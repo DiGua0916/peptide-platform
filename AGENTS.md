@@ -12,6 +12,7 @@ The user has approved WordPress and the collaboration repository. Product catego
 
 ## Ownership
 
+- Latest user decision on 2026-10-11: the proposed frontend/backend swap was cancelled. Codex continues frontend work; Claude continues backend work. Keep the existing A/B demo code and records for reference; do not expand that demo without a new user request.
 - Codex owns wp-content/themes/peptide-site/ and docs/handoffs/frontend.md.
 - Claude owns wp-content/plugins/peptide-core/, docs/handoffs/backend.md, and docs/handoffs/backend-*.md proposal documents.
 - Shared requirements, contracts, environment configuration, and task definitions require explicit coordination between roles. Record a proposed shared change in the role handoff before integration.
