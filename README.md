@@ -2,6 +2,8 @@
 
 面向省级技能大赛的海外独立站项目。平台确定采用自托管 WordPress；Codex 负责前端主题与交互，Claude 负责后端业务插件。
 
+主仓库现在位于 `D:\Codex\Projects\peptide-platform`。前后端独立工作目录位于 `D:\Codex\Projects\peptide-platform-worktrees` 下。
+
 ## 当前状态
 
 - 已准备 Git 仓库、分工约定、需求基线和交接文档。

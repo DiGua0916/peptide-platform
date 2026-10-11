@@ -2,7 +2,13 @@
 
 ## 三个工作目录
 
-主仓库位于输出目录中的 peptide-platform。独立工作目录位于相邻的 peptide-platform-worktrees/frontend 和 peptide-platform-worktrees/backend。
+主仓库：`D:\Codex\Projects\peptide-platform`。
+
+前端工作目录：`D:\Codex\Projects\peptide-platform-worktrees\frontend`。
+
+后端工作目录：`D:\Codex\Projects\peptide-platform-worktrees\backend`。
+
+用户已指定此后新项目和任务一律使用 D 盘。该项目已从 C 盘迁移，后续不要使用旧路径。
 
 | 角色 | 分支 | 职责 |
 | --- | --- | --- |

@@ -1,5 +1,9 @@
 # Repository collaboration rules
 
+## Storage location
+
+The user requires all new projects and task work to use drive D. This repository is now at D:/Codex/Projects/peptide-platform; its role worktrees are at D:/Codex/Projects/peptide-platform-worktrees/frontend and backend. Use these paths and do not recreate this project on drive C. Leave other existing C-drive projects untouched.
+
 ## Scope
 
 This is a WordPress project skeleton for a student competition. Read docs/REQUIREMENTS.md, docs/CONTRACT.md, docs/TASKS.md, and your role's handoff before changing implementation.
