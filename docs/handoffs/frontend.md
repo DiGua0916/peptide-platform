@@ -100,10 +100,12 @@ WordPress：当前没有可运行的主题前端，尚未执行 WordPress 页面
 - 修改 public/app.js、index.html、style.css，同步 CHATROOM.md 和任务 outputs 使用说明。JS 语法与 diff 检查通过；现有 3 项隔离测试覆盖 @全体、不可用/非成员拒绝、普通留言与忙碌状态，均通过。正式页面部署后核验记入 ROOM-09 进度。
 - 正式 17835 已检测为 hubVersion=4，用户已完成服务升级，本次无需重启。提交引用为本段所在提交。
 
-## ROOM-10 Claude 登录网络修复（进行中）
+## ROOM-10 Claude 登录网络修复（已验收）
 
 - 用户连续遇到浏览器授权成功、CLI 立即 HTTP 403。实际 CLI 2.1.295 的 auth status 未登录，无代理环境变量或 Claude settings 代理配置；Windows 已启用 127.0.0.1:8800。匿名访问 platform.claude.com：直连 403，现有系统代理 200；api.anthropic.com：直连 403，系统代理 404（根路径不存在，不能视为模型已接通）。
 - 共享变更提议：仅为 Claude 子进程补充当前启用的 Windows HTTP/HTTPS 代理，已有显式代理优先；登录入口和群聊回复共用同一方法。不写系统或 Claude 全局配置，不关闭 TLS 校验，不更换用户代理。
 - 登录修复需用户重新完成官方授权验证，不能仅凭匿名连通测试宣布解决。运行版本标记升级为 5，更新入口同步检查，确保群聊 Claude 回复也加载相同修复。
 - 实现与检查：live_chat.py 的 claude_environment 为登录状态查询和 Claude 回复子进程传入环境，交付登录入口复用；35 项测试全部通过，包含系统代理、显式代理优先、不改父环境、禁用和非 HTTP 代理。交付两份 Python 脚本语法通过。匿名页面请求受 User-Agent 等因素影响，另一次默认 Python UA 经代理仍 403，故网络差异仅为重要线索，真实授权重试才是验收标准。
 - ROOM-09 正式界面确认：下拉框不存在，连接状态弹窗正常显示 Codex/Claude 并可刷新，正文 @ 菜单正常，无浏览器错误；用户草稿为空并保持原样。
+- 最终结果：用户用修复入口重新授权后终端 Login successful，实际 auth status 为 loggedIn=true/authMethod=claude.ai；用户更新服务后正式 health 为 hubVersion=5。正式连接弹窗刷新后 Codex、Claude 均显示已登录。
+- 实际模型验收：通过正式源码在独立临时群执行 HTTP POST @Claude，观测 pending → running → 文本流 → completed，5.4 秒返回“Claude 群聊已接通。”并写入独立 ROOM.md。结果保存在本次任务 work/claude-acceptance-5vmff909/result.json。无模型测试消息写入正式群，正式日志仅追加 Codex 自身进度。本次 403 登录阻塞已解除。
