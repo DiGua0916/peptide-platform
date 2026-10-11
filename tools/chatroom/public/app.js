@@ -45,7 +45,8 @@ async function refreshCapabilities() {
   }catch{state.capabilities=[];}
   const preview=location.port==="17834";
   $("#service-notice").hidden=!preview&&state.capabilities.includes("live-chat");
-  $("#service-notice-text").textContent=preview?"这是界面测试页，记录与正式群聊分开。":"当前服务版本较旧，请重新打开正式聊天室。";
+  $("#service-notice-text").textContent=preview?"这是界面测试页，记录与正式群聊分开。":"当前仍是旧服务。请双击交付文件「更新并打开协作群聊.cmd」，载入实时聊天版本。";
+  $("#service-notice").querySelector("a").hidden=!preview;
   $("#management-note").hidden=state.capabilities.includes("members");
 }
 function renderRooms() {
