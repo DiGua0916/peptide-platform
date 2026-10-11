@@ -27,14 +27,16 @@
 <aside class="sidebar" id="sidebar" aria-label="会话列表">
 <div class="sidebar-heading"><h2>会话</h2><button class="icon-button new-room-button" id="new-room-button" aria-label="新建群聊" title="新建群聊"><svg><use href="#i-plus"/></svg></button></div>
 <div class="search-area"><label class="search"><svg><use href="#i-search"/></svg><input id="search" type="search" autocomplete="off" placeholder="搜索聊天记录" aria-label="搜索消息或任务编号"></label><button class="icon-button sidebar-close" id="close-sidebar" aria-label="关闭会话列表"><svg><use href="#i-close"/></svg></button></div>
-<div class="list-caption">项目群聊 <span id="room-count">1</span></div>
+<div class="list-caption"><span id="room-caption">项目群聊</span><span id="room-count">1</span></div>
 <div id="room-list" class="room-list" aria-label="项目群聊列表"></div>
+<button class="archive-toggle" id="archive-toggle" hidden>已解散群聊</button>
 <div class="sidebar-bottom"><div class="sync"><span id="sync-dot" class="sync-dot"></span><span id="sync-label" role="status">正在连接…</span></div><span>本地聊天室 · <span id="total-count">0</span> 条消息</span></div>
 </aside>
 <main class="chat-main">
 <header class="chat-header"><button class="icon-button mobile-menu" id="open-sidebar" aria-label="打开会话列表" aria-expanded="false"><svg><use href="#i-menu"/></svg></button><div class="room-heading"><span class="room-mark" aria-hidden="true"><svg><use href="#i-users"/></svg></span><div><h1><span id="room-name">多肽项目群</span><small>3 人</small></h1><p>地瓜、Codex、Claude <span>· 一起推进项目</span></p></div></div><div class="header-actions"><button class="join-button" data-join title="复制接入口令" aria-label="接入助手"><svg><use href="#i-key"/></svg><span>接入助手</span></button><button class="icon-button" id="find-button" aria-label="搜索聊天记录" title="搜索聊天记录"><svg><use href="#i-search"/></svg></button><button class="icon-button" data-members aria-label="群聊详情" title="群聊详情" aria-expanded="false"><svg><use href="#i-more"/></svg></button></div></header>
 <div class="filter-bar" id="filter-bar" hidden><span id="filter-label"></span><button id="clear-filter">查看全部消息 ×</button></div>
 <div id="warning" class="warning" role="status" hidden></div>
+<div id="closed-notice" class="closed-notice" role="status" hidden>本群已解散 · 历史记录只读，助手无需再汇报</div>
 <section class="timeline" id="timeline" aria-label="聊天记录" tabindex="0"><div id="messages" class="messages" aria-label="项目消息列表"><div class="empty">正在读取聊天记录…</div></div></section>
 <button id="jump-latest" class="jump-latest" hidden>↓ 查看新消息</button>
 <section class="composer" aria-label="发送项目留言"><form id="message-form">
@@ -51,6 +53,7 @@
 <section class="detail-section"><h3>查看成员消息</h3><div class="filters" role="group" aria-label="按参与者筛选"><button class="selected" data-author="全部" aria-pressed="true">全部</button><button data-author="Codex" aria-pressed="false">Codex</button><button data-author="Claude" aria-pressed="false">Claude</button><button data-author="用户" aria-pressed="false">地瓜</button></div></section>
 <section class="detail-section"><h3>群公告</h3><p>需求、进度和决定，都留在这里。</p><p class="muted">消息保存在本项目。留言后，请提醒对应助手读取；这里不会自动触发 AI 回复。</p></section>
 <button class="source-row" data-source>查看 Markdown 原文 <span>›</span></button><p class="record-path" id="record-path">docs/chat/ROOM.md</p>
+<button class="dissolve-button" id="dissolve-room-button">解散群聊</button>
 </aside>
 </main></div>
 <dialog id="source-dialog" aria-labelledby="source-title"><div class="dialog-header"><h2 id="source-title">Markdown 原文</h2><button class="icon-button" id="close-source" aria-label="关闭原文"><svg><use href="#i-close"/></svg></button></div><p id="source-path"></p><pre id="source-content"></pre><div class="dialog-footer"><span>所有成员共用这一份记录</span><button id="copy-source">复制原文</button></div></dialog>
@@ -66,5 +69,11 @@
 <p class="field-help">尚未加载规则的旧会话，请复制完整说明；助手需要能读写这台电脑的文件。双方可以在群里留言交接，新消息不会自动唤醒另一位助手。</p>
 <details class="join-details"><summary>查看完整接入说明</summary><textarea id="join-instructions" readonly aria-label="完整接入说明"></textarea></details>
 <button class="secondary-button" id="copy-join-instructions">复制完整接入说明</button><p id="join-status" role="status"></p>
+</dialog>
+<dialog id="dissolve-dialog" class="compact-dialog" aria-labelledby="dissolve-title">
+<div class="dialog-header"><h2 id="dissolve-title">解散群聊</h2><button class="icon-button" data-close="dissolve-dialog" aria-label="取消解散"><svg><use href="#i-close"/></svg></button></div>
+<p class="dialog-intro">确定解散「<strong id="dissolve-room-name"></strong>」？</p>
+<p class="field-help">解散后停止接收消息，接入口令失效，助手无需再向本群汇报。历史记录和项目文件会保留，可以从“已解散群聊”查看。</p>
+<p id="dissolve-status" class="form-error" role="status"></p><div class="dissolve-actions"><button class="secondary-button" data-close="dissolve-dialog">保留群聊</button><button class="danger-button" id="confirm-dissolve">确认解散</button></div>
 </dialog>
 </body></html>

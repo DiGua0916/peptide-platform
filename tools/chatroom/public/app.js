@@ -2,12 +2,22 @@
 // Keep existing bookmarks working while the older local server remains running.
 if(location.port==="17832")location.replace("http://127.0.0.1:17835/"+location.search);
 const $ = (selector) => document.querySelector(selector);
-const state = {messages: [], rooms: [], roomId: new URLSearchParams(location.search).get("room") || "peptide", epoch: 0, author: "全部", query: "", revision: "", etag: "", loading: false, logPath: "", online: false, sending: false, expanded: new Set(), collapsed: new Set()};
+const state = {messages: [], rooms: [], showClosed: false, roomId: new URLSearchParams(location.search).get("room") || "peptide", epoch: 0, author: "全部", query: "", revision: "", etag: "", loading: false, logPath: "", online: false, sending: false, expanded: new Set(), collapsed: new Set()};
 function roomUrl(path, roomId=state.roomId) {return path+"?room="+encodeURIComponent(roomId);}
 function currentRoom() {return state.rooms.find(r=>r.id===state.roomId);}
+function isClosed() {return currentRoom()?.status === "dissolved";}
 function renderRooms() {
-  $("#room-count").textContent=String(state.rooms.length).padStart(2,"0");
-  $("#room-list").innerHTML=state.rooms.map(r=>'<button class="conversation '+(r.id===state.roomId?'selected':'')+'" data-room="'+escapeHtml(r.id)+'" aria-pressed="'+(r.id===state.roomId)+'" aria-label="'+escapeHtml(r.name)+'"><span class="group-avatar" aria-hidden="true"><span class="mini codex"><img src="/avatars/openai.svg" alt=""></span><span class="mini claude"><img src="/avatars/claude.svg" alt=""></span><span class="mini user"><img src="/avatars/digua.jpg" alt=""></span><span class="mini project"><svg><use href="#i-chat"/></svg></span></span><span class="conversation-copy"><span class="conversation-top"><strong>'+escapeHtml(r.name)+'</strong><time>'+escapeHtml(r.lastTime?formatTime(r.lastTime,true):'')+'</time></span><span class="conversation-preview">'+escapeHtml((r.lastPreview||'地瓜、Codex、Claude · 开始协作').replace(/^用户：/,"地瓜：").replace(/^你、/,"地瓜、"))+'</span></span></button>').join("");
+  const shown=state.rooms.filter(r=>(r.status==="dissolved")===state.showClosed);
+  const closedCount=state.rooms.filter(r=>r.status==="dissolved").length;
+  $("#room-count").textContent=String(shown.length).padStart(2,"0");
+  $("#room-caption").textContent=state.showClosed?"已解散群聊 · 只读":"项目群聊";
+  $("#archive-toggle").hidden=!closedCount;
+  $("#archive-toggle").textContent=state.showClosed?"返回进行中的群聊":"已解散群聊（"+closedCount+"）";
+  $("#closed-notice").hidden=!isClosed();
+  $("#dissolve-room-button").hidden=isClosed()||!currentRoom();
+  document.querySelectorAll("[data-join]").forEach(b=>b.disabled=isClosed());
+  updateInput();
+  $("#room-list").innerHTML=shown.map(r=>'<button class="conversation '+(r.id===state.roomId?'selected':'')+'" data-room="'+escapeHtml(r.id)+'" aria-pressed="'+(r.id===state.roomId)+'" aria-label="'+escapeHtml(r.name)+'"><span class="group-avatar" aria-hidden="true"><span class="mini codex"><img src="/avatars/openai.svg" alt=""></span><span class="mini claude"><img src="/avatars/claude.svg" alt=""></span><span class="mini user"><img src="/avatars/digua.jpg" alt=""></span><span class="mini project"><svg><use href="#i-chat"/></svg></span></span><span class="conversation-copy"><span class="conversation-top"><strong>'+escapeHtml(r.name)+'</strong><time>'+escapeHtml(r.lastTime?formatTime(r.lastTime,true):'')+'</time></span><span class="conversation-preview">'+escapeHtml((r.lastPreview||'地瓜、Codex、Claude · 开始协作').replace(/^用户：/,"地瓜：").replace(/^你、/,"地瓜、"))+'</span></span></button>').join("");
   const room=currentRoom();
   $("#room-name").textContent=room?.name||"选择群聊";
   $("#detail-room-name").textContent=room?.name||"";
@@ -31,6 +41,7 @@ async function refreshRooms() {
 async function switchRoom(id) {
   if(state.sending)return;
   updateInput();state.roomId=id;state.epoch++;state.loading=false;state.revision="";state.etag="";
+  state.showClosed=isClosed();
   state.messages=[];state.author="全部";state.query="";state.expanded.clear();state.collapsed.clear();$("#search").value="";
   $("#message-input").value=readDraft();updateInput();
   $("#send-status").textContent="留言后需提醒助手读取";$("#send-status").className="";
@@ -148,9 +159,10 @@ async function refresh(force=false) {
     if(response.status===304){setConnection(true);return;}
     if(!response.ok){const error=await response.json();throw Error(error.error||"读取失败");}
     const data=await response.json();if(epoch!==state.epoch)return;state.etag=response.headers.get("ETag")||"";
-    const changed=state.revision!==data.revision, wasLoaded=Boolean(state.revision), oldCount=state.messages.length;
+    const changed=state.revision!==data.revision||currentRoom()?.status!==data.room?.status, wasLoaded=Boolean(state.revision), oldCount=state.messages.length;
     const nearBottom=atBottom(), oldScroll=$("#timeline").scrollTop;
     state.messages=data.messages;state.revision=data.revision;state.logPath=data.logPath;
+    if(data.room){const index=state.rooms.findIndex(r=>r.id===data.room.id);if(index>=0)state.rooms[index]={...state.rooms[index],...data.room};}
     $("#record-path").title=data.logPath;$("#warning").hidden=!data.warnings.length;$("#warning").textContent=data.warnings.join(" ");
     if(changed) {
       render();
@@ -217,8 +229,11 @@ function readDraft() {
   return "";
 }
 function updateInput() {
-  $("#send-button").disabled=state.sending || !$("#message-input").value.trim();
+  $("#send-button").disabled=state.sending || isClosed() || !$("#message-input").value.trim();
+  $("#message-input").readOnly=state.sending||isClosed();
+  $("#message-input").placeholder=isClosed()?"本群已解散，无法发送新消息":"聊聊你的想法，或留下一条项目消息…";
   $("#new-room-button").disabled=state.sending;
+  $("#emoji-button").disabled=isClosed();$("#code-button").disabled=isClosed();
   try{sessionStorage.setItem(draftKey(),$("#message-input").value);}catch{}
 }
 $("#message-input").value=readDraft();
@@ -226,7 +241,7 @@ updateInput();
 $("#message-input").addEventListener("input",()=>{updateInput();$("#send-status").textContent="留言后需提醒助手读取";$("#send-status").className="";});
 $("#message-form").addEventListener("submit",async event=>{
   event.preventDefault();
-  const input=$("#message-input"),body=input.value.trim();if(!body||state.sending)return;
+  const input=$("#message-input"),body=input.value.trim();if(!body||state.sending||isClosed())return;
   const status=$("#send-status");state.sending=true;input.readOnly=true;updateInput();toggleEmoji(false);status.className="";status.textContent="正在发送…";
   try {
     const response=await fetch(roomUrl("/api/messages"),{method:"POST",headers:{"Content-Type":"application/json","X-Peptide-Room":"1"},body:JSON.stringify({title:"项目留言",body})});
@@ -242,7 +257,7 @@ $("#message-input").addEventListener("keydown",event=>{
   if(event.key==="Enter"&&!event.shiftKey&&!event.isComposing&&event.keyCode!==229){event.preventDefault();$("#message-form").requestSubmit();}
 });
 function insertText(text) {
-  const input=$("#message-input");if(state.sending)return;
+  const input=$("#message-input");if(state.sending||isClosed())return;
   if(input.value.length-(input.selectionEnd-input.selectionStart)+text.length>input.maxLength)return;
   input.setRangeText(text,input.selectionStart,input.selectionEnd,"end");input.focus();updateInput();return true;
 }
@@ -261,7 +276,7 @@ $("#copy-source").addEventListener("click",async()=>{try{await navigator.clipboa
 document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>document.getElementById(b.dataset.close).close()));
 $("#new-room-button").addEventListener("click",()=>{$("#create-room-status").textContent="";$("#create-room-dialog").showModal();});
 async function openJoin() {
-  const room=currentRoom();if(!room)return;
+  const room=currentRoom();if(!room||isClosed())return;
   $("#join-room-name").textContent=room.name;$("#join-code").textContent=room.code;$("#join-status").textContent="";
   $("#join-instructions").value="";$("#copy-join-instructions").disabled=true;$("#join-dialog").showModal();
   try {const response=await fetch(roomUrl("/api/join",room.id));if(!response.ok)throw Error();const data=await response.json();if($("#join-dialog").open&&$("#join-code").textContent===room.code){$("#join-instructions").value=data.instructions;$("#copy-join-instructions").disabled=false;}}
@@ -278,6 +293,24 @@ $("#create-room-form").addEventListener("submit",async event=>{
     const data=await response.json();if(!response.ok)throw Error(data.error||"创建失败");
     state.rooms.push(data);$("#create-room-dialog").close();$("#create-room-form").reset();await switchRoom(data.id);await openJoin();
   }catch(error){$("#create-room-status").textContent=error.message||"创建失败，请稍后重试。";}
+  finally{button.disabled=false;}
+});
+$("#archive-toggle").addEventListener("click",()=>{state.showClosed=!state.showClosed;renderRooms();});
+let dissolvingRoom="";
+$("#dissolve-room-button").addEventListener("click",()=>{
+  const room=currentRoom();if(!room||isClosed())return;
+  dissolvingRoom=room.id;$("#dissolve-room-name").textContent=room.name;$("#dissolve-status").textContent="";$("#dissolve-dialog").showModal();
+});
+$("#confirm-dissolve").addEventListener("click",async()=>{
+  const button=$("#confirm-dissolve");if(button.disabled||state.sending)return;button.disabled=true;
+  try {
+    const response=await fetch("/api/rooms/dissolve",{method:"POST",headers:{"Content-Type":"application/json","X-Peptide-Room":"1"},body:JSON.stringify({room:dissolvingRoom})});
+    const data=await response.json();if(!response.ok)throw Error(data.error||"解散失败");
+    const index=state.rooms.findIndex(r=>r.id===data.id);if(index>=0)state.rooms[index]={...state.rooms[index],...data};
+    $("#dissolve-dialog").close();toggleDetails(false);
+    const next=state.rooms.find(r=>r.status!=="dissolved");state.showClosed=!next;
+    if(next)await switchRoom(next.id);else {renderRooms();await refresh(true);}
+  }catch(error){$("#dissolve-status").textContent=error.message||"解散失败，请重试。";}
   finally{button.disabled=false;}
 });
 async function bootstrap(){await refreshRooms();$("#message-input").value=readDraft();updateInput();await refresh(true);}

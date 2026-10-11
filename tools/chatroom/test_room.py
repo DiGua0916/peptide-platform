@@ -234,6 +234,41 @@ class MultiRoomTests(unittest.TestCase):
         with self.request("/api/join?room="+a["code"]) as response:
             self.assertEqual(json.load(response)["room"]["id"], a["id"])
 
+    def test_dissolution_preserves_history_and_projects_but_blocks_posts(self):
+        registry = self.server.registry
+        entry = registry.create("准备解散")
+        registry.post(entry["code"], "Codex", "已完成", "保留这条记录")
+        before = Path(entry["logPath"]).read_bytes()
+        closed = registry.dissolve(entry["code"])
+        self.assertEqual(closed["status"], "dissolved")
+        self.assertEqual(closed, registry.dissolve(entry["code"]))
+        with self.assertRaises(room.RoomClosedError):
+            registry.post(entry["code"], "Claude", "不能追加", "停止汇报")
+        with self.assertRaises(room.RoomClosedError):
+            room.join_context(registry, entry["code"])
+        self.assertEqual(before, Path(entry["logPath"]).read_bytes())
+        self.assertTrue(Path(entry["projectRoot"]).is_dir())
+
+    def test_http_dissolution_invalidates_cache_and_keeps_read_only_access(self):
+        entry = self.server.registry.create("网页解散")
+        with self.request("/api/messages?room="+entry["id"]) as response:
+            etag = response.headers["ETag"]
+        with self.assertRaises(HTTPError) as caught:
+            self.request("/api/rooms/dissolve", {})
+        self.assertEqual(caught.exception.code, 400)
+        self.request("/api/rooms/dissolve", {"room":entry["id"]}).close()
+        for path, payload in [("/api/join?room="+entry["code"],None),
+                              ("/api/messages?room="+entry["code"],{"body":"拒绝新留言"})]:
+            with self.assertRaises(HTTPError) as caught:
+                self.request(path, payload)
+            self.assertEqual(caught.exception.code, 410)
+            self.assertEqual(json.load(caught.exception)["code"], "room_dissolved")
+        with self.request("/api/messages?room="+entry["id"], extra={"If-None-Match":etag}) as response:
+            self.assertEqual(response.status, 200)
+            self.assertEqual(json.load(response)["room"]["status"], "dissolved")
+        with self.request("/room.md?room="+entry["id"]) as response:
+            self.assertEqual(response.status, 200)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

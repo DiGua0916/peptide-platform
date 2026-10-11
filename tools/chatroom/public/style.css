@@ -280,3 +280,13 @@ dialog { background: #fafafa; color: #292929; }
 
 .avatar.codex { background: linear-gradient(145deg, #64849a, #426277); border-color: #55768b; }
 .mini.codex { background: #56788e; }
+
+.archive-toggle { border: 0; background: transparent; color: #888; text-align: left; font-size: 11px; margin: 0 24px 18px; padding: 9px 0; }
+.archive-toggle:hover { color: #333; }
+.closed-notice { background: #efefef; color: #777; font-size: 12px; padding: 12px 28px; border-bottom: 1px solid #e4e4e4; }
+.dissolve-button { width: 100%; border: 1px solid #edd9d4; color: #af614e; background: #fff8f6; border-radius: 10px; padding: 11px; font-size: 12px; }
+.dissolve-button:hover { background: #faeeea; }
+.dissolve-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.danger-button { background: #ae6252; border: 1px solid #a65c4b; color: #fff; border-radius: 10px; padding: 10px 18px; font-size: 12px; }
+.danger-button:disabled { opacity: .55; }
+.join-button:disabled, [data-join]:disabled { opacity: .4; cursor: default; }
