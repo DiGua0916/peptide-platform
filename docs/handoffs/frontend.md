@@ -1,6 +1,16 @@
 # 前端交接
 
-状态：2026-10-11 用户撤回分工调整，Codex 继续负责前端，Claude 继续负责后端。A/B 演示保留代码与记录，后续主线回到 WordPress 主站前端。主站主题仍只有预留目录，模板尚未确认取得。
+状态：2026-10-12 用户选定 Lunira 并提供 ZIP，Codex 已完成源码检查。Codex 继续前端，Claude 继续后端。主站主题仍只有预留目录，尚未迁移商业模板或接入后台；教学演示与 A/B 演示均已关闭并保留文件。
+
+## FE-TEMPLATE-AUDIT Lunira 源码检查（2026-10-12）
+
+- 原包：`D:/下载/lunira-website-template.zip`；SHA256 `36753ba50b6a6f0fdef46255c65ee81b27fb507a45fffce54fcea26e903ca34e`。解压检查副本：`D:/Codex/Tasks/peptide-platform/work/vendor/lunira-original-36753ba50b/`，位于 Git 外；原包与原始代码保持原样。
+- 取得 48 HTML、1 CSS、14 JS、3 Lottie JSON，共 66 文件。包含 3 个首页、商城、6 个商品详情及结账等页面。没有独立图片、视频、字体、Spline/Rive 素材文件，仍引用外部 CDN；不是安装即用的 WordPress 主题。
+- 静态扫描发现 239 个不同外链资源/连接地址（含预连接与响应式图片变体）；3 个 Spline、2 个 Rive、1 WebP 和 1 MP4 的 HEAD 抽查均为 200。首屏 DNA/胶囊在联网本地预览可显示；可访问不等于已本地化或已获得可编辑 3D 设计源文件。
+- 发现一处 `%20` 文件名与 URL 解码不一致，动画原链接实测 404；两条 Rive View Model 错误及一条 Spline 版本警告。页面自动请求 `POST /.wf_graphql/csrf`，静态服务器返回 501；现存 Webflow 商品/结账绑定和表单提交逻辑必须替换，不能把模板页面视为可用 WooCommerce 功能。
+- 实际验证：ZIP CRC；静态本地路径；解码路径；外部资源抽查；首页/商城 HTTP 200；浏览器首页与 Shop 导航、390×844 商城局部排版（文档宽度/滚动宽度均 375，可见已加载图片未破损）。未完成 48 页全面验收、性能/离线/结账测试。临时 17842 检查服务与标签已关闭，未改网络设置。
+- 报告：`D:/Codex/Tasks/peptide-platform/outputs/Lunira-源码检查.txt`；机器清单 `lunira-source-audit.json`；资源探测 `lunira-resource-probes.json`。本轮仓库只更新本交接，无接口或后端源码改动；提交引用见对应聊天室进度。
+- 下一步：在开发副本整理素材、修复路径和动效，抽取公共组件后适配 WordPress 主题，与 Claude 对齐商品、购物车及报告数据。商业原包不进 Git。共享 REQUIREMENTS/TASKS 中模板与后端阶段信息已落后；本段提出后续同步需求，本轮不擅自覆盖 Claude 方案或共享契约。
 
 ## 前端继续由 Codex 负责（最新决定，2026-10-11）
 
