@@ -68,7 +68,7 @@ function renderRooms() {
   $("#detail-room-name").textContent=room?.name||"";
   $("#detail-project").textContent=room?.projectRoot||"暂未关联项目目录";
   $("#detail-code").textContent=room?.code||"";
-  renderMembers();updateReplyTargets();
+  renderMembers();
   document.title=(room?.name||"协作群聊")+" · 项目聊天室";
 }
 let roomsLoading=false;
@@ -157,18 +157,6 @@ function messageBody(message) {
   const previewSource = message.body.replace(/^(?:\*\*[^\n]+\*\*|#{1,6}[^\n]+)\s*\n/, "");
   const preview = plainPreview(previewSource).split("\n").filter(line=>line.trim()).slice(0,3).join("\n").slice(0,200).trimEnd();
   return '<div class="markdown" id="body-'+escapeHtml(message.id)+'">'+(long && !expanded ? '<p class="preview-text">'+highlightMentions(preview)+'…</p>' : renderMarkdown(message.body))+'</div>'+ (long ? '<button class="expand-message" data-expand="'+escapeHtml(message.id)+'" aria-controls="body-'+escapeHtml(message.id)+'" aria-expanded="'+expanded+'">'+(expanded?'收起':'展开全文')+'</button>' : '');
-}
-function updateReplyTargets() {
-  const members=roomMembers(currentRoom());
-  for(const option of $("#reply-target").options){
-    if(option.value){
-      const targets=option.value==="all"?["Codex","Claude"]:[option.value];
-      option.disabled=isClosed()||targets.some(name=>!members.includes(name)||!state.providers[name]?.available);
-      option.title=targets.map(name=>state.providers[name]?.detail||"正在确认连接").join("；");
-    }
-  }
-  if($("#reply-target").selectedOptions[0]?.disabled)$("#reply-target").value="";
-  $("#reply-target").disabled=isClosed();
 }
 function renderLiveReplies() {
   if(state.liveJobs.length&&state.liveJobs.every(j=>!["pending","running","stopping"].includes(j.status))&&$("#send-status").textContent==="已发送 · 正在连接助手"){
@@ -377,8 +365,7 @@ $("#message-form").addEventListener("submit",async event=>{
   const input=$("#message-input"),body=input.value.trim();if(!body||state.sending||isClosed())return;
   const status=$("#send-status");state.sending=true;input.readOnly=true;closeMentions();updateInput();toggleEmoji(false);status.className="";status.textContent="正在发送…";
   try {
-    const target=$("#reply-target").value,targets=target==="all"?["Codex","Claude"]:target?[target]:[];
-    const response=await fetch(roomUrl("/api/messages"),{method:"POST",headers:{"Content-Type":"application/json","X-Peptide-Room":"1"},body:JSON.stringify({title:"项目留言",body,targets})});
+    const response=await fetch(roomUrl("/api/messages"),{method:"POST",headers:{"Content-Type":"application/json","X-Peptide-Room":"1"},body:JSON.stringify({title:"项目留言",body})});
     const data=await response.json();if(!response.ok)throw Error(data.error||"保存失败");
     input.value="";status.textContent=data.replyRequested?"已发送 · 正在连接助手":"已保存到本群";status.className="success";
     state.author="全部";state.query="";$("#search").value="";
@@ -477,10 +464,6 @@ $("#live-replies").addEventListener("click",async event=>{
     if(!response.ok)throw Error("停止失败，请重试");await refresh(true);
   }catch(error){$("#send-status").textContent=error.message;button.disabled=false;}
 });
-$("#reply-target").addEventListener("change",()=>{
-  const target=$("#reply-target").value;
-  $("#reply-help").textContent=target?"回答实时显示 · 可随时停止":"可在正文 @助手 提问";
-});
 function renderAssistantStatus(){
   $("#assistant-status-list").innerHTML=["Codex","Claude"].map(name=>{
     const provider=state.providers[name], author=authors[name];
@@ -492,7 +475,7 @@ $("#refresh-assistants").addEventListener("click",async()=>{
   const button=$("#refresh-assistants");button.disabled=true;$("#assistant-refresh-status").textContent="正在检查本机登录…";
   try{
     const response=await fetch("/api/assistants?refresh=1");if(!response.ok)throw Error("检查失败，请稍后再试");
-    state.providers=(await response.json()).providers;renderAssistantStatus();updateReplyTargets();
+    state.providers=(await response.json()).providers;renderAssistantStatus();
     $("#assistant-refresh-status").textContent="连接状态已更新";
   }catch(error){$("#assistant-refresh-status").textContent=error.message;}
   finally{button.disabled=false;}
