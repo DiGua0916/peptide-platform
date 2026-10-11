@@ -4,6 +4,12 @@
 
 首次接手时完整阅读 docs/CLAUDE_HANDOFF.md。它说明项目背景、当前状态、双方分工、D 盘目录和 BE-01 的交付要求。
 
+## 每次任务必须更新项目聊天室
+
+本项目新增 docs/CHATROOM.md 中的协作约定。开始工作前读取主仓库的最新消息；每次完成项目工作后，在最终回复用户之前，以 Claude 署名追加进度，写明完成内容、修改文件、实际验证、剩余问题和下一步，并重新读取确认写入成功。
+
+唯一记录：D:/Codex/Projects/peptide-platform/docs/chat/ROOM.md。使用主仓库 tools/chatroom/room.py 的 tail / post 命令；不要在 backend 工作目录另建聊天记录。网页只是 Markdown 的本地展示，不会自动触发回复。这项约定仅在多肽项目中生效。
+
 ## 工作范围
 
 - 工作分支：claude/backend。

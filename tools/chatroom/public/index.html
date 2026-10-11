@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>项目聊天室 · 多肽独立站</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">P<span>·</span></span><div>PEPTIDE<span class="brand-caption">项目协作空间</span></div></div>
+      <div class="project-card"><span class="eyebrow">CURRENT PROJECT</span><strong>多肽独立站</strong><span>WordPress · 省级技能大赛</span></div>
+      <nav aria-label="项目导航"><a href="/" class="nav-item active"><span aria-hidden="true">▤</span> 项目聊天室 <span class="nav-count" id="nav-count">0</span></a><button class="nav-item" id="source-button"><span aria-hidden="true">⌘</span> 查看 Markdown 原文 <span aria-hidden="true">↗</span></button></nav>
+      <section class="members"><span class="eyebrow">PARTICIPANTS / 参与者</span>
+        <div class="member"><span class="avatar user">你</span><div><strong>你</strong><small>项目负责人 · 需求与决策</small></div></div>
+        <div class="member"><span class="avatar codex">C</span><div><strong>Codex</strong><small>前端设计 · 主题与交互</small></div></div>
+        <div class="member"><span class="avatar claude">✳</span><div><strong>Claude</strong><small>业务插件 · 数据与接口</small></div></div>
+      </section>
+      <div class="sidebar-note"><span class="note-icon" aria-hidden="true">↳</span><strong>每次完成，都留下一条记录。</strong><p>把进度、改动、验证结果和下一步，放在同一个地方。</p></div>
+      <div class="storage"><span class="storage-dot"></span><div>记录保存在 D 盘<small>仅此项目 · 本地 Markdown</small></div></div>
+    </aside>
+    <main>
+      <header class="topbar"><div class="breadcrumb">工作空间 <span>/</span> 多肽独立站 <span>/</span> <b>协作</b></div><span class="local-badge"><i></i> 仅在本机运行</span></header>
+      <div class="main-inner">
+        <section class="heading"><div><span class="eyebrow">PROJECT CONVERSATION</span><h1>项目聊天室<span class="heading-dot">.</span></h1><p>需求有回应，进度有记录。</p></div><div class="sync"><span id="sync-dot" class="sync-dot"></span><span id="sync-label">正在连接记录…</span><button id="refresh" title="刷新记录" aria-label="刷新记录">↻</button></div></section>
+        <div class="context-note"><span class="context-icon" aria-hidden="true">i</span><p>这里汇集你、Codex 和 Claude 的项目留言与工作汇报。<strong>新留言写入文件后，需提醒对方读取；不会自动触发 AI 回复。</strong></p></div>
+        <div class="toolbar"><div class="filters" role="group" aria-label="按参与者筛选"><button class="selected" data-author="全部" aria-pressed="true">全部 <span id="total-count">0</span></button><button data-author="Codex" aria-pressed="false">Codex</button><button data-author="Claude" aria-pressed="false">Claude</button><button data-author="用户" aria-pressed="false">你</button></div><label class="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="搜索消息或任务编号" aria-label="搜索消息或任务编号"></label></div>
+        <div id="warning" class="warning" role="status" hidden></div>
+        <div class="timeline-label"><span>项目记录</span><span id="visible-count">正在读取</span></div>
+        <div id="messages" class="messages" aria-label="项目消息列表"><div class="empty"><span class="empty-symbol">···</span><h2>正在读取项目记录</h2><p>消息保存在本项目的 Markdown 文件中。</p></div></div>
+        <button id="jump-latest" class="jump-latest" hidden>↓ 有新记录，查看最新</button>
+        <section class="composer" aria-label="发送项目留言">
+          <div class="composer-top"><span class="avatar user small">你</span><strong>给项目留个消息</strong><span>支持 Markdown</span></div>
+          <form id="message-form"><label class="sr-only" for="message-input">项目留言内容</label><textarea id="message-input" rows="3" maxlength="32000" placeholder="说说你的想法、补充需求，或者记录一个决定…" required></textarea><div class="composer-bottom"><span id="send-status" role="status">Ctrl / ⌘ + Enter 发送 · 仅保存在当前项目</span><button class="send-button" id="send-button" type="submit">发送留言 <span aria-hidden="true">↗</span></button></div></form>
+        </section>
+        <footer><span>一份 Markdown，三方共享。</span><span id="record-path" title="">docs/chat/ROOM.md</span></footer>
+      </div>
+    </main>
+  </div>
+  <dialog id="source-dialog"><div class="dialog-header"><div><span class="eyebrow">SOURCE OF TRUTH</span><h2>Markdown 原文</h2></div><button id="close-source" aria-label="关闭原文">×</button></div><p id="source-path"></p><pre id="source-content"></pre><div class="dialog-footer"><span>文件是唯一记录来源，页面自动读取更新。</span><button id="copy-source">复制原文</button></div></dialog>
+</body>
+</html>
