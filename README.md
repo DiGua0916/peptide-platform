@@ -10,6 +10,7 @@
 - 初始化后使用 main 作为集成分支，codex/frontend、claude/backend 分别开发。
 - 尚未安装 WordPress、引入付费模板或实现业务功能。
 - 尚未连接 Claude、配置在线服务或创建 GitHub 远程仓库。
+- 已有项目专用 Markdown 聊天室，用于双方记录进度；它不自动调用 Claude 或 Codex。
 - 仓库名称和代码标识是开发用名称，不是最终品牌。
 
 ## 目录
@@ -23,6 +24,8 @@
 | docs/CONTRACT.md | 前后端数据与接口草案 |
 | docs/WORKFLOW.md | 独立工作目录、提交和联调流程 |
 | docs/TASKS.md | 当前任务和验收条件 |
+| docs/CHATROOM.md | 项目聊天室使用方法和每次任务后的进度规则 |
+| tools/chatroom/ | Markdown 聊天室服务、界面和追加工具 |
 | docs/handoffs/ | 双方分别维护的交接记录 |
 | wp-content/themes/peptide-site/ | Codex 负责的主题源码预留目录 |
 | wp-content/plugins/peptide-core/ | Claude 负责的业务插件预留目录 |
@@ -34,7 +37,9 @@
 1. 先读 docs/REQUIREMENTS.md、docs/CONTRACT.md。
 2. 按 docs/WORKFLOW.md 在自己的工作目录工作。
 3. 只修改当前任务负责的文件；接口变更先记录再同步。
-4. 每个任务完成后写明改动、验证结果和剩余问题。
+4. 每个任务完成后，先向主仓库 docs/chat/ROOM.md 追加进度并确认保存，再回复用户。操作见 docs/CHATROOM.md。
+
+双击主仓库“打开项目聊天室.cmd”可打开本项目的聊天页面，默认地址 http://127.0.0.1:17832。记录固定保存到主仓库的 docs/chat/ROOM.md，两个开发目录共用这一份文件。
 
 Claude 的启动指令可直接复制 CLAUDE.md 中的“首个任务”。
 

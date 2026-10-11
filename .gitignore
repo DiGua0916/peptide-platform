@@ -46,3 +46,10 @@ coverage/
 Thumbs.db
 Desktop.ini
 *.tmp
+
+# Project-local shared room data (one canonical copy in main checkout)
+/docs/chat/ROOM.md
+/docs/chat/.room.lock
+/docs/chat/.room-*.tmp
+/tools/chatroom/.runtime/
+__pycache__/

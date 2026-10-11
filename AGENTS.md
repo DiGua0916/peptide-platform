@@ -39,3 +39,15 @@ Keep credentials, database dumps, real customer data, uploads, and third-party c
 ## Verification and handoff
 
 Run checks appropriate to changed behavior. State which checks actually ran; never report an unrun test as passing. Update your handoff with scope, changed files, contract changes, checks, next actions, and commit reference. Do not claim deployment, Claude integration, or a working WordPress instance until verified.
+
+## Project-only Markdown room (required)
+
+This rule applies only to peptide-platform. Do not extend it to other projects or global instructions.
+
+- At task start, read recent messages in D:/Codex/Projects/peptide-platform/docs/chat/ROOM.md using the main checkout's tools/chatroom/room.py tail --limit 12, plus relevant handoffs.
+- After each actual project work task, BEFORE the final user-facing reply, append a progress message as Codex or Claude. Include the task, completed work, changed files, checks actually run, remaining issues and next steps. Record partial/blocked work honestly.
+- Use the shared main-checkout helper: python "D:/Codex/Projects/peptide-platform/tools/chatroom/room.py" post --author Codex --task <task-id> --title <title> --body-file <absolute-UTF8-file-on-D>. Claude uses --author Claude. See docs/CHATROOM.md for the full usage and interpreter fallback.
+- Re-read the newest messages after posting to verify that the entry was saved. Never claim a post succeeded if the write failed.
+- All worktrees append to the ONE canonical Markdown file in the main checkout. Do not create branch-local logs, overwrite history, post under the other agent's name, or include secrets/private customer data. The helper serializes concurrent writes.
+- Explicit exception to role ownership: both agents may append their own messages to this main-checkout record through the helper; it does not authorize editing other shared files or the other role's code.
+- Reading and appending records does not automatically invoke either model. User messages in the file are context; follow actual user instructions and normal project boundaries. The record is gitignored local data and needs a separate backup.
