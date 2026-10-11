@@ -4,6 +4,7 @@ if(location.port==="17832")location.replace("http://127.0.0.1:17835/"+location.s
 const $ = (selector) => document.querySelector(selector);
 const state = {messages: [], rooms: [], capabilities: [], providers: {}, liveJobs: [], liveRevision: -1, streamConnected: false, showClosed: false, roomId: new URLSearchParams(location.search).get("room") || "peptide", epoch: 0, author: "全部", query: "", revision: "", etag: "", loading: false, logPath: "", online: false, sending: false, expanded: new Set(), collapsed: new Set()};
 let eventStream=null, streamRefreshPending=false;
+const mentionState={start:-1,end:0,index:0,items:[],composing:false};
 function connectEvents() {
   eventStream?.close();eventStream=null;state.streamConnected=false;
   if(!state.capabilities.includes("events")||document.hidden||!("EventSource" in window))return;
@@ -85,6 +86,7 @@ async function refreshRooms() {
 }
 async function switchRoom(id) {
   if(state.sending)return;
+  closeMentions();
   updateInput();state.roomId=id;state.epoch++;state.loading=false;state.revision="";state.etag="";
   state.showClosed=isClosed();
   state.messages=[];state.liveJobs=[];state.liveRevision=-1;state.author="全部";state.query="";state.expanded.clear();state.collapsed.clear();$("#search").value="";
@@ -99,12 +101,13 @@ const authors = {Codex:{className:"codex",avatar:'<img src="/avatars/openai.svg"
 const kinds = {progress:"进度",message:"消息",decision:"决定",question:"待确认"};
 function escapeHtml(value) {return String(value).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function inlineMarkdown(text) {
-  const pattern = /(\x60[^\x60]+\x60|\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\))/g;
+  const pattern = /(\x60[^\x60]+\x60|\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\)|(?<!\S)@(?:Codex|Claude|全体|地瓜)(?![A-Za-z0-9_]))/gi;
   let html = "", start = 0;
   for (const match of text.matchAll(pattern)) {
     html += escapeHtml(text.slice(start,match.index));
     const token = match[0];
-    if (token.startsWith("\x60")) html += "<code>"+escapeHtml(token.slice(1,-1))+"</code>";
+    if(token.startsWith("@")) html += mentionMarkup(token);
+    else if (token.startsWith("\x60")) html += "<code>"+escapeHtml(token.slice(1,-1))+"</code>";
     else if (token.startsWith("**")) html += "<strong>"+escapeHtml(token.slice(2,-2))+"</strong>";
     else {
       const link = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
@@ -153,7 +156,7 @@ function messageBody(message) {
   const expanded = state.expanded.has(message.id) || (Boolean(state.query) && !state.collapsed.has(message.id));
   const previewSource = message.body.replace(/^(?:\*\*[^\n]+\*\*|#{1,6}[^\n]+)\s*\n/, "");
   const preview = plainPreview(previewSource).split("\n").filter(line=>line.trim()).slice(0,3).join("\n").slice(0,200).trimEnd();
-  return '<div class="markdown" id="body-'+escapeHtml(message.id)+'">'+(long && !expanded ? '<p class="preview-text">'+escapeHtml(preview)+'…</p>' : renderMarkdown(message.body))+'</div>'+ (long ? '<button class="expand-message" data-expand="'+escapeHtml(message.id)+'" aria-controls="body-'+escapeHtml(message.id)+'" aria-expanded="'+expanded+'">'+(expanded?'收起':'展开全文')+'</button>' : '');
+  return '<div class="markdown" id="body-'+escapeHtml(message.id)+'">'+(long && !expanded ? '<p class="preview-text">'+highlightMentions(preview)+'…</p>' : renderMarkdown(message.body))+'</div>'+ (long ? '<button class="expand-message" data-expand="'+escapeHtml(message.id)+'" aria-controls="body-'+escapeHtml(message.id)+'" aria-expanded="'+expanded+'">'+(expanded?'收起':'展开全文')+'</button>' : '');
 }
 function updateReplyTargets() {
   const members=roomMembers(currentRoom());
@@ -306,14 +309,73 @@ function updateInput() {
   $("#new-room-button").disabled=state.sending;
   $("#emoji-button").disabled=isClosed();$("#code-button").disabled=isClosed();
   try{sessionStorage.setItem(draftKey(),$("#message-input").value);}catch{}
+  syncMentionHighlight();
 }
+function mentionMarkup(token){
+  const name=token.slice(1).toLowerCase(), tone=name==="codex"?"codex":name==="claude"?"claude":"all";
+  return '<span class="mention-token mention-'+tone+'">'+escapeHtml(token)+'</span>';
+}
+function highlightMentions(text){
+  let result="",start=0;
+  for(const match of text.matchAll(/(?<!\S)@(?:Codex|Claude|全体|地瓜)(?![A-Za-z0-9_])/gi)){
+    result+=escapeHtml(text.slice(start,match.index))+mentionMarkup(match[0]);start=match.index+match[0].length;
+  }
+  return result+escapeHtml(text.slice(start));
+}
+function syncMentionHighlight(){
+  const input=$("#message-input"),mirror=$("#input-highlight");
+  mirror.innerHTML=highlightMentions(input.value)+"\u200b";
+  mirror.style.width=input.clientWidth+"px";mirror.scrollTop=input.scrollTop;mirror.scrollLeft=input.scrollLeft;
+}
+function closeMentions(){
+  $("#mention-menu").hidden=true;mentionState.start=-1;mentionState.items=[];
+  $("#message-input").setAttribute("aria-expanded","false");$("#message-input").removeAttribute("aria-activedescendant");
+}
+function drawMentions(){
+  $("#mention-options").innerHTML=mentionState.items.map((item,i)=>'<button type="button" role="option" id="mention-option-'+i+'" data-mention-index="'+i+'" aria-selected="'+(i===mentionState.index)+'" tabindex="-1">'+(item.name==="全体"?'<span class="mention-everyone">@</span>':'<span class="avatar '+authors[item.name].className+'">'+authors[item.name].avatar+'</span>')+'<span class="mention-copy"><strong>'+escapeHtml(item.name==="全体"?"全体成员":item.name)+'</strong><small>'+escapeHtml(item.detail)+'</small></span></button>').join("");
+  $("#message-input").setAttribute("aria-activedescendant","mention-option-"+mentionState.index);
+}
+function refreshMentions(){
+  const input=$("#message-input");
+  if(mentionState.composing||input.readOnly||document.activeElement!==input||input.selectionStart!==input.selectionEnd){closeMentions();return;}
+  const before=input.value.slice(0,input.selectionStart), match=before.match(/(?:^|\s)@([^@\s]{0,20})$/);
+  if(!match){closeMentions();return;}
+  const start=before.lastIndexOf("@"), query=match[1].toLowerCase(), members=roomMembers(currentRoom()).filter(a=>a!=="用户");
+  const items=members.map(name=>({name,detail:state.providers[name]?.available?"群内可自动回复":"群成员 · 自动回复待连接"}));
+  if(members.length)items.push({name:"全体",detail:"提及本群所有助手"});
+  const filtered=items.filter(item=>(item.name==="全体"?"全体成员all":item.name.toLowerCase()).includes(query));
+  if(!filtered.length){closeMentions();return;}
+  if(start!==mentionState.start||mentionState.items.map(i=>i.name).join()!==filtered.map(i=>i.name).join())mentionState.index=0;
+  Object.assign(mentionState,{start,end:input.selectionStart,items:filtered});
+  $("#mention-menu").hidden=false;input.setAttribute("aria-expanded","true");drawMentions();
+  const probe=$("#input-caret-probe");probe.style.width=input.clientWidth+"px";probe.textContent=before;
+  const caret=document.createElement("span");caret.textContent="\u200b";probe.append(caret);probe.scrollTop=input.scrollTop;
+  const point=caret.getBoundingClientRect(),composer=$(".composer").getBoundingClientRect(),menu=$("#mention-menu");
+  menu.style.left=Math.max(8,Math.min(point.left-composer.left,composer.width-menu.offsetWidth-10))+"px";
+  menu.style.bottom=Math.max(35,composer.bottom-point.top+7)+"px";
+}
+function chooseMention(index){
+  const item=mentionState.items[index],input=$("#message-input");if(!item||mentionState.start<0)return;
+  const token="@"+item.name+" ";
+  if(input.value.length-(mentionState.end-mentionState.start)+token.length>input.maxLength)return;
+  input.setRangeText(token,mentionState.start,mentionState.end,"end");closeMentions();input.focus();updateInput();
+}
+$("#mention-options").addEventListener("mousedown",event=>event.preventDefault());
+$("#mention-options").addEventListener("click",event=>{const item=event.target.closest("[data-mention-index]");if(item)chooseMention(Number(item.dataset.mentionIndex));});
+$("#message-input").addEventListener("compositionstart",()=>{mentionState.composing=true;closeMentions();});
+$("#message-input").addEventListener("compositionend",()=>{mentionState.composing=false;updateInput();refreshMentions();});
+$("#message-input").addEventListener("click",refreshMentions);
+$("#message-input").addEventListener("keyup",event=>{if(["ArrowLeft","ArrowRight","Home","End"].includes(event.key))refreshMentions();});
+$("#message-input").addEventListener("scroll",()=>{syncMentionHighlight();if(!$("#mention-menu").hidden)refreshMentions();});
+$("#message-input").addEventListener("blur",closeMentions);
+window.addEventListener("resize",()=>{syncMentionHighlight();if(!$("#mention-menu").hidden)refreshMentions();});
 $("#message-input").value=readDraft();
 updateInput();
-$("#message-input").addEventListener("input",()=>{updateInput();$("#send-status").textContent="消息保存在本群";$("#send-status").className="";});
+$("#message-input").addEventListener("input",()=>{updateInput();refreshMentions();$("#send-status").textContent="消息保存在本群";$("#send-status").className="";});
 $("#message-form").addEventListener("submit",async event=>{
   event.preventDefault();
   const input=$("#message-input"),body=input.value.trim();if(!body||state.sending||isClosed())return;
-  const status=$("#send-status");state.sending=true;input.readOnly=true;updateInput();toggleEmoji(false);status.className="";status.textContent="正在发送…";
+  const status=$("#send-status");state.sending=true;input.readOnly=true;closeMentions();updateInput();toggleEmoji(false);status.className="";status.textContent="正在发送…";
   try {
     const target=$("#reply-target").value,targets=target==="all"?["Codex","Claude"]:target?[target]:[];
     const response=await fetch(roomUrl("/api/messages"),{method:"POST",headers:{"Content-Type":"application/json","X-Peptide-Room":"1"},body:JSON.stringify({title:"项目留言",body,targets})});
@@ -326,6 +388,12 @@ $("#message-form").addEventListener("submit",async event=>{
   finally {state.sending=false;input.readOnly=false;updateInput();input.focus();}
 });
 $("#message-input").addEventListener("keydown",event=>{
+  if(event.isComposing||event.keyCode===229||mentionState.composing)return;
+  if(!$("#mention-menu").hidden){
+    if(["ArrowDown","ArrowUp"].includes(event.key)){event.preventDefault();mentionState.index=(mentionState.index+(event.key==="ArrowDown"?1:-1)+mentionState.items.length)%mentionState.items.length;drawMentions();return;}
+    if((event.key==="Enter"&&!event.shiftKey)||event.key==="Tab"){event.preventDefault();chooseMention(mentionState.index);return;}
+    if(event.key==="Escape"){event.preventDefault();closeMentions();return;}
+  }
   if(event.key==="Enter"&&!event.shiftKey&&!event.isComposing&&event.keyCode!==229){event.preventDefault();$("#message-form").requestSubmit();}
 });
 function insertText(text) {

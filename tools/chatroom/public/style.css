@@ -326,3 +326,29 @@ dialog { background: #fafafa; color: #292929; }
 .live-heading button { border: 1px solid #ddd; color: #666; background: #fff; padding: 4px 8px; border-radius: 8px; font-size: 10px; }
 .reply-error { font-size: 12px; color: #9d6454; line-height: 1.8; }
 @media(max-width:600px) { #reply-help { display: none; } .live-replies { padding: 0 14px 16px; } .live-reply { gap: 9px; } }
+
+/* Plain textarea keeps native IME, selection, undo and paste; the mirror paints mentions. */
+.message-editor { position: relative; flex: 1; min-height: 32px; overflow: hidden; }
+.composer .message-editor textarea { position: absolute; inset: 0; height: 100%; color: transparent; -webkit-text-fill-color: transparent; caret-color: #383838; }
+.composer .message-editor textarea::placeholder { color: #969696; -webkit-text-fill-color: #969696; }
+.composer .message-editor textarea::selection { background: #c4d9ef88; }
+.input-mirror { position: absolute; inset: 0; padding: 9px 4px; font: inherit; font-size: 15px; line-height: 1.75; color: #383838; white-space: pre-wrap; overflow-wrap: break-word; overflow: hidden; pointer-events: none; }
+.caret-probe { visibility: hidden; }
+.mention-token { border-radius: 4px; background: #e9eff6; color: #426d91; }
+.mention-claude { background: #f8eae2; color: #aa583c; }
+.mention-all { background: #eeebf8; color: #73619d; }
+.user-message .mention-codex { background: #dce9f4; color: #335f86; }
+.user-message .mention-claude { background: #fae2d5; color: #975035; }
+.user-message .mention-all { background: #eae2fa; color: #6d579b; }
+.markdown .mention-token { padding: 2px 3px; font-weight: 500; }
+.mention-menu { position: absolute; z-index: 12; width: 252px; max-width: calc(100% - 20px); padding: 6px; border: 1px solid #e0e0e0; background: #fffffff5; backdrop-filter: blur(18px); border-radius: 13px; box-shadow: 0 8px 32px #00000017, 0 2px 5px #00000008; }
+.mention-caption { display: flex; justify-content: space-between; padding: 6px 7px 8px; color: #8b8b8b; font-size: 10px; }
+.mention-caption span { font-size: 9px; color: #aaa; }
+.mention-menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px; border: 0; border-radius: 8px; background: transparent; text-align: left; }
+.mention-menu button:hover, .mention-menu button[aria-selected=true] { background: #efefef; }
+.mention-menu .avatar, .mention-everyone { width: 30px; height: 30px; border-radius: 7px; flex: none; }
+.mention-everyone { display: grid; place-items: center; background: #eeeaf7; color: #73619d; font-size: 18px; }
+.mention-copy { display: flex; flex-direction: column; gap: 2px; }
+.mention-copy strong { font-size: 12px; font-weight: 500; color: #333; }
+.mention-copy small { font-size: 10px; color: #929292; }
+@media(max-width:480px) { .input-mirror { font-size: 14px; } }
