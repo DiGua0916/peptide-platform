@@ -14,6 +14,27 @@ import subprocess
 import threading
 import time
 import uuid
+from urllib.parse import urlparse
+
+
+def claude_environment():
+    """Match the user's enabled Windows proxy only when no CLI proxy is set."""
+    env = os.environ.copy()
+    explicit = ("http_proxy", "HTTP_PROXY", "https_proxy", "HTTPS_PROXY", "all_proxy", "ALL_PROXY")
+    if os.name != "nt" or any(env.get(key) for key in explicit):
+        return env
+    from urllib.request import getproxies_registry
+    proxies = getproxies_registry()
+    added = False
+    for scheme in ("http", "https"):
+        proxy = proxies.get(scheme, "")
+        parsed = urlparse(proxy)
+        if parsed.scheme in ("http", "https") and parsed.hostname:
+            env[scheme.upper()+"_PROXY"] = proxy
+            added = True
+    if added and not (env.get("NO_PROXY") or env.get("no_proxy")):
+        env["NO_PROXY"] = ",".join(filter(None, (proxies.get("no", ""), "localhost,127.0.0.1,::1")))
+    return env
 
 
 def codex_executable():
@@ -77,6 +98,7 @@ class LiveChat:
                     try:
                         status = subprocess.run([program]+args, cwd=workdir, capture_output=True,
                                                 encoding="utf-8", errors="replace", timeout=8,
+                                                env=claude_environment() if name == "Claude" else None,
                                                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
                         ready = status.returncode == 0
                         if name == "Claude":
@@ -305,7 +327,7 @@ class LiveChat:
              "--tools", "", "--strict-mcp-config", "--system-prompt",
              "你是 Claude 群聊文字助手。只回答本轮问题，不执行操作，不调用工具，不伪称完成工作。"],
             cwd=workdir, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-            encoding="utf-8", errors="replace", bufsize=1,
+            encoding="utf-8", errors="replace", bufsize=1, env=claude_environment(),
             creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
         events = queue.Queue()
         def reader():

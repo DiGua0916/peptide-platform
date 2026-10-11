@@ -5,17 +5,43 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 import room
-from live_chat import LiveChat, claude_event
+from live_chat import LiveChat, claude_event, claude_environment
 
 TEST_ROOT = Path("D:/Codex/Tasks/peptide-platform/work/chatroom/tests").resolve()
 if not str(TEST_ROOT).lower().startswith("d:\\codex\\tasks\\peptide-platform\\work\\chatroom\\"):
     raise RuntimeError("Unexpected test workspace")
 TEST_ROOT.mkdir(parents=True, exist_ok=True)
+
+
+class ClaudeNetworkTests(unittest.TestCase):
+    def test_enabled_windows_proxy_is_child_only_and_keeps_local_callback_direct(self):
+        with patch.dict("os.environ", {"SENTINEL": "unchanged"}, clear=True), patch("os.name", "nt"), \
+                patch("urllib.request.getproxies_registry", return_value={"http": "http://127.0.0.1:8800", "https": "http://127.0.0.1:8800"}, create=True):
+            env = claude_environment()
+            self.assertEqual(env["HTTPS_PROXY"], "http://127.0.0.1:8800")
+            self.assertEqual(env["HTTP_PROXY"], env["HTTPS_PROXY"])
+            self.assertIn("127.0.0.1", env["NO_PROXY"])
+            self.assertEqual(dict(room.os.environ), {"SENTINEL": "unchanged"})
+
+    def test_explicit_proxy_is_not_overridden(self):
+        for key in ("https_proxy", "HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY"):
+            with self.subTest(key=key), patch.dict("os.environ", {key: "http://chosen:8000", "NO_PROXY": "example.test"}, clear=True), \
+                    patch("os.name", "nt"), patch("urllib.request.getproxies_registry", create=True) as registry:
+                original = dict(room.os.environ)  # Windows normalizes environment keys to uppercase.
+                self.assertEqual(claude_environment(), original)
+                registry.assert_not_called()
+
+    def test_disabled_or_unsupported_proxy_does_not_change_environment(self):
+        for proxies in ({}, {"https": "socks5://127.0.0.1:8000"}):
+            with self.subTest(proxies=proxies), patch.dict("os.environ", {}, clear=True), patch("os.name", "nt"), \
+                    patch("urllib.request.getproxies_registry", return_value=proxies, create=True):
+                self.assertEqual(claude_environment(), {})
 
 
 class LiveChatTests(unittest.TestCase):
