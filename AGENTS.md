@@ -42,7 +42,7 @@ Run checks appropriate to changed behavior. State which checks actually ran; nev
 
 ## Project-only Markdown room (required)
 
-This rule applies only to peptide-platform. Do not extend it to other projects or global instructions.
+The default room rule below applies only to peptide-platform. On 2026-10-11 the user separately authorized opt-in cross-project rooms using CRK1 keys. When the user explicitly binds the current conversation to a CRK1 key, use the central helper D:/Codex/Projects/collaboration-chatrooms/room.py with that explicit --room key for every tail/post, instead of posting again to the default room. Each room has one independent Markdown file. Do not apply reporting to other projects without an explicit binding. See docs/CHATROOM.md.
 
 - At task start, read recent messages in D:/Codex/Projects/peptide-platform/docs/chat/ROOM.md using the main checkout's tools/chatroom/room.py tail --limit 12, plus relevant handoffs.
 - After each actual project work task, BEFORE the final user-facing reply, append a progress message as Codex or Claude. Include the task, completed work, changed files, checks actually run, remaining issues and next steps. Record partial/blocked work honestly.

@@ -1,7 +1,42 @@
 "use strict";
 const $ = (selector) => document.querySelector(selector);
-const state = {messages: [], author: "全部", query: "", revision: "", etag: "", loading: false, logPath: "", online: false, sending: false, expanded: new Set(), collapsed: new Set()};
-const authors = {Codex:{className:"codex",avatar:"&lt;/&gt;",role:"前端设计与开发"},Claude:{className:"claude",avatar:"✳",role:"后端业务与接口"},"用户":{className:"user",avatar:"你",role:"项目负责人"}};
+const state = {messages: [], rooms: [], roomId: new URLSearchParams(location.search).get("room") || "peptide", epoch: 0, author: "全部", query: "", revision: "", etag: "", loading: false, logPath: "", online: false, sending: false, expanded: new Set(), collapsed: new Set()};
+function roomUrl(path, roomId=state.roomId) {return path+"?room="+encodeURIComponent(roomId);}
+function currentRoom() {return state.rooms.find(r=>r.id===state.roomId);}
+function renderRooms() {
+  $("#room-count").textContent=String(state.rooms.length).padStart(2,"0");
+  $("#room-list").innerHTML=state.rooms.map(r=>'<button class="conversation '+(r.id===state.roomId?'selected':'')+'" data-room="'+escapeHtml(r.id)+'" aria-pressed="'+(r.id===state.roomId)+'" aria-label="'+escapeHtml(r.name)+'"><span class="group-avatar" aria-hidden="true"><span class="mini codex"><img src="/avatars/openai.svg" alt=""></span><span class="mini claude"><img src="/avatars/claude.svg" alt=""></span><span class="mini user"><img src="/avatars/digua.jpg" alt=""></span><span class="mini project"><svg><use href="#i-chat"/></svg></span></span><span class="conversation-copy"><span class="conversation-top"><strong>'+escapeHtml(r.name)+'</strong><time>'+escapeHtml(r.lastTime?formatTime(r.lastTime,true):'')+'</time></span><span class="conversation-preview">'+escapeHtml((r.lastPreview||'地瓜、Codex、Claude · 开始协作').replace(/^用户：/,"地瓜：").replace(/^你、/,"地瓜、"))+'</span></span></button>').join("");
+  const room=currentRoom();
+  $("#room-name").textContent=room?.name||"选择群聊";
+  $("#detail-room-name").textContent=room?.name||"";
+  $("#detail-project").textContent=room?.projectRoot||"暂未关联项目目录";
+  $("#detail-code").textContent=room?.code||"";
+  document.title=(room?.name||"协作群聊")+" · 项目聊天室";
+}
+let roomsLoading=false;
+async function refreshRooms() {
+  if(roomsLoading)return;roomsLoading=true;
+  const epoch=state.epoch;
+  try {
+    const response=await fetch("/api/rooms");if(!response.ok)throw Error();
+    const data=await response.json();if(epoch!==state.epoch)return;state.rooms=data.rooms;
+    const resolved=state.rooms.find(r=>[r.id,r.name,r.alias,r.code].some(key=>key.toLowerCase()===state.roomId.toLowerCase()));
+    if(resolved)state.roomId=resolved.id;
+    renderRooms();
+  }catch{if(!state.rooms.length)$("#room-list").innerHTML='<p class="rooms-error">暂时无法读取群聊列表</p>';}
+  finally{roomsLoading=false;}
+}
+async function switchRoom(id) {
+  if(state.sending)return;
+  updateInput();state.roomId=id;state.epoch++;state.loading=false;state.revision="";state.etag="";
+  state.messages=[];state.author="全部";state.query="";state.expanded.clear();state.collapsed.clear();$("#search").value="";
+  $("#message-input").value=readDraft();updateInput();
+  $("#send-status").textContent="留言后需提醒助手读取";$("#send-status").className="";
+  $("#warning").hidden=true;$("#jump-latest").hidden=true;toggleDetails(false);toggleSidebar(false);toggleEmoji(false);
+  history.replaceState(null,"",roomUrl("/"));renderRooms();render();
+  await refresh(true);
+}
+const authors = {Codex:{className:"codex",avatar:'<img src="/avatars/openai.svg" alt="">',role:"前端设计与开发"},Claude:{className:"claude",avatar:'<img src="/avatars/claude.svg" alt="">',role:"后端业务与接口"},"用户":{className:"user",avatar:'<img src="/avatars/digua.jpg" alt="">',role:"项目负责人"}};
 const kinds = {progress:"进度",message:"消息",decision:"决定",question:"待确认"};
 function escapeHtml(value) {return String(value).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function inlineMarkdown(text) {
@@ -52,22 +87,23 @@ function plainPreview(body) {
   return body.replace(/\[([^\]]+)\]\([^)]+\)/g,"$1").replace(/\*\*|`/g,"").replace(/^#{1,6}\s+/gm,"").replace(/^[-*]\s+/gm,"· ").trim();
 }
 function visibleMessages() {
-  return state.messages.filter(m => (state.author === "全部" || m.author === state.author) && (!state.query || (m.title+"\n"+m.body+"\n"+m.task+"\n"+m.author).toLowerCase().includes(state.query)));
+  return state.messages.filter(m => (state.author === "全部" || m.author === state.author) && (!state.query || (m.title+"\n"+m.body+"\n"+m.task+"\n"+m.author+"\n"+(m.author==="用户"?"地瓜":"")).toLowerCase().includes(state.query)));
 }
 function messageBody(message) {
   const long = message.body.length > 340 || message.body.split("\n").length > 10;
   const expanded = state.expanded.has(message.id) || (Boolean(state.query) && !state.collapsed.has(message.id));
-  const preview = plainPreview(message.body).replace(/\s+/g," ").slice(0,145).trimEnd();
+  const previewSource = message.body.replace(/^(?:\*\*[^\n]+\*\*|#{1,6}[^\n]+)\s*\n/, "");
+  const preview = plainPreview(previewSource).split("\n").filter(line=>line.trim()).slice(0,3).join("\n").slice(0,200).trimEnd();
   return '<div class="markdown" id="body-'+escapeHtml(message.id)+'">'+(long && !expanded ? '<p class="preview-text">'+escapeHtml(preview)+'…</p>' : renderMarkdown(message.body))+'</div>'+ (long ? '<button class="expand-message" data-expand="'+escapeHtml(message.id)+'" aria-controls="body-'+escapeHtml(message.id)+'" aria-expanded="'+expanded+'">'+(expanded?'收起':'展开全文')+'</button>' : '');
 }
 function render() {
   $("#total-count").textContent = state.messages.length;
   const latest = state.messages.at(-1);
-  $("#last-time").textContent = latest ? formatTime(latest.time,true) : "";
-  $("#last-preview").textContent = latest ? `${latest.author === "用户" ? "你" : latest.author}：${latest.kind === "message" ? plainPreview(latest.body) : latest.title}` : "你、Codex、Claude";
+  const active=currentRoom();
+  if(active){active.lastTime=latest?.time||"";active.lastPreview=latest?`${latest.author === "用户" ? "地瓜" : latest.author}：${latest.kind === "message" ? plainPreview(latest.body) : latest.title}`:"地瓜、Codex、Claude · 开始协作";renderRooms();}
   const messages = visibleMessages(), filtered = state.author !== "全部" || Boolean(state.query);
   $("#filter-bar").hidden = !filtered;
-  $("#filter-label").textContent = [state.author !== "全部" ? (state.author === "用户" ? "你" : state.author) : "", state.query ? `“${state.query}”` : "", `${messages.length} 条消息`].filter(Boolean).join(" · ");
+  $("#filter-label").textContent = [state.author !== "全部" ? (state.author === "用户" ? "地瓜" : state.author) : "", state.query ? `“${state.query}”` : "", `${messages.length} 条消息`].filter(Boolean).join(" · ");
   document.querySelectorAll("[data-author]").forEach(button => {
     const selected = button.dataset.author === state.author;
     button.classList.toggle("selected", selected);button.setAttribute("aria-pressed",String(selected));
@@ -85,7 +121,7 @@ function render() {
     const time = showTime ? '<div class="time-divider"><time datetime="'+escapeHtml(m.time)+'">'+escapeHtml(formatTime(m.time))+'</time></div>' : '';
     const title = m.kind !== "message" || m.title !== "项目留言" ? '<h2 class="message-title">'+escapeHtml(m.title)+'</h2>' : '';
     const meta = m.kind !== "message" || m.task ? '<div class="message-meta"><span>'+escapeHtml(kinds[m.kind] || "消息")+'</span>'+(m.task ? '<span>'+escapeHtml(m.task)+'</span>' : '')+'</div>' : '';
-    return time+'<article class="message '+(isUser ? 'user-message' : '')+'" id="message-'+escapeHtml(m.id)+'"><span class="avatar '+author.className+'" aria-hidden="true">'+author.avatar+'</span><div class="message-content"><div class="sender" title="'+escapeHtml(formatTime(m.time))+'">'+escapeHtml(isUser ? "你" : m.author)+'</div><div class="bubble">'+title+messageBody(m)+meta+'</div></div></article>';
+    return time+'<article class="message '+(isUser ? 'user-message' : '')+'" id="message-'+escapeHtml(m.id)+'"><span class="avatar '+author.className+'" aria-hidden="true">'+author.avatar+'</span><div class="message-content"><div class="sender" title="'+escapeHtml(formatTime(m.time))+'"><span>'+escapeHtml(isUser ? "地瓜" : m.author)+'</span><time datetime="'+escapeHtml(m.time)+'">'+escapeHtml(formatTime(m.time,true))+'</time></div><div class="bubble">'+title+messageBody(m)+meta+'</div></div></article>';
   }).join("");
 }
 function atBottom() {
@@ -102,12 +138,14 @@ function setConnection(online) {
 }
 async function refresh(force=false) {
   if(state.loading) return;
+  const epoch=state.epoch, requestedRoom=state.roomId;
   state.loading=true;
   try {
-    const response = await fetch("/api/messages",{headers:force||!state.etag?{}:{"If-None-Match":state.etag}});
+    const response = await fetch(roomUrl("/api/messages",requestedRoom),{headers:force||!state.etag?{}:{"If-None-Match":state.etag}});
+    if(epoch!==state.epoch)return;
     if(response.status===304){setConnection(true);return;}
-    if(!response.ok) throw Error("读取失败");
-    const data=await response.json();state.etag=response.headers.get("ETag")||"";
+    if(!response.ok){const error=await response.json();throw Error(error.error||"读取失败");}
+    const data=await response.json();if(epoch!==state.epoch)return;state.etag=response.headers.get("ETag")||"";
     const changed=state.revision!==data.revision, wasLoaded=Boolean(state.revision), oldCount=state.messages.length;
     const nearBottom=atBottom(), oldScroll=$("#timeline").scrollTop;
     state.messages=data.messages;state.revision=data.revision;state.logPath=data.logPath;
@@ -118,10 +156,11 @@ async function refresh(force=false) {
       else {$("#timeline").scrollTop=oldScroll;if(oldCount<data.messages.length) $("#jump-latest").hidden=false;}
     }
     setConnection(true);
-  } catch {
+  } catch(error) {
+    if(epoch!==state.epoch)return;
     setConnection(false);
-    if(!state.revision) $("#messages").innerHTML='<div class="empty">暂时无法读取记录<p>请重新打开“打开项目聊天室.cmd”，再点击刷新。</p></div>';
-  } finally {state.loading=false;}
+    if(!state.revision) $("#messages").innerHTML='<div class="empty">暂时无法读取记录<p>'+escapeHtml(error.message||"请重新打开聊天室")+'</p></div>';
+  } finally {if(epoch===state.epoch)state.loading=false;}
 }
 function clearFilters() {
   state.author="全部";state.query="";$("#search").value="";render();scrollToLatest();
@@ -153,7 +192,7 @@ document.querySelectorAll("[data-author]").forEach(button=>button.addEventListen
 $("#search").addEventListener("input",event=>{state.query=event.target.value.trim().toLowerCase();state.collapsed.clear();render();$("#timeline").scrollTop=0;$("#jump-latest").hidden=true;});
 $("#search").addEventListener("keydown",event=>{if(event.key==="Enter"){toggleSidebar(false);$("#timeline").focus();}});
 $("#clear-filter").addEventListener("click",clearFilters);
-$("#room-button").addEventListener("click",()=>{clearFilters();toggleSidebar(false);$("#message-input").focus();});
+$("#room-list").addEventListener("click",event=>{const button=event.target.closest("[data-room]");if(button)switchRoom(button.dataset.room);});
 $("#chat-button").addEventListener("click",()=>{clearFilters();toggleDetails(false);$("#message-input").focus();});
 $("#find-button").addEventListener("click",()=>{toggleDetails(false);toggleSidebar(true);$("#search").focus();});
 $("#open-sidebar").addEventListener("click",()=>{toggleDetails(false);toggleSidebar(!$("#sidebar").classList.contains("is-open"));});
@@ -163,12 +202,24 @@ $("#close-details").addEventListener("click",()=>{toggleDetails(false);$(".heade
 $("#refresh").addEventListener("click",()=>refresh(true));
 $("#jump-latest").addEventListener("click",clearFilters);
 $("#timeline").addEventListener("scroll",()=>{if(atBottom()&&!state.query&&state.author==="全部")$("#jump-latest").hidden=true;});
-const draftKey="peptide-room-draft-v1";
+function draftKey() {return "collaboration-room-draft-v2-"+state.roomId;}
+function readDraft() {
+  try {
+    const saved=sessionStorage.getItem(draftKey());
+    if(saved!==null)return saved;
+    if(state.roomId==="peptide"){
+      const legacy=sessionStorage.getItem("peptide-room-draft-v1");
+      if(legacy!==null){sessionStorage.setItem(draftKey(),legacy);sessionStorage.removeItem("peptide-room-draft-v1");return legacy;}
+    }
+  }catch{}
+  return "";
+}
 function updateInput() {
   $("#send-button").disabled=state.sending || !$("#message-input").value.trim();
-  try{sessionStorage.setItem(draftKey,$("#message-input").value);}catch{}
+  $("#new-room-button").disabled=state.sending;
+  try{sessionStorage.setItem(draftKey(),$("#message-input").value);}catch{}
 }
-try{$("#message-input").value=sessionStorage.getItem(draftKey)||"";}catch{}
+$("#message-input").value=readDraft();
 updateInput();
 $("#message-input").addEventListener("input",()=>{updateInput();$("#send-status").textContent="留言后需提醒助手读取";$("#send-status").className="";});
 $("#message-form").addEventListener("submit",async event=>{
@@ -176,7 +227,7 @@ $("#message-form").addEventListener("submit",async event=>{
   const input=$("#message-input"),body=input.value.trim();if(!body||state.sending)return;
   const status=$("#send-status");state.sending=true;input.readOnly=true;updateInput();toggleEmoji(false);status.className="";status.textContent="正在发送…";
   try {
-    const response=await fetch("/api/messages",{method:"POST",headers:{"Content-Type":"application/json","X-Peptide-Room":"1"},body:JSON.stringify({title:"项目留言",body})});
+    const response=await fetch(roomUrl("/api/messages"),{method:"POST",headers:{"Content-Type":"application/json","X-Peptide-Room":"1"},body:JSON.stringify({title:"项目留言",body})});
     const data=await response.json();if(!response.ok)throw Error(data.error||"保存失败");
     input.value="";status.textContent="已保存 · 请提醒助手读取";status.className="success";
     state.author="全部";state.query="";$("#search").value="";
@@ -199,10 +250,35 @@ $("#code-button").addEventListener("click",()=>{if(!insertText("\n```\n\n```\n")
 document.addEventListener("click",event=>{if(!event.target.closest("#emoji-button, #emoji-picker"))toggleEmoji(false);});
 document.addEventListener("keydown",event=>{if(event.key==="Escape"){toggleEmoji(false);toggleDetails(false);toggleSidebar(false);}});
 document.querySelectorAll("[data-source]").forEach(button=>button.addEventListener("click",async()=>{
+  const sourceRoom=state.roomId;
   const dialog=$("#source-dialog");$("#source-content").textContent="正在读取…";$("#source-path").textContent=state.logPath;dialog.showModal();
-  try{const response=await fetch("/room.md");if(!response.ok)throw Error();$("#source-content").textContent=await response.text();}catch{$("#source-content").textContent="读取失败，请检查服务是否运行。";}
+  try{const response=await fetch(roomUrl("/room.md",sourceRoom));if(!response.ok)throw Error();const content=await response.text();if(sourceRoom===state.roomId&&dialog.open)$("#source-content").textContent=content;}catch{if(sourceRoom===state.roomId&&dialog.open)$("#source-content").textContent="读取失败，请检查服务是否运行。";}
 }));
 $("#close-source").addEventListener("click",()=>$("#source-dialog").close());
 $("#copy-source").addEventListener("click",async()=>{try{await navigator.clipboard.writeText($("#source-content").textContent);$("#copy-source").textContent="已复制";}catch{$("#copy-source").textContent="请选中原文复制";}setTimeout(()=>$("#copy-source").textContent="复制原文",1800);});
-refresh();setInterval(()=>{if(!document.hidden)refresh();},2500);
-document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh(true);});
+document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>document.getElementById(b.dataset.close).close()));
+$("#new-room-button").addEventListener("click",()=>{$("#create-room-status").textContent="";$("#create-room-dialog").showModal();});
+async function openJoin() {
+  const room=currentRoom();if(!room)return;
+  $("#join-room-name").textContent=room.name;$("#join-code").textContent=room.code;$("#join-status").textContent="";
+  $("#join-instructions").value="";$("#copy-join-instructions").disabled=true;$("#join-dialog").showModal();
+  try {const response=await fetch(roomUrl("/api/join",room.id));if(!response.ok)throw Error();const data=await response.json();if($("#join-dialog").open&&$("#join-code").textContent===room.code){$("#join-instructions").value=data.instructions;$("#copy-join-instructions").disabled=false;}}
+  catch{if($("#join-dialog").open&&$("#join-code").textContent===room.code)$("#join-status").textContent="接入说明读取失败，请稍后重试。";}
+}
+document.querySelectorAll("[data-join]").forEach(b=>b.addEventListener("click",openJoin));
+async function copyJoin(text) {try{await navigator.clipboard.writeText(text);$("#join-status").textContent="已复制，可以粘贴到助手的新会话中。";}catch{$("#join-status").textContent="复制不可用，请手动选中上方内容复制。";}}
+$("#copy-room-key").addEventListener("click",()=>copyJoin($("#join-code").textContent));
+$("#copy-join-instructions").addEventListener("click",()=>copyJoin($("#join-instructions").value));
+$("#create-room-form").addEventListener("submit",async event=>{
+  event.preventDefault();const button=$("#create-room-submit");if(button.disabled)return;button.disabled=true;$("#create-room-status").textContent="正在创建…";
+  try {
+    const response=await fetch("/api/rooms",{method:"POST",headers:{"Content-Type":"application/json","X-Peptide-Room":"1"},body:JSON.stringify({name:$("#new-room-name").value.trim(),projectRoot:$("#new-room-project").value.trim()})});
+    const data=await response.json();if(!response.ok)throw Error(data.error||"创建失败");
+    state.rooms.push(data);$("#create-room-dialog").close();$("#create-room-form").reset();await switchRoom(data.id);await openJoin();
+  }catch(error){$("#create-room-status").textContent=error.message||"创建失败，请稍后重试。";}
+  finally{button.disabled=false;}
+});
+async function bootstrap(){await refreshRooms();$("#message-input").value=readDraft();updateInput();await refresh(true);}
+bootstrap();setInterval(()=>{if(!document.hidden)refresh();},2500);
+setInterval(()=>{if(!document.hidden)refreshRooms();},10000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden){refresh(true);refreshRooms();}});

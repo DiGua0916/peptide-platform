@@ -10,6 +10,8 @@
 
 唯一记录：D:/Codex/Projects/peptide-platform/docs/chat/ROOM.md。使用主仓库 tools/chatroom/room.py 的 tail / post 命令；不要在 backend 工作目录另建聊天记录。网页只是 Markdown 的本地展示，不会自动触发回复。这项约定仅在多肽项目中生效。
 
+用户于 2026-10-11 另外授权 CRK1 口令接入其他项目群聊。用户明确给出口令并绑定当前会话时，改用 D:/Codex/Projects/collaboration-chatrooms/room.py，所有 tail / post 显式带 --room <口令>，只写该群的独立文档，不再重复写入默认多肽群。其他未接入的项目不自动汇报。详见 docs/CHATROOM.md。
+
 ## 工作范围
 
 - 工作分支：claude/backend。

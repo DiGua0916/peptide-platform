@@ -141,5 +141,99 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, 404)
 
 
+class MultiRoomTests(unittest.TestCase):
+    setUp = HttpTests.setUp
+    tearDown = HttpTests.tearDown
+    request = HttpTests.request
+
+    def test_each_room_has_its_own_document_and_history(self):
+        before = self.path.read_bytes()
+        with self.request("/api/rooms", {"name": "隔离项目甲"}) as response:
+            first = json.load(response)
+        with self.request("/api/rooms", {"name": "隔离项目乙"}) as response:
+            second = json.load(response)
+        self.assertNotEqual(first["code"], second["code"])
+        self.assertNotEqual(first["logPath"], second["logPath"])
+        for entry, content in [(first, "只在甲群"), (second, "只在乙群")]:
+            self.request("/api/messages?room="+entry["id"], {"body": content}).close()
+            with self.request("/api/messages?room="+entry["code"]) as response:
+                messages = json.load(response)["messages"]
+            self.assertEqual([m["body"] for m in messages], [content])
+            self.assertEqual(messages[0]["author"], "用户")
+            self.assertEqual([p.name for p in Path(entry["logPath"]).parent.iterdir()], ["ROOM.md"])
+        with self.request("/room.md?room="+first["id"]) as response:
+            self.assertNotIn("只在乙群", response.read().decode())
+        self.assertEqual(before, self.path.read_bytes())
+
+    def test_code_resolves_after_registry_reopen_and_join_is_read_only(self):
+        entry = self.server.registry.create("重载群聊")
+        room.append_message("Claude", "后端进度", "这是隔离测试内容", path=Path(entry["logPath"]))
+        before = Path(entry["logPath"]).read_bytes()
+        registry = room.RoomRegistry(self.server.registry.root, self.path)
+        resolved = room.join_context(registry, entry["code"].lower())
+        self.assertEqual(resolved["room"], entry)
+        self.assertEqual(resolved["messages"][0]["author"], "Claude")
+        self.assertIn("--room "+entry["code"], resolved["instructions"])
+        self.assertEqual(before, Path(entry["logPath"]).read_bytes())
+        self.assertRegex(entry["code"], r"^CRK1-(?:[2-9A-HJ-NP-Z]{4}-){3}[2-9A-HJ-NP-Z]{4}$")
+
+    def test_blank_project_creates_folder_without_reusing_existing_data(self):
+        base = self.server.registry.projects_root
+        base.mkdir(parents=True, exist_ok=True)
+        existing = base / "自动目录"
+        existing.mkdir()
+        marker = existing / "原有文件.txt"
+        marker.write_text("保留", encoding="utf-8")
+        entry = self.server.registry.create("自动目录")
+        project = Path(entry["projectRoot"])
+        self.assertTrue(project.is_dir())
+        self.assertEqual(project.parent, base)
+        self.assertNotEqual(project, existing)
+        self.assertEqual(marker.read_text(encoding="utf-8"), "保留")
+        self.assertEqual(list(project.iterdir()), [])
+        reserved = self.server.registry.create("CON")
+        self.assertEqual(Path(reserved["projectRoot"]).name, "项目-CON")
+        attached = self.server.registry.create("关联已有目录", str(existing))
+        self.assertEqual(Path(attached["projectRoot"]), existing)
+
+    def test_unknown_code_never_falls_back_to_default(self):
+        original = self.path.read_bytes()
+        for method in (None, {"body": "不能写到默认群"}):
+            with self.assertRaises(HTTPError) as caught:
+                self.request("/api/messages?room=unknown-code", method)
+            self.assertEqual(caught.exception.code, 400)
+        self.assertEqual(original, self.path.read_bytes())
+
+    def test_room_creation_validates_names_paths_and_origin(self):
+        for payload in [{"name": "../escape"}, {"name": ""}, {"name": "多肽项目群"},
+                        {"name": "目录校验", "projectRoot": "C:/Windows"}]:
+            with self.assertRaises(HTTPError) as caught:
+                self.request("/api/rooms", payload)
+            self.assertEqual(caught.exception.code, 400)
+        with self.assertRaises(HTTPError) as caught:
+            self.request("/api/rooms", {"name": "不允许外部创建"}, {"Origin": "https://example.com"})
+        self.assertEqual(caught.exception.code, 403)
+        self.assertEqual(len(self.server.registry.read()), 1)
+
+    def test_concurrent_creation_preserves_all_rooms_and_unique_keys(self):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
+            entries = list(pool.map(lambda i: self.server.registry.create(f"并发群 {i}"), range(12)))
+        self.assertEqual(len(self.server.registry.read()), 13)
+        self.assertEqual(len({r["code"] for r in entries}), 12)
+        self.assertEqual(len({r["logPath"] for r in entries}), 12)
+
+    def test_room_etags_are_distinct_and_records_cannot_impersonate(self):
+        a = self.server.registry.create("缓存甲")
+        b = self.server.registry.create("缓存乙")
+        with self.request("/api/messages?room="+a["id"]) as response:
+            etag = response.headers["ETag"]
+        with self.request("/api/messages?room="+b["id"], extra={"If-None-Match": etag}) as response:
+            self.assertEqual(response.status, 200)
+        with self.request("/api/messages?room="+a["code"], {"body": "署名检查", "author": "Claude"}) as response:
+            self.assertEqual(json.load(response)["author"], "用户")
+        with self.request("/api/join?room="+a["code"]) as response:
+            self.assertEqual(json.load(response)["room"]["id"], a["id"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
