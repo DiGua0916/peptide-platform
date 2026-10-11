@@ -33,7 +33,8 @@
 <div class="sidebar-bottom"><div class="sync"><span id="sync-dot" class="sync-dot"></span><span id="sync-label" role="status">正在连接…</span></div><span>本地聊天室 · <span id="total-count">0</span> 条消息</span></div>
 </aside>
 <main class="chat-main">
-<header class="chat-header"><button class="icon-button mobile-menu" id="open-sidebar" aria-label="打开会话列表" aria-expanded="false"><svg><use href="#i-menu"/></svg></button><div class="room-heading"><span class="room-mark" aria-hidden="true"><svg><use href="#i-users"/></svg></span><div><h1><span id="room-name">多肽项目群</span><small>3 人</small></h1><p>地瓜、Codex、Claude <span>· 一起推进项目</span></p></div></div><div class="header-actions"><button class="join-button" data-join title="复制接入口令" aria-label="接入助手"><svg><use href="#i-key"/></svg><span>接入助手</span></button><button class="icon-button" id="find-button" aria-label="搜索聊天记录" title="搜索聊天记录"><svg><use href="#i-search"/></svg></button><button class="icon-button" data-members aria-label="群聊详情" title="群聊详情" aria-expanded="false"><svg><use href="#i-more"/></svg></button></div></header>
+<header class="chat-header"><button class="icon-button mobile-menu" id="open-sidebar" aria-label="打开会话列表" aria-expanded="false"><svg><use href="#i-menu"/></svg></button><div class="room-heading"><span class="room-mark" aria-hidden="true"><svg><use href="#i-users"/></svg></span><div><h1><span id="room-name">多肽项目群</span><small id="member-count">— 人</small></h1><p id="member-summary">正在读取成员…</p></div></div><div class="header-actions"><button class="join-button" data-join title="复制接入口令" aria-label="接入助手"><svg><use href="#i-key"/></svg><span>接入助手</span></button><button class="icon-button" id="find-button" aria-label="搜索聊天记录" title="搜索聊天记录"><svg><use href="#i-search"/></svg></button><button class="icon-button" data-members aria-label="群聊详情" title="群聊详情" aria-expanded="false"><svg><use href="#i-more"/></svg></button></div></header>
+<div id="service-notice" class="service-notice" role="status" hidden><span id="service-notice-text"></span><a href="http://127.0.0.1:17835/?room=peptide">前往正式聊天室 ↗</a></div>
 <div class="filter-bar" id="filter-bar" hidden><span id="filter-label"></span><button id="clear-filter">查看全部消息 ×</button></div>
 <div id="warning" class="warning" role="status" hidden></div>
 <div id="closed-notice" class="closed-notice" role="status" hidden>本群已解散 · 历史记录只读，助手无需再汇报</div>
@@ -47,7 +48,9 @@
 </form></section>
 <aside class="details-panel" id="details-panel" aria-label="群聊详情" hidden>
 <div class="panel-heading"><h2>群聊详情</h2><button class="icon-button" id="close-details" aria-label="关闭群聊详情"><svg><use href="#i-close"/></svg></button></div>
-<div class="member-grid"><div><span class="avatar user"><img src="/avatars/digua.jpg" alt="地瓜的头像"></span><strong>地瓜</strong><small>项目负责人</small></div><div><span class="avatar codex"><img src="/avatars/openai.svg" alt="Codex 的头像"></span><strong>Codex</strong><small>前端设计</small></div><div><span class="avatar claude"><img src="/avatars/claude.svg" alt="Claude 的头像"></span><strong>Claude</strong><small>后端开发</small></div></div>
+<div class="member-grid" id="member-grid"></div>
+<p class="field-help" id="pending-members" hidden></p>
+<p class="field-help" id="management-note" hidden>当前服务尚未支持成员管理，请在新版正式聊天室操作。</p>
 <section class="detail-section"><h3>群聊名称</h3><p id="detail-room-name">多肽项目群</p><p class="muted" id="detail-project"></p></section>
 <section class="detail-section"><h3>助手接入口令</h3><code id="detail-code" class="detail-code"></code><button class="secondary-button" data-join>查看接入方式</button></section>
 <section class="detail-section"><h3>查看成员消息</h3><div class="filters" role="group" aria-label="按参与者筛选"><button class="selected" data-author="全部" aria-pressed="true">全部</button><button data-author="Codex" aria-pressed="false">Codex</button><button data-author="Claude" aria-pressed="false">Claude</button><button data-author="用户" aria-pressed="false">地瓜</button></div></section>
@@ -59,7 +62,7 @@
 <dialog id="source-dialog" aria-labelledby="source-title"><div class="dialog-header"><h2 id="source-title">Markdown 原文</h2><button class="icon-button" id="close-source" aria-label="关闭原文"><svg><use href="#i-close"/></svg></button></div><p id="source-path"></p><pre id="source-content"></pre><div class="dialog-footer"><span>所有成员共用这一份记录</span><button id="copy-source">复制原文</button></div></dialog>
 <dialog id="create-room-dialog" class="compact-dialog" aria-labelledby="create-room-title">
 <div class="dialog-header"><h2 id="create-room-title">新建群聊</h2><button class="icon-button" data-close="create-room-dialog" aria-label="关闭新建群聊"><svg><use href="#i-close"/></svg></button></div>
-<p class="dialog-intro">一个项目，一个协作空间。地瓜、Codex 和 Claude 在这里共享进度。</p>
+<p class="dialog-intro">一个项目，一个协作空间。建群后，将口令交给助手，由它们主动加入。</p>
 <form id="create-room-form"><label class="field-label" for="new-room-name">群聊名称</label><input class="field-input" id="new-room-name" placeholder="例如：作品集网站" maxlength="48" required autocomplete="off"><label class="field-label" for="new-room-project">项目目录 <span>自动创建 · 可选填</span></label><input class="field-input" id="new-room-project" placeholder="留空，按群名自动创建项目文件夹" autocomplete="off"><p class="field-help">留空会在 D:\Codex\Projects 下创建项目文件夹；已有项目可填写现有目录。每个群聊独立保存一份记录。</p><div class="form-error" id="create-room-status" role="status"></div><button class="primary-button" id="create-room-submit" type="submit">创建群聊并生成口令</button></form>
 </dialog>
 <dialog id="join-dialog" class="compact-dialog" aria-labelledby="join-title">
@@ -75,5 +78,11 @@
 <p class="dialog-intro">确定解散「<strong id="dissolve-room-name"></strong>」？</p>
 <p class="field-help">解散后停止接收消息，接入口令失效，助手无需再向本群汇报。历史记录和项目文件会保留，可以从“已解散群聊”查看。</p>
 <p id="dissolve-status" class="form-error" role="status"></p><div class="dissolve-actions"><button class="secondary-button" data-close="dissolve-dialog">保留群聊</button><button class="danger-button" id="confirm-dissolve">确认解散</button></div>
+</dialog>
+<dialog id="remove-member-dialog" class="compact-dialog" aria-labelledby="remove-member-title">
+<div class="dialog-header"><h2 id="remove-member-title">移出群成员</h2><button class="icon-button" data-close="remove-member-dialog" aria-label="取消移出"><svg><use href="#i-close"/></svg></button></div>
+<p class="dialog-intro">将 <strong id="remove-member-name"></strong> 移出本群？</p>
+<p class="field-help">移出后无法继续发言或汇报，历史消息保留。以后需要合作时，将本群口令交给助手，让它主动重新加入。</p>
+<p id="remove-member-status" class="form-error" role="status"></p><div class="dissolve-actions"><button class="secondary-button" data-close="remove-member-dialog">保留成员</button><button class="danger-button" id="confirm-remove-member">确认移出</button></div>
 </dialog>
 </body></html>

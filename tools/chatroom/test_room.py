@@ -234,9 +234,68 @@ class MultiRoomTests(unittest.TestCase):
         with self.request("/api/join?room="+a["code"]) as response:
             self.assertEqual(json.load(response)["room"]["id"], a["id"])
 
+    def test_new_room_only_owner_and_explicit_join_is_idempotent(self):
+        registry = self.server.registry
+        entry = registry.create("主动加入")
+        self.assertEqual(entry["members"], ["用户"])
+        before = Path(entry["logPath"]).read_bytes()
+        self.assertIsNone(room.join_context(registry, entry["code"])["joinedAs"])
+        self.assertEqual(registry.resolve(entry["id"])["members"], ["用户"])
+        joined = room.join_context(registry, entry["code"], author="Claude")
+        self.assertEqual(joined["joinedAs"], "Claude")
+        self.assertEqual(joined["room"]["members"], ["用户", "Claude"])
+        self.assertEqual(joined["room"], registry.join(entry["id"], "Claude"))
+        self.assertEqual(before, Path(entry["logPath"]).read_bytes())
+
+    def test_removal_blocks_posts_preserves_history_and_allows_invited_rejoin(self):
+        registry = self.server.registry
+        entry = registry.create("成员验证")
+        for author in ("Codex", "Claude"):
+            registry.join(entry["code"], author)
+        registry.post(entry["id"], "Claude", "隔离测试", "保留历史")
+        before = Path(entry["logPath"]).read_bytes()
+        removed = registry.remove_member(entry["id"], "Claude")
+        self.assertEqual(removed["members"], ["用户", "Codex"])
+        self.assertEqual(removed, registry.remove_member(entry["id"], "Claude"))
+        self.assertEqual(before, Path(entry["logPath"]).read_bytes())
+        with self.assertRaises(room.RoomMemberError):
+            registry.post(entry["id"], "Claude", "拒绝", "不能继续汇报")
+        registry.post(entry["id"], "Codex", "保留成员", "正常汇报")
+        registry.join(entry["id"], "Claude")
+        registry.post(entry["id"], "Claude", "重新加入", "允许新消息")
+        registry.dissolve(entry["id"])
+        with self.assertRaises(room.RoomClosedError):
+            registry.join(entry["id"], "Claude")
+
+    def test_http_member_removal_validates_request_and_invalidates_etag(self):
+        with self.request("/api/messages?room=peptide") as response:
+            etag = response.headers["ETag"]
+        for payload, extra, status in [({}, None, 400),
+                ({"room":"peptide", "author":"用户"}, None, 400),
+                ({"room":"peptide", "author":"Claude"}, {"Origin":"https://example.com"}, 403)]:
+            with self.assertRaises(HTTPError) as caught:
+                self.request("/api/rooms/remove-member", payload, extra)
+            self.assertEqual(caught.exception.code, status)
+        with self.request("/api/rooms/remove-member", {"room":"peptide", "author":"Claude"}) as response:
+            self.assertEqual(json.load(response)["members"], ["用户", "Codex"])
+        with self.request("/api/messages?room=peptide", extra={"If-None-Match":etag}) as response:
+            self.assertEqual(response.status, 200)
+            self.assertNotEqual(response.headers["ETag"], etag)
+        with self.request("/api/join?room=peptide") as response:
+            self.assertNotIn("Claude", json.load(response)["room"]["members"])
+
+    def test_concurrent_joins_preserve_members_and_other_rooms(self):
+        registry = self.server.registry
+        entry = registry.create("并发入群")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            list(pool.map(lambda a: registry.join(entry["id"], a), ("Codex", "Claude")))
+        self.assertEqual(set(registry.resolve(entry["id"])["members"]), set(room.AUTHORS))
+        self.assertEqual(len(registry.read()), 2)
+
     def test_dissolution_preserves_history_and_projects_but_blocks_posts(self):
         registry = self.server.registry
         entry = registry.create("准备解散")
+        registry.join(entry["code"], "Codex")
         registry.post(entry["code"], "Codex", "已完成", "保留这条记录")
         before = Path(entry["logPath"]).read_bytes()
         closed = registry.dissolve(entry["code"])

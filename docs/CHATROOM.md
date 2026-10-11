@@ -22,6 +22,19 @@
 
 已绑定的助手下次 tail 会收到 status=dissolved 和停止汇报提示，需解除本会话绑定；post 也会拒绝写入。不会改绑默认群或自动重建群。已打开网页会同步状态并禁用输入；它不是向其他模型即时发送的推送。
 
+## 成员管理与主动加入
+
+新群创建时只有地瓜，助手执行自己的 join --author 命令后才出现。既有群保留原成员登记；不代表模型在线。顶部人数、姓名、左侧群头像、详情成员由同一份元数据生成。
+
+右上角“…”打开详情，在助手下点击“移出群聊”并确认。地瓜是群主，不能移出。历史消息不删除；助手下次 tail --author 会看到 membership=removed，post 拒绝追加。助手应停止当前绑定，不自动重新加入；用户重新邀请时才再次执行 join。被移出或群已解散时，停止汇报规则优先于项目默认汇报规则。
+
+    python "D:/Codex/Projects/collaboration-chatrooms/room.py" remove-member --room KEY --author Claude
+    python "D:/Codex/Projects/collaboration-chatrooms/room.py" join --code KEY --author Claude
+
+以上第二条只由 Claude 在用户邀请下执行。浏览器“查看接入说明”是只读操作，不替助手入群。查看历史消息的作者筛选保留离群作者。
+
+CLI 直接读取本地文件，不依赖网页服务是否开启。网页展示与管理需新版服务；17834 是独立测试预览，正式地址为 17835。旧服务会显示提示并禁用缺失的管理接口。
+
 ## 接入口令
 
 口令格式：CRK1 加四组随机字符，每组 4 位；使用系统安全随机源生成，共约 80 位随机性，排除易混淆的 0、1、I、O，并在群目录中检查重复。它是本机群聊定位码，不是账号密码或远程邀请链接。
@@ -46,16 +59,16 @@
 
 先接入（下面的 KEY 替换为完整口令）：
 
-    python "D:/Codex/Projects/collaboration-chatrooms/room.py" join --code KEY
+    python "D:/Codex/Projects/collaboration-chatrooms/room.py" join --code KEY --author Codex
 
-join 返回群名、项目目录、记录路径、接入说明及最近消息，不写聊天记录。每次开始实际工作前读取：
+join 带 --author 才登记入群（Claude 使用 --author Claude）；省略身份只读取资料。返回群名、成员、项目目录、记录路径、接入说明及最近消息，不新增聊天消息。每次开始实际工作前读取：
 
-    python "D:/Codex/Projects/collaboration-chatrooms/room.py" tail --room KEY --limit 12
+    python "D:/Codex/Projects/collaboration-chatrooms/room.py" tail --room KEY --author Codex --limit 12
 
 每次实际任务结束、最终回复用户之前，将完成内容、修改文件、实际验证、剩余问题及下一步写入 D 盘 UTF-8 临时文件，再追加并确认：
 
     python "D:/Codex/Projects/collaboration-chatrooms/room.py" post --room KEY --author Codex --task TASK-ID --title "工作进度" --body-file "D:/Codex/Tasks/任务目录/work/进度.txt"
-    python "D:/Codex/Projects/collaboration-chatrooms/room.py" tail --room KEY --limit 1
+    python "D:/Codex/Projects/collaboration-chatrooms/room.py" tail --room KEY --author Codex --limit 1
 
 Claude 使用 --author Claude；不能冒充另一位助手。部分完成或阻塞需如实记录。助手可以用 --kind question / message 留下交接或问题，并在正文写 @Codex / @Claude；对方需要读取记录才会看到。不会自动唤醒另一应用，也不代表对方已确认。
 
@@ -76,4 +89,4 @@ Python 标准库 + HTML/CSS/JavaScript，无第三方依赖。工具源码目前
     python "D:/Codex/Projects/peptide-platform/tools/chatroom/test_room.py"
     node --check "D:/Codex/Projects/peptide-platform/tools/chatroom/public/app.js"
 
-19 项测试在 D 盘独立临时目录运行，覆盖历史保留、并发追加、重启读取、格式、来源、署名，以及多群独立文档、口令持久化、未知群拒绝、并发建群、自动项目目录、解散后的写入拒绝与历史保留、缓存隔离。不向正式群写测试消息。
+23 项测试在 D 盘独立临时目录运行，覆盖历史保留、并发追加、重启读取、格式、来源、署名，以及多群独立文档、口令持久化、未知群拒绝、并发建群、自动项目目录、解散后的写入拒绝与历史保留、缓存隔离，以及成员移出后拒写、主动重新加入、幂等和并发入群。不向正式群写测试消息。

@@ -2,10 +2,35 @@
 // Keep existing bookmarks working while the older local server remains running.
 if(location.port==="17832")location.replace("http://127.0.0.1:17835/"+location.search);
 const $ = (selector) => document.querySelector(selector);
-const state = {messages: [], rooms: [], showClosed: false, roomId: new URLSearchParams(location.search).get("room") || "peptide", epoch: 0, author: "全部", query: "", revision: "", etag: "", loading: false, logPath: "", online: false, sending: false, expanded: new Set(), collapsed: new Set()};
+const state = {messages: [], rooms: [], capabilities: [], showClosed: false, roomId: new URLSearchParams(location.search).get("room") || "peptide", epoch: 0, author: "全部", query: "", revision: "", etag: "", loading: false, logPath: "", online: false, sending: false, expanded: new Set(), collapsed: new Set()};
 function roomUrl(path, roomId=state.roomId) {return path+"?room="+encodeURIComponent(roomId);}
 function currentRoom() {return state.rooms.find(r=>r.id===state.roomId);}
 function isClosed() {return currentRoom()?.status === "dissolved";}
+function roomMembers(room) {return room ? ["用户","Codex","Claude"].filter(a=>(room.members||["用户","Codex","Claude"]).includes(a)) : [];}
+function memberName(author) {return author==="用户"?"地瓜":author;}
+function groupAvatar(room) {
+  const members=roomMembers(room);
+  return '<span class="group-avatar members-'+members.length+'" aria-hidden="true">'+members.map(a=>'<span class="mini '+authors[a].className+'">'+authors[a].avatar+'</span>').join("")+'</span>';
+}
+function renderMembers() {
+  const room=currentRoom(), members=roomMembers(room), canManage=state.capabilities.includes("members")&&!isClosed();
+  $("#member-count").textContent=members.length+" 人";
+  $("#member-summary").textContent=members.map(memberName).join("、");
+  $("#member-grid").innerHTML=members.map(a=>'<div><span class="avatar '+authors[a].className+'">'+authors[a].avatar+'</span><strong>'+memberName(a)+'</strong><small>'+authors[a].role+'</small>'+(a!=="用户"&&!isClosed()?'<button class="remove-member" data-remove-member="'+a+'" aria-label="移出 '+a+'" '+(canManage?'':'disabled')+'>移出群聊</button>':'')+'</div>').join("");
+  const absent=["Codex","Claude"].filter(a=>!members.includes(a));
+  $("#pending-members").hidden=!room||isClosed()||!absent.length;
+  $("#pending-members").textContent=absent.join("、")+" 尚未加入。将接入口令发给助手，让它主动加入。";
+}
+async function refreshCapabilities() {
+  try {
+    const response=await fetch("/api/health");if(!response.ok)throw Error();
+    const data=await response.json();state.capabilities=data.capabilities||[];
+  }catch{state.capabilities=[];}
+  const preview=location.port==="17834";
+  $("#service-notice").hidden=!preview&&state.capabilities.includes("members");
+  $("#service-notice-text").textContent=preview?"这是界面测试页，记录与正式群聊分开。":"当前服务版本较旧，请重新打开正式聊天室。";
+  $("#management-note").hidden=state.capabilities.includes("members");
+}
 function renderRooms() {
   const shown=state.rooms.filter(r=>(r.status==="dissolved")===state.showClosed);
   const closedCount=state.rooms.filter(r=>r.status==="dissolved").length;
@@ -15,14 +40,16 @@ function renderRooms() {
   $("#archive-toggle").textContent=state.showClosed?"返回进行中的群聊":"已解散群聊（"+closedCount+"）";
   $("#closed-notice").hidden=!isClosed();
   $("#dissolve-room-button").hidden=isClosed()||!currentRoom();
+  $("#dissolve-room-button").disabled=!state.capabilities.includes("dissolve");
   document.querySelectorAll("[data-join]").forEach(b=>b.disabled=isClosed());
   updateInput();
-  $("#room-list").innerHTML=shown.map(r=>'<button class="conversation '+(r.id===state.roomId?'selected':'')+'" data-room="'+escapeHtml(r.id)+'" aria-pressed="'+(r.id===state.roomId)+'" aria-label="'+escapeHtml(r.name)+'"><span class="group-avatar" aria-hidden="true"><span class="mini codex"><img src="/avatars/openai.svg" alt=""></span><span class="mini claude"><img src="/avatars/claude.svg" alt=""></span><span class="mini user"><img src="/avatars/digua.jpg" alt=""></span><span class="mini project"><svg><use href="#i-chat"/></svg></span></span><span class="conversation-copy"><span class="conversation-top"><strong>'+escapeHtml(r.name)+'</strong><time>'+escapeHtml(r.lastTime?formatTime(r.lastTime,true):'')+'</time></span><span class="conversation-preview">'+escapeHtml((r.lastPreview||'地瓜、Codex、Claude · 开始协作').replace(/^用户：/,"地瓜：").replace(/^你、/,"地瓜、"))+'</span></span></button>').join("");
+  $("#room-list").innerHTML=shown.map(r=>'<button class="conversation '+(r.id===state.roomId?'selected':'')+'" data-room="'+escapeHtml(r.id)+'" aria-pressed="'+(r.id===state.roomId)+'" aria-label="'+escapeHtml(r.name)+'">'+groupAvatar(r)+'<span class="conversation-copy"><span class="conversation-top"><strong>'+escapeHtml(r.name)+'</strong><time>'+escapeHtml(r.lastTime?formatTime(r.lastTime,true):'')+'</time></span><span class="conversation-preview">'+escapeHtml((r.lastPreview||'暂无消息 · 邀请助手加入').replace(/^用户：/,"地瓜：").replace(/^你、/,"地瓜、"))+'</span></span></button>').join("");
   const room=currentRoom();
   $("#room-name").textContent=room?.name||"选择群聊";
   $("#detail-room-name").textContent=room?.name||"";
   $("#detail-project").textContent=room?.projectRoot||"暂未关联项目目录";
   $("#detail-code").textContent=room?.code||"";
+  renderMembers();
   document.title=(room?.name||"协作群聊")+" · 项目聊天室";
 }
 let roomsLoading=false;
@@ -113,7 +140,7 @@ function render() {
   $("#total-count").textContent = state.messages.length;
   const latest = state.messages.at(-1);
   const active=currentRoom();
-  if(active){active.lastTime=latest?.time||"";active.lastPreview=latest?`${latest.author === "用户" ? "地瓜" : latest.author}：${latest.kind === "message" ? plainPreview(latest.body) : latest.title}`:"地瓜、Codex、Claude · 开始协作";renderRooms();}
+  if(active){active.lastTime=latest?.time||"";active.lastPreview=latest?`${latest.author === "用户" ? "地瓜" : latest.author}：${latest.kind === "message" ? plainPreview(latest.body) : latest.title}`:"暂无消息 · 邀请助手加入";renderRooms();}
   const messages = visibleMessages(), filtered = state.author !== "全部" || Boolean(state.query);
   $("#filter-bar").hidden = !filtered;
   $("#filter-label").textContent = [state.author !== "全部" ? (state.author === "用户" ? "地瓜" : state.author) : "", state.query ? `“${state.query}”` : "", `${messages.length} 条消息`].filter(Boolean).join(" · ");
@@ -159,7 +186,7 @@ async function refresh(force=false) {
     if(response.status===304){setConnection(true);return;}
     if(!response.ok){const error=await response.json();throw Error(error.error||"读取失败");}
     const data=await response.json();if(epoch!==state.epoch)return;state.etag=response.headers.get("ETag")||"";
-    const changed=state.revision!==data.revision||currentRoom()?.status!==data.room?.status, wasLoaded=Boolean(state.revision), oldCount=state.messages.length;
+    const changed=state.revision!==data.revision||currentRoom()?.status!==data.room?.status||currentRoom()?.memberRevision!==data.room?.memberRevision, wasLoaded=Boolean(state.revision), oldCount=state.messages.length;
     const nearBottom=atBottom(), oldScroll=$("#timeline").scrollTop;
     state.messages=data.messages;state.revision=data.revision;state.logPath=data.logPath;
     if(data.room){const index=state.rooms.findIndex(r=>r.id===data.room.id);if(index>=0)state.rooms[index]={...state.rooms[index],...data.room};}
@@ -313,7 +340,24 @@ $("#confirm-dissolve").addEventListener("click",async()=>{
   }catch(error){$("#dissolve-status").textContent=error.message||"解散失败，请重试。";}
   finally{button.disabled=false;}
 });
-async function bootstrap(){await refreshRooms();$("#message-input").value=readDraft();updateInput();await refresh(true);}
+let removingMember=null;
+$("#member-grid").addEventListener("click",event=>{
+  const button=event.target.closest("[data-remove-member]");if(!button||button.disabled||isClosed())return;
+  removingMember={room:state.roomId,author:button.dataset.removeMember};
+  $("#remove-member-name").textContent=removingMember.author;$("#remove-member-status").textContent="";
+  $("#remove-member-dialog").showModal();
+});
+$("#confirm-remove-member").addEventListener("click",async()=>{
+  const button=$("#confirm-remove-member");if(button.disabled||!removingMember)return;button.disabled=true;
+  try {
+    const response=await fetch("/api/rooms/remove-member",{method:"POST",headers:{"Content-Type":"application/json","X-Peptide-Room":"1"},body:JSON.stringify(removingMember)});
+    const data=await response.json();if(!response.ok)throw Error(data.error||"移出失败");
+    const index=state.rooms.findIndex(r=>r.id===data.id);if(index>=0)state.rooms[index]={...state.rooms[index],...data};
+    renderRooms();$("#remove-member-dialog").close();removingMember=null;await refresh(true);
+  }catch(error){$("#remove-member-status").textContent=error.message||"移出失败，请重试。";}
+  finally{button.disabled=false;}
+});
+async function bootstrap(){await refreshCapabilities();await refreshRooms();$("#message-input").value=readDraft();updateInput();await refresh(true);}
 bootstrap();setInterval(()=>{if(!document.hidden)refresh();},2500);
 setInterval(()=>{if(!document.hidden)refreshRooms();},10000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden){refresh(true);refreshRooms();}});
