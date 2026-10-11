@@ -38,13 +38,14 @@
 <div class="filter-bar" id="filter-bar" hidden><span id="filter-label"></span><button id="clear-filter">查看全部消息 ×</button></div>
 <div id="warning" class="warning" role="status" hidden></div>
 <div id="closed-notice" class="closed-notice" role="status" hidden>本群已解散 · 历史记录只读，助手无需再汇报</div>
-<section class="timeline" id="timeline" aria-label="聊天记录" tabindex="0"><div id="messages" class="messages" aria-label="项目消息列表"><div class="empty">正在读取聊天记录…</div></div></section>
+<section class="timeline" id="timeline" aria-label="聊天记录" tabindex="0"><div id="messages" class="messages" aria-label="项目消息列表"><div class="empty">正在读取聊天记录…</div></div><div id="live-replies" class="live-replies" aria-live="polite"></div></section>
 <button id="jump-latest" class="jump-latest" hidden>↓ 查看新消息</button>
 <section class="composer" aria-label="发送项目留言"><form id="message-form">
 <div class="composer-tools"><div class="tool-group"><button type="button" class="icon-button" id="emoji-button" title="表情" aria-label="表情" aria-expanded="false"><svg><use href="#i-smile"/></svg></button><button type="button" class="icon-button" id="code-button" title="插入代码块" aria-label="插入代码块"><svg><use href="#i-code"/></svg></button><button type="button" class="icon-button" data-source title="查看 Markdown 原文" aria-label="查看 Markdown 原文"><svg><use href="#i-file"/></svg></button></div><button type="button" class="icon-button" id="refresh" title="刷新记录" aria-label="刷新记录"><svg><use href="#i-refresh"/></svg></button></div>
 <div class="emoji-picker" id="emoji-picker" role="group" aria-label="选择表情" hidden><button type="button">😊</button><button type="button">👍</button><button type="button">👌</button><button type="button">🎉</button><button type="button">✅</button><button type="button">💡</button><button type="button">👀</button><button type="button">☕</button></div>
 <label class="sr-only" for="message-input">项目留言内容</label><textarea id="message-input" rows="3" maxlength="32000" placeholder="聊聊你的想法，或留下一条项目消息…" required></textarea>
-<div class="composer-bottom"><span id="send-status" role="status">留言后需提醒助手读取</span><div class="send-actions"><span class="key-hint">Enter 发送，Shift + Enter 换行</span><button class="send-button" id="send-button" type="submit" disabled>发送</button></div></div>
+<div class="reply-controls" id="reply-controls" hidden><label for="reply-target">发送给</label><select id="reply-target" aria-label="选择回复对象"><option value="">群聊 · 仅留言</option><option value="Codex">@Codex · 自动回复</option><option value="Claude">@Claude · 自动回复</option><option value="all">@全体 · 各回复一次</option></select><button type="button" id="assistant-status" class="connection-button">连接状态</button><span id="reply-help">可在正文 @助手 提问</span></div>
+<div class="composer-bottom"><span id="send-status" role="status">消息保存在本群</span><div class="send-actions"><span class="key-hint">Enter 发送，Shift + Enter 换行</span><button class="send-button" id="send-button" type="submit" disabled>发送</button></div></div>
 </form></section>
 <aside class="details-panel" id="details-panel" aria-label="群聊详情" hidden>
 <div class="panel-heading"><h2>群聊详情</h2><button class="icon-button" id="close-details" aria-label="关闭群聊详情"><svg><use href="#i-close"/></svg></button></div>
@@ -54,7 +55,7 @@
 <section class="detail-section"><h3>群聊名称</h3><p id="detail-room-name">多肽项目群</p><p class="muted" id="detail-project"></p></section>
 <section class="detail-section"><h3>助手接入口令</h3><code id="detail-code" class="detail-code"></code><button class="secondary-button" data-join>查看接入方式</button></section>
 <section class="detail-section"><h3>查看成员消息</h3><div class="filters" role="group" aria-label="按参与者筛选"><button class="selected" data-author="全部" aria-pressed="true">全部</button><button data-author="Codex" aria-pressed="false">Codex</button><button data-author="Claude" aria-pressed="false">Claude</button><button data-author="用户" aria-pressed="false">地瓜</button></div></section>
-<section class="detail-section"><h3>群公告</h3><p>需求、进度和决定，都留在这里。</p><p class="muted">消息保存在本项目。留言后，请提醒对应助手读取；这里不会自动触发 AI 回复。</p></section>
+<section class="detail-section"><h3>群公告</h3><p>需求、进度和决定，都留在这里。</p><p class="muted">选择已接通的助手或 @它，即可在群内获得文字回复。开发工作仍在各自任务中进行，完成后汇报到本群。</p></section>
 <button class="source-row" data-source>查看 Markdown 原文 <span>›</span></button><p class="record-path" id="record-path">docs/chat/ROOM.md</p>
 <button class="dissolve-button" id="dissolve-room-button">解散群聊</button>
 </aside>
@@ -69,9 +70,16 @@
 <div class="dialog-header"><h2 id="join-title">让助手接入群聊</h2><button class="icon-button" data-close="join-dialog" aria-label="关闭接入说明"><svg><use href="#i-close"/></svg></button></div>
 <p class="dialog-intro" id="join-room-name"></p><div class="key-card"><span>本群的唯一口令</span><code id="join-code"></code><button class="primary-button" id="copy-room-key">复制口令</button></div>
 <ol class="join-steps"><li>在这台电脑新开一个 Codex 或 Claude Code 会话。</li><li>粘贴口令，助手读取本群最近消息并接入。</li><li>接入后，每次实际任务结束都会按约定汇报进度。</li></ol>
-<p class="field-help">尚未加载规则的旧会话，请复制完整说明；助手需要能读写这台电脑的文件。双方可以在群里留言交接，新消息不会自动唤醒另一位助手。</p>
+<p class="field-help">尚未加载规则的旧会话，请复制完整说明；助手需要能读写这台电脑的文件。群内自动回复使用独立文字会话，读取本群记录；不会接管桌面里已有的开发任务。</p>
 <details class="join-details"><summary>查看完整接入说明</summary><textarea id="join-instructions" readonly aria-label="完整接入说明"></textarea></details>
 <button class="secondary-button" id="copy-join-instructions">复制完整接入说明</button><p id="join-status" role="status"></p>
+</dialog>
+<dialog id="assistants-dialog" class="compact-dialog" aria-labelledby="assistants-title">
+<div class="dialog-header"><h2 id="assistants-title">助手连接</h2><button class="icon-button" data-close="assistants-dialog" aria-label="关闭连接状态"><svg><use href="#i-close"/></svg></button></div>
+<div id="assistant-status-list" class="assistant-status-list"></div>
+<p class="field-help">群内文字回复读取当前群最近 12 条记录，使用本机助手账号的额度。每轮是独立会话，不会操作桌面里正在进行的任务。</p>
+<p class="field-help">Claude Code 如未登录，请先运行交付文件「登录Claude群聊.cmd」，使用原 Claude 订阅账号授权，再刷新状态。连接成功后还需是本群成员才能回复。</p>
+<button id="refresh-assistants" class="secondary-button">刷新连接状态</button><p id="assistant-refresh-status" role="status"></p>
 </dialog>
 <dialog id="dissolve-dialog" class="compact-dialog" aria-labelledby="dissolve-title">
 <div class="dialog-header"><h2 id="dissolve-title">解散群聊</h2><button class="icon-button" data-close="dissolve-dialog" aria-label="取消解散"><svg><use href="#i-close"/></svg></button></div>

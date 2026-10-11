@@ -10,6 +10,7 @@ import secrets
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import uuid
 import webbrowser
@@ -20,6 +21,7 @@ from pathlib import Path
 from urllib.error import URLError
 from urllib.parse import urlparse, parse_qs
 from urllib.request import urlopen
+from live_chat import LiveChat
 
 TOOL_DIR = Path(__file__).resolve().parent
 CONFIG = json.loads((TOOL_DIR / "project.json").read_text(encoding="utf-8"))
@@ -316,11 +318,13 @@ class RoomRegistry:
             replace_atomic(self.path, json.dumps({"version": 1, "rooms": rooms}, ensure_ascii=False, indent=2))
             return entry
 
-    def post(self, key, author, title, body, kind="progress", task=""):
+    def post(self, key, author, title, body, kind="progress", task="", expected_member_revision=None):
         # Serialize state checks with dissolution so no write slips in after it.
         with file_lock(self.path):
             entry = self.resolve(key)
             require_active(entry)
+            if expected_member_revision is not None and entry.get("memberRevision", 0) != expected_member_revision:
+                raise RoomMemberError("成员状态已改变，本轮回复已停止。")
             if author not in members_of(entry):
                 raise RoomMemberError("你已不在本群，不能发言或汇报。请停止本会话的群聊绑定；仅在用户重新邀请后，以自己的身份执行 join --code <口令> --author <身份> 加入。")
             return append_message(author, title, body, kind, task, Path(entry["logPath"]))
@@ -358,10 +362,18 @@ class RoomServer(ThreadingHTTPServer):
 
     def __init__(self, address, log_path=LOG_PATH, registry_root=None):
         self.log_path = log_path
+        self.events_stopped = threading.Event()
         # Custom log paths (tests/previews) always receive an isolated registry.
         registry_root = registry_root or (HUB_ROOT / "data" if Path(log_path).resolve() == LOG_PATH else Path(log_path).parent / "hub")
         self.registry = RoomRegistry(registry_root, log_path)
+        self.live = LiveChat(self.registry, snapshot)
         super().__init__(address, RoomHandler)
+
+    def shutdown(self):
+        self.events_stopped.set()
+        for entry in self.registry.read():
+            self.live.cancel(entry["id"])
+        super().shutdown()
 
 
 class RoomHandler(BaseHTTPRequestHandler):
@@ -414,8 +426,12 @@ class RoomHandler(BaseHTTPRequestHandler):
             return self.send_data(403, {"error": "仅允许本机访问。"})
         route = urlparse(self.path).path
         if route == "/api/health":
-            return self.send_data(200, {"projectId": PROJECT_ID, "status": "ok", "hubVersion": 3,
-                                        "capabilities": ["dissolve", "members"]})
+            return self.send_data(200, {"projectId": PROJECT_ID, "status": "ok", "hubVersion": 4,
+                                        "capabilities": ["dissolve", "members", "events", "live-chat"]})
+        if route == "/api/assistants":
+            return self.send_data(200, {"providers": self.server.live.providers(force=parse_qs(urlparse(self.path).query).get("refresh") == ["1"])})
+        if route == "/api/events":
+            return self.stream_events()
         if route == "/api/rooms":
             return self.send_data(200, {"rooms": self.server.registry.summaries()})
         if route == "/api/join":
@@ -425,7 +441,9 @@ class RoomHandler(BaseHTTPRequestHandler):
             entry = self.selected_room()
             state = snapshot(Path(entry["logPath"]))
             state["room"] = entry
-            etag = '"' + entry["id"] + ":" + entry.get("status", "active") + ":" + str(entry.get("memberRevision", 0)) + ":" + state["revision"] + '"'
+            state["liveJobs"] = self.server.live.list_jobs(entry["id"])
+            state["liveRevision"] = self.server.live.revision
+            etag = '"' + entry["id"] + ":" + entry.get("status", "active") + ":" + str(entry.get("memberRevision", 0)) + ":" + str(state["liveRevision"]) + ":" + state["revision"] + '"'
             if self.headers.get("If-None-Match") == etag:
                 return self.send_data(304, b"", extra={"ETag": etag})
             return self.send_data(200, state, extra={"ETag": etag})
@@ -445,6 +463,40 @@ class RoomHandler(BaseHTTPRequestHandler):
             return self.send_data(200, (TOOL_DIR / "public" / filename).read_bytes(), mime)
         return self.send_data(404, {"error": "页面不存在。"})
 
+    def stream_events(self):
+        # Watch the canonical files too: CLI/MCP writes happen outside this server.
+        entry = self.selected_room()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache, no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Connection", "close")
+        self.end_headers()
+        self.close_connection = True
+        self.connection.settimeout(5)
+        previous, heartbeat, started = None, time.monotonic(), time.monotonic()
+        try:
+            self.wfile.write(b"retry: 1000\n\n")
+            self.wfile.flush()
+            while not self.server.events_stopped.is_set() and time.monotonic()-started < 55:
+                signature = []
+                for path in (Path(entry["logPath"]), self.server.registry.path):
+                    stat = path.stat() if path.exists() else None
+                    signature.append((stat.st_mtime_ns, stat.st_size) if stat else None)
+                signature.append(self.server.live.revision)
+                if signature != previous:
+                    payload = json.dumps({"room": entry["id"]}, ensure_ascii=False)
+                    self.wfile.write(("event: update\ndata: "+payload+"\n\n").encode("utf-8"))
+                    self.wfile.flush()
+                    previous, heartbeat = signature, time.monotonic()
+                elif time.monotonic()-heartbeat >= 15:
+                    self.wfile.write(b": heartbeat\n\n")
+                    self.wfile.flush()
+                    heartbeat = time.monotonic()
+                self.server.events_stopped.wait(0.3)
+        except (OSError, ConnectionError):
+            pass  # Tab closed or a slow/disconnected client; EventSource reconnects.
+
     def do_POST(self):
         if not self.local_request():
             return self.send_data(403, {"error": "仅允许本机访问。"})
@@ -456,7 +508,7 @@ class RoomHandler(BaseHTTPRequestHandler):
         if self.headers.get("X-Peptide-Room") != "1":
             return self.send_data(403, {"error": "缺少本地聊天室请求标识。"})
         route = urlparse(self.path).path
-        if route not in ("/api/messages", "/api/rooms", "/api/rooms/dissolve", "/api/rooms/remove-member"):
+        if route not in ("/api/messages", "/api/rooms", "/api/rooms/dissolve", "/api/rooms/remove-member", "/api/replies/stop"):
             return self.send_data(404, {"error": "接口不存在。"})
         if self.headers.get("Content-Type", "").split(";")[0].strip() != "application/json":
             return self.send_data(415, {"error": "请求格式必须为 JSON。"})
@@ -470,23 +522,41 @@ class RoomHandler(BaseHTTPRequestHandler):
             if route == "/api/rooms":
                 created = self.server.registry.create(payload.get("name"), payload.get("projectRoot", ""))
                 return self.send_data(201, created)
+            if route == "/api/replies/stop":
+                if not payload.get("room"):
+                    raise ValueError("必须明确指定群聊。")
+                entry = self.server.registry.resolve(payload["room"])
+                self.server.live.cancel(entry["id"])
+                return self.send_data(200, {"stopped": True})
             if route == "/api/rooms/dissolve":
                 if not payload.get("room"):
                     raise ValueError("必须明确指定要解散的群聊。")
-                return self.send_data(200, self.server.registry.dissolve(payload["room"]))
+                entry = self.server.registry.dissolve(payload["room"])
+                self.server.live.cancel(entry["id"])
+                return self.send_data(200, entry)
             if route == "/api/rooms/remove-member":
                 if not payload.get("room"):
                     raise ValueError("必须明确指定目标群聊。")
-                return self.send_data(200, self.server.registry.remove_member(payload["room"], payload.get("author")))
+                entry = self.server.registry.remove_member(payload["room"], payload.get("author"))
+                self.server.live.cancel(entry["id"])
+                return self.send_data(200, entry)
             entry = self.selected_room()
             # Web composer is exclusively the owner; agents use the append helper.
-            message = self.server.registry.post(
-                key=entry["id"],
-                author="用户", title=payload.get("title", "项目留言"),
-                body=payload.get("body", ""), kind="message",
-                task="",
-            )
-            return self.send_data(201, message)
+            require_active(entry)
+            targets = payload.get("targets", [])
+            if not targets and isinstance(payload.get("body"), str):
+                mentions = re.findall(r"(?:^|\s)@(Codex|Claude|全体)(?![A-Za-z0-9_])", payload["body"], re.I)
+                targets = list(dict.fromkeys(t for m in mentions for t in (("Codex", "Claude") if m == "全体" else (m.capitalize() if m.lower() == "claude" else "Codex",))))
+            pending = self.server.live.reserve(entry, targets)
+            try:
+                message = self.server.registry.post(
+                    key=entry["id"], author="用户", title=payload.get("title", "项目留言"),
+                    body=payload.get("body", ""), kind="message", task="")
+            except Exception:
+                self.server.live.discard(pending)
+                raise
+            self.server.live.start(pending, message)
+            return self.send_data(201, {**message, "replyRequested": bool(pending)})
         except RoomClosedError as exc:
             return self.send_data(410, {"error": str(exc), "code": "room_dissolved"})
         except RoomMemberError as exc:
