@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>A/B 分流实验室 · 本地演示</title><link rel="icon" href="data:,"><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body>
+<header class="topbar"><a class="wordmark" href="/">ab<span>/</span>lab<span class="wordmark-label">访问分流实验室</span></a><span class="local"><i></i> LOCAL DEMO</span></header>
+<main>
+  <section class="intro"><div><p class="eyebrow">PEPTIDE PROJECT / INTERACTIVE PROTOTYPE</p><h1>一次访问，<span>两个结果。</span></h1><p class="description">选择一个模拟身份，亲眼看看请求怎样进入不同页面。</p></div><div class="intro-note"><span>01 — 设定访客</span><span>02 — 发起访问</span><span>03 — 查看结果</span></div></section>
+  <section class="workspace">
+    <aside class="controls">
+      <div class="section-label"><span>分流设置</span><span class="mono">CONTROL</span></div>
+      <fieldset><legend>01 / 选择模式</legend><div class="mode-options"><label class="mode-card"><input type="radio" name="mode" value="role" checked><span><strong>模拟身份分流</strong><small>指定身份，按规则进入页面</small></span></label><label class="mode-card"><input type="radio" name="mode" value="random"><span><strong>随机 A/B 测试</strong><small>按比例分配，并保持访客版本</small></span></label></div></fieldset>
+      <div id="role-settings"><label class="field-label" for="persona">02 / 模拟访客身份</label><select id="persona"><option value="reviewer">模拟审核访客 → A 页面</option><option value="customer">模拟普通访客 → B 页面</option></select><p class="hint">这是你手动选择的演示身份。</p></div>
+      <div id="random-settings" hidden><label class="field-label" for="weight">02 / 分配比例 <output id="ratio">A 50% · B 50%</output></label><input id="weight" type="range" min="0" max="100" step="10" value="50"><label class="check-label"><input id="fresh" type="checkbox">这次模拟一个新访客</label><p class="hint">已有分组保留 24 小时。调整比例仅影响新访客；模拟身份模式不改变随机分组。</p></div>
+      <button class="run" id="run" type="button">模拟一次访问 <span>↗</span></button><p id="error" class="error" role="alert" hidden></p>
+      <div class="explanation"><span class="small-title">看清分流过程</span><ol><li>你提供模拟身份或分配比例</li><li>本机服务计算页面版本</li><li>页面载入，写入演示记录</li></ol><p>两套页面都标注为演示内容。记录只保存在本机。</p></div>
+    </aside>
+    <div class="result-panel"><div class="section-label"><span>页面预览</span><a id="open-page" href="/pages/a.html" target="_blank" rel="noopener">单独打开 ↗</a></div>
+      <div class="browser-bar"><span class="dots"><i></i><i></i><i></i></span><span id="preview-address">预览 A · 尚未发起访问</span><span class="version" id="version">A</span></div>
+      <iframe id="preview" title="分流后的演示页面" src="/pages/a.html"></iframe>
+      <div class="decision" aria-live="polite"><div class="decision-icon" id="decision-icon">↳</div><div><strong id="decision-title">等待第一次访问</strong><p id="decision-reason">左侧调整设置，再点击“模拟一次访问”。预览本身不计入访问记录。</p></div><span id="visit-id" class="mono">—</span></div>
+    </div>
+  </section>
+  <section class="history-panel"><div class="history-heading"><div><p class="eyebrow">EVERY REQUEST, EXPLAINED</p><h2>访问记录</h2></div><div class="totals"><span>A <b id="count-a">0</b></span><span>B <b id="count-b">0</b></span><button class="quiet" id="refresh" type="button">刷新 ↻</button></div></div><p class="history-note">累计次数包含重复访问，用于观察分流；不是独立用户数或转化率。下方显示最近 30 次。</p><div class="table-wrap"><table><thead><tr><th>访问 / 时间</th><th>模式与身份</th><th>结果</th><th>分配原因</th></tr></thead><tbody id="history"><tr><td colspan="4" class="empty">暂无演示记录，发起第一次访问吧。</td></tr></tbody></table></div></section>
+  <footer><span>本地原型 · 手动身份模拟与随机分组</span><span>WordPress 集成尚未实现</span></footer>
+</main></body></html>
