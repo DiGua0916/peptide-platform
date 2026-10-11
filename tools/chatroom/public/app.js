@@ -1,4 +1,6 @@
 "use strict";
+// Keep existing bookmarks working while the older local server remains running.
+if(location.port==="17832")location.replace("http://127.0.0.1:17835/"+location.search);
 const $ = (selector) => document.querySelector(selector);
 const state = {messages: [], rooms: [], roomId: new URLSearchParams(location.search).get("room") || "peptide", epoch: 0, author: "全部", query: "", revision: "", etag: "", loading: false, logPath: "", online: false, sending: false, expanded: new Set(), collapsed: new Set()};
 function roomUrl(path, roomId=state.roomId) {return path+"?room="+encodeURIComponent(roomId);}

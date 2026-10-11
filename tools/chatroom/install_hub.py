@@ -6,6 +6,7 @@ from datetime import datetime
 import os
 import re
 import json
+import sys
 import room
 
 MARKER_START = '<!-- collaboration-room-key:v1 -->'
@@ -59,4 +60,6 @@ def install():
 
 
 if __name__ == '__main__':
+    if sys.stdout is not None and hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
     install()
