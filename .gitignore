@@ -1,0 +1,48 @@
+# Secrets and environment
+.env
+.env.*
+!.env.example
+wp-config.php
+auth.json
+*.pem
+*.key
+*.p12
+*.pfx
+
+# WordPress runtime and local content
+wp-admin/
+wp-includes/
+wp-content/uploads/
+wp-content/cache/
+wp-content/upgrade/
+wp-content/backup*/
+wp-content/debug.log
+
+# Dependencies and build outputs
+node_modules/
+vendor/
+dist/
+build/
+coverage/
+.phpunit.cache/
+
+# Databases, archives and logs
+*.sql
+*.sql.gz
+*.sqlite
+*.sqlite3
+*.db
+*.zip
+*.7z
+*.tar
+*.tar.gz
+*.log
+
+# Local tooling and operating system files
+.vscode/
+.idea/
+.claude/settings.local.json
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.tmp
