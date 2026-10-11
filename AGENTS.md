@@ -13,7 +13,7 @@ The user has approved WordPress and the collaboration repository. Product catego
 ## Ownership
 
 - Codex owns wp-content/themes/peptide-site/ and docs/handoffs/frontend.md.
-- Claude owns wp-content/plugins/peptide-core/ and docs/handoffs/backend.md.
+- Claude owns wp-content/plugins/peptide-core/, docs/handoffs/backend.md, and docs/handoffs/backend-*.md proposal documents.
 - Shared requirements, contracts, environment configuration, and task definitions require explicit coordination between roles. Record a proposed shared change in the role handoff before integration.
 - Use codex/frontend and claude/backend worktrees for development. The main checkout is the integration copy.
 - Keep each worktree on its assigned branch. Do not reset, overwrite, clean, or force-push another role's work.

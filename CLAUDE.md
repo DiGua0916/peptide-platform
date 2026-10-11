@@ -2,6 +2,8 @@
 
 先读取 AGENTS.md，并遵守共同开发约定。你负责本项目的 WordPress 后端业务插件；Codex 负责主题、页面和交互。
 
+首次接手时完整阅读 docs/CLAUDE_HANDOFF.md。它说明项目背景、当前状态、双方分工、D 盘目录和 BE-01 的交付要求。
+
 ## 工作范围
 
 - 工作分支：claude/backend。
@@ -14,7 +16,7 @@
 
 以下内容可以作为 Claude Code 的首条任务：
 
-> 请读取 AGENTS.md、CLAUDE.md 和 docs 下的需求、接口、流程与任务文档。你负责这个 WordPress 项目的后端，Codex 负责前端。首先检查当前分支和文件状态，在 docs/handoffs/backend.md 中提出产品、批次和检测报告的数据组织方案，以及 WordPress 原生能力与 WooCommerce 的取舍。区分已确定和待确认的内容，列出给前端的数据契约建议。当前先完成方案和交接，不安装依赖、不接入支付、不修改前端主题。完成后报告文件改动和实际执行的检查。
+> 请读取 AGENTS.md、CLAUDE.md、docs/CLAUDE_HANDOFF.md 和其中列出的项目文档。首先检查当前目录、分支和文件状态，完成 BE-01：在 docs/handoffs/backend-plan-v1.md 中提出后端架构、产品与批次及检测报告的数据组织方案、WooCommerce 的取舍、接口草案和分阶段计划，并更新 docs/handoffs/backend.md。区分已确定、假设和待确认内容。当前先完成方案，不安装依赖、不接入支付、不发布网站、不修改前端主题。按交接说明中的格式报告文件改动、实际检查和提交标识；无法访问本地目录时说明限制并输出方案正文。
 
 ## 后续实现原则
 

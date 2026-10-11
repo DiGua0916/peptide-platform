@@ -18,6 +18,7 @@
 | --- | --- |
 | AGENTS.md | 共同开发约定及 Codex 工作边界 |
 | CLAUDE.md | Claude 后端工作入口 |
+| docs/CLAUDE_HANDOFF.md | 给 Claude 的完整项目背景与首次任务 |
 | docs/REQUIREMENTS.md | 已确认需求与待确认事项 |
 | docs/CONTRACT.md | 前后端数据与接口草案 |
 | docs/WORKFLOW.md | 独立工作目录、提交和联调流程 |
