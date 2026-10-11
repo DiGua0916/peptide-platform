@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import re
 import secrets
 import sqlite3
 import subprocess
@@ -21,12 +22,37 @@ DATA = ROOT / '.runtime' / 'visits.sqlite3'
 PORT = 17836
 IDENTITY = 'peptide-ab-local-demo-v1'
 COOKIE = 'peptide_ab_demo_variant'
+VERSION = 2
 
 
-def choose(payload, previous=None):
+def device_route(headers):
+    """Presentation routing only; browser hints are not authentication."""
+    hint = headers.get('Sec-CH-UA-Mobile', '').strip()
+    ua = headers.get('User-Agent', '').lower()
+    if hint in ('?0', '?1'):
+        device = 'mobile' if hint == '?1' else 'desktop'
+        source = 'Sec-CH-UA-Mobile'
+    elif 'ipad' in ua or 'tablet' in ua:
+        device, source = 'desktop', 'User-Agent（平板按电脑规则）'
+    elif re.search(r'iphone|ipod|windows phone|blackberry|bb10|opera mini|opera mobi|mobile', ua):
+        device, source = 'mobile', 'User-Agent'
+    elif ua:
+        device, source = 'desktop', 'User-Agent'
+    else:
+        device, source = 'unknown', '缺少设备信息，默认电脑规则'
+    variant = 'B' if device == 'mobile' else 'A'
+    label = {'mobile': '手机', 'desktop': '电脑 / 非手机', 'unknown': '未知设备'}[device]
+    return {'device': device, 'variant': variant, 'source': source,
+            'reason': f'浏览器信息判断为{label}，进入 {variant} 页面；依据：{source}。'}
+
+
+def choose(payload, previous=None, request_headers=None):
     if not isinstance(payload, dict):
         raise ValueError('请求应为对象。')
     mode = payload.get('mode')
+    if mode == 'device':
+        detected = device_route(request_headers or {})
+        return detected['variant'], detected['reason'], False
     persona = payload.get('persona')
     weight = payload.get('weight', 50)
     fresh = payload.get('fresh', False)
@@ -51,16 +77,17 @@ def initialize(path):
         db.execute('CREATE TABLE IF NOT EXISTS visits (id INTEGER PRIMARY KEY, time TEXT, mode TEXT, persona TEXT, variant TEXT, reason TEXT, reused INTEGER)')
 
 
-def record(path, payload, previous):
-    variant, reason, returning = choose(payload, previous)
+def record(path, payload, previous, request_headers=None):
+    variant, reason, returning = choose(payload, previous, request_headers)
+    persona = device_route(request_headers or {})['device'] if payload['mode'] == 'device' else payload['persona']
     stamp = datetime.now().astimezone().isoformat(timespec='seconds')
     with closing(sqlite3.connect(path, timeout=10)) as db, db:
         cursor = db.execute('INSERT INTO visits(time,mode,persona,variant,reason,reused) VALUES(?,?,?,?,?,?)',
-                            (stamp, payload['mode'], payload['persona'], variant, reason, int(returning)))
+                            (stamp, payload['mode'], persona, variant, reason, int(returning)))
         entry_id = cursor.lastrowid
-    return {'id': entry_id, 'time': stamp, 'mode': payload['mode'], 'persona': payload['persona'],
+    return {'id': entry_id, 'time': stamp, 'mode': payload['mode'], 'persona': persona,
             'variant': variant, 'reason': reason, 'returning': returning,
-            'previewUrl': f'/pages/{variant.lower()}.html'}
+            'previewUrl': '/device-preview' if payload['mode'] == 'device' else f'/pages/{variant.lower()}.html'}
 
 
 def history(path):
@@ -90,7 +117,7 @@ class Handler(BaseHTTPRequestHandler):
         port = self.server.server_address[1]
         return self.headers.get('Host') in (f'127.0.0.1:{port}', f'localhost:{port}')
 
-    def respond(self, code, data, mime='application/json; charset=utf-8', cookie=None):
+    def respond(self, code, data, mime='application/json; charset=utf-8', cookie=None, extra=None):
         if isinstance(data, dict):
             data = json.dumps(data, ensure_ascii=False).encode('utf-8')
         elif isinstance(data, str):
@@ -99,11 +126,14 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Content-Type', mime)
         self.send_header('Content-Length', str(len(data)))
         self.send_header('Cache-Control', 'no-store')
+        self.send_header('Vary', 'User-Agent, Sec-CH-UA-Mobile')
         self.send_header('X-Content-Type-Options', 'nosniff')
         self.send_header('Referrer-Policy', 'no-referrer')
         self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; frame-src 'self'; frame-ancestors 'self'; object-src 'none'; base-uri 'none'")
         if cookie:
             self.send_header('Set-Cookie', f'{COOKIE}={cookie}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400')
+        for key, value in (extra or {}).items():
+            self.send_header(key, value)
         self.end_headers()
         self.wfile.write(data)
 
@@ -112,7 +142,19 @@ class Handler(BaseHTTPRequestHandler):
             return self.respond(403, {'error': '仅允许本机访问。'})
         route = urlparse(self.path).path
         if route == '/api/health':
-            return self.respond(200, {'id': IDENTITY})
+            return self.respond(200, {'id': IDENTITY, 'version': VERSION})
+        if route == '/api/device':
+            return self.respond(200, device_route(self.headers))
+        if route in ('/entry', '/device-preview'):
+            detected = device_route(self.headers)
+            if route == '/entry':
+                try:
+                    record(self.server.database, {'mode': 'device'}, None, self.headers)
+                except sqlite3.Error:
+                    return self.respond(503, {'error': '访问记录暂时无法保存，请稍后重试。'})
+            page = ROOT / 'public' / (detected['variant'].lower()+'.html')
+            return self.respond(200, page.read_bytes(), 'text/html; charset=utf-8',
+                                extra={'X-AB-Variant': detected['variant'], 'X-AB-Device': detected['device']})
         if route == '/api/history':
             return self.respond(200, history(self.server.database))
         assets = {'/': ('index.html', 'text/html'), '/app.js': ('app.js', 'text/javascript'),
@@ -142,7 +184,7 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 pass
             previous = jar[COOKIE].value if COOKIE in jar else None
-            entry = record(self.server.database, payload, previous)
+            entry = record(self.server.database, payload, previous, self.headers)
             cookie = entry['variant'] if payload['mode'] == 'random' else None
             return self.respond(201, entry, cookie=cookie)
         except (ValueError, UnicodeError) as error:

@@ -95,6 +95,49 @@ class DemoTests(unittest.TestCase):
             self.assertIn('VERSION '+version.upper(), body)
             self.assertIn('DEMO ONLY', body)
 
+    def test_device_hints_and_user_agent_fallback(self):
+        cases = [
+            ({'Sec-CH-UA-Mobile':'?0', 'User-Agent':'Mozilla/5.0 (Windows NT 10.0)'}, 'A'),
+            ({'Sec-CH-UA-Mobile':'?1'}, 'B'),
+            ({'Sec-CH-UA-Mobile':'?0', 'User-Agent':'iPhone Mobile'}, 'A'),
+            ({'User-Agent':'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0) Mobile Safari'}, 'B'),
+            ({'User-Agent':'Mozilla/5.0 (Linux; Android 15) Chrome/130 Mobile Safari'}, 'B'),
+            ({'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X) Safari'}, 'A'),
+            ({'User-Agent':'Mozilla/5.0 (iPad; CPU OS 18_0) Mobile Safari'}, 'A'),
+            ({'User-Agent':'Mozilla/5.0 (Linux; Android 15) Chrome/130 Safari'}, 'A'),
+            ({}, 'A'),
+            ({'Sec-CH-UA-Mobile':'invalid', 'User-Agent':'iPhone Mobile'}, 'B'),
+        ]
+        for headers, expected in cases:
+            with self.subTest(headers=headers):
+                self.assertEqual(server.device_route(headers)['variant'], expected)
+
+    def test_device_post_uses_headers_not_body_or_random_cookie(self):
+        request = {'mode':'device', 'persona':'mobile', 'variant':'B'}
+        status, headers, raw = self.request(request, headers={'Sec-CH-UA-Mobile':'?0', 'Cookie':server.COOKIE+'=B'})
+        self.assertEqual(status, 201)
+        self.assertEqual(json.loads(raw)['variant'], 'A')
+        self.assertEqual(json.loads(raw)['persona'], 'desktop')
+        self.assertNotIn('Set-Cookie', headers)
+        self.assertEqual(server.history(self.path)['counts'], {'A':1, 'B':0})
+
+    def test_same_entry_serves_real_html_by_device(self):
+        for hint, expected in [('?0','A'), ('?1','B')]:
+            status, headers, body = self.request(path='/entry', headers={'Sec-CH-UA-Mobile':hint})
+            self.assertEqual(status, 200)
+            self.assertEqual(headers['X-AB-Variant'], expected)
+            self.assertIn('VERSION '+expected, body)
+            self.assertIn('Sec-CH-UA-Mobile', headers['Vary'])
+            self.assertEqual(headers['Cache-Control'], 'no-store')
+        self.assertEqual(server.history(self.path)['counts'], {'A':1, 'B':1})
+
+    def test_device_preview_and_detection_do_not_duplicate_visits(self):
+        self.request(path='/api/device', headers={'Sec-CH-UA-Mobile':'?1'})
+        status, headers, body = self.request(path='/device-preview', headers={'Sec-CH-UA-Mobile':'?1'})
+        self.assertEqual(status, 200)
+        self.assertIn('VERSION B', body)
+        self.assertEqual(server.history(self.path)['entries'], [])
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
