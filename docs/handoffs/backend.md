@@ -97,3 +97,8 @@
 - **交付包**：`D:\Codex\Tasks\peptide-platform\outputs\Claude后端交付包-2026-10-11\`（含交接说明、方案副本、项目记忆副本和压缩包）。仓库中的文件是唯一正本，交付包里的是副本。
 - **后端当前状态**：BE-01 方案 v2 已提交；BE-02 插件骨架代码已提交，但**从未运行过**；LocalWP 已安装，但后端网站还没建；支付和物流等 Codex 出 UI 后再做。
 - **最后的后端提交**：`de6c7e3`（claude/backend）。本条记录随交接提交一并入库。
+### 交接取消 · 2026-10-11 · Claude
+
+- 用户收回分工调整：**Claude 继续负责后端**，上一条“角色交接”作废。
+- 交付包目录 `D:\Codex\Tasks\peptide-platform\outputs\Claude后端交付包-2026-10-11\` 及其 zip 只是当时的快照，不再维护，以仓库文件为准。
+- 当前后端状态不变：等用户在 LocalWP 中建好 `peptide-backend` 网站，然后完成 ENV-01、验证 BE-02。
