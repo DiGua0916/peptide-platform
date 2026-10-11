@@ -1,4 +1,4 @@
-import http.client
+from http.client import HTTPConnection
 import json
 import tempfile
 import threading
@@ -30,8 +30,8 @@ class DemoTests(unittest.TestCase):
         self.thread.join()
         self.temp.cleanup()
 
-    def request(self, body=None, path='/api/visit', headers=None):
-        conn = http.client.HTTPConnection(*self.http.server_address, timeout=3)
+    def request(self, body=None, path='/api/visit', headers=None, http=None):
+        conn = HTTPConnection(*(http or self.http).server_address, timeout=3)
         default = {'Content-Type':'application/json', 'X-Local-Demo':'1'}
         default.update(headers or {})
         conn.request('POST' if body is not None else 'GET', path,
@@ -137,6 +137,124 @@ class DemoTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn('VERSION B', body)
         self.assertEqual(server.history(self.path)['entries'], [])
+
+
+class ConfigurationTests(unittest.TestCase):
+    request = DemoTests.request
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(dir=TEMP)
+        self.path = Path(self.temp.name) / 'visits.sqlite3'
+        self.http = server.Server(('127.0.0.1', 0), self.path)
+        self.entry = server.Server(('127.0.0.1', 0), self.path, role='entry', admin_port=self.http.server_port)
+        self.http.entry_port = self.entry.server_port
+        self.threads = [threading.Thread(target=http.serve_forever, daemon=True) for http in (self.http, self.entry)]
+        for thread in self.threads:
+            thread.start()
+
+    def tearDown(self):
+        for http in (self.http, self.entry):
+            http.shutdown()
+            http.server_close()
+        for thread in self.threads:
+            thread.join()
+        self.temp.cleanup()
+
+    def test_two_ports_separate_configuration_from_entry(self):
+        config = json.loads(self.request(path='/api/config')[2])
+        self.assertEqual(config['entryUrl'], f'http://127.0.0.1:{self.entry.server_port}/')
+        for path in ('/api/config', '/api/history', '/app.js', '/server.py'):
+            self.assertEqual(self.request(path=path, http=self.entry)[0], 404)
+        self.assertEqual(self.request({'aUrl':'', 'bUrl':''}, '/api/config', http=self.entry)[0], 404)
+        status, headers, body = self.request(path='/', http=self.entry, headers={'Sec-CH-UA-Mobile':'?1'})
+        self.assertEqual(status, 200)
+        self.assertIn('VERSION B', body)
+        self.assertNotIn('Location', headers)
+
+    def test_local_and_external_targets_persist_without_erasing_history(self):
+        self.request(payload())
+        targets = {'aUrl':'http://localhost:9000/path?q=one#section', 'bUrl':'https://example.com/catalog/'}
+        self.assertEqual(self.request(targets, '/api/config')[0], 200)
+        server.initialize(self.path)
+        config = json.loads(self.request(path='/api/config')[2])
+        self.assertEqual({key: config[key] for key in targets}, targets)
+        self.assertEqual(server.history(self.path)['counts'], {'A':1, 'B':0})
+
+    def test_entry_embeds_selected_url_with_no_redirect_or_server_fetch(self):
+        targets = {'aUrl':'http://127.0.0.1:9/missing', 'bUrl':'https://example.com/path?q=1&label="two"'}
+        self.request(targets, '/api/config')
+        for hint, variant in [('?0','A'), ('?1','B')]:
+            status, headers, body = self.request(path='/', headers={'Sec-CH-UA-Mobile':hint}, http=self.entry)
+            self.assertEqual(status, 200)  # Port 9 need not exist: the server never fetches it.
+            self.assertNotIn('Location', headers)
+            self.assertEqual(headers['X-AB-Variant'], variant)
+            self.assertEqual(headers['X-AB-Display'], 'embed')
+            self.assertIn('<iframe src="'+server.html.escape(targets[variant.lower()+'Url'], quote=True)+'"', body)
+            self.assertNotIn('window.location', body)
+            self.assertNotIn('allow-top-navigation', body)
+            self.assertIn('打开原网页', body)
+        self.assertEqual(server.history(self.path)['counts'], {'A':1, 'B':1})
+
+    def test_bad_url_or_loop_rejected_atomically(self):
+        original = {'aUrl':'https://example.com/a', 'bUrl':'https://example.com/b'}
+        self.request(original, '/api/config')
+        bad_urls = ['javascript:alert(1)', 'file:///D:/index.html', 'https://user:secret@example.com/',
+                    'https://example.com:bad/', 'https://example.com/\npath', 'https://example.com\\@localhost/',
+                    f'http://localhost:{self.http.server_port}/', f'http://127.0.0.1:{self.entry.server_port}/',
+                    f'http://[::1]:{self.entry.server_port}/', 123, 'https://'+'x'*2048]
+        for value in bad_urls:
+            with self.subTest(url=value):
+                self.assertEqual(self.request({'aUrl':'', 'bUrl':value}, '/api/config')[0], 400)
+                self.assertEqual(server.settings(self.path), original)
+        for body in ([], {}, {'aUrl':''}):
+            self.assertEqual(self.request(body, '/api/config')[0], 400)
+
+    def test_configuration_write_requires_admin_origin_and_header(self):
+        body = {'aUrl':'https://example.com', 'bUrl':''}
+        self.assertEqual(self.request(body, '/api/config', {'X-Local-Demo':''})[0], 403)
+        self.assertEqual(self.request(body, '/api/config', {'Origin':self.entry.entry_url})[0], 403)
+        self.assertEqual(self.request(body, '/api/config', {'Origin':'https://example.com'})[0], 403)
+        self.assertEqual(server.settings(self.path), {'aUrl':'', 'bUrl':''})
+
+    def test_preview_uses_saved_urls_without_counting_and_empty_restores_builtin(self):
+        self.request({'aUrl':'https://example.com', 'bUrl':'http://localhost:9000'}, '/api/config')
+        for variant in ('a', 'b'):
+            status, headers, body = self.request(path='/preview/'+variant, http=self.entry)
+            self.assertEqual(status, 200)
+            self.assertEqual(headers['X-AB-Display'], 'embed')
+        self.assertEqual(server.history(self.path)['entries'], [])
+        result = json.loads(self.request(payload(persona='customer'))[2])
+        self.assertEqual(result['previewUrl'], self.entry.entry_url+'/preview/b')
+        self.assertEqual(result['targetUrl'], 'http://localhost:9000')
+        self.request({'aUrl':'', 'bUrl':''}, '/api/config')
+        status, headers, body = self.request(path='/preview/b', http=self.entry)
+        self.assertEqual(headers['X-AB-Display'], 'local-html')
+        self.assertIn('VERSION B', body)
+
+    def test_lan_entry_host_does_not_open_admin_or_configuration(self):
+        for service in (self.http, self.entry):
+            service.lan_address = '192.168.0.104'
+            service.lan_network = server.ipaddress.ip_network('192.168.0.0/24')
+        host = f'192.168.0.104:{self.entry.server_port}'
+        status, headers, body = self.request(path='/', headers={'Host':host, 'User-Agent':'iPhone Mobile'}, http=self.entry)
+        self.assertEqual(status, 200)
+        self.assertEqual(headers['X-AB-Variant'], 'B')
+        self.assertEqual(self.request(path='/api/config', headers={'Host':host}, http=self.entry)[0], 404)
+        self.assertEqual(self.request(path='/', headers={'Host':f'192.168.0.104:{self.http.server_port}'})[0], 403)
+        self.assertEqual(self.request(path='/', headers={'Host':f'example.com:{self.entry.server_port}'}, http=self.entry)[0], 403)
+        self.assertEqual(self.request({'aUrl':f'http://{host}/','bUrl':''}, '/api/config')[0], 400)
+        config = json.loads(self.request(path='/api/config')[2])
+        self.assertEqual(config['lanEntryUrl'], f'http://{host}/')
+
+    def test_lan_rejects_clients_outside_selected_subnet(self):
+        self.entry.lan_address = '192.168.0.104'
+        self.entry.lan_network = server.ipaddress.ip_network('192.168.0.0/24')
+        handler = server.Handler.__new__(server.Handler)
+        handler.server = self.entry
+        handler.headers = {'Host':f'192.168.0.104:{self.entry.server_port}'}
+        for address, expected in [('192.168.0.20',True), ('127.0.0.1',True), ('192.168.1.20',False), ('8.8.8.8',False)]:
+            handler.client_address = (address, 50000)
+            self.assertEqual(handler.local(), expected)
 
 
 if __name__ == '__main__':

@@ -2,6 +2,66 @@
 const $ = selector => document.querySelector(selector);
 const escapeText = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const mode = () => $('input[name=mode]:checked').value;
+let config = null;
+let previewVariant = 'A';
+const isDirty = () => config && ($('#a-url').value.trim() !== config.aUrl || $('#b-url').value.trim() !== config.bUrl);
+function requireSaved() {
+  if (!config) throw Error('请等待配置加载完成。');
+  if (isDirty()) throw Error('网址已修改，请先点击“保存网址”。');
+}
+function previewPage(variant) {
+  requireSaved();
+  previewVariant = variant;
+  const url = new URL('preview/'+variant.toLowerCase(), config.entryUrl).href;
+  $('#preview').src = url;
+  $('#open-page').href = url;
+  $('#preview-address').textContent = `预览 ${variant} · ${config[variant.toLowerCase()+'Url'] || '内置页面'}`;
+  $('#version').textContent = variant;
+  $('#decision-icon').textContent = variant;
+  $('#decision-title').textContent = `正在预览 ${variant} 的已保存配置`;
+  $('#decision-reason').textContent = '预览不新增访问记录；外部页面是否允许嵌入，由目标网站决定。';
+  $('#visit-id').textContent = 'PREVIEW';
+}
+function applyConfig(data) {
+  config = data;
+  $('#a-url').value = data.aUrl;
+  $('#b-url').value = data.bUrl;
+  $('#admin-address').textContent = data.adminUrl;
+  $('#entry-address').textContent = data.entryUrl;
+  $('#entry-address').href = data.entryUrl;
+  $('#entry-link').href = data.entryUrl;
+  $('#lan-info').hidden = !data.lanEntryUrl;
+  if (data.lanEntryUrl) {
+    $('#lan-address').textContent = data.lanEntryUrl;
+    $('#lan-address').href = data.lanEntryUrl;
+  }
+}
+$('#url-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  $('#url-fields').disabled = true;
+  $('#config-error').hidden = true;
+  $('#save-status').textContent = '正在保存…';
+  try {
+    const response = await fetch('/api/config', {method:'POST',headers:{'Content-Type':'application/json','X-Local-Demo':'1'},body:JSON.stringify({aUrl:$('#a-url').value,bUrl:$('#b-url').value})});
+    const data = await response.json();
+    if (!response.ok) throw Error(data.error || '保存失败。');
+    applyConfig(data);
+    $('#save-status').textContent = '已保存 · 入口下次访问立即生效';
+    previewPage(previewVariant);
+  } catch (error) {
+    $('#config-error').hidden = false;
+    $('#config-error').textContent = error.message;
+    $('#save-status').textContent = '未保存';
+  } finally {$('#url-fields').disabled = false;}
+});
+['#a-url','#b-url'].forEach(selector => $(selector).addEventListener('input', () => {
+  $('#save-status').textContent = isDirty() ? '有修改尚未保存' : '当前为已保存配置';
+}));
+document.querySelectorAll('[data-preview]').forEach(button => button.addEventListener('click', () => {
+  $('#config-error').hidden = true;
+  try {previewPage(button.dataset.preview);}
+  catch (error) {$('#config-error').hidden = false; $('#config-error').textContent = error.message;}
+}));
 function syncControls() {
   $('#role-settings').hidden = mode() !== 'role';
   $('#random-settings').hidden = mode() !== 'random';
@@ -27,15 +87,17 @@ function showError(error) {$('#error').hidden = false; $('#error').textContent =
 $('#run').addEventListener('click', async () => {
   $('#run').disabled = true; $('#error').hidden = true;
   try {
+    requireSaved();
     const response = await fetch('/api/visit', {method:'POST',headers:{'Content-Type':'application/json','X-Local-Demo':'1'},body:JSON.stringify({mode:mode(),persona:$('#persona').value,weight:Number($('#weight').value),fresh:$('#fresh').checked})});
     const data = await response.json();
     if (!response.ok) throw Error(data.error || '演示访问失败。');
     $('#preview').src = data.previewUrl;
-    $('#open-page').href = data.mode === 'device' ? '/entry' : data.previewUrl;
-    $('#preview-address').textContent = data.mode === 'device' ? `统一入口 / entry → ${data.variant}` : `本机 / pages / ${data.variant.toLowerCase()}.html`;
+    previewVariant = data.variant;
+    $('#open-page').href = data.mode === 'device' ? data.entryUrl : data.previewUrl;
+    $('#preview-address').textContent = `${data.variant} · ${data.targetUrl || '内置页面'}`;
     $('#version').textContent = data.variant;
     $('#decision-icon').textContent = data.variant;
-    $('#decision-title').textContent = `已进入 ${data.variant} 页面 · ${data.variant === 'A' ? '品牌介绍' : '产品目录'}`;
+    $('#decision-title').textContent = `已分配 ${data.variant} 页面 · ${data.targetUrl ? '嵌入已保存网址' : '内置演示'}`;
     $('#decision-reason').textContent = data.reason;
     $('#visit-id').textContent = `VISIT #${data.id}`;
     $('#fresh').checked = false;
@@ -45,6 +107,13 @@ $('#run').addEventListener('click', async () => {
 });
 $('#refresh').addEventListener('click', () => refreshHistory().catch(showError));
 syncControls();
+fetch('/api/config').then(async response => {
+  if (!response.ok) throw Error('配置加载失败，请刷新后台页面重试。');
+  applyConfig(await response.json());
+  $('#url-fields').disabled = false;
+  $('#save-status').textContent = '配置已载入';
+  previewPage('A');
+}).catch(error => {$('#config-error').hidden = false; $('#config-error').textContent = error.message;});
 refreshHistory().catch(showError);
 fetch('/api/device').then(async response => {
   if (!response.ok) throw Error('读取设备信息失败，请确认服务已经更新。');
