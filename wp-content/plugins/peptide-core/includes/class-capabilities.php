@@ -1,6 +1,6 @@
 <?php
 /**
- * 批次与报告的能力。管理员和 WooCommerce 的 shop_manager 获得全部能力。
+ * 插件能力。批次、报告和批次分配授予管理员与 WooCommerce 的 shop_manager；插件设置只授予管理员。
  *
  * @package PeptideCore
  */
@@ -13,8 +13,11 @@ final class Capabilities {
 
 	public const ROLES = array( 'administrator', 'shop_manager' );
 
+	/** 只授予管理员的能力。 */
+	public const ADMIN_ONLY = array( 'pc_manage_settings' );
+
 	/**
-	 * register_post_type 的 capability_type 对应的基础能力（配合 map_meta_cap）。
+	 * register_post_type 的 capability_type 对应的基础能力（配合 map_meta_cap），以及员工共用的能力。
 	 *
 	 * @return string[]
 	 */
@@ -47,6 +50,12 @@ final class Capabilities {
 				$role->add_cap( $cap );
 			}
 		}
+		$admin = get_role( 'administrator' );
+		if ( $admin ) {
+			foreach ( self::ADMIN_ONLY as $cap ) {
+				$admin->add_cap( $cap );
+			}
+		}
 	}
 
 	public static function revoke(): void {
@@ -55,7 +64,7 @@ final class Capabilities {
 			if ( ! $role ) {
 				continue;
 			}
-			foreach ( self::all() as $cap ) {
+			foreach ( array_merge( self::all(), self::ADMIN_ONLY ) as $cap ) {
 				$role->remove_cap( $cap );
 			}
 		}

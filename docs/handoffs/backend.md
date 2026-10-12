@@ -202,3 +202,22 @@
 - **实际检查**：在本地站点放了一个临时测试页（模拟 WooCommerce 在冒泡阶段调用 confirm 的处理函数），用内置浏览器真实点击测试：弹出页面内对话框，原操作被拦住；点“确定”后原操作执行且只执行一次，原生 confirm 已恢复；按 Esc 取消后原操作没有执行；alert 显示为页面内提示框，按回车可以关闭。测试页已删除（再访问返回 404）。脚本在后台正常加载，中文文案（请确认 / 提示 / 确定 / 取消）正确。
 - **未验证**：在真实的 WooCommerce 订单页里点退款（要地瓜刷新后台再试）。
 - **顺带发现**：本地站点的 debug.log 里有一条 Codex 主题 `functions.php:52` 的致命错误（09:36 UTC，`stdClass` 被当成数组使用，因为 Store API 的 extensions 是对象）。Codex 已经修复（改为先 JSON 往返转换），首页现在返回 200。另外，Codex 的主题已经通过目录联接挂到这个后端站点并启用了。
+
+### BE-05 设置页与结账确认 · 2026-10-12 · Claude
+
+- **范围**：插件设置页、结账确认复选框、订单上的确认快照。用户还没提供文案，所以设置页先做好，文案留空，用户以后在后台填写。
+- **新增文件**：`includes/admin/class-settings-page.php`、`includes/class-checkout-ack.php`、`tests/smoke-settings-ack.php`。修改：`class-settings.php`（新增 `sanitize()`、`checkout_ack_label()`）、`class-capabilities.php`（新增只授予管理员的 `pc_manage_settings`）、`class-plugin.php`、`peptide-core.php`（版本 0.3.0）、翻译文件、README。
+- **设计要点**：
+  - 设置页在“WooCommerce → VialCove 设置”，用 Settings API 保存到 `peptide_core_settings`；`option_page_capability` 改为 `pc_manage_settings`，店铺经理看不到这个页面。
+  - 结账确认使用 WooCommerce 官方的 Additional Checkout Fields API（必选复选框，位置 order）：前端由结账区块自动渲染，后端由 Store API 自动校验。本站结账页是区块结账（已确认）。
+  - 订单快照 `_pc_checkout_ack = { label, accepted_at }` 保存顾客勾选时的原文，以后改文案也不影响旧订单。
+  - 确认框文案只能填纯文本（结账复选框标签不支持 HTML）；`/site` 中的 `checkout_ack.label_html` 因此也是纯文本。
+- **接口影响**：`/site` 的形状不变。@Codex：如果使用 WooCommerce 结账区块，复选框会自动出现；如果自己调用 Store API 的 `/checkout`，需要传 `additional_fields: { "peptide-core/checkout-ack": true }`。
+- **实际检查**：
+  - `smoke-settings-ack.php` 17 项全部通过：清理与校验（空品牌名保留原值、过滤 script、没有文案时不能开启确认）、`/site` 正确反映设置、字段注册为必选复选框、订单快照（原文和 UTC 时间）、后台显示、管理员有设置权限而店铺经理没有、清理后恢复原状。
+  - **真实 HTTP**（Store API：建购物车 → 加商品 → 结账）：不传确认字段返回 400 `rest_missing_callback_param`；传 false 返回 400 `rest_invalid_param`；传 true 时通过确认校验，只停在“没有支付方式”（支付还没接，这是预期结果）。测试后设置已恢复（option 删除，回到默认值），没有留下测试订单。
+  - 五套测试回归，共 75 项全部通过。
+- **其他**：
+  - debug.log 里新增了一条致命错误，来自我在命令行用来检查订单的临时脚本（对退款对象调用了 `get_billing_email()`），不是插件代码的问题。
+  - 订单 #55 是用户在演示订单 #54 上做的 30 美元人工退款（#54 现在的状态是“已退款”）。
+- **未验证**：结账页上复选框的实际外观（要在后台开启确认并填写文案后，才能在前台结账页看到）；后台设置页的实际显示。

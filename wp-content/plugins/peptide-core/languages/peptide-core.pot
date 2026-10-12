@@ -2,14 +2,14 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.2.0\n"
+"Project-Id-Version: Peptide Core 0.3.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-12T09:45:38+00:00\n"
+"POT-Creation-Date: 2026-10-12T09:54:22+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -499,6 +499,75 @@ msgstr ""
 msgid "A report needs a batch and a file before it can be published. It was kept as a draft."
 msgstr ""
 
+#. translators: %s: store brand name
+#: includes/admin/class-settings-page.php:29
+#, php-format
+msgid "%s settings"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:59
+msgid "Brand"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:62
+msgid "Brand name"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:65
+msgid "Used in the admin area (workbench, this page). Storefront branding is handled by the theme."
+msgstr ""
+
+#: includes/admin/class-settings-page.php:70
+#: includes/admin/class-settings-page.php:73
+msgid "Demo mode"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:75
+msgid "The site contains demonstration data; the storefront shows the demo notice."
+msgstr ""
+
+#: includes/admin/class-settings-page.php:76
+msgid "Turn this off only after all demo records have been removed and real data is in place."
+msgstr ""
+
+#: includes/admin/class-settings-page.php:80
+msgid "Demo notice"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:83
+msgid "Shown to visitors while demo mode is on. English is recommended for overseas visitors."
+msgstr ""
+
+#: includes/admin/class-settings-page.php:88
+#: includes/admin/class-settings-page.php:91
+msgid "Use statement"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:94
+msgid "A statement about the intended use of your products, shown on the storefront. Leave empty to hide it. Basic HTML (links, bold) is allowed. The content is your decision; make sure it is accurate and compliant."
+msgstr ""
+
+#: includes/admin/class-settings-page.php:99
+#: includes/class-checkout-ack.php:70
+msgid "Checkout confirmation"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:102
+msgid "Require confirmation"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:104
+msgid "Customers must tick a checkbox before placing an order."
+msgstr ""
+
+#: includes/admin/class-settings-page.php:108
+msgid "Checkbox text"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:111
+msgid "Plain text only. The exact text and the time of acceptance are saved on each order. Required when the confirmation is enabled."
+msgstr ""
+
 #: includes/api/class-errors.php:20
 msgid "Invalid request parameters."
 msgstr ""
@@ -543,6 +612,16 @@ msgstr ""
 msgid "Best report state across public batches for the current user."
 msgstr ""
 
+#: includes/class-checkout-ack.php:40
+msgid "Please tick the confirmation box before placing your order."
+msgstr ""
+
+#. translators: %s: date and time
+#: includes/class-checkout-ack.php:73
+#, php-format
+msgid "Accepted at %s (UTC)"
+msgstr ""
+
 #. translators: 1: product name, 2: batch number or "none"
 #: includes/class-order-batches.php:108
 #, php-format
@@ -564,7 +643,7 @@ msgstr ""
 msgid "Batch: %s"
 msgstr ""
 
-#: includes/class-plugin.php:67
+#: includes/class-plugin.php:69
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr ""
 
@@ -617,4 +696,8 @@ msgstr ""
 #: includes/class-private-files.php:86
 #: includes/class-private-files.php:108
 msgid "The file could not be saved."
+msgstr ""
+
+#: includes/class-settings.php:92
+msgid "The checkout confirmation was not enabled because its text is empty."
 msgstr ""

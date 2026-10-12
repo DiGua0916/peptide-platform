@@ -2,7 +2,7 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.2.0\n"
+"Project-Id-Version: Peptide Core 0.3.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -11,7 +11,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-12T09:45:38+00:00\n"
+"POT-Creation-Date: 2026-10-12T09:54:22+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -499,6 +499,75 @@ msgstr "请选择此报告所属的批次。"
 msgid "A report needs a batch and a file before it can be published. It was kept as a draft."
 msgstr "报告必须先选择批次并上传文件才能发布，已保持为草稿。"
 
+#. translators: %s: store brand name
+#: includes/admin/class-settings-page.php:29
+#, php-format
+msgid "%s settings"
+msgstr "%s 设置"
+
+#: includes/admin/class-settings-page.php:59
+msgid "Brand"
+msgstr "品牌"
+
+#: includes/admin/class-settings-page.php:62
+msgid "Brand name"
+msgstr "品牌名"
+
+#: includes/admin/class-settings-page.php:65
+msgid "Used in the admin area (workbench, this page). Storefront branding is handled by the theme."
+msgstr "用于后台（工作台、本页面）。前台的品牌展示由主题负责。"
+
+#: includes/admin/class-settings-page.php:70
+#: includes/admin/class-settings-page.php:73
+msgid "Demo mode"
+msgstr "演示模式"
+
+#: includes/admin/class-settings-page.php:75
+msgid "The site contains demonstration data; the storefront shows the demo notice."
+msgstr "网站中有演示数据；前台会显示演示提示。"
+
+#: includes/admin/class-settings-page.php:76
+msgid "Turn this off only after all demo records have been removed and real data is in place."
+msgstr "请在删除全部演示数据、换上真实数据之后再关闭。"
+
+#: includes/admin/class-settings-page.php:80
+msgid "Demo notice"
+msgstr "演示提示"
+
+#: includes/admin/class-settings-page.php:83
+msgid "Shown to visitors while demo mode is on. English is recommended for overseas visitors."
+msgstr "演示模式开启时向访客显示。面向海外访客，建议使用英文。"
+
+#: includes/admin/class-settings-page.php:88
+#: includes/admin/class-settings-page.php:91
+msgid "Use statement"
+msgstr "用途声明"
+
+#: includes/admin/class-settings-page.php:94
+msgid "A statement about the intended use of your products, shown on the storefront. Leave empty to hide it. Basic HTML (links, bold) is allowed. The content is your decision; make sure it is accurate and compliant."
+msgstr "说明产品用途的声明，显示在网站前台；留空则不显示。可使用简单 HTML（链接、加粗）。内容由你决定，请确保准确并符合法规。"
+
+#: includes/admin/class-settings-page.php:99
+#: includes/class-checkout-ack.php:70
+msgid "Checkout confirmation"
+msgstr "结账确认"
+
+#: includes/admin/class-settings-page.php:102
+msgid "Require confirmation"
+msgstr "要求确认"
+
+#: includes/admin/class-settings-page.php:104
+msgid "Customers must tick a checkbox before placing an order."
+msgstr "顾客下单前必须勾选一个确认框。"
+
+#: includes/admin/class-settings-page.php:108
+msgid "Checkbox text"
+msgstr "确认框文案"
+
+#: includes/admin/class-settings-page.php:111
+msgid "Plain text only. The exact text and the time of acceptance are saved on each order. Required when the confirmation is enabled."
+msgstr "只能填纯文本。每个订单都会保存顾客勾选时的原文和勾选时间。开启确认时必须填写。"
+
 #: includes/api/class-errors.php:20
 msgid "Invalid request parameters."
 msgstr "请求参数无效。"
@@ -543,6 +612,16 @@ msgstr "公开批次数量。"
 msgid "Best report state across public batches for the current user."
 msgstr "当前用户在所有公开批次中可获得的最佳报告状态。"
 
+#: includes/class-checkout-ack.php:40
+msgid "Please tick the confirmation box before placing your order."
+msgstr "下单前请先勾选确认框。"
+
+#. translators: %s: date and time
+#: includes/class-checkout-ack.php:73
+#, php-format
+msgid "Accepted at %s (UTC)"
+msgstr "勾选时间：%s（UTC）"
+
 #. translators: 1: product name, 2: batch number or "none"
 #: includes/class-order-batches.php:108
 #, php-format
@@ -564,7 +643,7 @@ msgstr "批次分配已更新："
 msgid "Batch: %s"
 msgstr "批次：%s"
 
-#: includes/class-plugin.php:67
+#: includes/class-plugin.php:69
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr "Peptide Core 需要先安装并启用 WooCommerce。"
 
@@ -618,3 +697,7 @@ msgstr "私有报告文件夹不可写入。"
 #: includes/class-private-files.php:108
 msgid "The file could not be saved."
 msgstr "文件保存失败。"
+
+#: includes/class-settings.php:92
+msgid "The checkout confirmation was not enabled because its text is empty."
+msgstr "确认框文案为空，结账确认未开启。"

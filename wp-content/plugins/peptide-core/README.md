@@ -2,7 +2,7 @@
 
 负责人：Claude。方案见 docs/handoffs/backend-plan-v1.md 与 backend-plan-v2.md。
 
-状态：BE-02、BE-03、BE-04、BE-04b 已在本地 WordPress 7.1.3 + WooCommerce 11.2.1（PHP 8.3.29）中运行并通过冒烟测试（2026-10-12）。后台界面尚未人工点验。
+状态：BE-02 至 BE-05 已在本地 WordPress 7.1.3 + WooCommerce 11.2.1（PHP 8.3.29）中运行并通过冒烟测试（2026-10-12）。后台界面尚未人工点验。
 
 ## 本地开发站点
 
@@ -15,6 +15,7 @@
   - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-read-api.php`（只读接口与报告权限，18 项）
   - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-order-batches.php`（订单与批次关联，18 项）
   - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-workbench.php`（后台工作台，13 项）
+  - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-settings-ack.php`（设置页与结账确认，17 项）
 
 ## 依赖
 
@@ -81,7 +82,13 @@ wp peptide demo purge --yes
 
 后台首页的“VialCove 工作台”面板（有 edit_pc_batches 或 pc_assign_batches 能力的用户可见），放在第一列最上面：待指定批次的已付款订单（processing）、缺少已发布报告的公开批次、草稿报告数量、演示模式与演示数据数量、常用入口。同时移除 WordPress 的“快速草稿”和“活动与新闻”面板。品牌名取自设置项 `brand_name`（默认 VialCove）。
 
+## 设置页与结账确认（BE-05，已实现）
+
+- 后台“WooCommerce → VialCove 设置”（仅管理员，能力 `pc_manage_settings`）：品牌名、演示模式与演示提示、用途声明（允许简单 HTML，留空则不显示）、结账确认开关与文案（纯文本；开启时必须填写文案）。保存在 option `peptide_core_settings`，`/site` 接口据此返回。
+- 结账确认：通过 WooCommerce 的 Additional Checkout Fields API 在**区块结账**的订单区域加一个必选复选框（字段 ID `peptide-core/checkout-ack`）。Store API 服务端校验：没传这个字段或传 false 时都返回 400。勾选后订单上保存快照 `_pc_checkout_ack`（当时的原文和 UTC 时间），后台订单详情中会显示。**不支持经典结账短代码。**
+- 后台的浏览器原生 confirm / alert 已换成页面内对话框（`assets/admin-dialogs.*`）。
+
 ## 尚未实现
 
-- 结账确认项（BE-05）、真实数据导入（BE-06）。
+- 真实数据导入（BE-06）。
 - 支付与物流：按用户安排暂时搁置，先由 Codex 设计界面。
