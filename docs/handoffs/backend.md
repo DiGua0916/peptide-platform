@@ -124,3 +124,24 @@
 - **未验证**：后台界面没有人工点验（需要用户用自己的管理员账号登录）；没有通过浏览器上传文件；Nginx 下的行为。
 - **修改文件**：`wp-content/plugins/peptide-core/README.md`、新增 `wp-content/plugins/peptide-core/tests/smoke-save-logic.php`、本文件。
 - **下一步**：用户在后台目视检查“产品 → Batches / Test reports”和商品的 Peptide data 面板；然后做 BE-03 只读接口。
+
+### BE-03 只读接口 · 2026-10-12 · Claude
+
+- **范围**：Store API 扩展、`peptide/v1` 只读接口、报告受控下载、主题 PHP 读取函数。没有涉及订单、支付、物流。
+- **新增文件**：`includes/class-settings.php`、`class-access.php`、`class-catalog.php`、`functions.php`，`includes/api/class-rest-controller.php`、`class-errors.php`、`class-store-api.php`，`tests/smoke-read-api.php`。修改：`includes/class-plugin.php`（注册新模块）、插件 README。
+- **接口**（与方案 v1/v2 一致，以下是实现时补充的细节，需要同步到共享契约）：
+  1. `GET /products/{slug}/batches` 返回 `{ product: {id, slug, name, is_demo}, batches: [...] }`。
+  2. 批次对象包含：`id`、`batch_no`、`product_id`、`variation_ids`、`status`、`is_demo`、`manufactured_on`、`retest_or_expiry_on`、`origin_note`、`report_state`、`reports`。批次查询结果另附 `product`。
+  3. 报告对象在 v1 C4 的基础上加了 `batch_id` 和 `access_reason`（public / registered / approved / staff，之后还会有 order_owner）。
+  4. `access=admin` 的报告对非员工完全不出现（不是显示为锁定）。
+  5. `download_url` 是绝对地址；已登录用户的地址附带 `_wpnonce`，这样普通链接也能带上登录身份。
+  6. 字段级原因码新增 `invalid_format`（批次号格式错误）。
+  7. 批次查询限流为每个 IP 每 10 分钟 60 次。
+  8. 预留过滤器 `peptide_core_report_access`，供 BE-04 加入“订单所有者”规则。
+- **实际检查**：
+  - 全部 PHP 文件 `php -l` 通过。
+  - 用 curl 走真实 HTTP（Apache）测试：`/site` 200；商品批次 200；不存在的商品 404；批次查询 200 / 404 / 400（缺参数 `required`、格式错 `invalid_format`）；公开报告下载 200（application/pdf、attachment、nosniff，文件以 %PDF 开头）；访客下载 registered 报告 401；不存在的报告 404；Store API 商品带 `extensions.peptide_core`；DEMO-B-2401 为 `pending`；连续请求触发 429（带 `retry_after`）。
+  - `tests/smoke-read-api.php` 18 项全部通过：访客、顾客、已审核顾客、员工四种身份；旧版本隐藏与 `include_history`；撤回 410、草稿 404、未登录 401、权限不足 403；隐藏批次不可见；测试账号和数据清理后恢复原状。
+  - `tests/smoke-save-logic.php` 回归 9 项通过；`debug.log` 没有产生。
+- **未验证**：已登录用户在浏览器里点击带 nonce 的下载链接（只验证了地址中带 nonce，以及服务端的权限判断）；Store API 在购物车 / 结账接口中的表现（扩展只挂在商品接口上）。
+- **下一步**：BE-04 订单行与批次关联。

@@ -2,7 +2,7 @@
 
 负责人：Claude。方案见 docs/handoffs/backend-plan-v1.md 与 backend-plan-v2.md。
 
-状态：BE-02 已在本地 WordPress 7.1.3 + WooCommerce 11.2.1（PHP 8.3.29）中启用并通过冒烟测试（2026-10-12）。后台界面尚未人工点验。
+状态：BE-02、BE-03 已在本地 WordPress 7.1.3 + WooCommerce 11.2.1（PHP 8.3.29）中运行并通过冒烟测试（2026-10-12）。后台界面尚未人工点验。
 
 ## 本地开发站点
 
@@ -10,7 +10,9 @@
 - 本插件目录通过目录联接挂载到站点的 `wp-content/plugins/peptide-core`，代码只在仓库这一份。
 - 报告私有目录：`D:\Codex\Sites\vialcovepeptidescom\app\private\peptide-core`（wp-config.php 中的 `PEPTIDE_CORE_PRIVATE_DIR`，位于网站根目录之外）。
 - 已开启 `WP_DEBUG` 与 `WP_DEBUG_LOG`（日志写入 `wp-content/debug.log`，不在页面显示）。
-- 冒烟测试：`wp eval-file wp-content/plugins/peptide-core/tests/smoke-save-logic.php`（需先 `wp peptide demo seed`，只用于开发站点）。
+- 冒烟测试（需先 `wp peptide demo seed`，只用于开发站点）：
+  - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-save-logic.php`（后台保存逻辑，9 项）
+  - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-read-api.php`（只读接口与报告权限，18 项）
 
 ## 依赖
 
@@ -50,8 +52,21 @@ wp peptide demo purge --yes
 
 创建 2 个演示商品（Demo Peptide A / B）、3 个批次（DEMO-A-2401、DEMO-A-2402、DEMO-B-2401）和 2 份带 “DEMO – NOT A REAL TEST REPORT” 水印的演示报告。所有记录都有演示标记；`purge` 只删除带演示标记的记录。
 
+## 前台接口（BE-03，已实现）
+
+| 接口 | 说明 |
+| --- | --- |
+| `GET /wp-json/peptide/v1/site` | 演示模式、演示提示、用途声明、结账确认项 |
+| `GET /wp-json/peptide/v1/products/{slug}/batches?include_history=0\|1` | `{ product, batches[] }`，只含已发布且公开的批次 |
+| `GET /wp-json/peptide/v1/batches/lookup?batch_no=` | 单个批次 + `product`；每个 IP 每 10 分钟最多 60 次 |
+| `GET /wp-json/peptide/v1/reports/{id}/file` | 校验权限后输出文件；已登录用户的 `download_url` 自带 `_wpnonce` |
+| Store API `GET /wp-json/wc/store/v1/products` | 每个商品附加 `extensions.peptide_core`：`is_demo`、`specs`、`batch_count`、`report_state` |
+
+主题 PHP 函数：`peptide_core_get_site_config()`、`peptide_core_get_product_batches( $slug )`、`peptide_core_lookup_batch( $batch_no )`（定义在 includes/functions.php）。
+
+错误格式：`{ code, message, data: { status, fields? } }`。错误码：`pc_invalid_param`（400，`fields` 值为 `required` / `invalid_format`）、`pc_login_required`（401）、`pc_forbidden`（403）、`pc_not_found`（404，不区分“不存在”和“不可见”）、`pc_report_withdrawn`（410）、`pc_rate_limited`（429，带 `retry_after`）。
+
 ## 尚未实现
 
-- 前台接口（BE-03）：Store API 扩展、`peptide/v1` 只读接口、报告下载。
 - 订单行与批次关联（BE-04）、结账确认项（BE-05）、真实数据导入（BE-06）。
 - 支付与物流：按用户安排暂时搁置，先由 Codex 设计界面。

@@ -17,9 +17,13 @@ final class Plugin {
 			return;
 		}
 
+		require_once PEPTIDE_CORE_DIR . '/includes/functions.php';
+
 		Post_Types::register_hooks();
 		Meta::register_hooks();
 		Reports::register_hooks();
+		Api\Rest_Controller::register_hooks();
+		Api\Store_Api::register_hooks();
 
 		if ( is_admin() ) {
 			Admin_Notices::register_hooks();
