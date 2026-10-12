@@ -2,6 +2,8 @@
 
 状态：2026-10-12 INT-01 集成基线，peptide-core **0.3.0 / ecec833**。接口已在 LocalWP 开发站点实现。设计沿革见后端方案 v1 的 C/D、v2 的 C'/D'；本文件记录当前代码，包括后续增补。变更先写角色交接，再协调更新本文件。
 
+后续基线：PAY-SHIP-01 的后端提交 3aecb8f 增加测试商务配置命令和后台提醒，公共接口形状未变。
+
 ## 数据与职责
 
 - WooCommerce 是商品、变体、价格、库存、购物车、顾客和订单的唯一来源。使用 Store API `/wc/store/v1` 及原生 Blocks 购物车/结账。
@@ -98,4 +100,14 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
 
 ## 支付物流边界
 
-前端使用原生区块的支付/配送选项、价格、错误和加载状态；标识和业务值由 WooCommerce/网关提供。Claude 配置测试网关和运费后继续联调。当前没有可用支付方式，运费未配置，不把样式或测试 fixture 当作真实支付/配送能力。正式上线另验实际网关、税费、配送范围、政策链接和真实资料。
+前端使用原生区块的支付/配送选项、价格、错误和加载状态；标识和业务值由 WooCommerce/网关提供，不在主题硬编码支付标识或运费。
+
+当前本地测试配置（3aecb8f，由 Claude 配置，Codex 浏览器复验）：
+
+- 只销售和配送至 US，国家选项只有 United States。
+- `wp peptide demo commerce` 开启测试配置：区域 United States (test shipping)，一条 flat_rate，费用 0，名称 Test shipping – rates to be confirmed。
+- 支付 ID 为 `cod`，名称 Test payment – no money is charged。是 WooCommerce 货到付款方式用于开发演示，不对接支付商、不扣款；测试订单进入 processing。
+- 浏览器原生区块提交成功后跳 WooCommerce order-received；确认字段快照保留当时文案及 UTC 时间；顾客与管理员邮件仅由本机 Mailpit 接收。
+- `wp peptide demo commerce --disable` 关闭测试付款、删除测试区域，但保留美国销售范围。正式上线前需要关闭/替换测试配置。
+
+正式收款、真实运费/税费、具体配送政策、Terms/Privacy 链接和正式邮件服务另行配置与验证。本地通过不代表真实支付商或生产物流已就绪。
