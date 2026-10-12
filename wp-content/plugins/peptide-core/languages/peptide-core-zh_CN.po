@@ -1,0 +1,703 @@
+# Copyright (C) 2026 DiGua
+# This file is distributed under the same license as the Peptide Core plugin.
+msgid ""
+msgstr ""
+"Project-Id-Version: Peptide Core 0.3.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-10-12T09:54:22+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: peptide-core\n"
+
+#. Plugin Name of the plugin
+#: peptide-core.php
+msgid "Peptide Core"
+msgstr "Peptide Core（多肽业务插件）"
+
+#. Description of the plugin
+#: peptide-core.php
+msgid "Batches, test reports and WooCommerce integration for the peptide store."
+msgstr "为多肽商店提供批次、检测报告及与 WooCommerce 的集成。"
+
+#. Author of the plugin
+#: peptide-core.php
+msgid "DiGua"
+msgstr "DiGua"
+
+#: includes/admin/class-batch-metabox.php:29
+msgid "Batch details"
+msgstr "批次信息"
+
+#: includes/admin/class-batch-metabox.php:30
+#: includes/class-post-types.php:56
+msgid "Test reports"
+msgstr "检测报告"
+
+#: includes/admin/class-batch-metabox.php:49
+#: includes/admin/class-list-columns.php:32
+msgid "Batch number"
+msgstr "批次号"
+
+#: includes/admin/class-batch-metabox.php:52
+msgid "3–40 characters: letters, digits and hyphens. Stored in upper case and must be unique."
+msgstr "3–40 个字符：字母、数字和连字符。保存时统一转为大写，且不能与其他批次重复。"
+
+#: includes/admin/class-batch-metabox.php:56
+#: includes/admin/class-list-columns.php:33
+msgid "Product"
+msgstr "商品"
+
+#: includes/admin/class-batch-metabox.php:59
+msgid "— Select a product —"
+msgstr "— 选择商品 —"
+
+#: includes/admin/class-batch-metabox.php:68
+#: includes/admin/class-list-columns.php:34
+msgid "Visibility"
+msgstr "可见性"
+
+#: includes/admin/class-batch-metabox.php:71
+msgid "Public (visible on the storefront)"
+msgstr "公开（前台可见）"
+
+#: includes/admin/class-batch-metabox.php:72
+msgid "Hidden (admin only)"
+msgstr "隐藏（仅后台可见）"
+
+#: includes/admin/class-batch-metabox.php:77
+#: includes/admin/class-list-columns.php:35
+msgid "Status"
+msgstr "状态"
+
+#: includes/admin/class-batch-metabox.php:80
+msgid "Active"
+msgstr "在售"
+
+#: includes/admin/class-batch-metabox.php:81
+msgid "Depleted (reports stay searchable)"
+msgstr "已售完（报告仍可查询）"
+
+#: includes/admin/class-batch-metabox.php:86
+msgid "Manufactured on"
+msgstr "生产日期"
+
+#: includes/admin/class-batch-metabox.php:90
+msgid "Retest / expiry date"
+msgstr "复检 / 有效期至"
+
+#: includes/admin/class-batch-metabox.php:94
+msgid "Origin note"
+msgstr "来源说明"
+
+#: includes/admin/class-batch-metabox.php:97
+msgid "Leave empty unless the information is real and may be published."
+msgstr "只有信息真实且可以公开时才填写，否则留空。"
+
+#: includes/admin/class-batch-metabox.php:101
+#: includes/admin/class-report-metabox.php:144
+msgid "Flags"
+msgstr "标记"
+
+#: includes/admin/class-batch-metabox.php:103
+msgid "Report in preparation"
+msgstr "报告整理中"
+
+#: includes/admin/class-batch-metabox.php:104
+msgid "Demo batch (synthetic data)"
+msgstr "演示批次（虚构数据）"
+
+#: includes/admin/class-batch-metabox.php:114
+msgid "No test reports yet."
+msgstr "暂无检测报告。"
+
+#: includes/admin/class-batch-metabox.php:135
+msgid "Add test report for this batch"
+msgstr "为此批次添加检测报告"
+
+#: includes/admin/class-batch-metabox.php:138
+msgid "Save the batch first, then add reports."
+msgstr "请先保存批次，再添加报告。"
+
+#: includes/admin/class-batch-metabox.php:155
+msgid "Batch number is missing or invalid."
+msgstr "批次号缺失或格式不正确。"
+
+#. translators: %s: batch number
+#: includes/admin/class-batch-metabox.php:158
+#, php-format
+msgid "Batch number %s is already used by another batch."
+msgstr "批次号 %s 已被其他批次使用。"
+
+#: includes/admin/class-batch-metabox.php:166
+msgid "Please select a valid product."
+msgstr "请选择有效的商品。"
+
+#: includes/admin/class-batch-metabox.php:189
+msgid "(no batch number)"
+msgstr "（无批次号）"
+
+#: includes/admin/class-batch-metabox.php:193
+msgid "The batch was saved as a draft until the errors are fixed."
+msgstr "在修正错误前，该批次已保存为草稿。"
+
+#: includes/admin/class-batch-metabox.php:241
+msgid "Pack sizes"
+msgstr "包装规格"
+
+#: includes/admin/class-batch-metabox.php:249
+msgid "Leave all unchecked if this batch applies to every pack size. Save after changing the product to refresh this list."
+msgstr "如果此批次适用于所有规格，请全部不勾选。更换商品后需先保存，才能刷新此列表。"
+
+#. translators: %s: store brand name
+#: includes/admin/class-dashboard.php:39
+#, php-format
+msgid "%s workbench"
+msgstr "%s 工作台"
+
+#: includes/admin/class-dashboard.php:65
+msgid "Orders waiting for batch assignment"
+msgstr "待指定批次的订单"
+
+#: includes/admin/class-dashboard.php:67
+msgid "All paid orders have their batches assigned."
+msgstr "所有已付款订单都已指定批次。"
+
+#. translators: %d: number of items without a batch
+#: includes/admin/class-dashboard.php:78
+#, php-format
+msgid "%d item without batch"
+msgid_plural "%d items without batch"
+msgstr[0] "%d 件商品未指定批次"
+
+#: includes/admin/class-dashboard.php:86
+msgid "Public batches without a published report"
+msgstr "缺少已发布报告的公开批次"
+
+#: includes/admin/class-dashboard.php:88
+msgid "Every public batch has a published report."
+msgstr "所有公开批次都有已发布的报告。"
+
+#: includes/admin/class-dashboard.php:96
+msgid "marked \"report in preparation\""
+msgstr "已标记“报告整理中”"
+
+#: includes/admin/class-dashboard.php:104
+msgid "Draft reports"
+msgstr "草稿报告"
+
+#: includes/admin/class-dashboard.php:109
+msgid "Review and publish"
+msgstr "去审核并发布"
+
+#: includes/admin/class-dashboard.php:112
+msgid "No draft reports."
+msgstr "没有草稿报告。"
+
+#: includes/admin/class-dashboard.php:116
+msgid "Demo data"
+msgstr "演示数据"
+
+#: includes/admin/class-dashboard.php:119
+msgid "Demo mode is ON: the storefront shows the demo notice."
+msgstr "演示模式已开启：前台会显示演示提示。"
+
+#: includes/admin/class-dashboard.php:120
+msgid "Demo mode is off."
+msgstr "演示模式已关闭。"
+
+#. translators: %d: number of demo records
+#: includes/admin/class-dashboard.php:123
+#, php-format
+msgid "%d demo record exists."
+msgid_plural "%d demo records exist."
+msgstr[0] "当前有 %d 条演示数据。"
+
+#: includes/admin/class-dashboard.php:125
+msgid "Remove them before going live (wp peptide demo purge)."
+msgstr "正式上线前请删除（wp peptide demo purge）。"
+
+#: includes/admin/class-dashboard.php:132
+#: includes/class-post-types.php:41
+msgid "Add batch"
+msgstr "添加批次"
+
+#: includes/admin/class-dashboard.php:133
+#: includes/class-post-types.php:58
+msgid "Add test report"
+msgstr "添加检测报告"
+
+#: includes/admin/class-dashboard.php:134
+msgid "All batches"
+msgstr "全部批次"
+
+#: includes/admin/class-dashboard.php:135
+msgid "All orders"
+msgstr "全部订单"
+
+#. translators: %d: total count
+#: includes/admin/class-dashboard.php:171
+#, php-format
+msgid "View all %d"
+msgstr "查看全部 %d 条"
+
+#: includes/admin/class-dialogs.php:31
+msgid "Please confirm"
+msgstr "请确认"
+
+#: includes/admin/class-dialogs.php:32
+msgid "Notice"
+msgstr "提示"
+
+#: includes/admin/class-dialogs.php:33
+msgid "OK"
+msgstr "确定"
+
+#: includes/admin/class-dialogs.php:34
+msgid "Cancel"
+msgstr "取消"
+
+#: includes/admin/class-list-columns.php:36
+msgid "Reports"
+msgstr "报告"
+
+#: includes/admin/class-list-columns.php:37
+#: includes/admin/class-list-columns.php:80
+msgid "Demo"
+msgstr "演示"
+
+#: includes/admin/class-list-columns.php:38
+#: includes/admin/class-list-columns.php:81
+msgid "Date"
+msgstr "日期"
+
+#: includes/admin/class-list-columns.php:62
+#: includes/admin/class-list-columns.php:109
+msgid "Yes"
+msgstr "是"
+
+#: includes/admin/class-list-columns.php:74
+msgid "Title"
+msgstr "标题"
+
+#: includes/admin/class-list-columns.php:75
+#: includes/admin/class-order-metabox.php:56
+#: includes/admin/class-report-metabox.php:81
+#: includes/class-post-types.php:40
+msgid "Batch"
+msgstr "批次"
+
+#: includes/admin/class-list-columns.php:76
+#: includes/admin/class-report-metabox.php:92
+msgid "Type"
+msgstr "类型"
+
+#: includes/admin/class-list-columns.php:77
+#: includes/admin/class-report-metabox.php:96
+msgid "Version"
+msgstr "版本"
+
+#: includes/admin/class-list-columns.php:78
+#: includes/admin/class-report-metabox.php:105
+msgid "Report status"
+msgstr "报告状态"
+
+#: includes/admin/class-list-columns.php:79
+msgid "Access"
+msgstr "访问级别"
+
+#: includes/admin/class-order-metabox.php:33
+msgid "Batch assignment"
+msgstr "批次分配"
+
+#: includes/admin/class-order-metabox.php:47
+msgid "This order has no product items."
+msgstr "此订单没有商品项目。"
+
+#: includes/admin/class-order-metabox.php:52
+msgid "When shipping, choose the batch actually sent for each item. Customers will see the batch number in their order and can download that batch's published reports."
+msgstr "发货时，为每件商品选择实际发出的批次。顾客会在自己的订单中看到批次号，并可以下载该批次已发布的报告。"
+
+#: includes/admin/class-order-metabox.php:54
+msgid "Item"
+msgstr "商品"
+
+#: includes/admin/class-order-metabox.php:55
+msgid "Qty"
+msgstr "数量"
+
+#: includes/admin/class-order-metabox.php:66
+msgid "No active batch for this product yet."
+msgstr "此商品暂无在售批次。"
+
+#: includes/admin/class-order-metabox.php:70
+msgid "— Not assigned —"
+msgstr "— 未指定 —"
+
+#: includes/admin/class-order-metabox.php:74
+msgid "(depleted)"
+msgstr "（已售完）"
+
+#: includes/admin/class-order-metabox.php:77
+msgid "(hidden)"
+msgstr "（隐藏）"
+
+#. translators: %s: product name
+#: includes/admin/class-order-metabox.php:108
+#, php-format
+msgid "The selected batch does not match \"%s\" and was not saved."
+msgstr "所选批次与“%s”不匹配，未保存。"
+
+#: includes/admin/class-product-panel.php:34
+msgid "Peptide data"
+msgstr "多肽资料"
+
+#: includes/admin/class-product-panel.php:54
+msgid "Demo product"
+msgstr "演示商品"
+
+#: includes/admin/class-product-panel.php:55
+msgid "Synthetic demonstration record. The storefront must show a \"Demo\" label."
+msgstr "虚构的演示数据。前台必须显示“Demo”标识。"
+
+#: includes/admin/class-product-panel.php:63
+msgid "Specifications"
+msgstr "规格表"
+
+#: includes/admin/class-product-panel.php:64
+msgid "One per line: Label | Value | Unit (unit optional). Do not enter usage, dosage or efficacy claims."
+msgstr "每行一项：名称 | 值 | 单位（单位可省略）。不要填写用途、剂量或功效说明。"
+
+#: includes/admin/class-product-panel.php:141
+#: includes/class-post-types.php:39
+msgid "Batches"
+msgstr "批次"
+
+#: includes/admin/class-product-panel.php:145
+msgid "No batches yet."
+msgstr "暂无批次。"
+
+#: includes/admin/class-product-panel.php:160
+msgid "Add batch for this product"
+msgstr "为此商品添加批次"
+
+#: includes/admin/class-report-metabox.php:41
+msgid "Report details"
+msgstr "报告信息"
+
+#: includes/admin/class-report-metabox.php:61
+msgid "Certificate of analysis (COA)"
+msgstr "分析证书（COA）"
+
+#: includes/admin/class-report-metabox.php:62
+msgid "HPLC"
+msgstr "HPLC（高效液相色谱）"
+
+#: includes/admin/class-report-metabox.php:63
+msgid "Mass spectrometry (MS)"
+msgstr "质谱（MS）"
+
+#: includes/admin/class-report-metabox.php:64
+msgid "Other"
+msgstr "其他"
+
+#: includes/admin/class-report-metabox.php:67
+msgid "Draft (not visible)"
+msgstr "草稿（不可见）"
+
+#: includes/admin/class-report-metabox.php:68
+msgid "Published"
+msgstr "已发布"
+
+#: includes/admin/class-report-metabox.php:69
+msgid "Superseded (old version)"
+msgstr "已被取代（旧版本）"
+
+#: includes/admin/class-report-metabox.php:70
+msgid "Withdrawn"
+msgstr "已撤回"
+
+#: includes/admin/class-report-metabox.php:73
+msgid "Public"
+msgstr "公开"
+
+#: includes/admin/class-report-metabox.php:74
+msgid "Logged-in customers"
+msgstr "已登录顾客"
+
+#: includes/admin/class-report-metabox.php:75
+msgid "Approved customers"
+msgstr "已审核顾客"
+
+#: includes/admin/class-report-metabox.php:76
+msgid "Staff only"
+msgstr "仅员工"
+
+#: includes/admin/class-report-metabox.php:84
+msgid "— Select a batch —"
+msgstr "— 选择批次 —"
+
+#: includes/admin/class-report-metabox.php:98
+msgid "Assigned on save"
+msgstr "保存时自动分配"
+
+#: includes/admin/class-report-metabox.php:100
+msgid "Superseded by:"
+msgstr "取代它的版本："
+
+#: includes/admin/class-report-metabox.php:109
+msgid "Who can download"
+msgstr "谁可以下载"
+
+#: includes/admin/class-report-metabox.php:112
+msgid "Customers who received this batch in an order can always download its published reports."
+msgstr "订单中收到过此批次的顾客，始终可以下载该批次已发布的报告。"
+
+#: includes/admin/class-report-metabox.php:116
+msgid "Issued on"
+msgstr "出具日期"
+
+#: includes/admin/class-report-metabox.php:120
+msgid "Issuer"
+msgstr "出具机构"
+
+#: includes/admin/class-report-metabox.php:123
+msgid "Real laboratory name only. Leave empty for demo reports."
+msgstr "只填写真实的实验室名称；演示报告请留空。"
+
+#: includes/admin/class-report-metabox.php:127
+msgid "Summary"
+msgstr "摘要"
+
+#: includes/admin/class-report-metabox.php:130
+msgid "Optional. Never enter invented test results."
+msgstr "可选。不要填写编造的检测结果。"
+
+#: includes/admin/class-report-metabox.php:134
+msgid "File"
+msgstr "文件"
+
+#: includes/admin/class-report-metabox.php:140
+msgid "PDF, PNG or JPEG, up to 20 MB. Uploading a new file replaces the current one. Files are stored privately and are never linked directly."
+msgstr "支持 PDF、PNG、JPEG，最大 20 MB。上传新文件会替换当前文件。文件私密存放，不会提供直接链接。"
+
+#: includes/admin/class-report-metabox.php:145
+msgid "Demo report (the file must carry a visible DEMO watermark)"
+msgstr "演示报告（文件必须带有明显的 DEMO 水印）"
+
+#: includes/admin/class-report-metabox.php:170
+msgid "Please select the batch this report belongs to."
+msgstr "请选择此报告所属的批次。"
+
+#: includes/admin/class-report-metabox.php:210
+msgid "A report needs a batch and a file before it can be published. It was kept as a draft."
+msgstr "报告必须先选择批次并上传文件才能发布，已保持为草稿。"
+
+#. translators: %s: store brand name
+#: includes/admin/class-settings-page.php:29
+#, php-format
+msgid "%s settings"
+msgstr "%s 设置"
+
+#: includes/admin/class-settings-page.php:59
+msgid "Brand"
+msgstr "品牌"
+
+#: includes/admin/class-settings-page.php:62
+msgid "Brand name"
+msgstr "品牌名"
+
+#: includes/admin/class-settings-page.php:65
+msgid "Used in the admin area (workbench, this page). Storefront branding is handled by the theme."
+msgstr "用于后台（工作台、本页面）。前台的品牌展示由主题负责。"
+
+#: includes/admin/class-settings-page.php:70
+#: includes/admin/class-settings-page.php:73
+msgid "Demo mode"
+msgstr "演示模式"
+
+#: includes/admin/class-settings-page.php:75
+msgid "The site contains demonstration data; the storefront shows the demo notice."
+msgstr "网站中有演示数据；前台会显示演示提示。"
+
+#: includes/admin/class-settings-page.php:76
+msgid "Turn this off only after all demo records have been removed and real data is in place."
+msgstr "请在删除全部演示数据、换上真实数据之后再关闭。"
+
+#: includes/admin/class-settings-page.php:80
+msgid "Demo notice"
+msgstr "演示提示"
+
+#: includes/admin/class-settings-page.php:83
+msgid "Shown to visitors while demo mode is on. English is recommended for overseas visitors."
+msgstr "演示模式开启时向访客显示。面向海外访客，建议使用英文。"
+
+#: includes/admin/class-settings-page.php:88
+#: includes/admin/class-settings-page.php:91
+msgid "Use statement"
+msgstr "用途声明"
+
+#: includes/admin/class-settings-page.php:94
+msgid "A statement about the intended use of your products, shown on the storefront. Leave empty to hide it. Basic HTML (links, bold) is allowed. The content is your decision; make sure it is accurate and compliant."
+msgstr "说明产品用途的声明，显示在网站前台；留空则不显示。可使用简单 HTML（链接、加粗）。内容由你决定，请确保准确并符合法规。"
+
+#: includes/admin/class-settings-page.php:99
+#: includes/class-checkout-ack.php:70
+msgid "Checkout confirmation"
+msgstr "结账确认"
+
+#: includes/admin/class-settings-page.php:102
+msgid "Require confirmation"
+msgstr "要求确认"
+
+#: includes/admin/class-settings-page.php:104
+msgid "Customers must tick a checkbox before placing an order."
+msgstr "顾客下单前必须勾选一个确认框。"
+
+#: includes/admin/class-settings-page.php:108
+msgid "Checkbox text"
+msgstr "确认框文案"
+
+#: includes/admin/class-settings-page.php:111
+msgid "Plain text only. The exact text and the time of acceptance are saved on each order. Required when the confirmation is enabled."
+msgstr "只能填纯文本。每个订单都会保存顾客勾选时的原文和勾选时间。开启确认时必须填写。"
+
+#: includes/api/class-errors.php:20
+msgid "Invalid request parameters."
+msgstr "请求参数无效。"
+
+#: includes/api/class-errors.php:32
+msgid "Not found."
+msgstr "未找到。"
+
+#: includes/api/class-rest-controller.php:116
+msgid "Please log in to view your orders."
+msgstr "请登录后查看你的订单。"
+
+#: includes/api/class-rest-controller.php:208
+msgid "This report has been withdrawn."
+msgstr "此报告已撤回。"
+
+#: includes/api/class-rest-controller.php:229
+msgid "You do not have permission to download this report."
+msgstr "你没有权限下载此报告。"
+
+#: includes/api/class-rest-controller.php:230
+msgid "Please log in to download this report."
+msgstr "请登录后下载此报告。"
+
+#: includes/api/class-rest-controller.php:280
+msgid "Too many requests. Please try again later."
+msgstr "请求过于频繁，请稍后再试。"
+
+#: includes/api/class-store-api.php:69
+msgid "Synthetic demonstration record."
+msgstr "虚构的演示数据。"
+
+#: includes/api/class-store-api.php:75
+msgid "Specification table."
+msgstr "规格表。"
+
+#: includes/api/class-store-api.php:90
+msgid "Number of public batches."
+msgstr "公开批次数量。"
+
+#: includes/api/class-store-api.php:96
+msgid "Best report state across public batches for the current user."
+msgstr "当前用户在所有公开批次中可获得的最佳报告状态。"
+
+#: includes/class-checkout-ack.php:40
+msgid "Please tick the confirmation box before placing your order."
+msgstr "下单前请先勾选确认框。"
+
+#. translators: %s: date and time
+#: includes/class-checkout-ack.php:73
+#, php-format
+msgid "Accepted at %s (UTC)"
+msgstr "勾选时间：%s（UTC）"
+
+#. translators: 1: product name, 2: batch number or "none"
+#: includes/class-order-batches.php:108
+#, php-format
+msgid "%1$s → batch %2$s"
+msgstr "%1$s → 批次 %2$s"
+
+#: includes/class-order-batches.php:110
+msgid "(none)"
+msgstr "（无）"
+
+#: includes/class-order-batches.php:117
+msgid "Batch assignment updated:"
+msgstr "批次分配已更新："
+
+#. translators: %s: batch number
+#: includes/class-order-batches.php:251
+#: includes/class-order-batches.php:258
+#, php-format
+msgid "Batch: %s"
+msgstr "批次：%s"
+
+#: includes/class-plugin.php:69
+msgid "Peptide Core requires WooCommerce to be installed and active."
+msgstr "Peptide Core 需要先安装并启用 WooCommerce。"
+
+#: includes/class-post-types.php:42
+msgid "Edit batch"
+msgstr "编辑批次"
+
+#: includes/class-post-types.php:43
+msgid "Search batches"
+msgstr "搜索批次"
+
+#: includes/class-post-types.php:44
+msgid "No batches found."
+msgstr "未找到批次。"
+
+#: includes/class-post-types.php:57
+msgid "Test report"
+msgstr "检测报告"
+
+#: includes/class-post-types.php:59
+msgid "Edit test report"
+msgstr "编辑检测报告"
+
+#: includes/class-post-types.php:60
+msgid "Search test reports"
+msgstr "搜索检测报告"
+
+#: includes/class-post-types.php:61
+msgid "No test reports found."
+msgstr "未找到检测报告。"
+
+#: includes/class-private-files.php:62
+#: includes/class-private-files.php:69
+msgid "The file could not be uploaded."
+msgstr "文件上传失败。"
+
+#: includes/class-private-files.php:72
+msgid "The file is empty or larger than 20 MB."
+msgstr "文件为空或超过 20 MB。"
+
+#: includes/class-private-files.php:77
+msgid "Only PDF, PNG and JPEG files are allowed."
+msgstr "只允许上传 PDF、PNG 和 JPEG 文件。"
+
+#: includes/class-private-files.php:81
+#: includes/class-private-files.php:104
+msgid "The private report folder is not writable."
+msgstr "私有报告文件夹不可写入。"
+
+#: includes/class-private-files.php:86
+#: includes/class-private-files.php:108
+msgid "The file could not be saved."
+msgstr "文件保存失败。"
+
+#: includes/class-settings.php:92
+msgid "The checkout confirmation was not enabled because its text is empty."
+msgstr "确认框文案为空，结账确认未开启。"

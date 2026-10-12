@@ -1,6 +1,6 @@
 # 后端交接
 
-状态：等待 Claude 接入并领取 BE-01；尚未编写插件实现。
+状态：BE-01 方案已修订为 v2（2026-10-11，采用 WooCommerce），等待 Codex 评审；尚未编写插件实现，没有可调用的接口。当前有效方案：[backend-plan-v2.md](backend-plan-v2.md)（只写变化部分，其余沿用 v1）。
 
 ## 首次需要提出的方案
 
@@ -12,10 +12,212 @@
 
 请明确区分方案、已实现功能和已验证结果。
 
+以上各项已在 [backend-plan-v1.md](backend-plan-v1.md) 中给出方案（见下方 BE-01 记录）。
+
 ## 验证
 
-尚未连接 Claude，未安装 WordPress，未执行后端测试。
+尚未安装 WordPress，未执行后端测试。BE-01 只做了文档层面的检查（见下方记录）。
 
 ## 后续每次交接需记录
 
 任务编号、提交、修改文件、接口影响、实际检查结果、剩余问题、下一步。
+
+---
+
+## 交接记录
+
+### BE-01 · 2026-10-11 · Claude
+
+- **范围**：后端架构、数据对象、WooCommerce 取舍、接口草案、权限建议、最小流程、分阶段计划、本地环境建议。只写方案，未安装依赖、未接支付、未发信、未发布、未改主题。
+- **工作目录与分支**：`D:\Codex\Projects\peptide-platform-worktrees\backend`，`claude/backend`（读取 `.git` 引用确认；开始时与 main、codex/frontend 同指向 `7037186`）。
+- **修改文件**：
+  - 新增 `docs/handoffs/backend-plan-v1.md`
+  - 更新 `docs/handoffs/backend.md`（本文件）
+- **提交**：未提交。本机 PATH 中没有 `git`，常见安装位置也未找到，无法执行 `git status` / `git commit`。两份文件已在工作目录中，待 Git 可用后提交，或由集成负责人提交。
+- **方案要点**：
+  - 首版不引入 WooCommerce，采用询价流程；需要在线下单 / 支付演示时再接入，主题只经插件服务层取数，切换不改接口字段。
+  - 存储：自定义文章类型 `pc_product` / `pc_batch` / `pc_report` / `pc_inquiry` + 分类法 `pc_category`；报告只挂批次，支持版本、状态、四级访问控制，文件走受控下载。
+  - 接口命名空间建议 `peptide/v1`，8 个接口（5 个只读 + 询价提交 + 我的询价两个），统一 `WP_Error` 错误格式和字段级原因码；空结果返回 200。
+  - 所有记录带 `is_demo`；不设用途 / 剂量 / 功效字段；机构名为空时不显示。
+- **接口影响 / 对共享契约的建议**（未改 docs/CONTRACT.md，等集成负责人决定）：
+  1. 把 backend-plan-v1.md 第 C、D 节合入 CONTRACT.md 作为 v0.1 草案。
+  2. 前端 URL 用 `slug` 和 `batch_no`，不要用数字 ID（各环境 ID 不同）。
+  3. 新增前端状态：报告 `restricted`（登录 / 审核后可看）、`pending`（报告整理中）、询价幂等重放、429 限流、nonce 过期。
+  4. 在 TASKS.md 增加 BE-02～BE-05（见方案 F2）。
+- **实际执行的检查**：
+  - 读取 AGENTS.md、CLAUDE.md、docs/ 下全部文档、两个 README、.gitignore。
+  - 读取 `.git/worktrees/backend/HEAD` 与 `refs/heads/*`，确认分支。
+  - 对比工作目录文件与 Git 索引时间戳：开始时没有比索引更新的文件（近似“工作目录干净”，非 `git status` 结果）。
+  - 人工核对方案与 AGENTS.md / REQUIREMENTS.md / CONTRACT.md 的约束一致（未预设用途、WooCommerce 未作为既定依赖、演示数据标注、秘密不进浏览器）。
+- **未验证**：所有接口与字段均未实现、未运行；LocalWP 路线、目录联接命令、版本建议未在本机验证；`git status` 未运行。
+- **剩余问题**：见方案 H 节三个问题（项目定位与交易范围；产品类别、客户与真实资料；本地环境、Git 与截止时间）。
+- **下一步**：Codex 评审方案 → 用户回答 H 节问题 → ENV-01 搭建本地 WordPress → BE-02 插件骨架与数据模型。
+
+### BE-01 v2 修订 · 2026-10-11 · Claude
+
+- **触发**：地瓜在 Claude 对话中确认：之后要真实运营并在线下单；产品类别、客户、真实资料“都有”（尚未提供具体内容）；截止时间不用管；不了解 LocalWP。
+- **范围**：只修订方案，未安装任何软件，未写插件代码，未改共享文件和前端。
+- **修改文件**：新增 `docs/handoffs/backend-plan-v2.md`；更新本文件。
+- **方案变化**：
+  - 采用 WooCommerce：商品、购物车、结账、订单、库存、顾客都用 WooCommerce；`pc_product` / `pc_category` 取消。
+  - peptide-core 只做批次、报告、订单行 ↔ 批次关联（发货时由管理员指定）、“订单所有者可下载本单批次报告”、Store API 扩展、结账合规确认项。
+  - 库存只以 WooCommerce 为准，批次不再记库存；询价降为可选（BE-07）。
+  - 角色改用 WooCommerce 的 `customer` / `shop_manager`。
+  - 新增上线前合规清单（I 节），由用户负责确认。
+- **接口影响**（需同步到共享契约，未改 docs/CONTRACT.md）：
+  1. 商品列表 / 详情 / 购物车 / 结账改用 WooCommerce 模板或 Store API；peptide/v1 只保留 `/site`、`/products/{slug}/batches`、`/batches/lookup`、`/reports/{id}/file`、`/me/orders/{order_number}/batches`。
+  2. Store API 商品数据附加 `extensions.peptide_core`（is_demo、specs、batch_count、report_state）。
+  3. 新前端状态：订单行“发货后可查看批次”（`batch: null`）；结账确认项 `checkout_ack`。
+  4. docs/REQUIREMENTS.md 需记录用户的新决定；docs/TASKS.md 建议加入 ENV-01 细化与 BE-02～BE-07（v2 F'2 节）。
+- **实际执行的检查**：读取群聊最新记录（Codex 无新消息）；`git status` 干净；用 `winget show Flywheel.Local` 查询 LocalWP 包信息（只查询，未下载）；人工核对 v2 与 v1、AGENTS.md 约束一致。
+- **未验证**：所有接口与字段均未实现；Store API 按 slug 取商品的具体方式、可变商品方案未在实际 WooCommerce 中验证。
+- **剩余问题**：v2 H' 节三个问题（是否同意安装 LocalWP；目标客户与销售国家；真实资料提供时间）。
+- **下一步**：用户同意后执行 ENV-01（安装 LocalWP、建站、装 WooCommerce），然后 BE-02。
+### BE-02 插件骨架 · 2026-10-11 · Claude
+
+- **用户安排**：支付和物流先由 Codex 出 UI，后端暂时搁置这部分（已在群里转告 Codex），先做其他后端功能。
+- **范围**：编写 peptide-core 插件骨架。没有安装任何软件，没有改共享文件和前端，没有涉及支付和物流。
+- **修改文件**（均在 `wp-content/plugins/peptide-core/`）：`peptide-core.php`、`uninstall.php`、`README.md`、`includes/` 下 autoload、plugin、installer、capabilities、post-types、meta、batches、reports、private-files、admin-notices，`includes/admin/` 下 product-panel、batch-metabox、report-metabox、list-columns，`includes/cli/` 下 demo-command、demo-pdf。
+- **实现内容**：
+  - 依赖 WooCommerce（`Requires Plugins` 头 + 运行时检查）；声明 HPOS 兼容。
+  - 批次 `pc_batch`、报告 `pc_report` 两种不公开的自定义文章类型，后台挂在“产品”菜单下；独立能力授予 administrator 和 shop_manager。
+  - 批次：批次号自动转大写、格式校验（3–40 位字母数字和连字符）、全局唯一；必须关联 WooCommerce 商品（不能是变体）；可选适用包装规格；有错误时退回草稿并提示。
+  - 报告：版本号自动分配；发布时同批次同类型的旧版本自动变为 superseded；无批次或无文件不能发布；文件仅限 PDF / PNG / JPEG、20 MB 以内，存入私有目录并使用随机文件名；删除报告时删除文件。
+  - 商品编辑页新增 “Peptide data” 面板：演示标记、规格表（每行“名称 | 值 | 单位”）、该商品的批次列表。
+  - `wp peptide demo seed / purge`：演示商品、批次和带水印的演示 PDF，全部带演示标记，`purge` 只删除带演示标记的记录。
+- **与方案的差异**：报告状态存在元数据 `_pc_report_status` 中，与 WordPress 的发布状态无关；批次号统一大写存储（方案只写了格式）。
+- **接口影响**：无。本次没有前台接口，主题暂时取不到批次和报告数据（BE-03 再做）。
+- **实际执行的检查**：读取群聊最新记录；`git status` 确认改动范围。**本机没有 PHP，未做语法检查，也没有在 WordPress 中运行，以上功能全部未经验证。**
+- **未验证**：插件启用、能力授予、后台表单保存、文件上传、版本与取代逻辑、演示数据命令、生成的 PDF 能否正常打开。
+- **剩余问题**：需要本地环境（LocalWP + WooCommerce）才能验证；用户尚未答复是否安装 LocalWP。
+- **下一步**：环境就绪后先跑通 BE-02（启用、`demo seed`、后台录入一品多批多报告），再做 BE-03 只读接口。
+### 角色交接 · 2026-10-11 · Claude
+
+- **用户安排**：Claude 改做前端；后端工作打包交出，由用户转交给接手方（预计 Codex）。
+- **交付包**：`D:\Codex\Tasks\peptide-platform\outputs\Claude后端交付包-2026-10-11\`（含交接说明、方案副本、项目记忆副本和压缩包）。仓库中的文件是唯一正本，交付包里的是副本。
+- **后端当前状态**：BE-01 方案 v2 已提交；BE-02 插件骨架代码已提交，但**从未运行过**；LocalWP 已安装，但后端网站还没建；支付和物流等 Codex 出 UI 后再做。
+- **最后的后端提交**：`de6c7e3`（claude/backend）。本条记录随交接提交一并入库。
+### 交接取消 · 2026-10-11 · Claude
+
+- 用户收回分工调整：**Claude 继续负责后端**，上一条“角色交接”作废。
+- 交付包目录 `D:\Codex\Tasks\peptide-platform\outputs\Claude后端交付包-2026-10-11\` 及其 zip 只是当时的快照，不再维护，以仓库文件为准。
+- 当前后端状态不变：等用户在 LocalWP 中建好 `peptide-backend` 网站，然后完成 ENV-01、验证 BE-02。
+### BE-02 语法检查 · 2026-10-12 · Claude
+
+- 找到了 LocalWP 自带的 PHP 8.2.29（`%APPDATA%\Local\lightning-services\php-8.2.29+0\bin\win64\php.exe`）。
+- **实际检查**：对 peptide-core 全部 18 个 PHP 文件运行 `php -n -l`，均无语法错误。单独运行演示 PDF 生成器并核对文件结构：xref 位置、5 个对象的偏移量、流长度均正确，生成文件 791 字节。
+- **仍未验证**：插件在 WordPress 和 WooCommerce 中启用与运行、后台表单、文件上传、演示数据命令。需要先在 LocalWP 中建好 `peptide-backend` 网站。
+
+### ENV-01 完成 + BE-02 运行验证 · 2026-10-12 · Claude
+
+- **环境迁移到 D 盘**（用户要求“全部移动到 D 盘，不在 C 盘构建项目”）：
+  - 站点 `vialcovepeptides.com` 从 `C:\Users\JingYue\Local Sites\vialcovepeptidescom` 迁到 `D:\Codex\Sites\vialcovepeptidescom`，同时更新了 Local 的 sites.json（备份为 sites.json.bak-2026-10-12）。
+  - Local 数据（`%APPDATA%\Local`，约 3.1 GB，含数据库运行目录）迁到 `D:\Codex\LocalWP\data`；Local 程序（`%LOCALAPPDATA%\Programs\Local`，约 2.3 GB）迁到 `D:\Codex\LocalWP\app`。原位置改为目录联接，文件实际都在 D 盘。
+  - `C:\Users\JingYue\Local Sites` 改为联接到 `D:\Codex\Sites`，以后用默认位置新建的站点也会落在 D 盘。
+  - 迁移前通过 Local GraphQL 正常停止站点，复制后核对文件数和字节数一致，再删除 C 盘原件。迁移后站点由 Local 正常启动，Apache 文档根目录为 D 盘路径，首页返回 200。
+- **站点配置**：WordPress 7.1.3、PHP 8.3.29、Apache 2.4.43、MySQL 8.0.35；安装并启用 WooCommerce 11.2.1（WordPress 官方插件库）；peptide-core 通过目录联接挂载；`PEPTIDE_CORE_PRIVATE_DIR` 设在网站根目录之外；开启 `WP_DEBUG_LOG`。
+- **实际检查**：
+  - `wp plugin activate peptide-core` 成功；administrator、shop_manager 各获得 20 项 pc_ 能力。
+  - `wp peptide demo seed` 创建 2 个商品、3 个批次、2 份报告，私有目录里出现 2 个演示 PDF 和防护文件；重复执行 seed 被正确拒绝；purge 删除 7 条记录和对应文件，之后能重新 seed。
+  - 新增冒烟测试 `tests/smoke-save-logic.php`，9 项全部通过：重复批次号被拒绝并退回草稿、批次号规范化、标题同步、报告版本号递增、旧版本被取代并指向新版本、无文件报告不能发布、测试清理后演示文件仍在。
+  - `wp-content/debug.log` 没有出现任何错误或警告。
+- **未验证**：后台界面没有人工点验（需要用户用自己的管理员账号登录）；没有通过浏览器上传文件；Nginx 下的行为。
+- **修改文件**：`wp-content/plugins/peptide-core/README.md`、新增 `wp-content/plugins/peptide-core/tests/smoke-save-logic.php`、本文件。
+- **下一步**：用户在后台目视检查“产品 → Batches / Test reports”和商品的 Peptide data 面板；然后做 BE-03 只读接口。
+
+### BE-03 只读接口 · 2026-10-12 · Claude
+
+- **范围**：Store API 扩展、`peptide/v1` 只读接口、报告受控下载、主题 PHP 读取函数。没有涉及订单、支付、物流。
+- **新增文件**：`includes/class-settings.php`、`class-access.php`、`class-catalog.php`、`functions.php`，`includes/api/class-rest-controller.php`、`class-errors.php`、`class-store-api.php`，`tests/smoke-read-api.php`。修改：`includes/class-plugin.php`（注册新模块）、插件 README。
+- **接口**（与方案 v1/v2 一致，以下是实现时补充的细节，需要同步到共享契约）：
+  1. `GET /products/{slug}/batches` 返回 `{ product: {id, slug, name, is_demo}, batches: [...] }`。
+  2. 批次对象包含：`id`、`batch_no`、`product_id`、`variation_ids`、`status`、`is_demo`、`manufactured_on`、`retest_or_expiry_on`、`origin_note`、`report_state`、`reports`。批次查询结果另附 `product`。
+  3. 报告对象在 v1 C4 的基础上加了 `batch_id` 和 `access_reason`（public / registered / approved / staff，之后还会有 order_owner）。
+  4. `access=admin` 的报告对非员工完全不出现（不是显示为锁定）。
+  5. `download_url` 是绝对地址；已登录用户的地址附带 `_wpnonce`，这样普通链接也能带上登录身份。
+  6. 字段级原因码新增 `invalid_format`（批次号格式错误）。
+  7. 批次查询限流为每个 IP 每 10 分钟 60 次。
+  8. 预留过滤器 `peptide_core_report_access`，供 BE-04 加入“订单所有者”规则。
+- **实际检查**：
+  - 全部 PHP 文件 `php -l` 通过。
+  - 用 curl 走真实 HTTP（Apache）测试：`/site` 200；商品批次 200；不存在的商品 404；批次查询 200 / 404 / 400（缺参数 `required`、格式错 `invalid_format`）；公开报告下载 200（application/pdf、attachment、nosniff，文件以 %PDF 开头）；访客下载 registered 报告 401；不存在的报告 404；Store API 商品带 `extensions.peptide_core`；DEMO-B-2401 为 `pending`；连续请求触发 429（带 `retry_after`）。
+  - `tests/smoke-read-api.php` 18 项全部通过：访客、顾客、已审核顾客、员工四种身份；旧版本隐藏与 `include_history`；撤回 410、草稿 404、未登录 401、权限不足 403；隐藏批次不可见；测试账号和数据清理后恢复原状。
+  - `tests/smoke-save-logic.php` 回归 9 项通过；`debug.log` 没有产生。
+- **未验证**：已登录用户在浏览器里点击带 nonce 的下载链接（只验证了地址中带 nonce，以及服务端的权限判断）；Store API 在购物车 / 结账接口中的表现（扩展只挂在商品接口上）。
+- **下一步**：BE-04 订单行与批次关联。
+
+### 后台中文化 · 2026-10-12 · Claude
+
+- **用户要求**：后台改成中文。
+- **站点操作**（只改本地站点，不在仓库里）：安装 WordPress 核心和 WooCommerce 的 zh_CN 语言包；**只把 DiGua 这个账号**的个人语言设为 zh_CN。站点语言保持英文（WPLANG 为空），海外访客看到的前台和接口返回仍是英文。
+- **插件改动**：新增 `languages/peptide-core.pot`、`peptide-core-zh_CN.po`、`peptide-core-zh_CN.mo`（104 条，全部已翻译）。`Plugin::load_textdomain()` 在 init 钩子（优先级 0）上按 `determine_locale()` 加载对应语言文件；用绝对路径加载，因为插件目录是目录联接挂载的。
+- **实际检查**：以 DiGua 的语言加载，插件、WooCommerce、WordPress 核心的字符串都显示中文（批次信息 / 检测报告、订单、仪表盘）；站点语言仍是 en_US；访客请求接口的错误信息仍是英文；debug.log 没有产生。
+- **以后新增可翻译字符串时**：先 `wp i18n make-pot` 重新生成 .pot，再把新条目补进 zh_CN.po，最后 `wp i18n make-mo` 编译。
+
+### BE-04 订单与批次关联 · 2026-10-12 · Claude
+
+- **范围**：发货时给订单行指定批次、订单所有者报告权限、我的订单接口、我的账户和邮件中显示批次。没有涉及支付和物流。
+- **新增文件**：`includes/class-order-batches.php`、`includes/admin/class-order-metabox.php`、`tests/smoke-order-batches.php`。修改：`class-plugin.php`、`class-capabilities.php`（新增 `pc_assign_batches`）、`class-installer.php`（`maybe_upgrade`）、`api/class-rest-controller.php`（新增 `/me/orders/{n}/batches`；订单所有者可以下载隐藏批次的报告）、`peptide-core.php`（版本 0.2.0）、翻译文件、README。
+- **设计要点**：
+  - 订单行元数据 `_pc_batch_id`；订单上每个批次存一条 `_pc_batch_id` 元数据，作为反查索引（HPOS 下用 `wc_get_orders` 的 `meta_query` 查询）。
+  - 只有**已付款**订单（`wc_get_is_paid_statuses()`）才算“收到过批次”；待付款、已取消的订单不算。
+  - 订单所有者规则通过 BE-03 预留的过滤器 `peptide_core_report_access` 加入，不覆盖“仅员工”级别。
+  - 修改批次分配时自动写订单备注，方便追溯谁改了什么。
+- **接口影响**（需同步到共享契约）：`GET /me/orders/{order_number}/batches` 的返回形状与 v2 D'2 的示例一致：`{ order_number, items: [{ product: {slug, name}, variation_label, quantity, batch: null | {batch_no, is_demo, report_state, reports} }] }`；报告的 `access_reason` 可能是 `order_owner`。我的账户订单页的商品行下新增 `.pc-order-batch` 区块，Codex 可以按需调整样式。
+- **实际检查**：
+  - 全部 PHP 文件 `php -l` 通过；版本升级后 shop_manager 自动获得 `pc_assign_batches`。
+  - `tests/smoke-order-batches.php` 18 项全部通过：候选批次过滤、错误批次被拒绝、保存与索引、订单备注、订单所有者获得 order_owner 权限、其他顾客仍需审核、仅员工报告不放开、未付款订单不算、接口 200 / 404 / 401、我的账户显示批次和链接、纯文本邮件只显示批次号、隐藏批次对非所有者返回 404、清理后恢复原状。
+  - **真实 HTTP**（curl 带测试顾客的登录 Cookie 和 nonce 链接）：订单所有者下载**隐藏批次**的报告返回 200，得到 PDF；同一链接不带 Cookie 返回 403（WordPress 的 nonce 校验）；带 Cookie 但不带 nonce 时按访客处理，返回 404。这也补上了 BE-03 中“已登录用户点击带 nonce 的下载链接”这一项验证。
+  - 三套冒烟测试回归：9 + 18 + 18 项全部通过；`debug.log` 没有产生；测试账号已清理（站点只剩 DiGua 一个用户）。
+- **未验证**：后台订单页面板的实际显示（需要用户登录查看，HPOS 页面）；真实下单流程（支付未接）。
+- **下一步**：BE-04b 后台“VialCove 工作台”；或者等用户提供文案后做 BE-05。
+
+### BE-04b 后台工作台 · 2026-10-12 · Claude
+
+- **用户要求**：先做工作台。
+- **新增文件**：`includes/class-workbench.php`（数据查询，只读）、`includes/admin/class-dashboard.php`（面板渲染）、`tests/smoke-workbench.php`。修改：`class-plugin.php`、`class-settings.php`（新增 `brand_name`，默认 VialCove，只在后台使用，不出现在 `/site` 接口里）、翻译文件（新增 zh_CN 复数形式的支持）、README。
+- **面板内容**：
+  - 待指定批次的订单（处理中，且至少有一件商品没指定批次，列出最早的 5 单）；
+  - 缺少已发布报告的公开批次（标出“报告整理中”的批次）；
+  - 草稿报告数量；
+  - 演示模式状态和演示数据数量（提示上线前要清除）；
+  - 常用入口按钮。
+  - 只有员工能看到这个面板；它会被放到第一列最上面；同时移除了“快速草稿”和“活动与新闻”面板。
+- **实际检查**：`smoke-workbench.php` 13 项全部通过（面板注册与位置、默认面板移除、演示数据状态、订单出现和消失、草稿计数、订阅者看不到、清理）；四套测试回归 9 + 18 + 18 + 13 = 58 项全部通过；debug.log 没有产生；测试数据已清理（只有 1 个用户、0 个订单）；中文翻译（含复数）验证正确。
+- **未验证**：浏览器里面板的实际样子（要地瓜刷新后台首页查看）。
+- **下一步**：BE-05（需要地瓜提供用途声明和结账确认语）；或者先造一个演示订单，方便地瓜看到“批次分配”面板。
+
+### 演示订单命令 · 2026-10-12 · Claude
+
+- **用户要求**：造一个演示订单看看。
+- 新增 `wp peptide demo order`：创建访客演示订单（虚构联系人 Demo Customer，邮箱用 example.com；Demo Peptide A ×2、Demo Peptide B ×1；状态为处理中；没有指定批次；带 `_pc_demo_seed` 标记）；创建时关闭新订单通知邮件。`purge` 会一并删除演示订单。
+- **实际执行**：已在本地站点创建演示订单 #54，工作台“待指定批次的订单”计数变为 1；debug.log 没有产生；#54 没有触发邮件。
+- **发现**：Mailpit 里有 7 封“新订单”通知邮件，来自之前冒烟测试创建的临时订单。邮件只在本地被拦截，没有真正发出。以后可以让测试脚本在运行时关闭邮件。
+
+### 后台页面内对话框 · 2026-10-12 · Claude
+
+- **用户要求**：退款时浏览器在页面顶部弹出的原生确认框（WooCommerce 用 `window.confirm` 实现）改成页面内的对话框。
+- **新增文件**：`assets/admin-dialogs.js`、`assets/admin-dialogs.css`、`includes/admin/class-dialogs.php`。修改：`class-plugin.php`、翻译文件。
+- **原理**：原生 confirm 是同步的，所以采用“拦截后重放”：点击时在捕获阶段临时替换 `window.confirm`，让它返回 false 并记下提示文字，原操作因此被取消；然后弹出页面内对话框，用户点“确定”后在放行状态下重新点击同一个元素，原操作照常执行。`window.alert` 直接换成页面内提示框。所有后台页面生效。不是由点击触发的 confirm（极少见）仍使用原生对话框。支持 Esc 取消、焦点限制在对话框内、点遮罩取消。
+- **实际检查**：在本地站点放了一个临时测试页（模拟 WooCommerce 在冒泡阶段调用 confirm 的处理函数），用内置浏览器真实点击测试：弹出页面内对话框，原操作被拦住；点“确定”后原操作执行且只执行一次，原生 confirm 已恢复；按 Esc 取消后原操作没有执行；alert 显示为页面内提示框，按回车可以关闭。测试页已删除（再访问返回 404）。脚本在后台正常加载，中文文案（请确认 / 提示 / 确定 / 取消）正确。
+- **未验证**：在真实的 WooCommerce 订单页里点退款（要地瓜刷新后台再试）。
+- **顺带发现**：本地站点的 debug.log 里有一条 Codex 主题 `functions.php:52` 的致命错误（09:36 UTC，`stdClass` 被当成数组使用，因为 Store API 的 extensions 是对象）。Codex 已经修复（改为先 JSON 往返转换），首页现在返回 200。另外，Codex 的主题已经通过目录联接挂到这个后端站点并启用了。
+
+### BE-05 设置页与结账确认 · 2026-10-12 · Claude
+
+- **范围**：插件设置页、结账确认复选框、订单上的确认快照。用户还没提供文案，所以设置页先做好，文案留空，用户以后在后台填写。
+- **新增文件**：`includes/admin/class-settings-page.php`、`includes/class-checkout-ack.php`、`tests/smoke-settings-ack.php`。修改：`class-settings.php`（新增 `sanitize()`、`checkout_ack_label()`）、`class-capabilities.php`（新增只授予管理员的 `pc_manage_settings`）、`class-plugin.php`、`peptide-core.php`（版本 0.3.0）、翻译文件、README。
+- **设计要点**：
+  - 设置页在“WooCommerce → VialCove 设置”，用 Settings API 保存到 `peptide_core_settings`；`option_page_capability` 改为 `pc_manage_settings`，店铺经理看不到这个页面。
+  - 结账确认使用 WooCommerce 官方的 Additional Checkout Fields API（必选复选框，位置 order）：前端由结账区块自动渲染，后端由 Store API 自动校验。本站结账页是区块结账（已确认）。
+  - 订单快照 `_pc_checkout_ack = { label, accepted_at }` 保存顾客勾选时的原文，以后改文案也不影响旧订单。
+  - 确认框文案只能填纯文本（结账复选框标签不支持 HTML）；`/site` 中的 `checkout_ack.label_html` 因此也是纯文本。
+- **接口影响**：`/site` 的形状不变。@Codex：如果使用 WooCommerce 结账区块，复选框会自动出现；如果自己调用 Store API 的 `/checkout`，需要传 `additional_fields: { "peptide-core/checkout-ack": true }`。
+- **实际检查**：
+  - `smoke-settings-ack.php` 17 项全部通过：清理与校验（空品牌名保留原值、过滤 script、没有文案时不能开启确认）、`/site` 正确反映设置、字段注册为必选复选框、订单快照（原文和 UTC 时间）、后台显示、管理员有设置权限而店铺经理没有、清理后恢复原状。
+  - **真实 HTTP**（Store API：建购物车 → 加商品 → 结账）：不传确认字段返回 400 `rest_missing_callback_param`；传 false 返回 400 `rest_invalid_param`；传 true 时通过确认校验，只停在“没有支付方式”（支付还没接，这是预期结果）。测试后设置已恢复（option 删除，回到默认值），没有留下测试订单。
+  - 五套测试回归，共 75 项全部通过。
+- **其他**：
+  - debug.log 里新增了一条致命错误，来自我在命令行用来检查订单的临时脚本（对退款对象调用了 `get_billing_email()`），不是插件代码的问题。
+  - 订单 #55 是用户在演示订单 #54 上做的 30 美元人工退款（#54 现在的状态是“已退款”）。
+- **未验证**：结账页上复选框的实际外观（要在后台开启确认并填写文案后，才能在前台结账页看到）；后台设置页的实际显示。
