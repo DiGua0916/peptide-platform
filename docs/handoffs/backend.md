@@ -193,3 +193,12 @@
 - 新增 `wp peptide demo order`：创建访客演示订单（虚构联系人 Demo Customer，邮箱用 example.com；Demo Peptide A ×2、Demo Peptide B ×1；状态为处理中；没有指定批次；带 `_pc_demo_seed` 标记）；创建时关闭新订单通知邮件。`purge` 会一并删除演示订单。
 - **实际执行**：已在本地站点创建演示订单 #54，工作台“待指定批次的订单”计数变为 1；debug.log 没有产生；#54 没有触发邮件。
 - **发现**：Mailpit 里有 7 封“新订单”通知邮件，来自之前冒烟测试创建的临时订单。邮件只在本地被拦截，没有真正发出。以后可以让测试脚本在运行时关闭邮件。
+
+### 后台页面内对话框 · 2026-10-12 · Claude
+
+- **用户要求**：退款时浏览器在页面顶部弹出的原生确认框（WooCommerce 用 `window.confirm` 实现）改成页面内的对话框。
+- **新增文件**：`assets/admin-dialogs.js`、`assets/admin-dialogs.css`、`includes/admin/class-dialogs.php`。修改：`class-plugin.php`、翻译文件。
+- **原理**：原生 confirm 是同步的，所以采用“拦截后重放”：点击时在捕获阶段临时替换 `window.confirm`，让它返回 false 并记下提示文字，原操作因此被取消；然后弹出页面内对话框，用户点“确定”后在放行状态下重新点击同一个元素，原操作照常执行。`window.alert` 直接换成页面内提示框。所有后台页面生效。不是由点击触发的 confirm（极少见）仍使用原生对话框。支持 Esc 取消、焦点限制在对话框内、点遮罩取消。
+- **实际检查**：在本地站点放了一个临时测试页（模拟 WooCommerce 在冒泡阶段调用 confirm 的处理函数），用内置浏览器真实点击测试：弹出页面内对话框，原操作被拦住；点“确定”后原操作执行且只执行一次，原生 confirm 已恢复；按 Esc 取消后原操作没有执行；alert 显示为页面内提示框，按回车可以关闭。测试页已删除（再访问返回 404）。脚本在后台正常加载，中文文案（请确认 / 提示 / 确定 / 取消）正确。
+- **未验证**：在真实的 WooCommerce 订单页里点退款（要地瓜刷新后台再试）。
+- **顺带发现**：本地站点的 debug.log 里有一条 Codex 主题 `functions.php:52` 的致命错误（09:36 UTC，`stdClass` 被当成数组使用，因为 Store API 的 extensions 是对象）。Codex 已经修复（改为先 JSON 往返转换），首页现在返回 200。另外，Codex 的主题已经通过目录联接挂到这个后端站点并启用了。

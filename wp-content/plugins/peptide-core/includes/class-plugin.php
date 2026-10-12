@@ -37,6 +37,7 @@ final class Plugin {
 			Admin\Report_Metabox::register_hooks();
 			Admin\Order_Metabox::register_hooks();
 			Admin\Dashboard::register_hooks();
+			Admin\Dialogs::register_hooks();
 			Admin\List_Columns::register_hooks();
 		}
 
