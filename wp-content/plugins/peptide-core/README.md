@@ -2,7 +2,15 @@
 
 负责人：Claude。方案见 docs/handoffs/backend-plan-v1.md 与 backend-plan-v2.md。
 
-状态：BE-02 骨架代码已编写，**尚未在 WordPress 中运行过**（本机还没有 PHP / WordPress 环境）。
+状态：BE-02 已在本地 WordPress 7.1.3 + WooCommerce 11.2.1（PHP 8.3.29）中启用并通过冒烟测试（2026-10-12）。后台界面尚未人工点验。
+
+## 本地开发站点
+
+- LocalWP 站点 `vialcovepeptides.com`，目录 `D:\Codex\Sites\vialcovepeptidescom`，本地地址 `http://vialcovepeptidescom.local`。
+- 本插件目录通过目录联接挂载到站点的 `wp-content/plugins/peptide-core`，代码只在仓库这一份。
+- 报告私有目录：`D:\Codex\Sites\vialcovepeptidescom\app\private\peptide-core`（wp-config.php 中的 `PEPTIDE_CORE_PRIVATE_DIR`，位于网站根目录之外）。
+- 已开启 `WP_DEBUG` 与 `WP_DEBUG_LOG`（日志写入 `wp-content/debug.log`，不在页面显示）。
+- 冒烟测试：`wp eval-file wp-content/plugins/peptide-core/tests/smoke-save-logic.php`（需先 `wp peptide demo seed`，只用于开发站点）。
 
 ## 依赖
 

@@ -107,3 +107,20 @@
 - 找到了 LocalWP 自带的 PHP 8.2.29（`%APPDATA%\Local\lightning-services\php-8.2.29+0\bin\win64\php.exe`）。
 - **实际检查**：对 peptide-core 全部 18 个 PHP 文件运行 `php -n -l`，均无语法错误。单独运行演示 PDF 生成器并核对文件结构：xref 位置、5 个对象的偏移量、流长度均正确，生成文件 791 字节。
 - **仍未验证**：插件在 WordPress 和 WooCommerce 中启用与运行、后台表单、文件上传、演示数据命令。需要先在 LocalWP 中建好 `peptide-backend` 网站。
+
+### ENV-01 完成 + BE-02 运行验证 · 2026-10-12 · Claude
+
+- **环境迁移到 D 盘**（用户要求“全部移动到 D 盘，不在 C 盘构建项目”）：
+  - 站点 `vialcovepeptides.com` 从 `C:\Users\JingYue\Local Sites\vialcovepeptidescom` 迁到 `D:\Codex\Sites\vialcovepeptidescom`，同时更新了 Local 的 sites.json（备份为 sites.json.bak-2026-10-12）。
+  - Local 数据（`%APPDATA%\Local`，约 3.1 GB，含数据库运行目录）迁到 `D:\Codex\LocalWP\data`；Local 程序（`%LOCALAPPDATA%\Programs\Local`，约 2.3 GB）迁到 `D:\Codex\LocalWP\app`。原位置改为目录联接，文件实际都在 D 盘。
+  - `C:\Users\JingYue\Local Sites` 改为联接到 `D:\Codex\Sites`，以后用默认位置新建的站点也会落在 D 盘。
+  - 迁移前通过 Local GraphQL 正常停止站点，复制后核对文件数和字节数一致，再删除 C 盘原件。迁移后站点由 Local 正常启动，Apache 文档根目录为 D 盘路径，首页返回 200。
+- **站点配置**：WordPress 7.1.3、PHP 8.3.29、Apache 2.4.43、MySQL 8.0.35；安装并启用 WooCommerce 11.2.1（WordPress 官方插件库）；peptide-core 通过目录联接挂载；`PEPTIDE_CORE_PRIVATE_DIR` 设在网站根目录之外；开启 `WP_DEBUG_LOG`。
+- **实际检查**：
+  - `wp plugin activate peptide-core` 成功；administrator、shop_manager 各获得 20 项 pc_ 能力。
+  - `wp peptide demo seed` 创建 2 个商品、3 个批次、2 份报告，私有目录里出现 2 个演示 PDF 和防护文件；重复执行 seed 被正确拒绝；purge 删除 7 条记录和对应文件，之后能重新 seed。
+  - 新增冒烟测试 `tests/smoke-save-logic.php`，9 项全部通过：重复批次号被拒绝并退回草稿、批次号规范化、标题同步、报告版本号递增、旧版本被取代并指向新版本、无文件报告不能发布、测试清理后演示文件仍在。
+  - `wp-content/debug.log` 没有出现任何错误或警告。
+- **未验证**：后台界面没有人工点验（需要用户用自己的管理员账号登录）；没有通过浏览器上传文件；Nginx 下的行为。
+- **修改文件**：`wp-content/plugins/peptide-core/README.md`、新增 `wp-content/plugins/peptide-core/tests/smoke-save-logic.php`、本文件。
+- **下一步**：用户在后台目视检查“产品 → Batches / Test reports”和商品的 Peptide data 面板；然后做 BE-03 只读接口。
