@@ -18,6 +18,8 @@ final class Settings {
 	 */
 	public static function defaults(): array {
 		return array(
+			// 品牌名只在后台使用（如工作台标题），前台文案由主题负责。
+			'brand_name'         => 'VialCove',
 			'demo_mode'          => true,
 			'demo_notice'        => 'This site is a demonstration. Product, batch and report data are synthetic.',
 			// 用途声明与结账确认项的文案由用户提供，未提供时为 null，前端不显示。

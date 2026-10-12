@@ -2,7 +2,7 @@
 
 负责人：Claude。方案见 docs/handoffs/backend-plan-v1.md 与 backend-plan-v2.md。
 
-状态：BE-02、BE-03、BE-04 已在本地 WordPress 7.1.3 + WooCommerce 11.2.1（PHP 8.3.29）中运行并通过冒烟测试（2026-10-12）。后台界面尚未人工点验。
+状态：BE-02、BE-03、BE-04、BE-04b 已在本地 WordPress 7.1.3 + WooCommerce 11.2.1（PHP 8.3.29）中运行并通过冒烟测试（2026-10-12）。后台界面尚未人工点验。
 
 ## 本地开发站点
 
@@ -14,6 +14,7 @@
   - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-save-logic.php`（后台保存逻辑，9 项）
   - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-read-api.php`（只读接口与报告权限，18 项）
   - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-order-batches.php`（订单与批次关联，18 项）
+  - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-workbench.php`（后台工作台，13 项）
 
 ## 依赖
 
@@ -74,6 +75,10 @@ wp peptide demo purge --yes
 - `GET /wp-json/peptide/v1/me/orders/{order_number}/batches`：未登录返回 401；订单不存在或不属于本人返回 404。未指定批次的行 `batch` 为 null。订单号目前就是订单 ID。
 - “我的账户 → 订单详情”的商品行下显示批次号和可下载的报告链接；订单邮件只显示批次号，不带链接。
 - 插件版本升级时（`peptide_core_version` 变化）自动补授新增的能力。
+
+## 后台工作台（BE-04b，已实现）
+
+后台首页的“VialCove 工作台”面板（有 edit_pc_batches 或 pc_assign_batches 能力的用户可见），放在第一列最上面：待指定批次的已付款订单（processing）、缺少已发布报告的公开批次、草稿报告数量、演示模式与演示数据数量、常用入口。同时移除 WordPress 的“快速草稿”和“活动与新闻”面板。品牌名取自设置项 `brand_name`（默认 VialCove）。
 
 ## 尚未实现
 
