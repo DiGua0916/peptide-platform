@@ -17,7 +17,7 @@ import uuid
 from urllib.parse import urlparse
 
 
-def claude_environment():
+def assistant_environment():
     """Match the user's enabled Windows proxy only when no CLI proxy is set."""
     env = os.environ.copy()
     explicit = ("http_proxy", "HTTP_PROXY", "https_proxy", "HTTPS_PROXY", "all_proxy", "ALL_PROXY")
@@ -35,6 +35,10 @@ def claude_environment():
     if added and not (env.get("NO_PROXY") or env.get("no_proxy")):
         env["NO_PROXY"] = ",".join(filter(None, (proxies.get("no", ""), "localhost,127.0.0.1,::1")))
     return env
+
+
+# Keep the existing standalone Claude login launcher compatible.
+claude_environment = assistant_environment
 
 
 def codex_executable():
@@ -98,7 +102,7 @@ class LiveChat:
                     try:
                         status = subprocess.run([program]+args, cwd=workdir, capture_output=True,
                                                 encoding="utf-8", errors="replace", timeout=8,
-                                                env=claude_environment() if name == "Claude" else None,
+                                                env=assistant_environment(),
                                                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
                         ready = status.returncode == 0
                         if name == "Claude":
@@ -221,13 +225,13 @@ class LiveChat:
                 # Serialize completion with stop; registry serializes with member changes.
                 saved = self.registry.post(job["room"], job["author"], "群聊回复", result[:32000], "message", "CHAT",
                                            expected_member_revision=job["_memberRevision"])
-                job.update(status="completed", text="", messageId=saved["id"])
+                job.update(status="completed", phase="", text="", messageId=saved["id"])
         except InterruptedError as exc:
             with self.lock:
-                job.update(status="cancelled", text="", error=str(exc))
+                job.update(status="cancelled", phase="", text="", error=str(exc))
         except Exception as exc:
             with self.lock:
-                job.update(status="failed", text="", error=str(exc)[:500])
+                job.update(status="failed", phase="", text="", error=str(exc)[:500])
         finally:
             with self.lock:
                 self.changed()
@@ -238,7 +242,7 @@ class LiveChat:
         process = subprocess.Popen(
             [self.executable, "app-server", "--listen", "stdio://"], cwd=workdir,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-            encoding="utf-8", errors="replace", bufsize=1,
+            encoding="utf-8", errors="replace", bufsize=1, env=assistant_environment(),
             creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
         events = queue.Queue()
         def reader():
@@ -253,6 +257,7 @@ class LiveChat:
             process.stdin.write(json.dumps(value, ensure_ascii=False)+"\n")
             process.stdin.flush()
         turn_id, thread_id, final_text = None, None, ""
+        retries = 0
         started, next_check = time.monotonic(), 0
         try:
             send({"id":1,"method":"initialize","params":{"clientInfo":{"name":"local_project_group","title":"项目群聊","version":"1.0"}}})
@@ -288,7 +293,8 @@ class LiveChat:
                 elif event.get("method") == "error":
                     problem = event.get("params", {})
                     if problem.get("willRetry"):
-                        self.phase(job, "模型连接中断，正在重试…")
+                        retries += 1
+                        self.phase(job, f"连接中断，第 {retries} 次重试 · 本轮最多等待 2 分钟")
                     else:
                         raise RuntimeError("Codex 回复失败："+str(problem.get("error", {}).get("message", "连接中断")))
                 elif event.get("method") == "item/agentMessage/delta":
@@ -302,7 +308,9 @@ class LiveChat:
                     if turn.get("status") != "completed":
                         raise RuntimeError("Codex 本轮未完成："+str((turn.get("error") or {}).get("message",turn.get("status"))))
                     return final_text or job["text"]
-            raise RuntimeError("回复超过两分钟，已停止本轮。请缩短问题后重试。")
+            if retries:
+                raise RuntimeError("模型连接多次中断，本轮已在 2 分钟后停止。请检查网络或代理连接，再重新 @Codex 发送。")
+            raise RuntimeError("等待回复超过 2 分钟，本轮已停止。请稍后重新 @Codex 发送。")
         finally:
             if process.poll() is None:
                 if thread_id and turn_id:
@@ -327,7 +335,7 @@ class LiveChat:
              "--tools", "", "--strict-mcp-config", "--system-prompt",
              "你是 Claude 群聊文字助手。只回答本轮问题，不执行操作，不调用工具，不伪称完成工作。"],
             cwd=workdir, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-            encoding="utf-8", errors="replace", bufsize=1, env=claude_environment(),
+            encoding="utf-8", errors="replace", bufsize=1, env=assistant_environment(),
             creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
         events = queue.Queue()
         def reader():

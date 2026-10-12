@@ -1,17 +1,19 @@
 """Behavior checks; all temporary records are separate from the project room."""
 import concurrent.futures
+import io
 import json
 import tempfile
 import threading
 import time
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 import room
-from live_chat import LiveChat, claude_event, claude_environment
+from live_chat import LiveChat, assistant_environment, claude_event, claude_environment
 
 TEST_ROOT = Path("D:/Codex/Tasks/peptide-platform/work/chatroom/tests").resolve()
 if not str(TEST_ROOT).lower().startswith("d:\\codex\\tasks\\peptide-platform\\work\\chatroom\\"):
@@ -19,11 +21,11 @@ if not str(TEST_ROOT).lower().startswith("d:\\codex\\tasks\\peptide-platform\\wo
 TEST_ROOT.mkdir(parents=True, exist_ok=True)
 
 
-class ClaudeNetworkTests(unittest.TestCase):
+class AssistantNetworkTests(unittest.TestCase):
     def test_enabled_windows_proxy_is_child_only_and_keeps_local_callback_direct(self):
         with patch.dict("os.environ", {"SENTINEL": "unchanged"}, clear=True), patch("os.name", "nt"), \
                 patch("urllib.request.getproxies_registry", return_value={"http": "http://127.0.0.1:8800", "https": "http://127.0.0.1:8800"}, create=True):
-            env = claude_environment()
+            env = assistant_environment()
             self.assertEqual(env["HTTPS_PROXY"], "http://127.0.0.1:8800")
             self.assertEqual(env["HTTP_PROXY"], env["HTTPS_PROXY"])
             self.assertIn("127.0.0.1", env["NO_PROXY"])
@@ -42,6 +44,51 @@ class ClaudeNetworkTests(unittest.TestCase):
             with self.subTest(proxies=proxies), patch.dict("os.environ", {}, clear=True), patch("os.name", "nt"), \
                     patch("urllib.request.getproxies_registry", return_value=proxies, create=True):
                 self.assertEqual(claude_environment(), {})
+
+
+class CodexTransportTests(unittest.TestCase):
+    def test_codex_child_inherits_proxy_and_retry_can_recover(self):
+        self.run_adapter(timeout=False)
+
+    def test_codex_retry_timeout_reports_network_and_stops_child(self):
+        self.run_adapter(timeout=True)
+
+    def run_adapter(self, timeout):
+        live = LiveChat(SimpleNamespace(root=TEST_ROOT), None)
+        job = {"text": "", "phase": ""}
+        events = iter([
+            {"id": 1, "result": {}},
+            {"id": 2, "result": {"thread": {"id": "isolated"}}},
+            {"id": 3, "result": {"turn": {"id": "isolated-turn"}}},
+            {"method": "error", "params": {"willRetry": True, "error": {"message": "network interrupted"}}},
+            {"method": "item/completed", "params": {"item": {"type": "agentMessage", "text": "connected"}}},
+            {"method": "turn/completed", "params": {"turn": {"status": "completed"}}},
+        ])
+        elapsed = [0]
+        def next_event(**kwargs):
+            event = next(events)
+            if timeout and event.get("method") == "error":
+                elapsed[0] = 121
+            return event
+        process = MagicMock(stdin=io.StringIO(), stdout=io.StringIO())
+        process.poll.return_value = None
+        env = {"HTTPS_PROXY": "http://127.0.0.1:8800", "NO_PROXY": "localhost"}
+        with patch("live_chat.assistant_environment", return_value=env), \
+                patch("live_chat.subprocess.Popen", return_value=process) as launch, \
+                patch("live_chat.threading.Thread"), patch("live_chat.queue.Queue") as event_queue, \
+                patch("live_chat.time.monotonic", side_effect=lambda: elapsed[0]), \
+                patch.object(live, "still_allowed", return_value=True):
+            event_queue.return_value.get.side_effect = next_event
+            if timeout:
+                with self.assertRaisesRegex(RuntimeError, "模型连接多次中断.*2 分钟"):
+                    live.run_codex(job, "isolated test", lambda text: None)
+            else:
+                self.assertEqual(live.run_codex(job, "isolated test", lambda text: None), "connected")
+        self.assertEqual(launch.call_args.kwargs["env"], env)
+        self.assertIn("第 1 次重试", job["phase"])
+        self.assertIn("2 分钟", job["phase"])
+        self.assertTrue(process.stdin.closed)
+        process.wait.assert_called_once_with(timeout=3)
 
 
 class LiveChatTests(unittest.TestCase):
@@ -111,6 +158,19 @@ class LiveChatTests(unittest.TestCase):
             self.assertIn("项目群里的 "+author, prompt)
             self.assertIn("CURRENT_ROOM_SENTINEL", prompt)
             self.assertNotIn("OTHER_ROOM_SENTINEL", prompt)
+
+    def test_failed_reply_clears_retry_phase_without_saving_partial_text(self):
+        def fail(job, prompt, delta):
+            delta("unfinished")
+            self.server.live.phase(job, "连接中断，正在重试")
+            raise RuntimeError("连接失败")
+        self.server.live.runner = fail
+        with self.request("/api/messages", {"body": "@Codex test"}):
+            pass
+        job = self.wait_finished()[0]
+        self.assertEqual((job["status"], job["phase"], job["text"]), ("failed", "", ""))
+        self.assertEqual(job["error"], "连接失败")
+        self.assertEqual(len(room.snapshot(self.path)["messages"]), 1)
 
     def test_unavailable_or_absent_targets_reject_before_saving(self):
         self.server.live.provider_status["Claude"] = {"available": False, "detail": "未登录"}

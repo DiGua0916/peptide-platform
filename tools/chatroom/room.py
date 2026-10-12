@@ -426,7 +426,7 @@ class RoomHandler(BaseHTTPRequestHandler):
             return self.send_data(403, {"error": "仅允许本机访问。"})
         route = urlparse(self.path).path
         if route == "/api/health":
-            return self.send_data(200, {"projectId": PROJECT_ID, "status": "ok", "hubVersion": 5,
+            return self.send_data(200, {"projectId": PROJECT_ID, "status": "ok", "hubVersion": 6,
                                         "capabilities": ["dissolve", "members", "events", "live-chat"]})
         if route == "/api/assistants":
             return self.send_data(200, {"providers": self.server.live.providers(force=parse_qs(urlparse(self.path).query).get("refresh") == ["1"])})
