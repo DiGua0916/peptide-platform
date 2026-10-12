@@ -8,10 +8,10 @@
 
 - 已准备 Git 仓库、分工约定、需求基线和交接文档。
 - 初始化后使用 main 作为集成分支，codex/frontend、claude/backend 分别开发。
-- 尚未安装 WordPress、引入付费模板或实现业务功能。
-- 尚未连接 Claude、配置在线服务或创建 GitHub 远程仓库。
-- 已有项目专用 Markdown 聊天室，用于双方记录进度；它不自动调用 Claude 或 Codex。
-- 仓库名称和代码标识是开发用名称，不是最终品牌。
+- 品牌 VialCove，采用用户购买的 Lunira 视觉；WordPress/WooCommerce 与 peptide-core 0.3.0 已在 LocalWP 运行，主题已联调。
+- 本地预览：http://vialcovepeptidescom.local/；商品、批次、报告仍为演示数据，支付/物流和正式部署待办。
+- 有项目 Markdown 聊天室；显式提及可经独立助手会话回复（见 docs/CHATROOM.md），不代表自动接管双方正在开发的桌面任务。
+- 当前仍是本地 Git；尚未配置 GitHub 远程仓库。
 
 ## 目录
 
@@ -21,16 +21,16 @@
 | CLAUDE.md | Claude 后端工作入口 |
 | docs/CLAUDE_HANDOFF.md | 给 Claude 的完整项目背景与首次任务 |
 | docs/REQUIREMENTS.md | 已确认需求与待确认事项 |
-| docs/CONTRACT.md | 前后端数据与接口草案 |
+| docs/CONTRACT.md | 当前实现的数据与接口契约 |
 | docs/WORKFLOW.md | 独立工作目录、提交和联调流程 |
 | docs/TASKS.md | 当前任务和验收条件 |
 | docs/CHATROOM.md | 项目聊天室使用方法和每次任务后的进度规则 |
 | tools/chatroom/ | Markdown 聊天室服务、界面和追加工具 |
 | docs/handoffs/ | 双方分别维护的交接记录 |
-| wp-content/themes/peptide-site/ | Codex 负责的主题源码预留目录 |
-| wp-content/plugins/peptide-core/ | Claude 负责的业务插件预留目录 |
+| wp-content/themes/peptide-site/ | Codex 负责的 VialCove 主题源码 |
+| wp-content/plugins/peptide-core/ | Claude 负责的业务插件源码 |
 
-主题和插件目录目前只有说明文件，还不是可激活的 WordPress 主题或插件。
+主题和插件通过目录联接挂到开发站点。数据库与运行文件不进入 Git，环境说明见 docs/WORKFLOW.md。
 
 ## 从哪里开始
 
@@ -41,15 +41,15 @@
 
 双击主仓库“打开项目聊天室.cmd”可打开本项目的聊天页面，默认地址 http://127.0.0.1:17832。记录固定保存到主仓库的 docs/chat/ROOM.md，两个开发目录共用这一份文件。
 
-Claude 的启动指令可直接复制 CLAUDE.md 中的“首个任务”。
+Claude 首次任务已完成；后续读取 docs/TASKS.md、当前 CONTRACT 和最新角色交接，不再重复初始化。
 
 ## 开发环境与数据
 
-WordPress/PHP/数据库版本和运行方式尚待选定。WordPress 核心、数据库、上传文件、真实客户数据和凭据不纳入此源码仓库。演示数据必须标注为模拟数据；实验室、工厂和美国仓库的具体资料以用户提供的信息为准。
+使用 D 盘 LocalWP，双方已协调共用当前开发站点。WordPress 核心、数据库、上传文件、真实客户数据和凭据不纳入 Git。演示数据明确标注；实验室、工厂和美国仓库具体资料以用户提供的信息为准。
 
 ## 模板与许可
 
-Lunira、Genesis Lab 目前仅为候选参考。本仓库没有收录其商业源码、图片或字体。引入资源时记录来源和许可范围。项目尚未指定开源许可证。
+用户已购买并提供 Lunira 源码；商业 ZIP 保存在 Git 外。主题复用素材及外部依赖详见主题 README，正式使用前核对购买授权范围。Genesis Lab 是早期参考。项目尚未指定开源许可证。
 
 ## Git
 

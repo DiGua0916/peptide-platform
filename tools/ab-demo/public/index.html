@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>A/B 分流实验室 · 本地演示</title><link rel="icon" href="data:,"><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body>
+<header class="topbar"><a class="wordmark" href="/">ab<span>/</span>lab<span class="wordmark-label">访问分流实验室</span></a><span class="local"><i></i> LOCAL DEMO</span></header>
+<main>
+  <section class="intro"><div><p class="eyebrow">PEPTIDE PROJECT / INTERACTIVE PROTOTYPE</p><h1>电脑看 A，<span>手机看 B。</span></h1><p class="description">填入两个网址。访问同一个入口，按设备嵌入对应页面，地址栏保持入口地址。</p></div><a class="quiet" id="entry-link" href="/entry" target="_blank" rel="noopener">打开自动分流入口 ↗</a></section>
+  <section class="url-panel" aria-labelledby="url-title">
+    <div class="url-heading"><div><p class="eyebrow">YOUR PAGES / ONE ENTRANCE</p><h2 id="url-title">设置你的 A / B 网页</h2></div><span class="embed-badge">嵌入显示 · 不自动跳转</span></div>
+    <form id="url-form"><fieldset id="url-fields" disabled><legend class="sr-only">目标网址</legend><div class="url-grid">
+      <label class="url-field" for="a-url"><span><b>A</b> 电脑访问时显示</span><input type="url" id="a-url" maxlength="2048" placeholder="https://你的网址 或 http://localhost:端口/" autocomplete="off" spellcheck="false"><small>留空使用内置 A 页面</small></label>
+      <label class="url-field" for="b-url"><span><b>B</b> 手机访问时显示</span><input type="url" id="b-url" maxlength="2048" placeholder="https://你的网址 或 http://localhost:端口/" autocomplete="off" spellcheck="false"><small>留空使用内置 B 页面</small></label>
+    </div><div class="url-actions"><button type="submit" class="save" id="save-urls">保存网址</button><button type="button" class="quiet" data-preview="A">预览 A</button><button type="button" class="quiet" data-preview="B">预览 B</button><span id="save-status" role="status">正在读取配置…</span></div></fieldset></form>
+    <p class="url-warning">支持本地与外部 HTTP/HTTPS 网址；不支持 file:// 文件路径。外部网站若禁止嵌入或需要特定登录环境，可能无法正常显示，可手动打开原网页。</p>
+    <div class="port-strip"><span>配置后台 <code id="admin-address">正在连接…</code></span><span>统一入口 <a id="entry-address" href="/entry" target="_blank" rel="noopener">正在连接…</a></span></div>
+    <div id="lan-info" class="lan-info" hidden><span>手机连接同一局域网后打开</span><a id="lan-address" target="_blank" rel="noopener"></a><p>目标网址若使用 localhost / 127.0.0.1，手机会访问手机自己。请改成目标服务的局域网地址，或使用外部网址。地址留空的内置页面可以直接测试。</p></div>
+    <p id="config-error" class="error" role="alert" hidden></p>
+  </section>
+  <section class="workspace">
+    <aside class="controls">
+      <div class="section-label"><span>分流设置</span><span class="mono">CONTROL</span></div>
+      <fieldset><legend>01 / 选择模式</legend><div class="mode-options"><label class="mode-card device-mode"><input type="radio" name="mode" value="device" checked><span><strong>自动设备分流</strong><small>电脑 → A · 手机 → B</small></span></label><label class="mode-card"><input type="radio" name="mode" value="role"><span><strong>模拟身份分流</strong><small>指定身份，按规则进入页面</small></span></label><label class="mode-card"><input type="radio" name="mode" value="random"><span><strong>随机 A/B 测试</strong><small>按比例分配，并保持访客版本</small></span></label></div></fieldset>
+      <div id="device-settings"><span class="field-label">02 / 当前浏览器判断</span><strong id="device-label">正在读取设备信息…</strong><p class="hint" id="device-source"></p><p class="hint">平板和未知设备默认显示 A。改变窗口宽度不会改变设备类型。手机“桌面版网站”可能被判断为电脑。</p><p class="hint">入口按设备选择展示内容；这里的控制台仍可手动预览两版。</p></div>
+      <div id="role-settings" hidden><label class="field-label" for="persona">02 / 模拟访客身份</label><select id="persona"><option value="reviewer">模拟审核访客 → A 页面</option><option value="customer">模拟普通访客 → B 页面</option></select><p class="hint">这是你手动选择的演示身份。</p></div>
+      <div id="random-settings" hidden><label class="field-label" for="weight">02 / 分配比例 <output id="ratio">A 50% · B 50%</output></label><input id="weight" type="range" min="0" max="100" step="10" value="50"><label class="check-label"><input id="fresh" type="checkbox">这次模拟一个新访客</label><p class="hint">已有分组保留 24 小时。调整比例仅影响新访客；模拟身份模式不改变随机分组。</p></div>
+      <button class="run" id="run" type="button">访问一次 <span>↗</span></button><p id="error" class="error" role="alert" hidden></p>
+      <div class="explanation"><span class="small-title">看清分流过程</span><ol><li>浏览器访问统一入口</li><li>本机服务按设备选择 A / B</li><li>嵌入已保存网址，记录分流结果</li></ol><p>这里的身份与随机模式只用于控制台实验，统一入口始终按设备选择。配置后台仅本机访问；入口的局域网状态见上方。</p></div>
+    </aside>
+    <div class="result-panel"><div class="section-label"><span>页面预览</span><a id="open-page" href="/pages/a.html" target="_blank" rel="noopener">单独打开 ↗</a></div>
+      <div class="browser-bar"><span class="dots"><i></i><i></i><i></i></span><span id="preview-address">预览 A · 尚未发起访问</span><span class="version" id="version">A</span></div>
+      <iframe id="preview" title="分流后的演示页面" src="about:blank" referrerpolicy="no-referrer"></iframe>
+      <div class="decision" aria-live="polite"><div class="decision-icon" id="decision-icon">↳</div><div><strong id="decision-title">等待第一次访问</strong><p id="decision-reason">左侧调整设置，再点击“访问一次”。预览本身不计入访问记录。</p></div><span id="visit-id" class="mono">—</span></div>
+    </div>
+  </section>
+  <section class="history-panel"><div class="history-heading"><div><p class="eyebrow">EVERY REQUEST, EXPLAINED</p><h2>访问记录</h2></div><div class="totals"><span>A <b id="count-a">0</b></span><span>B <b id="count-b">0</b></span><button class="quiet" id="refresh" type="button">刷新 ↻</button></div></div><p class="history-note">记录的是服务端分流次数，不代表目标网站加载成功、独立用户数或转化率。下方显示最近 30 次。</p><div class="table-wrap"><table><thead><tr><th>访问 / 时间</th><th>模式与身份</th><th>结果</th><th>分配原因</th></tr></thead><tbody id="history"><tr><td colspan="4" class="empty">暂无演示记录，发起第一次访问吧。</td></tr></tbody></table></div></section>
+  <footer><span>本地原型 · 自动设备分流、手动模拟与随机分组</span><span>WordPress 集成尚未实现</span></footer>
+</main></body></html>

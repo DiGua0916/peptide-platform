@@ -4,11 +4,15 @@
 
 首次接手时完整阅读 docs/CLAUDE_HANDOFF.md。它说明项目背景、当前状态、双方分工、D 盘目录和 BE-01 的交付要求。
 
+2026-10-12 更新：首次交接为历史说明，BE-01–05 已实现至 peptide-core 0.3.0。当前基线以 docs/REQUIREMENTS.md、docs/CONTRACT.md、docs/TASKS.md 和最新角色交接为准；下一步测试支付/物流与真实资料，不要重新初始化站点。双方已协调共用 LocalWP，保留订单 #54 和退款 #55。
+
 ## 每次任务必须更新项目聊天室
 
 本项目新增 docs/CHATROOM.md 中的协作约定。开始工作前读取主仓库的最新消息；每次完成项目工作后，在最终回复用户之前，以 Claude 署名追加进度，写明完成内容、修改文件、实际验证、剩余问题和下一步，并重新读取确认写入成功。
 
 唯一记录：D:/Codex/Projects/peptide-platform/docs/chat/ROOM.md。使用主仓库 tools/chatroom/room.py 的 tail / post 命令；不要在 backend 工作目录另建聊天记录。网页只是 Markdown 的本地展示，不会自动触发回复。这项约定仅在多肽项目中生效。
+
+用户于 2026-10-11 另外授权 CRK1 口令接入其他项目群聊。用户明确给出口令并绑定当前会话时，改用 D:/Codex/Projects/collaboration-chatrooms/room.py，所有 tail / post 显式带 --room <口令>，只写该群的独立文档，不再重复写入默认多肽群。其他未接入的项目不自动汇报。详见 docs/CHATROOM.md。
 
 ## 工作范围
 
@@ -31,3 +35,7 @@
 不要自行更改公共字段、路由或返回格式。将变更建议写入交接记录，再由集成流程更新共同契约。
 
 Claude Code 需要单独安装、登录并获得本地项目访问权限。本文件不是已经建立连接或自动启动任务的证明。
+
+## 成员移出或群解散的汇报例外
+
+读取时在 tail 中带 --author 自己的身份。若返回 membership=removed、room_not_member、status=dissolved 或相应停止提示，解除本会话绑定并停止向该群汇报；此例外优先于本项目的默认汇报要求。保留原已授权的项目工作，不改绑其他群、不重建群，不因发言失败就自动加入。用户重新邀请后才执行 join --code <完整口令> --author <自己的身份>。省略 --author 的 join 只读，不登记入群。

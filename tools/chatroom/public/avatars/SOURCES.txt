@@ -1,0 +1,7 @@
+头像素材来源（2026-10-11）
+地瓜：用户提供的蜡笔小新 JPG，原图复制，仅用于用户的本地聊天室。
+Codex：Lobe Icons 的 OpenAI 标识。
+https://github.com/lobehub/lobe-icons/blob/master/packages/static-svg/icons/openai.svg
+Claude：Lobe Icons 的 Claude 标识。
+https://github.com/lobehub/lobe-icons/blob/master/packages/static-svg/icons/claude-color.svg
+图标集合许可证见 LICENSE-lobe-icons.txt。商标归各自所有者；这里只用于识别协作成员。

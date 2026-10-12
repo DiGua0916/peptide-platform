@@ -1,45 +1,97 @@
 <!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>项目聊天室 · 多肽独立站</title>
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/style.css">
-  <script defer src="/app.js"></script>
-</head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>项目聊天室 · 多肽独立站</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/style.css"><script defer src="/app.js"></script></head>
 <body>
-  <div class="app">
-    <aside class="sidebar">
-      <div class="brand"><span class="brand-mark">P<span>·</span></span><div>PEPTIDE<span class="brand-caption">项目协作空间</span></div></div>
-      <div class="project-card"><span class="eyebrow">CURRENT PROJECT</span><strong>多肽独立站</strong><span>WordPress · 省级技能大赛</span></div>
-      <nav aria-label="项目导航"><a href="/" class="nav-item active"><span aria-hidden="true">▤</span> 项目聊天室 <span class="nav-count" id="nav-count">0</span></a><button class="nav-item" id="source-button"><span aria-hidden="true">⌘</span> 查看 Markdown 原文 <span aria-hidden="true">↗</span></button></nav>
-      <section class="members"><span class="eyebrow">PARTICIPANTS / 参与者</span>
-        <div class="member"><span class="avatar user">你</span><div><strong>你</strong><small>项目负责人 · 需求与决策</small></div></div>
-        <div class="member"><span class="avatar codex">C</span><div><strong>Codex</strong><small>前端设计 · 主题与交互</small></div></div>
-        <div class="member"><span class="avatar claude">✳</span><div><strong>Claude</strong><small>业务插件 · 数据与接口</small></div></div>
-      </section>
-      <div class="sidebar-note"><span class="note-icon" aria-hidden="true">↳</span><strong>每次完成，都留下一条记录。</strong><p>把进度、改动、验证结果和下一步，放在同一个地方。</p></div>
-      <div class="storage"><span class="storage-dot"></span><div>记录保存在 D 盘<small>仅此项目 · 本地 Markdown</small></div></div>
-    </aside>
-    <main>
-      <header class="topbar"><div class="breadcrumb">工作空间 <span>/</span> 多肽独立站 <span>/</span> <b>协作</b></div><span class="local-badge"><i></i> 仅在本机运行</span></header>
-      <div class="main-inner">
-        <section class="heading"><div><span class="eyebrow">PROJECT CONVERSATION</span><h1>项目聊天室<span class="heading-dot">.</span></h1><p>需求有回应，进度有记录。</p></div><div class="sync"><span id="sync-dot" class="sync-dot"></span><span id="sync-label">正在连接记录…</span><button id="refresh" title="刷新记录" aria-label="刷新记录">↻</button></div></section>
-        <div class="context-note"><span class="context-icon" aria-hidden="true">i</span><p>这里汇集你、Codex 和 Claude 的项目留言与工作汇报。<strong>新留言写入文件后，需提醒对方读取；不会自动触发 AI 回复。</strong></p></div>
-        <div class="toolbar"><div class="filters" role="group" aria-label="按参与者筛选"><button class="selected" data-author="全部" aria-pressed="true">全部 <span id="total-count">0</span></button><button data-author="Codex" aria-pressed="false">Codex</button><button data-author="Claude" aria-pressed="false">Claude</button><button data-author="用户" aria-pressed="false">你</button></div><label class="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="搜索消息或任务编号" aria-label="搜索消息或任务编号"></label></div>
-        <div id="warning" class="warning" role="status" hidden></div>
-        <div class="timeline-label"><span>项目记录</span><span id="visible-count">正在读取</span></div>
-        <div id="messages" class="messages" aria-label="项目消息列表"><div class="empty"><span class="empty-symbol">···</span><h2>正在读取项目记录</h2><p>消息保存在本项目的 Markdown 文件中。</p></div></div>
-        <button id="jump-latest" class="jump-latest" hidden>↓ 有新记录，查看最新</button>
-        <section class="composer" aria-label="发送项目留言">
-          <div class="composer-top"><span class="avatar user small">你</span><strong>给项目留个消息</strong><span>支持 Markdown</span></div>
-          <form id="message-form"><label class="sr-only" for="message-input">项目留言内容</label><textarea id="message-input" rows="3" maxlength="32000" placeholder="说说你的想法、补充需求，或者记录一个决定…" required></textarea><div class="composer-bottom"><span id="send-status" role="status">Ctrl / ⌘ + Enter 发送 · 仅保存在当前项目</span><button class="send-button" id="send-button" type="submit">发送留言 <span aria-hidden="true">↗</span></button></div></form>
-        </section>
-        <footer><span>一份 Markdown，三方共享。</span><span id="record-path" title="">docs/chat/ROOM.md</span></footer>
-      </div>
-    </main>
-  </div>
-  <dialog id="source-dialog"><div class="dialog-header"><div><span class="eyebrow">SOURCE OF TRUTH</span><h2>Markdown 原文</h2></div><button id="close-source" aria-label="关闭原文">×</button></div><p id="source-path"></p><pre id="source-content"></pre><div class="dialog-footer"><span>文件是唯一记录来源，页面自动读取更新。</span><button id="copy-source">复制原文</button></div></dialog>
-</body>
-</html>
+<svg class="svg-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+<symbol id="i-chat" viewBox="0 0 24 24"><path d="M20.5 11.2a8.5 8.5 0 0 1-8.7 8.1 10.8 10.8 0 0 1-3.8-.7l-4.4 1.5 1.2-4A7.8 7.8 0 0 1 3 11.2a8.5 8.5 0 0 1 8.8-8.1 8.5 8.5 0 0 1 8.7 8.1Z"/><path d="M8 11h.01M12 11h.01M16 11h.01" stroke-width="2.8"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="7.5" r="3.2"/><path d="M2.8 20v-2a6.2 6.2 0 0 1 12.4 0v2ZM17 4.5a3.2 3.2 0 0 1 0 6.2M18.5 14a5.5 5.5 0 0 1 3 5"/></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6zM14 3v5h4M9 12h6M9 16h6"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.8"/><path d="m16 16 4.7 4.7"/></symbol>
+<symbol id="i-more" viewBox="0 0 24 24"><path d="M5 12h.01M12 12h.01M19 12h.01" stroke-width="3"/></symbol>
+<symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 9h.01M16 9h.01M7.5 14a5 5 0 0 0 9 0"/></symbol>
+<symbol id="i-code" viewBox="0 0 24 24"><path d="m8 6-6 6 6 6M16 6l6 6-6 6m-9 3 4-18"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 10a8 8 0 1 0-1.5 7M20 4v6h-6"/></symbol>
+<symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="9" r="4"/><path d="m11 12 8 8m-4-4 3-3m-1 5 3-3"/></symbol>
+</defs></svg>
+<div class="app">
+<nav class="rail" aria-label="聊天室导航">
+<span class="avatar user profile" title="地瓜 · 项目负责人"><img src="/avatars/digua.jpg" alt="地瓜的头像"></span>
+<button class="rail-button active" id="chat-button" title="群聊" aria-label="群聊"><svg><use href="#i-chat"/></svg></button>
+<button class="rail-button" data-members title="群成员" aria-label="群成员" aria-expanded="false"><svg><use href="#i-users"/></svg></button>
+<button class="rail-button" data-source title="查看 Markdown 原文" aria-label="查看 Markdown 原文"><svg><use href="#i-file"/></svg></button>
+<div class="rail-spacer"></div><button class="rail-button" data-members title="群聊信息" aria-label="群聊信息" aria-expanded="false"><svg><use href="#i-menu"/></svg></button>
+</nav>
+<aside class="sidebar" id="sidebar" aria-label="会话列表">
+<div class="sidebar-heading"><h2>会话</h2><button class="icon-button new-room-button" id="new-room-button" aria-label="新建群聊" title="新建群聊"><svg><use href="#i-plus"/></svg></button></div>
+<div class="search-area"><label class="search"><svg><use href="#i-search"/></svg><input id="search" type="search" autocomplete="off" placeholder="搜索聊天记录" aria-label="搜索消息或任务编号"></label><button class="icon-button sidebar-close" id="close-sidebar" aria-label="关闭会话列表"><svg><use href="#i-close"/></svg></button></div>
+<div class="list-caption"><span id="room-caption">项目群聊</span><span id="room-count">1</span></div>
+<div id="room-list" class="room-list" aria-label="项目群聊列表"></div>
+<button class="archive-toggle" id="archive-toggle" hidden>已解散群聊</button>
+<div class="sidebar-bottom"><div class="sync"><span id="sync-dot" class="sync-dot"></span><span id="sync-label" role="status">正在连接…</span></div><span>本地聊天室 · <span id="total-count">0</span> 条消息</span></div>
+</aside>
+<main class="chat-main">
+<header class="chat-header"><button class="icon-button mobile-menu" id="open-sidebar" aria-label="打开会话列表" aria-expanded="false"><svg><use href="#i-menu"/></svg></button><div class="room-heading"><span class="room-mark" aria-hidden="true"><svg><use href="#i-users"/></svg></span><div><h1><span id="room-name">多肽项目群</span><small id="member-count">— 人</small></h1><p id="member-summary">正在读取成员…</p></div></div><div class="header-actions"><button class="join-button" data-join title="复制接入口令" aria-label="接入助手"><svg><use href="#i-key"/></svg><span>接入助手</span></button><button class="icon-button" id="find-button" aria-label="搜索聊天记录" title="搜索聊天记录"><svg><use href="#i-search"/></svg></button><button class="icon-button" data-members aria-label="群聊详情" title="群聊详情" aria-expanded="false"><svg><use href="#i-more"/></svg></button></div></header>
+<div id="service-notice" class="service-notice" role="status" hidden><span id="service-notice-text"></span><a href="http://127.0.0.1:17835/?room=peptide">前往正式聊天室 ↗</a></div>
+<div class="filter-bar" id="filter-bar" hidden><span id="filter-label"></span><button id="clear-filter">查看全部消息 ×</button></div>
+<div id="warning" class="warning" role="status" hidden></div>
+<div id="closed-notice" class="closed-notice" role="status" hidden>本群已解散 · 历史记录只读，助手无需再汇报</div>
+<section class="timeline" id="timeline" aria-label="聊天记录" tabindex="0"><div id="messages" class="messages" aria-label="项目消息列表"><div class="empty">正在读取聊天记录…</div></div><div id="live-replies" class="live-replies" aria-live="polite"></div></section>
+<button id="jump-latest" class="jump-latest" hidden>↓ 查看新消息</button>
+<section class="composer" aria-label="发送项目留言"><form id="message-form">
+<div class="composer-tools"><div class="tool-group"><button type="button" class="icon-button" id="emoji-button" title="表情" aria-label="表情" aria-expanded="false"><svg><use href="#i-smile"/></svg></button><button type="button" class="icon-button" id="code-button" title="插入代码块" aria-label="插入代码块"><svg><use href="#i-code"/></svg></button><button type="button" class="icon-button" data-source title="查看 Markdown 原文" aria-label="查看 Markdown 原文"><svg><use href="#i-file"/></svg></button></div><button type="button" class="icon-button" id="refresh" title="刷新记录" aria-label="刷新记录"><svg><use href="#i-refresh"/></svg></button></div>
+<div class="emoji-picker" id="emoji-picker" role="group" aria-label="选择表情" hidden><button type="button">😊</button><button type="button">👍</button><button type="button">👌</button><button type="button">🎉</button><button type="button">✅</button><button type="button">💡</button><button type="button">👀</button><button type="button">☕</button></div>
+<label class="sr-only" for="message-input">项目留言内容</label><div class="message-editor"><div id="input-highlight" class="input-mirror" aria-hidden="true"></div><div id="input-caret-probe" class="input-mirror caret-probe" aria-hidden="true"></div><textarea id="message-input" rows="3" maxlength="32000" placeholder="聊聊你的想法，或留下一条项目消息…" aria-autocomplete="list" aria-controls="mention-options" aria-expanded="false" required></textarea></div>
+<div id="mention-menu" class="mention-menu" hidden><div class="mention-caption">提及群成员 <span>↑ ↓ 选择 · Enter 确定</span></div><div id="mention-options" role="listbox" aria-label="选择要提及的成员"></div></div>
+<div class="reply-controls" id="reply-controls" hidden><button type="button" id="assistant-status" class="connection-button">连接状态</button></div>
+<div class="composer-bottom"><span id="send-status" role="status">消息保存在本群</span><div class="send-actions"><span class="key-hint">Enter 发送，Shift + Enter 换行</span><button class="send-button" id="send-button" type="submit" disabled>发送</button></div></div>
+</form></section>
+<aside class="details-panel" id="details-panel" aria-label="群聊详情" hidden>
+<div class="panel-heading"><h2>群聊详情</h2><button class="icon-button" id="close-details" aria-label="关闭群聊详情"><svg><use href="#i-close"/></svg></button></div>
+<div class="member-grid" id="member-grid"></div>
+<p class="field-help" id="pending-members" hidden></p>
+<p class="field-help" id="management-note" hidden>当前服务尚未支持成员管理，请在新版正式聊天室操作。</p>
+<section class="detail-section"><h3>群聊名称</h3><p id="detail-room-name">多肽项目群</p><p class="muted" id="detail-project"></p></section>
+<section class="detail-section"><h3>助手接入口令</h3><code id="detail-code" class="detail-code"></code><button class="secondary-button" data-join>查看接入方式</button></section>
+<section class="detail-section"><h3>查看成员消息</h3><div class="filters" role="group" aria-label="按参与者筛选"><button class="selected" data-author="全部" aria-pressed="true">全部</button><button data-author="Codex" aria-pressed="false">Codex</button><button data-author="Claude" aria-pressed="false">Claude</button><button data-author="用户" aria-pressed="false">地瓜</button></div></section>
+<section class="detail-section"><h3>群公告</h3><p>需求、进度和决定，都留在这里。</p><p class="muted">选择已接通的助手或 @它，即可在群内获得文字回复。开发工作仍在各自任务中进行，完成后汇报到本群。</p></section>
+<button class="source-row" data-source>查看 Markdown 原文 <span>›</span></button><p class="record-path" id="record-path">docs/chat/ROOM.md</p>
+<button class="dissolve-button" id="dissolve-room-button">解散群聊</button>
+</aside>
+</main></div>
+<dialog id="source-dialog" aria-labelledby="source-title"><div class="dialog-header"><h2 id="source-title">Markdown 原文</h2><button class="icon-button" id="close-source" aria-label="关闭原文"><svg><use href="#i-close"/></svg></button></div><p id="source-path"></p><pre id="source-content"></pre><div class="dialog-footer"><span>所有成员共用这一份记录</span><button id="copy-source">复制原文</button></div></dialog>
+<dialog id="create-room-dialog" class="compact-dialog" aria-labelledby="create-room-title">
+<div class="dialog-header"><h2 id="create-room-title">新建群聊</h2><button class="icon-button" data-close="create-room-dialog" aria-label="关闭新建群聊"><svg><use href="#i-close"/></svg></button></div>
+<p class="dialog-intro">一个项目，一个协作空间。建群后，将口令交给助手，由它们主动加入。</p>
+<form id="create-room-form"><label class="field-label" for="new-room-name">群聊名称</label><input class="field-input" id="new-room-name" placeholder="例如：作品集网站" maxlength="48" required autocomplete="off"><label class="field-label" for="new-room-project">项目目录 <span>自动创建 · 可选填</span></label><input class="field-input" id="new-room-project" placeholder="留空，按群名自动创建项目文件夹" autocomplete="off"><p class="field-help">留空会在 D:\Codex\Projects 下创建项目文件夹；已有项目可填写现有目录。每个群聊独立保存一份记录。</p><div class="form-error" id="create-room-status" role="status"></div><button class="primary-button" id="create-room-submit" type="submit">创建群聊并生成口令</button></form>
+</dialog>
+<dialog id="join-dialog" class="compact-dialog" aria-labelledby="join-title">
+<div class="dialog-header"><h2 id="join-title">让助手接入群聊</h2><button class="icon-button" data-close="join-dialog" aria-label="关闭接入说明"><svg><use href="#i-close"/></svg></button></div>
+<p class="dialog-intro" id="join-room-name"></p><div class="key-card"><span>本群的唯一口令</span><code id="join-code"></code><button class="primary-button" id="copy-room-key">复制口令</button></div>
+<ol class="join-steps"><li>在这台电脑新开一个 Codex 或 Claude Code 会话。</li><li>粘贴口令，助手读取本群最近消息并接入。</li><li>接入后，每次实际任务结束都会按约定汇报进度。</li></ol>
+<p class="field-help">尚未加载规则的旧会话，请复制完整说明；助手需要能读写这台电脑的文件。群内自动回复使用独立文字会话，读取本群记录；不会接管桌面里已有的开发任务。</p>
+<details class="join-details"><summary>查看完整接入说明</summary><textarea id="join-instructions" readonly aria-label="完整接入说明"></textarea></details>
+<button class="secondary-button" id="copy-join-instructions">复制完整接入说明</button><p id="join-status" role="status"></p>
+</dialog>
+<dialog id="assistants-dialog" class="compact-dialog" aria-labelledby="assistants-title">
+<div class="dialog-header"><h2 id="assistants-title">助手连接</h2><button class="icon-button" data-close="assistants-dialog" aria-label="关闭连接状态"><svg><use href="#i-close"/></svg></button></div>
+<div id="assistant-status-list" class="assistant-status-list"></div>
+<p class="field-help">群内文字回复读取当前群最近 12 条记录，使用本机助手账号的额度。每轮是独立会话，不会操作桌面里正在进行的任务。</p>
+<p class="field-help">Claude Code 如未登录，请先运行交付文件「登录Claude群聊.cmd」，使用原 Claude 订阅账号授权，再刷新状态。连接成功后还需是本群成员才能回复。</p>
+<button id="refresh-assistants" class="secondary-button">刷新连接状态</button><p id="assistant-refresh-status" role="status"></p>
+</dialog>
+<dialog id="dissolve-dialog" class="compact-dialog" aria-labelledby="dissolve-title">
+<div class="dialog-header"><h2 id="dissolve-title">解散群聊</h2><button class="icon-button" data-close="dissolve-dialog" aria-label="取消解散"><svg><use href="#i-close"/></svg></button></div>
+<p class="dialog-intro">确定解散「<strong id="dissolve-room-name"></strong>」？</p>
+<p class="field-help">解散后停止接收消息，接入口令失效，助手无需再向本群汇报。历史记录和项目文件会保留，可以从“已解散群聊”查看。</p>
+<p id="dissolve-status" class="form-error" role="status"></p><div class="dissolve-actions"><button class="secondary-button" data-close="dissolve-dialog">保留群聊</button><button class="danger-button" id="confirm-dissolve">确认解散</button></div>
+</dialog>
+<dialog id="remove-member-dialog" class="compact-dialog" aria-labelledby="remove-member-title">
+<div class="dialog-header"><h2 id="remove-member-title">移出群成员</h2><button class="icon-button" data-close="remove-member-dialog" aria-label="取消移出"><svg><use href="#i-close"/></svg></button></div>
+<p class="dialog-intro">将 <strong id="remove-member-name"></strong> 移出本群？</p>
+<p class="field-help">移出后无法继续发言或汇报，历史消息保留。以后需要合作时，将本群口令交给助手，让它主动重新加入。</p>
+<p id="remove-member-status" class="form-error" role="status"></p><div class="dissolve-actions"><button class="secondary-button" data-close="remove-member-dialog">保留成员</button><button class="danger-button" id="confirm-remove-member">确认移出</button></div>
+</dialog>
+</body></html>

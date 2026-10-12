@@ -1,19 +1,250 @@
 """Behavior checks; all temporary records are separate from the project room."""
 import concurrent.futures
+import io
 import json
 import tempfile
 import threading
+import time
 import unittest
+from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 import room
+from live_chat import LiveChat, assistant_environment, claude_event, claude_environment
 
 TEST_ROOT = Path("D:/Codex/Tasks/peptide-platform/work/chatroom/tests").resolve()
 if not str(TEST_ROOT).lower().startswith("d:\\codex\\tasks\\peptide-platform\\work\\chatroom\\"):
     raise RuntimeError("Unexpected test workspace")
 TEST_ROOT.mkdir(parents=True, exist_ok=True)
+
+
+class AssistantNetworkTests(unittest.TestCase):
+    def test_enabled_windows_proxy_is_child_only_and_keeps_local_callback_direct(self):
+        with patch.dict("os.environ", {"SENTINEL": "unchanged"}, clear=True), patch("os.name", "nt"), \
+                patch("urllib.request.getproxies_registry", return_value={"http": "http://127.0.0.1:8800", "https": "http://127.0.0.1:8800"}, create=True):
+            env = assistant_environment()
+            self.assertEqual(env["HTTPS_PROXY"], "http://127.0.0.1:8800")
+            self.assertEqual(env["HTTP_PROXY"], env["HTTPS_PROXY"])
+            self.assertIn("127.0.0.1", env["NO_PROXY"])
+            self.assertEqual(dict(room.os.environ), {"SENTINEL": "unchanged"})
+
+    def test_explicit_proxy_is_not_overridden(self):
+        for key in ("https_proxy", "HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY"):
+            with self.subTest(key=key), patch.dict("os.environ", {key: "http://chosen:8000", "NO_PROXY": "example.test"}, clear=True), \
+                    patch("os.name", "nt"), patch("urllib.request.getproxies_registry", create=True) as registry:
+                original = dict(room.os.environ)  # Windows normalizes environment keys to uppercase.
+                self.assertEqual(claude_environment(), original)
+                registry.assert_not_called()
+
+    def test_disabled_or_unsupported_proxy_does_not_change_environment(self):
+        for proxies in ({}, {"https": "socks5://127.0.0.1:8000"}):
+            with self.subTest(proxies=proxies), patch.dict("os.environ", {}, clear=True), patch("os.name", "nt"), \
+                    patch("urllib.request.getproxies_registry", return_value=proxies, create=True):
+                self.assertEqual(claude_environment(), {})
+
+
+class CodexTransportTests(unittest.TestCase):
+    def test_codex_child_inherits_proxy_and_retry_can_recover(self):
+        self.run_adapter(timeout=False)
+
+    def test_codex_retry_timeout_reports_network_and_stops_child(self):
+        self.run_adapter(timeout=True)
+
+    def run_adapter(self, timeout):
+        live = LiveChat(SimpleNamespace(root=TEST_ROOT), None)
+        job = {"text": "", "phase": ""}
+        events = iter([
+            {"id": 1, "result": {}},
+            {"id": 2, "result": {"thread": {"id": "isolated"}}},
+            {"id": 3, "result": {"turn": {"id": "isolated-turn"}}},
+            {"method": "error", "params": {"willRetry": True, "error": {"message": "network interrupted"}}},
+            {"method": "item/completed", "params": {"item": {"type": "agentMessage", "text": "connected"}}},
+            {"method": "turn/completed", "params": {"turn": {"status": "completed"}}},
+        ])
+        elapsed = [0]
+        def next_event(**kwargs):
+            event = next(events)
+            if timeout and event.get("method") == "error":
+                elapsed[0] = 121
+            return event
+        process = MagicMock(stdin=io.StringIO(), stdout=io.StringIO())
+        process.poll.return_value = None
+        env = {"HTTPS_PROXY": "http://127.0.0.1:8800", "NO_PROXY": "localhost"}
+        with patch("live_chat.assistant_environment", return_value=env), \
+                patch("live_chat.subprocess.Popen", return_value=process) as launch, \
+                patch("live_chat.threading.Thread"), patch("live_chat.queue.Queue") as event_queue, \
+                patch("live_chat.time.monotonic", side_effect=lambda: elapsed[0]), \
+                patch.object(live, "still_allowed", return_value=True):
+            event_queue.return_value.get.side_effect = next_event
+            if timeout:
+                with self.assertRaisesRegex(RuntimeError, "模型连接多次中断.*2 分钟"):
+                    live.run_codex(job, "isolated test", lambda text: None)
+            else:
+                self.assertEqual(live.run_codex(job, "isolated test", lambda text: None), "connected")
+        self.assertEqual(launch.call_args.kwargs["env"], env)
+        self.assertIn("第 1 次重试", job["phase"])
+        self.assertIn("2 分钟", job["phase"])
+        self.assertTrue(process.stdin.closed)
+        process.wait.assert_called_once_with(timeout=3)
+
+
+class LiveChatTests(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory(dir=TEST_ROOT)
+        self.path = Path(self.directory.name) / "ROOM.md"
+        room.initialize(self.path)
+        self.server = room.RoomServer(("127.0.0.1", 0), self.path)
+        self.release = threading.Event()
+        self.entered = threading.Event()
+        self.prompts = []
+        providers = {name: {"available": True, "detail": "isolated test"} for name in ("Codex", "Claude")}
+        self.server.live = LiveChat(self.server.registry, room.snapshot, self.reply, providers)
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+        self.url = f"http://127.0.0.1:{self.server.server_address[1]}"
+
+    def tearDown(self):
+        self.release.set()
+        self.server.live.cancel("peptide")
+        self.wait_finished()
+        self.server.shutdown()
+        self.server.server_close()
+        self.thread.join()
+        self.directory.cleanup()
+
+    def request(self, path, payload=None, extra=None):
+        headers = {"Content-Type": "application/json", "X-Peptide-Room": "1", "Origin": self.url}
+        headers.update(extra or {})
+        data = json.dumps(payload).encode() if payload is not None else None
+        return urlopen(Request(self.url + path, data=data, headers=headers), timeout=4)
+
+    def reply(self, job, prompt, delta):
+        self.prompts.append((job["author"], prompt))
+        delta("正在分析")
+        self.entered.set()
+        self.release.wait(3)
+        return job["author"]+"：隔离测试回复 @Claude"
+
+    def wait_finished(self):
+        deadline = time.monotonic()+4
+        while time.monotonic() < deadline:
+            jobs = self.server.live.list_jobs("peptide")
+            if all(j["status"] not in ("pending", "running", "stopping") for j in jobs):
+                return jobs
+            time.sleep(0.02)
+        self.fail("reply workers did not finish")
+
+    def test_both_assistants_stream_then_save_once_using_only_current_room(self):
+        other = self.server.registry.create("隔离")
+        self.server.registry.post(other["id"], "用户", "私有", "OTHER_ROOM_SENTINEL")
+        self.server.registry.post("peptide", "用户", "上下文", "CURRENT_ROOM_SENTINEL")
+        with self.request("/api/messages", {"body": "@全体 讨论方案"}) as response:
+            self.assertTrue(json.load(response)["replyRequested"])
+        self.assertTrue(self.entered.wait(2))
+        with self.request("/api/messages") as response:
+            state = json.load(response)
+        self.assertEqual({j["author"] for j in state["liveJobs"]}, {"Codex", "Claude"})
+        self.assertTrue(any(j["text"] == "正在分析" for j in state["liveJobs"]))
+        self.release.set()
+        self.assertTrue(all(j["status"] == "completed" for j in self.wait_finished()))
+        messages = room.snapshot(self.path)["messages"]
+        self.assertEqual(len(messages), 4)
+        self.assertEqual({m["author"] for m in messages[2:]}, {"Codex", "Claude"})
+        self.assertEqual(len(self.prompts), 2)  # Assistant mentions don't trigger loops.
+        for author, prompt in self.prompts:
+            self.assertIn("项目群里的 "+author, prompt)
+            self.assertIn("CURRENT_ROOM_SENTINEL", prompt)
+            self.assertNotIn("OTHER_ROOM_SENTINEL", prompt)
+
+    def test_failed_reply_clears_retry_phase_without_saving_partial_text(self):
+        def fail(job, prompt, delta):
+            delta("unfinished")
+            self.server.live.phase(job, "连接中断，正在重试")
+            raise RuntimeError("连接失败")
+        self.server.live.runner = fail
+        with self.request("/api/messages", {"body": "@Codex test"}):
+            pass
+        job = self.wait_finished()[0]
+        self.assertEqual((job["status"], job["phase"], job["text"]), ("failed", "", ""))
+        self.assertEqual(job["error"], "连接失败")
+        self.assertEqual(len(room.snapshot(self.path)["messages"]), 1)
+
+    def test_unavailable_or_absent_targets_reject_before_saving(self):
+        self.server.live.provider_status["Claude"] = {"available": False, "detail": "未登录"}
+        for targets in (["Codex", "Claude"], ["其他"], "Codex"):
+            with self.assertRaises(HTTPError) as caught:
+                self.request("/api/messages", {"body": "保留草稿", "targets": targets})
+            self.assertEqual(caught.exception.code, 400)
+        self.server.registry.remove_member("peptide", "Codex")
+        with self.assertRaises(HTTPError):
+            self.request("/api/messages", {"body": "@Codex 不应发送"})
+        self.assertEqual(room.snapshot(self.path)["messages"], [])
+
+    def test_stop_retains_user_message_but_discards_partial_reply(self):
+        with self.request("/api/messages", {"body": "问题", "targets": ["Codex"]}):
+            pass
+        self.assertTrue(self.entered.wait(2))
+        with self.assertRaises(HTTPError) as caught:
+            self.request("/api/replies/stop", {"room": "peptide"}, {"Origin": "https://example.com"})
+        self.assertEqual(caught.exception.code, 403)
+        with self.request("/api/replies/stop", {"room": "peptide"}):
+            pass
+        self.release.set()
+        self.assertEqual(self.wait_finished()[0]["status"], "cancelled")
+        self.assertEqual([m["author"] for m in room.snapshot(self.path)["messages"]], ["用户"])
+
+    def test_member_removal_even_if_rejoined_cancels_old_reply(self):
+        with self.request("/api/messages", {"body": "问题", "targets": ["Claude"]}):
+            pass
+        self.assertTrue(self.entered.wait(2))
+        self.server.registry.remove_member("peptide", "Claude")
+        self.server.registry.join("peptide", "Claude")
+        self.release.set()
+        self.assertEqual(self.wait_finished()[0]["status"], "cancelled")
+        self.assertEqual(len(room.snapshot(self.path)["messages"]), 1)
+
+    def test_dissolution_stops_inflight_reply(self):
+        with self.request("/api/messages", {"body": "问题", "targets": ["Codex"]}):
+            pass
+        self.assertTrue(self.entered.wait(2))
+        with self.request("/api/rooms/dissolve", {"room": "peptide"}):
+            pass
+        self.release.set()
+        self.assertEqual(self.wait_finished()[0]["status"], "cancelled")
+        self.assertEqual(len(room.snapshot(self.path)["messages"]), 1)
+
+    def test_busy_room_allows_plain_comments_and_rejects_duplicate_work(self):
+        with self.request("/api/messages", {"body": "问题", "targets": ["Codex"]}):
+            pass
+        self.assertTrue(self.entered.wait(2))
+        with self.assertRaises(HTTPError):
+            self.request("/api/messages", {"body": "重复任务", "targets": ["Codex"]})
+        with self.request("/api/messages", {"body": "补充留言"}):
+            pass
+        self.release.set()
+        self.wait_finished()
+        self.assertEqual(len(room.snapshot(self.path)["messages"]), 3)
+
+    def test_invalid_message_releases_reservation_and_revision_protects_commit(self):
+        with self.assertRaises(HTTPError):
+            self.request("/api/messages", {"body": "", "targets": ["Codex"]})
+        self.assertFalse(self.server.live.list_jobs("peptide"))
+        revision = self.server.registry.resolve("peptide").get("memberRevision", 0)
+        self.server.registry.remove_member("peptide", "Claude")
+        with self.assertRaises(room.RoomMemberError):
+            self.server.registry.post("peptide", "Codex", "不保存", "竞态检查", expected_member_revision=revision)
+        self.assertFalse(room.snapshot(self.path)["messages"])
+
+    def test_claude_stream_distinguishes_text_completion_and_failures(self):
+        self.assertEqual(claude_event({"type": "stream_event", "event": {"type": "content_block_delta",
+            "delta": {"type": "text_delta", "text": "中文"}}}), ("中文", None, None))
+        self.assertEqual(claude_event({"type": "stream_event", "event": {"type": "content_block_delta",
+            "delta": {"type": "thinking_delta", "thinking": "私有分析"}}}), ("", None, None))
+        self.assertEqual(claude_event({"type": "result", "is_error": False, "result": "完成"}), ("", "完成", None))
+        self.assertEqual(claude_event({"type": "result", "is_error": True, "errors": ["未登录"]}), ("", None, "未登录"))
 
 
 class RecordTests(unittest.TestCase):
@@ -139,6 +370,215 @@ class HttpTests(unittest.TestCase):
         with self.assertRaises(HTTPError) as caught:
             self.request("/../../AGENTS.md")
         self.assertEqual(caught.exception.code, 404)
+
+    def test_live_events_notice_external_posts_and_member_changes(self):
+        def next_update(response):
+            for _ in range(12):
+                line = response.readline().decode("utf-8").strip()
+                if line.startswith("data: "):
+                    return json.loads(line[6:])
+            self.fail("No live update received")
+        with self.request("/api/health") as response:
+            self.assertIn("events", json.load(response)["capabilities"])
+        with self.request("/api/events?room=peptide") as response:
+            self.assertIn("text/event-stream", response.headers["Content-Type"])
+            self.assertEqual(next_update(response), {"room":"peptide"})
+            # A separate CLI would use the same registry/file path.
+            self.server.registry.post("peptide", "Codex", "实时验证", "外部写入")
+            self.assertEqual(next_update(response), {"room":"peptide"})
+            self.server.registry.remove_member("peptide", "Claude")
+            self.assertEqual(next_update(response), {"room":"peptide"})
+        with self.assertRaises(HTTPError) as caught:
+            self.request("/api/events?room=unknown")
+        self.assertEqual(caught.exception.code, 400)
+
+
+class MultiRoomTests(unittest.TestCase):
+    setUp = HttpTests.setUp
+    tearDown = HttpTests.tearDown
+    request = HttpTests.request
+
+    def test_each_room_has_its_own_document_and_history(self):
+        before = self.path.read_bytes()
+        with self.request("/api/rooms", {"name": "隔离项目甲"}) as response:
+            first = json.load(response)
+        with self.request("/api/rooms", {"name": "隔离项目乙"}) as response:
+            second = json.load(response)
+        self.assertNotEqual(first["code"], second["code"])
+        self.assertNotEqual(first["logPath"], second["logPath"])
+        for entry, content in [(first, "只在甲群"), (second, "只在乙群")]:
+            self.request("/api/messages?room="+entry["id"], {"body": content}).close()
+            with self.request("/api/messages?room="+entry["code"]) as response:
+                messages = json.load(response)["messages"]
+            self.assertEqual([m["body"] for m in messages], [content])
+            self.assertEqual(messages[0]["author"], "用户")
+            self.assertEqual([p.name for p in Path(entry["logPath"]).parent.iterdir()], ["ROOM.md"])
+        with self.request("/room.md?room="+first["id"]) as response:
+            self.assertNotIn("只在乙群", response.read().decode())
+        self.assertEqual(before, self.path.read_bytes())
+
+    def test_code_resolves_after_registry_reopen_and_join_is_read_only(self):
+        entry = self.server.registry.create("重载群聊")
+        room.append_message("Claude", "后端进度", "这是隔离测试内容", path=Path(entry["logPath"]))
+        before = Path(entry["logPath"]).read_bytes()
+        registry = room.RoomRegistry(self.server.registry.root, self.path)
+        resolved = room.join_context(registry, entry["code"].lower())
+        self.assertEqual(resolved["room"], entry)
+        self.assertEqual(resolved["messages"][0]["author"], "Claude")
+        self.assertIn("--room "+entry["code"], resolved["instructions"])
+        self.assertEqual(before, Path(entry["logPath"]).read_bytes())
+        self.assertRegex(entry["code"], r"^CRK1-(?:[2-9A-HJ-NP-Z]{4}-){3}[2-9A-HJ-NP-Z]{4}$")
+
+    def test_blank_project_creates_folder_without_reusing_existing_data(self):
+        base = self.server.registry.projects_root
+        base.mkdir(parents=True, exist_ok=True)
+        existing = base / "自动目录"
+        existing.mkdir()
+        marker = existing / "原有文件.txt"
+        marker.write_text("保留", encoding="utf-8")
+        entry = self.server.registry.create("自动目录")
+        project = Path(entry["projectRoot"])
+        self.assertTrue(project.is_dir())
+        self.assertEqual(project.parent, base)
+        self.assertNotEqual(project, existing)
+        self.assertEqual(marker.read_text(encoding="utf-8"), "保留")
+        self.assertEqual(list(project.iterdir()), [])
+        reserved = self.server.registry.create("CON")
+        self.assertEqual(Path(reserved["projectRoot"]).name, "项目-CON")
+        attached = self.server.registry.create("关联已有目录", str(existing))
+        self.assertEqual(Path(attached["projectRoot"]), existing)
+
+    def test_unknown_code_never_falls_back_to_default(self):
+        original = self.path.read_bytes()
+        for method in (None, {"body": "不能写到默认群"}):
+            with self.assertRaises(HTTPError) as caught:
+                self.request("/api/messages?room=unknown-code", method)
+            self.assertEqual(caught.exception.code, 400)
+        self.assertEqual(original, self.path.read_bytes())
+
+    def test_room_creation_validates_names_paths_and_origin(self):
+        for payload in [{"name": "../escape"}, {"name": ""}, {"name": "多肽项目群"},
+                        {"name": "目录校验", "projectRoot": "C:/Windows"}]:
+            with self.assertRaises(HTTPError) as caught:
+                self.request("/api/rooms", payload)
+            self.assertEqual(caught.exception.code, 400)
+        with self.assertRaises(HTTPError) as caught:
+            self.request("/api/rooms", {"name": "不允许外部创建"}, {"Origin": "https://example.com"})
+        self.assertEqual(caught.exception.code, 403)
+        self.assertEqual(len(self.server.registry.read()), 1)
+
+    def test_concurrent_creation_preserves_all_rooms_and_unique_keys(self):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
+            entries = list(pool.map(lambda i: self.server.registry.create(f"并发群 {i}"), range(12)))
+        self.assertEqual(len(self.server.registry.read()), 13)
+        self.assertEqual(len({r["code"] for r in entries}), 12)
+        self.assertEqual(len({r["logPath"] for r in entries}), 12)
+
+    def test_room_etags_are_distinct_and_records_cannot_impersonate(self):
+        a = self.server.registry.create("缓存甲")
+        b = self.server.registry.create("缓存乙")
+        with self.request("/api/messages?room="+a["id"]) as response:
+            etag = response.headers["ETag"]
+        with self.request("/api/messages?room="+b["id"], extra={"If-None-Match": etag}) as response:
+            self.assertEqual(response.status, 200)
+        with self.request("/api/messages?room="+a["code"], {"body": "署名检查", "author": "Claude"}) as response:
+            self.assertEqual(json.load(response)["author"], "用户")
+        with self.request("/api/join?room="+a["code"]) as response:
+            self.assertEqual(json.load(response)["room"]["id"], a["id"])
+
+    def test_new_room_only_owner_and_explicit_join_is_idempotent(self):
+        registry = self.server.registry
+        entry = registry.create("主动加入")
+        self.assertEqual(entry["members"], ["用户"])
+        before = Path(entry["logPath"]).read_bytes()
+        self.assertIsNone(room.join_context(registry, entry["code"])["joinedAs"])
+        self.assertEqual(registry.resolve(entry["id"])["members"], ["用户"])
+        joined = room.join_context(registry, entry["code"], author="Claude")
+        self.assertEqual(joined["joinedAs"], "Claude")
+        self.assertEqual(joined["room"]["members"], ["用户", "Claude"])
+        self.assertEqual(joined["room"], registry.join(entry["id"], "Claude"))
+        self.assertEqual(before, Path(entry["logPath"]).read_bytes())
+
+    def test_removal_blocks_posts_preserves_history_and_allows_invited_rejoin(self):
+        registry = self.server.registry
+        entry = registry.create("成员验证")
+        for author in ("Codex", "Claude"):
+            registry.join(entry["code"], author)
+        registry.post(entry["id"], "Claude", "隔离测试", "保留历史")
+        before = Path(entry["logPath"]).read_bytes()
+        removed = registry.remove_member(entry["id"], "Claude")
+        self.assertEqual(removed["members"], ["用户", "Codex"])
+        self.assertEqual(removed, registry.remove_member(entry["id"], "Claude"))
+        self.assertEqual(before, Path(entry["logPath"]).read_bytes())
+        with self.assertRaises(room.RoomMemberError):
+            registry.post(entry["id"], "Claude", "拒绝", "不能继续汇报")
+        registry.post(entry["id"], "Codex", "保留成员", "正常汇报")
+        registry.join(entry["id"], "Claude")
+        registry.post(entry["id"], "Claude", "重新加入", "允许新消息")
+        registry.dissolve(entry["id"])
+        with self.assertRaises(room.RoomClosedError):
+            registry.join(entry["id"], "Claude")
+
+    def test_http_member_removal_validates_request_and_invalidates_etag(self):
+        with self.request("/api/messages?room=peptide") as response:
+            etag = response.headers["ETag"]
+        for payload, extra, status in [({}, None, 400),
+                ({"room":"peptide", "author":"用户"}, None, 400),
+                ({"room":"peptide", "author":"Claude"}, {"Origin":"https://example.com"}, 403)]:
+            with self.assertRaises(HTTPError) as caught:
+                self.request("/api/rooms/remove-member", payload, extra)
+            self.assertEqual(caught.exception.code, status)
+        with self.request("/api/rooms/remove-member", {"room":"peptide", "author":"Claude"}) as response:
+            self.assertEqual(json.load(response)["members"], ["用户", "Codex"])
+        with self.request("/api/messages?room=peptide", extra={"If-None-Match":etag}) as response:
+            self.assertEqual(response.status, 200)
+            self.assertNotEqual(response.headers["ETag"], etag)
+        with self.request("/api/join?room=peptide") as response:
+            self.assertNotIn("Claude", json.load(response)["room"]["members"])
+
+    def test_concurrent_joins_preserve_members_and_other_rooms(self):
+        registry = self.server.registry
+        entry = registry.create("并发入群")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            list(pool.map(lambda a: registry.join(entry["id"], a), ("Codex", "Claude")))
+        self.assertEqual(set(registry.resolve(entry["id"])["members"]), set(room.AUTHORS))
+        self.assertEqual(len(registry.read()), 2)
+
+    def test_dissolution_preserves_history_and_projects_but_blocks_posts(self):
+        registry = self.server.registry
+        entry = registry.create("准备解散")
+        registry.join(entry["code"], "Codex")
+        registry.post(entry["code"], "Codex", "已完成", "保留这条记录")
+        before = Path(entry["logPath"]).read_bytes()
+        closed = registry.dissolve(entry["code"])
+        self.assertEqual(closed["status"], "dissolved")
+        self.assertEqual(closed, registry.dissolve(entry["code"]))
+        with self.assertRaises(room.RoomClosedError):
+            registry.post(entry["code"], "Claude", "不能追加", "停止汇报")
+        with self.assertRaises(room.RoomClosedError):
+            room.join_context(registry, entry["code"])
+        self.assertEqual(before, Path(entry["logPath"]).read_bytes())
+        self.assertTrue(Path(entry["projectRoot"]).is_dir())
+
+    def test_http_dissolution_invalidates_cache_and_keeps_read_only_access(self):
+        entry = self.server.registry.create("网页解散")
+        with self.request("/api/messages?room="+entry["id"]) as response:
+            etag = response.headers["ETag"]
+        with self.assertRaises(HTTPError) as caught:
+            self.request("/api/rooms/dissolve", {})
+        self.assertEqual(caught.exception.code, 400)
+        self.request("/api/rooms/dissolve", {"room":entry["id"]}).close()
+        for path, payload in [("/api/join?room="+entry["code"],None),
+                              ("/api/messages?room="+entry["code"],{"body":"拒绝新留言"})]:
+            with self.assertRaises(HTTPError) as caught:
+                self.request(path, payload)
+            self.assertEqual(caught.exception.code, 410)
+            self.assertEqual(json.load(caught.exception)["code"], "room_dissolved")
+        with self.request("/api/messages?room="+entry["id"], extra={"If-None-Match":etag}) as response:
+            self.assertEqual(response.status, 200)
+            self.assertEqual(json.load(response)["room"]["status"], "dissolved")
+        with self.request("/room.md?room="+entry["id"]) as response:
+            self.assertEqual(response.status, 200)
 
 
 if __name__ == "__main__":
