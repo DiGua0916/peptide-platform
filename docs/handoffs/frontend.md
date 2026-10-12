@@ -1,7 +1,26 @@
 # 前端交接
 
-状态：2026-10-12 用户选定 Lunira 并提供 ZIP，Codex 已完成源码检查。Codex 继续前端，Claude 继续后端。主站主题仍只有预留目录，尚未迁移商业模板或接入后台；教学演示与 A/B 演示均已关闭并保留文件。
+## FE-INTEGRATION-01 · VialCove 首版已与后端联调（2026-10-12）
 
+- 用户明确品牌 VialCove，并要求 Codex 配合 Claude 后端开发前端。采用已选 Lunira 的蓝白视觉和原版 Spline DNA 场景。商业压缩包、Webflow 脚本及第三方库不进入本主题；保留 17842 原版预览。
+- 已读 Claude BE-02/BE-03/BE-04 方案、实现及运行中的 API。Claude 后端正在产生新提交与未提交改动，本轮不合并、不重置、不修改后端工作树。
+- 接口采用建议：WooCommerce 负责商品、价格、库存、购物车、账户、订单；主题通过 Store API extensions.peptide_core 读取演示标记、规格和报告摘要；通过 peptide_core_get_product_batches() 读取商品批次；公共查询使用 GET peptide/v1/batches/lookup，保持后端限流与权限规则。
+- 已执行的本地集成设置：主题以目录联接挂载到现有 LocalWP 站点并启用（原主题 twentytwentyfive，可切回）；增加 batch-reports 页面；关闭本地 WooCommerce coming-soon 页面以便访客验收店铺。只用于 D:/Codex/Sites/vialcovepeptidescom 开发站点，不涉及公开部署、支付或物流配置。原设置记录在 D:/Codex/Tasks/peptide-platform/work/frontend-site-before.json。
+- 对 Claude 的交接：请沿用上述已存在接口；若规格或数据对象需要变更，请在 backend.md 记录。主题无需直接读取 _pc_* 元数据。支付、物流、正式产品、真实机构资质和运营内容仍待后续。
+- 共享 REQUIREMENTS/CONTRACT/TASKS 的首部仍是旧骨架状态；本段提出以 Claude 最新实现和用户确认品牌/模板同步共享文档，暂不覆盖共享文件。
+- 当前会话未收到用户明确的 CRK1 口令，按最新全局规则不自动向任何聊天室发言。文件交接不代表 Claude 已读取或回复。
+
+
+状态：2026-10-12 VialCove 首版主题已运行在本地 WordPress，按 Claude 已实现的 WooCommerce / peptide-core 接口完成商品与报告联调。Codex 前端、Claude 后端的分工保持；教学与 A/B 演示继续关闭。原版 Lunira 单独保留预览。
+
+- 完成：VialCove 首页、商品列表/检索、商品详情与规格/批次报告、批次查询、购物车/结账/账户统一样式及手机导航。后台接口实际返回的演示标记、价格、报告状态均已显示；有无权限由后端决定。
+- 本地地址 http://vialcovepeptidescom.local/；查询 /batch-reports/；原版 Lunira 仍在 17842，现有 17842 LAN 设置未改。新版 WordPress 域名是本机 hosts 地址，未额外配置其手机 LAN 入口。
+- 已通过：11 PHP 语法、JS 语法、diff 检查；8 组 Edge 浏览器验收（真实商品/报告/购物车流程，客户端 503/429/危险链接模拟，390px 六类页面无横向溢出，移动菜单）；独立购物车增量/删除后页头计数同步测试。SPLINE hero-art is-loaded；浏览器结果无未捕获异常和资源 HTTP 错误。
+- 报告：D:/Codex/Tasks/peptide-platform/outputs/vialcove-verification.json 与 vialcove-cart-verification.json，截图同目录。源码说明与接口边界见 wp-content/themes/peptide-site/README.md。
+- 联调修复：Store API PHP extensions 可能是 stdClass，已统一为数组，首页早期 500 已修复；WooCommerce 原 coming-soon 挡板导致商店未显示，已在本地关闭；补齐商品 gallery 原生样式类，修复桌面上下错位。旧 debug.log 中的历史错误保留，不作为本轮最终测试结果。
+- 尚待：用户视觉反馈与真实商品/用途/机构资料；登录后报告 UI、真实变体商品、付款/物流/邮件和真实手机未验收；外部字体与 Spline 未本地化。商品概念瓶图不是实际商品照片。
+- 协作状态：读取了后端 BE-04/BE-04b 和演示订单的新提交；没有修改/提交其未完成文件或声称 Claude 已确认。代码只提交前端主题和本交接。主仓库同步前端后，Claude 可读取这份记录；不要求他切换分支或丢弃当前改动。
+- 提交引用：见本节所在提交，标题 “Build VialCove WordPress storefront against peptide-core APIs”。
 ## FE-TEMPLATE-AUDIT Lunira 源码检查（2026-10-12）
 
 - 原包：`D:/下载/lunira-website-template.zip`；SHA256 `36753ba50b6a6f0fdef46255c65ee81b27fb507a45fffce54fcea26e903ca34e`。解压检查副本：`D:/Codex/Tasks/peptide-platform/work/vendor/lunira-original-36753ba50b/`，位于 Git 外；原包与原始代码保持原样。
