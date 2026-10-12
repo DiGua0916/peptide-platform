@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-12T09:54:22+00:00\n"
+"POT-Creation-Date: 2026-10-12T11:28:02+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -223,26 +223,34 @@ msgstr[1] ""
 msgid "Remove them before going live (wp peptide demo purge)."
 msgstr ""
 
-#: includes/admin/class-dashboard.php:132
+#: includes/admin/class-dashboard.php:129
+msgid "Test payment is enabled: orders are placed without taking any money."
+msgstr ""
+
+#: includes/admin/class-dashboard.php:130
+msgid "Disable it before going live (wp peptide demo commerce --disable)."
+msgstr ""
+
+#: includes/admin/class-dashboard.php:136
 #: includes/class-post-types.php:41
 msgid "Add batch"
 msgstr ""
 
-#: includes/admin/class-dashboard.php:133
+#: includes/admin/class-dashboard.php:137
 #: includes/class-post-types.php:58
 msgid "Add test report"
 msgstr ""
 
-#: includes/admin/class-dashboard.php:134
+#: includes/admin/class-dashboard.php:138
 msgid "All batches"
 msgstr ""
 
-#: includes/admin/class-dashboard.php:135
+#: includes/admin/class-dashboard.php:139
 msgid "All orders"
 msgstr ""
 
 #. translators: %d: total count
-#: includes/admin/class-dashboard.php:171
+#: includes/admin/class-dashboard.php:175
 #, php-format
 msgid "View all %d"
 msgstr ""

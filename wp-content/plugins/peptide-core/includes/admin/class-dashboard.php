@@ -125,6 +125,10 @@ final class Dashboard {
 			echo ' ' . esc_html__( 'Remove them before going live (wp peptide demo purge).', 'peptide-core' );
 		}
 		echo '</p>';
+		if ( Workbench::test_payment_enabled() ) {
+			echo '<p style="color:#b32d2e"><strong>' . esc_html__( 'Test payment is enabled: orders are placed without taking any money.', 'peptide-core' ) . '</strong> ';
+			echo esc_html__( 'Disable it before going live (wp peptide demo commerce --disable).', 'peptide-core' ) . '</p>';
+		}
 
 		// 5. 快捷入口。
 		echo '<p class="pc-workbench__links">';

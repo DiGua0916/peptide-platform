@@ -129,6 +129,16 @@ final class Workbench {
 	}
 
 	/**
+	 * 是否启用了 `wp peptide demo commerce` 配置的“测试付款”（不扣钱）。上线前必须关闭。
+	 */
+	public static function test_payment_enabled(): bool {
+		$cod = get_option( 'woocommerce_cod_settings', array() );
+		return is_array( $cod )
+			&& 'yes' === ( $cod['enabled'] ?? 'no' )
+			&& str_starts_with( (string) ( $cod['title'] ?? '' ), 'Test payment' );
+	}
+
+	/**
 	 * 演示数据的数量（由 demo seed 创建、带 _pc_demo_seed 标记的记录）。
 	 */
 	public static function demo_record_count(): int {

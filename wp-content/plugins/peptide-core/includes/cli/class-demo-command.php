@@ -162,6 +162,99 @@ final class Demo_Command {
 		WP_CLI::log( 'Edit it in the admin: ' . $order->get_edit_order_url() );
 	}
 
+	/**
+	 * 开发用的测试结账配置：只卖美国、$0 测试运费、“测试付款”（不扣钱，订单直接进入处理中）。
+	 *
+	 * 用户 2026-10-12 确认：只卖美国；运费先放测试运费；测试付款直接进入处理中。
+	 * 真实运费、真实收款确定后要替换；正式上线前必须运行 --disable 关闭测试付款。
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--disable]
+	 * : 关闭测试付款并删除测试配送区域（销售国家设置保持不变）。
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp peptide demo commerce
+	 *     wp peptide demo commerce --disable
+	 *
+	 * @param string[]             $args
+	 * @param array<string,string> $assoc_args
+	 */
+	public function commerce( array $args, array $assoc_args ): void {
+		$zone = $this->test_zone();
+
+		if ( ! empty( $assoc_args['disable'] ) ) {
+			$cod            = get_option( 'woocommerce_cod_settings', array() );
+			$cod            = is_array( $cod ) ? $cod : array();
+			$cod['enabled'] = 'no';
+			update_option( 'woocommerce_cod_settings', $cod );
+			if ( $zone ) {
+				$zone->delete();
+			}
+			WP_CLI::success( 'Test payment disabled and test shipping zone removed.' );
+			return;
+		}
+
+		// 只卖美国，只配送到可销售国家。
+		update_option( 'woocommerce_allowed_countries', 'specific' );
+		update_option( 'woocommerce_specific_allowed_countries', array( 'US' ) );
+		update_option( 'woocommerce_ship_to_countries', '' );
+
+		// 美国测试配送区域：一个 $0 的固定运费，名称写明运费待定，不写时效。
+		if ( ! $zone ) {
+			$zone = new \WC_Shipping_Zone();
+			$zone->set_zone_name( self::TEST_ZONE );
+			$zone->add_location( 'US', 'country' );
+			$zone->save();
+		}
+		$has_method = false;
+		foreach ( $zone->get_shipping_methods() as $method ) {
+			if ( 'flat_rate' === $method->id ) {
+				$has_method = true;
+			}
+		}
+		if ( ! $has_method ) {
+			$instance_id = $zone->add_shipping_method( 'flat_rate' );
+			update_option(
+				'woocommerce_flat_rate_' . $instance_id . '_settings',
+				array(
+					'title'      => 'Test shipping – rates to be confirmed',
+					'tax_status' => 'none',
+					'cost'       => '0',
+				)
+			);
+		}
+
+		// “测试付款”：借用 WooCommerce 自带的货到付款网关，下单后订单直接是“处理中”。
+		update_option(
+			'woocommerce_cod_settings',
+			array(
+				'enabled'            => 'yes',
+				'title'              => 'Test payment – no money is charged',
+				'description'        => 'Development only. No payment is taken for this order.',
+				'instructions'       => 'This is a test order. No payment was taken.',
+				'enable_for_methods' => array(),
+				'enable_for_virtual' => 'yes',
+			)
+		);
+
+		WP_CLI::success( 'Test checkout configured: sell to US only, $0 test shipping, test payment (no money charged).' );
+		WP_CLI::warning( 'Run `wp peptide demo commerce --disable` before going live.' );
+	}
+
+	/** 测试配送区域的名称，用于识别与删除。 */
+	private const TEST_ZONE = 'United States (test shipping)';
+
+	private function test_zone(): ?\WC_Shipping_Zone {
+		foreach ( \WC_Shipping_Zones::get_zones() as $data ) {
+			if ( self::TEST_ZONE === $data['zone_name'] ) {
+				return new \WC_Shipping_Zone( (int) $data['id'] );
+			}
+		}
+		return null;
+	}
+
 	private function seeded_product( string $slug ): ?\WC_Product {
 		$post = get_page_by_path( $slug, OBJECT, 'product' );
 		if ( ! $post || '1' !== get_post_meta( $post->ID, Meta::DEMO_SEED, true ) ) {

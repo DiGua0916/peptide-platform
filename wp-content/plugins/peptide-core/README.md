@@ -51,6 +51,8 @@
 ```
 wp peptide demo seed
 wp peptide demo order        # 演示订单：处理中、未指定批次
+wp peptide demo commerce      # 测试结账：只卖美国、$0 测试运费、测试付款（不扣钱）
+wp peptide demo commerce --disable   # 上线前必须执行
 wp peptide demo purge --yes
 ```
 
@@ -91,4 +93,4 @@ wp peptide demo purge --yes
 ## 尚未实现
 
 - 真实数据导入（BE-06）。
-- 支付与物流：按用户安排暂时搁置，先由 Codex 设计界面。
+- 真实支付与真实运费：等用户确认支付服务商和运费规则。目前只有 `wp peptide demo commerce` 配置的测试付款和测试运费（工作台会提示“测试付款已开启”）。
