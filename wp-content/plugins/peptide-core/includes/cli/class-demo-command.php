@@ -67,13 +67,22 @@ final class Demo_Command {
 	 * @param array<string,string> $assoc_args
 	 */
 	public function purge( array $args, array $assoc_args ): void {
-		$ids = $this->seeded_ids();
-		if ( ! $ids ) {
+		$ids    = $this->seeded_ids();
+		$orders = $this->seeded_order_ids();
+		if ( ! $ids && ! $orders ) {
 			WP_CLI::success( 'No demo data found.' );
 			return;
 		}
 
-		WP_CLI::confirm( sprintf( 'Delete %d demo records permanently?', count( $ids ) ), $assoc_args );
+		WP_CLI::confirm( sprintf( 'Delete %d demo records and %d demo orders permanently?', count( $ids ), count( $orders ) ), $assoc_args );
+
+		// 先删订单，再删商品和批次。
+		foreach ( $orders as $order_id ) {
+			$order = wc_get_order( $order_id );
+			if ( $order ) {
+				$order->delete( true );
+			}
+		}
 
 		foreach ( $ids as $id ) {
 			if ( 'product' === get_post_type( $id ) ) {
@@ -87,7 +96,101 @@ final class Demo_Command {
 			wp_delete_post( $id, true );
 		}
 
-		WP_CLI::success( sprintf( 'Deleted %d demo records.', count( $ids ) ) );
+		WP_CLI::success( sprintf( 'Deleted %d demo records and %d demo orders.', count( $ids ), count( $orders ) ) );
+	}
+
+	/**
+	 * 创建一个演示订单（处理中、未指定批次），用于查看后台“批次分配”面板和工作台待办。
+	 *
+	 * 订单为访客订单，联系人信息是明显的虚构演示数据（example.com 是保留的示例域名），
+	 * 不发任何邮件。需要先运行 seed。
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp peptide demo order
+	 *
+	 * @param string[]             $args
+	 * @param array<string,string> $assoc_args
+	 */
+	public function order( array $args, array $assoc_args ): void {
+		$product_a = $this->seeded_product( 'demo-peptide-a' );
+		$product_b = $this->seeded_product( 'demo-peptide-b' );
+		if ( ! $product_a || ! $product_b ) {
+			WP_CLI::error( 'Demo products not found. Run `wp peptide demo seed` first.' );
+		}
+
+		// 创建演示订单时不触发 WooCommerce 的邮件通知。
+		add_filter( 'woocommerce_email_enabled_new_order', '__return_false' );
+		add_filter( 'woocommerce_email_enabled_customer_processing_order', '__return_false' );
+
+		$order = wc_create_order();
+		$order->add_product( $product_a, 2 );
+		$order->add_product( $product_b, 1 );
+		$order->set_address(
+			array(
+				'first_name' => 'Demo',
+				'last_name'  => 'Customer',
+				'company'    => 'Demo Lab (synthetic)',
+				'email'      => 'demo.customer@example.com',
+				'address_1'  => '123 Demo Street',
+				'city'       => 'Demo City',
+				'state'      => 'CA',
+				'postcode'   => '90000',
+				'country'    => 'US',
+			),
+			'billing'
+		);
+		$order->set_address(
+			array(
+				'first_name' => 'Demo',
+				'last_name'  => 'Customer',
+				'address_1'  => '123 Demo Street',
+				'city'       => 'Demo City',
+				'state'      => 'CA',
+				'postcode'   => '90000',
+				'country'    => 'US',
+			),
+			'shipping'
+		);
+		$order->set_payment_method_title( 'Demo payment (no money involved)' );
+		$order->calculate_totals();
+		$order->update_meta_data( Meta::DEMO_SEED, '1' );
+		$order->set_status( 'processing', 'Demo order created by `wp peptide demo order`. Synthetic data, no payment involved.' );
+		$order->save();
+
+		WP_CLI::success( sprintf( 'Demo order #%s created (processing, no batches assigned).', $order->get_order_number() ) );
+		WP_CLI::log( 'Edit it in the admin: ' . $order->get_edit_order_url() );
+	}
+
+	private function seeded_product( string $slug ): ?\WC_Product {
+		$post = get_page_by_path( $slug, OBJECT, 'product' );
+		if ( ! $post || '1' !== get_post_meta( $post->ID, Meta::DEMO_SEED, true ) ) {
+			return null;
+		}
+		$product = wc_get_product( $post );
+		return $product ?: null;
+	}
+
+	/**
+	 * @return int[]
+	 */
+	private function seeded_order_ids(): array {
+		return array_map(
+			'intval',
+			wc_get_orders(
+				array(
+					'limit'      => -1,
+					'status'     => 'any',
+					'return'     => 'ids',
+					'meta_query' => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						array(
+							'key'   => Meta::DEMO_SEED,
+							'value' => '1',
+						),
+					),
+				)
+			)
+		);
 	}
 
 	/**

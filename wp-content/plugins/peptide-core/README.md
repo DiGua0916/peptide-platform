@@ -49,10 +49,11 @@
 
 ```
 wp peptide demo seed
+wp peptide demo order        # 演示订单：处理中、未指定批次
 wp peptide demo purge --yes
 ```
 
-创建 2 个演示商品（Demo Peptide A / B）、3 个批次（DEMO-A-2401、DEMO-A-2402、DEMO-B-2401）和 2 份带 “DEMO – NOT A REAL TEST REPORT” 水印的演示报告。所有记录都有演示标记；`purge` 只删除带演示标记的记录。
+创建 2 个演示商品（Demo Peptide A / B）、3 个批次（DEMO-A-2401、DEMO-A-2402、DEMO-B-2401）和 2 份带 “DEMO – NOT A REAL TEST REPORT” 水印的演示报告。所有记录都有演示标记；`purge` 只删除带演示标记的记录（包括演示订单）。`order` 会创建一个访客演示订单（Demo Customer，联系人邮箱用 example.com，Demo Peptide A ×2、Demo Peptide B ×1，状态为处理中，不发邮件），用于查看批次分配面板和工作台。
 
 ## 前台接口（BE-03，已实现）
 
