@@ -1,5 +1,22 @@
 # 前端交接
 
+## PAY-SHIP-01 已完成浏览器同步（2026-10-12）
+
+- 后端测试商务配置提交 3aecb8f 已快进前端；本轮前端/文档提交再快进 main，最终哈希见群内完成记录。Claude 工作树保持其分支，未直接修改。
+- 实际完整流程：无登录 Cookie 的访客从商品加购→购物车点击结账→国家只可选 US→出现唯一 $0 测试配送与 Test payment→未勾选确认时显示错误、不提交→键盘空格勾选→390px 浏览器点击 Place Order→真实 Store API 200→订单进入 processing→原生 order-received 成功页。无页面 JS 异常或 HTTP 5xx。
+- 两次本地订单 #88 / #89（第二次用于修正后的回归）均为访客订单，payment_method=cod、shipping_total=0、total=10.00，确认快照含本轮测试原文与 UTC 时间，Woo 原字段值为 1。未调用真实支付商。
+- Mailpit（127.0.0.1:10000，SMTP 10001）实际捕获顾客确认与管理员新订单邮件；用其本地 API 核对订单号、商品总额、测试付款/配送，并渲染顾客 HTML 邮件检查。未声称验证外发邮件。测试邮件留在本地供查看。
+- 发现并完成样式修正：page-commerce.php 在订单回执使用中性的 Your order. 标题；site.css 增加成功提示、订单摘要卡片、表格与地址区块样式。清除 Woo 原 col2-set 伪元素在 CSS grid 中占位造成的地址错行；浏览器断言两列 top 对齐。1440px 和 390px 截图已目视检查，无横向溢出。
+- 清理：只取消并删除本轮 #88/#89（取消用于回滚订单库存/销量），临时确认配置恢复关闭/空文案。#54/#55 完整数据摘要不变；商品库存、库存状态、销量及 Claude 的测试配送/付款配置均与测试前相同。没有 demo purge、没有新增测试用户。Mailpit 的测试邮件与任务截图保留。
+- 共享文档：REQUIREMENTS / CONTRACT / TASKS / README 同步美国范围及本地测试完成状态。测试 $0 不代表正式包邮；新命令 --disable 不会恢复销售国家范围。公共接口字段未改。
+- 本轮检查：真实浏览器全流程及确认校验、订单落库数据/快照、Mailpit 邮件、修正后桌面地址对齐/手机宽度、PHP lint 和 git diff 检查。Claude 的 75 项后端测试是其本轮交接结果，本助手未再重复运行。
+- 证据位于 D:/Codex/Tasks/peptide-platform/outputs/：pay-ship-browser-verification.json、pay-ship-order-verification.json、pay-ship-receipt-verification.json、pay-ship-cleanup.json，及 pay-ship-*.png。结果文件保存最后一轮 #89；#88 的首轮结果和清理也在工具记录中已核对。
+- @Claude：本地测试链路通过，目前前端无缺失接口/字段。请自行同步 main 最新基线；后续等用户真实商品、正式确认/用途文案、Terms/Privacy 内容、真实运费和收款渠道。邮件当前仍用站点名 vialcovepeptides.com 与本地 dev-email@wpengine.local，正式邮件品牌/联系信息与外发配置另行处理。生产上线未完成。
+
+## PAY-SHIP-01 浏览器验收与共享同步提议（2026-10-12）
+
+用户要求处理 Claude 最新同步；已读 3aecb8f 交接。将已提交测试结账代码纳入 main/前端基线，并同步美国销售范围、测试支付/配送现状至 REQUIREMENTS、CONTRACT、TASKS。按已授权本地测试创建明确标记的访客订单、核验成功页和 Mailpit，短时启用测试确认文案再恢复；保留 #54/#55、原商品库存及 Claude 已开启的测试结账配置。不改其工作树；真实收款与运费仍未确定。实际结果后续补充。
+
 ## INT-01 本轮交付（2026-10-12）
 
 - 后端 ecec833 已通过合并提交 bfa55b9 纳入 codex/frontend，保留主线聊天室修复 130fbab。主题与共享文档完成后快进 main；最终提交号见群内 INT-01 完成记录。未变更 claude/backend 工作树或业务插件实现。

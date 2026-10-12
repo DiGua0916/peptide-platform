@@ -9,7 +9,7 @@
 - 已准备 Git 仓库、分工约定、需求基线和交接文档。
 - 初始化后使用 main 作为集成分支，codex/frontend、claude/backend 分别开发。
 - 品牌 VialCove，采用用户购买的 Lunira 视觉；WordPress/WooCommerce 与 peptide-core 0.3.0 已在 LocalWP 运行，主题已联调。
-- 本地预览：http://vialcovepeptidescom.local/；商品、批次、报告仍为演示数据，支付/物流和正式部署待办。
+- 本地预览：http://vialcovepeptidescom.local/；商品、批次、报告仍为演示数据。仅美国的测试付款/配送已联调，真实收款、运费和正式部署待办。
 - 有项目 Markdown 聊天室；显式提及可经独立助手会话回复（见 docs/CHATROOM.md），不代表自动接管双方正在开发的桌面任务。
 - 当前仍是本地 Git；尚未配置 GitHub 远程仓库。
 

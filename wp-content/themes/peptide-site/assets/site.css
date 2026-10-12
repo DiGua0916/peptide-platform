@@ -1,5 +1,21 @@
 /* VialCove / Lunira-inspired presentation. Business behavior remains in WooCommerce and peptide-core. */
 /* Native WooCommerce Blocks retain their field validation, focus behavior and gateway rendering. */
+.vc-commerce-content .woocommerce-order>p{margin-bottom:26px;line-height:1.7}
+.vc-commerce-content .woocommerce-notice--success{background:#edf5ff;border:1px solid #d0e1fa;border-radius:12px;padding:20px 24px;color:#234b80;font-size:16px}
+.vc-commerce-content .woocommerce-order .woocommerce-order-overview{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:26px 0 36px;padding:0;list-style:none}
+.vc-commerce-content .woocommerce-order .woocommerce-order-overview::before,.vc-commerce-content .woocommerce-order .woocommerce-order-overview::after{display:none}
+.vc-commerce-content .woocommerce-order .woocommerce-order-overview li{float:none;border:1px solid #e0e6ee;border-radius:10px;background:#fff;margin:0;padding:20px;font-size:10px;letter-spacing:.06em;color:#667387;line-height:1.7;overflow-wrap:anywhere}
+.vc-commerce-content .woocommerce-order .woocommerce-order-overview strong{display:block;margin-top:7px;font-size:15px;letter-spacing:0;text-transform:none;color:#222932;line-height:1.5}
+.vc-commerce-content .woocommerce-order h2{font-size:29px;margin:0 0 24px}
+.vc-commerce-content .woocommerce-order-details,.vc-commerce-content .woocommerce-customer-details{margin:34px 0}
+.vc-commerce-content .woocommerce-order .woocommerce-columns--addresses{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.vc-commerce-content .woocommerce-order .woocommerce-columns--addresses::before,.vc-commerce-content .woocommerce-order .woocommerce-columns--addresses::after{display:none}
+.vc-commerce-content .woocommerce-order .woocommerce-order-overview li:last-of-type{border:1px solid #e0e6ee}
+.vc-commerce-content .woocommerce-columns--addresses .woocommerce-column{float:none!important;width:auto!important;min-width:0}
+.vc-commerce-content .woocommerce-customer-details address{padding:24px;background:#fff;border:1px solid #e0e6ee;border-radius:12px;line-height:1.8;overflow-wrap:anywhere}
+.vc-commerce-content .woocommerce-order .shop_table th,.vc-commerce-content .woocommerce-order .shop_table td{padding:18px 22px;font-size:14px;line-height:1.6}
+.vc-commerce-content .woocommerce-order .shop_table th{font-weight:500}
+@media(max-width:767px){.vc-commerce-content .woocommerce-order .woocommerce-order-overview{grid-template-columns:1fr 1fr;gap:10px}.vc-commerce-content .woocommerce-order-overview__payment-method{grid-column:1/-1}.vc-commerce-content .woocommerce-order .woocommerce-order-overview li{padding:16px}.vc-commerce-content .woocommerce-order .woocommerce-columns--addresses{grid-template-columns:1fr;gap:28px}.vc-commerce-content .woocommerce-order h2{font-size:25px;margin-bottom:18px}.vc-commerce-content .woocommerce-customer-details address{padding:20px;font-size:13px}.vc-commerce-content .woocommerce-notice--success{padding:18px;font-size:14px}.vc-commerce-content .woocommerce-order .shop_table th,.vc-commerce-content .woocommerce-order .shop_table td{padding:14px;font-size:12px}}
 .vc-commerce-page{max-width:1280px;padding-top:44px;padding-bottom:72px}
 .vc-back-link{display:inline-flex;align-items:center;gap:9px;font-size:13px;color:#536172;margin-bottom:36px}
 .vc-back-link svg{width:18px;transform:rotate(180deg)}
