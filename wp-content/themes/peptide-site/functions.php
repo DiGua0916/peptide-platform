@@ -42,6 +42,33 @@ function vc_site_config(): array {
     return function_exists( 'peptide_core_get_site_config' ) ? peptide_core_get_site_config() : array();
 }
 
+/** The plugin owns this optional statement. Do not invent product-use wording. */
+function vc_use_statement(): void {
+    $config = vc_site_config();
+    $html = wp_kses_post( (string) ( $config['use_statement_html'] ?? '' ) );
+    if ( '' === trim( $html ) ) { return; }
+    echo '<section class="vc-use-statement" aria-label="Product use statement"><span class="eyebrow">Product use statement</span><div>' . $html . '</div></section>';
+}
+
+/** Only supplement missing batch assignments on the signed-in owner's order page. */
+add_action( 'woocommerce_order_item_meta_end', function ( $item_id, $item, $order, $plain_text = false ) {
+    if ( $plain_text || ! is_account_page() || ! is_wc_endpoint_url( 'view-order' ) || ! $item instanceof WC_Order_Item_Product || ! $order instanceof WC_Order || ! get_current_user_id() || (int) $order->get_customer_id() !== get_current_user_id() ) { return; }
+    static $orders = array();
+    $id = $order->get_id();
+    if ( ! array_key_exists( $id, $orders ) ) {
+        $response = rest_do_request( new WP_REST_Request( 'GET', '/peptide/v1/me/orders/' . $id . '/batches' ) );
+        $data = $response->get_data();
+        // The public contract preserves WooCommerce line-item order, including repeated products.
+        $keys = array_keys( $order->get_items( 'line_item' ) );
+        $items = $data['items'] ?? array();
+        $orders[ $id ] = ! $response->is_error() && count( $keys ) === count( $items ) ? array_combine( $keys, $items ) : array();
+    }
+    $record = $orders[ $id ][ $item_id ] ?? null;
+    if ( ! is_array( $record ) || ! array_key_exists( 'batch', $record ) || null !== $record['batch'] ) { return; }
+    $message = $order->has_status( array( 'cancelled', 'refunded', 'failed' ) ) ? 'No batch information was assigned to this item.' : 'Batch information will be available after shipment.';
+    echo '<div class="pc-order-batch pc-order-batch--pending"><small>' . esc_html( $message ) . '</small></div>';
+}, 20, 4 );
+
 /** Use the documented Store API extension; never depend on plugin meta keys. */
 function vc_product_data( $product ): array {
     static $cache = array();
@@ -168,5 +195,7 @@ add_filter( 'body_class', function ( $classes ) { $classes[] = 'vialcove-site'; 
 
 // The fallback route keeps the report tool reachable before its WordPress page is created.
 add_filter( 'template_include', function ( $template ) {
-    return isset( $_GET['vc_reports'] ) && '1' === $_GET['vc_reports'] ? __DIR__ . '/page-batch-reports.php' : $template;
+    if ( isset( $_GET['vc_reports'] ) && '1' === $_GET['vc_reports'] ) { return __DIR__ . '/page-batch-reports.php'; }
+    if ( function_exists( 'is_cart' ) && ( is_cart() || is_checkout() ) ) { return __DIR__ . '/page-commerce.php'; }
+    return $template;
 } );

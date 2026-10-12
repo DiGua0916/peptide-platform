@@ -6,9 +6,9 @@ The user requires all new projects and task work to use drive D. This repository
 
 ## Scope
 
-This is a WordPress project skeleton for a student competition. Read docs/REQUIREMENTS.md, docs/CONTRACT.md, docs/TASKS.md, and your role's handoff before changing implementation.
+This is the VialCove WordPress/WooCommerce project for a student competition and planned real operation. Read docs/REQUIREMENTS.md, docs/CONTRACT.md, docs/TASKS.md, and your role's handoff before changing implementation.
 
-The user has approved WordPress and the collaboration repository. Product category, intended customer, competition rules, final branding, commerce scope, and source template are not yet confirmed. Do not treat draft proposals as approved requirements.
+WordPress, WooCommerce ordering, VialCove branding and the purchased Lunira source template are confirmed. Product use, real product data, competition rules and publication wording remain to be supplied. Do not treat draft proposals or template content as business facts.
 
 ## Ownership
 
@@ -25,7 +25,7 @@ The user has approved WordPress and the collaboration repository. Product catego
 - Use a WordPress theme for presentation and a project plugin for persistent business behavior.
 - Keep WordPress and third-party plugin core files unchanged.
 - Prefer existing WordPress capabilities for users, permissions, and media.
-- WooCommerce is a candidate for commerce, not an approved dependency yet. If selected, use its public APIs and avoid a duplicate order or product system.
+- WooCommerce owns products, stock, cart and orders. Use its public APIs; preserve Blocks checkout because peptide-core's required acknowledgement uses Additional Checkout Fields. Do not build a duplicate order or product system.
 - Do not select a separate backend framework without an explicit requirement.
 - Add only necessary dependencies. Document why each is needed.
 
@@ -35,7 +35,7 @@ Do not invent partners, certifications, efficacy claims, customer reviews, inven
 
 ## Security and environments
 
-Keep credentials, database dumps, real customer data, uploads, and third-party commercial archives outside Git. Server-side operations must validate inputs and permissions; escape rendered data. Each development environment should have its own database and runtime configuration.
+Keep credentials, database dumps, real customer data, uploads, and third-party commercial archives outside Git. Server-side operations must validate inputs and permissions; escape rendered data. Separate environments use separate databases. The two roles explicitly agreed in INT-01 to share the current LocalWP development site: coordinate setting changes, restore temporary fixtures and preserve existing order #54/refund #55. Never run demo purge as test cleanup.
 
 ## Verification and handoff
 

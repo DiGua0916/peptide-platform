@@ -4,7 +4,7 @@
 <head><meta charset="<?php bloginfo( 'charset' ); ?>"><meta name="viewport" content="width=device-width, initial-scale=1"><?php wp_head(); ?></head>
 <body <?php body_class(); ?>><?php wp_body_open(); ?>
 <a class="skip-link" href="#main-content">Skip to content</a>
-<?php if ( ! empty( $vc_config['demo_mode'] ) ) : ?><div class="site-notice"><span class="notice-dot"></span><span>VialCove preview · Products, prices and reports are demonstration data.</span><a href="<?php echo esc_url( vc_url( 'reports' ) ); ?>">Explore batch reports <?php echo vc_icon(); ?></a></div><?php endif; ?>
+<?php if ( ! empty( $vc_config['demo_mode'] ) ) : ?><div class="site-notice"><span class="notice-dot"></span><span><?php echo esc_html( $vc_config['demo_notice'] ?: 'Demonstration site' ); ?></span><a href="<?php echo esc_url( vc_url( 'reports' ) ); ?>">Explore batch reports <?php echo vc_icon(); ?></a></div><?php endif; ?>
 <header class="site-header"><div class="container header-inner">
     <a class="brand" href="<?php echo esc_url( home_url( '/' ) ); ?>" aria-label="VialCove home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>VialCove</a>
     <nav id="primary-nav" class="primary-nav" aria-label="Main navigation">

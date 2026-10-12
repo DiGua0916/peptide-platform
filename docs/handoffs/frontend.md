@@ -1,5 +1,18 @@
 # 前端交接
 
+## INT-01 本轮交付（2026-10-12）
+
+- 后端 ecec833 已通过合并提交 bfa55b9 纳入 codex/frontend，保留主线聊天室修复 130fbab。主题与共享文档完成后快进 main；最终提交号见群内 INT-01 完成记录。未变更 claude/backend 工作树或业务插件实现。
+- 页面：header 使用后台 demo_notice；可选 use_statement_html 经 wp_kses_post 显示于页脚区域，在购物车/结账中独立展示且不重复。没有替用户填写正式用途或确认语。
+- 新增 page-commerce.php 为现有 WooCommerce Blocks 提供页标题、购物步骤和报告入口，保留 the_content() 原生区块、确认字段和网关行为。site.css 增加原生字段、单选项、错误、确认框、订单摘要与移动端样式；不虚构支付方法或运费。
+- 账户订单详情补充 .pc-order-batch 样式，未分配显示发货后可查；取消/失败/退款时不暗示后续发货。使用有权限检查的订单 REST，按订单行顺序映射，接口失败时不猜状态，不读取业务私有元数据。后端原有报告链接完整保留 nonce。
+- 公共基线更新 REQUIREMENTS / CONTRACT / TASKS；README、WORKFLOW、AGENTS / CLAUDE 入口纠正过时的未安装/品牌未定/Woo 候选/不得共用当前站点等内容。原方案文档由 Claude 所有，作为历史保留。
+- 本轮实际验证：12 个主题 PHP 文件 lint；JS 语法、git diff 检查；Claude 的 BE-05 smoke-settings-ack 17 项通过（CLI 用 pre_wp_mail 拦截邮件），另外核对 #54/#55 未变。没有把历史 75 项写成这轮全部重跑。
+- Headless Edge 7 组真实联调通过：后台文案与声明；原生确认框未预勾选及点击；390px 结账/购物车；同一商品两条订单行分别已分配/未分配；账户内带原 nonce 的 PDF 实际 200/application/pdf/%PDF；Store API 漏传/false 为 400、true 通过确认但缺支付方式 400；游客订单接口 401。无页面 JS 异常或 5xx。另重跑购物车数量 1→2→0 与页头同步通过。
+- 检查产物：D:/Codex/Tasks/peptide-platform/outputs/int01-verification.json、int01-checkout-validation.json、int01-cleanup.json、int01-*.png。截图中的确认文案、顾客、地址和订单均为临时验证资料，不是实际产品说明。
+- 清理：临时用户 #20 和其订单已删除；临时登录会话撤销；设置恢复原值（demo_mode=true，默认提示，use_statement=null，ack disabled）。#54/#55 的完整订单数据摘要与测试前一致。未修改产品、清空数据库或 demo purge。旧 debug.log 保留，最后错误仍是此前 09:54 UTC 临时 CLI 检查，没有新增本轮错误。
+- 下一步 @Claude：在你的工作树自行合入 main 的公共基线；配置获准测试网关和美国仓配送规则，再一起验成功下单/失败/运费/确认快照。当前启用的 shipping method 数为 0 时，WooCommerce 自身 needs_shipping() 返回 false，因此未显示配送步骤；此处不是主题隐藏。实际有配送选项/网关的界面与支付成功流程尚未验证。默认 Terms/Privacy 文案尚无正式政策目标链接，也需后续配置。用户真实声明、产品资料和最终视觉验收仍待提供。
+
 ## INT-01 共享集成提议（2026-10-12）
 
 用户要求读取并处理 Claude 群内 INT-01 六项任务。按 Claude 的明确请求，将其已提交的后端 ecec833 合入前端分支再集成 main；同步 REQUIREMENTS、CONTRACT、TASKS 及过时的平台/环境规则。承认 VialCove、Lunira、WooCommerce 在线下单和经双方协调共用 LocalWP 的当前状态；真实用途、文案、支付、运费与上线仍有待办。保留 main 的聊天室修复及现有演示订单 #54、退款 #55，不改 Claude 工作树。前端只消费公开接口和 WooCommerce Blocks，不改业务元数据或复刻支付流程。共享调整和结果将在本节记录并回群交接。

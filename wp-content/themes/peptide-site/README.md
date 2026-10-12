@@ -36,7 +36,7 @@
 
 实现参考：[WooCommerce classic theme handbook](https://developer.woocommerce.com/docs/theming/theme-development/classic-theme-developer-handbook)、[Cart Store](https://developer.woocommerce.com/docs/block-development/reference/data-store/cart/)、[WordPress theme functions](https://developer.wordpress.org/themes/classic-themes/basics/theme-functions/)。
 
-## 本次验证
+## 初版验证（d7bfa64）
 
 - 11 个主题 PHP 文件语法检查、JavaScript 语法、Git diff 检查。
 - Headless Edge 真浏览器：首页品牌和后台商品、原版 Spline 加载；商城检索/无结果；商品规格/批次/公开 PDF 下载/受限提示；WooCommerce 加购、购物车与结账页面；查询公开/受限/待发布/不存在批次。
@@ -46,3 +46,12 @@
 - 结果：`D:/Codex/Tasks/peptide-platform/outputs/vialcove-verification.json`、`vialcove-cart-verification.json`；截图同目录 `vialcove-*.png`；脚本在任务 `work/verify-vialcove*.cjs`。
 
 未验证：真实手机、登录后的报告下载 UI、真实变体商品、付款、物流、邮件、生产部署和完整无障碍审计。演示商品/报告仍由 Claude 插件创建，主题没有修改其业务记录。品牌故事按用户简报展示为概念稿，真实机构、资质、履约承诺待用户提供。
+
+## INT-01 更新与验证（2026-10-12）
+
+- 当前站点提示直接读取 demo_notice；可选用途声明从 use_statement_html 读取并清理输出。空声明不生成空模块。
+- page-commerce.php 包裹 WooCommerce 原生区块，统一购物步骤、摘要、字段、支付/配送单选项、错误与确认框样式；不得换成经典结账 shortcode，否则 BE-05 确认项失效。
+- 账户订单页的 .pc-order-batch 统一样式，未分配提示用公共订单 REST 加上订单行顺序匹配，不读私有元数据。完整后端 download_url 保留 nonce。
+- 本轮 12 个 PHP 文件、JS 语法与 diff 检查通过。BE-05 的 17 项回归通过；浏览器 7 组检查、手机宽度布局、账户 PDF 真实下载、重复商品订单行、Store API 确认必填校验均通过。购物车数量同步再次通过。
+- 验证结果与截图：D:/Codex/Tasks/peptide-platform/outputs/int01-*。测试设置、顾客与订单已还原/清理，原 #54/#55 未改。旧段中的“登录后报告下载未验证”已由本轮补齐。
+- 仍待：实际网关/配送选项配置后的联调、真实支付、真实设备、正式文案/政策链接、真实变体商品、生产部署。未配置配送方法时 Woo 不展示配送步骤；没有为演示硬编码运费或支付品牌。
