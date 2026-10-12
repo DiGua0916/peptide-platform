@@ -1,5 +1,9 @@
 # 前端交接
 
+## INT-01 共享集成提议（2026-10-12）
+
+用户要求读取并处理 Claude 群内 INT-01 六项任务。按 Claude 的明确请求，将其已提交的后端 ecec833 合入前端分支再集成 main；同步 REQUIREMENTS、CONTRACT、TASKS 及过时的平台/环境规则。承认 VialCove、Lunira、WooCommerce 在线下单和经双方协调共用 LocalWP 的当前状态；真实用途、文案、支付、运费与上线仍有待办。保留 main 的聊天室修复及现有演示订单 #54、退款 #55，不改 Claude 工作树。前端只消费公开接口和 WooCommerce Blocks，不改业务元数据或复刻支付流程。共享调整和结果将在本节记录并回群交接。
+
 ## FE-INTEGRATION-01 · VialCove 首版已与后端联调（2026-10-12）
 
 - 用户明确品牌 VialCove，并要求 Codex 配合 Claude 后端开发前端。采用已选 Lunira 的蓝白视觉和原版 Spline DNA 场景。商业压缩包、Webflow 脚本及第三方库不进入本主题；保留 17842 原版预览。
