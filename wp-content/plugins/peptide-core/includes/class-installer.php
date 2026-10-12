@@ -20,6 +20,15 @@ final class Installer {
 	}
 
 	/**
+	 * 插件代码更新后（版本号变化）补授新增的能力，不必停用再启用。
+	 */
+	public static function maybe_upgrade(): void {
+		if ( get_option( self::OPTION_VERSION ) !== PEPTIDE_CORE_VERSION ) {
+			self::activate();
+		}
+	}
+
+	/**
 	 * 卸载时只移除能力和设置，不删除批次、报告和报告文件（避免误删真实资料）。
 	 */
 	public static function uninstall(): void {

@@ -32,6 +32,8 @@ final class Capabilities {
 			$caps[] = "delete_published_{$plural}";
 			$caps[] = "delete_private_{$plural}";
 		}
+		// 发货时给订单行指定批次（BE-04）。
+		$caps[] = 'pc_assign_batches';
 		return $caps;
 	}
 

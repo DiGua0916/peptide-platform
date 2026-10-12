@@ -92,6 +92,34 @@ final class Rest_Controller {
 				'permission_callback' => $public,
 			)
 		);
+
+		register_rest_route(
+			self::ROUTE_NAMESPACE,
+			'/me/orders/(?P<order_number>\d+)/batches',
+			array(
+				'methods'             => \WP_REST_Server::READABLE,
+				'callback'            => array( self::class, 'get_my_order_batches' ),
+				'permission_callback' => $public,
+			)
+		);
+	}
+
+	/**
+	 * 我的某个订单各行的批次与报告。订单号目前就是订单 ID（WooCommerce 默认）。
+	 * 不存在和不属于本人都返回 404，不作区分。
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public static function get_my_order_batches( \WP_REST_Request $request ) {
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) {
+			return new \WP_Error( 'pc_login_required', __( 'Please log in to view your orders.', 'peptide-core' ), array( 'status' => 401 ) );
+		}
+		$order = wc_get_order( (int) $request['order_number'] );
+		if ( ! $order instanceof \WC_Order || (int) $order->get_customer_id() !== $user_id ) {
+			return Errors::not_found();
+		}
+		return rest_ensure_response( \PeptideCore\Order_Batches::customer_view( $order, $user_id ) );
 	}
 
 	public static function get_site(): \WP_REST_Response {
@@ -182,14 +210,17 @@ final class Rest_Controller {
 			if ( ! in_array( $status, array( 'published', 'superseded' ), true ) ) {
 				return Errors::not_found();
 			}
-			// 所属批次必须前台可见。
+		}
+
+		$access = Access::for_report( $report_id, $user_id );
+
+		// 所属批次必须前台可见；订单所有者例外（隐藏批次也可能已经发给了他）。
+		if ( ! $is_staff && 'order_owner' !== $access['access_reason'] ) {
 			$batch_id = (int) get_post_meta( $report_id, Meta::REPORT_BATCH_ID, true );
 			if ( ! $batch_id || Catalog::public_batch_id_by_no( (string) get_post_meta( $batch_id, Meta::BATCH_NO, true ) ) !== $batch_id ) {
 				return Errors::not_found();
 			}
 		}
-
-		$access = Access::for_report( $report_id, $user_id );
 		if ( ! $access['allowed'] ) {
 			if ( null === $access['locked_reason'] ) {
 				return Errors::not_found();

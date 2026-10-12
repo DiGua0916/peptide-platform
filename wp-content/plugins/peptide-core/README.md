@@ -2,7 +2,7 @@
 
 负责人：Claude。方案见 docs/handoffs/backend-plan-v1.md 与 backend-plan-v2.md。
 
-状态：BE-02、BE-03 已在本地 WordPress 7.1.3 + WooCommerce 11.2.1（PHP 8.3.29）中运行并通过冒烟测试（2026-10-12）。后台界面尚未人工点验。
+状态：BE-02、BE-03、BE-04 已在本地 WordPress 7.1.3 + WooCommerce 11.2.1（PHP 8.3.29）中运行并通过冒烟测试（2026-10-12）。后台界面尚未人工点验。
 
 ## 本地开发站点
 
@@ -13,6 +13,7 @@
 - 冒烟测试（需先 `wp peptide demo seed`，只用于开发站点）：
   - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-save-logic.php`（后台保存逻辑，9 项）
   - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-read-api.php`（只读接口与报告权限，18 项）
+  - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-order-batches.php`（订单与批次关联，18 项）
 
 ## 依赖
 
@@ -66,7 +67,15 @@ wp peptide demo purge --yes
 
 错误格式：`{ code, message, data: { status, fields? } }`。错误码：`pc_invalid_param`（400，`fields` 值为 `required` / `invalid_format`）、`pc_login_required`（401）、`pc_forbidden`（403）、`pc_not_found`（404，不区分“不存在”和“不可见”）、`pc_report_withdrawn`（410）、`pc_rate_limited`（429，带 `retry_after`）。
 
+## 订单与批次（BE-04，已实现）
+
+- 后台订单编辑页新增“批次分配”面板：每个商品行可选同一商品、已发布、在售且适用该规格的批次；保存后写入订单行元数据 `_pc_batch_id`，并在订单上建立批次索引，同时自动写一条订单备注。需要 `pc_assign_batches` 能力（administrator、shop_manager 已有）。
+- 订单所有者规则：用户在已付款订单（`wc_get_is_paid_statuses()`，默认 processing / completed）中收到过某批次，就可以下载该批次已发布的报告，`access_reason` 为 `order_owner`；仅员工可见的报告除外；批次被设为隐藏也照样可以下载。
+- `GET /wp-json/peptide/v1/me/orders/{order_number}/batches`：未登录返回 401；订单不存在或不属于本人返回 404。未指定批次的行 `batch` 为 null。订单号目前就是订单 ID。
+- “我的账户 → 订单详情”的商品行下显示批次号和可下载的报告链接；订单邮件只显示批次号，不带链接。
+- 插件版本升级时（`peptide_core_version` 变化）自动补授新增的能力。
+
 ## 尚未实现
 
-- 订单行与批次关联（BE-04）、结账确认项（BE-05）、真实数据导入（BE-06）。
+- 结账确认项（BE-05）、真实数据导入（BE-06）。
 - 支付与物流：按用户安排暂时搁置，先由 Codex 设计界面。

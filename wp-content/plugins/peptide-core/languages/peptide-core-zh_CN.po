@@ -2,7 +2,7 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.1.0\n"
+"Project-Id-Version: Peptide Core 0.2.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -10,7 +10,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-12T09:06:13+00:00\n"
+"POT-Creation-Date: 2026-10-12T09:21:32+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -178,6 +178,7 @@ msgid "Title"
 msgstr "标题"
 
 #: includes/admin/class-list-columns.php:75
+#: includes/admin/class-order-metabox.php:56
 #: includes/admin/class-report-metabox.php:81
 #: includes/class-post-types.php:40
 msgid "Batch"
@@ -201,6 +202,48 @@ msgstr "报告状态"
 #: includes/admin/class-list-columns.php:79
 msgid "Access"
 msgstr "访问级别"
+
+#: includes/admin/class-order-metabox.php:33
+msgid "Batch assignment"
+msgstr "批次分配"
+
+#: includes/admin/class-order-metabox.php:47
+msgid "This order has no product items."
+msgstr "此订单没有商品项目。"
+
+#: includes/admin/class-order-metabox.php:52
+msgid "When shipping, choose the batch actually sent for each item. Customers will see the batch number in their order and can download that batch's published reports."
+msgstr "发货时，为每件商品选择实际发出的批次。顾客会在自己的订单中看到批次号，并可以下载该批次已发布的报告。"
+
+#: includes/admin/class-order-metabox.php:54
+msgid "Item"
+msgstr "商品"
+
+#: includes/admin/class-order-metabox.php:55
+msgid "Qty"
+msgstr "数量"
+
+#: includes/admin/class-order-metabox.php:66
+msgid "No active batch for this product yet."
+msgstr "此商品暂无在售批次。"
+
+#: includes/admin/class-order-metabox.php:70
+msgid "— Not assigned —"
+msgstr "— 未指定 —"
+
+#: includes/admin/class-order-metabox.php:74
+msgid "(depleted)"
+msgstr "（已售完）"
+
+#: includes/admin/class-order-metabox.php:77
+msgid "(hidden)"
+msgstr "（隐藏）"
+
+#. translators: %s: product name
+#: includes/admin/class-order-metabox.php:108
+#, php-format
+msgid "The selected batch does not match \"%s\" and was not saved."
+msgstr "所选批次与“%s”不匹配，未保存。"
 
 #: includes/admin/class-product-panel.php:34
 msgid "Peptide data"
@@ -355,19 +398,23 @@ msgstr "请求参数无效。"
 msgid "Not found."
 msgstr "未找到。"
 
-#: includes/api/class-rest-controller.php:180
+#: includes/api/class-rest-controller.php:116
+msgid "Please log in to view your orders."
+msgstr "请登录后查看你的订单。"
+
+#: includes/api/class-rest-controller.php:208
 msgid "This report has been withdrawn."
 msgstr "此报告已撤回。"
 
-#: includes/api/class-rest-controller.php:198
+#: includes/api/class-rest-controller.php:229
 msgid "You do not have permission to download this report."
 msgstr "你没有权限下载此报告。"
 
-#: includes/api/class-rest-controller.php:199
+#: includes/api/class-rest-controller.php:230
 msgid "Please log in to download this report."
 msgstr "请登录后下载此报告。"
 
-#: includes/api/class-rest-controller.php:249
+#: includes/api/class-rest-controller.php:280
 msgid "Too many requests. Please try again later."
 msgstr "请求过于频繁，请稍后再试。"
 
@@ -387,7 +434,28 @@ msgstr "公开批次数量。"
 msgid "Best report state across public batches for the current user."
 msgstr "当前用户在所有公开批次中可获得的最佳报告状态。"
 
-#: includes/class-plugin.php:47
+#. translators: 1: product name, 2: batch number or "none"
+#: includes/class-order-batches.php:108
+#, php-format
+msgid "%1$s → batch %2$s"
+msgstr "%1$s → 批次 %2$s"
+
+#: includes/class-order-batches.php:110
+msgid "(none)"
+msgstr "（无）"
+
+#: includes/class-order-batches.php:117
+msgid "Batch assignment updated:"
+msgstr "批次分配已更新："
+
+#. translators: %s: batch number
+#: includes/class-order-batches.php:251
+#: includes/class-order-batches.php:258
+#, php-format
+msgid "Batch: %s"
+msgstr "批次：%s"
+
+#: includes/class-plugin.php:65
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr "Peptide Core 需要先安装并启用 WooCommerce。"
 

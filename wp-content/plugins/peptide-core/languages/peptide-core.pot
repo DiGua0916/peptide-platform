@@ -2,14 +2,14 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.1.0\n"
+"Project-Id-Version: Peptide Core 0.2.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-12T09:06:13+00:00\n"
+"POT-Creation-Date: 2026-10-12T09:21:32+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -177,6 +177,7 @@ msgid "Title"
 msgstr ""
 
 #: includes/admin/class-list-columns.php:75
+#: includes/admin/class-order-metabox.php:56
 #: includes/admin/class-report-metabox.php:81
 #: includes/class-post-types.php:40
 msgid "Batch"
@@ -199,6 +200,48 @@ msgstr ""
 
 #: includes/admin/class-list-columns.php:79
 msgid "Access"
+msgstr ""
+
+#: includes/admin/class-order-metabox.php:33
+msgid "Batch assignment"
+msgstr ""
+
+#: includes/admin/class-order-metabox.php:47
+msgid "This order has no product items."
+msgstr ""
+
+#: includes/admin/class-order-metabox.php:52
+msgid "When shipping, choose the batch actually sent for each item. Customers will see the batch number in their order and can download that batch's published reports."
+msgstr ""
+
+#: includes/admin/class-order-metabox.php:54
+msgid "Item"
+msgstr ""
+
+#: includes/admin/class-order-metabox.php:55
+msgid "Qty"
+msgstr ""
+
+#: includes/admin/class-order-metabox.php:66
+msgid "No active batch for this product yet."
+msgstr ""
+
+#: includes/admin/class-order-metabox.php:70
+msgid "— Not assigned —"
+msgstr ""
+
+#: includes/admin/class-order-metabox.php:74
+msgid "(depleted)"
+msgstr ""
+
+#: includes/admin/class-order-metabox.php:77
+msgid "(hidden)"
+msgstr ""
+
+#. translators: %s: product name
+#: includes/admin/class-order-metabox.php:108
+#, php-format
+msgid "The selected batch does not match \"%s\" and was not saved."
 msgstr ""
 
 #: includes/admin/class-product-panel.php:34
@@ -354,19 +397,23 @@ msgstr ""
 msgid "Not found."
 msgstr ""
 
-#: includes/api/class-rest-controller.php:180
+#: includes/api/class-rest-controller.php:116
+msgid "Please log in to view your orders."
+msgstr ""
+
+#: includes/api/class-rest-controller.php:208
 msgid "This report has been withdrawn."
 msgstr ""
 
-#: includes/api/class-rest-controller.php:198
+#: includes/api/class-rest-controller.php:229
 msgid "You do not have permission to download this report."
 msgstr ""
 
-#: includes/api/class-rest-controller.php:199
+#: includes/api/class-rest-controller.php:230
 msgid "Please log in to download this report."
 msgstr ""
 
-#: includes/api/class-rest-controller.php:249
+#: includes/api/class-rest-controller.php:280
 msgid "Too many requests. Please try again later."
 msgstr ""
 
@@ -386,7 +433,28 @@ msgstr ""
 msgid "Best report state across public batches for the current user."
 msgstr ""
 
-#: includes/class-plugin.php:47
+#. translators: 1: product name, 2: batch number or "none"
+#: includes/class-order-batches.php:108
+#, php-format
+msgid "%1$s → batch %2$s"
+msgstr ""
+
+#: includes/class-order-batches.php:110
+msgid "(none)"
+msgstr ""
+
+#: includes/class-order-batches.php:117
+msgid "Batch assignment updated:"
+msgstr ""
+
+#. translators: %s: batch number
+#: includes/class-order-batches.php:251
+#: includes/class-order-batches.php:258
+#, php-format
+msgid "Batch: %s"
+msgstr ""
+
+#: includes/class-plugin.php:65
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr ""
 

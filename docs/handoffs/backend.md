@@ -153,3 +153,21 @@
 - **插件改动**：新增 `languages/peptide-core.pot`、`peptide-core-zh_CN.po`、`peptide-core-zh_CN.mo`（104 条，全部已翻译）。`Plugin::load_textdomain()` 在 init 钩子（优先级 0）上按 `determine_locale()` 加载对应语言文件；用绝对路径加载，因为插件目录是目录联接挂载的。
 - **实际检查**：以 DiGua 的语言加载，插件、WooCommerce、WordPress 核心的字符串都显示中文（批次信息 / 检测报告、订单、仪表盘）；站点语言仍是 en_US；访客请求接口的错误信息仍是英文；debug.log 没有产生。
 - **以后新增可翻译字符串时**：先 `wp i18n make-pot` 重新生成 .pot，再把新条目补进 zh_CN.po，最后 `wp i18n make-mo` 编译。
+
+### BE-04 订单与批次关联 · 2026-10-12 · Claude
+
+- **范围**：发货时给订单行指定批次、订单所有者报告权限、我的订单接口、我的账户和邮件中显示批次。没有涉及支付和物流。
+- **新增文件**：`includes/class-order-batches.php`、`includes/admin/class-order-metabox.php`、`tests/smoke-order-batches.php`。修改：`class-plugin.php`、`class-capabilities.php`（新增 `pc_assign_batches`）、`class-installer.php`（`maybe_upgrade`）、`api/class-rest-controller.php`（新增 `/me/orders/{n}/batches`；订单所有者可以下载隐藏批次的报告）、`peptide-core.php`（版本 0.2.0）、翻译文件、README。
+- **设计要点**：
+  - 订单行元数据 `_pc_batch_id`；订单上每个批次存一条 `_pc_batch_id` 元数据，作为反查索引（HPOS 下用 `wc_get_orders` 的 `meta_query` 查询）。
+  - 只有**已付款**订单（`wc_get_is_paid_statuses()`）才算“收到过批次”；待付款、已取消的订单不算。
+  - 订单所有者规则通过 BE-03 预留的过滤器 `peptide_core_report_access` 加入，不覆盖“仅员工”级别。
+  - 修改批次分配时自动写订单备注，方便追溯谁改了什么。
+- **接口影响**（需同步到共享契约）：`GET /me/orders/{order_number}/batches` 的返回形状与 v2 D'2 的示例一致：`{ order_number, items: [{ product: {slug, name}, variation_label, quantity, batch: null | {batch_no, is_demo, report_state, reports} }] }`；报告的 `access_reason` 可能是 `order_owner`。我的账户订单页的商品行下新增 `.pc-order-batch` 区块，Codex 可以按需调整样式。
+- **实际检查**：
+  - 全部 PHP 文件 `php -l` 通过；版本升级后 shop_manager 自动获得 `pc_assign_batches`。
+  - `tests/smoke-order-batches.php` 18 项全部通过：候选批次过滤、错误批次被拒绝、保存与索引、订单备注、订单所有者获得 order_owner 权限、其他顾客仍需审核、仅员工报告不放开、未付款订单不算、接口 200 / 404 / 401、我的账户显示批次和链接、纯文本邮件只显示批次号、隐藏批次对非所有者返回 404、清理后恢复原状。
+  - **真实 HTTP**（curl 带测试顾客的登录 Cookie 和 nonce 链接）：订单所有者下载**隐藏批次**的报告返回 200，得到 PDF；同一链接不带 Cookie 返回 403（WordPress 的 nonce 校验）；带 Cookie 但不带 nonce 时按访客处理，返回 404。这也补上了 BE-03 中“已登录用户点击带 nonce 的下载链接”这一项验证。
+  - 三套冒烟测试回归：9 + 18 + 18 项全部通过；`debug.log` 没有产生；测试账号已清理（站点只剩 DiGua 一个用户）。
+- **未验证**：后台订单页面板的实际显示（需要用户登录查看，HPOS 页面）；真实下单流程（支付未接）。
+- **下一步**：BE-04b 后台“VialCove 工作台”；或者等用户提供文案后做 BE-05。

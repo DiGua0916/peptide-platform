@@ -25,6 +25,8 @@ final class Plugin {
 		Post_Types::register_hooks();
 		Meta::register_hooks();
 		Reports::register_hooks();
+		Order_Batches::register_hooks();
+		add_action( 'init', array( Installer::class, 'maybe_upgrade' ), 5 );
 		Api\Rest_Controller::register_hooks();
 		Api\Store_Api::register_hooks();
 
@@ -33,6 +35,7 @@ final class Plugin {
 			Admin\Product_Panel::register_hooks();
 			Admin\Batch_Metabox::register_hooks();
 			Admin\Report_Metabox::register_hooks();
+			Admin\Order_Metabox::register_hooks();
 			Admin\List_Columns::register_hooks();
 		}
 
