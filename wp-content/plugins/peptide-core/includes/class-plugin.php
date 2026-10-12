@@ -19,6 +19,9 @@ final class Plugin {
 
 		require_once PEPTIDE_CORE_DIR . '/includes/functions.php';
 
+		// 优先级 0：要早于 init 上注册文章类型时用到的翻译。
+		add_action( 'init', array( self::class, 'load_textdomain' ), 0 );
+
 		Post_Types::register_hooks();
 		Meta::register_hooks();
 		Reports::register_hooks();
@@ -35,6 +38,18 @@ final class Plugin {
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			\WP_CLI::add_command( 'peptide demo', Cli\Demo_Command::class );
+		}
+	}
+
+	/**
+	 * 按当前语言加载插件自带的翻译（languages/peptide-core-{locale}.mo）。
+	 * 用绝对路径加载：插件目录通过目录联接挂载时，plugin_basename() 可能拿不到相对路径。
+	 * determine_locale() 会使用后台用户自己的语言设置，前台访客仍按站点语言（英文）。
+	 */
+	public static function load_textdomain(): void {
+		$mofile = PEPTIDE_CORE_DIR . '/languages/peptide-core-' . determine_locale() . '.mo';
+		if ( is_readable( $mofile ) ) {
+			load_textdomain( 'peptide-core', $mofile );
 		}
 	}
 

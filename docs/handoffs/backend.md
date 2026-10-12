@@ -145,3 +145,11 @@
   - `tests/smoke-save-logic.php` 回归 9 项通过；`debug.log` 没有产生。
 - **未验证**：已登录用户在浏览器里点击带 nonce 的下载链接（只验证了地址中带 nonce，以及服务端的权限判断）；Store API 在购物车 / 结账接口中的表现（扩展只挂在商品接口上）。
 - **下一步**：BE-04 订单行与批次关联。
+
+### 后台中文化 · 2026-10-12 · Claude
+
+- **用户要求**：后台改成中文。
+- **站点操作**（只改本地站点，不在仓库里）：安装 WordPress 核心和 WooCommerce 的 zh_CN 语言包；**只把 DiGua 这个账号**的个人语言设为 zh_CN。站点语言保持英文（WPLANG 为空），海外访客看到的前台和接口返回仍是英文。
+- **插件改动**：新增 `languages/peptide-core.pot`、`peptide-core-zh_CN.po`、`peptide-core-zh_CN.mo`（104 条，全部已翻译）。`Plugin::load_textdomain()` 在 init 钩子（优先级 0）上按 `determine_locale()` 加载对应语言文件；用绝对路径加载，因为插件目录是目录联接挂载的。
+- **实际检查**：以 DiGua 的语言加载，插件、WooCommerce、WordPress 核心的字符串都显示中文（批次信息 / 检测报告、订单、仪表盘）；站点语言仍是 en_US；访客请求接口的错误信息仍是英文；debug.log 没有产生。
+- **以后新增可翻译字符串时**：先 `wp i18n make-pot` 重新生成 .pot，再把新条目补进 zh_CN.po，最后 `wp i18n make-mo` 编译。
