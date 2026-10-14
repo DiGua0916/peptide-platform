@@ -293,3 +293,22 @@
   - 原有 5 套测试都加了 `pre_wp_mail`，测试不再发邮件。
   - 六套测试共 **98 项全部通过**；Mailpit 邮件数不变（23 → 23）；debug.log 没有新增；站点数据不变（订单 #54 和 #55、1 个用户、96 个商品）。
 - **仍然要等用户的**：合规结论、政策内容、真实运费、收款渠道、商品图片和描述、批次与报告资料、用途声明和确认语。
+
+### ENV 修复：Local 启动报 EEXIST · 2026-10-15 · Claude
+
+- **现象**：Local 启动站点时报 `EEXIST: file already exists, mkdir '...\Local\run\router\nginx\conf'`，站点无法启动。Codex 已经起了一个临时 Nginx（`work/local-router-recovery`）恢复 HTTP 访问（ENV-ACCESS-03）。
+- **排查**：
+  - Local 日志显示，生成路由配置时会先清空 `conf` 目录再复制模板；失败时同一毫秒出现两条错误。
+  - 用 Local 自带的 Node（v24.15.0，fs-extra 7.0.1）复现：单次复制在 C 盘联接路径、D 盘真实路径的各种组合下全部成功；**两次复制同时写同一个目录**时，会复现 EEXIST。
+  - 直接在 C 路径和 D 路径创建目录也都正常，说明目录本身没有处于“待删除”状态。
+  - 结论：目录联接本身不是根因。当时 Local 处于残留状态：站点服务进程还在运行，而 Local 认为站点已停止；另外还有 Codex 的临时路由，Local 是从 D 盘路径直接启动的。在这种状态下，路由配置被并发生成，造成冲突。
+- **修复**（没有修改代码和数据）：
+  1. 通过 GraphQL 停止站点，正常退出 Local；
+  2. 停止 Codex 的临时 Nginx；
+  3. 确认没有残留的服务进程；
+  4. 用正常入口（`%LOCALAPPDATA%\Programs\Local\Local.exe`）重新启动 Local 并启动站点。
+- **验证**：
+  - 站点状态为 running；连续两次停止和启动都成功；首页、wp-login、/shop/ 返回 200。
+  - 现在运行的 Nginx 是 Local 自己的路由（`-c ...\run\router\nginx\conf`）；路由配置目录已正常生成；日志没有新错误。
+  - 数据不变：订单 #54 和 #55、1 个用户、96 个商品、3 个批次、测试付款仍开启；smoke-read-api 18 项通过。
+- **以后再遇到时**：先在 Local 里点“Stop all”，完全退出 Local（包括托盘图标），确认没有残留的 nginx、httpd、mysqld 进程后再打开 Local 并启动站点。不要同时从两个入口启动 Local，也不要在 Local 运行时另外占用 80 端口。
