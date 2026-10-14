@@ -45,6 +45,7 @@ final class Plugin {
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			\WP_CLI::add_command( 'peptide demo', Cli\Demo_Command::class );
+			\WP_CLI::add_command( 'peptide import', Cli\Import_Command::class );
 		}
 	}
 
