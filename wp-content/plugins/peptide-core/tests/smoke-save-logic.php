@@ -10,6 +10,9 @@
 
 defined( 'ABSPATH' ) || exit;
 
+// 测试中创建的订单不发送通知邮件。
+add_filter( 'pre_wp_mail', '__return_false' );
+
 use PeptideCore\Meta;
 wp_set_current_user( 1 );
 $ok = static function ( $label, $cond ) { echo ( $cond ? 'PASS ' : 'FAIL ' ), $label, "\n"; };

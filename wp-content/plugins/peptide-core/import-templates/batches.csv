@@ -1,0 +1,4 @@
+﻿sku,batch_no,manufactured_on,retest_or_expiry_on,visibility,status,origin_note,report_pending,is_demo,report_file,report_type,report_access,report_issued_on,report_issuer,report_title
+TR10,TR10-2410-01,2026-09-15,2028-09-14,public,active,,no,yes,TR10-2410-01-coa.pdf,coa,public,2026-09-20,,
+TR20,TR10-2410-01,,,,,,,yes,,,,,,
+CU50,CU50-2409-02,2026-08-30,,public,active,,yes,yes,,,,,,

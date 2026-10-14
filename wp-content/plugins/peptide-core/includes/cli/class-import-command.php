@@ -83,7 +83,74 @@ final class Import_Command {
 	}
 
 	/**
-	 * 删除某个导入标签下的全部商品（包括变体）。
+	 * 从 CSV 导入批次与检测报告（模板见插件目录 import-templates/batches.csv）。
+	 *
+	 * 任意一行有错时整个批次都不导入；先用 --dry-run 检查。
+	 *
+	 * ## OPTIONS
+	 *
+	 * <csv>
+	 * : CSV 文件路径（UTF-8 或 Excel 默认的中文编码均可）。
+	 *
+	 * [--reports-dir=<dir>]
+	 * : 报告文件（PDF/PNG/JPEG）所在文件夹。
+	 *
+	 * [--tag=<tag>]
+	 * : 导入标签，用于识别和删除这批数据。
+	 * ---
+	 * default: batches
+	 * ---
+	 *
+	 * [--update]
+	 * : 批次号已存在时，合并规格、补充报告，而不是报错。
+	 *
+	 * [--dry-run]
+	 * : 只检查，不写入。
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp peptide import batches batches.csv --reports-dir=D:/reports --tag=batches-2026-10 --dry-run
+	 *
+	 * @param string[]             $args
+	 * @param array<string,string> $assoc_args
+	 */
+	public function batches( array $args, array $assoc_args ): void {
+		$rows = \PeptideCore\Batch_Importer::read_csv( $args[0] );
+		if ( is_wp_error( $rows ) ) {
+			WP_CLI::error( $rows->get_error_message() );
+		}
+		$plan = \PeptideCore\Batch_Importer::plan( $rows, (string) ( $assoc_args['reports-dir'] ?? '' ), ! empty( $assoc_args['update'] ) );
+
+		foreach ( $plan['errors'] as $line => $errs ) {
+			WP_CLI::warning( sprintf( 'Line %d: %s', $line, implode( '; ', $errs ) ) );
+		}
+		foreach ( $plan['batches'] as $batch_no => $b ) {
+			WP_CLI::log(
+				sprintf(
+					'%s %s: product #%d, %s, %d report(s)',
+					$b['existing_id'] ? 'UPDATE' : 'NEW   ',
+					$batch_no,
+					$b['product_id'],
+					$b['variation_ids'] ? count( $b['variation_ids'] ) . ' pack size(s)' : 'all pack sizes',
+					count( $b['reports'] )
+				)
+			);
+		}
+		if ( ! empty( $assoc_args['dry-run'] ) ) {
+			WP_CLI::success( sprintf( 'Dry run: %d batch(es) ready, %d line(s) with errors. Nothing was written.', count( $plan['batches'] ), count( $plan['errors'] ) ) );
+			return;
+		}
+
+		$result = \PeptideCore\Batch_Importer::run( $plan['batches'], sanitize_key( $assoc_args['tag'] ?? 'batches' ) );
+		foreach ( $result['errors'] as $msg ) {
+			WP_CLI::warning( $msg );
+		}
+		$reports = array_sum( array_map( static fn( $c ) => count( $c['report_ids'] ), $result['created'] ) );
+		WP_CLI::success( sprintf( 'Imported %d batch(es) and %d report(s). %d line(s) skipped because of errors.', count( $result['created'] ), $reports, count( $plan['errors'] ) ) );
+	}
+
+	/**
+	 * 删除某个导入标签下的全部商品（包括变体）、批次和报告。
 	 *
 	 * ## OPTIONS
 	 *
@@ -97,13 +164,18 @@ final class Import_Command {
 	 * @param array<string,string> $assoc_args
 	 */
 	public function delete( array $args, array $assoc_args ): void {
-		$tag = sanitize_key( $assoc_args['tag'] );
-		$ids = $this->tagged_ids( $tag );
-		if ( ! $ids ) {
-			WP_CLI::success( "No products with import tag '{$tag}'." );
+		$tag   = sanitize_key( $assoc_args['tag'] );
+		$ids   = $this->tagged_ids( $tag );
+		$posts = \PeptideCore\Batch_Importer::tagged_ids( $tag );
+		if ( ! $ids && ! $posts ) {
+			WP_CLI::success( "Nothing found with import tag '{$tag}'." );
 			return;
 		}
-		WP_CLI::confirm( sprintf( 'Delete %d imported products permanently?', count( $ids ) ), $assoc_args );
+		WP_CLI::confirm( sprintf( 'Delete %d imported products and %d batches/reports permanently?', count( $ids ), count( $posts ) ), $assoc_args );
+		// 报告文件由 Reports::delete_file_with_post 在删除时清理。
+		foreach ( $posts as $post_id ) {
+			wp_delete_post( $post_id, true );
+		}
 		foreach ( $ids as $id ) {
 			$product = wc_get_product( $id );
 			if ( ! $product ) {
@@ -117,7 +189,7 @@ final class Import_Command {
 			}
 			$product->delete( true );
 		}
-		WP_CLI::success( sprintf( 'Deleted %d products.', count( $ids ) ) );
+		WP_CLI::success( sprintf( 'Deleted %d products and %d batches/reports.', count( $ids ), count( $posts ) ) );
 	}
 
 	/**
