@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-12T11:28:02+00:00\n"
+"POT-Creation-Date: 2026-10-15T15:24:08+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -70,6 +70,7 @@ msgid "Hidden (admin only)"
 msgstr ""
 
 #: includes/admin/class-batch-metabox.php:77
+#: includes/admin/class-batch-orders.php:66
 #: includes/admin/class-list-columns.php:35
 msgid "Status"
 msgstr ""
@@ -151,6 +152,69 @@ msgstr ""
 
 #: includes/admin/class-batch-metabox.php:249
 msgid "Leave all unchecked if this batch applies to every pack size. Save after changing the product to refresh this list."
+msgstr ""
+
+#: includes/admin/class-batch-orders.php:40
+msgid "Orders with this batch"
+msgstr ""
+
+#: includes/admin/class-batch-orders.php:46
+msgid "No order has received this batch yet. Orders appear here after a batch is assigned to an order item."
+msgstr ""
+
+#. translators: 1: number of orders, 2: number of customers, 3: total quantity
+#: includes/admin/class-batch-orders.php:57
+#, php-format
+msgid "%1$d orders, %2$d customers, %3$d units in total."
+msgstr ""
+
+#: includes/admin/class-batch-orders.php:66
+msgid "Order"
+msgstr ""
+
+#: includes/admin/class-batch-orders.php:66
+#: includes/admin/class-list-columns.php:38
+#: includes/admin/class-list-columns.php:81
+msgid "Date"
+msgstr ""
+
+#: includes/admin/class-batch-orders.php:66
+msgid "Customer"
+msgstr ""
+
+#: includes/admin/class-batch-orders.php:66
+msgid "Email"
+msgstr ""
+
+#: includes/admin/class-batch-orders.php:66
+msgid "Items"
+msgstr ""
+
+#: includes/admin/class-batch-orders.php:78
+msgid "(guest)"
+msgstr ""
+
+#. translators: %d: number of orders shown
+#: includes/admin/class-batch-orders.php:86
+#, php-format
+msgid "Showing the latest %d orders. Export CSV to see all."
+msgstr ""
+
+#: includes/admin/class-batch-orders.php:102
+msgid "Export CSV (for recall notices)"
+msgstr ""
+
+#: includes/admin/class-batch-orders.php:103
+msgid "Contains customer contact details. Handle according to your privacy policy."
+msgstr ""
+
+#: includes/admin/class-batch-orders.php:114
+msgid "You do not have permission to export these orders."
+msgstr ""
+
+#: includes/admin/class-batch-orders.php:141
+#: includes/admin/class-batch-orders.php:144
+msgid "Orders"
 msgstr ""
 
 #. translators: %s: store brand name
@@ -278,11 +342,6 @@ msgstr ""
 #: includes/admin/class-list-columns.php:37
 #: includes/admin/class-list-columns.php:80
 msgid "Demo"
-msgstr ""
-
-#: includes/admin/class-list-columns.php:38
-#: includes/admin/class-list-columns.php:81
-msgid "Date"
 msgstr ""
 
 #: includes/admin/class-list-columns.php:62
@@ -645,13 +704,13 @@ msgid "Batch assignment updated:"
 msgstr ""
 
 #. translators: %s: batch number
-#: includes/class-order-batches.php:251
-#: includes/class-order-batches.php:258
+#: includes/class-order-batches.php:336
+#: includes/class-order-batches.php:343
 #, php-format
 msgid "Batch: %s"
 msgstr ""
 
-#: includes/class-plugin.php:69
+#: includes/class-plugin.php:73
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr ""
 
@@ -689,10 +748,12 @@ msgid "The file could not be uploaded."
 msgstr ""
 
 #: includes/class-private-files.php:72
+#: includes/class-private-files.php:130
 msgid "The file is empty or larger than 20 MB."
 msgstr ""
 
 #: includes/class-private-files.php:77
+#: includes/class-private-files.php:134
 msgid "Only PDF, PNG and JPEG files are allowed."
 msgstr ""
 
@@ -704,6 +765,11 @@ msgstr ""
 #: includes/class-private-files.php:86
 #: includes/class-private-files.php:108
 msgid "The file could not be saved."
+msgstr ""
+
+#: includes/class-private-files.php:126
+#: includes/class-private-files.php:138
+msgid "The report file was not found."
 msgstr ""
 
 #: includes/class-settings.php:92

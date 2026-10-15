@@ -165,6 +165,91 @@ final class Order_Batches {
 	}
 
 	/**
+	 * 批次反查订单（用于溯源和召回）：收到过这个批次的全部订单，包括已取消或已退款的订单，按下单时间从新到旧。
+	 * 返回内容含顾客联系信息，只能给有订单管理权限的员工使用。
+	 *
+	 * @return array<int,array{order_id:int,number:string,date:string,status:string,customer:string,email:string,phone:string,country:string,user_id:int,items:array<int,array{name:string,quantity:int}>,quantity:int}>
+	 */
+	public static function orders_for_batch( int $batch_id ): array {
+		if ( $batch_id <= 0 ) {
+			return array();
+		}
+		$orders = wc_get_orders(
+			array(
+				'limit'      => -1,
+				'status'     => array_keys( wc_get_order_statuses() ),
+				'orderby'    => 'date',
+				'order'      => 'DESC',
+				'meta_query' => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					array(
+						'key'   => self::ORDER_META,
+						'value' => (string) $batch_id,
+					),
+				),
+			)
+		);
+
+		$rows = array();
+		foreach ( $orders as $order ) {
+			if ( ! $order instanceof \WC_Order ) {
+				continue;
+			}
+			$items    = array();
+			$quantity = 0;
+			foreach ( $order->get_items() as $item ) {
+				if ( $item instanceof \WC_Order_Item_Product && $batch_id === (int) $item->get_meta( self::ITEM_META ) ) {
+					$items[]   = array(
+						'name'     => $item->get_name(),
+						'quantity' => (int) $item->get_quantity(),
+					);
+					$quantity += (int) $item->get_quantity();
+				}
+			}
+			if ( ! $items ) {
+				continue; // 索引过期（例如批次后来被改掉）时以订单行为准。
+			}
+			$created = $order->get_date_created();
+			$rows[]  = array(
+				'order_id' => $order->get_id(),
+				'number'   => (string) $order->get_order_number(),
+				'date'     => $created ? $created->date( 'Y-m-d H:i' ) : '',
+				'status'   => wc_get_order_status_name( $order->get_status() ),
+				'customer' => trim( $order->get_formatted_billing_full_name() ),
+				'email'    => (string) $order->get_billing_email(),
+				'phone'    => (string) $order->get_billing_phone(),
+				'country'  => (string) ( $order->get_shipping_country() ?: $order->get_billing_country() ),
+				'user_id'  => (int) $order->get_customer_id(),
+				'items'    => $items,
+				'quantity' => $quantity,
+			);
+		}
+		return $rows;
+	}
+
+	/**
+	 * 把反查结果整理成 CSV 文本（带 BOM，Excel 直接打开不乱码）。
+	 * 以 = + - @ 开头的单元格前加单引号，防止在 Excel 中被当成公式执行（CSV 注入）。
+	 *
+	 * @param array<int,array<string,mixed>> $rows orders_for_batch() 的结果。
+	 */
+	public static function orders_csv( string $batch_no, array $rows ): string {
+		$safe = static function ( $value ): string {
+			$value = (string) $value;
+			return ( '' !== $value && in_array( $value[0], array( '=', '+', '-', '@', "\t", "\r" ), true ) ) ? "'" . $value : $value;
+		};
+		$out = fopen( 'php://temp', 'r+' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen
+		fputcsv( $out, array( 'batch_no', 'order_number', 'order_date', 'order_status', 'customer', 'email', 'phone', 'country', 'items', 'quantity' ), ',', '"', '' );
+		foreach ( $rows as $r ) {
+			$items = implode( '; ', array_map( static fn( $i ) => $i['name'] . ' x' . $i['quantity'], $r['items'] ) );
+			fputcsv( $out, array_map( $safe, array( $batch_no, $r['number'], $r['date'], $r['status'], $r['customer'], $r['email'], $r['phone'], $r['country'], $items, $r['quantity'] ) ), ',', '"', '' );
+		}
+		rewind( $out );
+		$csv = (string) stream_get_contents( $out );
+		fclose( $out ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+		return "\xEF\xBB\xBF" . $csv;
+	}
+
+	/**
 	 * 清空请求内缓存（测试用）。
 	 */
 	public static function flush_cache(): void {

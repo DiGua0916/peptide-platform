@@ -40,6 +40,7 @@ final class Plugin {
 			Admin\Dashboard::register_hooks();
 			Admin\Dialogs::register_hooks();
 			Admin\Settings_Page::register_hooks();
+			Admin\Batch_Orders::register_hooks();
 			Admin\List_Columns::register_hooks();
 		}
 
@@ -47,6 +48,7 @@ final class Plugin {
 			\WP_CLI::add_command( 'peptide demo', Cli\Demo_Command::class );
 			\WP_CLI::add_command( 'peptide import', Cli\Import_Command::class );
 			\WP_CLI::add_command( 'peptide doctor', Cli\Doctor_Command::class );
+			\WP_CLI::add_command( 'peptide batch', Cli\Batch_Command::class );
 		}
 	}
 
