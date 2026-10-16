@@ -81,6 +81,13 @@ final class Settings {
 		$input = is_array( $input ) ? $input : array();
 		$old   = self::all();
 
+		// 第一次保存时 option 还不存在，WordPress 会对已经清理过的结果再调用一次本函数。
+		// 已清理结果的形状是 checkout_ack => {enabled, label_html}，这里转回表单字段，保证重复调用结果不变。
+		if ( isset( $input['checkout_ack'] ) && is_array( $input['checkout_ack'] ) && ! isset( $input['checkout_ack_label'] ) ) {
+			$input['checkout_ack_enabled'] = ! empty( $input['checkout_ack']['enabled'] );
+			$input['checkout_ack_label']   = (string) ( $input['checkout_ack']['label_html'] ?? '' );
+		}
+
 		$brand = sanitize_text_field( (string) ( $input['brand_name'] ?? '' ) );
 		$use   = trim( wp_kses_post( (string) ( $input['use_statement_html'] ?? '' ) ) );
 		$label = trim( sanitize_textarea_field( (string) ( $input['checkout_ack_label'] ?? '' ) ) );

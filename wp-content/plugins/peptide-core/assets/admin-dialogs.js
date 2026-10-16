@@ -7,6 +7,13 @@
  * 2. 本次点击处理完后（setTimeout 0）恢复原生 confirm；如果期间请求过确认，就弹出页面内对话框；
  * 3. 用户点“确定”后，在“放行”状态下重新点击同一个元素，此时 confirm 返回 true，原有操作照常执行。
  * 不是由点击触发的 confirm（极少见）仍使用浏览器原生对话框。
+ *
+ * 安全细节（2026-10-15 安全检查后补充）：
+ * - 重放时只自动同意用户确认过的那一条提示，且只同意一次；其他确认仍走原生对话框。
+ * - 对话框打开后 400 ms 内不接受“确定”，按住回车（repeat）不算确认；确认框默认聚焦“取消”。
+ * - 只处理真实的用户点击（isTrusted），脚本触发的点击不拦截。
+ * - 已知限制：第一次被拦截时 confirm 返回 false，如果某个处理函数在“取消”分支里有副作用，那个分支会先执行一次。
+ *   WordPress / WooCommerce 后台的写法基本都是“不确认就直接 return”，不受影响。
  */
 ( function () {
 	'use strict';
@@ -63,6 +70,10 @@
 		overlay.appendChild( box );
 		document.body.appendChild( overlay );
 
+		// 对话框刚出现的一小段时间内不接受“确定”，防止双击或连按回车时误确认（例如误点退款）。
+		var openedAt = Date.now();
+		var GUARD_MS = 400;
+
 		function close( confirmed ) {
 			document.removeEventListener( 'keydown', onKey, true );
 			overlay.remove();
@@ -78,6 +89,8 @@
 			if ( 'Escape' === e.key ) {
 				e.preventDefault();
 				close( false );
+			} else if ( 'Enter' === e.key && ( e.repeat || Date.now() - openedAt < GUARD_MS ) ) {
+				e.preventDefault(); // 按住不放或打开瞬间的回车不算确认。
 			} else if ( 'Tab' === e.key ) {
 				// 焦点限制在对话框内。
 				var items = cancelBtn ? [ cancelBtn, okBtn ] : [ okBtn ];
@@ -88,6 +101,9 @@
 		}
 
 		okBtn.addEventListener( 'click', function () {
+			if ( Date.now() - openedAt < GUARD_MS ) {
+				return;
+			}
 			close( true );
 		} );
 		if ( cancelBtn ) {
@@ -101,7 +117,8 @@
 			}
 		} );
 		document.addEventListener( 'keydown', onKey, true );
-		okBtn.focus();
+		// 确认框默认聚焦“取消”（更安全）；提示框只有一个“确定”。
+		( cancelBtn || okBtn ).focus();
 	}
 
 	// 1–3：拦截点击期间的 confirm。
@@ -126,8 +143,15 @@
 				}
 				buildDialog( requested, true, function () {
 					bypass = true;
-					window.confirm = function () {
-						return true;
+					// 重放时只自动同意用户刚刚确认过的那一条提示，而且只同意一次；
+					// 同一次点击里如果又弹出别的确认，交给浏览器原生对话框让用户自己决定。
+					var approved = false;
+					window.confirm = function ( message ) {
+						if ( ! approved && message === requested ) {
+							approved = true;
+							return true;
+						}
+						return nativeConfirm.call( window, message );
 					};
 					try {
 						if ( target && target.isConnected ) {

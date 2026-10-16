@@ -40,22 +40,37 @@ final class Capabilities {
 		return $caps;
 	}
 
-	public static function grant(): void {
+	/** 记录插件授出过哪些“角色:能力”，升级时只补授新增的。 */
+	public const GRANTED_OPTION = 'peptide_core_granted_caps';
+
+	/**
+	 * @param bool $only_new true 时只授予以前没授过的能力（升级用），不恢复管理员手动移除的能力。
+	 */
+	public static function grant( bool $only_new = false ): void {
+		$granted = $only_new ? (array) get_option( self::GRANTED_OPTION, array() ) : array();
+		$plan    = array();
 		foreach ( self::ROLES as $role_name ) {
+			foreach ( self::all() as $cap ) {
+				$plan[] = array( $role_name, $cap );
+			}
+		}
+		foreach ( self::ADMIN_ONLY as $cap ) {
+			$plan[] = array( 'administrator', $cap );
+		}
+
+		$record = (array) get_option( self::GRANTED_OPTION, array() );
+		foreach ( $plan as [ $role_name, $cap ] ) {
+			$key  = $role_name . ':' . $cap;
 			$role = get_role( $role_name );
 			if ( ! $role ) {
 				continue;
 			}
-			foreach ( self::all() as $cap ) {
+			if ( ! $only_new || ! in_array( $key, $granted, true ) ) {
 				$role->add_cap( $cap );
 			}
+			$record[] = $key;
 		}
-		$admin = get_role( 'administrator' );
-		if ( $admin ) {
-			foreach ( self::ADMIN_ONLY as $cap ) {
-				$admin->add_cap( $cap );
-			}
-		}
+		update_option( self::GRANTED_OPTION, array_values( array_unique( $record ) ), false );
 	}
 
 	public static function revoke(): void {

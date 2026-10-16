@@ -34,7 +34,11 @@ define( 'WP_DEBUG', false );
 define( 'WP_DEBUG_DISPLAY', false );
 define( 'DISALLOW_FILE_EDIT', true );   // 禁止在后台直接编辑主题和插件代码
 define( 'DISABLE_WP_CRON', true );      // 改用系统 cron：每 5 分钟执行一次 wp cron event run --due-now
+// 使用 Cloudflare 或反向代理时，填入代理的 IP 段（逗号分隔，支持 CIDR），限流才能拿到真实访客 IP：
+define( 'PEPTIDE_CORE_TRUSTED_PROXIES', '<Cloudflare 官方公布的 IPv4/IPv6 网段>' );
 ```
+
+WooCommerce 订单存储请保持**高性能订单存储（HPOS）**开启（WooCommerce → 设置 → 高级 → 功能）。插件在旧版存储下也能正确工作（会逐个核对订单），但会变慢；`wp peptide doctor` 会检查这一项。
 
 数据库口令、盐值等用服务商面板生成，**不要进 Git，也不要发到聊天里**。
 

@@ -18,6 +18,7 @@
   - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-settings-ack.php`（设置页与结账确认，17 项）
   - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-import.php`（报价表与批次报告导入，23 项）
   - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-batch-orders.php`（批次反查订单，14 项）
+  - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-security.php`（安全修复回归，23 项）
   - 所有测试都会关闭邮件发送（`pre_wp_mail`），不会产生通知邮件。
 
 ## 依赖
@@ -73,7 +74,7 @@ wp peptide batch orders <批次号> [--format=table|csv|json]      # 批次反�
 | `GET /wp-json/peptide/v1/site` | 演示模式、演示提示、用途声明、结账确认项 |
 | `GET /wp-json/peptide/v1/products/{slug}/batches?include_history=0\|1` | `{ product, batches[] }`，只含已发布且公开的批次 |
 | `GET /wp-json/peptide/v1/batches/lookup?batch_no=` | 单个批次 + `product`；每个 IP 每 10 分钟最多 60 次 |
-| `GET /wp-json/peptide/v1/reports/{id}/file` | 校验权限后输出文件；已登录用户的 `download_url` 自带 `_wpnonce` |
+| `GET /wp-json/peptide/v1/reports/{id}/file` | 校验权限后输出文件；已登录用户的 `download_url` 自带只对这一份报告有效的 `pc_nonce`；每个来源每 10 分钟最多 120 次 |
 | Store API `GET /wp-json/wc/store/v1/products` | 每个商品附加 `extensions.peptide_core`：`is_demo`、`specs`、`batch_count`、`report_state` |
 
 主题 PHP 函数：`peptide_core_get_site_config()`、`peptide_core_get_product_batches( $slug )`、`peptide_core_lookup_batch( $batch_no )`（定义在 includes/functions.php）。

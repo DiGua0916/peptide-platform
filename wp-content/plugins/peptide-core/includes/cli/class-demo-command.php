@@ -268,22 +268,29 @@ final class Demo_Command {
 	 * @return int[]
 	 */
 	private function seeded_order_ids(): array {
-		return array_map(
-			'intval',
-			wc_get_orders(
-				array(
-					'limit'      => -1,
-					'status'     => 'any',
-					'return'     => 'ids',
-					'meta_query' => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-						array(
-							'key'   => Meta::DEMO_SEED,
-							'value' => '1',
-						),
-					),
-				)
-			)
+		$query = array(
+			'limit'  => -1,
+			'status' => 'any',
+			'type'   => 'shop_order',
+			'return' => 'ids',
 		);
+		if ( \PeptideCore\Order_Batches::hpos_enabled() ) {
+			$query['meta_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				array(
+					'key'   => Meta::DEMO_SEED,
+					'value' => '1',
+				),
+			);
+		}
+		// 旧版订单存储会忽略 meta_query，所以无论哪种模式都逐个核对演示标记，绝不删到真实订单。
+		$ids = array();
+		foreach ( wc_get_orders( $query ) as $order_id ) {
+			$order = wc_get_order( $order_id );
+			if ( $order instanceof \WC_Order && '1' === (string) $order->get_meta( Meta::DEMO_SEED ) ) {
+				$ids[] = (int) $order_id;
+			}
+		}
+		return $ids;
 	}
 
 	/**

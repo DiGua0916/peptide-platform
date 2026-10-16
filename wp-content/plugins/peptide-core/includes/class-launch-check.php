@@ -87,8 +87,21 @@ final class Launch_Check {
 		$debug_display = defined( 'WP_DEBUG' ) && WP_DEBUG && ( ! defined( 'WP_DEBUG_DISPLAY' ) || WP_DEBUG_DISPLAY );
 		$add( 'Debug output', $debug_display ? 'fail' : ( defined( 'WP_DEBUG' ) && WP_DEBUG ? 'warn' : 'ok' ), $debug_display ? 'Errors are displayed to visitors.' : ( defined( 'WP_DEBUG' ) && WP_DEBUG ? 'WP_DEBUG is on (log only).' : 'Off.' ) );
 
-		$dir     = Private_Files::dir();
-		$outside = defined( 'PEPTIDE_CORE_PRIVATE_DIR' ) && ! str_starts_with( wp_normalize_path( $dir ), wp_normalize_path( ABSPATH ) );
+		// 订单存储模式：旧版存储下 wc_get_orders 会忽略 meta_query，插件已逐个核对，但查询会变慢。
+		$hpos = Order_Batches::hpos_enabled();
+		$add( 'Order storage', $hpos ? 'ok' : 'warn', $hpos ? 'High-performance order storage (HPOS).' : 'Legacy order storage: batch lookups scan orders one by one. Enable HPOS in WooCommerce → Settings → Advanced → Features.' );
+
+		$dir  = wp_normalize_path( Private_Files::dir() );
+		$webs = array( wp_normalize_path( ABSPATH ) );
+		if ( ! empty( $_SERVER['DOCUMENT_ROOT'] ) ) {
+			$webs[] = trailingslashit( wp_normalize_path( sanitize_text_field( wp_unslash( $_SERVER['DOCUMENT_ROOT'] ) ) ) );
+		}
+		$outside = defined( 'PEPTIDE_CORE_PRIVATE_DIR' );
+		foreach ( $webs as $web ) {
+			if ( str_starts_with( trailingslashit( $dir ), $web ) ) {
+				$outside = false; // WordPress 装在子目录时，也要和网站根目录（DOCUMENT_ROOT）比较。
+			}
+		}
 		if ( ! is_dir( $dir ) || ! is_writable( $dir ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable
 			$add( 'Private report folder', 'fail', 'Missing or not writable: ' . $dir );
 		} else {

@@ -48,7 +48,7 @@ $customer = wp_insert_user(
 $ok( 'guest: registered report locked (login_required)', 'login_required' === $report_in( Catalog::batch( $a2, 0 ) )['locked_reason'] );
 $ok( 'customer: registered report downloadable', true === $report_in( Catalog::batch( $a2, $customer ) )['can_download'] );
 $ok( 'customer: batch state available', 'available' === Catalog::batch( $a2, $customer )['report_state'] );
-$ok( 'customer: download_url carries nonce', str_contains( (string) $report_in( Catalog::batch( $a2, $customer ) )['download_url'], '_wpnonce=' ) );
+$ok( 'customer: download_url carries report-scoped nonce only', str_contains( (string) $report_in( Catalog::batch( $a2, $customer ) )['download_url'], 'pc_nonce=' ) && ! str_contains( (string) $report_in( Catalog::batch( $a2, $customer ) )['download_url'], '_wpnonce=' ) );
 
 update_post_meta( $r2, Meta::REPORT_ACCESS, 'approved' );
 $ok( 'customer: approved report locked (approval_required)', 'approval_required' === $report_in( Catalog::batch( $a2, $customer ) )['locked_reason'] );

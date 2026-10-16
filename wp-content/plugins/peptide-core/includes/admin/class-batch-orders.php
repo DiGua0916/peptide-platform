@@ -146,7 +146,8 @@ final class Batch_Orders {
 
 	public static function render_column( string $column, int $post_id ): void {
 		if ( 'pc_orders' === $column ) {
-			echo esc_html( (string) count( Order_Batches::orders_for_batch( $post_id ) ) );
+			// 列表里只需要数量：只按订单索引计数，不逐行整理顾客和商品信息。
+			echo esc_html( (string) count( Order_Batches::order_ids_with_batch( $post_id ) ) );
 		}
 	}
 }
