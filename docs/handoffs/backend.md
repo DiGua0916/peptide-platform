@@ -411,3 +411,23 @@
   - 前端展示（Codex 负责）；
   - 含税情况（本站没有开启税费；扩展里带 `tax_display` 字段）；
   - 真实依据的对照价（需要用户提供，届时 source 记为 documented）。
+
+### 商品分类 · 2026-10-17 · Claude
+
+- **用户要求**：参照截图（GLP-1 & Metabolic、Anti-Aging & Longevity、Repair & Regeneration、Growth Peptides、Immune & Neural）给商品分类。
+- **合规取舍**：截图里的“抗衰老”“修复再生”“免疫与神经”属于功效说法，网站上的说法会被美国监管当作“预期用途”的证据。经用户确认（2026-10-17），**改为按物质类别命名**，只说明产品是什么。B733、PT-10、PT-20、PI-20 不确定是什么，按用户选择先放进 Other。
+- **分类（slug / 名称 / 排序 / 商品数）**：
+  - `glp1-metabolic` / GLP-1 & Metabolic Compounds / 1 / 23
+  - `bioregulators-nad` / Bioregulators & NAD+ / 2 / 15（也包括 GHK-CU、AHK-CU、Snap-8、Matrixyl）
+  - `bpc-157-tb-500-blends` / BPC-157, TB-500 & Blends / 3 / 12
+  - `gh-secretagogues-hormones` / GH Secretagogues & Hormones / 4 / 20
+  - `neuropeptides-immunopeptides` / Neuropeptides & Immunopeptides / 5 / 16
+  - `reconstitution-supplies` / Reconstitution Supplies / 6 / 4
+  - `other` / Other / 7 / 4
+  - Uncategorized 只剩 2 个旧的演示商品。
+- **执行**：脚本和方案在 `D:/Codex/Tasks/peptide-platform/work/claude/category-plan/`（`plan.json`、`apply.php`，可以重复执行；归类前的分类备份在 `before.json`）。用 WooCommerce 原生分类 `product_cat`，排序用 term meta `order`。没有改插件代码。
+- **实际检查**：
+  - 先 dry run 再写入：94 / 94 全部归类，没有遗漏，重复执行结果相同；
+  - Store API `?category=<slug>` 返回的数量正确，分类页面返回 200；
+  - 210 个价格全部没变；非价格字段只有这 94 个商品的分类变了，其余没有变化；
+  - debug.log 只有 WordPress 自动更新的记录。
