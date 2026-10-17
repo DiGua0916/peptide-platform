@@ -376,3 +376,38 @@
   - **浏览器**：确认框默认聚焦“取消”；点“确定”后原操作只执行一次；原生 confirm 已恢复。临时测试页已删除。
   - 八套测试共 **135 项全部通过**；debug.log 没有新增；站点数据不变；版本升级自动完成（0.4.0，记录了 43 条能力授予）。
 - **上线清单**：补充了 `PEPTIDE_CORE_TRUSTED_PROXIES`（Cloudflare 网段）和“保持 HPOS 开启”。
+
+### PRICE-SALE-01 促销对照价（后端）· 2026-10-17 · Claude
+
+- **来源**：Codex 在群里的完整交接（PRICE-SALE-HANDOFF-01），地瓜要求 Claude 按交接执行。
+- **价格依据边界**：用户给的“当前价 × 2 + 0.02”对照价（如 59.98）**没有真实原价依据**。按 FTC 16 CFR 233.1，原价必须是真实、近期、持续一段时间的实际售价。所以这些对照价都标记为演示数据（`source = demo-formula`），`wp peptide doctor` 会把它们列为上线前必须处理的项目。
+- **实现**（`includes/class-pricing.php`、`cli/class-pricing-command.php`，修改 `api/class-store-api.php`、`class-order-batches.php`、`class-launch-check.php`、`class-plugin.php`、翻译）：
+  - 完全使用 Woo 原生的 regular / sale：regular = 对照价，sale = 当前成交价（不变），**不设促销日期**（不会到期）。没有运行时价格过滤器，没有负数费用，也没有另建定价系统。
+  - 每个 simple 和 variation 记录 `_pc_pricing = {base, compare, source, formula, applied_at}`。
+  - **启停策略**：
+    - `wp peptide pricing revert` 撤销：regular 还原为成交价，sale 清空，成交价不变；
+    - 有人在后台清空 sale、而 regular 仍是对照价时，保存钩子（product 和 product_variation 两个钩子）会**自动把 regular 还原为成交价**，绝不会翻倍；
+    - regular 被人改成其他值时，不再标记为演示来源。
+  - 金额全部用“分”的整数计算；百分比按实际差价**向下取整**（50.0167% 显示为 50），无效时为 0，不会除以零。
+  - Store API 扩展：
+    - 商品 `extensions.peptide_core.price_pair`：规格或 simple 返回自身；variable 父商品返回**当前价最低的那个规格**及该规格自己的常规价；
+    - 购物车行 `extensions.peptide_core.pricing`；
+    - 购物车 `extensions.peptide_core.sale_savings`。
+    - 都与优惠券分开（优惠券仍在 Woo 原生的 `totals.total_discount`）。
+  - 下单快照：用 `woocommerce_checkout_create_order_line_item` 写入订单行 `_pc_price_snapshot`（区块结账和经典结账都会触发）。`/me/orders/{n}/batches` 的每行新增 `pricing`（旧订单为 null，不倒推）。
+- **数据迁移**：
+  - 写入前逐项核对现场价格与 Codex 的 `price-adjust-20261017/after.json`：210 / 210 一致，没有税。
+  - 备份：`D:/Codex/Tasks/peptide-platform/work/price-sale-20261017/before.json`。
+  - 执行 `wp peptide pricing apply-demo`：applied 210；再执行一次全部是 already-applied。
+  - 核对结果（`price-sale-20261017/verification.json`）：成交价未变 210、对照价公式正确 210、sale 等于成交价 210、没有促销日期 210、演示记录 210、267 条记录的非价格字段哈希不变、57 个父商品最低价正确、订单 #54 和 #55 的哈希不变。
+- **实际检查**：
+  - 新增 `tests/smoke-pricing.php` 23 项（用临时商品）：公式、百分比边界、未促销、基准不一致时跳过、重复执行不变、成交价最低规格与非最低规格的价格对、数量 2（11996 / 5996 / 节省 6000）、10% 优惠券单独计算（Woo 折扣 600，应付 5396，促销节省仍是 6000）、订单快照、清空 sale 不翻倍、改价后旧订单快照不变、手动改 regular 后去掉演示标记、撤销、已有促销不碰、清理。
+  - **真实 HTTP**（Store API）：
+    - Tirzepatide 卡片：price_pair 为 TR5 规格，2998 / 5998，50%，demo；
+    - 规格 #100：4498 / 8998；
+    - 购物车 TR5 ×2：原生 price 2998、regular 5998，line_subtotal 5996；扩展里是 11996 / 5996 / 6000；total_discount 0；total_price 5996；测试商品已移出购物车。
+  - 九套测试共 **158 项全部通过**；debug.log 没有新增。
+- **未做 / 未验证**：
+  - 前端展示（Codex 负责）；
+  - 含税情况（本站没有开启税费；扩展里带 `tax_display` 字段）；
+  - 真实依据的对照价（需要用户提供，届时 source 记为 documented）。

@@ -26,6 +26,7 @@ final class Plugin {
 		Meta::register_hooks();
 		Reports::register_hooks();
 		Order_Batches::register_hooks();
+		Pricing::register_hooks();
 		Checkout_Ack::register_hooks();
 		add_action( 'init', array( Installer::class, 'maybe_upgrade' ), 5 );
 		Api\Rest_Controller::register_hooks();
@@ -49,6 +50,7 @@ final class Plugin {
 			\WP_CLI::add_command( 'peptide import', Cli\Import_Command::class );
 			\WP_CLI::add_command( 'peptide doctor', Cli\Doctor_Command::class );
 			\WP_CLI::add_command( 'peptide batch', Cli\Batch_Command::class );
+			\WP_CLI::add_command( 'peptide pricing', Cli\Pricing_Command::class );
 		}
 	}
 

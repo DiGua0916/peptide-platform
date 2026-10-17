@@ -39,6 +39,40 @@ final class Store_Api {
 				'schema_type'     => ARRAY_A,
 			)
 		);
+
+		// 促销节省（PRICE-SALE-01）：购物车每一行和购物车汇总。只做说明，WooCommerce 原生金额仍是权威。
+		woocommerce_store_api_register_endpoint_data(
+			array(
+				'endpoint'        => \Automattic\WooCommerce\StoreApi\Schemas\V1\CartItemSchema::IDENTIFIER,
+				'namespace'       => self::EXT_NAMESPACE,
+				'data_callback'   => static fn( $cart_item ) => array( 'pricing' => \PeptideCore\Pricing::cart_line( (array) $cart_item ) ),
+				'schema_callback' => static fn() => array(
+					'pricing' => array(
+						'description' => __( 'Sale savings for this cart line (minor units). Excludes coupons.', 'peptide-core' ),
+						'type'        => 'object',
+						'context'     => array( 'view', 'edit' ),
+						'readonly'    => true,
+					),
+				),
+				'schema_type'     => ARRAY_A,
+			)
+		);
+		woocommerce_store_api_register_endpoint_data(
+			array(
+				'endpoint'        => \Automattic\WooCommerce\StoreApi\Schemas\V1\CartSchema::IDENTIFIER,
+				'namespace'       => self::EXT_NAMESPACE,
+				'data_callback'   => static fn() => array( 'sale_savings' => \PeptideCore\Pricing::cart_summary( function_exists( 'WC' ) && WC()->cart ? WC()->cart : null ) ),
+				'schema_callback' => static fn() => array(
+					'sale_savings' => array(
+						'description' => __( 'Total sale savings in the cart (minor units). Informational; excludes coupons.', 'peptide-core' ),
+						'type'        => 'object',
+						'context'     => array( 'view', 'edit' ),
+						'readonly'    => true,
+					),
+				),
+				'schema_type'     => ARRAY_A,
+			)
+		);
 	}
 
 	/**
@@ -57,6 +91,8 @@ final class Store_Api {
 			'specs'        => Product_Panel::get_specs( $parent ),
 			'batch_count'  => count( Catalog::public_batch_ids( $product_id ) ),
 			'report_state' => Catalog::best_report_state( $product_id, get_current_user_id() ),
+			// 价格对（PRICE-SALE-01）：请求的是规格或简单商品时为它自己的价格对；请求父商品时为“当前成交价最低”那个规格的价格对。
+			'price_pair'   => $product->is_type( 'variable' ) ? \PeptideCore\Pricing::card_pair( $product ) : ( '' === $product->get_price() ? null : \PeptideCore\Pricing::pair( $product ) ),
 		);
 	}
 
@@ -96,6 +132,12 @@ final class Store_Api {
 				'description' => __( 'Best report state across public batches for the current user.', 'peptide-core' ),
 				'type'        => 'string',
 				'enum'        => array( 'available', 'restricted', 'pending', 'none' ),
+				'context'     => array( 'view', 'edit' ),
+				'readonly'    => true,
+			),
+			'price_pair'   => array(
+				'description' => __( 'Paired regular/current price of one purchasable item (minor units), with sale state and comparison-price source.', 'peptide-core' ),
+				'type'        => array( 'object', 'null' ),
 				'context'     => array( 'view', 'edit' ),
 				'readonly'    => true,
 			),

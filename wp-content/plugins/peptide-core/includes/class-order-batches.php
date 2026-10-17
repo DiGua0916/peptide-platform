@@ -348,6 +348,8 @@ final class Order_Batches {
 				'variation_label' => $variation ? wc_get_formatted_variation( $variation, true, false ) : null,
 				'quantity'        => (int) $item->get_quantity(),
 				'batch'           => $batch,
+				// 下单时保存的价格快照（PRICE-SALE-01）；旧订单没有快照时为 null，不按现价倒推。
+				'pricing'         => Pricing::snapshot( $item ),
 			);
 		}
 		return array(

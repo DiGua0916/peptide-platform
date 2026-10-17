@@ -19,6 +19,7 @@
   - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-import.php`（报价表与批次报告导入，23 项）
   - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-batch-orders.php`（批次反查订单，14 项）
   - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-security.php`（安全修复回归，23 项）
+  - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-pricing.php`（促销对照价，23 项）
   - 所有测试都会关闭邮件发送（`pre_wp_mail`），不会产生通知邮件。
 
 ## 依赖
@@ -63,6 +64,7 @@ wp peptide import batches <批次.csv> --reports-dir=<报告文件夹> --tag=<�
 wp peptide import delete --tag=<标签> --yes                      # 删除该标签下导入的商品、批次和报告
 wp peptide doctor                                                # 上线体检（只读）
 wp peptide batch orders <批次号> [--format=table|csv|json]      # 批次反查订单（溯源、召回）
+wp peptide pricing status|apply-demo|revert --backup=<文件> [--dry-run]   # 促销对照价（演示对照价不能上线）
 ```
 
 创建 2 个演示商品（Demo Peptide A / B）、3 个批次（DEMO-A-2401、DEMO-A-2402、DEMO-B-2401）和 2 份带 “DEMO – NOT A REAL TEST REPORT” 水印的演示报告。所有记录都有演示标记；`purge` 只删除带演示标记的记录（包括演示订单）。`order` 会创建一个访客演示订单（Demo Customer，联系人邮箱用 example.com，Demo Peptide A ×2、Demo Peptide B ×1，状态为处理中，不发邮件），用于查看批次分配面板和工作台。
