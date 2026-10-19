@@ -34,3 +34,13 @@ function peptide_core_get_product_batches( string $slug, bool $include_history =
 function peptide_core_lookup_batch( string $batch_no, bool $include_history = false ) {
 	return \PeptideCore\Api\Rest_Controller::batch_by_no( $batch_no, get_current_user_id(), $include_history );
 }
+
+/**
+ * 客服浮动按钮的联系方式，等同 GET /peptide/v1/site 的 support 字段（SUPPORT-CHAT-01）。
+ * enabled 为 false 时不要显示按钮。
+ *
+ * @return array{enabled:bool,position:string,channels:array<int,array{type:string,label:string,value:string,url:string}>}
+ */
+function peptide_core_get_support_contacts(): array {
+	return \PeptideCore\Support_Contacts::public_view();
+}

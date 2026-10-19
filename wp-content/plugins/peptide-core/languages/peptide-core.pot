@@ -2,14 +2,14 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.4.0\n"
+"Project-Id-Version: Peptide Core 0.5.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-17T09:36:18+00:00\n"
+"POT-Creation-Date: 2026-10-19T14:29:13+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -223,98 +223,116 @@ msgstr ""
 msgid "%s workbench"
 msgstr ""
 
-#: includes/admin/class-dashboard.php:65
+#: includes/admin/class-dashboard.php:66
 msgid "Orders waiting for batch assignment"
 msgstr ""
 
-#: includes/admin/class-dashboard.php:67
+#: includes/admin/class-dashboard.php:68
 msgid "All paid orders have their batches assigned."
 msgstr ""
 
 #. translators: %d: number of items without a batch
-#: includes/admin/class-dashboard.php:78
+#: includes/admin/class-dashboard.php:79
 #, php-format
 msgid "%d item without batch"
 msgid_plural "%d items without batch"
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/admin/class-dashboard.php:86
-msgid "Public batches without a published report"
-msgstr ""
-
 #: includes/admin/class-dashboard.php:88
-msgid "Every public batch has a published report."
+#: includes/admin/class-dashboard.php:91
+msgid "Paid orders waiting to ship"
 msgstr ""
 
-#: includes/admin/class-dashboard.php:96
-msgid "marked \"report in preparation\""
+#: includes/admin/class-dashboard.php:89
+#: includes/admin/class-settings-page.php:130
+msgid "Shipment tracking is off. Run `wp peptide shipping enable` to turn on WooCommerce order fulfillments."
 msgstr ""
 
-#: includes/admin/class-dashboard.php:104
-msgid "Draft reports"
+#: includes/admin/class-dashboard.php:93
+msgid "All paid orders have been shipped."
 msgstr ""
 
-#: includes/admin/class-dashboard.php:109
-msgid "Review and publish"
+#: includes/admin/class-dashboard.php:103
+msgid "partially shipped"
 msgstr ""
 
 #: includes/admin/class-dashboard.php:112
+msgid "Public batches without a published report"
+msgstr ""
+
+#: includes/admin/class-dashboard.php:114
+msgid "Every public batch has a published report."
+msgstr ""
+
+#: includes/admin/class-dashboard.php:122
+msgid "marked \"report in preparation\""
+msgstr ""
+
+#: includes/admin/class-dashboard.php:130
+msgid "Draft reports"
+msgstr ""
+
+#: includes/admin/class-dashboard.php:135
+msgid "Review and publish"
+msgstr ""
+
+#: includes/admin/class-dashboard.php:138
 msgid "No draft reports."
 msgstr ""
 
-#: includes/admin/class-dashboard.php:116
+#: includes/admin/class-dashboard.php:142
 msgid "Demo data"
 msgstr ""
 
-#: includes/admin/class-dashboard.php:119
+#: includes/admin/class-dashboard.php:145
 msgid "Demo mode is ON: the storefront shows the demo notice."
 msgstr ""
 
-#: includes/admin/class-dashboard.php:120
+#: includes/admin/class-dashboard.php:146
 msgid "Demo mode is off."
 msgstr ""
 
 #. translators: %d: number of demo records
-#: includes/admin/class-dashboard.php:123
+#: includes/admin/class-dashboard.php:149
 #, php-format
 msgid "%d demo record exists."
 msgid_plural "%d demo records exist."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/admin/class-dashboard.php:125
+#: includes/admin/class-dashboard.php:151
 msgid "Remove them before going live (wp peptide demo purge)."
 msgstr ""
 
-#: includes/admin/class-dashboard.php:129
+#: includes/admin/class-dashboard.php:155
 msgid "Test payment is enabled: orders are placed without taking any money."
 msgstr ""
 
-#: includes/admin/class-dashboard.php:130
+#: includes/admin/class-dashboard.php:156
 msgid "Disable it before going live (wp peptide demo commerce --disable)."
 msgstr ""
 
-#: includes/admin/class-dashboard.php:136
+#: includes/admin/class-dashboard.php:162
 #: includes/class-post-types.php:41
 msgid "Add batch"
 msgstr ""
 
-#: includes/admin/class-dashboard.php:137
+#: includes/admin/class-dashboard.php:163
 #: includes/class-post-types.php:58
 msgid "Add test report"
 msgstr ""
 
-#: includes/admin/class-dashboard.php:138
+#: includes/admin/class-dashboard.php:164
 msgid "All batches"
 msgstr ""
 
-#: includes/admin/class-dashboard.php:139
+#: includes/admin/class-dashboard.php:165
 msgid "All orders"
 msgstr ""
 
 #. translators: %d: total count
-#: includes/admin/class-dashboard.php:175
+#: includes/admin/class-dashboard.php:201
 #, php-format
 msgid "View all %d"
 msgstr ""
@@ -567,72 +585,144 @@ msgid "A report needs a batch and a file before it can be published. It was kept
 msgstr ""
 
 #. translators: %s: store brand name
-#: includes/admin/class-settings-page.php:29
+#: includes/admin/class-settings-page.php:31
 #, php-format
 msgid "%s settings"
 msgstr ""
 
-#: includes/admin/class-settings-page.php:59
+#: includes/admin/class-settings-page.php:62
 msgid "Brand"
 msgstr ""
 
-#: includes/admin/class-settings-page.php:62
+#: includes/admin/class-settings-page.php:65
 msgid "Brand name"
 msgstr ""
 
-#: includes/admin/class-settings-page.php:65
+#: includes/admin/class-settings-page.php:68
 msgid "Used in the admin area (workbench, this page). Storefront branding is handled by the theme."
 msgstr ""
 
-#: includes/admin/class-settings-page.php:70
 #: includes/admin/class-settings-page.php:73
+#: includes/admin/class-settings-page.php:76
 msgid "Demo mode"
 msgstr ""
 
-#: includes/admin/class-settings-page.php:75
+#: includes/admin/class-settings-page.php:78
 msgid "The site contains demonstration data; the storefront shows the demo notice."
 msgstr ""
 
-#: includes/admin/class-settings-page.php:76
+#: includes/admin/class-settings-page.php:79
 msgid "Turn this off only after all demo records have been removed and real data is in place."
 msgstr ""
 
-#: includes/admin/class-settings-page.php:80
+#: includes/admin/class-settings-page.php:83
 msgid "Demo notice"
 msgstr ""
 
-#: includes/admin/class-settings-page.php:83
+#: includes/admin/class-settings-page.php:86
 msgid "Shown to visitors while demo mode is on. English is recommended for overseas visitors."
 msgstr ""
 
-#: includes/admin/class-settings-page.php:88
 #: includes/admin/class-settings-page.php:91
+#: includes/admin/class-settings-page.php:94
 msgid "Use statement"
 msgstr ""
 
-#: includes/admin/class-settings-page.php:94
+#: includes/admin/class-settings-page.php:97
 msgid "A statement about the intended use of your products, shown on the storefront. Leave empty to hide it. Basic HTML (links, bold) is allowed. The content is your decision; make sure it is accurate and compliant."
 msgstr ""
 
-#: includes/admin/class-settings-page.php:99
+#: includes/admin/class-settings-page.php:102
 #: includes/class-checkout-ack.php:70
 msgid "Checkout confirmation"
 msgstr ""
 
-#: includes/admin/class-settings-page.php:102
+#: includes/admin/class-settings-page.php:105
 msgid "Require confirmation"
 msgstr ""
 
-#: includes/admin/class-settings-page.php:104
+#: includes/admin/class-settings-page.php:107
 msgid "Customers must tick a checkbox before placing an order."
 msgstr ""
 
-#: includes/admin/class-settings-page.php:108
+#: includes/admin/class-settings-page.php:111
 msgid "Checkbox text"
 msgstr ""
 
-#: includes/admin/class-settings-page.php:111
+#: includes/admin/class-settings-page.php:114
 msgid "Plain text only. The exact text and the time of acceptance are saved on each order. Required when the confirmation is enabled."
+msgstr ""
+
+#: includes/admin/class-settings-page.php:119
+msgid "Shipping"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:122
+msgid "Batch check"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:124
+msgid "Do not allow marking items as shipped until a batch is assigned (only for products that have batches)."
+msgstr ""
+
+#: includes/admin/class-settings-page.php:129
+msgid "Add tracking numbers on the order page with the \"Fulfill items\" button. The carrier is detected automatically and the customer receives an email with the tracking link."
+msgstr ""
+
+#: includes/admin/class-settings-page.php:138
+msgid "Customer support button"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:139
+msgid "A floating contact button on the storefront. Only the contact methods you fill in are shown. They are public: use business accounts, not personal ones."
+msgstr ""
+
+#: includes/admin/class-settings-page.php:142
+msgid "Show button"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:143
+msgid "Show the support button on the storefront."
+msgstr ""
+
+#: includes/admin/class-settings-page.php:146
+msgid "WhatsApp number"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:149
+msgid "International format with country code. Leave empty to hide."
+msgstr ""
+
+#: includes/admin/class-settings-page.php:153
+msgid "Telegram username"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:156
+msgid "A username, not a phone number. Leave empty to hide."
+msgstr ""
+
+#: includes/admin/class-settings-page.php:160
+msgid "Support email"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:164
+msgid "WhatsApp greeting"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:167
+msgid "Optional text pre-filled when a customer opens WhatsApp. English is recommended."
+msgstr ""
+
+#: includes/admin/class-settings-page.php:171
+msgid "Position"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:174
+msgid "Bottom right"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:175
+msgid "Bottom left"
 msgstr ""
 
 #: includes/api/class-errors.php:20
@@ -716,13 +806,13 @@ msgid "Batch assignment updated:"
 msgstr ""
 
 #. translators: %s: batch number
-#: includes/class-order-batches.php:377
-#: includes/class-order-batches.php:384
+#: includes/class-order-batches.php:379
+#: includes/class-order-batches.php:386
 #, php-format
 msgid "Batch: %s"
 msgstr ""
 
-#: includes/class-plugin.php:75
+#: includes/class-plugin.php:77
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr ""
 
@@ -784,6 +874,28 @@ msgstr ""
 msgid "The report file was not found."
 msgstr ""
 
-#: includes/class-settings.php:99
+#: includes/class-settings.php:107
 msgid "The checkout confirmation was not enabled because its text is empty."
+msgstr ""
+
+#. translators: %s: comma-separated product names
+#: includes/class-shipping-tracking.php:91
+#, php-format
+msgid "Assign a batch before shipping: %s. (You can turn this check off in the store settings.)"
+msgstr ""
+
+#: includes/class-support-contacts.php:76
+msgid "The WhatsApp number was not saved: use the international format with country code, for example +1 555 123 4567."
+msgstr ""
+
+#: includes/class-support-contacts.php:85
+msgid "The Telegram username was not saved: use 5–32 letters, digits or underscores, for example @vialcove_support."
+msgstr ""
+
+#: includes/class-support-contacts.php:94
+msgid "The support email address was not saved because it is not valid."
+msgstr ""
+
+#: includes/class-support-contacts.php:108
+msgid "The support button was not enabled because no valid contact method was entered."
 msgstr ""

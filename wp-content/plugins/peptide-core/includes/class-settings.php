@@ -1,6 +1,6 @@
 <?php
 /**
- * 站点级设置（品牌名、演示模式、用途声明、结账确认项），在后台“WooCommerce → VialCove 设置”中编辑（BE-05）。
+ * 站点级设置（品牌名、演示模式、用途声明、结账确认项、发货规则、客服按钮），在后台“WooCommerce → VialCove 设置”中编辑（BE-05）。
  *
  * @package PeptideCore
  */
@@ -19,15 +19,19 @@ final class Settings {
 	public static function defaults(): array {
 		return array(
 			// 品牌名只在后台使用（如工作台标题），前台文案由主题负责。
-			'brand_name'         => 'VialCove',
-			'demo_mode'          => true,
-			'demo_notice'        => 'This site is a demonstration. Product, batch and report data are synthetic.',
+			'brand_name'            => 'VialCove',
+			'demo_mode'             => true,
+			'demo_notice'           => 'This site is a demonstration. Product, batch and report data are synthetic.',
 			// 用途声明与结账确认项的文案由用户提供，未提供时为 null，前端不显示。
-			'use_statement_html' => null,
-			'checkout_ack'       => array(
+			'use_statement_html'    => null,
+			'checkout_ack'          => array(
 				'enabled'    => false,
 				'label_html' => null,
 			),
+			// 发货（标记为已履约）前，已有批次记录的商品行必须先指定批次（SHIP-TRACK-01）。
+			'require_batch_to_ship' => true,
+			// 客服浮动按钮的联系方式（SUPPORT-CHAT-01）。
+			'support'               => Support_Contacts::defaults(),
 		);
 	}
 
@@ -55,6 +59,7 @@ final class Settings {
 				'enabled'    => ! empty( $ack['enabled'] ) && null !== self::html_or_null( $ack['label_html'] ?? null ),
 				'label_html' => self::html_or_null( $ack['label_html'] ?? null ),
 			),
+			'support'            => Support_Contacts::public_view( is_array( $s['support'] ) ? $s['support'] : array() ),
 		);
 	}
 
@@ -87,6 +92,9 @@ final class Settings {
 			$input['checkout_ack_enabled'] = ! empty( $input['checkout_ack']['enabled'] );
 			$input['checkout_ack_label']   = (string) ( $input['checkout_ack']['label_html'] ?? '' );
 		}
+		if ( isset( $input['support'] ) && is_array( $input['support'] ) && ! isset( $input['support_position'] ) ) {
+			$input = array_merge( $input, Support_Contacts::to_form( $input['support'] ) );
+		}
 
 		$brand = sanitize_text_field( (string) ( $input['brand_name'] ?? '' ) );
 		$use   = trim( wp_kses_post( (string) ( $input['use_statement_html'] ?? '' ) ) );
@@ -101,14 +109,16 @@ final class Settings {
 		}
 
 		return array(
-			'brand_name'         => '' !== $brand ? $brand : $old['brand_name'],
-			'demo_mode'          => ! empty( $input['demo_mode'] ),
-			'demo_notice'        => sanitize_text_field( (string) ( $input['demo_notice'] ?? '' ) ),
-			'use_statement_html' => '' === $use ? null : $use,
-			'checkout_ack'       => array(
+			'brand_name'            => '' !== $brand ? $brand : $old['brand_name'],
+			'demo_mode'             => ! empty( $input['demo_mode'] ),
+			'demo_notice'           => sanitize_text_field( (string) ( $input['demo_notice'] ?? '' ) ),
+			'use_statement_html'    => '' === $use ? null : $use,
+			'checkout_ack'          => array(
 				'enabled'    => $ack,
 				'label_html' => '' === $label ? null : $label,
 			),
+			'require_batch_to_ship' => ! empty( $input['require_batch_to_ship'] ),
+			'support'               => Support_Contacts::sanitize( $input ),
 		);
 	}
 

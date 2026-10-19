@@ -355,6 +355,8 @@ final class Order_Batches {
 		return array(
 			'order_number' => (string) $order->get_order_number(),
 			'items'        => $items,
+			// 已发货包裹和单号（SHIP-TRACK-01）；订单履约功能未开启时为 null。
+			'fulfillment'  => Shipping_Tracking::customer_view( $order ),
 		);
 	}
 

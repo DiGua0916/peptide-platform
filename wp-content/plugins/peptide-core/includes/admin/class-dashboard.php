@@ -54,6 +54,7 @@ final class Dashboard {
 
 	public static function render(): void {
 		$orders  = Workbench::orders_missing_batch();
+		$ship    = Workbench::orders_awaiting_shipment();
 		$batches = Workbench::batches_without_report();
 		$drafts  = Workbench::draft_report_count();
 		$demo    = Workbench::demo_record_count();
@@ -80,6 +81,31 @@ final class Dashboard {
 			}
 			echo '</ul>';
 			self::more_link( $orders['count'], self::orders_url( 'wc-processing' ) );
+		}
+
+		// 1b. 已付款待发货（SHIP-TRACK-01）。
+		if ( null === $ship ) {
+			echo '<h3 style="margin-top:1.2em">' . esc_html__( 'Paid orders waiting to ship', 'peptide-core' ) . '</h3>';
+			self::muted( __( 'Shipment tracking is off. Run `wp peptide shipping enable` to turn on WooCommerce order fulfillments.', 'peptide-core' ) );
+		} else {
+			self::section_title( __( 'Paid orders waiting to ship', 'peptide-core' ), $ship['count'] );
+			if ( ! $ship['count'] ) {
+				self::muted( __( 'All paid orders have been shipped.', 'peptide-core' ) );
+			} else {
+				echo '<ul>';
+				foreach ( $ship['items'] as $o ) {
+					$order = wc_get_order( $o['id'] );
+					printf(
+						'<li><a href="%1$s">#%2$s</a> %3$s%4$s</li>',
+						esc_url( $order ? $order->get_edit_order_url() : '' ),
+						esc_html( $o['number'] ),
+						esc_html( (string) $o['date'] ),
+						$o['partial'] ? ' — ' . esc_html__( 'partially shipped', 'peptide-core' ) : ''
+					);
+				}
+				echo '</ul>';
+				self::more_link( $ship['count'], self::orders_url( 'wc-processing' ) );
+			}
 		}
 
 		// 2. 缺少报告的批次。

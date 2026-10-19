@@ -51,6 +51,22 @@ final class Launch_Check {
 			$add( 'Shipping', 'ok', count( $zones ) . ' shipping zone(s).' );
 		}
 
+		// 物流单号追踪（SHIP-TRACK-01）：使用 WooCommerce 原生订单履约。
+		if ( ! Shipping_Tracking::native_enabled() ) {
+			$add( 'Shipment tracking', 'fail', 'WooCommerce order fulfillments are off; customers cannot see tracking numbers. Run `wp peptide shipping enable`.' );
+		} else {
+			$emails = WC()->mailer()->get_emails();
+			$mail   = $emails['WC_Email_Customer_Fulfillment_Created'] ?? null;
+			$on     = $mail && $mail->is_enabled();
+			$add( 'Shipment tracking', $on ? 'ok' : 'warn', $on ? 'Order fulfillments on; customers are emailed when a shipment is added.' : 'Order fulfillments on, but the "fulfillment created" customer email is disabled.' );
+			$guard = ! empty( Settings::all()['require_batch_to_ship'] );
+			$add( 'Batch check before shipping', $guard ? 'ok' : 'warn', $guard ? 'On.' : 'Off: orders can be shipped without a batch assigned.' );
+		}
+
+		// 客服按钮（SUPPORT-CHAT-01）。
+		$support = Support_Contacts::public_view();
+		$add( 'Support button', $support['enabled'] ? 'ok' : 'warn', $support['enabled'] ? implode( ', ', array_column( $support['channels'], 'value' ) ) : 'No contact method is shown to customers. Add WhatsApp, Telegram or email in the store settings.' );
+
 		// 演示数据。
 		$settings = Settings::all();
 		$add( 'Demo mode', $settings['demo_mode'] ? 'fail' : 'ok', $settings['demo_mode'] ? 'Demo mode is on; the storefront shows the demo notice.' : 'Off.' );

@@ -431,3 +431,83 @@
   - Store API `?category=<slug>` 返回的数量正确，分类页面返回 200；
   - 210 个价格全部没变；非价格字段只有这 94 个商品的分类变了，其余没有变化；
   - debug.log 只有 WordPress 自动更新的记录。
+
+### Shopname 后台对照 · 2026-10-19 · Claude
+
+- 用户提供了一个 Shopname 店铺后台，由用户本人登录，Claude 只读查看后写了查漏补缺报告：`docs/handoffs/shopname-gap-report.md`（提交 `bf3781b`）。用户随后选择先做 P0 里的两项：物流单号追踪和客服按钮（下两节）。
+
+### SHIP-TRACK-01 物流单号追踪 + SUPPORT-CHAT-01 客服按钮（后端）· 2026-10-19 · Claude
+
+- **取舍**：WooCommerce 11.2 自带完整的“订单履约（Fulfillments）”功能，默认关闭。它包括：
+  - 订单页“完成商品发货”面板，可以分包裹发货；
+  - 自动识别承运商（UPS、USPS、FedEx、DHL 等 80 多家）并生成追踪链接；
+  - 订单列表的发货状态、承运商、单号列，以及筛选和批量操作；
+  - 顾客邮件（发货 / 更新 / 删除）和“我的账户”订单页的物流显示。
+
+  所以**不另写单号系统**，直接开启原生功能，插件只补充下面列的几项。
+- **SHIP-TRACK-01**（新增 `includes/class-shipping-tracking.php`、`cli/class-shipping-command.php`）：
+  - **发货前检查批次**：钩子 `woocommerce_fulfillment_before_fulfill`。标记为已发货时，如果这次发货的商品行**所属商品有已发布的批次**、但这一行还没指定批次，就抛出 `FulfillmentException`，后台面板会显示提示。
+    - 没有任何批次的商品（例如配套耗材）不受限制；
+    - 未发货的草稿不受限制；
+    - 设置项 `require_batch_to_ship` 默认开启，可以在“VialCove 设置 → 发货”里关闭。
+  - **顾客接口**：`GET /peptide/v1/me/orders/{n}/batches` 顶层新增 `fulfillment`（原生功能关闭时为 null）：
+    ```json
+    {"status":"fulfilled","shipments":[{"provider":"usps","provider_name":"USPS","tracking_number":"9400…","tracking_url":"https://tools.usps.com/…","shipped_at":"2026-10-19T14:29:59+00:00","items":[{"name":"Demo Peptide A","quantity":1}]}]}
+    ```
+    - `status` 取 Woo 的订单发货状态：`fulfilled` / `partially_fulfilled` / `unfulfilled` / `no_fulfillments`；
+    - 只返回已发货的包裹，草稿不返回；
+    - 没有链接时按承运商生成。
+  - **工作台**新增“已付款待发货的订单”：处理中、还没全部发货的订单，部分发货的会标注出来。
+  - **上线体检**新增两项：
+    - `Shipment tracking`：原生功能关闭时 fail；发货邮件关闭时 warn；
+    - `Batch check before shipping`。
+  - **命令**：`wp peptide shipping enable|disable|status`。数据表由 WooCommerce 在下一次加载时自动创建；关闭时保留已有记录。
+  - **本地站点已执行** `wp peptide shipping enable`，表 `wc_order_fulfillments` 和 `wc_order_fulfillment_meta` 已创建，目前没有发货记录。#54 和 #55 不受影响。
+- **SUPPORT-CHAT-01**（新增 `includes/class-support-contacts.php`）：
+  - 设置页新增“客服按钮”：开关、WhatsApp 号码、Telegram 用户名、客服邮箱、WhatsApp 开场白、位置（右下 / 左下）。
+  - 校验规则：
+    - WhatsApp 只保留数字，8–15 位，带国家代码；
+    - Telegram 可以填 `@name` 或 `t.me/name`，保存为 name（5–32 位）；
+    - 邮箱用 `is_email`；
+    - 开场白最多 300 字；
+    - 无效的值不保存并提示；没有任何有效渠道时不能开启。
+  - **`GET /peptide/v1/site` 新增 `support`**，主题也可以调用 `peptide_core_get_support_contacts()`，结果相同：
+    ```json
+    {"enabled":true,"position":"right","channels":[
+      {"type":"whatsapp","label":"WhatsApp","value":"+15551234567","url":"https://wa.me/15551234567?text=Hi%20VialCove"},
+      {"type":"telegram","label":"Telegram","value":"@vialcove_support","url":"https://t.me/vialcove_support"},
+      {"type":"email","label":"Email","value":"support@example.com","url":"mailto:support@example.com"}]}
+    ```
+    - 渠道顺序固定；只返回有效渠道；
+    - `enabled=false` 时 `channels=[]`，前台不显示按钮。
+  - 按钮的样式和交互由主题负责（已在群里请 Codex 做）。
+  - 上线体检新增 `Support button`：没有配置时 warn。
+- **其他**：插件版本 0.5.0；中文翻译已补齐（28 条）；设置项新增 `require_batch_to_ship` 和 `support`，`sanitize` 在第一次保存时可以重复调用，结果不变。
+- **接口影响**（需要同步到 CONTRACT.md）：
+  1. `/site` 新增 `support`；
+  2. `/me/orders/{n}/batches` 新增 `fulfillment`；
+  3. 主题函数 `peptide_core_get_support_contacts()`。
+
+  都只是新增字段，原有字段不变。
+- **实际检查**：
+  - 新增 `tests/smoke-shipping-support.php` 30 项：
+    - 客服字段的清理和校验、重复清理结果不变、链接编码、/site 与主题函数一致；
+    - 缺批次不能发货；草稿可以保存，但草稿改成已发货时会拦截；
+    - 无批次商品可以发货；指定批次后可以发货；
+    - 部分发货出现在工作台，全部发货后从工作台消失；
+    - 顾客接口的包裹信息正确（UPS、单号、链接、时间）；
+    - 关闭检查后可以发货；体检项存在；功能关闭时接口返回 null；
+    - 清理后没有残留的发货记录、订单和顾客。
+  - 十套测试共 **188 项全部通过**。
+  - 用后台面板实际调用的接口 `POST /wc/v3/orders/{id}/fulfillments`、以中文管理员身份验证：
+    - 缺批次时返回 400，提示“发货前请先指定批次：Demo Peptide A。（可以在 VialCove 设置里关闭这项检查。）”；
+    - 指定批次后返回 201；
+    - 顾客视图生成了 USPS 追踪链接。
+
+    临时订单已删除。
+  - `wp peptide doctor`：Shipment tracking ok、Batch check ok、Support button warn（还没填联系方式）。
+- **未验证**：
+  - 没有在浏览器里点击订单页的“完成商品发货”面板（需要用户登录后台）；
+  - 发货邮件的实际发送（本地站点不发邮件，测试里关闭了邮件）；
+  - 前台客服按钮（等 Codex）。
+- **需要用户提供**：真实的 WhatsApp / Telegram / 客服邮箱（建议用业务号），以及承运商（美国仓发货一般用 USPS 或 UPS）。

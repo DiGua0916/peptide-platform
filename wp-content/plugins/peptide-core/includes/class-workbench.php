@@ -63,6 +63,53 @@ final class Workbench {
 	}
 
 	/**
+	 * 已付款待发货的订单：处理中，且还没有全部标记为已发货（SHIP-TRACK-01）。
+	 * 订单履约功能未开启时返回 null。
+	 *
+	 * @return array{count:int,items:array<int,array{id:int,number:string,date:?string,partial:bool}>}|null
+	 */
+	public static function orders_awaiting_shipment(): ?array {
+		if ( ! Shipping_Tracking::native_enabled() ) {
+			return null;
+		}
+		$ids   = wc_get_orders(
+			array(
+				'status'  => array( 'wc-processing' ),
+				'limit'   => -1,
+				'return'  => 'ids',
+				'orderby' => 'date',
+				'order'   => 'ASC',
+			)
+		);
+		$items = array();
+		$count = 0;
+		foreach ( $ids as $order_id ) {
+			$order = wc_get_order( $order_id );
+			if ( ! $order ) {
+				continue;
+			}
+			$status = (string) $order->get_meta( '_fulfillment_status' );
+			if ( 'fulfilled' === $status ) {
+				continue;
+			}
+			++$count;
+			if ( count( $items ) < self::LIST_LIMIT ) {
+				$created = $order->get_date_created();
+				$items[] = array(
+					'id'      => $order->get_id(),
+					'number'  => (string) $order->get_order_number(),
+					'date'    => $created ? $created->date_i18n( get_option( 'date_format' ) ) : null,
+					'partial' => 'partially_fulfilled' === $status,
+				);
+			}
+		}
+		return array(
+			'count' => $count,
+			'items' => $items,
+		);
+	}
+
+	/**
 	 * 缺少可用报告的公开批次：已发布、公开，且没有已发布的报告（包括标为“报告整理中”的批次）。
 	 *
 	 * @return array{count:int,items:array<int,array{id:int,batch_no:string,pending:bool}>}

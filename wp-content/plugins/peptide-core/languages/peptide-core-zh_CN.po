@@ -2,7 +2,7 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.4.0\n"
+"Project-Id-Version: Peptide Core 0.5.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -11,7 +11,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-17T09:36:18+00:00\n"
+"POT-Creation-Date: 2026-10-19T14:29:13+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -225,96 +225,114 @@ msgstr "订单"
 msgid "%s workbench"
 msgstr "%s 工作台"
 
-#: includes/admin/class-dashboard.php:65
+#: includes/admin/class-dashboard.php:66
 msgid "Orders waiting for batch assignment"
 msgstr "待指定批次的订单"
 
-#: includes/admin/class-dashboard.php:67
+#: includes/admin/class-dashboard.php:68
 msgid "All paid orders have their batches assigned."
 msgstr "所有已付款订单都已指定批次。"
 
 #. translators: %d: number of items without a batch
-#: includes/admin/class-dashboard.php:78
+#: includes/admin/class-dashboard.php:79
 #, php-format
 msgid "%d item without batch"
 msgid_plural "%d items without batch"
 msgstr[0] "%d 件商品未指定批次"
 
-#: includes/admin/class-dashboard.php:86
+#: includes/admin/class-dashboard.php:88
+#: includes/admin/class-dashboard.php:91
+msgid "Paid orders waiting to ship"
+msgstr "已付款待发货的订单"
+
+#: includes/admin/class-dashboard.php:89
+#: includes/admin/class-settings-page.php:130
+msgid "Shipment tracking is off. Run `wp peptide shipping enable` to turn on WooCommerce order fulfillments."
+msgstr "物流追踪未开启。运行 `wp peptide shipping enable` 开启 WooCommerce 订单发货记录功能。"
+
+#: includes/admin/class-dashboard.php:93
+msgid "All paid orders have been shipped."
+msgstr "所有已付款订单都已发货。"
+
+#: includes/admin/class-dashboard.php:103
+msgid "partially shipped"
+msgstr "部分已发货"
+
+#: includes/admin/class-dashboard.php:112
 msgid "Public batches without a published report"
 msgstr "缺少已发布报告的公开批次"
 
-#: includes/admin/class-dashboard.php:88
+#: includes/admin/class-dashboard.php:114
 msgid "Every public batch has a published report."
 msgstr "所有公开批次都有已发布的报告。"
 
-#: includes/admin/class-dashboard.php:96
+#: includes/admin/class-dashboard.php:122
 msgid "marked \"report in preparation\""
 msgstr "已标记“报告整理中”"
 
-#: includes/admin/class-dashboard.php:104
+#: includes/admin/class-dashboard.php:130
 msgid "Draft reports"
 msgstr "草稿报告"
 
-#: includes/admin/class-dashboard.php:109
+#: includes/admin/class-dashboard.php:135
 msgid "Review and publish"
 msgstr "去审核并发布"
 
-#: includes/admin/class-dashboard.php:112
+#: includes/admin/class-dashboard.php:138
 msgid "No draft reports."
 msgstr "没有草稿报告。"
 
-#: includes/admin/class-dashboard.php:116
+#: includes/admin/class-dashboard.php:142
 msgid "Demo data"
 msgstr "演示数据"
 
-#: includes/admin/class-dashboard.php:119
+#: includes/admin/class-dashboard.php:145
 msgid "Demo mode is ON: the storefront shows the demo notice."
 msgstr "演示模式已开启：前台会显示演示提示。"
 
-#: includes/admin/class-dashboard.php:120
+#: includes/admin/class-dashboard.php:146
 msgid "Demo mode is off."
 msgstr "演示模式已关闭。"
 
 #. translators: %d: number of demo records
-#: includes/admin/class-dashboard.php:123
+#: includes/admin/class-dashboard.php:149
 #, php-format
 msgid "%d demo record exists."
 msgid_plural "%d demo records exist."
 msgstr[0] "当前有 %d 条演示数据。"
 
-#: includes/admin/class-dashboard.php:125
+#: includes/admin/class-dashboard.php:151
 msgid "Remove them before going live (wp peptide demo purge)."
 msgstr "正式上线前请删除（wp peptide demo purge）。"
 
-#: includes/admin/class-dashboard.php:129
+#: includes/admin/class-dashboard.php:155
 msgid "Test payment is enabled: orders are placed without taking any money."
 msgstr "测试付款已开启：下单不会收取任何费用。"
 
-#: includes/admin/class-dashboard.php:130
+#: includes/admin/class-dashboard.php:156
 msgid "Disable it before going live (wp peptide demo commerce --disable)."
 msgstr "正式上线前请关闭（wp peptide demo commerce --disable）。"
 
-#: includes/admin/class-dashboard.php:136
+#: includes/admin/class-dashboard.php:162
 #: includes/class-post-types.php:41
 msgid "Add batch"
 msgstr "添加批次"
 
-#: includes/admin/class-dashboard.php:137
+#: includes/admin/class-dashboard.php:163
 #: includes/class-post-types.php:58
 msgid "Add test report"
 msgstr "添加检测报告"
 
-#: includes/admin/class-dashboard.php:138
+#: includes/admin/class-dashboard.php:164
 msgid "All batches"
 msgstr "全部批次"
 
-#: includes/admin/class-dashboard.php:139
+#: includes/admin/class-dashboard.php:165
 msgid "All orders"
 msgstr "全部订单"
 
 #. translators: %d: total count
-#: includes/admin/class-dashboard.php:175
+#: includes/admin/class-dashboard.php:201
 #, php-format
 msgid "View all %d"
 msgstr "查看全部 %d 条"
@@ -567,73 +585,145 @@ msgid "A report needs a batch and a file before it can be published. It was kept
 msgstr "报告必须先选择批次并上传文件才能发布，已保持为草稿。"
 
 #. translators: %s: store brand name
-#: includes/admin/class-settings-page.php:29
+#: includes/admin/class-settings-page.php:31
 #, php-format
 msgid "%s settings"
 msgstr "%s 设置"
 
-#: includes/admin/class-settings-page.php:59
+#: includes/admin/class-settings-page.php:62
 msgid "Brand"
 msgstr "品牌"
 
-#: includes/admin/class-settings-page.php:62
+#: includes/admin/class-settings-page.php:65
 msgid "Brand name"
 msgstr "品牌名"
 
-#: includes/admin/class-settings-page.php:65
+#: includes/admin/class-settings-page.php:68
 msgid "Used in the admin area (workbench, this page). Storefront branding is handled by the theme."
 msgstr "用于后台（工作台、本页面）。前台的品牌展示由主题负责。"
 
-#: includes/admin/class-settings-page.php:70
 #: includes/admin/class-settings-page.php:73
+#: includes/admin/class-settings-page.php:76
 msgid "Demo mode"
 msgstr "演示模式"
 
-#: includes/admin/class-settings-page.php:75
+#: includes/admin/class-settings-page.php:78
 msgid "The site contains demonstration data; the storefront shows the demo notice."
 msgstr "网站中有演示数据；前台会显示演示提示。"
 
-#: includes/admin/class-settings-page.php:76
+#: includes/admin/class-settings-page.php:79
 msgid "Turn this off only after all demo records have been removed and real data is in place."
 msgstr "请在删除全部演示数据、换上真实数据之后再关闭。"
 
-#: includes/admin/class-settings-page.php:80
+#: includes/admin/class-settings-page.php:83
 msgid "Demo notice"
 msgstr "演示提示"
 
-#: includes/admin/class-settings-page.php:83
+#: includes/admin/class-settings-page.php:86
 msgid "Shown to visitors while demo mode is on. English is recommended for overseas visitors."
 msgstr "演示模式开启时向访客显示。面向海外访客，建议使用英文。"
 
-#: includes/admin/class-settings-page.php:88
 #: includes/admin/class-settings-page.php:91
+#: includes/admin/class-settings-page.php:94
 msgid "Use statement"
 msgstr "用途声明"
 
-#: includes/admin/class-settings-page.php:94
+#: includes/admin/class-settings-page.php:97
 msgid "A statement about the intended use of your products, shown on the storefront. Leave empty to hide it. Basic HTML (links, bold) is allowed. The content is your decision; make sure it is accurate and compliant."
 msgstr "说明产品用途的声明，显示在网站前台；留空则不显示。可使用简单 HTML（链接、加粗）。内容由你决定，请确保准确并符合法规。"
 
-#: includes/admin/class-settings-page.php:99
+#: includes/admin/class-settings-page.php:102
 #: includes/class-checkout-ack.php:70
 msgid "Checkout confirmation"
 msgstr "结账确认"
 
-#: includes/admin/class-settings-page.php:102
+#: includes/admin/class-settings-page.php:105
 msgid "Require confirmation"
 msgstr "要求确认"
 
-#: includes/admin/class-settings-page.php:104
+#: includes/admin/class-settings-page.php:107
 msgid "Customers must tick a checkbox before placing an order."
 msgstr "顾客下单前必须勾选一个确认框。"
 
-#: includes/admin/class-settings-page.php:108
+#: includes/admin/class-settings-page.php:111
 msgid "Checkbox text"
 msgstr "确认框文案"
 
-#: includes/admin/class-settings-page.php:111
+#: includes/admin/class-settings-page.php:114
 msgid "Plain text only. The exact text and the time of acceptance are saved on each order. Required when the confirmation is enabled."
 msgstr "只能填纯文本。每个订单都会保存顾客勾选时的原文和勾选时间。开启确认时必须填写。"
+
+#: includes/admin/class-settings-page.php:119
+msgid "Shipping"
+msgstr "发货"
+
+#: includes/admin/class-settings-page.php:122
+msgid "Batch check"
+msgstr "批次检查"
+
+#: includes/admin/class-settings-page.php:124
+msgid "Do not allow marking items as shipped until a batch is assigned (only for products that have batches)."
+msgstr "商品行指定批次之前，不允许标记为已发货（只针对有批次记录的商品）。"
+
+#: includes/admin/class-settings-page.php:129
+msgid "Add tracking numbers on the order page with the \"Fulfill items\" button. The carrier is detected automatically and the customer receives an email with the tracking link."
+msgstr "在订单页点“完成商品发货”填写物流单号。系统会自动识别承运商，并给顾客发送带追踪链接的邮件。"
+
+#: includes/admin/class-settings-page.php:138
+msgid "Customer support button"
+msgstr "客服按钮"
+
+#: includes/admin/class-settings-page.php:139
+msgid "A floating contact button on the storefront. Only the contact methods you fill in are shown. They are public: use business accounts, not personal ones."
+msgstr "前台的浮动联系按钮，只显示你填写了的联系方式。这些信息是公开的，请使用业务账号，不要用个人账号。"
+
+#: includes/admin/class-settings-page.php:142
+msgid "Show button"
+msgstr "显示按钮"
+
+#: includes/admin/class-settings-page.php:143
+msgid "Show the support button on the storefront."
+msgstr "在前台显示客服按钮。"
+
+#: includes/admin/class-settings-page.php:146
+msgid "WhatsApp number"
+msgstr "WhatsApp 号码"
+
+#: includes/admin/class-settings-page.php:149
+msgid "International format with country code. Leave empty to hide."
+msgstr "国际格式，带国家代码。留空则不显示。"
+
+#: includes/admin/class-settings-page.php:153
+msgid "Telegram username"
+msgstr "Telegram 用户名"
+
+#: includes/admin/class-settings-page.php:156
+msgid "A username, not a phone number. Leave empty to hide."
+msgstr "填用户名，不是电话号码。留空则不显示。"
+
+#: includes/admin/class-settings-page.php:160
+msgid "Support email"
+msgstr "客服邮箱"
+
+#: includes/admin/class-settings-page.php:164
+msgid "WhatsApp greeting"
+msgstr "WhatsApp 开场白"
+
+#: includes/admin/class-settings-page.php:167
+msgid "Optional text pre-filled when a customer opens WhatsApp. English is recommended."
+msgstr "可选。顾客打开 WhatsApp 时自动填好的文字，建议用英文。"
+
+#: includes/admin/class-settings-page.php:171
+msgid "Position"
+msgstr "位置"
+
+#: includes/admin/class-settings-page.php:174
+msgid "Bottom right"
+msgstr "右下角"
+
+#: includes/admin/class-settings-page.php:175
+msgid "Bottom left"
+msgstr "左下角"
 
 #: includes/api/class-errors.php:20
 msgid "Invalid request parameters."
@@ -716,13 +806,13 @@ msgid "Batch assignment updated:"
 msgstr "批次分配已更新："
 
 #. translators: %s: batch number
-#: includes/class-order-batches.php:377
-#: includes/class-order-batches.php:384
+#: includes/class-order-batches.php:379
+#: includes/class-order-batches.php:386
 #, php-format
 msgid "Batch: %s"
 msgstr "批次：%s"
 
-#: includes/class-plugin.php:75
+#: includes/class-plugin.php:77
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr "Peptide Core 需要先安装并启用 WooCommerce。"
 
@@ -784,6 +874,28 @@ msgstr "文件保存失败。"
 msgid "The report file was not found."
 msgstr "找不到报告文件。"
 
-#: includes/class-settings.php:99
+#: includes/class-settings.php:107
 msgid "The checkout confirmation was not enabled because its text is empty."
 msgstr "确认框文案为空，结账确认未开启。"
+
+#. translators: %s: comma-separated product names
+#: includes/class-shipping-tracking.php:91
+#, php-format
+msgid "Assign a batch before shipping: %s. (You can turn this check off in the store settings.)"
+msgstr "发货前请先指定批次：%s。（可以在 VialCove 设置里关闭这项检查。）"
+
+#: includes/class-support-contacts.php:76
+msgid "The WhatsApp number was not saved: use the international format with country code, for example +1 555 123 4567."
+msgstr "WhatsApp 号码没有保存：请使用带国家代码的国际格式，例如 +1 555 123 4567。"
+
+#: includes/class-support-contacts.php:85
+msgid "The Telegram username was not saved: use 5–32 letters, digits or underscores, for example @vialcove_support."
+msgstr "Telegram 用户名没有保存：请使用 5–32 位字母、数字或下划线，例如 @vialcove_support。"
+
+#: includes/class-support-contacts.php:94
+msgid "The support email address was not saved because it is not valid."
+msgstr "客服邮箱格式不正确，没有保存。"
+
+#: includes/class-support-contacts.php:108
+msgid "The support button was not enabled because no valid contact method was entered."
+msgstr "没有填写有效的联系方式，所以客服按钮没有开启。"
