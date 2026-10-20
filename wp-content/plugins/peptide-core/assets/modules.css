@@ -815,7 +815,8 @@ picture.vc-img,
 }
 
 /* 空白 */
-.vc-m--spacer {
+/* 空白积木块只有自己的高度，电脑和手机都不加默认上下留白。 */
+.vc-m.vc-m--spacer {
 	padding: 0;
 }
 

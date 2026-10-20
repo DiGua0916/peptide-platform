@@ -30,7 +30,13 @@
 
 	function titleOf( m ) {
 		var def = defOf( m );
-		var custom = m.attrs && m.attrs.settings && ( m.attrs.settings.title || m.attrs.settings.leftTitle );
+		var s = ( m.attrs && m.attrs.settings ) || {};
+		var custom = s.title || s.leftTitle;
+		// 空白积木块显示高度（电脑 / 手机），不用点开也能看出间距。
+		if ( m.block === 'vialcove/spacer' && s.heightPx && typeof s.heightPx === 'object' ) {
+			var mob = s.heightPx.mobile === null || s.heightPx.mobile === undefined ? s.heightPx.desktop : s.heightPx.mobile;
+			custom = s.heightPx.desktop + ' / ' + mob + 'px';
+		}
 		return ( def ? def.title : m.block ) + ( custom ? ' · ' + custom : '' );
 	}
 

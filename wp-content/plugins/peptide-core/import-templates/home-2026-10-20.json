@@ -1,5 +1,5 @@
 {
-	"description": "VialCove homepage as built in the theme on 2026-10-20 (front-page.php, home-hero.php, brand-network.php), converted to design blocks. Text and links copied as-is. Images are referenced by asset keys that the theme registers with the peptide_core_layout_assets filter. The brand story is split into a section heading, one Image & text block per row and a note block (user request, 2026-10-20).",
+	"description": "VialCove homepage as built in the theme on 2026-10-20 (front-page.php, home-hero.php, brand-network.php), converted to design blocks. Text and links copied as-is. Images are referenced by asset keys that the theme registers with the peptide_core_layout_assets filter. The brand story is split into a section heading, one Image & text block per row and a note block (user request, 2026-10-20). Spacing between blocks uses Spacer blocks like YY (each block has 0 own padding, except the report band).",
 	"document": "home",
 	"assets": [
 		"home-packaging",
@@ -23,6 +23,10 @@
 					"height": "auto",
 					"fullWidth": false,
 					"paddingTopPx": {
+						"desktop": 0,
+						"mobile": 0
+					},
+					"paddingBottomPx": {
 						"desktop": 0,
 						"mobile": 0
 					}
@@ -214,6 +218,19 @@
 			}
 		},
 		{
+			"block": "vialcove/spacer",
+			"attrs": {
+				"moduleId": "gap-01",
+				"settings": {
+					"heightPx": {
+						"desktop": 64,
+						"mobile": 40
+					},
+					"color": ""
+				}
+			}
+		},
+		{
 			"block": "vialcove/product-collection",
 			"attrs": {
 				"moduleId": "collection",
@@ -234,7 +251,28 @@
 						"mobile": 2
 					},
 					"reportPreview": true,
-					"emptyText": "The collection is being prepared. Please check back soon."
+					"emptyText": "The collection is being prepared. Please check back soon.",
+					"paddingTopPx": {
+						"desktop": 0,
+						"mobile": 0
+					},
+					"paddingBottomPx": {
+						"desktop": 0,
+						"mobile": 0
+					}
+				}
+			}
+		},
+		{
+			"block": "vialcove/spacer",
+			"attrs": {
+				"moduleId": "gap-02",
+				"settings": {
+					"heightPx": {
+						"desktop": 96,
+						"mobile": 56
+					},
+					"color": ""
 				}
 			}
 		},
@@ -249,9 +287,26 @@
 					"description": "Research in Israel. Manufacturing in China. Warehousing in the U.S. Three distinct roles at the heart of our brand vision.",
 					"align": "center",
 					"paddingBottomPx": {
-						"desktop": 16,
-						"mobile": 8
+						"desktop": 0,
+						"mobile": 0
+					},
+					"paddingTopPx": {
+						"desktop": 0,
+						"mobile": 0
 					}
+				}
+			}
+		},
+		{
+			"block": "vialcove/spacer",
+			"attrs": {
+				"moduleId": "gap-03",
+				"settings": {
+					"heightPx": {
+						"desktop": 40,
+						"mobile": 24
+					},
+					"color": ""
 				}
 			}
 		},
@@ -279,13 +334,26 @@
 					"textAlign": "left",
 					"animation": true,
 					"paddingTopPx": {
-						"desktop": 24,
-						"mobile": 16
+						"desktop": 0,
+						"mobile": 0
 					},
 					"paddingBottomPx": {
-						"desktop": 24,
-						"mobile": 16
+						"desktop": 0,
+						"mobile": 0
 					}
+				}
+			}
+		},
+		{
+			"block": "vialcove/spacer",
+			"attrs": {
+				"moduleId": "gap-04",
+				"settings": {
+					"heightPx": {
+						"desktop": 56,
+						"mobile": 32
+					},
+					"color": ""
 				}
 			}
 		},
@@ -313,13 +381,26 @@
 					"textAlign": "left",
 					"animation": true,
 					"paddingTopPx": {
-						"desktop": 24,
-						"mobile": 16
+						"desktop": 0,
+						"mobile": 0
 					},
 					"paddingBottomPx": {
-						"desktop": 24,
-						"mobile": 16
+						"desktop": 0,
+						"mobile": 0
 					}
+				}
+			}
+		},
+		{
+			"block": "vialcove/spacer",
+			"attrs": {
+				"moduleId": "gap-05",
+				"settings": {
+					"heightPx": {
+						"desktop": 56,
+						"mobile": 32
+					},
+					"color": ""
 				}
 			}
 		},
@@ -347,13 +428,26 @@
 					"textAlign": "left",
 					"animation": true,
 					"paddingTopPx": {
+						"desktop": 0,
+						"mobile": 0
+					},
+					"paddingBottomPx": {
+						"desktop": 0,
+						"mobile": 0
+					}
+				}
+			}
+		},
+		{
+			"block": "vialcove/spacer",
+			"attrs": {
+				"moduleId": "gap-06",
+				"settings": {
+					"heightPx": {
 						"desktop": 24,
 						"mobile": 16
 					},
-					"paddingBottomPx": {
-						"desktop": 24,
-						"mobile": 16
-					}
+					"color": ""
 				}
 			}
 		},
@@ -370,9 +464,26 @@
 						"mobile": 0
 					},
 					"paddingTopPx": {
-						"desktop": 8,
-						"mobile": 8
+						"desktop": 0,
+						"mobile": 0
+					},
+					"paddingBottomPx": {
+						"desktop": 0,
+						"mobile": 0
 					}
+				}
+			}
+		},
+		{
+			"block": "vialcove/spacer",
+			"attrs": {
+				"moduleId": "gap-07",
+				"settings": {
+					"heightPx": {
+						"desktop": 96,
+						"mobile": 56
+					},
+					"color": ""
 				}
 			}
 		},
@@ -392,7 +503,15 @@
 					},
 					"cardEyebrow": "BATCH DOCUMENTATION",
 					"cardTitle": "Trace the details.",
-					"cardNote": "Find a batch. View its record. Read the report."
+					"cardNote": "Find a batch. View its record. Read the report.",
+					"paddingTopPx": {
+						"desktop": 80,
+						"mobile": 48
+					},
+					"paddingBottomPx": {
+						"desktop": 80,
+						"mobile": 48
+					}
 				},
 				"items": [
 					{
@@ -420,6 +539,19 @@
 			}
 		},
 		{
+			"block": "vialcove/spacer",
+			"attrs": {
+				"moduleId": "gap-08",
+				"settings": {
+					"heightPx": {
+						"desktop": 96,
+						"mobile": 56
+					},
+					"color": ""
+				}
+			}
+		},
+		{
 			"block": "vialcove/faq",
 			"attrs": {
 				"moduleId": "questions",
@@ -434,7 +566,15 @@
 						"target": "_self"
 					},
 					"layout": "side",
-					"openFirst": true
+					"openFirst": true,
+					"paddingTopPx": {
+						"desktop": 0,
+						"mobile": 0
+					},
+					"paddingBottomPx": {
+						"desktop": 0,
+						"mobile": 0
+					}
 				},
 				"items": [
 					{
@@ -469,6 +609,19 @@
 			}
 		},
 		{
+			"block": "vialcove/spacer",
+			"attrs": {
+				"moduleId": "gap-09",
+				"settings": {
+					"heightPx": {
+						"desktop": 96,
+						"mobile": 56
+					},
+					"color": ""
+				}
+			}
+		},
+		{
 			"block": "vialcove/cta",
 			"attrs": {
 				"moduleId": "closing-cta",
@@ -480,7 +633,28 @@
 						"href": "{url:shop}",
 						"target": "_self"
 					},
-					"align": "center"
+					"align": "center",
+					"paddingTopPx": {
+						"desktop": 0,
+						"mobile": 0
+					},
+					"paddingBottomPx": {
+						"desktop": 0,
+						"mobile": 0
+					}
+				}
+			}
+		},
+		{
+			"block": "vialcove/spacer",
+			"attrs": {
+				"moduleId": "gap-10",
+				"settings": {
+					"heightPx": {
+						"desktop": 96,
+						"mobile": 56
+					},
+					"color": ""
 				}
 			}
 		}
