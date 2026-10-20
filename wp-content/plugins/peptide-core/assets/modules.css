@@ -1090,6 +1090,243 @@ picture.vc-img,
 	transition: opacity 0.6s ease, transform 0.6s ease;
 }
 
+/* 小标题 + 两行标题（左对齐）、文字链接 */
+.vc-m__head--left {
+	text-align: left;
+	margin-left: 0;
+	max-width: none;
+}
+
+.vc-text-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin-top: 12px;
+	color: inherit;
+	font-weight: 600;
+	text-decoration: none;
+	border-bottom: 1px solid currentColor;
+}
+
+/* 轮播：图文并排、按钮组、短信息、浮动卡片、图片说明 */
+.vc-slide__figure {
+	position: relative;
+	margin: 0;
+}
+
+.vc-slide--split {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+	gap: clamp(20px, 4vw, 64px);
+	align-items: center;
+	padding: clamp(20px, 4vw, 56px);
+	color: var(--vc-fg, inherit);
+}
+
+.vc-slide--split .vc-slide__text {
+	position: static;
+	padding: 0;
+	color: inherit;
+}
+
+.vc-slide__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 16px 24px;
+	margin-top: 8px;
+}
+
+.vc-slide__actions .vc-text-link {
+	margin-top: 0;
+}
+
+.vc-slide__facts {
+	list-style: none;
+	margin: 16px 0 0;
+	padding: 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 24px;
+	font-size: 13px;
+	opacity: 0.85;
+}
+
+.vc-slide__cards {
+	position: absolute;
+	right: 12px;
+	bottom: 12px;
+	display: grid;
+	gap: 8px;
+	max-width: 260px;
+}
+
+.vc-slide__card {
+	display: grid;
+	gap: 2px;
+	padding: 10px 14px;
+	background: rgba(255, 255, 255, 0.94);
+	color: #1d2327;
+	border-radius: 10px;
+	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+	text-decoration: none;
+	font-size: 13px;
+}
+
+.vc-slide__card-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	opacity: 0.7;
+}
+
+.vc-slide__card-action {
+	font-size: 12px;
+	opacity: 0.75;
+}
+
+.vc-slide__number {
+	position: absolute;
+	top: 12px;
+	left: 12px;
+	padding: 2px 8px;
+	background: rgba(0, 0, 0, 0.5);
+	color: #fff;
+	border-radius: 12px;
+	font-size: 12px;
+}
+
+.vc-slide__caption {
+	padding-top: 8px;
+	font-size: 12px;
+	opacity: 0.75;
+}
+
+/* 商品区 */
+.vc-collection .vc-m__head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 12px 32px;
+}
+
+.vc-collection .vc-m__head .vc-m__title {
+	flex: 1 1 100%;
+}
+
+.vc-products.home-product-grid {
+	display: grid;
+	grid-template-columns: repeat(var(--vc-cols, 4), minmax(0, 1fr));
+	gap: var(--vc-gap, 24px);
+}
+
+.vc-products--no-report .product-report-preview {
+	display: none;
+}
+
+.vc-price {
+	margin: 4px 0 0;
+	font-weight: 600;
+}
+
+.vc-empty {
+	padding: 24px;
+	text-align: center;
+	opacity: 0.7;
+}
+
+/* 批次报告介绍 */
+.vc-m--report-feature {
+	background: var(--vc-m-bg, #0f2a3d);
+	color: var(--vc-fg, #fff);
+}
+
+.vc-report-feature__inner {
+	display: grid;
+	grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+	gap: clamp(24px, 5vw, 72px);
+	align-items: center;
+}
+
+.vc-report-feature .vc-btn {
+	background: var(--vc-btn-bg, #fff);
+	color: var(--vc-btn-fg, #0f2a3d);
+	margin-top: 16px;
+}
+
+.vc-report-card {
+	background: #fff;
+	color: #1d2327;
+	border-radius: 14px;
+	padding: 22px;
+	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+}
+
+.vc-report-card__top {
+	display: flex;
+	justify-content: flex-end;
+	margin-bottom: 10px;
+	color: #0f766e;
+}
+
+.vc-report-card__title {
+	margin: 0 0 12px;
+	font-size: 20px;
+}
+
+.vc-report-card__row {
+	display: flex;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 10px 0;
+	border-top: 1px solid #e5e7eb;
+	font-size: 14px;
+}
+
+.vc-report-card__row span {
+	opacity: 0.65;
+}
+
+.vc-report-card__note {
+	margin: 12px 0 0;
+	font-size: 13px;
+	opacity: 0.7;
+}
+
+/* 结尾引导 */
+.vc-cta {
+	text-align: center;
+	background: var(--vc-m-bg, transparent);
+	color: var(--vc-fg, inherit);
+}
+
+.vc-cta .vc-btn {
+	margin-top: 16px;
+}
+
+/* FAQ：标题在左、问答在右 */
+.vc-faq-wrap--side {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+	gap: clamp(24px, 5vw, 72px);
+	align-items: start;
+}
+
+.vc-faq-wrap--side .vc-faq {
+	max-width: none;
+	margin: 0;
+}
+
+.vc-faq-wrap--stacked .vc-m__head {
+	text-align: center;
+	margin-left: auto;
+	margin-right: auto;
+}
+
 /* 手机 */
 @media (max-width: 767px) {
 	.vc-m {
@@ -1153,6 +1390,11 @@ picture.vc-img,
 	}
 
 	.vc-promo { grid-template-columns: 1fr; }
+	.vc-slide--split,
+	.vc-report-feature__inner,
+	.vc-faq-wrap--side { grid-template-columns: 1fr; }
+	.vc-slide__cards { position: static; max-width: none; margin-top: 10px; }
+	.vc-products.home-product-grid { grid-template-columns: repeat(var(--vc-cols-m, 2), minmax(0, 1fr)); }
 	.vc-timeline--vertical .vc-timeline__item { grid-template-columns: 1fr; }
 
 	.vc-hotspot {

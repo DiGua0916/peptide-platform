@@ -94,6 +94,43 @@ final class Fallback {
 		return $out . '</header>';
 	}
 
+	/**
+	 * 小标题 + 标题（第二行强调）+ 描述，例如现有首页的 “EXPLORE VIALCOVE / Explore our products.”。
+	 */
+	private static function heading_accent( array $s, string $tag = 'h2', string $extra = '' ): string {
+		$eyebrow = (string) ( $s['eyebrow'] ?? '' );
+		$title   = (string) ( $s['title'] ?? '' );
+		$accent  = (string) ( $s['titleAccent'] ?? '' );
+		$desc    = (string) ( $s['description'] ?? '' );
+		if ( '' === $eyebrow . $title . $accent . $desc . $extra ) {
+			return '';
+		}
+		$out = '<header class="vc-m__head vc-m__head--left">';
+		if ( '' !== $eyebrow ) {
+			$out .= '<p class="vc-eyebrow">' . esc_html( $eyebrow ) . '</p>';
+		}
+		if ( '' !== $title || '' !== $accent ) {
+			$out .= sprintf( '<%1$s class="vc-m__title">%2$s%3$s</%1$s>', $tag, esc_html( $title ), '' !== $accent ? ( '' !== $title ? '<br>' : '' ) . '<em>' . esc_html( $accent ) . '</em>' : '' );
+		}
+		if ( '' !== $desc ) {
+			$out .= '<p class="vc-m__desc">' . nl2br( esc_html( $desc ) ) . '</p>';
+		}
+		return $out . $extra . '</header>';
+	}
+
+	/** 文字链接（例如 “View all peptides →”）。 */
+	private static function text_link( array $link ): string {
+		if ( '' === (string) ( $link['label'] ?? '' ) || '' === (string) ( $link['href'] ?? '' ) ) {
+			return '';
+		}
+		return sprintf(
+			'<a class="vc-text-link" href="%1$s"%2$s>%3$s <span aria-hidden="true">→</span></a>',
+			esc_url( (string) $link['href'] ),
+			'_blank' === ( $link['target'] ?? '' ) ? ' target="_blank" rel="noopener"' : '',
+			esc_html( (string) $link['label'] )
+		);
+	}
+
 	private static function placeholder( string $label = '' ): string {
 		return self::staff() ? '<div class="vc-ph" role="img" aria-label="' . esc_attr__( 'No image selected', 'peptide-core' ) . '"><span>' . esc_html( '' !== $label ? $label : __( 'Choose an image', 'peptide-core' ) ) . '</span></div>' : '';
 	}
@@ -260,6 +297,7 @@ final class Fallback {
 			$s['arrows'] ? '1' : '0',
 			$height
 		);
+		$count = count( $items );
 		foreach ( $items as $i => $it ) {
 			$overlay = self::style(
 				array(
@@ -269,20 +307,63 @@ final class Fallback {
 					'--vc-title'     => (int) $s['titleSizePx'] . 'px',
 				)
 			);
-			$out .= sprintf( '<div class="%1$s"%2$s>', esc_attr( self::item_class( $it, 'vc-slide' . ( 0 === $i ? ' is-active' : '' ) ) ), $overlay );
-			$out .= self::picture( $it['media'], 'vc-slide__media' );
-			$out .= '<div class="vc-slide__overlay"></div><div class="vc-slide__text ' . esc_attr( self::pos_class( $it['position'] ) ) . '">';
+			$label = sprintf( '%1$d / %2$d%3$s', $i + 1, $count, '' !== $it['name'] ? ': ' . $it['name'] : '' );
+			$out  .= sprintf(
+				'<div class="%1$s" role="group" aria-roledescription="slide" aria-label="%2$s"%3$s>',
+				esc_attr( self::item_class( $it, 'vc-slide vc-slide--' . $it['layout'] . ( 0 === $i ? ' is-active' : '' ) ) ),
+				esc_attr( $label ),
+				$overlay
+			);
+
+			// 文字：小标题、两行标题、说明、按钮 + 文字链接、短信息。
+			$text = '';
 			if ( '' !== $it['eyebrow'] ) {
-				$out .= '<p class="vc-eyebrow">' . esc_html( $it['eyebrow'] ) . '</p>';
+				$text .= '<p class="vc-eyebrow">' . esc_html( $it['eyebrow'] ) . '</p>';
 			}
-			if ( '' !== $it['title'] ) {
-				$out .= '<h2 class="vc-slide__title">' . esc_html( $it['title'] ) . '</h2>';
+			if ( '' !== $it['title'] || '' !== $it['titleAccent'] ) {
+				// 第一张轮播的标题作为页面 H1（与现有首页一致），其余用 H2。
+				$tag   = 0 === $i ? 'h1' : 'h2';
+				$text .= sprintf( '<%1$s class="vc-slide__title">%2$s%3$s</%1$s>', $tag, esc_html( $it['title'] ), '' !== $it['titleAccent'] ? ( '' !== $it['title'] ? '<br>' : '' ) . '<em>' . esc_html( $it['titleAccent'] ) . '</em>' : '' );
 			}
 			if ( '' !== $it['description'] ) {
-				$out .= '<p class="vc-slide__desc">' . nl2br( esc_html( $it['description'] ) ) . '</p>';
+				$text .= '<p class="vc-slide__desc">' . nl2br( esc_html( $it['description'] ) ) . '</p>';
 			}
-			$out .= self::button( $it['button'], $it );
-			$out .= '</div></div>';
+			$actions = self::button( $it['button'], $it ) . self::text_link( $it['secondaryLink'] );
+			if ( '' !== $actions ) {
+				$text .= '<div class="vc-slide__actions">' . $actions . '</div>';
+			}
+			if ( $it['facts'] ) {
+				$text .= '<ul class="vc-slide__facts">';
+				foreach ( $it['facts'] as $fact ) {
+					$text .= '<li><strong>' . esc_html( $fact['settings']['label'] ) . '</strong> ' . esc_html( $fact['settings']['text'] ) . '</li>';
+				}
+				$text .= '</ul>';
+			}
+
+			// 图片：浮动卡片、编号、说明。
+			$figure = self::picture( $it['media'], 'vc-slide__media' );
+			if ( $it['highlights'] ) {
+				$figure .= '<div class="vc-slide__cards">';
+				foreach ( $it['highlights'] as $card ) {
+					$c     = $card['settings'];
+					$inner = '<span class="vc-slide__card-label">' . self::icon( (string) $c['icon'], 16 ) . esc_html( $c['label'] ) . '</span><strong>' . esc_html( $c['title'] ) . '</strong>' . ( '' !== $c['action'] ? '<span class="vc-slide__card-action">' . esc_html( $c['action'] ) . ' →</span>' : '' );
+					$figure .= self::maybe_link( $inner, (string) $c['href'], 'vc-slide__card' );
+				}
+				$figure .= '</div>';
+			}
+			if ( '' !== $it['sceneNumber'] ) {
+				$figure .= '<span class="vc-slide__number">' . esc_html( $it['sceneNumber'] ) . '</span>';
+			}
+			if ( '' !== $it['captionTitle'] || '' !== $it['captionNote'] ) {
+				$figure .= '<figcaption class="vc-slide__caption"><strong>' . esc_html( $it['captionTitle'] ) . '</strong> ' . esc_html( $it['captionNote'] ) . '</figcaption>';
+			}
+
+			if ( 'split' === $it['layout'] ) {
+				$out .= '<div class="vc-slide__text">' . $text . '</div><figure class="vc-slide__figure">' . $figure . '</figure>';
+			} else {
+				$out .= '<figure class="vc-slide__figure">' . $figure . '</figure><div class="vc-slide__overlay"></div><div class="vc-slide__text ' . esc_attr( self::pos_class( $it['position'] ) ) . '">' . $text . '</div>';
+			}
+			$out .= '</div>';
 		}
 		if ( $s['pagination'] && count( $items ) > 1 ) {
 			$out .= '<div class="vc-carousel__dots" aria-hidden="true">' . str_repeat( '<span></span>', count( $items ) ) . '</div>';
@@ -758,7 +839,8 @@ final class Fallback {
 	}
 
 	private static function render_faq( array $s, array $items ): string {
-		$out = '<div class="vc-m__inner">' . self::heading( $s ) . '<div class="vc-faq"' . self::style(
+		$head = self::heading_accent( $s, 'h2', self::text_link( $s['link'] ) );
+		$out  = '<div class="vc-m__inner vc-faq-wrap vc-faq-wrap--' . esc_attr( $s['layout'] ) . '">' . $head . '<div class="vc-faq"' . self::style(
 			array(
 				'--vc-answer-bg' => $s['answerBgColor'],
 				'--vc-answer-fg' => $s['answerTextColor'],
@@ -884,6 +966,82 @@ final class Fallback {
 			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-logos__item' ) ) . '">' . self::maybe_link( self::img( $it['image'], 'vc-logos__img', __( 'Logo', 'peptide-core' ) ), $it['href'] ) . '</div>';
 		}
 		return $out . '</div></div>';
+	}
+
+	private static function render_product_collection( array $s, array $items, array $module ): string {
+		$products = Products::for_module( $module );
+		$head     = self::heading_accent( $s, 'h2', self::text_link( $s['link'] ) );
+		$grid     = '';
+		if ( ! $products ) {
+			$grid = '' !== $s['emptyText'] ? '<p class="vc-empty">' . esc_html( $s['emptyText'] ) . '</p>' : '';
+		} elseif ( function_exists( 'vc_product_card' ) ) {
+			// 主题提供商品卡片时直接使用，外观与现有首页一致（价格、最低规格、报告悬停都由主题和 WooCommerce 决定）。
+			ob_start();
+			foreach ( $products as $product ) {
+				vc_product_card( $product );
+			}
+			$grid = '<div class="home-product-grid vc-products' . ( $s['reportPreview'] ? '' : ' vc-products--no-report' ) . '"' . self::cols_style( $s ) . '>' . (string) ob_get_clean() . '</div>';
+		} else {
+			$grid = '<div class="vc-grid vc-products"' . self::cols_style( $s ) . '>';
+			foreach ( $products as $product ) {
+				$img   = $product->get_image_id() ? self::img( array( 'attachmentId' => $product->get_image_id(), 'alt' => $product->get_name() ), 'vc-card__media' ) : '';
+				$grid .= sprintf(
+					'<article class="vc-card vc-product"><a class="vc-card__link" href="%1$s">%2$s<div class="vc-card__body"><h3 class="vc-card__title">%3$s</h3><p class="vc-price">%4$s</p></div></a></article>',
+					esc_url( $product->get_permalink() ),
+					$img,
+					esc_html( $product->get_name() ),
+					wp_kses_post( $product->get_price_html() )
+				);
+			}
+			$grid .= '</div>';
+		}
+		return '<div class="vc-m__inner vc-collection">' . $head . $grid . '</div>';
+	}
+
+	private static function render_report_feature( array $s, array $items ): string {
+		$vars = self::style(
+			array(
+				'--vc-m-bg' => $s['bgColor'],
+				'--vc-fg'   => $s['textColor'],
+			)
+		);
+		$text = self::heading_accent( $s ) . self::button( $s['button'] );
+		$card = '<div class="vc-report-card"><div class="vc-report-card__top">' . self::icon( 'document', 22 ) . '</div>';
+		if ( '' !== $s['cardEyebrow'] ) {
+			$card .= '<p class="vc-eyebrow">' . esc_html( $s['cardEyebrow'] ) . '</p>';
+		}
+		if ( '' !== $s['cardTitle'] ) {
+			$card .= '<h3 class="vc-report-card__title">' . esc_html( $s['cardTitle'] ) . '</h3>';
+		}
+		foreach ( $items as $it ) {
+			$card .= '<div class="' . esc_attr( self::item_class( $it, 'vc-report-card__row' ) ) . '"><span>' . esc_html( $it['label'] ) . '</span><strong>' . esc_html( $it['value'] ) . '</strong></div>';
+		}
+		if ( '' !== $s['cardNote'] ) {
+			$card .= '<p class="vc-report-card__note">' . esc_html( $s['cardNote'] ) . '</p>';
+		}
+		$card .= '</div>';
+		return '<div class="vc-report-feature"' . $vars . '><div class="vc-m__inner vc-report-feature__inner"><div class="vc-report-feature__text">' . $text . '</div>' . $card . '</div></div>';
+	}
+
+	private static function render_cta( array $s ): string {
+		$vars = self::style(
+			array(
+				'--vc-m-bg'  => $s['bgColor'],
+				'--vc-fg'    => $s['textColor'],
+				'text-align' => $s['align'],
+			)
+		);
+		$out = '<div class="vc-m__inner vc-cta"' . $vars . '>';
+		if ( '' !== $s['eyebrow'] ) {
+			$out .= '<p class="vc-eyebrow">' . esc_html( $s['eyebrow'] ) . '</p>';
+		}
+		if ( '' !== $s['title'] ) {
+			$out .= '<h2 class="vc-m__title">' . esc_html( $s['title'] ) . '</h2>';
+		}
+		if ( '' !== $s['description'] ) {
+			$out .= '<p class="vc-m__desc">' . nl2br( esc_html( $s['description'] ) ) . '</p>';
+		}
+		return $out . self::button( $s['button'] ) . '</div>';
 	}
 
 	private static function render_text_block( array $s ): string {

@@ -31,8 +31,8 @@ set_error_handler(
 );
 
 $all = Registry::all();
-$ok( '31 modules registered in the library', 31 === count( $all ) );
-$ok( 'all of them are basic blocks', 31 === count( array_filter( $all, static fn( $d ) => 'basic' === $d['category'] ) ) );
+$ok( '34 modules registered in the library', 34 === count( $all ) );
+$ok( '33 basic blocks and 1 product block', 33 === count( array_filter( $all, static fn( $d ) => 'basic' === $d['category'] ) ) && 1 === count( array_filter( $all, static fn( $d ) => 'product' === $d['category'] ) ) );
 $ok( 'no donation module', ! isset( $all['donation'] ) );
 $registered = WP_Block_Type_Registry::get_instance();
 $ok( 'every module is a registered block', array() === array_filter( $all, static fn( $d ) => ! $registered->is_registered( $d['block'] ) ) );
@@ -249,7 +249,7 @@ $ok( 'custom html never runs scripts in the editor', ! str_contains( $editor_cus
 
 // 编辑器数据。
 $data = Blocks::editor_data();
-$ok( 'editor data lists every block with defaults', 31 === count( $data['modules'] ) && isset( $data['modules']['vialcove/carousel']['items']['defaults']['media'] ) );
+$ok( 'editor data lists every block with defaults', 34 === count( $data['modules'] ) && isset( $data['modules']['vialcove/carousel']['items']['defaults']['media'] ) );
 $ok(
 	'device defaults are {desktop, mobile}',
 	array(
@@ -292,6 +292,61 @@ if ( $product ) {
 	);
 	$ok( 'product hotspot shows the live product name and link', str_contains( $sc, esc_html( $product->get_name() ) ) && str_contains( $sc, esc_url( $product->get_permalink() ) ) );
 }
+
+// 商品区：目录顺序与现有首页一致（menu_order title 升序，4 个）。
+$theme_ids = array_map(
+	static fn( $p ) => $p->get_id(),
+	wc_get_products(
+		array(
+			'status'     => 'publish',
+			'visibility' => 'visible',
+			'limit'      => 4,
+			'orderby'    => 'menu_order title',
+			'order'      => 'ASC',
+		)
+	)
+);
+$pc   = Renderer::normalize( 'product_collection', array( 'moduleId' => 'pc-test' ) );
+$mine = array_map( static fn( $p ) => $p->get_id(), \PeptideCore\Modules\Products::for_module( $pc ) );
+$ok( 'product collection matches the current homepage query', $theme_ids === $mine && 4 === count( $mine ) );
+$manual = Renderer::normalize(
+	'product_collection',
+	array(
+		'settings' => array(
+			'source'   => 'manual',
+			'products' => array(
+				array( 'id' => 'p-two', 'settings' => array( 'product' => $theme_ids[1] ) ),
+				array( 'id' => 'p-one', 'settings' => array( 'product' => $theme_ids[0] ) ),
+			),
+		),
+	)
+);
+$ok( 'manual products keep the chosen order', array( $theme_ids[1], $theme_ids[0] ) === array_map( static fn( $p ) => $p->get_id(), \PeptideCore\Modules\Products::for_module( $manual ) ) );
+$cat = get_terms( array( 'taxonomy' => 'product_cat', 'slug' => 'glp1-metabolic', 'hide_empty' => false ) );
+if ( $cat ) {
+	$by_cat = \PeptideCore\Modules\Products::for_module( Renderer::normalize( 'product_collection', array( 'settings' => array( 'source' => 'category', 'category' => $cat[0]->term_id, 'limit' => 24 ) ) ) );
+	$ok( 'category source returns only that category', $by_cat && array() === array_filter( $by_cat, static fn( $p ) => ! has_term( $cat[0]->term_id, 'product_cat', $p->get_id() ) ) );
+}
+$coll = Renderer::render( 'product_collection', array( 'moduleId' => 'pc-test', 'settings' => array( 'title' => 'Explore our products.', 'link' => array( 'label' => 'View all', 'href' => '/shop/' ) ) ), 'public' );
+$ok( 'collection renders products with live names and the text link', str_contains( $coll, esc_html( wc_get_product( $theme_ids[0] )->get_name() ) ) && str_contains( $coll, 'vc-text-link' ) );
+
+$hero = Renderer::render(
+	'carousel',
+	array(
+		'moduleId' => 'hero-test',
+		'items'    => array(
+			array( 'id' => 's-one1', 'settings' => array( 'name' => 'Collection', 'layout' => 'split', 'title' => 'A clearer view', 'titleAccent' => 'of peptides.', 'highlights' => array( array( 'id' => 'h-one', 'settings' => array( 'label' => 'Batch lookup', 'title' => 'Find your batch.', 'href' => '/reports/' ) ) ) ) ),
+			array( 'id' => 's-two2', 'settings' => array( 'title' => 'Built on' ) ),
+		),
+	),
+	'public'
+);
+$ok( 'first slide title is the page H1, others H2', str_contains( $hero, '<h1 class="vc-slide__title">A clearer view<br><em>of peptides.</em></h1>' ) && str_contains( $hero, '<h2 class="vc-slide__title">Built on</h2>' ) );
+$ok( 'slides have accessible names and floating cards', str_contains( $hero, 'aria-label="1 / 2: Collection"' ) && str_contains( $hero, 'vc-slide__card' ) && str_contains( $hero, 'vc-slide--split' ) );
+$rf = Renderer::render( 'report_feature', array( 'moduleId' => 'rf-test', 'settings' => array( 'title' => 'Details you can', 'titleAccent' => 'look into.' ), 'items' => array( array( 'id' => 'r-one', 'settings' => array( 'label' => 'Product', 'value' => 'Linked to its batch' ) ) ) ), 'public' );
+$ok( 'report highlight renders title and card rows', str_contains( $rf, '<em>look into.</em>' ) && str_contains( $rf, 'Linked to its batch' ) );
+$faq2 = Renderer::render( 'faq', array( 'moduleId' => 'faq-two', 'settings' => array( 'eyebrow' => 'A LITTLE MORE CLARITY', 'title' => 'Good questions.', 'titleAccent' => 'Clear answers.', 'link' => array( 'label' => 'Explore', 'href' => '/reports/' ) ) ), 'public' );
+$ok( 'faq has eyebrow, accent title and link', str_contains( $faq2, 'A LITTLE MORE CLARITY' ) && str_contains( $faq2, '<em>Clear answers.</em>' ) && str_contains( $faq2, 'vc-text-link' ) );
 
 // 编辑器的区块预览接口（ServerSideRender 实际调用的 /wp/v2/block-renderer）。
 $admin = get_users( array( 'role' => 'administrator', 'number' => 1 ) )[0];

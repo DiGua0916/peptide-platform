@@ -275,11 +275,56 @@ final class Registry {
 				'items'       => self::items(
 					__( 'Slides', 'peptide-core' ),
 					array(
+						Fields::f( 'text', 'name', __( 'Slide name (read by screen readers)', 'peptide-core' ), '' ),
+						self::select(
+							'layout',
+							__( 'Slide layout', 'peptide-core' ),
+							'overlay',
+							array(
+								'overlay' => __( 'Text over the image', 'peptide-core' ),
+								'split'   => __( 'Text beside the image', 'peptide-core' ),
+							),
+							'content'
+						),
 						self::media( 'media', __( 'Slide image', 'peptide-core' ), __( 'Desktop: 1920px wide. Mobile: 1242px wide. Height follows the image.', 'peptide-core' ) ),
 						Fields::f( 'text', 'eyebrow', __( 'Subtitle', 'peptide-core' ), '' ),
 						Fields::f( 'text', 'title', __( 'Title', 'peptide-core' ), '' ),
+						Fields::f( 'text', 'titleAccent', __( 'Title (second line, emphasized)', 'peptide-core' ), '' ),
 						Fields::f( 'textarea', 'description', __( 'Text', 'peptide-core' ), '' ),
 						Fields::f( 'link', 'button', __( 'Button', 'peptide-core' ) ),
+						Fields::f( 'link', 'secondaryLink', __( 'Text link (next to the button)', 'peptide-core' ) ),
+						Fields::f(
+							'repeater',
+							'facts',
+							__( 'Short facts under the text', 'peptide-core' ),
+							null,
+							array(
+								'max'    => 4,
+								'fields' => array(
+									Fields::f( 'text', 'label', __( 'Bold text', 'peptide-core' ), '' ),
+									Fields::f( 'text', 'text', __( 'Text', 'peptide-core' ), '' ),
+								),
+							)
+						),
+						Fields::f(
+							'repeater',
+							'highlights',
+							__( 'Floating cards on the image', 'peptide-core' ),
+							null,
+							array(
+								'max'    => 3,
+								'fields' => array(
+									Fields::f( 'icon', 'icon', __( 'Icon', 'peptide-core' ), '' ),
+									Fields::f( 'text', 'label', __( 'Small label', 'peptide-core' ), '' ),
+									Fields::f( 'text', 'title', __( 'Title', 'peptide-core' ), '' ),
+									Fields::f( 'text', 'action', __( 'Action text', 'peptide-core' ), '' ),
+									Fields::f( 'url', 'href', __( 'Link', 'peptide-core' ), '' ),
+								),
+							)
+						),
+						Fields::f( 'text', 'sceneNumber', __( 'Image number label', 'peptide-core' ), '' ),
+						Fields::f( 'text', 'captionTitle', __( 'Image caption (bold)', 'peptide-core' ), '' ),
+						Fields::f( 'text', 'captionNote', __( 'Image caption (note)', 'peptide-core' ), '' ),
 						self::select( 'position', __( 'Text position', 'peptide-core' ), 'middle-left', $pos9, 'layout', array( 'device' => true ) ),
 						self::color( 'overlayColor', __( 'Overlay color', 'peptide-core' ), '#000000' ),
 						self::number( 'overlayOpacity', __( 'Overlay opacity (%)', 'peptide-core' ), 0, 0, 90, 'style' ),
@@ -895,8 +940,20 @@ final class Registry {
 				'title'    => __( 'FAQ', 'peptide-core' ),
 				'icon'     => 'editor-help',
 				'settings' => array_merge(
+					array( Fields::f( 'text', 'eyebrow', __( 'Small heading', 'peptide-core' ), '' ) ),
 					self::heading(),
 					array(
+						Fields::f( 'text', 'titleAccent', __( 'Title (second line, emphasized)', 'peptide-core' ), '' ),
+						Fields::f( 'link', 'link', __( 'Text link (under the title)', 'peptide-core' ) ),
+						self::select(
+							'layout',
+							__( 'Layout', 'peptide-core' ),
+							'side',
+							array(
+								'side'    => __( 'Title on the left, questions on the right', 'peptide-core' ),
+								'stacked' => __( 'Title above the questions', 'peptide-core' ),
+							)
+						),
 						self::toggle( 'openFirst', __( 'Open the first question', 'peptide-core' ), true ),
 						self::color( 'answerBgColor', __( 'Answer background', 'peptide-core' ) ),
 						self::color( 'answerTextColor', __( 'Answer text color', 'peptide-core' ) ),
@@ -1057,6 +1114,105 @@ final class Registry {
 					1,
 					40,
 					''
+				),
+			),
+
+			// VialCove 首页：商品区（读 WooCommerce 商品；不保存价格副本）。参考 YY 商品块“专辑商品”。
+			'product_collection' => array(
+				'title'       => __( 'Product collection', 'peptide-core' ),
+				'category'    => 'product',
+				'icon'        => 'products',
+				'description' => __( 'Products from your catalog. Prices, stock and images always come from WooCommerce.', 'peptide-core' ),
+				'settings'    => array(
+					Fields::f( 'text', 'eyebrow', __( 'Small heading', 'peptide-core' ), '' ),
+					Fields::f( 'text', 'title', __( 'Title', 'peptide-core' ), '' ),
+					Fields::f( 'textarea', 'description', __( 'Short description', 'peptide-core' ), '' ),
+					Fields::f( 'link', 'link', __( 'Text link (e.g. "View all")', 'peptide-core' ) ),
+					self::select(
+						'source',
+						__( 'Products to show', 'peptide-core' ),
+						'catalog',
+						array(
+							'catalog'  => __( 'Whole catalog', 'peptide-core' ),
+							'category' => __( 'One category', 'peptide-core' ),
+							'manual'   => __( 'Choose products', 'peptide-core' ),
+						),
+						'content'
+					),
+					Fields::f( 'category', 'category', __( 'Category', 'peptide-core' ), null, array( 'show_if' => array( 'source' => 'category' ) ) ),
+					Fields::f(
+						'repeater',
+						'products',
+						__( 'Products', 'peptide-core' ),
+						null,
+						array(
+							'max'     => 24,
+							'show_if' => array( 'source' => 'manual' ),
+							'fields'  => array( Fields::f( 'product', 'product', __( 'Product', 'peptide-core' ), null ) ),
+						)
+					),
+					self::select(
+						'sort',
+						__( 'Sort order', 'peptide-core' ),
+						'catalog',
+						array(
+							'catalog'    => __( 'Catalog order (as in the price list)', 'peptide-core' ),
+							'newest'     => __( 'Newest first', 'peptide-core' ),
+							'title'      => __( 'Name A–Z', 'peptide-core' ),
+							'price_asc'  => __( 'Price: low to high', 'peptide-core' ),
+							'price_desc' => __( 'Price: high to low', 'peptide-core' ),
+						),
+						'content'
+					),
+					self::number( 'limit', __( 'Number of products', 'peptide-core' ), 4, 1, 24, 'content' ),
+					self::columns( 4, 2 ),
+					self::toggle( 'reportPreview', __( 'Show report preview on hover', 'peptide-core' ), true ),
+					Fields::f( 'text', 'emptyText', __( 'Text when there are no products', 'peptide-core' ), 'The collection is being prepared. Please check back soon.', array( 'group' => 'layout' ) ),
+				),
+			),
+
+			// VialCove 首页：批次报告介绍（只是展示；批次查询和报告权限仍由批次报告功能提供）。
+			'report_feature'   => array(
+				'title'       => __( 'Batch report highlight', 'peptide-core' ),
+				'icon'        => 'media-document',
+				'description' => __( 'Introduces batch lookup with a sample report card. It does not show real report data.', 'peptide-core' ),
+				'settings'    => array(
+					Fields::f( 'text', 'eyebrow', __( 'Small heading', 'peptide-core' ), '' ),
+					Fields::f( 'text', 'title', __( 'Title', 'peptide-core' ), '' ),
+					Fields::f( 'text', 'titleAccent', __( 'Title (second line, emphasized)', 'peptide-core' ), '' ),
+					Fields::f( 'textarea', 'description', __( 'Short description', 'peptide-core' ), '' ),
+					Fields::f( 'link', 'button', __( 'Button', 'peptide-core' ) ),
+					Fields::f( 'text', 'cardEyebrow', __( 'Card: small heading', 'peptide-core' ), '', array( 'group' => 'media' ) ),
+					Fields::f( 'text', 'cardTitle', __( 'Card: title', 'peptide-core' ), '', array( 'group' => 'media' ) ),
+					Fields::f( 'text', 'cardNote', __( 'Card: bottom line', 'peptide-core' ), '', array( 'group' => 'media' ) ),
+					self::color( 'bgColor', __( 'Background color', 'peptide-core' ) ),
+					self::color( 'textColor', __( 'Text color', 'peptide-core' ) ),
+				),
+				'items'       => self::items(
+					__( 'Card rows', 'peptide-core' ),
+					array(
+						Fields::f( 'text', 'label', __( 'Label', 'peptide-core' ), '' ),
+						Fields::f( 'text', 'value', __( 'Value', 'peptide-core' ), '' ),
+					),
+					3,
+					0,
+					6,
+					'label'
+				),
+			),
+
+			// VialCove 首页：结尾引导。
+			'cta'              => array(
+				'title'    => __( 'Call to action', 'peptide-core' ),
+				'icon'     => 'megaphone',
+				'settings' => array(
+					Fields::f( 'text', 'eyebrow', __( 'Small heading', 'peptide-core' ), '' ),
+					Fields::f( 'text', 'title', __( 'Title', 'peptide-core' ), '' ),
+					Fields::f( 'textarea', 'description', __( 'Short description', 'peptide-core' ), '' ),
+					Fields::f( 'link', 'button', __( 'Button', 'peptide-core' ) ),
+					self::select( 'align', __( 'Alignment', 'peptide-core' ), 'center', $align ),
+					self::color( 'bgColor', __( 'Background color', 'peptide-core' ) ),
+					self::color( 'textColor', __( 'Text color', 'peptide-core' ) ),
 				),
 			),
 
