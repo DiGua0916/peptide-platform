@@ -32,6 +32,7 @@ final class Plugin {
 		Templates::register_hooks();
 		Modules\Blocks::register_hooks();
 		Modules\Layout::register_hooks();
+		Modules\Assets::register_hooks();
 		Api\Layout_Controller::register_hooks();
 		add_action( 'init', array( Installer::class, 'maybe_upgrade' ), 5 );
 		Api\Rest_Controller::register_hooks();
