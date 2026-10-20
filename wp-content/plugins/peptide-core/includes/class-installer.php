@@ -34,12 +34,14 @@ final class Installer {
 	}
 
 	/**
-	 * 卸载：移除能力、版本记录和插件设置；不删除批次、报告和报告文件（避免误删真实资料）。
+	 * 卸载：移除能力、版本记录和插件设置；不删除批次、报告、报告文件和装修模板（避免误删真实资料）。
 	 */
 	public static function uninstall(): void {
 		Capabilities::revoke();
 		delete_option( self::OPTION_VERSION );
 		delete_option( Settings::OPTION );
 		delete_option( Capabilities::GRANTED_OPTION );
+		delete_option( Templates::ACTIVE_OPTION );
+		delete_option( Templates::DOMAIN_OPTION );
 	}
 }
