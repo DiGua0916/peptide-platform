@@ -63,6 +63,21 @@
 				}, Math.max( 1000, parseInt( root.dataset.interval, 10 ) || 3000 ) );
 			}
 		}
+		// 装修编辑器选中某一张时：停在这一张，不再自动播放。
+		root.addEventListener( 'vc:select-item', function ( e ) {
+			var target = e.target && e.target.closest ? e.target.closest( '[data-module-item]' ) : null;
+			var at = slides.indexOf( target );
+			if ( at === -1 ) {
+				return;
+			}
+			e.preventDefault();
+			if ( timer ) {
+				clearInterval( timer );
+				timer = null;
+			}
+			root.dataset.autoplay = '0';
+			go( at );
+		} );
 		root.addEventListener( 'mouseenter', function () {
 			if ( timer ) {
 				clearInterval( timer );

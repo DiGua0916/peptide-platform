@@ -655,3 +655,16 @@
 - 修正：空白积木块在手机上会被套上默认的上下留白（`.vc-m` 的手机规则覆盖了 `.vc-m--spacer`）。改为 `.vc-m.vc-m--spacer { padding: 0 }`。
 - 编辑器列表里空白积木块显示高度，例如“空白积木块 · 96 / 56px”。
 - 检查：smoke-design-editor 39 项通过（新增：每个内容积木后都有空白积木块、内容积木自身间距为 0）。浏览器（Claude 自己的标签页）：列表顺序与 YY 类似。
+
+### 编辑器：高亮正在修改的区域 · 2026-10-21 · Claude
+
+- **用户要求**：点“页头”时，预览要高亮页头；展开某一张轮播（某一个条目）时，要高亮那一张。目的是让用户知道自己正在改哪个地方。
+- **高亮框**：原来是给元素加 outline，会被主题里子元素的背景盖住（页头就是这样）。现在改为在预览页面上单独画一个绝对定位的框 `#pc-de-highlight`，左上角显示名称，例如“页头”或“轮播图 · 第 2 项”；框外加一层很淡的遮罩。滚动、缩放、图片加载后会重新定位。
+- **条目联动**：
+  - 设置面板里展开的条目改为由编辑器控制（`ItemsEditor` 新增 `openId` / `onOpen`，`settingsPanels` 新增 `openItem` / `onOpenItem`；区块编辑器里不受影响）。
+  - 预览按 `[data-module-item="<条目 id>"]` 找到对应元素并高亮。
+  - 一次只显示一项的积木（轮播）：先发冒泡、可取消的 `vc:select-item` 事件（`detail.item`）；没人处理时，对 `[data-vc-module-carousel]` 发 focusin 暂停自动播放，再用 Home + ArrowRight 切到这一张；还看不见时直接切换 is-active / hidden。
+  - 在预览里点某一项，会选中积木并展开这一项的设置。
+- 插件默认样式里每个条目也输出 `data-module-item`（18 处），插件默认轮播支持 `vc:select-item`。
+- 测试：smoke-modules 改为直接检查插件默认样式（主题已经有 carousel、section-heading、media-text 模板，Renderer 会改用主题模板），并新增 data-module-item 检查。十三套测试全部通过。
+- 浏览器：选中页头时，页头被框住并标“页头”；展开第 2 张轮播时，预览切到第 2 张、框住并标“轮播图 · 第 2 项”，8 秒后仍然停在这一张。

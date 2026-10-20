@@ -239,6 +239,11 @@ final class Fallback {
 		);
 	}
 
+	/** 条目的编号属性：装修编辑器据此在预览里高亮、切换到这一项（与主题模板的 data-module-item 一致）。 */
+	private static function item_attr( array $item ): string {
+		return ' data-module-item="' . esc_attr( (string) ( $item['_id'] ?? '' ) ) . '"';
+	}
+
 	private static function item_class( array $item, string $class ): string {
 		return $class . ( empty( $item['_enabled'] ) ? ' is-hidden' : '' );
 	}
@@ -309,10 +314,11 @@ final class Fallback {
 			);
 			$label = sprintf( '%1$d / %2$d%3$s', $i + 1, $count, '' !== $it['name'] ? ': ' . $it['name'] : '' );
 			$out  .= sprintf(
-				'<div class="%1$s" role="group" aria-roledescription="slide" aria-label="%2$s"%3$s>',
+				'<div class="%1$s" role="group" aria-roledescription="slide" aria-label="%2$s"%3$s%4$s>',
 				esc_attr( self::item_class( $it, 'vc-slide vc-slide--' . $it['layout'] . ( 0 === $i ? ' is-active' : '' ) ) ),
 				esc_attr( $label ),
-				$overlay
+				$overlay,
+				self::item_attr( $it )
 			);
 
 			// 文字：小标题、两行标题、说明、按钮 + 文字链接、短信息。
@@ -397,7 +403,7 @@ final class Fallback {
 		$out = '<div class="' . esc_attr( self::inner_class( $s ) ) . '">' . self::heading( $s );
 		$out .= '<div class="vc-row vc-row--' . esc_attr( $s['mobileStyle'] ) . '"' . self::style( array( '--vc-gap' => (int) $s['gapPx'] . 'px' ) ) . '>';
 		foreach ( $items as $it ) {
-			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-row__item' ) ) . '">' . self::maybe_link( self::picture( $it['media'] ), $it['href'] ) . '</div>';
+			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-row__item' ) ) . '"' . self::item_attr( $it ) . '>' . self::maybe_link( self::picture( $it['media'] ), $it['href'] ) . '</div>';
 		}
 		return $out . '</div></div>';
 	}
@@ -405,7 +411,7 @@ final class Fallback {
 	private static function render_image_grid( array $s, array $items ): string {
 		$out = '<div class="' . esc_attr( self::inner_class( $s ) ) . '">' . self::heading( $s ) . '<div class="vc-grid"' . self::cols_style( $s ) . '>';
 		foreach ( $items as $it ) {
-			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-grid__item' ) ) . '">' . self::maybe_link( self::picture( $it['media'], 'vc-img', '(max-width: 767px) 50vw, 25vw' ), $it['href'] ) . '</div>';
+			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-grid__item' ) ) . '"' . self::item_attr( $it ) . '>' . self::maybe_link( self::picture( $it['media'], 'vc-img', '(max-width: 767px) 50vw, 25vw' ), $it['href'] ) . '</div>';
 		}
 		return $out . '</div></div>';
 	}
@@ -418,7 +424,7 @@ final class Fallback {
 			if ( '' !== $it['buttonLabel'] ) {
 				$tile .= '<span class="vc-btn vc-mosaic__btn">' . esc_html( $it['buttonLabel'] ) . '</span>';
 			}
-			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-mosaic__tile vc-mosaic__tile--' . ( $i + 1 ) ) ) . '">' . self::maybe_link( $tile, $it['href'], 'vc-mosaic__link' ) . '</div>';
+			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-mosaic__tile vc-mosaic__tile--' . ( $i + 1 ) ) ) . '"' . self::item_attr( $it ) . '>' . self::maybe_link( $tile, $it['href'], 'vc-mosaic__link' ) . '</div>';
 		}
 		return $out . '</div></div>';
 	}
@@ -438,15 +444,16 @@ final class Fallback {
 	/**
 	 * 一行图文（图文、图文行共用）。
 	 */
-	private static function media_text_row( array $media, $position, string $text_html, string $class = 'vc-mt', string $caption = '' ): string {
+	private static function media_text_row( array $media, $position, string $text_html, string $class = 'vc-mt', string $caption = '', string $attrs = '' ): string {
 		return sprintf(
-			'<div class="%1$s vc-mt--d-%2$s vc-mt--m-%3$s"><figure class="vc-mt__media">%4$s%6$s</figure><div class="vc-mt__text">%5$s</div></div>',
+			'<div class="%1$s vc-mt--d-%2$s vc-mt--m-%3$s"%7$s><figure class="vc-mt__media">%4$s%6$s</figure><div class="vc-mt__text">%5$s</div></div>',
 			esc_attr( $class ),
 			esc_attr( (string) self::dv( $position, 'desktop' ) ),
 			esc_attr( (string) self::dv( $position, 'mobile' ) ),
 			self::picture( $media, 'vc-img', '(max-width: 767px) 100vw, 50vw' ),
 			$text_html,
-			'' !== $caption ? '<figcaption class="vc-mt__caption">' . esc_html( $caption ) . '</figcaption>' : ''
+			'' !== $caption ? '<figcaption class="vc-mt__caption">' . esc_html( $caption ) . '</figcaption>' : '',
+			$attrs
 		);
 	}
 
@@ -526,7 +533,7 @@ final class Fallback {
 				$text .= '<div class="vc-richtext">' . self::html( $it['bodyHtml'] ) . '</div>';
 			}
 			$text .= self::button( $it['button'] );
-			$rows .= self::media_text_row( $it['media'], $it['imagePosition'], $text, self::item_class( $it, 'vc-mt' ), (string) $it['caption'] );
+			$rows .= self::media_text_row( $it['media'], $it['imagePosition'], $text, self::item_class( $it, 'vc-mt' ), (string) $it['caption'], self::item_attr( $it ) );
 		}
 		$vars = self::style(
 			array(
@@ -550,7 +557,7 @@ final class Fallback {
 				$card .= '<p class="vc-card__text">' . nl2br( esc_html( $it['text'] ) ) . '</p>';
 			}
 			$card .= '</div>';
-			$out  .= '<div class="' . esc_attr( self::item_class( $it, 'vc-card' ) ) . '">' . self::maybe_link( $card, $it['href'], 'vc-card__link' ) . '</div>';
+			$out  .= '<div class="' . esc_attr( self::item_class( $it, 'vc-card' ) ) . '"' . self::item_attr( $it ) . '>' . self::maybe_link( $card, $it['href'], 'vc-card__link' ) . '</div>';
 		}
 		return $out . '</div></div>';
 	}
@@ -641,7 +648,7 @@ final class Fallback {
 			)
 		) . '>';
 		foreach ( $items as $it ) {
-			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-slogan__item' ) ) . '">' . self::img( $it['icon'], 'vc-slogan__icon', __( 'Icon', 'peptide-core' ) );
+			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-slogan__item' ) ) . '"' . self::item_attr( $it ) . '>' . self::img( $it['icon'], 'vc-slogan__icon', __( 'Icon', 'peptide-core' ) );
 			$out .= '' !== $it['title'] ? '<h3 class="vc-slogan__title">' . esc_html( $it['title'] ) . '</h3>' : '';
 			$out .= '' !== $it['text'] ? '<p class="vc-slogan__text">' . esc_html( $it['text'] ) . '</p>' : '';
 			$out .= '</div>';
@@ -652,7 +659,7 @@ final class Fallback {
 	private static function render_counter( array $s, array $items ): string {
 		$out = '<div class="vc-m__inner">' . self::heading( $s ) . '<div class="vc-grid vc-counter"' . self::cols_style( $s ) . self::style( array( '--vc-num' => (int) $s['numberSizePx'] . 'px' ) ) . '>';
 		foreach ( $items as $it ) {
-			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-counter__item' ) ) . '">' . self::icon_or_image( $it, 32 );
+			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-counter__item' ) ) . '"' . self::item_attr( $it ) . '>' . self::icon_or_image( $it, 32 );
 			$out .= sprintf( '<p class="vc-counter__num"><span data-count="%1$d">%2$s</span>%3$s</p>', (int) $it['number'], esc_html( number_format_i18n( (int) $it['number'] ) ), '' !== $it['unit'] ? '<small>' . esc_html( $it['unit'] ) . '</small>' : '' );
 			$out .= '' !== $it['label'] ? '<p class="vc-counter__label">' . esc_html( $it['label'] ) . '</p>' : '';
 			$out .= '</div>';
@@ -665,7 +672,7 @@ final class Fallback {
 		foreach ( $items as $it ) {
 			$fig  = self::img( $it['image'], 'vc-gallery__img' );
 			$fig .= '' !== $it['caption'] ? '<figcaption>' . esc_html( $it['caption'] ) . '</figcaption>' : '';
-			$out .= '<figure class="' . esc_attr( self::item_class( $it, 'vc-gallery__item' ) ) . '">' . self::maybe_link( $fig, $it['href'] ) . '</figure>';
+			$out .= '<figure class="' . esc_attr( self::item_class( $it, 'vc-gallery__item' ) ) . '"' . self::item_attr( $it ) . '>' . self::maybe_link( $fig, $it['href'] ) . '</figure>';
 		}
 		$out .= '</div>';
 		$btn  = self::button( $s['button'], $s );
@@ -705,7 +712,7 @@ final class Fallback {
 		) . '>' . self::heading( $s );
 		$out .= '<ol class="vc-timeline vc-timeline--' . esc_attr( $s['style'] ) . '">';
 		foreach ( $items as $it ) {
-			$out .= '<li class="' . esc_attr( self::item_class( $it, 'vc-timeline__item vc-timeline__item--' . $it['imagePosition'] ) ) . '"' . self::style( array( '--vc-accent' => $it['color'] ) ) . '>';
+			$out .= '<li class="' . esc_attr( self::item_class( $it, 'vc-timeline__item vc-timeline__item--' . $it['imagePosition'] ) ) . '"' . self::item_attr( $it ) . '' . self::style( array( '--vc-accent' => $it['color'] ) ) . '>';
 			if ( 'vertical' === $s['style'] ) {
 				$out .= self::img( $it['image'], 'vc-timeline__img' );
 			}
@@ -734,7 +741,7 @@ final class Fallback {
 		$out = '<div class="' . esc_attr( self::inner_class( $s ) ) . '"><div class="vc-contact"' . $vars . '>' . $bg . '<div class="vc-contact__body">' . self::heading( $s ) . '<ul class="vc-contact__list">';
 		foreach ( $items as $it ) {
 			$row  = '<span class="vc-contact__icon">' . self::icon_or_image( $it, (int) $s['iconSizePx'] ) . '</span><span><strong>' . esc_html( $it['title'] ) . '</strong><br>' . esc_html( $it['text'] ) . '</span>';
-			$out .= '<li class="' . esc_attr( self::item_class( $it, 'vc-contact__item' ) ) . '">' . self::maybe_link( $row, $it['href'] ) . '</li>';
+			$out .= '<li class="' . esc_attr( self::item_class( $it, 'vc-contact__item' ) ) . '"' . self::item_attr( $it ) . '>' . self::maybe_link( $row, $it['href'] ) . '</li>';
 		}
 		return $out . '</ul></div></div></div>';
 	}
@@ -743,7 +750,7 @@ final class Fallback {
 		$left = '<div class="vc-promo__left">' . ( '' !== $s['leftTitle'] ? '<h3 class="vc-promo__title">' . esc_html( $s['leftTitle'] ) . '</h3>' : '' );
 		$left .= sprintf( '<div class="vc-carousel vc-carousel--auto" data-autoplay="%1$s" data-interval="%2$d" data-dots="%3$s">', $s['autoplay'] ? '1' : '0', (int) $s['intervalMs'], $s['dots'] ? '1' : '0' );
 		foreach ( $items as $i => $it ) {
-			$left .= '<div class="' . esc_attr( self::item_class( $it, 'vc-slide' . ( 0 === $i ? ' is-active' : '' ) ) ) . '">' . self::maybe_link( self::img( $it['image'], 'vc-slide__media' ), $it['href'] ) . '</div>';
+			$left .= '<div class="' . esc_attr( self::item_class( $it, 'vc-slide' . ( 0 === $i ? ' is-active' : '' ) ) ) . '"' . self::item_attr( $it ) . '>' . self::maybe_link( self::img( $it['image'], 'vc-slide__media' ), $it['href'] ) . '</div>';
 		}
 		$left .= '</div></div>';
 		$right = '<div class="vc-promo__right">' . ( '' !== $s['rightTitle'] ? '<h3 class="vc-promo__title">' . esc_html( $s['rightTitle'] ) . '</h3>' : '' );
@@ -853,7 +860,7 @@ final class Fallback {
 			$out .= sprintf(
 				'<details class="%1$s"%2$s><summary aria-label="%3$s">%4$s</summary><div class="vc-hotspot__pop vc-hotspot__pop--%5$s"><strong>%6$s</strong><p>%7$s</p></div></details>',
 				esc_attr( self::item_class( $it, 'vc-hotspot' ) ),
-				$vars,
+				$vars . self::item_attr( $it ),
 				esc_attr( '' !== $it['title'] ? $it['title'] : sprintf( /* translators: %d: hotspot number */ __( 'Hotspot %d', 'peptide-core' ), $i + 1 ) ),
 				$icon,
 				esc_attr( $it['popup'] ),
@@ -876,7 +883,7 @@ final class Fallback {
 			$out .= sprintf(
 				'<details class="%1$s"%2$s><summary>%3$s</summary><div class="vc-faq__answer">%4$s</div></details>',
 				esc_attr( self::item_class( $it, 'vc-faq__item' ) ),
-				( 0 === $i && $s['openFirst'] ) ? ' open' : '',
+				( ( 0 === $i && $s['openFirst'] ) ? ' open' : '' ) . self::item_attr( $it ),
 				esc_html( '' !== $it['question'] ? $it['question'] : __( 'Question', 'peptide-core' ) ),
 				self::html( $it['answerHtml'] )
 			);
@@ -887,7 +894,7 @@ final class Fallback {
 	private static function render_product_showcase( array $s, array $items ): string {
 		$out = sprintf( '<div class="vc-m__inner"><div class="vc-carousel vc-carousel--auto vc-showcase" data-autoplay="%1$s" data-interval="%2$d" data-dots="1">', $s['autoplay'] ? '1' : '0', (int) $s['intervalMs'] );
 		foreach ( $items as $i => $it ) {
-			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-slide vc-showcase__scene' . ( 0 === $i ? ' is-active' : '' ) ) ) . '"' . self::style(
+			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-slide vc-showcase__scene' . ( 0 === $i ? ' is-active' : '' ) ) ) . '"' . self::item_attr( $it ) . '' . self::style(
 				array(
 					'--vc-overlay'   => '' !== $it['overlayColor'] ? $it['overlayColor'] : null,
 					'--vc-overlay-o' => (string) ( (int) $it['overlayOpacity'] / 100 ),
@@ -954,7 +961,7 @@ final class Fallback {
 	private static function render_info_list( array $s, array $items ): string {
 		$out = '<div class="vc-m__inner"><ul class="vc-info vc-info--' . esc_attr( $s['align'] ) . ( $s['mobileSwipe'] ? ' vc-swipe-m' : '' ) . '">';
 		foreach ( $items as $it ) {
-			$out .= '<li class="' . esc_attr( self::item_class( $it, 'vc-info__item' ) ) . '">' . self::icon_or_image( $it, 22 ) . '<span>' . esc_html( $it['text'] ) . '</span></li>';
+			$out .= '<li class="' . esc_attr( self::item_class( $it, 'vc-info__item' ) ) . '"' . self::item_attr( $it ) . '>' . self::icon_or_image( $it, 22 ) . '<span>' . esc_html( $it['text'] ) . '</span></li>';
 		}
 		return $out . '</ul></div>';
 	}
@@ -989,7 +996,7 @@ final class Fallback {
 	private static function render_logo_list( array $s, array $items ): string {
 		$out = '<div class="vc-m__inner">' . self::heading( $s ) . '<div class="vc-logos vc-logos--' . esc_attr( $s['mode'] ) . '"' . self::cols_style( $s ) . '>';
 		foreach ( $items as $it ) {
-			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-logos__item' ) ) . '">' . self::maybe_link( self::img( $it['image'], 'vc-logos__img', __( 'Logo', 'peptide-core' ) ), $it['href'] ) . '</div>';
+			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-logos__item' ) ) . '"' . self::item_attr( $it ) . '>' . self::maybe_link( self::img( $it['image'], 'vc-logos__img', __( 'Logo', 'peptide-core' ) ), $it['href'] ) . '</div>';
 		}
 		return $out . '</div></div>';
 	}
@@ -1040,7 +1047,7 @@ final class Fallback {
 			$card .= '<h3 class="vc-report-card__title">' . esc_html( $s['cardTitle'] ) . '</h3>';
 		}
 		foreach ( $items as $it ) {
-			$card .= '<div class="' . esc_attr( self::item_class( $it, 'vc-report-card__row' ) ) . '"><span>' . esc_html( $it['label'] ) . '</span><strong>' . esc_html( $it['value'] ) . '</strong></div>';
+			$card .= '<div class="' . esc_attr( self::item_class( $it, 'vc-report-card__row' ) ) . '"' . self::item_attr( $it ) . '><span>' . esc_html( $it['label'] ) . '</span><strong>' . esc_html( $it['value'] ) . '</strong></div>';
 		}
 		if ( '' !== $s['cardNote'] ) {
 			$card .= '<p class="vc-report-card__note">' . esc_html( $s['cardNote'] ) . '</p>';

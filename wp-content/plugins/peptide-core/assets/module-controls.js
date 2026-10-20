@@ -483,9 +483,11 @@
 
 	function ItemsEditor( props ) {
 		var items = props.items || [];
+		// 展开的条目：传入 openId / onOpen 时由外部控制（装修编辑器据此在预览里高亮对应内容）。
 		var openState = useState( null );
-		var open = openState[ 0 ];
-		var setOpen = openState[ 1 ];
+		var controlled = typeof props.onOpen === 'function';
+		var open = controlled ? props.openId : openState[ 0 ];
+		var setOpen = controlled ? props.onOpen : openState[ 1 ];
 
 		function update( index, next ) {
 			var list = items.slice();
@@ -639,6 +641,8 @@
 						titleField: def.items.title_field,
 						device: props.device,
 						onChange: props.setItems,
+						openId: props.openItem,
+						onOpen: props.onOpenItem,
 					} )
 				)
 			);

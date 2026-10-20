@@ -330,7 +330,9 @@ if ( $cat ) {
 $coll = Renderer::render( 'product_collection', array( 'moduleId' => 'pc-test', 'settings' => array( 'title' => 'Explore our products.', 'link' => array( 'label' => 'View all', 'href' => '/shop/' ) ) ), 'public' );
 $ok( 'collection renders products with live names and the text link', str_contains( $coll, esc_html( wc_get_product( $theme_ids[0] )->get_name() ) ) && str_contains( $coll, 'vc-text-link' ) );
 
-$hero = Renderer::render(
+// 以下几项检查插件自带的默认样式（主题已有模板时，Renderer 会改用主题模板）。
+$fb   = static fn( string $type, array $attrs ): string => Fallback::render( Renderer::normalize( $type, $attrs ), 'public' );
+$hero = $fb(
 	'carousel',
 	array(
 		'moduleId' => 'hero-test',
@@ -338,8 +340,7 @@ $hero = Renderer::render(
 			array( 'id' => 's-one1', 'settings' => array( 'name' => 'Collection', 'layout' => 'split', 'title' => 'A clearer view', 'titleAccent' => 'of peptides.', 'highlights' => array( array( 'id' => 'h-one', 'settings' => array( 'label' => 'Batch lookup', 'title' => 'Find your batch.', 'href' => '/reports/' ) ) ) ) ),
 			array( 'id' => 's-two2', 'settings' => array( 'title' => 'Built on' ) ),
 		),
-	),
-	'public'
+	)
 );
 $ok( 'first slide title is the page H1, others H2', str_contains( $hero, '<h1 class="vc-slide__title">A clearer view<br><em>of peptides.</em></h1>' ) && str_contains( $hero, '<h2 class="vc-slide__title">Built on</h2>' ) );
 $ok( 'slides have accessible names and floating cards', str_contains( $hero, 'aria-label="1 / 2: Collection"' ) && str_contains( $hero, 'vc-slide__card' ) && str_contains( $hero, 'vc-slide--split' ) );
@@ -348,9 +349,10 @@ $ok( 'report highlight renders title and card rows', str_contains( $rf, '<em>loo
 $faq2 = Renderer::render( 'faq', array( 'moduleId' => 'faq-two', 'settings' => array( 'eyebrow' => 'A LITTLE MORE CLARITY', 'title' => 'Good questions.', 'titleAccent' => 'Clear answers.', 'link' => array( 'label' => 'Explore', 'href' => '/reports/' ) ) ), 'public' );
 $ok( 'faq has eyebrow, accent title and link', str_contains( $faq2, 'A LITTLE MORE CLARITY' ) && str_contains( $faq2, '<em>Clear answers.</em>' ) && str_contains( $faq2, 'vc-text-link' ) );
 
-$sh = Renderer::render( 'section_heading', array( 'moduleId' => 'sh-test', 'settings' => array( 'eyebrow' => 'THE VIALCOVE STORY', 'title' => 'Three places.', 'titleAccent' => 'One connected vision.' ) ), 'public' );
+$sh = $fb( 'section_heading', array( 'moduleId' => 'sh-test', 'settings' => array( 'eyebrow' => 'THE VIALCOVE STORY', 'title' => 'Three places.', 'titleAccent' => 'One connected vision.' ) ) );
 $ok( 'section heading renders eyebrow and accent title', str_contains( $sh, 'THE VIALCOVE STORY' ) && str_contains( $sh, '<em>One connected vision.</em>' ) && str_contains( $sh, 'vc-heading--center' ) );
-$mt = Renderer::render( 'media_text', array( 'moduleId' => 'mt-test', 'settings' => array( 'eyebrow' => '01 / ISRAEL', 'label' => 'RESEARCH', 'caption' => 'AI-generated scene', 'title' => 'Scientific collaboration.' ) ), 'public' );
+$mt = $fb( 'media_text', array( 'moduleId' => 'mt-test', 'settings' => array( 'eyebrow' => '01 / ISRAEL', 'label' => 'RESEARCH', 'caption' => 'AI-generated scene', 'title' => 'Scientific collaboration.' ) ) );
+$ok( 'default design marks each item with data-module-item', str_contains( $fb( 'faq', array( 'moduleId' => 'faq-attr', 'items' => array( array( 'id' => 'q-attr1', 'settings' => array( 'question' => 'Q' ) ) ) ) ), 'data-module-item="q-attr1"' ) && str_contains( $hero, 'data-module-item="s-one1"' ) );
 $ok( 'image & text renders eyebrow, label and caption', str_contains( $mt, '01 / ISRAEL' ) && str_contains( $mt, 'vc-mt__label' ) && str_contains( $mt, '<figcaption class="vc-mt__caption">AI-generated scene</figcaption>' ) );
 
 // 编辑器的区块预览接口（ServerSideRender 实际调用的 /wp/v2/block-renderer）。

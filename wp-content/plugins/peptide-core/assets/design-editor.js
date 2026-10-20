@@ -102,6 +102,11 @@
 		var frameRef = useRef( null );
 		var scrollRef = useRef( 0 );
 		var fromPreviewRef = useRef( false );
+		// 设置面板里展开的条目（例如第 2 张轮播），预览里会高亮并切换到它。
+		var openItemState = useState( null );
+		var openItem = openItemState[ 0 ];
+		var pendingItemRef = useRef( null );
+		var hlTargetRef = useRef( null );
 		var firstRef = useRef( true );
 		var historyTick = useState( 0 );
 
@@ -337,26 +342,173 @@
 			[ modules ]
 		);
 
-		// 预览加载完成：恢复滚动、绑定点击选中、高亮当前积木。
+		function frameDoc() {
+			try {
+				return frameRef.current ? frameRef.current.contentDocument : null;
+			} catch ( e ) {
+				return null;
+			}
+		}
+
+		// 高亮框：在预览页面上单独画一个框，不受主题样式（背景、层级、overflow）影响。
+		function overlay( doc ) {
+			var box = doc.getElementById( 'pc-de-highlight' );
+			if ( ! box ) {
+				box = doc.createElement( 'div' );
+				box.id = 'pc-de-highlight';
+				box.setAttribute( 'aria-hidden', 'true' );
+				box.innerHTML = '<span></span>';
+				doc.body.appendChild( box );
+			}
+			return box;
+		}
+
+		function placeOverlay() {
+			var doc = frameDoc();
+			var target = hlTargetRef.current;
+			if ( ! doc || ! doc.body ) {
+				return;
+			}
+			var box = overlay( doc );
+			if ( ! target || ! target.isConnected ) {
+				box.style.display = 'none';
+				return;
+			}
+			var r = target.getBoundingClientRect();
+			var win = doc.defaultView;
+			box.style.display = r.width || r.height ? 'block' : 'none';
+			box.style.top = r.top + win.scrollY + 'px';
+			box.style.left = r.left + win.scrollX + 'px';
+			box.style.width = r.width + 'px';
+			box.style.height = r.height + 'px';
+		}
+
+		function moduleEl( doc, id ) {
+			return id ? doc.getElementById( 'vc-' + id ) : null;
+		}
+
+		function itemEl( doc, moduleId, itemId ) {
+			var root = moduleEl( doc, moduleId );
+			if ( ! root || ! itemId ) {
+				return null;
+			}
+			var list = root.querySelectorAll( '[data-module-item]' );
+			for ( var i = 0; i < list.length; i++ ) {
+				if ( list[ i ].getAttribute( 'data-module-item' ) === itemId ) {
+					return list[ i ];
+				}
+			}
+			return null;
+		}
+
+		// 轮播等一次只显示一项的积木：暂停自动播放并切换到这一项。
+		// 1. 先发 vc:select-item 事件，主题脚本处理后调用 preventDefault() 即可；
+		// 2. 没人处理时：Codex 的轮播（[data-vc-module-carousel]）用 focusin 暂停、方向键切换；
+		// 3. 仍然看不见时，直接切换 is-active / hidden。
+		function revealItem( root, el ) {
+			var id = el.getAttribute( 'data-module-item' );
+			var win = el.ownerDocument.defaultView;
+			var ev = null;
+			try {
+				ev = new win.CustomEvent( 'vc:select-item', { bubbles: true, cancelable: true, detail: { item: id } } );
+				el.dispatchEvent( ev );
+			} catch ( e ) {}
+			if ( ev && ev.defaultPrevented ) {
+				return;
+			}
+			var car = el.closest( '[data-vc-module-carousel]' );
+			if ( car ) {
+				var slides = Array.prototype.filter.call( car.querySelectorAll( '[data-module-item]' ), function ( n ) {
+					return n.closest( '[data-vc-module-carousel]' ) === car;
+				} );
+				var to = slides.indexOf( el );
+				try {
+					car.dispatchEvent( new win.FocusEvent( 'focusin', { bubbles: true } ) );
+					car.dispatchEvent( new win.KeyboardEvent( 'keydown', { key: 'Home', bubbles: true } ) );
+					for ( var k = 0; k < to; k++ ) {
+						car.dispatchEvent( new win.KeyboardEvent( 'keydown', { key: 'ArrowRight', bubbles: true } ) );
+					}
+				} catch ( e ) {}
+			}
+			var r = el.getBoundingClientRect();
+			if ( r.width && r.height && ! el.hidden && el.classList.contains( 'is-active' ) !== false ) {
+				return;
+			}
+			Array.prototype.forEach.call( el.parentNode ? el.parentNode.children : [], function ( sib ) {
+				if ( sib.hasAttribute && sib.hasAttribute( 'data-module-item' ) ) {
+					var on = sib === el;
+					sib.classList.toggle( 'is-active', on );
+					sib.hidden = ! on;
+					sib.inert = ! on;
+					if ( on ) {
+						sib.removeAttribute( 'aria-hidden' );
+					}
+				}
+			} );
+		}
+
+		function highlight( scroll ) {
+			var doc = frameDoc();
+			if ( ! doc || ! doc.body ) {
+				return;
+			}
+			var target = null;
+			var label = '';
+			if ( selected === 'header' ) {
+				target = doc.querySelector( '.site-header, body > header, header' );
+				label = S.header;
+			} else if ( selected === 'footer' ) {
+				target = doc.querySelector( '.site-footer, body > footer, footer' );
+				label = S.footer;
+			} else if ( selected && selected !== 'library' ) {
+				var m = modules[ indexOf( selected ) ];
+				target = moduleEl( doc, selected );
+				label = m ? titleOf( m ) : '';
+				if ( target && openItem ) {
+					var it = itemEl( doc, selected, openItem );
+					if ( it ) {
+						revealItem( target, it );
+						target = it;
+						var items = ( m && m.attrs.items ) || [];
+						for ( var i = 0; i < items.length; i++ ) {
+							if ( items[ i ].id === openItem ) {
+								label += ' · ' + S.itemN.replace( '%d', i + 1 );
+							}
+						}
+					}
+				}
+			}
+			hlTargetRef.current = target;
+			var box = overlay( doc );
+			box.firstChild.textContent = label;
+			placeOverlay();
+			if ( target && scroll ) {
+				target.scrollIntoView( { block: 'center', behavior: 'smooth' } );
+			}
+		}
+
+		// 预览加载完成：恢复滚动、绑定点击选中、画高亮框。
 		function onFrameLoad() {
 			loadingState[ 1 ]( false );
 			var frame = frameRef.current;
-			var doc;
-			try {
-				doc = frame.contentDocument;
-			} catch ( e ) {
-				return;
-			}
+			var doc = frameDoc();
 			if ( ! doc ) {
 				return;
 			}
 			var style = doc.createElement( 'style' );
 			style.textContent =
-				'.vc-m{cursor:pointer}.vc-m:hover{outline:1px dashed #ee7d33;outline-offset:-1px}' +
-				'.vc-m.pc-de-selected{outline:2px solid #ee7d33;outline-offset:-2px}' +
-				'body > header:hover, body > footer:hover, .site-header:hover, .site-footer:hover{outline:1px dashed #ee7d33;outline-offset:-1px}';
+				'.vc-m{cursor:pointer}.vc-m:hover{outline:1px dashed rgba(238,125,51,.7);outline-offset:-1px}' +
+				'.site-header:hover,.site-footer:hover{outline:1px dashed rgba(238,125,51,.7);outline-offset:-1px}' +
+				'#pc-de-highlight{position:absolute;z-index:2147483646;pointer-events:none;border:2px solid #ee7d33;box-shadow:0 0 0 9999px rgba(15,23,42,.06);border-radius:2px;display:none;transition:top .15s,left .15s,width .15s,height .15s}' +
+				'#pc-de-highlight>span{position:absolute;left:-2px;top:-24px;background:#ee7d33;color:#fff;font:600 12px/24px system-ui,sans-serif;padding:0 8px;border-radius:2px 2px 0 0;white-space:nowrap;max-width:60vw;overflow:hidden;text-overflow:ellipsis}';
 			doc.head.appendChild( style );
 			frame.contentWindow.scrollTo( 0, scrollRef.current );
+			frame.contentWindow.addEventListener( 'scroll', placeOverlay, { passive: true } );
+			frame.contentWindow.addEventListener( 'resize', placeOverlay );
+			// 图片加载、字体加载后位置会变，稍后再校正几次。
+			[ 200, 800, 2000 ].forEach( function ( ms ) {
+				setTimeout( placeOverlay, ms );
+			} );
 			doc.addEventListener(
 				'click',
 				function ( e ) {
@@ -365,9 +517,14 @@
 					e.preventDefault();
 					var m = t.closest && t.closest( '.vc-m' );
 					if ( m && m.id ) {
+						var item = t.closest( '[data-module-item]' );
 						fromPreviewRef.current = true;
+						pendingItemRef.current = item && m.contains( item ) ? item.getAttribute( 'data-module-item' ) : null;
 						tabState[ 1 ]( 'modules' );
 						setSelected( m.id.replace( /^vc-/, '' ) );
+						if ( pendingItemRef.current ) {
+							openItemState[ 1 ]( pendingItemRef.current );
+						}
 						return;
 					}
 					if ( t.closest && t.closest( 'footer' ) ) {
@@ -378,45 +535,24 @@
 				},
 				true
 			);
-			highlight( selected, false );
+			highlight( false );
 		}
 
-		function highlight( id, scroll ) {
-			var frame = frameRef.current;
-			var doc;
-			try {
-				doc = frame && frame.contentDocument;
-			} catch ( e ) {
-				return;
-			}
-			if ( ! doc ) {
-				return;
-			}
-			Array.prototype.forEach.call( doc.querySelectorAll( '.pc-de-selected' ), function ( n ) {
-				n.classList.remove( 'pc-de-selected' );
-			} );
-			var target = null;
-			if ( id === 'header' ) {
-				target = doc.querySelector( 'body > header, .site-header, header' );
-			} else if ( id === 'footer' ) {
-				target = doc.querySelector( 'body > footer, .site-footer, footer' );
-			} else if ( id ) {
-				target = doc.getElementById( 'vc-' + id );
-			}
-			if ( target ) {
-				target.classList.add( 'pc-de-selected' );
-				if ( scroll ) {
-					target.scrollIntoView( { block: 'center', behavior: 'smooth' } );
-				}
-			}
-		}
+		// 换了积木：关闭之前展开的条目（从预览里点某一项时保留那一项）。
+		useEffect(
+			function () {
+				openItemState[ 1 ]( pendingItemRef.current );
+				pendingItemRef.current = null;
+			},
+			[ selected ]
+		);
 
 		useEffect(
 			function () {
-				highlight( selected, ! fromPreviewRef.current );
+				highlight( ! fromPreviewRef.current );
 				fromPreviewRef.current = false;
 			},
-			[ selected ]
+			[ selected, openItem ]
 		);
 
 		// 快捷键：Ctrl+S 保存，Ctrl+Z / Ctrl+Shift+Z 撤销重做（输入框里保留浏览器自己的撤销）。
@@ -737,6 +873,10 @@
 						},
 						setItems: function ( items ) {
 							updateModule( current.attrs.moduleId, { items: items }, true );
+						},
+						openItem: openItem,
+						onOpenItem: function ( id ) {
+							openItemState[ 1 ]( id );
 						},
 					} )
 				)
