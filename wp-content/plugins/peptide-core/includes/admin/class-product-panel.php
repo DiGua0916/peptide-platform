@@ -1,6 +1,6 @@
 <?php
 /**
- * WooCommerce 商品编辑页的 “Peptide data” 面板：演示标记、规格表，以及该商品的批次列表。
+ * WooCommerce 商品编辑页的 “Peptide data” 面板：演示标记、规格表、商品卡片悬停内容，以及该商品的批次列表。
  *
  * 保存由 WooCommerce 的商品保存流程触发（它已校验 nonce 和 edit_product 权限）。
  *
@@ -12,6 +12,7 @@ namespace PeptideCore\Admin;
 use PeptideCore\Batches;
 use PeptideCore\Meta;
 use PeptideCore\Post_Types;
+use PeptideCore\Product_Hover;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -23,6 +24,8 @@ final class Product_Panel {
 		add_filter( 'woocommerce_product_data_tabs', array( self::class, 'add_tab' ) );
 		add_action( 'woocommerce_product_data_panels', array( self::class, 'render_panel' ) );
 		add_action( 'woocommerce_admin_process_product_object', array( self::class, 'save' ) );
+		add_action( 'admin_footer-post.php', array( self::class, 'hover_script' ) );
+		add_action( 'admin_footer-post-new.php', array( self::class, 'hover_script' ) );
 	}
 
 	/**
@@ -69,9 +72,97 @@ final class Product_Panel {
 			)
 		);
 
+		self::render_hover( $product );
+
 		self::render_batches( $product->get_id() );
 
 		echo '</div>';
+	}
+
+	/**
+	 * 商品卡片悬停内容（PRODUCT-HOVER-01）。
+	 */
+	private static function render_hover( \WC_Product $product ): void {
+		$mode  = Product_Hover::mode( $product );
+		$image = (int) $product->get_meta( Product_Hover::IMAGE_META );
+		$src   = $image ? wp_get_attachment_image_url( $image, 'thumbnail' ) : '';
+		echo '<div class="options_group pc-hover">';
+		echo '<p class="form-field"><strong>' . esc_html__( 'Card hover', 'peptide-core' ) . '</strong><br><span class="description">' . esc_html__( 'What appears when a visitor moves the mouse over this product card (homepage, shop and category pages).', 'peptide-core' ) . '</span></p>';
+		woocommerce_wp_select(
+			array(
+				'id'      => 'pc_hover_mode',
+				'label'   => __( 'Show on hover', 'peptide-core' ),
+				'value'   => $mode,
+				'options' => Product_Hover::modes(),
+			)
+		);
+		?>
+		<p class="form-field pc-hover__image"<?php echo 'image' === $mode ? '' : ' style="display:none"'; ?>>
+			<label><?php esc_html_e( 'Custom image', 'peptide-core' ); ?></label>
+			<input type="hidden" id="pc_hover_image" name="pc_hover_image" value="<?php echo esc_attr( (string) $image ); ?>">
+			<img class="pc-hover__preview" src="<?php echo esc_url( (string) $src ); ?>" alt="" style="max-width:120px;height:auto;display:<?php echo $src ? 'block' : 'none'; ?>;margin-bottom:6px;border:1px solid #dcdcde">
+			<button type="button" class="button pc-hover__choose"><?php esc_html_e( 'Choose image', 'peptide-core' ); ?></button>
+			<button type="button" class="button-link pc-hover__clear"<?php echo $image ? '' : ' style="display:none"'; ?>><?php esc_html_e( 'Remove', 'peptide-core' ); ?></button>
+			<span class="description" style="display:block;margin-top:6px"><?php esc_html_e( 'Do not upload made-up test reports. To show a report, choose "Real batch report summary": it comes from your batch records.', 'peptide-core' ); ?></span>
+		</p>
+		<?php
+		woocommerce_wp_text_input(
+			array(
+				'id'            => 'pc_hover_alt',
+				'label'         => __( 'Hover image description (alt)', 'peptide-core' ),
+				'value'         => (string) $product->get_meta( Product_Hover::ALT_META ),
+				'wrapper_class' => 'pc-hover__alt',
+				'description'   => __( 'Describe the image for screen readers. Empty = product name.', 'peptide-core' ),
+				'desc_tip'      => true,
+			)
+		);
+		echo '</div>';
+	}
+
+	/**
+	 * 悬停图片的媒体库选择（商品编辑页已加载 wp.media）。
+	 */
+	public static function hover_script(): void {
+		$screen = get_current_screen();
+		if ( ! $screen || 'product' !== $screen->post_type ) {
+			return;
+		}
+		$title = wp_json_encode( __( 'Choose the hover image', 'peptide-core' ) );
+		?>
+		<script>
+		( function ( $ ) {
+			var $wrap = $( '.pc-hover' );
+			if ( ! $wrap.length || ! window.wp || ! wp.media ) { return; }
+			var frame;
+			function sync() {
+				var mode = $( '#pc_hover_mode' ).val();
+				$wrap.find( '.pc-hover__image' ).toggle( mode === 'image' );
+				$wrap.find( '.pc-hover__alt' ).toggle( mode === 'image' || mode === 'gallery' );
+			}
+			$( '#pc_hover_mode' ).on( 'change', sync );
+			sync();
+			$wrap.on( 'click', '.pc-hover__choose', function ( e ) {
+				e.preventDefault();
+				frame = frame || wp.media( { title: <?php echo $title; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_json_encode ?>, library: { type: 'image' }, multiple: false } );
+				frame.off( 'select' ).on( 'select', function () {
+					var a = frame.state().get( 'selection' ).first().toJSON();
+					var url = a.sizes && a.sizes.thumbnail ? a.sizes.thumbnail.url : a.url;
+					$( '#pc_hover_image' ).val( a.id );
+					$wrap.find( '.pc-hover__preview' ).attr( 'src', url ).show();
+					$wrap.find( '.pc-hover__clear' ).show();
+					if ( ! $( '#pc_hover_alt' ).val() && a.alt ) { $( '#pc_hover_alt' ).val( a.alt ); }
+				} );
+				frame.open();
+			} );
+			$wrap.on( 'click', '.pc-hover__clear', function ( e ) {
+				e.preventDefault();
+				$( '#pc_hover_image' ).val( '' );
+				$wrap.find( '.pc-hover__preview' ).attr( 'src', '' ).hide();
+				$( this ).hide();
+			} );
+		} )( jQuery );
+		</script>
+		<?php
 	}
 
 	public static function save( \WC_Product $product ): void {
@@ -81,6 +172,16 @@ final class Product_Panel {
 		if ( isset( $_POST['pc_specs'] ) ) {
 			$text = sanitize_textarea_field( wp_unslash( $_POST['pc_specs'] ) );
 			$product->update_meta_data( Meta::PRODUCT_SPECS, self::parse_specs( $text ) );
+		}
+		if ( isset( $_POST['pc_hover_mode'] ) ) {
+			Product_Hover::save(
+				$product,
+				array(
+					'pc_hover_mode'  => sanitize_key( wp_unslash( $_POST['pc_hover_mode'] ) ),
+					'pc_hover_image' => isset( $_POST['pc_hover_image'] ) ? absint( $_POST['pc_hover_image'] ) : 0,
+					'pc_hover_alt'   => isset( $_POST['pc_hover_alt'] ) ? sanitize_text_field( wp_unslash( $_POST['pc_hover_alt'] ) ) : '',
+				)
+			);
 		}
 		// phpcs:enable
 	}

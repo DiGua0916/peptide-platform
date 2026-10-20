@@ -58,3 +58,16 @@ function peptide_core_has_layout( string $doc = 'home' ): bool {
 function peptide_core_render_layout( string $doc = 'home' ): string {
 	return \PeptideCore\Modules\Layout::render_current( $doc );
 }
+
+/**
+ * 商品卡片悬停时显示的内容（PRODUCT-HOVER-01），在商品编辑页的 Peptide data 面板里设置。
+ * mode：placeholder / report / gallery / image / none（缺内容时已退回 placeholder）；
+ * image：{src, width, height, srcset, alt}；report：{batch_no, title, type, version, issued_on, issuer_name, is_demo, access}。
+ *
+ * @param WC_Product|int $product
+ * @return array{mode:string,requested:string,image:?array,report:?array}
+ */
+function peptide_core_get_product_hover( $product ): array {
+	$product = $product instanceof WC_Product ? $product : wc_get_product( (int) $product );
+	return $product ? \PeptideCore\Product_Hover::for_product( $product ) : array( 'mode' => 'none', 'requested' => 'none', 'image' => null, 'report' => null );
+}

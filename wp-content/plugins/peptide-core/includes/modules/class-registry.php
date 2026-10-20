@@ -1190,7 +1190,7 @@ final class Registry {
 					),
 					self::number( 'limit', __( 'Number of products', 'peptide-core' ), 4, 1, 24, 'content' ),
 					self::columns( 4, 2 ),
-					self::toggle( 'reportPreview', __( 'Show report preview on hover', 'peptide-core' ), true ),
+					self::toggle( 'reportPreview', __( 'Show the hover card set on each product', 'peptide-core' ), true ),
 					Fields::f( 'text', 'emptyText', __( 'Text when there are no products', 'peptide-core' ), 'The collection is being prepared. Please check back soon.', array( 'group' => 'layout' ) ),
 				),
 			),

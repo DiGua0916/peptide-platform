@@ -668,3 +668,15 @@
 - 插件默认样式里每个条目也输出 `data-module-item`（18 处），插件默认轮播支持 `vc:select-item`。
 - 测试：smoke-modules 改为直接检查插件默认样式（主题已经有 carousel、section-heading、media-text 模板，Renderer 会改用主题模板），并新增 data-module-item 检查。十三套测试全部通过。
 - 浏览器：选中页头时，页头被框住并标“页头”；展开第 2 张轮播时，预览切到第 2 张、框住并标“轮播图 · 第 2 项”，8 秒后仍然停在这一张。
+
+### PRODUCT-HOVER-01 商品卡片悬停内容在“编辑商品”里设置 · 2026-10-21 · Claude
+
+- **用户要求**：商品卡片鼠标悬停时显示的那张“图中图”（现在是主题写死的报告占位卡片）要能编辑。用户认为应该放在编辑商品里改。Claude 同意：这是每个商品自己的内容，首页积木只负责开关。
+- **数据**（新增 `includes/class-product-hover.php`）：商品 meta `_pc_hover_mode`（placeholder / report / gallery / image / none，默认 placeholder）、`_pc_hover_image`（必须是图片附件）、`_pc_hover_alt`。
+  - `report`：读取该商品公开批次里最新的当前报告，只取目录信息（batch_no、title、type、version、issued_on、issuer_name、is_demo、access），不含文件和下载地址；没有时退回 placeholder。
+  - `gallery`：商品相册的第一张图；`image`：自定义图片。缺图时都退回 placeholder。
+- **后台**：商品编辑页 → 多肽资料 → “卡片悬停”：下拉选择方式；选“自定义图片”时有媒体库选图按钮，并提示不要上传虚构的检测报告；另有 ALT 描述框。
+- **主题函数** `peptide_core_get_product_hover( $product )`，返回 `{mode, requested, image:{src, width, height, srcset, alt}|null, report:{...}|null}`。
+- 首页商品区积木的开关改名为“显示每个商品自己设置的悬停内容”。
+- 检查：新增 `tests/smoke-product-hover.php` 16 项（5 种模式、缺内容时退回、报告摘要不含下载链接、演示报告带标记、保存时的清理、编辑页表单保存）。十四套测试全部通过。浏览器：面板显示正常（只切换了选项看效果，没有保存；演示商品的设置没有变化）。
+- **需要 Codex**：`vc_product_card()` 按 mode 渲染悬停层（见群消息）。

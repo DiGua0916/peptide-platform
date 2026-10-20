@@ -11,7 +11,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-20T15:06:50+00:00\n"
+"POT-Creation-Date: 2026-10-20T17:08:31+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -342,7 +342,7 @@ msgid "View all %d"
 msgstr "查看全部 %d 条"
 
 #: includes/admin/class-design-editor.php:44
-#: includes/admin/class-design-editor.php:181
+#: includes/admin/class-design-editor.php:183
 msgid "Design editor"
 msgstr "装修编辑器"
 
@@ -581,12 +581,19 @@ msgstr "实时预览当前编辑的内容，只有你能看到。"
 msgid "Editing values for"
 msgstr "正在编辑"
 
-#: includes/admin/class-design-editor.php:181
+#. translators: %d: item number
+#: includes/admin/class-design-editor.php:172
+#: includes/modules/class-blocks.php:232
+#, php-format
+msgid "Item %d"
+msgstr "第 %d 项"
+
+#: includes/admin/class-design-editor.php:183
 #: includes/api/class-layout-controller.php:89
 msgid "Design document not found."
 msgstr "找不到这份装修文档。"
 
-#: includes/admin/class-design-editor.php:184
+#: includes/admin/class-design-editor.php:186
 msgid "Loading the design editor…"
 msgstr "正在加载装修编辑器…"
 
@@ -716,36 +723,80 @@ msgstr "（隐藏）"
 msgid "The selected batch does not match \"%s\" and was not saved."
 msgstr "所选批次与“%s”不匹配，未保存。"
 
-#: includes/admin/class-product-panel.php:34
+#: includes/admin/class-product-panel.php:37
 msgid "Peptide data"
 msgstr "多肽资料"
 
-#: includes/admin/class-product-panel.php:54
+#: includes/admin/class-product-panel.php:57
 msgid "Demo product"
 msgstr "演示商品"
 
-#: includes/admin/class-product-panel.php:55
+#: includes/admin/class-product-panel.php:58
 msgid "Synthetic demonstration record. The storefront must show a \"Demo\" label."
 msgstr "虚构的演示数据。前台必须显示“Demo”标识。"
 
-#: includes/admin/class-product-panel.php:63
+#: includes/admin/class-product-panel.php:66
 msgid "Specifications"
 msgstr "规格表"
 
-#: includes/admin/class-product-panel.php:64
+#: includes/admin/class-product-panel.php:67
 msgid "One per line: Label | Value | Unit (unit optional). Do not enter usage, dosage or efficacy claims."
 msgstr "每行一项：名称 | 值 | 单位（单位可省略）。不要填写用途、剂量或功效说明。"
 
-#: includes/admin/class-product-panel.php:141
+#: includes/admin/class-product-panel.php:90
+msgid "Card hover"
+msgstr "卡片悬停"
+
+#: includes/admin/class-product-panel.php:90
+msgid "What appears when a visitor moves the mouse over this product card (homepage, shop and category pages)."
+msgstr "访客把鼠标移到这个商品的卡片上时显示的内容（首页、商店页、分类页都适用）。"
+
+#: includes/admin/class-product-panel.php:94
+msgid "Show on hover"
+msgstr "悬停时显示"
+
+#: includes/admin/class-product-panel.php:101
+#: includes/class-product-hover.php:37
+msgid "Custom image"
+msgstr "自定义图片"
+
+#: includes/admin/class-product-panel.php:104
+#: includes/modules/class-blocks.php:234
+msgid "Choose image"
+msgstr "选择图片"
+
+#: includes/admin/class-product-panel.php:105
+#: includes/admin/class-store-design.php:310
+#: includes/modules/class-blocks.php:237
+msgid "Remove"
+msgstr "移除"
+
+#: includes/admin/class-product-panel.php:106
+msgid "Do not upload made-up test reports. To show a report, choose \"Real batch report summary\": it comes from your batch records."
+msgstr "不要上传虚构的检测报告图片。要展示报告，请选“真实批次报告摘要”，内容来自你的批次记录。"
+
+#: includes/admin/class-product-panel.php:112
+msgid "Hover image description (alt)"
+msgstr "悬停图片描述（ALT）"
+
+#: includes/admin/class-product-panel.php:115
+msgid "Describe the image for screen readers. Empty = product name."
+msgstr "给读屏软件看的图片描述，留空则使用商品名称。"
+
+#: includes/admin/class-product-panel.php:130
+msgid "Choose the hover image"
+msgstr "选择悬停图片"
+
+#: includes/admin/class-product-panel.php:242
 #: includes/class-post-types.php:39
 msgid "Batches"
 msgstr "批次"
 
-#: includes/admin/class-product-panel.php:145
+#: includes/admin/class-product-panel.php:246
 msgid "No batches yet."
 msgstr "暂无批次。"
 
-#: includes/admin/class-product-panel.php:160
+#: includes/admin/class-product-panel.php:261
 msgid "Add batch for this product"
 msgstr "为此商品添加批次"
 
@@ -1195,11 +1246,6 @@ msgstr "还没有域名指定模板，所有域名都使用店铺默认模板。
 msgid "Remove this domain assignment? The domain will use the store default template."
 msgstr "取消这个域名指定？该域名将使用店铺默认模板。"
 
-#: includes/admin/class-store-design.php:310
-#: includes/modules/class-blocks.php:237
-msgid "Remove"
-msgstr "移除"
-
 #: includes/admin/class-store-design.php:329
 msgid "Assign"
 msgstr "指定"
@@ -1469,6 +1515,22 @@ msgstr "文件保存失败。"
 msgid "The report file was not found."
 msgstr "找不到报告文件。"
 
+#: includes/class-product-hover.php:34
+msgid "Report placeholder card (default)"
+msgstr "报告占位卡片（默认）"
+
+#: includes/class-product-hover.php:35
+msgid "Real batch report summary (placeholder when no report is published)"
+msgstr "真实批次报告摘要（没有已发布报告时显示占位卡片）"
+
+#: includes/class-product-hover.php:36
+msgid "First image of the product gallery"
+msgstr "商品相册里的第一张图"
+
+#: includes/class-product-hover.php:38
+msgid "Nothing"
+msgstr "不显示"
+
 #: includes/class-settings.php:107
 msgid "The checkout confirmation was not enabled because its text is empty."
 msgstr "确认框文案为空，结账确认未开启。"
@@ -1569,18 +1631,9 @@ msgstr "下移"
 msgid "hidden"
 msgstr "已隐藏"
 
-#: includes/modules/class-blocks.php:232
-#, php-format
-msgid "Item %d"
-msgstr "第 %d 项"
-
 #: includes/modules/class-blocks.php:233
 msgid "Delete this item?"
 msgstr "删除这一项？"
-
-#: includes/modules/class-blocks.php:234
-msgid "Choose image"
-msgstr "选择图片"
 
 #: includes/modules/class-blocks.php:235
 msgid "Choose video"
@@ -1687,24 +1740,24 @@ msgstr "未选择图片"
 msgid "Choose an image"
 msgstr "请选择图片"
 
-#: includes/modules/class-fallback.php:482
+#: includes/modules/class-fallback.php:489
 msgid "Add a title in the sidebar."
 msgstr "请在右侧填写标题。"
 
-#: includes/modules/class-fallback.php:566
+#: includes/modules/class-fallback.php:573
 msgid "Add a YouTube link"
 msgstr "请填写 YouTube 链接"
 
-#: includes/modules/class-fallback.php:582
+#: includes/modules/class-fallback.php:589
 #: includes/modules/class-registry.php:598
 msgid "Video"
 msgstr "视频"
 
-#: includes/modules/class-fallback.php:587
+#: includes/modules/class-fallback.php:594
 msgid "Choose a video"
 msgstr "请选择视频"
 
-#: includes/modules/class-fallback.php:644
+#: includes/modules/class-fallback.php:651
 #: includes/modules/class-registry.php:317
 #: includes/modules/class-registry.php:689
 #: includes/modules/class-registry.php:806
@@ -1712,66 +1765,66 @@ msgstr "请选择视频"
 msgid "Icon"
 msgstr "图标"
 
-#: includes/modules/class-fallback.php:678
+#: includes/modules/class-fallback.php:685
 msgid "Paste your HTML in the sidebar."
 msgstr "请在右侧粘贴 HTML。"
 
-#: includes/modules/class-fallback.php:757
+#: includes/modules/class-fallback.php:764
 msgid "Choose a category"
 msgstr "请选择分类"
 
-#: includes/modules/class-fallback.php:767
+#: includes/modules/class-fallback.php:774
 msgid "Add some text."
 msgstr "请添加文字。"
 
-#: includes/modules/class-fallback.php:799
+#: includes/modules/class-fallback.php:806
 #: includes/modules/class-registry.php:878
 msgid "Spacer"
 msgstr "空白积木块"
 
-#: includes/modules/class-fallback.php:815
+#: includes/modules/class-fallback.php:822
 msgid "Write your text in the sidebar."
 msgstr "请在右侧填写内容。"
 
-#: includes/modules/class-fallback.php:821
+#: includes/modules/class-fallback.php:828
 #: includes/modules/class-registry.php:912
 msgid "Before image"
 msgstr "前图片"
 
-#: includes/modules/class-fallback.php:822
+#: includes/modules/class-fallback.php:829
 #: includes/modules/class-registry.php:913
 msgid "After image"
 msgstr "后图片"
 
-#: includes/modules/class-fallback.php:832
+#: includes/modules/class-fallback.php:839
 msgid "Drag to compare"
 msgstr "拖动对比"
 
 #. translators: %d: hotspot number
-#: includes/modules/class-fallback.php:857
+#: includes/modules/class-fallback.php:864
 #, php-format
 msgid "Hotspot %d"
 msgstr "热点 %d"
 
-#: includes/modules/class-fallback.php:880
+#: includes/modules/class-fallback.php:887
 #: includes/modules/class-registry.php:989
 msgid "Question"
 msgstr "问题"
 
-#: includes/modules/class-fallback.php:929
+#: includes/modules/class-fallback.php:936
 msgid "Add the headline."
 msgstr "请填写标题。"
 
-#: includes/modules/class-fallback.php:964
+#: includes/modules/class-fallback.php:971
 msgid "Choose a menu in the sidebar."
 msgstr "请在右侧选择菜单。"
 
-#: includes/modules/class-fallback.php:986
+#: includes/modules/class-fallback.php:993
 #: includes/modules/class-registry.php:1099
 msgid "Menu"
 msgstr "菜单"
 
-#: includes/modules/class-fallback.php:992
+#: includes/modules/class-fallback.php:999
 msgid "Logo"
 msgstr "商标"
 
@@ -2932,8 +2985,8 @@ msgid "Number of products"
 msgstr "商品数量"
 
 #: includes/modules/class-registry.php:1193
-msgid "Show report preview on hover"
-msgstr "鼠标悬停时显示报告预览"
+msgid "Show the hover card set on each product"
+msgstr "显示每个商品自己设置的悬停内容"
 
 #: includes/modules/class-registry.php:1194
 msgid "Text when there are no products"
