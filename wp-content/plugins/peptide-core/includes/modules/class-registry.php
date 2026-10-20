@@ -322,6 +322,7 @@ final class Registry {
 								),
 							)
 						),
+						Fields::f( 'text', 'footnote', __( 'Footnote under the text', 'peptide-core' ), '' ),
 						Fields::f( 'text', 'sceneNumber', __( 'Image number label', 'peptide-core' ), '' ),
 						Fields::f( 'text', 'captionTitle', __( 'Image caption (bold)', 'peptide-core' ), '' ),
 						Fields::f( 'text', 'captionNote', __( 'Image caption (note)', 'peptide-core' ), '' ),
@@ -497,6 +498,7 @@ final class Registry {
 					),
 					self::number( 'itemGapPx', __( 'Gap between rows (px)', 'peptide-core' ), array( 'desktop' => 48, 'mobile' => 32 ), 0, 240, 'layout', array( 'device' => true ) ),
 					self::toggle( 'animation', __( 'Fade in on scroll', 'peptide-core' ), true, 'layout' ),
+					Fields::f( 'textarea', 'footnote', __( 'Note under the rows (e.g. image disclosure)', 'peptide-core' ), '' ),
 				),
 				'items'       => self::items(
 					__( 'Rows', 'peptide-core' ),
@@ -506,6 +508,7 @@ final class Registry {
 						Fields::f( 'text', 'label', __( 'Label', 'peptide-core' ), '' ),
 						Fields::f( 'html', 'bodyHtml', __( 'Text', 'peptide-core' ), '' ),
 						self::media(),
+						Fields::f( 'text', 'caption', __( 'Image caption', 'peptide-core' ), '', array( 'group' => 'media' ) ),
 						self::select(
 							'imagePosition',
 							__( 'Image position', 'peptide-core' ),

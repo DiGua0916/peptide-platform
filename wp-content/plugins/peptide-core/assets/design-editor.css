@@ -131,6 +131,83 @@ html.wp-toolbar {
 	opacity: 0.7;
 }
 
+.pc-de-status {
+	margin-left: 10px;
+	padding: 2px 10px;
+	border-radius: 12px;
+	background: rgba(255, 255, 255, 0.14);
+	font-size: 12px;
+	white-space: nowrap;
+}
+
+.pc-de-status.is-live {
+	background: #16a34a;
+}
+
+.pc-de-status.is-changed {
+	background: #b45309;
+}
+
+.pc-de-publish {
+	position: relative;
+	display: flex;
+	margin-left: 8px;
+}
+
+.pc-de-publish .pc-de-top__publish {
+	margin-left: 0;
+	border-radius: 3px 0 0 3px;
+}
+
+.pc-de-publish .pc-de-top__publish--more {
+	padding: 0 8px;
+	border-left: 1px solid rgba(255, 255, 255, 0.35);
+	border-radius: 0 3px 3px 0;
+}
+
+.pc-de-top__publish:disabled {
+	opacity: 0.6;
+	cursor: default;
+}
+
+.pc-de-publish__menu {
+	position: absolute;
+	right: 0;
+	top: calc(100% + 6px);
+	z-index: 10;
+	min-width: 260px;
+	padding: 6px 0;
+	background: #fff;
+	border-radius: 4px;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.pc-de-publish__menu button {
+	display: block;
+	width: 100%;
+	padding: 9px 14px;
+	border: 0;
+	background: none;
+	text-align: left;
+	color: #1d2327;
+	font-size: 13px;
+	cursor: pointer;
+}
+
+.pc-de-publish__menu button:hover:not(:disabled),
+.pc-de-publish__menu button:focus-visible {
+	background: #f6f7f7;
+}
+
+.pc-de-publish__menu button:disabled {
+	color: #a7aaad;
+	cursor: default;
+}
+
+.pc-de-publish__menu button.is-danger:not(:disabled) {
+	color: #b32d2e;
+}
+
 .pc-de-page select {
 	height: 32px;
 	min-width: 140px;

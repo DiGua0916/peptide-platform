@@ -44,3 +44,17 @@ function peptide_core_lookup_batch( string $batch_no, bool $include_history = fa
 function peptide_core_get_support_contacts(): array {
 	return \PeptideCore\Support_Contacts::public_view();
 }
+
+/**
+ * 当前模板（预览 > 域名指定 > 店铺默认）的某份装修文档是否已经发布并且有模块（EDIT-BLOCKS-05）。
+ */
+function peptide_core_has_layout( string $doc = 'home' ): bool {
+	return (bool) \PeptideCore\Modules\Layout::published_modules( $doc );
+}
+
+/**
+ * 输出当前请求应该显示的装修内容：员工预览时是草稿，访客看到已发布的版本。返回已转义的 HTML。
+ */
+function peptide_core_render_layout( string $doc = 'home' ): string {
+	return \PeptideCore\Modules\Layout::render_current( $doc );
+}

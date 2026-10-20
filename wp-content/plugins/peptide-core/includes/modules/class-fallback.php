@@ -340,6 +340,10 @@ final class Fallback {
 				$text .= '</ul>';
 			}
 
+			if ( '' !== $it['footnote'] ) {
+				$text .= '<p class="vc-slide__footnote">' . esc_html( $it['footnote'] ) . '</p>';
+			}
+
 			// 图片：浮动卡片、编号、说明。
 			$figure = self::picture( $it['media'], 'vc-slide__media' );
 			if ( $it['highlights'] ) {
@@ -434,14 +438,15 @@ final class Fallback {
 	/**
 	 * 一行图文（图文、图文行共用）。
 	 */
-	private static function media_text_row( array $media, $position, string $text_html, string $class = 'vc-mt' ): string {
+	private static function media_text_row( array $media, $position, string $text_html, string $class = 'vc-mt', string $caption = '' ): string {
 		return sprintf(
-			'<div class="%1$s vc-mt--d-%2$s vc-mt--m-%3$s"><div class="vc-mt__media">%4$s</div><div class="vc-mt__text">%5$s</div></div>',
+			'<div class="%1$s vc-mt--d-%2$s vc-mt--m-%3$s"><figure class="vc-mt__media">%4$s%6$s</figure><div class="vc-mt__text">%5$s</div></div>',
 			esc_attr( $class ),
 			esc_attr( (string) self::dv( $position, 'desktop' ) ),
 			esc_attr( (string) self::dv( $position, 'mobile' ) ),
 			self::picture( $media, 'vc-img', '(max-width: 767px) 100vw, 50vw' ),
-			$text_html
+			$text_html,
+			'' !== $caption ? '<figcaption class="vc-mt__caption">' . esc_html( $caption ) . '</figcaption>' : ''
 		);
 	}
 
@@ -501,7 +506,7 @@ final class Fallback {
 				$text .= '<div class="vc-richtext">' . self::html( $it['bodyHtml'] ) . '</div>';
 			}
 			$text .= self::button( $it['button'] );
-			$rows .= self::media_text_row( $it['media'], $it['imagePosition'], $text, self::item_class( $it, 'vc-mt' ) );
+			$rows .= self::media_text_row( $it['media'], $it['imagePosition'], $text, self::item_class( $it, 'vc-mt' ), (string) $it['caption'] );
 		}
 		$vars = self::style(
 			array(
@@ -509,7 +514,8 @@ final class Fallback {
 				'--vc-gap-m' => (int) self::dv( $s['itemGapPx'], 'mobile' ) . 'px',
 			)
 		);
-		return '<div class="' . esc_attr( $width ) . '">' . $head . '<div class="vc-mt-list' . ( $s['animation'] ? ' vc-reveal' : '' ) . '"' . $vars . '>' . $rows . '</div></div>';
+		$note = '' !== $s['footnote'] ? '<p class="vc-mt-list__note">' . nl2br( esc_html( $s['footnote'] ) ) . '</p>' : '';
+		return '<div class="' . esc_attr( $width ) . '">' . $head . '<div class="vc-mt-list' . ( $s['animation'] ? ' vc-reveal' : '' ) . '"' . $vars . '>' . $rows . '</div>' . $note . '</div>';
 	}
 
 	private static function render_card_list( array $s, array $items ): string {

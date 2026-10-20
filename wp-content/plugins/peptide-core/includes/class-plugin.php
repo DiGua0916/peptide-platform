@@ -60,6 +60,7 @@ final class Plugin {
 			\WP_CLI::add_command( 'peptide batch', Cli\Batch_Command::class );
 			\WP_CLI::add_command( 'peptide pricing', Cli\Pricing_Command::class );
 			\WP_CLI::add_command( 'peptide shipping', Cli\Shipping_Command::class );
+			\WP_CLI::add_command( 'peptide layout', Cli\Layout_Command::class );
 		}
 	}
 

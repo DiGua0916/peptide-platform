@@ -79,6 +79,12 @@
 		var notice = noticeState[ 0 ];
 		var setNotice = noticeState[ 1 ];
 		var modifiedRef = useRef( cfg.document.modified );
+		var statusState = useState( cfg.document.status || { published: false, changed: true } );
+		var status = statusState[ 0 ];
+		var menuState = useState( false );
+		var menuOpen = menuState[ 0 ];
+		var busyState = useState( false );
+		var busy = busyState[ 0 ];
 		var previewState = useState( cfg.document.previewBase );
 		var previewUrl = previewState[ 0 ];
 		var loadingState = useState( true );
@@ -197,26 +203,103 @@
 			setModules( list );
 		}
 
-		function save() {
+		function showError( err ) {
+			setNotice( {
+				type: 'error',
+				text: ( err && err.message ) || 'Error',
+				reload: err && err.code === 'pc_layout_conflict',
+			} );
+		}
+
+		// 保存草稿；返回 Promise，发布前会先调用。
+		function save( quiet ) {
 			if ( saving ) {
-				return;
+				return Promise.reject( { message: S.saving } );
 			}
 			savingState[ 1 ]( true );
-			apiFetch( { path: cfg.restPath, method: 'POST', data: { modules: modules, modified: modifiedRef.current } } )
+			return apiFetch( { path: cfg.restPath, method: 'POST', data: { modules: modules, modified: modifiedRef.current } } )
 				.then( function ( doc ) {
 					modifiedRef.current = doc.modified;
+					statusState[ 1 ]( doc.status );
 					dirtyState[ 1 ]( false );
-					setNotice( { type: 'success', text: S.saved } );
-				} )
-				.catch( function ( err ) {
-					setNotice( {
-						type: 'error',
-						text: ( err && err.message ) || 'Error',
-						reload: err && err.code === 'pc_layout_conflict',
-					} );
+					if ( ! quiet ) {
+						setNotice( { type: 'success', text: S.saved } );
+					}
+					return doc;
 				} )
 				.finally( function () {
 					savingState[ 1 ]( false );
+				} );
+		}
+
+		function onSave() {
+			save( false ).catch( showError );
+		}
+
+		// 发布：有未保存的修改时先保存，再发布。
+		function publish() {
+			menuState[ 1 ]( false );
+			if ( ! cfg.canPublish ) {
+				setNotice( { type: 'warning', text: S.publishDenied } );
+				return;
+			}
+			// eslint-disable-next-line no-alert -- 后台已用页面内对话框替换原生确认框。
+			if ( ! window.confirm( S.publishConfirm ) ) {
+				return;
+			}
+			busyState[ 1 ]( true );
+			( dirty ? save( true ) : Promise.resolve() )
+				.then( function () {
+					return apiFetch( { path: cfg.restPath + '/publish', method: 'POST', data: { modified: modifiedRef.current } } );
+				} )
+				.then( function ( doc ) {
+					statusState[ 1 ]( doc.status );
+					setNotice( { type: 'success', text: S.published } );
+				} )
+				.catch( showError )
+				.finally( function () {
+					busyState[ 1 ]( false );
+				} );
+		}
+
+		function unpublish() {
+			menuState[ 1 ]( false );
+			// eslint-disable-next-line no-alert
+			if ( ! window.confirm( S.unpublishConfirm ) ) {
+				return;
+			}
+			busyState[ 1 ]( true );
+			apiFetch( { path: cfg.restPath + '/unpublish', method: 'POST' } )
+				.then( function ( doc ) {
+					statusState[ 1 ]( doc.status );
+					setNotice( { type: 'success', text: S.unpublished } );
+				} )
+				.catch( showError )
+				.finally( function () {
+					busyState[ 1 ]( false );
+				} );
+		}
+
+		function discard() {
+			menuState[ 1 ]( false );
+			// eslint-disable-next-line no-alert
+			if ( ! window.confirm( S.discardConfirm ) ) {
+				return;
+			}
+			busyState[ 1 ]( true );
+			apiFetch( { path: cfg.restPath + '/discard', method: 'POST' } )
+				.then( function ( doc ) {
+					modifiedRef.current = doc.modified;
+					statusState[ 1 ]( doc.status );
+					historyRef.current = { past: [], future: [], last: 0 };
+					setModulesRaw( doc.modules );
+					dirtyState[ 1 ]( false );
+					setSelected( null );
+					setNotice( { type: 'success', text: S.discarded } );
+				} )
+				.catch( showError )
+				.finally( function () {
+					busyState[ 1 ]( false );
 				} );
 		}
 
@@ -336,7 +419,7 @@
 				var mod = e.ctrlKey || e.metaKey;
 				if ( mod && e.key.toLowerCase() === 's' ) {
 					e.preventDefault();
-					save();
+					onSave();
 				} else if ( mod && e.key.toLowerCase() === 'z' && ! isTyping( e.target ) ) {
 					e.preventDefault();
 					if ( e.shiftKey ) {
@@ -410,7 +493,14 @@
 						} )
 					)
 				),
-				el( 'span', { className: 'pc-de-top__template' }, cfg.document.template.name )
+				el( 'span', { className: 'pc-de-top__template' }, cfg.document.template.name ),
+				el(
+					'span',
+					{ className: 'pc-de-status' + ( status.published ? ( status.changed || dirty ? ' is-changed' : ' is-live' ) : '' ) },
+					status.published
+						? ( status.changed || dirty ? S.statusChanged : S.statusLive.replace( '%s', status.at || '' ) )
+						: S.statusDraft
+				)
 			),
 			el(
 				'div',
@@ -427,21 +517,41 @@
 				el( 'a', { className: 'pc-de-top__btn', href: cfg.storeUrl, target: '_blank', rel: 'noopener' }, el( Icon, { name: 'visibility' } ), el( 'span', null, S.viewStore ) ),
 				el(
 					'button',
-					{ type: 'button', className: 'pc-de-top__btn pc-de-top__save' + ( dirty ? ' is-dirty' : '' ), onClick: save, disabled: saving },
+					{ type: 'button', className: 'pc-de-top__btn pc-de-top__save' + ( dirty ? ' is-dirty' : '' ), onClick: onSave, disabled: saving || busy },
 					el( Icon, { name: 'saved' } ),
 					el( 'span', null, saving ? S.saving : S.save )
 				),
 				el(
-					'button',
-					{
-						type: 'button',
-						className: 'pc-de-top__publish',
-						onClick: function () {
-							setNotice( { type: 'info', text: S.publishSoon } );
+					'div',
+					{ className: 'pc-de-publish' },
+					el(
+						'button',
+						{ type: 'button', className: 'pc-de-top__publish', onClick: publish, disabled: busy || saving },
+						el( Icon, { name: 'upload' } ),
+						el( 'span', null, busy ? S.working : S.publish )
+					),
+					el(
+						'button',
+						{
+							type: 'button',
+							className: 'pc-de-top__publish pc-de-top__publish--more',
+							'aria-label': S.publishMenu,
+							'aria-expanded': menuOpen,
+							title: S.publishMenu,
+							onClick: function () {
+								menuState[ 1 ]( ! menuOpen );
+							},
 						},
-					},
-					el( Icon, { name: 'upload' } ),
-					el( 'span', null, S.publish )
+						el( Icon, { name: 'arrow-down-alt2' } )
+					),
+					menuOpen
+						? el(
+							'div',
+							{ className: 'pc-de-publish__menu', role: 'menu' },
+							el( 'button', { type: 'button', role: 'menuitem', disabled: ! status.published, onClick: discard }, S.discard ),
+							el( 'button', { type: 'button', role: 'menuitem', disabled: ! status.published || ! cfg.canPublish, onClick: unpublish, className: 'is-danger' }, S.unpublish )
+						)
+						: null
 				)
 			)
 		);

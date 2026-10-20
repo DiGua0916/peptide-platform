@@ -11,7 +11,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-20T14:37:04+00:00\n"
+"POT-Creation-Date: 2026-10-20T14:49:50+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -51,8 +51,8 @@ msgstr "3–40 个字符：字母、数字和连字符。保存时统一转为�
 
 #: includes/admin/class-batch-metabox.php:56
 #: includes/admin/class-list-columns.php:33
-#: includes/modules/class-registry.php:998
-#: includes/modules/class-registry.php:1151
+#: includes/modules/class-registry.php:1001
+#: includes/modules/class-registry.php:1154
 msgid "Product"
 msgstr "商品"
 
@@ -179,7 +179,7 @@ msgstr "订单"
 #: includes/admin/class-batch-orders.php:66
 #: includes/admin/class-list-columns.php:38
 #: includes/admin/class-list-columns.php:81
-#: includes/modules/class-registry.php:742
+#: includes/modules/class-registry.php:745
 msgid "Date"
 msgstr "日期"
 
@@ -192,7 +192,7 @@ msgid "Email"
 msgstr "邮箱"
 
 #: includes/admin/class-batch-orders.php:66
-#: includes/modules/class-registry.php:1057
+#: includes/modules/class-registry.php:1060
 msgid "Items"
 msgstr "商品"
 
@@ -342,7 +342,7 @@ msgid "View all %d"
 msgstr "查看全部 %d 条"
 
 #: includes/admin/class-design-editor.php:44
-#: includes/admin/class-design-editor.php:167
+#: includes/admin/class-design-editor.php:181
 msgid "Design editor"
 msgstr "装修编辑器"
 
@@ -413,125 +413,180 @@ msgid "Publish"
 msgstr "发布"
 
 #: includes/admin/class-design-editor.php:131
-msgid "Publishing to the storefront comes in the next step. For now, save the draft and use the preview."
-msgstr "“发布到网站”下一步上线。现在可以先保存草稿，用预览查看效果。"
+msgid "More publishing options"
+msgstr "更多发布选项"
 
 #: includes/admin/class-design-editor.php:132
+msgid "Publish this design to the storefront? Visitors will see it right away. Unsaved changes are saved first."
+msgstr "把这份装修发布到网站？访客会立刻看到。未保存的修改会先自动保存。"
+
+#: includes/admin/class-design-editor.php:133
+msgid "Published. Visitors now see this design."
+msgstr "已发布，访客现在看到的是这份装修。"
+
+#: includes/admin/class-design-editor.php:134
+#: includes/api/class-layout-controller.php:107
+msgid "Only administrators can publish designs to the storefront."
+msgstr "只有管理员可以把装修发布到网站。"
+
+#: includes/admin/class-design-editor.php:135
+msgid "Working…"
+msgstr "处理中…"
+
+#: includes/admin/class-design-editor.php:136
+msgid "Not published: visitors see the theme's original page"
+msgstr "未发布：访客看到的是主题原来的页面"
+
+#. translators: %s: date and time
+#: includes/admin/class-design-editor.php:138
+#, php-format
+msgid "Published %s"
+msgstr "已发布 %s"
+
+#: includes/admin/class-design-editor.php:139
+msgid "Published · has unpublished changes"
+msgstr "已发布 · 有未发布的修改"
+
+#: includes/admin/class-design-editor.php:140
+msgid "Discard unpublished changes (back to the published version)"
+msgstr "放弃未发布的修改（回到已发布的版本）"
+
+#: includes/admin/class-design-editor.php:141
+msgid "Replace your draft with the published version? The current draft stays in the revision history."
+msgstr "用已发布的版本替换草稿？当前草稿会保留在修订记录里。"
+
+#: includes/admin/class-design-editor.php:142
+msgid "The draft is back to the published version."
+msgstr "草稿已恢复成已发布的版本。"
+
+#: includes/admin/class-design-editor.php:143
+msgid "Unpublish (show the theme's original page again)"
+msgstr "取消发布（恢复主题原来的页面）"
+
+#: includes/admin/class-design-editor.php:144
+msgid "Unpublish this design? Visitors will see the theme's original page again. Your draft is kept."
+msgstr "取消发布这份装修？访客会重新看到主题原来的页面，草稿会保留。"
+
+#: includes/admin/class-design-editor.php:145
+msgid "Unpublished. Visitors see the theme's original page."
+msgstr "已取消发布，访客看到的是主题原来的页面。"
+
+#: includes/admin/class-design-editor.php:146
 msgid "Block design"
 msgstr "积木装修"
 
-#: includes/admin/class-design-editor.php:133
+#: includes/admin/class-design-editor.php:147
 msgid "Global settings"
 msgstr "全局配置"
 
-#: includes/admin/class-design-editor.php:134
+#: includes/admin/class-design-editor.php:148
 #: includes/class-templates.php:50
 msgid "Header"
 msgstr "页头"
 
-#: includes/admin/class-design-editor.php:135
+#: includes/admin/class-design-editor.php:149
 #: includes/class-templates.php:51
 msgid "Footer"
 msgstr "页脚"
 
-#: includes/admin/class-design-editor.php:136
+#: includes/admin/class-design-editor.php:150
 msgid "Add block"
 msgstr "添加积木块"
 
-#: includes/admin/class-design-editor.php:137
+#: includes/admin/class-design-editor.php:151
 msgid "Block library"
 msgstr "积木库"
 
-#: includes/admin/class-design-editor.php:138
+#: includes/admin/class-design-editor.php:152
 msgid "Click a card to add it below the selected block."
 msgstr "点击卡片，添加到当前选中积木的下面。"
 
-#: includes/admin/class-design-editor.php:139
+#: includes/admin/class-design-editor.php:153
 #: includes/admin/class-store-design.php:386
 #: includes/modules/class-blocks.php:225
 msgid "Duplicate"
 msgstr "复制"
 
-#: includes/admin/class-design-editor.php:140
+#: includes/admin/class-design-editor.php:154
 #: includes/modules/class-blocks.php:229
 msgid "Hide"
 msgstr "隐藏"
 
-#: includes/admin/class-design-editor.php:141
+#: includes/admin/class-design-editor.php:155
 #: includes/modules/class-blocks.php:230
 msgid "Show"
 msgstr "显示"
 
-#: includes/admin/class-design-editor.php:142
+#: includes/admin/class-design-editor.php:156
 #: includes/admin/class-store-design.php:396
 #: includes/modules/class-blocks.php:226
 msgid "Delete"
 msgstr "删除"
 
-#: includes/admin/class-design-editor.php:143
+#: includes/admin/class-design-editor.php:157
 msgid "More"
 msgstr "更多"
 
-#: includes/admin/class-design-editor.php:144
+#: includes/admin/class-design-editor.php:158
 msgid "Delete this block? You can undo this until you leave the editor."
 msgstr "删除这个积木？离开编辑器之前都可以撤销。"
 
-#: includes/admin/class-design-editor.php:145
+#: includes/admin/class-design-editor.php:159
 msgid "Drag to reorder"
 msgstr "拖动排序"
 
-#: includes/admin/class-design-editor.php:146
+#: includes/admin/class-design-editor.php:160
 msgid "No blocks yet. Click \"Add block\" to start."
 msgstr "还没有积木。点“添加积木块”开始。"
 
-#: includes/admin/class-design-editor.php:147
+#: includes/admin/class-design-editor.php:161
 msgid "The header (announcement bar, logo, menu, search, account and cart) is shown by the theme for now. Editing it here comes next, together with the footer."
 msgstr "页头（公告栏、LOGO、菜单、搜索、账户、购物车）目前由主题显示。下一步和页脚一起做成可以在这里编辑。"
 
-#: includes/admin/class-design-editor.php:148
+#: includes/admin/class-design-editor.php:162
 msgid "The footer is shown by the theme for now. Editing it here comes next."
 msgstr "页脚目前由主题显示，下一步做成可以在这里编辑。"
 
-#: includes/admin/class-design-editor.php:149
+#: includes/admin/class-design-editor.php:163
 msgid "Global settings (colors, fonts, content width, spacing, button corners) come next. They will apply to every block."
 msgstr "全局配置（颜色、字体、内容宽度、间距、按钮圆角）下一步上线，会作用到所有积木。"
 
-#: includes/admin/class-design-editor.php:150
+#: includes/admin/class-design-editor.php:164
 msgid "You have unsaved changes."
 msgstr "有未保存的修改。"
 
-#: includes/admin/class-design-editor.php:151
+#: includes/admin/class-design-editor.php:165
 msgid "Reload"
 msgstr "重新加载"
 
-#: includes/admin/class-design-editor.php:152
+#: includes/admin/class-design-editor.php:166
 #, php-format
 msgid "%s is also editing this design. Saving may overwrite their changes."
 msgstr "%s 也在编辑这份装修，保存可能会覆盖对方的修改。"
 
-#: includes/admin/class-design-editor.php:153
+#: includes/admin/class-design-editor.php:167
 msgid "Updating preview…"
 msgstr "正在更新预览…"
 
-#: includes/admin/class-design-editor.php:154
+#: includes/admin/class-design-editor.php:168
 msgid "Select a block on the left of this panel, or click it in the preview."
 msgstr "在左边的积木列表里选择一个积木，或者直接点击预览里的积木。"
 
-#: includes/admin/class-design-editor.php:155
+#: includes/admin/class-design-editor.php:169
 msgid "Live preview of what you are editing. Only you can see it."
 msgstr "实时预览当前编辑的内容，只有你能看到。"
 
-#: includes/admin/class-design-editor.php:156
+#: includes/admin/class-design-editor.php:170
 #: includes/modules/class-blocks.php:222
 msgid "Editing values for"
 msgstr "正在编辑"
 
-#: includes/admin/class-design-editor.php:167
-#: includes/api/class-layout-controller.php:70
+#: includes/admin/class-design-editor.php:181
+#: includes/api/class-layout-controller.php:89
 msgid "Design document not found."
 msgstr "找不到这份装修文档。"
 
-#: includes/admin/class-design-editor.php:170
+#: includes/admin/class-design-editor.php:184
 msgid "Loading the design editor…"
 msgstr "正在加载装修编辑器…"
 
@@ -575,20 +630,20 @@ msgstr "是"
 #: includes/modules/class-registry.php:110
 #: includes/modules/class-registry.php:291
 #: includes/modules/class-registry.php:319
-#: includes/modules/class-registry.php:453
-#: includes/modules/class-registry.php:485
-#: includes/modules/class-registry.php:505
-#: includes/modules/class-registry.php:562
-#: includes/modules/class-registry.php:642
-#: includes/modules/class-registry.php:709
-#: includes/modules/class-registry.php:743
-#: includes/modules/class-registry.php:784
-#: includes/modules/class-registry.php:868
-#: includes/modules/class-registry.php:917
-#: includes/modules/class-registry.php:1128
-#: includes/modules/class-registry.php:1181
-#: includes/modules/class-registry.php:1210
-#: includes/modules/class-registry.php:1224
+#: includes/modules/class-registry.php:454
+#: includes/modules/class-registry.php:486
+#: includes/modules/class-registry.php:507
+#: includes/modules/class-registry.php:565
+#: includes/modules/class-registry.php:645
+#: includes/modules/class-registry.php:712
+#: includes/modules/class-registry.php:746
+#: includes/modules/class-registry.php:787
+#: includes/modules/class-registry.php:871
+#: includes/modules/class-registry.php:920
+#: includes/modules/class-registry.php:1131
+#: includes/modules/class-registry.php:1184
+#: includes/modules/class-registry.php:1213
+#: includes/modules/class-registry.php:1227
 msgid "Title"
 msgstr "标题"
 
@@ -1250,19 +1305,27 @@ msgstr "请求参数无效。"
 msgid "Not found."
 msgstr "未找到。"
 
-#: includes/api/class-layout-controller.php:73
+#: includes/api/class-layout-controller.php:92
 msgid "Sorry, you are not allowed to edit this design."
 msgstr "抱歉，你没有权限编辑这份装修。"
 
 #. translators: %s: user name
-#: includes/api/class-layout-controller.php:118
+#: includes/api/class-layout-controller.php:151
 #, php-format
 msgid "This design was changed by %s after you opened it. Reload to see their changes before saving."
 msgstr "你打开之后，%s 修改过这份装修。请先重新加载，看到对方的修改后再保存。"
 
-#: includes/api/class-layout-controller.php:119
+#: includes/api/class-layout-controller.php:152
 msgid "someone else"
 msgstr "其他人"
+
+#: includes/api/class-layout-controller.php:183
+msgid "This design was changed after you opened it. Reload, check the changes, then publish."
+msgstr "你打开之后这份装修被改过。请重新加载，确认修改后再发布。"
+
+#: includes/api/class-layout-controller.php:200
+msgid "There is no published version to go back to."
+msgstr "还没有已发布的版本，无法恢复。"
 
 #: includes/api/class-rest-controller.php:121
 msgid "Please log in to view your orders."
@@ -1343,7 +1406,7 @@ msgstr "批次分配已更新："
 msgid "Batch: %s"
 msgstr "批次：%s"
 
-#: includes/class-plugin.php:84
+#: includes/class-plugin.php:85
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr "Peptide Core 需要先安装并启用 WooCommerce。"
 
@@ -1557,13 +1620,13 @@ msgstr "焦点位置"
 #: includes/modules/class-blocks.php:245
 #: includes/modules/class-registry.php:293
 #: includes/modules/class-registry.php:305
-#: includes/modules/class-registry.php:454
-#: includes/modules/class-registry.php:507
-#: includes/modules/class-registry.php:563
-#: includes/modules/class-registry.php:643
-#: includes/modules/class-registry.php:669
-#: includes/modules/class-registry.php:844
-#: includes/modules/class-registry.php:869
+#: includes/modules/class-registry.php:455
+#: includes/modules/class-registry.php:509
+#: includes/modules/class-registry.php:566
+#: includes/modules/class-registry.php:646
+#: includes/modules/class-registry.php:672
+#: includes/modules/class-registry.php:847
+#: includes/modules/class-registry.php:872
 msgid "Text"
 msgstr "文字"
 
@@ -1623,87 +1686,87 @@ msgstr "未选择图片"
 msgid "Choose an image"
 msgstr "请选择图片"
 
-#: includes/modules/class-fallback.php:540
+#: includes/modules/class-fallback.php:546
 msgid "Add a YouTube link"
 msgstr "请填写 YouTube 链接"
 
-#: includes/modules/class-fallback.php:556
-#: includes/modules/class-registry.php:574
+#: includes/modules/class-fallback.php:562
+#: includes/modules/class-registry.php:577
 msgid "Video"
 msgstr "视频"
 
-#: includes/modules/class-fallback.php:561
+#: includes/modules/class-fallback.php:567
 msgid "Choose a video"
 msgstr "请选择视频"
 
-#: includes/modules/class-fallback.php:618
+#: includes/modules/class-fallback.php:624
 #: includes/modules/class-registry.php:317
-#: includes/modules/class-registry.php:665
-#: includes/modules/class-registry.php:782
-#: includes/modules/class-registry.php:1059
+#: includes/modules/class-registry.php:668
+#: includes/modules/class-registry.php:785
+#: includes/modules/class-registry.php:1062
 msgid "Icon"
 msgstr "图标"
 
-#: includes/modules/class-fallback.php:652
+#: includes/modules/class-fallback.php:658
 msgid "Paste your HTML in the sidebar."
 msgstr "请在右侧粘贴 HTML。"
 
-#: includes/modules/class-fallback.php:731
+#: includes/modules/class-fallback.php:737
 msgid "Choose a category"
 msgstr "请选择分类"
 
-#: includes/modules/class-fallback.php:741
+#: includes/modules/class-fallback.php:747
 msgid "Add some text."
 msgstr "请添加文字。"
 
-#: includes/modules/class-fallback.php:773
-#: includes/modules/class-registry.php:854
+#: includes/modules/class-fallback.php:779
+#: includes/modules/class-registry.php:857
 msgid "Spacer"
 msgstr "空白积木块"
 
-#: includes/modules/class-fallback.php:789
+#: includes/modules/class-fallback.php:795
 msgid "Write your text in the sidebar."
 msgstr "请在右侧填写内容。"
 
-#: includes/modules/class-fallback.php:795
-#: includes/modules/class-registry.php:888
+#: includes/modules/class-fallback.php:801
+#: includes/modules/class-registry.php:891
 msgid "Before image"
 msgstr "前图片"
 
-#: includes/modules/class-fallback.php:796
-#: includes/modules/class-registry.php:889
+#: includes/modules/class-fallback.php:802
+#: includes/modules/class-registry.php:892
 msgid "After image"
 msgstr "后图片"
 
-#: includes/modules/class-fallback.php:806
+#: includes/modules/class-fallback.php:812
 msgid "Drag to compare"
 msgstr "拖动对比"
 
 #. translators: %d: hotspot number
-#: includes/modules/class-fallback.php:831
+#: includes/modules/class-fallback.php:837
 #, php-format
 msgid "Hotspot %d"
 msgstr "热点 %d"
 
-#: includes/modules/class-fallback.php:854
-#: includes/modules/class-registry.php:965
+#: includes/modules/class-fallback.php:860
+#: includes/modules/class-registry.php:968
 msgid "Question"
 msgstr "问题"
 
-#: includes/modules/class-fallback.php:903
+#: includes/modules/class-fallback.php:909
 msgid "Add the headline."
 msgstr "请填写标题。"
 
-#: includes/modules/class-fallback.php:938
+#: includes/modules/class-fallback.php:944
 msgid "Choose a menu in the sidebar."
 msgstr "请在右侧选择菜单。"
 
-#: includes/modules/class-fallback.php:960
-#: includes/modules/class-registry.php:1075
+#: includes/modules/class-fallback.php:966
+#: includes/modules/class-registry.php:1078
 msgid "Menu"
 msgstr "菜单"
 
-#: includes/modules/class-fallback.php:966
+#: includes/modules/class-fallback.php:972
 msgid "Logo"
 msgstr "商标"
 
@@ -1736,7 +1799,7 @@ msgstr "中右"
 msgid "Bottom center"
 msgstr "下中"
 
-#: includes/modules/class-layout.php:187
+#: includes/modules/class-layout.php:292
 msgid "This page has no modules yet. Add modules in the design editor."
 msgstr "这个页面还没有积木，请在装修编辑器里添加。"
 
@@ -1753,8 +1816,8 @@ msgid "Marketing blocks"
 msgstr "运营类"
 
 #: includes/modules/class-registry.php:39
-#: includes/modules/class-registry.php:785
-#: includes/modules/class-registry.php:1225
+#: includes/modules/class-registry.php:788
+#: includes/modules/class-registry.php:1228
 msgid "Content"
 msgstr "内容"
 
@@ -1763,8 +1826,8 @@ msgid "Media"
 msgstr "图片与视频"
 
 #: includes/modules/class-registry.php:41
-#: includes/modules/class-registry.php:950
-#: includes/modules/class-registry.php:1250
+#: includes/modules/class-registry.php:953
+#: includes/modules/class-registry.php:1253
 msgid "Layout"
 msgstr "布局"
 
@@ -1775,10 +1838,10 @@ msgstr "播放"
 #: includes/modules/class-registry.php:43
 #: includes/modules/class-registry.php:129
 #: includes/modules/class-registry.php:294
-#: includes/modules/class-registry.php:522
-#: includes/modules/class-registry.php:620
-#: includes/modules/class-registry.php:1184
-#: includes/modules/class-registry.php:1212
+#: includes/modules/class-registry.php:525
+#: includes/modules/class-registry.php:623
+#: includes/modules/class-registry.php:1187
+#: includes/modules/class-registry.php:1215
 msgid "Button"
 msgstr "按钮"
 
@@ -1811,19 +1874,19 @@ msgid "Module background"
 msgstr "积木背景色"
 
 #: includes/modules/class-registry.php:112
-#: includes/modules/class-registry.php:694
-#: includes/modules/class-registry.php:744
-#: includes/modules/class-registry.php:918
-#: includes/modules/class-registry.php:1022
-#: includes/modules/class-registry.php:1061
-#: includes/modules/class-registry.php:1129
-#: includes/modules/class-registry.php:1183
-#: includes/modules/class-registry.php:1211
+#: includes/modules/class-registry.php:697
+#: includes/modules/class-registry.php:747
+#: includes/modules/class-registry.php:921
+#: includes/modules/class-registry.php:1025
+#: includes/modules/class-registry.php:1064
+#: includes/modules/class-registry.php:1132
+#: includes/modules/class-registry.php:1186
+#: includes/modules/class-registry.php:1214
 msgid "Short description"
 msgstr "简短描述"
 
 #: includes/modules/class-registry.php:118
-#: includes/modules/class-registry.php:495
+#: includes/modules/class-registry.php:496
 msgid "Full width"
 msgstr "宽度铺满"
 
@@ -1852,12 +1915,12 @@ msgid "Effect interval (ms)"
 msgstr "动画间隔（毫秒）"
 
 #: includes/modules/class-registry.php:147
-#: includes/modules/class-registry.php:332
+#: includes/modules/class-registry.php:333
 msgid "Button text color"
 msgstr "按钮文字颜色"
 
 #: includes/modules/class-registry.php:148
-#: includes/modules/class-registry.php:333
+#: includes/modules/class-registry.php:334
 msgid "Button background"
 msgstr "按钮背景色"
 
@@ -1866,26 +1929,26 @@ msgid "Items per row"
 msgstr "每行数量"
 
 #: includes/modules/class-registry.php:183
-#: includes/modules/class-registry.php:693
-#: includes/modules/class-registry.php:810
+#: includes/modules/class-registry.php:696
+#: includes/modules/class-registry.php:813
 msgid "Image"
 msgstr "图片"
 
 #: includes/modules/class-registry.php:215
-#: includes/modules/class-registry.php:460
-#: includes/modules/class-registry.php:514
-#: includes/modules/class-registry.php:751
-#: includes/modules/class-registry.php:927
-#: includes/modules/class-registry.php:1032
+#: includes/modules/class-registry.php:461
+#: includes/modules/class-registry.php:517
+#: includes/modules/class-registry.php:754
+#: includes/modules/class-registry.php:930
+#: includes/modules/class-registry.php:1035
 msgid "Left"
 msgstr "左"
 
 #: includes/modules/class-registry.php:217
-#: includes/modules/class-registry.php:461
-#: includes/modules/class-registry.php:515
-#: includes/modules/class-registry.php:752
-#: includes/modules/class-registry.php:925
-#: includes/modules/class-registry.php:1033
+#: includes/modules/class-registry.php:462
+#: includes/modules/class-registry.php:518
+#: includes/modules/class-registry.php:755
+#: includes/modules/class-registry.php:928
+#: includes/modules/class-registry.php:1036
 msgid "Right"
 msgstr "右"
 
@@ -1934,7 +1997,7 @@ msgid "Show controls"
 msgstr "显示播放控件"
 
 #: includes/modules/class-registry.php:253
-#: includes/modules/class-registry.php:550
+#: includes/modules/class-registry.php:553
 msgid "Carousel"
 msgstr "轮播图"
 
@@ -1943,19 +2006,19 @@ msgid "Full-width slides with separate desktop and mobile images."
 msgstr "全宽轮播，电脑和手机可以分别设置图片。"
 
 #: includes/modules/class-registry.php:257
-#: includes/modules/class-registry.php:800
-#: includes/modules/class-registry.php:980
+#: includes/modules/class-registry.php:803
+#: includes/modules/class-registry.php:983
 msgid "Autoplay"
 msgstr "自动轮播"
 
 #: includes/modules/class-registry.php:258
-#: includes/modules/class-registry.php:801
-#: includes/modules/class-registry.php:981
+#: includes/modules/class-registry.php:804
+#: includes/modules/class-registry.php:984
 msgid "Time per slide (ms)"
 msgstr "轮播时间（毫秒）"
 
 #: includes/modules/class-registry.php:259
-#: includes/modules/class-registry.php:802
+#: includes/modules/class-registry.php:805
 msgid "Show dots"
 msgstr "显示分页器"
 
@@ -1964,12 +2027,12 @@ msgid "Show arrows"
 msgstr "显示左右箭头"
 
 #: includes/modules/class-registry.php:263
-#: includes/modules/class-registry.php:351
+#: includes/modules/class-registry.php:352
 msgid "Image height"
 msgstr "图片高度"
 
 #: includes/modules/class-registry.php:266
-#: includes/modules/class-registry.php:354
+#: includes/modules/class-registry.php:355
 msgid "Image height (auto)"
 msgstr "跟随图片（自适应）"
 
@@ -1986,7 +2049,7 @@ msgid "Fixed height (px)"
 msgstr "固定高度（px）"
 
 #: includes/modules/class-registry.php:273
-#: includes/modules/class-registry.php:615
+#: includes/modules/class-registry.php:618
 msgid "Title size (px)"
 msgstr "标题字号（px）"
 
@@ -2023,9 +2086,9 @@ msgid "Subtitle"
 msgstr "二级标题"
 
 #: includes/modules/class-registry.php:292
-#: includes/modules/class-registry.php:486
-#: includes/modules/class-registry.php:946
-#: includes/modules/class-registry.php:1182
+#: includes/modules/class-registry.php:487
+#: includes/modules/class-registry.php:949
+#: includes/modules/class-registry.php:1185
 msgid "Title (second line, emphasized)"
 msgstr "标题第二行（强调）"
 
@@ -2038,7 +2101,7 @@ msgid "Short facts under the text"
 msgstr "文字下方的短信息"
 
 #: includes/modules/class-registry.php:304
-#: includes/modules/class-registry.php:1079
+#: includes/modules/class-registry.php:1082
 msgid "Bold text"
 msgstr "文字加粗"
 
@@ -2055,836 +2118,848 @@ msgid "Action text"
 msgstr "行动提示文字"
 
 #: includes/modules/class-registry.php:325
+msgid "Footnote under the text"
+msgstr "文字下方的脚注"
+
+#: includes/modules/class-registry.php:326
 msgid "Image number label"
 msgstr "图片编号"
 
-#: includes/modules/class-registry.php:326
+#: includes/modules/class-registry.php:327
 msgid "Image caption (bold)"
 msgstr "图片说明（加粗）"
 
-#: includes/modules/class-registry.php:327
+#: includes/modules/class-registry.php:328
 msgid "Image caption (note)"
 msgstr "图片说明（备注）"
 
-#: includes/modules/class-registry.php:328
-#: includes/modules/class-registry.php:366
-#: includes/modules/class-registry.php:616
+#: includes/modules/class-registry.php:329
+#: includes/modules/class-registry.php:367
+#: includes/modules/class-registry.php:619
 msgid "Text position"
 msgstr "文字位置"
 
-#: includes/modules/class-registry.php:329
-#: includes/modules/class-registry.php:361
-#: includes/modules/class-registry.php:907
-#: includes/modules/class-registry.php:988
+#: includes/modules/class-registry.php:330
+#: includes/modules/class-registry.php:362
+#: includes/modules/class-registry.php:910
+#: includes/modules/class-registry.php:991
 msgid "Overlay color"
 msgstr "蒙层颜色"
 
-#: includes/modules/class-registry.php:330
-#: includes/modules/class-registry.php:362
-#: includes/modules/class-registry.php:618
-#: includes/modules/class-registry.php:773
-#: includes/modules/class-registry.php:989
+#: includes/modules/class-registry.php:331
+#: includes/modules/class-registry.php:363
+#: includes/modules/class-registry.php:621
+#: includes/modules/class-registry.php:776
+#: includes/modules/class-registry.php:992
 msgid "Overlay opacity (%)"
 msgstr "蒙层不透明度（%）"
 
-#: includes/modules/class-registry.php:331
-#: includes/modules/class-registry.php:368
-#: includes/modules/class-registry.php:471
-#: includes/modules/class-registry.php:619
-#: includes/modules/class-registry.php:736
-#: includes/modules/class-registry.php:840
-#: includes/modules/class-registry.php:875
-#: includes/modules/class-registry.php:1041
-#: includes/modules/class-registry.php:1082
-#: includes/modules/class-registry.php:1189
-#: includes/modules/class-registry.php:1215
-#: includes/modules/class-registry.php:1229
+#: includes/modules/class-registry.php:332
+#: includes/modules/class-registry.php:369
+#: includes/modules/class-registry.php:472
+#: includes/modules/class-registry.php:622
+#: includes/modules/class-registry.php:739
+#: includes/modules/class-registry.php:843
+#: includes/modules/class-registry.php:878
+#: includes/modules/class-registry.php:1044
+#: includes/modules/class-registry.php:1085
+#: includes/modules/class-registry.php:1192
+#: includes/modules/class-registry.php:1218
+#: includes/modules/class-registry.php:1232
 msgid "Text color"
 msgstr "文字颜色"
 
-#: includes/modules/class-registry.php:343
+#: includes/modules/class-registry.php:344
 msgid "Single image"
 msgstr "单图"
 
-#: includes/modules/class-registry.php:347
+#: includes/modules/class-registry.php:348
 msgid "Desktop: 1920 × 800 / 600 / 420. Mobile: 1242 × 2000."
 msgstr "电脑端 1920 × 800 / 600 / 420，手机端 1242 × 2000。"
 
-#: includes/modules/class-registry.php:348
+#: includes/modules/class-registry.php:349
 msgid "Image link"
 msgstr "图片跳转链接"
 
-#: includes/modules/class-registry.php:367
-#: includes/modules/class-registry.php:470
-#: includes/modules/class-registry.php:735
-#: includes/modules/class-registry.php:1040
+#: includes/modules/class-registry.php:368
+#: includes/modules/class-registry.php:471
+#: includes/modules/class-registry.php:738
+#: includes/modules/class-registry.php:1043
 msgid "Title color"
 msgstr "标题颜色"
 
-#: includes/modules/class-registry.php:376
+#: includes/modules/class-registry.php:377
 msgid "Image row"
 msgstr "单排图片"
 
-#: includes/modules/class-registry.php:382
-#: includes/modules/class-registry.php:415
-#: includes/modules/class-registry.php:1251
+#: includes/modules/class-registry.php:383
+#: includes/modules/class-registry.php:416
+#: includes/modules/class-registry.php:1254
 msgid "Gap (px)"
 msgstr "间距（px）"
 
-#: includes/modules/class-registry.php:385
+#: includes/modules/class-registry.php:386
 msgid "Mobile style"
 msgstr "手机端样式"
 
-#: includes/modules/class-registry.php:388
+#: includes/modules/class-registry.php:389
 msgid "Swipe sideways"
 msgstr "左右滑动"
 
-#: includes/modules/class-registry.php:389
+#: includes/modules/class-registry.php:390
 msgid "Stack vertically"
 msgstr "上下排列"
 
-#: includes/modules/class-registry.php:395
-#: includes/modules/class-registry.php:420
-#: includes/modules/class-registry.php:1255
+#: includes/modules/class-registry.php:396
+#: includes/modules/class-registry.php:421
+#: includes/modules/class-registry.php:1258
 msgid "Images"
 msgstr "图片"
 
-#: includes/modules/class-registry.php:409
+#: includes/modules/class-registry.php:410
 msgid "Image grid"
 msgstr "多列图片"
 
-#: includes/modules/class-registry.php:433
+#: includes/modules/class-registry.php:434
 msgid "Mosaic (3 images)"
 msgstr "多图3"
 
-#: includes/modules/class-registry.php:433
+#: includes/modules/class-registry.php:434
 msgid "Large image on the left"
 msgstr "大图在左"
 
-#: includes/modules/class-registry.php:433
+#: includes/modules/class-registry.php:434
 msgid "Large image on the right"
 msgstr "大图在右"
 
-#: includes/modules/class-registry.php:434
+#: includes/modules/class-registry.php:435
 msgid "Mosaic (4 images)"
 msgstr "多图4"
 
-#: includes/modules/class-registry.php:434
-#: includes/modules/class-registry.php:439
+#: includes/modules/class-registry.php:435
+#: includes/modules/class-registry.php:440
 msgid "Tall image on the left"
 msgstr "长图在左"
 
-#: includes/modules/class-registry.php:434
-#: includes/modules/class-registry.php:441
+#: includes/modules/class-registry.php:435
+#: includes/modules/class-registry.php:442
 msgid "Tall image on the right"
 msgstr "长图在右"
 
-#: includes/modules/class-registry.php:437
+#: includes/modules/class-registry.php:438
 msgid "Mosaic (5 images)"
 msgstr "多图5"
 
-#: includes/modules/class-registry.php:440
+#: includes/modules/class-registry.php:441
 msgid "Tall image in the middle"
 msgstr "长图居中"
 
-#: includes/modules/class-registry.php:442
+#: includes/modules/class-registry.php:443
 msgid "Wide image on top"
 msgstr "横图在上"
 
-#: includes/modules/class-registry.php:448
+#: includes/modules/class-registry.php:449
 msgid "Image & text"
 msgstr "图文"
 
-#: includes/modules/class-registry.php:452
+#: includes/modules/class-registry.php:453
 msgid "Ratio 4:3, 3:2, 2:1 or 1:1, at least 1000px wide."
 msgstr "建议比例 4:3、3:2、2:1 或 1:1，宽度 1000px 以上。"
 
-#: includes/modules/class-registry.php:457
-#: includes/modules/class-registry.php:511
-#: includes/modules/class-registry.php:748
-#: includes/modules/class-registry.php:1029
+#: includes/modules/class-registry.php:458
+#: includes/modules/class-registry.php:514
+#: includes/modules/class-registry.php:751
+#: includes/modules/class-registry.php:1032
 msgid "Image position"
 msgstr "图片位置"
 
-#: includes/modules/class-registry.php:462
-#: includes/modules/class-registry.php:516
-#: includes/modules/class-registry.php:585
-#: includes/modules/class-registry.php:1034
+#: includes/modules/class-registry.php:463
+#: includes/modules/class-registry.php:519
+#: includes/modules/class-registry.php:588
+#: includes/modules/class-registry.php:1037
 msgid "Above the text"
 msgstr "在文字上方"
 
-#: includes/modules/class-registry.php:463
-#: includes/modules/class-registry.php:517
-#: includes/modules/class-registry.php:584
-#: includes/modules/class-registry.php:1035
+#: includes/modules/class-registry.php:464
+#: includes/modules/class-registry.php:520
+#: includes/modules/class-registry.php:587
+#: includes/modules/class-registry.php:1038
 msgid "Below the text"
 msgstr "在文字下方"
 
-#: includes/modules/class-registry.php:468
-#: includes/modules/class-registry.php:553
-#: includes/modules/class-registry.php:870
-#: includes/modules/class-registry.php:1023
+#: includes/modules/class-registry.php:469
+#: includes/modules/class-registry.php:556
+#: includes/modules/class-registry.php:873
+#: includes/modules/class-registry.php:1026
 msgid "Text alignment"
 msgstr "文字对齐"
 
-#: includes/modules/class-registry.php:472
-#: includes/modules/class-registry.php:1042
+#: includes/modules/class-registry.php:473
+#: includes/modules/class-registry.php:1045
 msgid "Text background"
 msgstr "内容背景色"
 
-#: includes/modules/class-registry.php:480
+#: includes/modules/class-registry.php:481
 msgid "Image & text rows"
 msgstr "图文行（品牌故事）"
 
-#: includes/modules/class-registry.php:482
+#: includes/modules/class-registry.php:483
 msgid "Several image-and-text rows; each row chooses its own image side (e.g. left, right, left)."
 msgstr "多行图文，每一行可以单独设置图片在左还是在右（例如左、右、左）。"
 
-#: includes/modules/class-registry.php:484
-#: includes/modules/class-registry.php:504
-#: includes/modules/class-registry.php:943
-#: includes/modules/class-registry.php:1127
-#: includes/modules/class-registry.php:1180
-#: includes/modules/class-registry.php:1209
+#: includes/modules/class-registry.php:485
+#: includes/modules/class-registry.php:506
+#: includes/modules/class-registry.php:946
+#: includes/modules/class-registry.php:1130
+#: includes/modules/class-registry.php:1183
+#: includes/modules/class-registry.php:1212
 msgid "Small heading"
 msgstr "小标题"
 
-#: includes/modules/class-registry.php:487
+#: includes/modules/class-registry.php:488
 msgid "Introduction"
 msgstr "介绍"
 
-#: includes/modules/class-registry.php:490
+#: includes/modules/class-registry.php:491
 msgid "Width"
 msgstr "宽度"
 
-#: includes/modules/class-registry.php:493
+#: includes/modules/class-registry.php:494
 msgid "Content width"
 msgstr "内容宽度"
 
-#: includes/modules/class-registry.php:494
+#: includes/modules/class-registry.php:495
 msgid "Wide"
 msgstr "加宽"
 
-#: includes/modules/class-registry.php:498
+#: includes/modules/class-registry.php:499
 msgid "Gap between rows (px)"
 msgstr "行间距（px）"
 
-#: includes/modules/class-registry.php:499
+#: includes/modules/class-registry.php:500
 msgid "Fade in on scroll"
 msgstr "滚动时渐显"
 
-#: includes/modules/class-registry.php:502
+#: includes/modules/class-registry.php:501
+msgid "Note under the rows (e.g. image disclosure)"
+msgstr "所有行下方的说明（例如图片来源声明）"
+
+#: includes/modules/class-registry.php:504
 msgid "Rows"
 msgstr "行"
 
-#: includes/modules/class-registry.php:506
-#: includes/modules/class-registry.php:1194
+#: includes/modules/class-registry.php:508
+#: includes/modules/class-registry.php:1197
 msgid "Label"
 msgstr "标签"
 
-#: includes/modules/class-registry.php:538
+#: includes/modules/class-registry.php:511
+msgid "Image caption"
+msgstr "图片说明"
+
+#: includes/modules/class-registry.php:541
 msgid "Card list"
 msgstr "图文列表"
 
-#: includes/modules/class-registry.php:546
-#: includes/modules/class-registry.php:1097
+#: includes/modules/class-registry.php:549
+#: includes/modules/class-registry.php:1100
 msgid "Display"
 msgstr "展示方式"
 
-#: includes/modules/class-registry.php:549
-#: includes/modules/class-registry.php:1100
+#: includes/modules/class-registry.php:552
+#: includes/modules/class-registry.php:1103
 msgid "Grid"
 msgstr "平铺"
 
-#: includes/modules/class-registry.php:555
+#: includes/modules/class-registry.php:558
 msgid "Card gap (px)"
 msgstr "卡片间距（px）"
 
-#: includes/modules/class-registry.php:559
+#: includes/modules/class-registry.php:562
 msgid "Cards"
 msgstr "卡片"
 
-#: includes/modules/class-registry.php:581
+#: includes/modules/class-registry.php:584
 msgid "Video position"
 msgstr "视频位置"
 
-#: includes/modules/class-registry.php:586
+#: includes/modules/class-registry.php:589
 msgid "Left of the text"
 msgstr "在文字左边"
 
-#: includes/modules/class-registry.php:587
+#: includes/modules/class-registry.php:590
 msgid "Right of the text"
 msgstr "在文字右边"
 
-#: includes/modules/class-registry.php:593
+#: includes/modules/class-registry.php:596
 msgid "Video ratio"
 msgstr "视频比例"
 
-#: includes/modules/class-registry.php:610
+#: includes/modules/class-registry.php:613
 msgid "Video banner"
 msgstr "视频图文"
 
-#: includes/modules/class-registry.php:617
-#: includes/modules/class-registry.php:825
-#: includes/modules/class-registry.php:857
+#: includes/modules/class-registry.php:620
+#: includes/modules/class-registry.php:828
+#: includes/modules/class-registry.php:860
 msgid "Height (px)"
 msgstr "高度（px）"
 
-#: includes/modules/class-registry.php:628
-#: includes/modules/class-registry.php:639
+#: includes/modules/class-registry.php:631
+#: includes/modules/class-registry.php:642
 msgid "Highlights"
 msgstr "slogan（卖点）"
 
-#: includes/modules/class-registry.php:633
+#: includes/modules/class-registry.php:636
 msgid "Icon width (px)"
 msgstr "图标宽度（px）"
 
-#: includes/modules/class-registry.php:634
+#: includes/modules/class-registry.php:637
 msgid "Item title size (px)"
 msgstr "条目标题字号（px）"
 
-#: includes/modules/class-registry.php:635
-#: includes/modules/class-registry.php:1053
+#: includes/modules/class-registry.php:638
+#: includes/modules/class-registry.php:1056
 msgid "Swipe on mobile"
 msgstr "手机端左右滑动"
 
-#: includes/modules/class-registry.php:641
+#: includes/modules/class-registry.php:644
 msgid "Icon image"
 msgstr "图标图片"
 
-#: includes/modules/class-registry.php:653
+#: includes/modules/class-registry.php:656
 msgid "Counting numbers"
 msgstr "数字增长"
 
-#: includes/modules/class-registry.php:658
+#: includes/modules/class-registry.php:661
 msgid "Number size (px)"
 msgstr "数字大小（px）"
 
-#: includes/modules/class-registry.php:663
+#: includes/modules/class-registry.php:666
 msgid "Numbers"
 msgstr "数字"
 
-#: includes/modules/class-registry.php:666
+#: includes/modules/class-registry.php:669
 msgid "Or an image (48 × 48)"
 msgstr "或者用图片（48 × 48）"
 
-#: includes/modules/class-registry.php:667
+#: includes/modules/class-registry.php:670
 msgid "Number"
 msgstr "数字"
 
-#: includes/modules/class-registry.php:668
+#: includes/modules/class-registry.php:671
 msgid "Unit"
 msgstr "单位"
 
-#: includes/modules/class-registry.php:680
+#: includes/modules/class-registry.php:683
 msgid "Gallery"
 msgstr "画廊"
 
-#: includes/modules/class-registry.php:691
+#: includes/modules/class-registry.php:694
 msgid "Pictures"
 msgstr "图片"
 
-#: includes/modules/class-registry.php:693
-#: includes/modules/class-registry.php:1026
+#: includes/modules/class-registry.php:696
+#: includes/modules/class-registry.php:1029
 msgid "At least 1000px wide; height follows the image."
 msgstr "宽度 1000px 以上，高度自适应。"
 
-#: includes/modules/class-registry.php:706
+#: includes/modules/class-registry.php:709
 msgid "Custom HTML"
 msgstr "自定义"
 
-#: includes/modules/class-registry.php:711
+#: includes/modules/class-registry.php:714
 msgid "HTML"
 msgstr "HTML"
 
-#: includes/modules/class-registry.php:711
+#: includes/modules/class-registry.php:714
 msgid "Scripts only run when the last editor of this design is an administrator. Do not paste code you do not trust."
 msgstr "只有最后编辑这份装修的人是管理员时，脚本才会运行。不要粘贴来历不明的代码。"
 
-#: includes/modules/class-registry.php:717
+#: includes/modules/class-registry.php:720
 msgid "Timeline"
 msgstr "时间轴"
 
-#: includes/modules/class-registry.php:724
+#: includes/modules/class-registry.php:727
 msgid "Timeline style"
 msgstr "时间轴样式"
 
-#: includes/modules/class-registry.php:727
+#: includes/modules/class-registry.php:730
 msgid "Horizontal line"
 msgstr "横向时间线"
 
-#: includes/modules/class-registry.php:728
+#: includes/modules/class-registry.php:731
 msgid "Vertical with images"
 msgstr "纵向（带图片）"
 
-#: includes/modules/class-registry.php:731
+#: includes/modules/class-registry.php:734
 msgid "Auto scroll (horizontal style, desktop)"
 msgstr "自动滚动（横向样式，电脑端）"
 
-#: includes/modules/class-registry.php:732
+#: includes/modules/class-registry.php:735
 msgid "Collapse long timelines (vertical style)"
 msgstr "内容较多时折叠（纵向样式）"
 
-#: includes/modules/class-registry.php:733
-#: includes/modules/class-registry.php:1226
+#: includes/modules/class-registry.php:736
+#: includes/modules/class-registry.php:1229
 msgid "Expand button text"
 msgstr "展开按钮文字"
 
-#: includes/modules/class-registry.php:734
-#: includes/modules/class-registry.php:1227
+#: includes/modules/class-registry.php:737
+#: includes/modules/class-registry.php:1230
 msgid "Collapse button text"
 msgstr "收起按钮文字"
 
-#: includes/modules/class-registry.php:740
+#: includes/modules/class-registry.php:743
 msgid "Events"
 msgstr "时间线"
 
-#: includes/modules/class-registry.php:745
+#: includes/modules/class-registry.php:748
 msgid "Image (vertical style)"
 msgstr "图片（纵向样式）"
 
-#: includes/modules/class-registry.php:756
-#: includes/modules/class-registry.php:776
+#: includes/modules/class-registry.php:759
+#: includes/modules/class-registry.php:779
 msgid "Accent color"
 msgstr "主题色"
 
-#: includes/modules/class-registry.php:766
+#: includes/modules/class-registry.php:769
 msgid "Contact details"
 msgstr "联系我们"
 
-#: includes/modules/class-registry.php:772
-#: includes/modules/class-registry.php:987
+#: includes/modules/class-registry.php:775
+#: includes/modules/class-registry.php:990
 msgid "Background image"
 msgstr "背景图"
 
-#: includes/modules/class-registry.php:772
+#: includes/modules/class-registry.php:775
 msgid "Desktop 2400 × 656, mobile 1242 × 1138. Without an image the background color is used."
 msgstr "电脑端 2400 × 656，手机端 1242 × 1138。没有图片时使用背景色。"
 
-#: includes/modules/class-registry.php:774
+#: includes/modules/class-registry.php:777
 msgid "Icon size (px)"
 msgstr "图标大小（px）"
 
-#: includes/modules/class-registry.php:775
-#: includes/modules/class-registry.php:839
-#: includes/modules/class-registry.php:1083
-#: includes/modules/class-registry.php:1188
-#: includes/modules/class-registry.php:1214
+#: includes/modules/class-registry.php:778
+#: includes/modules/class-registry.php:842
+#: includes/modules/class-registry.php:1086
+#: includes/modules/class-registry.php:1191
+#: includes/modules/class-registry.php:1217
 msgid "Background color"
 msgstr "背景色"
 
-#: includes/modules/class-registry.php:780
+#: includes/modules/class-registry.php:783
 msgid "Contact methods"
 msgstr "联系方式"
 
-#: includes/modules/class-registry.php:783
+#: includes/modules/class-registry.php:786
 msgid "Or an icon image (48 × 48)"
 msgstr "或者上传图标（48 × 48）"
 
-#: includes/modules/class-registry.php:796
+#: includes/modules/class-registry.php:799
 msgid "Promo grid"
 msgstr "推广格子"
 
-#: includes/modules/class-registry.php:799
+#: includes/modules/class-registry.php:802
 msgid "Left title"
 msgstr "左边标题"
 
-#: includes/modules/class-registry.php:803
+#: includes/modules/class-registry.php:806
 msgid "Right title"
 msgstr "右边标题"
 
-#: includes/modules/class-registry.php:804
+#: includes/modules/class-registry.php:807
 msgid "Promoted category 1"
 msgstr "促销分类 1"
 
-#: includes/modules/class-registry.php:805
+#: includes/modules/class-registry.php:808
 msgid "Promoted category 2"
 msgstr "促销分类 2"
 
-#: includes/modules/class-registry.php:808
+#: includes/modules/class-registry.php:811
 msgid "Left slides"
 msgstr "左侧轮播"
 
-#: includes/modules/class-registry.php:810
-#: includes/modules/class-registry.php:987
+#: includes/modules/class-registry.php:813
+#: includes/modules/class-registry.php:990
 msgid "At least 1000px wide."
 msgstr "宽度 1000px 以上。"
 
-#: includes/modules/class-registry.php:822
+#: includes/modules/class-registry.php:825
 msgid "Scrolling text"
 msgstr "滚动文本"
 
-#: includes/modules/class-registry.php:826
-#: includes/modules/class-registry.php:1080
+#: includes/modules/class-registry.php:829
+#: includes/modules/class-registry.php:1083
 msgid "Text size (px)"
 msgstr "文字大小（px）"
 
-#: includes/modules/class-registry.php:829
+#: includes/modules/class-registry.php:832
 msgid "Direction"
 msgstr "滚动方向"
 
-#: includes/modules/class-registry.php:832
+#: includes/modules/class-registry.php:835
 msgid "Right to left"
 msgstr "从右向左"
 
-#: includes/modules/class-registry.php:833
+#: includes/modules/class-registry.php:836
 msgid "Left to right"
 msgstr "从左向右"
 
-#: includes/modules/class-registry.php:837
+#: includes/modules/class-registry.php:840
 msgid "Seconds per loop"
 msgstr "滚动一圈的秒数"
 
-#: includes/modules/class-registry.php:838
+#: includes/modules/class-registry.php:841
 msgid "Pause on hover"
 msgstr "鼠标悬停时暂停"
 
-#: includes/modules/class-registry.php:843
+#: includes/modules/class-registry.php:846
 msgid "Texts"
 msgstr "文本"
 
-#: includes/modules/class-registry.php:858
+#: includes/modules/class-registry.php:861
 msgid "Color"
 msgstr "颜色"
 
-#: includes/modules/class-registry.php:864
+#: includes/modules/class-registry.php:867
 msgid "Rich text"
 msgstr "富文本"
 
-#: includes/modules/class-registry.php:871
+#: includes/modules/class-registry.php:874
 msgid "Content width (px)"
 msgstr "内容宽度（px）"
 
-#: includes/modules/class-registry.php:872
-#: includes/modules/class-registry.php:1078
+#: includes/modules/class-registry.php:875
+#: includes/modules/class-registry.php:1081
 msgid "Inner padding (px)"
 msgstr "内容留白（px）"
 
-#: includes/modules/class-registry.php:873
+#: includes/modules/class-registry.php:876
 msgid "Corner radius (px)"
 msgstr "内容圆角（px）"
 
-#: includes/modules/class-registry.php:874
+#: includes/modules/class-registry.php:877
 msgid "Content background"
 msgstr "内容背景色"
 
-#: includes/modules/class-registry.php:883
+#: includes/modules/class-registry.php:886
 msgid "Before / after"
 msgstr "对比图"
 
-#: includes/modules/class-registry.php:888
+#: includes/modules/class-registry.php:891
 msgid "Recommended 1000 × 500."
 msgstr "建议 1000 × 500。"
 
-#: includes/modules/class-registry.php:889
+#: includes/modules/class-registry.php:892
 msgid "Recommended 1000 × 500, same size as the before image."
 msgstr "建议 1000 × 500，和前图片尺寸相同。"
 
-#: includes/modules/class-registry.php:890
+#: includes/modules/class-registry.php:893
 msgid "Before label"
 msgstr "前图文字"
 
-#: includes/modules/class-registry.php:891
+#: includes/modules/class-registry.php:894
 msgid "After label"
 msgstr "后图文字"
 
-#: includes/modules/class-registry.php:892
+#: includes/modules/class-registry.php:895
 msgid "Divider start position (%)"
 msgstr "拖动初始位置（%）"
 
-#: includes/modules/class-registry.php:893
+#: includes/modules/class-registry.php:896
 msgid "Before label color"
 msgstr "前图文字颜色"
 
-#: includes/modules/class-registry.php:894
+#: includes/modules/class-registry.php:897
 msgid "After label color"
 msgstr "后图文字颜色"
 
-#: includes/modules/class-registry.php:901
+#: includes/modules/class-registry.php:904
 msgid "Image hotspots"
 msgstr "图片热点"
 
-#: includes/modules/class-registry.php:906
+#: includes/modules/class-registry.php:909
 msgid "Desktop 1920 × 600, mobile 1242 × 900."
 msgstr "电脑端 1920 × 600，手机端 1242 × 900。"
 
-#: includes/modules/class-registry.php:908
+#: includes/modules/class-registry.php:911
 msgid "Hotspot icon width (px)"
 msgstr "热点图标宽度（px）"
 
-#: includes/modules/class-registry.php:912
+#: includes/modules/class-registry.php:915
 msgid "Hotspots"
 msgstr "热点"
 
-#: includes/modules/class-registry.php:914
-#: includes/modules/class-registry.php:1000
+#: includes/modules/class-registry.php:917
+#: includes/modules/class-registry.php:1003
 msgid "Horizontal position (%)"
 msgstr "横向位置（%）"
 
-#: includes/modules/class-registry.php:915
-#: includes/modules/class-registry.php:1001
+#: includes/modules/class-registry.php:918
+#: includes/modules/class-registry.php:1004
 msgid "Vertical position (%)"
 msgstr "纵向位置（%）"
 
-#: includes/modules/class-registry.php:916
+#: includes/modules/class-registry.php:919
 msgid "Hotspot icon (200 × 200)"
 msgstr "热点图标（200 × 200）"
 
-#: includes/modules/class-registry.php:921
+#: includes/modules/class-registry.php:924
 msgid "Popup position"
 msgstr "内容显示位置"
 
-#: includes/modules/class-registry.php:924
+#: includes/modules/class-registry.php:927
 msgid "Above"
 msgstr "上方"
 
-#: includes/modules/class-registry.php:926
+#: includes/modules/class-registry.php:929
 msgid "Below"
 msgstr "下方"
 
-#: includes/modules/class-registry.php:940
+#: includes/modules/class-registry.php:943
 msgid "FAQ"
 msgstr "FAQ"
 
-#: includes/modules/class-registry.php:947
+#: includes/modules/class-registry.php:950
 msgid "Text link (under the title)"
 msgstr "文字链接（标题下方）"
 
-#: includes/modules/class-registry.php:953
+#: includes/modules/class-registry.php:956
 msgid "Title on the left, questions on the right"
 msgstr "标题在左，问答在右"
 
-#: includes/modules/class-registry.php:954
+#: includes/modules/class-registry.php:957
 msgid "Title above the questions"
 msgstr "标题在问答上方"
 
-#: includes/modules/class-registry.php:957
+#: includes/modules/class-registry.php:960
 msgid "Open the first question"
 msgstr "默认展开第一个问题"
 
-#: includes/modules/class-registry.php:958
+#: includes/modules/class-registry.php:961
 msgid "Answer background"
 msgstr "回答背景色"
 
-#: includes/modules/class-registry.php:959
+#: includes/modules/class-registry.php:962
 msgid "Answer text color"
 msgstr "回答文字颜色"
 
-#: includes/modules/class-registry.php:963
+#: includes/modules/class-registry.php:966
 msgid "Questions"
 msgstr "问答"
 
-#: includes/modules/class-registry.php:966
+#: includes/modules/class-registry.php:969
 msgid "Answer"
 msgstr "回答"
 
-#: includes/modules/class-registry.php:977
+#: includes/modules/class-registry.php:980
 msgid "Shop the look"
 msgstr "产品展示"
 
-#: includes/modules/class-registry.php:982
+#: includes/modules/class-registry.php:985
 msgid "Preview product on hover"
 msgstr "鼠标悬停预览商品"
 
-#: includes/modules/class-registry.php:985
+#: includes/modules/class-registry.php:988
 msgid "Scenes"
 msgstr "展示图"
 
-#: includes/modules/class-registry.php:993
+#: includes/modules/class-registry.php:996
 msgid "Product hotspots"
 msgstr "商品热点"
 
-#: includes/modules/class-registry.php:999
+#: includes/modules/class-registry.php:1002
 msgid "Show by default"
 msgstr "默认展示"
 
-#: includes/modules/class-registry.php:1002
-#: includes/modules/class-registry.php:1259
+#: includes/modules/class-registry.php:1005
+#: includes/modules/class-registry.php:1262
 msgid "Button text"
 msgstr "按钮文字"
 
-#: includes/modules/class-registry.php:1016
+#: includes/modules/class-registry.php:1019
 msgid "Homepage headline (H1)"
 msgstr "首页H1媒体"
 
-#: includes/modules/class-registry.php:1018
+#: includes/modules/class-registry.php:1021
 msgid "The page's main heading for search engines. Use only one, before other blocks."
 msgstr "页面给搜索引擎看的主标题。只能放一个，放在其他积木前面。"
 
-#: includes/modules/class-registry.php:1021
+#: includes/modules/class-registry.php:1024
 msgid "Headline (H1)"
 msgstr "主标题（H1）"
 
-#: includes/modules/class-registry.php:1025
+#: includes/modules/class-registry.php:1028
 msgid "Show image"
 msgstr "显示图片"
 
-#: includes/modules/class-registry.php:1050
+#: includes/modules/class-registry.php:1053
 msgid "Info strip"
 msgstr "信息列表"
 
-#: includes/modules/class-registry.php:1054
-#: includes/modules/class-registry.php:1213
+#: includes/modules/class-registry.php:1057
+#: includes/modules/class-registry.php:1216
 msgid "Alignment"
 msgstr "对齐方式"
 
-#: includes/modules/class-registry.php:1060
+#: includes/modules/class-registry.php:1063
 msgid "Or an image (40px or wider)"
 msgstr "或者用图片（宽 40px 以上）"
 
-#: includes/modules/class-registry.php:1072
+#: includes/modules/class-registry.php:1075
 msgid "Navigation bar"
 msgstr "通用导航栏"
 
-#: includes/modules/class-registry.php:1075
+#: includes/modules/class-registry.php:1078
 msgid "Menus are managed under Store design → Menus & navigation (for now: Appearance → Menus)."
 msgstr "菜单在“店铺装修 → 菜单导航”里管理（目前先用“外观 → 菜单”）。"
 
-#: includes/modules/class-registry.php:1077
+#: includes/modules/class-registry.php:1080
 msgid "Alignment (desktop)"
 msgstr "对齐方式（电脑端）"
 
-#: includes/modules/class-registry.php:1081
+#: includes/modules/class-registry.php:1084
 msgid "Show border"
 msgstr "显示边框"
 
-#: includes/modules/class-registry.php:1084
+#: includes/modules/class-registry.php:1087
 msgid "Border color"
 msgstr "边框颜色"
 
-#: includes/modules/class-registry.php:1090
+#: includes/modules/class-registry.php:1093
 msgid "Logo list"
 msgstr "商标列表"
 
-#: includes/modules/class-registry.php:1101
+#: includes/modules/class-registry.php:1104
 msgid "Scrolling row"
 msgstr "横向滚动"
 
-#: includes/modules/class-registry.php:1108
+#: includes/modules/class-registry.php:1111
 msgid "Logos"
 msgstr "商标"
 
-#: includes/modules/class-registry.php:1110
+#: includes/modules/class-registry.php:1113
 msgid "Logo (400 × 200)"
 msgstr "商标图片（400 × 200）"
 
-#: includes/modules/class-registry.php:1122
+#: includes/modules/class-registry.php:1125
 msgid "Product collection"
 msgstr "专辑商品（商品区）"
 
-#: includes/modules/class-registry.php:1125
+#: includes/modules/class-registry.php:1128
 msgid "Products from your catalog. Prices, stock and images always come from WooCommerce."
 msgstr "展示店铺里的商品。价格、库存和图片都实时读取 WooCommerce。"
 
-#: includes/modules/class-registry.php:1130
+#: includes/modules/class-registry.php:1133
 msgid "Text link (e.g. \"View all\")"
 msgstr "文字链接（例如“查看全部”）"
 
-#: includes/modules/class-registry.php:1133
+#: includes/modules/class-registry.php:1136
 msgid "Products to show"
 msgstr "显示哪些商品"
 
-#: includes/modules/class-registry.php:1136
+#: includes/modules/class-registry.php:1139
 msgid "Whole catalog"
 msgstr "全部商品"
 
-#: includes/modules/class-registry.php:1137
+#: includes/modules/class-registry.php:1140
 msgid "One category"
 msgstr "某个分类"
 
-#: includes/modules/class-registry.php:1138
+#: includes/modules/class-registry.php:1141
 msgid "Choose products"
 msgstr "手动选择商品"
 
-#: includes/modules/class-registry.php:1142
+#: includes/modules/class-registry.php:1145
 msgid "Category"
 msgstr "分类"
 
-#: includes/modules/class-registry.php:1146
+#: includes/modules/class-registry.php:1149
 msgid "Products"
 msgstr "商品"
 
-#: includes/modules/class-registry.php:1156
+#: includes/modules/class-registry.php:1159
 msgid "Sort order"
 msgstr "排序方式"
 
-#: includes/modules/class-registry.php:1159
+#: includes/modules/class-registry.php:1162
 msgid "Catalog order (as in the price list)"
 msgstr "目录顺序（与报价单一致）"
 
-#: includes/modules/class-registry.php:1160
+#: includes/modules/class-registry.php:1163
 msgid "Newest first"
 msgstr "最新优先"
 
-#: includes/modules/class-registry.php:1161
+#: includes/modules/class-registry.php:1164
 msgid "Name A–Z"
 msgstr "名称 A–Z"
 
-#: includes/modules/class-registry.php:1162
+#: includes/modules/class-registry.php:1165
 msgid "Price: low to high"
 msgstr "价格从低到高"
 
-#: includes/modules/class-registry.php:1163
+#: includes/modules/class-registry.php:1166
 msgid "Price: high to low"
 msgstr "价格从高到低"
 
-#: includes/modules/class-registry.php:1167
+#: includes/modules/class-registry.php:1170
 msgid "Number of products"
 msgstr "商品数量"
 
-#: includes/modules/class-registry.php:1169
+#: includes/modules/class-registry.php:1172
 msgid "Show report preview on hover"
 msgstr "鼠标悬停时显示报告预览"
 
-#: includes/modules/class-registry.php:1170
+#: includes/modules/class-registry.php:1173
 msgid "Text when there are no products"
 msgstr "没有商品时显示的文字"
 
-#: includes/modules/class-registry.php:1176
+#: includes/modules/class-registry.php:1179
 msgid "Batch report highlight"
 msgstr "批次报告介绍"
 
-#: includes/modules/class-registry.php:1178
+#: includes/modules/class-registry.php:1181
 msgid "Introduces batch lookup with a sample report card. It does not show real report data."
 msgstr "介绍批次查询，配一张示意报告卡片，不显示真实报告数据。"
 
-#: includes/modules/class-registry.php:1185
+#: includes/modules/class-registry.php:1188
 msgid "Card: small heading"
 msgstr "卡片：小标题"
 
-#: includes/modules/class-registry.php:1186
+#: includes/modules/class-registry.php:1189
 msgid "Card: title"
 msgstr "卡片：标题"
 
-#: includes/modules/class-registry.php:1187
+#: includes/modules/class-registry.php:1190
 msgid "Card: bottom line"
 msgstr "卡片：底部文字"
 
-#: includes/modules/class-registry.php:1192
+#: includes/modules/class-registry.php:1195
 msgid "Card rows"
 msgstr "卡片信息行"
 
-#: includes/modules/class-registry.php:1195
+#: includes/modules/class-registry.php:1198
 msgid "Value"
 msgstr "内容"
 
-#: includes/modules/class-registry.php:1206
+#: includes/modules/class-registry.php:1209
 msgid "Call to action"
 msgstr "结尾引导"
 
-#: includes/modules/class-registry.php:1221
+#: includes/modules/class-registry.php:1224
 msgid "Text with \"read more\""
 msgstr "文本区块"
 
-#: includes/modules/class-registry.php:1228
+#: includes/modules/class-registry.php:1231
 msgid "Height when collapsed (px, 0 = never collapse)"
 msgstr "收起时显示高度（px，0 表示不折叠）"
 
-#: includes/modules/class-registry.php:1230
+#: includes/modules/class-registry.php:1233
 msgid "Link color"
 msgstr "链接颜色"
 
-#: includes/modules/class-registry.php:1231
+#: includes/modules/class-registry.php:1234
 msgid "Button color"
 msgstr "按钮颜色"
 

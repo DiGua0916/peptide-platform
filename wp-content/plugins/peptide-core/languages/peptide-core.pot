@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-20T14:37:04+00:00\n"
+"POT-Creation-Date: 2026-10-20T14:49:50+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -49,8 +49,8 @@ msgstr ""
 
 #: includes/admin/class-batch-metabox.php:56
 #: includes/admin/class-list-columns.php:33
-#: includes/modules/class-registry.php:998
-#: includes/modules/class-registry.php:1151
+#: includes/modules/class-registry.php:1001
+#: includes/modules/class-registry.php:1154
 msgid "Product"
 msgstr ""
 
@@ -177,7 +177,7 @@ msgstr ""
 #: includes/admin/class-batch-orders.php:66
 #: includes/admin/class-list-columns.php:38
 #: includes/admin/class-list-columns.php:81
-#: includes/modules/class-registry.php:742
+#: includes/modules/class-registry.php:745
 msgid "Date"
 msgstr ""
 
@@ -190,7 +190,7 @@ msgid "Email"
 msgstr ""
 
 #: includes/admin/class-batch-orders.php:66
-#: includes/modules/class-registry.php:1057
+#: includes/modules/class-registry.php:1060
 msgid "Items"
 msgstr ""
 
@@ -342,7 +342,7 @@ msgid "View all %d"
 msgstr ""
 
 #: includes/admin/class-design-editor.php:44
-#: includes/admin/class-design-editor.php:167
+#: includes/admin/class-design-editor.php:181
 msgid "Design editor"
 msgstr ""
 
@@ -413,125 +413,180 @@ msgid "Publish"
 msgstr ""
 
 #: includes/admin/class-design-editor.php:131
-msgid "Publishing to the storefront comes in the next step. For now, save the draft and use the preview."
+msgid "More publishing options"
 msgstr ""
 
 #: includes/admin/class-design-editor.php:132
-msgid "Block design"
+msgid "Publish this design to the storefront? Visitors will see it right away. Unsaved changes are saved first."
 msgstr ""
 
 #: includes/admin/class-design-editor.php:133
-msgid "Global settings"
+msgid "Published. Visitors now see this design."
 msgstr ""
 
 #: includes/admin/class-design-editor.php:134
+#: includes/api/class-layout-controller.php:107
+msgid "Only administrators can publish designs to the storefront."
+msgstr ""
+
+#: includes/admin/class-design-editor.php:135
+msgid "Working…"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:136
+msgid "Not published: visitors see the theme's original page"
+msgstr ""
+
+#. translators: %s: date and time
+#: includes/admin/class-design-editor.php:138
+#, php-format
+msgid "Published %s"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:139
+msgid "Published · has unpublished changes"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:140
+msgid "Discard unpublished changes (back to the published version)"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:141
+msgid "Replace your draft with the published version? The current draft stays in the revision history."
+msgstr ""
+
+#: includes/admin/class-design-editor.php:142
+msgid "The draft is back to the published version."
+msgstr ""
+
+#: includes/admin/class-design-editor.php:143
+msgid "Unpublish (show the theme's original page again)"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:144
+msgid "Unpublish this design? Visitors will see the theme's original page again. Your draft is kept."
+msgstr ""
+
+#: includes/admin/class-design-editor.php:145
+msgid "Unpublished. Visitors see the theme's original page."
+msgstr ""
+
+#: includes/admin/class-design-editor.php:146
+msgid "Block design"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:147
+msgid "Global settings"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:148
 #: includes/class-templates.php:50
 msgid "Header"
 msgstr ""
 
-#: includes/admin/class-design-editor.php:135
+#: includes/admin/class-design-editor.php:149
 #: includes/class-templates.php:51
 msgid "Footer"
 msgstr ""
 
-#: includes/admin/class-design-editor.php:136
+#: includes/admin/class-design-editor.php:150
 msgid "Add block"
 msgstr ""
 
-#: includes/admin/class-design-editor.php:137
+#: includes/admin/class-design-editor.php:151
 msgid "Block library"
 msgstr ""
 
-#: includes/admin/class-design-editor.php:138
+#: includes/admin/class-design-editor.php:152
 msgid "Click a card to add it below the selected block."
 msgstr ""
 
-#: includes/admin/class-design-editor.php:139
+#: includes/admin/class-design-editor.php:153
 #: includes/admin/class-store-design.php:386
 #: includes/modules/class-blocks.php:225
 msgid "Duplicate"
 msgstr ""
 
-#: includes/admin/class-design-editor.php:140
+#: includes/admin/class-design-editor.php:154
 #: includes/modules/class-blocks.php:229
 msgid "Hide"
 msgstr ""
 
-#: includes/admin/class-design-editor.php:141
+#: includes/admin/class-design-editor.php:155
 #: includes/modules/class-blocks.php:230
 msgid "Show"
 msgstr ""
 
-#: includes/admin/class-design-editor.php:142
+#: includes/admin/class-design-editor.php:156
 #: includes/admin/class-store-design.php:396
 #: includes/modules/class-blocks.php:226
 msgid "Delete"
 msgstr ""
 
-#: includes/admin/class-design-editor.php:143
+#: includes/admin/class-design-editor.php:157
 msgid "More"
 msgstr ""
 
-#: includes/admin/class-design-editor.php:144
+#: includes/admin/class-design-editor.php:158
 msgid "Delete this block? You can undo this until you leave the editor."
 msgstr ""
 
-#: includes/admin/class-design-editor.php:145
+#: includes/admin/class-design-editor.php:159
 msgid "Drag to reorder"
 msgstr ""
 
-#: includes/admin/class-design-editor.php:146
+#: includes/admin/class-design-editor.php:160
 msgid "No blocks yet. Click \"Add block\" to start."
 msgstr ""
 
-#: includes/admin/class-design-editor.php:147
+#: includes/admin/class-design-editor.php:161
 msgid "The header (announcement bar, logo, menu, search, account and cart) is shown by the theme for now. Editing it here comes next, together with the footer."
 msgstr ""
 
-#: includes/admin/class-design-editor.php:148
+#: includes/admin/class-design-editor.php:162
 msgid "The footer is shown by the theme for now. Editing it here comes next."
 msgstr ""
 
-#: includes/admin/class-design-editor.php:149
+#: includes/admin/class-design-editor.php:163
 msgid "Global settings (colors, fonts, content width, spacing, button corners) come next. They will apply to every block."
 msgstr ""
 
-#: includes/admin/class-design-editor.php:150
+#: includes/admin/class-design-editor.php:164
 msgid "You have unsaved changes."
 msgstr ""
 
-#: includes/admin/class-design-editor.php:151
+#: includes/admin/class-design-editor.php:165
 msgid "Reload"
 msgstr ""
 
-#: includes/admin/class-design-editor.php:152
+#: includes/admin/class-design-editor.php:166
 #, php-format
 msgid "%s is also editing this design. Saving may overwrite their changes."
 msgstr ""
 
-#: includes/admin/class-design-editor.php:153
+#: includes/admin/class-design-editor.php:167
 msgid "Updating preview…"
 msgstr ""
 
-#: includes/admin/class-design-editor.php:154
+#: includes/admin/class-design-editor.php:168
 msgid "Select a block on the left of this panel, or click it in the preview."
 msgstr ""
 
-#: includes/admin/class-design-editor.php:155
+#: includes/admin/class-design-editor.php:169
 msgid "Live preview of what you are editing. Only you can see it."
 msgstr ""
 
-#: includes/admin/class-design-editor.php:156
+#: includes/admin/class-design-editor.php:170
 #: includes/modules/class-blocks.php:222
 msgid "Editing values for"
 msgstr ""
 
-#: includes/admin/class-design-editor.php:167
-#: includes/api/class-layout-controller.php:70
+#: includes/admin/class-design-editor.php:181
+#: includes/api/class-layout-controller.php:89
 msgid "Design document not found."
 msgstr ""
 
-#: includes/admin/class-design-editor.php:170
+#: includes/admin/class-design-editor.php:184
 msgid "Loading the design editor…"
 msgstr ""
 
@@ -575,20 +630,20 @@ msgstr ""
 #: includes/modules/class-registry.php:110
 #: includes/modules/class-registry.php:291
 #: includes/modules/class-registry.php:319
-#: includes/modules/class-registry.php:453
-#: includes/modules/class-registry.php:485
-#: includes/modules/class-registry.php:505
-#: includes/modules/class-registry.php:562
-#: includes/modules/class-registry.php:642
-#: includes/modules/class-registry.php:709
-#: includes/modules/class-registry.php:743
-#: includes/modules/class-registry.php:784
-#: includes/modules/class-registry.php:868
-#: includes/modules/class-registry.php:917
-#: includes/modules/class-registry.php:1128
-#: includes/modules/class-registry.php:1181
-#: includes/modules/class-registry.php:1210
-#: includes/modules/class-registry.php:1224
+#: includes/modules/class-registry.php:454
+#: includes/modules/class-registry.php:486
+#: includes/modules/class-registry.php:507
+#: includes/modules/class-registry.php:565
+#: includes/modules/class-registry.php:645
+#: includes/modules/class-registry.php:712
+#: includes/modules/class-registry.php:746
+#: includes/modules/class-registry.php:787
+#: includes/modules/class-registry.php:871
+#: includes/modules/class-registry.php:920
+#: includes/modules/class-registry.php:1131
+#: includes/modules/class-registry.php:1184
+#: includes/modules/class-registry.php:1213
+#: includes/modules/class-registry.php:1227
 msgid "Title"
 msgstr ""
 
@@ -1250,18 +1305,26 @@ msgstr ""
 msgid "Not found."
 msgstr ""
 
-#: includes/api/class-layout-controller.php:73
+#: includes/api/class-layout-controller.php:92
 msgid "Sorry, you are not allowed to edit this design."
 msgstr ""
 
 #. translators: %s: user name
-#: includes/api/class-layout-controller.php:118
+#: includes/api/class-layout-controller.php:151
 #, php-format
 msgid "This design was changed by %s after you opened it. Reload to see their changes before saving."
 msgstr ""
 
-#: includes/api/class-layout-controller.php:119
+#: includes/api/class-layout-controller.php:152
 msgid "someone else"
+msgstr ""
+
+#: includes/api/class-layout-controller.php:183
+msgid "This design was changed after you opened it. Reload, check the changes, then publish."
+msgstr ""
+
+#: includes/api/class-layout-controller.php:200
+msgid "There is no published version to go back to."
 msgstr ""
 
 #: includes/api/class-rest-controller.php:121
@@ -1343,7 +1406,7 @@ msgstr ""
 msgid "Batch: %s"
 msgstr ""
 
-#: includes/class-plugin.php:84
+#: includes/class-plugin.php:85
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr ""
 
@@ -1557,13 +1620,13 @@ msgstr ""
 #: includes/modules/class-blocks.php:245
 #: includes/modules/class-registry.php:293
 #: includes/modules/class-registry.php:305
-#: includes/modules/class-registry.php:454
-#: includes/modules/class-registry.php:507
-#: includes/modules/class-registry.php:563
-#: includes/modules/class-registry.php:643
-#: includes/modules/class-registry.php:669
-#: includes/modules/class-registry.php:844
-#: includes/modules/class-registry.php:869
+#: includes/modules/class-registry.php:455
+#: includes/modules/class-registry.php:509
+#: includes/modules/class-registry.php:566
+#: includes/modules/class-registry.php:646
+#: includes/modules/class-registry.php:672
+#: includes/modules/class-registry.php:847
+#: includes/modules/class-registry.php:872
 msgid "Text"
 msgstr ""
 
@@ -1623,87 +1686,87 @@ msgstr ""
 msgid "Choose an image"
 msgstr ""
 
-#: includes/modules/class-fallback.php:540
+#: includes/modules/class-fallback.php:546
 msgid "Add a YouTube link"
 msgstr ""
 
-#: includes/modules/class-fallback.php:556
-#: includes/modules/class-registry.php:574
+#: includes/modules/class-fallback.php:562
+#: includes/modules/class-registry.php:577
 msgid "Video"
 msgstr ""
 
-#: includes/modules/class-fallback.php:561
+#: includes/modules/class-fallback.php:567
 msgid "Choose a video"
 msgstr ""
 
-#: includes/modules/class-fallback.php:618
+#: includes/modules/class-fallback.php:624
 #: includes/modules/class-registry.php:317
-#: includes/modules/class-registry.php:665
-#: includes/modules/class-registry.php:782
-#: includes/modules/class-registry.php:1059
+#: includes/modules/class-registry.php:668
+#: includes/modules/class-registry.php:785
+#: includes/modules/class-registry.php:1062
 msgid "Icon"
 msgstr ""
 
-#: includes/modules/class-fallback.php:652
+#: includes/modules/class-fallback.php:658
 msgid "Paste your HTML in the sidebar."
 msgstr ""
 
-#: includes/modules/class-fallback.php:731
+#: includes/modules/class-fallback.php:737
 msgid "Choose a category"
 msgstr ""
 
-#: includes/modules/class-fallback.php:741
+#: includes/modules/class-fallback.php:747
 msgid "Add some text."
 msgstr ""
 
-#: includes/modules/class-fallback.php:773
-#: includes/modules/class-registry.php:854
+#: includes/modules/class-fallback.php:779
+#: includes/modules/class-registry.php:857
 msgid "Spacer"
 msgstr ""
 
-#: includes/modules/class-fallback.php:789
+#: includes/modules/class-fallback.php:795
 msgid "Write your text in the sidebar."
 msgstr ""
 
-#: includes/modules/class-fallback.php:795
-#: includes/modules/class-registry.php:888
+#: includes/modules/class-fallback.php:801
+#: includes/modules/class-registry.php:891
 msgid "Before image"
 msgstr ""
 
-#: includes/modules/class-fallback.php:796
-#: includes/modules/class-registry.php:889
+#: includes/modules/class-fallback.php:802
+#: includes/modules/class-registry.php:892
 msgid "After image"
 msgstr ""
 
-#: includes/modules/class-fallback.php:806
+#: includes/modules/class-fallback.php:812
 msgid "Drag to compare"
 msgstr ""
 
 #. translators: %d: hotspot number
-#: includes/modules/class-fallback.php:831
+#: includes/modules/class-fallback.php:837
 #, php-format
 msgid "Hotspot %d"
 msgstr ""
 
-#: includes/modules/class-fallback.php:854
-#: includes/modules/class-registry.php:965
+#: includes/modules/class-fallback.php:860
+#: includes/modules/class-registry.php:968
 msgid "Question"
 msgstr ""
 
-#: includes/modules/class-fallback.php:903
+#: includes/modules/class-fallback.php:909
 msgid "Add the headline."
 msgstr ""
 
-#: includes/modules/class-fallback.php:938
+#: includes/modules/class-fallback.php:944
 msgid "Choose a menu in the sidebar."
 msgstr ""
 
-#: includes/modules/class-fallback.php:960
-#: includes/modules/class-registry.php:1075
+#: includes/modules/class-fallback.php:966
+#: includes/modules/class-registry.php:1078
 msgid "Menu"
 msgstr ""
 
-#: includes/modules/class-fallback.php:966
+#: includes/modules/class-fallback.php:972
 msgid "Logo"
 msgstr ""
 
@@ -1736,7 +1799,7 @@ msgstr ""
 msgid "Bottom center"
 msgstr ""
 
-#: includes/modules/class-layout.php:187
+#: includes/modules/class-layout.php:292
 msgid "This page has no modules yet. Add modules in the design editor."
 msgstr ""
 
@@ -1753,8 +1816,8 @@ msgid "Marketing blocks"
 msgstr ""
 
 #: includes/modules/class-registry.php:39
-#: includes/modules/class-registry.php:785
-#: includes/modules/class-registry.php:1225
+#: includes/modules/class-registry.php:788
+#: includes/modules/class-registry.php:1228
 msgid "Content"
 msgstr ""
 
@@ -1763,8 +1826,8 @@ msgid "Media"
 msgstr ""
 
 #: includes/modules/class-registry.php:41
-#: includes/modules/class-registry.php:950
-#: includes/modules/class-registry.php:1250
+#: includes/modules/class-registry.php:953
+#: includes/modules/class-registry.php:1253
 msgid "Layout"
 msgstr ""
 
@@ -1775,10 +1838,10 @@ msgstr ""
 #: includes/modules/class-registry.php:43
 #: includes/modules/class-registry.php:129
 #: includes/modules/class-registry.php:294
-#: includes/modules/class-registry.php:522
-#: includes/modules/class-registry.php:620
-#: includes/modules/class-registry.php:1184
-#: includes/modules/class-registry.php:1212
+#: includes/modules/class-registry.php:525
+#: includes/modules/class-registry.php:623
+#: includes/modules/class-registry.php:1187
+#: includes/modules/class-registry.php:1215
 msgid "Button"
 msgstr ""
 
@@ -1811,19 +1874,19 @@ msgid "Module background"
 msgstr ""
 
 #: includes/modules/class-registry.php:112
-#: includes/modules/class-registry.php:694
-#: includes/modules/class-registry.php:744
-#: includes/modules/class-registry.php:918
-#: includes/modules/class-registry.php:1022
-#: includes/modules/class-registry.php:1061
-#: includes/modules/class-registry.php:1129
-#: includes/modules/class-registry.php:1183
-#: includes/modules/class-registry.php:1211
+#: includes/modules/class-registry.php:697
+#: includes/modules/class-registry.php:747
+#: includes/modules/class-registry.php:921
+#: includes/modules/class-registry.php:1025
+#: includes/modules/class-registry.php:1064
+#: includes/modules/class-registry.php:1132
+#: includes/modules/class-registry.php:1186
+#: includes/modules/class-registry.php:1214
 msgid "Short description"
 msgstr ""
 
 #: includes/modules/class-registry.php:118
-#: includes/modules/class-registry.php:495
+#: includes/modules/class-registry.php:496
 msgid "Full width"
 msgstr ""
 
@@ -1852,12 +1915,12 @@ msgid "Effect interval (ms)"
 msgstr ""
 
 #: includes/modules/class-registry.php:147
-#: includes/modules/class-registry.php:332
+#: includes/modules/class-registry.php:333
 msgid "Button text color"
 msgstr ""
 
 #: includes/modules/class-registry.php:148
-#: includes/modules/class-registry.php:333
+#: includes/modules/class-registry.php:334
 msgid "Button background"
 msgstr ""
 
@@ -1866,26 +1929,26 @@ msgid "Items per row"
 msgstr ""
 
 #: includes/modules/class-registry.php:183
-#: includes/modules/class-registry.php:693
-#: includes/modules/class-registry.php:810
+#: includes/modules/class-registry.php:696
+#: includes/modules/class-registry.php:813
 msgid "Image"
 msgstr ""
 
 #: includes/modules/class-registry.php:215
-#: includes/modules/class-registry.php:460
-#: includes/modules/class-registry.php:514
-#: includes/modules/class-registry.php:751
-#: includes/modules/class-registry.php:927
-#: includes/modules/class-registry.php:1032
+#: includes/modules/class-registry.php:461
+#: includes/modules/class-registry.php:517
+#: includes/modules/class-registry.php:754
+#: includes/modules/class-registry.php:930
+#: includes/modules/class-registry.php:1035
 msgid "Left"
 msgstr ""
 
 #: includes/modules/class-registry.php:217
-#: includes/modules/class-registry.php:461
-#: includes/modules/class-registry.php:515
-#: includes/modules/class-registry.php:752
-#: includes/modules/class-registry.php:925
-#: includes/modules/class-registry.php:1033
+#: includes/modules/class-registry.php:462
+#: includes/modules/class-registry.php:518
+#: includes/modules/class-registry.php:755
+#: includes/modules/class-registry.php:928
+#: includes/modules/class-registry.php:1036
 msgid "Right"
 msgstr ""
 
@@ -1934,7 +1997,7 @@ msgid "Show controls"
 msgstr ""
 
 #: includes/modules/class-registry.php:253
-#: includes/modules/class-registry.php:550
+#: includes/modules/class-registry.php:553
 msgid "Carousel"
 msgstr ""
 
@@ -1943,19 +2006,19 @@ msgid "Full-width slides with separate desktop and mobile images."
 msgstr ""
 
 #: includes/modules/class-registry.php:257
-#: includes/modules/class-registry.php:800
-#: includes/modules/class-registry.php:980
+#: includes/modules/class-registry.php:803
+#: includes/modules/class-registry.php:983
 msgid "Autoplay"
 msgstr ""
 
 #: includes/modules/class-registry.php:258
-#: includes/modules/class-registry.php:801
-#: includes/modules/class-registry.php:981
+#: includes/modules/class-registry.php:804
+#: includes/modules/class-registry.php:984
 msgid "Time per slide (ms)"
 msgstr ""
 
 #: includes/modules/class-registry.php:259
-#: includes/modules/class-registry.php:802
+#: includes/modules/class-registry.php:805
 msgid "Show dots"
 msgstr ""
 
@@ -1964,12 +2027,12 @@ msgid "Show arrows"
 msgstr ""
 
 #: includes/modules/class-registry.php:263
-#: includes/modules/class-registry.php:351
+#: includes/modules/class-registry.php:352
 msgid "Image height"
 msgstr ""
 
 #: includes/modules/class-registry.php:266
-#: includes/modules/class-registry.php:354
+#: includes/modules/class-registry.php:355
 msgid "Image height (auto)"
 msgstr ""
 
@@ -1986,7 +2049,7 @@ msgid "Fixed height (px)"
 msgstr ""
 
 #: includes/modules/class-registry.php:273
-#: includes/modules/class-registry.php:615
+#: includes/modules/class-registry.php:618
 msgid "Title size (px)"
 msgstr ""
 
@@ -2023,9 +2086,9 @@ msgid "Subtitle"
 msgstr ""
 
 #: includes/modules/class-registry.php:292
-#: includes/modules/class-registry.php:486
-#: includes/modules/class-registry.php:946
-#: includes/modules/class-registry.php:1182
+#: includes/modules/class-registry.php:487
+#: includes/modules/class-registry.php:949
+#: includes/modules/class-registry.php:1185
 msgid "Title (second line, emphasized)"
 msgstr ""
 
@@ -2038,7 +2101,7 @@ msgid "Short facts under the text"
 msgstr ""
 
 #: includes/modules/class-registry.php:304
-#: includes/modules/class-registry.php:1079
+#: includes/modules/class-registry.php:1082
 msgid "Bold text"
 msgstr ""
 
@@ -2055,836 +2118,848 @@ msgid "Action text"
 msgstr ""
 
 #: includes/modules/class-registry.php:325
-msgid "Image number label"
+msgid "Footnote under the text"
 msgstr ""
 
 #: includes/modules/class-registry.php:326
-msgid "Image caption (bold)"
+msgid "Image number label"
 msgstr ""
 
 #: includes/modules/class-registry.php:327
-msgid "Image caption (note)"
+msgid "Image caption (bold)"
 msgstr ""
 
 #: includes/modules/class-registry.php:328
-#: includes/modules/class-registry.php:366
-#: includes/modules/class-registry.php:616
-msgid "Text position"
+msgid "Image caption (note)"
 msgstr ""
 
 #: includes/modules/class-registry.php:329
-#: includes/modules/class-registry.php:361
-#: includes/modules/class-registry.php:907
-#: includes/modules/class-registry.php:988
-msgid "Overlay color"
+#: includes/modules/class-registry.php:367
+#: includes/modules/class-registry.php:619
+msgid "Text position"
 msgstr ""
 
 #: includes/modules/class-registry.php:330
 #: includes/modules/class-registry.php:362
-#: includes/modules/class-registry.php:618
-#: includes/modules/class-registry.php:773
-#: includes/modules/class-registry.php:989
-msgid "Overlay opacity (%)"
+#: includes/modules/class-registry.php:910
+#: includes/modules/class-registry.php:991
+msgid "Overlay color"
 msgstr ""
 
 #: includes/modules/class-registry.php:331
-#: includes/modules/class-registry.php:368
-#: includes/modules/class-registry.php:471
-#: includes/modules/class-registry.php:619
-#: includes/modules/class-registry.php:736
-#: includes/modules/class-registry.php:840
-#: includes/modules/class-registry.php:875
-#: includes/modules/class-registry.php:1041
-#: includes/modules/class-registry.php:1082
-#: includes/modules/class-registry.php:1189
-#: includes/modules/class-registry.php:1215
-#: includes/modules/class-registry.php:1229
+#: includes/modules/class-registry.php:363
+#: includes/modules/class-registry.php:621
+#: includes/modules/class-registry.php:776
+#: includes/modules/class-registry.php:992
+msgid "Overlay opacity (%)"
+msgstr ""
+
+#: includes/modules/class-registry.php:332
+#: includes/modules/class-registry.php:369
+#: includes/modules/class-registry.php:472
+#: includes/modules/class-registry.php:622
+#: includes/modules/class-registry.php:739
+#: includes/modules/class-registry.php:843
+#: includes/modules/class-registry.php:878
+#: includes/modules/class-registry.php:1044
+#: includes/modules/class-registry.php:1085
+#: includes/modules/class-registry.php:1192
+#: includes/modules/class-registry.php:1218
+#: includes/modules/class-registry.php:1232
 msgid "Text color"
 msgstr ""
 
-#: includes/modules/class-registry.php:343
+#: includes/modules/class-registry.php:344
 msgid "Single image"
 msgstr ""
 
-#: includes/modules/class-registry.php:347
+#: includes/modules/class-registry.php:348
 msgid "Desktop: 1920 × 800 / 600 / 420. Mobile: 1242 × 2000."
 msgstr ""
 
-#: includes/modules/class-registry.php:348
+#: includes/modules/class-registry.php:349
 msgid "Image link"
 msgstr ""
 
-#: includes/modules/class-registry.php:367
-#: includes/modules/class-registry.php:470
-#: includes/modules/class-registry.php:735
-#: includes/modules/class-registry.php:1040
+#: includes/modules/class-registry.php:368
+#: includes/modules/class-registry.php:471
+#: includes/modules/class-registry.php:738
+#: includes/modules/class-registry.php:1043
 msgid "Title color"
 msgstr ""
 
-#: includes/modules/class-registry.php:376
+#: includes/modules/class-registry.php:377
 msgid "Image row"
 msgstr ""
 
-#: includes/modules/class-registry.php:382
-#: includes/modules/class-registry.php:415
-#: includes/modules/class-registry.php:1251
+#: includes/modules/class-registry.php:383
+#: includes/modules/class-registry.php:416
+#: includes/modules/class-registry.php:1254
 msgid "Gap (px)"
 msgstr ""
 
-#: includes/modules/class-registry.php:385
+#: includes/modules/class-registry.php:386
 msgid "Mobile style"
 msgstr ""
 
-#: includes/modules/class-registry.php:388
+#: includes/modules/class-registry.php:389
 msgid "Swipe sideways"
 msgstr ""
 
-#: includes/modules/class-registry.php:389
+#: includes/modules/class-registry.php:390
 msgid "Stack vertically"
 msgstr ""
 
-#: includes/modules/class-registry.php:395
-#: includes/modules/class-registry.php:420
-#: includes/modules/class-registry.php:1255
+#: includes/modules/class-registry.php:396
+#: includes/modules/class-registry.php:421
+#: includes/modules/class-registry.php:1258
 msgid "Images"
 msgstr ""
 
-#: includes/modules/class-registry.php:409
+#: includes/modules/class-registry.php:410
 msgid "Image grid"
 msgstr ""
 
-#: includes/modules/class-registry.php:433
+#: includes/modules/class-registry.php:434
 msgid "Mosaic (3 images)"
 msgstr ""
 
-#: includes/modules/class-registry.php:433
+#: includes/modules/class-registry.php:434
 msgid "Large image on the left"
 msgstr ""
 
-#: includes/modules/class-registry.php:433
+#: includes/modules/class-registry.php:434
 msgid "Large image on the right"
 msgstr ""
 
-#: includes/modules/class-registry.php:434
+#: includes/modules/class-registry.php:435
 msgid "Mosaic (4 images)"
 msgstr ""
 
-#: includes/modules/class-registry.php:434
-#: includes/modules/class-registry.php:439
+#: includes/modules/class-registry.php:435
+#: includes/modules/class-registry.php:440
 msgid "Tall image on the left"
 msgstr ""
 
-#: includes/modules/class-registry.php:434
-#: includes/modules/class-registry.php:441
+#: includes/modules/class-registry.php:435
+#: includes/modules/class-registry.php:442
 msgid "Tall image on the right"
 msgstr ""
 
-#: includes/modules/class-registry.php:437
+#: includes/modules/class-registry.php:438
 msgid "Mosaic (5 images)"
 msgstr ""
 
-#: includes/modules/class-registry.php:440
+#: includes/modules/class-registry.php:441
 msgid "Tall image in the middle"
 msgstr ""
 
-#: includes/modules/class-registry.php:442
+#: includes/modules/class-registry.php:443
 msgid "Wide image on top"
 msgstr ""
 
-#: includes/modules/class-registry.php:448
+#: includes/modules/class-registry.php:449
 msgid "Image & text"
 msgstr ""
 
-#: includes/modules/class-registry.php:452
+#: includes/modules/class-registry.php:453
 msgid "Ratio 4:3, 3:2, 2:1 or 1:1, at least 1000px wide."
 msgstr ""
 
-#: includes/modules/class-registry.php:457
-#: includes/modules/class-registry.php:511
-#: includes/modules/class-registry.php:748
-#: includes/modules/class-registry.php:1029
+#: includes/modules/class-registry.php:458
+#: includes/modules/class-registry.php:514
+#: includes/modules/class-registry.php:751
+#: includes/modules/class-registry.php:1032
 msgid "Image position"
 msgstr ""
 
-#: includes/modules/class-registry.php:462
-#: includes/modules/class-registry.php:516
-#: includes/modules/class-registry.php:585
-#: includes/modules/class-registry.php:1034
+#: includes/modules/class-registry.php:463
+#: includes/modules/class-registry.php:519
+#: includes/modules/class-registry.php:588
+#: includes/modules/class-registry.php:1037
 msgid "Above the text"
 msgstr ""
 
-#: includes/modules/class-registry.php:463
-#: includes/modules/class-registry.php:517
-#: includes/modules/class-registry.php:584
-#: includes/modules/class-registry.php:1035
+#: includes/modules/class-registry.php:464
+#: includes/modules/class-registry.php:520
+#: includes/modules/class-registry.php:587
+#: includes/modules/class-registry.php:1038
 msgid "Below the text"
 msgstr ""
 
-#: includes/modules/class-registry.php:468
-#: includes/modules/class-registry.php:553
-#: includes/modules/class-registry.php:870
-#: includes/modules/class-registry.php:1023
+#: includes/modules/class-registry.php:469
+#: includes/modules/class-registry.php:556
+#: includes/modules/class-registry.php:873
+#: includes/modules/class-registry.php:1026
 msgid "Text alignment"
 msgstr ""
 
-#: includes/modules/class-registry.php:472
-#: includes/modules/class-registry.php:1042
+#: includes/modules/class-registry.php:473
+#: includes/modules/class-registry.php:1045
 msgid "Text background"
 msgstr ""
 
-#: includes/modules/class-registry.php:480
+#: includes/modules/class-registry.php:481
 msgid "Image & text rows"
 msgstr ""
 
-#: includes/modules/class-registry.php:482
+#: includes/modules/class-registry.php:483
 msgid "Several image-and-text rows; each row chooses its own image side (e.g. left, right, left)."
 msgstr ""
 
-#: includes/modules/class-registry.php:484
-#: includes/modules/class-registry.php:504
-#: includes/modules/class-registry.php:943
-#: includes/modules/class-registry.php:1127
-#: includes/modules/class-registry.php:1180
-#: includes/modules/class-registry.php:1209
+#: includes/modules/class-registry.php:485
+#: includes/modules/class-registry.php:506
+#: includes/modules/class-registry.php:946
+#: includes/modules/class-registry.php:1130
+#: includes/modules/class-registry.php:1183
+#: includes/modules/class-registry.php:1212
 msgid "Small heading"
 msgstr ""
 
-#: includes/modules/class-registry.php:487
+#: includes/modules/class-registry.php:488
 msgid "Introduction"
 msgstr ""
 
-#: includes/modules/class-registry.php:490
+#: includes/modules/class-registry.php:491
 msgid "Width"
 msgstr ""
 
-#: includes/modules/class-registry.php:493
+#: includes/modules/class-registry.php:494
 msgid "Content width"
 msgstr ""
 
-#: includes/modules/class-registry.php:494
+#: includes/modules/class-registry.php:495
 msgid "Wide"
 msgstr ""
 
-#: includes/modules/class-registry.php:498
+#: includes/modules/class-registry.php:499
 msgid "Gap between rows (px)"
 msgstr ""
 
-#: includes/modules/class-registry.php:499
+#: includes/modules/class-registry.php:500
 msgid "Fade in on scroll"
 msgstr ""
 
-#: includes/modules/class-registry.php:502
+#: includes/modules/class-registry.php:501
+msgid "Note under the rows (e.g. image disclosure)"
+msgstr ""
+
+#: includes/modules/class-registry.php:504
 msgid "Rows"
 msgstr ""
 
-#: includes/modules/class-registry.php:506
-#: includes/modules/class-registry.php:1194
+#: includes/modules/class-registry.php:508
+#: includes/modules/class-registry.php:1197
 msgid "Label"
 msgstr ""
 
-#: includes/modules/class-registry.php:538
-msgid "Card list"
+#: includes/modules/class-registry.php:511
+msgid "Image caption"
 msgstr ""
 
-#: includes/modules/class-registry.php:546
-#: includes/modules/class-registry.php:1097
-msgid "Display"
+#: includes/modules/class-registry.php:541
+msgid "Card list"
 msgstr ""
 
 #: includes/modules/class-registry.php:549
 #: includes/modules/class-registry.php:1100
+msgid "Display"
+msgstr ""
+
+#: includes/modules/class-registry.php:552
+#: includes/modules/class-registry.php:1103
 msgid "Grid"
 msgstr ""
 
-#: includes/modules/class-registry.php:555
+#: includes/modules/class-registry.php:558
 msgid "Card gap (px)"
 msgstr ""
 
-#: includes/modules/class-registry.php:559
+#: includes/modules/class-registry.php:562
 msgid "Cards"
 msgstr ""
 
-#: includes/modules/class-registry.php:581
+#: includes/modules/class-registry.php:584
 msgid "Video position"
 msgstr ""
 
-#: includes/modules/class-registry.php:586
+#: includes/modules/class-registry.php:589
 msgid "Left of the text"
 msgstr ""
 
-#: includes/modules/class-registry.php:587
+#: includes/modules/class-registry.php:590
 msgid "Right of the text"
 msgstr ""
 
-#: includes/modules/class-registry.php:593
+#: includes/modules/class-registry.php:596
 msgid "Video ratio"
 msgstr ""
 
-#: includes/modules/class-registry.php:610
+#: includes/modules/class-registry.php:613
 msgid "Video banner"
 msgstr ""
 
-#: includes/modules/class-registry.php:617
-#: includes/modules/class-registry.php:825
-#: includes/modules/class-registry.php:857
+#: includes/modules/class-registry.php:620
+#: includes/modules/class-registry.php:828
+#: includes/modules/class-registry.php:860
 msgid "Height (px)"
 msgstr ""
 
-#: includes/modules/class-registry.php:628
-#: includes/modules/class-registry.php:639
+#: includes/modules/class-registry.php:631
+#: includes/modules/class-registry.php:642
 msgid "Highlights"
 msgstr ""
 
-#: includes/modules/class-registry.php:633
+#: includes/modules/class-registry.php:636
 msgid "Icon width (px)"
 msgstr ""
 
-#: includes/modules/class-registry.php:634
+#: includes/modules/class-registry.php:637
 msgid "Item title size (px)"
 msgstr ""
 
-#: includes/modules/class-registry.php:635
-#: includes/modules/class-registry.php:1053
+#: includes/modules/class-registry.php:638
+#: includes/modules/class-registry.php:1056
 msgid "Swipe on mobile"
 msgstr ""
 
-#: includes/modules/class-registry.php:641
+#: includes/modules/class-registry.php:644
 msgid "Icon image"
 msgstr ""
 
-#: includes/modules/class-registry.php:653
+#: includes/modules/class-registry.php:656
 msgid "Counting numbers"
 msgstr ""
 
-#: includes/modules/class-registry.php:658
+#: includes/modules/class-registry.php:661
 msgid "Number size (px)"
 msgstr ""
 
-#: includes/modules/class-registry.php:663
+#: includes/modules/class-registry.php:666
 msgid "Numbers"
 msgstr ""
 
-#: includes/modules/class-registry.php:666
+#: includes/modules/class-registry.php:669
 msgid "Or an image (48 × 48)"
 msgstr ""
 
-#: includes/modules/class-registry.php:667
+#: includes/modules/class-registry.php:670
 msgid "Number"
 msgstr ""
 
-#: includes/modules/class-registry.php:668
+#: includes/modules/class-registry.php:671
 msgid "Unit"
 msgstr ""
 
-#: includes/modules/class-registry.php:680
+#: includes/modules/class-registry.php:683
 msgid "Gallery"
 msgstr ""
 
-#: includes/modules/class-registry.php:691
+#: includes/modules/class-registry.php:694
 msgid "Pictures"
 msgstr ""
 
-#: includes/modules/class-registry.php:693
-#: includes/modules/class-registry.php:1026
+#: includes/modules/class-registry.php:696
+#: includes/modules/class-registry.php:1029
 msgid "At least 1000px wide; height follows the image."
 msgstr ""
 
-#: includes/modules/class-registry.php:706
+#: includes/modules/class-registry.php:709
 msgid "Custom HTML"
 msgstr ""
 
-#: includes/modules/class-registry.php:711
+#: includes/modules/class-registry.php:714
 msgid "HTML"
 msgstr ""
 
-#: includes/modules/class-registry.php:711
+#: includes/modules/class-registry.php:714
 msgid "Scripts only run when the last editor of this design is an administrator. Do not paste code you do not trust."
 msgstr ""
 
-#: includes/modules/class-registry.php:717
+#: includes/modules/class-registry.php:720
 msgid "Timeline"
 msgstr ""
 
-#: includes/modules/class-registry.php:724
+#: includes/modules/class-registry.php:727
 msgid "Timeline style"
 msgstr ""
 
-#: includes/modules/class-registry.php:727
+#: includes/modules/class-registry.php:730
 msgid "Horizontal line"
 msgstr ""
 
-#: includes/modules/class-registry.php:728
+#: includes/modules/class-registry.php:731
 msgid "Vertical with images"
 msgstr ""
 
-#: includes/modules/class-registry.php:731
+#: includes/modules/class-registry.php:734
 msgid "Auto scroll (horizontal style, desktop)"
 msgstr ""
 
-#: includes/modules/class-registry.php:732
+#: includes/modules/class-registry.php:735
 msgid "Collapse long timelines (vertical style)"
 msgstr ""
 
-#: includes/modules/class-registry.php:733
-#: includes/modules/class-registry.php:1226
+#: includes/modules/class-registry.php:736
+#: includes/modules/class-registry.php:1229
 msgid "Expand button text"
 msgstr ""
 
-#: includes/modules/class-registry.php:734
-#: includes/modules/class-registry.php:1227
+#: includes/modules/class-registry.php:737
+#: includes/modules/class-registry.php:1230
 msgid "Collapse button text"
 msgstr ""
 
-#: includes/modules/class-registry.php:740
+#: includes/modules/class-registry.php:743
 msgid "Events"
 msgstr ""
 
-#: includes/modules/class-registry.php:745
+#: includes/modules/class-registry.php:748
 msgid "Image (vertical style)"
 msgstr ""
 
-#: includes/modules/class-registry.php:756
-#: includes/modules/class-registry.php:776
+#: includes/modules/class-registry.php:759
+#: includes/modules/class-registry.php:779
 msgid "Accent color"
 msgstr ""
 
-#: includes/modules/class-registry.php:766
+#: includes/modules/class-registry.php:769
 msgid "Contact details"
 msgstr ""
 
-#: includes/modules/class-registry.php:772
-#: includes/modules/class-registry.php:987
+#: includes/modules/class-registry.php:775
+#: includes/modules/class-registry.php:990
 msgid "Background image"
 msgstr ""
 
-#: includes/modules/class-registry.php:772
+#: includes/modules/class-registry.php:775
 msgid "Desktop 2400 × 656, mobile 1242 × 1138. Without an image the background color is used."
 msgstr ""
 
-#: includes/modules/class-registry.php:774
+#: includes/modules/class-registry.php:777
 msgid "Icon size (px)"
 msgstr ""
 
-#: includes/modules/class-registry.php:775
-#: includes/modules/class-registry.php:839
-#: includes/modules/class-registry.php:1083
-#: includes/modules/class-registry.php:1188
-#: includes/modules/class-registry.php:1214
+#: includes/modules/class-registry.php:778
+#: includes/modules/class-registry.php:842
+#: includes/modules/class-registry.php:1086
+#: includes/modules/class-registry.php:1191
+#: includes/modules/class-registry.php:1217
 msgid "Background color"
 msgstr ""
 
-#: includes/modules/class-registry.php:780
+#: includes/modules/class-registry.php:783
 msgid "Contact methods"
 msgstr ""
 
-#: includes/modules/class-registry.php:783
+#: includes/modules/class-registry.php:786
 msgid "Or an icon image (48 × 48)"
 msgstr ""
 
-#: includes/modules/class-registry.php:796
+#: includes/modules/class-registry.php:799
 msgid "Promo grid"
 msgstr ""
 
-#: includes/modules/class-registry.php:799
+#: includes/modules/class-registry.php:802
 msgid "Left title"
 msgstr ""
 
-#: includes/modules/class-registry.php:803
+#: includes/modules/class-registry.php:806
 msgid "Right title"
 msgstr ""
 
-#: includes/modules/class-registry.php:804
+#: includes/modules/class-registry.php:807
 msgid "Promoted category 1"
 msgstr ""
 
-#: includes/modules/class-registry.php:805
+#: includes/modules/class-registry.php:808
 msgid "Promoted category 2"
 msgstr ""
 
-#: includes/modules/class-registry.php:808
+#: includes/modules/class-registry.php:811
 msgid "Left slides"
 msgstr ""
 
-#: includes/modules/class-registry.php:810
-#: includes/modules/class-registry.php:987
+#: includes/modules/class-registry.php:813
+#: includes/modules/class-registry.php:990
 msgid "At least 1000px wide."
 msgstr ""
 
-#: includes/modules/class-registry.php:822
+#: includes/modules/class-registry.php:825
 msgid "Scrolling text"
 msgstr ""
 
-#: includes/modules/class-registry.php:826
-#: includes/modules/class-registry.php:1080
+#: includes/modules/class-registry.php:829
+#: includes/modules/class-registry.php:1083
 msgid "Text size (px)"
 msgstr ""
 
-#: includes/modules/class-registry.php:829
+#: includes/modules/class-registry.php:832
 msgid "Direction"
 msgstr ""
 
-#: includes/modules/class-registry.php:832
+#: includes/modules/class-registry.php:835
 msgid "Right to left"
 msgstr ""
 
-#: includes/modules/class-registry.php:833
+#: includes/modules/class-registry.php:836
 msgid "Left to right"
 msgstr ""
 
-#: includes/modules/class-registry.php:837
+#: includes/modules/class-registry.php:840
 msgid "Seconds per loop"
 msgstr ""
 
-#: includes/modules/class-registry.php:838
+#: includes/modules/class-registry.php:841
 msgid "Pause on hover"
 msgstr ""
 
-#: includes/modules/class-registry.php:843
+#: includes/modules/class-registry.php:846
 msgid "Texts"
 msgstr ""
 
-#: includes/modules/class-registry.php:858
+#: includes/modules/class-registry.php:861
 msgid "Color"
 msgstr ""
 
-#: includes/modules/class-registry.php:864
+#: includes/modules/class-registry.php:867
 msgid "Rich text"
 msgstr ""
 
-#: includes/modules/class-registry.php:871
+#: includes/modules/class-registry.php:874
 msgid "Content width (px)"
 msgstr ""
 
-#: includes/modules/class-registry.php:872
-#: includes/modules/class-registry.php:1078
+#: includes/modules/class-registry.php:875
+#: includes/modules/class-registry.php:1081
 msgid "Inner padding (px)"
 msgstr ""
 
-#: includes/modules/class-registry.php:873
+#: includes/modules/class-registry.php:876
 msgid "Corner radius (px)"
 msgstr ""
 
-#: includes/modules/class-registry.php:874
+#: includes/modules/class-registry.php:877
 msgid "Content background"
 msgstr ""
 
-#: includes/modules/class-registry.php:883
+#: includes/modules/class-registry.php:886
 msgid "Before / after"
 msgstr ""
 
-#: includes/modules/class-registry.php:888
+#: includes/modules/class-registry.php:891
 msgid "Recommended 1000 × 500."
 msgstr ""
 
-#: includes/modules/class-registry.php:889
+#: includes/modules/class-registry.php:892
 msgid "Recommended 1000 × 500, same size as the before image."
 msgstr ""
 
-#: includes/modules/class-registry.php:890
+#: includes/modules/class-registry.php:893
 msgid "Before label"
 msgstr ""
 
-#: includes/modules/class-registry.php:891
+#: includes/modules/class-registry.php:894
 msgid "After label"
 msgstr ""
 
-#: includes/modules/class-registry.php:892
+#: includes/modules/class-registry.php:895
 msgid "Divider start position (%)"
 msgstr ""
 
-#: includes/modules/class-registry.php:893
+#: includes/modules/class-registry.php:896
 msgid "Before label color"
 msgstr ""
 
-#: includes/modules/class-registry.php:894
+#: includes/modules/class-registry.php:897
 msgid "After label color"
 msgstr ""
 
-#: includes/modules/class-registry.php:901
+#: includes/modules/class-registry.php:904
 msgid "Image hotspots"
 msgstr ""
 
-#: includes/modules/class-registry.php:906
+#: includes/modules/class-registry.php:909
 msgid "Desktop 1920 × 600, mobile 1242 × 900."
 msgstr ""
 
-#: includes/modules/class-registry.php:908
+#: includes/modules/class-registry.php:911
 msgid "Hotspot icon width (px)"
 msgstr ""
 
-#: includes/modules/class-registry.php:912
+#: includes/modules/class-registry.php:915
 msgid "Hotspots"
 msgstr ""
 
-#: includes/modules/class-registry.php:914
-#: includes/modules/class-registry.php:1000
+#: includes/modules/class-registry.php:917
+#: includes/modules/class-registry.php:1003
 msgid "Horizontal position (%)"
 msgstr ""
 
-#: includes/modules/class-registry.php:915
-#: includes/modules/class-registry.php:1001
+#: includes/modules/class-registry.php:918
+#: includes/modules/class-registry.php:1004
 msgid "Vertical position (%)"
 msgstr ""
 
-#: includes/modules/class-registry.php:916
+#: includes/modules/class-registry.php:919
 msgid "Hotspot icon (200 × 200)"
 msgstr ""
 
-#: includes/modules/class-registry.php:921
+#: includes/modules/class-registry.php:924
 msgid "Popup position"
 msgstr ""
 
-#: includes/modules/class-registry.php:924
+#: includes/modules/class-registry.php:927
 msgid "Above"
 msgstr ""
 
-#: includes/modules/class-registry.php:926
+#: includes/modules/class-registry.php:929
 msgid "Below"
 msgstr ""
 
-#: includes/modules/class-registry.php:940
+#: includes/modules/class-registry.php:943
 msgid "FAQ"
 msgstr ""
 
-#: includes/modules/class-registry.php:947
+#: includes/modules/class-registry.php:950
 msgid "Text link (under the title)"
 msgstr ""
 
-#: includes/modules/class-registry.php:953
+#: includes/modules/class-registry.php:956
 msgid "Title on the left, questions on the right"
 msgstr ""
 
-#: includes/modules/class-registry.php:954
+#: includes/modules/class-registry.php:957
 msgid "Title above the questions"
 msgstr ""
 
-#: includes/modules/class-registry.php:957
+#: includes/modules/class-registry.php:960
 msgid "Open the first question"
 msgstr ""
 
-#: includes/modules/class-registry.php:958
+#: includes/modules/class-registry.php:961
 msgid "Answer background"
 msgstr ""
 
-#: includes/modules/class-registry.php:959
+#: includes/modules/class-registry.php:962
 msgid "Answer text color"
 msgstr ""
 
-#: includes/modules/class-registry.php:963
+#: includes/modules/class-registry.php:966
 msgid "Questions"
 msgstr ""
 
-#: includes/modules/class-registry.php:966
+#: includes/modules/class-registry.php:969
 msgid "Answer"
 msgstr ""
 
-#: includes/modules/class-registry.php:977
+#: includes/modules/class-registry.php:980
 msgid "Shop the look"
 msgstr ""
 
-#: includes/modules/class-registry.php:982
+#: includes/modules/class-registry.php:985
 msgid "Preview product on hover"
 msgstr ""
 
-#: includes/modules/class-registry.php:985
+#: includes/modules/class-registry.php:988
 msgid "Scenes"
 msgstr ""
 
-#: includes/modules/class-registry.php:993
+#: includes/modules/class-registry.php:996
 msgid "Product hotspots"
 msgstr ""
 
-#: includes/modules/class-registry.php:999
+#: includes/modules/class-registry.php:1002
 msgid "Show by default"
 msgstr ""
 
-#: includes/modules/class-registry.php:1002
-#: includes/modules/class-registry.php:1259
+#: includes/modules/class-registry.php:1005
+#: includes/modules/class-registry.php:1262
 msgid "Button text"
 msgstr ""
 
-#: includes/modules/class-registry.php:1016
+#: includes/modules/class-registry.php:1019
 msgid "Homepage headline (H1)"
 msgstr ""
 
-#: includes/modules/class-registry.php:1018
+#: includes/modules/class-registry.php:1021
 msgid "The page's main heading for search engines. Use only one, before other blocks."
 msgstr ""
 
-#: includes/modules/class-registry.php:1021
+#: includes/modules/class-registry.php:1024
 msgid "Headline (H1)"
 msgstr ""
 
-#: includes/modules/class-registry.php:1025
+#: includes/modules/class-registry.php:1028
 msgid "Show image"
 msgstr ""
 
-#: includes/modules/class-registry.php:1050
+#: includes/modules/class-registry.php:1053
 msgid "Info strip"
 msgstr ""
 
-#: includes/modules/class-registry.php:1054
-#: includes/modules/class-registry.php:1213
+#: includes/modules/class-registry.php:1057
+#: includes/modules/class-registry.php:1216
 msgid "Alignment"
 msgstr ""
 
-#: includes/modules/class-registry.php:1060
+#: includes/modules/class-registry.php:1063
 msgid "Or an image (40px or wider)"
 msgstr ""
 
-#: includes/modules/class-registry.php:1072
+#: includes/modules/class-registry.php:1075
 msgid "Navigation bar"
 msgstr ""
 
-#: includes/modules/class-registry.php:1075
+#: includes/modules/class-registry.php:1078
 msgid "Menus are managed under Store design → Menus & navigation (for now: Appearance → Menus)."
 msgstr ""
 
-#: includes/modules/class-registry.php:1077
+#: includes/modules/class-registry.php:1080
 msgid "Alignment (desktop)"
 msgstr ""
 
-#: includes/modules/class-registry.php:1081
+#: includes/modules/class-registry.php:1084
 msgid "Show border"
 msgstr ""
 
-#: includes/modules/class-registry.php:1084
+#: includes/modules/class-registry.php:1087
 msgid "Border color"
 msgstr ""
 
-#: includes/modules/class-registry.php:1090
+#: includes/modules/class-registry.php:1093
 msgid "Logo list"
 msgstr ""
 
-#: includes/modules/class-registry.php:1101
+#: includes/modules/class-registry.php:1104
 msgid "Scrolling row"
 msgstr ""
 
-#: includes/modules/class-registry.php:1108
+#: includes/modules/class-registry.php:1111
 msgid "Logos"
 msgstr ""
 
-#: includes/modules/class-registry.php:1110
+#: includes/modules/class-registry.php:1113
 msgid "Logo (400 × 200)"
 msgstr ""
 
-#: includes/modules/class-registry.php:1122
+#: includes/modules/class-registry.php:1125
 msgid "Product collection"
 msgstr ""
 
-#: includes/modules/class-registry.php:1125
+#: includes/modules/class-registry.php:1128
 msgid "Products from your catalog. Prices, stock and images always come from WooCommerce."
 msgstr ""
 
-#: includes/modules/class-registry.php:1130
+#: includes/modules/class-registry.php:1133
 msgid "Text link (e.g. \"View all\")"
 msgstr ""
 
-#: includes/modules/class-registry.php:1133
+#: includes/modules/class-registry.php:1136
 msgid "Products to show"
 msgstr ""
 
-#: includes/modules/class-registry.php:1136
+#: includes/modules/class-registry.php:1139
 msgid "Whole catalog"
 msgstr ""
 
-#: includes/modules/class-registry.php:1137
+#: includes/modules/class-registry.php:1140
 msgid "One category"
 msgstr ""
 
-#: includes/modules/class-registry.php:1138
+#: includes/modules/class-registry.php:1141
 msgid "Choose products"
 msgstr ""
 
-#: includes/modules/class-registry.php:1142
+#: includes/modules/class-registry.php:1145
 msgid "Category"
 msgstr ""
 
-#: includes/modules/class-registry.php:1146
+#: includes/modules/class-registry.php:1149
 msgid "Products"
 msgstr ""
 
-#: includes/modules/class-registry.php:1156
+#: includes/modules/class-registry.php:1159
 msgid "Sort order"
 msgstr ""
 
-#: includes/modules/class-registry.php:1159
+#: includes/modules/class-registry.php:1162
 msgid "Catalog order (as in the price list)"
 msgstr ""
 
-#: includes/modules/class-registry.php:1160
+#: includes/modules/class-registry.php:1163
 msgid "Newest first"
 msgstr ""
 
-#: includes/modules/class-registry.php:1161
+#: includes/modules/class-registry.php:1164
 msgid "Name A–Z"
 msgstr ""
 
-#: includes/modules/class-registry.php:1162
+#: includes/modules/class-registry.php:1165
 msgid "Price: low to high"
 msgstr ""
 
-#: includes/modules/class-registry.php:1163
+#: includes/modules/class-registry.php:1166
 msgid "Price: high to low"
 msgstr ""
 
-#: includes/modules/class-registry.php:1167
+#: includes/modules/class-registry.php:1170
 msgid "Number of products"
 msgstr ""
 
-#: includes/modules/class-registry.php:1169
+#: includes/modules/class-registry.php:1172
 msgid "Show report preview on hover"
 msgstr ""
 
-#: includes/modules/class-registry.php:1170
+#: includes/modules/class-registry.php:1173
 msgid "Text when there are no products"
 msgstr ""
 
-#: includes/modules/class-registry.php:1176
+#: includes/modules/class-registry.php:1179
 msgid "Batch report highlight"
 msgstr ""
 
-#: includes/modules/class-registry.php:1178
+#: includes/modules/class-registry.php:1181
 msgid "Introduces batch lookup with a sample report card. It does not show real report data."
 msgstr ""
 
-#: includes/modules/class-registry.php:1185
+#: includes/modules/class-registry.php:1188
 msgid "Card: small heading"
 msgstr ""
 
-#: includes/modules/class-registry.php:1186
+#: includes/modules/class-registry.php:1189
 msgid "Card: title"
 msgstr ""
 
-#: includes/modules/class-registry.php:1187
+#: includes/modules/class-registry.php:1190
 msgid "Card: bottom line"
 msgstr ""
 
-#: includes/modules/class-registry.php:1192
+#: includes/modules/class-registry.php:1195
 msgid "Card rows"
 msgstr ""
 
-#: includes/modules/class-registry.php:1195
+#: includes/modules/class-registry.php:1198
 msgid "Value"
 msgstr ""
 
-#: includes/modules/class-registry.php:1206
+#: includes/modules/class-registry.php:1209
 msgid "Call to action"
 msgstr ""
 
-#: includes/modules/class-registry.php:1221
+#: includes/modules/class-registry.php:1224
 msgid "Text with \"read more\""
 msgstr ""
 
-#: includes/modules/class-registry.php:1228
+#: includes/modules/class-registry.php:1231
 msgid "Height when collapsed (px, 0 = never collapse)"
 msgstr ""
 
-#: includes/modules/class-registry.php:1230
+#: includes/modules/class-registry.php:1233
 msgid "Link color"
 msgstr ""
 
-#: includes/modules/class-registry.php:1231
+#: includes/modules/class-registry.php:1234
 msgid "Button color"
 msgstr ""
 

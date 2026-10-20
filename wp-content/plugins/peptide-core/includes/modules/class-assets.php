@@ -5,7 +5,12 @@
  *
  * 主题登记示例：
  *     add_filter( 'peptide_core_layout_assets', function ( $assets ) {
- *         $assets['story-israel'] = array( 'url' => get_theme_file_uri( 'assets/images/israel.webp' ), 'width' => 1200, 'height' => 800 );
+ *         $assets['story-israel'] = array(
+ *             'url'    => get_theme_file_uri( 'assets/images/israel-1200.webp' ),
+ *             'width'  => 1200,
+ *             'height' => 800,
+ *             'srcset' => get_theme_file_uri( 'assets/images/israel-600.webp' ) . ' 600w, ' . get_theme_file_uri( 'assets/images/israel-1200.webp' ) . ' 1200w', // 可选
+ *         );
  *         return $assets;
  *     } );
  *
@@ -19,7 +24,7 @@ defined( 'ABSPATH' ) || exit;
 final class Assets {
 
 	/**
-	 * @return array<string,array{url:string,width:int,height:int}>
+	 * @return array<string,array{url:string,width:int,height:int,srcset:string}>
 	 */
 	public static function all(): array {
 		$out = array();
@@ -32,6 +37,7 @@ final class Assets {
 				'url'    => esc_url_raw( (string) $asset['url'] ),
 				'width'  => (int) ( $asset['width'] ?? 0 ),
 				'height' => (int) ( $asset['height'] ?? 0 ),
+				'srcset' => isset( $asset['srcset'] ) ? (string) $asset['srcset'] : '',
 			);
 		}
 		return $out;
@@ -73,7 +79,7 @@ final class Assets {
 					'src'    => $asset['url'],
 					'width'  => $asset['width'],
 					'height' => $asset['height'],
-					'srcset' => '',
+					'srcset' => $asset['srcset'],
 					'alt'    => $alt,
 				);
 			}

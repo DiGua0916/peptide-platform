@@ -5,6 +5,9 @@
  *   GET  /peptide/v1/layouts/{id}          读取文档：模块列表、修改时间、所属模板
  *   POST /peptide/v1/layouts/{id}          保存草稿：{modules, modified}；modified 与服务器不同时返回 409（别人已经改过）
  *   POST /peptide/v1/layouts/{id}/preview  生成实时预览：{modules} → {url}（30 分钟有效，不产生修订）
+ *   POST /peptide/v1/layouts/{id}/publish    发布到网站：{modified}；草稿在你打开后被改过时返回 409（需要管理员）
+ *   POST /peptide/v1/layouts/{id}/unpublish  取消发布，网站恢复主题原来的页面（需要管理员）
+ *   POST /peptide/v1/layouts/{id}/discard    放弃未发布的修改，草稿恢复成已发布版本
  *
  * 保存的内容先按字段定义清理，再写成区块格式；每次保存产生一条 WordPress 修订。
  *
@@ -49,6 +52,22 @@ final class Layout_Controller {
 				),
 			)
 		);
+		foreach ( array(
+			'publish'   => array( 'publish', 'can_publish' ),
+			'unpublish' => array( 'unpublish', 'can_publish' ),
+			'discard'   => array( 'discard', 'can_edit' ),
+		) as $path => [ $callback, $permission ] ) {
+			register_rest_route(
+				Rest_Controller::ROUTE_NAMESPACE,
+				'/layouts/(?P<id>\d+)/' . $path,
+				array(
+					'methods'             => \WP_REST_Server::CREATABLE,
+					'callback'            => array( self::class, $callback ),
+					'permission_callback' => array( self::class, $permission ),
+					'args'                => $id,
+				)
+			);
+		}
 		register_rest_route(
 			Rest_Controller::ROUTE_NAMESPACE,
 			'/layouts/(?P<id>\d+)/preview',
@@ -76,6 +95,19 @@ final class Layout_Controller {
 	}
 
 	/**
+	 * 发布 / 取消发布需要管理员（pc_publish_layouts）。
+	 *
+	 * @return true|\WP_Error
+	 */
+	public static function can_publish( \WP_REST_Request $request ) {
+		$can = self::can_edit( $request );
+		if ( true !== $can ) {
+			return $can;
+		}
+		return current_user_can( Templates::CAP_MANAGE ) ? true : new \WP_Error( 'pc_layout_publish_forbidden', __( 'Only administrators can publish designs to the storefront.', 'peptide-core' ), array( 'status' => rest_authorization_required_code() ) );
+	}
+
+	/**
 	 * @return array<string,mixed>
 	 */
 	public static function document( int $id ): array {
@@ -93,6 +125,7 @@ final class Layout_Controller {
 			'modules'     => Layout::modules_from_content( (string) get_post_field( 'post_content', $id ) ),
 			'modified'    => (string) get_post_field( 'post_modified_gmt', $id ),
 			'lockedBy'    => $locker ? $locker->display_name : null,
+			'status'      => Layout::status( $id ),
 			'previewBase' => Templates::preview_url( $template, true ),
 		);
 	}
@@ -135,6 +168,36 @@ final class Layout_Controller {
 		update_post_meta( $id, '_edit_last', get_current_user_id() );
 		if ( function_exists( 'wp_set_post_lock' ) ) {
 			wp_set_post_lock( $id );
+		}
+		clean_post_cache( $id );
+		return rest_ensure_response( self::document( $id ) );
+	}
+
+	/**
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public static function publish( \WP_REST_Request $request ) {
+		$id       = (int) $request['id'];
+		$expected = (string) $request->get_param( 'modified' );
+		if ( '' !== $expected && $expected !== (string) get_post_field( 'post_modified_gmt', $id ) ) {
+			return new \WP_Error( 'pc_layout_conflict', __( 'This design was changed after you opened it. Reload, check the changes, then publish.', 'peptide-core' ), array( 'status' => 409 ) );
+		}
+		Layout::publish( $id );
+		return rest_ensure_response( self::document( $id ) );
+	}
+
+	public static function unpublish( \WP_REST_Request $request ): \WP_REST_Response {
+		Layout::unpublish( (int) $request['id'] );
+		return rest_ensure_response( self::document( (int) $request['id'] ) );
+	}
+
+	/**
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public static function discard( \WP_REST_Request $request ) {
+		$id = (int) $request['id'];
+		if ( ! Layout::discard_draft( $id ) ) {
+			return new \WP_Error( 'pc_layout_not_published', __( 'There is no published version to go back to.', 'peptide-core' ), array( 'status' => 400 ) );
 		}
 		clean_post_cache( $id );
 		return rest_ensure_response( self::document( $id ) );

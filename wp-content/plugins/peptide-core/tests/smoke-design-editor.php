@@ -122,6 +122,52 @@ $ok( 'unknown document returns 404', 404 === $call( 'GET', '/peptide/v1/layouts/
 // 6. 预览模板：只在员工预览模板时接管首页。
 $ok( 'public front page keeps the theme template', '/theme/front-page.php' === Layout::preview_template( '/theme/front-page.php' ) );
 
+// 7. 发布（EDIT-BLOCKS-05）。
+wp_set_current_user( $admin->ID );
+$_GET = array();
+$orig_default = (int) get_option( Templates::ACTIVE_OPTION );
+Templates::set_default( $template );
+$ok( 'not published: front page keeps the theme', ! Layout::takes_over( 'home' ) && ! peptide_core_has_layout( 'home' ) );
+$doc_now = $call( 'GET', $route )->get_data();
+$ok( 'status says not published', false === $doc_now['status']['published'] );
+$res = $call( 'POST', $route . '/publish', array( 'modified' => '2000-01-01 00:00:00' ) );
+$ok( 'publish with a stale modified time returns 409', 409 === $res->get_status() );
+$res = $call( 'POST', $route . '/publish', array( 'modified' => $doc_now['modified'] ) );
+$ok( 'publish succeeds', 200 === $res->get_status() && true === $res->get_data()['status']['published'] && false === $res->get_data()['status']['changed'] );
+$ok( 'published: front page is taken over', Layout::takes_over( 'home' ) && peptide_core_has_layout( 'home' ) );
+$public = peptide_core_render_layout( 'home' );
+$ok( 'visitors see the published modules', str_contains( $public, 'vc-m--faq' ) && str_contains( $public, 'vc-m--spacer' ) );
+
+// 改草稿：访客仍看已发布版本。
+$call( 'POST', $route, array( 'modules' => array( $modules[1] ), 'modified' => (string) get_post_field( 'post_modified_gmt', $doc ) ) );
+$ok( 'draft change marks unpublished changes', true === $call( 'GET', $route )->get_data()['status']['changed'] );
+$ok( 'visitors still see the published version', str_contains( peptide_core_render_layout( 'home' ), 'vc-m--faq' ) );
+
+// 放弃修改。
+$res = $call( 'POST', $route . '/discard' );
+$ok( 'discard restores the published version into the draft', 200 === $res->get_status() && 2 === count( $res->get_data()['modules'] ) && false === $res->get_data()['status']['changed'] );
+
+// 店长不能发布。
+$manager = wp_insert_user( array( 'user_login' => 'pc_smoke_' . wp_generate_password( 6, false ), 'user_pass' => wp_generate_password( 24 ), 'role' => 'shop_manager' ) );
+wp_set_current_user( $manager );
+$ok( 'shop manager can read the design', 200 === $call( 'GET', $route )->get_status() );
+$ok( 'shop manager cannot publish or unpublish', in_array( $call( 'POST', $route . '/publish', array() )->get_status(), array( 401, 403 ), true ) && in_array( $call( 'POST', $route . '/unpublish' )->get_status(), array( 401, 403 ), true ) );
+wp_set_current_user( $admin->ID );
+
+// 取消发布。
+$res = $call( 'POST', $route . '/unpublish' );
+$ok( 'unpublish brings back the theme page', 200 === $res->get_status() && ! Layout::takes_over( 'home' ) && '' === peptide_core_render_layout( 'home' ) );
+$ok( 'unpublish keeps the draft', 2 === count( Layout::modules_from_content( (string) get_post_field( 'post_content', $doc ) ) ) );
+update_option( Templates::ACTIVE_OPTION, $orig_default );
+
+// 8. 导入数据文件：链接标记换成本站相对地址。
+$resolved = \PeptideCore\Cli\Layout_Command::resolve_links( array( 'a' => '{url:shop}', 'b' => array( 'x' => 'go {url:reports}' ), 'c' => 5 ) );
+$ok( 'import links become relative site urls', str_starts_with( $resolved['a'], '/' ) && ! str_contains( $resolved['a'], '{url' ) && str_contains( $resolved['b']['x'], 'go /' ) && 5 === $resolved['c'] );
+$seed = json_decode( (string) file_get_contents( PEPTIDE_CORE_DIR . '/import-templates/home-2026-10-20.json' ), true );
+$clean = Layout::clean_modules( \PeptideCore\Cli\Layout_Command::resolve_links( $seed['modules'] ) );
+$ok( 'homepage seed has 6 known modules with stable ids', 6 === count( $clean ) && array( 'hero', 'collection', 'our-story', 'report-feature', 'questions', 'closing-cta' ) === array_map( static fn( $m ) => $m['attrs']['moduleId'], $clean ) );
+$ok( 'seed keeps the AI image disclosure', str_contains( wp_json_encode( $clean ), 'AI-generated scene' ) && str_contains( wp_json_encode( $clean ), 'not photographs of verified teams' ) );
+
 // ---------- 清理 ----------
 require_once ABSPATH . 'wp-admin/includes/user.php';
 foreach ( get_children( array( 'post_parent' => $template, 'post_type' => Templates::LAYOUT, 'post_status' => 'any', 'fields' => 'ids' ) ) as $id ) {
@@ -132,4 +178,5 @@ foreach ( get_children( array( 'post_parent' => $template, 'post_type' => Templa
 }
 wp_delete_post( $template, true );
 wp_delete_user( $customer );
+wp_delete_user( $manager );
 $ok( 'cleanup: template removed', null === get_post( $template ) && null === get_post( $doc ) );

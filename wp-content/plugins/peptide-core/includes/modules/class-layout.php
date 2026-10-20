@@ -7,6 +7,9 @@
  * 装修编辑器（YY 式界面）通过 peptide/v1/layouts 接口读写模块列表；实时预览使用短期草稿（transient），
  * 不会每次改动都产生修订。
  *
+ * 发布（EDIT-BLOCKS-05）：把草稿复制成“已发布快照”（meta），访客只看快照；之后修改草稿不影响网站，直到再次发布。
+ * 当前模板（预览 > 域名指定 > 店铺默认）的首页有已发布快照时，首页由插件输出；没有时仍是主题原来的首页。
+ *
  * @package PeptideCore
  */
 
@@ -20,6 +23,11 @@ final class Layout {
 
 	public const PREVIEW_PARAM = 'pc_preview_token';
 	public const PREVIEW_TTL   = 1800;
+
+	public const PUBLISHED_META     = '_pc_published_content';
+	public const PUBLISHED_REVISION = '_pc_published_revision';
+	public const PUBLISHED_AT       = '_pc_published_at';
+	public const PUBLISHED_BY       = '_pc_published_by';
 
 	/**
 	 * 从区块内容中取出模块：[{block, attrs}]。非模块区块忽略。
@@ -114,6 +122,104 @@ final class Layout {
 		return $html;
 	}
 
+	// ---------- 发布 ----------
+
+	public static function is_published( int $document_id ): bool {
+		return metadata_exists( 'post', $document_id, self::PUBLISHED_META );
+	}
+
+	/**
+	 * 把当前草稿发布到网站。
+	 */
+	public static function publish( int $document_id ): void {
+		$content   = (string) get_post_field( 'post_content', $document_id );
+		$revisions = wp_get_post_revisions( $document_id, array( 'numberposts' => 1, 'fields' => 'ids' ) );
+		update_post_meta( $document_id, self::PUBLISHED_META, wp_slash( $content ) );
+		update_post_meta( $document_id, self::PUBLISHED_REVISION, $revisions ? (int) reset( $revisions ) : 0 );
+		update_post_meta( $document_id, self::PUBLISHED_AT, current_time( 'mysql', true ) );
+		update_post_meta( $document_id, self::PUBLISHED_BY, get_current_user_id() );
+		/**
+		 * 装修发布后触发（可用于清理页面缓存）。
+		 *
+		 * @param int $document_id 装修文档 ID
+		 */
+		do_action( 'peptide_core_layout_published', $document_id );
+	}
+
+	/**
+	 * 取消发布：网站恢复主题原来的页面。草稿保留。
+	 */
+	public static function unpublish( int $document_id ): void {
+		foreach ( array( self::PUBLISHED_META, self::PUBLISHED_REVISION, self::PUBLISHED_AT, self::PUBLISHED_BY ) as $key ) {
+			delete_post_meta( $document_id, $key );
+		}
+		do_action( 'peptide_core_layout_published', $document_id );
+	}
+
+	/**
+	 * 放弃未发布的修改：草稿恢复成已发布的版本（会留下一条修订，可以再找回）。
+	 */
+	public static function discard_draft( int $document_id ): bool {
+		if ( ! self::is_published( $document_id ) ) {
+			return false;
+		}
+		$result = wp_update_post(
+			array(
+				'ID'           => $document_id,
+				'post_content' => wp_slash( (string) get_post_meta( $document_id, self::PUBLISHED_META, true ) ),
+			),
+			true
+		);
+		return ! is_wp_error( $result );
+	}
+
+	/**
+	 * @return array{published:bool,at:?string,by:?string,changed:bool}
+	 */
+	public static function status( int $document_id ): array {
+		$published = self::is_published( $document_id );
+		$user      = $published ? get_userdata( (int) get_post_meta( $document_id, self::PUBLISHED_BY, true ) ) : null;
+		$at        = $published ? (string) get_post_meta( $document_id, self::PUBLISHED_AT, true ) : '';
+		return array(
+			'published' => $published,
+			'at'        => '' !== $at ? get_date_from_gmt( $at, 'Y-m-d H:i' ) : null,
+			'by'        => $user ? $user->display_name : null,
+			'changed'   => ! $published || (string) get_post_meta( $document_id, self::PUBLISHED_META, true ) !== (string) get_post_field( 'post_content', $document_id ),
+		);
+	}
+
+	/**
+	 * 当前模板某份文档已发布的模块；没有发布时为空。
+	 *
+	 * @return array<int,array{block:string,attrs:array<string,mixed>}>
+	 */
+	public static function published_modules( string $doc = 'home', ?int $template_id = null ): array {
+		$template_id = $template_id ?? Templates::current_id();
+		$doc_id      = $template_id ? Templates::document_id( $template_id, $doc ) : 0;
+		if ( ! $doc_id || ! self::is_published( $doc_id ) ) {
+			return array();
+		}
+		return self::modules_from_content( (string) get_post_meta( $doc_id, self::PUBLISHED_META, true ) );
+	}
+
+	/**
+	 * 本次请求是否由插件输出这个页面：员工预览模板时，或当前模板已发布且有模块时。
+	 */
+	public static function takes_over( string $doc = 'home' ): bool {
+		return Templates::previewing_id() || (bool) self::published_modules( $doc );
+	}
+
+	/**
+	 * 本次请求应该显示的内容：预览时是草稿（或实时预览令牌），否则是已发布版本。
+	 */
+	public static function render_current( string $doc = 'home' ): string {
+		if ( Templates::previewing_id() ) {
+			return self::render_preview( $doc );
+		}
+		$template_id = Templates::current_id();
+		return self::render_modules( self::published_modules( $doc, $template_id ), 'public', Templates::document_id( $template_id, $doc ) );
+	}
+
 	// ---------- 预览草稿 ----------
 
 	/**
@@ -162,13 +268,12 @@ final class Layout {
 	}
 
 	/**
-	 * 预览模板时，首页由插件输出：主题的页头 + 模板首页的模块 + 主题的页脚。
-	 * 公开访客不受影响（还没有发布功能，公开首页仍是主题自带的页面）。
+	 * 首页由插件输出（主题的页头 + 模块 + 主题的页脚）的两种情况：员工预览模板，或当前模板的首页已经发布。
+	 * 其余情况（包括从未发布）仍使用主题原来的首页模板，可以随时回退。
 	 * 主题可以提供 peptide-layout.php 自己接管这个页面。
 	 */
 	public static function preview_template( string $template ): string {
-		$template_id = Templates::previewing_id();
-		if ( ! $template_id || ! ( is_front_page() || is_home() ) ) {
+		if ( ! ( is_front_page() || is_home() ) || ! self::takes_over( 'home' ) ) {
 			return $template;
 		}
 		$theme = locate_template( 'peptide-layout.php' );

@@ -613,3 +613,20 @@
   - smoke-modules 增加到 46 项，其中商品区默认查询和现有首页的 `wc_get_products( menu_order title ASC, 4 )` **结果和顺序完全一致**；
   - 十三套测试共 **291 项全部通过**；
   - 浏览器（在 Claude 自己新开的标签页里）：积木库的“商品块”分类里有“专辑商品（商品区）”，插入后预览显示主题的商品卡片；测试插入已经撤销，没有保存。
+
+### SYNC-HOME-01（第 3、4 步）导入命令 + 发布到网站 · 2026-10-20 · Claude（插件 0.8.0）
+
+- **发布**（`modules/class-layout.php`、`api/class-layout-controller.php`、编辑器）：
+  - 发布 = 把草稿复制成“已发布快照”（meta `_pc_published_content`，另记修订号、时间和发布人）。访客只看快照，继续改草稿不影响网站。
+  - **当前模板（预览 > 域名指定 > 店铺默认）的首页有已发布的积木时，首页由插件模板 `templates/layout-page.php` 输出**（主题页头 + 积木 + 主题页脚，主题可以用 `peptide-layout.php` 接管）；从未发布或取消发布时仍是主题原来的 `front-page.php`，可以随时回退。**所以 Codex 不需要在 front-page.php 里加切换点**（原计划的第 4 项取消）。
+  - 接口：`POST /layouts/{id}/publish {modified}`（409 = 打开后被改过）、`/unpublish`、`/discard`（草稿恢复成已发布版本，并留下一条修订）。发布和取消发布需要 `pc_publish_layouts`（管理员）；店长可以编辑，但不能发布。
+  - 编辑器：顶栏显示状态（未发布 / 已发布 + 时间 / 有未发布的修改）；点“发布”时有未保存的修改会先保存再发布（需要确认）；▾ 菜单里有“放弃未发布的修改”和“取消发布”。
+  - 主题函数：`peptide_core_has_layout( 'home' )`、`peptide_core_render_layout( 'home' )`。发布后会触发 `peptide_core_layout_published`，可以用来清缓存。
+- **导入**：`wp peptide layout import [--file] [--template] [--dry-run] [--force] [--allow-missing-assets]`。
+  - 默认数据文件 `import-templates/home-2026-10-20.json`：2026-10-20 主题首页的全部文字、链接、ALT，以及 AI 图片声明。6 个积木，ID 分别是 hero、collection、our-story、report-feature、questions、closing-cta；轮播里“Explore our story”的锚点是 `#vc-our-story`。
+  - 链接标记 `{url:shop}`、`{url:reports}`、`{url:<页面别名>}` 会换成本站相对地址。
+  - 资产键没登记时停止；草稿已有内容时需要加 `--force`。
+  - 另外还有 `wp peptide layout publish|unpublish|status`。
+- **补字段**：图文行的图片说明 `caption`、行下方说明 `footnote`；轮播每一张的脚注 `footnote`；资产可以附带 `srcset`。
+- **检查**：smoke-design-editor 增加到 36 项（发布时修改时间过期 409、发布后接管首页、改草稿不影响访客、放弃修改、店长不能发布、取消发布后恢复主题首页并保留草稿、链接标记、首页数据 6 个积木、AI 声明保留）。十三套共 **307 项全部通过**。浏览器（Claude 自己的标签页）：顶栏状态和发布菜单显示正常，没有点发布。
+- **还没做**：正式导入（等 Codex 登记 7 个资产键）；在真实网站上发布。用户验收前不发布。

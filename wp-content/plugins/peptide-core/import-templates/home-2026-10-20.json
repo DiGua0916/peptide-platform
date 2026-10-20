@@ -1,0 +1,237 @@
+{
+	"description": "VialCove homepage as built in the theme on 2026-10-20 (front-page.php, home-hero.php, brand-network.php), converted to design blocks. Text and links copied as-is. Images are referenced by asset keys that the theme registers with the peptide_core_layout_assets filter.",
+	"document": "home",
+	"assets": [
+		"home-packaging",
+		"carousel-israel-research",
+		"carousel-china-production",
+		"carousel-us-warehouse",
+		"story-israel-research",
+		"story-china-manufacturing",
+		"story-us-fulfillment"
+	],
+	"modules": [
+		{
+			"block": "vialcove/carousel",
+			"attrs": {
+				"moduleId": "hero",
+				"settings": {
+					"autoplay": true,
+					"intervalMs": 6500,
+					"pagination": true,
+					"arrows": false,
+					"height": "auto",
+					"fullWidth": false,
+					"paddingTopPx": { "desktop": 0, "mobile": 0 }
+				},
+				"items": [
+					{
+						"id": "slide-collection",
+						"settings": {
+							"name": "Collection",
+							"layout": "split",
+							"media": { "desktop": { "assetKey": "home-packaging", "alt": "Brand packaging concept: three sealed glass vials containing white powder, with silver caps, white VialCove labels and a matching box.", "fit": "contain" }, "mobile": null },
+							"eyebrow": "VialCovePeptides",
+							"title": "A clearer view",
+							"titleAccent": "of peptides.",
+							"description": "Discover the collection. Explore the details.\nFollow every batch back to its documentation.",
+							"button": { "label": "Explore peptides", "href": "{url:shop}", "target": "_self" },
+							"secondaryLink": { "label": "Find a batch report", "href": "{url:reports}", "target": "_self" },
+							"facts": [
+								{ "id": "fact-israel", "settings": { "label": "Israel", "text": "Research" } },
+								{ "id": "fact-china", "settings": { "label": "China", "text": "Manufacturing" } },
+								{ "id": "fact-united-states", "settings": { "label": "United States", "text": "Warehousing" } }
+							],
+							"highlights": [
+								{ "id": "card-batch", "settings": { "icon": "document", "label": "Batch lookup", "title": "Find your batch.", "action": "Search by batch number", "href": "{url:reports}" } },
+								{ "id": "card-testing", "settings": { "icon": "", "label": "Testing documentation", "title": "Method. Result. Source.", "action": "Review quality standards", "href": "{url:quality-standards}" } },
+								{ "id": "card-library", "settings": { "icon": "", "label": "Report library", "title": "Documents, by product.", "action": "Browse the report directory", "href": "{url:certificates}" } }
+							],
+							"captionTitle": "The VialCove identity",
+							"captionNote": "AI-generated packaging concept"
+						}
+					},
+					{
+						"id": "slide-research",
+						"settings": {
+							"name": "Research",
+							"layout": "split",
+							"media": { "desktop": { "assetKey": "carousel-israel-research", "alt": "AI-generated brand concept of two colleagues discussing laboratory work beside a microscope." }, "mobile": null },
+							"eyebrow": "01 / ISRAEL · OUR BRAND VISION",
+							"title": "Built on",
+							"titleAccent": "curiosity.",
+							"description": "The research side of the VialCove vision: an Israeli laboratory team, scientific collaboration and clear documentation.",
+							"button": { "label": "Explore our story", "href": "#vc-our-story", "target": "_self" },
+							"secondaryLink": { "label": "Batch documentation", "href": "{url:reports}", "target": "_self" },
+							"footnote": "An illustration of our research vision.",
+							"sceneNumber": "02 / 04",
+							"captionTitle": "Laboratory collaboration",
+							"captionNote": "AI-generated scene · Brand concept"
+						}
+					},
+					{
+						"id": "slide-manufacturing",
+						"settings": {
+							"name": "Manufacturing",
+							"layout": "split",
+							"media": { "desktop": { "assetKey": "carousel-china-production", "alt": "AI-generated brand concept of a technician handling trays of vials in manufacturing equipment." }, "mobile": null },
+							"eyebrow": "02 / CHINA · OUR BRAND VISION",
+							"title": "From the source,",
+							"titleAccent": "with clarity.",
+							"description": "Chinese source manufacturing is the production side of our vision. Explore the connection between production processes and batch documentation.",
+							"button": { "label": "Explore our story", "href": "#vc-our-story", "target": "_self" },
+							"secondaryLink": { "label": "Batch documentation", "href": "{url:reports}", "target": "_self" },
+							"footnote": "A closer look at the manufacturing concept.",
+							"sceneNumber": "03 / 04",
+							"captionTitle": "Source manufacturing",
+							"captionNote": "AI-generated scene · Brand concept"
+						}
+					},
+					{
+						"id": "slide-warehousing",
+						"settings": {
+							"name": "U.S. warehousing",
+							"layout": "split",
+							"media": { "desktop": { "assetKey": "carousel-us-warehouse", "alt": "AI-generated brand concept of organized storage racks and labeled boxes in a warehouse." }, "mobile": null },
+							"eyebrow": "03 / UNITED STATES · OUR BRAND VISION",
+							"title": "Closer to",
+							"titleAccent": "your doorstep.",
+							"description": "U.S. warehousing is central to our local fulfillment plan. Confirmed service areas, shipping times and tracking details will follow.",
+							"button": { "label": "Explore our story", "href": "#vc-our-story", "target": "_self" },
+							"secondaryLink": { "label": "Batch documentation", "href": "{url:reports}", "target": "_self" },
+							"footnote": "A vision for serving customers closer to home.",
+							"sceneNumber": "04 / 04",
+							"captionTitle": "U.S. warehousing",
+							"captionNote": "AI-generated scene · Brand concept"
+						}
+					}
+				]
+			}
+		},
+		{
+			"block": "vialcove/product-collection",
+			"attrs": {
+				"moduleId": "collection",
+				"settings": {
+					"eyebrow": "EXPLORE VIALCOVE",
+					"title": "Explore our products.",
+					"description": "Browse specifications and available batch documentation.",
+					"link": { "label": "View all peptides", "href": "{url:shop}", "target": "_self" },
+					"source": "catalog",
+					"sort": "catalog",
+					"limit": 4,
+					"columns": { "desktop": 4, "mobile": 2 },
+					"reportPreview": true,
+					"emptyText": "The collection is being prepared. Please check back soon."
+				}
+			}
+		},
+		{
+			"block": "vialcove/media-text-list",
+			"attrs": {
+				"moduleId": "our-story",
+				"settings": {
+					"eyebrow": "THE VIALCOVE STORY",
+					"title": "Three places.",
+					"titleAccent": "One connected vision.",
+					"descriptionHtml": "Research in Israel. Manufacturing in China. Warehousing in the U.S. Three distinct roles at the heart of our brand vision.",
+					"container": "content",
+					"animation": true,
+					"footnote": "These AI-generated scenes illustrate the founder’s brand vision; they are not photographs of verified teams or facilities. Partner identities, credentials and fulfillment details are awaiting supporting documentation."
+				},
+				"items": [
+					{
+						"id": "story-israel",
+						"settings": {
+							"eyebrow": "01 / ISRAEL",
+							"label": "RESEARCH & LABORATORY TEAM",
+							"title": "Scientific collaboration.",
+							"bodyHtml": "An Israeli laboratory team forms the research side of the VialCove vision, with a focus on scientific collaboration and clear documentation.",
+							"media": { "desktop": { "assetKey": "story-israel-research", "alt": "AI-generated concept of three researchers reviewing a computer in a laboratory." }, "mobile": null },
+							"caption": "AI-generated scene · Brand concept",
+							"imagePosition": { "desktop": "left", "mobile": "top" }
+						}
+					},
+					{
+						"id": "story-china",
+						"settings": {
+							"eyebrow": "02 / CHINA",
+							"label": "MANUFACTURING & QUALITY",
+							"title": "At the source.",
+							"bodyHtml": "Direct collaboration with Chinese manufacturers is the production side of our plan. Process records and batch documentation will support the details.",
+							"media": { "desktop": { "assetKey": "story-china-manufacturing", "alt": "AI-generated concept of technicians working beside enclosed manufacturing equipment." }, "mobile": null },
+							"caption": "AI-generated scene · Brand concept",
+							"imagePosition": { "desktop": "right", "mobile": "top" }
+						}
+					},
+					{
+						"id": "story-united-states",
+						"settings": {
+							"eyebrow": "03 / UNITED STATES",
+							"label": "WAREHOUSING & FULFILLMENT",
+							"title": "Closer to your doorstep.",
+							"bodyHtml": "U.S. warehousing is the local fulfillment side of our plan. Service areas, dispatch times and tracking details will be published once confirmed.",
+							"media": { "desktop": { "assetKey": "story-us-fulfillment", "alt": "AI-generated concept of a worker preparing a parcel in a compact warehouse." }, "mobile": null },
+							"caption": "AI-generated scene · Brand concept",
+							"imagePosition": { "desktop": "left", "mobile": "top" }
+						}
+					}
+				]
+			}
+		},
+		{
+			"block": "vialcove/report-feature",
+			"attrs": {
+				"moduleId": "report-feature",
+				"settings": {
+					"eyebrow": "KNOW YOUR BATCH",
+					"title": "Details you can",
+					"titleAccent": "look into.",
+					"description": "Enter the batch number on your product to find its published documentation, report version and availability.",
+					"button": { "label": "Find your batch", "href": "{url:reports}", "target": "_self" },
+					"cardEyebrow": "BATCH DOCUMENTATION",
+					"cardTitle": "Trace the details.",
+					"cardNote": "Find a batch. View its record. Read the report."
+				},
+				"items": [
+					{ "id": "card-product", "settings": { "label": "Product", "value": "Linked to its batch" } },
+					{ "id": "card-reports", "settings": { "label": "Reports", "value": "Published versions" } },
+					{ "id": "card-access", "settings": { "label": "Access", "value": "Clear availability" } }
+				]
+			}
+		},
+		{
+			"block": "vialcove/faq",
+			"attrs": {
+				"moduleId": "questions",
+				"settings": {
+					"eyebrow": "A LITTLE MORE CLARITY",
+					"title": "Good questions.",
+					"titleAccent": "Clear answers.",
+					"description": "",
+					"link": { "label": "Explore batch documentation", "href": "{url:reports}", "target": "_self" },
+					"layout": "side",
+					"openFirst": true
+				},
+				"items": [
+					{ "id": "faq-find-report", "settings": { "question": "How do I find a batch report?", "answerHtml": "Open Batch reports and enter the batch number from your product. The result shows its product, report availability and documents you can access." } },
+					{ "id": "faq-sign-in", "settings": { "question": "Why do some reports require sign-in?", "answerHtml": "Access is set for each report. Public reports are available to everyone; other reports may require an account or approval. The batch record shows the current access status." } },
+					{ "id": "faq-real-products", "settings": { "question": "Are these real products and test results?", "answerHtml": "This preview currently uses clearly marked demonstration products, prices, batches and watermarked reports. They are synthetic examples and do not represent real test results." } },
+					{ "id": "faq-delivery", "settings": { "question": "Where can I see delivery and payment options?", "answerHtml": "Delivery and payment arrangements are still being configured. Confirmed options will appear at checkout when available." } }
+				]
+			}
+		},
+		{
+			"block": "vialcove/cta",
+			"attrs": {
+				"moduleId": "closing-cta",
+				"settings": {
+					"eyebrow": "YOUR NEXT DISCOVERY",
+					"title": "Start with a closer look.",
+					"button": { "label": "Explore the collection", "href": "{url:shop}", "target": "_self" },
+					"align": "center"
+				}
+			}
+		}
+	]
+}
