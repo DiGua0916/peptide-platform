@@ -115,7 +115,8 @@ $html = ob_get_clean();
 unset( $_GET['view'] );
 $ok( 'domain view renders the form', str_contains( $html, 'pc_design_domain_add' ) );
 
-// 9. 删除（回收站，连同文档）。
+// 9. 装修文档不能单独删除；删除模板时连同文档移到回收站。
+$ok( 'design document cannot be deleted on its own', ! current_user_can( 'delete_post', $home_b ) );
 $ok( 'trash template and documents', true === Templates::trash( $b ) && 'trash' === get_post_status( $b ) && 'trash' === get_post_status( $home_b ) );
 
 // ---------- 清理 ----------

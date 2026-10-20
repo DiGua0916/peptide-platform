@@ -81,7 +81,9 @@ final class Store_Design {
 		if ( ! str_contains( $hook, self::SLUG ) ) {
 			return;
 		}
-		wp_enqueue_style( 'peptide-core-store-design', plugins_url( 'assets/store-design.css', PEPTIDE_CORE_FILE ), array(), PEPTIDE_CORE_VERSION );
+		$file = PEPTIDE_CORE_DIR . '/assets/store-design.css';
+		// 版本号带上文件修改时间，样式调整后浏览器不会继续用旧缓存。
+		wp_enqueue_style( 'peptide-core-store-design', plugins_url( 'assets/store-design.css', PEPTIDE_CORE_FILE ), array(), PEPTIDE_CORE_VERSION . '.' . (int) filemtime( $file ) );
 	}
 
 	private static function page_url( array $args = array() ): string {

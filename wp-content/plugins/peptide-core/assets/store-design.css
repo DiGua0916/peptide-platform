@@ -140,6 +140,20 @@
 	gap: 12px;
 }
 
+/* 次要按钮：参照 Shopname 用中性灰，不用 WordPress 默认的蓝色描边 */
+.pc-sd .button:not(.button-primary):not(.pc-sd-primary) {
+	color: #1d2327;
+	border-color: #c3c4c7;
+	background: #fff;
+}
+
+.pc-sd .button:not(.button-primary):not(.pc-sd-primary):hover,
+.pc-sd .button:not(.button-primary):not(.pc-sd-primary):focus {
+	color: var(--pc-sd-orange-dark);
+	border-color: var(--pc-sd-orange);
+	background: #fff;
+}
+
 .pc-sd .button.pc-sd-primary,
 .pc-sd .button-primary {
 	background: var(--pc-sd-orange);

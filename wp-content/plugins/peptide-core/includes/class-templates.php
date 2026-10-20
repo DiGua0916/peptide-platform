@@ -32,6 +32,9 @@ final class Templates {
 	/** 设为默认、域名指定、删除、发布的能力（只有管理员）。 */
 	public const CAP_MANAGE = 'pc_publish_layouts';
 
+	/** 只有删除整个模板时，才允许把它的文档移到回收站。 */
+	private static bool $trashing_template = false;
+
 	public const PREVIEW_PARAM = 'pc_template_preview';
 	public const NONCE_PARAM   = 'pc_preview_nonce';
 	public const FRAME_PARAM   = 'pc_frame';
@@ -55,6 +58,21 @@ final class Templates {
 		add_action( 'send_headers', array( self::class, 'preview_headers' ) );
 		add_filter( 'show_admin_bar', array( self::class, 'hide_admin_bar_in_frame' ) );
 		add_action( 'wp_footer', array( self::class, 'render_preview_bar' ) );
+		add_filter( 'map_meta_cap', array( self::class, 'protect_documents' ), 10, 4 );
+	}
+
+	/**
+	 * 装修文档不能单独删除（编辑器里的“移到回收站”），只能随模板一起删除，避免模板缺少文档。
+	 *
+	 * @param string[] $caps
+	 * @param mixed[]  $args
+	 * @return string[]
+	 */
+	public static function protect_documents( $caps, $cap, $user_id, $args ) {
+		if ( 'delete_post' === $cap && ! self::$trashing_template && ! empty( $args[0] ) && self::LAYOUT === get_post_type( (int) $args[0] ) ) {
+			return array( 'do_not_allow' );
+		}
+		return $caps;
 	}
 
 	public static function register(): void {
@@ -294,10 +312,12 @@ final class Templates {
 		if ( in_array( $template_id, self::domain_map(), true ) ) {
 			return new \WP_Error( 'pc_template_domain', __( 'This template is assigned to a domain. Remove the domain assignment first.', 'peptide-core' ) );
 		}
+		self::$trashing_template = true;
 		foreach ( get_children( array( 'post_parent' => $template_id, 'post_type' => self::LAYOUT, 'post_status' => 'any', 'fields' => 'ids' ) ) as $doc_id ) {
 			wp_trash_post( (int) $doc_id );
 		}
 		wp_trash_post( $template_id );
+		self::$trashing_template = false;
 		return true;
 	}
 
