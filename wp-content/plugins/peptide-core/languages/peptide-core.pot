@@ -2,14 +2,14 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.6.0\n"
+"Project-Id-Version: Peptide Core 0.7.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-20T12:13:22+00:00\n"
+"POT-Creation-Date: 2026-10-20T12:59:34+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -49,6 +49,7 @@ msgstr ""
 
 #: includes/admin/class-batch-metabox.php:56
 #: includes/admin/class-list-columns.php:33
+#: includes/modules/class-registry.php:941
 msgid "Product"
 msgstr ""
 
@@ -175,6 +176,7 @@ msgstr ""
 #: includes/admin/class-batch-orders.php:66
 #: includes/admin/class-list-columns.php:38
 #: includes/admin/class-list-columns.php:81
+#: includes/modules/class-registry.php:697
 msgid "Date"
 msgstr ""
 
@@ -187,6 +189,7 @@ msgid "Email"
 msgstr ""
 
 #: includes/admin/class-batch-orders.php:66
+#: includes/modules/class-registry.php:1000
 msgid "Items"
 msgstr ""
 
@@ -337,6 +340,200 @@ msgstr ""
 msgid "View all %d"
 msgstr ""
 
+#: includes/admin/class-design-editor.php:44
+#: includes/admin/class-design-editor.php:167
+msgid "Design editor"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:113
+#: includes/class-templates.php:49
+msgid "Homepage"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:114
+msgid "Product page (coming soon)"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:115
+msgid "Category page (coming soon)"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:116
+msgid "Custom pages (coming soon)"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:119
+#: includes/admin/class-layout-editor.php:56
+msgid "Back to theme design"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:120
+msgid "Page"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:121
+msgid "Desktop preview"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:122
+msgid "Mobile preview"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:123
+msgid "Full-screen preview"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:124
+msgid "Undo"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:125
+msgid "Redo"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:126
+msgid "View store"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:127
+msgid "Save draft"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:128
+msgid "Saving…"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:129
+msgid "Draft saved"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:130
+msgid "Publish"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:131
+msgid "Publishing to the storefront comes in the next step. For now, save the draft and use the preview."
+msgstr ""
+
+#: includes/admin/class-design-editor.php:132
+msgid "Block design"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:133
+msgid "Global settings"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:134
+#: includes/class-templates.php:50
+msgid "Header"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:135
+#: includes/class-templates.php:51
+msgid "Footer"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:136
+msgid "Add block"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:137
+msgid "Block library"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:138
+msgid "Click a card to add it below the selected block."
+msgstr ""
+
+#: includes/admin/class-design-editor.php:139
+#: includes/admin/class-store-design.php:386
+#: includes/modules/class-blocks.php:225
+msgid "Duplicate"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:140
+#: includes/modules/class-blocks.php:229
+msgid "Hide"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:141
+#: includes/modules/class-blocks.php:230
+msgid "Show"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:142
+#: includes/admin/class-store-design.php:396
+#: includes/modules/class-blocks.php:226
+msgid "Delete"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:143
+msgid "More"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:144
+msgid "Delete this block? You can undo this until you leave the editor."
+msgstr ""
+
+#: includes/admin/class-design-editor.php:145
+msgid "Drag to reorder"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:146
+msgid "No blocks yet. Click \"Add block\" to start."
+msgstr ""
+
+#: includes/admin/class-design-editor.php:147
+msgid "The header (announcement bar, logo, menu, search, account and cart) is shown by the theme for now. Editing it here comes next, together with the footer."
+msgstr ""
+
+#: includes/admin/class-design-editor.php:148
+msgid "The footer is shown by the theme for now. Editing it here comes next."
+msgstr ""
+
+#: includes/admin/class-design-editor.php:149
+msgid "Global settings (colors, fonts, content width, spacing, button corners) come next. They will apply to every block."
+msgstr ""
+
+#: includes/admin/class-design-editor.php:150
+msgid "You have unsaved changes."
+msgstr ""
+
+#: includes/admin/class-design-editor.php:151
+msgid "Reload"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:152
+#, php-format
+msgid "%s is also editing this design. Saving may overwrite their changes."
+msgstr ""
+
+#: includes/admin/class-design-editor.php:153
+msgid "Updating preview…"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:154
+msgid "Select a block on the left of this panel, or click it in the preview."
+msgstr ""
+
+#: includes/admin/class-design-editor.php:155
+msgid "Live preview of what you are editing. Only you can see it."
+msgstr ""
+
+#: includes/admin/class-design-editor.php:156
+#: includes/modules/class-blocks.php:222
+msgid "Editing values for"
+msgstr ""
+
+#: includes/admin/class-design-editor.php:167
+#: includes/api/class-layout-controller.php:70
+msgid "Design document not found."
+msgstr ""
+
+#: includes/admin/class-design-editor.php:170
+msgid "Loading the design editor…"
+msgstr ""
+
 #: includes/admin/class-dialogs.php:31
 msgid "Please confirm"
 msgstr ""
@@ -356,11 +553,7 @@ msgstr ""
 #. translators: %s: template name
 #: includes/admin/class-layout-editor.php:51
 #, php-format
-msgid "Template \"%s\". The module library is being built: the first module (brand story rows) comes next. Changes here are not shown on the storefront yet."
-msgstr ""
-
-#: includes/admin/class-layout-editor.php:56
-msgid "Back to theme design"
+msgid "Template \"%s\". Add modules with the + button (Basic blocks). Saving keeps a draft; publishing to the storefront comes in the next step."
 msgstr ""
 
 #: includes/admin/class-list-columns.php:36
@@ -378,6 +571,19 @@ msgid "Yes"
 msgstr ""
 
 #: includes/admin/class-list-columns.php:74
+#: includes/modules/class-registry.php:110
+#: includes/modules/class-registry.php:280
+#: includes/modules/class-registry.php:408
+#: includes/modules/class-registry.php:440
+#: includes/modules/class-registry.php:460
+#: includes/modules/class-registry.php:517
+#: includes/modules/class-registry.php:597
+#: includes/modules/class-registry.php:664
+#: includes/modules/class-registry.php:698
+#: includes/modules/class-registry.php:739
+#: includes/modules/class-registry.php:823
+#: includes/modules/class-registry.php:872
+#: includes/modules/class-registry.php:1068
 msgid "Title"
 msgstr ""
 
@@ -643,7 +849,7 @@ msgid "A statement about the intended use of your products, shown on the storefr
 msgstr ""
 
 #: includes/admin/class-settings-page.php:102
-#: includes/admin/class-store-design.php:428
+#: includes/admin/class-store-design.php:430
 #: includes/class-checkout-ack.php:70
 msgid "Checkout confirmation"
 msgstr ""
@@ -681,7 +887,7 @@ msgid "Add tracking numbers on the order page with the \"Fulfill items\" button.
 msgstr ""
 
 #: includes/admin/class-settings-page.php:138
-#: includes/admin/class-store-design.php:426
+#: includes/admin/class-store-design.php:428
 msgid "Customer support button"
 msgstr ""
 
@@ -730,15 +936,17 @@ msgid "Position"
 msgstr ""
 
 #: includes/admin/class-settings-page.php:174
+#: includes/modules/class-fields.php:78
 msgid "Bottom right"
 msgstr ""
 
 #: includes/admin/class-settings-page.php:175
+#: includes/modules/class-fields.php:76
 msgid "Bottom left"
 msgstr ""
 
 #: includes/admin/class-store-design.php:49
-#: includes/admin/class-store-design.php:190
+#: includes/admin/class-store-design.php:192
 msgid "Theme design"
 msgstr ""
 
@@ -767,272 +975,265 @@ msgstr ""
 msgid "Store design"
 msgstr ""
 
-#: includes/admin/class-store-design.php:101
+#: includes/admin/class-store-design.php:103
 msgid "Sorry, you are not allowed to do that."
 msgstr ""
 
-#: includes/admin/class-store-design.php:159
+#: includes/admin/class-store-design.php:161
 msgid "Template details saved."
 msgstr ""
 
-#: includes/admin/class-store-design.php:160
+#: includes/admin/class-store-design.php:162
 msgid "Template created."
 msgstr ""
 
-#: includes/admin/class-store-design.php:161
+#: includes/admin/class-store-design.php:163
 msgid "Template copied. The copy is not used by the store until you set it as default or assign it to a domain."
 msgstr ""
 
-#: includes/admin/class-store-design.php:162
+#: includes/admin/class-store-design.php:164
 msgid "Store default template changed."
 msgstr ""
 
-#: includes/admin/class-store-design.php:163
+#: includes/admin/class-store-design.php:165
 msgid "Template moved to the trash."
 msgstr ""
 
-#: includes/admin/class-store-design.php:164
+#: includes/admin/class-store-design.php:166
 msgid "Domain template saved."
 msgstr ""
 
-#: includes/admin/class-store-design.php:165
+#: includes/admin/class-store-design.php:167
 msgid "Domain assignment removed. That domain now uses the store default template."
 msgstr ""
 
-#: includes/admin/class-store-design.php:166
 #: includes/admin/class-store-design.php:168
-#: includes/class-templates.php:289
-#: includes/class-templates.php:351
+#: includes/admin/class-store-design.php:170
+#: includes/class-templates.php:307
+#: includes/class-templates.php:371
 msgid "Template not found."
 msgstr ""
 
-#: includes/admin/class-store-design.php:167
+#: includes/admin/class-store-design.php:169
 msgid "Something went wrong. Please try again."
 msgstr ""
 
-#: includes/admin/class-store-design.php:169
-#: includes/class-templates.php:292
+#: includes/admin/class-store-design.php:171
+#: includes/class-templates.php:310
 msgid "The store default template cannot be deleted. Set another template as default first."
 msgstr ""
 
-#: includes/admin/class-store-design.php:170
-#: includes/class-templates.php:295
+#: includes/admin/class-store-design.php:172
+#: includes/class-templates.php:313
 msgid "This template is assigned to a domain. Remove the domain assignment first."
 msgstr ""
 
-#: includes/admin/class-store-design.php:171
-#: includes/class-templates.php:348
+#: includes/admin/class-store-design.php:173
+#: includes/class-templates.php:368
 msgid "Enter a valid domain name, for example shop.example.com."
 msgstr ""
 
-#: includes/admin/class-store-design.php:191
+#: includes/admin/class-store-design.php:193
 msgid "Template sources"
 msgstr ""
 
-#: includes/admin/class-store-design.php:192
+#: includes/admin/class-store-design.php:194
 msgid "My templates"
 msgstr ""
 
-#: includes/admin/class-store-design.php:200
+#: includes/admin/class-store-design.php:202
 msgid "Template in use"
 msgstr ""
 
-#: includes/admin/class-store-design.php:202
-#: includes/admin/class-store-design.php:255
+#: includes/admin/class-store-design.php:204
+#: includes/admin/class-store-design.php:257
 msgid "Store default template"
 msgstr ""
 
-#: includes/admin/class-store-design.php:203
-#: includes/admin/class-store-design.php:294
+#: includes/admin/class-store-design.php:205
+#: includes/admin/class-store-design.php:296
 msgid "Domain templates"
 msgstr ""
 
-#: includes/admin/class-store-design.php:206
+#: includes/admin/class-store-design.php:208
 msgid "This is the design customers see. Different domains can use different templates."
 msgstr ""
 
-#: includes/admin/class-store-design.php:207
+#: includes/admin/class-store-design.php:209
 msgid "A domain without its own template uses the store default template."
 msgstr ""
 
-#: includes/admin/class-store-design.php:224
+#: includes/admin/class-store-design.php:226
 msgid "My template library"
 msgstr ""
 
-#: includes/admin/class-store-design.php:226
+#: includes/admin/class-store-design.php:228
 msgid "New template"
 msgstr ""
 
-#: includes/admin/class-store-design.php:230
-#: includes/admin/class-store-design.php:344
-#: includes/admin/class-store-design.php:389
+#: includes/admin/class-store-design.php:232
+#: includes/admin/class-store-design.php:346
+#: includes/admin/class-store-design.php:391
 msgid "Template name"
 msgstr ""
 
-#: includes/admin/class-store-design.php:231
-#: includes/admin/class-store-design.php:346
-#: includes/admin/class-store-design.php:390
+#: includes/admin/class-store-design.php:233
+#: includes/admin/class-store-design.php:348
+#: includes/admin/class-store-design.php:392
 msgid "Note"
 msgstr ""
 
-#: includes/admin/class-store-design.php:232
+#: includes/admin/class-store-design.php:234
 msgid "Create"
 msgstr ""
 
 #. translators: %s: date and time
-#: includes/admin/class-store-design.php:260
+#: includes/admin/class-store-design.php:262
 #, php-format
 msgid "Modified: %s"
 msgstr ""
 
-#: includes/admin/class-store-design.php:266
-#: includes/admin/class-store-design.php:377
+#: includes/admin/class-store-design.php:268
+#: includes/admin/class-store-design.php:379
 msgid "Design"
 msgstr ""
 
-#: includes/admin/class-store-design.php:267
-#: includes/admin/class-store-design.php:350
+#: includes/admin/class-store-design.php:269
+#: includes/admin/class-store-design.php:352
 msgid "Preview"
 msgstr ""
 
-#: includes/admin/class-store-design.php:270
+#: includes/admin/class-store-design.php:272
 msgid "The module editor is being built. Until a template has published modules, the storefront keeps showing the theme's built-in pages."
 msgstr ""
 
-#: includes/admin/class-store-design.php:295
+#: includes/admin/class-store-design.php:297
 msgid "Use this when several domains point to this store and each should show a different design. The domain must already reach this site (DNS and server settings); adding it here only chooses the template."
 msgstr ""
 
-#: includes/admin/class-store-design.php:297
-#: includes/admin/class-store-design.php:319
+#: includes/admin/class-store-design.php:299
+#: includes/admin/class-store-design.php:321
 msgid "Domain"
 msgstr ""
 
-#: includes/admin/class-store-design.php:297
-#: includes/admin/class-store-design.php:320
+#: includes/admin/class-store-design.php:299
+#: includes/admin/class-store-design.php:322
 msgid "Template"
 msgstr ""
 
-#: includes/admin/class-store-design.php:297
-#: includes/admin/class-store-design.php:349
+#: includes/admin/class-store-design.php:299
+#: includes/admin/class-store-design.php:351
 msgid "Actions"
 msgstr ""
 
-#: includes/admin/class-store-design.php:300
+#: includes/admin/class-store-design.php:302
 msgid "No domain has its own template. All domains use the store default template."
 msgstr ""
 
-#: includes/admin/class-store-design.php:308
+#: includes/admin/class-store-design.php:310
 msgid "Remove this domain assignment? The domain will use the store default template."
 msgstr ""
 
-#: includes/admin/class-store-design.php:308
+#: includes/admin/class-store-design.php:310
+#: includes/modules/class-blocks.php:237
 msgid "Remove"
 msgstr ""
 
-#: includes/admin/class-store-design.php:327
+#: includes/admin/class-store-design.php:329
 msgid "Assign"
 msgstr ""
 
-#: includes/admin/class-store-design.php:330
+#: includes/admin/class-store-design.php:332
 msgid "Only administrators can change domain templates."
 msgstr ""
 
-#: includes/admin/class-store-design.php:345
+#: includes/admin/class-store-design.php:347
 msgid "Theme"
 msgstr ""
 
-#: includes/admin/class-store-design.php:347
+#: includes/admin/class-store-design.php:349
 msgid "Created by"
 msgstr ""
 
-#: includes/admin/class-store-design.php:348
+#: includes/admin/class-store-design.php:350
 msgid "Modified"
 msgstr ""
 
-#: includes/admin/class-store-design.php:365
+#: includes/admin/class-store-design.php:367
 msgid "In use"
 msgstr ""
 
-#: includes/admin/class-store-design.php:379
+#: includes/admin/class-store-design.php:381
 msgid "More actions"
 msgstr ""
 
-#: includes/admin/class-store-design.php:382
+#: includes/admin/class-store-design.php:384
 msgid "Use this template as the store default? Customers will see it on all domains without their own template."
 msgstr ""
 
-#: includes/admin/class-store-design.php:382
+#: includes/admin/class-store-design.php:384
 msgid "Set as store default"
 msgstr ""
 
-#: includes/admin/class-store-design.php:384
-msgid "Duplicate"
-msgstr ""
-
-#: includes/admin/class-store-design.php:391
+#: includes/admin/class-store-design.php:393
 msgid "Save details"
 msgstr ""
 
-#: includes/admin/class-store-design.php:394
+#: includes/admin/class-store-design.php:396
 msgid "Move this template to the trash? Its designs are removed with it."
 msgstr ""
 
-#: includes/admin/class-store-design.php:394
-msgid "Delete"
-msgstr ""
-
 #. translators: %s: template name
-#: includes/admin/class-store-design.php:400
+#: includes/admin/class-store-design.php:402
 #, php-format
 msgid "Preview %s"
 msgstr ""
 
-#: includes/admin/class-store-design.php:415
+#: includes/admin/class-store-design.php:417
 msgid "Built for the active theme"
 msgstr ""
 
-#: includes/admin/class-store-design.php:415
+#: includes/admin/class-store-design.php:417
 msgid "Built for a different theme"
 msgstr ""
 
-#: includes/admin/class-store-design.php:427
+#: includes/admin/class-store-design.php:429
 msgid "Shipment tracking"
 msgstr ""
 
-#: includes/admin/class-store-design.php:429
+#: includes/admin/class-store-design.php:431
 msgid "Batch reports"
 msgstr ""
 
-#: includes/admin/class-store-design.php:433
+#: includes/admin/class-store-design.php:435
 msgid "Recommended apps"
 msgstr ""
 
-#: includes/admin/class-store-design.php:440
+#: includes/admin/class-store-design.php:442
 msgid "Enabled"
 msgstr ""
 
-#: includes/admin/class-store-design.php:458
+#: includes/admin/class-store-design.php:460
 msgid "Edit the header and footer menus: links, order and sub-menus."
 msgstr ""
 
-#: includes/admin/class-store-design.php:459
+#: includes/admin/class-store-design.php:461
 msgid "Build extra pages (About, Shipping, FAQ…) from the same modules as the homepage."
 msgstr ""
 
-#: includes/admin/class-store-design.php:460
+#: includes/admin/class-store-design.php:462
 msgid "Homepage title, description and social sharing image for search engines."
 msgstr ""
 
-#: includes/admin/class-store-design.php:461
+#: includes/admin/class-store-design.php:463
 msgid "Bind your own domain and check HTTPS once the site is on a server."
 msgstr ""
 
-#: includes/admin/class-store-design.php:462
+#: includes/admin/class-store-design.php:464
 msgid "Landing pages for promotions, built from modules, with their own address."
 msgstr ""
 
-#: includes/admin/class-store-design.php:469
+#: includes/admin/class-store-design.php:471
 msgid "Coming soon"
 msgstr ""
 
@@ -1042,6 +1243,20 @@ msgstr ""
 
 #: includes/api/class-errors.php:32
 msgid "Not found."
+msgstr ""
+
+#: includes/api/class-layout-controller.php:73
+msgid "Sorry, you are not allowed to edit this design."
+msgstr ""
+
+#. translators: %s: user name
+#: includes/api/class-layout-controller.php:118
+#, php-format
+msgid "This design was changed by %s after you opened it. Reload to see their changes before saving."
+msgstr ""
+
+#: includes/api/class-layout-controller.php:119
+msgid "someone else"
 msgstr ""
 
 #: includes/api/class-rest-controller.php:121
@@ -1123,7 +1338,7 @@ msgstr ""
 msgid "Batch: %s"
 msgstr ""
 
-#: includes/class-plugin.php:80
+#: includes/class-plugin.php:84
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr ""
 
@@ -1211,60 +1426,1288 @@ msgstr ""
 msgid "The support button was not enabled because no valid contact method was entered."
 msgstr ""
 
-#: includes/class-templates.php:46
-msgid "Homepage"
-msgstr ""
-
-#: includes/class-templates.php:47
-msgid "Header"
-msgstr ""
-
-#: includes/class-templates.php:48
-msgid "Footer"
-msgstr ""
-
-#: includes/class-templates.php:49
+#: includes/class-templates.php:52
 msgid "Global styles"
 msgstr ""
 
-#: includes/class-templates.php:78
+#: includes/class-templates.php:96
 msgid "Store templates"
 msgstr ""
 
-#: includes/class-templates.php:79
+#: includes/class-templates.php:97
 msgid "Store template"
 msgstr ""
 
-#: includes/class-templates.php:90
+#: includes/class-templates.php:108
 msgid "Design documents"
 msgstr ""
 
-#: includes/class-templates.php:91
+#: includes/class-templates.php:109
 msgid "Design document"
 msgstr ""
 
-#: includes/class-templates.php:92
+#: includes/class-templates.php:110
 msgid "Edit design"
 msgstr ""
 
-#: includes/class-templates.php:204
+#: includes/class-templates.php:222
 msgid "Untitled template"
 msgstr ""
 
 #. translators: %s: original template name
-#: includes/class-templates.php:242
+#: includes/class-templates.php:260
 #, php-format
 msgid "%s (copy)"
 msgstr ""
 
 #. translators: %s: original template name
-#: includes/class-templates.php:244
+#: includes/class-templates.php:262
 #, php-format
 msgid "Copied from: %s"
 msgstr ""
 
 #. translators: %s: template name
-#: includes/class-templates.php:459
+#: includes/class-templates.php:479
 #, php-format
 msgid "Previewing template \"%s\". Only signed-in staff can see this preview."
+msgstr ""
+
+#: includes/modules/class-blocks.php:220
+msgid "Desktop"
+msgstr ""
+
+#: includes/modules/class-blocks.php:221
+msgid "Mobile"
+msgstr ""
+
+#: includes/modules/class-blocks.php:223
+msgid "Same as desktop"
+msgstr ""
+
+#: includes/modules/class-blocks.php:224
+msgid "Add"
+msgstr ""
+
+#: includes/modules/class-blocks.php:227
+msgid "Move up"
+msgstr ""
+
+#: includes/modules/class-blocks.php:228
+msgid "Move down"
+msgstr ""
+
+#: includes/modules/class-blocks.php:231
+msgid "hidden"
+msgstr ""
+
+#: includes/modules/class-blocks.php:232
+#, php-format
+msgid "Item %d"
+msgstr ""
+
+#: includes/modules/class-blocks.php:233
+msgid "Delete this item?"
+msgstr ""
+
+#: includes/modules/class-blocks.php:234
+msgid "Choose image"
+msgstr ""
+
+#: includes/modules/class-blocks.php:235
+msgid "Choose video"
+msgstr ""
+
+#: includes/modules/class-blocks.php:236
+msgid "Replace"
+msgstr ""
+
+#: includes/modules/class-blocks.php:238
+msgid "Alt text (describe the image)"
+msgstr ""
+
+#: includes/modules/class-blocks.php:239
+msgid "Desktop image"
+msgstr ""
+
+#: includes/modules/class-blocks.php:240
+msgid "Mobile image (empty = use desktop image)"
+msgstr ""
+
+#: includes/modules/class-blocks.php:241
+msgid "Fit"
+msgstr ""
+
+#: includes/modules/class-blocks.php:242
+msgid "Fill (crop)"
+msgstr ""
+
+#: includes/modules/class-blocks.php:243
+msgid "Show whole image"
+msgstr ""
+
+#: includes/modules/class-blocks.php:244
+msgid "Focus point"
+msgstr ""
+
+#: includes/modules/class-blocks.php:245
+#: includes/modules/class-registry.php:281
+#: includes/modules/class-registry.php:409
+#: includes/modules/class-registry.php:462
+#: includes/modules/class-registry.php:518
+#: includes/modules/class-registry.php:598
+#: includes/modules/class-registry.php:624
+#: includes/modules/class-registry.php:799
+#: includes/modules/class-registry.php:824
+msgid "Text"
+msgstr ""
+
+#: includes/modules/class-blocks.php:246
+#: includes/modules/class-registry.php:191
+msgid "Link"
+msgstr ""
+
+#: includes/modules/class-blocks.php:247
+msgid "Open in a new tab"
+msgstr ""
+
+#: includes/modules/class-blocks.php:248
+msgid "— None —"
+msgstr ""
+
+#: includes/modules/class-blocks.php:249
+msgid "Default"
+msgstr ""
+
+#: includes/modules/class-blocks.php:250
+msgid "Use default color"
+msgstr ""
+
+#: includes/modules/class-blocks.php:251
+#, php-format
+msgid "At least %d item(s) are required."
+msgstr ""
+
+#: includes/modules/class-blocks.php:252
+#, php-format
+msgid "Up to %d items."
+msgstr ""
+
+#: includes/modules/class-blocks.php:253
+msgid "Hide this module"
+msgstr ""
+
+#: includes/modules/class-blocks.php:254
+msgid "Allowed: paragraphs, bold, italic, links, lists."
+msgstr ""
+
+#: includes/modules/class-blocks.php:255
+msgid "Search products"
+msgstr ""
+
+#: includes/modules/class-fallback.php:26
+msgid "This module has no default design yet."
+msgstr ""
+
+#: includes/modules/class-fallback.php:98
+msgid "No image selected"
+msgstr ""
+
+#: includes/modules/class-fallback.php:98
+msgid "Choose an image"
+msgstr ""
+
+#: includes/modules/class-fallback.php:459
+msgid "Add a YouTube link"
+msgstr ""
+
+#: includes/modules/class-fallback.php:475
+#: includes/modules/class-registry.php:529
+msgid "Video"
+msgstr ""
+
+#: includes/modules/class-fallback.php:480
+msgid "Choose a video"
+msgstr ""
+
+#: includes/modules/class-fallback.php:537
+#: includes/modules/class-registry.php:620
+#: includes/modules/class-registry.php:737
+#: includes/modules/class-registry.php:1002
+msgid "Icon"
+msgstr ""
+
+#: includes/modules/class-fallback.php:571
+msgid "Paste your HTML in the sidebar."
+msgstr ""
+
+#: includes/modules/class-fallback.php:650
+msgid "Choose a category"
+msgstr ""
+
+#: includes/modules/class-fallback.php:660
+msgid "Add some text."
+msgstr ""
+
+#: includes/modules/class-fallback.php:692
+#: includes/modules/class-registry.php:809
+msgid "Spacer"
+msgstr ""
+
+#: includes/modules/class-fallback.php:708
+msgid "Write your text in the sidebar."
+msgstr ""
+
+#: includes/modules/class-fallback.php:714
+#: includes/modules/class-registry.php:843
+msgid "Before image"
+msgstr ""
+
+#: includes/modules/class-fallback.php:715
+#: includes/modules/class-registry.php:844
+msgid "After image"
+msgstr ""
+
+#: includes/modules/class-fallback.php:725
+msgid "Drag to compare"
+msgstr ""
+
+#. translators: %d: hotspot number
+#: includes/modules/class-fallback.php:750
+#, php-format
+msgid "Hotspot %d"
+msgstr ""
+
+#: includes/modules/class-fallback.php:772
+#: includes/modules/class-registry.php:908
+msgid "Question"
+msgstr ""
+
+#: includes/modules/class-fallback.php:821
+msgid "Add the headline."
+msgstr ""
+
+#: includes/modules/class-fallback.php:856
+msgid "Choose a menu in the sidebar."
+msgstr ""
+
+#: includes/modules/class-fallback.php:878
+#: includes/modules/class-registry.php:1018
+msgid "Menu"
+msgstr ""
+
+#: includes/modules/class-fallback.php:884
+msgid "Logo"
+msgstr ""
+
+#: includes/modules/class-fields.php:70
+msgid "Top left"
+msgstr ""
+
+#: includes/modules/class-fields.php:71
+msgid "Top center"
+msgstr ""
+
+#: includes/modules/class-fields.php:72
+msgid "Top right"
+msgstr ""
+
+#: includes/modules/class-fields.php:73
+msgid "Middle left"
+msgstr ""
+
+#: includes/modules/class-fields.php:74
+#: includes/modules/class-registry.php:216
+msgid "Center"
+msgstr ""
+
+#: includes/modules/class-fields.php:75
+msgid "Middle right"
+msgstr ""
+
+#: includes/modules/class-fields.php:77
+msgid "Bottom center"
+msgstr ""
+
+#: includes/modules/class-layout.php:187
+msgid "This page has no modules yet. Add modules in the design editor."
+msgstr ""
+
+#: includes/modules/class-registry.php:28
+msgid "Basic blocks"
+msgstr ""
+
+#: includes/modules/class-registry.php:29
+msgid "Product blocks"
+msgstr ""
+
+#: includes/modules/class-registry.php:30
+msgid "Marketing blocks"
+msgstr ""
+
+#: includes/modules/class-registry.php:39
+#: includes/modules/class-registry.php:740
+#: includes/modules/class-registry.php:1069
+msgid "Content"
+msgstr ""
+
+#: includes/modules/class-registry.php:40
+msgid "Media"
+msgstr ""
+
+#: includes/modules/class-registry.php:41
+#: includes/modules/class-registry.php:1094
+msgid "Layout"
+msgstr ""
+
+#: includes/modules/class-registry.php:42
+msgid "Playback"
+msgstr ""
+
+#: includes/modules/class-registry.php:43
+#: includes/modules/class-registry.php:129
+#: includes/modules/class-registry.php:282
+#: includes/modules/class-registry.php:477
+#: includes/modules/class-registry.php:575
+msgid "Button"
+msgstr ""
+
+#: includes/modules/class-registry.php:44
+msgid "Colors"
+msgstr ""
+
+#: includes/modules/class-registry.php:45
+msgid "Display & spacing"
+msgstr ""
+
+#: includes/modules/class-registry.php:96
+msgid "Show on desktop"
+msgstr ""
+
+#: includes/modules/class-registry.php:97
+msgid "Show on mobile"
+msgstr ""
+
+#: includes/modules/class-registry.php:98
+msgid "Space above (px, empty = default)"
+msgstr ""
+
+#: includes/modules/class-registry.php:99
+msgid "Space below (px, empty = default)"
+msgstr ""
+
+#: includes/modules/class-registry.php:100
+msgid "Module background"
+msgstr ""
+
+#: includes/modules/class-registry.php:112
+#: includes/modules/class-registry.php:649
+#: includes/modules/class-registry.php:699
+#: includes/modules/class-registry.php:873
+#: includes/modules/class-registry.php:965
+#: includes/modules/class-registry.php:1004
+msgid "Short description"
+msgstr ""
+
+#: includes/modules/class-registry.php:118
+#: includes/modules/class-registry.php:450
+msgid "Full width"
+msgstr ""
+
+#: includes/modules/class-registry.php:133
+msgid "Button effect"
+msgstr ""
+
+#: includes/modules/class-registry.php:137
+msgid "None"
+msgstr ""
+
+#: includes/modules/class-registry.php:138
+msgid "Pulse"
+msgstr ""
+
+#: includes/modules/class-registry.php:139
+msgid "Shine"
+msgstr ""
+
+#: includes/modules/class-registry.php:143
+msgid "Effect duration (ms)"
+msgstr ""
+
+#: includes/modules/class-registry.php:144
+msgid "Effect interval (ms)"
+msgstr ""
+
+#: includes/modules/class-registry.php:147
+#: includes/modules/class-registry.php:287
+msgid "Button text color"
+msgstr ""
+
+#: includes/modules/class-registry.php:148
+#: includes/modules/class-registry.php:288
+msgid "Button background"
+msgstr ""
+
+#: includes/modules/class-registry.php:157
+msgid "Items per row"
+msgstr ""
+
+#: includes/modules/class-registry.php:183
+#: includes/modules/class-registry.php:648
+#: includes/modules/class-registry.php:765
+msgid "Image"
+msgstr ""
+
+#: includes/modules/class-registry.php:215
+#: includes/modules/class-registry.php:415
+#: includes/modules/class-registry.php:469
+#: includes/modules/class-registry.php:706
+#: includes/modules/class-registry.php:882
+#: includes/modules/class-registry.php:975
+msgid "Left"
+msgstr ""
+
+#: includes/modules/class-registry.php:217
+#: includes/modules/class-registry.php:416
+#: includes/modules/class-registry.php:470
+#: includes/modules/class-registry.php:707
+#: includes/modules/class-registry.php:880
+#: includes/modules/class-registry.php:976
+msgid "Right"
+msgstr ""
+
+#: includes/modules/class-registry.php:225
+msgid "Video source"
+msgstr ""
+
+#: includes/modules/class-registry.php:228
+msgid "Uploaded video"
+msgstr ""
+
+#: includes/modules/class-registry.php:229
+msgid "YouTube link"
+msgstr ""
+
+#: includes/modules/class-registry.php:233
+msgid "Video file"
+msgstr ""
+
+#: includes/modules/class-registry.php:234
+msgid "YouTube URL"
+msgstr ""
+
+#: includes/modules/class-registry.php:235
+msgid "Cover image"
+msgstr ""
+
+#: includes/modules/class-registry.php:235
+msgid "Recommended width 1000px or more."
+msgstr ""
+
+#: includes/modules/class-registry.php:236
+msgid "Autoplay (muted)"
+msgstr ""
+
+#: includes/modules/class-registry.php:237
+msgid "Loop"
+msgstr ""
+
+#: includes/modules/class-registry.php:238
+msgid "Muted"
+msgstr ""
+
+#: includes/modules/class-registry.php:239
+msgid "Show controls"
+msgstr ""
+
+#: includes/modules/class-registry.php:253
+#: includes/modules/class-registry.php:505
+msgid "Carousel"
+msgstr ""
+
+#: includes/modules/class-registry.php:255
+msgid "Full-width slides with separate desktop and mobile images."
+msgstr ""
+
+#: includes/modules/class-registry.php:257
+#: includes/modules/class-registry.php:755
+#: includes/modules/class-registry.php:923
+msgid "Autoplay"
+msgstr ""
+
+#: includes/modules/class-registry.php:258
+#: includes/modules/class-registry.php:756
+#: includes/modules/class-registry.php:924
+msgid "Time per slide (ms)"
+msgstr ""
+
+#: includes/modules/class-registry.php:259
+#: includes/modules/class-registry.php:757
+msgid "Show dots"
+msgstr ""
+
+#: includes/modules/class-registry.php:260
+msgid "Show arrows"
+msgstr ""
+
+#: includes/modules/class-registry.php:263
+#: includes/modules/class-registry.php:306
+msgid "Image height"
+msgstr ""
+
+#: includes/modules/class-registry.php:266
+#: includes/modules/class-registry.php:309
+msgid "Image height (auto)"
+msgstr ""
+
+#: includes/modules/class-registry.php:267
+msgid "Full screen"
+msgstr ""
+
+#: includes/modules/class-registry.php:268
+msgid "Fixed height"
+msgstr ""
+
+#: includes/modules/class-registry.php:271
+msgid "Fixed height (px)"
+msgstr ""
+
+#: includes/modules/class-registry.php:273
+#: includes/modules/class-registry.php:570
+msgid "Title size (px)"
+msgstr ""
+
+#: includes/modules/class-registry.php:276
+msgid "Slides"
+msgstr ""
+
+#: includes/modules/class-registry.php:278
+msgid "Slide image"
+msgstr ""
+
+#: includes/modules/class-registry.php:278
+msgid "Desktop: 1920px wide. Mobile: 1242px wide. Height follows the image."
+msgstr ""
+
+#: includes/modules/class-registry.php:279
+msgid "Subtitle"
+msgstr ""
+
+#: includes/modules/class-registry.php:283
+#: includes/modules/class-registry.php:321
+#: includes/modules/class-registry.php:571
+msgid "Text position"
+msgstr ""
+
+#: includes/modules/class-registry.php:284
+#: includes/modules/class-registry.php:316
+#: includes/modules/class-registry.php:862
+#: includes/modules/class-registry.php:931
+msgid "Overlay color"
+msgstr ""
+
+#: includes/modules/class-registry.php:285
+#: includes/modules/class-registry.php:317
+#: includes/modules/class-registry.php:573
+#: includes/modules/class-registry.php:728
+#: includes/modules/class-registry.php:932
+msgid "Overlay opacity (%)"
+msgstr ""
+
+#: includes/modules/class-registry.php:286
+#: includes/modules/class-registry.php:323
+#: includes/modules/class-registry.php:426
+#: includes/modules/class-registry.php:574
+#: includes/modules/class-registry.php:691
+#: includes/modules/class-registry.php:795
+#: includes/modules/class-registry.php:830
+#: includes/modules/class-registry.php:984
+#: includes/modules/class-registry.php:1025
+#: includes/modules/class-registry.php:1073
+msgid "Text color"
+msgstr ""
+
+#: includes/modules/class-registry.php:298
+msgid "Single image"
+msgstr ""
+
+#: includes/modules/class-registry.php:302
+msgid "Desktop: 1920 × 800 / 600 / 420. Mobile: 1242 × 2000."
+msgstr ""
+
+#: includes/modules/class-registry.php:303
+msgid "Image link"
+msgstr ""
+
+#: includes/modules/class-registry.php:322
+#: includes/modules/class-registry.php:425
+#: includes/modules/class-registry.php:690
+#: includes/modules/class-registry.php:983
+msgid "Title color"
+msgstr ""
+
+#: includes/modules/class-registry.php:331
+msgid "Image row"
+msgstr ""
+
+#: includes/modules/class-registry.php:337
+#: includes/modules/class-registry.php:370
+#: includes/modules/class-registry.php:1095
+msgid "Gap (px)"
+msgstr ""
+
+#: includes/modules/class-registry.php:340
+msgid "Mobile style"
+msgstr ""
+
+#: includes/modules/class-registry.php:343
+msgid "Swipe sideways"
+msgstr ""
+
+#: includes/modules/class-registry.php:344
+msgid "Stack vertically"
+msgstr ""
+
+#: includes/modules/class-registry.php:350
+#: includes/modules/class-registry.php:375
+#: includes/modules/class-registry.php:1099
+msgid "Images"
+msgstr ""
+
+#: includes/modules/class-registry.php:364
+msgid "Image grid"
+msgstr ""
+
+#: includes/modules/class-registry.php:388
+msgid "Mosaic (3 images)"
+msgstr ""
+
+#: includes/modules/class-registry.php:388
+msgid "Large image on the left"
+msgstr ""
+
+#: includes/modules/class-registry.php:388
+msgid "Large image on the right"
+msgstr ""
+
+#: includes/modules/class-registry.php:389
+msgid "Mosaic (4 images)"
+msgstr ""
+
+#: includes/modules/class-registry.php:389
+#: includes/modules/class-registry.php:394
+msgid "Tall image on the left"
+msgstr ""
+
+#: includes/modules/class-registry.php:389
+#: includes/modules/class-registry.php:396
+msgid "Tall image on the right"
+msgstr ""
+
+#: includes/modules/class-registry.php:392
+msgid "Mosaic (5 images)"
+msgstr ""
+
+#: includes/modules/class-registry.php:395
+msgid "Tall image in the middle"
+msgstr ""
+
+#: includes/modules/class-registry.php:397
+msgid "Wide image on top"
+msgstr ""
+
+#: includes/modules/class-registry.php:403
+msgid "Image & text"
+msgstr ""
+
+#: includes/modules/class-registry.php:407
+msgid "Ratio 4:3, 3:2, 2:1 or 1:1, at least 1000px wide."
+msgstr ""
+
+#: includes/modules/class-registry.php:412
+#: includes/modules/class-registry.php:466
+#: includes/modules/class-registry.php:703
+#: includes/modules/class-registry.php:972
+msgid "Image position"
+msgstr ""
+
+#: includes/modules/class-registry.php:417
+#: includes/modules/class-registry.php:471
+#: includes/modules/class-registry.php:540
+#: includes/modules/class-registry.php:977
+msgid "Above the text"
+msgstr ""
+
+#: includes/modules/class-registry.php:418
+#: includes/modules/class-registry.php:472
+#: includes/modules/class-registry.php:539
+#: includes/modules/class-registry.php:978
+msgid "Below the text"
+msgstr ""
+
+#: includes/modules/class-registry.php:423
+#: includes/modules/class-registry.php:508
+#: includes/modules/class-registry.php:825
+#: includes/modules/class-registry.php:966
+msgid "Text alignment"
+msgstr ""
+
+#: includes/modules/class-registry.php:427
+#: includes/modules/class-registry.php:985
+msgid "Text background"
+msgstr ""
+
+#: includes/modules/class-registry.php:435
+msgid "Image & text rows"
+msgstr ""
+
+#: includes/modules/class-registry.php:437
+msgid "Several image-and-text rows; each row chooses its own image side (e.g. left, right, left)."
+msgstr ""
+
+#: includes/modules/class-registry.php:439
+#: includes/modules/class-registry.php:459
+msgid "Small heading"
+msgstr ""
+
+#: includes/modules/class-registry.php:441
+msgid "Title (second line, emphasized)"
+msgstr ""
+
+#: includes/modules/class-registry.php:442
+msgid "Introduction"
+msgstr ""
+
+#: includes/modules/class-registry.php:445
+msgid "Width"
+msgstr ""
+
+#: includes/modules/class-registry.php:448
+msgid "Content width"
+msgstr ""
+
+#: includes/modules/class-registry.php:449
+msgid "Wide"
+msgstr ""
+
+#: includes/modules/class-registry.php:453
+msgid "Gap between rows (px)"
+msgstr ""
+
+#: includes/modules/class-registry.php:454
+msgid "Fade in on scroll"
+msgstr ""
+
+#: includes/modules/class-registry.php:457
+msgid "Rows"
+msgstr ""
+
+#: includes/modules/class-registry.php:461
+msgid "Label"
+msgstr ""
+
+#: includes/modules/class-registry.php:493
+msgid "Card list"
+msgstr ""
+
+#: includes/modules/class-registry.php:501
+#: includes/modules/class-registry.php:1040
+msgid "Display"
+msgstr ""
+
+#: includes/modules/class-registry.php:504
+#: includes/modules/class-registry.php:1043
+msgid "Grid"
+msgstr ""
+
+#: includes/modules/class-registry.php:510
+msgid "Card gap (px)"
+msgstr ""
+
+#: includes/modules/class-registry.php:514
+msgid "Cards"
+msgstr ""
+
+#: includes/modules/class-registry.php:536
+msgid "Video position"
+msgstr ""
+
+#: includes/modules/class-registry.php:541
+msgid "Left of the text"
+msgstr ""
+
+#: includes/modules/class-registry.php:542
+msgid "Right of the text"
+msgstr ""
+
+#: includes/modules/class-registry.php:548
+msgid "Video ratio"
+msgstr ""
+
+#: includes/modules/class-registry.php:565
+msgid "Video banner"
+msgstr ""
+
+#: includes/modules/class-registry.php:572
+#: includes/modules/class-registry.php:780
+#: includes/modules/class-registry.php:812
+msgid "Height (px)"
+msgstr ""
+
+#: includes/modules/class-registry.php:583
+#: includes/modules/class-registry.php:594
+msgid "Highlights"
+msgstr ""
+
+#: includes/modules/class-registry.php:588
+msgid "Icon width (px)"
+msgstr ""
+
+#: includes/modules/class-registry.php:589
+msgid "Item title size (px)"
+msgstr ""
+
+#: includes/modules/class-registry.php:590
+#: includes/modules/class-registry.php:996
+msgid "Swipe on mobile"
+msgstr ""
+
+#: includes/modules/class-registry.php:596
+msgid "Icon image"
+msgstr ""
+
+#: includes/modules/class-registry.php:608
+msgid "Counting numbers"
+msgstr ""
+
+#: includes/modules/class-registry.php:613
+msgid "Number size (px)"
+msgstr ""
+
+#: includes/modules/class-registry.php:618
+msgid "Numbers"
+msgstr ""
+
+#: includes/modules/class-registry.php:621
+msgid "Or an image (48 × 48)"
+msgstr ""
+
+#: includes/modules/class-registry.php:622
+msgid "Number"
+msgstr ""
+
+#: includes/modules/class-registry.php:623
+msgid "Unit"
+msgstr ""
+
+#: includes/modules/class-registry.php:635
+msgid "Gallery"
+msgstr ""
+
+#: includes/modules/class-registry.php:646
+msgid "Pictures"
+msgstr ""
+
+#: includes/modules/class-registry.php:648
+#: includes/modules/class-registry.php:969
+msgid "At least 1000px wide; height follows the image."
+msgstr ""
+
+#: includes/modules/class-registry.php:661
+msgid "Custom HTML"
+msgstr ""
+
+#: includes/modules/class-registry.php:666
+msgid "HTML"
+msgstr ""
+
+#: includes/modules/class-registry.php:666
+msgid "Scripts only run when the last editor of this design is an administrator. Do not paste code you do not trust."
+msgstr ""
+
+#: includes/modules/class-registry.php:672
+msgid "Timeline"
+msgstr ""
+
+#: includes/modules/class-registry.php:679
+msgid "Timeline style"
+msgstr ""
+
+#: includes/modules/class-registry.php:682
+msgid "Horizontal line"
+msgstr ""
+
+#: includes/modules/class-registry.php:683
+msgid "Vertical with images"
+msgstr ""
+
+#: includes/modules/class-registry.php:686
+msgid "Auto scroll (horizontal style, desktop)"
+msgstr ""
+
+#: includes/modules/class-registry.php:687
+msgid "Collapse long timelines (vertical style)"
+msgstr ""
+
+#: includes/modules/class-registry.php:688
+#: includes/modules/class-registry.php:1070
+msgid "Expand button text"
+msgstr ""
+
+#: includes/modules/class-registry.php:689
+#: includes/modules/class-registry.php:1071
+msgid "Collapse button text"
+msgstr ""
+
+#: includes/modules/class-registry.php:695
+msgid "Events"
+msgstr ""
+
+#: includes/modules/class-registry.php:700
+msgid "Image (vertical style)"
+msgstr ""
+
+#: includes/modules/class-registry.php:711
+#: includes/modules/class-registry.php:731
+msgid "Accent color"
+msgstr ""
+
+#: includes/modules/class-registry.php:721
+msgid "Contact details"
+msgstr ""
+
+#: includes/modules/class-registry.php:727
+#: includes/modules/class-registry.php:930
+msgid "Background image"
+msgstr ""
+
+#: includes/modules/class-registry.php:727
+msgid "Desktop 2400 × 656, mobile 1242 × 1138. Without an image the background color is used."
+msgstr ""
+
+#: includes/modules/class-registry.php:729
+msgid "Icon size (px)"
+msgstr ""
+
+#: includes/modules/class-registry.php:730
+#: includes/modules/class-registry.php:794
+#: includes/modules/class-registry.php:1026
+msgid "Background color"
+msgstr ""
+
+#: includes/modules/class-registry.php:735
+msgid "Contact methods"
+msgstr ""
+
+#: includes/modules/class-registry.php:738
+msgid "Or an icon image (48 × 48)"
+msgstr ""
+
+#: includes/modules/class-registry.php:751
+msgid "Promo grid"
+msgstr ""
+
+#: includes/modules/class-registry.php:754
+msgid "Left title"
+msgstr ""
+
+#: includes/modules/class-registry.php:758
+msgid "Right title"
+msgstr ""
+
+#: includes/modules/class-registry.php:759
+msgid "Promoted category 1"
+msgstr ""
+
+#: includes/modules/class-registry.php:760
+msgid "Promoted category 2"
+msgstr ""
+
+#: includes/modules/class-registry.php:763
+msgid "Left slides"
+msgstr ""
+
+#: includes/modules/class-registry.php:765
+#: includes/modules/class-registry.php:930
+msgid "At least 1000px wide."
+msgstr ""
+
+#: includes/modules/class-registry.php:777
+msgid "Scrolling text"
+msgstr ""
+
+#: includes/modules/class-registry.php:781
+#: includes/modules/class-registry.php:1023
+msgid "Text size (px)"
+msgstr ""
+
+#: includes/modules/class-registry.php:784
+msgid "Direction"
+msgstr ""
+
+#: includes/modules/class-registry.php:787
+msgid "Right to left"
+msgstr ""
+
+#: includes/modules/class-registry.php:788
+msgid "Left to right"
+msgstr ""
+
+#: includes/modules/class-registry.php:792
+msgid "Seconds per loop"
+msgstr ""
+
+#: includes/modules/class-registry.php:793
+msgid "Pause on hover"
+msgstr ""
+
+#: includes/modules/class-registry.php:798
+msgid "Texts"
+msgstr ""
+
+#: includes/modules/class-registry.php:813
+msgid "Color"
+msgstr ""
+
+#: includes/modules/class-registry.php:819
+msgid "Rich text"
+msgstr ""
+
+#: includes/modules/class-registry.php:826
+msgid "Content width (px)"
+msgstr ""
+
+#: includes/modules/class-registry.php:827
+#: includes/modules/class-registry.php:1021
+msgid "Inner padding (px)"
+msgstr ""
+
+#: includes/modules/class-registry.php:828
+msgid "Corner radius (px)"
+msgstr ""
+
+#: includes/modules/class-registry.php:829
+msgid "Content background"
+msgstr ""
+
+#: includes/modules/class-registry.php:838
+msgid "Before / after"
+msgstr ""
+
+#: includes/modules/class-registry.php:843
+msgid "Recommended 1000 × 500."
+msgstr ""
+
+#: includes/modules/class-registry.php:844
+msgid "Recommended 1000 × 500, same size as the before image."
+msgstr ""
+
+#: includes/modules/class-registry.php:845
+msgid "Before label"
+msgstr ""
+
+#: includes/modules/class-registry.php:846
+msgid "After label"
+msgstr ""
+
+#: includes/modules/class-registry.php:847
+msgid "Divider start position (%)"
+msgstr ""
+
+#: includes/modules/class-registry.php:848
+msgid "Before label color"
+msgstr ""
+
+#: includes/modules/class-registry.php:849
+msgid "After label color"
+msgstr ""
+
+#: includes/modules/class-registry.php:856
+msgid "Image hotspots"
+msgstr ""
+
+#: includes/modules/class-registry.php:861
+msgid "Desktop 1920 × 600, mobile 1242 × 900."
+msgstr ""
+
+#: includes/modules/class-registry.php:863
+msgid "Hotspot icon width (px)"
+msgstr ""
+
+#: includes/modules/class-registry.php:867
+msgid "Hotspots"
+msgstr ""
+
+#: includes/modules/class-registry.php:869
+#: includes/modules/class-registry.php:943
+msgid "Horizontal position (%)"
+msgstr ""
+
+#: includes/modules/class-registry.php:870
+#: includes/modules/class-registry.php:944
+msgid "Vertical position (%)"
+msgstr ""
+
+#: includes/modules/class-registry.php:871
+msgid "Hotspot icon (200 × 200)"
+msgstr ""
+
+#: includes/modules/class-registry.php:876
+msgid "Popup position"
+msgstr ""
+
+#: includes/modules/class-registry.php:879
+msgid "Above"
+msgstr ""
+
+#: includes/modules/class-registry.php:881
+msgid "Below"
+msgstr ""
+
+#: includes/modules/class-registry.php:895
+msgid "FAQ"
+msgstr ""
+
+#: includes/modules/class-registry.php:900
+msgid "Open the first question"
+msgstr ""
+
+#: includes/modules/class-registry.php:901
+msgid "Answer background"
+msgstr ""
+
+#: includes/modules/class-registry.php:902
+msgid "Answer text color"
+msgstr ""
+
+#: includes/modules/class-registry.php:906
+msgid "Questions"
+msgstr ""
+
+#: includes/modules/class-registry.php:909
+msgid "Answer"
+msgstr ""
+
+#: includes/modules/class-registry.php:920
+msgid "Shop the look"
+msgstr ""
+
+#: includes/modules/class-registry.php:925
+msgid "Preview product on hover"
+msgstr ""
+
+#: includes/modules/class-registry.php:928
+msgid "Scenes"
+msgstr ""
+
+#: includes/modules/class-registry.php:936
+msgid "Product hotspots"
+msgstr ""
+
+#: includes/modules/class-registry.php:942
+msgid "Show by default"
+msgstr ""
+
+#: includes/modules/class-registry.php:945
+#: includes/modules/class-registry.php:1103
+msgid "Button text"
+msgstr ""
+
+#: includes/modules/class-registry.php:959
+msgid "Homepage headline (H1)"
+msgstr ""
+
+#: includes/modules/class-registry.php:961
+msgid "The page's main heading for search engines. Use only one, before other blocks."
+msgstr ""
+
+#: includes/modules/class-registry.php:964
+msgid "Headline (H1)"
+msgstr ""
+
+#: includes/modules/class-registry.php:968
+msgid "Show image"
+msgstr ""
+
+#: includes/modules/class-registry.php:993
+msgid "Info strip"
+msgstr ""
+
+#: includes/modules/class-registry.php:997
+msgid "Alignment"
+msgstr ""
+
+#: includes/modules/class-registry.php:1003
+msgid "Or an image (40px or wider)"
+msgstr ""
+
+#: includes/modules/class-registry.php:1015
+msgid "Navigation bar"
+msgstr ""
+
+#: includes/modules/class-registry.php:1018
+msgid "Menus are managed under Store design → Menus & navigation (for now: Appearance → Menus)."
+msgstr ""
+
+#: includes/modules/class-registry.php:1020
+msgid "Alignment (desktop)"
+msgstr ""
+
+#: includes/modules/class-registry.php:1022
+msgid "Bold text"
+msgstr ""
+
+#: includes/modules/class-registry.php:1024
+msgid "Show border"
+msgstr ""
+
+#: includes/modules/class-registry.php:1027
+msgid "Border color"
+msgstr ""
+
+#: includes/modules/class-registry.php:1033
+msgid "Logo list"
+msgstr ""
+
+#: includes/modules/class-registry.php:1044
+msgid "Scrolling row"
+msgstr ""
+
+#: includes/modules/class-registry.php:1051
+msgid "Logos"
+msgstr ""
+
+#: includes/modules/class-registry.php:1053
+msgid "Logo (400 × 200)"
+msgstr ""
+
+#: includes/modules/class-registry.php:1065
+msgid "Text with \"read more\""
+msgstr ""
+
+#: includes/modules/class-registry.php:1072
+msgid "Height when collapsed (px, 0 = never collapse)"
+msgstr ""
+
+#: includes/modules/class-registry.php:1074
+msgid "Link color"
+msgstr ""
+
+#: includes/modules/class-registry.php:1075
+msgid "Button color"
+msgstr ""
+
+#: includes/modules/class-renderer.php:96
+msgid "Unknown module type."
+msgstr ""
+
+#: includes/modules/class-renderer.php:172
+msgid "Hidden"
+msgstr ""
+
+#: includes/modules/class-renderer.php:172
+msgid "Hidden on desktop"
+msgstr ""
+
+#: includes/modules/class-renderer.php:172
+msgid "Hidden on mobile"
 msgstr ""

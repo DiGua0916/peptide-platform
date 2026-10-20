@@ -48,7 +48,7 @@ final class Layout_Editor {
 		$template = $post_id ? (int) wp_get_post_parent_id( $post_id ) : 0;
 		$message  = sprintf(
 			/* translators: %s: template name */
-			__( 'Template "%s". The module library is being built: the first module (brand story rows) comes next. Changes here are not shown on the storefront yet.', 'peptide-core' ),
+			__( 'Template "%s". Add modules with the + button (Basic blocks). Saving keeps a draft; publishing to the storefront comes in the next step.', 'peptide-core' ),
 			$template ? get_the_title( $template ) : '-'
 		);
 		$data = array(

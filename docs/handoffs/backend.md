@@ -555,3 +555,42 @@
     - 装修文档不能单独删除（`map_meta_cap` 返回 do_not_allow），编辑器里的“移动到回收站”按钮已经不显示；删除整个模板时仍会连同文档移到回收站；
     - 默认模板的 4 份文档标题改为中文（首页 / 页头 / 页脚 / 全局样式）。
   - 测试增加到 37 项，全部通过。
+
+### EDIT-BLOCKS-03 / 04 积木库 + YY 式装修编辑器 · 2026-10-20 · Claude
+
+- **用户要求**：
+  1. 先把 Codex 扫描出的 YY 积木加进后台，先做最基本的积木；
+  2. 编辑器界面照 YY 的装修页来做（用户提供了截图）。
+- **积木库**（`includes/modules/`，插件 0.7.0）：
+  - **31 个基础积木**：YY 基础积木 31 个中的 30 个（不做“捐款/小费”，它的“放大系数”会虚增金额和人数）+ VialCove 首页的“图文行”（Codex 交接的 `media_text_list`，默认左、右、左）。
+  - 类型名用下划线（`media_text_list`），区块名用短横线（`vialcove/media-text-list`）。
+  - `class-registry.php`：每个积木的字段清单。分组有内容 / 图片与视频 / 布局 / 播放 / 按钮 / 颜色 / 显示与间距；每个积木自动加上电脑显示、手机显示、上下间距（电脑 / 手机分开）和背景色。
+  - `class-fields.php`：字段类型有 text / textarea / html / code / url / toggle / select / icon / number / color / image / media（电脑图 + 手机图，含 ALT、填充方式、焦点）/ video / link / menu / category / product / repeater。
+    - `device` 字段保存为 `{desktop, mobile}`；手机为 null 表示和电脑一致；0、false 和空字符串不当作空值。
+    - 富文本只允许 p、strong、em、a、列表等标签；链接只允许 http(s)、mailto、tel、站内相对路径和 #。
+    - 自定义 HTML 只有最后编辑者是管理员时才原样输出，编辑器里从不执行脚本。
+  - `class-renderer.php`：外层由插件输出，内容是 `<section id="vc-<id>" class="vc-m vc-m--<type>" data-module>` 加显示、间距、背景的 CSS 变量。**内层优先用主题模板 `template-parts/modules/<type 短横线>.php`**，参数是 `$args['module']`（已清理、已补默认值）和 `$args['context']`（public / preview / editor）；主题没有模板时用插件自带的默认样式（`class-fallback.php`、`assets/modules.css`、`assets/modules.js`）。
+  - `class-assets.php`：主题用过滤器 `peptide_core_layout_assets` 登记资产键，引用主题自带的图片。
+  - 商品热点只读 WooCommerce 的名称、价格和链接，不保存价格副本。
+- **YY 式装修编辑器**（`admin/class-design-editor.php`、`assets/design-editor.js/css`；“主题装修 → 装修”现在打开这里）：
+  - 顶栏：返回、页面选择（目前只有首页，其他页面显示“即将推出”）、电脑 / 手机 / 全屏预览、撤销 / 重做（Ctrl+Z）、查看店铺、保存草稿（Ctrl+S）、发布（下一步实现，现在点了会提示）。
+  - 左侧：整页实时预览，包括主题的页头和页脚。改动约 0.6 秒后刷新，保留滚动位置；点预览里的积木就能选中；选中的积木有橙色框。
+  - 右侧：
+    - “积木装修 / 全局配置”两个标签；
+    - 积木列表：头部固定在最上面、页脚固定在最下面，可以拖动排序；鼠标移上去有复制、隐藏、删除；隐藏的积木右上角有标记；“添加积木块”打开积木库（卡片网格，新积木加在选中积木的下面）；
+    - 设置面板：按分组折叠，条目可以添加、复制、删除、上下移动、隐藏；有电脑 / 手机切换，和预览设备联动。
+  - 页头、页脚、全局配置目前显示“下一步”的说明。
+  - 字段控件放在 `assets/module-controls.js`（`window.pcModuleUI`），区块编辑器（`module-editor.js`）也用同一份，所以同一份数据在 WordPress 区块编辑器里也能打开。
+- **数据与接口**（`modules/class-layout.php`、`api/class-layout-controller.php`）：
+  - 文档内容用区块格式保存在 `post_content`（`<!-- wp:vialcove/... {...} /-->`），没有另外一份 JSON。
+  - `GET` / `POST /peptide/v1/layouts/{id}`：读取 / 保存草稿；保存时带上 `modified`，对不上返回 **409**；保存时按字段清理、丢弃未知区块、ID 重复时换新；每次保存产生一条修订；设置文章锁。
+  - `POST /peptide/v1/layouts/{id}/preview`：短期预览令牌（transient，30 分钟，绑定用户），不产生修订。
+  - 预览页：只在员工预览模板时，由插件模板 `templates/layout-page.php`（主题页头 + 模块 + 主题页脚）接管首页；主题可以用 `peptide-layout.php` 替换。**公开首页不变**（还没有发布功能）。
+- **实际检查**：
+  - 新增测试：
+    - `smoke-modules.php` 38 项：31 个积木都在编辑器和公开两种上下文里渲染、字段清理、手机继承规则、隐藏、电脑 / 手机两张图、YouTube 和自定义 HTML 安全、区块预览接口、没有 PHP 警告；
+    - `smoke-design-editor.php` 20 项：读取、保存、清理、去重、409 冲突、修订、预览令牌只对本人有效、预览不改动已保存内容、权限、清理。
+  - 十三套测试共 **283 项全部通过**。
+  - **浏览器实测**（用户已登录）：打开编辑器、积木库、插入轮播和图文行（默认左右左）、点预览选中积木、保存草稿（数据库里 2 个模块、产生修订）、手机预览（图上文下）、从媒体库选图（焦点和 ALT 自动填写）、中文界面，都正常。
+- **本地数据**：默认模板首页文档 #685 里有一份测试草稿（轮播 + 图文行，未发布，访客看不到）。
+- **未做**：发布到网站（公开首页切换）、页头 / 页脚 / 全局配置编辑、商品块和运营类积木、Codex 的正式渲染模板。

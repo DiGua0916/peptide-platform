@@ -115,7 +115,7 @@ final class Store_Design {
 			case 'pc_design_edit':
 				$doc_id = Templates::document_id( $id, 'home' );
 				if ( $doc_id ) {
-					wp_safe_redirect( admin_url( 'post.php?post=' . $doc_id . '&action=edit' ) );
+					wp_safe_redirect( Design_Editor::url( $doc_id ) );
 					exit;
 				}
 				$notice = 'missing';

@@ -1,0 +1,325 @@
+<?php
+/**
+ * 装修模块库冒烟测试（EDIT-BLOCKS-03，开发环境专用）。
+ *
+ * 运行：wp eval-file wp-content/plugins/peptide-core/tests/smoke-modules.php
+ * 只在内存里渲染模块，不写数据库。
+ *
+ * @package PeptideCore
+ */
+
+defined( 'ABSPATH' ) || exit;
+
+use PeptideCore\Modules\Blocks;
+use PeptideCore\Modules\Fallback;
+use PeptideCore\Modules\Fields;
+use PeptideCore\Modules\Registry;
+use PeptideCore\Modules\Renderer;
+
+$ok = static function ( string $label, bool $cond ): void {
+	echo ( $cond ? 'PASS ' : 'FAIL ' ), $label, "\n";
+};
+
+$errors = array();
+set_error_handler(
+	static function ( $no, $str, $file, $line ) use ( &$errors ) {
+		if ( str_contains( $file, 'peptide-core' ) ) {
+			$errors[] = "$str @ " . basename( $file ) . ":$line";
+		}
+		return false;
+	}
+);
+
+$all = Registry::all();
+$ok( '31 modules registered in the library', 31 === count( $all ) );
+$ok( 'all of them are basic blocks', 31 === count( array_filter( $all, static fn( $d ) => 'basic' === $d['category'] ) ) );
+$ok( 'no donation module', ! isset( $all['donation'] ) );
+$registered = WP_Block_Type_Registry::get_instance();
+$ok( 'every module is a registered block', array() === array_filter( $all, static fn( $d ) => ! $registered->is_registered( $d['block'] ) ) );
+$ok( 'block names use dashes', 'vialcove/media-text-list' === $all['media_text_list']['block'] && 'media_text_list' === Registry::type_for_block( 'vialcove/media-text-list' ) );
+$ok( 'headline block can be used only once', false === $registered->get_registered( 'vialcove/hero-h1' )->supports['multiple'] );
+
+// 每个模块：默认值 + 默认条目，在编辑器和公开两种上下文里渲染。
+$bad = array();
+foreach ( $all as $type => $def ) {
+	$attrs = array(
+		'moduleId' => 'test-' . str_replace( '_', '-', $type ),
+		'settings' => Blocks::item_defaults( $def['settings'] ),
+		'items'    => array(),
+	);
+	if ( ! empty( $def['items'] ) ) {
+		for ( $i = 0; $i < $def['items']['default_count']; $i++ ) {
+			$attrs['items'][] = array(
+				'id'       => 'item-' . $i . 'xx',
+				'settings' => Blocks::item_defaults( $def['items']['fields'] ),
+			);
+		}
+	}
+	$editor = Renderer::render( $type, $attrs, 'editor' );
+	$public = Renderer::render( $type, $attrs, 'public' );
+	if ( ! str_contains( $editor, 'vc-m--' . str_replace( '_', '-', $type ) ) || ! str_contains( $editor, 'vc-m--editor' ) ) {
+		$bad[] = $type . ':editor';
+	}
+	if ( '' !== $public && ! str_contains( $public, 'id="vc-test-' ) ) {
+		$bad[] = $type . ':public';
+	}
+	if ( str_contains( $public, 'vc-ph' ) ) {
+		$bad[] = $type . ':placeholder-on-public';
+	}
+}
+$ok( 'all modules render in editor and public contexts', array() === $bad );
+if ( $bad ) {
+	echo '  ', implode( ', ', $bad ), "\n";
+}
+
+// 字段清理。
+$attr = array(
+	'moduleId' => 'BAD ID!',
+	'settings' => array(
+		'intervalMs'  => 999999,
+		'height'      => 'weird',
+		'titleSizePx' => '72',
+		'heightPx'    => array(
+			'desktop' => 50,
+			'mobile'  => null,
+		),
+		'showMobile'  => false,
+	),
+	'items'    => array(
+		array(
+			'id'       => 'slide-one',
+			'settings' => array(
+				'title'          => '<b>Hi</b> there',
+				'overlayColor'   => 'red',
+				'overlayOpacity' => 0,
+				'button'         => array(
+					'label'  => 'Go',
+					'href'   => 'javascript:alert(1)',
+					'target' => '_top',
+				),
+				'position'       => array(
+					'desktop' => 'bottom-right',
+					'mobile'  => 'nowhere',
+				),
+			),
+		),
+	),
+);
+$m = Renderer::normalize( 'carousel', $attr );
+$ok( 'invalid module id is replaced', 1 === preg_match( '/^[a-z0-9][a-z0-9-]{3,39}$/', $m['id'] ) && 'BAD ID!' !== $m['id'] );
+$ok( 'numbers are clamped', 20000 === $m['settings']['intervalMs'] && 72 === $m['settings']['titleSizePx'] && 200 === $m['settings']['heightPx']['desktop'] );
+$ok( 'invalid select falls back to default', 'auto' === $m['settings']['height'] );
+$ok( 'mobile null keeps inheriting', null === $m['settings']['heightPx']['mobile'] );
+$ok( 'visibility follows settings', true === $m['visibility']['desktop'] && false === $m['visibility']['mobile'] );
+$it = $m['items'][0]['settings'];
+$ok( 'text is plain', 'Hi there' === $it['title'] );
+$ok( 'invalid color falls back', '#000000' === $it['overlayColor'] );
+$ok( 'zero is kept (not treated as empty)', 0 === $it['overlayOpacity'] );
+$ok( 'javascript: link removed and target limited', '' === $it['button']['href'] && '_self' === $it['button']['target'] );
+$ok( 'invalid mobile position falls back to inherit (null)', 'bottom-right' === $it['position']['desktop'] && null === $it['position']['mobile'] );
+$def_m = Renderer::normalize( 'carousel', array() );
+$ok( 'missing mobile value uses the module default', 520 === $def_m['settings']['heightPx']['mobile'] );
+$ok( 'relative links stay relative', '/shop/' === Fields::url( '/shop/' ) && '#faq' === Fields::url( '#FAQ' ) );
+$ok( 'unknown keys are dropped', ! array_key_exists( 'evil', Renderer::normalize( 'spacer', array( 'settings' => array( 'evil' => 1 ) ) )['settings'] ) );
+
+$html = Fields::sanitize(
+	array(
+		'type'    => 'html',
+		'key'     => 'x',
+		'default' => '',
+	),
+	'<p onclick="x()">Hi <script>alert(1)</script><a href="https://a.b" onmouseover="y">link</a></p>'
+);
+$ok( 'rich text strips scripts and handlers', ! str_contains( $html, '<script' ) && ! str_contains( $html, 'onclick' ) && ! str_contains( $html, 'onmouseover' ) && str_contains( $html, '<a href="https://a.b">' ) );
+
+// 隐藏与显示。
+$hidden = array(
+	'moduleId' => 'hidden-one',
+	'enabled'  => false,
+	'settings' => array( 'title' => 'X' ),
+);
+$ok( 'hidden module is not shown publicly', '' === Renderer::render( 'rich_text', $hidden, 'public' ) );
+$ok( 'hidden module is shown in the editor with a badge', str_contains( Renderer::render( 'rich_text', $hidden, 'editor' ), 'vc-m__badge' ) );
+$m_only = Renderer::render(
+	'spacer',
+	array(
+		'moduleId' => 'desk-only',
+		'settings' => array( 'showMobile' => false ),
+	),
+	'public'
+);
+$ok( 'desktop-only module gets the mobile hide class', str_contains( $m_only, 'vc-hide-mobile' ) );
+$faq = Renderer::render(
+	'faq',
+	array(
+		'moduleId' => 'faq-test',
+		'items'    => array(
+			array(
+				'id'       => 'q-one',
+				'enabled'  => false,
+				'settings' => array( 'question' => 'SECRETQ' ),
+			),
+		),
+	),
+	'public'
+);
+$ok( 'disabled items are skipped publicly', ! str_contains( $faq, 'SECRETQ' ) );
+
+// 媒体：电脑 / 手机两张图。
+$img_ids = get_posts(
+	array(
+		'post_type'      => 'attachment',
+		'post_mime_type' => 'image',
+		'posts_per_page' => 2,
+		'fields'         => 'ids',
+	)
+);
+if ( count( $img_ids ) >= 2 ) {
+	$out = Renderer::render(
+		'image',
+		array(
+			'moduleId' => 'img-test',
+			'settings' => array(
+				'media' => array(
+					'desktop' => array(
+						'attachmentId' => $img_ids[0],
+						'alt'          => 'Desk alt',
+					),
+					'mobile'  => array(
+						'attachmentId' => $img_ids[1],
+						'alt'          => '',
+					),
+				),
+			),
+		),
+		'public'
+	);
+	$ok( 'picture has a mobile source and the desktop image', str_contains( $out, '<source media="(max-width: 767px)"' ) && str_contains( $out, 'alt="Desk alt"' ) );
+	$m2 = Renderer::normalize(
+		'image',
+		array(
+			'settings' => array(
+				'media' => array(
+					'desktop' => array( 'attachmentId' => $img_ids[0] ),
+					'mobile'  => array( 'attachmentId' => null ),
+				),
+			),
+		)
+	);
+	$ok( 'empty mobile image is null (falls back to desktop)', null === $m2['settings']['media']['mobile'] );
+} else {
+	echo "SKIP media test: fewer than 2 images in the media library\n";
+}
+$ok( 'unknown attachment is dropped', null === Renderer::normalize( 'image', array( 'settings' => array( 'media' => array( 'desktop' => array( 'attachmentId' => 99999999 ) ) ) ) )['settings']['media']['desktop']['attachmentId'] );
+
+// 视频与自定义 HTML。
+$ok( 'youtube ids parsed', 'dQw4w9WgXcQ' === Fallback::youtube_id( 'https://youtu.be/dQw4w9WgXcQ' ) && 'dQw4w9WgXcQ' === Fallback::youtube_id( 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=3' ) && null === Fallback::youtube_id( 'https://evil.example/x' ) );
+$yt = Renderer::render(
+	'video',
+	array(
+		'moduleId' => 'video-test',
+		'settings' => array(
+			'source'     => 'youtube',
+			'youtubeUrl' => 'https://youtu.be/dQw4w9WgXcQ',
+			'autoplay'   => true,
+		),
+	),
+	'public'
+);
+$ok( 'youtube uses the privacy-friendly domain and mutes autoplay', str_contains( $yt, 'youtube-nocookie.com/embed/dQw4w9WgXcQ' ) && str_contains( $yt, 'mute=1' ) );
+Renderer::$document_id = 0;
+$custom = Renderer::render(
+	'custom_html',
+	array(
+		'moduleId' => 'custom-test',
+		'settings' => array( 'html' => '<div>ok</div><script>alert(1)</script>' ),
+	),
+	'public'
+);
+$ok( 'custom html without a trusted editor is filtered', str_contains( $custom, '<div>ok</div>' ) && ! str_contains( $custom, '<script' ) );
+$editor_custom = Renderer::render(
+	'custom_html',
+	array(
+		'moduleId' => 'custom-test',
+		'settings' => array( 'html' => '<script>x</script>' ),
+	),
+	'editor'
+);
+$ok( 'custom html never runs scripts in the editor', ! str_contains( $editor_custom, '<script' ) );
+
+// 编辑器数据。
+$data = Blocks::editor_data();
+$ok( 'editor data lists every block with defaults', 31 === count( $data['modules'] ) && isset( $data['modules']['vialcove/carousel']['items']['defaults']['media'] ) );
+$ok(
+	'device defaults are {desktop, mobile}',
+	array(
+		'desktop' => 4,
+		'mobile'  => 2,
+	) === $data['modules']['vialcove/image-grid']['defaults']['columns']
+);
+$ok( 'editor data has products and categories', count( $data['products'] ) > 0 && count( $data['categories'] ) > 0 );
+
+// 商品热点只读 WooCommerce 的名称、价格和链接。
+$product = wc_get_products(
+	array(
+		'limit'  => 1,
+		'status' => 'publish',
+	)
+)[0] ?? null;
+if ( $product ) {
+	$sc = Renderer::render(
+		'product_showcase',
+		array(
+			'moduleId' => 'showcase-test',
+			'items'    => array(
+				array(
+					'id'       => 'scene-one',
+					'settings' => array(
+						'spots' => array(
+							array(
+								'id'       => 'spot-one',
+								'settings' => array(
+									'product'     => $product->get_id(),
+									'buttonLabel' => 'View',
+								),
+							),
+						),
+					),
+				),
+			),
+		),
+		'public'
+	);
+	$ok( 'product hotspot shows the live product name and link', str_contains( $sc, esc_html( $product->get_name() ) ) && str_contains( $sc, esc_url( $product->get_permalink() ) ) );
+}
+
+// 编辑器的区块预览接口（ServerSideRender 实际调用的 /wp/v2/block-renderer）。
+$admin = get_users( array( 'role' => 'administrator', 'number' => 1 ) )[0];
+wp_set_current_user( $admin->ID );
+$doc = \PeptideCore\Templates::document_id( \PeptideCore\Templates::default_id(), 'home' );
+$req = new WP_REST_Request( 'POST', '/wp/v2/block-renderer/vialcove/faq' );
+$req->set_param( 'context', 'edit' );
+$req->set_param( 'post_id', $doc );
+$req->set_param(
+	'attributes',
+	array(
+		'moduleId' => 'rest-faq',
+		'items'    => array(
+			array(
+				'id'       => 'rest-q1',
+				'settings' => array( 'question' => 'REST QUESTION' ),
+			),
+		),
+	)
+);
+$res = rest_do_request( $req );
+$out = $res->get_data();
+$ok( 'block renderer endpoint returns editor preview', 200 === $res->get_status() && str_contains( (string) ( $out['rendered'] ?? '' ), 'REST QUESTION' ) && str_contains( (string) ( $out['rendered'] ?? '' ), 'vc-m--editor' ) );
+Renderer::$in_editor = false;
+wp_set_current_user( 0 );
+
+restore_error_handler();
+$ok( 'no PHP warnings or notices from the plugin', array() === $errors );
+if ( $errors ) {
+	echo '  ', implode( "\n  ", array_slice( array_unique( $errors ), 0, 10 ) ), "\n";
+}
