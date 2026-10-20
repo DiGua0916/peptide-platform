@@ -452,8 +452,14 @@ final class Fallback {
 
 	private static function render_media_text( array $s ): string {
 		$text = '';
+		if ( '' !== $s['eyebrow'] ) {
+			$text .= '<p class="vc-eyebrow">' . esc_html( $s['eyebrow'] ) . '</p>';
+		}
 		if ( '' !== $s['title'] ) {
-			$text .= '<h2 class="vc-m__title">' . esc_html( $s['title'] ) . '</h2>';
+			$text .= '<h2 class="vc-m__title vc-mt__title">' . esc_html( $s['title'] ) . '</h2>';
+		}
+		if ( '' !== $s['label'] ) {
+			$text .= '<p class="vc-mt__label">' . esc_html( $s['label'] ) . '</p>';
 		}
 		if ( '' !== $s['bodyHtml'] ) {
 			$text .= '<div class="vc-richtext">' . self::html( $s['bodyHtml'] ) . '</div>';
@@ -467,7 +473,21 @@ final class Fallback {
 				'text-align'   => $s['textAlign'],
 			)
 		);
-		return '<div class="' . esc_attr( self::inner_class( $s ) ) . '"' . $vars . '>' . self::media_text_row( $s['media'], $s['imagePosition'], $text ) . '</div>';
+		return '<div class="' . esc_attr( self::inner_class( $s ) . ( $s['animation'] ? ' vc-reveal' : '' ) ) . '"' . $vars . '>' . self::media_text_row( $s['media'], $s['imagePosition'], $text, 'vc-mt', (string) $s['caption'] ) . '</div>';
+	}
+
+	private static function render_section_heading( array $s ): string {
+		$head = self::heading_accent( $s, 'h2', self::text_link( $s['link'] ) );
+		if ( '' === $head ) {
+			return self::staff() ? Renderer::notice( __( 'Add a title in the sidebar.', 'peptide-core' ) ) : '';
+		}
+		$vars = self::style(
+			array(
+				'--vc-title-c' => $s['titleColor'],
+				'--vc-fg'      => $s['textColor'],
+			)
+		);
+		return '<div class="vc-m__inner vc-heading vc-heading--' . esc_attr( $s['align'] ) . '"' . $vars . '>' . $head . '</div>';
 	}
 
 	private static function render_media_text_list( array $s, array $items ): string {

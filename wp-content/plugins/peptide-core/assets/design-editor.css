@@ -485,6 +485,12 @@ html.wp-toolbar {
 	display: none;
 	background: #fff;
 	box-shadow: -8px 0 8px #fff;
+	/* 只有按钮本身接收点击，按钮之间的空白不挡住下面的标题（点标题就选中积木）。 */
+	pointer-events: none;
+}
+
+.pc-de-row__actions button {
+	pointer-events: auto;
 }
 
 .pc-de-row:hover .pc-de-row__actions,

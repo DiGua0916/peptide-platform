@@ -165,7 +165,9 @@ $resolved = \PeptideCore\Cli\Layout_Command::resolve_links( array( 'a' => '{url:
 $ok( 'import links become relative site urls', str_starts_with( $resolved['a'], '/' ) && ! str_contains( $resolved['a'], '{url' ) && str_contains( $resolved['b']['x'], 'go /' ) && 5 === $resolved['c'] );
 $seed = json_decode( (string) file_get_contents( PEPTIDE_CORE_DIR . '/import-templates/home-2026-10-20.json' ), true );
 $clean = Layout::clean_modules( \PeptideCore\Cli\Layout_Command::resolve_links( $seed['modules'] ) );
-$ok( 'homepage seed has 6 known modules with stable ids', 6 === count( $clean ) && array( 'hero', 'collection', 'our-story', 'report-feature', 'questions', 'closing-cta' ) === array_map( static fn( $m ) => $m['attrs']['moduleId'], $clean ) );
+$ok( 'homepage seed: brand story split into heading + one block per row + note', 10 === count( $clean ) && array( 'hero', 'collection', 'our-story', 'story-israel', 'story-china', 'story-united-states', 'story-note', 'report-feature', 'questions', 'closing-cta' ) === array_map( static fn( $m ) => $m['attrs']['moduleId'], $clean ) );
+$sides = array_map( static fn( $m ) => $m['attrs']['settings']['imagePosition']['desktop'] ?? null, array_slice( $clean, 3, 3 ) );
+$ok( 'brand story rows keep left / right / left', array( 'left', 'right', 'left' ) === $sides );
 $ok( 'seed keeps the AI image disclosure', str_contains( wp_json_encode( $clean ), 'AI-generated scene' ) && str_contains( wp_json_encode( $clean ), 'not photographs of verified teams' ) );
 
 // ---------- 清理 ----------

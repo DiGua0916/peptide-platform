@@ -31,8 +31,8 @@ set_error_handler(
 );
 
 $all = Registry::all();
-$ok( '34 modules registered in the library', 34 === count( $all ) );
-$ok( '33 basic blocks and 1 product block', 33 === count( array_filter( $all, static fn( $d ) => 'basic' === $d['category'] ) ) && 1 === count( array_filter( $all, static fn( $d ) => 'product' === $d['category'] ) ) );
+$ok( '35 modules registered in the library', 35 === count( $all ) );
+$ok( '34 basic blocks and 1 product block', 34 === count( array_filter( $all, static fn( $d ) => 'basic' === $d['category'] ) ) && 1 === count( array_filter( $all, static fn( $d ) => 'product' === $d['category'] ) ) );
 $ok( 'no donation module', ! isset( $all['donation'] ) );
 $registered = WP_Block_Type_Registry::get_instance();
 $ok( 'every module is a registered block', array() === array_filter( $all, static fn( $d ) => ! $registered->is_registered( $d['block'] ) ) );
@@ -249,7 +249,7 @@ $ok( 'custom html never runs scripts in the editor', ! str_contains( $editor_cus
 
 // 编辑器数据。
 $data = Blocks::editor_data();
-$ok( 'editor data lists every block with defaults', 34 === count( $data['modules'] ) && isset( $data['modules']['vialcove/carousel']['items']['defaults']['media'] ) );
+$ok( 'editor data lists every block with defaults', 35 === count( $data['modules'] ) && isset( $data['modules']['vialcove/carousel']['items']['defaults']['media'] ) );
 $ok(
 	'device defaults are {desktop, mobile}',
 	array(
@@ -347,6 +347,11 @@ $rf = Renderer::render( 'report_feature', array( 'moduleId' => 'rf-test', 'setti
 $ok( 'report highlight renders title and card rows', str_contains( $rf, '<em>look into.</em>' ) && str_contains( $rf, 'Linked to its batch' ) );
 $faq2 = Renderer::render( 'faq', array( 'moduleId' => 'faq-two', 'settings' => array( 'eyebrow' => 'A LITTLE MORE CLARITY', 'title' => 'Good questions.', 'titleAccent' => 'Clear answers.', 'link' => array( 'label' => 'Explore', 'href' => '/reports/' ) ) ), 'public' );
 $ok( 'faq has eyebrow, accent title and link', str_contains( $faq2, 'A LITTLE MORE CLARITY' ) && str_contains( $faq2, '<em>Clear answers.</em>' ) && str_contains( $faq2, 'vc-text-link' ) );
+
+$sh = Renderer::render( 'section_heading', array( 'moduleId' => 'sh-test', 'settings' => array( 'eyebrow' => 'THE VIALCOVE STORY', 'title' => 'Three places.', 'titleAccent' => 'One connected vision.' ) ), 'public' );
+$ok( 'section heading renders eyebrow and accent title', str_contains( $sh, 'THE VIALCOVE STORY' ) && str_contains( $sh, '<em>One connected vision.</em>' ) && str_contains( $sh, 'vc-heading--center' ) );
+$mt = Renderer::render( 'media_text', array( 'moduleId' => 'mt-test', 'settings' => array( 'eyebrow' => '01 / ISRAEL', 'label' => 'RESEARCH', 'caption' => 'AI-generated scene', 'title' => 'Scientific collaboration.' ) ), 'public' );
+$ok( 'image & text renders eyebrow, label and caption', str_contains( $mt, '01 / ISRAEL' ) && str_contains( $mt, 'vc-mt__label' ) && str_contains( $mt, '<figcaption class="vc-mt__caption">AI-generated scene</figcaption>' ) );
 
 // 编辑器的区块预览接口（ServerSideRender 实际调用的 /wp/v2/block-renderer）。
 $admin = get_users( array( 'role' => 'administrator', 'number' => 1 ) )[0];

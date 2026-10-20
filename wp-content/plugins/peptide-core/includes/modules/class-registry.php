@@ -451,7 +451,10 @@ final class Registry {
 				'settings' => array_merge(
 					array(
 						self::media( 'media', '', __( 'Ratio 4:3, 3:2, 2:1 or 1:1, at least 1000px wide.', 'peptide-core' ) ),
+						Fields::f( 'text', 'caption', __( 'Image caption', 'peptide-core' ), '', array( 'group' => 'media' ) ),
+						Fields::f( 'text', 'eyebrow', __( 'Small heading', 'peptide-core' ), '' ),
 						Fields::f( 'text', 'title', __( 'Title', 'peptide-core' ), '' ),
+						Fields::f( 'text', 'label', __( 'Label', 'peptide-core' ), '' ),
 						Fields::f( 'html', 'bodyHtml', __( 'Text', 'peptide-core' ), '' ),
 						self::select(
 							'imagePosition',
@@ -468,11 +471,29 @@ final class Registry {
 						),
 						self::select( 'textAlign', __( 'Text alignment', 'peptide-core' ), 'left', $align ),
 						self::full_width(),
+						self::toggle( 'animation', __( 'Fade in on scroll', 'peptide-core' ), true ),
 						self::color( 'titleColor', __( 'Title color', 'peptide-core' ) ),
 						self::color( 'textColor', __( 'Text color', 'peptide-core' ) ),
 						self::color( 'contentBgColor', __( 'Text background', 'peptide-core' ) ),
 					),
 					self::button( false )
+				),
+			),
+
+			// 标题栏：一个区域的小标题、两行标题、介绍和链接（例如品牌故事上方的 “THE VIALCOVE STORY”）。
+			'section_heading'  => array(
+				'title'       => __( 'Section heading', 'peptide-core' ),
+				'icon'        => 'heading',
+				'description' => __( 'A heading for the blocks below it: small heading, two-line title, introduction and a link.', 'peptide-core' ),
+				'settings'    => array(
+					Fields::f( 'text', 'eyebrow', __( 'Small heading', 'peptide-core' ), '' ),
+					Fields::f( 'text', 'title', __( 'Title', 'peptide-core' ), '' ),
+					Fields::f( 'text', 'titleAccent', __( 'Title (second line, emphasized)', 'peptide-core' ), '' ),
+					Fields::f( 'textarea', 'description', __( 'Introduction', 'peptide-core' ), '' ),
+					Fields::f( 'link', 'link', __( 'Text link (under the title)', 'peptide-core' ) ),
+					self::select( 'align', __( 'Alignment', 'peptide-core' ), 'center', $align ),
+					self::color( 'titleColor', __( 'Title color', 'peptide-core' ) ),
+					self::color( 'textColor', __( 'Text color', 'peptide-core' ) ),
 				),
 			),
 
