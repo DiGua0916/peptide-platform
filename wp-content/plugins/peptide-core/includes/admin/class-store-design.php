@@ -1,13 +1,15 @@
 <?php
 /**
  * 后台“店铺装修”菜单（EDIT-BLOCKS-02）：主题装修、菜单导航、自定义页面、首页 SEO、域名管理、活动专题页。
- * 目前只有“主题装修”有内容（模板库、店铺默认模板、域名指定模板、预览）；其余页面是占位，后续逐个实现。
+ * “主题装修”（模板库、店铺默认模板、域名指定模板、预览）、“菜单导航”（Menu_Page）、“自定义页面”（WordPress 页面列表）已实现；
+ * 其余页面是占位，后续逐个实现。
  *
  * @package PeptideCore
  */
 
 namespace PeptideCore\Admin;
 
+use PeptideCore\Menus;
 use PeptideCore\Modules\Layout;
 use PeptideCore\Settings;
 use PeptideCore\Shipping_Tracking;
@@ -76,6 +78,10 @@ final class Store_Design {
 			if ( self::PAGES_SLUG === $slug ) {
 				// 菜单链接直接指向页面列表；权限按 WordPress 自己的“编辑页面”能力。
 				add_submenu_page( self::SLUG, $title, $title, 'edit_pages', $slug );
+				continue;
+			}
+			if ( Menu_Page::SLUG === $slug ) {
+				add_submenu_page( self::SLUG, $title, $title, Menus::CAP, $slug, array( Menu_Page::class, 'render' ) );
 				continue;
 			}
 			add_submenu_page(
@@ -534,7 +540,6 @@ final class Store_Design {
 		}
 		$slug = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$desc = array(
-			self::SLUG . '-menus'    => __( 'Edit the header and footer menus: links, order and sub-menus.', 'peptide-core' ),
 			self::SLUG . '-seo'      => __( 'Homepage title, description and social sharing image for search engines.', 'peptide-core' ),
 			self::SLUG . '-domains'  => __( 'Bind your own domain and check HTTPS once the site is on a server.', 'peptide-core' ),
 			self::SLUG . '-campaign' => __( 'Landing pages for promotions, built from modules, with their own address.', 'peptide-core' ),

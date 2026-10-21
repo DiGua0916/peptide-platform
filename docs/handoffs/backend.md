@@ -749,3 +749,43 @@
 - 点同一个积木里不属于任何条目的地方，会取消锁定条目（例如“轮播图 · 第 1 项”），回到选中整个积木。
 - 设置面板里的空白不会取消选中，避免正在修改时误点。
 - 验证：`node --check` 通过；smoke-design-editor 全部通过。没有浏览器实测（内置浏览器未登录）。
+
+### MENU-NAV-01 菜单导航 + CUSTOM-PAGES-01 自定义页面 · 2026-10-22 · Claude（peptide-core 0.9.0）
+
+用户要求：“页面”移到“店铺装修 → 自定义页面”；菜单导航负责页头和页脚；对照 Shopname 后台（yyy12345 店铺，只读查看，未保存任何修改）把我们没有的功能补上。
+
+**Shopname 对照结果**
+- 菜单导航有：
+  - 两份固定菜单（顶部导航菜单 / 页尾菜单，不可删除）和自定义菜单，导出 / 导入，指定创建人；
+  - 每一项有导航名称、链接页面，以及批量添加、添加二级目录、设置、删除；
+  - 设置里有：打开方式、收录 / 不收录、链接 title、字体颜色、导航图标（80×80）、斜体、加粗、装饰线。
+- 链接页面类型共 25 种。我们实现了能对应上的 15 种（无、首页、所有商品、分类、商品、页面、文章、购物车、我的账号、我的订单、登录、注册、忘记密码、搜索、自定义 URL）。专题、满减、优惠码、评论列表、博客列表 / 专辑这几种，我们站点没有对应功能，暂不提供。
+- 自定义页面有：访问量、“结账条款”标签、生成常见条款、内容变量、AI 生成、单页 SEO。我们做了结账条款、变量和常见条款草稿。访问量等访客统计任务，单页 SEO 和“首页 SEO”一起做，AI 生成不做。
+
+**实现**
+- “页面”菜单：去掉左侧顶层“页面”，“店铺装修 → 自定义页面”直接打开页面列表（`edit.php?post_type=page`）。打开列表、新建或编辑页面时，左侧菜单停在“自定义页面”。
+- `includes/class-menus.php`：
+  - 使用 WordPress 自带的导航菜单。固定菜单的分类项上记 `_pc_fixed = header|footer`，删除时会被拦下（也包括从“外观 → 菜单”删）。
+  - 第一次打开时按主题现有的页头 / 页脚链接建好：#29 顶部导航菜单 → 主题位置 primary，#30 页尾菜单 → 插件注册的位置 footer。
+  - 站内对象按 ID 保存，显示时取最新网址。首页、购物车等类型存在菜单项元数据 `_pc_link` 里，网址在显示时计算。样式存在 `_pc_style`，nofollow 写进 xfn。
+  - 最多两级，每份菜单最多 200 项，保存时带修改标记，冲突返回 409。
+  - 导出时站内对象按 slug 记录，导入时一律新建菜单，找不到的对象改为无链接并列出。
+- `includes/api/class-menu-controller.php`：`GET|POST /peptide/v1/menus/{id}`，需要 edit_theme_options。
+- `includes/admin/class-menu-page.php`、`assets/menu-editor.js/.css`：列表页和编辑页（React），界面按 Shopname 做。
+- `includes/class-custom-pages.php`：
+  - 页面编辑页右侧有“VialCove 页面选项”：设置为结账条款，以及变量说明。页面列表显示“结账条款”标签。
+  - 短代码 `[pc_var name="store_name|store_url|store_domain|support_email|support_whatsapp|support_telegram|year|today" link="1"]`。
+  - 页面列表上方有“生成常见条款”：生成 Shipping / Return & refund / Terms / Privacy / Contact 的**草稿**，内容只有标题和方括号提示，已有同类页面时跳过（现有的 privacy-policy、refund_returns 草稿会被认出来）。
+- 公共函数（**待写入 CONTRACT**）：
+  - `peptide_core_get_menu( 'header'|'footer' )`：返回菜单树或 null。每一项包含 id、title、description、type、object_id、url、target、rel、attr_title、style（行内样式）、icon、current、children。
+  - `peptide_core_get_checkout_terms()`：返回 `[{id, title, url}]`。
+
+**验证**
+- 新增 smoke-menus 51 项、smoke-custom-pages 18 项；十六套共 407 项通过。
+- 菜单编辑器在测试页（使用站点自己的 WordPress 脚本 + 模拟接口）里实际操作过：渲染、设置弹窗、批量添加分类为二级目录、切换链接类型、上下移动、保存。
+- 首页、商店页 200；新代码在 debug.log 中没有新警告。
+- **没有在真实后台用浏览器看过**（内置浏览器未登录本地后台）。
+
+**需要 Codex**
+- 页头和页脚改为用 `peptide_core_get_menu()` 渲染，返回 null 时保留现在写死的链接。
+- 结账页显示 `peptide_core_get_checkout_terms()`。

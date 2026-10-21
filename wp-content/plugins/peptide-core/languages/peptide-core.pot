@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-21T18:13:09+00:00\n"
+"POT-Creation-Date: 2026-10-21T19:35:27+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -347,7 +347,8 @@ msgid "Design editor"
 msgstr ""
 
 #: includes/admin/class-design-editor.php:113
-#: includes/admin/class-store-design.php:395
+#: includes/admin/class-store-design.php:431
+#: includes/class-menus.php:97
 #: includes/class-templates.php:49
 msgid "Homepage"
 msgstr ""
@@ -402,6 +403,7 @@ msgid "Save draft"
 msgstr ""
 
 #: includes/admin/class-design-editor.php:128
+#: includes/admin/class-menu-page.php:113
 msgid "Saving…"
 msgstr ""
 
@@ -440,7 +442,7 @@ msgstr ""
 
 #. translators: %s: date and time
 #: includes/admin/class-design-editor.php:138
-#: includes/admin/class-store-design.php:313
+#: includes/admin/class-store-design.php:349
 #, php-format
 msgid "Published %s"
 msgstr ""
@@ -482,11 +484,14 @@ msgid "Global settings"
 msgstr ""
 
 #: includes/admin/class-design-editor.php:148
+#: includes/admin/class-menu-page.php:243
 #: includes/class-templates.php:50
 msgid "Header"
 msgstr ""
 
 #: includes/admin/class-design-editor.php:149
+#: includes/admin/class-menu-page.php:90
+#: includes/admin/class-menu-page.php:244
 #: includes/class-templates.php:51
 msgid "Footer"
 msgstr ""
@@ -504,7 +509,7 @@ msgid "Click a card to add it below the selected block."
 msgstr ""
 
 #: includes/admin/class-design-editor.php:153
-#: includes/admin/class-store-design.php:433
+#: includes/admin/class-store-design.php:469
 #: includes/modules/class-blocks.php:230
 msgid "Duplicate"
 msgstr ""
@@ -520,7 +525,9 @@ msgid "Show"
 msgstr ""
 
 #: includes/admin/class-design-editor.php:156
-#: includes/admin/class-store-design.php:443
+#: includes/admin/class-menu-page.php:101
+#: includes/admin/class-menu-page.php:291
+#: includes/admin/class-store-design.php:479
 #: includes/modules/class-blocks.php:231
 msgid "Delete"
 msgstr ""
@@ -554,6 +561,7 @@ msgid "Global settings (colors, fonts, content width, spacing, button corners) c
 msgstr ""
 
 #: includes/admin/class-design-editor.php:164
+#: includes/admin/class-menu-page.php:115
 msgid "You have unsaved changes."
 msgstr ""
 
@@ -622,10 +630,12 @@ msgid "Notice"
 msgstr ""
 
 #: includes/admin/class-dialogs.php:33
+#: includes/admin/class-menu-page.php:118
 msgid "OK"
 msgstr ""
 
 #: includes/admin/class-dialogs.php:34
+#: includes/admin/class-menu-page.php:117
 msgid "Cancel"
 msgstr ""
 
@@ -695,6 +705,371 @@ msgstr ""
 
 #: includes/admin/class-list-columns.php:79
 msgid "Access"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:84
+msgid "Back to menu list"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:85
+msgid "Edit menu"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:86
+#: includes/admin/class-menu-page.php:267
+#: includes/admin/class-menu-page.php:279
+msgid "Menu name"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:87
+#: includes/admin/class-menu-page.php:280
+msgid "Shown in"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:88
+#: includes/admin/class-menu-page.php:304
+msgid "Not used"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:89
+msgid "Header (top navigation)"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:91
+msgid "A menu used in the header or footer replaces the one used there before."
+msgstr ""
+
+#: includes/admin/class-menu-page.php:92
+msgid "This is a fixed menu and cannot be deleted."
+msgstr ""
+
+#: includes/admin/class-menu-page.php:93
+msgid "Menu structure"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:94
+msgid "Item names are shown on the storefront. Up to two levels."
+msgstr ""
+
+#: includes/admin/class-menu-page.php:95
+msgid "Navigation name"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:96
+msgid "Linked page"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:97
+#: includes/admin/class-menu-page.php:278
+#: includes/admin/class-store-design.php:380
+#: includes/admin/class-store-design.php:433
+msgid "Actions"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:98
+msgid "Batch add"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:99
+msgid "Add sub-item"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:100
+msgid "Settings"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:102
+#: includes/modules/class-blocks.php:232
+msgid "Move up"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:103
+#: includes/modules/class-blocks.php:233
+msgid "Move down"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:104
+msgid "Add menu item"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:105
+#: includes/admin/class-menu-page.php:120
+msgid "Batch add top-level items"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:106
+msgid "No items yet. Add the first one below."
+msgstr ""
+
+#: includes/admin/class-menu-page.php:107
+msgid "Choose…"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:108
+msgid "Type to search"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:110
+msgid "The linked page no longer exists or is not published. Visitors will not see this item."
+msgstr ""
+
+#: includes/admin/class-menu-page.php:111
+msgid "New item"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:112
+msgid "Save"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:114
+msgid "Menu saved."
+msgstr ""
+
+#: includes/admin/class-menu-page.php:116
+msgid "Delete this item and its sub-items?"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:119
+msgid "Batch add sub-items"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:121
+msgid "Add type"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:122
+msgid "Adds one item per selected entry, named after it and linking to it. Example: choose several product categories to add them all as sub-items."
+msgstr ""
+
+#: includes/admin/class-menu-page.php:123
+msgid "Select all"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:124
+#, php-format
+msgid "%d selected"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:125
+msgid "Navigation settings"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:126
+msgid "Open in"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:127
+msgid "Keep default"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:128
+msgid "Same window"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:129
+msgid "New window"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:130
+msgid "Search engines"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:131
+msgid "Follow this link"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:132
+msgid "Do not follow (nofollow)"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:133
+msgid "Link title (shown on hover)"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:134
+msgid "Description (shown under the name in the header drop-down)"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:135
+#: includes/modules/class-registry.php:347
+#: includes/modules/class-registry.php:384
+#: includes/modules/class-registry.php:491
+#: includes/modules/class-registry.php:511
+#: includes/modules/class-registry.php:658
+#: includes/modules/class-registry.php:775
+#: includes/modules/class-registry.php:879
+#: includes/modules/class-registry.php:914
+#: includes/modules/class-registry.php:1080
+#: includes/modules/class-registry.php:1121
+#: includes/modules/class-registry.php:1228
+#: includes/modules/class-registry.php:1254
+#: includes/modules/class-registry.php:1268
+msgid "Text color"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:136
+msgid "Clear"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:137
+#: includes/modules/class-fallback.php:672
+#: includes/modules/class-registry.php:329
+#: includes/modules/class-registry.php:704
+#: includes/modules/class-registry.php:821
+#: includes/modules/class-registry.php:1098
+msgid "Icon"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:138
+msgid "Navigation icon, recommended 80 × 80 px."
+msgstr ""
+
+#: includes/admin/class-menu-page.php:139
+#: includes/admin/class-product-panel.php:104
+#: includes/modules/class-blocks.php:239
+msgid "Choose image"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:140
+#: includes/admin/class-product-panel.php:105
+#: includes/admin/class-store-design.php:391
+#: includes/modules/class-blocks.php:242
+msgid "Remove"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:141
+msgid "Font style"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:142
+msgid "Normal"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:143
+msgid "Italic"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:144
+msgid "Font weight"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:145
+msgid "Bold"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:146
+msgid "Text decoration"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:147
+#: includes/modules/class-registry.php:137
+msgid "None"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:148
+msgid "Underline"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:149
+msgid "Overline"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:150
+msgid "Strikethrough"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:151
+#: includes/class-menus.php:645
+msgid "This menu was changed somewhere else after you opened it. Reload the page to see the latest version."
+msgstr ""
+
+#: includes/admin/class-menu-page.php:164
+#: includes/admin/class-menu-page.php:207
+#: includes/admin/class-store-design.php:140
+#: includes/class-custom-pages.php:330
+msgid "Sorry, you are not allowed to do that."
+msgstr ""
+
+#: includes/admin/class-menu-page.php:179
+msgid "Menu deleted."
+msgstr ""
+
+#: includes/admin/class-menu-page.php:190
+msgid "Choose a menu export file (.json, up to 1 MB)."
+msgstr ""
+
+#. translators: %d: number of menus
+#: includes/admin/class-menu-page.php:198
+#, php-format
+msgid "Imported %d menu as a new menu."
+msgid_plural "Imported %d menus as new menus."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: item names
+#: includes/admin/class-menu-page.php:201
+#, php-format
+msgid "These items link to pages that do not exist on this site and were imported without a link: %s"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:238
+msgid "Loading…"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:249
+#: includes/admin/class-store-design.php:59
+msgid "Menus & navigation"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:250
+msgid "Export"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:252
+#: includes/admin/class-menu-page.php:258
+msgid "Import"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:256
+msgid "Menu export file (.json)"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:257
+msgid "Every menu in the file is added as a new menu. Existing menus are not changed."
+msgstr ""
+
+#: includes/admin/class-menu-page.php:261
+msgid "Set up menus here, then choose which one the storefront header and footer use."
+msgstr ""
+
+#: includes/admin/class-menu-page.php:263
+msgid "New menu"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:268
+#: includes/admin/class-store-design.php:271
+msgid "Create"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:281
+msgid "Top-level items"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:282
+#: includes/admin/class-store-design.php:430
+msgid "Created by"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:289
+msgid "Edit"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:291
+msgid "Delete this menu?"
+msgstr ""
+
+#: includes/admin/class-menu-page.php:297
+msgid "Cannot be deleted"
 msgstr ""
 
 #: includes/admin/class-order-metabox.php:33
@@ -774,17 +1149,6 @@ msgstr ""
 #: includes/admin/class-product-panel.php:101
 #: includes/class-product-hover.php:37
 msgid "Custom image"
-msgstr ""
-
-#: includes/admin/class-product-panel.php:104
-#: includes/modules/class-blocks.php:239
-msgid "Choose image"
-msgstr ""
-
-#: includes/admin/class-product-panel.php:105
-#: includes/admin/class-store-design.php:355
-#: includes/modules/class-blocks.php:242
-msgid "Remove"
 msgstr ""
 
 #: includes/admin/class-product-panel.php:106
@@ -977,7 +1341,7 @@ msgid "A statement about the intended use of your products, shown on the storefr
 msgstr ""
 
 #: includes/admin/class-settings-page.php:102
-#: includes/admin/class-store-design.php:477
+#: includes/admin/class-store-design.php:513
 #: includes/class-checkout-ack.php:70
 msgid "Checkout confirmation"
 msgstr ""
@@ -1015,7 +1379,7 @@ msgid "Add tracking numbers on the order page with the \"Fulfill items\" button.
 msgstr ""
 
 #: includes/admin/class-settings-page.php:138
-#: includes/admin/class-store-design.php:475
+#: includes/admin/class-store-design.php:511
 msgid "Customer support button"
 msgstr ""
 
@@ -1073,308 +1437,279 @@ msgstr ""
 msgid "Bottom left"
 msgstr ""
 
-#: includes/admin/class-store-design.php:50
-#: includes/admin/class-store-design.php:193
+#: includes/admin/class-store-design.php:58
+#: includes/admin/class-store-design.php:229
 msgid "Theme design"
 msgstr ""
 
-#: includes/admin/class-store-design.php:51
-msgid "Menus & navigation"
-msgstr ""
-
-#: includes/admin/class-store-design.php:52
+#: includes/admin/class-store-design.php:60
 msgid "Custom pages"
 msgstr ""
 
-#: includes/admin/class-store-design.php:53
+#: includes/admin/class-store-design.php:61
 msgid "Homepage SEO"
 msgstr ""
 
-#: includes/admin/class-store-design.php:54
+#: includes/admin/class-store-design.php:62
 msgid "Domains"
 msgstr ""
 
-#: includes/admin/class-store-design.php:55
+#: includes/admin/class-store-design.php:63
 msgid "Campaign pages"
 msgstr ""
 
-#: includes/admin/class-store-design.php:61
-#: includes/admin/class-store-design.php:62
+#: includes/admin/class-store-design.php:69
+#: includes/admin/class-store-design.php:70
 msgid "Store design"
 msgstr ""
 
-#: includes/admin/class-store-design.php:104
-msgid "Sorry, you are not allowed to do that."
-msgstr ""
-
-#: includes/admin/class-store-design.php:162
+#: includes/admin/class-store-design.php:198
 msgid "Template details saved."
 msgstr ""
 
-#: includes/admin/class-store-design.php:163
+#: includes/admin/class-store-design.php:199
 msgid "Template created."
 msgstr ""
 
-#: includes/admin/class-store-design.php:164
+#: includes/admin/class-store-design.php:200
 msgid "Template copied. The copy is not used by the store until you set it as default or assign it to a domain."
 msgstr ""
 
-#: includes/admin/class-store-design.php:165
+#: includes/admin/class-store-design.php:201
 msgid "Store default template changed."
 msgstr ""
 
-#: includes/admin/class-store-design.php:166
+#: includes/admin/class-store-design.php:202
 msgid "Template moved to the trash."
 msgstr ""
 
-#: includes/admin/class-store-design.php:167
+#: includes/admin/class-store-design.php:203
 msgid "Domain template saved."
 msgstr ""
 
-#: includes/admin/class-store-design.php:168
+#: includes/admin/class-store-design.php:204
 msgid "Domain assignment removed. That domain now uses the store default template."
 msgstr ""
 
-#: includes/admin/class-store-design.php:169
-#: includes/admin/class-store-design.php:171
+#: includes/admin/class-store-design.php:205
+#: includes/admin/class-store-design.php:207
 #: includes/class-templates.php:307
 #: includes/class-templates.php:371
 msgid "Template not found."
 msgstr ""
 
-#: includes/admin/class-store-design.php:170
+#: includes/admin/class-store-design.php:206
 msgid "Something went wrong. Please try again."
 msgstr ""
 
-#: includes/admin/class-store-design.php:172
+#: includes/admin/class-store-design.php:208
 #: includes/class-templates.php:310
 msgid "The store default template cannot be deleted. Set another template as default first."
 msgstr ""
 
-#: includes/admin/class-store-design.php:173
+#: includes/admin/class-store-design.php:209
 #: includes/class-templates.php:313
 msgid "This template is assigned to a domain. Remove the domain assignment first."
 msgstr ""
 
-#: includes/admin/class-store-design.php:174
+#: includes/admin/class-store-design.php:210
 #: includes/class-templates.php:368
 msgid "Enter a valid domain name, for example shop.example.com."
 msgstr ""
 
-#: includes/admin/class-store-design.php:194
+#: includes/admin/class-store-design.php:230
 msgid "Template sources"
 msgstr ""
 
-#: includes/admin/class-store-design.php:195
+#: includes/admin/class-store-design.php:231
 msgid "My templates"
 msgstr ""
 
-#: includes/admin/class-store-design.php:203
+#: includes/admin/class-store-design.php:239
 msgid "Template in use"
 msgstr ""
 
-#: includes/admin/class-store-design.php:205
-#: includes/admin/class-store-design.php:275
+#: includes/admin/class-store-design.php:241
+#: includes/admin/class-store-design.php:311
 msgid "Store default template"
 msgstr ""
 
-#: includes/admin/class-store-design.php:206
-#: includes/admin/class-store-design.php:341
+#: includes/admin/class-store-design.php:242
+#: includes/admin/class-store-design.php:377
 msgid "Domain templates"
 msgstr ""
 
-#: includes/admin/class-store-design.php:209
+#: includes/admin/class-store-design.php:245
 msgid "This is the design customers see. Different domains can use different templates."
 msgstr ""
 
-#: includes/admin/class-store-design.php:210
+#: includes/admin/class-store-design.php:246
 msgid "A domain without its own template uses the store default template."
 msgstr ""
 
-#: includes/admin/class-store-design.php:227
+#: includes/admin/class-store-design.php:263
 msgid "My template library"
 msgstr ""
 
-#: includes/admin/class-store-design.php:229
+#: includes/admin/class-store-design.php:265
 msgid "New template"
 msgstr ""
 
-#: includes/admin/class-store-design.php:233
-#: includes/admin/class-store-design.php:391
-#: includes/admin/class-store-design.php:438
+#: includes/admin/class-store-design.php:269
+#: includes/admin/class-store-design.php:427
+#: includes/admin/class-store-design.php:474
 msgid "Template name"
 msgstr ""
 
-#: includes/admin/class-store-design.php:234
-#: includes/admin/class-store-design.php:393
-#: includes/admin/class-store-design.php:439
+#: includes/admin/class-store-design.php:270
+#: includes/admin/class-store-design.php:429
+#: includes/admin/class-store-design.php:475
 msgid "Note"
 msgstr ""
 
-#: includes/admin/class-store-design.php:235
-msgid "Create"
-msgstr ""
-
 #. translators: %s: date and time
-#: includes/admin/class-store-design.php:280
+#: includes/admin/class-store-design.php:316
 #, php-format
 msgid "Modified: %s"
 msgstr ""
 
-#: includes/admin/class-store-design.php:286
-#: includes/admin/class-store-design.php:426
+#: includes/admin/class-store-design.php:322
+#: includes/admin/class-store-design.php:462
 msgid "Design"
 msgstr ""
 
-#: includes/admin/class-store-design.php:287
-#: includes/admin/class-store-design.php:398
+#: includes/admin/class-store-design.php:323
+#: includes/admin/class-store-design.php:434
 msgid "Preview"
 msgstr ""
 
-#: includes/admin/class-store-design.php:303
+#: includes/admin/class-store-design.php:339
 msgid "Homepage not published"
 msgstr ""
 
-#: includes/admin/class-store-design.php:304
+#: includes/admin/class-store-design.php:340
 msgid "Visitors see the theme's original homepage. Open “Design”, check the draft, then publish."
 msgstr ""
 
-#: includes/admin/class-store-design.php:307
+#: includes/admin/class-store-design.php:343
 msgid "Published · unpublished changes"
 msgstr ""
 
 #. translators: %s: date and time
-#: includes/admin/class-store-design.php:309
+#: includes/admin/class-store-design.php:345
 #, php-format
 msgid "Visitors see the version published %s. Your newer draft is not live yet."
 msgstr ""
 
-#: includes/admin/class-store-design.php:314
+#: includes/admin/class-store-design.php:350
 msgid "Visitors see this design."
 msgstr ""
 
-#: includes/admin/class-store-design.php:342
+#: includes/admin/class-store-design.php:378
 msgid "Use this when several domains point to this store and each should show a different design. The domain must already reach this site (DNS and server settings); adding it here only chooses the template."
 msgstr ""
 
-#: includes/admin/class-store-design.php:344
-#: includes/admin/class-store-design.php:366
+#: includes/admin/class-store-design.php:380
+#: includes/admin/class-store-design.php:402
 msgid "Domain"
 msgstr ""
 
-#: includes/admin/class-store-design.php:344
-#: includes/admin/class-store-design.php:367
+#: includes/admin/class-store-design.php:380
+#: includes/admin/class-store-design.php:403
 msgid "Template"
 msgstr ""
 
-#: includes/admin/class-store-design.php:344
-#: includes/admin/class-store-design.php:397
-msgid "Actions"
-msgstr ""
-
-#: includes/admin/class-store-design.php:347
+#: includes/admin/class-store-design.php:383
 msgid "No domain has its own template. All domains use the store default template."
 msgstr ""
 
-#: includes/admin/class-store-design.php:355
+#: includes/admin/class-store-design.php:391
 msgid "Remove this domain assignment? The domain will use the store default template."
 msgstr ""
 
-#: includes/admin/class-store-design.php:374
+#: includes/admin/class-store-design.php:410
 msgid "Assign"
 msgstr ""
 
-#: includes/admin/class-store-design.php:377
+#: includes/admin/class-store-design.php:413
 msgid "Only administrators can change domain templates."
 msgstr ""
 
-#: includes/admin/class-store-design.php:392
+#: includes/admin/class-store-design.php:428
 msgid "Theme"
 msgstr ""
 
-#: includes/admin/class-store-design.php:394
-msgid "Created by"
-msgstr ""
-
-#: includes/admin/class-store-design.php:396
+#: includes/admin/class-store-design.php:432
 msgid "Modified"
 msgstr ""
 
-#: includes/admin/class-store-design.php:413
+#: includes/admin/class-store-design.php:449
 msgid "In use"
 msgstr ""
 
-#: includes/admin/class-store-design.php:428
+#: includes/admin/class-store-design.php:464
 msgid "More actions"
 msgstr ""
 
-#: includes/admin/class-store-design.php:431
+#: includes/admin/class-store-design.php:467
 msgid "Use this template as the store default? Customers will see it on all domains without their own template."
 msgstr ""
 
-#: includes/admin/class-store-design.php:431
+#: includes/admin/class-store-design.php:467
 msgid "Set as store default"
 msgstr ""
 
-#: includes/admin/class-store-design.php:440
+#: includes/admin/class-store-design.php:476
 msgid "Save details"
 msgstr ""
 
-#: includes/admin/class-store-design.php:443
+#: includes/admin/class-store-design.php:479
 msgid "Move this template to the trash? Its designs are removed with it."
 msgstr ""
 
 #. translators: %s: template name
-#: includes/admin/class-store-design.php:449
+#: includes/admin/class-store-design.php:485
 #, php-format
 msgid "Preview %s"
 msgstr ""
 
-#: includes/admin/class-store-design.php:464
+#: includes/admin/class-store-design.php:500
 msgid "Built for the active theme"
 msgstr ""
 
-#: includes/admin/class-store-design.php:464
+#: includes/admin/class-store-design.php:500
 msgid "Built for a different theme"
 msgstr ""
 
-#: includes/admin/class-store-design.php:476
+#: includes/admin/class-store-design.php:512
 msgid "Shipment tracking"
 msgstr ""
 
-#: includes/admin/class-store-design.php:478
+#: includes/admin/class-store-design.php:514
 msgid "Batch reports"
 msgstr ""
 
-#: includes/admin/class-store-design.php:482
+#: includes/admin/class-store-design.php:518
 msgid "Recommended apps"
 msgstr ""
 
-#: includes/admin/class-store-design.php:489
+#: includes/admin/class-store-design.php:525
 msgid "Enabled"
 msgstr ""
 
-#: includes/admin/class-store-design.php:507
-msgid "Edit the header and footer menus: links, order and sub-menus."
-msgstr ""
-
-#: includes/admin/class-store-design.php:508
-msgid "Build extra pages (About, Shipping, FAQ…) from the same modules as the homepage."
-msgstr ""
-
-#: includes/admin/class-store-design.php:509
+#: includes/admin/class-store-design.php:543
 msgid "Homepage title, description and social sharing image for search engines."
 msgstr ""
 
-#: includes/admin/class-store-design.php:510
+#: includes/admin/class-store-design.php:544
 msgid "Bind your own domain and check HTTPS once the site is on a server."
 msgstr ""
 
-#: includes/admin/class-store-design.php:511
+#: includes/admin/class-store-design.php:545
 msgid "Landing pages for promotions, built from modules, with their own address."
 msgstr ""
 
-#: includes/admin/class-store-design.php:518
+#: includes/admin/class-store-design.php:552
 msgid "Coming soon"
 msgstr ""
 
@@ -1406,6 +1741,16 @@ msgstr ""
 
 #: includes/api/class-layout-controller.php:200
 msgid "There is no published version to go back to."
+msgstr ""
+
+#: includes/api/class-menu-controller.php:57
+msgid "Sorry, you are not allowed to edit menus."
+msgstr ""
+
+#: includes/api/class-menu-controller.php:60
+#: includes/class-menus.php:290
+#: includes/class-menus.php:642
+msgid "Menu not found."
 msgstr ""
 
 #: includes/api/class-rest-controller.php:121
@@ -1466,6 +1811,214 @@ msgstr ""
 msgid "Accepted at %s (UTC)"
 msgstr ""
 
+#: includes/class-custom-pages.php:53
+msgid "Store name"
+msgstr ""
+
+#: includes/class-custom-pages.php:54
+msgid "Store address"
+msgstr ""
+
+#: includes/class-custom-pages.php:55
+msgid "Store domain"
+msgstr ""
+
+#: includes/class-custom-pages.php:56
+msgid "Support email (Settings → support button)"
+msgstr ""
+
+#: includes/class-custom-pages.php:57
+msgid "Support WhatsApp"
+msgstr ""
+
+#: includes/class-custom-pages.php:58
+msgid "Support Telegram"
+msgstr ""
+
+#: includes/class-custom-pages.php:59
+msgid "Current year"
+msgstr ""
+
+#: includes/class-custom-pages.php:60
+msgid "Today’s date"
+msgstr ""
+
+#: includes/class-custom-pages.php:122
+msgid "VialCove page options"
+msgstr ""
+
+#: includes/class-custom-pages.php:129
+msgid "Use as checkout terms"
+msgstr ""
+
+#: includes/class-custom-pages.php:131
+msgid "Published pages marked as checkout terms are linked on the checkout page (for example shipping, returns, terms and privacy)."
+msgstr ""
+
+#: includes/class-custom-pages.php:133
+msgid "How to insert variables"
+msgstr ""
+
+#: includes/class-custom-pages.php:134
+msgid "Type a variable into the page content. It shows the current store information, so you do not have to edit every page when it changes."
+msgstr ""
+
+#: includes/class-custom-pages.php:137
+msgid "(not set)"
+msgstr ""
+
+#: includes/class-custom-pages.php:140
+msgid "Add link=\"1\" to support_email or store_url to show a clickable link."
+msgstr ""
+
+#: includes/class-custom-pages.php:162
+msgid "Checkout terms"
+msgstr ""
+
+#: includes/class-custom-pages.php:311
+msgid "Generate common policies"
+msgstr ""
+
+#: includes/class-custom-pages.php:314
+msgid "Creates draft pages with a heading outline and notes to fill in. They are not legal advice: write the real policy and have it reviewed before publishing. Existing pages of the same kind are kept."
+msgstr ""
+
+#: includes/class-custom-pages.php:320
+msgid "already exists"
+msgstr ""
+
+#: includes/class-custom-pages.php:322
+msgid "Create drafts"
+msgstr ""
+
+#. translators: %d: number of pages
+#: includes/class-custom-pages.php:345
+#, php-format
+msgid "Created %d draft. Fill in every bracketed note, have it reviewed, then publish."
+msgid_plural "Created %d drafts. Fill in every bracketed note, have them reviewed, then publish."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of pages
+#: includes/class-custom-pages.php:345
+msgid "No new drafts: those pages already exist."
+msgstr ""
+
+#: includes/class-menus.php:72
+#: includes/class-menus.php:203
+msgid "Header menu"
+msgstr ""
+
+#: includes/class-menus.php:75
+#: includes/class-menus.php:203
+msgid "Footer menu"
+msgstr ""
+
+#: includes/class-menus.php:85
+#: includes/class-menus.php:293
+msgid "The header and footer menus cannot be deleted."
+msgstr ""
+
+#: includes/class-menus.php:96
+msgid "None (heading only)"
+msgstr ""
+
+#: includes/class-menus.php:98
+msgid "All products"
+msgstr ""
+
+#: includes/class-menus.php:99
+msgid "Product category"
+msgstr ""
+
+#: includes/class-menus.php:100
+msgid "Product page"
+msgstr ""
+
+#: includes/class-menus.php:101
+msgid "Custom page"
+msgstr ""
+
+#: includes/class-menus.php:102
+msgid "Blog post"
+msgstr ""
+
+#: includes/class-menus.php:103
+msgid "Cart"
+msgstr ""
+
+#: includes/class-menus.php:104
+msgid "My account"
+msgstr ""
+
+#: includes/class-menus.php:105
+msgid "My orders / order tracking"
+msgstr ""
+
+#: includes/class-menus.php:106
+msgid "Log in"
+msgstr ""
+
+#: includes/class-menus.php:107
+msgid "Register"
+msgstr ""
+
+#: includes/class-menus.php:108
+msgid "Forgot password"
+msgstr ""
+
+#: includes/class-menus.php:109
+msgid "Product search"
+msgstr ""
+
+#: includes/class-menus.php:110
+msgid "Custom URL"
+msgstr ""
+
+#: includes/class-menus.php:276
+#: includes/class-menus.php:650
+msgid "Please enter a menu name."
+msgstr ""
+
+#. translators: %d: maximum number of items
+#: includes/class-menus.php:568
+#, php-format
+msgid "A menu can have at most %d items."
+msgstr ""
+
+#. translators: %s: menu item name
+#: includes/class-menus.php:594
+#, php-format
+msgid "“%s”: the linked page no longer exists. Choose another link."
+msgstr ""
+
+#. translators: %s: menu item name
+#: includes/class-menus.php:594
+msgid "(untitled)"
+msgstr ""
+
+#: includes/class-menus.php:602
+msgid "Every menu item needs a name."
+msgstr ""
+
+#: includes/class-menus.php:659
+msgid "Another menu already uses this name."
+msgstr ""
+
+#. translators: %s: page title
+#: includes/class-menus.php:757
+#, php-format
+msgid "%s (not published)"
+msgstr ""
+
+#: includes/class-menus.php:835
+msgid "This file is not a menu export from this plugin."
+msgstr ""
+
+#: includes/class-menus.php:850
+msgid "Imported menu"
+msgstr ""
+
 #. translators: 1: product name, 2: batch number or "none"
 #: includes/class-order-batches.php:108
 #, php-format
@@ -1487,7 +2040,7 @@ msgstr ""
 msgid "Batch: %s"
 msgstr ""
 
-#: includes/class-plugin.php:86
+#: includes/class-plugin.php:90
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr ""
 
@@ -1653,14 +2206,6 @@ msgstr ""
 msgid "Add"
 msgstr ""
 
-#: includes/modules/class-blocks.php:232
-msgid "Move up"
-msgstr ""
-
-#: includes/modules/class-blocks.php:233
-msgid "Move down"
-msgstr ""
-
 #: includes/modules/class-blocks.php:236
 msgid "hidden"
 msgstr ""
@@ -1793,14 +2338,6 @@ msgstr ""
 
 #: includes/modules/class-fallback.php:615
 msgid "Choose a video"
-msgstr ""
-
-#: includes/modules/class-fallback.php:672
-#: includes/modules/class-registry.php:329
-#: includes/modules/class-registry.php:704
-#: includes/modules/class-registry.php:821
-#: includes/modules/class-registry.php:1098
-msgid "Icon"
 msgstr ""
 
 #: includes/modules/class-fallback.php:706
@@ -1988,10 +2525,6 @@ msgstr ""
 
 #: includes/modules/class-registry.php:133
 msgid "Button effect"
-msgstr ""
-
-#: includes/modules/class-registry.php:137
-msgid "None"
 msgstr ""
 
 #: includes/modules/class-registry.php:138
@@ -2274,22 +2807,6 @@ msgstr ""
 #: includes/modules/class-registry.php:812
 #: includes/modules/class-registry.php:1028
 msgid "Overlay opacity (%)"
-msgstr ""
-
-#: includes/modules/class-registry.php:347
-#: includes/modules/class-registry.php:384
-#: includes/modules/class-registry.php:491
-#: includes/modules/class-registry.php:511
-#: includes/modules/class-registry.php:658
-#: includes/modules/class-registry.php:775
-#: includes/modules/class-registry.php:879
-#: includes/modules/class-registry.php:914
-#: includes/modules/class-registry.php:1080
-#: includes/modules/class-registry.php:1121
-#: includes/modules/class-registry.php:1228
-#: includes/modules/class-registry.php:1254
-#: includes/modules/class-registry.php:1268
-msgid "Text color"
 msgstr ""
 
 #: includes/modules/class-registry.php:359

@@ -71,3 +71,27 @@ function peptide_core_get_product_hover( $product ): array {
 	$product = $product instanceof WC_Product ? $product : wc_get_product( (int) $product );
 	return $product ? \PeptideCore\Product_Hover::for_product( $product ) : array( 'mode' => 'none', 'requested' => 'none', 'image' => null, 'report' => null );
 }
+
+/**
+ * 页头 / 页尾菜单（MENU-NAV-01），在“店铺装修 → 菜单导航”编辑。该位置没有菜单时返回 null，主题继续显示自己的默认链接。
+ * 最多两级；已删除或未发布的商品 / 页面 / 分类不会出现。每一项：
+ * id, title, description, type（home / shop / category / product / page / post / cart / account / orders / login /
+ * register / lost_password / search / custom / none）, object_id, url（none 时为空字符串，只是标题）,
+ * target（'' / '_self' / '_blank'）, rel（例如 'nofollow noopener'）, attr_title, style（已整理好的行内样式，可直接放进 style 属性）,
+ * icon（null 或 {url, width, height, alt}）, current（是否当前页面）, children（同样结构的二级项）。
+ *
+ * @param string $location header | footer
+ * @return array<int,array<string,mixed>>|null
+ */
+function peptide_core_get_menu( string $location = 'header' ): ?array {
+	return \PeptideCore\Menus::public_tree( $location );
+}
+
+/**
+ * 设为“结账条款”并已发布的页面（CUSTOM-PAGES-01），在页面编辑页右侧勾选。主题可以把它们链接在结账页。
+ *
+ * @return array<int,array{id:int,title:string,url:string}>
+ */
+function peptide_core_get_checkout_terms(): array {
+	return \PeptideCore\Custom_Pages::checkout_terms();
+}

@@ -34,6 +34,9 @@ final class Plugin {
 		Modules\Layout::register_hooks();
 		Modules\Assets::register_hooks();
 		Api\Layout_Controller::register_hooks();
+		Menus::register_hooks();
+		Custom_Pages::register_hooks();
+		Api\Menu_Controller::register_hooks();
 		add_action( 'init', array( Installer::class, 'maybe_upgrade' ), 5 );
 		Api\Rest_Controller::register_hooks();
 		Api\Store_Api::register_hooks();
@@ -52,6 +55,7 @@ final class Plugin {
 			Admin\Store_Design::register_hooks();
 			Admin\Layout_Editor::register_hooks();
 			Admin\Design_Editor::register_hooks();
+			Admin\Menu_Page::register_hooks();
 		}
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
