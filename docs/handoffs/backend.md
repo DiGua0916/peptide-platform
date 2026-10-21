@@ -691,5 +691,5 @@
   - 过时的说明“模块编辑器正在建设中”换成真实的首页发布状态标签：首页未发布 / 已发布 + 时间 / 已发布 · 有未发布的修改，后面附一句说明；
   - 模板库新增“首页”状态列；
   - 推荐应用改为 auto-fit 铺满一行。
-- 检查：smoke-store-design 37 项通过；十四套测试全部通过；服务器端渲染确认有状态标签和 2 个缩放 iframe，旧说明已经去掉。**没有做浏览器视觉检查**（内置浏览器的登录已过期）。
+- 检查：smoke-store-design 37 项通过；服务器端渲染确认有状态标签和 2 个缩放 iframe，旧说明已经去掉。第一次跑十四套测试时 smoke-modules 有 2 项失败：Codex 已经交了 product-collection 和 faq 的模板，测试却还在检查插件默认样式的输出。改为直接测默认样式（`$fb`）后，49 项全部通过。主题现在有 9 个积木模板：carousel、cta、faq、media-text-list、media-text、product-collection、report-feature、rich-text、section-heading。**没有做浏览器视觉检查**（内置浏览器的登录已过期）。
 - 另外发现：**Local 自动升级到 10.2.0，安装程序把 `%LOCALAPPDATA%\Programs\Local` 的目录联接换成了真实目录**（约 2.4 GB 在 C 盘），D 盘的 `D:\Codex\LocalWP\app` 已经空了。数据目录 `%APPDATA%\Local` → `D:\Codex\LocalWP\data` 的联接仍然正常。Claude 的 wp.sh 暂时改为使用 C 盘的 wp-cli.phar。是否重新迁到 D 盘，等用户决定。

@@ -30,6 +30,9 @@ set_error_handler(
 	}
 );
 
+// 检查插件自带的默认样式时用 $fb（主题已有模板时，Renderer::render 会改用主题模板）。
+$fb = static fn( string $type, array $attrs ): string => Fallback::render( Renderer::normalize( $type, $attrs ), 'public' );
+
 $all = Registry::all();
 $ok( '35 modules registered in the library', 35 === count( $all ) );
 $ok( '34 basic blocks and 1 product block', 34 === count( array_filter( $all, static fn( $d ) => 'basic' === $d['category'] ) ) && 1 === count( array_filter( $all, static fn( $d ) => 'product' === $d['category'] ) ) );
@@ -327,11 +330,9 @@ if ( $cat ) {
 	$by_cat = \PeptideCore\Modules\Products::for_module( Renderer::normalize( 'product_collection', array( 'settings' => array( 'source' => 'category', 'category' => $cat[0]->term_id, 'limit' => 24 ) ) ) );
 	$ok( 'category source returns only that category', $by_cat && array() === array_filter( $by_cat, static fn( $p ) => ! has_term( $cat[0]->term_id, 'product_cat', $p->get_id() ) ) );
 }
-$coll = Renderer::render( 'product_collection', array( 'moduleId' => 'pc-test', 'settings' => array( 'title' => 'Explore our products.', 'link' => array( 'label' => 'View all', 'href' => '/shop/' ) ) ), 'public' );
+$coll = $fb( 'product_collection', array( 'moduleId' => 'pc-test', 'settings' => array( 'title' => 'Explore our products.', 'link' => array( 'label' => 'View all', 'href' => '/shop/' ) ) ) );
 $ok( 'collection renders products with live names and the text link', str_contains( $coll, esc_html( wc_get_product( $theme_ids[0] )->get_name() ) ) && str_contains( $coll, 'vc-text-link' ) );
 
-// 以下几项检查插件自带的默认样式（主题已有模板时，Renderer 会改用主题模板）。
-$fb   = static fn( string $type, array $attrs ): string => Fallback::render( Renderer::normalize( $type, $attrs ), 'public' );
 $hero = $fb(
 	'carousel',
 	array(
@@ -346,7 +347,7 @@ $ok( 'first slide title is the page H1, others H2', str_contains( $hero, '<h1 cl
 $ok( 'slides have accessible names and floating cards', str_contains( $hero, 'aria-label="1 / 2: Collection"' ) && str_contains( $hero, 'vc-slide__card' ) && str_contains( $hero, 'vc-slide--split' ) );
 $rf = Renderer::render( 'report_feature', array( 'moduleId' => 'rf-test', 'settings' => array( 'title' => 'Details you can', 'titleAccent' => 'look into.' ), 'items' => array( array( 'id' => 'r-one', 'settings' => array( 'label' => 'Product', 'value' => 'Linked to its batch' ) ) ) ), 'public' );
 $ok( 'report highlight renders title and card rows', str_contains( $rf, '<em>look into.</em>' ) && str_contains( $rf, 'Linked to its batch' ) );
-$faq2 = Renderer::render( 'faq', array( 'moduleId' => 'faq-two', 'settings' => array( 'eyebrow' => 'A LITTLE MORE CLARITY', 'title' => 'Good questions.', 'titleAccent' => 'Clear answers.', 'link' => array( 'label' => 'Explore', 'href' => '/reports/' ) ) ), 'public' );
+$faq2 = $fb( 'faq', array( 'moduleId' => 'faq-two', 'settings' => array( 'eyebrow' => 'A LITTLE MORE CLARITY', 'title' => 'Good questions.', 'titleAccent' => 'Clear answers.', 'link' => array( 'label' => 'Explore', 'href' => '/reports/' ) ) ) );
 $ok( 'faq has eyebrow, accent title and link', str_contains( $faq2, 'A LITTLE MORE CLARITY' ) && str_contains( $faq2, '<em>Clear answers.</em>' ) && str_contains( $faq2, 'vc-text-link' ) );
 
 $sh = $fb( 'section_heading', array( 'moduleId' => 'sh-test', 'settings' => array( 'eyebrow' => 'THE VIALCOVE STORY', 'title' => 'Three places.', 'titleAccent' => 'One connected vision.' ) ) );
