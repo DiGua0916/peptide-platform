@@ -401,7 +401,7 @@ $cards = $fb(
 		),
 	)
 );
-$ok( 'cards default: on the image on desktop, below the image on mobile', str_contains( $cards, 'vc-cards-d-overlay vc-cards-m-below' ) );
+$ok( 'cards default: on the image on desktop, hidden on mobile (phones are too small)', str_contains( $cards, 'vc-cards-d-overlay vc-cards-m-hidden' ) );
 $ok( 'dragged card keeps its position; others stay automatic', str_contains( $cards, '--x:10%;--y:20%' ) && str_contains( $cards, 'is-placed-d' ) && 1 === substr_count( $cards, 'is-placed-d' ) );
 $ok( 'cards are draggable inside the image area', str_contains( $cards, 'data-pc-drag-area' ) && str_contains( $cards, 'data-module-item="card-a1" data-pc-drag' ) && str_contains( $cards, 'data-module-item="card-b1" data-pc-drag' ) );
 

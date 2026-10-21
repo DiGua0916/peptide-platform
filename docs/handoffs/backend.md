@@ -730,3 +730,11 @@
   - 改为用 explorer.exe 打开后，startSite 成功。
 - 核对：首页和商店页 200；96 个商品；订单 #54 refunded、#55 completed，都没有变化；首页草稿 20 个积木。
 - wp.sh 已经改回使用 `D:/Codex/LocalWP/app/resources/.../wp-cli.phar`（经联接访问，C 盘入口仍然有效）。
+
+### EDIT-BLOCKS-08：手机不显示浮动卡片 + 去掉轮播圆点 · 2026-10-22 · Claude
+
+- 用户决定：手机屏幕约 390 px，三张浮动卡片压在图上会挡住产品图，排在图下又会让首屏超过一整屏，所以**手机默认不显示**。轮播每张的 `cardLayout` 默认值改为 `{desktop: overlay, mobile: hidden}`。用户仍然可以在手机视图里把某一张改成“压在图片上 / 放在图片下方”。
+- 首页草稿 #685 原来没有保存 cardLayout，所以新的默认值直接生效，不需要改数据。
+- 轮播下方的圆点：这是轮播图积木自带的切换圆点（播放设置 → 显示圆点），不是写死的；删除轮播图积木时会一起删除。设计器里选中“轮播 · 第 N 张”时高亮框只框住这一张幻灯片，所以圆点在框外；选中整个轮播积木时圆点在框内。按用户要求在草稿 #685 和导入模板 `home-2026-10-20.json` 中把 `pagination` 改为 false。
+- 测试：smoke-modules 第 404 项改为检查 `vc-cards-m-hidden`；十四套共 338 项通过。
+- 需要 Codex：轮播模板在 mobile 的 cardLayout 为 hidden 时不输出卡片（或者加 class 隐藏）；`pagination` 为 false 时不输出圆点（模板已经支持）。

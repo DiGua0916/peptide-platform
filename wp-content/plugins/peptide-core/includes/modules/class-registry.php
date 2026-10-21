@@ -316,7 +316,7 @@ final class Registry {
 								'hidden'  => __( 'Hidden', 'peptide-core' ),
 							),
 							'content',
-							array( 'device' => true, 'default' => array( 'desktop' => 'overlay', 'mobile' => 'below' ) )
+							array( 'device' => true, 'default' => array( 'desktop' => 'overlay', 'mobile' => 'hidden' ) )
 						),
 						Fields::f(
 							'repeater',

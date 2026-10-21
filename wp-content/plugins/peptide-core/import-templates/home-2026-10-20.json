@@ -18,7 +18,7 @@
 				"settings": {
 					"autoplay": true,
 					"intervalMs": 6500,
-					"pagination": true,
+					"pagination": false,
 					"arrows": false,
 					"height": "auto",
 					"fullWidth": false,
