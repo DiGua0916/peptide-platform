@@ -20,6 +20,9 @@ final class Store_Design {
 
 	public const SLUG = 'pc-store-design';
 
+	/** “自定义页面”直接打开 WordPress 的页面列表（用户 2026-10-22 要求把左侧的“页面”菜单移到这里）。 */
+	public const PAGES_SLUG = 'edit.php?post_type=page';
+
 	/** 表单动作 => 需要的能力。 */
 	private const ACTIONS = array(
 		'pc_design_edit'          => Templates::CAP_EDIT,
@@ -34,6 +37,9 @@ final class Store_Design {
 
 	public static function register_hooks(): void {
 		add_action( 'admin_menu', array( self::class, 'add_menu' ), 55 );
+		add_action( 'admin_menu', array( self::class, 'move_pages_menu' ), 999 );
+		add_filter( 'parent_file', array( self::class, 'pages_parent_file' ) );
+		add_filter( 'submenu_file', array( self::class, 'pages_submenu_file' ), 10, 2 );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
 		foreach ( array_keys( self::ACTIONS ) as $action ) {
 			add_action( 'admin_post_' . $action, array( self::class, 'handle' ) );
@@ -49,7 +55,7 @@ final class Store_Design {
 		return array(
 			self::SLUG               => __( 'Theme design', 'peptide-core' ),
 			self::SLUG . '-menus'    => __( 'Menus & navigation', 'peptide-core' ),
-			self::SLUG . '-pages'    => __( 'Custom pages', 'peptide-core' ),
+			self::PAGES_SLUG         => __( 'Custom pages', 'peptide-core' ),
 			self::SLUG . '-seo'      => __( 'Homepage SEO', 'peptide-core' ),
 			self::SLUG . '-domains'  => __( 'Domains', 'peptide-core' ),
 			self::SLUG . '-campaign' => __( 'Campaign pages', 'peptide-core' ),
@@ -67,6 +73,11 @@ final class Store_Design {
 			56
 		);
 		foreach ( self::pages() as $slug => $title ) {
+			if ( self::PAGES_SLUG === $slug ) {
+				// 菜单链接直接指向页面列表；权限按 WordPress 自己的“编辑页面”能力。
+				add_submenu_page( self::SLUG, $title, $title, 'edit_pages', $slug );
+				continue;
+			}
 			add_submenu_page(
 				self::SLUG,
 				$title,
@@ -76,6 +87,25 @@ final class Store_Design {
 				self::SLUG === $slug ? array( self::class, 'render_theme_design' ) : array( self::class, 'render_placeholder' )
 			);
 		}
+	}
+
+	/** 去掉左侧顶层的“页面”菜单。页面的列表、新建、编辑地址不变，只是入口移到“店铺装修 → 自定义页面”。 */
+	public static function move_pages_menu(): void {
+		remove_menu_page( self::PAGES_SLUG );
+	}
+
+	private static function on_pages_screen(): bool {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		return $screen && 'page' === $screen->post_type && in_array( $screen->base, array( 'edit', 'post' ), true );
+	}
+
+	/** 在页面列表、新建或编辑页面时，左侧菜单展开“店铺装修”并选中“自定义页面”。 */
+	public static function pages_parent_file( $parent_file ) {
+		return self::on_pages_screen() ? self::SLUG : $parent_file;
+	}
+
+	public static function pages_submenu_file( $submenu_file, $parent_file = '' ) {
+		return self::on_pages_screen() ? self::PAGES_SLUG : $submenu_file;
 	}
 
 	public static function enqueue( string $hook ): void {
@@ -505,7 +535,6 @@ final class Store_Design {
 		$slug = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$desc = array(
 			self::SLUG . '-menus'    => __( 'Edit the header and footer menus: links, order and sub-menus.', 'peptide-core' ),
-			self::SLUG . '-pages'    => __( 'Build extra pages (About, Shipping, FAQ…) from the same modules as the homepage.', 'peptide-core' ),
 			self::SLUG . '-seo'      => __( 'Homepage title, description and social sharing image for search engines.', 'peptide-core' ),
 			self::SLUG . '-domains'  => __( 'Bind your own domain and check HTTPS once the site is on a server.', 'peptide-core' ),
 			self::SLUG . '-campaign' => __( 'Landing pages for promotions, built from modules, with their own address.', 'peptide-core' ),
