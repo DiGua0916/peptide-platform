@@ -715,3 +715,18 @@
   - 插件默认样式已经实现三种放置方式和定位；**Codex 的模板需要支持**（见群消息）。
 - **细节**：预览 iframe 隐藏滚动条（仍然可以滚动）；积木列表里空白积木块不再显示高度。其他积木名后面仍然带标题，用来区分几个同名的“图文”。
 - 测试：smoke-modules 58 项（新增手机版设置 7 项、浮动卡片 3 项）；十四套共 **338 项全部通过**。**没有做浏览器实测**（内置浏览器的登录已过期）。
+
+### ENV：Local 程序搬回 D 盘 + 以后自动搬回 · 2026-10-22 · Claude
+
+- 原因：Local 自动升级到 10.2.0，安装程序把 `%LOCALAPPDATA%\Programs\Local` 的目录联接换成了 C 盘上的真实目录（约 2.4 GB）。用户要求搬回 D 盘，并且以后检测到时自动搬回，不需要询问。
+- 新脚本 `D:\Codex\LocalWP\tools\relocate-local.ps1`（UTF-8 BOM，日志 `relocate-local.log`）：
+  - 已经是联接时直接退出；
+  - 是真实目录时：robocopy 镜像到 `D:\Codex\LocalWP\app`，核对文件数和总字节数一致 → C 盘目录改名备份 → 建联接并确认能找到 Local.exe → 删除备份。失败时还原。
+  - `-Auto` 模式：记下正在运行的网站并通过 GraphQL 停止 → 退出 Local → 等 mysqld、nginx、php-cgi 等后台进程退干净 → 搬家 → **用 explorer.exe 重新打开 Local**（避免随脚本一起退出）→ 启动原来在运行的网站。Local 正在升级（Update / Squirrel）时跳过。
+- 计划任务“VialCove - keep Local on D drive”（当前用户，登录时运行 + 每 30 分钟运行一次，参数 `-Auto`）。已经试运行一次，结果 0。
+- 这次手动执行的过程：
+  - stopSite → 脚本 `-StopLocal` → 3560 个文件、2,365 MB 核对一致，联接已建好；
+  - 第一次重新打开 Local 时，我是从工具的 shell 里启动的，工具结束后 Local 跟着退出了，同时数据库报了一次 “ibdata1 must be writable”（上一个进程还没完全退出）；
+  - 改为用 explorer.exe 打开后，startSite 成功。
+- 核对：首页和商店页 200；96 个商品；订单 #54 refunded、#55 completed，都没有变化；首页草稿 20 个积木。
+- wp.sh 已经改回使用 `D:/Codex/LocalWP/app/resources/.../wp-cli.phar`（经联接访问，C 盘入口仍然有效）。
