@@ -597,19 +597,25 @@
 						pendingItemRef.current = item && m.contains( item ) ? item.getAttribute( 'data-module-item' ) : null;
 						tabState[ 1 ]( 'modules' );
 						setSelected( m.id.replace( /^vc-/, '' ) );
-						if ( pendingItemRef.current ) {
-							openItemState[ 1 ]( pendingItemRef.current );
-						}
+						// 点同一个积木里不属于任何条目的地方：取消锁定条目，回到整个积木。
+						openItemState[ 1 ]( pendingItemRef.current );
 						return;
 					}
 					if ( t.closest && t.closest( 'footer' ) ) {
 						setSelected( 'footer' );
 					} else if ( t.closest && t.closest( 'header' ) ) {
 						setSelected( 'header' );
+					} else {
+						clearRef.current();
 					}
 				},
 				true
 			);
+			doc.addEventListener( 'keydown', function ( e ) {
+				if ( 'Escape' === e.key ) {
+					clearRef.current();
+				}
+			} );
 			highlight( false );
 		}
 
@@ -660,6 +666,27 @@
 				setModules( next );
 			}
 		};
+
+		// 点空白处 / 按 Esc：取消选中，高亮框消失。
+		function clearSelection() {
+			pendingItemRef.current = null;
+			setSelected( null );
+			openItemState[ 1 ]( null );
+		}
+		var clearRef = useRef( clearSelection );
+		clearRef.current = clearSelection;
+
+		useEffect( function () {
+			function onKey( e ) {
+				if ( 'Escape' === e.key && ! e.defaultPrevented && ! document.querySelector( '.components-modal__frame, .media-modal' ) ) {
+					clearRef.current();
+				}
+			}
+			document.addEventListener( 'keydown', onKey );
+			return function () {
+				document.removeEventListener( 'keydown', onKey );
+			};
+		}, [] );
 
 		// 换了积木：关闭之前展开的条目（从预览里点某一项时保留那一项）。
 		useEffect(
@@ -840,7 +867,16 @@
 
 		var list = el(
 			'div',
-			{ className: 'pc-de-list', role: 'list' },
+			{
+				className: 'pc-de-list',
+				role: 'list',
+				// 点积木列表下方的空白：取消选中。
+				onClick: function ( e ) {
+					if ( e.target === e.currentTarget ) {
+						clearSelection();
+					}
+				},
+			},
 			pinned( 'header', S.header ),
 			modules.length
 				? null
@@ -1089,7 +1125,15 @@
 
 		var preview = el(
 			'main',
-			{ className: 'pc-de-preview' },
+			{
+				className: 'pc-de-preview',
+				// 点预览四周的灰色空白（不是预览页面本身）：取消选中。
+				onClick: function ( e ) {
+					if ( ! e.target.closest( 'iframe, button, a' ) ) {
+						clearSelection();
+					}
+				},
+			},
 			el(
 				'div',
 				{ className: 'pc-de-frame pc-de-frame--' + device },
