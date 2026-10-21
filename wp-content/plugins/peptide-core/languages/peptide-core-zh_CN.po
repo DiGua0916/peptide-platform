@@ -11,7 +11,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-20T17:08:31+00:00\n"
+"POT-Creation-Date: 2026-10-21T18:04:47+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -347,6 +347,7 @@ msgid "Design editor"
 msgstr "装修编辑器"
 
 #: includes/admin/class-design-editor.php:113
+#: includes/admin/class-store-design.php:395
 #: includes/class-templates.php:49
 msgid "Homepage"
 msgstr "首页"
@@ -439,6 +440,7 @@ msgstr "未发布：访客看到的是主题原来的页面"
 
 #. translators: %s: date and time
 #: includes/admin/class-design-editor.php:138
+#: includes/admin/class-store-design.php:313
 #, php-format
 msgid "Published %s"
 msgstr "已发布 %s"
@@ -502,7 +504,7 @@ msgid "Click a card to add it below the selected block."
 msgstr "点击卡片，添加到当前选中积木的下面。"
 
 #: includes/admin/class-design-editor.php:153
-#: includes/admin/class-store-design.php:386
+#: includes/admin/class-store-design.php:433
 #: includes/modules/class-blocks.php:225
 msgid "Duplicate"
 msgstr "复制"
@@ -518,7 +520,7 @@ msgid "Show"
 msgstr "显示"
 
 #: includes/admin/class-design-editor.php:156
-#: includes/admin/class-store-design.php:396
+#: includes/admin/class-store-design.php:443
 #: includes/modules/class-blocks.php:226
 msgid "Delete"
 msgstr "删除"
@@ -766,7 +768,7 @@ msgid "Choose image"
 msgstr "选择图片"
 
 #: includes/admin/class-product-panel.php:105
-#: includes/admin/class-store-design.php:310
+#: includes/admin/class-store-design.php:355
 #: includes/modules/class-blocks.php:237
 msgid "Remove"
 msgstr "移除"
@@ -961,7 +963,7 @@ msgid "A statement about the intended use of your products, shown on the storefr
 msgstr "说明产品用途的声明，显示在网站前台；留空则不显示。可使用简单 HTML（链接、加粗）。内容由你决定，请确保准确并符合法规。"
 
 #: includes/admin/class-settings-page.php:102
-#: includes/admin/class-store-design.php:430
+#: includes/admin/class-store-design.php:477
 #: includes/class-checkout-ack.php:70
 msgid "Checkout confirmation"
 msgstr "结账确认"
@@ -999,7 +1001,7 @@ msgid "Add tracking numbers on the order page with the \"Fulfill items\" button.
 msgstr "在订单页点“完成商品发货”填写物流单号。系统会自动识别承运商，并给顾客发送带追踪链接的邮件。"
 
 #: includes/admin/class-settings-page.php:138
-#: includes/admin/class-store-design.php:428
+#: includes/admin/class-store-design.php:475
 msgid "Customer support button"
 msgstr "客服按钮"
 
@@ -1057,290 +1059,308 @@ msgstr "右下角"
 msgid "Bottom left"
 msgstr "左下角"
 
-#: includes/admin/class-store-design.php:49
-#: includes/admin/class-store-design.php:192
+#: includes/admin/class-store-design.php:50
+#: includes/admin/class-store-design.php:193
 msgid "Theme design"
 msgstr "主题装修"
 
-#: includes/admin/class-store-design.php:50
+#: includes/admin/class-store-design.php:51
 msgid "Menus & navigation"
 msgstr "菜单导航"
 
-#: includes/admin/class-store-design.php:51
+#: includes/admin/class-store-design.php:52
 msgid "Custom pages"
 msgstr "自定义页面"
 
-#: includes/admin/class-store-design.php:52
+#: includes/admin/class-store-design.php:53
 msgid "Homepage SEO"
 msgstr "首页SEO"
 
-#: includes/admin/class-store-design.php:53
+#: includes/admin/class-store-design.php:54
 msgid "Domains"
 msgstr "域名管理"
 
-#: includes/admin/class-store-design.php:54
+#: includes/admin/class-store-design.php:55
 msgid "Campaign pages"
 msgstr "活动专题页"
 
-#: includes/admin/class-store-design.php:60
 #: includes/admin/class-store-design.php:61
+#: includes/admin/class-store-design.php:62
 msgid "Store design"
 msgstr "店铺装修"
 
-#: includes/admin/class-store-design.php:103
+#: includes/admin/class-store-design.php:104
 msgid "Sorry, you are not allowed to do that."
 msgstr "抱歉，你没有权限执行此操作。"
 
-#: includes/admin/class-store-design.php:161
+#: includes/admin/class-store-design.php:162
 msgid "Template details saved."
 msgstr "模板信息已保存。"
 
-#: includes/admin/class-store-design.php:162
+#: includes/admin/class-store-design.php:163
 msgid "Template created."
 msgstr "模板已创建。"
 
-#: includes/admin/class-store-design.php:163
+#: includes/admin/class-store-design.php:164
 msgid "Template copied. The copy is not used by the store until you set it as default or assign it to a domain."
 msgstr "模板已复制。副本要设为店铺默认模板或指定给某个域名后才会被使用。"
 
-#: includes/admin/class-store-design.php:164
+#: includes/admin/class-store-design.php:165
 msgid "Store default template changed."
 msgstr "店铺默认模板已更换。"
 
-#: includes/admin/class-store-design.php:165
+#: includes/admin/class-store-design.php:166
 msgid "Template moved to the trash."
 msgstr "模板已移到回收站。"
 
-#: includes/admin/class-store-design.php:166
+#: includes/admin/class-store-design.php:167
 msgid "Domain template saved."
 msgstr "域名指定模板已保存。"
 
-#: includes/admin/class-store-design.php:167
+#: includes/admin/class-store-design.php:168
 msgid "Domain assignment removed. That domain now uses the store default template."
 msgstr "已取消域名指定，该域名现在使用店铺默认模板。"
 
-#: includes/admin/class-store-design.php:168
-#: includes/admin/class-store-design.php:170
+#: includes/admin/class-store-design.php:169
+#: includes/admin/class-store-design.php:171
 #: includes/class-templates.php:307
 #: includes/class-templates.php:371
 msgid "Template not found."
 msgstr "找不到该模板。"
 
-#: includes/admin/class-store-design.php:169
+#: includes/admin/class-store-design.php:170
 msgid "Something went wrong. Please try again."
 msgstr "出了点问题，请重试。"
 
-#: includes/admin/class-store-design.php:171
+#: includes/admin/class-store-design.php:172
 #: includes/class-templates.php:310
 msgid "The store default template cannot be deleted. Set another template as default first."
 msgstr "店铺默认模板不能删除。请先把其他模板设为默认。"
 
-#: includes/admin/class-store-design.php:172
+#: includes/admin/class-store-design.php:173
 #: includes/class-templates.php:313
 msgid "This template is assigned to a domain. Remove the domain assignment first."
 msgstr "该模板已指定给域名，请先取消域名指定。"
 
-#: includes/admin/class-store-design.php:173
+#: includes/admin/class-store-design.php:174
 #: includes/class-templates.php:368
 msgid "Enter a valid domain name, for example shop.example.com."
 msgstr "请输入有效的域名，例如 shop.example.com。"
 
-#: includes/admin/class-store-design.php:193
+#: includes/admin/class-store-design.php:194
 msgid "Template sources"
 msgstr "模板来源"
 
-#: includes/admin/class-store-design.php:194
+#: includes/admin/class-store-design.php:195
 msgid "My templates"
 msgstr "我的模板"
 
-#: includes/admin/class-store-design.php:202
+#: includes/admin/class-store-design.php:203
 msgid "Template in use"
 msgstr "使用中的模板"
 
-#: includes/admin/class-store-design.php:204
-#: includes/admin/class-store-design.php:257
+#: includes/admin/class-store-design.php:205
+#: includes/admin/class-store-design.php:275
 msgid "Store default template"
 msgstr "店铺默认模板"
 
-#: includes/admin/class-store-design.php:205
-#: includes/admin/class-store-design.php:296
+#: includes/admin/class-store-design.php:206
+#: includes/admin/class-store-design.php:341
 msgid "Domain templates"
 msgstr "域名指定模板"
 
-#: includes/admin/class-store-design.php:208
+#: includes/admin/class-store-design.php:209
 msgid "This is the design customers see. Different domains can use different templates."
 msgstr "这是向顾客展示的店铺样式，支持为不同域名指定不同模板。"
 
-#: includes/admin/class-store-design.php:209
+#: includes/admin/class-store-design.php:210
 msgid "A domain without its own template uses the store default template."
 msgstr "没有指定模板的域名，使用店铺默认模板。"
 
-#: includes/admin/class-store-design.php:226
+#: includes/admin/class-store-design.php:227
 msgid "My template library"
 msgstr "我的模板库"
 
-#: includes/admin/class-store-design.php:228
+#: includes/admin/class-store-design.php:229
 msgid "New template"
 msgstr "新建模板"
 
-#: includes/admin/class-store-design.php:232
-#: includes/admin/class-store-design.php:346
+#: includes/admin/class-store-design.php:233
 #: includes/admin/class-store-design.php:391
+#: includes/admin/class-store-design.php:438
 msgid "Template name"
 msgstr "模板名称"
 
-#: includes/admin/class-store-design.php:233
-#: includes/admin/class-store-design.php:348
-#: includes/admin/class-store-design.php:392
+#: includes/admin/class-store-design.php:234
+#: includes/admin/class-store-design.php:393
+#: includes/admin/class-store-design.php:439
 msgid "Note"
 msgstr "备注"
 
-#: includes/admin/class-store-design.php:234
+#: includes/admin/class-store-design.php:235
 msgid "Create"
 msgstr "创建"
 
 #. translators: %s: date and time
-#: includes/admin/class-store-design.php:262
+#: includes/admin/class-store-design.php:280
 #, php-format
 msgid "Modified: %s"
 msgstr "修改时间：%s"
 
-#: includes/admin/class-store-design.php:268
-#: includes/admin/class-store-design.php:379
+#: includes/admin/class-store-design.php:286
+#: includes/admin/class-store-design.php:426
 msgid "Design"
 msgstr "装修"
 
-#: includes/admin/class-store-design.php:269
-#: includes/admin/class-store-design.php:352
+#: includes/admin/class-store-design.php:287
+#: includes/admin/class-store-design.php:398
 msgid "Preview"
 msgstr "预览"
 
-#: includes/admin/class-store-design.php:272
-msgid "The module editor is being built. Until a template has published modules, the storefront keeps showing the theme's built-in pages."
-msgstr "模块编辑器正在建设中。模板发布模块之前，前台继续显示主题自带的页面。"
+#: includes/admin/class-store-design.php:303
+msgid "Homepage not published"
+msgstr "首页未发布"
 
-#: includes/admin/class-store-design.php:297
+#: includes/admin/class-store-design.php:304
+msgid "Visitors see the theme's original homepage. Open “Design”, check the draft, then publish."
+msgstr "访客看到的是主题原来的首页。点“装修”检查草稿，确认后再发布。"
+
+#: includes/admin/class-store-design.php:307
+msgid "Published · unpublished changes"
+msgstr "已发布 · 有未发布的修改"
+
+#. translators: %s: date and time
+#: includes/admin/class-store-design.php:309
+#, php-format
+msgid "Visitors see the version published %s. Your newer draft is not live yet."
+msgstr "访客看到的是 %s 发布的版本，你之后的修改还没有上线。"
+
+#: includes/admin/class-store-design.php:314
+msgid "Visitors see this design."
+msgstr "访客看到的就是这份装修。"
+
+#: includes/admin/class-store-design.php:342
 msgid "Use this when several domains point to this store and each should show a different design. The domain must already reach this site (DNS and server settings); adding it here only chooses the template."
 msgstr "当多个域名都指向本店、并且要显示不同的样式时使用。域名需要先通过 DNS 和服务器设置指向本站，这里只负责选择模板。"
 
-#: includes/admin/class-store-design.php:299
-#: includes/admin/class-store-design.php:321
+#: includes/admin/class-store-design.php:344
+#: includes/admin/class-store-design.php:366
 msgid "Domain"
 msgstr "域名"
 
-#: includes/admin/class-store-design.php:299
-#: includes/admin/class-store-design.php:322
+#: includes/admin/class-store-design.php:344
+#: includes/admin/class-store-design.php:367
 msgid "Template"
 msgstr "模板"
 
-#: includes/admin/class-store-design.php:299
-#: includes/admin/class-store-design.php:351
+#: includes/admin/class-store-design.php:344
+#: includes/admin/class-store-design.php:397
 msgid "Actions"
 msgstr "操作"
 
-#: includes/admin/class-store-design.php:302
+#: includes/admin/class-store-design.php:347
 msgid "No domain has its own template. All domains use the store default template."
 msgstr "还没有域名指定模板，所有域名都使用店铺默认模板。"
 
-#: includes/admin/class-store-design.php:310
+#: includes/admin/class-store-design.php:355
 msgid "Remove this domain assignment? The domain will use the store default template."
 msgstr "取消这个域名指定？该域名将使用店铺默认模板。"
 
-#: includes/admin/class-store-design.php:329
+#: includes/admin/class-store-design.php:374
 msgid "Assign"
 msgstr "指定"
 
-#: includes/admin/class-store-design.php:332
+#: includes/admin/class-store-design.php:377
 msgid "Only administrators can change domain templates."
 msgstr "只有管理员可以修改域名指定模板。"
 
-#: includes/admin/class-store-design.php:347
+#: includes/admin/class-store-design.php:392
 msgid "Theme"
 msgstr "主题"
 
-#: includes/admin/class-store-design.php:349
+#: includes/admin/class-store-design.php:394
 msgid "Created by"
 msgstr "创建人"
 
-#: includes/admin/class-store-design.php:350
+#: includes/admin/class-store-design.php:396
 msgid "Modified"
 msgstr "修改时间"
 
-#: includes/admin/class-store-design.php:367
+#: includes/admin/class-store-design.php:413
 msgid "In use"
 msgstr "使用中"
 
-#: includes/admin/class-store-design.php:381
+#: includes/admin/class-store-design.php:428
 msgid "More actions"
 msgstr "更多操作"
 
-#: includes/admin/class-store-design.php:384
+#: includes/admin/class-store-design.php:431
 msgid "Use this template as the store default? Customers will see it on all domains without their own template."
 msgstr "把这个模板设为店铺默认模板？所有没有指定模板的域名都会显示它。"
 
-#: includes/admin/class-store-design.php:384
+#: includes/admin/class-store-design.php:431
 msgid "Set as store default"
 msgstr "设为店铺默认模板"
 
-#: includes/admin/class-store-design.php:393
+#: includes/admin/class-store-design.php:440
 msgid "Save details"
 msgstr "保存信息"
 
-#: includes/admin/class-store-design.php:396
+#: includes/admin/class-store-design.php:443
 msgid "Move this template to the trash? Its designs are removed with it."
 msgstr "把这个模板移到回收站？它的装修内容会一起移走。"
 
 #. translators: %s: template name
-#: includes/admin/class-store-design.php:402
+#: includes/admin/class-store-design.php:449
 #, php-format
 msgid "Preview %s"
 msgstr "预览 %s"
 
-#: includes/admin/class-store-design.php:417
+#: includes/admin/class-store-design.php:464
 msgid "Built for the active theme"
 msgstr "适用于当前启用的主题"
 
-#: includes/admin/class-store-design.php:417
+#: includes/admin/class-store-design.php:464
 msgid "Built for a different theme"
 msgstr "适用于另一个主题"
 
-#: includes/admin/class-store-design.php:429
+#: includes/admin/class-store-design.php:476
 msgid "Shipment tracking"
 msgstr "物流单号追踪"
 
-#: includes/admin/class-store-design.php:431
+#: includes/admin/class-store-design.php:478
 msgid "Batch reports"
 msgstr "批次报告"
 
-#: includes/admin/class-store-design.php:435
+#: includes/admin/class-store-design.php:482
 msgid "Recommended apps"
 msgstr "推荐应用"
 
-#: includes/admin/class-store-design.php:442
+#: includes/admin/class-store-design.php:489
 msgid "Enabled"
 msgstr "已启用"
 
-#: includes/admin/class-store-design.php:460
+#: includes/admin/class-store-design.php:507
 msgid "Edit the header and footer menus: links, order and sub-menus."
 msgstr "编辑页头和页脚的菜单：链接、顺序和子菜单。"
 
-#: includes/admin/class-store-design.php:461
+#: includes/admin/class-store-design.php:508
 msgid "Build extra pages (About, Shipping, FAQ…) from the same modules as the homepage."
 msgstr "用和首页相同的模块搭建其他页面（关于我们、配送说明、常见问题等）。"
 
-#: includes/admin/class-store-design.php:462
+#: includes/admin/class-store-design.php:509
 msgid "Homepage title, description and social sharing image for search engines."
 msgstr "首页在搜索引擎里的标题、描述，以及社交分享图片。"
 
-#: includes/admin/class-store-design.php:463
+#: includes/admin/class-store-design.php:510
 msgid "Bind your own domain and check HTTPS once the site is on a server."
 msgstr "网站上服务器后，在这里绑定自己的域名并检查 HTTPS。"
 
-#: includes/admin/class-store-design.php:464
+#: includes/admin/class-store-design.php:511
 msgid "Landing pages for promotions, built from modules, with their own address."
 msgstr "用模块搭建促销活动落地页，每个页面有自己的地址。"
 
-#: includes/admin/class-store-design.php:471
+#: includes/admin/class-store-design.php:518
 msgid "Coming soon"
 msgstr "即将推出"
 

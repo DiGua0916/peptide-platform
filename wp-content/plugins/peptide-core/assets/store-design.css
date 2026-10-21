@@ -5,7 +5,9 @@
 	--pc-sd-orange-dark: #d96a20;
 	--pc-sd-border: #e2e4e7;
 	--pc-sd-muted: #646970;
-	max-width: 1600px;
+	/* 铺满后台内容区，宽屏不再留一大片空白。 */
+	max-width: none;
+	margin-right: 20px;
 }
 
 .pc-sd-tabs {
@@ -39,7 +41,7 @@
 /* 使用中的模板 */
 .pc-sd-current {
 	display: grid;
-	grid-template-columns: minmax(240px, 340px) 1fr;
+	grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
 	gap: 24px;
 }
 
@@ -175,12 +177,13 @@
 	margin: 12px 0;
 }
 
-/* 电脑 + 手机缩略预览：iframe 按实际尺寸渲染再缩小 */
+/* 电脑 + 手机缩略预览：iframe 按实际宽度渲染，由页面脚本按容器宽度等比缩小（见 render_theme_design）。 */
 .pc-sd-stage {
 	position: relative;
-	height: 300px;
-	margin: 8px auto 0;
-	max-width: 560px;
+	width: 100%;
+	max-width: 1180px;
+	margin: 12px auto 0;
+	aspect-ratio: 16 / 7.6;
 }
 
 .pc-sd-stage iframe {
@@ -188,44 +191,33 @@
 	pointer-events: none;
 	transform-origin: 0 0;
 	background: #fff;
+	display: block;
 }
 
 .pc-sd-stage__desktop {
 	position: absolute;
 	left: 0;
 	top: 0;
-	width: 432px;
-	height: 270px;
+	width: 82%;
+	aspect-ratio: 16 / 9;
 	overflow: hidden;
 	border: 1px solid var(--pc-sd-border);
-	border-radius: 4px;
-	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+	border-radius: 6px;
+	box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
 	background: #fff;
-}
-
-.pc-sd-stage__desktop iframe {
-	width: 1440px;
-	height: 900px;
-	transform: scale(0.3);
 }
 
 .pc-sd-stage__phone {
 	position: absolute;
 	right: 0;
-	top: 30px;
-	width: 136px;
-	height: 268px;
+	bottom: 0;
+	width: 21%;
+	aspect-ratio: 9 / 19;
 	overflow: hidden;
-	border: 6px solid #1d2327;
-	border-radius: 18px;
-	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+	border: 7px solid #1d2327;
+	border-radius: 22px;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 	background: #fff;
-}
-
-.pc-sd-stage__phone iframe {
-	width: 390px;
-	height: 770px;
-	transform: scale(0.318);
 }
 
 /* 模板库 */
@@ -275,6 +267,21 @@
 .pc-sd-tag--warn {
 	background: #dba617;
 	color: #1d2327;
+}
+
+.pc-sd-tag--green {
+	background: #00a32a;
+	color: #fff;
+}
+
+.pc-sd-tag--muted {
+	background: #f0f0f1;
+	color: #50575e;
+}
+
+.pc-sd-note .pc-sd-tag {
+	margin-left: 0;
+	margin-right: 6px;
 }
 
 .pc-sd-split {
@@ -404,7 +411,7 @@
 /* 推荐应用 */
 .pc-sd-apps__grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 	gap: 12px;
 }
 
@@ -473,10 +480,3 @@
 	}
 }
 
-@media (max-width: 600px) {
-	.pc-sd-stage {
-		transform: scale(0.7);
-		transform-origin: 0 0;
-		height: 220px;
-	}
-}

@@ -8,6 +8,7 @@
 
 namespace PeptideCore\Admin;
 
+use PeptideCore\Modules\Layout;
 use PeptideCore\Settings;
 use PeptideCore\Shipping_Tracking;
 use PeptideCore\Support_Contacts;
@@ -240,6 +241,23 @@ final class Store_Design {
 
 			<?php self::render_apps(); ?>
 		</div>
+		<script>
+		// 缩略预览：iframe 按真实宽度（电脑 1440、手机 390）渲染，再按容器宽度等比缩小，宽屏和窄屏都铺满预览区。
+		( function () {
+			function fit() {
+				document.querySelectorAll( '.pc-sd-stage iframe[data-pc-width]' ).forEach( function ( f ) {
+					var box = f.parentNode;
+					var w = parseInt( f.getAttribute( 'data-pc-width' ), 10 );
+					var scale = box.clientWidth / w;
+					f.style.width = w + 'px';
+					f.style.height = Math.ceil( box.clientHeight / scale ) + 'px';
+					f.style.transform = 'scale(' + scale + ')';
+				} );
+			}
+			window.addEventListener( 'resize', fit );
+			fit();
+		} )();
+		</script>
 		<?php
 	}
 
@@ -269,9 +287,36 @@ final class Store_Design {
 				<a class="button" href="<?php echo esc_url( Templates::preview_url( $default ) ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Preview', 'peptide-core' ); ?></a>
 			</div>
 		</div>
-		<p class="pc-sd-note"><?php esc_html_e( 'The module editor is being built. Until a template has published modules, the storefront keeps showing the theme\'s built-in pages.', 'peptide-core' ); ?></p>
+		<p class="pc-sd-note"><?php self::publish_status( $default, true ); ?></p>
 		<?php self::render_stage( $default ); ?>
 		<?php
+	}
+
+	/**
+	 * 模板首页的发布状态标签：未发布 / 已发布 + 时间 / 有未发布的修改。$long 为 true 时附带一句说明。
+	 */
+	private static function publish_status( int $template_id, bool $long = false ): void {
+		$doc    = Templates::document_id( $template_id, 'home' );
+		$status = $doc ? Layout::status( $doc ) : array( 'published' => false, 'changed' => true, 'at' => null );
+		if ( ! $status['published'] ) {
+			$class = 'pc-sd-tag--muted';
+			$label = __( 'Homepage not published', 'peptide-core' );
+			$note  = __( 'Visitors see the theme\'s original homepage. Open “Design”, check the draft, then publish.', 'peptide-core' );
+		} elseif ( $status['changed'] ) {
+			$class = 'pc-sd-tag--warn';
+			$label = __( 'Published · unpublished changes', 'peptide-core' );
+			/* translators: %s: date and time */
+			$note = sprintf( __( 'Visitors see the version published %s. Your newer draft is not live yet.', 'peptide-core' ), (string) $status['at'] );
+		} else {
+			$class = 'pc-sd-tag--green';
+			/* translators: %s: date and time */
+			$label = sprintf( __( 'Published %s', 'peptide-core' ), (string) $status['at'] );
+			$note  = __( 'Visitors see this design.', 'peptide-core' );
+		}
+		printf( '<span class="pc-sd-tag %1$s">%2$s</span>', esc_attr( $class ), esc_html( $label ) );
+		if ( $long ) {
+			echo ' <span class="pc-sd-note__text">' . esc_html( $note ) . '</span>';
+		}
 	}
 
 	/**
@@ -281,8 +326,8 @@ final class Store_Design {
 		$url = Templates::preview_url( $template_id, true );
 		?>
 		<div class="pc-sd-stage" aria-hidden="true">
-			<div class="pc-sd-stage__desktop"><iframe src="<?php echo esc_url( $url ); ?>" loading="lazy" tabindex="-1" title=""></iframe></div>
-			<div class="pc-sd-stage__phone"><iframe src="<?php echo esc_url( $url ); ?>" loading="lazy" tabindex="-1" title=""></iframe></div>
+			<div class="pc-sd-stage__desktop"><iframe src="<?php echo esc_url( $url ); ?>" loading="lazy" tabindex="-1" title="" data-pc-width="1440"></iframe></div>
+			<div class="pc-sd-stage__phone"><iframe src="<?php echo esc_url( $url ); ?>" loading="lazy" tabindex="-1" title="" data-pc-width="390"></iframe></div>
 		</div>
 		<?php
 	}
@@ -347,6 +392,7 @@ final class Store_Design {
 					<th><?php esc_html_e( 'Theme', 'peptide-core' ); ?></th>
 					<th><?php esc_html_e( 'Note', 'peptide-core' ); ?></th>
 					<th><?php esc_html_e( 'Created by', 'peptide-core' ); ?></th>
+					<th><?php esc_html_e( 'Homepage', 'peptide-core' ); ?></th>
 					<th><?php esc_html_e( 'Modified', 'peptide-core' ); ?></th>
 					<th><?php esc_html_e( 'Actions', 'peptide-core' ); ?></th>
 					<th><?php esc_html_e( 'Preview', 'peptide-core' ); ?></th>
@@ -373,6 +419,7 @@ final class Store_Design {
 					<td><?php self::theme_badge( (string) get_post_meta( $id, Templates::THEME_META, true ) ); ?></td>
 					<td><?php echo esc_html( (string) get_post_meta( $id, Templates::NOTE_META, true ) ?: '-' ); ?></td>
 					<td><?php echo esc_html( $author ? $author->display_name : '-' ); ?></td>
+					<td><?php self::publish_status( $id ); ?></td>
 					<td><?php echo esc_html( $modified ? mysql2date( 'Y-m-d H:i:s', $modified ) : '-' ); ?></td>
 					<td>
 						<div class="pc-sd-split">
