@@ -693,3 +693,25 @@
   - 推荐应用改为 auto-fit 铺满一行。
 - 检查：smoke-store-design 37 项通过；服务器端渲染确认有状态标签和 2 个缩放 iframe，旧说明已经去掉。第一次跑十四套测试时 smoke-modules 有 2 项失败：Codex 已经交了 product-collection 和 faq 的模板，测试却还在检查插件默认样式的输出。改为直接测默认样式（`$fb`）后，49 项全部通过。主题现在有 9 个积木模板：carousel、cta、faq、media-text-list、media-text、product-collection、report-feature、rich-text、section-heading。**没有做浏览器视觉检查**（内置浏览器的登录已过期）。
 - 另外发现：**Local 自动升级到 10.2.0，安装程序把 `%LOCALAPPDATA%\Programs\Local` 的目录联接换成了真实目录**（约 2.4 GB 在 C 盘），D 盘的 `D:\Codex\LocalWP\app` 已经空了。数据目录 `%APPDATA%\Local` → `D:\Codex\LocalWP\data` 的联接仍然正常。Claude 的 wp.sh 暂时改为使用 C 盘的 wp-cli.phar。是否重新迁到 D 盘，等用户决定。
+
+### EDIT-BLOCKS-07 电脑 / 手机参数分开 + 浮动卡片拖动 + 编辑器细节 · 2026-10-22 · Claude
+
+- **用户反馈 4 点**：
+  1. 首屏 3 张浮动卡片要能编辑：可以做成图层拖动；但客户主要用手机，要么删掉，要么适配手机；
+  2. 去掉预览里的滚动条；
+  3. 积木列表里，积木名后面不要带参数（例如“空白积木块 · 64 / 40px”）；
+  4. **手机和电脑的参数要完全分开**：之前切换只是换视图，参数是同一份。
+- **电脑 / 手机分开**（Renderer、Layout、Blocks、编辑器）：
+  - 区块新增属性 `mobile = {settings: {只存手机改过的字段}, items: 整份条目 | null}`。
+  - 编辑器切到“手机”后，修改普通字段写进 `mobile.settings`，修改条目时把整份条目复制到 `mobile.items`；没改过的内容继承电脑。原本就分设备的字段（device）和“显示与间距”仍然按原来的方式存。
+  - 侧栏在手机模式下显示提示条和“手机已单独修改 N 项”，并提供“全部恢复与电脑一致”；单独改过的字段左侧有蓝条，可以单个恢复。
+  - 输出：有手机版设置时，同一个 `<section>` 里输出 `<div class="vc-v vc-v--desktop">…</div><div class="vc-v vc-v--mobile">…</div>`（display: contents，767px 断点切换）；主题模板多收到一个参数 `$args['device']`（all / desktop / mobile）。没有手机版设置的积木输出不变。
+  - 保存时保留 mobile；为空时不写进内容。复制积木时，电脑版和手机版的条目编号保持一一对应。
+  - 预览高亮时，优先选当前看得见的那一份条目。
+- **浮动卡片**：
+  - 轮播每张新增 `cardLayout`（电脑 / 手机分开：overlay 压在图上 / below 图片下方 / hidden 不显示），默认电脑 overlay、手机 below；
+  - 每张卡片新增 `x`、`y`（%，电脑 / 手机分开，空 = 自动排列）；
+  - 预览里可以拖动 `[data-pc-drag]` 元素，在 `[data-pc-drag-area]` 范围内按百分比定位，松手后写入当前设备的 x / y（手机有单独条目时写进手机条目），并自动选中这一张；
+  - 插件默认样式已经实现三种放置方式和定位；**Codex 的模板需要支持**（见群消息）。
+- **细节**：预览 iframe 隐藏滚动条（仍然可以滚动）；积木列表里空白积木块不再显示高度。其他积木名后面仍然带标题，用来区分几个同名的“图文”。
+- 测试：smoke-modules 58 项（新增手机版设置 7 项、浮动卡片 3 项）；十四套共 **338 项全部通过**。**没有做浏览器实测**（内置浏览器的登录已过期）。

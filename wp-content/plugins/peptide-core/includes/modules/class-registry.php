@@ -306,6 +306,18 @@ final class Registry {
 								),
 							)
 						),
+						self::select(
+							'cardLayout',
+							__( 'Floating cards', 'peptide-core' ),
+							'overlay',
+							array(
+								'overlay' => __( 'On the image (drag to position in the preview)', 'peptide-core' ),
+								'below'   => __( 'Below the image', 'peptide-core' ),
+								'hidden'  => __( 'Hidden', 'peptide-core' ),
+							),
+							'content',
+							array( 'device' => true, 'default' => array( 'desktop' => 'overlay', 'mobile' => 'below' ) )
+						),
 						Fields::f(
 							'repeater',
 							'highlights',
@@ -319,6 +331,9 @@ final class Registry {
 									Fields::f( 'text', 'title', __( 'Title', 'peptide-core' ), '' ),
 									Fields::f( 'text', 'action', __( 'Action text', 'peptide-core' ), '' ),
 									Fields::f( 'url', 'href', __( 'Link', 'peptide-core' ), '' ),
+									// 卡片左上角在图片上的位置（%）；空 = 自动排列。可以在装修预览里直接拖动。
+									Fields::f( 'number', 'x', __( 'Horizontal position on the image (%, empty = automatic)', 'peptide-core' ), null, array( 'device' => true, 'min' => 0, 'max' => 100 ) ),
+									Fields::f( 'number', 'y', __( 'Vertical position on the image (%, empty = automatic)', 'peptide-core' ), null, array( 'device' => true, 'min' => 0, 'max' => 100 ) ),
 								),
 							)
 						),

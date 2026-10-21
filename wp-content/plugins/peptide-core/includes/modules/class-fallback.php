@@ -16,11 +16,15 @@ final class Fallback {
 
 	private static string $context = 'public';
 
+	/** 正在输出的设备版本：all / desktop / mobile（有手机版单独设置时分两份输出）。 */
+	private static string $device = 'all';
+
 	/**
 	 * @param array<string,mixed> $module
 	 */
-	public static function render( array $module, string $context ): string {
+	public static function render( array $module, string $context, string $device = 'all' ): string {
 		self::$context = $context;
+		self::$device  = $device;
 		$method        = 'render_' . $module['type'];
 		if ( ! method_exists( self::class, $method ) ) {
 			return 'editor' === $context ? Renderer::notice( __( 'This module has no default design yet.', 'peptide-core' ) ) : '';
@@ -352,14 +356,31 @@ final class Fallback {
 
 			// 图片：浮动卡片、编号、说明。
 			$figure = self::picture( $it['media'], 'vc-slide__media' );
+			$cards_html = '';
 			if ( $it['highlights'] ) {
-				$figure .= '<div class="vc-slide__cards">';
+				// 浮动卡片：放置方式电脑 / 手机分开（压在图上 / 图片下方 / 不显示）；压在图上时可以按 x / y（%）定位，编辑器里可以拖动。
+				$cl          = $it['cardLayout'];
+				$cards_html .= sprintf( '<div class="vc-slide__cards vc-cards-d-%1$s vc-cards-m-%2$s">', esc_attr( (string) self::dv( $cl, 'desktop' ) ), esc_attr( (string) self::dv( $cl, 'mobile' ) ) );
 				foreach ( $it['highlights'] as $card ) {
 					$c     = $card['settings'];
-					$inner = '<span class="vc-slide__card-label">' . self::icon( (string) $c['icon'], 16 ) . esc_html( $c['label'] ) . '</span><strong>' . esc_html( $c['title'] ) . '</strong>' . ( '' !== $c['action'] ? '<span class="vc-slide__card-action">' . esc_html( $c['action'] ) . ' →</span>' : '' );
-					$figure .= self::maybe_link( $inner, (string) $c['href'], 'vc-slide__card' );
+					$pos   = self::style(
+						array(
+							'--x'   => null !== $c['x']['desktop'] ? (int) $c['x']['desktop'] . '%' : null,
+							'--y'   => null !== $c['y']['desktop'] ? (int) $c['y']['desktop'] . '%' : null,
+							'--x-m' => null !== self::dv( $c['x'], 'mobile' ) ? (int) self::dv( $c['x'], 'mobile' ) . '%' : null,
+							'--y-m' => null !== self::dv( $c['y'], 'mobile' ) ? (int) self::dv( $c['y'], 'mobile' ) . '%' : null,
+						)
+					);
+					$placed  = null !== $c['x']['desktop'] && null !== $c['y']['desktop'] ? ' is-placed-d' : '';
+					$placed .= null !== self::dv( $c['x'], 'mobile' ) && null !== self::dv( $c['y'], 'mobile' ) ? ' is-placed-m' : '';
+					$inner   = '<span class="vc-slide__card-label">' . self::icon( (string) $c['icon'], 16 ) . esc_html( $c['label'] ) . '</span><strong>' . esc_html( $c['title'] ) . '</strong>' . ( '' !== $c['action'] ? '<span class="vc-slide__card-action">' . esc_html( $c['action'] ) . ' →</span>' : '' );
+					$attrs   = ' data-module-item="' . esc_attr( $card['id'] ) . '" data-pc-drag' . $pos;
+					$cards_html .= '' !== (string) $c['href']
+						? sprintf( '<a class="vc-slide__card%1$s" href="%2$s"%3$s>%4$s</a>', esc_attr( $placed ), esc_url( (string) $c['href'] ), $attrs, $inner )
+						: sprintf( '<div class="vc-slide__card%1$s"%2$s>%3$s</div>', esc_attr( $placed ), $attrs, $inner );
 				}
-				$figure .= '</div>';
+				$cards_html .= '</div>';
+				$figure     .= $cards_html;
 			}
 			if ( '' !== $it['sceneNumber'] ) {
 				$figure .= '<span class="vc-slide__number">' . esc_html( $it['sceneNumber'] ) . '</span>';
@@ -369,9 +390,9 @@ final class Fallback {
 			}
 
 			if ( 'split' === $it['layout'] ) {
-				$out .= '<div class="vc-slide__text">' . $text . '</div><figure class="vc-slide__figure">' . $figure . '</figure>';
+				$out .= '<div class="vc-slide__text">' . $text . '</div><figure class="vc-slide__figure" data-pc-drag-area>' . $figure . '</figure>';
 			} else {
-				$out .= '<figure class="vc-slide__figure">' . $figure . '</figure><div class="vc-slide__overlay"></div><div class="vc-slide__text ' . esc_attr( self::pos_class( $it['position'] ) ) . '">' . $text . '</div>';
+				$out .= '<figure class="vc-slide__figure" data-pc-drag-area>' . $figure . '</figure><div class="vc-slide__overlay"></div><div class="vc-slide__text ' . esc_attr( self::pos_class( $it['position'] ) ) . '">' . $text . '</div>';
 			}
 			$out .= '</div>';
 		}

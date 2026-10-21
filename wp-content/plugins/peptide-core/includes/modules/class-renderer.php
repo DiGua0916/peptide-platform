@@ -8,6 +8,11 @@
  *     $args['context'] public | preview | editor
  * 主题没有模板时使用插件自带的默认外观（Fallback），保证编辑器里能看到效果。
  *
+ * 手机版单独设置（EDIT-BLOCKS-07）：区块属性 mobile = {settings: {只存改过的字段}, items: 整份条目或 null}。
+ * 有手机版设置时，同一个外层 section 里输出两份内容：
+ *     <div class="vc-v vc-v--desktop">电脑版</div><div class="vc-v vc-v--mobile">手机版</div>
+ * 767px 及以下只显示手机版，以上只显示电脑版；模板收到 $args['device'] = desktop / mobile（只有一份时是 all）。
+ *
  * @package PeptideCore
  */
 
@@ -52,6 +57,26 @@ final class Renderer {
 			}
 		}
 
+		// 手机版单独设置：只保留改过的普通字段（电脑 / 手机分开的字段和“显示与间距”本来就分设备，不放在这里）。
+		$mobile = array(
+			'settings' => array(),
+			'items'    => null,
+		);
+		$raw_m  = is_array( $attrs['mobile'] ?? null ) ? $attrs['mobile'] : array();
+		$m_set  = is_array( $raw_m['settings'] ?? null ) ? $raw_m['settings'] : array();
+		foreach ( $def['settings'] as $field ) {
+			if ( ! empty( $field['device'] ) || 'general' === ( $field['group'] ?? '' ) || ! array_key_exists( $field['key'], $m_set ) ) {
+				continue;
+			}
+			$mobile['settings'][ $field['key'] ] = Fields::sanitize( $field, $m_set[ $field['key'] ] );
+		}
+		if ( ! empty( $def['items'] ) && is_array( $raw_m['items'] ?? null ) ) {
+			$mobile['items'] = array();
+			foreach ( array_slice( array_values( $raw_m['items'] ), 0, (int) $def['items']['max'] ) as $row ) {
+				$mobile['items'][] = Fields::item( $def['items']['fields'], is_array( $row ) ? $row : array() );
+			}
+		}
+
 		return array(
 			'id'         => Fields::id( $attrs['moduleId'] ?? '' ),
 			'type'       => $type,
@@ -63,7 +88,29 @@ final class Renderer {
 			),
 			'settings'   => $settings,
 			'items'      => $items,
+			'mobile'     => $mobile,
 		);
+	}
+
+	public static function has_mobile( array $module ): bool {
+		return ! empty( $module['mobile']['settings'] ) || null !== ( $module['mobile']['items'] ?? null );
+	}
+
+	/**
+	 * 某个设备看到的模块：手机版 = 电脑版设置 + 手机改过的字段；条目有手机版时整份替换。
+	 *
+	 * @param array<string,mixed> $module
+	 * @return array<string,mixed>
+	 */
+	public static function variant( array $module, string $device ): array {
+		if ( 'mobile' !== $device || ! self::has_mobile( $module ) ) {
+			return $module;
+		}
+		$module['settings'] = array_merge( $module['settings'], $module['mobile']['settings'] );
+		if ( null !== $module['mobile']['items'] ) {
+			$module['items'] = $module['mobile']['items'];
+		}
+		return $module;
 	}
 
 	/**
@@ -108,11 +155,23 @@ final class Renderer {
 			wp_enqueue_script( self::SCRIPT );
 		}
 
-		$inner = self::theme_template( $module, $context );
-		if ( null === $inner ) {
-			$inner = Fallback::render( $module, $context );
+		if ( self::has_mobile( $module ) ) {
+			$inner = '<div class="vc-v vc-v--desktop">' . self::inner( self::variant( $module, 'desktop' ), $context, 'desktop' ) . '</div>'
+				. '<div class="vc-v vc-v--mobile">' . self::inner( self::variant( $module, 'mobile' ), $context, 'mobile' ) . '</div>';
+		} else {
+			$inner = self::inner( $module, $context, 'all' );
 		}
 		return self::wrap( $module, $inner, $editor );
+	}
+
+	/**
+	 * 模块内容：优先主题模板，没有时用插件默认外观。
+	 *
+	 * @param array<string,mixed> $module
+	 */
+	private static function inner( array $module, string $context, string $device ): string {
+		$html = self::theme_template( $module, $context, $device );
+		return null !== $html ? $html : Fallback::render( $module, $context, $device );
 	}
 
 	/**
@@ -120,7 +179,7 @@ final class Renderer {
 	 *
 	 * @param array<string,mixed> $module
 	 */
-	private static function theme_template( array $module, string $context ): ?string {
+	private static function theme_template( array $module, string $context, string $device = 'all' ): ?string {
 		$slug = 'template-parts/modules/' . str_replace( '_', '-', $module['type'] );
 		if ( ! locate_template( $slug . '.php' ) ) {
 			return null;
@@ -132,6 +191,7 @@ final class Renderer {
 			array(
 				'module'  => $module,
 				'context' => $context,
+				'device'  => $device,
 			)
 		);
 		return (string) ob_get_clean();

@@ -169,3 +169,22 @@
 .pc-module-block > div > .components-placeholder {
 	min-height: 120px;
 }
+
+/* 手机单独改过的字段 */
+.pc-me-field.is-overridden {
+	padding-left: 8px;
+	border-left: 3px solid #2271b1;
+}
+
+.pc-me-override {
+	margin: 4px 0 0;
+	font-size: 12px;
+	color: #2271b1;
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+.pc-me-override .components-button.is-link {
+	font-size: 12px;
+}

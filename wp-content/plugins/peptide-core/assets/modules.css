@@ -1171,11 +1171,37 @@ picture.vc-img,
 
 .vc-slide__cards {
 	position: absolute;
-	right: 12px;
-	bottom: 12px;
-	display: grid;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	justify-content: flex-end;
 	gap: 8px;
+	padding: 12px;
+	pointer-events: none;
+}
+
+.vc-slide__cards > * {
+	pointer-events: auto;
 	max-width: 260px;
+}
+
+/* 压在图上且已拖动定位：按 x / y 放在图片上 */
+.vc-cards-d-overlay > .is-placed-d {
+	position: absolute;
+	left: var(--x);
+	top: var(--y);
+}
+
+.vc-cards-d-below {
+	position: static;
+	flex-direction: row;
+	flex-wrap: wrap;
+	padding: 12px 0 0;
+}
+
+.vc-cards-d-hidden {
+	display: none;
 }
 
 .vc-slide__card {
@@ -1367,8 +1393,25 @@ picture.vc-img,
 	margin-right: auto;
 }
 
+/* 手机版单独设置：同一个积木输出电脑版和手机版两份，按屏幕宽度只显示一份。 */
+.vc-v--desktop {
+	display: contents;
+}
+
+.vc-v--mobile {
+	display: none;
+}
+
 /* 手机 */
 @media (max-width: 767px) {
+	.vc-v--desktop {
+		display: none;
+	}
+
+	.vc-v--mobile {
+		display: contents;
+	}
+
 	.vc-m {
 		padding-top: var(--vc-m-pt-m, 32px);
 		padding-bottom: var(--vc-m-pb-m, 32px);
@@ -1433,7 +1476,14 @@ picture.vc-img,
 	.vc-slide--split,
 	.vc-report-feature__inner,
 	.vc-faq-wrap--side { grid-template-columns: 1fr; }
-	.vc-slide__cards { position: static; max-width: none; margin-top: 10px; }
+	.vc-slide__cards { display: flex; }
+	.vc-cards-m-overlay { position: absolute; inset: 0; flex-direction: column; padding: 8px; }
+	.vc-cards-m-overlay > .is-placed-d { position: static; }
+	.vc-cards-m-overlay > .is-placed-m { position: absolute; left: var(--x-m); top: var(--y-m); }
+	.vc-cards-m-below { position: static; flex-direction: column; align-items: stretch; padding: 10px 0 0; }
+	.vc-cards-m-below > * { max-width: none; }
+	.vc-cards-m-below > .is-placed-d { position: static; }
+	.vc-cards-m-hidden { display: none; }
 	.vc-products.home-product-grid { grid-template-columns: repeat(var(--vc-cols-m, 2), minmax(0, 1fr)); }
 	.vc-timeline--vertical .vc-timeline__item { grid-template-columns: 1fr; }
 

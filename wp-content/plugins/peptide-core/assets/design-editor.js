@@ -32,11 +32,6 @@
 		var def = defOf( m );
 		var s = ( m.attrs && m.attrs.settings ) || {};
 		var custom = s.title || s.leftTitle;
-		// 空白积木块显示高度（电脑 / 手机），不用点开也能看出间距。
-		if ( m.block === 'vialcove/spacer' && s.heightPx && typeof s.heightPx === 'object' ) {
-			var mob = s.heightPx.mobile === null || s.heightPx.mobile === undefined ? s.heightPx.desktop : s.heightPx.mobile;
-			custom = s.heightPx.desktop + ' / ' + mob + 'px';
-		}
 		return ( def ? def.title : m.block ) + ( custom ? ' · ' + custom : '' );
 	}
 
@@ -46,14 +41,36 @@
 
 	function copyModule( m ) {
 		var c = ui.clone( m );
-		c.attrs.moduleId = ui.uid();
-		( c.attrs.items || [] ).forEach( function ( it ) {
-			it.id = ui.uid();
-			( ( it.settings && it.settings.spots ) || [] ).forEach( function ( s ) {
-				s.id = ui.uid();
+		var map = {};
+		function renew( list ) {
+			( list || [] ).forEach( function ( it ) {
+				map[ it.id ] = map[ it.id ] || ui.uid();
+				it.id = map[ it.id ];
+				[ 'spots', 'highlights', 'facts', 'products' ].forEach( function ( key ) {
+					( ( it.settings && it.settings[ key ] ) || [] ).forEach( function ( sub ) {
+						map[ sub.id ] = map[ sub.id ] || ui.uid();
+						sub.id = map[ sub.id ];
+					} );
+				} );
 			} );
-		} );
+		}
+		c.attrs.moduleId = ui.uid();
+		renew( c.attrs.items );
+		// 手机版条目和电脑版用同一套编号，复制后仍然一一对应。
+		if ( c.attrs.mobile && c.attrs.mobile.items ) {
+			renew( c.attrs.mobile.items );
+		}
 		return c;
+	}
+
+	function mobileOf( m ) {
+		var mob = ( m.attrs && m.attrs.mobile ) || {};
+		return { settings: mob.settings || {}, items: Array.isArray( mob.items ) ? mob.items : null };
+	}
+
+	function mobileCount( m ) {
+		var mob = mobileOf( m );
+		return Object.keys( mob.settings ).length + ( mob.items ? 1 : 0 );
 	}
 
 	function isTyping( target ) {
@@ -107,6 +124,8 @@
 		var openItem = openItemState[ 0 ];
 		var pendingItemRef = useRef( null );
 		var hlTargetRef = useRef( null );
+		var dragJustEndedRef = useRef( false );
+		var commitDragRef = useRef( function () {} );
 		var firstRef = useRef( true );
 		var historyTick = useState( 0 );
 
@@ -393,12 +412,18 @@
 				return null;
 			}
 			var list = root.querySelectorAll( '[data-module-item]' );
+			var first = null;
 			for ( var i = 0; i < list.length; i++ ) {
-				if ( list[ i ].getAttribute( 'data-module-item' ) === itemId ) {
-					return list[ i ];
+				if ( list[ i ].getAttribute( 'data-module-item' ) !== itemId ) {
+					continue;
 				}
+				// 电脑版和手机版各有一份：优先当前看得见的那一份。
+				if ( list[ i ].closest( '.vc-v' ) && 'none' === list[ i ].ownerDocument.defaultView.getComputedStyle( list[ i ].closest( '.vc-v' ) ).display ) {
+					continue;
+				}
+				first = first || list[ i ];
 			}
-			return null;
+			return first;
 		}
 
 		// 轮播等一次只显示一项的积木：暂停自动播放并切换到这一项。
@@ -499,6 +524,8 @@
 			style.textContent =
 				'.vc-m{cursor:pointer}.vc-m:hover{outline:1px dashed rgba(238,125,51,.7);outline-offset:-1px}' +
 				'.site-header:hover,.site-footer:hover{outline:1px dashed rgba(238,125,51,.7);outline-offset:-1px}' +
+				'html{scrollbar-width:none}html::-webkit-scrollbar{width:0;height:0;display:none}' +
+				'[data-pc-drag]{cursor:move}' +
 				'#pc-de-highlight{position:absolute;z-index:2147483646;pointer-events:none;border:2px solid #ee7d33;box-shadow:0 0 0 9999px rgba(15,23,42,.06);border-radius:2px;display:none;transition:top .15s,left .15s,width .15s,height .15s}' +
 				'#pc-de-highlight>span{position:absolute;left:-2px;top:-24px;background:#ee7d33;color:#fff;font:600 12px/24px system-ui,sans-serif;padding:0 8px;border-radius:2px 2px 0 0;white-space:nowrap;max-width:60vw;overflow:hidden;text-overflow:ellipsis}';
 			doc.head.appendChild( style );
@@ -509,10 +536,58 @@
 			[ 200, 800, 2000 ].forEach( function ( ms ) {
 				setTimeout( placeOverlay, ms );
 			} );
+			// 拖动浮动卡片（[data-pc-drag]）：在所在区域（[data-pc-drag-area]）里按百分比定位，松手后保存到当前设备。
+			doc.addEventListener(
+				'mousedown',
+				function ( e ) {
+					var card = e.target.closest && e.target.closest( '[data-pc-drag]' );
+					if ( ! card || e.button !== 0 ) {
+						return;
+					}
+					var area = card.closest( '[data-pc-drag-area]' ) || card.offsetParent;
+					if ( ! area ) {
+						return;
+					}
+					e.preventDefault();
+					var a = area.getBoundingClientRect();
+					var r = card.getBoundingClientRect();
+					var dx = e.clientX - r.left;
+					var dy = e.clientY - r.top;
+					var moved = false;
+					var pos = null;
+					function onMove( ev ) {
+						moved = true;
+						var x = Math.max( 0, Math.min( 100, ( ( ev.clientX - dx - a.left ) / a.width ) * 100 ) );
+						var y = Math.max( 0, Math.min( 100, ( ( ev.clientY - dy - a.top ) / a.height ) * 100 ) );
+						pos = { x: Math.round( x ), y: Math.round( y ) };
+						card.style.position = 'absolute';
+						card.style.left = pos.x + '%';
+						card.style.top = pos.y + '%';
+						card.style.zIndex = '20';
+						placeOverlay();
+					}
+					function onUp() {
+						doc.removeEventListener( 'mousemove', onMove );
+						doc.removeEventListener( 'mouseup', onUp );
+						if ( moved && pos ) {
+							dragJustEndedRef.current = true;
+							commitDragRef.current( card.getAttribute( 'data-module-item' ), pos );
+						}
+					}
+					doc.addEventListener( 'mousemove', onMove );
+					doc.addEventListener( 'mouseup', onUp );
+				},
+				true
+			);
 			doc.addEventListener(
 				'click',
 				function ( e ) {
 					var t = e.target;
+					if ( dragJustEndedRef.current ) {
+						dragJustEndedRef.current = false;
+						e.preventDefault();
+						return;
+					}
 					// 预览里不跳转、不提交，只用来选中积木。
 					e.preventDefault();
 					var m = t.closest && t.closest( '.vc-m' );
@@ -537,6 +612,54 @@
 			);
 			highlight( false );
 		}
+
+		// 拖动卡片后保存位置：在当前设备的条目里找到这张卡片（例如轮播某一张的 highlights），写入 x / y 的当前设备值。
+		commitDragRef.current = function ( cardId, pos ) {
+			var dev = device === 'mobile' ? 'mobile' : 'desktop';
+			var found = false;
+			var next = modules.map( function ( m ) {
+				var mob = mobileOf( m );
+				var useMobile = dev === 'mobile' && mob.items;
+				var list = ui.clone( useMobile ? mob.items : m.attrs.items || [] );
+				var hitItem = null;
+				list.forEach( function ( it ) {
+					Object.keys( it.settings || {} ).forEach( function ( key ) {
+						var subs = it.settings[ key ];
+						if ( ! Array.isArray( subs ) ) {
+							return;
+						}
+						subs.forEach( function ( sub ) {
+							if ( sub && sub.id === cardId ) {
+								sub.settings = sub.settings || {};
+								[ 'x', 'y' ].forEach( function ( axis ) {
+									var cur = sub.settings[ axis ] && typeof sub.settings[ axis ] === 'object' ? sub.settings[ axis ] : { desktop: null, mobile: null };
+									var v = Object.assign( {}, cur );
+									v[ dev ] = pos[ axis ];
+									sub.settings[ axis ] = v;
+								} );
+								hitItem = it.id;
+							}
+						} );
+					} );
+				} );
+				if ( ! hitItem ) {
+					return m;
+				}
+				found = true;
+				fromPreviewRef.current = true;
+				pendingItemRef.current = hitItem;
+				if ( selected !== m.attrs.moduleId ) {
+					setSelected( m.attrs.moduleId );
+				} else {
+					openItemState[ 1 ]( hitItem );
+				}
+				var patch = useMobile ? { mobile: { settings: mob.settings, items: list } } : { items: list };
+				return { block: m.block, attrs: Object.assign( {}, m.attrs, patch ) };
+			} );
+			if ( found ) {
+				setModules( next );
+			}
+		};
 
 		// 换了积木：关闭之前展开的条目（从预览里点某一项时保留那一项）。
 		useEffect(
@@ -840,7 +963,53 @@
 			panel = el( 'div', { className: 'pc-de-note' }, el( Icon, { name: 'info-outline' } ), el( 'p', null, selected === 'header' ? S.headerNote : S.footerNote ) );
 		} else if ( current ) {
 			var def = defOf( current );
-			var values = ui.withDefaults( def.defaults, current.attrs.settings );
+			var isMobile = settingsDevice === 'mobile';
+			var mob = mobileOf( current );
+			var baseValues = ui.withDefaults( def.defaults, current.attrs.settings );
+			// 手机：电脑的设置 + 手机单独改过的字段；条目有手机版时整份用手机版。
+			var values = isMobile ? Object.assign( {}, baseValues, mob.settings ) : baseValues;
+			var shownItems = isMobile && mob.items ? mob.items : current.attrs.items;
+			var fieldDefs = {};
+			def.settings.forEach( function ( f ) {
+				fieldDefs[ f.key ] = f;
+			} );
+			var perDevice = function ( key ) {
+				var f = fieldDefs[ key ];
+				return ! f || f.device || ( f.group || 'content' ) === 'general';
+			};
+			var setMobile = function ( next ) {
+				var m = { settings: next.settings, items: next.items };
+				if ( ! Object.keys( m.settings ).length && ! m.items ) {
+					m = {};
+				}
+				updateModule( current.attrs.moduleId, { mobile: m }, true );
+			};
+			var count = mobileCount( current );
+			var mobileBar = isMobile
+				? el(
+					'div',
+					{ className: 'pc-de-mobilebar' + ( count ? ' has-changes' : '' ) },
+					el( 'p', null, el( Icon, { name: 'smartphone' } ), ' ', S.mobileEditing ),
+					count
+						? el(
+							'p',
+							null,
+							S.mobileChanged.replace( '%d', count ),
+							' ',
+							el(
+								C.Button,
+								{
+									variant: 'link',
+									onClick: function () {
+										updateModule( current.attrs.moduleId, { mobile: {} } );
+									},
+								},
+								S.mobileResetAll
+							)
+						)
+						: null
+				)
+				: null;
 			panel = el(
 				'div',
 				{ className: 'pc-de-settings__inner', key: current.attrs.moduleId },
@@ -858,6 +1027,7 @@
 						)
 					)
 					: null,
+				mobileBar,
 				el(
 					C.Panel,
 					null,
@@ -865,14 +1035,34 @@
 						def: def,
 						settings: values,
 						device: settingsDevice,
-						items: current.attrs.items,
+						items: shownItems,
 						setSetting: function ( key, v ) {
-							var next = Object.assign( {}, values );
+							if ( isMobile && ! perDevice( key ) ) {
+								var ms = Object.assign( {}, mob.settings );
+								ms[ key ] = v;
+								setMobile( { settings: ms, items: mob.items } );
+								return;
+							}
+							var next = Object.assign( {}, baseValues );
 							next[ key ] = v;
 							updateModule( current.attrs.moduleId, { settings: next }, true );
 						},
 						setItems: function ( items ) {
+							if ( isMobile ) {
+								setMobile( { settings: mob.settings, items: items } );
+								return;
+							}
 							updateModule( current.attrs.moduleId, { items: items }, true );
+						},
+						overridden: isMobile
+							? function ( key ) {
+								return Object.prototype.hasOwnProperty.call( mob.settings, key );
+							}
+							: null,
+						resetOverride: function ( key ) {
+							var ms = Object.assign( {}, mob.settings );
+							delete ms[ key ];
+							setMobile( { settings: ms, items: mob.items } );
 						},
 						openItem: openItem,
 						onOpenItem: function ( id ) {

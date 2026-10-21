@@ -356,6 +356,55 @@ $mt = $fb( 'media_text', array( 'moduleId' => 'mt-test', 'settings' => array( 'e
 $ok( 'default design marks each item with data-module-item', str_contains( $fb( 'faq', array( 'moduleId' => 'faq-attr', 'items' => array( array( 'id' => 'q-attr1', 'settings' => array( 'question' => 'Q' ) ) ) ) ), 'data-module-item="q-attr1"' ) && str_contains( $hero, 'data-module-item="s-one1"' ) );
 $ok( 'image & text renders eyebrow, label and caption', str_contains( $mt, '01 / ISRAEL' ) && str_contains( $mt, 'vc-mt__label' ) && str_contains( $mt, '<figcaption class="vc-mt__caption">AI-generated scene</figcaption>' ) );
 
+// 手机版单独设置（EDIT-BLOCKS-07）：只存改过的普通字段；条目整份替换。
+$mob = Renderer::normalize(
+	'cta',
+	array(
+		'moduleId' => 'cta-mob',
+		'settings' => array( 'title' => 'Desktop title', 'eyebrow' => 'SAME' ),
+		'mobile'   => array(
+			'settings' => array(
+				'title'        => 'Phone title',
+				'showMobile'   => false,
+				'paddingTopPx' => array( 'desktop' => 1, 'mobile' => 2 ),
+				'nope'         => 'x',
+			),
+		),
+	)
+);
+$ok( 'mobile overrides keep only normal fields', array( 'title' ) === array_keys( $mob['mobile']['settings'] ) );
+$ok( 'mobile variant merges overrides over desktop', 'Phone title' === Renderer::variant( $mob, 'mobile' )['settings']['title'] && 'SAME' === Renderer::variant( $mob, 'mobile' )['settings']['eyebrow'] && 'Desktop title' === Renderer::variant( $mob, 'desktop' )['settings']['title'] );
+$two = Renderer::render( 'cta', array( 'moduleId' => 'cta-mob', 'settings' => array( 'title' => 'Desktop title' ), 'mobile' => array( 'settings' => array( 'title' => 'Phone title' ) ) ), 'public' );
+$ok( 'module with mobile overrides outputs desktop and mobile versions', str_contains( $two, 'vc-v vc-v--desktop' ) && str_contains( $two, 'vc-v vc-v--mobile' ) && str_contains( $two, 'Desktop title' ) && str_contains( $two, 'Phone title' ) && 1 === substr_count( $two, 'id="vc-cta-mob"' ) );
+$one = Renderer::render( 'cta', array( 'moduleId' => 'cta-one', 'settings' => array( 'title' => 'Only' ) ), 'public' );
+$ok( 'module without mobile overrides outputs one version', ! str_contains( $one, 'vc-v--mobile' ) );
+$mitems = Renderer::normalize( 'faq', array( 'items' => array( array( 'id' => 'q-desk', 'settings' => array( 'question' => 'D' ) ) ), 'mobile' => array( 'items' => array( array( 'id' => 'q-desk', 'settings' => array( 'question' => 'M' ) ) ) ) ) );
+$ok( 'mobile items replace the desktop list on phones', 'M' === Renderer::variant( $mitems, 'mobile' )['items'][0]['settings']['question'] && 'D' === $mitems['items'][0]['settings']['question'] );
+$kept = \PeptideCore\Modules\Layout::clean_modules( array( array( 'block' => 'vialcove/cta', 'attrs' => array( 'moduleId' => 'cta-keep', 'mobile' => array( 'settings' => array( 'title' => 'Phone' ) ) ) ), array( 'block' => 'vialcove/cta', 'attrs' => array( 'moduleId' => 'cta-none' ) ) ) );
+$ok( 'saving keeps mobile overrides and omits empty ones', 'Phone' === $kept[0]['attrs']['mobile']['settings']['title'] && ! isset( $kept[1]['attrs']['mobile'] ) );
+
+// 浮动卡片：放置方式电脑 / 手机分开，位置可以拖动保存。
+$cards = $fb(
+	'carousel',
+	array(
+		'moduleId' => 'card-test',
+		'items'    => array(
+			array(
+				'id'       => 'slide-c1',
+				'settings' => array(
+					'highlights' => array(
+						array( 'id' => 'card-a1', 'settings' => array( 'title' => 'A', 'x' => array( 'desktop' => 10, 'mobile' => null ), 'y' => array( 'desktop' => 20, 'mobile' => null ) ) ),
+						array( 'id' => 'card-b1', 'settings' => array( 'title' => 'B' ) ),
+					),
+				),
+			),
+		),
+	)
+);
+$ok( 'cards default: on the image on desktop, below the image on mobile', str_contains( $cards, 'vc-cards-d-overlay vc-cards-m-below' ) );
+$ok( 'dragged card keeps its position; others stay automatic', str_contains( $cards, '--x:10%;--y:20%' ) && str_contains( $cards, 'is-placed-d' ) && 1 === substr_count( $cards, 'is-placed-d' ) );
+$ok( 'cards are draggable inside the image area', str_contains( $cards, 'data-pc-drag-area' ) && str_contains( $cards, 'data-module-item="card-a1" data-pc-drag' ) && str_contains( $cards, 'data-module-item="card-b1" data-pc-drag' ) );
+
 // 编辑器的区块预览接口（ServerSideRender 实际调用的 /wp/v2/block-renderer）。
 $admin = get_users( array( 'role' => 'administrator', 'number' => 1 ) )[0];
 wp_set_current_user( $admin->ID );

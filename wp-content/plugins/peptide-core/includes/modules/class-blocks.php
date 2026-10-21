@@ -63,6 +63,11 @@ final class Blocks {
 							'type'    => 'array',
 							'default' => array(),
 						),
+						// 手机版单独设置：{settings: {...}, items: [...] | null}
+						'mobile'   => array(
+							'type'    => 'object',
+							'default' => new \stdClass(),
+						),
 					),
 					'supports'        => array(
 						'html'            => false,
@@ -253,6 +258,7 @@ final class Blocks {
 				'hiddenModule' => __( 'Hide this module', 'peptide-core' ),
 				'htmlHelp'     => __( 'Allowed: paragraphs, bold, italic, links, lists.', 'peptide-core' ),
 				'searchProduct' => __( 'Search products', 'peptide-core' ),
+				'mobileOnly'    => __( 'Changed for mobile only.', 'peptide-core' ),
 			),
 		);
 	}

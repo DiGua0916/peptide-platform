@@ -168,6 +168,10 @@ final class Design_Editor {
 						'selectHint'    => __( 'Select a block on the left of this panel, or click it in the preview.', 'peptide-core' ),
 						'previewNote'   => __( 'Live preview of what you are editing. Only you can see it.', 'peptide-core' ),
 						'editing'       => __( 'Editing values for', 'peptide-core' ),
+						'mobileEditing'  => __( 'Mobile version: changes here only affect phones. Anything you do not change stays the same as on desktop.', 'peptide-core' ),
+						/* translators: %d: number of changed settings */
+						'mobileChanged'  => __( '%d setting(s) changed for mobile.', 'peptide-core' ),
+						'mobileResetAll' => __( 'Make mobile the same as desktop again', 'peptide-core' ),
 						/* translators: %d: item number */
 						'itemN'         => __( 'Item %d', 'peptide-core' ),
 					),

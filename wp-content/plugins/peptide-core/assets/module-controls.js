@@ -469,12 +469,21 @@
 				return visible( f, values );
 			} )
 			.map( function ( f ) {
+				var overridden = ctx.overridden && ctx.overridden( f.key );
 				return el(
 					'div',
-					{ key: f.key, className: 'pc-me-field pc-me-field--' + f.type },
+					{ key: f.key, className: 'pc-me-field pc-me-field--' + f.type + ( overridden ? ' is-overridden' : '' ) },
 					control( f, values[ f.key ], function ( v ) {
 						setValue( f.key, v );
-					}, ctx )
+					}, ctx ),
+					overridden
+						? el(
+							'p',
+							{ className: 'pc-me-override' },
+							el( 'span', null, S.mobileOnly ),
+							el( C.Button, { variant: 'link', onClick: function () { ctx.reset( f.key ); } }, S.sameAsDesk )
+						)
+						: null
 				);
 			} );
 	}
@@ -608,7 +617,7 @@
 	 */
 	function settingsPanels( props ) {
 		var def = props.def;
-		var ctx = { device: props.device };
+		var ctx = { device: props.device, overridden: props.overridden, reset: props.resetOverride };
 		var panels = Object.keys( data.groups )
 			.map( function ( group ) {
 				var fields = def.settings.filter( function ( f ) {

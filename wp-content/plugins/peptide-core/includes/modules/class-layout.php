@@ -68,15 +68,20 @@ final class Layout {
 				$m['id'] = Fields::id( '' );
 			}
 			$seen[ $m['id'] ] = true;
-			$out[]            = array(
+			$attrs_out = array(
+				'moduleId' => $m['id'],
+				'version'  => $m['version'],
+				'enabled'  => $m['enabled'],
+				'settings' => $m['settings'],
+				'items'    => $m['items'],
+			);
+			// 手机版单独设置：没有时不保存，保持内容简洁。
+			if ( Renderer::has_mobile( $m ) ) {
+				$attrs_out['mobile'] = $m['mobile'];
+			}
+			$out[] = array(
 				'block' => $block,
-				'attrs' => array(
-					'moduleId' => $m['id'],
-					'version'  => $m['version'],
-					'enabled'  => $m['enabled'],
-					'settings' => $m['settings'],
-					'items'    => $m['items'],
-				),
+				'attrs' => $attrs_out,
 			);
 		}
 		return $out;
