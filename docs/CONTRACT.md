@@ -4,6 +4,8 @@
 
 后续基线：PAY-SHIP-01 的后端提交 3aecb8f 增加测试商务配置命令和后台提醒，公共接口形状未变。
 
+2026-10-22 增补（peptide-core 0.11.0，Codex 已按这些接口完成前端对接 / 提议同步）：菜单、结账条款、公开优惠码三组 PHP 公共函数和 `?pc_coupon=` 行为；访客追踪测试版接口（详细协议见 `docs/handoffs/tracking-protocol.md`）。
+
 ## 数据与职责
 
 - WooCommerce 是商品、变体、价格、库存、购物车、顾客和订单的唯一来源。使用 Store API `/wc/store/v1` 及原生 Blocks 购物车/结账。
@@ -21,6 +23,10 @@
 | GET `/batches/lookup?batch_no=…` | 精确查询；返回批次对象并附 product；每 IP 每 10 分钟 60 次 |
 | GET `/reports/{id}/file` | 授权后 PDF 文件流；错误为统一 JSON |
 | GET `/me/orders/{order_number}/batches` | 已登录订单顾客；未登录 401，不存在或非所有者 404 |
+| GET `/track/session` | 公开；追踪状态 `{protocol,enabled,test_mode,tracked,config}`，不返回访客编号 |
+| POST `/track/events` | 公开、无需 nonce；追踪关闭 403；批量上报，逐条 ack / rejected（见下文“访客追踪”） |
+| GET `/track/admin/live`、`/track/admin/visitors/{id}`、`/track/admin/visits/{id}`、`/track/admin/stats` | manage_woocommerce；后台页面专用，主题不调用 |
+| GET/POST `/menus/{id}` | edit_theme_options；后台菜单编辑器专用，主题用下面的 PHP 函数 |
 
 最后一条路由参数目前按 **WooCommerce 数字订单 ID** 查找，返回 order_number 为展示编号字符串。未启用自定义编号插件时二者一致，将来需显式适配展示编号。
 
@@ -97,6 +103,37 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
 | 429 | pc_rate_limited，读取 retry_after 提示重试 |
 
 浏览器 Cookie REST 需 X-WP-Nonce；下载 URL 的 _wpnonce 由后端生成，登录 Cookie 仍需存在。Woo Store API 写请求另需其 Nonce 或 Cart-Token，由原生 Blocks 处理。账户、购物车、结账及带用户权限的报告不得被公共整页缓存。PHP 公共函数：`peptide_core_get_site_config()`、`peptide_core_get_product_batches($slug,$include_history=false)`、`peptide_core_lookup_batch($batch_no,$include_history=false)`；PHP lookup 不带 HTTP 限流。当前无公共订单 helper，主题用内部 REST 并保留权限检查。
+
+## 菜单、结账条款与公开优惠码
+
+- `peptide_core_get_menu( 'header'|'footer' )`：
+  - 返回 `null` 表示这个位置没有指定菜单，主题显示自己的默认链接；返回 `[]` 表示指定了空菜单，什么都不显示。
+  - 最多两级，每一项有：`id, title, description, type, object_id, url, target('' | '_self' | '_blank'), rel, attr_title, style, icon(null | {url,width,height,alt}), current, children`。
+  - `type` 取 home / shop / category / product / page / post / cart / account / orders / login / register / lost_password / search / coupons / coupon / custom / none。`none` 时 url 为空字符串，只作为标题。
+  - `style` 是插件整理好的行内样式，主题仍需 esc_attr。网址在显示时实时生成；已删除或未发布的对象，以及不再公开的优惠码，不会出现。
+- `peptide_core_get_checkout_terms()`：`[{id,title,url}]`，只包含已发布并勾选“设置为结账条款”的页面。主题只加链接，不改 Additional Checkout Fields 的必选确认。
+- `peptide_core_get_public_coupons()` / `peptide_core_get_public_coupon( $code )`：
+  - 每张优惠码的字段：`id, code, title, text, type, amount, value, free_shipping, minimum_spend(_text), maximum_spend(_text), expires, expires_text, uses_left, limit_per_customer, individual_use, exclude_sale_items, products, categories, excluded_products, excluded_categories([{id,name,url}]), url, apply_url`。
+  - 限定邮箱、过期、用完、未发布的优惠码不会出现；不返回邮箱限制等内部信息。单张查询不可用时返回 null。
+  - 主题可以用 `template-parts/coupons/list.php`（`$args['coupons']`）和 `detail.php`（`$args['coupon']|null`、`$args['list_url']`）接管 `[pc_coupons]` 页面。
+- `?pc_coupon=CODE`（任意前台地址）：插件用 302 跳回去掉参数的同一地址。
+  - 购物车满足条件时立刻使用这张优惠码；否则先记在 WC 会话里，加入商品或修改数量后自动再试。
+  - 过期、用完、未发布的优惠码直接放弃。
+  - 提示文字使用 WooCommerce 的通知，由主题负责显示。
+
+## 访客追踪（测试版）
+
+- 默认关闭，开启方式是后台“访客数据”或 `wp peptide tracking enable`。开启后，插件让 `vialcove_visitor_observer_config` 返回 `{enabled:true,test_mode:true,protocol:1,endpoint,heartbeat_ms:15000,idle_ms:60000,batch_max:20}`。
+- 身份：
+  - 访客由服务器在页面加载时发 HttpOnly cookie `pc_vid`，前端读不到，也不需要生成；
+  - 30 分钟没有事件时开始新的访问；
+  - 标签页由前端放在 `sessionStorage['vc_tab_id']`，作为整批的 `tab_id` 发送；
+  - 登录后由服务器关联账号；员工账号不追踪。
+- 上报 `{protocol:1,tab_id,sent_at,events:[{event_id,page_instance_id,seq,type,occurred_at,page,data}]}`，每批最多 20 条、64 KB。
+  - 返回 `{ack:[], rejected:[{event_id,code,retry}], server_time}`。重复的事件也会 ack，`retry:false` 的应该丢弃。
+  - 整批错误：400 / 403（disabled、staff）/ 413 / 429（Retry-After）。
+  - 字段白名单、在线 / 空闲 / 离线口径、乱序和时钟规则见协议文件。
+- 加购成功、下单、支付成功 / 失败、登录、注册由服务器根据 WooCommerce 事件记录，前端只上报“尝试”。
 
 ## 支付物流边界
 

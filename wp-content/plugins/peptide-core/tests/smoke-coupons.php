@@ -88,7 +88,8 @@ $_GET['code'] = 'SMOKECOLD';
 $gone         = do_shortcode( '[pc_coupons]' );
 unset( $_GET['code'] );
 $ok( 'detail page shows conditions and apply link', str_contains( $detail, 'Minimum spend' ) && str_contains( $detail, 'pc_coupon=SMOKEA10' ) );
-$ok( 'ended coupon detail says it is not available', str_contains( $gone, 'not available' ) && ! str_contains( $gone, 'SMOKECOLD' ) );
+// 主题有自己的 Coupons 模板时文案不同（“unavailable”），插件默认样式是“not available”。
+$ok( 'ended coupon detail says it is not available', ( str_contains( $gone, 'not available' ) || str_contains( $gone, 'unavailable' ) ) && ! str_contains( $gone, 'SMOKECOLD' ) );
 
 // 4. 分享链接：购物车为空时先记下，满足最低消费后自动使用。
 wc_load_cart();

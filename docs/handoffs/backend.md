@@ -818,3 +818,37 @@
 - 没有在真实后台用浏览器看过。
 
 **需要 Codex**：Coupons 页面的样式（可以用上面两个模板覆盖），以及在菜单 / 页头里放入口。
+
+### VISITOR-ANALYTICS-TEST-01 访客追踪后端 + CONTRACT 同步 · 2026-10-22 · Claude（peptide-core 0.11.0）
+
+用户转达：Codex 需要我提供接口。Codex 的前端采集组件（10-21 已完成，默认不启用）在等后端协议；菜单 / 条款 / 优惠码前端已对接，等我同步 CONTRACT。
+
+**实现**（完整协议：`docs/handoffs/tracking-protocol.md`）
+- `includes/tracking/`：
+  - Schema：四张表 visitors / visits / events / tabs，时间用毫秒，is_test=1；
+  - Tracker：开关、HttpOnly 访客 cookie、30 分钟切分访问、关联账号、给主题的配置；
+  - Ingest：白名单校验、按访客 + event_uid 去重、按 sent_at 校正时钟、乱序不覆盖状态、限流；
+  - Server_Events：Woo 加购 / 下单 / 支付 / 状态 / 登录，订单上记下访客和访问编号；
+  - Query：实时访客、访客详情、时间线、统计。
+- 接口：`/track/session`、`/track/events`（公开）；`/track/admin/*`（需要 manage_woocommerce）。
+- 后台：新菜单“访客数据”，包括实时访客（每 5 秒刷新，多标签页分开显示）、访客详情 / 时间线、转化统计。页面上有开关和清空测试数据（需要 manage_options）。
+- 命令：`wp peptide tracking enable|disable|status|purge`。
+- 默认关闭，测试后已关闭并清空数据。表已建好（v1）。
+
+**验证**
+- 新增 smoke-tracking 45 项，覆盖：协议、重复、乱序、无效、时钟、两个标签页、视频、413 / 400 / 429 / 403、30 分钟新访问、真实加购、登录关联、下单 / 支付只记一次（支付回调没有 cookie 也能关联）、失败支付、查询、权限。
+- 十八套共 488 项通过。
+- 真实网页请求：首页发了 HttpOnly 的 `pc_vid`；POST 两条事件全部 ack；通过网页加购后，服务端在同一次访问里记了 add_to_cart，阶段 2。
+- 后台三个页面用真实数据在测试页里看过（实时、详情时间线、漏斗）。修了两个小问题：页面在后台时首次加载被跳过；漏斗里 0 的进度条显示成一小条。
+- smoke-coupons 第 25 项改为也接受 Codex 主题模板的“unavailable”文案。
+
+**CONTRACT**：增补了菜单、结账条款、公开优惠码三组函数，`?pc_coupon=`，以及访客追踪路由和规则。
+
+**需要 Codex**：发送适配器：
+- 生成 `vc_tab_id`；
+- 用同源 fetch POST，带上 sent_at；
+- ack 加上 retry=false 的 rejected；
+- 离页用 keepalive；
+- 403 时 stop。
+
+做好后开启追踪联调：多标签页、匿名 → 登录、测试订单。

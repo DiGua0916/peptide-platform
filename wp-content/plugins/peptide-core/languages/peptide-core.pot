@@ -2,14 +2,14 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.9.0\n"
+"Project-Id-Version: Peptide Core 0.10.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-22T08:32:27+00:00\n"
+"POT-Creation-Date: 2026-10-22T10:29:35+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -49,6 +49,7 @@ msgstr ""
 
 #: includes/admin/class-batch-metabox.php:56
 #: includes/admin/class-list-columns.php:33
+#: includes/admin/class-tracking-page.php:140
 #: includes/modules/class-registry.php:1037
 #: includes/modules/class-registry.php:1190
 msgid "Product"
@@ -78,6 +79,7 @@ msgid "Status"
 msgstr ""
 
 #: includes/admin/class-batch-metabox.php:80
+#: includes/admin/class-tracking-page.php:73
 msgid "Active"
 msgstr ""
 
@@ -171,6 +173,7 @@ msgid "%1$d orders, %2$d customers, %3$d units in total."
 msgstr ""
 
 #: includes/admin/class-batch-orders.php:66
+#: includes/admin/class-tracking-page.php:92
 msgid "Order"
 msgstr ""
 
@@ -218,6 +221,7 @@ msgstr ""
 
 #: includes/admin/class-batch-orders.php:141
 #: includes/admin/class-batch-orders.php:144
+#: includes/admin/class-tracking-page.php:123
 msgid "Orders"
 msgstr ""
 
@@ -371,6 +375,8 @@ msgid "Back to theme design"
 msgstr ""
 
 #: includes/admin/class-design-editor.php:120
+#: includes/admin/class-tracking-page.php:96
+#: includes/admin/class-tracking-page.php:146
 msgid "Page"
 msgstr ""
 
@@ -986,6 +992,8 @@ msgstr ""
 #: includes/admin/class-menu-page.php:164
 #: includes/admin/class-menu-page.php:207
 #: includes/admin/class-store-design.php:140
+#: includes/admin/class-tracking-page.php:184
+#: includes/admin/class-tracking-page.php:194
 #: includes/class-custom-pages.php:330
 msgid "Sorry, you are not allowed to do that."
 msgstr ""
@@ -1013,6 +1021,8 @@ msgid "These items link to pages that do not exist on this site and were importe
 msgstr ""
 
 #: includes/admin/class-menu-page.php:238
+#: includes/admin/class-tracking-page.php:107
+#: includes/admin/class-tracking-page.php:247
 msgid "Loading…"
 msgstr ""
 
@@ -1714,6 +1724,425 @@ msgstr ""
 msgid "Coming soon"
 msgstr ""
 
+#: includes/admin/class-tracking-page.php:34
+#: includes/admin/class-tracking-page.php:116
+msgid "Visitors"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:35
+#: includes/admin/class-tracking-page.php:213
+msgid "Live visitors"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:36
+#: includes/admin/class-tracking-page.php:215
+msgid "Conversion"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:74
+msgid "Idle"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:75
+msgid "Offline"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:76
+msgid "No visitors in the last 30 minutes."
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:77
+msgid "Visitor"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:78
+msgid "Device"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:79
+msgid "Open pages"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:80
+msgid "Furthest step"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:81
+msgid "Visit started"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:82
+msgid "Last signal"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:83
+#, php-format
+msgid "%s ago"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:84
+#, php-format
+msgid "%ds"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:85
+#, php-format
+msgid "%dm"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:86
+#, php-format
+msgid "%dh"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:87
+msgid "Visits"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:88
+msgid "Page views"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:89
+#: includes/modules/class-registry.php:779
+msgid "Events"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:90
+msgid "Duration"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:91
+msgid "Landing page"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:93
+msgid "Time"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:94
+msgid "Tab"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:95
+msgid "Event"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:97
+#: includes/class-coupons.php:420
+msgid "Details"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:98
+msgid "Server fact"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:99
+msgid "← Live visitors"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:100
+msgid "Same account on other devices / browsers"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:101
+msgid "First seen"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:102
+#: includes/admin/class-tracking-page.php:143
+msgid "Account"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:103
+msgid "Guest"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:104
+#: includes/modules/class-registry.php:756
+msgid "Timeline"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:105
+msgid "Choose a visit to see its timeline."
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:106
+msgid "Refresh"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:108
+#, php-format
+msgid "Could not load: %s"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:109
+msgid "From"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:110
+msgid "To"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:111
+msgid "All devices"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:112
+#: includes/modules/class-blocks.php:225
+msgid "Desktop"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:113
+#: includes/modules/class-blocks.php:226
+msgid "Mobile"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:114
+msgid "Tablet"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:115
+msgid "Apply"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:117
+msgid "Conversion funnel"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:118
+#, php-format
+msgid "%s of visits"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:119
+#, php-format
+msgid "%s from the previous step"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:120
+msgid "By day (UTC)"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:121
+msgid "Day"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:122
+#: includes/admin/class-tracking-page.php:132
+#: includes/admin/class-tracking-page.php:168
+msgid "Added to cart"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:124
+#: includes/admin/class-tracking-page.php:135
+msgid "Paid"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:125
+#: includes/modules/class-registry.php:1185
+msgid "Products"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:126
+msgid "Views"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:127
+msgid "No data in this period."
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:128
+#: includes/modules/class-fallback.php:610
+#: includes/modules/class-registry.php:613
+msgid "Video"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:130
+msgid "Visited"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:131
+msgid "Viewed a product"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:133
+msgid "Reached checkout"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:134
+msgid "Placed an order"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:138
+msgid "Home"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:139
+msgid "Shop"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:141
+#: includes/class-menus.php:105
+msgid "Cart"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:142
+msgid "Checkout"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:144
+msgid "Order received"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:145
+msgid "Order payment"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:149
+msgid "Opened page"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:150
+msgid "Viewed product"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:151
+msgid "Viewed cart"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:152
+msgid "Opened checkout"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:153
+msgid "Visibility changed"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:154
+msgid "Heartbeat"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:155
+msgid "Left page"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:156
+msgid "Chose option"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:157
+msgid "Clicked add to cart"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:158
+msgid "Clicked place order"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:159
+msgid "Opened cart drawer"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:160
+msgid "Closed cart drawer"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:161
+msgid "Changed cart"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:162
+msgid "Cart updated (browser)"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:163
+msgid "Video play"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:164
+msgid "Video pause"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:165
+msgid "Video progress"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:166
+msgid "Video seek"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:167
+msgid "Video ended"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:169
+msgid "Order placed"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:170
+msgid "Payment succeeded"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:171
+msgid "Payment failed"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:172
+msgid "Order status changed"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:173
+msgid "Logged in"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:174
+msgid "Registered"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:176
+msgid "Hide heartbeats"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:214
+msgid "Visitor details"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:220
+msgid "Collecting (test mode)"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:220
+msgid "Tracking is off"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:221
+msgid "Test version: data here comes from test visits on this site. There is no consent banner or retention policy yet, so do not turn this on for real customers."
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:223
+msgid "All tracking test data was deleted."
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:231
+msgid "Turn off tracking"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:234
+msgid "Turn on test tracking"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:238
+msgid "Delete all tracking test data? This cannot be undone."
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:241
+msgid "Delete test data"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:244
+msgid "Staff accounts (shop managers, administrators) are never tracked. Use a customer test account or a private window to test."
+msgstr ""
+
 #: includes/api/class-errors.php:20
 msgid "Invalid request parameters."
 msgstr ""
@@ -1800,6 +2229,22 @@ msgstr ""
 
 #: includes/api/class-store-api.php:139
 msgid "Paired regular/current price of one purchasable item (minor units), with sale state and comparison-price source."
+msgstr ""
+
+#: includes/api/class-tracking-controller.php:62
+msgid "Visitor tracking is turned off."
+msgstr ""
+
+#: includes/api/class-tracking-controller.php:124
+msgid "Sorry, you are not allowed to view visitor data."
+msgstr ""
+
+#: includes/api/class-tracking-controller.php:137
+msgid "Visitor not found."
+msgstr ""
+
+#: includes/api/class-tracking-controller.php:145
+msgid "Visit not found."
 msgstr ""
 
 #: includes/class-checkout-ack.php:40
@@ -1900,10 +2345,6 @@ msgstr ""
 
 #: includes/class-coupons.php:406
 msgid "There are no public offers right now. Please check back later."
-msgstr ""
-
-#: includes/class-coupons.php:420
-msgid "Details"
 msgstr ""
 
 #: includes/class-coupons.php:429
@@ -2139,10 +2580,6 @@ msgstr ""
 msgid "Blog post"
 msgstr ""
 
-#: includes/class-menus.php:105
-msgid "Cart"
-msgstr ""
-
 #: includes/class-menus.php:106
 msgid "My account"
 msgstr ""
@@ -2244,7 +2681,7 @@ msgstr ""
 msgid "Batch: %s"
 msgstr ""
 
-#: includes/class-plugin.php:91
+#: includes/class-plugin.php:95
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr ""
 
@@ -2394,14 +2831,6 @@ msgstr ""
 msgid "Previewing template \"%s\". Only signed-in staff can see this preview."
 msgstr ""
 
-#: includes/modules/class-blocks.php:225
-msgid "Desktop"
-msgstr ""
-
-#: includes/modules/class-blocks.php:226
-msgid "Mobile"
-msgstr ""
-
 #: includes/modules/class-blocks.php:228
 msgid "Same as desktop"
 msgstr ""
@@ -2533,11 +2962,6 @@ msgstr ""
 
 #: includes/modules/class-fallback.php:594
 msgid "Add a YouTube link"
-msgstr ""
-
-#: includes/modules/class-fallback.php:610
-#: includes/modules/class-registry.php:613
-msgid "Video"
 msgstr ""
 
 #: includes/modules/class-fallback.php:615
@@ -3346,10 +3770,6 @@ msgstr ""
 msgid "Scripts only run when the last editor of this design is an administrator. Do not paste code you do not trust."
 msgstr ""
 
-#: includes/modules/class-registry.php:756
-msgid "Timeline"
-msgstr ""
-
 #: includes/modules/class-registry.php:763
 msgid "Timeline style"
 msgstr ""
@@ -3378,10 +3798,6 @@ msgstr ""
 #: includes/modules/class-registry.php:773
 #: includes/modules/class-registry.php:1266
 msgid "Collapse button text"
-msgstr ""
-
-#: includes/modules/class-registry.php:779
-msgid "Events"
 msgstr ""
 
 #: includes/modules/class-registry.php:784
@@ -3736,10 +4152,6 @@ msgstr ""
 msgid "Category"
 msgstr ""
 
-#: includes/modules/class-registry.php:1185
-msgid "Products"
-msgstr ""
-
 #: includes/modules/class-registry.php:1198
 msgid "Catalog order (as in the price list)"
 msgstr ""
@@ -3830,4 +4242,26 @@ msgstr ""
 
 #: includes/modules/class-renderer.php:232
 msgid "Hidden on mobile"
+msgstr ""
+
+#: includes/tracking/class-ingest.php:86
+msgid "Batch is too large."
+msgstr ""
+
+#: includes/tracking/class-ingest.php:90
+msgid "Expected a JSON object with an events array."
+msgstr ""
+
+#. translators: %d: maximum events
+#: includes/tracking/class-ingest.php:94
+#, php-format
+msgid "At most %d events per batch."
+msgstr ""
+
+#: includes/tracking/class-ingest.php:191
+msgid "Staff accounts are not tracked."
+msgstr ""
+
+#: includes/tracking/class-ingest.php:201
+msgid "Too many events. Try again later."
 msgstr ""

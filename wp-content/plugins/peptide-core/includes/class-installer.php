@@ -29,6 +29,10 @@ final class Installer {
 		if ( get_option( self::OPTION_VERSION ) !== PEPTIDE_CORE_VERSION ) {
 			Capabilities::grant( true );
 			Private_Files::ensure_dir();
+			// 访客追踪的表只在开启过追踪后存在；结构有更新时同步。
+			if ( get_option( Tracking\Schema::OPTION ) && ! Tracking\Schema::installed() ) {
+				Tracking\Schema::install();
+			}
 			update_option( self::OPTION_VERSION, PEPTIDE_CORE_VERSION, false );
 		}
 	}

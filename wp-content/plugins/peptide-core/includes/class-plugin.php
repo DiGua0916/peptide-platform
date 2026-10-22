@@ -37,6 +37,8 @@ final class Plugin {
 		Menus::register_hooks();
 		Custom_Pages::register_hooks();
 		Coupons::register_hooks();
+		Tracking\Tracker::register_hooks();
+		Api\Tracking_Controller::register_hooks();
 		Api\Menu_Controller::register_hooks();
 		add_action( 'init', array( Installer::class, 'maybe_upgrade' ), 5 );
 		Api\Rest_Controller::register_hooks();
@@ -57,6 +59,7 @@ final class Plugin {
 			Admin\Layout_Editor::register_hooks();
 			Admin\Design_Editor::register_hooks();
 			Admin\Menu_Page::register_hooks();
+			Admin\Tracking_Page::register_hooks();
 		}
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
@@ -67,6 +70,7 @@ final class Plugin {
 			\WP_CLI::add_command( 'peptide pricing', Cli\Pricing_Command::class );
 			\WP_CLI::add_command( 'peptide shipping', Cli\Shipping_Command::class );
 			\WP_CLI::add_command( 'peptide layout', Cli\Layout_Command::class );
+			\WP_CLI::add_command( 'peptide tracking', Cli\Tracking_Command::class );
 		}
 	}
 
