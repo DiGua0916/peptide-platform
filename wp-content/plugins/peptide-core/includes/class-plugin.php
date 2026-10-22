@@ -63,6 +63,7 @@ final class Plugin {
 			Admin\Menu_Page::register_hooks();
 			Admin\Tracking_Page::register_hooks();
 			Admin\Overview_Page::register_hooks();
+			Admin\Admin_Menus::register_hooks();
 		}
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {

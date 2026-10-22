@@ -942,3 +942,20 @@
   - 追踪关闭时，卡片里提示到“访客数据”开启。
 - **翻译**：这一轮第一次生成翻译时，命令在仓库根目录运行，生成了一个没有用的 `languages/` 目录，已经删除，然后在插件目录重新生成。之前几轮的翻译都抽查过，正常。
 - **验证**：在模拟的后台请求里，第一个菜单是 pc-overview（仪表盘），index.php 已经不在菜单里，页面可以访问。卡片用示例访客在测试页里看过。二十套共 545 项通过。
+
+### ADMIN-MENU-01 删掉文章 / 媒体 / 评论 / WooCommerce 菜单 · 2026-10-22 · Claude
+
+用户要求：左侧菜单的“文章、媒体、评论、WooCommerce”直接删掉。
+
+- `includes/admin/class-admin-menus.php`（只对 manage_woocommerce 生效）：
+  - 去掉四个顶层菜单。`remove_menu_page()` 每次只去掉第一个匹配项，所以循环执行到没有为止。
+  - WooCommerce 菜单下有开店必需的页面，所以移到新的顶层菜单，参照 Shopname：
+    - **订单**：wc-orders，带待处理数量；
+    - **顾客**：wc-admin 的 /customers；
+    - **店铺设置**：WooCommerce 设置、VialCove 设置、系统状态。
+  - 这些页面本身都没有变。打开时左侧菜单停在新的位置（parent_file / submenu_file）。
+  - 文章、媒体、评论的页面也都还在，只是菜单里没有入口。媒体库在商品图、装修选图时照常可以用。
+- 说明文字里的“WooCommerce → VialCove 设置”改为“店铺设置 → VialCove 设置”，CONTRACT 同步修改；launch-check 的 HPOS 提示也改了路径。
+- 新增 smoke-admin-menus 8 项：在命令行里手动载入 WC_Admin_Menus 模拟后台菜单，检查四个菜单已去掉、新菜单的位置，以及 4 个移走的页面仍能打开、菜单高亮正确。
+- smoke-overview 最后一项改为只检查测试自己建的记录：Codex 已经开启追踪并接通适配器，测试期间有真实访客进来，原来比较今天总数会误报。
+- 全部 21 套测试通过。

@@ -115,7 +115,7 @@ final class Launch_Check {
 
 		// 订单存储模式：旧版存储下 wc_get_orders 会忽略 meta_query，插件已逐个核对，但查询会变慢。
 		$hpos = Order_Batches::hpos_enabled();
-		$add( 'Order storage', $hpos ? 'ok' : 'warn', $hpos ? 'High-performance order storage (HPOS).' : 'Legacy order storage: batch lookups scan orders one by one. Enable HPOS in WooCommerce → Settings → Advanced → Features.' );
+		$add( 'Order storage', $hpos ? 'ok' : 'warn', $hpos ? 'High-performance order storage (HPOS).' : 'Legacy order storage: batch lookups scan orders one by one. Enable HPOS in Store settings → WooCommerce settings → Advanced → Features.' );
 
 		$dir  = wp_normalize_path( Private_Files::dir() );
 		$webs = array( wp_normalize_path( ABSPATH ) );

@@ -1,6 +1,6 @@
 <?php
 /**
- * 后台设置页（BE-05）：WooCommerce → VialCove 设置。仅管理员（pc_manage_settings）可用。
+ * 后台设置页（BE-05）：店铺设置 → VialCove 设置（2026-10-22 起；原来在 WooCommerce 菜单下）。仅管理员（pc_manage_settings）可用。
  *
  * @package PeptideCore
  */

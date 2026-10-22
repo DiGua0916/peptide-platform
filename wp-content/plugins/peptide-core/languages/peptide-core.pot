@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-22T12:05:37+00:00\n"
+"POT-Creation-Date: 2026-10-22T12:20:01+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -27,6 +27,34 @@ msgstr ""
 #. Author of the plugin
 #: peptide-core.php
 msgid "DiGua"
+msgstr ""
+
+#: includes/admin/class-admin-menus.php:53
+#: includes/admin/class-batch-orders.php:141
+#: includes/admin/class-batch-orders.php:144
+#: includes/admin/class-overview-page.php:130
+#: includes/admin/class-tracking-page.php:127
+msgid "Orders"
+msgstr ""
+
+#: includes/admin/class-admin-menus.php:54
+msgid "Customers"
+msgstr ""
+
+#: includes/admin/class-admin-menus.php:55
+msgid "Store settings"
+msgstr ""
+
+#: includes/admin/class-admin-menus.php:56
+msgid "WooCommerce settings"
+msgstr ""
+
+#: includes/admin/class-admin-menus.php:58
+msgid "VialCove settings"
+msgstr ""
+
+#: includes/admin/class-admin-menus.php:60
+msgid "System status"
 msgstr ""
 
 #: includes/admin/class-batch-metabox.php:29
@@ -221,13 +249,6 @@ msgstr ""
 
 #: includes/admin/class-batch-orders.php:114
 msgid "You do not have permission to export these orders."
-msgstr ""
-
-#: includes/admin/class-batch-orders.php:141
-#: includes/admin/class-batch-orders.php:144
-#: includes/admin/class-overview-page.php:130
-#: includes/admin/class-tracking-page.php:127
-msgid "Orders"
 msgstr ""
 
 #. translators: %s: store brand name
@@ -2974,7 +2995,7 @@ msgstr ""
 msgid "Batch: %s"
 msgstr ""
 
-#: includes/class-plugin.php:98
+#: includes/class-plugin.php:99
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr ""
 

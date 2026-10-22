@@ -39,7 +39,7 @@
 - demo_notice 为纯文本；demo_mode=false 时返回 null。主题仅在开启演示时显示，转义文字，空提示仍保留简短演示标识。
 - use_statement_html 为经 wp_kses_post 清理的 HTML 或 null；主题再次清理后显示，空值不生成空模块。
 - checkout_ack.label_html 保留早期字段名，实际是**纯文本**。空文案时 enabled 不生效。brand_name 仅后台使用，不在 /site 返回。
-- 管理入口：WooCommerce → VialCove 设置。仅有 pc_manage_settings 的管理员可操作。
+- 管理入口：店铺设置 → VialCove 设置（2026-10-22 起，原来在 WooCommerce 菜单下）。仅有 pc_manage_settings 的管理员可操作。
 
 ## 商品、批次与报告
 

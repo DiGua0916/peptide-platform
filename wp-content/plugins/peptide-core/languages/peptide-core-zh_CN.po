@@ -11,7 +11,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-22T12:05:37+00:00\n"
+"POT-Creation-Date: 2026-10-22T12:20:01+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -30,6 +30,34 @@ msgstr "为多肽商店提供批次、检测报告及与 WooCommerce 的集成�
 #: peptide-core.php
 msgid "DiGua"
 msgstr "DiGua"
+
+#: includes/admin/class-admin-menus.php:53
+#: includes/admin/class-batch-orders.php:141
+#: includes/admin/class-batch-orders.php:144
+#: includes/admin/class-overview-page.php:130
+#: includes/admin/class-tracking-page.php:127
+msgid "Orders"
+msgstr "订单"
+
+#: includes/admin/class-admin-menus.php:54
+msgid "Customers"
+msgstr "顾客"
+
+#: includes/admin/class-admin-menus.php:55
+msgid "Store settings"
+msgstr "店铺设置"
+
+#: includes/admin/class-admin-menus.php:56
+msgid "WooCommerce settings"
+msgstr "WooCommerce 设置"
+
+#: includes/admin/class-admin-menus.php:58
+msgid "VialCove settings"
+msgstr "VialCove 设置"
+
+#: includes/admin/class-admin-menus.php:60
+msgid "System status"
+msgstr "系统状态"
 
 #: includes/admin/class-batch-metabox.php:29
 msgid "Batch details"
@@ -224,13 +252,6 @@ msgstr "文件包含顾客联系方式，请按隐私政策妥善处理。"
 #: includes/admin/class-batch-orders.php:114
 msgid "You do not have permission to export these orders."
 msgstr "你没有导出这些订单的权限。"
-
-#: includes/admin/class-batch-orders.php:141
-#: includes/admin/class-batch-orders.php:144
-#: includes/admin/class-overview-page.php:130
-#: includes/admin/class-tracking-page.php:127
-msgid "Orders"
-msgstr "订单"
 
 #. translators: %s: store brand name
 #: includes/admin/class-dashboard.php:39
@@ -2970,7 +2991,7 @@ msgstr "批次分配已更新："
 msgid "Batch: %s"
 msgstr "批次：%s"
 
-#: includes/class-plugin.php:98
+#: includes/class-plugin.php:99
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr "Peptide Core 需要先安装并启用 WooCommerce。"
 

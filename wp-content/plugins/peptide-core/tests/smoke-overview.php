@@ -132,4 +132,9 @@ foreach ( $visitor_ids as $id ) {
 }
 $s = Overview::summary();
 $after = Overview::range_data( 'today' );
-$ok( 'test data removed', $after['orders'] === $before['orders'] && $after['visitors'] === $before['visitors'] );
+// 只检查测试自己建的记录（访客追踪开着时，测试期间可能有真实访客进来）。
+$left = 0;
+foreach ( $visitor_ids as $id ) {
+	$left += (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . Schema::table( 'visitors' ) . ' WHERE id = %d', $id ) ); // phpcs:ignore
+}
+$ok( 'test data removed', 0 === $left && ! wc_get_order( $paid->get_id() ) && ! get_userdata( $user ) );
