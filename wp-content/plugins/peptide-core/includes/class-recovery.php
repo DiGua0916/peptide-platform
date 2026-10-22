@@ -1,36 +1,44 @@
 <?php
 /**
- * 弃单召回（CART-RECOVERY-01），对应 Shopname 的“弃单激活 / 购物车召回（阶段一、阶段二）”。
+ * 弃单召回（CART-RECOVERY-01，2026-10-23 按 Shopname 改为三阶段：CART-RECOVERY-02）。
  *
- * 数据来源：WooCommerce 会话（woocommerce_sessions）。客户在结账页填写邮箱后，区块结账会立刻把邮箱写进会话的
- * customer 数据；会话里同时有购物车。所以“弃单” = 有效会话里有商品、有邮箱，购物车一段时间没变，也还没付款。
- * 不依赖访客追踪，追踪关闭时也能用。
+ * 弃单：顾客在结账页填了邮箱和地址，购物车里有商品，但没有付款。
+ * 数据来源是 WooCommerce 会话（woocommerce_sessions）：区块结账填写时会把邮箱、地址写进会话的 customer，
+ * 会话里还有购物车、选中的配送 / 支付方式和结账草稿订单（store_api_draft_order，用来显示订单编号）。不依赖访客追踪。
  *
- * 流程（WP-Cron 每 10 分钟扫描一次，也可以 wp peptide recovery scan）：
- * - 新出现或购物车有变化：记一条 / 更新弃单记录，计时从这次变化开始；
- * - 购物车 delay1（默认 60 分钟）没变化：发第一封提醒；第一封之后再过 delay2（默认 24 小时）仍没付款：发第二封；
- * - 客户付款（woocommerce_payment_complete，或订单进入已付款状态）：同邮箱的未结记录结束，
- *   在提醒邮件之后付款的记为“召回成功”，并记下订单和金额；
- * - 购物车被清空：结束（closed）；会话过期：结束（expired）。
+ * 状态（和 Shopname 的“弃单”列表一致）：
+ * - pending 待召回：已记录，还没有发提醒；
+ * - recalling 召回中：已经发了提醒，三封还没发完；
+ * - success 召回成功：顾客点了邮件里的链接回来，或者在收到提醒后付了款；
+ * - failed 召回失败：开启的提醒都发完了，最后一封之后 24 小时内没有回来（或会话已过期）；
+ * - void 已作废：没等提醒就自己付了款、清空了购物车、会话在发提醒前就过期、退订，或在后台手动作废。
  *
- * 邮件（美国 CAN-SPAM）：每封都有退订链接和店铺实体地址；WooCommerce 设置里没有店铺地址时不发。
- * 退订的邮箱以后不再收到提醒（只保存邮箱的哈希）。员工账号不发。默认关闭。
- * 邮件里的“完成订单”链接带一次性令牌：恢复购物车（不重复添加已有商品）、可选地使用设置里的优惠码，然后进入结账页。
+ * 提醒邮件是三封 WooCommerce 邮件（Emails\Cart_Recovery_1/2/3），各有开关、优惠券和延迟秒数，
+ * 在“系统设置 → 邮件通知 → 弃单通知”里设置。WP-Cron 每 5 分钟扫描一次（也可以 wp peptide recovery scan）。
+ * 没有店铺实体地址或发件邮箱无效时不发（美国 CAN-SPAM）。退订的邮箱只保存哈希。员工账号不记录。
  *
  * @package PeptideCore
  */
 
 namespace PeptideCore;
 
+use PeptideCore\Emails\Admin_Abandoned;
+use PeptideCore\Emails\Cart_Recovery;
+
 defined( 'ABSPATH' ) || exit;
 
 final class Recovery {
 
-	public const OPTION     = 'peptide_core_recovery';
 	public const OPTOUT     = 'peptide_core_recovery_optout';
 	public const DB_OPTION  = 'peptide_core_recovery_db';
-	public const DB_VERSION = '1';
+	public const DB_VERSION = '2';
 	public const CRON       = 'peptide_core_recovery_scan';
+
+	public const STATUSES = array( 'pending', 'recalling', 'success', 'failed', 'void' );
+	public const OPEN     = array( 'pending', 'recalling' );
+
+	/** 最后一封提醒发出后多久没回来算召回失败。 */
+	public const FAIL_AFTER_MS = DAY_IN_SECONDS * 1000;
 
 	public static function register_hooks(): void {
 		add_filter( 'cron_schedules', array( self::class, 'cron_schedule' ) );
@@ -41,63 +49,43 @@ final class Recovery {
 		add_action( 'woocommerce_order_status_changed', array( self::class, 'on_status' ), 30, 4 );
 	}
 
-	// ---------- 设置 ----------
+	// ---------- 邮件 ----------
 
-	public static function defaults(): array {
-		return array(
-			'enabled'      => false,
-			'delay1_min'   => 60,
-			'stage2'       => true,
-			'delay2_hours' => 24,
-			'coupon'       => '',
-			'subject1'     => 'You left something in your cart',
-			'subject2'     => 'Your cart is still saved',
-			'heading'      => 'Still thinking it over?',
-			'intro'        => 'You left these items in your cart. Your cart is saved, so you can pick up right where you left off.',
-			'button'       => 'Complete your order',
-		);
+	/** 第 n 阶段的提醒邮件（1–3）。 */
+	public static function email( int $stage ): ?Cart_Recovery {
+		$emails = function_exists( 'WC' ) ? WC()->mailer()->get_emails() : array();
+		$e      = $emails[ 'PC_Email_Cart_Recovery_' . $stage ] ?? null;
+		return $e instanceof Cart_Recovery ? $e : null;
 	}
 
-	public static function settings(): array {
-		$o = get_option( self::OPTION, array() );
-		return array_merge( self::defaults(), is_array( $o ) ? $o : array() );
+	public static function admin_email(): ?Admin_Abandoned {
+		$e = WC()->mailer()->get_emails()['PC_Email_Admin_Abandoned'] ?? null;
+		return $e instanceof Admin_Abandoned ? $e : null;
 	}
 
-	public static function save_settings( array $raw ): array {
-		$d    = self::defaults();
-		$text = static fn( $v, int $max, string $fallback ): string => '' !== trim( (string) $v ) ? ( function_exists( 'mb_substr' ) ? mb_substr( sanitize_text_field( (string) $v ), 0, $max ) : substr( sanitize_text_field( (string) $v ), 0, $max ) ) : $fallback;
-		$code = wc_format_coupon_code( (string) ( $raw['coupon'] ?? '' ) );
-		$s    = array(
-			'enabled'      => ! empty( $raw['enabled'] ),
-			'delay1_min'   => max( 15, min( 72 * 60, (int) ( $raw['delay1_min'] ?? $d['delay1_min'] ) ) ),
-			'stage2'       => ! empty( $raw['stage2'] ),
-			'delay2_hours' => max( 1, min( 14 * 24, (int) ( $raw['delay2_hours'] ?? $d['delay2_hours'] ) ) ),
-			'coupon'       => '' !== $code && wc_get_coupon_id_by_code( $code ) ? $code : '',
-			'subject1'     => $text( $raw['subject1'] ?? '', 120, $d['subject1'] ),
-			'subject2'     => $text( $raw['subject2'] ?? '', 120, $d['subject2'] ),
-			'heading'      => $text( $raw['heading'] ?? '', 120, $d['heading'] ),
-			'intro'        => '' !== trim( (string) ( $raw['intro'] ?? '' ) ) ? ( function_exists( 'mb_substr' ) ? mb_substr( sanitize_textarea_field( (string) $raw['intro'] ), 0, 600 ) : substr( sanitize_textarea_field( (string) $raw['intro'] ), 0, 600 ) ) : $d['intro'],
-			'button'       => $text( $raw['button'] ?? '', 40, $d['button'] ),
-		);
-		update_option( self::OPTION, $s, false );
-		if ( $s['enabled'] ) {
-			self::install();
-		}
-		self::schedule();
-		return $s;
+	/**
+	 * 有开启的提醒（或管理员弃单通知）时才需要扫描。直接读邮件设置，不加载邮件类（init 时每个请求都会调用）。
+	 * 顾客提醒默认开启，管理员通知默认关闭。
+	 */
+	public static function enabled(): bool {
+		$on = static function ( string $id, string $default ): bool {
+			$o = get_option( 'woocommerce_' . $id . '_settings', array() );
+			return 'yes' === ( is_array( $o ) && isset( $o['enabled'] ) ? $o['enabled'] : $default );
+		};
+		return $on( 'pc_cart_recovery_1', 'yes' ) || $on( 'pc_cart_recovery_2', 'yes' ) || $on( 'pc_cart_recovery_3', 'yes' ) || $on( 'pc_admin_abandoned', 'no' );
 	}
 
-	/** 店铺实体地址（WooCommerce → 设置 → 常规）。CAN-SPAM 要求商业邮件写明实体地址，没有时不发。 */
+	/** 店铺实体地址（WooCommerce 店铺地址）。没有地址时不发营销邮件。 */
 	public static function store_address(): string {
-		$parts = array_filter(
-			array(
-				get_option( 'woocommerce_store_address' ),
-				get_option( 'woocommerce_store_address_2' ),
-				trim( get_option( 'woocommerce_store_city' ) . ' ' . get_option( 'woocommerce_store_postcode' ) ),
-				WC()->countries ? WC()->countries->get_base_country() : '',
-			)
-		);
-		return get_option( 'woocommerce_store_address' ) && get_option( 'woocommerce_store_city' ) ? implode( ', ', array_map( 'strval', $parts ) ) : '';
+		return get_option( 'woocommerce_store_address' ) && get_option( 'woocommerce_store_city' ) ? Store_Config::address_line() : '';
+	}
+
+	/** 不能发送的原因：address（缺店铺地址）、sender（发件邮箱无效）；可以发送时为空。 */
+	public static function blocked_reason(): string {
+		if ( '' === self::store_address() ) {
+			return 'address';
+		}
+		return is_email( (string) get_option( 'woocommerce_email_from_address' ) ) ? '' : 'sender';
 	}
 
 	// ---------- 表 ----------
@@ -114,26 +102,38 @@ final class Recovery {
 	public static function install(): void {
 		global $wpdb;
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-		$t = self::table();
+		$t      = self::table();
+		$before = (string) get_option( self::DB_OPTION );
 		dbDelta(
 			"CREATE TABLE {$t} (
   id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   session_key varchar(64) NOT NULL,
   email varchar(190) NOT NULL,
   user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  name varchar(190) NOT NULL DEFAULT '',
   cart longtext NULL,
   cart_hash char(32) NOT NULL DEFAULT '',
   items int(10) unsigned NOT NULL DEFAULT 0,
   subtotal varchar(32) NOT NULL DEFAULT '0',
+  total varchar(32) NOT NULL DEFAULT '',
   currency varchar(8) NOT NULL DEFAULT '',
-  status varchar(16) NOT NULL DEFAULT 'open',
+  country varchar(4) NOT NULL DEFAULT '',
+  ship_method varchar(190) NOT NULL DEFAULT '',
+  pay_method varchar(190) NOT NULL DEFAULT '',
+  draft_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  status varchar(16) NOT NULL DEFAULT 'pending',
   stage tinyint(3) unsigned NOT NULL DEFAULT 0,
+  emails tinyint(3) unsigned NOT NULL DEFAULT 0,
   changed_ms bigint(20) unsigned NOT NULL DEFAULT 0,
   sent1_ms bigint(20) unsigned NOT NULL DEFAULT 0,
   sent2_ms bigint(20) unsigned NOT NULL DEFAULT 0,
+  sent3_ms bigint(20) unsigned NOT NULL DEFAULT 0,
+  last_sent_ms bigint(20) unsigned NOT NULL DEFAULT 0,
+  admin_ms bigint(20) unsigned NOT NULL DEFAULT 0,
   clicked_ms bigint(20) unsigned NOT NULL DEFAULT 0,
   order_id bigint(20) unsigned NOT NULL DEFAULT 0,
   order_total varchar(32) NOT NULL DEFAULT '',
+  paid_ms bigint(20) unsigned NOT NULL DEFAULT 0,
   token char(32) NOT NULL DEFAULT '',
   created_ms bigint(20) unsigned NOT NULL DEFAULT 0,
   updated_ms bigint(20) unsigned NOT NULL DEFAULT 0,
@@ -145,6 +145,16 @@ final class Recovery {
   KEY created_ms (created_ms)
 ) {$wpdb->get_charset_collate()};"
 		);
+		if ( '1' === $before ) {
+			// v1 → v2：旧状态换成 Shopname 的五种状态。
+			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			$wpdb->query( "UPDATE {$t} SET status = IF(stage > 0, 'recalling', 'pending'), emails = stage, last_sent_ms = GREATEST(sent1_ms, sent2_ms) WHERE status = 'open'" );
+			$wpdb->query( "UPDATE {$t} SET status = 'success', note = 'paid', paid_ms = updated_ms, emails = stage WHERE status = 'recovered'" );
+			$wpdb->query( "UPDATE {$t} SET status = 'void', note = 'paid before reminder', paid_ms = updated_ms WHERE status = 'converted'" );
+			$wpdb->query( "UPDATE {$t} SET status = IF(stage > 0, 'failed', 'void') WHERE status IN ('closed','expired','unsubscribed')" );
+			// phpcs:enable
+			delete_option( 'peptide_core_recovery' );
+		}
 		update_option( self::DB_OPTION, self::DB_VERSION, false );
 	}
 
@@ -155,27 +165,43 @@ final class Recovery {
 	// ---------- 定时扫描 ----------
 
 	public static function cron_schedule( $schedules ) {
-		$schedules['pc_ten_minutes'] = array(
+		$schedules['pc_five_minutes'] = array(
+			'interval' => 5 * MINUTE_IN_SECONDS,
+			'display'  => 'Every 5 minutes (peptide-core)',
+		);
+		$schedules['pc_ten_minutes']  = array(
 			'interval' => 10 * MINUTE_IN_SECONDS,
 			'display'  => 'Every 10 minutes (peptide-core)',
 		);
 		return $schedules;
 	}
 
-	/** 开启时排好每 10 分钟的扫描，关闭时取消。 */
+	/** 有开启的提醒时排好每 5 分钟的扫描，全部关闭时取消；旧的 10 分钟排程换成 5 分钟。 */
 	public static function schedule(): void {
-		$on   = self::settings()['enabled'];
-		$next = wp_next_scheduled( self::CRON );
-		if ( $on && ! $next ) {
-			wp_schedule_event( time() + 60, 'pc_ten_minutes', self::CRON );
-		} elseif ( ! $on && $next ) {
+		if ( ! did_action( 'woocommerce_init' ) ) {
+			return;
+		}
+		if ( get_option( self::DB_OPTION ) && ! self::installed() ) {
+			self::install();
+		}
+		$on    = self::enabled();
+		$event = wp_get_scheduled_event( self::CRON );
+		if ( $event && ( ! $on || 'pc_five_minutes' !== $event->schedule ) ) {
 			wp_clear_scheduled_hook( self::CRON );
+			$event = false;
+		}
+		if ( $on && ! $event ) {
+			wp_schedule_event( time() + 60, 'pc_five_minutes', self::CRON );
 		}
 	}
 
 	private static function opted_out( string $email ): bool {
 		$list = get_option( self::OPTOUT, array() );
 		return is_array( $list ) && in_array( hash( 'sha256', strtolower( $email ) ), $list, true );
+	}
+
+	public static function is_opted_out( string $email ): bool {
+		return self::opted_out( $email );
 	}
 
 	public static function opt_out( string $email ): void {
@@ -186,16 +212,17 @@ final class Recovery {
 	}
 
 	/**
-	 * 解析一条 Woo 会话：邮箱、账号、购物车行。没有邮箱或购物车为空时返回 null。
+	 * 解析一条 Woo 会话：邮箱、姓名、地址是否已填、购物车、配送 / 支付方式、草稿订单。
 	 */
 	public static function parse_session( string $key, string $value ): ?array {
 		$data  = maybe_unserialize( $value );
 		$data  = is_array( $data ) ? $data : array();
 		$cust  = maybe_unserialize( $data['customer'] ?? '' );
+		$cust  = is_array( $cust ) ? $cust : array();
 		$lines = maybe_unserialize( $data['cart'] ?? '' );
 		$tot   = maybe_unserialize( $data['cart_totals'] ?? '' );
 		$user  = ctype_digit( $key ) ? (int) $key : 0;
-		$email = is_array( $cust ) ? sanitize_email( (string) ( $cust['email'] ?? '' ) ) : '';
+		$email = sanitize_email( (string) ( $cust['email'] ?? '' ) );
 		if ( '' === $email && $user ) {
 			$u     = get_userdata( $user );
 			$email = $u ? (string) $u->user_email : '';
@@ -213,24 +240,35 @@ final class Recovery {
 				'line_subtotal' => (float) ( $line['line_subtotal'] ?? 0 ),
 			);
 		}
+		$ship     = maybe_unserialize( $data['chosen_shipping_methods'] ?? '' );
+		$pay      = (string) maybe_unserialize( $data['chosen_payment_method'] ?? '' );
+		$gateways = function_exists( 'WC' ) && WC()->payment_gateways() ? WC()->payment_gateways()->payment_gateways() : array();
+		$tot      = is_array( $tot ) ? $tot : array();
 		return array(
-			'email'    => is_email( $email ) ? strtolower( $email ) : '',
-			'user_id'  => $user,
-			'items'    => $items,
-			'subtotal' => is_array( $tot ) ? (float) ( $tot['subtotal'] ?? 0 ) : array_sum( array_column( $items, 'line_subtotal' ) ),
+			'email'       => is_email( $email ) ? strtolower( $email ) : '',
+			'user_id'     => $user,
+			'name'        => trim( (string) ( $cust['first_name'] ?? '' ) . ' ' . (string) ( $cust['last_name'] ?? '' ) ),
+			'has_address' => '' !== trim( (string) ( $cust['address_1'] ?? '' ) ) || '' !== trim( (string) ( $cust['shipping_address_1'] ?? '' ) ),
+			'country'     => strtoupper( (string) ( ( $cust['shipping_country'] ?? '' ) ? $cust['shipping_country'] : ( $cust['country'] ?? '' ) ) ),
+			'ship_method' => is_array( $ship ) && $ship ? (string) reset( $ship ) : '',
+			'pay_method'  => '' !== $pay && isset( $gateways[ $pay ] ) ? wp_strip_all_tags( (string) $gateways[ $pay ]->get_title() ) : $pay,
+			'draft_id'    => absint( maybe_unserialize( $data['store_api_draft_order'] ?? 0 ) ),
+			'items'       => $items,
+			'subtotal'    => (float) ( $tot['subtotal'] ?? array_sum( array_column( $items, 'line_subtotal' ) ) ),
+			'total'       => isset( $tot['total'] ) ? (float) $tot['total'] : null,
 		);
 	}
 
 	/**
 	 * 扫描有效会话，更新弃单记录，按时间发送提醒。返回本次处理的统计。
+	 * $only 是会话键前缀，只给测试用：测试用模拟的未来时间扫描时，只处理测试自己的会话，不碰真实记录。
 	 *
-	 * @return array{tracked:int,sent:int,closed:int,expired:int,blocked:string}
+	 * @return array{tracked:int,sent:int,voided:int,failed:int,admin:int,blocked:string}
 	 */
-	public static function scan( ?int $now_ms = null ): array {
+	public static function scan( ?int $now_ms = null, string $only = '' ): array {
 		global $wpdb;
-		$stats = array( 'tracked' => 0, 'sent' => 0, 'closed' => 0, 'expired' => 0, 'blocked' => '' );
-		$s     = self::settings();
-		if ( ! $s['enabled'] ) {
+		$stats = array( 'tracked' => 0, 'sent' => 0, 'voided' => 0, 'failed' => 0, 'admin' => 0, 'blocked' => '' );
+		if ( ! self::enabled() ) {
 			$stats['blocked'] = 'disabled';
 			return $stats;
 		}
@@ -239,76 +277,117 @@ final class Recovery {
 		}
 		$now   = $now_ms ?? self::now_ms();
 		$t     = self::table();
+		$scope = '' !== $only ? $wpdb->prepare( ' AND session_key LIKE %s', $wpdb->esc_like( $only ) . '%' ) : '';
+		$open  = "status IN ('pending','recalling')" . $scope;
 		$alive = array();
-		$rows  = $wpdb->get_results( $wpdb->prepare( "SELECT session_key, session_value FROM {$wpdb->prefix}woocommerce_sessions WHERE session_expiry > %d LIMIT 5000", (int) floor( $now / 1000 ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$rows  = $wpdb->get_results( $wpdb->prepare( "SELECT session_key, session_value FROM {$wpdb->prefix}woocommerce_sessions WHERE session_expiry > %d{$scope} LIMIT 5000", (int) floor( $now / 1000 ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		foreach ( $rows as $row ) {
 			$key           = (string) $row['session_key'];
 			$alive[ $key ] = true;
 			$p             = self::parse_session( $key, (string) $row['session_value'] );
-			$open          = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$t} WHERE session_key = %s AND status = 'open' ORDER BY id DESC LIMIT 1", $key ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			$rec           = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$t} WHERE session_key = %s AND {$open} ORDER BY id DESC LIMIT 1", $key ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 			if ( ! $p || ! $p['items'] ) {
-				if ( $open ) {
-					$wpdb->update( $t, array( 'status' => 'closed', 'updated_ms' => $now, 'note' => 'cart emptied' ), array( 'id' => (int) $open['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-					++$stats['closed'];
+				if ( $rec ) {
+					self::finish( $rec, 'void', 'cart emptied', $now );
+					++$stats['voided'];
 				}
 				continue;
 			}
-			if ( '' === $p['email'] || ( $p['user_id'] && ( user_can( $p['user_id'], 'manage_woocommerce' ) || user_can( $p['user_id'], 'manage_options' ) ) ) ) {
-				continue; // 没有邮箱就没法提醒；员工账号不提醒。
+			if ( '' === $p['email'] || ! $p['has_address'] || ( $p['user_id'] && ( user_can( $p['user_id'], 'manage_woocommerce' ) || user_can( $p['user_id'], 'manage_options' ) ) ) ) {
+				continue; // 还没填邮箱和地址就不算弃单；员工账号不记录。
 			}
 			$hash = md5( wp_json_encode( array_map( static fn( $i ) => array( $i['product_id'], $i['variation_id'], $i['variation'], $i['quantity'] ), $p['items'] ) ) );
 			$data = array(
-				'email'      => $p['email'],
-				'user_id'    => $p['user_id'],
-				'cart'       => wp_json_encode( $p['items'] ),
-				'cart_hash'  => $hash,
-				'items'      => (int) array_sum( array_column( $p['items'], 'quantity' ) ),
-				'subtotal'   => (string) round( $p['subtotal'], 2 ),
-				'currency'   => get_woocommerce_currency(),
-				'updated_ms' => $now,
+				'email'       => $p['email'],
+				'user_id'     => $p['user_id'],
+				'name'        => substr( $p['name'], 0, 190 ),
+				'cart'        => wp_json_encode( $p['items'] ),
+				'cart_hash'   => $hash,
+				'items'       => (int) array_sum( array_column( $p['items'], 'quantity' ) ),
+				'subtotal'    => (string) round( $p['subtotal'], 2 ),
+				'total'       => null === $p['total'] ? '' : (string) round( $p['total'], 2 ),
+				'currency'    => get_woocommerce_currency(),
+				'country'     => substr( $p['country'], 0, 4 ),
+				'ship_method' => substr( self::shipping_label( $p['ship_method'], $p['draft_id'] ), 0, 190 ),
+				'pay_method'  => substr( $p['pay_method'], 0, 190 ),
+				'draft_id'    => $p['draft_id'],
+				'updated_ms'  => $now,
 			);
-			if ( ! $open ) {
-				$wpdb->insert( $t, $data + array( 'session_key' => $key, 'status' => 'open', 'changed_ms' => $now, 'created_ms' => $now, 'token' => bin2hex( random_bytes( 16 ) ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			if ( ! $rec ) {
+				$wpdb->insert( $t, $data + array( 'session_key' => $key, 'status' => 'pending', 'changed_ms' => $now, 'created_ms' => $now, 'token' => bin2hex( random_bytes( 16 ) ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 				++$stats['tracked'];
 				continue;
 			}
-			if ( $open['cart_hash'] !== $hash || $open['email'] !== $p['email'] ) {
-				// 客户还在改购物车：重新计时（已经发过的阶段不重发）。
-				$wpdb->update( $t, $data + array( 'changed_ms' => $now ), array( 'id' => (int) $open['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-				continue;
+			if ( $rec['cart_hash'] !== $hash || $rec['email'] !== $p['email'] ) {
+				// 顾客还在改购物车：重新计时（已经发过的提醒不重发）。
+				$data['changed_ms'] = $now;
 			}
-			$wpdb->update( $t, array( 'updated_ms' => $now ), array( 'id' => (int) $open['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->update( $t, $data, array( 'id' => (int) $rec['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		}
 
-		// 会话已经不在的未结记录：过期。
-		foreach ( $wpdb->get_results( "SELECT id, session_key FROM {$t} WHERE status = 'open'", ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		// 会话已经不在：发过提醒的算召回失败，没发过的作废。
+		foreach ( $wpdb->get_results( "SELECT * FROM {$t} WHERE {$open}", ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 			if ( ! isset( $alive[ $r['session_key'] ] ) ) {
-				$wpdb->update( $t, array( 'status' => 'expired', 'updated_ms' => $now, 'note' => 'session expired' ), array( 'id' => (int) $r['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-				++$stats['expired'];
+				self::finish( $r, (int) $r['emails'] ? 'failed' : 'void', 'session expired', $now );
+				++$stats[ (int) $r['emails'] ? 'failed' : 'voided' ];
 			}
 		}
 
-		// 发送提醒。
-		if ( '' === self::store_address() ) {
-			$stats['blocked'] = 'address';
+		$stats['blocked'] = self::blocked_reason();
+		if ( '' !== $stats['blocked'] ) {
 			return $stats;
 		}
-		$due1 = $now - (int) $s['delay1_min'] * 60000;
-		$due2 = $now - (int) $s['delay2_hours'] * 3600000;
-		foreach ( $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} WHERE status = 'open' AND ( ( stage = 0 AND changed_ms <= %d ) OR ( stage = 1 AND %d = 1 AND sent1_ms <= %d AND changed_ms <= %d ) ) LIMIT 200", $due1, $s['stage2'] ? 1 : 0, $due2, $due1 ), ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
-			if ( self::opted_out( (string) $r['email'] ) ) {
-				$wpdb->update( $t, array( 'status' => 'unsubscribed', 'updated_ms' => $now ), array( 'id' => (int) $r['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+
+		// 管理员弃单通知（每条记录一次）。
+		$admin = self::admin_email();
+		if ( $admin && $admin->is_enabled() ) {
+			foreach ( $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} WHERE {$open} AND admin_ms = 0 AND changed_ms <= %d LIMIT 100", $now - $admin->delay() * 1000 ), ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+				$admin->trigger( $r );
+				$wpdb->update( $t, array( 'admin_ms' => $now ), array( 'id' => (int) $r['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				++$stats['admin'];
+			}
+		}
+
+		// 顾客提醒：每条记录每次扫描最多发一封，按阶段顺序。
+		$stages = array();
+		foreach ( array( 1, 2, 3 ) as $s ) {
+			$e = self::email( $s );
+			if ( $e && $e->is_enabled() ) {
+				$stages[ $s ] = $e;
+			}
+		}
+		foreach ( $wpdb->get_results( "SELECT * FROM {$t} WHERE {$open} LIMIT 500", ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			$next = null;
+			foreach ( $stages as $s => $e ) {
+				if ( $s > (int) $r['stage'] ) {
+					$next = $s;
+					break;
+				}
+			}
+			if ( null === $next ) {
+				// 开启的提醒都发完了：最后一封之后 24 小时没回来算失败。
+				if ( (int) $r['emails'] && (int) $r['last_sent_ms'] && $now - (int) $r['last_sent_ms'] >= self::FAIL_AFTER_MS ) {
+					self::finish( $r, 'failed', 'no response', $now );
+					++$stats['failed'];
+				}
 				continue;
 			}
-			// 发提醒前再确认：这个邮箱在计时开始后有没有付款（例如用别的设备下了单）。
+			if ( (int) $r['changed_ms'] + $stages[ $next ]->delay() * 1000 > $now ) {
+				continue;
+			}
+			if ( self::opted_out( (string) $r['email'] ) ) {
+				self::finish( $r, 'void', 'unsubscribed', $now );
+				++$stats['voided'];
+				continue;
+			}
+			// 发提醒前再确认：这个邮箱在记录之后有没有付款（例如用别的设备下了单）。
 			$paid = self::paid_order_since( (string) $r['email'], (int) $r['created_ms'] );
 			if ( $paid ) {
 				self::close_with_order( $r, $paid, $now );
 				continue;
 			}
-			$stage = (int) $r['stage'] + 1;
-			if ( self::send( $r, $stage ) ) {
-				$wpdb->update( $t, array( 'stage' => $stage, 'sent' . $stage . '_ms' => $now, 'updated_ms' => $now ), array( 'id' => (int) $r['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			if ( $stages[ $next ]->trigger( $r ) ) {
+				$wpdb->update( $t, array( 'stage' => $next, 'sent' . $next . '_ms' => $now, 'last_sent_ms' => $now, 'emails' => (int) $r['emails'] + 1, 'status' => 'recalling', 'updated_ms' => $now, 'note' => '' ), array( 'id' => (int) $r['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 				++$stats['sent'];
 			} else {
 				$wpdb->update( $t, array( 'note' => 'send failed', 'updated_ms' => $now ), array( 'id' => (int) $r['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
@@ -317,7 +396,29 @@ final class Recovery {
 		return $stats;
 	}
 
-	// ---------- 邮件 ----------
+	/** 配送方式显示名：优先取草稿订单上的名称，否则用运费 ID。 */
+	private static function shipping_label( string $rate_id, int $draft_id ): string {
+		if ( $draft_id ) {
+			$order = wc_get_order( $draft_id );
+			if ( $order && $order->get_shipping_method() ) {
+				return (string) $order->get_shipping_method();
+			}
+		}
+		return $rate_id;
+	}
+
+	private static function finish( array $r, string $status, string $note, int $now ): void {
+		global $wpdb;
+		$wpdb->update( self::table(), array( 'status' => $status, 'note' => $note, 'updated_ms' => $now ), array( 'id' => (int) $r['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	}
+
+	/** 后台手动作废。 */
+	public static function void( int $id ): bool {
+		global $wpdb;
+		return (bool) $wpdb->update( self::table(), array( 'status' => 'void', 'note' => 'manual', 'updated_ms' => self::now_ms() ), array( 'id' => $id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	}
+
+	// ---------- 链接 ----------
 
 	public static function recover_url( array $r ): string {
 		return add_query_arg( 'pc_recover', (int) $r['id'] . '.' . $r['token'], home_url( '/' ) );
@@ -327,50 +428,20 @@ final class Recovery {
 		return add_query_arg( 'pc_unsub', (int) $r['id'] . '.' . $r['token'], home_url( '/' ) );
 	}
 
-	/** 邮件正文（HTML，放进 WooCommerce 邮件模板）。 */
-	public static function email_html( array $r, int $stage ): string {
-		$s     = self::settings();
-		$items = json_decode( (string) $r['cart'], true );
-		$rows  = '';
-		foreach ( is_array( $items ) ? $items : array() as $i ) {
-			$product = wc_get_product( $i['variation_id'] ? $i['variation_id'] : $i['product_id'] );
-			if ( ! $product ) {
-				continue;
-			}
-			$image = wp_get_attachment_image_src( (int) $product->get_image_id(), 'thumbnail' );
-			$rows .= '<tr><td style="padding:8px 0;width:64px">' . ( $image ? '<img src="' . esc_url( $image[0] ) . '" alt="" width="56" height="56" style="display:block;border-radius:4px">' : '' ) . '</td><td style="padding:8px">' . esc_html( $product->get_name() ) . ' &times; ' . esc_html( wc_stock_amount( $i['quantity'] ) ) . '</td><td style="padding:8px 0;text-align:right">' . wp_kses_post( wc_price( $i['line_subtotal'] ) ) . '</td></tr>';
-		}
-		$store = get_bloginfo( 'name' );
-		$html  = '<p>' . nl2br( esc_html( $s['intro'] ) ) . '</p>';
-		$html .= '<table cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;margin:16px 0">' . $rows . '</table>';
-		$html .= '<p style="text-align:right"><strong>' . esc_html__( 'Subtotal', 'peptide-core' ) . ': ' . wp_kses_post( wc_price( (float) $r['subtotal'] ) ) . '</strong></p>';
-		if ( '' !== $s['coupon'] ) {
-			/* translators: %s: coupon code */
-			$html .= '<p>' . sprintf( esc_html__( 'Use code %s at checkout.', 'peptide-core' ), '<strong>' . esc_html( strtoupper( $s['coupon'] ) ) . '</strong>' ) . '</p>';
-		}
-		$html .= '<p style="margin:24px 0"><a href="' . esc_url( self::recover_url( $r ) ) . '" style="display:inline-block;padding:12px 24px;background:#177e9b;color:#ffffff;text-decoration:none;border-radius:4px;font-weight:bold">' . esc_html( $s['button'] ) . '</a></p>';
-		/* translators: 1: store name, 2: store address */
-		$html .= '<p style="font-size:12px;color:#6b7280">' . sprintf( esc_html__( 'You are receiving this because you started a checkout at %1$s. %2$s', 'peptide-core' ), esc_html( $store ), esc_html( self::store_address() ) ) . '<br><a href="' . esc_url( self::unsubscribe_url( $r ) ) . '" style="color:#6b7280">' . esc_html__( 'Unsubscribe from cart reminders', 'peptide-core' ) . '</a></p>';
-		return $html;
-	}
-
-	public static function send( array $r, int $stage ): bool {
-		$s       = self::settings();
-		$mailer  = WC()->mailer();
-		$subject = 2 === $stage ? $s['subject2'] : $s['subject1'];
-		$message = $mailer->wrap_message( $s['heading'], self::email_html( $r, $stage ) );
-		$headers = array( 'Content-Type: text/html; charset=UTF-8', 'List-Unsubscribe: <' . self::unsubscribe_url( $r ) . '>' );
-		return (bool) $mailer->send( (string) $r['email'], $subject, $message, $headers );
-	}
-
-	// ---------- 链接 ----------
-
-	private static function record_from( string $value ): ?array {
+	public static function get_record( int $id ): ?array {
 		global $wpdb;
-		if ( ! preg_match( '/^(\d{1,15})\.([a-f0-9]{32})$/', $value, $m ) || ! self::installed() ) {
+		if ( ! self::installed() ) {
 			return null;
 		}
-		$r = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::table() . ' WHERE id = %d', (int) $m[1] ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+		$r = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::table() . ' WHERE id = %d', $id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+		return $r ? $r : null;
+	}
+
+	private static function record_from( string $value ): ?array {
+		if ( ! preg_match( '/^(\d{1,15})\.([a-f0-9]{32})$/', $value, $m ) ) {
+			return null;
+		}
+		$r = self::get_record( (int) $m[1] );
 		return $r && hash_equals( (string) $r['token'], $m[2] ) ? $r : null;
 	}
 
@@ -382,7 +453,7 @@ final class Recovery {
 		if ( isset( $_GET['pc_unsub'] ) ) {
 			$r = self::record_from( sanitize_text_field( wp_unslash( $_GET['pc_unsub'] ) ) );
 			if ( $r ) {
-				self::unsubscribe( $r );
+				self::unsubscribe( (string) $r['email'] );
 			}
 			wp_die( esc_html__( 'You will no longer receive cart reminder emails from us.', 'peptide-core' ), esc_html__( 'Unsubscribed', 'peptide-core' ), array( 'response' => 200 ) );
 		}
@@ -397,13 +468,17 @@ final class Recovery {
 		// phpcs:enable
 	}
 
-	public static function unsubscribe( array $r ): void {
+	public static function unsubscribe( string $email ): void {
 		global $wpdb;
-		self::opt_out( (string) $r['email'] );
-		$wpdb->query( $wpdb->prepare( 'UPDATE ' . self::table() . " SET status = 'unsubscribed', updated_ms = %d WHERE email = %s AND status = 'open'", self::now_ms(), $r['email'] ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+		self::opt_out( $email );
+		if ( self::installed() ) {
+			$wpdb->query( $wpdb->prepare( 'UPDATE ' . self::table() . " SET status = 'void', note = 'unsubscribed', updated_ms = %d WHERE email = %s AND status IN ('pending','recalling')", self::now_ms(), strtolower( $email ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+		}
 	}
 
-	/** 把记录里的商品放回当前购物车（已经在车里的不重复添加），记下点击时间，可选地使用优惠码。 */
+	/**
+	 * 顾客从邮件链接回来：把商品放回购物车（已经在车里的不重复添加），记为召回成功，按最近一封邮件的设置使用优惠码。
+	 */
 	public static function restore( array $r ): int {
 		global $wpdb;
 		$added = 0;
@@ -423,17 +498,22 @@ final class Recovery {
 		if ( WC()->customer && '' === (string) WC()->customer->get_billing_email() ) {
 			WC()->customer->set_billing_email( (string) $r['email'] );
 		}
-		$code = self::settings()['coupon'];
+		$email = self::email( max( 1, (int) $r['stage'] ) );
+		$code  = $email ? $email->coupon() : '';
 		if ( '' !== $code && ! WC()->cart->has_discount( $code ) ) {
 			Coupons::remember( $code );
 		}
-		$wpdb->update( self::table(), array( 'clicked_ms' => self::now_ms() ), array( 'id' => (int) $r['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$set = array( 'clicked_ms' => self::now_ms(), 'updated_ms' => self::now_ms() );
+		if ( in_array( $r['status'], array( 'pending', 'recalling', 'failed' ), true ) ) {
+			$set += array( 'status' => 'success', 'note' => 'clicked' );
+		}
+		$wpdb->update( self::table(), $set, array( 'id' => (int) $r['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		return $added;
 	}
 
 	// ---------- 付款 ----------
 
-	/** 这个邮箱在某时间之后有没有已付款订单（返回订单）。 */
+	/** 这个邮箱在某时间之后有没有已付款订单（返回最早的一张）。 */
 	private static function paid_order_since( string $email, int $since_ms ): ?\WC_Order {
 		$orders = wc_get_orders(
 			array(
@@ -448,18 +528,22 @@ final class Recovery {
 		return $orders ? $orders[0] : null;
 	}
 
-	/** 结束一条记录：在提醒邮件之后付款的算召回成功，否则算自行下单。 */
+	/** 付款后结束记录：收到提醒或点过链接后付款算召回成功，没等提醒就付款算作废。 */
 	private static function close_with_order( array $r, \WC_Order $order, int $now ): void {
 		global $wpdb;
-		$created = $order->get_date_created();
-		$at      = $created ? $created->getTimestamp() * 1000 : $now;
-		$sent    = (int) $r['sent1_ms'];
+		$paid     = $order->get_date_paid() ? $order->get_date_paid() : $order->get_date_created();
+		$at       = $paid ? $paid->getTimestamp() * 1000 : $now;
+		$reminded = ( (int) $r['sent1_ms'] || (int) $r['sent2_ms'] || (int) $r['sent3_ms'] || (int) $r['clicked_ms'] );
+		$first    = min( array_filter( array( (int) $r['sent1_ms'], (int) $r['sent2_ms'], (int) $r['sent3_ms'], (int) $r['clicked_ms'], PHP_INT_MAX ) ) );
+		$success  = 'success' === $r['status'] || ( $reminded && $at >= $first );
 		$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			self::table(),
 			array(
-				'status'      => $sent && $at >= $sent ? 'recovered' : 'converted',
+				'status'      => $success ? 'success' : 'void',
+				'note'        => $success ? ( 'clicked' === $r['note'] ? 'clicked' : 'paid' ) : 'paid before reminder',
 				'order_id'    => $order->get_id(),
 				'order_total' => (string) $order->get_total(),
+				'paid_ms'     => $at,
 				'updated_ms'  => $now,
 			),
 			array( 'id' => (int) $r['id'] )
@@ -478,7 +562,8 @@ final class Recovery {
 		}
 		$created = $order->get_date_created();
 		$at      = $created ? $created->getTimestamp() * 1000 : self::now_ms();
-		foreach ( $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::table() . " WHERE email = %s AND status = 'open' AND created_ms <= %d", $email, $at + 60000 ), ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+		// 未结束的记录，以及已经点击回来、还没关联订单的记录。
+		foreach ( $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::table() . " WHERE email = %s AND ( status IN ('pending','recalling') OR ( status IN ('success','failed') AND order_id = 0 ) ) AND created_ms <= %d", $email, $at + 60000 ), ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
 			self::close_with_order( $r, $order, self::now_ms() );
 		}
 	}
@@ -491,15 +576,13 @@ final class Recovery {
 
 	// ---------- 后台 ----------
 
-	/**
-	 * 统计：时间段内出现的弃单、发过提醒的、召回成功的（数量和金额）。
-	 */
+	/** 时间段内的统计：弃单数、发过提醒的、点击回来的、召回成功的（数量和付款金额）。 */
 	public static function stats( int $from_ms, int $to_ms ): array {
 		global $wpdb;
 		if ( ! self::installed() ) {
 			return array( 'abandoned' => 0, 'emailed' => 0, 'clicked' => 0, 'recovered' => 0, 'recovered_total' => 0.0, 'rate' => null );
 		}
-		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT COUNT(*) AS abandoned, SUM(sent1_ms > 0) AS emailed, SUM(clicked_ms > 0) AS clicked, SUM(status = \'recovered\') AS recovered, SUM(IF(status = \'recovered\', CAST(order_total AS DECIMAL(18,2)), 0)) AS total FROM ' . self::table() . ' WHERE created_ms >= %d AND created_ms < %d', $from_ms, $to_ms ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+		$row     = $wpdb->get_row( $wpdb->prepare( 'SELECT COUNT(*) AS abandoned, SUM(emails > 0) AS emailed, SUM(clicked_ms > 0) AS clicked, SUM(status = \'success\') AS recovered, SUM(IF(status = \'success\' AND order_id > 0, CAST(order_total AS DECIMAL(18,2)), 0)) AS total FROM ' . self::table() . ' WHERE created_ms >= %d AND created_ms < %d', $from_ms, $to_ms ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
 		$emailed = (int) $row['emailed'];
 		return array(
 			'abandoned'       => (int) $row['abandoned'],
@@ -511,15 +594,52 @@ final class Recovery {
 		);
 	}
 
-	/** 弃单列表（新的在前）。 */
-	public static function records( string $status = '', int $page = 1, int $per = 25 ): array {
+	/** 各状态的记录数。 */
+	public static function counts(): array {
+		global $wpdb;
+		$out = array_fill_keys( self::STATUSES, 0 );
+		if ( ! self::installed() ) {
+			return $out;
+		}
+		foreach ( $wpdb->get_results( 'SELECT status, COUNT(*) AS n FROM ' . self::table() . ' GROUP BY status', ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+			if ( isset( $out[ $r['status'] ] ) ) {
+				$out[ $r['status'] ] = (int) $r['n'];
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * 弃单列表（新的在前）。
+	 *
+	 * @param array{status?:string,from_ms?:int,to_ms?:int,q?:string} $filter
+	 */
+	public static function records( array $filter = array(), int $page = 1, int $per = 50 ): array {
 		global $wpdb;
 		if ( ! self::installed() ) {
 			return array( 'items' => array(), 'total' => 0 );
 		}
-		$where = in_array( $status, array( 'open', 'recovered', 'converted', 'closed', 'expired', 'unsubscribed' ), true ) ? $wpdb->prepare( 'WHERE status = %s', $status ) : '';
-		$total = (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . self::table() . " {$where}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
-		$rows  = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::table() . " {$where} ORDER BY created_ms DESC, id DESC LIMIT %d OFFSET %d", $per, max( 0, ( $page - 1 ) * $per ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		$where = array( '1=1' );
+		if ( in_array( $filter['status'] ?? '', self::STATUSES, true ) ) {
+			$where[] = $wpdb->prepare( 'status = %s', $filter['status'] );
+		}
+		if ( ! empty( $filter['from_ms'] ) ) {
+			$where[] = $wpdb->prepare( 'created_ms >= %d', (int) $filter['from_ms'] );
+		}
+		if ( ! empty( $filter['to_ms'] ) ) {
+			$where[] = $wpdb->prepare( 'created_ms < %d', (int) $filter['to_ms'] );
+		}
+		$q = trim( (string) ( $filter['q'] ?? '' ) );
+		if ( '' !== $q ) {
+			$ids     = array_filter( array_map( 'absint', preg_split( '/[\s,]+/', $q ) ) );
+			$like    = '%' . $wpdb->esc_like( $q ) . '%';
+			$where[] = $ids
+				? $wpdb->prepare( '(email LIKE %s OR draft_id IN (' . implode( ',', array_fill( 0, count( $ids ), '%d' ) ) . ') OR order_id IN (' . implode( ',', array_fill( 0, count( $ids ), '%d' ) ) . '))', array_merge( array( $like ), $ids, $ids ) ) // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+				: $wpdb->prepare( '(email LIKE %s OR name LIKE %s)', $like, $like );
+		}
+		$sql   = implode( ' AND ', $where );
+		$total = (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . self::table() . " WHERE {$sql}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		$rows  = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::table() . " WHERE {$sql} ORDER BY created_ms DESC, id DESC LIMIT %d OFFSET %d", $per, max( 0, ( $page - 1 ) * $per ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		return array( 'items' => $rows, 'total' => $total );
 	}
 }

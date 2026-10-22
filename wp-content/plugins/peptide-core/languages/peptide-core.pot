@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-22T17:25:08+00:00\n"
+"POT-Creation-Date: 2026-10-22T17:47:47+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -59,8 +59,9 @@ msgstr ""
 
 #: includes/admin/class-admin-menus.php:62
 #: includes/admin/class-basic-config-page.php:113
-#: includes/admin/class-store-settings.php:105
-#: includes/admin/class-store-settings.php:117
+#: includes/admin/class-email-center.php:151
+#: includes/admin/class-store-settings.php:106
+#: includes/admin/class-store-settings.php:118
 msgid "System settings"
 msgstr ""
 
@@ -88,11 +89,12 @@ msgid "Disable"
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:107
-#: includes/admin/class-recovery-page.php:101
 msgid "Settings saved."
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:114
+#: includes/admin/class-email-center.php:158
+#: includes/admin/class-recovery-page.php:145
 #: includes/admin/class-store-settings.php:43
 msgid "Basic settings"
 msgstr ""
@@ -102,11 +104,11 @@ msgid "Store name, admin email, favicon, time zone and language are WordPress se
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:127
-#: includes/admin/class-recovery-page.php:183
 msgid "Save settings"
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:136
+#: includes/admin/class-email-center.php:158
 msgid "Without a support email, automatic emails cannot be sent."
 msgstr ""
 
@@ -488,6 +490,8 @@ msgid "Select a country"
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:256
+#: includes/admin/class-email-center.php:219
+#: includes/admin/class-recovery-page.php:143
 msgid "Public contact information"
 msgstr ""
 
@@ -528,6 +532,8 @@ msgid "Enter the ZIP or postcode"
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:267
+#: includes/admin/class-recovery-page.php:163
+#: includes/emails/class-admin-abandoned.php:60
 msgid "Country"
 msgstr ""
 
@@ -548,9 +554,10 @@ msgid "Enter the phone number"
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:277
+#: includes/admin/class-email-center.php:102
 #: includes/admin/class-menu-page.php:164
 #: includes/admin/class-menu-page.php:207
-#: includes/admin/class-recovery-page.php:51
+#: includes/admin/class-recovery-page.php:57
 #: includes/admin/class-shipping-page.php:221
 #: includes/admin/class-store-design.php:140
 #: includes/admin/class-tax-page.php:116
@@ -633,7 +640,6 @@ msgstr ""
 #: includes/admin/class-batch-orders.php:66
 #: includes/admin/class-list-columns.php:35
 #: includes/admin/class-plans-editor.php:84
-#: includes/admin/class-recovery-page.php:216
 #: includes/admin/class-tracking-page.php:92
 #: includes/class-promotions.php:666
 #: includes/class-promotions.php:780
@@ -736,8 +742,8 @@ msgid "%1$d orders, %2$d customers, %3$d units in total."
 msgstr ""
 
 #: includes/admin/class-batch-orders.php:66
-#: includes/admin/class-recovery-page.php:217
 #: includes/admin/class-tracking-page.php:122
+#: includes/emails/class-admin-offline.php:48
 msgid "Order"
 msgstr ""
 
@@ -749,11 +755,16 @@ msgid "Date"
 msgstr ""
 
 #: includes/admin/class-batch-orders.php:66
+#: includes/admin/class-recovery-page.php:163
+#: includes/emails/class-admin-abandoned.php:59
+#: includes/emails/class-admin-duplicate.php:74
+#: includes/emails/class-admin-offline.php:49
 msgid "Customer"
 msgstr ""
 
 #: includes/admin/class-batch-orders.php:66
-#: includes/admin/class-recovery-page.php:212
+#: includes/admin/class-email-center.php:264
+#: includes/admin/class-email-center.php:273
 msgid "Email"
 msgstr ""
 
@@ -897,7 +908,7 @@ msgid "All batches"
 msgstr ""
 
 #: includes/admin/class-dashboard.php:165
-#: includes/admin/class-recovery-page.php:37
+#: includes/admin/class-recovery-page.php:41
 msgid "All orders"
 msgstr ""
 
@@ -1210,6 +1221,305 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
+#: includes/admin/class-email-center.php:53
+#: includes/emails/class-register-invite.php:18
+msgid "Registration invitation"
+msgstr ""
+
+#: includes/admin/class-email-center.php:54
+msgid "Customer registration"
+msgstr ""
+
+#: includes/admin/class-email-center.php:55
+msgid "Order paid"
+msgstr ""
+
+#: includes/admin/class-email-center.php:56
+msgid "Offline payment order"
+msgstr ""
+
+#: includes/admin/class-email-center.php:57
+msgid "Order cancelled"
+msgstr ""
+
+#: includes/admin/class-email-center.php:58
+msgid "Order shipped"
+msgstr ""
+
+#: includes/admin/class-email-center.php:59
+msgid "Shipment updated"
+msgstr ""
+
+#: includes/admin/class-email-center.php:60
+msgid "Order delivered"
+msgstr ""
+
+#: includes/admin/class-email-center.php:61
+msgid "Order refunded"
+msgstr ""
+
+#: includes/admin/class-email-center.php:62
+msgid "Order payment failed"
+msgstr ""
+
+#: includes/admin/class-email-center.php:63
+msgid "Customer password reset"
+msgstr ""
+
+#: includes/admin/class-email-center.php:64
+#: includes/emails/class-register-verify.php:20
+msgid "Registration email verification"
+msgstr ""
+
+#: includes/admin/class-email-center.php:65
+msgid "Confirm email for guest orders"
+msgstr ""
+
+#: includes/admin/class-email-center.php:66
+msgid "Review invitation"
+msgstr ""
+
+#: includes/admin/class-email-center.php:67
+msgid "Order details (sent manually)"
+msgstr ""
+
+#: includes/admin/class-email-center.php:68
+msgid "Order note to customer"
+msgstr ""
+
+#: includes/admin/class-email-center.php:71
+msgid "Stage 1"
+msgstr ""
+
+#: includes/admin/class-email-center.php:72
+msgid "Stage 2"
+msgstr ""
+
+#: includes/admin/class-email-center.php:73
+msgid "Stage 3"
+msgstr ""
+
+#: includes/admin/class-email-center.php:76
+#: includes/admin/class-email-center.php:145
+#: includes/emails/class-browse-reminder.php:24
+msgid "Shopping discovery"
+msgstr ""
+
+#: includes/admin/class-email-center.php:79
+msgid "Order paid (admin)"
+msgstr ""
+
+#: includes/admin/class-email-center.php:80
+msgid "Order payment failed (admin)"
+msgstr ""
+
+#: includes/admin/class-email-center.php:81
+msgid "Order cancelled (admin)"
+msgstr ""
+
+#: includes/admin/class-email-center.php:82
+#: includes/emails/class-admin-abandoned.php:19
+msgid "Abandoned cart (admin)"
+msgstr ""
+
+#: includes/admin/class-email-center.php:83
+#: includes/emails/class-admin-duplicate.php:22
+msgid "Possible duplicate payment (admin)"
+msgstr ""
+
+#: includes/admin/class-email-center.php:84
+#: includes/emails/class-admin-offline.php:17
+msgid "Offline payment order (admin)"
+msgstr ""
+
+#: includes/admin/class-email-center.php:85
+msgid "Payment method enabled (admin)"
+msgstr ""
+
+#. translators: %s: on/off
+#: includes/admin/class-email-center.php:135
+#: includes/admin/class-email-center.php:242
+msgid "On"
+msgstr ""
+
+#. translators: %s: on/off
+#: includes/admin/class-email-center.php:135
+#: includes/admin/class-email-center.php:242
+#: includes/admin/class-shipping-page.php:149
+#: includes/class-promotions.php:797
+msgid "Off"
+msgstr ""
+
+#: includes/admin/class-email-center.php:135
+msgid "Turn off"
+msgstr ""
+
+#: includes/admin/class-email-center.php:135
+msgid "Turn on"
+msgstr ""
+
+#: includes/admin/class-email-center.php:143
+msgid "Customer notifications"
+msgstr ""
+
+#: includes/admin/class-email-center.php:144
+msgid "Abandoned cart"
+msgstr ""
+
+#. translators: %s: on/off
+#: includes/admin/class-email-center.php:146
+#: includes/admin/class-email-center.php:242
+msgid "Admin notifications"
+msgstr ""
+
+#: includes/admin/class-email-center.php:152
+#: includes/admin/class-store-settings.php:54
+msgid "Email notifications"
+msgstr ""
+
+#: includes/admin/class-email-center.php:153
+#: includes/admin/class-menu-page.php:100
+msgid "Settings"
+msgstr ""
+
+#: includes/admin/class-email-center.php:154
+#: includes/admin/class-email-center.php:263
+msgid "Email delivery data"
+msgstr ""
+
+#. translators: %s: recipient address
+#: includes/admin/class-email-center.php:188
+#, php-format
+msgid "Sent to %s"
+msgstr ""
+
+#. translators: %d: seconds
+#: includes/admin/class-email-center.php:192
+#, php-format
+msgid "Delay: %d s"
+msgstr ""
+
+#: includes/admin/class-email-center.php:195
+msgid "Not sent while registration on the account page is off."
+msgstr ""
+
+#: includes/admin/class-email-center.php:198
+msgid "Used when “Register email verification” is on in Basic settings."
+msgstr ""
+
+#. translators: %s: email name
+#: includes/admin/class-email-center.php:202
+#, php-format
+msgid "Edit %s"
+msgstr ""
+
+#: includes/admin/class-email-center.php:204
+msgid "This is a WooCommerce beta feature. Turning it on also enables the feature: customers get an email after their order is completed, inviting them to review what they bought."
+msgstr ""
+
+#: includes/admin/class-email-center.php:214
+msgid "“Shopping discovery” reminds new customers who showed interest in the store but have not ordered yet."
+msgstr ""
+
+#: includes/admin/class-email-center.php:214
+msgid "How it works: when a new customer registers and does not place an order within the delay, they automatically get this email with the products they recently added to the cart or viewed. Each customer gets it once."
+msgstr ""
+
+#: includes/admin/class-email-center.php:216
+msgid "Customers who entered their email and address at checkout but did not pay get up to three reminders. The delay counts from the last change to the cart; each reminder has its own coupon. Abandoned checkouts are listed under Orders → Abandoned checkouts."
+msgstr ""
+
+#: includes/admin/class-email-center.php:216
+#: includes/admin/class-recovery-page.php:43
+#: includes/admin/class-recovery-page.php:132
+msgid "Abandoned checkouts"
+msgstr ""
+
+#: includes/admin/class-email-center.php:219
+msgid "These emails are not sent until the store address is filled in (US law requires a physical address in marketing emails)."
+msgstr ""
+
+#: includes/admin/class-email-center.php:232
+#: includes/emails/class-browse-reminder.php:47
+#: includes/emails/class-cart-recovery.php:64
+msgid "Coupon"
+msgstr ""
+
+#. translators: %d: seconds
+#: includes/admin/class-email-center.php:234
+#, php-format
+msgid "Send delay: %d s"
+msgstr ""
+
+#: includes/admin/class-email-center.php:236
+#: includes/admin/class-menu-page.php:289
+#: includes/admin/class-plans-editor.php:35
+msgid "Edit"
+msgstr ""
+
+#. translators: %s: on/off
+#: includes/admin/class-email-center.php:242
+#, php-format
+msgid "Admin notice for new abandoned checkouts: %s."
+msgstr ""
+
+#: includes/admin/class-email-center.php:263
+msgid "Counts every store email handed to the mail server (WooCommerce and VialCove emails). “Failed” means the mail server refused it. Opens are not tracked."
+msgstr ""
+
+#: includes/admin/class-email-center.php:264
+msgid "Sent (7 days)"
+msgstr ""
+
+#: includes/admin/class-email-center.php:264
+msgid "Sent (30 days)"
+msgstr ""
+
+#: includes/admin/class-email-center.php:264
+msgid "Failed (30 days)"
+msgstr ""
+
+#: includes/admin/class-email-center.php:264
+msgid "Last sent"
+msgstr ""
+
+#: includes/admin/class-email-center.php:266
+msgid "No emails sent in the last 30 days."
+msgstr ""
+
+#: includes/admin/class-email-center.php:273
+msgid "Latest emails"
+msgstr ""
+
+#: includes/admin/class-email-center.php:273
+#: includes/admin/class-tracking-page.php:123
+msgid "Time"
+msgstr ""
+
+#: includes/admin/class-email-center.php:273
+msgid "Recipient"
+msgstr ""
+
+#: includes/admin/class-email-center.php:273
+msgid "Subject"
+msgstr ""
+
+#: includes/admin/class-email-center.php:273
+msgid "Result"
+msgstr ""
+
+#: includes/admin/class-email-center.php:275
+msgid "No emails yet."
+msgstr ""
+
+#: includes/admin/class-email-center.php:278
+msgid "Sent"
+msgstr ""
+
+#: includes/admin/class-email-center.php:278
+msgid "Failed"
+msgstr ""
+
 #. translators: %s: template name
 #: includes/admin/class-layout-editor.php:51
 #, php-format
@@ -1329,6 +1639,7 @@ msgstr ""
 #: includes/admin/class-menu-page.php:278
 #: includes/admin/class-plans-editor.php:84
 #: includes/admin/class-plans-editor.php:114
+#: includes/admin/class-recovery-page.php:163
 #: includes/admin/class-shipping-page.php:195
 #: includes/admin/class-store-design.php:380
 #: includes/admin/class-store-design.php:433
@@ -1342,11 +1653,6 @@ msgstr ""
 
 #: includes/admin/class-menu-page.php:99
 msgid "Add sub-item"
-msgstr ""
-
-#: includes/admin/class-menu-page.php:100
-#: includes/admin/class-recovery-page.php:169
-msgid "Settings"
 msgstr ""
 
 #: includes/admin/class-menu-page.php:102
@@ -1525,7 +1831,6 @@ msgid "Text decoration"
 msgstr ""
 
 #: includes/admin/class-menu-page.php:147
-#: includes/admin/class-recovery-page.php:177
 #: includes/modules/class-registry.php:137
 msgid "None"
 msgstr ""
@@ -1618,11 +1923,6 @@ msgstr ""
 #: includes/admin/class-menu-page.php:282
 #: includes/admin/class-store-design.php:430
 msgid "Created by"
-msgstr ""
-
-#: includes/admin/class-menu-page.php:289
-#: includes/admin/class-plans-editor.php:35
-msgid "Edit"
 msgstr ""
 
 #: includes/admin/class-menu-page.php:291
@@ -1939,7 +2239,7 @@ msgid "Shop"
 msgstr ""
 
 #: includes/admin/class-overview-page.php:193
-#: includes/admin/class-recovery-page.php:213
+#: includes/admin/class-recovery-page.php:223
 #: includes/admin/class-tracking-page.php:110
 #: includes/admin/class-tracking-page.php:171
 #: includes/class-menus.php:108
@@ -1952,7 +2252,6 @@ msgid "Checkout"
 msgstr ""
 
 #: includes/admin/class-overview-page.php:195
-#: includes/admin/class-recovery-page.php:233
 #: includes/admin/class-tracking-page.php:132
 #: includes/admin/class-tracking-page.php:173
 msgid "Account"
@@ -1997,6 +2296,8 @@ msgid "Placed an order"
 msgstr ""
 
 #: includes/admin/class-overview-page.php:208
+#: includes/admin/class-recovery-page.php:204
+#: includes/admin/class-recovery-page.php:221
 #: includes/admin/class-tracking-page.php:154
 #: includes/admin/class-tracking-page.php:165
 msgid "Paid"
@@ -2060,7 +2361,7 @@ msgid "Christmas"
 msgstr ""
 
 #: includes/admin/class-plans-editor.php:34
-#: includes/admin/class-recovery-page.php:141
+#: includes/admin/class-recovery-page.php:152
 msgid "All"
 msgstr ""
 
@@ -2328,198 +2629,225 @@ msgstr ""
 msgid "Add batch for this product"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:39
-#: includes/admin/class-recovery-page.php:151
-msgid "Abandoned cart recovery"
+#: includes/admin/class-recovery-page.php:78
+msgid "Waiting to recall"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:39
-msgid "Abandoned carts"
+#: includes/admin/class-recovery-page.php:79
+msgid "Recalling"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:102
-msgid "A sample reminder was sent to your email address."
+#: includes/admin/class-recovery-page.php:80
+msgid "Recall failed"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:103
-msgid "The sample reminder could not be sent. Check the site’s email setup."
+#: includes/admin/class-recovery-page.php:81
+msgid "Recalled"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:104
-msgid "Add the store address first (WooCommerce settings → General). US law requires it in marketing emails."
+#: includes/admin/class-recovery-page.php:82
+msgid "Voided"
 msgstr ""
 
-#. translators: 1: new abandoned carts, 2: emails sent
-#: includes/admin/class-recovery-page.php:108
-#, php-format
-msgid "Scan finished: %1$d new abandoned cart(s), %2$d reminder(s) sent."
+#: includes/admin/class-recovery-page.php:88
+msgid "Came back through the email link"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:111
-msgid "No reminders were sent because the store address is missing."
+#: includes/admin/class-recovery-page.php:89
+msgid "Paid after a reminder"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:113
-msgid "Recovery is turned off, so nothing was scanned."
+#: includes/admin/class-recovery-page.php:90
+msgid "Paid before any reminder"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:142
-msgid "Waiting"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:143
-msgid "Recovered"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:144
-msgid "Paid without reminder"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:145
+#: includes/admin/class-recovery-page.php:91
 msgid "Cart emptied"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:146
-msgid "Session expired"
+#: includes/admin/class-recovery-page.php:92
+msgid "Cart session expired"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:147
-#: includes/class-recovery.php:387
+#: includes/admin/class-recovery-page.php:93
+msgid "No response 24 hours after the last reminder"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:94
+#: includes/class-recovery.php:458
+#: includes/emails/class-registry.php:272
 msgid "Unsubscribed"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:152
-msgid "On"
+#: includes/admin/class-recovery-page.php:95
+msgid "Voided by an admin"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:152
-#: includes/admin/class-shipping-page.php:149
-#: includes/class-promotions.php:797
-msgid "Off"
+#: includes/admin/class-recovery-page.php:96
+msgid "The last reminder could not be sent"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:154
-msgid "A cart counts as abandoned when a shopper has entered an email at checkout, has items in the cart, and has not paid. Reminders stop as soon as they pay. Every email has an unsubscribe link and your store address."
+#. translators: 1: new records, 2: reminders sent
+#: includes/admin/class-recovery-page.php:130
+#, php-format
+msgid "Scan finished: %1$d new abandoned checkouts, %2$d reminders sent."
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:156
-msgid "No reminders will be sent until you add the store address (WooCommerce settings → General). US law (CAN-SPAM) requires a physical address in marketing emails."
+#: includes/admin/class-recovery-page.php:133
+msgid "Abandoned cart emails"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:156
-msgid "Open settings"
+#: includes/admin/class-recovery-page.php:134
+msgid "Failed payments"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:160
-msgid "Abandoned carts (30 days)"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:161
-msgid "Reminders sent"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:162
-msgid "Link clicked"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:163
-msgid "Recovered orders"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:164
-msgid "Recovery rate"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:165
-msgid "Recovered sales"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:174
-msgid "Send reminders"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:174
-msgid "Turn on abandoned cart reminders"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:175
-msgid "First reminder"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:175
-msgid "minutes after the cart last changed"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:176
-msgid "Second reminder"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:176
-msgid "Send a second reminder"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:176
-msgid "hours after the first one"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:177
-msgid "Coupon in the email"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:177
-msgid "Optional. The link in the email applies it automatically when the cart meets its conditions."
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:178
-msgid "Subject (first / second)"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:179
-msgid "Heading"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:180
-msgid "Message"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:180
-msgid "Shown above the product list. Keep it factual: no health claims and no fake urgency."
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:181
-#: includes/modules/class-registry.php:1041
-#: includes/modules/class-registry.php:1298
-msgid "Button text"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:188
-msgid "Send me a sample reminder"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:192
+#: includes/admin/class-recovery-page.php:137
 msgid "Scan now"
 msgstr ""
 
-#. translators: %s: date and time
-#: includes/admin/class-recovery-page.php:196
+#: includes/admin/class-recovery-page.php:141
+msgid "All reminder emails are turned off, so abandoned checkouts are not recorded or recalled."
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:141
+msgid "Turn them on"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:143
+msgid "No reminders are sent until the store address is filled in. US law (CAN-SPAM) requires a physical address in marketing emails."
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:145
+msgid "No reminders are sent until a valid support email is set as the sender."
+msgstr ""
+
+#. translators: 1: abandoned, 2: emailed, 3: recalled, 4: rate, 5: amount
+#: includes/admin/class-recovery-page.php:149
 #, php-format
-msgid "Next automatic scan: %s"
+msgid "Last 30 days: %1$d abandoned checkouts, %2$d reminded, %3$d recalled (%4$s), recalled orders paid %5$s."
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:159
+msgid "Created"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:159
+#: includes/admin/class-tracking-page.php:140
+msgid "To"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:160
+msgid "Order number or email (separate several with spaces)"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:160
+msgid "Filter"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:163
+msgid "Order number"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:163
+msgid "Shipping method"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:163
+msgid "Order total"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:163
+#: includes/emails/class-admin-offline.php:50
+msgid "Payment method"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:163
+msgid "Paid at"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:163
+msgid "Transaction ID"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:163
+msgid "Order status"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:163
+msgid "Recall status"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:163
+msgid "Email sent at"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:163
+msgid "Emails sent"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:168
+msgid "No abandoned checkouts yet."
+msgstr ""
+
+#. translators: %d: number of records
+#: includes/admin/class-recovery-page.php:177
+#, php-format
+msgid "%d records"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:195
+#: includes/admin/class-tracking-page.php:127
+#: includes/class-coupons.php:420
+#: includes/class-promotions.php:566
+msgid "Details"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:197
+msgid "Void"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:204
+msgid "Unfinished"
 msgstr ""
 
 #: includes/admin/class-recovery-page.php:214
-msgid "Abandoned"
+msgid "Recorded"
 msgstr ""
 
 #: includes/admin/class-recovery-page.php:215
-msgid "Reminders"
+msgid "Cart last changed"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:221
-msgid "No abandoned carts yet."
+#: includes/admin/class-recovery-page.php:216
+msgid "Reminder 1 sent"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:236
-msgid "clicked"
+#: includes/admin/class-recovery-page.php:217
+msgid "Reminder 2 sent"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:218
+msgid "Reminder 3 sent"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:219
+msgid "Admin notified"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:220
+msgid "Came back from email"
+msgstr ""
+
+#. translators: 1: order number, 2: amount
+#: includes/admin/class-recovery-page.php:226
+#, php-format
+msgid "Paid order #%1$s: %2$s"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:228
+#: includes/admin/class-tracking-page.php:134
+#: includes/modules/class-registry.php:756
+msgid "Timeline"
 msgstr ""
 
 #: includes/admin/class-report-metabox.php:41
@@ -3261,8 +3589,8 @@ msgid "Landing pages for promotions, built from modules, with their own address.
 msgstr ""
 
 #: includes/admin/class-store-design.php:552
-#: includes/admin/class-store-settings.php:107
-#: includes/admin/class-store-settings.php:119
+#: includes/admin/class-store-settings.php:108
+#: includes/admin/class-store-settings.php:120
 msgid "Coming soon"
 msgstr ""
 
@@ -3278,63 +3606,59 @@ msgstr ""
 msgid "WordPress general settings (site title, language, time zone)"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:54
-msgid "Email notifications"
-msgstr ""
-
 #: includes/admin/class-store-settings.php:55
 msgid "Templates for system emails that are sent automatically when certain events happen."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:58
+#: includes/admin/class-store-settings.php:59
 msgid "WooCommerce emails"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:63
+#: includes/admin/class-store-settings.php:64
 msgid "Terms of sale"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:64
+#: includes/admin/class-store-settings.php:65
 msgid "Create your own terms pages that set clear rules for everyone taking part in a purchase."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:67
+#: includes/admin/class-store-settings.php:68
 msgid "Custom pages (policy pages and checkout terms)"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:76
+#: includes/admin/class-store-settings.php:77
 msgid "WooCommerce settings"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:76
+#: includes/admin/class-store-settings.php:77
 msgid "General, products, accounts, emails and advanced WooCommerce options."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:79
+#: includes/admin/class-store-settings.php:80
 msgid "VialCove settings"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:79
+#: includes/admin/class-store-settings.php:80
 msgid "Brand name, demo mode, use statement, checkout confirmation, batch check and the support button."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:81
+#: includes/admin/class-store-settings.php:82
 msgid "System status"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:81
+#: includes/admin/class-store-settings.php:82
 msgid "Server, database and plugin information for troubleshooting."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:109
+#: includes/admin/class-store-settings.php:110
 msgid "Other settings"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:119
+#: includes/admin/class-store-settings.php:120
 msgid "The details of this section are still being decided. Once they are, this page becomes the full settings form."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:121
+#: includes/admin/class-store-settings.php:122
 msgid "Until then, these existing settings cover it:"
 msgstr ""
 
@@ -3548,22 +3872,12 @@ msgstr ""
 msgid "Landing page"
 msgstr ""
 
-#: includes/admin/class-tracking-page.php:123
-msgid "Time"
-msgstr ""
-
 #: includes/admin/class-tracking-page.php:124
 msgid "Tab"
 msgstr ""
 
 #: includes/admin/class-tracking-page.php:125
 msgid "Event"
-msgstr ""
-
-#: includes/admin/class-tracking-page.php:127
-#: includes/class-coupons.php:420
-#: includes/class-promotions.php:566
-msgid "Details"
 msgstr ""
 
 #: includes/admin/class-tracking-page.php:128
@@ -3586,11 +3900,6 @@ msgstr ""
 msgid "Guest"
 msgstr ""
 
-#: includes/admin/class-tracking-page.php:134
-#: includes/modules/class-registry.php:756
-msgid "Timeline"
-msgstr ""
-
 #: includes/admin/class-tracking-page.php:135
 msgid "Choose a visit to see its timeline."
 msgstr ""
@@ -3606,10 +3915,6 @@ msgstr ""
 
 #: includes/admin/class-tracking-page.php:139
 msgid "From"
-msgstr ""
-
-#: includes/admin/class-tracking-page.php:140
-msgid "To"
 msgstr ""
 
 #: includes/admin/class-tracking-page.php:141
@@ -4374,7 +4679,7 @@ msgstr ""
 msgid "Batch: %s"
 msgstr ""
 
-#: includes/class-plugin.php:108
+#: includes/class-plugin.php:110
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr ""
 
@@ -4724,28 +5029,7 @@ msgstr ""
 msgid "View on the offers page"
 msgstr ""
 
-#: includes/class-recovery.php:346
-msgid "Subtotal"
-msgstr ""
-
-#. translators: %s: coupon code
-#: includes/class-recovery.php:349
-#, php-format
-msgid "Use code %s at checkout."
-msgstr ""
-
-#. translators: 1: store name, 2: store address
-#: includes/class-recovery.php:353
-#, php-format
-msgid "You are receiving this because you started a checkout at %1$s. %2$s"
-msgstr ""
-
-#. translators: 1: store name, 2: store address
-#: includes/class-recovery.php:353
-msgid "Unsubscribe from cart reminders"
-msgstr ""
-
-#: includes/class-recovery.php:387
+#: includes/class-recovery.php:458
 msgid "You will no longer receive cart reminder emails from us."
 msgstr ""
 
@@ -4880,6 +5164,204 @@ msgstr ""
 #: includes/class-templates.php:479
 #, php-format
 msgid "Previewing template \"%s\". Only signed-in staff can see this preview."
+msgstr ""
+
+#: includes/emails/class-admin-abandoned.php:20
+msgid "Tells the admin when a customer entered their email and address at checkout but did not pay, so you can follow up."
+msgstr ""
+
+#: includes/emails/class-admin-abandoned.php:25
+msgid "[{site_title}] New abandoned checkout"
+msgstr ""
+
+#: includes/emails/class-admin-abandoned.php:29
+msgid "New abandoned checkout"
+msgstr ""
+
+#: includes/emails/class-admin-abandoned.php:35
+#: includes/emails/class-browse-reminder.php:53
+#: includes/emails/class-cart-recovery.php:72
+msgid "Send delay (seconds)"
+msgstr ""
+
+#: includes/emails/class-admin-abandoned.php:39
+msgid "Seconds after the customer last changed the cart."
+msgstr ""
+
+#: includes/emails/class-admin-abandoned.php:56
+msgid "A customer entered their contact details at checkout but has not paid yet. Reminder emails are sent automatically if they are turned on."
+msgstr ""
+
+#: includes/emails/class-admin-abandoned.php:61
+#: includes/emails/class-admin-offline.php:51
+msgid "Total"
+msgstr ""
+
+#: includes/emails/class-admin-abandoned.php:65
+msgid "View abandoned checkouts"
+msgstr ""
+
+#: includes/emails/class-admin-base.php:35
+msgid "Recipient(s)"
+msgstr ""
+
+#. translators: %s: default address
+#: includes/emails/class-admin-base.php:38
+#, php-format
+msgid "Separate several addresses with commas. Defaults to %s."
+msgstr ""
+
+#: includes/emails/class-admin-duplicate.php:23
+msgid "Sent when the same customer pays another order with the same total within the time window, so you can check whether a refund is needed."
+msgstr ""
+
+#: includes/emails/class-admin-duplicate.php:33
+msgid "[{site_title}] Possible duplicate payment: order #{order_number}"
+msgstr ""
+
+#: includes/emails/class-admin-duplicate.php:37
+msgid "Possible duplicate payment"
+msgstr ""
+
+#: includes/emails/class-admin-duplicate.php:43
+msgid "Time window (hours)"
+msgstr ""
+
+#: includes/emails/class-admin-duplicate.php:67
+msgid "This customer paid more than one order with the same total in a short time. Please check whether one of them is a duplicate."
+msgstr ""
+
+#. translators: %s: order number
+#: includes/emails/class-admin-duplicate.php:72
+#, php-format
+msgid "Order #%s"
+msgstr ""
+
+#: includes/emails/class-admin-duplicate.php:75
+#: includes/emails/class-admin-offline.php:54
+msgid "Open the order"
+msgstr ""
+
+#: includes/emails/class-admin-offline.php:18
+msgid "Sent when a customer places an order with an offline payment method (the order is on hold until you confirm the payment)."
+msgstr ""
+
+#: includes/emails/class-admin-offline.php:23
+msgid "[{site_title}] Offline payment order #{order_number}"
+msgstr ""
+
+#: includes/emails/class-admin-offline.php:27
+msgid "New offline payment order"
+msgstr ""
+
+#: includes/emails/class-admin-offline.php:45
+msgid "A new order is waiting for an offline payment. Contact the customer as soon as possible and confirm the payment."
+msgstr ""
+
+#: includes/emails/class-base.php:105
+msgid "Unsubscribe from these emails"
+msgstr ""
+
+#: includes/emails/class-browse-reminder.php:25
+msgid "Sent to newly registered customers who have not ordered after the delay, with the products they recently added to the cart or viewed."
+msgstr ""
+
+#: includes/emails/class-browse-reminder.php:41
+#: includes/emails/class-cart-recovery.php:51
+#: includes/emails/class-register-invite.php:34
+msgid "Message"
+msgstr ""
+
+#: includes/emails/class-browse-reminder.php:50
+#: includes/emails/class-cart-recovery.php:67
+msgid "Optional coupon code"
+msgstr ""
+
+#: includes/emails/class-browse-reminder.php:57
+msgid "Seconds after the customer registered."
+msgstr ""
+
+#. translators: %s: coupon code
+#: includes/emails/class-browse-reminder.php:97
+#: includes/emails/class-cart-recovery.php:124
+#, php-format
+msgid "Use code %s at checkout."
+msgstr ""
+
+#: includes/emails/class-browse-reminder.php:99
+msgid "Continue shopping"
+msgstr ""
+
+#. translators: %s: store name
+#: includes/emails/class-browse-reminder.php:101
+#, php-format
+msgid "You are receiving this because you created an account at %s."
+msgstr ""
+
+#. translators: %d: stage number 1-3
+#: includes/emails/class-cart-recovery.php:32
+#, php-format
+msgid "Abandoned cart: stage %d"
+msgstr ""
+
+#: includes/emails/class-cart-recovery.php:33
+msgid "Sent to customers who entered their email and address at checkout but did not pay. The delay counts from the last change to the cart."
+msgstr ""
+
+#: includes/emails/class-cart-recovery.php:55
+msgid "Shown above the product list. Keep it factual: no health claims and no fake urgency."
+msgstr ""
+
+#: includes/emails/class-cart-recovery.php:59
+#: includes/modules/class-registry.php:1041
+#: includes/modules/class-registry.php:1298
+msgid "Button text"
+msgstr ""
+
+#: includes/emails/class-cart-recovery.php:68
+msgid "Shown in the email and applied automatically when the customer comes back through the link (if the cart meets the coupon conditions)."
+msgstr ""
+
+#: includes/emails/class-cart-recovery.php:76
+msgid "Seconds after the customer last changed the cart. The store checks every 5 minutes, so emails go out up to 5 minutes later."
+msgstr ""
+
+#: includes/emails/class-cart-recovery.php:120
+msgid "Subtotal"
+msgstr ""
+
+#. translators: %s: store name
+#: includes/emails/class-cart-recovery.php:128
+#, php-format
+msgid "You are receiving this because you started a checkout at %s."
+msgstr ""
+
+#: includes/emails/class-register-invite.php:19
+msgid "Sent once to guests after a paid order when their email has no account yet. Only sent while registration on the account page is open."
+msgstr ""
+
+#: includes/emails/class-register-invite.php:50
+msgid "Create an account"
+msgstr ""
+
+#: includes/emails/class-register-verify.php:21
+msgid "Sent when “Register email verification” is on in Basic settings. The customer must open the link before signing in."
+msgstr ""
+
+#: includes/emails/class-register-verify.php:45
+msgid "Welcome! Please confirm your email address to activate your account. The link is valid for 3 days."
+msgstr ""
+
+#: includes/emails/class-register-verify.php:46
+msgid "Verify my email"
+msgstr ""
+
+#: includes/emails/class-register-verify.php:47
+msgid "If you did not create this account, you can ignore this email."
+msgstr ""
+
+#: includes/emails/class-registry.php:272
+msgid "You will no longer receive these emails from us."
 msgstr ""
 
 #: includes/modules/class-blocks.php:228

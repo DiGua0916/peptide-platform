@@ -53,7 +53,8 @@ final class Store_Settings {
 				'icon'        => 'dashicons-email-alt',
 				'title'       => __( 'Email notifications', 'peptide-core' ),
 				'desc'        => __( 'Templates for system emails that are sent automatically when certain events happen.', 'peptide-core' ),
-				'placeholder' => true,
+				'placeholder' => false,
+				'render'      => array( Email_Center::class, 'render' ),
 				'now'         => array(
 					__( 'WooCommerce emails', 'peptide-core' ) => admin_url( 'admin.php?page=wc-settings&tab=email' ),
 				),

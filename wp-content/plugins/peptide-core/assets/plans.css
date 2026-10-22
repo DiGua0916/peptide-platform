@@ -364,3 +364,228 @@
 		margin-left: 0;
 	}
 }
+
+/* 系统设置 → 邮件通知（EMAIL-CENTER-01）：卡片里是 WooCommerce 邮件预览的缩略图。 */
+.pc-em-grid {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: clamp(12px, 1.2vw, 24px);
+	margin-top: 16px;
+}
+
+.pc-em-card {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	background: #eef0f4;
+	border-radius: 4px;
+}
+
+.pc-em-card.is-off .pc-em-card__preview {
+	opacity: 0.55;
+}
+
+.pc-em-card__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 10px 12px;
+}
+
+.pc-em-switch {
+	margin: 0;
+}
+
+.pc-em-card__preview,
+.pc-em-row__preview {
+	position: relative;
+	display: block;
+	overflow: hidden;
+	margin: 0 8px;
+	background: #fff;
+	border-radius: 3px;
+}
+
+.pc-em-card__preview {
+	height: 300px;
+}
+
+/* 预览按 600px 宽的邮件缩小到卡片宽度；iframe 不接收点击，点卡片进入编辑。 */
+.pc-em-card__preview iframe,
+.pc-em-row__preview iframe {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 200%;
+	height: 200%;
+	border: 0;
+	transform: scale(0.5);
+	transform-origin: 0 0;
+	pointer-events: none;
+}
+
+.pc-em-card__off {
+	padding: 16px;
+	color: var(--pc-pl-muted);
+}
+
+.pc-em-card__foot {
+	padding: 10px 12px;
+	color: #374151;
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+.pc-em-stage {
+	margin: 20px 0 8px;
+}
+
+.pc-em-row {
+	display: grid;
+	grid-template-columns: 200px minmax(0, 1fr) minmax(0, 1fr) auto auto;
+	gap: 16px;
+	align-items: center;
+	padding: 8px 24px 8px 0;
+	background: #eef0f4;
+	border-radius: 4px;
+}
+
+.pc-em-row.is-off .pc-em-row__preview {
+	opacity: 0.55;
+}
+
+.pc-em-row__preview {
+	height: 130px;
+	margin: 0 8px;
+}
+
+.pc-em-row__preview iframe {
+	width: 400%;
+	height: 400%;
+	transform: scale(0.25);
+}
+
+@media (max-width: 1400px) {
+	.pc-em-grid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 1100px) {
+	.pc-em-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 782px) {
+	.pc-em-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.pc-em-row {
+		grid-template-columns: 1fr auto;
+		padding: 8px;
+	}
+
+	.pc-em-row__preview {
+		grid-column: 1 / -1;
+	}
+}
+
+/* 订单 → 弃单（CART-RECOVERY-02） */
+.pc-rc-filter {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	padding: 14px 20px;
+}
+
+.pc-rc-filter input[type="search"] {
+	min-width: 280px;
+}
+
+.pc-rc-scroll {
+	overflow-x: auto;
+}
+
+.pc-rc-table th,
+.pc-rc-table td {
+	white-space: nowrap;
+}
+
+.pc-rc-table td small {
+	color: var(--pc-pl-muted);
+}
+
+.pc-rc-badge {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 3px;
+	background: #e5e7eb;
+	color: #374151;
+	font-size: 12px;
+}
+
+.pc-rc-badge.is-open {
+	background: #f59e0b;
+	color: #fff;
+}
+
+.pc-rc-badge.is-paid,
+.pc-rc-badge.is-success {
+	background: #16a34a;
+	color: #fff;
+}
+
+.pc-rc-badge.is-recalling {
+	background: #2563eb;
+	color: #fff;
+}
+
+.pc-rc-badge.is-pending {
+	background: #dbeafe;
+	color: #1e40af;
+}
+
+.pc-rc-badge.is-failed {
+	background: #fee2e2;
+	color: #b91c1c;
+}
+
+.pc-rc-detail td {
+	background: #f9fafb;
+	white-space: normal !important;
+}
+
+.pc-rc-detail__grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 24px;
+}
+
+.pc-rc-detail ul {
+	margin: 6px 0 0;
+}
+
+.pc-rc-pager {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	padding: 16px;
+}
+
+.pc-rc-pager .page-numbers {
+	padding: 2px 8px;
+	border: 1px solid var(--pc-pl-line);
+	border-radius: 3px;
+	text-decoration: none;
+}
+
+.pc-rc-pager .page-numbers.current {
+	border-color: var(--pc-pl-orange);
+	color: var(--pc-pl-orange);
+}

@@ -97,7 +97,7 @@ final class Overview_Page {
 				array(
 					'summary'  => Overview::summary(),
 					'range'    => Overview::range_data( 'today' ),
-					'recovery' => Recovery::settings()['enabled'],
+					'recovery' => Recovery::enabled(),
 					'links'    => array(
 						'orders'      => admin_url( 'admin.php?page=wc-orders&status=wc-processing' ),
 						'onHold'      => admin_url( 'admin.php?page=wc-orders&status=wc-on-hold' ),
