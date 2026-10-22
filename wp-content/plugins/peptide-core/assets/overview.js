@@ -57,35 +57,39 @@
 
 	function side() {
 		var h = summary.holidays.map( function ( d ) {
-			return '<li><span>' + esc( S.holidayNames[ d.key ] || d.key ) + '</span><span>' + esc( d.date ) + '</span><span class="pc-ov-muted">' + esc( d.days ? fmt( S.inDays, d.days ) : S.todayTag ) + '</span></li>';
+			return '<li><span>' + esc( S.holidayNames[ d.key ] || d.key ) + '</span><span class="pc-ov-muted">' + esc( d.date ) + '</span><span class="pc-ov-muted">' + esc( d.days ? fmt( S.inDays, d.days ) : S.todayTag ) + '</span></li>';
 		} ).join( '' );
-		return '<section class="pc-ov-card"><div class="pc-ov-card__head"><h2>' + esc( S.currency ) + '</h2></div><p><b>' + esc( summary.currency.code + ' (' + summary.currency.symbol + ')' ) + '</b> <span class="pc-ov-tag">' + esc( S.default ) + '</span></p>' +
-			'<div class="pc-ov-card__head"><h2>' + esc( S.holidays ) + '</h2></div><ul class="pc-ov-holidays">' + h + '</ul></section>';
+		return '<section class="pc-ov-card"><div class="pc-ov-card__head"><h2>' + esc( S.currency ) + '</h2><span><b>' + esc( summary.currency.code + ' (' + summary.currency.symbol + ')' ) + '</b><span class="pc-ov-tag">' + esc( S.default ) + '</span></span></div>' +
+			'<div class="pc-ov-card__head pc-ov-card__head--sub"><h2>' + esc( S.holidays ) + '</h2></div><ul class="pc-ov-holidays">' + h + '</ul></section>';
 	}
 
 	// ---------- 第二行 ----------
 
+	// 数字格：固定列数，标签在上、数字在下；有链接的整格可点；warn 为真且数字不为 0 时标橙色。
+	function num( label, n, href, warn ) {
+		var tag = href ? 'a' : 'div';
+		return '<' + tag + ' class="pc-ov-num"' + ( href ? ' href="' + esc( href ) + '"' : '' ) + '><span title="' + esc( label ) + '">' + esc( label ) + '</span><b class="' + ( warn && Number( n ) ? 'is-warn' : '' ) + '">' + esc( n ) + '</b></' + tag + '>';
+	}
+	function nums( cells ) {
+		return '<div class="pc-ov-nums" style="--pc-ov-cols:' + cells.length + '">' + cells.join( '' ) + '</div>';
+	}
+
 	function todo() {
 		var t = summary.todo;
-		var cell = function ( label, n, href ) {
-			return '<a class="pc-ov-num" href="' + esc( href ) + '"><span>' + esc( label ) + '</span><b class="' + ( n ? 'is-warn' : '' ) + '">' + esc( n ) + '</b></a>';
-		};
-		return '<section class="pc-ov-card"><div class="pc-ov-card__head"><h2>' + esc( S.todo ) + '</h2></div><div class="pc-ov-nums">' +
-			cell( S.toShip, t.to_ship, L.orders ) + cell( S.onHold, t.on_hold, L.onHold ) + cell( S.missingBatch, t.missing_batch, L.orders ) + cell( S.noReport, t.batches_no_report, L.batches ) + '</div></section>';
+		return '<section class="pc-ov-card"><div class="pc-ov-card__head"><h2>' + esc( S.todo ) + '</h2></div>' +
+			nums( [ num( S.toShip, t.to_ship, L.orders, true ), num( S.onHold, t.on_hold, L.onHold, true ), num( S.missingBatch, t.missing_batch, L.orders, true ), num( S.noReport, t.batches_no_report, L.batches, true ) ] ) + '</section>';
 	}
 
 	function unfinished() {
 		var t = summary.todo;
-		return '<section class="pc-ov-card"><div class="pc-ov-card__head"><h2>' + esc( S.unfinished ) + '</h2></div><div class="pc-ov-nums">' +
-			'<a class="pc-ov-num" href="' + esc( L.unpaid ) + '"><span>' + esc( S.unpaid ) + '</span><b>' + esc( t.unpaid_7d ) + '</b></a>' +
-			'<a class="pc-ov-num" href="' + esc( L.failed ) + '"><span>' + esc( S.failed ) + '</span><b>' + esc( t.failed_7d ) + '</b></a></div><p class="pc-ov-muted">' + esc( S.unfinishedNote ) + '</p></section>';
+		return '<section class="pc-ov-card"><div class="pc-ov-card__head"><h2>' + esc( S.unfinished ) + '</h2>' + link( L.recovery, S.recoveryLink ) + '</div>' +
+			nums( [ num( S.unpaid, t.unpaid_7d, L.unpaid ), num( S.failed, t.failed_7d, L.failed ) ] ) +
+			'<p class="pc-ov-muted pc-ov-foot">' + esc( cfg.recovery ? S.recoveryOn : S.recoveryOff ) + '</p></section>';
 	}
 
 	function live( today ) {
-		return '<section class="pc-ov-card"><div class="pc-ov-card__head"><h2>' + esc( S.live ) + '</h2>' + link( L.visitors, S.more ) + '</div><div class="pc-ov-nums">' +
-			'<div class="pc-ov-num"><span>' + esc( S.online ) + '</span><b>' + esc( summary.online ) + '</b></div>' +
-			'<div class="pc-ov-num"><span>' + esc( S.todayOrders ) + '</span><b>' + esc( today.orders ) + '</b></div>' +
-			'<div class="pc-ov-num"><span>' + esc( S.todaySales + ' (' + summary.currency.code + ')' ) + '</span><b>' + esc( money( today.sales ) ) + '</b></div></div></section>';
+		return '<section class="pc-ov-card"><div class="pc-ov-card__head"><h2>' + esc( S.live ) + '</h2>' + link( L.visitors, S.more ) + '</div>' +
+			nums( [ num( S.online, summary.online ), num( S.todayOrders, today.orders ), num( S.todaySales, summary.currency.symbol + money( today.sales ) ) ] ) + '</section>';
 	}
 
 	// ---------- 第三行 ----------
@@ -96,10 +100,12 @@
 			return '<p class="pc-ov-muted">' + esc( S.noData ) + '</p>';
 		}
 		var base = f[ 0 ].count;
-		return '<div class="pc-ov-funnel">' + f.map( function ( s, i ) {
+		// 每行同宽：底色条按占访客的比例填充；名称、人数、占比、上一步转化各占固定一列，上下对齐。
+		return '<div class="pc-ov-funnel"><div class="pc-ov-step pc-ov-step--head"><span></span><span class="pc-ov-step__rate">' + esc( S.stepRate ) + '</span></div>' + f.map( function ( s, i ) {
 			var prev = i ? f[ i - 1 ].count : s.count;
-			var width = 100 - i * 7;
-			return '<div class="pc-ov-step"><div class="pc-ov-step__bar" style="width:' + width + '%"><b>' + esc( S.stages[ s.stage ] ) + ': ' + esc( s.count ) + '</b>' + ( i ? ' <span>' + esc( fmt( S.ofVisitors, pct( s.count, base ) ) ) + '</span>' : '' ) + '</div>' + ( i ? '<span class="pc-ov-step__rate">' + esc( pct( s.count, prev ) ) + '</span>' : '' ) + '</div>';
+			var fill = base ? Math.min( 100, ( s.count / base ) * 100 ) : 0;
+			return '<div class="pc-ov-step"><div class="pc-ov-step__bar"><i style="width:' + fill + '%"></i><span class="pc-ov-step__name">' + esc( S.stages[ s.stage ] ) + '</span><b>' + esc( s.count ) + '</b><span class="pc-ov-step__share">' + ( i ? esc( fmt( S.ofVisitors, pct( s.count, base ) ) ) : '' ) + '</span></div>' +
+				'<span class="pc-ov-step__rate">' + ( i ? esc( pct( s.count, prev ) ) : '' ) + '</span></div>';
 		} ).join( '' ) + '</div>';
 	}
 

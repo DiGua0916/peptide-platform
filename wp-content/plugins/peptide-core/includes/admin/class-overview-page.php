@@ -16,6 +16,7 @@ namespace PeptideCore\Admin;
 
 use PeptideCore\Api\Rest_Controller;
 use PeptideCore\Overview;
+use PeptideCore\Recovery;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -96,6 +97,7 @@ final class Overview_Page {
 				array(
 					'summary'  => Overview::summary(),
 					'range'    => Overview::range_data( 'today' ),
+					'recovery' => Recovery::settings()['enabled'],
 					'links'    => array(
 						'orders'      => admin_url( 'admin.php?page=wc-orders&status=wc-processing' ),
 						'onHold'      => admin_url( 'admin.php?page=wc-orders&status=wc-on-hold' ),
@@ -107,6 +109,7 @@ final class Overview_Page {
 						'visitor'     => admin_url( 'admin.php?page=' . Tracking_Page::SLUG . '&visitor=' ),
 						'products'    => admin_url( 'edit.php?post_type=product' ),
 						'promotions'  => admin_url( 'edit.php?post_type=pc_promotion' ),
+						'recovery'    => admin_url( 'admin.php?page=' . Recovery_Page::SLUG ),
 					),
 					'strings'  => self::strings(),
 				)
@@ -139,7 +142,9 @@ final class Overview_Page {
 			'unfinished'   => __( 'Unfinished orders (last 7 days)', 'peptide-core' ),
 			'unpaid'       => __( 'Waiting for payment', 'peptide-core' ),
 			'failed'       => __( 'Payment failed', 'peptide-core' ),
-			'unfinishedNote' => __( 'Abandoned-cart recovery emails are not set up yet; follow up on these orders manually.', 'peptide-core' ),
+			'recoveryOn'   => __( 'Cart recovery is on: shoppers who left an email get reminder emails automatically.', 'peptide-core' ),
+			'recoveryOff'  => __( 'Cart recovery emails are off; follow up on these orders manually or turn them on.', 'peptide-core' ),
+			'recoveryLink' => __( 'Cart recovery', 'peptide-core' ),
 			'currency'     => __( 'Currency', 'peptide-core' ),
 			'default'      => __( 'Default', 'peptide-core' ),
 			'holidays'     => __( 'Upcoming US shopping days', 'peptide-core' ),
@@ -196,6 +201,7 @@ final class Overview_Page {
 				__( 'Paid', 'peptide-core' ),
 			),
 			'ofVisitors'   => __( '%s of visitors', 'peptide-core' ),
+			'stepRate'     => __( 'From previous step', 'peptide-core' ),
 			'holidayNames' => array(
 				'new_year'     => __( 'New Year’s Day', 'peptide-core' ),
 				'valentine'    => __( 'Valentine’s Day', 'peptide-core' ),
