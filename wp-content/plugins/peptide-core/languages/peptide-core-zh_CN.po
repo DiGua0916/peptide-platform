@@ -11,7 +11,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-22T17:07:57+00:00\n"
+"POT-Creation-Date: 2026-10-22T17:20:36+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -31,7 +31,7 @@ msgstr "为多肽商店提供批次、检测报告及与 WooCommerce 的集成�
 msgid "DiGua"
 msgstr "DiGua"
 
-#: includes/admin/class-admin-menus.php:56
+#: includes/admin/class-admin-menus.php:55
 #: includes/admin/class-batch-orders.php:141
 #: includes/admin/class-batch-orders.php:144
 #: includes/admin/class-overview-page.php:133
@@ -39,28 +39,28 @@ msgstr "DiGua"
 msgid "Orders"
 msgstr "订单"
 
-#: includes/admin/class-admin-menus.php:57
+#: includes/admin/class-admin-menus.php:56
 msgid "Customers"
 msgstr "顾客"
 
-#: includes/admin/class-admin-menus.php:58
+#: includes/admin/class-admin-menus.php:57
 msgid "Store settings"
 msgstr "店铺设置"
 
-#: includes/admin/class-admin-menus.php:60
+#: includes/admin/class-admin-menus.php:59
 msgid "Shipping settings"
 msgstr "物流设置"
 
-#: includes/admin/class-admin-menus.php:61
+#: includes/admin/class-admin-menus.php:60
 #: includes/admin/class-store-settings.php:156
 msgid "Tax settings"
 msgstr "税费设置"
 
-#: includes/admin/class-admin-menus.php:65
+#: includes/admin/class-admin-menus.php:64
 msgid "Payment settings"
 msgstr "支付设置"
 
-#: includes/admin/class-admin-menus.php:66
+#: includes/admin/class-admin-menus.php:65
 #: includes/admin/class-basic-config-page.php:113
 #: includes/admin/class-store-settings.php:127
 #: includes/admin/class-store-settings.php:139
@@ -72,6 +72,7 @@ msgid "Choose favicon"
 msgstr "选择 Favicon"
 
 #: includes/admin/class-basic-config-page.php:49
+#: includes/admin/class-plans-editor.php:51
 msgid "Use this image"
 msgstr "使用这张图片"
 
@@ -82,15 +83,12 @@ msgid "— None —"
 msgstr "— 无 —"
 
 #: includes/admin/class-basic-config-page.php:97
-#: includes/admin/class-recovery-page.php:152
-msgid "On"
-msgstr "已开启"
+msgid "Enable"
+msgstr "开启"
 
 #: includes/admin/class-basic-config-page.php:97
-#: includes/admin/class-recovery-page.php:152
-#: includes/class-promotions.php:797
-msgid "Off"
-msgstr "未启用"
+msgid "Disable"
+msgstr "关闭"
 
 #: includes/admin/class-basic-config-page.php:107
 #: includes/admin/class-recovery-page.php:101
@@ -164,6 +162,7 @@ msgstr "顾客收件箱里显示的发件人名称。"
 
 #: includes/admin/class-basic-config-page.php:152
 #: includes/admin/class-menu-page.php:139
+#: includes/admin/class-plans-editor.php:136
 #: includes/admin/class-product-panel.php:104
 #: includes/modules/class-blocks.php:239
 msgid "Choose image"
@@ -171,6 +170,7 @@ msgstr "选择图片"
 
 #: includes/admin/class-basic-config-page.php:152
 #: includes/admin/class-menu-page.php:140
+#: includes/admin/class-plans-editor.php:136
 #: includes/admin/class-product-panel.php:105
 #: includes/admin/class-store-design.php:391
 #: includes/modules/class-blocks.php:242
@@ -551,6 +551,7 @@ msgstr "请输入电话"
 #: includes/admin/class-menu-page.php:164
 #: includes/admin/class-menu-page.php:207
 #: includes/admin/class-recovery-page.php:51
+#: includes/admin/class-shipping-page.php:221
 #: includes/admin/class-store-design.php:140
 #: includes/admin/class-store-settings.php:40
 #: includes/admin/class-tracking-page.php:214
@@ -604,6 +605,7 @@ msgstr "3–40 个字符：字母、数字和连字符。保存时统一转为�
 #: includes/admin/class-batch-metabox.php:56
 #: includes/admin/class-list-columns.php:33
 #: includes/admin/class-overview-page.php:192
+#: includes/admin/class-plans-editor.php:84
 #: includes/admin/class-tracking-page.php:170
 #: includes/modules/class-registry.php:1037
 #: includes/modules/class-registry.php:1190
@@ -630,6 +632,7 @@ msgstr "隐藏（仅后台可见）"
 #: includes/admin/class-batch-metabox.php:77
 #: includes/admin/class-batch-orders.php:66
 #: includes/admin/class-list-columns.php:35
+#: includes/admin/class-plans-editor.php:84
 #: includes/admin/class-recovery-page.php:216
 #: includes/admin/class-tracking-page.php:92
 #: includes/class-promotions.php:666
@@ -755,6 +758,8 @@ msgid "Email"
 msgstr "邮箱"
 
 #: includes/admin/class-batch-orders.php:66
+#: includes/admin/class-plans-editor.php:43
+#: includes/admin/class-plans-editor.php:138
 #: includes/modules/class-registry.php:1096
 msgid "Items"
 msgstr "商品"
@@ -1079,6 +1084,8 @@ msgstr "复制"
 #: includes/admin/class-design-editor.php:156
 #: includes/admin/class-menu-page.php:101
 #: includes/admin/class-menu-page.php:291
+#: includes/admin/class-plans-editor.php:36
+#: includes/admin/class-plans-editor.php:107
 #: includes/admin/class-store-design.php:479
 #: includes/modules/class-blocks.php:231
 msgid "Delete"
@@ -1184,11 +1191,19 @@ msgstr "提示"
 
 #: includes/admin/class-dialogs.php:33
 #: includes/admin/class-menu-page.php:118
+#: includes/admin/class-plans-editor.php:128
+#: includes/admin/class-plans-editor.php:142
 msgid "OK"
 msgstr "确定"
 
 #: includes/admin/class-dialogs.php:34
 #: includes/admin/class-menu-page.php:117
+#: includes/admin/class-plans-editor.php:123
+#: includes/admin/class-plans-editor.php:128
+#: includes/admin/class-plans-editor.php:142
+#: includes/admin/class-plans-editor.php:145
+#: includes/admin/class-shipping-page.php:108
+#: includes/admin/class-shipping-page.php:197
 msgid "Cancel"
 msgstr "取消"
 
@@ -1309,6 +1324,9 @@ msgstr "链接页面"
 
 #: includes/admin/class-menu-page.php:97
 #: includes/admin/class-menu-page.php:278
+#: includes/admin/class-plans-editor.php:84
+#: includes/admin/class-plans-editor.php:114
+#: includes/admin/class-shipping-page.php:195
 #: includes/admin/class-store-design.php:380
 #: includes/admin/class-store-design.php:433
 msgid "Actions"
@@ -1367,6 +1385,8 @@ msgid "New item"
 msgstr "新目录"
 
 #: includes/admin/class-menu-page.php:112
+#: includes/admin/class-shipping-page.php:108
+#: includes/admin/class-shipping-page.php:197
 msgid "Save"
 msgstr "保存"
 
@@ -1461,6 +1481,8 @@ msgid "Clear"
 msgstr "清除"
 
 #: includes/admin/class-menu-page.php:137
+#: includes/admin/class-plans-editor.php:136
+#: includes/admin/class-shipping-page.php:195
 #: includes/modules/class-fallback.php:672
 #: includes/modules/class-registry.php:329
 #: includes/modules/class-registry.php:704
@@ -1593,6 +1615,7 @@ msgid "Created by"
 msgstr "创建人"
 
 #: includes/admin/class-menu-page.php:289
+#: includes/admin/class-plans-editor.php:35
 msgid "Edit"
 msgstr "编辑"
 
@@ -2030,6 +2053,206 @@ msgstr "网络星期一"
 msgid "Christmas"
 msgstr "圣诞节"
 
+#: includes/admin/class-plans-editor.php:34
+#: includes/admin/class-recovery-page.php:141
+msgid "All"
+msgstr "全部"
+
+#: includes/admin/class-plans-editor.php:37
+msgid "No regions yet. Use “Add countries”."
+msgstr "还没有区域，请点“添加国家”。"
+
+#: includes/admin/class-plans-editor.php:38
+msgid "No rates yet. Use “Add rate”."
+msgstr "还没有运费，请点“添加方案”。"
+
+#. translators: %d: number of countries
+#: includes/admin/class-plans-editor.php:40
+#, php-format
+msgid "%d countries/regions selected"
+msgstr "已选择 %d 个国家/地区"
+
+#: includes/admin/class-plans-editor.php:41
+#: includes/admin/class-plans-editor.php:139
+#: includes/shipping/class-plans.php:353
+msgid "no limit"
+msgstr "无限制"
+
+#: includes/admin/class-plans-editor.php:42
+#: includes/admin/class-plans-editor.php:138
+msgid "Order amount"
+msgstr "订单价格"
+
+#: includes/admin/class-plans-editor.php:44
+#: includes/admin/class-plans-editor.php:138
+msgid "Weight"
+msgstr "重量"
+
+#: includes/admin/class-plans-editor.php:46
+msgid "Remove all regions from this plan?"
+msgstr "确定删除这个方案的全部区域吗？"
+
+#: includes/admin/class-plans-editor.php:47
+msgid "Delete this plan? This cannot be undone."
+msgstr "确定删除这个方案吗？删除后无法恢复。"
+
+#: includes/admin/class-plans-editor.php:48
+msgid "Enter a rate name."
+msgstr "请填写物流方案名称。"
+
+#: includes/admin/class-plans-editor.php:49
+msgid "The upper limit must be greater than the lower limit."
+msgstr "上限必须大于下限。"
+
+#: includes/admin/class-plans-editor.php:50
+msgid "Choose an icon"
+msgstr "选择图标"
+
+#. translators: %s: plan name
+#: includes/admin/class-plans-editor.php:53
+#, php-format
+msgid "Will be moved out of “%s”"
+msgstr "将从“%s”移出"
+
+#: includes/admin/class-plans-editor.php:54
+msgid "Tax rate (%)"
+msgstr "税率（%）"
+
+#: includes/admin/class-plans-editor.php:55
+msgid "Enter a tax rate between 0 and 100 for every region."
+msgstr "请为每个区域填写 0 到 100 之间的税率。"
+
+#: includes/admin/class-plans-editor.php:64
+msgid "Saved."
+msgstr "已保存。"
+
+#: includes/admin/class-plans-editor.php:67
+msgid "Plan deleted."
+msgstr "方案已删除。"
+
+#: includes/admin/class-plans-editor.php:82
+#: includes/admin/class-tracking-page.php:155
+#: includes/class-promotions.php:723
+#: includes/modules/class-registry.php:1185
+msgid "Products"
+msgstr "商品"
+
+#: includes/admin/class-plans-editor.php:83
+msgid "Search products to add…"
+msgstr "搜索商品并添加……"
+
+#: includes/admin/class-plans-editor.php:92
+msgid "No products selected."
+msgstr "还没有选择商品。"
+
+#: includes/admin/class-plans-editor.php:105
+#: includes/admin/class-report-metabox.php:68
+msgid "Published"
+msgstr "已发布"
+
+#: includes/admin/class-plans-editor.php:105
+msgid "Unpublished"
+msgstr "已下架"
+
+#: includes/admin/class-plans-editor.php:112
+msgid "Regions"
+msgstr "选择区域"
+
+#: includes/admin/class-plans-editor.php:113
+msgid "Remove all"
+msgstr "全部删除"
+
+#: includes/admin/class-plans-editor.php:113
+#: includes/admin/class-plans-editor.php:119
+msgid "Add countries"
+msgstr "添加国家"
+
+#: includes/admin/class-plans-editor.php:114
+msgid "Country/region"
+msgstr "国家/地区"
+
+#: includes/admin/class-plans-editor.php:114
+msgid "States/provinces"
+msgstr "州/省"
+
+#: includes/admin/class-plans-editor.php:120
+msgid "Search countries"
+msgstr "搜索国家"
+
+#: includes/admin/class-plans-editor.php:121
+msgid "Select all shown"
+msgstr "全选当前列表"
+
+#: includes/admin/class-plans-editor.php:123
+#: includes/modules/class-blocks.php:229
+msgid "Add"
+msgstr "添加"
+
+#: includes/admin/class-plans-editor.php:126
+msgid "All states/provinces"
+msgstr "全部州/省"
+
+#: includes/admin/class-plans-editor.php:126
+msgid "Only these:"
+msgstr "仅限以下："
+
+#: includes/admin/class-plans-editor.php:133
+msgid "Shipping rate"
+msgstr "运费方案"
+
+#: includes/admin/class-plans-editor.php:134
+#: includes/admin/class-shipping-page.php:144
+#: includes/admin/class-shipping-page.php:195
+msgid "Rate name"
+msgstr "物流方案名称"
+
+#: includes/admin/class-plans-editor.php:134
+msgid "Shown to customers at checkout, e.g. UPS • FedEx • USPS"
+msgstr "结账页显示给顾客，例如 UPS • FedEx • USPS"
+
+#: includes/admin/class-plans-editor.php:135
+#: includes/admin/class-shipping-page.php:195
+#: includes/admin/class-store-design.php:525
+msgid "Enabled"
+msgstr "已启用"
+
+#: includes/admin/class-plans-editor.php:137
+#: includes/admin/class-shipping-page.php:195
+msgid "ZIP range"
+msgstr "邮编范围"
+
+#: includes/admin/class-plans-editor.php:137
+msgid "Empty = all ZIP codes. One per line or comma separated: 90001, 900*, 90000-90999"
+msgstr "留空表示全部邮编。每行一个或用逗号分隔：90001、900*、90000-90999"
+
+#: includes/admin/class-plans-editor.php:138
+#: includes/admin/class-shipping-page.php:144
+#: includes/admin/class-shipping-page.php:195
+msgid "Fee rule"
+msgstr "费用规则"
+
+#: includes/admin/class-plans-editor.php:140
+#: includes/admin/class-shipping-page.php:144
+msgid "Shipping fee"
+msgstr "运费"
+
+#: includes/admin/class-plans-editor.php:140
+msgid "0 means free shipping."
+msgstr "填 0 表示免运费。"
+
+#: includes/admin/class-plans-editor.php:144
+#: includes/admin/class-shipping-page.php:194
+msgid "Copy rates"
+msgstr "复制方案"
+
+#: includes/admin/class-plans-editor.php:144
+msgid "Add the rates of another plan to this plan."
+msgstr "把另一个方案的运费加到这个方案里。"
+
+#: includes/admin/class-plans-editor.php:145
+msgid "Copy"
+msgstr "复制"
+
 #: includes/admin/class-product-panel.php:37
 msgid "Peptide data"
 msgstr "多肽资料"
@@ -2131,10 +2354,6 @@ msgstr "因为没有店铺地址，没有发送提醒。"
 msgid "Recovery is turned off, so nothing was scanned."
 msgstr "弃单召回没有开启，所以没有扫描。"
 
-#: includes/admin/class-recovery-page.php:141
-msgid "All"
-msgstr "全部"
-
 #: includes/admin/class-recovery-page.php:142
 msgid "Waiting"
 msgstr "等待中"
@@ -2159,6 +2378,16 @@ msgstr "会话已失效"
 #: includes/class-recovery.php:387
 msgid "Unsubscribed"
 msgstr "已退订"
+
+#: includes/admin/class-recovery-page.php:152
+msgid "On"
+msgstr "已开启"
+
+#: includes/admin/class-recovery-page.php:152
+#: includes/admin/class-shipping-page.php:149
+#: includes/class-promotions.php:797
+msgid "Off"
+msgstr "未启用"
 
 #: includes/admin/class-recovery-page.php:154
 msgid "A cart counts as abandoned when a shopper has entered an email at checkout, has items in the cart, and has not paid. Reminders stop as soon as they pay. Every email has an unsubscribe link and your store address."
@@ -2308,10 +2537,6 @@ msgstr "其他"
 #: includes/admin/class-report-metabox.php:67
 msgid "Draft (not visible)"
 msgstr "草稿（不可见）"
-
-#: includes/admin/class-report-metabox.php:68
-msgid "Published"
-msgstr "已发布"
 
 #: includes/admin/class-report-metabox.php:69
 msgid "Superseded (old version)"
@@ -2543,6 +2768,212 @@ msgstr "右下角"
 #: includes/modules/class-fields.php:76
 msgid "Bottom left"
 msgstr "左下角"
+
+#: includes/admin/class-shipping-page.php:58
+msgid "Shipping management"
+msgstr "物流管理"
+
+#: includes/admin/class-shipping-page.php:59
+#: includes/admin/class-shipping-page.php:100
+msgid "Rate order and calculation rules"
+msgstr "运费排序与计算规则"
+
+#: includes/admin/class-shipping-page.php:60
+msgid "New custom shipping"
+msgstr "新建自定义物流"
+
+#: includes/admin/class-shipping-page.php:60
+msgid "New general shipping"
+msgstr "新建通用物流"
+
+#: includes/admin/class-shipping-page.php:65
+msgid "General shipping"
+msgstr "通用物流"
+
+#: includes/admin/class-shipping-page.php:65
+msgid "Custom shipping"
+msgstr "自定义物流"
+
+#: includes/admin/class-shipping-page.php:70
+msgid "General shipping plans"
+msgstr "通用物流方案"
+
+#: includes/admin/class-shipping-page.php:70
+msgid "These products use the general shipping plans:"
+msgstr "以下商品将自动使用通用物流方案："
+
+#: includes/admin/class-shipping-page.php:70
+msgid "every product that is not in a custom shipping plan;"
+msgstr "所有不在自定义物流方案中的商品；"
+
+#: includes/admin/class-shipping-page.php:70
+msgid "new products, automatically."
+msgstr "新增商品默认自动加入。"
+
+#: includes/admin/class-shipping-page.php:72
+msgid "Custom shipping plans"
+msgstr "自定义物流方案"
+
+#: includes/admin/class-shipping-page.php:72
+msgid "Search by product title"
+msgstr "按商品标题搜索"
+
+#: includes/admin/class-shipping-page.php:72
+msgid "Search"
+msgstr "搜索"
+
+#: includes/admin/class-shipping-page.php:73
+msgid "Set separate shipping rates for specific products."
+msgstr "为指定商品配置单独的物流运费方案。"
+
+#: includes/admin/class-shipping-page.php:90
+msgid "No plan contains a matching product."
+msgstr "没有方案包含匹配的商品。"
+
+#: includes/admin/class-shipping-page.php:90
+msgid "No plans yet."
+msgstr "还没有方案。"
+
+#: includes/admin/class-shipping-page.php:101
+msgid "Order of rates at checkout"
+msgstr "结账页运费的排列顺序"
+
+#: includes/admin/class-shipping-page.php:102
+msgid "Cheapest first"
+msgstr "运费从低到高"
+
+#: includes/admin/class-shipping-page.php:103
+msgid "In the order of the plan"
+msgstr "按方案里的顺序"
+
+#: includes/admin/class-shipping-page.php:104
+msgid "When the cart has products from several plans"
+msgstr "购物车里的商品属于多个方案时"
+
+#: includes/admin/class-shipping-page.php:105
+msgid "Add up the cheapest rate of each plan"
+msgstr "各方案取最便宜的运费后相加"
+
+#: includes/admin/class-shipping-page.php:106
+msgid "Charge only the highest of those rates"
+msgstr "只收其中最高的一项"
+
+#: includes/admin/class-shipping-page.php:107
+msgid "A cart with products from one plan shows every matching rate of that plan. If any product has no matching rate for the address, checkout shows that the order cannot be shipped there."
+msgstr "购物车商品都属于同一方案时，列出这个方案所有符合条件的运费。只要有一个商品在收货地址没有可用运费，结账页就会提示无法配送。"
+
+#: includes/admin/class-shipping-page.php:115
+msgid "Shipping plans are in use: checkout only offers the rates below. The original WooCommerce shipping zones are no longer used."
+msgstr "物流方案已启用：结账页只提供下面这些运费，WooCommerce 原有的运费区域不再使用。"
+
+#. translators: %s: zone names
+#: includes/admin/class-shipping-page.php:119
+#, php-format
+msgid "No plan has regions yet, so checkout still uses the original WooCommerce shipping zones (%s). Once a plan has regions, the plans take over."
+msgstr "还没有方案选择区域，所以结账页仍使用 WooCommerce 原有的运费区域（%s）。任一方案选择区域后，就改由方案计算运费。"
+
+#. translators: %s: zone names
+#: includes/admin/class-shipping-page.php:119
+msgid "none"
+msgstr "无"
+
+#. translators: %s: zone names
+#: includes/admin/class-shipping-page.php:119
+msgid "Shipping zones"
+msgstr "运费区域"
+
+#. translators: 1: number of countries, 2: allowed countries
+#: includes/admin/class-shipping-page.php:131
+#, php-format
+msgid "%1$d countries in your plans cannot be chosen at checkout, because the store only sells to: %2$s."
+msgstr "方案里有 %1$d 个国家在结账时无法选择，因为店铺只销售到：%2$s。"
+
+#. translators: 1: number of countries, 2: allowed countries
+#: includes/admin/class-shipping-page.php:131
+msgid "Selling locations"
+msgstr "销售地区"
+
+#. translators: %d: number of countries
+#: includes/admin/class-shipping-page.php:137
+#, php-format
+msgid "%d country/region"
+msgid_plural "%d countries/regions"
+msgstr[0] "%d 个国家/地区"
+
+#. translators: %d: number of products
+#: includes/admin/class-shipping-page.php:140
+#, php-format
+msgid "%d product selected"
+msgid_plural "%d products selected"
+msgstr[0] "已选择 %d 个商品"
+
+#: includes/admin/class-shipping-page.php:143
+msgid "Edit plan"
+msgstr "编辑方案"
+
+#: includes/admin/class-shipping-page.php:146
+msgid "No rates yet: products in this plan cannot be shipped."
+msgstr "还没有运费：这个方案里的商品无法配送。"
+
+#: includes/admin/class-shipping-page.php:159
+msgid "This plan does not exist."
+msgstr "这个方案不存在。"
+
+#: includes/admin/class-shipping-page.php:167
+msgid "Edit custom shipping plan"
+msgstr "编辑自定义物流方案"
+
+#: includes/admin/class-shipping-page.php:167
+msgid "Edit general shipping plan"
+msgstr "编辑通用物流方案"
+
+#: includes/admin/class-shipping-page.php:168
+msgid "New custom shipping plan"
+msgstr "新建自定义物流方案"
+
+#: includes/admin/class-shipping-page.php:168
+msgid "New general shipping plan"
+msgstr "新建通用物流方案"
+
+#: includes/admin/class-shipping-page.php:178
+msgid "Back to shipping management"
+msgstr "返回物流管理"
+
+#: includes/admin/class-shipping-page.php:186
+msgid "Plan name"
+msgstr "方案名称"
+
+#: includes/admin/class-shipping-page.php:186
+msgid "e.g. Worldwide Express Service"
+msgstr "例如 Worldwide Express Service"
+
+#: includes/admin/class-shipping-page.php:189
+msgid "(Products chosen here use this plan’s rates in its regions.)"
+msgstr "（选择的商品在这个方案的区域里使用这里的运费。）"
+
+#: includes/admin/class-shipping-page.php:193
+msgid "Shipping rates"
+msgstr "运费方案"
+
+#: includes/admin/class-shipping-page.php:193
+msgid "Keep the ranges continuous, otherwise some buyers cannot place an order. Example: 0-40, 40-50, 50-60, 60 and above (the lower bound is included, the upper bound is not)."
+msgstr "请确保区间规则连续，否则可能导致买家无法下单。例如：0-40、40-50、50-60、60 以上（含下限，不含上限）。"
+
+#: includes/admin/class-shipping-page.php:194
+msgid "Add rate"
+msgstr "添加方案"
+
+#: includes/admin/class-shipping-page.php:195
+msgid "Fee"
+msgstr "费用"
+
+#: includes/admin/class-shipping-page.php:199
+msgid "Delete this plan"
+msgstr "删除此条数据"
+
+#: includes/admin/class-shipping-page.php:247
+msgid "Enter a plan name."
+msgstr "请填写方案名称。"
 
 #: includes/admin/class-store-design.php:58
 #: includes/admin/class-store-design.php:229
@@ -2799,10 +3230,6 @@ msgstr "批次报告"
 #: includes/admin/class-store-design.php:518
 msgid "Recommended apps"
 msgstr "推荐应用"
-
-#: includes/admin/class-store-design.php:525
-msgid "Enabled"
-msgstr "已启用"
 
 #: includes/admin/class-store-design.php:543
 msgid "Homepage title, description and social sharing image for search engines."
@@ -3132,12 +3559,6 @@ msgstr "按天（店铺时区）"
 #: includes/admin/class-tracking-page.php:151
 msgid "Day"
 msgstr "日期"
-
-#: includes/admin/class-tracking-page.php:155
-#: includes/class-promotions.php:723
-#: includes/modules/class-registry.php:1185
-msgid "Products"
-msgstr "商品"
 
 #: includes/admin/class-tracking-page.php:156
 msgid "Views"
@@ -3854,7 +4275,7 @@ msgstr "批次分配已更新："
 msgid "Batch: %s"
 msgstr "批次：%s"
 
-#: includes/class-plugin.php:105
+#: includes/class-plugin.php:107
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr "Peptide Core 需要先安装并启用 WooCommerce。"
 
@@ -4363,10 +4784,6 @@ msgstr "正在预览模板“%s”。只有已登录的员工能看到这个预�
 #: includes/modules/class-blocks.php:228
 msgid "Same as desktop"
 msgstr "和电脑一致"
-
-#: includes/modules/class-blocks.php:229
-msgid "Add"
-msgstr "添加"
 
 #: includes/modules/class-blocks.php:236
 msgid "hidden"
@@ -5743,6 +6160,36 @@ msgstr "电脑端隐藏"
 #: includes/modules/class-renderer.php:232
 msgid "Hidden on mobile"
 msgstr "手机端隐藏"
+
+#: includes/shipping/class-plan-method.php:20
+msgid "VialCove shipping plans"
+msgstr "VialCove 物流方案"
+
+#: includes/shipping/class-plan-method.php:21
+msgid "Rates from Store settings → Shipping settings. Configure them there."
+msgstr "运费来自“店铺设置 → 物流设置”，请在那里配置。"
+
+#: includes/shipping/class-plan-method.php:33
+msgid "Open shipping settings"
+msgstr "打开物流设置"
+
+#. translators: 1: minimum, 2: maximum
+#: includes/shipping/class-plans.php:358
+#, php-format
+msgid "Items %1$s–%2$s"
+msgstr "件数 %1$s–%2$s"
+
+#. translators: 1: minimum, 2: maximum, 3: weight unit
+#: includes/shipping/class-plans.php:361
+#, php-format
+msgid "Weight %1$s–%2$s %3$s"
+msgstr "重量 %1$s–%2$s %3$s"
+
+#. translators: 1: minimum, 2: maximum, 3: currency code
+#: includes/shipping/class-plans.php:364
+#, php-format
+msgid "Order amount %1$s–%2$s %3$s"
+msgstr "订单价格 %1$s–%2$s %3$s"
 
 #: includes/tracking/class-ingest.php:86
 msgid "Batch is too large."

@@ -33,7 +33,6 @@ final class Admin_Menus {
 	public const ORDERS    = 'admin.php?page=wc-orders';
 	public const CUSTOMERS = 'admin.php?page=wc-admin&path=/customers';
 	public const SETTINGS  = 'admin.php?page=wc-settings';
-	public const SHIPPING  = 'admin.php?page=wc-settings&tab=shipping';
 	public const PAYMENTS  = 'admin.php?page=wc-settings&tab=checkout';
 
 	public static function register_hooks(): void {
@@ -57,7 +56,7 @@ final class Admin_Menus {
 		add_menu_page( __( 'Customers', 'peptide-core' ), __( 'Customers', 'peptide-core' ), self::CAP, self::CUSTOMERS, '', 'dashicons-groups', 4 );
 		add_menu_page( __( 'Store settings', 'peptide-core' ), __( 'Store settings', 'peptide-core' ), self::CAP, self::SETTINGS, '', 'dashicons-admin-settings', 58 );
 		// 顶层菜单链接到第一个子菜单（物流设置）。
-		add_submenu_page( self::SETTINGS, __( 'Shipping settings', 'peptide-core' ), __( 'Shipping settings', 'peptide-core' ), self::CAP, self::SHIPPING );
+		add_submenu_page( self::SETTINGS, __( 'Shipping settings', 'peptide-core' ), __( 'Shipping settings', 'peptide-core' ), self::CAP, Shipping_Page::SLUG, array( Shipping_Page::class, 'render' ) );
 		$tax = add_submenu_page( self::SETTINGS, __( 'Tax settings', 'peptide-core' ), __( 'Tax settings', 'peptide-core' ), self::CAP, Store_Settings::TAX_SLUG, array( Store_Settings::class, 'render_tax' ) );
 		if ( $tax ) {
 			add_action( 'load-' . $tax, array( Store_Settings::class, 'maybe_redirect_tax' ) );
@@ -109,7 +108,7 @@ final class Admin_Menus {
 		if ( 'wc-settings' === $page ) {
 			$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'general'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			$map = array(
-				'shipping' => self::SHIPPING,
+				'shipping' => Shipping_Page::SLUG,
 				'tax'      => Store_Settings::TAX_SLUG,
 				'checkout' => self::PAYMENTS,
 			);

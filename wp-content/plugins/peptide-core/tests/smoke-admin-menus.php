@@ -36,7 +36,7 @@ $slugs = array_column( $menu, 2 );
 $ok( 'posts, media and comments removed', ! array_intersect( array( 'edit.php', 'upload.php', 'edit-comments.php' ), $slugs ) );
 $ok( 'WooCommerce top-level menu removed', ! in_array( 'woocommerce', $slugs, true ) );
 $ok( 'dashboard first, then orders and customers', 'pc-overview' === array_values( array_filter( $slugs ) )[0] && in_array( 'admin.php?page=wc-orders', $slugs, true ) && in_array( 'admin.php?page=wc-admin&path=/customers', $slugs, true ) );
-$ok( 'store settings menu: shipping, tax, payments, system', array( 'admin.php?page=wc-settings&tab=shipping', 'pc-tax', 'admin.php?page=wc-settings&tab=checkout', 'pc-system' ) === array_column( $submenu['admin.php?page=wc-settings'] ?? array(), 2 ) );
+$ok( 'store settings menu: shipping, tax, payments, system', array( 'pc-shipping', 'pc-tax', 'admin.php?page=wc-settings&tab=checkout', 'pc-system' ) === array_column( $submenu['admin.php?page=wc-settings'] ?? array(), 2 ) );
 foreach ( array( 'wc-orders' => 'admin.php?page=wc-orders', 'wc-settings' => 'admin.php?page=wc-settings', 'pc-settings' => 'admin.php?page=wc-settings', 'wc-status' => 'admin.php?page=wc-settings', 'pc-system' => 'admin.php?page=wc-settings', 'pc-tax' => 'admin.php?page=wc-settings' ) as $page => $parent ) {
 	$_GET['page'] = $page;
 	$plugin_page  = $page;
@@ -45,7 +45,7 @@ foreach ( array( 'wc-orders' => 'admin.php?page=wc-orders', 'wc-settings' => 'ad
 
 // 店铺设置子菜单高亮（STORE-SETTINGS-01）。
 $_GET['page'] = 'wc-settings';
-foreach ( array( 'shipping' => 'admin.php?page=wc-settings&tab=shipping', 'tax' => 'pc-tax', 'checkout' => 'admin.php?page=wc-settings&tab=checkout', 'general' => 'pc-system', 'email' => 'pc-system' ) as $tab => $sub ) {
+foreach ( array( 'shipping' => 'pc-shipping', 'tax' => 'pc-tax', 'checkout' => 'admin.php?page=wc-settings&tab=checkout', 'general' => 'pc-system', 'email' => 'pc-system' ) as $tab => $sub ) {
 	$_GET['tab'] = $tab;
 	$ok( "wc-settings tab $tab highlights $sub", $sub === apply_filters( 'submenu_file', null ) );
 }

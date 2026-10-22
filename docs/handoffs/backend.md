@@ -1156,3 +1156,25 @@
 - **公开联系方式**：公司名称和电话存在我们的选项里；国家、州、市、地址、邮编写入 WooCommerce 店铺地址（弃单邮件的实体地址也用这里）。新增 `[pc_var]` 变量 company_name、company_phone、company_address。
 - **没有做的 Shopname 平台专有项**：临时域名、临时域名访问密码、静态资源路径、代码模式、页面缓存时间、广告像素延迟、多币种结算、防爬 / 高风险 IP 限制、商品意向统计、标题搜索方式、前台图形验证码、已删除款式。
 - **测试**：smoke-basic-config 42 项。全部 23 套 667 项通过。实测首页带 X-Frame-Options，sqlmap 的 UA 返回 403，Googlebot 的 UA 返回 200。
+
+### SHIPPING-PLANS-01 物流设置 · 2026-10-23 · Claude
+
+按用户截图（4–7 图）实现。店铺设置 → 物流设置改为我们的页面 `pc-shipping`（`includes/admin/class-shipping-page.php`），共用编辑部件在 `class-plans-editor.php` / `assets/plans-editor.js` / `assets/plans.css`。
+
+- **数据**：选项 `peptide_core_shipping_plans`（`includes/shipping/class-plans.php`）。
+  - 方案 = 名称 + 区域（国家，可细到州 / 省）+ 运费；自定义方案另外选择商品。
+  - 一个商品只能属于一个自定义方案，保存时会从其他方案移出。
+  - 运费包含：名称、启用、图标、邮编范围（90001 / 900* / 90000-90999）、费用规则（订单价格 / 件数 / 重量，区间含下限不含上限，上限为空表示不限）、费用。
+- **计算**：`Shipping\Plan_Method`（全局运费方式 `pc_plans`，不属于任何运费区域）。
+  - 购物车按方案分组：不在自定义方案里的商品走通用方案。
+  - 只有一组时，列出全部符合条件的运费。
+  - 多组时，每组取最便宜的一项，再按“运费排序与计算规则”相加或取最高，合成一项。
+  - 任意一组在收货地址没有可用运费 → 不给运费，结账页提示无法配送，和 Shopname 一样。
+  - 只要有一个方案选择了区域，方案就接管运费：`woocommerce_package_rates` 去掉 WooCommerce 原有运费区域给出的运费。没有方案时原有区域照常使用。
+  - 运费 meta 带 `_pc_plans`、`_pc_icon`，下划线开头，不显示给顾客。
+- **后台**：
+  - 列表页：通用 / 自定义两个标签；自定义物流可以按商品标题搜索；顶部有“运费排序与计算规则”弹窗。
+  - 编辑页：用 WooCommerce 的商品搜索选择商品；“添加国家”可搜索、可全选；可以只选部分州 / 省；运费弹窗可选媒体库图标；支持复制其他方案的运费、删除方案。
+  - 页面会提示两种情况：方案中有国家不在 WooCommerce 的“销售地区”里；还没有方案时仍在使用原有运费区域。
+- **注意**：本地 WooCommerce 只卖美国（allowed=specific: US）。要卖到其他国家，需要先在 WooCommerce 设置 → 常规里加上。
+- **测试**：smoke-shipping-plans 31 项，包括用游客购物车实际计算运费。全部 24 套 698 项通过。

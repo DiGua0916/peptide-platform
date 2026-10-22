@@ -1,0 +1,366 @@
+/* 物流设置 / 税费设置（SHIPPING-PLANS-01 / TAX-PLANS-01），版式参照 Shopname 的物流管理。铺满后台内容区。 */
+
+.pc-pl {
+	--pc-pl-line: #e5e7eb;
+	--pc-pl-head: #e6e9ef;
+	--pc-pl-muted: #6b7280;
+	--pc-pl-orange: #ee7d33;
+	font-size: clamp(13px, 0.75vw, 15px);
+}
+
+.pc-pl-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 18px;
+	margin: 8px 0 12px;
+}
+
+.pc-pl-head h1 {
+	margin: 0;
+	padding: 0;
+}
+
+.pc-pl-head .pc-pl-new {
+	margin-left: auto;
+}
+
+.pc-pl .button-link {
+	color: var(--pc-pl-orange);
+	text-decoration: none;
+}
+
+.pc-pl .button-link .dashicons {
+	vertical-align: -4px;
+}
+
+.pc-pl-card {
+	margin-bottom: 12px;
+	background: #fff;
+	border: 1px solid var(--pc-pl-line);
+	border-radius: 4px;
+}
+
+.pc-pl-pad {
+	padding: 16px 20px;
+}
+
+.pc-pl-tabs {
+	display: flex;
+	gap: 28px;
+	padding: 0 20px;
+	border-bottom: 1px solid var(--pc-pl-line);
+}
+
+.pc-pl-tabs a {
+	padding: 14px 0 12px;
+	border-bottom: 2px solid transparent;
+	color: #374151;
+	text-decoration: none;
+}
+
+.pc-pl-tabs a.is-active {
+	border-bottom-color: var(--pc-pl-orange);
+	color: var(--pc-pl-orange);
+}
+
+.pc-pl-body {
+	padding: 4px 20px 20px;
+}
+
+.pc-pl-body h2 {
+	margin: 16px 0 10px;
+	font-size: 1.25em;
+}
+
+.pc-pl-h2row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.pc-pl-search {
+	display: flex;
+	gap: 6px;
+}
+
+.pc-pl-info {
+	margin-bottom: 18px;
+	padding: 12px 14px;
+	background: #f3f4f6;
+	border-radius: 3px;
+	line-height: 1.7;
+}
+
+.pc-pl-plan {
+	margin-bottom: 16px;
+	border: 1px solid var(--pc-pl-line);
+	border-radius: 3px;
+}
+
+.pc-pl-plan__head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	padding: 14px 18px;
+}
+
+.pc-pl-plan__head .button {
+	margin-left: auto;
+}
+
+.pc-pl-muted {
+	color: var(--pc-pl-muted);
+}
+
+.pc-pl-empty {
+	padding: 24px 0;
+	color: var(--pc-pl-muted);
+	text-align: center;
+}
+
+.pc-pl-table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.pc-pl-table th,
+.pc-pl-table td {
+	padding: 10px 18px;
+	text-align: left;
+	vertical-align: middle;
+}
+
+.pc-pl-table thead th {
+	background: var(--pc-pl-head);
+	color: #4b5563;
+	font-weight: 400;
+}
+
+.pc-pl-table tbody tr + tr td {
+	border-top: 1px solid #f0f1f3;
+}
+
+.pc-pl-table tr.is-off td {
+	color: #9ca3af;
+}
+
+.pc-pl-col-act {
+	width: 80px;
+	white-space: nowrap;
+}
+
+.pc-pl-col-act .button-link {
+	margin-right: 6px;
+	color: #4b5563;
+}
+
+.pc-pl-col-status {
+	width: 120px;
+	text-align: right !important;
+}
+
+.pc-pl-section {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 12px;
+	padding: 14px 20px;
+}
+
+.pc-pl-actions {
+	margin-left: auto;
+}
+
+.pc-pl-scroll {
+	max-height: 420px;
+	overflow: auto;
+}
+
+.pc-pl-scroll.is-collapsed {
+	display: none;
+}
+
+.pc-pl-tag,
+.pc-pl-badge {
+	display: inline-block;
+	padding: 1px 8px;
+	background: #e5e7eb;
+	border-radius: 3px;
+	color: #4b5563;
+	font-size: 12px;
+}
+
+.pc-pl-badge.is-on {
+	background: #4b5563;
+	color: #fff;
+}
+
+.pc-pl-product {
+	display: inline-flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.pc-pl-product img,
+.pc-pl-noimg {
+	width: 44px;
+	height: 44px;
+	border-radius: 3px;
+	background: #f3f4f6;
+	object-fit: cover;
+}
+
+.pc-pl-product > span {
+	display: grid;
+	gap: 2px;
+}
+
+.pc-pl-product small {
+	color: var(--pc-pl-muted);
+}
+
+.pc-pl-warn {
+	color: #b45309 !important;
+}
+
+.pc-pl-rate-icon,
+.pc-pl-icon-img img {
+	width: 32px;
+	height: 32px;
+	object-fit: contain;
+	vertical-align: middle;
+}
+
+.pc-pl-icon-pick {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+
+/* 启用开关 */
+.pc-pl-switch {
+	position: relative;
+	display: inline-block;
+	width: 36px;
+	height: 20px;
+}
+
+.pc-pl-switch input {
+	position: absolute;
+	opacity: 0;
+}
+
+.pc-pl-switch span {
+	position: absolute;
+	inset: 0;
+	background: #d1d5db;
+	border-radius: 10px;
+	cursor: pointer;
+	transition: background 0.15s;
+}
+
+.pc-pl-switch span::after {
+	content: "";
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 16px;
+	height: 16px;
+	background: #fff;
+	border-radius: 50%;
+	transition: transform 0.15s;
+}
+
+.pc-pl-switch input:checked + span {
+	background: var(--pc-pl-orange);
+}
+
+.pc-pl-switch input:checked + span::after {
+	transform: translateX(16px);
+}
+
+.pc-pl-switch input:focus-visible + span {
+	outline: 2px solid #2271b1;
+	outline-offset: 2px;
+}
+
+/* 弹窗 */
+.pc-pl-dialog {
+	width: min(560px, calc(100vw - 32px));
+	padding: 20px 24px;
+	border: 0;
+	border-radius: 6px;
+	box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+}
+
+.pc-pl-dialog::backdrop {
+	background: rgba(0, 0, 0, 0.35);
+}
+
+.pc-pl-dialog h2 {
+	margin-top: 0;
+}
+
+.pc-pl-dialog__foot {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 16px;
+}
+
+.pc-pl-checklist {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+	gap: 4px 12px;
+	max-height: 50vh;
+	overflow: auto;
+	padding: 8px;
+	border: 1px solid var(--pc-pl-line);
+	border-radius: 3px;
+}
+
+.pc-pl-checklist.is-disabled {
+	opacity: 0.45;
+	pointer-events: none;
+}
+
+.pc-pl-radio {
+	display: inline-block;
+	margin-right: 16px;
+	line-height: 28px;
+}
+
+.pc-pl-inline {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+}
+
+.pc-pl-error {
+	color: #d63638;
+}
+
+.pc-pl-delete {
+	color: #d63638 !important;
+	border-color: #d63638 !important;
+}
+
+@media (max-width: 782px) {
+	.pc-pl-table th,
+	.pc-pl-table td {
+		padding: 8px 10px;
+	}
+
+	.pc-pl-card {
+		overflow-x: auto;
+	}
+
+	.pc-pl-actions {
+		margin-left: 0;
+	}
+}
