@@ -56,6 +56,9 @@ final class Custom_Pages {
 			'support_email'  => array( __( 'Support email (Settings → support button)', 'peptide-core' ), (string) ( $channels['email'] ?? '' ) ),
 			'support_whatsapp' => array( __( 'Support WhatsApp', 'peptide-core' ), (string) ( $channels['whatsapp'] ?? '' ) ),
 			'support_telegram' => array( __( 'Support Telegram', 'peptide-core' ), (string) ( $channels['telegram'] ?? '' ) ),
+			'company_name'    => array( __( 'Company name (System settings → Basic settings)', 'peptide-core' ), (string) Store_Config::get( 'company_name' ) ),
+			'company_phone'   => array( __( 'Company phone', 'peptide-core' ), (string) Store_Config::get( 'company_phone' ) ),
+			'company_address' => array( __( 'Company address', 'peptide-core' ), Store_Config::address_line() ),
 			'year'           => array( __( 'Current year', 'peptide-core' ), (string) wp_date( 'Y' ) ),
 			'today'          => array( __( 'Today’s date', 'peptide-core' ), (string) wp_date( (string) get_option( 'date_format' ) ) ),
 		);

@@ -2,7 +2,7 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.16.0\n"
+"Project-Id-Version: Peptide Core 0.17.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -11,7 +11,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-22T16:38:33+00:00\n"
+"POT-Creation-Date: 2026-10-22T17:07:57+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -52,7 +52,7 @@ msgid "Shipping settings"
 msgstr "物流设置"
 
 #: includes/admin/class-admin-menus.php:61
-#: includes/admin/class-store-settings.php:151
+#: includes/admin/class-store-settings.php:156
 msgid "Tax settings"
 msgstr "税费设置"
 
@@ -61,10 +61,527 @@ msgid "Payment settings"
 msgstr "支付设置"
 
 #: includes/admin/class-admin-menus.php:66
-#: includes/admin/class-store-settings.php:122
-#: includes/admin/class-store-settings.php:134
+#: includes/admin/class-basic-config-page.php:113
+#: includes/admin/class-store-settings.php:127
+#: includes/admin/class-store-settings.php:139
 msgid "System settings"
 msgstr "系统设置"
+
+#: includes/admin/class-basic-config-page.php:48
+msgid "Choose favicon"
+msgstr "选择 Favicon"
+
+#: includes/admin/class-basic-config-page.php:49
+msgid "Use this image"
+msgstr "使用这张图片"
+
+#: includes/admin/class-basic-config-page.php:50
+#: includes/admin/class-basic-config-page.php:259
+#: includes/modules/class-blocks.php:253
+msgid "— None —"
+msgstr "— 无 —"
+
+#: includes/admin/class-basic-config-page.php:97
+#: includes/admin/class-recovery-page.php:152
+msgid "On"
+msgstr "已开启"
+
+#: includes/admin/class-basic-config-page.php:97
+#: includes/admin/class-recovery-page.php:152
+#: includes/class-promotions.php:797
+msgid "Off"
+msgstr "未启用"
+
+#: includes/admin/class-basic-config-page.php:107
+#: includes/admin/class-recovery-page.php:101
+msgid "Settings saved."
+msgstr "设置已保存。"
+
+#: includes/admin/class-basic-config-page.php:114
+#: includes/admin/class-store-settings.php:65
+msgid "Basic settings"
+msgstr "基础配置"
+
+#: includes/admin/class-basic-config-page.php:116
+msgid "Store name, admin email, favicon, time zone and language are WordPress settings: only site administrators can change them."
+msgstr "店铺名称、管理员邮箱、Favicon、时区和语言属于 WordPress 设置，只有站点管理员可以修改。"
+
+#: includes/admin/class-basic-config-page.php:127
+#: includes/admin/class-recovery-page.php:183
+msgid "Save settings"
+msgstr "保存设置"
+
+#: includes/admin/class-basic-config-page.php:136
+msgid "Without a support email, automatic emails cannot be sent."
+msgstr "没有配置客服邮箱，将无法自动发送邮件。"
+
+#: includes/admin/class-basic-config-page.php:138
+msgid "Store information"
+msgstr "店铺信息"
+
+#: includes/admin/class-basic-config-page.php:139
+#: includes/class-custom-pages.php:53
+msgid "Store name"
+msgstr "店铺名称"
+
+#: includes/admin/class-basic-config-page.php:140
+msgid "We contact you at this address when needed (WordPress admin email)."
+msgstr "如有需要，我们会通过这个邮箱联系你（WordPress 管理员邮箱）。"
+
+#. translators: %s: email address
+#: includes/admin/class-basic-config-page.php:143
+#, php-format
+msgid "Waiting for confirmation: %s. Open the link in the email sent to that address."
+msgstr "等待确认：%s。请打开发到该邮箱的确认链接。"
+
+#: includes/admin/class-basic-config-page.php:145
+msgid "Admin email"
+msgstr "管理员邮箱"
+
+#: includes/admin/class-basic-config-page.php:145
+msgid "Changing it sends a confirmation link to the new address; the change takes effect after the link is opened."
+msgstr "修改后会向新邮箱发送确认链接，打开链接后才生效。"
+
+#: includes/admin/class-basic-config-page.php:146
+msgid "Support email (important)"
+msgstr "客服邮箱（重要）"
+
+#: includes/admin/class-basic-config-page.php:146
+msgid "Sender address of all store emails (order emails, cart reminders). Use an address on your own domain so emails are not marked as spam."
+msgstr "店铺所有邮件（订单邮件、弃单提醒）的发件地址。请使用你自己域名下的邮箱，避免被当成垃圾邮件。"
+
+#: includes/admin/class-basic-config-page.php:147
+msgid "Support name"
+msgstr "客服名称"
+
+#: includes/admin/class-basic-config-page.php:147
+msgid "Sender name of store emails; empty uses the store name"
+msgstr "发送邮件的发件人名称，为空则默认“店铺名称”"
+
+#: includes/admin/class-basic-config-page.php:147
+msgid "Shown as the sender name in the customer’s inbox."
+msgstr "顾客收件箱里显示的发件人名称。"
+
+#: includes/admin/class-basic-config-page.php:152
+#: includes/admin/class-menu-page.php:139
+#: includes/admin/class-product-panel.php:104
+#: includes/modules/class-blocks.php:239
+msgid "Choose image"
+msgstr "选择图片"
+
+#: includes/admin/class-basic-config-page.php:152
+#: includes/admin/class-menu-page.php:140
+#: includes/admin/class-product-panel.php:105
+#: includes/admin/class-store-design.php:391
+#: includes/modules/class-blocks.php:242
+msgid "Remove"
+msgstr "移除"
+
+#: includes/admin/class-basic-config-page.php:155
+msgid "Website favicon"
+msgstr "网站 Favicon"
+
+#: includes/admin/class-basic-config-page.php:155
+msgid "The small icon shown in the browser tab and bookmarks. Usually 32×32 px; use png, svg or ico so browsers show it correctly."
+msgstr "Favicon 是网站的缩略标识，显示在浏览器标签页和收藏夹里，一般为 32×32 像素。请使用 png、svg 或 ico 格式，浏览器才能正常显示。"
+
+#: includes/admin/class-basic-config-page.php:156
+msgid "Finance email"
+msgstr "财务邮箱"
+
+#: includes/admin/class-basic-config-page.php:156
+msgid "Receives payment alerts such as possible duplicate payments. Empty uses the admin email."
+msgstr "接收付款相关提醒，例如疑似重复付款。为空时发到管理员邮箱。"
+
+#: includes/admin/class-basic-config-page.php:168
+msgid "Basic"
+msgstr "基础设置"
+
+#: includes/admin/class-basic-config-page.php:169
+msgid "Store currency"
+msgstr "店铺货币"
+
+#: includes/admin/class-basic-config-page.php:169
+msgid "The store currency cannot be changed after orders exist."
+msgstr "店铺货币在产生订单后无法修改。"
+
+#: includes/admin/class-basic-config-page.php:170
+msgid "Generate SPU codes automatically"
+msgstr "自动生成 SPU 编码"
+
+#: includes/admin/class-basic-config-page.php:170
+msgid "Random code (18 digits)"
+msgstr "独立随机编码（18 位数字）"
+
+#: includes/admin/class-basic-config-page.php:170
+msgid "Same as product ID"
+msgstr "同商品 ID"
+
+#: includes/admin/class-basic-config-page.php:170
+msgid "The SPU is the code of the product itself; variation SKUs are built from it. Existing codes are kept."
+msgstr "SPU 是商品本身的编码，款式的 SKU 由它生成。已有的编码不会改变。"
+
+#: includes/admin/class-basic-config-page.php:174
+msgid "Custom (kept as is)"
+msgstr "自定义（保持不变）"
+
+#: includes/admin/class-basic-config-page.php:176
+msgid "Currency format"
+msgstr "货币格式"
+
+#: includes/admin/class-basic-config-page.php:176
+msgid "Thousands separator, decimal separator and number of decimals in prices."
+msgstr "价格的千位分隔符、小数点和小数位数。"
+
+#: includes/admin/class-basic-config-page.php:177
+msgid "One keyword per line, e.g. examplebot"
+msgstr "每行一个关键词，例如 examplebot"
+
+#: includes/admin/class-basic-config-page.php:178
+msgid "Block crawlers"
+msgstr "禁止爬虫访问"
+
+#: includes/admin/class-basic-config-page.php:178
+msgid "Visitors whose browser identification (User-Agent) contains one of these keywords get a 403 page. Do not add search engines such as Googlebot or Bingbot."
+msgstr "浏览器标识（User-Agent）包含这些关键词的访问会被拒绝（403）。不要添加 Googlebot、Bingbot 等搜索引擎。"
+
+#: includes/admin/class-basic-config-page.php:179
+msgid "Admin login security check"
+msgstr "后台登录验证码"
+
+#: includes/admin/class-basic-config-page.php:179
+msgid "Adds a simple math question to the WordPress login page to slow down password guessing."
+msgstr "在 WordPress 登录页加一道简单的算术题，防止暴力猜密码。"
+
+#: includes/admin/class-basic-config-page.php:186
+msgid "Time zone"
+msgstr "时区"
+
+#: includes/admin/class-basic-config-page.php:186
+msgid "Used for order times and the dashboard (“today” starts at midnight in this time zone)."
+msgstr "用于订单时间和仪表盘（“今天”从这个时区的 0 点开始）。"
+
+#: includes/admin/class-basic-config-page.php:188
+msgid "Do not generate"
+msgstr "不自动生成"
+
+#: includes/admin/class-basic-config-page.php:188
+msgid "Generate"
+msgstr "自动生成"
+
+#: includes/admin/class-basic-config-page.php:189
+msgid "Generate SKU codes automatically"
+msgstr "自动生成 SKU 编码"
+
+#: includes/admin/class-basic-config-page.php:189
+msgid "When a product or variation is saved without a SKU, one is created: simple products use the SPU, variations use the pattern ({SKU_CODE} is the variation number 01, 02, …)."
+msgstr "商品或款式保存时没有 SKU 就自动生成：单款式商品用 SPU，多款式按格式生成（{SKU_CODE} 是款式序号 01、02……）。"
+
+#. translators: %d: number of hours
+#: includes/admin/class-basic-config-page.php:193
+#, php-format
+msgid "%d hour"
+msgid_plural "%d hours"
+msgstr[0] "%d 小时"
+
+#: includes/admin/class-basic-config-page.php:195
+msgid "Returning visitor rule"
+msgstr "回访用户计算时间"
+
+#: includes/admin/class-basic-config-page.php:195
+msgid "Visitors who come back more than"
+msgstr "用户再次访问网站超过"
+
+#: includes/admin/class-basic-config-page.php:195
+msgid "after their first visit count as returning"
+msgstr "标记为老用户"
+
+#: includes/admin/class-basic-config-page.php:195
+msgid "Used by “Returning visitors” on the dashboard."
+msgstr "用于仪表盘的“回访用户”。"
+
+#: includes/admin/class-basic-config-page.php:196
+msgid "Also block the built-in list of security scanners and scraping bots"
+msgstr "同时拦截系统内置的安全扫描器和采集爬虫"
+
+#. translators: %d: number of keywords
+#: includes/admin/class-basic-config-page.php:197
+#, php-format
+msgid "Built-in list (%d keywords)"
+msgstr "内置名单（%d 个关键词）"
+
+#. translators: %d: number of keywords
+#: includes/admin/class-basic-config-page.php:198
+msgid "System crawler block"
+msgstr "系统禁止爬虫访问"
+
+#: includes/admin/class-basic-config-page.php:216
+#: includes/class-coupons.php:518
+msgid "Storefront"
+msgstr "网站展示"
+
+#: includes/admin/class-basic-config-page.php:217
+msgid "Language"
+msgstr "语言"
+
+#: includes/admin/class-basic-config-page.php:217
+msgid "Language of the storefront texts provided by WordPress, WooCommerce and this plugin. Your own admin language is set in your profile."
+msgstr "前台由 WordPress、WooCommerce 和本插件提供的文字所用的语言。你自己的后台语言在个人资料里设置。"
+
+#: includes/admin/class-basic-config-page.php:218
+msgid "Product title"
+msgstr "商品标题"
+
+#: includes/admin/class-basic-config-page.php:219
+msgid "SKU"
+msgstr "SKU"
+
+#: includes/admin/class-basic-config-page.php:219
+#: includes/modules/class-registry.php:1181
+msgid "Category"
+msgstr "分类"
+
+#: includes/admin/class-basic-config-page.php:219
+msgid "Tag"
+msgstr "标签"
+
+#: includes/admin/class-basic-config-page.php:223
+msgid "Storefront search fields"
+msgstr "前台搜索字段"
+
+#: includes/admin/class-basic-config-page.php:223
+msgid "What the storefront product search matches besides the product title and description."
+msgstr "前台商品搜索除了商品标题和描述，还匹配哪些内容。"
+
+#: includes/admin/class-basic-config-page.php:224
+msgid "Require sign-in to visit the store"
+msgstr "前台访问是否强制注册 / 登录"
+
+#: includes/admin/class-basic-config-page.php:224
+#: includes/admin/class-list-columns.php:62
+#: includes/admin/class-list-columns.php:109
+msgid "Yes"
+msgstr "是"
+
+#: includes/admin/class-basic-config-page.php:224
+msgid "No"
+msgstr "否"
+
+#: includes/admin/class-basic-config-page.php:224
+msgid "Visitors who are not signed in are sent to the account page. The privacy policy and checkout terms pages stay public."
+msgstr "未登录的访客会被带到账户页。隐私政策和结账条款页面仍然公开。"
+
+#: includes/admin/class-basic-config-page.php:230
+msgid "Storefront sort options"
+msgstr "前台排序字段"
+
+#: includes/admin/class-basic-config-page.php:230
+msgid "Ticked options appear in the sort menu of the shop; drag to change the order. The first one is the default sort."
+msgstr "勾选的选项会出现在商店的排序菜单里，拖动可调整顺序，排在第一的是默认排序。"
+
+#: includes/admin/class-basic-config-page.php:231
+msgid "Allow the store in an iframe"
+msgstr "允许 iframe 加载网站"
+
+#: includes/admin/class-basic-config-page.php:231
+msgid "When off, other websites cannot embed your store pages (protects against clickjacking)."
+msgstr "关闭时，其他网站不能嵌入你的店铺页面（防止点击劫持）。"
+
+#: includes/admin/class-basic-config-page.php:239
+msgid "Custom (set in Settings → Permalinks)"
+msgstr "自定义（在“设置 → 固定链接”中设置）"
+
+#: includes/admin/class-basic-config-page.php:241
+msgid "Product link structure"
+msgstr "商品链接结构"
+
+#: includes/admin/class-basic-config-page.php:241
+msgid "Changing it changes the address of every product page. Old links stop working, so decide before you promote the store."
+msgstr "修改后所有商品页的地址都会改变，旧链接会失效，请在推广店铺之前确定。"
+
+#: includes/admin/class-basic-config-page.php:242
+msgid "Product page of an unpublished product"
+msgstr "商品详情页，已下架商品展示"
+
+#: includes/admin/class-basic-config-page.php:242
+msgid "Show the 404 page"
+msgstr "404 页面"
+
+#: includes/admin/class-basic-config-page.php:242
+msgid "Go to the home page"
+msgstr "跳转到首页"
+
+#: includes/admin/class-basic-config-page.php:242
+msgid "Go to the shop page"
+msgstr "跳转到商店页"
+
+#: includes/admin/class-basic-config-page.php:242
+msgid "What visitors see when they open a product that is a draft, private or in the trash."
+msgstr "访客打开草稿、私密或已放入回收站的商品时看到什么。"
+
+#: includes/admin/class-basic-config-page.php:244
+msgid "Register email verification"
+msgstr "注册邮箱验证"
+
+#: includes/admin/class-basic-config-page.php:244
+msgid "Customers who register on the account page must open a link in their email before they can sign in. Accounts created during checkout are not affected."
+msgstr "在账户页注册的顾客需要先打开邮件里的链接才能登录。结账时创建的账户不受影响。"
+
+#: includes/admin/class-basic-config-page.php:244
+msgid "Registration on the account page is currently turned off (WooCommerce settings → Accounts & Privacy)."
+msgstr "账户页注册目前是关闭的（WooCommerce 设置 → 账户与隐私）。"
+
+#: includes/admin/class-basic-config-page.php:245
+msgid "Store status"
+msgstr "店铺经营状态"
+
+#: includes/admin/class-basic-config-page.php:245
+msgid "Open"
+msgstr "营业中"
+
+#: includes/admin/class-basic-config-page.php:245
+msgid "Closed"
+msgstr "打烊"
+
+#: includes/admin/class-basic-config-page.php:245
+msgid "Closed shows a “coming soon” page to visitors (WooCommerce site visibility). You still see the store while signed in."
+msgstr "打烊时访客看到“即将上线”页面（WooCommerce 站点可见性），你登录后仍能看到店铺。"
+
+#: includes/admin/class-basic-config-page.php:246
+msgid "Default variation on product pages"
+msgstr "多款式商品默认选中"
+
+#: includes/admin/class-basic-config-page.php:246
+msgid "First available variation"
+msgstr "第一个有货的款式"
+
+#: includes/admin/class-basic-config-page.php:246
+msgid "None selected"
+msgstr "不选中"
+
+#: includes/admin/class-basic-config-page.php:246
+msgid "Used when a variable product has no default variation of its own."
+msgstr "多款式商品自己没有设置默认款式时使用。"
+
+#: includes/admin/class-basic-config-page.php:247
+msgid "Sold-out variations on product pages"
+msgstr "商品详情页，已售罄的款式"
+
+#: includes/admin/class-basic-config-page.php:247
+#: includes/admin/class-design-editor.php:155
+#: includes/modules/class-blocks.php:235
+msgid "Show"
+msgstr "显示"
+
+#: includes/admin/class-basic-config-page.php:247
+#: includes/admin/class-design-editor.php:154
+#: includes/modules/class-blocks.php:234
+msgid "Hide"
+msgstr "隐藏"
+
+#: includes/admin/class-basic-config-page.php:247
+msgid "Hidden variations cannot be selected."
+msgstr "隐藏的款式无法选择。"
+
+#: includes/admin/class-basic-config-page.php:253
+msgid "Select a country"
+msgstr "选择国家"
+
+#: includes/admin/class-basic-config-page.php:256
+msgid "Public contact information"
+msgstr "公开联系方式"
+
+#: includes/admin/class-basic-config-page.php:256
+msgid "Shown in store emails (US law requires a physical address in marketing emails) and available to pages through [pc_var]. Country, state, city, address and ZIP are the WooCommerce store address."
+msgstr "显示在店铺邮件里（美国法律要求营销邮件写明实体地址），页面里也可以用 [pc_var] 引用。国家、州、市、地址和邮编就是 WooCommerce 的店铺地址。"
+
+#: includes/admin/class-basic-config-page.php:257
+msgid "Company name"
+msgstr "公司名称"
+
+#: includes/admin/class-basic-config-page.php:257
+msgid "Enter the company name"
+msgstr "请输入公司名称"
+
+#: includes/admin/class-basic-config-page.php:261
+msgid "Enter the state or province"
+msgstr "请输入州 / 省"
+
+#: includes/admin/class-basic-config-page.php:263
+msgid "State / province"
+msgstr "州 / 省"
+
+#: includes/admin/class-basic-config-page.php:264
+msgid "Address"
+msgstr "地址"
+
+#: includes/admin/class-basic-config-page.php:264
+msgid "Enter the street address"
+msgstr "请输入地址"
+
+#: includes/admin/class-basic-config-page.php:265
+msgid "ZIP / postcode"
+msgstr "邮编"
+
+#: includes/admin/class-basic-config-page.php:265
+msgid "Enter the ZIP or postcode"
+msgstr "请输入邮编"
+
+#: includes/admin/class-basic-config-page.php:267
+msgid "Country"
+msgstr "国家"
+
+#: includes/admin/class-basic-config-page.php:268
+msgid "City"
+msgstr "市"
+
+#: includes/admin/class-basic-config-page.php:268
+msgid "Enter the city"
+msgstr "请输入城市"
+
+#: includes/admin/class-basic-config-page.php:269
+msgid "Phone"
+msgstr "电话"
+
+#: includes/admin/class-basic-config-page.php:269
+msgid "Enter the phone number"
+msgstr "请输入电话"
+
+#: includes/admin/class-basic-config-page.php:277
+#: includes/admin/class-menu-page.php:164
+#: includes/admin/class-menu-page.php:207
+#: includes/admin/class-recovery-page.php:51
+#: includes/admin/class-store-design.php:140
+#: includes/admin/class-store-settings.php:40
+#: includes/admin/class-tracking-page.php:214
+#: includes/admin/class-tracking-page.php:224
+#: includes/class-custom-pages.php:333
+msgid "Sorry, you are not allowed to do that."
+msgstr "抱歉，你没有权限执行此操作。"
+
+#: includes/admin/class-basic-config-page.php:298
+msgid "The store name cannot be empty."
+msgstr "店铺名称不能为空。"
+
+#: includes/admin/class-basic-config-page.php:304
+msgid "The admin email is not valid."
+msgstr "管理员邮箱格式不正确。"
+
+#: includes/admin/class-basic-config-page.php:321
+msgid "Choose a city-based time zone (for example Los Angeles), so daylight saving time is handled."
+msgstr "请选择按城市命名的时区（例如洛杉矶），这样夏令时会自动处理。"
+
+#: includes/admin/class-basic-config-page.php:333
+msgid "The support email is not valid."
+msgstr "客服邮箱格式不正确。"
+
+#: includes/admin/class-basic-config-page.php:338
+msgid "The finance email is not valid."
+msgstr "财务邮箱格式不正确。"
+
+#: includes/admin/class-basic-config-page.php:363
+msgid "Keep at least one sort option."
+msgstr "至少保留一个排序选项。"
 
 #: includes/admin/class-batch-metabox.php:29
 msgid "Batch details"
@@ -559,16 +1076,6 @@ msgstr "点击卡片，添加到当前选中积木的下面。"
 msgid "Duplicate"
 msgstr "复制"
 
-#: includes/admin/class-design-editor.php:154
-#: includes/modules/class-blocks.php:234
-msgid "Hide"
-msgstr "隐藏"
-
-#: includes/admin/class-design-editor.php:155
-#: includes/modules/class-blocks.php:235
-msgid "Show"
-msgstr "显示"
-
 #: includes/admin/class-design-editor.php:156
 #: includes/admin/class-menu-page.php:101
 #: includes/admin/class-menu-page.php:291
@@ -699,11 +1206,6 @@ msgstr "报告"
 #: includes/admin/class-list-columns.php:80
 msgid "Demo"
 msgstr "演示"
-
-#: includes/admin/class-list-columns.php:62
-#: includes/admin/class-list-columns.php:109
-msgid "Yes"
-msgstr "是"
 
 #: includes/admin/class-list-columns.php:74
 #: includes/modules/class-registry.php:110
@@ -971,19 +1473,6 @@ msgstr "图标"
 msgid "Navigation icon, recommended 80 × 80 px."
 msgstr "导航图标，推荐尺寸 80 × 80 像素。"
 
-#: includes/admin/class-menu-page.php:139
-#: includes/admin/class-product-panel.php:104
-#: includes/modules/class-blocks.php:239
-msgid "Choose image"
-msgstr "选择图片"
-
-#: includes/admin/class-menu-page.php:140
-#: includes/admin/class-product-panel.php:105
-#: includes/admin/class-store-design.php:391
-#: includes/modules/class-blocks.php:242
-msgid "Remove"
-msgstr "移除"
-
 #: includes/admin/class-menu-page.php:141
 msgid "Font style"
 msgstr "字体样式"
@@ -1030,17 +1519,6 @@ msgstr "中划线"
 #: includes/class-menus.php:699
 msgid "This menu was changed somewhere else after you opened it. Reload the page to see the latest version."
 msgstr "打开这份菜单后，它在别处被修改过。请刷新页面查看最新内容。"
-
-#: includes/admin/class-menu-page.php:164
-#: includes/admin/class-menu-page.php:207
-#: includes/admin/class-recovery-page.php:51
-#: includes/admin/class-store-design.php:140
-#: includes/admin/class-store-settings.php:40
-#: includes/admin/class-tracking-page.php:214
-#: includes/admin/class-tracking-page.php:224
-#: includes/class-custom-pages.php:330
-msgid "Sorry, you are not allowed to do that."
-msgstr "抱歉，你没有权限执行此操作。"
 
 #: includes/admin/class-menu-page.php:179
 msgid "Menu deleted."
@@ -1627,10 +2105,6 @@ msgstr "弃单召回"
 msgid "Abandoned carts"
 msgstr "弃单召回"
 
-#: includes/admin/class-recovery-page.php:101
-msgid "Settings saved."
-msgstr "设置已保存。"
-
 #: includes/admin/class-recovery-page.php:102
 msgid "A sample reminder was sent to your email address."
 msgstr "示例提醒邮件已发到你的邮箱。"
@@ -1685,15 +2159,6 @@ msgstr "会话已失效"
 #: includes/class-recovery.php:387
 msgid "Unsubscribed"
 msgstr "已退订"
-
-#: includes/admin/class-recovery-page.php:152
-msgid "On"
-msgstr "已开启"
-
-#: includes/admin/class-recovery-page.php:152
-#: includes/class-promotions.php:797
-msgid "Off"
-msgstr "未启用"
 
 #: includes/admin/class-recovery-page.php:154
 msgid "A cart counts as abandoned when a shopper has entered an email at checkout, has items in the cart, and has not paid. Reminders stop as soon as they pay. Every email has an unsubscribe link and your store address."
@@ -1788,10 +2253,6 @@ msgstr "显示在商品清单上方。请如实描述：不要写功效，也不
 #: includes/modules/class-registry.php:1298
 msgid "Button text"
 msgstr "按钮文字"
-
-#: includes/admin/class-recovery-page.php:183
-msgid "Save settings"
-msgstr "保存设置"
 
 #: includes/admin/class-recovery-page.php:188
 msgid "Send me a sample reminder"
@@ -2356,100 +2817,96 @@ msgid "Landing pages for promotions, built from modules, with their own address.
 msgstr "用模块搭建促销活动落地页，每个页面有自己的地址。"
 
 #: includes/admin/class-store-design.php:552
-#: includes/admin/class-store-settings.php:124
-#: includes/admin/class-store-settings.php:136
+#: includes/admin/class-store-settings.php:129
+#: includes/admin/class-store-settings.php:141
 msgid "Coming soon"
 msgstr "即将推出"
-
-#: includes/admin/class-store-settings.php:65
-msgid "Basic settings"
-msgstr "基础配置"
 
 #: includes/admin/class-store-settings.php:66
 msgid "Store name, favicon, contact details, language, store currency, time zone and more."
 msgstr "店铺名称、Favicon、联系方式、语言、店铺货币、时区等。"
 
-#: includes/admin/class-store-settings.php:69
+#: includes/admin/class-store-settings.php:70
 msgid "WooCommerce general settings (store address, currency)"
 msgstr "WooCommerce 常规设置（店铺地址、货币）"
 
-#: includes/admin/class-store-settings.php:70
+#: includes/admin/class-store-settings.php:71
 msgid "WordPress general settings (site title, language, time zone)"
 msgstr "WordPress 常规设置（站点标题、语言、时区）"
 
-#: includes/admin/class-store-settings.php:75
+#: includes/admin/class-store-settings.php:76
 msgid "Email notifications"
 msgstr "邮件通知"
 
-#: includes/admin/class-store-settings.php:76
+#: includes/admin/class-store-settings.php:77
 msgid "Templates for system emails that are sent automatically when certain events happen."
 msgstr "定义系统邮件提醒的模板，触发指定事件时自动发送。"
 
-#: includes/admin/class-store-settings.php:79
+#: includes/admin/class-store-settings.php:80
 msgid "WooCommerce emails"
 msgstr "WooCommerce 邮件设置"
 
-#: includes/admin/class-store-settings.php:84
+#: includes/admin/class-store-settings.php:85
 msgid "Terms of sale"
 msgstr "交易条款"
 
-#: includes/admin/class-store-settings.php:85
+#: includes/admin/class-store-settings.php:86
 msgid "Create your own terms pages that set clear rules for everyone taking part in a purchase."
 msgstr "创建自己的服务说明页面，为参与交易的各方提供明确的约定和规则。"
 
-#: includes/admin/class-store-settings.php:88
+#: includes/admin/class-store-settings.php:89
 msgid "Custom pages (policy pages and checkout terms)"
 msgstr "自定义页面（政策页面和结账条款）"
 
-#: includes/admin/class-store-settings.php:97
+#: includes/admin/class-store-settings.php:98
 msgid "WooCommerce settings"
 msgstr "WooCommerce 设置"
 
-#: includes/admin/class-store-settings.php:97
+#: includes/admin/class-store-settings.php:98
 msgid "General, products, accounts, emails and advanced WooCommerce options."
 msgstr "WooCommerce 的常规、商品、账户、邮件和高级选项。"
 
-#: includes/admin/class-store-settings.php:100
+#: includes/admin/class-store-settings.php:101
 msgid "VialCove settings"
 msgstr "VialCove 设置"
 
-#: includes/admin/class-store-settings.php:100
+#: includes/admin/class-store-settings.php:101
 msgid "Brand name, demo mode, use statement, checkout confirmation, batch check and the support button."
 msgstr "品牌名称、演示模式、用途声明、结账确认、批次检查和客服按钮。"
 
-#: includes/admin/class-store-settings.php:102
+#: includes/admin/class-store-settings.php:103
 msgid "System status"
 msgstr "系统状态"
 
-#: includes/admin/class-store-settings.php:102
+#: includes/admin/class-store-settings.php:103
 msgid "Server, database and plugin information for troubleshooting."
 msgstr "服务器、数据库和插件信息，用于排查问题。"
 
-#: includes/admin/class-store-settings.php:126
+#: includes/admin/class-store-settings.php:131
 msgid "Other settings"
 msgstr "其他设置"
 
-#: includes/admin/class-store-settings.php:136
+#: includes/admin/class-store-settings.php:141
 msgid "The details of this section are still being decided. Once they are, this page becomes the full settings form."
 msgstr "这一项的具体内容还没定，确定之后这里会做成完整的设置页面。"
 
-#: includes/admin/class-store-settings.php:138
+#: includes/admin/class-store-settings.php:143
 msgid "Until then, these existing settings cover it:"
 msgstr "在此之前，可以先用这些现有设置："
 
-#: includes/admin/class-store-settings.php:152
+#: includes/admin/class-store-settings.php:157
 msgid "Taxes are turned off"
 msgstr "税费未开启"
 
-#: includes/admin/class-store-settings.php:153
+#: includes/admin/class-store-settings.php:158
 msgid "Checkout does not add any tax right now. Turning taxes on opens the tax rate tables, where you set rates by country, state and ZIP code. Until you add rates, no tax is charged."
 msgstr "目前结账时不加收任何税费。开启后会出现税率表，可以按国家、州和邮编设置税率。添加税率之前，不会收取税费。"
 
-#: includes/admin/class-store-settings.php:154
+#: includes/admin/class-store-settings.php:159
 msgid "US sales tax depends on the states where you have to collect it. Check with your accountant before adding rates."
 msgstr "美国销售税取决于你需要在哪些州代收。添加税率前请先咨询会计。"
 
-#: includes/admin/class-store-settings.php:157
+#: includes/admin/class-store-settings.php:162
 msgid "Turn on taxes and set rates"
 msgstr "开启税费并设置税率"
 
@@ -3128,10 +3585,6 @@ msgstr "未展示：优惠码已过期。"
 msgid "Not shown: the usage limit has been reached."
 msgstr "未展示：使用次数已用完。"
 
-#: includes/class-coupons.php:518
-msgid "Storefront"
-msgstr "网站展示"
-
 #: includes/class-coupons.php:520
 msgid "View on the coupons page"
 msgstr "在优惠码页面查看"
@@ -3151,10 +3604,6 @@ msgstr "已展示"
 #: includes/class-coupons.php:558
 msgid "Public, but not listed now"
 msgstr "已勾选公开，但目前不展示"
-
-#: includes/class-custom-pages.php:53
-msgid "Store name"
-msgstr "店铺名称"
 
 #: includes/class-custom-pages.php:54
 msgid "Store address"
@@ -3177,70 +3626,82 @@ msgid "Support Telegram"
 msgstr "客服 Telegram"
 
 #: includes/class-custom-pages.php:59
+msgid "Company name (System settings → Basic settings)"
+msgstr "公司名称（系统设置 → 基础配置）"
+
+#: includes/class-custom-pages.php:60
+msgid "Company phone"
+msgstr "公司电话"
+
+#: includes/class-custom-pages.php:61
+msgid "Company address"
+msgstr "公司地址"
+
+#: includes/class-custom-pages.php:62
 msgid "Current year"
 msgstr "当前年份"
 
-#: includes/class-custom-pages.php:60
+#: includes/class-custom-pages.php:63
 msgid "Today’s date"
 msgstr "今天的日期"
 
-#: includes/class-custom-pages.php:122
+#: includes/class-custom-pages.php:125
 msgid "VialCove page options"
 msgstr "VialCove 页面选项"
 
-#: includes/class-custom-pages.php:129
+#: includes/class-custom-pages.php:132
 msgid "Use as checkout terms"
 msgstr "设置为结账条款"
 
-#: includes/class-custom-pages.php:131
+#: includes/class-custom-pages.php:134
 msgid "Published pages marked as checkout terms are linked on the checkout page (for example shipping, returns, terms and privacy)."
 msgstr "已发布且设为结账条款的页面会链接在结账页（例如配送、退换货、服务条款、隐私政策）。"
 
-#: includes/class-custom-pages.php:133
+#: includes/class-custom-pages.php:136
 msgid "How to insert variables"
 msgstr "如何插入变量？"
 
-#: includes/class-custom-pages.php:134
+#: includes/class-custom-pages.php:137
 msgid "Type a variable into the page content. It shows the current store information, so you do not have to edit every page when it changes."
 msgstr "在页面内容里写入变量，显示时会换成当前的店铺信息，信息变了也不用逐页修改。"
 
-#: includes/class-custom-pages.php:137
+#: includes/class-custom-pages.php:140
 msgid "(not set)"
 msgstr "（未设置）"
 
-#: includes/class-custom-pages.php:140
+#: includes/class-custom-pages.php:143
 msgid "Add link=\"1\" to support_email or store_url to show a clickable link."
 msgstr "support_email 或 store_url 加上 link=\"1\" 会显示成可点击的链接。"
 
-#: includes/class-custom-pages.php:162
+#: includes/class-custom-pages.php:165
 msgid "Checkout terms"
 msgstr "结账条款"
 
-#: includes/class-custom-pages.php:311
+#: includes/class-custom-pages.php:314
 msgid "Generate common policies"
 msgstr "生成常见条款"
 
-#: includes/class-custom-pages.php:314
+#: includes/class-custom-pages.php:317
 msgid "Creates draft pages with a heading outline and notes to fill in. They are not legal advice: write the real policy and have it reviewed before publishing. Existing pages of the same kind are kept."
 msgstr "生成只有标题结构和填写提示的草稿页面。这不是法律意见：请按真实情况写好条款并请专业人士审核后再发布。已有的同类页面不会被覆盖。"
 
-#: includes/class-custom-pages.php:320
+#: includes/class-custom-pages.php:323
 msgid "already exists"
 msgstr "已存在"
 
-#: includes/class-custom-pages.php:322
+#: includes/class-custom-pages.php:325
 msgid "Create drafts"
 msgstr "生成草稿"
 
 #. translators: %d: number of pages
-#: includes/class-custom-pages.php:345
+#: includes/class-custom-pages.php:348
 #, php-format
 msgid "Created %d draft. Fill in every bracketed note, have it reviewed, then publish."
 msgid_plural "Created %d drafts. Fill in every bracketed note, have them reviewed, then publish."
 msgstr[0] "已生成 %d 份草稿。请填写所有方括号里的提示，审核后再发布。"
 
 #. translators: %d: number of pages
-#: includes/class-custom-pages.php:345
+#: includes/class-custom-pages.php:348
 msgid "No new drafts: those pages already exist."
 msgstr "没有生成新草稿：这些页面已经存在。"
 
@@ -3393,7 +3854,7 @@ msgstr "批次分配已更新："
 msgid "Batch: %s"
 msgstr "批次：%s"
 
-#: includes/class-plugin.php:103
+#: includes/class-plugin.php:105
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr "Peptide Core 需要先安装并启用 WooCommerce。"
 
@@ -3776,6 +4237,67 @@ msgstr "确认框文案为空，结账确认未开启。"
 msgid "Assign a batch before shipping: %s. (You can turn this check off in the store settings.)"
 msgstr "发货前请先指定批次：%s。（可以在 VialCove 设置里关闭这项检查。）"
 
+#. translators: 1, 2: numbers to add
+#: includes/class-store-config.php:293
+#, php-format
+msgid "Security check: what is %1$d + %2$d?"
+msgstr "安全验证：%1$d + %2$d 等于多少？"
+
+#: includes/class-store-config.php:311
+msgid "<strong>Error:</strong> The security check answer is wrong. Please try again."
+msgstr "<strong>错误：</strong>安全验证答案不正确，请重试。"
+
+#: includes/class-store-config.php:404
+msgid "Almost done: we sent a verification link to your email. Open it to activate your account, then sign in."
+msgstr "还差一步：验证链接已发到你的邮箱，打开链接激活账户后即可登录。"
+
+#: includes/class-store-config.php:450
+msgid "Please verify your email first. We sent you a link when you registered; check your inbox and spam folder."
+msgstr "请先验证邮箱。注册时我们已发送验证链接，请检查收件箱和垃圾邮件。"
+
+#: includes/class-store-config.php:461
+msgid "Your email is verified. You can sign in now."
+msgstr "邮箱已验证，现在可以登录了。"
+
+#: includes/class-store-config.php:463
+msgid "This verification link is invalid or has expired."
+msgstr "验证链接无效或已过期。"
+
+#: includes/class-store-config.php:473
+msgid "Recommended"
+msgstr "综合推荐"
+
+#: includes/class-store-config.php:474
+msgid "Best selling"
+msgstr "按总销量从高到低"
+
+#: includes/class-store-config.php:475
+msgid "Name: A to Z"
+msgstr "按名称 A-Z"
+
+#: includes/class-store-config.php:476
+msgid "Name: Z to A"
+msgstr "按名称 Z-A"
+
+#: includes/class-store-config.php:477
+#: includes/modules/class-registry.php:1201
+msgid "Price: low to high"
+msgstr "价格从低到高"
+
+#: includes/class-store-config.php:478
+#: includes/modules/class-registry.php:1202
+msgid "Price: high to low"
+msgstr "价格从高到低"
+
+#: includes/class-store-config.php:479
+msgid "Oldest first"
+msgstr "按创建时间升序"
+
+#: includes/class-store-config.php:480
+#: includes/modules/class-registry.php:1199
+msgid "Newest first"
+msgstr "最新优先"
+
 #: includes/class-support-contacts.php:76
 msgid "The WhatsApp number was not saved: use the international format with country code, for example +1 555 123 4567."
 msgstr "WhatsApp 号码没有保存：请使用带国家代码的国际格式，例如 +1 555 123 4567。"
@@ -3912,10 +4434,6 @@ msgstr "跳转链接"
 #: includes/modules/class-blocks.php:252
 msgid "Open in a new tab"
 msgstr "在新标签页打开"
-
-#: includes/modules/class-blocks.php:253
-msgid "— None —"
-msgstr "— 无 —"
 
 #: includes/modules/class-blocks.php:255
 msgid "Use default color"
@@ -5146,29 +5664,13 @@ msgstr "某个分类"
 msgid "Choose products"
 msgstr "手动选择商品"
 
-#: includes/modules/class-registry.php:1181
-msgid "Category"
-msgstr "分类"
-
 #: includes/modules/class-registry.php:1198
 msgid "Catalog order (as in the price list)"
 msgstr "目录顺序（与报价单一致）"
 
-#: includes/modules/class-registry.php:1199
-msgid "Newest first"
-msgstr "最新优先"
-
 #: includes/modules/class-registry.php:1200
 msgid "Name A–Z"
 msgstr "名称 A–Z"
-
-#: includes/modules/class-registry.php:1201
-msgid "Price: low to high"
-msgstr "价格从低到高"
-
-#: includes/modules/class-registry.php:1202
-msgid "Price: high to low"
-msgstr "价格从高到低"
 
 #: includes/modules/class-registry.php:1206
 msgid "Number of products"

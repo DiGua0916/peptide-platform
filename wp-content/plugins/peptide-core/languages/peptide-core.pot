@@ -2,14 +2,14 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.16.0\n"
+"Project-Id-Version: Peptide Core 0.17.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-22T16:38:33+00:00\n"
+"POT-Creation-Date: 2026-10-22T17:07:57+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -50,7 +50,7 @@ msgid "Shipping settings"
 msgstr ""
 
 #: includes/admin/class-admin-menus.php:61
-#: includes/admin/class-store-settings.php:151
+#: includes/admin/class-store-settings.php:156
 msgid "Tax settings"
 msgstr ""
 
@@ -59,9 +59,527 @@ msgid "Payment settings"
 msgstr ""
 
 #: includes/admin/class-admin-menus.php:66
-#: includes/admin/class-store-settings.php:122
-#: includes/admin/class-store-settings.php:134
+#: includes/admin/class-basic-config-page.php:113
+#: includes/admin/class-store-settings.php:127
+#: includes/admin/class-store-settings.php:139
 msgid "System settings"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:48
+msgid "Choose favicon"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:49
+msgid "Use this image"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:50
+#: includes/admin/class-basic-config-page.php:259
+#: includes/modules/class-blocks.php:253
+msgid "— None —"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:97
+#: includes/admin/class-recovery-page.php:152
+msgid "On"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:97
+#: includes/admin/class-recovery-page.php:152
+#: includes/class-promotions.php:797
+msgid "Off"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:107
+#: includes/admin/class-recovery-page.php:101
+msgid "Settings saved."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:114
+#: includes/admin/class-store-settings.php:65
+msgid "Basic settings"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:116
+msgid "Store name, admin email, favicon, time zone and language are WordPress settings: only site administrators can change them."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:127
+#: includes/admin/class-recovery-page.php:183
+msgid "Save settings"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:136
+msgid "Without a support email, automatic emails cannot be sent."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:138
+msgid "Store information"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:139
+#: includes/class-custom-pages.php:53
+msgid "Store name"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:140
+msgid "We contact you at this address when needed (WordPress admin email)."
+msgstr ""
+
+#. translators: %s: email address
+#: includes/admin/class-basic-config-page.php:143
+#, php-format
+msgid "Waiting for confirmation: %s. Open the link in the email sent to that address."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:145
+msgid "Admin email"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:145
+msgid "Changing it sends a confirmation link to the new address; the change takes effect after the link is opened."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:146
+msgid "Support email (important)"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:146
+msgid "Sender address of all store emails (order emails, cart reminders). Use an address on your own domain so emails are not marked as spam."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:147
+msgid "Support name"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:147
+msgid "Sender name of store emails; empty uses the store name"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:147
+msgid "Shown as the sender name in the customer’s inbox."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:152
+#: includes/admin/class-menu-page.php:139
+#: includes/admin/class-product-panel.php:104
+#: includes/modules/class-blocks.php:239
+msgid "Choose image"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:152
+#: includes/admin/class-menu-page.php:140
+#: includes/admin/class-product-panel.php:105
+#: includes/admin/class-store-design.php:391
+#: includes/modules/class-blocks.php:242
+msgid "Remove"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:155
+msgid "Website favicon"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:155
+msgid "The small icon shown in the browser tab and bookmarks. Usually 32×32 px; use png, svg or ico so browsers show it correctly."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:156
+msgid "Finance email"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:156
+msgid "Receives payment alerts such as possible duplicate payments. Empty uses the admin email."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:168
+msgid "Basic"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:169
+msgid "Store currency"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:169
+msgid "The store currency cannot be changed after orders exist."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:170
+msgid "Generate SPU codes automatically"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:170
+msgid "Random code (18 digits)"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:170
+msgid "Same as product ID"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:170
+msgid "The SPU is the code of the product itself; variation SKUs are built from it. Existing codes are kept."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:174
+msgid "Custom (kept as is)"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:176
+msgid "Currency format"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:176
+msgid "Thousands separator, decimal separator and number of decimals in prices."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:177
+msgid "One keyword per line, e.g. examplebot"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:178
+msgid "Block crawlers"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:178
+msgid "Visitors whose browser identification (User-Agent) contains one of these keywords get a 403 page. Do not add search engines such as Googlebot or Bingbot."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:179
+msgid "Admin login security check"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:179
+msgid "Adds a simple math question to the WordPress login page to slow down password guessing."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:186
+msgid "Time zone"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:186
+msgid "Used for order times and the dashboard (“today” starts at midnight in this time zone)."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:188
+msgid "Do not generate"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:188
+msgid "Generate"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:189
+msgid "Generate SKU codes automatically"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:189
+msgid "When a product or variation is saved without a SKU, one is created: simple products use the SPU, variations use the pattern ({SKU_CODE} is the variation number 01, 02, …)."
+msgstr ""
+
+#. translators: %d: number of hours
+#: includes/admin/class-basic-config-page.php:193
+#, php-format
+msgid "%d hour"
+msgid_plural "%d hours"
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/admin/class-basic-config-page.php:195
+msgid "Returning visitor rule"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:195
+msgid "Visitors who come back more than"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:195
+msgid "after their first visit count as returning"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:195
+msgid "Used by “Returning visitors” on the dashboard."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:196
+msgid "Also block the built-in list of security scanners and scraping bots"
+msgstr ""
+
+#. translators: %d: number of keywords
+#: includes/admin/class-basic-config-page.php:197
+#, php-format
+msgid "Built-in list (%d keywords)"
+msgstr ""
+
+#. translators: %d: number of keywords
+#: includes/admin/class-basic-config-page.php:198
+msgid "System crawler block"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:216
+#: includes/class-coupons.php:518
+msgid "Storefront"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:217
+msgid "Language"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:217
+msgid "Language of the storefront texts provided by WordPress, WooCommerce and this plugin. Your own admin language is set in your profile."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:218
+msgid "Product title"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:219
+msgid "SKU"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:219
+#: includes/modules/class-registry.php:1181
+msgid "Category"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:219
+msgid "Tag"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:223
+msgid "Storefront search fields"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:223
+msgid "What the storefront product search matches besides the product title and description."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:224
+msgid "Require sign-in to visit the store"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:224
+#: includes/admin/class-list-columns.php:62
+#: includes/admin/class-list-columns.php:109
+msgid "Yes"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:224
+msgid "No"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:224
+msgid "Visitors who are not signed in are sent to the account page. The privacy policy and checkout terms pages stay public."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:230
+msgid "Storefront sort options"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:230
+msgid "Ticked options appear in the sort menu of the shop; drag to change the order. The first one is the default sort."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:231
+msgid "Allow the store in an iframe"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:231
+msgid "When off, other websites cannot embed your store pages (protects against clickjacking)."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:239
+msgid "Custom (set in Settings → Permalinks)"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:241
+msgid "Product link structure"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:241
+msgid "Changing it changes the address of every product page. Old links stop working, so decide before you promote the store."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:242
+msgid "Product page of an unpublished product"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:242
+msgid "Show the 404 page"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:242
+msgid "Go to the home page"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:242
+msgid "Go to the shop page"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:242
+msgid "What visitors see when they open a product that is a draft, private or in the trash."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:244
+msgid "Register email verification"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:244
+msgid "Customers who register on the account page must open a link in their email before they can sign in. Accounts created during checkout are not affected."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:244
+msgid "Registration on the account page is currently turned off (WooCommerce settings → Accounts & Privacy)."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:245
+msgid "Store status"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:245
+msgid "Open"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:245
+msgid "Closed"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:245
+msgid "Closed shows a “coming soon” page to visitors (WooCommerce site visibility). You still see the store while signed in."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:246
+msgid "Default variation on product pages"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:246
+msgid "First available variation"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:246
+msgid "None selected"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:246
+msgid "Used when a variable product has no default variation of its own."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:247
+msgid "Sold-out variations on product pages"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:247
+#: includes/admin/class-design-editor.php:155
+#: includes/modules/class-blocks.php:235
+msgid "Show"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:247
+#: includes/admin/class-design-editor.php:154
+#: includes/modules/class-blocks.php:234
+msgid "Hide"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:247
+msgid "Hidden variations cannot be selected."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:253
+msgid "Select a country"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:256
+msgid "Public contact information"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:256
+msgid "Shown in store emails (US law requires a physical address in marketing emails) and available to pages through [pc_var]. Country, state, city, address and ZIP are the WooCommerce store address."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:257
+msgid "Company name"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:257
+msgid "Enter the company name"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:261
+msgid "Enter the state or province"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:263
+msgid "State / province"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:264
+msgid "Address"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:264
+msgid "Enter the street address"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:265
+msgid "ZIP / postcode"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:265
+msgid "Enter the ZIP or postcode"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:267
+msgid "Country"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:268
+msgid "City"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:268
+msgid "Enter the city"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:269
+msgid "Phone"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:269
+msgid "Enter the phone number"
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:277
+#: includes/admin/class-menu-page.php:164
+#: includes/admin/class-menu-page.php:207
+#: includes/admin/class-recovery-page.php:51
+#: includes/admin/class-store-design.php:140
+#: includes/admin/class-store-settings.php:40
+#: includes/admin/class-tracking-page.php:214
+#: includes/admin/class-tracking-page.php:224
+#: includes/class-custom-pages.php:333
+msgid "Sorry, you are not allowed to do that."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:298
+msgid "The store name cannot be empty."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:304
+msgid "The admin email is not valid."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:321
+msgid "Choose a city-based time zone (for example Los Angeles), so daylight saving time is handled."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:333
+msgid "The support email is not valid."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:338
+msgid "The finance email is not valid."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:363
+msgid "Keep at least one sort option."
 msgstr ""
 
 #: includes/admin/class-batch-metabox.php:29
@@ -559,16 +1077,6 @@ msgstr ""
 msgid "Duplicate"
 msgstr ""
 
-#: includes/admin/class-design-editor.php:154
-#: includes/modules/class-blocks.php:234
-msgid "Hide"
-msgstr ""
-
-#: includes/admin/class-design-editor.php:155
-#: includes/modules/class-blocks.php:235
-msgid "Show"
-msgstr ""
-
 #: includes/admin/class-design-editor.php:156
 #: includes/admin/class-menu-page.php:101
 #: includes/admin/class-menu-page.php:291
@@ -698,11 +1206,6 @@ msgstr ""
 #: includes/admin/class-list-columns.php:37
 #: includes/admin/class-list-columns.php:80
 msgid "Demo"
-msgstr ""
-
-#: includes/admin/class-list-columns.php:62
-#: includes/admin/class-list-columns.php:109
-msgid "Yes"
 msgstr ""
 
 #: includes/admin/class-list-columns.php:74
@@ -971,19 +1474,6 @@ msgstr ""
 msgid "Navigation icon, recommended 80 × 80 px."
 msgstr ""
 
-#: includes/admin/class-menu-page.php:139
-#: includes/admin/class-product-panel.php:104
-#: includes/modules/class-blocks.php:239
-msgid "Choose image"
-msgstr ""
-
-#: includes/admin/class-menu-page.php:140
-#: includes/admin/class-product-panel.php:105
-#: includes/admin/class-store-design.php:391
-#: includes/modules/class-blocks.php:242
-msgid "Remove"
-msgstr ""
-
 #: includes/admin/class-menu-page.php:141
 msgid "Font style"
 msgstr ""
@@ -1029,17 +1519,6 @@ msgstr ""
 #: includes/admin/class-menu-page.php:151
 #: includes/class-menus.php:699
 msgid "This menu was changed somewhere else after you opened it. Reload the page to see the latest version."
-msgstr ""
-
-#: includes/admin/class-menu-page.php:164
-#: includes/admin/class-menu-page.php:207
-#: includes/admin/class-recovery-page.php:51
-#: includes/admin/class-store-design.php:140
-#: includes/admin/class-store-settings.php:40
-#: includes/admin/class-tracking-page.php:214
-#: includes/admin/class-tracking-page.php:224
-#: includes/class-custom-pages.php:330
-msgid "Sorry, you are not allowed to do that."
 msgstr ""
 
 #: includes/admin/class-menu-page.php:179
@@ -1628,10 +2107,6 @@ msgstr ""
 msgid "Abandoned carts"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:101
-msgid "Settings saved."
-msgstr ""
-
 #: includes/admin/class-recovery-page.php:102
 msgid "A sample reminder was sent to your email address."
 msgstr ""
@@ -1685,15 +2160,6 @@ msgstr ""
 #: includes/admin/class-recovery-page.php:147
 #: includes/class-recovery.php:387
 msgid "Unsubscribed"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:152
-msgid "On"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:152
-#: includes/class-promotions.php:797
-msgid "Off"
 msgstr ""
 
 #: includes/admin/class-recovery-page.php:154
@@ -1788,10 +2254,6 @@ msgstr ""
 #: includes/modules/class-registry.php:1041
 #: includes/modules/class-registry.php:1298
 msgid "Button text"
-msgstr ""
-
-#: includes/admin/class-recovery-page.php:183
-msgid "Save settings"
 msgstr ""
 
 #: includes/admin/class-recovery-page.php:188
@@ -2357,100 +2819,96 @@ msgid "Landing pages for promotions, built from modules, with their own address.
 msgstr ""
 
 #: includes/admin/class-store-design.php:552
-#: includes/admin/class-store-settings.php:124
-#: includes/admin/class-store-settings.php:136
+#: includes/admin/class-store-settings.php:129
+#: includes/admin/class-store-settings.php:141
 msgid "Coming soon"
-msgstr ""
-
-#: includes/admin/class-store-settings.php:65
-msgid "Basic settings"
 msgstr ""
 
 #: includes/admin/class-store-settings.php:66
 msgid "Store name, favicon, contact details, language, store currency, time zone and more."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:69
+#: includes/admin/class-store-settings.php:70
 msgid "WooCommerce general settings (store address, currency)"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:70
+#: includes/admin/class-store-settings.php:71
 msgid "WordPress general settings (site title, language, time zone)"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:75
+#: includes/admin/class-store-settings.php:76
 msgid "Email notifications"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:76
+#: includes/admin/class-store-settings.php:77
 msgid "Templates for system emails that are sent automatically when certain events happen."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:79
+#: includes/admin/class-store-settings.php:80
 msgid "WooCommerce emails"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:84
+#: includes/admin/class-store-settings.php:85
 msgid "Terms of sale"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:85
+#: includes/admin/class-store-settings.php:86
 msgid "Create your own terms pages that set clear rules for everyone taking part in a purchase."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:88
+#: includes/admin/class-store-settings.php:89
 msgid "Custom pages (policy pages and checkout terms)"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:97
+#: includes/admin/class-store-settings.php:98
 msgid "WooCommerce settings"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:97
+#: includes/admin/class-store-settings.php:98
 msgid "General, products, accounts, emails and advanced WooCommerce options."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:100
+#: includes/admin/class-store-settings.php:101
 msgid "VialCove settings"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:100
+#: includes/admin/class-store-settings.php:101
 msgid "Brand name, demo mode, use statement, checkout confirmation, batch check and the support button."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:102
+#: includes/admin/class-store-settings.php:103
 msgid "System status"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:102
+#: includes/admin/class-store-settings.php:103
 msgid "Server, database and plugin information for troubleshooting."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:126
+#: includes/admin/class-store-settings.php:131
 msgid "Other settings"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:136
+#: includes/admin/class-store-settings.php:141
 msgid "The details of this section are still being decided. Once they are, this page becomes the full settings form."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:138
+#: includes/admin/class-store-settings.php:143
 msgid "Until then, these existing settings cover it:"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:152
+#: includes/admin/class-store-settings.php:157
 msgid "Taxes are turned off"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:153
+#: includes/admin/class-store-settings.php:158
 msgid "Checkout does not add any tax right now. Turning taxes on opens the tax rate tables, where you set rates by country, state and ZIP code. Until you add rates, no tax is charged."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:154
+#: includes/admin/class-store-settings.php:159
 msgid "US sales tax depends on the states where you have to collect it. Check with your accountant before adding rates."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:157
+#: includes/admin/class-store-settings.php:162
 msgid "Turn on taxes and set rates"
 msgstr ""
 
@@ -3131,10 +3589,6 @@ msgstr ""
 msgid "Not shown: the usage limit has been reached."
 msgstr ""
 
-#: includes/class-coupons.php:518
-msgid "Storefront"
-msgstr ""
-
 #: includes/class-coupons.php:520
 msgid "View on the coupons page"
 msgstr ""
@@ -3153,10 +3607,6 @@ msgstr ""
 
 #: includes/class-coupons.php:558
 msgid "Public, but not listed now"
-msgstr ""
-
-#: includes/class-custom-pages.php:53
-msgid "Store name"
 msgstr ""
 
 #: includes/class-custom-pages.php:54
@@ -3180,63 +3630,75 @@ msgid "Support Telegram"
 msgstr ""
 
 #: includes/class-custom-pages.php:59
-msgid "Current year"
+msgid "Company name (System settings → Basic settings)"
 msgstr ""
 
 #: includes/class-custom-pages.php:60
+msgid "Company phone"
+msgstr ""
+
+#: includes/class-custom-pages.php:61
+msgid "Company address"
+msgstr ""
+
+#: includes/class-custom-pages.php:62
+msgid "Current year"
+msgstr ""
+
+#: includes/class-custom-pages.php:63
 msgid "Today’s date"
 msgstr ""
 
-#: includes/class-custom-pages.php:122
+#: includes/class-custom-pages.php:125
 msgid "VialCove page options"
 msgstr ""
 
-#: includes/class-custom-pages.php:129
+#: includes/class-custom-pages.php:132
 msgid "Use as checkout terms"
 msgstr ""
 
-#: includes/class-custom-pages.php:131
+#: includes/class-custom-pages.php:134
 msgid "Published pages marked as checkout terms are linked on the checkout page (for example shipping, returns, terms and privacy)."
 msgstr ""
 
-#: includes/class-custom-pages.php:133
+#: includes/class-custom-pages.php:136
 msgid "How to insert variables"
 msgstr ""
 
-#: includes/class-custom-pages.php:134
+#: includes/class-custom-pages.php:137
 msgid "Type a variable into the page content. It shows the current store information, so you do not have to edit every page when it changes."
 msgstr ""
 
-#: includes/class-custom-pages.php:137
+#: includes/class-custom-pages.php:140
 msgid "(not set)"
 msgstr ""
 
-#: includes/class-custom-pages.php:140
+#: includes/class-custom-pages.php:143
 msgid "Add link=\"1\" to support_email or store_url to show a clickable link."
 msgstr ""
 
-#: includes/class-custom-pages.php:162
+#: includes/class-custom-pages.php:165
 msgid "Checkout terms"
 msgstr ""
 
-#: includes/class-custom-pages.php:311
+#: includes/class-custom-pages.php:314
 msgid "Generate common policies"
 msgstr ""
 
-#: includes/class-custom-pages.php:314
+#: includes/class-custom-pages.php:317
 msgid "Creates draft pages with a heading outline and notes to fill in. They are not legal advice: write the real policy and have it reviewed before publishing. Existing pages of the same kind are kept."
 msgstr ""
 
-#: includes/class-custom-pages.php:320
+#: includes/class-custom-pages.php:323
 msgid "already exists"
 msgstr ""
 
-#: includes/class-custom-pages.php:322
+#: includes/class-custom-pages.php:325
 msgid "Create drafts"
 msgstr ""
 
 #. translators: %d: number of pages
-#: includes/class-custom-pages.php:345
+#: includes/class-custom-pages.php:348
 #, php-format
 msgid "Created %d draft. Fill in every bracketed note, have it reviewed, then publish."
 msgid_plural "Created %d drafts. Fill in every bracketed note, have them reviewed, then publish."
@@ -3244,7 +3706,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: number of pages
-#: includes/class-custom-pages.php:345
+#: includes/class-custom-pages.php:348
 msgid "No new drafts: those pages already exist."
 msgstr ""
 
@@ -3397,7 +3859,7 @@ msgstr ""
 msgid "Batch: %s"
 msgstr ""
 
-#: includes/class-plugin.php:103
+#: includes/class-plugin.php:105
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr ""
 
@@ -3782,6 +4244,67 @@ msgstr ""
 msgid "Assign a batch before shipping: %s. (You can turn this check off in the store settings.)"
 msgstr ""
 
+#. translators: 1, 2: numbers to add
+#: includes/class-store-config.php:293
+#, php-format
+msgid "Security check: what is %1$d + %2$d?"
+msgstr ""
+
+#: includes/class-store-config.php:311
+msgid "<strong>Error:</strong> The security check answer is wrong. Please try again."
+msgstr ""
+
+#: includes/class-store-config.php:404
+msgid "Almost done: we sent a verification link to your email. Open it to activate your account, then sign in."
+msgstr ""
+
+#: includes/class-store-config.php:450
+msgid "Please verify your email first. We sent you a link when you registered; check your inbox and spam folder."
+msgstr ""
+
+#: includes/class-store-config.php:461
+msgid "Your email is verified. You can sign in now."
+msgstr ""
+
+#: includes/class-store-config.php:463
+msgid "This verification link is invalid or has expired."
+msgstr ""
+
+#: includes/class-store-config.php:473
+msgid "Recommended"
+msgstr ""
+
+#: includes/class-store-config.php:474
+msgid "Best selling"
+msgstr ""
+
+#: includes/class-store-config.php:475
+msgid "Name: A to Z"
+msgstr ""
+
+#: includes/class-store-config.php:476
+msgid "Name: Z to A"
+msgstr ""
+
+#: includes/class-store-config.php:477
+#: includes/modules/class-registry.php:1201
+msgid "Price: low to high"
+msgstr ""
+
+#: includes/class-store-config.php:478
+#: includes/modules/class-registry.php:1202
+msgid "Price: high to low"
+msgstr ""
+
+#: includes/class-store-config.php:479
+msgid "Oldest first"
+msgstr ""
+
+#: includes/class-store-config.php:480
+#: includes/modules/class-registry.php:1199
+msgid "Newest first"
+msgstr ""
+
 #: includes/class-support-contacts.php:76
 msgid "The WhatsApp number was not saved: use the international format with country code, for example +1 555 123 4567."
 msgstr ""
@@ -3917,10 +4440,6 @@ msgstr ""
 
 #: includes/modules/class-blocks.php:252
 msgid "Open in a new tab"
-msgstr ""
-
-#: includes/modules/class-blocks.php:253
-msgid "— None —"
 msgstr ""
 
 #: includes/modules/class-blocks.php:255
@@ -5152,28 +5671,12 @@ msgstr ""
 msgid "Choose products"
 msgstr ""
 
-#: includes/modules/class-registry.php:1181
-msgid "Category"
-msgstr ""
-
 #: includes/modules/class-registry.php:1198
 msgid "Catalog order (as in the price list)"
 msgstr ""
 
-#: includes/modules/class-registry.php:1199
-msgid "Newest first"
-msgstr ""
-
 #: includes/modules/class-registry.php:1200
 msgid "Name A–Z"
-msgstr ""
-
-#: includes/modules/class-registry.php:1201
-msgid "Price: low to high"
-msgstr ""
-
-#: includes/modules/class-registry.php:1202
-msgid "Price: high to low"
 msgstr ""
 
 #: includes/modules/class-registry.php:1206

@@ -140,3 +140,157 @@
 		grid-template-columns: 1fr;
 	}
 }
+
+/* 系统设置 → 基础配置（BASIC-CONFIG-01）：两列表单，窄屏一列。 */
+.pc-bc .pc-ss-panel h2 {
+	margin-bottom: 16px;
+	font-size: calc(var(--pc-ss-text) + 3px);
+}
+
+.pc-bc-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0 clamp(24px, 4vw, 80px);
+}
+
+.pc-bc-field {
+	margin-bottom: 20px;
+}
+
+.pc-bc-label {
+	display: block;
+	margin-bottom: 8px;
+	font-weight: 600;
+}
+
+.pc-bc-req {
+	color: #d63638;
+}
+
+.pc-bc .pc-bc-input {
+	width: 100%;
+	max-width: none;
+}
+
+.pc-bc .pc-bc-inline .pc-bc-input,
+.pc-bc .pc-bc-radios + .pc-bc-input {
+	width: auto;
+}
+
+.pc-bc-inline {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+}
+
+.pc-bc-radios {
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: 6px 20px;
+	margin-right: 12px;
+	line-height: 30px;
+}
+
+.pc-bc-note {
+	margin: 6px 0 0;
+	color: var(--pc-ss-muted);
+}
+
+.pc-bc-warn {
+	color: #d63638;
+}
+
+.pc-bc-help.dashicons {
+	color: #9ca3af;
+	font-size: 16px;
+	cursor: help;
+	vertical-align: -3px;
+}
+
+.pc-bc-check {
+	display: block;
+	margin-bottom: 6px;
+}
+
+.pc-bc-details summary {
+	color: var(--pc-ss-muted);
+	cursor: pointer;
+}
+
+.pc-bc-details p {
+	margin: 6px 0 0;
+	color: var(--pc-ss-muted);
+	word-break: break-word;
+}
+
+.pc-bc-favicon {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.pc-bc-favicon__img {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 64px;
+	height: 64px;
+	border: 1px dashed #ee7d33;
+	border-radius: 4px;
+	background: #fff;
+}
+
+.pc-bc-favicon__img img {
+	max-width: 56px;
+	max-height: 56px;
+}
+
+.pc-bc-favicon__img .dashicons {
+	color: #9ca3af;
+	font-size: 28px;
+	width: 28px;
+	height: 28px;
+}
+
+.pc-bc-sort {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin: 0;
+}
+
+.pc-bc-sort li {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	margin: 0;
+	padding: 4px 8px;
+	background: #f3f4f6;
+	border: 1px solid var(--pc-ss-line);
+	border-radius: 3px;
+}
+
+.pc-bc-sort .dashicons-menu {
+	color: #9ca3af;
+	cursor: move;
+}
+
+.pc-bc-sort li.ui-sortable-helper {
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.pc-bc-bar {
+	position: sticky;
+	bottom: 0;
+	z-index: 5;
+	margin-top: 16px;
+	padding: 12px 0;
+	background: #f0f0f1;
+}
+
+@media (max-width: 960px) {
+	.pc-bc-grid {
+		grid-template-columns: 1fr;
+	}
+}

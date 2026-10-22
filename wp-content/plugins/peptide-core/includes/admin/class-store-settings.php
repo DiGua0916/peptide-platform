@@ -64,7 +64,8 @@ final class Store_Settings {
 				'icon'        => 'dashicons-admin-generic',
 				'title'       => __( 'Basic settings', 'peptide-core' ),
 				'desc'        => __( 'Store name, favicon, contact details, language, store currency, time zone and more.', 'peptide-core' ),
-				'placeholder' => true,
+				'placeholder' => false,
+				'render'      => array( Basic_Config_Page::class, 'render' ),
 				'now'         => array(
 					__( 'WooCommerce general settings (store address, currency)', 'peptide-core' ) => admin_url( 'admin.php?page=wc-settings&tab=general' ),
 					__( 'WordPress general settings (site title, language, time zone)', 'peptide-core' ) => admin_url( 'options-general.php' ),
@@ -115,7 +116,11 @@ final class Store_Settings {
 		$current  = isset( $_GET['section'] ) ? sanitize_key( wp_unslash( $_GET['section'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		echo '<div class="wrap pc-ss">';
 		if ( isset( $sections[ $current ] ) ) {
-			self::render_section( $sections[ $current ] );
+			if ( isset( $sections[ $current ]['render'] ) ) {
+				call_user_func( $sections[ $current ]['render'] );
+			} else {
+				self::render_section( $sections[ $current ] );
+			}
 			echo '</div>';
 			return;
 		}

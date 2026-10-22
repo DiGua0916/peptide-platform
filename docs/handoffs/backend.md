@@ -1120,3 +1120,39 @@
 - **连线**：两条之间画折线，从上一条右端向右、向下，再用箭头指回下一条右端，旁边显示相对上一步的转化率。
 - **检查**：用 JS 核对过连线端点和上下两条右端完全对齐（误差 0–1px），数字不会超出卡片，375px 宽度下没有横向滚动。
 - **待用户决定**：Shopname 有 8 步（多出“添加地址 / 添加物流 / 添加支付”），我们目前是 6 步。要增加这几步，需要新的追踪事件和阶段编号，会影响 Codex 那边的访客页面。
+
+### BASIC-CONFIG-01 系统设置 → 基础配置 · 2026-10-23 · Claude
+
+按用户提供的 Shopname 截图（1–3 图）实现。页面在 `pc-system&section=basic`（`includes/admin/class-basic-config-page.php`），运行逻辑在 `includes/class-store-config.php`（选项 `peptide_core_store_config`）。
+
+- **店铺信息**
+  - 店铺名称 → blogname。
+  - 管理员邮箱 → 按 WordPress 原有流程，先写 new_admin_email、发确认邮件，确认后才生效。
+  - 客服邮箱 / 客服名称 → WooCommerce 发件地址和发件人；发件人为空时用店铺名称。
+  - Favicon → site_icon。**主题目前去掉了 wp_site_icon，固定输出自己的图标，需要 Codex 适配。**
+  - 财务邮箱 → 接收付款类提醒。
+  - WordPress 自身的设置只有 manage_options 能改，店长看到的是只读。
+- **基础设置**
+  - 店铺货币：有订单后锁定。
+  - 时区。
+  - 自动生成 SPU：18 位随机数或商品 ID，存 `_pc_spu`。
+  - 自动生成 SKU：保存时 SKU 为空才生成，单款式商品用 SPU，多款式商品的款式按 `{SPU}-{SKU_CODE}`。
+  - 货币格式：预设组合。
+  - 回访用户计算时间：仪表盘的“回访用户”改为“距离第一次访问超过 N 小时的访问”。
+  - 禁止爬虫：自定义 UA 关键词，加内置的扫描器 / 采集器名单；前台返回 403，后台、命令行、定时任务不受影响。
+  - 后台登录验证码：wp-login.php 上的算术题，只检查表单登录。
+- **店铺前台设置**
+  - 语言：WPLANG。
+  - 前台搜索字段：用 posts_search 额外匹配 SKU（含款式 SKU）、分类、标签。
+  - 强制登录：未登录访客跳到账户页；隐私政策和结账条款页仍公开。
+  - 注册邮箱验证：只针对账户页注册，结账时创建的账户不受影响。用户在验证前不能登录，验证链接 3 天有效，通过设置密码链接也算验证。验证邮件由后面的邮件模块发送（动作 `peptide_core_send_registration_verification`）。
+  - 前台排序字段：可勾选、可拖动顺序，第一项为默认排序。
+  - iframe：关闭时发送 X-Frame-Options: SAMEORIGIN。
+  - 店铺经营状态：打烊 = WooCommerce coming soon，全站生效。
+  - 商品链接结构：/product、/shop、/shop/%product_cat%，改完自动刷新固定链接。
+  - 已下架商品：可选 404、跳首页或跳商店页。
+  - 默认选中第一个有货的款式。
+  - 售罄款式：可选隐藏。
+- **公开联系方式**：公司名称和电话存在我们的选项里；国家、州、市、地址、邮编写入 WooCommerce 店铺地址（弃单邮件的实体地址也用这里）。新增 `[pc_var]` 变量 company_name、company_phone、company_address。
+- **没有做的 Shopname 平台专有项**：临时域名、临时域名访问密码、静态资源路径、代码模式、页面缓存时间、广告像素延迟、多币种结算、防爬 / 高风险 IP 限制、商品意向统计、标题搜索方式、前台图形验证码、已删除款式。
+- **测试**：smoke-basic-config 42 项。全部 23 套 667 项通过。实测首页带 X-Frame-Options，sqlmap 的 UA 返回 403，Googlebot 的 UA 返回 200。

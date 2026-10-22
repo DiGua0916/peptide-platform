@@ -108,7 +108,9 @@ final class Overview {
 		$fm       = $from * 1000;
 		$tm       = $to * 1000;
 		$out['visitors']  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(DISTINCT visitor_id) FROM {$visits} WHERE start_ms >= %d AND start_ms < %d", $fm, $tm ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
-		$out['returning'] = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(DISTINCT s.visitor_id) FROM {$visits} s INNER JOIN {$visitors} v ON v.id = s.visitor_id WHERE s.start_ms >= %d AND s.start_ms < %d AND v.first_ms < %d", $fm, $tm, $fm ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		// 回访用户：这段时间内来过，并且这次访问距离第一次来已经超过“回访用户计算时间”（系统设置 → 基础配置，默认 1 天）。
+		$gap              = max( 1, (int) Store_Config::get( 'returning_hours' ) ) * HOUR_IN_SECONDS * 1000;
+		$out['returning'] = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(DISTINCT s.visitor_id) FROM {$visits} s INNER JOIN {$visitors} v ON v.id = s.visitor_id WHERE s.start_ms >= %d AND s.start_ms < %d AND s.start_ms >= v.first_ms + %d", $fm, $tm, $gap ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		$rows             = $wpdb->get_results( $wpdb->prepare( "SELECT visitor_id, start_ms FROM {$visits} WHERE start_ms >= %d AND start_ms < %d LIMIT 50000", $fm, $tm ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		$seen             = array();
 		$index            = array_flip( array_column( $out['series'], 'key' ) );
