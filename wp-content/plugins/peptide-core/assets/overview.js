@@ -100,12 +100,16 @@
 			return '<p class="pc-ov-muted">' + esc( S.noData ) + '</p>';
 		}
 		var base = f[ 0 ].count;
-		// 每行同宽：底色条按占访客的比例填充；名称、人数、占比、上一步转化各占固定一列，上下对齐。
-		return '<div class="pc-ov-funnel"><div class="pc-ov-step pc-ov-step--head"><span></span><span class="pc-ov-step__rate">' + esc( S.stepRate ) + '</span></div>' + f.map( function ( s, i ) {
-			var prev = i ? f[ i - 1 ].count : s.count;
-			var fill = base ? Math.min( 100, ( s.count / base ) * 100 ) : 0;
-			return '<div class="pc-ov-step"><div class="pc-ov-step__bar"><i style="width:' + fill + '%"></i><span class="pc-ov-step__name">' + esc( S.stages[ s.stage ] ) + '</span><b>' + esc( s.count ) + '</b><span class="pc-ov-step__share">' + ( i ? esc( fmt( S.ofVisitors, pct( s.count, base ) ) ) : '' ) + '</span></div>' +
-				'<span class="pc-ov-step__rate">' + ( i ? esc( pct( s.count, prev ) ) : '' ) + '</span></div>';
+		// 版式参照 Shopname：条形逐级变窄；条内是人数和占访客的比例，两条之间的箭头旁是相对上一步的转化率。
+		var frac = function ( i ) {
+			return 1 - ( i * 0.36 ) / Math.max( 1, f.length - 1 );
+		};
+		return '<div class="pc-ov-funnel">' + f.map( function ( s, i ) {
+			var link = '';
+			if ( i ) {
+				link = '<div class="pc-ov-link" style="--f1:' + frac( i - 1 ) + ';--f2:' + frac( i ) + '" title="' + esc( S.stepRate ) + '"><i></i><span>' + esc( pct( s.count, f[ i - 1 ].count ) ) + '</span></div>';
+			}
+			return link + '<div class="pc-ov-step" style="--f:' + frac( i ) + '"><b>' + esc( S.stages[ s.stage ] ) + ': ' + esc( s.count ) + '</b>' + ( i ? '<span>' + esc( fmt( S.ofVisitors, pct( s.count, base ) ) ) + '</span>' : '' ) + '</div>';
 		} ).join( '' ) + '</div>';
 	}
 

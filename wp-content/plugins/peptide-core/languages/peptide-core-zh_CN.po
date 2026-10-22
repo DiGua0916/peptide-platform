@@ -1498,7 +1498,7 @@ msgstr "已支付"
 #: includes/admin/class-overview-page.php:210
 #, php-format
 msgid "%s of visitors"
-msgstr "访客转化 %s"
+msgstr "访客转化：%s"
 
 #: includes/admin/class-overview-page.php:211
 msgid "From previous step"
