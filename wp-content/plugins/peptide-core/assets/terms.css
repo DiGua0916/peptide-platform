@@ -1,0 +1,62 @@
+/* 交易条款（TERMS-01）前台基础样式，尽量中性，主题可以覆盖。 */
+
+.pc-terms {
+	margin: 12px 0;
+}
+
+.pc-terms__title {
+	margin: 0 0 6px;
+}
+
+.pc-terms__row {
+	margin: 0 0 8px;
+}
+
+.pc-terms__links {
+	display: block;
+	margin: 2px 0 0 1.6em;
+	font-size: 0.9em;
+}
+
+.pc-terms__links--checkout {
+	margin: -4px 0 12px 2em;
+}
+
+.pc-terms__link {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: inherit;
+	font: inherit;
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+.pc-terms__dialog {
+	width: min(640px, calc(100vw - 32px));
+	max-height: min(80vh, 720px);
+	padding: 0;
+	border: 0;
+	border-radius: 6px;
+	box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+}
+
+.pc-terms__dialog::backdrop {
+	background: rgba(0, 0, 0, 0.4);
+}
+
+.pc-terms__dialog-body {
+	max-height: calc(min(80vh, 720px) - 72px);
+	overflow: auto;
+	padding: 20px 24px 8px;
+	line-height: 1.6;
+}
+
+.pc-terms__dialog-body h3 {
+	margin-top: 0;
+}
+
+.pc-terms__dialog form {
+	padding: 12px 24px 20px;
+	text-align: right;
+}

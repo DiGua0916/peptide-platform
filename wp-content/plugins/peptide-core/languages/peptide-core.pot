@@ -2,14 +2,14 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.17.0\n"
+"Project-Id-Version: Peptide Core 0.18.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-22T17:47:47+00:00\n"
+"POT-Creation-Date: 2026-10-22T17:55:58+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -60,8 +60,9 @@ msgstr ""
 #: includes/admin/class-admin-menus.php:62
 #: includes/admin/class-basic-config-page.php:113
 #: includes/admin/class-email-center.php:151
-#: includes/admin/class-store-settings.php:106
-#: includes/admin/class-store-settings.php:118
+#: includes/admin/class-store-settings.php:107
+#: includes/admin/class-store-settings.php:119
+#: includes/admin/class-terms-page.php:91
 msgid "System settings"
 msgstr ""
 
@@ -561,6 +562,7 @@ msgstr ""
 #: includes/admin/class-shipping-page.php:221
 #: includes/admin/class-store-design.php:140
 #: includes/admin/class-tax-page.php:116
+#: includes/admin/class-terms-page.php:114
 #: includes/admin/class-tracking-page.php:214
 #: includes/admin/class-tracking-page.php:224
 #: includes/class-custom-pages.php:333
@@ -1100,6 +1102,7 @@ msgstr ""
 #: includes/admin/class-plans-editor.php:36
 #: includes/admin/class-plans-editor.php:107
 #: includes/admin/class-store-design.php:479
+#: includes/admin/class-terms-page.php:60
 #: includes/modules/class-blocks.php:231
 msgid "Delete"
 msgstr ""
@@ -1339,6 +1342,7 @@ msgstr ""
 #. translators: %s: on/off
 #: includes/admin/class-email-center.php:135
 #: includes/admin/class-email-center.php:242
+#: includes/admin/class-terms-page.php:96
 msgid "On"
 msgstr ""
 
@@ -1536,6 +1540,7 @@ msgid "Demo"
 msgstr ""
 
 #: includes/admin/class-list-columns.php:74
+#: includes/admin/class-terms-page.php:98
 #: includes/modules/class-registry.php:110
 #: includes/modules/class-registry.php:291
 #: includes/modules/class-registry.php:331
@@ -1644,6 +1649,7 @@ msgstr ""
 #: includes/admin/class-store-design.php:380
 #: includes/admin/class-store-design.php:433
 #: includes/admin/class-tax-page.php:61
+#: includes/admin/class-terms-page.php:100
 msgid "Actions"
 msgstr ""
 
@@ -1698,6 +1704,7 @@ msgstr ""
 #: includes/admin/class-shipping-page.php:108
 #: includes/admin/class-shipping-page.php:197
 #: includes/admin/class-tax-page.php:103
+#: includes/admin/class-terms-page.php:103
 msgid "Save"
 msgstr ""
 
@@ -1771,6 +1778,7 @@ msgid "Description (shown under the name in the header drop-down)"
 msgstr ""
 
 #: includes/admin/class-menu-page.php:135
+#: includes/admin/class-terms-page.php:66
 #: includes/modules/class-registry.php:347
 #: includes/modules/class-registry.php:384
 #: includes/modules/class-registry.php:491
@@ -1815,6 +1823,7 @@ msgid "Normal"
 msgstr ""
 
 #: includes/admin/class-menu-page.php:143
+#: includes/admin/class-terms-page.php:63
 msgid "Italic"
 msgstr ""
 
@@ -1823,6 +1832,7 @@ msgid "Font weight"
 msgstr ""
 
 #: includes/admin/class-menu-page.php:145
+#: includes/admin/class-terms-page.php:62
 msgid "Bold"
 msgstr ""
 
@@ -2431,6 +2441,7 @@ msgid "Enter a tax rate between 0 and 100 for every region."
 msgstr ""
 
 #: includes/admin/class-plans-editor.php:64
+#: includes/admin/class-terms-page.php:84
 msgid "Saved."
 msgstr ""
 
@@ -3024,6 +3035,7 @@ msgid "Customers must tick a checkbox before placing an order."
 msgstr ""
 
 #: includes/admin/class-settings-page.php:111
+#: includes/admin/class-terms-page.php:100
 msgid "Checkbox text"
 msgstr ""
 
@@ -3463,6 +3475,8 @@ msgstr ""
 
 #: includes/admin/class-store-design.php:323
 #: includes/admin/class-store-design.php:434
+#: includes/admin/class-terms-page.php:98
+#: includes/admin/class-terms-page.php:106
 msgid "Preview"
 msgstr ""
 
@@ -3589,8 +3603,8 @@ msgid "Landing pages for promotions, built from modules, with their own address.
 msgstr ""
 
 #: includes/admin/class-store-design.php:552
-#: includes/admin/class-store-settings.php:108
-#: includes/admin/class-store-settings.php:120
+#: includes/admin/class-store-settings.php:109
+#: includes/admin/class-store-settings.php:121
 msgid "Coming soon"
 msgstr ""
 
@@ -3615,6 +3629,7 @@ msgid "WooCommerce emails"
 msgstr ""
 
 #: includes/admin/class-store-settings.php:64
+#: includes/admin/class-terms-page.php:95
 msgid "Terms of sale"
 msgstr ""
 
@@ -3622,43 +3637,43 @@ msgstr ""
 msgid "Create your own terms pages that set clear rules for everyone taking part in a purchase."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:68
+#: includes/admin/class-store-settings.php:69
 msgid "Custom pages (policy pages and checkout terms)"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:77
+#: includes/admin/class-store-settings.php:78
 msgid "WooCommerce settings"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:77
+#: includes/admin/class-store-settings.php:78
 msgid "General, products, accounts, emails and advanced WooCommerce options."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:80
+#: includes/admin/class-store-settings.php:81
 msgid "VialCove settings"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:80
+#: includes/admin/class-store-settings.php:81
 msgid "Brand name, demo mode, use statement, checkout confirmation, batch check and the support button."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:82
+#: includes/admin/class-store-settings.php:83
 msgid "System status"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:82
+#: includes/admin/class-store-settings.php:83
 msgid "Server, database and plugin information for troubleshooting."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:110
+#: includes/admin/class-store-settings.php:111
 msgid "Other settings"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:120
+#: includes/admin/class-store-settings.php:121
 msgid "The details of this section are still being decided. Once they are, this page becomes the full settings form."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:122
+#: includes/admin/class-store-settings.php:123
 msgid "Until then, these existing settings cover it:"
 msgstr ""
 
@@ -3755,6 +3770,134 @@ msgstr ""
 
 #: includes/admin/class-tax-page.php:100
 msgid "(These products use this plan instead of the plans for all taxable products.)"
+msgstr ""
+
+#. translators: %d: number
+#: includes/admin/class-terms-page.php:49
+#, php-format
+msgid "Plan %d"
+msgstr ""
+
+#. translators: %d: number
+#: includes/admin/class-terms-page.php:51
+#, php-format
+msgid "Term %d"
+msgstr ""
+
+#: includes/admin/class-terms-page.php:52
+msgid "Enter the checkbox text, e.g. I agree to the Terms of Service"
+msgstr ""
+
+#: includes/admin/class-terms-page.php:53
+msgid "Enter the term name"
+msgstr ""
+
+#: includes/admin/class-terms-page.php:54
+msgid "Name"
+msgstr ""
+
+#: includes/admin/class-terms-page.php:55
+#: includes/modules/class-registry.php:39
+#: includes/modules/class-registry.php:824
+#: includes/modules/class-registry.php:1264
+msgid "Content"
+msgstr ""
+
+#: includes/admin/class-terms-page.php:56
+msgid "Checkout page"
+msgstr ""
+
+#: includes/admin/class-terms-page.php:57
+msgid "Registration page"
+msgstr ""
+
+#: includes/admin/class-terms-page.php:58
+msgid "Login page"
+msgstr ""
+
+#: includes/admin/class-terms-page.php:59
+msgid "Ticked by default"
+msgstr ""
+
+#: includes/admin/class-terms-page.php:61
+msgid "Add term"
+msgstr ""
+
+#: includes/admin/class-terms-page.php:64
+#: includes/modules/class-blocks.php:251
+#: includes/modules/class-registry.php:191
+#: includes/modules/class-registry.php:333
+msgid "Link"
+msgstr ""
+
+#: includes/admin/class-terms-page.php:65
+msgid "Code"
+msgstr ""
+
+#: includes/admin/class-terms-page.php:67
+msgid "Link address (https://…)"
+msgstr ""
+
+#: includes/admin/class-terms-page.php:68
+msgid "Every plan needs a checkbox text."
+msgstr ""
+
+#: includes/admin/class-terms-page.php:69
+msgid "Every plan needs at least one page to show on."
+msgstr ""
+
+#: includes/admin/class-terms-page.php:70
+msgid "Delete this plan?"
+msgstr ""
+
+#: includes/admin/class-terms-page.php:71
+msgid "Show or hide the terms of this plan"
+msgstr ""
+
+#: includes/admin/class-terms-page.php:87
+msgid "All terms data was cleared."
+msgstr ""
+
+#: includes/admin/class-terms-page.php:95
+msgid "When on, buyers must tick every term."
+msgstr ""
+
+#: includes/admin/class-terms-page.php:96
+msgid "Turn the terms on"
+msgstr ""
+
+#: includes/admin/class-terms-page.php:99
+msgid "The title cannot be empty, e.g. Terms & Conditions"
+msgstr ""
+
+#: includes/admin/class-terms-page.php:100
+msgid "Plan"
+msgstr ""
+
+#: includes/admin/class-terms-page.php:100
+msgid "Show on"
+msgstr ""
+
+#: includes/admin/class-terms-page.php:101
+msgid "Add plan"
+msgstr ""
+
+#: includes/admin/class-terms-page.php:103
+msgid "Clear all data"
+msgstr ""
+
+#: includes/admin/class-terms-page.php:106
+msgid "How the saved terms look to buyers (save first to see your latest changes)."
+msgstr ""
+
+#: includes/admin/class-terms-page.php:107
+msgid "No terms yet."
+msgstr ""
+
+#: includes/admin/class-terms-page.php:108
+#: includes/class-terms.php:220
+#: includes/class-terms.php:282
+msgid "Close"
 msgstr ""
 
 #: includes/admin/class-tracking-page.php:36
@@ -4235,6 +4378,7 @@ msgstr ""
 
 #. translators: %s: date and time
 #: includes/class-checkout-ack.php:73
+#: includes/class-terms.php:181
 #, php-format
 msgid "Accepted at %s (UTC)"
 msgstr ""
@@ -4679,7 +4823,7 @@ msgstr ""
 msgid "Batch: %s"
 msgstr ""
 
-#: includes/class-plugin.php:110
+#: includes/class-plugin.php:112
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr ""
 
@@ -5166,6 +5310,21 @@ msgstr ""
 msgid "Previewing template \"%s\". Only signed-in staff can see this preview."
 msgstr ""
 
+#. translators: %s: the checkbox text
+#: includes/class-terms.php:134
+#: includes/class-terms.php:258
+#, php-format
+msgid "Please accept: %s"
+msgstr ""
+
+#: includes/class-terms.php:176
+msgid "Terms accepted at checkout"
+msgstr ""
+
+#: includes/class-terms.php:200
+msgid "required"
+msgstr ""
+
 #: includes/emails/class-admin-abandoned.php:20
 msgid "Tells the admin when a customer entered their email and address at checkout but did not pay, so you can follow up."
 msgstr ""
@@ -5425,12 +5584,6 @@ msgstr ""
 msgid "Text"
 msgstr ""
 
-#: includes/modules/class-blocks.php:251
-#: includes/modules/class-registry.php:191
-#: includes/modules/class-registry.php:333
-msgid "Link"
-msgstr ""
-
 #: includes/modules/class-blocks.php:252
 msgid "Open in a new tab"
 msgstr ""
@@ -5595,12 +5748,6 @@ msgstr ""
 
 #: includes/modules/class-registry.php:30
 msgid "Marketing blocks"
-msgstr ""
-
-#: includes/modules/class-registry.php:39
-#: includes/modules/class-registry.php:824
-#: includes/modules/class-registry.php:1264
-msgid "Content"
 msgstr ""
 
 #: includes/modules/class-registry.php:40

@@ -178,3 +178,28 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
 - `wp peptide demo commerce --disable` 关闭测试付款、删除测试区域，但保留美国销售范围。正式上线前需要关闭/替换测试配置。
 
 正式收款、真实运费/税费、具体配送政策、Terms/Privacy 链接和正式邮件服务另行配置与验证。本地通过不代表真实支付商或生产物流已就绪。
+
+## 店铺设置与系统设置的前台影响（2026-10-23，Claude）
+
+都由插件通过 WooCommerce 原生机制生效，主题不需要读取新的接口。
+
+- **运费**：店铺设置 → 物流设置里的方案，以全局运费方式 `pc_plans` 提供原生区块的配送选项。
+  - 运费 ID 形如 `pc_plans:<方案>-<运费>`，多方案合并时为 `pc_plans:combined`。
+  - 只要有一个方案选择了区域，WooCommerce 原有运费区域给出的运费就会被去掉。
+  - 运费 meta 带 `_pc_icon`（图标地址，可为空），主题需要时可以显示。
+- **税费**：税费方案写入 WooCommerce 自己的税率表，结账仍是原生税额行；“启用税费”默认关闭。
+- **交易条款**：开启后，结账页每个方案是一个必选附加字段 `peptide-core/terms-<id>`（location=order，checkbox），区块渲染出的 input id 为 `order-peptide-core-terms-<id>`。
+  - `assets/terms.js` 在复选框下面插入 `.pc-terms__links`（条款链接），点开 `dialog.pc-terms__dialog`。
+  - “我的账户”的注册 / 登录表单里是 `.pc-terms` 复选框（`pc_terms[<id>]`），由服务端校验。
+  - 样式在 `assets/terms.css`，尽量中性，主题可以覆盖。
+  - 订单 meta `_pc_terms` 保存当时的条款快照。
+- **基础配置**：
+  - 前台搜索可以额外匹配 SKU / 分类 / 标签；
+  - 排序菜单用 `woocommerce_catalog_orderby`（新增 `title`、`title-desc`、`date-asc`）；
+  - 默认选中第一个有货的款式；售罄款式可以隐藏；
+  - 默认发送 `X-Frame-Options: SAMEORIGIN`；
+  - 强制登录时跳到账户页；打烊使用 WooCommerce coming soon；
+  - Favicon 存在 `site_icon`，主题目前固定输出自己的图标。
+- **邮件链接**：
+  - `?pc_recover=` / `?pc_unsub=`（弃单提醒）不变；
+  - 新增 `?pc_optout=`（购物发现退订）、`?pc_verify=`（注册邮箱验证，跳回账户页并显示提示）。

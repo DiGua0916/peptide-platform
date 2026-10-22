@@ -2,7 +2,7 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.17.0\n"
+"Project-Id-Version: Peptide Core 0.18.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -11,7 +11,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-22T17:47:47+00:00\n"
+"POT-Creation-Date: 2026-10-22T17:55:58+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -62,8 +62,9 @@ msgstr "支付设置"
 #: includes/admin/class-admin-menus.php:62
 #: includes/admin/class-basic-config-page.php:113
 #: includes/admin/class-email-center.php:151
-#: includes/admin/class-store-settings.php:106
-#: includes/admin/class-store-settings.php:118
+#: includes/admin/class-store-settings.php:107
+#: includes/admin/class-store-settings.php:119
+#: includes/admin/class-terms-page.php:91
 msgid "System settings"
 msgstr "系统设置"
 
@@ -562,6 +563,7 @@ msgstr "请输入电话"
 #: includes/admin/class-shipping-page.php:221
 #: includes/admin/class-store-design.php:140
 #: includes/admin/class-tax-page.php:116
+#: includes/admin/class-terms-page.php:114
 #: includes/admin/class-tracking-page.php:214
 #: includes/admin/class-tracking-page.php:224
 #: includes/class-custom-pages.php:333
@@ -1099,6 +1101,7 @@ msgstr "复制"
 #: includes/admin/class-plans-editor.php:36
 #: includes/admin/class-plans-editor.php:107
 #: includes/admin/class-store-design.php:479
+#: includes/admin/class-terms-page.php:60
 #: includes/modules/class-blocks.php:231
 msgid "Delete"
 msgstr "删除"
@@ -1338,6 +1341,7 @@ msgstr "支付方式已启用（管理员）"
 #. translators: %s: on/off
 #: includes/admin/class-email-center.php:135
 #: includes/admin/class-email-center.php:242
+#: includes/admin/class-terms-page.php:96
 msgid "On"
 msgstr "已开启"
 
@@ -1535,6 +1539,7 @@ msgid "Demo"
 msgstr "演示"
 
 #: includes/admin/class-list-columns.php:74
+#: includes/admin/class-terms-page.php:98
 #: includes/modules/class-registry.php:110
 #: includes/modules/class-registry.php:291
 #: includes/modules/class-registry.php:331
@@ -1643,6 +1648,7 @@ msgstr "链接页面"
 #: includes/admin/class-store-design.php:380
 #: includes/admin/class-store-design.php:433
 #: includes/admin/class-tax-page.php:61
+#: includes/admin/class-terms-page.php:100
 msgid "Actions"
 msgstr "操作"
 
@@ -1697,6 +1703,7 @@ msgstr "新目录"
 #: includes/admin/class-shipping-page.php:108
 #: includes/admin/class-shipping-page.php:197
 #: includes/admin/class-tax-page.php:103
+#: includes/admin/class-terms-page.php:103
 msgid "Save"
 msgstr "保存"
 
@@ -1770,6 +1777,7 @@ msgid "Description (shown under the name in the header drop-down)"
 msgstr "说明文字（页头下拉菜单里显示在名称下面）"
 
 #: includes/admin/class-menu-page.php:135
+#: includes/admin/class-terms-page.php:66
 #: includes/modules/class-registry.php:347
 #: includes/modules/class-registry.php:384
 #: includes/modules/class-registry.php:491
@@ -1814,6 +1822,7 @@ msgid "Normal"
 msgstr "正常"
 
 #: includes/admin/class-menu-page.php:143
+#: includes/admin/class-terms-page.php:63
 msgid "Italic"
 msgstr "斜体"
 
@@ -1822,6 +1831,7 @@ msgid "Font weight"
 msgstr "字体加粗"
 
 #: includes/admin/class-menu-page.php:145
+#: includes/admin/class-terms-page.php:62
 msgid "Bold"
 msgstr "加粗"
 
@@ -2429,6 +2439,7 @@ msgid "Enter a tax rate between 0 and 100 for every region."
 msgstr "请为每个区域填写 0 到 100 之间的税率。"
 
 #: includes/admin/class-plans-editor.php:64
+#: includes/admin/class-terms-page.php:84
 msgid "Saved."
 msgstr "已保存。"
 
@@ -3022,6 +3033,7 @@ msgid "Customers must tick a checkbox before placing an order."
 msgstr "顾客下单前必须勾选一个确认框。"
 
 #: includes/admin/class-settings-page.php:111
+#: includes/admin/class-terms-page.php:100
 msgid "Checkbox text"
 msgstr "确认框文案"
 
@@ -3459,6 +3471,8 @@ msgstr "装修"
 
 #: includes/admin/class-store-design.php:323
 #: includes/admin/class-store-design.php:434
+#: includes/admin/class-terms-page.php:98
+#: includes/admin/class-terms-page.php:106
 msgid "Preview"
 msgstr "预览"
 
@@ -3585,8 +3599,8 @@ msgid "Landing pages for promotions, built from modules, with their own address.
 msgstr "用模块搭建促销活动落地页，每个页面有自己的地址。"
 
 #: includes/admin/class-store-design.php:552
-#: includes/admin/class-store-settings.php:108
-#: includes/admin/class-store-settings.php:120
+#: includes/admin/class-store-settings.php:109
+#: includes/admin/class-store-settings.php:121
 msgid "Coming soon"
 msgstr "即将推出"
 
@@ -3611,6 +3625,7 @@ msgid "WooCommerce emails"
 msgstr "WooCommerce 邮件设置"
 
 #: includes/admin/class-store-settings.php:64
+#: includes/admin/class-terms-page.php:95
 msgid "Terms of sale"
 msgstr "交易条款"
 
@@ -3618,43 +3633,43 @@ msgstr "交易条款"
 msgid "Create your own terms pages that set clear rules for everyone taking part in a purchase."
 msgstr "创建自己的服务说明页面，为参与交易的各方提供明确的约定和规则。"
 
-#: includes/admin/class-store-settings.php:68
+#: includes/admin/class-store-settings.php:69
 msgid "Custom pages (policy pages and checkout terms)"
 msgstr "自定义页面（政策页面和结账条款）"
 
-#: includes/admin/class-store-settings.php:77
+#: includes/admin/class-store-settings.php:78
 msgid "WooCommerce settings"
 msgstr "WooCommerce 设置"
 
-#: includes/admin/class-store-settings.php:77
+#: includes/admin/class-store-settings.php:78
 msgid "General, products, accounts, emails and advanced WooCommerce options."
 msgstr "WooCommerce 的常规、商品、账户、邮件和高级选项。"
 
-#: includes/admin/class-store-settings.php:80
+#: includes/admin/class-store-settings.php:81
 msgid "VialCove settings"
 msgstr "VialCove 设置"
 
-#: includes/admin/class-store-settings.php:80
+#: includes/admin/class-store-settings.php:81
 msgid "Brand name, demo mode, use statement, checkout confirmation, batch check and the support button."
 msgstr "品牌名称、演示模式、用途声明、结账确认、批次检查和客服按钮。"
 
-#: includes/admin/class-store-settings.php:82
+#: includes/admin/class-store-settings.php:83
 msgid "System status"
 msgstr "系统状态"
 
-#: includes/admin/class-store-settings.php:82
+#: includes/admin/class-store-settings.php:83
 msgid "Server, database and plugin information for troubleshooting."
 msgstr "服务器、数据库和插件信息，用于排查问题。"
 
-#: includes/admin/class-store-settings.php:110
+#: includes/admin/class-store-settings.php:111
 msgid "Other settings"
 msgstr "其他设置"
 
-#: includes/admin/class-store-settings.php:120
+#: includes/admin/class-store-settings.php:121
 msgid "The details of this section are still being decided. Once they are, this page becomes the full settings form."
 msgstr "这一项的具体内容还没定，确定之后这里会做成完整的设置页面。"
 
-#: includes/admin/class-store-settings.php:122
+#: includes/admin/class-store-settings.php:123
 msgid "Until then, these existing settings cover it:"
 msgstr "在此之前，可以先用这些现有设置："
 
@@ -3752,6 +3767,134 @@ msgstr "仅特定商品"
 #: includes/admin/class-tax-page.php:100
 msgid "(These products use this plan instead of the plans for all taxable products.)"
 msgstr "（这些商品改用这个方案，不再使用“所有需收税商品”的方案。）"
+
+#. translators: %d: number
+#: includes/admin/class-terms-page.php:49
+#, php-format
+msgid "Plan %d"
+msgstr "方案%d"
+
+#. translators: %d: number
+#: includes/admin/class-terms-page.php:51
+#, php-format
+msgid "Term %d"
+msgstr "条款%d"
+
+#: includes/admin/class-terms-page.php:52
+msgid "Enter the checkbox text, e.g. I agree to the Terms of Service"
+msgstr "请输入条款描述（复选框文字），例如 I agree to the Terms of Service"
+
+#: includes/admin/class-terms-page.php:53
+msgid "Enter the term name"
+msgstr "请输入条款名称"
+
+#: includes/admin/class-terms-page.php:54
+msgid "Name"
+msgstr "名称"
+
+#: includes/admin/class-terms-page.php:55
+#: includes/modules/class-registry.php:39
+#: includes/modules/class-registry.php:824
+#: includes/modules/class-registry.php:1264
+msgid "Content"
+msgstr "内容"
+
+#: includes/admin/class-terms-page.php:56
+msgid "Checkout page"
+msgstr "结账页"
+
+#: includes/admin/class-terms-page.php:57
+msgid "Registration page"
+msgstr "注册页"
+
+#: includes/admin/class-terms-page.php:58
+msgid "Login page"
+msgstr "登录页"
+
+#: includes/admin/class-terms-page.php:59
+msgid "Ticked by default"
+msgstr "是否默认勾选"
+
+#: includes/admin/class-terms-page.php:61
+msgid "Add term"
+msgstr "添加条款"
+
+#: includes/admin/class-terms-page.php:64
+#: includes/modules/class-blocks.php:251
+#: includes/modules/class-registry.php:191
+#: includes/modules/class-registry.php:333
+msgid "Link"
+msgstr "跳转链接"
+
+#: includes/admin/class-terms-page.php:65
+msgid "Code"
+msgstr "代码"
+
+#: includes/admin/class-terms-page.php:67
+msgid "Link address (https://…)"
+msgstr "链接地址（https://……）"
+
+#: includes/admin/class-terms-page.php:68
+msgid "Every plan needs a checkbox text."
+msgstr "每个方案都需要填写条款描述。"
+
+#: includes/admin/class-terms-page.php:69
+msgid "Every plan needs at least one page to show on."
+msgstr "每个方案至少要选择一个显示页面。"
+
+#: includes/admin/class-terms-page.php:70
+msgid "Delete this plan?"
+msgstr "确定删除这个方案吗？"
+
+#: includes/admin/class-terms-page.php:71
+msgid "Show or hide the terms of this plan"
+msgstr "展开或收起这个方案的条款"
+
+#: includes/admin/class-terms-page.php:87
+msgid "All terms data was cleared."
+msgstr "已清空所有条款数据。"
+
+#: includes/admin/class-terms-page.php:95
+msgid "When on, buyers must tick every term."
+msgstr "开启后，买家需要勾选所有的条款"
+
+#: includes/admin/class-terms-page.php:96
+msgid "Turn the terms on"
+msgstr "开启交易条款"
+
+#: includes/admin/class-terms-page.php:99
+msgid "The title cannot be empty, e.g. Terms & Conditions"
+msgstr "标题名称不能为空，例如 Terms & Conditions"
+
+#: includes/admin/class-terms-page.php:100
+msgid "Plan"
+msgstr "方案名称"
+
+#: includes/admin/class-terms-page.php:100
+msgid "Show on"
+msgstr "显示页面"
+
+#: includes/admin/class-terms-page.php:101
+msgid "Add plan"
+msgstr "添加方案"
+
+#: includes/admin/class-terms-page.php:103
+msgid "Clear all data"
+msgstr "清空所有数据"
+
+#: includes/admin/class-terms-page.php:106
+msgid "How the saved terms look to buyers (save first to see your latest changes)."
+msgstr "买家看到的效果（显示的是已保存的内容，请先保存再预览）。"
+
+#: includes/admin/class-terms-page.php:107
+msgid "No terms yet."
+msgstr "还没有条款。"
+
+#: includes/admin/class-terms-page.php:108
+#: includes/class-terms.php:220
+#: includes/class-terms.php:282
+msgid "Close"
+msgstr "关闭"
 
 #: includes/admin/class-tracking-page.php:36
 #: includes/admin/class-tracking-page.php:243
@@ -4231,6 +4374,7 @@ msgstr "下单前请先勾选确认框。"
 
 #. translators: %s: date and time
 #: includes/class-checkout-ack.php:73
+#: includes/class-terms.php:181
 #, php-format
 msgid "Accepted at %s (UTC)"
 msgstr "勾选时间：%s（UTC）"
@@ -4672,7 +4816,7 @@ msgstr "批次分配已更新："
 msgid "Batch: %s"
 msgstr "批次：%s"
 
-#: includes/class-plugin.php:110
+#: includes/class-plugin.php:112
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr "Peptide Core 需要先安装并启用 WooCommerce。"
 
@@ -5157,6 +5301,21 @@ msgstr "复制自：%s"
 msgid "Previewing template \"%s\". Only signed-in staff can see this preview."
 msgstr "正在预览模板“%s”。只有已登录的员工能看到这个预览。"
 
+#. translators: %s: the checkbox text
+#: includes/class-terms.php:134
+#: includes/class-terms.php:258
+#, php-format
+msgid "Please accept: %s"
+msgstr "请勾选：%s"
+
+#: includes/class-terms.php:176
+msgid "Terms accepted at checkout"
+msgstr "结账时同意的条款"
+
+#: includes/class-terms.php:200
+msgid "required"
+msgstr "必填"
+
 #: includes/emails/class-admin-abandoned.php:20
 msgid "Tells the admin when a customer entered their email and address at checkout but did not pay, so you can follow up."
 msgstr "顾客在结账页填写了邮箱和地址却没有付款时通知管理员，方便跟进。"
@@ -5416,12 +5575,6 @@ msgstr "焦点位置"
 msgid "Text"
 msgstr "文字"
 
-#: includes/modules/class-blocks.php:251
-#: includes/modules/class-registry.php:191
-#: includes/modules/class-registry.php:333
-msgid "Link"
-msgstr "跳转链接"
-
 #: includes/modules/class-blocks.php:252
 msgid "Open in a new tab"
 msgstr "在新标签页打开"
@@ -5587,12 +5740,6 @@ msgstr "商品块"
 #: includes/modules/class-registry.php:30
 msgid "Marketing blocks"
 msgstr "运营类"
-
-#: includes/modules/class-registry.php:39
-#: includes/modules/class-registry.php:824
-#: includes/modules/class-registry.php:1264
-msgid "Content"
-msgstr "内容"
 
 #: includes/modules/class-registry.php:40
 msgid "Media"

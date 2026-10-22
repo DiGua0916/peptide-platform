@@ -42,6 +42,7 @@ final class Plugin {
 		Store_Config::register_hooks();
 		Shipping\Plans::register_hooks();
 		Emails\Registry::register_hooks();
+		Terms::register_hooks();
 		Tracking\Tracker::register_hooks();
 		Api\Tracking_Controller::register_hooks();
 		Admin\Overview_Page::register_rest();
@@ -73,6 +74,7 @@ final class Plugin {
 			Admin\Shipping_Page::register_hooks();
 			Admin\Tax_Page::register_hooks();
 			Admin\Email_Center::register_hooks();
+			Admin\Terms_Page::register_hooks();
 			Admin\Recovery_Page::register_hooks();
 		}
 

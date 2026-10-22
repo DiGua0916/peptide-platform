@@ -4,7 +4,7 @@
  *
  * - 物流设置、支付设置直接打开 WooCommerce 自己的设置页（菜单在 Admin_Menus 里）。
  * - 税费设置：见 Tax_Page（TAX-PLANS-01）。
- * - 系统设置：卡片列表。用户 2026-10-23 先要“基础配置、邮件通知、交易条款”三张卡片的占位页，具体内容之后由用户说明。
+ * - 系统设置：卡片列表。用户 2026-10-23 要了“基础配置、邮件通知、交易条款”三张卡片（先做占位页，同日按截图做成完整页面）。
  *   原来菜单里的 WooCommerce 设置、VialCove 设置、系统状态放在页面底部“其他设置”。
  *
  * @package PeptideCore
@@ -63,7 +63,8 @@ final class Store_Settings {
 				'icon'        => 'dashicons-media-text',
 				'title'       => __( 'Terms of sale', 'peptide-core' ),
 				'desc'        => __( 'Create your own terms pages that set clear rules for everyone taking part in a purchase.', 'peptide-core' ),
-				'placeholder' => true,
+				'placeholder' => false,
+				'render'      => array( Terms_Page::class, 'render' ),
 				'now'         => array(
 					__( 'Custom pages (policy pages and checkout terms)', 'peptide-core' ) => admin_url( 'edit.php?post_type=page' ),
 				),
