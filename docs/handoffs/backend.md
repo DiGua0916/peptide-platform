@@ -852,3 +852,32 @@
 - 403 时 stop。
 
 做好后开启追踪联调：多标签页、匿名 → 登录、测试订单。
+
+### PROMO-01 满减活动 · 2026-10-22 · Claude（peptide-core 0.12.0）
+
+用户决定：在 Shopname 的专题、满减、优惠码三种链接里，先做优惠码，再做满减（“开始吧”）。专题页还没做。
+
+**实现**：`includes/class-promotions.php`
+- **后台**：自定义类型 `pc_promotion`，放在“营销 → 满减活动”（没有营销菜单时放在 WooCommerce 下面），使用优惠券的权限。
+  - 规则：按金额或按件数，最多 5 档；减固定金额或打百分比折扣；开始 / 结束时间（店铺时区）；范围是全部商品、指定分类或指定商品；可以排除促销中的商品；可以设置能否和优惠码同时使用；可以在活动页面公开展示，并写说明。
+  - 发布 = 启用，草稿 = 停用；规则有错时自动改回草稿并提示。
+  - 列表多了档位、时间、状态（未开始 / 进行中 / 已结束）和公开四列。
+- **购物车**：每次计算总价时，在所有进行中的活动里选优惠最多的一个，加一笔负数费用（不计税），不叠加。不能和优惠码同时用的活动，在购物车里有优惠码时跳过。订单费用行记下 `_pc_promotion_id`。
+- **进度**：`progress()` 给出已用上的活动和下一档提示（例如 “Add $5.02 more to get $5.00 off”）。同样的数据合并进现有的 Store API 购物车扩展 `extensions.peptide_core.promotion`。同一个端点和命名空间只能注册一次，所以写在 `Api\Store_Api` 里，没有另外注册。
+- **页面**：第一次公开活动时自动建好 Offers 页面（`[pc_promotions]`），`?promo=ID` 显示详情；默认样式和 Coupons 页面共用。主题模板覆盖方式见 CONTRACT。
+- **菜单**：新增链接类型 promotions / promotion。
+- **公共函数**：`peptide_core_get_promotions()`、`peptide_core_get_promotion()`、`peptide_core_get_promotion_progress()`、`peptide_core_get_product_promotions()`，已写入 CONTRACT。
+
+**注意**：演示商品都带“对照价”（PRICE-SALE-01），WooCommerce 会把它们都当成“促销中”。所以勾选“促销中的商品不计入”后，现在所有商品都不会计入。
+
+**验证**
+- 新增 smoke-promotions 33 项，十九套共 521 项通过。
+- 真实网页请求：临时活动“满 $50 减 $5 / 满 $100 减 $15”，购物车 1 件 $44.98 时提示 “Add $5.02 more to get $5.00 off”；3 件 $134.94 时费用行 −$15.00，合计 $119.94。临时活动已删除。
+- debug.log 没有新警告。
+- 目前站点没有满减活动，也没有 Offers 页面。
+- 没有在真实后台用浏览器看过。
+
+**需要 Codex**：
+- Offers 页面模板；
+- 购物车 / 抽屉显示 `extensions.peptide_core.promotion` 的已省和“再买…”提示；
+- 商品页显示参加的活动。

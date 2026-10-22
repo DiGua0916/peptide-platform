@@ -46,7 +46,10 @@ final class Menus {
 	public const EXPORT_VERSION = 1;
 
 	/** 网址由插件计算的链接类型。 */
-	private const SPECIAL = array( 'home', 'shop', 'cart', 'account', 'login', 'register', 'lost_password', 'orders', 'search', 'coupons' );
+	private const SPECIAL = array( 'home', 'shop', 'cart', 'account', 'login', 'register', 'lost_password', 'orders', 'search', 'coupons', 'promotions' );
+
+	/** 按 ID 记录、网址在显示时生成的链接类型（没有自己的固定网址）。 */
+	private const LINKED = array( 'coupon', 'promotion' );
 
 	/** 按 ID 关联的站内对象：链接类型 => [菜单项类型, 对象]。 */
 	private const OBJECTS = array(
@@ -111,6 +114,8 @@ final class Menus {
 			'search'        => __( 'Product search', 'peptide-core' ),
 			'coupons'       => __( 'Coupons page', 'peptide-core' ),
 			'coupon'        => __( 'Coupon details', 'peptide-core' ),
+			'promotions'    => __( 'Spend-and-save offers page', 'peptide-core' ),
+			'promotion'     => __( 'Spend-and-save offer details', 'peptide-core' ),
 			'custom'        => __( 'Custom URL', 'peptide-core' ),
 		);
 	}
@@ -135,13 +140,15 @@ final class Menus {
 				return add_query_arg( array( 's' => '', 'post_type' => 'product' ), home_url( '/' ) );
 			case 'coupons':
 				return Coupons::list_url();
+			case 'promotions':
+				return Promotions::list_url();
 		}
 		return '';
 	}
 
 	/** 需要选择具体对象（带 ID）的链接类型。 */
 	private static function needs_id( string $type ): bool {
-		return isset( self::OBJECTS[ $type ] ) || 'coupon' === $type;
+		return isset( self::OBJECTS[ $type ] ) || in_array( $type, self::LINKED, true );
 	}
 
 	// ---------- 菜单 ----------
@@ -407,8 +414,8 @@ final class Menus {
 	private static function link_of( \WP_Post $item ): array {
 		$special = (string) get_post_meta( $item->ID, self::LINK_META, true );
 		if ( 'custom' === $item->type ) {
-			if ( 'coupon' === $special ) {
-				return array( 'type' => 'coupon', 'id' => (int) get_post_meta( $item->ID, self::LINK_ID_META, true ), 'url' => '' );
+			if ( in_array( $special, self::LINKED, true ) ) {
+				return array( 'type' => $special, 'id' => (int) get_post_meta( $item->ID, self::LINK_ID_META, true ), 'url' => '' );
 			}
 			if ( in_array( $special, self::SPECIAL, true ) ) {
 				return array( 'type' => $special, 'id' => 0, 'url' => '' );
@@ -445,6 +452,10 @@ final class Menus {
 
 	/** 对象是否还在、标题是什么（编辑器里提示坏链接）。 */
 	private static function object_state( array $link ): array {
+		if ( 'promotion' === $link['type'] ) {
+			$promo = $link['id'] ? Promotions::get_public( $link['id'] ) : null;
+			return $promo ? array( 'label' => $promo['title'], 'broken' => 'ended' === $promo['status'] ) : array( 'label' => '', 'broken' => true );
+		}
 		if ( 'coupon' === $link['type'] ) {
 			if ( ! $link['id'] || 'shop_coupon' !== get_post_type( $link['id'] ) || 'trash' === get_post_status( $link['id'] ) ) {
 				return array( 'label' => '', 'broken' => true );
@@ -498,6 +509,12 @@ final class Menus {
 				return null;
 			}
 			$url = Coupons::detail_url( (string) get_post_field( 'post_title', $link['id'] ) );
+		} elseif ( 'promotion' === $link['type'] ) {
+			// 活动结束、停用或不再公开时，这一项不显示。
+			if ( self::object_state( $link )['broken'] ) {
+				return null;
+			}
+			$url = Promotions::detail_url( $link['id'] );
 		} elseif ( isset( self::OBJECTS[ $link['type'] ] ) ) {
 			$state = self::object_state( $link );
 			if ( $state['broken'] ) {
@@ -565,6 +582,8 @@ final class Menus {
 				return function_exists( 'is_account_page' ) && is_account_page();
 			case 'coupons':
 				return Coupons::page_id() && is_page( Coupons::page_id() );
+			case 'promotions':
+				return Promotions::page_id() && is_page( Promotions::page_id() );
 			case 'category':
 				return is_tax( 'product_cat', $link['id'] );
 			case 'page':
@@ -737,6 +756,8 @@ final class Menus {
 				$args['menu-item-url']       = 'custom' === $link['type'] ? $link['url'] : ( in_array( $link['type'], self::SPECIAL, true ) ? self::special_url( $link['type'] ) : '' );
 				if ( 'coupon' === $link['type'] ) {
 					$args['menu-item-url'] = Coupons::detail_url( (string) get_post_field( 'post_title', $link['id'] ) );
+				} elseif ( 'promotion' === $link['type'] ) {
+					$args['menu-item-url'] = Promotions::detail_url( $link['id'] );
 				}
 			}
 			$db_id = $node['id'] && isset( $existing[ $node['id'] ] ) ? $node['id'] : 0;
@@ -745,12 +766,12 @@ final class Menus {
 				return;
 			}
 			$kept[ (int) $id ] = true;
-			if ( in_array( $link['type'], self::SPECIAL, true ) || 'coupon' === $link['type'] ) {
+			if ( in_array( $link['type'], self::SPECIAL, true ) || in_array( $link['type'], self::LINKED, true ) ) {
 				update_post_meta( $id, self::LINK_META, $link['type'] );
 			} else {
 				delete_post_meta( $id, self::LINK_META );
 			}
-			if ( 'coupon' === $link['type'] ) {
+			if ( in_array( $link['type'], self::LINKED, true ) ) {
 				update_post_meta( $id, self::LINK_ID_META, $link['id'] );
 			} else {
 				delete_post_meta( $id, self::LINK_ID_META );
@@ -816,8 +837,13 @@ final class Menus {
 		foreach ( Coupons::public_list() as $c ) {
 			$coupons[] = array( 'id' => $c['id'], 'label' => $c['code'] . ' · ' . $c['title'], 'name' => $c['title'] );
 		}
+		$promos = array();
+		foreach ( Promotions::public_list() as $p ) {
+			$promos[] = array( 'id' => $p['id'], 'label' => $p['title'], 'name' => $p['title'] );
+		}
 		return array(
-			'coupon'   => $coupons,
+			'coupon'    => $coupons,
+			'promotion' => $promos,
 			'page'     => $posts( 'page', 300 ),
 			'post'     => $posts( 'post', 300 ),
 			'product'  => $posts( 'product', 2000 ),
@@ -855,6 +881,8 @@ final class Menus {
 			$ref['url'] = $link['url'];
 		} elseif ( 'coupon' === $link['type'] ) {
 			$ref['code'] = strtoupper( (string) get_post_field( 'post_title', $link['id'] ) );
+		} elseif ( 'promotion' === $link['type'] ) {
+			$ref['name'] = (string) get_post_field( 'post_title', $link['id'] );
 		} elseif ( 'category' === $link['type'] ) {
 			$term        = get_term( $link['id'], 'product_cat' );
 			$ref['slug'] = $term instanceof \WP_Term ? $term->slug : '';
@@ -917,6 +945,13 @@ final class Menus {
 		$link = array( 'type' => $type, 'id' => 0, 'url' => is_scalar( $ref['url'] ?? null ) ? (string) $ref['url'] : '' );
 		if ( 'coupon' === $type ) {
 			$link['id'] = is_scalar( $ref['code'] ?? null ) ? (int) wc_get_coupon_id_by_code( (string) $ref['code'] ) : 0;
+			if ( ! $link['id'] ) {
+				$missing[] = (string) ( $item['title'] ?? '' );
+				$link      = array( 'type' => 'none', 'id' => 0, 'url' => '' );
+			}
+		} elseif ( 'promotion' === $type ) {
+			$found      = is_scalar( $ref['name'] ?? null ) && '' !== (string) $ref['name'] ? get_posts( array( 'post_type' => Promotions::CPT, 'title' => (string) $ref['name'], 'post_status' => 'any', 'numberposts' => 1, 'fields' => 'ids' ) ) : array();
+			$link['id'] = $found ? (int) $found[0] : 0;
 			if ( ! $link['id'] ) {
 				$missing[] = (string) ( $item['title'] ?? '' );
 				$link      = array( 'type' => 'none', 'id' => 0, 'url' => '' );

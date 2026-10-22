@@ -4,7 +4,7 @@
 
 后续基线：PAY-SHIP-01 的后端提交 3aecb8f 增加测试商务配置命令和后台提醒，公共接口形状未变。
 
-2026-10-22 增补（peptide-core 0.11.0，Codex 已按这些接口完成前端对接 / 提议同步）：菜单、结账条款、公开优惠码三组 PHP 公共函数和 `?pc_coupon=` 行为；访客追踪测试版接口（详细协议见 `docs/handoffs/tracking-protocol.md`）。
+2026-10-22 增补（peptide-core 0.11.0–0.12.0，Codex 已按这些接口完成前端对接 / 提议同步）：菜单、结账条款、公开优惠码三组 PHP 公共函数和 `?pc_coupon=` 行为；访客追踪测试版接口（详细协议见 `docs/handoffs/tracking-protocol.md`）；满减活动（0.12.0）。
 
 ## 数据与职责
 
@@ -120,6 +120,18 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
   - 购物车满足条件时立刻使用这张优惠码；否则先记在 WC 会话里，加入商品或修改数量后自动再试。
   - 过期、用完、未发布的优惠码直接放弃。
   - 提示文字使用 WooCommerce 的通知，由主题负责显示。
+
+## 满减活动
+
+- `peptide_core_get_promotions()`：公开展示、进行中或即将开始的活动。
+  - 字段：`id, title, text, status(active | upcoming | ended), basis(spend | quantity), reward(amount | percent), tiers([{min,value,text}]), starts, ends(ISO | null), starts_text, ends_text, scope(all | categories | products), categories, products([{id,name,url}]), exclude_sale, with_coupons, url`。
+  - `peptide_core_get_promotion( $id )` 查单个活动，不公开或已停用时返回 null；已结束的仍然返回，status=ended。
+- `peptide_core_get_promotion_progress()`：`{applied:null | {id,title,tier,discount,discount_text,url}, next:null | {id,title,basis,remaining,remaining_text,reward_text,message,url}}`。
+  - Store API 购物车的 `extensions.peptide_core.promotion` 是同样的数据，可以直接用于区块购物车和抽屉。
+- `peptide_core_get_product_promotions( $product )`：这个商品参加的、进行中的公开活动。
+- 优惠由插件在购物车里加一笔负数费用（不计税），名称就是活动标题，订单费用行记着活动 ID。每份购物车只用优惠最多的一个活动。主题只负责显示，不计算金额。
+- `[pc_promotions]` 活动页面：第一次公开活动时自动建好 Offers 页面，`?promo=ID` 显示详情。主题可以用 `template-parts/promotions/list.php`（`$args['promotions']`）和 `detail.php`（`$args['promotion']|null`、`$args['list_url']`）接管。
+- 菜单链接类型新增 `promotions`（活动列表页）和 `promotion`（活动详情页）。活动结束或不再公开时，这一项不显示。
 
 ## 访客追踪（测试版）
 

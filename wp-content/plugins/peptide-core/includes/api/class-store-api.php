@@ -61,10 +61,20 @@ final class Store_Api {
 			array(
 				'endpoint'        => \Automattic\WooCommerce\StoreApi\Schemas\V1\CartSchema::IDENTIFIER,
 				'namespace'       => self::EXT_NAMESPACE,
-				'data_callback'   => static fn() => array( 'sale_savings' => \PeptideCore\Pricing::cart_summary( function_exists( 'WC' ) && WC()->cart ? WC()->cart : null ) ),
+				'data_callback'   => static fn() => array(
+					'sale_savings' => \PeptideCore\Pricing::cart_summary( function_exists( 'WC' ) && WC()->cart ? WC()->cart : null ),
+					// 满减（PROMO-01）：已用上的活动和下一档提示，结构同 peptide_core_get_promotion_progress()。
+					'promotion'    => \PeptideCore\Promotions::progress(),
+				),
 				'schema_callback' => static fn() => array(
 					'sale_savings' => array(
 						'description' => __( 'Total sale savings in the cart (minor units). Informational; excludes coupons.', 'peptide-core' ),
+						'type'        => 'object',
+						'context'     => array( 'view', 'edit' ),
+						'readonly'    => true,
+					),
+					'promotion'    => array(
+						'description' => __( 'Spend-and-save promotion applied to the cart, and the next tier the customer can reach.', 'peptide-core' ),
 						'type'        => 'object',
 						'context'     => array( 'view', 'edit' ),
 						'readonly'    => true,

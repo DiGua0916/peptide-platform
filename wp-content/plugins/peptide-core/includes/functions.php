@@ -115,3 +115,44 @@ function peptide_core_get_public_coupons(): array {
 function peptide_core_get_public_coupon( string $code ): ?array {
 	return \PeptideCore\Coupons::get_public( $code );
 }
+
+/**
+ * 公开展示的满减活动（PROMO-01），进行中或即将开始。每个：id, title, text, status（active / upcoming / ended）,
+ * basis（spend / quantity）, reward（amount / percent）, tiers（[{min, value, text}]，text 例如 "Spend $100.00, get $10.00 off"）,
+ * starts / ends（ISO 或 null）, starts_text / ends_text, scope（all / categories / products）, categories / products（[{id,name,url}]）,
+ * exclude_sale, with_coupons, url（详情页）。
+ *
+ * @return array<int,array<string,mixed>>
+ */
+function peptide_core_get_promotions(): array {
+	return \PeptideCore\Promotions::public_list();
+}
+
+/**
+ * 一个公开的满减活动，结构同上；不公开或已停用时返回 null（已结束的仍返回，status=ended）。
+ */
+function peptide_core_get_promotion( int $id ): ?array {
+	return \PeptideCore\Promotions::get_public( $id );
+}
+
+/**
+ * 当前购物车的满减情况：
+ * applied：null 或 {id, title, tier, discount, discount_text, url}（购物车里已经减掉的那一笔）；
+ * next：null 或 {id, title, basis, remaining, remaining_text, reward_text, message, url}
+ * （例如 message = "Add $20.00 more to get $25.00 off"）。区块购物车在 Store API 的 extensions.peptide_core.promotion 里有同样的数据。
+ *
+ * @return array{applied:?array,next:?array}
+ */
+function peptide_core_get_promotion_progress(): array {
+	return \PeptideCore\Promotions::progress();
+}
+
+/**
+ * 这个商品参加的、进行中的公开满减活动（结构同 peptide_core_get_promotions()），用于商品页 / 商品卡片提示。
+ *
+ * @param WC_Product|int $product
+ */
+function peptide_core_get_product_promotions( $product ): array {
+	$product = $product instanceof WC_Product ? $product : wc_get_product( (int) $product );
+	return $product ? \PeptideCore\Promotions::for_product( $product ) : array();
+}

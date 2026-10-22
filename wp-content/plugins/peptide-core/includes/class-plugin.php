@@ -37,6 +37,7 @@ final class Plugin {
 		Menus::register_hooks();
 		Custom_Pages::register_hooks();
 		Coupons::register_hooks();
+		Promotions::register_hooks();
 		Tracking\Tracker::register_hooks();
 		Api\Tracking_Controller::register_hooks();
 		Api\Menu_Controller::register_hooks();

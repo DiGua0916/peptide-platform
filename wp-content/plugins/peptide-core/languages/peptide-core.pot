@@ -2,14 +2,14 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.10.0\n"
+"Project-Id-Version: Peptide Core 0.11.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-22T10:29:35+00:00\n"
+"POT-Creation-Date: 2026-10-22T10:38:51+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -75,6 +75,8 @@ msgstr ""
 #: includes/admin/class-batch-metabox.php:77
 #: includes/admin/class-batch-orders.php:66
 #: includes/admin/class-list-columns.php:35
+#: includes/class-promotions.php:666
+#: includes/class-promotions.php:780
 msgid "Status"
 msgstr ""
 
@@ -352,7 +354,7 @@ msgstr ""
 
 #: includes/admin/class-design-editor.php:113
 #: includes/admin/class-store-design.php:431
-#: includes/class-menus.php:99
+#: includes/class-menus.php:102
 #: includes/class-templates.php:49
 msgid "Homepage"
 msgstr ""
@@ -985,7 +987,7 @@ msgid "Strikethrough"
 msgstr ""
 
 #: includes/admin/class-menu-page.php:151
-#: includes/class-menus.php:680
+#: includes/class-menus.php:699
 msgid "This menu was changed somewhere else after you opened it. Reload the page to see the latest version."
 msgstr ""
 
@@ -1207,6 +1209,7 @@ msgid "Mass spectrometry (MS)"
 msgstr ""
 
 #: includes/admin/class-report-metabox.php:64
+#: includes/class-promotions.php:734
 msgid "Other"
 msgstr ""
 
@@ -1228,6 +1231,7 @@ msgstr ""
 
 #: includes/admin/class-report-metabox.php:73
 #: includes/class-coupons.php:546
+#: includes/class-promotions.php:781
 msgid "Public"
 msgstr ""
 
@@ -1830,6 +1834,7 @@ msgstr ""
 
 #: includes/admin/class-tracking-page.php:97
 #: includes/class-coupons.php:420
+#: includes/class-promotions.php:566
 msgid "Details"
 msgstr ""
 
@@ -1940,6 +1945,7 @@ msgid "Paid"
 msgstr ""
 
 #: includes/admin/class-tracking-page.php:125
+#: includes/class-promotions.php:723
 #: includes/modules/class-registry.php:1185
 msgid "Products"
 msgstr ""
@@ -1983,7 +1989,7 @@ msgid "Shop"
 msgstr ""
 
 #: includes/admin/class-tracking-page.php:141
-#: includes/class-menus.php:105
+#: includes/class-menus.php:108
 msgid "Cart"
 msgstr ""
 
@@ -2178,8 +2184,8 @@ msgid "Sorry, you are not allowed to edit menus."
 msgstr ""
 
 #: includes/api/class-menu-controller.php:60
-#: includes/class-menus.php:301
-#: includes/class-menus.php:677
+#: includes/class-menus.php:308
+#: includes/class-menus.php:696
 msgid "Menu not found."
 msgstr ""
 
@@ -2207,27 +2213,31 @@ msgstr ""
 msgid "Sale savings for this cart line (minor units). Excludes coupons."
 msgstr ""
 
-#: includes/api/class-store-api.php:67
+#: includes/api/class-store-api.php:71
 msgid "Total sale savings in the cart (minor units). Informational; excludes coupons."
 msgstr ""
 
-#: includes/api/class-store-api.php:105
+#: includes/api/class-store-api.php:77
+msgid "Spend-and-save promotion applied to the cart, and the next tier the customer can reach."
+msgstr ""
+
+#: includes/api/class-store-api.php:115
 msgid "Synthetic demonstration record."
 msgstr ""
 
-#: includes/api/class-store-api.php:111
+#: includes/api/class-store-api.php:121
 msgid "Specification table."
 msgstr ""
 
-#: includes/api/class-store-api.php:126
+#: includes/api/class-store-api.php:136
 msgid "Number of public batches."
 msgstr ""
 
-#: includes/api/class-store-api.php:132
+#: includes/api/class-store-api.php:142
 msgid "Best report state across public batches for the current user."
 msgstr ""
 
-#: includes/api/class-store-api.php:139
+#: includes/api/class-store-api.php:149
 msgid "Paired regular/current price of one purchasable item (minor units), with sale state and comparison-price source."
 msgstr ""
 
@@ -2259,6 +2269,7 @@ msgstr ""
 
 #. translators: %s: percentage
 #: includes/class-coupons.php:135
+#: includes/class-promotions.php:221
 #, php-format
 msgid "%s%% off"
 msgstr ""
@@ -2376,6 +2387,7 @@ msgid "Not valid in these categories"
 msgstr ""
 
 #: includes/class-coupons.php:466
+#: includes/class-promotions.php:606
 msgid "All offers"
 msgstr ""
 
@@ -2396,6 +2408,7 @@ msgid "e.g. 10% off your first order (empty = automatic)"
 msgstr ""
 
 #: includes/class-coupons.php:495
+#: includes/class-promotions.php:738
 msgid "Public description"
 msgstr ""
 
@@ -2541,122 +2554,131 @@ msgstr[1] ""
 msgid "No new drafts: those pages already exist."
 msgstr ""
 
-#: includes/class-menus.php:74
-#: includes/class-menus.php:214
+#: includes/class-menus.php:77
+#: includes/class-menus.php:221
 msgid "Header menu"
 msgstr ""
 
-#: includes/class-menus.php:77
-#: includes/class-menus.php:214
+#: includes/class-menus.php:80
+#: includes/class-menus.php:221
 msgid "Footer menu"
 msgstr ""
 
-#: includes/class-menus.php:87
-#: includes/class-menus.php:304
+#: includes/class-menus.php:90
+#: includes/class-menus.php:311
 msgid "The header and footer menus cannot be deleted."
 msgstr ""
 
-#: includes/class-menus.php:98
+#: includes/class-menus.php:101
 msgid "None (heading only)"
 msgstr ""
 
-#: includes/class-menus.php:100
+#: includes/class-menus.php:103
+#: includes/class-promotions.php:713
 msgid "All products"
 msgstr ""
 
-#: includes/class-menus.php:101
+#: includes/class-menus.php:104
 msgid "Product category"
 msgstr ""
 
-#: includes/class-menus.php:102
+#: includes/class-menus.php:105
 msgid "Product page"
 msgstr ""
 
-#: includes/class-menus.php:103
+#: includes/class-menus.php:106
 msgid "Custom page"
 msgstr ""
 
-#: includes/class-menus.php:104
+#: includes/class-menus.php:107
 msgid "Blog post"
 msgstr ""
 
-#: includes/class-menus.php:106
+#: includes/class-menus.php:109
 msgid "My account"
 msgstr ""
 
-#: includes/class-menus.php:107
+#: includes/class-menus.php:110
 msgid "My orders / order tracking"
 msgstr ""
 
-#: includes/class-menus.php:108
+#: includes/class-menus.php:111
 msgid "Log in"
 msgstr ""
 
-#: includes/class-menus.php:109
+#: includes/class-menus.php:112
 msgid "Register"
 msgstr ""
 
-#: includes/class-menus.php:110
+#: includes/class-menus.php:113
 msgid "Forgot password"
 msgstr ""
 
-#: includes/class-menus.php:111
+#: includes/class-menus.php:114
 msgid "Product search"
 msgstr ""
 
-#: includes/class-menus.php:112
+#: includes/class-menus.php:115
 msgid "Coupons page"
 msgstr ""
 
-#: includes/class-menus.php:113
+#: includes/class-menus.php:116
 msgid "Coupon details"
 msgstr ""
 
-#: includes/class-menus.php:114
+#: includes/class-menus.php:117
+msgid "Spend-and-save offers page"
+msgstr ""
+
+#: includes/class-menus.php:118
+msgid "Spend-and-save offer details"
+msgstr ""
+
+#: includes/class-menus.php:119
 msgid "Custom URL"
 msgstr ""
 
-#: includes/class-menus.php:287
-#: includes/class-menus.php:685
+#: includes/class-menus.php:294
+#: includes/class-menus.php:704
 msgid "Please enter a menu name."
 msgstr ""
 
 #. translators: %d: maximum number of items
-#: includes/class-menus.php:603
+#: includes/class-menus.php:622
 #, php-format
 msgid "A menu can have at most %d items."
 msgstr ""
 
 #. translators: %s: menu item name
-#: includes/class-menus.php:629
+#: includes/class-menus.php:648
 #, php-format
 msgid "“%s”: the linked page no longer exists. Choose another link."
 msgstr ""
 
 #. translators: %s: menu item name
-#: includes/class-menus.php:629
+#: includes/class-menus.php:648
 msgid "(untitled)"
 msgstr ""
 
-#: includes/class-menus.php:637
+#: includes/class-menus.php:656
 msgid "Every menu item needs a name."
 msgstr ""
 
-#: includes/class-menus.php:694
+#: includes/class-menus.php:713
 msgid "Another menu already uses this name."
 msgstr ""
 
 #. translators: %s: page title
-#: includes/class-menus.php:800
+#: includes/class-menus.php:821
 #, php-format
 msgid "%s (not published)"
 msgstr ""
 
-#: includes/class-menus.php:885
+#: includes/class-menus.php:913
 msgid "This file is not a menu export from this plugin."
 msgstr ""
 
-#: includes/class-menus.php:900
+#: includes/class-menus.php:928
 msgid "Imported menu"
 msgstr ""
 
@@ -2681,7 +2703,7 @@ msgstr ""
 msgid "Batch: %s"
 msgstr ""
 
-#: includes/class-plugin.php:95
+#: includes/class-plugin.php:96
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr ""
 
@@ -2757,6 +2779,282 @@ msgstr ""
 
 #: includes/class-product-hover.php:38
 msgid "Nothing"
+msgstr ""
+
+#: includes/class-promotions.php:69
+#: includes/class-promotions.php:615
+msgid "Spend-and-save promotions"
+msgstr ""
+
+#: includes/class-promotions.php:70
+msgid "Promotion"
+msgstr ""
+
+#: includes/class-promotions.php:71
+msgid "Add promotion"
+msgstr ""
+
+#: includes/class-promotions.php:72
+msgid "Edit promotion"
+msgstr ""
+
+#: includes/class-promotions.php:73
+#: includes/class-promotions.php:615
+msgid "Spend-and-save"
+msgstr ""
+
+#: includes/class-promotions.php:74
+msgid "No promotions yet."
+msgstr ""
+
+#: includes/class-promotions.php:130
+msgid "Each tier needs a threshold and a discount greater than zero."
+msgstr ""
+
+#: includes/class-promotions.php:137
+msgid "A percentage discount must be below 100%."
+msgstr ""
+
+#: includes/class-promotions.php:141
+msgid "A fixed discount must be smaller than the amount the customer has to spend."
+msgstr ""
+
+#: includes/class-promotions.php:151
+msgid "Higher tiers should give at least the same discount as lower tiers."
+msgstr ""
+
+#: includes/class-promotions.php:157
+msgid "Add at least one tier."
+msgstr ""
+
+#: includes/class-promotions.php:162
+msgid "The end time must be after the start time."
+msgstr ""
+
+#: includes/class-promotions.php:168
+msgid "Choose at least one category, or apply the promotion to all products."
+msgstr ""
+
+#: includes/class-promotions.php:171
+msgid "Choose at least one product, or apply the promotion to all products."
+msgstr ""
+
+#. translators: %s: percentage
+#: includes/class-promotions.php:221
+#, php-format
+msgid "%s off"
+msgstr ""
+
+#. translators: 1: number of items, 2: reward
+#: includes/class-promotions.php:227
+#, php-format
+msgid "Buy %1$d item, get %2$s"
+msgid_plural "Buy %1$d items, get %2$s"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: 1: amount, 2: reward
+#: includes/class-promotions.php:230
+#, php-format
+msgid "Spend %1$s, get %2$s"
+msgstr ""
+
+#. translators: %d: number of items
+#: includes/class-promotions.php:346
+#, php-format
+msgid "%d more item"
+msgid_plural "%d more items"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: 1: amount or number of items still needed, 2: reward
+#: includes/class-promotions.php:356
+#, php-format
+msgid "Add %1$s more to get %2$s"
+msgstr ""
+
+#. translators: %s: date
+#: includes/class-promotions.php:540
+#, php-format
+msgid "Starts %s"
+msgstr ""
+
+#: includes/class-promotions.php:543
+msgid "This offer has ended."
+msgstr ""
+
+#. translators: %s: date
+#: includes/class-promotions.php:546
+#, php-format
+msgid "Ends %s"
+msgstr ""
+
+#: includes/class-promotions.php:551
+msgid "There are no offers right now. Please check back later."
+msgstr ""
+
+#: includes/class-promotions.php:573
+msgid "This offer is not available."
+msgstr ""
+
+#: includes/class-promotions.php:587
+msgid "Applies to all products."
+msgstr ""
+
+#: includes/class-promotions.php:588
+msgid "Items already on sale do not count."
+msgstr ""
+
+#: includes/class-promotions.php:589
+msgid "Cannot be combined with coupon codes."
+msgstr ""
+
+#: includes/class-promotions.php:590
+msgid "The discount is applied automatically in the cart. Only the best offer applies."
+msgstr ""
+
+#: includes/class-promotions.php:594
+msgid "Eligible categories"
+msgstr ""
+
+#: includes/class-promotions.php:594
+#: includes/class-promotions.php:710
+msgid "Eligible products"
+msgstr ""
+
+#: includes/class-promotions.php:628
+msgid "Name shown to customers, e.g. Spend $100, save $10"
+msgstr ""
+
+#: includes/class-promotions.php:632
+msgid "Promotion rules"
+msgstr ""
+
+#: includes/class-promotions.php:655
+msgid "Off (draft or no tiers)"
+msgstr ""
+
+#: includes/class-promotions.php:656
+#: includes/class-promotions.php:798
+msgid "Scheduled"
+msgstr ""
+
+#: includes/class-promotions.php:657
+#: includes/class-promotions.php:799
+msgid "Running"
+msgstr ""
+
+#: includes/class-promotions.php:658
+#: includes/class-promotions.php:800
+msgid "Ended"
+msgstr ""
+
+#: includes/class-promotions.php:663
+msgid "The promotion was saved as a draft until this is fixed."
+msgstr ""
+
+#: includes/class-promotions.php:666
+msgid "Publish to turn the promotion on; switch it back to draft to turn it off."
+msgstr ""
+
+#: includes/class-promotions.php:669
+msgid "Condition"
+msgstr ""
+
+#: includes/class-promotions.php:671
+msgid "Cart amount (spend $X)"
+msgstr ""
+
+#: includes/class-promotions.php:672
+msgid "Number of items (buy X items)"
+msgstr ""
+
+#: includes/class-promotions.php:673
+msgid "Only eligible items count, before coupons, taxes and shipping."
+msgstr ""
+
+#: includes/class-promotions.php:677
+msgid "Discount"
+msgstr ""
+
+#: includes/class-promotions.php:679
+msgid "Fixed amount off"
+msgstr ""
+
+#: includes/class-promotions.php:680
+msgid "Percentage off the eligible items"
+msgstr ""
+
+#: includes/class-promotions.php:684
+#: includes/class-promotions.php:778
+msgid "Tiers"
+msgstr ""
+
+#: includes/class-promotions.php:687
+msgid "Threshold (amount or items)"
+msgstr ""
+
+#: includes/class-promotions.php:687
+msgid "Discount (amount or %)"
+msgstr ""
+
+#: includes/class-promotions.php:697
+msgid "Example: 100 → 10 and 200 → 25 means spend $100 save $10, spend $200 save $25. The highest tier reached applies. Leave unused rows empty."
+msgstr ""
+
+#: includes/class-promotions.php:701
+#: includes/class-promotions.php:779
+msgid "Dates"
+msgstr ""
+
+#: includes/class-promotions.php:703
+msgid "Start"
+msgstr ""
+
+#: includes/class-promotions.php:704
+msgid "End"
+msgstr ""
+
+#. translators: %s: timezone name
+#: includes/class-promotions.php:706
+#, php-format
+msgid "Store time zone: %s. Leave empty for no limit. Use the real dates of the offer."
+msgstr ""
+
+#: includes/class-promotions.php:714
+msgid "Selected categories"
+msgstr ""
+
+#: includes/class-promotions.php:715
+msgid "Selected products"
+msgstr ""
+
+#: includes/class-promotions.php:717
+msgid "Categories"
+msgstr ""
+
+#: includes/class-promotions.php:729
+msgid "Hold Ctrl (Cmd on Mac) to choose several."
+msgstr ""
+
+#: includes/class-promotions.php:730
+msgid "Items already on sale do not count"
+msgstr ""
+
+#: includes/class-promotions.php:736
+msgid "Can be combined with coupon codes"
+msgstr ""
+
+#: includes/class-promotions.php:737
+msgid "Show on the storefront offers page"
+msgstr ""
+
+#: includes/class-promotions.php:740
+msgid "View on the offers page"
+msgstr ""
+
+#: includes/class-promotions.php:797
+msgid "Off"
 msgstr ""
 
 #: includes/class-settings.php:107

@@ -2,7 +2,7 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.10.0\n"
+"Project-Id-Version: Peptide Core 0.11.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -11,7 +11,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-22T10:29:35+00:00\n"
+"POT-Creation-Date: 2026-10-22T10:38:51+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -77,6 +77,8 @@ msgstr "隐藏（仅后台可见）"
 #: includes/admin/class-batch-metabox.php:77
 #: includes/admin/class-batch-orders.php:66
 #: includes/admin/class-list-columns.php:35
+#: includes/class-promotions.php:666
+#: includes/class-promotions.php:780
 msgid "Status"
 msgstr "状态"
 
@@ -352,7 +354,7 @@ msgstr "装修编辑器"
 
 #: includes/admin/class-design-editor.php:113
 #: includes/admin/class-store-design.php:431
-#: includes/class-menus.php:99
+#: includes/class-menus.php:102
 #: includes/class-templates.php:49
 msgid "Homepage"
 msgstr "首页"
@@ -985,7 +987,7 @@ msgid "Strikethrough"
 msgstr "中划线"
 
 #: includes/admin/class-menu-page.php:151
-#: includes/class-menus.php:680
+#: includes/class-menus.php:699
 msgid "This menu was changed somewhere else after you opened it. Reload the page to see the latest version."
 msgstr "打开这份菜单后，它在别处被修改过。请刷新页面查看最新内容。"
 
@@ -1206,6 +1208,7 @@ msgid "Mass spectrometry (MS)"
 msgstr "质谱（MS）"
 
 #: includes/admin/class-report-metabox.php:64
+#: includes/class-promotions.php:734
 msgid "Other"
 msgstr "其他"
 
@@ -1227,6 +1230,7 @@ msgstr "已撤回"
 
 #: includes/admin/class-report-metabox.php:73
 #: includes/class-coupons.php:546
+#: includes/class-promotions.php:781
 msgid "Public"
 msgstr "公开"
 
@@ -1829,6 +1833,7 @@ msgstr "事件"
 
 #: includes/admin/class-tracking-page.php:97
 #: includes/class-coupons.php:420
+#: includes/class-promotions.php:566
 msgid "Details"
 msgstr "详情"
 
@@ -1939,6 +1944,7 @@ msgid "Paid"
 msgstr "已支付"
 
 #: includes/admin/class-tracking-page.php:125
+#: includes/class-promotions.php:723
 #: includes/modules/class-registry.php:1185
 msgid "Products"
 msgstr "商品"
@@ -1982,7 +1988,7 @@ msgid "Shop"
 msgstr "商店"
 
 #: includes/admin/class-tracking-page.php:141
-#: includes/class-menus.php:105
+#: includes/class-menus.php:108
 msgid "Cart"
 msgstr "购物车"
 
@@ -2177,8 +2183,8 @@ msgid "Sorry, you are not allowed to edit menus."
 msgstr "抱歉，你没有编辑菜单的权限。"
 
 #: includes/api/class-menu-controller.php:60
-#: includes/class-menus.php:301
-#: includes/class-menus.php:677
+#: includes/class-menus.php:308
+#: includes/class-menus.php:696
 msgid "Menu not found."
 msgstr "找不到这份菜单。"
 
@@ -2206,27 +2212,31 @@ msgstr "请求过于频繁，请稍后再试。"
 msgid "Sale savings for this cart line (minor units). Excludes coupons."
 msgstr "这一行商品的促销节省金额（最小货币单位），不含优惠券。"
 
-#: includes/api/class-store-api.php:67
+#: includes/api/class-store-api.php:71
 msgid "Total sale savings in the cart (minor units). Informational; excludes coupons."
 msgstr "购物车促销节省合计（最小货币单位），仅供展示，不含优惠券。"
 
-#: includes/api/class-store-api.php:105
+#: includes/api/class-store-api.php:77
+msgid "Spend-and-save promotion applied to the cart, and the next tier the customer can reach."
+msgstr "购物车已用上的满减活动，以及客户可以达到的下一档。"
+
+#: includes/api/class-store-api.php:115
 msgid "Synthetic demonstration record."
 msgstr "虚构的演示数据。"
 
-#: includes/api/class-store-api.php:111
+#: includes/api/class-store-api.php:121
 msgid "Specification table."
 msgstr "规格表。"
 
-#: includes/api/class-store-api.php:126
+#: includes/api/class-store-api.php:136
 msgid "Number of public batches."
 msgstr "公开批次数量。"
 
-#: includes/api/class-store-api.php:132
+#: includes/api/class-store-api.php:142
 msgid "Best report state across public batches for the current user."
 msgstr "当前用户在所有公开批次中可获得的最佳报告状态。"
 
-#: includes/api/class-store-api.php:139
+#: includes/api/class-store-api.php:149
 msgid "Paired regular/current price of one purchasable item (minor units), with sale state and comparison-price source."
 msgstr "某个可购买规格的常规价与成交价（最小货币单位），含促销状态和对照价来源。"
 
@@ -2258,6 +2268,7 @@ msgstr "勾选时间：%s（UTC）"
 
 #. translators: %s: percentage
 #: includes/class-coupons.php:135
+#: includes/class-promotions.php:221
 #, php-format
 msgid "%s%% off"
 msgstr "%s%% 折扣"
@@ -2373,6 +2384,7 @@ msgid "Not valid in these categories"
 msgstr "不适用的分类"
 
 #: includes/class-coupons.php:466
+#: includes/class-promotions.php:606
 msgid "All offers"
 msgstr "全部优惠"
 
@@ -2393,6 +2405,7 @@ msgid "e.g. 10% off your first order (empty = automatic)"
 msgstr "例如 10% off your first order（留空自动生成）"
 
 #: includes/class-coupons.php:495
+#: includes/class-promotions.php:738
 msgid "Public description"
 msgstr "展示说明"
 
@@ -2537,122 +2550,131 @@ msgstr[0] "已生成 %d 份草稿。请填写所有方括号里的提示，审�
 msgid "No new drafts: those pages already exist."
 msgstr "没有生成新草稿：这些页面已经存在。"
 
-#: includes/class-menus.php:74
-#: includes/class-menus.php:214
+#: includes/class-menus.php:77
+#: includes/class-menus.php:221
 msgid "Header menu"
 msgstr "顶部导航菜单"
 
-#: includes/class-menus.php:77
-#: includes/class-menus.php:214
+#: includes/class-menus.php:80
+#: includes/class-menus.php:221
 msgid "Footer menu"
 msgstr "页尾菜单"
 
-#: includes/class-menus.php:87
-#: includes/class-menus.php:304
+#: includes/class-menus.php:90
+#: includes/class-menus.php:311
 msgid "The header and footer menus cannot be deleted."
 msgstr "顶部导航菜单和页尾菜单不可删除。"
 
-#: includes/class-menus.php:98
+#: includes/class-menus.php:101
 msgid "None (heading only)"
 msgstr "无（只作为标题）"
 
-#: includes/class-menus.php:100
+#: includes/class-menus.php:103
+#: includes/class-promotions.php:713
 msgid "All products"
 msgstr "所有商品页"
 
-#: includes/class-menus.php:101
+#: includes/class-menus.php:104
 msgid "Product category"
 msgstr "分类详情页"
 
-#: includes/class-menus.php:102
+#: includes/class-menus.php:105
 msgid "Product page"
 msgstr "商品详情页"
 
-#: includes/class-menus.php:103
+#: includes/class-menus.php:106
 msgid "Custom page"
 msgstr "自定义页面"
 
-#: includes/class-menus.php:104
+#: includes/class-menus.php:107
 msgid "Blog post"
 msgstr "博客详情页"
 
-#: includes/class-menus.php:106
+#: includes/class-menus.php:109
 msgid "My account"
 msgstr "我的账号"
 
-#: includes/class-menus.php:107
+#: includes/class-menus.php:110
 msgid "My orders / order tracking"
 msgstr "我的订单 / 订单追踪"
 
-#: includes/class-menus.php:108
+#: includes/class-menus.php:111
 msgid "Log in"
 msgstr "登录"
 
-#: includes/class-menus.php:109
+#: includes/class-menus.php:112
 msgid "Register"
 msgstr "注册"
 
-#: includes/class-menus.php:110
+#: includes/class-menus.php:113
 msgid "Forgot password"
 msgstr "忘记密码"
 
-#: includes/class-menus.php:111
+#: includes/class-menus.php:114
 msgid "Product search"
 msgstr "搜索"
 
-#: includes/class-menus.php:112
+#: includes/class-menus.php:115
 msgid "Coupons page"
 msgstr "优惠码列表页"
 
-#: includes/class-menus.php:113
+#: includes/class-menus.php:116
 msgid "Coupon details"
 msgstr "优惠码详情页"
 
-#: includes/class-menus.php:114
+#: includes/class-menus.php:117
+msgid "Spend-and-save offers page"
+msgstr "满减活动列表页"
+
+#: includes/class-menus.php:118
+msgid "Spend-and-save offer details"
+msgstr "满减活动详情页"
+
+#: includes/class-menus.php:119
 msgid "Custom URL"
 msgstr "自定义 URL"
 
-#: includes/class-menus.php:287
-#: includes/class-menus.php:685
+#: includes/class-menus.php:294
+#: includes/class-menus.php:704
 msgid "Please enter a menu name."
 msgstr "请填写菜单名称。"
 
 #. translators: %d: maximum number of items
-#: includes/class-menus.php:603
+#: includes/class-menus.php:622
 #, php-format
 msgid "A menu can have at most %d items."
 msgstr "每份菜单最多 %d 项。"
 
 #. translators: %s: menu item name
-#: includes/class-menus.php:629
+#: includes/class-menus.php:648
 #, php-format
 msgid "“%s”: the linked page no longer exists. Choose another link."
 msgstr "“%s”：链接的页面已不存在，请重新选择链接。"
 
 #. translators: %s: menu item name
-#: includes/class-menus.php:629
+#: includes/class-menus.php:648
 msgid "(untitled)"
 msgstr "（未命名）"
 
-#: includes/class-menus.php:637
+#: includes/class-menus.php:656
 msgid "Every menu item needs a name."
 msgstr "每一项都需要填写导航名称。"
 
-#: includes/class-menus.php:694
+#: includes/class-menus.php:713
 msgid "Another menu already uses this name."
 msgstr "已有其他菜单使用这个名称。"
 
 #. translators: %s: page title
-#: includes/class-menus.php:800
+#: includes/class-menus.php:821
 #, php-format
 msgid "%s (not published)"
 msgstr "%s（未发布）"
 
-#: includes/class-menus.php:885
+#: includes/class-menus.php:913
 msgid "This file is not a menu export from this plugin."
 msgstr "这个文件不是本插件导出的菜单文件。"
 
-#: includes/class-menus.php:900
+#: includes/class-menus.php:928
 msgid "Imported menu"
 msgstr "导入的菜单"
 
@@ -2677,7 +2699,7 @@ msgstr "批次分配已更新："
 msgid "Batch: %s"
 msgstr "批次：%s"
 
-#: includes/class-plugin.php:95
+#: includes/class-plugin.php:96
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr "Peptide Core 需要先安装并启用 WooCommerce。"
 
@@ -2754,6 +2776,280 @@ msgstr "商品相册里的第一张图"
 #: includes/class-product-hover.php:38
 msgid "Nothing"
 msgstr "不显示"
+
+#: includes/class-promotions.php:69
+#: includes/class-promotions.php:615
+msgid "Spend-and-save promotions"
+msgstr "满减活动"
+
+#: includes/class-promotions.php:70
+msgid "Promotion"
+msgstr "活动"
+
+#: includes/class-promotions.php:71
+msgid "Add promotion"
+msgstr "新建满减活动"
+
+#: includes/class-promotions.php:72
+msgid "Edit promotion"
+msgstr "编辑满减活动"
+
+#: includes/class-promotions.php:73
+#: includes/class-promotions.php:615
+msgid "Spend-and-save"
+msgstr "满减活动"
+
+#: includes/class-promotions.php:74
+msgid "No promotions yet."
+msgstr "还没有满减活动。"
+
+#: includes/class-promotions.php:130
+msgid "Each tier needs a threshold and a discount greater than zero."
+msgstr "每一档都需要填写大于 0 的门槛和优惠。"
+
+#: includes/class-promotions.php:137
+msgid "A percentage discount must be below 100%."
+msgstr "折扣百分比必须小于 100%。"
+
+#: includes/class-promotions.php:141
+msgid "A fixed discount must be smaller than the amount the customer has to spend."
+msgstr "减免金额必须小于客户需要消费的金额。"
+
+#: includes/class-promotions.php:151
+msgid "Higher tiers should give at least the same discount as lower tiers."
+msgstr "高档的优惠不能比低档少。"
+
+#: includes/class-promotions.php:157
+msgid "Add at least one tier."
+msgstr "请至少添加一档。"
+
+#: includes/class-promotions.php:162
+msgid "The end time must be after the start time."
+msgstr "结束时间必须晚于开始时间。"
+
+#: includes/class-promotions.php:168
+msgid "Choose at least one category, or apply the promotion to all products."
+msgstr "请至少选择一个分类，或者改为全部商品参加。"
+
+#: includes/class-promotions.php:171
+msgid "Choose at least one product, or apply the promotion to all products."
+msgstr "请至少选择一个商品，或者改为全部商品参加。"
+
+#. translators: %s: percentage
+#: includes/class-promotions.php:221
+#, php-format
+msgid "%s off"
+msgstr "减 %s"
+
+#. translators: 1: number of items, 2: reward
+#: includes/class-promotions.php:227
+#, php-format
+msgid "Buy %1$d item, get %2$s"
+msgid_plural "Buy %1$d items, get %2$s"
+msgstr[0] "满 %1$d 件 %2$s"
+
+#. translators: 1: amount, 2: reward
+#: includes/class-promotions.php:230
+#, php-format
+msgid "Spend %1$s, get %2$s"
+msgstr "满 %1$s %2$s"
+
+#. translators: %d: number of items
+#: includes/class-promotions.php:346
+#, php-format
+msgid "%d more item"
+msgid_plural "%d more items"
+msgstr[0] "%d 件"
+
+#. translators: 1: amount or number of items still needed, 2: reward
+#: includes/class-promotions.php:356
+#, php-format
+msgid "Add %1$s more to get %2$s"
+msgstr "再买 %1$s 即可%2$s"
+
+#. translators: %s: date
+#: includes/class-promotions.php:540
+#, php-format
+msgid "Starts %s"
+msgstr "%s 开始"
+
+#: includes/class-promotions.php:543
+msgid "This offer has ended."
+msgstr "活动已结束。"
+
+#. translators: %s: date
+#: includes/class-promotions.php:546
+#, php-format
+msgid "Ends %s"
+msgstr "%s 结束"
+
+#: includes/class-promotions.php:551
+msgid "There are no offers right now. Please check back later."
+msgstr "目前没有活动，请稍后再来看看。"
+
+#: includes/class-promotions.php:573
+msgid "This offer is not available."
+msgstr "这个活动不可用。"
+
+#: includes/class-promotions.php:587
+msgid "Applies to all products."
+msgstr "全部商品参加。"
+
+#: includes/class-promotions.php:588
+msgid "Items already on sale do not count."
+msgstr "促销中的商品不计入。"
+
+#: includes/class-promotions.php:589
+msgid "Cannot be combined with coupon codes."
+msgstr "不能与优惠码同时使用。"
+
+#: includes/class-promotions.php:590
+msgid "The discount is applied automatically in the cart. Only the best offer applies."
+msgstr "优惠在购物车里自动扣减，只使用最优惠的一个活动。"
+
+#: includes/class-promotions.php:594
+msgid "Eligible categories"
+msgstr "参加的分类"
+
+#: includes/class-promotions.php:594
+#: includes/class-promotions.php:710
+msgid "Eligible products"
+msgstr "参加的商品"
+
+#: includes/class-promotions.php:628
+msgid "Name shown to customers, e.g. Spend $100, save $10"
+msgstr "给客户看的名称，例如 Spend $100, save $10"
+
+#: includes/class-promotions.php:632
+msgid "Promotion rules"
+msgstr "活动规则"
+
+#: includes/class-promotions.php:655
+msgid "Off (draft or no tiers)"
+msgstr "未启用（草稿或没有档位）"
+
+#: includes/class-promotions.php:656
+#: includes/class-promotions.php:798
+msgid "Scheduled"
+msgstr "未开始"
+
+#: includes/class-promotions.php:657
+#: includes/class-promotions.php:799
+msgid "Running"
+msgstr "进行中"
+
+#: includes/class-promotions.php:658
+#: includes/class-promotions.php:800
+msgid "Ended"
+msgstr "已结束"
+
+#: includes/class-promotions.php:663
+msgid "The promotion was saved as a draft until this is fixed."
+msgstr "改正之前，活动已保存为草稿。"
+
+#: includes/class-promotions.php:666
+msgid "Publish to turn the promotion on; switch it back to draft to turn it off."
+msgstr "发布即启用；改回草稿即停用。"
+
+#: includes/class-promotions.php:669
+msgid "Condition"
+msgstr "条件"
+
+#: includes/class-promotions.php:671
+msgid "Cart amount (spend $X)"
+msgstr "按金额（满 $X）"
+
+#: includes/class-promotions.php:672
+msgid "Number of items (buy X items)"
+msgstr "按件数（满 X 件）"
+
+#: includes/class-promotions.php:673
+msgid "Only eligible items count, before coupons, taxes and shipping."
+msgstr "只计算参加活动的商品，按优惠码、税费和运费之前的金额。"
+
+#: includes/class-promotions.php:677
+msgid "Discount"
+msgstr "优惠"
+
+#: includes/class-promotions.php:679
+msgid "Fixed amount off"
+msgstr "减固定金额"
+
+#: includes/class-promotions.php:680
+msgid "Percentage off the eligible items"
+msgstr "参加活动的商品打折（百分比）"
+
+#: includes/class-promotions.php:684
+#: includes/class-promotions.php:778
+msgid "Tiers"
+msgstr "档位"
+
+#: includes/class-promotions.php:687
+msgid "Threshold (amount or items)"
+msgstr "门槛（金额或件数）"
+
+#: includes/class-promotions.php:687
+msgid "Discount (amount or %)"
+msgstr "优惠（金额或 %）"
+
+#: includes/class-promotions.php:697
+msgid "Example: 100 → 10 and 200 → 25 means spend $100 save $10, spend $200 save $25. The highest tier reached applies. Leave unused rows empty."
+msgstr "例如 100 → 10、200 → 25 表示满 $100 减 $10、满 $200 减 $25，按达到的最高一档计算。不用的行留空。"
+
+#: includes/class-promotions.php:701
+#: includes/class-promotions.php:779
+msgid "Dates"
+msgstr "时间"
+
+#: includes/class-promotions.php:703
+msgid "Start"
+msgstr "开始"
+
+#: includes/class-promotions.php:704
+msgid "End"
+msgstr "结束"
+
+#. translators: %s: timezone name
+#: includes/class-promotions.php:706
+#, php-format
+msgid "Store time zone: %s. Leave empty for no limit. Use the real dates of the offer."
+msgstr "店铺时区：%s。留空表示不限。请填写活动的真实时间。"
+
+#: includes/class-promotions.php:714
+msgid "Selected categories"
+msgstr "指定分类"
+
+#: includes/class-promotions.php:715
+msgid "Selected products"
+msgstr "指定商品"
+
+#: includes/class-promotions.php:717
+msgid "Categories"
+msgstr "分类"
+
+#: includes/class-promotions.php:729
+msgid "Hold Ctrl (Cmd on Mac) to choose several."
+msgstr "按住 Ctrl（Mac 用 Cmd）可以多选。"
+
+#: includes/class-promotions.php:730
+msgid "Items already on sale do not count"
+msgstr "促销中的商品不计入"
+
+#: includes/class-promotions.php:736
+msgid "Can be combined with coupon codes"
+msgstr "可以和优惠码同时使用"
+
+#: includes/class-promotions.php:737
+msgid "Show on the storefront offers page"
+msgstr "在网站活动页面公开展示"
+
+#: includes/class-promotions.php:740
+msgid "View on the offers page"
+msgstr "在活动页面查看"
+
+#: includes/class-promotions.php:797
+msgid "Off"
+msgstr "未启用"
 
 #: includes/class-settings.php:107
 msgid "The checkout confirmation was not enabled because its text is empty."

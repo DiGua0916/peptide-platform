@@ -21,8 +21,8 @@
 	var apiFetch = wp.apiFetch;
 	var S = cfg.strings;
 
-	var OBJECT_TYPES = [ 'category', 'product', 'page', 'post', 'coupon' ];
-	var BATCH_TYPES = [ 'category', 'page', 'product', 'post', 'coupon' ];
+	var OBJECT_TYPES = [ 'category', 'product', 'page', 'post', 'coupon', 'promotion' ];
+	var BATCH_TYPES = [ 'category', 'page', 'product', 'post', 'coupon', 'promotion' ];
 
 	var nextKey = 1;
 	function withKeys( items ) {
