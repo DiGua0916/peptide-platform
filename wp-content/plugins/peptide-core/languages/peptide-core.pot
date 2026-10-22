@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-22T11:50:16+00:00\n"
+"POT-Creation-Date: 2026-10-22T12:05:37+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -49,6 +49,7 @@ msgstr ""
 
 #: includes/admin/class-batch-metabox.php:56
 #: includes/admin/class-list-columns.php:33
+#: includes/admin/class-overview-page.php:179
 #: includes/admin/class-tracking-page.php:144
 #: includes/modules/class-registry.php:1037
 #: includes/modules/class-registry.php:1190
@@ -81,6 +82,7 @@ msgid "Status"
 msgstr ""
 
 #: includes/admin/class-batch-metabox.php:80
+#: includes/admin/class-overview-page.php:169
 #: includes/admin/class-tracking-page.php:77
 msgid "Active"
 msgstr ""
@@ -223,7 +225,7 @@ msgstr ""
 
 #: includes/admin/class-batch-orders.php:141
 #: includes/admin/class-batch-orders.php:144
-#: includes/admin/class-overview-page.php:120
+#: includes/admin/class-overview-page.php:130
 #: includes/admin/class-tracking-page.php:127
 msgid "Orders"
 msgstr ""
@@ -378,6 +380,7 @@ msgid "Back to theme design"
 msgstr ""
 
 #: includes/admin/class-design-editor.php:120
+#: includes/admin/class-overview-page.php:185
 #: includes/admin/class-tracking-page.php:100
 #: includes/admin/class-tracking-page.php:150
 msgid "Page"
@@ -542,7 +545,7 @@ msgid "Delete"
 msgstr ""
 
 #: includes/admin/class-design-editor.php:157
-#: includes/admin/class-overview-page.php:142
+#: includes/admin/class-overview-page.php:152
 msgid "More"
 msgstr ""
 
@@ -1025,7 +1028,7 @@ msgid "These items link to pages that do not exist on this site and were importe
 msgstr ""
 
 #: includes/admin/class-menu-page.php:238
-#: includes/admin/class-overview-page.php:188
+#: includes/admin/class-overview-page.php:219
 #: includes/admin/class-tracking-page.php:111
 #: includes/admin/class-tracking-page.php:251
 msgid "Loading…"
@@ -1129,279 +1132,352 @@ msgstr ""
 msgid "The selected batch does not match \"%s\" and was not saved."
 msgstr ""
 
-#: includes/admin/class-overview-page.php:51
+#: includes/admin/class-overview-page.php:54
 msgid "Sorry, you are not allowed to view store data."
 msgstr ""
 
-#: includes/admin/class-overview-page.php:63
-#: includes/admin/class-overview-page.php:188
-msgid "Overview"
+#: includes/admin/class-overview-page.php:66
+#: includes/admin/class-overview-page.php:219
+msgid "Dashboard"
 msgstr ""
 
 #. translators: %s: store name
-#: includes/admin/class-overview-page.php:111
+#: includes/admin/class-overview-page.php:121
 #, php-format
 msgid "%s, good morning! Here is today’s overview."
 msgstr ""
 
 #. translators: %s: store name
-#: includes/admin/class-overview-page.php:113
+#: includes/admin/class-overview-page.php:123
 #, php-format
 msgid "%s, good afternoon! Here is today’s overview."
 msgstr ""
 
 #. translators: %s: store name
-#: includes/admin/class-overview-page.php:115
+#: includes/admin/class-overview-page.php:125
 #, php-format
 msgid "%s, good evening! Here is today’s overview."
 msgstr ""
 
-#: includes/admin/class-overview-page.php:116
+#: includes/admin/class-overview-page.php:126
 msgid "Store time zone"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:117
+#: includes/admin/class-overview-page.php:127
 msgid "Sales"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:118
-#: includes/admin/class-overview-page.php:159
+#: includes/admin/class-overview-page.php:128
+#: includes/admin/class-overview-page.php:190
 #: includes/admin/class-tracking-page.php:34
 #: includes/admin/class-tracking-page.php:120
 msgid "Visitors"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:119
+#: includes/admin/class-overview-page.php:129
 msgid "New sign-ups"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:121
+#: includes/admin/class-overview-page.php:131
 msgid "Order conversion"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:122
+#: includes/admin/class-overview-page.php:132
 msgid "Average order value"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:123
+#: includes/admin/class-overview-page.php:133
 msgid "Returning visitors"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:124
+#: includes/admin/class-overview-page.php:134
 msgid "To do"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:125
+#: includes/admin/class-overview-page.php:135
 msgid "Paid, waiting to ship"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:126
+#: includes/admin/class-overview-page.php:136
 msgid "On hold"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:127
+#: includes/admin/class-overview-page.php:137
 msgid "Orders missing a batch"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:128
+#: includes/admin/class-overview-page.php:138
 msgid "Public batches without a report"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:129
+#: includes/admin/class-overview-page.php:139
 msgid "Unfinished orders (last 7 days)"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:130
+#: includes/admin/class-overview-page.php:140
 msgid "Waiting for payment"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:131
+#: includes/admin/class-overview-page.php:141
 #: includes/admin/class-tracking-page.php:175
 msgid "Payment failed"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:132
+#: includes/admin/class-overview-page.php:142
 msgid "Abandoned-cart recovery emails are not set up yet; follow up on these orders manually."
 msgstr ""
 
-#: includes/admin/class-overview-page.php:133
+#: includes/admin/class-overview-page.php:143
 msgid "Currency"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:134
+#: includes/admin/class-overview-page.php:144
 #: includes/modules/class-blocks.php:254
 msgid "Default"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:135
+#: includes/admin/class-overview-page.php:145
 msgid "Upcoming US shopping days"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:136
+#: includes/admin/class-overview-page.php:146
 #, php-format
 msgid "in %d days"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:137
+#: includes/admin/class-overview-page.php:147
 msgid "today"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:138
+#: includes/admin/class-overview-page.php:148
 msgid "Real time"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:139
+#: includes/admin/class-overview-page.php:149
 msgid "Visitors online"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:140
+#: includes/admin/class-overview-page.php:150
 msgid "Orders today"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:141
+#: includes/admin/class-overview-page.php:151
 msgid "Sales today"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:143
+#: includes/admin/class-overview-page.php:153
 msgid "Today"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:144
+#: includes/admin/class-overview-page.php:154
 msgid "Yesterday"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:145
+#: includes/admin/class-overview-page.php:155
 msgid "Last 7 days"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:146
+#: includes/admin/class-overview-page.php:156
 msgid "Last 30 days"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:147
+#: includes/admin/class-overview-page.php:157
 #: includes/admin/class-tracking-page.php:36
 #: includes/admin/class-tracking-page.php:219
 msgid "Conversion"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:148
+#: includes/admin/class-overview-page.php:158
 msgid "Visitors and orders"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:149
+#: includes/admin/class-overview-page.php:159
 #, php-format
 msgid "Total visitors: %d"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:150
+#: includes/admin/class-overview-page.php:160
 msgid "Top products"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:151
+#: includes/admin/class-overview-page.php:161
 #, php-format
 msgid "%d sold"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:152
+#: includes/admin/class-overview-page.php:162
 msgid "No data yet"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:153
+#: includes/admin/class-overview-page.php:163
 msgid "Visitor tracking is off, so visitor numbers, conversion and the funnel stay at zero. It is a test feature: turn it on only for test visits."
 msgstr ""
 
-#: includes/admin/class-overview-page.php:154
+#: includes/admin/class-overview-page.php:164
 msgid "Visitor data"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:155
-msgid "WordPress dashboard"
+#: includes/admin/class-overview-page.php:165
+msgid "Customer tracking"
+msgstr ""
+
+#: includes/admin/class-overview-page.php:166
+#: includes/admin/class-tracking-page.php:80
+msgid "No visitors in the last 30 minutes."
+msgstr ""
+
+#: includes/admin/class-overview-page.php:167
+msgid "Visitor tracking is off. Turn it on in Visitor data to see customers here."
+msgstr ""
+
+#: includes/admin/class-overview-page.php:168
+msgid "View all"
+msgstr ""
+
+#: includes/admin/class-overview-page.php:170
+#: includes/admin/class-tracking-page.php:78
+msgid "Idle"
+msgstr ""
+
+#: includes/admin/class-overview-page.php:171
+#: includes/admin/class-tracking-page.php:79
+msgid "Offline"
+msgstr ""
+
+#. translators: %s: time, e.g. 5s
+#: includes/admin/class-overview-page.php:173
+#: includes/admin/class-tracking-page.php:87
+#, php-format
+msgid "%s ago"
+msgstr ""
+
+#. translators: %d: number of pages
+#: includes/admin/class-overview-page.php:175
+#, php-format
+msgid "%d pages open"
+msgstr ""
+
+#: includes/admin/class-overview-page.php:177
+#: includes/admin/class-tracking-page.php:142
+msgid "Home"
+msgstr ""
+
+#: includes/admin/class-overview-page.php:178
+#: includes/admin/class-tracking-page.php:143
+msgid "Shop"
+msgstr ""
+
+#: includes/admin/class-overview-page.php:180
+#: includes/admin/class-tracking-page.php:145
+#: includes/class-menus.php:108
+msgid "Cart"
+msgstr ""
+
+#: includes/admin/class-overview-page.php:181
+#: includes/admin/class-tracking-page.php:146
+msgid "Checkout"
+msgstr ""
+
+#: includes/admin/class-overview-page.php:182
+#: includes/admin/class-tracking-page.php:106
+#: includes/admin/class-tracking-page.php:147
+msgid "Account"
+msgstr ""
+
+#: includes/admin/class-overview-page.php:183
+#: includes/admin/class-tracking-page.php:148
+msgid "Order received"
+msgstr ""
+
+#: includes/admin/class-overview-page.php:184
+#: includes/admin/class-tracking-page.php:149
+msgid "Order payment"
 msgstr ""
 
 #. translators: %d: number of orders
-#: includes/admin/class-overview-page.php:157
+#: includes/admin/class-overview-page.php:188
 #, php-format
 msgid "Only real orders are counted: %d test order(s) in this period (test payment or demo products) are left out."
 msgstr ""
 
-#: includes/admin/class-overview-page.php:160
+#: includes/admin/class-overview-page.php:191
 #: includes/admin/class-tracking-page.php:135
 msgid "Viewed a product"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:161
+#: includes/admin/class-overview-page.php:192
 #: includes/admin/class-tracking-page.php:126
 #: includes/admin/class-tracking-page.php:136
 #: includes/admin/class-tracking-page.php:172
 msgid "Added to cart"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:162
+#: includes/admin/class-overview-page.php:193
 #: includes/admin/class-tracking-page.php:137
 msgid "Reached checkout"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:163
+#: includes/admin/class-overview-page.php:194
 #: includes/admin/class-tracking-page.php:138
 msgid "Placed an order"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:164
+#: includes/admin/class-overview-page.php:195
 #: includes/admin/class-tracking-page.php:128
 #: includes/admin/class-tracking-page.php:139
 msgid "Paid"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:166
+#: includes/admin/class-overview-page.php:197
 #, php-format
 msgid "%s of visitors"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:168
+#: includes/admin/class-overview-page.php:199
 msgid "New Year’s Day"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:169
+#: includes/admin/class-overview-page.php:200
 msgid "Valentine’s Day"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:170
+#: includes/admin/class-overview-page.php:201
 msgid "Mother’s Day"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:171
+#: includes/admin/class-overview-page.php:202
 msgid "Memorial Day"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:172
+#: includes/admin/class-overview-page.php:203
 msgid "Father’s Day"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:173
+#: includes/admin/class-overview-page.php:204
 msgid "Independence Day"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:174
+#: includes/admin/class-overview-page.php:205
 msgid "Labor Day"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:175
+#: includes/admin/class-overview-page.php:206
 msgid "Halloween"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:176
+#: includes/admin/class-overview-page.php:207
 msgid "Thanksgiving"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:177
+#: includes/admin/class-overview-page.php:208
 msgid "Black Friday"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:178
+#: includes/admin/class-overview-page.php:209
 msgid "Cyber Monday"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:179
+#: includes/admin/class-overview-page.php:210
 msgid "Christmas"
 msgstr ""
 
@@ -2012,18 +2088,6 @@ msgstr ""
 msgid "Live visitors"
 msgstr ""
 
-#: includes/admin/class-tracking-page.php:78
-msgid "Idle"
-msgstr ""
-
-#: includes/admin/class-tracking-page.php:79
-msgid "Offline"
-msgstr ""
-
-#: includes/admin/class-tracking-page.php:80
-msgid "No visitors in the last 30 minutes."
-msgstr ""
-
 #: includes/admin/class-tracking-page.php:81
 msgid "Visitor"
 msgstr ""
@@ -2046,11 +2110,6 @@ msgstr ""
 
 #: includes/admin/class-tracking-page.php:86
 msgid "Last signal"
-msgstr ""
-
-#: includes/admin/class-tracking-page.php:87
-#, php-format
-msgid "%s ago"
 msgstr ""
 
 #: includes/admin/class-tracking-page.php:88
@@ -2121,11 +2180,6 @@ msgstr ""
 
 #: includes/admin/class-tracking-page.php:105
 msgid "First seen"
-msgstr ""
-
-#: includes/admin/class-tracking-page.php:106
-#: includes/admin/class-tracking-page.php:147
-msgid "Account"
 msgstr ""
 
 #: includes/admin/class-tracking-page.php:107
@@ -2224,31 +2278,6 @@ msgstr ""
 
 #: includes/admin/class-tracking-page.php:134
 msgid "Visited"
-msgstr ""
-
-#: includes/admin/class-tracking-page.php:142
-msgid "Home"
-msgstr ""
-
-#: includes/admin/class-tracking-page.php:143
-msgid "Shop"
-msgstr ""
-
-#: includes/admin/class-tracking-page.php:145
-#: includes/class-menus.php:108
-msgid "Cart"
-msgstr ""
-
-#: includes/admin/class-tracking-page.php:146
-msgid "Checkout"
-msgstr ""
-
-#: includes/admin/class-tracking-page.php:148
-msgid "Order received"
-msgstr ""
-
-#: includes/admin/class-tracking-page.php:149
-msgid "Order payment"
 msgstr ""
 
 #: includes/admin/class-tracking-page.php:153

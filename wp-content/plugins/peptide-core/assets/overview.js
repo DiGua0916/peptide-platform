@@ -148,6 +148,50 @@
 		return '<section class="pc-ov-card"><div class="pc-ov-card__head"><h2>' + esc( S.topProducts ) + '</h2>' + link( L.products, S.more ) + '</div>' + body + '</section>';
 	}
 
+	// ---------- 客户追踪（最近 30 分钟的访客，每 10 秒刷新） ----------
+
+	var liveData = null;
+
+	function ago( ms ) {
+		var s = Math.max( 0, Math.round( ms / 1000 ) );
+		return fmt( S.ago, s < 60 ? s + 's' : s < 3600 ? Math.floor( s / 60 ) + 'm' : Math.floor( s / 3600 ) + 'h' );
+	}
+
+	function visitorsCard() {
+		var head = '<div class="pc-ov-card__head"><h2>' + esc( S.liveVisitors ) + '</h2>' + link( L.visitors, S.viewAll ) + '</div>';
+		if ( ! summary.tracking ) {
+			return head + '<p class="pc-ov-empty">' + esc( S.liveOff ) + '</p>';
+		}
+		if ( ! liveData ) {
+			return head + '<p class="pc-ov-empty">…</p>';
+		}
+		var list = liveData.visitors || [];
+		if ( ! list.length ) {
+			return head + '<p class="pc-ov-empty">' + esc( S.liveEmpty ) + '</p>';
+		}
+		return head + '<ul class="pc-ov-visitors">' + list.slice( 0, 20 ).map( function ( v ) {
+			var tab = v.tabs[ 0 ] || {};
+			var page = ( S.pageTypes[ tab.page_type ] || tab.page_type || '' ) + ( tab.product_name ? ' · ' + tab.product_name : '' );
+			var more = v.tabs.length > 1 ? ' · ' + fmt( S.tabsOpen, v.tabs.length ) : '';
+			return '<li><a href="' + esc( L.visitor + v.visitor.id ) + '"><span class="pc-ov-dot is-' + esc( v.status ) + '" title="' + esc( S[ v.status ] ) + '"></span>' +
+				'<span class="pc-ov-visitor__who"><b>' + esc( v.visitor.label ) + '</b><small>' + esc( page + more ) + '</small></span>' +
+				'<span class="pc-ov-visitor__when">' + esc( S[ v.status ] ) + '<small>' + esc( ago( liveData.now_ms - v.last_signal_ms ) ) + '</small></span></a></li>';
+		} ).join( '' ) + '</ul>';
+	}
+
+	function refreshVisitors() {
+		if ( ! summary.tracking ) {
+			return;
+		}
+		wp.apiFetch( { path: '/peptide/v1/track/admin/live' } ).then( function ( res ) {
+			liveData = res;
+			var box = document.getElementById( 'pc-ov-visitors' );
+			if ( box ) {
+				box.innerHTML = visitorsCard();
+			}
+		} ).catch( function () {} );
+	}
+
 	function tabs() {
 		return [ 'today', 'yesterday', '7d', '30d' ].map( function ( r ) {
 			return '<button type="button" class="pc-ov-tab' + ( r === range.range ? ' is-active' : '' ) + '" data-range="' + r + '">' + esc( S[ r ] ) + '</button>';
@@ -161,14 +205,14 @@
 			note += '<div class="notice notice-info inline pc-ov-note"><p>' + esc( fmt( S.testOrders, excluded ) ) + '</p></div>';
 		}
 		root.innerHTML =
-			'<div class="pc-ov-top"><a href="' + esc( L.classic ) + '">' + esc( S.classic ) + '</a></div>' + note +
+			note +
 			'<div class="pc-ov-grid">' +
 			'<div class="pc-ov-main">' + hero() + '<div class="pc-ov-row">' + todo() + unfinished() + '</div>' +
 			'<section class="pc-ov-card"><div class="pc-ov-card__head"><div class="pc-ov-tabs">' + tabs() + '</div>' + link( L.conversion, S.more ) + '</div>' +
 			'<p class="pc-ov-headline">' + esc( S.conversion ) + ': <b>' + esc( null === range.conversion ? '—' : range.conversion + '%' ) + '</b> · ' + esc( S.sales ) + ': <b>' + esc( money( range.sales ) + ' ' + summary.currency.code ) + '</b> <span class="pc-ov-muted">' + esc( range.from + ' – ' + range.to ) + '</span></p>' +
 			'<div class="pc-ov-split"><div><h3>' + esc( S.funnel ) + '</h3>' + funnel() + '</div><div><h3>' + esc( fmt( S.totalVisitors, range.visitors ) ) + '</h3>' + chart() + '</div></div></section>' +
 			'</div>' +
-			'<div class="pc-ov-side">' + side() + live( todayData ) + products() + '</div>' +
+			'<div class="pc-ov-side">' + side() + live( todayData ) + products() + '<section class="pc-ov-card" id="pc-ov-visitors">' + visitorsCard() + '</section></div>' +
 			'</div>';
 		root.querySelectorAll( '.pc-ov-tab' ).forEach( function ( b ) {
 			b.addEventListener( 'click', function () {
@@ -215,6 +259,12 @@
 
 	render();
 	schedule();
+	refreshVisitors();
+	setInterval( function () {
+		if ( ! document.hidden ) {
+			refreshVisitors();
+		}
+	}, 10000 );
 	document.addEventListener( 'visibilitychange', function () {
 		if ( ! document.hidden ) {
 			load( range.range ).catch( schedule );

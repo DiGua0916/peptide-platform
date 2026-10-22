@@ -390,3 +390,61 @@
 		border-left: 0;
 	}
 }
+
+/* 客户追踪 */
+.pc-ov-visitors {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.pc-ov-visitors li + li {
+	border-top: 1px solid var(--pc-ov-line);
+}
+
+.pc-ov-visitors a {
+	display: grid;
+	grid-template-columns: 10px minmax(0, 1fr) auto;
+	gap: 10px;
+	align-items: center;
+	padding: 8px 4px;
+	color: inherit;
+	text-decoration: none;
+}
+
+.pc-ov-visitors a:hover {
+	background: #f9fafb;
+}
+
+.pc-ov-visitor__who,
+.pc-ov-visitor__when {
+	display: grid;
+	min-width: 0;
+}
+
+.pc-ov-visitor__who small,
+.pc-ov-visitor__when small {
+	overflow: hidden;
+	color: var(--pc-ov-muted);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.pc-ov-visitor__when {
+	text-align: right;
+}
+
+.pc-ov-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: #a7aaad;
+}
+
+.pc-ov-dot.is-active {
+	background: #00a32a;
+}
+
+.pc-ov-dot.is-idle {
+	background: #dba617;
+}

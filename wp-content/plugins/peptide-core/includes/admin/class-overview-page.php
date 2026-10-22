@@ -2,8 +2,10 @@
 /**
  * 后台“概览”数据大盘（OVERVIEW-01），参照 Shopname 的概览页。用户要求后台首页改成数据大盘。
  *
- * - 左侧菜单最上面的“概览”。能管理商店的人（manage_woocommerce）打开后台首页（index.php）时自动来到这里；
- *   WordPress 原来的仪表盘（含 VialCove 工作台）仍可以从页面右上角的链接打开（index.php?pc_classic=1）。
+ * - 左侧菜单最上面的“仪表盘”（用户 2026-10-22 要求：删掉 WordPress 原来的仪表盘，用这个数据大盘代替）。
+ *   能管理商店的人（manage_woocommerce）打开后台首页（index.php）时自动来到这里。原来仪表盘里“VialCove 工作台”的待办，
+ *   在这里的“待处理”卡片里。WordPress 的“更新”页面仍可以从插件 / 主题页面或 update-core.php 打开。
+ * - 右侧“客户追踪”：最近 30 分钟的访客，每人一行，每 10 秒刷新；点进去是这个访客的单独追踪页面（访客数据 → 访客详情）。
  * - 数据：Overview::summary()（待处理、实时、节日、币种）和 Overview::range_data()（今天 / 昨天 / 7 天 / 30 天）。
  *   切换时间段时调用 GET /peptide/v1/overview?range=…，由 assets/overview.js 渲染。
  *
@@ -24,6 +26,7 @@ final class Overview_Page {
 
 	public static function register_hooks(): void {
 		add_action( 'admin_menu', array( self::class, 'add_menu' ), 5 );
+		add_action( 'admin_menu', array( self::class, 'remove_wp_dashboard' ), 999 );
 		add_action( 'load-index.php', array( self::class, 'redirect_dashboard' ) );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
 	}
@@ -60,12 +63,19 @@ final class Overview_Page {
 	}
 
 	public static function add_menu(): void {
-		add_menu_page( __( 'Overview', 'peptide-core' ), __( 'Overview', 'peptide-core' ), self::CAP, self::SLUG, array( self::class, 'render' ), 'dashicons-chart-area', 1 );
+		add_menu_page( __( 'Dashboard', 'peptide-core' ), __( 'Dashboard', 'peptide-core' ), self::CAP, self::SLUG, array( self::class, 'render' ), 'dashicons-dashboard', 1 );
 	}
 
-	/** 后台首页直接显示概览；带 pc_classic=1 时显示 WordPress 原来的仪表盘。 */
+	/** 去掉 WordPress 原来的“仪表盘”菜单（只对能看到数据大盘的人）。 */
+	public static function remove_wp_dashboard(): void {
+		if ( current_user_can( self::CAP ) ) {
+			remove_menu_page( 'index.php' );
+		}
+	}
+
+	/** 后台首页直接显示数据大盘。 */
 	public static function redirect_dashboard(): void {
-		if ( ! current_user_can( self::CAP ) || isset( $_GET['pc_classic'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( ! current_user_can( self::CAP ) ) {
 			return;
 		}
 		wp_safe_redirect( self::url() );
@@ -94,7 +104,7 @@ final class Overview_Page {
 						'batches'     => admin_url( 'edit.php?post_type=pc_batch' ),
 						'visitors'    => admin_url( 'admin.php?page=' . Tracking_Page::SLUG ),
 						'conversion'  => admin_url( 'admin.php?page=' . Tracking_Page::STATS_SLUG ),
-						'classic'     => admin_url( 'index.php?pc_classic=1' ),
+						'visitor'     => admin_url( 'admin.php?page=' . Tracking_Page::SLUG . '&visitor=' ),
 						'products'    => admin_url( 'edit.php?post_type=product' ),
 						'promotions'  => admin_url( 'edit.php?post_type=pc_promotion' ),
 					),
@@ -152,7 +162,28 @@ final class Overview_Page {
 			'noData'       => __( 'No data yet', 'peptide-core' ),
 			'trackingOff'  => __( 'Visitor tracking is off, so visitor numbers, conversion and the funnel stay at zero. It is a test feature: turn it on only for test visits.', 'peptide-core' ),
 			'trackingLink' => __( 'Visitor data', 'peptide-core' ),
-			'classic'      => __( 'WordPress dashboard', 'peptide-core' ),
+			'liveVisitors' => __( 'Customer tracking', 'peptide-core' ),
+			'liveEmpty'    => __( 'No visitors in the last 30 minutes.', 'peptide-core' ),
+			'liveOff'      => __( 'Visitor tracking is off. Turn it on in Visitor data to see customers here.', 'peptide-core' ),
+			'viewAll'      => __( 'View all', 'peptide-core' ),
+			'active'       => __( 'Active', 'peptide-core' ),
+			'idle'         => __( 'Idle', 'peptide-core' ),
+			'offline'      => __( 'Offline', 'peptide-core' ),
+			/* translators: %s: time, e.g. 5s */
+			'ago'          => __( '%s ago', 'peptide-core' ),
+			/* translators: %d: number of pages */
+			'tabsOpen'     => __( '%d pages open', 'peptide-core' ),
+			'pageTypes'    => array(
+				'home'           => __( 'Home', 'peptide-core' ),
+				'shop'           => __( 'Shop', 'peptide-core' ),
+				'product'        => __( 'Product', 'peptide-core' ),
+				'cart'           => __( 'Cart', 'peptide-core' ),
+				'checkout'       => __( 'Checkout', 'peptide-core' ),
+				'account'        => __( 'Account', 'peptide-core' ),
+				'order_received' => __( 'Order received', 'peptide-core' ),
+				'order_pay'      => __( 'Order payment', 'peptide-core' ),
+				'content'        => __( 'Page', 'peptide-core' ),
+			),
 			/* translators: %d: number of orders */
 			'testOrders'   => __( 'Only real orders are counted: %d test order(s) in this period (test payment or demo products) are left out.', 'peptide-core' ),
 			'stages'       => array(
@@ -185,6 +216,6 @@ final class Overview_Page {
 		if ( ! current_user_can( self::CAP ) ) {
 			return;
 		}
-		echo '<div class="wrap pc-ov-wrap"><h1 class="screen-reader-text">' . esc_html__( 'Overview', 'peptide-core' ) . '</h1><div id="pc-overview" class="pc-ov"><p>' . esc_html__( 'Loading…', 'peptide-core' ) . '</p></div></div>';
+		echo '<div class="wrap pc-ov-wrap"><h1 class="screen-reader-text">' . esc_html__( 'Dashboard', 'peptide-core' ) . '</h1><div id="pc-overview" class="pc-ov"><p>' . esc_html__( 'Loading…', 'peptide-core' ) . '</p></div></div>';
 	}
 }
