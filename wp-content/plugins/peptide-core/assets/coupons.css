@@ -1,0 +1,83 @@
+/* 优惠码页面的默认样式（COUPON-01）。主题有 template-parts/coupons/*.php 时不会用到这些类名。 */
+
+.pc-coupons {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	gap: 16px;
+	margin: 24px 0;
+}
+
+.pc-coupon {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 20px;
+	border: 1px dashed currentColor;
+	border-radius: 8px;
+}
+
+.pc-coupon--detail {
+	max-width: 640px;
+	margin: 24px 0;
+}
+
+.pc-coupon__value {
+	font-size: 1.4em;
+	font-weight: 700;
+	line-height: 1.25;
+}
+
+.pc-coupon__text,
+.pc-coupon__terms {
+	margin: 0;
+}
+
+.pc-coupon__terms {
+	font-size: 0.9em;
+	opacity: 0.75;
+}
+
+.pc-coupon__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+	margin-top: auto;
+}
+
+.pc-coupon__code {
+	padding: 6px 10px;
+	border: 1px solid currentColor;
+	border-radius: 4px;
+	font-size: 1.05em;
+	letter-spacing: 0.06em;
+	background: transparent;
+}
+
+.pc-coupon__copy,
+.pc-coupon__apply {
+	padding: 8px 14px;
+	border: 0;
+	border-radius: 4px;
+	background: #177e9b;
+	color: #fff;
+	font: inherit;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.pc-coupon__heading {
+	margin: 12px 0 0;
+	font-size: 1em;
+}
+
+.pc-coupon__list {
+	margin: 0;
+	padding-left: 1.2em;
+}
+
+@media (max-width: 480px) {
+	.pc-coupons {
+		grid-template-columns: 1fr;
+	}
+}

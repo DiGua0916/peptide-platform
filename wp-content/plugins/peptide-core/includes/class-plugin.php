@@ -36,6 +36,7 @@ final class Plugin {
 		Api\Layout_Controller::register_hooks();
 		Menus::register_hooks();
 		Custom_Pages::register_hooks();
+		Coupons::register_hooks();
 		Api\Menu_Controller::register_hooks();
 		add_action( 'init', array( Installer::class, 'maybe_upgrade' ), 5 );
 		Api\Rest_Controller::register_hooks();

@@ -2,14 +2,14 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.8.0\n"
+"Project-Id-Version: Peptide Core 0.9.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-21T19:35:27+00:00\n"
+"POT-Creation-Date: 2026-10-22T08:32:27+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -348,7 +348,7 @@ msgstr ""
 
 #: includes/admin/class-design-editor.php:113
 #: includes/admin/class-store-design.php:431
-#: includes/class-menus.php:97
+#: includes/class-menus.php:99
 #: includes/class-templates.php:49
 msgid "Homepage"
 msgstr ""
@@ -979,7 +979,7 @@ msgid "Strikethrough"
 msgstr ""
 
 #: includes/admin/class-menu-page.php:151
-#: includes/class-menus.php:645
+#: includes/class-menus.php:680
 msgid "This menu was changed somewhere else after you opened it. Reload the page to see the latest version."
 msgstr ""
 
@@ -1217,6 +1217,7 @@ msgid "Withdrawn"
 msgstr ""
 
 #: includes/admin/class-report-metabox.php:73
+#: includes/class-coupons.php:546
 msgid "Public"
 msgstr ""
 
@@ -1748,8 +1749,8 @@ msgid "Sorry, you are not allowed to edit menus."
 msgstr ""
 
 #: includes/api/class-menu-controller.php:60
-#: includes/class-menus.php:290
-#: includes/class-menus.php:642
+#: includes/class-menus.php:301
+#: includes/class-menus.php:677
 msgid "Menu not found."
 msgstr ""
 
@@ -1809,6 +1810,201 @@ msgstr ""
 #: includes/class-checkout-ack.php:73
 #, php-format
 msgid "Accepted at %s (UTC)"
+msgstr ""
+
+#. translators: %s: percentage
+#: includes/class-coupons.php:135
+#, php-format
+msgid "%s%% off"
+msgstr ""
+
+#. translators: %s: amount
+#: includes/class-coupons.php:138
+#, php-format
+msgid "%s off each eligible item"
+msgstr ""
+
+#. translators: %s: amount
+#: includes/class-coupons.php:141
+#, php-format
+msgid "%s off your order"
+msgstr ""
+
+#: includes/class-coupons.php:263
+msgid "This coupon code does not exist."
+msgstr ""
+
+#: includes/class-coupons.php:279
+msgid "This coupon has ended or can no longer be used."
+msgstr ""
+
+#. translators: %s: coupon code
+#: includes/class-coupons.php:284
+#, php-format
+msgid "Coupon %s is saved and will be applied once your cart meets its conditions."
+msgstr ""
+
+#. translators: %s: amount
+#: includes/class-coupons.php:361
+#, php-format
+msgid "Minimum spend %s"
+msgstr ""
+
+#. translators: %s: amount
+#: includes/class-coupons.php:365
+#, php-format
+msgid "Maximum spend %s"
+msgstr ""
+
+#: includes/class-coupons.php:368
+msgid "Includes free shipping"
+msgstr ""
+
+#. translators: %s: date
+#: includes/class-coupons.php:372
+#, php-format
+msgid "Valid until %s"
+msgstr ""
+
+#. translators: %d: number of uses
+#: includes/class-coupons.php:376
+#, php-format
+msgid "%d use left"
+msgid_plural "%d uses left"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of uses
+#: includes/class-coupons.php:380
+#, php-format
+msgid "Limit %d per customer"
+msgid_plural "Limit %d per customer"
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/class-coupons.php:383
+msgid "Cannot be combined with other coupons"
+msgstr ""
+
+#: includes/class-coupons.php:386
+msgid "Not valid on sale items"
+msgstr ""
+
+#: includes/class-coupons.php:392
+msgid "Copied"
+msgstr ""
+
+#: includes/class-coupons.php:392
+msgid "Copy code"
+msgstr ""
+
+#: includes/class-coupons.php:406
+msgid "There are no public offers right now. Please check back later."
+msgstr ""
+
+#: includes/class-coupons.php:420
+msgid "Details"
+msgstr ""
+
+#: includes/class-coupons.php:429
+msgid "This offer is not available. It may have ended."
+msgstr ""
+
+#: includes/class-coupons.php:431
+msgid "See current offers"
+msgstr ""
+
+#: includes/class-coupons.php:440
+msgid "Apply to my cart"
+msgstr ""
+
+#: includes/class-coupons.php:450
+msgid "Valid on these products"
+msgstr ""
+
+#: includes/class-coupons.php:451
+msgid "Valid in these categories"
+msgstr ""
+
+#: includes/class-coupons.php:452
+msgid "Not valid on these products"
+msgstr ""
+
+#: includes/class-coupons.php:453
+msgid "Not valid in these categories"
+msgstr ""
+
+#: includes/class-coupons.php:466
+msgid "All offers"
+msgstr ""
+
+#: includes/class-coupons.php:479
+msgid "Show publicly"
+msgstr ""
+
+#: includes/class-coupons.php:480
+msgid "List this coupon on the storefront coupons page so customers can copy it."
+msgstr ""
+
+#: includes/class-coupons.php:487
+msgid "Public title"
+msgstr ""
+
+#: includes/class-coupons.php:488
+msgid "e.g. 10% off your first order (empty = automatic)"
+msgstr ""
+
+#: includes/class-coupons.php:495
+msgid "Public description"
+msgstr ""
+
+#: includes/class-coupons.php:502
+#: includes/modules/class-registry.php:1195
+msgid "Sort order"
+msgstr ""
+
+#: includes/class-coupons.php:512
+msgid "Not shown: the coupon is not published."
+msgstr ""
+
+#: includes/class-coupons.php:513
+msgid "Not shown: “Show publicly” is off."
+msgstr ""
+
+#: includes/class-coupons.php:514
+msgid "Not shown: coupons limited to specific emails are never listed publicly."
+msgstr ""
+
+#: includes/class-coupons.php:515
+msgid "Not shown: the coupon has expired."
+msgstr ""
+
+#: includes/class-coupons.php:516
+msgid "Not shown: the usage limit has been reached."
+msgstr ""
+
+#: includes/class-coupons.php:518
+msgid "Storefront"
+msgstr ""
+
+#: includes/class-coupons.php:520
+msgid "View on the coupons page"
+msgstr ""
+
+#: includes/class-coupons.php:524
+msgid "Share link"
+msgstr ""
+
+#: includes/class-coupons.php:524
+msgid "Opening this link applies the coupon automatically."
+msgstr ""
+
+#: includes/class-coupons.php:556
+msgid "Listed"
+msgstr ""
+
+#: includes/class-coupons.php:558
+msgid "Public, but not listed now"
 msgstr ""
 
 #: includes/class-custom-pages.php:53
@@ -1904,118 +2100,126 @@ msgstr[1] ""
 msgid "No new drafts: those pages already exist."
 msgstr ""
 
-#: includes/class-menus.php:72
-#: includes/class-menus.php:203
+#: includes/class-menus.php:74
+#: includes/class-menus.php:214
 msgid "Header menu"
 msgstr ""
 
-#: includes/class-menus.php:75
-#: includes/class-menus.php:203
+#: includes/class-menus.php:77
+#: includes/class-menus.php:214
 msgid "Footer menu"
 msgstr ""
 
-#: includes/class-menus.php:85
-#: includes/class-menus.php:293
+#: includes/class-menus.php:87
+#: includes/class-menus.php:304
 msgid "The header and footer menus cannot be deleted."
 msgstr ""
 
-#: includes/class-menus.php:96
+#: includes/class-menus.php:98
 msgid "None (heading only)"
 msgstr ""
 
-#: includes/class-menus.php:98
+#: includes/class-menus.php:100
 msgid "All products"
 msgstr ""
 
-#: includes/class-menus.php:99
+#: includes/class-menus.php:101
 msgid "Product category"
 msgstr ""
 
-#: includes/class-menus.php:100
+#: includes/class-menus.php:102
 msgid "Product page"
 msgstr ""
 
-#: includes/class-menus.php:101
+#: includes/class-menus.php:103
 msgid "Custom page"
 msgstr ""
 
-#: includes/class-menus.php:102
+#: includes/class-menus.php:104
 msgid "Blog post"
 msgstr ""
 
-#: includes/class-menus.php:103
+#: includes/class-menus.php:105
 msgid "Cart"
 msgstr ""
 
-#: includes/class-menus.php:104
+#: includes/class-menus.php:106
 msgid "My account"
 msgstr ""
 
-#: includes/class-menus.php:105
+#: includes/class-menus.php:107
 msgid "My orders / order tracking"
 msgstr ""
 
-#: includes/class-menus.php:106
+#: includes/class-menus.php:108
 msgid "Log in"
 msgstr ""
 
-#: includes/class-menus.php:107
+#: includes/class-menus.php:109
 msgid "Register"
 msgstr ""
 
-#: includes/class-menus.php:108
+#: includes/class-menus.php:110
 msgid "Forgot password"
 msgstr ""
 
-#: includes/class-menus.php:109
+#: includes/class-menus.php:111
 msgid "Product search"
 msgstr ""
 
-#: includes/class-menus.php:110
+#: includes/class-menus.php:112
+msgid "Coupons page"
+msgstr ""
+
+#: includes/class-menus.php:113
+msgid "Coupon details"
+msgstr ""
+
+#: includes/class-menus.php:114
 msgid "Custom URL"
 msgstr ""
 
-#: includes/class-menus.php:276
-#: includes/class-menus.php:650
+#: includes/class-menus.php:287
+#: includes/class-menus.php:685
 msgid "Please enter a menu name."
 msgstr ""
 
 #. translators: %d: maximum number of items
-#: includes/class-menus.php:568
+#: includes/class-menus.php:603
 #, php-format
 msgid "A menu can have at most %d items."
 msgstr ""
 
 #. translators: %s: menu item name
-#: includes/class-menus.php:594
+#: includes/class-menus.php:629
 #, php-format
 msgid "“%s”: the linked page no longer exists. Choose another link."
 msgstr ""
 
 #. translators: %s: menu item name
-#: includes/class-menus.php:594
+#: includes/class-menus.php:629
 msgid "(untitled)"
 msgstr ""
 
-#: includes/class-menus.php:602
+#: includes/class-menus.php:637
 msgid "Every menu item needs a name."
 msgstr ""
 
-#: includes/class-menus.php:659
+#: includes/class-menus.php:694
 msgid "Another menu already uses this name."
 msgstr ""
 
 #. translators: %s: page title
-#: includes/class-menus.php:757
+#: includes/class-menus.php:800
 #, php-format
 msgid "%s (not published)"
 msgstr ""
 
-#: includes/class-menus.php:835
+#: includes/class-menus.php:885
 msgid "This file is not a menu export from this plugin."
 msgstr ""
 
-#: includes/class-menus.php:850
+#: includes/class-menus.php:900
 msgid "Imported menu"
 msgstr ""
 
@@ -2040,7 +2244,7 @@ msgstr ""
 msgid "Batch: %s"
 msgstr ""
 
-#: includes/class-plugin.php:90
+#: includes/class-plugin.php:91
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr ""
 
@@ -3534,10 +3738,6 @@ msgstr ""
 
 #: includes/modules/class-registry.php:1185
 msgid "Products"
-msgstr ""
-
-#: includes/modules/class-registry.php:1195
-msgid "Sort order"
 msgstr ""
 
 #: includes/modules/class-registry.php:1198

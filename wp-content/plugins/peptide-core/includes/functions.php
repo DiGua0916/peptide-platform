@@ -95,3 +95,23 @@ function peptide_core_get_menu( string $location = 'header' ): ?array {
 function peptide_core_get_checkout_terms(): array {
 	return \PeptideCore\Custom_Pages::checkout_terms();
 }
+
+/**
+ * 可以公开展示的优惠码（COUPON-01），在 WooCommerce 优惠券编辑页勾选“在优惠码页面公开展示”。
+ * 每张：id, code, title, text, type（percent / fixed_cart / fixed_product）, amount, value（例如 "10% off"）, free_shipping,
+ * minimum_spend(_text), maximum_spend(_text), expires（ISO 时间或 null）, expires_text, uses_left, limit_per_customer,
+ * individual_use, exclude_sale_items, products / categories / excluded_products / excluded_categories（[{id,name,url}]）,
+ * url（详情页）, apply_url（打开后自动使用的分享链接）。不包含邮箱限制等内部信息；限定邮箱的优惠码不会出现。
+ *
+ * @return array<int,array<string,mixed>>
+ */
+function peptide_core_get_public_coupons(): array {
+	return \PeptideCore\Coupons::public_list();
+}
+
+/**
+ * 一张可以公开的优惠码，结构同上；不存在、已过期或未公开时返回 null。
+ */
+function peptide_core_get_public_coupon( string $code ): ?array {
+	return \PeptideCore\Coupons::get_public( $code );
+}
