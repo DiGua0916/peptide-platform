@@ -65,6 +65,7 @@ final class Plugin {
 			Admin\Tracking_Page::register_hooks();
 			Admin\Overview_Page::register_hooks();
 			Admin\Admin_Menus::register_hooks();
+			Admin\Store_Settings::register_hooks();
 			Admin\Recovery_Page::register_hooks();
 		}
 

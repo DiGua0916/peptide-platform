@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Peptide Core
  * Description:       Batches, test reports and WooCommerce integration for the peptide store.
- * Version:           0.16.0
+ * Version:           0.17.0
  * Requires at least: 6.5
  * Requires PHP:      8.1
  * Requires Plugins:  woocommerce
@@ -15,7 +15,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'PEPTIDE_CORE_VERSION', '0.16.0' );
+define( 'PEPTIDE_CORE_VERSION', '0.17.0' );
 define( 'PEPTIDE_CORE_FILE', __FILE__ );
 define( 'PEPTIDE_CORE_DIR', __DIR__ );
 

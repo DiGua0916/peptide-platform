@@ -5,7 +5,8 @@
  * - 文章、媒体、评论：直接去掉菜单。页面本身还在：商品图片等仍然用媒体库选图，地址仍可以直接打开。
  * - WooCommerce：去掉顶层菜单，但订单、顾客、设置是开店必需的，按 Shopname 的方式移到新的顶层菜单：
  *   订单（WooCommerce 订单列表，带待处理数量）、顾客（WooCommerce 顾客）、
- *   店铺设置（WooCommerce 设置、VialCove 设置、系统状态）。
+ *   店铺设置（STORE-SETTINGS-01 起按 Shopname 分为：物流设置、税费设置、支付设置、系统设置；
+ *   原来的 WooCommerce 设置、VialCove 设置、系统状态放在“系统设置”页面底部）。
  *   这些页面仍然是 WooCommerce 自己的页面，打开时左侧菜单停在新的位置。
  *
  * 只影响能管理商店的人（manage_woocommerce）；其他角色的菜单不变。
@@ -32,6 +33,8 @@ final class Admin_Menus {
 	public const ORDERS    = 'admin.php?page=wc-orders';
 	public const CUSTOMERS = 'admin.php?page=wc-admin&path=/customers';
 	public const SETTINGS  = 'admin.php?page=wc-settings';
+	public const SHIPPING  = 'admin.php?page=wc-settings&tab=shipping';
+	public const PAYMENTS  = 'admin.php?page=wc-settings&tab=checkout';
 
 	public static function register_hooks(): void {
 		add_action( 'admin_menu', array( self::class, 'add_menus' ), 60 );
@@ -53,11 +56,16 @@ final class Admin_Menus {
 		add_menu_page( __( 'Orders', 'peptide-core' ), __( 'Orders', 'peptide-core' ) . $badge, 'edit_shop_orders', self::ORDERS, '', 'dashicons-cart', 3 );
 		add_menu_page( __( 'Customers', 'peptide-core' ), __( 'Customers', 'peptide-core' ), self::CAP, self::CUSTOMERS, '', 'dashicons-groups', 4 );
 		add_menu_page( __( 'Store settings', 'peptide-core' ), __( 'Store settings', 'peptide-core' ), self::CAP, self::SETTINGS, '', 'dashicons-admin-settings', 58 );
-		add_submenu_page( self::SETTINGS, __( 'WooCommerce settings', 'peptide-core' ), __( 'WooCommerce settings', 'peptide-core' ), self::CAP, self::SETTINGS );
-		if ( current_user_can( Settings_Page::CAP ) ) {
-			add_submenu_page( self::SETTINGS, __( 'VialCove settings', 'peptide-core' ), __( 'VialCove settings', 'peptide-core' ), Settings_Page::CAP, 'admin.php?page=' . Settings_Page::SLUG );
+		// 顶层菜单链接到第一个子菜单（物流设置）。
+		add_submenu_page( self::SETTINGS, __( 'Shipping settings', 'peptide-core' ), __( 'Shipping settings', 'peptide-core' ), self::CAP, self::SHIPPING );
+		$tax = add_submenu_page( self::SETTINGS, __( 'Tax settings', 'peptide-core' ), __( 'Tax settings', 'peptide-core' ), self::CAP, Store_Settings::TAX_SLUG, array( Store_Settings::class, 'render_tax' ) );
+		if ( $tax ) {
+			add_action( 'load-' . $tax, array( Store_Settings::class, 'maybe_redirect_tax' ) );
 		}
-		add_submenu_page( self::SETTINGS, __( 'System status', 'peptide-core' ), __( 'System status', 'peptide-core' ), self::CAP, 'admin.php?page=wc-status' );
+		add_submenu_page( self::SETTINGS, __( 'Payment settings', 'peptide-core' ), __( 'Payment settings', 'peptide-core' ), self::CAP, self::PAYMENTS );
+		add_submenu_page( self::SETTINGS, __( 'System settings', 'peptide-core' ), __( 'System settings', 'peptide-core' ), self::CAP, Store_Settings::SYSTEM_SLUG, array( Store_Settings::class, 'render_system' ) );
+		// WordPress 会自动把顶层菜单本身加成第一个子菜单，去掉它。
+		remove_submenu_page( self::SETTINGS, self::SETTINGS );
 	}
 
 	public static function remove_menus(): void {
@@ -97,14 +105,18 @@ final class Admin_Menus {
 			return $submenu_file;
 		}
 		$page = self::current_page();
-		if ( 'pc-settings' === $page ) {
-			return 'admin.php?page=' . Settings_Page::SLUG;
-		}
-		if ( 'wc-status' === $page ) {
-			return 'admin.php?page=wc-status';
-		}
+		// WooCommerce 设置按标签页对应到店铺设置的子菜单，其余（常规、商品、邮件等）和 VialCove 设置、系统状态都算“系统设置”。
 		if ( 'wc-settings' === $page ) {
-			return self::SETTINGS;
+			$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'general'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$map = array(
+				'shipping' => self::SHIPPING,
+				'tax'      => Store_Settings::TAX_SLUG,
+				'checkout' => self::PAYMENTS,
+			);
+			return $map[ $tab ] ?? Store_Settings::SYSTEM_SLUG;
+		}
+		if ( in_array( $page, array( 'pc-settings', 'wc-status' ), true ) ) {
+			return Store_Settings::SYSTEM_SLUG;
 		}
 		if ( 'wc-orders' === $page ) {
 			return self::ORDERS;

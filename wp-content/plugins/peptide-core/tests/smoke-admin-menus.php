@@ -29,15 +29,58 @@ add_action( 'admin_menu', static function () { add_submenu_page( 'woocommerce', 
 \PeptideCore\Admin\Overview_Page::register_hooks();
 \PeptideCore\Admin\Settings_Page::register_hooks();
 \PeptideCore\Admin\Admin_Menus::register_hooks();
+\PeptideCore\Admin\Store_Settings::register_hooks();
 require ABSPATH . 'wp-admin/menu.php';
 
 $slugs = array_column( $menu, 2 );
 $ok( 'posts, media and comments removed', ! array_intersect( array( 'edit.php', 'upload.php', 'edit-comments.php' ), $slugs ) );
 $ok( 'WooCommerce top-level menu removed', ! in_array( 'woocommerce', $slugs, true ) );
 $ok( 'dashboard first, then orders and customers', 'pc-overview' === array_values( array_filter( $slugs ) )[0] && in_array( 'admin.php?page=wc-orders', $slugs, true ) && in_array( 'admin.php?page=wc-admin&path=/customers', $slugs, true ) );
-$ok( 'store settings menu holds Woo settings, VialCove settings and status', array( 'admin.php?page=wc-settings', 'admin.php?page=pc-settings', 'admin.php?page=wc-status' ) === array_column( $submenu['admin.php?page=wc-settings'] ?? array(), 2 ) );
-foreach ( array( 'wc-orders' => 'admin.php?page=wc-orders', 'wc-settings' => 'admin.php?page=wc-settings', 'pc-settings' => 'admin.php?page=wc-settings', 'wc-status' => 'admin.php?page=wc-settings' ) as $page => $parent ) {
+$ok( 'store settings menu: shipping, tax, payments, system', array( 'admin.php?page=wc-settings&tab=shipping', 'pc-tax', 'admin.php?page=wc-settings&tab=checkout', 'pc-system' ) === array_column( $submenu['admin.php?page=wc-settings'] ?? array(), 2 ) );
+foreach ( array( 'wc-orders' => 'admin.php?page=wc-orders', 'wc-settings' => 'admin.php?page=wc-settings', 'pc-settings' => 'admin.php?page=wc-settings', 'wc-status' => 'admin.php?page=wc-settings', 'pc-system' => 'admin.php?page=wc-settings', 'pc-tax' => 'admin.php?page=wc-settings' ) as $page => $parent ) {
 	$_GET['page'] = $page;
 	$plugin_page  = $page;
 	$ok( "$page still opens and highlights the new menu", user_can_access_admin_page() && $parent === apply_filters( 'parent_file', get_admin_page_parent() ) );
 }
+
+// 店铺设置子菜单高亮（STORE-SETTINGS-01）。
+$_GET['page'] = 'wc-settings';
+foreach ( array( 'shipping' => 'admin.php?page=wc-settings&tab=shipping', 'tax' => 'pc-tax', 'checkout' => 'admin.php?page=wc-settings&tab=checkout', 'general' => 'pc-system', 'email' => 'pc-system' ) as $tab => $sub ) {
+	$_GET['tab'] = $tab;
+	$ok( "wc-settings tab $tab highlights $sub", $sub === apply_filters( 'submenu_file', null ) );
+}
+unset( $_GET['tab'] );
+foreach ( array( 'pc-settings', 'wc-status' ) as $page ) {
+	$_GET['page'] = $page;
+	$ok( "$page sits under system settings", 'pc-system' === apply_filters( 'submenu_file', null ) );
+}
+
+// 系统设置页面：三张占位卡片 + 其他设置；占位页列出现有替代设置。
+$_GET = array( 'page' => 'pc-system' );
+ob_start();
+\PeptideCore\Admin\Store_Settings::render_system();
+$html = ob_get_clean();
+$ok( 'system settings shows the three placeholder cards', 3 === substr_count( $html, 'page=pc-system&#038;section=' ) + substr_count( $html, 'page=pc-system&section=' ) );
+$ok( 'system settings links the old store settings pages', false !== strpos( $html, 'page=pc-settings' ) && false !== strpos( $html, 'page=wc-status' ) && false !== strpos( $html, 'tab=general' ) );
+$_GET['section'] = 'email';
+ob_start();
+\PeptideCore\Admin\Store_Settings::render_system();
+$html = ob_get_clean();
+$ok( 'placeholder page points to the current email settings', false !== strpos( $html, 'pc-ss-placeholder' ) && false !== strpos( $html, 'tab=email' ) );
+$_GET['section'] = 'nope';
+ob_start();
+\PeptideCore\Admin\Store_Settings::render_system();
+$ok( 'unknown section falls back to the card list', false !== strpos( ob_get_clean(), 'pc-ss-grid' ) );
+
+// 税费：关闭时显示开启按钮（不在测试里真的开启）。
+if ( ! wc_tax_enabled() ) {
+	ob_start();
+	\PeptideCore\Admin\Store_Settings::render_tax();
+	$html = ob_get_clean();
+	$ok( 'tax page offers to turn taxes on with a nonce', false !== strpos( $html, 'pc_enable_tax' ) && false !== strpos( $html, '_wpnonce' ) );
+}
+wp_set_current_user( 0 );
+ob_start();
+\PeptideCore\Admin\Store_Settings::render_system();
+$ok( 'visitors see nothing', '' === ob_get_clean() );
+$_GET = array();
