@@ -353,6 +353,11 @@
 		$form.find( '.pc-pl-products__empty' ).prop( 'hidden', $form.find( '.pc-pl-products tr[data-id]' ).length > 0 );
 	} );
 
+	// 税费方案：适用全部商品 / 特定商品。
+	$form.on( 'change', 'input[name="scope"]', function () {
+		$form.find( '.pc-tx-products' ).prop( 'hidden', 'products' !== this.value );
+	} );
+
 	// ---------- 提交 ----------
 
 	$form.on( 'submit', function ( e ) {

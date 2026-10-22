@@ -1178,3 +1178,17 @@
   - 页面会提示两种情况：方案中有国家不在 WooCommerce 的“销售地区”里；还没有方案时仍在使用原有运费区域。
 - **注意**：本地 WooCommerce 只卖美国（allowed=specific: US）。要卖到其他国家，需要先在 WooCommerce 设置 → 常规里加上。
 - **测试**：smoke-shipping-plans 31 项，包括用游客购物车实际计算运费。全部 24 套 698 项通过。
+
+### TAX-PLANS-01 税费设置 · 2026-10-23 · Claude
+
+按用户截图（8 图）实现。店铺设置 → 税费设置为 `pc-tax`（`includes/admin/class-tax-page.php`），数据在 `includes/tax/class-plans.php`，选项为 `peptide_core_tax_plans`。原来的“税费未开启”占位页已删除。
+
+- **方案内容**：名称 + 区域（国家，可细到州 / 省，每个区域一个税率 %）+ 适用商品（所有需收税商品 / 仅特定商品）+ 是否对运费征税。
+- **同步到 WooCommerce 税率表**，结账、订单税额、退款都由 WooCommerce 自己计算：
+  - 适用所有商品的方案写入标准税率类；
+  - 仅特定商品的方案建立税率类 `pc-tax-<id>`，并把选中商品的税率类改成它；
+  - 每个区域写一条税率，选了州时每个州一条；
+  - 方案记录自己写入的税率 ID，修改或删除时只动这些税率，手工建的税率不受影响；
+  - 商品移出方案时税率类恢复为标准。
+- **开关**：列表页可以开启 / 关闭 WooCommerce 税费（`woocommerce_calc_taxes`，admin-post `pc_enable_tax`，需要 nonce）。本地目前是关闭的。
+- **测试**：smoke-tax-plans 21 项，包括临时开启税费后用游客购物车实际计算加州 8% 和特定商品 2.5%，测试后恢复原样。全部 25 套 719 项通过。

@@ -3,7 +3,7 @@
  * 店铺设置下的“税费设置”和“系统设置”页面（STORE-SETTINGS-01），版式参照 Shopname。
  *
  * - 物流设置、支付设置直接打开 WooCommerce 自己的设置页（菜单在 Admin_Menus 里）。
- * - 税费设置：WooCommerce 关闭税费时会隐藏“税费”标签页，所以这里先说明并提供开启按钮；已开启时直接跳到 WooCommerce 的税费页。
+ * - 税费设置：见 Tax_Page（TAX-PLANS-01）。
  * - 系统设置：卡片列表。用户 2026-10-23 先要“基础配置、邮件通知、交易条款”三张卡片的占位页，具体内容之后由用户说明。
  *   原来菜单里的 WooCommerce 设置、VialCove 设置、系统状态放在页面底部“其他设置”。
  *
@@ -18,36 +18,14 @@ final class Store_Settings {
 
 	public const CAP         = 'manage_woocommerce';
 	public const SYSTEM_SLUG = 'pc-system';
-	public const TAX_SLUG    = 'pc-tax';
-
-	private const ENABLE_TAX = 'pc_enable_tax';
 
 	public static function register_hooks(): void {
-		add_action( 'admin_post_' . self::ENABLE_TAX, array( self::class, 'enable_tax' ) );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
-	}
-
-	/** 已开启税费时，“税费设置”直接打开 WooCommerce 的税费页。挂在 load-{页面} 上。 */
-	public static function maybe_redirect_tax(): void {
-		if ( function_exists( 'wc_tax_enabled' ) && wc_tax_enabled() ) {
-			wp_safe_redirect( admin_url( 'admin.php?page=wc-settings&tab=tax' ) );
-			exit;
-		}
-	}
-
-	public static function enable_tax(): void {
-		if ( ! current_user_can( self::CAP ) ) {
-			wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'peptide-core' ), 403 );
-		}
-		check_admin_referer( self::ENABLE_TAX );
-		update_option( 'woocommerce_calc_taxes', 'yes' );
-		wp_safe_redirect( admin_url( 'admin.php?page=wc-settings&tab=tax' ) );
-		exit;
 	}
 
 	public static function enqueue(): void {
 		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( ! in_array( $page, array( self::SYSTEM_SLUG, self::TAX_SLUG ), true ) ) {
+		if ( ! self::SYSTEM_SLUG === $page ) {
 			return;
 		}
 		$file = PEPTIDE_CORE_DIR . '/assets/store-settings.css';
@@ -149,17 +127,4 @@ final class Store_Settings {
 		echo '</div>';
 	}
 
-	public static function render_tax(): void {
-		if ( ! current_user_can( self::CAP ) ) {
-			return;
-		}
-		echo '<div class="wrap pc-ss"><h1>' . esc_html__( 'Tax settings', 'peptide-core' ) . '</h1><div class="pc-ss-panel">';
-		echo '<h2>' . esc_html__( 'Taxes are turned off', 'peptide-core' ) . '</h2>';
-		echo '<p>' . esc_html__( 'Checkout does not add any tax right now. Turning taxes on opens the tax rate tables, where you set rates by country, state and ZIP code. Until you add rates, no tax is charged.', 'peptide-core' ) . '</p>';
-		echo '<p class="pc-ss-muted">' . esc_html__( 'US sales tax depends on the states where you have to collect it. Check with your accountant before adding rates.', 'peptide-core' ) . '</p>';
-		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="' . esc_attr( self::ENABLE_TAX ) . '">';
-		wp_nonce_field( self::ENABLE_TAX );
-		submit_button( __( 'Turn on taxes and set rates', 'peptide-core' ), 'primary', 'submit', false );
-		echo '</form></div></div>';
-	}
 }

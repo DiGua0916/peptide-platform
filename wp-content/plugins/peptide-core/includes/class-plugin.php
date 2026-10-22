@@ -70,6 +70,7 @@ final class Plugin {
 			Admin\Store_Settings::register_hooks();
 			Admin\Basic_Config_Page::register_hooks();
 			Admin\Shipping_Page::register_hooks();
+			Admin\Tax_Page::register_hooks();
 			Admin\Recovery_Page::register_hooks();
 		}
 

@@ -108,10 +108,10 @@ final class Plans_Editor {
 			. '<td><span class="pc-pl-product">' . ( $img ? '<img src="' . esc_url( $img ) . '" alt="">' : '<span class="pc-pl-noimg"></span>' ) . '<span><strong>' . esc_html( $p->get_name() ) . '</strong><small>' . esc_html( $code ) . '</small></span></span></td><td class="pc-pl-col-status">' . $status . '</td></tr>';
 	}
 
-	public static function regions_section(): void {
+	public static function regions_section( bool $tax = false ): void {
 		echo '<div class="pc-pl-card"><div class="pc-pl-section"><strong>' . esc_html__( 'Regions', 'peptide-core' ) . '</strong> <button type="button" class="button-link pc-pl-regions-toggle"><span class="pc-pl-regions-count"></span> <span class="dashicons dashicons-arrow-down-alt2"></span></button>';
 		echo '<span class="pc-pl-actions"><button type="button" class="button-link pc-pl-regions-clear">' . esc_html__( 'Remove all', 'peptide-core' ) . '</button> <button type="button" class="button button-primary pc-pl-regions-add">+ ' . esc_html__( 'Add countries', 'peptide-core' ) . '</button></span></div>';
-		echo '<div class="pc-pl-scroll"><table class="pc-pl-table pc-pl-regions"><thead><tr><th class="pc-pl-col-act">' . esc_html__( 'Actions', 'peptide-core' ) . '</th><th>' . esc_html__( 'Country/region', 'peptide-core' ) . '</th><th>' . esc_html__( 'States/provinces', 'peptide-core' ) . '</th></tr></thead><tbody></tbody></table></div></div>';
+		echo '<div class="pc-pl-scroll"><table class="pc-pl-table pc-pl-regions"><thead><tr><th class="pc-pl-col-act">' . esc_html__( 'Actions', 'peptide-core' ) . '</th><th>' . esc_html__( 'Country/region', 'peptide-core' ) . '</th><th>' . esc_html__( 'States/provinces', 'peptide-core' ) . '</th>' . ( $tax ? '<th>' . esc_html__( 'Tax rate (%)', 'peptide-core' ) . '</th>' : '' ) . '</tr></thead><tbody></tbody></table></div></div>';
 	}
 
 	/** 浏览器里用的弹窗：添加国家、选择州 / 省、编辑运费、复制运费。 */

@@ -75,7 +75,7 @@ $ok( 'unknown section falls back to the card list', false !== strpos( ob_get_cle
 // 税费：关闭时显示开启按钮（不在测试里真的开启）。
 if ( ! wc_tax_enabled() ) {
 	ob_start();
-	\PeptideCore\Admin\Store_Settings::render_tax();
+	\PeptideCore\Admin\Tax_Page::render();
 	$html = ob_get_clean();
 	$ok( 'tax page offers to turn taxes on with a nonce', false !== strpos( $html, 'pc_enable_tax' ) && false !== strpos( $html, '_wpnonce' ) );
 }

@@ -11,7 +11,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-22T17:20:36+00:00\n"
+"POT-Creation-Date: 2026-10-22T17:25:08+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -52,18 +52,17 @@ msgid "Shipping settings"
 msgstr "物流设置"
 
 #: includes/admin/class-admin-menus.php:60
-#: includes/admin/class-store-settings.php:156
 msgid "Tax settings"
 msgstr "税费设置"
 
-#: includes/admin/class-admin-menus.php:64
+#: includes/admin/class-admin-menus.php:61
 msgid "Payment settings"
 msgstr "支付设置"
 
-#: includes/admin/class-admin-menus.php:65
+#: includes/admin/class-admin-menus.php:62
 #: includes/admin/class-basic-config-page.php:113
-#: includes/admin/class-store-settings.php:127
-#: includes/admin/class-store-settings.php:139
+#: includes/admin/class-store-settings.php:105
+#: includes/admin/class-store-settings.php:117
 msgid "System settings"
 msgstr "系统设置"
 
@@ -96,7 +95,7 @@ msgid "Settings saved."
 msgstr "设置已保存。"
 
 #: includes/admin/class-basic-config-page.php:114
-#: includes/admin/class-store-settings.php:65
+#: includes/admin/class-store-settings.php:43
 msgid "Basic settings"
 msgstr "基础配置"
 
@@ -360,10 +359,12 @@ msgstr "前台访问是否强制注册 / 登录"
 #: includes/admin/class-basic-config-page.php:224
 #: includes/admin/class-list-columns.php:62
 #: includes/admin/class-list-columns.php:109
+#: includes/admin/class-tax-page.php:70
 msgid "Yes"
 msgstr "是"
 
 #: includes/admin/class-basic-config-page.php:224
+#: includes/admin/class-tax-page.php:70
 msgid "No"
 msgstr "否"
 
@@ -553,7 +554,7 @@ msgstr "请输入电话"
 #: includes/admin/class-recovery-page.php:51
 #: includes/admin/class-shipping-page.php:221
 #: includes/admin/class-store-design.php:140
-#: includes/admin/class-store-settings.php:40
+#: includes/admin/class-tax-page.php:116
 #: includes/admin/class-tracking-page.php:214
 #: includes/admin/class-tracking-page.php:224
 #: includes/class-custom-pages.php:333
@@ -1204,6 +1205,7 @@ msgstr "确定"
 #: includes/admin/class-plans-editor.php:145
 #: includes/admin/class-shipping-page.php:108
 #: includes/admin/class-shipping-page.php:197
+#: includes/admin/class-tax-page.php:103
 msgid "Cancel"
 msgstr "取消"
 
@@ -1329,6 +1331,7 @@ msgstr "链接页面"
 #: includes/admin/class-shipping-page.php:195
 #: includes/admin/class-store-design.php:380
 #: includes/admin/class-store-design.php:433
+#: includes/admin/class-tax-page.php:61
 msgid "Actions"
 msgstr "操作"
 
@@ -1387,6 +1390,7 @@ msgstr "新目录"
 #: includes/admin/class-menu-page.php:112
 #: includes/admin/class-shipping-page.php:108
 #: includes/admin/class-shipping-page.php:197
+#: includes/admin/class-tax-page.php:103
 msgid "Save"
 msgstr "保存"
 
@@ -2115,6 +2119,7 @@ msgid "Will be moved out of “%s”"
 msgstr "将从“%s”移出"
 
 #: includes/admin/class-plans-editor.php:54
+#: includes/admin/class-plans-editor.php:114
 msgid "Tax rate (%)"
 msgstr "税率（%）"
 
@@ -2131,6 +2136,8 @@ msgid "Plan deleted."
 msgstr "方案已删除。"
 
 #: includes/admin/class-plans-editor.php:82
+#: includes/admin/class-tax-page.php:61
+#: includes/admin/class-tax-page.php:97
 #: includes/admin/class-tracking-page.php:155
 #: includes/class-promotions.php:723
 #: includes/modules/class-registry.php:1185
@@ -2902,12 +2909,14 @@ msgstr[0] "%d 个国家/地区"
 
 #. translators: %d: number of products
 #: includes/admin/class-shipping-page.php:140
+#: includes/admin/class-tax-page.php:69
 #, php-format
 msgid "%d product selected"
 msgid_plural "%d products selected"
 msgstr[0] "已选择 %d 个商品"
 
 #: includes/admin/class-shipping-page.php:143
+#: includes/admin/class-tax-page.php:71
 msgid "Edit plan"
 msgstr "编辑方案"
 
@@ -2916,6 +2925,7 @@ msgid "No rates yet: products in this plan cannot be shipped."
 msgstr "还没有运费：这个方案里的商品无法配送。"
 
 #: includes/admin/class-shipping-page.php:159
+#: includes/admin/class-tax-page.php:79
 msgid "This plan does not exist."
 msgstr "这个方案不存在。"
 
@@ -2940,6 +2950,7 @@ msgid "Back to shipping management"
 msgstr "返回物流管理"
 
 #: includes/admin/class-shipping-page.php:186
+#: includes/admin/class-tax-page.php:61
 msgid "Plan name"
 msgstr "方案名称"
 
@@ -2968,10 +2979,12 @@ msgid "Fee"
 msgstr "费用"
 
 #: includes/admin/class-shipping-page.php:199
+#: includes/admin/class-tax-page.php:105
 msgid "Delete this plan"
 msgstr "删除此条数据"
 
 #: includes/admin/class-shipping-page.php:247
+#: includes/admin/class-tax-page.php:139
 msgid "Enter a plan name."
 msgstr "请填写方案名称。"
 
@@ -3244,98 +3257,177 @@ msgid "Landing pages for promotions, built from modules, with their own address.
 msgstr "用模块搭建促销活动落地页，每个页面有自己的地址。"
 
 #: includes/admin/class-store-design.php:552
-#: includes/admin/class-store-settings.php:129
-#: includes/admin/class-store-settings.php:141
+#: includes/admin/class-store-settings.php:107
+#: includes/admin/class-store-settings.php:119
 msgid "Coming soon"
 msgstr "即将推出"
 
-#: includes/admin/class-store-settings.php:66
+#: includes/admin/class-store-settings.php:44
 msgid "Store name, favicon, contact details, language, store currency, time zone and more."
 msgstr "店铺名称、Favicon、联系方式、语言、店铺货币、时区等。"
 
-#: includes/admin/class-store-settings.php:70
+#: includes/admin/class-store-settings.php:48
 msgid "WooCommerce general settings (store address, currency)"
 msgstr "WooCommerce 常规设置（店铺地址、货币）"
 
-#: includes/admin/class-store-settings.php:71
+#: includes/admin/class-store-settings.php:49
 msgid "WordPress general settings (site title, language, time zone)"
 msgstr "WordPress 常规设置（站点标题、语言、时区）"
 
-#: includes/admin/class-store-settings.php:76
+#: includes/admin/class-store-settings.php:54
 msgid "Email notifications"
 msgstr "邮件通知"
 
-#: includes/admin/class-store-settings.php:77
+#: includes/admin/class-store-settings.php:55
 msgid "Templates for system emails that are sent automatically when certain events happen."
 msgstr "定义系统邮件提醒的模板，触发指定事件时自动发送。"
 
-#: includes/admin/class-store-settings.php:80
+#: includes/admin/class-store-settings.php:58
 msgid "WooCommerce emails"
 msgstr "WooCommerce 邮件设置"
 
-#: includes/admin/class-store-settings.php:85
+#: includes/admin/class-store-settings.php:63
 msgid "Terms of sale"
 msgstr "交易条款"
 
-#: includes/admin/class-store-settings.php:86
+#: includes/admin/class-store-settings.php:64
 msgid "Create your own terms pages that set clear rules for everyone taking part in a purchase."
 msgstr "创建自己的服务说明页面，为参与交易的各方提供明确的约定和规则。"
 
-#: includes/admin/class-store-settings.php:89
+#: includes/admin/class-store-settings.php:67
 msgid "Custom pages (policy pages and checkout terms)"
 msgstr "自定义页面（政策页面和结账条款）"
 
-#: includes/admin/class-store-settings.php:98
+#: includes/admin/class-store-settings.php:76
 msgid "WooCommerce settings"
 msgstr "WooCommerce 设置"
 
-#: includes/admin/class-store-settings.php:98
+#: includes/admin/class-store-settings.php:76
 msgid "General, products, accounts, emails and advanced WooCommerce options."
 msgstr "WooCommerce 的常规、商品、账户、邮件和高级选项。"
 
-#: includes/admin/class-store-settings.php:101
+#: includes/admin/class-store-settings.php:79
 msgid "VialCove settings"
 msgstr "VialCove 设置"
 
-#: includes/admin/class-store-settings.php:101
+#: includes/admin/class-store-settings.php:79
 msgid "Brand name, demo mode, use statement, checkout confirmation, batch check and the support button."
 msgstr "品牌名称、演示模式、用途声明、结账确认、批次检查和客服按钮。"
 
-#: includes/admin/class-store-settings.php:103
+#: includes/admin/class-store-settings.php:81
 msgid "System status"
 msgstr "系统状态"
 
-#: includes/admin/class-store-settings.php:103
+#: includes/admin/class-store-settings.php:81
 msgid "Server, database and plugin information for troubleshooting."
 msgstr "服务器、数据库和插件信息，用于排查问题。"
 
-#: includes/admin/class-store-settings.php:131
+#: includes/admin/class-store-settings.php:109
 msgid "Other settings"
 msgstr "其他设置"
 
-#: includes/admin/class-store-settings.php:141
+#: includes/admin/class-store-settings.php:119
 msgid "The details of this section are still being decided. Once they are, this page becomes the full settings form."
 msgstr "这一项的具体内容还没定，确定之后这里会做成完整的设置页面。"
 
-#: includes/admin/class-store-settings.php:143
+#: includes/admin/class-store-settings.php:121
 msgid "Until then, these existing settings cover it:"
 msgstr "在此之前，可以先用这些现有设置："
 
-#: includes/admin/class-store-settings.php:157
+#: includes/admin/class-tax-page.php:50
+msgid "Tax plans"
+msgstr "税费方案"
+
+#: includes/admin/class-tax-page.php:51
+#: includes/admin/class-tax-page.php:86
+msgid "New tax plan"
+msgstr "新建税费方案"
+
+#: includes/admin/class-tax-page.php:55
+msgid "Taxes are on"
+msgstr "税费已开启"
+
+#: includes/admin/class-tax-page.php:55
 msgid "Taxes are turned off"
 msgstr "税费未开启"
 
-#: includes/admin/class-store-settings.php:158
-msgid "Checkout does not add any tax right now. Turning taxes on opens the tax rate tables, where you set rates by country, state and ZIP code. Until you add rates, no tax is charged."
-msgstr "目前结账时不加收任何税费。开启后会出现税率表，可以按国家、州和邮编设置税率。添加税率之前，不会收取税费。"
+#: includes/admin/class-tax-page.php:56
+msgid "Checkout adds tax according to the plans below (based on the customer’s shipping address)."
+msgstr "结账时按下面的方案计税（依据顾客的收货地址）。"
 
-#: includes/admin/class-store-settings.php:159
-msgid "US sales tax depends on the states where you have to collect it. Check with your accountant before adding rates."
-msgstr "美国销售税取决于你需要在哪些州代收。添加税率前请先咨询会计。"
+#: includes/admin/class-tax-page.php:56
+msgid "Checkout does not add any tax right now; the plans below have no effect until taxes are on."
+msgstr "目前结账不加收税费；开启税费之前，下面的方案不会生效。"
 
-#: includes/admin/class-store-settings.php:162
-msgid "Turn on taxes and set rates"
-msgstr "开启税费并设置税率"
+#: includes/admin/class-tax-page.php:57
+msgid "Turn off taxes"
+msgstr "关闭税费"
+
+#: includes/admin/class-tax-page.php:57
+msgid "Turn on taxes"
+msgstr "开启税费"
+
+#: includes/admin/class-tax-page.php:58
+msgid "Prices are entered without tax; tax is added at checkout. US sales tax depends on the states where you have to collect it. Check with your accountant before adding rates."
+msgstr "商品价格不含税，税费在结账时加上。美国销售税取决于你需要在哪些州代收，添加税率前请先咨询会计。"
+
+#: includes/admin/class-tax-page.php:58
+msgid "WooCommerce tax options"
+msgstr "WooCommerce 税费选项"
+
+#: includes/admin/class-tax-page.php:61
+msgid "Regions and rates"
+msgstr "区域和税率"
+
+#: includes/admin/class-tax-page.php:61
+msgid "Tax on shipping"
+msgstr "运费征税"
+
+#: includes/admin/class-tax-page.php:63
+msgid "No tax plans yet."
+msgstr "还没有税费方案。"
+
+#. translators: %d: number of products
+#: includes/admin/class-tax-page.php:69
+#: includes/admin/class-tax-page.php:98
+msgid "All taxable products"
+msgstr "所有需收税商品"
+
+#: includes/admin/class-tax-page.php:85
+msgid "Back to tax plans"
+msgstr "返回税费列表"
+
+#: includes/admin/class-tax-page.php:86
+msgid "Edit tax plan"
+msgstr "编辑税费方案"
+
+#: includes/admin/class-tax-page.php:92
+msgid "Tax plan name"
+msgstr "税费方案名称"
+
+#: includes/admin/class-tax-page.php:92
+msgid "Enter the tax plan name, e.g. California sales tax"
+msgstr "请输入税费方案名称，例如 California sales tax"
+
+#: includes/admin/class-tax-page.php:92
+msgid "Shown to customers as the name of the tax line at checkout."
+msgstr "结账页税费一行显示给顾客的名称。"
+
+#: includes/admin/class-tax-page.php:93
+msgid "Also charge this tax on shipping"
+msgstr "运费也按这个税率征税"
+
+#: includes/admin/class-tax-page.php:97
+msgid "If the regions and rates apply to all taxable products, you do not need to pick products. If they only apply to some taxable products, pick those products."
+msgstr "如当前区域和税率适用于“所有需收税商品”，无需单独勾选商品；如仅适用“某些需收税商品”，请勾选对应商品。"
+
+#: includes/admin/class-tax-page.php:98
+msgid "Only some products"
+msgstr "仅特定商品"
+
+#: includes/admin/class-tax-page.php:100
+msgid "(These products use this plan instead of the plans for all taxable products.)"
+msgstr "（这些商品改用这个方案，不再使用“所有需收税商品”的方案。）"
 
 #: includes/admin/class-tracking-page.php:36
 #: includes/admin/class-tracking-page.php:243
@@ -4275,7 +4367,7 @@ msgstr "批次分配已更新："
 msgid "Batch: %s"
 msgstr "批次：%s"
 
-#: includes/class-plugin.php:107
+#: includes/class-plugin.php:108
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr "Peptide Core 需要先安装并启用 WooCommerce。"
 
@@ -6190,6 +6282,10 @@ msgstr "重量 %1$s–%2$s %3$s"
 #, php-format
 msgid "Order amount %1$s–%2$s %3$s"
 msgstr "订单价格 %1$s–%2$s %3$s"
+
+#: includes/tax/class-plans.php:145
+msgid "Tax"
+msgstr "税费"
 
 #: includes/tracking/class-ingest.php:86
 msgid "Batch is too large."

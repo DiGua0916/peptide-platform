@@ -57,10 +57,7 @@ final class Admin_Menus {
 		add_menu_page( __( 'Store settings', 'peptide-core' ), __( 'Store settings', 'peptide-core' ), self::CAP, self::SETTINGS, '', 'dashicons-admin-settings', 58 );
 		// 顶层菜单链接到第一个子菜单（物流设置）。
 		add_submenu_page( self::SETTINGS, __( 'Shipping settings', 'peptide-core' ), __( 'Shipping settings', 'peptide-core' ), self::CAP, Shipping_Page::SLUG, array( Shipping_Page::class, 'render' ) );
-		$tax = add_submenu_page( self::SETTINGS, __( 'Tax settings', 'peptide-core' ), __( 'Tax settings', 'peptide-core' ), self::CAP, Store_Settings::TAX_SLUG, array( Store_Settings::class, 'render_tax' ) );
-		if ( $tax ) {
-			add_action( 'load-' . $tax, array( Store_Settings::class, 'maybe_redirect_tax' ) );
-		}
+		add_submenu_page( self::SETTINGS, __( 'Tax settings', 'peptide-core' ), __( 'Tax settings', 'peptide-core' ), self::CAP, Tax_Page::SLUG, array( Tax_Page::class, 'render' ) );
 		add_submenu_page( self::SETTINGS, __( 'Payment settings', 'peptide-core' ), __( 'Payment settings', 'peptide-core' ), self::CAP, self::PAYMENTS );
 		add_submenu_page( self::SETTINGS, __( 'System settings', 'peptide-core' ), __( 'System settings', 'peptide-core' ), self::CAP, Store_Settings::SYSTEM_SLUG, array( Store_Settings::class, 'render_system' ) );
 		// WordPress 会自动把顶层菜单本身加成第一个子菜单，去掉它。
@@ -109,7 +106,7 @@ final class Admin_Menus {
 			$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'general'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			$map = array(
 				'shipping' => Shipping_Page::SLUG,
-				'tax'      => Store_Settings::TAX_SLUG,
+				'tax'      => Tax_Page::SLUG,
 				'checkout' => self::PAYMENTS,
 			);
 			return $map[ $tab ] ?? Store_Settings::SYSTEM_SLUG;
