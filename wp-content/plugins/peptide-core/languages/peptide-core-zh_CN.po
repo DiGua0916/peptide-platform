@@ -11,7 +11,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-22T14:24:02+00:00\n"
+"POT-Creation-Date: 2026-10-22T16:32:54+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -79,7 +79,7 @@ msgstr "3–40 个字符：字母、数字和连字符。保存时统一转为�
 
 #: includes/admin/class-batch-metabox.php:56
 #: includes/admin/class-list-columns.php:33
-#: includes/admin/class-overview-page.php:185
+#: includes/admin/class-overview-page.php:192
 #: includes/admin/class-tracking-page.php:170
 #: includes/modules/class-registry.php:1037
 #: includes/modules/class-registry.php:1190
@@ -114,7 +114,7 @@ msgid "Status"
 msgstr "状态"
 
 #: includes/admin/class-batch-metabox.php:80
-#: includes/admin/class-overview-page.php:174
+#: includes/admin/class-overview-page.php:181
 #: includes/admin/class-tracking-page.php:87
 msgid "Active"
 msgstr "在售"
@@ -406,7 +406,7 @@ msgid "Back to theme design"
 msgstr "返回主题装修"
 
 #: includes/admin/class-design-editor.php:120
-#: includes/admin/class-overview-page.php:191
+#: includes/admin/class-overview-page.php:198
 #: includes/admin/class-tracking-page.php:126
 #: includes/admin/class-tracking-page.php:176
 msgid "Page"
@@ -1056,7 +1056,7 @@ msgid "These items link to pages that do not exist on this site and were importe
 msgstr "以下目录链接的页面在本站不存在，已按“无链接”导入：%s"
 
 #: includes/admin/class-menu-page.php:238
-#: includes/admin/class-overview-page.php:226
+#: includes/admin/class-overview-page.php:233
 #: includes/admin/class-tracking-page.php:137
 #: includes/admin/class-tracking-page.php:278
 msgid "Loading…"
@@ -1165,7 +1165,7 @@ msgid "Sorry, you are not allowed to view store data."
 msgstr "抱歉，你没有查看店铺数据的权限。"
 
 #: includes/admin/class-overview-page.php:67
-#: includes/admin/class-overview-page.php:226
+#: includes/admin/class-overview-page.php:233
 msgid "Dashboard"
 msgstr "仪表盘"
 
@@ -1192,11 +1192,12 @@ msgid "Store time zone"
 msgstr "当前店铺时区"
 
 #: includes/admin/class-overview-page.php:130
+#: includes/admin/class-overview-page.php:168
 msgid "Sales"
 msgstr "销售额"
 
 #: includes/admin/class-overview-page.php:131
-#: includes/admin/class-overview-page.php:196
+#: includes/admin/class-overview-page.php:203
 #: includes/admin/class-tracking-page.php:35
 #: includes/admin/class-tracking-page.php:146
 msgid "Visitors"
@@ -1207,6 +1208,7 @@ msgid "New sign-ups"
 msgstr "注册用户"
 
 #: includes/admin/class-overview-page.php:134
+#: includes/admin/class-overview-page.php:169
 msgid "Order conversion"
 msgstr "订单转化率"
 
@@ -1324,91 +1326,104 @@ msgid "Conversion"
 msgstr "转化统计"
 
 #: includes/admin/class-overview-page.php:163
-msgid "Visitors and orders"
-msgstr "访客与订单"
+msgid "Chart metric"
+msgstr "图表指标"
 
-#: includes/admin/class-overview-page.php:164
+#: includes/admin/class-overview-page.php:165
+msgid "Visitor count"
+msgstr "访客数"
+
+#: includes/admin/class-overview-page.php:166
+#: includes/admin/class-tracking-page.php:118
+msgid "Page views"
+msgstr "浏览量"
+
+#: includes/admin/class-overview-page.php:167
+msgid "Order count"
+msgstr "订单数"
+
+#: includes/admin/class-overview-page.php:171
 #, php-format
 msgid "Total visitors: %d"
 msgstr "访问用户总数：%d 人"
 
-#: includes/admin/class-overview-page.php:165
+#: includes/admin/class-overview-page.php:172
 msgid "Top products"
 msgstr "商品排名"
 
-#: includes/admin/class-overview-page.php:166
+#: includes/admin/class-overview-page.php:173
 #, php-format
 msgid "%d sold"
 msgstr "%d 件"
 
-#: includes/admin/class-overview-page.php:167
+#: includes/admin/class-overview-page.php:174
 msgid "No data yet"
 msgstr "暂无数据"
 
-#: includes/admin/class-overview-page.php:168
+#: includes/admin/class-overview-page.php:175
 msgid "Visitor tracking is off, so visitor numbers, conversion and the funnel stay at zero. It is a test feature: turn it on only for test visits."
 msgstr "访客追踪没有开启，访客数、转化率和漏斗会一直是 0。追踪是测试功能，只在测试访问时开启。"
 
-#: includes/admin/class-overview-page.php:169
+#: includes/admin/class-overview-page.php:176
 msgid "Visitor data"
 msgstr "访客数据"
 
-#: includes/admin/class-overview-page.php:170
+#: includes/admin/class-overview-page.php:177
 msgid "Customer tracking"
 msgstr "客户追踪"
 
-#: includes/admin/class-overview-page.php:171
+#: includes/admin/class-overview-page.php:178
 #: includes/admin/class-tracking-page.php:105
 msgid "No visitors in the last 30 minutes."
 msgstr "最近 30 分钟没有访客。"
 
-#: includes/admin/class-overview-page.php:172
+#: includes/admin/class-overview-page.php:179
 msgid "Visitor tracking is off. Turn it on in Visitor data to see customers here."
 msgstr "访客追踪没有开启。在“访客数据”里开启后，进来的客户会显示在这里。"
 
-#: includes/admin/class-overview-page.php:173
+#: includes/admin/class-overview-page.php:180
 msgid "View all"
 msgstr "查看全部"
 
-#: includes/admin/class-overview-page.php:175
+#: includes/admin/class-overview-page.php:182
 #: includes/admin/class-tracking-page.php:88
 msgid "Idle"
 msgstr "空闲"
 
-#: includes/admin/class-overview-page.php:176
+#: includes/admin/class-overview-page.php:183
 #: includes/admin/class-tracking-page.php:104
 msgid "Offline"
 msgstr "离线"
 
-#: includes/admin/class-overview-page.php:177
+#: includes/admin/class-overview-page.php:184
 #: includes/admin/class-tracking-page.php:89
 msgid "No signal (away)"
 msgstr "无信号（暂离）"
 
 #. translators: %s: time, e.g. 5s
-#: includes/admin/class-overview-page.php:179
+#: includes/admin/class-overview-page.php:186
 #: includes/admin/class-tracking-page.php:113
 #, php-format
 msgid "%s ago"
 msgstr "%s前"
 
 #. translators: %d: number of pages
-#: includes/admin/class-overview-page.php:181
+#: includes/admin/class-overview-page.php:188
 #, php-format
 msgid "%d pages open"
 msgstr "打开了 %d 个页面"
 
-#: includes/admin/class-overview-page.php:183
+#: includes/admin/class-overview-page.php:190
 #: includes/admin/class-tracking-page.php:168
 msgid "Home"
 msgstr "首页"
 
-#: includes/admin/class-overview-page.php:184
+#: includes/admin/class-overview-page.php:191
 #: includes/admin/class-tracking-page.php:169
 msgid "Shop"
 msgstr "商店"
 
-#: includes/admin/class-overview-page.php:186
+#: includes/admin/class-overview-page.php:193
 #: includes/admin/class-recovery-page.php:213
 #: includes/admin/class-tracking-page.php:110
 #: includes/admin/class-tracking-page.php:171
@@ -1416,116 +1431,116 @@ msgstr "商店"
 msgid "Cart"
 msgstr "购物车"
 
-#: includes/admin/class-overview-page.php:187
+#: includes/admin/class-overview-page.php:194
 #: includes/admin/class-tracking-page.php:172
 msgid "Checkout"
 msgstr "结账"
 
-#: includes/admin/class-overview-page.php:188
+#: includes/admin/class-overview-page.php:195
 #: includes/admin/class-recovery-page.php:233
 #: includes/admin/class-tracking-page.php:132
 #: includes/admin/class-tracking-page.php:173
 msgid "Account"
 msgstr "账号"
 
-#: includes/admin/class-overview-page.php:189
+#: includes/admin/class-overview-page.php:196
 #: includes/admin/class-tracking-page.php:174
 msgid "Order received"
 msgstr "下单完成页"
 
-#: includes/admin/class-overview-page.php:190
+#: includes/admin/class-overview-page.php:197
 #: includes/admin/class-tracking-page.php:175
 msgid "Order payment"
 msgstr "订单付款页"
 
 #. translators: %d: number of orders
-#: includes/admin/class-overview-page.php:194
+#: includes/admin/class-overview-page.php:201
 #, php-format
 msgid "Only real orders are counted: %d test order(s) in this period (test payment or demo products) are left out."
 msgstr "只统计真实订单：这个时间段有 %d 笔测试订单（测试付款或演示商品）没有计入。"
 
-#: includes/admin/class-overview-page.php:197
+#: includes/admin/class-overview-page.php:204
 #: includes/admin/class-tracking-page.php:161
 msgid "Viewed a product"
 msgstr "看过商品"
 
-#: includes/admin/class-overview-page.php:198
+#: includes/admin/class-overview-page.php:205
 #: includes/admin/class-tracking-page.php:152
 #: includes/admin/class-tracking-page.php:162
 #: includes/admin/class-tracking-page.php:198
 msgid "Added to cart"
 msgstr "加购成功"
 
-#: includes/admin/class-overview-page.php:199
+#: includes/admin/class-overview-page.php:206
 #: includes/admin/class-tracking-page.php:163
 msgid "Reached checkout"
 msgstr "进入结账"
 
-#: includes/admin/class-overview-page.php:200
+#: includes/admin/class-overview-page.php:207
 #: includes/admin/class-tracking-page.php:164
 msgid "Placed an order"
 msgstr "已下单"
 
-#: includes/admin/class-overview-page.php:201
+#: includes/admin/class-overview-page.php:208
 #: includes/admin/class-tracking-page.php:154
 #: includes/admin/class-tracking-page.php:165
 msgid "Paid"
 msgstr "已支付"
 
-#: includes/admin/class-overview-page.php:203
+#: includes/admin/class-overview-page.php:210
 #, php-format
 msgid "%s of visitors"
 msgstr "访客转化 %s"
 
-#: includes/admin/class-overview-page.php:204
+#: includes/admin/class-overview-page.php:211
 msgid "From previous step"
 msgstr "上一步转化"
 
-#: includes/admin/class-overview-page.php:206
+#: includes/admin/class-overview-page.php:213
 msgid "New Year’s Day"
 msgstr "元旦"
 
-#: includes/admin/class-overview-page.php:207
+#: includes/admin/class-overview-page.php:214
 msgid "Valentine’s Day"
 msgstr "情人节"
 
-#: includes/admin/class-overview-page.php:208
+#: includes/admin/class-overview-page.php:215
 msgid "Mother’s Day"
 msgstr "母亲节"
 
-#: includes/admin/class-overview-page.php:209
+#: includes/admin/class-overview-page.php:216
 msgid "Memorial Day"
 msgstr "阵亡将士纪念日"
 
-#: includes/admin/class-overview-page.php:210
+#: includes/admin/class-overview-page.php:217
 msgid "Father’s Day"
 msgstr "父亲节"
 
-#: includes/admin/class-overview-page.php:211
+#: includes/admin/class-overview-page.php:218
 msgid "Independence Day"
 msgstr "美国独立日"
 
-#: includes/admin/class-overview-page.php:212
+#: includes/admin/class-overview-page.php:219
 msgid "Labor Day"
 msgstr "劳动节（美国）"
 
-#: includes/admin/class-overview-page.php:213
+#: includes/admin/class-overview-page.php:220
 msgid "Halloween"
 msgstr "万圣节"
 
-#: includes/admin/class-overview-page.php:214
+#: includes/admin/class-overview-page.php:221
 msgid "Thanksgiving"
 msgstr "感恩节"
 
-#: includes/admin/class-overview-page.php:215
+#: includes/admin/class-overview-page.php:222
 msgid "Black Friday"
 msgstr "黑色星期五"
 
-#: includes/admin/class-overview-page.php:216
+#: includes/admin/class-overview-page.php:223
 msgid "Cyber Monday"
 msgstr "网络星期一"
 
-#: includes/admin/class-overview-page.php:217
+#: includes/admin/class-overview-page.php:224
 msgid "Christmas"
 msgstr "圣诞节"
 
@@ -2437,10 +2452,6 @@ msgstr "%d 小时"
 #: includes/admin/class-tracking-page.php:117
 msgid "Visits"
 msgstr "访问次数"
-
-#: includes/admin/class-tracking-page.php:118
-msgid "Page views"
-msgstr "浏览页数"
 
 #: includes/admin/class-tracking-page.php:119
 #: includes/modules/class-registry.php:779

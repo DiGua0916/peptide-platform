@@ -109,27 +109,83 @@
 		} ).join( '' ) + '</div>';
 	}
 
+	// 趋势图：下拉选择指标，鼠标移上去显示竖线、圆点和提示框（时间 + 数值）。
+	var METRICS = [ 'visitors', 'page_views', 'orders', 'sales', 'conversion' ];
+	var metric = 'visitors';
+	try {
+		metric = METRICS.indexOf( window.localStorage.getItem( 'pcOvMetric' ) ) > -1 ? window.localStorage.getItem( 'pcOvMetric' ) : metric;
+	} catch ( e ) {}
+	var geo = null;
+
+	function metricValue( p ) {
+		if ( 'conversion' === metric ) {
+			return p.visitors ? Math.round( ( p.orders / p.visitors ) * 10000 ) / 100 : 0;
+		}
+		return Number( p[ metric ] || 0 );
+	}
+	function metricText( v, p ) {
+		if ( 'sales' === metric ) {
+			return summary.currency.symbol + money( v );
+		}
+		if ( 'conversion' === metric ) {
+			return p && ! p.visitors ? '—' : v + '%';
+		}
+		return String( v );
+	}
+	function metricTotal() {
+		switch ( metric ) {
+			case 'visitors':
+				return fmt( S.totalVisitors, range.visitors );
+			case 'page_views':
+				return S.metrics.page_views + ': ' + ( range.page_views || 0 );
+			case 'orders':
+				return S.metrics.orders + ': ' + range.orders;
+			case 'sales':
+				return S.metrics.sales + ': ' + summary.currency.symbol + money( range.sales );
+			default:
+				return S.metrics.conversion + ': ' + ( null === range.conversion ? '—' : range.conversion + '%' );
+		}
+	}
+	// 纵轴最多 5 格，刻度取 1 / 2 / 5 × 10ⁿ，次数类指标刻度至少为 1。
+	function niceStep( max ) {
+		var raw = max / 5;
+		if ( raw <= 0 ) {
+			return 1;
+		}
+		var p = Math.pow( 10, Math.floor( Math.log10( raw ) ) );
+		var n = raw / p;
+		var st = ( n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10 ) * p;
+		return 'sales' === metric || 'conversion' === metric ? st : Math.max( 1, Math.ceil( st ) );
+	}
+	function axisText( v ) {
+		v = Math.round( v * 100 ) / 100;
+		if ( 'conversion' === metric ) {
+			return v + '%';
+		}
+		return v >= 1000 ? Math.round( v / 100 ) / 10 + 'k' : String( v );
+	}
+
 	function chart() {
 		var pts = range.series || [];
 		var w = 640;
-		var h = 240;
-		var pad = { l: 34, r: 10, t: 12, b: 28 };
-		var max = 1;
-		pts.forEach( function ( p ) {
-			max = Math.max( max, p.visitors, p.orders );
-		} );
-		var step = Math.max( 1, Math.ceil( max / 4 ) );
-		max = step * 4;
+		var h = 250;
+		var pad = { l: 40, r: 12, t: 12, b: 28 };
+		var vals = pts.map( metricValue );
+		var peak = Math.max.apply( null, [ 0 ].concat( vals ) );
+		var step = niceStep( peak );
+		var ticks = Math.max( 1, Math.ceil( peak / step - 1e-9 ) );
+		var max = step * ticks;
 		var x = function ( i ) {
-			return pad.l + ( pts.length > 1 ? ( i * ( w - pad.l - pad.r ) ) / ( pts.length - 1 ) : 0 );
+			return pad.l + ( pts.length > 1 ? ( i * ( w - pad.l - pad.r ) ) / ( pts.length - 1 ) : ( w - pad.l - pad.r ) / 2 );
 		};
 		var y = function ( v ) {
 			return h - pad.b - ( v / max ) * ( h - pad.t - pad.b );
 		};
-		var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" class="pc-ov-chart" role="img" aria-label="' + esc( S.trend ) + '">';
-		for ( var g = 0; g <= 4; g++ ) {
+		geo = { pts: pts, vals: vals, w: w, h: h, pad: pad, x: x, y: y };
+		var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" class="pc-ov-chart" role="img" aria-label="' + esc( S.metrics[ metric ] ) + '">';
+		for ( var g = 0; g <= ticks; g++ ) {
 			var gy = y( g * step );
-			svg += '<line x1="' + pad.l + '" x2="' + ( w - pad.r ) + '" y1="' + gy + '" y2="' + gy + '" class="pc-ov-grid"/><text x="' + ( pad.l - 6 ) + '" y="' + ( gy + 4 ) + '" text-anchor="end">' + g * step + '</text>';
+			svg += '<line x1="' + pad.l + '" x2="' + ( w - pad.r ) + '" y1="' + gy + '" y2="' + gy + '" class="pc-ov-grid' + ( g ? ' is-dash' : '' ) + '"/><text x="' + ( pad.l - 6 ) + '" y="' + ( gy + 4 ) + '" text-anchor="end">' + esc( axisText( g * step ) ) + '</text>';
 		}
 		var every = Math.max( 1, Math.ceil( pts.length / 12 ) );
 		pts.forEach( function ( p, i ) {
@@ -137,13 +193,71 @@
 				svg += '<text x="' + x( i ) + '" y="' + ( h - 8 ) + '" text-anchor="middle">' + esc( p.label ) + '</text>';
 			}
 		} );
-		var line = function ( key, cls ) {
-			return '<polyline class="' + cls + '" points="' + pts.map( function ( p, i ) {
-				return x( i ) + ',' + y( p[ key ] );
-			} ).join( ' ' ) + '"/>';
+		if ( pts.length ) {
+			var line = pts.map( function ( p, i ) {
+				return x( i ) + ',' + y( vals[ i ] );
+			} ).join( ' ' );
+			svg += '<polygon class="pc-ov-area" points="' + x( 0 ) + ',' + y( 0 ) + ' ' + line + ' ' + x( pts.length - 1 ) + ',' + y( 0 ) + '"/>' +
+				'<polyline class="pc-ov-line" points="' + line + '"/>';
+		}
+		svg += '<line class="pc-ov-cross" y1="' + pad.t + '" y2="' + ( h - pad.b ) + '" x1="0" x2="0"/><circle class="pc-ov-dot-pt" r="4" cx="0" cy="0"/></svg>';
+		var options = METRICS.map( function ( m ) {
+			return '<option value="' + m + '"' + ( m === metric ? ' selected' : '' ) + '>' + esc( S.metrics[ m ] ) + '</option>';
+		} ).join( '' );
+		return '<div class="pc-ov-chart-head"><h3>' + esc( metricTotal() ) + '</h3><select class="pc-ov-metric" aria-label="' + esc( S.metricPick ) + '">' + options + '</select></div>' +
+			'<div class="pc-ov-chart-wrap">' + svg + '<div class="pc-ov-tip" hidden></div></div>';
+	}
+
+	function bindChart() {
+		var box = root.querySelector( '#pc-ov-trend' );
+		if ( ! box ) {
+			return;
+		}
+		box.querySelector( '.pc-ov-metric' ).addEventListener( 'change', function ( e ) {
+			metric = e.target.value;
+			try {
+				window.localStorage.setItem( 'pcOvMetric', metric );
+			} catch ( err ) {}
+			box.innerHTML = chart();
+			bindChart();
+		} );
+		var wrap = box.querySelector( '.pc-ov-chart-wrap' );
+		var svg = wrap.querySelector( 'svg' );
+		var cross = svg.querySelector( '.pc-ov-cross' );
+		var dot = svg.querySelector( '.pc-ov-dot-pt' );
+		var tip = wrap.querySelector( '.pc-ov-tip' );
+		var hide = function () {
+			wrap.classList.remove( 'is-hover' );
+			tip.hidden = true;
 		};
-		svg += line( 'visitors', 'pc-ov-line' ) + line( 'orders', 'pc-ov-line pc-ov-line--orders' ) + '</svg>';
-		return svg + '<p class="pc-ov-legend"><span class="pc-ov-key"></span>' + esc( S.visitors ) + ' <span class="pc-ov-key pc-ov-key--orders"></span>' + esc( S.orders ) + '</p>';
+		wrap.addEventListener( 'pointermove', function ( e ) {
+			var n = geo.pts.length;
+			var r = svg.getBoundingClientRect();
+			if ( ! n || ! r.width ) {
+				return;
+			}
+			var scale = r.width / geo.w;
+			var sx = ( e.clientX - r.left ) / scale;
+			var i = n > 1 ? Math.round( ( ( sx - geo.pad.l ) / ( geo.w - geo.pad.l - geo.pad.r ) ) * ( n - 1 ) ) : 0;
+			i = Math.max( 0, Math.min( n - 1, i ) );
+			var px = geo.x( i );
+			var py = geo.y( geo.vals[ i ] );
+			cross.setAttribute( 'x1', px );
+			cross.setAttribute( 'x2', px );
+			dot.setAttribute( 'cx', px );
+			dot.setAttribute( 'cy', py );
+			wrap.classList.add( 'is-hover' );
+			tip.innerHTML = '<span>' + esc( geo.pts[ i ].start ) + '</span><span>' + esc( S.metrics[ metric ] ) + ': <b>' + esc( metricText( geo.vals[ i ], geo.pts[ i ] ) ) + '</b></span>';
+			tip.hidden = false;
+			// 提示框放在点的右下方，靠右边缘时翻到左边。
+			var left = px * scale + 14;
+			if ( left + tip.offsetWidth > r.width ) {
+				left = px * scale - tip.offsetWidth - 14;
+			}
+			tip.style.left = Math.max( 0, left ) + 'px';
+			tip.style.top = Math.max( 0, Math.min( r.height - tip.offsetHeight, py * scale + 12 ) ) + 'px';
+		} );
+		wrap.addEventListener( 'pointerleave', hide );
 	}
 
 	function products() {
@@ -216,10 +330,11 @@
 			'<div class="pc-ov-main">' + hero() + '<div class="pc-ov-row">' + todo() + unfinished() + '</div>' +
 			'<section class="pc-ov-card"><div class="pc-ov-card__head"><div class="pc-ov-tabs">' + tabs() + '</div>' + link( L.conversion, S.more ) + '</div>' +
 			'<p class="pc-ov-headline">' + esc( S.conversion ) + ': <b>' + esc( null === range.conversion ? '—' : range.conversion + '%' ) + '</b> · ' + esc( S.sales ) + ': <b>' + esc( money( range.sales ) + ' ' + summary.currency.code ) + '</b> <span class="pc-ov-muted">' + esc( range.from + ' – ' + range.to ) + '</span></p>' +
-			'<div class="pc-ov-split"><div><h3>' + esc( S.funnel ) + '</h3>' + funnel() + '</div><div><h3>' + esc( fmt( S.totalVisitors, range.visitors ) ) + '</h3>' + chart() + '</div></div></section>' +
+			'<div class="pc-ov-split"><div><h3>' + esc( S.funnel ) + '</h3>' + funnel() + '</div><div id="pc-ov-trend">' + chart() + '</div></div></section>' +
 			'</div>' +
 			'<div class="pc-ov-side">' + side() + live( todayData ) + products() + '<section class="pc-ov-card" id="pc-ov-visitors">' + visitorsCard() + '</section></div>' +
 			'</div>';
+		bindChart();
 		root.querySelectorAll( '.pc-ov-tab' ).forEach( function ( b ) {
 			b.addEventListener( 'click', function () {
 				b.classList.add( 'is-loading' );

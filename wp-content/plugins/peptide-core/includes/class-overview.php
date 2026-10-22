@@ -119,6 +119,15 @@ final class Overview {
 				++$out['series'][ $index[ $key ] ]['visitors'];
 			}
 		}
+		// 浏览量：按距离开始时间的小时数分组（店铺时区整点对齐），再归到小时或天。
+		$events = Schema::table( 'events' );
+		$views  = $wpdb->get_results( $wpdb->prepare( "SELECT FLOOR((occurred_ms - %d) / 3600000) AS h, COUNT(*) AS n FROM {$events} WHERE type = 'page_view' AND occurred_ms >= %d AND occurred_ms < %d GROUP BY h", $fm, $fm, $tm ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		foreach ( $views as $r ) {
+			$key = self::bucket_key( $from + (int) $r['h'] * HOUR_IN_SECONDS, $bucket );
+			if ( isset( $index[ $key ] ) ) {
+				$out['series'][ $index[ $key ] ]['page_views'] += (int) $r['n'];
+			}
+		}
 		return $out;
 	}
 
@@ -132,9 +141,12 @@ final class Overview {
 		for ( $t = $from; $t < $to; $t += $step ) {
 			$out[] = array(
 				'key'      => self::bucket_key( $t, $bucket ),
-				'label'    => wp_date( 'hour' === $bucket ? 'H:00' : 'm-d', $t ),
-				'visitors' => 0,
-				'orders'   => 0,
+				'label'      => wp_date( 'hour' === $bucket ? 'H:00' : 'm-d', $t ),
+				'start'      => wp_date( 'hour' === $bucket ? 'Y-m-d H:00' : 'Y-m-d', $t ),
+				'visitors'   => 0,
+				'page_views' => 0,
+				'orders'     => 0,
+				'sales'      => 0.0,
 			);
 		}
 		return $out;
@@ -151,12 +163,14 @@ final class Overview {
 		$v                      = self::visitor_numbers( $from, $to, $bucket );
 		$index                  = array_flip( array_column( $v['series'], 'key' ) );
 		foreach ( $orders as $order ) {
-			$sales += (float) $order->get_total() - (float) $order->get_total_refunded();
+			$net     = (float) $order->get_total() - (float) $order->get_total_refunded();
+			$sales  += $net;
 			$created = $order->get_date_created();
 			if ( $created ) {
 				$key = self::bucket_key( $created->getTimestamp(), $bucket );
 				if ( isset( $index[ $key ] ) ) {
 					++$v['series'][ $index[ $key ] ]['orders'];
+					$v['series'][ $index[ $key ] ]['sales'] += $net;
 				}
 			}
 			foreach ( $order->get_items() as $item ) {
@@ -218,7 +232,18 @@ final class Overview {
 			'registered' => (int) $registered->get_total(),
 			'conversion' => $v['visitors'] ? round( $count / $v['visitors'] * 100, 2 ) : null,
 			'funnel'     => $funnel,
-			'series'     => array_map( static fn( $s ) => array( 'label' => $s['label'], 'visitors' => $s['visitors'], 'orders' => $s['orders'] ), $v['series'] ),
+			'page_views' => array_sum( array_column( $v['series'], 'page_views' ) ),
+			'series'     => array_map(
+				static fn( $s ) => array(
+					'label'      => $s['label'],
+					'start'      => $s['start'],
+					'visitors'   => $s['visitors'],
+					'page_views' => $s['page_views'],
+					'orders'     => $s['orders'],
+					'sales'      => round( $s['sales'], 2 ),
+				),
+				$v['series']
+			),
 			'products'   => $top,
 		);
 	}

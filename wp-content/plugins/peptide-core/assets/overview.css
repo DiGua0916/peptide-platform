@@ -341,7 +341,30 @@ a.pc-ov-num:focus {
 	white-space: nowrap;
 }
 
-/* 趋势图 */
+/* 趋势图：指标下拉 + 单条折线，悬停时显示竖线、圆点和提示框。 */
+.pc-ov-chart-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 14px;
+	margin-bottom: 10px;
+}
+
+.pc-ov-chart-head h3 {
+	margin: 0;
+}
+
+.pc-ov .pc-ov-metric {
+	min-width: 9em;
+	min-height: 30px;
+	font-size: var(--pc-ov-text);
+}
+
+.pc-ov-chart-wrap {
+	position: relative;
+	touch-action: pan-y;
+}
+
 .pc-ov-chart {
 	display: block;
 	width: 100%;
@@ -358,34 +381,65 @@ a.pc-ov-num:focus {
 	stroke-width: 1;
 }
 
+.pc-ov-chart .pc-ov-grid.is-dash {
+	stroke-dasharray: 4 4;
+}
+
 .pc-ov-line {
 	fill: none;
 	stroke: var(--pc-ov-orange);
 	stroke-width: 2;
+	stroke-linejoin: round;
 }
 
-.pc-ov-line--orders {
-	stroke: var(--pc-ov-teal);
-	stroke-dasharray: 4 3;
+.pc-ov-area {
+	fill: rgba(238, 125, 51, 0.08);
 }
 
-.pc-ov-legend {
-	margin: 6px 0 0;
+.pc-ov-cross,
+.pc-ov-dot-pt {
+	visibility: hidden;
+	pointer-events: none;
+}
+
+.pc-ov-cross {
+	stroke: #9ca3af;
+	stroke-width: 1;
+}
+
+.pc-ov-dot-pt {
+	fill: #fff;
+	stroke: var(--pc-ov-orange);
+	stroke-width: 2;
+}
+
+.pc-ov-chart-wrap.is-hover .pc-ov-cross,
+.pc-ov-chart-wrap.is-hover .pc-ov-dot-pt {
+	visibility: visible;
+}
+
+.pc-ov-tip {
+	position: absolute;
+	z-index: 2;
+	display: grid;
+	gap: 4px;
+	padding: 8px 12px;
+	background: #fff;
+	border-radius: 4px;
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
 	color: var(--pc-ov-muted);
 	font-size: var(--pc-ov-text);
+	white-space: nowrap;
+	pointer-events: none;
 }
 
-.pc-ov-key {
-	display: inline-block;
-	width: 14px;
-	height: 2px;
-	margin: 0 4px 3px 10px;
-	background: var(--pc-ov-orange);
-	vertical-align: middle;
+.pc-ov-tip[hidden] {
+	display: none;
 }
 
-.pc-ov-key--orders {
-	background: var(--pc-ov-teal);
+.pc-ov-tip b {
+	color: #1f2937;
+	font-weight: 600;
 }
 
 /* 商品排名 */
