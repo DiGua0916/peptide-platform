@@ -959,3 +959,33 @@
 - 新增 smoke-admin-menus 8 项：在命令行里手动载入 WC_Admin_Menus 模拟后台菜单，检查四个菜单已去掉、新菜单的位置，以及 4 个移走的页面仍能打开、菜单高亮正确。
 - smoke-overview 最后一项改为只检查测试自己建的记录：Codex 已经开启追踪并接通适配器，测试期间有真实访客进来，原来比较今天总数会误报。
 - 全部 21 套测试通过。
+
+### VISITOR-CART-01 访客当前购物车 + 追踪并发修复 · 2026-10-22 · Claude（peptide-core 0.14.0，追踪表 v2）
+
+用户让我看 Codex 要的接口：
+- VISITOR-CART-01：在“实时访客”加“购物车”列，点开弹窗看客户当前车里的商品，不是历史加购；
+- Codex 19:17 指出的两个并发边界。
+
+**购物车**（`includes/tracking/class-carts.php`）
+- 来源只有 WooCommerce。`woocommerce_cart_updated` / `woocommerce_cart_emptied` 时标记，请求结束（shutdown 5）时把当前购物车整理成快照，存到 visitors.cart / cart_ms / cart_key（Woo 会话键）。前端不上报。
+- 快照内容：每行有 product_id、variation_id、名称、规格（属性：值）、SKU、数量、单价、行金额和缩略图；另有件数、小计、优惠和优惠码、币种。
+- 状态：
+  - active：有商品，Woo 会话还在；
+  - expired：有商品，但 woocommerce_sessions 里的会话已过期或被删除；
+  - empty：空车；
+  - unknown：还没有同步过。
+- 接口：`/track/admin/live` 每位访客带 `cart` 摘要；新增 `GET /track/admin/visitors/{id}/cart` 返回明细（manage_woocommerce）。
+- 后台：实时访客表格新增“购物车”列，显示“查看（N 件）+ 小计”或“空车 / 尚未同步 / 会话已失效”。
+  - 弹窗挂在 document.body 上，所以列表每 5 秒刷新时不会关掉；有刷新、关闭、Esc，关闭后焦点回到原来的按钮。
+  - 弹窗内容：图、名称、规格、SKU、数量、单价、金额、优惠、小计、更新时间。
+
+**并发修复**
+1. 标签页状态：tabs 新增 last_page_instance / last_seq。先 `INSERT IGNORE` 保证这一行存在，在线信号用 `GREATEST` 单独更新。状态字段用一条带条件的 UPDATE 原子写入，条件是：同一页面实例 seq 更大，或者不同页面实例 occurred_ms ≥ 已保存的时间。各 SQL 片段分别 prepare 后拼接，不整体再 prepare，避免值里的 % 被当成占位符。
+2. 访问创建：`Tracker::visit` 用 MySQL `GET_LOCK('pc_trk_visit_<访客>', 5)` 包住“查找最近访问 / 新建”，沿用已有访问时立即把 last_ms 推到现在。
+- 表结构 v2：`Tracker::register_hooks` 在表版本落后时自动升级（只加列），本地站点已经升级，Codex 正在用的数据没有动。
+
+**验证**
+- smoke-tracking 增加 11 项（同页低序号晚到不覆盖、% 安全、重复查找沿用访问、购物车四种状态、明细字段、后台接口、live 摘要、钩子在请求结束时记录），共 56 项。
+- 全部 21 套共 564 项通过。
+- 真实网页请求：新浏览器打开首页，加 3 件 $44.98 的商品后，快照是 active、3 件、$134.94。测试访客已删除，只删了这个编号。
+- 另外删了一个之前测试残留的访客行（#39：没有浏览器信息、没有事件）。原来的访客 #21 和它的 50 个事件没有动。

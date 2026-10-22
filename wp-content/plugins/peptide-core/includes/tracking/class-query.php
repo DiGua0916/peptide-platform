@@ -111,6 +111,7 @@ final class Query {
 			$visit = $visit_id ? $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . Schema::table( 'visits' ) . ' WHERE id = %d', $visit_id ), ARRAY_A ) : null; // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
 			$out[] = array(
 				'visitor'        => self::visitor_label( (array) $visitors[ $vid ] ),
+				'cart'           => Carts::view( (array) $visitors[ $vid ], false ),
 				'status'         => $best,
 				'last_signal_ms' => $last,
 				'visit'          => $visit ? self::visit_view( $visit ) : null,
@@ -137,6 +138,7 @@ final class Query {
 		}
 		return array(
 			'visitor' => self::visitor_label( $v ),
+			'cart'    => Carts::view( $v, false ),
 			'visits'  => array_map( array( self::class, 'visit_view' ), $visits ),
 			'others'  => $others,
 		);

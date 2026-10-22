@@ -25,7 +25,7 @@
 | GET `/me/orders/{order_number}/batches` | 已登录订单顾客；未登录 401，不存在或非所有者 404 |
 | GET `/track/session` | 公开；追踪状态 `{protocol,enabled,test_mode,tracked,config}`，不返回访客编号 |
 | POST `/track/events` | 公开、无需 nonce；追踪关闭 403；批量上报，逐条 ack / rejected（见下文“访客追踪”） |
-| GET `/track/admin/live`、`/track/admin/visitors/{id}`、`/track/admin/visits/{id}`、`/track/admin/stats` | manage_woocommerce；后台页面专用，主题不调用 |
+| GET `/track/admin/live`、`/track/admin/visitors/{id}`、`/track/admin/visitors/{id}/cart`、`/track/admin/visits/{id}`、`/track/admin/stats` | manage_woocommerce；后台页面专用，主题不调用。live 的每位访客带 `cart:{status,count,subtotal_text,updated_ms}`，status 为 active / empty / unknown / expired |
 | GET/POST `/menus/{id}` | edit_theme_options；后台菜单编辑器专用，主题用下面的 PHP 函数 |
 
 最后一条路由参数目前按 **WooCommerce 数字订单 ID** 查找，返回 order_number 为展示编号字符串。未启用自定义编号插件时二者一致，将来需显式适配展示编号。

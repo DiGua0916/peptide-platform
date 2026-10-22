@@ -19,7 +19,8 @@ defined( 'ABSPATH' ) || exit;
 
 final class Schema {
 
-	public const DB_VERSION = '1';
+	// v2（VISITOR-CART-01）：访客当前购物车快照；标签页记录最后事件的页面实例和序号（并发 / 乱序时单调更新）。
+	public const DB_VERSION = '2';
 	public const OPTION     = 'peptide_core_tracking_db';
 
 	public static function table( string $name ): string {
@@ -50,6 +51,9 @@ final class Schema {
   device varchar(10) NOT NULL DEFAULT '',
   browser varchar(20) NOT NULL DEFAULT '',
   is_test tinyint(1) NOT NULL DEFAULT 1,
+  cart longtext NULL,
+  cart_ms bigint(20) unsigned NOT NULL DEFAULT 0,
+  cart_key varchar(64) NOT NULL DEFAULT '',
   PRIMARY KEY  (id),
   UNIQUE KEY vid (vid),
   KEY user_id (user_id),
@@ -109,6 +113,8 @@ CREATE TABLE {$t} (
   visibility varchar(8) NOT NULL DEFAULT '',
   activity varchar(8) NOT NULL DEFAULT '',
   last_type varchar(32) NOT NULL DEFAULT '',
+  last_page_instance varchar(64) NOT NULL DEFAULT '',
+  last_seq int(10) unsigned NOT NULL DEFAULT 0,
   last_occurred_ms bigint(20) unsigned NOT NULL DEFAULT 0,
   last_signal_ms bigint(20) unsigned NOT NULL DEFAULT 0,
   video text NULL,

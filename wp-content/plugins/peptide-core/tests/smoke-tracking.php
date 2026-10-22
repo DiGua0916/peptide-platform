@@ -138,6 +138,22 @@ $tabRow = $wpdb->get_row( $wpdb->prepare( 'SELECT video FROM ' . Schema::table( 
 $video  = json_decode( (string) $tabRow['video'], true );
 $ok( 'video state on the tab', 'playing' === $video['state'] && 'hero' === $video['video_id'] && true === $video['autoplay'] );
 
+// 4b. 并发 / 同页序号：同一页面实例里序号小的事件晚到，不覆盖序号大的状态（即使时间戳相同）。
+$tabC  = 'tab-' . substr( md5( 'c' . $now ), 0, 12 );
+$pageC = $uuid();
+$sameT = Tracker::now_ms();
+$send( array( 'tab_id' => $tabC, 'events' => array( $ev( 'heartbeat', $sameT, $pageC, 5, array( 'page_type' => 'shop', 'path' => '/shop/' ), array( 'visibility' => 'hidden', 'activity' => 'idle' ) ) ) ) );
+$send( array( 'tab_id' => $tabC, 'events' => array( $ev( 'heartbeat', $sameT, $pageC, 4, array( 'page_type' => 'shop', 'path' => '/shop/' ), array( 'visibility' => 'visible', 'activity' => 'active' ) ) ) ) );
+$rowC = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . Schema::table( 'tabs' ) . ' WHERE visitor_id = %d AND tab_id = %s', $visitor['id'], $tabC ), ARRAY_A ); // phpcs:ignore
+$ok( 'lower sequence in the same page does not overwrite newer state', 'hidden' === $rowC['visibility'] && 5 === (int) $rowC['last_seq'] );
+$send( array( 'tab_id' => $tabC, 'events' => array( $ev( 'heartbeat', $sameT + 1, $pageC, 6, array( 'page_type' => 'product', 'path' => '/p/', 'product_id' => 1, 'product_name' => 'Smoke 100% pure' ), array( 'visibility' => 'visible', 'activity' => 'active' ) ) ) ) );
+$rowC = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . Schema::table( 'tabs' ) . ' WHERE visitor_id = %d AND tab_id = %s', $visitor['id'], $tabC ), ARRAY_A ); // phpcs:ignore
+$ok( 'higher sequence updates; % in values is stored safely', 'visible' === $rowC['visibility'] && 6 === (int) $rowC['last_seq'] && 'Smoke 100% pure' === $rowC['product_name'] );
+$visits_before = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . Schema::table( 'visits' ) . ' WHERE visitor_id = %d', $visitor['id'] ) ); // phpcs:ignore
+Tracker::visit( $visitor['id'], Tracker::now_ms() );
+Tracker::visit( $visitor['id'], Tracker::now_ms() );
+$ok( 'repeated visit lookups reuse the open visit', $visits_before === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . Schema::table( 'visits' ) . ' WHERE visitor_id = %d', $visitor['id'] ) ) ); // phpcs:ignore
+
 // 5. 整批错误。
 $big = array();
 for ( $i = 0; $i < 21; $i++ ) {
@@ -217,6 +233,44 @@ $orders[] = $failed->get_id();
 Server_Events::on_order_placed( $failed );
 $failed->update_status( 'failed' );
 $ok( 'failed payment recorded', 1 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . Schema::table( 'events' ) . " WHERE visitor_id = %d AND type = 'payment_failed'", $visitor['id'] ) ) ); // phpcs:ignore
+
+// 7b. 当前购物车快照（VISITOR-CART-01）。
+$_COOKIE[ Tracker::COOKIE ] = $vid1;
+$cartRow = static function () use ( $wpdb, $visitor ) {
+	return $wpdb->get_row( $wpdb->prepare( 'SELECT id, cart, cart_ms, cart_key FROM ' . Schema::table( 'visitors' ) . ' WHERE id = %d', $visitor['id'] ), ARRAY_A ); // phpcs:ignore
+};
+$wpdb->update( Schema::table( 'visitors' ), array( 'cart' => null, 'cart_ms' => 0, 'cart_key' => '' ), array( 'id' => $visitor['id'] ) ); // phpcs:ignore
+$ok( 'no snapshot yet: unknown', 'unknown' === \PeptideCore\Tracking\Carts::view( $cartRow(), false )['status'] );
+WC()->cart->empty_cart();
+if ( $simple ) {
+	WC()->cart->add_to_cart( $simple->get_id(), 2 );
+	WC()->cart->calculate_totals();
+	\PeptideCore\Tracking\Carts::save( $visitor['id'], WC()->cart, (string) WC()->session->get_customer_id() );
+	// 命令行里 Woo 不会写会话表，这里补一行，模拟浏览器里仍然有效的会话；结束时删除。
+	$skey = (string) WC()->session->get_customer_id();
+	$wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO {$wpdb->prefix}woocommerce_sessions (session_key, session_value, session_expiry) VALUES (%s, %s, %d)", $skey, 'a:0:{}', time() + HOUR_IN_SECONDS ) ); // phpcs:ignore
+	$detail = \PeptideCore\Tracking\Carts::detail( $visitor['id'] );
+	$ok( 'snapshot has items, quantity, prices and subtotal', 'active' === $detail['status'] && 2 === $detail['count'] && $simple->get_id() === $detail['items'][0]['product_id'] && 2.0 === (float) $detail['items'][0]['quantity'] && '' !== $detail['items'][0]['unit_price_text'] && abs( $detail['subtotal'] - (float) WC()->cart->get_subtotal() ) < 0.01 );
+	$res = rest_do_request( new WP_REST_Request( 'GET', '/peptide/v1/track/admin/visitors/' . $visitor['id'] . '/cart' ) );
+	$ok( 'customers cannot read the cart endpoint', in_array( $res->get_status(), array( 401, 403 ), true ) || ! is_user_logged_in() );
+	wp_set_current_user( $admin->ID );
+	$res = rest_do_request( new WP_REST_Request( 'GET', '/peptide/v1/track/admin/visitors/' . $visitor['id'] . '/cart' ) );
+	$ok( 'admin cart endpoint', 200 === $res->get_status() && 2 === $res->get_data()['count'] );
+	$live = array_values( array_filter( Query::live( Tracker::now_ms() ), static fn( $l ) => $l['visitor']['id'] === $visitor['id'] ) );
+	$ok( 'live list carries the cart summary', $live && 'active' === $live[0]['cart']['status'] && 2 === $live[0]['cart']['count'] );
+	wp_set_current_user( 0 );
+	$wpdb->update( Schema::table( 'visitors' ), array( 'cart_key' => 'no-such-session-key' ), array( 'id' => $visitor['id'] ) ); // phpcs:ignore
+	$ok( 'session gone: expired', 'expired' === \PeptideCore\Tracking\Carts::view( $cartRow(), false )['status'] );
+	WC()->cart->empty_cart();
+	\PeptideCore\Tracking\Carts::save( $visitor['id'], WC()->cart, (string) WC()->session->get_customer_id() );
+	$ok( 'emptied cart: empty', 'empty' === \PeptideCore\Tracking\Carts::view( $cartRow(), false )['status'] );
+	\PeptideCore\Tracking\Carts::mark();
+	WC()->cart->add_to_cart( $simple->get_id(), 1 );
+	\PeptideCore\Tracking\Carts::flush();
+	$ok( 'hooks: cart change is captured at the end of the request', 1 === \PeptideCore\Tracking\Carts::detail( $visitor['id'] )['count'] );
+	WC()->cart->empty_cart();
+	$wpdb->delete( $wpdb->prefix . 'woocommerce_sessions', array( 'session_key' => $skey ) ); // phpcs:ignore
+}
 
 // 8. 后台查询与权限。
 $detail = Query::visitor( $visitor['id'] );

@@ -88,7 +88,7 @@
 			root.innerHTML = html + '<p class="pc-trk-empty">' + esc( S.noVisitors ) + '</p>';
 			return;
 		}
-		html += '<table class="widefat striped pc-trk-table"><thead><tr><th>' + esc( S.visitor ) + '</th><th>' + esc( S.tabs ) + '</th><th>' + esc( S.stage ) + '</th><th>' + esc( S.visitStart ) + '</th><th>' + esc( S.lastSignal ) + '</th></tr></thead><tbody>';
+		html += '<table class="widefat striped pc-trk-table"><thead><tr><th>' + esc( S.visitor ) + '</th><th>' + esc( S.tabs ) + '</th><th>' + esc( S.stage ) + '</th><th>' + esc( S.cart ) + '</th><th>' + esc( S.visitStart ) + '</th><th>' + esc( S.lastSignal ) + '</th></tr></thead><tbody>';
 		list.forEach( function ( v ) {
 			var who = v.visitor;
 			html += '<tr><td><div>' + dot( v.status ) + '</div><a href="' + esc( cfg.liveUrl + '&visitor=' + who.id ) + '"><strong>' + esc( who.label ) + '</strong></a>' + '<div class="pc-trk-sub">' + esc( ( S[ who.device ] || who.device ) + ' · ' + who.browser + ' · ' + S.visits + ' ' + who.visits ) + '</div></td><td>';
@@ -97,11 +97,94 @@
 			} );
 			var visit = v.visit;
 			html += '</td><td>' + ( visit ? esc( S.stages[ visit.stage ] ) + ( visit.order_url ? ' <a href="' + esc( visit.order_url ) + '">#' + esc( visit.order_id ) + '</a>' : '' ) : '—' ) + '</td>';
+			html += '<td>' + cartCell( who, v.cart ) + '</td>';
 			html += '<td>' + ( visit ? esc( clock( visit.start_ms, true ) ) + '<div class="pc-trk-sub">' + esc( S.pageviews + ' ' + visit.pageviews ) + '</div>' : '—' ) + '</td>';
 			html += '<td>' + esc( fmt( S.ago, ago( res.now_ms - v.last_signal_ms ) ) ) + '</td></tr>';
 		} );
 		root.innerHTML = html + '</tbody></table>';
 	}
+
+	// ---------- 购物车（VISITOR-CART-01） ----------
+
+	function cartCell( who, c ) {
+		c = c || { status: 'unknown', count: 0 };
+		if ( 'active' === c.status || 'expired' === c.status ) {
+			return '<button type="button" class="button button-small pc-trk-cartbtn" data-cart="' + esc( who.id ) + '" data-name="' + esc( who.label ) + '">' + esc( fmt( S.cartView, c.count ) ) + '</button>' + ( 'expired' === c.status ? '<div class="pc-trk-sub">' + esc( S.cartExpired ) + '</div>' : '<div class="pc-trk-sub">' + esc( c.subtotal_text ) + '</div>' );
+		}
+		return '<span class="pc-trk-sub">' + esc( 'empty' === c.status ? S.cartEmpty : S.cartUnknown ) + '</span>';
+	}
+
+	// 弹窗放在列表外面（document.body），列表每 5 秒刷新时弹窗不会被关掉。
+	var modal = null;
+	var modalVisitor = 0;
+	var modalReturn = null;
+	function closeCart() {
+		if ( modal ) {
+			modal.remove();
+			modal = null;
+			modalVisitor = 0;
+			if ( modalReturn && document.contains( modalReturn ) ) {
+				modalReturn.focus();
+			}
+		}
+	}
+	function renderCart( name, c ) {
+		var body;
+		if ( ! c.items || ! c.items.length ) {
+			body = '<p>' + esc( 'unknown' === c.status ? S.cartUnknownNote : S.cartEmptyNote ) + '</p>';
+		} else {
+			body = ( 'expired' === c.status ? '<div class="notice notice-warning inline"><p>' + esc( S.cartExpiredNote ) + '</p></div>' : '' ) +
+				'<table class="widefat striped pc-trk-cart"><thead><tr><th>' + esc( S.product ) + '</th><th>' + esc( S.qty ) + '</th><th>' + esc( S.unitPrice ) + '</th><th>' + esc( S.lineTotal ) + '</th></tr></thead><tbody>' +
+				c.items.map( function ( i ) {
+					return '<tr><td class="pc-trk-cart__prod">' + ( i.image ? '<img src="' + esc( i.image ) + '" alt="">' : '' ) + '<span><b>' + esc( i.name ) + '</b>' + ( i.variation ? '<small>' + esc( i.variation ) + '</small>' : '' ) + ( i.sku ? '<small>SKU ' + esc( i.sku ) + '</small>' : '' ) + '</span></td><td>' + esc( i.quantity ) + '</td><td>' + esc( i.unit_price_text ) + '</td><td>' + esc( i.line_total_text ) + '</td></tr>';
+				} ).join( '' ) + '</tbody></table>' +
+				'<p class="pc-trk-cart__sum">' + ( c.discount_text ? esc( S.discount ) + ': −' + esc( c.discount_text ) + ( c.coupons.length ? ' (' + esc( c.coupons.join( ', ' ) ) + ')' : '' ) + ' · ' : '' ) + esc( S.subtotal ) + ': <b>' + esc( c.subtotal_text ) + '</b></p>';
+		}
+		var updated = c.updated_ms ? '<span class="pc-trk-sub">' + esc( fmt( S.updated, clock( c.updated_ms, true ) ) ) + '</span>' : '';
+		modal.querySelector( '.pc-trk-modal__body' ).innerHTML = body;
+		modal.querySelector( '.pc-trk-modal__title' ).textContent = S.cartTitle + ' · ' + name;
+		modal.querySelector( '.pc-trk-modal__meta' ).innerHTML = updated;
+	}
+	function openCart( id, name, opener ) {
+		closeCart();
+		modalVisitor = id;
+		modalReturn = opener || null;
+		modal = document.createElement( 'div' );
+		modal.className = 'pc-trk-modal';
+		modal.innerHTML = '<div class="pc-trk-modal__box" role="dialog" aria-modal="true" aria-labelledby="pc-trk-modal-title"><div class="pc-trk-modal__head"><h2 id="pc-trk-modal-title" class="pc-trk-modal__title"></h2><button type="button" class="button pc-trk-modal__refresh">' + esc( S.refresh ) + '</button><button type="button" class="button pc-trk-modal__close" aria-label="' + esc( S.close ) + '">×</button></div><div class="pc-trk-modal__meta"></div><div class="pc-trk-modal__body"><p>' + esc( S.loading ) + '</p></div></div>';
+		document.body.appendChild( modal );
+		var load = function () {
+			wp.apiFetch( { path: '/peptide/v1/track/admin/visitors/' + id + '/cart' } ).then( function ( c ) {
+				if ( modal && modalVisitor === id ) {
+					renderCart( name, c );
+				}
+			} ).catch( function ( err ) {
+				if ( modal ) {
+					modal.querySelector( '.pc-trk-modal__body' ).innerHTML = '<p>' + esc( fmt( S.error, ( err && err.message ) || err ) ) + '</p>';
+				}
+			} );
+		};
+		modal.addEventListener( 'click', function ( e ) {
+			if ( e.target === modal || e.target.closest( '.pc-trk-modal__close' ) ) {
+				closeCart();
+			} else if ( e.target.closest( '.pc-trk-modal__refresh' ) ) {
+				load();
+			}
+		} );
+		modal.querySelector( '.pc-trk-modal__close' ).focus();
+		load();
+	}
+	document.addEventListener( 'keydown', function ( e ) {
+		if ( 'Escape' === e.key ) {
+			closeCart();
+		}
+	} );
+	root.addEventListener( 'click', function ( e ) {
+		var b = e.target.closest( '.pc-trk-cartbtn' );
+		if ( b ) {
+			openCart( parseInt( b.getAttribute( 'data-cart' ), 10 ), b.getAttribute( 'data-name' ), b );
+		}
+	} );
 
 	function live() {
 		var tick = function () {

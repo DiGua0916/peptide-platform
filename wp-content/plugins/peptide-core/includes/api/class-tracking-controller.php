@@ -11,6 +11,7 @@
  * 后台（需要 manage_woocommerce）：
  *   GET /peptide/v1/track/admin/live
  *   GET /peptide/v1/track/admin/visitors/{id}
+ *   GET /peptide/v1/track/admin/visitors/{id}/cart   当前购物车快照（VISITOR-CART-01）
  *   GET /peptide/v1/track/admin/visits/{id}
  *   GET /peptide/v1/track/admin/stats?from=YYYY-MM-DD&to=YYYY-MM-DD&device=
  *
@@ -54,6 +55,7 @@ final class Tracking_Controller {
 		$admin = array( self::class, 'can_view' );
 		register_rest_route( $ns, '/track/admin/live', array( 'methods' => \WP_REST_Server::READABLE, 'callback' => array( self::class, 'live' ), 'permission_callback' => $admin ) );
 		register_rest_route( $ns, '/track/admin/visitors/(?P<id>\d+)', array( 'methods' => \WP_REST_Server::READABLE, 'callback' => array( self::class, 'visitor' ), 'permission_callback' => $admin ) );
+		register_rest_route( $ns, '/track/admin/visitors/(?P<id>\d+)/cart', array( 'methods' => \WP_REST_Server::READABLE, 'callback' => array( self::class, 'cart' ), 'permission_callback' => $admin ) );
 		register_rest_route( $ns, '/track/admin/visits/(?P<id>\d+)', array( 'methods' => \WP_REST_Server::READABLE, 'callback' => array( self::class, 'visit' ), 'permission_callback' => $admin ) );
 		register_rest_route( $ns, '/track/admin/stats', array( 'methods' => \WP_REST_Server::READABLE, 'callback' => array( self::class, 'stats' ), 'permission_callback' => $admin ) );
 	}
@@ -134,6 +136,14 @@ final class Tracking_Controller {
 	 */
 	public static function visitor( \WP_REST_Request $request ) {
 		$data = Query::visitor( (int) $request['id'] );
+		return $data ? self::respond( $data ) : new \WP_Error( 'pc_track_not_found', __( 'Visitor not found.', 'peptide-core' ), array( 'status' => 404 ) );
+	}
+
+	/**
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public static function cart( \WP_REST_Request $request ) {
+		$data = \PeptideCore\Tracking\Carts::detail( (int) $request['id'] );
 		return $data ? self::respond( $data ) : new \WP_Error( 'pc_track_not_found', __( 'Visitor not found.', 'peptide-core' ), array( 'status' => 404 ) );
 	}
 

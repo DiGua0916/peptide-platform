@@ -325,56 +325,62 @@ final class Ingest {
 	}
 
 	/**
-	 * 更新标签页状态。乱序到达的旧事件不会覆盖更新的状态，但仍算作“还在线”的信号。
+	 * 更新标签页状态。乱序或并发到达的旧事件不会覆盖更新的状态，但仍算作“还在线”的信号。
+	 *
+	 * “更新”的判断：同一页面实例按序号；不同页面实例按发生时间（同一毫秒时以后到的为准）。
+	 * 判断写在 UPDATE 的 WHERE 条件里，由数据库原子地比较，普通请求和离页请求同时到达也不会互相覆盖。
 	 */
 	private static function update_tab( int $visitor_id, int $visit_id, array $c, int $now_ms ): void {
 		global $wpdb;
 		$table = Schema::table( 'tabs' );
-		$row   = $wpdb->get_row( $wpdb->prepare( "SELECT id, last_occurred_ms, video FROM {$table} WHERE visitor_id = %d AND tab_id = %s", $visitor_id, $c['tab_id'] ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
-		$fields = array(
-			'visit_id'       => $visit_id,
-			'last_signal_ms' => $now_ms,
+		// 1. 确保这一行存在（唯一键 visitor_id + tab_id）。
+		$wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO {$table} (visitor_id, visit_id, tab_id, last_signal_ms) VALUES (%d, %d, %s, %d)", $visitor_id, $visit_id, $c['tab_id'], $now_ms ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		// 2. 在线信号：任何事件都算，只增不减。
+		$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET visit_id = %d, last_signal_ms = GREATEST(last_signal_ms, %d) WHERE visitor_id = %d AND tab_id = %s", $visit_id, $now_ms, $visitor_id, $c['tab_id'] ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+
+		// 3. 当前状态：只有比已保存的状态更新时才写。
+		$page = $c['page'];
+		$data = $c['data'];
+		$set  = array(
+			$wpdb->prepare( 'page_instance_id = %s', $c['page_instance_id'] ),
+			$wpdb->prepare( 'page_type = %s', $page['page_type'] ),
+			$wpdb->prepare( 'path = %s', $page['path'] ),
+			$wpdb->prepare( 'product_id = %d', (int) ( $page['product_id'] ?? 0 ) ),
+			$wpdb->prepare( 'product_name = %s', (string) ( $page['product_name'] ?? '' ) ),
+			$wpdb->prepare( 'last_type = %s', $c['type'] ),
+			$wpdb->prepare( 'last_page_instance = %s', $c['page_instance_id'] ),
+			$wpdb->prepare( 'last_seq = %d', $c['seq'] ),
+			$wpdb->prepare( 'last_occurred_ms = %d', $c['at'] ),
 		);
-		if ( ! $row || $c['at'] >= (int) $row['last_occurred_ms'] ) {
-			$page   = $c['page'];
-			$data   = $c['data'];
-			$fields = array_merge(
-				$fields,
-				array(
-					'page_instance_id' => $c['page_instance_id'],
-					'page_type'        => $page['page_type'],
-					'path'             => $page['path'],
-					'product_id'       => (int) ( $page['product_id'] ?? 0 ),
-					'product_name'     => (string) ( $page['product_name'] ?? '' ),
-					'last_type'        => $c['type'],
-					'last_occurred_ms' => $c['at'],
+		if ( isset( $data['visibility'] ) ) {
+			$set[] = $wpdb->prepare( 'visibility = %s', $data['visibility'] );
+		}
+		if ( isset( $data['activity'] ) ) {
+			$set[] = $wpdb->prepare( 'activity = %s', $data['activity'] );
+		}
+		if ( 'page_view' === $c['type'] ) {
+			$set[] = 'video = NULL'; // 新页面：之前页面的视频状态不再适用。
+		} elseif ( str_starts_with( $c['type'], 'video_' ) ) {
+			$video = wp_json_encode(
+				array_merge(
+					$data,
+					array(
+						'state' => array( 'video_play' => 'playing', 'video_pause' => 'paused', 'video_end' => 'ended', 'video_seek' => 'seeking', 'video_progress' => 'playing' )[ $c['type'] ],
+						'at'    => $c['at'],
+					)
 				)
 			);
-			if ( isset( $data['visibility'] ) ) {
-				$fields['visibility'] = $data['visibility'];
-			}
-			if ( isset( $data['activity'] ) ) {
-				$fields['activity'] = $data['activity'];
-			}
-			if ( 'page_view' === $c['type'] ) {
-				$fields['video'] = null; // 新页面：之前页面的视频状态不再适用。
-			}
-			if ( str_starts_with( $c['type'], 'video_' ) ) {
-				$fields['video'] = wp_json_encode(
-					array_merge(
-						$data,
-						array(
-							'state' => array( 'video_play' => 'playing', 'video_pause' => 'paused', 'video_end' => 'ended', 'video_seek' => 'seeking', 'video_progress' => 'playing' )[ $c['type'] ],
-							'at'    => $c['at'],
-						)
-					)
-				);
-			}
+			$set[] = $wpdb->prepare( 'video = %s', $video );
 		}
-		if ( $row ) {
-			$wpdb->update( $table, $fields, array( 'id' => (int) $row['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		} else {
-			$wpdb->insert( $table, array_merge( array( 'visitor_id' => $visitor_id, 'tab_id' => $c['tab_id'] ), $fields ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		}
+		$newer = $wpdb->prepare(
+			'( ( last_page_instance = %s AND last_seq < %d ) OR ( last_page_instance <> %s AND last_occurred_ms <= %d ) )',
+			$c['page_instance_id'],
+			$c['seq'],
+			$c['page_instance_id'],
+			$c['at']
+		);
+		// 各片段已经分别 prepare 过，这里只拼接，不能再整体 prepare（值里的 % 会被当成占位符）。
+		$where = $wpdb->prepare( 'visitor_id = %d AND tab_id = %s', $visitor_id, $c['tab_id'] );
+		$wpdb->query( "UPDATE {$table} SET " . implode( ', ', $set ) . " WHERE {$where} AND {$newer}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
 	}
 }

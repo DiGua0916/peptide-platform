@@ -32,12 +32,17 @@ final class Tracker {
 	public const EXIT_MS      = 10000;   // 最后一个事件是离开页面且 10 秒内没有新信号 → 离线。
 
 	public static function register_hooks(): void {
+		// 表结构有新版本时先升级（只比较一个选项，开销很小），否则追踪会因为“未安装”而停下。
+		if ( get_option( Schema::OPTION ) && ! Schema::installed() ) {
+			Schema::install();
+		}
 		if ( ! self::enabled() ) {
 			return;
 		}
 		add_action( 'template_redirect', array( self::class, 'ensure_cookie' ), 1 );
 		add_filter( 'vialcove_visitor_observer_config', array( self::class, 'observer_config' ), 20 );
 		Server_Events::register_hooks();
+		Carts::register_hooks();
 	}
 
 	public static function enabled(): bool {
@@ -161,9 +166,25 @@ final class Tracker {
 	 */
 	public static function visit( int $visitor_id, int $now_ms, string $landing_path = '' ): int {
 		global $wpdb;
+		// 同一访客的两个标签页同时上报时，不能各自新开一次访问：查找和新建放在访客级的数据库锁里。
+		$lock = 'pc_trk_visit_' . $visitor_id;
+		$got  = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 5)', $lock ) );
+		try {
+			return self::find_or_create_visit( $visitor_id, $now_ms, $landing_path );
+		} finally {
+			if ( $got ) {
+				$wpdb->query( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) );
+			}
+		}
+	}
+
+	private static function find_or_create_visit( int $visitor_id, int $now_ms, string $landing_path ): int {
+		global $wpdb;
 		$visits = Schema::table( 'visits' );
 		$row    = $wpdb->get_row( $wpdb->prepare( "SELECT id, last_ms FROM {$visits} WHERE visitor_id = %d ORDER BY start_ms DESC, id DESC LIMIT 1", $visitor_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		if ( $row && (int) $row['last_ms'] >= $now_ms - self::VISIT_GAP_MS ) {
+			// 先把最后活动时间推到现在，锁释放后别的请求看到的就是这次访问。
+			$wpdb->query( $wpdb->prepare( "UPDATE {$visits} SET last_ms = GREATEST(last_ms, %d) WHERE id = %d", $now_ms, (int) $row['id'] ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 			return (int) $row['id'];
 		}
 		$visitor = $wpdb->get_row( $wpdb->prepare( 'SELECT user_id, device FROM ' . Schema::table( 'visitors' ) . ' WHERE id = %d', $visitor_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
