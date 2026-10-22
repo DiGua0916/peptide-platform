@@ -21,7 +21,8 @@ defined( 'ABSPATH' ) || exit;
 final class Tracking_Page {
 
 	public const SLUG       = 'pc-visitors';
-	public const STATS_SLUG = 'pc-visitors-stats';
+	public const STATS_SLUG   = 'pc-visitors-stats';
+	public const ARCHIVE_SLUG = 'pc-visitors-archive';
 
 	public static function register_hooks(): void {
 		add_action( 'admin_menu', array( self::class, 'add_menu' ), 57 );
@@ -33,6 +34,7 @@ final class Tracking_Page {
 	public static function add_menu(): void {
 		add_menu_page( __( 'Visitors', 'peptide-core' ), __( 'Visitors', 'peptide-core' ), 'manage_woocommerce', self::SLUG, array( self::class, 'render' ), 'dashicons-visibility', 57 );
 		add_submenu_page( self::SLUG, __( 'Live visitors', 'peptide-core' ), __( 'Live visitors', 'peptide-core' ), 'manage_woocommerce', self::SLUG, array( self::class, 'render' ) );
+		add_submenu_page( self::SLUG, __( 'Visitor archive', 'peptide-core' ), __( 'Visitor archive', 'peptide-core' ), 'manage_woocommerce', self::ARCHIVE_SLUG, array( self::class, 'render' ) );
 		add_submenu_page( self::SLUG, __( 'Conversion', 'peptide-core' ), __( 'Conversion', 'peptide-core' ), 'manage_woocommerce', self::STATS_SLUG, array( self::class, 'render' ) );
 	}
 
@@ -41,17 +43,24 @@ final class Tracking_Page {
 		if ( self::STATS_SLUG === $page ) {
 			return 'stats';
 		}
+		if ( self::ARCHIVE_SLUG === $page ) {
+			return 'archive';
+		}
 		return isset( $_GET['visitor'] ) ? 'visitor' : 'live'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 	}
 
 	public static function enqueue( string $hook ): void {
-		if ( ! str_ends_with( $hook, self::SLUG ) && ! str_ends_with( $hook, self::STATS_SLUG ) ) {
+		if ( ! str_ends_with( $hook, self::SLUG ) && ! str_ends_with( $hook, self::STATS_SLUG ) && ! str_ends_with( $hook, self::ARCHIVE_SLUG ) ) {
 			return;
 		}
 		$url = plugins_url( 'assets/', PEPTIDE_CORE_FILE );
 		$ver = static fn( string $file ): string => PEPTIDE_CORE_VERSION . '.' . (int) @filemtime( PEPTIDE_CORE_DIR . '/assets/' . $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 		wp_enqueue_style( 'peptide-core-tracking-admin', $url . 'tracking-admin.css', array(), $ver( 'tracking-admin.css' ) );
-		wp_enqueue_script( 'peptide-core-tracking-admin', $url . 'tracking-admin.js', array( 'wp-api-fetch' ), $ver( 'tracking-admin.js' ), array( 'in_footer' => true ) );
+		// 购物车弹窗组件由 Codex 编写（VISITOR-CART-01，独立浏览器验收），插件只负责接口和挂载。
+		wp_enqueue_style( 'peptide-core-visitor-cart', $url . 'visitor-cart.css', array(), $ver( 'visitor-cart.css' ) );
+		wp_register_script( 'peptide-core-visitor-cart', $url . 'visitor-cart.js', array(), $ver( 'visitor-cart.js' ), array( 'in_footer' => true ) );
+		wp_register_script( 'peptide-core-visitor-cart-adapter', $url . 'visitor-cart-adapter.js', array( 'peptide-core-visitor-cart' ), $ver( 'visitor-cart-adapter.js' ), array( 'in_footer' => true ) );
+		wp_enqueue_script( 'peptide-core-tracking-admin', $url . 'tracking-admin.js', array( 'wp-api-fetch', 'peptide-core-visitor-cart-adapter' ), $ver( 'tracking-admin.js' ), array( 'in_footer' => true ) );
 		wp_add_inline_script(
 			'peptide-core-tracking-admin',
 			'window.pcTrackingAdmin = ' . wp_json_encode(
@@ -60,6 +69,7 @@ final class Tracking_Page {
 					'visitor'    => isset( $_GET['visitor'] ) ? absint( $_GET['visitor'] ) : 0, // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 					'visit'      => isset( $_GET['visit'] ) ? absint( $_GET['visit'] ) : 0, // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 					'liveUrl'    => admin_url( 'admin.php?page=' . self::SLUG ),
+					'archiveUrl' => admin_url( 'admin.php?page=' . self::ARCHIVE_SLUG ),
 					'refreshMs'  => 5000,
 					// 后台时间都按店铺时区显示（IANA 名称时用浏览器的 Intl 换算；只有偏移量时按浏览器本地时间）。
 					'timezone'   => wp_timezone_string(),
@@ -76,6 +86,21 @@ final class Tracking_Page {
 		return array(
 			'active'      => __( 'Active', 'peptide-core' ),
 			'idle'        => __( 'Idle', 'peptide-core' ),
+			'away'        => __( 'No signal (away)', 'peptide-core' ),
+			'left'        => __( 'Left the site', 'peptide-core' ),
+			'gone'        => __( 'Left (timed out)', 'peptide-core' ),
+			'status'      => __( 'Status', 'peptide-core' ),
+			'archive'     => __( 'Visitor archive', 'peptide-core' ),
+			'archiveNote' => __( 'Visits that have ended: every page was closed (leave signal), or no signal for 30 minutes (estimated). The leave time is the last signal, not an exact moment. A visitor who comes back shows up in Live visitors again; nothing is deleted.', 'peptide-core' ),
+			'archiveEmpty' => __( 'No ended visits match these filters.', 'peptide-core' ),
+			'visitTime'   => __( 'Visit (start → last signal)', 'peptide-core' ),
+			'leftReason'  => __( 'How the visit ended', 'peptide-core' ),
+			'reasonExit'  => __( 'Leave signal', 'peptide-core' ),
+			'reasonTimeout' => __( 'No signal for 30 min', 'peptide-core' ),
+			'leftEstimated' => __( 'Estimated', 'peptide-core' ),
+			'lastPage'    => __( 'Last page', 'peptide-core' ),
+			'searchVisitor' => __( 'Visitor #ID, name or email', 'peptide-core' ),
+			'loadMore'    => __( 'Load more', 'peptide-core' ),
 			'offline'     => __( 'Offline', 'peptide-core' ),
 			'noVisitors'  => __( 'No visitors in the last 30 minutes.', 'peptide-core' ),
 			'visitor'     => __( 'Visitor', 'peptide-core' ),
@@ -83,23 +108,6 @@ final class Tracking_Page {
 			'tabs'        => __( 'Open pages', 'peptide-core' ),
 			'stage'       => __( 'Furthest step', 'peptide-core' ),
 			'cart'        => __( 'Cart', 'peptide-core' ),
-			/* translators: %d: number of items */
-			'cartView'    => __( 'View (%d)', 'peptide-core' ),
-			'cartEmpty'   => __( 'Empty', 'peptide-core' ),
-			'cartUnknown' => __( 'Not synced yet', 'peptide-core' ),
-			'cartExpired' => __( 'Session expired', 'peptide-core' ),
-			'cartTitle'   => __( 'Current cart', 'peptide-core' ),
-			'cartExpiredNote' => __( 'The store session has expired, so this may no longer be what the customer sees.', 'peptide-core' ),
-			'cartUnknownNote' => __( 'No cart activity has been recorded for this visitor yet.', 'peptide-core' ),
-			'cartEmptyNote'   => __( 'The cart is empty.', 'peptide-core' ),
-			'product'     => __( 'Product', 'peptide-core' ),
-			'qty'         => __( 'Qty', 'peptide-core' ),
-			'unitPrice'   => __( 'Price', 'peptide-core' ),
-			'lineTotal'   => __( 'Total', 'peptide-core' ),
-			'subtotal'    => __( 'Subtotal', 'peptide-core' ),
-			'discount'    => __( 'Discount', 'peptide-core' ),
-			'updated'     => __( 'Updated %s', 'peptide-core' ),
-			'close'       => __( 'Close', 'peptide-core' ),
 			'visitStart'  => __( 'Visit started', 'peptide-core' ),
 			'lastSignal'  => __( 'Last signal', 'peptide-core' ),
 			'ago'         => __( '%s ago', 'peptide-core' ),
@@ -235,6 +243,7 @@ final class Tracking_Page {
 			'live'    => __( 'Live visitors', 'peptide-core' ),
 			'visitor' => __( 'Visitor details', 'peptide-core' ),
 			'stats'   => __( 'Conversion', 'peptide-core' ),
+			'archive' => __( 'Visitor archive', 'peptide-core' ),
 		);
 		?>
 		<div class="wrap pc-trk">

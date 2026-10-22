@@ -20,7 +20,8 @@ defined( 'ABSPATH' ) || exit;
 final class Schema {
 
 	// v2（VISITOR-CART-01）：访客当前购物车快照；标签页记录最后事件的页面实例和序号（并发 / 乱序时单调更新）。
-	public const DB_VERSION = '2';
+	// v3（VISITOR-ARCHIVE-01）：访问按最后活动时间排序的索引（访客归档分页）。
+	public const DB_VERSION = '3';
 	public const OPTION     = 'peptide_core_tracking_db';
 
 	public static function table( string $name ): string {
@@ -74,7 +75,8 @@ CREATE TABLE {$s} (
   is_test tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY  (id),
   KEY visitor (visitor_id,start_ms),
-  KEY start_ms (start_ms)
+  KEY start_ms (start_ms),
+  KEY last_ms (last_ms,id)
 ) {$charset};
 CREATE TABLE {$e} (
   id bigint(20) unsigned NOT NULL AUTO_INCREMENT,

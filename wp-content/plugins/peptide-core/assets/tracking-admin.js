@@ -77,11 +77,11 @@
 
 	function renderLive( res ) {
 		var list = res.visitors || [];
-		var count = { active: 0, idle: 0, offline: 0 };
+		var count = { active: 0, idle: 0, away: 0 };
 		list.forEach( function ( v ) {
 			count[ v.status ]++;
 		} );
-		var html = '<div class="pc-trk-cards">' + [ 'active', 'idle', 'offline' ].map( function ( k ) {
+		var html = '<div class="pc-trk-cards">' + [ 'active', 'idle', 'away' ].map( function ( k ) {
 			return '<div class="pc-trk-card"><span>' + dot( k ) + '</span><b>' + count[ k ] + '</b></div>';
 		} ).join( '' ) + '</div>';
 		if ( ! list.length ) {
@@ -105,86 +105,28 @@
 	}
 
 	// ---------- 购物车（VISITOR-CART-01） ----------
+	// 弹窗用 Codex 的组件（visitor-cart.js + visitor-cart-adapter.js）：挂在 body，列表重绘不关窗；
+	// 请求有代次 / 可取消，旧响应不会覆盖新窗口；关窗后焦点回到（重绘后的）同一访客按钮。
+	var carts = window.PCVisitorCart && window.PCVisitorCartWordPress ? window.PCVisitorCart.mount( {
+		root: root,
+		timeZone: cfg.timezone,
+		refreshMs: 5000,
+		loadCart: window.PCVisitorCartWordPress.createLoader( wp.apiFetch ),
+	} ) : null;
 
 	function cartCell( who, c ) {
-		c = c || { status: 'unknown', count: 0 };
-		if ( 'active' === c.status || 'expired' === c.status ) {
-			return '<button type="button" class="button button-small pc-trk-cartbtn" data-cart="' + esc( who.id ) + '" data-name="' + esc( who.label ) + '">' + esc( fmt( S.cartView, c.count ) ) + '</button>' + ( 'expired' === c.status ? '<div class="pc-trk-sub">' + esc( S.cartExpired ) + '</div>' : '<div class="pc-trk-sub">' + esc( c.subtotal_text ) + '</div>' );
+		if ( ! carts ) {
+			return '—';
 		}
-		return '<span class="pc-trk-sub">' + esc( 'empty' === c.status ? S.cartEmpty : S.cartUnknown ) + '</span>';
+		var summary;
+		try {
+			summary = window.PCVisitorCartWordPress.summary( c );
+		} catch ( e ) {
+			summary = { status: 'unknown', item_count: 0 };
+		}
+		var sub = c && 'active' === c.status && c.subtotal_text ? '<div class="pc-trk-sub">' + esc( c.subtotal_text ) + '</div>' : '';
+		return window.PCVisitorCart.buttonHTML( { id: who.id, label: who.label }, summary ) + sub;
 	}
-
-	// 弹窗放在列表外面（document.body），列表每 5 秒刷新时弹窗不会被关掉。
-	var modal = null;
-	var modalVisitor = 0;
-	var modalReturn = null;
-	function closeCart() {
-		if ( modal ) {
-			modal.remove();
-			modal = null;
-			modalVisitor = 0;
-			if ( modalReturn && document.contains( modalReturn ) ) {
-				modalReturn.focus();
-			}
-		}
-	}
-	function renderCart( name, c ) {
-		var body;
-		if ( ! c.items || ! c.items.length ) {
-			body = '<p>' + esc( 'unknown' === c.status ? S.cartUnknownNote : S.cartEmptyNote ) + '</p>';
-		} else {
-			body = ( 'expired' === c.status ? '<div class="notice notice-warning inline"><p>' + esc( S.cartExpiredNote ) + '</p></div>' : '' ) +
-				'<table class="widefat striped pc-trk-cart"><thead><tr><th>' + esc( S.product ) + '</th><th>' + esc( S.qty ) + '</th><th>' + esc( S.unitPrice ) + '</th><th>' + esc( S.lineTotal ) + '</th></tr></thead><tbody>' +
-				c.items.map( function ( i ) {
-					return '<tr><td class="pc-trk-cart__prod">' + ( i.image ? '<img src="' + esc( i.image ) + '" alt="">' : '' ) + '<span><b>' + esc( i.name ) + '</b>' + ( i.variation ? '<small>' + esc( i.variation ) + '</small>' : '' ) + ( i.sku ? '<small>SKU ' + esc( i.sku ) + '</small>' : '' ) + '</span></td><td>' + esc( i.quantity ) + '</td><td>' + esc( i.unit_price_text ) + '</td><td>' + esc( i.line_total_text ) + '</td></tr>';
-				} ).join( '' ) + '</tbody></table>' +
-				'<p class="pc-trk-cart__sum">' + ( c.discount_text ? esc( S.discount ) + ': −' + esc( c.discount_text ) + ( c.coupons.length ? ' (' + esc( c.coupons.join( ', ' ) ) + ')' : '' ) + ' · ' : '' ) + esc( S.subtotal ) + ': <b>' + esc( c.subtotal_text ) + '</b></p>';
-		}
-		var updated = c.updated_ms ? '<span class="pc-trk-sub">' + esc( fmt( S.updated, clock( c.updated_ms, true ) ) ) + '</span>' : '';
-		modal.querySelector( '.pc-trk-modal__body' ).innerHTML = body;
-		modal.querySelector( '.pc-trk-modal__title' ).textContent = S.cartTitle + ' · ' + name;
-		modal.querySelector( '.pc-trk-modal__meta' ).innerHTML = updated;
-	}
-	function openCart( id, name, opener ) {
-		closeCart();
-		modalVisitor = id;
-		modalReturn = opener || null;
-		modal = document.createElement( 'div' );
-		modal.className = 'pc-trk-modal';
-		modal.innerHTML = '<div class="pc-trk-modal__box" role="dialog" aria-modal="true" aria-labelledby="pc-trk-modal-title"><div class="pc-trk-modal__head"><h2 id="pc-trk-modal-title" class="pc-trk-modal__title"></h2><button type="button" class="button pc-trk-modal__refresh">' + esc( S.refresh ) + '</button><button type="button" class="button pc-trk-modal__close" aria-label="' + esc( S.close ) + '">×</button></div><div class="pc-trk-modal__meta"></div><div class="pc-trk-modal__body"><p>' + esc( S.loading ) + '</p></div></div>';
-		document.body.appendChild( modal );
-		var load = function () {
-			wp.apiFetch( { path: '/peptide/v1/track/admin/visitors/' + id + '/cart' } ).then( function ( c ) {
-				if ( modal && modalVisitor === id ) {
-					renderCart( name, c );
-				}
-			} ).catch( function ( err ) {
-				if ( modal ) {
-					modal.querySelector( '.pc-trk-modal__body' ).innerHTML = '<p>' + esc( fmt( S.error, ( err && err.message ) || err ) ) + '</p>';
-				}
-			} );
-		};
-		modal.addEventListener( 'click', function ( e ) {
-			if ( e.target === modal || e.target.closest( '.pc-trk-modal__close' ) ) {
-				closeCart();
-			} else if ( e.target.closest( '.pc-trk-modal__refresh' ) ) {
-				load();
-			}
-		} );
-		modal.querySelector( '.pc-trk-modal__close' ).focus();
-		load();
-	}
-	document.addEventListener( 'keydown', function ( e ) {
-		if ( 'Escape' === e.key ) {
-			closeCart();
-		}
-	} );
-	root.addEventListener( 'click', function ( e ) {
-		var b = e.target.closest( '.pc-trk-cartbtn' );
-		if ( b ) {
-			openCart( parseInt( b.getAttribute( 'data-cart' ), 10 ), b.getAttribute( 'data-name' ), b );
-		}
-	} );
 
 	function live() {
 		var tick = function () {
@@ -224,63 +166,115 @@
 		return parts.join( ', ' );
 	}
 
-	function renderTimeline( box, res ) {
-		var rows = res.events.filter( function ( e ) {
-			return ! hideHeartbeats || e.type !== 'heartbeat';
+	function eventRow( e ) {
+		return '<tr class="' + ( 'server' === e.source ? 'is-server' : '' ) + '"><td>' + esc( clock( e.at_ms ) ) + '</td><td><span class="pc-trk-tabid">' + esc( e.tab || '—' ) + '</span></td><td>' + esc( S.types[ e.type ] || e.type ) + ( 'server' === e.source ? ' <span class="pc-trk-badge">' + esc( S.server ) + '</span>' : '' ) + '</td><td>' + ( e.path ? pageText( { page_type: e.page_type, path: e.path, product_name: ( e.data || {} ).product_name } ) : '' ) + '</td><td>' + esc( detailText( e ) ) + ( e.order_url ? ' <a href="' + esc( e.order_url ) + '">#' + esc( e.order_id ) + '</a>' : '' ) + '</td></tr>';
+	}
+
+	// 时间线分页：心跳在服务器端过滤，“加载更多”接着往后翻，不会漏掉末尾的事件。
+	var timelineToken = 0;
+	function openTimeline( box, id ) {
+		var token = ++timelineToken;
+		var path = function ( cursor ) {
+			return '/peptide/v1/track/admin/visits/' + id + '?limit=200&heartbeats=' + ( hideHeartbeats ? '0' : '1' ) + ( cursor ? '&cursor=' + encodeURIComponent( cursor ) : '' );
+		};
+		box.innerHTML = '<p>' + esc( S.loading ) + '</p>';
+		load( path( null ) ).then( function ( t ) {
+			if ( token !== timelineToken ) {
+				return;
+			}
+			box.innerHTML = '<h2>' + esc( S.timeline ) + ' · ' + esc( clock( t.visit.start_ms, true ) ) + '</h2>' +
+				'<label class="pc-trk-hb"><input type="checkbox"' + ( hideHeartbeats ? ' checked' : '' ) + '> ' + esc( S.hideHeartbeats ) + '</label>' +
+				'<table class="widefat striped pc-trk-table pc-trk-timeline"><thead><tr><th>' + esc( S.time ) + '</th><th>' + esc( S.tab ) + '</th><th>' + esc( S.event ) + '</th><th>' + esc( S.page ) + '</th><th>' + esc( S.details ) + '</th></tr></thead><tbody>' + t.events.map( eventRow ).join( '' ) + '</tbody></table>' +
+				'<p class="pc-trk-more"></p>';
+			var more = box.querySelector( '.pc-trk-more' );
+			var cursor = t.next_cursor;
+			var button = function () {
+				more.innerHTML = cursor ? '<button type="button" class="button">' + esc( S.loadMore ) + '</button>' : '';
+			};
+			button();
+			more.addEventListener( 'click', function ( ev ) {
+				var b = ev.target.closest( 'button' );
+				if ( ! b || ! cursor ) {
+					return;
+				}
+				b.disabled = true;
+				load( path( cursor ) ).then( function ( next ) {
+					if ( token !== timelineToken ) {
+						return;
+					}
+					box.querySelector( '.pc-trk-timeline tbody' ).insertAdjacentHTML( 'beforeend', next.events.map( eventRow ).join( '' ) );
+					cursor = next.next_cursor;
+					button();
+				} ).catch( function () {
+					b.disabled = false;
+				} );
+			} );
+			box.querySelector( '.pc-trk-hb input' ).addEventListener( 'change', function ( ev ) {
+				hideHeartbeats = ev.target.checked;
+				openTimeline( box, id );
+			} );
+		} ).catch( function ( err ) {
+			if ( token === timelineToken ) {
+				box.innerHTML = '<p>' + esc( fmt( S.error, ( err && err.message ) || err ) ) + '</p>';
+			}
 		} );
-		var html = '<h2>' + esc( S.timeline ) + ' · ' + esc( clock( res.visit.start_ms, true ) ) + '</h2>';
-		html += '<label class="pc-trk-hb"><input type="checkbox"' + ( hideHeartbeats ? ' checked' : '' ) + '> ' + esc( S.hideHeartbeats ) + '</label>';
-		html += '<table class="widefat striped pc-trk-table pc-trk-timeline"><thead><tr><th>' + esc( S.time ) + '</th><th>' + esc( S.tab ) + '</th><th>' + esc( S.event ) + '</th><th>' + esc( S.page ) + '</th><th>' + esc( S.details ) + '</th></tr></thead><tbody>';
-		rows.forEach( function ( e ) {
-			html += '<tr class="' + ( 'server' === e.source ? 'is-server' : '' ) + '"><td>' + esc( clock( e.at_ms ) ) + '</td><td><span class="pc-trk-tabid">' + esc( e.tab || '—' ) + '</span></td><td>' + esc( S.types[ e.type ] || e.type ) + ( 'server' === e.source ? ' <span class="pc-trk-badge">' + esc( S.server ) + '</span>' : '' ) + '</td><td>' + ( e.path ? pageText( { page_type: e.page_type, path: e.path, product_name: ( e.data || {} ).product_name } ) : '' ) + '</td><td>' + esc( detailText( e ) ) + ( e.order_url ? ' <a href="' + esc( e.order_url ) + '">#' + esc( e.order_id ) + '</a>' : '' ) + '</td></tr>';
-		} );
-		box.innerHTML = html + '</tbody></table>';
-		box.querySelector( '.pc-trk-hb input' ).addEventListener( 'change', function ( ev ) {
-			hideHeartbeats = ev.target.checked;
-			renderTimeline( box, res );
-		} );
+	}
+
+	function visitRow( s ) {
+		return '<tr data-visit="' + esc( s.id ) + '" tabindex="0"><td>' + esc( clock( s.start_ms, true ) ) + '<div class="pc-trk-sub"><code>' + esc( s.landing ) + '</code></div></td><td>' + esc( ago( s.last_ms - s.start_ms ) ) + '</td><td>' + esc( s.pageviews ) + '</td><td>' + esc( S.stages[ s.stage ] ) + ( s.order_url ? ' <a href="' + esc( s.order_url ) + '">#' + esc( s.order_id ) + '</a>' : '' ) + '</td></tr>';
 	}
 
 	function visitor() {
 		load( '/peptide/v1/track/admin/visitors/' + cfg.visitor ).then( function ( res ) {
 			var v = res.visitor;
-			var html = '<p><a href="' + esc( cfg.liveUrl ) + '">' + esc( S.back ) + '</a></p>';
-			html += '<div class="pc-trk-cards"><div class="pc-trk-card"><span>' + esc( S.visitor ) + '</span><b>' + esc( v.label ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.account ) + '</span><b>' + esc( v.user_id ? v.email : S.guest ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.device ) + '</span><b>' + esc( ( S[ v.device ] || v.device ) + ' · ' + v.browser ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.firstSeen ) + '</span><b>' + esc( clock( v.first_ms, true ) ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.visits ) + '</span><b>' + esc( v.visits ) + '</b></div></div>';
+			var html = '<p><a href="' + esc( cfg.liveUrl ) + '">' + esc( S.back ) + '</a> · <a href="' + esc( cfg.archiveUrl ) + '">' + esc( S.archive ) + '</a></p>';
+			html += '<div class="pc-trk-cards"><div class="pc-trk-card"><span>' + esc( S.visitor ) + '</span><b>' + esc( v.label ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.status ) + '</span><b>' + dot( res.presence ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.account ) + '</span><b>' + esc( v.user_id ? v.email : S.guest ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.device ) + '</span><b>' + esc( ( S[ v.device ] || v.device ) + ' · ' + v.browser ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.firstSeen ) + '</span><b>' + esc( clock( v.first_ms, true ) ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.visits ) + '</span><b>' + esc( v.visits ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.cart ) + '</span><b>' + cartCell( v, res.cart ) + '</b></div></div>';
 			if ( res.others.length ) {
 				html += '<p>' + esc( S.otherDevices ) + ': ' + res.others.map( function ( o ) {
 					return '<a href="' + esc( cfg.liveUrl + '&visitor=' + o.id ) + '">' + esc( '#' + o.id + ' ' + ( S[ o.device ] || o.device ) + ' · ' + o.browser ) + '</a>';
 				} ).join( ', ' ) + '</p>';
 			}
-			html += '<div class="pc-trk-split"><div><h2>' + esc( S.visits ) + '</h2><table class="widefat pc-trk-table pc-trk-visits"><thead><tr><th>' + esc( S.visitStart ) + '</th><th>' + esc( S.duration ) + '</th><th>' + esc( S.pageviews ) + '</th><th>' + esc( S.stage ) + '</th></tr></thead><tbody>';
-			res.visits.forEach( function ( s ) {
-				html += '<tr data-visit="' + esc( s.id ) + '" tabindex="0"><td>' + esc( clock( s.start_ms, true ) ) + '<div class="pc-trk-sub"><code>' + esc( s.landing ) + '</code></div></td><td>' + esc( ago( s.last_ms - s.start_ms ) ) + '</td><td>' + esc( s.pageviews ) + '</td><td>' + esc( S.stages[ s.stage ] ) + ( s.order_url ? ' <a href="' + esc( s.order_url ) + '">#' + esc( s.order_id ) + '</a>' : '' ) + '</td></tr>';
-			} );
-			html += '</tbody></table></div><div id="pc-trk-timeline"><p>' + esc( S.chooseVisit ) + '</p></div></div>';
+			html += '<div class="pc-trk-split"><div><h2>' + esc( S.visits ) + '</h2><table class="widefat pc-trk-table pc-trk-visits"><thead><tr><th>' + esc( S.visitStart ) + '</th><th>' + esc( S.duration ) + '</th><th>' + esc( S.pageviews ) + '</th><th>' + esc( S.stage ) + '</th></tr></thead><tbody>' + res.visits.map( visitRow ).join( '' ) + '</tbody></table><p class="pc-trk-more"></p></div><div id="pc-trk-timeline"><p>' + esc( S.chooseVisit ) + '</p></div></div>';
 			root.innerHTML = html;
 			var box = document.getElementById( 'pc-trk-timeline' );
+			var list = root.querySelector( '.pc-trk-visits' );
 			var open = function ( id ) {
-				root.querySelectorAll( '.pc-trk-visits tr' ).forEach( function ( tr ) {
+				list.querySelectorAll( 'tr' ).forEach( function ( tr ) {
 					tr.classList.toggle( 'is-selected', tr.getAttribute( 'data-visit' ) === String( id ) );
 				} );
-				box.innerHTML = '<p>' + esc( S.loading ) + '</p>';
-				load( '/peptide/v1/track/admin/visits/' + id ).then( function ( t ) {
-					renderTimeline( box, t );
-				} ).catch( function ( err ) {
-					box.innerHTML = '<p>' + esc( fmt( S.error, err.message ) ) + '</p>';
-				} );
+				openTimeline( box, id );
 			};
-			root.querySelectorAll( '.pc-trk-visits tr[data-visit]' ).forEach( function ( tr ) {
-				var go = function ( ev ) {
-					if ( ev.target.closest( 'a' ) ) {
-						return;
-					}
+			// 点访问行（含“加载更多”追加的行）打开它的时间线。
+			list.addEventListener( 'click', function ( ev ) {
+				var tr = ev.target.closest( 'tr[data-visit]' );
+				if ( tr && ! ev.target.closest( 'a' ) ) {
 					open( tr.getAttribute( 'data-visit' ) );
-				};
-				tr.addEventListener( 'click', go );
-				tr.addEventListener( 'keydown', function ( ev ) {
-					if ( 'Enter' === ev.key ) {
-						go( ev );
-					}
+				}
+			} );
+			list.addEventListener( 'keydown', function ( ev ) {
+				var tr = ev.target.closest( 'tr[data-visit]' );
+				if ( tr && 'Enter' === ev.key ) {
+					open( tr.getAttribute( 'data-visit' ) );
+				}
+			} );
+			var more = root.querySelector( '.pc-trk-more' );
+			var cursor = res.next_cursor;
+			var button = function () {
+				more.innerHTML = cursor ? '<button type="button" class="button">' + esc( S.loadMore ) + '</button>' : '';
+			};
+			button();
+			more.addEventListener( 'click', function ( ev ) {
+				var b = ev.target.closest( 'button' );
+				if ( ! b || ! cursor ) {
+					return;
+				}
+				b.disabled = true;
+				load( '/peptide/v1/track/admin/visitors/' + cfg.visitor + '/visits?limit=25&cursor=' + encodeURIComponent( cursor ) ).then( function ( page ) {
+					list.querySelector( 'tbody' ).insertAdjacentHTML( 'beforeend', page.items.map( visitRow ).join( '' ) );
+					cursor = page.next_cursor;
+					button();
+				} ).catch( function () {
+					b.disabled = false;
 				} );
 			} );
 			var first = cfg.visit || ( res.visits[ 0 ] && res.visits[ 0 ].id );
@@ -288,6 +282,79 @@
 				open( first );
 			}
 		} ).catch( fail );
+	}
+
+	// ---------- 访客归档（VISITOR-ARCHIVE-01） ----------
+
+	function archiveRow( it ) {
+		var who = it.visitor;
+		var visit = it.visit;
+		var page = it.last_page;
+		return '<tr><td><a href="' + esc( cfg.liveUrl + '&visitor=' + who.id + '&visit=' + visit.id ) + '"><strong>' + esc( who.label ) + '</strong></a><div class="pc-trk-sub">' + esc( ( S[ who.device ] || who.device ) + ' · ' + who.browser + ' · ' + S.visits + ' ' + who.visits ) + '</div></td>' +
+			'<td>' + esc( clock( visit.start_ms, true ) ) + '<div class="pc-trk-sub">→ ' + esc( clock( it.left_ms, true ) ) + ' · ' + esc( ago( visit.last_ms - visit.start_ms ) ) + '</div></td>' +
+			'<td>' + esc( 'exit_signal' === it.reason ? S.reasonExit : S.reasonTimeout ) + '<div class="pc-trk-sub">' + esc( S.leftEstimated ) + '</div></td>' +
+			'<td>' + ( page ? pageText( page ) : '—' ) + '</td>' +
+			'<td>' + esc( visit.pageviews ) + '</td>' +
+			'<td>' + esc( S.stages[ visit.stage ] ) + ( visit.order_url ? ' <a href="' + esc( visit.order_url ) + '">#' + esc( visit.order_id ) + '</a>' : '' ) + '</td>' +
+			'<td>' + cartCell( who, it.cart ) + '</td>' +
+			'<td><a class="button button-small" href="' + esc( cfg.liveUrl + '&visitor=' + who.id + '&visit=' + visit.id ) + '">' + esc( S.timeline ) + '</a></td></tr>';
+	}
+
+	function archive() {
+		root.innerHTML = '<form class="pc-trk-filter"><label>' + esc( S.from ) + ' <input type="date" name="from"></label> <label>' + esc( S.to ) + ' <input type="date" name="to"></label> <select name="device"><option value="">' + esc( S.allDevices ) + '</option><option value="desktop">' + esc( S.desktop ) + '</option><option value="mobile">' + esc( S.mobile ) + '</option><option value="tablet">' + esc( S.tablet ) + '</option></select> <input type="search" name="q" placeholder="' + esc( S.searchVisitor ) + '"> <button class="button">' + esc( S.apply ) + '</button></form>' +
+			'<p class="description">' + esc( S.archiveNote ) + '</p><div id="pc-trk-archive"></div>';
+		var form = root.querySelector( 'form' );
+		var out = document.getElementById( 'pc-trk-archive' );
+		var token = 0;
+		var query = function ( cursor ) {
+			return '/peptide/v1/track/admin/archive?limit=25&from=' + encodeURIComponent( form.from.value ) + '&to=' + encodeURIComponent( form.to.value ) + '&device=' + encodeURIComponent( form.device.value ) + '&q=' + encodeURIComponent( form.q.value ) + ( cursor ? '&cursor=' + encodeURIComponent( cursor ) : '' );
+		};
+		var run = function () {
+			var mine = ++token;
+			out.innerHTML = '<p>' + esc( S.loading ) + '</p>';
+			load( query( null ) ).then( function ( r ) {
+				if ( mine !== token ) {
+					return;
+				}
+				if ( ! r.items.length ) {
+					out.innerHTML = '<p class="pc-trk-empty">' + esc( S.archiveEmpty ) + '</p>';
+					return;
+				}
+				out.innerHTML = '<table class="widefat striped pc-trk-table"><thead><tr><th>' + esc( S.visitor ) + '</th><th>' + esc( S.visitTime ) + '</th><th>' + esc( S.leftReason ) + '</th><th>' + esc( S.lastPage ) + '</th><th>' + esc( S.pageviews ) + '</th><th>' + esc( S.stage ) + '</th><th>' + esc( S.cart ) + '</th><th></th></tr></thead><tbody>' + r.items.map( archiveRow ).join( '' ) + '</tbody></table><p class="pc-trk-more"></p>';
+				var more = out.querySelector( '.pc-trk-more' );
+				var cursor = r.next_cursor;
+				var button = function () {
+					more.innerHTML = cursor ? '<button type="button" class="button">' + esc( S.loadMore ) + '</button>' : '';
+				};
+				button();
+				more.addEventListener( 'click', function ( ev ) {
+					var b = ev.target.closest( 'button' );
+					if ( ! b || ! cursor ) {
+						return;
+					}
+					b.disabled = true;
+					load( query( cursor ) ).then( function ( next ) {
+						if ( mine !== token ) {
+							return;
+						}
+						out.querySelector( 'tbody' ).insertAdjacentHTML( 'beforeend', next.items.map( archiveRow ).join( '' ) );
+						cursor = next.next_cursor;
+						button();
+					} ).catch( function () {
+						b.disabled = false;
+					} );
+				} );
+			} ).catch( function ( err ) {
+				if ( mine === token ) {
+					out.innerHTML = '<p>' + esc( fmt( S.error, ( err && err.message ) || err ) ) + '</p>';
+				}
+			} );
+		};
+		form.addEventListener( 'submit', function ( e ) {
+			e.preventDefault();
+			run();
+		} );
+		run();
 	}
 
 	// ---------- 转化统计 ----------
@@ -335,6 +402,8 @@
 
 	if ( 'stats' === cfg.view ) {
 		stats();
+	} else if ( 'archive' === cfg.view ) {
+		archive();
 	} else if ( 'visitor' === cfg.view && cfg.visitor ) {
 		visitor();
 	} else {

@@ -154,6 +154,16 @@ Tracker::visit( $visitor['id'], Tracker::now_ms() );
 Tracker::visit( $visitor['id'], Tracker::now_ms() );
 $ok( 'repeated visit lookups reuse the open visit', $visits_before === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . Schema::table( 'visits' ) . ' WHERE visitor_id = %d', $visitor['id'] ) ) ); // phpcs:ignore
 
+// 4c. 离站判断（VISITOR-ARCHIVE-01）。
+$T = static fn( string $type, int $signal ) => array( 'last_signal_ms' => $signal, 'last_type' => $type, 'visibility' => 'visible', 'activity' => 'active' );
+$n = Tracker::now_ms();
+$ok( 'presence: one tab left, another still beating -> active', 'active' === Query::presence( array( $T( 'page_exit', $n - 20000 ), $T( 'heartbeat', $n - 5000 ) ), $n ) );
+$ok( 'presence: hidden tab still beating -> idle, not archived', 'idle' === Query::presence( array( array( 'last_signal_ms' => $n - 5000, 'last_type' => 'heartbeat', 'visibility' => 'hidden', 'activity' => 'idle' ) ), $n ) );
+$ok( 'presence: every recent tab left 10s+ ago -> left', 'left' === Query::presence( array( $T( 'page_exit', $n - 20000 ), $T( 'page_exit', $n - 15000 ), $T( 'heartbeat', $n - 40 * 60000 ) ), $n ) );
+$ok( 'presence: exit within the 10s grace (in-site navigation) -> not left', 'left' !== Query::presence( array( $T( 'page_exit', $n - 3000 ) ), $n ) );
+$ok( 'presence: no signal for 50s without exit -> away (still live)', 'away' === Query::presence( array( $T( 'heartbeat', $n - 50000 ) ), $n ) );
+$ok( 'presence: nothing for 30 min -> gone', 'gone' === Query::presence( array( $T( 'heartbeat', $n - 31 * 60000 ) ), $n ) );
+
 // 5. 整批错误。
 $big = array();
 for ( $i = 0; $i < 21; $i++ ) {
@@ -234,43 +244,138 @@ Server_Events::on_order_placed( $failed );
 $failed->update_status( 'failed' );
 $ok( 'failed payment recorded', 1 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . Schema::table( 'events' ) . " WHERE visitor_id = %d AND type = 'payment_failed'", $visitor['id'] ) ) ); // phpcs:ignore
 
-// 7b. 当前购物车快照（VISITOR-CART-01）。
+// 7b. 当前购物车（VISITOR-CART-01）：读 Woo 会话本身；会话失效时退回最后的快照。
 $_COOKIE[ Tracker::COOKIE ] = $vid1;
-$cartRow = static function () use ( $wpdb, $visitor ) {
-	return $wpdb->get_row( $wpdb->prepare( 'SELECT id, cart, cart_ms, cart_key FROM ' . Schema::table( 'visitors' ) . ' WHERE id = %d', $visitor['id'] ), ARRAY_A ); // phpcs:ignore
+$C       = \PeptideCore\Tracking\Carts::class;
+$cartRow = static function ( int $id ) use ( $wpdb ) {
+	return $wpdb->get_row( $wpdb->prepare( 'SELECT id, user_id, cart, cart_ms, cart_key FROM ' . Schema::table( 'visitors' ) . ' WHERE id = %d', $id ), ARRAY_A ); // phpcs:ignore
+};
+// 命令行里 Woo 不会写会话表：按 Woo 的格式把当前购物车写成一行会话，模拟浏览器里有效的会话。
+$sessions     = array();
+$writeSession = static function ( string $key ) use ( $wpdb, &$sessions ) {
+	$value = maybe_serialize(
+		array(
+			'cart'            => maybe_serialize( WC()->cart->get_cart_for_session() ),
+			'cart_totals'     => maybe_serialize( WC()->cart->get_totals() ),
+			'applied_coupons' => maybe_serialize( WC()->cart->get_applied_coupons() ),
+		)
+	);
+	$wpdb->replace( $wpdb->prefix . 'woocommerce_sessions', array( 'session_key' => $key, 'session_value' => $value, 'session_expiry' => time() + HOUR_IN_SECONDS ) ); // phpcs:ignore
+	$sessions[] = $key;
+	\PeptideCore\Tracking\Carts::forget();
 };
 $wpdb->update( Schema::table( 'visitors' ), array( 'cart' => null, 'cart_ms' => 0, 'cart_key' => '' ), array( 'id' => $visitor['id'] ) ); // phpcs:ignore
-$ok( 'no snapshot yet: unknown', 'unknown' === \PeptideCore\Tracking\Carts::view( $cartRow(), false )['status'] );
+$ok( 'no binding yet: unknown', 'unknown' === $C::view( $cartRow( $visitor['id'] ), false )['status'] );
 WC()->cart->empty_cart();
 if ( $simple ) {
+	$skey = 'smoke_sess_' . substr( md5( (string) $now ), 0, 10 );
 	WC()->cart->add_to_cart( $simple->get_id(), 2 );
 	WC()->cart->calculate_totals();
-	\PeptideCore\Tracking\Carts::save( $visitor['id'], WC()->cart, (string) WC()->session->get_customer_id() );
-	// 命令行里 Woo 不会写会话表，这里补一行，模拟浏览器里仍然有效的会话；结束时删除。
-	$skey = (string) WC()->session->get_customer_id();
-	$wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO {$wpdb->prefix}woocommerce_sessions (session_key, session_value, session_expiry) VALUES (%s, %s, %d)", $skey, 'a:0:{}', time() + HOUR_IN_SECONDS ) ); // phpcs:ignore
-	$detail = \PeptideCore\Tracking\Carts::detail( $visitor['id'] );
-	$ok( 'snapshot has items, quantity, prices and subtotal', 'active' === $detail['status'] && 2 === $detail['count'] && $simple->get_id() === $detail['items'][0]['product_id'] && 2.0 === (float) $detail['items'][0]['quantity'] && '' !== $detail['items'][0]['unit_price_text'] && abs( $detail['subtotal'] - (float) WC()->cart->get_subtotal() ) < 0.01 );
-	$res = rest_do_request( new WP_REST_Request( 'GET', '/peptide/v1/track/admin/visitors/' . $visitor['id'] . '/cart' ) );
-	$ok( 'customers cannot read the cart endpoint', in_array( $res->get_status(), array( 401, 403 ), true ) || ! is_user_logged_in() );
+	$C::save( $visitor['id'], WC()->cart, $skey );
+	$writeSession( $skey );
+	$detail = $C::detail( $visitor['id'] );
+	$ok( 'cart read from the Woo session: items, quantity, prices, subtotal', 'active' === $detail['status'] && 2 === $detail['count'] && $simple->get_id() === $detail['items'][0]['product_id'] && 2.0 === (float) $detail['items'][0]['quantity'] && '' !== $detail['items'][0]['unit_price_text'] && abs( $detail['subtotal'] - (float) WC()->cart->get_subtotal() ) < 0.01 && $detail['updated_ms'] > 0 );
 	wp_set_current_user( $admin->ID );
 	$res = rest_do_request( new WP_REST_Request( 'GET', '/peptide/v1/track/admin/visitors/' . $visitor['id'] . '/cart' ) );
 	$ok( 'admin cart endpoint', 200 === $res->get_status() && 2 === $res->get_data()['count'] );
+	$C::forget();
 	$live = array_values( array_filter( Query::live( Tracker::now_ms() ), static fn( $l ) => $l['visitor']['id'] === $visitor['id'] ) );
 	$ok( 'live list carries the cart summary', $live && 'active' === $live[0]['cart']['status'] && 2 === $live[0]['cart']['count'] );
 	wp_set_current_user( 0 );
-	$wpdb->update( Schema::table( 'visitors' ), array( 'cart_key' => 'no-such-session-key' ), array( 'id' => $visitor['id'] ) ); // phpcs:ignore
-	$ok( 'session gone: expired', 'expired' === \PeptideCore\Tracking\Carts::view( $cartRow(), false )['status'] );
+
+	// 同一个 Woo 会话被另一个访客编号共用：另一边改了车，两边看到的都是当前内容，不是各自的旧副本。
+	$other_vid = md5( 'smoke-other-' . $now );
+	$other     = Tracker::visitor( $other_vid, Tracker::now_ms() );
+	$visitors[] = $other['id'];
+	WC()->cart->set_quantity( array_key_first( WC()->cart->get_cart() ), 5 );
+	WC()->cart->calculate_totals();
+	$C::save( $other['id'], WC()->cart, $skey );
+	$writeSession( $skey );
+	$ok( 'shared session: both visitors see the current cart', 5 === $C::detail( $visitor['id'] )['count'] && 5 === $C::detail( $other['id'] )['count'] );
+
+	// 游客登录后 Woo 把会话迁到账号：绑定跟着改。
+	$user_key = (string) $customer;
+	$C::migrate( $skey, $user_key );
+	$ok( 'guest-to-account session migration moves the binding', $user_key === $cartRow( $visitor['id'] )['cart_key'] && $user_key === $cartRow( $other['id'] )['cart_key'] );
+	$writeSession( $user_key );
+	$ok( 'cart follows the migrated account session', 5 === $C::detail( $visitor['id'] )['count'] );
+
+	// 会话不在了：退回最后的快照，状态 expired。
+	$wpdb->delete( $wpdb->prefix . 'woocommerce_sessions', array( 'session_key' => $user_key ) ); // phpcs:ignore
+	$C::forget();
+	$ok( 'session gone: expired with the last snapshot', 'expired' === $C::view( $cartRow( $visitor['id'] ), false )['status'] );
+
+	// 空车。
 	WC()->cart->empty_cart();
-	\PeptideCore\Tracking\Carts::save( $visitor['id'], WC()->cart, (string) WC()->session->get_customer_id() );
-	$ok( 'emptied cart: empty', 'empty' === \PeptideCore\Tracking\Carts::view( $cartRow(), false )['status'] );
-	\PeptideCore\Tracking\Carts::mark();
+	$C::save( $visitor['id'], WC()->cart, $skey );
+	$writeSession( $skey );
+	$ok( 'emptied cart: empty', 'empty' === $C::view( $cartRow( $visitor['id'] ), false )['status'] );
+
+	// 请求结束时记录；没有访客行且车是空的时不建行（爬虫等）。
+	$C::mark();
 	WC()->cart->add_to_cart( $simple->get_id(), 1 );
-	\PeptideCore\Tracking\Carts::flush();
-	$ok( 'hooks: cart change is captured at the end of the request', 1 === \PeptideCore\Tracking\Carts::detail( $visitor['id'] )['count'] );
+	$C::flush();
+	$ok( 'hooks: cart change is captured at the end of the request', (string) WC()->session->get_customer_id() === $cartRow( $visitor['id'] )['cart_key'] );
 	WC()->cart->empty_cart();
-	$wpdb->delete( $wpdb->prefix . 'woocommerce_sessions', array( 'session_key' => $skey ) ); // phpcs:ignore
+	$_COOKIE[ Tracker::COOKIE ] = md5( 'smoke-bot-' . $now );
+	$before_rows = (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . Schema::table( 'visitors' ) ); // phpcs:ignore
+	$C::mark();
+	$C::flush();
+	$ok( 'empty cart with no visitor row creates nothing', $before_rows === (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . Schema::table( 'visitors' ) ) ); // phpcs:ignore
+	$_COOKIE[ Tracker::COOKIE ] = $vid1;
+	foreach ( array_unique( $sessions ) as $k ) {
+		$wpdb->delete( $wpdb->prefix . 'woocommerce_sessions', array( 'session_key' => $k ) ); // phpcs:ignore
+	}
 }
+
+// 7c. 归档列表、回访、分页。
+$arch_vid = md5( 'smoke-archive-' . $now );
+$_COOKIE[ Tracker::COOKIE ] = $arch_vid;
+$archTab  = 'tab-' . substr( md5( 'arch' . $now ), 0, 12 );
+$archPage = $uuid();
+$t0       = Tracker::now_ms();
+$shopPage = array( 'page_type' => 'shop', 'path' => '/shop/' );
+$send(
+	array(
+		'tab_id' => $archTab,
+		'events' => array(
+			$ev( 'page_view', $t0 - 2000, $archPage, 1, $shopPage, array( 'visibility' => 'visible', 'activity' => 'active' ) ),
+			$ev( 'heartbeat', $t0 - 1500, $archPage, 2, $shopPage, array( 'visibility' => 'visible', 'activity' => 'active' ) ),
+			$ev( 'page_exit', $t0 - 1000, $archPage, 3, $shopPage, array( 'persisted' => false, 'visibility' => 'hidden', 'activity' => 'active' ) ),
+		),
+	)
+);
+$arch       = Tracker::visitor( $arch_vid, $t0 );
+$visitors[] = $arch['id'];
+$liveIds    = static fn() => array_map( static fn( $l ) => $l['visitor']['id'], Query::live( Tracker::now_ms() ) );
+$ok( 'just left: still live during the 10s grace', in_array( $arch['id'], $liveIds(), true ) );
+$wpdb->query( $wpdb->prepare( 'UPDATE ' . Schema::table( 'tabs' ) . ' SET last_signal_ms = last_signal_ms - 15000 WHERE visitor_id = %d', $arch['id'] ) ); // phpcs:ignore
+$ok( 'after the grace: removed from live', ! in_array( $arch['id'], $liveIds(), true ) );
+$a1 = Query::archive( Tracker::now_ms(), array( 'q' => '#' . $arch['id'] ) );
+$ok( 'archived with leave-signal reason and last page', 1 === count( $a1['items'] ) && 'exit_signal' === $a1['items'][0]['reason'] && '/shop/' === $a1['items'][0]['last_page']['path'] );
+$archVisit = $a1['items'][0]['visit']['id'];
+// 30 分钟内回来：回到实时列表，仍是同一次访问。
+$send( array( 'tab_id' => $archTab, 'events' => array( $ev( 'page_view', Tracker::now_ms(), $uuid(), 1, array( 'page_type' => 'home', 'path' => '/' ), array( 'visibility' => 'visible', 'activity' => 'active' ) ) ) ) );
+$visitCount = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . Schema::table( 'visits' ) . ' WHERE visitor_id = %d', $arch['id'] ) ); // phpcs:ignore
+$ok( 'returning visitor is live again, same visit', in_array( $arch['id'], $liveIds(), true ) && ! Query::archive( Tracker::now_ms(), array( 'q' => '#' . $arch['id'] ) )['items'] && 1 === $visitCount );
+// 那次访问变成 31 分钟前：超时推定进归档，事件还在。
+$wpdb->query( $wpdb->prepare( 'UPDATE ' . Schema::table( 'visits' ) . ' SET last_ms = %d, start_ms = %d WHERE id = %d', Tracker::now_ms() - 31 * 60000, Tracker::now_ms() - 40 * 60000, $archVisit ) ); // phpcs:ignore
+$wpdb->query( $wpdb->prepare( 'UPDATE ' . Schema::table( 'tabs' ) . ' SET last_signal_ms = %d WHERE visitor_id = %d', Tracker::now_ms() - 31 * 60000, $arch['id'] ) ); // phpcs:ignore
+$a2     = Query::archive( Tracker::now_ms(), array( 'q' => '#' . $arch['id'] ) );
+$events = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . Schema::table( 'events' ) . ' WHERE visit_id = %d', $archVisit ) ); // phpcs:ignore
+$ok( 'old visit archived by timeout, events kept', 1 === count( $a2['items'] ) && 'timeout' === $a2['items'][0]['reason'] && $events > 0 );
+$ok( 'archive filters: device and date', ! Query::archive( Tracker::now_ms(), array( 'q' => '#' . $arch['id'], 'device' => 'tablet' ) )['items'] && ! Query::archive( Tracker::now_ms(), array( 'q' => '#' . $arch['id'], 'from_ms' => Tracker::now_ms() + 86400000 ) )['items'] );
+// 分页：时间线一页 1 条，往后翻不重复；心跳在服务器端过滤。
+$p1 = Query::timeline( $archVisit, null, 1 );
+$p2 = Query::timeline( $archVisit, $p1['next_cursor'], 1 );
+$ok( 'timeline pages forward without repeats', $p1['has_more'] && 1 === count( $p1['events'] ) && $p2['events'] && $p1['events'][0]['id'] !== $p2['events'][0]['id'] );
+$no_hb = array_column( Query::timeline( $archVisit, null, 500 )['events'], 'type' );
+$hb    = array_column( Query::timeline( $archVisit, null, 500, true )['events'], 'type' );
+$ok( 'heartbeats filtered on the server', ! in_array( 'heartbeat', $no_hb, true ) && in_array( 'heartbeat', $hb, true ) );
+$vp1 = Query::visits_page( $visitor['id'], null, 1 );
+$vp2 = Query::visits_page( $visitor['id'], $vp1['next_cursor'], 1 );
+$ok( 'visit history pages', $vp1['has_more'] && $vp2['items'] && $vp1['items'][0]['id'] !== $vp2['items'][0]['id'] );
+$_COOKIE[ Tracker::COOKIE ] = $vid1;
 
 // 8. 后台查询与权限。
 $detail = Query::visitor( $visitor['id'] );
@@ -283,8 +388,14 @@ $ok( 'stats funnel counts this visit up to paid', $stats['funnel'][5]['count'] >
 wp_set_current_user( $admin->ID );
 $ok( 'admin can read live data', 200 === rest_do_request( new WP_REST_Request( 'GET', '/peptide/v1/track/admin/live' ) )->get_status() );
 $ok( 'admin stats endpoint', 200 === rest_do_request( new WP_REST_Request( 'GET', '/peptide/v1/track/admin/stats' ) )->get_status() );
+$req = new WP_REST_Request( 'GET', '/peptide/v1/track/admin/archive' );
+$req->set_param( 'limit', 2 );
+$res = rest_do_request( $req );
+$ok( 'admin archive endpoint pages', 200 === $res->get_status() && count( $res->get_data()['items'] ) <= 2 && array_key_exists( 'next_cursor', $res->get_data() ) );
+$ok( 'admin visits endpoint', 200 === rest_do_request( new WP_REST_Request( 'GET', '/peptide/v1/track/admin/visitors/' . $visitor['id'] . '/visits' ) )->get_status() );
 wp_set_current_user( $customer );
 $ok( 'customers cannot read visitor data', in_array( rest_do_request( new WP_REST_Request( 'GET', '/peptide/v1/track/admin/live' ) )->get_status(), array( 401, 403 ), true ) );
+$ok( 'customers cannot read the archive', in_array( rest_do_request( new WP_REST_Request( 'GET', '/peptide/v1/track/admin/archive' ) )->get_status(), array( 401, 403 ), true ) );
 wp_set_current_user( 0 );
 $cfg = Tracker::observer_config( array( 'enabled' => false ) );
 $ok( 'theme config: enabled with endpoint and timings', true === $cfg['enabled'] && true === $cfg['test_mode'] && 15000 === $cfg['heartbeat_ms'] && 20 === $cfg['batch_max'] );

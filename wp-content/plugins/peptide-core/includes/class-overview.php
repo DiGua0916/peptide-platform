@@ -229,7 +229,7 @@ final class Overview {
 		$online  = 0;
 		if ( Schema::installed() ) {
 			foreach ( Query::live( $now * 1000 ) as $l ) {
-				if ( 'offline' !== $l['status'] ) {
+				if ( in_array( $l['status'], array( 'active', 'idle' ), true ) ) {
 					++$online;
 				}
 			}

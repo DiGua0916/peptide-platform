@@ -12,7 +12,9 @@
  *   GET /peptide/v1/track/admin/live
  *   GET /peptide/v1/track/admin/visitors/{id}
  *   GET /peptide/v1/track/admin/visitors/{id}/cart   当前购物车快照（VISITOR-CART-01）
- *   GET /peptide/v1/track/admin/visits/{id}
+ *   GET /peptide/v1/track/admin/visitors/{id}/visits?cursor=&limit=   访问历史分页（VISITOR-ARCHIVE-01）
+ *   GET /peptide/v1/track/admin/visits/{id}?cursor=&limit=&heartbeats=0|1  时间线分页（默认不含心跳）
+ *   GET /peptide/v1/track/admin/archive?cursor=&limit=&from=&to=&device=&q=  访客归档：已结束的访问
  *   GET /peptide/v1/track/admin/stats?from=YYYY-MM-DD&to=YYYY-MM-DD&device=
  *
  * @package PeptideCore
@@ -57,6 +59,8 @@ final class Tracking_Controller {
 		register_rest_route( $ns, '/track/admin/visitors/(?P<id>\d+)', array( 'methods' => \WP_REST_Server::READABLE, 'callback' => array( self::class, 'visitor' ), 'permission_callback' => $admin ) );
 		register_rest_route( $ns, '/track/admin/visitors/(?P<id>\d+)/cart', array( 'methods' => \WP_REST_Server::READABLE, 'callback' => array( self::class, 'cart' ), 'permission_callback' => $admin ) );
 		register_rest_route( $ns, '/track/admin/visits/(?P<id>\d+)', array( 'methods' => \WP_REST_Server::READABLE, 'callback' => array( self::class, 'visit' ), 'permission_callback' => $admin ) );
+		register_rest_route( $ns, '/track/admin/visitors/(?P<id>\d+)/visits', array( 'methods' => \WP_REST_Server::READABLE, 'callback' => array( self::class, 'visits' ), 'permission_callback' => $admin ) );
+		register_rest_route( $ns, '/track/admin/archive', array( 'methods' => \WP_REST_Server::READABLE, 'callback' => array( self::class, 'archive' ), 'permission_callback' => $admin ) );
 		register_rest_route( $ns, '/track/admin/stats', array( 'methods' => \WP_REST_Server::READABLE, 'callback' => array( self::class, 'stats' ), 'permission_callback' => $admin ) );
 	}
 
@@ -151,8 +155,49 @@ final class Tracking_Controller {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public static function visit( \WP_REST_Request $request ) {
-		$data = Query::timeline( (int) $request['id'] );
+		$data = Query::timeline(
+			(int) $request['id'],
+			is_string( $request['cursor'] ) ? $request['cursor'] : null,
+			is_numeric( $request['limit'] ) ? (int) $request['limit'] : 200,
+			in_array( (string) $request['heartbeats'], array( '1', 'true' ), true )
+		);
 		return $data ? self::respond( $data ) : new \WP_Error( 'pc_track_not_found', __( 'Visit not found.', 'peptide-core' ), array( 'status' => 404 ) );
+	}
+
+	/**
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public static function visits( \WP_REST_Request $request ) {
+		if ( ! Query::visitor( (int) $request['id'] ) ) {
+			return new \WP_Error( 'pc_track_not_found', __( 'Visitor not found.', 'peptide-core' ), array( 'status' => 404 ) );
+		}
+		return self::respond( Query::visits_page( (int) $request['id'], is_string( $request['cursor'] ) ? $request['cursor'] : null, is_numeric( $request['limit'] ) ? (int) $request['limit'] : 25 ) );
+	}
+
+	/** 店铺时区的日期 → 那天 0 点的毫秒；格式不对时返回 0。 */
+	private static function day_ms( $value, int $add_days = 0 ): int {
+		if ( ! is_string( $value ) || ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value ) ) {
+			return 0;
+		}
+		$d = date_create_immutable( $value . ' 00:00:00', wp_timezone() );
+		return $d ? $d->modify( '+' . $add_days . ' days' )->getTimestamp() * 1000 : 0;
+	}
+
+	public static function archive( \WP_REST_Request $request ): \WP_REST_Response {
+		$q = is_string( $request['q'] ) ? sanitize_text_field( $request['q'] ) : '';
+		return self::respond(
+			Query::archive(
+				Tracker::now_ms(),
+				array(
+					'limit'   => is_numeric( $request['limit'] ) ? (int) $request['limit'] : 25,
+					'cursor'  => is_string( $request['cursor'] ) ? $request['cursor'] : null,
+					'from_ms' => self::day_ms( $request['from'] ),
+					'to_ms'   => self::day_ms( $request['to'], 1 ),
+					'device'  => is_string( $request['device'] ) ? sanitize_key( $request['device'] ) : '',
+					'q'       => function_exists( 'mb_substr' ) ? mb_substr( $q, 0, 60 ) : substr( $q, 0, 60 ),
+				)
+			)
+		);
 	}
 
 	public static function stats( \WP_REST_Request $request ): \WP_REST_Response {

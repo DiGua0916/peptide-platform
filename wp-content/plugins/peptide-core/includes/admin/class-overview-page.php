@@ -169,6 +169,7 @@ final class Overview_Page {
 			'active'       => __( 'Active', 'peptide-core' ),
 			'idle'         => __( 'Idle', 'peptide-core' ),
 			'offline'      => __( 'Offline', 'peptide-core' ),
+			'away'         => __( 'No signal (away)', 'peptide-core' ),
 			/* translators: %s: time, e.g. 5s */
 			'ago'          => __( '%s ago', 'peptide-core' ),
 			/* translators: %d: number of pages */

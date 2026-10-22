@@ -25,7 +25,7 @@
 | GET `/me/orders/{order_number}/batches` | 已登录订单顾客；未登录 401，不存在或非所有者 404 |
 | GET `/track/session` | 公开；追踪状态 `{protocol,enabled,test_mode,tracked,config}`，不返回访客编号 |
 | POST `/track/events` | 公开、无需 nonce；追踪关闭 403；批量上报，逐条 ack / rejected（见下文“访客追踪”） |
-| GET `/track/admin/live`、`/track/admin/visitors/{id}`、`/track/admin/visitors/{id}/cart`、`/track/admin/visits/{id}`、`/track/admin/stats` | manage_woocommerce；后台页面专用，主题不调用。live 的每位访客带 `cart:{status,count,subtotal_text,updated_ms}`，status 为 active / empty / unknown / expired |
+| GET `/track/admin/live`、`/track/admin/visitors/{id}`、`/track/admin/visitors/{id}/cart`、`/track/admin/visitors/{id}/visits`、`/track/admin/visits/{id}`、`/track/admin/archive`、`/track/admin/stats` | manage_woocommerce；后台页面专用，主题不调用。具体说明见下表 |
 | GET/POST `/menus/{id}` | edit_theme_options；后台菜单编辑器专用，主题用下面的 PHP 函数 |
 
 最后一条路由参数目前按 **WooCommerce 数字订单 ID** 查找，返回 order_number 为展示编号字符串。未启用自定义编号插件时二者一致，将来需显式适配展示编号。
@@ -146,6 +146,24 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
   - 整批错误：400 / 403（disabled、staff）/ 413 / 429（Retry-After）。
   - 字段白名单、在线 / 空闲 / 离线口径、乱序和时钟规则见协议文件。
 - 加购成功、下单、支付成功 / 失败、登录、注册由服务器根据 WooCommerce 事件记录，前端只上报“尝试”。
+- 后台读取接口（VISITOR-CART-01 / VISITOR-ARCHIVE-01，peptide-core 0.15.0）：
+
+| 接口 | 说明 |
+| --- | --- |
+| live | 只列在线（active）、空闲（idle）和暂离（away）的访客，离开的进归档。每位访客带 `cart:{status,count,subtotal_text,updated_ms}` |
+| visitors/{id} | 增加 `presence`，访问历史只返回第一页，附 `has_more` / `next_cursor` |
+| visitors/{id}/cart | 购物车明细，直接读 Woo 会话 |
+| visitors/{id}/visits | `?cursor=&limit=`，访问历史分页 |
+| visits/{id} | `?cursor=&limit=&heartbeats=0\|1` 时间线分页，心跳在服务器端过滤 |
+| archive | `?cursor=&limit=&from=&to=&device=&q=`，已结束的访问；每项 `{visit, visitor, cart, reason: exit_signal\|timeout, left_ms, last_page}` |
+
+- 购物车状态：active / empty 来自当前有效的 Woo 会话；expired 表示会话已失效，只剩历史快照；unknown 表示还没有绑定会话。小计是税前、优惠码前的商品金额，不含运费。
+- 离站推定：
+  - 至少一个标签页的最后信号在 45 秒内为 active / idle（hidden 但仍有心跳也算 idle）；
+  - 45 秒内没有信号、也没有全部离开为 away；
+  - 全部最近的标签页都离开页面且之后 10 秒没有信号为 left（归档，离页信号）；
+  - 30 分钟没有信号为 gone（归档，超时推定）。
+  - 这些都是推定，不是精确的关站时间。归档只是查询视图，不删除也不复制数据，访客回来后重新出现在实时列表。
 
 ## 支付物流边界
 
