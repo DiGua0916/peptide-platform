@@ -5,9 +5,13 @@
 	--pc-ov-teal: #177e9b;
 	--pc-ov-line: #e5e7eb;
 	--pc-ov-muted: #6b7280;
-	max-width: 1680px;
+	/* 铺满后台内容区，字号随屏幕宽度在一定范围内放大（宽屏不留空白）。 */
+	--pc-ov-text: clamp(12px, 0.72vw, 15px);
+	--pc-ov-big: clamp(18px, 1.35vw, 30px);
+	width: 100%;
 	margin-top: 8px;
 	color: #1f2937;
+	font-size: var(--pc-ov-text);
 }
 
 .pc-ov-top {
@@ -22,8 +26,8 @@
 
 .pc-ov-grid {
 	display: grid;
-	grid-template-columns: minmax(0, 3fr) minmax(280px, 1fr);
-	gap: 16px;
+	grid-template-columns: minmax(0, 3fr) minmax(300px, 1fr);
+	gap: clamp(12px, 1vw, 24px);
 	align-items: start;
 }
 
@@ -57,7 +61,7 @@
 
 .pc-ov-card__head h2 {
 	margin: 0;
-	font-size: 14px;
+	font-size: calc(var(--pc-ov-text) + 2px);
 	font-weight: 600;
 }
 
@@ -70,12 +74,12 @@
 
 .pc-ov-card h3 {
 	margin: 0 0 10px;
-	font-size: 13px;
+	font-size: calc(var(--pc-ov-text) + 1px);
 }
 
 .pc-ov-muted {
 	color: var(--pc-ov-muted);
-	font-size: 12px;
+	font-size: var(--pc-ov-text);
 }
 
 .pc-ov-tag {
@@ -90,7 +94,7 @@
 
 /* 顶部横幅 */
 .pc-ov-hero {
-	padding: 22px 24px 0;
+	padding: clamp(18px, 1.6vw, 32px) clamp(16px, 2vw, 40px) 0;
 	background: linear-gradient(180deg, #1aa0c8 0%, #6cc7e4 55%, #e9d7c2 100%);
 	border-radius: 4px;
 	overflow: hidden;
@@ -99,13 +103,13 @@
 .pc-ov-hero__hello {
 	margin: 0 0 14px;
 	color: #fff;
-	font-size: 14px;
+	font-size: calc(var(--pc-ov-text) + 3px);
 	text-align: center;
 	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
 .pc-ov-hero__panel {
-	max-width: 900px;
+	width: 82%;
 	margin: 0 auto;
 	background: #fff;
 	border-radius: 4px 4px 0 0;
@@ -116,7 +120,7 @@
 	padding: 8px 14px;
 	background: linear-gradient(90deg, var(--pc-ov-orange), #f6b183 60%, #f6efe8);
 	color: #fff;
-	font-size: 12px;
+	font-size: var(--pc-ov-text);
 }
 
 .pc-ov-kpis {
@@ -137,11 +141,11 @@
 	display: block;
 	min-height: 2.4em;
 	color: var(--pc-ov-muted);
-	font-size: 12px;
+	font-size: var(--pc-ov-text);
 }
 
 .pc-ov-kpi b {
-	font-size: 20px;
+	font-size: var(--pc-ov-big);
 	font-weight: 400;
 }
 
@@ -161,11 +165,11 @@
 .pc-ov-num span {
 	display: block;
 	color: var(--pc-ov-muted);
-	font-size: 12px;
+	font-size: var(--pc-ov-text);
 }
 
 .pc-ov-num b {
-	font-size: 20px;
+	font-size: var(--pc-ov-big);
 	font-weight: 400;
 }
 
@@ -239,9 +243,9 @@
 }
 
 .pc-ov-step__bar {
-	padding: 7px 12px;
+	padding: 0.6em 1em;
 	background: #eef0f3;
-	font-size: 12px;
+	font-size: var(--pc-ov-text);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -253,7 +257,7 @@
 
 .pc-ov-step__rate {
 	color: var(--pc-ov-muted);
-	font-size: 12px;
+	font-size: var(--pc-ov-text);
 }
 
 /* 趋势图 */
@@ -287,7 +291,7 @@
 .pc-ov-legend {
 	margin: 6px 0 0;
 	color: var(--pc-ov-muted);
-	font-size: 12px;
+	font-size: var(--pc-ov-text);
 }
 
 .pc-ov-key {
@@ -357,6 +361,15 @@
 	.pc-ov-grid,
 	.pc-ov-split {
 		grid-template-columns: 1fr;
+	}
+
+	/* 单列时右侧三张卡片并排一行。 */
+	.pc-ov-side {
+		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+	}
+
+	.pc-ov-hero__panel {
+		width: 100%;
 	}
 
 	.pc-ov-kpis {
