@@ -56,6 +56,23 @@ $unpaid = wc_create_order();
 $unpaid->add_product( $product, 1 );
 $unpaid->calculate_totals();
 $unpaid->save();
+// 测试订单：测试付款方式，或包含演示商品。不计入。
+$test_pay = wc_create_order();
+$test_pay->add_product( $product, 5 );
+$test_pay->set_payment_method( 'cod' );
+$test_pay->set_payment_method_title( 'Test payment – no money is charged' );
+$test_pay->calculate_totals();
+$test_pay->set_status( 'processing' );
+$test_pay->save();
+$demo_ids = get_posts( array( 'post_type' => 'product', 'post_status' => 'any', 'numberposts' => 1, 'fields' => 'ids', 'meta_key' => \PeptideCore\Meta::DEMO_SEED, 'meta_value' => '1' ) ); // phpcs:ignore
+$test_demo = null;
+if ( $demo_ids && wc_get_product( $demo_ids[0] ) ) {
+	$test_demo = wc_create_order();
+	$test_demo->add_product( wc_get_product( $demo_ids[0] ), 1 );
+	$test_demo->calculate_totals();
+	$test_demo->set_status( 'processing' );
+	$test_demo->save();
+}
 $user = wp_insert_user( array( 'user_login' => 'smoke_overview_user', 'user_email' => 'smoke-overview@example.com', 'user_pass' => wp_generate_password(), 'role' => 'customer' ) );
 
 $visitor_ids = array();
@@ -72,6 +89,8 @@ if ( Schema::installed() ) {
 $d     = Overview::range_data( 'today' );
 $total = (float) $paid->get_total();
 $ok( 'sales and orders count only paid orders', abs( $d['sales'] - $before['sales'] - $total ) < 0.01 && $d['orders'] === $before['orders'] + 1 );
+$ok( 'test orders are left out and counted separately', $d['test_orders'] === $before['test_orders'] + 1 + ( $test_demo ? 1 : 0 ) );
+$ok( 'is_test_order detects test payment and demo products', \PeptideCore\Overview::is_test_order( $test_pay ) && ( ! $test_demo || \PeptideCore\Overview::is_test_order( $test_demo ) ) && ! \PeptideCore\Overview::is_test_order( $paid ) );
 $ok( 'average order value', $d['orders'] && abs( $d['aov'] - round( $d['sales'] / $d['orders'], 2 ) ) < 0.01 );
 $ok( 'new sign-up counted', $d['registered'] >= 1 );
 if ( Schema::installed() ) {
@@ -84,6 +103,7 @@ $ok( 'product ranking from paid orders', in_array( $product->get_id(), array_col
 $ok( '30-day series has 30 points', 30 === count( Overview::range_data( '30d' )['series'] ) );
 
 $s = Overview::summary();
+$ok( 'summary: store time zone label and next midnight', str_contains( $s['tz_label'], wp_timezone_string() ) && $s['next_midnight_ms'] === Overview::window( 'today' )[1] * 1000 && '00:00' === wp_date( 'H:i', (int) ( $s['next_midnight_ms'] / 1000 ) ) );
 $ok( 'summary: currency, greeting, to-do counts', 'USD' === $s['currency']['code'] && in_array( $s['greeting'], array( 'morning', 'afternoon', 'evening' ), true ) && isset( $s['todo']['to_ship'], $s['todo']['unpaid_7d'] ) && $s['todo']['unpaid_7d'] >= 1 );
 
 // 4. 接口与入口。
@@ -99,6 +119,10 @@ $ok( 'admin home redirects to the overview', (bool) has_action( 'load-index.php'
 
 // 5. 清理。
 $paid->delete( true );
+$test_pay->delete( true );
+if ( $test_demo ) {
+	$test_demo->delete( true );
+}
 $unpaid->delete( true );
 require_once ABSPATH . 'wp-admin/includes/user.php';
 wp_delete_user( $user );
@@ -106,5 +130,6 @@ foreach ( $visitor_ids as $id ) {
 	$wpdb->delete( Schema::table( 'visits' ), array( 'visitor_id' => $id ) ); // phpcs:ignore
 	$wpdb->delete( Schema::table( 'visitors' ), array( 'id' => $id ) ); // phpcs:ignore
 }
+$s = Overview::summary();
 $after = Overview::range_data( 'today' );
 $ok( 'test data removed', $after['orders'] === $before['orders'] && $after['visitors'] === $before['visitors'] );

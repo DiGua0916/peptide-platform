@@ -61,6 +61,10 @@ final class Tracking_Page {
 					'visit'      => isset( $_GET['visit'] ) ? absint( $_GET['visit'] ) : 0, // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 					'liveUrl'    => admin_url( 'admin.php?page=' . self::SLUG ),
 					'refreshMs'  => 5000,
+					// 后台时间都按店铺时区显示（IANA 名称时用浏览器的 Intl 换算；只有偏移量时按浏览器本地时间）。
+					'timezone'   => wp_timezone_string(),
+					'today'      => wp_date( 'Y-m-d' ),
+					'weekAgo'    => wp_date( 'Y-m-d', time() - 6 * DAY_IN_SECONDS ),
 					'strings'    => self::strings(),
 				)
 			) . ';',
@@ -117,7 +121,7 @@ final class Tracking_Page {
 			'funnel'      => __( 'Conversion funnel', 'peptide-core' ),
 			'ofVisits'    => __( '%s of visits', 'peptide-core' ),
 			'fromPrev'    => __( '%s from the previous step', 'peptide-core' ),
-			'byDay'       => __( 'By day (UTC)', 'peptide-core' ),
+			'byDay'       => __( 'By day (store time zone)', 'peptide-core' ),
 			'day'         => __( 'Day', 'peptide-core' ),
 			'carts'       => __( 'Added to cart', 'peptide-core' ),
 			'orders'      => __( 'Orders', 'peptide-core' ),

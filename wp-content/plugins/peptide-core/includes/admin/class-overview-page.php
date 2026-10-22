@@ -153,6 +153,8 @@ final class Overview_Page {
 			'trackingOff'  => __( 'Visitor tracking is off, so visitor numbers, conversion and the funnel stay at zero. It is a test feature: turn it on only for test visits.', 'peptide-core' ),
 			'trackingLink' => __( 'Visitor data', 'peptide-core' ),
 			'classic'      => __( 'WordPress dashboard', 'peptide-core' ),
+			/* translators: %d: number of orders */
+			'testOrders'   => __( 'Only real orders are counted: %d test order(s) in this period (test payment or demo products) are left out.', 'peptide-core' ),
 			'stages'       => array(
 				__( 'Visitors', 'peptide-core' ),
 				__( 'Viewed a product', 'peptide-core' ),

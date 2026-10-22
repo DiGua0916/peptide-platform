@@ -13,6 +13,10 @@
  * - 商品排名：时间段内已付款订单里的销量。
  * 访客追踪关闭或没有数据时，访客相关的数字是 0，并在页面上说明。
  *
+ * 只统计真实数据：测试订单（用“Test payment”测试付款方式下的单，或包含演示商品的单）不计入销售额、订单数、
+ * 客单价、转化率、趋势和商品排名，页面上显示排除了几笔。所有数字都在打开页面时从数据库实时计算，
+ * 店铺时区（2026-10-22 起为 America/Los_Angeles）每天 0 点开始新的“今天”。
+ *
  * @package PeptideCore
  */
 
@@ -48,7 +52,20 @@ final class Overview {
 		return array( $today->getTimestamp(), $today->modify( '+1 day' )->getTimestamp(), 'hour' );
 	}
 
-	/** @return \WC_Order[] 时间段内创建的已付款订单。 */
+	/** 测试订单：测试付款方式（订单上保存的付款方式名称以 “Test payment” 开头），或者包含演示商品。 */
+	public static function is_test_order( \WC_Order $order ): bool {
+		if ( str_starts_with( (string) $order->get_payment_method_title(), 'Test payment' ) ) {
+			return true;
+		}
+		foreach ( $order->get_items() as $item ) {
+			if ( $item instanceof \WC_Order_Item_Product && '1' === get_post_meta( $item->get_product_id(), Meta::DEMO_SEED, true ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** @return \WC_Order[] 时间段内创建的已付款订单（包括测试订单，由调用方排除）。 */
 	private static function paid_orders( int $from, int $to ): array {
 		$orders = wc_get_orders(
 			array(
@@ -127,7 +144,8 @@ final class Overview {
 	public static function range_data( string $range, ?int $now = null ): array {
 		$range                  = in_array( $range, self::RANGES, true ) ? $range : 'today';
 		[ $from, $to, $bucket ] = self::window( $range, $now );
-		$orders                 = self::paid_orders( $from, $to );
+		$all                    = self::paid_orders( $from, $to );
+		$orders                 = array_values( array_filter( $all, static fn( $o ) => ! self::is_test_order( $o ) ) );
 		$sales                  = 0.0;
 		$products               = array();
 		$v                      = self::visitor_numbers( $from, $to, $bucket );
@@ -194,6 +212,7 @@ final class Overview {
 			'sales'      => round( $sales, 2 ),
 			'orders'     => $count,
 			'aov'        => $count ? round( $sales / $count, 2 ) : 0,
+			'test_orders' => count( $all ) - $count,
 			'visitors'   => $v['visitors'],
 			'returning'  => $v['returning'],
 			'registered' => (int) $registered->get_total(),
@@ -216,6 +235,7 @@ final class Overview {
 			}
 		}
 		$hour     = (int) wp_date( 'G', $now );
+		$tomorrow = self::window( 'today', $now )[1];
 		$currency = get_woocommerce_currency();
 		$week_ago = $now - 7 * DAY_IN_SECONDS;
 		// 待发货：开启了订单履约（SHIP-TRACK-01）时按“已付款但没发货”，否则按 processing 状态。
@@ -225,6 +245,10 @@ final class Overview {
 			'greeting'  => $hour < 12 ? 'morning' : ( $hour < 18 ? 'afternoon' : 'evening' ),
 			'now'       => wp_date( 'Y-m-d H:i:s', $now ),
 			'timezone'  => wp_timezone_string(),
+			// 例如 “America/Los_Angeles (PDT, UTC-07:00)”。夏令时自动切换。
+			'tz_label'  => wp_timezone_string() . ' (' . wp_date( 'T', $now ) . ', UTC' . wp_date( 'P', $now ) . ')',
+			// 店铺时区的下一个 0 点（毫秒），页面在这个时间自动刷新“今天”。
+			'next_midnight_ms' => $tomorrow * 1000,
 			'currency'  => array( 'code' => $currency, 'symbol' => html_entity_decode( get_woocommerce_currency_symbol( $currency ) ) ),
 			'tracking'  => Tracker::enabled(),
 			'todo'      => array(

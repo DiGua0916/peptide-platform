@@ -32,13 +32,22 @@
 		}
 		return fmt( S.hours, Math.floor( s / 3600 ) );
 	}
+	// 按店铺时区显示时间。
+	var zoned = null;
+	try {
+		if ( cfg.timezone && cfg.timezone.indexOf( '/' ) > 0 ) {
+			zoned = new Intl.DateTimeFormat( 'sv-SE', { timeZone: cfg.timezone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false } );
+		}
+	} catch ( e ) {
+		zoned = null;
+	}
 	function clock( ms, withDate ) {
 		var d = new Date( ms );
 		var p = function ( n, w ) {
 			return String( n ).padStart( w || 2, '0' );
 		};
-		var t = p( d.getHours() ) + ':' + p( d.getMinutes() ) + ':' + p( d.getSeconds() );
-		return withDate ? d.getFullYear() + '-' + p( d.getMonth() + 1 ) + '-' + p( d.getDate() ) + ' ' + t : t + '.' + p( d.getMilliseconds(), 3 );
+		var full = zoned ? zoned.format( d ) : d.getFullYear() + '-' + p( d.getMonth() + 1 ) + '-' + p( d.getDate() ) + ' ' + p( d.getHours() ) + ':' + p( d.getMinutes() ) + ':' + p( d.getSeconds() );
+		return withDate ? full : full.slice( 11 ) + '.' + p( d.getMilliseconds(), 3 );
 	}
 	function pct( a, b ) {
 		return b ? Math.round( ( a / b ) * 1000 ) / 10 + '%' : '—';
@@ -201,12 +210,7 @@
 	// ---------- 转化统计 ----------
 
 	function stats() {
-		var today = new Date();
-		var iso = function ( d ) {
-			return d.toISOString().slice( 0, 10 );
-		};
-		var week = new Date( today.getTime() - 6 * 86400000 );
-		root.innerHTML = '<form class="pc-trk-filter"><label>' + esc( S.from ) + ' <input type="date" name="from" value="' + iso( week ) + '"></label> <label>' + esc( S.to ) + ' <input type="date" name="to" value="' + iso( today ) + '"></label> <select name="device"><option value="">' + esc( S.allDevices ) + '</option><option value="desktop">' + esc( S.desktop ) + '</option><option value="mobile">' + esc( S.mobile ) + '</option><option value="tablet">' + esc( S.tablet ) + '</option></select> <button class="button">' + esc( S.apply ) + '</button></form><div id="pc-trk-stats"></div>';
+		root.innerHTML = '<form class="pc-trk-filter"><label>' + esc( S.from ) + ' <input type="date" name="from" value="' + esc( cfg.weekAgo ) + '"></label> <label>' + esc( S.to ) + ' <input type="date" name="to" value="' + esc( cfg.today ) + '"></label> <select name="device"><option value="">' + esc( S.allDevices ) + '</option><option value="desktop">' + esc( S.desktop ) + '</option><option value="mobile">' + esc( S.mobile ) + '</option><option value="tablet">' + esc( S.tablet ) + '</option></select> <button class="button">' + esc( S.apply ) + '</button></form><div id="pc-trk-stats"></div>';
 		var form = root.querySelector( 'form' );
 		var out = document.getElementById( 'pc-trk-stats' );
 		var run = function () {

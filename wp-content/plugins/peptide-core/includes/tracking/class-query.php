@@ -190,7 +190,18 @@ final class Query {
 			$where .= $wpdb->prepare( ' AND device = %s', $device );
 		}
 		$row = $wpdb->get_row( "SELECT COUNT(*) AS visits, COUNT(DISTINCT visitor_id) AS visitors, SUM(stage >= 1) AS s1, SUM(stage >= 2) AS s2, SUM(stage >= 3) AS s3, SUM(stage >= 4) AS s4, SUM(stage >= 5) AS s5, SUM(pageviews) AS pageviews FROM {$visits} WHERE {$where}", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
-		$days = $wpdb->get_results( "SELECT FLOOR(start_ms / 86400000) AS d, COUNT(*) AS visits, SUM(stage >= 2) AS carts, SUM(stage >= 4) AS orders, SUM(stage >= 5) AS paid FROM {$visits} WHERE {$where} GROUP BY d ORDER BY d", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		// 按店铺时区的日期分组（每天 0 点开始新的一天）。
+		$days = array();
+		foreach ( $wpdb->get_results( "SELECT start_ms, stage FROM {$visits} WHERE {$where} ORDER BY start_ms LIMIT 100000", ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			$d = wp_date( 'Y-m-d', (int) floor( (int) $r['start_ms'] / 1000 ) );
+			if ( ! isset( $days[ $d ] ) ) {
+				$days[ $d ] = array( 'day' => $d, 'visits' => 0, 'carts' => 0, 'orders' => 0, 'paid' => 0 );
+			}
+			++$days[ $d ]['visits'];
+			$days[ $d ]['carts']  += (int) ( (int) $r['stage'] >= 2 );
+			$days[ $d ]['orders'] += (int) ( (int) $r['stage'] >= 4 );
+			$days[ $d ]['paid']   += (int) ( (int) $r['stage'] >= 5 );
+		}
 		$ev   = Schema::table( 'events' );
 		$top  = $wpdb->get_results( "SELECT e.product_id, SUM(e.type = 'product_view') AS views, SUM(e.type = 'add_to_cart') AS carts FROM {$ev} e INNER JOIN {$visits} ON {$visits}.id = e.visit_id WHERE " . str_replace( array( 'start_ms', 'device' ), array( "{$visits}.start_ms", "{$visits}.device" ), $where ) . " AND e.product_id > 0 AND e.type IN ('product_view','add_to_cart') GROUP BY e.product_id ORDER BY views DESC, carts DESC LIMIT 10", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		$n    = static fn( $v ) => (int) ( $v ?? 0 );
@@ -209,10 +220,7 @@ final class Query {
 				array( 'stage' => 4, 'count' => $n( $row['s4'] ?? 0 ) ),
 				array( 'stage' => 5, 'count' => $n( $row['s5'] ?? 0 ) ),
 			),
-			'days'      => array_map(
-				static fn( $d ) => array( 'day' => gmdate( 'Y-m-d', (int) $d['d'] * 86400 ), 'visits' => (int) $d['visits'], 'carts' => (int) $d['carts'], 'orders' => (int) $d['orders'], 'paid' => (int) $d['paid'] ),
-				$days
-			),
+			'days'      => array_values( $days ),
 			'products'  => array_map(
 				static fn( $p ) => array( 'product_id' => (int) $p['product_id'], 'name' => html_entity_decode( (string) get_the_title( (int) $p['product_id'] ) ), 'views' => (int) $p['views'], 'carts' => (int) $p['carts'] ),
 				$top

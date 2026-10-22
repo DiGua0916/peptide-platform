@@ -49,7 +49,7 @@
 			[ S.returning, t.returning ],
 		];
 		return '<section class="pc-ov-hero"><p class="pc-ov-hero__hello">' + esc( fmt( S[ summary.greeting ], summary.store ) ) + '</p>' +
-			'<div class="pc-ov-hero__panel"><div class="pc-ov-hero__time"><span>' + esc( S.storeTime + ': (UTC' + summary.timezone.replace( /^UTC/, '' ) + ') ' + summary.now ) + '</span></div>' +
+			'<div class="pc-ov-hero__panel"><div class="pc-ov-hero__time"><span>' + esc( S.storeTime + ': ' + summary.tz_label + ' ' + summary.now ) + '</span></div>' +
 			'<div class="pc-ov-kpis">' + kpis.map( function ( k ) {
 				return '<div class="pc-ov-kpi"><span>' + esc( k[ 0 ] ) + '</span><b>' + esc( k[ 1 ] ) + '</b></div>';
 			} ).join( '' ) + '</div></div></section>';
@@ -156,6 +156,10 @@
 
 	function render() {
 		var note = summary.tracking ? '' : '<div class="notice notice-info inline pc-ov-note"><p>' + esc( S.trackingOff ) + ' ' + link( L.visitors, S.trackingLink ) + '</p></div>';
+		var excluded = range.test_orders || todayData.test_orders;
+		if ( excluded ) {
+			note += '<div class="notice notice-info inline pc-ov-note"><p>' + esc( fmt( S.testOrders, excluded ) ) + '</p></div>';
+		}
 		root.innerHTML =
 			'<div class="pc-ov-top"><a href="' + esc( L.classic ) + '">' + esc( S.classic ) + '</a></div>' + note +
 			'<div class="pc-ov-grid">' +
@@ -168,21 +172,52 @@
 			'</div>';
 		root.querySelectorAll( '.pc-ov-tab' ).forEach( function ( b ) {
 			b.addEventListener( 'click', function () {
-				var r = b.getAttribute( 'data-range' );
 				b.classList.add( 'is-loading' );
-				wp.apiFetch( { path: '/peptide/v1/overview?range=' + encodeURIComponent( r ) } ).then( function ( res ) {
-					summary = res.summary;
-					range = res.range;
-					if ( 'today' === r ) {
-						todayData = res.range;
-					}
-					render();
-				} ).catch( function () {
+				load( b.getAttribute( 'data-range' ) ).catch( function () {
 					b.classList.remove( 'is-loading' );
 				} );
 			} );
 		} );
 	}
 
+	function fetchRange( r ) {
+		return wp.apiFetch( { path: '/peptide/v1/overview?range=' + encodeURIComponent( r ) } );
+	}
+
+	// 切换时间段；顶部的“今天”同时更新。
+	function load( r ) {
+		var jobs = [ fetchRange( r ) ];
+		if ( 'today' !== r ) {
+			jobs.push( fetchRange( 'today' ) );
+		}
+		return Promise.all( jobs ).then( function ( res ) {
+			summary = res[ 0 ].summary;
+			range = res[ 0 ].range;
+			todayData = 'today' === r ? res[ 0 ].range : res[ 1 ].range;
+			render();
+			schedule();
+		} );
+	}
+
+	// 数据都是实时从数据库算的：页面开着时每分钟刷新一次，店铺时区 0 点时立刻刷新，开始新的“今天”。
+	var timer = null;
+	function schedule() {
+		clearTimeout( timer );
+		var untilMidnight = summary.next_midnight_ms - Date.now() + 1000;
+		timer = setTimeout( function () {
+			if ( document.hidden && untilMidnight > 60000 ) {
+				schedule();
+				return;
+			}
+			load( range.range ).catch( schedule );
+		}, Math.max( 1000, Math.min( 60000, untilMidnight ) ) );
+	}
+
 	render();
+	schedule();
+	document.addEventListener( 'visibilitychange', function () {
+		if ( ! document.hidden ) {
+			load( range.range ).catch( schedule );
+		}
+	} );
 } )( window.wp, window.pcOverview );

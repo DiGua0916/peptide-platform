@@ -146,11 +146,16 @@ final class Tracking_Controller {
 	}
 
 	public static function stats( \WP_REST_Request $request ): \WP_REST_Response {
-		$day  = static function ( $value, int $fallback ): int {
-			$d = is_string( $value ) && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value ) ? strtotime( $value . ' 00:00:00 UTC' ) : false;
-			return false === $d ? $fallback : (int) $d * 1000;
+		// 日期按店铺时区（每天 0 点开始）。
+		$tz    = wp_timezone();
+		$day   = static function ( $value, int $fallback ) use ( $tz ): int {
+			if ( ! is_string( $value ) || ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value ) ) {
+				return $fallback;
+			}
+			$d = date_create_immutable( $value . ' 00:00:00', $tz );
+			return $d ? $d->getTimestamp() * 1000 : $fallback;
 		};
-		$today = (int) strtotime( gmdate( 'Y-m-d' ) . ' 00:00:00 UTC' ) * 1000;
+		$today = ( new \DateTimeImmutable( 'now', $tz ) )->setTime( 0, 0 )->getTimestamp() * 1000;
 		$from  = $day( $request['from'], $today - 6 * 86400000 );
 		$to    = $day( $request['to'], $today ) + 86400000;
 		if ( $to <= $from ) {
