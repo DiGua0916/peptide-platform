@@ -2,14 +2,14 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.14.0\n"
+"Project-Id-Version: Peptide Core 0.15.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-22T13:49:03+00:00\n"
+"POT-Creation-Date: 2026-10-22T14:14:06+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -104,6 +104,7 @@ msgstr ""
 #: includes/admin/class-batch-metabox.php:77
 #: includes/admin/class-batch-orders.php:66
 #: includes/admin/class-list-columns.php:35
+#: includes/admin/class-recovery-page.php:216
 #: includes/admin/class-tracking-page.php:92
 #: includes/class-promotions.php:666
 #: includes/class-promotions.php:780
@@ -206,6 +207,7 @@ msgid "%1$d orders, %2$d customers, %3$d units in total."
 msgstr ""
 
 #: includes/admin/class-batch-orders.php:66
+#: includes/admin/class-recovery-page.php:217
 #: includes/admin/class-tracking-page.php:122
 msgid "Order"
 msgstr ""
@@ -222,6 +224,7 @@ msgid "Customer"
 msgstr ""
 
 #: includes/admin/class-batch-orders.php:66
+#: includes/admin/class-recovery-page.php:212
 msgid "Email"
 msgstr ""
 
@@ -363,6 +366,7 @@ msgid "All batches"
 msgstr ""
 
 #: includes/admin/class-dashboard.php:165
+#: includes/admin/class-recovery-page.php:37
 msgid "All orders"
 msgstr ""
 
@@ -810,6 +814,7 @@ msgid "Add sub-item"
 msgstr ""
 
 #: includes/admin/class-menu-page.php:100
+#: includes/admin/class-recovery-page.php:169
 msgid "Settings"
 msgstr ""
 
@@ -997,6 +1002,7 @@ msgid "Text decoration"
 msgstr ""
 
 #: includes/admin/class-menu-page.php:147
+#: includes/admin/class-recovery-page.php:177
 #: includes/modules/class-registry.php:137
 msgid "None"
 msgstr ""
@@ -1020,6 +1026,7 @@ msgstr ""
 
 #: includes/admin/class-menu-page.php:164
 #: includes/admin/class-menu-page.php:207
+#: includes/admin/class-recovery-page.php:51
 #: includes/admin/class-store-design.php:140
 #: includes/admin/class-tracking-page.php:214
 #: includes/admin/class-tracking-page.php:224
@@ -1395,6 +1402,7 @@ msgid "Shop"
 msgstr ""
 
 #: includes/admin/class-overview-page.php:181
+#: includes/admin/class-recovery-page.php:213
 #: includes/admin/class-tracking-page.php:110
 #: includes/admin/class-tracking-page.php:171
 #: includes/class-menus.php:108
@@ -1407,6 +1415,7 @@ msgid "Checkout"
 msgstr ""
 
 #: includes/admin/class-overview-page.php:183
+#: includes/admin/class-recovery-page.php:233
 #: includes/admin/class-tracking-page.php:132
 #: includes/admin/class-tracking-page.php:173
 msgid "Account"
@@ -1573,6 +1582,211 @@ msgstr ""
 
 #: includes/admin/class-product-panel.php:261
 msgid "Add batch for this product"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:39
+#: includes/admin/class-recovery-page.php:151
+msgid "Abandoned cart recovery"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:39
+msgid "Abandoned carts"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:101
+msgid "Settings saved."
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:102
+msgid "A sample reminder was sent to your email address."
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:103
+msgid "The sample reminder could not be sent. Check the site’s email setup."
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:104
+msgid "Add the store address first (WooCommerce settings → General). US law requires it in marketing emails."
+msgstr ""
+
+#. translators: 1: new abandoned carts, 2: emails sent
+#: includes/admin/class-recovery-page.php:108
+#, php-format
+msgid "Scan finished: %1$d new abandoned cart(s), %2$d reminder(s) sent."
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:111
+msgid "No reminders were sent because the store address is missing."
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:113
+msgid "Recovery is turned off, so nothing was scanned."
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:141
+msgid "All"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:142
+msgid "Waiting"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:143
+msgid "Recovered"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:144
+msgid "Paid without reminder"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:145
+msgid "Cart emptied"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:146
+msgid "Session expired"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:147
+#: includes/class-recovery.php:387
+msgid "Unsubscribed"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:152
+msgid "On"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:152
+#: includes/class-promotions.php:797
+msgid "Off"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:154
+msgid "A cart counts as abandoned when a shopper has entered an email at checkout, has items in the cart, and has not paid. Reminders stop as soon as they pay. Every email has an unsubscribe link and your store address."
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:156
+msgid "No reminders will be sent until you add the store address (WooCommerce settings → General). US law (CAN-SPAM) requires a physical address in marketing emails."
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:156
+msgid "Open settings"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:160
+msgid "Abandoned carts (30 days)"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:161
+msgid "Reminders sent"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:162
+msgid "Link clicked"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:163
+msgid "Recovered orders"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:164
+msgid "Recovery rate"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:165
+msgid "Recovered sales"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:174
+msgid "Send reminders"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:174
+msgid "Turn on abandoned cart reminders"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:175
+msgid "First reminder"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:175
+msgid "minutes after the cart last changed"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:176
+msgid "Second reminder"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:176
+msgid "Send a second reminder"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:176
+msgid "hours after the first one"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:177
+msgid "Coupon in the email"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:177
+msgid "Optional. The link in the email applies it automatically when the cart meets its conditions."
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:178
+msgid "Subject (first / second)"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:179
+msgid "Heading"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:180
+msgid "Message"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:180
+msgid "Shown above the product list. Keep it factual: no health claims and no fake urgency."
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:181
+#: includes/modules/class-registry.php:1041
+#: includes/modules/class-registry.php:1298
+msgid "Button text"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:183
+msgid "Save settings"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:188
+msgid "Send me a sample reminder"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:192
+msgid "Scan now"
+msgstr ""
+
+#. translators: %s: date and time
+#: includes/admin/class-recovery-page.php:196
+#, php-format
+msgid "Next automatic scan: %s"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:214
+msgid "Abandoned"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:215
+msgid "Reminders"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:221
+msgid "No abandoned carts yet."
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:236
+msgid "clicked"
 msgstr ""
 
 #: includes/admin/class-report-metabox.php:41
@@ -3058,7 +3272,7 @@ msgstr ""
 msgid "Batch: %s"
 msgstr ""
 
-#: includes/class-plugin.php:99
+#: includes/class-plugin.php:102
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr ""
 
@@ -3408,8 +3622,29 @@ msgstr ""
 msgid "View on the offers page"
 msgstr ""
 
-#: includes/class-promotions.php:797
-msgid "Off"
+#: includes/class-recovery.php:346
+msgid "Subtotal"
+msgstr ""
+
+#. translators: %s: coupon code
+#: includes/class-recovery.php:349
+#, php-format
+msgid "Use code %s at checkout."
+msgstr ""
+
+#. translators: 1: store name, 2: store address
+#: includes/class-recovery.php:353
+#, php-format
+msgid "You are receiving this because you started a checkout at %1$s. %2$s"
+msgstr ""
+
+#. translators: 1: store name, 2: store address
+#: includes/class-recovery.php:353
+msgid "Unsubscribe from cart reminders"
+msgstr ""
+
+#: includes/class-recovery.php:387
+msgid "You will no longer receive cart reminder emails from us."
 msgstr ""
 
 #: includes/class-settings.php:107
@@ -4702,11 +4937,6 @@ msgstr ""
 
 #: includes/modules/class-registry.php:1038
 msgid "Show by default"
-msgstr ""
-
-#: includes/modules/class-registry.php:1041
-#: includes/modules/class-registry.php:1298
-msgid "Button text"
 msgstr ""
 
 #: includes/modules/class-registry.php:1055

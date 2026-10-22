@@ -2,7 +2,7 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.14.0\n"
+"Project-Id-Version: Peptide Core 0.15.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -11,7 +11,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-22T13:49:03+00:00\n"
+"POT-Creation-Date: 2026-10-22T14:14:06+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -106,6 +106,7 @@ msgstr "隐藏（仅后台可见）"
 #: includes/admin/class-batch-metabox.php:77
 #: includes/admin/class-batch-orders.php:66
 #: includes/admin/class-list-columns.php:35
+#: includes/admin/class-recovery-page.php:216
 #: includes/admin/class-tracking-page.php:92
 #: includes/class-promotions.php:666
 #: includes/class-promotions.php:780
@@ -208,6 +209,7 @@ msgid "%1$d orders, %2$d customers, %3$d units in total."
 msgstr "共 %1$d 个订单、%2$d 位顾客、%3$d 件。"
 
 #: includes/admin/class-batch-orders.php:66
+#: includes/admin/class-recovery-page.php:217
 #: includes/admin/class-tracking-page.php:122
 msgid "Order"
 msgstr "订单"
@@ -224,6 +226,7 @@ msgid "Customer"
 msgstr "顾客"
 
 #: includes/admin/class-batch-orders.php:66
+#: includes/admin/class-recovery-page.php:212
 msgid "Email"
 msgstr "邮箱"
 
@@ -363,6 +366,7 @@ msgid "All batches"
 msgstr "全部批次"
 
 #: includes/admin/class-dashboard.php:165
+#: includes/admin/class-recovery-page.php:37
 msgid "All orders"
 msgstr "全部订单"
 
@@ -810,6 +814,7 @@ msgid "Add sub-item"
 msgstr "添加二级目录"
 
 #: includes/admin/class-menu-page.php:100
+#: includes/admin/class-recovery-page.php:169
 msgid "Settings"
 msgstr "设置"
 
@@ -997,6 +1002,7 @@ msgid "Text decoration"
 msgstr "字体装饰"
 
 #: includes/admin/class-menu-page.php:147
+#: includes/admin/class-recovery-page.php:177
 #: includes/modules/class-registry.php:137
 msgid "None"
 msgstr "无"
@@ -1020,6 +1026,7 @@ msgstr "打开这份菜单后，它在别处被修改过。请刷新页面查看
 
 #: includes/admin/class-menu-page.php:164
 #: includes/admin/class-menu-page.php:207
+#: includes/admin/class-recovery-page.php:51
 #: includes/admin/class-store-design.php:140
 #: includes/admin/class-tracking-page.php:214
 #: includes/admin/class-tracking-page.php:224
@@ -1394,6 +1401,7 @@ msgid "Shop"
 msgstr "商店"
 
 #: includes/admin/class-overview-page.php:181
+#: includes/admin/class-recovery-page.php:213
 #: includes/admin/class-tracking-page.php:110
 #: includes/admin/class-tracking-page.php:171
 #: includes/class-menus.php:108
@@ -1406,6 +1414,7 @@ msgid "Checkout"
 msgstr "结账"
 
 #: includes/admin/class-overview-page.php:183
+#: includes/admin/class-recovery-page.php:233
 #: includes/admin/class-tracking-page.php:132
 #: includes/admin/class-tracking-page.php:173
 msgid "Account"
@@ -1573,6 +1582,211 @@ msgstr "暂无批次。"
 #: includes/admin/class-product-panel.php:261
 msgid "Add batch for this product"
 msgstr "为此商品添加批次"
+
+#: includes/admin/class-recovery-page.php:39
+#: includes/admin/class-recovery-page.php:151
+msgid "Abandoned cart recovery"
+msgstr "弃单召回"
+
+#: includes/admin/class-recovery-page.php:39
+msgid "Abandoned carts"
+msgstr "弃单召回"
+
+#: includes/admin/class-recovery-page.php:101
+msgid "Settings saved."
+msgstr "设置已保存。"
+
+#: includes/admin/class-recovery-page.php:102
+msgid "A sample reminder was sent to your email address."
+msgstr "示例提醒邮件已发到你的邮箱。"
+
+#: includes/admin/class-recovery-page.php:103
+msgid "The sample reminder could not be sent. Check the site’s email setup."
+msgstr "示例提醒邮件发送失败，请检查网站的邮件设置。"
+
+#: includes/admin/class-recovery-page.php:104
+msgid "Add the store address first (WooCommerce settings → General). US law requires it in marketing emails."
+msgstr "请先填写店铺地址（WooCommerce 设置 → 常规）。美国法律要求营销邮件写明实体地址。"
+
+#. translators: 1: new abandoned carts, 2: emails sent
+#: includes/admin/class-recovery-page.php:108
+#, php-format
+msgid "Scan finished: %1$d new abandoned cart(s), %2$d reminder(s) sent."
+msgstr "扫描完成：新增 %1$d 个弃单，发送 %2$d 封提醒。"
+
+#: includes/admin/class-recovery-page.php:111
+msgid "No reminders were sent because the store address is missing."
+msgstr "因为没有店铺地址，没有发送提醒。"
+
+#: includes/admin/class-recovery-page.php:113
+msgid "Recovery is turned off, so nothing was scanned."
+msgstr "弃单召回没有开启，所以没有扫描。"
+
+#: includes/admin/class-recovery-page.php:141
+msgid "All"
+msgstr "全部"
+
+#: includes/admin/class-recovery-page.php:142
+msgid "Waiting"
+msgstr "等待中"
+
+#: includes/admin/class-recovery-page.php:143
+msgid "Recovered"
+msgstr "召回成功"
+
+#: includes/admin/class-recovery-page.php:144
+msgid "Paid without reminder"
+msgstr "未提醒已付款"
+
+#: includes/admin/class-recovery-page.php:145
+msgid "Cart emptied"
+msgstr "已清空购物车"
+
+#: includes/admin/class-recovery-page.php:146
+msgid "Session expired"
+msgstr "会话已失效"
+
+#: includes/admin/class-recovery-page.php:147
+#: includes/class-recovery.php:387
+msgid "Unsubscribed"
+msgstr "已退订"
+
+#: includes/admin/class-recovery-page.php:152
+msgid "On"
+msgstr "已开启"
+
+#: includes/admin/class-recovery-page.php:152
+#: includes/class-promotions.php:797
+msgid "Off"
+msgstr "未启用"
+
+#: includes/admin/class-recovery-page.php:154
+msgid "A cart counts as abandoned when a shopper has entered an email at checkout, has items in the cart, and has not paid. Reminders stop as soon as they pay. Every email has an unsubscribe link and your store address."
+msgstr "客户在结账页填了邮箱、购物车里有商品、还没有付款，就算弃单。客户一付款就停止提醒。每封邮件都带退订链接和店铺地址。"
+
+#: includes/admin/class-recovery-page.php:156
+msgid "No reminders will be sent until you add the store address (WooCommerce settings → General). US law (CAN-SPAM) requires a physical address in marketing emails."
+msgstr "填写店铺地址（WooCommerce 设置 → 常规）之前不会发送任何提醒。美国 CAN-SPAM 法要求营销邮件写明实体地址。"
+
+#: includes/admin/class-recovery-page.php:156
+msgid "Open settings"
+msgstr "去填写"
+
+#: includes/admin/class-recovery-page.php:160
+msgid "Abandoned carts (30 days)"
+msgstr "弃单数（30 天）"
+
+#: includes/admin/class-recovery-page.php:161
+msgid "Reminders sent"
+msgstr "已发提醒"
+
+#: includes/admin/class-recovery-page.php:162
+msgid "Link clicked"
+msgstr "点击链接"
+
+#: includes/admin/class-recovery-page.php:163
+msgid "Recovered orders"
+msgstr "召回订单"
+
+#: includes/admin/class-recovery-page.php:164
+msgid "Recovery rate"
+msgstr "召回率"
+
+#: includes/admin/class-recovery-page.php:165
+msgid "Recovered sales"
+msgstr "召回金额"
+
+#: includes/admin/class-recovery-page.php:174
+msgid "Send reminders"
+msgstr "发送提醒"
+
+#: includes/admin/class-recovery-page.php:174
+msgid "Turn on abandoned cart reminders"
+msgstr "开启弃单提醒"
+
+#: includes/admin/class-recovery-page.php:175
+msgid "First reminder"
+msgstr "第一封提醒"
+
+#: includes/admin/class-recovery-page.php:175
+msgid "minutes after the cart last changed"
+msgstr "分钟后（从购物车最后一次变化算起）"
+
+#: includes/admin/class-recovery-page.php:176
+msgid "Second reminder"
+msgstr "第二封提醒"
+
+#: includes/admin/class-recovery-page.php:176
+msgid "Send a second reminder"
+msgstr "发送第二封提醒"
+
+#: includes/admin/class-recovery-page.php:176
+msgid "hours after the first one"
+msgstr "小时后（从第一封算起）"
+
+#: includes/admin/class-recovery-page.php:177
+msgid "Coupon in the email"
+msgstr "邮件里的优惠码"
+
+#: includes/admin/class-recovery-page.php:177
+msgid "Optional. The link in the email applies it automatically when the cart meets its conditions."
+msgstr "可选。客户点邮件里的链接时，满足条件就会自动使用。"
+
+#: includes/admin/class-recovery-page.php:178
+msgid "Subject (first / second)"
+msgstr "邮件标题（第一封 / 第二封）"
+
+#: includes/admin/class-recovery-page.php:179
+msgid "Heading"
+msgstr "邮件大标题"
+
+#: includes/admin/class-recovery-page.php:180
+msgid "Message"
+msgstr "正文"
+
+#: includes/admin/class-recovery-page.php:180
+msgid "Shown above the product list. Keep it factual: no health claims and no fake urgency."
+msgstr "显示在商品清单上方。请如实描述：不要写功效，也不要制造虚假的紧迫感。"
+
+#: includes/admin/class-recovery-page.php:181
+#: includes/modules/class-registry.php:1041
+#: includes/modules/class-registry.php:1298
+msgid "Button text"
+msgstr "按钮文字"
+
+#: includes/admin/class-recovery-page.php:183
+msgid "Save settings"
+msgstr "保存设置"
+
+#: includes/admin/class-recovery-page.php:188
+msgid "Send me a sample reminder"
+msgstr "给我发一封示例邮件"
+
+#: includes/admin/class-recovery-page.php:192
+msgid "Scan now"
+msgstr "立即扫描"
+
+#. translators: %s: date and time
+#: includes/admin/class-recovery-page.php:196
+#, php-format
+msgid "Next automatic scan: %s"
+msgstr "下次自动扫描：%s"
+
+#: includes/admin/class-recovery-page.php:214
+msgid "Abandoned"
+msgstr "放弃时间"
+
+#: includes/admin/class-recovery-page.php:215
+msgid "Reminders"
+msgstr "提醒"
+
+#: includes/admin/class-recovery-page.php:221
+msgid "No abandoned carts yet."
+msgstr "还没有弃单。"
+
+#: includes/admin/class-recovery-page.php:236
+msgid "clicked"
+msgstr "已点击"
 
 #: includes/admin/class-report-metabox.php:41
 msgid "Report details"
@@ -3054,7 +3268,7 @@ msgstr "批次分配已更新："
 msgid "Batch: %s"
 msgstr "批次：%s"
 
-#: includes/class-plugin.php:99
+#: includes/class-plugin.php:102
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr "Peptide Core 需要先安装并启用 WooCommerce。"
 
@@ -3402,9 +3616,30 @@ msgstr "在网站活动页面公开展示"
 msgid "View on the offers page"
 msgstr "在活动页面查看"
 
-#: includes/class-promotions.php:797
-msgid "Off"
-msgstr "未启用"
+#: includes/class-recovery.php:346
+msgid "Subtotal"
+msgstr "小计"
+
+#. translators: %s: coupon code
+#: includes/class-recovery.php:349
+#, php-format
+msgid "Use code %s at checkout."
+msgstr "结账时使用优惠码 %s。"
+
+#. translators: 1: store name, 2: store address
+#: includes/class-recovery.php:353
+#, php-format
+msgid "You are receiving this because you started a checkout at %1$s. %2$s"
+msgstr "你收到这封邮件，是因为你在 %1$s 开始了结账。%2$s"
+
+#. translators: 1: store name, 2: store address
+#: includes/class-recovery.php:353
+msgid "Unsubscribe from cart reminders"
+msgstr "退订购物车提醒"
+
+#: includes/class-recovery.php:387
+msgid "You will no longer receive cart reminder emails from us."
+msgstr "你以后不会再收到我们的购物车提醒邮件。"
 
 #: includes/class-settings.php:107
 msgid "The checkout confirmation was not enabled because its text is empty."
@@ -4697,11 +4932,6 @@ msgstr "商品热点"
 #: includes/modules/class-registry.php:1038
 msgid "Show by default"
 msgstr "默认展示"
-
-#: includes/modules/class-registry.php:1041
-#: includes/modules/class-registry.php:1298
-msgid "Button text"
-msgstr "按钮文字"
 
 #: includes/modules/class-registry.php:1055
 msgid "Homepage headline (H1)"

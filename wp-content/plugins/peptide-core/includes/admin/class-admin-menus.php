@@ -106,6 +106,9 @@ final class Admin_Menus {
 		if ( 'wc-settings' === $page ) {
 			return self::SETTINGS;
 		}
+		if ( 'wc-orders' === $page ) {
+			return self::ORDERS;
+		}
 		return $submenu_file;
 	}
 }

@@ -38,6 +38,7 @@ final class Plugin {
 		Custom_Pages::register_hooks();
 		Coupons::register_hooks();
 		Promotions::register_hooks();
+		Recovery::register_hooks();
 		Tracking\Tracker::register_hooks();
 		Api\Tracking_Controller::register_hooks();
 		Admin\Overview_Page::register_rest();
@@ -64,6 +65,7 @@ final class Plugin {
 			Admin\Tracking_Page::register_hooks();
 			Admin\Overview_Page::register_hooks();
 			Admin\Admin_Menus::register_hooks();
+			Admin\Recovery_Page::register_hooks();
 		}
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
@@ -75,6 +77,7 @@ final class Plugin {
 			\WP_CLI::add_command( 'peptide shipping', Cli\Shipping_Command::class );
 			\WP_CLI::add_command( 'peptide layout', Cli\Layout_Command::class );
 			\WP_CLI::add_command( 'peptide tracking', Cli\Tracking_Command::class );
+			\WP_CLI::add_command( 'peptide recovery', Cli\Recovery_Command::class );
 		}
 	}
 
