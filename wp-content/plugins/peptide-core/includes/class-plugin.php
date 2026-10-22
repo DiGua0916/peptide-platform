@@ -40,6 +40,7 @@ final class Plugin {
 		Promotions::register_hooks();
 		Tracking\Tracker::register_hooks();
 		Api\Tracking_Controller::register_hooks();
+		Admin\Overview_Page::register_rest();
 		Api\Menu_Controller::register_hooks();
 		add_action( 'init', array( Installer::class, 'maybe_upgrade' ), 5 );
 		Api\Rest_Controller::register_hooks();
@@ -61,6 +62,7 @@ final class Plugin {
 			Admin\Design_Editor::register_hooks();
 			Admin\Menu_Page::register_hooks();
 			Admin\Tracking_Page::register_hooks();
+			Admin\Overview_Page::register_hooks();
 		}
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
