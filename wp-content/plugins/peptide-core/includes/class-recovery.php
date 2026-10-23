@@ -244,6 +244,7 @@ final class Recovery {
 		$pay      = (string) maybe_unserialize( $data['chosen_payment_method'] ?? '' );
 		$gateways = function_exists( 'WC' ) && WC()->payment_gateways() ? WC()->payment_gateways()->payment_gateways() : array();
 		$tot      = is_array( $tot ) ? $tot : array();
+		$pkg      = maybe_unserialize( $data['shipping_for_package_0'] ?? '' );
 		return array(
 			'email'       => is_email( $email ) ? strtolower( $email ) : '',
 			'user_id'     => $user,
@@ -253,6 +254,7 @@ final class Recovery {
 			'ship_method' => is_array( $ship ) && $ship ? (string) reset( $ship ) : '',
 			'pay_method'  => '' !== $pay && isset( $gateways[ $pay ] ) ? wp_strip_all_tags( (string) $gateways[ $pay ]->get_title() ) : $pay,
 			'draft_id'    => absint( maybe_unserialize( $data['store_api_draft_order'] ?? 0 ) ),
+			'rates'       => is_array( $pkg ) && isset( $pkg['rates'] ) && is_array( $pkg['rates'] ) ? $pkg['rates'] : array(),
 			'items'       => $items,
 			'subtotal'    => (float) ( $tot['subtotal'] ?? array_sum( array_column( $items, 'line_subtotal' ) ) ),
 			'total'       => isset( $tot['total'] ) ? (float) $tot['total'] : null,
@@ -308,7 +310,7 @@ final class Recovery {
 				'total'       => null === $p['total'] ? '' : (string) round( $p['total'], 2 ),
 				'currency'    => get_woocommerce_currency(),
 				'country'     => substr( $p['country'], 0, 4 ),
-				'ship_method' => substr( self::shipping_label( $p['ship_method'], $p['draft_id'] ), 0, 190 ),
+				'ship_method' => substr( self::shipping_label( $p['ship_method'], $p['draft_id'], $p['rates'] ), 0, 190 ),
 				'pay_method'  => substr( $p['pay_method'], 0, 190 ),
 				'draft_id'    => $p['draft_id'],
 				'updated_ms'  => $now,
@@ -396,13 +398,17 @@ final class Recovery {
 		return $stats;
 	}
 
-	/** 配送方式显示名：优先取草稿订单上的名称，否则用运费 ID。 */
-	private static function shipping_label( string $rate_id, int $draft_id ): string {
+	/** 配送方式显示名：优先取草稿订单上的名称，其次取会话里算好的运费名称，最后才用运费 ID。 */
+	private static function shipping_label( string $rate_id, int $draft_id, array $rates = array() ): string {
 		if ( $draft_id ) {
 			$order = wc_get_order( $draft_id );
 			if ( $order && $order->get_shipping_method() ) {
 				return (string) $order->get_shipping_method();
 			}
+		}
+		$rate = $rates[ $rate_id ] ?? null;
+		if ( $rate instanceof \WC_Shipping_Rate ) {
+			return wp_strip_all_tags( (string) $rate->get_label() );
 		}
 		return $rate_id;
 	}
