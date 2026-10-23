@@ -2,14 +2,14 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.20.0\n"
+"Project-Id-Version: Peptide Core 0.21.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-23T14:51:44+00:00\n"
+"POT-Creation-Date: 2026-10-23T15:03:33+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -137,7 +137,7 @@ msgstr ""
 
 #: includes/admin/class-apps-page.php:62
 #: includes/admin/class-terms-page.php:108
-#: includes/class-exit-intent.php:259
+#: includes/class-exit-intent.php:272
 #: includes/class-terms.php:220
 #: includes/class-terms.php:282
 msgid "Close"
@@ -145,24 +145,24 @@ msgstr ""
 
 #: includes/admin/class-apps-page.php:63
 #: includes/class-coupons.php:434
-#: includes/class-exit-intent.php:260
+#: includes/class-exit-intent.php:273
 msgid "Copy code"
 msgstr ""
 
 #: includes/admin/class-apps-page.php:64
 #: includes/class-coupons.php:434
-#: includes/class-exit-intent.php:261
+#: includes/class-exit-intent.php:274
 msgid "Copied"
 msgstr ""
 
 #: includes/admin/class-apps-page.php:65
-#: includes/class-exit-intent.php:263
+#: includes/class-exit-intent.php:276
 #: includes/emails/class-browse-reminder.php:99
 msgid "Continue shopping"
 msgstr ""
 
 #: includes/admin/class-apps-page.php:66
-#: includes/class-exit-intent.php:264
+#: includes/class-exit-intent.php:277
 msgid "Spinning…"
 msgstr ""
 
@@ -456,56 +456,70 @@ msgstr ""
 msgid "When the mouse leaves the top of the page (towards the address bar, tabs or close button)"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:186
+#: includes/admin/class-apps-page.php:188
 #: includes/admin/class-basic-config-page.php:300
 msgid "Phone"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:186
-msgid "Phones have no mouse, so leaving cannot be seen directly. A quick scroll back up after reading usually means the visitor is going to the address bar or back."
+#: includes/admin/class-apps-page.php:188
+msgid ""
+"Phones have no mouse and do not tell the page that the visitor is leaving, so these signals are used instead. Tick several to catch more visitors:\n"
+"Quick scroll back up: scrolled down to read, then flicks back up – usually towards the address bar or back.\n"
+"Comes back after switching away: went to another app or tab for a few seconds and came back.\n"
+"No activity: nothing touched for the set time.\n"
+"Reaches the bottom of the page: has seen everything on the page.\n"
+"The back button is not intercepted: ad platforms treat that as hijacking navigation, and Chrome skips such entries anyway."
 msgstr ""
 
-#: includes/admin/class-apps-page.php:186
+#: includes/admin/class-apps-page.php:189
 msgid "Quick scroll back up"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:186
+#: includes/admin/class-apps-page.php:190
+msgid "Comes back after switching to another app or tab"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:191
 msgid "No activity for"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:186
+#: includes/admin/class-apps-page.php:191
 msgid "seconds"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:186
-msgid "Do not show on phones"
+#: includes/admin/class-apps-page.php:192
+msgid "Reaches the bottom of the page"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:187
+#: includes/admin/class-apps-page.php:193
+msgid "Leave all unticked to never show the popup on phones."
+msgstr ""
+
+#: includes/admin/class-apps-page.php:194
 msgid "Wait at least"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:187
+#: includes/admin/class-apps-page.php:194
 msgid "seconds on the page before the popup can show"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:188
+#: includes/admin/class-apps-page.php:195
 msgid "Pages"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:189
+#: includes/admin/class-apps-page.php:196
 msgid "Home page"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:189
+#: includes/admin/class-apps-page.php:196
 msgid "Product lists and search"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:189
+#: includes/admin/class-apps-page.php:196
 msgid "Product pages"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:189
+#: includes/admin/class-apps-page.php:196
 #: includes/admin/class-overview-page.php:193
 #: includes/admin/class-recovery-page.php:223
 #: includes/admin/class-tracking-page.php:110
@@ -514,17 +528,17 @@ msgstr ""
 msgid "Cart"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:189
+#: includes/admin/class-apps-page.php:196
 #: includes/admin/class-overview-page.php:194
 #: includes/admin/class-tracking-page.php:172
 msgid "Checkout"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:189
+#: includes/admin/class-apps-page.php:196
 msgid "Other pages"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:193
+#: includes/admin/class-apps-page.php:200
 #: includes/admin/class-overview-page.php:131
 #: includes/admin/class-overview-page.php:203
 #: includes/admin/class-tracking-page.php:35
@@ -532,36 +546,36 @@ msgstr ""
 msgid "Visitors"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:193
+#: includes/admin/class-apps-page.php:200
 #: includes/admin/class-marketing.php:197
 msgid "Everyone"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:193
+#: includes/admin/class-apps-page.php:200
 msgid "Only with items in the cart"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:193
+#: includes/admin/class-apps-page.php:200
 msgid "Only visitors without orders"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:194
+#: includes/admin/class-apps-page.php:201
 msgid "How often"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:194
+#: includes/admin/class-apps-page.php:201
 msgid "Remembered in the visitor’s browser. 0 = at most once each time the browser is opened."
 msgstr ""
 
-#: includes/admin/class-apps-page.php:194
+#: includes/admin/class-apps-page.php:201
 msgid "At most once every"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:194
+#: includes/admin/class-apps-page.php:201
 msgid "days per visitor"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:198
+#: includes/admin/class-apps-page.php:205
 #: includes/admin/class-store-design.php:323
 #: includes/admin/class-store-design.php:434
 #: includes/admin/class-terms-page.php:98
@@ -569,15 +583,15 @@ msgstr ""
 msgid "Preview"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:198
+#: includes/admin/class-apps-page.php:205
 msgid "Preview in the store"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:199
+#: includes/admin/class-apps-page.php:206
 msgid "The preview in the store uses the saved settings and shows the popup right away. Staff never see the popup otherwise, and previews are not counted."
 msgstr ""
 
-#: includes/admin/class-apps-page.php:206
+#: includes/admin/class-apps-page.php:213
 #: includes/admin/class-basic-config-page.php:327
 #: includes/admin/class-email-center.php:102
 #: includes/admin/class-marketing.php:481
@@ -595,7 +609,7 @@ msgstr ""
 msgid "Sorry, you are not allowed to do that."
 msgstr ""
 
-#: includes/admin/class-apps-page.php:214
+#: includes/admin/class-apps-page.php:221
 msgid "The settings are saved, but the popup stays off until this is fixed."
 msgstr ""
 
@@ -4836,7 +4850,7 @@ msgid "Template not found."
 msgstr ""
 
 #: includes/admin/class-store-design.php:206
-#: includes/class-exit-intent.php:262
+#: includes/class-exit-intent.php:275
 msgid "Something went wrong. Please try again."
 msgstr ""
 
@@ -6178,67 +6192,67 @@ msgstr[1] ""
 msgid "No new drafts: those pages already exist."
 msgstr ""
 
-#: includes/class-exit-intent.php:133
+#: includes/class-exit-intent.php:146
 msgid "Every prize needs a name."
 msgstr ""
 
-#: includes/class-exit-intent.php:148
+#: includes/class-exit-intent.php:161
 msgid "Enter a popup title."
 msgstr ""
 
-#: includes/class-exit-intent.php:151
+#: includes/class-exit-intent.php:164
 msgid "Choose at least one page type."
 msgstr ""
 
-#: includes/class-exit-intent.php:154
+#: includes/class-exit-intent.php:167
 msgid "Turn on at least one trigger."
 msgstr ""
 
-#: includes/class-exit-intent.php:157
+#: includes/class-exit-intent.php:170
 msgid "Choose a coupon code that is enabled, not expired and not used up."
 msgstr ""
 
-#: includes/class-exit-intent.php:160
+#: includes/class-exit-intent.php:173
 msgid "Enter the button link, or leave the button text empty."
 msgstr ""
 
-#: includes/class-exit-intent.php:164
+#: includes/class-exit-intent.php:177
 msgid "The wheel needs at least 2 prizes."
 msgstr ""
 
-#: includes/class-exit-intent.php:167
+#: includes/class-exit-intent.php:180
 msgid "At least one prize needs a chance greater than zero."
 msgstr ""
 
 #. translators: %s: coupon code
-#: includes/class-exit-intent.php:172
+#: includes/class-exit-intent.php:185
 #, php-format
 msgid "The coupon code %s of a prize is not enabled, has expired or is used up."
 msgstr ""
 
-#: includes/class-exit-intent.php:323
+#: includes/class-exit-intent.php:336
 msgid "The code is applied to your cart."
 msgstr ""
 
-#: includes/class-exit-intent.php:324
+#: includes/class-exit-intent.php:337
 msgid "The code is saved and will be applied once your cart meets its conditions."
 msgstr ""
 
-#: includes/class-exit-intent.php:324
+#: includes/class-exit-intent.php:337
 msgid "This code can no longer be used."
 msgstr ""
 
-#: includes/class-exit-intent.php:331
-#: includes/class-exit-intent.php:364
+#: includes/class-exit-intent.php:344
+#: includes/class-exit-intent.php:377
 #: includes/class-promotions.php:954
 msgid "This offer has ended."
 msgstr ""
 
-#: includes/class-exit-intent.php:334
+#: includes/class-exit-intent.php:347
 msgid "Preview: customers get the code applied to their cart here."
 msgstr ""
 
-#: includes/class-exit-intent.php:382
+#: includes/class-exit-intent.php:395
 msgid "Preview: the draw is real, but no code is applied and nothing is counted."
 msgstr ""
 

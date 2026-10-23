@@ -1,6 +1,7 @@
 /**
  * 应用：离开意图增收（APP-EXIT-01）。前台弹窗和后台预览共用。
- * - 前台：页面配置 window.pcExitIntent。电脑端鼠标移出页面顶部时触发；手机端快速上滑或一段时间没有操作时触发。
+ * - 前台：页面配置 window.pcExitIntent。电脑端鼠标移出页面顶部时触发；手机端按勾选的方式触发（可以多选）：
+ *   快速上滑、切到别的 App / 标签页后回来、一段时间没有操作、看到页面底部。
  *   每位访客按设置的天数最多弹一次（localStorage，读写失败时只按本次浏览算）。
  * - 抽奖结果由服务端决定，这里只负责把转盘转到服务端给出的奖项。
  * - 后台预览：PeptideExitIntent.render( config, host, { demo: true, weights: [...] } )，不发请求。
@@ -362,6 +363,10 @@
 	}, Math.max( 0, cfg.triggers.min ) * 1000 );
 
 	var coarse = window.matchMedia && window.matchMedia( '(pointer: coarse)' ).matches;
+	var mobile = [].concat( cfg.triggers.mobile || [] );
+	var has = function ( t ) {
+		return coarse && mobile.indexOf( t ) !== -1;
+	};
 	if ( ! coarse && cfg.triggers.desktop ) {
 		// 鼠标从页面顶部移出（去点地址栏、标签页或关闭按钮）。
 		document.addEventListener( 'mouseout', function ( e ) {
@@ -370,7 +375,7 @@
 			}
 		} );
 	}
-	if ( coarse && 'scroll' === cfg.triggers.mobile ) {
+	if ( has( 'scroll' ) ) {
 		// 往下看过一段后又快速往上滑（多半是要去地址栏或返回）。
 		var maxY = 0;
 		var lastY = window.scrollY;
@@ -388,7 +393,28 @@
 			}
 		}, { passive: true } );
 	}
-	if ( coarse && 'idle' === cfg.triggers.mobile ) {
+	if ( has( 'return' ) ) {
+		// 切到别的 App 或标签页超过 3 秒后又回到这一页。
+		var awayAt = 0;
+		document.addEventListener( 'visibilitychange', function () {
+			if ( 'hidden' === document.visibilityState ) {
+				awayAt = Date.now();
+			} else if ( awayAt && Date.now() - awayAt > 3000 ) {
+				awayAt = 0;
+				open();
+			}
+		} );
+	}
+	if ( has( 'bottom' ) ) {
+		// 页面至少两屏长，并且看到了底部。
+		window.addEventListener( 'scroll', function () {
+			var doc = document.documentElement;
+			if ( doc.scrollHeight > window.innerHeight * 2 && window.scrollY + window.innerHeight >= doc.scrollHeight - 200 ) {
+				open();
+			}
+		}, { passive: true } );
+	}
+	if ( has( 'idle' ) ) {
 		var timer = null;
 		var reset = function () {
 			window.clearTimeout( timer );

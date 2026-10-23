@@ -224,7 +224,7 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
 - **弹窗**：`<dialog class="pc-exit-dialog">`，里面是 `.pc-exit.pc-exit--coupon | --wheel | --message`。
   - 子元素：`__close`、`__image`、`__title`、`__text`、`__code`（`code`、`__copy`）、`__wheel`（`svg.__svg`、`__pointer`）、`__btn`、`__decline`、`__result`。
   - 主色是 CSS 变量 `--pc-exit-color`。默认样式尽量中性，主题可以覆盖。
-- **触发**：电脑端鼠标移出页面顶部；手机端快速上滑或一段时间没有操作；页面打开时已有其他 `dialog[open]` 时不弹。员工不会看到。
+- **触发**：电脑端鼠标移出页面顶部；手机端可以多选：快速上滑、切到别的 App / 标签页后回来（`visibilitychange`）、一段时间没有操作、看到页面底部；页面打开时已有其他 `dialog[open]` 时不弹。员工不会看到。不拦截返回键。
   - 频率记在 localStorage / sessionStorage 的 `pcExitIntent`。
   - 管理员打开任意前台地址加 `?pc_exit_preview=1` 可以预览。
 - **请求**：`?wc-ajax=pc_exit_event`、`pc_exit_claim`、`pc_exit_spin`，都是公开请求（和 WooCommerce 加购一样）。

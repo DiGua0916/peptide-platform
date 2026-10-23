@@ -2,7 +2,7 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.20.0\n"
+"Project-Id-Version: Peptide Core 0.21.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -11,7 +11,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-23T14:51:44+00:00\n"
+"POT-Creation-Date: 2026-10-23T15:03:33+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -139,7 +139,7 @@ msgstr "删除"
 
 #: includes/admin/class-apps-page.php:62
 #: includes/admin/class-terms-page.php:108
-#: includes/class-exit-intent.php:259
+#: includes/class-exit-intent.php:272
 #: includes/class-terms.php:220
 #: includes/class-terms.php:282
 msgid "Close"
@@ -147,24 +147,24 @@ msgstr "关闭"
 
 #: includes/admin/class-apps-page.php:63
 #: includes/class-coupons.php:434
-#: includes/class-exit-intent.php:260
+#: includes/class-exit-intent.php:273
 msgid "Copy code"
 msgstr "复制优惠码"
 
 #: includes/admin/class-apps-page.php:64
 #: includes/class-coupons.php:434
-#: includes/class-exit-intent.php:261
+#: includes/class-exit-intent.php:274
 msgid "Copied"
 msgstr "已复制"
 
 #: includes/admin/class-apps-page.php:65
-#: includes/class-exit-intent.php:263
+#: includes/class-exit-intent.php:276
 #: includes/emails/class-browse-reminder.php:99
 msgid "Continue shopping"
 msgstr "继续购物"
 
 #: includes/admin/class-apps-page.php:66
-#: includes/class-exit-intent.php:264
+#: includes/class-exit-intent.php:277
 msgid "Spinning…"
 msgstr "抽奖中…"
 
@@ -458,56 +458,70 @@ msgstr "电脑端"
 msgid "When the mouse leaves the top of the page (towards the address bar, tabs or close button)"
 msgstr "鼠标移出页面顶部时（去点地址栏、标签页或关闭按钮）"
 
-#: includes/admin/class-apps-page.php:186
+#: includes/admin/class-apps-page.php:188
 #: includes/admin/class-basic-config-page.php:300
 msgid "Phone"
 msgstr "电话"
 
-#: includes/admin/class-apps-page.php:186
-msgid "Phones have no mouse, so leaving cannot be seen directly. A quick scroll back up after reading usually means the visitor is going to the address bar or back."
-msgstr "手机没有鼠标，看不到“要离开”的动作。往下看了一段后又快速往上滑，通常就是要去地址栏或返回。"
+#: includes/admin/class-apps-page.php:188
+msgid ""
+"Phones have no mouse and do not tell the page that the visitor is leaving, so these signals are used instead. Tick several to catch more visitors:\n"
+"Quick scroll back up: scrolled down to read, then flicks back up – usually towards the address bar or back.\n"
+"Comes back after switching away: went to another app or tab for a few seconds and came back.\n"
+"No activity: nothing touched for the set time.\n"
+"Reaches the bottom of the page: has seen everything on the page.\n"
+"The back button is not intercepted: ad platforms treat that as hijacking navigation, and Chrome skips such entries anyway."
+msgstr "手机没有鼠标，也不会告诉网页“访客要离开了”，所以改用下面这些信号。多勾几种能挽回更多访客：\n快速上滑：往下看了一段后又快速往上滑，通常是要去地址栏或返回。\n切走后又回来：切到别的 App 或标签页几秒后又回到这一页。\n无操作：在设定时间内没有任何触摸。\n看到页面底部：已经把整页看完了。\n不拦截返回键：广告平台把它当作劫持导航，Chrome 也会直接跳过这种记录。"
 
-#: includes/admin/class-apps-page.php:186
+#: includes/admin/class-apps-page.php:189
 msgid "Quick scroll back up"
 msgstr "快速上滑"
 
-#: includes/admin/class-apps-page.php:186
+#: includes/admin/class-apps-page.php:190
+msgid "Comes back after switching to another app or tab"
+msgstr "切到别的 App 或标签页后又回来"
+
+#: includes/admin/class-apps-page.php:191
 msgid "No activity for"
 msgstr "无操作"
 
-#: includes/admin/class-apps-page.php:186
+#: includes/admin/class-apps-page.php:191
 msgid "seconds"
 msgstr "秒"
 
-#: includes/admin/class-apps-page.php:186
-msgid "Do not show on phones"
-msgstr "手机端不弹"
+#: includes/admin/class-apps-page.php:192
+msgid "Reaches the bottom of the page"
+msgstr "看到页面底部"
 
-#: includes/admin/class-apps-page.php:187
+#: includes/admin/class-apps-page.php:193
+msgid "Leave all unticked to never show the popup on phones."
+msgstr "全部不勾选，手机端就不弹。"
+
+#: includes/admin/class-apps-page.php:194
 msgid "Wait at least"
 msgstr "至少停留"
 
-#: includes/admin/class-apps-page.php:187
+#: includes/admin/class-apps-page.php:194
 msgid "seconds on the page before the popup can show"
 msgstr "秒后才会弹出"
 
-#: includes/admin/class-apps-page.php:188
+#: includes/admin/class-apps-page.php:195
 msgid "Pages"
 msgstr "弹出页面"
 
-#: includes/admin/class-apps-page.php:189
+#: includes/admin/class-apps-page.php:196
 msgid "Home page"
 msgstr "首页"
 
-#: includes/admin/class-apps-page.php:189
+#: includes/admin/class-apps-page.php:196
 msgid "Product lists and search"
 msgstr "商品列表和搜索"
 
-#: includes/admin/class-apps-page.php:189
+#: includes/admin/class-apps-page.php:196
 msgid "Product pages"
 msgstr "商品详情页"
 
-#: includes/admin/class-apps-page.php:189
+#: includes/admin/class-apps-page.php:196
 #: includes/admin/class-overview-page.php:193
 #: includes/admin/class-recovery-page.php:223
 #: includes/admin/class-tracking-page.php:110
@@ -516,17 +530,17 @@ msgstr "商品详情页"
 msgid "Cart"
 msgstr "购物车"
 
-#: includes/admin/class-apps-page.php:189
+#: includes/admin/class-apps-page.php:196
 #: includes/admin/class-overview-page.php:194
 #: includes/admin/class-tracking-page.php:172
 msgid "Checkout"
 msgstr "结账"
 
-#: includes/admin/class-apps-page.php:189
+#: includes/admin/class-apps-page.php:196
 msgid "Other pages"
 msgstr "其他页面"
 
-#: includes/admin/class-apps-page.php:193
+#: includes/admin/class-apps-page.php:200
 #: includes/admin/class-overview-page.php:131
 #: includes/admin/class-overview-page.php:203
 #: includes/admin/class-tracking-page.php:35
@@ -534,36 +548,36 @@ msgstr "其他页面"
 msgid "Visitors"
 msgstr "访客数据"
 
-#: includes/admin/class-apps-page.php:193
+#: includes/admin/class-apps-page.php:200
 #: includes/admin/class-marketing.php:197
 msgid "Everyone"
 msgstr "所有人"
 
-#: includes/admin/class-apps-page.php:193
+#: includes/admin/class-apps-page.php:200
 msgid "Only with items in the cart"
 msgstr "仅购物车有商品的访客"
 
-#: includes/admin/class-apps-page.php:193
+#: includes/admin/class-apps-page.php:200
 msgid "Only visitors without orders"
 msgstr "仅没下过单的访客"
 
-#: includes/admin/class-apps-page.php:194
+#: includes/admin/class-apps-page.php:201
 msgid "How often"
 msgstr "弹出频率"
 
-#: includes/admin/class-apps-page.php:194
+#: includes/admin/class-apps-page.php:201
 msgid "Remembered in the visitor’s browser. 0 = at most once each time the browser is opened."
 msgstr "记在访客的浏览器里。填 0 表示每次打开浏览器最多弹一次。"
 
-#: includes/admin/class-apps-page.php:194
+#: includes/admin/class-apps-page.php:201
 msgid "At most once every"
 msgstr "每位访客每"
 
-#: includes/admin/class-apps-page.php:194
+#: includes/admin/class-apps-page.php:201
 msgid "days per visitor"
 msgstr "天最多弹一次"
 
-#: includes/admin/class-apps-page.php:198
+#: includes/admin/class-apps-page.php:205
 #: includes/admin/class-store-design.php:323
 #: includes/admin/class-store-design.php:434
 #: includes/admin/class-terms-page.php:98
@@ -571,15 +585,15 @@ msgstr "天最多弹一次"
 msgid "Preview"
 msgstr "预览"
 
-#: includes/admin/class-apps-page.php:198
+#: includes/admin/class-apps-page.php:205
 msgid "Preview in the store"
 msgstr "在店铺里预览"
 
-#: includes/admin/class-apps-page.php:199
+#: includes/admin/class-apps-page.php:206
 msgid "The preview in the store uses the saved settings and shows the popup right away. Staff never see the popup otherwise, and previews are not counted."
 msgstr "店铺里的预览用已保存的设置，打开就弹出。除了预览，员工不会看到弹窗；预览不计入数据。"
 
-#: includes/admin/class-apps-page.php:206
+#: includes/admin/class-apps-page.php:213
 #: includes/admin/class-basic-config-page.php:327
 #: includes/admin/class-email-center.php:102
 #: includes/admin/class-marketing.php:481
@@ -597,7 +611,7 @@ msgstr "店铺里的预览用已保存的设置，打开就弹出。除了预览
 msgid "Sorry, you are not allowed to do that."
 msgstr "抱歉，你没有权限执行此操作。"
 
-#: includes/admin/class-apps-page.php:214
+#: includes/admin/class-apps-page.php:221
 msgid "The settings are saved, but the popup stays off until this is fixed."
 msgstr "设置已保存，但改好这些之前弹窗不会开启。"
 
@@ -4828,7 +4842,7 @@ msgid "Template not found."
 msgstr "找不到该模板。"
 
 #: includes/admin/class-store-design.php:206
-#: includes/class-exit-intent.php:262
+#: includes/class-exit-intent.php:275
 msgid "Something went wrong. Please try again."
 msgstr "出了点问题，请重试。"
 
@@ -6164,67 +6178,67 @@ msgstr[0] "已生成 %d 份草稿。请填写所有方括号里的提示，审�
 msgid "No new drafts: those pages already exist."
 msgstr "没有生成新草稿：这些页面已经存在。"
 
-#: includes/class-exit-intent.php:133
+#: includes/class-exit-intent.php:146
 msgid "Every prize needs a name."
 msgstr "每个奖项都要有名称。"
 
-#: includes/class-exit-intent.php:148
+#: includes/class-exit-intent.php:161
 msgid "Enter a popup title."
 msgstr "请填写弹窗标题。"
 
-#: includes/class-exit-intent.php:151
+#: includes/class-exit-intent.php:164
 msgid "Choose at least one page type."
 msgstr "请至少选择一种弹出页面。"
 
-#: includes/class-exit-intent.php:154
+#: includes/class-exit-intent.php:167
 msgid "Turn on at least one trigger."
 msgstr "请至少开启一种触发方式。"
 
-#: includes/class-exit-intent.php:157
+#: includes/class-exit-intent.php:170
 msgid "Choose a coupon code that is enabled, not expired and not used up."
 msgstr "请选择已启用、没过期、还有次数的优惠码。"
 
-#: includes/class-exit-intent.php:160
+#: includes/class-exit-intent.php:173
 msgid "Enter the button link, or leave the button text empty."
 msgstr "请填写按钮链接，或者把按钮文字留空。"
 
-#: includes/class-exit-intent.php:164
+#: includes/class-exit-intent.php:177
 msgid "The wheel needs at least 2 prizes."
 msgstr "转盘至少要有 2 个奖项。"
 
-#: includes/class-exit-intent.php:167
+#: includes/class-exit-intent.php:180
 msgid "At least one prize needs a chance greater than zero."
 msgstr "至少要有一个奖项的权重大于 0。"
 
 #. translators: %s: coupon code
-#: includes/class-exit-intent.php:172
+#: includes/class-exit-intent.php:185
 #, php-format
 msgid "The coupon code %s of a prize is not enabled, has expired or is used up."
 msgstr "奖项的优惠码 %s 没有启用、已过期或已用完。"
 
-#: includes/class-exit-intent.php:323
+#: includes/class-exit-intent.php:336
 msgid "The code is applied to your cart."
 msgstr "优惠码已用到购物车。"
 
-#: includes/class-exit-intent.php:324
+#: includes/class-exit-intent.php:337
 msgid "The code is saved and will be applied once your cart meets its conditions."
 msgstr "优惠码已保存，购物车满足条件后会自动使用。"
 
-#: includes/class-exit-intent.php:324
+#: includes/class-exit-intent.php:337
 msgid "This code can no longer be used."
 msgstr "这个优惠码已经不能使用。"
 
-#: includes/class-exit-intent.php:331
-#: includes/class-exit-intent.php:364
+#: includes/class-exit-intent.php:344
+#: includes/class-exit-intent.php:377
 #: includes/class-promotions.php:954
 msgid "This offer has ended."
 msgstr "活动已结束。"
 
-#: includes/class-exit-intent.php:334
+#: includes/class-exit-intent.php:347
 msgid "Preview: customers get the code applied to their cart here."
 msgstr "预览：顾客在这里会把优惠码直接用到购物车。"
 
-#: includes/class-exit-intent.php:382
+#: includes/class-exit-intent.php:395
 msgid "Preview: the draw is real, but no code is applied and nothing is counted."
 msgstr "预览：抽奖是真实的，但不会用优惠码，也不计入数据。"
 

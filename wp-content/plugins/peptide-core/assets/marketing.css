@@ -757,6 +757,14 @@
 	font-size: 1.35em;
 }
 
+.pc-exit-admin__mobile {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 6px;
+	line-height: 28px;
+}
+
 .pc-exit-admin__image {
 	display: flex;
 	flex-wrap: wrap;

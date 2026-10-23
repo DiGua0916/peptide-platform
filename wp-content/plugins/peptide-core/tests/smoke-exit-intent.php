@@ -70,6 +70,10 @@ $many    = array_fill( 0, 10, array( 'label' => 'P', 'weight' => 1 ) );
 $ok( 'at most 8 prizes', 8 === count( $s['prizes'] ) );
 [ , $e ] = Exit_Intent::clean( array( 'type' => 'message', 'title' => 'x', 'pages' => array( 'home' ), 'mobile' => 'off', 'button' => 'Go' ) );
 $ok( 'needs a trigger, and a button needs a link', 2 <= count( $e ) );
+update_option( Exit_Intent::OPTION, array( 'mobile' => 'idle' ), false );
+$ok( 'old single phone trigger is read as a list', array( 'idle' ) === Exit_Intent::settings()['mobile'] );
+[ $s, ] = Exit_Intent::clean( array( 'type' => 'message', 'title' => 'x', 'pages' => array( 'home' ), 'mobile' => array( 'return', 'bogus', 'bottom' ) ) );
+$ok( 'phone triggers: several can be ticked, unknown ones dropped', array( 'return', 'bottom' ) === $s['mobile'] );
 $errors = Exit_Intent::save( array( 'enabled' => 1, 'type' => 'coupon', 'coupon' => '', 'title' => 'x', 'pages' => array( 'home' ), 'desktop_exit' => 1 ) );
 $ok( 'settings with errors are saved but stay off', $errors && false === Exit_Intent::settings()['enabled'] );
 

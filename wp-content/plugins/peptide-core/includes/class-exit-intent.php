@@ -4,7 +4,9 @@
  *
  * 顾客要离开网站时弹出窗口挽回：
  * - 弹窗类型：优惠券（领取后自动用到购物车）/ 抽奖转盘（最多 8 个奖项，按权重在服务端抽奖）/ 自定义内容（标题、文字、按钮链接）。
- * - 触发：电脑端鼠标移出页面顶部（离开意图）；手机端快速上滑或一段时间没有操作；页面至少停留几秒后才会触发。
+ * - 触发：电脑端鼠标移出页面顶部（离开意图）。手机端没有“要离开”的信号，可以同时勾选几种：快速上滑、切到别的 App / 标签页后回来、
+ *   一段时间没有操作、看到页面底部（2026-10-23 用户：手机端最重要）。不拦截返回键：广告平台把它当作劫持导航，Chrome 也会跳过这种记录。
+ *   页面至少停留几秒后才会触发。
  * - 范围：哪些页面弹（首页 / 商品列表 / 商品页 / 购物车 / 结账 / 其他），哪些访客弹（所有人 / 购物车有商品 / 没下过单）；
  *   每位访客多少天最多弹一次（浏览器本地记录）。员工不会看到弹窗，后台用“预览”查看。
  * - 抽奖结果由服务端决定（权重就是真实概率），每个购物会话只能抽一次；抽中带优惠码的奖项时，
@@ -32,6 +34,7 @@ final class Exit_Intent {
 	public const TYPES       = array( 'coupon', 'wheel', 'message' );
 	public const PAGES       = array( 'home', 'shop', 'product', 'cart', 'checkout', 'other' );
 	public const EVENTS      = array( 'show', 'close', 'claim', 'spin', 'win', 'order' );
+	public const MOBILE      = array( 'scroll', 'return', 'idle', 'bottom' );
 
 	private const DB_OPTION  = 'peptide_core_app_stats_db';
 	private const DB_VERSION = '1';
@@ -65,7 +68,7 @@ final class Exit_Intent {
 			'win_text'       => 'Your code: {code}',
 			'lose_text'      => 'Not this time. Thanks for playing!',
 			'desktop_exit'   => true,
-			'mobile'         => 'scroll',  // scroll / idle / off
+			'mobile'         => array( 'scroll', 'return' ), // 见 MOBILE，可以多选；空 = 手机端不弹
 			'idle_seconds'   => 20,
 			'min_seconds'    => 5,
 			'pages'          => self::PAGES,
@@ -75,8 +78,18 @@ final class Exit_Intent {
 	}
 
 	public static function settings(): array {
-		$s = get_option( self::OPTION, array() );
-		return array_merge( self::defaults(), is_array( $s ) ? $s : array() );
+		$s           = get_option( self::OPTION, array() );
+		$s           = array_merge( self::defaults(), is_array( $s ) ? $s : array() );
+		$s['mobile'] = self::mobile_triggers( $s['mobile'] );
+		return $s;
+	}
+
+	/** 手机端触发方式（兼容以前只能选一种时存的 scroll / idle / off）。 */
+	public static function mobile_triggers( $value ): array {
+		if ( is_string( $value ) ) {
+			$value = 'off' === $value || '' === $value ? array() : array( $value );
+		}
+		return array_values( array_intersect( self::MOBILE, array_map( 'strval', (array) $value ) ) );
 	}
 
 	/** 这个优惠码现在能不能发给顾客（存在、已启用、没过期、没用完）。 */
@@ -137,7 +150,7 @@ final class Exit_Intent {
 		}
 		$s['prizes'] = array_slice( $prizes, 0, self::MAX_PRIZES );
 		$s['desktop_exit']   = ! empty( $raw['desktop_exit'] );
-		$s['mobile']         = in_array( $raw['mobile'] ?? '', array( 'scroll', 'idle', 'off' ), true ) ? (string) $raw['mobile'] : 'scroll';
+		$s['mobile']         = self::mobile_triggers( $raw['mobile'] ?? array() ); // 复选框都没勾时不会提交
 		$s['idle_seconds']   = max( 5, min( 600, (int) ( $raw['idle_seconds'] ?? 20 ) ) );
 		$s['min_seconds']    = max( 0, min( 300, (int) ( $raw['min_seconds'] ?? 5 ) ) );
 		$s['pages']          = array_values( array_intersect( self::PAGES, array_map( 'strval', (array) ( $raw['pages'] ?? array() ) ) ) );
@@ -150,7 +163,7 @@ final class Exit_Intent {
 		if ( ! $s['pages'] ) {
 			$errors[] = __( 'Choose at least one page type.', 'peptide-core' );
 		}
-		if ( ! $s['desktop_exit'] && 'off' === $s['mobile'] ) {
+		if ( ! $s['desktop_exit'] && ! $s['mobile'] ) {
 			$errors[] = __( 'Turn on at least one trigger.', 'peptide-core' );
 		}
 		if ( 'coupon' === $s['type'] && ! self::coupon_ok( $s['coupon'] ) ) {
