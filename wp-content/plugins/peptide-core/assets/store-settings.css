@@ -201,11 +201,114 @@
 	color: #d63638;
 }
 
-.pc-bc-help.dashicons {
-	color: #9ca3af;
-	font-size: 16px;
+/* 问号说明：深色提示框，鼠标移上去或键盘聚焦时显示（版式参照 Shopname）。 */
+.pc-bc-help {
+	position: relative;
+	display: inline-block;
 	cursor: help;
 	vertical-align: -3px;
+	outline: none;
+}
+
+.pc-bc-help .dashicons {
+	color: #9ca3af;
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
+}
+
+.pc-bc-help:hover .dashicons,
+.pc-bc-help:focus .dashicons {
+	color: #ee7d33;
+}
+
+.pc-bc-help::after {
+	content: attr(data-tip);
+	position: absolute;
+	bottom: calc(100% + 10px);
+	left: 50%;
+	z-index: 20;
+	width: max-content;
+	max-width: min(460px, 80vw);
+	padding: 10px 14px;
+	background: #262626;
+	border-radius: 4px;
+	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+	color: #fff;
+	font-size: 13px;
+	font-weight: 400;
+	line-height: 1.6;
+	text-align: left;
+	white-space: pre-line;
+	opacity: 0;
+	visibility: hidden;
+	transform: translateX(-50%);
+	transition: opacity 0.12s;
+	pointer-events: none;
+}
+
+.pc-bc-help::before {
+	content: "";
+	position: absolute;
+	bottom: calc(100% + 4px);
+	left: 50%;
+	z-index: 21;
+	border: 6px solid transparent;
+	border-top-color: #262626;
+	opacity: 0;
+	visibility: hidden;
+	transform: translateX(-50%);
+	pointer-events: none;
+}
+
+.pc-bc-help:hover::after,
+.pc-bc-help:focus::after,
+.pc-bc-help:hover::before,
+.pc-bc-help:focus::before {
+	opacity: 1;
+	visibility: visible;
+}
+
+/* 左栏的说明往右展开（免得被侧栏挡住），右栏的往左展开（免得超出屏幕）。 */
+.pc-bc-grid > div:first-child .pc-bc-help::after {
+	left: -12px;
+	transform: none;
+}
+
+.pc-bc-grid > div:last-child .pc-bc-help::after {
+	right: -12px;
+	left: auto;
+	transform: none;
+}
+
+.pc-bc-grid > div:last-child .pc-bc-help::before,
+.pc-bc-grid > div:first-child .pc-bc-help::before {
+	left: 2px;
+	transform: none;
+}
+
+.pc-bc-chip {
+	display: inline-block;
+	margin-left: 4px;
+	padding: 0 6px;
+	background: #e5e7eb;
+	border-radius: 3px;
+	color: #4b5563;
+	font-size: 12px;
+}
+
+.pc-bc-bots {
+	margin-bottom: 8px;
+}
+
+.pc-bc-na th {
+	width: 30%;
+	color: #4b5563;
+	font-weight: 600;
+}
+
+.pc-bc-na td {
+	color: var(--pc-ss-muted);
 }
 
 .pc-bc-check {
@@ -293,4 +396,21 @@
 	.pc-bc-grid {
 		grid-template-columns: 1fr;
 	}
+}
+
+.pc-bc-na table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.pc-bc-na th,
+.pc-bc-na td {
+	padding: 10px 12px;
+	border-top: 1px solid var(--pc-ss-line);
+	text-align: left;
+	vertical-align: top;
+}
+
+.pc-bc textarea.pc-bc-input {
+	width: 100%;
 }

@@ -1,7 +1,8 @@
 <?php
 /**
  * 系统设置 → 基础配置（BASIC-CONFIG-01）冒烟测试：保存与校验、货币锁定、管理员邮箱确认流程、SPU / SKU 自动编码、
- * 爬虫拦截、登录验证码、前台搜索字段、排序字段、默认款式与售罄款式、注册邮箱验证、打烊、商品链接、页面权限。
+ * 爬虫拦截、登录验证码、前台搜索字段、排序字段、默认款式与售罄款式、注册邮箱验证、打烊、商品链接、页面权限，
+ * 以及智能搜索、默认款式的几种选法、已下架商品可见 / 可购买、新账户审核、前台验证码、robots.txt、JSON-LD、手动 SPU。
  *
  * 运行：wp eval-file wp-content/plugins/peptide-core/tests/smoke-basic-config.php
  * 邮件用 pre_wp_mail 拦截。测试改动的设置在结束时全部恢复，测试商品和用户删除。不要在正式站点运行。
@@ -26,7 +27,7 @@ $keys = array(
 	'woocommerce_email_from_address', 'woocommerce_email_from_name', 'woocommerce_currency', 'woocommerce_price_thousand_sep',
 	'woocommerce_price_decimal_sep', 'woocommerce_price_num_decimals', 'woocommerce_coming_soon', 'woocommerce_store_pages_only',
 	'woocommerce_permalinks', 'woocommerce_default_country', 'woocommerce_store_city', 'woocommerce_store_address',
-	'woocommerce_store_postcode', 'peptide_core_flush_rewrites',
+	'woocommerce_store_postcode', 'peptide_core_flush_rewrites', 'woocommerce_pc_register_verify_settings',
 );
 $orig = array();
 foreach ( $keys as $k ) {
@@ -241,6 +242,147 @@ Basic_Config_Page::apply( array_merge( $form, array( 'store_open' => '0' ) ) );
 $ok( 'closed store turns on WooCommerce coming soon for the whole site', 'yes' === get_option( 'woocommerce_coming_soon' ) && 'no' === get_option( 'woocommerce_store_pages_only' ) );
 Basic_Config_Page::apply( array_merge( $form, array( 'store_open' => '1', 'product_link' => 'shop_cat' ) ) );
 $ok( 'open again and product links include the category', 'no' === get_option( 'woocommerce_coming_soon' ) && 'shop_cat' === Store_Config::current_product_link() && get_option( 'peptide_core_flush_rewrites' ) );
+
+// 12. 商品标题搜索方式（智能搜索 / 全部包含）。
+$ok( 'smart search word counts: 1 → 1, 2 → 2, 3 → 3, 5 → 4, 8 → 7', 1 === Store_Config::words_needed( 1, 'smart' ) && 2 === Store_Config::words_needed( 2, 'smart' ) && 3 === Store_Config::words_needed( 3, 'smart' ) && 4 === Store_Config::words_needed( 5, 'smart' ) && 7 === Store_Config::words_needed( 8, 'smart' ) && 5 === Store_Config::words_needed( 5, 'all' ) );
+$smart = new WC_Product_Simple();
+$smart->set_name( 'PC smart Alpha Beta Gamma Delta Epsilon' );
+$smart->set_status( 'private' );
+$smart->save();
+$cleanup_products[] = $smart->get_id();
+Store_Config::update( array( 'search_mode' => 'smart' ) );
+$ok( 'smart: 2 words must both be in the title', in_array( $smart->get_id(), $search( 'Alpha Beta' ), true ) && ! in_array( $smart->get_id(), $search( 'Alpha Zeta' ), true ) );
+$ok( 'smart: with more than 2 words, 80% is enough (4 of 5)', in_array( $smart->get_id(), $search( 'Alpha Beta Gamma Delta Zeta' ), true ) );
+$ok( 'smart: below 80% does not match (2 of 5)', ! in_array( $smart->get_id(), $search( 'Alpha Beta Zeta Eta Theta' ), true ) );
+Store_Config::update( array( 'search_mode' => 'all' ) );
+$ok( 'all words mode: one missing word means no match', ! in_array( $smart->get_id(), $search( 'Alpha Beta Gamma Delta Zeta' ), true ) && in_array( $smart->get_id(), $search( 'Gamma Alpha' ), true ) );
+Store_Config::update( array( 'search_mode' => 'smart' ) );
+$admin_ids = Store_Config::admin_product_search( false, 'Alpha Beta Gamma Delta Zeta', '', false, true );
+$ok( 'admin product search uses the same smart matching (and SKU)', is_array( $admin_ids ) && in_array( $smart->get_id(), $admin_ids, true ) && in_array( $simple->get_id(), (array) Store_Config::admin_product_search( false, $spu, '', false, true ), true ) );
+Store_Config::update( array( 'search_mode' => 'front_smart' ) );
+$ok( 'front-only smart search leaves the admin search to WooCommerce', false === Store_Config::admin_product_search( false, 'Alpha', '', false, true ) );
+Store_Config::update( array( 'search_mode' => 'smart' ) );
+
+// 13. 多款式商品默认选中：价格最低 / 最高 / 库存最多。
+$v3 = new WC_Product_Variable();
+$v3->set_name( 'PC basic-config variants' );
+$v3->set_status( 'private' );
+$attr3 = new WC_Product_Attribute();
+$attr3->set_name( 'Size' );
+$attr3->set_options( array( 'A', 'B', 'C' ) );
+$attr3->set_variation( true );
+$attr3->set_visible( true );
+$v3->set_attributes( array( $attr3 ) );
+$v3->save();
+$cleanup_products[] = $v3->get_id();
+foreach ( array( 'A' => array( 30, 5 ), 'B' => array( 10, 2 ), 'C' => array( 20, 9 ) ) as $size => [ $price, $qty ] ) {
+	$v = new WC_Product_Variation();
+	$v->set_parent_id( $v3->get_id() );
+	$v->set_attributes( array( 'size' => $size ) );
+	$v->set_regular_price( (string) $price );
+	$v->set_manage_stock( true );
+	$v->set_stock_quantity( $qty );
+	$v->set_status( 'publish' );
+	$v->save();
+	$cleanup_products[] = $v->get_id();
+}
+$v3 = wc_get_product( $v3->get_id() );
+$pick_with = static function ( string $mode ) use ( $v3 ) {
+	Store_Config::update( array( 'default_variant' => $mode ) );
+	return Store_Config::default_attributes( array(), $v3 );
+};
+$ok( 'default variation: lowest price, highest price, most stock, first', array( 'size' => 'B' ) === $pick_with( 'lowest' ) && array( 'size' => 'A' ) === $pick_with( 'highest' ) && array( 'size' => 'C' ) === $pick_with( 'stock' ) && array( 'size' => 'A' ) === $pick_with( 'first' ) );
+Store_Config::update( array( 'default_variant' => 'first' ) );
+
+// 14. 已下架（草稿）商品：可见但不可购买 / 可见且可购买。
+$draft = new WC_Product_Simple();
+$draft->set_name( 'PC basic-config draft' );
+$draft->set_regular_price( '12' );
+$draft->set_status( 'draft' );
+$draft->save();
+$cleanup_products[] = $draft->get_id();
+wp_set_current_user( 0 );
+$draft = wc_get_product( $draft->get_id() );
+Store_Config::update( array( 'offline_product' => 'visible' ) );
+$ok( 'visible but not purchasable', ! $draft->is_purchasable() );
+Store_Config::update( array( 'offline_product' => 'visible_buy' ) );
+$ok( 'visible and purchasable', $draft->is_purchasable() );
+$saved_q = $GLOBALS['wp_the_query'] ?? null;
+$q       = new WP_Query();
+$q->set( 'product', 'pc-basic-config-draft' );
+$GLOBALS['wp_the_query'] = $q;
+Store_Config::show_offline_products( $q );
+$ok( 'the product page query also finds drafts', array( 'publish', 'draft' ) === $q->get( 'post_status' ) );
+Store_Config::update( array( 'offline_product' => '404' ) );
+$q2 = new WP_Query();
+$q2->set( 'product', 'pc-basic-config-draft' );
+$GLOBALS['wp_the_query'] = $q2;
+Store_Config::show_offline_products( $q2 );
+$ok( '404 mode: drafts stay hidden and cannot be bought', '' === $q2->get( 'post_status' ) && ! $draft->is_purchasable() );
+$GLOBALS['wp_the_query'] = $saved_q;
+wp_set_current_user( $admin->ID );
+
+// 15. 强制注册 / 登录：新账户等管理员批准。
+Store_Config::update( array( 'force_login' => true, 'register_verify' => false ) );
+$member          = wc_create_new_customer( 'pc-bc-approve-' . wp_rand() . '@example.com', '', wp_generate_password() );
+$cleanup_users[] = $member;
+$_POST           = array( 'register' => '1' );
+$ok( 'new account waits for approval and is not signed in', false === Store_Config::hold_new_customer( true, $member ) && Store_Config::is_pending_approval( $member ) );
+$_POST = array();
+$blocked = Store_Config::block_unverified( get_user_by( 'id', $member ) );
+$ok( 'waiting accounts cannot sign in', is_wp_error( $blocked ) && 'pc_pending' === $blocked->get_error_code() );
+$ok( 'users list shows the status and an Approve action', str_contains( (string) Store_Config::users_column_value( '', 'pc_status', $member ), 'Waiting' ) && isset( Store_Config::user_row_actions( array(), get_user_by( 'id', $member ) )['pc_approve'] ) );
+Store_Config::handle_bulk( admin_url( 'users.php' ), 'pc_approve', array( $member ) );
+$ok( 'bulk approve activates the account', ! Store_Config::is_pending_approval( $member ) && ! is_wp_error( Store_Config::block_unverified( get_user_by( 'id', $member ) ) ) );
+Store_Config::update( array( 'force_login' => false ) );
+
+// 16. 注册邮箱验证：验证邮件关闭时不要求验证（否则顾客永远收不到链接）。
+update_option( 'woocommerce_pc_register_verify_settings', array( 'enabled' => 'no' ) );
+Store_Config::update( array( 'register_verify' => true ) );
+$nov             = wc_create_new_customer( 'pc-bc-noverify-' . wp_rand() . '@example.com', '', wp_generate_password() );
+$cleanup_users[] = $nov;
+$_POST           = array( 'register' => '1' );
+$ok( 'verification email off: registration is not held', true === Store_Config::hold_new_customer( true, $nov ) && ! Store_Config::is_unverified( $nov ) );
+$_POST = array();
+update_option( 'woocommerce_pc_register_verify_settings', array( 'enabled' => 'yes' ) );
+
+// 17. 前台图形验证码（我的账户登录 / 注册）。
+Store_Config::update( array( 'front_captcha' => true ) );
+ob_start();
+Store_Config::front_captcha_field();
+$field = ob_get_clean();
+preg_match( '/what is (\d) \+ (\d)/', $field, $m );
+preg_match( '/name="pc_captcha_token" value="([^"]+)"/', $field, $t );
+$_POST = array( 'pc_login_captcha' => (string) ( (int) $m[1] + (int) $m[2] ), 'pc_captcha_token' => $t[1] );
+$ok( 'storefront security check: right answer passes', ! Store_Config::check_front_captcha( new WP_Error() )->has_errors() );
+$_POST['pc_login_captcha'] = '99';
+$ok( 'storefront security check: wrong answer is refused', Store_Config::check_front_captcha( new WP_Error() )->has_errors() );
+$_POST = array();
+Store_Config::update( array( 'front_captcha' => false ) );
+
+// 18. 禁止爬虫访问：勾选常见爬虫、robots.txt。
+Store_Config::update( array( 'bot_known' => array( 'googlebot' ), 'bot_custom' => array( 'evilbot' ), 'bot_system' => true ) );
+$robots = Store_Config::robots_txt( "User-agent: *\nDisallow: /wp-admin/\n" );
+$ok( 'ticked crawler is blocked and listed in robots.txt', Store_Config::is_blocked_agent( 'Mozilla/5.0 (compatible; Googlebot/2.1)' ) && str_contains( $robots, "User-agent: Googlebot\nDisallow: /" ) && str_contains( $robots, "User-agent: evilbot\nDisallow: /" ) && str_contains( $robots, 'Disallow: /wp-admin/' ) );
+Store_Config::update( array( 'bot_known' => array() ) );
+$ok( 'unticked again: Googlebot allowed', ! Store_Config::is_blocked_agent( 'Mozilla/5.0 (compatible; Googlebot/2.1)' ) );
+
+// 19. 公开联系方式的 JSON-LD。
+$ld = Store_Config::json_ld_data();
+$ok( 'JSON-LD Organization with name, phone and postal address', 'Organization' === ( $ld['@type'] ?? '' ) && 'VialCove Test LLC' === $ld['name'] && '+1 555 0100' === $ld['telephone'] && '1 Test Way' === $ld['address']['streetAddress'] && 'CA' === $ld['address']['addressRegion'] );
+
+// 20. SPU：复制商品不带 SPU，可以手动填写，不能重复。
+$ok( 'duplicated products do not copy the SPU', in_array( '_pc_spu', (array) apply_filters( 'woocommerce_duplicate_product_exclude_meta', array() ), true ) );
+$manual = wc_get_product( $simple->get_id() );
+$_POST  = array( '_pc_spu' => 'my-spu 1!' );
+Store_Config::save_spu_field( $manual );
+$manual->save();
+$ok( 'manual SPU cleaned and saved', 'MY-SPU1' === wc_get_product( $simple->get_id() )->get_meta( '_pc_spu' ) );
+$other = wc_get_product( $keep->get_id() );
+Store_Config::save_spu_field( $other );
+$other->save();
+$ok( 'an SPU already used by another product is refused', 'MY-SPU1' !== wc_get_product( $keep->get_id() )->get_meta( '_pc_spu' ) );
+$_POST = array();
 
 // 11. 页面。
 ob_start();
