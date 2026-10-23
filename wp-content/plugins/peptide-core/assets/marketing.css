@@ -653,3 +653,148 @@
 		width: 120px;
 	}
 }
+
+/* ---------- 应用中心（APP-CENTER-01） ---------- */
+
+.pc-apps__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr));
+	gap: 16px;
+}
+
+.pc-apps__card {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 18px 20px;
+	background: #fff;
+	border: 1px solid var(--pc-pl-line);
+	border-radius: 6px;
+	color: inherit;
+	text-decoration: none;
+}
+
+.pc-apps__card:hover,
+.pc-apps__card:focus-visible {
+	border-color: var(--pc-pl-orange);
+	color: inherit;
+}
+
+.pc-apps__icon {
+	flex: none;
+	width: 44px;
+	height: 44px;
+	border-radius: 10px;
+	background: #fff4e5;
+	color: var(--pc-pl-orange);
+	font-size: 26px;
+	line-height: 44px;
+	text-align: center;
+}
+
+.pc-apps__main {
+	flex: 1;
+	min-width: 0;
+}
+
+.pc-apps__main small {
+	display: block;
+	margin-top: 4px;
+	color: var(--pc-pl-muted);
+	line-height: 1.5;
+}
+
+/* ---------- 离开意图增收设置页（APP-EXIT-01） ---------- */
+
+.pc-exit-admin__grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(320px, 460px);
+	gap: 0 24px;
+	align-items: start;
+}
+
+.pc-exit-admin__side {
+	position: sticky;
+	top: 46px;
+}
+
+.pc-exit-admin__stage {
+	display: flex;
+	justify-content: center;
+	padding: 24px 12px;
+	background: #e5e7eb;
+	border-radius: 6px;
+}
+
+.pc-exit-admin__stage .pc-exit {
+	width: min(420px, 100%);
+	border-radius: 14px;
+	box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+}
+
+.pc-exit-admin__tiles {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+	gap: 10px;
+}
+
+.pc-exit-admin__tile {
+	padding: 12px 14px;
+	background: #f9fafb;
+	border: 1px solid var(--pc-pl-line);
+	border-radius: 4px;
+}
+
+.pc-exit-admin__tile span {
+	display: block;
+	color: var(--pc-pl-muted);
+	font-size: 12px;
+}
+
+.pc-exit-admin__tile strong {
+	display: block;
+	margin-top: 4px;
+	font-size: 1.35em;
+}
+
+.pc-exit-admin__image {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+}
+
+.pc-exit-admin__thumb img {
+	display: block;
+	max-width: 120px;
+	max-height: 72px;
+	border-radius: 4px;
+}
+
+.pc-exit-admin__table input[type="text"] {
+	width: 100%;
+	min-width: 120px;
+}
+
+.pc-exit-admin__table .pc-mk-select {
+	min-width: 180px;
+}
+
+.pc-exit-admin__prizes .pc-pl-table {
+	margin-bottom: 10px;
+}
+
+.pc-exit-admin__prizes [data-show] {
+	overflow-x: auto;
+}
+
+@media (max-width: 1280px) {
+	.pc-exit-admin__grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.pc-exit-admin__side {
+		position: static;
+		order: -1;
+	}
+}

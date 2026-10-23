@@ -75,6 +75,11 @@ final class Marketing {
 		if ( ! in_array( $page, self::pages(), true ) ) {
 			return;
 		}
+		self::enqueue_assets();
+	}
+
+	/** 营销活动的表单样式和脚本（应用中心的设置页也用）。 */
+	public static function enqueue_assets(): void {
 		$ver = static fn( string $f ): string => PEPTIDE_CORE_VERSION . '.' . (int) @filemtime( PEPTIDE_CORE_DIR . '/assets/' . $f ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 		wp_enqueue_style( 'woocommerce_admin_styles' );
 		wp_enqueue_style( 'peptide-core-store-settings', plugins_url( 'assets/store-settings.css', PEPTIDE_CORE_FILE ), array(), $ver( 'store-settings.css' ) );

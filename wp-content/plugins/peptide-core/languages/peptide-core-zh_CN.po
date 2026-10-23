@@ -11,7 +11,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-23T10:31:32+00:00\n"
+"POT-Creation-Date: 2026-10-23T14:51:44+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -32,6 +32,7 @@ msgid "DiGua"
 msgstr "DiGua"
 
 #: includes/admin/class-admin-menus.php:70
+#: includes/admin/class-apps-page.php:141
 #: includes/admin/class-batch-orders.php:141
 #: includes/admin/class-batch-orders.php:144
 #: includes/admin/class-overview-page.php:133
@@ -88,14 +89,521 @@ msgstr "优惠码"
 msgid "Shipping discounts"
 msgstr "运费折扣"
 
-#: includes/admin/class-basic-config-page.php:48
-msgid "Choose favicon"
-msgstr "选择 Favicon"
+#: includes/admin/class-admin-menus.php:87
+#: includes/admin/class-apps-page.php:83
+msgid "App center"
+msgstr "应用中心"
 
+#: includes/admin/class-apps-page.php:34
+#: includes/admin/class-apps-page.php:127
+msgid "Exit-intent offers"
+msgstr "离开意图增收"
+
+#: includes/admin/class-apps-page.php:35
+msgid "When a visitor is about to leave, win them back with a coupon, a prize wheel or your own message."
+msgstr "当用户离开网站时，通过抽奖、优惠券等弹窗方式挽回他们的兴趣，促使继续浏览或购买产品。"
+
+#: includes/admin/class-apps-page.php:58
+#: includes/modules/class-fallback.php:139
+msgid "Choose an image"
+msgstr "请选择图片"
+
+#: includes/admin/class-apps-page.php:59
 #: includes/admin/class-basic-config-page.php:49
 #: includes/admin/class-plans-editor.php:51
 msgid "Use this image"
 msgstr "使用这张图片"
+
+#: includes/admin/class-apps-page.php:60
+#: includes/admin/class-apps-page.php:174
+msgid "No prize"
+msgstr "不中奖"
+
+#. translators: %d: tier number
+#: includes/admin/class-apps-page.php:61
+#: includes/admin/class-apps-page.php:174
+#: includes/admin/class-design-editor.php:156
+#: includes/admin/class-marketing.php:100
+#: includes/admin/class-marketing.php:378
+#: includes/admin/class-menu-page.php:101
+#: includes/admin/class-menu-page.php:291
+#: includes/admin/class-plans-editor.php:36
+#: includes/admin/class-plans-editor.php:107
+#: includes/admin/class-promotions-page.php:227
+#: includes/admin/class-shipping-discounts-page.php:139
+#: includes/admin/class-store-design.php:479
+#: includes/admin/class-terms-page.php:60
+#: includes/modules/class-blocks.php:231
+msgid "Delete"
+msgstr "删除"
+
+#: includes/admin/class-apps-page.php:62
+#: includes/admin/class-terms-page.php:108
+#: includes/class-exit-intent.php:259
+#: includes/class-terms.php:220
+#: includes/class-terms.php:282
+msgid "Close"
+msgstr "关闭"
+
+#: includes/admin/class-apps-page.php:63
+#: includes/class-coupons.php:434
+#: includes/class-exit-intent.php:260
+msgid "Copy code"
+msgstr "复制优惠码"
+
+#: includes/admin/class-apps-page.php:64
+#: includes/class-coupons.php:434
+#: includes/class-exit-intent.php:261
+msgid "Copied"
+msgstr "已复制"
+
+#: includes/admin/class-apps-page.php:65
+#: includes/class-exit-intent.php:263
+#: includes/emails/class-browse-reminder.php:99
+msgid "Continue shopping"
+msgstr "继续购物"
+
+#: includes/admin/class-apps-page.php:66
+#: includes/class-exit-intent.php:264
+msgid "Spinning…"
+msgstr "抽奖中…"
+
+#. translators: %s: on/off
+#: includes/admin/class-apps-page.php:86
+#: includes/admin/class-apps-page.php:152
+#: includes/admin/class-email-center.php:135
+#: includes/admin/class-email-center.php:242
+#: includes/admin/class-terms-page.php:96
+msgid "On"
+msgstr "已开启"
+
+#. translators: %s: on/off
+#: includes/admin/class-apps-page.php:86
+#: includes/admin/class-apps-page.php:152
+#: includes/admin/class-email-center.php:135
+#: includes/admin/class-email-center.php:242
+#: includes/admin/class-shipping-page.php:149
+msgid "Off"
+msgstr "未启用"
+
+#: includes/admin/class-apps-page.php:86
+#: includes/admin/class-email-center.php:153
+#: includes/admin/class-marketing.php:314
+#: includes/admin/class-menu-page.php:100
+msgid "Settings"
+msgstr "设置"
+
+#: includes/admin/class-apps-page.php:101
+msgid "not usable now"
+msgstr "当前不可用"
+
+#: includes/admin/class-apps-page.php:134
+#: includes/admin/class-overview-page.php:161
+msgid "Last 30 days"
+msgstr "过去 30 天"
+
+#: includes/admin/class-apps-page.php:136
+msgid "Shown"
+msgstr "弹出次数"
+
+#: includes/admin/class-apps-page.php:137
+msgid "Claimed / spun"
+msgstr "领取 / 抽奖"
+
+#: includes/admin/class-apps-page.php:138
+msgid "Claim rate"
+msgstr "领取率"
+
+#: includes/admin/class-apps-page.php:139
+msgid "Prizes won"
+msgstr "中奖次数"
+
+#: includes/admin/class-apps-page.php:140
+#: includes/admin/class-basic-config-page.php:269
+msgid "Closed"
+msgstr "打烊"
+
+#: includes/admin/class-apps-page.php:142
+#: includes/admin/class-plans-editor.php:42
+#: includes/admin/class-plans-editor.php:138
+msgid "Order amount"
+msgstr "订单价格"
+
+#: includes/admin/class-apps-page.php:148
+msgid "Orders count when the order uses the code that this popup gave to the customer. Staff visits and previews are not counted."
+msgstr "订单按“用了这个弹窗发给顾客的优惠码”计算。员工访问和预览不计入。"
+
+#: includes/admin/class-apps-page.php:151
+#: includes/admin/class-basic-config-page.php:115
+#: includes/admin/class-email-center.php:158
+#: includes/admin/class-recovery-page.php:145
+#: includes/admin/class-store-settings.php:43
+msgid "Basic settings"
+msgstr "基础配置"
+
+#: includes/admin/class-apps-page.php:152
+#: includes/admin/class-batch-metabox.php:77
+#: includes/admin/class-batch-orders.php:66
+#: includes/admin/class-list-columns.php:35
+#: includes/admin/class-marketing.php:262
+#: includes/admin/class-plans-editor.php:84
+#: includes/admin/class-tracking-page.php:92
+msgid "Status"
+msgstr "状态"
+
+#: includes/admin/class-apps-page.php:153
+msgid "Popup type"
+msgstr "弹窗类型"
+
+#: includes/admin/class-apps-page.php:153
+msgid ""
+"Coupon: show a coupon code; one click applies it to the cart.\n"
+"Prize wheel: the visitor spins once per visit; the chances you set are the real chances, drawn on the server.\n"
+"Custom message: your own title, text and button link, e.g. to a collection or the offers page."
+msgstr "优惠券：显示一个优惠码，一键用到购物车。\n抽奖转盘：每次购物访问可以抽一次，设置的概率就是真实概率，由服务器抽奖。\n自定义内容：自己写标题、文字和按钮链接，例如链接到某个专辑或活动页面。"
+
+#: includes/admin/class-apps-page.php:154
+#: includes/admin/class-email-center.php:232
+#: includes/emails/class-browse-reminder.php:47
+#: includes/emails/class-cart-recovery.php:64
+msgid "Coupon"
+msgstr "优惠券"
+
+#: includes/admin/class-apps-page.php:154
+msgid "Prize wheel"
+msgstr "抽奖转盘"
+
+#: includes/admin/class-apps-page.php:154
+msgid "Custom message"
+msgstr "自定义内容"
+
+#: includes/admin/class-apps-page.php:160
+msgid "Popup content"
+msgstr "弹窗内容"
+
+#: includes/admin/class-apps-page.php:161
+#: includes/admin/class-list-columns.php:74
+#: includes/admin/class-terms-page.php:98
+#: includes/modules/class-registry.php:110
+#: includes/modules/class-registry.php:291
+#: includes/modules/class-registry.php:331
+#: includes/modules/class-registry.php:471
+#: includes/modules/class-registry.php:505
+#: includes/modules/class-registry.php:522
+#: includes/modules/class-registry.php:543
+#: includes/modules/class-registry.php:601
+#: includes/modules/class-registry.php:681
+#: includes/modules/class-registry.php:748
+#: includes/modules/class-registry.php:782
+#: includes/modules/class-registry.php:823
+#: includes/modules/class-registry.php:907
+#: includes/modules/class-registry.php:956
+#: includes/modules/class-registry.php:1167
+#: includes/modules/class-registry.php:1220
+#: includes/modules/class-registry.php:1249
+#: includes/modules/class-registry.php:1263
+msgid "Title"
+msgstr "标题"
+
+#: includes/admin/class-apps-page.php:162
+#: includes/modules/class-blocks.php:250
+#: includes/modules/class-registry.php:293
+#: includes/modules/class-registry.php:305
+#: includes/modules/class-registry.php:473
+#: includes/modules/class-registry.php:545
+#: includes/modules/class-registry.php:602
+#: includes/modules/class-registry.php:682
+#: includes/modules/class-registry.php:708
+#: includes/modules/class-registry.php:883
+#: includes/modules/class-registry.php:908
+msgid "Text"
+msgstr "文字"
+
+#: includes/admin/class-apps-page.php:163
+#: includes/modules/class-registry.php:183
+#: includes/modules/class-registry.php:732
+#: includes/modules/class-registry.php:849
+msgid "Image"
+msgstr "图片"
+
+#: includes/admin/class-apps-page.php:163
+#: includes/admin/class-basic-config-page.php:154
+#: includes/admin/class-menu-page.php:139
+#: includes/admin/class-plans-editor.php:136
+#: includes/admin/class-product-panel.php:104
+#: includes/modules/class-blocks.php:239
+msgid "Choose image"
+msgstr "选择图片"
+
+#: includes/admin/class-apps-page.php:163
+#: includes/admin/class-basic-config-page.php:154
+#: includes/admin/class-menu-page.php:140
+#: includes/admin/class-plans-editor.php:136
+#: includes/admin/class-product-panel.php:105
+#: includes/admin/class-store-design.php:391
+#: includes/modules/class-blocks.php:242
+msgid "Remove"
+msgstr "移除"
+
+#: includes/admin/class-apps-page.php:164
+#: includes/admin/class-apps-page.php:172
+#: includes/admin/class-coupons-page.php:80
+#: includes/admin/class-coupons-page.php:213
+msgid "Coupon code"
+msgstr "优惠码"
+
+#: includes/admin/class-apps-page.php:164
+msgid "— Choose a coupon code —"
+msgstr "— 选择优惠码 —"
+
+#: includes/admin/class-apps-page.php:164
+#: includes/admin/class-coupons-page.php:76
+#: includes/admin/class-coupons-page.php:204
+msgid "New coupon code"
+msgstr "新建优惠码"
+
+#: includes/admin/class-apps-page.php:164
+msgid "The rules of the code still apply (minimum spend, first order only, combining with promotions…)."
+msgstr "优惠码自己的规则照样生效（门槛、全局首单、和满减活动的叠加策略等）。"
+
+#: includes/admin/class-apps-page.php:165
+#: includes/emails/class-cart-recovery.php:59
+#: includes/modules/class-registry.php:1041
+#: includes/modules/class-registry.php:1298
+msgid "Button text"
+msgstr "按钮文字"
+
+#: includes/admin/class-apps-page.php:166
+msgid "Button link"
+msgstr "按钮链接"
+
+#: includes/admin/class-apps-page.php:167
+msgid "Decline link text"
+msgstr "拒绝文字"
+
+#: includes/admin/class-apps-page.php:167
+msgid "Leave empty to show only the close button."
+msgstr "留空则只显示右上角的关闭按钮。"
+
+#: includes/admin/class-apps-page.php:168
+msgid "Main color"
+msgstr "主色"
+
+#: includes/admin/class-apps-page.php:171
+msgid "Prizes"
+msgstr "奖品设置"
+
+#: includes/admin/class-apps-page.php:171
+msgid ""
+"Up to 8 prizes. The chance of each prize is its weight divided by the total weight.\n"
+"A prize without a coupon code is a “no prize” slot.\n"
+"Each shopping visit can spin once; the result is decided on the server, so it cannot be changed in the browser."
+msgstr "最多 8 个奖项。每个奖项的概率 = 它的权重 ÷ 全部权重之和。\n没有选优惠码的奖项就是“不中奖”。\n每次购物访问只能抽一次，结果由服务器决定，在浏览器里改不了。"
+
+#: includes/admin/class-apps-page.php:172
+msgid "Prize name"
+msgstr "奖项名称"
+
+#: includes/admin/class-apps-page.php:172
+#: includes/admin/class-plans-editor.php:44
+#: includes/admin/class-plans-editor.php:138
+msgid "Weight"
+msgstr "重量"
+
+#: includes/admin/class-apps-page.php:172
+msgid "Chance"
+msgstr "中奖概率"
+
+#: includes/admin/class-apps-page.php:174
+msgid "e.g. 10% OFF"
+msgstr "例如 10% OFF"
+
+#: includes/admin/class-apps-page.php:176
+msgid "Add prize"
+msgstr "添加奖项"
+
+#: includes/admin/class-apps-page.php:177
+msgid "Spin button text"
+msgstr "抽奖按钮文字"
+
+#: includes/admin/class-apps-page.php:178
+msgid "Title when a prize is won"
+msgstr "中奖标题"
+
+#: includes/admin/class-apps-page.php:178
+msgid "{prize} is replaced by the prize name, {code} by the coupon code."
+msgstr "{prize} 会换成奖项名称，{code} 会换成优惠码。"
+
+#: includes/admin/class-apps-page.php:179
+msgid "Text when a prize is won"
+msgstr "中奖文字"
+
+#: includes/admin/class-apps-page.php:180
+msgid "Text for a “no prize” slot"
+msgstr "未中奖文字"
+
+#: includes/admin/class-apps-page.php:181
+msgid "Only used by the prize wheel."
+msgstr "只有抽奖转盘用到。"
+
+#: includes/admin/class-apps-page.php:184
+msgid "When to show"
+msgstr "触发规则"
+
+#: includes/admin/class-apps-page.php:185
+msgid "Computer"
+msgstr "电脑端"
+
+#: includes/admin/class-apps-page.php:185
+msgid "When the mouse leaves the top of the page (towards the address bar, tabs or close button)"
+msgstr "鼠标移出页面顶部时（去点地址栏、标签页或关闭按钮）"
+
+#: includes/admin/class-apps-page.php:186
+#: includes/admin/class-basic-config-page.php:300
+msgid "Phone"
+msgstr "电话"
+
+#: includes/admin/class-apps-page.php:186
+msgid "Phones have no mouse, so leaving cannot be seen directly. A quick scroll back up after reading usually means the visitor is going to the address bar or back."
+msgstr "手机没有鼠标，看不到“要离开”的动作。往下看了一段后又快速往上滑，通常就是要去地址栏或返回。"
+
+#: includes/admin/class-apps-page.php:186
+msgid "Quick scroll back up"
+msgstr "快速上滑"
+
+#: includes/admin/class-apps-page.php:186
+msgid "No activity for"
+msgstr "无操作"
+
+#: includes/admin/class-apps-page.php:186
+msgid "seconds"
+msgstr "秒"
+
+#: includes/admin/class-apps-page.php:186
+msgid "Do not show on phones"
+msgstr "手机端不弹"
+
+#: includes/admin/class-apps-page.php:187
+msgid "Wait at least"
+msgstr "至少停留"
+
+#: includes/admin/class-apps-page.php:187
+msgid "seconds on the page before the popup can show"
+msgstr "秒后才会弹出"
+
+#: includes/admin/class-apps-page.php:188
+msgid "Pages"
+msgstr "弹出页面"
+
+#: includes/admin/class-apps-page.php:189
+msgid "Home page"
+msgstr "首页"
+
+#: includes/admin/class-apps-page.php:189
+msgid "Product lists and search"
+msgstr "商品列表和搜索"
+
+#: includes/admin/class-apps-page.php:189
+msgid "Product pages"
+msgstr "商品详情页"
+
+#: includes/admin/class-apps-page.php:189
+#: includes/admin/class-overview-page.php:193
+#: includes/admin/class-recovery-page.php:223
+#: includes/admin/class-tracking-page.php:110
+#: includes/admin/class-tracking-page.php:171
+#: includes/class-menus.php:108
+msgid "Cart"
+msgstr "购物车"
+
+#: includes/admin/class-apps-page.php:189
+#: includes/admin/class-overview-page.php:194
+#: includes/admin/class-tracking-page.php:172
+msgid "Checkout"
+msgstr "结账"
+
+#: includes/admin/class-apps-page.php:189
+msgid "Other pages"
+msgstr "其他页面"
+
+#: includes/admin/class-apps-page.php:193
+#: includes/admin/class-overview-page.php:131
+#: includes/admin/class-overview-page.php:203
+#: includes/admin/class-tracking-page.php:35
+#: includes/admin/class-tracking-page.php:146
+msgid "Visitors"
+msgstr "访客数据"
+
+#: includes/admin/class-apps-page.php:193
+#: includes/admin/class-marketing.php:197
+msgid "Everyone"
+msgstr "所有人"
+
+#: includes/admin/class-apps-page.php:193
+msgid "Only with items in the cart"
+msgstr "仅购物车有商品的访客"
+
+#: includes/admin/class-apps-page.php:193
+msgid "Only visitors without orders"
+msgstr "仅没下过单的访客"
+
+#: includes/admin/class-apps-page.php:194
+msgid "How often"
+msgstr "弹出频率"
+
+#: includes/admin/class-apps-page.php:194
+msgid "Remembered in the visitor’s browser. 0 = at most once each time the browser is opened."
+msgstr "记在访客的浏览器里。填 0 表示每次打开浏览器最多弹一次。"
+
+#: includes/admin/class-apps-page.php:194
+msgid "At most once every"
+msgstr "每位访客每"
+
+#: includes/admin/class-apps-page.php:194
+msgid "days per visitor"
+msgstr "天最多弹一次"
+
+#: includes/admin/class-apps-page.php:198
+#: includes/admin/class-store-design.php:323
+#: includes/admin/class-store-design.php:434
+#: includes/admin/class-terms-page.php:98
+#: includes/admin/class-terms-page.php:106
+msgid "Preview"
+msgstr "预览"
+
+#: includes/admin/class-apps-page.php:198
+msgid "Preview in the store"
+msgstr "在店铺里预览"
+
+#: includes/admin/class-apps-page.php:199
+msgid "The preview in the store uses the saved settings and shows the popup right away. Staff never see the popup otherwise, and previews are not counted."
+msgstr "店铺里的预览用已保存的设置，打开就弹出。除了预览，员工不会看到弹窗；预览不计入数据。"
+
+#: includes/admin/class-apps-page.php:206
+#: includes/admin/class-basic-config-page.php:327
+#: includes/admin/class-email-center.php:102
+#: includes/admin/class-marketing.php:481
+#: includes/admin/class-menu-page.php:164
+#: includes/admin/class-menu-page.php:207
+#: includes/admin/class-recovery-page.php:57
+#: includes/admin/class-shipping-page.php:221
+#: includes/admin/class-store-design.php:140
+#: includes/admin/class-tax-page.php:116
+#: includes/admin/class-terms-page.php:114
+#: includes/admin/class-tracking-page.php:214
+#: includes/admin/class-tracking-page.php:224
+#: includes/class-custom-pages.php:333
+#: includes/class-store-config.php:675
+msgid "Sorry, you are not allowed to do that."
+msgstr "抱歉，你没有权限执行此操作。"
+
+#: includes/admin/class-apps-page.php:214
+msgid "The settings are saved, but the popup stays off until this is fixed."
+msgstr "设置已保存，但改好这些之前弹窗不会开启。"
+
+#: includes/admin/class-basic-config-page.php:48
+msgid "Choose favicon"
+msgstr "选择 Favicon"
 
 #: includes/admin/class-basic-config-page.php:50
 #: includes/admin/class-basic-config-page.php:290
@@ -104,27 +612,20 @@ msgid "— None —"
 msgstr "— 无 —"
 
 #: includes/admin/class-basic-config-page.php:98
-#: includes/admin/class-marketing.php:373
-#: includes/admin/class-marketing.php:379
+#: includes/admin/class-marketing.php:378
+#: includes/admin/class-marketing.php:384
 msgid "Enable"
 msgstr "开启"
 
 #: includes/admin/class-basic-config-page.php:98
-#: includes/admin/class-marketing.php:373
-#: includes/admin/class-marketing.php:379
+#: includes/admin/class-marketing.php:378
+#: includes/admin/class-marketing.php:384
 msgid "Disable"
 msgstr "关闭"
 
 #: includes/admin/class-basic-config-page.php:108
 msgid "Settings saved."
 msgstr "设置已保存。"
-
-#: includes/admin/class-basic-config-page.php:115
-#: includes/admin/class-email-center.php:158
-#: includes/admin/class-recovery-page.php:145
-#: includes/admin/class-store-settings.php:43
-msgid "Basic settings"
-msgstr "基础配置"
 
 #: includes/admin/class-basic-config-page.php:117
 msgid "Store name, admin email, favicon, time zone and language are WordPress settings: only site administrators can change them."
@@ -187,23 +688,6 @@ msgstr "发送邮件的发件人名称，为空则默认“店铺名称”"
 #: includes/admin/class-basic-config-page.php:149
 msgid "The sender shown in store emails, so customers can tell where the email comes from."
 msgstr "发送邮件中显示的发件人信息，便于顾客识别邮件的来源。"
-
-#: includes/admin/class-basic-config-page.php:154
-#: includes/admin/class-menu-page.php:139
-#: includes/admin/class-plans-editor.php:136
-#: includes/admin/class-product-panel.php:104
-#: includes/modules/class-blocks.php:239
-msgid "Choose image"
-msgstr "选择图片"
-
-#: includes/admin/class-basic-config-page.php:154
-#: includes/admin/class-menu-page.php:140
-#: includes/admin/class-plans-editor.php:136
-#: includes/admin/class-product-panel.php:105
-#: includes/admin/class-store-design.php:391
-#: includes/modules/class-blocks.php:242
-msgid "Remove"
-msgstr "移除"
 
 #: includes/admin/class-basic-config-page.php:157
 msgid "Website favicon"
@@ -549,10 +1033,6 @@ msgid "Open"
 msgstr "营业中"
 
 #: includes/admin/class-basic-config-page.php:269
-msgid "Closed"
-msgstr "打烊"
-
-#: includes/admin/class-basic-config-page.php:269
 msgid ""
 "1. Set the store to Closed before you officially open, or when you need to close the storefront for a while; set it back to Open to resume.\n"
 "2. While Closed, visitors see a “coming soon” page. You still see the storefront when signed in as admin; to see what visitors see, use another browser or a private window."
@@ -676,10 +1156,6 @@ msgid "Enter the city"
 msgstr "请输入城市"
 
 #: includes/admin/class-basic-config-page.php:300
-msgid "Phone"
-msgstr "电话"
-
-#: includes/admin/class-basic-config-page.php:300
 msgid "Enter the phone number"
 msgstr "请输入电话"
 
@@ -751,23 +1227,6 @@ msgstr "本店只使用一种货币。"
 msgid "Shopname options not used on this site"
 msgstr "本站不适用的 Shopname 选项"
 
-#: includes/admin/class-basic-config-page.php:327
-#: includes/admin/class-email-center.php:102
-#: includes/admin/class-marketing.php:476
-#: includes/admin/class-menu-page.php:164
-#: includes/admin/class-menu-page.php:207
-#: includes/admin/class-recovery-page.php:57
-#: includes/admin/class-shipping-page.php:221
-#: includes/admin/class-store-design.php:140
-#: includes/admin/class-tax-page.php:116
-#: includes/admin/class-terms-page.php:114
-#: includes/admin/class-tracking-page.php:214
-#: includes/admin/class-tracking-page.php:224
-#: includes/class-custom-pages.php:333
-#: includes/class-store-config.php:675
-msgid "Sorry, you are not allowed to do that."
-msgstr "抱歉，你没有权限执行此操作。"
-
 #: includes/admin/class-basic-config-page.php:348
 msgid "The store name cannot be empty."
 msgstr "店铺名称不能为空。"
@@ -812,7 +1271,7 @@ msgstr "3–40 个字符：字母、数字和连字符。保存时统一转为�
 
 #: includes/admin/class-batch-metabox.php:56
 #: includes/admin/class-list-columns.php:33
-#: includes/admin/class-marketing.php:257
+#: includes/admin/class-marketing.php:262
 #: includes/admin/class-overview-page.php:192
 #: includes/admin/class-plans-editor.php:84
 #: includes/admin/class-tracking-page.php:170
@@ -837,15 +1296,6 @@ msgstr "公开（前台可见）"
 #: includes/admin/class-batch-metabox.php:72
 msgid "Hidden (admin only)"
 msgstr "隐藏（仅后台可见）"
-
-#: includes/admin/class-batch-metabox.php:77
-#: includes/admin/class-batch-orders.php:66
-#: includes/admin/class-list-columns.php:35
-#: includes/admin/class-marketing.php:257
-#: includes/admin/class-plans-editor.php:84
-#: includes/admin/class-tracking-page.php:92
-msgid "Status"
-msgstr "状态"
 
 #: includes/admin/class-batch-metabox.php:80
 #: includes/admin/class-overview-page.php:181
@@ -999,17 +1449,12 @@ msgstr "文件包含顾客联系方式，请按隐私政策妥善处理。"
 msgid "You do not have permission to export these orders."
 msgstr "你没有导出这些订单的权限。"
 
-#: includes/admin/class-coupons-page.php:76
-#: includes/admin/class-coupons-page.php:204
-msgid "New coupon code"
-msgstr "新建优惠码"
-
 #: includes/admin/class-coupons-page.php:78
 msgid "Search by promotion name or code"
 msgstr "请输入活动名称/优惠码"
 
 #: includes/admin/class-coupons-page.php:80
-#: includes/admin/class-marketing.php:257
+#: includes/admin/class-marketing.php:262
 #: includes/admin/class-menu-page.php:97
 #: includes/admin/class-menu-page.php:278
 #: includes/admin/class-plans-editor.php:84
@@ -1033,14 +1478,9 @@ msgstr "操作"
 msgid "Promotion name"
 msgstr "活动名称"
 
-#: includes/admin/class-coupons-page.php:80
-#: includes/admin/class-coupons-page.php:213
-msgid "Coupon code"
-msgstr "优惠码"
-
 #. translators: %s: time zone, e.g. GMT+08:00
 #: includes/admin/class-coupons-page.php:80
-#: includes/admin/class-marketing.php:166
+#: includes/admin/class-marketing.php:171
 #: includes/admin/class-promotions-page.php:95
 #: includes/admin/class-shipping-discounts-page.php:55
 msgid "Promotion time"
@@ -1652,22 +2092,6 @@ msgstr "点击卡片，添加到当前选中积木的下面。"
 msgid "Duplicate"
 msgstr "复制"
 
-#. translators: %d: tier number
-#: includes/admin/class-design-editor.php:156
-#: includes/admin/class-marketing.php:95
-#: includes/admin/class-marketing.php:373
-#: includes/admin/class-menu-page.php:101
-#: includes/admin/class-menu-page.php:291
-#: includes/admin/class-plans-editor.php:36
-#: includes/admin/class-plans-editor.php:107
-#: includes/admin/class-promotions-page.php:227
-#: includes/admin/class-shipping-discounts-page.php:139
-#: includes/admin/class-store-design.php:479
-#: includes/admin/class-terms-page.php:60
-#: includes/modules/class-blocks.php:231
-msgid "Delete"
-msgstr "删除"
-
 #: includes/admin/class-design-editor.php:157
 #: includes/admin/class-overview-page.php:157
 msgid "More"
@@ -1774,8 +2198,8 @@ msgid "OK"
 msgstr "确定"
 
 #: includes/admin/class-dialogs.php:34
-#: includes/admin/class-marketing.php:483
-#: includes/admin/class-marketing.php:508
+#: includes/admin/class-marketing.php:488
+#: includes/admin/class-marketing.php:513
 #: includes/admin/class-menu-page.php:117
 #: includes/admin/class-plans-editor.php:123
 #: includes/admin/class-plans-editor.php:128
@@ -1902,20 +2326,6 @@ msgstr "线下付款订单通知（管理员）"
 msgid "Payment method enabled (admin)"
 msgstr "支付方式已启用（管理员）"
 
-#. translators: %s: on/off
-#: includes/admin/class-email-center.php:135
-#: includes/admin/class-email-center.php:242
-#: includes/admin/class-terms-page.php:96
-msgid "On"
-msgstr "已开启"
-
-#. translators: %s: on/off
-#: includes/admin/class-email-center.php:135
-#: includes/admin/class-email-center.php:242
-#: includes/admin/class-shipping-page.php:149
-msgid "Off"
-msgstr "未启用"
-
 #: includes/admin/class-email-center.php:135
 msgid "Turn off"
 msgstr "关闭"
@@ -1937,12 +2347,6 @@ msgstr "弃单通知"
 #: includes/admin/class-email-center.php:242
 msgid "Admin notifications"
 msgstr "管理员通知"
-
-#: includes/admin/class-email-center.php:153
-#: includes/admin/class-marketing.php:309
-#: includes/admin/class-menu-page.php:100
-msgid "Settings"
-msgstr "设置"
 
 #: includes/admin/class-email-center.php:154
 #: includes/admin/class-email-center.php:263
@@ -2001,12 +2405,6 @@ msgstr "弃单"
 msgid "These emails are not sent until the store address is filled in (US law requires a physical address in marketing emails)."
 msgstr "填写店铺地址之前不会发送这些邮件（美国法律要求营销邮件写明实体地址）。"
 
-#: includes/admin/class-email-center.php:232
-#: includes/emails/class-browse-reminder.php:47
-#: includes/emails/class-cart-recovery.php:64
-msgid "Coupon"
-msgstr "优惠券"
-
 #. translators: %d: seconds
 #: includes/admin/class-email-center.php:234
 #, php-format
@@ -2014,7 +2412,7 @@ msgid "Send delay: %d s"
 msgstr "延迟发送：%d 秒"
 
 #: includes/admin/class-email-center.php:236
-#: includes/admin/class-marketing.php:378
+#: includes/admin/class-marketing.php:383
 #: includes/admin/class-menu-page.php:289
 #: includes/admin/class-plans-editor.php:35
 msgid "Edit"
@@ -2098,29 +2496,6 @@ msgstr "报告"
 msgid "Demo"
 msgstr "演示"
 
-#: includes/admin/class-list-columns.php:74
-#: includes/admin/class-terms-page.php:98
-#: includes/modules/class-registry.php:110
-#: includes/modules/class-registry.php:291
-#: includes/modules/class-registry.php:331
-#: includes/modules/class-registry.php:471
-#: includes/modules/class-registry.php:505
-#: includes/modules/class-registry.php:522
-#: includes/modules/class-registry.php:543
-#: includes/modules/class-registry.php:601
-#: includes/modules/class-registry.php:681
-#: includes/modules/class-registry.php:748
-#: includes/modules/class-registry.php:782
-#: includes/modules/class-registry.php:823
-#: includes/modules/class-registry.php:907
-#: includes/modules/class-registry.php:956
-#: includes/modules/class-registry.php:1167
-#: includes/modules/class-registry.php:1220
-#: includes/modules/class-registry.php:1249
-#: includes/modules/class-registry.php:1263
-msgid "Title"
-msgstr "标题"
-
 #: includes/admin/class-list-columns.php:75
 #: includes/admin/class-order-metabox.php:56
 #: includes/admin/class-report-metabox.php:81
@@ -2148,292 +2523,288 @@ msgid "Access"
 msgstr "访问级别"
 
 #. translators: %d: tier number
-#: includes/admin/class-marketing.php:92
+#: includes/admin/class-marketing.php:97
 #: includes/admin/class-promotions-page.php:227
 #, php-format
 msgid "Tier %d"
 msgstr "优惠层级 %d"
 
 #. translators: %d: stage number
-#: includes/admin/class-marketing.php:94
+#: includes/admin/class-marketing.php:99
 #: includes/admin/class-shipping-discounts-page.php:137
 #, php-format
 msgid "Stage %d"
 msgstr "阶段 %d"
 
-#: includes/admin/class-marketing.php:96
+#: includes/admin/class-marketing.php:101
 msgid "Delete the selected items?"
 msgstr "删除选中的项目？"
 
-#: includes/admin/class-marketing.php:97
+#: includes/admin/class-marketing.php:102
 msgid "Select at least one item first."
 msgstr "请先勾选至少一项。"
 
 #. translators: %s: promotion name
-#: includes/admin/class-marketing.php:99
-#: includes/admin/class-marketing.php:266
+#: includes/admin/class-marketing.php:104
+#: includes/admin/class-marketing.php:271
 #, php-format
 msgid "Already in “%s” – saving will be refused if the times overlap."
 msgstr "已参加“%s”，时间重叠时不能保存。"
 
-#: includes/admin/class-marketing.php:100
-#: includes/admin/class-marketing.php:270
+#: includes/admin/class-marketing.php:105
+#: includes/admin/class-marketing.php:275
 #: includes/admin/class-plans-editor.php:92
 msgid "No products selected."
 msgstr "还没有选择商品。"
 
 #. translators: %s: time zone, e.g. GMT+08:00
-#: includes/admin/class-marketing.php:166
+#: includes/admin/class-marketing.php:171
 msgid "Set time zone"
 msgstr "设置时区"
 
-#: includes/admin/class-marketing.php:167
+#: includes/admin/class-marketing.php:172
 msgid "Time period"
 msgstr "时间段"
 
-#: includes/admin/class-marketing.php:167
+#: includes/admin/class-marketing.php:172
 #: includes/admin/class-promotions-page.php:105
 #: includes/admin/class-shipping-discounts-page.php:64
 msgid "Long-term"
 msgstr "长期"
 
 #. translators: %d: stage number
-#: includes/admin/class-marketing.php:168
+#: includes/admin/class-marketing.php:173
 #: includes/admin/class-shipping-discounts-page.php:137
 msgid "Start time"
 msgstr "开始时间"
 
 #. translators: %d: stage number
-#: includes/admin/class-marketing.php:169
+#: includes/admin/class-marketing.php:174
 #: includes/admin/class-shipping-discounts-page.php:137
 msgid "to"
 msgstr "至"
 
 #. translators: %d: stage number
-#: includes/admin/class-marketing.php:169
+#: includes/admin/class-marketing.php:174
 #: includes/admin/class-shipping-discounts-page.php:137
 msgid "End time"
 msgstr "结束时间"
 
-#: includes/admin/class-marketing.php:180
+#: includes/admin/class-marketing.php:185
 msgid "Choose the start time."
 msgstr "请选择活动开始时间。"
 
-#: includes/admin/class-marketing.php:183
+#: includes/admin/class-marketing.php:188
 msgid "Choose the end time, or choose “Long-term”."
 msgstr "请选择活动结束时间，或者选择“长期”。"
 
-#: includes/admin/class-marketing.php:190
+#: includes/admin/class-marketing.php:195
 msgid "Eligible customers"
 msgstr "适用顾客"
 
-#: includes/admin/class-marketing.php:192
-msgid "Everyone"
-msgstr "所有人"
-
-#: includes/admin/class-marketing.php:193
+#: includes/admin/class-marketing.php:198
 msgid "Specific customers"
 msgstr "指定顾客"
 
-#: includes/admin/class-marketing.php:194
+#: includes/admin/class-marketing.php:199
 msgid "One email per line, e.g. buyer@example.com"
 msgstr "每行一个邮箱，例如 buyer@example.com"
 
-#: includes/admin/class-marketing.php:194
+#: includes/admin/class-marketing.php:199
 msgid "Matched against the email entered at checkout (or the account email of a signed-in customer)."
 msgstr "按结账时填写的邮箱核对（已登录顾客没填时用账户邮箱）。"
 
-#: includes/admin/class-marketing.php:195
+#: includes/admin/class-marketing.php:200
 msgid "Specific customer tags"
 msgstr "指定顾客标签"
 
-#: includes/admin/class-marketing.php:197
+#: includes/admin/class-marketing.php:202
 msgid "Specific visitor IDs"
 msgstr "指定访客ID"
 
-#: includes/admin/class-marketing.php:199
+#: includes/admin/class-marketing.php:204
 msgid "Specific customer levels"
 msgstr "指定顾客级别"
 
-#: includes/admin/class-marketing.php:203
+#: includes/admin/class-marketing.php:208
 msgid "Customer tags and levels do not exist on this site yet, and visitor tracking is still a test feature, so these options cannot be chosen."
 msgstr "本站还没有顾客标签和顾客级别，访客追踪也还是测试功能，所以这几项暂时不能选。"
 
-#: includes/admin/class-marketing.php:203
+#: includes/admin/class-marketing.php:208
 msgid "Customer tags and levels do not exist on this site yet, so these options cannot be chosen."
 msgstr "本站还没有顾客标签和顾客级别，所以这两项暂时不能选。"
 
-#: includes/admin/class-marketing.php:215
+#: includes/admin/class-marketing.php:220
 #: includes/admin/class-shipping-discounts-page.php:55
 msgid "Scope"
 msgstr "适用范围"
 
-#: includes/admin/class-marketing.php:217
+#: includes/admin/class-marketing.php:222
 msgid "Choose all products"
 msgstr "选择全部商品"
 
-#: includes/admin/class-marketing.php:218
+#: includes/admin/class-marketing.php:223
 msgid "Choose some products"
 msgstr "选择部分商品"
 
-#: includes/admin/class-marketing.php:219
+#: includes/admin/class-marketing.php:224
 msgid "Choose collections"
 msgstr "选择专辑"
 
-#: includes/admin/class-marketing.php:234
+#: includes/admin/class-marketing.php:239
 msgid "Default product order"
 msgstr "活动商品默认排序方式"
 
-#: includes/admin/class-marketing.php:234
+#: includes/admin/class-marketing.php:239
 msgid "The order of the products on the storefront page of this promotion. Customers can still re-sort the list."
 msgstr "前台活动页面里商品的默认排序，顾客仍然可以自己切换排序。"
 
-#: includes/admin/class-marketing.php:245
+#: includes/admin/class-marketing.php:250
 #: includes/class-store-config.php:768
 #: includes/modules/class-registry.php:1199
 msgid "Newest first"
 msgstr "最新优先"
 
-#: includes/admin/class-marketing.php:246
+#: includes/admin/class-marketing.php:251
 #: includes/class-store-config.php:767
 msgid "Oldest first"
 msgstr "按创建时间升序"
 
-#: includes/admin/class-marketing.php:247
+#: includes/admin/class-marketing.php:252
 #: includes/class-store-config.php:765
 #: includes/modules/class-registry.php:1201
 msgid "Price: low to high"
 msgstr "价格从低到高"
 
-#: includes/admin/class-marketing.php:248
+#: includes/admin/class-marketing.php:253
 #: includes/class-store-config.php:766
 #: includes/modules/class-registry.php:1202
 msgid "Price: high to low"
 msgstr "价格从高到低"
 
-#: includes/admin/class-marketing.php:249
+#: includes/admin/class-marketing.php:254
 #: includes/class-store-config.php:762
 msgid "Best selling"
 msgstr "按总销量从高到低"
 
-#: includes/admin/class-marketing.php:250
+#: includes/admin/class-marketing.php:255
 #: includes/class-store-config.php:763
 msgid "Name: A to Z"
 msgstr "按名称 A-Z"
 
-#: includes/admin/class-marketing.php:256
+#: includes/admin/class-marketing.php:261
 #: includes/admin/class-plans-editor.php:83
 msgid "Search products to add…"
 msgstr "搜索商品并添加……"
 
-#: includes/admin/class-marketing.php:278
+#: includes/admin/class-marketing.php:283
 msgid "There are no collections yet."
 msgstr "还没有专辑（商品分类）。"
 
-#: includes/admin/class-marketing.php:278
+#: includes/admin/class-marketing.php:283
 msgid "Add collections"
 msgstr "添加专辑"
 
-#: includes/admin/class-marketing.php:293
+#: includes/admin/class-marketing.php:298
 msgid "Edit page"
 msgstr "编辑页面"
 
-#: includes/admin/class-marketing.php:296
+#: includes/admin/class-marketing.php:301
 msgid "View"
 msgstr "查看"
 
-#: includes/admin/class-marketing.php:337
+#: includes/admin/class-marketing.php:342
 #: includes/admin/class-plans-editor.php:34
 #: includes/admin/class-recovery-page.php:152
 msgid "All"
 msgstr "全部"
 
-#: includes/admin/class-marketing.php:338
-#: includes/admin/class-marketing.php:358
+#: includes/admin/class-marketing.php:343
+#: includes/admin/class-marketing.php:363
 msgid "Not started"
 msgstr "未开始"
 
-#: includes/admin/class-marketing.php:339
-#: includes/admin/class-marketing.php:359
+#: includes/admin/class-marketing.php:344
+#: includes/admin/class-marketing.php:364
 msgid "In progress"
 msgstr "进行中"
 
-#: includes/admin/class-marketing.php:340
-#: includes/admin/class-marketing.php:360
+#: includes/admin/class-marketing.php:345
+#: includes/admin/class-marketing.php:365
 msgid "Ended"
 msgstr "已结束"
 
-#: includes/admin/class-marketing.php:348
+#: includes/admin/class-marketing.php:353
 #: includes/admin/class-shipping-page.php:72
 msgid "Search"
 msgstr "搜索"
 
-#: includes/admin/class-marketing.php:357
+#: includes/admin/class-marketing.php:362
 msgid "Disabled"
 msgstr "已停用"
 
-#: includes/admin/class-marketing.php:373
+#: includes/admin/class-marketing.php:378
 #: includes/admin/class-tracking-page.php:145
 msgid "Apply"
 msgstr "查询"
 
-#: includes/admin/class-marketing.php:383
+#: includes/admin/class-marketing.php:388
 msgid "Select"
 msgstr "选择"
 
-#: includes/admin/class-marketing.php:387
+#: includes/admin/class-marketing.php:392
 #: includes/admin/class-menu-page.php:123
 msgid "Select all"
 msgstr "全选"
 
 #. translators: %d: number of records
-#: includes/admin/class-marketing.php:396
+#: includes/admin/class-marketing.php:401
 #, php-format
 msgid "%d record"
 msgid_plural "%d records"
 msgstr[0] "共 %d 条"
 
-#: includes/admin/class-marketing.php:397
+#: includes/admin/class-marketing.php:402
 msgid "Previous page"
 msgstr "上一页"
 
-#: includes/admin/class-marketing.php:401
+#: includes/admin/class-marketing.php:406
 msgid "Next page"
 msgstr "下一页"
 
-#: includes/admin/class-marketing.php:403
+#: includes/admin/class-marketing.php:408
 msgid "Items per page"
 msgstr "每页条数"
 
 #. translators: %d: number of items
-#: includes/admin/class-marketing.php:406
+#: includes/admin/class-marketing.php:411
 #, php-format
 msgid "%d / page"
 msgstr "%d条/页"
 
-#: includes/admin/class-marketing.php:408
+#: includes/admin/class-marketing.php:413
 msgid "Go to"
 msgstr "前往"
 
-#: includes/admin/class-marketing.php:408
+#: includes/admin/class-marketing.php:413
 msgid "page"
 msgstr "页"
 
-#: includes/admin/class-marketing.php:438
+#: includes/admin/class-marketing.php:443
 #: includes/admin/class-plans-editor.php:64
 #: includes/admin/class-terms-page.php:84
 msgid "Saved."
 msgstr "已保存。"
 
 #. translators: %d: number of items
-#: includes/admin/class-marketing.php:442
+#: includes/admin/class-marketing.php:447
 #, php-format
 msgid "%d item updated."
 msgid_plural "%d items updated."
 msgstr[0] "已更新 %d 项。"
 
-#: includes/admin/class-marketing.php:483
-#: includes/admin/class-marketing.php:508
+#: includes/admin/class-marketing.php:488
+#: includes/admin/class-marketing.php:513
 #: includes/admin/class-menu-page.php:112
 #: includes/admin/class-shipping-page.php:108
 #: includes/admin/class-shipping-page.php:197
@@ -2442,20 +2813,20 @@ msgstr[0] "已更新 %d 项。"
 msgid "Save"
 msgstr "保存"
 
-#: includes/admin/class-marketing.php:488
+#: includes/admin/class-marketing.php:493
 msgid "Back"
 msgstr "返回"
 
-#: includes/admin/class-marketing.php:495
+#: includes/admin/class-marketing.php:500
 msgid "Storefront page"
 msgstr "前台页面"
 
-#: includes/admin/class-marketing.php:501
+#: includes/admin/class-marketing.php:506
 msgid "— Create a new page —"
 msgstr "— 新建一个页面 —"
 
 #. translators: %s: shortcode
-#: includes/admin/class-marketing.php:507
+#: includes/admin/class-marketing.php:512
 #, php-format
 msgid "If the page does not contain %s yet, it is added at the end of the page."
 msgstr "如果页面里还没有 %s，会自动加在页面末尾。"
@@ -2867,13 +3238,6 @@ msgstr "当前店铺时区"
 msgid "Sales"
 msgstr "销售额"
 
-#: includes/admin/class-overview-page.php:131
-#: includes/admin/class-overview-page.php:203
-#: includes/admin/class-tracking-page.php:35
-#: includes/admin/class-tracking-page.php:146
-msgid "Visitors"
-msgstr "访客数据"
-
 #: includes/admin/class-overview-page.php:132
 msgid "New sign-ups"
 msgstr "注册用户"
@@ -2986,10 +3350,6 @@ msgstr "昨天"
 msgid "Last 7 days"
 msgstr "过去 7 天"
 
-#: includes/admin/class-overview-page.php:161
-msgid "Last 30 days"
-msgstr "过去 30 天"
-
 #: includes/admin/class-overview-page.php:162
 #: includes/admin/class-tracking-page.php:38
 #: includes/admin/class-tracking-page.php:245
@@ -3093,19 +3453,6 @@ msgstr "首页"
 #: includes/admin/class-tracking-page.php:169
 msgid "Shop"
 msgstr "商店"
-
-#: includes/admin/class-overview-page.php:193
-#: includes/admin/class-recovery-page.php:223
-#: includes/admin/class-tracking-page.php:110
-#: includes/admin/class-tracking-page.php:171
-#: includes/class-menus.php:108
-msgid "Cart"
-msgstr "购物车"
-
-#: includes/admin/class-overview-page.php:194
-#: includes/admin/class-tracking-page.php:172
-msgid "Checkout"
-msgstr "结账"
 
 #: includes/admin/class-overview-page.php:195
 #: includes/admin/class-tracking-page.php:132
@@ -3235,16 +3582,6 @@ msgstr "已选择 %d 个国家/地区"
 #: includes/shipping/class-plans.php:353
 msgid "no limit"
 msgstr "无限制"
-
-#: includes/admin/class-plans-editor.php:42
-#: includes/admin/class-plans-editor.php:138
-msgid "Order amount"
-msgstr "订单价格"
-
-#: includes/admin/class-plans-editor.php:44
-#: includes/admin/class-plans-editor.php:138
-msgid "Weight"
-msgstr "重量"
 
 #: includes/admin/class-plans-editor.php:46
 msgid "Remove all regions from this plan?"
@@ -4491,6 +4828,7 @@ msgid "Template not found."
 msgstr "找不到该模板。"
 
 #: includes/admin/class-store-design.php:206
+#: includes/class-exit-intent.php:262
 msgid "Something went wrong. Please try again."
 msgstr "出了点问题，请重试。"
 
@@ -4569,13 +4907,6 @@ msgstr "修改时间：%s"
 #: includes/admin/class-store-design.php:462
 msgid "Design"
 msgstr "装修"
-
-#: includes/admin/class-store-design.php:323
-#: includes/admin/class-store-design.php:434
-#: includes/admin/class-terms-page.php:98
-#: includes/admin/class-terms-page.php:106
-msgid "Preview"
-msgstr "预览"
 
 #: includes/admin/class-store-design.php:339
 msgid "Homepage not published"
@@ -4990,12 +5321,6 @@ msgstr "买家看到的效果（显示的是已保存的内容，请先保存再
 #: includes/admin/class-terms-page.php:107
 msgid "No terms yet."
 msgstr "还没有条款。"
-
-#: includes/admin/class-terms-page.php:108
-#: includes/class-terms.php:220
-#: includes/class-terms.php:282
-msgid "Close"
-msgstr "关闭"
 
 #: includes/admin/class-tracking-page.php:36
 #: includes/admin/class-tracking-page.php:243
@@ -5633,14 +5958,6 @@ msgstr "不能与其他优惠码同时使用"
 msgid "Not valid on sale items"
 msgstr "促销商品不可用"
 
-#: includes/class-coupons.php:434
-msgid "Copied"
-msgstr "已复制"
-
-#: includes/class-coupons.php:434
-msgid "Copy code"
-msgstr "复制优惠码"
-
 #: includes/class-coupons.php:448
 msgid "There are no public offers right now. Please check back later."
 msgstr "目前没有公开的优惠，请稍后再来看看。"
@@ -5847,6 +6164,70 @@ msgstr[0] "已生成 %d 份草稿。请填写所有方括号里的提示，审�
 msgid "No new drafts: those pages already exist."
 msgstr "没有生成新草稿：这些页面已经存在。"
 
+#: includes/class-exit-intent.php:133
+msgid "Every prize needs a name."
+msgstr "每个奖项都要有名称。"
+
+#: includes/class-exit-intent.php:148
+msgid "Enter a popup title."
+msgstr "请填写弹窗标题。"
+
+#: includes/class-exit-intent.php:151
+msgid "Choose at least one page type."
+msgstr "请至少选择一种弹出页面。"
+
+#: includes/class-exit-intent.php:154
+msgid "Turn on at least one trigger."
+msgstr "请至少开启一种触发方式。"
+
+#: includes/class-exit-intent.php:157
+msgid "Choose a coupon code that is enabled, not expired and not used up."
+msgstr "请选择已启用、没过期、还有次数的优惠码。"
+
+#: includes/class-exit-intent.php:160
+msgid "Enter the button link, or leave the button text empty."
+msgstr "请填写按钮链接，或者把按钮文字留空。"
+
+#: includes/class-exit-intent.php:164
+msgid "The wheel needs at least 2 prizes."
+msgstr "转盘至少要有 2 个奖项。"
+
+#: includes/class-exit-intent.php:167
+msgid "At least one prize needs a chance greater than zero."
+msgstr "至少要有一个奖项的权重大于 0。"
+
+#. translators: %s: coupon code
+#: includes/class-exit-intent.php:172
+#, php-format
+msgid "The coupon code %s of a prize is not enabled, has expired or is used up."
+msgstr "奖项的优惠码 %s 没有启用、已过期或已用完。"
+
+#: includes/class-exit-intent.php:323
+msgid "The code is applied to your cart."
+msgstr "优惠码已用到购物车。"
+
+#: includes/class-exit-intent.php:324
+msgid "The code is saved and will be applied once your cart meets its conditions."
+msgstr "优惠码已保存，购物车满足条件后会自动使用。"
+
+#: includes/class-exit-intent.php:324
+msgid "This code can no longer be used."
+msgstr "这个优惠码已经不能使用。"
+
+#: includes/class-exit-intent.php:331
+#: includes/class-exit-intent.php:364
+#: includes/class-promotions.php:954
+msgid "This offer has ended."
+msgstr "活动已结束。"
+
+#: includes/class-exit-intent.php:334
+msgid "Preview: customers get the code applied to their cart here."
+msgstr "预览：顾客在这里会把优惠码直接用到购物车。"
+
+#: includes/class-exit-intent.php:382
+msgid "Preview: the draw is real, but no code is applied and nothing is counted."
+msgstr "预览：抽奖是真实的，但不会用优惠码，也不计入数据。"
+
 #: includes/class-menus.php:77
 #: includes/class-menus.php:221
 msgid "Header menu"
@@ -5995,7 +6376,7 @@ msgstr "批次分配已更新："
 msgid "Batch: %s"
 msgstr "批次：%s"
 
-#: includes/class-plugin.php:118
+#: includes/class-plugin.php:120
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr "Peptide Core 需要先安装并启用 WooCommerce。"
 
@@ -6231,10 +6612,6 @@ msgstr "再买 %1$s 即可%2$s"
 #, php-format
 msgid "Starts %s"
 msgstr "%s 开始"
-
-#: includes/class-promotions.php:954
-msgid "This offer has ended."
-msgstr "活动已结束。"
 
 #. translators: %s: date
 #: includes/class-promotions.php:957
@@ -6575,10 +6952,6 @@ msgstr "从顾客注册算起的秒数。"
 msgid "Use code %s at checkout."
 msgstr "结账时使用优惠码 %s。"
 
-#: includes/emails/class-browse-reminder.php:99
-msgid "Continue shopping"
-msgstr "继续购物"
-
 #. translators: %s: store name
 #: includes/emails/class-browse-reminder.php:101
 #, php-format
@@ -6598,12 +6971,6 @@ msgstr "发给在结账页填写了邮箱和地址却没有付款的顾客。延
 #: includes/emails/class-cart-recovery.php:55
 msgid "Shown above the product list. Keep it factual: no health claims and no fake urgency."
 msgstr "显示在商品清单上方。请如实描述：不要写功效，也不要制造虚假的紧迫感。"
-
-#: includes/emails/class-cart-recovery.php:59
-#: includes/modules/class-registry.php:1041
-#: includes/modules/class-registry.php:1298
-msgid "Button text"
-msgstr "按钮文字"
 
 #: includes/emails/class-cart-recovery.php:68
 msgid "Shown in the email and applied automatically when the customer comes back through the link (if the cart meets the coupon conditions)."
@@ -6699,19 +7066,6 @@ msgstr "完整显示"
 msgid "Focus point"
 msgstr "焦点位置"
 
-#: includes/modules/class-blocks.php:250
-#: includes/modules/class-registry.php:293
-#: includes/modules/class-registry.php:305
-#: includes/modules/class-registry.php:473
-#: includes/modules/class-registry.php:545
-#: includes/modules/class-registry.php:602
-#: includes/modules/class-registry.php:682
-#: includes/modules/class-registry.php:708
-#: includes/modules/class-registry.php:883
-#: includes/modules/class-registry.php:908
-msgid "Text"
-msgstr "文字"
-
 #: includes/modules/class-blocks.php:252
 msgid "Open in a new tab"
 msgstr "在新标签页打开"
@@ -6753,10 +7107,6 @@ msgstr "这个积木还没有默认样式。"
 #: includes/modules/class-fallback.php:139
 msgid "No image selected"
 msgstr "未选择图片"
-
-#: includes/modules/class-fallback.php:139
-msgid "Choose an image"
-msgstr "请选择图片"
 
 #: includes/modules/class-fallback.php:510
 msgid "Add a title in the sidebar."
@@ -6980,12 +7330,6 @@ msgstr "按钮背景色"
 #: includes/modules/class-registry.php:157
 msgid "Items per row"
 msgstr "每行数量"
-
-#: includes/modules/class-registry.php:183
-#: includes/modules/class-registry.php:732
-#: includes/modules/class-registry.php:849
-msgid "Image"
-msgstr "图片"
 
 #: includes/modules/class-registry.php:215
 #: includes/modules/class-registry.php:479

@@ -38,6 +38,7 @@ final class Plugin {
 		Custom_Pages::register_hooks();
 		Coupons::register_hooks();
 		Coupon_Rules::register_hooks();
+		Exit_Intent::register_hooks();
 		Promotions::register_hooks();
 		Recovery::register_hooks();
 		Store_Config::register_hooks();
@@ -82,6 +83,7 @@ final class Plugin {
 			Admin\Promotions_Page::register_hooks();
 			Admin\Coupons_Page::register_hooks();
 			Admin\Shipping_Discounts_Page::register_hooks();
+			Admin\Apps_Page::register_hooks();
 		}
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {

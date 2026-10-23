@@ -43,6 +43,7 @@ $ok( 'posts, media and comments removed', ! array_intersect( array( 'edit.php', 
 $ok( 'WooCommerce top-level menu removed', ! in_array( 'woocommerce', $slugs, true ) );
 $ok( 'dashboard first, then orders and customers', 'pc-overview' === array_values( array_filter( $slugs ) )[0] && in_array( 'admin.php?page=wc-orders', $slugs, true ) && in_array( 'admin.php?page=wc-admin&path=/customers', $slugs, true ) );
 $ok( 'WooCommerce marketing menu replaced by marketing campaigns: spend-and-save, coupon codes, shipping discounts', ! in_array( 'woocommerce-marketing', $slugs, true ) && in_array( 'pc-promotions', $slugs, true ) && array( 'pc-promotions', 'pc-coupons', 'pc-shipping-discounts' ) === array_column( $submenu['pc-promotions'] ?? array(), 2 ) );
+$ok( 'app center menu', in_array( 'pc-apps', $slugs, true ) );
 $ok( 'analytics keeps only its top-level menu, no submenus', in_array( 'wc-admin&path=/analytics/overview', $slugs, true ) && empty( $submenu['wc-admin&path=/analytics/overview'] ) );
 $_GET['page'] = 'wc-settings';
 $wc_tabs      = \PeptideCore\Admin\Admin_Menus::settings_tabs( array( 'general' => 'General', 'products' => 'Products', 'shipping' => 'Shipping', 'checkout' => 'Payments', 'account' => 'Accounts', 'email' => 'Emails', 'integration' => 'Integration', 'site-visibility' => 'Visibility', 'point-of-sale' => 'POS', 'wcpay_multi_currency' => 'Multi-currency', 'advanced' => 'Advanced' ) );

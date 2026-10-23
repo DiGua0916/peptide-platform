@@ -82,6 +82,9 @@ final class Admin_Menus {
 		add_submenu_page( Promotions_Page::SLUG, __( 'Spend-and-save promotions', 'peptide-core' ), __( 'Spend-and-save', 'peptide-core' ), Marketing::CAP, Promotions_Page::SLUG, array( Promotions_Page::class, 'render' ) );
 		add_submenu_page( Promotions_Page::SLUG, __( 'Coupon codes', 'peptide-core' ), __( 'Coupon codes', 'peptide-core' ), Marketing::CAP, Coupons_Page::SLUG, array( Coupons_Page::class, 'render' ) );
 		add_submenu_page( Promotions_Page::SLUG, __( 'Shipping discounts', 'peptide-core' ), __( 'Shipping discounts', 'peptide-core' ), Marketing::CAP, Shipping_Discounts_Page::SLUG, array( Shipping_Discounts_Page::class, 'render' ) );
+
+		// 应用中心（APP-CENTER-01）：在店铺设置下面。
+		add_menu_page( __( 'App center', 'peptide-core' ), __( 'App center', 'peptide-core' ), Apps_Page::CAP, Apps_Page::SLUG, array( Apps_Page::class, 'render' ), 'dashicons-screenoptions', 59 );
 	}
 
 	public static function remove_menus(): void {

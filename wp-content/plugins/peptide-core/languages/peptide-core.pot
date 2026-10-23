@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-23T10:31:32+00:00\n"
+"POT-Creation-Date: 2026-10-23T14:51:44+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -30,6 +30,7 @@ msgid "DiGua"
 msgstr ""
 
 #: includes/admin/class-admin-menus.php:70
+#: includes/admin/class-apps-page.php:141
 #: includes/admin/class-batch-orders.php:141
 #: includes/admin/class-batch-orders.php:144
 #: includes/admin/class-overview-page.php:133
@@ -86,13 +87,520 @@ msgstr ""
 msgid "Shipping discounts"
 msgstr ""
 
-#: includes/admin/class-basic-config-page.php:48
-msgid "Choose favicon"
+#: includes/admin/class-admin-menus.php:87
+#: includes/admin/class-apps-page.php:83
+msgid "App center"
 msgstr ""
 
+#: includes/admin/class-apps-page.php:34
+#: includes/admin/class-apps-page.php:127
+msgid "Exit-intent offers"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:35
+msgid "When a visitor is about to leave, win them back with a coupon, a prize wheel or your own message."
+msgstr ""
+
+#: includes/admin/class-apps-page.php:58
+#: includes/modules/class-fallback.php:139
+msgid "Choose an image"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:59
 #: includes/admin/class-basic-config-page.php:49
 #: includes/admin/class-plans-editor.php:51
 msgid "Use this image"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:60
+#: includes/admin/class-apps-page.php:174
+msgid "No prize"
+msgstr ""
+
+#. translators: %d: tier number
+#: includes/admin/class-apps-page.php:61
+#: includes/admin/class-apps-page.php:174
+#: includes/admin/class-design-editor.php:156
+#: includes/admin/class-marketing.php:100
+#: includes/admin/class-marketing.php:378
+#: includes/admin/class-menu-page.php:101
+#: includes/admin/class-menu-page.php:291
+#: includes/admin/class-plans-editor.php:36
+#: includes/admin/class-plans-editor.php:107
+#: includes/admin/class-promotions-page.php:227
+#: includes/admin/class-shipping-discounts-page.php:139
+#: includes/admin/class-store-design.php:479
+#: includes/admin/class-terms-page.php:60
+#: includes/modules/class-blocks.php:231
+msgid "Delete"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:62
+#: includes/admin/class-terms-page.php:108
+#: includes/class-exit-intent.php:259
+#: includes/class-terms.php:220
+#: includes/class-terms.php:282
+msgid "Close"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:63
+#: includes/class-coupons.php:434
+#: includes/class-exit-intent.php:260
+msgid "Copy code"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:64
+#: includes/class-coupons.php:434
+#: includes/class-exit-intent.php:261
+msgid "Copied"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:65
+#: includes/class-exit-intent.php:263
+#: includes/emails/class-browse-reminder.php:99
+msgid "Continue shopping"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:66
+#: includes/class-exit-intent.php:264
+msgid "Spinning…"
+msgstr ""
+
+#. translators: %s: on/off
+#: includes/admin/class-apps-page.php:86
+#: includes/admin/class-apps-page.php:152
+#: includes/admin/class-email-center.php:135
+#: includes/admin/class-email-center.php:242
+#: includes/admin/class-terms-page.php:96
+msgid "On"
+msgstr ""
+
+#. translators: %s: on/off
+#: includes/admin/class-apps-page.php:86
+#: includes/admin/class-apps-page.php:152
+#: includes/admin/class-email-center.php:135
+#: includes/admin/class-email-center.php:242
+#: includes/admin/class-shipping-page.php:149
+msgid "Off"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:86
+#: includes/admin/class-email-center.php:153
+#: includes/admin/class-marketing.php:314
+#: includes/admin/class-menu-page.php:100
+msgid "Settings"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:101
+msgid "not usable now"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:134
+#: includes/admin/class-overview-page.php:161
+msgid "Last 30 days"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:136
+msgid "Shown"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:137
+msgid "Claimed / spun"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:138
+msgid "Claim rate"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:139
+msgid "Prizes won"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:140
+#: includes/admin/class-basic-config-page.php:269
+msgid "Closed"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:142
+#: includes/admin/class-plans-editor.php:42
+#: includes/admin/class-plans-editor.php:138
+msgid "Order amount"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:148
+msgid "Orders count when the order uses the code that this popup gave to the customer. Staff visits and previews are not counted."
+msgstr ""
+
+#: includes/admin/class-apps-page.php:151
+#: includes/admin/class-basic-config-page.php:115
+#: includes/admin/class-email-center.php:158
+#: includes/admin/class-recovery-page.php:145
+#: includes/admin/class-store-settings.php:43
+msgid "Basic settings"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:152
+#: includes/admin/class-batch-metabox.php:77
+#: includes/admin/class-batch-orders.php:66
+#: includes/admin/class-list-columns.php:35
+#: includes/admin/class-marketing.php:262
+#: includes/admin/class-plans-editor.php:84
+#: includes/admin/class-tracking-page.php:92
+msgid "Status"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:153
+msgid "Popup type"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:153
+msgid ""
+"Coupon: show a coupon code; one click applies it to the cart.\n"
+"Prize wheel: the visitor spins once per visit; the chances you set are the real chances, drawn on the server.\n"
+"Custom message: your own title, text and button link, e.g. to a collection or the offers page."
+msgstr ""
+
+#: includes/admin/class-apps-page.php:154
+#: includes/admin/class-email-center.php:232
+#: includes/emails/class-browse-reminder.php:47
+#: includes/emails/class-cart-recovery.php:64
+msgid "Coupon"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:154
+msgid "Prize wheel"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:154
+msgid "Custom message"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:160
+msgid "Popup content"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:161
+#: includes/admin/class-list-columns.php:74
+#: includes/admin/class-terms-page.php:98
+#: includes/modules/class-registry.php:110
+#: includes/modules/class-registry.php:291
+#: includes/modules/class-registry.php:331
+#: includes/modules/class-registry.php:471
+#: includes/modules/class-registry.php:505
+#: includes/modules/class-registry.php:522
+#: includes/modules/class-registry.php:543
+#: includes/modules/class-registry.php:601
+#: includes/modules/class-registry.php:681
+#: includes/modules/class-registry.php:748
+#: includes/modules/class-registry.php:782
+#: includes/modules/class-registry.php:823
+#: includes/modules/class-registry.php:907
+#: includes/modules/class-registry.php:956
+#: includes/modules/class-registry.php:1167
+#: includes/modules/class-registry.php:1220
+#: includes/modules/class-registry.php:1249
+#: includes/modules/class-registry.php:1263
+msgid "Title"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:162
+#: includes/modules/class-blocks.php:250
+#: includes/modules/class-registry.php:293
+#: includes/modules/class-registry.php:305
+#: includes/modules/class-registry.php:473
+#: includes/modules/class-registry.php:545
+#: includes/modules/class-registry.php:602
+#: includes/modules/class-registry.php:682
+#: includes/modules/class-registry.php:708
+#: includes/modules/class-registry.php:883
+#: includes/modules/class-registry.php:908
+msgid "Text"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:163
+#: includes/modules/class-registry.php:183
+#: includes/modules/class-registry.php:732
+#: includes/modules/class-registry.php:849
+msgid "Image"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:163
+#: includes/admin/class-basic-config-page.php:154
+#: includes/admin/class-menu-page.php:139
+#: includes/admin/class-plans-editor.php:136
+#: includes/admin/class-product-panel.php:104
+#: includes/modules/class-blocks.php:239
+msgid "Choose image"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:163
+#: includes/admin/class-basic-config-page.php:154
+#: includes/admin/class-menu-page.php:140
+#: includes/admin/class-plans-editor.php:136
+#: includes/admin/class-product-panel.php:105
+#: includes/admin/class-store-design.php:391
+#: includes/modules/class-blocks.php:242
+msgid "Remove"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:164
+#: includes/admin/class-apps-page.php:172
+#: includes/admin/class-coupons-page.php:80
+#: includes/admin/class-coupons-page.php:213
+msgid "Coupon code"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:164
+msgid "— Choose a coupon code —"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:164
+#: includes/admin/class-coupons-page.php:76
+#: includes/admin/class-coupons-page.php:204
+msgid "New coupon code"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:164
+msgid "The rules of the code still apply (minimum spend, first order only, combining with promotions…)."
+msgstr ""
+
+#: includes/admin/class-apps-page.php:165
+#: includes/emails/class-cart-recovery.php:59
+#: includes/modules/class-registry.php:1041
+#: includes/modules/class-registry.php:1298
+msgid "Button text"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:166
+msgid "Button link"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:167
+msgid "Decline link text"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:167
+msgid "Leave empty to show only the close button."
+msgstr ""
+
+#: includes/admin/class-apps-page.php:168
+msgid "Main color"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:171
+msgid "Prizes"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:171
+msgid ""
+"Up to 8 prizes. The chance of each prize is its weight divided by the total weight.\n"
+"A prize without a coupon code is a “no prize” slot.\n"
+"Each shopping visit can spin once; the result is decided on the server, so it cannot be changed in the browser."
+msgstr ""
+
+#: includes/admin/class-apps-page.php:172
+msgid "Prize name"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:172
+#: includes/admin/class-plans-editor.php:44
+#: includes/admin/class-plans-editor.php:138
+msgid "Weight"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:172
+msgid "Chance"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:174
+msgid "e.g. 10% OFF"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:176
+msgid "Add prize"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:177
+msgid "Spin button text"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:178
+msgid "Title when a prize is won"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:178
+msgid "{prize} is replaced by the prize name, {code} by the coupon code."
+msgstr ""
+
+#: includes/admin/class-apps-page.php:179
+msgid "Text when a prize is won"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:180
+msgid "Text for a “no prize” slot"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:181
+msgid "Only used by the prize wheel."
+msgstr ""
+
+#: includes/admin/class-apps-page.php:184
+msgid "When to show"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:185
+msgid "Computer"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:185
+msgid "When the mouse leaves the top of the page (towards the address bar, tabs or close button)"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:186
+#: includes/admin/class-basic-config-page.php:300
+msgid "Phone"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:186
+msgid "Phones have no mouse, so leaving cannot be seen directly. A quick scroll back up after reading usually means the visitor is going to the address bar or back."
+msgstr ""
+
+#: includes/admin/class-apps-page.php:186
+msgid "Quick scroll back up"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:186
+msgid "No activity for"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:186
+msgid "seconds"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:186
+msgid "Do not show on phones"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:187
+msgid "Wait at least"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:187
+msgid "seconds on the page before the popup can show"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:188
+msgid "Pages"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:189
+msgid "Home page"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:189
+msgid "Product lists and search"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:189
+msgid "Product pages"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:189
+#: includes/admin/class-overview-page.php:193
+#: includes/admin/class-recovery-page.php:223
+#: includes/admin/class-tracking-page.php:110
+#: includes/admin/class-tracking-page.php:171
+#: includes/class-menus.php:108
+msgid "Cart"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:189
+#: includes/admin/class-overview-page.php:194
+#: includes/admin/class-tracking-page.php:172
+msgid "Checkout"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:189
+msgid "Other pages"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:193
+#: includes/admin/class-overview-page.php:131
+#: includes/admin/class-overview-page.php:203
+#: includes/admin/class-tracking-page.php:35
+#: includes/admin/class-tracking-page.php:146
+msgid "Visitors"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:193
+#: includes/admin/class-marketing.php:197
+msgid "Everyone"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:193
+msgid "Only with items in the cart"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:193
+msgid "Only visitors without orders"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:194
+msgid "How often"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:194
+msgid "Remembered in the visitor’s browser. 0 = at most once each time the browser is opened."
+msgstr ""
+
+#: includes/admin/class-apps-page.php:194
+msgid "At most once every"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:194
+msgid "days per visitor"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:198
+#: includes/admin/class-store-design.php:323
+#: includes/admin/class-store-design.php:434
+#: includes/admin/class-terms-page.php:98
+#: includes/admin/class-terms-page.php:106
+msgid "Preview"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:198
+msgid "Preview in the store"
+msgstr ""
+
+#: includes/admin/class-apps-page.php:199
+msgid "The preview in the store uses the saved settings and shows the popup right away. Staff never see the popup otherwise, and previews are not counted."
+msgstr ""
+
+#: includes/admin/class-apps-page.php:206
+#: includes/admin/class-basic-config-page.php:327
+#: includes/admin/class-email-center.php:102
+#: includes/admin/class-marketing.php:481
+#: includes/admin/class-menu-page.php:164
+#: includes/admin/class-menu-page.php:207
+#: includes/admin/class-recovery-page.php:57
+#: includes/admin/class-shipping-page.php:221
+#: includes/admin/class-store-design.php:140
+#: includes/admin/class-tax-page.php:116
+#: includes/admin/class-terms-page.php:114
+#: includes/admin/class-tracking-page.php:214
+#: includes/admin/class-tracking-page.php:224
+#: includes/class-custom-pages.php:333
+#: includes/class-store-config.php:675
+msgid "Sorry, you are not allowed to do that."
+msgstr ""
+
+#: includes/admin/class-apps-page.php:214
+msgid "The settings are saved, but the popup stays off until this is fixed."
+msgstr ""
+
+#: includes/admin/class-basic-config-page.php:48
+msgid "Choose favicon"
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:50
@@ -102,26 +610,19 @@ msgid "— None —"
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:98
-#: includes/admin/class-marketing.php:373
-#: includes/admin/class-marketing.php:379
+#: includes/admin/class-marketing.php:378
+#: includes/admin/class-marketing.php:384
 msgid "Enable"
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:98
-#: includes/admin/class-marketing.php:373
-#: includes/admin/class-marketing.php:379
+#: includes/admin/class-marketing.php:378
+#: includes/admin/class-marketing.php:384
 msgid "Disable"
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:108
 msgid "Settings saved."
-msgstr ""
-
-#: includes/admin/class-basic-config-page.php:115
-#: includes/admin/class-email-center.php:158
-#: includes/admin/class-recovery-page.php:145
-#: includes/admin/class-store-settings.php:43
-msgid "Basic settings"
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:117
@@ -184,23 +685,6 @@ msgstr ""
 
 #: includes/admin/class-basic-config-page.php:149
 msgid "The sender shown in store emails, so customers can tell where the email comes from."
-msgstr ""
-
-#: includes/admin/class-basic-config-page.php:154
-#: includes/admin/class-menu-page.php:139
-#: includes/admin/class-plans-editor.php:136
-#: includes/admin/class-product-panel.php:104
-#: includes/modules/class-blocks.php:239
-msgid "Choose image"
-msgstr ""
-
-#: includes/admin/class-basic-config-page.php:154
-#: includes/admin/class-menu-page.php:140
-#: includes/admin/class-plans-editor.php:136
-#: includes/admin/class-product-panel.php:105
-#: includes/admin/class-store-design.php:391
-#: includes/modules/class-blocks.php:242
-msgid "Remove"
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:157
@@ -548,10 +1032,6 @@ msgid "Open"
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:269
-msgid "Closed"
-msgstr ""
-
-#: includes/admin/class-basic-config-page.php:269
 msgid ""
 "1. Set the store to Closed before you officially open, or when you need to close the storefront for a while; set it back to Open to resume.\n"
 "2. While Closed, visitors see a “coming soon” page. You still see the storefront when signed in as admin; to see what visitors see, use another browser or a private window."
@@ -675,10 +1155,6 @@ msgid "Enter the city"
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:300
-msgid "Phone"
-msgstr ""
-
-#: includes/admin/class-basic-config-page.php:300
 msgid "Enter the phone number"
 msgstr ""
 
@@ -750,23 +1226,6 @@ msgstr ""
 msgid "Shopname options not used on this site"
 msgstr ""
 
-#: includes/admin/class-basic-config-page.php:327
-#: includes/admin/class-email-center.php:102
-#: includes/admin/class-marketing.php:476
-#: includes/admin/class-menu-page.php:164
-#: includes/admin/class-menu-page.php:207
-#: includes/admin/class-recovery-page.php:57
-#: includes/admin/class-shipping-page.php:221
-#: includes/admin/class-store-design.php:140
-#: includes/admin/class-tax-page.php:116
-#: includes/admin/class-terms-page.php:114
-#: includes/admin/class-tracking-page.php:214
-#: includes/admin/class-tracking-page.php:224
-#: includes/class-custom-pages.php:333
-#: includes/class-store-config.php:675
-msgid "Sorry, you are not allowed to do that."
-msgstr ""
-
 #: includes/admin/class-basic-config-page.php:348
 msgid "The store name cannot be empty."
 msgstr ""
@@ -811,7 +1270,7 @@ msgstr ""
 
 #: includes/admin/class-batch-metabox.php:56
 #: includes/admin/class-list-columns.php:33
-#: includes/admin/class-marketing.php:257
+#: includes/admin/class-marketing.php:262
 #: includes/admin/class-overview-page.php:192
 #: includes/admin/class-plans-editor.php:84
 #: includes/admin/class-tracking-page.php:170
@@ -835,15 +1294,6 @@ msgstr ""
 
 #: includes/admin/class-batch-metabox.php:72
 msgid "Hidden (admin only)"
-msgstr ""
-
-#: includes/admin/class-batch-metabox.php:77
-#: includes/admin/class-batch-orders.php:66
-#: includes/admin/class-list-columns.php:35
-#: includes/admin/class-marketing.php:257
-#: includes/admin/class-plans-editor.php:84
-#: includes/admin/class-tracking-page.php:92
-msgid "Status"
 msgstr ""
 
 #: includes/admin/class-batch-metabox.php:80
@@ -998,17 +1448,12 @@ msgstr ""
 msgid "You do not have permission to export these orders."
 msgstr ""
 
-#: includes/admin/class-coupons-page.php:76
-#: includes/admin/class-coupons-page.php:204
-msgid "New coupon code"
-msgstr ""
-
 #: includes/admin/class-coupons-page.php:78
 msgid "Search by promotion name or code"
 msgstr ""
 
 #: includes/admin/class-coupons-page.php:80
-#: includes/admin/class-marketing.php:257
+#: includes/admin/class-marketing.php:262
 #: includes/admin/class-menu-page.php:97
 #: includes/admin/class-menu-page.php:278
 #: includes/admin/class-plans-editor.php:84
@@ -1032,14 +1477,9 @@ msgstr ""
 msgid "Promotion name"
 msgstr ""
 
-#: includes/admin/class-coupons-page.php:80
-#: includes/admin/class-coupons-page.php:213
-msgid "Coupon code"
-msgstr ""
-
 #. translators: %s: time zone, e.g. GMT+08:00
 #: includes/admin/class-coupons-page.php:80
-#: includes/admin/class-marketing.php:166
+#: includes/admin/class-marketing.php:171
 #: includes/admin/class-promotions-page.php:95
 #: includes/admin/class-shipping-discounts-page.php:55
 msgid "Promotion time"
@@ -1654,22 +2094,6 @@ msgstr ""
 msgid "Duplicate"
 msgstr ""
 
-#. translators: %d: tier number
-#: includes/admin/class-design-editor.php:156
-#: includes/admin/class-marketing.php:95
-#: includes/admin/class-marketing.php:373
-#: includes/admin/class-menu-page.php:101
-#: includes/admin/class-menu-page.php:291
-#: includes/admin/class-plans-editor.php:36
-#: includes/admin/class-plans-editor.php:107
-#: includes/admin/class-promotions-page.php:227
-#: includes/admin/class-shipping-discounts-page.php:139
-#: includes/admin/class-store-design.php:479
-#: includes/admin/class-terms-page.php:60
-#: includes/modules/class-blocks.php:231
-msgid "Delete"
-msgstr ""
-
 #: includes/admin/class-design-editor.php:157
 #: includes/admin/class-overview-page.php:157
 msgid "More"
@@ -1776,8 +2200,8 @@ msgid "OK"
 msgstr ""
 
 #: includes/admin/class-dialogs.php:34
-#: includes/admin/class-marketing.php:483
-#: includes/admin/class-marketing.php:508
+#: includes/admin/class-marketing.php:488
+#: includes/admin/class-marketing.php:513
 #: includes/admin/class-menu-page.php:117
 #: includes/admin/class-plans-editor.php:123
 #: includes/admin/class-plans-editor.php:128
@@ -1904,20 +2328,6 @@ msgstr ""
 msgid "Payment method enabled (admin)"
 msgstr ""
 
-#. translators: %s: on/off
-#: includes/admin/class-email-center.php:135
-#: includes/admin/class-email-center.php:242
-#: includes/admin/class-terms-page.php:96
-msgid "On"
-msgstr ""
-
-#. translators: %s: on/off
-#: includes/admin/class-email-center.php:135
-#: includes/admin/class-email-center.php:242
-#: includes/admin/class-shipping-page.php:149
-msgid "Off"
-msgstr ""
-
 #: includes/admin/class-email-center.php:135
 msgid "Turn off"
 msgstr ""
@@ -1938,12 +2348,6 @@ msgstr ""
 #: includes/admin/class-email-center.php:146
 #: includes/admin/class-email-center.php:242
 msgid "Admin notifications"
-msgstr ""
-
-#: includes/admin/class-email-center.php:153
-#: includes/admin/class-marketing.php:309
-#: includes/admin/class-menu-page.php:100
-msgid "Settings"
 msgstr ""
 
 #: includes/admin/class-email-center.php:154
@@ -2003,12 +2407,6 @@ msgstr ""
 msgid "These emails are not sent until the store address is filled in (US law requires a physical address in marketing emails)."
 msgstr ""
 
-#: includes/admin/class-email-center.php:232
-#: includes/emails/class-browse-reminder.php:47
-#: includes/emails/class-cart-recovery.php:64
-msgid "Coupon"
-msgstr ""
-
 #. translators: %d: seconds
 #: includes/admin/class-email-center.php:234
 #, php-format
@@ -2016,7 +2414,7 @@ msgid "Send delay: %d s"
 msgstr ""
 
 #: includes/admin/class-email-center.php:236
-#: includes/admin/class-marketing.php:378
+#: includes/admin/class-marketing.php:383
 #: includes/admin/class-menu-page.php:289
 #: includes/admin/class-plans-editor.php:35
 msgid "Edit"
@@ -2100,29 +2498,6 @@ msgstr ""
 msgid "Demo"
 msgstr ""
 
-#: includes/admin/class-list-columns.php:74
-#: includes/admin/class-terms-page.php:98
-#: includes/modules/class-registry.php:110
-#: includes/modules/class-registry.php:291
-#: includes/modules/class-registry.php:331
-#: includes/modules/class-registry.php:471
-#: includes/modules/class-registry.php:505
-#: includes/modules/class-registry.php:522
-#: includes/modules/class-registry.php:543
-#: includes/modules/class-registry.php:601
-#: includes/modules/class-registry.php:681
-#: includes/modules/class-registry.php:748
-#: includes/modules/class-registry.php:782
-#: includes/modules/class-registry.php:823
-#: includes/modules/class-registry.php:907
-#: includes/modules/class-registry.php:956
-#: includes/modules/class-registry.php:1167
-#: includes/modules/class-registry.php:1220
-#: includes/modules/class-registry.php:1249
-#: includes/modules/class-registry.php:1263
-msgid "Title"
-msgstr ""
-
 #: includes/admin/class-list-columns.php:75
 #: includes/admin/class-order-metabox.php:56
 #: includes/admin/class-report-metabox.php:81
@@ -2150,294 +2525,290 @@ msgid "Access"
 msgstr ""
 
 #. translators: %d: tier number
-#: includes/admin/class-marketing.php:92
+#: includes/admin/class-marketing.php:97
 #: includes/admin/class-promotions-page.php:227
 #, php-format
 msgid "Tier %d"
 msgstr ""
 
 #. translators: %d: stage number
-#: includes/admin/class-marketing.php:94
+#: includes/admin/class-marketing.php:99
 #: includes/admin/class-shipping-discounts-page.php:137
 #, php-format
 msgid "Stage %d"
 msgstr ""
 
-#: includes/admin/class-marketing.php:96
+#: includes/admin/class-marketing.php:101
 msgid "Delete the selected items?"
 msgstr ""
 
-#: includes/admin/class-marketing.php:97
+#: includes/admin/class-marketing.php:102
 msgid "Select at least one item first."
 msgstr ""
 
 #. translators: %s: promotion name
-#: includes/admin/class-marketing.php:99
-#: includes/admin/class-marketing.php:266
+#: includes/admin/class-marketing.php:104
+#: includes/admin/class-marketing.php:271
 #, php-format
 msgid "Already in “%s” – saving will be refused if the times overlap."
 msgstr ""
 
-#: includes/admin/class-marketing.php:100
-#: includes/admin/class-marketing.php:270
+#: includes/admin/class-marketing.php:105
+#: includes/admin/class-marketing.php:275
 #: includes/admin/class-plans-editor.php:92
 msgid "No products selected."
 msgstr ""
 
 #. translators: %s: time zone, e.g. GMT+08:00
-#: includes/admin/class-marketing.php:166
+#: includes/admin/class-marketing.php:171
 msgid "Set time zone"
 msgstr ""
 
-#: includes/admin/class-marketing.php:167
+#: includes/admin/class-marketing.php:172
 msgid "Time period"
 msgstr ""
 
-#: includes/admin/class-marketing.php:167
+#: includes/admin/class-marketing.php:172
 #: includes/admin/class-promotions-page.php:105
 #: includes/admin/class-shipping-discounts-page.php:64
 msgid "Long-term"
 msgstr ""
 
 #. translators: %d: stage number
-#: includes/admin/class-marketing.php:168
+#: includes/admin/class-marketing.php:173
 #: includes/admin/class-shipping-discounts-page.php:137
 msgid "Start time"
 msgstr ""
 
 #. translators: %d: stage number
-#: includes/admin/class-marketing.php:169
+#: includes/admin/class-marketing.php:174
 #: includes/admin/class-shipping-discounts-page.php:137
 msgid "to"
 msgstr ""
 
 #. translators: %d: stage number
-#: includes/admin/class-marketing.php:169
+#: includes/admin/class-marketing.php:174
 #: includes/admin/class-shipping-discounts-page.php:137
 msgid "End time"
 msgstr ""
 
-#: includes/admin/class-marketing.php:180
+#: includes/admin/class-marketing.php:185
 msgid "Choose the start time."
 msgstr ""
 
-#: includes/admin/class-marketing.php:183
+#: includes/admin/class-marketing.php:188
 msgid "Choose the end time, or choose “Long-term”."
 msgstr ""
 
-#: includes/admin/class-marketing.php:190
+#: includes/admin/class-marketing.php:195
 msgid "Eligible customers"
 msgstr ""
 
-#: includes/admin/class-marketing.php:192
-msgid "Everyone"
-msgstr ""
-
-#: includes/admin/class-marketing.php:193
+#: includes/admin/class-marketing.php:198
 msgid "Specific customers"
 msgstr ""
 
-#: includes/admin/class-marketing.php:194
+#: includes/admin/class-marketing.php:199
 msgid "One email per line, e.g. buyer@example.com"
 msgstr ""
 
-#: includes/admin/class-marketing.php:194
+#: includes/admin/class-marketing.php:199
 msgid "Matched against the email entered at checkout (or the account email of a signed-in customer)."
 msgstr ""
 
-#: includes/admin/class-marketing.php:195
+#: includes/admin/class-marketing.php:200
 msgid "Specific customer tags"
 msgstr ""
 
-#: includes/admin/class-marketing.php:197
+#: includes/admin/class-marketing.php:202
 msgid "Specific visitor IDs"
 msgstr ""
 
-#: includes/admin/class-marketing.php:199
+#: includes/admin/class-marketing.php:204
 msgid "Specific customer levels"
 msgstr ""
 
-#: includes/admin/class-marketing.php:203
+#: includes/admin/class-marketing.php:208
 msgid "Customer tags and levels do not exist on this site yet, and visitor tracking is still a test feature, so these options cannot be chosen."
 msgstr ""
 
-#: includes/admin/class-marketing.php:203
+#: includes/admin/class-marketing.php:208
 msgid "Customer tags and levels do not exist on this site yet, so these options cannot be chosen."
 msgstr ""
 
-#: includes/admin/class-marketing.php:215
+#: includes/admin/class-marketing.php:220
 #: includes/admin/class-shipping-discounts-page.php:55
 msgid "Scope"
 msgstr ""
 
-#: includes/admin/class-marketing.php:217
+#: includes/admin/class-marketing.php:222
 msgid "Choose all products"
 msgstr ""
 
-#: includes/admin/class-marketing.php:218
+#: includes/admin/class-marketing.php:223
 msgid "Choose some products"
 msgstr ""
 
-#: includes/admin/class-marketing.php:219
+#: includes/admin/class-marketing.php:224
 msgid "Choose collections"
 msgstr ""
 
-#: includes/admin/class-marketing.php:234
+#: includes/admin/class-marketing.php:239
 msgid "Default product order"
 msgstr ""
 
-#: includes/admin/class-marketing.php:234
+#: includes/admin/class-marketing.php:239
 msgid "The order of the products on the storefront page of this promotion. Customers can still re-sort the list."
 msgstr ""
 
-#: includes/admin/class-marketing.php:245
+#: includes/admin/class-marketing.php:250
 #: includes/class-store-config.php:768
 #: includes/modules/class-registry.php:1199
 msgid "Newest first"
 msgstr ""
 
-#: includes/admin/class-marketing.php:246
+#: includes/admin/class-marketing.php:251
 #: includes/class-store-config.php:767
 msgid "Oldest first"
 msgstr ""
 
-#: includes/admin/class-marketing.php:247
+#: includes/admin/class-marketing.php:252
 #: includes/class-store-config.php:765
 #: includes/modules/class-registry.php:1201
 msgid "Price: low to high"
 msgstr ""
 
-#: includes/admin/class-marketing.php:248
+#: includes/admin/class-marketing.php:253
 #: includes/class-store-config.php:766
 #: includes/modules/class-registry.php:1202
 msgid "Price: high to low"
 msgstr ""
 
-#: includes/admin/class-marketing.php:249
+#: includes/admin/class-marketing.php:254
 #: includes/class-store-config.php:762
 msgid "Best selling"
 msgstr ""
 
-#: includes/admin/class-marketing.php:250
+#: includes/admin/class-marketing.php:255
 #: includes/class-store-config.php:763
 msgid "Name: A to Z"
 msgstr ""
 
-#: includes/admin/class-marketing.php:256
+#: includes/admin/class-marketing.php:261
 #: includes/admin/class-plans-editor.php:83
 msgid "Search products to add…"
 msgstr ""
 
-#: includes/admin/class-marketing.php:278
+#: includes/admin/class-marketing.php:283
 msgid "There are no collections yet."
 msgstr ""
 
-#: includes/admin/class-marketing.php:278
+#: includes/admin/class-marketing.php:283
 msgid "Add collections"
 msgstr ""
 
-#: includes/admin/class-marketing.php:293
+#: includes/admin/class-marketing.php:298
 msgid "Edit page"
 msgstr ""
 
-#: includes/admin/class-marketing.php:296
+#: includes/admin/class-marketing.php:301
 msgid "View"
 msgstr ""
 
-#: includes/admin/class-marketing.php:337
+#: includes/admin/class-marketing.php:342
 #: includes/admin/class-plans-editor.php:34
 #: includes/admin/class-recovery-page.php:152
 msgid "All"
 msgstr ""
 
-#: includes/admin/class-marketing.php:338
-#: includes/admin/class-marketing.php:358
+#: includes/admin/class-marketing.php:343
+#: includes/admin/class-marketing.php:363
 msgid "Not started"
 msgstr ""
 
-#: includes/admin/class-marketing.php:339
-#: includes/admin/class-marketing.php:359
+#: includes/admin/class-marketing.php:344
+#: includes/admin/class-marketing.php:364
 msgid "In progress"
 msgstr ""
 
-#: includes/admin/class-marketing.php:340
-#: includes/admin/class-marketing.php:360
+#: includes/admin/class-marketing.php:345
+#: includes/admin/class-marketing.php:365
 msgid "Ended"
 msgstr ""
 
-#: includes/admin/class-marketing.php:348
+#: includes/admin/class-marketing.php:353
 #: includes/admin/class-shipping-page.php:72
 msgid "Search"
 msgstr ""
 
-#: includes/admin/class-marketing.php:357
+#: includes/admin/class-marketing.php:362
 msgid "Disabled"
 msgstr ""
 
-#: includes/admin/class-marketing.php:373
+#: includes/admin/class-marketing.php:378
 #: includes/admin/class-tracking-page.php:145
 msgid "Apply"
 msgstr ""
 
-#: includes/admin/class-marketing.php:383
+#: includes/admin/class-marketing.php:388
 msgid "Select"
 msgstr ""
 
-#: includes/admin/class-marketing.php:387
+#: includes/admin/class-marketing.php:392
 #: includes/admin/class-menu-page.php:123
 msgid "Select all"
 msgstr ""
 
 #. translators: %d: number of records
-#: includes/admin/class-marketing.php:396
+#: includes/admin/class-marketing.php:401
 #, php-format
 msgid "%d record"
 msgid_plural "%d records"
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/admin/class-marketing.php:397
+#: includes/admin/class-marketing.php:402
 msgid "Previous page"
 msgstr ""
 
-#: includes/admin/class-marketing.php:401
+#: includes/admin/class-marketing.php:406
 msgid "Next page"
 msgstr ""
 
-#: includes/admin/class-marketing.php:403
+#: includes/admin/class-marketing.php:408
 msgid "Items per page"
 msgstr ""
 
 #. translators: %d: number of items
-#: includes/admin/class-marketing.php:406
+#: includes/admin/class-marketing.php:411
 #, php-format
 msgid "%d / page"
 msgstr ""
 
-#: includes/admin/class-marketing.php:408
+#: includes/admin/class-marketing.php:413
 msgid "Go to"
 msgstr ""
 
-#: includes/admin/class-marketing.php:408
+#: includes/admin/class-marketing.php:413
 msgid "page"
 msgstr ""
 
-#: includes/admin/class-marketing.php:438
+#: includes/admin/class-marketing.php:443
 #: includes/admin/class-plans-editor.php:64
 #: includes/admin/class-terms-page.php:84
 msgid "Saved."
 msgstr ""
 
 #. translators: %d: number of items
-#: includes/admin/class-marketing.php:442
+#: includes/admin/class-marketing.php:447
 #, php-format
 msgid "%d item updated."
 msgid_plural "%d items updated."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/admin/class-marketing.php:483
-#: includes/admin/class-marketing.php:508
+#: includes/admin/class-marketing.php:488
+#: includes/admin/class-marketing.php:513
 #: includes/admin/class-menu-page.php:112
 #: includes/admin/class-shipping-page.php:108
 #: includes/admin/class-shipping-page.php:197
@@ -2446,20 +2817,20 @@ msgstr[1] ""
 msgid "Save"
 msgstr ""
 
-#: includes/admin/class-marketing.php:488
+#: includes/admin/class-marketing.php:493
 msgid "Back"
 msgstr ""
 
-#: includes/admin/class-marketing.php:495
+#: includes/admin/class-marketing.php:500
 msgid "Storefront page"
 msgstr ""
 
-#: includes/admin/class-marketing.php:501
+#: includes/admin/class-marketing.php:506
 msgid "— Create a new page —"
 msgstr ""
 
 #. translators: %s: shortcode
-#: includes/admin/class-marketing.php:507
+#: includes/admin/class-marketing.php:512
 #, php-format
 msgid "If the page does not contain %s yet, it is added at the end of the page."
 msgstr ""
@@ -2872,13 +3243,6 @@ msgstr ""
 msgid "Sales"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:131
-#: includes/admin/class-overview-page.php:203
-#: includes/admin/class-tracking-page.php:35
-#: includes/admin/class-tracking-page.php:146
-msgid "Visitors"
-msgstr ""
-
 #: includes/admin/class-overview-page.php:132
 msgid "New sign-ups"
 msgstr ""
@@ -2991,10 +3355,6 @@ msgstr ""
 msgid "Last 7 days"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:161
-msgid "Last 30 days"
-msgstr ""
-
 #: includes/admin/class-overview-page.php:162
 #: includes/admin/class-tracking-page.php:38
 #: includes/admin/class-tracking-page.php:245
@@ -3097,19 +3457,6 @@ msgstr ""
 #: includes/admin/class-overview-page.php:191
 #: includes/admin/class-tracking-page.php:169
 msgid "Shop"
-msgstr ""
-
-#: includes/admin/class-overview-page.php:193
-#: includes/admin/class-recovery-page.php:223
-#: includes/admin/class-tracking-page.php:110
-#: includes/admin/class-tracking-page.php:171
-#: includes/class-menus.php:108
-msgid "Cart"
-msgstr ""
-
-#: includes/admin/class-overview-page.php:194
-#: includes/admin/class-tracking-page.php:172
-msgid "Checkout"
 msgstr ""
 
 #: includes/admin/class-overview-page.php:195
@@ -3239,16 +3586,6 @@ msgstr ""
 #: includes/admin/class-plans-editor.php:139
 #: includes/shipping/class-plans.php:353
 msgid "no limit"
-msgstr ""
-
-#: includes/admin/class-plans-editor.php:42
-#: includes/admin/class-plans-editor.php:138
-msgid "Order amount"
-msgstr ""
-
-#: includes/admin/class-plans-editor.php:44
-#: includes/admin/class-plans-editor.php:138
-msgid "Weight"
 msgstr ""
 
 #: includes/admin/class-plans-editor.php:46
@@ -4499,6 +4836,7 @@ msgid "Template not found."
 msgstr ""
 
 #: includes/admin/class-store-design.php:206
+#: includes/class-exit-intent.php:262
 msgid "Something went wrong. Please try again."
 msgstr ""
 
@@ -4576,13 +4914,6 @@ msgstr ""
 #: includes/admin/class-store-design.php:322
 #: includes/admin/class-store-design.php:462
 msgid "Design"
-msgstr ""
-
-#: includes/admin/class-store-design.php:323
-#: includes/admin/class-store-design.php:434
-#: includes/admin/class-terms-page.php:98
-#: includes/admin/class-terms-page.php:106
-msgid "Preview"
 msgstr ""
 
 #: includes/admin/class-store-design.php:339
@@ -4997,12 +5328,6 @@ msgstr ""
 
 #: includes/admin/class-terms-page.php:107
 msgid "No terms yet."
-msgstr ""
-
-#: includes/admin/class-terms-page.php:108
-#: includes/class-terms.php:220
-#: includes/class-terms.php:282
-msgid "Close"
 msgstr ""
 
 #: includes/admin/class-tracking-page.php:36
@@ -5646,14 +5971,6 @@ msgstr ""
 msgid "Not valid on sale items"
 msgstr ""
 
-#: includes/class-coupons.php:434
-msgid "Copied"
-msgstr ""
-
-#: includes/class-coupons.php:434
-msgid "Copy code"
-msgstr ""
-
 #: includes/class-coupons.php:448
 msgid "There are no public offers right now. Please check back later."
 msgstr ""
@@ -5861,6 +6178,70 @@ msgstr[1] ""
 msgid "No new drafts: those pages already exist."
 msgstr ""
 
+#: includes/class-exit-intent.php:133
+msgid "Every prize needs a name."
+msgstr ""
+
+#: includes/class-exit-intent.php:148
+msgid "Enter a popup title."
+msgstr ""
+
+#: includes/class-exit-intent.php:151
+msgid "Choose at least one page type."
+msgstr ""
+
+#: includes/class-exit-intent.php:154
+msgid "Turn on at least one trigger."
+msgstr ""
+
+#: includes/class-exit-intent.php:157
+msgid "Choose a coupon code that is enabled, not expired and not used up."
+msgstr ""
+
+#: includes/class-exit-intent.php:160
+msgid "Enter the button link, or leave the button text empty."
+msgstr ""
+
+#: includes/class-exit-intent.php:164
+msgid "The wheel needs at least 2 prizes."
+msgstr ""
+
+#: includes/class-exit-intent.php:167
+msgid "At least one prize needs a chance greater than zero."
+msgstr ""
+
+#. translators: %s: coupon code
+#: includes/class-exit-intent.php:172
+#, php-format
+msgid "The coupon code %s of a prize is not enabled, has expired or is used up."
+msgstr ""
+
+#: includes/class-exit-intent.php:323
+msgid "The code is applied to your cart."
+msgstr ""
+
+#: includes/class-exit-intent.php:324
+msgid "The code is saved and will be applied once your cart meets its conditions."
+msgstr ""
+
+#: includes/class-exit-intent.php:324
+msgid "This code can no longer be used."
+msgstr ""
+
+#: includes/class-exit-intent.php:331
+#: includes/class-exit-intent.php:364
+#: includes/class-promotions.php:954
+msgid "This offer has ended."
+msgstr ""
+
+#: includes/class-exit-intent.php:334
+msgid "Preview: customers get the code applied to their cart here."
+msgstr ""
+
+#: includes/class-exit-intent.php:382
+msgid "Preview: the draw is real, but no code is applied and nothing is counted."
+msgstr ""
+
 #: includes/class-menus.php:77
 #: includes/class-menus.php:221
 msgid "Header menu"
@@ -6009,7 +6390,7 @@ msgstr ""
 msgid "Batch: %s"
 msgstr ""
 
-#: includes/class-plugin.php:118
+#: includes/class-plugin.php:120
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr ""
 
@@ -6247,10 +6628,6 @@ msgstr ""
 #: includes/class-promotions.php:951
 #, php-format
 msgid "Starts %s"
-msgstr ""
-
-#: includes/class-promotions.php:954
-msgid "This offer has ended."
 msgstr ""
 
 #. translators: %s: date
@@ -6594,10 +6971,6 @@ msgstr ""
 msgid "Use code %s at checkout."
 msgstr ""
 
-#: includes/emails/class-browse-reminder.php:99
-msgid "Continue shopping"
-msgstr ""
-
 #. translators: %s: store name
 #: includes/emails/class-browse-reminder.php:101
 #, php-format
@@ -6616,12 +6989,6 @@ msgstr ""
 
 #: includes/emails/class-cart-recovery.php:55
 msgid "Shown above the product list. Keep it factual: no health claims and no fake urgency."
-msgstr ""
-
-#: includes/emails/class-cart-recovery.php:59
-#: includes/modules/class-registry.php:1041
-#: includes/modules/class-registry.php:1298
-msgid "Button text"
 msgstr ""
 
 #: includes/emails/class-cart-recovery.php:68
@@ -6718,19 +7085,6 @@ msgstr ""
 msgid "Focus point"
 msgstr ""
 
-#: includes/modules/class-blocks.php:250
-#: includes/modules/class-registry.php:293
-#: includes/modules/class-registry.php:305
-#: includes/modules/class-registry.php:473
-#: includes/modules/class-registry.php:545
-#: includes/modules/class-registry.php:602
-#: includes/modules/class-registry.php:682
-#: includes/modules/class-registry.php:708
-#: includes/modules/class-registry.php:883
-#: includes/modules/class-registry.php:908
-msgid "Text"
-msgstr ""
-
 #: includes/modules/class-blocks.php:252
 msgid "Open in a new tab"
 msgstr ""
@@ -6771,10 +7125,6 @@ msgstr ""
 
 #: includes/modules/class-fallback.php:139
 msgid "No image selected"
-msgstr ""
-
-#: includes/modules/class-fallback.php:139
-msgid "Choose an image"
 msgstr ""
 
 #: includes/modules/class-fallback.php:510
@@ -6998,12 +7348,6 @@ msgstr ""
 
 #: includes/modules/class-registry.php:157
 msgid "Items per row"
-msgstr ""
-
-#: includes/modules/class-registry.php:183
-#: includes/modules/class-registry.php:732
-#: includes/modules/class-registry.php:849
-msgid "Image"
 msgstr ""
 
 #: includes/modules/class-registry.php:215

@@ -216,3 +216,18 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
 - **优惠码规则**由 `woocommerce_coupon_is_valid` 检查，加购、计算总价、经典结账和区块结账都会检查，错误信息就是 WooCommerce 的优惠码提示：开始时间、全局首单（按账户和结账邮箱）、只算适用商品的满金额 / 满件数、“不叠加满减活动”（购物车有满减优惠时不能用）。“替换满减活动”的优惠码一用，满减费用就消失。
 - **运费折扣**在 `woocommerce_package_rates`（优先级 120，物流方案之后）直接改运费金额，税按比例减少；区块结账显示的就是折扣后的运费，没有单独的折扣行。运费行 meta 带 `_pc_ship_discount`（折扣名称）和 `_pc_ship_original_cost`（原运费），主题需要时可以显示“原价 / 折后”。
 - 运费缓存的包裹数据里多了 `pc_ship_discounts`（当前可用的折扣），换邮箱或活动开始、结束时会重新计算运费。
+
+## 应用：离开意图增收（2026-10-23，Claude，APP-EXIT-01）
+
+后台“应用中心 → 离开意图增收”。开启后插件在前台加载 `assets/exit-intent.js` 和 `assets/exit-intent.css`，主题不需要接入。
+
+- **弹窗**：`<dialog class="pc-exit-dialog">`，里面是 `.pc-exit.pc-exit--coupon | --wheel | --message`。
+  - 子元素：`__close`、`__image`、`__title`、`__text`、`__code`（`code`、`__copy`）、`__wheel`（`svg.__svg`、`__pointer`）、`__btn`、`__decline`、`__result`。
+  - 主色是 CSS 变量 `--pc-exit-color`。默认样式尽量中性，主题可以覆盖。
+- **触发**：电脑端鼠标移出页面顶部；手机端快速上滑或一段时间没有操作；页面打开时已有其他 `dialog[open]` 时不弹。员工不会看到。
+  - 频率记在 localStorage / sessionStorage 的 `pcExitIntent`。
+  - 管理员打开任意前台地址加 `?pc_exit_preview=1` 可以预览。
+- **请求**：`?wc-ajax=pc_exit_event`、`pc_exit_claim`、`pc_exit_spin`，都是公开请求（和 WooCommerce 加购一样）。
+  - 抽奖由服务端按权重抽，每个购物会话只能抽一次。
+  - 优惠码用 Coupons::remember 用到购物车；购物车为空时先记下，加入商品后自动使用。
+- **订单**：用了弹窗给的优惠码时，订单 meta `_pc_exit_intent` 记着这个码。
