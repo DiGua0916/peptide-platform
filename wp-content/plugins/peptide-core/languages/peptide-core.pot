@@ -2,14 +2,14 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.18.0\n"
+"Project-Id-Version: Peptide Core 0.19.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-23T08:15:01+00:00\n"
+"POT-Creation-Date: 2026-10-23T09:58:06+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -29,7 +29,7 @@ msgstr ""
 msgid "DiGua"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:55
+#: includes/admin/class-admin-menus.php:57
 #: includes/admin/class-batch-orders.php:141
 #: includes/admin/class-batch-orders.php:144
 #: includes/admin/class-overview-page.php:133
@@ -37,33 +37,57 @@ msgstr ""
 msgid "Orders"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:56
+#: includes/admin/class-admin-menus.php:58
 msgid "Customers"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:57
+#: includes/admin/class-admin-menus.php:59
 msgid "Store settings"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:59
+#: includes/admin/class-admin-menus.php:61
 msgid "Shipping settings"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:60
+#: includes/admin/class-admin-menus.php:62
 msgid "Tax settings"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:61
+#: includes/admin/class-admin-menus.php:63
 msgid "Payment settings"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:62
+#: includes/admin/class-admin-menus.php:64
 #: includes/admin/class-basic-config-page.php:114
 #: includes/admin/class-email-center.php:151
 #: includes/admin/class-store-settings.php:107
 #: includes/admin/class-store-settings.php:119
 #: includes/admin/class-terms-page.php:91
 msgid "System settings"
+msgstr ""
+
+#: includes/admin/class-admin-menus.php:69
+msgid "Marketing campaigns"
+msgstr ""
+
+#: includes/admin/class-admin-menus.php:70
+#: includes/admin/class-promotions-page.php:91
+#: includes/class-promotions.php:84
+msgid "Spend-and-save promotions"
+msgstr ""
+
+#: includes/admin/class-admin-menus.php:70
+msgid "Spend-and-save"
+msgstr ""
+
+#: includes/admin/class-admin-menus.php:71
+#: includes/admin/class-coupons-page.php:76
+msgid "Coupon codes"
+msgstr ""
+
+#: includes/admin/class-admin-menus.php:72
+#: includes/admin/class-shipping-discounts-page.php:51
+msgid "Shipping discounts"
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:48
@@ -82,10 +106,14 @@ msgid "— None —"
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:98
+#: includes/admin/class-marketing.php:373
+#: includes/admin/class-marketing.php:379
 msgid "Enable"
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:98
+#: includes/admin/class-marketing.php:373
+#: includes/admin/class-marketing.php:379
 msgid "Disable"
 msgstr ""
 
@@ -353,7 +381,7 @@ msgid "These crawlers are blocked at system level and cannot be edited; they are
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:228
-#: includes/class-coupons.php:518
+#: includes/class-coupons.php:581
 msgid "Storefront"
 msgstr ""
 
@@ -397,13 +425,17 @@ msgid "Require sign-in to visit the store"
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:236
+#: includes/admin/class-coupons-page.php:222
 #: includes/admin/class-list-columns.php:62
 #: includes/admin/class-list-columns.php:109
+#: includes/admin/class-shipping-discounts-page.php:119
 #: includes/admin/class-tax-page.php:70
 msgid "Yes"
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:236
+#: includes/admin/class-coupons-page.php:222
+#: includes/admin/class-shipping-discounts-page.php:119
 #: includes/admin/class-tax-page.php:70
 msgid "No"
 msgstr ""
@@ -724,6 +756,7 @@ msgstr ""
 
 #: includes/admin/class-basic-config-page.php:327
 #: includes/admin/class-email-center.php:102
+#: includes/admin/class-marketing.php:476
 #: includes/admin/class-menu-page.php:164
 #: includes/admin/class-menu-page.php:207
 #: includes/admin/class-recovery-page.php:57
@@ -782,6 +815,7 @@ msgstr ""
 
 #: includes/admin/class-batch-metabox.php:56
 #: includes/admin/class-list-columns.php:33
+#: includes/admin/class-marketing.php:257
 #: includes/admin/class-overview-page.php:192
 #: includes/admin/class-plans-editor.php:84
 #: includes/admin/class-tracking-page.php:170
@@ -810,10 +844,9 @@ msgstr ""
 #: includes/admin/class-batch-metabox.php:77
 #: includes/admin/class-batch-orders.php:66
 #: includes/admin/class-list-columns.php:35
+#: includes/admin/class-marketing.php:257
 #: includes/admin/class-plans-editor.php:84
 #: includes/admin/class-tracking-page.php:92
-#: includes/class-promotions.php:666
-#: includes/class-promotions.php:780
 msgid "Status"
 msgstr ""
 
@@ -967,6 +1000,365 @@ msgstr ""
 
 #: includes/admin/class-batch-orders.php:114
 msgid "You do not have permission to export these orders."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:76
+#: includes/admin/class-coupons-page.php:204
+msgid "New coupon code"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:78
+msgid "Search by promotion name or code"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:80
+#: includes/admin/class-marketing.php:257
+#: includes/admin/class-menu-page.php:97
+#: includes/admin/class-menu-page.php:278
+#: includes/admin/class-plans-editor.php:84
+#: includes/admin/class-plans-editor.php:114
+#: includes/admin/class-promotions-page.php:95
+#: includes/admin/class-recovery-page.php:163
+#: includes/admin/class-shipping-discounts-page.php:55
+#: includes/admin/class-shipping-page.php:195
+#: includes/admin/class-store-design.php:380
+#: includes/admin/class-store-design.php:433
+#: includes/admin/class-tax-page.php:61
+#: includes/admin/class-terms-page.php:100
+msgid "Actions"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:80
+#: includes/admin/class-coupons-page.php:212
+#: includes/admin/class-promotions-page.php:95
+#: includes/admin/class-promotions-page.php:174
+#: includes/admin/class-shipping-discounts-page.php:55
+msgid "Promotion name"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:80
+#: includes/admin/class-coupons-page.php:213
+msgid "Coupon code"
+msgstr ""
+
+#. translators: %s: time zone, e.g. GMT+08:00
+#: includes/admin/class-coupons-page.php:80
+#: includes/admin/class-marketing.php:166
+#: includes/admin/class-promotions-page.php:95
+#: includes/admin/class-shipping-discounts-page.php:55
+msgid "Promotion time"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:80
+#: includes/admin/class-coupons-page.php:228
+#: includes/admin/class-promotions-page.php:95
+#: includes/admin/class-promotions-page.php:187
+#: includes/admin/class-shipping-discounts-page.php:55
+msgid "Discount rules"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:80
+#: includes/admin/class-promotions-page.php:95
+msgid "Product scope"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:80
+#: includes/admin/class-promotions-page.php:95
+#: includes/admin/class-shipping-discounts-page.php:55
+msgid "Promotion status"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:80
+msgid "Usage"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:82
+msgid "No coupon codes yet."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:94
+msgid "No end date"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:96
+msgid "Used / left"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:96
+#: includes/admin/class-coupons-page.php:220
+#: includes/admin/class-coupons-page.php:221
+msgid "Unlimited"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:101
+msgid "Coupon code page settings"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:101
+msgid "The storefront page that lists the coupon codes marked “Show in the coupon list”."
+msgstr ""
+
+#. translators: %d: number of products
+#: includes/admin/class-coupons-page.php:108
+#: includes/admin/class-promotions-page.php:119
+#, php-format
+msgid "%d product"
+msgid_plural "%d products"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: collection names
+#: includes/admin/class-coupons-page.php:119
+#: includes/admin/class-promotions-page.php:130
+#, php-format
+msgid "Collections: %s"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:121
+#: includes/admin/class-promotions-page.php:132
+msgid "Whole store"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:196
+#: includes/admin/class-coupons-page.php:271
+#: includes/class-coupons.php:281
+msgid "This coupon code does not exist."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:204
+msgid "Edit coupon code"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:211
+#: includes/admin/class-promotions-page.php:173
+#: includes/admin/class-shipping-discounts-page.php:116
+msgid "Basic information"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:212
+msgid "For your own reference in the coupon list; customers see the code, not this name."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:212
+#: includes/admin/class-promotions-page.php:174
+msgid "Enter the promotion name, e.g. Black Friday Discounts"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:213
+msgid "Random code"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:213
+msgid "Enter a code"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:213
+msgid "Letters, digits, “-” and “_”. Customers can type it in any letter case."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:214
+msgid "Combining with promotions"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:214
+msgid ""
+"Do not combine: while a spend-and-save promotion gives a discount in the cart, this code cannot be used.\n"
+"Combine: the code and the promotions both apply.\n"
+"Replace: when this code is used, spend-and-save promotions do not apply."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:215
+msgid "Do not combine with promotions"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:215
+msgid "Combine with promotions"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:215
+msgid "Replace promotions"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:220
+msgid "Number of coupons"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:220
+#: includes/admin/class-coupons-page.php:221
+msgid "Limited"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:220
+msgid "uses in total"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:221
+msgid "Limit per customer"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:221
+msgid "times"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:221
+#: includes/class-coupons.php:394
+msgid "First order only"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:221
+msgid "Only customers who have never ordered in this store can use the code: checked against the account and the checkout email, at checkout. Each of them can use it once."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:222
+msgid "Show in the coupon list"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:222
+msgid "Yes: the code is listed on the storefront coupon page so customers can copy it. Codes for specific customers are never listed."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:225
+msgid "The coupon page is created automatically when the first code is shown in the coupon list."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:229
+msgid "Discount condition"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:229
+msgid ""
+"No minimum: the code works on any cart.\n"
+"Minimum amount / Minimum items: only the products this code applies to count (see Scope), before discounts, taxes and shipping."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:230
+#: includes/class-coupon-rules.php:195
+msgid "No minimum"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:230
+msgid "Minimum amount"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:230
+msgid "Minimum items"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:233
+#: includes/admin/class-coupons-page.php:238
+#: includes/admin/class-promotions-page.php:231
+#: includes/admin/class-shipping-discounts-page.php:130
+#: includes/admin/class-shipping-discounts-page.php:138
+msgid "Enter"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:233
+msgid "items"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:234
+#: includes/admin/class-promotions-page.php:176
+#: includes/admin/class-shipping-discounts-page.php:128
+msgid "Discount type"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:235
+msgid "Percentage"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:235
+msgid "Fixed amount"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:242
+msgid "Specific customers: only these emails can use the code (WooCommerce checks the checkout email)."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:249
+msgid "The code can be used on all products."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:250
+msgid "The code only discounts the chosen products."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:251
+msgid "The code only discounts the products of the chosen collections."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:254
+msgid "More settings (WooCommerce coupon editor)"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:299
+#: includes/class-promotions.php:296
+msgid "Enter a promotion name."
+msgstr ""
+
+#. translators: %d: number of characters
+#: includes/admin/class-coupons-page.php:302
+#: includes/class-promotions.php:299
+#: includes/shipping/class-discounts.php:91
+#, php-format
+msgid "The name can have at most %d characters."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:305
+msgid "Enter a coupon code."
+msgstr ""
+
+#. translators: %d: number of characters
+#: includes/admin/class-coupons-page.php:308
+#, php-format
+msgid "The code can have up to %d letters, digits, “-” and “_”."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:310
+msgid "This code is already used by another coupon."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:314
+#: includes/class-promotions.php:200
+#: includes/shipping/class-discounts.php:109
+msgid "The end time must be after the start time."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:317
+msgid "Enter how many times the code can be used."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:320
+msgid "Enter how many times each customer can use the code."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:323
+msgid "Enter the minimum amount or number of items."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:326
+#: includes/shipping/class-discounts.php:98
+msgid "Enter a discount greater than zero."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:328
+msgid "A percentage discount can be at most 100%."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:331
+#: includes/shipping/class-discounts.php:152
+msgid "Enter at least one customer email."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:334
+msgid "Choose at least one product, or apply the code to all products."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:337
+msgid "Choose at least one collection, or apply the code to all products."
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:359
+msgid "The coupon code could not be saved."
 msgstr ""
 
 #. translators: %s: store brand name
@@ -1266,11 +1658,16 @@ msgstr ""
 msgid "Duplicate"
 msgstr ""
 
+#. translators: %d: tier number
 #: includes/admin/class-design-editor.php:156
+#: includes/admin/class-marketing.php:95
+#: includes/admin/class-marketing.php:373
 #: includes/admin/class-menu-page.php:101
 #: includes/admin/class-menu-page.php:291
 #: includes/admin/class-plans-editor.php:36
 #: includes/admin/class-plans-editor.php:107
+#: includes/admin/class-promotions-page.php:227
+#: includes/admin/class-shipping-discounts-page.php:139
 #: includes/admin/class-store-design.php:479
 #: includes/admin/class-terms-page.php:60
 #: includes/modules/class-blocks.php:231
@@ -1383,6 +1780,8 @@ msgid "OK"
 msgstr ""
 
 #: includes/admin/class-dialogs.php:34
+#: includes/admin/class-marketing.php:483
+#: includes/admin/class-marketing.php:508
 #: includes/admin/class-menu-page.php:117
 #: includes/admin/class-plans-editor.php:123
 #: includes/admin/class-plans-editor.php:128
@@ -1520,7 +1919,6 @@ msgstr ""
 #: includes/admin/class-email-center.php:135
 #: includes/admin/class-email-center.php:242
 #: includes/admin/class-shipping-page.php:149
-#: includes/class-promotions.php:797
 msgid "Off"
 msgstr ""
 
@@ -1547,6 +1945,7 @@ msgid "Admin notifications"
 msgstr ""
 
 #: includes/admin/class-email-center.php:153
+#: includes/admin/class-marketing.php:309
 #: includes/admin/class-menu-page.php:100
 msgid "Settings"
 msgstr ""
@@ -1621,6 +2020,7 @@ msgid "Send delay: %d s"
 msgstr ""
 
 #: includes/admin/class-email-center.php:236
+#: includes/admin/class-marketing.php:378
 #: includes/admin/class-menu-page.php:289
 #: includes/admin/class-plans-editor.php:35
 msgid "Edit"
@@ -1753,6 +2153,321 @@ msgstr ""
 msgid "Access"
 msgstr ""
 
+#. translators: %d: tier number
+#: includes/admin/class-marketing.php:92
+#: includes/admin/class-promotions-page.php:227
+#, php-format
+msgid "Tier %d"
+msgstr ""
+
+#. translators: %d: stage number
+#: includes/admin/class-marketing.php:94
+#: includes/admin/class-shipping-discounts-page.php:137
+#, php-format
+msgid "Stage %d"
+msgstr ""
+
+#: includes/admin/class-marketing.php:96
+msgid "Delete the selected items?"
+msgstr ""
+
+#: includes/admin/class-marketing.php:97
+msgid "Select at least one item first."
+msgstr ""
+
+#. translators: %s: promotion name
+#: includes/admin/class-marketing.php:99
+#: includes/admin/class-marketing.php:266
+#, php-format
+msgid "Already in “%s” – saving will be refused if the times overlap."
+msgstr ""
+
+#: includes/admin/class-marketing.php:100
+#: includes/admin/class-marketing.php:270
+#: includes/admin/class-plans-editor.php:92
+msgid "No products selected."
+msgstr ""
+
+#. translators: %s: time zone, e.g. GMT+08:00
+#: includes/admin/class-marketing.php:166
+msgid "Set time zone"
+msgstr ""
+
+#: includes/admin/class-marketing.php:167
+msgid "Time period"
+msgstr ""
+
+#: includes/admin/class-marketing.php:167
+#: includes/admin/class-promotions-page.php:105
+#: includes/admin/class-shipping-discounts-page.php:64
+msgid "Long-term"
+msgstr ""
+
+#. translators: %d: stage number
+#: includes/admin/class-marketing.php:168
+#: includes/admin/class-shipping-discounts-page.php:137
+msgid "Start time"
+msgstr ""
+
+#. translators: %d: stage number
+#: includes/admin/class-marketing.php:169
+#: includes/admin/class-shipping-discounts-page.php:137
+msgid "to"
+msgstr ""
+
+#. translators: %d: stage number
+#: includes/admin/class-marketing.php:169
+#: includes/admin/class-shipping-discounts-page.php:137
+msgid "End time"
+msgstr ""
+
+#: includes/admin/class-marketing.php:180
+msgid "Choose the start time."
+msgstr ""
+
+#: includes/admin/class-marketing.php:183
+msgid "Choose the end time, or choose “Long-term”."
+msgstr ""
+
+#: includes/admin/class-marketing.php:190
+msgid "Eligible customers"
+msgstr ""
+
+#: includes/admin/class-marketing.php:192
+msgid "Everyone"
+msgstr ""
+
+#: includes/admin/class-marketing.php:193
+msgid "Specific customers"
+msgstr ""
+
+#: includes/admin/class-marketing.php:194
+msgid "One email per line, e.g. buyer@example.com"
+msgstr ""
+
+#: includes/admin/class-marketing.php:194
+msgid "Matched against the email entered at checkout (or the account email of a signed-in customer)."
+msgstr ""
+
+#: includes/admin/class-marketing.php:195
+msgid "Specific customer tags"
+msgstr ""
+
+#: includes/admin/class-marketing.php:197
+msgid "Specific visitor IDs"
+msgstr ""
+
+#: includes/admin/class-marketing.php:199
+msgid "Specific customer levels"
+msgstr ""
+
+#: includes/admin/class-marketing.php:203
+msgid "Customer tags and levels do not exist on this site yet, and visitor tracking is still a test feature, so these options cannot be chosen."
+msgstr ""
+
+#: includes/admin/class-marketing.php:203
+msgid "Customer tags and levels do not exist on this site yet, so these options cannot be chosen."
+msgstr ""
+
+#: includes/admin/class-marketing.php:215
+#: includes/admin/class-shipping-discounts-page.php:55
+msgid "Scope"
+msgstr ""
+
+#: includes/admin/class-marketing.php:217
+msgid "Choose all products"
+msgstr ""
+
+#: includes/admin/class-marketing.php:218
+msgid "Choose some products"
+msgstr ""
+
+#: includes/admin/class-marketing.php:219
+msgid "Choose collections"
+msgstr ""
+
+#: includes/admin/class-marketing.php:234
+msgid "Default product order"
+msgstr ""
+
+#: includes/admin/class-marketing.php:234
+msgid "The order of the products on the storefront page of this promotion. Customers can still re-sort the list."
+msgstr ""
+
+#: includes/admin/class-marketing.php:245
+#: includes/class-store-config.php:768
+#: includes/modules/class-registry.php:1199
+msgid "Newest first"
+msgstr ""
+
+#: includes/admin/class-marketing.php:246
+#: includes/class-store-config.php:767
+msgid "Oldest first"
+msgstr ""
+
+#: includes/admin/class-marketing.php:247
+#: includes/class-store-config.php:765
+#: includes/modules/class-registry.php:1201
+msgid "Price: low to high"
+msgstr ""
+
+#: includes/admin/class-marketing.php:248
+#: includes/class-store-config.php:766
+#: includes/modules/class-registry.php:1202
+msgid "Price: high to low"
+msgstr ""
+
+#: includes/admin/class-marketing.php:249
+#: includes/class-store-config.php:762
+msgid "Best selling"
+msgstr ""
+
+#: includes/admin/class-marketing.php:250
+#: includes/class-store-config.php:763
+msgid "Name: A to Z"
+msgstr ""
+
+#: includes/admin/class-marketing.php:256
+#: includes/admin/class-plans-editor.php:83
+msgid "Search products to add…"
+msgstr ""
+
+#: includes/admin/class-marketing.php:278
+msgid "There are no collections yet."
+msgstr ""
+
+#: includes/admin/class-marketing.php:278
+msgid "Add collections"
+msgstr ""
+
+#: includes/admin/class-marketing.php:293
+msgid "Edit page"
+msgstr ""
+
+#: includes/admin/class-marketing.php:296
+msgid "View"
+msgstr ""
+
+#: includes/admin/class-marketing.php:337
+#: includes/admin/class-plans-editor.php:34
+#: includes/admin/class-recovery-page.php:152
+msgid "All"
+msgstr ""
+
+#: includes/admin/class-marketing.php:338
+#: includes/admin/class-marketing.php:358
+msgid "Not started"
+msgstr ""
+
+#: includes/admin/class-marketing.php:339
+#: includes/admin/class-marketing.php:359
+msgid "In progress"
+msgstr ""
+
+#: includes/admin/class-marketing.php:340
+#: includes/admin/class-marketing.php:360
+msgid "Ended"
+msgstr ""
+
+#: includes/admin/class-marketing.php:348
+#: includes/admin/class-shipping-page.php:72
+msgid "Search"
+msgstr ""
+
+#: includes/admin/class-marketing.php:357
+msgid "Disabled"
+msgstr ""
+
+#: includes/admin/class-marketing.php:373
+#: includes/admin/class-tracking-page.php:145
+msgid "Apply"
+msgstr ""
+
+#: includes/admin/class-marketing.php:383
+msgid "Select"
+msgstr ""
+
+#: includes/admin/class-marketing.php:387
+#: includes/admin/class-menu-page.php:123
+msgid "Select all"
+msgstr ""
+
+#. translators: %d: number of records
+#: includes/admin/class-marketing.php:396
+#, php-format
+msgid "%d record"
+msgid_plural "%d records"
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/admin/class-marketing.php:397
+msgid "Previous page"
+msgstr ""
+
+#: includes/admin/class-marketing.php:401
+msgid "Next page"
+msgstr ""
+
+#: includes/admin/class-marketing.php:403
+msgid "Items per page"
+msgstr ""
+
+#. translators: %d: number of items
+#: includes/admin/class-marketing.php:406
+#, php-format
+msgid "%d / page"
+msgstr ""
+
+#: includes/admin/class-marketing.php:408
+msgid "Go to"
+msgstr ""
+
+#: includes/admin/class-marketing.php:408
+msgid "page"
+msgstr ""
+
+#: includes/admin/class-marketing.php:438
+#: includes/admin/class-plans-editor.php:64
+#: includes/admin/class-terms-page.php:84
+msgid "Saved."
+msgstr ""
+
+#. translators: %d: number of items
+#: includes/admin/class-marketing.php:442
+#, php-format
+msgid "%d item updated."
+msgid_plural "%d items updated."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/admin/class-marketing.php:483
+#: includes/admin/class-marketing.php:508
+#: includes/admin/class-menu-page.php:112
+#: includes/admin/class-shipping-page.php:108
+#: includes/admin/class-shipping-page.php:197
+#: includes/admin/class-tax-page.php:103
+#: includes/admin/class-terms-page.php:103
+msgid "Save"
+msgstr ""
+
+#: includes/admin/class-marketing.php:488
+msgid "Back"
+msgstr ""
+
+#: includes/admin/class-marketing.php:495
+msgid "Storefront page"
+msgstr ""
+
+#: includes/admin/class-marketing.php:501
+msgid "— Create a new page —"
+msgstr ""
+
+#. translators: %s: shortcode
+#: includes/admin/class-marketing.php:507
+#, php-format
+msgid "If the page does not contain %s yet, it is added at the end of the page."
+msgstr ""
+
 #: includes/admin/class-menu-page.php:84
 msgid "Back to menu list"
 msgstr ""
@@ -1805,19 +2520,6 @@ msgstr ""
 msgid "Linked page"
 msgstr ""
 
-#: includes/admin/class-menu-page.php:97
-#: includes/admin/class-menu-page.php:278
-#: includes/admin/class-plans-editor.php:84
-#: includes/admin/class-plans-editor.php:114
-#: includes/admin/class-recovery-page.php:163
-#: includes/admin/class-shipping-page.php:195
-#: includes/admin/class-store-design.php:380
-#: includes/admin/class-store-design.php:433
-#: includes/admin/class-tax-page.php:61
-#: includes/admin/class-terms-page.php:100
-msgid "Actions"
-msgstr ""
-
 #: includes/admin/class-menu-page.php:98
 msgid "Batch add"
 msgstr ""
@@ -1865,14 +2567,6 @@ msgstr ""
 msgid "New item"
 msgstr ""
 
-#: includes/admin/class-menu-page.php:112
-#: includes/admin/class-shipping-page.php:108
-#: includes/admin/class-shipping-page.php:197
-#: includes/admin/class-tax-page.php:103
-#: includes/admin/class-terms-page.php:103
-msgid "Save"
-msgstr ""
-
 #: includes/admin/class-menu-page.php:114
 msgid "Menu saved."
 msgstr ""
@@ -1891,10 +2585,6 @@ msgstr ""
 
 #: includes/admin/class-menu-page.php:122
 msgid "Adds one item per selected entry, named after it and linking to it. Example: choose several product categories to add them all as sub-items."
-msgstr ""
-
-#: includes/admin/class-menu-page.php:123
-msgid "Select all"
 msgstr ""
 
 #: includes/admin/class-menu-page.php:124
@@ -2535,11 +3225,6 @@ msgstr ""
 msgid "Christmas"
 msgstr ""
 
-#: includes/admin/class-plans-editor.php:34
-#: includes/admin/class-recovery-page.php:152
-msgid "All"
-msgstr ""
-
 #: includes/admin/class-plans-editor.php:37
 msgid "No regions yet. Use “Add countries”."
 msgstr ""
@@ -2605,11 +3290,6 @@ msgstr ""
 msgid "Enter a tax rate between 0 and 100 for every region."
 msgstr ""
 
-#: includes/admin/class-plans-editor.php:64
-#: includes/admin/class-terms-page.php:84
-msgid "Saved."
-msgstr ""
-
 #: includes/admin/class-plans-editor.php:67
 msgid "Plan deleted."
 msgstr ""
@@ -2618,17 +3298,8 @@ msgstr ""
 #: includes/admin/class-tax-page.php:61
 #: includes/admin/class-tax-page.php:97
 #: includes/admin/class-tracking-page.php:155
-#: includes/class-promotions.php:723
 #: includes/modules/class-registry.php:1185
 msgid "Products"
-msgstr ""
-
-#: includes/admin/class-plans-editor.php:83
-msgid "Search products to add…"
-msgstr ""
-
-#: includes/admin/class-plans-editor.php:92
-msgid "No products selected."
 msgstr ""
 
 #: includes/admin/class-plans-editor.php:105
@@ -2718,6 +3389,7 @@ msgid "Fee rule"
 msgstr ""
 
 #: includes/admin/class-plans-editor.php:140
+#: includes/admin/class-shipping-discounts-page.php:104
 #: includes/admin/class-shipping-page.php:144
 msgid "Shipping fee"
 msgstr ""
@@ -2803,6 +3475,171 @@ msgstr ""
 
 #: includes/admin/class-product-panel.php:261
 msgid "Add batch for this product"
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:32
+msgid "Spend & save"
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:33
+msgid "Spend & get % off"
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:34
+msgid "Buy items & save"
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:35
+msgid "Buy items & get % off"
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:36
+msgid "Xth item % off"
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:37
+msgid "Bundle price"
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:38
+msgid "Buy X, get Y free"
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:45
+msgid "Spend {min} {cur}, save {value} {cur}"
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:46
+msgid "Spend {min} {cur}, get {value} % off"
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:47
+msgid "Buy {min} items, save {value} {cur}"
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:48
+msgid "Buy {min} items, get {value} % off"
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:49
+msgid "Item no. {min} gets {value} % off"
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:50
+msgid "Any {min} items for {value} {cur}"
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:51
+msgid "Buy {min} items, {value} of them free"
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:91
+#: includes/admin/class-promotions-page.php:167
+msgid "New promotion"
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:93
+#: includes/admin/class-shipping-discounts-page.php:53
+msgid "Search by promotion name"
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:97
+msgid "No promotions yet."
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:112
+msgid "Promotion page settings"
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:112
+msgid "The storefront page that lists the running promotions; each promotion has its own detail page with its products."
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:139
+#: includes/class-promotions.php:291
+#: includes/class-promotions.php:342
+msgid "This promotion does not exist."
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:167
+msgid "Edit promotion"
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:174
+msgid "Shown to customers in the cart, at checkout and on the order as the name of the discount, and as the title of the promotion page."
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:176
+msgid ""
+"Spend & save: spend $300, save $25.\n"
+"Spend & get % off: spend $300, get 10% off.\n"
+"Buy items & save: buy 3 items, save $10.\n"
+"Buy items & get % off: buy 3 items, get 15% off.\n"
+"Xth item % off: the 2nd item gets 50% off (Shopname “2nd item at 50%”).\n"
+"Bundle price: any 3 items for $99.\n"
+"Buy X, get Y free: buy 3 items, the cheapest one is free.\n"
+"Only the products in this promotion count."
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:184
+msgid "The promotions page is created automatically when the first promotion is enabled."
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:194
+msgid "No upper limit"
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:194
+msgid ""
+"The discount repeats each time the threshold is reached again: spend $100 save $10 gives $20 off at $200, $30 off at $300, and so on.\n"
+"Works with one tier only."
+msgstr ""
+
+#. translators: %d: maximum number of tiers
+#: includes/admin/class-promotions-page.php:196
+msgid "Add tier"
+msgstr ""
+
+#. translators: %d: maximum number of tiers
+#: includes/admin/class-promotions-page.php:196
+#, php-format
+msgid "Up to %d tiers. The highest tier reached applies."
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:205
+msgid "Every product can use this promotion; products that are in another promotion are left out automatically."
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:206
+msgid "Only the chosen products can use this promotion. Choose products that are not in another promotion at the same time."
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:207
+msgid "The products of the chosen collections can use this promotion. A product in several collections uses the promotion of the most recently created collection promotion."
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:212
+msgid "Usage rules"
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:213
+msgid "You can choose all products, some products or collections for this promotion."
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:213
+msgid "Notes:"
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:214
+msgid "At the same time, a product or a collection can only be in one promotion, and only one promotion can cover all products."
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:215
+msgid "In an order, a product only joins one promotion, by priority: specific products > specific collections > all products."
+msgstr ""
+
+#: includes/admin/class-promotions-page.php:216
+msgid "Example: product a, collection A and all products each have a promotion at the same time, and product a is in collection A. When a customer buys product a, the promotion of product a applies (if its threshold is not reached, there is no discount); product a does not join the promotions of collection A or of all products."
 msgstr ""
 
 #: includes/admin/class-recovery-page.php:78
@@ -2973,8 +3810,8 @@ msgstr ""
 
 #: includes/admin/class-recovery-page.php:195
 #: includes/admin/class-tracking-page.php:127
-#: includes/class-coupons.php:420
-#: includes/class-promotions.php:566
+#: includes/class-coupons.php:462
+#: includes/class-promotions.php:977
 msgid "Details"
 msgstr ""
 
@@ -3043,7 +3880,6 @@ msgid "Mass spectrometry (MS)"
 msgstr ""
 
 #: includes/admin/class-report-metabox.php:64
-#: includes/class-promotions.php:734
 msgid "Other"
 msgstr ""
 
@@ -3060,8 +3896,7 @@ msgid "Withdrawn"
 msgstr ""
 
 #: includes/admin/class-report-metabox.php:73
-#: includes/class-coupons.php:546
-#: includes/class-promotions.php:781
+#: includes/class-coupons.php:609
 msgid "Public"
 msgstr ""
 
@@ -3283,6 +4118,119 @@ msgstr ""
 msgid "Bottom left"
 msgstr ""
 
+#: includes/admin/class-shipping-discounts-page.php:51
+#: includes/admin/class-shipping-discounts-page.php:110
+msgid "New discount"
+msgstr ""
+
+#: includes/admin/class-shipping-discounts-page.php:53
+msgid "Note: when several shipping discounts apply at the same time, the customer gets the lowest shipping fee."
+msgstr ""
+
+#: includes/admin/class-shipping-discounts-page.php:55
+#: includes/admin/class-shipping-discounts-page.php:118
+msgid "Promotion type"
+msgstr ""
+
+#: includes/admin/class-shipping-discounts-page.php:57
+msgid "No shipping discounts yet."
+msgstr ""
+
+#: includes/admin/class-shipping-discounts-page.php:63
+#: includes/admin/class-shipping-discounts-page.php:118
+msgid "Time-limited stages"
+msgstr ""
+
+#: includes/admin/class-shipping-discounts-page.php:63
+#: includes/admin/class-shipping-discounts-page.php:118
+msgid "Fixed discount"
+msgstr ""
+
+#. translators: %d: number of customers
+#: includes/admin/class-shipping-discounts-page.php:74
+#, php-format
+msgid "%d specific customer"
+msgid_plural "%d specific customers"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of customers
+#: includes/admin/class-shipping-discounts-page.php:74
+msgid "All customers"
+msgstr ""
+
+#. translators: %s: weekdays
+#: includes/admin/class-shipping-discounts-page.php:77
+#, php-format
+msgid "Member days: %s"
+msgstr ""
+
+#: includes/admin/class-shipping-discounts-page.php:93
+msgid "This shipping discount does not exist."
+msgstr ""
+
+#: includes/admin/class-shipping-discounts-page.php:104
+msgid "Reduce by"
+msgstr ""
+
+#: includes/admin/class-shipping-discounts-page.php:110
+msgid "Edit discount"
+msgstr ""
+
+#: includes/admin/class-shipping-discounts-page.php:117
+msgid "Discount name"
+msgstr ""
+
+#: includes/admin/class-shipping-discounts-page.php:117
+msgid "Enter the discount name, e.g. Shipping"
+msgstr ""
+
+#: includes/admin/class-shipping-discounts-page.php:117
+msgid "Recorded on the shipping line of the order."
+msgstr ""
+
+#: includes/admin/class-shipping-discounts-page.php:118
+msgid ""
+"Fixed discount: one discount for the whole promotion time.\n"
+"Time-limited stages: up to 5 time periods, each with its own discount, e.g. 50% off in the first 24 hours, then 20% off for a week."
+msgstr ""
+
+#: includes/admin/class-shipping-discounts-page.php:119
+msgid "Member days only"
+msgstr ""
+
+#: includes/admin/class-shipping-discounts-page.php:119
+msgid "Yes: the discount only works on the chosen weekdays (store time zone) and only for signed-in customers with an account – the members of this store."
+msgstr ""
+
+#: includes/admin/class-shipping-discounts-page.php:128
+msgid "Amount off shipping"
+msgstr ""
+
+#: includes/admin/class-shipping-discounts-page.php:128
+msgid "Percentage off shipping"
+msgstr ""
+
+#: includes/admin/class-shipping-discounts-page.php:131
+msgid "Shipping is never reduced below zero; 100% off means free shipping."
+msgstr ""
+
+#. translators: %s: time zone
+#: includes/admin/class-shipping-discounts-page.php:134
+msgid "Stages"
+msgstr ""
+
+#. translators: %d: maximum number of stages
+#: includes/admin/class-shipping-discounts-page.php:142
+msgid "Add stage"
+msgstr ""
+
+#. translators: %d: maximum number of stages
+#: includes/admin/class-shipping-discounts-page.php:142
+#, php-format
+msgid "Up to %d stages. Stages must not overlap; between stages there is no discount."
+msgstr ""
+
 #: includes/admin/class-shipping-page.php:58
 msgid "Shipping management"
 msgstr ""
@@ -3330,10 +4278,6 @@ msgstr ""
 
 #: includes/admin/class-shipping-page.php:72
 msgid "Search by product title"
-msgstr ""
-
-#: includes/admin/class-shipping-page.php:72
-msgid "Search"
 msgstr ""
 
 #: includes/admin/class-shipping-page.php:73
@@ -4243,10 +5187,6 @@ msgstr ""
 msgid "Tablet"
 msgstr ""
 
-#: includes/admin/class-tracking-page.php:145
-msgid "Apply"
-msgstr ""
-
 #: includes/admin/class-tracking-page.php:147
 msgid "Conversion funnel"
 msgstr ""
@@ -4548,63 +5488,146 @@ msgstr ""
 msgid "Accepted at %s (UTC)"
 msgstr ""
 
+#. translators: %s: date and time
+#: includes/class-coupon-rules.php:146
+#, php-format
+msgid "This code can be used from %s."
+msgstr ""
+
+#. translators: %d: number of items
+#: includes/class-coupon-rules.php:157
+#, php-format
+msgid "This code needs at least %d eligible item in the cart."
+msgid_plural "This code needs at least %d eligible items in the cart."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: amount
+#: includes/class-coupon-rules.php:162
+#, php-format
+msgid "This code needs at least %s of eligible items in the cart."
+msgstr ""
+
+#: includes/class-coupon-rules.php:167
+msgid "This code is for a first order only."
+msgstr ""
+
+#. translators: %s: promotion name
+#: includes/class-coupon-rules.php:174
+#, php-format
+msgid "This code cannot be combined with the promotion “%s” in your cart."
+msgstr ""
+
+#. translators: %s: amount
+#: includes/class-coupon-rules.php:187
+#: includes/class-coupon-rules.php:193
+#, php-format
+msgid "Spend %s"
+msgstr ""
+
+#. translators: %d: number of items
+#: includes/class-coupon-rules.php:190
+#, php-format
+msgid "Buy %d item"
+msgid_plural "Buy %d items"
+msgstr[0] ""
+msgstr[1] ""
+
 #. translators: %s: percentage
-#: includes/class-coupons.php:135
-#: includes/class-promotions.php:221
+#: includes/class-coupon-rules.php:200
+#: includes/class-coupons.php:141
+#: includes/class-promotions.php:409
 #, php-format
 msgid "%s%% off"
 msgstr ""
 
 #. translators: %s: amount
-#: includes/class-coupons.php:138
+#: includes/class-coupon-rules.php:203
+#: includes/class-coupons.php:144
 #, php-format
 msgid "%s off each eligible item"
 msgstr ""
 
 #. translators: %s: amount
-#: includes/class-coupons.php:141
+#. translators: %s: percentage
+#: includes/class-coupon-rules.php:206
+#: includes/class-promotions.php:409
+#, php-format
+msgid "%s off"
+msgstr ""
+
+#: includes/class-coupon-rules.php:209
+msgid "free shipping"
+msgstr ""
+
+#. translators: %s: amount
+#: includes/class-coupons.php:147
 #, php-format
 msgid "%s off your order"
 msgstr ""
 
-#: includes/class-coupons.php:263
-msgid "This coupon code does not exist."
-msgstr ""
-
-#: includes/class-coupons.php:279
+#: includes/class-coupons.php:297
 msgid "This coupon has ended or can no longer be used."
 msgstr ""
 
 #. translators: %s: coupon code
-#: includes/class-coupons.php:284
+#: includes/class-coupons.php:302
 #, php-format
 msgid "Coupon %s is saved and will be applied once your cart meets its conditions."
 msgstr ""
 
 #. translators: %s: amount
-#: includes/class-coupons.php:361
+#: includes/class-coupons.php:383
 #, php-format
 msgid "Minimum spend %s"
 msgstr ""
 
 #. translators: %s: amount
-#: includes/class-coupons.php:365
+#: includes/class-coupons.php:387
+#, php-format
+msgid "Spend %s on eligible items"
+msgstr ""
+
+#. translators: %d: number of items
+#: includes/class-coupons.php:391
+#, php-format
+msgid "Buy at least %d eligible item"
+msgid_plural "Buy at least %d eligible items"
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/class-coupons.php:397
+msgid "Cannot be combined with spend-and-save offers"
+msgstr ""
+
+#: includes/class-coupons.php:399
+msgid "Replaces spend-and-save offers"
+msgstr ""
+
+#. translators: %s: amount
+#: includes/class-coupons.php:403
 #, php-format
 msgid "Maximum spend %s"
 msgstr ""
 
-#: includes/class-coupons.php:368
+#: includes/class-coupons.php:406
 msgid "Includes free shipping"
 msgstr ""
 
 #. translators: %s: date
-#: includes/class-coupons.php:372
+#: includes/class-coupons.php:410
+#, php-format
+msgid "Valid from %s"
+msgstr ""
+
+#. translators: %s: date
+#: includes/class-coupons.php:414
 #, php-format
 msgid "Valid until %s"
 msgstr ""
 
 #. translators: %d: number of uses
-#: includes/class-coupons.php:376
+#: includes/class-coupons.php:418
 #, php-format
 msgid "%d use left"
 msgid_plural "%d uses left"
@@ -4612,129 +5635,132 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: number of uses
-#: includes/class-coupons.php:380
+#: includes/class-coupons.php:422
 #, php-format
 msgid "Limit %d per customer"
 msgid_plural "Limit %d per customer"
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/class-coupons.php:383
+#: includes/class-coupons.php:425
 msgid "Cannot be combined with other coupons"
 msgstr ""
 
-#: includes/class-coupons.php:386
+#: includes/class-coupons.php:428
 msgid "Not valid on sale items"
 msgstr ""
 
-#: includes/class-coupons.php:392
+#: includes/class-coupons.php:434
 msgid "Copied"
 msgstr ""
 
-#: includes/class-coupons.php:392
+#: includes/class-coupons.php:434
 msgid "Copy code"
 msgstr ""
 
-#: includes/class-coupons.php:406
+#: includes/class-coupons.php:448
 msgid "There are no public offers right now. Please check back later."
 msgstr ""
 
-#: includes/class-coupons.php:429
+#: includes/class-coupons.php:471
 msgid "This offer is not available. It may have ended."
 msgstr ""
 
-#: includes/class-coupons.php:431
+#: includes/class-coupons.php:473
 msgid "See current offers"
 msgstr ""
 
-#: includes/class-coupons.php:440
+#: includes/class-coupons.php:482
 msgid "Apply to my cart"
 msgstr ""
 
-#: includes/class-coupons.php:450
+#: includes/class-coupons.php:492
 msgid "Valid on these products"
 msgstr ""
 
-#: includes/class-coupons.php:451
+#: includes/class-coupons.php:493
 msgid "Valid in these categories"
 msgstr ""
 
-#: includes/class-coupons.php:452
+#: includes/class-coupons.php:494
 msgid "Not valid on these products"
 msgstr ""
 
-#: includes/class-coupons.php:453
+#: includes/class-coupons.php:495
 msgid "Not valid in these categories"
 msgstr ""
 
-#: includes/class-coupons.php:466
-#: includes/class-promotions.php:606
+#: includes/class-coupons.php:508
+#: includes/class-promotions.php:1018
 msgid "All offers"
 msgstr ""
 
-#: includes/class-coupons.php:479
+#: includes/class-coupons.php:541
 msgid "Show publicly"
 msgstr ""
 
-#: includes/class-coupons.php:480
+#: includes/class-coupons.php:542
 msgid "List this coupon on the storefront coupons page so customers can copy it."
 msgstr ""
 
-#: includes/class-coupons.php:487
+#: includes/class-coupons.php:549
 msgid "Public title"
 msgstr ""
 
-#: includes/class-coupons.php:488
+#: includes/class-coupons.php:550
 msgid "e.g. 10% off your first order (empty = automatic)"
 msgstr ""
 
-#: includes/class-coupons.php:495
-#: includes/class-promotions.php:738
+#: includes/class-coupons.php:557
 msgid "Public description"
 msgstr ""
 
-#: includes/class-coupons.php:502
+#: includes/class-coupons.php:564
 #: includes/modules/class-registry.php:1195
 msgid "Sort order"
 msgstr ""
 
-#: includes/class-coupons.php:512
+#: includes/class-coupons.php:574
 msgid "Not shown: the coupon is not published."
 msgstr ""
 
-#: includes/class-coupons.php:513
+#: includes/class-coupons.php:575
+msgid "Not shown yet: the coupon has not started."
+msgstr ""
+
+#: includes/class-coupons.php:576
 msgid "Not shown: “Show publicly” is off."
 msgstr ""
 
-#: includes/class-coupons.php:514
+#: includes/class-coupons.php:577
 msgid "Not shown: coupons limited to specific emails are never listed publicly."
 msgstr ""
 
-#: includes/class-coupons.php:515
+#: includes/class-coupons.php:578
 msgid "Not shown: the coupon has expired."
 msgstr ""
 
-#: includes/class-coupons.php:516
+#: includes/class-coupons.php:579
 msgid "Not shown: the usage limit has been reached."
 msgstr ""
 
-#: includes/class-coupons.php:520
+#: includes/class-coupons.php:583
 msgid "View on the coupons page"
 msgstr ""
 
-#: includes/class-coupons.php:524
+#: includes/class-coupons.php:587
 msgid "Share link"
 msgstr ""
 
-#: includes/class-coupons.php:524
+#: includes/class-coupons.php:587
 msgid "Opening this link applies the coupon automatically."
 msgstr ""
 
-#: includes/class-coupons.php:556
+#: includes/class-coupons.php:619
 msgid "Listed"
 msgstr ""
 
-#: includes/class-coupons.php:558
+#: includes/class-coupons.php:621
 msgid "Public, but not listed now"
 msgstr ""
 
@@ -4859,7 +5885,6 @@ msgid "None (heading only)"
 msgstr ""
 
 #: includes/class-menus.php:103
-#: includes/class-promotions.php:713
 msgid "All products"
 msgstr ""
 
@@ -4988,7 +6013,7 @@ msgstr ""
 msgid "Batch: %s"
 msgstr ""
 
-#: includes/class-plugin.php:112
+#: includes/class-plugin.php:118
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr ""
 
@@ -5066,72 +6091,130 @@ msgstr ""
 msgid "Nothing"
 msgstr ""
 
-#: includes/class-promotions.php:69
-#: includes/class-promotions.php:615
-msgid "Spend-and-save promotions"
-msgstr ""
-
-#: includes/class-promotions.php:70
+#: includes/class-promotions.php:85
 msgid "Promotion"
 msgstr ""
 
-#: includes/class-promotions.php:71
-msgid "Add promotion"
-msgstr ""
-
-#: includes/class-promotions.php:72
-msgid "Edit promotion"
-msgstr ""
-
-#: includes/class-promotions.php:73
-#: includes/class-promotions.php:615
-msgid "Spend-and-save"
-msgstr ""
-
-#: includes/class-promotions.php:74
-msgid "No promotions yet."
-msgstr ""
-
-#: includes/class-promotions.php:130
+#: includes/class-promotions.php:162
 msgid "Each tier needs a threshold and a discount greater than zero."
 msgstr ""
 
-#: includes/class-promotions.php:137
-msgid "A percentage discount must be below 100%."
+#: includes/class-promotions.php:182
+msgid "“No upper limit” works with one tier only."
 msgstr ""
 
-#: includes/class-promotions.php:141
-msgid "A fixed discount must be smaller than the amount the customer has to spend."
-msgstr ""
-
-#: includes/class-promotions.php:151
+#: includes/class-promotions.php:189
 msgid "Higher tiers should give at least the same discount as lower tiers."
 msgstr ""
 
-#: includes/class-promotions.php:157
+#: includes/class-promotions.php:195
+#: includes/class-promotions.php:347
 msgid "Add at least one tier."
 msgstr ""
 
-#: includes/class-promotions.php:162
-msgid "The end time must be after the start time."
+#: includes/class-promotions.php:206
+msgid "Choose at least one collection, or apply the promotion to all products."
 msgstr ""
 
-#: includes/class-promotions.php:168
-msgid "Choose at least one category, or apply the promotion to all products."
-msgstr ""
-
-#: includes/class-promotions.php:171
+#: includes/class-promotions.php:209
 msgid "Choose at least one product, or apply the promotion to all products."
 msgstr ""
 
-#. translators: %s: percentage
-#: includes/class-promotions.php:221
+#: includes/class-promotions.php:225
+msgid "A percentage discount must be below 100%."
+msgstr ""
+
+#: includes/class-promotions.php:227
+msgid "A fixed discount must be smaller than the amount the customer has to spend."
+msgstr ""
+
+#: includes/class-promotions.php:229
+msgid "For “Xth item Y% off”, X must be at least 2 and Y at most 100 (100 = free)."
+msgstr ""
+
+#: includes/class-promotions.php:231
+msgid "A bundle price needs at least 2 items."
+msgstr ""
+
+#: includes/class-promotions.php:233
+msgid "For “buy X, Y free”, X must be at least 2 and Y smaller than X."
+msgstr ""
+
+#. translators: %s: promotion name
+#: includes/class-promotions.php:266
 #, php-format
-msgid "%s off"
+msgid "Only one promotion for all products can run at a time. “%s” runs at the same time."
+msgstr ""
+
+#. translators: 1: product names, 2: promotion name
+#: includes/class-promotions.php:270
+#, php-format
+msgid "%1$s already in “%2$s” at the same time. A product can only be in one promotion at a time."
+msgstr ""
+
+#. translators: 1: collection names, 2: promotion name
+#: includes/class-promotions.php:278
+#, php-format
+msgid "The collection %1$s is already in “%2$s” at the same time. A collection can only be in one promotion at a time."
+msgstr ""
+
+#. translators: %s: price
+#: includes/class-promotions.php:402
+#, php-format
+msgid "all for %s"
+msgstr ""
+
+#. translators: %d: number of items
+#: includes/class-promotions.php:406
+#, php-format
+msgid "%d item free"
+msgid_plural "%d items free"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: 1: item position, 2: percentage
+#: includes/class-promotions.php:420
+#, php-format
+msgid "Every %1$dth item %2$s%% off"
+msgstr ""
+
+#. translators: 1: item position, 2: percentage
+#: includes/class-promotions.php:422
+#, php-format
+msgid "Item no. %1$d %2$s%% off"
+msgstr ""
+
+#. translators: 1: number of items, 2: price
+#: includes/class-promotions.php:426
+#, php-format
+msgid "Any %1$d items for %2$s"
+msgstr ""
+
+#: includes/class-promotions.php:427
+#: includes/class-promotions.php:431
+msgid "(repeats)"
+msgstr ""
+
+#. translators: 1: number of items to buy, 2: number of free items
+#: includes/class-promotions.php:430
+#, php-format
+msgid "Buy %1$d, the cheapest %2$d free"
+msgstr ""
+
+#. translators: 1: amount, 2: discount
+#: includes/class-promotions.php:435
+#, php-format
+msgid "Every %1$s spent, %2$s off"
+msgstr ""
+
+#. translators: 1: number of items, 2: discount
+#: includes/class-promotions.php:441
+#, php-format
+msgid "Every %1$d items, %2$s off"
 msgstr ""
 
 #. translators: 1: number of items, 2: reward
-#: includes/class-promotions.php:227
+#: includes/class-promotions.php:447
 #, php-format
 msgid "Buy %1$d item, get %2$s"
 msgid_plural "Buy %1$d items, get %2$s"
@@ -5139,203 +6222,73 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: amount, 2: reward
-#: includes/class-promotions.php:230
+#: includes/class-promotions.php:450
 #, php-format
 msgid "Spend %1$s, get %2$s"
 msgstr ""
 
 #. translators: %d: number of items
-#: includes/class-promotions.php:346
+#: includes/class-promotions.php:696
 #, php-format
 msgid "%d more item"
 msgid_plural "%d more items"
 msgstr[0] ""
 msgstr[1] ""
 
-#. translators: 1: amount or number of items still needed, 2: reward
-#: includes/class-promotions.php:356
+#. translators: 1: number of items still needed, e.g. "2 more items", 2: reward
+#: includes/class-promotions.php:707
+#, php-format
+msgid "Add %1$s to get %2$s"
+msgstr ""
+
+#. translators: 1: amount still needed, 2: reward
+#: includes/class-promotions.php:709
 #, php-format
 msgid "Add %1$s more to get %2$s"
 msgstr ""
 
 #. translators: %s: date
-#: includes/class-promotions.php:540
+#: includes/class-promotions.php:951
 #, php-format
 msgid "Starts %s"
 msgstr ""
 
-#: includes/class-promotions.php:543
+#: includes/class-promotions.php:954
 msgid "This offer has ended."
 msgstr ""
 
 #. translators: %s: date
-#: includes/class-promotions.php:546
+#: includes/class-promotions.php:957
 #, php-format
 msgid "Ends %s"
 msgstr ""
 
-#: includes/class-promotions.php:551
+#: includes/class-promotions.php:962
 msgid "There are no offers right now. Please check back later."
 msgstr ""
 
-#: includes/class-promotions.php:573
+#: includes/class-promotions.php:984
 msgid "This offer is not available."
 msgstr ""
 
-#: includes/class-promotions.php:587
+#: includes/class-promotions.php:998
 msgid "Applies to all products."
 msgstr ""
 
-#: includes/class-promotions.php:588
+#: includes/class-promotions.php:999
 msgid "Items already on sale do not count."
 msgstr ""
 
-#: includes/class-promotions.php:589
+#: includes/class-promotions.php:1000
 msgid "Cannot be combined with coupon codes."
 msgstr ""
 
-#: includes/class-promotions.php:590
-msgid "The discount is applied automatically in the cart. Only the best offer applies."
+#: includes/class-promotions.php:1001
+msgid "The discount is applied automatically in the cart. Each item joins one offer only."
 msgstr ""
 
-#: includes/class-promotions.php:594
-msgid "Eligible categories"
-msgstr ""
-
-#: includes/class-promotions.php:594
-#: includes/class-promotions.php:710
-msgid "Eligible products"
-msgstr ""
-
-#: includes/class-promotions.php:628
-msgid "Name shown to customers, e.g. Spend $100, save $10"
-msgstr ""
-
-#: includes/class-promotions.php:632
-msgid "Promotion rules"
-msgstr ""
-
-#: includes/class-promotions.php:655
-msgid "Off (draft or no tiers)"
-msgstr ""
-
-#: includes/class-promotions.php:656
-#: includes/class-promotions.php:798
-msgid "Scheduled"
-msgstr ""
-
-#: includes/class-promotions.php:657
-#: includes/class-promotions.php:799
-msgid "Running"
-msgstr ""
-
-#: includes/class-promotions.php:658
-#: includes/class-promotions.php:800
-msgid "Ended"
-msgstr ""
-
-#: includes/class-promotions.php:663
-msgid "The promotion was saved as a draft until this is fixed."
-msgstr ""
-
-#: includes/class-promotions.php:666
-msgid "Publish to turn the promotion on; switch it back to draft to turn it off."
-msgstr ""
-
-#: includes/class-promotions.php:669
-msgid "Condition"
-msgstr ""
-
-#: includes/class-promotions.php:671
-msgid "Cart amount (spend $X)"
-msgstr ""
-
-#: includes/class-promotions.php:672
-msgid "Number of items (buy X items)"
-msgstr ""
-
-#: includes/class-promotions.php:673
-msgid "Only eligible items count, before coupons, taxes and shipping."
-msgstr ""
-
-#: includes/class-promotions.php:677
-msgid "Discount"
-msgstr ""
-
-#: includes/class-promotions.php:679
-msgid "Fixed amount off"
-msgstr ""
-
-#: includes/class-promotions.php:680
-msgid "Percentage off the eligible items"
-msgstr ""
-
-#: includes/class-promotions.php:684
-#: includes/class-promotions.php:778
-msgid "Tiers"
-msgstr ""
-
-#: includes/class-promotions.php:687
-msgid "Threshold (amount or items)"
-msgstr ""
-
-#: includes/class-promotions.php:687
-msgid "Discount (amount or %)"
-msgstr ""
-
-#: includes/class-promotions.php:697
-msgid "Example: 100 → 10 and 200 → 25 means spend $100 save $10, spend $200 save $25. The highest tier reached applies. Leave unused rows empty."
-msgstr ""
-
-#: includes/class-promotions.php:701
-#: includes/class-promotions.php:779
-msgid "Dates"
-msgstr ""
-
-#: includes/class-promotions.php:703
-msgid "Start"
-msgstr ""
-
-#: includes/class-promotions.php:704
-msgid "End"
-msgstr ""
-
-#. translators: %s: timezone name
-#: includes/class-promotions.php:706
-#, php-format
-msgid "Store time zone: %s. Leave empty for no limit. Use the real dates of the offer."
-msgstr ""
-
-#: includes/class-promotions.php:714
-msgid "Selected categories"
-msgstr ""
-
-#: includes/class-promotions.php:715
-msgid "Selected products"
-msgstr ""
-
-#: includes/class-promotions.php:717
-msgid "Categories"
-msgstr ""
-
-#: includes/class-promotions.php:729
-msgid "Hold Ctrl (Cmd on Mac) to choose several."
-msgstr ""
-
-#: includes/class-promotions.php:730
-msgid "Items already on sale do not count"
-msgstr ""
-
-#: includes/class-promotions.php:736
-msgid "Can be combined with coupon codes"
-msgstr ""
-
-#: includes/class-promotions.php:737
-msgid "Show on the storefront offers page"
-msgstr ""
-
-#: includes/class-promotions.php:740
-msgid "View on the offers page"
+#: includes/class-promotions.php:1006
+msgid "Eligible collections"
 msgstr ""
 
 #: includes/class-recovery.php:464
@@ -5430,35 +6383,8 @@ msgstr ""
 msgid "Recommended"
 msgstr ""
 
-#: includes/class-store-config.php:762
-msgid "Best selling"
-msgstr ""
-
-#: includes/class-store-config.php:763
-msgid "Name: A to Z"
-msgstr ""
-
 #: includes/class-store-config.php:764
 msgid "Name: Z to A"
-msgstr ""
-
-#: includes/class-store-config.php:765
-#: includes/modules/class-registry.php:1201
-msgid "Price: low to high"
-msgstr ""
-
-#: includes/class-store-config.php:766
-#: includes/modules/class-registry.php:1202
-msgid "Price: high to low"
-msgstr ""
-
-#: includes/class-store-config.php:767
-msgid "Oldest first"
-msgstr ""
-
-#: includes/class-store-config.php:768
-#: includes/modules/class-registry.php:1199
-msgid "Newest first"
 msgstr ""
 
 #: includes/class-store-config.php:1022
@@ -7114,6 +8040,48 @@ msgstr ""
 
 #: includes/modules/class-renderer.php:232
 msgid "Hidden on mobile"
+msgstr ""
+
+#: includes/shipping/class-discounts.php:88
+msgid "Enter a discount name."
+msgstr ""
+
+#: includes/shipping/class-discounts.php:100
+msgid "A shipping discount can be at most 100% (free shipping)."
+msgstr ""
+
+#: includes/shipping/class-discounts.php:120
+msgid "Each stage needs a start and an end time, and the end must be after the start."
+msgstr ""
+
+#: includes/shipping/class-discounts.php:128
+msgid "The stages must not overlap."
+msgstr ""
+
+#: includes/shipping/class-discounts.php:133
+msgid "Add at least one stage."
+msgstr ""
+
+#. translators: %d: number of stages
+#: includes/shipping/class-discounts.php:137
+#, php-format
+msgid "At most %d stages."
+msgstr ""
+
+#: includes/shipping/class-discounts.php:147
+msgid "Choose at least one member day."
+msgstr ""
+
+#. translators: %s: percentage
+#: includes/shipping/class-discounts.php:353
+#, php-format
+msgid "%s%% off shipping"
+msgstr ""
+
+#. translators: %s: amount
+#: includes/shipping/class-discounts.php:356
+#, php-format
+msgid "%s off shipping"
 msgstr ""
 
 #: includes/shipping/class-plan-method.php:20

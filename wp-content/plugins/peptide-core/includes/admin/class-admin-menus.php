@@ -8,6 +8,8 @@
  *   店铺设置（STORE-SETTINGS-01 起按 Shopname 分为：物流设置、税费设置、支付设置、系统设置；
  *   原来的 WooCommerce 设置、VialCove 设置、系统状态放在“系统设置”页面底部）。
  *   这些页面仍然是 WooCommerce 自己的页面，打开时左侧菜单停在新的位置。
+ * - 营销（MARKETING-01，用户 2026-10-23 要求）：去掉 WooCommerce 的营销菜单（概览、优惠券和原来的满减活动），
+ *   换成 Shopname 的“营销活动”：满减活动、优惠码、运费折扣（见 Marketing）。
  *
  * 只影响能管理商店的人（manage_woocommerce）；其他角色的菜单不变。
  *
@@ -62,15 +64,21 @@ final class Admin_Menus {
 		add_submenu_page( self::SETTINGS, __( 'System settings', 'peptide-core' ), __( 'System settings', 'peptide-core' ), self::CAP, Store_Settings::SYSTEM_SLUG, array( Store_Settings::class, 'render_system' ) );
 		// WordPress 会自动把顶层菜单本身加成第一个子菜单，去掉它。
 		remove_submenu_page( self::SETTINGS, self::SETTINGS );
+
+		// 营销活动：顶层菜单就是第一个子菜单（满减活动）。
+		add_menu_page( __( 'Marketing campaigns', 'peptide-core' ), __( 'Marketing campaigns', 'peptide-core' ), Marketing::CAP, Promotions_Page::SLUG, array( Promotions_Page::class, 'render' ), 'dashicons-megaphone', 56 );
+		add_submenu_page( Promotions_Page::SLUG, __( 'Spend-and-save promotions', 'peptide-core' ), __( 'Spend-and-save', 'peptide-core' ), Marketing::CAP, Promotions_Page::SLUG, array( Promotions_Page::class, 'render' ) );
+		add_submenu_page( Promotions_Page::SLUG, __( 'Coupon codes', 'peptide-core' ), __( 'Coupon codes', 'peptide-core' ), Marketing::CAP, Coupons_Page::SLUG, array( Coupons_Page::class, 'render' ) );
+		add_submenu_page( Promotions_Page::SLUG, __( 'Shipping discounts', 'peptide-core' ), __( 'Shipping discounts', 'peptide-core' ), Marketing::CAP, Shipping_Discounts_Page::SLUG, array( Shipping_Discounts_Page::class, 'render' ) );
 	}
 
 	public static function remove_menus(): void {
 		if ( ! self::applies() ) {
 			return;
 		}
-		// 文章、媒体、评论、WooCommerce（订单、顾客、设置已移到上面的新菜单）。
+		// 文章、媒体、评论、WooCommerce（订单、顾客、设置已移到上面的新菜单）、WooCommerce 营销（换成营销活动）。
 		// remove_menu_page() 每次只去掉第一个匹配项，所以重复执行到没有为止。
-		foreach ( array( 'edit.php', 'upload.php', 'edit-comments.php', 'woocommerce' ) as $slug ) {
+		foreach ( array( 'edit.php', 'upload.php', 'edit-comments.php', 'woocommerce', 'woocommerce-marketing' ) as $slug ) {
 			while ( false !== remove_menu_page( $slug ) ) {
 				continue;
 			}

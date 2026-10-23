@@ -114,6 +114,7 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
 - `peptide_core_get_checkout_terms()`：`[{id,title,url}]`，只包含已发布并勾选“设置为结账条款”的页面。主题只加链接，不改 Additional Checkout Fields 的必选确认。
 - `peptide_core_get_public_coupons()` / `peptide_core_get_public_coupon( $code )`：
   - 每张优惠码的字段：`id, code, title, text, type, amount, value, free_shipping, minimum_spend(_text), maximum_spend(_text), expires, expires_text, uses_left, limit_per_customer, individual_use, exclude_sale_items, products, categories, excluded_products, excluded_categories([{id,name,url}]), url, apply_url`。
+  - 2026-10-23 新增（COUPON-02）：`eligible_spend(_text)`、`eligible_items`（只按适用商品计算的门槛）、`first_order`、`strategy`（no_stack / stack / replace，和满减活动的关系）、`sort`、`starts`、`starts_text`。`code` 按商家输入的大小写显示（WooCommerce 内部存小写，输入不区分大小写）。还没开始的优惠码不公开。
   - 限定邮箱、过期、用完、未发布的优惠码不会出现；不返回邮箱限制等内部信息。单张查询不可用时返回 null。
   - 主题可以用 `template-parts/coupons/list.php`（`$args['coupons']`）和 `detail.php`（`$args['coupon']|null`、`$args['list_url']`）接管 `[pc_coupons]` 页面。
 - `?pc_coupon=CODE`（任意前台地址）：插件用 302 跳回去掉参数的同一地址。
@@ -129,7 +130,11 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
 - `peptide_core_get_promotion_progress()`：`{applied:null | {id,title,tier,discount,discount_text,url}, next:null | {id,title,basis,remaining,remaining_text,reward_text,message,url}}`。
   - Store API 购物车的 `extensions.peptide_core.promotion` 是同样的数据，可以直接用于区块购物车和抽屉。
 - `peptide_core_get_product_promotions( $product )`：这个商品参加的、进行中的公开活动。
-- 优惠由插件在购物车里加一笔负数费用（不计税），名称就是活动标题，订单费用行记着活动 ID。每份购物车只用优惠最多的一个活动。主题只负责显示，不计算金额。
+- 优惠由插件在购物车里加负数费用（不计税），名称就是活动标题，订单费用行记着活动 ID。主题只负责显示，不计算金额。
+  - 2026-10-23 起（PROMO-02）：每个商品只参加一个活动（指定商品 > 指定专辑 > 全部商品），不同商品可以参加不同活动，所以**一份购物车可能有多笔 `pc-promo-<id>` 费用**。
+  - `progress()` 的 `applied` 仍是优惠最多的那个活动；有优惠时另有 `applied_all`（全部生效的活动，同样的字段）和 `discount`（合计金额）。
+  - 活动字段新增 `type`（spend_amount / spend_percent / qty_amount / qty_percent / nth_percent / bundle_price / buy_x_free_y）、`unlimited`（上不封顶）、`sort`（活动页商品排序）。`basis` / `reward` 保留：basis=quantity 表示按件数，reward=percent 表示打折。
+  - 活动详情页（`?promo=ID`）的插件默认样式会在下面列出参加活动的商品（WooCommerce `[products]`，按活动设置的排序）。
 - `[pc_promotions]` 活动页面：第一次公开活动时自动建好 Offers 页面，`?promo=ID` 显示详情。主题可以用 `template-parts/promotions/list.php`（`$args['promotions']`）和 `detail.php`（`$args['promotion']|null`、`$args['list_url']`）接管。
 - 菜单链接类型新增 `promotions`（活动列表页）和 `promotion`（活动详情页）。活动结束或不再公开时，这一项不显示。
 
@@ -203,3 +208,11 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
 - **邮件链接**：
   - `?pc_recover=` / `?pc_unsub=`（弃单提醒）不变；
   - 新增 `?pc_optout=`（购物发现退订）、`?pc_verify=`（注册邮箱验证，跳回账户页并显示提示）。
+
+## 营销活动（2026-10-23，Claude，MARKETING-01）
+
+后台的 WooCommerce“营销”菜单换成“营销活动”（满减活动 / 优惠码 / 运费折扣）。前台影响都走 WooCommerce 原生机制：
+
+- **优惠码规则**由 `woocommerce_coupon_is_valid` 检查，加购、计算总价、经典结账和区块结账都会检查，错误信息就是 WooCommerce 的优惠码提示：开始时间、全局首单（按账户和结账邮箱）、只算适用商品的满金额 / 满件数、“不叠加满减活动”（购物车有满减优惠时不能用）。“替换满减活动”的优惠码一用，满减费用就消失。
+- **运费折扣**在 `woocommerce_package_rates`（优先级 120，物流方案之后）直接改运费金额，税按比例减少；区块结账显示的就是折扣后的运费，没有单独的折扣行。运费行 meta 带 `_pc_ship_discount`（折扣名称）和 `_pc_ship_original_cost`（原运费），主题需要时可以显示“原价 / 折后”。
+- 运费缓存的包裹数据里多了 `pc_ship_discounts`（当前可用的折扣），换邮箱或活动开始、结束时会重新计算运费。

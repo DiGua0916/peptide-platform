@@ -1,0 +1,655 @@
+/* 营销活动（MARKETING-01）：满减活动、优惠码、运费折扣，版式参照 Shopname。铺满后台内容区，窄屏一列。 */
+
+.pc-mk {
+	--pc-mk-blue: #2d8cf0;
+	--pc-mk-label: 120px;
+}
+
+.pc-mk .pc-pl-card {
+	overflow: visible;
+}
+
+/* ---------- 列表页 ---------- */
+
+.pc-mk-head h1 {
+	font-size: 1.5em;
+}
+
+.pc-mk-head .button-link {
+	color: var(--pc-pl-orange);
+}
+
+.pc-mk-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px 16px;
+	padding: 16px 20px;
+}
+
+.pc-mk-search {
+	display: flex;
+	align-items: stretch;
+	width: min(380px, 100%);
+}
+
+.pc-mk-search .pc-mk-count {
+	flex: 1;
+}
+
+.pc-mk-search .pc-mk-count input {
+	border-radius: 3px 0 0 3px;
+}
+
+.pc-mk-search__btn.button {
+	margin-left: -1px;
+	border-radius: 0 3px 3px 0;
+}
+
+.pc-mk-search__btn .dashicons {
+	vertical-align: -4px;
+	font-size: 16px;
+}
+
+.pc-mk-note {
+	margin: 0;
+	padding: 6px 12px;
+	background: var(--pc-pl-orange);
+	border-radius: 2px;
+	color: #fff;
+}
+
+.pc-mk-scroll {
+	overflow-x: auto;
+}
+
+.pc-mk-table {
+	min-width: 860px;
+}
+
+.pc-mk-table td {
+	padding-top: 14px;
+	padding-bottom: 14px;
+	line-height: 1.6;
+}
+
+.pc-mk-col-check {
+	width: 36px;
+	padding-right: 0 !important;
+	text-align: center !important;
+}
+
+.pc-mk-col-check input {
+	margin: 0;
+}
+
+.pc-mk-col-act {
+	width: 80px;
+	white-space: nowrap;
+}
+
+.pc-mk-icon {
+	display: inline-block;
+	margin-right: 10px;
+	color: #4b5563;
+	text-decoration: none;
+}
+
+.pc-mk-icon:hover,
+.pc-mk-icon:focus {
+	color: var(--pc-pl-orange);
+}
+
+.pc-mk-name {
+	color: inherit;
+	text-decoration: none;
+}
+
+.pc-mk-name:hover {
+	color: var(--pc-pl-orange);
+}
+
+.pc-mk-time-cell,
+.pc-mk-table code {
+	white-space: nowrap;
+}
+
+.pc-mk-badge {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 2px;
+	background: #e5e7eb;
+	color: #4b5563;
+	font-size: 12px;
+	line-height: 1.6;
+	white-space: nowrap;
+}
+
+.pc-mk-badge.is-active {
+	background: var(--pc-mk-blue);
+	color: #fff;
+}
+
+.pc-mk-badge.is-upcoming {
+	background: #fff4e5;
+	color: #b45309;
+	box-shadow: inset 0 0 0 1px #fbd38d;
+}
+
+.pc-mk-badge.is-ended {
+	background: #9ca3af;
+	color: #fff;
+}
+
+.pc-mk-bulkbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	padding: 0 20px 12px;
+}
+
+.pc-mk-bulkbar[hidden] {
+	display: none;
+}
+
+.pc-mk-pager {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 16px 20px 20px;
+}
+
+.pc-mk-page {
+	min-width: 28px;
+	padding: 2px 6px;
+	border: 1px solid var(--pc-pl-line);
+	border-radius: 3px;
+	color: #4b5563;
+	line-height: 22px;
+	text-align: center;
+	text-decoration: none;
+}
+
+.pc-mk-page.is-current {
+	border-color: var(--pc-pl-orange);
+	color: var(--pc-pl-orange);
+}
+
+.pc-mk-page.is-disabled {
+	color: #c0c4cc;
+}
+
+.pc-mk-pager__form {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin-left: 8px;
+}
+
+.pc-mk-pager__form input.small-text {
+	width: 56px;
+}
+
+/* ---------- 编辑页 ---------- */
+
+.pc-mk-back {
+	margin: 8px 0 4px;
+}
+
+.pc-mk-back a {
+	color: #374151;
+	text-decoration: none;
+}
+
+.pc-mk-back .dashicons {
+	vertical-align: -5px;
+}
+
+.pc-mk-title {
+	margin: 12px 0 16px;
+	padding: 0;
+	font-size: 1.5em;
+}
+
+.pc-mk-top {
+	display: grid;
+	grid-template-columns: minmax(0, 7fr) minmax(280px, 3fr);
+	gap: 0 24px;
+	align-items: start;
+}
+
+.pc-mk-card {
+	display: grid;
+	grid-template-columns: var(--pc-mk-label) minmax(0, 1fr);
+	gap: 12px 24px;
+	margin-bottom: 16px;
+	padding: 24px 28px 8px;
+	background: #fff;
+	border: 1px solid var(--pc-pl-line);
+	border-radius: 4px;
+}
+
+.pc-mk-card__title {
+	font-size: 1.1em;
+	line-height: 1.5;
+}
+
+.pc-mk-card__body {
+	min-width: 0;
+}
+
+.pc-mk-seo {
+	display: block;
+	padding-bottom: 20px;
+}
+
+.pc-mk-seo__head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin-bottom: 12px;
+	font-size: 1.15em;
+}
+
+.pc-mk-seo__head a {
+	margin-left: 12px;
+	color: var(--pc-pl-orange);
+	font-size: 13px;
+	text-decoration: none;
+}
+
+.pc-mk-seo__head .dashicons {
+	width: 16px;
+	height: 16px;
+	font-size: 16px;
+	vertical-align: -3px;
+}
+
+.pc-mk-seo__url {
+	margin: 0;
+	word-break: break-all;
+}
+
+.pc-mk-field {
+	margin-bottom: 22px;
+}
+
+.pc-mk-narrow {
+	max-width: 560px;
+}
+
+.pc-mk-label {
+	display: inline-block;
+	margin-bottom: 8px;
+	font-weight: 500;
+}
+
+.pc-mk-label-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 6px;
+	margin-bottom: 8px;
+}
+
+.pc-mk-label-row .pc-mk-label {
+	margin-bottom: 0;
+}
+
+.pc-mk-label-row .pc-mk-random {
+	margin-left: auto;
+	color: var(--pc-mk-blue);
+	text-decoration: underline;
+}
+
+.pc-mk-label-row a {
+	color: var(--pc-pl-orange);
+}
+
+/* 问号说明：在内容左边，提示框往右展开，免得被后台侧栏挡住。 */
+.pc-mk .pc-bc-help::after {
+	left: -12px;
+	transform: none;
+}
+
+.pc-mk .pc-bc-help::before {
+	left: 2px;
+	transform: none;
+}
+
+/* 没显示的提示框不占位置（否则手机上页面会横向滚动）。 */
+.pc-mk .pc-bc-help::after,
+.pc-mk .pc-bc-help::before {
+	display: none;
+}
+
+.pc-mk .pc-bc-help:hover::after,
+.pc-mk .pc-bc-help:focus::after,
+.pc-mk .pc-bc-help:hover::before,
+.pc-mk .pc-bc-help:focus::before {
+	display: block;
+}
+
+.pc-mk .pc-bc-help::after {
+	max-width: min(460px, calc(100vw - 64px));
+}
+
+.pc-mk-count {
+	position: relative;
+	display: block;
+}
+
+.pc-mk-count input {
+	box-sizing: border-box;
+	width: 100%;
+	padding-right: 56px;
+}
+
+.pc-mk-count small {
+	position: absolute;
+	top: 50%;
+	right: 10px;
+	color: #9ca3af;
+	transform: translateY(-50%);
+	pointer-events: none;
+}
+
+.pc-mk-radios {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 26px;
+	line-height: 30px;
+}
+
+.pc-mk-radios > .pc-bc-help {
+	margin-left: -18px;
+}
+
+.pc-mk-field > .pc-mk-inline {
+	display: flex;
+}
+
+.pc-mk-radio.is-disabled {
+	color: #9ca3af;
+}
+
+.pc-mk-stack {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 4px;
+	line-height: 28px;
+}
+
+.pc-mk-stack .pc-mk-sub {
+	align-self: stretch;
+	max-width: 560px;
+}
+
+.pc-mk-inline {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+.pc-mk-inline[hidden] {
+	display: none;
+}
+
+.pc-mk-range {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.pc-mk-range input {
+	width: 230px;
+	max-width: 100%;
+}
+
+.pc-mk-range input:disabled {
+	opacity: 0.55;
+}
+
+/* 优惠层级 */
+.pc-mk-tier {
+	padding: 4px 0 18px;
+}
+
+.pc-mk-tier + .pc-mk-tier {
+	padding-top: 16px;
+	border-top: 1px solid #f0f1f3;
+}
+
+.pc-mk-tier[hidden] {
+	display: none;
+}
+
+.pc-mk-tier__head {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 10px;
+	font-weight: 400;
+}
+
+.pc-mk-tier__head strong {
+	font-weight: 500;
+}
+
+.pc-mk-tier__row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+.pc-mk-num {
+	width: 120px;
+}
+
+.pc-mk-unit {
+	color: #374151;
+}
+
+.pc-mk-unlimited {
+	margin: 0 0 18px;
+}
+
+.pc-mk-unlimited[hidden] {
+	display: none;
+}
+
+.pc-mk-tier-add-row {
+	margin: 0 0 18px;
+	padding-top: 18px;
+	border-top: 1px solid var(--pc-pl-line);
+}
+
+.pc-mk-tier-add.button,
+.pc-mk-stage-add.button {
+	border-color: var(--pc-pl-orange);
+	color: var(--pc-pl-orange);
+}
+
+/* 适用范围 */
+.pc-mk-option {
+	margin-bottom: 18px;
+}
+
+.pc-mk-big {
+	font-size: 1.05em;
+}
+
+.pc-mk-hint {
+	margin: 4px 0 0 24px;
+	color: var(--pc-pl-muted);
+}
+
+.pc-mk-sub {
+	margin: 10px 0 0 24px;
+}
+
+.pc-mk-sub[hidden],
+.pc-mk [data-show][hidden] {
+	display: none;
+}
+
+.pc-mk-products {
+	border: 1px solid var(--pc-pl-line);
+	border-radius: 3px;
+}
+
+.pc-mk-products__bar {
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--pc-pl-line);
+}
+
+.pc-mk-products__bar .select2-container {
+	width: min(420px, 100%) !important;
+}
+
+.pc-mk-cats {
+	max-height: 320px;
+}
+
+.pc-mk-sort {
+	padding-top: 16px;
+	border-top: 1px solid var(--pc-pl-line);
+}
+
+.pc-mk-sort select,
+.pc-mk-select {
+	min-width: 220px;
+	max-width: 100%;
+}
+
+.pc-mk-rules {
+	color: #4b5563;
+	line-height: 1.8;
+}
+
+.pc-mk-rules p,
+.pc-mk-rules ol {
+	margin: 0 0 6px;
+}
+
+/* 输入框后面接单位（% off / USD / 件） */
+.pc-mk-addon {
+	display: inline-flex;
+	align-items: stretch;
+}
+
+.pc-mk-addon[hidden] {
+	display: none;
+}
+
+.pc-mk-addon input {
+	width: 160px;
+	border-radius: 3px 0 0 3px;
+}
+
+.pc-mk-addon__unit {
+	display: inline-flex;
+	align-items: center;
+	margin-left: -1px;
+	padding: 0 12px;
+	background: #f3f4f6;
+	border: 1px solid #8c8f94;
+	border-radius: 0 3px 3px 0;
+	color: #4b5563;
+}
+
+/* 运费折扣：阶段、会员日 */
+.pc-mk-stage {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 10px;
+}
+
+.pc-mk-stage__title {
+	min-width: 64px;
+	font-weight: 500;
+}
+
+.pc-mk-stage input[type="datetime-local"] {
+	width: 220px;
+	max-width: 100%;
+}
+
+.pc-mk-weekdays {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 18px;
+}
+
+.pc-mk-bar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 8px;
+	padding: 12px 16px;
+	border-top: 1px solid var(--pc-pl-line);
+}
+
+.pc-mk-classic {
+	order: -1;
+	margin-right: auto !important;
+}
+
+@media (max-width: 1280px) {
+	.pc-mk-top {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+@media (max-width: 782px) {
+	.pc-mk-card {
+		grid-template-columns: minmax(0, 1fr);
+		padding: 16px 16px 4px;
+	}
+
+	.pc-mk-toolbar {
+		padding: 12px;
+	}
+
+	.pc-mk-search {
+		width: 100%;
+	}
+
+	.pc-mk-pager__form {
+		margin-left: 0;
+	}
+
+	.pc-mk-range input,
+	.pc-mk-stage input[type="datetime-local"] {
+		width: 100%;
+	}
+
+	.pc-mk-range__to {
+		width: 100%;
+	}
+
+	.pc-mk-hint,
+	.pc-mk-sub {
+		margin-left: 0;
+	}
+
+	.pc-mk-addon input {
+		width: 120px;
+	}
+}

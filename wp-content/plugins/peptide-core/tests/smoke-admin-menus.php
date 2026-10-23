@@ -30,12 +30,15 @@ add_action( 'admin_menu', static function () { add_submenu_page( 'woocommerce', 
 \PeptideCore\Admin\Settings_Page::register_hooks();
 \PeptideCore\Admin\Admin_Menus::register_hooks();
 \PeptideCore\Admin\Store_Settings::register_hooks();
+// WooCommerce 的营销菜单（Internal\Admin\Marketing 在后台请求里注册），这里补一个同名菜单来模拟。
+add_action( 'admin_menu', static function () { add_menu_page( 'Marketing', 'Marketing', 'manage_woocommerce', 'woocommerce-marketing', '__return_null', 'dashicons-megaphone', 58 ); add_submenu_page( 'woocommerce-marketing', 'Coupons', 'Coupons', 'manage_woocommerce', 'edit.php?post_type=shop_coupon' ); }, 6 );
 require ABSPATH . 'wp-admin/menu.php';
 
 $slugs = array_column( $menu, 2 );
 $ok( 'posts, media and comments removed', ! array_intersect( array( 'edit.php', 'upload.php', 'edit-comments.php' ), $slugs ) );
 $ok( 'WooCommerce top-level menu removed', ! in_array( 'woocommerce', $slugs, true ) );
 $ok( 'dashboard first, then orders and customers', 'pc-overview' === array_values( array_filter( $slugs ) )[0] && in_array( 'admin.php?page=wc-orders', $slugs, true ) && in_array( 'admin.php?page=wc-admin&path=/customers', $slugs, true ) );
+$ok( 'WooCommerce marketing menu replaced by marketing campaigns: spend-and-save, coupon codes, shipping discounts', ! in_array( 'woocommerce-marketing', $slugs, true ) && in_array( 'pc-promotions', $slugs, true ) && array( 'pc-promotions', 'pc-coupons', 'pc-shipping-discounts' ) === array_column( $submenu['pc-promotions'] ?? array(), 2 ) );
 $ok( 'store settings menu: shipping, tax, payments, system', array( 'pc-shipping', 'pc-tax', 'admin.php?page=wc-settings&tab=checkout', 'pc-system' ) === array_column( $submenu['admin.php?page=wc-settings'] ?? array(), 2 ) );
 foreach ( array( 'wc-orders' => 'admin.php?page=wc-orders', 'wc-settings' => 'admin.php?page=wc-settings', 'pc-settings' => 'admin.php?page=wc-settings', 'wc-status' => 'admin.php?page=wc-settings', 'pc-system' => 'admin.php?page=wc-settings', 'pc-tax' => 'admin.php?page=wc-settings' ) as $page => $parent ) {
 	$_GET['page'] = $page;

@@ -7,6 +7,8 @@
  * - 公开条件：已发布、勾选公开、未过期、还有剩余次数、**没有设置允许的邮箱**（指定客户的优惠码不公开，也不泄露邮箱）。
  * - 前台：优惠码页面（短代码 [pc_coupons]，第一次公开优惠码时自动建好已发布的 Coupons 页面）。
  *   不带参数时显示列表，?code=XXX 显示详情。主题可以用 template-parts/coupons/list.php、detail.php 覆盖默认样式。
+ * - 2026-10-23 起后台用“营销活动 → 优惠码”（Admin\Coupons_Page，版式参照 Shopname）编辑，开始时间、全局首单、
+ *   按适用商品计算的满金额 / 满件数、和满减活动的叠加策略见 Coupon_Rules。未开始的优惠码不公开。
  * - 分享链接：任何前台网址加 ?pc_coupon=XXX。购物车里有商品时立刻使用；购物车还是空的时先记下，加入商品后自动使用
  *   （还没达到最低消费时继续等待，过期或无效时放弃）。
  *
@@ -47,10 +49,14 @@ final class Coupons {
 
 	// ---------- 公开的优惠码 ----------
 
-	/** 优惠码本身还能不能用：'' / unpublished / expired / used_up。 */
+	/** 优惠码本身还能不能用：'' / unpublished / upcoming / expired / used_up。 */
 	public static function unusable_reason( \WC_Coupon $coupon ): string {
 		if ( 'publish' !== get_post_status( $coupon->get_id() ) ) {
 			return 'unpublished';
+		}
+		$start = Coupon_Rules::start( $coupon );
+		if ( $start && $start > time() ) {
+			return 'upcoming';
 		}
 		$expires = $coupon->get_date_expires();
 		if ( $expires && $expires->getTimestamp() < time() ) {
@@ -163,9 +169,13 @@ final class Coupons {
 		$min     = (float) $coupon->get_minimum_amount();
 		$max     = (float) $coupon->get_maximum_amount();
 		$limit   = (int) $coupon->get_usage_limit();
+		$start   = Coupon_Rules::start( $coupon );
+		$m_spend = (float) get_post_meta( $id, Coupon_Rules::MIN_SPEND_META, true );
+		$m_qty   = (int) get_post_meta( $id, Coupon_Rules::MIN_QTY_META, true );
+		$sort    = (string) get_post_meta( $id, Coupon_Rules::SORT_META, true );
 		return array(
 			'id'                  => $id,
-			'code'                => strtoupper( $coupon->get_code() ),
+			'code'                => Coupon_Rules::display_code( $coupon ),
 			'title'               => '' !== $title ? $title : $value,
 			'text'                => (string) get_post_meta( $id, self::TEXT_META, true ),
 			'type'                => $type,
@@ -176,6 +186,14 @@ final class Coupons {
 			'minimum_spend_text'  => $min > 0 ? self::money( $min ) : '',
 			'maximum_spend'       => $max > 0 ? $max : null,
 			'maximum_spend_text'  => $max > 0 ? self::money( $max ) : '',
+			'eligible_spend'      => $m_spend > 0 ? $m_spend : null,
+			'eligible_spend_text' => $m_spend > 0 ? self::money( $m_spend ) : '',
+			'eligible_items'      => $m_qty > 0 ? $m_qty : null,
+			'first_order'         => 'yes' === get_post_meta( $id, Coupon_Rules::FIRST_META, true ),
+			'strategy'            => Coupon_Rules::strategy( $coupon ),
+			'sort'                => isset( Promotions::SORTS[ $sort ] ) ? $sort : 'date_desc',
+			'starts'              => $start ? gmdate( 'c', $start ) : null,
+			'starts_text'         => $start ? wp_date( (string) get_option( 'date_format' ), $start ) : '',
 			'expires'             => $expires ? $expires->date( 'c' ) : null,
 			'expires_text'        => $expires ? wc_format_datetime( $expires ) : '',
 			'uses_left'           => $limit > 0 ? max( 0, $limit - (int) $coupon->get_usage_count() ) : null,
@@ -287,8 +305,12 @@ final class Coupons {
 
 	/** 不出提示地检查：valid / wait（例如还没达到最低消费、购物车为空）/ invalid。 */
 	private static function check( \WC_Coupon $coupon ): string {
-		// 分享链接也可以用没有公开的优惠码，只要它本身还能用。
-		if ( '' !== self::unusable_reason( $coupon ) ) {
+		// 分享链接也可以用没有公开的优惠码，只要它本身还能用。还没开始的先记下，开始后再用。
+		$reason = self::unusable_reason( $coupon );
+		if ( 'upcoming' === $reason ) {
+			return 'wait';
+		}
+		if ( '' !== $reason ) {
 			return 'invalid';
 		}
 		if ( WC()->cart->is_empty() ) {
@@ -360,12 +382,32 @@ final class Coupons {
 			/* translators: %s: amount */
 			$out[] = sprintf( __( 'Minimum spend %s', 'peptide-core' ), $c['minimum_spend_text'] );
 		}
+		if ( $c['eligible_spend_text'] ) {
+			/* translators: %s: amount */
+			$out[] = sprintf( __( 'Spend %s on eligible items', 'peptide-core' ), $c['eligible_spend_text'] );
+		}
+		if ( $c['eligible_items'] ) {
+			/* translators: %d: number of items */
+			$out[] = sprintf( _n( 'Buy at least %d eligible item', 'Buy at least %d eligible items', $c['eligible_items'], 'peptide-core' ), $c['eligible_items'] );
+		}
+		if ( $c['first_order'] ) {
+			$out[] = __( 'First order only', 'peptide-core' );
+		}
+		if ( 'no_stack' === $c['strategy'] ) {
+			$out[] = __( 'Cannot be combined with spend-and-save offers', 'peptide-core' );
+		} elseif ( 'replace' === $c['strategy'] ) {
+			$out[] = __( 'Replaces spend-and-save offers', 'peptide-core' );
+		}
 		if ( $c['maximum_spend_text'] ) {
 			/* translators: %s: amount */
 			$out[] = sprintf( __( 'Maximum spend %s', 'peptide-core' ), $c['maximum_spend_text'] );
 		}
 		if ( $c['free_shipping'] ) {
 			$out[] = __( 'Includes free shipping', 'peptide-core' );
+		}
+		if ( $c['starts_text'] ) {
+			/* translators: %s: date */
+			$out[] = sprintf( __( 'Valid from %s', 'peptide-core' ), $c['starts_text'] );
 		}
 		if ( $c['expires_text'] ) {
 			/* translators: %s: date */
@@ -466,7 +508,27 @@ final class Coupons {
 			echo '<p><a class="pc-coupon__more" href="' . esc_url( $list_url ) . '">' . esc_html__( 'All offers', 'peptide-core' ) . '</a></p>';
 		}
 		echo '</article>';
+		echo '<div class="pc-coupon__products">' . self::products_html( $c ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- WooCommerce 短代码输出。
 		self::copy_script();
+	}
+
+	/** 优惠码详情页的商品（WooCommerce [products] 短代码），按优惠码设置的排序。 */
+	public static function products_html( array $c ): string {
+		[ $orderby, $order ] = Promotions::SORTS[ $c['sort'] ] ?? Promotions::SORTS['date_desc'];
+		$atts = array( 'limit="12"', 'columns="4"', 'paginate="true"', 'orderby="' . $orderby . '"', 'order="' . $order . '"' );
+		if ( $c['products'] ) {
+			$atts[] = 'ids="' . implode( ',', array_map( 'intval', array_column( $c['products'], 'id' ) ) ) . '"';
+		} elseif ( $c['categories'] ) {
+			$slugs = array();
+			foreach ( array_column( $c['categories'], 'id' ) as $tid ) {
+				$t = get_term( (int) $tid, 'product_cat' );
+				if ( $t instanceof \WP_Term ) {
+					$slugs[] = $t->slug;
+				}
+			}
+			$atts[] = 'category="' . esc_attr( implode( ',', $slugs ) ) . '"';
+		}
+		return (string) do_shortcode( '[products ' . implode( ' ', $atts ) . ']' );
 	}
 
 	// ---------- 后台 ----------
@@ -510,6 +572,7 @@ final class Coupons {
 			$reason  = self::hidden_reason( $coupon );
 			$reasons = array(
 				'unpublished' => __( 'Not shown: the coupon is not published.', 'peptide-core' ),
+				'upcoming'    => __( 'Not shown yet: the coupon has not started.', 'peptide-core' ),
 				'private'     => __( 'Not shown: “Show publicly” is off.', 'peptide-core' ),
 				'emails'      => __( 'Not shown: coupons limited to specific emails are never listed publicly.', 'peptide-core' ),
 				'expired'     => __( 'Not shown: the coupon has expired.', 'peptide-core' ),

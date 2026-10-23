@@ -108,7 +108,7 @@ final class Overview_Page {
 						'conversion'  => admin_url( 'admin.php?page=' . Tracking_Page::STATS_SLUG ),
 						'visitor'     => admin_url( 'admin.php?page=' . Tracking_Page::SLUG . '&visitor=' ),
 						'products'    => admin_url( 'edit.php?post_type=product' ),
-						'promotions'  => admin_url( 'edit.php?post_type=pc_promotion' ),
+						'promotions'  => admin_url( 'admin.php?page=' . Promotions_Page::SLUG ),
 						'recovery'    => admin_url( 'admin.php?page=' . Recovery_Page::SLUG ),
 					),
 					'strings'  => self::strings(),

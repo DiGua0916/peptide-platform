@@ -1,6 +1,6 @@
 <?php
 /**
- * 满减活动（PROMO-01）冒烟测试：规则校验、状态、购物车优惠（选最优、和优惠码的关系、排除促销商品）、
+ * 满减活动（PROMO-01 / PROMO-02）冒烟测试：规则校验、状态、购物车优惠（每个商品一个活动、和优惠码的关系、排除促销商品）、
  * 进度提示、订单费用行、活动页面、菜单链接。开发环境专用。
  *
  * 运行：wp eval-file wp-content/plugins/peptide-core/tests/smoke-promotions.php
@@ -87,14 +87,14 @@ $ok( 'discount added as a negative fee', isset( $fees[ 'pc-promo-' . $a ] ) && -
 $ok( 'cart total reduced', abs( (float) WC()->cart->get_total( 'edit' ) - ( $price * 2 + (float) WC()->cart->get_shipping_total() + (float) WC()->cart->get_total_tax() - 5 ) ) < 0.02 );
 $ok( 'next tier still offered', $p['next'] && $a === $p['next']['id'] && str_contains( $p['next']['reward_text'], '12' ) );
 
-// 选最优：按件数 3 件打 30% 折，比满额减 $5 更多。
+// 每个商品只参加一个活动：指定专辑的活动优先于全部商品的活动（没有分类时两个都是全部商品，用创建时间最近的）。
 $b = $make( 'SMOKE Buy three', array( 'basis' => 'quantity', 'reward' => 'percent', 'tiers' => array( array( 'min' => 3, 'value' => 30 ) ), 'scope' => $cat ? 'categories' : 'all', 'categories' => $cat ? array( $cat ) : array(), 'public' => true ) );
 WC()->cart->add_to_cart( $product->get_id(), 1 );
 WC()->cart->calculate_totals();
 $p        = Promotions::progress();
 $expectB  = round( $price * 3 * 0.30, 2 );
 $fees     = WC()->cart->get_fees();
-$ok( 'best promotion wins, only one applies', $p['applied'] && ( $expectB > 5 ? $b : $a ) === $p['applied']['id'] && 1 === count( array_filter( array_keys( $fees ), static fn( $k ) => str_starts_with( (string) $k, 'pc-promo-' ) ) ) );
+$ok( 'collection promotion takes the item over the all-products one, only one applies', $p['applied'] && $b === $p['applied']['id'] && abs( $p['applied']['discount'] - $expectB ) < 0.011 && 1 === count( array_filter( array_keys( $fees ), static fn( $k ) => str_starts_with( (string) $k, 'pc-promo-' ) ) ) );
 
 // 不能和优惠码同时用。
 update_post_meta( $b, Promotions::META, array_merge( Promotions::config( $b ), array( 'with_coupons' => false ) ) );
@@ -132,10 +132,13 @@ WC()->cart->empty_cart();
 $ok( 'empty cart: no promotion data', array( 'applied' => null, 'next' => null ) === Promotions::progress() );
 
 // 4. 公开页面与商品提示。
-$_POST = array( 'pc_promo_nonce' => wp_create_nonce( 'pc_promo_nonce' ), 'pc_promo' => array( 'basis' => 'spend', 'reward' => 'amount', 'tiers' => array( array( 'min' => round( $price * 2, 2 ), 'value' => 5 ) ), 'public' => '1', 'scope' => 'all', 'with_coupons' => '1', 'start' => '', 'end' => '' ) );
-Promotions::save( $a, get_post( $a ) );
-$_POST = array();
-$ok( 'saving a public promotion creates the offers page', Promotions::page_id() && 'publish' === get_post_status( Promotions::page_id() ) );
+$raw          = array( 'type' => 'spend_amount', 'tiers' => array( array( 'min' => round( $price * 2, 2 ), 'value' => 5 ) ), 'public' => true, 'scope' => 'all', 'start' => time() - 60, 'end' => 0 );
+[ , $errors ] = Promotions::store( $a, 'SMOKE Spend save', $raw, true );
+$ok( 'saving is refused while another all-products promotion overlaps', $errors && str_contains( implode( ' ', $errors ), 'SMOKE Later' ) );
+wp_update_post( array( 'ID' => $upcoming, 'post_status' => 'draft' ) );
+[ $sid, $errors ] = Promotions::store( $a, 'SMOKE Spend save', $raw, true );
+wp_update_post( array( 'ID' => $upcoming, 'post_status' => 'publish' ) );
+$ok( 'saving a public promotion creates the offers page', ! $errors && $a === $sid && Promotions::page_id() && 'publish' === get_post_status( Promotions::page_id() ) );
 $codes = array_column( peptide_core_get_promotions(), 'id' );
 $ok( 'public list: running and scheduled, not ended or draft', in_array( $a, $codes, true ) && in_array( $upcoming, $codes, true ) && ! in_array( $ended, $codes, true ) && ! in_array( $draft, $codes, true ) );
 $list = do_shortcode( '[pc_promotions]' );
@@ -149,12 +152,10 @@ $ok( 'ended promotion detail says it has ended', str_contains( $gone, 'ended' ) 
 $ok( 'draft promotion is not shown', ! str_contains( $hidden, 'SMOKE Draft' ) );
 $ok( 'product shows its running promotions', in_array( $a, array_column( peptide_core_get_product_promotions( $product ), 'id' ), true ) && ! in_array( $upcoming, array_column( peptide_core_get_product_promotions( $product ), 'id' ), true ) );
 
-// 规则有错时保存为草稿。
-$bad = $make( 'SMOKE Bad', array( 'tiers' => array( array( 'min' => 10, 'value' => 1 ) ) ) );
-$_POST = array( 'pc_promo_nonce' => wp_create_nonce( 'pc_promo_nonce' ), 'pc_promo' => array( 'tiers' => array( array( 'min' => 10, 'value' => 50 ) ) ) );
-Promotions::save( $bad, get_post( $bad ) );
-$_POST = array();
-$ok( 'invalid rules turn the promotion off', 'draft' === get_post_status( $bad ) && get_transient( 'pc_promo_errors_' . $bad ) );
+// 规则有错时不保存。
+$bad          = $make( 'SMOKE Bad', array( 'tiers' => array( array( 'min' => 10, 'value' => 1 ) ) ), 'draft' );
+[ , $errors ] = Promotions::store( $bad, 'SMOKE Bad', array( 'tiers' => array( array( 'min' => 10, 'value' => 50 ) ) ), false );
+$ok( 'invalid rules are refused and the saved rules stay', $errors && 1.0 === (float) Promotions::config( $bad )['tiers'][0]['value'] );
 
 // 5. 菜单链接。
 $m     = Menus::create( 'SMOKE promo menu' );
