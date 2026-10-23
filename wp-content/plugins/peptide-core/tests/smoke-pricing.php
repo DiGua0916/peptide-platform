@@ -128,7 +128,8 @@ $ok( 'revert variation', 'reverted' === Pricing::revert( $fresh( $vids['Small'] 
 $v = $fresh( $vids['Small'] );
 $v->set_sale_price( '35.00' );
 $v->save();
-$ok( 'existing sale left alone', 'skipped:existing-sale' === Pricing::apply_demo_compare( $fresh( $vids['Small'] ) ) && '35.00' === $fresh( $vids['Small'] )->get_price() );
+// 按数值比较：WooPayments 的多币种会把显示价格改成 “35” 这样的写法。
+$ok( 'existing sale left alone', 'skipped:existing-sale' === Pricing::apply_demo_compare( $fresh( $vids['Small'] ) ) && abs( (float) $fresh( $vids['Small'] )->get_price() - 35 ) < 0.001 );
 
 // 还原。
 $order->delete( true );

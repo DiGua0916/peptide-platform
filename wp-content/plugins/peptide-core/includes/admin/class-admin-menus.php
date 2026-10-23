@@ -10,6 +10,15 @@
  *   这些页面仍然是 WooCommerce 自己的页面，打开时左侧菜单停在新的位置。
  * - 营销（MARKETING-01，用户 2026-10-23 要求）：去掉 WooCommerce 的营销菜单（概览、优惠券和原来的满减活动），
  *   换成 Shopname 的“营销活动”：满减活动、优惠码、运费折扣（见 Marketing）。
+ * - 分析（用户 2026-10-23 要求）：WooCommerce 分析只保留顶层菜单，点开是分析概览；
+ *   下面的概述、产品、收入、订单、变量、分类、优惠券、税费、下载、库存、设置子菜单都去掉。
+ * - 支付（用户 2026-10-23 要求）：店铺设置里的“支付设置”去掉，用 WooCommerce 自己的顶层“支付”菜单；
+ *   打开支付设置时左侧菜单停在“支付”。
+ * - WooCommerce 设置的标签栏（用户 2026-10-23 要求去掉用不上或已经有了的）：
+ *   配送（= 物流设置）、付款（= 支付菜单）、电子邮件（= 邮件通知）、站点可见性（= 基础配置的店铺经营状态）、
+ *   集成、销售点、Multi-currency（本站不用）从标签栏去掉。只是不显示标签，设置值不变，
+ *   插件页面里指向这些设置的链接（例如邮件通知的“设置”、物流设置里的“运费区域”）仍然能打开。
+ *   常规（可销售国家等）、产品（单位、库存、评价）、帐户和隐私（游客结账、账户创建）、高级（购物车 / 结账页面、接口）保留。
  *
  * 只影响能管理商店的人（manage_woocommerce）；其他角色的菜单不变。
  *
@@ -35,13 +44,17 @@ final class Admin_Menus {
 	public const ORDERS    = 'admin.php?page=wc-orders';
 	public const CUSTOMERS = 'admin.php?page=wc-admin&path=/customers';
 	public const SETTINGS  = 'admin.php?page=wc-settings';
-	public const PAYMENTS  = 'admin.php?page=wc-settings&tab=checkout';
+	public const ANALYTICS = 'wc-admin&path=/analytics/overview';
+
+	/** 从 WooCommerce 设置标签栏去掉的标签。 */
+	public const HIDDEN_TABS = array( 'shipping', 'checkout', 'email', 'site-visibility', 'integration', 'point-of-sale', 'wcpay_multi_currency' );
 
 	public static function register_hooks(): void {
 		add_action( 'admin_menu', array( self::class, 'add_menus' ), 60 );
 		add_action( 'admin_menu', array( self::class, 'remove_menus' ), 1000 );
 		add_filter( 'parent_file', array( self::class, 'parent_file' ), 20 );
 		add_filter( 'submenu_file', array( self::class, 'submenu_file' ), 20 );
+		add_filter( 'woocommerce_settings_tabs_array', array( self::class, 'settings_tabs' ), 999 );
 	}
 
 	private static function applies(): bool {
@@ -60,7 +73,6 @@ final class Admin_Menus {
 		// 顶层菜单链接到第一个子菜单（物流设置）。
 		add_submenu_page( self::SETTINGS, __( 'Shipping settings', 'peptide-core' ), __( 'Shipping settings', 'peptide-core' ), self::CAP, Shipping_Page::SLUG, array( Shipping_Page::class, 'render' ) );
 		add_submenu_page( self::SETTINGS, __( 'Tax settings', 'peptide-core' ), __( 'Tax settings', 'peptide-core' ), self::CAP, Tax_Page::SLUG, array( Tax_Page::class, 'render' ) );
-		add_submenu_page( self::SETTINGS, __( 'Payment settings', 'peptide-core' ), __( 'Payment settings', 'peptide-core' ), self::CAP, self::PAYMENTS );
 		add_submenu_page( self::SETTINGS, __( 'System settings', 'peptide-core' ), __( 'System settings', 'peptide-core' ), self::CAP, Store_Settings::SYSTEM_SLUG, array( Store_Settings::class, 'render_system' ) );
 		// WordPress 会自动把顶层菜单本身加成第一个子菜单，去掉它。
 		remove_submenu_page( self::SETTINGS, self::SETTINGS );
@@ -73,9 +85,12 @@ final class Admin_Menus {
 	}
 
 	public static function remove_menus(): void {
+		global $submenu;
 		if ( ! self::applies() ) {
 			return;
 		}
+		// 分析：只留顶层菜单。没有子菜单时 WordPress 直接链接到顶层菜单自己的页面（分析概览）。
+		unset( $submenu[ self::ANALYTICS ] );
 		// 文章、媒体、评论、WooCommerce（订单、顾客、设置已移到上面的新菜单）、WooCommerce 营销（换成营销活动）。
 		// remove_menu_page() 每次只去掉第一个匹配项，所以重复执行到没有为止。
 		foreach ( array( 'edit.php', 'upload.php', 'edit-comments.php', 'woocommerce', 'woocommerce-marketing' ) as $slug ) {
@@ -85,8 +100,32 @@ final class Admin_Menus {
 		}
 	}
 
+	/** WooCommerce 设置页的标签栏只留常规、产品、帐户和隐私、高级（和其他插件新加的标签）。 */
+	public static function settings_tabs( $tabs ) {
+		if ( ! is_array( $tabs ) || 'wc-settings' !== self::current_page() ) {
+			return $tabs;
+		}
+		return array_diff_key( $tabs, array_flip( self::HIDDEN_TABS ) );
+	}
+
 	private static function current_page(): string {
 		return isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	}
+
+	private static function current_tab(): string {
+		return isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'general'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	}
+
+	/** WooCommerce 自己的顶层“支付”菜单（没有 WooPayments 时链接到支付设置；接入 WooPayments 后由它提供）。 */
+	public static function payments_menu(): string {
+		global $menu;
+		foreach ( (array) $menu as $item ) {
+			$slug = (string) ( $item[2] ?? '' );
+			if ( str_starts_with( $slug, 'admin.php?page=wc-settings&tab=checkout' ) || str_starts_with( $slug, 'wc-admin&path=/payments' ) ) {
+				return $slug;
+			}
+		}
+		return '';
 	}
 
 	/** 打开移走的页面时，左侧菜单展开新的位置。 */
@@ -95,11 +134,18 @@ final class Admin_Menus {
 			return $parent_file;
 		}
 		$page = self::current_page();
+		if ( 'wc-settings' === $page && 'checkout' === self::current_tab() && '' !== self::payments_menu() ) {
+			return self::payments_menu();
+		}
 		if ( isset( self::MOVED[ $page ] ) ) {
 			return self::MOVED[ $page ];
 		}
 		if ( 'wc-admin' === $page && isset( $_GET['path'] ) && '/customers' === wp_unslash( $_GET['path'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 			return self::CUSTOMERS;
+		}
+		// 分析的各个报表（从概览里的链接打开时）也停在“分析”菜单。
+		if ( 'wc-admin' === $page && isset( $_GET['path'] ) && str_starts_with( (string) wp_unslash( $_GET['path'] ), '/analytics' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+			return self::ANALYTICS;
 		}
 		return $parent_file;
 	}
@@ -111,11 +157,13 @@ final class Admin_Menus {
 		$page = self::current_page();
 		// WooCommerce 设置按标签页对应到店铺设置的子菜单，其余（常规、商品、邮件等）和 VialCove 设置、系统状态都算“系统设置”。
 		if ( 'wc-settings' === $page ) {
-			$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'general'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$tab = self::current_tab();
+			if ( 'checkout' === $tab && '' !== self::payments_menu() ) {
+				return self::payments_menu();
+			}
 			$map = array(
 				'shipping' => Shipping_Page::SLUG,
 				'tax'      => Tax_Page::SLUG,
-				'checkout' => self::PAYMENTS,
 			);
 			return $map[ $tab ] ?? Store_Settings::SYSTEM_SLUG;
 		}

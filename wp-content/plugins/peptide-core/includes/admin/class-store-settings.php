@@ -2,7 +2,7 @@
 /**
  * 店铺设置下的“税费设置”和“系统设置”页面（STORE-SETTINGS-01），版式参照 Shopname。
  *
- * - 物流设置、支付设置直接打开 WooCommerce 自己的设置页（菜单在 Admin_Menus 里）。
+ * - 菜单在 Admin_Menus 里；支付设置用 WooCommerce 自己的顶层“支付”菜单（2026-10-23 起不在店铺设置下面）。
  * - 税费设置：见 Tax_Page（TAX-PLANS-01）。
  * - 系统设置：卡片列表。用户 2026-10-23 要了“基础配置、邮件通知、交易条款”三张卡片（先做占位页，同日按截图做成完整页面）。
  *   原来菜单里的 WooCommerce 设置、VialCove 设置、系统状态放在页面底部“其他设置”。
@@ -75,7 +75,7 @@ final class Store_Settings {
 	/** 底部“其他设置”：原来店铺设置菜单里的页面。 */
 	private static function others(): array {
 		$out = array(
-			array( 'dashicons-admin-settings', __( 'WooCommerce settings', 'peptide-core' ), __( 'General, products, accounts, emails and advanced WooCommerce options.', 'peptide-core' ), admin_url( 'admin.php?page=wc-settings&tab=general' ) ),
+			array( 'dashicons-admin-settings', __( 'WooCommerce settings', 'peptide-core' ), __( 'General, products, accounts and advanced WooCommerce options.', 'peptide-core' ), admin_url( 'admin.php?page=wc-settings&tab=general' ) ),
 		);
 		if ( current_user_can( Settings_Page::CAP ) ) {
 			$out[] = array( 'dashicons-admin-tools', __( 'VialCove settings', 'peptide-core' ), __( 'Brand name, demo mode, use statement, checkout confirmation, batch check and the support button.', 'peptide-core' ), admin_url( 'admin.php?page=' . Settings_Page::SLUG ) );

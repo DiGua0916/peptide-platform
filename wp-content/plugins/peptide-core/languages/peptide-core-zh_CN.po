@@ -2,7 +2,7 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.19.0\n"
+"Project-Id-Version: Peptide Core 0.20.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -11,7 +11,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-23T09:58:06+00:00\n"
+"POT-Creation-Date: 2026-10-23T10:31:32+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -31,7 +31,7 @@ msgstr "为多肽商店提供批次、检测报告及与 WooCommerce 的集成�
 msgid "DiGua"
 msgstr "DiGua"
 
-#: includes/admin/class-admin-menus.php:57
+#: includes/admin/class-admin-menus.php:70
 #: includes/admin/class-batch-orders.php:141
 #: includes/admin/class-batch-orders.php:144
 #: includes/admin/class-overview-page.php:133
@@ -39,27 +39,23 @@ msgstr "DiGua"
 msgid "Orders"
 msgstr "订单"
 
-#: includes/admin/class-admin-menus.php:58
+#: includes/admin/class-admin-menus.php:71
 msgid "Customers"
 msgstr "顾客"
 
-#: includes/admin/class-admin-menus.php:59
+#: includes/admin/class-admin-menus.php:72
 msgid "Store settings"
 msgstr "店铺设置"
 
-#: includes/admin/class-admin-menus.php:61
+#: includes/admin/class-admin-menus.php:74
 msgid "Shipping settings"
 msgstr "物流设置"
 
-#: includes/admin/class-admin-menus.php:62
+#: includes/admin/class-admin-menus.php:75
 msgid "Tax settings"
 msgstr "税费设置"
 
-#: includes/admin/class-admin-menus.php:63
-msgid "Payment settings"
-msgstr "支付设置"
-
-#: includes/admin/class-admin-menus.php:64
+#: includes/admin/class-admin-menus.php:76
 #: includes/admin/class-basic-config-page.php:114
 #: includes/admin/class-email-center.php:151
 #: includes/admin/class-store-settings.php:107
@@ -68,26 +64,26 @@ msgstr "支付设置"
 msgid "System settings"
 msgstr "系统设置"
 
-#: includes/admin/class-admin-menus.php:69
+#: includes/admin/class-admin-menus.php:81
 msgid "Marketing campaigns"
 msgstr "营销活动"
 
-#: includes/admin/class-admin-menus.php:70
+#: includes/admin/class-admin-menus.php:82
 #: includes/admin/class-promotions-page.php:91
 #: includes/class-promotions.php:84
 msgid "Spend-and-save promotions"
 msgstr "满减活动"
 
-#: includes/admin/class-admin-menus.php:70
+#: includes/admin/class-admin-menus.php:82
 msgid "Spend-and-save"
 msgstr "满减活动"
 
-#: includes/admin/class-admin-menus.php:71
+#: includes/admin/class-admin-menus.php:83
 #: includes/admin/class-coupons-page.php:76
 msgid "Coupon codes"
 msgstr "优惠码"
 
-#: includes/admin/class-admin-menus.php:72
+#: includes/admin/class-admin-menus.php:84
 #: includes/admin/class-shipping-discounts-page.php:51
 msgid "Shipping discounts"
 msgstr "运费折扣"
@@ -4747,8 +4743,8 @@ msgid "WooCommerce settings"
 msgstr "WooCommerce 设置"
 
 #: includes/admin/class-store-settings.php:78
-msgid "General, products, accounts, emails and advanced WooCommerce options."
-msgstr "WooCommerce 的常规、商品、账户、邮件和高级选项。"
+msgid "General, products, accounts and advanced WooCommerce options."
+msgstr "WooCommerce 的常规、商品、账户和高级选项。"
 
 #: includes/admin/class-store-settings.php:81
 msgid "VialCove settings"

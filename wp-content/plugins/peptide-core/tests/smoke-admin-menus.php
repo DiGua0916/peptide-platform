@@ -31,6 +31,10 @@ add_action( 'admin_menu', static function () { add_submenu_page( 'woocommerce', 
 \PeptideCore\Admin\Admin_Menus::register_hooks();
 \PeptideCore\Admin\Store_Settings::register_hooks();
 // WooCommerce 的营销菜单（Internal\Admin\Marketing 在后台请求里注册），这里补一个同名菜单来模拟。
+// WooCommerce 的顶层“支付”菜单（PaymentsController 在后台请求里注册）。
+add_action( 'admin_menu', static function () { add_menu_page( 'Payments', 'Payments', 'manage_woocommerce', 'admin.php?page=wc-settings&tab=checkout&from=PAYMENTS_MENU_ITEM', null, 'dashicons-money-alt', 56 ); }, 6 );
+// WooCommerce 分析（同样只在后台请求里注册）：顶层菜单 + 子菜单。
+add_action( 'admin_menu', static function () { add_menu_page( 'Analytics', 'Analytics', 'view_woocommerce_reports', 'wc-admin&path=/analytics/overview', '__return_null', 'dashicons-chart-bar', 57 ); foreach ( array( 'overview', 'products', 'revenue', 'orders', 'settings' ) as $r ) { add_submenu_page( 'wc-admin&path=/analytics/overview', $r, $r, 'view_woocommerce_reports', 'wc-admin&path=/analytics/' . $r, '__return_null' ); } }, 6 );
 add_action( 'admin_menu', static function () { add_menu_page( 'Marketing', 'Marketing', 'manage_woocommerce', 'woocommerce-marketing', '__return_null', 'dashicons-megaphone', 58 ); add_submenu_page( 'woocommerce-marketing', 'Coupons', 'Coupons', 'manage_woocommerce', 'edit.php?post_type=shop_coupon' ); }, 6 );
 require ABSPATH . 'wp-admin/menu.php';
 
@@ -39,7 +43,16 @@ $ok( 'posts, media and comments removed', ! array_intersect( array( 'edit.php', 
 $ok( 'WooCommerce top-level menu removed', ! in_array( 'woocommerce', $slugs, true ) );
 $ok( 'dashboard first, then orders and customers', 'pc-overview' === array_values( array_filter( $slugs ) )[0] && in_array( 'admin.php?page=wc-orders', $slugs, true ) && in_array( 'admin.php?page=wc-admin&path=/customers', $slugs, true ) );
 $ok( 'WooCommerce marketing menu replaced by marketing campaigns: spend-and-save, coupon codes, shipping discounts', ! in_array( 'woocommerce-marketing', $slugs, true ) && in_array( 'pc-promotions', $slugs, true ) && array( 'pc-promotions', 'pc-coupons', 'pc-shipping-discounts' ) === array_column( $submenu['pc-promotions'] ?? array(), 2 ) );
-$ok( 'store settings menu: shipping, tax, payments, system', array( 'pc-shipping', 'pc-tax', 'admin.php?page=wc-settings&tab=checkout', 'pc-system' ) === array_column( $submenu['admin.php?page=wc-settings'] ?? array(), 2 ) );
+$ok( 'analytics keeps only its top-level menu, no submenus', in_array( 'wc-admin&path=/analytics/overview', $slugs, true ) && empty( $submenu['wc-admin&path=/analytics/overview'] ) );
+$_GET['page'] = 'wc-settings';
+$wc_tabs      = \PeptideCore\Admin\Admin_Menus::settings_tabs( array( 'general' => 'General', 'products' => 'Products', 'shipping' => 'Shipping', 'checkout' => 'Payments', 'account' => 'Accounts', 'email' => 'Emails', 'integration' => 'Integration', 'site-visibility' => 'Visibility', 'point-of-sale' => 'POS', 'wcpay_multi_currency' => 'Multi-currency', 'advanced' => 'Advanced' ) );
+$ok( 'WooCommerce settings tab bar keeps general, products, accounts and advanced', array( 'general', 'products', 'account', 'advanced' ) === array_keys( $wc_tabs ) );
+// WooCommerce 打开设置页时，只要这个标签的设置动作还在就照常显示（html-admin-settings.php 的 $tab_exists），所以隐藏的标签仍能直接打开。
+include_once WC()->plugin_path() . '/includes/admin/class-wc-admin-settings.php';
+WC_Admin_Settings::get_settings_pages();
+$ok( 'hidden tabs still open from direct links (their settings actions remain)', has_action( 'woocommerce_settings_email' ) && has_action( 'woocommerce_settings_shipping' ) && has_action( 'woocommerce_settings_checkout' ) );
+$_GET['page'] = 'wc-orders';
+$ok( 'store settings menu: shipping, tax, system (payments has its own WooCommerce menu)', array( 'pc-shipping', 'pc-tax', 'pc-system' ) === array_column( $submenu['admin.php?page=wc-settings'] ?? array(), 2 ) );
 foreach ( array( 'wc-orders' => 'admin.php?page=wc-orders', 'wc-settings' => 'admin.php?page=wc-settings', 'pc-settings' => 'admin.php?page=wc-settings', 'wc-status' => 'admin.php?page=wc-settings', 'pc-system' => 'admin.php?page=wc-settings', 'pc-tax' => 'admin.php?page=wc-settings' ) as $page => $parent ) {
 	$_GET['page'] = $page;
 	$plugin_page  = $page;
@@ -48,7 +61,9 @@ foreach ( array( 'wc-orders' => 'admin.php?page=wc-orders', 'wc-settings' => 'ad
 
 // 店铺设置子菜单高亮（STORE-SETTINGS-01）。
 $_GET['page'] = 'wc-settings';
-foreach ( array( 'shipping' => 'pc-shipping', 'tax' => 'pc-tax', 'checkout' => 'admin.php?page=wc-settings&tab=checkout', 'general' => 'pc-system', 'email' => 'pc-system' ) as $tab => $sub ) {
+$_GET['tab'] = 'checkout';
+$ok( 'payment settings open under the WooCommerce payments menu', 'admin.php?page=wc-settings&tab=checkout&from=PAYMENTS_MENU_ITEM' === apply_filters( 'parent_file', 'x' ) );
+foreach ( array( 'shipping' => 'pc-shipping', 'tax' => 'pc-tax', 'checkout' => 'admin.php?page=wc-settings&tab=checkout&from=PAYMENTS_MENU_ITEM', 'general' => 'pc-system', 'email' => 'pc-system' ) as $tab => $sub ) {
 	$_GET['tab'] = $tab;
 	$ok( "wc-settings tab $tab highlights $sub", $sub === apply_filters( 'submenu_file', null ) );
 }
