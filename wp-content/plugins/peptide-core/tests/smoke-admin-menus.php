@@ -74,12 +74,12 @@ foreach ( array( 'pc-settings', 'wc-status' ) as $page ) {
 	$ok( "$page sits under system settings", 'pc-system' === apply_filters( 'submenu_file', null ) );
 }
 
-// 系统设置页面：三张占位卡片 + 其他设置；占位页列出现有替代设置。
+// 系统设置页面：三张占位卡片 + 广告像素 + 其他设置；占位页列出现有替代设置。
 $_GET = array( 'page' => 'pc-system' );
 ob_start();
 \PeptideCore\Admin\Store_Settings::render_system();
 $html = ob_get_clean();
-$ok( 'system settings shows the three section cards', 3 === substr_count( $html, 'page=pc-system&#038;section=' ) + substr_count( $html, 'page=pc-system&section=' ) );
+$ok( 'system settings shows the four section cards (with ad pixels)', 4 === substr_count( $html, 'page=pc-system&#038;section=' ) + substr_count( $html, 'page=pc-system&section=' ) && false !== strpos( $html, 'section=pixels' ) );
 $ok( 'system settings links the old store settings pages', false !== strpos( $html, 'page=pc-settings' ) && false !== strpos( $html, 'page=wc-status' ) && false !== strpos( $html, 'tab=general' ) );
 $_GET['section'] = 'email';
 ob_start();

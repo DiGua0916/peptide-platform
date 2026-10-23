@@ -2,7 +2,7 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.21.0\n"
+"Project-Id-Version: Peptide Core 0.22.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -11,7 +11,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-23T15:48:57+00:00\n"
+"POT-Creation-Date: 2026-10-23T18:43:19+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -59,8 +59,8 @@ msgstr "税费设置"
 #: includes/admin/class-admin-menus.php:76
 #: includes/admin/class-basic-config-page.php:114
 #: includes/admin/class-email-center.php:151
-#: includes/admin/class-store-settings.php:107
-#: includes/admin/class-store-settings.php:119
+#: includes/admin/class-store-settings.php:115
+#: includes/admin/class-store-settings.php:127
 #: includes/admin/class-terms-page.php:91
 msgid "System settings"
 msgstr "系统设置"
@@ -127,6 +127,8 @@ msgstr "不中奖"
 #: includes/admin/class-marketing.php:378
 #: includes/admin/class-menu-page.php:101
 #: includes/admin/class-menu-page.php:291
+#: includes/admin/class-pixels-page.php:54
+#: includes/admin/class-pixels-page.php:77
 #: includes/admin/class-plans-editor.php:36
 #: includes/admin/class-plans-editor.php:107
 #: includes/admin/class-promotions-page.php:227
@@ -608,6 +610,7 @@ msgstr "店铺里的预览用已保存的设置，打开就弹出。除了预览
 #: includes/admin/class-marketing.php:481
 #: includes/admin/class-menu-page.php:164
 #: includes/admin/class-menu-page.php:207
+#: includes/admin/class-pixels-page.php:229
 #: includes/admin/class-recovery-page.php:57
 #: includes/admin/class-shipping-page.php:221
 #: includes/admin/class-store-design.php:140
@@ -1033,7 +1036,7 @@ msgstr "“注册邮箱验证”邮件已关闭，所以不会要求验证。"
 
 #: includes/admin/class-basic-config-page.php:266
 #: includes/admin/class-email-center.php:152
-#: includes/admin/class-store-settings.php:54
+#: includes/admin/class-store-settings.php:62
 msgid "Email notifications"
 msgstr "邮件通知"
 
@@ -1480,6 +1483,7 @@ msgstr "请输入活动名称/优惠码"
 #: includes/admin/class-marketing.php:262
 #: includes/admin/class-menu-page.php:97
 #: includes/admin/class-menu-page.php:278
+#: includes/admin/class-pixels-page.php:127
 #: includes/admin/class-plans-editor.php:84
 #: includes/admin/class-plans-editor.php:114
 #: includes/admin/class-promotions-page.php:95
@@ -2215,6 +2219,8 @@ msgstr "提示"
 
 #: includes/admin/class-dialogs.php:33
 #: includes/admin/class-menu-page.php:118
+#: includes/admin/class-pixels-page.php:191
+#: includes/admin/class-pixels-page.php:221
 #: includes/admin/class-plans-editor.php:128
 #: includes/admin/class-plans-editor.php:142
 msgid "OK"
@@ -2224,6 +2230,8 @@ msgstr "确定"
 #: includes/admin/class-marketing.php:488
 #: includes/admin/class-marketing.php:513
 #: includes/admin/class-menu-page.php:117
+#: includes/admin/class-pixels-page.php:213
+#: includes/admin/class-pixels-page.php:221
 #: includes/admin/class-plans-editor.php:123
 #: includes/admin/class-plans-editor.php:128
 #: includes/admin/class-plans-editor.php:142
@@ -2437,6 +2445,8 @@ msgstr "延迟发送：%d 秒"
 #: includes/admin/class-email-center.php:236
 #: includes/admin/class-marketing.php:383
 #: includes/admin/class-menu-page.php:289
+#: includes/admin/class-pixels-page.php:53
+#: includes/admin/class-pixels-page.php:77
 #: includes/admin/class-plans-editor.php:35
 msgid "Edit"
 msgstr "编辑"
@@ -2476,6 +2486,7 @@ msgid "Latest emails"
 msgstr "最近发送的邮件"
 
 #: includes/admin/class-email-center.php:273
+#: includes/admin/class-pixels-page.php:189
 #: includes/admin/class-tracking-page.php:123
 msgid "Time"
 msgstr "时间"
@@ -2489,6 +2500,7 @@ msgid "Subject"
 msgstr "标题"
 
 #: includes/admin/class-email-center.php:273
+#: includes/admin/class-pixels-page.php:189
 msgid "Result"
 msgstr "结果"
 
@@ -2829,6 +2841,7 @@ msgstr[0] "已更新 %d 项。"
 #: includes/admin/class-marketing.php:488
 #: includes/admin/class-marketing.php:513
 #: includes/admin/class-menu-page.php:112
+#: includes/admin/class-pixels-page.php:213
 #: includes/admin/class-shipping-page.php:108
 #: includes/admin/class-shipping-page.php:197
 #: includes/admin/class-tax-page.php:103
@@ -3474,6 +3487,7 @@ msgstr "首页"
 
 #: includes/admin/class-overview-page.php:191
 #: includes/admin/class-tracking-page.php:169
+#: includes/class-pixels.php:597
 msgid "Shop"
 msgstr "商店"
 
@@ -3585,6 +3599,313 @@ msgstr "网络星期一"
 #: includes/admin/class-overview-page.php:224
 msgid "Christmas"
 msgstr "圣诞节"
+
+#: includes/admin/class-pixels-page.php:48
+msgid "Enter the pixel ID."
+msgstr "请填写像素 ID。"
+
+#: includes/admin/class-pixels-page.php:49
+msgid "This pixel ID is already in the list."
+msgstr "这个像素 ID 已经在列表里了。"
+
+#: includes/admin/class-pixels-page.php:50
+msgid "Remove this pixel? It takes effect after you save."
+msgstr "删除这个像素？保存后生效。"
+
+#: includes/admin/class-pixels-page.php:51
+msgid "saved (unchanged)"
+msgstr "已保存（不变）"
+
+#: includes/admin/class-pixels-page.php:82
+msgid "All domains"
+msgstr "所有域名"
+
+#: includes/admin/class-pixels-page.php:91
+msgid "How to get it?"
+msgstr "如何获取？"
+
+#: includes/admin/class-pixels-page.php:93
+msgid "New pixel"
+msgstr "新建像素"
+
+#. translators: %s: event names
+#: includes/admin/class-pixels-page.php:97
+#, php-format
+msgid "Supported events: %s"
+msgstr "目前支持：%s"
+
+#. translators: %s: event names
+#: includes/admin/class-pixels-page.php:97
+msgid "The official code of this platform is still being checked, so it does not send events yet. You can already save the IDs."
+msgstr "这个平台的官方代码还在核对，暂时不发送事件；ID 可以先保存。"
+
+#: includes/admin/class-pixels-page.php:104
+msgid "Use the product amount as the sales value"
+msgstr "销售额使用商品金额"
+
+#: includes/admin/class-pixels-page.php:104
+msgid "On: the value of purchase events is the products’ amount (without shipping and tax). Off: the order total the customer paid."
+msgstr "勾选：购买事件的金额用商品金额（不含运费和税）。不勾选：用顾客实际支付的订单总额。"
+
+#: includes/admin/class-pixels-page.php:108
+msgid "Content ID type"
+msgstr "Content ID 类型"
+
+#: includes/admin/class-pixels-page.php:108
+msgid ""
+"The product ID sent as content_ids. It must match the IDs in your Meta catalog if you use one.\n"
+"SPU: one ID per product (the SPU code, or the product ID).\n"
+"SKU_CODE: the SKU of the chosen variation."
+msgstr "回传给 content_ids 的商品编号。如果用了 Meta 商品目录，要和目录里的编号一致。\nSPU：每个商品一个编号（SPU 编码，没有时用商品 ID）。\nSKU_CODE：所选款式的 SKU。"
+
+#: includes/admin/class-pixels-page.php:109
+msgid "Content name type"
+msgstr "Content Name 类型"
+
+#: includes/admin/class-pixels-page.php:109
+msgid "What is sent as content_name. This site has no separate internal name, so “Internal name” uses the product’s URL slug."
+msgstr "回传给 content_name 的内容。本站没有单独的内部名称，“内部名称”用商品网址里的别名（slug）。"
+
+#: includes/admin/class-pixels-page.php:110
+msgid "Product name"
+msgstr "商品名称"
+
+#: includes/admin/class-pixels-page.php:110
+msgid "Internal name"
+msgstr "内部名称"
+
+#: includes/admin/class-pixels-page.php:110
+msgid "Product type"
+msgstr "商品类型"
+
+#: includes/admin/class-pixels-page.php:114
+msgid "Upload custom events"
+msgstr "上传自定义事件"
+
+#: includes/admin/class-pixels-page.php:114
+msgid "Also sends ViewCategory, ViewCart, PlaceAnOrder and Login as custom events."
+msgstr "另外把 ViewCategory（浏览专辑）、ViewCart（查看购物车）、PlaceAnOrder（下单）、Login（登录）作为自定义事件回传。"
+
+#: includes/admin/class-pixels-page.php:115
+msgid "Report purchases of first orders only"
+msgstr "购买事件是否只回传首单"
+
+#: includes/admin/class-pixels-page.php:115
+msgid "Only the first paid order of each customer (by account or email) is sent as Purchase."
+msgstr "每位顾客（按账户或邮箱）只有第一笔付款订单回传为 Purchase。"
+
+#: includes/admin/class-pixels-page.php:116
+msgid "Online order report ratio"
+msgstr "在线订单回传比例"
+
+#: includes/admin/class-pixels-page.php:116
+msgid "The share of online orders that are reported to Facebook as Purchase. Which orders are left out is fixed by the order number, so an order is never reported twice. 100% = all orders."
+msgstr "按比例把在线订单回传给 Facebook 作为 Purchase。哪些订单不回传按订单号固定，同一个订单不会时报时不报。100% = 全部回传。"
+
+#: includes/admin/class-pixels-page.php:119
+msgid "Send email and phone number"
+msgstr "回传邮箱和手机号"
+
+#: includes/admin/class-pixels-page.php:119
+msgid "Adds the customer’s email and phone to the data layer as SHA-256 hashes (sha256_email_address, sha256_phone_number), for enhanced conversions."
+msgstr "把顾客的邮箱和手机号加密成 SHA-256 哈希（sha256_email_address、sha256_phone_number）放进数据层，用于增强型转化。"
+
+#: includes/admin/class-pixels-page.php:127
+#: includes/admin/class-pixels-page.php:189
+#: includes/admin/class-pixels-page.php:217
+msgid "Pixel ID"
+msgstr "像素ID"
+
+#: includes/admin/class-pixels-page.php:127
+#: includes/admin/class-pixels-page.php:218
+#: includes/admin/class-store-design.php:270
+#: includes/admin/class-store-design.php:429
+#: includes/admin/class-store-design.php:475
+msgid "Note"
+msgstr "备注"
+
+#: includes/admin/class-pixels-page.php:127
+msgid "For your own reference, e.g. which media buyer or campaign uses the pixel."
+msgstr "自己看的备注，例如这个像素是哪个投手、哪个广告系列在用。"
+
+#: includes/admin/class-pixels-page.php:127
+#: includes/admin/class-pixels-page.php:219
+msgid "Linked domain"
+msgstr "关联域名"
+
+#: includes/admin/class-pixels-page.php:131
+msgid "No pixels yet."
+msgstr "还没有像素。"
+
+#: includes/admin/class-pixels-page.php:134
+msgid "Google Ads tracking ID"
+msgstr "Google Adwords 跟踪ID"
+
+#: includes/admin/class-pixels-page.php:134
+msgid "Google Analytics tracking ID"
+msgstr "Google Analytics 跟踪ID"
+
+#: includes/admin/class-pixels-page.php:134
+msgid "Pixel IDs"
+msgstr "像素编号"
+
+#. translators: %s: example id
+#: includes/admin/class-pixels-page.php:136
+msgid "One pixel ID per line"
+msgstr "多个像素ID使用回车隔开"
+
+#. translators: %s: example id
+#: includes/admin/class-pixels-page.php:136
+#, php-format
+msgid "e.g. %s"
+msgstr "例如：%s"
+
+#: includes/admin/class-pixels-page.php:139
+msgid "Purchase event tracking (purchase conversion ID)"
+msgstr "购买事件跟踪（Purchase Conversation ID）"
+
+#: includes/admin/class-pixels-page.php:139
+msgid "One per line, e.g. AW-872163871231/F234HFDSKhdj"
+msgstr "多个像素ID使用回车隔开，例如：AW-872163871231/F234HFDSKhdj"
+
+#: includes/admin/class-pixels-page.php:140
+msgid "Track more events"
+msgstr "跟踪更多事件"
+
+#: includes/admin/class-pixels-page.php:148
+msgid "Event IDs"
+msgstr "事件 ID"
+
+#: includes/admin/class-pixels-page.php:169
+msgid "Back to system settings"
+msgstr "返回系统设置"
+
+#: includes/admin/class-pixels-page.php:174
+#: includes/admin/class-store-settings.php:54
+msgid "Ad pixels"
+msgstr "广告像素"
+
+#: includes/admin/class-pixels-page.php:174
+#: includes/admin/class-pixels-page.php:205
+msgid "Tracking settings"
+msgstr "统计设置"
+
+#: includes/admin/class-pixels-page.php:176
+msgid "No pixels yet, so nothing is sent. Add the IDs of the platforms you advertise on and save."
+msgstr "还没有填写像素，所以不会回传任何数据。填写你投放的平台的像素 ID 后保存。"
+
+#: includes/admin/class-pixels-page.php:185
+msgid "Server-side sends"
+msgstr "服务端回传记录"
+
+#: includes/admin/class-pixels-page.php:185
+msgid "Events sent by the server to Facebook (Conversions API) and TikTok (Events API) for pixels with an access token. Kept for 7 days. Browser events can be checked in each platform’s own test tool (for example Meta Events Manager → Test events)."
+msgstr "填了 access token 的像素，由服务器发给 Facebook（Conversions API）和 TikTok（Events API）的事件，保留 7 天。浏览器端的事件请在各平台自己的测试工具里查看（例如 Meta 事件管理工具 → 测试事件）。"
+
+#: includes/admin/class-pixels-page.php:187
+msgid "Nothing sent yet."
+msgstr "还没有发送记录。"
+
+#: includes/admin/class-pixels-page.php:189
+msgid "Platform"
+msgstr "平台"
+
+#: includes/admin/class-pixels-page.php:189
+#: includes/admin/class-tracking-page.php:125
+msgid "Event"
+msgstr "事件"
+
+#: includes/admin/class-pixels-page.php:197
+msgid "Notes"
+msgstr "备注说明"
+
+#: includes/admin/class-pixels-page.php:198
+msgid "A pixel is a piece of JavaScript in the page. It sends what visitors do (views, add to cart, orders) to the ad platform’s servers so the platform can count the results of your ads."
+msgstr "通过在网页中嵌入一段 JS 代码，这段代码会把访客的浏览、加购、下单等行为发送给广告平台的服务器，用来统计广告效果。"
+
+#: includes/admin/class-pixels-page.php:199
+msgid "With the pixel of an ad platform installed you can measure, analyse, retarget and build audiences on that platform. With an access token the server also sends the same events, which fills in what ad blockers and phone privacy settings remove; both carry the same event ID so the platform counts them once."
+msgstr "安装对应的广告像素代码，有助于广告平台进行数据统计、数据分析、实现再营销、精准定位受众人群等功能。填了 access token 时服务器也会回传一份，补上被拦截插件和手机隐私设置挡掉的数据；两份事件编号相同，平台只算一次。"
+
+#: includes/admin/class-pixels-page.php:200
+msgid "The numbers in the ad platform and on the site can differ somewhat; this is normal."
+msgstr "广告平台数据与网站数据，可能存在一定程度的数据误差，属于正常情况。"
+
+#: includes/admin/class-pixels-page.php:201
+msgid "Visitors who send the browser “Global Privacy Control” signal, or open any page with ?pc_px_optout=1, are not reported. Mention the platforms you use in your privacy policy."
+msgstr "发出浏览器“全局隐私控制（GPC）”信号的访客，或者打开过带 ?pc_px_optout=1 的页面的访客，不会被回传。请在隐私政策里写明用了哪些广告平台。"
+
+#: includes/admin/class-pixels-page.php:207
+msgid "Respect the browser’s Global Privacy Control (GPC) signal"
+msgstr "遵守浏览器的“全局隐私控制（GPC）”信号"
+
+#: includes/admin/class-pixels-page.php:207
+msgid "California and several other US states treat a GPC signal as a request not to sell or share the visitor’s data. On: no pixels and no server-side events for these visitors."
+msgstr "加利福尼亚等美国州把 GPC 信号视为“不要出售或分享我的数据”的请求。勾选：这些访客不加载像素，也不做服务端回传。"
+
+#: includes/admin/class-pixels-page.php:208
+msgid "Advanced matching: send the known email and phone as SHA-256 hashes"
+msgstr "高级匹配：把已知的邮箱和电话加密成 SHA-256 哈希后回传"
+
+#: includes/admin/class-pixels-page.php:208
+msgid "Helps the platforms recognise the customer. The values are hashed before they leave the site and cannot be read back."
+msgstr "帮助平台认出顾客。资料在离开网站之前就已经加密，无法还原。"
+
+#: includes/admin/class-pixels-page.php:209
+msgid "Also report staff visits (for testing)"
+msgstr "员工访问也回传（测试用）"
+
+#: includes/admin/class-pixels-page.php:210
+msgid "Also send PageView from the server"
+msgstr "服务端也回传 PageView"
+
+#: includes/admin/class-pixels-page.php:210
+msgid "Off by default: every page view would then also become a server request to the platform."
+msgstr "默认关闭：打开后每次浏览页面都会多一次服务器请求。"
+
+#: includes/admin/class-pixels-page.php:211
+msgid "When the pixels load"
+msgstr "像素加载时机"
+
+#: includes/admin/class-pixels-page.php:211
+msgid "When the page has loaded"
+msgstr "页面加载完成后"
+
+#: includes/admin/class-pixels-page.php:211
+msgid "At the first scroll or tap (faster pages, a few page views may be missed)"
+msgstr "访客第一次滚动或点击时（页面更快，可能漏掉少量浏览）"
+
+#: includes/admin/class-pixels-page.php:212
+msgid "Facebook test event code"
+msgstr "Facebook 测试事件代码"
+
+#: includes/admin/class-pixels-page.php:212
+msgid "From Meta Events Manager → Test events. While it is filled in, server-side events show up there. Clear it when you are done testing."
+msgstr "在 Meta 事件管理工具 → 测试事件里获取。填了以后服务端事件会显示在那里，测试完请清空。"
+
+#: includes/admin/class-pixels-page.php:216
+msgid "Pixel"
+msgstr "像素"
+
+#: includes/admin/class-pixels-page.php:219
+msgid "Empty = every domain of the store"
+msgstr "留空 = 店铺的所有域名"
+
+#: includes/admin/class-pixels-page.php:220
+msgid "Facebook: Events Manager → the pixel → Settings → Conversions API → Generate access token. TikTok: Events Manager → the pixel → Settings → Events API → Generate access token. The token stays on the server and is never shown in the store."
+msgstr "Facebook：事件管理工具 → 选择像素 → 设置 → 转化 API → 生成访问口令。TikTok：事件管理 → 选择像素 → 设置 → Events API → 生成 Access Token。口令只保存在服务器上，不会出现在店铺页面里。"
+
+#: includes/admin/class-pixels-page.php:220
+msgid "A token is saved. Leave empty to keep it."
+msgstr "已保存口令，留空则不修改。"
+
+#: includes/admin/class-pixels-page.php:220
+msgid "Remove the saved token"
+msgstr "删除已保存的口令"
+
+#: includes/admin/class-pixels-page.php:234
+msgid "Saved, but please check:"
+msgstr "已保存，但请检查："
 
 #: includes/admin/class-plans-editor.php:37
 msgid "No regions yet. Use “Add countries”."
@@ -4914,12 +5235,6 @@ msgstr "新建模板"
 msgid "Template name"
 msgstr "模板名称"
 
-#: includes/admin/class-store-design.php:270
-#: includes/admin/class-store-design.php:429
-#: includes/admin/class-store-design.php:475
-msgid "Note"
-msgstr "备注"
-
 #. translators: %s: date and time
 #: includes/admin/class-store-design.php:316
 #, php-format
@@ -5054,8 +5369,8 @@ msgid "Landing pages for promotions, built from modules, with their own address.
 msgstr "用模块搭建促销活动落地页，每个页面有自己的地址。"
 
 #: includes/admin/class-store-design.php:552
-#: includes/admin/class-store-settings.php:109
-#: includes/admin/class-store-settings.php:121
+#: includes/admin/class-store-settings.php:117
+#: includes/admin/class-store-settings.php:129
 msgid "Coming soon"
 msgstr "即将推出"
 
@@ -5072,59 +5387,63 @@ msgid "WordPress general settings (site title, language, time zone)"
 msgstr "WordPress 常规设置（站点标题、语言、时区）"
 
 #: includes/admin/class-store-settings.php:55
+msgid "Send visits, add to carts and orders to Facebook, Google, TikTok and other ad platforms."
+msgstr "把浏览、加购、下单等数据回传给 Facebook、Google、TikTok 等广告平台。"
+
+#: includes/admin/class-store-settings.php:63
 msgid "Templates for system emails that are sent automatically when certain events happen."
 msgstr "定义系统邮件提醒的模板，触发指定事件时自动发送。"
 
-#: includes/admin/class-store-settings.php:59
+#: includes/admin/class-store-settings.php:67
 msgid "WooCommerce emails"
 msgstr "WooCommerce 邮件设置"
 
-#: includes/admin/class-store-settings.php:64
+#: includes/admin/class-store-settings.php:72
 #: includes/admin/class-terms-page.php:95
 msgid "Terms of sale"
 msgstr "交易条款"
 
-#: includes/admin/class-store-settings.php:65
+#: includes/admin/class-store-settings.php:73
 msgid "Create your own terms pages that set clear rules for everyone taking part in a purchase."
 msgstr "创建自己的服务说明页面，为参与交易的各方提供明确的约定和规则。"
 
-#: includes/admin/class-store-settings.php:69
+#: includes/admin/class-store-settings.php:77
 msgid "Custom pages (policy pages and checkout terms)"
 msgstr "自定义页面（政策页面和结账条款）"
 
-#: includes/admin/class-store-settings.php:78
+#: includes/admin/class-store-settings.php:86
 msgid "WooCommerce settings"
 msgstr "WooCommerce 设置"
 
-#: includes/admin/class-store-settings.php:78
+#: includes/admin/class-store-settings.php:86
 msgid "General, products, accounts and advanced WooCommerce options."
 msgstr "WooCommerce 的常规、商品、账户和高级选项。"
 
-#: includes/admin/class-store-settings.php:81
+#: includes/admin/class-store-settings.php:89
 msgid "VialCove settings"
 msgstr "VialCove 设置"
 
-#: includes/admin/class-store-settings.php:81
+#: includes/admin/class-store-settings.php:89
 msgid "Brand name, demo mode, use statement, checkout confirmation, batch check and the support button."
 msgstr "品牌名称、演示模式、用途声明、结账确认、批次检查和客服按钮。"
 
-#: includes/admin/class-store-settings.php:83
+#: includes/admin/class-store-settings.php:91
 msgid "System status"
 msgstr "系统状态"
 
-#: includes/admin/class-store-settings.php:83
+#: includes/admin/class-store-settings.php:91
 msgid "Server, database and plugin information for troubleshooting."
 msgstr "服务器、数据库和插件信息，用于排查问题。"
 
-#: includes/admin/class-store-settings.php:111
+#: includes/admin/class-store-settings.php:119
 msgid "Other settings"
 msgstr "其他设置"
 
-#: includes/admin/class-store-settings.php:121
+#: includes/admin/class-store-settings.php:129
 msgid "The details of this section are still being decided. Once they are, this page becomes the full settings form."
 msgstr "这一项的具体内容还没定，确定之后这里会做成完整的设置页面。"
 
-#: includes/admin/class-store-settings.php:123
+#: includes/admin/class-store-settings.php:131
 msgid "Until then, these existing settings cover it:"
 msgstr "在此之前，可以先用这些现有设置："
 
@@ -5464,10 +5783,6 @@ msgstr "进入页面"
 msgid "Tab"
 msgstr "标签页"
 
-#: includes/admin/class-tracking-page.php:125
-msgid "Event"
-msgstr "事件"
-
 #: includes/admin/class-tracking-page.php:128
 msgid "Server fact"
 msgstr "服务端事实"
@@ -5767,31 +6082,35 @@ msgstr "请求过于频繁，请稍后再试。"
 msgid "Sale savings for this cart line (minor units). Excludes coupons."
 msgstr "这一行商品的促销节省金额（最小货币单位），不含优惠券。"
 
-#: includes/api/class-store-api.php:71
+#: includes/api/class-store-api.php:73
 msgid "Total sale savings in the cart (minor units). Informational; excludes coupons."
 msgstr "购物车促销节省合计（最小货币单位），仅供展示，不含优惠券。"
 
-#: includes/api/class-store-api.php:77
+#: includes/api/class-store-api.php:79
 msgid "Spend-and-save promotion applied to the cart, and the next tier the customer can reach."
 msgstr "购物车已用上的满减活动，以及客户可以达到的下一档。"
 
-#: includes/api/class-store-api.php:115
+#: includes/api/class-store-api.php:85
+msgid "Ad pixel events that happened in this request (for example add to cart), for the storefront pixel script."
+msgstr "这次请求里发生的广告像素事件（例如加购），给前台像素脚本使用。"
+
+#: includes/api/class-store-api.php:123
 msgid "Synthetic demonstration record."
 msgstr "虚构的演示数据。"
 
-#: includes/api/class-store-api.php:121
+#: includes/api/class-store-api.php:129
 msgid "Specification table."
 msgstr "规格表。"
 
-#: includes/api/class-store-api.php:136
+#: includes/api/class-store-api.php:144
 msgid "Number of public batches."
 msgstr "公开批次数量。"
 
-#: includes/api/class-store-api.php:142
+#: includes/api/class-store-api.php:150
 msgid "Best report state across public batches for the current user."
 msgstr "当前用户在所有公开批次中可获得的最佳报告状态。"
 
-#: includes/api/class-store-api.php:149
+#: includes/api/class-store-api.php:157
 msgid "Paired regular/current price of one purchasable item (minor units), with sale state and comparison-price source."
 msgstr "某个可购买规格的常规价与成交价（最小货币单位），含促销状态和对照价来源。"
 
@@ -6405,7 +6724,117 @@ msgstr "批次分配已更新："
 msgid "Batch: %s"
 msgstr "批次：%s"
 
-#: includes/class-plugin.php:120
+#: includes/class-pixels.php:68
+msgid "Kwai"
+msgstr "快手"
+
+#: includes/class-pixels.php:68
+msgid "Amounts are only sent in BRL, IDR or USD (Kwai supports no other currency)."
+msgstr "金额只在币种是 BRL、IDR 或 USD 时回传（快手不支持其他币种）。"
+
+#: includes/class-pixels.php:70
+msgid "A page loads only one BIGO pixel, so only the first ID is used. The browser pixel does not send amounts."
+msgstr "一个页面只能装一个 BIGO 像素，只用第一个 ID。浏览器像素不回传金额。"
+
+#: includes/class-pixels.php:77
+msgid "The base code records visits. For the other events, create each event in X Ads Manager (Events Manager → Add event → Define with code) and fill in its event ID below; events without an ID are not sent."
+msgstr "基础代码会记录访问。其他事件要先在 X 广告管理器里逐个建好（事件管理器 → 添加事件 → 用代码定义），把事件 ID 填在下面；没填 ID 的事件不回传。"
+
+#: includes/class-pixels.php:78
+msgid "Fill in the MediaGo account ID. In MediaGo, create the conversions with the Google Tag Manager method and the same conversion types; purchases are sent as the important conversion."
+msgstr "填写 MediaGo 的账户 ID。在 MediaGo 后台用“Google Tag Manager”方式新建同样类型的转化来接收；购买作为重要转化回传。"
+
+#: includes/class-pixels.php:80
+msgid "A page loads only one NewsBreak pixel, so only the first one that matches the domain is used."
+msgstr "一个页面只能装一个 NewsBreak 像素，只用第一个和当前域名匹配的。"
+
+#: includes/class-pixels.php:82
+msgid "Fill in the Axon Event Key. A page loads only one, so only the first one that matches the domain is used."
+msgstr "填写 Axon 的 Event Key。一个页面只能装一个，只用第一个和当前域名匹配的。"
+
+#: includes/class-pixels.php:93
+msgid "page view"
+msgstr "浏览页面"
+
+#: includes/class-pixels.php:94
+msgid "home page"
+msgstr "浏览首页"
+
+#: includes/class-pixels.php:95
+msgid "view category"
+msgstr "浏览专辑"
+
+#: includes/class-pixels.php:96
+msgid "view product"
+msgstr "查看商品"
+
+#: includes/class-pixels.php:97
+msgid "search"
+msgstr "搜索"
+
+#: includes/class-pixels.php:98
+msgid "view cart"
+msgstr "查看购物车"
+
+#: includes/class-pixels.php:99
+msgid "add to cart"
+msgstr "加购"
+
+#: includes/class-pixels.php:100
+msgid "checkout"
+msgstr "结账"
+
+#: includes/class-pixels.php:101
+msgid "add payment info"
+msgstr "添加支付"
+
+#: includes/class-pixels.php:102
+msgid "place an order"
+msgstr "下单"
+
+#: includes/class-pixels.php:103
+msgid "purchase"
+msgstr "购买"
+
+#: includes/class-pixels.php:104
+msgid "sign up"
+msgstr "注册"
+
+#: includes/class-pixels.php:105
+msgid "login"
+msgstr "登录"
+
+#: includes/class-pixels.php:233
+msgid "The online order report ratio must be between 1% and 100%."
+msgstr "在线订单回传比例要在 1% 到 100% 之间。"
+
+#. translators: %s: conversion id
+#: includes/class-pixels.php:244
+#, php-format
+msgid "Google Ads purchase conversion %s should look like AW-123456789/AbCdEf."
+msgstr "Google Ads 购买转化 %s 的格式应该是 AW-123456789/AbCdEf。"
+
+#: includes/class-pixels.php:264
+msgid "Yahoo needs both the pixel ID and the project ID."
+msgstr "Yahoo 需要同时填写 Pixelid 和 Projectid。"
+
+#. translators: %s: event id
+#: includes/class-pixels.php:277
+#, php-format
+msgid "X event ID %s should look like tw-o1abc-o2def."
+msgstr "X 的事件 ID %s 格式应该是 tw-o1abc-o2def。"
+
+#. translators: 1: platform, 2: id
+#: includes/class-pixels.php:290
+#, php-format
+msgid "%1$s ID %2$s does not look right. Check the example in the box."
+msgstr "%1$s 的 ID %2$s 格式不对，请参考输入框里的示例。"
+
+#: includes/class-pixels.php:327
+msgid "This browser will no longer share your activity with advertising partners."
+msgstr "这个浏览器以后不会再把你的浏览行为分享给广告合作方。"
+
+#: includes/class-plugin.php:122
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr "Peptide Core 需要先安装并启用 WooCommerce。"
 

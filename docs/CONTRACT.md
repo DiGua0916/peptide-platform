@@ -233,3 +233,19 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
   - 抽奖由服务端按权重抽，每个购物会话只能抽一次。
   - 优惠码用 Coupons::remember 用到购物车；购物车为空时先记下，加入商品后自动使用。
 - **订单**：用了弹窗给的优惠码时，订单 meta `_pc_exit_intent` 记着这个码。
+
+## 广告像素（2026-10-24，Claude，PIXELS-01）
+
+后台“店铺设置 → 系统设置 → 广告像素”（`pc-system&section=pixels`）。填了任意平台的 ID 后，插件在前台页脚加载 `assets/pixels.js`（handle `peptide-core-pixels`，配置 `window.pcPixels`），主题不需要接入。
+
+- **平台**：Facebook、Google Analytics（GA4）、Google Ads、Google Tag Manager、Bing、Yahoo、Pinterest、TikTok、Snapchat、快手、Taboola、BIGO Ads、VK、Yandex Metrica、Outbrain、Criteo、X（Twitter）、MediaGo、NewsBreak、AppLovin、SmartNews、Reddit、OpenAI。每个平台用的是它官方文档里的安装代码；填在像素表格里的像素可以绑定一个域名（留空 = 所有域名）。
+- **统一事件**：`page_view`、`view_home`、`view_list`、`view_item`、`search`、`view_cart`、`add_to_cart`、`begin_checkout`、`add_payment_info`、`place_order`、`purchase`、`sign_up`、`login`。插件把它们换成各平台的事件名，平台没有对应事件的就不发；X 的事件要在后台填好每个事件的事件 ID 才发。
+  - 页面事件由服务端按页面类型给出：首页、商品列表 / 分类、商品页、搜索、购物车、结账；购买和下单只在订单完成页出现一次（订单 meta `_pc_px_browser`）。
+  - 加购、注册、登录发生在请求里，先存进 Woo 会话：
+    - Store API 的购物车响应带 `extensions.peptide_core.pixel_events`（数组，取出后清空），`pixels.js` 包装了 `fetch`，自动读 `/wc/store/` 的响应；
+    - 经典加购（jQuery `added_to_cart`）之后，`pixels.js` 请求 `POST ?wc-ajax=pc_px_queue` 取回。
+  - 结账页第一次选择付款方式时发 `add_payment_info`（input 的 name 是 `payment_method` 或含 `payment-method`）。
+  - 主题自己的交互可以调用 `window.PeptidePixels.track( event )`。事件格式：`{name, id, items:[{id, spu, sku, name, internal, category, variant, price, quantity}], value, items_value, currency, search?, list?, order_id?}`；`id` 是去重用的事件编号，同一个事件不要换编号。
+- **服务端回传**：Facebook（Conversions API）和 TikTok（Events API）的像素填了 access token 时，浏览商品、搜索、购物车、结账、加购、注册、登录和购买（订单变成已付款时）也由服务器经 Action Scheduler 发一份，和浏览器事件用同一个事件编号，平台只算一次。token 只在服务器上，`window.pcPixels` 里没有。
+- **不回传**：员工（除非勾了测试用选项）；浏览器发出 GPC 信号（默认遵守）；打开过任意前台地址加 `?pc_px_optout=1` 的浏览器（cookie `pc_px_optout`，一年；`=0` 取消）。主题可以在页脚或隐私页放一个“不要出售或分享我的个人信息”链接指向 `/?pc_px_optout=1`，打开后显示一条 WooCommerce 成功提示。
+- **检查**：浏览器里 `localStorage.pcPixelsDebug = '1'` 时，每个事件和发给了哪些平台都打印在控制台。

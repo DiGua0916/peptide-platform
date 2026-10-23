@@ -49,6 +49,14 @@ final class Store_Settings {
 					__( 'WordPress general settings (site title, language, time zone)', 'peptide-core' ) => admin_url( 'options-general.php' ),
 				),
 			),
+			'pixels' => array(
+				'icon'        => 'dashicons-chart-line',
+				'title'       => __( 'Ad pixels', 'peptide-core' ),
+				'desc'        => __( 'Send visits, add to carts and orders to Facebook, Google, TikTok and other ad platforms.', 'peptide-core' ),
+				'placeholder' => false,
+				'render'      => array( Pixels_Page::class, 'render' ),
+				'now'         => array(),
+			),
 			'email' => array(
 				'icon'        => 'dashicons-email-alt',
 				'title'       => __( 'Email notifications', 'peptide-core' ),

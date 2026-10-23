@@ -2,14 +2,14 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.21.0\n"
+"Project-Id-Version: Peptide Core 0.22.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-23T15:48:57+00:00\n"
+"POT-Creation-Date: 2026-10-23T18:43:19+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -57,8 +57,8 @@ msgstr ""
 #: includes/admin/class-admin-menus.php:76
 #: includes/admin/class-basic-config-page.php:114
 #: includes/admin/class-email-center.php:151
-#: includes/admin/class-store-settings.php:107
-#: includes/admin/class-store-settings.php:119
+#: includes/admin/class-store-settings.php:115
+#: includes/admin/class-store-settings.php:127
 #: includes/admin/class-terms-page.php:91
 msgid "System settings"
 msgstr ""
@@ -125,6 +125,8 @@ msgstr ""
 #: includes/admin/class-marketing.php:378
 #: includes/admin/class-menu-page.php:101
 #: includes/admin/class-menu-page.php:291
+#: includes/admin/class-pixels-page.php:54
+#: includes/admin/class-pixels-page.php:77
 #: includes/admin/class-plans-editor.php:36
 #: includes/admin/class-plans-editor.php:107
 #: includes/admin/class-promotions-page.php:227
@@ -606,6 +608,7 @@ msgstr ""
 #: includes/admin/class-marketing.php:481
 #: includes/admin/class-menu-page.php:164
 #: includes/admin/class-menu-page.php:207
+#: includes/admin/class-pixels-page.php:229
 #: includes/admin/class-recovery-page.php:57
 #: includes/admin/class-shipping-page.php:221
 #: includes/admin/class-store-design.php:140
@@ -1032,7 +1035,7 @@ msgstr ""
 
 #: includes/admin/class-basic-config-page.php:266
 #: includes/admin/class-email-center.php:152
-#: includes/admin/class-store-settings.php:54
+#: includes/admin/class-store-settings.php:62
 msgid "Email notifications"
 msgstr ""
 
@@ -1479,6 +1482,7 @@ msgstr ""
 #: includes/admin/class-marketing.php:262
 #: includes/admin/class-menu-page.php:97
 #: includes/admin/class-menu-page.php:278
+#: includes/admin/class-pixels-page.php:127
 #: includes/admin/class-plans-editor.php:84
 #: includes/admin/class-plans-editor.php:114
 #: includes/admin/class-promotions-page.php:95
@@ -2217,6 +2221,8 @@ msgstr ""
 
 #: includes/admin/class-dialogs.php:33
 #: includes/admin/class-menu-page.php:118
+#: includes/admin/class-pixels-page.php:191
+#: includes/admin/class-pixels-page.php:221
 #: includes/admin/class-plans-editor.php:128
 #: includes/admin/class-plans-editor.php:142
 msgid "OK"
@@ -2226,6 +2232,8 @@ msgstr ""
 #: includes/admin/class-marketing.php:488
 #: includes/admin/class-marketing.php:513
 #: includes/admin/class-menu-page.php:117
+#: includes/admin/class-pixels-page.php:213
+#: includes/admin/class-pixels-page.php:221
 #: includes/admin/class-plans-editor.php:123
 #: includes/admin/class-plans-editor.php:128
 #: includes/admin/class-plans-editor.php:142
@@ -2439,6 +2447,8 @@ msgstr ""
 #: includes/admin/class-email-center.php:236
 #: includes/admin/class-marketing.php:383
 #: includes/admin/class-menu-page.php:289
+#: includes/admin/class-pixels-page.php:53
+#: includes/admin/class-pixels-page.php:77
 #: includes/admin/class-plans-editor.php:35
 msgid "Edit"
 msgstr ""
@@ -2478,6 +2488,7 @@ msgid "Latest emails"
 msgstr ""
 
 #: includes/admin/class-email-center.php:273
+#: includes/admin/class-pixels-page.php:189
 #: includes/admin/class-tracking-page.php:123
 msgid "Time"
 msgstr ""
@@ -2491,6 +2502,7 @@ msgid "Subject"
 msgstr ""
 
 #: includes/admin/class-email-center.php:273
+#: includes/admin/class-pixels-page.php:189
 msgid "Result"
 msgstr ""
 
@@ -2833,6 +2845,7 @@ msgstr[1] ""
 #: includes/admin/class-marketing.php:488
 #: includes/admin/class-marketing.php:513
 #: includes/admin/class-menu-page.php:112
+#: includes/admin/class-pixels-page.php:213
 #: includes/admin/class-shipping-page.php:108
 #: includes/admin/class-shipping-page.php:197
 #: includes/admin/class-tax-page.php:103
@@ -3479,6 +3492,7 @@ msgstr ""
 
 #: includes/admin/class-overview-page.php:191
 #: includes/admin/class-tracking-page.php:169
+#: includes/class-pixels.php:597
 msgid "Shop"
 msgstr ""
 
@@ -3589,6 +3603,313 @@ msgstr ""
 
 #: includes/admin/class-overview-page.php:224
 msgid "Christmas"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:48
+msgid "Enter the pixel ID."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:49
+msgid "This pixel ID is already in the list."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:50
+msgid "Remove this pixel? It takes effect after you save."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:51
+msgid "saved (unchanged)"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:82
+msgid "All domains"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:91
+msgid "How to get it?"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:93
+msgid "New pixel"
+msgstr ""
+
+#. translators: %s: event names
+#: includes/admin/class-pixels-page.php:97
+#, php-format
+msgid "Supported events: %s"
+msgstr ""
+
+#. translators: %s: event names
+#: includes/admin/class-pixels-page.php:97
+msgid "The official code of this platform is still being checked, so it does not send events yet. You can already save the IDs."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:104
+msgid "Use the product amount as the sales value"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:104
+msgid "On: the value of purchase events is the products’ amount (without shipping and tax). Off: the order total the customer paid."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:108
+msgid "Content ID type"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:108
+msgid ""
+"The product ID sent as content_ids. It must match the IDs in your Meta catalog if you use one.\n"
+"SPU: one ID per product (the SPU code, or the product ID).\n"
+"SKU_CODE: the SKU of the chosen variation."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:109
+msgid "Content name type"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:109
+msgid "What is sent as content_name. This site has no separate internal name, so “Internal name” uses the product’s URL slug."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:110
+msgid "Product name"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:110
+msgid "Internal name"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:110
+msgid "Product type"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:114
+msgid "Upload custom events"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:114
+msgid "Also sends ViewCategory, ViewCart, PlaceAnOrder and Login as custom events."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:115
+msgid "Report purchases of first orders only"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:115
+msgid "Only the first paid order of each customer (by account or email) is sent as Purchase."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:116
+msgid "Online order report ratio"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:116
+msgid "The share of online orders that are reported to Facebook as Purchase. Which orders are left out is fixed by the order number, so an order is never reported twice. 100% = all orders."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:119
+msgid "Send email and phone number"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:119
+msgid "Adds the customer’s email and phone to the data layer as SHA-256 hashes (sha256_email_address, sha256_phone_number), for enhanced conversions."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:127
+#: includes/admin/class-pixels-page.php:189
+#: includes/admin/class-pixels-page.php:217
+msgid "Pixel ID"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:127
+#: includes/admin/class-pixels-page.php:218
+#: includes/admin/class-store-design.php:270
+#: includes/admin/class-store-design.php:429
+#: includes/admin/class-store-design.php:475
+msgid "Note"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:127
+msgid "For your own reference, e.g. which media buyer or campaign uses the pixel."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:127
+#: includes/admin/class-pixels-page.php:219
+msgid "Linked domain"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:131
+msgid "No pixels yet."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:134
+msgid "Google Ads tracking ID"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:134
+msgid "Google Analytics tracking ID"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:134
+msgid "Pixel IDs"
+msgstr ""
+
+#. translators: %s: example id
+#: includes/admin/class-pixels-page.php:136
+msgid "One pixel ID per line"
+msgstr ""
+
+#. translators: %s: example id
+#: includes/admin/class-pixels-page.php:136
+#, php-format
+msgid "e.g. %s"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:139
+msgid "Purchase event tracking (purchase conversion ID)"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:139
+msgid "One per line, e.g. AW-872163871231/F234HFDSKhdj"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:140
+msgid "Track more events"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:148
+msgid "Event IDs"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:169
+msgid "Back to system settings"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:174
+#: includes/admin/class-store-settings.php:54
+msgid "Ad pixels"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:174
+#: includes/admin/class-pixels-page.php:205
+msgid "Tracking settings"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:176
+msgid "No pixels yet, so nothing is sent. Add the IDs of the platforms you advertise on and save."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:185
+msgid "Server-side sends"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:185
+msgid "Events sent by the server to Facebook (Conversions API) and TikTok (Events API) for pixels with an access token. Kept for 7 days. Browser events can be checked in each platform’s own test tool (for example Meta Events Manager → Test events)."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:187
+msgid "Nothing sent yet."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:189
+msgid "Platform"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:189
+#: includes/admin/class-tracking-page.php:125
+msgid "Event"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:197
+msgid "Notes"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:198
+msgid "A pixel is a piece of JavaScript in the page. It sends what visitors do (views, add to cart, orders) to the ad platform’s servers so the platform can count the results of your ads."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:199
+msgid "With the pixel of an ad platform installed you can measure, analyse, retarget and build audiences on that platform. With an access token the server also sends the same events, which fills in what ad blockers and phone privacy settings remove; both carry the same event ID so the platform counts them once."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:200
+msgid "The numbers in the ad platform and on the site can differ somewhat; this is normal."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:201
+msgid "Visitors who send the browser “Global Privacy Control” signal, or open any page with ?pc_px_optout=1, are not reported. Mention the platforms you use in your privacy policy."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:207
+msgid "Respect the browser’s Global Privacy Control (GPC) signal"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:207
+msgid "California and several other US states treat a GPC signal as a request not to sell or share the visitor’s data. On: no pixels and no server-side events for these visitors."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:208
+msgid "Advanced matching: send the known email and phone as SHA-256 hashes"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:208
+msgid "Helps the platforms recognise the customer. The values are hashed before they leave the site and cannot be read back."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:209
+msgid "Also report staff visits (for testing)"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:210
+msgid "Also send PageView from the server"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:210
+msgid "Off by default: every page view would then also become a server request to the platform."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:211
+msgid "When the pixels load"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:211
+msgid "When the page has loaded"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:211
+msgid "At the first scroll or tap (faster pages, a few page views may be missed)"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:212
+msgid "Facebook test event code"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:212
+msgid "From Meta Events Manager → Test events. While it is filled in, server-side events show up there. Clear it when you are done testing."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:216
+msgid "Pixel"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:219
+msgid "Empty = every domain of the store"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:220
+msgid "Facebook: Events Manager → the pixel → Settings → Conversions API → Generate access token. TikTok: Events Manager → the pixel → Settings → Events API → Generate access token. The token stays on the server and is never shown in the store."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:220
+msgid "A token is saved. Leave empty to keep it."
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:220
+msgid "Remove the saved token"
+msgstr ""
+
+#: includes/admin/class-pixels-page.php:234
+msgid "Saved, but please check:"
 msgstr ""
 
 #: includes/admin/class-plans-editor.php:37
@@ -4922,12 +5243,6 @@ msgstr ""
 msgid "Template name"
 msgstr ""
 
-#: includes/admin/class-store-design.php:270
-#: includes/admin/class-store-design.php:429
-#: includes/admin/class-store-design.php:475
-msgid "Note"
-msgstr ""
-
 #. translators: %s: date and time
 #: includes/admin/class-store-design.php:316
 #, php-format
@@ -5062,8 +5377,8 @@ msgid "Landing pages for promotions, built from modules, with their own address.
 msgstr ""
 
 #: includes/admin/class-store-design.php:552
-#: includes/admin/class-store-settings.php:109
-#: includes/admin/class-store-settings.php:121
+#: includes/admin/class-store-settings.php:117
+#: includes/admin/class-store-settings.php:129
 msgid "Coming soon"
 msgstr ""
 
@@ -5080,59 +5395,63 @@ msgid "WordPress general settings (site title, language, time zone)"
 msgstr ""
 
 #: includes/admin/class-store-settings.php:55
+msgid "Send visits, add to carts and orders to Facebook, Google, TikTok and other ad platforms."
+msgstr ""
+
+#: includes/admin/class-store-settings.php:63
 msgid "Templates for system emails that are sent automatically when certain events happen."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:59
+#: includes/admin/class-store-settings.php:67
 msgid "WooCommerce emails"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:64
+#: includes/admin/class-store-settings.php:72
 #: includes/admin/class-terms-page.php:95
 msgid "Terms of sale"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:65
+#: includes/admin/class-store-settings.php:73
 msgid "Create your own terms pages that set clear rules for everyone taking part in a purchase."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:69
+#: includes/admin/class-store-settings.php:77
 msgid "Custom pages (policy pages and checkout terms)"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:78
+#: includes/admin/class-store-settings.php:86
 msgid "WooCommerce settings"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:78
+#: includes/admin/class-store-settings.php:86
 msgid "General, products, accounts and advanced WooCommerce options."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:81
+#: includes/admin/class-store-settings.php:89
 msgid "VialCove settings"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:81
+#: includes/admin/class-store-settings.php:89
 msgid "Brand name, demo mode, use statement, checkout confirmation, batch check and the support button."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:83
+#: includes/admin/class-store-settings.php:91
 msgid "System status"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:83
+#: includes/admin/class-store-settings.php:91
 msgid "Server, database and plugin information for troubleshooting."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:111
+#: includes/admin/class-store-settings.php:119
 msgid "Other settings"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:121
+#: includes/admin/class-store-settings.php:129
 msgid "The details of this section are still being decided. Once they are, this page becomes the full settings form."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:123
+#: includes/admin/class-store-settings.php:131
 msgid "Until then, these existing settings cover it:"
 msgstr ""
 
@@ -5472,10 +5791,6 @@ msgstr ""
 msgid "Tab"
 msgstr ""
 
-#: includes/admin/class-tracking-page.php:125
-msgid "Event"
-msgstr ""
-
 #: includes/admin/class-tracking-page.php:128
 msgid "Server fact"
 msgstr ""
@@ -5775,31 +6090,35 @@ msgstr ""
 msgid "Sale savings for this cart line (minor units). Excludes coupons."
 msgstr ""
 
-#: includes/api/class-store-api.php:71
+#: includes/api/class-store-api.php:73
 msgid "Total sale savings in the cart (minor units). Informational; excludes coupons."
 msgstr ""
 
-#: includes/api/class-store-api.php:77
+#: includes/api/class-store-api.php:79
 msgid "Spend-and-save promotion applied to the cart, and the next tier the customer can reach."
 msgstr ""
 
-#: includes/api/class-store-api.php:115
+#: includes/api/class-store-api.php:85
+msgid "Ad pixel events that happened in this request (for example add to cart), for the storefront pixel script."
+msgstr ""
+
+#: includes/api/class-store-api.php:123
 msgid "Synthetic demonstration record."
 msgstr ""
 
-#: includes/api/class-store-api.php:121
+#: includes/api/class-store-api.php:129
 msgid "Specification table."
 msgstr ""
 
-#: includes/api/class-store-api.php:136
+#: includes/api/class-store-api.php:144
 msgid "Number of public batches."
 msgstr ""
 
-#: includes/api/class-store-api.php:142
+#: includes/api/class-store-api.php:150
 msgid "Best report state across public batches for the current user."
 msgstr ""
 
-#: includes/api/class-store-api.php:149
+#: includes/api/class-store-api.php:157
 msgid "Paired regular/current price of one purchasable item (minor units), with sale state and comparison-price source."
 msgstr ""
 
@@ -6419,7 +6738,117 @@ msgstr ""
 msgid "Batch: %s"
 msgstr ""
 
-#: includes/class-plugin.php:120
+#: includes/class-pixels.php:68
+msgid "Kwai"
+msgstr ""
+
+#: includes/class-pixels.php:68
+msgid "Amounts are only sent in BRL, IDR or USD (Kwai supports no other currency)."
+msgstr ""
+
+#: includes/class-pixels.php:70
+msgid "A page loads only one BIGO pixel, so only the first ID is used. The browser pixel does not send amounts."
+msgstr ""
+
+#: includes/class-pixels.php:77
+msgid "The base code records visits. For the other events, create each event in X Ads Manager (Events Manager → Add event → Define with code) and fill in its event ID below; events without an ID are not sent."
+msgstr ""
+
+#: includes/class-pixels.php:78
+msgid "Fill in the MediaGo account ID. In MediaGo, create the conversions with the Google Tag Manager method and the same conversion types; purchases are sent as the important conversion."
+msgstr ""
+
+#: includes/class-pixels.php:80
+msgid "A page loads only one NewsBreak pixel, so only the first one that matches the domain is used."
+msgstr ""
+
+#: includes/class-pixels.php:82
+msgid "Fill in the Axon Event Key. A page loads only one, so only the first one that matches the domain is used."
+msgstr ""
+
+#: includes/class-pixels.php:93
+msgid "page view"
+msgstr ""
+
+#: includes/class-pixels.php:94
+msgid "home page"
+msgstr ""
+
+#: includes/class-pixels.php:95
+msgid "view category"
+msgstr ""
+
+#: includes/class-pixels.php:96
+msgid "view product"
+msgstr ""
+
+#: includes/class-pixels.php:97
+msgid "search"
+msgstr ""
+
+#: includes/class-pixels.php:98
+msgid "view cart"
+msgstr ""
+
+#: includes/class-pixels.php:99
+msgid "add to cart"
+msgstr ""
+
+#: includes/class-pixels.php:100
+msgid "checkout"
+msgstr ""
+
+#: includes/class-pixels.php:101
+msgid "add payment info"
+msgstr ""
+
+#: includes/class-pixels.php:102
+msgid "place an order"
+msgstr ""
+
+#: includes/class-pixels.php:103
+msgid "purchase"
+msgstr ""
+
+#: includes/class-pixels.php:104
+msgid "sign up"
+msgstr ""
+
+#: includes/class-pixels.php:105
+msgid "login"
+msgstr ""
+
+#: includes/class-pixels.php:233
+msgid "The online order report ratio must be between 1% and 100%."
+msgstr ""
+
+#. translators: %s: conversion id
+#: includes/class-pixels.php:244
+#, php-format
+msgid "Google Ads purchase conversion %s should look like AW-123456789/AbCdEf."
+msgstr ""
+
+#: includes/class-pixels.php:264
+msgid "Yahoo needs both the pixel ID and the project ID."
+msgstr ""
+
+#. translators: %s: event id
+#: includes/class-pixels.php:277
+#, php-format
+msgid "X event ID %s should look like tw-o1abc-o2def."
+msgstr ""
+
+#. translators: 1: platform, 2: id
+#: includes/class-pixels.php:290
+#, php-format
+msgid "%1$s ID %2$s does not look right. Check the example in the box."
+msgstr ""
+
+#: includes/class-pixels.php:327
+msgid "This browser will no longer share your activity with advertising partners."
+msgstr ""
+
+#: includes/class-plugin.php:122
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr ""
 

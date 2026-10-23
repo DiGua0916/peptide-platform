@@ -65,6 +65,8 @@ final class Store_Api {
 					'sale_savings' => \PeptideCore\Pricing::cart_summary( function_exists( 'WC' ) && WC()->cart ? WC()->cart : null ),
 					// 满减（PROMO-01）：已用上的活动和下一档提示，结构同 peptide_core_get_promotion_progress()。
 					'promotion'    => \PeptideCore\Promotions::progress(),
+					// 广告像素（PIXELS-01）：这次请求里发生的加购等事件，交给浏览器里的 assets/pixels.js。取出后清空。
+					'pixel_events' => \PeptideCore\Pixels::allowed() ? \PeptideCore\Pixels::pop_queue() : array(),
 				),
 				'schema_callback' => static fn() => array(
 					'sale_savings' => array(
@@ -76,6 +78,12 @@ final class Store_Api {
 					'promotion'    => array(
 						'description' => __( 'Spend-and-save promotion applied to the cart, and the next tier the customer can reach.', 'peptide-core' ),
 						'type'        => 'object',
+						'context'     => array( 'view', 'edit' ),
+						'readonly'    => true,
+					),
+					'pixel_events' => array(
+						'description' => __( 'Ad pixel events that happened in this request (for example add to cart), for the storefront pixel script.', 'peptide-core' ),
+						'type'        => 'array',
 						'context'     => array( 'view', 'edit' ),
 						'readonly'    => true,
 					),
