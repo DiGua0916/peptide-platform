@@ -1,7 +1,7 @@
 /**
  * 应用：离开意图增收（APP-EXIT-01）。前台弹窗和后台预览共用。
  * - 前台：页面配置 window.pcExitIntent。电脑端鼠标移出页面顶部时触发；手机端按勾选的方式触发（可以多选）：
- *   快速上滑、切到别的 App / 标签页后回来、一段时间没有操作、看到页面底部。
+ *   按返回键、快速上滑、切到别的 App / 标签页后回来、一段时间没有操作、看到页面底部。
  *   每位访客按设置的天数最多弹一次（localStorage，读写失败时只按本次浏览算）。
  * - 抽奖结果由服务端决定，这里只负责把转盘转到服务端给出的奖项。
  * - 后台预览：PeptideExitIntent.render( config, host, { demo: true, weights: [...] } )，不发请求。
@@ -303,9 +303,10 @@
 	var armed = false;
 	var dialog = null;
 
+	/** 弹出；不能弹时（已经弹过、还没到停留时间、已有别的弹窗）返回 false。 */
 	function open() {
 		if ( fired || ( ! cfg.preview && ( ! armed || recently() ) ) || document.querySelector( 'dialog[open]' ) ) {
-			return;
+			return false;
 		}
 		fired = true;
 		if ( ! cfg.preview ) {
@@ -349,6 +350,7 @@
 		if ( ! cfg.preview ) {
 			post( cfg.ajax.event, { event: 'show' } ).catch( function () {} );
 		}
+		return true;
 	}
 
 	if ( cfg.preview ) {
@@ -372,6 +374,37 @@
 		document.addEventListener( 'mouseout', function ( e ) {
 			if ( ! e.relatedTarget && e.clientY <= 0 ) {
 				open();
+			}
+		} );
+	}
+	if ( has( 'back' ) && window.history && window.history.pushState ) {
+		// 按返回键：顾客第一次点页面时，加一条同地址的浏览记录（Chrome 只认有点击之后加的记录）。
+		// 按返回时回到原记录，先弹窗；只拦一次，再按返回就正常离开；不能弹时马上放行。
+		var pushed = false;
+		var caught = false;
+		var events = [ 'pointerup', 'touchend', 'click', 'keydown' ];
+		var push = function () {
+			events.forEach( function ( ev ) {
+				window.removeEventListener( ev, push, true );
+			} );
+			if ( pushed || fired ) {
+				return;
+			}
+			try {
+				window.history.pushState( { pcExit: 1 }, '', window.location.href );
+				pushed = true;
+			} catch ( e ) {}
+		};
+		events.forEach( function ( ev ) {
+			window.addEventListener( ev, push, true );
+		} );
+		window.addEventListener( 'popstate', function ( e ) {
+			if ( ! pushed || caught || ( e.state && e.state.pcExit ) ) {
+				return;
+			}
+			caught = true;
+			if ( ! open() ) {
+				window.history.back();
 			}
 		} );
 	}

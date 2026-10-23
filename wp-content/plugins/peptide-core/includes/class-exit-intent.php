@@ -4,9 +4,10 @@
  *
  * 顾客要离开网站时弹出窗口挽回：
  * - 弹窗类型：优惠券（领取后自动用到购物车）/ 抽奖转盘（最多 8 个奖项，按权重在服务端抽奖）/ 自定义内容（标题、文字、按钮链接）。
- * - 触发：电脑端鼠标移出页面顶部（离开意图）。手机端没有“要离开”的信号，可以同时勾选几种：快速上滑、切到别的 App / 标签页后回来、
- *   一段时间没有操作、看到页面底部（2026-10-23 用户：手机端最重要）。不拦截返回键：广告平台把它当作劫持导航，Chrome 也会跳过这种记录。
- *   页面至少停留几秒后才会触发。
+ * - 触发：电脑端鼠标移出页面顶部（离开意图）。手机端可以同时勾选几种（2026-10-23 用户：手机端最重要，按 Shopname 做返回键）：
+ *   按返回键（顾客第一次点页面时加一条同地址的浏览记录，按返回时先弹窗；只拦一次，再按返回就离开；不能弹时直接放行）、
+ *   快速上滑、切到别的 App / 标签页后回来、一段时间没有操作、看到页面底部。页面至少停留几秒后才会触发。
+ * - 订单：用了弹窗给的优惠码的订单记 meta `_pc_exit_intent`，加一条备注；在订单列表搜索 “exitintent” 就能列出这些订单（和 Shopname 一样）。
  * - 范围：哪些页面弹（首页 / 商品列表 / 商品页 / 购物车 / 结账 / 其他），哪些访客弹（所有人 / 购物车有商品 / 没下过单）；
  *   每位访客多少天最多弹一次（浏览器本地记录）。员工不会看到弹窗，后台用“预览”查看。
  * - 抽奖结果由服务端决定（权重就是真实概率），每个购物会话只能抽一次；抽中带优惠码的奖项时，
@@ -34,7 +35,8 @@ final class Exit_Intent {
 	public const TYPES       = array( 'coupon', 'wheel', 'message' );
 	public const PAGES       = array( 'home', 'shop', 'product', 'cart', 'checkout', 'other' );
 	public const EVENTS      = array( 'show', 'close', 'claim', 'spin', 'win', 'order' );
-	public const MOBILE      = array( 'scroll', 'return', 'idle', 'bottom' );
+	public const MOBILE      = array( 'back', 'scroll', 'return', 'idle', 'bottom' );
+	public const ORDER_TAG   = 'exitintent';
 
 	private const DB_OPTION  = 'peptide_core_app_stats_db';
 	private const DB_VERSION = '1';
@@ -46,6 +48,7 @@ final class Exit_Intent {
 		add_action( 'wc_ajax_pc_exit_spin', array( self::class, 'ajax_spin' ) );
 		add_action( 'woocommerce_checkout_order_processed', array( self::class, 'attribute_order' ), 20, 1 );
 		add_action( 'woocommerce_store_api_checkout_order_processed', array( self::class, 'attribute_order' ), 20, 1 );
+		add_filter( 'woocommerce_order_list_table_prepare_items_query_args', array( self::class, 'orders_search' ) );
 	}
 
 	// ---------- 设置 ----------
@@ -68,7 +71,7 @@ final class Exit_Intent {
 			'win_text'       => 'Your code: {code}',
 			'lose_text'      => 'Not this time. Thanks for playing!',
 			'desktop_exit'   => true,
-			'mobile'         => array( 'scroll', 'return' ), // 见 MOBILE，可以多选；空 = 手机端不弹
+			'mobile'         => array( 'back', 'scroll', 'return' ), // 见 MOBILE，可以多选；空 = 手机端不弹
 			'idle_seconds'   => 20,
 			'min_seconds'    => 5,
 			'pages'          => self::PAGES,
@@ -418,8 +421,24 @@ final class Exit_Intent {
 		}
 		$order->update_meta_data( self::ORDER_META, strtoupper( $code ) );
 		$order->save();
+		/* translators: 1: coupon code, 2: search tag */
+		$order->add_order_note( sprintf( __( 'Exit-intent offers: the customer used the popup code %1$s (search the orders for “%2$s”).', 'peptide-core' ), strtoupper( $code ), self::ORDER_TAG ) );
 		self::record( 'order', (float) $order->get_total() );
 		WC()->session->set( self::SESSION_KEY . '_code', null );
+	}
+
+	/** 订单列表（HPOS）里搜索 “exitintent” 时，列出通过弹窗优惠码下的订单。 */
+	public static function orders_search( $args ) {
+		if ( ! is_array( $args ) || self::ORDER_TAG !== strtolower( trim( (string) ( $args['s'] ?? '' ) ) ) ) {
+			return $args;
+		}
+		unset( $args['s'], $args['search_filter'] );
+		$args['meta_query']   = (array) ( $args['meta_query'] ?? array() ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+		$args['meta_query'][] = array(
+			'key'     => self::ORDER_META,
+			'compare' => 'EXISTS',
+		);
+		return $args;
 	}
 
 	// ---------- 数据 ----------
