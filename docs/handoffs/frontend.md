@@ -1,5 +1,13 @@
 # 前端交接
 
+## MOBILE-TYPE-FIX-01 手机商品卡文字可读性（2026-10-28）
+
+- 用户确认由 Codex 修正截图中的主站手机文字。只调整主题 `assets/experience.css` 与 `assets/sale-pricing.css` 的 <=767px 样式：商品元信息、批次数和 Demo 标记/价格说明为 12px/16px、字重 500、深灰蓝 #425F69；详情链接 14px/20px、字重 500；划线价 14px/20px、字重 500；折扣标签 12px/16px，保留字重 600。手机 body 的强制 antialiased 改为 auto，保留 Inter VI。
+- 商品模块后加载的 `modules-content.css` 原先会把元信息/底部字号压回 10/11px。本次用限定商品卡的更高优先级覆盖，不使用 !important。售价、标题、详情页价格、桌面样式、后台数据及独立设计预览保持原样。
+- 实际检查：主域名和手机 LAN 代理的首页/商品列表均返回商品卡和更新后的 CSS，文件字节及 filemtime 版本与磁盘一致；说明文字在白色/浅蓝背景对比度分别为 6.83/6.40，折扣标签为 5.52；独立预览 29 个文件哈希全部不变。共 16 项 HTTP/对比度/文件检查通过，记录 `D:/Codex/Tasks/peptide-platform/work/mobile-type-fix-20261028/verification.json`。
+- 独立源码复核确认模块级联覆盖有效、两列布局原有自动换行保留、桌面和商品详情价格未受影响；`git diff --check` 通过。浏览器连接超时，未取得计算样式或 iPhone 实机画面；截图极细字的 Safari 渲染根因尚未被复现，不将源码检查冒称为手机验收。
+- 按协作规则合入 origin/main 的 4b3d89a（Claude 的 SEO/专题页/域名管理），未直接修改插件或共享契约。主题提交与推送结果记录在本次群消息；后续只需用户在原手机网址刷新查看实机效果。
+
 ## TRACKING-LIVE-01 正式访客追踪接入与前端版本归档（2026-10-27）
 
 - 用户确认执行群内交接。对接 peptide-core 0.23.0 的正式配置：`inc/visitor-tracking.php` / `assets/visitor-adapter.js` 不再要求 `test_mode:true`，严格检查 `enabled:true`、整数 `protocol:1`，并在入队前保留同源 HTTP(S) endpoint 校验。PHP 在配置无效时不加载任何观察器资产，真实 `test_mode` 与 `mode` 转发给前端；员工、装修令牌与预览排除不变。

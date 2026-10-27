@@ -182,6 +182,24 @@
   .hero-carousel-controls .hero-autoplay { width: 48px; }
   .hero-dot { min-width: 25px; }
 }
+/* Keep card annotations readable, including collections rendered by modules. */
+@media (max-width: 767px) {
+  body.vialcove-site { -webkit-font-smoothing: auto; }
+  .vialcove-site .product-card .product-meta,
+  .vialcove-site .product-card .product-card-bottom,
+  .vialcove-site .product-card .demo-badge {
+    color: #425F69;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+  }
+  .vialcove-site .product-card .product-card-bottom a {
+    color: var(--vc-ink);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .site-header, .product-visual, .product-open { transition: none; }
   .hero-dot-progress { display: none; }

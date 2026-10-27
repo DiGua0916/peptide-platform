@@ -22,3 +22,18 @@
   .vc-price-set .vc-price-compare { font-size: 13px; }
   .vc-detail-price .vc-price-compare { font-size: 17px; }
 }
+@media (max-width: 767px) {
+  .product-card .vc-price-set .vc-price-compare {
+    color: #425F69;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+  }
+  .product-card .vc-sale-badge { font-size: 12px; line-height: 16px; }
+  .product-card .vc-price-demo {
+    color: #425F69;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+  }
+}
