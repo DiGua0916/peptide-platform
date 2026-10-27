@@ -90,7 +90,7 @@ final class Register {
 		if ( '' === $url || ! preg_match( '/^[0-9a-f]{64}$/', $key ) ) {
 			return new \WP_Error( 'pchq_bad', 'Store address or key missing.', array( 'status' => 400 ) );
 		}
-		[ $id, $state ] = Sites::register( $url, $key, sanitize_text_field( (string) ( $p['name'] ?? '' ) ) );
+		[ $id, $state ] = Sites::register( $url, $key, sanitize_text_field( (string) ( $p['name'] ?? '' ) ), (string) ( $p['uuid'] ?? '' ) );
 		if ( 'same' !== $state ) {
 			// 稍后检查一次：确认能连上，并载入最近 31 天的数字。
 			wp_schedule_single_event( time() + 5, Monitor::POLL_ONE, array( $id ) );

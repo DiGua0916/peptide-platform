@@ -2,21 +2,21 @@
 /**
  * Plugin Name:       Peptide HQ
  * Description:       Master admin for all VialCove stores: sales and orders of every store, alerts, one-click login and salesperson accounts.
- * Version:           0.1.0
+ * Version:           0.2.0
  * Requires at least: 6.5
  * Requires PHP:      8.1
  * Author:            DiGua
  * Text Domain:       peptide-hq
  * Domain Path:       /languages
  *
- * 总后台（用户 2026-10-27）：装在单独的 WordPress 上，不装在店铺上。每个店铺用 peptide-core 的“总后台连接”接进来。
+ * 总后台（用户 2026-10-27）：装在单独的 WordPress 上，不装在店铺上。店铺的 wp-config.php 有总后台的两行时，peptide-core 自动接入。
  *
  * @package PeptideHq
  */
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'PEPTIDE_HQ_VERSION', '0.1.0' );
+define( 'PEPTIDE_HQ_VERSION', '0.2.0' );
 define( 'PEPTIDE_HQ_FILE', __FILE__ );
 define( 'PEPTIDE_HQ_DIR', __DIR__ );
 

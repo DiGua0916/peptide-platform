@@ -135,7 +135,24 @@ final class Monitor {
 			}
 		}
 		self::check_rules( $id, $status, $now );
+		self::sync_server( $id, $status );
 		return true;
+	}
+
+	/** 店铺上的服务器 IP 和总后台分配的不一样时（例如服务器换了 IP、下发时店铺没连上），再下发一次。 */
+	private static function sync_server( int $id, array $status ): void {
+		$site = Sites::get( $id );
+		if ( ! $site || ! $site['server_id'] ) {
+			return;
+		}
+		$want = Servers::ip_for_site( $id );
+		if ( '' !== $want && $want !== (string) ( $status['config']['server_ip'] ?? '' ) ) {
+			$res = Client::config( $id, array( 'server_ip' => $want ) );
+			if ( is_array( $res ) ) {
+				$status['config'] = $res;
+				Sites::update( $id, array( 'info' => (string) wp_json_encode( $status ) ) );
+			}
+		}
 	}
 
 	/** 按店铺状态开 / 关告警。 */

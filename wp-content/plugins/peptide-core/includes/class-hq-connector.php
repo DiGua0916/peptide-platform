@@ -8,8 +8,9 @@
  * - 总后台调用店铺的接口 /peptide/v1/hq/*，每次请求都要签名：
  *   HMAC-SHA256( 连接密钥, 方法 \n 路由 \n 排好序的查询参数 \n 时间 \n 请求体的 SHA-256 )，
  *   放在 X-PC-HQ-Time / X-PC-HQ-Sign 头里。时间相差超过 5 分钟、签名不对或重复使用的请求都拒绝。
- * - 接口：status（店铺状态）、summary（每天的订单、销售额、访客）、login（一次性登录链接，2 分钟内有效）、
- *   staff（销售账号：列出、新建 / 修改、删除，规则和店铺的员工权限相同）。
+ * - 接口：status（店铺状态）、summary（每天的订单、销售额、访客）、login（一次性登录链接，2 分钟内有效，
+ *   可以直接打开某个平台工具页面）、staff（销售账号：列出、新建 / 修改、删除，规则和店铺的员工权限相同）、
+ *   config（总后台下发：服务器 IP、搜索引擎收录、访客追踪；店铺后台不显示这些开关，2026-10-27 前后台隔开）。
  * - 顾客的个人信息不通过这些接口给出，总后台只拿汇总数字。
  *
  * @package PeptideCore
@@ -35,6 +36,29 @@ final class Hq_Connector {
 	/** summary 最多给多少天。 */
 	public const MAX_DAYS = 92;
 
+	/**
+	 * 平台工具（2026-10-27 用户要求前后台彻底隔开）：店铺后台不显示这些页面，只从总后台一键登录后打开。
+	 * 键 => 后台地址。
+	 */
+	public const PLATFORM_PAGES = array(
+		'plugins'     => 'plugins.php',
+		'themes'      => 'themes.php',
+		'updates'     => 'update-core.php',
+		'general'     => 'options-general.php',
+		'reading'     => 'options-reading.php',
+		'permalinks'  => 'options-permalink.php',
+		'privacy'     => 'options-privacy.php',
+		'discussion'  => 'options-discussion.php',
+		'health'      => 'site-health.php',
+		'status'      => 'admin.php?page=wc-status',
+		'scheduler'   => 'admin.php?page=wc-status&tab=action-scheduler',
+		'wc_settings' => 'admin.php?page=wc-settings&tab=general',
+		'pc_settings' => 'admin.php?page=pc-settings',
+		'export_data' => 'export-personal-data.php',
+		'erase_data'  => 'erase-personal-data.php',
+		'users'       => 'users.php',
+	);
+
 	public static function register_hooks(): void {
 		add_action( 'rest_api_init', array( self::class, 'routes' ) );
 		add_action( 'init', array( self::class, 'maybe_login' ), 0 );
@@ -57,8 +81,20 @@ final class Hq_Connector {
 			'seen'       => (int) ( $s['seen'] ?? 0 ),
 			'registered' => (int) ( $s['registered'] ?? 0 ),
 			'reg_key'    => (string) ( $s['reg_key'] ?? '' ),
+			'reg_url'    => (string) ( $s['reg_url'] ?? '' ),
 			'reg_error'  => (string) ( $s['reg_error'] ?? '' ),
+			'uuid'       => (string) ( $s['uuid'] ?? '' ),
 		);
+	}
+
+	/** 店铺的固定编号：店铺换主域名（网址变了）后，总后台仍然认得是同一个店铺。 */
+	public static function uuid(): string {
+		$s = self::settings();
+		if ( '' === $s['uuid'] ) {
+			$s['uuid'] = wp_generate_uuid4();
+			self::save( $s );
+		}
+		return $s['uuid'];
 	}
 
 	private static function save( array $s ): void {
@@ -97,7 +133,7 @@ final class Hq_Connector {
 			return;
 		}
 		$s = self::settings();
-		if ( $s['reg_key'] === hash( 'sha256', self::key() ) && time() - $s['registered'] < DAY_IN_SECONDS ) {
+		if ( $s['reg_key'] === hash( 'sha256', self::key() ) && home_url( '/' ) === $s['reg_url'] && time() - $s['registered'] < DAY_IN_SECONDS ) {
 			return;
 		}
 		if ( get_transient( 'pc_hq_reg_wait' ) ) {
@@ -128,6 +164,7 @@ final class Hq_Connector {
 				'url'     => home_url( '/' ),
 				'name'    => get_bloginfo( 'name' ),
 				'key'     => $key,
+				'uuid'    => self::uuid(),
 				'version' => PEPTIDE_CORE_VERSION,
 			),
 			JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
@@ -154,6 +191,7 @@ final class Hq_Connector {
 		}
 		$s['registered'] = time();
 		$s['reg_key']    = hash( 'sha256', $key );
+		$s['reg_url']    = home_url( '/' );
 		$s['reg_error']  = '';
 		self::save( $s );
 		return true;
@@ -260,16 +298,86 @@ final class Hq_Connector {
 				'permission_callback' => $auth,
 			)
 		);
+		register_rest_route(
+			self::NS,
+			'/hq/config',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( self::class, 'config_route' ),
+				'permission_callback' => $auth,
+			)
+		);
 	}
 
-	/** 店铺状态：名称、地址、版本、域名、待发货订单、最近一笔订单的时间等。 */
-	public static function status(): array {
-		$last   = function_exists( 'wc_get_orders' ) ? wc_get_orders( array( 'limit' => 1, 'orderby' => 'date', 'order' => 'DESC', 'type' => 'shop_order', 'return' => 'objects' ) ) : array();
-		$counts = (array) wp_count_posts( 'product' );
+	/** 由总后台决定的店铺设置（店铺后台不显示这些开关）。 */
+	public static function config(): array {
+		$t = Tracking\Tracker::settings();
 		return array(
+			'server_ip'   => Domains::server_ip(),
+			'blog_public' => '1' === (string) get_option( 'blog_public', '1' ),
+			'tracking'    => array(
+				'enabled'        => Tracking\Tracker::enabled(),
+				'retention_days' => (int) $t['retention_days'],
+				'gpc'            => (bool) $t['gpc'],
+			),
+		);
+	}
+
+	/**
+	 * 总后台下发设置：服务器 IP（解析记录指向它）、是否允许搜索引擎收录、访客追踪（开关、保留天数、GPC）。只改传过来的项。
+	 *
+	 * @return array|\WP_Error
+	 */
+	public static function config_route( \WP_REST_Request $request ) {
+		$p = (array) $request->get_json_params();
+		if ( array_key_exists( 'server_ip', $p ) ) {
+			$done = Domains::save_server_ip( (string) $p['server_ip'] );
+			if ( is_wp_error( $done ) ) {
+				$done->add_data( array( 'status' => 400 ) );
+				return $done;
+			}
+		}
+		if ( array_key_exists( 'blog_public', $p ) ) {
+			update_option( 'blog_public', ! empty( $p['blog_public'] ) ? '1' : '0' );
+		}
+		if ( isset( $p['tracking'] ) && is_array( $p['tracking'] ) ) {
+			$t   = $p['tracking'];
+			$now = Tracking\Tracker::settings();
+			if ( isset( $t['retention_days'] ) || isset( $t['gpc'] ) ) {
+				Tracking\Tracker::save_settings( (int) ( $t['retention_days'] ?? $now['retention_days'] ), (bool) ( $t['gpc'] ?? $now['gpc'] ) );
+			}
+			if ( isset( $t['enabled'] ) ) {
+				Tracking\Tracker::set_enabled( (bool) $t['enabled'] );
+			}
+		}
+		return self::config();
+	}
+
+	/** 店铺状态：名称、地址、版本、域名、待发货订单、最近一笔订单的时间，以及总后台下发的设置。 */
+	public static function status(): array {
+		$last    = function_exists( 'wc_get_orders' ) ? wc_get_orders( array( 'limit' => 1, 'orderby' => 'date', 'order' => 'DESC', 'type' => 'shop_order', 'return' => 'objects' ) ) : array();
+		$counts  = (array) wp_count_posts( 'product' );
+		$theme   = wp_get_theme();
+		$plugins = array();
+		if ( ! function_exists( 'get_plugins' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		}
+		foreach ( get_plugins() as $file => $p ) {
+			if ( is_plugin_active( $file ) ) {
+				$plugins[] = array(
+					'name'    => (string) $p['Name'],
+					'version' => (string) $p['Version'],
+				);
+			}
+		}
+		return array(
+			'uuid'        => self::uuid(),
 			'name'        => get_bloginfo( 'name' ),
 			'url'         => home_url( '/' ),
 			'admin_url'   => admin_url(),
+			'config'      => self::config(),
+			'theme'       => $theme->get( 'Name' ) . ' ' . $theme->get( 'Version' ),
+			'plugins'     => $plugins,
 			'versions'    => array(
 				'plugin' => PEPTIDE_CORE_VERSION,
 				'wp'     => get_bloginfo( 'version' ),
@@ -373,10 +481,19 @@ final class Hq_Connector {
 		return (int) ( $ids[0] ?? 0 );
 	}
 
-	public static function login_route(): array {
+	/** 一次性登录链接；to 是 PLATFORM_PAGES 里的键时，登录后打开那个平台工具页面，否则打开后台首页。 */
+	public static function login_route( \WP_REST_Request $request ): array {
 		$user  = self::login_user();
+		$to    = sanitize_key( (string) ( ( (array) $request->get_json_params() )['to'] ?? '' ) );
 		$token = wp_generate_password( 40, false );
-		set_transient( 'pc_hq_login_' . hash( 'sha256', $token ), $user, self::LOGIN_TTL );
+		set_transient(
+			'pc_hq_login_' . hash( 'sha256', $token ),
+			array(
+				'user' => $user,
+				'to'   => self::PLATFORM_PAGES[ $to ] ?? '',
+			),
+			self::LOGIN_TTL
+		);
 		return array(
 			'url'  => add_query_arg( self::LOGIN_ARG, $token, home_url( '/' ) ),
 			'user' => $user ? (string) get_userdata( $user )->user_login : '',
@@ -390,7 +507,8 @@ final class Hq_Connector {
 		}
 		$token = sanitize_text_field( wp_unslash( $_GET[ self::LOGIN_ARG ] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$key   = 'pc_hq_login_' . hash( 'sha256', $token );
-		$user  = (int) get_transient( $key );
+		$data  = get_transient( $key );
+		$user  = is_array( $data ) ? (int) ( $data['user'] ?? 0 ) : 0;
 		delete_transient( $key );
 		nocache_headers();
 		if ( ! $user || ! user_can( $user, 'manage_options' ) ) {
@@ -400,7 +518,8 @@ final class Hq_Connector {
 		wp_set_current_user( $user );
 		wp_set_auth_cookie( $user, false, is_ssl() );
 		Activity_Log::log( 'login', 'login', array( 'type' => 'user', 'id' => $user, 'label' => get_userdata( $user )->user_login ), array( 'via' => 'HQ' ), $user );
-		wp_safe_redirect( admin_url() );
+		$to = (string) ( $data['to'] ?? '' );
+		wp_safe_redirect( admin_url( in_array( $to, self::PLATFORM_PAGES, true ) ? $to : '' ) );
 		exit;
 	}
 

@@ -66,6 +66,7 @@ $ok( 'hidden tabs still open from direct links (their settings actions remain)',
 $_GET['page'] = 'wc-orders';
 $ok( 'store settings menu: shipping, tax, system (payments has its own WooCommerce menu; staff moved to the master admin)', array( 'pc-shipping', 'pc-tax', 'pc-system' ) === array_column( $submenu['admin.php?page=wc-settings'] ?? array(), 2 ) );
 $ok( 'no Users menu on the store (accounts are managed in the master admin)', ! in_array( 'users.php', $slugs, true ) );
+$ok( 'no Plugins menu on the store (platform tools open from the master admin)', ! in_array( 'plugins.php', $slugs, true ) );
 foreach ( array( 'wc-orders' => 'admin.php?page=wc-orders', 'wc-settings' => 'admin.php?page=wc-settings', 'pc-settings' => 'admin.php?page=wc-settings', 'wc-status' => 'admin.php?page=wc-settings', 'pc-system' => 'admin.php?page=wc-settings', 'pc-tax' => 'admin.php?page=wc-settings' ) as $page => $parent ) {
 	$_GET['page'] = $page;
 	$plugin_page  = $page;
@@ -145,8 +146,8 @@ ob_start();
 \PeptideCore\Admin\Store_Settings::render_system();
 $html = ob_get_clean();
 $ok( 'system settings shows the four section cards (with ad pixels)', 4 === substr_count( $html, 'page=pc-system&#038;section=' ) + substr_count( $html, 'page=pc-system&section=' ) && false !== strpos( $html, 'section=pixels' ) );
-$ok( 'system settings lists the WordPress settings and tools', str_contains( $html, 'options-reading.php' ) && str_contains( $html, 'options-permalink.php' ) && str_contains( $html, 'erase-personal-data.php' ) && str_contains( $html, 'page=action-scheduler' ) );
-$ok( 'system settings links the old store settings pages', false !== strpos( $html, 'page=pc-settings' ) && false !== strpos( $html, 'page=wc-status' ) && false !== strpos( $html, 'tab=general' ) );
+// 2026-10-27 前后台隔开：WordPress 设置和工具、WooCommerce 设置、VialCove 设置、系统状态从总后台的“平台工具”进入，店铺后台不显示。
+$ok( 'system settings no longer lists platform tools (they open from the master admin)', ! str_contains( $html, 'options-reading.php' ) && ! str_contains( $html, 'options-permalink.php' ) && ! str_contains( $html, 'page=wc-status' ) && ! str_contains( $html, 'page=pc-settings' ) );
 $_GET['section'] = 'email';
 ob_start();
 \PeptideCore\Admin\Store_Settings::render_system();

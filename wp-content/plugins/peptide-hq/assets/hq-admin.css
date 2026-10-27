@@ -421,3 +421,36 @@ a.pchq-switch:focus {
 		text-align: right;
 	}
 }
+
+/* 店铺页：服务器下拉框、平台工具、系统信息 */
+.pchq-inline {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px;
+}
+
+.pchq-inline select {
+	max-width: 220px;
+}
+
+.pchq-more__title {
+	margin: 8px 0 4px;
+}
+
+.pchq-tools {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 12px;
+	margin: 0 0 8px;
+	max-width: 420px;
+}
+
+.pchq-tools li {
+	margin: 0;
+}
+
+.pchq-sysinfo {
+	max-width: 420px;
+	overflow-wrap: anywhere;
+}

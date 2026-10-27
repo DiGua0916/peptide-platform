@@ -28,6 +28,8 @@ final class Sites {
 			'last_ok'    => (int) $r['last_ok'],
 			'last_full'  => (int) $r['last_full'],
 			'created'    => (int) $r['created'],
+			'uuid'       => (string) ( $r['uuid'] ?? '' ),
+			'server_id'  => (int) ( $r['server_id'] ?? 0 ),
 		);
 	}
 
@@ -61,18 +63,24 @@ final class Sites {
 	 *
 	 * @return array{0:int,1:string}
 	 */
-	public static function register( string $url, string $key, string $name ): array {
+	public static function register( string $url, string $key, string $name, string $uuid = '' ): array {
 		global $wpdb;
 		$t    = Db::table( 'sites' );
 		$url  = trailingslashit( $url );
+		$uuid = substr( sanitize_key( $uuid ), 0, 64 );
 		$name = mb_substr( '' !== trim( $name ) ? $name : (string) wp_parse_url( $url, PHP_URL_HOST ), 0, 190 );
-		$id   = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$t} WHERE url = %s", $url ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		// 先按店铺的固定编号找（店铺换了主域名，网址会变），再按网址找。
+		$id = '' !== $uuid ? (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$t} WHERE uuid = %s", $uuid ) ) : 0; // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		if ( ! $id ) {
+			$id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$t} WHERE url = %s", $url ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		}
 		if ( ! $id ) {
 			$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 				$t,
 				array(
 					'name'    => $name,
 					'url'     => $url,
+					'uuid'    => $uuid,
 					'key_enc' => Crypto::encrypt( $key ),
 					'status'  => 'unknown',
 					'created' => time(),
@@ -81,6 +89,19 @@ final class Sites {
 			return array( (int) $wpdb->insert_id, 'new' );
 		}
 		if ( hash_equals( self::key( $id ), $key ) ) {
+			// 密钥对得上，才接受新的网址和编号（例如店铺换了主域名）。
+			$site = self::get( $id );
+			$taken = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$t} WHERE url = %s AND id <> %d", $url, $id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			if ( $site && ( ( $site['url'] !== $url && ! $taken ) || ( '' !== $uuid && $site['uuid'] !== $uuid ) ) ) {
+				self::update(
+					$id,
+					array(
+						'url'  => $taken ? $site['url'] : $url,
+						'uuid' => '' !== $uuid ? $uuid : $site['uuid'],
+					)
+				);
+				return array( $id, 'moved' );
+			}
 			return array( $id, 'same' );
 		}
 		self::update( $id, array( 'key_pending' => Crypto::encrypt( $key ) ) );

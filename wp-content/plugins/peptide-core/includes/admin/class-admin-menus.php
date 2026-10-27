@@ -84,6 +84,28 @@ final class Admin_Menus {
 		add_action( 'adminmenu', array( self::class, 'restore_parent' ) );
 		add_action( 'admin_init', array( self::class, 'block_removed_pages' ) );
 		add_filter( 'map_meta_cap', array( self::class, 'no_file_editors' ), 10, 2 );
+		add_action( 'admin_bar_menu', array( self::class, 'clean_admin_bar' ), 999 );
+		add_action( 'admin_init', array( self::class, 'no_update_nags' ) );
+	}
+
+	/**
+	 * 店铺后台和总后台彻底隔开（用户 2026-10-27）：顶部工具条去掉 WordPress 标志菜单、更新提示、评论和“新建用户”。
+	 * 插件、主题、更新这些平台操作从总后台进入。
+	 */
+	public static function clean_admin_bar( $bar ): void {
+		if ( ! $bar instanceof \WP_Admin_Bar ) {
+			return;
+		}
+		foreach ( array( 'wp-logo', 'updates', 'comments', 'new-user' ) as $node ) {
+			$bar->remove_node( $node );
+		}
+	}
+
+	/** 店铺后台不显示 WordPress 和插件的更新提示（更新由总后台统一处理）。 */
+	public static function no_update_nags(): void {
+		remove_action( 'admin_notices', 'update_nag', 3 );
+		remove_action( 'network_admin_notices', 'update_nag', 3 );
+		remove_action( 'admin_notices', 'maintenance_nag', 10 );
 	}
 
 	/** 打开已经删掉的页面时转到“系统设置”（带提示）。 */
@@ -164,9 +186,10 @@ final class Admin_Menus {
 		// 媒体、评论、WooCommerce（订单、顾客、设置已移到上面的新菜单）、WooCommerce 营销（换成营销活动）。
 		// 文章改成“博客”（Blog_Admin，2026-10-27），媒体在“后台设置 → 素材管理”。
 		// remove_menu_page() 每次只去掉第一个匹配项，所以重复执行到没有为止。
+		// 插件（2026-10-27 前后台隔开）：插件、主题、更新是平台操作，从总后台的“平台工具”进入。
 		// 用户（2026-10-27 用户要求）：一个销售一个站点，账号在总后台管理，店铺后台不需要“用户”菜单；
 		// 员工管理也移到总后台（销售账号）。两个页面的地址还在，管理员直接打开地址仍能用。
-		foreach ( array( 'upload.php', 'edit-comments.php', 'woocommerce', 'woocommerce-marketing', 'themes.php', 'tools.php', 'options-general.php', 'users.php' ) as $slug ) {
+		foreach ( array( 'upload.php', 'edit-comments.php', 'woocommerce', 'woocommerce-marketing', 'themes.php', 'tools.php', 'options-general.php', 'users.php', 'plugins.php' ) as $slug ) {
 			while ( false !== remove_menu_page( $slug ) ) {
 				continue;
 			}

@@ -155,7 +155,7 @@ $render = static function ( array $get ): string {
 	return (string) ob_get_clean();
 };
 $html = $render( array( 'page' => Domains_Page::SLUG ) );
-$ok( 'list: table with the site address as primary, switch, statuses and add button', str_contains( $html, 'pc-dm-table' ) && str_contains( $html, 'pc-dm-switch is-on' ) && str_contains( $html, '>' . $www . '</a>' ) && str_contains( $html, 'pc-dm-badge' ) && str_contains( $html, 'add=1' ) && str_contains( $html, 'name="server_ip"' ) );
+$ok( 'list: table with the site address as primary, switch, statuses and add button; server IP shown read-only (set by the master admin)', str_contains( $html, 'pc-dm-table' ) && str_contains( $html, 'pc-dm-switch is-on' ) && str_contains( $html, '>' . $www . '</a>' ) && str_contains( $html, 'pc-dm-badge' ) && str_contains( $html, 'add=1' ) && ! str_contains( $html, 'name="server_ip"' ) && str_contains( $html, '203.0.113.10' ) );
 $html = $render( array( 'page' => Domains_Page::SLUG, 'https' => 'active' ) );
 $ok( 'list filters by HTTPS status', ! str_contains( $html, '>' . $www . '</a>' ) );
 $html = $render( array( 'page' => Domains_Page::SLUG, 'redirect' => $www ) );

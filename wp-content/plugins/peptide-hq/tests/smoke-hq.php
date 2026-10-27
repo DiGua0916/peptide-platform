@@ -64,7 +64,21 @@ $ok( 'registering again with the same key changes nothing', 'same' === $r['state
 $ok( 'a new key waits for confirmation; the old key stays in use', 'pending' === $r['state'] && $k1 === Sites::key( $jid ) && str_repeat( 'b2', 32 ) === Sites::key( $jid, true ) );
 Monitor::poll( $jid );
 $ok( 'a new key that does not work is thrown away at the next check', $k1 === Sites::key( $jid ) && '' === Sites::key( $jid, true ) );
+[ , $r ] = $register( array( 'url' => $join_url, 'key' => $k1, 'name' => 'Smoke Join', 'uuid' => 'smoke-uuid-1' ), null, time() + 3 );
+[ , $r ] = $register( array( 'url' => 'http://pc-smoke-moved.invalid/', 'key' => $k1, 'name' => 'Smoke Join', 'uuid' => 'smoke-uuid-1' ), null, time() + 4 );
+$ok( 'a store that changed its main domain is recognised by its ID and keeps its record', 'moved' === $r['state'] && $jid === (int) $r['site'] && 'http://pc-smoke-moved.invalid/' === Sites::get( $jid )['url'] );
+[ , $r ] = $register( array( 'url' => 'http://pc-smoke-thief.invalid/', 'key' => str_repeat( 'e5', 32 ), 'uuid' => 'smoke-uuid-1' ), null, time() + 5 );
+$ok( 'someone using the same ID with another key cannot move the store', 'pending' === $r['state'] && 'http://pc-smoke-moved.invalid/' === Sites::get( $jid )['url'] );
+
+// 服务器。
+$ok( 'a server needs a valid IP address', is_wp_error( \PeptideHq\Servers::save( 0, 'Bad', 'not-an-ip', '' ) ) );
+$sv = \PeptideHq\Servers::save( 0, 'Smoke server', '198.51.100.20', 'smoke' );
+$ok( 'a server is saved with its name and IP', is_int( $sv ) && '198.51.100.20' === \PeptideHq\Servers::get( $sv )['ip'] );
+$assigned = \PeptideHq\Servers::assign( $jid, $sv );
+$ok( 'assigning saves the server even if the store cannot be reached yet (sent again at the next check)', is_wp_error( $assigned ) && $sv === Sites::get( $jid )['server_id'] && '198.51.100.20' === \PeptideHq\Servers::ip_for_site( $jid ) );
+$ok( 'a server that stores still use cannot be deleted', is_wp_error( \PeptideHq\Servers::delete( $sv ) ) );
 Sites::delete( $jid );
+$ok( 'a server without stores can be deleted', true === \PeptideHq\Servers::delete( $sv ) && null === \PeptideHq\Servers::get( $sv ) );
 $enc = Crypto::encrypt( 'secret-key-123' );
 $bad = base64_encode( substr( (string) base64_decode( $enc ), 0, -1 ) . 'x' );
 $ok( 'store keys are stored encrypted; a changed value does not decrypt', ! str_contains( $enc, 'secret' ) && 'secret-key-123' === Crypto::decrypt( $enc ) && '' === Crypto::decrypt( $bad ) && $enc !== Crypto::encrypt( 'secret-key-123' ) );
@@ -133,6 +147,18 @@ if ( $real ) {
 	$ok( 'the store refuses a wrong key', is_wp_error( $denied ) && 'pchq_denied' === $denied->get_error_code() );
 	$login = Client::login( $real );
 	$ok( 'one-click login returns a link on the store itself', is_array( $login ) && wp_parse_url( (string) $login['url'], PHP_URL_HOST ) === wp_parse_url( $sites[ $real ]['url'], PHP_URL_HOST ) );
+	// 分配服务器 → 店铺马上拿到 IP；还原成原来的分配。
+	$before_server = $sites[ $real ]['server_id'];
+	$tmp           = \PeptideHq\Servers::save( 0, 'Smoke push', '198.51.100.30', '' );
+	$push          = \PeptideHq\Servers::assign( $real, $tmp );
+	$store_conf    = Client::status( $real );
+	$ok( 'assigning a server sends its IP to the store right away (real request)', true === $push && is_array( $store_conf ) && '198.51.100.30' === $store_conf['config']['server_ip'] );
+	\PeptideHq\Servers::assign( $real, $before_server );
+	\PeptideHq\Servers::delete( $tmp );
+	$back_conf = Client::status( $real );
+	$ok( 'the original assignment is restored on the store', is_array( $back_conf ) && \PeptideHq\Servers::ip_for_site( $real ) === $back_conf['config']['server_ip'] );
+	$cfg = Client::config( $real, array( 'blog_public' => ! empty( $store_conf['config']['blog_public'] ) ) );
+	$ok( 'store settings can be read and written through config', is_array( $cfg ) && isset( $cfg['tracking']['enabled'], $cfg['server_ip'] ) );
 } else {
 	echo "SKIP no connected store for the real checks\n";
 }

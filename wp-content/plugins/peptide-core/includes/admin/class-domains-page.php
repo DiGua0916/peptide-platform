@@ -5,7 +5,8 @@
  * - 列表：ID、域名、跳转域名、是否切换为主域名、HTTPS 状态、CDN 节点、连接状态、创建时间；
  *   按 HTTPS 状态、连接状态、创建日期、域名筛选；每行可以立即检查、设置跳转、删除，也可以批量检查 / 删除。
  * - 添加域名四步：输入域名 → 选择 CDN 节点 → 解析域名（要添加的解析记录、当前解析、立即检查）→ 成功。
- * - 查看要 Templates::CAP_EDIT；改动要 manage_options，因为切换主域名会改网站地址。
+ * - 查看和改动都要 Templates::CAP_EDIT（店铺装修权限），销售自己加域名、去域名服务商解析。
+ * - 服务器 IP 由总后台分配（Hq_Connector 的 config），店铺上只显示；解析记录的 A 记录指向它。
  *
  * @package PeptideCore
  */
@@ -21,10 +22,13 @@ final class Domains_Page {
 
 	public const SLUG = 'pc-store-design-domains';
 
-	/** 改动要管理员：切换主域名会改网站地址。 */
-	public const CAP = 'manage_options';
+	/**
+	 * 能管理域名的人：有“店铺装修”权限的（销售自己加域名、解析，2026-10-27 用户要求）。
+	 * 服务器 IP 由总后台分配，店铺上只显示，不能改。
+	 */
+	public const CAP = Templates::CAP_EDIT;
 
-	private const ACTIONS = array( 'pc_domain_add', 'pc_domain_check', 'pc_domain_delete', 'pc_domain_bulk', 'pc_domain_redirect', 'pc_domain_primary', 'pc_domain_server' );
+	private const ACTIONS = array( 'pc_domain_add', 'pc_domain_check', 'pc_domain_delete', 'pc_domain_bulk', 'pc_domain_redirect', 'pc_domain_primary' );
 
 	/** 一次最多检查几个域名（每个要请求两次，太多会超时）。 */
 	private const CHECK_LIMIT = 20;
@@ -201,11 +205,6 @@ final class Domains_Page {
 					self::flash( 'success', sprintf( __( '%s is now the primary domain. Links in the store and in emails use it.', 'peptide-core' ), $hosts[0] ?? '' ) );
 				}
 				break;
-
-			case 'pc_domain_server':
-				$result = Domains::save_server_ip( isset( $_POST['server_ip'] ) ? sanitize_text_field( wp_unslash( $_POST['server_ip'] ) ) : '' );
-				self::flash( is_wp_error( $result ) ? 'error' : 'success', is_wp_error( $result ) ? $result->get_error_message() : __( 'Server IP saved.', 'peptide-core' ) );
-				break;
 		}
 		// phpcs:enable
 
@@ -319,21 +318,20 @@ final class Domains_Page {
 			</div>
 		<?php endif; ?>
 
-		<?php if ( $manage ) : ?>
-			<form class="pc-dm-server" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-				<input type="hidden" name="action" value="pc_domain_server">
-				<?php wp_nonce_field( 'pc_domain_server' ); ?>
-				<label for="pc-dm-ip"><?php esc_html_e( 'Server IP', 'peptide-core' ); ?></label>
-				<input type="text" id="pc-dm-ip" name="server_ip" value="<?php echo esc_attr( '' !== Domains::server_ip() ? Domains::server_ip() : Domains::suggested_ip() ); ?>" placeholder="203.0.113.10" autocomplete="off" spellcheck="false">
-				<button type="submit" class="button"><?php esc_html_e( 'Save', 'peptide-core' ); ?></button>
-				<span class="description"><?php esc_html_e( 'The DNS records point domains to this address. Fill it in once the site is on a server.', 'peptide-core' ); ?></span>
-			</form>
-			<?php
-			if ( '' !== $redirect ) {
-				self::render_redirect_panel( $redirect, $items, $primary );
-			}
-			?>
-		<?php endif; ?>
+		<p class="pc-dm-server">
+			<strong><?php esc_html_e( 'Server IP', 'peptide-core' ); ?>:</strong>
+			<?php if ( '' !== Domains::server_ip() ) : ?>
+				<code><?php echo esc_html( Domains::server_ip() ); ?></code>
+				<span class="description"><?php esc_html_e( 'Assigned by the master admin. Point your domains to this address.', 'peptide-core' ); ?></span>
+			<?php else : ?>
+				<span class="description"><?php esc_html_e( 'No server has been assigned to this store yet. Ask the administrator.', 'peptide-core' ); ?></span>
+			<?php endif; ?>
+		</p>
+		<?php
+		if ( $manage && '' !== $redirect ) {
+			self::render_redirect_panel( $redirect, $items, $primary );
+		}
+		?>
 
 		<form class="pc-dm-filters" method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>">
 			<input type="hidden" name="page" value="<?php echo esc_attr( self::SLUG ); ?>">
@@ -700,7 +698,7 @@ final class Domains_Page {
 				<?php if ( '' !== $ip ) : ?>
 					<code><?php echo esc_html( $ip ); ?></code>
 				<?php else : ?>
-					<em><?php esc_html_e( 'Not filled in yet. Fill it in on the domain list once the site is on a server.', 'peptide-core' ); ?></em>
+					<em><?php esc_html_e( 'No server has been assigned to this store yet. Ask the administrator.', 'peptide-core' ); ?></em>
 				<?php endif; ?>
 			</p>
 			<div class="pc-dm-scroll">

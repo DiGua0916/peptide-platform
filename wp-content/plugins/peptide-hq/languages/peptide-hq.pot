@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-27T19:03:33+00:00\n"
+"POT-Creation-Date: 2026-10-27T19:29:30+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-hq\n"
@@ -30,9 +30,9 @@ msgid "DiGua"
 msgstr ""
 
 #: includes/admin/class-accounts-page.php:36
-#: includes/admin/class-menu.php:57
-#: includes/admin/class-sites-page.php:56
-#: includes/admin/class-sites-page.php:113
+#: includes/admin/class-menu.php:58
+#: includes/admin/class-sites-page.php:61
+#: includes/admin/class-sites-page.php:163
 msgid "Salesperson accounts"
 msgstr ""
 
@@ -62,8 +62,8 @@ msgstr ""
 #: includes/admin/class-alerts-page.php:69
 #: includes/admin/class-dashboard-page.php:157
 #: includes/admin/class-dashboard-page.php:176
-#: includes/admin/class-sites-page.php:51
-#: includes/admin/class-sites-page.php:81
+#: includes/admin/class-sites-page.php:55
+#: includes/admin/class-sites-page.php:102
 msgid "Store"
 msgstr ""
 
@@ -79,7 +79,10 @@ msgstr ""
 #: includes/admin/class-accounts-page.php:96
 #: includes/admin/class-accounts-page.php:109
 #: includes/admin/class-accounts-page.php:158
-#: includes/admin/class-sites-page.php:124
+#: includes/admin/class-servers-page.php:39
+#: includes/admin/class-servers-page.php:50
+#: includes/admin/class-servers-page.php:77
+#: includes/admin/class-sites-page.php:215
 msgid "Name"
 msgstr ""
 
@@ -98,8 +101,8 @@ msgstr ""
 #: includes/admin/class-accounts-page.php:112
 #: includes/admin/class-dashboard-page.php:158
 #: includes/admin/class-dashboard-page.php:177
-#: includes/admin/class-sites-page.php:52
-#: includes/admin/class-sites-page.php:85
+#: includes/admin/class-sites-page.php:56
+#: includes/admin/class-sites-page.php:106
 msgid "Status"
 msgstr ""
 
@@ -114,8 +117,10 @@ msgstr ""
 #: includes/admin/class-alerts-page.php:53
 #: includes/admin/class-dashboard-page.php:166
 #: includes/admin/class-dashboard-page.php:185
-#: includes/admin/class-sites-page.php:58
-#: includes/admin/class-sites-page.php:115
+#: includes/admin/class-servers-page.php:43
+#: includes/admin/class-servers-page.php:54
+#: includes/admin/class-sites-page.php:63
+#: includes/admin/class-sites-page.php:165
 msgid "Actions"
 msgstr ""
 
@@ -140,6 +145,7 @@ msgid "Enabled"
 msgstr ""
 
 #: includes/admin/class-accounts-page.php:118
+#: includes/admin/class-servers-page.php:55
 msgid "Edit"
 msgstr ""
 
@@ -148,6 +154,7 @@ msgid "Delete this salesperson account from the store? Its posts and products ar
 msgstr ""
 
 #: includes/admin/class-accounts-page.php:120
+#: includes/admin/class-servers-page.php:57
 msgid "Delete"
 msgstr ""
 
@@ -186,6 +193,8 @@ msgid "Disable this account (cannot log in)"
 msgstr ""
 
 #: includes/admin/class-accounts-page.php:184
+#: includes/admin/class-sites-page.php:127
+#: includes/admin/class-sites-page.php:208
 msgid "Save"
 msgstr ""
 
@@ -194,11 +203,12 @@ msgid "Create account on the store"
 msgstr ""
 
 #: includes/admin/class-accounts-page.php:185
+#: includes/admin/class-servers-page.php:90
 msgid "Cancel"
 msgstr ""
 
 #: includes/admin/class-alerts-page.php:30
-#: includes/admin/class-menu.php:58
+#: includes/admin/class-menu.php:59
 msgid "Alerts"
 msgstr ""
 
@@ -281,7 +291,7 @@ msgid "Overview"
 msgstr ""
 
 #: includes/admin/class-dashboard-page.php:86
-#: includes/admin/class-sites-page.php:28
+#: includes/admin/class-sites-page.php:32
 msgid "Refresh all stores now"
 msgstr ""
 
@@ -358,7 +368,7 @@ msgid "Last order"
 msgstr ""
 
 #: includes/admin/class-dashboard-page.php:185
-#: includes/admin/class-sites-page.php:116
+#: includes/admin/class-sites-page.php:166
 msgid "Open store admin"
 msgstr ""
 
@@ -395,8 +405,6 @@ msgid "Orders"
 msgstr ""
 
 #: includes/admin/class-menu.php:39
-#: includes/admin/class-sites-page.php:55
-#: includes/admin/class-sites-page.php:112
 msgid "Products"
 msgstr ""
 
@@ -437,164 +445,337 @@ msgid "Master admin"
 msgstr ""
 
 #: includes/admin/class-menu.php:56
-#: includes/admin/class-sites-page.php:26
+#: includes/admin/class-sites-page.php:30
 msgid "Stores"
 msgstr ""
 
-#: includes/admin/class-menu.php:108
+#: includes/admin/class-menu.php:57
+#: includes/admin/class-servers-page.php:30
+msgid "Servers"
+msgstr ""
+
+#: includes/admin/class-menu.php:109
 msgid "Sorry, you are not allowed to do that."
 msgstr ""
 
 #. translators: 1: stores reached, 2: stores checked
-#: includes/admin/class-menu.php:124
+#: includes/admin/class-menu.php:125
 #, php-format
 msgid "Refreshed: %1$d of %2$d stores reached."
 msgstr ""
 
-#: includes/admin/class-menu.php:130
+#: includes/admin/class-menu.php:131
 msgid "Name saved."
 msgstr ""
 
-#: includes/admin/class-menu.php:135
+#: includes/admin/class-menu.php:136
 msgid "New registration secret created. Stores already connected keep working; use the new lines when you open a new store."
 msgstr ""
 
-#: includes/admin/class-menu.php:140
+#: includes/admin/class-menu.php:141
 msgid "Store removed from the master admin. The store itself is not changed; if it still has the master admin lines in wp-config.php, it joins again by itself within a day."
 msgstr ""
 
+#. translators: %s: error
+#: includes/admin/class-menu.php:149
+#, php-format
+msgid "Server saved, but the store could not be told yet (%s). It is sent again at the next check."
+msgstr ""
+
 #: includes/admin/class-menu.php:152
+msgid "Server assigned. The store’s Domains page now shows this IP for the DNS records."
+msgstr ""
+
+#: includes/admin/class-menu.php:152
+msgid "Server removed from this store."
+msgstr ""
+
+#: includes/admin/class-menu.php:170
+msgid "Saved on the store."
+msgstr ""
+
+#: includes/admin/class-menu.php:185
+msgid "Server saved."
+msgstr ""
+
+#: includes/admin/class-menu.php:192
+msgid "Server deleted."
+msgstr ""
+
+#: includes/admin/class-menu.php:205
 msgid "The store did not return a login link."
 msgstr ""
 
-#: includes/admin/class-menu.php:174
+#: includes/admin/class-menu.php:227
 msgid "Salesperson account saved on the store."
 msgstr ""
 
-#: includes/admin/class-menu.php:174
+#: includes/admin/class-menu.php:227
 msgid "Salesperson account created on the store. Tell the salesperson the account name and password."
 msgstr ""
 
-#: includes/admin/class-menu.php:184
+#: includes/admin/class-menu.php:237
 msgid "Account not found on the store."
 msgstr ""
 
-#: includes/admin/class-menu.php:189
+#: includes/admin/class-menu.php:242
 msgid "Account disabled. The salesperson is logged out of the store."
 msgstr ""
 
-#: includes/admin/class-menu.php:189
+#: includes/admin/class-menu.php:242
 msgid "Account enabled."
 msgstr ""
 
-#: includes/admin/class-menu.php:195
+#: includes/admin/class-menu.php:248
 msgid "Account deleted. Its posts and products were moved to the store administrator."
 msgstr ""
 
-#: includes/admin/class-menu.php:200
+#: includes/admin/class-menu.php:253
 msgid "Alert marked as handled."
 msgstr ""
 
-#: includes/admin/class-menu.php:214
+#: includes/admin/class-menu.php:267
 msgid "Online"
 msgstr ""
 
-#: includes/admin/class-menu.php:215
+#: includes/admin/class-menu.php:268
 msgid "Offline"
 msgstr ""
 
-#: includes/admin/class-menu.php:216
+#: includes/admin/class-menu.php:269
 msgid "Code invalid"
 msgstr ""
 
-#: includes/admin/class-menu.php:218
+#: includes/admin/class-menu.php:271
 msgid "Checking"
 msgstr ""
 
 #. translators: %s: time difference, e.g. 3 hours
-#: includes/admin/class-menu.php:244
+#: includes/admin/class-menu.php:297
 #, php-format
 msgid "%s ago"
 msgstr ""
 
-#: includes/admin/class-sites-page.php:34
+#: includes/admin/class-servers-page.php:32
+msgid "Register your servers here, then assign one to each store on the Stores page. When a salesperson adds a domain in their store, the DNS records point to the IP of the assigned server; they set the records at their domain registrar themselves."
+msgstr ""
+
+#: includes/admin/class-servers-page.php:40
+#: includes/admin/class-servers-page.php:51
+#: includes/admin/class-servers-page.php:73
+msgid "IP address"
+msgstr ""
+
+#: includes/admin/class-servers-page.php:41
+#: includes/admin/class-servers-page.php:52
+#: includes/admin/class-servers-page.php:81
+msgid "Note"
+msgstr ""
+
+#: includes/admin/class-servers-page.php:42
+#: includes/admin/class-servers-page.php:53
+msgid "Stores on it"
+msgstr ""
+
+#: includes/admin/class-servers-page.php:57
+msgid "Delete this server from the list?"
+msgstr ""
+
+#: includes/admin/class-servers-page.php:68
+msgid "Edit server"
+msgstr ""
+
+#: includes/admin/class-servers-page.php:68
+msgid "Add server"
+msgstr ""
+
+#: includes/admin/class-servers-page.php:78
+msgid "For example US-West 1"
+msgstr ""
+
+#: includes/admin/class-servers-page.php:82
+msgid "Provider, location, renewal date…"
+msgstr ""
+
+#: includes/admin/class-servers-page.php:85
+msgid "Changing the IP sends the new address to every store on this server right away; their salespeople must update their DNS records."
+msgstr ""
+
+#: includes/admin/class-servers-page.php:88
+msgid "Save server"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:38
 msgid "Opening a new store"
 msgstr ""
 
-#: includes/admin/class-sites-page.php:35
+#: includes/admin/class-sites-page.php:39
 msgid "Every store you open joins the master admin by itself. When you set up a new store, add these two lines to its wp-config.php (above “That’s all, stop editing!”). The store appears here as soon as its admin is opened once (at the latest within a day)."
 msgstr ""
 
-#: includes/admin/class-sites-page.php:37
+#: includes/admin/class-sites-page.php:41
 msgid "Lines for wp-config.php"
 msgstr ""
 
-#: includes/admin/class-sites-page.php:40
+#: includes/admin/class-sites-page.php:44
 msgid "The secret only lets a store join; each store makes its own key for everything else. Keep the lines private."
 msgstr ""
 
-#: includes/admin/class-sites-page.php:42
+#: includes/admin/class-sites-page.php:46
 msgid "Create a new registration secret? Stores already connected keep working. Stores opened later need the new lines."
 msgstr ""
 
-#: includes/admin/class-sites-page.php:42
+#: includes/admin/class-sites-page.php:46
 msgid "Create a new secret (if the old one leaked)"
 msgstr ""
 
-#: includes/admin/class-sites-page.php:53
-#: includes/admin/class-sites-page.php:94
+#: includes/admin/class-sites-page.php:57
+#: includes/admin/class-sites-page.php:115
+#: includes/admin/class-sites-page.php:120
+msgid "Server"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:58
+#: includes/admin/class-sites-page.php:135
 msgid "Domains"
 msgstr ""
 
-#: includes/admin/class-sites-page.php:54
-#: includes/admin/class-sites-page.php:108
-msgid "Versions"
+#: includes/admin/class-sites-page.php:59
+#: includes/admin/class-sites-page.php:149
+msgid "Search engines"
 msgstr ""
 
-#: includes/admin/class-sites-page.php:57
-#: includes/admin/class-sites-page.php:114
+#: includes/admin/class-sites-page.php:60
+#: includes/admin/class-sites-page.php:152
+msgid "Visitor tracking"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:62
+#: includes/admin/class-sites-page.php:164
 msgid "Last check"
 msgstr ""
 
-#: includes/admin/class-sites-page.php:78
+#: includes/admin/class-sites-page.php:87
+msgid "On"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:87
+msgid "Off"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:99
 msgid "HTTPS in effect"
 msgstr ""
 
-#: includes/admin/class-sites-page.php:78
+#: includes/admin/class-sites-page.php:99
 msgid "HTTPS being checked"
 msgstr ""
 
-#: includes/admin/class-sites-page.php:78
+#: includes/admin/class-sites-page.php:99
 msgid "HTTPS not in effect"
 msgstr ""
 
-#: includes/admin/class-sites-page.php:91
+#: includes/admin/class-sites-page.php:112
 msgid "Coming soon mode: customers cannot see the store."
 msgstr ""
 
+#: includes/admin/class-sites-page.php:122
+msgid "— Not assigned —"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:130
+msgid "Add a server first"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:132
+msgid "Not on the store yet; sent again at the next check."
+msgstr ""
+
 #. translators: %d: number of other domains
-#: includes/admin/class-sites-page.php:103
+#: includes/admin/class-sites-page.php:144
 #, php-format
 msgid "+%d other domains"
 msgstr ""
 
-#: includes/admin/class-sites-page.php:117
+#: includes/admin/class-sites-page.php:150
+msgid "Allow search engines to index this store?"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:150
+msgid "Hide this store from search engines?"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:153
+msgid "Start recording visitors on this store?"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:153
+msgid "Stop recording visitors on this store? Data already collected is kept."
+msgstr ""
+
+#. translators: %d: days
+#: includes/admin/class-sites-page.php:158
+#, php-format
+msgid "kept %d days"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:167
 msgid "Refresh"
 msgstr ""
 
-#: includes/admin/class-sites-page.php:119
+#: includes/admin/class-sites-page.php:169
 msgid "More"
 msgstr ""
 
-#: includes/admin/class-sites-page.php:126
+#: includes/admin/class-sites-page.php:170
+msgid "Platform tools"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:170
+msgid "Not shown in the store admin; opens the store page logged in as administrator."
+msgstr ""
+
+#: includes/admin/class-sites-page.php:176
+msgid "System"
+msgstr ""
+
+#. translators: %s: theme name and version
+#: includes/admin/class-sites-page.php:181
+#, php-format
+msgid "Theme: %s"
+msgstr ""
+
+#. translators: %d: number of products
+#: includes/admin/class-sites-page.php:186
+#, php-format
+msgid "Published products: %d"
+msgstr ""
+
+#. translators: %s: list of plugins
+#: includes/admin/class-sites-page.php:192
+#, php-format
+msgid "Active plugins: %s"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:201
+msgid "Keep visitor data for"
+msgstr ""
+
+#. translators: %d: days
+#: includes/admin/class-sites-page.php:205
+#, php-format
+msgid "%d days"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:217
 msgid "Save name"
 msgstr ""
 
-#: includes/admin/class-sites-page.php:128
+#: includes/admin/class-sites-page.php:219
 msgid "Remove this store from the master admin? Its numbers and alerts here are deleted; the store itself keeps running."
 msgstr ""
 
-#: includes/admin/class-sites-page.php:128
+#: includes/admin/class-sites-page.php:219
 msgid "Remove from master admin"
 msgstr ""
 
@@ -649,23 +830,163 @@ msgid "The store could not be reached twice in a row: %s"
 msgstr ""
 
 #. translators: %s: domain
-#: includes/class-monitor.php:153
+#: includes/class-monitor.php:170
 #, php-format
 msgid "%s does not reach the store. Check its DNS records."
 msgstr ""
 
 #. translators: %s: domain
-#: includes/class-monitor.php:157
+#: includes/class-monitor.php:174
 #, php-format
 msgid "HTTPS does not work on %s. Visitors see a security warning."
 msgstr ""
 
 #. translators: 1: hours, 2: average orders per day
-#: includes/class-monitor.php:167
+#: includes/class-monitor.php:184
 #, php-format
 msgid "No order for %1$d hours, although the store had %2$s orders a day over the last 7 days."
 msgstr ""
 
-#: includes/class-monitor.php:173
+#: includes/class-monitor.php:190
 msgid "The store is in “coming soon” mode: customers cannot see it."
+msgstr ""
+
+#: includes/class-platform.php:21
+msgid "Plugins"
+msgstr ""
+
+#: includes/class-platform.php:21
+msgid "Install, turn on or off and update plugins."
+msgstr ""
+
+#: includes/class-platform.php:22
+msgid "Themes"
+msgstr ""
+
+#: includes/class-platform.php:22
+msgid "The store theme. Change it only together with the theme developer."
+msgstr ""
+
+#: includes/class-platform.php:23
+msgid "Updates"
+msgstr ""
+
+#: includes/class-platform.php:23
+msgid "WordPress, plugin and theme updates."
+msgstr ""
+
+#: includes/class-platform.php:24
+msgid "System status"
+msgstr ""
+
+#: includes/class-platform.php:24
+msgid "Server, database and plugin information for troubleshooting."
+msgstr ""
+
+#: includes/class-platform.php:25
+msgid "Scheduled actions"
+msgstr ""
+
+#: includes/class-platform.php:25
+msgid "Background jobs such as pixel sends and reminder emails."
+msgstr ""
+
+#: includes/class-platform.php:26
+msgid "Site health"
+msgstr ""
+
+#: includes/class-platform.php:26
+msgid "Security and performance checks from WordPress."
+msgstr ""
+
+#: includes/class-platform.php:27
+msgid "WooCommerce settings"
+msgstr ""
+
+#: includes/class-platform.php:27
+msgid "General, products, accounts and advanced WooCommerce options."
+msgstr ""
+
+#: includes/class-platform.php:28
+msgid "VialCove settings"
+msgstr ""
+
+#: includes/class-platform.php:28
+msgid "Brand name, demo mode, use statement, checkout confirmation, batch check, support button."
+msgstr ""
+
+#: includes/class-platform.php:29
+msgid "WordPress general settings"
+msgstr ""
+
+#: includes/class-platform.php:29
+msgid "Tagline, site address, date format."
+msgstr ""
+
+#: includes/class-platform.php:30
+msgid "Reading"
+msgstr ""
+
+#: includes/class-platform.php:30
+msgid "What the home page shows."
+msgstr ""
+
+#: includes/class-platform.php:31
+msgid "Permalinks"
+msgstr ""
+
+#: includes/class-platform.php:31
+msgid "The address format of pages and products."
+msgstr ""
+
+#: includes/class-platform.php:32
+msgid "Privacy policy page"
+msgstr ""
+
+#: includes/class-platform.php:32
+msgid "Which page is the privacy policy."
+msgstr ""
+
+#: includes/class-platform.php:33
+msgid "Discussion"
+msgstr ""
+
+#: includes/class-platform.php:33
+msgid "Review moderation and blocked words."
+msgstr ""
+
+#: includes/class-platform.php:34
+msgid "Export personal data"
+msgstr ""
+
+#: includes/class-platform.php:34
+msgid "When a customer asks for a copy of their data."
+msgstr ""
+
+#: includes/class-platform.php:35
+msgid "Erase personal data"
+msgstr ""
+
+#: includes/class-platform.php:35
+msgid "When a customer asks to delete their data."
+msgstr ""
+
+#: includes/class-platform.php:36
+msgid "All accounts on the store"
+msgstr ""
+
+#: includes/class-platform.php:36
+msgid "Administrators, salespeople and customers (WordPress user list)."
+msgstr ""
+
+#: includes/class-servers.php:44
+msgid "Enter the server’s IP address, for example 203.0.113.10."
+msgstr ""
+
+#: includes/class-servers.php:68
+msgid "Stores still use this server. Move them to another server first."
+msgstr ""
+
+#: includes/class-servers.php:96
+msgid "Server not found."
 msgstr ""

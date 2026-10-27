@@ -119,7 +119,39 @@ $ok( 'the account can be deleted', 200 === $c && ! get_userdata( $sid ) );
 [ $c ] = $call( 'POST', '/peptide/v1/hq/staff/delete', array(), array( 'id' => 1 ) );
 $ok( 'an administrator cannot be deleted through this (404)', 404 === $c && get_userdata( 1 ) );
 
-// 6. 换密钥。
+// 6. 总后台下发的设置（服务器 IP、搜索引擎收录、访客追踪）和平台工具。
+$orig_ip     = \PeptideCore\Domains::server_ip();
+$orig_public = get_option( 'blog_public' );
+$orig_trk    = get_option( \PeptideCore\Tracking\Tracker::OPTION, null );
+[ $c, $conf ] = $call( 'POST', '/peptide/v1/hq/config', array(), array( 'server_ip' => '198.51.100.7', 'blog_public' => false, 'tracking' => array( 'retention_days' => 90 ) ) );
+wp_cache_delete( 'blog_public', 'options' );
+wp_cache_delete( \PeptideCore\Domains::OPTION, 'options' );
+wp_cache_delete( 'alloptions', 'options' );
+$ok( 'the master admin sets the server IP, search engine indexing and visitor data retention', 200 === $c && '198.51.100.7' === $conf['server_ip'] && false === $conf['blog_public'] && 90 === $conf['tracking']['retention_days'] && '198.51.100.7' === \PeptideCore\Domains::server_ip() );
+$ok( 'the DNS record for new domains points to that server', '198.51.100.7' === \PeptideCore\Domains::record( 'smoke-hq-example.com', 'none' )['value'] );
+[ $c ] = $call( 'POST', '/peptide/v1/hq/config', array(), array( 'server_ip' => 'not-an-ip' ) );
+$ok( 'an invalid server IP is refused (400)', 400 === $c );
+[ , $st ] = $call( 'GET', '/peptide/v1/hq/status' );
+$ok( 'the status reports the store ID, settings, theme and active plugins', Hq_Connector::uuid() === $st['uuid'] && '198.51.100.7' === $st['config']['server_ip'] && '' !== $st['theme'] && in_array( 'Peptide Core', array_column( (array) $st['plugins'], 'name' ), true ) );
+[ , $login ] = $call( 'POST', '/peptide/v1/hq/login', array(), array( 'to' => 'plugins' ) );
+$to_res      = wp_remote_get( (string) $login['url'], array( 'timeout' => 20, 'redirection' => 0 ) );
+$ok( 'a platform tool link logs in and opens that page (Plugins)', str_ends_with( (string) wp_remote_retrieve_header( $to_res, 'location' ), '/wp-admin/plugins.php' ) );
+[ , $login ] = $call( 'POST', '/peptide/v1/hq/login', array(), array( 'to' => 'nowhere' ) );
+$to_res      = wp_remote_get( (string) $login['url'], array( 'timeout' => 20, 'redirection' => 0 ) );
+$ok( 'an unknown page opens the admin home instead', str_ends_with( (string) wp_remote_retrieve_header( $to_res, 'location' ), '/wp-admin/' ) );
+// 还原（设置是接口那个请求改的，先清掉这里缓存的旧值，否则 update_option 会以为没变化而不写）。
+wp_cache_delete( \PeptideCore\Tracking\Tracker::OPTION, 'options' );
+wp_cache_delete( 'blog_public', 'options' );
+wp_cache_delete( 'alloptions', 'options' );
+\PeptideCore\Domains::save_server_ip( $orig_ip );
+update_option( 'blog_public', $orig_public );
+if ( null === $orig_trk ) {
+	delete_option( \PeptideCore\Tracking\Tracker::OPTION );
+} else {
+	update_option( \PeptideCore\Tracking\Tracker::OPTION, $orig_trk );
+}
+
+// 7. 换密钥。
 $old = $key;
 Hq_Connector::regenerate();
 [ $c ] = $call( 'GET', '/peptide/v1/hq/status', array(), null, array( 'key' => $old ) );

@@ -269,6 +269,9 @@ msgstr "总后台"
 msgid "Stores"
 msgstr "店铺"
 
+msgid "Servers"
+msgstr "服务器"
+
 msgid "Sorry, you are not allowed to do that."
 msgstr "抱歉，你没有权限这样做。"
 
@@ -283,6 +286,24 @@ msgstr "已生成新的注册密钥。已经接入的店铺照常可用；以后
 
 msgid "Store removed from the master admin. The store itself is not changed; if it still has the master admin lines in wp-config.php, it joins again by itself within a day."
 msgstr "已从总后台移除这个店铺，店铺本身不受影响。如果它的 wp-config.php 里还有总后台的两行，一天之内会自己重新接入。"
+
+msgid "Server saved, but the store could not be told yet (%s). It is sent again at the next check."
+msgstr "服务器已保存，但暂时没能通知店铺（%s）。下次检查时会再发送。"
+
+msgid "Server assigned. The store’s Domains page now shows this IP for the DNS records."
+msgstr "服务器已分配。店铺“域名管理”里的解析记录现在指向这个 IP。"
+
+msgid "Server removed from this store."
+msgstr "已取消这个店铺的服务器。"
+
+msgid "Saved on the store."
+msgstr "已保存到店铺。"
+
+msgid "Server saved."
+msgstr "服务器已保存。"
+
+msgid "Server deleted."
+msgstr "服务器已删除。"
 
 msgid "The store did not return a login link."
 msgstr "店铺没有返回登录链接。"
@@ -323,6 +344,39 @@ msgstr "检测中"
 msgid "%s ago"
 msgstr "%s前"
 
+msgid "Register your servers here, then assign one to each store on the Stores page. When a salesperson adds a domain in their store, the DNS records point to the IP of the assigned server; they set the records at their domain registrar themselves."
+msgstr "在这里登记你的服务器，再到“店铺”页面给每个店铺分配一台。销售在自己店铺里添加域名时，解析记录就指向分配的服务器 IP，他们自己去域名服务商那里解析。"
+
+msgid "IP address"
+msgstr "IP 地址"
+
+msgid "Note"
+msgstr "备注"
+
+msgid "Stores on it"
+msgstr "使用的店铺"
+
+msgid "Delete this server from the list?"
+msgstr "从列表里删除这台服务器？"
+
+msgid "Edit server"
+msgstr "编辑服务器"
+
+msgid "Add server"
+msgstr "添加服务器"
+
+msgid "For example US-West 1"
+msgstr "例如 美西 1 号"
+
+msgid "Provider, location, renewal date…"
+msgstr "服务商、机房位置、续费日期……"
+
+msgid "Changing the IP sends the new address to every store on this server right away; their salespeople must update their DNS records."
+msgstr "修改 IP 后，新地址会马上发给使用这台服务器的所有店铺，这些店铺的销售需要更新域名解析。"
+
+msgid "Save server"
+msgstr "保存服务器"
+
 msgid "Opening a new store"
 msgstr "开新店铺"
 
@@ -341,14 +395,26 @@ msgstr "生成新的注册密钥？已经接入的店铺照常可用，以后开
 msgid "Create a new secret (if the old one leaked)"
 msgstr "重新生成密钥（旧的可能泄露时）"
 
+msgid "Server"
+msgstr "服务器"
+
 msgid "Domains"
 msgstr "域名"
 
-msgid "Versions"
-msgstr "版本"
+msgid "Search engines"
+msgstr "搜索引擎收录"
+
+msgid "Visitor tracking"
+msgstr "访客追踪"
 
 msgid "Last check"
 msgstr "最后检查"
+
+msgid "On"
+msgstr "开"
+
+msgid "Off"
+msgstr "关"
 
 msgid "HTTPS in effect"
 msgstr "HTTPS 生效"
@@ -362,14 +428,62 @@ msgstr "HTTPS 未生效"
 msgid "Coming soon mode: customers cannot see the store."
 msgstr "即将开业模式：顾客看不到店铺。"
 
+msgid "— Not assigned —"
+msgstr "— 未分配 —"
+
+msgid "Add a server first"
+msgstr "请先添加服务器"
+
+msgid "Not on the store yet; sent again at the next check."
+msgstr "店铺还没收到，下次检查时会再发送。"
+
 msgid "+%d other domains"
 msgstr "另外还有 %d 个域名"
+
+msgid "Allow search engines to index this store?"
+msgstr "允许搜索引擎收录这个店铺？"
+
+msgid "Hide this store from search engines?"
+msgstr "不让搜索引擎收录这个店铺？"
+
+msgid "Start recording visitors on this store?"
+msgstr "开始记录这个店铺的访客？"
+
+msgid "Stop recording visitors on this store? Data already collected is kept."
+msgstr "停止记录这个店铺的访客？已经记录的数据会保留。"
+
+msgid "kept %d days"
+msgstr "保留 %d 天"
 
 msgid "Refresh"
 msgstr "刷新"
 
 msgid "More"
 msgstr "更多"
+
+msgid "Platform tools"
+msgstr "平台工具"
+
+msgid "Not shown in the store admin; opens the store page logged in as administrator."
+msgstr "店铺后台不显示这些页面；点一下以管理员身份登录后直接打开。"
+
+msgid "System"
+msgstr "系统信息"
+
+msgid "Theme: %s"
+msgstr "主题：%s"
+
+msgid "Published products: %d"
+msgstr "已上架商品：%d"
+
+msgid "Active plugins: %s"
+msgstr "启用的插件：%s"
+
+msgid "Keep visitor data for"
+msgstr "访客数据保留"
+
+msgid "%d days"
+msgstr "%d 天"
 
 msgid "Save name"
 msgstr "保存名称"
@@ -424,3 +538,108 @@ msgstr "已经 %1$d 小时没有订单，而最近 7 天平均每天有 %2$s 单
 
 msgid "The store is in “coming soon” mode: customers cannot see it."
 msgstr "店铺处于“即将开业”模式，顾客看不到。"
+
+msgid "Plugins"
+msgstr "插件"
+
+msgid "Install, turn on or off and update plugins."
+msgstr "安装、启用、停用和更新插件。"
+
+msgid "Themes"
+msgstr "主题"
+
+msgid "The store theme. Change it only together with the theme developer."
+msgstr "店铺使用的主题。要换主题请先和主题开发者商量。"
+
+msgid "Updates"
+msgstr "更新"
+
+msgid "WordPress, plugin and theme updates."
+msgstr "WordPress、插件和主题的更新。"
+
+msgid "System status"
+msgstr "系统状态"
+
+msgid "Server, database and plugin information for troubleshooting."
+msgstr "服务器、数据库和插件信息，用于排查问题。"
+
+msgid "Scheduled actions"
+msgstr "计划任务"
+
+msgid "Background jobs such as pixel sends and reminder emails."
+msgstr "后台任务，例如像素回传和提醒邮件。"
+
+msgid "Site health"
+msgstr "站点健康"
+
+msgid "Security and performance checks from WordPress."
+msgstr "WordPress 自带的安全和性能检查。"
+
+msgid "WooCommerce settings"
+msgstr "WooCommerce 设置"
+
+msgid "General, products, accounts and advanced WooCommerce options."
+msgstr "WooCommerce 的常规、商品、账户和高级选项。"
+
+msgid "VialCove settings"
+msgstr "VialCove 设置"
+
+msgid "Brand name, demo mode, use statement, checkout confirmation, batch check, support button."
+msgstr "品牌名称、演示模式、用途声明、结账确认、批次检查、客服按钮。"
+
+msgid "WordPress general settings"
+msgstr "WordPress 常规设置"
+
+msgid "Tagline, site address, date format."
+msgstr "副标题、站点网址、日期格式。"
+
+msgid "Reading"
+msgstr "阅读设置"
+
+msgid "What the home page shows."
+msgstr "首页显示什么。"
+
+msgid "Permalinks"
+msgstr "固定链接"
+
+msgid "The address format of pages and products."
+msgstr "页面和商品的网址格式。"
+
+msgid "Privacy policy page"
+msgstr "隐私政策页面"
+
+msgid "Which page is the privacy policy."
+msgstr "哪个页面是隐私政策。"
+
+msgid "Discussion"
+msgstr "讨论"
+
+msgid "Review moderation and blocked words."
+msgstr "评论审核和屏蔽词。"
+
+msgid "Export personal data"
+msgstr "导出个人数据"
+
+msgid "When a customer asks for a copy of their data."
+msgstr "顾客要求拿到自己的资料时使用。"
+
+msgid "Erase personal data"
+msgstr "抹除个人数据"
+
+msgid "When a customer asks to delete their data."
+msgstr "顾客要求删除自己的资料时使用。"
+
+msgid "All accounts on the store"
+msgstr "店铺上的全部账号"
+
+msgid "Administrators, salespeople and customers (WordPress user list)."
+msgstr "管理员、销售和顾客（WordPress 用户列表）。"
+
+msgid "Enter the server’s IP address, for example 203.0.113.10."
+msgstr "请输入服务器的 IP 地址，例如 203.0.113.10。"
+
+msgid "Stores still use this server. Move them to another server first."
+msgstr "还有店铺在用这台服务器，请先把它们换到别的服务器。"
+
+msgid "Server not found."
+msgstr "找不到这台服务器。"

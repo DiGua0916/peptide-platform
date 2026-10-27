@@ -78,8 +78,18 @@ final class Client {
 		return self::request( $site_id, 'GET', '/peptide/v1/hq/summary', array( 'days' => (string) $days ) );
 	}
 
-	public static function login( int $site_id ) {
-		return self::request( $site_id, 'POST', '/peptide/v1/hq/login', array(), array() );
+	/** 一次性登录链接；$to 是店铺“平台工具”页面的键（见 Platform::tools()），空时进后台首页。 */
+	public static function login( int $site_id, string $to = '' ) {
+		return self::request( $site_id, 'POST', '/peptide/v1/hq/login', array(), '' !== $to ? array( 'to' => $to ) : array() );
+	}
+
+	/**
+	 * 下发设置：server_ip、blog_public（是否允许搜索引擎收录）、tracking（enabled / retention_days / gpc）。只传要改的项。
+	 *
+	 * @return array|\WP_Error 店铺现在的设置
+	 */
+	public static function config( int $site_id, array $config ) {
+		return self::request( $site_id, 'POST', '/peptide/v1/hq/config', array(), $config );
 	}
 
 	public static function staff_list( int $site_id ) {

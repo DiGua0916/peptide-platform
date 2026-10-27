@@ -20,7 +20,7 @@ final class Menu {
 
 	public const CAP = 'manage_options';
 
-	private const ACTIONS = array( 'pchq_site_refresh', 'pchq_site_rename', 'pchq_site_delete', 'pchq_secret_regenerate', 'pchq_login', 'pchq_account_save', 'pchq_account_delete', 'pchq_account_toggle', 'pchq_alert_close' );
+	private const ACTIONS = array( 'pchq_site_refresh', 'pchq_site_rename', 'pchq_site_delete', 'pchq_site_server', 'pchq_site_config', 'pchq_secret_regenerate', 'pchq_server_save', 'pchq_server_delete', 'pchq_login', 'pchq_account_save', 'pchq_account_delete', 'pchq_account_toggle', 'pchq_alert_close' );
 
 	public static function register_hooks(): void {
 		add_action( 'admin_menu', array( self::class, 'menu' ) );
@@ -54,6 +54,7 @@ final class Menu {
 		add_menu_page( __( 'Master admin', 'peptide-hq' ), __( 'Master admin', 'peptide-hq' ) . $badge, self::CAP, Dashboard_Page::SLUG, array( Dashboard_Page::class, 'render' ), 'dashicons-networking', 2 );
 		add_submenu_page( Dashboard_Page::SLUG, __( 'Overview', 'peptide-hq' ), __( 'Overview', 'peptide-hq' ), self::CAP, Dashboard_Page::SLUG, array( Dashboard_Page::class, 'render' ) );
 		add_submenu_page( Dashboard_Page::SLUG, __( 'Stores', 'peptide-hq' ), __( 'Stores', 'peptide-hq' ), self::CAP, Sites_Page::SLUG, array( Sites_Page::class, 'render' ) );
+		add_submenu_page( Dashboard_Page::SLUG, __( 'Servers', 'peptide-hq' ), __( 'Servers', 'peptide-hq' ), self::CAP, Servers_Page::SLUG, array( Servers_Page::class, 'render' ) );
 		add_submenu_page( Dashboard_Page::SLUG, __( 'Salesperson accounts', 'peptide-hq' ), __( 'Salesperson accounts', 'peptide-hq' ), self::CAP, Accounts_Page::SLUG, array( Accounts_Page::class, 'render' ) );
 		add_submenu_page( Dashboard_Page::SLUG, __( 'Alerts', 'peptide-hq' ), __( 'Alerts', 'peptide-hq' ) . $badge, self::CAP, Alerts_Page::SLUG, array( Alerts_Page::class, 'render' ) );
 	}
@@ -140,8 +141,60 @@ final class Menu {
 				self::flash( 'success', __( 'Store removed from the master admin. The store itself is not changed; if it still has the master admin lines in wp-config.php, it joins again by itself within a day.', 'peptide-hq' ) );
 				break;
 
+			case 'pchq_site_server':
+				$server = isset( $_POST['server'] ) ? absint( $_POST['server'] ) : 0;
+				$res    = \PeptideHq\Servers::assign( $site, $server );
+				if ( is_wp_error( $res ) ) {
+					/* translators: %s: error */
+					self::flash( 'error', sprintf( __( 'Server saved, but the store could not be told yet (%s). It is sent again at the next check.', 'peptide-hq' ), $res->get_error_message() ) );
+				} else {
+					Monitor::poll( $site );
+					self::flash( 'success', $server ? __( 'Server assigned. The store’s Domains page now shows this IP for the DNS records.', 'peptide-hq' ) : __( 'Server removed from this store.', 'peptide-hq' ) );
+				}
+				break;
+
+			case 'pchq_site_config':
+				$key  = isset( $_REQUEST['key'] ) ? sanitize_key( wp_unslash( $_REQUEST['key'] ) ) : '';
+				$on   = ! empty( $_REQUEST['on'] );
+				$conf = array(
+					'search'   => array( 'blog_public' => $on ),
+					'tracking' => array( 'tracking' => array( 'enabled' => $on ) ),
+				)[ $key ] ?? null;
+				if ( 'retention' === $key ) {
+					$conf = array( 'tracking' => array( 'retention_days' => isset( $_REQUEST['days'] ) ? absint( $_REQUEST['days'] ) : 180 ) );
+				}
+				$res = null === $conf ? new \WP_Error( 'pchq_bad', 'Unknown setting.' ) : Client::config( $site, $conf );
+				if ( ! is_wp_error( $res ) ) {
+					Monitor::poll( $site );
+				}
+				self::flash( is_wp_error( $res ) ? 'error' : 'success', is_wp_error( $res ) ? $res->get_error_message() : __( 'Saved on the store.', 'peptide-hq' ) );
+				break;
+
+			case 'pchq_server_save':
+				$back = admin_url( 'admin.php?page=' . Servers_Page::SLUG );
+				$res  = \PeptideHq\Servers::save( isset( $_POST['server'] ) ? absint( $_POST['server'] ) : 0, $text( 'name' ), $text( 'ip' ), $text( 'note' ) );
+				if ( is_wp_error( $res ) ) {
+					self::flash( 'error', $res->get_error_message() );
+				} else {
+					// 改了 IP 的话，马上下发给用这台服务器的店铺。
+					foreach ( Sites::all() as $s ) {
+						if ( $s['server_id'] === $res ) {
+							Client::config( $s['id'], array( 'server_ip' => \PeptideHq\Servers::ip_for_site( $s['id'] ) ) );
+						}
+					}
+					self::flash( 'success', __( 'Server saved.', 'peptide-hq' ) );
+				}
+				break;
+
+			case 'pchq_server_delete':
+				$back = admin_url( 'admin.php?page=' . Servers_Page::SLUG );
+				$res  = \PeptideHq\Servers::delete( isset( $_REQUEST['server'] ) ? absint( $_REQUEST['server'] ) : 0 );
+				self::flash( is_wp_error( $res ) ? 'error' : 'success', is_wp_error( $res ) ? $res->get_error_message() : __( 'Server deleted.', 'peptide-hq' ) );
+				break;
+
 			case 'pchq_login':
-				$res  = Client::login( $site );
+				$to   = isset( $_REQUEST['to'] ) ? sanitize_key( wp_unslash( $_REQUEST['to'] ) ) : '';
+				$res  = Client::login( $site, isset( \PeptideHq\Platform::tools()[ $to ] ) ? $to : '' );
 				$info = Sites::get( $site );
 				$url  = is_array( $res ) ? (string) ( $res['url'] ?? '' ) : '';
 				// 只跳到这个店铺自己的地址。
