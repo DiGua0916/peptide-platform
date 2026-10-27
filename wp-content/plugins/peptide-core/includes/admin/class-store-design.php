@@ -1,8 +1,8 @@
 <?php
 /**
  * 后台“店铺装修”菜单（EDIT-BLOCKS-02）：主题装修、菜单导航、自定义页面、首页 SEO、域名管理、活动专题页。
- * “主题装修”（模板库、店铺默认模板、域名指定模板、预览）、“菜单导航”（Menu_Page）、“自定义页面”（WordPress 页面列表）已实现；
- * 其余页面是占位，后续逐个实现。
+ * “主题装修”（模板库、店铺默认模板、域名指定模板、预览）在这里；其余子页面：Menu_Page、WordPress 页面列表、
+ * Seo_Page、Domains_Page、活动专题页列表（Topics）。
  *
  * @package PeptideCore
  */
@@ -24,6 +24,9 @@ final class Store_Design {
 
 	/** “自定义页面”直接打开 WordPress 的页面列表（用户 2026-10-22 要求把左侧的“页面”菜单移到这里）。 */
 	public const PAGES_SLUG = 'edit.php?post_type=page';
+
+	/** “活动专题页”打开专题页列表（Topics，2026-10-27 照 YY 做成实际功能）。 */
+	public const TOPICS_SLUG = 'edit.php?post_type=pc_topic';
 
 	/** 表单动作 => 需要的能力。 */
 	private const ACTIONS = array(
@@ -60,7 +63,7 @@ final class Store_Design {
 			self::PAGES_SLUG         => __( 'Custom pages', 'peptide-core' ),
 			self::SLUG . '-seo'      => __( 'Homepage SEO', 'peptide-core' ),
 			self::SLUG . '-domains'  => __( 'Domains', 'peptide-core' ),
-			self::SLUG . '-campaign' => __( 'Campaign pages', 'peptide-core' ),
+			self::TOPICS_SLUG        => __( 'Campaign pages', 'peptide-core' ),
 		);
 	}
 
@@ -75,23 +78,24 @@ final class Store_Design {
 			56
 		);
 		foreach ( self::pages() as $slug => $title ) {
-			if ( self::PAGES_SLUG === $slug ) {
-				// 菜单链接直接指向页面列表；权限按 WordPress 自己的“编辑页面”能力。
+			if ( self::PAGES_SLUG === $slug || self::TOPICS_SLUG === $slug ) {
+				// 菜单链接直接指向页面 / 专题页列表；权限按 WordPress 自己的“编辑页面”能力。
 				add_submenu_page( self::SLUG, $title, $title, 'edit_pages', $slug );
+				continue;
+			}
+			if ( Seo_Page::SLUG === $slug ) {
+				add_submenu_page( self::SLUG, $title, $title, Templates::CAP_EDIT, $slug, array( Seo_Page::class, 'render' ) );
+				continue;
+			}
+			if ( Domains_Page::SLUG === $slug ) {
+				add_submenu_page( self::SLUG, $title, $title, Templates::CAP_EDIT, $slug, array( Domains_Page::class, 'render' ) );
 				continue;
 			}
 			if ( Menu_Page::SLUG === $slug ) {
 				add_submenu_page( self::SLUG, $title, $title, Menus::CAP, $slug, array( Menu_Page::class, 'render' ) );
 				continue;
 			}
-			add_submenu_page(
-				self::SLUG,
-				$title,
-				$title,
-				Templates::CAP_EDIT,
-				$slug,
-				self::SLUG === $slug ? array( self::class, 'render_theme_design' ) : array( self::class, 'render_placeholder' )
-			);
+			add_submenu_page( self::SLUG, $title, $title, Templates::CAP_EDIT, $slug, array( self::class, 'render_theme_design' ) );
 		}
 	}
 
@@ -100,18 +104,26 @@ final class Store_Design {
 		remove_menu_page( self::PAGES_SLUG );
 	}
 
-	private static function on_pages_screen(): bool {
+	/** 当前是页面或专题页的列表 / 编辑界面时，返回对应的子菜单；否则为空。 */
+	private static function list_screen(): string {
 		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-		return $screen && 'page' === $screen->post_type && in_array( $screen->base, array( 'edit', 'post' ), true );
+		if ( ! $screen || ! in_array( $screen->base, array( 'edit', 'post' ), true ) ) {
+			return '';
+		}
+		if ( 'page' === $screen->post_type ) {
+			return self::PAGES_SLUG;
+		}
+		return \PeptideCore\Topics::POST_TYPE === $screen->post_type ? self::TOPICS_SLUG : '';
 	}
 
-	/** 在页面列表、新建或编辑页面时，左侧菜单展开“店铺装修”并选中“自定义页面”。 */
+	/** 在页面 / 专题页列表、新建或编辑时，左侧菜单展开“店铺装修”并选中“自定义页面”或“活动专题页”。 */
 	public static function pages_parent_file( $parent_file ) {
-		return self::on_pages_screen() ? self::SLUG : $parent_file;
+		return '' !== self::list_screen() ? self::SLUG : $parent_file;
 	}
 
 	public static function pages_submenu_file( $submenu_file, $parent_file = '' ) {
-		return self::on_pages_screen() ? self::PAGES_SLUG : $submenu_file;
+		$sub = self::list_screen();
+		return '' !== $sub ? $sub : $submenu_file;
 	}
 
 	public static function enqueue( string $hook ): void {
@@ -375,7 +387,7 @@ final class Store_Design {
 	private static function render_domains( array $domains, array $templates, bool $manage ): void {
 		?>
 		<h3 class="pc-sd-current__name"><?php esc_html_e( 'Domain templates', 'peptide-core' ); ?></h3>
-		<p class="pc-sd-note"><?php esc_html_e( 'Use this when several domains point to this store and each should show a different design. The domain must already reach this site (DNS and server settings); adding it here only chooses the template.', 'peptide-core' ); ?></p>
+		<p class="pc-sd-note"><?php esc_html_e( 'Use this when several domains point to this store and each should show a different design. Bind the domain under Domains first so it reaches this site; adding it here only chooses the template.', 'peptide-core' ); ?></p>
 		<table class="widefat striped pc-sd-table">
 			<thead><tr><th><?php esc_html_e( 'Domain', 'peptide-core' ); ?></th><th><?php esc_html_e( 'Template', 'peptide-core' ); ?></th><th><?php esc_html_e( 'Actions', 'peptide-core' ); ?></th></tr></thead>
 			<tbody>
@@ -399,7 +411,8 @@ final class Store_Design {
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="pc-sd-form pc-sd-form--inline">
 				<input type="hidden" name="action" value="pc_design_domain_add">
 				<?php wp_nonce_field( 'pc_design_domain_add' ); ?>
-				<label><?php esc_html_e( 'Domain', 'peptide-core' ); ?> <input type="text" name="domain" placeholder="shop.example.com" required></label>
+				<label><?php esc_html_e( 'Domain', 'peptide-core' ); ?> <input type="text" name="domain" list="pc-sd-bound-domains" placeholder="shop.example.com" required></label>
+				<datalist id="pc-sd-bound-domains"><?php foreach ( \PeptideCore\Domains::hosts() as $bound ) : ?><option value="<?php echo esc_attr( $bound ); ?>"><?php endforeach; ?></datalist>
 				<label><?php esc_html_e( 'Template', 'peptide-core' ); ?>
 					<select name="template">
 						<?php foreach ( $templates as $t ) : ?>
@@ -528,31 +541,6 @@ final class Store_Design {
 				<?php endforeach; ?>
 			</div>
 		</section>
-		<?php
-	}
-
-	/**
-	 * 其余子页面的占位。
-	 */
-	public static function render_placeholder(): void {
-		if ( ! current_user_can( Templates::CAP_EDIT ) ) {
-			return;
-		}
-		$slug = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$desc = array(
-			self::SLUG . '-seo'      => __( 'Homepage title, description and social sharing image for search engines.', 'peptide-core' ),
-			self::SLUG . '-domains'  => __( 'Bind your own domain and check HTTPS once the site is on a server.', 'peptide-core' ),
-			self::SLUG . '-campaign' => __( 'Landing pages for promotions, built from modules, with their own address.', 'peptide-core' ),
-		);
-		?>
-		<div class="wrap pc-sd">
-			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
-			<section class="pc-sd-card pc-sd-empty">
-				<span class="dashicons dashicons-hammer" aria-hidden="true"></span>
-				<h2><?php esc_html_e( 'Coming soon', 'peptide-core' ); ?></h2>
-				<p><?php echo esc_html( $desc[ $slug ] ?? '' ); ?></p>
-			</section>
-		</div>
 		<?php
 	}
 }

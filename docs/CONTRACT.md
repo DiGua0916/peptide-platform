@@ -253,3 +253,28 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
 - **服务端回传**：Facebook（Conversions API）和 TikTok（Events API）的像素填了 access token 时，浏览商品、搜索、购物车、结账、加购、注册、登录和购买（订单变成已付款时）也由服务器经 Action Scheduler 发一份，和浏览器事件用同一个事件编号，平台只算一次。token 只在服务器上，`window.pcPixels` 里没有。
 - **不回传**：员工（除非勾了测试用选项）；浏览器发出 GPC 信号（默认遵守）；打开过任意前台地址加 `?pc_px_optout=1` 的浏览器（cookie `pc_px_optout`，一年；`=0` 取消）。主题可以在页脚或隐私页放一个“不要出售或分享我的个人信息”链接指向 `/?pc_px_optout=1`，打开后显示一条 WooCommerce 成功提示。
 - **检查**：浏览器里 `localStorage.pcPixelsDebug = '1'` 时，每个事件和发给了哪些平台都打印在控制台。
+
+## 首页SEO 和活动专题页（2026-10-27，Claude，照 YY 后台）
+
+- **首页SEO**（店铺装修 → 首页SEO，`PeptideCore\Seo`）：插件在首页的 `wp_head` 输出 meta description、meta keywords、og:type / og:site_name / og:title / og:description / og:url、twitter:card / title / description，并用 `pre_get_document_title` 替换首页的 `<title>`（没填 SEO 标题时保留主题的标题）。
+  - 按访问的域名选“域名指定模板”，没有就用“默认模板”。
+  - 支持变量 `{current_domain}`。
+  - 主题不要再输出这些标签，以免重复。
+- **活动专题页**（店铺装修 → 活动专题页，`PeptideCore\Topics`，文章类型 `pc_topic`）：
+  - 网址 `/topics/<别名>/`；改别名后旧网址 301 跳到新网址（WordPress 的 _wp_old_slug）；草稿看不到。
+  - 内容是区块编辑器的正文；简短描述 = 摘要；封面 = 特色图片。
+  - 模板：主题的 `single-pc_topic.php`，没有时用 `page.php`。现在用的是 page.php，Codex 可以以后做专门的模板。
+  - “展示专题标题”关掉时，`the_title` 在专题页主循环里返回空（page.php 的 h1 会是空的，模板里可以判断 `get_post_meta( $id, '_pc_topic_show_title', true ) === '0'` 不输出 h1）。
+  - 专题页有自己的 SEO（标题、描述、关键词），没填时用标题和摘要；有封面时输出 og:image。
+
+## 域名管理（2026-10-27，Claude，YY-DOMAINS-01，照 YY 后台）
+
+店铺装修 → 域名管理（`PeptideCore\Domains` + `Admin\Domains_Page`），选项 `peptide_core_domains`。
+
+- **多个域名打开同一个店铺**：访客打开的是已绑定的域名时，插件把 `home` / `siteurl` 换成这个域名（`option_home` / `option_siteurl` 过滤），页面里的链接留在这个域名上。没绑定的域名、IP 地址不变。主题生成链接请继续用 `home_url()` 等函数，不要写死域名。
+- **主域名**就是 WordPress 的网站地址。后台切换主域名会改 `home` / `siteurl`；只有“已连接”的域名能切换，wp-config 里写死 WP_HOME 时不能切换。旧网站地址留在列表里，照样能用。
+- **检查**：`GET /?pc_domain_check=任意值` 在 `init` 最早返回纯文本校验码（本站给这个域名算的 HMAC），不经过主题、追踪和跳转。服务器请求 http 和 https（验证证书），返回校验码才算“已连接 / HTTPS 生效”。新域名 7 天内每小时检查（cron `pc_domains_check`），之后每天。7 天没连上只显示“未连接”，不自动删除。
+- **前台跳转**（`template_redirect` 优先级 -10，只对 GET / HEAD，不对后台、REST、admin-ajax、wc-ajax、预览）：
+  - 设置了“域名跳转”的域名 301 到目标域名的同一路径（目标只能是已绑定、自己不跳转的域名）。
+  - HTTPS 生效的域名，http 访问 301 到 https。判断 https 时也认 `X-Forwarded-Proto` 和 Cloudflare 的 `CF-Visitor`，避免灵活 SSL 下循环跳转。
+- 主题装修的“域名指定模板”和首页SEO 的域名列表会列出这里绑定的域名。

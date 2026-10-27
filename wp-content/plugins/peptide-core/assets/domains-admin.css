@@ -1,0 +1,437 @@
+/* 域名管理后台（照 YY：列表 + 四步添加向导）。 */
+.pc-dm-limit {
+	margin-left: 8px;
+	font-size: 13px;
+	color: #646970;
+}
+
+.pc-dm-tips {
+	margin: 12px 0;
+	padding: 8px 12px;
+	background: #fcf3e8;
+	border-left: 4px solid #e26f00;
+	border-radius: 2px;
+}
+
+.pc-dm-tips ul {
+	margin: 0;
+	padding-left: 18px;
+	list-style: disc;
+}
+
+.pc-dm-tips li {
+	margin: 4px 0;
+	color: #8a4600;
+}
+
+.pc-dm-server,
+.pc-dm-filters {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin: 12px 0;
+}
+
+.pc-dm-server label {
+	font-weight: 600;
+}
+
+.pc-dm-server input[type="text"] {
+	width: min(220px, 100%);
+}
+
+.pc-dm-server .description {
+	flex: 1 1 240px;
+}
+
+.pc-dm-filters select,
+.pc-dm-filters input[type="search"] {
+	max-width: 100%;
+}
+
+.pc-dm-dates {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px;
+}
+
+.pc-dm-table td,
+.pc-dm-table th {
+	vertical-align: middle;
+}
+
+.pc-dm-table thead th,
+.pc-dm-records thead th {
+	white-space: nowrap;
+}
+
+.pc-dm-table .check-column {
+	vertical-align: middle;
+	padding-top: 8px;
+	padding-bottom: 8px;
+}
+
+.pc-dm-actions,
+.pc-dm-created {
+	white-space: nowrap;
+}
+
+.pc-dm-actions a {
+	margin-right: 6px;
+	text-decoration: none;
+}
+
+.pc-dm-actions .pc-dm-delete {
+	color: #b32d2e;
+}
+
+.pc-dm-host {
+	overflow-wrap: anywhere;
+}
+
+.pc-dm-tag {
+	display: inline-block;
+	margin-left: 6px;
+	padding: 1px 6px;
+	font-size: 12px;
+	line-height: 1.6;
+	color: #fff;
+	background: #2271b1;
+	border-radius: 3px;
+	white-space: nowrap;
+}
+
+.pc-dm-badge {
+	display: inline-block;
+	padding: 1px 8px;
+	font-size: 12px;
+	line-height: 1.7;
+	color: #50575e;
+	background: #f0f0f1;
+	border-radius: 3px;
+	white-space: nowrap;
+}
+
+.pc-dm-badge.is-ok {
+	color: #fff;
+	background: #008a20;
+}
+
+.pc-dm-badge.is-wait {
+	color: #2271b1;
+	background: #f0f6fc;
+}
+
+.pc-dm-badge.is-bad {
+	color: #b32d2e;
+	background: #fcf0f1;
+}
+
+.pc-dm-error {
+	display: block;
+	min-width: 12em;
+	max-width: 280px;
+	margin-top: 2px;
+	font-size: 12px;
+	color: #646970;
+	overflow-wrap: anywhere;
+}
+
+/* 主域名开关 */
+.pc-dm-switch {
+	position: relative;
+	display: inline-block;
+	width: 36px;
+	height: 20px;
+	vertical-align: middle;
+	background: #c3c4c7;
+	border-radius: 10px;
+	transition: background 0.15s;
+}
+
+.pc-dm-switch::after {
+	content: "";
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 16px;
+	height: 16px;
+	background: #fff;
+	border-radius: 50%;
+	transition: left 0.15s;
+}
+
+.pc-dm-switch.is-on {
+	background: #2271b1;
+}
+
+.pc-dm-switch.is-on::after {
+	left: 18px;
+}
+
+.pc-dm-switch.is-disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+a.pc-dm-switch:hover {
+	background: #a7aaad;
+}
+
+a.pc-dm-switch:focus {
+	outline: 0;
+	box-shadow: 0 0 0 2px #fff, 0 0 0 4px #2271b1;
+}
+
+/* 卡片和向导 */
+.pc-dm-card {
+	max-width: 960px;
+	margin: 12px 0;
+	padding: 16px 20px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+	box-sizing: border-box;
+}
+
+.pc-dm-card h2 {
+	margin-top: 0;
+}
+
+.pc-dm-redirect select {
+	max-width: 100%;
+	margin-top: 4px;
+}
+
+.pc-dm-redirect label {
+	display: block;
+	font-weight: 600;
+}
+
+.pc-dm-back a {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	text-decoration: none;
+}
+
+.pc-dm-steps {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 12px;
+	max-width: 960px;
+	margin: 16px 0;
+	padding: 0;
+	list-style: none;
+}
+
+.pc-dm-steps li {
+	display: flex;
+	flex: 1 1 140px;
+	align-items: center;
+	gap: 8px;
+	margin: 0;
+	color: #8c8f94;
+}
+
+.pc-dm-steps li:not(:last-child)::after {
+	content: "";
+	flex: 1 1 auto;
+	min-width: 12px;
+	height: 1px;
+	background: #dcdcde;
+}
+
+.pc-dm-steps__n {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	font-weight: 600;
+	color: #fff;
+	background: #c3c4c7;
+	border-radius: 50%;
+}
+
+.pc-dm-steps .is-done,
+.pc-dm-steps .is-current {
+	color: #1d2327;
+}
+
+.pc-dm-steps .is-current {
+	font-weight: 600;
+}
+
+.pc-dm-steps .is-done .pc-dm-steps__n,
+.pc-dm-steps .is-current .pc-dm-steps__n {
+	background: #2271b1;
+}
+
+.pc-dm-step__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 16px;
+}
+
+.pc-dm-batch summary {
+	cursor: pointer;
+	color: #2271b1;
+}
+
+.pc-dm-hostlist {
+	margin: 0 0 12px 18px;
+	list-style: disc;
+}
+
+.pc-dm-hostlist li {
+	overflow-wrap: anywhere;
+}
+
+.pc-dm-cdns {
+	display: grid;
+	gap: 8px;
+	margin: 12px 0;
+	padding: 0;
+	border: 0;
+}
+
+.pc-dm-cdn {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 12px;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+	cursor: pointer;
+}
+
+.pc-dm-cdn input {
+	margin-top: 2px;
+}
+
+.pc-dm-cdn:has(input:checked) {
+	background: #f0f6fc;
+	border-color: #2271b1;
+}
+
+.pc-dm-cdn strong {
+	display: block;
+	margin-bottom: 2px;
+}
+
+.pc-dm-cdn span span {
+	color: #50575e;
+}
+
+.pc-dm-howto {
+	margin: 0 0 12px 18px;
+	list-style: disc;
+}
+
+.pc-dm-scroll {
+	overflow-x: auto;
+}
+
+.pc-dm-records code {
+	white-space: nowrap;
+}
+
+.pc-dm-done {
+	text-align: center;
+}
+
+.pc-dm-done > .dashicons {
+	width: 48px;
+	height: 48px;
+	font-size: 48px;
+	color: #008a20;
+}
+
+.pc-dm-done .pc-dm-hostlist {
+	margin-left: 0;
+	list-style: none;
+}
+
+.pc-dm-done .pc-dm-step__actions {
+	justify-content: center;
+}
+
+/* 手机和窄屏：每行变成一张卡片，左边是列名。 */
+@media screen and (max-width: 782px) {
+	.pc-dm-table thead,
+	.pc-dm-records thead {
+		display: none;
+	}
+
+	.pc-dm-table,
+	.pc-dm-table tbody,
+	.pc-dm-records,
+	.pc-dm-records tbody {
+		display: block;
+	}
+
+	.pc-dm-table tr,
+	.pc-dm-records tr {
+		position: relative;
+		display: block;
+		padding: 8px 12px;
+		border-bottom: 1px solid #dcdcde;
+	}
+
+	.pc-dm-table tr > *,
+	.pc-dm-records tr > * {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 4px 12px;
+		width: auto;
+		padding: 4px 0;
+		text-align: right;
+		overflow-wrap: anywhere;
+	}
+
+	.pc-dm-table td[data-label]::before,
+	.pc-dm-records td[data-label]::before {
+		content: attr(data-label);
+		flex: none;
+		max-width: 45%;
+		margin-right: auto;
+		font-weight: 600;
+		color: #50575e;
+		text-align: left;
+	}
+
+	.pc-dm-table .check-column {
+		justify-content: flex-start;
+		width: auto;
+		padding: 4px 0;
+	}
+
+	.pc-dm-table .check-column input {
+		margin: 0;
+	}
+
+	.pc-dm-table td[colspan] {
+		display: block;
+		text-align: left;
+	}
+
+	.pc-dm-error {
+		min-width: 0;
+		max-width: 60%;
+		text-align: right;
+	}
+
+	.pc-dm-table td.pc-dm-conn {
+		flex-wrap: wrap;
+	}
+
+	.pc-dm-card {
+		padding: 12px 14px;
+	}
+}
