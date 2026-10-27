@@ -1,0 +1,114 @@
+/* 邮件详情数据页（DATA-01 第 8 步）：两个合计（和运营数据页一样的带边框网格）、没有统计打开和点击的说明、每种邮件一行的表格。 */
+
+.pc-emails-data {
+	max-width: 100%;
+}
+
+/* 1px 的间隔露出底色，看起来就是格子之间的边框。 */
+.pc-emails-data .pc-emails-tiles {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+	gap: 1px;
+	border: 1px solid #dcdcde;
+	background: #dcdcde;
+}
+
+.pc-emails-data .pc-emails-tile {
+	min-width: 0;
+	padding: 14px 16px;
+	background: #fff;
+}
+
+.pc-emails-data .pc-emails-tile__label {
+	color: #646970;
+	font-size: 13px;
+	overflow-wrap: anywhere;
+}
+
+.pc-emails-data .pc-emails-tile[title] {
+	cursor: help;
+}
+
+.pc-emails-data .pc-emails-help {
+	color: #646970;
+	font-weight: 400;
+}
+
+.pc-emails-data .pc-emails-tile__value {
+	margin: 6px 0 4px;
+	font-size: 22px;
+	font-weight: 700;
+	line-height: 1.3;
+	overflow-wrap: anywhere;
+}
+
+.pc-emails-data .pc-emails-tile__prev {
+	color: #646970;
+	font-size: 12px;
+}
+
+.pc-emails-data .pc-emails-tile__change {
+	font-size: 12px;
+	white-space: nowrap;
+}
+
+.pc-emails-data .is-up {
+	color: #008a20;
+}
+
+.pc-emails-data .is-down {
+	color: #d63638;
+}
+
+.pc-emails-data .pc-emails-note {
+	margin: 12px 0;
+	font-size: 12px;
+}
+
+.pc-emails-data .pc-emails-loglink {
+	margin-left: 4px;
+}
+
+/* 表格在窄屏上自己横向滚动，页面不出现横向滚动条。 */
+.pc-emails-data .pc-emails-table-wrap {
+	max-width: 100%;
+	overflow-x: auto;
+}
+
+.pc-emails-data .pc-emails-table {
+	width: 100%;
+	border-collapse: collapse;
+	background: #fff;
+	font-size: 13px;
+}
+
+.pc-emails-data .pc-emails-table th,
+.pc-emails-data .pc-emails-table td {
+	padding: 8px 10px;
+	border: 1px solid #dcdcde;
+	text-align: left;
+	white-space: nowrap;
+}
+
+.pc-emails-data .pc-emails-table thead th {
+	background: #f6f7f7;
+	font-weight: 600;
+}
+
+/* 邮件名称列可以换行，数字列不换行。 */
+.pc-emails-data .pc-emails-table .pc-emails-name {
+	min-width: 140px;
+	font-weight: 400;
+	overflow-wrap: anywhere;
+	white-space: normal;
+}
+
+@media (max-width: 600px) {
+	.pc-emails-data .pc-emails-tile {
+		padding: 12px;
+	}
+
+	.pc-emails-data .pc-emails-tile__value {
+		font-size: 18px;
+	}
+}

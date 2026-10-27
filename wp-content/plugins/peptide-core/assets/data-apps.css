@@ -1,0 +1,111 @@
+/* 应用统计页（DATA-01 第 8 步）：每个应用一张卡片，卡片里每个指标一格（和运营数据页一样的带边框网格）。 */
+
+.pc-apps-data {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	max-width: 100%;
+}
+
+.pc-apps-data .pc-apps-card {
+	min-width: 0;
+	padding: 16px;
+	border: 1px solid #dcdcde;
+	background: #fff;
+}
+
+.pc-apps-data .pc-apps-card__head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px 12px;
+	margin-bottom: 12px;
+}
+
+.pc-apps-data .pc-apps-card__name {
+	margin: 0;
+	padding: 0;
+	font-size: 16px;
+	font-weight: 600;
+	line-height: 1.4;
+	overflow-wrap: anywhere;
+}
+
+.pc-apps-data .pc-apps-badge {
+	padding: 1px 8px;
+	border-radius: 10px;
+	background: #f0f0f1;
+	color: #646970;
+	font-size: 12px;
+	line-height: 1.6;
+}
+
+.pc-apps-data .pc-apps-badge.is-on {
+	background: #edfaef;
+	color: #008a20;
+}
+
+.pc-apps-data .pc-apps-card__settings {
+	font-size: 13px;
+}
+
+/* 1px 的间隔露出底色，看起来就是格子之间的边框。 */
+.pc-apps-data .pc-apps-tiles {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+	gap: 1px;
+	border: 1px solid #dcdcde;
+	background: #dcdcde;
+}
+
+.pc-apps-data .pc-apps-tile {
+	min-width: 0;
+	padding: 14px 16px;
+	background: #fff;
+}
+
+.pc-apps-data .pc-apps-tile__label {
+	color: #646970;
+	font-size: 13px;
+	overflow-wrap: anywhere;
+}
+
+.pc-apps-data .pc-apps-tile__value {
+	margin: 6px 0 4px;
+	font-size: 22px;
+	font-weight: 700;
+	line-height: 1.3;
+	overflow-wrap: anywhere;
+}
+
+.pc-apps-data .pc-apps-tile__prev {
+	color: #646970;
+	font-size: 12px;
+}
+
+.pc-apps-data .pc-apps-tile__change {
+	font-size: 12px;
+	white-space: nowrap;
+}
+
+.pc-apps-data .is-up {
+	color: #008a20;
+}
+
+.pc-apps-data .is-down {
+	color: #d63638;
+}
+
+@media (max-width: 600px) {
+	.pc-apps-data .pc-apps-card {
+		padding: 12px;
+	}
+
+	.pc-apps-data .pc-apps-tile {
+		padding: 12px;
+	}
+
+	.pc-apps-data .pc-apps-tile__value {
+		font-size: 18px;
+	}
+}

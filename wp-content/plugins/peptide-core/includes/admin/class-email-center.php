@@ -244,7 +244,13 @@ final class Email_Center {
 		}
 	}
 
-	private static function render_log(): void {
+	/**
+	 * 邮件 id（WooCommerce 邮件的 id，例如 customer_processing_order，也是发送记录里的 email_id）=> 显示名称。
+	 * 先用 groups() 里的名称，其余已注册的邮件用 WooCommerce 里的标题；发送记录和邮件详情数据页都用它。
+	 *
+	 * @return array<string,string>
+	 */
+	public static function names(): array {
 		$emails = WC()->mailer()->get_emails();
 		$names  = array();
 		foreach ( self::groups() as $group ) {
@@ -257,6 +263,12 @@ final class Email_Center {
 		foreach ( $emails as $e ) {
 			$names[ $e->id ] = $names[ $e->id ] ?? wp_strip_all_tags( (string) $e->get_title() );
 		}
+		return $names;
+	}
+
+	private static function render_log(): void {
+		$names = self::names();
+
 		$now = (int) floor( microtime( true ) * 1000 );
 		$d7  = Log::stats( $now - 7 * DAY_IN_SECONDS * 1000 );
 		$d30 = Log::stats( $now - 30 * DAY_IN_SECONDS * 1000 );

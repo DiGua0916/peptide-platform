@@ -17,7 +17,9 @@
 namespace PeptideCore\Admin;
 
 use PeptideCore\Api\Rest_Controller;
+use PeptideCore\Data\Apps;
 use PeptideCore\Data\Conversion;
+use PeptideCore\Data\Emails;
 use PeptideCore\Data\Operations;
 use PeptideCore\Data\Page_Visits;
 use PeptideCore\Data\Products;
@@ -214,6 +216,42 @@ final class Data_Pages {
 						'permission_callback' => $permission,
 					)
 				);
+				// 应用统计页（DATA-01 第 8 步）：每个应用一张卡片，卡片里是它的各项数字，本期、对比期和变化。
+				register_rest_route(
+					Rest_Controller::ROUTE_NAMESPACE,
+					'/data/apps',
+					array(
+						'methods'             => \WP_REST_Server::READABLE,
+						'callback'            => static function ( \WP_REST_Request $request ) {
+							$r = Range::from_params( $request->get_params() );
+							if ( is_wp_error( $r ) ) {
+								return $r;
+							}
+							$res = new \WP_REST_Response( Apps::summary( $r ) );
+							$res->header( 'Cache-Control', 'no-store' );
+							return $res;
+						},
+						'permission_callback' => $permission,
+					)
+				);
+				// 邮件详情数据页（DATA-01 第 8 步）：邮件发送数和成功率（本期、对比期、变化），以及本期每封邮件的发送数和成功率。
+				register_rest_route(
+					Rest_Controller::ROUTE_NAMESPACE,
+					'/data/emails',
+					array(
+						'methods'             => \WP_REST_Server::READABLE,
+						'callback'            => static function ( \WP_REST_Request $request ) {
+							$r = Range::from_params( $request->get_params() );
+							if ( is_wp_error( $r ) ) {
+								return $r;
+							}
+							$res = new \WP_REST_Response( Emails::summary( $r ) );
+							$res->header( 'Cache-Control', 'no-store' );
+							return $res;
+						},
+						'permission_callback' => $permission,
+					)
+				);
 			}
 		);
 	}
@@ -321,6 +359,28 @@ final class Data_Pages {
 			wp_add_inline_script(
 				'peptide-core-data-conversion',
 				'window.pcDataConversion = ' . wp_json_encode( array( 'strings' => self::conversion_strings() ) ) . ';',
+				'before'
+			);
+		}
+
+		// 应用统计页的报表（每个应用一张卡片，各项数字和对比时间段），同样在 data.js 之后加载，用 PcData.register( 'apps', … ) 画进页面。
+		if ( 'apps' === $key ) {
+			wp_enqueue_style( 'peptide-core-data-apps', $url . 'data-apps.css', array( 'peptide-core-data' ), $ver( 'data-apps.css' ) );
+			wp_enqueue_script( 'peptide-core-data-apps', $url . 'data-apps.js', array( self::SCRIPT ), $ver( 'data-apps.js' ), array( 'in_footer' => true ) );
+			wp_add_inline_script(
+				'peptide-core-data-apps',
+				'window.pcDataApps = ' . wp_json_encode( array( 'strings' => self::apps_strings() ) ) . ';',
+				'before'
+			);
+		}
+
+		// 邮件详情数据页的报表（发送数和成功率的合计，每封邮件一行的表格），同样在 data.js 之后加载，用 PcData.register( 'emails', … ) 画进页面。
+		if ( 'emails' === $key ) {
+			wp_enqueue_style( 'peptide-core-data-emails', $url . 'data-emails.css', array( 'peptide-core-data' ), $ver( 'data-emails.css' ) );
+			wp_enqueue_script( 'peptide-core-data-emails', $url . 'data-emails.js', array( self::SCRIPT ), $ver( 'data-emails.js' ), array( 'in_footer' => true ) );
+			wp_add_inline_script(
+				'peptide-core-data-emails',
+				'window.pcDataEmails = ' . wp_json_encode( array( 'strings' => self::emails_strings() ) ) . ';',
 				'before'
 			);
 		}
@@ -563,6 +623,36 @@ final class Data_Pages {
 			'noGroups'       => __( 'No visits or paid orders in this period.', 'peptide-core' ),
 			'trackingOff'    => __( 'Visitor tracking is off, so visitor numbers, conversion and the funnels stay at zero.', 'peptide-core' ),
 			'notYet'         => __( 'Adding an address, choosing shipping and choosing payment are not recorded yet, so those steps are not shown.', 'peptide-core' ),
+		);
+	}
+
+	/** 应用统计页脚本里的文字：离开意图的七个指标名、开关状态、设置链接、没有应用时的提示。 */
+	private static function apps_strings(): array {
+		return array(
+			'shown'        => __( 'Shown', 'peptide-core' ),
+			'claims'       => __( 'Claimed / spun', 'peptide-core' ),
+			'claim_rate'   => __( 'Claim rate', 'peptide-core' ),
+			'wins'         => __( 'Prizes won', 'peptide-core' ),
+			'closed'       => __( 'Times closed', 'peptide-core' ),
+			'orders'       => __( 'Orders placed with the offer', 'peptide-core' ),
+			'order_amount' => __( 'Amount of orders placed with the offer', 'peptide-core' ),
+			'on'           => __( 'On', 'peptide-core' ),
+			'off'          => __( 'Off', 'peptide-core' ),
+			'settings'     => __( 'Settings', 'peptide-core' ),
+			'noApps'       => __( 'No apps are installed.', 'peptide-core' ),
+		);
+	}
+
+	/** 邮件详情数据页脚本里的文字：两个合计、表格的列名、成功率说明、没有统计打开和点击的说明、发送记录链接、空表提示。 */
+	private static function emails_strings(): array {
+		return array(
+			'sent'         => __( 'Send attempts', 'peptide-core' ),
+			'success_rate' => __( 'Delivery success rate', 'peptide-core' ),
+			'name'         => __( 'Email name', 'peptide-core' ),
+			'successHelp'  => __( 'Emails accepted by the mail server / send attempts × 100%', 'peptide-core' ),
+			'notTracked'   => __( 'Opens and clicks are not tracked yet, so those numbers are not shown. The send log keeps 180 days.', 'peptide-core' ),
+			'logLink'      => __( 'View the send log', 'peptide-core' ),
+			'noEmails'     => __( 'No emails were sent in this period.', 'peptide-core' ),
 		);
 	}
 
