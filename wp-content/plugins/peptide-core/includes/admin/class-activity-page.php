@@ -109,7 +109,7 @@ final class Activity_Page {
 							<th scope="col"><?php esc_html_e( 'Module', 'peptide-core' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'Event', 'peptide-core' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'Object', 'peptide-core' ); ?></th>
-							<th scope="col">Trace ID</th>
+							<th scope="col"><?php esc_html_e( 'Trace ID', 'peptide-core' ); ?></th>
 							<th scope="col">IP</th>
 							<th scope="col"><?php esc_html_e( 'Browser', 'peptide-core' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'Device', 'peptide-core' ); ?></th>
@@ -128,7 +128,7 @@ final class Activity_Page {
 								<td data-label="<?php esc_attr_e( 'Module', 'peptide-core' ); ?>"><?php echo esc_html( $modules[ $r['module'] ] ?? (string) $r['module'] ); ?></td>
 								<td data-label="<?php esc_attr_e( 'Event', 'peptide-core' ); ?>"><?php echo esc_html( Activity_Log::event_label( (string) $r['event'], (string) $r['module'] ) ); ?></td>
 								<td data-label="<?php esc_attr_e( 'Object', 'peptide-core' ); ?>" class="pc-media-source"><?php echo '' !== (string) $r['object_label'] ? esc_html( (string) $r['object_label'] ) : '—'; ?></td>
-								<td data-label="Trace ID" class="pc-activity-trace" title="<?php echo esc_attr( (string) $r['trace_id'] ); ?>"><?php echo esc_html( substr( (string) $r['trace_id'], 0, 8 ) ); ?></td>
+								<td data-label="<?php esc_attr_e( 'Trace ID', 'peptide-core' ); ?>" class="pc-activity-trace" title="<?php echo esc_attr( (string) $r['trace_id'] ); ?>"><?php echo esc_html( substr( (string) $r['trace_id'], 0, 8 ) ); ?></td>
 								<td data-label="IP"><?php echo esc_html( (string) $r['ip'] ); ?></td>
 								<td data-label="<?php esc_attr_e( 'Browser', 'peptide-core' ); ?>"><?php echo esc_html( (string) $r['browser'] ); ?></td>
 								<td data-label="<?php esc_attr_e( 'Device', 'peptide-core' ); ?>"><?php echo esc_html( (string) $r['device'] ); ?></td>
@@ -183,7 +183,7 @@ final class Activity_Page {
 				<?php foreach ( is_array( $details ) ? $details : array() as $k => $v ) : ?>
 					<dt><?php echo esc_html( $keys[ $k ] ?? (string) $k ); ?></dt><dd><?php echo esc_html( is_scalar( $v ) ? (string) $v : (string) wp_json_encode( $v, JSON_UNESCAPED_UNICODE ) ); ?></dd>
 				<?php endforeach; ?>
-				<dt>Trace ID</dt><dd><code><?php echo esc_html( (string) $r['trace_id'] ); ?></code></dd>
+				<dt><?php esc_html_e( 'Trace ID', 'peptide-core' ); ?></dt><dd><code><?php echo esc_html( (string) $r['trace_id'] ); ?></code></dd>
 				<dt>IP</dt><dd><?php echo esc_html( (string) $r['ip'] ); ?></dd>
 				<dt><?php esc_html_e( 'Browser', 'peptide-core' ); ?></dt><dd><?php echo esc_html( $r['browser'] . ' · ' . $r['device'] ); ?></dd>
 			</dl>

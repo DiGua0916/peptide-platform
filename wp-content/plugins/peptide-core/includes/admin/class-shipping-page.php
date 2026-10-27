@@ -128,7 +128,7 @@ final class Shipping_Page {
 		$blocked = array_diff( array_keys( $used ), $ship );
 		if ( $blocked ) {
 			/* translators: 1: number of countries, 2: allowed countries */
-			echo '<div class="notice notice-warning inline"><p>' . esc_html( sprintf( __( '%1$d countries in your plans cannot be chosen at checkout, because the store only sells to: %2$s.', 'peptide-core' ), count( $blocked ), implode( ', ', array_slice( $ship, 0, 10 ) ) . ( count( $ship ) > 10 ? '…' : '' ) ) ) . ' <a href="' . esc_url( admin_url( 'admin.php?page=wc-settings&tab=general' ) ) . '">' . esc_html__( 'Selling locations', 'peptide-core' ) . '</a></p></div>';
+			echo '<div class="notice notice-warning inline"><p>' . esc_html( sprintf( __( '%1$d countries in your plans cannot be chosen at checkout, because the store only sells to: %2$s.', 'peptide-core' ), count( $blocked ), implode( ', ', array_slice( $ship, 0, 10 ) ) . ( count( $ship ) > 10 ? '…' : '' ) ) ) . ' ' . ( current_user_can( 'manage_options' ) ? '<a href="' . esc_url( admin_url( 'admin.php?page=wc-settings&tab=general' ) ) . '">' . esc_html__( 'Selling locations', 'peptide-core' ) . '</a>' : esc_html__( 'Selling locations are set by the administrator.', 'peptide-core' ) ) . '</p></div>';
 		}
 	}
 

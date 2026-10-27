@@ -179,6 +179,8 @@ $ok( 'a staff account is created with only the ticked menus', is_int( $sid ) && 
 $ok( 'ticked menu gives its abilities; others are not given', $staff->has_cap( 'edit_products' ) && $staff->has_cap( 'upload_files' ) && ! $staff->has_cap( 'manage_woocommerce' ) && ! $staff->has_cap( 'edit_posts' ) && ! $staff->has_cap( 'manage_options' ) );
 $ok( 'admin pages map to menus', 'products' === Staff::module_for( 'edit.php', '', 'product' ) && 'products' === Staff::module_for( 'edit-tags.php', '', '', 'pa_strength' ) && 'blog' === Staff::module_for( 'edit.php' ) && 'design' === Staff::module_for( 'admin.php', 'pc-store-design-seo' ) && 'data' === Staff::module_for( 'admin.php', 'pc-visitors-archive' ) && 'customers' === Staff::module_for( 'admin.php', 'wc-admin', '', '', '/customers' ) && 'backend' === Staff::module_for( 'admin.php', 'pc-activity' ) && null === Staff::module_for( 'admin.php', 'pc-staff' ) && null === Staff::module_for( 'users.php' ) && 'always' === Staff::module_for( 'profile.php' ) );
 $ok( 'menu slugs map the same way', 'data' === Staff::module_for_url( 'wc-admin&path=/analytics/overview' ) && 'settings' === Staff::module_for_url( 'admin.php?page=wc-settings&page=pc-shipping' ) && null === Staff::module_for_url( admin_url() ) );
+$ok( 'platform pages belong to no menu: system status, WooCommerce general/advanced, WooCommerce home and marketplace', null === Staff::module_for( 'admin.php', 'wc-status' ) && null === Staff::module_for( 'admin.php', 'pc-settings' ) && null === Staff::module_for( 'admin.php', 'wc-settings' ) && null === Staff::module_for( 'admin.php', 'wc-settings', '', '', '', 'advanced' ) && null === Staff::module_for_url( 'admin.php?page=wc-settings&tab=general' ) && null === Staff::module_for( 'admin.php', 'wc-admin' ) && null === Staff::module_for( 'admin.php', 'wc-admin', '', '', '/extensions' ) );
+$ok( 'store tabs of WooCommerce settings stay under Store settings (shipping, tax, payments, email)', 'settings' === Staff::module_for_url( 'admin.php?page=wc-settings&tab=checkout&from=PAYMENTS_MENU_ITEM' ) && 'settings' === Staff::module_for_url( 'admin.php?page=wc-settings&tab=email&section=wc_email_new_order' ) && 'settings' === Staff::module_for( 'admin.php', 'wc-settings', '', '', '', 'tax' ) && 'settings' === Staff::module_for_url( 'wc-admin&path=/payments/overview' ) );
 
 $cookies = static function ( int $uid ): array {
 	$exp = time() + HOUR_IN_SECONDS;
@@ -207,6 +209,17 @@ Staff::flush_cache();
 $ok( 'with “Admin settings” they can manage all media and see the activity log', user_can( $sid, 'delete_post', $other_media ) && user_can( $sid, Activity_Log::CAP ) );
 $perm = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . Activity_Log::table() . " WHERE object_id = %d AND module = 'staff' AND event = 'permissions'", $sid ), ARRAY_A ); // phpcs:ignore WordPress.DB
 $ok( 'permission changes are written to the activity log with before / after', $perm && str_contains( (string) $perm['details'], 'from' ) && str_contains( (string) $perm['details'], 'to' ) );
+
+// 勾了“店铺设置”的销售：店铺用到的 WooCommerce 设置标签能打开，平台页面（系统状态、常规、高级）不能。
+Staff_Page::save( $sid, array( 'email' => 'pc-smoke-staff@example.com', 'name' => 'Smoke Staff', 'modules' => array( 'products', 'backend', 'settings', 'customers' ) ) );
+Staff::flush_cache();
+$code = static fn( string $p ): int => (int) wp_remote_retrieve_response_code( $http( admin_url( $p ), array( 'cookies' => $cookies( $sid ) ) ) );
+$tax  = $http( admin_url( 'admin.php?page=wc-settings&tab=tax' ), array( 'cookies' => $cookies( $sid ) ) );
+$ok( 'with “Store settings” the tax tab opens and its tab bar has no platform tabs (real request)', 200 === (int) wp_remote_retrieve_response_code( $tax ) && ! str_contains( (string) wp_remote_retrieve_body( $tax ), 'tab=advanced' ) && ! str_contains( (string) wp_remote_retrieve_body( $tax ), 'tab=general' ) );
+$ok( 'platform pages are refused even with “Store settings”: system status, WooCommerce general and advanced (403)', 403 === $code( 'admin.php?page=wc-status' ) && 403 === $code( 'admin.php?page=wc-settings' ) && 403 === $code( 'admin.php?page=wc-settings&tab=advanced' ) && 403 === $code( 'admin.php?page=wc-admin' ) );
+$ok( 'WooCommerce pages of ticked menus still open: customers, payments (200)', 200 === $code( 'admin.php?page=wc-admin&path=/customers' ) && 200 === $code( 'admin.php?page=wc-settings&tab=checkout&from=PAYMENTS_MENU_ITEM' ) );
+Staff_Page::save( $sid, array( 'email' => 'pc-smoke-staff@example.com', 'name' => 'Smoke Staff', 'modules' => array( 'products', 'backend' ) ) );
+Staff::flush_cache();
 
 Staff::set_disabled( $sid, true );
 Staff::flush_cache();

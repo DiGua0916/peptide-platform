@@ -2,7 +2,7 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.26.0\n"
+"Project-Id-Version: Peptide Core 0.27.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -11,7 +11,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-27T19:29:30+00:00\n"
+"POT-Creation-Date: 2026-10-27T19:41:47+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -142,6 +142,12 @@ msgstr "事件"
 #: includes/admin/class-activity-page.php:182
 msgid "Object"
 msgstr "对象"
+
+#: includes/admin/class-activity-page.php:112
+#: includes/admin/class-activity-page.php:131
+#: includes/admin/class-activity-page.php:186
+msgid "Trace ID"
+msgstr "追踪 ID"
 
 #: includes/admin/class-activity-page.php:114
 #: includes/admin/class-activity-page.php:133
@@ -492,7 +498,7 @@ msgstr "基础配置"
 #: includes/admin/class-batch-metabox.php:77
 #: includes/admin/class-batch-orders.php:66
 #: includes/admin/class-blog-admin.php:198
-#: includes/admin/class-list-columns.php:35
+#: includes/admin/class-list-columns.php:44
 #: includes/admin/class-marketing.php:262
 #: includes/admin/class-plans-editor.php:84
 #: includes/admin/class-staff-page.php:232
@@ -532,7 +538,7 @@ msgid "Popup content"
 msgstr "弹窗内容"
 
 #: includes/admin/class-apps-page.php:161
-#: includes/admin/class-list-columns.php:74
+#: includes/admin/class-list-columns.php:83
 #: includes/admin/class-terms-page.php:98
 #: includes/modules/class-registry.php:110
 #: includes/modules/class-registry.php:291
@@ -1184,8 +1190,8 @@ msgstr "前台访问是否强制注册 / 登录"
 
 #: includes/admin/class-basic-config-page.php:236
 #: includes/admin/class-coupons-page.php:222
-#: includes/admin/class-list-columns.php:62
-#: includes/admin/class-list-columns.php:109
+#: includes/admin/class-list-columns.php:71
+#: includes/admin/class-list-columns.php:118
 #: includes/admin/class-shipping-discounts-page.php:119
 #: includes/admin/class-tax-page.php:70
 msgid "Yes"
@@ -1542,7 +1548,7 @@ msgid "Test reports"
 msgstr "检测报告"
 
 #: includes/admin/class-batch-metabox.php:49
-#: includes/admin/class-list-columns.php:32
+#: includes/admin/class-list-columns.php:41
 #: includes/admin/class-report-metabox.php:97
 msgid "Batch number"
 msgstr "批次号"
@@ -1552,7 +1558,7 @@ msgid "3–40 characters: letters, digits and hyphens. Stored in upper case and 
 msgstr "3–40 个字符：字母、数字和连字符。保存时统一转为大写，且不能与其他批次重复。"
 
 #: includes/admin/class-batch-metabox.php:56
-#: includes/admin/class-list-columns.php:33
+#: includes/admin/class-list-columns.php:42
 #: includes/admin/class-marketing.php:262
 #: includes/admin/class-overview-page.php:196
 #: includes/admin/class-plans-editor.php:84
@@ -1569,7 +1575,7 @@ msgid "— Select a product —"
 msgstr "— 选择商品 —"
 
 #: includes/admin/class-batch-metabox.php:68
-#: includes/admin/class-list-columns.php:34
+#: includes/admin/class-list-columns.php:43
 msgid "Visibility"
 msgstr "可见性"
 
@@ -1688,8 +1694,8 @@ msgid "Order"
 msgstr "订单"
 
 #: includes/admin/class-batch-orders.php:66
-#: includes/admin/class-list-columns.php:38
-#: includes/admin/class-list-columns.php:81
+#: includes/admin/class-list-columns.php:47
+#: includes/admin/class-list-columns.php:90
 #: includes/modules/class-registry.php:781
 msgid "Date"
 msgstr "日期"
@@ -3521,40 +3527,45 @@ msgstr "失败"
 msgid "Template \"%s\". Add modules with the + button (Basic blocks). Saving keeps a draft; publishing to the storefront comes in the next step."
 msgstr "模板“%s”。点左上角 + 号添加积木（基础积木）。保存只会存为草稿；“发布到网站”在下一步上线。"
 
-#: includes/admin/class-list-columns.php:36
+#: includes/admin/class-list-columns.php:29
+#: includes/admin/class-recovery-page.php:164
+msgid "Order status"
+msgstr "订单状态"
+
+#: includes/admin/class-list-columns.php:45
 msgid "Reports"
 msgstr "报告"
 
-#: includes/admin/class-list-columns.php:37
-#: includes/admin/class-list-columns.php:80
+#: includes/admin/class-list-columns.php:46
+#: includes/admin/class-list-columns.php:89
 msgid "Demo"
 msgstr "演示"
 
-#: includes/admin/class-list-columns.php:75
+#: includes/admin/class-list-columns.php:84
 #: includes/admin/class-order-metabox.php:56
 #: includes/admin/class-report-metabox.php:84
 #: includes/class-post-types.php:40
 msgid "Batch"
 msgstr "批次"
 
-#: includes/admin/class-list-columns.php:76
+#: includes/admin/class-list-columns.php:85
 #: includes/admin/class-media-page.php:397
 #: includes/admin/class-media-page.php:445
 #: includes/admin/class-report-metabox.php:109
 msgid "Type"
 msgstr "类型"
 
-#: includes/admin/class-list-columns.php:77
+#: includes/admin/class-list-columns.php:86
 #: includes/admin/class-report-metabox.php:113
 msgid "Version"
 msgstr "版本"
 
-#: includes/admin/class-list-columns.php:78
+#: includes/admin/class-list-columns.php:87
 #: includes/admin/class-report-metabox.php:122
 msgid "Report status"
 msgstr "报告状态"
 
-#: includes/admin/class-list-columns.php:79
+#: includes/admin/class-list-columns.php:88
 msgid "Access"
 msgstr "访问级别"
 
@@ -5701,10 +5712,6 @@ msgid "Transaction ID"
 msgstr "流水号"
 
 #: includes/admin/class-recovery-page.php:164
-msgid "Order status"
-msgstr "订单状态"
-
-#: includes/admin/class-recovery-page.php:164
 msgid "Recall status"
 msgstr "召回状态"
 
@@ -6375,6 +6382,11 @@ msgstr "方案里有 %1$d 个国家在结账时无法选择，因为店铺只销
 msgid "Selling locations"
 msgstr "销售地区"
 
+#. translators: 1: number of countries, 2: allowed countries
+#: includes/admin/class-shipping-page.php:131
+msgid "Selling locations are set by the administrator."
+msgstr "销售国家由管理员设置。"
+
 #. translators: %d: number of countries
 #: includes/admin/class-shipping-page.php:137
 #, php-format
@@ -6480,7 +6492,7 @@ msgid "The password needs at least %d characters."
 msgstr "密码至少要 %d 位。"
 
 #: includes/admin/class-staff-page.php:97
-#: includes/class-hq-connector.php:580
+#: includes/class-hq-connector.php:581
 msgid "This account is not a staff account."
 msgstr "这个账号不是员工账号。"
 
@@ -8837,15 +8849,19 @@ msgstr "发货前请先指定批次：%s。（可以在 VialCove 设置里关闭
 msgid "This staff account is disabled. Contact the store owner."
 msgstr "这个员工账号已停用，请联系店主。"
 
-#: includes/class-staff.php:378
-msgid "Your staff account does not have permission for this page. Ask the store owner to tick it under Store settings → Staff."
-msgstr "你的员工账号没有这个页面的权限。请店主在“店铺设置 → 员工管理”里给你勾选。"
+#: includes/class-staff.php:390
+msgid "This page is not part of the store admin. It is managed by the administrator."
+msgstr "这个页面不属于店铺后台，由管理员管理。"
 
-#: includes/class-staff.php:378
+#: includes/class-staff.php:391
+msgid "Your account does not have permission for this menu. Ask the administrator to allow it for your account."
+msgstr "你的账号没有这个菜单的权限，请联系管理员为你的账号开通。"
+
+#: includes/class-staff.php:393
 msgid "Go to a page you can use"
 msgstr "去你能用的页面"
 
-#: includes/class-staff.php:379
+#: includes/class-staff.php:394
 msgid "No permission"
 msgstr "没有权限"
 

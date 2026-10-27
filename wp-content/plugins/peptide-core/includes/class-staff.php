@@ -261,10 +261,20 @@ final class Staff {
 		return 'always' === $module || ( null !== $module && in_array( $module, self::granted( $user_id ), true ) );
 	}
 
+	/** 店铺后台用到的 WooCommerce 设置标签（物流、税费、支付、邮件）；其余标签和系统状态是平台设置，只从总后台打开。 */
+	public const STORE_TABS = array( 'shipping', 'tax', 'checkout', 'email' );
+
+	/** 代表整个页面的菜单项 => 用到这个页面的菜单（见 filter_menu()）。 */
+	private const ACCESS_ITEMS = array(
+		'wc-settings' => array( 'settings' ),
+		'wc-admin'    => array( 'customers', 'data', 'settings' ),
+	);
+
 	/**
 	 * 一个后台地址属于哪个模块：always = 都能用，null = 不属于任何模块（员工不能打开）。
+	 * $tab 是 WooCommerce 设置的标签（空 = 常规）。
 	 */
-	public static function module_for( string $file, string $page = '', string $post_type = '', string $taxonomy = '', string $path = '' ): ?string {
+	public static function module_for( string $file, string $page = '', string $post_type = '', string $taxonomy = '', string $path = '', string $tab = '' ): ?string {
 		if ( in_array( $file, self::ALWAYS, true ) ) {
 			return 'always';
 		}
@@ -283,9 +293,6 @@ final class Staff {
 				'pc-shipping'           => 'settings',
 				'pc-tax'                => 'settings',
 				'pc-system'             => 'settings',
-				'pc-settings'           => 'settings',
-				'wc-settings'           => 'settings',
-				'wc-status'             => 'settings',
 				'pc-media'              => 'backend',
 				'pc-activity'           => 'backend',
 				'pc-apps'               => 'apps',
@@ -294,8 +301,18 @@ final class Staff {
 				'product_importer'      => 'products',
 				'product_exporter'      => 'products',
 			);
+			if ( 'wc-settings' === $page ) {
+				return in_array( $tab, self::STORE_TABS, true ) ? 'settings' : null;
+			}
+			// WooCommerce 首页、扩展市场、它自己的设置等其他 wc-admin 页面不属于店铺后台。
 			if ( 'wc-admin' === $page ) {
-				return str_starts_with( $path, '/customers' ) ? 'customers' : 'data';
+				if ( str_starts_with( $path, '/customers' ) ) {
+					return 'customers';
+				}
+				if ( str_starts_with( $path, '/analytics' ) ) {
+					return 'data';
+				}
+				return str_starts_with( $path, '/payments' ) ? 'settings' : null;
 			}
 			// 前缀相同的子页面（例如 pc-store-design-seo、pc-visitors-archive）属于同一个模块；最长的前缀优先。
 			$best = null;
@@ -358,7 +375,7 @@ final class Staff {
 		if ( 'post.php' === wp_basename( $path ) && ! empty( $args['post'] ) ) {
 			$post_type = (string) get_post_type( (int) $args['post'] );
 		}
-		return self::module_for( wp_basename( $path ), (string) ( $args['page'] ?? '' ), $post_type, (string) ( $args['taxonomy'] ?? '' ), (string) ( $args['path'] ?? '' ) );
+		return self::module_for( wp_basename( $path ), (string) ( $args['page'] ?? '' ), $post_type, (string) ( $args['taxonomy'] ?? '' ), (string) ( $args['path'] ?? '' ), sanitize_key( (string) ( $args['tab'] ?? '' ) ) );
 	}
 
 	/** 打开后台页面时检查：员工没勾这个模块就拒绝。 */
@@ -370,12 +387,16 @@ final class Staff {
 		global $pagenow, $plugin_page;
 		$page   = (string) ( $plugin_page ?? '' );
 		$path   = isset( $_GET['path'] ) ? sanitize_text_field( wp_unslash( $_GET['path'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$module = self::module_for( (string) $pagenow, $page, (string) $screen->post_type, (string) $screen->taxonomy, $path );
+		$tab    = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$module = self::module_for( (string) $pagenow, $page, (string) $screen->post_type, (string) $screen->taxonomy, $path, $tab );
 		if ( self::allowed( $id, $module ) ) {
 			return;
 		}
+		$why = null === $module
+			? __( 'This page is not part of the store admin. It is managed by the administrator.', 'peptide-core' )
+			: __( 'Your account does not have permission for this menu. Ask the administrator to allow it for your account.', 'peptide-core' );
 		wp_die(
-			'<p>' . esc_html__( 'Your staff account does not have permission for this page. Ask the store owner to tick it under Store settings → Staff.', 'peptide-core' ) . '</p><p><a href="' . esc_url( self::home_url( $id ) ) . '">' . esc_html__( 'Go to a page you can use', 'peptide-core' ) . '</a></p>',
+			'<p>' . esc_html( $why ) . '</p><p><a href="' . esc_url( self::home_url( $id ) ) . '">' . esc_html__( 'Go to a page you can use', 'peptide-core' ) . '</a></p>',
 			esc_html__( 'No permission', 'peptide-core' ),
 			array( 'response' => 403 )
 		);
@@ -392,6 +413,14 @@ final class Staff {
 			foreach ( (array) $items as $i => $item ) {
 				$slug = (string) ( $item[2] ?? '' );
 				$url  = str_contains( $slug, '.php' ) ? $slug : ( str_contains( (string) $parent, '.php' ) ? $parent . ( str_contains( (string) $parent, '?' ) ? '&' : '?' ) . 'page=' . $slug : $slug );
+				// WooCommerce 设置和 wc-admin 在菜单里各有一项不带标签、路径的（菜单本身不显示）：WordPress 靠它判断这个页面能不能打开，
+				// 各个标签和路径再由 gate() 分。用到它们的菜单勾了一个就留着。
+				if ( isset( self::ACCESS_ITEMS[ $slug ] ) ) {
+					if ( ! array_intersect( self::ACCESS_ITEMS[ $slug ], self::granted( $id ) ) ) {
+						unset( $submenu[ $parent ][ $i ] ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+					}
+					continue;
+				}
 				if ( ! self::allowed( $id, self::module_for_url( $url ) ) ) {
 					unset( $submenu[ $parent ][ $i ] ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 				}

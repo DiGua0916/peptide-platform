@@ -293,6 +293,10 @@ final class Admin_Menus {
 		if ( ! is_array( $tabs ) || 'wc-settings' !== self::current_page() ) {
 			return $tabs;
 		}
+		// 销售只看到店铺后台用到的标签（常规、高级等平台设置在总后台）。
+		if ( \PeptideCore\Staff::is_staff( get_current_user_id() ) ) {
+			$tabs = array_intersect_key( $tabs, array_flip( \PeptideCore\Staff::STORE_TABS ) );
+		}
 		return array_diff_key( $tabs, array_flip( self::HIDDEN_TABS ) );
 	}
 

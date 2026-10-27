@@ -1,6 +1,6 @@
 <?php
 /**
- * 批次、报告后台列表的附加列。
+ * 批次、报告后台列表的附加列；订单列表里没有翻译的列名。
  *
  * @package PeptideCore
  */
@@ -20,6 +20,16 @@ final class List_Columns {
 		add_action( 'manage_' . Post_Types::BATCH . '_posts_custom_column', array( self::class, 'render_batch_column' ), 10, 2 );
 		add_filter( 'manage_' . Post_Types::REPORT . '_posts_columns', array( self::class, 'report_columns' ) );
 		add_action( 'manage_' . Post_Types::REPORT . '_posts_custom_column', array( self::class, 'render_report_column' ), 10, 2 );
+		add_filter( 'manage_woocommerce_page_wc-orders_columns', array( self::class, 'order_columns' ), 20 );
+		add_filter( 'manage_edit-shop_order_columns', array( self::class, 'order_columns' ), 20 );
+	}
+
+	/** WooCommerce 的发货功能把订单列表的状态列名写死成英文“Order Status”（没有翻译），换成可以翻译的。 */
+	public static function order_columns( $columns ) {
+		if ( is_array( $columns ) && 'Order Status' === ( $columns['order_status'] ?? '' ) ) {
+			$columns['order_status'] = __( 'Order status', 'peptide-core' );
+		}
+		return $columns;
 	}
 
 	/**
