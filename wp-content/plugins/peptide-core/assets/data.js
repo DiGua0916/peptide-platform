@@ -8,6 +8,8 @@
  * range 就是接口返回的时间段（from / to / compare_from / compare_to 时间戳、days、bucket、dates）；
  * 数字自己用 ctx.api( '/peptide/v1/data/…', { from: range.from, … } ) 去取。切换时间段时会再调用一次。
  * 没有注册报表的页面显示“正在开发中”。
+ * 页面可以不要时间段工具栏（实时数据页）：pcData.showRange 为 false 时只画标题、时区说明和报表，
+ * 不读地址栏里的时间段，直接画报表；没有这个键时和以前一样（有工具栏）。
  */
 ( function ( wp, cfg ) {
 	'use strict';
@@ -17,6 +19,8 @@
 		return;
 	}
 	var S = cfg.strings;
+	// 没有 showRange 这个键就是要工具栏（其他数据页不变）；只有明确是 false（实时数据页）才不要。
+	var showRange = cfg.showRange !== false;
 	var PRESETS = [ 'today', 'yesterday', '7d', '30d' ];
 	var RANGE_PATH = '/peptide/v1/data/range';
 	var URL_KEYS = [ 'range', 'from', 'to', 'compare_from', 'compare_to' ];
@@ -74,35 +78,44 @@
 	}
 
 	function frame() {
-		var presets = PRESETS.map( function ( p ) {
-			return '<button type="button" class="button pc-data-preset" data-preset="' + esc( p ) + '" aria-pressed="false">' + esc( S[ p ] ) + '</button>';
-		} ).join( '' );
+		var toolbar = '';
+		if ( showRange ) {
+			var presets = PRESETS.map( function ( p ) {
+				return '<button type="button" class="button pc-data-preset" data-preset="' + esc( p ) + '" aria-pressed="false">' + esc( S[ p ] ) + '</button>';
+			} ).join( '' );
+			toolbar =
+				'<div class="pc-data-toolbar">' +
+					'<div class="pc-data-group pc-data-presets" role="group">' + presets + '</div>' +
+					'<div class="pc-data-group pc-data-custom" role="group" aria-label="' + esc( S.custom ) + '">' +
+						'<span class="pc-data-label">' + esc( S.custom ) + '</span>' +
+						dateInput( 'pc-data-from', S.startDate ) + '<span class="pc-data-dash">–</span>' + dateInput( 'pc-data-to', S.endDate ) +
+					'</div>' +
+					'<div class="pc-data-group pc-data-compare" role="group" aria-label="' + esc( S.compareWith ) + '">' +
+						'<span class="pc-data-vs">' + esc( S.vs ) + '</span>' +
+						dateInput( 'pc-data-cfrom', S.compareWith + ': ' + S.startDate ) + '<span class="pc-data-dash">–</span>' + dateInput( 'pc-data-cto', S.compareWith + ': ' + S.endDate ) +
+					'</div>' +
+					'<button type="button" class="button button-primary pc-data-apply">' + esc( S.apply ) + '</button>' +
+				'</div>';
+		}
 		root.innerHTML =
 			'<h1 class="pc-data-title">' + esc( cfg.title ) + '</h1>' +
-			'<div class="pc-data-toolbar">' +
-				'<div class="pc-data-group pc-data-presets" role="group">' + presets + '</div>' +
-				'<div class="pc-data-group pc-data-custom" role="group" aria-label="' + esc( S.custom ) + '">' +
-					'<span class="pc-data-label">' + esc( S.custom ) + '</span>' +
-					dateInput( 'pc-data-from', S.startDate ) + '<span class="pc-data-dash">–</span>' + dateInput( 'pc-data-to', S.endDate ) +
-				'</div>' +
-				'<div class="pc-data-group pc-data-compare" role="group" aria-label="' + esc( S.compareWith ) + '">' +
-					'<span class="pc-data-vs">' + esc( S.vs ) + '</span>' +
-					dateInput( 'pc-data-cfrom', S.compareWith + ': ' + S.startDate ) + '<span class="pc-data-dash">–</span>' + dateInput( 'pc-data-cto', S.compareWith + ': ' + S.endDate ) +
-				'</div>' +
-				'<button type="button" class="button button-primary pc-data-apply">' + esc( S.apply ) + '</button>' +
-			'</div>' +
+			toolbar +
 			'<p class="pc-data-muted pc-data-tz">' + esc( S.storeTime + ': ' + cfg.timezone ) + '</p>' +
 			'<p class="pc-data-error" role="alert" hidden></p>' +
 			'<div class="pc-data-body"></div>';
 
+		els.error = root.querySelector( '.pc-data-error' );
+		els.body = root.querySelector( '.pc-data-body' );
+		if ( ! showRange ) {
+			// 没有工具栏：没有预设按钮、日期框和“应用”，也就没有要绑定的事件。
+			return;
+		}
 		els.presets = root.querySelectorAll( '.pc-data-preset' );
 		els.from = root.querySelector( '.pc-data-from' );
 		els.to = root.querySelector( '.pc-data-to' );
 		els.cfrom = root.querySelector( '.pc-data-cfrom' );
 		els.cto = root.querySelector( '.pc-data-cto' );
 		els.apply = root.querySelector( '.pc-data-apply' );
-		els.error = root.querySelector( '.pc-data-error' );
-		els.body = root.querySelector( '.pc-data-body' );
 
 		each( els.presets, function ( b ) {
 			b.addEventListener( 'click', function () {
@@ -114,6 +127,9 @@
 
 	// 日期框和预设按钮跟着当前时间段走。
 	function sync() {
+		if ( ! showRange ) {
+			return;
+		}
 		var d = state.dates;
 		els.from.value = d.from;
 		els.to.value = d.to;
@@ -132,6 +148,9 @@
 
 	function setBusy( on ) {
 		busy = on;
+		if ( ! showRange ) {
+			return;
+		}
 		each( els.presets, function ( b ) {
 			b.disabled = on;
 		} );
@@ -249,7 +268,8 @@
 	function start() {
 		frame();
 		sync();
-		var wanted = paramsFromUrl();
+		// 没有工具栏的页面不读地址栏里的时间段（也没有地方显示它）。
+		var wanted = showRange ? paramsFromUrl() : null;
 		if ( wanted ) {
 			load( wanted, true );
 		} else {
