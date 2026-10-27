@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-27T19:14:03+00:00\n"
+"POT-Creation-Date: 2026-10-27T19:33:51+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -225,7 +225,7 @@ msgid "not usable now"
 msgstr ""
 
 #: includes/admin/class-apps-page.php:134
-#: includes/admin/class-data-pages.php:331
+#: includes/admin/class-data-pages.php:350
 #: includes/admin/class-overview-page.php:165
 msgid "Last 30 days"
 msgstr ""
@@ -1329,7 +1329,7 @@ msgid "3–40 characters: letters, digits and hyphens. Stored in upper case and 
 msgstr ""
 
 #: includes/admin/class-batch-metabox.php:56
-#: includes/admin/class-data-pages.php:445
+#: includes/admin/class-data-pages.php:492
 #: includes/admin/class-list-columns.php:33
 #: includes/admin/class-marketing.php:262
 #: includes/admin/class-overview-page.php:196
@@ -1986,95 +1986,95 @@ msgstr ""
 msgid "View all %d"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:60
+#: includes/admin/class-data-pages.php:61
 #: includes/admin/class-overview-page.php:55
 msgid "Sorry, you are not allowed to view store data."
 msgstr ""
 
-#: includes/admin/class-data-pages.php:210
+#: includes/admin/class-data-pages.php:229
 msgid "Data"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:313
+#: includes/admin/class-data-pages.php:332
 msgid "Real-time data"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:314
+#: includes/admin/class-data-pages.php:333
 msgid "Operations data"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:315
+#: includes/admin/class-data-pages.php:334
 msgid "Product details data"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:316
+#: includes/admin/class-data-pages.php:335
 msgid "Page visit statistics"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:317
+#: includes/admin/class-data-pages.php:336
 msgid "Page product conversion"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:318
+#: includes/admin/class-data-pages.php:337
 msgid "App statistics"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:319
+#: includes/admin/class-data-pages.php:338
 msgid "Landing page conversion"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:320
+#: includes/admin/class-data-pages.php:339
 msgid "Conversion rate details"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:321
+#: includes/admin/class-data-pages.php:340
 msgid "Email details data"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:328
+#: includes/admin/class-data-pages.php:347
 #: includes/admin/class-overview-page.php:162
 msgid "Today"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:329
+#: includes/admin/class-data-pages.php:348
 #: includes/admin/class-overview-page.php:163
 msgid "Yesterday"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:330
+#: includes/admin/class-data-pages.php:349
 #: includes/admin/class-overview-page.php:164
 msgid "Last 7 days"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:332
+#: includes/admin/class-data-pages.php:351
 msgid "Custom range"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:333
+#: includes/admin/class-data-pages.php:352
 msgid "Compare with"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:335
+#: includes/admin/class-data-pages.php:354
 msgid "Start date"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:336
+#: includes/admin/class-data-pages.php:355
 msgid "End date"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:337
+#: includes/admin/class-data-pages.php:356
 #: includes/admin/class-marketing.php:378
 #: includes/admin/class-tracking-page.php:146
 msgid "Apply"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:338
+#: includes/admin/class-data-pages.php:357
 #: includes/admin/class-overview-page.php:131
 msgid "Store time zone"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:339
-#: includes/admin/class-data-pages.php:527
+#: includes/admin/class-data-pages.php:358
+#: includes/admin/class-data-pages.php:574
 #: includes/admin/class-menu-page.php:238
 #: includes/admin/class-overview-page.php:237
 #: includes/admin/class-tracking-page.php:138
@@ -2082,492 +2082,579 @@ msgstr ""
 msgid "Loading…"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:340
+#: includes/admin/class-data-pages.php:359
 msgid "This page is being built. The date range already works; the report will appear here in a later update."
 msgstr ""
 
-#: includes/admin/class-data-pages.php:341
+#: includes/admin/class-data-pages.php:360
 msgid "Check the dates: the start date must be on or before the end date, and a range can cover at most 366 days."
 msgstr ""
 
-#: includes/admin/class-data-pages.php:342
+#: includes/admin/class-data-pages.php:361
 msgid "The data could not be loaded. Try again."
 msgstr ""
 
 #. translators: %s: date and time
-#: includes/admin/class-data-pages.php:350
+#: includes/admin/class-data-pages.php:369
 #, php-format
 msgid "Last updated: %s"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:351
+#: includes/admin/class-data-pages.php:370
 #: includes/admin/class-tracking-page.php:137
 msgid "Refresh"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:352
+#: includes/admin/class-data-pages.php:371
 msgid "Updates every minute while this page is open."
 msgstr ""
 
-#: includes/admin/class-data-pages.php:353
+#: includes/admin/class-data-pages.php:372
 msgid "Real-time visits"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:354
+#: includes/admin/class-data-pages.php:373
 msgid "Real-time sales"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:355
+#: includes/admin/class-data-pages.php:374
 msgid "Real-time buying power"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:356
-#: includes/admin/class-data-pages.php:422
+#: includes/admin/class-data-pages.php:375
+#: includes/admin/class-data-pages.php:441
 #: includes/admin/class-overview-page.php:169
 msgid "Visitor count"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:357
-#: includes/admin/class-data-pages.php:475
+#: includes/admin/class-data-pages.php:376
+#: includes/admin/class-data-pages.php:522
 msgid "Page visits"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:358
-#: includes/admin/class-data-pages.php:396
-#: includes/admin/class-data-pages.php:424
+#: includes/admin/class-data-pages.php:377
+#: includes/admin/class-data-pages.php:415
+#: includes/admin/class-data-pages.php:443
 #: includes/admin/class-overview-page.php:171
 msgid "Order count"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:359
-#: includes/admin/class-data-pages.php:393
-#: includes/admin/class-data-pages.php:425
+#: includes/admin/class-data-pages.php:378
+#: includes/admin/class-data-pages.php:412
+#: includes/admin/class-data-pages.php:444
 #: includes/admin/class-overview-page.php:132
 #: includes/admin/class-overview-page.php:172
 msgid "Sales"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:360
-#: includes/admin/class-data-pages.php:426
+#: includes/admin/class-data-pages.php:379
+#: includes/admin/class-data-pages.php:445
 msgid "Units per order"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:361
-#: includes/admin/class-data-pages.php:398
-#: includes/admin/class-data-pages.php:427
+#: includes/admin/class-data-pages.php:380
+#: includes/admin/class-data-pages.php:417
+#: includes/admin/class-data-pages.php:446
 #: includes/admin/class-overview-page.php:137
 msgid "Average order value"
 msgstr ""
 
 #. translators: %s: today's value
-#: includes/admin/class-data-pages.php:363
+#: includes/admin/class-data-pages.php:382
 #, php-format
 msgid "(Today %s)"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:364
+#: includes/admin/class-data-pages.php:383
 msgid "Last 10 minutes"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:365
+#: includes/admin/class-data-pages.php:384
 msgid "Real-time visitor behaviour"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:366
+#: includes/admin/class-data-pages.php:385
 msgid "Visitors per minute"
 msgstr ""
 
 #. translators: %d: number of minutes
-#: includes/admin/class-data-pages.php:368
+#: includes/admin/class-data-pages.php:387
 #, php-format
 msgid "%d minutes"
 msgstr ""
 
 #. translators: %d: number of minutes
-#: includes/admin/class-data-pages.php:370
+#: includes/admin/class-data-pages.php:389
 #, php-format
 msgid "%d min ago"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:371
+#: includes/admin/class-data-pages.php:390
 msgid "Now"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:372
-#: includes/admin/class-data-pages.php:394
-#: includes/admin/class-data-pages.php:476
-#: includes/admin/class-data-pages.php:499
+#: includes/admin/class-data-pages.php:391
+#: includes/admin/class-data-pages.php:413
+#: includes/admin/class-data-pages.php:523
+#: includes/admin/class-data-pages.php:546
 msgid "Visited users"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:373
-#: includes/admin/class-data-pages.php:405
-#: includes/admin/class-data-pages.php:500
+#: includes/admin/class-data-pages.php:392
+#: includes/admin/class-data-pages.php:424
+#: includes/admin/class-data-pages.php:547
 msgid "Viewed products"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:374
-#: includes/admin/class-data-pages.php:406
-#: includes/admin/class-data-pages.php:501
+#: includes/admin/class-data-pages.php:393
+#: includes/admin/class-data-pages.php:425
+#: includes/admin/class-data-pages.php:548
 msgid "Carted products"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:375
-#: includes/admin/class-data-pages.php:407
-#: includes/admin/class-data-pages.php:502
+#: includes/admin/class-data-pages.php:394
+#: includes/admin/class-data-pages.php:426
+#: includes/admin/class-data-pages.php:549
 msgid "Started checkout"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:376
+#: includes/admin/class-data-pages.php:395
 msgid "Completed payment"
 msgstr ""
 
 #. translators: %s: a percentage, for example 54.72%
-#: includes/admin/class-data-pages.php:378
-#: includes/admin/class-data-pages.php:416
-#: includes/admin/class-data-pages.php:515
+#: includes/admin/class-data-pages.php:397
+#: includes/admin/class-data-pages.php:435
+#: includes/admin/class-data-pages.php:562
 #, php-format
 msgid "Of visitors: %s"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:379
+#: includes/admin/class-data-pages.php:398
 msgid "Most viewed products today"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:380
+#: includes/admin/class-data-pages.php:399
 msgid "Most added to cart today"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:381
+#: includes/admin/class-data-pages.php:400
 msgid "Best sellers today"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:382
+#: includes/admin/class-data-pages.php:401
 msgid "Popular pages today"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:383
+#: includes/admin/class-data-pages.php:402
 msgid "View details"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:384
+#: includes/admin/class-data-pages.php:403
 msgid "No data yet."
 msgstr ""
 
-#: includes/admin/class-data-pages.php:385
+#: includes/admin/class-data-pages.php:404
 msgid "Address, shipping and payment steps, the visitor map, countries, sources and collections need data that is not collected yet."
 msgstr ""
 
-#: includes/admin/class-data-pages.php:386
-#: includes/admin/class-data-pages.php:419
-#: includes/admin/class-data-pages.php:517
+#: includes/admin/class-data-pages.php:405
+#: includes/admin/class-data-pages.php:438
+#: includes/admin/class-data-pages.php:564
 msgid "Visitor tracking is off, so visitor numbers, conversion and the funnels stay at zero."
 msgstr ""
 
-#: includes/admin/class-data-pages.php:395
+#: includes/admin/class-data-pages.php:414
 #: includes/admin/class-overview-page.php:134
 msgid "New sign-ups"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:397
-#: includes/admin/class-data-pages.php:455
-#: includes/admin/class-data-pages.php:496
+#: includes/admin/class-data-pages.php:416
+#: includes/admin/class-data-pages.php:502
+#: includes/admin/class-data-pages.php:543
 msgid "Conversion rate"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:399
+#: includes/admin/class-data-pages.php:418
 msgid "Product units sold"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:400
+#: includes/admin/class-data-pages.php:419
 msgid "Net product sales"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:401
+#: includes/admin/class-data-pages.php:420
 msgid "Refund amount"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:402
+#: includes/admin/class-data-pages.php:421
 msgid "Average visit duration"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:403
+#: includes/admin/class-data-pages.php:422
 msgid "Customer count"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:404
+#: includes/admin/class-data-pages.php:423
 msgid "Mobile users"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:408
-#: includes/admin/class-data-pages.php:498
+#: includes/admin/class-data-pages.php:427
+#: includes/admin/class-data-pages.php:545
 msgid "Paid successfully"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:409
+#: includes/admin/class-data-pages.php:428
 msgid "Visitor conversion rate"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:410
+#: includes/admin/class-data-pages.php:429
 msgid "Returning visitor conversion rate"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:411
+#: includes/admin/class-data-pages.php:430
 msgid "Conversion event"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:412
+#: includes/admin/class-data-pages.php:431
 msgid "This period"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:413
+#: includes/admin/class-data-pages.php:432
 msgid "Previous period"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:414
+#: includes/admin/class-data-pages.php:433
 msgid "Change"
 msgstr ""
 
 #. translators: 1: minutes, 2: seconds
-#: includes/admin/class-data-pages.php:418
+#: includes/admin/class-data-pages.php:437
 #, php-format
 msgid "%1$d min %2$d s"
 msgstr ""
 
 #. translators: %d: number of orders
-#: includes/admin/class-data-pages.php:421
+#: includes/admin/class-data-pages.php:440
 #: includes/admin/class-overview-page.php:205
 #, php-format
 msgid "Only real orders are counted: %d test order(s) in this period (test payment or demo products) are left out."
 msgstr ""
 
-#: includes/admin/class-data-pages.php:423
+#: includes/admin/class-data-pages.php:442
 msgid "PV"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:428
+#: includes/admin/class-data-pages.php:447
 msgid "Repurchase rate"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:429
+#: includes/admin/class-data-pages.php:448
 msgid "Repurchase orders"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:430
+#: includes/admin/class-data-pages.php:449
 msgid "Repurchase sales"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:431
+#: includes/admin/class-data-pages.php:450
 msgid "Repurchase average order value"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:432
+#: includes/admin/class-data-pages.php:451
 msgid "Paid units / paid orders"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:433
+#: includes/admin/class-data-pages.php:452
 msgid "Buyers with more than one purchase / all buyers in the period × 100%"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:434
+#: includes/admin/class-data-pages.php:453
 msgid "Orders from buyers who had bought before; each buyer's first purchase is not a repurchase"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:435
+#: includes/admin/class-data-pages.php:454
 msgid "Repurchase sales / repurchase orders"
 msgstr ""
 
 #. translators: 1: metric name, 2: value
-#: includes/admin/class-data-pages.php:437
+#: includes/admin/class-data-pages.php:456
 #, php-format
 msgid "%1$s: %2$s"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:438
+#: includes/admin/class-data-pages.php:457
 msgid "The trend charts could not be loaded."
 msgstr ""
 
-#: includes/admin/class-data-pages.php:446
-msgid "Product views"
-msgstr ""
-
-#: includes/admin/class-data-pages.php:447
-msgid "Viewing users"
-msgstr ""
-
-#: includes/admin/class-data-pages.php:448
-msgid "Add-to-cart actions"
-msgstr ""
-
-#: includes/admin/class-data-pages.php:449
-msgid "Users who added to cart"
-msgstr ""
-
-#: includes/admin/class-data-pages.php:450
-msgid "Units added to cart"
-msgstr ""
-
-#: includes/admin/class-data-pages.php:451
-msgid "Add-to-cart rate"
-msgstr ""
-
-#: includes/admin/class-data-pages.php:452
-msgid "Paid orders"
-msgstr ""
-
-#: includes/admin/class-data-pages.php:453
-msgid "Paying users"
-msgstr ""
-
-#: includes/admin/class-data-pages.php:454
-msgid "Units paid"
-msgstr ""
-
-#: includes/admin/class-data-pages.php:456
-msgid "Paid amount"
-msgstr ""
-
-#: includes/admin/class-data-pages.php:457
-msgid "Net sales"
-msgstr ""
-
-#: includes/admin/class-data-pages.php:458
-#: includes/modules/class-blocks.php:260
-msgid "Search products"
-msgstr ""
-
-#: includes/admin/class-data-pages.php:459
-msgid "Edit columns"
-msgstr ""
-
 #: includes/admin/class-data-pages.php:460
-msgid "Variation details"
+msgid "Rankings"
 msgstr ""
 
 #: includes/admin/class-data-pages.php:461
-msgid "No product data in this period."
+#: includes/admin/class-terms-page.php:54
+msgid "Name"
 msgstr ""
 
-#. translators: 1: current page number, 2: total number of pages
+#: includes/admin/class-data-pages.php:462
+msgid "View more"
+msgstr ""
+
 #: includes/admin/class-data-pages.php:463
-#: includes/admin/class-data-pages.php:486
-#, php-format
-msgid "Page %1$d of %2$d"
+msgid "Show less"
 msgstr ""
 
 #: includes/admin/class-data-pages.php:464
-#: includes/admin/class-data-pages.php:487
-msgid "Previous"
+#: includes/admin/class-tracking-page.php:158
+msgid "No data in this period."
 msgstr ""
 
 #: includes/admin/class-data-pages.php:465
-#: includes/admin/class-data-pages.php:488
-msgid "Next"
+msgid "The ranking tables could not be loaded."
 msgstr ""
 
-#. translators: %s: a product SKU
-#: includes/admin/class-data-pages.php:467
-#, php-format
-msgid "SKU: %s"
-msgstr ""
-
-#: includes/admin/class-data-pages.php:474
-msgid "Page path"
-msgstr ""
-
-#: includes/admin/class-data-pages.php:477
-msgid "Bounce rate"
-msgstr ""
-
-#: includes/admin/class-data-pages.php:478
-msgid "Bounce rate = users who left after viewing only this page / all users who viewed this page"
-msgstr ""
-
-#: includes/admin/class-data-pages.php:479
-msgid "Open page"
-msgstr ""
-
-#: includes/admin/class-data-pages.php:480
-msgid "Search page paths"
-msgstr ""
-
-#: includes/admin/class-data-pages.php:481
-msgid "Per page"
-msgstr ""
-
-#. translators: %d: number of page paths
-#: includes/admin/class-data-pages.php:483
-#, php-format
-msgid "%d pages in total"
-msgstr ""
-
-#: includes/admin/class-data-pages.php:484
-msgid "No page visits in this period."
-msgstr ""
-
-#: includes/admin/class-data-pages.php:489
-msgid "Page visits come from the visitor tracking script in the browser; without it this page stays empty."
-msgstr ""
-
-#: includes/admin/class-data-pages.php:497
-msgid "Paid successfully / visited users × 100%"
-msgstr ""
-
-#: includes/admin/class-data-pages.php:503
-msgid "Group by"
-msgstr ""
-
-#: includes/admin/class-data-pages.php:504
-#: includes/admin/class-tracking-page.php:108
-#: includes/tracking/class-privacy.php:167
-msgid "Device"
-msgstr ""
-
-#: includes/admin/class-data-pages.php:505
-msgid "Browser"
-msgstr ""
-
-#: includes/admin/class-data-pages.php:506
+#: includes/admin/class-data-pages.php:466
+#: includes/admin/class-data-pages.php:553
 #: includes/admin/class-tracking-page.php:143
 #: includes/modules/class-blocks.php:225
 msgid "Desktop"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:507
+#: includes/admin/class-data-pages.php:467
+#: includes/admin/class-data-pages.php:554
 #: includes/admin/class-tracking-page.php:144
 #: includes/modules/class-blocks.php:226
 msgid "Mobile"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:508
+#: includes/admin/class-data-pages.php:468
+#: includes/admin/class-data-pages.php:555
 #: includes/admin/class-tracking-page.php:145
 msgid "Tablet"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:509
+#: includes/admin/class-data-pages.php:469
+#: includes/admin/class-data-pages.php:556
 #: includes/admin/class-report-metabox.php:67
 msgid "Other"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:510
+#: includes/admin/class-data-pages.php:470
+#: includes/admin/class-data-pages.php:557
 msgid "Unknown"
 msgstr ""
 
-#. translators: %s: the name of a device or browser, for example Mobile
+#: includes/admin/class-data-pages.php:472
+msgid "Best sellers"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:473
+msgid "Top products by sales"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:474
+msgid "Most viewed products"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:475
+msgid "Most added to cart"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:476
+msgid "Product categories by units"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:477
+msgid "Product categories by sales"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:478
+msgid "Order countries"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:479
+msgid "Customer countries"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:480
+msgid "Visitor browsers"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:481
+msgid "Order browsers"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:482
+msgid "Payment methods"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:483
+msgid "Payment success rate"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:484
+msgid "Coupon usage"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:485
+msgid "Devices"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:493
+msgid "Product views"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:494
+msgid "Viewing users"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:495
+msgid "Add-to-cart actions"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:496
+msgid "Users who added to cart"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:497
+msgid "Units added to cart"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:498
+msgid "Add-to-cart rate"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:499
+msgid "Paid orders"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:500
+msgid "Paying users"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:501
+msgid "Units paid"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:503
+msgid "Paid amount"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:504
+msgid "Net sales"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:505
+#: includes/modules/class-blocks.php:260
+msgid "Search products"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:506
+msgid "Edit columns"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:507
+msgid "Variation details"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:508
+msgid "No product data in this period."
+msgstr ""
+
+#. translators: 1: current page number, 2: total number of pages
+#: includes/admin/class-data-pages.php:510
+#: includes/admin/class-data-pages.php:533
+#, php-format
+msgid "Page %1$d of %2$d"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:511
+#: includes/admin/class-data-pages.php:534
+msgid "Previous"
+msgstr ""
+
 #: includes/admin/class-data-pages.php:512
+#: includes/admin/class-data-pages.php:535
+msgid "Next"
+msgstr ""
+
+#. translators: %s: a product SKU
+#: includes/admin/class-data-pages.php:514
+#, php-format
+msgid "SKU: %s"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:521
+msgid "Page path"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:524
+msgid "Bounce rate"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:525
+msgid "Bounce rate = users who left after viewing only this page / all users who viewed this page"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:526
+msgid "Open page"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:527
+msgid "Search page paths"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:528
+msgid "Per page"
+msgstr ""
+
+#. translators: %d: number of page paths
+#: includes/admin/class-data-pages.php:530
+#, php-format
+msgid "%d pages in total"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:531
+msgid "No page visits in this period."
+msgstr ""
+
+#: includes/admin/class-data-pages.php:536
+msgid "Page visits come from the visitor tracking script in the browser; without it this page stays empty."
+msgstr ""
+
+#: includes/admin/class-data-pages.php:544
+msgid "Paid successfully / visited users × 100%"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:550
+msgid "Group by"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:551
+#: includes/admin/class-tracking-page.php:108
+#: includes/tracking/class-privacy.php:167
+msgid "Device"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:552
+msgid "Browser"
+msgstr ""
+
+#. translators: %s: the name of a device or browser, for example Mobile
+#: includes/admin/class-data-pages.php:559
 #, php-format
 msgid "%s visitor conversion rate:"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:513
+#: includes/admin/class-data-pages.php:560
 msgid "Sales:"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:516
+#: includes/admin/class-data-pages.php:563
 msgid "No visits or paid orders in this period."
 msgstr ""
 
-#: includes/admin/class-data-pages.php:518
+#: includes/admin/class-data-pages.php:565
 msgid "Adding an address, choosing shipping and choosing payment are not recorded yet, so those steps are not shown."
 msgstr ""
 
@@ -6350,10 +6437,6 @@ msgstr ""
 msgid "Enter the term name"
 msgstr ""
 
-#: includes/admin/class-terms-page.php:54
-msgid "Name"
-msgstr ""
-
 #: includes/admin/class-terms-page.php:55
 #: includes/modules/class-registry.php:39
 #: includes/modules/class-registry.php:824
@@ -6630,10 +6713,6 @@ msgstr ""
 #: includes/admin/class-tracking-page.php:157
 #: includes/class-topics.php:187
 msgid "Views"
-msgstr ""
-
-#: includes/admin/class-tracking-page.php:158
-msgid "No data in this period."
 msgstr ""
 
 #: includes/admin/class-tracking-page.php:159
