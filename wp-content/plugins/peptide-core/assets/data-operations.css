@@ -161,7 +161,128 @@
 	font-weight: 400;
 }
 
+/* 九张趋势图（第 7a 步）：每行放得下几张就放几张，900px 以下一列；图是 SVG，随卡片宽度缩放，页面不出现横向滚动条。 */
+.pc-ops-trends {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+	gap: 16px;
+	margin-top: 16px;
+}
+
+.pc-ops-trends > .pc-data-empty {
+	grid-column: 1 / -1;
+}
+
+.pc-ops-trend {
+	min-width: 0;
+	padding: 16px;
+	border: 1px solid #dcdcde;
+	background: #fff;
+}
+
+.pc-ops-trend__title {
+	margin: 0 0 8px;
+	padding: 0;
+	font-size: 14px;
+	font-weight: 600;
+	line-height: 1.4;
+}
+
+.pc-ops-help {
+	color: #646970;
+	cursor: help;
+	font-weight: 400;
+}
+
+.pc-ops-trend__total {
+	font-size: 18px;
+	font-weight: 700;
+	line-height: 1.4;
+	overflow-wrap: anywhere;
+}
+
+.pc-ops-trend__sub {
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.pc-ops-chart {
+	display: block;
+	width: 100%;
+	height: auto;
+	margin-top: 8px;
+}
+
+.pc-ops-chart text {
+	fill: #646970;
+	font-size: 11px;
+}
+
+.pc-ops-grid {
+	stroke: #dcdcde;
+	stroke-width: 1;
+}
+
+.pc-ops-grid.is-dash {
+	stroke-dasharray: 3 3;
+}
+
+.pc-ops-line {
+	fill: none;
+	stroke: #2271b1;
+	stroke-width: 2;
+	stroke-linejoin: round;
+}
+
+.pc-ops-line.is-prev {
+	stroke: #a7aaad;
+	stroke-dasharray: 5 4;
+}
+
+.pc-ops-dot {
+	fill: #2271b1;
+}
+
+.pc-ops-dot.is-prev {
+	fill: #a7aaad;
+}
+
+.pc-ops-legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 16px;
+	margin-top: 4px;
+	color: #646970;
+	font-size: 12px;
+}
+
+.pc-ops-legend__item {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.pc-ops-swatch {
+	display: inline-block;
+	width: 22px;
+	border-top: 2px solid #2271b1;
+}
+
+.pc-ops-swatch.is-prev {
+	border-top: 2px dashed #a7aaad;
+}
+
+@media (max-width: 900px) {
+	.pc-ops-trends {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
 @media (max-width: 600px) {
+	.pc-ops-trend {
+		padding: 12px;
+	}
+
 	.pc-ops-kpi {
 		padding: 12px;
 	}
