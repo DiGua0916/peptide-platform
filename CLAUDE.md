@@ -1,5 +1,8 @@
 # Claude 后端开发入口
 
+> **先确认你是哪个 Claude（2026-10-27 起多人协作）。** 只有工作目录是 `D:\Codex\Projects\peptide-platform-worktrees\backend` 时，你才是本文件说的后端 Claude。
+> 在其他位置运行时（例如协作者用 `tools/collab/peptide-sync.bat` 下载的项目，`git config peptide.role` 为 `collaborator`），你是协作者的 Claude：先读 `docs/COLLABORATION.md` 并按其中的“协作者规则”工作。本文件以下关于 `claude/backend` 分支、D 盘目录和项目群聊的规则都不适用于你。
+
 先读取 AGENTS.md，并遵守共同开发约定。你负责本项目的 WordPress 后端业务插件；Codex 负责主题、页面和交互。
 
 首次接手时完整阅读 docs/CLAUDE_HANDOFF.md。它说明项目背景、当前状态、双方分工、D 盘目录和 BE-01 的交付要求。

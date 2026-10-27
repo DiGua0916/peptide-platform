@@ -1427,3 +1427,18 @@
 - 收起成图标的菜单、自动收起的窄屏和触屏设备保留预览，因为那时没有别的办法打开子菜单。
 - 实现：`Admin_Menus::no_flyout()` 在后台页头输出一小段 CSS，只对能管理商店的人生效。
 - 实测：真实后台（订单页）鼠标移到“产品”上，只有高亮，没有弹出；smoke-admin-menus 增加一项。
+
+### GITHUB-01 上传 GitHub、合进 main、邀请协作者 · 2026-10-27 · Claude
+
+- 私有仓库 https://github.com/DiGua0916/peptide-platform 。主仓库加了远程 `origin`，三个分支都已推送；用户要求后，main 快进到 claude/backend（59c49ab）并推送。
+- 上传前检查过全部提交：没有密码、密钥、token。
+- 用户邀请了协作者（GitHub 用户 EvanCarter017），对方也用 Claude。为了分清谁是谁：
+  - 新增 `docs/COLLABORATION.md`：参与者表；Claude 按工作目录判断自己的身份；协作者规则（自己的分支 `<名字>/<任务>`、只经 Pull Request 进 main、自己署名、自己的交接文件、改别人的代码和共享文件先说明、不用本机群聊、沟通走 GitHub）；本机 Claude / Codex 的规则；本地运行说明。
+  - `CLAUDE.md` 开头加了身份判断：只有在 backend 工作目录里才是后端 Claude。
+  - 新增 `tools/collab/peptide-sync.bat`（给协作者双击）：
+    - 第一次运行：下载项目，记下名字（只写进他那份项目的设置），建好 `<名字>/work` 分支；
+    - 每次运行：取最新 main 合进他的分支，只推送他自己的分支；有未提交改动时只下载不合并；有冲突时撤销合并；
+    - 在 DiGua 电脑上多个工作目录共用的项目里拒绝运行。
+    - 文件按 GBK 保存（cmd 读 UTF-8 中文批处理会错行），`.gitattributes` 加了 `*.bat text eol=crlf`。
+- **测试**：在 D 盘临时目录用本地假远程测过首次运行（错误名字、保留名字、正常名字）、main 更新后的合并、有未提交改动、多工作目录的拒绝，都正常；测试目录已删除。
+- **测试中出过一次问题，已复原**：最早一版 UTF-8 批处理错行，在 backend 工作目录里执行了 `git config --local user.email ""`（写进了三个工作目录共用的设置）。查过提交历史和全局设置后确认原来没有这一项，已删除，现在共用设置里没有 user 项。以后测试批处理只在测试目录里启动。
