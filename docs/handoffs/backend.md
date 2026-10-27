@@ -1443,3 +1443,14 @@
 - **测试**：在 D 盘临时目录用本地假远程测过首次运行（错误名字、保留名字、正常名字）、main 更新后的合并、有未提交改动、多工作目录的拒绝，都正常；测试目录已删除。
 - **测试中出过一次问题，已复原**：最早一版 UTF-8 批处理错行，在 backend 工作目录里执行了 `git config --local user.email ""`（写进了三个工作目录共用的设置）。查过提交历史和全局设置后确认原来没有这一项，已删除，现在共用设置里没有 user 项。以后测试批处理只在测试目录里启动。
 - 同日用户确认后把仓库改为公开（改之前列出了会公开的内容：业务文档、全部历史、基于 Lunira 的主题代码，并说明无法完全撤回）。从外部不登录可以打开仓库页和文件。
+
+### ADMIN-MENU-04 订单菜单：待处理订单、弃单重新可见 · 2026-10-27 · Claude
+
+用户问订单下面的“待处理”和“弃单”去哪了（对照 Shopname 的订单菜单）。
+
+- **原因**：订单页、WooCommerce 设置、顾客、分析这些页面仍登记在 WooCommerce 已去掉的顶层菜单下。WordPress 在 parent_file 过滤器之后还会调用一次 get_admin_page_parent()，把高亮改回 woocommerce，所以订单菜单在订单页上也不会展开，子菜单以前只能靠悬停预览看到。上午去掉悬停预览（ADMIN-MENU-03）后，就完全看不到了。
+- **修复**：`Admin_Menus::parent_file()` 在这一次请求里把 `$_wp_real_parent_file['woocommerce']` 指向新的顶层菜单，菜单输出完（adminmenu）再还原。页面钩子在这之前已算好，WooCommerce 页面照常显示。
+- **订单菜单**：全部订单、**待处理订单**（新，`admin.php?page=wc-orders&status=wc-processing`，即已付款待发货）、弃单。
+- 弃单、物流 / 税费 / 系统设置页面上，对应的子菜单项也会高亮了。
+- **实测**：真实后台逐页检查了订单（全部 / 待处理 / 单张订单）、弃单、店铺设置三个子页、WooCommerce 设置、支付、顾客、分析、商品，菜单展开和高亮都正确，页面正常。
+- **测试**：smoke-admin-menus 35 项，按 menu-header.php 的顺序模拟“过滤后再查一次父菜单”；smoke-recovery / store-design / overview 通过。

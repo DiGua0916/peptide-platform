@@ -30,6 +30,7 @@ add_action( 'admin_menu', static function () { add_submenu_page( 'woocommerce', 
 \PeptideCore\Admin\Settings_Page::register_hooks();
 \PeptideCore\Admin\Admin_Menus::register_hooks();
 \PeptideCore\Admin\Store_Settings::register_hooks();
+\PeptideCore\Admin\Recovery_Page::register_hooks();
 // WooCommerce 的营销菜单（Internal\Admin\Marketing 在后台请求里注册），这里补一个同名菜单来模拟。
 // WooCommerce 的顶层“支付”菜单（PaymentsController 在后台请求里注册）。
 add_action( 'admin_menu', static function () { add_menu_page( 'Payments', 'Payments', 'manage_woocommerce', 'admin.php?page=wc-settings&tab=checkout&from=PAYMENTS_MENU_ITEM', null, 'dashicons-money-alt', 56 ); }, 6 );
@@ -57,8 +58,20 @@ $ok( 'store settings menu: shipping, tax, system (payments has its own WooCommer
 foreach ( array( 'wc-orders' => 'admin.php?page=wc-orders', 'wc-settings' => 'admin.php?page=wc-settings', 'pc-settings' => 'admin.php?page=wc-settings', 'wc-status' => 'admin.php?page=wc-settings', 'pc-system' => 'admin.php?page=wc-settings', 'pc-tax' => 'admin.php?page=wc-settings' ) as $page => $parent ) {
 	$_GET['page'] = $page;
 	$plugin_page  = $page;
-	$ok( "$page still opens and highlights the new menu", user_can_access_admin_page() && $parent === apply_filters( 'parent_file', get_admin_page_parent() ) );
+	// 和 menu-header.php 一样：先过滤，再调用一次 get_admin_page_parent()（它会改写 $parent_file），然后输出菜单。
+	$GLOBALS['parent_file'] = apply_filters( 'parent_file', get_admin_page_parent() );
+	get_admin_page_parent();
+	$after = $GLOBALS['parent_file'];
+	do_action( 'adminmenu' );
+	$ok( "$page still opens and keeps the new menu open after WordPress re-checks the parent", user_can_access_admin_page() && $parent === $after );
 }
+$ok( 'the temporary WooCommerce parent mapping is removed after the menu is printed', ! isset( $GLOBALS['_wp_real_parent_file']['woocommerce'] ) );
+$ok( 'orders menu: all orders, pending orders, abandoned checkouts', array( 'admin.php?page=wc-orders', 'admin.php?page=wc-orders&status=wc-processing', 'pc-recovery' ) === array_column( $submenu['admin.php?page=wc-orders'] ?? array(), 2 ) );
+$_GET['page']   = 'wc-orders';
+$_GET['status'] = 'wc-processing';
+$ok( 'the processing order list highlights pending orders', \PeptideCore\Admin\Admin_Menus::PENDING === apply_filters( 'submenu_file', null ) );
+unset( $_GET['status'] );
+$ok( 'other order lists highlight all orders', \PeptideCore\Admin\Admin_Menus::ORDERS === apply_filters( 'submenu_file', null ) );
 
 // 店铺设置子菜单高亮（STORE-SETTINGS-01）。
 $_GET['page'] = 'wc-settings';

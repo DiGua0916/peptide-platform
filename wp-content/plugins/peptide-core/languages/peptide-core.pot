@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-23T18:43:19+00:00\n"
+"POT-Creation-Date: 2026-10-27T14:07:32+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -29,7 +29,7 @@ msgstr ""
 msgid "DiGua"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:70
+#: includes/admin/class-admin-menus.php:91
 #: includes/admin/class-apps-page.php:141
 #: includes/admin/class-batch-orders.php:141
 #: includes/admin/class-batch-orders.php:144
@@ -38,23 +38,23 @@ msgstr ""
 msgid "Orders"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:71
+#: includes/admin/class-admin-menus.php:92
 msgid "Customers"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:72
+#: includes/admin/class-admin-menus.php:93
 msgid "Store settings"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:74
+#: includes/admin/class-admin-menus.php:95
 msgid "Shipping settings"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:75
+#: includes/admin/class-admin-menus.php:96
 msgid "Tax settings"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:76
+#: includes/admin/class-admin-menus.php:97
 #: includes/admin/class-basic-config-page.php:114
 #: includes/admin/class-email-center.php:151
 #: includes/admin/class-store-settings.php:115
@@ -63,31 +63,31 @@ msgstr ""
 msgid "System settings"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:81
+#: includes/admin/class-admin-menus.php:102
 msgid "Marketing campaigns"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:82
+#: includes/admin/class-admin-menus.php:103
 #: includes/admin/class-promotions-page.php:91
 #: includes/class-promotions.php:84
 msgid "Spend-and-save promotions"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:82
+#: includes/admin/class-admin-menus.php:103
 msgid "Spend-and-save"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:83
+#: includes/admin/class-admin-menus.php:104
 #: includes/admin/class-coupons-page.php:76
 msgid "Coupon codes"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:84
+#: includes/admin/class-admin-menus.php:105
 #: includes/admin/class-shipping-discounts-page.php:51
 msgid "Shipping discounts"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:87
+#: includes/admin/class-admin-menus.php:108
 #: includes/admin/class-apps-page.php:83
 msgid "App center"
 msgstr ""
@@ -240,7 +240,7 @@ msgstr ""
 #: includes/admin/class-apps-page.php:151
 #: includes/admin/class-basic-config-page.php:115
 #: includes/admin/class-email-center.php:158
-#: includes/admin/class-recovery-page.php:145
+#: includes/admin/class-recovery-page.php:146
 #: includes/admin/class-store-settings.php:43
 msgid "Basic settings"
 msgstr ""
@@ -532,7 +532,7 @@ msgstr ""
 
 #: includes/admin/class-apps-page.php:197
 #: includes/admin/class-overview-page.php:193
-#: includes/admin/class-recovery-page.php:223
+#: includes/admin/class-recovery-page.php:224
 #: includes/admin/class-tracking-page.php:110
 #: includes/admin/class-tracking-page.php:171
 #: includes/class-menus.php:108
@@ -609,7 +609,7 @@ msgstr ""
 #: includes/admin/class-menu-page.php:164
 #: includes/admin/class-menu-page.php:207
 #: includes/admin/class-pixels-page.php:229
-#: includes/admin/class-recovery-page.php:57
+#: includes/admin/class-recovery-page.php:58
 #: includes/admin/class-shipping-page.php:221
 #: includes/admin/class-store-design.php:140
 #: includes/admin/class-tax-page.php:116
@@ -1124,7 +1124,7 @@ msgstr ""
 
 #: includes/admin/class-basic-config-page.php:287
 #: includes/admin/class-email-center.php:219
-#: includes/admin/class-recovery-page.php:143
+#: includes/admin/class-recovery-page.php:144
 msgid "Public contact information"
 msgstr ""
 
@@ -1167,7 +1167,7 @@ msgid "Enter the ZIP or postcode"
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:298
-#: includes/admin/class-recovery-page.php:163
+#: includes/admin/class-recovery-page.php:164
 #: includes/emails/class-admin-abandoned.php:60
 msgid "Country"
 msgstr ""
@@ -1432,7 +1432,7 @@ msgid "Date"
 msgstr ""
 
 #: includes/admin/class-batch-orders.php:66
-#: includes/admin/class-recovery-page.php:163
+#: includes/admin/class-recovery-page.php:164
 #: includes/emails/class-admin-abandoned.php:59
 #: includes/emails/class-admin-duplicate.php:74
 #: includes/emails/class-admin-offline.php:49
@@ -1486,7 +1486,7 @@ msgstr ""
 #: includes/admin/class-plans-editor.php:84
 #: includes/admin/class-plans-editor.php:114
 #: includes/admin/class-promotions-page.php:95
-#: includes/admin/class-recovery-page.php:163
+#: includes/admin/class-recovery-page.php:164
 #: includes/admin/class-shipping-discounts-page.php:55
 #: includes/admin/class-shipping-page.php:195
 #: includes/admin/class-store-design.php:380
@@ -2429,8 +2429,8 @@ msgid "Customers who entered their email and address at checkout but did not pay
 msgstr ""
 
 #: includes/admin/class-email-center.php:216
-#: includes/admin/class-recovery-page.php:43
-#: includes/admin/class-recovery-page.php:132
+#: includes/admin/class-recovery-page.php:44
+#: includes/admin/class-recovery-page.php:133
 msgid "Abandoned checkouts"
 msgstr ""
 
@@ -2752,7 +2752,7 @@ msgstr ""
 
 #: includes/admin/class-marketing.php:342
 #: includes/admin/class-plans-editor.php:34
-#: includes/admin/class-recovery-page.php:152
+#: includes/admin/class-recovery-page.php:153
 msgid "All"
 msgstr ""
 
@@ -3541,8 +3541,8 @@ msgid "Placed an order"
 msgstr ""
 
 #: includes/admin/class-overview-page.php:208
-#: includes/admin/class-recovery-page.php:204
-#: includes/admin/class-recovery-page.php:221
+#: includes/admin/class-recovery-page.php:205
+#: includes/admin/class-recovery-page.php:222
 #: includes/admin/class-tracking-page.php:154
 #: includes/admin/class-tracking-page.php:165
 msgid "Paid"
@@ -4319,222 +4319,226 @@ msgstr ""
 msgid "Example: product a, collection A and all products each have a promotion at the same time, and product a is in collection A. When a customer buys product a, the promotion of product a applies (if its threshold is not reached, there is no discount); product a does not join the promotions of collection A or of all products."
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:78
-msgid "Waiting to recall"
+#: includes/admin/class-recovery-page.php:42
+msgid "Pending orders"
 msgstr ""
 
 #: includes/admin/class-recovery-page.php:79
-msgid "Recalling"
+msgid "Waiting to recall"
 msgstr ""
 
 #: includes/admin/class-recovery-page.php:80
-msgid "Recall failed"
+msgid "Recalling"
 msgstr ""
 
 #: includes/admin/class-recovery-page.php:81
-msgid "Recalled"
+msgid "Recall failed"
 msgstr ""
 
 #: includes/admin/class-recovery-page.php:82
+msgid "Recalled"
+msgstr ""
+
+#: includes/admin/class-recovery-page.php:83
 msgid "Voided"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:88
+#: includes/admin/class-recovery-page.php:89
 msgid "Came back through the email link"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:89
+#: includes/admin/class-recovery-page.php:90
 msgid "Paid after a reminder"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:90
+#: includes/admin/class-recovery-page.php:91
 msgid "Paid before any reminder"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:91
+#: includes/admin/class-recovery-page.php:92
 msgid "Cart emptied"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:92
+#: includes/admin/class-recovery-page.php:93
 msgid "Cart session expired"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:93
+#: includes/admin/class-recovery-page.php:94
 msgid "No response 24 hours after the last reminder"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:94
+#: includes/admin/class-recovery-page.php:95
 #: includes/class-recovery.php:464
 #: includes/emails/class-registry.php:272
 msgid "Unsubscribed"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:95
+#: includes/admin/class-recovery-page.php:96
 msgid "Voided by an admin"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:96
+#: includes/admin/class-recovery-page.php:97
 msgid "The last reminder could not be sent"
 msgstr ""
 
 #. translators: 1: new records, 2: reminders sent
-#: includes/admin/class-recovery-page.php:130
+#: includes/admin/class-recovery-page.php:131
 #, php-format
 msgid "Scan finished: %1$d new abandoned checkouts, %2$d reminders sent."
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:133
+#: includes/admin/class-recovery-page.php:134
 msgid "Abandoned cart emails"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:134
+#: includes/admin/class-recovery-page.php:135
 msgid "Failed payments"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:137
+#: includes/admin/class-recovery-page.php:138
 msgid "Scan now"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:141
+#: includes/admin/class-recovery-page.php:142
 msgid "All reminder emails are turned off, so abandoned checkouts are not recorded or recalled."
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:141
+#: includes/admin/class-recovery-page.php:142
 msgid "Turn them on"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:143
+#: includes/admin/class-recovery-page.php:144
 msgid "No reminders are sent until the store address is filled in. US law (CAN-SPAM) requires a physical address in marketing emails."
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:145
+#: includes/admin/class-recovery-page.php:146
 msgid "No reminders are sent until a valid support email is set as the sender."
 msgstr ""
 
 #. translators: 1: abandoned, 2: emailed, 3: recalled, 4: rate, 5: amount
-#: includes/admin/class-recovery-page.php:149
+#: includes/admin/class-recovery-page.php:150
 #, php-format
 msgid "Last 30 days: %1$d abandoned checkouts, %2$d reminded, %3$d recalled (%4$s), recalled orders paid %5$s."
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:159
+#: includes/admin/class-recovery-page.php:160
 msgid "Created"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:159
+#: includes/admin/class-recovery-page.php:160
 #: includes/admin/class-tracking-page.php:140
 msgid "To"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:160
+#: includes/admin/class-recovery-page.php:161
 msgid "Order number or email (separate several with spaces)"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:160
+#: includes/admin/class-recovery-page.php:161
 msgid "Filter"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:163
+#: includes/admin/class-recovery-page.php:164
 msgid "Order number"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:163
+#: includes/admin/class-recovery-page.php:164
 msgid "Shipping method"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:163
+#: includes/admin/class-recovery-page.php:164
 msgid "Order total"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:163
+#: includes/admin/class-recovery-page.php:164
 #: includes/emails/class-admin-offline.php:50
 msgid "Payment method"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:163
+#: includes/admin/class-recovery-page.php:164
 msgid "Paid at"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:163
+#: includes/admin/class-recovery-page.php:164
 msgid "Transaction ID"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:163
+#: includes/admin/class-recovery-page.php:164
 msgid "Order status"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:163
+#: includes/admin/class-recovery-page.php:164
 msgid "Recall status"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:163
+#: includes/admin/class-recovery-page.php:164
 msgid "Email sent at"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:163
+#: includes/admin/class-recovery-page.php:164
 msgid "Emails sent"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:168
+#: includes/admin/class-recovery-page.php:169
 msgid "No abandoned checkouts yet."
 msgstr ""
 
 #. translators: %d: number of records
-#: includes/admin/class-recovery-page.php:177
+#: includes/admin/class-recovery-page.php:178
 #, php-format
 msgid "%d records"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:195
+#: includes/admin/class-recovery-page.php:196
 #: includes/admin/class-tracking-page.php:127
 #: includes/class-coupons.php:462
 #: includes/class-promotions.php:977
 msgid "Details"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:197
+#: includes/admin/class-recovery-page.php:198
 msgid "Void"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:204
+#: includes/admin/class-recovery-page.php:205
 msgid "Unfinished"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:214
+#: includes/admin/class-recovery-page.php:215
 msgid "Recorded"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:215
+#: includes/admin/class-recovery-page.php:216
 msgid "Cart last changed"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:216
+#: includes/admin/class-recovery-page.php:217
 msgid "Reminder 1 sent"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:217
+#: includes/admin/class-recovery-page.php:218
 msgid "Reminder 2 sent"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:218
+#: includes/admin/class-recovery-page.php:219
 msgid "Reminder 3 sent"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:219
+#: includes/admin/class-recovery-page.php:220
 msgid "Admin notified"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:220
+#: includes/admin/class-recovery-page.php:221
 msgid "Came back from email"
 msgstr ""
 
 #. translators: 1: order number, 2: amount
-#: includes/admin/class-recovery-page.php:226
+#: includes/admin/class-recovery-page.php:227
 #, php-format
 msgid "Paid order #%1$s: %2$s"
 msgstr ""
 
-#: includes/admin/class-recovery-page.php:228
+#: includes/admin/class-recovery-page.php:229
 #: includes/admin/class-tracking-page.php:134
 #: includes/modules/class-registry.php:756
 msgid "Timeline"

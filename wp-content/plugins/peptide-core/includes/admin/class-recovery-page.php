@@ -39,6 +39,7 @@ final class Recovery_Page {
 		$parent = in_array( Admin_Menus::ORDERS, array_column( (array) $menu, 2 ), true ) ? Admin_Menus::ORDERS : 'woocommerce';
 		if ( Admin_Menus::ORDERS === $parent ) {
 			add_submenu_page( $parent, __( 'All orders', 'peptide-core' ), __( 'All orders', 'peptide-core' ), 'edit_shop_orders', Admin_Menus::ORDERS );
+			add_submenu_page( $parent, __( 'Pending orders', 'peptide-core' ), __( 'Pending orders', 'peptide-core' ), 'edit_shop_orders', Admin_Menus::PENDING );
 		}
 		add_submenu_page( $parent, __( 'Abandoned checkouts', 'peptide-core' ), __( 'Abandoned checkouts', 'peptide-core' ), self::CAP, self::SLUG, array( self::class, 'render' ) );
 	}

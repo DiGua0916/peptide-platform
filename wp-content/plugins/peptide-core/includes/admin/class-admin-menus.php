@@ -19,6 +19,7 @@
  *   集成、销售点、Multi-currency（本站不用）从标签栏去掉。只是不显示标签，设置值不变，
  *   插件页面里指向这些设置的链接（例如邮件通知的“设置”、物流设置里的“运费区域”）仍然能打开。
  *   常规（可销售国家等）、产品（单位、库存、评价）、帐户和隐私（游客结账、账户创建）、高级（购物车 / 结账页面、接口）保留。
+ * - 订单（用户 2026-10-27 要求和 Shopname 一样）：全部订单、待处理订单（WooCommerce 的“处理中”，已付款待发货）、弃单。
  * - 悬停预览（用户 2026-10-27 要求去掉）：鼠标移到没展开的菜单上时，旁边不再弹出子菜单，点菜单进去后照常展开。
  *   只在展开的宽菜单、用鼠标时去掉；收起成图标的菜单和触屏设备没有别的办法打开子菜单，保留。
  *
@@ -44,12 +45,16 @@ final class Admin_Menus {
 	);
 
 	public const ORDERS    = 'admin.php?page=wc-orders';
+	public const PENDING   = 'admin.php?page=wc-orders&status=wc-processing';
 	public const CUSTOMERS = 'admin.php?page=wc-admin&path=/customers';
 	public const SETTINGS  = 'admin.php?page=wc-settings';
 	public const ANALYTICS = 'wc-admin&path=/analytics/overview';
 
 	/** 从 WooCommerce 设置标签栏去掉的标签。 */
 	public const HIDDEN_TABS = array( 'shipping', 'checkout', 'email', 'site-visibility', 'integration', 'point-of-sale', 'wcpay_multi_currency' );
+
+	/** parent_file() 临时改动前 $_wp_real_parent_file['woocommerce'] 的值（放在数组里，以区分“原来没有”）。 */
+	private static $real_parent = null;
 
 	public static function register_hooks(): void {
 		add_action( 'admin_menu', array( self::class, 'add_menus' ), 60 );
@@ -58,6 +63,7 @@ final class Admin_Menus {
 		add_filter( 'submenu_file', array( self::class, 'submenu_file' ), 20 );
 		add_filter( 'woocommerce_settings_tabs_array', array( self::class, 'settings_tabs' ), 999 );
 		add_action( 'admin_head', array( self::class, 'no_flyout' ) );
+		add_action( 'adminmenu', array( self::class, 'restore_parent' ) );
 	}
 
 	/** 去掉左侧菜单的悬停预览（没展开的菜单旁边弹出的子菜单和小箭头）。 */
@@ -146,11 +152,46 @@ final class Admin_Menus {
 		return '';
 	}
 
-	/** 打开移走的页面时，左侧菜单展开新的位置。 */
+	/**
+	 * 打开移走的页面时，左侧菜单展开新的位置。
+	 *
+	 * WordPress 在这个过滤器之后还会调用一次 get_admin_page_parent()（menu-header.php）。这些页面仍然登记在
+	 * WooCommerce 已经去掉的顶层菜单下面，它会把 $parent_file 改回 woocommerce，结果没有菜单展开、子菜单只能靠悬停看到。
+	 * 所以这一次请求里让 woocommerce 指向新的位置（$_wp_real_parent_file），菜单输出完（adminmenu）再还原。
+	 * 页面钩子在这之前已经算好，WooCommerce 页面照常显示。
+	 */
 	public static function parent_file( $parent_file ) {
 		if ( ! self::applies() ) {
 			return $parent_file;
 		}
+		$target = self::target_parent();
+		if ( '' === $target ) {
+			return $parent_file;
+		}
+		global $_wp_real_parent_file;
+		if ( null === self::$real_parent ) {
+			self::$real_parent = array( $_wp_real_parent_file['woocommerce'] ?? null );
+		}
+		$_wp_real_parent_file['woocommerce'] = $target;
+		return $target;
+	}
+
+	/** 菜单输出完以后，还原 parent_file() 临时改的 $_wp_real_parent_file。 */
+	public static function restore_parent(): void {
+		if ( null === self::$real_parent ) {
+			return;
+		}
+		global $_wp_real_parent_file;
+		if ( null === self::$real_parent[0] ) {
+			unset( $_wp_real_parent_file['woocommerce'] );
+		} else {
+			$_wp_real_parent_file['woocommerce'] = self::$real_parent[0];
+		}
+		self::$real_parent = null;
+	}
+
+	/** 当前页面应该展开的顶层菜单；不是移走的页面时为空。 */
+	private static function target_parent(): string {
 		$page = self::current_page();
 		if ( 'wc-settings' === $page && 'checkout' === self::current_tab() && '' !== self::payments_menu() ) {
 			return self::payments_menu();
@@ -165,7 +206,7 @@ final class Admin_Menus {
 		if ( 'wc-admin' === $page && isset( $_GET['path'] ) && str_starts_with( (string) wp_unslash( $_GET['path'] ), '/analytics' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 			return self::ANALYTICS;
 		}
-		return $parent_file;
+		return '';
 	}
 
 	public static function submenu_file( $submenu_file ) {
@@ -189,7 +230,13 @@ final class Admin_Menus {
 			return Store_Settings::SYSTEM_SLUG;
 		}
 		if ( 'wc-orders' === $page ) {
-			return self::ORDERS;
+			// 待处理订单 = 处理中的订单列表；打开某一张订单时仍算“全部订单”。
+			$status = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			return 'wc-processing' === $status && ! isset( $_GET['action'] ) ? self::PENDING : self::ORDERS; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		}
+		// 插件自己放在这些菜单下的页面：WordPress 只在 $submenu_file 为空时才按 page 参数高亮，这里直接指定。
+		if ( in_array( $page, array( Recovery_Page::SLUG, Shipping_Page::SLUG, Tax_Page::SLUG, Store_Settings::SYSTEM_SLUG ), true ) ) {
+			return $page;
 		}
 		return $submenu_file;
 	}
