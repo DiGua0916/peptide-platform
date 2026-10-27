@@ -1,0 +1,139 @@
+/* 页面访问统计页（DATA-01 第 5 步）：工具栏（搜索、每页条数）、说明、页面路径表格、页脚（总数和分页）。都放在 .pc-pages 下面。 */
+
+.pc-pages {
+	max-width: 100%;
+}
+
+.pc-pages .pc-pages-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 12px;
+	margin-bottom: 8px;
+}
+
+.pc-pages .pc-pages-search {
+	box-sizing: border-box;
+	width: 280px;
+	max-width: 100%;
+	min-height: 30px;
+	padding: 0 8px;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	background: #fff;
+	color: #1d2327;
+}
+
+.pc-pages .pc-pages-per {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	color: #50575e;
+	font-size: 13px;
+}
+
+.pc-pages .pc-pages-note {
+	margin: 0 0 12px;
+	font-size: 12px;
+}
+
+/* 表格在窄屏上自己横向滚动，页面不出现横向滚动条。 */
+.pc-pages .pc-pages-wrap {
+	max-width: 100%;
+	overflow-x: auto;
+}
+
+.pc-pages .pc-pages-table {
+	width: 100%;
+	border-collapse: collapse;
+	background: #fff;
+	font-size: 13px;
+}
+
+.pc-pages .pc-pages-table th,
+.pc-pages .pc-pages-table td {
+	padding: 8px 10px;
+	border: 1px solid #dcdcde;
+	vertical-align: top;
+	text-align: left;
+}
+
+.pc-pages .pc-pages-table thead th {
+	background: #f6f7f7;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.pc-pages .pc-pages-th--path,
+.pc-pages .pc-pages-path {
+	min-width: 200px;
+}
+
+.pc-pages .pc-pages-path {
+	overflow-wrap: anywhere;
+}
+
+.pc-pages .pc-pages-open {
+	margin-left: 6px;
+	font-size: 12px;
+	white-space: nowrap;
+}
+
+.pc-pages .pc-pages-num {
+	white-space: nowrap;
+}
+
+.pc-pages .pc-pages-sort {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: #1d2327;
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.pc-pages .pc-pages-sort:hover,
+.pc-pages .pc-pages-sort.is-active {
+	color: #2271b1;
+}
+
+.pc-pages .pc-pages-help {
+	color: #646970;
+	font-size: 12px;
+	font-weight: 400;
+}
+
+.pc-pages .pc-pages-foot {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px 12px;
+	margin-top: 12px;
+}
+
+.pc-pages .pc-pages-total,
+.pc-pages .pc-pages-page {
+	color: #646970;
+	font-size: 13px;
+}
+
+.pc-pages .pc-pages-pager {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+@media (max-width: 600px) {
+	.pc-pages .pc-pages-search {
+		width: 100%;
+	}
+
+	.pc-pages .pc-pages-th--path,
+	.pc-pages .pc-pages-path {
+		min-width: 140px;
+	}
+}

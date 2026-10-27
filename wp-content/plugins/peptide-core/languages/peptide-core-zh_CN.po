@@ -225,7 +225,7 @@ msgid "not usable now"
 msgstr "当前不可用"
 
 #: includes/admin/class-apps-page.php:134
-#: includes/admin/class-data-pages.php:247
+#: includes/admin/class-data-pages.php:281
 #: includes/admin/class-overview-page.php:165
 msgid "Last 30 days"
 msgstr "过去 30 天"
@@ -1382,7 +1382,7 @@ msgid "3–40 characters: letters, digits and hyphens. Stored in upper case and 
 msgstr "3–40 个字符：字母、数字和连字符。保存时统一转为大写，且不能与其他批次重复。"
 
 #: includes/admin/class-batch-metabox.php:56
-#: includes/admin/class-data-pages.php:300
+#: includes/admin/class-data-pages.php:334
 #: includes/admin/class-list-columns.php:33
 #: includes/admin/class-marketing.php:262
 #: includes/admin/class-overview-page.php:196
@@ -2876,7 +2876,7 @@ msgstr "搜索"
 msgid "Disabled"
 msgstr "已停用"
 
-#: includes/admin/class-data-pages.php:253
+#: includes/admin/class-data-pages.php:287
 #: includes/admin/class-marketing.php:378
 #: includes/admin/class-tracking-page.php:146
 msgid "Apply"
@@ -3239,8 +3239,8 @@ msgstr[0] "已导入 %d 份菜单（均作为新菜单）。"
 msgid "These items link to pages that do not exist on this site and were imported without a link: %s"
 msgstr "以下目录链接的页面在本站不存在，已按“无链接”导入：%s"
 
-#: includes/admin/class-data-pages.php:255
-#: includes/admin/class-data-pages.php:360
+#: includes/admin/class-data-pages.php:289
+#: includes/admin/class-data-pages.php:416
 #: includes/admin/class-menu-page.php:238
 #: includes/admin/class-overview-page.php:237
 #: includes/admin/class-tracking-page.php:138
@@ -3343,7 +3343,7 @@ msgstr "（隐藏）"
 msgid "The selected batch does not match \"%s\" and was not saved."
 msgstr "所选批次与“%s”不匹配，未保存。"
 
-#: includes/admin/class-data-pages.php:57
+#: includes/admin/class-data-pages.php:58
 #: includes/admin/class-overview-page.php:55
 msgid "Sorry, you are not allowed to view store data."
 msgstr "抱歉，你没有查看店铺数据的权限。"
@@ -3371,18 +3371,18 @@ msgstr "%s，下午好！下面是今日数据概览"
 msgid "%s, good evening! Here is today’s overview."
 msgstr "%s，晚上好！下面是今日数据概览"
 
-#: includes/admin/class-data-pages.php:254
+#: includes/admin/class-data-pages.php:288
 #: includes/admin/class-overview-page.php:131
 msgid "Store time zone"
 msgstr "当前店铺时区"
 
-#: includes/admin/class-data-pages.php:265
+#: includes/admin/class-data-pages.php:299
 #: includes/admin/class-overview-page.php:132
 #: includes/admin/class-overview-page.php:172
 msgid "Sales"
 msgstr "销售额"
 
-#: includes/admin/class-data-pages.php:267
+#: includes/admin/class-data-pages.php:301
 #: includes/admin/class-overview-page.php:134
 msgid "New sign-ups"
 msgstr "注册用户"
@@ -3392,7 +3392,7 @@ msgstr "注册用户"
 msgid "Order conversion"
 msgstr "订单转化率"
 
-#: includes/admin/class-data-pages.php:270
+#: includes/admin/class-data-pages.php:304
 #: includes/admin/class-overview-page.php:137
 msgid "Average order value"
 msgstr "客单价"
@@ -3492,17 +3492,17 @@ msgstr "今日订单"
 msgid "Sales today"
 msgstr "今日销售额"
 
-#: includes/admin/class-data-pages.php:244
+#: includes/admin/class-data-pages.php:278
 #: includes/admin/class-overview-page.php:162
 msgid "Today"
 msgstr "今天"
 
-#: includes/admin/class-data-pages.php:245
+#: includes/admin/class-data-pages.php:279
 #: includes/admin/class-overview-page.php:163
 msgid "Yesterday"
 msgstr "昨天"
 
-#: includes/admin/class-data-pages.php:246
+#: includes/admin/class-data-pages.php:280
 #: includes/admin/class-overview-page.php:164
 msgid "Last 7 days"
 msgstr "过去 7 天"
@@ -3526,7 +3526,7 @@ msgstr "访客数"
 msgid "Page views"
 msgstr "浏览量"
 
-#: includes/admin/class-data-pages.php:268
+#: includes/admin/class-data-pages.php:302
 #: includes/admin/class-overview-page.php:171
 msgid "Order count"
 msgstr "订单数"
@@ -3630,7 +3630,7 @@ msgid "Order payment"
 msgstr "订单付款页"
 
 #. translators: %d: number of orders
-#: includes/admin/class-data-pages.php:293
+#: includes/admin/class-data-pages.php:327
 #: includes/admin/class-overview-page.php:205
 #, php-format
 msgid "Only real orders are counted: %d test order(s) in this period (test payment or demo products) are left out."
@@ -4684,7 +4684,7 @@ msgstr "HPLC（高效液相色谱）"
 msgid "Mass spectrometry (MS)"
 msgstr "质谱（MS）"
 
-#: includes/admin/class-data-pages.php:342
+#: includes/admin/class-data-pages.php:398
 #: includes/admin/class-report-metabox.php:67
 msgid "Other"
 msgstr "其他"
@@ -6070,7 +6070,7 @@ msgstr "加载更多"
 msgid "Visitor"
 msgstr "访客"
 
-#: includes/admin/class-data-pages.php:337
+#: includes/admin/class-data-pages.php:393
 #: includes/admin/class-tracking-page.php:108
 #: includes/tracking/class-privacy.php:167
 msgid "Device"
@@ -6170,19 +6170,19 @@ msgstr "从"
 msgid "All devices"
 msgstr "全部设备"
 
-#: includes/admin/class-data-pages.php:339
+#: includes/admin/class-data-pages.php:395
 #: includes/admin/class-tracking-page.php:143
 #: includes/modules/class-blocks.php:225
 msgid "Desktop"
 msgstr "电脑"
 
-#: includes/admin/class-data-pages.php:340
+#: includes/admin/class-data-pages.php:396
 #: includes/admin/class-tracking-page.php:144
 #: includes/modules/class-blocks.php:226
 msgid "Mobile"
 msgstr "手机"
 
-#: includes/admin/class-data-pages.php:341
+#: includes/admin/class-data-pages.php:397
 #: includes/admin/class-tracking-page.php:145
 msgid "Tablet"
 msgstr "平板"
@@ -8014,7 +8014,7 @@ msgstr "隐藏这个积木"
 msgid "Allowed: paragraphs, bold, italic, links, lists."
 msgstr "可以使用：段落、加粗、斜体、链接、列表。"
 
-#: includes/admin/class-data-pages.php:313
+#: includes/admin/class-data-pages.php:347
 #: includes/modules/class-blocks.php:260
 msgid "Search products"
 msgstr "搜索商品"
@@ -9412,277 +9412,323 @@ msgstr "您浏览本店时，我们会记录您看了哪些页面和商品、加
 msgid "Store visit analytics"
 msgstr "店铺访问统计"
 
-#: includes/admin/class-data-pages.php:149
+#: includes/admin/class-data-pages.php:172
 msgid "Data"
 msgstr "数据"
 
-#: includes/admin/class-data-pages.php:229
+#: includes/admin/class-data-pages.php:263
 msgid "Real-time data"
 msgstr "实时数据"
 
-#: includes/admin/class-data-pages.php:230
+#: includes/admin/class-data-pages.php:264
 msgid "Operations data"
 msgstr "运营数据"
 
-#: includes/admin/class-data-pages.php:231
+#: includes/admin/class-data-pages.php:265
 msgid "Product details data"
 msgstr "商品详情数据"
 
-#: includes/admin/class-data-pages.php:232
+#: includes/admin/class-data-pages.php:266
 msgid "Page visit statistics"
 msgstr "页面访问统计"
 
-#: includes/admin/class-data-pages.php:233
+#: includes/admin/class-data-pages.php:267
 msgid "Page product conversion"
 msgstr "页面商品转化"
 
-#: includes/admin/class-data-pages.php:234
+#: includes/admin/class-data-pages.php:268
 msgid "App statistics"
 msgstr "应用统计"
 
-#: includes/admin/class-data-pages.php:235
+#: includes/admin/class-data-pages.php:269
 msgid "Landing page conversion"
 msgstr "落地页转化"
 
-#: includes/admin/class-data-pages.php:236
+#: includes/admin/class-data-pages.php:270
 msgid "Conversion rate details"
 msgstr "转化率详情"
 
-#: includes/admin/class-data-pages.php:237
+#: includes/admin/class-data-pages.php:271
 msgid "Email details data"
 msgstr "邮件详情数据"
 
-#: includes/admin/class-data-pages.php:248
+#: includes/admin/class-data-pages.php:282
 msgid "Custom range"
 msgstr "自定义时间"
 
-#: includes/admin/class-data-pages.php:249
+#: includes/admin/class-data-pages.php:283
 msgid "Compare with"
 msgstr "对比时间"
 
-#: includes/admin/class-data-pages.php:251
+#: includes/admin/class-data-pages.php:285
 msgid "Start date"
 msgstr "开始日期"
 
-#: includes/admin/class-data-pages.php:252
+#: includes/admin/class-data-pages.php:286
 msgid "End date"
 msgstr "结束日期"
 
-#: includes/admin/class-data-pages.php:256
+#: includes/admin/class-data-pages.php:290
 msgid "This page is being built. The date range already works; the report will appear here in a later update."
 msgstr "这个页面正在开发中。上方的时间选择已经可以使用，报表会在后续更新中显示。"
 
-#: includes/admin/class-data-pages.php:257
+#: includes/admin/class-data-pages.php:291
 msgid "Check the dates: the start date must be on or before the end date, and a range can cover at most 366 days."
 msgstr "请检查日期：开始日期不能晚于结束日期，时间范围最多 366 天。"
 
-#: includes/admin/class-data-pages.php:258
+#: includes/admin/class-data-pages.php:292
 msgid "The data could not be loaded. Try again."
 msgstr "数据加载失败，请重试。"
 
-#: includes/admin/class-data-pages.php:266
-#: includes/admin/class-data-pages.php:332
+#: includes/admin/class-data-pages.php:300
+#: includes/admin/class-data-pages.php:365
+#: includes/admin/class-data-pages.php:388
 msgid "Visited users"
 msgstr "访问用户"
 
-#: includes/admin/class-data-pages.php:269
-#: includes/admin/class-data-pages.php:310
-#: includes/admin/class-data-pages.php:329
+#: includes/admin/class-data-pages.php:303
+#: includes/admin/class-data-pages.php:344
+#: includes/admin/class-data-pages.php:385
 msgid "Conversion rate"
 msgstr "转化率"
 
-#: includes/admin/class-data-pages.php:271
+#: includes/admin/class-data-pages.php:305
 msgid "Product units sold"
 msgstr "商品销售件数"
 
-#: includes/admin/class-data-pages.php:272
+#: includes/admin/class-data-pages.php:306
 msgid "Net product sales"
 msgstr "商品净销售额"
 
-#: includes/admin/class-data-pages.php:273
+#: includes/admin/class-data-pages.php:307
 msgid "Refund amount"
 msgstr "退款金额"
 
-#: includes/admin/class-data-pages.php:274
+#: includes/admin/class-data-pages.php:308
 msgid "Average visit duration"
 msgstr "平均访问时长"
 
-#: includes/admin/class-data-pages.php:275
+#: includes/admin/class-data-pages.php:309
 msgid "Customer count"
 msgstr "顾客数"
 
-#: includes/admin/class-data-pages.php:276
+#: includes/admin/class-data-pages.php:310
 msgid "Mobile users"
 msgstr "移动端"
 
-#: includes/admin/class-data-pages.php:277
-#: includes/admin/class-data-pages.php:333
+#: includes/admin/class-data-pages.php:311
+#: includes/admin/class-data-pages.php:389
 msgid "Viewed products"
 msgstr "查看商品"
 
-#: includes/admin/class-data-pages.php:278
-#: includes/admin/class-data-pages.php:334
+#: includes/admin/class-data-pages.php:312
+#: includes/admin/class-data-pages.php:390
 msgid "Carted products"
 msgstr "加购商品"
 
-#: includes/admin/class-data-pages.php:279
-#: includes/admin/class-data-pages.php:335
+#: includes/admin/class-data-pages.php:313
+#: includes/admin/class-data-pages.php:391
 msgid "Started checkout"
 msgstr "发起结账"
 
-#: includes/admin/class-data-pages.php:280
-#: includes/admin/class-data-pages.php:331
+#: includes/admin/class-data-pages.php:314
+#: includes/admin/class-data-pages.php:387
 msgid "Paid successfully"
 msgstr "支付成功"
 
-#: includes/admin/class-data-pages.php:281
+#: includes/admin/class-data-pages.php:315
 msgid "Visitor conversion rate"
 msgstr "访客转化率"
 
-#: includes/admin/class-data-pages.php:282
+#: includes/admin/class-data-pages.php:316
 msgid "Returning visitor conversion rate"
 msgstr "回访用户转化率"
 
-#: includes/admin/class-data-pages.php:283
+#: includes/admin/class-data-pages.php:317
 msgid "Conversion event"
 msgstr "转化事件"
 
-#: includes/admin/class-data-pages.php:284
+#: includes/admin/class-data-pages.php:318
 msgid "This period"
 msgstr "本期"
 
-#: includes/admin/class-data-pages.php:285
+#: includes/admin/class-data-pages.php:319
 msgid "Previous period"
 msgstr "对比期"
 
-#: includes/admin/class-data-pages.php:286
+#: includes/admin/class-data-pages.php:320
 msgid "Change"
 msgstr "同比"
 
 #. translators: %s: a percentage, for example 54.72%
-#: includes/admin/class-data-pages.php:288
-#: includes/admin/class-data-pages.php:348
+#: includes/admin/class-data-pages.php:322
+#: includes/admin/class-data-pages.php:404
 #, php-format
 msgid "Of visitors: %s"
 msgstr "访客转化：%s"
 
 #. translators: 1: minutes, 2: seconds
-#: includes/admin/class-data-pages.php:290
+#: includes/admin/class-data-pages.php:324
 #, php-format
 msgid "%1$d min %2$d s"
 msgstr "%1$d分%2$d秒"
 
-#: includes/admin/class-data-pages.php:291
-#: includes/admin/class-data-pages.php:350
+#: includes/admin/class-data-pages.php:325
+#: includes/admin/class-data-pages.php:406
 msgid "Visitor tracking is off, so visitor numbers, conversion and the funnels stay at zero."
 msgstr "访客追踪没有开启，访客相关的数字、转化率和漏斗都是 0。"
 
-#: includes/admin/class-data-pages.php:301
+#: includes/admin/class-data-pages.php:335
 msgid "Product views"
 msgstr "查看次数"
 
-#: includes/admin/class-data-pages.php:302
+#: includes/admin/class-data-pages.php:336
 msgid "Viewing users"
 msgstr "查看用户数"
 
-#: includes/admin/class-data-pages.php:303
+#: includes/admin/class-data-pages.php:337
 msgid "Add-to-cart actions"
 msgstr "加购次数"
 
-#: includes/admin/class-data-pages.php:304
+#: includes/admin/class-data-pages.php:338
 msgid "Users who added to cart"
 msgstr "加购用户数"
 
-#: includes/admin/class-data-pages.php:305
+#: includes/admin/class-data-pages.php:339
 msgid "Units added to cart"
 msgstr "加购件数"
 
-#: includes/admin/class-data-pages.php:306
+#: includes/admin/class-data-pages.php:340
 msgid "Add-to-cart rate"
 msgstr "加购转化率"
 
-#: includes/admin/class-data-pages.php:307
+#: includes/admin/class-data-pages.php:341
 msgid "Paid orders"
 msgstr "付款订单数"
 
-#: includes/admin/class-data-pages.php:308
+#: includes/admin/class-data-pages.php:342
 msgid "Paying users"
 msgstr "付款用户数"
 
-#: includes/admin/class-data-pages.php:309
+#: includes/admin/class-data-pages.php:343
 msgid "Units paid"
 msgstr "付款件数"
 
-#: includes/admin/class-data-pages.php:311
+#: includes/admin/class-data-pages.php:345
 msgid "Paid amount"
 msgstr "付款金额"
 
-#: includes/admin/class-data-pages.php:312
+#: includes/admin/class-data-pages.php:346
 msgid "Net sales"
 msgstr "净销售额"
 
-#: includes/admin/class-data-pages.php:314
+#: includes/admin/class-data-pages.php:348
 msgid "Edit columns"
 msgstr "编辑表头"
 
-#: includes/admin/class-data-pages.php:315
+#: includes/admin/class-data-pages.php:349
 msgid "Variation details"
 msgstr "款式详情数据"
 
-#: includes/admin/class-data-pages.php:316
+#: includes/admin/class-data-pages.php:350
 msgid "No product data in this period."
 msgstr "这个时间段没有商品数据。"
 
 #. translators: 1: current page number, 2: total number of pages
-#: includes/admin/class-data-pages.php:318
+#: includes/admin/class-data-pages.php:352
+#: includes/admin/class-data-pages.php:375
 #, php-format
 msgid "Page %1$d of %2$d"
 msgstr "第 %1$d / %2$d 页"
 
-#: includes/admin/class-data-pages.php:319
+#: includes/admin/class-data-pages.php:353
+#: includes/admin/class-data-pages.php:376
 msgid "Previous"
 msgstr "上一页"
 
-#: includes/admin/class-data-pages.php:320
+#: includes/admin/class-data-pages.php:354
+#: includes/admin/class-data-pages.php:377
 msgid "Next"
 msgstr "下一页"
 
 #. translators: %s: a product SKU
-#: includes/admin/class-data-pages.php:322
+#: includes/admin/class-data-pages.php:356
 #, php-format
 msgid "SKU: %s"
 msgstr "SKU：%s"
 
-#: includes/admin/class-data-pages.php:330
+#: includes/admin/class-data-pages.php:386
 msgid "Paid successfully / visited users × 100%"
 msgstr "支付成功 / 访问用户 × 100%"
 
-#: includes/admin/class-data-pages.php:336
+#: includes/admin/class-data-pages.php:392
 msgid "Group by"
 msgstr "分组"
 
-#: includes/admin/class-data-pages.php:338
+#: includes/admin/class-data-pages.php:394
 msgid "Browser"
 msgstr "浏览器"
 
-#: includes/admin/class-data-pages.php:343
+#: includes/admin/class-data-pages.php:399
 msgid "Unknown"
 msgstr "未知"
 
 #. translators: %s: the name of a device or browser, for example Mobile
-#: includes/admin/class-data-pages.php:345
+#: includes/admin/class-data-pages.php:401
 #, php-format
 msgid "%s visitor conversion rate:"
 msgstr "%s 访客转化率："
 
-#: includes/admin/class-data-pages.php:346
+#: includes/admin/class-data-pages.php:402
 msgid "Sales:"
 msgstr "销售额："
 
-#: includes/admin/class-data-pages.php:349
+#: includes/admin/class-data-pages.php:405
 msgid "No visits or paid orders in this period."
 msgstr "这个时间段没有访问和付款订单。"
 
-#: includes/admin/class-data-pages.php:351
+#: includes/admin/class-data-pages.php:407
 msgid "Adding an address, choosing shipping and choosing payment are not recorded yet, so those steps are not shown."
 msgstr "添加地址、添加物流、添加支付这三步还没有采集，暂不显示。"
+
+#: includes/admin/class-data-pages.php:363
+msgid "Page path"
+msgstr "页面路径"
+
+#: includes/admin/class-data-pages.php:364
+msgid "Page visits"
+msgstr "访问量"
+
+#: includes/admin/class-data-pages.php:366
+msgid "Bounce rate"
+msgstr "跳出率"
+
+#: includes/admin/class-data-pages.php:367
+msgid "Bounce rate = users who left after viewing only this page / all users who viewed this page"
+msgstr "跳出率 = 只看了这个页面就离开的用户 / 看过这个页面的所有用户"
+
+#: includes/admin/class-data-pages.php:368
+msgid "Open page"
+msgstr "打开页面"
+
+#: includes/admin/class-data-pages.php:369
+msgid "Search page paths"
+msgstr "搜索页面路径"
+
+#: includes/admin/class-data-pages.php:370
+msgid "Per page"
+msgstr "每页"
+
+#. translators: %d: number of page paths
+#: includes/admin/class-data-pages.php:372
+#, php-format
+msgid "%d pages in total"
+msgstr "共 %d 个页面"
+
+#: includes/admin/class-data-pages.php:373
+msgid "No page visits in this period."
+msgstr "这个时间段没有页面访问。"
+
+#: includes/admin/class-data-pages.php:378
+msgid "Page visits come from the visitor tracking script in the browser; without it this page stays empty."
+msgstr "页面访问来自浏览器端的访客追踪脚本；没有这个脚本时本页为空。"

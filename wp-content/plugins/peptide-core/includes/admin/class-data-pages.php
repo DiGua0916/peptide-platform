@@ -19,6 +19,7 @@ namespace PeptideCore\Admin;
 use PeptideCore\Api\Rest_Controller;
 use PeptideCore\Data\Conversion;
 use PeptideCore\Data\Operations;
+use PeptideCore\Data\Page_Visits;
 use PeptideCore\Data\Products;
 use PeptideCore\Data\Range;
 
@@ -106,6 +107,28 @@ final class Data_Pages {
 								return $a;
 							}
 							$res = new \WP_REST_Response( Products::table( $r, $a ) );
+							$res->header( 'Cache-Control', 'no-store' );
+							return $res;
+						},
+						'permission_callback' => $permission,
+					)
+				);
+				// 页面访问统计页（DATA-01 第 5 步）：每个页面路径的访问量、访问用户、跳出率（只有本期，没有对比期）；可排序、搜索、分页。
+				register_rest_route(
+					Rest_Controller::ROUTE_NAMESPACE,
+					'/data/pages',
+					array(
+						'methods'             => \WP_REST_Server::READABLE,
+						'callback'            => static function ( \WP_REST_Request $request ) {
+							$r = Range::from_params( $request->get_params() );
+							if ( is_wp_error( $r ) ) {
+								return $r;
+							}
+							$a = Page_Visits::params( $request->get_params() );
+							if ( is_wp_error( $a ) ) {
+								return $a;
+							}
+							$res = new \WP_REST_Response( Page_Visits::table( $r, $a ) );
 							$res->header( 'Cache-Control', 'no-store' );
 							return $res;
 						},
@@ -207,6 +230,17 @@ final class Data_Pages {
 			wp_add_inline_script(
 				'peptide-core-data-products',
 				'window.pcDataProducts = ' . wp_json_encode( array( 'strings' => self::products_strings() ) ) . ';',
+				'before'
+			);
+		}
+
+		// 页面访问统计页的报表（页面路径表格、搜索、排序、分页），同样在 data.js 之后加载，用 PcData.register( 'pages', … ) 画进页面。
+		if ( 'pages' === $key ) {
+			wp_enqueue_style( 'peptide-core-data-pages', $url . 'data-pages.css', array( 'peptide-core-data' ), $ver( 'data-pages.css' ) );
+			wp_enqueue_script( 'peptide-core-data-pages', $url . 'data-pages.js', array( self::SCRIPT ), $ver( 'data-pages.js' ), array( 'in_footer' => true ) );
+			wp_add_inline_script(
+				'peptide-core-data-pages',
+				'window.pcDataPages = ' . wp_json_encode( array( 'strings' => self::pages_strings() ) ) . ';',
 				'before'
 			);
 		}
@@ -320,6 +354,28 @@ final class Data_Pages {
 			'next'        => __( 'Next', 'peptide-core' ),
 			/* translators: %s: a product SKU */
 			'sku'         => __( 'SKU: %s', 'peptide-core' ),
+		);
+	}
+
+	/** 页面访问统计页脚本里的文字：表头、跳出率说明、搜索、每页条数、总数、分页。 */
+	private static function pages_strings(): array {
+		return array(
+			'path'         => __( 'Page path', 'peptide-core' ),
+			'views'        => __( 'Page visits', 'peptide-core' ),
+			'visitors'     => __( 'Visited users', 'peptide-core' ),
+			'bounce_rate'  => __( 'Bounce rate', 'peptide-core' ),
+			'bounceHelp'   => __( 'Bounce rate = users who left after viewing only this page / all users who viewed this page', 'peptide-core' ),
+			'open'         => __( 'Open page', 'peptide-core' ),
+			'search'       => __( 'Search page paths', 'peptide-core' ),
+			'perPage'      => __( 'Per page', 'peptide-core' ),
+			/* translators: %d: number of page paths */
+			'total'        => __( '%d pages in total', 'peptide-core' ),
+			'noData'       => __( 'No page visits in this period.', 'peptide-core' ),
+			/* translators: 1: current page number, 2: total number of pages */
+			'page'         => __( 'Page %1$d of %2$d', 'peptide-core' ),
+			'prev'         => __( 'Previous', 'peptide-core' ),
+			'next'         => __( 'Next', 'peptide-core' ),
+			'trackingNote' => __( 'Page visits come from the visitor tracking script in the browser; without it this page stays empty.', 'peptide-core' ),
 		);
 	}
 
