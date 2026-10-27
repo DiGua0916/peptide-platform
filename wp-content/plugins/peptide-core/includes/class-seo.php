@@ -95,9 +95,9 @@ final class Seo {
 		return $host;
 	}
 
-	/** 选择域名时可选的域名：主题装修里指定过模板的域名、已经设过 SEO 的域名，以及当前网站的域名。 */
+	/** 选择域名时可选的域名：域名管理里绑定的、主题装修里指定过模板的、已经设过 SEO 的域名，以及当前网站的域名。 */
 	public static function known_domains(): array {
-		$hosts = array_merge( array_keys( Templates::domain_map() ), array_keys( self::settings()['domains'] ) );
+		$hosts = array_merge( Domains::hosts(), array_keys( Templates::domain_map() ), array_keys( self::settings()['domains'] ) );
 		$site  = (string) Templates::normalize_host( (string) wp_parse_url( home_url(), PHP_URL_HOST ) );
 		if ( '' !== $site ) {
 			$hosts[] = $site;
