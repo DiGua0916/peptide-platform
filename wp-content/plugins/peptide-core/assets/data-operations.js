@@ -2,6 +2,9 @@
  * 运营数据页（DATA-01 第 2 步）的报表：12 个指标卡片、访客转化漏斗、回访用户转化漏斗，每个数字都和对比时间段（VS）一起显示。
  * 数字来自运营数据接口（见下面的 PATH；口径都在 PeptideCore\Data\Operations，这里不自己算），
  * 文字来自 window.pcDataOperations.strings，插入页面的值都经过 ctx.esc() 转义。
+ * 两个漏斗下面是九张趋势图（DATA-01 第 7a 步）：访客数（带浏览量）、订单数、销售额、客单数、客单价、复购率、复购订单量、复购成交额、复购客单价，
+ * 每张图有本期合计、变化和本期 / 对比期两条折线；数字来自趋势接口（见下面的 TRENDS_PATH，口径在 PeptideCore\Data\Trends）。
+ * 趋势图单独请求：失败只影响趋势图那一块，指标卡片和漏斗照常显示。
  * 文件末尾把 render 注册成 operations 页面的报表，由 data.js 的外壳调用，切换时间段时会再调用一次。
  */
 ( function ( PcData, cfg ) {
@@ -12,10 +15,24 @@
 	}
 	var T = cfg.strings;
 	var PATH = '/peptide/v1/data/operations';
+	var TRENDS_PATH = '/peptide/v1/data/trends';
 	// 和 Operations::KPIS / LAYERS 的顺序一致（Shopname 的卡片顺序）。
 	var KPIS = [ 'sales', 'visitors', 'registered', 'orders', 'conversion', 'aov', 'items', 'net_item_sales', 'refunds', 'avg_duration', 'customers', 'mobile' ];
 	var LAYERS = [ 'visitors', 'viewed', 'carted', 'checkout', 'paid' ];
 	var MONEY = { sales: true, aov: true, net_item_sales: true, refunds: true };
+	// 九张趋势图，顺序 = Shopname 的顺序：key 是趋势接口里的指标，title / help 是 strings 的 key，kind 决定纵轴和数值的格式。
+	var TRENDS = [
+		{ key: 'visitors', title: 'trendVisitors', help: '', kind: 'count' },
+		{ key: 'orders', title: 'trendOrders', help: '', kind: 'count' },
+		{ key: 'sales', title: 'trendSales', help: '', kind: 'money' },
+		{ key: 'units_per_order', title: 'trendUnits', help: 'helpUnits', kind: 'decimal' },
+		{ key: 'aov', title: 'trendAov', help: '', kind: 'money' },
+		{ key: 'repurchase_rate', title: 'trendRepRate', help: 'helpRepRate', kind: 'percent' },
+		{ key: 'repurchase_orders', title: 'trendRepOrders', help: 'helpRepOrders', kind: 'count' },
+		{ key: 'repurchase_sales', title: 'trendRepSales', help: '', kind: 'money' },
+		{ key: 'repurchase_aov', title: 'trendRepAov', help: 'helpRepAov', kind: 'money' }
+	];
+	var TREND_MONEY = { sales: true, aov: true, repurchase_sales: true, repurchase_aov: true };
 
 	// 请求计数：切换时间段后，旧请求晚到的结果不再画。
 	var requests = 0;
@@ -138,6 +155,162 @@
 		'</section>';
 	}
 
+	// ---------- 趋势图 ----------
+
+	// 趋势图上一个数字的显示值：金额 2 位小数，客单数 2 位小数，复购率带 % 且 2 位小数（没有值显示“-”），其余是整数。
+	function trendValue( key, v, ctx ) {
+		if ( TREND_MONEY[ key ] ) {
+			return ctx.money( v );
+		}
+		if ( 'units_per_order' === key ) {
+			return isNum( v ) ? Number( v ).toFixed( 2 ) : '-';
+		}
+		if ( 'repurchase_rate' === key ) {
+			return isNum( v ) ? Number( v ).toFixed( 2 ) + '%' : '-';
+		}
+		return ctx.number( v );
+	}
+
+	// 一条折线的数值：没有值（复购率没有购买用户的桶）画成 0。
+	function series( points, key ) {
+		return ( points || [] ).map( function ( p ) {
+			return p && isNum( p[ key ] ) ? Number( p[ key ] ) : 0;
+		} );
+	}
+
+	// 纵轴最多 5 格，刻度取 1 / 2 / 5 乘以 10 的整数次方；次数类的刻度至少为 1 且是整数。
+	// 用 Math.log / Math.LN10 算以 10 为底的对数：Math.log10 不是 ES5。
+	function niceStep( max, whole ) {
+		var raw = max / 5;
+		if ( raw <= 0 ) {
+			return 1;
+		}
+		var p = Math.pow( 10, Math.floor( Math.log( raw ) / Math.LN10 ) );
+		var n = raw / p;
+		var st = ( n <= 1 ? 1 : ( n <= 2 ? 2 : ( n <= 5 ? 5 : 10 ) ) ) * p;
+		return whole ? Math.max( 1, Math.ceil( st ) ) : st;
+	}
+
+	function axisText( v, kind ) {
+		v = Math.round( v * 100 ) / 100;
+		if ( 'percent' === kind ) {
+			return v + '%';
+		}
+		return v >= 1000 ? ( Math.round( v / 100 ) / 10 ) + 'k' : String( v );
+	}
+
+	function r1( v ) {
+		return Math.round( v * 10 ) / 10;
+	}
+
+	// 一张趋势图：本期实线、对比期虚线（按下标对应）；纵轴取两条线里最大的值，全是 0 时按 1 画，线贴在底线上。
+	function trendChart( t, data, ctx ) {
+		var esc = ctx.esc;
+		var cur = ( data.current && data.current.points ) || [];
+		var prev = ( data.previous && data.previous.points ) || [];
+		var cv = series( cur, t.key );
+		var pv = series( prev, t.key );
+		var w = 560;
+		var h = 200;
+		var padL = 48;
+		var padR = 20;
+		var padT = 12;
+		var padB = 26;
+
+		var peak = 0;
+		cv.concat( pv ).forEach( function ( v ) {
+			if ( v > peak ) {
+				peak = v;
+			}
+		} );
+		if ( peak <= 0 ) {
+			peak = 1;
+		}
+		var step = niceStep( peak, 'count' === t.kind );
+		var ticks = Math.max( 1, Math.ceil( peak / step - 1e-9 ) );
+		var max = step * ticks;
+		var n = cv.length;
+		var x = function ( i ) {
+			return padL + ( n > 1 ? ( i * ( w - padL - padR ) ) / ( n - 1 ) : ( w - padL - padR ) / 2 );
+		};
+		var y = function ( v ) {
+			return h - padB - ( v / max ) * ( h - padT - padB );
+		};
+		// 折线只画前 count 个点（对比期的点数可以和本期不同，只画两边都有的下标）。
+		var line = function ( vals, count, cls ) {
+			if ( count < 1 ) {
+				return '';
+			}
+			if ( count < 2 ) {
+				return '<circle class="pc-ops-dot ' + esc( cls ) + '" cx="' + esc( r1( x( 0 ) ) ) + '" cy="' + esc( r1( y( vals[ 0 ] ) ) ) + '" r="2.5"/>';
+			}
+			var pts = [];
+			var i;
+			for ( i = 0; i < count; i++ ) {
+				pts.push( r1( x( i ) ) + ',' + r1( y( vals[ i ] ) ) );
+			}
+			return '<polyline class="pc-ops-line ' + esc( cls ) + '" points="' + esc( pts.join( ' ' ) ) + '"/>';
+		};
+
+		var svg = '<svg viewBox="0 0 ' + esc( w ) + ' ' + esc( h ) + '" class="pc-ops-chart" role="img" aria-label="' + esc( T[ t.title ] ) + '">';
+		var g;
+		for ( g = 0; g <= ticks; g++ ) {
+			var gy = r1( y( g * step ) );
+			svg += '<line class="pc-ops-grid' + ( g ? ' is-dash' : '' ) + '" x1="' + esc( padL ) + '" x2="' + esc( w - padR ) + '" y1="' + esc( gy ) + '" y2="' + esc( gy ) + '"/>' +
+				'<text class="pc-ops-axis" x="' + esc( padL - 6 ) + '" y="' + esc( r1( gy + 4 ) ) + '" text-anchor="end">' + esc( axisText( g * step, t.kind ) ) + '</text>';
+		}
+		// 横轴标签取本期的点，最多显示 8 个。
+		var every = Math.max( 1, Math.ceil( n / 8 ) );
+		cur.forEach( function ( p, i ) {
+			if ( 0 === i % every ) {
+				svg += '<text class="pc-ops-axis" x="' + esc( r1( x( i ) ) ) + '" y="' + esc( h - 8 ) + '" text-anchor="middle">' + esc( p.label ) + '</text>';
+			}
+		} );
+		svg += line( pv, Math.min( n, pv.length ), 'is-prev' );
+		svg += line( cv, n, '' );
+		// 每个本期的点带一个提示：时间和数值。
+		cur.forEach( function ( p, i ) {
+			svg += '<circle class="pc-ops-dot" cx="' + esc( r1( x( i ) ) ) + '" cy="' + esc( r1( y( cv[ i ] ) ) ) + '" r="3"><title>' +
+				esc( fill( T.totalLine, { '%1$s': p.label, '%2$s': trendValue( t.key, p[ t.key ], ctx ) } ) ) + '</title></circle>';
+		} );
+		return svg + '</svg>';
+	}
+
+	function trendCard( t, data, ctx ) {
+		var esc = ctx.esc;
+		var code = ctx.currency && ctx.currency.code ? ctx.currency.code : '';
+		var name = T[ t.title ];
+		var title = name + ( TREND_MONEY[ t.key ] && code ? ' (' + code + ')' : '' );
+		var help = t.help ? T[ t.help ] : '';
+		var totals = ( data.current && data.current.totals ) || {};
+		var change = data.change || {};
+
+		var html = '<div class="pc-ops-trend">' +
+			'<h3 class="pc-ops-trend__title"' + ( help ? ' title="' + esc( help ) + '"' : '' ) + '>' + esc( title ) +
+				( help ? ' <span class="pc-ops-help" tabindex="0" role="img" aria-label="' + esc( help ) + '" title="' + esc( help ) + '">' + esc( 'ⓘ' ) + '</span>' : '' ) +
+			'</h3>' +
+			'<div class="pc-ops-trend__total">' + esc( fill( T.totalLine, { '%1$s': name, '%2$s': trendValue( t.key, totals[ t.key ], ctx ) } ) ) + ' ' +
+				changeHtml( change[ t.key ], ctx, 'pc-ops-change' ) + '</div>';
+		if ( 'visitors' === t.key ) {
+			// 访客数这张图的第二行：浏览量的合计和变化（浏览量不画线）。
+			html += '<div class="pc-ops-trend__total pc-ops-trend__sub">' + esc( fill( T.totalLine, { '%1$s': T.trendPv, '%2$s': ctx.number( totals.pageviews ) } ) ) + ' ' +
+				changeHtml( change.pageviews, ctx, 'pc-ops-change' ) + '</div>';
+		}
+		html += trendChart( t, data, ctx ) +
+			'<div class="pc-ops-legend">' +
+				'<span class="pc-ops-legend__item"><span class="pc-ops-swatch"></span>' + esc( T.thisPeriod ) + '</span>' +
+				'<span class="pc-ops-legend__item"><span class="pc-ops-swatch is-prev"></span>' + esc( T.previousPeriod ) + '</span>' +
+			'</div>' +
+		'</div>';
+		return html;
+	}
+
+	function trendsView( data, ctx ) {
+		return TRENDS.map( function ( t ) {
+			return trendCard( t, data, ctx );
+		} ).join( '' );
+	}
+
 	function view( data, ctx ) {
 		var esc = ctx.esc;
 		var html = '';
@@ -150,6 +323,8 @@
 		html += kpis( data, ctx );
 		html += funnel( T.visitorFunnel, data.funnel || {}, ctx );
 		html += funnel( T.returningFunnel, data.returning || {}, ctx );
+		// 趋势图的位置：趋势数据到了再填（见 render）。
+		html += '<section class="pc-ops-trends" aria-live="polite"></section>';
 		return '<div class="pc-ops">' + html + '</div>';
 	}
 
@@ -162,6 +337,27 @@
 		var failed = function () {
 			bodyEl.innerHTML = '<p class="pc-data-empty">' + ctx.esc( ctx.strings.loadError ) + '</p>';
 		};
+		// 两个请求的结果各自留着：运营数据画好页面（opsData），趋势数据到了（trends：{ data } 或 { error }）。两个都有了才填趋势图那一块，谁先到都一样。
+		var opsData = null;
+		var trends = null;
+		var trendsFailed = function ( box ) {
+			box.innerHTML = '<p class="pc-data-empty">' + ctx.esc( T.trendsError ) + '</p>';
+		};
+		var showTrends = function () {
+			var box = opsData && trends ? bodyEl.querySelector( '.pc-ops-trends' ) : null;
+			if ( ! box ) {
+				return;
+			}
+			if ( trends.error ) {
+				trendsFailed( box );
+				return;
+			}
+			try {
+				box.innerHTML = trendsView( trends.data, ctx );
+			} catch ( e ) {
+				trendsFailed( box );
+			}
+		};
 
 		bodyEl.innerHTML = '<p class="pc-data-muted">' + ctx.esc( ctx.strings.loading ) + '</p>';
 		ctx.api( PATH, params ).then(
@@ -171,15 +367,34 @@
 				}
 				try {
 					bodyEl.innerHTML = view( data, ctx );
+					opsData = data;
 				} catch ( e ) {
 					failed();
+					return;
 				}
+				showTrends();
 			},
 			function () {
 				if ( mine !== requests ) {
 					return;
 				}
 				failed();
+			}
+		);
+		ctx.api( TRENDS_PATH, params ).then(
+			function ( data ) {
+				if ( mine !== requests ) {
+					return;
+				}
+				trends = { data: data };
+				showTrends();
+			},
+			function () {
+				if ( mine !== requests ) {
+					return;
+				}
+				trends = { error: true };
+				showTrends();
 			}
 		);
 	}

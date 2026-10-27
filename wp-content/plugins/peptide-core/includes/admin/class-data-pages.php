@@ -23,6 +23,7 @@ use PeptideCore\Data\Page_Visits;
 use PeptideCore\Data\Products;
 use PeptideCore\Data\Range;
 use PeptideCore\Data\Realtime;
+use PeptideCore\Data\Trends;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -104,6 +105,24 @@ final class Data_Pages {
 								return $r;
 							}
 							$res = new \WP_REST_Response( Operations::summary( $r ) );
+							$res->header( 'Cache-Control', 'no-store' );
+							return $res;
+						},
+						'permission_callback' => $permission,
+					)
+				);
+				// 运营数据页的趋势图（DATA-01 第 7a 步）：九张趋势图的本期合计、对比期合计、变化和每个桶的点。
+				register_rest_route(
+					Rest_Controller::ROUTE_NAMESPACE,
+					'/data/trends',
+					array(
+						'methods'             => \WP_REST_Server::READABLE,
+						'callback'            => static function ( \WP_REST_Request $request ) {
+							$r = Range::from_params( $request->get_params() );
+							if ( is_wp_error( $r ) ) {
+								return $r;
+							}
+							$res = new \WP_REST_Response( Trends::summary( $r ) );
 							$res->header( 'Cache-Control', 'no-store' );
 							return $res;
 						},
@@ -368,7 +387,7 @@ final class Data_Pages {
 		);
 	}
 
-	/** 运营数据页脚本里的文字：12 个指标、漏斗的五层、表头和说明。 */
+	/** 运营数据页脚本里的文字：12 个指标、漏斗的五层、表头和说明，以及九张趋势图的标题、说明和提示。 */
 	private static function operations_strings(): array {
 		return array(
 			'sales'           => __( 'Sales', 'peptide-core' ),
@@ -400,6 +419,23 @@ final class Data_Pages {
 			'trackingOff'     => __( 'Visitor tracking is off, so visitor numbers, conversion and the funnels stay at zero.', 'peptide-core' ),
 			/* translators: %d: number of orders */
 			'testOrders'      => __( 'Only real orders are counted: %d test order(s) in this period (test payment or demo products) are left out.', 'peptide-core' ),
+			'trendVisitors'   => __( 'Visitor count', 'peptide-core' ),
+			'trendPv'         => __( 'PV', 'peptide-core' ),
+			'trendOrders'     => __( 'Order count', 'peptide-core' ),
+			'trendSales'      => __( 'Sales', 'peptide-core' ),
+			'trendUnits'      => __( 'Units per order', 'peptide-core' ),
+			'trendAov'        => __( 'Average order value', 'peptide-core' ),
+			'trendRepRate'    => __( 'Repurchase rate', 'peptide-core' ),
+			'trendRepOrders'  => __( 'Repurchase orders', 'peptide-core' ),
+			'trendRepSales'   => __( 'Repurchase sales', 'peptide-core' ),
+			'trendRepAov'     => __( 'Repurchase average order value', 'peptide-core' ),
+			'helpUnits'       => __( 'Paid units / paid orders', 'peptide-core' ),
+			'helpRepRate'     => __( 'Buyers with more than one purchase / all buyers in the period × 100%', 'peptide-core' ),
+			'helpRepOrders'   => __( "Orders from buyers who had bought before; each buyer's first purchase is not a repurchase", 'peptide-core' ),
+			'helpRepAov'      => __( 'Repurchase sales / repurchase orders', 'peptide-core' ),
+			/* translators: 1: metric name, 2: value */
+			'totalLine'       => __( '%1$s: %2$s', 'peptide-core' ),
+			'trendsError'     => __( 'The trend charts could not be loaded.', 'peptide-core' ),
 		);
 	}
 
