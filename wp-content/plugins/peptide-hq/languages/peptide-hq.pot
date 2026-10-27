@@ -1,0 +1,671 @@
+# Copyright (C) 2026 DiGua
+# This file is distributed under the same license as the Peptide HQ plugin.
+msgid ""
+msgstr ""
+"Project-Id-Version: Peptide HQ 0.1.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-hq\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-10-27T19:03:33+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: peptide-hq\n"
+
+#. Plugin Name of the plugin
+#: peptide-hq.php
+msgid "Peptide HQ"
+msgstr ""
+
+#. Description of the plugin
+#: peptide-hq.php
+msgid "Master admin for all VialCove stores: sales and orders of every store, alerts, one-click login and salesperson accounts."
+msgstr ""
+
+#. Author of the plugin
+#: peptide-hq.php
+msgid "DiGua"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:36
+#: includes/admin/class-menu.php:57
+#: includes/admin/class-sites-page.php:56
+#: includes/admin/class-sites-page.php:113
+msgid "Salesperson accounts"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:38
+#: includes/admin/class-accounts-page.php:87
+#: includes/admin/class-accounts-page.php:144
+msgid "Add salesperson account"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:42
+msgid "Each store is run by one salesperson. Their account lives on the store; create and change it here. The master admin does not keep their password."
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:45
+msgid "No store has joined yet."
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:45
+#: includes/admin/class-dashboard-page.php:94
+msgid "How stores join"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:52
+#: includes/admin/class-alerts-page.php:45
+#: includes/admin/class-alerts-page.php:49
+#: includes/admin/class-alerts-page.php:65
+#: includes/admin/class-alerts-page.php:69
+#: includes/admin/class-dashboard-page.php:157
+#: includes/admin/class-dashboard-page.php:176
+#: includes/admin/class-sites-page.php:51
+#: includes/admin/class-sites-page.php:81
+msgid "Store"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:87
+msgid "This store has no salesperson account yet."
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:95
+#: includes/admin/class-accounts-page.php:108
+msgid "Account"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:96
+#: includes/admin/class-accounts-page.php:109
+#: includes/admin/class-accounts-page.php:158
+#: includes/admin/class-sites-page.php:124
+msgid "Name"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:97
+#: includes/admin/class-accounts-page.php:110
+#: includes/admin/class-accounts-page.php:154
+msgid "Email"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:98
+#: includes/admin/class-accounts-page.php:111
+msgid "Menus they can use"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:99
+#: includes/admin/class-accounts-page.php:112
+#: includes/admin/class-dashboard-page.php:158
+#: includes/admin/class-dashboard-page.php:177
+#: includes/admin/class-sites-page.php:52
+#: includes/admin/class-sites-page.php:85
+msgid "Status"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:100
+#: includes/admin/class-accounts-page.php:116
+msgid "Last login"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:101
+#: includes/admin/class-accounts-page.php:117
+#: includes/admin/class-alerts-page.php:45
+#: includes/admin/class-alerts-page.php:53
+#: includes/admin/class-dashboard-page.php:166
+#: includes/admin/class-dashboard-page.php:185
+#: includes/admin/class-sites-page.php:58
+#: includes/admin/class-sites-page.php:115
+msgid "Actions"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:111
+msgid "None"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:113
+msgid "Enable this account?"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:113
+msgid "Disable this account? The salesperson is logged out at once and cannot log in until enabled again."
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:114
+msgid "Disabled"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:114
+msgid "Enabled"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:118
+msgid "Edit"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:120
+msgid "Delete this salesperson account from the store? Its posts and products are kept and moved to the store administrator."
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:120
+msgid "Delete"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:144
+msgid "Edit salesperson account"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:150
+msgid "Account name"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:162
+msgid "Password"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:168
+msgid "Leave empty to keep the current password. A new password logs the salesperson out everywhere."
+msgstr ""
+
+#. translators: %d: minimum length
+#: includes/admin/class-accounts-page.php:170
+#, php-format
+msgid "At least %d characters. Tell the salesperson the account name and password yourself."
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:176
+msgid "Menus the salesperson can use in the store admin"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:180
+msgid "Users, plugins and WordPress settings always stay with the administrator."
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:182
+msgid "Disable this account (cannot log in)"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:184
+msgid "Save"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:184
+msgid "Create account on the store"
+msgstr ""
+
+#: includes/admin/class-accounts-page.php:185
+msgid "Cancel"
+msgstr ""
+
+#: includes/admin/class-alerts-page.php:30
+#: includes/admin/class-menu.php:58
+msgid "Alerts"
+msgstr ""
+
+#. translators: %s: email address
+#: includes/admin/class-alerts-page.php:35
+#, php-format
+msgid "Stores are checked every 10 minutes. New alerts are also emailed to %s. An alert closes by itself when the problem is gone."
+msgstr ""
+
+#: includes/admin/class-alerts-page.php:39
+msgid "Open"
+msgstr ""
+
+#: includes/admin/class-alerts-page.php:41
+msgid "No open alerts. All stores look fine."
+msgstr ""
+
+#: includes/admin/class-alerts-page.php:45
+#: includes/admin/class-alerts-page.php:50
+#: includes/admin/class-alerts-page.php:65
+#: includes/admin/class-alerts-page.php:70
+msgid "Problem"
+msgstr ""
+
+#: includes/admin/class-alerts-page.php:45
+#: includes/admin/class-alerts-page.php:51
+#: includes/admin/class-alerts-page.php:65
+#: includes/admin/class-alerts-page.php:71
+msgid "Details"
+msgstr ""
+
+#: includes/admin/class-alerts-page.php:45
+#: includes/admin/class-alerts-page.php:52
+msgid "Since"
+msgstr ""
+
+#: includes/admin/class-alerts-page.php:53
+msgid "Mark as handled"
+msgstr ""
+
+#: includes/admin/class-alerts-page.php:62
+msgid "Recently closed"
+msgstr ""
+
+#: includes/admin/class-alerts-page.php:65
+#: includes/admin/class-alerts-page.php:72
+msgid "From"
+msgstr ""
+
+#: includes/admin/class-alerts-page.php:65
+#: includes/admin/class-alerts-page.php:73
+msgid "Closed"
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:24
+msgid "Today"
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:25
+msgid "Yesterday"
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:26
+msgid "Last 7 days"
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:27
+msgid "Last 30 days"
+msgstr ""
+
+#. translators: %s: signed percentage
+#: includes/admin/class-dashboard-page.php:60
+#, php-format
+msgid "%s vs previous period"
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:85
+#: includes/admin/class-menu.php:55
+msgid "Overview"
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:86
+#: includes/admin/class-sites-page.php:28
+msgid "Refresh all stores now"
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:92
+msgid "No store has joined yet"
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:93
+msgid "Stores join by themselves once their wp-config.php has the two master admin lines. The lines are on the Stores page."
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:103
+msgid "Time range"
+msgstr ""
+
+#. translators: 1: date range, 2: time of last update
+#: includes/admin/class-dashboard-page.php:111
+#, php-format
+msgid "%1$s · updated %2$s (every 10 minutes)"
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:118
+#: includes/admin/class-dashboard-page.php:159
+#: includes/admin/class-dashboard-page.php:178
+#: includes/admin/class-dashboard-page.php:266
+msgid "Sales"
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:123
+#: includes/admin/class-dashboard-page.php:160
+#: includes/admin/class-dashboard-page.php:179
+#: includes/admin/class-dashboard-page.php:266
+msgid "Paid orders"
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:128
+#: includes/admin/class-dashboard-page.php:161
+#: includes/admin/class-dashboard-page.php:180
+msgid "Average order value"
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:132
+#: includes/admin/class-dashboard-page.php:162
+#: includes/admin/class-dashboard-page.php:181
+msgid "Visitors"
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:137
+#: includes/admin/class-dashboard-page.php:163
+#: includes/admin/class-dashboard-page.php:182
+msgid "Conversion rate"
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:141
+msgid "Stores online"
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:145
+msgid "Open alerts"
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:152
+msgid "By store"
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:164
+#: includes/admin/class-dashboard-page.php:183
+msgid "To ship"
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:165
+#: includes/admin/class-dashboard-page.php:184
+msgid "Last order"
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:185
+#: includes/admin/class-sites-page.php:116
+msgid "Open store admin"
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:191
+msgid "Sales are paid orders minus refunds. Days follow each store’s time zone. Visitors are counted only on stores with visitor tracking turned on."
+msgstr ""
+
+#. translators: %d: number of days
+#: includes/admin/class-dashboard-page.php:230
+#, php-format
+msgid "Daily sales, all stores (last %d days)"
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:233
+msgid "Daily sales chart; the table below lists the same numbers."
+msgstr ""
+
+#. translators: 1: date, 2: sales, 3: orders
+#: includes/admin/class-dashboard-page.php:247
+#, php-format
+msgid "%1$s: %2$s, %3$d orders"
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:264
+msgid "Show the numbers by day"
+msgstr ""
+
+#: includes/admin/class-dashboard-page.php:266
+msgid "Date"
+msgstr ""
+
+#: includes/admin/class-menu.php:38
+msgid "Orders"
+msgstr ""
+
+#: includes/admin/class-menu.php:39
+#: includes/admin/class-sites-page.php:55
+#: includes/admin/class-sites-page.php:112
+msgid "Products"
+msgstr ""
+
+#: includes/admin/class-menu.php:40
+msgid "Customers"
+msgstr ""
+
+#: includes/admin/class-menu.php:41
+msgid "Marketing campaigns"
+msgstr ""
+
+#: includes/admin/class-menu.php:42
+msgid "Data"
+msgstr ""
+
+#: includes/admin/class-menu.php:43
+msgid "Blog"
+msgstr ""
+
+#: includes/admin/class-menu.php:44
+msgid "Store design"
+msgstr ""
+
+#: includes/admin/class-menu.php:45
+msgid "Store settings"
+msgstr ""
+
+#: includes/admin/class-menu.php:46
+msgid "Admin settings"
+msgstr ""
+
+#: includes/admin/class-menu.php:47
+msgid "App center"
+msgstr ""
+
+#: includes/admin/class-menu.php:54
+msgid "Master admin"
+msgstr ""
+
+#: includes/admin/class-menu.php:56
+#: includes/admin/class-sites-page.php:26
+msgid "Stores"
+msgstr ""
+
+#: includes/admin/class-menu.php:108
+msgid "Sorry, you are not allowed to do that."
+msgstr ""
+
+#. translators: 1: stores reached, 2: stores checked
+#: includes/admin/class-menu.php:124
+#, php-format
+msgid "Refreshed: %1$d of %2$d stores reached."
+msgstr ""
+
+#: includes/admin/class-menu.php:130
+msgid "Name saved."
+msgstr ""
+
+#: includes/admin/class-menu.php:135
+msgid "New registration secret created. Stores already connected keep working; use the new lines when you open a new store."
+msgstr ""
+
+#: includes/admin/class-menu.php:140
+msgid "Store removed from the master admin. The store itself is not changed; if it still has the master admin lines in wp-config.php, it joins again by itself within a day."
+msgstr ""
+
+#: includes/admin/class-menu.php:152
+msgid "The store did not return a login link."
+msgstr ""
+
+#: includes/admin/class-menu.php:174
+msgid "Salesperson account saved on the store."
+msgstr ""
+
+#: includes/admin/class-menu.php:174
+msgid "Salesperson account created on the store. Tell the salesperson the account name and password."
+msgstr ""
+
+#: includes/admin/class-menu.php:184
+msgid "Account not found on the store."
+msgstr ""
+
+#: includes/admin/class-menu.php:189
+msgid "Account disabled. The salesperson is logged out of the store."
+msgstr ""
+
+#: includes/admin/class-menu.php:189
+msgid "Account enabled."
+msgstr ""
+
+#: includes/admin/class-menu.php:195
+msgid "Account deleted. Its posts and products were moved to the store administrator."
+msgstr ""
+
+#: includes/admin/class-menu.php:200
+msgid "Alert marked as handled."
+msgstr ""
+
+#: includes/admin/class-menu.php:214
+msgid "Online"
+msgstr ""
+
+#: includes/admin/class-menu.php:215
+msgid "Offline"
+msgstr ""
+
+#: includes/admin/class-menu.php:216
+msgid "Code invalid"
+msgstr ""
+
+#: includes/admin/class-menu.php:218
+msgid "Checking"
+msgstr ""
+
+#. translators: %s: time difference, e.g. 3 hours
+#: includes/admin/class-menu.php:244
+#, php-format
+msgid "%s ago"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:34
+msgid "Opening a new store"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:35
+msgid "Every store you open joins the master admin by itself. When you set up a new store, add these two lines to its wp-config.php (above “That’s all, stop editing!”). The store appears here as soon as its admin is opened once (at the latest within a day)."
+msgstr ""
+
+#: includes/admin/class-sites-page.php:37
+msgid "Lines for wp-config.php"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:40
+msgid "The secret only lets a store join; each store makes its own key for everything else. Keep the lines private."
+msgstr ""
+
+#: includes/admin/class-sites-page.php:42
+msgid "Create a new registration secret? Stores already connected keep working. Stores opened later need the new lines."
+msgstr ""
+
+#: includes/admin/class-sites-page.php:42
+msgid "Create a new secret (if the old one leaked)"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:53
+#: includes/admin/class-sites-page.php:94
+msgid "Domains"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:54
+#: includes/admin/class-sites-page.php:108
+msgid "Versions"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:57
+#: includes/admin/class-sites-page.php:114
+msgid "Last check"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:78
+msgid "HTTPS in effect"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:78
+msgid "HTTPS being checked"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:78
+msgid "HTTPS not in effect"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:91
+msgid "Coming soon mode: customers cannot see the store."
+msgstr ""
+
+#. translators: %d: number of other domains
+#: includes/admin/class-sites-page.php:103
+#, php-format
+msgid "+%d other domains"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:117
+msgid "Refresh"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:119
+msgid "More"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:126
+msgid "Save name"
+msgstr ""
+
+#: includes/admin/class-sites-page.php:128
+msgid "Remove this store from the master admin? Its numbers and alerts here are deleted; the store itself keeps running."
+msgstr ""
+
+#: includes/admin/class-sites-page.php:128
+msgid "Remove from master admin"
+msgstr ""
+
+#: includes/class-alerts.php:17
+msgid "Store unreachable"
+msgstr ""
+
+#: includes/class-alerts.php:18
+msgid "Connection code no longer valid"
+msgstr ""
+
+#: includes/class-alerts.php:19
+msgid "Domain not connected"
+msgstr ""
+
+#: includes/class-alerts.php:20
+msgid "HTTPS not working"
+msgstr ""
+
+#: includes/class-alerts.php:21
+msgid "No orders for a while"
+msgstr ""
+
+#: includes/class-alerts.php:22
+msgid "Store not open to the public"
+msgstr ""
+
+#. translators: 1: store name, 2: alert type
+#: includes/class-alerts.php:94
+#, php-format
+msgid "[Master admin] %1$s: %2$s"
+msgstr ""
+
+#: includes/class-client.php:54
+msgid "The store refused the connection key. Paste the current connection code from the store."
+msgstr ""
+
+#. translators: %d: HTTP status
+#: includes/class-client.php:58
+#, php-format
+msgid "The store answered with HTTP status %d. Is peptide-core up to date there?"
+msgstr ""
+
+#: includes/class-client.php:68
+msgid "Store not found."
+msgstr ""
+
+#. translators: %s: error
+#: includes/class-monitor.php:110
+#, php-format
+msgid "The store could not be reached twice in a row: %s"
+msgstr ""
+
+#. translators: %s: domain
+#: includes/class-monitor.php:153
+#, php-format
+msgid "%s does not reach the store. Check its DNS records."
+msgstr ""
+
+#. translators: %s: domain
+#: includes/class-monitor.php:157
+#, php-format
+msgid "HTTPS does not work on %s. Visitors see a security warning."
+msgstr ""
+
+#. translators: 1: hours, 2: average orders per day
+#: includes/class-monitor.php:167
+#, php-format
+msgid "No order for %1$d hours, although the store had %2$s orders a day over the last 7 days."
+msgstr ""
+
+#: includes/class-monitor.php:173
+msgid "The store is in “coming soon” mode: customers cannot see it."
+msgstr ""

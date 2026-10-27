@@ -49,7 +49,7 @@ $ok( 'media and comments removed (posts are the Blog menu now)', ! array_interse
 // 2026-10-27 照 YY：……访客数据、博客、店铺设置、后台设置、应用中心；员工管理在店铺设置里。
 $pos = array_flip( array_values( array_filter( $slugs, static fn( $s ) => $s && ! str_starts_with( (string) $s, 'separator' ) ) ) );
 $ok( 'Blog comes after Visitors; Admin settings between Store settings and App center', isset( $pos['edit.php'], $pos['pc-visitors'], $pos['pc-media'], $pos['pc-apps'], $pos['admin.php?page=wc-settings'] ) && $pos['edit.php'] === $pos['pc-visitors'] + 1 && $pos['pc-media'] === $pos['admin.php?page=wc-settings'] + 1 && $pos['pc-apps'] === $pos['pc-media'] + 1 );
-$ok( 'Blog has Blog posts and Blog collections only; Admin settings has Media library and Activity log; Staff is under Store settings', array( 'edit.php', 'edit-tags.php?taxonomy=category' ) === array_column( $submenu['edit.php'] ?? array(), 2 ) && array( 'pc-media', 'pc-activity' ) === array_column( $submenu['pc-media'] ?? array(), 2 ) && in_array( 'pc-staff', array_column( $submenu['admin.php?page=wc-settings'] ?? array(), 2 ), true ) );
+$ok( 'Blog has Blog posts and Blog collections only; Admin settings has Media library and Activity log', array( 'edit.php', 'edit-tags.php?taxonomy=category' ) === array_column( $submenu['edit.php'] ?? array(), 2 ) && array( 'pc-media', 'pc-activity' ) === array_column( $submenu['pc-media'] ?? array(), 2 ) );
 $ok( 'appearance, tools and settings removed', ! array_intersect( array( 'themes.php', 'tools.php', 'options-general.php' ), $slugs ) );
 $ok( 'WooCommerce top-level menu removed', ! in_array( 'woocommerce', $slugs, true ) );
 $ok( 'dashboard first, then orders and customers', 'pc-overview' === array_values( array_filter( $slugs ) )[0] && in_array( 'admin.php?page=wc-orders', $slugs, true ) && in_array( 'admin.php?page=wc-admin&path=/customers', $slugs, true ) );
@@ -64,7 +64,8 @@ include_once WC()->plugin_path() . '/includes/admin/class-wc-admin-settings.php'
 WC_Admin_Settings::get_settings_pages();
 $ok( 'hidden tabs still open from direct links (their settings actions remain)', has_action( 'woocommerce_settings_email' ) && has_action( 'woocommerce_settings_shipping' ) && has_action( 'woocommerce_settings_checkout' ) );
 $_GET['page'] = 'wc-orders';
-$ok( 'store settings menu: shipping, tax, system, staff (payments has its own WooCommerce menu)', array( 'pc-shipping', 'pc-tax', 'pc-system', 'pc-staff' ) === array_column( $submenu['admin.php?page=wc-settings'] ?? array(), 2 ) );
+$ok( 'store settings menu: shipping, tax, system (payments has its own WooCommerce menu; staff moved to the master admin)', array( 'pc-shipping', 'pc-tax', 'pc-system' ) === array_column( $submenu['admin.php?page=wc-settings'] ?? array(), 2 ) );
+$ok( 'no Users menu on the store (accounts are managed in the master admin)', ! in_array( 'users.php', $slugs, true ) );
 foreach ( array( 'wc-orders' => 'admin.php?page=wc-orders', 'wc-settings' => 'admin.php?page=wc-settings', 'pc-settings' => 'admin.php?page=wc-settings', 'wc-status' => 'admin.php?page=wc-settings', 'pc-system' => 'admin.php?page=wc-settings', 'pc-tax' => 'admin.php?page=wc-settings' ) as $page => $parent ) {
 	$_GET['page'] = $page;
 	$plugin_page  = $page;

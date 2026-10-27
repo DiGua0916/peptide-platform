@@ -41,6 +41,12 @@ final class Staff {
 		add_action( 'admin_menu', array( self::class, 'filter_menu' ), 9999 );
 		add_action( 'admin_init', array( self::class, 'redirect_dashboard' ), 1 );
 		add_action( 'current_screen', array( self::class, 'gate' ) );
+		add_filter( 'gettext_with_context', array( self::class, 'role_name' ), 10, 4 );
+	}
+
+	/** 角色名“Staff”是存在数据库里的英文，WordPress 的角色下拉框里翻译成“员工”。 */
+	public static function role_name( $translation, $text, $context, $domain ) {
+		return 'User role' === $context && 'Staff' === $text && 'default' === $domain ? __( 'Staff member', 'peptide-core' ) : $translation;
 	}
 
 	/** 员工角色本身只有“能登录后台”的能力，其余按勾选的模块给。 */

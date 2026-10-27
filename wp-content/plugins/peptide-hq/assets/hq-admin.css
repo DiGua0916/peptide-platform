@@ -1,0 +1,423 @@
+/* 总后台（peptide-hq）后台样式。 */
+.pchq {
+	--pchq-ink: #1d2327;
+	--pchq-muted: #646970;
+	--pchq-line: #dcdcde;
+	--pchq-grid: #ececec;
+	--pchq-accent: #2271b1;
+	--pchq-surface: #fff;
+}
+
+.pchq-muted {
+	color: var(--pchq-muted);
+	font-size: 12px;
+}
+
+.pchq-card {
+	margin: 12px 0;
+	padding: 16px 20px;
+	background: var(--pchq-surface);
+	border: 1px solid var(--pchq-line);
+	border-radius: 6px;
+	box-sizing: border-box;
+}
+
+.pchq-empty {
+	max-width: 640px;
+}
+
+.pchq-ok {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	max-width: 640px;
+}
+
+.pchq-ok .dashicons {
+	color: #008a20;
+}
+
+.pchq-h2 {
+	margin: 20px 0 8px;
+	font-size: 15px;
+}
+
+/* 时间范围 / 店铺切换 */
+.pchq-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 16px;
+	margin: 12px 0;
+}
+
+.pchq-ranges {
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	padding: 3px;
+	background: #f0f0f1;
+	border-radius: 6px;
+}
+
+.pchq-ranges a {
+	padding: 5px 12px;
+	color: var(--pchq-ink);
+	text-decoration: none;
+	border-radius: 4px;
+}
+
+.pchq-ranges a.is-current {
+	background: var(--pchq-surface);
+	color: var(--pchq-accent);
+	font-weight: 600;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.pchq-sitepick {
+	margin: 12px 0;
+}
+
+/* 指标卡片 */
+.pchq-tiles {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+	gap: 12px;
+	margin: 12px 0;
+}
+
+.pchq-tile {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 14px 16px;
+	color: var(--pchq-ink);
+	text-decoration: none;
+	background: var(--pchq-surface);
+	border: 1px solid var(--pchq-line);
+	border-radius: 6px;
+}
+
+a.pchq-tile:hover {
+	border-color: var(--pchq-accent);
+}
+
+.pchq-tile--hero {
+	grid-column: span 2;
+}
+
+.pchq-tile__label {
+	color: var(--pchq-muted);
+	font-size: 13px;
+}
+
+.pchq-tile__value {
+	font-size: 24px;
+	font-weight: 600;
+	line-height: 1.2;
+	overflow-wrap: anywhere;
+}
+
+.pchq-tile--hero .pchq-tile__value {
+	font-size: 40px;
+}
+
+.pchq-tile__delta {
+	min-height: 1em;
+	color: var(--pchq-muted);
+	font-size: 12px;
+}
+
+/* 柱状图：一个系列，WordPress 后台蓝；网格线是很浅的灰色细线。 */
+.pchq-chart svg {
+	display: block;
+	width: 100%;
+	max-width: 960px;
+	height: auto;
+}
+
+.pchq-chart .pchq-grid {
+	stroke: var(--pchq-grid);
+	stroke-width: 1;
+}
+
+.pchq-chart .pchq-base {
+	stroke: #c3c4c7;
+	stroke-width: 1;
+}
+
+.pchq-chart .pchq-axis {
+	fill: var(--pchq-muted);
+	font-size: 11px;
+	font-variant-numeric: tabular-nums;
+}
+
+.pchq-chart .pchq-col {
+	fill: var(--pchq-accent);
+}
+
+.pchq-chart .pchq-hit {
+	fill: transparent;
+}
+
+.pchq-chart .pchq-bar:hover .pchq-col {
+	fill: #135e96;
+}
+
+.pchq-chart .pchq-bar:hover .pchq-hit {
+	fill: rgba(34, 113, 177, 0.06);
+}
+
+.pchq-table-view summary {
+	margin-top: 8px;
+	color: var(--pchq-accent);
+	cursor: pointer;
+}
+
+.pchq-table-view table {
+	max-width: 480px;
+	margin-top: 8px;
+}
+
+/* 表格 */
+.pchq-scroll {
+	overflow-x: auto;
+}
+
+.pchq-table th,
+.pchq-table td {
+	vertical-align: middle;
+}
+
+.pchq-table thead th {
+	white-space: nowrap;
+}
+
+.pchq .num {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.pchq-badge {
+	display: inline-block;
+	padding: 1px 8px;
+	font-size: 12px;
+	line-height: 1.7;
+	border-radius: 3px;
+	white-space: nowrap;
+	color: #50575e;
+	background: #f0f0f1;
+}
+
+.pchq-badge.is-ok {
+	color: #fff;
+	background: #008a20;
+}
+
+.pchq-badge.is-bad {
+	color: #b32d2e;
+	background: #fcf0f1;
+}
+
+.pchq-badge.is-wait {
+	color: var(--pchq-accent);
+	background: #f0f6fc;
+}
+
+.pchq-error {
+	display: block;
+	max-width: 260px;
+	margin-top: 2px;
+	font-size: 12px;
+	color: #b32d2e;
+	overflow-wrap: anywhere;
+}
+
+.pchq-actions {
+	white-space: nowrap;
+}
+
+.pchq-more {
+	display: inline-block;
+	position: relative;
+	margin-left: 4px;
+	vertical-align: middle;
+}
+
+.pchq-more summary {
+	color: var(--pchq-accent);
+	cursor: pointer;
+}
+
+.pchq-more[open] > :not(summary) {
+	white-space: normal;
+}
+
+.pchq-more[open] {
+	display: block;
+	margin: 8px 0 0;
+	padding: 8px 10px;
+	background: #f6f7f7;
+	border-radius: 4px;
+}
+
+.pchq-more form {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin: 6px 0 10px;
+	max-width: 320px;
+}
+
+.pchq-delete {
+	color: #b32d2e;
+}
+
+.pchq-perms {
+	max-width: 280px;
+}
+
+/* 开关 */
+.pchq-switch {
+	position: relative;
+	display: inline-block;
+	width: 36px;
+	height: 20px;
+	vertical-align: middle;
+	background: #c3c4c7;
+	border-radius: 10px;
+}
+
+.pchq-switch::after {
+	content: "";
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 16px;
+	height: 16px;
+	background: #fff;
+	border-radius: 50%;
+	transition: left 0.15s;
+}
+
+.pchq-switch.is-on {
+	background: var(--pchq-accent);
+}
+
+.pchq-switch.is-on::after {
+	left: 18px;
+}
+
+a.pchq-switch:focus {
+	outline: 0;
+	box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--pchq-accent);
+}
+
+/* 添加店铺、账号表单 */
+.pchq-add {
+	max-width: 760px;
+}
+
+.pchq-add summary {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-weight: 600;
+	color: var(--pchq-accent);
+	cursor: pointer;
+}
+
+.pchq-steps {
+	margin: 12px 0 8px 20px;
+	color: #50575e;
+}
+
+.pchq-form {
+	max-width: 720px;
+}
+
+.pchq-form h2 {
+	margin-top: 0;
+}
+
+.pchq-modules {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+	gap: 8px 16px;
+	margin: 16px 0;
+	padding: 12px 14px;
+	border: 1px solid var(--pchq-line);
+	border-radius: 6px;
+}
+
+.pchq-modules legend {
+	padding: 0 4px;
+}
+
+.pchq-modules .pchq-muted {
+	grid-column: 1 / -1;
+	margin: 0;
+}
+
+.pchq-buttons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+/* 手机：表格每行变成卡片 */
+@media screen and (max-width: 782px) {
+	.pchq-tile--hero {
+		grid-column: 1 / -1;
+	}
+
+	.pchq-tile--hero .pchq-tile__value {
+		font-size: 32px;
+	}
+
+	.pchq-table thead {
+		display: none;
+	}
+
+	.pchq-table,
+	.pchq-table tbody {
+		display: block;
+	}
+
+	.pchq-table tr {
+		display: block;
+		padding: 8px 12px;
+		border-bottom: 1px solid var(--pchq-line);
+	}
+
+	.pchq-table td {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 4px 12px;
+		padding: 4px 0;
+		text-align: right;
+		overflow-wrap: anywhere;
+	}
+
+	.pchq-table td[data-label]::before {
+		content: attr(data-label);
+		flex: none;
+		max-width: 45%;
+		margin-right: auto;
+		font-weight: 600;
+		color: #50575e;
+		text-align: left;
+	}
+
+	.pchq-actions {
+		white-space: normal;
+	}
+
+	.pchq-error {
+		max-width: none;
+		text-align: right;
+	}
+}

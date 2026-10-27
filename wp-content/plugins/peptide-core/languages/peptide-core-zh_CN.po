@@ -2,7 +2,7 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.24.0\n"
+"Project-Id-Version: Peptide Core 0.25.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -11,7 +11,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-27T18:18:58+00:00\n"
+"POT-Creation-Date: 2026-10-27T19:03:34+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -241,18 +241,18 @@ msgstr "关闭"
 #: includes/admin/class-overview-page.php:135
 #: includes/admin/class-tracking-page.php:154
 #: includes/class-activity-log.php:191
-#: includes/class-staff.php:73
+#: includes/class-staff.php:79
 msgid "Orders"
 msgstr "订单"
 
 #: includes/admin/class-admin-menus.php:138
 #: includes/class-activity-log.php:192
-#: includes/class-staff.php:83
+#: includes/class-staff.php:89
 msgid "Customers"
 msgstr "顾客"
 
 #: includes/admin/class-admin-menus.php:139
-#: includes/class-staff.php:108
+#: includes/class-staff.php:114
 msgid "Store settings"
 msgstr "店铺设置"
 
@@ -278,7 +278,7 @@ msgstr "系统设置"
 
 #: includes/admin/class-admin-menus.php:148
 #: includes/class-activity-log.php:193
-#: includes/class-staff.php:88
+#: includes/class-staff.php:94
 msgid "Marketing campaigns"
 msgstr "营销活动"
 
@@ -305,35 +305,35 @@ msgstr "运费折扣"
 
 #: includes/admin/class-admin-menus.php:154
 #: includes/admin/class-apps-page.php:83
-#: includes/class-staff.php:118
+#: includes/class-staff.php:124
 msgid "App center"
 msgstr "应用中心"
 
-#: includes/admin/class-admin-menus.php:210
+#: includes/admin/class-admin-menus.php:213
 #: includes/admin/class-plans-editor.php:82
 #: includes/admin/class-tax-page.php:61
 #: includes/admin/class-tax-page.php:97
 #: includes/admin/class-tracking-page.php:156
 #: includes/class-activity-log.php:187
-#: includes/class-staff.php:78
+#: includes/class-staff.php:84
 #: includes/modules/class-registry.php:1185
 msgid "Products"
 msgstr "商品"
 
-#: includes/admin/class-admin-menus.php:217
+#: includes/admin/class-admin-menus.php:220
 msgid "Product management"
 msgstr "商品管理"
 
-#: includes/admin/class-admin-menus.php:218
+#: includes/admin/class-admin-menus.php:221
 #: includes/class-activity-log.php:188
 msgid "Collections"
 msgstr "商品专辑"
 
-#: includes/admin/class-admin-menus.php:219
+#: includes/admin/class-admin-menus.php:222
 msgid "Product reviews"
 msgstr "商品评论"
 
-#: includes/admin/class-admin-menus.php:220
+#: includes/admin/class-admin-menus.php:223
 msgid "Product tags"
 msgstr "商品标签"
 
@@ -1748,7 +1748,7 @@ msgstr "你没有导出这些订单的权限。"
 #: includes/class-activity-log.php:195
 #: includes/class-blog.php:85
 #: includes/class-blog.php:87
-#: includes/class-staff.php:98
+#: includes/class-staff.php:104
 msgid "Blog"
 msgstr "博客"
 
@@ -3860,7 +3860,7 @@ msgid "If the page does not contain %s yet, it is added at the end of the page."
 msgstr "如果页面里还没有 %s，会自动加在页面末尾。"
 
 #: includes/admin/class-media-page.php:39
-#: includes/class-staff.php:113
+#: includes/class-staff.php:119
 msgid "Admin settings"
 msgstr "后台设置"
 
@@ -6489,6 +6489,7 @@ msgid "The password needs at least %d characters."
 msgstr "密码至少要 %d 位。"
 
 #: includes/admin/class-staff-page.php:97
+#: includes/class-hq-connector.php:462
 msgid "This account is not a staff account."
 msgstr "这个账号不是员工账号。"
 
@@ -6638,7 +6639,7 @@ msgstr "活动专题页"
 #: includes/admin/class-store-design.php:72
 #: includes/admin/class-store-design.php:73
 #: includes/class-activity-log.php:196
-#: includes/class-staff.php:103
+#: includes/class-staff.php:109
 msgid "Store design"
 msgstr "店铺装修"
 
@@ -7722,7 +7723,7 @@ msgid "Payment settings"
 msgstr "支付设置"
 
 #: includes/class-activity-log.php:204
-#: includes/class-staff.php:93
+#: includes/class-staff.php:99
 msgid "Data"
 msgstr "数据"
 
@@ -7797,6 +7798,7 @@ msgid "Change password"
 msgstr "修改密码"
 
 #: includes/class-activity-log.php:253
+#: includes/class-staff.php:49
 msgid "Staff member"
 msgstr "员工"
 
@@ -8682,7 +8684,7 @@ msgstr "%1$s 的 ID %2$s 格式不对，请参考输入框里的示例。"
 msgid "This browser will no longer share your activity with advertising partners."
 msgstr "这个浏览器以后不会再把你的浏览行为分享给广告合作方。"
 
-#: includes/class-plugin.php:135
+#: includes/class-plugin.php:136
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr "Peptide Core 需要先安装并启用 WooCommerce。"
 
@@ -8969,19 +8971,19 @@ msgstr "确认框文案为空，结账确认未开启。"
 msgid "Assign a batch before shipping: %s. (You can turn this check off in the store settings.)"
 msgstr "发货前请先指定批次：%s。（可以在 VialCove 设置里关闭这项检查。）"
 
-#: includes/class-staff.php:202
+#: includes/class-staff.php:208
 msgid "This staff account is disabled. Contact the store owner."
 msgstr "这个员工账号已停用，请联系店主。"
 
-#: includes/class-staff.php:372
+#: includes/class-staff.php:378
 msgid "Your staff account does not have permission for this page. Ask the store owner to tick it under Store settings → Staff."
 msgstr "你的员工账号没有这个页面的权限。请店主在“店铺设置 → 员工管理”里给你勾选。"
 
-#: includes/class-staff.php:372
+#: includes/class-staff.php:378
 msgid "Go to a page you can use"
 msgstr "去你能用的页面"
 
-#: includes/class-staff.php:373
+#: includes/class-staff.php:379
 msgid "No permission"
 msgstr "没有权限"
 

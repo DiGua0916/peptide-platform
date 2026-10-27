@@ -309,3 +309,20 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
 - 勾选的模块通过 `user_has_cap` 临时给能力；没勾的菜单不显示，打开对应后台页面返回 403（不认识的后台页面也拒绝）。
 - 停用（`pc_staff_disabled`）的员工不能登录，已登录的会被退出。
 - 新的后台页面请告诉 Claude 归到哪个模块（`Staff::module_for()`），否则员工打不开。
+
+## 总后台（2026-10-27，Claude，HQ-01）
+
+用户要求：一个销售一个店铺，店铺都是用户开的，一定连着总后台。账号在总后台管理，店铺后台不要“用户”菜单，也不要连接页面。
+
+- **总后台**是单独的一个 WordPress，装新插件 `peptide-hq`（同一个仓库的 `wp-content/plugins/peptide-hq/`，说明见它的 README）。店铺上不装。
+- **店铺自动接入**：
+  - 店铺的 `wp-config.php` 里有 `PEPTIDE_HQ_URL` 和 `PEPTIDE_HQ_SECRET` 时，peptide-core 自己生成连接密钥，向总后台注册（`POST ?rest_route=/peptide-hq/v1/register`）。
+  - 注册在这些时候发生：进后台时、每天一次、密钥变了时。
+- **总后台调用店铺**：`?rest_route=/peptide/v1/hq/status | summary | login | staff | staff/delete`。每次请求都用店铺的连接密钥做 HMAC 签名；时间、签名、重放都会检查。
+  - **一键登录**：店铺发一个 2 分钟内有效、只能用一次的链接 `/?pc_hq_login=…`，登录成最早的管理员。
+  - **顾客个人信息**：不经过这些接口。
+- **店铺后台的变化**：
+  - 没有“用户”菜单；
+  - “员工管理”不在菜单里，改到总后台的“销售账号”。两个页面的地址还在。
+  - 规则仍然是店铺的 `Staff`（pc_staff + 勾选菜单）。
+- **对主题没有影响。**

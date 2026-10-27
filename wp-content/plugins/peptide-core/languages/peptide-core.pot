@@ -2,14 +2,14 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.24.0\n"
+"Project-Id-Version: Peptide Core 0.25.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-27T18:18:58+00:00\n"
+"POT-Creation-Date: 2026-10-27T19:03:34+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -239,18 +239,18 @@ msgstr ""
 #: includes/admin/class-overview-page.php:135
 #: includes/admin/class-tracking-page.php:154
 #: includes/class-activity-log.php:191
-#: includes/class-staff.php:73
+#: includes/class-staff.php:79
 msgid "Orders"
 msgstr ""
 
 #: includes/admin/class-admin-menus.php:138
 #: includes/class-activity-log.php:192
-#: includes/class-staff.php:83
+#: includes/class-staff.php:89
 msgid "Customers"
 msgstr ""
 
 #: includes/admin/class-admin-menus.php:139
-#: includes/class-staff.php:108
+#: includes/class-staff.php:114
 msgid "Store settings"
 msgstr ""
 
@@ -276,7 +276,7 @@ msgstr ""
 
 #: includes/admin/class-admin-menus.php:148
 #: includes/class-activity-log.php:193
-#: includes/class-staff.php:88
+#: includes/class-staff.php:94
 msgid "Marketing campaigns"
 msgstr ""
 
@@ -303,35 +303,35 @@ msgstr ""
 
 #: includes/admin/class-admin-menus.php:154
 #: includes/admin/class-apps-page.php:83
-#: includes/class-staff.php:118
+#: includes/class-staff.php:124
 msgid "App center"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:210
+#: includes/admin/class-admin-menus.php:213
 #: includes/admin/class-plans-editor.php:82
 #: includes/admin/class-tax-page.php:61
 #: includes/admin/class-tax-page.php:97
 #: includes/admin/class-tracking-page.php:156
 #: includes/class-activity-log.php:187
-#: includes/class-staff.php:78
+#: includes/class-staff.php:84
 #: includes/modules/class-registry.php:1185
 msgid "Products"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:217
+#: includes/admin/class-admin-menus.php:220
 msgid "Product management"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:218
+#: includes/admin/class-admin-menus.php:221
 #: includes/class-activity-log.php:188
 msgid "Collections"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:219
+#: includes/admin/class-admin-menus.php:222
 msgid "Product reviews"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:220
+#: includes/admin/class-admin-menus.php:223
 msgid "Product tags"
 msgstr ""
 
@@ -1747,7 +1747,7 @@ msgstr ""
 #: includes/class-activity-log.php:195
 #: includes/class-blog.php:85
 #: includes/class-blog.php:87
-#: includes/class-staff.php:98
+#: includes/class-staff.php:104
 msgid "Blog"
 msgstr ""
 
@@ -3864,7 +3864,7 @@ msgid "If the page does not contain %s yet, it is added at the end of the page."
 msgstr ""
 
 #: includes/admin/class-media-page.php:39
-#: includes/class-staff.php:113
+#: includes/class-staff.php:119
 msgid "Admin settings"
 msgstr ""
 
@@ -6498,6 +6498,7 @@ msgid "The password needs at least %d characters."
 msgstr ""
 
 #: includes/admin/class-staff-page.php:97
+#: includes/class-hq-connector.php:462
 msgid "This account is not a staff account."
 msgstr ""
 
@@ -6647,7 +6648,7 @@ msgstr ""
 #: includes/admin/class-store-design.php:72
 #: includes/admin/class-store-design.php:73
 #: includes/class-activity-log.php:196
-#: includes/class-staff.php:103
+#: includes/class-staff.php:109
 msgid "Store design"
 msgstr ""
 
@@ -7733,7 +7734,7 @@ msgid "Payment settings"
 msgstr ""
 
 #: includes/class-activity-log.php:204
-#: includes/class-staff.php:93
+#: includes/class-staff.php:99
 msgid "Data"
 msgstr ""
 
@@ -7808,6 +7809,7 @@ msgid "Change password"
 msgstr ""
 
 #: includes/class-activity-log.php:253
+#: includes/class-staff.php:49
 msgid "Staff member"
 msgstr ""
 
@@ -8699,7 +8701,7 @@ msgstr ""
 msgid "This browser will no longer share your activity with advertising partners."
 msgstr ""
 
-#: includes/class-plugin.php:135
+#: includes/class-plugin.php:136
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr ""
 
@@ -8989,19 +8991,19 @@ msgstr ""
 msgid "Assign a batch before shipping: %s. (You can turn this check off in the store settings.)"
 msgstr ""
 
-#: includes/class-staff.php:202
+#: includes/class-staff.php:208
 msgid "This staff account is disabled. Contact the store owner."
 msgstr ""
 
-#: includes/class-staff.php:372
+#: includes/class-staff.php:378
 msgid "Your staff account does not have permission for this page. Ask the store owner to tick it under Store settings → Staff."
 msgstr ""
 
-#: includes/class-staff.php:372
+#: includes/class-staff.php:378
 msgid "Go to a page you can use"
 msgstr ""
 
-#: includes/class-staff.php:373
+#: includes/class-staff.php:379
 msgid "No permission"
 msgstr ""
 

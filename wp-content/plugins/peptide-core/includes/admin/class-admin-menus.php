@@ -164,11 +164,14 @@ final class Admin_Menus {
 		// 媒体、评论、WooCommerce（订单、顾客、设置已移到上面的新菜单）、WooCommerce 营销（换成营销活动）。
 		// 文章改成“博客”（Blog_Admin，2026-10-27），媒体在“后台设置 → 素材管理”。
 		// remove_menu_page() 每次只去掉第一个匹配项，所以重复执行到没有为止。
-		foreach ( array( 'upload.php', 'edit-comments.php', 'woocommerce', 'woocommerce-marketing', 'themes.php', 'tools.php', 'options-general.php' ) as $slug ) {
+		// 用户（2026-10-27 用户要求）：一个销售一个站点，账号在总后台管理，店铺后台不需要“用户”菜单；
+		// 员工管理也移到总后台（销售账号）。两个页面的地址还在，管理员直接打开地址仍能用。
+		foreach ( array( 'upload.php', 'edit-comments.php', 'woocommerce', 'woocommerce-marketing', 'themes.php', 'tools.php', 'options-general.php', 'users.php' ) as $slug ) {
 			while ( false !== remove_menu_page( $slug ) ) {
 				continue;
 			}
 		}
+		remove_submenu_page( self::SETTINGS, Staff_Page::SLUG );
 		self::product_menu();
 	}
 
