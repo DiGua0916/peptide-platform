@@ -1,0 +1,208 @@
+/* 商品详情数据页（DATA-01 第 3 步）：工具栏（搜索、编辑表头）、商品表格（款式行可展开）、分页。 */
+
+.pc-prod {
+	max-width: 100%;
+}
+
+.pc-prod-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 12px;
+	margin-bottom: 12px;
+}
+
+.pc-prod-search {
+	box-sizing: border-box;
+	width: 280px;
+	max-width: 100%;
+	min-height: 30px;
+	padding: 0 8px;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	background: #fff;
+	color: #1d2327;
+}
+
+/* 编辑表头的面板：白色卡片，里面是复选框网格。 */
+.pc-prod-columns {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	gap: 8px 16px;
+	max-width: 100%;
+	margin-bottom: 12px;
+	padding: 12px 16px;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	background: #fff;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+	box-sizing: border-box;
+	font-size: 13px;
+}
+
+.pc-prod-columns[hidden] {
+	display: none;
+}
+
+.pc-prod-columns__item {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+/* 表格在窄屏上自己横向滚动，页面不出现横向滚动条。 */
+.pc-prod-wrap {
+	max-width: 100%;
+	overflow-x: auto;
+}
+
+.pc-prod-table {
+	width: 100%;
+	border-collapse: collapse;
+	background: #fff;
+	font-size: 13px;
+}
+
+.pc-prod-table th,
+.pc-prod-table td {
+	padding: 8px 10px;
+	border: 1px solid #dcdcde;
+	vertical-align: top;
+	text-align: left;
+}
+
+.pc-prod-table thead th {
+	background: #f6f7f7;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.pc-prod-table .pc-prod-product,
+.pc-prod-th--product {
+	min-width: 220px;
+}
+
+.pc-prod-sort {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: #1d2327;
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.pc-prod-sort:hover,
+.pc-prod-sort.is-active {
+	color: #2271b1;
+}
+
+.pc-prod-metric {
+	white-space: nowrap;
+}
+
+.pc-prod-cur {
+	font-weight: 600;
+}
+
+.pc-prod-prev {
+	color: #646970;
+	font-size: 12px;
+}
+
+.pc-prod-chg {
+	font-size: 12px;
+}
+
+.pc-prod-chg.is-up {
+	color: #008a20;
+}
+
+.pc-prod-chg.is-down {
+	color: #d63638;
+}
+
+.pc-prod-cell {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+}
+
+.pc-prod-thumb {
+	flex: 0 0 40px;
+	width: 40px;
+	height: 40px;
+	border-radius: 4px;
+	object-fit: cover;
+}
+
+.pc-prod-thumb--empty {
+	display: block;
+	background: #f0f0f1;
+}
+
+.pc-prod-info {
+	min-width: 0;
+}
+
+.pc-prod-name {
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+.pc-prod-sku {
+	color: #646970;
+	font-size: 12px;
+}
+
+.pc-prod-toggle {
+	display: block;
+	margin-top: 4px;
+	font-size: 12px;
+}
+
+.pc-prod-toggle::before {
+	content: "\25B8\00a0";
+}
+
+.pc-prod-toggle[aria-expanded="true"]::before {
+	content: "\25BE\00a0";
+}
+
+/* 款式行：浅灰底，名称缩进。 */
+.pc-prod-var {
+	background: #f6f7f7;
+}
+
+.pc-prod-var .pc-prod-product {
+	padding-left: 60px;
+}
+
+.pc-prod-var .pc-prod-name {
+	font-weight: 400;
+}
+
+.pc-prod-pager {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 12px;
+}
+
+.pc-prod-page {
+	color: #646970;
+	font-size: 13px;
+}
+
+@media (max-width: 600px) {
+	.pc-prod-search {
+		width: 100%;
+	}
+
+	.pc-prod-var .pc-prod-product {
+		padding-left: 24px;
+	}
+}

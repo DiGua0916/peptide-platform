@@ -18,6 +18,7 @@ namespace PeptideCore\Admin;
 
 use PeptideCore\Api\Rest_Controller;
 use PeptideCore\Data\Operations;
+use PeptideCore\Data\Products;
 use PeptideCore\Data\Range;
 
 defined( 'ABSPATH' ) || exit;
@@ -88,6 +89,28 @@ final class Data_Pages {
 						'permission_callback' => $permission,
 					)
 				);
+				// 商品详情数据页（DATA-01 第 3 步）：每个商品（和它的款式）的查看、加购、付款数字，本期和对比期；可排序、搜索、分页。
+				register_rest_route(
+					Rest_Controller::ROUTE_NAMESPACE,
+					'/data/products',
+					array(
+						'methods'             => \WP_REST_Server::READABLE,
+						'callback'            => static function ( \WP_REST_Request $request ) {
+							$r = Range::from_params( $request->get_params() );
+							if ( is_wp_error( $r ) ) {
+								return $r;
+							}
+							$a = Products::params( $request->get_params() );
+							if ( is_wp_error( $a ) ) {
+								return $a;
+							}
+							$res = new \WP_REST_Response( Products::table( $r, $a ) );
+							$res->header( 'Cache-Control', 'no-store' );
+							return $res;
+						},
+						'permission_callback' => $permission,
+					)
+				);
 			}
 		);
 	}
@@ -150,6 +173,17 @@ final class Data_Pages {
 			wp_add_inline_script(
 				'peptide-core-data-operations',
 				'window.pcDataOperations = ' . wp_json_encode( array( 'strings' => self::operations_strings() ) ) . ';',
+				'before'
+			);
+		}
+
+		// 商品详情数据页的报表（商品表格、款式展开、排序搜索分页），同样在 data.js 之后加载，用 PcData.register( 'products', … ) 画进页面。
+		if ( 'products' === $key ) {
+			wp_enqueue_style( 'peptide-core-data-products', $url . 'data-products.css', array( 'peptide-core-data' ), $ver( 'data-products.css' ) );
+			wp_enqueue_script( 'peptide-core-data-products', $url . 'data-products.js', array( self::SCRIPT ), $ver( 'data-products.js' ), array( 'in_footer' => true ) );
+			wp_add_inline_script(
+				'peptide-core-data-products',
+				'window.pcDataProducts = ' . wp_json_encode( array( 'strings' => self::products_strings() ) ) . ';',
 				'before'
 			);
 		}
@@ -223,6 +257,35 @@ final class Data_Pages {
 			'trackingOff'     => __( 'Visitor tracking is off, so visitor numbers, conversion and the funnels stay at zero.', 'peptide-core' ),
 			/* translators: %d: number of orders */
 			'testOrders'      => __( 'Only real orders are counted: %d test order(s) in this period (test payment or demo products) are left out.', 'peptide-core' ),
+		);
+	}
+
+	/** 商品详情数据页脚本里的文字：商品列、12 个指标的表头、搜索、编辑表头、分页。 */
+	private static function products_strings(): array {
+		return array(
+			'product'     => __( 'Product', 'peptide-core' ),
+			'views'       => __( 'Product views', 'peptide-core' ),
+			'view_users'  => __( 'Viewing users', 'peptide-core' ),
+			'carts'       => __( 'Add-to-cart actions', 'peptide-core' ),
+			'cart_users'  => __( 'Users who added to cart', 'peptide-core' ),
+			'cart_units'  => __( 'Units added to cart', 'peptide-core' ),
+			'cart_rate'   => __( 'Add-to-cart rate', 'peptide-core' ),
+			'paid_orders' => __( 'Paid orders', 'peptide-core' ),
+			'paid_users'  => __( 'Paying users', 'peptide-core' ),
+			'paid_units'  => __( 'Units paid', 'peptide-core' ),
+			'conversion'  => __( 'Conversion rate', 'peptide-core' ),
+			'sales'       => __( 'Paid amount', 'peptide-core' ),
+			'net_sales'   => __( 'Net sales', 'peptide-core' ),
+			'search'      => __( 'Search products', 'peptide-core' ),
+			'columns'     => __( 'Edit columns', 'peptide-core' ),
+			'variations'  => __( 'Variation details', 'peptide-core' ),
+			'noData'      => __( 'No product data in this period.', 'peptide-core' ),
+			/* translators: 1: current page number, 2: total number of pages */
+			'page'        => __( 'Page %1$d of %2$d', 'peptide-core' ),
+			'prev'        => __( 'Previous', 'peptide-core' ),
+			'next'        => __( 'Next', 'peptide-core' ),
+			/* translators: %s: a product SKU */
+			'sku'         => __( 'SKU: %s', 'peptide-core' ),
 		);
 	}
 
