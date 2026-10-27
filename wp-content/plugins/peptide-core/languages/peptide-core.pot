@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-27T14:26:18+00:00\n"
+"POT-Creation-Date: 2026-10-27T14:40:00+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -29,7 +29,7 @@ msgstr ""
 msgid "DiGua"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:102
+#: includes/admin/class-admin-menus.php:135
 #: includes/admin/class-apps-page.php:141
 #: includes/admin/class-batch-orders.php:141
 #: includes/admin/class-batch-orders.php:144
@@ -38,61 +38,61 @@ msgstr ""
 msgid "Orders"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:103
+#: includes/admin/class-admin-menus.php:136
 msgid "Customers"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:104
+#: includes/admin/class-admin-menus.php:137
 msgid "Store settings"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:106
+#: includes/admin/class-admin-menus.php:139
 msgid "Shipping settings"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:107
+#: includes/admin/class-admin-menus.php:140
 msgid "Tax settings"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:108
+#: includes/admin/class-admin-menus.php:141
 #: includes/admin/class-basic-config-page.php:114
 #: includes/admin/class-email-center.php:151
 #: includes/admin/class-store-settings.php:141
-#: includes/admin/class-store-settings.php:160
+#: includes/admin/class-store-settings.php:164
 #: includes/admin/class-terms-page.php:91
 msgid "System settings"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:113
+#: includes/admin/class-admin-menus.php:146
 msgid "Marketing campaigns"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:114
+#: includes/admin/class-admin-menus.php:147
 #: includes/admin/class-promotions-page.php:91
 #: includes/class-promotions.php:84
 msgid "Spend-and-save promotions"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:114
+#: includes/admin/class-admin-menus.php:147
 msgid "Spend-and-save"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:115
+#: includes/admin/class-admin-menus.php:148
 #: includes/admin/class-coupons-page.php:76
 msgid "Coupon codes"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:116
+#: includes/admin/class-admin-menus.php:149
 #: includes/admin/class-shipping-discounts-page.php:51
 msgid "Shipping discounts"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:119
+#: includes/admin/class-admin-menus.php:152
 #: includes/admin/class-apps-page.php:83
 msgid "App center"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:145
+#: includes/admin/class-admin-menus.php:178
 #: includes/admin/class-plans-editor.php:82
 #: includes/admin/class-tax-page.php:61
 #: includes/admin/class-tax-page.php:97
@@ -101,19 +101,19 @@ msgstr ""
 msgid "Products"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:152
+#: includes/admin/class-admin-menus.php:185
 msgid "Product management"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:153
+#: includes/admin/class-admin-menus.php:186
 msgid "Collections"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:154
+#: includes/admin/class-admin-menus.php:187
 msgid "Product reviews"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:155
+#: includes/admin/class-admin-menus.php:188
 msgid "Product tags"
 msgstr ""
 
@@ -5418,8 +5418,8 @@ msgid "Landing pages for promotions, built from modules, with their own address.
 msgstr ""
 
 #: includes/admin/class-store-design.php:552
-#: includes/admin/class-store-settings.php:143
-#: includes/admin/class-store-settings.php:162
+#: includes/admin/class-store-settings.php:147
+#: includes/admin/class-store-settings.php:166
 msgid "Coming soon"
 msgstr ""
 
@@ -5564,19 +5564,23 @@ msgstr ""
 msgid "The store theme. Only change it together with the theme developer."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:145
+#: includes/admin/class-store-settings.php:143
+msgid "That page is not used in this store and has been removed. The WordPress settings that are still needed are at the bottom of this page."
+msgstr ""
+
+#: includes/admin/class-store-settings.php:149
 msgid "Other settings"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:151
+#: includes/admin/class-store-settings.php:155
 msgid "WordPress settings and tools"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:162
+#: includes/admin/class-store-settings.php:166
 msgid "The details of this section are still being decided. Once they are, this page becomes the full settings form."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:164
+#: includes/admin/class-store-settings.php:168
 msgid "Until then, these existing settings cover it:"
 msgstr ""
 
