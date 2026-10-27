@@ -22,6 +22,7 @@ use PeptideCore\Data\Operations;
 use PeptideCore\Data\Page_Visits;
 use PeptideCore\Data\Products;
 use PeptideCore\Data\Range;
+use PeptideCore\Data\Realtime;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -67,6 +68,24 @@ final class Data_Pages {
 								return $r;
 							}
 							$res = new \WP_REST_Response( $r );
+							$res->header( 'Cache-Control', 'no-store' );
+							return $res;
+						},
+						'permission_callback' => $permission,
+					)
+				);
+				// 实时数据页（DATA-01 第 6 步）：最近 10 分钟的数字（带今日合计）、访客行为漏斗、每分钟访客数量、今日的热门商品和页面。没有时间段（始终是“现在”），只有 funnel / minutes 两个窗口参数。
+				register_rest_route(
+					Rest_Controller::ROUTE_NAMESPACE,
+					'/data/realtime',
+					array(
+						'methods'             => \WP_REST_Server::READABLE,
+						'callback'            => static function ( \WP_REST_Request $request ) {
+							$p = Realtime::params( $request->get_params() );
+							if ( is_wp_error( $p ) ) {
+								return $p;
+							}
+							$res = new \WP_REST_Response( Realtime::summary( (int) round( microtime( true ) * 1000 ), $p['funnel'], $p['minutes'] ) );
 							$res->header( 'Cache-Control', 'no-store' );
 							return $res;
 						},
@@ -198,19 +217,31 @@ final class Data_Pages {
 			self::SCRIPT,
 			'window.pcData = ' . wp_json_encode(
 				array(
-					'page'     => $key,
-					'title'    => self::titles()[ $key ],
-					'range'    => Range::from_params( array() ), // 今天，由服务器按店铺时区算好。
-					'timezone' => wp_timezone_string() . ' (UTC' . wp_date( 'P' ) . ')',
-					'currency' => array(
+					'page'      => $key,
+					'title'     => self::titles()[ $key ],
+					'range'     => Range::from_params( array() ), // 今天，由服务器按店铺时区算好。
+					'showRange' => 'realtime' !== $key,           // 实时数据页没有时间段工具栏。
+					'timezone'  => wp_timezone_string() . ' (UTC' . wp_date( 'P' ) . ')',
+					'currency'  => array(
 						'code'   => get_woocommerce_currency(),
 						'symbol' => html_entity_decode( get_woocommerce_currency_symbol() ),
 					),
-					'strings'  => self::strings(),
+					'strings'   => self::strings(),
 				)
 			) . ';',
 			'before'
 		);
+
+		// 实时数据页的报表（三张卡片、访客行为漏斗、每分钟访客数量、今日列表），在 data.js 之后加载，用 PcData.register( 'realtime', … ) 画进页面。
+		if ( 'realtime' === $key ) {
+			wp_enqueue_style( 'peptide-core-data-realtime', $url . 'data-realtime.css', array( 'peptide-core-data' ), $ver( 'data-realtime.css' ) );
+			wp_enqueue_script( 'peptide-core-data-realtime', $url . 'data-realtime.js', array( self::SCRIPT ), $ver( 'data-realtime.js' ), array( 'in_footer' => true ) );
+			wp_add_inline_script(
+				'peptide-core-data-realtime',
+				'window.pcDataRealtime = ' . wp_json_encode( array( 'strings' => self::realtime_strings() ) ) . ';',
+				'before'
+			);
+		}
 
 		// 运营数据页的报表（指标卡片和转化漏斗），在 data.js 之后加载，用 PcData.register( 'operations', … ) 画进页面。
 		if ( 'operations' === $key ) {
@@ -290,6 +321,50 @@ final class Data_Pages {
 			'building'    => __( 'This page is being built. The date range already works; the report will appear here in a later update.', 'peptide-core' ),
 			'rangeError'  => __( 'Check the dates: the start date must be on or before the end date, and a range can cover at most 366 days.', 'peptide-core' ),
 			'loadError'   => __( 'The data could not be loaded. Try again.', 'peptide-core' ),
+		);
+	}
+
+	/** 实时数据页脚本里的文字：更新时间、三张卡片和六个指标、“今日”、访客行为漏斗、每分钟图、四个今日列表、说明。 */
+	private static function realtime_strings(): array {
+		return array(
+			/* translators: %s: date and time */
+			'updated'        => __( 'Last updated: %s', 'peptide-core' ),
+			'refresh'        => __( 'Refresh', 'peptide-core' ),
+			'autoRefresh'    => __( 'Updates every minute while this page is open.', 'peptide-core' ),
+			'visits'         => __( 'Real-time visits', 'peptide-core' ),
+			'sales'          => __( 'Real-time sales', 'peptide-core' ),
+			'power'          => __( 'Real-time buying power', 'peptide-core' ),
+			'visitors'       => __( 'Visitor count', 'peptide-core' ),
+			'pageviews'      => __( 'Page visits', 'peptide-core' ),
+			'orders'         => __( 'Order count', 'peptide-core' ),
+			'salesAmount'    => __( 'Sales', 'peptide-core' ),
+			'unitsPerOrder'  => __( 'Units per order', 'peptide-core' ),
+			'aov'            => __( 'Average order value', 'peptide-core' ),
+			/* translators: %s: today's value */
+			'today'          => __( '(Today %s)', 'peptide-core' ),
+			'windowNote'     => __( 'Last 10 minutes', 'peptide-core' ),
+			'behaviour'      => __( 'Real-time visitor behaviour', 'peptide-core' ),
+			'perMinute'      => __( 'Visitors per minute', 'peptide-core' ),
+			/* translators: %d: number of minutes */
+			'minutesOption'  => __( '%d minutes', 'peptide-core' ),
+			/* translators: %d: number of minutes */
+			'minutesAgo'     => __( '%d min ago', 'peptide-core' ),
+			'now'            => __( 'Now', 'peptide-core' ),
+			'funnelVisitors' => __( 'Visited users', 'peptide-core' ),
+			'viewed'         => __( 'Viewed products', 'peptide-core' ),
+			'carted'         => __( 'Carted products', 'peptide-core' ),
+			'checkout'       => __( 'Started checkout', 'peptide-core' ),
+			'paid'           => __( 'Completed payment', 'peptide-core' ),
+			/* translators: %s: a percentage, for example 54.72% */
+			'ofVisitors'     => __( 'Of visitors: %s', 'peptide-core' ),
+			'listViewed'     => __( 'Most viewed products today', 'peptide-core' ),
+			'listCarted'     => __( 'Most added to cart today', 'peptide-core' ),
+			'listSold'       => __( 'Best sellers today', 'peptide-core' ),
+			'listPages'      => __( 'Popular pages today', 'peptide-core' ),
+			'details'        => __( 'View details', 'peptide-core' ),
+			'empty'          => __( 'No data yet.', 'peptide-core' ),
+			'notYet'         => __( 'Address, shipping and payment steps, the visitor map, countries, sources and collections need data that is not collected yet.', 'peptide-core' ),
+			'trackingOff'    => __( 'Visitor tracking is off, so visitor numbers, conversion and the funnels stay at zero.', 'peptide-core' ),
 		);
 	}
 
