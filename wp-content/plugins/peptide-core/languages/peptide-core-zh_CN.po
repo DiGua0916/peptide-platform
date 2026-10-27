@@ -1,18 +1,16 @@
-# Copyright (C) 2026 DiGua
-# This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
 "Project-Id-Version: Peptide Core 0.23.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
-"Plural-Forms: nplurals=1; plural=0;\n"
-"Language: zh_CN\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: 2026-10-27T15:32:49+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Language: zh_CN\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
 
@@ -227,6 +225,7 @@ msgid "not usable now"
 msgstr "当前不可用"
 
 #: includes/admin/class-apps-page.php:134
+#: includes/admin/class-data-pages.php:147
 #: includes/admin/class-overview-page.php:165
 msgid "Last 30 days"
 msgstr "过去 30 天"
@@ -293,7 +292,10 @@ msgid ""
 "Coupon: show a coupon code; one click applies it to the cart.\n"
 "Prize wheel: the visitor spins once per visit; the chances you set are the real chances, drawn on the server.\n"
 "Custom message: your own title, text and button link, e.g. to a collection or the offers page."
-msgstr "优惠券：显示一个优惠码，一键用到购物车。\n抽奖转盘：每次购物访问可以抽一次，设置的概率就是真实概率，由服务器抽奖。\n自定义内容：自己写标题、文字和按钮链接，例如链接到某个专辑或活动页面。"
+msgstr ""
+"优惠券：显示一个优惠码，一键用到购物车。\n"
+"抽奖转盘：每次购物访问可以抽一次，设置的概率就是真实概率，由服务器抽奖。\n"
+"自定义内容：自己写标题、文字和按钮链接，例如链接到某个专辑或活动页面。"
 
 #: includes/admin/class-apps-page.php:154
 #: includes/admin/class-email-center.php:232
@@ -432,7 +434,10 @@ msgid ""
 "Up to 8 prizes. The chance of each prize is its weight divided by the total weight.\n"
 "A prize without a coupon code is a “no prize” slot.\n"
 "Each shopping visit can spin once; the result is decided on the server, so it cannot be changed in the browser."
-msgstr "最多 8 个奖项。每个奖项的概率 = 它的权重 ÷ 全部权重之和。\n没有选优惠码的奖项就是“不中奖”。\n每次购物访问只能抽一次，结果由服务器决定，在浏览器里改不了。"
+msgstr ""
+"最多 8 个奖项。每个奖项的概率 = 它的权重 ÷ 全部权重之和。\n"
+"没有选优惠码的奖项就是“不中奖”。\n"
+"每次购物访问只能抽一次，结果由服务器决定，在浏览器里改不了。"
 
 #: includes/admin/class-apps-page.php:172
 msgid "Prize name"
@@ -506,7 +511,14 @@ msgid ""
 "No activity: nothing touched for the set time.\n"
 "Reaches the bottom of the page: has seen everything on the page.\n"
 "Works in Chrome, Safari, Firefox and the phone’s own browser. The popup starts after the page has loaded, so a visitor who leaves right away may not see it."
-msgstr "手机没有鼠标，所以改用下面这些信号。多勾几种能挽回更多访客：\n点击“返回”按钮：访客按返回（例如回到 Google 搜索结果）时先弹窗。只拦一次，再按返回就正常离开；弹窗不能弹时直接放行。访客点过一次页面之后才生效（Chrome 的要求）。广告审核可能会留意对返回键有反应的页面。\n快速上滑：往下看了一段后又快速往上滑，通常是要去地址栏或返回。\n切走后又回来：切到别的 App 或标签页几秒后又回到这一页。\n无操作：在设定时间内没有任何触摸。\n看到页面底部：已经把整页看完了。\n支持谷歌、Safari、火狐和手机自带的浏览器。弹窗在页面加载完成后才开始工作，访客打开后马上离开时可能不会触发。"
+msgstr ""
+"手机没有鼠标，所以改用下面这些信号。多勾几种能挽回更多访客：\n"
+"点击“返回”按钮：访客按返回（例如回到 Google 搜索结果）时先弹窗。只拦一次，再按返回就正常离开；弹窗不能弹时直接放行。访客点过一次页面之后才生效（Chrome 的要求）。广告审核可能会留意对返回键有反应的页面。\n"
+"快速上滑：往下看了一段后又快速往上滑，通常是要去地址栏或返回。\n"
+"切走后又回来：切到别的 App 或标签页几秒后又回到这一页。\n"
+"无操作：在设定时间内没有任何触摸。\n"
+"看到页面底部：已经把整页看完了。\n"
+"支持谷歌、Safari、火狐和手机自带的浏览器。弹窗在页面加载完成后才开始工作，访客打开后马上离开时可能不会触发。"
 
 #: includes/admin/class-apps-page.php:189
 msgid "Presses the back button"
@@ -725,7 +737,9 @@ msgstr "管理员邮箱"
 msgid ""
 "We use the admin email to contact you and to send order notifications (admin emails such as new orders go here unless you set other recipients). Make sure it is correct so you do not miss anything.\n"
 "Changing it sends a confirmation link to the new address; the change takes effect after the link is opened."
-msgstr "我们将通过你提供的管理员邮箱与你取得联系或发送订单通知（新订单等管理员邮件默认发到这里，除非另外设置了收件人）。请确保填写准确的邮箱信息，以便我们能够及时与你沟通。\n修改后会向新邮箱发送确认链接，打开链接后才生效。"
+msgstr ""
+"我们将通过你提供的管理员邮箱与你取得联系或发送订单通知（新订单等管理员邮件默认发到这里，除非另外设置了收件人）。请确保填写准确的邮箱信息，以便我们能够及时与你沟通。\n"
+"修改后会向新邮箱发送确认链接，打开链接后才生效。"
 
 #: includes/admin/class-basic-config-page.php:148
 msgid "Support email (important)"
@@ -791,7 +805,9 @@ msgstr "同商品 ID（自增数字）"
 msgid ""
 "When you have not set an SPU yourself, the system generates one (it identifies the product uniquely in this store). This applies to new products (including imports) and to edited products.\n"
 "You can also type an SPU on the product edit page; existing codes are kept."
-msgstr "当商家未手动定义 SPU 编码时，系统将自动生成 SPU 编码（用于标识商品在当前店铺内的唯一性），该机制适用于新增商品（包括导入等方式）及编辑商品场景。\n也可以在商品编辑页手动填写 SPU；已有的编码不会改变。"
+msgstr ""
+"当商家未手动定义 SPU 编码时，系统将自动生成 SPU 编码（用于标识商品在当前店铺内的唯一性），该机制适用于新增商品（包括导入等方式）及编辑商品场景。\n"
+"也可以在商品编辑页手动填写 SPU；已有的编码不会改变。"
 
 #: includes/admin/class-basic-config-page.php:176
 msgid "Custom (kept as is)"
@@ -845,7 +861,9 @@ msgstr "禁止爬虫访问"
 msgid ""
 "Choose which internet crawlers may not crawl your store. Ticked crawlers get a 403 page, and a Disallow line is added to robots.txt.\n"
 "Blocking Googlebot or Bingbot removes the store from that search engine; blocking Meta / Facebook stops link previews on Facebook and Instagram."
-msgstr "管理互联网爬虫是否允许爬取网站相关信息，勾选后将不允许选中的爬虫访问网站：勾选的爬虫会收到 403 页面，并写进 robots.txt。\n屏蔽 Googlebot 或 Bingbot 会让店铺从对应的搜索引擎消失；屏蔽 Meta / Facebook 会让 Facebook 和 Instagram 无法显示链接预览。"
+msgstr ""
+"管理互联网爬虫是否允许爬取网站相关信息，勾选后将不允许选中的爬虫访问网站：勾选的爬虫会收到 403 页面，并写进 robots.txt。\n"
+"屏蔽 Googlebot 或 Bingbot 会让店铺从对应的搜索引擎消失；屏蔽 Meta / Facebook 会让 Facebook 和 Instagram 无法显示链接预览。"
 
 #: includes/admin/class-basic-config-page.php:198
 msgid "Time zone"
@@ -871,7 +889,9 @@ msgstr "自动生成 SKU 编码"
 msgid ""
 "When on, SKUs are created for new, duplicated, edited and imported products that have no SKU yet.\n"
 "Variations use the pattern ({SKU_CODE} is the variation number 01, 02, …). A product with a single variation has no variation part: its SKU is the SPU."
-msgstr "开启自动生成 SKU 编码，在新增、复制、编辑、导入商品时，对还没有 SKU 的商品生效。\n多款式商品的款式按格式生成（{SKU_CODE} 是款式序号 01、02……）；单规格商品没有款式部分，SKU 就是 SPU。"
+msgstr ""
+"开启自动生成 SKU 编码，在新增、复制、编辑、导入商品时，对还没有 SKU 的商品生效。\n"
+"多款式商品的款式按格式生成（{SKU_CODE} 是款式序号 01、02……）；单规格商品没有款式部分，SKU 就是 SPU。"
 
 #. translators: %d: number of hours
 #: includes/admin/class-basic-config-page.php:205
@@ -898,7 +918,11 @@ msgid ""
 "2. A returning visitor visits the store again, e.g. more than 1 day after the first visit.\n"
 "3. Calculation: (end of the first visit’s day, 23:59:59, minus the visit time) + the returning time; in other words the next visit must come after the end of the first day plus this time.\n"
 "4. Keep one store time zone; changing it often makes the numbers less accurate."
-msgstr "1. 区分现有用户和回访用户（用于仪表盘的“回访用户”）。\n2. 回访用户指再次访问网站的用户，例如：其访问间隔超过 1 天记为回访用户。\n3. 计算方式：{零点时间（23:59:59）- 访问时间} + 回访用户的计算时间，也就是下次访问要在第一次访问当天结束之后，再过这段时间。\n4. 尽量使用统一的店铺时区，避免频繁切换时区导致的误差。"
+msgstr ""
+"1. 区分现有用户和回访用户（用于仪表盘的“回访用户”）。\n"
+"2. 回访用户指再次访问网站的用户，例如：其访问间隔超过 1 天记为回访用户。\n"
+"3. 计算方式：{零点时间（23:59:59）- 访问时间} + 回访用户的计算时间，也就是下次访问要在第一次访问当天结束之后，再过这段时间。\n"
+"4. 尽量使用统一的店铺时区，避免频繁切换时区导致的误差。"
 
 #: includes/admin/class-basic-config-page.php:208
 msgid "Anti-crawler / high-risk IP limit"
@@ -909,7 +933,10 @@ msgid ""
 "1. When on, the system blocks unfriendly crawlers and security scanners from visiting your store (the built-in list below).\n"
 "2. When off, they are allowed, e.g. while you temporarily run a scanning tool on your store.\n"
 "High-risk IP detection needs an IP reputation service and is not available on this site; blocking works by crawler name."
-msgstr "1. 开启时，系统将屏蔽不友好爬虫和安全扫描器访问你的店铺（即下面的系统内置名单），保护安全。\n2. 关闭时，将允许上述爬虫访问，适用于允许扫描工具访问店铺等临时场景。\n高风险 IP 识别需要 IP 信誉服务，本站暂不提供，目前按爬虫名称屏蔽。"
+msgstr ""
+"1. 开启时，系统将屏蔽不友好爬虫和安全扫描器访问你的店铺（即下面的系统内置名单），保护安全。\n"
+"2. 关闭时，将允许上述爬虫访问，适用于允许扫描工具访问店铺等临时场景。\n"
+"高风险 IP 识别需要 IP 信誉服务，本站暂不提供，目前按爬虫名称屏蔽。"
 
 #: includes/admin/class-basic-config-page.php:210
 msgid "System crawler block"
@@ -957,7 +984,9 @@ msgstr "前台搜索字段"
 msgid ""
 "What the storefront product search matches. The product title is always searched (see “Product title search”).\n"
 "SKU also matches variation SKUs; category and tag match their names."
-msgstr "前台商品搜索匹配哪些内容。商品标题总会被搜索（见“商品标题搜索方式”）。\nSKU 包括款式的 SKU；分类和标签按名称匹配。"
+msgstr ""
+"前台商品搜索匹配哪些内容。商品标题总会被搜索（见“商品标题搜索方式”）。\n"
+"SKU 包括款式的 SKU；分类和标签按名称匹配。"
 
 #: includes/admin/class-basic-config-page.php:236
 msgid "Require sign-in to visit the store"
@@ -983,7 +1012,9 @@ msgstr "否"
 msgid ""
 "When on, visitors must register or sign in before they can see any page of the store (the account page, privacy policy and checkout terms pages stay open).\n"
 "New accounts are disabled until you approve them under Users. Suitable for members-only or private stores; not recommended for stores that run traffic campaigns, because it lowers conversion."
-msgstr "开启强制注册 / 登录，前台用户访问网站任何页面均需要注册登录后才能访问（账户页、隐私政策和结账条款页面仍然公开）。\n新注册用户默认为禁用，需在后台“用户”里批准后才可正常使用。适用于强会员制、老客私域运营的网站；大量投放引流的网站不建议开启，以免影响流量转化。"
+msgstr ""
+"开启强制注册 / 登录，前台用户访问网站任何页面均需要注册登录后才能访问（账户页、隐私政策和结账条款页面仍然公开）。\n"
+"新注册用户默认为禁用，需在后台“用户”里批准后才可正常使用。适用于强会员制、老客私域运营的网站；大量投放引流的网站不建议开启，以免影响流量转化。"
 
 #: includes/admin/class-basic-config-page.php:242
 msgid "Storefront sort options"
@@ -993,7 +1024,9 @@ msgstr "前台排序字段"
 msgid ""
 "Controls the sort options customers can choose on product lists (shop, category pages, search results).\n"
 "Ticked options appear in the sort menu; drag to change the order. The first one is the default sort, so put “Recommended” first to keep your own product order."
-msgstr "控制商品列表页（商店、分类页、搜索结果页等）可选的商品排序方式。\n勾选的选项会出现在排序菜单里，拖动可调整顺序；排在第一的是默认排序，想保持自己设定的商品顺序，请把“综合推荐”置顶。"
+msgstr ""
+"控制商品列表页（商店、分类页、搜索结果页等）可选的商品排序方式。\n"
+"勾选的选项会出现在排序菜单里，拖动可调整顺序；排在第一的是默认排序，想保持自己设定的商品顺序，请把“综合推荐”置顶。"
 
 #: includes/admin/class-basic-config-page.php:243
 msgid "Allow the store in an iframe"
@@ -1015,7 +1048,9 @@ msgstr "商品链接结构"
 msgid ""
 "Controls the levels in product page addresses, e.g. shortening /shop/category/name to /product/name.\n"
 "Changing it changes the address of every product page and old links stop working, so decide before you promote the store."
-msgstr "控制商品链接的层级结构，例如：将商品页链接从“/shop/分类/名称”简化为“/product/名称”。\n修改后所有商品页的地址都会改变，旧链接会失效，请在推广店铺之前确定。"
+msgstr ""
+"控制商品链接的层级结构，例如：将商品页链接从“/shop/分类/名称”简化为“/product/名称”。\n"
+"修改后所有商品页的地址都会改变，旧链接会失效，请在推广店铺之前确定。"
 
 #: includes/admin/class-basic-config-page.php:255
 msgid "Show the 404 page"
@@ -1048,7 +1083,12 @@ msgid ""
 "Visible but not purchasable: the product page shows, sales are paused.\n"
 "Visible and purchasable: the product page shows and it can be bought while in stock; for products sold only through a direct link.\n"
 "Note: this only affects the product page (which is kept out of search engines); product lists always hide unpublished products. Private products and products in the trash always show the 404 page."
-msgstr "针对已下架（草稿）的商品：\n404 页面：用户无法查看商品信息。\n可见但不可购买：展示商品信息，但暂停销售。\n可见且可购买：展示商品信息，且满足库存时可购买商品；适用于需要通过独立推广链接或输入商品链接才能购买的场景。\n注：以上配置仅影响商品详情页（页面不让搜索引擎收录），商品列表会自动隐藏已下架商品。私密商品和回收站里的商品始终显示 404。"
+msgstr ""
+"针对已下架（草稿）的商品：\n"
+"404 页面：用户无法查看商品信息。\n"
+"可见但不可购买：展示商品信息，但暂停销售。\n"
+"可见且可购买：展示商品信息，且满足库存时可购买商品；适用于需要通过独立推广链接或输入商品链接才能购买的场景。\n"
+"注：以上配置仅影响商品详情页（页面不让搜索引擎收录），商品列表会自动隐藏已下架商品。私密商品和回收站里的商品始终显示 404。"
 
 #: includes/admin/class-basic-config-page.php:263
 msgid "Storefront security check"
@@ -1080,7 +1120,9 @@ msgstr "注册邮箱验证"
 msgid ""
 "1. When on, new customers who register must confirm their email through a link before they can sign in, which keeps accounts genuine. Accounts created during checkout are not affected.\n"
 "2. The “Registration email verification” email must be on in Email notifications."
-msgstr "1. 开启后，前台新用户注册时需要通过邮件里的链接验证邮箱后才能登录，验证邮件真实性以保证账户安全。结账时创建的账户不受影响。\n2. 使用此功能时，请在【邮件通知】板块中开启“注册邮箱验证”邮件。"
+msgstr ""
+"1. 开启后，前台新用户注册时需要通过邮件里的链接验证邮箱后才能登录，验证邮件真实性以保证账户安全。结账时创建的账户不受影响。\n"
+"2. 使用此功能时，请在【邮件通知】板块中开启“注册邮箱验证”邮件。"
 
 #: includes/admin/class-basic-config-page.php:269
 msgid "Store status"
@@ -1094,7 +1136,9 @@ msgstr "营业中"
 msgid ""
 "1. Set the store to Closed before you officially open, or when you need to close the storefront for a while; set it back to Open to resume.\n"
 "2. While Closed, visitors see a “coming soon” page. You still see the storefront when signed in as admin; to see what visitors see, use another browser or a private window."
-msgstr "1. 若你希望在正式经营前或暂时需要关闭店铺前台，可以将店铺设置为“打烊”状态；如果需要恢复运营，再将经营状态设置为“营业中”即可。\n2. 打烊时访客看到“即将上线”页面。以管理员身份登录时仍能看到前台；如需预览访客看到的效果，可更换浏览器或使用无痕窗口。"
+msgstr ""
+"1. 若你希望在正式经营前或暂时需要关闭店铺前台，可以将店铺设置为“打烊”状态；如果需要恢复运营，再将经营状态设置为“营业中”即可。\n"
+"2. 打烊时访客看到“即将上线”页面。以管理员身份登录时仍能看到前台；如需预览访客看到的效果，可更换浏览器或使用无痕窗口。"
 
 #: includes/admin/class-basic-config-page.php:271
 msgid "First available variation"
@@ -1129,7 +1173,14 @@ msgid ""
 "• Most stock: the available variation with the most stock, to lower the risk of running out.\n"
 "2. None selected: customers must choose themselves; when they try to buy without choosing, they are asked to select one.\n"
 "3. Used on product pages when the product has no default variation of its own."
-msgstr "1. 默认选中 SKU：\n• 首个 SKU：默认选中第一个可售 SKU，减少选择困惑，引导快速决策。\n• 价格最低：默认选中价格最低的可售 SKU，帮助用户快速锁定性价比。\n• 价格最高：默认选中价格最高的可售 SKU，满足高端需求用户。\n• 库存最多：默认选中库存最多的可售 SKU，降低缺货风险，提升成功率。\n2. 不默认选中：默认不选中任何 SKU，避免用户误操作；用户未选择就购买时，会提示先选择款式。\n3. 适用范围：商品自己没有设置默认款式时的商品详情页。"
+msgstr ""
+"1. 默认选中 SKU：\n"
+"• 首个 SKU：默认选中第一个可售 SKU，减少选择困惑，引导快速决策。\n"
+"• 价格最低：默认选中价格最低的可售 SKU，帮助用户快速锁定性价比。\n"
+"• 价格最高：默认选中价格最高的可售 SKU，满足高端需求用户。\n"
+"• 库存最多：默认选中库存最多的可售 SKU，降低缺货风险，提升成功率。\n"
+"2. 不默认选中：默认不选中任何 SKU，避免用户误操作；用户未选择就购买时，会提示先选择款式。\n"
+"3. 适用范围：商品自己没有设置默认款式时的商品详情页。"
 
 #: includes/admin/class-basic-config-page.php:278
 msgid "Sold-out variations on product pages"
@@ -1165,7 +1216,9 @@ msgstr "公开联系方式"
 msgid ""
 "Optional. When filled in it helps buyers contact you, is output as JSON-LD structured data (Organization) on the home page, and can be used in terms pages through [pc_var].\n"
 "Country, state, city, address and ZIP are the WooCommerce store address. US law requires a physical address in marketing emails, so cart reminders are only sent after the address is filled in."
-msgstr "可留空。填写之后方便买家联系，会以 JSON-LD 结构化数据（Organization）输出在首页，条款页面也可以用 [pc_var] 引用。\n国家、州、市、地址和邮编就是 WooCommerce 的店铺地址。美国法律要求营销邮件写明实体地址，所以填写地址后才会发送弃单提醒。"
+msgstr ""
+"可留空。填写之后方便买家联系，会以 JSON-LD 结构化数据（Organization）输出在首页，条款页面也可以用 [pc_var] 引用。\n"
+"国家、州、市、地址和邮编就是 WooCommerce 的店铺地址。美国法律要求营销邮件写明实体地址，所以填写地址后才会发送弃单提醒。"
 
 #: includes/admin/class-basic-config-page.php:288
 msgid "Company name"
@@ -1667,7 +1720,10 @@ msgid ""
 "Do not combine: while a spend-and-save promotion gives a discount in the cart, this code cannot be used.\n"
 "Combine: the code and the promotions both apply.\n"
 "Replace: when this code is used, spend-and-save promotions do not apply."
-msgstr "不叠加满减活动：购物车里有满减活动的优惠时，这个优惠码不能使用。\n叠加满减活动：优惠码和满减活动的优惠同时生效。\n替换满减活动：使用这个优惠码后，满减活动不再生效。"
+msgstr ""
+"不叠加满减活动：购物车里有满减活动的优惠时，这个优惠码不能使用。\n"
+"叠加满减活动：优惠码和满减活动的优惠同时生效。\n"
+"替换满减活动：使用这个优惠码后，满减活动不再生效。"
 
 #: includes/admin/class-coupons-page.php:215
 msgid "Do not combine with promotions"
@@ -1731,7 +1787,9 @@ msgstr "优惠条件"
 msgid ""
 "No minimum: the code works on any cart.\n"
 "Minimum amount / Minimum items: only the products this code applies to count (see Scope), before discounts, taxes and shipping."
-msgstr "无门槛：任何购物车都可以使用。\n满金额 / 满件数：只计算这个优惠码适用的商品（见“适用范围”），按优惠、税费和运费之前的金额计算。"
+msgstr ""
+"无门槛：任何购物车都可以使用。\n"
+"满金额 / 满件数：只计算这个优惠码适用的商品（见“适用范围”），按优惠、税费和运费之前的金额计算。"
 
 #: includes/admin/class-coupons-page.php:230
 #: includes/class-coupon-rules.php:195
@@ -2817,6 +2875,7 @@ msgstr "搜索"
 msgid "Disabled"
 msgstr "已停用"
 
+#: includes/admin/class-data-pages.php:153
 #: includes/admin/class-marketing.php:378
 #: includes/admin/class-tracking-page.php:146
 msgid "Apply"
@@ -3179,6 +3238,8 @@ msgstr[0] "已导入 %d 份菜单（均作为新菜单）。"
 msgid "These items link to pages that do not exist on this site and were imported without a link: %s"
 msgstr "以下目录链接的页面在本站不存在，已按“无链接”导入：%s"
 
+#: includes/admin/class-data-pages.php:155
+#: includes/admin/class-data-pages.php:167
 #: includes/admin/class-menu-page.php:238
 #: includes/admin/class-overview-page.php:237
 #: includes/admin/class-tracking-page.php:138
@@ -3281,6 +3342,7 @@ msgstr "（隐藏）"
 msgid "The selected batch does not match \"%s\" and was not saved."
 msgstr "所选批次与“%s”不匹配，未保存。"
 
+#: includes/admin/class-data-pages.php:67
 #: includes/admin/class-overview-page.php:55
 msgid "Sorry, you are not allowed to view store data."
 msgstr "抱歉，你没有查看店铺数据的权限。"
@@ -3308,6 +3370,7 @@ msgstr "%s，下午好！下面是今日数据概览"
 msgid "%s, good evening! Here is today’s overview."
 msgstr "%s，晚上好！下面是今日数据概览"
 
+#: includes/admin/class-data-pages.php:154
 #: includes/admin/class-overview-page.php:131
 msgid "Store time zone"
 msgstr "当前店铺时区"
@@ -3425,14 +3488,17 @@ msgstr "今日订单"
 msgid "Sales today"
 msgstr "今日销售额"
 
+#: includes/admin/class-data-pages.php:144
 #: includes/admin/class-overview-page.php:162
 msgid "Today"
 msgstr "今天"
 
+#: includes/admin/class-data-pages.php:145
 #: includes/admin/class-overview-page.php:163
 msgid "Yesterday"
 msgstr "昨天"
 
+#: includes/admin/class-data-pages.php:146
 #: includes/admin/class-overview-page.php:164
 msgid "Last 7 days"
 msgstr "过去 7 天"
@@ -3707,7 +3773,10 @@ msgid ""
 "The product ID sent as content_ids. It must match the IDs in your Meta catalog if you use one.\n"
 "SPU: one ID per product (the SPU code, or the product ID).\n"
 "SKU_CODE: the SKU of the chosen variation."
-msgstr "回传给 content_ids 的商品编号。如果用了 Meta 商品目录，要和目录里的编号一致。\nSPU：每个商品一个编号（SPU 编码，没有时用商品 ID）。\nSKU_CODE：所选款式的 SKU。"
+msgstr ""
+"回传给 content_ids 的商品编号。如果用了 Meta 商品目录，要和目录里的编号一致。\n"
+"SPU：每个商品一个编号（SPU 编码，没有时用商品 ID）。\n"
+"SKU_CODE：所选款式的 SKU。"
 
 #: includes/admin/class-pixels-page.php:109
 msgid "Content name type"
@@ -4295,7 +4364,15 @@ msgid ""
 "Bundle price: any 3 items for $99.\n"
 "Buy X, get Y free: buy 3 items, the cheapest one is free.\n"
 "Only the products in this promotion count."
-msgstr "满额减元：满 300 USD 减 25 USD。\n满额打折：满 300 USD 享 10% off。\n满件减元：满 3 件减 10 USD。\n满件打折：满 3 件享 15% off。\n第X件Y折：第 2 件享 50% off（即“第2件5折”，按美国顾客的习惯填 % off）。\n满件一口价：任选 3 件一口价 99 USD。\n满X免Y：满 3 件，最便宜的 1 件免费。\n只计算参加本活动的商品。"
+msgstr ""
+"满额减元：满 300 USD 减 25 USD。\n"
+"满额打折：满 300 USD 享 10% off。\n"
+"满件减元：满 3 件减 10 USD。\n"
+"满件打折：满 3 件享 15% off。\n"
+"第X件Y折：第 2 件享 50% off（即“第2件5折”，按美国顾客的习惯填 % off）。\n"
+"满件一口价：任选 3 件一口价 99 USD。\n"
+"满X免Y：满 3 件，最便宜的 1 件免费。\n"
+"只计算参加本活动的商品。"
 
 #: includes/admin/class-promotions-page.php:184
 msgid "The promotions page is created automatically when the first promotion is enabled."
@@ -4309,7 +4386,9 @@ msgstr "上不封顶"
 msgid ""
 "The discount repeats each time the threshold is reached again: spend $100 save $10 gives $20 off at $200, $30 off at $300, and so on.\n"
 "Works with one tier only."
-msgstr "勾选后，每达到一次门槛就再优惠一次：满 100 减 10，满 200 就减 20，满 300 减 30，以此类推。\n只能设置一个层级。"
+msgstr ""
+"勾选后，每达到一次门槛就再优惠一次：满 100 减 10，满 200 就减 20，满 300 减 30，以此类推。\n"
+"只能设置一个层级。"
 
 #. translators: %d: maximum number of tiers
 #: includes/admin/class-promotions-page.php:196
@@ -5048,7 +5127,9 @@ msgstr "会记录在订单的运费行上。"
 msgid ""
 "Fixed discount: one discount for the whole promotion time.\n"
 "Time-limited stages: up to 5 time periods, each with its own discount, e.g. 50% off in the first 24 hours, then 20% off for a week."
-msgstr "固定折扣：整个活动时间使用同一个折扣。\n限时阶段折扣：最多 5 个时间段，每段有自己的折扣，例如前 24 小时 50% off，之后一周 20% off。"
+msgstr ""
+"固定折扣：整个活动时间使用同一个折扣。\n"
+"限时阶段折扣：最多 5 个时间段，每段有自己的折扣，例如前 24 小时 50% off，之后一周 20% off。"
 
 #: includes/admin/class-shipping-discounts-page.php:119
 msgid "Member days only"
@@ -7124,7 +7205,7 @@ msgstr "%1$s 的 ID %2$s 格式不对，请参考输入框里的示例。"
 msgid "This browser will no longer share your activity with advertising partners."
 msgstr "这个浏览器以后不会再把你的浏览行为分享给广告合作方。"
 
-#: includes/class-plugin.php:125
+#: includes/class-plugin.php:127
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr "Peptide Core 需要先安装并启用 WooCommerce。"
 
@@ -9318,3 +9399,71 @@ msgstr "您浏览本店时，我们会记录您看了哪些页面和商品、加
 #: includes/tracking/class-privacy.php:202
 msgid "Store visit analytics"
 msgstr "店铺访问统计"
+
+#: includes/admin/class-data-pages.php:82
+msgid "Data"
+msgstr "数据"
+
+#: includes/admin/class-data-pages.php:129
+msgid "Real-time data"
+msgstr "实时数据"
+
+#: includes/admin/class-data-pages.php:130
+msgid "Operations data"
+msgstr "运营数据"
+
+#: includes/admin/class-data-pages.php:131
+msgid "Product details data"
+msgstr "商品详情数据"
+
+#: includes/admin/class-data-pages.php:132
+msgid "Page visit statistics"
+msgstr "页面访问统计"
+
+#: includes/admin/class-data-pages.php:133
+msgid "Page product conversion"
+msgstr "页面商品转化"
+
+#: includes/admin/class-data-pages.php:134
+msgid "App statistics"
+msgstr "应用统计"
+
+#: includes/admin/class-data-pages.php:135
+msgid "Landing page conversion"
+msgstr "落地页转化"
+
+#: includes/admin/class-data-pages.php:136
+msgid "Conversion rate details"
+msgstr "转化率详情"
+
+#: includes/admin/class-data-pages.php:137
+msgid "Email details data"
+msgstr "邮件详情数据"
+
+#: includes/admin/class-data-pages.php:148
+msgid "Custom range"
+msgstr "自定义时间"
+
+#: includes/admin/class-data-pages.php:149
+msgid "Compare with"
+msgstr "对比时间"
+
+#: includes/admin/class-data-pages.php:151
+msgid "Start date"
+msgstr "开始日期"
+
+#: includes/admin/class-data-pages.php:152
+msgid "End date"
+msgstr "结束日期"
+
+#: includes/admin/class-data-pages.php:156
+msgid "This page is being built. The date range already works; the report will appear here in a later update."
+msgstr "这个页面正在开发中。上方的时间选择已经可以使用，报表会在后续更新中显示。"
+
+#: includes/admin/class-data-pages.php:157
+msgid "Check the dates: the start date must be on or before the end date, and a range can cover at most 366 days."
+msgstr "请检查日期：开始日期不能晚于结束日期，时间范围最多 366 天。"
+
+#: includes/admin/class-data-pages.php:158
+msgid "The data could not be loaded. Try again."
+msgstr "数据加载失败，请重试。"
