@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-27T15:19:56+00:00\n"
+"POT-Creation-Date: 2026-10-27T15:32:49+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -156,7 +156,7 @@ msgstr ""
 #: includes/admin/class-plans-editor.php:107
 #: includes/admin/class-promotions-page.php:227
 #: includes/admin/class-shipping-discounts-page.php:139
-#: includes/admin/class-store-design.php:479
+#: includes/admin/class-store-design.php:494
 #: includes/admin/class-terms-page.php:60
 #: includes/modules/class-blocks.php:231
 msgid "Delete"
@@ -371,7 +371,8 @@ msgstr ""
 #: includes/admin/class-menu-page.php:140
 #: includes/admin/class-plans-editor.php:136
 #: includes/admin/class-product-panel.php:105
-#: includes/admin/class-store-design.php:391
+#: includes/admin/class-seo-page.php:49
+#: includes/admin/class-store-design.php:406
 #: includes/modules/class-blocks.php:242
 msgid "Remove"
 msgstr ""
@@ -614,8 +615,8 @@ msgid "days per visitor"
 msgstr ""
 
 #: includes/admin/class-apps-page.php:206
-#: includes/admin/class-store-design.php:323
-#: includes/admin/class-store-design.php:434
+#: includes/admin/class-store-design.php:338
+#: includes/admin/class-store-design.php:449
 #: includes/admin/class-terms-page.php:98
 #: includes/admin/class-terms-page.php:106
 msgid "Preview"
@@ -638,8 +639,9 @@ msgstr ""
 #: includes/admin/class-pixels-page.php:229
 #: includes/admin/class-recovery-page.php:58
 #: includes/admin/class-report-metabox.php:192
+#: includes/admin/class-seo-page.php:56
 #: includes/admin/class-shipping-page.php:221
-#: includes/admin/class-store-design.php:140
+#: includes/admin/class-store-design.php:155
 #: includes/admin/class-tax-page.php:116
 #: includes/admin/class-terms-page.php:114
 #: includes/admin/class-tracking-page.php:215
@@ -1526,8 +1528,8 @@ msgstr ""
 #: includes/admin/class-recovery-page.php:164
 #: includes/admin/class-shipping-discounts-page.php:55
 #: includes/admin/class-shipping-page.php:195
-#: includes/admin/class-store-design.php:380
-#: includes/admin/class-store-design.php:433
+#: includes/admin/class-store-design.php:395
+#: includes/admin/class-store-design.php:448
 #: includes/admin/class-tax-page.php:61
 #: includes/admin/class-terms-page.php:100
 msgid "Actions"
@@ -1988,7 +1990,7 @@ msgid "Design editor"
 msgstr ""
 
 #: includes/admin/class-design-editor.php:113
-#: includes/admin/class-store-design.php:431
+#: includes/admin/class-store-design.php:446
 #: includes/class-menus.php:102
 #: includes/class-templates.php:49
 msgid "Homepage"
@@ -2086,7 +2088,7 @@ msgstr ""
 
 #. translators: %s: date and time
 #: includes/admin/class-design-editor.php:138
-#: includes/admin/class-store-design.php:349
+#: includes/admin/class-store-design.php:364
 #, php-format
 msgid "Published %s"
 msgstr ""
@@ -2153,7 +2155,7 @@ msgid "Click a card to add it below the selected block."
 msgstr ""
 
 #: includes/admin/class-design-editor.php:153
-#: includes/admin/class-store-design.php:469
+#: includes/admin/class-store-design.php:484
 #: includes/modules/class-blocks.php:230
 msgid "Duplicate"
 msgstr ""
@@ -2867,6 +2869,7 @@ msgstr ""
 
 #: includes/admin/class-marketing.php:443
 #: includes/admin/class-plans-editor.php:64
+#: includes/admin/class-seo-page.php:180
 #: includes/admin/class-terms-page.php:84
 msgid "Saved."
 msgstr ""
@@ -2883,6 +2886,7 @@ msgstr[1] ""
 #: includes/admin/class-marketing.php:513
 #: includes/admin/class-menu-page.php:112
 #: includes/admin/class-pixels-page.php:213
+#: includes/admin/class-seo-page.php:160
 #: includes/admin/class-shipping-page.php:108
 #: includes/admin/class-shipping-page.php:197
 #: includes/admin/class-tax-page.php:103
@@ -3188,7 +3192,7 @@ msgid "Loading…"
 msgstr ""
 
 #: includes/admin/class-menu-page.php:249
-#: includes/admin/class-store-design.php:59
+#: includes/admin/class-store-design.php:62
 msgid "Menus & navigation"
 msgstr ""
 
@@ -3198,6 +3202,7 @@ msgstr ""
 
 #: includes/admin/class-menu-page.php:252
 #: includes/admin/class-menu-page.php:258
+#: includes/admin/class-seo-page.php:137
 msgid "Import"
 msgstr ""
 
@@ -3218,7 +3223,7 @@ msgid "New menu"
 msgstr ""
 
 #: includes/admin/class-menu-page.php:268
-#: includes/admin/class-store-design.php:271
+#: includes/admin/class-store-design.php:286
 msgid "Create"
 msgstr ""
 
@@ -3227,7 +3232,7 @@ msgid "Top-level items"
 msgstr ""
 
 #: includes/admin/class-menu-page.php:282
-#: includes/admin/class-store-design.php:430
+#: includes/admin/class-store-design.php:445
 msgid "Created by"
 msgstr ""
 
@@ -3769,9 +3774,9 @@ msgstr ""
 
 #: includes/admin/class-pixels-page.php:127
 #: includes/admin/class-pixels-page.php:218
-#: includes/admin/class-store-design.php:270
-#: includes/admin/class-store-design.php:429
-#: includes/admin/class-store-design.php:475
+#: includes/admin/class-store-design.php:285
+#: includes/admin/class-store-design.php:444
+#: includes/admin/class-store-design.php:490
 msgid "Note"
 msgstr ""
 
@@ -3867,6 +3872,7 @@ msgid "Event"
 msgstr ""
 
 #: includes/admin/class-pixels-page.php:197
+#: includes/admin/class-seo-page.php:169
 msgid "Notes"
 msgstr ""
 
@@ -4084,7 +4090,7 @@ msgstr ""
 
 #: includes/admin/class-plans-editor.php:135
 #: includes/admin/class-shipping-page.php:195
-#: includes/admin/class-store-design.php:525
+#: includes/admin/class-store-design.php:540
 msgid "Enabled"
 msgstr ""
 
@@ -4704,6 +4710,130 @@ msgstr ""
 msgid "A report needs a batch and a file before it can be published. It was kept as a draft."
 msgstr ""
 
+#: includes/admin/class-seo-page.php:47
+#: includes/admin/class-seo-page.php:153
+msgid "Page title"
+msgstr ""
+
+#: includes/admin/class-seo-page.php:48
+#: includes/admin/class-seo-page.php:153
+#: includes/admin/class-seo-page.php:158
+#: includes/class-topics.php:159
+msgid "SEO description"
+msgstr ""
+
+#: includes/admin/class-seo-page.php:122
+#: includes/admin/class-store-design.php:64
+msgid "Homepage SEO"
+msgstr ""
+
+#: includes/admin/class-seo-page.php:122
+msgid "A domain uses its own entry under “Domain templates”; domains without one use the default template."
+msgstr ""
+
+#: includes/admin/class-seo-page.php:126
+msgid "Default template"
+msgstr ""
+
+#: includes/admin/class-seo-page.php:127
+#: includes/admin/class-store-design.php:257
+#: includes/admin/class-store-design.php:392
+msgid "Domain templates"
+msgstr ""
+
+#: includes/admin/class-seo-page.php:129
+msgid "Export SEO"
+msgstr ""
+
+#: includes/admin/class-seo-page.php:130
+msgid "Import SEO"
+msgstr ""
+
+#: includes/admin/class-seo-page.php:137
+msgid "CSV with the columns domain, title, description, keywords (separate keywords with |). Rows replace the domain’s current entry. Export first to get the format."
+msgstr ""
+
+#: includes/admin/class-seo-page.php:139
+#: includes/admin/class-store-design.php:395
+#: includes/admin/class-store-design.php:417
+msgid "Domain"
+msgstr ""
+
+#: includes/admin/class-seo-page.php:143
+msgid "Select domain"
+msgstr ""
+
+#. translators: %s: list of domains
+#: includes/admin/class-seo-page.php:146
+#, php-format
+msgid "Domains with their own SEO: %s"
+msgstr ""
+
+#: includes/admin/class-seo-page.php:157
+#: includes/class-topics.php:158
+msgid "SEO title"
+msgstr ""
+
+#: includes/admin/class-seo-page.php:157
+msgid "Shown as the title in search results"
+msgstr ""
+
+#: includes/admin/class-seo-page.php:158
+msgid "Shown under the title in search results"
+msgstr ""
+
+#: includes/admin/class-seo-page.php:159
+#: includes/class-topics.php:160
+msgid "SEO keywords"
+msgstr ""
+
+#: includes/admin/class-seo-page.php:159
+msgid "Type a keyword and press Enter; you can add several"
+msgstr ""
+
+#: includes/admin/class-seo-page.php:162
+msgid "To use the default template for this domain again, empty all three fields and save."
+msgstr ""
+
+#: includes/admin/class-seo-page.php:166
+msgid "Enter or choose a domain above."
+msgstr ""
+
+#: includes/admin/class-seo-page.php:170
+msgid "Search engine optimisation (SEO) means adjusting the site to how search engines work, so it ranks higher in their results."
+msgstr ""
+
+#: includes/admin/class-seo-page.php:171
+msgid "A good title, description and keywords for the home page help search engines read and index the store, so customers find it more easily."
+msgstr ""
+
+#: includes/admin/class-seo-page.php:172
+msgid "Variable: {current_domain} is replaced by the domain the visitor opened."
+msgstr ""
+
+#: includes/admin/class-seo-page.php:173
+msgid "Campaign pages have their own SEO in their editor."
+msgstr ""
+
+#. translators: %d: number of domains
+#: includes/admin/class-seo-page.php:184
+#, php-format
+msgid "Imported SEO for %d domain."
+msgid_plural "Imported SEO for %d domains."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/admin/class-seo-page.php:194
+#: includes/admin/class-store-design.php:225
+#: includes/class-seo.php:85
+#: includes/class-templates.php:368
+msgid "Enter a valid domain name, for example shop.example.com."
+msgstr ""
+
+#: includes/admin/class-seo-page.php:196
+msgid "Choose a CSV file (up to 1 MB)."
+msgstr ""
+
 #. translators: %s: store brand name
 #: includes/admin/class-settings-page.php:31
 #, php-format
@@ -4753,7 +4883,7 @@ msgid "A statement about the intended use of your products, shown on the storefr
 msgstr ""
 
 #: includes/admin/class-settings-page.php:102
-#: includes/admin/class-store-design.php:513
+#: includes/admin/class-store-design.php:528
 #: includes/class-checkout-ack.php:70
 msgid "Checkout confirmation"
 msgstr ""
@@ -4792,7 +4922,7 @@ msgid "Add tracking numbers on the order page with the \"Fulfill items\" button.
 msgstr ""
 
 #: includes/admin/class-settings-page.php:138
-#: includes/admin/class-store-design.php:511
+#: includes/admin/class-store-design.php:526
 msgid "Customer support button"
 msgstr ""
 
@@ -5173,265 +5303,248 @@ msgstr ""
 msgid "Enter a plan name."
 msgstr ""
 
-#: includes/admin/class-store-design.php:58
-#: includes/admin/class-store-design.php:229
+#: includes/admin/class-store-design.php:61
+#: includes/admin/class-store-design.php:244
 msgid "Theme design"
 msgstr ""
 
-#: includes/admin/class-store-design.php:60
+#: includes/admin/class-store-design.php:63
 msgid "Custom pages"
 msgstr ""
 
-#: includes/admin/class-store-design.php:61
-msgid "Homepage SEO"
-msgstr ""
-
-#: includes/admin/class-store-design.php:62
+#: includes/admin/class-store-design.php:65
 msgid "Domains"
 msgstr ""
 
-#: includes/admin/class-store-design.php:63
+#: includes/admin/class-store-design.php:66
+#: includes/class-topics.php:54
+#: includes/class-topics.php:63
 msgid "Campaign pages"
 msgstr ""
 
-#: includes/admin/class-store-design.php:69
-#: includes/admin/class-store-design.php:70
+#: includes/admin/class-store-design.php:72
+#: includes/admin/class-store-design.php:73
 msgid "Store design"
 msgstr ""
 
-#: includes/admin/class-store-design.php:198
+#: includes/admin/class-store-design.php:213
 msgid "Template details saved."
 msgstr ""
 
-#: includes/admin/class-store-design.php:199
+#: includes/admin/class-store-design.php:214
 msgid "Template created."
 msgstr ""
 
-#: includes/admin/class-store-design.php:200
+#: includes/admin/class-store-design.php:215
 msgid "Template copied. The copy is not used by the store until you set it as default or assign it to a domain."
 msgstr ""
 
-#: includes/admin/class-store-design.php:201
+#: includes/admin/class-store-design.php:216
 msgid "Store default template changed."
 msgstr ""
 
-#: includes/admin/class-store-design.php:202
+#: includes/admin/class-store-design.php:217
 msgid "Template moved to the trash."
 msgstr ""
 
-#: includes/admin/class-store-design.php:203
+#: includes/admin/class-store-design.php:218
 msgid "Domain template saved."
 msgstr ""
 
-#: includes/admin/class-store-design.php:204
+#: includes/admin/class-store-design.php:219
 msgid "Domain assignment removed. That domain now uses the store default template."
 msgstr ""
 
-#: includes/admin/class-store-design.php:205
-#: includes/admin/class-store-design.php:207
+#: includes/admin/class-store-design.php:220
+#: includes/admin/class-store-design.php:222
 #: includes/class-templates.php:307
 #: includes/class-templates.php:371
 msgid "Template not found."
 msgstr ""
 
-#: includes/admin/class-store-design.php:206
+#: includes/admin/class-store-design.php:221
 #: includes/class-exit-intent.php:278
 msgid "Something went wrong. Please try again."
 msgstr ""
 
-#: includes/admin/class-store-design.php:208
+#: includes/admin/class-store-design.php:223
 #: includes/class-templates.php:310
 msgid "The store default template cannot be deleted. Set another template as default first."
 msgstr ""
 
-#: includes/admin/class-store-design.php:209
+#: includes/admin/class-store-design.php:224
 #: includes/class-templates.php:313
 msgid "This template is assigned to a domain. Remove the domain assignment first."
 msgstr ""
 
-#: includes/admin/class-store-design.php:210
-#: includes/class-templates.php:368
-msgid "Enter a valid domain name, for example shop.example.com."
-msgstr ""
-
-#: includes/admin/class-store-design.php:230
+#: includes/admin/class-store-design.php:245
 msgid "Template sources"
 msgstr ""
 
-#: includes/admin/class-store-design.php:231
+#: includes/admin/class-store-design.php:246
 msgid "My templates"
 msgstr ""
 
-#: includes/admin/class-store-design.php:239
+#: includes/admin/class-store-design.php:254
 msgid "Template in use"
 msgstr ""
 
-#: includes/admin/class-store-design.php:241
-#: includes/admin/class-store-design.php:311
+#: includes/admin/class-store-design.php:256
+#: includes/admin/class-store-design.php:326
 msgid "Store default template"
 msgstr ""
 
-#: includes/admin/class-store-design.php:242
-#: includes/admin/class-store-design.php:377
-msgid "Domain templates"
-msgstr ""
-
-#: includes/admin/class-store-design.php:245
+#: includes/admin/class-store-design.php:260
 msgid "This is the design customers see. Different domains can use different templates."
 msgstr ""
 
-#: includes/admin/class-store-design.php:246
+#: includes/admin/class-store-design.php:261
 msgid "A domain without its own template uses the store default template."
 msgstr ""
 
-#: includes/admin/class-store-design.php:263
+#: includes/admin/class-store-design.php:278
 msgid "My template library"
 msgstr ""
 
-#: includes/admin/class-store-design.php:265
+#: includes/admin/class-store-design.php:280
 msgid "New template"
 msgstr ""
 
-#: includes/admin/class-store-design.php:269
-#: includes/admin/class-store-design.php:427
-#: includes/admin/class-store-design.php:474
+#: includes/admin/class-store-design.php:284
+#: includes/admin/class-store-design.php:442
+#: includes/admin/class-store-design.php:489
 msgid "Template name"
 msgstr ""
 
 #. translators: %s: date and time
-#: includes/admin/class-store-design.php:316
+#: includes/admin/class-store-design.php:331
 #, php-format
 msgid "Modified: %s"
 msgstr ""
 
-#: includes/admin/class-store-design.php:322
-#: includes/admin/class-store-design.php:462
+#: includes/admin/class-store-design.php:337
+#: includes/admin/class-store-design.php:477
 msgid "Design"
 msgstr ""
 
-#: includes/admin/class-store-design.php:339
+#: includes/admin/class-store-design.php:354
 msgid "Homepage not published"
 msgstr ""
 
-#: includes/admin/class-store-design.php:340
+#: includes/admin/class-store-design.php:355
 msgid "Visitors see the theme's original homepage. Open “Design”, check the draft, then publish."
 msgstr ""
 
-#: includes/admin/class-store-design.php:343
+#: includes/admin/class-store-design.php:358
 msgid "Published · unpublished changes"
 msgstr ""
 
 #. translators: %s: date and time
-#: includes/admin/class-store-design.php:345
+#: includes/admin/class-store-design.php:360
 #, php-format
 msgid "Visitors see the version published %s. Your newer draft is not live yet."
 msgstr ""
 
-#: includes/admin/class-store-design.php:350
+#: includes/admin/class-store-design.php:365
 msgid "Visitors see this design."
 msgstr ""
 
-#: includes/admin/class-store-design.php:378
+#: includes/admin/class-store-design.php:393
 msgid "Use this when several domains point to this store and each should show a different design. The domain must already reach this site (DNS and server settings); adding it here only chooses the template."
 msgstr ""
 
-#: includes/admin/class-store-design.php:380
-#: includes/admin/class-store-design.php:402
-msgid "Domain"
-msgstr ""
-
-#: includes/admin/class-store-design.php:380
-#: includes/admin/class-store-design.php:403
+#: includes/admin/class-store-design.php:395
+#: includes/admin/class-store-design.php:418
 msgid "Template"
 msgstr ""
 
-#: includes/admin/class-store-design.php:383
+#: includes/admin/class-store-design.php:398
 msgid "No domain has its own template. All domains use the store default template."
 msgstr ""
 
-#: includes/admin/class-store-design.php:391
+#: includes/admin/class-store-design.php:406
 msgid "Remove this domain assignment? The domain will use the store default template."
 msgstr ""
 
-#: includes/admin/class-store-design.php:410
+#: includes/admin/class-store-design.php:425
 msgid "Assign"
 msgstr ""
 
-#: includes/admin/class-store-design.php:413
+#: includes/admin/class-store-design.php:428
 msgid "Only administrators can change domain templates."
 msgstr ""
 
-#: includes/admin/class-store-design.php:428
+#: includes/admin/class-store-design.php:443
 msgid "Theme"
 msgstr ""
 
-#: includes/admin/class-store-design.php:432
+#: includes/admin/class-store-design.php:447
 msgid "Modified"
 msgstr ""
 
-#: includes/admin/class-store-design.php:449
+#: includes/admin/class-store-design.php:464
 msgid "In use"
 msgstr ""
 
-#: includes/admin/class-store-design.php:464
+#: includes/admin/class-store-design.php:479
 msgid "More actions"
 msgstr ""
 
-#: includes/admin/class-store-design.php:467
+#: includes/admin/class-store-design.php:482
 msgid "Use this template as the store default? Customers will see it on all domains without their own template."
 msgstr ""
 
-#: includes/admin/class-store-design.php:467
+#: includes/admin/class-store-design.php:482
 msgid "Set as store default"
 msgstr ""
 
-#: includes/admin/class-store-design.php:476
+#: includes/admin/class-store-design.php:491
 msgid "Save details"
 msgstr ""
 
-#: includes/admin/class-store-design.php:479
+#: includes/admin/class-store-design.php:494
 msgid "Move this template to the trash? Its designs are removed with it."
 msgstr ""
 
 #. translators: %s: template name
-#: includes/admin/class-store-design.php:485
+#: includes/admin/class-store-design.php:500
 #, php-format
 msgid "Preview %s"
 msgstr ""
 
-#: includes/admin/class-store-design.php:500
+#: includes/admin/class-store-design.php:515
 msgid "Built for the active theme"
 msgstr ""
 
-#: includes/admin/class-store-design.php:500
+#: includes/admin/class-store-design.php:515
 msgid "Built for a different theme"
 msgstr ""
 
-#: includes/admin/class-store-design.php:512
+#: includes/admin/class-store-design.php:527
 msgid "Shipment tracking"
 msgstr ""
 
-#: includes/admin/class-store-design.php:514
+#: includes/admin/class-store-design.php:529
 msgid "Batch reports"
 msgstr ""
 
-#: includes/admin/class-store-design.php:518
+#: includes/admin/class-store-design.php:533
 msgid "Recommended apps"
 msgstr ""
 
-#: includes/admin/class-store-design.php:543
+#: includes/admin/class-store-design.php:558
 msgid "Homepage title, description and social sharing image for search engines."
 msgstr ""
 
-#: includes/admin/class-store-design.php:544
+#: includes/admin/class-store-design.php:559
 msgid "Bind your own domain and check HTTPS once the site is on a server."
 msgstr ""
 
-#: includes/admin/class-store-design.php:545
+#: includes/admin/class-store-design.php:560
 msgid "Landing pages for promotions, built from modules, with their own address."
 msgstr ""
 
-#: includes/admin/class-store-design.php:552
+#: includes/admin/class-store-design.php:567
 #: includes/admin/class-store-settings.php:147
 #: includes/admin/class-store-settings.php:166
 msgid "Coming soon"
@@ -6014,6 +6127,7 @@ msgid "Day"
 msgstr ""
 
 #: includes/admin/class-tracking-page.php:157
+#: includes/class-topics.php:187
 msgid "Views"
 msgstr ""
 
@@ -7027,7 +7141,7 @@ msgstr ""
 msgid "This browser will no longer share your activity with advertising partners."
 msgstr ""
 
-#: includes/class-plugin.php:122
+#: includes/class-plugin.php:125
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr ""
 
@@ -7301,6 +7415,12 @@ msgstr ""
 msgid "You will no longer receive cart reminder emails from us."
 msgstr ""
 
+#. translators: %d: line number
+#: includes/class-seo.php:158
+#, php-format
+msgid "Line %d: the domain is not valid."
+msgstr ""
+
 #: includes/class-settings.php:107
 msgid "The checkout confirmation was not enabled because its text is empty."
 msgstr ""
@@ -7480,6 +7600,86 @@ msgstr ""
 
 #: includes/class-terms.php:200
 msgid "required"
+msgstr ""
+
+#: includes/class-topics.php:55
+msgid "Campaign page"
+msgstr ""
+
+#: includes/class-topics.php:56
+#: includes/class-topics.php:57
+msgid "New campaign page"
+msgstr ""
+
+#: includes/class-topics.php:58
+msgid "Edit campaign page"
+msgstr ""
+
+#: includes/class-topics.php:59
+msgid "View campaign page"
+msgstr ""
+
+#: includes/class-topics.php:60
+msgid "Search campaign pages"
+msgstr ""
+
+#: includes/class-topics.php:61
+msgid "No campaign pages yet."
+msgstr ""
+
+#: includes/class-topics.php:62
+msgid "No campaign pages in the trash."
+msgstr ""
+
+#: includes/class-topics.php:64
+#: includes/class-topics.php:184
+msgid "Cover"
+msgstr ""
+
+#: includes/class-topics.php:65
+msgid "Set cover (1:1, at least 1000 px wide)"
+msgstr ""
+
+#: includes/class-topics.php:66
+msgid "Remove cover"
+msgstr ""
+
+#: includes/class-topics.php:140
+msgid "Campaign page settings"
+msgstr ""
+
+#: includes/class-topics.php:141
+msgid "SEO"
+msgstr ""
+
+#: includes/class-topics.php:146
+msgid "Show the title on the page"
+msgstr ""
+
+#: includes/class-topics.php:147
+msgid "Published = visible at its address; draft = not visible yet. The short description goes in the Excerpt box; the cover is the featured image."
+msgstr ""
+
+#. translators: %d: number of views
+#: includes/class-topics.php:150
+#, php-format
+msgid "Views: %d"
+msgstr ""
+
+#: includes/class-topics.php:157
+msgid "Leave empty to use the campaign title and short description. The link is the page’s slug (edit it next to the title); after a change the old link redirects to the new one."
+msgstr ""
+
+#: includes/class-topics.php:160
+msgid "Separate keywords with commas"
+msgstr ""
+
+#: includes/class-topics.php:161
+msgid "Address:"
+msgstr ""
+
+#: includes/class-topics.php:188
+msgid "Last modified"
 msgstr ""
 
 #: includes/emails/class-admin-abandoned.php:20

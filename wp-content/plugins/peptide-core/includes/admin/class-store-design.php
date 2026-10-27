@@ -25,6 +25,9 @@ final class Store_Design {
 	/** “自定义页面”直接打开 WordPress 的页面列表（用户 2026-10-22 要求把左侧的“页面”菜单移到这里）。 */
 	public const PAGES_SLUG = 'edit.php?post_type=page';
 
+	/** “活动专题页”打开专题页列表（Topics，2026-10-27 照 YY 做成实际功能）。 */
+	public const TOPICS_SLUG = 'edit.php?post_type=pc_topic';
+
 	/** 表单动作 => 需要的能力。 */
 	private const ACTIONS = array(
 		'pc_design_edit'          => Templates::CAP_EDIT,
@@ -60,7 +63,7 @@ final class Store_Design {
 			self::PAGES_SLUG         => __( 'Custom pages', 'peptide-core' ),
 			self::SLUG . '-seo'      => __( 'Homepage SEO', 'peptide-core' ),
 			self::SLUG . '-domains'  => __( 'Domains', 'peptide-core' ),
-			self::SLUG . '-campaign' => __( 'Campaign pages', 'peptide-core' ),
+			self::TOPICS_SLUG        => __( 'Campaign pages', 'peptide-core' ),
 		);
 	}
 
@@ -75,9 +78,13 @@ final class Store_Design {
 			56
 		);
 		foreach ( self::pages() as $slug => $title ) {
-			if ( self::PAGES_SLUG === $slug ) {
-				// 菜单链接直接指向页面列表；权限按 WordPress 自己的“编辑页面”能力。
+			if ( self::PAGES_SLUG === $slug || self::TOPICS_SLUG === $slug ) {
+				// 菜单链接直接指向页面 / 专题页列表；权限按 WordPress 自己的“编辑页面”能力。
 				add_submenu_page( self::SLUG, $title, $title, 'edit_pages', $slug );
+				continue;
+			}
+			if ( Seo_Page::SLUG === $slug ) {
+				add_submenu_page( self::SLUG, $title, $title, Templates::CAP_EDIT, $slug, array( Seo_Page::class, 'render' ) );
 				continue;
 			}
 			if ( Menu_Page::SLUG === $slug ) {
@@ -100,18 +107,26 @@ final class Store_Design {
 		remove_menu_page( self::PAGES_SLUG );
 	}
 
-	private static function on_pages_screen(): bool {
+	/** 当前是页面或专题页的列表 / 编辑界面时，返回对应的子菜单；否则为空。 */
+	private static function list_screen(): string {
 		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-		return $screen && 'page' === $screen->post_type && in_array( $screen->base, array( 'edit', 'post' ), true );
+		if ( ! $screen || ! in_array( $screen->base, array( 'edit', 'post' ), true ) ) {
+			return '';
+		}
+		if ( 'page' === $screen->post_type ) {
+			return self::PAGES_SLUG;
+		}
+		return \PeptideCore\Topics::POST_TYPE === $screen->post_type ? self::TOPICS_SLUG : '';
 	}
 
-	/** 在页面列表、新建或编辑页面时，左侧菜单展开“店铺装修”并选中“自定义页面”。 */
+	/** 在页面 / 专题页列表、新建或编辑时，左侧菜单展开“店铺装修”并选中“自定义页面”或“活动专题页”。 */
 	public static function pages_parent_file( $parent_file ) {
-		return self::on_pages_screen() ? self::SLUG : $parent_file;
+		return '' !== self::list_screen() ? self::SLUG : $parent_file;
 	}
 
 	public static function pages_submenu_file( $submenu_file, $parent_file = '' ) {
-		return self::on_pages_screen() ? self::PAGES_SLUG : $submenu_file;
+		$sub = self::list_screen();
+		return '' !== $sub ? $sub : $submenu_file;
 	}
 
 	public static function enqueue( string $hook ): void {
