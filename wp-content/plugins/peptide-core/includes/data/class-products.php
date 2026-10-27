@@ -149,19 +149,19 @@ final class Products {
 	public static function params( array $params ) {
 		$errors = array();
 
-		$sort = self::word( $params, 'sort', 'views', self::METRICS );
+		$sort = Params::word( $params, 'sort', 'views', self::METRICS );
 		if ( null === $sort ) {
 			$errors['sort'] = 'invalid_format';
 		}
-		$order = self::word( $params, 'order', 'desc', array( 'asc', 'desc' ) );
+		$order = Params::word( $params, 'order', 'desc', array( 'asc', 'desc' ) );
 		if ( null === $order ) {
 			$errors['order'] = 'invalid_format';
 		}
-		$page = self::whole( $params, 'page', 1, 1, 999999999 );
+		$page = Params::whole( $params, 'page', 1, 1, 999999999 );
 		if ( null === $page ) {
 			$errors['page'] = 'invalid_format';
 		}
-		$per_page = self::whole( $params, 'per_page', 20, 1, 100 );
+		$per_page = Params::whole( $params, 'per_page', 20, 1, 100 );
 		if ( null === $per_page ) {
 			$errors['per_page'] = 'invalid_format';
 		}
@@ -179,36 +179,6 @@ final class Products {
 			'per_page' => $per_page,
 			'q'        => $q,
 		);
-	}
-
-	/** 取一个必须在 $allowed 里的文字参数：没传或为空用默认值；不在里面返回 null。 */
-	private static function word( array $params, string $key, string $default, array $allowed ): ?string {
-		$raw = $params[ $key ] ?? '';
-		if ( ! is_scalar( $raw ) || is_bool( $raw ) ) {
-			return null;
-		}
-		$text = trim( (string) $raw );
-		if ( '' === $text ) {
-			return $default;
-		}
-		return in_array( $text, $allowed, true ) ? $text : null;
-	}
-
-	/** 取一个整数参数：没传或为空用默认值；不是整数或超出 $min ~ $max 返回 null。 */
-	private static function whole( array $params, string $key, int $default, int $min, int $max ): ?int {
-		$raw = $params[ $key ] ?? '';
-		if ( ! is_scalar( $raw ) || is_bool( $raw ) ) {
-			return null;
-		}
-		$text = trim( (string) $raw );
-		if ( '' === $text ) {
-			return $default;
-		}
-		if ( 1 !== preg_match( '/^[+-]?\d{1,9}$/', $text ) ) {
-			return null;
-		}
-		$n = (int) $text;
-		return ( $n < $min || $n > $max ) ? null : $n;
 	}
 
 	/**
