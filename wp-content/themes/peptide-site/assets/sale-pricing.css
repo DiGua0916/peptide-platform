@@ -1,0 +1,24 @@
+/* VialCove: one actual price, its matching comparison, and one quiet offer tag. */
+.product-card .product-heading { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.product-card .product-price { width: 100%; text-align: left; }
+.vc-price-set { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 8px 10px; max-width: 100%; vertical-align: middle; }
+.vc-price-current { color: var(--vc-ink); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.product-price .vc-price-current { font-size: 20px; letter-spacing: -.025em; }
+.vc-price-set .vc-price-compare { color: var(--vc-muted-readable); font-size: 14px; font-weight: 400; opacity: 1; text-decoration-thickness: 1px; white-space: nowrap; }
+.woocommerce div.product .vc-price-set .vc-price-compare,
+.woocommerce ul.products li.product .vc-price-set .vc-price-compare { opacity: 1; }
+.vc-sale-badge { display: inline-flex; align-items: center; padding: 4px 7px; border-radius: 4px; background: var(--vc-ice); color: var(--vc-primary-hover); font-size: 11px; font-weight: 600; line-height: 1.25; white-space: nowrap; letter-spacing: 0; }
+.vc-price-demo { flex: 0 0 100%; color: var(--vc-muted-readable); font-size: 11px; font-weight: 400; line-height: 1.5; letter-spacing: 0; }
+.woocommerce div.product .summary .vc-detail-price { margin-block: 18px 22px; line-height: 1.35; }
+.vc-detail-price .vc-price-current { font-size: clamp(26px, 2.3vw, 32px); }
+.vc-detail-price .vc-price-compare { font-size: 18px; }
+.vc-detail-price .vc-sale-badge { font-size: 12px; padding: 5px 9px; }
+.vc-detail-price .vc-price-demo { font-size: 12px; }
+.vc-price-hint { display: block; margin-top: 8px; color: var(--vc-muted-readable); font-size: 13px; font-weight: 400; line-height: 1.5; }
+.vc-detail-price .vc-variation-price { display: block; }
+@media (max-width: 480px) {
+  .vc-price-set { column-gap: 8px; }
+  .product-price .vc-price-current { font-size: 19px; }
+  .vc-price-set .vc-price-compare { font-size: 13px; }
+  .vc-detail-price .vc-price-compare { font-size: 17px; }
+}

@@ -1,0 +1,127 @@
+/* Public coupons use the VialCove palette; WooCommerce owns eligibility and totals. */
+.vc-coupons {
+	--coupon-ink: var(--vc-ink, #284650);
+	--coupon-accent: var(--vc-primary, #177e9b);
+	--coupon-paper: var(--vc-paper, #f4f8fb);
+	--coupon-line: var(--vc-line, #d8e5ea);
+	color: var(--coupon-ink);
+	font-family: var(--font, VialCoveInter, Inter, Arial, sans-serif);
+	font-size: 15px;
+	line-height: 1.6;
+	margin-top: 24px;
+}
+.vc-coupons *, .vc-coupons *::before, .vc-coupons *::after { box-sizing: border-box; }
+.vc-coupons p, .vc-coupons ul, .vc-coupons dl { margin: 0; }
+.vc-coupons .vc-coupons-intro { max-width: 64ch; margin-bottom: 36px; }
+.vc-coupons-list { border-top: 1px solid var(--coupon-line); }
+.vc-coupon-row {
+	display: grid;
+	grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(210px, .9fr);
+	align-items: start;
+	gap: clamp(24px, 3vw, 48px);
+	padding: 36px 0;
+	border-bottom: 1px solid var(--coupon-line);
+}
+.vc-coupon-row > *, .vc-coupon-detail > * { min-width: 0; }
+.vc-coupons .vc-coupon-summary h2 {
+	margin: 0;
+	font-size: clamp(25px, 2.4vw, 34px);
+	font-weight: 500;
+	line-height: 1.2;
+	letter-spacing: -.035em;
+	overflow-wrap: anywhere;
+}
+.vc-coupons .vc-coupon-value { color: var(--coupon-accent); margin-top: 12px; font-size: 18px; font-weight: 600; }
+.vc-coupons .vc-coupon-description { margin-top: 16px; max-width: 64ch; white-space: pre-line; overflow-wrap: anywhere; }
+.vc-coupon-conditions { font-size: 13px; }
+.vc-coupons .vc-coupon-expiry { color: var(--coupon-ink); font-weight: 500; margin-bottom: 12px; }
+.vc-coupons .vc-coupon-terms { list-style: none; padding: 0; }
+.vc-coupons .vc-coupon-terms li + li { margin-top: 7px; }
+.vc-coupons .vc-coupon-eligibility { margin-top: 12px; }
+.vc-coupon-redeem { padding-left: 28px; border-left: 1px solid var(--coupon-line); }
+.vc-coupon-code-label { display: block; font-size: 12px; margin-bottom: 8px; }
+.vc-coupons .vc-coupon-code {
+	display: block;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--coupon-ink);
+	font-family: inherit;
+	font-size: 21px;
+	font-weight: 600;
+	letter-spacing: .03em;
+	line-height: 1.45;
+	overflow-wrap: anywhere;
+	user-select: all;
+}
+.vc-coupon-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 18px; margin-top: 18px; }
+.vc-coupons .vc-coupon-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 44px;
+	max-width: 100%;
+	padding: 11px 18px;
+	border: 1px solid var(--coupon-accent);
+	border-radius: 4px;
+	background: var(--coupon-accent);
+	color: #fff;
+	font: inherit;
+	font-size: 13px;
+	font-weight: 500;
+	line-height: 1.5;
+	text-align: center;
+	text-decoration: none;
+	cursor: pointer;
+	transition: background-color 160ms ease, border-color 160ms ease;
+}
+.vc-coupons .vc-coupon-button:hover { background: #126b84; border-color: #126b84; color: #fff; }
+.vc-coupons .vc-coupon-button--secondary { background: transparent; color: var(--coupon-accent); }
+.vc-coupons .vc-coupon-button--secondary:hover { background: #e3f0f4; color: #126b84; }
+.vc-coupons .vc-coupon-link { color: var(--coupon-accent); font-size: 13px; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
+.vc-coupons .vc-coupon-link:hover { color: #126b84; }
+.vc-coupons :is(a, button):focus-visible { outline: 3px solid var(--coupon-accent); outline-offset: 4px; }
+.vc-coupons .vc-coupon-status { min-height: 1.6em; font-size: 12px; color: var(--coupon-ink); margin-top: 8px; overflow-wrap: anywhere; }
+.vc-coupons .vc-coupon-back { margin-bottom: 28px; }
+.vc-coupon-detail { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 340px); gap: clamp(32px, 6vw, 88px); align-items: start; }
+.vc-coupon-detail-main { padding-top: 28px; border-top: 1px solid var(--coupon-line); }
+.vc-coupon-detail .vc-coupon-summary h2 { font-size: clamp(30px, 3.4vw, 44px); }
+.vc-coupon-detail-terms { margin-top: 36px; }
+.vc-coupons .vc-coupon-detail-terms h3 { margin: 0 0 20px; font-size: 19px; font-weight: 500; line-height: 1.4; letter-spacing: -.015em; }
+.vc-coupon-facts > div { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(0, 1.5fr); gap: 20px; padding: 12px 0; border-bottom: 1px solid var(--coupon-line); }
+.vc-coupon-facts dt { color: var(--vc-muted-readable, #526f7d); font-size: 14px; }
+.vc-coupon-facts dd { margin: 0; color: var(--coupon-ink); font-size: 14px; overflow-wrap: anywhere; }
+.vc-coupons .vc-coupon-terms--detail { margin-top: 22px; font-size: 14px; }
+.vc-coupon-product-group { margin-top: 28px; }
+.vc-coupons .vc-coupon-product-group h4 { margin: 0 0 10px; font-size: 14px; font-weight: 600; line-height: 1.5; }
+.vc-coupons .vc-coupon-product-group ul { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.vc-coupon-product-group li { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.vc-coupon-detail-redeem { padding: 28px; background: #eaf3f6; border-radius: 6px; }
+.vc-coupon-detail-redeem .vc-coupon-code { font-size: 27px; }
+.vc-coupon-detail-redeem .vc-coupon-actions { align-items: stretch; flex-direction: column; gap: 10px; }
+.vc-coupons .vc-coupon-apply-note { font-size: 13px; margin-top: 20px; }
+.vc-coupons-empty { padding: 32px 0; border-top: 1px solid var(--coupon-line); }
+.vc-coupons .vc-coupons-empty h2 { font-size: clamp(26px, 3vw, 36px); line-height: 1.25; letter-spacing: -.025em; margin: 0 0 14px; }
+.vc-coupons .vc-coupons-empty p { max-width: 60ch; margin-bottom: 24px; }
+@media (max-width: 1000px) {
+	.vc-coupon-row { grid-template-columns: minmax(0, 1fr) minmax(220px, .8fr); gap: 20px 32px; }
+	.vc-coupon-conditions { grid-column: 1; }
+	.vc-coupon-redeem { grid-column: 2; grid-row: 1 / span 2; }
+}
+@media (max-width: 700px) {
+	.vc-coupons { margin-top: 20px; font-size: 14px; }
+	.vc-coupons .vc-coupons-intro { margin-bottom: 24px; }
+	.vc-coupon-row { display: flex; flex-direction: column; gap: 20px; padding: 28px 0; }
+	.vc-coupon-row > * { width: 100%; }
+	.vc-coupon-conditions:empty { display: none; }
+	.vc-coupon-redeem { border-left: 0; padding-left: 0; }
+	.vc-coupon-actions { gap: 12px 20px; margin-top: 14px; }
+	.vc-coupon-detail { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+	.vc-coupon-detail-main { padding-top: 24px; }
+	.vc-coupon-detail-redeem { padding: 22px; }
+	.vc-coupon-detail-redeem .vc-coupon-actions { flex-direction: row; }
+	.vc-coupon-detail-redeem .vc-coupon-actions > * { flex: 1 1 140px; }
+	.vc-coupon-detail-terms { margin-top: 28px; }
+	.vc-coupon-facts > div { grid-template-columns: minmax(100px, .85fr) minmax(0, 1fr); gap: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .vc-coupons .vc-coupon-button { transition: none; } }

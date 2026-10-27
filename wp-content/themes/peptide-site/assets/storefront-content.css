@@ -1,0 +1,26 @@
+/* Backend-managed notices and policy links, independent of commerce templates. */
+.vc-storefront-notices { margin-block: 24px; }
+.vc-storefront-notices .woocommerce-message,
+.vc-storefront-notices .woocommerce-info,
+.vc-storefront-notices .woocommerce-error {
+  margin: 0 0 12px; padding: 18px 22px; border: 1px solid var(--line, #d8e5ea);
+  border-left: 3px solid var(--blue, #177e9b); background: var(--soft, #f4f8fb);
+  color: var(--ink, #284650); font-size: 15px; line-height: 1.7; border-radius: 4px;
+  list-style: none; overflow-wrap: anywhere;
+}
+.vc-storefront-notices .woocommerce-error { border-left-color: #b44b44; }
+.vc-storefront-notices .woocommerce-message::before,
+.vc-storefront-notices .woocommerce-info::before,
+.vc-storefront-notices .woocommerce-error::before { display: none; }
+.vc-storefront-notices a { text-decoration: underline; text-underline-offset: 3px; }
+.vc-storefront-notices .button { float: right; margin: 0 0 6px 16px; text-decoration: none; }
+.vc-checkout-policies { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px 32px; padding: 24px 0; margin-top: 24px; border-top: 1px solid var(--line); font-size: 14px; }
+.vc-checkout-policies > span { color: var(--muted); }
+.vc-checkout-policies ul { list-style: none; display: flex; flex-wrap: wrap; gap: 12px 24px; padding: 0; margin: 0; }
+.vc-checkout-policies a { display: inline-block; padding-block: 4px; text-decoration: underline; text-underline-offset: 4px; overflow-wrap: anywhere; }
+.vc-checkout-policies a:focus-visible, .vc-storefront-notices a:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; }
+@media (max-width: 600px) {
+  .vc-storefront-notices { margin-block: 16px; }
+  .vc-storefront-notices .woocommerce-message, .vc-storefront-notices .woocommerce-info, .vc-storefront-notices .woocommerce-error { padding: 16px; }
+  .vc-storefront-notices .button { float: none; display: table; margin: 0 0 12px; }
+}

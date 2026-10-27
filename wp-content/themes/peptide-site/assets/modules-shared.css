@@ -1,0 +1,19 @@
+/* Theme internals only; module wrapper spacing/background belongs to peptide-core. */
+.vc-m .vc-module-picture { display: block; min-width: 0; }
+.vc-module-picture :where(img) {
+  display: block; width: 100%; max-width: 100%; height: auto;
+  object-fit: var(--vc-media-fit, cover);
+  object-position: var(--vc-media-position, 50% 50%);
+}
+.vc-m :where(a, button, summary):focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; }
+.vc-m .is-hidden { opacity: .55; outline: 1px dashed var(--line); }
+.vc-m .vc-button-effect-ready, .vc-m .vc-button-effect-ready::after { animation: none; }
+.vc-button-effect-ready { position: relative; isolation: isolate; }
+.vc-button-effect-ready.vc-button-effect-shine { overflow: hidden; }
+.vc-button-shine { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(110deg,transparent 30%,#ffffff60 50%,transparent 70%); transform: translateX(-110%); }
+@media (max-width: 767px) {
+  .vc-module-picture :where(img) {
+    object-fit: var(--vc-media-fit-mobile, var(--vc-media-fit, cover));
+    object-position: var(--vc-media-position-mobile, var(--vc-media-position, 50% 50%));
+  }
+}
