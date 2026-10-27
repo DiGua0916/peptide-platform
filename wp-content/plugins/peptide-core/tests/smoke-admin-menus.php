@@ -65,6 +65,20 @@ foreach ( array( 'wc-orders' => 'admin.php?page=wc-orders', 'wc-settings' => 'ad
 	do_action( 'adminmenu' );
 	$ok( "$page still opens and keeps the new menu open after WordPress re-checks the parent", user_can_access_admin_page() && $parent === $after );
 }
+$pm = $submenu['edit.php?post_type=product'] ?? array();
+$ps = array_column( $pm, 2 );
+$pos = static function ( string $needle ) use ( $ps ): int {
+	foreach ( $ps as $i => $slug ) {
+		if ( str_contains( $slug, $needle ) ) {
+			return $i;
+		}
+	}
+	return -1;
+};
+$ok( 'products menu: product management first, then collections, tags and test reports', 'edit.php?post_type=product' === ( $ps[0] ?? '' ) && 'Product management' === ( $pm[0][0] ?? '' ) && $pos( 'taxonomy=product_cat' ) > 0 && $pos( 'taxonomy=product_tag' ) > $pos( 'taxonomy=product_cat' ) && $pos( 'post_type=pc_report' ) > $pos( 'taxonomy=product_tag' ) );
+$ok( 'products menu labels: Collections, Product tags', 'Collections' === $pm[ $pos( 'taxonomy=product_cat' ) ][0] && 'Product tags' === $pm[ $pos( 'taxonomy=product_tag' ) ][0] );
+$ok( 'add new, brands, attributes and batches are not in the products menu', -1 === $pos( 'post-new.php' ) && -1 === $pos( 'product_brand' ) && -1 === $pos( 'product_attributes' ) && -1 === $pos( 'post_type=pc_batch' ) );
+$ok( 'top-level menu is called Products', in_array( 'Products', array_column( array_filter( $menu, static fn( $m ) => 'edit.php?post_type=product' === ( $m[2] ?? '' ) ), 0 ), true ) );
 $ok( 'the temporary WooCommerce parent mapping is removed after the menu is printed', ! isset( $GLOBALS['_wp_real_parent_file']['woocommerce'] ) );
 $ok( 'orders menu: all orders, pending orders, abandoned checkouts', array( 'admin.php?page=wc-orders', 'admin.php?page=wc-orders&status=wc-processing', 'pc-recovery' ) === array_column( $submenu['admin.php?page=wc-orders'] ?? array(), 2 ) );
 $_GET['page']   = 'wc-orders';

@@ -20,6 +20,8 @@
  *   插件页面里指向这些设置的链接（例如邮件通知的“设置”、物流设置里的“运费区域”）仍然能打开。
  *   常规（可销售国家等）、产品（单位、库存、评价）、帐户和隐私（游客结账、账户创建）、高级（购物车 / 结账页面、接口）保留。
  * - 订单（用户 2026-10-27 要求和 Shopname 一样）：全部订单、待处理订单（WooCommerce 的“处理中”，已付款待发货）、弃单。
+ * - 商品（用户 2026-10-27 要求和 Shopname 一样）：商品管理、商品专辑（WooCommerce 分类）、商品评论、商品标签，加上检测报告。
+ *   添加新产品（列表页有“添加”按钮）、品牌、属性、批次不在菜单里显示，页面仍能直接打开；批次在检测报告里选或新建。
  * - 悬停预览（用户 2026-10-27 要求去掉）：鼠标移到没展开的菜单上时，旁边不再弹出子菜单，点菜单进去后照常展开。
  *   只在展开的宽菜单、用鼠标时去掉；收起成图标的菜单和触屏设备没有别的办法打开子菜单，保留。
  *
@@ -122,6 +124,68 @@ final class Admin_Menus {
 				continue;
 			}
 		}
+		self::product_menu();
+	}
+
+	/** 商品菜单：改名、排序，去掉用不上的子菜单（其他插件加的子菜单放在最后，不去掉）。 */
+	private static function product_menu(): void {
+		global $menu, $submenu;
+		$parent = 'edit.php?post_type=product';
+		foreach ( (array) $menu as $i => $item ) {
+			if ( $parent === ( $item[2] ?? '' ) ) {
+				$menu[ $i ][0] = __( 'Products', 'peptide-core' ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+			}
+		}
+		if ( empty( $submenu[ $parent ] ) ) {
+			return;
+		}
+		$labels = array(
+			'all'     => __( 'Product management', 'peptide-core' ),
+			'cat'     => __( 'Collections', 'peptide-core' ),
+			'reviews' => __( 'Product reviews', 'peptide-core' ),
+			'tag'     => __( 'Product tags', 'peptide-core' ),
+			'reports' => null,
+		);
+		$found  = array_fill_keys( array_keys( $labels ), null );
+		$others = array();
+		foreach ( $submenu[ $parent ] as $item ) {
+			$key = self::product_item( (string) ( $item[2] ?? '' ) );
+			if ( 'hide' === $key ) {
+				continue;
+			}
+			if ( '' === $key ) {
+				$others[] = $item;
+				continue;
+			}
+			if ( null !== $labels[ $key ] ) {
+				$item[0] = $labels[ $key ];
+			}
+			$found[ $key ] = $item;
+		}
+		$submenu[ $parent ] = array_merge( array_values( array_filter( $found ) ), $others ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+	}
+
+	/** 商品子菜单属于哪一项：all / cat / reviews / tag / reports，hide = 不显示，空 = 其他插件的。 */
+	private static function product_item( string $slug ): string {
+		if ( 'edit.php?post_type=product' === $slug ) {
+			return 'all';
+		}
+		if ( str_contains( $slug, 'taxonomy=product_cat' ) ) {
+			return 'cat';
+		}
+		if ( 'product-reviews' === $slug || str_contains( $slug, 'page=product-reviews' ) ) {
+			return 'reviews';
+		}
+		if ( str_contains( $slug, 'taxonomy=product_tag' ) ) {
+			return 'tag';
+		}
+		if ( 'edit.php?post_type=' . \PeptideCore\Post_Types::REPORT === $slug ) {
+			return 'reports';
+		}
+		if ( 'post-new.php?post_type=product' === $slug || str_contains( $slug, 'taxonomy=product_brand' ) || 'product_attributes' === $slug || 'edit.php?post_type=' . \PeptideCore\Post_Types::BATCH === $slug ) {
+			return 'hide';
+		}
+		return '';
 	}
 
 	/** WooCommerce 设置页的标签栏只留常规、产品、帐户和隐私、高级（和其他插件新加的标签）。 */
@@ -163,6 +227,11 @@ final class Admin_Menus {
 	public static function parent_file( $parent_file ) {
 		if ( ! self::applies() ) {
 			return $parent_file;
+		}
+		// 批次不在商品菜单里了，WordPress 找不到它的父菜单；仍然展开商品菜单（子菜单高亮“检测报告”）。
+		global $typenow;
+		if ( \PeptideCore\Post_Types::BATCH === $typenow ) {
+			return 'edit.php?post_type=product';
 		}
 		$target = self::target_parent();
 		if ( '' === $target ) {
@@ -233,6 +302,14 @@ final class Admin_Menus {
 			// 待处理订单 = 处理中的订单列表；打开某一张订单时仍算“全部订单”。
 			$status = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			return 'wc-processing' === $status && ! isset( $_GET['action'] ) ? self::PENDING : self::ORDERS; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		}
+		// 商品菜单里隐藏的页面：批次算“检测报告”，添加商品、品牌、属性算“商品管理”。
+		global $typenow, $pagenow, $taxonomy;
+		if ( \PeptideCore\Post_Types::BATCH === $typenow ) {
+			return 'edit.php?post_type=' . \PeptideCore\Post_Types::REPORT;
+		}
+		if ( 'product' === $typenow && ( 'post-new.php' === $pagenow || 'product_attributes' === $page || 'product_brand' === $taxonomy || ( is_string( $taxonomy ) && '' !== $taxonomy && taxonomy_is_product_attribute( $taxonomy ) ) ) ) {
+			return 'edit.php?post_type=product';
 		}
 		// 插件自己放在这些菜单下的页面：WordPress 只在 $submenu_file 为空时才按 page 参数高亮，这里直接指定。
 		if ( in_array( $page, array( Recovery_Page::SLUG, Shipping_Page::SLUG, Tax_Page::SLUG, Store_Settings::SYSTEM_SLUG ), true ) ) {

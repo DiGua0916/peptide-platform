@@ -205,7 +205,7 @@ final class Batch_Metabox {
 	/**
 	 * @return array<int,string> 商品 ID => 名称（含 SKU）。
 	 */
-	private static function product_options(): array {
+	public static function product_options(): array {
 		$options  = array();
 		$products = wc_get_products(
 			array(
