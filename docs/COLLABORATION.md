@@ -1,6 +1,6 @@
 # 多人协作约定（GitHub）
 
-2026-10-27 起，项目放在 GitHub 私有仓库 https://github.com/DiGua0916/peptide-platform ，由仓库主人 DiGua 邀请协作者一起开发。协作者也用 Claude，所以同一个项目里会有好几个“Claude”。本文件用来分清谁是谁、谁改哪里，避免互相覆盖。
+2026-10-27 起，项目放在 GitHub 仓库 https://github.com/DiGua0916/peptide-platform （同日按用户要求改为公开，任何人都能看到代码、文档和历史；不要提交任何不能公开的内容），由仓库主人 DiGua 邀请协作者一起开发。协作者也用 Claude，所以同一个项目里会有好几个“Claude”。本文件用来分清谁是谁、谁改哪里，避免互相覆盖。
 
 ## 参与者
 
