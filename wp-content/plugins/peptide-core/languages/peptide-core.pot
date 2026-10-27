@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-27T14:15:00+00:00\n"
+"POT-Creation-Date: 2026-10-27T14:26:18+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -29,7 +29,7 @@ msgstr ""
 msgid "DiGua"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:93
+#: includes/admin/class-admin-menus.php:102
 #: includes/admin/class-apps-page.php:141
 #: includes/admin/class-batch-orders.php:141
 #: includes/admin/class-batch-orders.php:144
@@ -38,61 +38,61 @@ msgstr ""
 msgid "Orders"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:94
+#: includes/admin/class-admin-menus.php:103
 msgid "Customers"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:95
+#: includes/admin/class-admin-menus.php:104
 msgid "Store settings"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:97
+#: includes/admin/class-admin-menus.php:106
 msgid "Shipping settings"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:98
+#: includes/admin/class-admin-menus.php:107
 msgid "Tax settings"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:99
+#: includes/admin/class-admin-menus.php:108
 #: includes/admin/class-basic-config-page.php:114
 #: includes/admin/class-email-center.php:151
-#: includes/admin/class-store-settings.php:115
-#: includes/admin/class-store-settings.php:127
+#: includes/admin/class-store-settings.php:141
+#: includes/admin/class-store-settings.php:160
 #: includes/admin/class-terms-page.php:91
 msgid "System settings"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:104
+#: includes/admin/class-admin-menus.php:113
 msgid "Marketing campaigns"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:105
+#: includes/admin/class-admin-menus.php:114
 #: includes/admin/class-promotions-page.php:91
 #: includes/class-promotions.php:84
 msgid "Spend-and-save promotions"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:105
+#: includes/admin/class-admin-menus.php:114
 msgid "Spend-and-save"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:106
+#: includes/admin/class-admin-menus.php:115
 #: includes/admin/class-coupons-page.php:76
 msgid "Coupon codes"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:107
+#: includes/admin/class-admin-menus.php:116
 #: includes/admin/class-shipping-discounts-page.php:51
 msgid "Shipping discounts"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:110
+#: includes/admin/class-admin-menus.php:119
 #: includes/admin/class-apps-page.php:83
 msgid "App center"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:136
+#: includes/admin/class-admin-menus.php:145
 #: includes/admin/class-plans-editor.php:82
 #: includes/admin/class-tax-page.php:61
 #: includes/admin/class-tax-page.php:97
@@ -101,19 +101,19 @@ msgstr ""
 msgid "Products"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:143
+#: includes/admin/class-admin-menus.php:152
 msgid "Product management"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:144
+#: includes/admin/class-admin-menus.php:153
 msgid "Collections"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:145
+#: includes/admin/class-admin-menus.php:154
 msgid "Product reviews"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:146
+#: includes/admin/class-admin-menus.php:155
 msgid "Product tags"
 msgstr ""
 
@@ -635,7 +635,7 @@ msgstr ""
 #: includes/admin/class-menu-page.php:207
 #: includes/admin/class-pixels-page.php:229
 #: includes/admin/class-recovery-page.php:58
-#: includes/admin/class-report-metabox.php:191
+#: includes/admin/class-report-metabox.php:192
 #: includes/admin/class-shipping-page.php:221
 #: includes/admin/class-store-design.php:140
 #: includes/admin/class-tax-page.php:116
@@ -1313,7 +1313,7 @@ msgstr ""
 
 #: includes/admin/class-batch-metabox.php:49
 #: includes/admin/class-list-columns.php:32
-#: includes/admin/class-report-metabox.php:96
+#: includes/admin/class-report-metabox.php:97
 msgid "Batch number"
 msgstr ""
 
@@ -1326,7 +1326,7 @@ msgstr ""
 #: includes/admin/class-marketing.php:262
 #: includes/admin/class-overview-page.php:192
 #: includes/admin/class-plans-editor.php:84
-#: includes/admin/class-report-metabox.php:97
+#: includes/admin/class-report-metabox.php:98
 #: includes/admin/class-tracking-page.php:170
 #: includes/modules/class-registry.php:1037
 #: includes/modules/class-registry.php:1190
@@ -1334,7 +1334,7 @@ msgid "Product"
 msgstr ""
 
 #: includes/admin/class-batch-metabox.php:59
-#: includes/admin/class-report-metabox.php:98
+#: includes/admin/class-report-metabox.php:99
 msgid "— Select a product —"
 msgstr ""
 
@@ -1379,7 +1379,7 @@ msgid "Leave empty unless the information is real and may be published."
 msgstr ""
 
 #: includes/admin/class-batch-metabox.php:101
-#: includes/admin/class-report-metabox.php:160
+#: includes/admin/class-report-metabox.php:161
 msgid "Flags"
 msgstr ""
 
@@ -2567,23 +2567,23 @@ msgstr ""
 
 #: includes/admin/class-list-columns.php:75
 #: includes/admin/class-order-metabox.php:56
-#: includes/admin/class-report-metabox.php:83
+#: includes/admin/class-report-metabox.php:84
 #: includes/class-post-types.php:40
 msgid "Batch"
 msgstr ""
 
 #: includes/admin/class-list-columns.php:76
-#: includes/admin/class-report-metabox.php:108
+#: includes/admin/class-report-metabox.php:109
 msgid "Type"
 msgstr ""
 
 #: includes/admin/class-list-columns.php:77
-#: includes/admin/class-report-metabox.php:112
+#: includes/admin/class-report-metabox.php:113
 msgid "Version"
 msgstr ""
 
 #: includes/admin/class-list-columns.php:78
-#: includes/admin/class-report-metabox.php:121
+#: includes/admin/class-report-metabox.php:122
 msgid "Report status"
 msgstr ""
 
@@ -4004,7 +4004,7 @@ msgid "Plan deleted."
 msgstr ""
 
 #: includes/admin/class-plans-editor.php:105
-#: includes/admin/class-report-metabox.php:70
+#: includes/admin/class-report-metabox.php:71
 msgid "Published"
 msgstr ""
 
@@ -4572,121 +4572,121 @@ msgstr ""
 msgid "Report details"
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:63
+#: includes/admin/class-report-metabox.php:64
 msgid "Certificate of analysis (COA)"
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:64
+#: includes/admin/class-report-metabox.php:65
 msgid "HPLC"
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:65
+#: includes/admin/class-report-metabox.php:66
 msgid "Mass spectrometry (MS)"
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:66
+#: includes/admin/class-report-metabox.php:67
 msgid "Other"
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:69
+#: includes/admin/class-report-metabox.php:70
 msgid "Draft (not visible)"
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:71
+#: includes/admin/class-report-metabox.php:72
 msgid "Superseded (old version)"
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:72
+#: includes/admin/class-report-metabox.php:73
 msgid "Withdrawn"
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:75
+#: includes/admin/class-report-metabox.php:76
 #: includes/class-coupons.php:609
 msgid "Public"
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:76
+#: includes/admin/class-report-metabox.php:77
 msgid "Logged-in customers"
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:77
+#: includes/admin/class-report-metabox.php:78
 msgid "Approved customers"
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:78
+#: includes/admin/class-report-metabox.php:79
 msgid "Staff only"
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:86
+#: includes/admin/class-report-metabox.php:87
 msgid "— Select a batch —"
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:92
+#: includes/admin/class-report-metabox.php:93
 #: includes/class-post-types.php:42
 msgid "Edit batch"
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:95
+#: includes/admin/class-report-metabox.php:96
 msgid "Or a new batch:"
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:104
+#: includes/admin/class-report-metabox.php:105
 msgid "Choose an existing batch, or fill in a new batch number (3–40 letters, digits and hyphens) and its product: the batch is created when you save."
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:114
+#: includes/admin/class-report-metabox.php:115
 msgid "Assigned on save"
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:116
+#: includes/admin/class-report-metabox.php:117
 msgid "Superseded by:"
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:125
+#: includes/admin/class-report-metabox.php:126
 msgid "Who can download"
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:128
+#: includes/admin/class-report-metabox.php:129
 msgid "Customers who received this batch in an order can always download its published reports."
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:132
+#: includes/admin/class-report-metabox.php:133
 msgid "Issued on"
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:136
+#: includes/admin/class-report-metabox.php:137
 msgid "Issuer"
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:139
+#: includes/admin/class-report-metabox.php:140
 msgid "Real laboratory name only. Leave empty for demo reports."
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:143
+#: includes/admin/class-report-metabox.php:144
 msgid "Summary"
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:146
+#: includes/admin/class-report-metabox.php:147
 msgid "Optional. Never enter invented test results."
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:150
+#: includes/admin/class-report-metabox.php:151
 msgid "File"
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:156
+#: includes/admin/class-report-metabox.php:157
 msgid "PDF, PNG or JPEG, up to 20 MB. Uploading a new file replaces the current one. Files are stored privately and are never linked directly."
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:161
+#: includes/admin/class-report-metabox.php:162
 msgid "Demo report (the file must carry a visible DEMO watermark)"
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:199
+#: includes/admin/class-report-metabox.php:200
 msgid "Please select the batch this report belongs to."
 msgstr ""
 
-#: includes/admin/class-report-metabox.php:239
+#: includes/admin/class-report-metabox.php:240
 msgid "A report needs a batch and a file before it can be published. It was kept as a draft."
 msgstr ""
 
@@ -5418,8 +5418,8 @@ msgid "Landing pages for promotions, built from modules, with their own address.
 msgstr ""
 
 #: includes/admin/class-store-design.php:552
-#: includes/admin/class-store-settings.php:117
-#: includes/admin/class-store-settings.php:129
+#: includes/admin/class-store-settings.php:143
+#: includes/admin/class-store-settings.php:162
 msgid "Coming soon"
 msgstr ""
 
@@ -5484,15 +5484,99 @@ msgstr ""
 msgid "Server, database and plugin information for troubleshooting."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:119
+#: includes/admin/class-store-settings.php:101
+msgid "Reading and search engines"
+msgstr ""
+
+#: includes/admin/class-store-settings.php:101
+msgid "Whether search engines may index the store, and what the home page shows. Check this before launch."
+msgstr ""
+
+#: includes/admin/class-store-settings.php:102
+msgid "Permalinks"
+msgstr ""
+
+#: includes/admin/class-store-settings.php:102
+msgid "The address format of pages and products. Changing it changes every link."
+msgstr ""
+
+#: includes/admin/class-store-settings.php:103
+msgid "Privacy policy page"
+msgstr ""
+
+#: includes/admin/class-store-settings.php:103
+msgid "Which page is the privacy policy; checkout and account pages link to it."
+msgstr ""
+
+#: includes/admin/class-store-settings.php:104
+msgid "Discussion"
+msgstr ""
+
+#: includes/admin/class-store-settings.php:104
+msgid "Moderation and blocked words; these also apply to product reviews."
+msgstr ""
+
+#: includes/admin/class-store-settings.php:105
+msgid "WordPress general settings"
+msgstr ""
+
+#: includes/admin/class-store-settings.php:105
+msgid "Tagline, site address and date format. Store name, admin email, icon, time zone and language are in Basic configuration."
+msgstr ""
+
+#: includes/admin/class-store-settings.php:106
+msgid "Export personal data"
+msgstr ""
+
+#: includes/admin/class-store-settings.php:106
+msgid "When a customer asks for a copy of the data the store keeps about them."
+msgstr ""
+
+#: includes/admin/class-store-settings.php:107
+msgid "Erase personal data"
+msgstr ""
+
+#: includes/admin/class-store-settings.php:107
+msgid "When a customer asks the store to delete their personal data."
+msgstr ""
+
+#: includes/admin/class-store-settings.php:108
+msgid "Site health"
+msgstr ""
+
+#: includes/admin/class-store-settings.php:108
+msgid "Security and performance checks from WordPress."
+msgstr ""
+
+#: includes/admin/class-store-settings.php:109
+msgid "Scheduled actions"
+msgstr ""
+
+#: includes/admin/class-store-settings.php:109
+msgid "Background jobs such as pixel sends and abandoned checkout reminders; check here when something was not sent."
+msgstr ""
+
+#: includes/admin/class-store-settings.php:110
+msgid "Themes"
+msgstr ""
+
+#: includes/admin/class-store-settings.php:110
+msgid "The store theme. Only change it together with the theme developer."
+msgstr ""
+
+#: includes/admin/class-store-settings.php:145
 msgid "Other settings"
 msgstr ""
 
-#: includes/admin/class-store-settings.php:129
+#: includes/admin/class-store-settings.php:151
+msgid "WordPress settings and tools"
+msgstr ""
+
+#: includes/admin/class-store-settings.php:162
 msgid "The details of this section are still being decided. Once they are, this page becomes the full settings form."
 msgstr ""
 
-#: includes/admin/class-store-settings.php:131
+#: includes/admin/class-store-settings.php:164
 msgid "Until then, these existing settings cover it:"
 msgstr ""
 

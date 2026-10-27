@@ -92,6 +92,32 @@ final class Store_Settings {
 		return $out;
 	}
 
+	/**
+	 * 底部“WordPress 设置和工具”：外观、工具、设置三个菜单去掉后（用户 2026-10-27），仍然要用的页面。
+	 * 店铺名、管理员邮箱、图标、时区、语言、注册在“基础配置”，这里不重复。
+	 */
+	private static function wordpress_tools(): array {
+		$all = array(
+			array( 'manage_options', 'dashicons-visibility', __( 'Reading and search engines', 'peptide-core' ), __( 'Whether search engines may index the store, and what the home page shows. Check this before launch.', 'peptide-core' ), 'options-reading.php' ),
+			array( 'manage_options', 'dashicons-admin-links', __( 'Permalinks', 'peptide-core' ), __( 'The address format of pages and products. Changing it changes every link.', 'peptide-core' ), 'options-permalink.php' ),
+			array( 'manage_privacy_options', 'dashicons-privacy', __( 'Privacy policy page', 'peptide-core' ), __( 'Which page is the privacy policy; checkout and account pages link to it.', 'peptide-core' ), 'options-privacy.php' ),
+			array( 'manage_options', 'dashicons-admin-comments', __( 'Discussion', 'peptide-core' ), __( 'Moderation and blocked words; these also apply to product reviews.', 'peptide-core' ), 'options-discussion.php' ),
+			array( 'manage_options', 'dashicons-admin-generic', __( 'WordPress general settings', 'peptide-core' ), __( 'Tagline, site address and date format. Store name, admin email, icon, time zone and language are in Basic configuration.', 'peptide-core' ), 'options-general.php' ),
+			array( 'export_others_personal_data', 'dashicons-download', __( 'Export personal data', 'peptide-core' ), __( 'When a customer asks for a copy of the data the store keeps about them.', 'peptide-core' ), 'export-personal-data.php' ),
+			array( 'erase_others_personal_data', 'dashicons-trash', __( 'Erase personal data', 'peptide-core' ), __( 'When a customer asks the store to delete their personal data.', 'peptide-core' ), 'erase-personal-data.php' ),
+			array( 'view_site_health_checks', 'dashicons-heart', __( 'Site health', 'peptide-core' ), __( 'Security and performance checks from WordPress.', 'peptide-core' ), 'site-health.php' ),
+			array( 'manage_woocommerce', 'dashicons-clock', __( 'Scheduled actions', 'peptide-core' ), __( 'Background jobs such as pixel sends and abandoned checkout reminders; check here when something was not sent.', 'peptide-core' ), 'tools.php?page=action-scheduler' ),
+			array( 'switch_themes', 'dashicons-admin-appearance', __( 'Themes', 'peptide-core' ), __( 'The store theme. Only change it together with the theme developer.', 'peptide-core' ), 'themes.php' ),
+		);
+		$out = array();
+		foreach ( $all as $t ) {
+			if ( current_user_can( $t[0] ) ) {
+				$out[] = array( $t[1], $t[2], $t[3], admin_url( $t[4] ) );
+			}
+		}
+		return $out;
+	}
+
 	private static function card( string $icon, string $title, string $desc, string $url, string $tag = '' ): string {
 		return '<a class="pc-ss-card" href="' . esc_url( $url ) . '"><span class="pc-ss-card__icon dashicons ' . esc_attr( $icon ) . '" aria-hidden="true"></span><span class="pc-ss-card__text"><strong>' . esc_html( $title ) . ( $tag ? ' <em class="pc-ss-tag">' . esc_html( $tag ) . '</em>' : '' ) . '</strong><span>' . esc_html( $desc ) . '</span></span></a>';
 	}
@@ -119,6 +145,13 @@ final class Store_Settings {
 		echo '</div><h2 class="pc-ss-sub">' . esc_html__( 'Other settings', 'peptide-core' ) . '</h2><div class="pc-ss-grid">';
 		foreach ( self::others() as $o ) {
 			echo self::card( $o[0], $o[1], $o[2], $o[3] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		}
+		$wp = self::wordpress_tools();
+		if ( $wp ) {
+			echo '</div><h2 class="pc-ss-sub">' . esc_html__( 'WordPress settings and tools', 'peptide-core' ) . '</h2><div class="pc-ss-grid">';
+			foreach ( $wp as $o ) {
+				echo self::card( $o[0], $o[1], $o[2], $o[3] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			}
 		}
 		echo '</div></div>';
 	}

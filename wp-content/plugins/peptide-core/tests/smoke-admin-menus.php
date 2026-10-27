@@ -41,6 +41,7 @@ require ABSPATH . 'wp-admin/menu.php';
 
 $slugs = array_column( $menu, 2 );
 $ok( 'posts, media and comments removed', ! array_intersect( array( 'edit.php', 'upload.php', 'edit-comments.php' ), $slugs ) );
+$ok( 'appearance, tools and settings removed', ! array_intersect( array( 'themes.php', 'tools.php', 'options-general.php' ), $slugs ) );
 $ok( 'WooCommerce top-level menu removed', ! in_array( 'woocommerce', $slugs, true ) );
 $ok( 'dashboard first, then orders and customers', 'pc-overview' === array_values( array_filter( $slugs ) )[0] && in_array( 'admin.php?page=wc-orders', $slugs, true ) && in_array( 'admin.php?page=wc-admin&path=/customers', $slugs, true ) );
 $ok( 'WooCommerce marketing menu replaced by marketing campaigns: spend-and-save, coupon codes, shipping discounts', ! in_array( 'woocommerce-marketing', $slugs, true ) && in_array( 'pc-promotions', $slugs, true ) && array( 'pc-promotions', 'pc-coupons', 'pc-shipping-discounts' ) === array_column( $submenu['pc-promotions'] ?? array(), 2 ) );
@@ -75,11 +76,29 @@ $pos = static function ( string $needle ) use ( $ps ): int {
 	}
 	return -1;
 };
-$ok( 'products menu: product management first, then collections, tags and test reports', 'edit.php?post_type=product' === ( $ps[0] ?? '' ) && 'Product management' === ( $pm[0][0] ?? '' ) && $pos( 'taxonomy=product_cat' ) > 0 && $pos( 'taxonomy=product_tag' ) > $pos( 'taxonomy=product_cat' ) && $pos( 'post_type=pc_report' ) > $pos( 'taxonomy=product_tag' ) );
-$ok( 'products menu labels: Collections, Product tags', 'Collections' === $pm[ $pos( 'taxonomy=product_cat' ) ][0] && 'Product tags' === $pm[ $pos( 'taxonomy=product_tag' ) ][0] );
+$ok( 'products menu: product management first, then collections, tags and test reports', 'edit.php?post_type=product' === ( $ps[0] ?? '' ) && __( 'Product management', 'peptide-core' ) === ( $pm[0][0] ?? '' ) && $pos( 'taxonomy=product_cat' ) > 0 && $pos( 'taxonomy=product_tag' ) > $pos( 'taxonomy=product_cat' ) && $pos( 'post_type=pc_report' ) > $pos( 'taxonomy=product_tag' ) );
+$ok( 'products menu labels: Collections, Product tags', __( 'Collections', 'peptide-core' ) === $pm[ $pos( 'taxonomy=product_cat' ) ][0] && __( 'Product tags', 'peptide-core' ) === $pm[ $pos( 'taxonomy=product_tag' ) ][0] );
 $ok( 'add new, brands, attributes and batches are not in the products menu', -1 === $pos( 'post-new.php' ) && -1 === $pos( 'product_brand' ) && -1 === $pos( 'product_attributes' ) && -1 === $pos( 'post_type=pc_batch' ) );
-$ok( 'top-level menu is called Products', in_array( 'Products', array_column( array_filter( $menu, static fn( $m ) => 'edit.php?post_type=product' === ( $m[2] ?? '' ) ), 0 ), true ) );
+$ok( 'top-level menu is called Products', in_array( __( 'Products', 'peptide-core' ), array_column( array_filter( $menu, static fn( $m ) => 'edit.php?post_type=product' === ( $m[2] ?? '' ) ), 0 ), true ) );
 $ok( 'the temporary WooCommerce parent mapping is removed after the menu is printed', ! isset( $GLOBALS['_wp_real_parent_file']['woocommerce'] ) );
+// 外观、工具、设置下面的页面：停在“店铺设置 → 系统设置”。
+$saved_page = $pagenow;
+unset( $_GET['page'] );
+$plugin_page = null;
+foreach ( array( 'options-reading.php', 'options-permalink.php', 'erase-personal-data.php', 'site-health.php', 'themes.php' ) as $wp_page ) {
+	$pagenow = $wp_page;
+	$GLOBALS['pagenow'] = $wp_page;
+	$GLOBALS['parent_file'] = apply_filters( 'parent_file', get_admin_page_parent() );
+	get_admin_page_parent();
+	$after = $GLOBALS['parent_file'];
+	$sub   = apply_filters( 'submenu_file', null );
+	do_action( 'adminmenu' );
+	$ok( "$wp_page opens under store settings, system settings", 'admin.php?page=wc-settings' === $after && 'pc-system' === $sub );
+}
+$ok( 'and the temporary mappings are removed again', ! array_intersect_key( (array) $GLOBALS['_wp_real_parent_file'], array_flip( array( 'woocommerce', 'options-general.php', 'tools.php', 'themes.php' ) ) ) );
+$pagenow = $saved_page;
+$GLOBALS['pagenow'] = $saved_page;
+$plugin_page = 'wc-orders';
 $ok( 'orders menu: all orders, pending orders, abandoned checkouts', array( 'admin.php?page=wc-orders', 'admin.php?page=wc-orders&status=wc-processing', 'pc-recovery' ) === array_column( $submenu['admin.php?page=wc-orders'] ?? array(), 2 ) );
 $_GET['page']   = 'wc-orders';
 $_GET['status'] = 'wc-processing';
@@ -107,6 +126,7 @@ ob_start();
 \PeptideCore\Admin\Store_Settings::render_system();
 $html = ob_get_clean();
 $ok( 'system settings shows the four section cards (with ad pixels)', 4 === substr_count( $html, 'page=pc-system&#038;section=' ) + substr_count( $html, 'page=pc-system&section=' ) && false !== strpos( $html, 'section=pixels' ) );
+$ok( 'system settings lists the WordPress settings and tools', str_contains( $html, 'options-reading.php' ) && str_contains( $html, 'options-permalink.php' ) && str_contains( $html, 'erase-personal-data.php' ) && str_contains( $html, 'page=action-scheduler' ) );
 $ok( 'system settings links the old store settings pages', false !== strpos( $html, 'page=pc-settings' ) && false !== strpos( $html, 'page=wc-status' ) && false !== strpos( $html, 'tab=general' ) );
 $_GET['section'] = 'email';
 ob_start();

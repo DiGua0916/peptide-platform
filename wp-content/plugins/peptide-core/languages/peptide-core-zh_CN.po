@@ -11,7 +11,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-27T14:15:00+00:00\n"
+"POT-Creation-Date: 2026-10-27T14:26:18+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -31,7 +31,7 @@ msgstr "为多肽商店提供批次、检测报告及与 WooCommerce 的集成�
 msgid "DiGua"
 msgstr "DiGua"
 
-#: includes/admin/class-admin-menus.php:93
+#: includes/admin/class-admin-menus.php:102
 #: includes/admin/class-apps-page.php:141
 #: includes/admin/class-batch-orders.php:141
 #: includes/admin/class-batch-orders.php:144
@@ -40,61 +40,61 @@ msgstr "DiGua"
 msgid "Orders"
 msgstr "订单"
 
-#: includes/admin/class-admin-menus.php:94
+#: includes/admin/class-admin-menus.php:103
 msgid "Customers"
 msgstr "顾客"
 
-#: includes/admin/class-admin-menus.php:95
+#: includes/admin/class-admin-menus.php:104
 msgid "Store settings"
 msgstr "店铺设置"
 
-#: includes/admin/class-admin-menus.php:97
+#: includes/admin/class-admin-menus.php:106
 msgid "Shipping settings"
 msgstr "物流设置"
 
-#: includes/admin/class-admin-menus.php:98
+#: includes/admin/class-admin-menus.php:107
 msgid "Tax settings"
 msgstr "税费设置"
 
-#: includes/admin/class-admin-menus.php:99
+#: includes/admin/class-admin-menus.php:108
 #: includes/admin/class-basic-config-page.php:114
 #: includes/admin/class-email-center.php:151
-#: includes/admin/class-store-settings.php:115
-#: includes/admin/class-store-settings.php:127
+#: includes/admin/class-store-settings.php:141
+#: includes/admin/class-store-settings.php:160
 #: includes/admin/class-terms-page.php:91
 msgid "System settings"
 msgstr "系统设置"
 
-#: includes/admin/class-admin-menus.php:104
+#: includes/admin/class-admin-menus.php:113
 msgid "Marketing campaigns"
 msgstr "营销活动"
 
-#: includes/admin/class-admin-menus.php:105
+#: includes/admin/class-admin-menus.php:114
 #: includes/admin/class-promotions-page.php:91
 #: includes/class-promotions.php:84
 msgid "Spend-and-save promotions"
 msgstr "满减活动"
 
-#: includes/admin/class-admin-menus.php:105
+#: includes/admin/class-admin-menus.php:114
 msgid "Spend-and-save"
 msgstr "满减活动"
 
-#: includes/admin/class-admin-menus.php:106
+#: includes/admin/class-admin-menus.php:115
 #: includes/admin/class-coupons-page.php:76
 msgid "Coupon codes"
 msgstr "优惠码"
 
-#: includes/admin/class-admin-menus.php:107
+#: includes/admin/class-admin-menus.php:116
 #: includes/admin/class-shipping-discounts-page.php:51
 msgid "Shipping discounts"
 msgstr "运费折扣"
 
-#: includes/admin/class-admin-menus.php:110
+#: includes/admin/class-admin-menus.php:119
 #: includes/admin/class-apps-page.php:83
 msgid "App center"
 msgstr "应用中心"
 
-#: includes/admin/class-admin-menus.php:136
+#: includes/admin/class-admin-menus.php:145
 #: includes/admin/class-plans-editor.php:82
 #: includes/admin/class-tax-page.php:61
 #: includes/admin/class-tax-page.php:97
@@ -103,19 +103,19 @@ msgstr "应用中心"
 msgid "Products"
 msgstr "商品"
 
-#: includes/admin/class-admin-menus.php:143
+#: includes/admin/class-admin-menus.php:152
 msgid "Product management"
 msgstr "商品管理"
 
-#: includes/admin/class-admin-menus.php:144
+#: includes/admin/class-admin-menus.php:153
 msgid "Collections"
 msgstr "商品专辑"
 
-#: includes/admin/class-admin-menus.php:145
+#: includes/admin/class-admin-menus.php:154
 msgid "Product reviews"
 msgstr "商品评论"
 
-#: includes/admin/class-admin-menus.php:146
+#: includes/admin/class-admin-menus.php:155
 msgid "Product tags"
 msgstr "商品标签"
 
@@ -637,7 +637,7 @@ msgstr "店铺里的预览用已保存的设置，打开就弹出。除了预览
 #: includes/admin/class-menu-page.php:207
 #: includes/admin/class-pixels-page.php:229
 #: includes/admin/class-recovery-page.php:58
-#: includes/admin/class-report-metabox.php:191
+#: includes/admin/class-report-metabox.php:192
 #: includes/admin/class-shipping-page.php:221
 #: includes/admin/class-store-design.php:140
 #: includes/admin/class-tax-page.php:116
@@ -1314,7 +1314,7 @@ msgstr "检测报告"
 
 #: includes/admin/class-batch-metabox.php:49
 #: includes/admin/class-list-columns.php:32
-#: includes/admin/class-report-metabox.php:96
+#: includes/admin/class-report-metabox.php:97
 msgid "Batch number"
 msgstr "批次号"
 
@@ -1327,7 +1327,7 @@ msgstr "3–40 个字符：字母、数字和连字符。保存时统一转为�
 #: includes/admin/class-marketing.php:262
 #: includes/admin/class-overview-page.php:192
 #: includes/admin/class-plans-editor.php:84
-#: includes/admin/class-report-metabox.php:97
+#: includes/admin/class-report-metabox.php:98
 #: includes/admin/class-tracking-page.php:170
 #: includes/modules/class-registry.php:1037
 #: includes/modules/class-registry.php:1190
@@ -1335,7 +1335,7 @@ msgid "Product"
 msgstr "商品"
 
 #: includes/admin/class-batch-metabox.php:59
-#: includes/admin/class-report-metabox.php:98
+#: includes/admin/class-report-metabox.php:99
 msgid "— Select a product —"
 msgstr "— 选择商品 —"
 
@@ -1380,7 +1380,7 @@ msgid "Leave empty unless the information is real and may be published."
 msgstr "只有信息真实且可以公开时才填写，否则留空。"
 
 #: includes/admin/class-batch-metabox.php:101
-#: includes/admin/class-report-metabox.php:160
+#: includes/admin/class-report-metabox.php:161
 msgid "Flags"
 msgstr "标记"
 
@@ -2565,23 +2565,23 @@ msgstr "演示"
 
 #: includes/admin/class-list-columns.php:75
 #: includes/admin/class-order-metabox.php:56
-#: includes/admin/class-report-metabox.php:83
+#: includes/admin/class-report-metabox.php:84
 #: includes/class-post-types.php:40
 msgid "Batch"
 msgstr "批次"
 
 #: includes/admin/class-list-columns.php:76
-#: includes/admin/class-report-metabox.php:108
+#: includes/admin/class-report-metabox.php:109
 msgid "Type"
 msgstr "类型"
 
 #: includes/admin/class-list-columns.php:77
-#: includes/admin/class-report-metabox.php:112
+#: includes/admin/class-report-metabox.php:113
 msgid "Version"
 msgstr "版本"
 
 #: includes/admin/class-list-columns.php:78
-#: includes/admin/class-report-metabox.php:121
+#: includes/admin/class-report-metabox.php:122
 msgid "Report status"
 msgstr "报告状态"
 
@@ -3999,7 +3999,7 @@ msgid "Plan deleted."
 msgstr "方案已删除。"
 
 #: includes/admin/class-plans-editor.php:105
-#: includes/admin/class-report-metabox.php:70
+#: includes/admin/class-report-metabox.php:71
 msgid "Published"
 msgstr "已发布"
 
@@ -4567,121 +4567,121 @@ msgstr "时间轴"
 msgid "Report details"
 msgstr "报告信息"
 
-#: includes/admin/class-report-metabox.php:63
+#: includes/admin/class-report-metabox.php:64
 msgid "Certificate of analysis (COA)"
 msgstr "分析证书（COA）"
 
-#: includes/admin/class-report-metabox.php:64
+#: includes/admin/class-report-metabox.php:65
 msgid "HPLC"
 msgstr "HPLC（高效液相色谱）"
 
-#: includes/admin/class-report-metabox.php:65
+#: includes/admin/class-report-metabox.php:66
 msgid "Mass spectrometry (MS)"
 msgstr "质谱（MS）"
 
-#: includes/admin/class-report-metabox.php:66
+#: includes/admin/class-report-metabox.php:67
 msgid "Other"
 msgstr "其他"
 
-#: includes/admin/class-report-metabox.php:69
+#: includes/admin/class-report-metabox.php:70
 msgid "Draft (not visible)"
 msgstr "草稿（不可见）"
 
-#: includes/admin/class-report-metabox.php:71
+#: includes/admin/class-report-metabox.php:72
 msgid "Superseded (old version)"
 msgstr "已被取代（旧版本）"
 
-#: includes/admin/class-report-metabox.php:72
+#: includes/admin/class-report-metabox.php:73
 msgid "Withdrawn"
 msgstr "已撤回"
 
-#: includes/admin/class-report-metabox.php:75
+#: includes/admin/class-report-metabox.php:76
 #: includes/class-coupons.php:609
 msgid "Public"
 msgstr "公开"
 
-#: includes/admin/class-report-metabox.php:76
+#: includes/admin/class-report-metabox.php:77
 msgid "Logged-in customers"
 msgstr "已登录顾客"
 
-#: includes/admin/class-report-metabox.php:77
+#: includes/admin/class-report-metabox.php:78
 msgid "Approved customers"
 msgstr "已审核顾客"
 
-#: includes/admin/class-report-metabox.php:78
+#: includes/admin/class-report-metabox.php:79
 msgid "Staff only"
 msgstr "仅员工"
 
-#: includes/admin/class-report-metabox.php:86
+#: includes/admin/class-report-metabox.php:87
 msgid "— Select a batch —"
 msgstr "— 选择批次 —"
 
-#: includes/admin/class-report-metabox.php:92
+#: includes/admin/class-report-metabox.php:93
 #: includes/class-post-types.php:42
 msgid "Edit batch"
 msgstr "编辑批次"
 
-#: includes/admin/class-report-metabox.php:95
+#: includes/admin/class-report-metabox.php:96
 msgid "Or a new batch:"
 msgstr "或者新建批次："
 
-#: includes/admin/class-report-metabox.php:104
+#: includes/admin/class-report-metabox.php:105
 msgid "Choose an existing batch, or fill in a new batch number (3–40 letters, digits and hyphens) and its product: the batch is created when you save."
 msgstr "选已有的批次，或者填新的批次号（3–40 位字母、数字和连字符）并选商品，保存时自动建好批次。"
 
-#: includes/admin/class-report-metabox.php:114
+#: includes/admin/class-report-metabox.php:115
 msgid "Assigned on save"
 msgstr "保存时自动分配"
 
-#: includes/admin/class-report-metabox.php:116
+#: includes/admin/class-report-metabox.php:117
 msgid "Superseded by:"
 msgstr "取代它的版本："
 
-#: includes/admin/class-report-metabox.php:125
+#: includes/admin/class-report-metabox.php:126
 msgid "Who can download"
 msgstr "谁可以下载"
 
-#: includes/admin/class-report-metabox.php:128
+#: includes/admin/class-report-metabox.php:129
 msgid "Customers who received this batch in an order can always download its published reports."
 msgstr "订单中收到过此批次的顾客，始终可以下载该批次已发布的报告。"
 
-#: includes/admin/class-report-metabox.php:132
+#: includes/admin/class-report-metabox.php:133
 msgid "Issued on"
 msgstr "出具日期"
 
-#: includes/admin/class-report-metabox.php:136
+#: includes/admin/class-report-metabox.php:137
 msgid "Issuer"
 msgstr "出具机构"
 
-#: includes/admin/class-report-metabox.php:139
+#: includes/admin/class-report-metabox.php:140
 msgid "Real laboratory name only. Leave empty for demo reports."
 msgstr "只填写真实的实验室名称；演示报告请留空。"
 
-#: includes/admin/class-report-metabox.php:143
+#: includes/admin/class-report-metabox.php:144
 msgid "Summary"
 msgstr "摘要"
 
-#: includes/admin/class-report-metabox.php:146
+#: includes/admin/class-report-metabox.php:147
 msgid "Optional. Never enter invented test results."
 msgstr "可选。不要填写编造的检测结果。"
 
-#: includes/admin/class-report-metabox.php:150
+#: includes/admin/class-report-metabox.php:151
 msgid "File"
 msgstr "文件"
 
-#: includes/admin/class-report-metabox.php:156
+#: includes/admin/class-report-metabox.php:157
 msgid "PDF, PNG or JPEG, up to 20 MB. Uploading a new file replaces the current one. Files are stored privately and are never linked directly."
 msgstr "支持 PDF、PNG、JPEG，最大 20 MB。上传新文件会替换当前文件。文件私密存放，不会提供直接链接。"
 
-#: includes/admin/class-report-metabox.php:161
+#: includes/admin/class-report-metabox.php:162
 msgid "Demo report (the file must carry a visible DEMO watermark)"
 msgstr "演示报告（文件必须带有明显的 DEMO 水印）"
 
-#: includes/admin/class-report-metabox.php:199
+#: includes/admin/class-report-metabox.php:200
 msgid "Please select the batch this report belongs to."
 msgstr "请选择此报告所属的批次。"
 
-#: includes/admin/class-report-metabox.php:239
+#: includes/admin/class-report-metabox.php:240
 msgid "A report needs a batch and a file before it can be published. It was kept as a draft."
 msgstr "报告必须先选择批次并上传文件才能发布，已保持为草稿。"
 
@@ -5410,8 +5410,8 @@ msgid "Landing pages for promotions, built from modules, with their own address.
 msgstr "用模块搭建促销活动落地页，每个页面有自己的地址。"
 
 #: includes/admin/class-store-design.php:552
-#: includes/admin/class-store-settings.php:117
-#: includes/admin/class-store-settings.php:129
+#: includes/admin/class-store-settings.php:143
+#: includes/admin/class-store-settings.php:162
 msgid "Coming soon"
 msgstr "即将推出"
 
@@ -5476,15 +5476,99 @@ msgstr "系统状态"
 msgid "Server, database and plugin information for troubleshooting."
 msgstr "服务器、数据库和插件信息，用于排查问题。"
 
-#: includes/admin/class-store-settings.php:119
+#: includes/admin/class-store-settings.php:101
+msgid "Reading and search engines"
+msgstr "阅读和搜索引擎"
+
+#: includes/admin/class-store-settings.php:101
+msgid "Whether search engines may index the store, and what the home page shows. Check this before launch."
+msgstr "是否允许搜索引擎收录店铺，以及首页显示什么。上线前要检查一遍。"
+
+#: includes/admin/class-store-settings.php:102
+msgid "Permalinks"
+msgstr "固定链接"
+
+#: includes/admin/class-store-settings.php:102
+msgid "The address format of pages and products. Changing it changes every link."
+msgstr "页面和商品的网址格式。改了以后所有链接都会变。"
+
+#: includes/admin/class-store-settings.php:103
+msgid "Privacy policy page"
+msgstr "隐私政策页面"
+
+#: includes/admin/class-store-settings.php:103
+msgid "Which page is the privacy policy; checkout and account pages link to it."
+msgstr "指定哪个页面是隐私政策，结账页和账户页会链接到它。"
+
+#: includes/admin/class-store-settings.php:104
+msgid "Discussion"
+msgstr "讨论"
+
+#: includes/admin/class-store-settings.php:104
+msgid "Moderation and blocked words; these also apply to product reviews."
+msgstr "评论审核和屏蔽词，也作用于商品评论。"
+
+#: includes/admin/class-store-settings.php:105
+msgid "WordPress general settings"
+msgstr "WordPress 常规设置"
+
+#: includes/admin/class-store-settings.php:105
+msgid "Tagline, site address and date format. Store name, admin email, icon, time zone and language are in Basic configuration."
+msgstr "副标题、站点网址、日期格式。店铺名、管理员邮箱、图标、时区、语言在“基础配置”里。"
+
+#: includes/admin/class-store-settings.php:106
+msgid "Export personal data"
+msgstr "导出个人数据"
+
+#: includes/admin/class-store-settings.php:106
+msgid "When a customer asks for a copy of the data the store keeps about them."
+msgstr "顾客要求拿到店铺保存的关于他的资料时使用。"
+
+#: includes/admin/class-store-settings.php:107
+msgid "Erase personal data"
+msgstr "抹除个人数据"
+
+#: includes/admin/class-store-settings.php:107
+msgid "When a customer asks the store to delete their personal data."
+msgstr "顾客要求店铺删除他的个人资料时使用。"
+
+#: includes/admin/class-store-settings.php:108
+msgid "Site health"
+msgstr "站点健康"
+
+#: includes/admin/class-store-settings.php:108
+msgid "Security and performance checks from WordPress."
+msgstr "WordPress 自带的安全和性能检查。"
+
+#: includes/admin/class-store-settings.php:109
+msgid "Scheduled actions"
+msgstr "计划操作"
+
+#: includes/admin/class-store-settings.php:109
+msgid "Background jobs such as pixel sends and abandoned checkout reminders; check here when something was not sent."
+msgstr "后台任务，例如像素回传和弃单提醒；有东西没发出去时来这里查。"
+
+#: includes/admin/class-store-settings.php:110
+msgid "Themes"
+msgstr "主题"
+
+#: includes/admin/class-store-settings.php:110
+msgid "The store theme. Only change it together with the theme developer."
+msgstr "店铺使用的主题。要换主题请先和主题开发者商量。"
+
+#: includes/admin/class-store-settings.php:145
 msgid "Other settings"
 msgstr "其他设置"
 
-#: includes/admin/class-store-settings.php:129
+#: includes/admin/class-store-settings.php:151
+msgid "WordPress settings and tools"
+msgstr "WordPress 设置和工具"
+
+#: includes/admin/class-store-settings.php:162
 msgid "The details of this section are still being decided. Once they are, this page becomes the full settings form."
 msgstr "这一项的具体内容还没定，确定之后这里会做成完整的设置页面。"
 
-#: includes/admin/class-store-settings.php:131
+#: includes/admin/class-store-settings.php:164
 msgid "Until then, these existing settings cover it:"
 msgstr "在此之前，可以先用这些现有设置："
 

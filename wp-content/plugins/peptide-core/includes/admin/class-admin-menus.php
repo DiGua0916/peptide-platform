@@ -22,6 +22,9 @@
  * - 订单（用户 2026-10-27 要求和 Shopname 一样）：全部订单、待处理订单（WooCommerce 的“处理中”，已付款待发货）、弃单。
  * - 商品（用户 2026-10-27 要求和 Shopname 一样）：商品管理、商品专辑（WooCommerce 分类）、商品评论、商品标签，加上检测报告。
  *   添加新产品（列表页有“添加”按钮）、品牌、属性、批次不在菜单里显示，页面仍能直接打开；批次在检测报告里选或新建。
+ * - 外观、工具、设置（用户 2026-10-27 要求去掉）：常规里的店铺名、管理员邮箱、图标、时区、语言、注册已在“基础配置”；
+ *   仍然要用的页面（阅读 / 搜索引擎、固定链接、隐私、讨论、个人数据导出和抹除、站点健康、计划操作、主题）
+ *   放在“系统设置”底部的“WordPress 设置和工具”，打开时左侧菜单停在“店铺设置 → 系统设置”。
  * - 悬停预览（用户 2026-10-27 要求去掉）：鼠标移到没展开的菜单上时，旁边不再弹出子菜单，点菜单进去后照常展开。
  *   只在展开的宽菜单、用鼠标时去掉；收起成图标的菜单和触屏设备没有别的办法打开子菜单，保留。
  *
@@ -55,7 +58,13 @@ final class Admin_Menus {
 	/** 从 WooCommerce 设置标签栏去掉的标签。 */
 	public const HIDDEN_TABS = array( 'shipping', 'checkout', 'email', 'site-visibility', 'integration', 'point-of-sale', 'wcpay_multi_currency' );
 
-	/** parent_file() 临时改动前 $_wp_real_parent_file['woocommerce'] 的值（放在数组里，以区分“原来没有”）。 */
+	/** 去掉了顶层菜单、但页面还在用的父菜单：它们的页面打开时停在新的位置（见 parent_file()）。 */
+	private const HIDDEN_PARENTS = array( 'woocommerce', 'options-general.php', 'tools.php', 'themes.php' );
+
+	/** 外观、工具、设置下面的 WordPress 页面（$pagenow），打开时停在“店铺设置 → 系统设置”。 */
+	private const WP_PAGES = array( 'options-general.php', 'options-writing.php', 'options-reading.php', 'options-discussion.php', 'options-media.php', 'options-permalink.php', 'options-privacy.php', 'options-connectors.php', 'options.php', 'tools.php', 'import.php', 'export.php', 'site-health.php', 'export-personal-data.php', 'erase-personal-data.php', 'themes.php', 'theme-install.php', 'theme-editor.php', 'nav-menus.php', 'widgets.php' );
+
+	/** parent_file() 临时改动前 $_wp_real_parent_file 里这些父菜单的值（null = 原来没有）。 */
 	private static $real_parent = null;
 
 	public static function register_hooks(): void {
@@ -119,7 +128,7 @@ final class Admin_Menus {
 		unset( $submenu[ self::ANALYTICS ] );
 		// 文章、媒体、评论、WooCommerce（订单、顾客、设置已移到上面的新菜单）、WooCommerce 营销（换成营销活动）。
 		// remove_menu_page() 每次只去掉第一个匹配项，所以重复执行到没有为止。
-		foreach ( array( 'edit.php', 'upload.php', 'edit-comments.php', 'woocommerce', 'woocommerce-marketing' ) as $slug ) {
+		foreach ( array( 'edit.php', 'upload.php', 'edit-comments.php', 'woocommerce', 'woocommerce-marketing', 'themes.php', 'tools.php', 'options-general.php' ) as $slug ) {
 			while ( false !== remove_menu_page( $slug ) ) {
 				continue;
 			}
@@ -239,9 +248,14 @@ final class Admin_Menus {
 		}
 		global $_wp_real_parent_file;
 		if ( null === self::$real_parent ) {
-			self::$real_parent = array( $_wp_real_parent_file['woocommerce'] ?? null );
+			self::$real_parent = array();
+			foreach ( self::HIDDEN_PARENTS as $key ) {
+				self::$real_parent[ $key ] = $_wp_real_parent_file[ $key ] ?? null;
+			}
 		}
-		$_wp_real_parent_file['woocommerce'] = $target;
+		foreach ( self::HIDDEN_PARENTS as $key ) {
+			$_wp_real_parent_file[ $key ] = $target;
+		}
 		return $target;
 	}
 
@@ -251,16 +265,21 @@ final class Admin_Menus {
 			return;
 		}
 		global $_wp_real_parent_file;
-		if ( null === self::$real_parent[0] ) {
-			unset( $_wp_real_parent_file['woocommerce'] );
-		} else {
-			$_wp_real_parent_file['woocommerce'] = self::$real_parent[0];
+		foreach ( self::$real_parent as $key => $value ) {
+			if ( null === $value ) {
+				unset( $_wp_real_parent_file[ $key ] );
+			} else {
+				$_wp_real_parent_file[ $key ] = $value;
+			}
 		}
 		self::$real_parent = null;
 	}
 
 	/** 当前页面应该展开的顶层菜单；不是移走的页面时为空。 */
 	private static function target_parent(): string {
+		if ( self::on_wp_page() ) {
+			return self::SETTINGS;
+		}
 		$page = self::current_page();
 		if ( 'wc-settings' === $page && 'checkout' === self::current_tab() && '' !== self::payments_menu() ) {
 			return self::payments_menu();
@@ -278,9 +297,26 @@ final class Admin_Menus {
 		return '';
 	}
 
+	/** 是不是外观、工具、设置下面的页面（WordPress 自己的，或者插件挂在这些菜单下的）。 */
+	private static function on_wp_page(): bool {
+		global $pagenow, $plugin_page, $submenu;
+		if ( ! empty( $plugin_page ) ) {
+			foreach ( array( 'options-general.php', 'tools.php', 'themes.php' ) as $parent ) {
+				if ( in_array( $plugin_page, array_column( (array) ( $submenu[ $parent ] ?? array() ), 2 ), true ) ) {
+					return true;
+				}
+			}
+			return false;
+		}
+		return in_array( (string) $pagenow, self::WP_PAGES, true );
+	}
+
 	public static function submenu_file( $submenu_file ) {
 		if ( ! self::applies() ) {
 			return $submenu_file;
+		}
+		if ( self::on_wp_page() ) {
+			return Store_Settings::SYSTEM_SLUG;
 		}
 		$page = self::current_page();
 		// WooCommerce 设置按标签页对应到店铺设置的子菜单，其余（常规、商品、邮件等）和 VialCove 设置、系统状态都算“系统设置”。
