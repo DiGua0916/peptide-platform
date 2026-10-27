@@ -2,7 +2,7 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.23.0\n"
+"Project-Id-Version: Peptide Core 0.24.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -11,7 +11,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-27T17:00:27+00:00\n"
+"POT-Creation-Date: 2026-10-27T18:18:58+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -31,91 +31,309 @@ msgstr "为多肽商店提供批次、检测报告及与 WooCommerce 的集成�
 msgid "DiGua"
 msgstr "DiGua"
 
-#: includes/admin/class-admin-menus.php:135
+#: includes/admin/class-activity-page.php:28
+#: includes/admin/class-activity-page.php:62
+msgid "Activity log"
+msgstr "操作记录"
+
+#. translators: %d: days kept
+#: includes/admin/class-activity-page.php:66
+#, php-format
+msgid "What the people who work in the admin did: logins, products, orders, blog, store design, settings and more. Customers are not recorded. Records are kept for %d days."
+msgstr "后台人员做过的操作：登录、商品、订单、博客、店铺装修、设置等。顾客的操作不记录。记录保留 %d 天。"
+
+#: includes/admin/class-activity-page.php:76
+#: includes/admin/class-activity-page.php:107
+#: includes/admin/class-activity-page.php:126
+#: includes/admin/class-activity-page.php:178
+msgid "Operator"
+msgstr "操作人"
+
+#: includes/admin/class-activity-page.php:77
+msgid "Enter an operator"
+msgstr "请输入操作人"
+
+#: includes/admin/class-activity-page.php:78
+#: includes/admin/class-activity-page.php:109
+#: includes/admin/class-activity-page.php:128
+#: includes/admin/class-activity-page.php:180
+msgid "Module"
+msgstr "模块"
+
+#: includes/admin/class-activity-page.php:80
+msgid "All modules"
+msgstr "请选择模块"
+
+#: includes/admin/class-activity-page.php:86
+#: includes/admin/class-tracking-page.php:140
+msgid "From"
+msgstr "从"
+
+#: includes/admin/class-activity-page.php:88
+msgid "Until"
+msgstr "结束日期"
+
+#: includes/admin/class-activity-page.php:90
+#: includes/admin/class-domains-page.php:358
+#: includes/admin/class-recovery-page.php:161
+msgid "Filter"
+msgstr "筛选"
+
+#: includes/admin/class-activity-page.php:92
+#: includes/admin/class-domains-page.php:360
+msgid "Clear filters"
+msgstr "清除筛选"
+
+#. translators: %d: number of records
+#: includes/admin/class-activity-page.php:97
+#: includes/admin/class-recovery-page.php:178
+#, php-format
+msgid "%d records"
+msgstr "共 %d 条"
+
+#: includes/admin/class-activity-page.php:105
+#: includes/admin/class-activity-page.php:124
+#: includes/admin/class-coupons-page.php:80
+#: includes/admin/class-domains-page.php:387
+#: includes/admin/class-domains-page.php:427
+#: includes/admin/class-marketing.php:262
+#: includes/admin/class-menu-page.php:97
+#: includes/admin/class-menu-page.php:278
+#: includes/admin/class-pixels-page.php:127
+#: includes/admin/class-plans-editor.php:84
+#: includes/admin/class-plans-editor.php:114
+#: includes/admin/class-promotions-page.php:95
+#: includes/admin/class-recovery-page.php:164
+#: includes/admin/class-shipping-discounts-page.php:55
+#: includes/admin/class-shipping-page.php:195
+#: includes/admin/class-staff-page.php:235
+#: includes/admin/class-staff-page.php:266
+#: includes/admin/class-store-design.php:392
+#: includes/admin/class-store-design.php:446
+#: includes/admin/class-tax-page.php:61
+#: includes/admin/class-terms-page.php:100
+msgid "Actions"
+msgstr "操作"
+
+#: includes/admin/class-activity-page.php:106
+#: includes/admin/class-activity-page.php:125
+msgid "Operator type"
+msgstr "操作类型"
+
+#: includes/admin/class-activity-page.php:108
+#: includes/admin/class-activity-page.php:127
+#: includes/admin/class-activity-page.php:179
+#: includes/admin/class-email-center.php:273
+#: includes/admin/class-pixels-page.php:189
+#: includes/admin/class-tracking-page.php:124
+msgid "Time"
+msgstr "时间"
+
+#: includes/admin/class-activity-page.php:110
+#: includes/admin/class-activity-page.php:129
+#: includes/admin/class-activity-page.php:181
+#: includes/admin/class-pixels-page.php:189
+#: includes/admin/class-tracking-page.php:126
+msgid "Event"
+msgstr "事件"
+
+#: includes/admin/class-activity-page.php:111
+#: includes/admin/class-activity-page.php:130
+#: includes/admin/class-activity-page.php:182
+msgid "Object"
+msgstr "对象"
+
+#: includes/admin/class-activity-page.php:114
+#: includes/admin/class-activity-page.php:133
+#: includes/admin/class-activity-page.php:188
+msgid "Browser"
+msgstr "浏览器"
+
+#: includes/admin/class-activity-page.php:115
+#: includes/admin/class-activity-page.php:134
+#: includes/admin/class-tracking-page.php:108
+#: includes/tracking/class-privacy.php:167
+msgid "Device"
+msgstr "设备"
+
+#: includes/admin/class-activity-page.php:120
+msgid "No records yet."
+msgstr "暂无数据"
+
+#: includes/admin/class-activity-page.php:124
+msgid "View details"
+msgstr "查看明细"
+
+#: includes/admin/class-activity-page.php:140
+#: includes/admin/class-apps-page.php:196
+#: includes/admin/class-media-page.php:466
+msgid "Pages"
+msgstr "弹出页面"
+
+#: includes/admin/class-activity-page.php:142
+#: includes/admin/class-marketing.php:402
+#: includes/admin/class-media-page.php:468
+msgid "Previous page"
+msgstr "上一页"
+
+#. translators: 1: current page, 2: total pages
+#: includes/admin/class-activity-page.php:147
+#: includes/admin/class-media-page.php:473
+#, php-format
+msgid "Page %1$d of %2$d"
+msgstr "第 %1$d 页，共 %2$d 页"
+
+#: includes/admin/class-activity-page.php:151
+#: includes/admin/class-marketing.php:406
+#: includes/admin/class-media-page.php:477
+msgid "Next page"
+msgstr "下一页"
+
+#: includes/admin/class-activity-page.php:166
+msgid "Before"
+msgstr "修改前"
+
+#: includes/admin/class-activity-page.php:167
+msgid "After"
+msgstr "修改后"
+
+#: includes/admin/class-activity-page.php:168
+msgid "Amount"
+msgstr "金额"
+
+#: includes/admin/class-activity-page.php:169
+#: includes/admin/class-media-page.php:534
+#: includes/admin/class-media-page.php:548
+msgid "Reason"
+msgstr "原因"
+
+#: includes/admin/class-activity-page.php:170
+msgid "Review author"
+msgstr "评论人"
+
+#: includes/admin/class-activity-page.php:171
+#: includes/admin/class-staff-page.php:231
+#: includes/admin/class-staff-page.php:255
+msgid "Permissions"
+msgstr "权限"
+
+#: includes/admin/class-activity-page.php:172
+msgid "Form"
+msgstr "表单"
+
+#: includes/admin/class-activity-page.php:176
+msgid "Activity details"
+msgstr "操作明细"
+
+#: includes/admin/class-activity-page.php:190
+#: includes/admin/class-apps-page.php:62
+#: includes/admin/class-terms-page.php:108
+#: includes/class-exit-intent.php:275
+#: includes/class-terms.php:220
+#: includes/class-terms.php:282
+msgid "Close"
+msgstr "关闭"
+
+#: includes/admin/class-admin-menus.php:137
 #: includes/admin/class-apps-page.php:141
 #: includes/admin/class-batch-orders.php:141
 #: includes/admin/class-batch-orders.php:144
 #: includes/admin/class-overview-page.php:135
 #: includes/admin/class-tracking-page.php:154
+#: includes/class-activity-log.php:191
+#: includes/class-staff.php:73
 msgid "Orders"
 msgstr "订单"
 
-#: includes/admin/class-admin-menus.php:136
+#: includes/admin/class-admin-menus.php:138
+#: includes/class-activity-log.php:192
+#: includes/class-staff.php:83
 msgid "Customers"
 msgstr "顾客"
 
-#: includes/admin/class-admin-menus.php:137
+#: includes/admin/class-admin-menus.php:139
+#: includes/class-staff.php:108
 msgid "Store settings"
 msgstr "店铺设置"
 
-#: includes/admin/class-admin-menus.php:139
+#: includes/admin/class-admin-menus.php:141
+#: includes/class-activity-log.php:201
 msgid "Shipping settings"
 msgstr "物流设置"
 
-#: includes/admin/class-admin-menus.php:140
+#: includes/admin/class-admin-menus.php:142
+#: includes/class-activity-log.php:202
 msgid "Tax settings"
 msgstr "税费设置"
 
-#: includes/admin/class-admin-menus.php:141
+#: includes/admin/class-admin-menus.php:143
 #: includes/admin/class-basic-config-page.php:114
 #: includes/admin/class-email-center.php:151
 #: includes/admin/class-store-settings.php:141
 #: includes/admin/class-store-settings.php:164
 #: includes/admin/class-terms-page.php:91
+#: includes/class-activity-log.php:203
 msgid "System settings"
 msgstr "系统设置"
 
-#: includes/admin/class-admin-menus.php:146
+#: includes/admin/class-admin-menus.php:148
+#: includes/class-activity-log.php:193
+#: includes/class-staff.php:88
 msgid "Marketing campaigns"
 msgstr "营销活动"
 
-#: includes/admin/class-admin-menus.php:147
+#: includes/admin/class-admin-menus.php:149
 #: includes/admin/class-promotions-page.php:91
 #: includes/class-promotions.php:84
 msgid "Spend-and-save promotions"
 msgstr "满减活动"
 
-#: includes/admin/class-admin-menus.php:147
+#: includes/admin/class-admin-menus.php:149
 msgid "Spend-and-save"
 msgstr "满减活动"
 
-#: includes/admin/class-admin-menus.php:148
+#: includes/admin/class-admin-menus.php:150
 #: includes/admin/class-coupons-page.php:76
+#: includes/class-activity-log.php:194
 msgid "Coupon codes"
 msgstr "优惠码"
 
-#: includes/admin/class-admin-menus.php:149
+#: includes/admin/class-admin-menus.php:151
 #: includes/admin/class-shipping-discounts-page.php:51
 msgid "Shipping discounts"
 msgstr "运费折扣"
 
-#: includes/admin/class-admin-menus.php:152
+#: includes/admin/class-admin-menus.php:154
 #: includes/admin/class-apps-page.php:83
+#: includes/class-staff.php:118
 msgid "App center"
 msgstr "应用中心"
 
-#: includes/admin/class-admin-menus.php:178
+#: includes/admin/class-admin-menus.php:210
 #: includes/admin/class-plans-editor.php:82
 #: includes/admin/class-tax-page.php:61
 #: includes/admin/class-tax-page.php:97
 #: includes/admin/class-tracking-page.php:156
+#: includes/class-activity-log.php:187
+#: includes/class-staff.php:78
 #: includes/modules/class-registry.php:1185
 msgid "Products"
 msgstr "商品"
 
-#: includes/admin/class-admin-menus.php:185
+#: includes/admin/class-admin-menus.php:217
 msgid "Product management"
 msgstr "商品管理"
 
-#: includes/admin/class-admin-menus.php:186
+#: includes/admin/class-admin-menus.php:218
+#: includes/class-activity-log.php:188
 msgid "Collections"
 msgstr "商品专辑"
 
-#: includes/admin/class-admin-menus.php:187
+#: includes/admin/class-admin-menus.php:219
 msgid "Product reviews"
 msgstr "商品评论"
 
-#: includes/admin/class-admin-menus.php:188
+#: includes/admin/class-admin-menus.php:220
 msgid "Product tags"
 msgstr "商品标签"
 
@@ -150,7 +368,7 @@ msgstr "不中奖"
 #: includes/admin/class-apps-page.php:174
 #: includes/admin/class-design-editor.php:156
 #: includes/admin/class-domains-page.php:374
-#: includes/admin/class-domains-page.php:430
+#: includes/admin/class-domains-page.php:432
 #: includes/admin/class-marketing.php:100
 #: includes/admin/class-marketing.php:378
 #: includes/admin/class-menu-page.php:101
@@ -161,19 +379,13 @@ msgstr "不中奖"
 #: includes/admin/class-plans-editor.php:107
 #: includes/admin/class-promotions-page.php:227
 #: includes/admin/class-shipping-discounts-page.php:139
+#: includes/admin/class-staff-page.php:270
 #: includes/admin/class-store-design.php:492
 #: includes/admin/class-terms-page.php:60
+#: includes/class-activity-log.php:228
 #: includes/modules/class-blocks.php:231
 msgid "Delete"
 msgstr "删除"
-
-#: includes/admin/class-apps-page.php:62
-#: includes/admin/class-terms-page.php:108
-#: includes/class-exit-intent.php:275
-#: includes/class-terms.php:220
-#: includes/class-terms.php:282
-msgid "Close"
-msgstr "关闭"
 
 #: includes/admin/class-apps-page.php:63
 #: includes/class-coupons.php:434
@@ -182,6 +394,7 @@ msgid "Copy code"
 msgstr "复制优惠码"
 
 #: includes/admin/class-apps-page.php:64
+#: includes/admin/class-media-page.php:58
 #: includes/class-coupons.php:434
 #: includes/class-exit-intent.php:277
 msgid "Copied"
@@ -280,9 +493,12 @@ msgstr "基础配置"
 #: includes/admin/class-apps-page.php:152
 #: includes/admin/class-batch-metabox.php:77
 #: includes/admin/class-batch-orders.php:66
+#: includes/admin/class-blog-admin.php:198
 #: includes/admin/class-list-columns.php:35
 #: includes/admin/class-marketing.php:262
 #: includes/admin/class-plans-editor.php:84
+#: includes/admin/class-staff-page.php:232
+#: includes/admin/class-staff-page.php:256
 #: includes/admin/class-tracking-page.php:93
 msgid "Status"
 msgstr "状态"
@@ -547,10 +763,6 @@ msgstr "至少停留"
 msgid "seconds on the page before the popup can show"
 msgstr "秒后才会弹出"
 
-#: includes/admin/class-apps-page.php:196
-msgid "Pages"
-msgstr "弹出页面"
-
 #: includes/admin/class-apps-page.php:197
 msgid "Home page"
 msgstr "首页"
@@ -637,9 +849,13 @@ msgstr "店铺里的预览用已保存的设置，打开就弹出。除了预览
 
 #: includes/admin/class-apps-page.php:214
 #: includes/admin/class-basic-config-page.php:327
+#: includes/admin/class-blog-admin.php:298
+#: includes/admin/class-blog-admin.php:308
+#: includes/admin/class-blog-admin.php:320
 #: includes/admin/class-domains-page.php:127
 #: includes/admin/class-email-center.php:102
 #: includes/admin/class-marketing.php:481
+#: includes/admin/class-media-page.php:84
 #: includes/admin/class-menu-page.php:164
 #: includes/admin/class-menu-page.php:207
 #: includes/admin/class-pixels-page.php:229
@@ -647,6 +863,7 @@ msgstr "店铺里的预览用已保存的设置，打开就弹出。除了预览
 #: includes/admin/class-report-metabox.php:192
 #: includes/admin/class-seo-page.php:56
 #: includes/admin/class-shipping-page.php:221
+#: includes/admin/class-staff-page.php:143
 #: includes/admin/class-store-design.php:152
 #: includes/admin/class-tax-page.php:116
 #: includes/admin/class-terms-page.php:114
@@ -675,12 +892,14 @@ msgstr "— 无 —"
 #: includes/admin/class-basic-config-page.php:98
 #: includes/admin/class-marketing.php:378
 #: includes/admin/class-marketing.php:384
+#: includes/class-activity-log.php:241
 msgid "Enable"
 msgstr "开启"
 
 #: includes/admin/class-basic-config-page.php:98
 #: includes/admin/class-marketing.php:378
 #: includes/admin/class-marketing.php:384
+#: includes/class-activity-log.php:242
 msgid "Disable"
 msgstr "关闭"
 
@@ -1188,6 +1407,9 @@ msgid "State / province"
 msgstr "州 / 省"
 
 #: includes/admin/class-basic-config-page.php:295
+#: includes/admin/class-media-page.php:395
+#: includes/admin/class-media-page.php:440
+#: includes/admin/class-media-page.php:441
 msgid "Address"
 msgstr "地址"
 
@@ -1318,6 +1540,7 @@ msgid "Batch details"
 msgstr "批次信息"
 
 #: includes/admin/class-batch-metabox.php:30
+#: includes/class-activity-log.php:190
 #: includes/class-post-types.php:56
 msgid "Test reports"
 msgstr "检测报告"
@@ -1486,6 +1709,9 @@ msgstr "顾客"
 #: includes/admin/class-batch-orders.php:66
 #: includes/admin/class-email-center.php:264
 #: includes/admin/class-email-center.php:273
+#: includes/admin/class-staff-page.php:230
+#: includes/admin/class-staff-page.php:254
+#: includes/admin/class-staff-page.php:311
 msgid "Email"
 msgstr "邮箱"
 
@@ -1518,29 +1744,258 @@ msgstr "文件包含顾客联系方式，请按隐私政策妥善处理。"
 msgid "You do not have permission to export these orders."
 msgstr "你没有导出这些订单的权限。"
 
+#: includes/admin/class-blog-admin.php:57
+#: includes/class-activity-log.php:195
+#: includes/class-blog.php:85
+#: includes/class-blog.php:87
+#: includes/class-staff.php:98
+msgid "Blog"
+msgstr "博客"
+
+#: includes/admin/class-blog-admin.php:70
+#: includes/admin/class-blog-admin.php:448
+#: includes/class-blog.php:88
+msgid "Blog posts"
+msgstr "博客管理"
+
+#: includes/admin/class-blog-admin.php:73
+#: includes/admin/class-blog-admin.php:200
+#: includes/class-blog.php:106
+#: includes/class-blog.php:108
+msgid "Blog collections"
+msgstr "博客专辑"
+
+#: includes/admin/class-blog-admin.php:110
+#: includes/admin/class-blog-admin.php:413
+msgid "Choose cover"
+msgstr "选择封面"
+
+#: includes/admin/class-blog-admin.php:111
+#: includes/class-blog.php:100
+msgid "Use as cover"
+msgstr "设为封面"
+
+#: includes/admin/class-blog-admin.php:120
+msgid "Blog settings"
+msgstr "博客设置"
+
+#: includes/admin/class-blog-admin.php:121
+#: includes/admin/class-blog-admin.php:398
+#: includes/class-topics.php:141
+msgid "SEO"
+msgstr "SEO"
+
+#: includes/admin/class-blog-admin.php:122
+#: includes/admin/class-blog-admin.php:160
+msgid "Products shown under the post"
+msgstr "博客底部展示关联商品"
+
+#: includes/admin/class-blog-admin.php:128
+msgid "Author"
+msgstr "作者"
+
+#: includes/admin/class-blog-admin.php:128
+msgid "Enter the author name"
+msgstr "请输入作者名称"
+
+#: includes/admin/class-blog-admin.php:129
+msgid "Shown as the author on the storefront. Leave empty to use the account name. Pin a post with “Stick to the top of the blog”; the short description goes in the Excerpt box and the cover is the featured image."
+msgstr "前台显示的作者名，留空时用账号名称。置顶博客请勾选“置顶”；简短描述填在“摘要”里，封面就是“特色图片”。"
+
+#. translators: %d: number of views
+#: includes/admin/class-blog-admin.php:131
+#: includes/class-topics.php:150
+#, php-format
+msgid "Views: %d"
+msgstr "访问量：%d"
+
+#: includes/admin/class-blog-admin.php:133
+#: includes/admin/class-blog-admin.php:401
+#: includes/class-topics.php:161
+msgid "Address:"
+msgstr "网址："
+
+#: includes/admin/class-blog-admin.php:139
+msgid "Leave empty to use the post title and short description. The link is the post’s slug (edit it next to the title); after a change the old link redirects to the new one."
+msgstr "留空时使用博客标题和简短描述。SEO 链接就是博客的别名（在标题旁边修改），改了以后旧链接会自动跳转到新链接。"
+
+#: includes/admin/class-blog-admin.php:145
+#: includes/admin/class-seo-page.php:157
+#: includes/class-topics.php:158
+msgid "SEO title"
+msgstr "SEO标题"
+
+#: includes/admin/class-blog-admin.php:146
+#: includes/admin/class-seo-page.php:48
+#: includes/admin/class-seo-page.php:153
+#: includes/admin/class-seo-page.php:158
+#: includes/class-topics.php:159
+msgid "SEO description"
+msgstr "SEO描述"
+
+#: includes/admin/class-blog-admin.php:147
+#: includes/admin/class-seo-page.php:159
+#: includes/class-topics.php:160
+msgid "SEO keywords"
+msgstr "SEO关键词"
+
+#: includes/admin/class-blog-admin.php:147
+#: includes/class-topics.php:160
+msgid "Separate keywords with commas"
+msgstr "多个关键词用逗号隔开"
+
+#. translators: %d: maximum number of products
+#: includes/admin/class-blog-admin.php:155
+#, php-format
+msgid "Customers see these products under the post and can open them from there. Up to %d products."
+msgstr "顾客在博客正文下方看到这些商品，可以直接点进去。最多 %d 个商品。"
+
+#: includes/admin/class-blog-admin.php:160
+msgid "Search for a product…"
+msgstr "搜索商品…"
+
+#: includes/admin/class-blog-admin.php:196
+msgid "Blog title"
+msgstr "博客标题"
+
+#: includes/admin/class-blog-admin.php:197
+msgid "Blog image"
+msgstr "博客图片"
+
+#: includes/admin/class-blog-admin.php:199
+#: includes/admin/class-blog-admin.php:222
+msgid "Pinned"
+msgstr "是否置顶"
+
+#: includes/admin/class-blog-admin.php:201
+#: includes/admin/class-blog-admin.php:449
+#: includes/class-topics.php:187
+msgid "Visit count"
+msgstr "访问量"
+
+#: includes/admin/class-blog-admin.php:202
+#: includes/class-topics.php:188
+msgid "Last modified"
+msgstr "最后修改时间"
+
+#: includes/admin/class-blog-admin.php:212
+#: includes/admin/class-plans-editor.php:105
+#: includes/admin/class-report-metabox.php:71
+msgid "Published"
+msgstr "已发布"
+
+#: includes/admin/class-blog-admin.php:212
+msgid "Scheduled"
+msgstr "未开始"
+
+#: includes/admin/class-blog-admin.php:212
+msgid "Not published"
+msgstr "未发布"
+
+#. translators: %s: post title
+#: includes/admin/class-blog-admin.php:219
+#, php-format
+msgid "Unpin %s"
+msgstr "取消置顶 %s"
+
+#. translators: %s: post title
+#: includes/admin/class-blog-admin.php:219
+#, php-format
+msgid "Pin %s"
+msgstr "置顶 %s"
+
+#: includes/admin/class-blog-admin.php:222
+msgid "Not pinned"
+msgstr "未置顶"
+
+#. translators: 1: posts created, 2: posts updated
+#: includes/admin/class-blog-admin.php:255
+#, php-format
+msgid "Import finished: %1$d created, %2$d updated."
+msgstr "导入完成：新建 %1$d 篇，更新 %2$d 篇。"
+
+#: includes/admin/class-blog-admin.php:263
+msgid "Export blog posts"
+msgstr "导出博客"
+
+#: includes/admin/class-blog-admin.php:266
+msgid "Import blog posts"
+msgstr "导入博客"
+
+#: includes/admin/class-blog-admin.php:270
+msgid "CSV with the same columns as the export. Posts with the same slug are updated, others are created. Covers are matched to images already in the media library."
+msgstr "CSV 文件，列和导出的一样。别名相同的博客会更新，其他的新建。封面只认素材库里已有的图片地址。"
+
+#: includes/admin/class-blog-admin.php:272
+msgid "CSV file"
+msgstr "CSV 文件"
+
+#: includes/admin/class-blog-admin.php:274
+#: includes/admin/class-menu-page.php:252
+#: includes/admin/class-menu-page.php:258
+#: includes/admin/class-seo-page.php:137
+#: includes/class-activity-log.php:233
+msgid "Import"
+msgstr "导入"
+
+#: includes/admin/class-blog-admin.php:324
+msgid "Choose a CSV file (up to 5 MB)."
+msgstr "请选择一个 CSV 文件（不超过 5 MB）。"
+
+#: includes/admin/class-blog-admin.php:338
+#: includes/admin/class-blog-admin.php:362
+#: includes/class-blog.php:97
+#: includes/class-topics.php:64
+#: includes/class-topics.php:184
+msgid "Cover"
+msgstr "专题封面"
+
+#: includes/admin/class-blog-admin.php:342
+#: includes/admin/class-blog-admin.php:366
+msgid "Description above the collection"
+msgstr "专辑顶部描述"
+
+#: includes/admin/class-blog-admin.php:344
+msgid "Shown above the posts. HTML is allowed; edit the collection later for the rich text editor."
+msgstr "显示在博客列表上方，可以写 HTML；建好后再编辑专辑可以用富文本编辑器。"
+
+#: includes/admin/class-blog-admin.php:347
+#: includes/admin/class-blog-admin.php:382
+msgid "Description below the collection"
+msgstr "专辑底部描述"
+
+#: includes/admin/class-blog-admin.php:351
+#: includes/admin/class-blog-admin.php:400
+msgid "Leave empty to use the collection name and description."
+msgstr "留空时使用专辑名称和简短描述。"
+
+#: includes/admin/class-blog-admin.php:414
+#: includes/class-blog.php:99
+#: includes/class-topics.php:66
+msgid "Remove cover"
+msgstr "移除封面"
+
+#: includes/admin/class-blog-admin.php:415
+msgid "Common ratios 4:3, 3:2, 2:1 or 1:1, at least 1000 px wide."
+msgstr "常用比例 4:3、3:2、2:1、1:1，宽度 1000px 以上，高度可自适应。"
+
+#: includes/admin/class-blog-admin.php:446
+msgid "Collection image"
+msgstr "专辑图片"
+
+#: includes/admin/class-blog-admin.php:447
+#: includes/class-blog.php:114
+msgid "Collection name"
+msgstr "专辑名称"
+
+#: includes/admin/class-blog-admin.php:450
+#: includes/admin/class-store-design.php:445
+msgid "Modified"
+msgstr "修改时间"
+
 #: includes/admin/class-coupons-page.php:78
 msgid "Search by promotion name or code"
 msgstr "请输入活动名称/优惠码"
-
-#: includes/admin/class-coupons-page.php:80
-#: includes/admin/class-domains-page.php:386
-#: includes/admin/class-domains-page.php:425
-#: includes/admin/class-marketing.php:262
-#: includes/admin/class-menu-page.php:97
-#: includes/admin/class-menu-page.php:278
-#: includes/admin/class-pixels-page.php:127
-#: includes/admin/class-plans-editor.php:84
-#: includes/admin/class-plans-editor.php:114
-#: includes/admin/class-promotions-page.php:95
-#: includes/admin/class-recovery-page.php:164
-#: includes/admin/class-shipping-discounts-page.php:55
-#: includes/admin/class-shipping-page.php:195
-#: includes/admin/class-store-design.php:392
-#: includes/admin/class-store-design.php:446
-#: includes/admin/class-tax-page.php:61
-#: includes/admin/class-terms-page.php:100
-msgid "Actions"
-msgstr "操作"
 
 #: includes/admin/class-coupons-page.php:80
 #: includes/admin/class-coupons-page.php:212
@@ -2062,6 +2517,7 @@ msgid "Draft saved"
 msgstr "草稿已保存"
 
 #: includes/admin/class-design-editor.php:130
+#: includes/class-activity-log.php:224
 msgid "Publish"
 msgstr "发布"
 
@@ -2272,7 +2728,7 @@ msgid "OK"
 msgstr "确定"
 
 #: includes/admin/class-dialogs.php:34
-#: includes/admin/class-domains-page.php:525
+#: includes/admin/class-domains-page.php:527
 #: includes/admin/class-marketing.php:488
 #: includes/admin/class-marketing.php:513
 #: includes/admin/class-menu-page.php:117
@@ -2284,6 +2740,7 @@ msgstr "确定"
 #: includes/admin/class-plans-editor.php:145
 #: includes/admin/class-shipping-page.php:108
 #: includes/admin/class-shipping-page.php:197
+#: includes/admin/class-staff-page.php:345
 #: includes/admin/class-tax-page.php:103
 msgid "Cancel"
 msgstr "取消"
@@ -2322,6 +2779,7 @@ msgid "Select at least one domain."
 msgstr "请至少选择一个域名。"
 
 #: includes/admin/class-domains-page.php:180
+#: includes/admin/class-media-page.php:138
 msgid "Choose a bulk action."
 msgstr "请选择批量操作。"
 
@@ -2361,11 +2819,12 @@ msgstr "主域名不能删除。"
 
 #: includes/admin/class-domains-page.php:291
 #: includes/admin/class-store-design.php:65
+#: includes/class-activity-log.php:198
 msgid "Domains"
 msgstr "域名管理"
 
 #: includes/admin/class-domains-page.php:293
-#: includes/admin/class-domains-page.php:569
+#: includes/admin/class-domains-page.php:571
 msgid "Add domain"
 msgstr "添加域名"
 
@@ -2390,13 +2849,13 @@ msgid "The site runs on this computer (%s). Domains on the internet cannot reach
 msgstr "网站现在运行在这台电脑上（%s），外网的域名还连不上。网站上了服务器之前，域名会显示“未连接”。"
 
 #: includes/admin/class-domains-page.php:326
-#: includes/admin/class-domains-page.php:697
-#: includes/admin/class-domains-page.php:733
+#: includes/admin/class-domains-page.php:699
+#: includes/admin/class-domains-page.php:735
 msgid "Server IP"
 msgstr "服务器 IP"
 
 #: includes/admin/class-domains-page.php:328
-#: includes/admin/class-domains-page.php:524
+#: includes/admin/class-domains-page.php:526
 #: includes/admin/class-marketing.php:488
 #: includes/admin/class-marketing.php:513
 #: includes/admin/class-menu-page.php:112
@@ -2404,9 +2863,11 @@ msgstr "服务器 IP"
 #: includes/admin/class-seo-page.php:160
 #: includes/admin/class-shipping-page.php:108
 #: includes/admin/class-shipping-page.php:197
+#: includes/admin/class-staff-page.php:344
 #: includes/admin/class-tax-page.php:103
 #: includes/admin/class-terms-page.php:103
 #: includes/admin/class-tracking-page.php:297
+#: includes/class-activity-log.php:231
 msgid "Save"
 msgstr "保存"
 
@@ -2415,8 +2876,8 @@ msgid "The DNS records point domains to this address. Fill it in once the site i
 msgstr "解析记录会把域名指向这个地址。网站上了服务器以后再填写。"
 
 #: includes/admin/class-domains-page.php:340
-#: includes/admin/class-domains-page.php:391
-#: includes/admin/class-domains-page.php:445
+#: includes/admin/class-domains-page.php:392
+#: includes/admin/class-domains-page.php:447
 msgid "HTTPS status"
 msgstr "https状态"
 
@@ -2425,10 +2886,10 @@ msgid "All HTTPS statuses"
 msgstr "全部https状态"
 
 #: includes/admin/class-domains-page.php:346
-#: includes/admin/class-domains-page.php:393
-#: includes/admin/class-domains-page.php:447
-#: includes/admin/class-domains-page.php:713
-#: includes/admin/class-domains-page.php:737
+#: includes/admin/class-domains-page.php:394
+#: includes/admin/class-domains-page.php:449
+#: includes/admin/class-domains-page.php:715
+#: includes/admin/class-domains-page.php:739
 msgid "Connection status"
 msgstr "连接状态"
 
@@ -2445,7 +2906,7 @@ msgid "Created until"
 msgstr "创建结束日期"
 
 #: includes/admin/class-domains-page.php:357
-#: includes/admin/class-domains-page.php:605
+#: includes/admin/class-domains-page.php:607
 msgid "Enter a domain"
 msgstr "请输入域名"
 
@@ -2453,340 +2914,343 @@ msgstr "请输入域名"
 msgid "Search domains"
 msgstr "搜索域名"
 
-#: includes/admin/class-domains-page.php:358
-#: includes/admin/class-recovery-page.php:161
-msgid "Filter"
-msgstr "筛选"
-
-#: includes/admin/class-domains-page.php:360
-msgid "Clear filters"
-msgstr "清除筛选"
-
 #: includes/admin/class-domains-page.php:364
 msgid "Delete the selected domains? Visitors on them will no longer stay on that domain."
 msgstr "删除选中的域名？删除后，访客从这些域名打开时不会再停留在该域名上。"
 
 #: includes/admin/class-domains-page.php:370
 #: includes/admin/class-domains-page.php:372
+#: includes/admin/class-media-page.php:373
+#: includes/admin/class-media-page.php:375
 msgid "Bulk actions"
 msgstr "批量操作"
 
 #: includes/admin/class-domains-page.php:373
-#: includes/admin/class-domains-page.php:427
-#: includes/admin/class-domains-page.php:755
+#: includes/admin/class-domains-page.php:429
+#: includes/admin/class-domains-page.php:757
 msgid "Check now"
 msgstr "立即检查"
 
 #: includes/admin/class-domains-page.php:376
+#: includes/admin/class-media-page.php:380
 msgid "Apply bulk action"
 msgstr "应用"
 
-#: includes/admin/class-domains-page.php:384
+#: includes/admin/class-domains-page.php:385
 #: includes/admin/class-marketing.php:392
+#: includes/admin/class-media-page.php:392
+#: includes/admin/class-media-page.php:530
 #: includes/admin/class-menu-page.php:123
+#: includes/admin/class-staff-page.php:334
 msgid "Select all"
 msgstr "全选"
 
-#: includes/admin/class-domains-page.php:387
-#: includes/admin/class-domains-page.php:436
+#: includes/admin/class-domains-page.php:388
+#: includes/admin/class-domains-page.php:438
 msgid "ID"
 msgstr "ID"
 
-#: includes/admin/class-domains-page.php:388
-#: includes/admin/class-domains-page.php:437
-#: includes/admin/class-domains-page.php:604
-#: includes/admin/class-domains-page.php:708
-#: includes/admin/class-domains-page.php:724
+#: includes/admin/class-domains-page.php:389
+#: includes/admin/class-domains-page.php:439
+#: includes/admin/class-domains-page.php:606
+#: includes/admin/class-domains-page.php:710
+#: includes/admin/class-domains-page.php:726
 #: includes/admin/class-seo-page.php:139
 #: includes/admin/class-store-design.php:392
 #: includes/admin/class-store-design.php:414
 msgid "Domain"
 msgstr "域名"
 
-#: includes/admin/class-domains-page.php:389
-#: includes/admin/class-domains-page.php:443
+#: includes/admin/class-domains-page.php:390
+#: includes/admin/class-domains-page.php:445
 msgid "Redirects to"
 msgstr "跳转域名"
 
-#: includes/admin/class-domains-page.php:390
-#: includes/admin/class-domains-page.php:440
-#: includes/admin/class-domains-page.php:444
-#: includes/admin/class-domains-page.php:462
+#: includes/admin/class-domains-page.php:391
+#: includes/admin/class-domains-page.php:442
+#: includes/admin/class-domains-page.php:446
+#: includes/admin/class-domains-page.php:464
 msgid "Primary domain"
 msgstr "主域名"
 
-#: includes/admin/class-domains-page.php:391
+#: includes/admin/class-domains-page.php:392
 msgid "Checked every hour for 7 days. When HTTPS works, http visits are sent to https."
 msgstr "7天内每小时自动检查 HTTPS 状态，生效后会把 http 访问跳转到 https。"
 
-#: includes/admin/class-domains-page.php:392
-#: includes/admin/class-domains-page.php:446
-#: includes/admin/class-domains-page.php:658
+#: includes/admin/class-domains-page.php:393
+#: includes/admin/class-domains-page.php:448
+#: includes/admin/class-domains-page.php:660
 msgid "CDN"
 msgstr "cdn节点"
 
-#: includes/admin/class-domains-page.php:393
+#: includes/admin/class-domains-page.php:394
 msgid "Checked every hour for 7 days, then daily: whether the domain really opens this store."
 msgstr "7天内每小时自动检查一次，之后每天一次：检查域名是否真的能打开这个店铺。"
 
-#: includes/admin/class-domains-page.php:394
-#: includes/admin/class-domains-page.php:453
+#: includes/admin/class-domains-page.php:395
+#: includes/admin/class-domains-page.php:455
 #: includes/admin/class-recovery-page.php:160
+#: includes/admin/class-staff-page.php:234
+#: includes/admin/class-staff-page.php:265
 msgid "Created"
 msgstr "创建时间"
 
-#: includes/admin/class-domains-page.php:399
+#: includes/admin/class-domains-page.php:400
 msgid "No domains match."
 msgstr "没有符合条件的域名。"
 
 #. translators: %s: date and time
-#: includes/admin/class-domains-page.php:416
+#: includes/admin/class-domains-page.php:418
 #, php-format
 msgid "Last checked: %s"
 msgstr "上次检查：%s"
 
 #. translators: %s: date and time
-#: includes/admin/class-domains-page.php:416
+#: includes/admin/class-domains-page.php:418
 msgid "Not checked yet"
 msgstr "还没有检查"
 
 #. translators: %s: domain
-#: includes/admin/class-domains-page.php:422
+#. translators: %s: file name
+#. translators: %s: address
+#: includes/admin/class-domains-page.php:424
+#: includes/admin/class-media-page.php:422
+#: includes/admin/class-media-page.php:544
 #, php-format
 msgid "Select %s"
 msgstr "选择 %s"
 
 #. translators: %s: domain
-#: includes/admin/class-domains-page.php:427
+#: includes/admin/class-domains-page.php:429
 #, php-format
 msgid "Check %s now"
 msgstr "立即检查 %s"
 
-#: includes/admin/class-domains-page.php:429
-#: includes/admin/class-domains-page.php:495
+#: includes/admin/class-domains-page.php:431
+#: includes/admin/class-domains-page.php:497
 msgid "Domain redirect"
 msgstr "域名跳转"
 
 #. translators: %s: domain
-#: includes/admin/class-domains-page.php:429
+#: includes/admin/class-domains-page.php:431
 #, php-format
 msgid "Set the redirect for %s"
 msgstr "设置 %s 的跳转"
 
 #. translators: %s: domain
-#: includes/admin/class-domains-page.php:430
+#: includes/admin/class-domains-page.php:432
 #, php-format
 msgid "Delete %s? Visitors on it will no longer stay on that domain."
 msgstr "删除 %s？删除后，访客从这个域名打开时不会再停留在该域名上。"
 
 #. translators: %s: domain
-#: includes/admin/class-domains-page.php:430
+#: includes/admin/class-domains-page.php:432
 #, php-format
 msgid "Delete %s"
 msgstr "删除 %s"
 
-#: includes/admin/class-domains-page.php:467
+#: includes/admin/class-domains-page.php:469
 msgid "Only a connected domain can become the primary domain."
 msgstr "只有已连接的域名才能切换为主域名。"
 
-#: includes/admin/class-domains-page.php:469
+#: includes/admin/class-domains-page.php:471
 msgid "This domain redirects to another domain."
 msgstr "这个域名设置了跳转。"
 
-#: includes/admin/class-domains-page.php:472
+#: includes/admin/class-domains-page.php:474
 msgid "Not the primary domain."
 msgstr "不是主域名。"
 
 #. translators: %s: domain
-#: includes/admin/class-domains-page.php:476
+#: includes/admin/class-domains-page.php:478
 #, php-format
 msgid "Make %s the primary domain? The site address changes to this domain, so links in the store, in emails and in the admin use it. Other bound domains keep working."
 msgstr "把 %s 切换为主域名？网站地址会换成这个域名，店铺、邮件和后台里的链接都会使用它。其他已绑定的域名照常可以访问。"
 
 #. translators: %s: domain
-#: includes/admin/class-domains-page.php:482
+#: includes/admin/class-domains-page.php:484
 #, php-format
 msgid "Make %s the primary domain"
 msgstr "把 %s 切换为主域名"
 
-#: includes/admin/class-domains-page.php:497
+#: includes/admin/class-domains-page.php:499
 #: includes/class-domains.php:267
 msgid "The primary domain cannot redirect. Switch the primary domain first."
 msgstr "主域名不能设置跳转，请先切换主域名。"
 
 #. translators: %s: domain
-#: includes/admin/class-domains-page.php:507
+#: includes/admin/class-domains-page.php:509
 #, php-format
 msgid "Visits to %s go to"
 msgstr "访问 %s 时跳转到"
 
-#: includes/admin/class-domains-page.php:511
+#: includes/admin/class-domains-page.php:513
 msgid "No redirect (stay on this domain)"
 msgstr "不跳转（留在这个域名）"
 
-#: includes/admin/class-domains-page.php:522
+#: includes/admin/class-domains-page.php:524
 msgid "The page address stays the same, only the domain changes (301 redirect). Domains that redirect themselves are not offered, so redirects never chain."
 msgstr "页面路径不变，只换域名（301 跳转）。已经设置了跳转的域名不能选，避免连环跳转。"
 
-#: includes/admin/class-domains-page.php:562
+#: includes/admin/class-domains-page.php:564
 msgid "Enter domain"
 msgstr "输入域名"
 
-#: includes/admin/class-domains-page.php:563
+#: includes/admin/class-domains-page.php:565
 msgid "Choose CDN"
 msgstr "选择CDN节点"
 
-#: includes/admin/class-domains-page.php:564
-#: includes/admin/class-domains-page.php:682
+#: includes/admin/class-domains-page.php:566
+#: includes/admin/class-domains-page.php:684
 msgid "Add DNS records"
 msgstr "解析域名"
 
-#: includes/admin/class-domains-page.php:565
+#: includes/admin/class-domains-page.php:567
 msgid "Done"
 msgstr "成功"
 
-#: includes/admin/class-domains-page.php:568
-#: includes/admin/class-domains-page.php:775
+#: includes/admin/class-domains-page.php:570
+#: includes/admin/class-domains-page.php:777
 msgid "Back to the domain list"
 msgstr "返回域名列表"
 
-#: includes/admin/class-domains-page.php:593
+#: includes/admin/class-domains-page.php:595
 msgid "Bind a domain"
 msgstr "绑定域名"
 
-#: includes/admin/class-domains-page.php:594
+#: includes/admin/class-domains-page.php:596
 msgid "Bind a domain you already own to the store, so customers who know the domain can find the store and shop."
 msgstr "将你已有的店铺域名绑定到你的店铺中，方便熟悉你店铺域名的顾客更容易找到你的店铺并进行购物。"
 
-#: includes/admin/class-domains-page.php:595
+#: includes/admin/class-domains-page.php:597
 msgid "By default the domain and its “www” subdomain are both bound: entering example.com binds example.com and www.example.com."
 msgstr "默认同时绑定一级域名和对应的“www”子域名，例如填写 example.com，系统会绑定 example.com 和 www.example.com。"
 
-#: includes/admin/class-domains-page.php:608
+#: includes/admin/class-domains-page.php:610
 msgid "Only bind the domain I entered"
 msgstr "仅绑定填写域名"
 
-#: includes/admin/class-domains-page.php:609
+#: includes/admin/class-domains-page.php:611
 msgid "Checked: only this domain is bound. Unchecked: the domain and its www subdomain are bound (check with care)."
 msgstr "勾选后只绑定当前填写的域名；不勾选则同时绑定该域名及其 www 子域名（慎重勾选）。"
 
-#: includes/admin/class-domains-page.php:612
+#: includes/admin/class-domains-page.php:614
 msgid "Add several domains"
 msgstr "批量添加域名"
 
-#: includes/admin/class-domains-page.php:614
+#: includes/admin/class-domains-page.php:616
 msgid "One domain per line"
 msgstr "每行一个域名"
 
-#: includes/admin/class-domains-page.php:618
-#: includes/admin/class-domains-page.php:668
-#: includes/admin/class-domains-page.php:756
+#: includes/admin/class-domains-page.php:620
+#: includes/admin/class-domains-page.php:670
+#: includes/admin/class-domains-page.php:758
 msgid "Next"
 msgstr "下一步"
 
-#: includes/admin/class-domains-page.php:630
+#: includes/admin/class-domains-page.php:632
 msgid "The domain’s DNS is managed in Cloudflare with the proxy on (orange cloud). Cloudflare provides the HTTPS certificate."
 msgstr "域名的解析在 Cloudflare 管理，并开启代理（橙色云朵）。HTTPS 证书由 Cloudflare 提供。"
 
-#: includes/admin/class-domains-page.php:631
+#: includes/admin/class-domains-page.php:633
 msgid "Another CDN speeds up the store. Add the domain in the CDN with the server IP as the origin, then point the domain to the address the CDN gives you."
 msgstr "使用其他 CDN 加速。在 CDN 后台添加域名，源站填服务器 IP，再把域名解析到 CDN 给的地址。"
 
-#: includes/admin/class-domains-page.php:632
+#: includes/admin/class-domains-page.php:634
 msgid "Point the domain straight to the server at your domain registrar. The server needs its own HTTPS certificate."
 msgstr "在域名服务商那里把域名直接解析到服务器。服务器需要自己安装 HTTPS 证书。"
 
-#: includes/admin/class-domains-page.php:636
+#: includes/admin/class-domains-page.php:638
 msgid "Choose a CDN"
 msgstr "选择CDN节点"
 
-#: includes/admin/class-domains-page.php:637
+#: includes/admin/class-domains-page.php:639
 msgid "Domains to bind:"
 msgstr "要绑定的域名："
 
-#: includes/admin/class-domains-page.php:642
+#: includes/admin/class-domains-page.php:644
 msgid "Already bound, skipped"
 msgstr "已绑定，跳过"
 
-#: includes/admin/class-domains-page.php:648
+#: includes/admin/class-domains-page.php:650
 #: includes/class-domains.php:198
 msgid "These domains are already bound."
 msgstr "这些域名都已经绑定过了。"
 
-#: includes/admin/class-domains-page.php:649
-#: includes/admin/class-domains-page.php:667
+#: includes/admin/class-domains-page.php:651
+#: includes/admin/class-domains-page.php:669
 msgid "Previous"
 msgstr "上一步"
 
-#: includes/admin/class-domains-page.php:683
+#: includes/admin/class-domains-page.php:685
 msgid "Add these records where the domain’s DNS is managed. They usually take effect within minutes, sometimes up to 48 hours."
 msgstr "在管理域名解析的地方添加下面的记录。通常几分钟内生效，最长可能要 48 小时。"
 
-#: includes/admin/class-domains-page.php:686
+#: includes/admin/class-domains-page.php:688
 msgid "In Cloudflare → DNS, add the records below and keep the proxy on (orange cloud)."
 msgstr "在 Cloudflare → DNS 里添加下面的记录，并保持代理开启（橙色云朵）。"
 
-#: includes/admin/class-domains-page.php:687
+#: includes/admin/class-domains-page.php:689
 msgid "In Cloudflare → SSL/TLS, choose “Full” when the server has a certificate, otherwise “Flexible”."
 msgstr "在 Cloudflare → SSL/TLS 里，服务器有证书时选“完全（Full）”，没有证书时选“灵活（Flexible）”。"
 
-#: includes/admin/class-domains-page.php:689
+#: includes/admin/class-domains-page.php:691
 msgid "In the CDN, add each domain and set the origin to the server IP."
 msgstr "在 CDN 后台添加每个域名，源站地址填服务器 IP。"
 
-#: includes/admin/class-domains-page.php:690
+#: includes/admin/class-domains-page.php:692
 msgid "Then add a CNAME record pointing to the address the CDN gives you. Many registrars do not allow a CNAME on “@”; follow the CDN’s instructions for the root domain."
 msgstr "然后添加一条 CNAME 记录，指向 CDN 给的地址。很多域名服务商不允许在“@”上添加 CNAME，一级域名请按 CDN 的说明操作。"
 
-#: includes/admin/class-domains-page.php:692
+#: includes/admin/class-domains-page.php:694
 msgid "At your domain registrar, add the records below."
 msgstr "在域名服务商那里添加下面的记录。"
 
-#: includes/admin/class-domains-page.php:693
+#: includes/admin/class-domains-page.php:695
 msgid "Install an HTTPS certificate on the server (for example Let’s Encrypt)."
 msgstr "在服务器上安装 HTTPS 证书（例如 Let’s Encrypt 免费证书）。"
 
-#: includes/admin/class-domains-page.php:701
+#: includes/admin/class-domains-page.php:703
 msgid "Not filled in yet. Fill it in on the domain list once the site is on a server."
 msgstr "还没有填写。网站上了服务器以后，在域名列表上方填写。"
 
-#: includes/admin/class-domains-page.php:709
-#: includes/admin/class-domains-page.php:725
+#: includes/admin/class-domains-page.php:711
+#: includes/admin/class-domains-page.php:727
 msgid "Record type"
 msgstr "记录类型"
 
-#: includes/admin/class-domains-page.php:710
-#: includes/admin/class-domains-page.php:726
+#: includes/admin/class-domains-page.php:712
+#: includes/admin/class-domains-page.php:728
 msgid "Host record"
 msgstr "主机记录"
 
-#: includes/admin/class-domains-page.php:711
-#: includes/admin/class-domains-page.php:727
+#: includes/admin/class-domains-page.php:713
+#: includes/admin/class-domains-page.php:729
 msgid "Record value"
 msgstr "记录值"
 
-#: includes/admin/class-domains-page.php:712
-#: includes/admin/class-domains-page.php:736
+#: includes/admin/class-domains-page.php:714
+#: includes/admin/class-domains-page.php:738
 msgid "Current DNS"
 msgstr "当前解析"
 
-#: includes/admin/class-domains-page.php:731
+#: includes/admin/class-domains-page.php:733
 msgid "Address from your CDN"
 msgstr "CDN 给的地址"
 
-#: includes/admin/class-domains-page.php:736
+#: includes/admin/class-domains-page.php:738
 msgid "No records found"
 msgstr "没有查到解析记录"
 
-#: includes/admin/class-domains-page.php:767
+#: includes/admin/class-domains-page.php:769
 msgid "Domain added"
 msgstr "域名添加成功"
 
-#: includes/admin/class-domains-page.php:773
+#: includes/admin/class-domains-page.php:775
 msgid "The domain is checked every hour for the next 7 days. Once it is connected and HTTPS works, the list shows it and http visits go to https automatically."
 msgstr "接下来 7 天内每小时会自动检查一次域名。连接成功、HTTPS 生效后，列表里会显示出来，http 访问也会自动跳转到 https。"
 
-#: includes/admin/class-domains-page.php:776
+#: includes/admin/class-domains-page.php:778
 msgid "Add another domain"
 msgstr "继续添加域名"
 
@@ -2996,6 +3460,8 @@ msgstr "延迟发送：%d 秒"
 #: includes/admin/class-pixels-page.php:53
 #: includes/admin/class-pixels-page.php:77
 #: includes/admin/class-plans-editor.php:35
+#: includes/admin/class-staff-page.php:268
+#: includes/class-activity-log.php:223
 msgid "Edit"
 msgstr "编辑"
 
@@ -3032,12 +3498,6 @@ msgstr "最近 30 天没有发送邮件。"
 #: includes/admin/class-email-center.php:273
 msgid "Latest emails"
 msgstr "最近发送的邮件"
-
-#: includes/admin/class-email-center.php:273
-#: includes/admin/class-pixels-page.php:189
-#: includes/admin/class-tracking-page.php:124
-msgid "Time"
-msgstr "时间"
 
 #: includes/admin/class-email-center.php:273
 msgid "Recipient"
@@ -3087,6 +3547,8 @@ msgid "Batch"
 msgstr "批次"
 
 #: includes/admin/class-list-columns.php:76
+#: includes/admin/class-media-page.php:397
+#: includes/admin/class-media-page.php:445
 #: includes/admin/class-report-metabox.php:109
 msgid "Type"
 msgstr "类型"
@@ -3318,15 +3780,19 @@ msgid "Ended"
 msgstr "已结束"
 
 #: includes/admin/class-marketing.php:353
+#: includes/admin/class-media-page.php:342
 #: includes/admin/class-shipping-page.php:72
 msgid "Search"
 msgstr "搜索"
 
+#. translators: %s: account
 #: includes/admin/class-marketing.php:362
+#: includes/admin/class-staff-page.php:259
 msgid "Disabled"
 msgstr "已停用"
 
 #: includes/admin/class-marketing.php:378
+#: includes/admin/class-media-page.php:495
 #: includes/admin/class-tracking-page.php:146
 msgid "Apply"
 msgstr "查询"
@@ -3342,15 +3808,8 @@ msgid "%d record"
 msgid_plural "%d records"
 msgstr[0] "共 %d 条"
 
-#: includes/admin/class-marketing.php:402
-msgid "Previous page"
-msgstr "上一页"
-
-#: includes/admin/class-marketing.php:406
-msgid "Next page"
-msgstr "下一页"
-
 #: includes/admin/class-marketing.php:408
+#: includes/admin/class-media-page.php:484
 msgid "Items per page"
 msgstr "每页条数"
 
@@ -3399,6 +3858,290 @@ msgstr "— 新建一个页面 —"
 #, php-format
 msgid "If the page does not contain %s yet, it is added at the end of the page."
 msgstr "如果页面里还没有 %s，会自动加在页面末尾。"
+
+#: includes/admin/class-media-page.php:39
+#: includes/class-staff.php:113
+msgid "Admin settings"
+msgstr "后台设置"
+
+#: includes/admin/class-media-page.php:40
+#: includes/class-activity-log.php:206
+msgid "Media library"
+msgstr "素材管理"
+
+#: includes/admin/class-media-page.php:59
+msgid "Delete the selected media files? They are removed from the server and disappear wherever they are used (products, posts)."
+msgstr "永久删除选中的素材？文件会从服务器删除，用到它们的地方（商品、博客等）也会看不到。"
+
+#. translators: 1: addresses added, 2: collected now, 3: failed
+#: includes/admin/class-media-page.php:115
+#, php-format
+msgid "Added to the queue: %1$d. Collected now: %2$d, failed: %3$d. The rest are collected in the background."
+msgstr "已加入采集队列 %1$d 个。刚刚采集成功 %2$d 个，失败 %3$d 个，其余的在后台继续采集。"
+
+#: includes/admin/class-media-page.php:122
+msgid "Select at least one media file."
+msgstr "请至少选择一个素材。"
+
+#. translators: %d: number of files
+#: includes/admin/class-media-page.php:131
+#, php-format
+msgid "Media files deleted: %d."
+msgstr "已删除 %d 个素材。"
+
+#. translators: %d: number of files
+#: includes/admin/class-media-page.php:136
+#, php-format
+msgid "Group changed for %d media files."
+msgstr "已更改 %d 个素材的分组。"
+
+#: includes/admin/class-media-page.php:147
+msgid "Group created."
+msgstr "分组已创建。"
+
+#: includes/admin/class-media-page.php:154
+msgid "Group renamed."
+msgstr "分组已改名。"
+
+#: includes/admin/class-media-page.php:159
+msgid "Group deleted. Its media files are now ungrouped."
+msgstr "分组已删除，里面的素材变成未分组。"
+
+#. translators: 1: collected, 2: failed
+#: includes/admin/class-media-page.php:169
+#, php-format
+msgid "Collected: %1$d, failed: %2$d."
+msgstr "采集成功 %1$d 个，失败 %2$d 个。"
+
+#: includes/admin/class-media-page.php:171
+msgid "Select at least one address."
+msgstr "请至少选择一个地址。"
+
+#. translators: %d: number of addresses
+#: includes/admin/class-media-page.php:174
+#, php-format
+msgid "Queued again: %d."
+msgstr "已重新加入采集队列 %d 个。"
+
+#. translators: %d: number of addresses
+#: includes/admin/class-media-page.php:177
+#, php-format
+msgid "Removed from the queue: %d."
+msgstr "已从队列移除 %d 个。"
+
+#. translators: %d: number of files
+#: includes/admin/class-media-page.php:217
+#, php-format
+msgid "Uploaded: %d."
+msgstr "已上传 %d 个。"
+
+#: includes/admin/class-media-page.php:233
+#: includes/admin/class-media-page.php:295
+msgid "All media"
+msgstr "所有素材"
+
+#: includes/admin/class-media-page.php:234
+msgid "Being collected"
+msgstr "采集中"
+
+#: includes/admin/class-media-page.php:235
+msgid "Retrying"
+msgstr "采集重试"
+
+#: includes/admin/class-media-page.php:236
+msgid "Collection failed"
+msgstr "采集失败"
+
+#: includes/admin/class-media-page.php:241
+msgid "Media center"
+msgstr "素材中心"
+
+#: includes/admin/class-media-page.php:245
+msgid "Export media"
+msgstr "导出素材"
+
+#: includes/admin/class-media-page.php:249
+msgid "Media views"
+msgstr "素材视图"
+
+#: includes/admin/class-media-page.php:293
+#: includes/class-media-library.php:59
+msgid "Media groups"
+msgstr "素材分组"
+
+#: includes/admin/class-media-page.php:296
+msgid "Ungrouped"
+msgstr "未分组"
+
+#: includes/admin/class-media-page.php:302
+msgid "New group"
+msgstr "新建分组"
+
+#: includes/admin/class-media-page.php:306
+#: includes/admin/class-media-page.php:307
+#: includes/admin/class-media-page.php:319
+msgid "Group name"
+msgstr "分组名称"
+
+#: includes/admin/class-media-page.php:308
+#: includes/admin/class-menu-page.php:268
+#: includes/admin/class-store-design.php:283
+#: includes/class-activity-log.php:222
+msgid "Create"
+msgstr "创建"
+
+#: includes/admin/class-media-page.php:313
+msgid "Rename or delete this group"
+msgstr "重命名或删除这个分组"
+
+#: includes/admin/class-media-page.php:321
+msgid "Rename"
+msgstr "重命名"
+
+#: includes/admin/class-media-page.php:323
+msgid "Delete this group? Its media files are kept and become ungrouped."
+msgstr "删除这个分组？里面的素材会保留，变成未分组。"
+
+#: includes/admin/class-media-page.php:327
+msgid "Delete group"
+msgstr "删除分组"
+
+#: includes/admin/class-media-page.php:340
+msgid "Search media"
+msgstr "搜索素材"
+
+#: includes/admin/class-media-page.php:341
+msgid "Enter a media name"
+msgstr "请输入素材名称"
+
+#: includes/admin/class-media-page.php:345
+msgid "Upload media"
+msgstr "上传素材"
+
+#. translators: %d: maximum number of files
+#: includes/admin/class-media-page.php:350
+#, php-format
+msgid "Files (up to %d at a time)"
+msgstr "文件（一次最多 %d 个）"
+
+#: includes/admin/class-media-page.php:352
+#: includes/class-activity-log.php:234
+msgid "Upload"
+msgstr "上传"
+
+#: includes/admin/class-media-page.php:356
+msgid "Collect from addresses"
+msgstr "采集素材"
+
+#. translators: %d: maximum number of addresses
+#: includes/admin/class-media-page.php:361
+#, php-format
+msgid "Image, video or PDF addresses, one per line (up to %d)"
+msgstr "图片、视频或 PDF 的地址，每行一个（最多 %d 个）"
+
+#: includes/admin/class-media-page.php:363
+#: includes/class-activity-log.php:235
+msgid "Collect"
+msgstr "采集"
+
+#: includes/admin/class-media-page.php:376
+msgid "Change group to…"
+msgstr "更改分组为…"
+
+#: includes/admin/class-media-page.php:377
+msgid "Delete permanently"
+msgstr "永久删除"
+
+#. translators: %d: number of media files
+#: includes/admin/class-media-page.php:384
+#, php-format
+msgid "%d items"
+msgstr "共 %d 条"
+
+#. translators: %s: file name
+#: includes/admin/class-media-page.php:393
+#: includes/admin/class-media-page.php:423
+msgid "Media file"
+msgstr "素材"
+
+#: includes/admin/class-media-page.php:394
+#: includes/admin/class-media-page.php:439
+msgid "Size (px)"
+msgstr "宽高"
+
+#: includes/admin/class-media-page.php:396
+#: includes/admin/class-media-page.php:444
+msgid "File size"
+msgstr "文件大小"
+
+#: includes/admin/class-media-page.php:398
+#: includes/admin/class-media-page.php:446
+#: includes/admin/class-media-page.php:454
+#: includes/admin/class-media-page.php:532
+#: includes/admin/class-media-page.php:546
+msgid "Group"
+msgstr "分组"
+
+#. translators: %s: address
+#: includes/admin/class-media-page.php:399
+#: includes/admin/class-media-page.php:447
+#: includes/admin/class-media-page.php:531
+#: includes/admin/class-media-page.php:545
+msgid "Collected from"
+msgstr "采集地址"
+
+#: includes/admin/class-media-page.php:404
+msgid "No media files here."
+msgstr "暂无数据"
+
+#: includes/admin/class-media-page.php:442
+#: includes/admin/class-plans-editor.php:145
+msgid "Copy"
+msgstr "复制"
+
+#: includes/admin/class-media-page.php:456
+msgid "No group"
+msgstr "不分组"
+
+#. translators: %d: items per page
+#: includes/admin/class-media-page.php:490
+#, php-format
+msgid "%d per page"
+msgstr "%d 条/页"
+
+#: includes/admin/class-media-page.php:512
+msgid "These addresses could not be downloaded. Check the reason, then retry or remove them."
+msgstr "这些地址没能下载。看一下原因，再重试或移除。"
+
+#: includes/admin/class-media-page.php:514
+msgid "Waiting addresses are downloaded in the background, a few at a time. “Collect now” downloads the next few immediately."
+msgstr "排队的地址会在后台每次下载几个。点“立即采集”可以马上下载接下来的几个。"
+
+#: includes/admin/class-media-page.php:520
+msgid "Retry selected"
+msgstr "重试选中的"
+
+#: includes/admin/class-media-page.php:522
+msgid "Collect now"
+msgstr "立即采集"
+
+#: includes/admin/class-media-page.php:524
+msgid "Remove selected"
+msgstr "移除选中的"
+
+#: includes/admin/class-media-page.php:533
+#: includes/admin/class-media-page.php:547
+msgid "Attempts"
+msgstr "尝试次数"
+
+#: includes/admin/class-media-page.php:535
+#: includes/admin/class-media-page.php:549
+msgid "Added"
+msgstr "添加时间"
+
+#: includes/admin/class-media-page.php:540
+msgid "Nothing here."
+msgstr "暂无数据"
 
 #: includes/admin/class-menu-page.php:84
 msgid "Back to menu list"
@@ -3628,6 +4371,7 @@ msgid "Text decoration"
 msgstr "字体装饰"
 
 #: includes/admin/class-menu-page.php:147
+#: includes/admin/class-staff-page.php:255
 #: includes/modules/class-registry.php:137
 msgid "None"
 msgstr "无"
@@ -3683,14 +4427,9 @@ msgid "Menus & navigation"
 msgstr "菜单导航"
 
 #: includes/admin/class-menu-page.php:250
+#: includes/class-activity-log.php:232
 msgid "Export"
 msgstr "导出"
-
-#: includes/admin/class-menu-page.php:252
-#: includes/admin/class-menu-page.php:258
-#: includes/admin/class-seo-page.php:137
-msgid "Import"
-msgstr "导入"
 
 #: includes/admin/class-menu-page.php:256
 msgid "Menu export file (.json)"
@@ -3707,11 +4446,6 @@ msgstr "可以在此设置菜单，并指定店铺页头、页尾使用哪一份
 #: includes/admin/class-menu-page.php:263
 msgid "New menu"
 msgstr "新建菜单"
-
-#: includes/admin/class-menu-page.php:268
-#: includes/admin/class-store-design.php:283
-msgid "Create"
-msgstr "创建"
 
 #: includes/admin/class-menu-page.php:281
 msgid "Top-level items"
@@ -4034,6 +4768,8 @@ msgid "Shop"
 msgstr "商店"
 
 #: includes/admin/class-overview-page.php:199
+#: includes/admin/class-staff-page.php:228
+#: includes/admin/class-staff-page.php:247
 #: includes/admin/class-tracking-page.php:133
 #: includes/admin/class-tracking-page.php:174
 msgid "Account"
@@ -4352,11 +5088,6 @@ msgstr "还没有发送记录。"
 msgid "Platform"
 msgstr "平台"
 
-#: includes/admin/class-pixels-page.php:189
-#: includes/admin/class-tracking-page.php:126
-msgid "Event"
-msgstr "事件"
-
 #: includes/admin/class-pixels-page.php:197
 #: includes/admin/class-seo-page.php:169
 msgid "Notes"
@@ -4510,11 +5241,6 @@ msgid "Plan deleted."
 msgstr "方案已删除。"
 
 #: includes/admin/class-plans-editor.php:105
-#: includes/admin/class-report-metabox.php:71
-msgid "Published"
-msgstr "已发布"
-
-#: includes/admin/class-plans-editor.php:105
 msgid "Unpublished"
 msgstr "已下架"
 
@@ -4574,8 +5300,10 @@ msgstr "物流方案名称"
 msgid "Shown to customers at checkout, e.g. UPS • FedEx • USPS"
 msgstr "结账页显示给顾客，例如 UPS • FedEx • USPS"
 
+#. translators: %s: account
 #: includes/admin/class-plans-editor.php:135
 #: includes/admin/class-shipping-page.php:195
+#: includes/admin/class-staff-page.php:259
 #: includes/admin/class-store-design.php:538
 msgid "Enabled"
 msgstr "已启用"
@@ -4613,10 +5341,6 @@ msgstr "复制方案"
 #: includes/admin/class-plans-editor.php:144
 msgid "Add the rates of another plan to this plan."
 msgstr "把另一个方案的运费加到这个方案里。"
-
-#: includes/admin/class-plans-editor.php:145
-msgid "Copy"
-msgstr "复制"
 
 #: includes/admin/class-product-panel.php:37
 msgid "Peptide data"
@@ -5005,12 +5729,6 @@ msgstr "召回次数"
 msgid "No abandoned checkouts yet."
 msgstr "还没有弃单。"
 
-#. translators: %d: number of records
-#: includes/admin/class-recovery-page.php:178
-#, php-format
-msgid "%d records"
-msgstr "共 %d 条"
-
 #: includes/admin/class-recovery-page.php:196
 #: includes/admin/class-tracking-page.php:128
 #: includes/class-coupons.php:462
@@ -5193,13 +5911,6 @@ msgstr "报告必须先选择批次并上传文件才能发布，已保持为草
 msgid "Page title"
 msgstr "页面标题"
 
-#: includes/admin/class-seo-page.php:48
-#: includes/admin/class-seo-page.php:153
-#: includes/admin/class-seo-page.php:158
-#: includes/class-topics.php:159
-msgid "SEO description"
-msgstr "SEO描述"
-
 #: includes/admin/class-seo-page.php:122
 #: includes/admin/class-store-design.php:64
 msgid "Homepage SEO"
@@ -5242,22 +5953,12 @@ msgid "Domains with their own SEO: %s"
 msgstr "已单独设置SEO的域名：%s"
 
 #: includes/admin/class-seo-page.php:157
-#: includes/class-topics.php:158
-msgid "SEO title"
-msgstr "SEO标题"
-
-#: includes/admin/class-seo-page.php:157
 msgid "Shown as the title in search results"
 msgstr "显示在搜索结果里的标题"
 
 #: includes/admin/class-seo-page.php:158
 msgid "Shown under the title in search results"
 msgstr "显示在搜索结果标题下面的描述"
-
-#: includes/admin/class-seo-page.php:159
-#: includes/class-topics.php:160
-msgid "SEO keywords"
-msgstr "SEO关键词"
 
 #: includes/admin/class-seo-page.php:159
 msgid "Type a keyword and press Enter; you can add several"
@@ -5771,16 +6472,164 @@ msgstr "删除此条数据"
 msgid "Enter a plan name."
 msgstr "请填写方案名称。"
 
+#: includes/admin/class-staff-page.php:39
+#: includes/admin/class-staff-page.php:219
+#: includes/class-activity-log.php:207
+msgid "Staff"
+msgstr "员工管理"
+
+#: includes/admin/class-staff-page.php:84
+msgid "Enter a valid email address."
+msgstr "请输入有效的邮箱地址。"
+
+#. translators: %d: minimum length
+#: includes/admin/class-staff-page.php:88
+#, php-format
+msgid "The password needs at least %d characters."
+msgstr "密码至少要 %d 位。"
+
+#: includes/admin/class-staff-page.php:97
+msgid "This account is not a staff account."
+msgstr "这个账号不是员工账号。"
+
+#: includes/admin/class-staff-page.php:107
+msgid "Enter an account name (letters, numbers, - _ . @)."
+msgstr "请输入账号（字母、数字和 - _ . @）。"
+
+#: includes/admin/class-staff-page.php:166
+msgid "Staff account saved."
+msgstr "员工账号已保存。"
+
+#: includes/admin/class-staff-page.php:166
+msgid "Staff account created. Tell the staff member the account name and password."
+msgstr "员工账号已创建，请把账号和密码告诉员工。"
+
+#: includes/admin/class-staff-page.php:174
+msgid "Staff account disabled. It is logged out and cannot log in."
+msgstr "员工账号已停用，已被退出登录，不能再登录。"
+
+#: includes/admin/class-staff-page.php:174
+msgid "Staff account enabled."
+msgstr "员工账号已启用。"
+
+#: includes/admin/class-staff-page.php:182
+msgid "Staff account deleted. Its posts and products now belong to you."
+msgstr "员工账号已删除，他发布的博客和商品转到你名下。"
+
+#: includes/admin/class-staff-page.php:220
+#: includes/admin/class-staff-page.php:297
+msgid "Add staff"
+msgstr "添加员工"
+
+#: includes/admin/class-staff-page.php:223
+msgid "Staff only see and open the menus ticked for them. Administrators always have every permission. All changes are written to the activity log."
+msgstr "员工只能看到和打开勾选给他的菜单。管理员始终拥有全部权限。所有改动都会写进操作记录。"
+
+#: includes/admin/class-staff-page.php:229
+#: includes/admin/class-staff-page.php:253
+#: includes/admin/class-staff-page.php:315
+#: includes/admin/class-terms-page.php:54
+msgid "Name"
+msgstr "名称"
+
+#: includes/admin/class-staff-page.php:233
+#: includes/admin/class-staff-page.php:264
+msgid "Last login"
+msgstr "最后登录"
+
+#: includes/admin/class-staff-page.php:250
+#: includes/class-activity-log.php:250
+msgid "Administrator"
+msgstr "管理员"
+
+#: includes/admin/class-staff-page.php:255
+msgid "All permissions"
+msgstr "全部权限"
+
+#. translators: %s: account
+#: includes/admin/class-staff-page.php:258
+#, php-format
+msgid "Enable %s"
+msgstr "启用 %s"
+
+#. translators: %s: account
+#: includes/admin/class-staff-page.php:258
+#, php-format
+msgid "Disable %s"
+msgstr "停用 %s"
+
+#. translators: %s: account
+#: includes/admin/class-staff-page.php:258
+msgid "Enable this staff account?"
+msgstr "启用这个员工账号？"
+
+#. translators: %s: account
+#: includes/admin/class-staff-page.php:258
+msgid "Disable this staff account? It is logged out at once and cannot log in until enabled again."
+msgstr "停用这个员工账号？他会马上被退出登录，重新启用前不能登录。"
+
+#: includes/admin/class-staff-page.php:270
+msgid "Delete this staff account? Its posts and products are kept and moved to you."
+msgstr "删除这个员工账号？他发布的博客和商品会保留，转到你名下。"
+
+#: includes/admin/class-staff-page.php:296
+msgid "Back to staff"
+msgstr "返回员工列表"
+
+#: includes/admin/class-staff-page.php:297
+msgid "Edit staff"
+msgstr "编辑员工"
+
+#: includes/admin/class-staff-page.php:304
+msgid "Account name"
+msgstr "账号"
+
+#: includes/admin/class-staff-page.php:307
+msgid "The account name cannot be changed."
+msgstr "账号建好后不能修改。"
+
+#: includes/admin/class-staff-page.php:319
+msgid "Password"
+msgstr "密码"
+
+#: includes/admin/class-staff-page.php:325
+msgid "Leave empty to keep the current password. A new password logs the staff member out everywhere."
+msgstr "留空则不修改密码。设置新密码后，员工在所有地方都会被退出登录。"
+
+#. translators: %d: minimum length
+#: includes/admin/class-staff-page.php:327
+#, php-format
+msgid "At least %d characters. Tell the staff member the account name and password yourself."
+msgstr "至少 %d 位。请自己把账号和密码告诉员工。"
+
+#: includes/admin/class-staff-page.php:333
+msgid "Permissions (menus this staff member can use)"
+msgstr "权限（员工能用的菜单）"
+
+#: includes/admin/class-staff-page.php:338
+msgid "Staff management, plugins, users and WordPress settings stay with administrators."
+msgstr "员工管理、插件、用户和 WordPress 设置只有管理员能用。"
+
+#: includes/admin/class-staff-page.php:341
+msgid "Disable this account (cannot log in)"
+msgstr "停用这个账号（不能登录）"
+
+#: includes/admin/class-staff-page.php:344
+msgid "Create staff account"
+msgstr "创建员工账号"
+
 #: includes/admin/class-store-design.php:61
 #: includes/admin/class-store-design.php:241
 msgid "Theme design"
 msgstr "主题装修"
 
 #: includes/admin/class-store-design.php:63
+#: includes/class-activity-log.php:197
 msgid "Custom pages"
 msgstr "自定义页面"
 
 #: includes/admin/class-store-design.php:66
+#: includes/class-activity-log.php:199
 #: includes/class-topics.php:54
 #: includes/class-topics.php:63
 msgid "Campaign pages"
@@ -5788,6 +6637,8 @@ msgstr "活动专题页"
 
 #: includes/admin/class-store-design.php:72
 #: includes/admin/class-store-design.php:73
+#: includes/class-activity-log.php:196
+#: includes/class-staff.php:103
 msgid "Store design"
 msgstr "店铺装修"
 
@@ -5941,10 +6792,6 @@ msgstr "只有管理员可以修改域名指定模板。"
 #: includes/admin/class-store-design.php:441
 msgid "Theme"
 msgstr "主题"
-
-#: includes/admin/class-store-design.php:445
-msgid "Modified"
-msgstr "修改时间"
 
 #: includes/admin/class-store-design.php:462
 msgid "In use"
@@ -6277,10 +7124,6 @@ msgstr "请输入条款描述（复选框文字），例如 I agree to the Terms
 msgid "Enter the term name"
 msgstr "请输入条款名称"
 
-#: includes/admin/class-terms-page.php:54
-msgid "Name"
-msgstr "名称"
-
 #: includes/admin/class-terms-page.php:55
 #: includes/modules/class-registry.php:39
 #: includes/modules/class-registry.php:824
@@ -6442,11 +7285,6 @@ msgstr "加载更多"
 msgid "Visitor"
 msgstr "访客"
 
-#: includes/admin/class-tracking-page.php:108
-#: includes/tracking/class-privacy.php:167
-msgid "Device"
-msgstr "设备"
-
 #: includes/admin/class-tracking-page.php:109
 msgid "Open pages"
 msgstr "打开的页面"
@@ -6533,10 +7371,6 @@ msgstr "刷新"
 msgid "Could not load: %s"
 msgstr "加载失败：%s"
 
-#: includes/admin/class-tracking-page.php:140
-msgid "From"
-msgstr "从"
-
 #: includes/admin/class-tracking-page.php:142
 msgid "All devices"
 msgstr "全部设备"
@@ -6578,7 +7412,6 @@ msgid "Day"
 msgstr "日期"
 
 #: includes/admin/class-tracking-page.php:157
-#: includes/class-topics.php:187
 msgid "Views"
 msgstr "浏览"
 
@@ -6876,11 +7709,192 @@ msgstr "找不到这位访客。"
 msgid "Visit not found."
 msgstr "找不到这次访问。"
 
+#: includes/class-activity-log.php:186
+msgid "Login"
+msgstr "登录"
+
+#: includes/class-activity-log.php:189
+msgid "Reviews"
+msgstr "评论"
+
+#: includes/class-activity-log.php:200
+msgid "Payment settings"
+msgstr "支付设置"
+
+#: includes/class-activity-log.php:204
+#: includes/class-staff.php:93
+msgid "Data"
+msgstr "数据"
+
+#: includes/class-activity-log.php:205
+msgid "Apps"
+msgstr "应用"
+
+#: includes/class-activity-log.php:213
+msgid "Put on sale"
+msgstr "上架"
+
+#: includes/class-activity-log.php:216
+msgid "Taken off sale"
+msgstr "下架"
+
+#: includes/class-activity-log.php:219
+#: includes/class-menus.php:111
+msgid "Log in"
+msgstr "登录"
+
+#: includes/class-activity-log.php:220
+msgid "Log out"
+msgstr "退出登录"
+
+#: includes/class-activity-log.php:221
+msgid "Failed login"
+msgstr "登录失败"
+
+#: includes/class-activity-log.php:225
+msgid "Unpublish"
+msgstr "取消发布"
+
+#: includes/class-activity-log.php:226
+msgid "Move to trash"
+msgstr "移到回收站"
+
+#: includes/class-activity-log.php:227
+msgid "Restore"
+msgstr "恢复"
+
+#: includes/class-activity-log.php:229
+msgid "Change status"
+msgstr "修改状态"
+
+#: includes/class-activity-log.php:230
+msgid "Refund"
+msgstr "退款"
+
+#: includes/class-activity-log.php:236
+msgid "Check"
+msgstr "检查"
+
+#: includes/class-activity-log.php:237
+#: includes/class-store-config.php:667
+msgid "Approve"
+msgstr "批准"
+
+#: includes/class-activity-log.php:238
+msgid "Unapprove"
+msgstr "改为待审核"
+
+#: includes/class-activity-log.php:239
+msgid "Mark as spam"
+msgstr "标记为垃圾评论"
+
+#: includes/class-activity-log.php:240
+msgid "Change permissions"
+msgstr "修改权限"
+
+#: includes/class-activity-log.php:243
+msgid "Change password"
+msgstr "修改密码"
+
+#: includes/class-activity-log.php:253
+msgid "Staff member"
+msgstr "员工"
+
 #. translators: %s: batch number
 #: includes/class-batches.php:120
 #, php-format
 msgid "Batch number %s already belongs to another product."
 msgstr "批次号 %s 已经属于另一个商品。"
+
+#: includes/class-blog.php:86
+msgid "Blog article"
+msgstr "博客"
+
+#: includes/class-blog.php:89
+#: includes/class-blog.php:90
+#: includes/class-blog.php:92
+msgid "New blog post"
+msgstr "新建博客"
+
+#: includes/class-blog.php:91
+msgid "Edit blog post"
+msgstr "编辑博客"
+
+#: includes/class-blog.php:93
+msgid "View blog post"
+msgstr "查看博客"
+
+#: includes/class-blog.php:94
+msgid "Search blog posts"
+msgstr "搜索博客"
+
+#: includes/class-blog.php:95
+msgid "No blog posts yet."
+msgstr "暂无博客"
+
+#: includes/class-blog.php:96
+msgid "No blog posts in the trash."
+msgstr "回收站里没有博客。"
+
+#: includes/class-blog.php:98
+msgid "Set cover (4:3, 3:2, 2:1 or 1:1, at least 1000 px wide)"
+msgstr "设置封面（常用比例 4:3、3:2、2:1、1:1，宽度 1000px 以上）"
+
+#: includes/class-blog.php:107
+msgid "Blog collection"
+msgstr "博客专辑"
+
+#: includes/class-blog.php:109
+msgid "All collections"
+msgstr "全部专辑"
+
+#: includes/class-blog.php:110
+msgid "Edit collection"
+msgstr "编辑专辑"
+
+#: includes/class-blog.php:111
+msgid "View collection"
+msgstr "查看专辑"
+
+#: includes/class-blog.php:112
+msgid "Update collection"
+msgstr "更新专辑"
+
+#: includes/class-blog.php:113
+msgid "New collection"
+msgstr "新建专辑"
+
+#: includes/class-blog.php:115
+msgid "Search collections"
+msgstr "搜索专辑"
+
+#: includes/class-blog.php:116
+msgid "No collections yet."
+msgstr "暂无专辑"
+
+#: includes/class-blog.php:117
+msgid "← Back to blog collections"
+msgstr "← 返回博客专辑"
+
+#: includes/class-blog.php:243
+msgid "Products in this post"
+msgstr "本文相关商品"
+
+#: includes/class-blog.php:380
+msgid "The file has no “title” column. Export first to get the format."
+msgstr "文件里没有“title”列，可以先导出一份看格式。"
+
+#. translators: %d: line number
+#: includes/class-blog.php:395
+#, php-format
+msgid "Line %d: the title is empty."
+msgstr "第 %d 行：标题是空的。"
+
+#. translators: 1: line number, 2: error
+#: includes/class-blog.php:421
+#, php-format
+msgid "Line %1$d: %2$s"
+msgstr "第 %1$d 行：%2$s"
 
 #: includes/class-checkout-ack.php:40
 msgid "Please tick the confirmation box before placing your order."
@@ -7389,6 +8403,31 @@ msgstr "预览：抽奖是真实的，但不会用优惠码，也不计入数据
 msgid "Exit-intent offers: the customer used the popup code %1$s (search the orders for “%2$s”)."
 msgstr "离开意图增收：顾客使用了弹窗发放的优惠码 %1$s（在订单列表搜索“%2$s”可以列出这类订单）。"
 
+#: includes/class-media-library.php:60
+msgid "Media group"
+msgstr "素材分组"
+
+#: includes/class-media-library.php:103
+#: includes/class-media-library.php:115
+msgid "Enter a group name."
+msgstr "请输入分组名称。"
+
+#. translators: %d: maximum queue size
+#: includes/class-media-library.php:287
+#, php-format
+msgid "At most %d addresses can wait in the queue. Wait for the current ones to finish."
+msgstr "队列里最多排 %d 个地址，请等现在的采集完。"
+
+#. translators: %s: the address
+#: includes/class-media-library.php:303
+#, php-format
+msgid "“%s” is not a public http(s) address."
+msgstr "“%s”不是公网的 http(s) 地址。"
+
+#: includes/class-media-library.php:384
+msgid "Only images (JPG, PNG, GIF, WebP, AVIF), MP4/WebM videos and PDF files can be collected."
+msgstr "只能采集图片（JPG、PNG、GIF、WebP、AVIF）、MP4/WebM 视频和 PDF 文件。"
+
 #: includes/class-menus.php:77
 #: includes/class-menus.php:221
 msgid "Header menu"
@@ -7435,10 +8474,6 @@ msgstr "我的账号"
 #: includes/class-menus.php:110
 msgid "My orders / order tracking"
 msgstr "我的订单 / 订单追踪"
-
-#: includes/class-menus.php:111
-msgid "Log in"
-msgstr "登录"
 
 #: includes/class-menus.php:112
 msgid "Register"
@@ -7647,7 +8682,7 @@ msgstr "%1$s 的 ID %2$s 格式不对，请参考输入框里的示例。"
 msgid "This browser will no longer share your activity with advertising partners."
 msgstr "这个浏览器以后不会再把你的浏览行为分享给广告合作方。"
 
-#: includes/class-plugin.php:127
+#: includes/class-plugin.php:135
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr "Peptide Core 需要先安装并启用 WooCommerce。"
 
@@ -7934,6 +8969,22 @@ msgstr "确认框文案为空，结账确认未开启。"
 msgid "Assign a batch before shipping: %s. (You can turn this check off in the store settings.)"
 msgstr "发货前请先指定批次：%s。（可以在 VialCove 设置里关闭这项检查。）"
 
+#: includes/class-staff.php:202
+msgid "This staff account is disabled. Contact the store owner."
+msgstr "这个员工账号已停用，请联系店主。"
+
+#: includes/class-staff.php:372
+msgid "Your staff account does not have permission for this page. Ask the store owner to tick it under Store settings → Staff."
+msgstr "你的员工账号没有这个页面的权限。请店主在“店铺设置 → 员工管理”里给你勾选。"
+
+#: includes/class-staff.php:372
+msgid "Go to a page you can use"
+msgstr "去你能用的页面"
+
+#: includes/class-staff.php:373
+msgid "No permission"
+msgstr "没有权限"
+
 #. translators: 1, 2: numbers to add
 #: includes/class-store-config.php:383
 #, php-format
@@ -7963,10 +9014,6 @@ msgstr "请先验证邮箱。注册时我们已发送验证链接，请检查收
 #: includes/class-store-config.php:657
 msgid "Your account is waiting for approval by the store. You can sign in once it is approved."
 msgstr "你的账户正在等待店铺批准，批准后即可登录。"
-
-#: includes/class-store-config.php:667
-msgid "Approve"
-msgstr "批准"
 
 #: includes/class-store-config.php:685
 msgid "Approve accounts"
@@ -8132,26 +9179,13 @@ msgstr "还没有活动专题页。"
 msgid "No campaign pages in the trash."
 msgstr "回收站里没有活动专题页。"
 
-#: includes/class-topics.php:64
-#: includes/class-topics.php:184
-msgid "Cover"
-msgstr "专题封面"
-
 #: includes/class-topics.php:65
 msgid "Set cover (1:1, at least 1000 px wide)"
 msgstr "设置封面（建议 1:1，宽度 1000px 以上）"
 
-#: includes/class-topics.php:66
-msgid "Remove cover"
-msgstr "移除封面"
-
 #: includes/class-topics.php:140
 msgid "Campaign page settings"
 msgstr "专题设置"
-
-#: includes/class-topics.php:141
-msgid "SEO"
-msgstr "SEO"
 
 #: includes/class-topics.php:146
 msgid "Show the title on the page"
@@ -8161,27 +9195,9 @@ msgstr "展示专题标题"
 msgid "Published = visible at its address; draft = not visible yet. The short description goes in the Excerpt box; the cover is the featured image."
 msgstr "发布 = 专题页可以访问；草稿 = 还不能访问。简短描述填在“摘要”里，封面就是“特色图片”。"
 
-#. translators: %d: number of views
-#: includes/class-topics.php:150
-#, php-format
-msgid "Views: %d"
-msgstr "访问量：%d"
-
 #: includes/class-topics.php:157
 msgid "Leave empty to use the campaign title and short description. The link is the page’s slug (edit it next to the title); after a change the old link redirects to the new one."
 msgstr "留空时使用专题标题和简短描述。SEO链接就是页面的别名（在标题旁边修改），改了以后旧链接会自动跳转到新链接。"
-
-#: includes/class-topics.php:160
-msgid "Separate keywords with commas"
-msgstr "多个关键词用逗号隔开"
-
-#: includes/class-topics.php:161
-msgid "Address:"
-msgstr "网址："
-
-#: includes/class-topics.php:188
-msgid "Last modified"
-msgstr "最后修改时间"
 
 #: includes/emails/class-admin-abandoned.php:20
 msgid "Tells the admin when a customer entered their email and address at checkout but did not pay, so you can follow up."

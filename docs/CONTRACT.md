@@ -278,3 +278,34 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
   - 设置了“域名跳转”的域名 301 到目标域名的同一路径（目标只能是已绑定、自己不跳转的域名）。
   - HTTPS 生效的域名，http 访问 301 到 https。判断 https 时也认 `X-Forwarded-Proto` 和 Cloudflare 的 `CF-Visitor`，避免灵活 SSL 下循环跳转。
 - 主题装修的“域名指定模板”和首页SEO 的域名列表会列出这里绑定的域名。
+
+## 博客、素材管理、操作记录、员工管理（2026-10-27，Claude，YY-BACKEND-01，照 YY 后台）
+
+### 博客（`PeptideCore\Blog` + `Admin\Blog_Admin`）
+- WordPress 文章 = 博客，分类 = 博客专辑。后台菜单“博客 → 博客管理 / 博客专辑”。
+- 网址：
+  - 博客列表 `/blogs/`（文章类型 post 的归档，`is_post_type_archive('post')`；模板顺序 archive-post.php → archive.php → index.php）；
+  - 博客 `/blogs/<别名>/`（旧的 `/<别名>/` 301 过来）；
+  - 博客专辑 `/news/<别名>/`（分类归档，category.php → archive.php → index.php）。
+- 列表第一页把置顶的博客放在最前面（插件处理，主题照常循环）。
+- 简短描述 = 摘要，封面 = 特色图片。作者：填了“作者”时 `the_author` 返回这个名字。
+- 关联商品：`Blog::related_products( $post_id )` 返回已发布商品 ID。主题没有 `add_theme_support( 'pc-blog-products' )` 时，插件在正文后输出 `<section class="pc-blog-products">` + WooCommerce `[products]` 列表；主题想自己排版就声明这个支持。
+- 博客专辑的封面、顶部描述、底部描述：`Blog::term_extras( $term_id )` 返回 `{cover, top, bottom}`（HTML 已清理）。
+- SEO：插件在博客和博客专辑页输出 title / description / keywords / og（和首页SEO 相同的方式），有封面时输出 og:image。
+- 访问量：博客 `_pc_views`（文章 meta），博客专辑 `_pc_views`（分类 meta），员工和预览不算。
+
+### 素材管理（`PeptideCore\Media_Library` + `Admin\Media_Page`）
+- 后台菜单“后台设置 → 素材管理”。素材就是 WordPress 媒体库。
+- 分组是附件上的私有分类 `pc_media_group`。
+- 采集：把地址排进队列（选项 `peptide_core_media_queue`），用 WordPress 的安全下载（不下载内网地址），定时任务 `pc_media_collect` 每次处理 5 个。来源地址存在附件 meta `_pc_source_url`。
+
+### 操作记录（`PeptideCore\Activity_Log` + `Admin\Activity_Page`）
+- 表 `{prefix}pc_activity`，保留 365 天（每天清理，cron `pc_activity_prune`）。只记后台人员（管理员、员工等）在浏览器里的操作；命令行和网站自己发出的请求不记。
+- 查看权限 `pc_view_activity`：有 manage_options 的人自动有；员工勾“后台设置”时有。
+
+### 员工管理（`PeptideCore\Staff` + `Admin\Staff_Page`）
+- 后台菜单“店铺设置 → 员工管理”，只有管理员（create_users）能用。
+- 员工角色 `pc_staff`，勾选的模块存在用户 meta `pc_staff_modules`。模块有 orders / products / customers / marketing / data / blog / design / settings / backend / apps。
+- 勾选的模块通过 `user_has_cap` 临时给能力；没勾的菜单不显示，打开对应后台页面返回 403（不认识的后台页面也拒绝）。
+- 停用（`pc_staff_disabled`）的员工不能登录，已登录的会被退出。
+- 新的后台页面请告诉 Claude 归到哪个模块（`Staff::module_for()`），否则员工打不开。

@@ -2,14 +2,14 @@
 # This file is distributed under the same license as the Peptide Core plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: Peptide Core 0.23.0\n"
+"Project-Id-Version: Peptide Core 0.24.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/peptide-core\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-27T17:00:27+00:00\n"
+"POT-Creation-Date: 2026-10-27T18:18:58+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -29,91 +29,309 @@ msgstr ""
 msgid "DiGua"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:135
+#: includes/admin/class-activity-page.php:28
+#: includes/admin/class-activity-page.php:62
+msgid "Activity log"
+msgstr ""
+
+#. translators: %d: days kept
+#: includes/admin/class-activity-page.php:66
+#, php-format
+msgid "What the people who work in the admin did: logins, products, orders, blog, store design, settings and more. Customers are not recorded. Records are kept for %d days."
+msgstr ""
+
+#: includes/admin/class-activity-page.php:76
+#: includes/admin/class-activity-page.php:107
+#: includes/admin/class-activity-page.php:126
+#: includes/admin/class-activity-page.php:178
+msgid "Operator"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:77
+msgid "Enter an operator"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:78
+#: includes/admin/class-activity-page.php:109
+#: includes/admin/class-activity-page.php:128
+#: includes/admin/class-activity-page.php:180
+msgid "Module"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:80
+msgid "All modules"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:86
+#: includes/admin/class-tracking-page.php:140
+msgid "From"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:88
+msgid "Until"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:90
+#: includes/admin/class-domains-page.php:358
+#: includes/admin/class-recovery-page.php:161
+msgid "Filter"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:92
+#: includes/admin/class-domains-page.php:360
+msgid "Clear filters"
+msgstr ""
+
+#. translators: %d: number of records
+#: includes/admin/class-activity-page.php:97
+#: includes/admin/class-recovery-page.php:178
+#, php-format
+msgid "%d records"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:105
+#: includes/admin/class-activity-page.php:124
+#: includes/admin/class-coupons-page.php:80
+#: includes/admin/class-domains-page.php:387
+#: includes/admin/class-domains-page.php:427
+#: includes/admin/class-marketing.php:262
+#: includes/admin/class-menu-page.php:97
+#: includes/admin/class-menu-page.php:278
+#: includes/admin/class-pixels-page.php:127
+#: includes/admin/class-plans-editor.php:84
+#: includes/admin/class-plans-editor.php:114
+#: includes/admin/class-promotions-page.php:95
+#: includes/admin/class-recovery-page.php:164
+#: includes/admin/class-shipping-discounts-page.php:55
+#: includes/admin/class-shipping-page.php:195
+#: includes/admin/class-staff-page.php:235
+#: includes/admin/class-staff-page.php:266
+#: includes/admin/class-store-design.php:392
+#: includes/admin/class-store-design.php:446
+#: includes/admin/class-tax-page.php:61
+#: includes/admin/class-terms-page.php:100
+msgid "Actions"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:106
+#: includes/admin/class-activity-page.php:125
+msgid "Operator type"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:108
+#: includes/admin/class-activity-page.php:127
+#: includes/admin/class-activity-page.php:179
+#: includes/admin/class-email-center.php:273
+#: includes/admin/class-pixels-page.php:189
+#: includes/admin/class-tracking-page.php:124
+msgid "Time"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:110
+#: includes/admin/class-activity-page.php:129
+#: includes/admin/class-activity-page.php:181
+#: includes/admin/class-pixels-page.php:189
+#: includes/admin/class-tracking-page.php:126
+msgid "Event"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:111
+#: includes/admin/class-activity-page.php:130
+#: includes/admin/class-activity-page.php:182
+msgid "Object"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:114
+#: includes/admin/class-activity-page.php:133
+#: includes/admin/class-activity-page.php:188
+msgid "Browser"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:115
+#: includes/admin/class-activity-page.php:134
+#: includes/admin/class-tracking-page.php:108
+#: includes/tracking/class-privacy.php:167
+msgid "Device"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:120
+msgid "No records yet."
+msgstr ""
+
+#: includes/admin/class-activity-page.php:124
+msgid "View details"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:140
+#: includes/admin/class-apps-page.php:196
+#: includes/admin/class-media-page.php:466
+msgid "Pages"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:142
+#: includes/admin/class-marketing.php:402
+#: includes/admin/class-media-page.php:468
+msgid "Previous page"
+msgstr ""
+
+#. translators: 1: current page, 2: total pages
+#: includes/admin/class-activity-page.php:147
+#: includes/admin/class-media-page.php:473
+#, php-format
+msgid "Page %1$d of %2$d"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:151
+#: includes/admin/class-marketing.php:406
+#: includes/admin/class-media-page.php:477
+msgid "Next page"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:166
+msgid "Before"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:167
+msgid "After"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:168
+msgid "Amount"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:169
+#: includes/admin/class-media-page.php:534
+#: includes/admin/class-media-page.php:548
+msgid "Reason"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:170
+msgid "Review author"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:171
+#: includes/admin/class-staff-page.php:231
+#: includes/admin/class-staff-page.php:255
+msgid "Permissions"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:172
+msgid "Form"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:176
+msgid "Activity details"
+msgstr ""
+
+#: includes/admin/class-activity-page.php:190
+#: includes/admin/class-apps-page.php:62
+#: includes/admin/class-terms-page.php:108
+#: includes/class-exit-intent.php:275
+#: includes/class-terms.php:220
+#: includes/class-terms.php:282
+msgid "Close"
+msgstr ""
+
+#: includes/admin/class-admin-menus.php:137
 #: includes/admin/class-apps-page.php:141
 #: includes/admin/class-batch-orders.php:141
 #: includes/admin/class-batch-orders.php:144
 #: includes/admin/class-overview-page.php:135
 #: includes/admin/class-tracking-page.php:154
+#: includes/class-activity-log.php:191
+#: includes/class-staff.php:73
 msgid "Orders"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:136
+#: includes/admin/class-admin-menus.php:138
+#: includes/class-activity-log.php:192
+#: includes/class-staff.php:83
 msgid "Customers"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:137
+#: includes/admin/class-admin-menus.php:139
+#: includes/class-staff.php:108
 msgid "Store settings"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:139
+#: includes/admin/class-admin-menus.php:141
+#: includes/class-activity-log.php:201
 msgid "Shipping settings"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:140
+#: includes/admin/class-admin-menus.php:142
+#: includes/class-activity-log.php:202
 msgid "Tax settings"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:141
+#: includes/admin/class-admin-menus.php:143
 #: includes/admin/class-basic-config-page.php:114
 #: includes/admin/class-email-center.php:151
 #: includes/admin/class-store-settings.php:141
 #: includes/admin/class-store-settings.php:164
 #: includes/admin/class-terms-page.php:91
+#: includes/class-activity-log.php:203
 msgid "System settings"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:146
+#: includes/admin/class-admin-menus.php:148
+#: includes/class-activity-log.php:193
+#: includes/class-staff.php:88
 msgid "Marketing campaigns"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:147
+#: includes/admin/class-admin-menus.php:149
 #: includes/admin/class-promotions-page.php:91
 #: includes/class-promotions.php:84
 msgid "Spend-and-save promotions"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:147
+#: includes/admin/class-admin-menus.php:149
 msgid "Spend-and-save"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:148
+#: includes/admin/class-admin-menus.php:150
 #: includes/admin/class-coupons-page.php:76
+#: includes/class-activity-log.php:194
 msgid "Coupon codes"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:149
+#: includes/admin/class-admin-menus.php:151
 #: includes/admin/class-shipping-discounts-page.php:51
 msgid "Shipping discounts"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:152
+#: includes/admin/class-admin-menus.php:154
 #: includes/admin/class-apps-page.php:83
+#: includes/class-staff.php:118
 msgid "App center"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:178
+#: includes/admin/class-admin-menus.php:210
 #: includes/admin/class-plans-editor.php:82
 #: includes/admin/class-tax-page.php:61
 #: includes/admin/class-tax-page.php:97
 #: includes/admin/class-tracking-page.php:156
+#: includes/class-activity-log.php:187
+#: includes/class-staff.php:78
 #: includes/modules/class-registry.php:1185
 msgid "Products"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:185
+#: includes/admin/class-admin-menus.php:217
 msgid "Product management"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:186
+#: includes/admin/class-admin-menus.php:218
+#: includes/class-activity-log.php:188
 msgid "Collections"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:187
+#: includes/admin/class-admin-menus.php:219
 msgid "Product reviews"
 msgstr ""
 
-#: includes/admin/class-admin-menus.php:188
+#: includes/admin/class-admin-menus.php:220
 msgid "Product tags"
 msgstr ""
 
@@ -148,7 +366,7 @@ msgstr ""
 #: includes/admin/class-apps-page.php:174
 #: includes/admin/class-design-editor.php:156
 #: includes/admin/class-domains-page.php:374
-#: includes/admin/class-domains-page.php:430
+#: includes/admin/class-domains-page.php:432
 #: includes/admin/class-marketing.php:100
 #: includes/admin/class-marketing.php:378
 #: includes/admin/class-menu-page.php:101
@@ -159,18 +377,12 @@ msgstr ""
 #: includes/admin/class-plans-editor.php:107
 #: includes/admin/class-promotions-page.php:227
 #: includes/admin/class-shipping-discounts-page.php:139
+#: includes/admin/class-staff-page.php:270
 #: includes/admin/class-store-design.php:492
 #: includes/admin/class-terms-page.php:60
+#: includes/class-activity-log.php:228
 #: includes/modules/class-blocks.php:231
 msgid "Delete"
-msgstr ""
-
-#: includes/admin/class-apps-page.php:62
-#: includes/admin/class-terms-page.php:108
-#: includes/class-exit-intent.php:275
-#: includes/class-terms.php:220
-#: includes/class-terms.php:282
-msgid "Close"
 msgstr ""
 
 #: includes/admin/class-apps-page.php:63
@@ -180,6 +392,7 @@ msgid "Copy code"
 msgstr ""
 
 #: includes/admin/class-apps-page.php:64
+#: includes/admin/class-media-page.php:58
 #: includes/class-coupons.php:434
 #: includes/class-exit-intent.php:277
 msgid "Copied"
@@ -278,9 +491,12 @@ msgstr ""
 #: includes/admin/class-apps-page.php:152
 #: includes/admin/class-batch-metabox.php:77
 #: includes/admin/class-batch-orders.php:66
+#: includes/admin/class-blog-admin.php:198
 #: includes/admin/class-list-columns.php:35
 #: includes/admin/class-marketing.php:262
 #: includes/admin/class-plans-editor.php:84
+#: includes/admin/class-staff-page.php:232
+#: includes/admin/class-staff-page.php:256
 #: includes/admin/class-tracking-page.php:93
 msgid "Status"
 msgstr ""
@@ -545,10 +761,6 @@ msgstr ""
 msgid "seconds on the page before the popup can show"
 msgstr ""
 
-#: includes/admin/class-apps-page.php:196
-msgid "Pages"
-msgstr ""
-
 #: includes/admin/class-apps-page.php:197
 msgid "Home page"
 msgstr ""
@@ -635,9 +847,13 @@ msgstr ""
 
 #: includes/admin/class-apps-page.php:214
 #: includes/admin/class-basic-config-page.php:327
+#: includes/admin/class-blog-admin.php:298
+#: includes/admin/class-blog-admin.php:308
+#: includes/admin/class-blog-admin.php:320
 #: includes/admin/class-domains-page.php:127
 #: includes/admin/class-email-center.php:102
 #: includes/admin/class-marketing.php:481
+#: includes/admin/class-media-page.php:84
 #: includes/admin/class-menu-page.php:164
 #: includes/admin/class-menu-page.php:207
 #: includes/admin/class-pixels-page.php:229
@@ -645,6 +861,7 @@ msgstr ""
 #: includes/admin/class-report-metabox.php:192
 #: includes/admin/class-seo-page.php:56
 #: includes/admin/class-shipping-page.php:221
+#: includes/admin/class-staff-page.php:143
 #: includes/admin/class-store-design.php:152
 #: includes/admin/class-tax-page.php:116
 #: includes/admin/class-terms-page.php:114
@@ -673,12 +890,14 @@ msgstr ""
 #: includes/admin/class-basic-config-page.php:98
 #: includes/admin/class-marketing.php:378
 #: includes/admin/class-marketing.php:384
+#: includes/class-activity-log.php:241
 msgid "Enable"
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:98
 #: includes/admin/class-marketing.php:378
 #: includes/admin/class-marketing.php:384
+#: includes/class-activity-log.php:242
 msgid "Disable"
 msgstr ""
 
@@ -1187,6 +1406,9 @@ msgid "State / province"
 msgstr ""
 
 #: includes/admin/class-basic-config-page.php:295
+#: includes/admin/class-media-page.php:395
+#: includes/admin/class-media-page.php:440
+#: includes/admin/class-media-page.php:441
 msgid "Address"
 msgstr ""
 
@@ -1317,6 +1539,7 @@ msgid "Batch details"
 msgstr ""
 
 #: includes/admin/class-batch-metabox.php:30
+#: includes/class-activity-log.php:190
 #: includes/class-post-types.php:56
 msgid "Test reports"
 msgstr ""
@@ -1485,6 +1708,9 @@ msgstr ""
 #: includes/admin/class-batch-orders.php:66
 #: includes/admin/class-email-center.php:264
 #: includes/admin/class-email-center.php:273
+#: includes/admin/class-staff-page.php:230
+#: includes/admin/class-staff-page.php:254
+#: includes/admin/class-staff-page.php:311
 msgid "Email"
 msgstr ""
 
@@ -1517,28 +1743,257 @@ msgstr ""
 msgid "You do not have permission to export these orders."
 msgstr ""
 
-#: includes/admin/class-coupons-page.php:78
-msgid "Search by promotion name or code"
+#: includes/admin/class-blog-admin.php:57
+#: includes/class-activity-log.php:195
+#: includes/class-blog.php:85
+#: includes/class-blog.php:87
+#: includes/class-staff.php:98
+msgid "Blog"
 msgstr ""
 
-#: includes/admin/class-coupons-page.php:80
-#: includes/admin/class-domains-page.php:386
-#: includes/admin/class-domains-page.php:425
-#: includes/admin/class-marketing.php:262
-#: includes/admin/class-menu-page.php:97
-#: includes/admin/class-menu-page.php:278
-#: includes/admin/class-pixels-page.php:127
-#: includes/admin/class-plans-editor.php:84
-#: includes/admin/class-plans-editor.php:114
-#: includes/admin/class-promotions-page.php:95
-#: includes/admin/class-recovery-page.php:164
-#: includes/admin/class-shipping-discounts-page.php:55
-#: includes/admin/class-shipping-page.php:195
-#: includes/admin/class-store-design.php:392
-#: includes/admin/class-store-design.php:446
-#: includes/admin/class-tax-page.php:61
-#: includes/admin/class-terms-page.php:100
-msgid "Actions"
+#: includes/admin/class-blog-admin.php:70
+#: includes/admin/class-blog-admin.php:448
+#: includes/class-blog.php:88
+msgid "Blog posts"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:73
+#: includes/admin/class-blog-admin.php:200
+#: includes/class-blog.php:106
+#: includes/class-blog.php:108
+msgid "Blog collections"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:110
+#: includes/admin/class-blog-admin.php:413
+msgid "Choose cover"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:111
+#: includes/class-blog.php:100
+msgid "Use as cover"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:120
+msgid "Blog settings"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:121
+#: includes/admin/class-blog-admin.php:398
+#: includes/class-topics.php:141
+msgid "SEO"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:122
+#: includes/admin/class-blog-admin.php:160
+msgid "Products shown under the post"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:128
+msgid "Author"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:128
+msgid "Enter the author name"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:129
+msgid "Shown as the author on the storefront. Leave empty to use the account name. Pin a post with “Stick to the top of the blog”; the short description goes in the Excerpt box and the cover is the featured image."
+msgstr ""
+
+#. translators: %d: number of views
+#: includes/admin/class-blog-admin.php:131
+#: includes/class-topics.php:150
+#, php-format
+msgid "Views: %d"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:133
+#: includes/admin/class-blog-admin.php:401
+#: includes/class-topics.php:161
+msgid "Address:"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:139
+msgid "Leave empty to use the post title and short description. The link is the post’s slug (edit it next to the title); after a change the old link redirects to the new one."
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:145
+#: includes/admin/class-seo-page.php:157
+#: includes/class-topics.php:158
+msgid "SEO title"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:146
+#: includes/admin/class-seo-page.php:48
+#: includes/admin/class-seo-page.php:153
+#: includes/admin/class-seo-page.php:158
+#: includes/class-topics.php:159
+msgid "SEO description"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:147
+#: includes/admin/class-seo-page.php:159
+#: includes/class-topics.php:160
+msgid "SEO keywords"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:147
+#: includes/class-topics.php:160
+msgid "Separate keywords with commas"
+msgstr ""
+
+#. translators: %d: maximum number of products
+#: includes/admin/class-blog-admin.php:155
+#, php-format
+msgid "Customers see these products under the post and can open them from there. Up to %d products."
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:160
+msgid "Search for a product…"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:196
+msgid "Blog title"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:197
+msgid "Blog image"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:199
+#: includes/admin/class-blog-admin.php:222
+msgid "Pinned"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:201
+#: includes/admin/class-blog-admin.php:449
+#: includes/class-topics.php:187
+msgid "Visit count"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:202
+#: includes/class-topics.php:188
+msgid "Last modified"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:212
+#: includes/admin/class-plans-editor.php:105
+#: includes/admin/class-report-metabox.php:71
+msgid "Published"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:212
+msgid "Scheduled"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:212
+msgid "Not published"
+msgstr ""
+
+#. translators: %s: post title
+#: includes/admin/class-blog-admin.php:219
+#, php-format
+msgid "Unpin %s"
+msgstr ""
+
+#. translators: %s: post title
+#: includes/admin/class-blog-admin.php:219
+#, php-format
+msgid "Pin %s"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:222
+msgid "Not pinned"
+msgstr ""
+
+#. translators: 1: posts created, 2: posts updated
+#: includes/admin/class-blog-admin.php:255
+#, php-format
+msgid "Import finished: %1$d created, %2$d updated."
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:263
+msgid "Export blog posts"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:266
+msgid "Import blog posts"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:270
+msgid "CSV with the same columns as the export. Posts with the same slug are updated, others are created. Covers are matched to images already in the media library."
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:272
+msgid "CSV file"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:274
+#: includes/admin/class-menu-page.php:252
+#: includes/admin/class-menu-page.php:258
+#: includes/admin/class-seo-page.php:137
+#: includes/class-activity-log.php:233
+msgid "Import"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:324
+msgid "Choose a CSV file (up to 5 MB)."
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:338
+#: includes/admin/class-blog-admin.php:362
+#: includes/class-blog.php:97
+#: includes/class-topics.php:64
+#: includes/class-topics.php:184
+msgid "Cover"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:342
+#: includes/admin/class-blog-admin.php:366
+msgid "Description above the collection"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:344
+msgid "Shown above the posts. HTML is allowed; edit the collection later for the rich text editor."
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:347
+#: includes/admin/class-blog-admin.php:382
+msgid "Description below the collection"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:351
+#: includes/admin/class-blog-admin.php:400
+msgid "Leave empty to use the collection name and description."
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:414
+#: includes/class-blog.php:99
+#: includes/class-topics.php:66
+msgid "Remove cover"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:415
+msgid "Common ratios 4:3, 3:2, 2:1 or 1:1, at least 1000 px wide."
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:446
+msgid "Collection image"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:447
+#: includes/class-blog.php:114
+msgid "Collection name"
+msgstr ""
+
+#: includes/admin/class-blog-admin.php:450
+#: includes/admin/class-store-design.php:445
+msgid "Modified"
+msgstr ""
+
+#: includes/admin/class-coupons-page.php:78
+msgid "Search by promotion name or code"
 msgstr ""
 
 #: includes/admin/class-coupons-page.php:80
@@ -2064,6 +2519,7 @@ msgid "Draft saved"
 msgstr ""
 
 #: includes/admin/class-design-editor.php:130
+#: includes/class-activity-log.php:224
 msgid "Publish"
 msgstr ""
 
@@ -2274,7 +2730,7 @@ msgid "OK"
 msgstr ""
 
 #: includes/admin/class-dialogs.php:34
-#: includes/admin/class-domains-page.php:525
+#: includes/admin/class-domains-page.php:527
 #: includes/admin/class-marketing.php:488
 #: includes/admin/class-marketing.php:513
 #: includes/admin/class-menu-page.php:117
@@ -2286,6 +2742,7 @@ msgstr ""
 #: includes/admin/class-plans-editor.php:145
 #: includes/admin/class-shipping-page.php:108
 #: includes/admin/class-shipping-page.php:197
+#: includes/admin/class-staff-page.php:345
 #: includes/admin/class-tax-page.php:103
 msgid "Cancel"
 msgstr ""
@@ -2324,6 +2781,7 @@ msgid "Select at least one domain."
 msgstr ""
 
 #: includes/admin/class-domains-page.php:180
+#: includes/admin/class-media-page.php:138
 msgid "Choose a bulk action."
 msgstr ""
 
@@ -2363,11 +2821,12 @@ msgstr ""
 
 #: includes/admin/class-domains-page.php:291
 #: includes/admin/class-store-design.php:65
+#: includes/class-activity-log.php:198
 msgid "Domains"
 msgstr ""
 
 #: includes/admin/class-domains-page.php:293
-#: includes/admin/class-domains-page.php:569
+#: includes/admin/class-domains-page.php:571
 msgid "Add domain"
 msgstr ""
 
@@ -2392,13 +2851,13 @@ msgid "The site runs on this computer (%s). Domains on the internet cannot reach
 msgstr ""
 
 #: includes/admin/class-domains-page.php:326
-#: includes/admin/class-domains-page.php:697
-#: includes/admin/class-domains-page.php:733
+#: includes/admin/class-domains-page.php:699
+#: includes/admin/class-domains-page.php:735
 msgid "Server IP"
 msgstr ""
 
 #: includes/admin/class-domains-page.php:328
-#: includes/admin/class-domains-page.php:524
+#: includes/admin/class-domains-page.php:526
 #: includes/admin/class-marketing.php:488
 #: includes/admin/class-marketing.php:513
 #: includes/admin/class-menu-page.php:112
@@ -2406,9 +2865,11 @@ msgstr ""
 #: includes/admin/class-seo-page.php:160
 #: includes/admin/class-shipping-page.php:108
 #: includes/admin/class-shipping-page.php:197
+#: includes/admin/class-staff-page.php:344
 #: includes/admin/class-tax-page.php:103
 #: includes/admin/class-terms-page.php:103
 #: includes/admin/class-tracking-page.php:297
+#: includes/class-activity-log.php:231
 msgid "Save"
 msgstr ""
 
@@ -2417,8 +2878,8 @@ msgid "The DNS records point domains to this address. Fill it in once the site i
 msgstr ""
 
 #: includes/admin/class-domains-page.php:340
-#: includes/admin/class-domains-page.php:391
-#: includes/admin/class-domains-page.php:445
+#: includes/admin/class-domains-page.php:392
+#: includes/admin/class-domains-page.php:447
 msgid "HTTPS status"
 msgstr ""
 
@@ -2427,10 +2888,10 @@ msgid "All HTTPS statuses"
 msgstr ""
 
 #: includes/admin/class-domains-page.php:346
-#: includes/admin/class-domains-page.php:393
-#: includes/admin/class-domains-page.php:447
-#: includes/admin/class-domains-page.php:713
-#: includes/admin/class-domains-page.php:737
+#: includes/admin/class-domains-page.php:394
+#: includes/admin/class-domains-page.php:449
+#: includes/admin/class-domains-page.php:715
+#: includes/admin/class-domains-page.php:739
 msgid "Connection status"
 msgstr ""
 
@@ -2447,21 +2908,12 @@ msgid "Created until"
 msgstr ""
 
 #: includes/admin/class-domains-page.php:357
-#: includes/admin/class-domains-page.php:605
+#: includes/admin/class-domains-page.php:607
 msgid "Enter a domain"
 msgstr ""
 
 #: includes/admin/class-domains-page.php:357
 msgid "Search domains"
-msgstr ""
-
-#: includes/admin/class-domains-page.php:358
-#: includes/admin/class-recovery-page.php:161
-msgid "Filter"
-msgstr ""
-
-#: includes/admin/class-domains-page.php:360
-msgid "Clear filters"
 msgstr ""
 
 #: includes/admin/class-domains-page.php:364
@@ -2470,325 +2922,337 @@ msgstr ""
 
 #: includes/admin/class-domains-page.php:370
 #: includes/admin/class-domains-page.php:372
+#: includes/admin/class-media-page.php:373
+#: includes/admin/class-media-page.php:375
 msgid "Bulk actions"
 msgstr ""
 
 #: includes/admin/class-domains-page.php:373
-#: includes/admin/class-domains-page.php:427
-#: includes/admin/class-domains-page.php:755
+#: includes/admin/class-domains-page.php:429
+#: includes/admin/class-domains-page.php:757
 msgid "Check now"
 msgstr ""
 
 #: includes/admin/class-domains-page.php:376
+#: includes/admin/class-media-page.php:380
 msgid "Apply bulk action"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:384
+#: includes/admin/class-domains-page.php:385
 #: includes/admin/class-marketing.php:392
+#: includes/admin/class-media-page.php:392
+#: includes/admin/class-media-page.php:530
 #: includes/admin/class-menu-page.php:123
+#: includes/admin/class-staff-page.php:334
 msgid "Select all"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:387
-#: includes/admin/class-domains-page.php:436
+#: includes/admin/class-domains-page.php:388
+#: includes/admin/class-domains-page.php:438
 msgid "ID"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:388
-#: includes/admin/class-domains-page.php:437
-#: includes/admin/class-domains-page.php:604
-#: includes/admin/class-domains-page.php:708
-#: includes/admin/class-domains-page.php:724
+#: includes/admin/class-domains-page.php:389
+#: includes/admin/class-domains-page.php:439
+#: includes/admin/class-domains-page.php:606
+#: includes/admin/class-domains-page.php:710
+#: includes/admin/class-domains-page.php:726
 #: includes/admin/class-seo-page.php:139
 #: includes/admin/class-store-design.php:392
 #: includes/admin/class-store-design.php:414
 msgid "Domain"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:389
-#: includes/admin/class-domains-page.php:443
+#: includes/admin/class-domains-page.php:390
+#: includes/admin/class-domains-page.php:445
 msgid "Redirects to"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:390
-#: includes/admin/class-domains-page.php:440
-#: includes/admin/class-domains-page.php:444
-#: includes/admin/class-domains-page.php:462
+#: includes/admin/class-domains-page.php:391
+#: includes/admin/class-domains-page.php:442
+#: includes/admin/class-domains-page.php:446
+#: includes/admin/class-domains-page.php:464
 msgid "Primary domain"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:391
+#: includes/admin/class-domains-page.php:392
 msgid "Checked every hour for 7 days. When HTTPS works, http visits are sent to https."
 msgstr ""
 
-#: includes/admin/class-domains-page.php:392
-#: includes/admin/class-domains-page.php:446
-#: includes/admin/class-domains-page.php:658
+#: includes/admin/class-domains-page.php:393
+#: includes/admin/class-domains-page.php:448
+#: includes/admin/class-domains-page.php:660
 msgid "CDN"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:393
+#: includes/admin/class-domains-page.php:394
 msgid "Checked every hour for 7 days, then daily: whether the domain really opens this store."
 msgstr ""
 
-#: includes/admin/class-domains-page.php:394
-#: includes/admin/class-domains-page.php:453
+#: includes/admin/class-domains-page.php:395
+#: includes/admin/class-domains-page.php:455
 #: includes/admin/class-recovery-page.php:160
+#: includes/admin/class-staff-page.php:234
+#: includes/admin/class-staff-page.php:265
 msgid "Created"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:399
+#: includes/admin/class-domains-page.php:400
 msgid "No domains match."
 msgstr ""
 
 #. translators: %s: date and time
-#: includes/admin/class-domains-page.php:416
+#: includes/admin/class-domains-page.php:418
 #, php-format
 msgid "Last checked: %s"
 msgstr ""
 
 #. translators: %s: date and time
-#: includes/admin/class-domains-page.php:416
+#: includes/admin/class-domains-page.php:418
 msgid "Not checked yet"
 msgstr ""
 
 #. translators: %s: domain
-#: includes/admin/class-domains-page.php:422
+#. translators: %s: file name
+#. translators: %s: address
+#: includes/admin/class-domains-page.php:424
+#: includes/admin/class-media-page.php:422
+#: includes/admin/class-media-page.php:544
 #, php-format
 msgid "Select %s"
 msgstr ""
 
 #. translators: %s: domain
-#: includes/admin/class-domains-page.php:427
+#: includes/admin/class-domains-page.php:429
 #, php-format
 msgid "Check %s now"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:429
-#: includes/admin/class-domains-page.php:495
+#: includes/admin/class-domains-page.php:431
+#: includes/admin/class-domains-page.php:497
 msgid "Domain redirect"
 msgstr ""
 
 #. translators: %s: domain
-#: includes/admin/class-domains-page.php:429
+#: includes/admin/class-domains-page.php:431
 #, php-format
 msgid "Set the redirect for %s"
 msgstr ""
 
 #. translators: %s: domain
-#: includes/admin/class-domains-page.php:430
+#: includes/admin/class-domains-page.php:432
 #, php-format
 msgid "Delete %s? Visitors on it will no longer stay on that domain."
 msgstr ""
 
 #. translators: %s: domain
-#: includes/admin/class-domains-page.php:430
+#: includes/admin/class-domains-page.php:432
 #, php-format
 msgid "Delete %s"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:467
+#: includes/admin/class-domains-page.php:469
 msgid "Only a connected domain can become the primary domain."
 msgstr ""
 
-#: includes/admin/class-domains-page.php:469
+#: includes/admin/class-domains-page.php:471
 msgid "This domain redirects to another domain."
 msgstr ""
 
-#: includes/admin/class-domains-page.php:472
+#: includes/admin/class-domains-page.php:474
 msgid "Not the primary domain."
 msgstr ""
 
 #. translators: %s: domain
-#: includes/admin/class-domains-page.php:476
+#: includes/admin/class-domains-page.php:478
 #, php-format
 msgid "Make %s the primary domain? The site address changes to this domain, so links in the store, in emails and in the admin use it. Other bound domains keep working."
 msgstr ""
 
 #. translators: %s: domain
-#: includes/admin/class-domains-page.php:482
+#: includes/admin/class-domains-page.php:484
 #, php-format
 msgid "Make %s the primary domain"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:497
+#: includes/admin/class-domains-page.php:499
 #: includes/class-domains.php:267
 msgid "The primary domain cannot redirect. Switch the primary domain first."
 msgstr ""
 
 #. translators: %s: domain
-#: includes/admin/class-domains-page.php:507
+#: includes/admin/class-domains-page.php:509
 #, php-format
 msgid "Visits to %s go to"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:511
+#: includes/admin/class-domains-page.php:513
 msgid "No redirect (stay on this domain)"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:522
+#: includes/admin/class-domains-page.php:524
 msgid "The page address stays the same, only the domain changes (301 redirect). Domains that redirect themselves are not offered, so redirects never chain."
 msgstr ""
 
-#: includes/admin/class-domains-page.php:562
+#: includes/admin/class-domains-page.php:564
 msgid "Enter domain"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:563
+#: includes/admin/class-domains-page.php:565
 msgid "Choose CDN"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:564
-#: includes/admin/class-domains-page.php:682
+#: includes/admin/class-domains-page.php:566
+#: includes/admin/class-domains-page.php:684
 msgid "Add DNS records"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:565
+#: includes/admin/class-domains-page.php:567
 msgid "Done"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:568
-#: includes/admin/class-domains-page.php:775
+#: includes/admin/class-domains-page.php:570
+#: includes/admin/class-domains-page.php:777
 msgid "Back to the domain list"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:593
+#: includes/admin/class-domains-page.php:595
 msgid "Bind a domain"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:594
+#: includes/admin/class-domains-page.php:596
 msgid "Bind a domain you already own to the store, so customers who know the domain can find the store and shop."
 msgstr ""
 
-#: includes/admin/class-domains-page.php:595
+#: includes/admin/class-domains-page.php:597
 msgid "By default the domain and its “www” subdomain are both bound: entering example.com binds example.com and www.example.com."
 msgstr ""
 
-#: includes/admin/class-domains-page.php:608
+#: includes/admin/class-domains-page.php:610
 msgid "Only bind the domain I entered"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:609
+#: includes/admin/class-domains-page.php:611
 msgid "Checked: only this domain is bound. Unchecked: the domain and its www subdomain are bound (check with care)."
 msgstr ""
 
-#: includes/admin/class-domains-page.php:612
+#: includes/admin/class-domains-page.php:614
 msgid "Add several domains"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:614
+#: includes/admin/class-domains-page.php:616
 msgid "One domain per line"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:618
-#: includes/admin/class-domains-page.php:668
-#: includes/admin/class-domains-page.php:756
+#: includes/admin/class-domains-page.php:620
+#: includes/admin/class-domains-page.php:670
+#: includes/admin/class-domains-page.php:758
 msgid "Next"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:630
+#: includes/admin/class-domains-page.php:632
 msgid "The domain’s DNS is managed in Cloudflare with the proxy on (orange cloud). Cloudflare provides the HTTPS certificate."
 msgstr ""
 
-#: includes/admin/class-domains-page.php:631
+#: includes/admin/class-domains-page.php:633
 msgid "Another CDN speeds up the store. Add the domain in the CDN with the server IP as the origin, then point the domain to the address the CDN gives you."
 msgstr ""
 
-#: includes/admin/class-domains-page.php:632
+#: includes/admin/class-domains-page.php:634
 msgid "Point the domain straight to the server at your domain registrar. The server needs its own HTTPS certificate."
 msgstr ""
 
-#: includes/admin/class-domains-page.php:636
+#: includes/admin/class-domains-page.php:638
 msgid "Choose a CDN"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:637
+#: includes/admin/class-domains-page.php:639
 msgid "Domains to bind:"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:642
+#: includes/admin/class-domains-page.php:644
 msgid "Already bound, skipped"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:648
+#: includes/admin/class-domains-page.php:650
 #: includes/class-domains.php:198
 msgid "These domains are already bound."
 msgstr ""
 
-#: includes/admin/class-domains-page.php:649
-#: includes/admin/class-domains-page.php:667
+#: includes/admin/class-domains-page.php:651
+#: includes/admin/class-domains-page.php:669
 msgid "Previous"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:683
+#: includes/admin/class-domains-page.php:685
 msgid "Add these records where the domain’s DNS is managed. They usually take effect within minutes, sometimes up to 48 hours."
 msgstr ""
 
-#: includes/admin/class-domains-page.php:686
+#: includes/admin/class-domains-page.php:688
 msgid "In Cloudflare → DNS, add the records below and keep the proxy on (orange cloud)."
 msgstr ""
 
-#: includes/admin/class-domains-page.php:687
+#: includes/admin/class-domains-page.php:689
 msgid "In Cloudflare → SSL/TLS, choose “Full” when the server has a certificate, otherwise “Flexible”."
 msgstr ""
 
-#: includes/admin/class-domains-page.php:689
+#: includes/admin/class-domains-page.php:691
 msgid "In the CDN, add each domain and set the origin to the server IP."
 msgstr ""
 
-#: includes/admin/class-domains-page.php:690
+#: includes/admin/class-domains-page.php:692
 msgid "Then add a CNAME record pointing to the address the CDN gives you. Many registrars do not allow a CNAME on “@”; follow the CDN’s instructions for the root domain."
 msgstr ""
 
-#: includes/admin/class-domains-page.php:692
+#: includes/admin/class-domains-page.php:694
 msgid "At your domain registrar, add the records below."
 msgstr ""
 
-#: includes/admin/class-domains-page.php:693
+#: includes/admin/class-domains-page.php:695
 msgid "Install an HTTPS certificate on the server (for example Let’s Encrypt)."
 msgstr ""
 
-#: includes/admin/class-domains-page.php:701
+#: includes/admin/class-domains-page.php:703
 msgid "Not filled in yet. Fill it in on the domain list once the site is on a server."
-msgstr ""
-
-#: includes/admin/class-domains-page.php:709
-#: includes/admin/class-domains-page.php:725
-msgid "Record type"
-msgstr ""
-
-#: includes/admin/class-domains-page.php:710
-#: includes/admin/class-domains-page.php:726
-msgid "Host record"
 msgstr ""
 
 #: includes/admin/class-domains-page.php:711
 #: includes/admin/class-domains-page.php:727
-msgid "Record value"
+msgid "Record type"
 msgstr ""
 
 #: includes/admin/class-domains-page.php:712
-#: includes/admin/class-domains-page.php:736
+#: includes/admin/class-domains-page.php:728
+msgid "Host record"
+msgstr ""
+
+#: includes/admin/class-domains-page.php:713
+#: includes/admin/class-domains-page.php:729
+msgid "Record value"
+msgstr ""
+
+#: includes/admin/class-domains-page.php:714
+#: includes/admin/class-domains-page.php:738
 msgid "Current DNS"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:731
+#: includes/admin/class-domains-page.php:733
 msgid "Address from your CDN"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:736
+#: includes/admin/class-domains-page.php:738
 msgid "No records found"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:767
+#: includes/admin/class-domains-page.php:769
 msgid "Domain added"
 msgstr ""
 
-#: includes/admin/class-domains-page.php:773
+#: includes/admin/class-domains-page.php:775
 msgid "The domain is checked every hour for the next 7 days. Once it is connected and HTTPS works, the list shows it and http visits go to https automatically."
 msgstr ""
 
-#: includes/admin/class-domains-page.php:776
+#: includes/admin/class-domains-page.php:778
 msgid "Add another domain"
 msgstr ""
 
@@ -2998,6 +3462,8 @@ msgstr ""
 #: includes/admin/class-pixels-page.php:53
 #: includes/admin/class-pixels-page.php:77
 #: includes/admin/class-plans-editor.php:35
+#: includes/admin/class-staff-page.php:268
+#: includes/class-activity-log.php:223
 msgid "Edit"
 msgstr ""
 
@@ -3033,12 +3499,6 @@ msgstr ""
 
 #: includes/admin/class-email-center.php:273
 msgid "Latest emails"
-msgstr ""
-
-#: includes/admin/class-email-center.php:273
-#: includes/admin/class-pixels-page.php:189
-#: includes/admin/class-tracking-page.php:124
-msgid "Time"
 msgstr ""
 
 #: includes/admin/class-email-center.php:273
@@ -3089,6 +3549,8 @@ msgid "Batch"
 msgstr ""
 
 #: includes/admin/class-list-columns.php:76
+#: includes/admin/class-media-page.php:397
+#: includes/admin/class-media-page.php:445
 #: includes/admin/class-report-metabox.php:109
 msgid "Type"
 msgstr ""
@@ -3320,15 +3782,19 @@ msgid "Ended"
 msgstr ""
 
 #: includes/admin/class-marketing.php:353
+#: includes/admin/class-media-page.php:342
 #: includes/admin/class-shipping-page.php:72
 msgid "Search"
 msgstr ""
 
+#. translators: %s: account
 #: includes/admin/class-marketing.php:362
+#: includes/admin/class-staff-page.php:259
 msgid "Disabled"
 msgstr ""
 
 #: includes/admin/class-marketing.php:378
+#: includes/admin/class-media-page.php:495
 #: includes/admin/class-tracking-page.php:146
 msgid "Apply"
 msgstr ""
@@ -3345,15 +3811,8 @@ msgid_plural "%d records"
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/admin/class-marketing.php:402
-msgid "Previous page"
-msgstr ""
-
-#: includes/admin/class-marketing.php:406
-msgid "Next page"
-msgstr ""
-
 #: includes/admin/class-marketing.php:408
+#: includes/admin/class-media-page.php:484
 msgid "Items per page"
 msgstr ""
 
@@ -3402,6 +3861,290 @@ msgstr ""
 #: includes/admin/class-marketing.php:512
 #, php-format
 msgid "If the page does not contain %s yet, it is added at the end of the page."
+msgstr ""
+
+#: includes/admin/class-media-page.php:39
+#: includes/class-staff.php:113
+msgid "Admin settings"
+msgstr ""
+
+#: includes/admin/class-media-page.php:40
+#: includes/class-activity-log.php:206
+msgid "Media library"
+msgstr ""
+
+#: includes/admin/class-media-page.php:59
+msgid "Delete the selected media files? They are removed from the server and disappear wherever they are used (products, posts)."
+msgstr ""
+
+#. translators: 1: addresses added, 2: collected now, 3: failed
+#: includes/admin/class-media-page.php:115
+#, php-format
+msgid "Added to the queue: %1$d. Collected now: %2$d, failed: %3$d. The rest are collected in the background."
+msgstr ""
+
+#: includes/admin/class-media-page.php:122
+msgid "Select at least one media file."
+msgstr ""
+
+#. translators: %d: number of files
+#: includes/admin/class-media-page.php:131
+#, php-format
+msgid "Media files deleted: %d."
+msgstr ""
+
+#. translators: %d: number of files
+#: includes/admin/class-media-page.php:136
+#, php-format
+msgid "Group changed for %d media files."
+msgstr ""
+
+#: includes/admin/class-media-page.php:147
+msgid "Group created."
+msgstr ""
+
+#: includes/admin/class-media-page.php:154
+msgid "Group renamed."
+msgstr ""
+
+#: includes/admin/class-media-page.php:159
+msgid "Group deleted. Its media files are now ungrouped."
+msgstr ""
+
+#. translators: 1: collected, 2: failed
+#: includes/admin/class-media-page.php:169
+#, php-format
+msgid "Collected: %1$d, failed: %2$d."
+msgstr ""
+
+#: includes/admin/class-media-page.php:171
+msgid "Select at least one address."
+msgstr ""
+
+#. translators: %d: number of addresses
+#: includes/admin/class-media-page.php:174
+#, php-format
+msgid "Queued again: %d."
+msgstr ""
+
+#. translators: %d: number of addresses
+#: includes/admin/class-media-page.php:177
+#, php-format
+msgid "Removed from the queue: %d."
+msgstr ""
+
+#. translators: %d: number of files
+#: includes/admin/class-media-page.php:217
+#, php-format
+msgid "Uploaded: %d."
+msgstr ""
+
+#: includes/admin/class-media-page.php:233
+#: includes/admin/class-media-page.php:295
+msgid "All media"
+msgstr ""
+
+#: includes/admin/class-media-page.php:234
+msgid "Being collected"
+msgstr ""
+
+#: includes/admin/class-media-page.php:235
+msgid "Retrying"
+msgstr ""
+
+#: includes/admin/class-media-page.php:236
+msgid "Collection failed"
+msgstr ""
+
+#: includes/admin/class-media-page.php:241
+msgid "Media center"
+msgstr ""
+
+#: includes/admin/class-media-page.php:245
+msgid "Export media"
+msgstr ""
+
+#: includes/admin/class-media-page.php:249
+msgid "Media views"
+msgstr ""
+
+#: includes/admin/class-media-page.php:293
+#: includes/class-media-library.php:59
+msgid "Media groups"
+msgstr ""
+
+#: includes/admin/class-media-page.php:296
+msgid "Ungrouped"
+msgstr ""
+
+#: includes/admin/class-media-page.php:302
+msgid "New group"
+msgstr ""
+
+#: includes/admin/class-media-page.php:306
+#: includes/admin/class-media-page.php:307
+#: includes/admin/class-media-page.php:319
+msgid "Group name"
+msgstr ""
+
+#: includes/admin/class-media-page.php:308
+#: includes/admin/class-menu-page.php:268
+#: includes/admin/class-store-design.php:283
+#: includes/class-activity-log.php:222
+msgid "Create"
+msgstr ""
+
+#: includes/admin/class-media-page.php:313
+msgid "Rename or delete this group"
+msgstr ""
+
+#: includes/admin/class-media-page.php:321
+msgid "Rename"
+msgstr ""
+
+#: includes/admin/class-media-page.php:323
+msgid "Delete this group? Its media files are kept and become ungrouped."
+msgstr ""
+
+#: includes/admin/class-media-page.php:327
+msgid "Delete group"
+msgstr ""
+
+#: includes/admin/class-media-page.php:340
+msgid "Search media"
+msgstr ""
+
+#: includes/admin/class-media-page.php:341
+msgid "Enter a media name"
+msgstr ""
+
+#: includes/admin/class-media-page.php:345
+msgid "Upload media"
+msgstr ""
+
+#. translators: %d: maximum number of files
+#: includes/admin/class-media-page.php:350
+#, php-format
+msgid "Files (up to %d at a time)"
+msgstr ""
+
+#: includes/admin/class-media-page.php:352
+#: includes/class-activity-log.php:234
+msgid "Upload"
+msgstr ""
+
+#: includes/admin/class-media-page.php:356
+msgid "Collect from addresses"
+msgstr ""
+
+#. translators: %d: maximum number of addresses
+#: includes/admin/class-media-page.php:361
+#, php-format
+msgid "Image, video or PDF addresses, one per line (up to %d)"
+msgstr ""
+
+#: includes/admin/class-media-page.php:363
+#: includes/class-activity-log.php:235
+msgid "Collect"
+msgstr ""
+
+#: includes/admin/class-media-page.php:376
+msgid "Change group to…"
+msgstr ""
+
+#: includes/admin/class-media-page.php:377
+msgid "Delete permanently"
+msgstr ""
+
+#. translators: %d: number of media files
+#: includes/admin/class-media-page.php:384
+#, php-format
+msgid "%d items"
+msgstr ""
+
+#. translators: %s: file name
+#: includes/admin/class-media-page.php:393
+#: includes/admin/class-media-page.php:423
+msgid "Media file"
+msgstr ""
+
+#: includes/admin/class-media-page.php:394
+#: includes/admin/class-media-page.php:439
+msgid "Size (px)"
+msgstr ""
+
+#: includes/admin/class-media-page.php:396
+#: includes/admin/class-media-page.php:444
+msgid "File size"
+msgstr ""
+
+#: includes/admin/class-media-page.php:398
+#: includes/admin/class-media-page.php:446
+#: includes/admin/class-media-page.php:454
+#: includes/admin/class-media-page.php:532
+#: includes/admin/class-media-page.php:546
+msgid "Group"
+msgstr ""
+
+#. translators: %s: address
+#: includes/admin/class-media-page.php:399
+#: includes/admin/class-media-page.php:447
+#: includes/admin/class-media-page.php:531
+#: includes/admin/class-media-page.php:545
+msgid "Collected from"
+msgstr ""
+
+#: includes/admin/class-media-page.php:404
+msgid "No media files here."
+msgstr ""
+
+#: includes/admin/class-media-page.php:442
+#: includes/admin/class-plans-editor.php:145
+msgid "Copy"
+msgstr ""
+
+#: includes/admin/class-media-page.php:456
+msgid "No group"
+msgstr ""
+
+#. translators: %d: items per page
+#: includes/admin/class-media-page.php:490
+#, php-format
+msgid "%d per page"
+msgstr ""
+
+#: includes/admin/class-media-page.php:512
+msgid "These addresses could not be downloaded. Check the reason, then retry or remove them."
+msgstr ""
+
+#: includes/admin/class-media-page.php:514
+msgid "Waiting addresses are downloaded in the background, a few at a time. “Collect now” downloads the next few immediately."
+msgstr ""
+
+#: includes/admin/class-media-page.php:520
+msgid "Retry selected"
+msgstr ""
+
+#: includes/admin/class-media-page.php:522
+msgid "Collect now"
+msgstr ""
+
+#: includes/admin/class-media-page.php:524
+msgid "Remove selected"
+msgstr ""
+
+#: includes/admin/class-media-page.php:533
+#: includes/admin/class-media-page.php:547
+msgid "Attempts"
+msgstr ""
+
+#: includes/admin/class-media-page.php:535
+#: includes/admin/class-media-page.php:549
+msgid "Added"
+msgstr ""
+
+#: includes/admin/class-media-page.php:540
+msgid "Nothing here."
 msgstr ""
 
 #: includes/admin/class-menu-page.php:84
@@ -3632,6 +4375,7 @@ msgid "Text decoration"
 msgstr ""
 
 #: includes/admin/class-menu-page.php:147
+#: includes/admin/class-staff-page.php:255
 #: includes/modules/class-registry.php:137
 msgid "None"
 msgstr ""
@@ -3688,13 +4432,8 @@ msgid "Menus & navigation"
 msgstr ""
 
 #: includes/admin/class-menu-page.php:250
+#: includes/class-activity-log.php:232
 msgid "Export"
-msgstr ""
-
-#: includes/admin/class-menu-page.php:252
-#: includes/admin/class-menu-page.php:258
-#: includes/admin/class-seo-page.php:137
-msgid "Import"
 msgstr ""
 
 #: includes/admin/class-menu-page.php:256
@@ -3711,11 +4450,6 @@ msgstr ""
 
 #: includes/admin/class-menu-page.php:263
 msgid "New menu"
-msgstr ""
-
-#: includes/admin/class-menu-page.php:268
-#: includes/admin/class-store-design.php:283
-msgid "Create"
 msgstr ""
 
 #: includes/admin/class-menu-page.php:281
@@ -4039,6 +4773,8 @@ msgid "Shop"
 msgstr ""
 
 #: includes/admin/class-overview-page.php:199
+#: includes/admin/class-staff-page.php:228
+#: includes/admin/class-staff-page.php:247
 #: includes/admin/class-tracking-page.php:133
 #: includes/admin/class-tracking-page.php:174
 msgid "Account"
@@ -4357,11 +5093,6 @@ msgstr ""
 msgid "Platform"
 msgstr ""
 
-#: includes/admin/class-pixels-page.php:189
-#: includes/admin/class-tracking-page.php:126
-msgid "Event"
-msgstr ""
-
 #: includes/admin/class-pixels-page.php:197
 #: includes/admin/class-seo-page.php:169
 msgid "Notes"
@@ -4515,11 +5246,6 @@ msgid "Plan deleted."
 msgstr ""
 
 #: includes/admin/class-plans-editor.php:105
-#: includes/admin/class-report-metabox.php:71
-msgid "Published"
-msgstr ""
-
-#: includes/admin/class-plans-editor.php:105
 msgid "Unpublished"
 msgstr ""
 
@@ -4579,8 +5305,10 @@ msgstr ""
 msgid "Shown to customers at checkout, e.g. UPS • FedEx • USPS"
 msgstr ""
 
+#. translators: %s: account
 #: includes/admin/class-plans-editor.php:135
 #: includes/admin/class-shipping-page.php:195
+#: includes/admin/class-staff-page.php:259
 #: includes/admin/class-store-design.php:538
 msgid "Enabled"
 msgstr ""
@@ -4617,10 +5345,6 @@ msgstr ""
 
 #: includes/admin/class-plans-editor.php:144
 msgid "Add the rates of another plan to this plan."
-msgstr ""
-
-#: includes/admin/class-plans-editor.php:145
-msgid "Copy"
 msgstr ""
 
 #: includes/admin/class-product-panel.php:37
@@ -5010,12 +5734,6 @@ msgstr ""
 msgid "No abandoned checkouts yet."
 msgstr ""
 
-#. translators: %d: number of records
-#: includes/admin/class-recovery-page.php:178
-#, php-format
-msgid "%d records"
-msgstr ""
-
 #: includes/admin/class-recovery-page.php:196
 #: includes/admin/class-tracking-page.php:128
 #: includes/class-coupons.php:462
@@ -5198,13 +5916,6 @@ msgstr ""
 msgid "Page title"
 msgstr ""
 
-#: includes/admin/class-seo-page.php:48
-#: includes/admin/class-seo-page.php:153
-#: includes/admin/class-seo-page.php:158
-#: includes/class-topics.php:159
-msgid "SEO description"
-msgstr ""
-
 #: includes/admin/class-seo-page.php:122
 #: includes/admin/class-store-design.php:64
 msgid "Homepage SEO"
@@ -5247,21 +5958,11 @@ msgid "Domains with their own SEO: %s"
 msgstr ""
 
 #: includes/admin/class-seo-page.php:157
-#: includes/class-topics.php:158
-msgid "SEO title"
-msgstr ""
-
-#: includes/admin/class-seo-page.php:157
 msgid "Shown as the title in search results"
 msgstr ""
 
 #: includes/admin/class-seo-page.php:158
 msgid "Shown under the title in search results"
-msgstr ""
-
-#: includes/admin/class-seo-page.php:159
-#: includes/class-topics.php:160
-msgid "SEO keywords"
 msgstr ""
 
 #: includes/admin/class-seo-page.php:159
@@ -5780,16 +6481,164 @@ msgstr ""
 msgid "Enter a plan name."
 msgstr ""
 
+#: includes/admin/class-staff-page.php:39
+#: includes/admin/class-staff-page.php:219
+#: includes/class-activity-log.php:207
+msgid "Staff"
+msgstr ""
+
+#: includes/admin/class-staff-page.php:84
+msgid "Enter a valid email address."
+msgstr ""
+
+#. translators: %d: minimum length
+#: includes/admin/class-staff-page.php:88
+#, php-format
+msgid "The password needs at least %d characters."
+msgstr ""
+
+#: includes/admin/class-staff-page.php:97
+msgid "This account is not a staff account."
+msgstr ""
+
+#: includes/admin/class-staff-page.php:107
+msgid "Enter an account name (letters, numbers, - _ . @)."
+msgstr ""
+
+#: includes/admin/class-staff-page.php:166
+msgid "Staff account saved."
+msgstr ""
+
+#: includes/admin/class-staff-page.php:166
+msgid "Staff account created. Tell the staff member the account name and password."
+msgstr ""
+
+#: includes/admin/class-staff-page.php:174
+msgid "Staff account disabled. It is logged out and cannot log in."
+msgstr ""
+
+#: includes/admin/class-staff-page.php:174
+msgid "Staff account enabled."
+msgstr ""
+
+#: includes/admin/class-staff-page.php:182
+msgid "Staff account deleted. Its posts and products now belong to you."
+msgstr ""
+
+#: includes/admin/class-staff-page.php:220
+#: includes/admin/class-staff-page.php:297
+msgid "Add staff"
+msgstr ""
+
+#: includes/admin/class-staff-page.php:223
+msgid "Staff only see and open the menus ticked for them. Administrators always have every permission. All changes are written to the activity log."
+msgstr ""
+
+#: includes/admin/class-staff-page.php:229
+#: includes/admin/class-staff-page.php:253
+#: includes/admin/class-staff-page.php:315
+#: includes/admin/class-terms-page.php:54
+msgid "Name"
+msgstr ""
+
+#: includes/admin/class-staff-page.php:233
+#: includes/admin/class-staff-page.php:264
+msgid "Last login"
+msgstr ""
+
+#: includes/admin/class-staff-page.php:250
+#: includes/class-activity-log.php:250
+msgid "Administrator"
+msgstr ""
+
+#: includes/admin/class-staff-page.php:255
+msgid "All permissions"
+msgstr ""
+
+#. translators: %s: account
+#: includes/admin/class-staff-page.php:258
+#, php-format
+msgid "Enable %s"
+msgstr ""
+
+#. translators: %s: account
+#: includes/admin/class-staff-page.php:258
+#, php-format
+msgid "Disable %s"
+msgstr ""
+
+#. translators: %s: account
+#: includes/admin/class-staff-page.php:258
+msgid "Enable this staff account?"
+msgstr ""
+
+#. translators: %s: account
+#: includes/admin/class-staff-page.php:258
+msgid "Disable this staff account? It is logged out at once and cannot log in until enabled again."
+msgstr ""
+
+#: includes/admin/class-staff-page.php:270
+msgid "Delete this staff account? Its posts and products are kept and moved to you."
+msgstr ""
+
+#: includes/admin/class-staff-page.php:296
+msgid "Back to staff"
+msgstr ""
+
+#: includes/admin/class-staff-page.php:297
+msgid "Edit staff"
+msgstr ""
+
+#: includes/admin/class-staff-page.php:304
+msgid "Account name"
+msgstr ""
+
+#: includes/admin/class-staff-page.php:307
+msgid "The account name cannot be changed."
+msgstr ""
+
+#: includes/admin/class-staff-page.php:319
+msgid "Password"
+msgstr ""
+
+#: includes/admin/class-staff-page.php:325
+msgid "Leave empty to keep the current password. A new password logs the staff member out everywhere."
+msgstr ""
+
+#. translators: %d: minimum length
+#: includes/admin/class-staff-page.php:327
+#, php-format
+msgid "At least %d characters. Tell the staff member the account name and password yourself."
+msgstr ""
+
+#: includes/admin/class-staff-page.php:333
+msgid "Permissions (menus this staff member can use)"
+msgstr ""
+
+#: includes/admin/class-staff-page.php:338
+msgid "Staff management, plugins, users and WordPress settings stay with administrators."
+msgstr ""
+
+#: includes/admin/class-staff-page.php:341
+msgid "Disable this account (cannot log in)"
+msgstr ""
+
+#: includes/admin/class-staff-page.php:344
+msgid "Create staff account"
+msgstr ""
+
 #: includes/admin/class-store-design.php:61
 #: includes/admin/class-store-design.php:241
 msgid "Theme design"
 msgstr ""
 
 #: includes/admin/class-store-design.php:63
+#: includes/class-activity-log.php:197
 msgid "Custom pages"
 msgstr ""
 
 #: includes/admin/class-store-design.php:66
+#: includes/class-activity-log.php:199
 #: includes/class-topics.php:54
 #: includes/class-topics.php:63
 msgid "Campaign pages"
@@ -5797,6 +6646,8 @@ msgstr ""
 
 #: includes/admin/class-store-design.php:72
 #: includes/admin/class-store-design.php:73
+#: includes/class-activity-log.php:196
+#: includes/class-staff.php:103
 msgid "Store design"
 msgstr ""
 
@@ -5949,10 +6800,6 @@ msgstr ""
 
 #: includes/admin/class-store-design.php:441
 msgid "Theme"
-msgstr ""
-
-#: includes/admin/class-store-design.php:445
-msgid "Modified"
 msgstr ""
 
 #: includes/admin/class-store-design.php:462
@@ -6286,10 +7133,6 @@ msgstr ""
 msgid "Enter the term name"
 msgstr ""
 
-#: includes/admin/class-terms-page.php:54
-msgid "Name"
-msgstr ""
-
 #: includes/admin/class-terms-page.php:55
 #: includes/modules/class-registry.php:39
 #: includes/modules/class-registry.php:824
@@ -6451,11 +7294,6 @@ msgstr ""
 msgid "Visitor"
 msgstr ""
 
-#: includes/admin/class-tracking-page.php:108
-#: includes/tracking/class-privacy.php:167
-msgid "Device"
-msgstr ""
-
 #: includes/admin/class-tracking-page.php:109
 msgid "Open pages"
 msgstr ""
@@ -6542,10 +7380,6 @@ msgstr ""
 msgid "Could not load: %s"
 msgstr ""
 
-#: includes/admin/class-tracking-page.php:140
-msgid "From"
-msgstr ""
-
 #: includes/admin/class-tracking-page.php:142
 msgid "All devices"
 msgstr ""
@@ -6587,7 +7421,6 @@ msgid "Day"
 msgstr ""
 
 #: includes/admin/class-tracking-page.php:157
-#: includes/class-topics.php:187
 msgid "Views"
 msgstr ""
 
@@ -6887,10 +7720,191 @@ msgstr ""
 msgid "Visit not found."
 msgstr ""
 
+#: includes/class-activity-log.php:186
+msgid "Login"
+msgstr ""
+
+#: includes/class-activity-log.php:189
+msgid "Reviews"
+msgstr ""
+
+#: includes/class-activity-log.php:200
+msgid "Payment settings"
+msgstr ""
+
+#: includes/class-activity-log.php:204
+#: includes/class-staff.php:93
+msgid "Data"
+msgstr ""
+
+#: includes/class-activity-log.php:205
+msgid "Apps"
+msgstr ""
+
+#: includes/class-activity-log.php:213
+msgid "Put on sale"
+msgstr ""
+
+#: includes/class-activity-log.php:216
+msgid "Taken off sale"
+msgstr ""
+
+#: includes/class-activity-log.php:219
+#: includes/class-menus.php:111
+msgid "Log in"
+msgstr ""
+
+#: includes/class-activity-log.php:220
+msgid "Log out"
+msgstr ""
+
+#: includes/class-activity-log.php:221
+msgid "Failed login"
+msgstr ""
+
+#: includes/class-activity-log.php:225
+msgid "Unpublish"
+msgstr ""
+
+#: includes/class-activity-log.php:226
+msgid "Move to trash"
+msgstr ""
+
+#: includes/class-activity-log.php:227
+msgid "Restore"
+msgstr ""
+
+#: includes/class-activity-log.php:229
+msgid "Change status"
+msgstr ""
+
+#: includes/class-activity-log.php:230
+msgid "Refund"
+msgstr ""
+
+#: includes/class-activity-log.php:236
+msgid "Check"
+msgstr ""
+
+#: includes/class-activity-log.php:237
+#: includes/class-store-config.php:667
+msgid "Approve"
+msgstr ""
+
+#: includes/class-activity-log.php:238
+msgid "Unapprove"
+msgstr ""
+
+#: includes/class-activity-log.php:239
+msgid "Mark as spam"
+msgstr ""
+
+#: includes/class-activity-log.php:240
+msgid "Change permissions"
+msgstr ""
+
+#: includes/class-activity-log.php:243
+msgid "Change password"
+msgstr ""
+
+#: includes/class-activity-log.php:253
+msgid "Staff member"
+msgstr ""
+
 #. translators: %s: batch number
 #: includes/class-batches.php:120
 #, php-format
 msgid "Batch number %s already belongs to another product."
+msgstr ""
+
+#: includes/class-blog.php:86
+msgid "Blog article"
+msgstr ""
+
+#: includes/class-blog.php:89
+#: includes/class-blog.php:90
+#: includes/class-blog.php:92
+msgid "New blog post"
+msgstr ""
+
+#: includes/class-blog.php:91
+msgid "Edit blog post"
+msgstr ""
+
+#: includes/class-blog.php:93
+msgid "View blog post"
+msgstr ""
+
+#: includes/class-blog.php:94
+msgid "Search blog posts"
+msgstr ""
+
+#: includes/class-blog.php:95
+msgid "No blog posts yet."
+msgstr ""
+
+#: includes/class-blog.php:96
+msgid "No blog posts in the trash."
+msgstr ""
+
+#: includes/class-blog.php:98
+msgid "Set cover (4:3, 3:2, 2:1 or 1:1, at least 1000 px wide)"
+msgstr ""
+
+#: includes/class-blog.php:107
+msgid "Blog collection"
+msgstr ""
+
+#: includes/class-blog.php:109
+msgid "All collections"
+msgstr ""
+
+#: includes/class-blog.php:110
+msgid "Edit collection"
+msgstr ""
+
+#: includes/class-blog.php:111
+msgid "View collection"
+msgstr ""
+
+#: includes/class-blog.php:112
+msgid "Update collection"
+msgstr ""
+
+#: includes/class-blog.php:113
+msgid "New collection"
+msgstr ""
+
+#: includes/class-blog.php:115
+msgid "Search collections"
+msgstr ""
+
+#: includes/class-blog.php:116
+msgid "No collections yet."
+msgstr ""
+
+#: includes/class-blog.php:117
+msgid "← Back to blog collections"
+msgstr ""
+
+#: includes/class-blog.php:243
+msgid "Products in this post"
+msgstr ""
+
+#: includes/class-blog.php:380
+msgid "The file has no “title” column. Export first to get the format."
+msgstr ""
+
+#. translators: %d: line number
+#: includes/class-blog.php:395
+#, php-format
+msgid "Line %d: the title is empty."
+msgstr ""
+
+#. translators: 1: line number, 2: error
+#: includes/class-blog.php:421
+#, php-format
+msgid "Line %1$d: %2$s"
 msgstr ""
 
 #: includes/class-checkout-ack.php:40
@@ -7406,6 +8420,31 @@ msgstr ""
 msgid "Exit-intent offers: the customer used the popup code %1$s (search the orders for “%2$s”)."
 msgstr ""
 
+#: includes/class-media-library.php:60
+msgid "Media group"
+msgstr ""
+
+#: includes/class-media-library.php:103
+#: includes/class-media-library.php:115
+msgid "Enter a group name."
+msgstr ""
+
+#. translators: %d: maximum queue size
+#: includes/class-media-library.php:287
+#, php-format
+msgid "At most %d addresses can wait in the queue. Wait for the current ones to finish."
+msgstr ""
+
+#. translators: %s: the address
+#: includes/class-media-library.php:303
+#, php-format
+msgid "“%s” is not a public http(s) address."
+msgstr ""
+
+#: includes/class-media-library.php:384
+msgid "Only images (JPG, PNG, GIF, WebP, AVIF), MP4/WebM videos and PDF files can be collected."
+msgstr ""
+
 #: includes/class-menus.php:77
 #: includes/class-menus.php:221
 msgid "Header menu"
@@ -7451,10 +8490,6 @@ msgstr ""
 
 #: includes/class-menus.php:110
 msgid "My orders / order tracking"
-msgstr ""
-
-#: includes/class-menus.php:111
-msgid "Log in"
 msgstr ""
 
 #: includes/class-menus.php:112
@@ -7664,7 +8699,7 @@ msgstr ""
 msgid "This browser will no longer share your activity with advertising partners."
 msgstr ""
 
-#: includes/class-plugin.php:127
+#: includes/class-plugin.php:135
 msgid "Peptide Core requires WooCommerce to be installed and active."
 msgstr ""
 
@@ -7954,6 +8989,22 @@ msgstr ""
 msgid "Assign a batch before shipping: %s. (You can turn this check off in the store settings.)"
 msgstr ""
 
+#: includes/class-staff.php:202
+msgid "This staff account is disabled. Contact the store owner."
+msgstr ""
+
+#: includes/class-staff.php:372
+msgid "Your staff account does not have permission for this page. Ask the store owner to tick it under Store settings → Staff."
+msgstr ""
+
+#: includes/class-staff.php:372
+msgid "Go to a page you can use"
+msgstr ""
+
+#: includes/class-staff.php:373
+msgid "No permission"
+msgstr ""
+
 #. translators: 1, 2: numbers to add
 #: includes/class-store-config.php:383
 #, php-format
@@ -7982,10 +9033,6 @@ msgstr ""
 
 #: includes/class-store-config.php:657
 msgid "Your account is waiting for approval by the store. You can sign in once it is approved."
-msgstr ""
-
-#: includes/class-store-config.php:667
-msgid "Approve"
 msgstr ""
 
 #: includes/class-store-config.php:685
@@ -8154,25 +9201,12 @@ msgstr ""
 msgid "No campaign pages in the trash."
 msgstr ""
 
-#: includes/class-topics.php:64
-#: includes/class-topics.php:184
-msgid "Cover"
-msgstr ""
-
 #: includes/class-topics.php:65
 msgid "Set cover (1:1, at least 1000 px wide)"
 msgstr ""
 
-#: includes/class-topics.php:66
-msgid "Remove cover"
-msgstr ""
-
 #: includes/class-topics.php:140
 msgid "Campaign page settings"
-msgstr ""
-
-#: includes/class-topics.php:141
-msgid "SEO"
 msgstr ""
 
 #: includes/class-topics.php:146
@@ -8183,26 +9217,8 @@ msgstr ""
 msgid "Published = visible at its address; draft = not visible yet. The short description goes in the Excerpt box; the cover is the featured image."
 msgstr ""
 
-#. translators: %d: number of views
-#: includes/class-topics.php:150
-#, php-format
-msgid "Views: %d"
-msgstr ""
-
 #: includes/class-topics.php:157
 msgid "Leave empty to use the campaign title and short description. The link is the page’s slug (edit it next to the title); after a change the old link redirects to the new one."
-msgstr ""
-
-#: includes/class-topics.php:160
-msgid "Separate keywords with commas"
-msgstr ""
-
-#: includes/class-topics.php:161
-msgid "Address:"
-msgstr ""
-
-#: includes/class-topics.php:188
-msgid "Last modified"
 msgstr ""
 
 #: includes/emails/class-admin-abandoned.php:20

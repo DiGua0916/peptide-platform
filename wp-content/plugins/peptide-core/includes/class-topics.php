@@ -184,7 +184,7 @@ final class Topics {
 				$out['pc_cover'] = __( 'Cover', 'peptide-core' );
 			}
 			if ( 'date' === $key ) {
-				$out['pc_views']    = __( 'Views', 'peptide-core' );
+				$out['pc_views']    = __( 'Visit count', 'peptide-core' );
 				$out['pc_modified'] = __( 'Last modified', 'peptide-core' );
 			}
 			$out[ $key ] = $label;

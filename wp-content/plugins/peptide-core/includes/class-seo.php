@@ -184,13 +184,19 @@ final class Seo {
 		return $s['domains'][ $host ] ?? $s['home'];
 	}
 
-	/** 当前页面的 SEO（首页或活动专题页）；不是这两种页面时为 null。 */
+	/** 当前页面的 SEO（首页、活动专题页、博客、博客专辑）；其他页面为 null。 */
 	public static function current(): ?array {
 		if ( is_front_page() ) {
 			return self::home_set();
 		}
 		if ( is_singular( Topics::POST_TYPE ) ) {
 			return Topics::seo( (int) get_queried_object_id() );
+		}
+		if ( is_singular( 'post' ) ) {
+			return Blog::seo_post( (int) get_queried_object_id() );
+		}
+		if ( is_category() ) {
+			return Blog::seo_term( (int) get_queried_object_id() );
 		}
 		return null;
 	}
@@ -207,7 +213,13 @@ final class Seo {
 		}
 		$title = '' !== $set['title'] ? self::vars( $set['title'] ) : wp_get_document_title();
 		$desc  = self::vars( $set['description'] );
-		$url   = is_front_page() ? home_url( '/' ) : (string) get_permalink( get_queried_object_id() );
+		if ( is_front_page() ) {
+			$url = home_url( '/' );
+		} elseif ( is_category() ) {
+			$url = (string) get_term_link( (int) get_queried_object_id(), 'category' );
+		} else {
+			$url = (string) get_permalink( get_queried_object_id() );
+		}
 		echo "\n<!-- peptide-core SEO -->\n";
 		if ( '' !== $desc ) {
 			echo '<meta name="description" content="' . esc_attr( $desc ) . '">' . "\n";
@@ -222,7 +234,11 @@ final class Seo {
 			echo '<meta property="og:description" content="' . esc_attr( $desc ) . '">' . "\n";
 		}
 		echo '<meta property="og:url" content="' . esc_url( $url ) . '">' . "\n";
-		$image = is_singular( Topics::POST_TYPE ) ? (string) get_the_post_thumbnail_url( get_queried_object_id(), 'large' ) : '';
+		if ( is_singular( array( Topics::POST_TYPE, 'post' ) ) ) {
+			$image = (string) get_the_post_thumbnail_url( get_queried_object_id(), 'large' );
+		} else {
+			$image = is_category() ? Blog::term_cover( (int) get_queried_object_id() ) : '';
+		}
 		if ( '' !== $image ) {
 			echo '<meta property="og:image" content="' . esc_url( $image ) . '">' . "\n";
 		}
