@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-27T16:15:31+00:00\n"
+"POT-Creation-Date: 2026-10-27T16:45:29+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -225,7 +225,7 @@ msgid "not usable now"
 msgstr ""
 
 #: includes/admin/class-apps-page.php:134
-#: includes/admin/class-data-pages.php:147
+#: includes/admin/class-data-pages.php:179
 #: includes/admin/class-overview-page.php:165
 msgid "Last 30 days"
 msgstr ""
@@ -1985,95 +1985,95 @@ msgstr ""
 msgid "View all %d"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:67
+#: includes/admin/class-data-pages.php:55
 #: includes/admin/class-overview-page.php:55
 msgid "Sorry, you are not allowed to view store data."
 msgstr ""
 
-#: includes/admin/class-data-pages.php:82
+#: includes/admin/class-data-pages.php:103
 msgid "Data"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:129
+#: includes/admin/class-data-pages.php:161
 msgid "Real-time data"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:130
+#: includes/admin/class-data-pages.php:162
 msgid "Operations data"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:131
+#: includes/admin/class-data-pages.php:163
 msgid "Product details data"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:132
+#: includes/admin/class-data-pages.php:164
 msgid "Page visit statistics"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:133
+#: includes/admin/class-data-pages.php:165
 msgid "Page product conversion"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:134
+#: includes/admin/class-data-pages.php:166
 msgid "App statistics"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:135
+#: includes/admin/class-data-pages.php:167
 msgid "Landing page conversion"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:136
+#: includes/admin/class-data-pages.php:168
 msgid "Conversion rate details"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:137
+#: includes/admin/class-data-pages.php:169
 msgid "Email details data"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:144
+#: includes/admin/class-data-pages.php:176
 #: includes/admin/class-overview-page.php:162
 msgid "Today"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:145
+#: includes/admin/class-data-pages.php:177
 #: includes/admin/class-overview-page.php:163
 msgid "Yesterday"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:146
+#: includes/admin/class-data-pages.php:178
 #: includes/admin/class-overview-page.php:164
 msgid "Last 7 days"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:148
+#: includes/admin/class-data-pages.php:180
 msgid "Custom range"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:149
+#: includes/admin/class-data-pages.php:181
 msgid "Compare with"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:151
+#: includes/admin/class-data-pages.php:183
 msgid "Start date"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:152
+#: includes/admin/class-data-pages.php:184
 msgid "End date"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:153
+#: includes/admin/class-data-pages.php:185
 #: includes/admin/class-marketing.php:378
 #: includes/admin/class-tracking-page.php:146
 msgid "Apply"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:154
+#: includes/admin/class-data-pages.php:186
 #: includes/admin/class-overview-page.php:131
 msgid "Store time zone"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:155
-#: includes/admin/class-data-pages.php:167
+#: includes/admin/class-data-pages.php:187
+#: includes/admin/class-data-pages.php:234
 #: includes/admin/class-menu-page.php:238
 #: includes/admin/class-overview-page.php:237
 #: includes/admin/class-tracking-page.php:138
@@ -2081,16 +2081,132 @@ msgstr ""
 msgid "Loading…"
 msgstr ""
 
-#: includes/admin/class-data-pages.php:156
+#: includes/admin/class-data-pages.php:188
 msgid "This page is being built. The date range already works; the report will appear here in a later update."
 msgstr ""
 
-#: includes/admin/class-data-pages.php:157
+#: includes/admin/class-data-pages.php:189
 msgid "Check the dates: the start date must be on or before the end date, and a range can cover at most 366 days."
 msgstr ""
 
-#: includes/admin/class-data-pages.php:158
+#: includes/admin/class-data-pages.php:190
 msgid "The data could not be loaded. Try again."
+msgstr ""
+
+#: includes/admin/class-data-pages.php:197
+#: includes/admin/class-overview-page.php:132
+#: includes/admin/class-overview-page.php:172
+msgid "Sales"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:198
+msgid "Visited users"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:199
+#: includes/admin/class-overview-page.php:134
+msgid "New sign-ups"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:200
+#: includes/admin/class-overview-page.php:171
+msgid "Order count"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:201
+msgid "Conversion rate"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:202
+#: includes/admin/class-overview-page.php:137
+msgid "Average order value"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:203
+msgid "Product units sold"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:204
+msgid "Net product sales"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:205
+msgid "Refund amount"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:206
+msgid "Average visit duration"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:207
+msgid "Customer count"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:208
+msgid "Mobile users"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:209
+msgid "Viewed products"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:210
+msgid "Carted products"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:211
+msgid "Started checkout"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:212
+msgid "Paid successfully"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:213
+msgid "Visitor conversion rate"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:214
+msgid "Returning visitor conversion rate"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:215
+msgid "Conversion event"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:216
+msgid "This period"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:217
+msgid "Previous period"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:218
+msgid "Change"
+msgstr ""
+
+#. translators: %s: a percentage, for example 54.72%
+#: includes/admin/class-data-pages.php:220
+#, php-format
+msgid "Of visitors: %s"
+msgstr ""
+
+#. translators: 1: minutes, 2: seconds
+#: includes/admin/class-data-pages.php:222
+#, php-format
+msgid "%1$d min %2$d s"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:223
+msgid "Visitor tracking is off, so visitor numbers, conversion and the funnels stay at zero."
+msgstr ""
+
+#. translators: %d: number of orders
+#: includes/admin/class-data-pages.php:225
+#: includes/admin/class-overview-page.php:205
+#, php-format
+msgid "Only real orders are counted: %d test order(s) in this period (test payment or demo products) are left out."
 msgstr ""
 
 #: includes/admin/class-design-editor.php:44
@@ -3406,22 +3522,9 @@ msgstr ""
 msgid "%s, good evening! Here is today’s overview."
 msgstr ""
 
-#: includes/admin/class-overview-page.php:132
-#: includes/admin/class-overview-page.php:172
-msgid "Sales"
-msgstr ""
-
-#: includes/admin/class-overview-page.php:134
-msgid "New sign-ups"
-msgstr ""
-
 #: includes/admin/class-overview-page.php:136
 #: includes/admin/class-overview-page.php:173
 msgid "Order conversion"
-msgstr ""
-
-#: includes/admin/class-overview-page.php:137
-msgid "Average order value"
 msgstr ""
 
 #: includes/admin/class-overview-page.php:138
@@ -3538,10 +3641,6 @@ msgstr ""
 msgid "Page views"
 msgstr ""
 
-#: includes/admin/class-overview-page.php:171
-msgid "Order count"
-msgstr ""
-
 #: includes/admin/class-overview-page.php:175
 #, php-format
 msgid "Total visitors: %d"
@@ -3638,12 +3737,6 @@ msgstr ""
 #: includes/admin/class-overview-page.php:201
 #: includes/admin/class-tracking-page.php:176
 msgid "Order payment"
-msgstr ""
-
-#. translators: %d: number of orders
-#: includes/admin/class-overview-page.php:205
-#, php-format
-msgid "Only real orders are counted: %d test order(s) in this period (test payment or demo products) are left out."
 msgstr ""
 
 #: includes/admin/class-overview-page.php:208

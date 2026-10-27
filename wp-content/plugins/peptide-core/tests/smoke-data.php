@@ -143,6 +143,7 @@ Data_Pages::enqueue();
 $before = implode( '', (array) wp_scripts()->get_data( Data_Pages::SCRIPT, 'before' ) );
 $ok( 'data script is enqueued on a data page with its settings', wp_script_is( Data_Pages::SCRIPT, 'enqueued' ) && false !== strpos( $before, 'window.pcData' ) && false !== strpos( $before, '"page":"operations"' ) );
 wp_dequeue_script( Data_Pages::SCRIPT );
+wp_dequeue_script( 'peptide-core-data-operations' );
 $_GET['page'] = 'pc-overview';
 Data_Pages::enqueue();
 $ok( 'data script is not enqueued on other pages', ! wp_script_is( Data_Pages::SCRIPT, 'enqueued' ) );

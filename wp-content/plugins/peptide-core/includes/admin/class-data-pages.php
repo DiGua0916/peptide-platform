@@ -17,6 +17,7 @@
 namespace PeptideCore\Admin;
 
 use PeptideCore\Api\Rest_Controller;
+use PeptideCore\Data\Operations;
 use PeptideCore\Data\Range;
 
 defined( 'ABSPATH' ) || exit;
@@ -50,6 +51,8 @@ final class Data_Pages {
 		add_action(
 			'rest_api_init',
 			static function (): void {
+				// 所有数据接口共用的权限判断。
+				$permission = static fn() => current_user_can( self::CAP ) ? true : new \WP_Error( 'pc_forbidden', __( 'Sorry, you are not allowed to view store data.', 'peptide-core' ), array( 'status' => rest_authorization_required_code() ) );
 				register_rest_route(
 					Rest_Controller::ROUTE_NAMESPACE,
 					'/data/range',
@@ -64,7 +67,25 @@ final class Data_Pages {
 							$res->header( 'Cache-Control', 'no-store' );
 							return $res;
 						},
-						'permission_callback' => static fn() => current_user_can( self::CAP ) ? true : new \WP_Error( 'pc_forbidden', __( 'Sorry, you are not allowed to view store data.', 'peptide-core' ), array( 'status' => rest_authorization_required_code() ) ),
+						'permission_callback' => $permission,
+					)
+				);
+				// 运营数据页（DATA-01 第 2 步）：指标卡片和两个转化漏斗，本期和对比期。
+				register_rest_route(
+					Rest_Controller::ROUTE_NAMESPACE,
+					'/data/operations',
+					array(
+						'methods'             => \WP_REST_Server::READABLE,
+						'callback'            => static function ( \WP_REST_Request $request ) {
+							$r = Range::from_params( $request->get_params() );
+							if ( is_wp_error( $r ) ) {
+								return $r;
+							}
+							$res = new \WP_REST_Response( Operations::summary( $r ) );
+							$res->header( 'Cache-Control', 'no-store' );
+							return $res;
+						},
+						'permission_callback' => $permission,
 					)
 				);
 			}
@@ -121,6 +142,17 @@ final class Data_Pages {
 			) . ';',
 			'before'
 		);
+
+		// 运营数据页的报表（指标卡片和转化漏斗），在 data.js 之后加载，用 PcData.register( 'operations', … ) 画进页面。
+		if ( 'operations' === $key ) {
+			wp_enqueue_style( 'peptide-core-data-operations', $url . 'data-operations.css', array( 'peptide-core-data' ), $ver( 'data-operations.css' ) );
+			wp_enqueue_script( 'peptide-core-data-operations', $url . 'data-operations.js', array( self::SCRIPT ), $ver( 'data-operations.js' ), array( 'in_footer' => true ) );
+			wp_add_inline_script(
+				'peptide-core-data-operations',
+				'window.pcDataOperations = ' . wp_json_encode( array( 'strings' => self::operations_strings() ) ) . ';',
+				'before'
+			);
+		}
 	}
 
 	/** 页面 key => 翻译后的标题（也是菜单名）。 */
@@ -156,6 +188,41 @@ final class Data_Pages {
 			'building'    => __( 'This page is being built. The date range already works; the report will appear here in a later update.', 'peptide-core' ),
 			'rangeError'  => __( 'Check the dates: the start date must be on or before the end date, and a range can cover at most 366 days.', 'peptide-core' ),
 			'loadError'   => __( 'The data could not be loaded. Try again.', 'peptide-core' ),
+		);
+	}
+
+	/** 运营数据页脚本里的文字：12 个指标、漏斗的五层、表头和说明。 */
+	private static function operations_strings(): array {
+		return array(
+			'sales'           => __( 'Sales', 'peptide-core' ),
+			'visitors'        => __( 'Visited users', 'peptide-core' ),
+			'registered'      => __( 'New sign-ups', 'peptide-core' ),
+			'orders'          => __( 'Order count', 'peptide-core' ),
+			'conversion'      => __( 'Conversion rate', 'peptide-core' ),
+			'aov'             => __( 'Average order value', 'peptide-core' ),
+			'items'           => __( 'Product units sold', 'peptide-core' ),
+			'net_item_sales'  => __( 'Net product sales', 'peptide-core' ),
+			'refunds'         => __( 'Refund amount', 'peptide-core' ),
+			'avg_duration'    => __( 'Average visit duration', 'peptide-core' ),
+			'customers'       => __( 'Customer count', 'peptide-core' ),
+			'mobile'          => __( 'Mobile users', 'peptide-core' ),
+			'viewed'          => __( 'Viewed products', 'peptide-core' ),
+			'carted'          => __( 'Carted products', 'peptide-core' ),
+			'checkout'        => __( 'Started checkout', 'peptide-core' ),
+			'paid'            => __( 'Paid successfully', 'peptide-core' ),
+			'visitorFunnel'   => __( 'Visitor conversion rate', 'peptide-core' ),
+			'returningFunnel' => __( 'Returning visitor conversion rate', 'peptide-core' ),
+			'event'           => __( 'Conversion event', 'peptide-core' ),
+			'thisPeriod'      => __( 'This period', 'peptide-core' ),
+			'previousPeriod'  => __( 'Previous period', 'peptide-core' ),
+			'change'          => __( 'Change', 'peptide-core' ),
+			/* translators: %s: a percentage, for example 54.72% */
+			'ofVisitors'      => __( 'Of visitors: %s', 'peptide-core' ),
+			/* translators: 1: minutes, 2: seconds */
+			'duration'        => __( '%1$d min %2$d s', 'peptide-core' ),
+			'trackingOff'     => __( 'Visitor tracking is off, so visitor numbers, conversion and the funnels stay at zero.', 'peptide-core' ),
+			/* translators: %d: number of orders */
+			'testOrders'      => __( 'Only real orders are counted: %d test order(s) in this period (test payment or demo products) are left out.', 'peptide-core' ),
 		);
 	}
 
