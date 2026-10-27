@@ -285,12 +285,12 @@ final class Operations {
 	}
 
 	/**
-	 * 五层漏斗：数量、占上一层 %、占访问用户 %。
+	 * 五层漏斗：数量、占上一层 %、占访问用户 %。转化率详情页（Data\Conversion）的每张分组卡片也用这个方法，所以是 public。
 	 *
 	 * @param array<string,int> $counts LAYERS 的 key => 数量。
 	 * @return array<int,array{key:string,count:int,step_rate:?float,visitor_rate:?float}>
 	 */
-	private static function layers( array $counts ): array {
+	public static function layers( array $counts ): array {
 		$first = (int) ( $counts['visitors'] ?? 0 );
 		$prev  = null;
 		$out   = array();

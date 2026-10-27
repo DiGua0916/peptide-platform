@@ -17,6 +17,7 @@
 namespace PeptideCore\Admin;
 
 use PeptideCore\Api\Rest_Controller;
+use PeptideCore\Data\Conversion;
 use PeptideCore\Data\Operations;
 use PeptideCore\Data\Products;
 use PeptideCore\Data\Range;
@@ -111,6 +112,28 @@ final class Data_Pages {
 						'permission_callback' => $permission,
 					)
 				);
+				// 转化率详情页（DATA-01 第 4 步）：整体转化步骤（本期、对比期、变化）和按设备或浏览器分组的漏斗卡片。
+				register_rest_route(
+					Rest_Controller::ROUTE_NAMESPACE,
+					'/data/conversion',
+					array(
+						'methods'             => \WP_REST_Server::READABLE,
+						'callback'            => static function ( \WP_REST_Request $request ) {
+							$r = Range::from_params( $request->get_params() );
+							if ( is_wp_error( $r ) ) {
+								return $r;
+							}
+							$g = Conversion::params( $request->get_params() );
+							if ( is_wp_error( $g ) ) {
+								return $g;
+							}
+							$res = new \WP_REST_Response( Conversion::summary( $r, $g ) );
+							$res->header( 'Cache-Control', 'no-store' );
+							return $res;
+						},
+						'permission_callback' => $permission,
+					)
+				);
 			}
 		);
 	}
@@ -184,6 +207,17 @@ final class Data_Pages {
 			wp_add_inline_script(
 				'peptide-core-data-products',
 				'window.pcDataProducts = ' . wp_json_encode( array( 'strings' => self::products_strings() ) ) . ';',
+				'before'
+			);
+		}
+
+		// 转化率详情页的报表（整体转化步骤和分组漏斗卡片），同样在 data.js 之后加载，用 PcData.register( 'conversion', … ) 画进页面。
+		if ( 'conversion' === $key ) {
+			wp_enqueue_style( 'peptide-core-data-conversion', $url . 'data-conversion.css', array( 'peptide-core-data' ), $ver( 'data-conversion.css' ) );
+			wp_enqueue_script( 'peptide-core-data-conversion', $url . 'data-conversion.js', array( self::SCRIPT ), $ver( 'data-conversion.js' ), array( 'in_footer' => true ) );
+			wp_add_inline_script(
+				'peptide-core-data-conversion',
+				'window.pcDataConversion = ' . wp_json_encode( array( 'strings' => self::conversion_strings() ) ) . ';',
 				'before'
 			);
 		}
@@ -286,6 +320,35 @@ final class Data_Pages {
 			'next'        => __( 'Next', 'peptide-core' ),
 			/* translators: %s: a product SKU */
 			'sku'         => __( 'SKU: %s', 'peptide-core' ),
+		);
+	}
+
+	/** 转化率详情页脚本里的文字：整体步骤、分组选择、设备和浏览器名、卡片文字和说明。 */
+	private static function conversion_strings(): array {
+		return array(
+			'conversion'     => __( 'Conversion rate', 'peptide-core' ),
+			'conversionHelp' => __( 'Paid successfully / visited users × 100%', 'peptide-core' ),
+			'paid'           => __( 'Paid successfully', 'peptide-core' ),
+			'visitors'       => __( 'Visited users', 'peptide-core' ),
+			'viewed'         => __( 'Viewed products', 'peptide-core' ),
+			'carted'         => __( 'Carted products', 'peptide-core' ),
+			'checkout'       => __( 'Started checkout', 'peptide-core' ),
+			'groupBy'        => __( 'Group by', 'peptide-core' ),
+			'device'         => __( 'Device', 'peptide-core' ),
+			'browser'        => __( 'Browser', 'peptide-core' ),
+			'desktop'        => __( 'Desktop', 'peptide-core' ),
+			'mobile'         => __( 'Mobile', 'peptide-core' ),
+			'tablet'         => __( 'Tablet', 'peptide-core' ),
+			'other'          => __( 'Other', 'peptide-core' ),
+			'unknown'        => __( 'Unknown', 'peptide-core' ),
+			/* translators: %s: the name of a device or browser, for example Mobile */
+			'groupRate'      => __( '%s visitor conversion rate:', 'peptide-core' ),
+			'groupSales'     => __( 'Sales:', 'peptide-core' ),
+			/* translators: %s: a percentage, for example 54.72% */
+			'ofVisitors'     => __( 'Of visitors: %s', 'peptide-core' ),
+			'noGroups'       => __( 'No visits or paid orders in this period.', 'peptide-core' ),
+			'trackingOff'    => __( 'Visitor tracking is off, so visitor numbers, conversion and the funnels stay at zero.', 'peptide-core' ),
+			'notYet'         => __( 'Adding an address, choosing shipping and choosing payment are not recorded yet, so those steps are not shown.', 'peptide-core' ),
 		);
 	}
 
