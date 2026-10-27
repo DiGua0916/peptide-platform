@@ -1,6 +1,6 @@
 <?php
 /**
- * 后台设置页（BE-05）：WooCommerce → VialCove 设置。仅管理员（pc_manage_settings）可用。
+ * 后台设置页（BE-05）：店铺设置 → VialCove 设置（2026-10-22 起；原来在 WooCommerce 菜单下）。仅管理员（pc_manage_settings）可用。
  *
  * @package PeptideCore
  */
@@ -8,6 +8,8 @@
 namespace PeptideCore\Admin;
 
 use PeptideCore\Settings;
+use PeptideCore\Shipping_Tracking;
+use PeptideCore\Support_Contacts;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -48,6 +50,7 @@ final class Settings_Page {
 		}
 		$s    = Settings::all();
 		$ack  = is_array( $s['checkout_ack'] ) ? $s['checkout_ack'] : array();
+		$sup  = is_array( $s['support'] ) ? $s['support'] : array();
 		$name = Settings::OPTION;
 		?>
 		<div class="wrap">
@@ -109,6 +112,68 @@ final class Settings_Page {
 						<td>
 							<textarea id="pc_ack_label" name="<?php echo esc_attr( $name ); ?>[checkout_ack_label]" class="large-text" rows="3"><?php echo esc_textarea( (string) ( $ack['label_html'] ?? '' ) ); ?></textarea>
 							<p class="description"><?php esc_html_e( 'Plain text only. The exact text and the time of acceptance are saved on each order. Required when the confirmation is enabled.', 'peptide-core' ); ?></p>
+						</td>
+					</tr>
+				</table>
+
+				<h2><?php esc_html_e( 'Shipping', 'peptide-core' ); ?></h2>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Batch check', 'peptide-core' ); ?></th>
+						<td>
+							<label><input type="checkbox" name="<?php echo esc_attr( $name ); ?>[require_batch_to_ship]" value="1" <?php checked( ! empty( $s['require_batch_to_ship'] ) ); ?>> <?php esc_html_e( 'Do not allow marking items as shipped until a batch is assigned (only for products that have batches).', 'peptide-core' ); ?></label>
+							<p class="description">
+								<?php
+								echo esc_html(
+									Shipping_Tracking::native_enabled()
+										? __( 'Add tracking numbers on the order page with the "Fulfill items" button. The carrier is detected automatically and the customer receives an email with the tracking link.', 'peptide-core' )
+										: __( 'Shipment tracking is off. Run `wp peptide shipping enable` to turn on WooCommerce order fulfillments.', 'peptide-core' )
+								);
+								?>
+							</p>
+						</td>
+					</tr>
+				</table>
+
+				<h2><?php esc_html_e( 'Customer support button', 'peptide-core' ); ?></h2>
+				<p><?php esc_html_e( 'A floating contact button on the storefront. Only the contact methods you fill in are shown. They are public: use business accounts, not personal ones.', 'peptide-core' ); ?></p>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Show button', 'peptide-core' ); ?></th>
+						<td><label><input type="checkbox" name="<?php echo esc_attr( $name ); ?>[support_enabled]" value="1" <?php checked( ! empty( $sup['enabled'] ) ); ?>> <?php esc_html_e( 'Show the support button on the storefront.', 'peptide-core' ); ?></label></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="pc_support_whatsapp"><?php esc_html_e( 'WhatsApp number', 'peptide-core' ); ?></label></th>
+						<td>
+							<input type="text" id="pc_support_whatsapp" name="<?php echo esc_attr( $name ); ?>[support_whatsapp]" class="regular-text" value="<?php echo esc_attr( '' !== (string) ( $sup['whatsapp'] ?? '' ) ? '+' . $sup['whatsapp'] : '' ); ?>" placeholder="+1 555 123 4567" inputmode="tel">
+							<p class="description"><?php esc_html_e( 'International format with country code. Leave empty to hide.', 'peptide-core' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="pc_support_telegram"><?php esc_html_e( 'Telegram username', 'peptide-core' ); ?></label></th>
+						<td>
+							<input type="text" id="pc_support_telegram" name="<?php echo esc_attr( $name ); ?>[support_telegram]" class="regular-text" value="<?php echo esc_attr( '' !== (string) ( $sup['telegram'] ?? '' ) ? '@' . $sup['telegram'] : '' ); ?>" placeholder="@vialcove_support">
+							<p class="description"><?php esc_html_e( 'A username, not a phone number. Leave empty to hide.', 'peptide-core' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="pc_support_email"><?php esc_html_e( 'Support email', 'peptide-core' ); ?></label></th>
+						<td><input type="email" id="pc_support_email" name="<?php echo esc_attr( $name ); ?>[support_email]" class="regular-text" value="<?php echo esc_attr( (string) ( $sup['email'] ?? '' ) ); ?>" placeholder="support@example.com"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="pc_support_message"><?php esc_html_e( 'WhatsApp greeting', 'peptide-core' ); ?></label></th>
+						<td>
+							<input type="text" id="pc_support_message" name="<?php echo esc_attr( $name ); ?>[support_message]" class="large-text" maxlength="<?php echo esc_attr( (string) Support_Contacts::MESSAGE_MAX ); ?>" value="<?php echo esc_attr( (string) ( $sup['message'] ?? '' ) ); ?>" placeholder="Hi VialCove, I have a question about my order.">
+							<p class="description"><?php esc_html_e( 'Optional text pre-filled when a customer opens WhatsApp. English is recommended.', 'peptide-core' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="pc_support_position"><?php esc_html_e( 'Position', 'peptide-core' ); ?></label></th>
+						<td>
+							<select id="pc_support_position" name="<?php echo esc_attr( $name ); ?>[support_position]">
+								<option value="right" <?php selected( 'right', $sup['position'] ?? 'right' ); ?>><?php esc_html_e( 'Bottom right', 'peptide-core' ); ?></option>
+								<option value="left" <?php selected( 'left', $sup['position'] ?? 'right' ); ?>><?php esc_html_e( 'Bottom left', 'peptide-core' ); ?></option>
+							</select>
 						</td>
 					</tr>
 				</table>

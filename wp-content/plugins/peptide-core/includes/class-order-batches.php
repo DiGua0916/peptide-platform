@@ -136,6 +136,66 @@ final class Order_Batches {
 	}
 
 	/**
+	 * 是否启用了 WooCommerce 高性能订单存储（HPOS）。
+	 */
+	public static function hpos_enabled(): bool {
+		$hpos = class_exists( \Automattic\WooCommerce\Utilities\OrderUtil::class )
+			&& \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled();
+		/**
+		 * 是否用 meta_query 缩小订单查询范围。返回 false 时改为逐个订单核对（与旧版订单存储下的行为相同），
+		 * 测试用它来验证“查询条件被忽略时也不会放行”。
+		 */
+		return (bool) apply_filters( 'peptide_core_use_order_meta_query', $hpos );
+	}
+
+	/**
+	 * 订单上的批次索引中是否包含该批次。
+	 */
+	private static function order_indexes_batch( \WC_Order $order, int $batch_id ): bool {
+		$values = array_map( 'intval', wp_list_pluck( $order->get_meta( self::ORDER_META, false ), 'value' ) );
+		return in_array( $batch_id, $values, true );
+	}
+
+	/**
+	 * 收到过该批次的订单 ID（按订单索引）。
+	 *
+	 * 安全要点：旧版订单存储（非 HPOS）下 wc_get_orders 会静默忽略 meta_query。为了在任何存储模式下都“查不到就不放行”，
+	 * HPOS 下先用 meta_query 缩小范围，再逐个订单核对索引；非 HPOS 下不依赖 meta_query，直接逐个核对。
+	 *
+	 * @param array<string,mixed> $args 额外的 wc_get_orders 条件（如 customer_id、status）。
+	 * @return int[]
+	 */
+	public static function order_ids_with_batch( int $batch_id, array $args = array() ): array {
+		if ( $batch_id <= 0 ) {
+			return array();
+		}
+		$query = $args + array(
+			'limit'   => -1,
+			'return'  => 'ids',
+			'type'    => 'shop_order',
+			'status'  => array_keys( wc_get_order_statuses() ),
+			'orderby' => 'date',
+			'order'   => 'DESC',
+		);
+		if ( self::hpos_enabled() ) {
+			$query['meta_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				array(
+					'key'   => self::ORDER_META,
+					'value' => (string) $batch_id,
+				),
+			);
+		}
+		$ids = array();
+		foreach ( wc_get_orders( $query ) as $order_id ) {
+			$order = wc_get_order( $order_id );
+			if ( $order instanceof \WC_Order && self::order_indexes_batch( $order, $batch_id ) ) {
+				$ids[] = $order->get_id();
+			}
+		}
+		return $ids;
+	}
+
+	/**
 	 * 用户是否在已付款的订单中收到过该批次。
 	 * 已付款状态由 WooCommerce 的 wc_get_is_paid_statuses() 决定（默认 processing、completed）。
 	 */
@@ -145,23 +205,87 @@ final class Order_Batches {
 		}
 		$key = $user_id . ':' . $batch_id;
 		if ( ! isset( self::$received[ $key ] ) ) {
-			$orders                 = wc_get_orders(
+			self::$received[ $key ] = array() !== self::order_ids_with_batch(
+				$batch_id,
 				array(
 					'customer_id' => $user_id,
 					'status'      => array_map( static fn( $s ) => 'wc-' . $s, wc_get_is_paid_statuses() ),
-					'limit'       => 1,
-					'return'      => 'ids',
-					'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-						array(
-							'key'   => self::ORDER_META,
-							'value' => (string) $batch_id,
-						),
-					),
 				)
 			);
-			self::$received[ $key ] = ! empty( $orders );
 		}
 		return self::$received[ $key ];
+	}
+
+	/**
+	 * 批次反查订单（用于溯源和召回）：收到过这个批次的全部订单，包括已取消或已退款的订单，按下单时间从新到旧。
+	 * 返回内容含顾客联系信息，只能给有订单管理权限的员工使用。
+	 *
+	 * @return array<int,array{order_id:int,number:string,date:string,status:string,customer:string,email:string,phone:string,country:string,user_id:int,items:array<int,array{name:string,quantity:int}>,quantity:int}>
+	 */
+	public static function orders_for_batch( int $batch_id ): array {
+		if ( $batch_id <= 0 ) {
+			return array();
+		}
+		$orders = array_map( 'wc_get_order', self::order_ids_with_batch( $batch_id ) );
+
+		$rows = array();
+		foreach ( $orders as $order ) {
+			if ( ! $order instanceof \WC_Order ) {
+				continue;
+			}
+			$items    = array();
+			$quantity = 0;
+			foreach ( $order->get_items() as $item ) {
+				if ( $item instanceof \WC_Order_Item_Product && $batch_id === (int) $item->get_meta( self::ITEM_META ) ) {
+					$items[]   = array(
+						'name'     => $item->get_name(),
+						'quantity' => (int) $item->get_quantity(),
+					);
+					$quantity += (int) $item->get_quantity();
+				}
+			}
+			if ( ! $items ) {
+				continue; // 索引过期（例如批次后来被改掉）时以订单行为准。
+			}
+			$created = $order->get_date_created();
+			$rows[]  = array(
+				'order_id' => $order->get_id(),
+				'number'   => (string) $order->get_order_number(),
+				'date'     => $created ? $created->date( 'Y-m-d H:i' ) : '',
+				'status'   => wc_get_order_status_name( $order->get_status() ),
+				'customer' => trim( $order->get_formatted_billing_full_name() ),
+				'email'    => (string) $order->get_billing_email(),
+				'phone'    => (string) $order->get_billing_phone(),
+				'country'  => (string) ( $order->get_shipping_country() ?: $order->get_billing_country() ),
+				'user_id'  => (int) $order->get_customer_id(),
+				'items'    => $items,
+				'quantity' => $quantity,
+			);
+		}
+		return $rows;
+	}
+
+	/**
+	 * 把反查结果整理成 CSV 文本（带 BOM，Excel 直接打开不乱码）。
+	 * 以 = + - @ 开头的单元格前加单引号，防止在 Excel 中被当成公式执行（CSV 注入）。
+	 *
+	 * @param array<int,array<string,mixed>> $rows orders_for_batch() 的结果。
+	 */
+	public static function orders_csv( string $batch_no, array $rows ): string {
+		$safe = static function ( $value ): string {
+			$value = (string) $value;
+			return ( '' !== $value && in_array( $value[0], array( '=', '+', '-', '@', "\t", "\r" ), true ) ) ? "'" . $value : $value;
+		};
+		$out = fopen( 'php://temp', 'r+' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen
+		fputcsv( $out, array( 'batch_no', 'order_number', 'order_date', 'order_status', 'customer', 'email', 'phone', 'country', 'items', 'quantity' ), ',', '"', '' );
+		foreach ( $rows as $r ) {
+			$items = implode( '; ', array_map( static fn( $i ) => $i['name'] . ' x' . $i['quantity'], $r['items'] ) );
+			fputcsv( $out, array_map( $safe, array( $batch_no, $r['number'], $r['date'], $r['status'], $r['customer'], $r['email'], $r['phone'], $r['country'], $items, $r['quantity'] ) ), ',', '"', '' );
+		}
+		rewind( $out );
+		$csv = (string) stream_get_contents( $out );
+		fclose( $out ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+		return "\xEF\xBB\xBF" . $csv;
 	}
 
 	/**
@@ -224,11 +348,15 @@ final class Order_Batches {
 				'variation_label' => $variation ? wc_get_formatted_variation( $variation, true, false ) : null,
 				'quantity'        => (int) $item->get_quantity(),
 				'batch'           => $batch,
+				// 下单时保存的价格快照（PRICE-SALE-01）；旧订单没有快照时为 null，不按现价倒推。
+				'pricing'         => Pricing::snapshot( $item ),
 			);
 		}
 		return array(
 			'order_number' => (string) $order->get_order_number(),
 			'items'        => $items,
+			// 已发货包裹和单号（SHIP-TRACK-01）；订单履约功能未开启时为 null。
+			'fulfillment'  => Shipping_Tracking::customer_view( $order ),
 		);
 	}
 

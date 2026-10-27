@@ -20,11 +20,11 @@ final class Catalog {
 	);
 
 	/**
-	 * 按 slug 取前台可见的商品（已发布）。
+	 * 按 slug 取前台可见的商品（已发布、未设密码保护）。
 	 */
 	public static function product_by_slug( string $slug ): ?\WC_Product {
 		$post = get_page_by_path( $slug, OBJECT, 'product' );
-		if ( ! $post || 'publish' !== $post->post_status ) {
+		if ( ! $post || 'publish' !== $post->post_status || '' !== $post->post_password ) {
 			return null;
 		}
 		$product = wc_get_product( $post );
@@ -207,12 +207,12 @@ final class Catalog {
 	}
 
 	/**
-	 * 报告下载地址。已登录用户附带 wp_rest nonce：普通链接点击时浏览器不会带 X-WP-Nonce 头，
-	 * 没有 nonce 的 Cookie 请求会被 WordPress REST 当作访客处理。
+	 * 报告下载地址。已登录用户附带只对这一份报告有效的 pc_nonce（由下载接口自行校验登录 Cookie 和这个 nonce）。
+	 * 不放通用的 wp_rest nonce：网址会出现在浏览器历史、日志和被转发的链接里，通用 nonce 泄露后可以用于其他 REST 写操作。
 	 */
 	public static function download_url( int $report_id, int $user_id ): string {
 		$url = rest_url( 'peptide/v1/reports/' . $report_id . '/file' );
-		return $user_id > 0 ? add_query_arg( '_wpnonce', wp_create_nonce( 'wp_rest' ), $url ) : $url;
+		return $user_id > 0 ? add_query_arg( 'pc_nonce', wp_create_nonce( 'pc_report_' . $report_id ), $url ) : $url;
 	}
 
 	private static function nullable( $value ): ?string {

@@ -10,6 +10,9 @@
 
 defined( 'ABSPATH' ) || exit;
 
+// 测试中创建的订单不发送通知邮件。
+add_filter( 'pre_wp_mail', '__return_false' );
+
 use PeptideCore\Meta;
 wp_set_current_user( 1 );
 $ok = static function ( $label, $cond ) { echo ( $cond ? 'PASS ' : 'FAIL ' ), $label, "\n"; };
@@ -45,6 +48,22 @@ $ok( 'old report points to new', $new === (int) get_post_meta( $old, Meta::REPOR
 $nofile = wp_insert_post( array( 'post_type' => 'pc_report', 'post_status' => 'publish', 'post_title' => 'No file' ) );
 \PeptideCore\Admin\Report_Metabox::save( $nofile, get_post( $nofile ) );
 $ok( 'report without file kept as draft', 'draft' === get_post_meta( $nofile, Meta::REPORT_STATUS, true ) );
+
+// 5. 检测报告里直接新建批次（批次菜单隐藏后的入口）
+$viaReport = wp_insert_post( array( 'post_type' => 'pc_report', 'post_status' => 'publish', 'post_title' => 'New batch via report' ) );
+$_POST = array( 'pc_report_nonce' => wp_create_nonce( 'pc_save_report' ), 'pc_batch_id' => '', 'pc_new_batch_no' => ' smoke-rep-01 ', 'pc_new_batch_product' => $product, 'pc_type' => 'coa', 'pc_report_status' => 'draft', 'pc_access' => 'public' );
+\PeptideCore\Admin\Report_Metabox::save( $viaReport, get_post( $viaReport ) );
+$made = \PeptideCore\Batches::find_id_by_batch_no( 'SMOKE-REP-01' );
+$ok( 'a new batch number on the report creates the batch for that product', $made && $product === (int) get_post_meta( $made, Meta::BATCH_PRODUCT_ID, true ) && 'publish' === get_post_status( $made ) && 'public' === get_post_meta( $made, Meta::BATCH_VISIBILITY, true ) );
+$ok( 'and the report belongs to it', $made === (int) get_post_meta( $viaReport, Meta::REPORT_BATCH_ID, true ) );
+$_POST['pc_new_batch_no'] = 'SMOKE-REP-01';
+\PeptideCore\Admin\Report_Metabox::save( $viaReport, get_post( $viaReport ) );
+$ok( 'the same number again reuses the batch', 1 === count( get_posts( array( 'post_type' => 'pc_batch', 'post_status' => 'any', 'meta_key' => Meta::BATCH_NO, 'meta_value' => 'SMOKE-REP-01', 'fields' => 'ids' ) ) ) && $made === (int) get_post_meta( $viaReport, Meta::REPORT_BATCH_ID, true ) );
+$other = (int) get_posts( array( 'post_type' => 'product', 'post_status' => 'publish', 'fields' => 'ids', 'numberposts' => 1, 'exclude' => array( $product ) ) )[0];
+$ok( 'a batch number that belongs to another product is refused', is_wp_error( \PeptideCore\Batches::find_or_create( 'SMOKE-REP-01', $other ) ) );
+$ok( 'an invalid batch number is refused', is_wp_error( \PeptideCore\Batches::find_or_create( 'x', $product ) ) );
+wp_delete_post( $viaReport, true );
+wp_delete_post( $made, true );
 
 // 还原：删除测试报告（新报告共用演示文件，先去掉文件元数据避免误删），恢复旧报告
 delete_post_meta( $new, Meta::REPORT_FILE );

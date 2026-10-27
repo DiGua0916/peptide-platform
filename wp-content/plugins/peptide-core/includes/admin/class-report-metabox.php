@@ -1,6 +1,7 @@
 <?php
 /**
  * 检测报告编辑页：所属批次、类型、状态、访问级别、文件上传。
+ * 批次菜单隐藏后（用户 2026-10-27），批次在这里选，或者填新批次号和商品，保存时自动建批次。
  *
  * 规则：
  * - 版本号在首次保存（或更换批次 / 类型）时自动分配，不能手填。
@@ -13,6 +14,7 @@
 namespace PeptideCore\Admin;
 
 use PeptideCore\Admin_Notices;
+use PeptideCore\Batches;
 use PeptideCore\Meta;
 use PeptideCore\Post_Types;
 use PeptideCore\Private_Files;
@@ -50,7 +52,8 @@ final class Report_Metabox {
 			$batch_id = absint( $_GET['pc_batch_id'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		}
 
-		$type          = (string) get_post_meta( $post->ID, Meta::REPORT_TYPE, true );
+		// 新报告默认 COA（注册的 meta 默认值是 other，新建时读出来就是“其他”）。
+		$type          = 'auto-draft' === $post->post_status ? 'coa' : (string) get_post_meta( $post->ID, Meta::REPORT_TYPE, true );
 		$status        = (string) get_post_meta( $post->ID, Meta::REPORT_STATUS, true );
 		$access        = (string) get_post_meta( $post->ID, Meta::REPORT_ACCESS, true );
 		$version       = (int) get_post_meta( $post->ID, Meta::REPORT_VERSION, true );
@@ -80,12 +83,26 @@ final class Report_Metabox {
 			<tr>
 				<th scope="row"><label for="pc_batch_id"><?php esc_html_e( 'Batch', 'peptide-core' ); ?> *</label></th>
 				<td>
-					<select id="pc_batch_id" name="pc_batch_id" required>
+					<select id="pc_batch_id" name="pc_batch_id">
 						<option value=""><?php esc_html_e( '— Select a batch —', 'peptide-core' ); ?></option>
 						<?php foreach ( self::batch_options() as $id => $label ) : ?>
 							<option value="<?php echo esc_attr( (string) $id ); ?>" <?php selected( $batch_id, $id ); ?>><?php echo esc_html( $label ); ?></option>
 						<?php endforeach; ?>
 					</select>
+					<?php if ( $batch_id && Post_Types::BATCH === get_post_type( $batch_id ) ) : ?>
+						<a href="<?php echo esc_url( get_edit_post_link( $batch_id ) ?? '' ); ?>"><?php esc_html_e( 'Edit batch', 'peptide-core' ); ?></a>
+					<?php endif; ?>
+					<p>
+						<label for="pc_new_batch_no"><?php esc_html_e( 'Or a new batch:', 'peptide-core' ); ?></label>
+						<input type="text" id="pc_new_batch_no" name="pc_new_batch_no" maxlength="40" placeholder="<?php esc_attr_e( 'Batch number', 'peptide-core' ); ?>">
+						<select name="pc_new_batch_product" aria-label="<?php esc_attr_e( 'Product', 'peptide-core' ); ?>">
+							<option value=""><?php esc_html_e( '— Select a product —', 'peptide-core' ); ?></option>
+							<?php foreach ( Batch_Metabox::product_options() as $id => $label ) : ?>
+								<option value="<?php echo esc_attr( (string) $id ); ?>"><?php echo esc_html( $label ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</p>
+					<p class="description"><?php esc_html_e( 'Choose an existing batch, or fill in a new batch number (3–40 letters, digits and hyphens) and its product: the batch is created when you save.', 'peptide-core' ); ?></p>
 				</td>
 			</tr>
 			<tr>
@@ -165,6 +182,19 @@ final class Report_Metabox {
 		$batch_id = absint( $_POST['pc_batch_id'] ?? 0 );
 		if ( $batch_id && Post_Types::BATCH !== get_post_type( $batch_id ) ) {
 			$batch_id = 0;
+		}
+		// 填了新批次号：按它找批次，没有就建一个（同号批次属于别的商品时报错）。
+		$new_no = sanitize_text_field( wp_unslash( $_POST['pc_new_batch_no'] ?? '' ) );
+		if ( '' !== trim( $new_no ) ) {
+			$type_obj = get_post_type_object( Post_Types::BATCH );
+			$made     = $type_obj && current_user_can( $type_obj->cap->create_posts )
+				? Batches::find_or_create( $new_no, absint( $_POST['pc_new_batch_product'] ?? 0 ) )
+				: new \WP_Error( 'pc_batch_cap', __( 'Sorry, you are not allowed to do that.', 'peptide-core' ) );
+			if ( is_wp_error( $made ) ) {
+				$errors[] = $made->get_error_message();
+			} else {
+				$batch_id = $made;
+			}
 		}
 		if ( ! $batch_id ) {
 			$errors[] = __( 'Please select the batch this report belongs to.', 'peptide-core' );

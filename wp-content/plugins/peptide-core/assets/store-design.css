@@ -1,0 +1,482 @@
+/* 店铺装修 → 主题装修（EDIT-BLOCKS-02）。布局参考用户提供的 Shopname 后台截图。 */
+
+.pc-sd {
+	--pc-sd-orange: #ee7d33;
+	--pc-sd-orange-dark: #d96a20;
+	--pc-sd-border: #e2e4e7;
+	--pc-sd-muted: #646970;
+	/* 铺满后台内容区，宽屏不再留一大片空白。 */
+	max-width: none;
+	margin-right: 20px;
+}
+
+.pc-sd-tabs {
+	display: flex;
+	justify-content: center;
+	gap: 32px;
+	margin: 4px 0 16px;
+	border-bottom: 1px solid var(--pc-sd-border);
+}
+
+.pc-sd-tabs__item {
+	padding: 8px 2px;
+	font-size: 14px;
+	color: var(--pc-sd-muted);
+}
+
+.pc-sd-tabs__item.is-active {
+	color: var(--pc-sd-orange);
+	border-bottom: 2px solid var(--pc-sd-orange);
+	margin-bottom: -1px;
+}
+
+.pc-sd-card {
+	background: #fff;
+	border: 1px solid var(--pc-sd-border);
+	border-radius: 4px;
+	padding: 24px;
+	margin-bottom: 24px;
+}
+
+/* 使用中的模板 */
+.pc-sd-current {
+	display: grid;
+	grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+	gap: 24px;
+}
+
+.pc-sd-current h2,
+.pc-sd-library h2,
+.pc-sd-apps h2 {
+	margin: 0 0 16px;
+	font-size: 16px;
+	font-weight: 600;
+}
+
+.pc-sd-switch {
+	display: inline-flex;
+	flex-wrap: wrap;
+	border: 1px solid var(--pc-sd-border);
+	border-radius: 3px;
+	overflow: hidden;
+}
+
+.pc-sd-switch__btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 6px 12px;
+	color: #1d2327;
+	text-decoration: none;
+	background: #fff;
+}
+
+.pc-sd-switch__btn .dashicons {
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
+}
+
+.pc-sd-switch__btn.is-active {
+	background: var(--pc-sd-orange);
+	color: #fff;
+}
+
+.pc-sd-switch__btn:focus {
+	box-shadow: 0 0 0 2px var(--pc-sd-orange-dark);
+	outline: none;
+}
+
+.pc-sd-help {
+	margin: 16px 0 0 18px;
+	color: var(--pc-sd-muted);
+}
+
+.pc-sd-current__main {
+	background: #f6f7f7;
+	border-radius: 4px;
+	padding: 20px 24px;
+	min-width: 0;
+}
+
+.pc-sd-current__head {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 16px;
+	flex-wrap: wrap;
+}
+
+.pc-sd-current__name {
+	margin: 0 0 6px;
+	font-size: 18px;
+	font-weight: 500;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.pc-sd-meta {
+	margin: 0;
+	color: var(--pc-sd-muted);
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	flex-wrap: wrap;
+}
+
+.pc-sd-meta .dashicons {
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
+}
+
+.pc-sd-meta__sep {
+	margin: 0 4px;
+	color: #c3c4c7;
+}
+
+.pc-sd-actions {
+	display: flex;
+	gap: 12px;
+}
+
+/* 次要按钮：参照 Shopname 用中性灰，不用 WordPress 默认的蓝色描边 */
+.pc-sd .button:not(.button-primary):not(.pc-sd-primary) {
+	color: #1d2327;
+	border-color: #c3c4c7;
+	background: #fff;
+}
+
+.pc-sd .button:not(.button-primary):not(.pc-sd-primary):hover,
+.pc-sd .button:not(.button-primary):not(.pc-sd-primary):focus {
+	color: var(--pc-sd-orange-dark);
+	border-color: var(--pc-sd-orange);
+	background: #fff;
+}
+
+.pc-sd .button.pc-sd-primary,
+.pc-sd .button-primary {
+	background: var(--pc-sd-orange);
+	border-color: var(--pc-sd-orange);
+	color: #fff;
+}
+
+.pc-sd .button.pc-sd-primary:hover,
+.pc-sd .button-primary:hover,
+.pc-sd .button.pc-sd-primary:focus,
+.pc-sd .button-primary:focus {
+	background: var(--pc-sd-orange-dark);
+	border-color: var(--pc-sd-orange-dark);
+	color: #fff;
+}
+
+.pc-sd-note {
+	color: var(--pc-sd-muted);
+	margin: 12px 0;
+}
+
+/* 电脑 + 手机缩略预览：iframe 按实际宽度渲染，由页面脚本按容器宽度等比缩小（见 render_theme_design）。 */
+.pc-sd-stage {
+	position: relative;
+	width: 100%;
+	max-width: 1180px;
+	margin: 12px auto 0;
+	aspect-ratio: 16 / 7.6;
+}
+
+.pc-sd-stage iframe {
+	border: 0;
+	pointer-events: none;
+	transform-origin: 0 0;
+	background: #fff;
+	display: block;
+}
+
+.pc-sd-stage__desktop {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 82%;
+	aspect-ratio: 16 / 9;
+	overflow: hidden;
+	border: 1px solid var(--pc-sd-border);
+	border-radius: 6px;
+	box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+	background: #fff;
+}
+
+.pc-sd-stage__phone {
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	width: 21%;
+	aspect-ratio: 9 / 19;
+	overflow: hidden;
+	border: 7px solid #1d2327;
+	border-radius: 22px;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+	background: #fff;
+}
+
+/* 模板库 */
+.pc-sd-library__head {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 16px;
+}
+
+.pc-sd-table {
+	border-color: var(--pc-sd-border);
+}
+
+.pc-sd-table thead th {
+	background: #f0f0f1;
+	font-weight: 500;
+}
+
+.pc-sd-table td,
+.pc-sd-table th {
+	vertical-align: middle;
+	padding: 14px 10px;
+}
+
+.pc-sd-tag {
+	display: inline-block;
+	padding: 1px 8px;
+	border-radius: 2px;
+	font-size: 12px;
+	line-height: 20px;
+	background: #f0f0f1;
+	color: #1d2327;
+	margin-left: 4px;
+}
+
+.pc-sd-tag--blue {
+	background: #2271b1;
+	color: #fff;
+}
+
+.pc-sd-tag--teal {
+	background: #00a0a0;
+	color: #fff;
+}
+
+.pc-sd-tag--warn {
+	background: #dba617;
+	color: #1d2327;
+}
+
+.pc-sd-tag--green {
+	background: #00a32a;
+	color: #fff;
+}
+
+.pc-sd-tag--muted {
+	background: #f0f0f1;
+	color: #50575e;
+}
+
+.pc-sd-note .pc-sd-tag {
+	margin-left: 0;
+	margin-right: 6px;
+}
+
+.pc-sd-split {
+	display: inline-flex;
+	position: relative;
+}
+
+.pc-sd-split > .button {
+	border-top-right-radius: 0;
+	border-bottom-right-radius: 0;
+}
+
+.pc-sd-menu > summary {
+	list-style: none;
+	border-top-left-radius: 0;
+	border-bottom-left-radius: 0;
+	margin-left: -1px;
+	padding: 0 6px;
+}
+
+.pc-sd-menu > summary::-webkit-details-marker {
+	display: none;
+}
+
+.pc-sd-menu > summary .dashicons {
+	font-size: 14px;
+	width: 14px;
+	height: 14px;
+	margin-top: 6px;
+}
+
+.pc-sd-menu__list {
+	position: absolute;
+	right: 0;
+	top: calc(100% + 4px);
+	z-index: 20;
+	min-width: 240px;
+	background: #fff;
+	border: 1px solid var(--pc-sd-border);
+	border-radius: 4px;
+	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+	padding: 6px 0;
+}
+
+.pc-sd-menu__list > a {
+	display: block;
+	padding: 8px 14px;
+	text-decoration: none;
+	color: #1d2327;
+}
+
+.pc-sd-menu__list > a:hover,
+.pc-sd-menu__list > a:focus {
+	background: #f6f7f7;
+}
+
+.pc-sd-menu__list > .pc-sd-menu__danger {
+	color: #b32d2e;
+}
+
+.pc-sd-menu__list .pc-sd-form {
+	border-top: 1px solid var(--pc-sd-border);
+	border-bottom: 1px solid var(--pc-sd-border);
+	margin: 6px 0;
+	padding: 10px 14px;
+}
+
+.pc-sd-form label {
+	display: block;
+	margin-bottom: 8px;
+}
+
+.pc-sd-form input[type="text"],
+.pc-sd-form select {
+	display: block;
+	width: 100%;
+	margin-top: 2px;
+}
+
+.pc-sd-form--inline {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 12px;
+	margin-top: 16px;
+}
+
+.pc-sd-form--inline label {
+	margin: 0;
+	min-width: 220px;
+}
+
+.pc-sd-new {
+	position: relative;
+}
+
+.pc-sd-new > summary {
+	list-style: none;
+}
+
+.pc-sd-new > summary::-webkit-details-marker {
+	display: none;
+}
+
+.pc-sd-new[open] > .pc-sd-form {
+	position: absolute;
+	right: 0;
+	top: calc(100% + 4px);
+	z-index: 20;
+	width: 280px;
+	background: #fff;
+	border: 1px solid var(--pc-sd-border);
+	border-radius: 4px;
+	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+	padding: 14px;
+}
+
+.pc-sd-eye {
+	color: #1d2327;
+	text-decoration: none;
+}
+
+.pc-sd-library {
+	margin-bottom: 24px;
+}
+
+/* 推荐应用 */
+.pc-sd-apps__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 12px;
+}
+
+.pc-sd-app {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	background: #fff;
+	border: 1px solid var(--pc-sd-border);
+	border-radius: 4px;
+	padding: 12px 14px;
+	text-decoration: none;
+	color: #1d2327;
+	font-weight: 600;
+}
+
+.pc-sd-app:hover,
+.pc-sd-app:focus {
+	border-color: var(--pc-sd-orange);
+	color: #1d2327;
+}
+
+.pc-sd-app > .dashicons:first-child {
+	color: var(--pc-sd-orange);
+}
+
+.pc-sd-app__name {
+	flex: 1;
+}
+
+.pc-sd-app__on {
+	color: #fff;
+	background: #00a0a0;
+	border-radius: 50%;
+	font-size: 16px;
+	width: 18px;
+	height: 18px;
+	line-height: 18px;
+	text-align: center;
+}
+
+/* 占位页 */
+.pc-sd-empty {
+	text-align: center;
+	padding: 60px 24px;
+	color: var(--pc-sd-muted);
+}
+
+.pc-sd-empty .dashicons {
+	font-size: 40px;
+	width: 40px;
+	height: 40px;
+	color: #c3c4c7;
+}
+
+@media (max-width: 960px) {
+	.pc-sd-current {
+		grid-template-columns: 1fr;
+	}
+
+	.pc-sd-table--library th:nth-child(3),
+	.pc-sd-table--library td:nth-child(3),
+	.pc-sd-table--library th:nth-child(4),
+	.pc-sd-table--library td:nth-child(4) {
+		display: none;
+	}
+}
+

@@ -30,6 +30,10 @@ final class Rest_Controller {
 	private const LOOKUP_LIMIT  = 60;
 	private const LOOKUP_WINDOW = 10 * MINUTE_IN_SECONDS;
 
+	// 报告下载限流：每个来源每 10 分钟最多 120 次。
+	private const DOWNLOAD_LIMIT  = 120;
+	private const DOWNLOAD_WINDOW = 10 * MINUTE_IN_SECONDS;
+
 	public static function register_hooks(): void {
 		add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
 	}
@@ -49,7 +53,8 @@ final class Rest_Controller {
 
 		register_rest_route(
 			self::ROUTE_NAMESPACE,
-			'/products/(?P<slug>[a-z0-9-]{1,200})/batches',
+			// slug 可能含百分号编码的中文等非 ASCII 字符，所以不限定字符集，由 sanitize_title 处理。
+			'/products/(?P<slug>[^/]{1,400})/batches',
 			array(
 				'methods'             => \WP_REST_Server::READABLE,
 				'callback'            => array( self::class, 'get_product_batches' ),
@@ -194,31 +199,41 @@ final class Rest_Controller {
 	 * @return \WP_Error|void
 	 */
 	public static function download_report( \WP_REST_Request $request ) {
+		$limited = self::rate_limit( 'download', self::DOWNLOAD_LIMIT, self::DOWNLOAD_WINDOW );
+		if ( $limited ) {
+			return $limited;
+		}
+
 		$report_id = (int) $request['id'];
 		$user_id   = get_current_user_id();
-		$is_staff  = Access::is_staff( $user_id );
+		if ( ! $user_id ) {
+			$user_id = self::user_from_report_nonce( $request, $report_id );
+		}
+		$is_staff = Access::is_staff( $user_id );
 
 		if ( Post_Types::REPORT !== get_post_type( $report_id ) || 'trash' === get_post_status( $report_id ) ) {
 			return Errors::not_found();
 		}
 
 		$status = (string) get_post_meta( $report_id, Meta::REPORT_STATUS, true );
-		if ( ! $is_staff ) {
-			if ( 'withdrawn' === $status ) {
-				return new \WP_Error( 'pc_report_withdrawn', __( 'This report has been withdrawn.', 'peptide-core' ), array( 'status' => 410 ) );
-			}
-			if ( ! in_array( $status, array( 'published', 'superseded' ), true ) ) {
-				return Errors::not_found();
-			}
-		}
-
 		$access = Access::for_report( $report_id, $user_id );
 
-		// 所属批次必须前台可见；订单所有者例外（隐藏批次也可能已经发给了他）。
-		if ( ! $is_staff && 'order_owner' !== $access['access_reason'] ) {
-			$batch_id = (int) get_post_meta( $report_id, Meta::REPORT_BATCH_ID, true );
-			if ( ! $batch_id || Catalog::public_batch_id_by_no( (string) get_post_meta( $batch_id, Meta::BATCH_NO, true ) ) !== $batch_id ) {
+		if ( ! $is_staff ) {
+			// 先判断“这份报告对当前用户是否可见”，全部不可见的情况统一返回 404，避免暴露报告是否存在：
+			// 草稿、仅员工可见、所属批次不公开（且当前用户不是收到过这个批次的订单所有者）。
+			if ( ! in_array( $status, array( 'published', 'superseded', 'withdrawn' ), true ) ) {
 				return Errors::not_found();
+			}
+			if ( ! $access['allowed'] && null === $access['locked_reason'] ) {
+				return Errors::not_found();
+			}
+			$batch_id = (int) get_post_meta( $report_id, Meta::REPORT_BATCH_ID, true );
+			$is_owner = \PeptideCore\Order_Batches::user_received_batch( $user_id, $batch_id );
+			if ( ! $is_owner && ( ! $batch_id || Catalog::public_batch_id_by_no( (string) get_post_meta( $batch_id, Meta::BATCH_NO, true ) ) !== $batch_id ) ) {
+				return Errors::not_found();
+			}
+			if ( 'withdrawn' === $status ) {
+				return new \WP_Error( 'pc_report_withdrawn', __( 'This report has been withdrawn.', 'peptide-core' ), array( 'status' => 410 ) );
 			}
 		}
 		if ( ! $access['allowed'] ) {
@@ -261,10 +276,88 @@ final class Rest_Controller {
 	}
 
 	/**
+	 * 下载链接里的专用 nonce（pc_nonce，只对这一份报告有效）：浏览器直接点链接时不会带 X-WP-Nonce，
+	 * WordPress REST 会把请求当作访客。这里自己校验登录 Cookie 和这份报告专用的 nonce，
+	 * 不在网址里放通用的 wp_rest nonce（它能用于其他 REST 写操作）。
+	 */
+	private static function user_from_report_nonce( \WP_REST_Request $request, int $report_id ): int {
+		$nonce = (string) $request->get_param( 'pc_nonce' );
+		if ( '' === $nonce || empty( $_COOKIE[ LOGGED_IN_COOKIE ] ) ) {
+			return 0;
+		}
+		$user_id = wp_validate_auth_cookie( wp_unslash( $_COOKIE[ LOGGED_IN_COOKIE ] ), 'logged_in' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- 由 wp_validate_auth_cookie 校验。
+		if ( ! $user_id ) {
+			return 0;
+		}
+		wp_set_current_user( $user_id );
+		if ( ! wp_verify_nonce( $nonce, 'pc_report_' . $report_id ) ) {
+			wp_set_current_user( 0 );
+			return 0;
+		}
+		return (int) $user_id;
+	}
+
+	/**
+	 * 访客 IP，用于限流。
+	 * - 只有当 REMOTE_ADDR 属于 wp-config 中 PEPTIDE_CORE_TRUSTED_PROXIES（逗号分隔的 IP 或 CIDR，例如 Cloudflare 网段）时，
+	 *   才采用 CF-Connecting-IP / X-Forwarded-For，防止访客伪造请求头绕过限流；
+	 * - IPv6 按 /64 归为一个来源，防止换地址绕过。
+	 */
+	public static function client_ip(): string {
+		$remote = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+		$ip     = $remote;
+		$list   = defined( 'PEPTIDE_CORE_TRUSTED_PROXIES' ) ? array_filter( array_map( 'trim', explode( ',', (string) PEPTIDE_CORE_TRUSTED_PROXIES ) ) ) : array();
+		if ( $list && self::ip_in_list( $remote, $list ) ) {
+			$forwarded = '';
+			if ( ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
+				$forwarded = sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IP'] ) );
+			} elseif ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+				$parts     = explode( ',', sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) );
+				$forwarded = trim( $parts[0] );
+			}
+			if ( filter_var( $forwarded, FILTER_VALIDATE_IP ) ) {
+				$ip = $forwarded;
+			}
+		}
+		if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 ) ) {
+			$bin = inet_pton( $ip );
+			$ip  = inet_ntop( substr( $bin, 0, 8 ) . str_repeat( "\0", 8 ) ) . '/64';
+		}
+		return $ip;
+	}
+
+	/**
+	 * @param string[] $list IP 或 CIDR。
+	 */
+	private static function ip_in_list( string $ip, array $list ): bool {
+		$bin = @inet_pton( $ip ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		if ( false === $bin ) {
+			return false;
+		}
+		foreach ( $list as $entry ) {
+			[ $net, $bits ] = array_pad( explode( '/', $entry, 2 ), 2, null );
+			$net_bin        = @inet_pton( $net ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			if ( false === $net_bin || strlen( $net_bin ) !== strlen( $bin ) ) {
+				continue;
+			}
+			$bits = null === $bits ? strlen( $bin ) * 8 : max( 0, min( strlen( $bin ) * 8, (int) $bits ) );
+			$full = intdiv( $bits, 8 );
+			$rest = $bits % 8;
+			if ( substr( $bin, 0, $full ) !== substr( $net_bin, 0, $full ) ) {
+				continue;
+			}
+			if ( 0 === $rest || ( ( ord( $bin[ $full ] ) ^ ord( $net_bin[ $full ] ) ) & ( 0xFF << ( 8 - $rest ) ) & 0xFF ) === 0 ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
 	 * 按 IP 哈希计数的简单限流。超限返回 429 错误，否则返回 null。
 	 */
 	private static function rate_limit( string $bucket, int $limit, int $window ): ?\WP_Error {
-		$ip  = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+		$ip  = self::client_ip();
 		$key = 'pc_rl_' . $bucket . '_' . substr( hash_hmac( 'sha256', $ip, wp_salt( 'nonce' ) ), 0, 32 );
 		$hit = get_transient( $key );
 		$now = time();

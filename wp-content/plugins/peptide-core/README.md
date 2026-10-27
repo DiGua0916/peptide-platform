@@ -16,6 +16,11 @@
   - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-order-batches.php`（订单与批次关联，18 项）
   - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-workbench.php`（后台工作台，13 项）
   - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-settings-ack.php`（设置页与结账确认，17 项）
+  - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-import.php`（报价表与批次报告导入，23 项）
+  - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-batch-orders.php`（批次反查订单，14 项）
+  - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-security.php`（安全修复回归，23 项）
+  - `wp eval-file wp-content/plugins/peptide-core/tests/smoke-pricing.php`（促销对照价，23 项）
+  - 所有测试都会关闭邮件发送（`pre_wp_mail`），不会产生通知邮件。
 
 ## 依赖
 
@@ -54,6 +59,12 @@ wp peptide demo order        # 演示订单：处理中、未指定批次
 wp peptide demo commerce      # 测试结账：只卖美国、$0 测试运费、测试付款（不扣钱）
 wp peptide demo commerce --disable   # 上线前必须执行
 wp peptide demo purge --yes
+wp peptide import quote <报价表.xlsx> --tag=<标签> [--dry-run]   # 从报价表导入商品（全部标记为演示数据）
+wp peptide import batches <批次.csv> --reports-dir=<报告文件夹> --tag=<标签> [--update] [--dry-run]   # 导入批次与检测报告（模板见 import-templates/）
+wp peptide import delete --tag=<标签> --yes                      # 删除该标签下导入的商品、批次和报告
+wp peptide doctor                                                # 上线体检（只读）
+wp peptide batch orders <批次号> [--format=table|csv|json]      # 批次反查订单（溯源、召回）
+wp peptide pricing status|apply-demo|revert --backup=<文件> [--dry-run]   # 促销对照价（演示对照价不能上线）
 ```
 
 创建 2 个演示商品（Demo Peptide A / B）、3 个批次（DEMO-A-2401、DEMO-A-2402、DEMO-B-2401）和 2 份带 “DEMO – NOT A REAL TEST REPORT” 水印的演示报告。所有记录都有演示标记；`purge` 只删除带演示标记的记录（包括演示订单）。`order` 会创建一个访客演示订单（Demo Customer，联系人邮箱用 example.com，Demo Peptide A ×2、Demo Peptide B ×1，状态为处理中，不发邮件），用于查看批次分配面板和工作台。
@@ -65,7 +76,7 @@ wp peptide demo purge --yes
 | `GET /wp-json/peptide/v1/site` | 演示模式、演示提示、用途声明、结账确认项 |
 | `GET /wp-json/peptide/v1/products/{slug}/batches?include_history=0\|1` | `{ product, batches[] }`，只含已发布且公开的批次 |
 | `GET /wp-json/peptide/v1/batches/lookup?batch_no=` | 单个批次 + `product`；每个 IP 每 10 分钟最多 60 次 |
-| `GET /wp-json/peptide/v1/reports/{id}/file` | 校验权限后输出文件；已登录用户的 `download_url` 自带 `_wpnonce` |
+| `GET /wp-json/peptide/v1/reports/{id}/file` | 校验权限后输出文件；已登录用户的 `download_url` 自带只对这一份报告有效的 `pc_nonce`；每个来源每 10 分钟最多 120 次 |
 | Store API `GET /wp-json/wc/store/v1/products` | 每个商品附加 `extensions.peptide_core`：`is_demo`、`specs`、`batch_count`、`report_state` |
 
 主题 PHP 函数：`peptide_core_get_site_config()`、`peptide_core_get_product_batches( $slug )`、`peptide_core_lookup_batch( $batch_no )`（定义在 includes/functions.php）。

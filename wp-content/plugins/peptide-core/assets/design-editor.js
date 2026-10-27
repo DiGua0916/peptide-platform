@@ -1,0 +1,1195 @@
+/**
+ * 装修编辑器（EDIT-BLOCKS-04），界面参照 YY（Shopname）的装修页。
+ *
+ * 数据：window.pcDesignEditor（文档、接口路径、积木库、文案）；window.pcModules / window.pcModuleUI（字段定义与控件）。
+ * 保存：POST /peptide/v1/layouts/{id}，带上打开时的修改时间，别人改过时返回 409。
+ * 预览：每次改动后约 0.6 秒，把当前内容发到 /preview 生成短期预览地址，刷新左侧 iframe（保留滚动位置）。
+ */
+( function ( wp, cfg, data, ui ) {
+	'use strict';
+
+	if ( ! wp || ! cfg || ! data || ! ui ) {
+		return;
+	}
+
+	var el = wp.element.createElement;
+	var Fragment = wp.element.Fragment;
+	var useState = wp.element.useState;
+	var useEffect = wp.element.useEffect;
+	var useRef = wp.element.useRef;
+	var C = wp.components;
+	var apiFetch = wp.apiFetch;
+	var S = cfg.strings;
+
+	var HISTORY_LIMIT = 60;
+	var COALESCE_MS = 800;
+
+	function defOf( m ) {
+		return data.modules[ m.block ];
+	}
+
+	function titleOf( m ) {
+		var def = defOf( m );
+		var s = ( m.attrs && m.attrs.settings ) || {};
+		var custom = s.title || s.leftTitle;
+		return ( def ? def.title : m.block ) + ( custom ? ' · ' + custom : '' );
+	}
+
+	function newModule( block ) {
+		return { block: block, attrs: ui.initialAttributes( data.modules[ block ] ) };
+	}
+
+	function copyModule( m ) {
+		var c = ui.clone( m );
+		var map = {};
+		function renew( list ) {
+			( list || [] ).forEach( function ( it ) {
+				map[ it.id ] = map[ it.id ] || ui.uid();
+				it.id = map[ it.id ];
+				[ 'spots', 'highlights', 'facts', 'products' ].forEach( function ( key ) {
+					( ( it.settings && it.settings[ key ] ) || [] ).forEach( function ( sub ) {
+						map[ sub.id ] = map[ sub.id ] || ui.uid();
+						sub.id = map[ sub.id ];
+					} );
+				} );
+			} );
+		}
+		c.attrs.moduleId = ui.uid();
+		renew( c.attrs.items );
+		// 手机版条目和电脑版用同一套编号，复制后仍然一一对应。
+		if ( c.attrs.mobile && c.attrs.mobile.items ) {
+			renew( c.attrs.mobile.items );
+		}
+		return c;
+	}
+
+	function mobileOf( m ) {
+		var mob = ( m.attrs && m.attrs.mobile ) || {};
+		return { settings: mob.settings || {}, items: Array.isArray( mob.items ) ? mob.items : null };
+	}
+
+	function mobileCount( m ) {
+		var mob = mobileOf( m );
+		return Object.keys( mob.settings ).length + ( mob.items ? 1 : 0 );
+	}
+
+	function isTyping( target ) {
+		return target && ( /^(INPUT|TEXTAREA|SELECT)$/.test( target.tagName ) || target.isContentEditable );
+	}
+
+	function Icon( props ) {
+		return el( 'span', { className: 'dashicons dashicons-' + props.name + ( props.className ? ' ' + props.className : '' ), 'aria-hidden': 'true' } );
+	}
+
+	function App() {
+		var modulesState = useState( cfg.document.modules || [] );
+		var modules = modulesState[ 0 ];
+		var setModulesRaw = modulesState[ 1 ];
+		var selectedState = useState( null );
+		var selected = selectedState[ 0 ];
+		var setSelected = selectedState[ 1 ];
+		var tabState = useState( 'modules' );
+		var tab = tabState[ 0 ];
+		var deviceState = useState( 'desktop' );
+		var device = deviceState[ 0 ];
+		var dirtyState = useState( false );
+		var dirty = dirtyState[ 0 ];
+		var savingState = useState( false );
+		var saving = savingState[ 0 ];
+		var noticeState = useState(
+			cfg.document.lockedBy ? { type: 'warning', text: S.lockedBy.replace( '%s', cfg.document.lockedBy ) } : null
+		);
+		var notice = noticeState[ 0 ];
+		var setNotice = noticeState[ 1 ];
+		var modifiedRef = useRef( cfg.document.modified );
+		var statusState = useState( cfg.document.status || { published: false, changed: true } );
+		var status = statusState[ 0 ];
+		var menuState = useState( false );
+		var menuOpen = menuState[ 0 ];
+		var busyState = useState( false );
+		var busy = busyState[ 0 ];
+		var previewState = useState( cfg.document.previewBase );
+		var previewUrl = previewState[ 0 ];
+		var loadingState = useState( true );
+		var loading = loadingState[ 0 ];
+		var dragState = useState( { from: null, over: null } );
+		var drag = dragState[ 0 ];
+		var setDrag = dragState[ 1 ];
+		var historyRef = useRef( { past: [], future: [], last: 0 } );
+		var frameRef = useRef( null );
+		var scrollRef = useRef( 0 );
+		var fromPreviewRef = useRef( false );
+		// 设置面板里展开的条目（例如第 2 张轮播），预览里会高亮并切换到它。
+		var openItemState = useState( null );
+		var openItem = openItemState[ 0 ];
+		var pendingItemRef = useRef( null );
+		var hlTargetRef = useRef( null );
+		var dragJustEndedRef = useRef( false );
+		var commitDragRef = useRef( function () {} );
+		var firstRef = useRef( true );
+		var historyTick = useState( 0 );
+
+		function setModules( next, coalesce ) {
+			var h = historyRef.current;
+			var now = Date.now();
+			if ( ! coalesce || now - h.last > COALESCE_MS ) {
+				h.past.push( modules );
+				if ( h.past.length > HISTORY_LIMIT ) {
+					h.past.shift();
+				}
+			}
+			h.last = now;
+			h.future = [];
+			setModulesRaw( next );
+			dirtyState[ 1 ]( true );
+			historyTick[ 1 ]( now );
+		}
+
+		function undo() {
+			var h = historyRef.current;
+			if ( ! h.past.length ) {
+				return;
+			}
+			h.future.push( modules );
+			setModulesRaw( h.past.pop() );
+			h.last = 0;
+			dirtyState[ 1 ]( true );
+			historyTick[ 1 ]( Date.now() );
+		}
+
+		function redo() {
+			var h = historyRef.current;
+			if ( ! h.future.length ) {
+				return;
+			}
+			h.past.push( modules );
+			setModulesRaw( h.future.pop() );
+			h.last = 0;
+			dirtyState[ 1 ]( true );
+			historyTick[ 1 ]( Date.now() );
+		}
+
+		function indexOf( id ) {
+			for ( var i = 0; i < modules.length; i++ ) {
+				if ( modules[ i ].attrs.moduleId === id ) {
+					return i;
+				}
+			}
+			return -1;
+		}
+
+		function updateModule( id, patch, coalesce ) {
+			setModules(
+				modules.map( function ( m ) {
+					return m.attrs.moduleId === id ? { block: m.block, attrs: Object.assign( {}, m.attrs, patch ) } : m;
+				} ),
+				coalesce
+			);
+		}
+
+		function insert( block ) {
+			var m = newModule( block );
+			var at = indexOf( selected );
+			var list = modules.slice();
+			list.splice( at === -1 ? list.length : at + 1, 0, m );
+			setModules( list );
+			setSelected( m.attrs.moduleId );
+		}
+
+		function duplicate( index ) {
+			var c = copyModule( modules[ index ] );
+			var list = modules.slice();
+			list.splice( index + 1, 0, c );
+			setModules( list );
+			setSelected( c.attrs.moduleId );
+		}
+
+		function toggle( index ) {
+			var m = modules[ index ];
+			updateModule( m.attrs.moduleId, { enabled: m.attrs.enabled === false } );
+		}
+
+		function remove( index ) {
+			// 后台已用页面内对话框替换原生确认框（admin-dialogs.js）。
+			// eslint-disable-next-line no-alert
+			if ( ! window.confirm( S.confirmDelete ) ) {
+				return;
+			}
+			var list = modules.slice();
+			var removed = list.splice( index, 1 )[ 0 ];
+			setModules( list );
+			if ( removed && selected === removed.attrs.moduleId ) {
+				setSelected( null );
+			}
+		}
+
+		function move( from, to ) {
+			if ( from === null || to === null || from === to ) {
+				return;
+			}
+			var list = modules.slice();
+			var item = list.splice( from, 1 )[ 0 ];
+			list.splice( to, 0, item );
+			setModules( list );
+		}
+
+		function showError( err ) {
+			setNotice( {
+				type: 'error',
+				text: ( err && err.message ) || 'Error',
+				reload: err && err.code === 'pc_layout_conflict',
+			} );
+		}
+
+		// 保存草稿；返回 Promise，发布前会先调用。
+		function save( quiet ) {
+			if ( saving ) {
+				return Promise.reject( { message: S.saving } );
+			}
+			savingState[ 1 ]( true );
+			return apiFetch( { path: cfg.restPath, method: 'POST', data: { modules: modules, modified: modifiedRef.current } } )
+				.then( function ( doc ) {
+					modifiedRef.current = doc.modified;
+					statusState[ 1 ]( doc.status );
+					dirtyState[ 1 ]( false );
+					if ( ! quiet ) {
+						setNotice( { type: 'success', text: S.saved } );
+					}
+					return doc;
+				} )
+				.finally( function () {
+					savingState[ 1 ]( false );
+				} );
+		}
+
+		function onSave() {
+			save( false ).catch( showError );
+		}
+
+		// 发布：有未保存的修改时先保存，再发布。
+		function publish() {
+			menuState[ 1 ]( false );
+			if ( ! cfg.canPublish ) {
+				setNotice( { type: 'warning', text: S.publishDenied } );
+				return;
+			}
+			// eslint-disable-next-line no-alert -- 后台已用页面内对话框替换原生确认框。
+			if ( ! window.confirm( S.publishConfirm ) ) {
+				return;
+			}
+			busyState[ 1 ]( true );
+			( dirty ? save( true ) : Promise.resolve() )
+				.then( function () {
+					return apiFetch( { path: cfg.restPath + '/publish', method: 'POST', data: { modified: modifiedRef.current } } );
+				} )
+				.then( function ( doc ) {
+					statusState[ 1 ]( doc.status );
+					setNotice( { type: 'success', text: S.published } );
+				} )
+				.catch( showError )
+				.finally( function () {
+					busyState[ 1 ]( false );
+				} );
+		}
+
+		function unpublish() {
+			menuState[ 1 ]( false );
+			// eslint-disable-next-line no-alert
+			if ( ! window.confirm( S.unpublishConfirm ) ) {
+				return;
+			}
+			busyState[ 1 ]( true );
+			apiFetch( { path: cfg.restPath + '/unpublish', method: 'POST' } )
+				.then( function ( doc ) {
+					statusState[ 1 ]( doc.status );
+					setNotice( { type: 'success', text: S.unpublished } );
+				} )
+				.catch( showError )
+				.finally( function () {
+					busyState[ 1 ]( false );
+				} );
+		}
+
+		function discard() {
+			menuState[ 1 ]( false );
+			// eslint-disable-next-line no-alert
+			if ( ! window.confirm( S.discardConfirm ) ) {
+				return;
+			}
+			busyState[ 1 ]( true );
+			apiFetch( { path: cfg.restPath + '/discard', method: 'POST' } )
+				.then( function ( doc ) {
+					modifiedRef.current = doc.modified;
+					statusState[ 1 ]( doc.status );
+					historyRef.current = { past: [], future: [], last: 0 };
+					setModulesRaw( doc.modules );
+					dirtyState[ 1 ]( false );
+					setSelected( null );
+					setNotice( { type: 'success', text: S.discarded } );
+				} )
+				.catch( showError )
+				.finally( function () {
+					busyState[ 1 ]( false );
+				} );
+		}
+
+		// 预览：改动后稍等一下再刷新。
+		useEffect(
+			function () {
+				if ( firstRef.current ) {
+					firstRef.current = false;
+					return undefined;
+				}
+				var timer = setTimeout( function () {
+					apiFetch( { path: cfg.restPath + '/preview', method: 'POST', data: { modules: modules } } )
+						.then( function ( r ) {
+							var frame = frameRef.current;
+							try {
+								scrollRef.current = frame && frame.contentWindow ? frame.contentWindow.scrollY : 0;
+							} catch ( e ) {
+								scrollRef.current = 0;
+							}
+							loadingState[ 1 ]( true );
+							previewState[ 1 ]( r.url );
+						} )
+						.catch( function () {} );
+				}, 600 );
+				return function () {
+					clearTimeout( timer );
+				};
+			},
+			[ modules ]
+		);
+
+		function frameDoc() {
+			try {
+				return frameRef.current ? frameRef.current.contentDocument : null;
+			} catch ( e ) {
+				return null;
+			}
+		}
+
+		// 高亮框：在预览页面上单独画一个框，不受主题样式（背景、层级、overflow）影响。
+		function overlay( doc ) {
+			var box = doc.getElementById( 'pc-de-highlight' );
+			if ( ! box ) {
+				box = doc.createElement( 'div' );
+				box.id = 'pc-de-highlight';
+				box.setAttribute( 'aria-hidden', 'true' );
+				box.innerHTML = '<span></span>';
+				doc.body.appendChild( box );
+			}
+			return box;
+		}
+
+		function placeOverlay() {
+			var doc = frameDoc();
+			var target = hlTargetRef.current;
+			if ( ! doc || ! doc.body ) {
+				return;
+			}
+			var box = overlay( doc );
+			if ( ! target || ! target.isConnected ) {
+				box.style.display = 'none';
+				return;
+			}
+			var r = target.getBoundingClientRect();
+			var win = doc.defaultView;
+			box.style.display = r.width || r.height ? 'block' : 'none';
+			box.style.top = r.top + win.scrollY + 'px';
+			box.style.left = r.left + win.scrollX + 'px';
+			box.style.width = r.width + 'px';
+			box.style.height = r.height + 'px';
+		}
+
+		function moduleEl( doc, id ) {
+			return id ? doc.getElementById( 'vc-' + id ) : null;
+		}
+
+		function itemEl( doc, moduleId, itemId ) {
+			var root = moduleEl( doc, moduleId );
+			if ( ! root || ! itemId ) {
+				return null;
+			}
+			var list = root.querySelectorAll( '[data-module-item]' );
+			var first = null;
+			for ( var i = 0; i < list.length; i++ ) {
+				if ( list[ i ].getAttribute( 'data-module-item' ) !== itemId ) {
+					continue;
+				}
+				// 电脑版和手机版各有一份：优先当前看得见的那一份。
+				if ( list[ i ].closest( '.vc-v' ) && 'none' === list[ i ].ownerDocument.defaultView.getComputedStyle( list[ i ].closest( '.vc-v' ) ).display ) {
+					continue;
+				}
+				first = first || list[ i ];
+			}
+			return first;
+		}
+
+		// 轮播等一次只显示一项的积木：暂停自动播放并切换到这一项。
+		// 1. 先发 vc:select-item 事件，主题脚本处理后调用 preventDefault() 即可；
+		// 2. 没人处理时：Codex 的轮播（[data-vc-module-carousel]）用 focusin 暂停、方向键切换；
+		// 3. 仍然看不见时，直接切换 is-active / hidden。
+		function revealItem( root, el ) {
+			var id = el.getAttribute( 'data-module-item' );
+			var win = el.ownerDocument.defaultView;
+			var ev = null;
+			try {
+				ev = new win.CustomEvent( 'vc:select-item', { bubbles: true, cancelable: true, detail: { item: id } } );
+				el.dispatchEvent( ev );
+			} catch ( e ) {}
+			if ( ev && ev.defaultPrevented ) {
+				return;
+			}
+			var car = el.closest( '[data-vc-module-carousel]' );
+			if ( car ) {
+				var slides = Array.prototype.filter.call( car.querySelectorAll( '[data-module-item]' ), function ( n ) {
+					return n.closest( '[data-vc-module-carousel]' ) === car;
+				} );
+				var to = slides.indexOf( el );
+				try {
+					car.dispatchEvent( new win.FocusEvent( 'focusin', { bubbles: true } ) );
+					car.dispatchEvent( new win.KeyboardEvent( 'keydown', { key: 'Home', bubbles: true } ) );
+					for ( var k = 0; k < to; k++ ) {
+						car.dispatchEvent( new win.KeyboardEvent( 'keydown', { key: 'ArrowRight', bubbles: true } ) );
+					}
+				} catch ( e ) {}
+			}
+			var r = el.getBoundingClientRect();
+			if ( r.width && r.height && ! el.hidden && el.classList.contains( 'is-active' ) !== false ) {
+				return;
+			}
+			Array.prototype.forEach.call( el.parentNode ? el.parentNode.children : [], function ( sib ) {
+				if ( sib.hasAttribute && sib.hasAttribute( 'data-module-item' ) ) {
+					var on = sib === el;
+					sib.classList.toggle( 'is-active', on );
+					sib.hidden = ! on;
+					sib.inert = ! on;
+					if ( on ) {
+						sib.removeAttribute( 'aria-hidden' );
+					}
+				}
+			} );
+		}
+
+		function highlight( scroll ) {
+			var doc = frameDoc();
+			if ( ! doc || ! doc.body ) {
+				return;
+			}
+			var target = null;
+			var label = '';
+			if ( selected === 'header' ) {
+				target = doc.querySelector( '.site-header, body > header, header' );
+				label = S.header;
+			} else if ( selected === 'footer' ) {
+				target = doc.querySelector( '.site-footer, body > footer, footer' );
+				label = S.footer;
+			} else if ( selected && selected !== 'library' ) {
+				var m = modules[ indexOf( selected ) ];
+				target = moduleEl( doc, selected );
+				label = m ? titleOf( m ) : '';
+				if ( target && openItem ) {
+					var it = itemEl( doc, selected, openItem );
+					if ( it ) {
+						revealItem( target, it );
+						target = it;
+						var items = ( m && m.attrs.items ) || [];
+						for ( var i = 0; i < items.length; i++ ) {
+							if ( items[ i ].id === openItem ) {
+								label += ' · ' + S.itemN.replace( '%d', i + 1 );
+							}
+						}
+					}
+				}
+			}
+			hlTargetRef.current = target;
+			var box = overlay( doc );
+			box.firstChild.textContent = label;
+			placeOverlay();
+			if ( target && scroll ) {
+				target.scrollIntoView( { block: 'center', behavior: 'smooth' } );
+			}
+		}
+
+		// 预览加载完成：恢复滚动、绑定点击选中、画高亮框。
+		function onFrameLoad() {
+			loadingState[ 1 ]( false );
+			var frame = frameRef.current;
+			var doc = frameDoc();
+			if ( ! doc ) {
+				return;
+			}
+			var style = doc.createElement( 'style' );
+			style.textContent =
+				'.vc-m{cursor:pointer}.vc-m:hover{outline:1px dashed rgba(238,125,51,.7);outline-offset:-1px}' +
+				'.site-header:hover,.site-footer:hover{outline:1px dashed rgba(238,125,51,.7);outline-offset:-1px}' +
+				'html{scrollbar-width:none}html::-webkit-scrollbar{width:0;height:0;display:none}' +
+				'[data-pc-drag]{cursor:move}' +
+				'#pc-de-highlight{position:absolute;z-index:2147483646;pointer-events:none;border:2px solid #ee7d33;box-shadow:0 0 0 9999px rgba(15,23,42,.06);border-radius:2px;display:none;transition:top .15s,left .15s,width .15s,height .15s}' +
+				'#pc-de-highlight>span{position:absolute;left:-2px;top:-24px;background:#ee7d33;color:#fff;font:600 12px/24px system-ui,sans-serif;padding:0 8px;border-radius:2px 2px 0 0;white-space:nowrap;max-width:60vw;overflow:hidden;text-overflow:ellipsis}';
+			doc.head.appendChild( style );
+			frame.contentWindow.scrollTo( 0, scrollRef.current );
+			frame.contentWindow.addEventListener( 'scroll', placeOverlay, { passive: true } );
+			frame.contentWindow.addEventListener( 'resize', placeOverlay );
+			// 图片加载、字体加载后位置会变，稍后再校正几次。
+			[ 200, 800, 2000 ].forEach( function ( ms ) {
+				setTimeout( placeOverlay, ms );
+			} );
+			// 拖动浮动卡片（[data-pc-drag]）：在所在区域（[data-pc-drag-area]）里按百分比定位，松手后保存到当前设备。
+			doc.addEventListener(
+				'mousedown',
+				function ( e ) {
+					var card = e.target.closest && e.target.closest( '[data-pc-drag]' );
+					if ( ! card || e.button !== 0 ) {
+						return;
+					}
+					var area = card.closest( '[data-pc-drag-area]' ) || card.offsetParent;
+					if ( ! area ) {
+						return;
+					}
+					e.preventDefault();
+					var a = area.getBoundingClientRect();
+					var r = card.getBoundingClientRect();
+					var dx = e.clientX - r.left;
+					var dy = e.clientY - r.top;
+					var moved = false;
+					var pos = null;
+					function onMove( ev ) {
+						moved = true;
+						var x = Math.max( 0, Math.min( 100, ( ( ev.clientX - dx - a.left ) / a.width ) * 100 ) );
+						var y = Math.max( 0, Math.min( 100, ( ( ev.clientY - dy - a.top ) / a.height ) * 100 ) );
+						pos = { x: Math.round( x ), y: Math.round( y ) };
+						card.style.position = 'absolute';
+						card.style.left = pos.x + '%';
+						card.style.top = pos.y + '%';
+						card.style.zIndex = '20';
+						placeOverlay();
+					}
+					function onUp() {
+						doc.removeEventListener( 'mousemove', onMove );
+						doc.removeEventListener( 'mouseup', onUp );
+						if ( moved && pos ) {
+							dragJustEndedRef.current = true;
+							commitDragRef.current( card.getAttribute( 'data-module-item' ), pos );
+						}
+					}
+					doc.addEventListener( 'mousemove', onMove );
+					doc.addEventListener( 'mouseup', onUp );
+				},
+				true
+			);
+			doc.addEventListener(
+				'click',
+				function ( e ) {
+					var t = e.target;
+					if ( dragJustEndedRef.current ) {
+						dragJustEndedRef.current = false;
+						e.preventDefault();
+						return;
+					}
+					// 预览里不跳转、不提交，只用来选中积木。
+					e.preventDefault();
+					var m = t.closest && t.closest( '.vc-m' );
+					if ( m && m.id ) {
+						var item = t.closest( '[data-module-item]' );
+						fromPreviewRef.current = true;
+						pendingItemRef.current = item && m.contains( item ) ? item.getAttribute( 'data-module-item' ) : null;
+						tabState[ 1 ]( 'modules' );
+						setSelected( m.id.replace( /^vc-/, '' ) );
+						// 点同一个积木里不属于任何条目的地方：取消锁定条目，回到整个积木。
+						openItemState[ 1 ]( pendingItemRef.current );
+						return;
+					}
+					if ( t.closest && t.closest( 'footer' ) ) {
+						setSelected( 'footer' );
+					} else if ( t.closest && t.closest( 'header' ) ) {
+						setSelected( 'header' );
+					} else {
+						clearRef.current();
+					}
+				},
+				true
+			);
+			doc.addEventListener( 'keydown', function ( e ) {
+				if ( 'Escape' === e.key ) {
+					clearRef.current();
+				}
+			} );
+			highlight( false );
+		}
+
+		// 拖动卡片后保存位置：在当前设备的条目里找到这张卡片（例如轮播某一张的 highlights），写入 x / y 的当前设备值。
+		commitDragRef.current = function ( cardId, pos ) {
+			var dev = device === 'mobile' ? 'mobile' : 'desktop';
+			var found = false;
+			var next = modules.map( function ( m ) {
+				var mob = mobileOf( m );
+				var useMobile = dev === 'mobile' && mob.items;
+				var list = ui.clone( useMobile ? mob.items : m.attrs.items || [] );
+				var hitItem = null;
+				list.forEach( function ( it ) {
+					Object.keys( it.settings || {} ).forEach( function ( key ) {
+						var subs = it.settings[ key ];
+						if ( ! Array.isArray( subs ) ) {
+							return;
+						}
+						subs.forEach( function ( sub ) {
+							if ( sub && sub.id === cardId ) {
+								sub.settings = sub.settings || {};
+								[ 'x', 'y' ].forEach( function ( axis ) {
+									var cur = sub.settings[ axis ] && typeof sub.settings[ axis ] === 'object' ? sub.settings[ axis ] : { desktop: null, mobile: null };
+									var v = Object.assign( {}, cur );
+									v[ dev ] = pos[ axis ];
+									sub.settings[ axis ] = v;
+								} );
+								hitItem = it.id;
+							}
+						} );
+					} );
+				} );
+				if ( ! hitItem ) {
+					return m;
+				}
+				found = true;
+				fromPreviewRef.current = true;
+				pendingItemRef.current = hitItem;
+				if ( selected !== m.attrs.moduleId ) {
+					setSelected( m.attrs.moduleId );
+				} else {
+					openItemState[ 1 ]( hitItem );
+				}
+				var patch = useMobile ? { mobile: { settings: mob.settings, items: list } } : { items: list };
+				return { block: m.block, attrs: Object.assign( {}, m.attrs, patch ) };
+			} );
+			if ( found ) {
+				setModules( next );
+			}
+		};
+
+		// 点空白处 / 按 Esc：取消选中，高亮框消失。
+		function clearSelection() {
+			pendingItemRef.current = null;
+			setSelected( null );
+			openItemState[ 1 ]( null );
+		}
+		var clearRef = useRef( clearSelection );
+		clearRef.current = clearSelection;
+
+		useEffect( function () {
+			function onKey( e ) {
+				if ( 'Escape' === e.key && ! e.defaultPrevented && ! document.querySelector( '.components-modal__frame, .media-modal' ) ) {
+					clearRef.current();
+				}
+			}
+			document.addEventListener( 'keydown', onKey );
+			return function () {
+				document.removeEventListener( 'keydown', onKey );
+			};
+		}, [] );
+
+		// 换了积木：关闭之前展开的条目（从预览里点某一项时保留那一项）。
+		useEffect(
+			function () {
+				openItemState[ 1 ]( pendingItemRef.current );
+				pendingItemRef.current = null;
+			},
+			[ selected ]
+		);
+
+		useEffect(
+			function () {
+				highlight( ! fromPreviewRef.current );
+				fromPreviewRef.current = false;
+			},
+			[ selected, openItem ]
+		);
+
+		// 快捷键：Ctrl+S 保存，Ctrl+Z / Ctrl+Shift+Z 撤销重做（输入框里保留浏览器自己的撤销）。
+		useEffect( function () {
+			function onKey( e ) {
+				var mod = e.ctrlKey || e.metaKey;
+				if ( mod && e.key.toLowerCase() === 's' ) {
+					e.preventDefault();
+					onSave();
+				} else if ( mod && e.key.toLowerCase() === 'z' && ! isTyping( e.target ) ) {
+					e.preventDefault();
+					if ( e.shiftKey ) {
+						redo();
+					} else {
+						undo();
+					}
+				}
+			}
+			window.addEventListener( 'keydown', onKey );
+			return function () {
+				window.removeEventListener( 'keydown', onKey );
+			};
+		} );
+
+		useEffect(
+			function () {
+				function onLeave( e ) {
+					if ( dirty ) {
+						e.preventDefault();
+						e.returnValue = '';
+					}
+				}
+				window.addEventListener( 'beforeunload', onLeave );
+				return function () {
+					window.removeEventListener( 'beforeunload', onLeave );
+				};
+			},
+			[ dirty ]
+		);
+
+		// ---------- 顶部 ----------
+
+		function deviceButton( key, icon, label ) {
+			return el(
+				'button',
+				{
+					type: 'button',
+					className: 'pc-de-device' + ( device === key ? ' is-active' : '' ),
+					'aria-pressed': device === key,
+					title: label,
+					'aria-label': label,
+					onClick: function () {
+						deviceState[ 1 ]( key );
+					},
+				},
+				el( Icon, { name: icon } )
+			);
+		}
+
+		var top = el(
+			'header',
+			{ className: 'pc-de-top' },
+			el(
+				'div',
+				{ className: 'pc-de-top__left' },
+				el(
+					'a',
+					{ className: 'pc-de-top__btn', href: cfg.backUrl, title: S.back, 'aria-label': S.back },
+					el( Icon, { name: 'exit' } )
+				),
+				el(
+					'label',
+					{ className: 'pc-de-page' },
+					el( 'span', { className: 'screen-reader-text' }, S.page ),
+					el(
+						'select',
+						{ value: 'home', onChange: function () {} },
+						cfg.pages.map( function ( p ) {
+							return el( 'option', { key: p.value, value: p.value, disabled: ! p.enabled }, p.label );
+						} )
+					)
+				),
+				el( 'span', { className: 'pc-de-top__template' }, cfg.document.template.name ),
+				el(
+					'span',
+					{ className: 'pc-de-status' + ( status.published ? ( status.changed || dirty ? ' is-changed' : ' is-live' ) : '' ) },
+					status.published
+						? ( status.changed || dirty ? S.statusChanged : S.statusLive.replace( '%s', status.at || '' ) )
+						: S.statusDraft
+				)
+			),
+			el(
+				'div',
+				{ className: 'pc-de-top__center' },
+				deviceButton( 'desktop', 'desktop', S.desktop ),
+				deviceButton( 'mobile', 'smartphone', S.mobile ),
+				deviceButton( 'full', 'editor-expand', S.full )
+			),
+			el(
+				'div',
+				{ className: 'pc-de-top__right' },
+				el( 'button', { type: 'button', className: 'pc-de-top__btn', disabled: ! historyRef.current.past.length, onClick: undo, title: S.undo }, el( Icon, { name: 'undo' } ), el( 'span', null, S.undo ) ),
+				el( 'button', { type: 'button', className: 'pc-de-top__btn', disabled: ! historyRef.current.future.length, onClick: redo, title: S.redo }, el( Icon, { name: 'redo' } ), el( 'span', null, S.redo ) ),
+				el( 'a', { className: 'pc-de-top__btn', href: cfg.storeUrl, target: '_blank', rel: 'noopener' }, el( Icon, { name: 'visibility' } ), el( 'span', null, S.viewStore ) ),
+				el(
+					'button',
+					{ type: 'button', className: 'pc-de-top__btn pc-de-top__save' + ( dirty ? ' is-dirty' : '' ), onClick: onSave, disabled: saving || busy },
+					el( Icon, { name: 'saved' } ),
+					el( 'span', null, saving ? S.saving : S.save )
+				),
+				el(
+					'div',
+					{ className: 'pc-de-publish' },
+					el(
+						'button',
+						{ type: 'button', className: 'pc-de-top__publish', onClick: publish, disabled: busy || saving },
+						el( Icon, { name: 'upload' } ),
+						el( 'span', null, busy ? S.working : S.publish )
+					),
+					el(
+						'button',
+						{
+							type: 'button',
+							className: 'pc-de-top__publish pc-de-top__publish--more',
+							'aria-label': S.publishMenu,
+							'aria-expanded': menuOpen,
+							title: S.publishMenu,
+							onClick: function () {
+								menuState[ 1 ]( ! menuOpen );
+							},
+						},
+						el( Icon, { name: 'arrow-down-alt2' } )
+					),
+					menuOpen
+						? el(
+							'div',
+							{ className: 'pc-de-publish__menu', role: 'menu' },
+							el( 'button', { type: 'button', role: 'menuitem', disabled: ! status.published, onClick: discard }, S.discard ),
+							el( 'button', { type: 'button', role: 'menuitem', disabled: ! status.published || ! cfg.canPublish, onClick: unpublish, className: 'is-danger' }, S.unpublish )
+						)
+						: null
+				)
+			)
+		);
+
+		// ---------- 积木列表 ----------
+
+		function pinned( key, label ) {
+			return el(
+				'button',
+				{
+					type: 'button',
+					className: 'pc-de-row pc-de-row--pinned' + ( selected === key ? ' is-selected' : '' ),
+					onClick: function () {
+						setSelected( key );
+					},
+				},
+				el( Icon, { name: 'admin-post', className: 'pc-de-row__pin' } ),
+				el( 'span', { className: 'pc-de-row__title' }, label )
+			);
+		}
+
+		var list = el(
+			'div',
+			{
+				className: 'pc-de-list',
+				role: 'list',
+				// 点积木列表下方的空白：取消选中。
+				onClick: function ( e ) {
+					if ( e.target === e.currentTarget ) {
+						clearSelection();
+					}
+				},
+			},
+			pinned( 'header', S.header ),
+			modules.length
+				? null
+				: el( 'p', { className: 'pc-de-list__empty' }, S.emptyList ),
+			modules.map( function ( m, i ) {
+				var id = m.attrs.moduleId;
+				var hidden = m.attrs.enabled === false;
+				var settings = m.attrs.settings || {};
+				var partial = settings.showDesktop === false || settings.showMobile === false;
+				return el(
+					'div',
+					{
+						key: id,
+						role: 'listitem',
+						className:
+							'pc-de-row' +
+							( selected === id ? ' is-selected' : '' ) +
+							( hidden ? ' is-hidden' : '' ) +
+							( drag.over === i && drag.from !== null && drag.from !== i ? ' is-drop-target' : '' ),
+						draggable: true,
+						onDragStart: function ( e ) {
+							e.dataTransfer.effectAllowed = 'move';
+							e.dataTransfer.setData( 'text/plain', id );
+							setDrag( { from: i, over: i } );
+						},
+						onDragOver: function ( e ) {
+							e.preventDefault();
+							if ( drag.over !== i ) {
+								setDrag( { from: drag.from, over: i } );
+							}
+						},
+						onDrop: function ( e ) {
+							e.preventDefault();
+							move( drag.from, i );
+							setDrag( { from: null, over: null } );
+						},
+						onDragEnd: function () {
+							setDrag( { from: null, over: null } );
+						},
+					},
+					el( 'span', { className: 'pc-de-row__handle', title: S.dragHint }, el( Icon, { name: 'menu' } ) ),
+					el(
+						'button',
+						{
+							type: 'button',
+							className: 'pc-de-row__title',
+							onClick: function () {
+								tabState[ 1 ]( 'modules' );
+								setSelected( id );
+							},
+						},
+						titleOf( m )
+					),
+					hidden || partial ? el( 'span', { className: 'pc-de-row__flag', title: S.hide }, el( Icon, { name: 'hidden' } ) ) : null,
+					el(
+						'span',
+						{ className: 'pc-de-row__actions' },
+						el( 'button', { type: 'button', title: S.duplicate, 'aria-label': S.duplicate, onClick: function () { duplicate( i ); } }, el( Icon, { name: 'admin-page' } ) ),
+						el( 'button', { type: 'button', title: hidden ? S.show : S.hide, 'aria-label': hidden ? S.show : S.hide, onClick: function () { toggle( i ); } }, el( Icon, { name: hidden ? 'visibility' : 'hidden' } ) ),
+						el( 'button', { type: 'button', title: S.remove, 'aria-label': S.remove, className: 'is-danger', onClick: function () { remove( i ); } }, el( Icon, { name: 'trash' } ) )
+					)
+				);
+			} ),
+			el(
+				'button',
+				{
+					type: 'button',
+					className: 'pc-de-row pc-de-row--add' + ( selected === 'library' ? ' is-selected' : '' ),
+					onClick: function () {
+						setSelected( 'library' );
+					},
+				},
+				el( Icon, { name: 'plus-alt2' } ),
+				el( 'span', { className: 'pc-de-row__title' }, S.addModule )
+			),
+			pinned( 'footer', S.footer )
+		);
+
+		// ---------- 设置面板 ----------
+
+		var settingsDevice = device === 'mobile' ? 'mobile' : 'desktop';
+		var panel;
+		var current = selected && selected !== 'header' && selected !== 'footer' && selected !== 'library' ? modules[ indexOf( selected ) ] : null;
+		if ( tab === 'global' ) {
+			panel = el( 'div', { className: 'pc-de-note' }, el( Icon, { name: 'admin-appearance' } ), el( 'p', null, S.globalNote ) );
+		} else if ( selected === 'library' ) {
+			panel = el(
+				'div',
+				{ className: 'pc-de-library' },
+				el( 'h2', null, S.library ),
+				el( 'p', { className: 'pc-de-hint' }, S.libraryHint ),
+				cfg.library.map( function ( group ) {
+					return el(
+						'section',
+						{ key: group.label },
+						el( 'h3', null, group.label ),
+						el(
+							'div',
+							{ className: 'pc-de-library__grid' },
+							group.cards.map( function ( card ) {
+								return el(
+									'button',
+									{
+										key: card.block,
+										type: 'button',
+										className: 'pc-de-card',
+										onClick: function () {
+											insert( card.block );
+										},
+									},
+									el( Icon, { name: card.icon } ),
+									el( 'span', null, card.title )
+								);
+							} )
+						)
+					);
+				} )
+			);
+		} else if ( selected === 'header' || selected === 'footer' ) {
+			panel = el( 'div', { className: 'pc-de-note' }, el( Icon, { name: 'info-outline' } ), el( 'p', null, selected === 'header' ? S.headerNote : S.footerNote ) );
+		} else if ( current ) {
+			var def = defOf( current );
+			var isMobile = settingsDevice === 'mobile';
+			var mob = mobileOf( current );
+			var baseValues = ui.withDefaults( def.defaults, current.attrs.settings );
+			// 手机：电脑的设置 + 手机单独改过的字段；条目有手机版时整份用手机版。
+			var values = isMobile ? Object.assign( {}, baseValues, mob.settings ) : baseValues;
+			var shownItems = isMobile && mob.items ? mob.items : current.attrs.items;
+			var fieldDefs = {};
+			def.settings.forEach( function ( f ) {
+				fieldDefs[ f.key ] = f;
+			} );
+			var perDevice = function ( key ) {
+				var f = fieldDefs[ key ];
+				return ! f || f.device || ( f.group || 'content' ) === 'general';
+			};
+			var setMobile = function ( next ) {
+				var m = { settings: next.settings, items: next.items };
+				if ( ! Object.keys( m.settings ).length && ! m.items ) {
+					m = {};
+				}
+				updateModule( current.attrs.moduleId, { mobile: m }, true );
+			};
+			var count = mobileCount( current );
+			var mobileBar = isMobile
+				? el(
+					'div',
+					{ className: 'pc-de-mobilebar' + ( count ? ' has-changes' : '' ) },
+					el( 'p', null, el( Icon, { name: 'smartphone' } ), ' ', S.mobileEditing ),
+					count
+						? el(
+							'p',
+							null,
+							S.mobileChanged.replace( '%d', count ),
+							' ',
+							el(
+								C.Button,
+								{
+									variant: 'link',
+									onClick: function () {
+										updateModule( current.attrs.moduleId, { mobile: {} } );
+									},
+								},
+								S.mobileResetAll
+							)
+						)
+						: null
+				)
+				: null;
+			panel = el(
+				'div',
+				{ className: 'pc-de-settings__inner', key: current.attrs.moduleId },
+				el( 'h2', { className: 'pc-de-settings__title' }, def.title ),
+				ui.needsDeviceSwitch( def )
+					? el(
+						'div',
+						{ className: 'pc-me-devices' },
+						el( 'span', null, S.editing ),
+						el(
+							C.ButtonGroup,
+							null,
+							el( C.Button, { variant: settingsDevice === 'desktop' ? 'primary' : 'secondary', size: 'small', icon: 'desktop', onClick: function () { deviceState[ 1 ]( 'desktop' ); } }, data.strings.desktop ),
+							el( C.Button, { variant: settingsDevice === 'mobile' ? 'primary' : 'secondary', size: 'small', icon: 'smartphone', onClick: function () { deviceState[ 1 ]( 'mobile' ); } }, data.strings.mobile )
+						)
+					)
+					: null,
+				mobileBar,
+				el(
+					C.Panel,
+					null,
+					ui.settingsPanels( {
+						def: def,
+						settings: values,
+						device: settingsDevice,
+						items: shownItems,
+						setSetting: function ( key, v ) {
+							if ( isMobile && ! perDevice( key ) ) {
+								var ms = Object.assign( {}, mob.settings );
+								ms[ key ] = v;
+								setMobile( { settings: ms, items: mob.items } );
+								return;
+							}
+							var next = Object.assign( {}, baseValues );
+							next[ key ] = v;
+							updateModule( current.attrs.moduleId, { settings: next }, true );
+						},
+						setItems: function ( items ) {
+							if ( isMobile ) {
+								setMobile( { settings: mob.settings, items: items } );
+								return;
+							}
+							updateModule( current.attrs.moduleId, { items: items }, true );
+						},
+						overridden: isMobile
+							? function ( key ) {
+								return Object.prototype.hasOwnProperty.call( mob.settings, key );
+							}
+							: null,
+						resetOverride: function ( key ) {
+							var ms = Object.assign( {}, mob.settings );
+							delete ms[ key ];
+							setMobile( { settings: ms, items: mob.items } );
+						},
+						openItem: openItem,
+						onOpenItem: function ( id ) {
+							openItemState[ 1 ]( id );
+						},
+					} )
+				)
+			);
+		} else {
+			panel = el( 'div', { className: 'pc-de-note' }, el( Icon, { name: 'arrow-left-alt' } ), el( 'p', null, S.selectHint ) );
+		}
+
+		var side = el(
+			'aside',
+			{ className: 'pc-de-side' },
+			el(
+				'div',
+				{ className: 'pc-de-tabs', role: 'tablist' },
+				el( 'button', { type: 'button', role: 'tab', 'aria-selected': tab === 'modules', className: tab === 'modules' ? 'is-active' : '', onClick: function () { tabState[ 1 ]( 'modules' ); } }, S.tabModules ),
+				el( 'button', { type: 'button', role: 'tab', 'aria-selected': tab === 'global', className: tab === 'global' ? 'is-active' : '', onClick: function () { tabState[ 1 ]( 'global' ); } }, S.tabGlobal )
+			),
+			el( 'div', { className: 'pc-de-cols' }, tab === 'modules' ? list : null, el( 'div', { className: 'pc-de-settings' }, panel ) )
+		);
+
+		var preview = el(
+			'main',
+			{
+				className: 'pc-de-preview',
+				// 点预览四周的灰色空白（不是预览页面本身）：取消选中。
+				onClick: function ( e ) {
+					if ( ! e.target.closest( 'iframe, button, a' ) ) {
+						clearSelection();
+					}
+				},
+			},
+			el(
+				'div',
+				{ className: 'pc-de-frame pc-de-frame--' + device },
+				el( 'iframe', { ref: frameRef, src: previewUrl, title: S.previewNote, onLoad: onFrameLoad } ),
+				loading ? el( 'div', { className: 'pc-de-frame__loading' }, el( C.Spinner ), S.loadingPreview ) : null
+			),
+			el( 'p', { className: 'pc-de-preview__note' }, dirty ? S.unsaved + ' ' + S.previewNote : S.previewNote )
+		);
+
+		return el(
+			'div',
+			{ className: 'pc-de__app' + ( device === 'full' ? ' is-full' : '' ) },
+			top,
+			notice
+				? el(
+					C.Notice,
+					{
+						className: 'pc-de-notice',
+						status: notice.type,
+						onRemove: function () {
+							setNotice( null );
+						},
+						actions: notice.reload
+							? [
+								{
+									label: S.conflict,
+									onClick: function () {
+										window.location.reload();
+									},
+								},
+							]
+							: [],
+					},
+					notice.text
+				)
+				: null,
+			el( 'div', { className: 'pc-de-body' }, preview, device === 'full' ? null : side )
+		);
+	}
+
+	function mount() {
+		var root = document.getElementById( 'pc-design-editor' );
+		if ( ! root ) {
+			return;
+		}
+		root.removeAttribute( 'aria-busy' );
+		if ( wp.element.createRoot ) {
+			wp.element.createRoot( root ).render( el( App ) );
+		} else {
+			wp.element.render( el( App ), root );
+		}
+	}
+
+	if ( document.readyState === 'loading' ) {
+		document.addEventListener( 'DOMContentLoaded', mount );
+	} else {
+		mount();
+	}
+} )( window.wp, window.pcDesignEditor, window.pcModules, window.pcModuleUI );

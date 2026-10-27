@@ -26,7 +26,31 @@ final class Plugin {
 		Meta::register_hooks();
 		Reports::register_hooks();
 		Order_Batches::register_hooks();
+		Pricing::register_hooks();
 		Checkout_Ack::register_hooks();
+		Shipping_Tracking::register_hooks();
+		Templates::register_hooks();
+		Modules\Blocks::register_hooks();
+		Modules\Layout::register_hooks();
+		Modules\Assets::register_hooks();
+		Api\Layout_Controller::register_hooks();
+		Menus::register_hooks();
+		Custom_Pages::register_hooks();
+		Coupons::register_hooks();
+		Coupon_Rules::register_hooks();
+		Exit_Intent::register_hooks();
+		Pixels::register_hooks();
+		Promotions::register_hooks();
+		Recovery::register_hooks();
+		Store_Config::register_hooks();
+		Shipping\Plans::register_hooks();
+		Shipping\Discounts::register_hooks();
+		Emails\Registry::register_hooks();
+		Terms::register_hooks();
+		Tracking\Tracker::register_hooks();
+		Api\Tracking_Controller::register_hooks();
+		Admin\Overview_Page::register_rest();
+		Api\Menu_Controller::register_hooks();
 		add_action( 'init', array( Installer::class, 'maybe_upgrade' ), 5 );
 		Api\Rest_Controller::register_hooks();
 		Api\Store_Api::register_hooks();
@@ -40,11 +64,40 @@ final class Plugin {
 			Admin\Dashboard::register_hooks();
 			Admin\Dialogs::register_hooks();
 			Admin\Settings_Page::register_hooks();
+			Admin\Batch_Orders::register_hooks();
 			Admin\List_Columns::register_hooks();
+			Admin\Store_Design::register_hooks();
+			Admin\Layout_Editor::register_hooks();
+			Admin\Design_Editor::register_hooks();
+			Admin\Menu_Page::register_hooks();
+			Admin\Tracking_Page::register_hooks();
+			Admin\Overview_Page::register_hooks();
+			Admin\Admin_Menus::register_hooks();
+			Admin\Store_Settings::register_hooks();
+			Admin\Basic_Config_Page::register_hooks();
+			Admin\Shipping_Page::register_hooks();
+			Admin\Tax_Page::register_hooks();
+			Admin\Email_Center::register_hooks();
+			Admin\Terms_Page::register_hooks();
+			Admin\Recovery_Page::register_hooks();
+			Admin\Marketing::register_hooks();
+			Admin\Promotions_Page::register_hooks();
+			Admin\Coupons_Page::register_hooks();
+			Admin\Shipping_Discounts_Page::register_hooks();
+			Admin\Apps_Page::register_hooks();
+			Admin\Pixels_Page::register_hooks();
 		}
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			\WP_CLI::add_command( 'peptide demo', Cli\Demo_Command::class );
+			\WP_CLI::add_command( 'peptide import', Cli\Import_Command::class );
+			\WP_CLI::add_command( 'peptide doctor', Cli\Doctor_Command::class );
+			\WP_CLI::add_command( 'peptide batch', Cli\Batch_Command::class );
+			\WP_CLI::add_command( 'peptide pricing', Cli\Pricing_Command::class );
+			\WP_CLI::add_command( 'peptide shipping', Cli\Shipping_Command::class );
+			\WP_CLI::add_command( 'peptide layout', Cli\Layout_Command::class );
+			\WP_CLI::add_command( 'peptide tracking', Cli\Tracking_Command::class );
+			\WP_CLI::add_command( 'peptide recovery', Cli\Recovery_Command::class );
 		}
 	}
 

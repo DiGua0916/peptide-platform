@@ -13,6 +13,9 @@
 
 defined( 'ABSPATH' ) || exit;
 
+// 测试中创建的订单不发送通知邮件。
+add_filter( 'pre_wp_mail', '__return_false' );
+
 use PeptideCore\Access;
 use PeptideCore\Admin\Order_Metabox;
 use PeptideCore\Catalog;
@@ -152,7 +155,7 @@ if ( $http_file ) {
 		wp_json_encode(
 			array(
 				'cookie' => LOGGED_IN_COOKIE . '=' . rawurlencode( $cookie ),
-				'url'    => add_query_arg( '_wpnonce', wp_create_nonce( 'wp_rest' ), rest_url( 'peptide/v1/reports/' . $r2 . '/file' ) ),
+				'url'    => \PeptideCore\Catalog::download_url( $r2, $customer ),
 			)
 		)
 	);

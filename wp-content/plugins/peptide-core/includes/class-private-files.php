@@ -116,6 +116,31 @@ final class Private_Files {
 	}
 
 	/**
+	 * 复制本机上的报告文件到私有目录（批量导入使用）。校验规则与表单上传相同：
+	 * 只允许 PDF / PNG / JPEG，按文件内容核对类型，大小不超过 20 MB。
+	 *
+	 * @return array{stored:string,original:string,mime:string,size:int}|\WP_Error
+	 */
+	public static function store_local_file( string $path ) {
+		if ( ! is_file( $path ) || ! is_readable( $path ) ) {
+			return new \WP_Error( 'pc_file_missing', __( 'The report file was not found.', 'peptide-core' ) );
+		}
+		$size = (int) filesize( $path );
+		if ( $size <= 0 || $size > self::MAX_BYTES ) {
+			return new \WP_Error( 'pc_upload_too_large', __( 'The file is empty or larger than 20 MB.', 'peptide-core' ) );
+		}
+		$check = wp_check_filetype_and_ext( $path, wp_basename( $path ), self::ALLOWED_MIMES );
+		if ( empty( $check['ext'] ) || empty( $check['type'] ) ) {
+			return new \WP_Error( 'pc_upload_type', __( 'Only PDF, PNG and JPEG files are allowed.', 'peptide-core' ) );
+		}
+		$contents = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		if ( false === $contents ) {
+			return new \WP_Error( 'pc_file_missing', __( 'The report file was not found.', 'peptide-core' ) );
+		}
+		return self::store_contents( $contents, wp_basename( $path ), $check['ext'], $check['type'] );
+	}
+
+	/**
 	 * 只接受本插件生成的文件名，防止路径穿越。
 	 */
 	public static function path( string $stored ): ?string {

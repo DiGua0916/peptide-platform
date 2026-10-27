@@ -1,0 +1,190 @@
+/* 装修模块编辑器侧栏（EDIT-BLOCKS-03）。 */
+
+.pc-me-devices {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 12px 16px;
+	border-bottom: 1px solid #e0e0e0;
+	font-size: 12px;
+	color: #50575e;
+}
+
+.pc-me-field {
+	margin-bottom: 14px;
+}
+
+.pc-me-field:last-child {
+	margin-bottom: 0;
+}
+
+.pc-me-label {
+	margin: 0 0 6px;
+	font-size: 11px;
+	font-weight: 500;
+	text-transform: uppercase;
+	color: #1e1e1e;
+}
+
+.pc-me-label--strong {
+	font-size: 12px;
+	font-weight: 600;
+	text-transform: none;
+}
+
+.pc-me-media,
+.pc-me-media-part {
+	margin-bottom: 10px;
+}
+
+.pc-me-thumb {
+	display: block;
+	max-width: 100%;
+	max-height: 140px;
+	margin-bottom: 8px;
+	border-radius: 2px;
+	background: #f0f0f0;
+}
+
+.pc-me-file {
+	margin: 0 0 8px;
+	font-size: 12px;
+	color: #50575e;
+	word-break: break-all;
+}
+
+.pc-me-row {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.pc-me-mediafield,
+.pc-me-link,
+.pc-me-subitems {
+	padding: 10px;
+	border: 1px solid #e0e0e0;
+	border-radius: 2px;
+}
+
+.pc-me-code textarea {
+	font-family: Menlo, Consolas, monospace;
+	font-size: 12px;
+}
+
+.pc-me-inherit {
+	padding: 8px 10px;
+	background: #f6f7f7;
+	border-radius: 2px;
+}
+
+.pc-me-inherit__note {
+	margin: 0 0 6px;
+	font-size: 12px;
+	color: #50575e;
+}
+
+.pc-me-items {
+	display: grid;
+	gap: 6px;
+}
+
+.pc-me-item {
+	border: 1px solid #e0e0e0;
+	border-radius: 2px;
+	background: #fff;
+}
+
+.pc-me-item.is-open {
+	border-color: #949494;
+}
+
+.pc-me-item.is-hidden .pc-me-item__title {
+	opacity: 0.55;
+}
+
+.pc-me-item__head {
+	display: flex;
+	align-items: center;
+	gap: 0;
+}
+
+.pc-me-item__head .components-button.has-icon {
+	flex: 0 0 24px;
+	width: 24px;
+	min-width: 24px;
+	height: 28px;
+	padding: 0;
+	justify-content: center;
+}
+
+.pc-me-item__head .components-button.has-icon svg {
+	width: 18px;
+	height: 18px;
+}
+
+.pc-me-item__title {
+	flex: 1 1 auto;
+	min-width: 0;
+	text-align: left;
+	background: none;
+	border: 0;
+	padding: 8px 10px;
+	cursor: pointer;
+	font-size: 13px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.pc-me-item__title em {
+	color: #b32d2e;
+	font-style: normal;
+	font-size: 12px;
+}
+
+.pc-me-item__body {
+	padding: 12px 10px;
+	border-top: 1px solid #e0e0e0;
+}
+
+.pc-me-items__foot {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin-top: 4px;
+}
+
+.pc-me-hint {
+	font-size: 12px;
+	color: #757575;
+}
+
+.pc-module-block.is-hidden-module {
+	opacity: 0.5;
+}
+
+.pc-module-block > div > .components-placeholder {
+	min-height: 120px;
+}
+
+/* 手机单独改过的字段 */
+.pc-me-field.is-overridden {
+	padding-left: 8px;
+	border-left: 3px solid #2271b1;
+}
+
+.pc-me-override {
+	margin: 4px 0 0;
+	font-size: 12px;
+	color: #2271b1;
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+.pc-me-override .components-button.is-link {
+	font-size: 12px;
+}

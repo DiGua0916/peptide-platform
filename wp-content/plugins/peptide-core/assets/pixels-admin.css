@@ -1,0 +1,178 @@
+/* 系统设置 → 广告像素（PIXELS-01），版式参照 Shopname。宽屏两栏（右边备注说明），窄屏一栏。 */
+
+.pc-px .pc-mk-head h1 {
+	font-size: 1.5em;
+}
+
+.pc-px-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+	gap: 0 20px;
+	align-items: start;
+}
+
+.pc-px-side {
+	position: sticky;
+	top: 46px;
+}
+
+.pc-px-card {
+	margin-bottom: 14px;
+	padding: 18px 22px;
+	background: #fff;
+	border: 1px solid var(--pc-pl-line);
+	border-radius: 4px;
+}
+
+.pc-px-card__head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 12px;
+}
+
+.pc-px-card__head h2 {
+	margin: 0;
+	font-size: 1.25em;
+	font-weight: 500;
+}
+
+.pc-px-card__head a {
+	color: var(--pc-pl-orange);
+	text-decoration: none;
+}
+
+.pc-px-card__head .pc-px-add {
+	margin-left: auto;
+}
+
+.pc-px-desc {
+	margin: 8px 0 12px;
+	color: var(--pc-pl-muted);
+	line-height: 1.6;
+}
+
+.pc-px-opts {
+	margin-bottom: 12px;
+}
+
+.pc-px-check {
+	display: inline-block;
+	line-height: 30px;
+}
+
+.pc-px-fb {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(200px, 260px);
+	gap: 0 24px;
+	margin-top: 8px;
+}
+
+.pc-px-fb .pc-mk-field {
+	margin-bottom: 12px;
+}
+
+.pc-px-fb__side .pc-mk-addon input {
+	width: 100%;
+}
+
+.pc-px-fb__side .pc-mk-addon {
+	display: flex;
+}
+
+.pc-px-table {
+	min-width: 640px;
+}
+
+.pc-px-table code {
+	white-space: nowrap;
+}
+
+.pc-px-ids {
+	min-height: 40px;
+}
+
+.pc-px-pair {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 16px;
+	margin-bottom: 12px;
+}
+
+.pc-px-pair label {
+	min-width: 120px;
+}
+
+.pc-px-pair input {
+	flex: 1;
+	min-width: 200px;
+}
+
+.pc-px-more summary {
+	color: #374151;
+	cursor: pointer;
+}
+
+.pc-px-more__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+	gap: 10px 20px;
+	margin-top: 12px;
+}
+
+.pc-px-more__grid label span {
+	display: block;
+	margin-bottom: 4px;
+}
+
+.pc-px-more__grid input {
+	width: 100%;
+}
+
+.pc-px-notes h2 {
+	margin: 0 0 12px;
+	font-size: 1.15em;
+	font-weight: 500;
+}
+
+.pc-px-notes ol {
+	margin: 0 0 0 18px;
+	color: #4b5563;
+	line-height: 1.8;
+}
+
+.pc-px-notes li + li {
+	margin-top: 10px;
+}
+
+.pc-px-settings__body p {
+	margin: 0 0 12px;
+}
+
+.pc-px-settings__body .pc-mk-radios {
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 2px;
+	margin-bottom: 12px;
+}
+
+@media (max-width: 1280px) {
+	.pc-px-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.pc-px-side {
+		position: static;
+	}
+}
+
+@media (max-width: 782px) {
+	.pc-px-card {
+		padding: 14px;
+	}
+
+	.pc-px-fb {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}

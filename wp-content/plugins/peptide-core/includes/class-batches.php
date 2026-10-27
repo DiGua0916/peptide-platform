@@ -97,4 +97,50 @@ final class Batches {
 			)
 		);
 	}
+
+	/**
+	 * 按批次号找批次，没有就新建（检测报告编辑页用：批次菜单已经隐藏，在报告里直接填批次号）。
+	 * 已有同号批次时必须属于同一个商品；没选商品时直接用它。新建的批次公开、在售，其他字段为空。
+	 *
+	 * @return int|\WP_Error 批次 ID。
+	 */
+	public static function find_or_create( string $batch_no, int $product_id ) {
+		$batch_no = self::normalize_batch_no( $batch_no );
+		if ( ! self::is_valid_batch_no( $batch_no ) ) {
+			return new \WP_Error( 'pc_batch_no', __( 'Batch number is missing or invalid.', 'peptide-core' ) );
+		}
+		$existing = self::find_id_by_batch_no( $batch_no );
+		if ( $existing ) {
+			if ( 'trash' === get_post_status( $existing ) ) {
+				/* translators: %s: batch number */
+				return new \WP_Error( 'pc_batch_taken', sprintf( __( 'Batch number %s is already used by another batch.', 'peptide-core' ), $batch_no ) );
+			}
+			if ( $product_id && (int) get_post_meta( $existing, Meta::BATCH_PRODUCT_ID, true ) !== $product_id ) {
+				/* translators: %s: batch number */
+				return new \WP_Error( 'pc_batch_taken', sprintf( __( 'Batch number %s already belongs to another product.', 'peptide-core' ), $batch_no ) );
+			}
+			return $existing;
+		}
+		if ( ! self::is_valid_product( $product_id ) ) {
+			return new \WP_Error( 'pc_batch_product', __( 'Please select a valid product.', 'peptide-core' ) );
+		}
+		$id = wp_insert_post(
+			array(
+				'post_type'   => Post_Types::BATCH,
+				'post_status' => 'publish',
+				'post_title'  => $batch_no,
+				'meta_input'  => array(
+					Meta::BATCH_NO             => $batch_no,
+					Meta::BATCH_PRODUCT_ID     => $product_id,
+					Meta::BATCH_VARIATION_IDS  => array(),
+					Meta::BATCH_VISIBILITY     => 'public',
+					Meta::BATCH_STATUS         => 'active',
+					Meta::BATCH_REPORT_PENDING => false,
+					Meta::BATCH_IS_DEMO        => false,
+				),
+			),
+			true
+		);
+		return is_wp_error( $id ) ? $id : (int) $id;
+	}
 }
