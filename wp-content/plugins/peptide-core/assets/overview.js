@@ -84,7 +84,7 @@
 		var t = summary.todo;
 		return '<section class="pc-ov-card"><div class="pc-ov-card__head"><h2>' + esc( S.unfinished ) + '</h2>' + link( L.recovery, S.recoveryLink ) + '</div>' +
 			nums( [ num( S.unpaid, t.unpaid_7d, L.unpaid ), num( S.failed, t.failed_7d, L.failed ) ] ) +
-			'<p class="pc-ov-muted pc-ov-foot">' + esc( cfg.recovery ? S.recoveryOn : S.recoveryOff ) + '</p></section>';
+			'<p class="pc-ov-muted pc-ov-foot">' + esc( ! cfg.recovery ? S.recoveryOff : 'address' === cfg.blocked ? S.noAddress : 'sender' === cfg.blocked ? S.noSender : S.recoveryOn ) + '</p></section>';
 	}
 
 	function live( today ) {

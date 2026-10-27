@@ -98,6 +98,8 @@ final class Overview_Page {
 					'summary'  => Overview::summary(),
 					'range'    => Overview::range_data( 'today' ),
 					'recovery' => Recovery::enabled(),
+					// 开着但发不出去（缺店铺地址 / 发件邮箱无效）时，仪表盘照实说明。
+					'blocked'  => Recovery::enabled() ? Recovery::blocked_reason() : '',
 					'links'    => array(
 						'orders'      => admin_url( 'admin.php?page=wc-orders&status=wc-processing' ),
 						'onHold'      => admin_url( 'admin.php?page=wc-orders&status=wc-on-hold' ),
@@ -144,6 +146,8 @@ final class Overview_Page {
 			'failed'       => __( 'Payment failed', 'peptide-core' ),
 			'recoveryOn'   => __( 'Cart recovery is on: shoppers who left an email get reminder emails automatically.', 'peptide-core' ),
 			'recoveryOff'  => __( 'Cart recovery emails are off; follow up on these orders manually or turn them on.', 'peptide-core' ),
+			'noAddress'    => __( 'Cart recovery is on, but no reminder is sent until the store address is filled in (US law requires it in marketing emails).', 'peptide-core' ),
+			'noSender'     => __( 'Cart recovery is on, but no reminder is sent until a valid sender email is set.', 'peptide-core' ),
 			'recoveryLink' => __( 'Cart recovery', 'peptide-core' ),
 			'currency'     => __( 'Currency', 'peptide-core' ),
 			'default'      => __( 'Default', 'peptide-core' ),
