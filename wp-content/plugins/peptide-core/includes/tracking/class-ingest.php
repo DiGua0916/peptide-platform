@@ -278,7 +278,7 @@ final class Ingest {
 			$data = $c['data'];
 			$inserted = $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 				$wpdb->prepare(
-					"INSERT IGNORE INTO {$events_table} (event_uid, visitor_id, visit_id, tab_id, page_instance_id, seq, type, source, occurred_ms, received_ms, page_type, path, product_id, variation_id, data, is_test) VALUES (%s, %d, %d, %s, %s, %d, %s, 'client', %d, %d, %s, %s, %d, %d, %s, 1)", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					"INSERT IGNORE INTO {$events_table} (event_uid, visitor_id, visit_id, tab_id, page_instance_id, seq, type, source, occurred_ms, received_ms, page_type, path, product_id, variation_id, data, is_test) VALUES (%s, %d, %d, %s, %s, %d, %s, 'client', %d, %d, %s, %s, %d, %d, %s, 0)", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 					$c['event_id'],
 					$visitor['id'],
 					$visit,

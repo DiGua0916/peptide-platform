@@ -11,7 +11,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-27T14:40:00+00:00\n"
+"POT-Creation-Date: 2026-10-27T14:54:15+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: peptide-core\n"
@@ -36,7 +36,7 @@ msgstr "DiGua"
 #: includes/admin/class-batch-orders.php:141
 #: includes/admin/class-batch-orders.php:144
 #: includes/admin/class-overview-page.php:133
-#: includes/admin/class-tracking-page.php:153
+#: includes/admin/class-tracking-page.php:154
 msgid "Orders"
 msgstr "订单"
 
@@ -98,7 +98,7 @@ msgstr "应用中心"
 #: includes/admin/class-plans-editor.php:82
 #: includes/admin/class-tax-page.php:61
 #: includes/admin/class-tax-page.php:97
-#: includes/admin/class-tracking-page.php:155
+#: includes/admin/class-tracking-page.php:156
 #: includes/modules/class-registry.php:1185
 msgid "Products"
 msgstr "商品"
@@ -201,6 +201,7 @@ msgstr "抽奖中…"
 #: includes/admin/class-email-center.php:135
 #: includes/admin/class-email-center.php:242
 #: includes/admin/class-terms-page.php:96
+#: includes/admin/class-tracking-page.php:281
 msgid "On"
 msgstr "已开启"
 
@@ -210,6 +211,7 @@ msgstr "已开启"
 #: includes/admin/class-email-center.php:135
 #: includes/admin/class-email-center.php:242
 #: includes/admin/class-shipping-page.php:149
+#: includes/admin/class-tracking-page.php:281
 msgid "Off"
 msgstr "未启用"
 
@@ -278,7 +280,7 @@ msgstr "基础配置"
 #: includes/admin/class-list-columns.php:35
 #: includes/admin/class-marketing.php:262
 #: includes/admin/class-plans-editor.php:84
-#: includes/admin/class-tracking-page.php:92
+#: includes/admin/class-tracking-page.php:93
 msgid "Status"
 msgstr "状态"
 
@@ -560,15 +562,15 @@ msgstr "商品详情页"
 #: includes/admin/class-apps-page.php:197
 #: includes/admin/class-overview-page.php:193
 #: includes/admin/class-recovery-page.php:224
-#: includes/admin/class-tracking-page.php:110
-#: includes/admin/class-tracking-page.php:171
+#: includes/admin/class-tracking-page.php:111
+#: includes/admin/class-tracking-page.php:172
 #: includes/class-menus.php:108
 msgid "Cart"
 msgstr "购物车"
 
 #: includes/admin/class-apps-page.php:197
 #: includes/admin/class-overview-page.php:194
-#: includes/admin/class-tracking-page.php:172
+#: includes/admin/class-tracking-page.php:173
 msgid "Checkout"
 msgstr "结账"
 
@@ -579,8 +581,8 @@ msgstr "其他页面"
 #: includes/admin/class-apps-page.php:201
 #: includes/admin/class-overview-page.php:131
 #: includes/admin/class-overview-page.php:203
-#: includes/admin/class-tracking-page.php:35
-#: includes/admin/class-tracking-page.php:146
+#: includes/admin/class-tracking-page.php:36
+#: includes/admin/class-tracking-page.php:147
 msgid "Visitors"
 msgstr "访客数据"
 
@@ -642,8 +644,9 @@ msgstr "店铺里的预览用已保存的设置，打开就弹出。除了预览
 #: includes/admin/class-store-design.php:140
 #: includes/admin/class-tax-page.php:116
 #: includes/admin/class-terms-page.php:114
-#: includes/admin/class-tracking-page.php:214
-#: includes/admin/class-tracking-page.php:224
+#: includes/admin/class-tracking-page.php:215
+#: includes/admin/class-tracking-page.php:225
+#: includes/admin/class-tracking-page.php:235
 #: includes/class-custom-pages.php:333
 #: includes/class-store-config.php:675
 msgid "Sorry, you are not allowed to do that."
@@ -676,6 +679,7 @@ msgid "Disable"
 msgstr "关闭"
 
 #: includes/admin/class-basic-config-page.php:108
+#: includes/admin/class-tracking-page.php:267
 msgid "Settings saved."
 msgstr "设置已保存。"
 
@@ -1328,7 +1332,7 @@ msgstr "3–40 个字符：字母、数字和连字符。保存时统一转为�
 #: includes/admin/class-overview-page.php:192
 #: includes/admin/class-plans-editor.php:84
 #: includes/admin/class-report-metabox.php:98
-#: includes/admin/class-tracking-page.php:170
+#: includes/admin/class-tracking-page.php:171
 #: includes/modules/class-registry.php:1037
 #: includes/modules/class-registry.php:1190
 msgid "Product"
@@ -1354,7 +1358,7 @@ msgstr "隐藏（仅后台可见）"
 
 #: includes/admin/class-batch-metabox.php:80
 #: includes/admin/class-overview-page.php:181
-#: includes/admin/class-tracking-page.php:87
+#: includes/admin/class-tracking-page.php:88
 #: includes/class-store-config.php:719
 msgid "Active"
 msgstr "在售"
@@ -1452,8 +1456,9 @@ msgid "%1$d orders, %2$d customers, %3$d units in total."
 msgstr "共 %1$d 个订单、%2$d 位顾客、%3$d 件。"
 
 #: includes/admin/class-batch-orders.php:66
-#: includes/admin/class-tracking-page.php:122
+#: includes/admin/class-tracking-page.php:123
 #: includes/emails/class-admin-offline.php:48
+#: includes/tracking/class-privacy.php:169
 msgid "Order"
 msgstr "订单"
 
@@ -2006,8 +2011,8 @@ msgstr "返回主题装修"
 
 #: includes/admin/class-design-editor.php:120
 #: includes/admin/class-overview-page.php:198
-#: includes/admin/class-tracking-page.php:126
-#: includes/admin/class-tracking-page.php:176
+#: includes/admin/class-tracking-page.php:127
+#: includes/admin/class-tracking-page.php:177
 msgid "Page"
 msgstr "页面"
 
@@ -2519,7 +2524,7 @@ msgstr "最近发送的邮件"
 
 #: includes/admin/class-email-center.php:273
 #: includes/admin/class-pixels-page.php:189
-#: includes/admin/class-tracking-page.php:123
+#: includes/admin/class-tracking-page.php:124
 msgid "Time"
 msgstr "时间"
 
@@ -2811,7 +2816,7 @@ msgid "Disabled"
 msgstr "已停用"
 
 #: includes/admin/class-marketing.php:378
-#: includes/admin/class-tracking-page.php:145
+#: includes/admin/class-tracking-page.php:146
 msgid "Apply"
 msgstr "查询"
 
@@ -2878,6 +2883,7 @@ msgstr[0] "已更新 %d 项。"
 #: includes/admin/class-shipping-page.php:197
 #: includes/admin/class-tax-page.php:103
 #: includes/admin/class-terms-page.php:103
+#: includes/admin/class-tracking-page.php:297
 msgid "Save"
 msgstr "保存"
 
@@ -3171,8 +3177,8 @@ msgstr "以下目录链接的页面在本站不存在，已按“无链接”导
 
 #: includes/admin/class-menu-page.php:238
 #: includes/admin/class-overview-page.php:233
-#: includes/admin/class-tracking-page.php:137
-#: includes/admin/class-tracking-page.php:278
+#: includes/admin/class-tracking-page.php:138
+#: includes/admin/class-tracking-page.php:312
 msgid "Loading…"
 msgstr "加载中…"
 
@@ -3352,7 +3358,7 @@ msgid "Waiting for payment"
 msgstr "待付款"
 
 #: includes/admin/class-overview-page.php:144
-#: includes/admin/class-tracking-page.php:201
+#: includes/admin/class-tracking-page.php:202
 msgid "Payment failed"
 msgstr "支付失败"
 
@@ -3419,8 +3425,8 @@ msgid "Last 7 days"
 msgstr "过去 7 天"
 
 #: includes/admin/class-overview-page.php:162
-#: includes/admin/class-tracking-page.php:38
-#: includes/admin/class-tracking-page.php:245
+#: includes/admin/class-tracking-page.php:39
+#: includes/admin/class-tracking-page.php:256
 msgid "Conversion"
 msgstr "转化统计"
 
@@ -3433,7 +3439,7 @@ msgid "Visitor count"
 msgstr "访客数"
 
 #: includes/admin/class-overview-page.php:166
-#: includes/admin/class-tracking-page.php:118
+#: includes/admin/class-tracking-page.php:119
 msgid "Page views"
 msgstr "浏览量"
 
@@ -3472,7 +3478,7 @@ msgid "Customer tracking"
 msgstr "客户追踪"
 
 #: includes/admin/class-overview-page.php:178
-#: includes/admin/class-tracking-page.php:105
+#: includes/admin/class-tracking-page.php:106
 msgid "No visitors in the last 30 minutes."
 msgstr "最近 30 分钟没有访客。"
 
@@ -3485,23 +3491,23 @@ msgid "View all"
 msgstr "查看全部"
 
 #: includes/admin/class-overview-page.php:182
-#: includes/admin/class-tracking-page.php:88
+#: includes/admin/class-tracking-page.php:89
 msgid "Idle"
 msgstr "空闲"
 
 #: includes/admin/class-overview-page.php:183
-#: includes/admin/class-tracking-page.php:104
+#: includes/admin/class-tracking-page.php:105
 msgid "Offline"
 msgstr "离线"
 
 #: includes/admin/class-overview-page.php:184
-#: includes/admin/class-tracking-page.php:89
+#: includes/admin/class-tracking-page.php:90
 msgid "No signal (away)"
 msgstr "无信号（暂离）"
 
 #. translators: %s: time, e.g. 5s
 #: includes/admin/class-overview-page.php:186
-#: includes/admin/class-tracking-page.php:113
+#: includes/admin/class-tracking-page.php:114
 #, php-format
 msgid "%s ago"
 msgstr "%s前"
@@ -3513,29 +3519,29 @@ msgid "%d pages open"
 msgstr "打开了 %d 个页面"
 
 #: includes/admin/class-overview-page.php:190
-#: includes/admin/class-tracking-page.php:168
+#: includes/admin/class-tracking-page.php:169
 msgid "Home"
 msgstr "首页"
 
 #: includes/admin/class-overview-page.php:191
-#: includes/admin/class-tracking-page.php:169
+#: includes/admin/class-tracking-page.php:170
 #: includes/class-pixels.php:597
 msgid "Shop"
 msgstr "商店"
 
 #: includes/admin/class-overview-page.php:195
-#: includes/admin/class-tracking-page.php:132
-#: includes/admin/class-tracking-page.php:173
+#: includes/admin/class-tracking-page.php:133
+#: includes/admin/class-tracking-page.php:174
 msgid "Account"
 msgstr "账号"
 
 #: includes/admin/class-overview-page.php:196
-#: includes/admin/class-tracking-page.php:174
+#: includes/admin/class-tracking-page.php:175
 msgid "Order received"
 msgstr "下单完成页"
 
 #: includes/admin/class-overview-page.php:197
-#: includes/admin/class-tracking-page.php:175
+#: includes/admin/class-tracking-page.php:176
 msgid "Order payment"
 msgstr "订单付款页"
 
@@ -3546,32 +3552,32 @@ msgid "Only real orders are counted: %d test order(s) in this period (test payme
 msgstr "只统计真实订单：这个时间段有 %d 笔测试订单（测试付款或演示商品）没有计入。"
 
 #: includes/admin/class-overview-page.php:204
-#: includes/admin/class-tracking-page.php:161
+#: includes/admin/class-tracking-page.php:162
 msgid "Viewed a product"
 msgstr "看过商品"
 
 #: includes/admin/class-overview-page.php:205
-#: includes/admin/class-tracking-page.php:152
-#: includes/admin/class-tracking-page.php:162
-#: includes/admin/class-tracking-page.php:198
+#: includes/admin/class-tracking-page.php:153
+#: includes/admin/class-tracking-page.php:163
+#: includes/admin/class-tracking-page.php:199
 msgid "Added to cart"
 msgstr "加购成功"
 
 #: includes/admin/class-overview-page.php:206
-#: includes/admin/class-tracking-page.php:163
+#: includes/admin/class-tracking-page.php:164
 msgid "Reached checkout"
 msgstr "进入结账"
 
 #: includes/admin/class-overview-page.php:207
-#: includes/admin/class-tracking-page.php:164
+#: includes/admin/class-tracking-page.php:165
 msgid "Placed an order"
 msgstr "已下单"
 
 #: includes/admin/class-overview-page.php:208
 #: includes/admin/class-recovery-page.php:205
 #: includes/admin/class-recovery-page.php:222
-#: includes/admin/class-tracking-page.php:154
-#: includes/admin/class-tracking-page.php:165
+#: includes/admin/class-tracking-page.php:155
+#: includes/admin/class-tracking-page.php:166
 msgid "Paid"
 msgstr "已支付"
 
@@ -3843,7 +3849,7 @@ msgid "Platform"
 msgstr "平台"
 
 #: includes/admin/class-pixels-page.php:189
-#: includes/admin/class-tracking-page.php:125
+#: includes/admin/class-tracking-page.php:126
 msgid "Event"
 msgstr "事件"
 
@@ -4445,7 +4451,7 @@ msgid "Created"
 msgstr "创建时间"
 
 #: includes/admin/class-recovery-page.php:160
-#: includes/admin/class-tracking-page.php:140
+#: includes/admin/class-tracking-page.php:141
 msgid "To"
 msgstr "到"
 
@@ -4509,7 +4515,7 @@ msgid "%d records"
 msgstr "共 %d 条"
 
 #: includes/admin/class-recovery-page.php:196
-#: includes/admin/class-tracking-page.php:127
+#: includes/admin/class-tracking-page.php:128
 #: includes/class-coupons.php:462
 #: includes/class-promotions.php:977
 msgid "Details"
@@ -4558,7 +4564,7 @@ msgid "Paid order #%1$s: %2$s"
 msgstr "已付款订单 #%1$s：%2$s"
 
 #: includes/admin/class-recovery-page.php:229
-#: includes/admin/class-tracking-page.php:134
+#: includes/admin/class-tracking-page.php:135
 #: includes/modules/class-registry.php:756
 msgid "Timeline"
 msgstr "时间轴"
@@ -5793,359 +5799,383 @@ msgstr "买家看到的效果（显示的是已保存的内容，请先保存再
 msgid "No terms yet."
 msgstr "还没有条款。"
 
-#: includes/admin/class-tracking-page.php:36
-#: includes/admin/class-tracking-page.php:243
+#: includes/admin/class-tracking-page.php:37
+#: includes/admin/class-tracking-page.php:254
 msgid "Live visitors"
 msgstr "实时访客"
 
-#: includes/admin/class-tracking-page.php:37
-#: includes/admin/class-tracking-page.php:93
-#: includes/admin/class-tracking-page.php:246
+#: includes/admin/class-tracking-page.php:38
+#: includes/admin/class-tracking-page.php:94
+#: includes/admin/class-tracking-page.php:257
 msgid "Visitor archive"
 msgstr "访客归档"
 
-#: includes/admin/class-tracking-page.php:90
+#: includes/admin/class-tracking-page.php:91
 msgid "Left the site"
 msgstr "已离站"
 
-#: includes/admin/class-tracking-page.php:91
+#: includes/admin/class-tracking-page.php:92
 msgid "Left (timed out)"
 msgstr "已离站（超时）"
 
-#: includes/admin/class-tracking-page.php:94
+#: includes/admin/class-tracking-page.php:95
 msgid "Visits that have ended: every page was closed (leave signal), or no signal for 30 minutes (estimated). The leave time is the last signal, not an exact moment. A visitor who comes back shows up in Live visitors again; nothing is deleted."
 msgstr "已经结束的访问：所有页面都关闭了（离页信号），或者 30 分钟没有信号（推定）。离站时间是最后一次信号的时间，不是精确的关站时刻。客户回来后会重新出现在实时访客里，记录不会删除。"
 
-#: includes/admin/class-tracking-page.php:95
+#: includes/admin/class-tracking-page.php:96
 msgid "No ended visits match these filters."
 msgstr "没有符合条件的已结束访问。"
 
-#: includes/admin/class-tracking-page.php:96
+#: includes/admin/class-tracking-page.php:97
 msgid "Visit (start → last signal)"
 msgstr "访问（开始 → 最后信号）"
 
-#: includes/admin/class-tracking-page.php:97
+#: includes/admin/class-tracking-page.php:98
 msgid "How the visit ended"
 msgstr "离站方式"
 
-#: includes/admin/class-tracking-page.php:98
+#: includes/admin/class-tracking-page.php:99
 msgid "Leave signal"
 msgstr "离页信号"
 
-#: includes/admin/class-tracking-page.php:99
+#: includes/admin/class-tracking-page.php:100
 msgid "No signal for 30 min"
 msgstr "30 分钟无信号"
 
-#: includes/admin/class-tracking-page.php:100
+#: includes/admin/class-tracking-page.php:101
 msgid "Estimated"
 msgstr "推定"
 
-#: includes/admin/class-tracking-page.php:101
+#: includes/admin/class-tracking-page.php:102
 msgid "Last page"
 msgstr "最后页面"
 
-#: includes/admin/class-tracking-page.php:102
+#: includes/admin/class-tracking-page.php:103
 msgid "Visitor #ID, name or email"
 msgstr "访客 #编号、姓名或邮箱"
 
-#: includes/admin/class-tracking-page.php:103
+#: includes/admin/class-tracking-page.php:104
 msgid "Load more"
 msgstr "加载更多"
 
-#: includes/admin/class-tracking-page.php:106
+#: includes/admin/class-tracking-page.php:107
 msgid "Visitor"
 msgstr "访客"
 
-#: includes/admin/class-tracking-page.php:107
+#: includes/admin/class-tracking-page.php:108
+#: includes/tracking/class-privacy.php:167
 msgid "Device"
 msgstr "设备"
 
-#: includes/admin/class-tracking-page.php:108
+#: includes/admin/class-tracking-page.php:109
 msgid "Open pages"
 msgstr "打开的页面"
 
-#: includes/admin/class-tracking-page.php:109
+#: includes/admin/class-tracking-page.php:110
 msgid "Furthest step"
 msgstr "走到哪一步"
 
-#: includes/admin/class-tracking-page.php:111
+#: includes/admin/class-tracking-page.php:112
 msgid "Visit started"
 msgstr "访问开始"
 
-#: includes/admin/class-tracking-page.php:112
+#: includes/admin/class-tracking-page.php:113
 msgid "Last signal"
 msgstr "最后信号"
 
-#: includes/admin/class-tracking-page.php:114
+#: includes/admin/class-tracking-page.php:115
 #, php-format
 msgid "%ds"
 msgstr "%d 秒"
 
-#: includes/admin/class-tracking-page.php:115
+#: includes/admin/class-tracking-page.php:116
 #, php-format
 msgid "%dm"
 msgstr "%d 分钟"
 
-#: includes/admin/class-tracking-page.php:116
+#: includes/admin/class-tracking-page.php:117
 #, php-format
 msgid "%dh"
 msgstr "%d 小时"
 
-#: includes/admin/class-tracking-page.php:117
+#: includes/admin/class-tracking-page.php:118
 msgid "Visits"
 msgstr "访问次数"
 
-#: includes/admin/class-tracking-page.php:119
+#: includes/admin/class-tracking-page.php:120
 #: includes/modules/class-registry.php:779
 msgid "Events"
 msgstr "时间线"
 
-#: includes/admin/class-tracking-page.php:120
+#: includes/admin/class-tracking-page.php:121
 msgid "Duration"
 msgstr "时长"
 
-#: includes/admin/class-tracking-page.php:121
+#: includes/admin/class-tracking-page.php:122
+#: includes/tracking/class-privacy.php:166
 msgid "Landing page"
 msgstr "进入页面"
 
-#: includes/admin/class-tracking-page.php:124
+#: includes/admin/class-tracking-page.php:125
 msgid "Tab"
 msgstr "标签页"
 
-#: includes/admin/class-tracking-page.php:128
+#: includes/admin/class-tracking-page.php:129
 msgid "Server fact"
 msgstr "服务端事实"
 
-#: includes/admin/class-tracking-page.php:129
+#: includes/admin/class-tracking-page.php:130
 msgid "← Live visitors"
 msgstr "← 实时访客"
 
-#: includes/admin/class-tracking-page.php:130
+#: includes/admin/class-tracking-page.php:131
 msgid "Same account on other devices / browsers"
 msgstr "同一账号在其他设备 / 浏览器"
 
-#: includes/admin/class-tracking-page.php:131
+#: includes/admin/class-tracking-page.php:132
 msgid "First seen"
 msgstr "首次出现"
 
-#: includes/admin/class-tracking-page.php:133
+#: includes/admin/class-tracking-page.php:134
 msgid "Guest"
 msgstr "游客"
 
-#: includes/admin/class-tracking-page.php:135
+#: includes/admin/class-tracking-page.php:136
 msgid "Choose a visit to see its timeline."
 msgstr "选择一次访问查看时间线。"
 
-#: includes/admin/class-tracking-page.php:136
+#: includes/admin/class-tracking-page.php:137
 msgid "Refresh"
 msgstr "刷新"
 
-#: includes/admin/class-tracking-page.php:138
+#: includes/admin/class-tracking-page.php:139
 #, php-format
 msgid "Could not load: %s"
 msgstr "加载失败：%s"
 
-#: includes/admin/class-tracking-page.php:139
+#: includes/admin/class-tracking-page.php:140
 msgid "From"
 msgstr "从"
 
-#: includes/admin/class-tracking-page.php:141
+#: includes/admin/class-tracking-page.php:142
 msgid "All devices"
 msgstr "全部设备"
 
-#: includes/admin/class-tracking-page.php:142
+#: includes/admin/class-tracking-page.php:143
 #: includes/modules/class-blocks.php:225
 msgid "Desktop"
 msgstr "电脑"
 
-#: includes/admin/class-tracking-page.php:143
+#: includes/admin/class-tracking-page.php:144
 #: includes/modules/class-blocks.php:226
 msgid "Mobile"
 msgstr "手机"
 
-#: includes/admin/class-tracking-page.php:144
+#: includes/admin/class-tracking-page.php:145
 msgid "Tablet"
 msgstr "平板"
 
-#: includes/admin/class-tracking-page.php:147
+#: includes/admin/class-tracking-page.php:148
 msgid "Conversion funnel"
 msgstr "转化漏斗"
 
-#: includes/admin/class-tracking-page.php:148
+#: includes/admin/class-tracking-page.php:149
 #, php-format
 msgid "%s of visits"
 msgstr "占访问 %s"
 
-#: includes/admin/class-tracking-page.php:149
+#: includes/admin/class-tracking-page.php:150
 #, php-format
 msgid "%s from the previous step"
 msgstr "上一步转化 %s"
 
-#: includes/admin/class-tracking-page.php:150
+#: includes/admin/class-tracking-page.php:151
 msgid "By day (store time zone)"
 msgstr "按天（店铺时区）"
 
-#: includes/admin/class-tracking-page.php:151
+#: includes/admin/class-tracking-page.php:152
 msgid "Day"
 msgstr "日期"
 
-#: includes/admin/class-tracking-page.php:156
+#: includes/admin/class-tracking-page.php:157
 msgid "Views"
 msgstr "浏览"
 
-#: includes/admin/class-tracking-page.php:157
+#: includes/admin/class-tracking-page.php:158
 msgid "No data in this period."
 msgstr "这个时间段没有数据。"
 
-#: includes/admin/class-tracking-page.php:158
+#: includes/admin/class-tracking-page.php:159
 #: includes/modules/class-fallback.php:610
 #: includes/modules/class-registry.php:613
 msgid "Video"
 msgstr "视频"
 
-#: includes/admin/class-tracking-page.php:160
+#: includes/admin/class-tracking-page.php:161
 msgid "Visited"
 msgstr "访问"
 
-#: includes/admin/class-tracking-page.php:179
+#: includes/admin/class-tracking-page.php:180
 msgid "Opened page"
 msgstr "打开页面"
 
-#: includes/admin/class-tracking-page.php:180
+#: includes/admin/class-tracking-page.php:181
 msgid "Viewed product"
 msgstr "查看商品"
 
-#: includes/admin/class-tracking-page.php:181
+#: includes/admin/class-tracking-page.php:182
 msgid "Viewed cart"
 msgstr "查看购物车"
 
-#: includes/admin/class-tracking-page.php:182
+#: includes/admin/class-tracking-page.php:183
 msgid "Opened checkout"
 msgstr "打开结账页"
 
-#: includes/admin/class-tracking-page.php:183
+#: includes/admin/class-tracking-page.php:184
 msgid "Visibility changed"
 msgstr "切换前台 / 后台"
 
-#: includes/admin/class-tracking-page.php:184
+#: includes/admin/class-tracking-page.php:185
 msgid "Heartbeat"
 msgstr "心跳"
 
-#: includes/admin/class-tracking-page.php:185
+#: includes/admin/class-tracking-page.php:186
 msgid "Left page"
 msgstr "离开页面"
 
-#: includes/admin/class-tracking-page.php:186
+#: includes/admin/class-tracking-page.php:187
 msgid "Chose option"
 msgstr "选择规格"
 
-#: includes/admin/class-tracking-page.php:187
+#: includes/admin/class-tracking-page.php:188
 msgid "Clicked add to cart"
 msgstr "点击加购"
 
-#: includes/admin/class-tracking-page.php:188
+#: includes/admin/class-tracking-page.php:189
 msgid "Clicked place order"
 msgstr "点击下单"
 
-#: includes/admin/class-tracking-page.php:189
+#: includes/admin/class-tracking-page.php:190
 msgid "Opened cart drawer"
 msgstr "打开购物车抽屉"
 
-#: includes/admin/class-tracking-page.php:190
+#: includes/admin/class-tracking-page.php:191
 msgid "Closed cart drawer"
 msgstr "关闭购物车抽屉"
 
-#: includes/admin/class-tracking-page.php:191
+#: includes/admin/class-tracking-page.php:192
 msgid "Changed cart"
 msgstr "修改购物车"
 
-#: includes/admin/class-tracking-page.php:192
+#: includes/admin/class-tracking-page.php:193
 msgid "Cart updated (browser)"
 msgstr "购物车已更新（浏览器）"
 
-#: includes/admin/class-tracking-page.php:193
+#: includes/admin/class-tracking-page.php:194
 msgid "Video play"
 msgstr "视频播放"
 
-#: includes/admin/class-tracking-page.php:194
+#: includes/admin/class-tracking-page.php:195
 msgid "Video pause"
 msgstr "视频暂停"
 
-#: includes/admin/class-tracking-page.php:195
+#: includes/admin/class-tracking-page.php:196
 msgid "Video progress"
 msgstr "视频进度"
 
-#: includes/admin/class-tracking-page.php:196
+#: includes/admin/class-tracking-page.php:197
 msgid "Video seek"
 msgstr "视频拖动"
 
-#: includes/admin/class-tracking-page.php:197
+#: includes/admin/class-tracking-page.php:198
 msgid "Video ended"
 msgstr "视频播完"
 
-#: includes/admin/class-tracking-page.php:199
+#: includes/admin/class-tracking-page.php:200
 msgid "Order placed"
 msgstr "已下单"
 
-#: includes/admin/class-tracking-page.php:200
+#: includes/admin/class-tracking-page.php:201
 msgid "Payment succeeded"
 msgstr "支付成功"
 
-#: includes/admin/class-tracking-page.php:202
+#: includes/admin/class-tracking-page.php:203
 msgid "Order status changed"
 msgstr "订单状态变化"
 
-#: includes/admin/class-tracking-page.php:203
+#: includes/admin/class-tracking-page.php:204
 msgid "Logged in"
 msgstr "登录"
 
-#: includes/admin/class-tracking-page.php:204
+#: includes/admin/class-tracking-page.php:205
 msgid "Registered"
 msgstr "注册"
 
-#: includes/admin/class-tracking-page.php:206
+#: includes/admin/class-tracking-page.php:207
 msgid "Hide heartbeats"
 msgstr "隐藏心跳"
 
-#: includes/admin/class-tracking-page.php:244
+#: includes/admin/class-tracking-page.php:255
 msgid "Visitor details"
 msgstr "访客详情"
 
-#: includes/admin/class-tracking-page.php:251
-msgid "Collecting (test mode)"
-msgstr "正在采集（测试）"
+#: includes/admin/class-tracking-page.php:262
+msgid "Collecting"
+msgstr "正在收集"
 
-#: includes/admin/class-tracking-page.php:251
+#: includes/admin/class-tracking-page.php:262
 msgid "Tracking is off"
 msgstr "追踪已关闭"
 
-#: includes/admin/class-tracking-page.php:252
-msgid "Test version: data here comes from test visits on this site. There is no consent banner or retention policy yet, so do not turn this on for real customers."
-msgstr "测试版：这里的数据来自本站的测试访问。还没有隐私同意提示和数据保存期限，请不要对真实客户开启。"
+#: includes/admin/class-tracking-page.php:264
+msgid "The data from the test version was deleted."
+msgstr "测试版留下的数据已删除。"
 
-#: includes/admin/class-tracking-page.php:254
-msgid "All tracking test data was deleted."
-msgstr "全部追踪测试数据已删除。"
+#: includes/admin/class-tracking-page.php:280
+msgid "Visitor tracking"
+msgstr "访客追踪"
 
-#: includes/admin/class-tracking-page.php:262
-msgid "Turn off tracking"
-msgstr "关闭追踪"
+#: includes/admin/class-tracking-page.php:284
+msgid "Customers’ visits are being recorded. Click the switch to stop; the data already collected is kept."
+msgstr "正在记录顾客的访问。点开关可以停止，已经收集的数据会保留。"
 
-#: includes/admin/class-tracking-page.php:265
-msgid "Turn on test tracking"
-msgstr "开启测试追踪"
+#: includes/admin/class-tracking-page.php:284
+msgid "Nothing is recorded. Click the switch to start recording customers’ visits."
+msgstr "现在不记录。点开关开始记录顾客的访问。"
 
-#: includes/admin/class-tracking-page.php:269
-msgid "Delete all tracking test data? This cannot be undone."
-msgstr "删除全部追踪测试数据？删除后无法恢复。"
+#: includes/admin/class-tracking-page.php:288
+msgid "Keep data for"
+msgstr "数据保存"
 
-#: includes/admin/class-tracking-page.php:272
+#. translators: %d: number of days
+#: includes/admin/class-tracking-page.php:292
+#, php-format
+msgid "%d day"
+msgid_plural "%d days"
+msgstr[0] "%d 天"
+
+#: includes/admin/class-tracking-page.php:296
+msgid "Do not record browsers that send the Global Privacy Control (GPC) signal"
+msgstr "不记录发出“全局隐私控制（GPC）”信号的浏览器"
+
+#: includes/admin/class-tracking-page.php:299
+msgid "Never recorded: staff accounts, browsers with GPC (when ticked) and browsers that opened the opt-out link (?pc_px_optout=1). Older data is deleted every day. A customer’s visits are included when you use Export / Erase personal data. Mention this in your privacy policy; suggested text is in the WordPress privacy policy guide."
+msgstr "不会被记录的：员工账号、发出 GPC 信号的浏览器（勾选时）、打开过退出链接（?pc_px_optout=1）的浏览器。超过保存天数的数据每天自动删除。用“导出 / 抹除个人数据”时，会包含这位顾客的访问记录。请在隐私政策里写明这一点，WordPress 的隐私政策指南里有参考文字。"
+
+#: includes/admin/class-tracking-page.php:302
+msgid "Delete the data from the test version? This cannot be undone."
+msgstr "删除测试版留下的数据？删除后不能恢复。"
+
+#. translators: %d: number of visitors
+#: includes/admin/class-tracking-page.php:306
+#, php-format
+msgid "%d visitor from the test version is still here."
+msgid_plural "%d visitors from the test version are still here."
+msgstr[0] "还有 %d 位测试版留下的访客。"
+
+#: includes/admin/class-tracking-page.php:307
 msgid "Delete test data"
 msgstr "删除测试数据"
-
-#: includes/admin/class-tracking-page.php:275
-msgid "Staff accounts (shop managers, administrators) are never tracked. Use a customer test account or a private window to test."
-msgstr "员工账号（店长、管理员）不会被追踪。测试时请用顾客测试账号，或者在无痕窗口里访问。"
 
 #: includes/api/class-errors.php:20
 msgid "Invalid request parameters."
@@ -6247,17 +6277,21 @@ msgstr "某个可购买规格的常规价与成交价（最小货币单位），
 msgid "Visitor tracking is turned off."
 msgstr "访客追踪已关闭。"
 
-#: includes/api/class-tracking-controller.php:130
+#: includes/api/class-tracking-controller.php:104
+msgid "This browser asked not to be tracked."
+msgstr "这个浏览器要求不被追踪。"
+
+#: includes/api/class-tracking-controller.php:134
 msgid "Sorry, you are not allowed to view visitor data."
 msgstr "抱歉，你没有查看访客数据的权限。"
 
-#: includes/api/class-tracking-controller.php:143
-#: includes/api/class-tracking-controller.php:151
-#: includes/api/class-tracking-controller.php:172
+#: includes/api/class-tracking-controller.php:147
+#: includes/api/class-tracking-controller.php:155
+#: includes/api/class-tracking-controller.php:176
 msgid "Visitor not found."
 msgstr "找不到这位访客。"
 
-#: includes/api/class-tracking-controller.php:164
+#: includes/api/class-tracking-controller.php:168
 msgid "Visit not found."
 msgstr "找不到这次访问。"
 
@@ -9049,3 +9083,31 @@ msgstr "员工账号不追踪。"
 #: includes/tracking/class-ingest.php:201
 msgid "Too many events. Try again later."
 msgstr "事件太多，请稍后再试。"
+
+#: includes/tracking/class-privacy.php:132
+#: includes/tracking/class-privacy.php:141
+#: includes/tracking/class-privacy.php:161
+msgid "Store visits"
+msgstr "店铺访问记录"
+
+#: includes/tracking/class-privacy.php:164
+msgid "Started"
+msgstr "开始时间"
+
+#: includes/tracking/class-privacy.php:165
+msgid "Last activity"
+msgstr "最后活动"
+
+#: includes/tracking/class-privacy.php:168
+msgid "Pages viewed"
+msgstr "浏览页数"
+
+#. translators: %d: number of days
+#: includes/tracking/class-privacy.php:199
+#, php-format
+msgid "When you browse this store we record which pages and products you view, what you add to your cart and whether you check out, so we can understand how the store is used and improve it. We use a first-party cookie (pc_vid) that only identifies your browser, not you. If you sign in or place an order, these visits are linked to your account or order. The records are kept for %d days and are not sold or shared with advertisers. Browsers that send the Global Privacy Control signal, and browsers that used our opt-out link, are not recorded. You can ask us to export or delete this data."
+msgstr "您浏览本店时，我们会记录您看了哪些页面和商品、加购了什么、有没有结账，用来了解店铺的使用情况并加以改进。我们使用一个只识别浏览器、不识别个人身份的本站 cookie（pc_vid）。如果您登录或下单，这些访问会和您的账户或订单关联。记录保存 %d 天，不会出售或分享给广告商。发出全局隐私控制信号的浏览器，以及用过我们退出链接的浏览器，不会被记录。您可以要求我们导出或删除这些数据。"
+
+#: includes/tracking/class-privacy.php:202
+msgid "Store visit analytics"
+msgstr "店铺访问统计"

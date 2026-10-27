@@ -76,18 +76,19 @@ final class Tracking_Controller {
 	}
 
 	public static function session(): \WP_REST_Response {
-		$enabled = Tracker::enabled();
-		$staff   = Tracker::is_staff( Tracker::cookie_user_id() );
-		if ( $enabled && ! $staff && '' === Tracker::current_vid() ) {
+		$enabled  = Tracker::enabled();
+		$staff    = Tracker::is_staff( Tracker::cookie_user_id() );
+		$declined = Tracker::declined();
+		if ( $enabled && ! $staff && ! $declined && '' === Tracker::current_vid() ) {
 			Tracker::issue_vid();
 		}
 		return self::respond(
 			array(
 				'protocol'  => Tracker::PROTOCOL,
 				'enabled'   => $enabled,
-				'test_mode' => true,
-				'tracked'   => $enabled && ! $staff,
-				'config'    => $enabled ? Tracker::observer_config( array() ) : null,
+				'test_mode' => false,
+				'tracked'   => $enabled && ! $staff && ! $declined,
+				'config'    => $enabled && ! $declined ? Tracker::observer_config( array() ) : null,
 			)
 		);
 	}
@@ -98,6 +99,9 @@ final class Tracking_Controller {
 	public static function events( \WP_REST_Request $request ) {
 		if ( ! Tracker::enabled() ) {
 			return self::disabled();
+		}
+		if ( Tracker::declined() ) {
+			return new \WP_Error( 'pc_track_declined', __( 'This browser asked not to be tracked.', 'peptide-core' ), array( 'status' => 403 ) );
 		}
 		$body = Ingest::parse( (string) $request->get_body() );
 		if ( is_wp_error( $body ) ) {
