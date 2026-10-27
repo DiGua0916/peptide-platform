@@ -19,6 +19,8 @@
  *   集成、销售点、Multi-currency（本站不用）从标签栏去掉。只是不显示标签，设置值不变，
  *   插件页面里指向这些设置的链接（例如邮件通知的“设置”、物流设置里的“运费区域”）仍然能打开。
  *   常规（可销售国家等）、产品（单位、库存、评价）、帐户和隐私（游客结账、账户创建）、高级（购物车 / 结账页面、接口）保留。
+ * - 悬停预览（用户 2026-10-27 要求去掉）：鼠标移到没展开的菜单上时，旁边不再弹出子菜单，点菜单进去后照常展开。
+ *   只在展开的宽菜单、用鼠标时去掉；收起成图标的菜单和触屏设备没有别的办法打开子菜单，保留。
  *
  * 只影响能管理商店的人（manage_woocommerce）；其他角色的菜单不变。
  *
@@ -55,6 +57,19 @@ final class Admin_Menus {
 		add_filter( 'parent_file', array( self::class, 'parent_file' ), 20 );
 		add_filter( 'submenu_file', array( self::class, 'submenu_file' ), 20 );
 		add_filter( 'woocommerce_settings_tabs_array', array( self::class, 'settings_tabs' ), 999 );
+		add_action( 'admin_head', array( self::class, 'no_flyout' ) );
+	}
+
+	/** 去掉左侧菜单的悬停预览（没展开的菜单旁边弹出的子菜单和小箭头）。 */
+	public static function no_flyout(): void {
+		if ( ! self::applies() ) {
+			return;
+		}
+		echo '<style id="pc-no-menu-flyout">@media screen and (min-width:961px) and (hover:hover) and (pointer:fine){'
+			. 'body:not(.folded) #adminmenu li.wp-not-current-submenu>.wp-submenu{display:none}'
+			. 'body:not(.folded) #adminmenu li.wp-has-submenu.wp-not-current-submenu:hover:after,'
+			. 'body:not(.folded) #adminmenu li.wp-has-submenu.wp-not-current-submenu:focus-within:after{display:none}'
+			. '}</style>' . "\n";
 	}
 
 	private static function applies(): bool {

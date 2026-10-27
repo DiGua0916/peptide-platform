@@ -103,6 +103,11 @@ if ( ! wc_tax_enabled() ) {
 	$html = ob_get_clean();
 	$ok( 'tax page offers to turn taxes on with a nonce', false !== strpos( $html, 'pc_enable_tax' ) && false !== strpos( $html, '_wpnonce' ) );
 }
+// 左侧菜单不弹悬停预览（只在宽菜单、用鼠标时；收起的菜单和触屏保留）。
+ob_start();
+\PeptideCore\Admin\Admin_Menus::no_flyout();
+$css = ob_get_clean();
+$ok( 'menu hover flyout hidden for the wide menu with a mouse, kept when folded', str_contains( $css, 'li.wp-not-current-submenu>.wp-submenu{display:none}' ) && str_contains( $css, 'body:not(.folded)' ) && str_contains( $css, 'pointer:fine' ) );
 wp_set_current_user( 0 );
 ob_start();
 \PeptideCore\Admin\Store_Settings::render_system();
