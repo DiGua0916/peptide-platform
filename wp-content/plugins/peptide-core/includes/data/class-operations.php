@@ -151,8 +151,8 @@ final class Operations {
 		);
 	}
 
-	/** @return \WC_Order[] 时间段内创建的已付款订单（包括测试订单，由调用方排除）。和 Overview::paid_orders() 相同，只是不限数量。 */
-	private static function paid_orders( int $from, int $to ): array {
+	/** @return \WC_Order[] 时间段内创建的已付款订单（包括测试订单，由调用方排除）。和 Overview::paid_orders() 相同，只是不限数量。其他数据页面（商品详情数据）也用这一份。 */
+	public static function paid_orders( int $from, int $to ): array {
 		$orders = wc_get_orders(
 			array(
 				'type'         => 'shop_order',
