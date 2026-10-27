@@ -95,6 +95,15 @@ foreach ( array( 'options-reading.php', 'options-permalink.php', 'erase-personal
 	do_action( 'adminmenu' );
 	$ok( "$wp_page opens under store settings, system settings", 'admin.php?page=wc-settings' === $after && 'pc-system' === $sub );
 }
+foreach ( array( 'options-writing.php', 'options-media.php', 'nav-menus.php', 'import.php', 'site-editor.php' ) as $gone ) {
+	$GLOBALS['pagenow'] = $gone;
+	$ok( "$gone is removed and goes to system settings", str_contains( \PeptideCore\Admin\Admin_Menus::removed_redirect(), 'page=pc-system&pc_removed=1' ) );
+}
+foreach ( array( 'options-reading.php', 'options-permalink.php', 'erase-personal-data.php', 'site-health.php', 'themes.php' ) as $kept ) {
+	$GLOBALS['pagenow'] = $kept;
+	$ok( "$kept still opens", '' === \PeptideCore\Admin\Admin_Menus::removed_redirect() );
+}
+$ok( 'theme and plugin file editors are off for everyone', ! current_user_can( 'edit_themes' ) && ! current_user_can( 'edit_plugins' ) && ! current_user_can( 'edit_files' ) && current_user_can( 'switch_themes' ) && current_user_can( 'activate_plugins' ) );
 $ok( 'and the temporary mappings are removed again', ! array_intersect_key( (array) $GLOBALS['_wp_real_parent_file'], array_flip( array( 'woocommerce', 'options-general.php', 'tools.php', 'themes.php' ) ) ) );
 $pagenow = $saved_page;
 $GLOBALS['pagenow'] = $saved_page;

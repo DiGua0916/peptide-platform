@@ -1,7 +1,7 @@
 <?php
 /**
- * 访客追踪（VISITOR-ANALYTICS-TEST-01）冒烟测试：接收协议、去重 / 乱序 / 时钟、多标签页、访问切分、
- * Woo 服务端事实、后台查询和权限。开发环境专用。
+ * 访客追踪（VISITOR-ANALYTICS-TEST-01，TRACKING-LIVE-01 正式版）冒烟测试：接收协议、去重 / 乱序 / 时钟、多标签页、访问切分、
+ * Woo 服务端事实、后台查询和权限；正式版的不要追踪、保存期限、隐私请求、设置。开发环境专用。
  *
  * 运行：wp eval-file wp-content/plugins/peptide-core/tests/smoke-tracking.php
  * 测试产生的访客、访问、事件、标签页、订单和用户在结束时彻底删除，追踪开关恢复原样。不要在正式站点运行。
@@ -398,7 +398,66 @@ $ok( 'customers cannot read visitor data', in_array( rest_do_request( new WP_RES
 $ok( 'customers cannot read the archive', in_array( rest_do_request( new WP_REST_Request( 'GET', '/peptide/v1/track/admin/archive' ) )->get_status(), array( 401, 403 ), true ) );
 wp_set_current_user( 0 );
 $cfg = Tracker::observer_config( array( 'enabled' => false ) );
-$ok( 'theme config: enabled with endpoint and timings', true === $cfg['enabled'] && true === $cfg['test_mode'] && 15000 === $cfg['heartbeat_ms'] && 20 === $cfg['batch_max'] );
+$ok( 'theme config: enabled with endpoint and timings', true === $cfg['enabled'] && 15000 === $cfg['heartbeat_ms'] && 20 === $cfg['batch_max'] );
+
+// 8b. 正式版（TRACKING-LIVE-01）。
+$ok( 'live version: theme config says test_mode false, mode live', false === $cfg['test_mode'] && 'live' === $cfg['mode'] );
+$ok( 'new data is not marked as test data', 0 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT is_test FROM ' . Schema::table( 'visitors' ) . ' WHERE id = %d', $visitor['id'] ) ) && 0 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . Schema::table( 'events' ) . ' WHERE visitor_id = %d AND is_test = 1', $visitor['id'] ) ) ); // phpcs:ignore
+$_SERVER['HTTP_SEC_GPC'] = '1';
+$cfg_gpc = Tracker::observer_config( array( 'enabled' => false ) );
+$req     = new WP_REST_Request( 'POST', '/peptide/v1/track/events' );
+$req->set_body( '{}' );
+$ok( 'a browser with GPC is not tracked: the theme stays off and events are refused', false === $cfg_gpc['enabled'] && 403 === rest_do_request( $req )->get_status() );
+Tracker::save_settings( 180, false );
+$ok( 'GPC can be switched off in the settings', ! Tracker::declined() );
+Tracker::save_settings( 180, true );
+unset( $_SERVER['HTTP_SEC_GPC'] );
+$_COOKIE[ \PeptideCore\Pixels::OPTOUT ] = '1';
+$ok( 'a browser that used the opt-out link is not tracked', Tracker::declined() );
+unset( $_COOKIE[ \PeptideCore\Pixels::OPTOUT ] );
+Tracker::save_settings( 45, true );
+$ok( 'retention must be 30 / 90 / 180 / 365 days (otherwise 180)', 180 === Tracker::settings()['retention_days'] );
+Tracker::save_settings( 90, true );
+$ok( 'retention saved, switch untouched', 90 === Tracker::settings()['retention_days'] && Tracker::enabled() );
+$ok( 'the daily cleanup is scheduled while tracking is on', (bool) wp_next_scheduled( \PeptideCore\Tracking\Privacy::PRUNE_HOOK ) );
+
+// 保存期限：200 天前的访客和访问被删掉，近期的不动。
+$old_ms    = Tracker::now_ms() - 200 * DAY_IN_SECONDS * 1000;
+$old       = Tracker::visitor( bin2hex( random_bytes( 16 ) ), $old_ms );
+$visitors[] = $old['id'];
+$old_visit = Tracker::visit( $old['id'], $old_ms, '/old-page' );
+\PeptideCore\Tracking\Privacy::prune( 180, Tracker::now_ms() );
+$count = static fn( string $table, string $col, int $id ): int => (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . Schema::table( $table ) . " WHERE {$col} = %d", $id ) ); // phpcs:ignore
+$ok( 'data older than the retention period is deleted', 0 === $count( 'visitors', 'id', $old['id'] ) && 0 === $count( 'visits', 'id', $old_visit ) );
+$ok( 'recent data is kept', 1 === $count( 'visitors', 'id', $visitor['id'] ) && $count( 'events', 'visitor_id', $visitor['id'] ) > 0 );
+
+// 顾客的隐私请求：导出 / 抹除个人数据。
+$email   = 'trk-privacy-' . strtolower( wp_generate_password( 6, false ) ) . '@example.com';
+// 新建用户会触发注册事件，把当前浏览器的访客关联过去；这里先去掉测试浏览器的访客 cookie。
+$saved_vid = $_COOKIE[ Tracker::COOKIE ] ?? null;
+unset( $_COOKIE[ Tracker::COOKIE ] );
+$pu      = wp_create_user( 'trkprivacy' . wp_rand( 1000, 9999 ), wp_generate_password(), $email );
+if ( null !== $saved_vid ) {
+	$_COOKIE[ Tracker::COOKIE ] = $saved_vid;
+}
+$users[] = $pu;
+$pv      = Tracker::visitor( bin2hex( random_bytes( 16 ) ), Tracker::now_ms() );
+$visitors[] = $pv['id'];
+Tracker::link_user( $pv['id'], $pu );
+Tracker::visit( $pv['id'], Tracker::now_ms(), '/privacy-landing' );
+$exported = \PeptideCore\Tracking\Privacy::export( $email );
+$ok( 'export personal data includes the customer’s visits', 1 === count( $exported['data'] ) && in_array( '/privacy-landing', array_column( $exported['data'][0]['data'], 'value' ), true ) );
+$erased = \PeptideCore\Tracking\Privacy::erase( $email );
+$ok( 'erase personal data deletes the customer’s tracking data', $erased['items_removed'] && 0 === $count( 'visitors', 'id', $pv['id'] ) && 0 === $count( 'visits', 'visitor_id', $pv['id'] ) );
+$ok( 'exporter and eraser are registered with WordPress', isset( apply_filters( 'wp_privacy_personal_data_exporters', array() )['peptide-core-visits'] ) && isset( apply_filters( 'wp_privacy_personal_data_erasers', array() )['peptide-core-visits'] ) );
+
+// 删除测试版数据只删 is_test = 1 的行。
+$tv = Tracker::visitor( bin2hex( random_bytes( 16 ) ), Tracker::now_ms() );
+$visitors[] = $tv['id'];
+$wpdb->update( Schema::table( 'visitors' ), array( 'is_test' => 1 ), array( 'id' => $tv['id'] ) ); // phpcs:ignore
+$ok( 'test-version visitors are counted', Schema::test_visitors() >= 1 );
+Schema::purge_test();
+$ok( 'deleting test data removes only the test-version rows', 0 === $count( 'visitors', 'id', $tv['id'] ) && 1 === $count( 'visitors', 'id', $visitor['id'] ) );
 
 // 9. 清理。
 wp_set_current_user( $admin->ID );
@@ -424,5 +483,6 @@ if ( null === $orig_option ) {
 } else {
 	update_option( Tracker::OPTION, $orig_option, false );
 }
+\PeptideCore\Tracking\Privacy::schedule( Tracker::enabled() );
 $ok( 'test data removed', 0 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . Schema::table( 'events' ) . ' WHERE visitor_id = %d', $visitor['id'] ) ) ); // phpcs:ignore
 $ok( 'tracking switch restored', ( null === $orig_option ) === ( false === get_option( Tracker::OPTION ) ) );

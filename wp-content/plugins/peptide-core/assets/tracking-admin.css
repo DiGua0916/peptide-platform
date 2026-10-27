@@ -40,6 +40,82 @@
 	margin: 0;
 }
 
+/* 访客追踪开关（TRACKING-LIVE-01）：整个按钮可以点，点一下切换开 / 关。 */
+.pc-trk-switch {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	padding: 6px 4px;
+	border: 0;
+	background: none;
+	font-size: 14px;
+	font-weight: 600;
+	color: #1d2327;
+	cursor: pointer;
+}
+
+.pc-trk-switch__track {
+	position: relative;
+	width: 44px;
+	height: 24px;
+	border-radius: 999px;
+	background: #a7aaad;
+	transition: background-color .15s ease;
+}
+
+.pc-trk-switch__knob {
+	position: absolute;
+	top: 3px;
+	left: 3px;
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background: #fff;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, .25);
+	transition: transform .15s ease;
+}
+
+.pc-trk-switch.is-on .pc-trk-switch__track {
+	background: #2271b1;
+}
+
+.pc-trk-switch.is-on .pc-trk-switch__knob {
+	transform: translateX(20px);
+}
+
+.pc-trk-switch__state {
+	font-weight: 400;
+	color: #50575e;
+}
+
+.pc-trk-switch:focus-visible {
+	outline: 2px solid #2271b1;
+	outline-offset: 2px;
+	border-radius: 4px;
+}
+
+.pc-trk-settings {
+	display: flex;
+	flex: 1 1 100%;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 16px;
+}
+
+.pc-trk-settings label {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.pc-trk-purge {
+	display: flex;
+	flex: 1 1 100%;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
 .pc-trk-cards {
 	display: flex;
 	flex-wrap: wrap;

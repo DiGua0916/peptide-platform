@@ -138,9 +138,13 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
 - `[pc_promotions]` 活动页面：第一次公开活动时自动建好 Offers 页面，`?promo=ID` 显示详情。主题可以用 `template-parts/promotions/list.php`（`$args['promotions']`）和 `detail.php`（`$args['promotion']|null`、`$args['list_url']`）接管。
 - 菜单链接类型新增 `promotions`（活动列表页）和 `promotion`（活动详情页）。活动结束或不再公开时，这一项不显示。
 
-## 访客追踪（测试版）
+## 访客追踪（正式版，2026-10-27 TRACKING-LIVE-01；原测试版 VISITOR-ANALYTICS-TEST-01）
 
-- 默认关闭，开启方式是后台“访客数据”或 `wp peptide tracking enable`。开启后，插件让 `vialcove_visitor_observer_config` 返回 `{enabled:true,test_mode:true,protocol:1,endpoint,heartbeat_ms:15000,idle_ms:60000,batch_max:20}`。
+- 默认关闭，开关在后台“访客数据 → 实时访客”最上面（或 `wp peptide tracking enable / disable`）。开启后，插件让 `vialcove_visitor_observer_config` 返回 `{enabled:true,test_mode:false,mode:"live",protocol:1,endpoint,heartbeat_ms:15000,idle_ms:60000,batch_max:20}`。
+  - **主题需要配合**：现在主题只在 `test_mode === true` 时启动（`inc/visitor-tracking.php` 和 `assets/visitor-adapter.js`），要改成 `enabled === true && protocol === 1` 就启动，不再要求 test_mode。
+  - 不要追踪的浏览器（发出 GPC 信号且设置里遵守，或打开过 `?pc_px_optout=1`）：过滤器保持主题的默认值（enabled:false）；`POST /track/events` 返回 403 `pc_track_declined`（和 disabled、staff 一样，整批丢弃）；`GET /track/session` 返回 `tracked:false, config:null`。
+  - 新数据 `is_test = 0`；测试版留下的数据（is_test = 1）可以在后台单独删除。
+  - 保存期限（30 / 90 / 180 / 365 天，默认 180）每天自动清理；WordPress 的“导出 / 抹除个人数据”包含顾客的访问记录（按邮箱找账号和订单）。
 - 身份：
   - 访客由服务器在页面加载时发 HttpOnly cookie `pc_vid`，前端读不到，也不需要生成；
   - 30 分钟没有事件时开始新的访问；
@@ -249,3 +253,16 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
 - **服务端回传**：Facebook（Conversions API）和 TikTok（Events API）的像素填了 access token 时，浏览商品、搜索、购物车、结账、加购、注册、登录和购买（订单变成已付款时）也由服务器经 Action Scheduler 发一份，和浏览器事件用同一个事件编号，平台只算一次。token 只在服务器上，`window.pcPixels` 里没有。
 - **不回传**：员工（除非勾了测试用选项）；浏览器发出 GPC 信号（默认遵守）；打开过任意前台地址加 `?pc_px_optout=1` 的浏览器（cookie `pc_px_optout`，一年；`=0` 取消）。主题可以在页脚或隐私页放一个“不要出售或分享我的个人信息”链接指向 `/?pc_px_optout=1`，打开后显示一条 WooCommerce 成功提示。
 - **检查**：浏览器里 `localStorage.pcPixelsDebug = '1'` 时，每个事件和发给了哪些平台都打印在控制台。
+
+## 首页SEO 和活动专题页（2026-10-27，Claude，照 YY 后台）
+
+- **首页SEO**（店铺装修 → 首页SEO，`PeptideCore\Seo`）：插件在首页的 `wp_head` 输出 meta description、meta keywords、og:type / og:site_name / og:title / og:description / og:url、twitter:card / title / description，并用 `pre_get_document_title` 替换首页的 `<title>`（没填 SEO 标题时保留主题的标题）。
+  - 按访问的域名选“域名指定模板”，没有就用“默认模板”。
+  - 支持变量 `{current_domain}`。
+  - 主题不要再输出这些标签，以免重复。
+- **活动专题页**（店铺装修 → 活动专题页，`PeptideCore\Topics`，文章类型 `pc_topic`）：
+  - 网址 `/topics/<别名>/`；改别名后旧网址 301 跳到新网址（WordPress 的 _wp_old_slug）；草稿看不到。
+  - 内容是区块编辑器的正文；简短描述 = 摘要；封面 = 特色图片。
+  - 模板：主题的 `single-pc_topic.php`，没有时用 `page.php`。现在用的是 page.php，Codex 可以以后做专门的模板。
+  - “展示专题标题”关掉时，`the_title` 在专题页主循环里返回空（page.php 的 h1 会是空的，模板里可以判断 `get_post_meta( $id, '_pc_topic_show_title', true ) === '0'` 不输出 h1）。
+  - 专题页有自己的 SEO（标题、描述、关键词），没填时用标题和摘要；有封面时输出 og:image。

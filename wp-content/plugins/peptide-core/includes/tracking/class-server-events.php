@@ -42,7 +42,7 @@ final class Server_Events {
 	private static function browser_visitor( int $user_id = -1 ): ?array {
 		$vid = Tracker::current_vid();
 		$uid = $user_id >= 0 ? $user_id : Tracker::cookie_user_id();
-		if ( '' === $vid || Tracker::is_staff( $uid ) ) {
+		if ( '' === $vid || Tracker::is_staff( $uid ) || Tracker::declined() ) {
 			return null;
 		}
 		$v = Tracker::visitor( $vid, Tracker::now_ms() );
@@ -57,7 +57,7 @@ final class Server_Events {
 		$now = Tracker::now_ms();
 		$ok  = $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->prepare(
-				'INSERT IGNORE INTO ' . Schema::table( 'events' ) . " (event_uid, visitor_id, visit_id, type, source, occurred_ms, received_ms, page_type, path, product_id, variation_id, order_id, data, is_test) VALUES (%s, %d, %d, %s, 'server', %d, %d, %s, %s, %d, %d, %d, %s, 1)", // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+				'INSERT IGNORE INTO ' . Schema::table( 'events' ) . " (event_uid, visitor_id, visit_id, type, source, occurred_ms, received_ms, page_type, path, product_id, variation_id, order_id, data, is_test) VALUES (%s, %d, %d, %s, 'server', %d, %d, %s, %s, %d, %d, %d, %s, 0)", // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 				substr( $uid, 0, 64 ),
 				$visitor_id,
 				$visit_id,

@@ -1,6 +1,9 @@
-# 访客追踪接收协议（测试版）
+# 访客追踪接收协议
 
 VISITOR-ANALYTICS-TEST-01 · protocol 1 · peptide-core 0.11.0 · 2026-10-22 · Claude
+
+> **2026-10-27 起是正式版（TRACKING-LIVE-01）**：配置里 `test_mode:false, mode:"live"`，主题要改为不再要求 test_mode；新数据 is_test = 0。
+> 开关、不要追踪的浏览器（GPC / 退出链接，403 `pc_track_declined`）、保存期限、隐私请求见 CONTRACT“访客追踪”和第 8 节。协议本身（事件格式、ack、限流）没有变。
 
 本文件是已经实现、测试过的接口，不是草案。代码位置：`includes/tracking/`、`includes/api/class-tracking-controller.php`。测试：`tests/smoke-tracking.php`（45 项）。
 
@@ -154,9 +157,9 @@ VISITOR-ANALYTICS-TEST-01 · protocol 1 · peptide-core 0.11.0 · 2026-10-22 · 
 - “转化统计”：按日期和设备筛选的漏斗、按天统计、商品浏览和加购。
 - 接口 `/track/admin/*`，需要 manage_woocommerce。
 
-## 8. 已知边界（测试版）
+## 8. 已知边界
 
 - 访客 cookie 在页面加载时由 PHP 发放。以后如果开启整页缓存，需要改成第一次上报时发放（接口已经支持：没有 cookie 时会补发）。
 - 迟到的事件会记到它到达时的那次访问里，不会按发生时间回填到更早的访问。
-- 没有隐私同意、保存期限和删除管理界面。按测试范围，不能对真实客户开启。
+- ~~没有隐私同意、保存期限和删除管理界面~~（2026-10-27 已补：不追踪 GPC / 退出链接的浏览器；保存期限 30–365 天，每天清理；接入 WordPress 的导出 / 抹除个人数据；隐私政策指南里有参考文字）。美国店铺不弹同意框；以后如果面向要求事先同意的地区，需要再加同意框。
 - 员工账号（manage_woocommerce / manage_options）完全不追踪。测试请用顾客账号或无痕窗口。

@@ -128,7 +128,23 @@ CREATE TABLE {$t} (
 		update_option( self::OPTION, self::DB_VERSION, false );
 	}
 
-	/** 删除全部测试数据（保留表结构）。 */
+	/** 测试版留下的访客数（is_test = 1）。 */
+	public static function test_visitors(): int {
+		global $wpdb;
+		return self::installed() ? (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . self::table( 'visitors' ) . ' WHERE is_test = 1' ) : 0; // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+	}
+
+	/** 只删除测试版留下的数据（is_test = 1），正式数据不动。 */
+	public static function purge_test(): void {
+		global $wpdb;
+		$ids = $wpdb->get_col( 'SELECT id FROM ' . self::table( 'visitors' ) . ' WHERE is_test = 1' ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+		Privacy::delete_visitors( array_map( 'intval', (array) $ids ) );
+		foreach ( array( 'events', 'visits' ) as $name ) {
+			$wpdb->query( 'DELETE FROM ' . self::table( $name ) . ' WHERE is_test = 1' ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+		}
+	}
+
+	/** 删除全部追踪数据（保留表结构）。 */
 	public static function purge(): void {
 		global $wpdb;
 		foreach ( array( 'events', 'tabs', 'visits', 'visitors' ) as $name ) {

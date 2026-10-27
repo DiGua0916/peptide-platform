@@ -138,7 +138,11 @@ final class Store_Settings {
 			echo '</div>';
 			return;
 		}
-		echo '<h1>' . esc_html__( 'System settings', 'peptide-core' ) . '</h1><div class="pc-ss-grid">';
+		echo '<h1>' . esc_html__( 'System settings', 'peptide-core' ) . '</h1>';
+		if ( isset( $_GET['pc_removed'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			echo '<div class="notice notice-info"><p>' . esc_html__( 'That page is not used in this store and has been removed. The WordPress settings that are still needed are at the bottom of this page.', 'peptide-core' ) . '</p></div>';
+		}
+		echo '<div class="pc-ss-grid">';
 		foreach ( $sections as $key => $s ) {
 			echo self::card( $s['icon'], $s['title'], $s['desc'], admin_url( 'admin.php?page=' . self::SYSTEM_SLUG . '&section=' . $key ), $s['placeholder'] ? __( 'Coming soon', 'peptide-core' ) : '' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		}

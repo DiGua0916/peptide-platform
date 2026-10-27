@@ -25,6 +25,8 @@
  * - 外观、工具、设置（用户 2026-10-27 要求去掉）：常规里的店铺名、管理员邮箱、图标、时区、语言、注册已在“基础配置”；
  *   仍然要用的页面（阅读 / 搜索引擎、固定链接、隐私、讨论、个人数据导出和抹除、站点健康、计划操作、主题）
  *   放在“系统设置”底部的“WordPress 设置和工具”，打开时左侧菜单停在“店铺设置 → 系统设置”。
+ *   用不上的页面（撰写、媒体、连接、字体、样板、导入、外观 → 菜单、小工具）直接关掉，打开时转到“系统设置”；
+ *   主题和插件的文件编辑器对所有人关闭（edit_themes / edit_plugins / edit_files 不再允许）。
  * - 悬停预览（用户 2026-10-27 要求去掉）：鼠标移到没展开的菜单上时，旁边不再弹出子菜单，点菜单进去后照常展开。
  *   只在展开的宽菜单、用鼠标时去掉；收起成图标的菜单和触屏设备没有别的办法打开子菜单，保留。
  *
@@ -64,6 +66,9 @@ final class Admin_Menus {
 	/** 外观、工具、设置下面的 WordPress 页面（$pagenow），打开时停在“店铺设置 → 系统设置”。 */
 	private const WP_PAGES = array( 'options-general.php', 'options-writing.php', 'options-reading.php', 'options-discussion.php', 'options-media.php', 'options-permalink.php', 'options-privacy.php', 'options-connectors.php', 'options.php', 'tools.php', 'import.php', 'export.php', 'site-health.php', 'export-personal-data.php', 'erase-personal-data.php', 'themes.php', 'theme-install.php', 'theme-editor.php', 'nav-menus.php', 'widgets.php' );
 
+	/** 已经删掉的 WordPress 页面（$pagenow）：用不上，打开时转到“系统设置”。 */
+	private const REMOVED_PAGES = array( 'options-writing.php', 'options-media.php', 'options-connectors.php', 'font-library.php', 'site-editor.php', 'import.php', 'nav-menus.php', 'widgets.php' );
+
 	/** parent_file() 临时改动前 $_wp_real_parent_file 里这些父菜单的值（null = 原来没有）。 */
 	private static $real_parent = null;
 
@@ -75,6 +80,34 @@ final class Admin_Menus {
 		add_filter( 'woocommerce_settings_tabs_array', array( self::class, 'settings_tabs' ), 999 );
 		add_action( 'admin_head', array( self::class, 'no_flyout' ) );
 		add_action( 'adminmenu', array( self::class, 'restore_parent' ) );
+		add_action( 'admin_init', array( self::class, 'block_removed_pages' ) );
+		add_filter( 'map_meta_cap', array( self::class, 'no_file_editors' ), 10, 2 );
+	}
+
+	/** 打开已经删掉的页面时转到“系统设置”（带提示）。 */
+	public static function block_removed_pages(): void {
+		$to = self::removed_redirect();
+		if ( '' !== $to && wp_safe_redirect( $to ) ) {
+			exit;
+		}
+	}
+
+	/** 当前页面是已经删掉的页面时，返回要转去的地址；否则为空。导入工具（admin.php?import=）也算。 */
+	public static function removed_redirect(): string {
+		global $pagenow;
+		if ( ! self::applies() || wp_doing_ajax() ) {
+			return '';
+		}
+		$importer = 'admin.php' === $pagenow && isset( $_GET['import'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( ! $importer && ! in_array( (string) $pagenow, self::REMOVED_PAGES, true ) ) {
+			return '';
+		}
+		return admin_url( 'admin.php?page=' . Store_Settings::SYSTEM_SLUG . '&pc_removed=1' );
+	}
+
+	/** 主题和插件的文件编辑器：在后台直接改代码容易把网站改坏，也是常见的入侵途径，对所有人关闭。 */
+	public static function no_file_editors( $caps, $cap ) {
+		return in_array( $cap, array( 'edit_themes', 'edit_plugins', 'edit_files' ), true ) ? array( 'do_not_allow' ) : $caps;
 	}
 
 	/** 去掉左侧菜单的悬停预览（没展开的菜单旁边弹出的子菜单和小箭头）。 */

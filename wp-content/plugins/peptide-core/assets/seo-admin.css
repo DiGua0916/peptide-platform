@@ -1,0 +1,184 @@
+/* 首页SEO 后台（照 YY：左边表单，右边备注说明）。 */
+.pc-seo h1 {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 4px 12px;
+}
+
+.pc-seo-lead {
+	font-size: 13px;
+	font-weight: 400;
+	color: #646970;
+}
+
+.pc-seo-layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 320px;
+	gap: 16px;
+	margin-top: 12px;
+	align-items: start;
+}
+
+.pc-seo-card {
+	min-width: 0;
+	padding: 16px 20px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+}
+
+.pc-seo-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px 20px;
+	margin: -4px 0 16px;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.pc-seo-tabs a[role="tab"] {
+	padding: 8px 0;
+	margin-bottom: -1px;
+	color: #50575e;
+	text-decoration: none;
+	border-bottom: 2px solid transparent;
+}
+
+.pc-seo-tabs a.is-active {
+	color: #2271b1;
+	border-bottom-color: #2271b1;
+}
+
+.pc-seo-tabs__tools {
+	display: flex;
+	gap: 12px;
+	margin-left: auto;
+}
+
+.pc-seo-tabs__tools a,
+.pc-seo-tabs__tools button {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	text-decoration: none;
+}
+
+.pc-seo-import,
+.pc-seo-domain {
+	margin-bottom: 16px;
+}
+
+.pc-seo-domain input[type="text"] {
+	width: min(320px, 100%);
+}
+
+.pc-seo-preview {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 12px 14px;
+	margin-bottom: 16px;
+	background: #f6f7f7;
+	border-radius: 4px;
+	overflow-wrap: anywhere;
+}
+
+.pc-seo-preview__url {
+	font-size: 12px;
+	color: #3c434a;
+}
+
+.pc-seo-preview__title {
+	font-size: 18px;
+	color: #1a0dab;
+}
+
+.pc-seo-preview__desc {
+	color: #4d5156;
+}
+
+.pc-seo-form label,
+.pc-seo-keys > label {
+	display: block;
+	margin-bottom: 4px;
+	font-weight: 600;
+}
+
+.pc-seo-form input[type="text"],
+.pc-seo-form textarea {
+	width: 100%;
+}
+
+.pc-seo-form p {
+	position: relative;
+	margin: 0 0 16px;
+}
+
+.pc-seo-count {
+	display: block;
+	text-align: right;
+	font-size: 12px;
+	color: #8c8f94;
+}
+
+.pc-seo-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	min-height: 64px;
+	padding: 6px 8px;
+	background: #fff;
+	border: 1px solid #8c8f94;
+	border-radius: 4px;
+	align-content: flex-start;
+	cursor: text;
+}
+
+.pc-seo-tags input[type="text"] {
+	flex: 1 1 160px;
+	min-width: 0;
+	border: 0;
+	box-shadow: none;
+}
+
+.pc-seo-tag {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 2px 4px 2px 8px;
+	background: #f0f0f1;
+	border-radius: 3px;
+}
+
+.pc-seo-tag button {
+	padding: 0 4px;
+	border: 0;
+	background: none;
+	color: #646970;
+	cursor: pointer;
+}
+
+.pc-seo-actions {
+	margin-top: 16px;
+}
+
+.pc-seo-notes h2 {
+	margin-top: 0;
+	font-size: 14px;
+}
+
+.pc-seo-notes ol {
+	margin: 0 0 0 18px;
+	color: #50575e;
+}
+
+.pc-seo-notes li {
+	margin-bottom: 10px;
+}
+
+@media screen and (max-width: 960px) {
+	.pc-seo-layout {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}

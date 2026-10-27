@@ -1,6 +1,6 @@
 <?php
 /**
- * 访客追踪（测试版，VISITOR-ANALYTICS-TEST-01）：开关、访客 / 访问编号、给主题的配置。
+ * 访客追踪（正式版，TRACKING-LIVE-01；测试版 VISITOR-ANALYTICS-TEST-01 的数据 is_test = 1）：开关、访客 / 访问编号、给主题的配置。
  *
  * 身份规则：
  * - 访客：前台页面加载时由服务器发一个 HttpOnly cookie（pc_vid，32 位十六进制随机数，一年）。脚本读不到它，
@@ -11,6 +11,8 @@
  * - 登录：登录时（wp_login）把当前访客关联到账号；之后每批事件也会根据登录 cookie 补关联。员工账号不追踪。
  *
  * 默认关闭。开启：后台“访客数据”页面的开关，或 wp peptide tracking enable。
+ * 不追踪：员工；浏览器发出 GPC 信号（设置里默认遵守）；打开过退出链接 ?pc_px_optout=1 的浏览器（和广告像素共用）。
+ * 保存期限、顾客的导出 / 抹除请求见 Privacy。
  *
  * @package PeptideCore
  */
@@ -31,11 +33,16 @@ final class Tracker {
 	public const OFFLINE_MS   = 45000;   // 最后一次信号超过 45 秒（三次心跳）→ 离线。
 	public const EXIT_MS      = 10000;   // 最后一个事件是离开页面且 10 秒内没有新信号 → 离线。
 
+	public const RETENTION_CHOICES = array( 30, 90, 180, 365 );
+	public const DEFAULT_RETENTION = 180;
+
 	public static function register_hooks(): void {
 		// 表结构有新版本时先升级（只比较一个选项，开销很小），否则追踪会因为“未安装”而停下。
 		if ( get_option( Schema::OPTION ) && ! Schema::installed() ) {
 			Schema::install();
 		}
+		// 保存期限和隐私请求：关着追踪时也要能删旧数据、处理顾客的请求。
+		Privacy::register_hooks();
 		if ( ! self::enabled() ) {
 			return;
 		}
@@ -45,16 +52,44 @@ final class Tracker {
 		Carts::register_hooks();
 	}
 
+	/** 设置：开关、保存天数、是否遵守 GPC（默认遵守）。 */
+	public static function settings(): array {
+		$o    = get_option( self::OPTION, array() );
+		$o    = is_array( $o ) ? $o : array();
+		$days = (int) ( $o['retention_days'] ?? self::DEFAULT_RETENTION );
+		return array(
+			'enabled'        => ! empty( $o['enabled'] ),
+			'retention_days' => in_array( $days, self::RETENTION_CHOICES, true ) ? $days : self::DEFAULT_RETENTION,
+			'gpc'            => ! array_key_exists( 'gpc', $o ) || ! empty( $o['gpc'] ),
+		);
+	}
+
 	public static function enabled(): bool {
-		$o = get_option( self::OPTION, array() );
-		return is_array( $o ) && ! empty( $o['enabled'] ) && Schema::installed();
+		return self::settings()['enabled'] && Schema::installed();
 	}
 
 	public static function set_enabled( bool $on ): void {
 		if ( $on && ! Schema::installed() ) {
 			Schema::install();
 		}
-		update_option( self::OPTION, array( 'enabled' => $on, 'test_mode' => true, 'changed_ms' => self::now_ms() ), false );
+		self::store( array( 'enabled' => $on ) + self::settings() );
+		Privacy::schedule( $on );
+	}
+
+	public static function save_settings( int $retention_days, bool $gpc ): void {
+		self::store( array( 'retention_days' => in_array( $retention_days, self::RETENTION_CHOICES, true ) ? $retention_days : self::DEFAULT_RETENTION, 'gpc' => $gpc ) + self::settings() );
+	}
+
+	private static function store( array $s ): void {
+		update_option( self::OPTION, array( 'enabled' => (bool) $s['enabled'], 'retention_days' => (int) $s['retention_days'], 'gpc' => (bool) $s['gpc'], 'changed_ms' => self::now_ms() ), false );
+	}
+
+	/** 这个浏览器表示不要追踪：发出 GPC 信号（设置里默认遵守），或打开过退出链接（和广告像素共用 pc_px_optout）。 */
+	public static function declined(): bool {
+		if ( self::settings()['gpc'] && isset( $_SERVER['HTTP_SEC_GPC'] ) && '1' === trim( sanitize_text_field( wp_unslash( $_SERVER['HTTP_SEC_GPC'] ) ) ) ) {
+			return true;
+		}
+		return isset( $_COOKIE[ \PeptideCore\Pixels::OPTOUT ] ) && '1' === (string) $_COOKIE[ \PeptideCore\Pixels::OPTOUT ]; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 	}
 
 	public static function now_ms(): int {
@@ -105,7 +140,7 @@ final class Tracker {
 		if ( is_admin() || is_preview() || is_customize_preview() || isset( $_GET['pc_frame'] ) || isset( $_GET['pc_preview_token'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			return;
 		}
-		if ( self::is_staff( self::cookie_user_id() ) || '' !== self::current_vid() ) {
+		if ( self::is_staff( self::cookie_user_id() ) || '' !== self::current_vid() || self::declined() ) {
 			return;
 		}
 		self::issue_vid();
@@ -144,7 +179,7 @@ final class Tracker {
 			return array( 'id' => (int) $row['id'], 'user_id' => (int) $row['user_id'] );
 		}
 		$ua = self::user_agent();
-		$wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO {$table} (vid, first_ms, last_ms, device, browser, is_test) VALUES (%s, %d, %d, %s, %s, 1)", $vid, $now_ms, $now_ms, self::device_of( $ua ), self::browser_of( $ua ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		$wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO {$table} (vid, first_ms, last_ms, device, browser, is_test) VALUES (%s, %d, %d, %s, %s, 0)", $vid, $now_ms, $now_ms, self::device_of( $ua ), self::browser_of( $ua ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT id, user_id FROM {$table} WHERE vid = %s", $vid ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		return array( 'id' => (int) ( $row['id'] ?? 0 ), 'user_id' => (int) ( $row['user_id'] ?? 0 ) );
 	}
@@ -197,7 +232,7 @@ final class Tracker {
 				'last_ms'      => $now_ms,
 				'landing_path' => substr( $landing_path, 0, 500 ),
 				'device'       => (string) ( $visitor['device'] ?? '' ),
-				'is_test'      => 1,
+				'is_test'      => 0,
 			)
 		);
 		$id = (int) $wpdb->insert_id;
@@ -218,14 +253,18 @@ final class Tracker {
 
 	// ---------- 给主题的配置 ----------
 
-	/** 主题过滤器 vialcove_visitor_observer_config：开启时告诉前端接收地址和计时口径。 */
+	/** 主题过滤器 vialcove_visitor_observer_config：开启时告诉前端接收地址和计时口径；不要追踪的浏览器保持主题的默认值（关闭）。 */
 	public static function observer_config( $config ): array {
 		$config = is_array( $config ) ? $config : array();
+		if ( self::declined() ) {
+			return $config;
+		}
 		return array_merge(
 			$config,
 			array(
 				'enabled'      => true,
-				'test_mode'    => true,
+				'test_mode'    => false,
+				'mode'         => 'live',
 				'protocol'     => self::PROTOCOL,
 				'endpoint'     => rest_url( 'peptide/v1/track/events' ),
 				'heartbeat_ms' => self::HEARTBEAT_MS,
