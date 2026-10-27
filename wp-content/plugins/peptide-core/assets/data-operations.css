@@ -272,14 +272,82 @@
 	border-top: 2px dashed #a7aaad;
 }
 
+/* 十四张排行表（第 7b 步）：和趋势图一样，每行放得下几张就放几张，900px 以下一列；标题和出错提示占满一行。 */
+.pc-ops-rankings {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+	gap: 16px;
+	margin-top: 16px;
+}
+
+.pc-ops-rankings > .pc-ops-rankings__title,
+.pc-ops-rankings > .pc-data-empty {
+	grid-column: 1 / -1;
+}
+
+.pc-ops-rankings__title {
+	margin: 0;
+	padding: 0;
+	font-size: 16px;
+	font-weight: 600;
+	line-height: 1.4;
+}
+
+.pc-ops-rank {
+	min-width: 0;
+	padding: 16px;
+	border: 1px solid #dcdcde;
+	background: #fff;
+}
+
+.pc-ops-rank__title {
+	margin: 0;
+	padding: 0;
+	font-size: 14px;
+	font-weight: 600;
+	line-height: 1.4;
+}
+
+.pc-ops-rank .pc-ops-table-wrap {
+	margin-top: 8px;
+}
+
+/* 名称列可以换行（商品名可能很长），数字列不换行；表格太宽时在卡片里自己横向滚动。 */
+.pc-ops-rank .pc-ops-table th:first-child,
+.pc-ops-rank .pc-ops-table td:first-child {
+	min-width: 140px;
+	overflow-wrap: anywhere;
+	white-space: normal;
+}
+
+.pc-ops-rank__empty {
+	color: #646970;
+	text-align: center;
+}
+
+/* 第 11 行起默认藏起来，点“查看更多”（卡片有 is-expanded 类）才显示。 */
+.pc-ops-rank__row.is-extra {
+	display: none;
+}
+
+.pc-ops-rank.is-expanded .pc-ops-rank__row.is-extra {
+	display: table-row;
+}
+
+.pc-ops-rank__toggle {
+	margin-top: 8px;
+}
+
 @media (max-width: 900px) {
-	.pc-ops-trends {
+	.pc-ops-trends,
+	.pc-ops-rankings {
 		grid-template-columns: minmax(0, 1fr);
 	}
 }
 
 @media (max-width: 600px) {
-	.pc-ops-trend {
+	.pc-ops-trend,
+	.pc-ops-rank {
 		padding: 12px;
 	}
 

@@ -21,6 +21,7 @@ use PeptideCore\Data\Conversion;
 use PeptideCore\Data\Operations;
 use PeptideCore\Data\Page_Visits;
 use PeptideCore\Data\Products;
+use PeptideCore\Data\Rankings;
 use PeptideCore\Data\Range;
 use PeptideCore\Data\Realtime;
 use PeptideCore\Data\Trends;
@@ -123,6 +124,24 @@ final class Data_Pages {
 								return $r;
 							}
 							$res = new \WP_REST_Response( Trends::summary( $r ) );
+							$res->header( 'Cache-Control', 'no-store' );
+							return $res;
+						},
+						'permission_callback' => $permission,
+					)
+				);
+				// 运营数据页的排行表（DATA-01 第 7b 步）：十四张排行表，每张的名称、本期、对比期和变化。
+				register_rest_route(
+					Rest_Controller::ROUTE_NAMESPACE,
+					'/data/rankings',
+					array(
+						'methods'             => \WP_REST_Server::READABLE,
+						'callback'            => static function ( \WP_REST_Request $request ) {
+							$r = Range::from_params( $request->get_params() );
+							if ( is_wp_error( $r ) ) {
+								return $r;
+							}
+							$res = new \WP_REST_Response( Rankings::summary( $r ) );
 							$res->header( 'Cache-Control', 'no-store' );
 							return $res;
 						},
@@ -436,6 +455,34 @@ final class Data_Pages {
 			/* translators: 1: metric name, 2: value */
 			'totalLine'       => __( '%1$s: %2$s', 'peptide-core' ),
 			'trendsError'     => __( 'The trend charts could not be loaded.', 'peptide-core' ),
+
+			// 排行表（第 7b 步）：标题、表头、查看更多 / 收起、空表和出错的文字，设备和浏览器的名称，十四张表的标题（t_ + 表的 key）。
+			'rankings'      => __( 'Rankings', 'peptide-core' ),
+			'rankName'      => __( 'Name', 'peptide-core' ),
+			'rankMore'      => __( 'View more', 'peptide-core' ),
+			'rankLess'      => __( 'Show less', 'peptide-core' ),
+			'rankEmpty'     => __( 'No data in this period.', 'peptide-core' ),
+			'rankingsError' => __( 'The ranking tables could not be loaded.', 'peptide-core' ),
+			'labelDesktop'  => __( 'Desktop', 'peptide-core' ),
+			'labelMobile'   => __( 'Mobile', 'peptide-core' ),
+			'labelTablet'   => __( 'Tablet', 'peptide-core' ),
+			'labelOther'    => __( 'Other', 'peptide-core' ),
+			'labelUnknown'  => __( 'Unknown', 'peptide-core' ),
+
+			't_products_units'     => __( 'Best sellers', 'peptide-core' ),
+			't_products_sales'     => __( 'Top products by sales', 'peptide-core' ),
+			't_products_viewed'    => __( 'Most viewed products', 'peptide-core' ),
+			't_products_carted'    => __( 'Most added to cart', 'peptide-core' ),
+			't_categories_units'   => __( 'Product categories by units', 'peptide-core' ),
+			't_categories_sales'   => __( 'Product categories by sales', 'peptide-core' ),
+			't_order_countries'    => __( 'Order countries', 'peptide-core' ),
+			't_customer_countries' => __( 'Customer countries', 'peptide-core' ),
+			't_visitor_browsers'   => __( 'Visitor browsers', 'peptide-core' ),
+			't_order_browsers'     => __( 'Order browsers', 'peptide-core' ),
+			't_payment_methods'    => __( 'Payment methods', 'peptide-core' ),
+			't_payment_success'    => __( 'Payment success rate', 'peptide-core' ),
+			't_coupons'            => __( 'Coupon usage', 'peptide-core' ),
+			't_devices'            => __( 'Devices', 'peptide-core' ),
 		);
 	}
 
