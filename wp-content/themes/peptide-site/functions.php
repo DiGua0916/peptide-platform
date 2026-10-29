@@ -175,6 +175,7 @@ function vc_product_card( $product, bool $report_preview = true ): void {
         <div class="product-meta"><span><?php echo esc_html( $product->get_sku() ?: 'PEPTIDE COLLECTION' ); ?></span><span><?php echo esc_html( vc_report_label( $extra['report_state'] ?? '' ) ); ?></span></div>
         <div class="product-heading"><h3><a href="<?php echo esc_url( $product->get_permalink() ); ?>"><?php echo esc_html( $product->get_name() ); ?></a></h3><span class="product-price"><?php echo wp_kses_post( vc_card_price_html( $product ) ); ?></span></div>
         <div class="product-card-bottom"><span><?php echo isset( $extra['batch_count'] ) ? esc_html( sprintf( _n( '%d published batch', '%d published batches', $extra['batch_count'], 'vialcove' ), $extra['batch_count'] ) ) : 'Batch data unavailable'; ?></span><a href="<?php echo esc_url( $product->get_permalink() ); ?>">View details <?php echo vc_icon(); ?></a></div>
+        <?php do_action( 'peptide_core_product_card_extras', $product ); ?>
     </article>
     <?php
 }
