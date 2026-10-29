@@ -187,12 +187,12 @@ final class Registry {
 
 	/** Observed content blocks use the same saved fields with task-specific panels. */
 	private static function reference_content_controls( string $type, array $def ): array {
-		if ( ! in_array( $type, array( 'media_text', 'card_list' ), true ) ) { return $def; }
+		if ( ! in_array( $type, array( 'media_text', 'card_list', 'video' ), true ) ) { return $def; }
 		foreach ( $def['settings'] as &$field ) {
 			if ( 'bodyHtml' === $field['key'] ) { $field['ui'] = 'richtext'; }
 			if ( 'effectDurationMs' === $field['key'] ) { $field['uiMin'] = 1000; }
 			if ( 'effectIntervalMs' === $field['key'] ) { $field['uiMin'] = 500; $field['uiMax'] = 5000; }
-			if ( 'card_list' === $type && 'description' === $field['key'] ) { $field['uiHidden'] = true; }
+			if ( in_array( $type, array( 'card_list', 'video' ), true ) && 'description' === $field['key'] ) { $field['uiHidden'] = true; }
 			if ( 'card_list' === $type && 'columns' === $field['key'] ) { $field['uiMin'] = array( 'desktop' => 3, 'mobile' => 1 ); $field['uiMax'] = array( 'desktop' => 5, 'mobile' => 2 ); $field['deviceUI'] = 'paired'; }
 		}
 		unset( $field );
@@ -202,6 +202,18 @@ final class Registry {
 			$def['panels'] = array(
 				array( 'id' => 'content', 'label' => '标题与描述', 'initialOpen' => true, 'fields' => array( 'title', 'descriptionHtml' ) ),
 				array( 'id' => 'layout', 'label' => '宽度与排列', 'initialOpen' => true, 'fields' => array( 'fullWidth', 'display', 'textAlign', 'columns', 'gapPx' ) ),
+				array( 'id' => 'general', 'label' => '显示与间距', 'fields' => array( 'showDesktop', 'showMobile', 'paddingTopPx', 'paddingBottomPx', 'backgroundColor' ) ),
+			);
+		} elseif ( 'video' === $type ) {
+			$def['settings'][] = Fields::f( 'html', 'descriptionHtml', '简短描述', null, array( 'ui' => 'richtext', 'legacyKey' => 'description' ) );
+			// Only newly inserted videos follow the observed quiet playback defaults.
+			// Existing stored values and the original field defaults remain authoritative.
+			$def['editorDefaults'] = array( 'autoplay' => false, 'muted' => false );
+			$def['panels'] = array(
+				array( 'id' => 'content', 'label' => '标题与介绍', 'initialOpen' => true, 'fields' => array( 'title', 'descriptionHtml' ) ),
+				array( 'id' => 'media', 'label' => '视频来源与封面', 'initialOpen' => true, 'fields' => array( 'source', 'video', 'youtubeUrl', 'poster' ) ),
+				array( 'id' => 'layout', 'label' => '布局与比例', 'initialOpen' => true, 'fields' => array( 'layout', 'fullWidth', 'ratio' ) ),
+				array( 'id' => 'play', 'label' => '播放设置', 'fields' => array( 'autoplay', 'loop', 'muted', 'controls' ) ),
 				array( 'id' => 'general', 'label' => '显示与间距', 'fields' => array( 'showDesktop', 'showMobile', 'paddingTopPx', 'paddingBottomPx', 'backgroundColor' ) ),
 			);
 		} else { $def['panels'] = array(

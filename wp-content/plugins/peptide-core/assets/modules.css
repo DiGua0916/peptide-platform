@@ -1659,6 +1659,7 @@ picture.vc-img,
 
 	.vc-video-block--left,
 	.vc-video-block--right { grid-template-columns: 1fr; }
+	.vc-video-block--left .vc-video { order: 0; }
 
 	.vc-swipe-m {
 		display: flex !important;
