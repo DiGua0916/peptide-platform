@@ -171,13 +171,16 @@ final class Fields {
 					return $default;
 				}
 				$n = (float) $value;
+				// Trusted field definitions may opt in to finer decimal values; other fields keep two places.
+				$precision = isset( $field['precision'] ) && is_int( $field['precision'] ) && $field['precision'] >= 0 && $field['precision'] <= 6 ? $field['precision'] : null;
+				if ( null !== $precision && ! is_finite( $n ) ) { return $default; }
 				if ( isset( $field['min'] ) ) {
 					$n = max( (float) $field['min'], $n );
 				}
 				if ( isset( $field['max'] ) ) {
 					$n = min( (float) $field['max'], $n );
 				}
-				return ( ( $field['step'] ?? 1 ) >= 1 ) ? (int) round( $n ) : round( $n, 2 );
+				return ( ( $field['step'] ?? 1 ) >= 1 ) ? (int) round( $n ) : round( $n, $precision ?? 2 );
 			case 'color':
 				return is_string( $value ) && 1 === preg_match( '/^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i', $value ) ? strtolower( $value ) : ( '' === $value ? '' : $default );
 			case 'image':

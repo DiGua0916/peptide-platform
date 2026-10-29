@@ -187,12 +187,16 @@ final class Registry {
 
 	/** Observed content blocks use the same saved fields with task-specific panels. */
 	private static function reference_content_controls( string $type, array $def ): array {
-		if ( ! in_array( $type, array( 'media_text', 'card_list', 'video', 'video_text', 'slogan' ), true ) ) { return $def; }
+		if ( ! in_array( $type, array( 'media_text', 'card_list', 'video', 'video_text', 'slogan', 'counter' ), true ) ) { return $def; }
 		foreach ( $def['settings'] as &$field ) {
 			if ( 'bodyHtml' === $field['key'] ) { $field['ui'] = 'richtext'; }
 			if ( 'effectDurationMs' === $field['key'] ) { $field['uiMin'] = 1000; }
 			if ( 'effectIntervalMs' === $field['key'] ) { $field['uiMin'] = 500; $field['uiMax'] = 5000; }
-			if ( in_array( $type, array( 'card_list', 'video', 'video_text', 'slogan' ), true ) && 'description' === $field['key'] ) { $field['uiHidden'] = true; }
+			if ( in_array( $type, array( 'card_list', 'video', 'video_text', 'slogan', 'counter' ), true ) && 'description' === $field['key'] ) { $field['uiHidden'] = true; }
+			if ( 'counter' === $type ) {
+				if ( 'numberSizePx' === $field['key'] ) { $field['label'] = '数字字号'; $field['min'] = 14; $field['uiMin'] = 14; $field['uiMax'] = 52; }
+				if ( 'columns' === $field['key'] ) { $field['uiMin'] = 1; $field['uiMax'] = array( 'desktop' => 5, 'mobile' => 2 ); $field['deviceUI'] = 'paired'; }
+			}
 			if ( 'slogan' === $type ) {
 				if ( 'iconWidthPx' === $field['key'] ) { $field['label'] = '图标宽度'; $field['uiMin'] = 20; $field['uiMax'] = 100; }
 				if ( 'titleSizePx' === $field['key'] ) { $field['label'] = '条目标题字号'; $field['uiMin'] = 14; $field['uiMax'] = 30; }
@@ -207,7 +211,26 @@ final class Registry {
 			if ( 'card_list' === $type && 'columns' === $field['key'] ) { $field['uiMin'] = array( 'desktop' => 3, 'mobile' => 1 ); $field['uiMax'] = array( 'desktop' => 5, 'mobile' => 2 ); $field['deviceUI'] = 'paired'; }
 		}
 		unset( $field );
-		if ( 'slogan' === $type ) {
+		if ( 'counter' === $type ) {
+			$def['settings'][] = Fields::f( 'html', 'descriptionHtml', '简短描述', null, array( 'ui' => 'richtext', 'legacyKey' => 'description' ) );
+			$def['panels'] = array(
+				array( 'id' => 'content', 'label' => '标题与描述', 'initialOpen' => true, 'fields' => array( 'title', 'descriptionHtml' ) ),
+				array( 'id' => 'layout', 'label' => '数字与列数', 'initialOpen' => true, 'fields' => array( 'numberSizePx', 'columns' ) ),
+				array( 'id' => 'general', 'label' => '显示与间距', 'fields' => array( 'showDesktop', 'showMobile', 'paddingTopPx', 'paddingBottomPx', 'backgroundColor' ) ),
+			);
+			foreach ( $def['items']['fields'] as &$field ) {
+				if ( 'image' === $field['key'] ) { $field['label'] = '自定义图标图片'; $field['help'] = '建议48×48px。有效图片优先显示；清空图片后使用所选图标。'; }
+				if ( 'icon' === $field['key'] ) { $field['label'] = '其他图标'; $field['help'] = '内置图标选择“沿用原图标”且未使用自定义图片时显示。'; }
+				if ( 'number' === $field['key'] ) { $field['label'] = '数字'; $field['min'] = -999999999; $field['step'] = 0.000001; $field['precision'] = 6; $field['help'] = '支持负数及最多6位小数；显示时保留单位的原始大小写。'; }
+			}
+			unset( $field );
+			array_unshift( $def['items']['fields'], Fields::f( 'select', 'symbol', '内置图标', 'none', array( 'options' => array( 'none' => '沿用原图标', 'hidden' => '仅不显示内置图标' ) + Slogan_Symbols::options(), 'help' => '自定义图片优先；“仅不显示内置图标”同时关闭此处和其他图标，不隐藏图片。' ) ) );
+			$def['items']['panels'] = array(
+				array( 'id' => 'visual', 'label' => '图标与图片', 'initialOpen' => true, 'fields' => array( 'symbol', 'image' ) ),
+				array( 'id' => 'number', 'label' => '数字与文字', 'initialOpen' => true, 'fields' => array( 'number', 'unit', 'label' ) ),
+				array( 'id' => 'other-icon', 'label' => '其他图标', 'fields' => array( 'icon' ) ),
+			);
+		} elseif ( 'slogan' === $type ) {
 			$def['settings'][] = Fields::f( 'html', 'descriptionHtml', '简短描述', null, array( 'ui' => 'richtext', 'legacyKey' => 'description' ) );
 			$def['panels'] = array(
 				array( 'id' => 'content', 'label' => '标题与描述', 'initialOpen' => true, 'fields' => array( 'title', 'descriptionHtml' ) ),

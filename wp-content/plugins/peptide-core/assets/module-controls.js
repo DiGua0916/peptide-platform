@@ -354,29 +354,70 @@
 
 	function HtmlField( props ) {
 		var mode = useRef( null );
-		if ( ! mode.current ) { mode.current = { value: props.value, source: legacyRichSource( props.value ), emitted: undefined }; }
-		else if ( mode.current.value !== props.value ) {
+		if ( ! mode.current ) { mode.current = { value: props.value, scope: props.scope, source: legacyRichSource( props.value ), emitted: undefined }; }
+		else if ( mode.current.value !== props.value || mode.current.scope !== props.scope ) {
 			// Own keystrokes retain their control and focus; a different incoming
 			// module/device value is assessed before it can reach innerHTML.
-			if ( mode.current.emitted !== props.value ) { mode.current.source = legacyRichSource( props.value ); }
+			if ( mode.current.scope !== props.scope || mode.current.emitted !== props.value ) { mode.current.source = legacyRichSource( props.value ); }
 			mode.current.value = props.value;
+			mode.current.scope = props.scope;
 			mode.current.emitted = undefined;
 		}
-		function changed( value ) { mode.current.emitted = value; props.onChange( value ); }
-		if ( mode.current.source ) {
-			return el( C.TextareaControl, { label: props.field.label, help: ( props.field.help ? props.field.help + ' ' : '' ) + '此内容含已有链接格式，使用 HTML 文本编辑以保留原格式。', value: props.value || '', rows: 5, onChange: changed } );
+		function changed( value, source ) {
+			if ( typeof source === 'boolean' ) { mode.current.source = source; }
+			mode.current.emitted = value; props.onChange( value );
 		}
-		return el( RichTextField, { field: props.field, value: props.value, onChange: changed } );
+		return el( RichTextField, { field: props.field, value: props.value, scope: props.scope, legacySource: mode.current.source, onChange: changed } );
 	}
 
 	function RichTextField( props ) {
-		var field = props.field, editor = useRef( null ), selection = useRef( null );
+		var field = props.field, editor = useRef( null ), selection = useRef( null ), host = useRef( null ), sourceInput = useRef( null );
 		var id = useState( uid() )[ 0 ];
 		var linkState = useState( false ), hrefState = useState( '' ), errorState = useState( '' );
+		var sourceButton = useRef( null ), fullscreenButton = useRef( null ), helpButton = useRef( null );
+		var fullscreenState = useState( false ), helpState = useState( false );
+		var incoming = useRef( { value: props.value, scope: props.scope } ), emitted = useRef( undefined ), wasFullscreen = useRef( false );
+		var focusSource = useRef( false ), returnSourceFocus = useRef( false ), returnFullscreenFocus = useRef( false );
+		function textValue( value ) { return value === null || value === undefined ? '' : String( value ); }
+		function draft( value ) { var text = textValue( value ); return { initial: text, value: text }; }
+		var sourceState = useState( props.legacySource ? draft( props.value ) : null );
+		var source = sourceState[ 0 ] || ( props.legacySource ? draft( props.value ) : null );
+		var fullscreen = fullscreenState[ 0 ], sourceOpen = !! source;
 		var html = safeRichHtml( props.value );
 		useEffect( function () {
+			if ( incoming.current.value !== props.value || incoming.current.scope !== props.scope ) {
+				var ownChange = incoming.current.scope === props.scope && emitted.current === props.value;
+				incoming.current = { value: props.value, scope: props.scope }; emitted.current = undefined;
+				if ( ! ownChange ) {
+					// A different module/device value must never inherit a pending source draft.
+					focusSource.current = false; returnSourceFocus.current = false; returnFullscreenFocus.current = false;
+					sourceState[ 1 ]( props.legacySource ? draft( props.value ) : null );
+					fullscreenState[ 1 ]( false ); helpState[ 1 ]( false ); linkState[ 1 ]( false ); selection.current = null;
+				}
+			}
+		}, [ props.value, props.scope ] );
+		useEffect( function () {
 			if ( editor.current && safeRichHtml( editor.current.innerHTML ) !== html ) { editor.current.innerHTML = html; }
-		}, [ html ] );
+		}, [ html, sourceOpen ] );
+		useEffect( function () {
+			if ( sourceOpen && focusSource.current && sourceInput.current ) { sourceInput.current.focus(); }
+			else if ( ! sourceOpen && returnSourceFocus.current && sourceButton.current ) { sourceButton.current.focus(); }
+			focusSource.current = false; returnSourceFocus.current = false;
+		}, [ sourceOpen ] );
+		useEffect( function () {
+			if ( ! fullscreen ) {
+				if ( wasFullscreen.current && returnFullscreenFocus.current && fullscreenButton.current ) { fullscreenButton.current.focus(); }
+				wasFullscreen.current = false;
+				returnFullscreenFocus.current = false;
+				return;
+			}
+			wasFullscreen.current = true;
+			var overflow = document.body.style.overflow;
+			document.body.style.overflow = 'hidden';
+			if ( sourceOpen && sourceInput.current ) { sourceInput.current.focus(); }
+			else if ( editor.current ) { editor.current.focus(); }
+			return function () { document.body.style.overflow = overflow; };
+		}, [ fullscreen ] );
 		function remember() {
 			var current = window.getSelection();
 			if ( current && current.rangeCount && editor.current && editor.current.contains( current.anchorNode ) && editor.current.contains( current.focusNode ) ) {
@@ -384,14 +425,18 @@
 			}
 		}
 		function restore() {
+			if ( ! editor.current ) { return; }
 			editor.current.focus();
 			if ( selection.current && editor.current.contains( selection.current.commonAncestorContainer ) ) {
 				var current = window.getSelection();
 				current.removeAllRanges(); current.addRange( selection.current );
 			}
 		}
+		function emit( value, sourceMode ) {
+			emitted.current = value; props.onChange( value, sourceMode );
+		}
 		function changed() {
-			props.onChange( safeRichHtml( editor.current.innerHTML ) );
+			emit( safeRichHtml( editor.current.innerHTML ) );
 			remember();
 		}
 		function command( name, argument ) {
@@ -399,23 +444,75 @@
 			document.execCommand( name, false, argument || null );
 			changed();
 		}
-		function formatButton( label, text, action ) {
-			return el( 'button', { type: 'button', className: 'pc-me-richtext__tool', 'aria-label': label, title: label,
-				onMouseDown: function ( event ) { event.preventDefault(); remember(); }, onClick: action }, text );
+		function formatButton( label, text, action, extra ) {
+			return el( 'button', Object.assign( { type: 'button', className: 'pc-me-richtext__tool', 'aria-label': label, title: label,
+				onMouseDown: function ( event ) { event.preventDefault(); remember(); }, onClick: action }, extra || {} ), text );
 		}
-		return el( 'div', { className: 'pc-me-richtext' },
+		function icon( name, fallback, block ) {
+			var icons = window.PeptideDesignIcons;
+			return icons && typeof icons.render === 'function' ? icons.render( name, { kind: block ? 'block' : 'action', size: 16 } ) : fallback;
+		}
+		function openSource() {
+			linkState[ 1 ]( false ); helpState[ 1 ]( false );
+			if ( sourceOpen ) { if ( sourceInput.current ) { sourceInput.current.focus(); } return; }
+			focusSource.current = true;
+			sourceState[ 1 ]( draft( props.value ) );
+		}
+		function cancelSource() {
+			returnSourceFocus.current = ! props.legacySource;
+			sourceState[ 1 ]( props.legacySource ? draft( props.value ) : null );
+			if ( props.legacySource && sourceInput.current ) { sourceInput.current.focus(); }
+		}
+		function applySource() {
+			var preserve = legacyRichSource( source.value );
+			returnSourceFocus.current = ! preserve;
+			// Legacy links remain inert text, preserving their original server-cleaned
+			// source path. They must never be assigned to contentEditable.innerHTML.
+			if ( source.value !== source.initial ) { emit( preserve ? source.value : safeRichHtml( source.value ), preserve ); }
+			sourceState[ 1 ]( preserve ? draft( source.value ) : null );
+			if ( preserve && sourceInput.current ) { sourceInput.current.focus(); }
+		}
+		function keyboard( event ) {
+			if ( event.defaultPrevented ) { return; }
+			if ( event.key === 'Escape' ) {
+				if ( helpState[ 0 ] ) { event.preventDefault(); event.stopPropagation(); helpState[ 1 ]( false ); if ( helpButton.current ) { helpButton.current.focus(); } }
+				else if ( linkState[ 0 ] ) { event.preventDefault(); event.stopPropagation(); linkState[ 1 ]( false ); restore(); }
+				else if ( fullscreen ) { event.preventDefault(); event.stopPropagation(); returnFullscreenFocus.current = true; fullscreenState[ 1 ]( false ); }
+				else if ( sourceOpen ) { event.preventDefault(); event.stopPropagation(); cancelSource(); }
+			}
+			if ( fullscreen && event.key === 'Tab' && host.current ) {
+				var focusable = Array.prototype.filter.call( host.current.querySelectorAll( 'button,input,textarea,a[href],[tabindex], [contenteditable="true"]' ), function ( node ) {
+					// Native Tab treats the editable host as one stop, skipping its links.
+					return ! ( editor.current && node !== editor.current && editor.current.contains( node ) ) && ! node.disabled && ( node.tabIndex !== -1 || node.isContentEditable && ! node.hasAttribute( 'tabindex' ) ) && node.getClientRects().length;
+				} );
+				var first = focusable[ 0 ], last = focusable[ focusable.length - 1 ];
+				if ( first && ( event.shiftKey && document.activeElement === first || ! event.shiftKey && document.activeElement === last ) ) { event.preventDefault(); ( event.shiftKey ? last : first ).focus(); }
+			}
+		}
+		return el( Fragment, null,
+			fullscreen ? el( 'div', { className: 'pc-me-richtext__backdrop', 'aria-hidden': true } ) : null,
+			el( 'div', { ref: host, className: 'pc-me-richtext' + ( fullscreen ? ' is-fullscreen' : '' ), onKeyDown: keyboard,
+				role: fullscreen ? 'dialog' : undefined, 'aria-modal': fullscreen ? true : undefined, 'aria-labelledby': fullscreen ? id + '-label' : undefined },
 			el( 'label', { id: id + '-label', className: 'pc-me-label', htmlFor: id }, field.label ),
 			el( 'div', { className: 'pc-me-richtext__box' },
 				el( 'div', { className: 'pc-me-richtext__toolbar', role: 'toolbar', 'aria-label': field.label + '格式' },
-					formatButton( '加粗', el( 'strong', null, 'B' ), function () { command( 'bold' ); } ),
-					formatButton( '斜体', el( 'em', null, 'I' ), function () { command( 'italic' ); } ),
-					formatButton( '添加链接', '链接', function () { linkState[ 1 ]( ! linkState[ 0 ] ); errorState[ 1 ]( '' ); } ),
-					formatButton( '清除格式', '清除格式', function () { command( 'removeFormat' ); command( 'unlink' ); } )
+					formatButton( '加粗', el( 'strong', null, 'B' ), function () { command( 'bold' ); }, { disabled: sourceOpen } ),
+					formatButton( '斜体', el( 'em', null, 'I' ), function () { command( 'italic' ); }, { disabled: sourceOpen } ),
+					formatButton( '添加链接', icon( 'link', '链接' ), function () { linkState[ 1 ]( ! linkState[ 0 ] ); errorState[ 1 ]( '' ); }, { disabled: sourceOpen } ),
+					formatButton( '清除格式', icon( 'clear', '清除格式' ), function () { command( 'removeFormat' ); command( 'unlink' ); }, { disabled: sourceOpen } ),
+					el( 'span', { className: 'pc-me-richtext__separator', 'aria-hidden': true } ),
+					formatButton( 'HTML 源码', icon( 'custom_html', 'HTML', true ), openSource, { ref: sourceButton, 'aria-pressed': sourceOpen, 'aria-controls': id + '-source' } ),
+					formatButton( fullscreen ? '退出编辑全屏' : '编辑全屏', icon( fullscreen ? 'collapse_fullscreen' : 'fullscreen', fullscreen ? '退出全屏' : '全屏' ), function () { returnFullscreenFocus.current = fullscreen; fullscreenState[ 1 ]( ! fullscreen ); }, { ref: fullscreenButton, 'aria-pressed': fullscreen } ),
+					formatButton( '富文本帮助', icon( 'help', '帮助' ), function () { helpState[ 1 ]( ! helpState[ 0 ] ); }, { ref: helpButton, 'aria-expanded': helpState[ 0 ], 'aria-controls': id + '-tool-help' } )
 				),
-				linkState[ 0 ] ? el( 'div', { className: 'pc-me-richtext__link' },
+				helpState[ 0 ] ? el( 'div', { id: id + '-tool-help', className: 'pc-me-richtext__help' },
+					el( 'p', null, '支持加粗、斜体和链接；选中文字后使用工具栏，也可使用 Ctrl / ⌘ + B、I。' ),
+					el( 'p', null, '源码先在草稿中编辑，点“应用源码”后更新内容；“取消”保留原内容。图片和文字颜色暂不支持。' ),
+					el( 'p', null, 'Esc 关闭帮助或退出编辑全屏。普通源码模式下，Esc 取消本次源码修改。' )
+				) : null,
+				! sourceOpen && linkState[ 0 ] ? el( 'div', { className: 'pc-me-richtext__link' },
 					el( 'label', { htmlFor: id + '-href', className: 'screen-reader-text' }, '链接地址' ),
-					el( 'input', { id: id + '-href', type: 'text', value: hrefState[ 0 ], placeholder: '/shop/ 或 https://…', onChange: function ( event ) { hrefState[ 1 ]( event.target.value ); errorState[ 1 ]( '' ); },
-						onKeyDown: function ( event ) { if ( event.key === 'Escape' ) { event.preventDefault(); linkState[ 1 ]( false ); restore(); } } } ),
+					el( 'input', { id: id + '-href', type: 'text', value: hrefState[ 0 ], placeholder: '/shop/ 或 https://…', onChange: function ( event ) { hrefState[ 1 ]( event.target.value ); errorState[ 1 ]( '' ); } } ),
 					el( C.Button, { variant: 'secondary', size: 'small', onClick: function () {
 						var href = safeHref( hrefState[ 0 ] );
 						if ( ! href ) { errorState[ 1 ]( '请输入有效的网页、邮件或电话链接。' ); return; }
@@ -424,7 +521,16 @@
 					el( C.Button, { variant: 'tertiary', size: 'small', onClick: function () { linkState[ 1 ]( false ); restore(); } }, S.cancel || '取消' ),
 					errorState[ 0 ] ? el( 'p', { className: 'pc-me-error', role: 'alert' }, errorState[ 0 ] ) : null
 				) : null,
-				el( 'div', { id: id, ref: editor, className: 'pc-me-richtext__input', contentEditable: true, suppressContentEditableWarning: true,
+				sourceOpen ? el( 'div', { key: 'source', className: 'pc-me-richtext__source' },
+					el( 'label', { htmlFor: id + '-source', className: 'screen-reader-text' }, field.label + ' HTML 源码' ),
+					el( 'textarea', { id: id + '-source', ref: sourceInput, className: 'pc-me-richtext__source-input', value: source.value, rows: 7, spellCheck: false,
+						'aria-describedby': id + '-source-help', onChange: function ( event ) { sourceState[ 1 ]( { initial: source.initial, value: event.target.value } ); } } ),
+					el( 'p', { id: id + '-source-help', className: 'pc-me-richtext__source-help', role: props.legacySource ? 'status' : undefined }, props.legacySource ? '此内容含已有链接格式，使用源码编辑以保留原格式。转换为支持的链接后，可应用并返回可视化。' : '应用时仅保留支持的富文本格式；图片和文字颜色暂不支持。' ),
+					el( 'div', { className: 'pc-me-richtext__source-actions' },
+						el( C.Button, { variant: 'primary', size: 'small', onClick: applySource }, '应用源码' ),
+						el( C.Button, { variant: 'secondary', size: 'small', onClick: cancelSource }, S.cancel || '取消' )
+					)
+				) : el( 'div', { key: 'visual', id: id, ref: editor, className: 'pc-me-richtext__input', contentEditable: true, suppressContentEditableWarning: true,
 					role: 'textbox', 'aria-multiline': true, 'aria-labelledby': id + '-label', 'aria-describedby': field.help ? id + '-help' : undefined,
 					onInput: changed, onKeyUp: remember, onMouseUp: remember,
 					onBlur: function () { var clean = safeRichHtml( editor.current.innerHTML ); if ( clean !== editor.current.innerHTML ) { editor.current.innerHTML = clean; } },
@@ -440,6 +546,7 @@
 			),
 			field.tokens && field.tokens.length ? el( 'p', { className: 'pc-me-template-tokens' }, '可用变量：', field.tokens.map( function ( token ) { return el( 'code', { key: token }, token ); } ) ) : null,
 			field.help ? el( 'p', { id: id + '-help', className: 'pc-me-help' }, field.help ) : null
+			)
 		);
 	}
 
@@ -949,7 +1056,7 @@
 			case 'textarea':
 				return el( C.TextareaControl, { label: f.label, help: f.help, value: value || '', rows: 3, onChange: onChange } );
 			case 'html':
-				if ( f.ui === 'richtext' || f.ui === 'template' ) { return el( HtmlField, { field: f, value: value, onChange: onChange } ); }
+				if ( f.ui === 'richtext' || f.ui === 'template' ) { return el( HtmlField, { field: f, value: value, scope: ctx && ctx.device || 'desktop', onChange: onChange } ); }
 				return el( C.TextareaControl, { label: f.label, help: f.help || S.htmlHelp, value: value || '', rows: 5, onChange: onChange } );
 			case 'code':
 				return el( C.TextareaControl, { className: 'pc-me-code', label: f.label, help: f.help, value: value || '', rows: 10, onChange: onChange } );

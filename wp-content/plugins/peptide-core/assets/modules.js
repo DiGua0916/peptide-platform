@@ -512,18 +512,23 @@
 	}
 
 	function counter( el ) {
-		var target = parseInt( el.dataset.count, 10 ) || 0;
-		if ( reduce || target <= 0 ) {
+		var exact = el.hasAttribute( 'data-count-precision' );
+		var target = exact ? Number( el.dataset.count ) : ( parseInt( el.dataset.count, 10 ) || 0 );
+		if ( ! Number.isFinite( target ) || reduce || ( exact ? target === 0 : target <= 0 ) ) {
 			return;
 		}
 		var start = null;
-		var fmt = new Intl.NumberFormat();
+		var finalText = el.textContent;
+		var precision = exact ? Math.max( 0, Math.min( 6, Number( el.dataset.countPrecision ) || 0 ) ) : 0;
+		var fmt = exact ? new Intl.NumberFormat( undefined, { minimumFractionDigits: precision, maximumFractionDigits: precision } ) : new Intl.NumberFormat();
 		function step( t ) {
+			if ( exact && reduce ) { el.textContent = finalText; return; }
 			if ( start === null ) {
 				start = t;
 			}
 			var p = Math.min( 1, ( t - start ) / 1200 );
-			el.textContent = fmt.format( Math.round( target * ( 1 - Math.pow( 1 - p, 3 ) ) ) );
+			var value = target * ( 1 - Math.pow( 1 - p, 3 ) );
+			el.textContent = exact ? ( p === 1 ? finalText : fmt.format( value ) ) : fmt.format( Math.round( value ) );
 			if ( p < 1 ) {
 				requestAnimationFrame( step );
 			}
@@ -531,11 +536,22 @@
 		requestAnimationFrame( step );
 	}
 
+	/** Full values remain keyboard-scrollable when an intentionally large number or column count needs it. */
+	function counterOverflow( root ) {
+		function measure() { root.tabIndex = root.scrollWidth > root.clientWidth + 1 ? 0 : -1; }
+		if ( window.ResizeObserver ) {
+			var observer = new window.ResizeObserver( measure ); observer.observe( root );
+			Array.prototype.forEach.call( root.children, function ( child ) { observer.observe( child ); } );
+		} else { window.addEventListener( 'resize', measure ); }
+		measure();
+	}
+
 	function init() {
 		each( '.vc-m .vc-carousel', carousel );
 		each( '.vc-m [data-vc-card-grid]', cardGrid );
 		each( '.vc-m [data-vc-card-carousel]', cardCarousel );
 		each( '.vc-m [data-vc-slogan-carousel]', sloganCarousel );
+		each( '.vc-m [data-vc-counter-overflow]', counterOverflow );
 		each( '.vc-m .vc-timeline--horizontal', timeline );
 		each( '.vc-m .vc-showcase', showcase );
 		each( '.vc-m .vc-btn', buttonEffect );

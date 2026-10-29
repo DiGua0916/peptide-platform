@@ -132,6 +132,35 @@
 .pc-me-richtext__link { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; padding: 8px; background: #fafafa; border-bottom: 1px solid #e6e6e6; }
 .pc-me-richtext__link input { flex: 1 1 120px; min-width: 0; }
 .pc-me-richtext__link .pc-me-error { flex-basis: 100%; }
+.pc-me-richtext__toolbar { flex-wrap: wrap; }
+.pc-me-richtext__tool svg { display: block; flex: none; }
+.pc-me-richtext__tool[aria-pressed="true"], .pc-me-richtext__tool[aria-expanded="true"] { background: #eaeaea; color: #171717; }
+.pc-me-richtext__tool:disabled { color: #777; cursor: default; opacity: .55; }
+.pc-me-richtext__tool:focus-visible { outline: 2px solid #737373; outline-offset: -2px; }
+.pc-me-richtext__separator { width: 1px; align-self: stretch; margin: 3px 2px; background: #e6e6e6; }
+.pc-me-richtext__help { padding: 8px 12px; border-bottom: 1px solid #e6e6e6; background: #fafafa; color: #404040; font-size: 12px; line-height: 19px; }
+.pc-me-richtext__help p { margin: 0 0 6px; }
+.pc-me-richtext__help p:last-child { margin-bottom: 0; }
+.pc-me-richtext__source { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.pc-me-richtext__source-input { display: block; box-sizing: border-box; width: 100%; max-width: none; min-height: 160px; margin: 0; padding: 12px; border: 0; border-radius: 0; background: #fff; color: #171717; font: 12px/20px Consolas, "Liberation Mono", monospace; resize: vertical; overflow-wrap: anywhere; caret-color: #171717; scrollbar-width: thin; scrollbar-color: #b5b5b5 #f4f4f4; }
+.pc-me-richtext__source-input:focus { box-shadow: none; }
+.pc-me-richtext__source-input:focus-visible { outline: 2px solid #737373; outline-offset: -2px; }
+.pc-me-richtext__source-help { margin: 0; padding: 8px 12px; border-top: 1px solid #e6e6e6; background: #fafafa; color: #666; font-size: 12px; line-height: 19px; }
+.pc-me-richtext__source-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 12px; border-top: 1px solid #e6e6e6; }
+.pc-me-richtext__backdrop { position: fixed; inset: 0; z-index: 1000000; background: rgb(23 23 23 / 18%); }
+.pc-me-richtext.is-fullscreen { position: fixed; inset: 24px; z-index: 1000001; display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; margin: 0; padding: 16px; border: 1px solid #d4d4d4; border-radius: 8px; background: #fff; box-shadow: 0 24px 64px rgb(24 24 24 / 15%); }
+.pc-me-richtext.is-fullscreen > .pc-me-label { flex: none; margin: 0; font-size: 14px; line-height: 22px; }
+.pc-me-richtext.is-fullscreen > .pc-me-richtext__box { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.pc-me-richtext.is-fullscreen .pc-me-richtext__toolbar { flex: none; }
+.pc-me-richtext.is-fullscreen .pc-me-richtext__input { flex: 1; min-height: 0; max-height: none; padding: 16px; font-size: 14px; line-height: 24px; scrollbar-width: thin; scrollbar-color: #b5b5b5 #f4f4f4; }
+.pc-me-richtext.is-fullscreen .pc-me-richtext__source { flex: 1; overflow-y: auto; }
+.pc-me-richtext.is-fullscreen .pc-me-richtext__source-input { flex: 1; min-height: 160px; resize: none; }
+.pc-me-richtext.is-fullscreen :is(.pc-me-richtext__help, .pc-me-richtext__source-help, .pc-me-richtext__source-actions, .pc-me-template-tokens, .pc-me-help) { flex: none; }
+.pc-me-richtext :is(.pc-me-richtext__input, .pc-me-richtext__source-input)::selection { background: #171717; color: #fff; }
+@media (max-width: 600px) {
+	.pc-me-richtext.is-fullscreen { inset: 12px; padding: 12px; }
+	.pc-me-richtext__tool { min-width: 32px; }
+}
 .pc-me-template-tokens { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin: 8px 0 0; color: #666; font-size: 12px; line-height: 18px; }
 .pc-me-template-tokens code { padding: 0 4px; border-radius: 2px; background: #f5f5f5; color: #404040; font-size: 12px; }
 

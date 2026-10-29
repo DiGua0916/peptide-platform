@@ -732,12 +732,25 @@ final class Fallback {
 	}
 
 	private static function render_counter( array $s, array $items ): string {
-		$out = '<div class="vc-m__inner">' . self::heading( $s ) . '<div class="vc-grid vc-counter"' . self::cols_style( $s, 'gapPx', array( '--vc-num' => (int) $s['numberSizePx'] . 'px' ) ) . '>';
-		foreach ( $items as $it ) {
-			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-counter__item' ) ) . '"' . self::item_attr( $it ) . '>' . self::icon_or_image( $it, 32 );
-			$out .= sprintf( '<p class="vc-counter__num"><span data-count="%1$d">%2$s</span>%3$s</p>', (int) $it['number'], esc_html( number_format_i18n( (int) $it['number'] ) ), '' !== $it['unit'] ? '<small>' . esc_html( $it['unit'] ) . '</small>' : '' );
+		$out = '<div class="vc-m__inner">' . self::heading( $s ) . '<div class="vc-grid vc-counter" tabindex="0" data-vc-counter-overflow="1" aria-label="' . esc_attr__( 'Counting numbers', 'peptide-core' ) . '"' . self::cols_style( $s, 'gapPx', array( '--vc-num' => (int) $s['numberSizePx'] . 'px' ) ) . '>';
+		$desktop_columns = max( 1, (int) self::dv( $s['columns'], 'desktop' ) );
+		foreach ( $items as $index => $it ) {
+			$symbol = $it['symbol'] ?? 'none';
+			$icon = '';
+			if ( Assets::resolve( $it['image'] ) ) { $icon = self::img( $it['image'], 'vc-m__icon-img' ); }
+			elseif ( 'hidden' !== $symbol ) { $icon = 'none' === $symbol ? self::icon( (string) $it['icon'], 32 ) : Slogan_Symbols::svg( $symbol ); }
+			$raw = rtrim( rtrim( number_format( (float) $it['number'], 6, '.', '' ), '0' ), '.' );
+			if ( '-0' === $raw || '' === $raw ) { $raw = '0'; }
+			$decimal_at = strpos( $raw, '.' );
+			$precision = false === $decimal_at ? 0 : strlen( $raw ) - $decimal_at - 1;
+			$formatted = number_format_i18n( (float) $raw, $precision );
+			$class = 'vc-counter__item' . ( 0 === $index % $desktop_columns ? ' vc-counter__item--row-start' : '' );
+			$out .= '<div class="' . esc_attr( self::item_class( $it, $class ) ) . '"' . self::item_attr( $it ) . '>';
+			if ( '' !== $icon ) { $out .= '<div class="vc-counter__icon">' . $icon . '</div>'; }
+			$out .= '<div class="vc-counter__copy">';
+			$out .= sprintf( '<p class="vc-counter__num" tabindex="0" data-vc-counter-overflow="1" aria-label="%1$s"><span data-count="%2$s" data-count-precision="%3$d">%4$s</span>%5$s</p>', esc_attr( $formatted . $it['unit'] ), esc_attr( $raw ), $precision, esc_html( $formatted ), '' !== $it['unit'] ? '<span class="vc-counter__unit">' . esc_html( $it['unit'] ) . '</span>' : '' );
 			$out .= '' !== $it['label'] ? '<p class="vc-counter__label">' . esc_html( $it['label'] ) . '</p>' : '';
-			$out .= '</div>';
+			$out .= '</div></div>';
 		}
 		return $out . '</div></div>';
 	}

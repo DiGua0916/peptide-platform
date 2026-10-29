@@ -728,25 +728,44 @@ picture.vc-img,
 }
 
 /* 数字 */
+.vc-counter { grid-template-columns: repeat(var(--vc-cols, 3), minmax(min(100%, 180px), 1fr)); gap: 30px; overflow-x: auto; }
 .vc-counter__item {
-	text-align: center;
+	position: relative;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: 24px;
+	min-width: 0;
+	padding: 30px 12px;
+	text-align: start;
 }
+.vc-counter__item:not(.vc-counter__item--row-start)::before { content: ''; position: absolute; inset-block: 20px; inset-inline-start: -15px; width: 1px; background: currentColor; opacity: .15; }
+.vc-counter__icon { flex: 0 0 74px; width: 74px; height: 74px; display: grid; place-items: center; border: 1px solid #d4d4d4; border-radius: 12px; }
+.vc-counter__icon svg, .vc-counter__icon img { display: block; width: 32px; height: 32px; object-fit: contain; margin: 0; }
+.vc-counter__copy { min-width: 0; max-width: 100%; flex: 0 1 auto; }
 
-.vc-counter__num {
-	margin: 8px 0 4px;
+.vc-counter .vc-counter__num {
+	max-width: 100%;
+	margin: 0;
 	font-size: var(--vc-num, 42px);
 	font-weight: 700;
 	line-height: 1;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+	overflow-x: auto;
+	overflow-y: hidden;
+	color: inherit;
 }
 
-.vc-counter__num small {
-	font-size: 0.5em;
-	margin-left: 2px;
-}
+.vc-counter__unit { font-size: inherit; }
+.vc-counter:focus-visible, .vc-counter__num:focus-visible { outline: 2px solid currentColor; outline-offset: -2px; }
 
-.vc-counter__label {
-	margin: 0;
-	opacity: 0.75;
+.vc-counter .vc-counter__label {
+	margin: 14px 0 0;
+	font-size: 14px;
+	color: inherit;
+	overflow-wrap: anywhere;
 }
 
 /* 画廊 */
@@ -1697,6 +1716,11 @@ picture.vc-img,
 	.vc-video-block--left,
 	.vc-video-block--right { grid-template-columns: 1fr; }
 	.vc-video-block--left .vc-video { order: 0; }
+
+	.vc-counter { grid-template-columns: repeat(var(--vc-cols-m, 1), minmax(min(100%, 140px), 1fr)); column-gap: 0; row-gap: 0; }
+	.vc-counter__item { flex-direction: column; flex-wrap: nowrap; gap: 20px; padding: 30px 12px; text-align: center; }
+	.vc-counter__item::before { display: none; }
+	.vc-counter__icon { flex-basis: 74px; }
 
 	.vc-slogan { grid-template-columns: minmax(0, 1fr); gap: 30px; }
 	.vc-slogan--carousel {

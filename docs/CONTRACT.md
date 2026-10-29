@@ -521,4 +521,7 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
 
 9. `slogan`新增独立条目`symbol`，仅none及40个固定原创SVG的白名单；原`icon`图片对象及合法尺寸保留，有效图片优先。全局`descriptionHtml`和条目`textHtml`为nullable，null沿用旧纯文案、空字符串明确清空。手机轮播使用原生滚动和真实分页/键盘增强，关闭后纵排；不新增自动播放，禁JS仍有SSR内容和原生横滚。增强态只跟随当前项自然高度并禁止内部纵滚。六组真实WP和独立fixture边界见backend-slogan-2026-10-30.md。
 
+10. `counter`的数字字段仅由可信服务器定义显式启用precision6/step.000001，允许有限±999999999，拒绝非finite并保留旧正整数；其他number字段默认整数/两位规则不改。SSR locale文字与raw data-count分离，signed fractional动画完成后恢复原SSR原文。新增独立symbol保留原icon及image优先，nullable描述仍按null/空串区分；列数原1–6保留，无gapPx字段。实际四组范围见backend-counter-2026-10-30.md。
+11. 共享richtext新增主动源码草稿Apply/Cancel、编辑全屏及本地帮助，不扩大HTML/URL白名单。未应用/取消/原样Apply不写继承null；合法旧特殊链接留在原源码保护路径。设备切换含同值时丢弃待应用草稿，明确Apply才更新当前slot。全屏同节点/焦点循环排除editable内部被浏览器跳过的链接；实际四目标及7cbd定向Tab修复范围见backend-richtext-2026-10-30.md。颜色与正文媒体尚未启用。
+
 验证按阶段记录，不混计：Records独立34及控件12不当真WP；原站限定29项已精确清理并与858posts/2555非锁meta基线同指纹；独立WordPress+Woo评价/Index各范围见任务work/reviews-runtime-positive-report.md，Index19组及SQL6/同请求恢复2等有真实前后证据；Links真实API7+UI8通过，取消/权限/状态变化/390/错误恢复均覆盖。共享条目panels/paired和首7基础块属于后续单独阶段，最终真实性/版本/限制以对应报告为准，不以已有定义数代替全量验收。
