@@ -69,7 +69,7 @@ a.vc-slide-card[data-pc-drag]:hover { transform: none; }
 
 /* The height setting controls image height without clipping long copy. */
 .vc-module-carousel--fixed .vc-slide-stage { min-height: var(--vc-carousel-height); }
-.vc-module-carousel--fixed .vc-slide-picture img { height: var(--vc-carousel-height); }
+.vc-module-carousel--fixed .vc-slide-picture img { height: var(--vc-carousel-height); min-height: 0; }
 .vc-module-carousel--screen .vc-slide-stage { min-height: 100vh; min-height: 100svh; }
 .vc-module-carousel--screen .vc-slide-picture img { height: 100vh; height: 100svh; }
 
