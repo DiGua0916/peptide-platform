@@ -28,7 +28,7 @@ wp_set_current_user( $admin->ID );
 // 1. 默认模板与文档。
 $default = Templates::default_id();
 $ok( 'store has a default template', Templates::exists( $default ) );
-$ok( 'default template has 4 design documents', 4 === count( array_filter( array_map( static fn( $d ) => Templates::document_id( $default, $d ), array_keys( Templates::documents() ) ) ) ) );
+$ok( 'default template preserves its four original design documents', 4 === count( array_filter( array_map( static fn( $d ) => Templates::document_id( $default, $d, false ), array( 'home', 'header', 'footer', 'global' ) ) ) ) );
 $ok( 'document lookup is stable', Templates::document_id( $default, 'home' ) === Templates::document_id( $default, 'home' ) );
 $ok( 'unknown document key rejected', 0 === Templates::document_id( $default, 'nope' ) );
 

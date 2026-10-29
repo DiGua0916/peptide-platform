@@ -7,6 +7,13 @@
 	'use strict';
 
 	var reduce = window.matchMedia && window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches;
+	var motionQuery = window.matchMedia ? window.matchMedia( '(prefers-reduced-motion: reduce)' ) : null;
+	function mediaChange( query, callback ) {
+		if ( ! query ) { return; }
+		if ( query.addEventListener ) { query.addEventListener( 'change', callback ); }
+		else if ( query.addListener ) { query.addListener( callback ); }
+	}
+	mediaChange( motionQuery, function ( event ) { reduce = event.matches; } );
 
 	function each( selector, fn ) {
 		Array.prototype.forEach.call( document.querySelectorAll( selector ), fn );
@@ -22,6 +29,8 @@
 		var index = 0;
 		var timer = null;
 		var dots = root.querySelector( '.vc-carousel__dots' );
+		var hovered = false;
+		var focused = false;
 		if ( root.dataset.dots === '1' ) {
 			if ( ! dots ) {
 				dots = document.createElement( 'div' );
@@ -41,15 +50,28 @@
 			} );
 			dots.removeAttribute( 'aria-hidden' );
 		}
+		if ( root.dataset.arrows === '1' ) {
+			[ -1, 1 ].forEach( function ( direction ) {
+				var arrow = document.createElement( 'button' );
+				arrow.type = 'button';
+				arrow.className = 'vc-carousel__arrow vc-carousel__arrow--' + ( direction < 0 ? 'prev' : 'next' );
+				arrow.setAttribute( 'aria-label', direction < 0 ? ( root.dataset.prevLabel || 'Previous slide' ) : ( root.dataset.nextLabel || 'Next slide' ) );
+				arrow.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" focusable="false"><path d="' + ( direction < 0 ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7' ) + '"/></svg>';
+				arrow.addEventListener( 'click', function () { go( index + direction ); restart(); } );
+				root.appendChild( arrow );
+			} );
+		}
 		function go( i ) {
 			index = ( i + slides.length ) % slides.length;
 			slides.forEach( function ( s, n ) {
 				s.classList.toggle( 'is-active', n === index );
 				s.setAttribute( 'aria-hidden', n === index ? 'false' : 'true' );
+				s.inert = n !== index;
 			} );
 			if ( dots ) {
 				Array.prototype.forEach.call( dots.children, function ( d, n ) {
 					d.classList.toggle( 'is-active', n === index );
+					d.setAttribute( 'aria-pressed', n === index ? 'true' : 'false' );
 				} );
 			}
 		}
@@ -57,9 +79,10 @@
 			if ( timer ) {
 				clearInterval( timer );
 			}
-			if ( root.dataset.autoplay === '1' && ! reduce ) {
+			timer = null;
+			if ( root.dataset.autoplay === '1' && ! reduce && ! hovered && ! focused && ! document.hidden ) {
 				timer = setInterval( function () {
-					go( index + 1 );
+					if ( root.getClientRects().length ) { go( index + 1 ); }
 				}, Math.max( 1000, parseInt( root.dataset.interval, 10 ) || 3000 ) );
 			}
 		}
@@ -79,18 +102,165 @@
 			go( at );
 		} );
 		root.addEventListener( 'mouseenter', function () {
+			hovered = true;
 			if ( timer ) {
 				clearInterval( timer );
 			}
 		} );
-		root.addEventListener( 'mouseleave', restart );
+		root.addEventListener( 'mouseleave', function () { hovered = false; restart(); } );
 		root.addEventListener( 'focusin', function () {
+			focused = true;
 			if ( timer ) {
 				clearInterval( timer );
 			}
 		} );
+		root.addEventListener( 'focusout', function ( event ) { focused = !! ( event.relatedTarget && root.contains( event.relatedTarget ) ); restart(); } );
+		root.addEventListener( 'keydown', function ( event ) {
+			if ( /^(INPUT|TEXTAREA|SELECT)$/.test( event.target.tagName ) ) { return; }
+			var next = event.key === 'ArrowRight' ? index + 1 : event.key === 'ArrowLeft' ? index - 1 : event.key === 'Home' ? 0 : event.key === 'End' ? slides.length - 1 : null;
+			if ( next === null ) { return; }
+			event.preventDefault(); go( next ); restart();
+		} );
+		document.addEventListener( 'visibilitychange', restart );
+		mediaChange( motionQuery, restart );
 		go( 0 );
 		restart();
+	}
+
+	function timeline( root ) {
+		if ( root.dataset.autoScroll !== '1' ) { return; }
+		var desktop = window.matchMedia ? window.matchMedia( '(min-width: 768px)' ) : { matches: true };
+		var paused = false, hovered = false, focused = false, visible = true;
+		var frame = null, last = null, direction = 1, resumeTimer = null;
+		var button = document.createElement( 'button' );
+		button.type = 'button'; button.className = 'vc-timeline__autoscroll';
+		root.parentNode.insertBefore( button, root.nextSibling );
+		function label() {
+			button.textContent = paused ? root.dataset.resumeLabel : root.dataset.pauseLabel;
+			button.setAttribute( 'aria-pressed', paused ? 'true' : 'false' );
+			button.hidden = ! desktop.matches || reduce || root.scrollWidth <= root.clientWidth;
+		}
+		function stop() { if ( frame !== null ) { cancelAnimationFrame( frame ); } frame = null; last = null; }
+		function available() { return ! paused && ! hovered && ! focused && visible && desktop.matches && ! reduce && ! document.hidden && root.getClientRects().length && root.scrollWidth > root.clientWidth; }
+		function step( time ) {
+			frame = null;
+			if ( ! available() ) { last = null; return; }
+			var elapsed = last === null ? 0 : Math.min( 80, time - last ); last = time;
+			var sign = window.getComputedStyle( root ).direction === 'rtl' ? -1 : 1;
+			var max = root.scrollWidth - root.clientWidth;
+			var position = Math.abs( root.scrollLeft ) + direction * elapsed * .028;
+			if ( position >= max ) { position = max; direction = -1; }
+			if ( position <= 0 ) { position = 0; direction = 1; }
+			root.scrollLeft = position * sign;
+			frame = requestAnimationFrame( step );
+		}
+		function start() { stop(); label(); if ( available() ) { frame = requestAnimationFrame( step ); } }
+		function manualPause() { stop(); clearTimeout( resumeTimer ); resumeTimer = setTimeout( start, 5000 ); }
+		button.addEventListener( 'click', function () { paused = ! paused; start(); } );
+		root.addEventListener( 'mouseenter', function () { hovered = true; stop(); } );
+		root.addEventListener( 'mouseleave', function () { hovered = false; start(); } );
+		root.addEventListener( 'focusin', function () { focused = true; stop(); } );
+		root.addEventListener( 'focusout', function ( event ) { focused = !! ( event.relatedTarget && root.contains( event.relatedTarget ) ); start(); } );
+		root.addEventListener( 'wheel', manualPause, { passive: true } );
+		root.addEventListener( 'pointerdown', manualPause, { passive: true } );
+		root.addEventListener( 'keydown', manualPause );
+		document.addEventListener( 'visibilitychange', start );
+		window.addEventListener( 'resize', start );
+		mediaChange( desktop, start ); mediaChange( motionQuery, start );
+		if ( window.IntersectionObserver ) {
+			new window.IntersectionObserver( function ( entries ) { visible = entries[ 0 ].isIntersecting; start(); } ).observe( root );
+		}
+		start();
+	}
+
+	function showcase( root ) {
+		if ( root.dataset.hoverPreview !== '1' ) { return; }
+		var hover = window.matchMedia ? window.matchMedia( '(hover: hover) and (pointer: fine)' ) : { matches: false };
+		Array.prototype.forEach.call( root.querySelectorAll( '.vc-hotspot' ), function ( spot ) {
+			var pinned = spot.open, pointer = false, focused = false;
+			function update() { spot.open = pinned || pointer || focused; }
+			spot.addEventListener( 'mouseenter', function () { if ( hover.matches ) { pointer = true; update(); } } );
+			spot.addEventListener( 'mouseleave', function () { pointer = false; update(); } );
+			spot.addEventListener( 'focusin', function () { focused = true; update(); } );
+			spot.addEventListener( 'focusout', function ( event ) { focused = !! ( event.relatedTarget && spot.contains( event.relatedTarget ) ); update(); } );
+			var summary = spot.querySelector( 'summary' );
+			if ( summary ) { summary.addEventListener( 'click', function ( event ) { event.preventDefault(); pinned = ! pinned; update(); } ); }
+			spot.addEventListener( 'keydown', function ( event ) { if ( event.key === 'Escape' ) { if ( summary ) { summary.focus(); } pinned = pointer = focused = false; update(); } } );
+			mediaChange( hover, function () { if ( ! hover.matches ) { pointer = false; update(); } } );
+		} );
+	}
+
+	function buttonEffect( button ) {
+		// Theme templates own their wrappers; either script may run first without claiming the other.
+		if ( button.dataset.vcEffectOwner || button.closest( '.vc-content-rich, [data-vc-button-effect], .vc-m--editor' ) ) { return; }
+		var types = [ 'bounce', 'rubberband', 'shake', 'swing', 'wobble', 'pulse', 'shine' ];
+		if ( ! types.some( function ( type ) { return button.classList.contains( 'vc-btn--' + type ); } ) ) { return; }
+		button.dataset.vcEffectOwner = 'basic';
+		var active = null, waiting = null, hovered = false, focused = false, inView = true, suspended = false;
+		function stop() { clearTimeout( active ); clearTimeout( waiting ); button.classList.remove( 'is-effect-active' ); }
+		function allowed() {
+			if ( reduce || document.hidden || suspended || hovered || focused || ! inView || button.isConnected === false || button.disabled || button.getAttribute( 'aria-disabled' ) === 'true' ) { return false; }
+			var rect = button.getBoundingClientRect(), style = window.getComputedStyle( button );
+			return !! ( rect.width && rect.height && rect.bottom > 0 && rect.top < window.innerHeight && rect.right > 0 && rect.left < window.innerWidth && style.visibility !== 'hidden' && style.display !== 'none' );
+		}
+		function run() {
+			stop();
+			if ( ! allowed() ) { return; }
+			var style = window.getComputedStyle( button );
+			var duration = Math.max( 0, Math.min( 5000, parseFloat( style.getPropertyValue( '--vc-btn-duration' ) ) || 0 ) );
+			var interval = Math.max( 0, Math.min( 10000, parseFloat( style.getPropertyValue( '--vc-btn-interval' ) ) || 0 ) );
+			if ( duration <= 0 ) { return; }
+			// Flush the idle style so an explicitly zero interval still starts a fresh CSS animation.
+			button.getBoundingClientRect();
+			button.classList.add( 'is-effect-active' );
+			active = setTimeout( function () { button.classList.remove( 'is-effect-active' ); if ( allowed() ) { waiting = setTimeout( run, interval ); } }, duration );
+		}
+		button.addEventListener( 'mouseenter', function () { hovered = true; stop(); } );
+		button.addEventListener( 'mouseleave', function () { hovered = false; run(); } );
+		button.addEventListener( 'focusin', function () { focused = true; stop(); } );
+		button.addEventListener( 'focusout', function ( event ) { focused = !! ( event.relatedTarget && button.contains( event.relatedTarget ) ); run(); } );
+		document.addEventListener( 'visibilitychange', run );
+		window.addEventListener( 'resize', run, { passive: true } );
+		window.addEventListener( 'scroll', run, { passive: true } );
+		window.addEventListener( 'pagehide', function () { suspended = true; stop(); } );
+		window.addEventListener( 'pageshow', function () { suspended = false; run(); } );
+		mediaChange( motionQuery, run );
+		if ( window.IntersectionObserver ) {
+			new window.IntersectionObserver( function ( entries ) { if ( entries.length ) { inView = entries[ 0 ].isIntersecting; run(); } } ).observe( button );
+		}
+		run();
+	}
+
+	function embeddedVideo( root ) {
+		var frame = root.querySelector( 'iframe' ), cover = root.querySelector( '.vc-video__cover' );
+		if ( ! frame ) { return; }
+		function load( play ) {
+			var source = play ? root.dataset.vcVideoPlay : root.dataset.vcVideoSrc;
+			if ( frame.getAttribute( 'src' ) !== source ) { frame.setAttribute( 'src', source ); }
+			if ( cover ) { cover.hidden = play; }
+		}
+		function update() {
+			if ( reduce || document.hidden ) { load( false ); }
+			else if ( root.dataset.vcAutoplay === '1' && root.getClientRects().length ) { load( true ); }
+			else if ( frame.getAttribute( 'src' ) === 'about:blank' ) { load( false ); }
+		}
+		if ( cover ) { cover.addEventListener( 'click', function () { load( true ); } ); }
+		mediaChange( motionQuery, update );
+		document.addEventListener( 'visibilitychange', update );
+		window.addEventListener( 'resize', update );
+		update();
+	}
+
+	function fileVideo( video ) {
+		function update() {
+			if ( reduce || document.hidden || ! video.getClientRects().length ) { video.pause(); return; }
+			var playing = video.play();
+			if ( playing && playing.catch ) { playing.catch( function () {} ); }
+		}
+		mediaChange( motionQuery, update );
+		document.addEventListener( 'visibilitychange', update );
+		window.addEventListener( 'resize', update );
+		update();
 	}
 
 	function compare( root ) {
@@ -132,6 +302,11 @@
 
 	function init() {
 		each( '.vc-m .vc-carousel', carousel );
+		each( '.vc-m .vc-timeline--horizontal', timeline );
+		each( '.vc-m .vc-showcase', showcase );
+		each( '.vc-m .vc-btn', buttonEffect );
+		each( '.vc-m [data-vc-video-src]', embeddedVideo );
+		each( '.vc-m video[data-vc-video-autoplay]', fileVideo );
 		each( '.vc-m .vc-compare', compare );
 		each( '.vc-m .vc-textblock__toggle', function ( b ) {
 			toggle( b, b.closest( '.vc-textblock' ), 'is-open' );
@@ -143,6 +318,7 @@
 				b.addEventListener( 'click', function () {
 					var collapsed = list.classList.toggle( 'is-collapsed' );
 					b.textContent = collapsed ? b.dataset.expand : b.dataset.collapse;
+					b.setAttribute( 'aria-expanded', collapsed ? 'false' : 'true' );
 				} );
 			}
 		} );

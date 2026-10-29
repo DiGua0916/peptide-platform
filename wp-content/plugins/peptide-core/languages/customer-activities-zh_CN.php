@@ -1,0 +1,31 @@
+<?php
+/** Supplemental activity binding labels. */
+defined( 'ABSPATH' ) || exit;
+return array(
+	'Activity type' => '活动类型',
+	'Gift or product bundle' => '独立赠品与套餐',
+	'Announcement source' => '公告来源',
+	'Write announcements' => '手动填写公告',
+	'Use real activities' => '绑定真实活动',
+	'Bound activities' => '绑定的活动',
+	'Activities to show' => '展示活动',
+	'All public activities' => '全部公开活动',
+	'Choose activities' => '选择指定活动',
+	'Selected activities' => '指定活动列表',
+	'Activity' => '活动',
+	'Coupon code' => '优惠码',
+	'Shipping discount' => '运费折扣',
+	'Available for your customer group.' => '适用于您所属的顾客分组。',
+	'Minimum spend: %s.' => '最低消费：%s。',
+	'Maximum spend: %s.' => '最高消费：%s。',
+	'Eligible items must total at least %s.' => '符合条件的商品金额需达到 %s。',
+	'At least %d eligible items.' => '至少购买 %d 件符合条件的商品。',
+	'First order only.' => '仅限首单。',
+	'Cannot be combined with other coupon codes.' => '不可与其他优惠码叠加。',
+	'Member-day shipping offer.' => '会员日运费优惠。',
+	'The best eligible shipping discount is applied at checkout.' => '结账时自动使用符合条件的最优运费折扣。',
+	'Code selected. Copy it to continue.' => '已选中优惠码，请复制后使用。',
+	'Use code' => '使用优惠码',
+	'Purchase actions are disabled in design previews.' => '装修预览中不提供购买操作。',
+	'View offer' => '查看优惠',
+);

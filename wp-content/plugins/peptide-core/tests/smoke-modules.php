@@ -34,8 +34,9 @@ set_error_handler(
 $fb = static fn( string $type, array $attrs ): string => Fallback::render( Renderer::normalize( $type, $attrs ), 'public' );
 
 $all = Registry::all();
-$ok( '35 modules registered in the library', 35 === count( $all ) );
-$ok( '34 basic blocks and 1 product block', 34 === count( array_filter( $all, static fn( $d ) => 'basic' === $d['category'] ) ) && 1 === count( array_filter( $all, static fn( $d ) => 'product' === $d['category'] ) ) );
+$original_types = array( 'carousel','image','image_row','image_grid','mosaic_3','mosaic_4','mosaic_5','media_text','section_heading','media_text_list','card_list','video','video_text','slogan','counter','gallery','custom_html','timeline','contact','promo_grid','marquee','spacer','rich_text','compare','hotspots','faq','product_showcase','hero_h1','info_list','nav_bar','logo_list','product_collection','report_feature','cta','text_block' );
+$ok( 'all original 35 modules remain registered', ! array_diff( $original_types, array_keys( $all ) ) );
+$ok( 'product and marketing libraries extend the original modules', isset( $all['product_collection'], $all['product_carousel'], $all['subscribe'], $all['site_styles'] ) && count( array_filter( $all, static fn( $d ) => 'product' === $d['category'] ) ) > 1 && count( array_filter( $all, static fn( $d ) => 'operation' === $d['category'] ) ) > 0 );
 $ok( 'no donation module', ! isset( $all['donation'] ) );
 $registered = WP_Block_Type_Registry::get_instance();
 $ok( 'every module is a registered block', array() === array_filter( $all, static fn( $d ) => ! $registered->is_registered( $d['block'] ) ) );
@@ -252,7 +253,7 @@ $ok( 'custom html never runs scripts in the editor', ! str_contains( $editor_cus
 
 // 编辑器数据。
 $data = Blocks::editor_data();
-$ok( 'editor data lists every block with defaults', 35 === count( $data['modules'] ) && isset( $data['modules']['vialcove/carousel']['items']['defaults']['media'] ) );
+$ok( 'editor data lists every registered block with defaults', count( $all ) === count( $data['modules'] ) && isset( $data['modules']['vialcove/carousel']['items']['defaults']['media'] ) );
 $ok(
 	'device defaults are {desktop, mobile}',
 	array(

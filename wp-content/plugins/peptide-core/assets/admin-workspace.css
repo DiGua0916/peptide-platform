@@ -1,0 +1,300 @@
+/* VialCove operations workspace · Impeccable: precise hierarchy, light navigation, native behavior. */
+@font-face{font-family:Manrope;src:url(fonts/manrope-1.woff2) format('woff2');font-style:normal;font-weight:400 700;font-display:swap}
+body.pc-admin-workspace{
+ --pc-ui-brand:#171717;--pc-ui-accent:#171717;--pc-ui-hover:#333333;--pc-ui-bg:#f7f7f7;--pc-ui-surface:#ffffff;--pc-ui-text:#171717;--pc-ui-muted:#666666;--pc-ui-line:#e6e6e6;--pc-ui-soft:#f5f5f5;--pc-ui-sidebar:220px;--pc-ui-border:var(--pc-ui-line);--pc-ui-font:Manrope,"Microsoft YaHei","PingFang SC",sans-serif;--pc-ui-nav:#fafafa;--pc-ui-radius:12px;--pc-ui-control-radius:6px;
+ --wp-admin-theme-color:#181818;--wp-admin-theme-color-darker-10:#313131;--wp-admin-theme-color-darker-20:#404040;--wp-admin-theme-color--rgb:24,24,24;
+ background:var(--pc-ui-bg);color:var(--pc-ui-text);font-family:Manrope,"Microsoft YaHei","PingFang SC",sans-serif;font-size:14px;line-height:22px;
+}
+.pc-admin-workspace :is(input,textarea,select,button){font-family:inherit}
+.pc-admin-workspace :is(.dashicons,.dashicons-before::before){font-family:dashicons}
+.pc-admin-workspace :is(a,button,input,select,textarea):focus-visible{outline:2px solid var(--pc-ui-accent);outline-offset:2px;box-shadow:none}
+.pc-admin-workspace :is(h1,h2,h3,h4){color:var(--pc-ui-text);text-wrap:balance}
+.pc-admin-workspace p{font-size:14px;line-height:20px;text-wrap:pretty}
+.pc-admin-workspace a{color:var(--pc-ui-accent)}
+.pc-admin-workspace a:hover{color:var(--pc-ui-hover)}
+.pc-admin-workspace .description,.pc-admin-workspace .howto{color:var(--pc-ui-muted);font-size:12px;line-height:16px;font-style:normal}
+
+/* Shell: compact tools above a calm, purpose-built work surface. */
+.pc-admin-workspace:not(.pc-design-editor-page) #wpcontent,.pc-admin-workspace:not(.pc-design-editor-page) #wpfooter{margin-left:var(--pc-ui-sidebar);padding-left:0}
+.pc-admin-workspace #wpadminbar{background:#ffffff;color:var(--pc-ui-muted);box-shadow:0 1px 0 var(--pc-ui-line)}
+.pc-admin-workspace #wpadminbar :is(.ab-item,.ab-icon::before,.ab-label){color:var(--pc-ui-muted)!important;font-family:inherit;font-size:12px}
+.pc-admin-workspace #wpadminbar .ab-icon::before{font-family:dashicons}
+.pc-admin-workspace #wpadminbar .ab-icon::before,.pc-admin-workspace #wpadminbar .ab-item::before{color:var(--pc-ui-muted)!important}
+.pc-admin-workspace #wpadminbar .ab-sub-wrapper{max-width:calc(100vw - 16px);box-sizing:border-box}
+.pc-admin-workspace #wpadminbar #wp-admin-bar-user-info .display-name{overflow-wrap:anywhere;max-width:100%;white-space:normal}
+body.pc-admin-workspace #wpadminbar .quicklinks #wp-admin-bar-woocommerce-site-visibility-badge a.ab-item{background:#f1f1f1;color:#404040}
+.pc-admin-workspace #wpadminbar .ab-sub-wrapper{background:#ffffff;box-shadow:0 8px 24px #1818181a}
+.pc-admin-workspace #wpadminbar .ab-top-menu>li:hover>.ab-item,.pc-admin-workspace #wpadminbar .ab-top-menu>li>.ab-item:focus{background:var(--pc-ui-soft);color:var(--pc-ui-accent)!important}
+.pc-admin-workspace :is(#adminmenuback,#adminmenuwrap,#adminmenu){width:var(--pc-ui-sidebar);background:var(--pc-ui-nav)}
+.pc-admin-workspace #adminmenu{box-sizing:border-box;padding:76px 10px 16px;margin:0;border-right:1px solid var(--pc-ui-line)}
+.pc-admin-workspace #adminmenu li.menu-top{margin:0 0 3px;border:0;border-radius:6px;background:transparent}
+body.pc-admin-workspace #adminmenu li.menu-top:is(.wp-has-current-submenu,.wp-menu-open,.opensub,.current,:hover){background:transparent}
+.pc-admin-workspace #adminmenu a.menu-top{min-height:36px;padding:2px 8px;border-radius:6px;font-size:13px;line-height:20px;font-weight:500;color:#4b4b4b}
+.pc-admin-workspace #adminmenu .wp-menu-image{width:32px}
+.pc-admin-workspace #adminmenu .wp-menu-image::before{color:#777777;font-size:17px}
+.pc-admin-workspace #adminmenu .wp-menu-name{padding:8px 4px 8px 0}
+body.pc-admin-workspace #adminmenu li.menu-top>a.menu-top .wp-menu-image::before{color:#666666}
+.pc-admin-workspace :is(input,textarea){caret-color:#171717}
+.pc-admin-workspace ::selection{background:#252525;color:#fff}
+.pc-admin-workspace :is(td,.pc-ov-num){font-variant-numeric:tabular-nums}
+body.pc-admin-workspace #adminmenu li.menu-top>a.menu-top:is(:hover,:focus,:active){background:#f0f0f0;color:#171717;box-shadow:none}
+body.pc-admin-workspace #adminmenu li.menu-top:is(.wp-has-current-submenu,.wp-menu-open,.opensub,.current)>a.menu-top{background:#eaeaea;color:#171717;box-shadow:none}
+body.pc-admin-workspace #adminmenu li.menu-top>.wp-submenu{box-sizing:border-box;width:100%;padding:4px 0 8px;background:var(--pc-ui-nav);border:0;box-shadow:none}
+body.pc-admin-workspace #adminmenu li.menu-top>.wp-submenu>.wp-submenu-head{background:#eaeaea;color:#171717}
+body.pc-admin-workspace #adminmenu li.menu-top>.wp-submenu>li>a{padding:7px 12px 7px 40px;border-radius:6px;font-size:13px;line-height:20px;color:#555555;background:transparent;box-shadow:none}
+body.pc-admin-workspace #adminmenu li.menu-top>.wp-submenu>li>a:is(:hover,:focus,:active){background:#f0f0f0;color:#171717;box-shadow:none}
+body.pc-admin-workspace #adminmenu li.menu-top>.wp-submenu>li.current>a,
+body.pc-admin-workspace #adminmenu li.menu-top>.wp-submenu>li.current>a:is(:hover,:focus,:active){color:#171717;background:#e5e5e5;font-weight:650;box-shadow:none}
+body.pc-admin-workspace #adminmenu li.menu-top a:focus-visible{outline:2px solid #737373;outline-offset:-2px;box-shadow:none}
+.pc-admin-workspace #adminmenu li.wp-menu-separator{height:8px;margin:0}
+.pc-admin-workspace #adminmenu .wp-menu-arrow{display:none}
+.pc-admin-workspace #adminmenu a.wp-has-current-submenu::after,.pc-admin-workspace #adminmenu>li.current>a.current::after{display:none}
+.pc-admin-workspace #collapse-button{color:#666666;height:36px;font-size:12px}
+body.pc-admin-workspace #collapse-button:is(:hover,:focus,:active){background:#f0f0f0;color:#171717;box-shadow:none}
+body.pc-admin-workspace #collapse-button:focus-visible{outline:2px solid #737373;outline-offset:-2px}
+body.pc-admin-workspace #wpadminbar #wp-admin-bar-menu-toggle>.ab-item{background:transparent}
+body.pc-admin-workspace #wpadminbar #wp-admin-bar-menu-toggle>.ab-item:is(:hover,:focus,:active){background:#eaeaea;box-shadow:none}
+.pc-admin-workspace #adminmenu .pc-workspace-brand-item{position:absolute;left:16px;right:16px;top:16px;margin:0;height:48px;z-index:2}
+.pc-admin-workspace #adminmenu .pc-workspace-brand{display:flex;gap:10px;align-items:center;padding:0;color:#171717;text-decoration:none;background:transparent;line-height:24px}
+.pc-workspace-mark{display:flex;width:34px;height:34px;align-items:center;justify-content:center;background:#171717;color:#ffffff;border-radius:8px;font-size:21px;line-height:28px;font-weight:700}
+.pc-workspace-brand__name{font-size:17px;line-height:24px;font-weight:700;letter-spacing:-.3px}
+.pc-workspace-brand__name small{display:block;color:#666666;font-size:12px;line-height:16px;font-weight:400;letter-spacing:0}
+.pc-workspace-header{position:sticky;top:32px;z-index:100;display:flex;align-items:center;justify-content:space-between;gap:16px;box-sizing:border-box;min-height:52px;padding:10px 28px;background:#ffffff;box-shadow:0 1px 0 var(--pc-ui-line)}
+.pc-workspace-header__context,.pc-workspace-header__actions{display:flex;align-items:center;gap:12px;min-width:0;font-size:13px;line-height:20px}
+.pc-workspace-header__context>span{color:var(--pc-ui-muted)}
+.pc-workspace-header__context>a{color:var(--pc-ui-muted);text-decoration:none;white-space:nowrap}
+.pc-workspace-header__context>a:hover{color:var(--pc-ui-accent)}
+.pc-workspace-header__context>strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.pc-workspace-store{color:var(--pc-ui-muted);font-size:12px;line-height:16px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pc-workspace-header__actions>a{white-space:nowrap;text-decoration:none;font-weight:600}
+.pc-admin-workspace:not(.pc-design-editor-page) #wpbody-content{box-sizing:border-box;padding-bottom:64px}
+.pc-admin-workspace:not(.pc-design-editor-page) #wpbody-content>.wrap{margin:24px 28px 0;max-width:none;min-width:0}
+.pc-admin-workspace #wpbody-content>.wrap>h1{display:inline-block;margin:0 12px 20px 0;padding:0;font-size:26px;line-height:34px;font-weight:650;letter-spacing:-.02em}
+.pc-admin-workspace #screen-meta-links{margin-right:32px}
+.pc-admin-workspace #wpfooter{padding:16px 32px;color:var(--pc-ui-muted);font-size:12px;line-height:16px}
+.pc-admin-workspace .notice{margin:16px 0;padding:8px 16px;border:1px solid var(--pc-ui-line);border-radius:4px;background:#ffffff;box-shadow:none}
+.pc-admin-workspace .notice-error{border-color:#e6b7b7;background:#fff6f6}
+.pc-admin-workspace .notice-success{border-color:#d4d4d4;background:#fafafa}
+.pc-admin-workspace .notice-warning{border-color:#d4d4d4;background:#fafafa}
+
+/* Controls: one hierarchy, including native list screens and Woo settings. */
+.pc-admin-workspace #wpbody-content :is(.button,.page-title-action){box-sizing:border-box;display:inline-flex;justify-content:center;align-items:center;gap:4px;min-height:36px;padding:7px 12px;border:1px solid #d4d4d4;border-radius:6px;background:#ffffff;color:var(--pc-ui-text);font-size:13px;line-height:20px;font-weight:600;box-shadow:none;text-shadow:none;text-decoration:none;vertical-align:middle;cursor:pointer}
+.pc-admin-workspace #wpbody-content .page-title-action{position:static;top:auto;margin:0 0 24px}
+.pc-admin-workspace #wpbody-content :is(.button-primary,.woocommerce-save-button){border-color:var(--pc-ui-accent);background:var(--pc-ui-accent);color:#ffffff}
+.pc-admin-workspace #wpbody-content :is(.button:hover,.page-title-action:hover){border-color:var(--pc-ui-accent);background:var(--pc-ui-soft);color:var(--pc-ui-hover)}
+.pc-admin-workspace #wpbody-content .button-primary:hover{background:var(--pc-ui-hover);color:#ffffff}
+.pc-admin-workspace #wpbody-content :is(.button:disabled,.button.disabled){color:#a3a3a3;background:#f0f0f0;border-color:var(--pc-ui-line);cursor:default}
+.pc-admin-workspace #wpbody-content :is(.button-link-delete,.submitdelete){color:#a73636}
+.pc-admin-workspace #wpbody-content :is(input[type=text],input[type=search],input[type=email],input[type=url],input[type=number],input[type=password],input[type=datetime-local],input[type=date],select,textarea){box-sizing:border-box;max-width:100%;min-height:36px;padding:7px 12px;border:1px solid #d4d4d4;border-radius:6px;background-color:#ffffff;color:var(--pc-ui-text);font-size:14px;line-height:20px;box-shadow:none}
+.pc-admin-workspace #wpbody-content input[type=color]{padding:4px;width:48px;height:40px;border:1px solid #d4d4d4;border-radius:4px}
+.pc-admin-workspace #wpbody-content input[type=file]{max-width:100%;font-size:14px;line-height:20px}
+.pc-admin-workspace #wpbody-content :is(input[type=checkbox],input[type=radio]){border-color:#a3a3a3;accent-color:var(--pc-ui-accent);box-shadow:none}
+.pc-admin-workspace #wpbody-content input[type=checkbox]:checked::before{filter:grayscale(1)}
+.pc-admin-workspace #wpbody-content :is(input,textarea,select):focus{border-color:var(--pc-ui-accent);box-shadow:none;outline:2px solid var(--pc-ui-accent);outline-offset:1px}
+.pc-admin-workspace #wpbody-content :is(input,textarea):disabled{background:#f0f0f0;color:var(--pc-ui-muted)}
+.pc-admin-workspace #wpbody-content select.select2-hidden-accessible{min-height:0!important;max-width:1px!important;min-width:0!important;padding:0!important}
+.pc-admin-workspace #wpbody-content .form-table{margin-top:0;background:#ffffff;border:1px solid var(--pc-ui-line);border-radius:12px;border-collapse:separate;border-spacing:0}
+.pc-admin-workspace #wpbody-content .form-table th{box-sizing:border-box;padding:20px;width:208px;font-size:13px;line-height:22px;color:var(--pc-ui-text);font-weight:600}
+.pc-admin-workspace #wpbody-content .form-table td{padding:18px 20px;font-size:14px;line-height:22px}
+.pc-admin-workspace #wpbody-content .form-table tr+tr :is(th,td){border-top:1px solid #eeeeee}
+.pc-admin-workspace .form-table p{margin:8px 0 0}
+.pc-admin-workspace #wpbody-content .submit{padding:0;margin:24px 0}
+.pc-admin-workspace .nav-tab-wrapper{display:flex;flex-wrap:wrap;gap:20px;margin:0 0 20px!important;padding:0!important;border:0;border-bottom:1px solid var(--pc-ui-line)}
+.pc-admin-workspace .nav-tab{margin:0;padding:8px 2px 12px;border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;color:var(--pc-ui-muted);font-size:14px;line-height:20px;font-weight:500}
+.pc-admin-workspace .nav-tab:hover{color:var(--pc-ui-accent);background:#ffffff}
+.pc-admin-workspace .nav-tab-active{border-color:var(--pc-ui-accent);background:transparent;color:var(--pc-ui-accent);font-weight:600;box-shadow:none}
+.pc-admin-workspace :is(.subsubsub,.tablenav){font-size:14px;line-height:20px}
+.pc-admin-workspace .subsubsub{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 16px}
+.pc-admin-workspace .subsubsub a{padding:4px;font-size:14px;line-height:20px}
+.pc-admin-workspace .subsubsub .current{color:var(--pc-ui-text);font-weight:700}
+.pc-admin-workspace .tablenav{display:flow-root;height:auto;min-height:48px;margin:8px 0;padding:0}
+.pc-admin-workspace .tablenav .actions{display:flex;gap:8px;padding:0 12px 8px 0;flex-wrap:wrap}
+.pc-admin-workspace .tablenav .actions select{margin:0;max-width:240px}
+.pc-admin-workspace .tablenav .tablenav-pages{margin:8px 0}
+.pc-admin-workspace .search-box{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
+.pc-admin-workspace .search-box input[type=search]{margin:0;min-width:min(240px,100%)}
+.pc-admin-workspace .select2-container .select2-selection{box-sizing:border-box;min-height:40px;border-color:#d4d4d4;border-radius:4px;font-size:14px;line-height:20px}
+.pc-admin-workspace .select2-container .select2-selection--single .select2-selection__rendered{padding:8px 32px 8px 12px;line-height:20px}
+.pc-admin-workspace .select2-container .select2-selection--single .select2-selection__arrow{height:40px}
+
+/* Lists are quiet data surfaces, not a stack of decorated cards. */
+.pc-workspace-table{clear:both;width:100%;overflow-x:auto;border:1px solid var(--pc-ui-line);border-radius:12px;background:#ffffff;margin:0 0 16px;scrollbar-width:thin;scrollbar-color:#aaa #f7f7f7}
+.pc-admin-workspace .pc-workspace-table>:is(table.widefat,table.wp-list-table){margin:0;border:0;box-shadow:none}
+.pc-admin-workspace :is(table.widefat,table.wp-list-table){background:#ffffff;border-color:var(--pc-ui-line);box-shadow:none;font-size:14px;line-height:20px}
+.pc-admin-workspace table.widefat :is(td,th){padding:12px 14px;font-size:13px;line-height:21px;vertical-align:middle}
+.pc-admin-workspace table.widefat :is(thead,tfoot) :is(th,td){background:#fafafa;border-color:var(--pc-ui-line);color:var(--pc-ui-muted);font-size:12px;line-height:16px;font-weight:600}
+.pc-admin-workspace table.widefat tbody tr+tr>:is(td,th){border-top:1px solid #eeeeee}
+.pc-admin-workspace .striped>tbody>:nth-child(odd),.pc-admin-workspace ul.striped>:nth-child(odd){background:#ffffff}
+.pc-admin-workspace .striped>tbody>tr:hover{background:#fafafa}
+.pc-admin-workspace .widefat .check-column{width:32px;padding:12px 8px}
+.pc-admin-workspace .widefat :is(.row-title,strong){font-size:14px;line-height:20px;font-weight:600}
+.pc-admin-workspace .widefat .row-actions{padding-top:4px;font-size:12px;line-height:16px}
+.pc-admin-workspace .widefat .no-items td{padding:48px 24px;color:var(--pc-ui-muted);text-align:center}
+.pc-admin-workspace .postbox{border:1px solid var(--pc-ui-line);border-radius:12px;box-shadow:none;overflow:visible}
+.pc-admin-workspace .postbox-header{border-color:var(--pc-ui-line);background:#fafafa;border-radius:12px 12px 0 0}
+.pc-admin-workspace .postbox .hndle{font-size:14px;line-height:20px;padding:16px;font-weight:600}
+.pc-admin-workspace .postbox>.inside{padding:16px;margin:0}
+.pc-admin-workspace .postbox .handlediv{height:48px}
+
+/* Existing feature palettes are reset on their owners, not only on body. */
+.pc-admin-workspace :is(.pc-ov,.pc-sd,.pc-mk,.pc-bc,.pc-pl,.pc-ss,.pc-sp,.pc-seo,.pc-pixels,.pc-domains,.pc-media,.pc-blog,.pc-tr,.pc-tracking,.pc-me,.pc-cp,.pc-tax){
+ --pc-ov-orange:var(--pc-ui-accent);--pc-ov-teal:var(--pc-ui-accent);--pc-ov-text:14px;--pc-ov-big:30px;--pc-ov-line:var(--pc-ui-line);--pc-ov-muted:var(--pc-ui-muted);
+ --pc-sd-orange:var(--pc-ui-accent);--pc-sd-orange-dark:var(--pc-ui-hover);--pc-sd-line:var(--pc-ui-line);--pc-sd-border:var(--pc-ui-line);--pc-sd-muted:var(--pc-ui-muted);
+ --pc-mk-orange:var(--pc-ui-accent);--pc-mk-blue:var(--pc-ui-accent);--pc-mk-orange-dark:var(--pc-ui-hover);--pc-mk-line:var(--pc-ui-line);--pc-mk-muted:var(--pc-ui-muted);
+ --pc-pl-orange:var(--pc-ui-accent);--pc-pl-orange-dark:var(--pc-ui-hover);--pc-pl-line:var(--pc-ui-line);--pc-pl-head:#fafafa;--pc-pl-muted:var(--pc-ui-muted);
+ --pc-bc-orange:var(--pc-ui-accent);--pc-bc-line:var(--pc-ui-line);--pc-bc-muted:var(--pc-ui-muted);
+ --pc-ss-orange:var(--pc-ui-accent);--pc-ss-line:var(--pc-ui-line);--pc-ss-text:14px;--pc-ss-muted:var(--pc-ui-muted);--pc-sp-orange:var(--pc-ui-accent);--pc-me-line:var(--pc-ui-line);--pc-me-soft:var(--pc-ui-bg);--pc-me-orange:var(--pc-ui-accent);
+ font-size:14px;line-height:20px;color:var(--pc-ui-text)
+}
+.pc-admin-workspace :is(.pc-ov-card,.pc-sd-card,.pc-mk-card,.pc-customer-card,.pc-reviews-panel,.pc-site-tools section,.pc-bc-card,.pc-pl-card,.pc-ss-card){border:1px solid var(--pc-ui-line);border-radius:8px;box-shadow:none;background:#ffffff}
+.pc-admin-workspace :is(.pc-ov-card,.pc-customer-card,.pc-reviews-panel,.pc-site-tools section){padding:24px}
+.pc-admin-workspace :is(.pc-ov-grid,.pc-ov-main,.pc-ov-side,.pc-ov-row){gap:24px}
+.pc-admin-workspace .pc-ov-hero{padding:24px 0 0;border:1px solid var(--pc-ui-line);border-radius:8px;background:var(--pc-ui-brand)}
+.pc-admin-workspace .pc-ov-hero__hello{padding:0 24px;margin-bottom:24px;text-align:left;font-size:18px;line-height:28px;text-shadow:none}
+.pc-admin-workspace .pc-ov-card__head h2{font-size:16px;line-height:24px}
+.pc-admin-workspace .pc-ov-card h3{font-size:14px;line-height:20px}
+.pc-admin-workspace .pc-ov-hero__panel{padding:24px}
+.pc-admin-workspace .pc-ov-hero__time{padding:8px 12px;background:#f7f7f7;color:var(--pc-ui-muted);font-size:12px;line-height:16px}
+.pc-admin-workspace .pc-ov-num{font-variant-numeric:tabular-nums}
+.pc-admin-workspace .pc-sd-current__head{gap:16px}
+.pc-admin-workspace :is(.pc-sd-tabs__item,.pc-mk-tabs__item){padding:8px 16px;border-radius:4px;font-size:14px;line-height:20px}
+.pc-admin-workspace :is(.pc-sd-tabs__item.is-active,.pc-mk-tabs__item.is-active){background:var(--pc-ui-soft);color:var(--pc-ui-accent);border-color:var(--pc-ui-accent)}
+.pc-admin-workspace :is(.pc-sd-template,.pc-sd-current){padding:24px}
+.pc-admin-workspace :is(.pc-mk-card__title,.pc-bc-card__title){padding:16px 24px;background:#fafafa;font-size:16px;line-height:24px;color:var(--pc-ui-text)}
+.pc-admin-workspace :is(.pc-mk-card__body,.pc-bc-card__body){padding:24px}
+.pc-admin-workspace .pc-mk-savebar{padding:16px 24px;border:1px solid var(--pc-ui-line);border-radius:8px;background:#ffffff;box-shadow:0 4px 16px #1818180a}
+.pc-admin-workspace .pc-me-savebar{left:var(--pc-ui-sidebar);padding:16px 32px;background:#ffffff;box-shadow:0 -1px 0 var(--pc-ui-line)}
+.pc-admin-workspace :is(.pc-mk-title,.pc-pl-title,.pc-bc-title){font-size:24px;line-height:32px}
+.pc-admin-workspace :is(.pc-mk-back,.pc-pl-back){font-size:14px;line-height:20px}
+.pc-admin-workspace .pc-mk-label{font-size:14px;line-height:20px;font-weight:600}
+.pc-admin-workspace .pc-bc-help:not(:hover):not(:focus)::after,.pc-admin-workspace .pc-bc-help:not(:hover):not(:focus)::before{display:none}
+.pc-admin-workspace .pc-mk-table{border-color:var(--pc-ui-line)}
+.pc-admin-workspace .pc-mk-table :is(th,td){padding:16px 12px;font-size:14px;line-height:20px}
+.pc-admin-workspace :is(.pc-review-admin-filters,.pc-customer-toolbar){display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin-bottom:16px}
+.pc-admin-workspace :is(.pc-reviews,.pc-customers,.pc-site-tools){max-width:none}
+.pc-admin-workspace :is(.pc-review-admin-form,.pc-customer-card){margin-bottom:24px}
+.pc-admin-workspace .pc-ss-grid{gap:16px}
+.pc-admin-workspace .pc-ss-card{padding:24px;gap:16px;transition:border-color 180ms cubic-bezier(.22,1,.36,1)}
+.pc-admin-workspace .pc-ss-card:hover{border-color:var(--pc-ui-accent);box-shadow:none}
+.pc-admin-workspace .pc-ss-card__icon.dashicons{width:48px;height:48px;font-size:24px;line-height:48px;background:var(--pc-ui-soft);color:var(--pc-ui-accent);border-radius:8px}
+.pc-admin-workspace .pc-ss-card__text strong{font-size:16px;line-height:24px}
+.pc-admin-workspace :is(.pc-ss-back a,.pc-ss-card__text a){color:var(--pc-ui-accent)}
+.pc-admin-workspace .woocommerce-layout{background:var(--pc-ui-bg);font-family:inherit}
+.pc-admin-workspace .woocommerce-layout__header{position:relative;left:auto;top:auto;min-height:64px;box-shadow:none;background:#ffffff;border-bottom:1px solid var(--pc-ui-line)}
+.pc-admin-workspace .woocommerce-layout__header-heading{font-size:20px;line-height:28px}
+.pc-admin-workspace .woocommerce-layout__activity-panel{z-index:99}
+.pc-admin-workspace .woocommerce-layout__main{padding:24px 32px}
+.pc-admin-workspace .woocommerce-layout__header-breadcrumbs{font-size:14px;line-height:20px}
+.pc-admin-workspace .woocommerce-card{border:1px solid var(--pc-ui-line);border-radius:8px;box-shadow:none}
+.pc-admin-workspace .woocommerce-order-data,.pc-admin-workspace .woocommerce_order_items_wrapper{background:#ffffff}
+.pc-admin-workspace #order_data{padding:24px}
+.pc-admin-workspace .order-status{border-radius:4px;padding:4px 8px;font-size:12px;line-height:16px;font-weight:600}
+.pc-admin-workspace .order-status.status-completed{color:#404040;background:#f1f1f1}
+.pc-admin-workspace .order-status.status-processing{color:#313131;background:#f1f1f1}
+.pc-admin-workspace .order-status.status-failed{color:#9d3434;background:#f9e8e8}
+.pc-admin-workspace .media-modal :is(.button,input,select){font-size:14px;line-height:20px}
+.pc-admin-workspace .media-frame-title h1{font-size:20px;line-height:28px}
+.pc-admin-workspace .pc-dialog{border:1px solid var(--pc-ui-line);border-radius:8px;box-shadow:0 24px 64px #18181826;font-family:inherit}
+.pc-admin-workspace .pc-dialog__title{font-size:20px;line-height:28px}
+.pc-admin-workspace .pc-dialog__foot .button-primary{background:var(--pc-ui-accent);border-color:var(--pc-ui-accent);color:#ffffff}
+
+/* WordPress owns folded, mobile and full-screen mode; do not replace those controls. */
+body.pc-admin-workspace.folded{--pc-ui-sidebar:48px}
+.pc-admin-workspace.folded #adminmenu{padding:76px 4px 16px}
+.pc-admin-workspace.folded #adminmenu .pc-workspace-brand-item{left:4px;right:4px;top:16px}
+.pc-admin-workspace.folded .pc-workspace-brand__name{display:none}
+.pc-admin-workspace.folded #adminmenu a.menu-top{padding:4px}
+.pc-admin-workspace.folded #adminmenu .wp-menu-image{width:40px}
+body.pc-admin-workspace.folded #adminmenu li.menu-top>.wp-submenu{left:48px;width:220px;background:var(--pc-ui-nav)}
+body.pc-admin-workspace.folded #adminmenu li.menu-top>.wp-submenu>li>a{padding-left:16px}
+.pc-admin-workspace.is-fullscreen-mode :is(.pc-workspace-header,#adminmenumain){display:none}
+.pc-admin-workspace.is-fullscreen-mode #wpcontent{margin:0}
+@media(min-width:783px) and (max-width:960px){
+ body.pc-admin-workspace.auto-fold{--pc-ui-sidebar:48px}
+ .pc-admin-workspace.auto-fold #adminmenu{padding:76px 4px 16px}
+ .pc-admin-workspace.auto-fold #adminmenu .pc-workspace-brand-item{left:4px;right:4px}
+ .pc-admin-workspace.auto-fold .pc-workspace-brand__name{display:none}
+ .pc-admin-workspace.auto-fold #adminmenu .wp-menu-image{width:40px}
+ body.pc-admin-workspace.auto-fold #adminmenu li.menu-top>.wp-submenu{left:48px;width:220px;background:var(--pc-ui-nav)}
+ .pc-admin-workspace.auto-fold .pc-me-savebar{left:48px}
+}
+@media(max-width:1200px){.pc-admin-workspace .pc-ov-grid{grid-template-columns:minmax(0,1fr)}.pc-admin-workspace .pc-ov-side{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:782px){
+ body.pc-admin-workspace{--pc-ui-sidebar:0px}
+ .pc-admin-workspace:not(.pc-design-editor-page) #wpcontent,.pc-admin-workspace:not(.pc-design-editor-page) #wpfooter{margin-left:0}
+ .pc-admin-workspace :is(#adminmenuback,#adminmenuwrap,#adminmenu){width:240px}
+ .pc-admin-workspace #adminmenu .wp-menu-name{padding:8px 4px 8px 36px}
+ .pc-admin-workspace #wpwrap.wp-responsive-open #wpbody{right:auto}
+ .pc-admin-workspace #wpwrap.wp-responsive-open #wpcontent{margin-left:240px}
+ .pc-admin-workspace .pc-workspace-header{top:46px;min-height:52px;padding:10px 16px;gap:12px}
+ .pc-admin-workspace .pc-workspace-header__context{gap:8px;min-width:0}
+ .pc-admin-workspace .pc-workspace-header__context>span:first-child,.pc-admin-workspace .pc-workspace-header__context>span:nth-child(2),.pc-admin-workspace .pc-workspace-store{display:none}
+ .pc-admin-workspace .pc-workspace-header__actions{font-size:12px;line-height:16px}
+ .pc-admin-workspace:not(.pc-design-editor-page) #wpbody-content>.wrap{margin:16px 16px 0}
+ .pc-admin-workspace #wpbody-content>.wrap>h1{font-size:20px;line-height:28px;margin-bottom:16px}
+ .pc-admin-workspace #wpbody-content .form-table,.pc-admin-workspace #wpbody-content .form-table :is(tbody,tr,th,td){display:block;box-sizing:border-box;width:100%}
+ .pc-admin-workspace #wpbody-content .form-table :is(th,td){padding:16px}
+ .pc-admin-workspace #wpbody-content .form-table td{padding-top:0}
+ .pc-admin-workspace #wpbody-content .form-table tr+tr td{border-top:0}
+ .pc-admin-workspace #wpbody-content .form-table :is(.regular-text,.large-text){width:100%}
+ .pc-admin-workspace .tablenav.top{margin-bottom:16px}
+ .pc-admin-workspace .tablenav .actions{float:none;clear:both}
+ .pc-admin-workspace .tablenav .actions select{max-width:100%}
+ .pc-admin-workspace .search-box{position:static;display:flex;box-sizing:border-box;height:auto;width:100%;max-width:100%;margin:0 0 16px;float:none}
+ .pc-admin-workspace .search-box input[type=search]{flex:1;min-width:0}
+ .pc-admin-workspace .select2-container{max-width:100%}
+ .pc-admin-workspace .pc-bc-help::after{position:fixed!important;left:16px!important;right:16px!important;bottom:16px!important;top:auto!important;transform:none!important;max-width:none!important;width:auto!important}
+ .pc-admin-workspace #wpbody-content .form-table .select2-container{width:100%!important}
+ .pc-admin-workspace .pc-ov-row,.pc-admin-workspace .pc-ov-side{grid-template-columns:minmax(0,1fr)}
+ .pc-admin-workspace :is(.pc-ov-card,.pc-sd-template,.pc-sd-current,.pc-mk-card__body){padding:16px}
+ .pc-admin-workspace .pc-me-savebar{left:0;padding:12px 16px}
+ .pc-admin-workspace .woocommerce-layout__main{padding:24px 16px}
+ .pc-admin-workspace #wpfooter{padding:16px}
+ .pc-admin-workspace .pc-workspace-table{max-width:100%}
+ .pc-admin-workspace .wp-list-table .is-expanded td.hidden{display:none!important}
+}
+@media(max-width:600px){.pc-admin-workspace #wpadminbar{position:fixed;top:0}.pc-admin-workspace .pc-workspace-header{top:46px}.pc-admin-workspace:not(.pc-design-editor-page) #wpcontent{padding-top:0}.pc-admin-workspace #wpbody-content .tablenav-pages .pagination-links{display:flex;align-items:center;gap:4px}}
+/* Monochrome extends to existing feature controls; content photos retain their colors. */
+.pc-admin-workspace #wpbody-content :is(.pc-sd-tag,.pc-sd-tag--teal,.pc-sd-tag--green,.pc-sd-tag--blue,.pc-sd-tag--gray,.pc-pl-badge,.pc-mk-badge,.pc-trk-chip,.pc-review-source){background:#f1f1f1;color:#404040;border-color:#e5e5e5}
+.pc-admin-workspace #wpbody-content .pc-trk-chip.is-on{background:#f1f1f1;color:#404040;border-color:#d4d4d4}
+.pc-admin-workspace #wpbody-content .pc-trk-switch.is-on .pc-trk-switch__track{background:#181818}
+.pc-admin-workspace #wpbody-content .pc-trk-dot.is-active{background:#181818}
+.pc-admin-workspace #wpbody-content .pc-trk-dot.is-idle{background:#737373}
+.pc-admin-workspace #wpbody-content .pc-trk-video{color:#404040}
+.pc-admin-workspace #wpbody-content .pc-trk-badge{background:#404040;color:#fff}
+.pc-admin-workspace #wpbody-content .pc-trk-step__bar span{background:#181818}
+.pc-admin-workspace #wpbody-content .pc-trk-switch input:focus-visible+.pc-trk-switch__track{outline-color:#181818}
+.pc-admin-workspace #wpbody-content .pc-bc-favicon__img{border-color:#a3a3a3}
+.pc-admin-workspace #wpbody-content .pc-pl-tabs a.is-active{color:#181818;border-color:#181818}
+.pc-admin-workspace #wpbody-content .pc-pl-head h1{color:#171717}
+
+/* Respond immediately. Only feedback, never layout dimensions or data, is animated. */
+.pc-admin-workspace #wpbody-content :is(.button,.page-title-action),
+.pc-admin-workspace #adminmenu :is(a.menu-top,.wp-submenu a),
+.pc-admin-workspace .pc-workspace-header a{
+ transition:color 180ms cubic-bezier(.22,1,.36,1),background-color 180ms cubic-bezier(.22,1,.36,1),border-color 180ms cubic-bezier(.22,1,.36,1),transform 180ms cubic-bezier(.22,1,.36,1),opacity 180ms cubic-bezier(.22,1,.36,1)
+}
+.pc-admin-workspace #wpbody-content :is(.button,.page-title-action):active:not(:disabled):not(.disabled){transform:translateY(1px)}
+.pc-admin-workspace #adminmenu .wp-submenu a:hover{transform:none}
+@keyframes pc-workspace-dialog-in{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+@keyframes pc-workspace-fade-in{from{opacity:0}to{opacity:1}}
+@keyframes pc-workspace-panel-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.pc-admin-workspace .pc-dialog-overlay{animation:pc-workspace-fade-in 180ms cubic-bezier(.22,1,.36,1)}
+.pc-admin-workspace :is(.pc-dialog,.media-modal-content){animation:pc-workspace-dialog-in 220ms cubic-bezier(.22,1,.36,1)}
+.pc-admin-workspace #wpbody-content details[open]>:not(summary){animation:pc-workspace-panel-in 180ms cubic-bezier(.22,1,.36,1)}
+.pc-admin-workspace .select2-dropdown{animation:pc-workspace-panel-in 180ms cubic-bezier(.22,1,.36,1);border-color:#d4d4d4}
+.pc-admin-workspace .select2-container--default .select2-results__option--highlighted[aria-selected]{background:#181818;color:#fff}
+.pc-admin-workspace :is(.pc-dialog__actions,.media-modal) .button-primary{background:#181818;border-color:#181818;color:#fff;box-shadow:none;text-shadow:none}
+.pc-admin-workspace :is(.pc-dialog__actions,.media-modal) .button-primary:hover{background:#313131;border-color:#313131;color:#fff}
+.pc-admin-workspace .pc-dialog__actions .button{min-height:40px;padding:8px 12px;border-radius:4px;font-size:14px;line-height:20px}
+.pc-admin-workspace .pc-dialog__actions .button{transition:transform 180ms cubic-bezier(.22,1,.36,1),background-color 180ms cubic-bezier(.22,1,.36,1)}
+.pc-admin-workspace .pc-dialog__actions .button:active{transform:translateY(1px)}
+.pc-admin-workspace .media-modal .attachment.selected .check{background:#181818;box-shadow:0 0 0 1px #181818}
+.pc-admin-workspace .media-modal .attachment.details .attachment-preview{box-shadow:0 0 0 3px #181818}
+.pc-admin-workspace #wpbody-content input:focus,.pc-admin-workspace #wpbody-content textarea:focus{transition:border-color 180ms cubic-bezier(.22,1,.36,1)}
+.pc-admin-workspace :is(.pc-dm-switch,.pc-blog-switch)::after{left:2px;transform:translateX(0);transition:transform 300ms cubic-bezier(.22,1,.36,1)}
+.pc-admin-workspace :is(.pc-dm-switch.is-on,.pc-blog-switch.is-on){background:#181818}
+.pc-admin-workspace :is(.pc-dm-switch,.pc-blog-switch):focus-visible{outline:2px solid #181818;outline-offset:2px}
+.pc-admin-workspace :is(.pc-dm-switch.is-on,.pc-blog-switch.is-on)::after{left:2px;transform:translateX(16px)}
+.pc-admin-workspace .pc-trk-switch__knob{transition:transform 300ms cubic-bezier(.22,1,.36,1)}
+@media(prefers-reduced-motion:reduce){.pc-admin-workspace *,.pc-admin-workspace *::before,.pc-admin-workspace *::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}

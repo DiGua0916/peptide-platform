@@ -31,7 +31,7 @@
  * - 悬停预览（用户 2026-10-27 要求去掉）：鼠标移到没展开的菜单上时，旁边不再弹出子菜单，点菜单进去后照常展开。
  *   只在展开的宽菜单、用鼠标时去掉；收起成图标的菜单和触屏设备没有别的办法打开子菜单，保留。
  *
- * 只影响能管理商店的人（manage_woocommerce）；其他角色的菜单不变。
+ * 店铺菜单整理只影响能管理商店的人（manage_woocommerce）；营销页面独立按 edit_shop_coupons 注册。
  *
  * @package PeptideCore
  */
@@ -74,6 +74,10 @@ final class Admin_Menus {
 	private static $real_parent = null;
 
 	public static function register_hooks(): void {
+		// The store uses its own operational dashboard and configuration pages.
+		add_action( 'admin_init', array( self::class, 'route_woocommerce_home' ), 0 );
+		add_filter( 'woocommerce_prevent_automatic_wizard_redirect', '__return_true' );
+		add_filter( 'wp_redirect', array( self::class, 'keep_operational_redirect' ), 1000 );
 		add_action( 'admin_menu', array( self::class, 'add_menus' ), 60 );
 		add_action( 'admin_menu', array( self::class, 'remove_menus' ), 1000 );
 		add_action( 'admin_menu', array( self::class, 'order_menu' ), 10000 );
@@ -86,6 +90,33 @@ final class Admin_Menus {
 		add_filter( 'map_meta_cap', array( self::class, 'no_file_editors' ), 10, 2 );
 		add_action( 'admin_bar_menu', array( self::class, 'clean_admin_bar' ), 999 );
 		add_action( 'admin_init', array( self::class, 'no_update_nags' ) );
+	}
+
+	/** Keep Woo's installation profiler out of ordinary store navigation. */
+	public static function route_woocommerce_home(): void {
+		if ( wp_doing_ajax() || is_network_admin() || ! current_user_can( 'manage_woocommerce' ) ) { return; }
+		$page = isset( $_GET['page'] ) && is_string( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+		$path = isset( $_GET['path'] ) && is_string( $_GET['path'] ) ? wp_unslash( $_GET['path'] ) : '';
+		if ( 'wc-admin' !== $page || ! self::is_onboarding_path( $path ) ) { return; }
+		$home = \PeptideCore\Staff::is_staff( get_current_user_id() ) ? \PeptideCore\Staff::home_url( get_current_user_id() ) : Overview_Page::url();
+		wp_safe_redirect( $home );
+		exit;
+	}
+
+	public static function is_onboarding_path( string $path ): bool {
+		$path = rtrim( strtok( $path, '?' ) ?: '', '/' );
+		return '' === $path || '/setup-wizard' === $path || str_starts_with( $path, '/setup-wizard/' ) || '/profiler' === $path;
+	}
+
+	/** Catch later native redirects as well as direct page requests, without changing setup data. */
+	public static function keep_operational_redirect( $location ) {
+		if ( ! is_string( $location ) ) { return $location; }
+		if ( wp_doing_ajax() || is_network_admin() || ! current_user_can( 'manage_woocommerce' ) ) { return $location; }
+		$url = wp_parse_url( $location );
+		if ( ! $url || ! str_ends_with( (string) ( $url['path'] ?? '' ), '/wp-admin/admin.php' ) || ( ! empty( $url['host'] ) && strtolower( $url['host'] ) !== strtolower( (string) wp_parse_url( admin_url(), PHP_URL_HOST ) ) ) ) { return $location; }
+		parse_str( (string) ( $url['query'] ?? '' ), $query );
+		if ( 'wc-admin' !== ( $query['page'] ?? '' ) || ! is_string( $query['path'] ?? '' ) || ! self::is_onboarding_path( $query['path'] ?? '' ) ) { return $location; }
+		return \PeptideCore\Staff::is_staff( get_current_user_id() ) ? \PeptideCore\Staff::home_url( get_current_user_id() ) : Overview_Page::url();
 	}
 
 	/**
@@ -151,6 +182,13 @@ final class Admin_Menus {
 	}
 
 	public static function add_menus(): void {
+		// 营销可以单独授权给员工，不依赖订单、数据或店铺设置共用的 manage_woocommerce。
+		if ( current_user_can( Marketing::CAP ) ) {
+			add_menu_page( __( 'Marketing campaigns', 'peptide-core' ), __( 'Marketing campaigns', 'peptide-core' ), Marketing::CAP, Promotions_Page::SLUG, array( Promotions_Page::class, 'render' ), 'dashicons-megaphone', 56 );
+			add_submenu_page( Promotions_Page::SLUG, __( 'Spend-and-save promotions', 'peptide-core' ), __( 'Spend-and-save', 'peptide-core' ), Marketing::CAP, Promotions_Page::SLUG, array( Promotions_Page::class, 'render' ) );
+			add_submenu_page( Promotions_Page::SLUG, __( 'Coupon codes', 'peptide-core' ), __( 'Coupon codes', 'peptide-core' ), Marketing::CAP, Coupons_Page::SLUG, array( Coupons_Page::class, 'render' ) );
+			add_submenu_page( Promotions_Page::SLUG, __( 'Shipping discounts', 'peptide-core' ), __( 'Shipping discounts', 'peptide-core' ), Marketing::CAP, Shipping_Discounts_Page::SLUG, array( Shipping_Discounts_Page::class, 'render' ) );
+		}
 		if ( ! self::applies() ) {
 			return;
 		}
@@ -158,19 +196,16 @@ final class Admin_Menus {
 		$badge = $count ? ' <span class="awaiting-mod update-plugins count-' . $count . '"><span class="processing-count">' . number_format_i18n( $count ) . '</span></span>' : '';
 		add_menu_page( __( 'Orders', 'peptide-core' ), __( 'Orders', 'peptide-core' ) . $badge, 'edit_shop_orders', self::ORDERS, '', 'dashicons-cart', 3 );
 		add_menu_page( __( 'Customers', 'peptide-core' ), __( 'Customers', 'peptide-core' ), self::CAP, self::CUSTOMERS, '', 'dashicons-groups', 4 );
+		add_submenu_page( self::CUSTOMERS, __( 'Customer list', 'peptide-core' ), __( 'Customer list', 'peptide-core' ), self::CAP, self::CUSTOMERS );
+		add_submenu_page( self::CUSTOMERS, __( 'Customer segments and points', 'peptide-core' ), __( 'Customer segments and points', 'peptide-core' ), self::CAP, Customers_Page::SLUG, array( Customers_Page::class, 'render' ) );
 		add_menu_page( __( 'Store settings', 'peptide-core' ), __( 'Store settings', 'peptide-core' ), self::CAP, self::SETTINGS, '', 'dashicons-admin-settings', 58 );
 		// 顶层菜单链接到第一个子菜单（物流设置）。
 		add_submenu_page( self::SETTINGS, __( 'Shipping settings', 'peptide-core' ), __( 'Shipping settings', 'peptide-core' ), self::CAP, Shipping_Page::SLUG, array( Shipping_Page::class, 'render' ) );
 		add_submenu_page( self::SETTINGS, __( 'Tax settings', 'peptide-core' ), __( 'Tax settings', 'peptide-core' ), self::CAP, Tax_Page::SLUG, array( Tax_Page::class, 'render' ) );
 		add_submenu_page( self::SETTINGS, __( 'System settings', 'peptide-core' ), __( 'System settings', 'peptide-core' ), self::CAP, Store_Settings::SYSTEM_SLUG, array( Store_Settings::class, 'render_system' ) );
+		if ( current_user_can( 'manage_options' ) ) { add_submenu_page( self::SETTINGS, '站点工具', '站点工具', 'manage_options', Site_Tools_Page::SLUG, array( Site_Tools_Page::class, 'render' ) ); }
 		// WordPress 会自动把顶层菜单本身加成第一个子菜单，去掉它。
 		remove_submenu_page( self::SETTINGS, self::SETTINGS );
-
-		// 营销活动：顶层菜单就是第一个子菜单（满减活动）。
-		add_menu_page( __( 'Marketing campaigns', 'peptide-core' ), __( 'Marketing campaigns', 'peptide-core' ), Marketing::CAP, Promotions_Page::SLUG, array( Promotions_Page::class, 'render' ), 'dashicons-megaphone', 56 );
-		add_submenu_page( Promotions_Page::SLUG, __( 'Spend-and-save promotions', 'peptide-core' ), __( 'Spend-and-save', 'peptide-core' ), Marketing::CAP, Promotions_Page::SLUG, array( Promotions_Page::class, 'render' ) );
-		add_submenu_page( Promotions_Page::SLUG, __( 'Coupon codes', 'peptide-core' ), __( 'Coupon codes', 'peptide-core' ), Marketing::CAP, Coupons_Page::SLUG, array( Coupons_Page::class, 'render' ) );
-		add_submenu_page( Promotions_Page::SLUG, __( 'Shipping discounts', 'peptide-core' ), __( 'Shipping discounts', 'peptide-core' ), Marketing::CAP, Shipping_Discounts_Page::SLUG, array( Shipping_Discounts_Page::class, 'render' ) );
 
 		// 应用中心（APP-CENTER-01）：在店铺设置下面。
 		add_menu_page( __( 'App center', 'peptide-core' ), __( 'App center', 'peptide-core' ), Apps_Page::CAP, Apps_Page::SLUG, array( Apps_Page::class, 'render' ), 'dashicons-screenoptions', 59 );
@@ -221,6 +256,12 @@ final class Admin_Menus {
 		};
 		$move( 'edit.php', 'pc-visitors' );
 		$move( Media_Page::SLUG, self::SETTINGS );
+		// 用户 2026-10-29：分析与顾客对调，保留其他菜单的相对位置。
+		$customers = array_search( self::CUSTOMERS, array_column( $items, 2 ), true );
+		$analytics = array_search( self::ANALYTICS, array_column( $items, 2 ), true );
+		if ( false !== $customers && false !== $analytics ) {
+			list( $items[ $customers ], $items[ $analytics ] ) = array( $items[ $analytics ], $items[ $customers ] );
+		}
 		$menu = array(); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		foreach ( $items as $i => $item ) {
 			$menu[ ( $i + 1 ) * 5 ] = $item; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
@@ -273,7 +314,7 @@ final class Admin_Menus {
 		if ( str_contains( $slug, 'taxonomy=product_cat' ) ) {
 			return 'cat';
 		}
-		if ( 'product-reviews' === $slug || str_contains( $slug, 'page=product-reviews' ) ) {
+		if ( 'product-reviews' === $slug || 'pc-product-reviews' === $slug || str_contains( $slug, 'page=product-reviews' ) || str_contains( $slug, 'page=pc-product-reviews' ) ) {
 			return 'reviews';
 		}
 		if ( str_contains( $slug, 'taxonomy=product_tag' ) ) {

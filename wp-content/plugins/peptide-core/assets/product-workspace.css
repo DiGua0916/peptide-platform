@@ -1,0 +1,848 @@
+/**
+ * VialCove product workspace.
+ * Presentation only: WooCommerce retains its fields, tabs, media and save flow.
+ */
+body.pc-admin-product {
+  --pc-product-accent: var(--pc-ui-accent, #171717);
+  --pc-product-ink: var(--pc-ui-text, var(--pc-ui-text, #171717));
+  --pc-product-muted: var(--pc-ui-muted, var(--pc-ui-muted, #666));
+  --pc-product-line: var(--pc-ui-line, var(--pc-ui-line, #e6e6e6));
+  --pc-product-surface: var(--pc-ui-surface, #fff);
+}
+
+body.pc-admin-product #poststuff {
+  min-width: 0;
+  padding-top: 0;
+}
+
+body.pc-admin-product #post-body.columns-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 288px;
+  grid-template-rows: min-content 1fr;
+  grid-template-areas: "intro sidebar" "details sidebar";
+  column-gap: 24px;
+  align-items: start;
+  margin-right: 0 !important;
+}
+
+body.pc-admin-product #post-body-content {
+  grid-area: intro;
+  float: none;
+  width: auto;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+body.pc-admin-product #post-body.columns-2 #postbox-container-1 {
+  grid-area: sidebar;
+  float: none;
+  width: auto;
+  min-width: 0;
+  margin: 0;
+}
+
+body.pc-admin-product #post-body.columns-2 #postbox-container-2 {
+  grid-area: details;
+  float: none;
+  width: auto;
+  min-width: 0;
+}
+
+body.pc-admin-product #post-body.columns-1 {
+  margin-right: 0;
+}
+
+body.pc-admin-product #post-body.columns-1 #post-body-content,
+body.pc-admin-product #post-body.columns-1 .postbox-container {
+  float: none;
+  width: 100%;
+}
+
+body.pc-admin-product #poststuff .postbox,
+body.pc-admin-product #titlediv,
+body.pc-admin-product #postdivrich {
+  box-sizing: border-box;
+  min-width: 0;
+  margin: 0 0 24px;
+  border: 1px solid var(--pc-product-line);
+  border-radius: 12px;
+  background: var(--pc-product-surface);
+  box-shadow: none;
+}
+
+/* Compact native Woo header while keeping its help, activity and settings buttons. */
+body.pc-admin-product .woocommerce-layout__header {
+  min-height: 36px;
+  height: auto;
+  border-bottom: 0;
+  background: transparent;
+}
+body.pc-admin-product #wpbody-content > .wrap {
+  margin-top: 18px;
+}
+body.pc-admin-product #postdivrich .wp-editor-area {
+  min-height: 260px;
+}
+
+/* Woo's editor stylesheet carries legacy negative margins and !important field padding. */
+body.pc-admin-product #wpbody-content > .wrap {
+  padding: 0;
+}
+
+body.pc-admin-product #wpbody-content #postdivrich {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+body.pc-admin-product #wpbody-content #woocommerce-product-data > .inside {
+  padding: 0;
+}
+
+body.pc-admin-product #poststuff .postbox .postbox-header {
+  min-height: 44px;
+  padding: 3px 8px 3px 16px;
+  border: 0;
+  background: #fff;
+  border-radius: 12px 12px 0 0;
+  border-bottom: 1px solid var(--pc-product-line);
+}
+
+body.pc-admin-product #poststuff .postbox .hndle {
+  color: var(--pc-product-ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+body.pc-admin-product #poststuff .postbox .handle-actions {
+  flex-shrink: 0;
+}
+
+body.pc-admin-product #poststuff .postbox > .inside {
+  margin: 0;
+  padding: 16px;
+}
+
+body.pc-admin-product #titlediv {
+  padding: 0 0 20px;
+  border: 0;
+  border-bottom: 1px solid var(--pc-product-line);
+  border-radius: 0;
+  margin-bottom: 20px;
+}
+
+body.pc-admin-product .pc-product-field-label {
+  display: block;
+  margin: 0 0 8px;
+  color: var(--pc-product-ink);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+body.pc-admin-product #titlediv #title {
+  box-sizing: border-box;
+  width: 100%;
+  height: auto;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid var(--pc-product-line);
+  border-radius: 6px;
+  color: var(--pc-product-ink);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 26px;
+  box-shadow: none;
+  background: #fafafa;
+}
+
+body.pc-admin-product #titlediv #title:focus {
+  border-color: var(--pc-product-accent);
+  box-shadow: 0 0 0 2px rgb(24 24 24 / 16%);
+  outline: 0;
+}
+
+body.pc-admin-product #titlediv .inside {
+  margin: 0;
+}
+
+body.pc-admin-product #edit-slug-box {
+  min-height: 0;
+  margin-top: 12px;
+  padding: 0;
+  color: var(--pc-product-muted);
+  font-size: 12px;
+  line-height: 16px;
+  overflow-wrap: anywhere;
+}
+
+body.pc-admin-product #edit-slug-box:empty {
+  margin-top: 0;
+}
+
+body.pc-admin-product #edit-slug-box #editable-post-name-full {
+  max-width: 100%;
+}
+
+body.pc-admin-product .pc-product-sections {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 12px;
+  margin: 0 0 22px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--pc-product-line);
+}
+
+body.pc-admin-product .pc-product-sections a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--pc-product-muted);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  text-decoration: none;
+}
+
+body.pc-admin-product .pc-product-sections a:hover,
+body.pc-admin-product .pc-product-sections a[aria-current="location"] {
+  border-color: #d4d4d4;
+  background: #f1f1f1;
+  color: var(--pc-product-accent);
+}
+
+body.pc-admin-product .pc-product-sections a:focus-visible {
+  outline: 2px solid var(--pc-product-accent);
+  outline-offset: 2px;
+}
+
+body.pc-admin-product .pc-product-section-heading {
+  margin: 0;
+  padding: 16px 20px;
+  color: var(--pc-product-ink);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+body.pc-admin-product #postdivrich .wp-editor-wrap {
+  padding: 0 20px;
+}
+
+body.pc-admin-product #postdivrich .wp-editor-container,
+body.pc-admin-product #postexcerpt .wp-editor-container {
+  overflow: hidden;
+  border: 1px solid var(--pc-product-line);
+  border-radius: 6px;
+}
+
+body.pc-admin-product #postdivrich .wp-editor-tools {
+  padding-top: 0;
+  background: transparent;
+}
+
+body.pc-admin-product .mce-toolbar-grp,
+body.pc-admin-product .quicktags-toolbar {
+  background: #fafafa;
+}
+
+body.pc-admin-product .mce-toolbar .mce-btn {
+  border-radius: 6px;
+}
+
+body.pc-admin-product .wp-switch-editor {
+  box-sizing: border-box;
+  min-height: 32px;
+  padding: 4px 12px;
+  border-color: var(--pc-product-line);
+  border-radius: 4px 4px 0 0;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+body.pc-admin-product #post-status-info {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 20px;
+  border: 0;
+  background: transparent;
+  color: var(--pc-product-muted);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+body.pc-admin-product #post-status-info td {
+  border: 0;
+  background: transparent;
+}
+
+body.pc-admin-product #woocommerce-product-data > .inside {
+  padding: 0;
+}
+
+body.pc-admin-product #woocommerce-product-data .product_data {
+  overflow: visible;
+  border: 0;
+  border-radius: 0 0 12px 12px;
+}
+
+body.pc-admin-product #woocommerce-product-data .hndle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+body.pc-admin-product #woocommerce-product-data .product-data-wrapper {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  color: var(--pc-product-muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 20px;
+}
+
+body.pc-admin-product #woocommerce-product-data .product-data-wrapper label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+body.pc-admin-product #woocommerce-product-data #product-type {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-height: 32px;
+  border-color: var(--pc-product-line);
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+body.pc-admin-product #woocommerce-product-data ul.product_data_tabs {
+  display: flex;
+  float: none;
+  flex-wrap: wrap;
+  gap: 4px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 10px 16px;
+  border: 0;
+  background: #fafafa;
+  border-bottom: 1px solid var(--pc-product-line);
+}
+
+body.pc-admin-product #woocommerce-product-data ul.product_data_tabs::after {
+  display: none;
+}
+
+body.pc-admin-product #woocommerce-product-data ul.product_data_tabs li {
+  float: none;
+  margin: 0;
+}
+
+body.pc-admin-product #woocommerce-product-data ul.product_data_tabs li a {
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--pc-product-muted);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  text-indent: 0;
+}
+
+body.pc-admin-product #woocommerce-product-data ul.product_data_tabs li a span {
+  margin: 0;
+  text-indent: 0;
+}
+
+body.pc-admin-product #woocommerce-product-data ul.product_data_tabs li a::before {
+  margin-right: 8px;
+  color: inherit;
+  font-size: 16px;
+}
+
+body.pc-admin-product #woocommerce-product-data ul.product_data_tabs li.active a {
+  background: #171717;
+  color: #fff;
+}
+
+body.pc-admin-product #woocommerce-product-data .panel {
+  box-sizing: border-box;
+  float: none;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 8px 24px;
+}
+
+body.pc-admin-product #woocommerce-product-data .woocommerce_options_panel .options_group {
+  margin: 0;
+  padding: 8px 0;
+  border: 0;
+}
+
+body.pc-admin-product #woocommerce-product-data .woocommerce_options_panel p.form-field {
+  box-sizing: border-box;
+  margin: 16px 0;
+  padding: 0 !important;
+  color: var(--pc-product-ink);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+body.pc-admin-product #woocommerce-product-data .woocommerce_options_panel p.form-field > label {
+  display: block;
+  float: none;
+  width: auto;
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+
+body.pc-admin-product #woocommerce-product-data .woocommerce_options_panel p.form-field input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+body.pc-admin-product #woocommerce-product-data .woocommerce_options_panel p.form-field > select,
+body.pc-admin-product #woocommerce-product-data .woocommerce_options_panel p.form-field textarea {
+  box-sizing: border-box;
+  float: none;
+  width: 100%;
+  max-width: 100%;
+  min-height: 40px;
+  border-color: var(--pc-product-line);
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+body.pc-admin-product #woocommerce-product-data .woocommerce_options_panel .select2-container {
+  width: 100% !important;
+  max-width: 100%;
+}
+
+body.pc-admin-product #woocommerce-product-data .woocommerce_options_panel input[type="checkbox"],
+body.pc-admin-product #woocommerce-product-data .woocommerce_options_panel input[type="radio"] {
+  float: none;
+  margin: 0 8px 0 0;
+  vertical-align: middle;
+}
+
+body.pc-admin-product #woocommerce-product-data .woocommerce_options_panel .description {
+  display: block;
+  margin: 8px 0 0;
+  color: var(--pc-product-muted);
+  font-size: 12px;
+  font-style: normal;
+  line-height: 16px;
+}
+
+body.pc-admin-product #woocommerce-product-data .woocommerce_options_panel .woocommerce-help-tip {
+  float: none;
+  margin: 0 4px;
+}
+
+body.pc-admin-product #woocommerce-product-data .wc-metaboxes-wrapper .toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 16px 0;
+  border: 0;
+  background: transparent;
+}
+
+body.pc-admin-product #woocommerce-product-data .wc-metaboxes-wrapper .toolbar .actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+body.pc-admin-product #woocommerce-product-data .wc-metaboxes-wrapper .toolbar select {
+  max-width: 100%;
+}
+
+body.pc-admin-product #woocommerce-product-data .wc-metaboxes-wrapper .woocommerce_attribute,
+body.pc-admin-product #woocommerce-product-data .wc-metaboxes-wrapper .woocommerce_variation {
+  margin: 0 0 12px;
+  border: 1px solid var(--pc-product-line);
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+body.pc-admin-product #woocommerce-product-data .wc-metaboxes-wrapper .wc-metabox h3 {
+  padding: 12px;
+  background: #fafafa;
+  color: var(--pc-product-ink);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+body.pc-admin-product #woocommerce-product-data .wc-metaboxes-wrapper .wc-metabox table {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-collapse: separate;
+}
+
+body.pc-admin-product #woocommerce-product-data .woocommerce_variation .form-row {
+  box-sizing: border-box;
+  max-width: 100%;
+  padding: 8px;
+}
+
+body.pc-admin-product #woocommerce-product-data .woocommerce_variation .form-row label {
+  color: var(--pc-product-ink);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+body.pc-admin-product #woocommerce-product-data .woocommerce_variation .form-row input,
+body.pc-admin-product #woocommerce-product-data .woocommerce_variation .form-row select {
+  max-width: 100%;
+  border-color: var(--pc-product-line);
+  border-radius: 6px;
+}
+
+body.pc-admin-product #postexcerpt .inside {
+  padding: 16px;
+}
+
+body.pc-admin-product #submitdiv #minor-publishing {
+  padding: 0;
+}
+
+body.pc-admin-product #submitdiv #minor-publishing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 0 16px;
+}
+
+body.pc-admin-product #submitdiv #misc-publishing-actions {
+  padding: 0;
+}
+
+body.pc-admin-product #submitdiv .misc-pub-section {
+  padding: 8px 0;
+  color: var(--pc-product-muted);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+body.pc-admin-product #submitdiv #major-publishing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 0 0;
+  padding: 16px 0 0;
+  border: 0;
+  background: transparent;
+  border-top: 1px solid var(--pc-product-line);
+}
+
+body.pc-admin-product #submitdiv #publishing-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  float: none;
+  margin-left: auto;
+}
+
+body.pc-admin-product #submitdiv #publishing-action .spinner {
+  margin: 0;
+}
+
+body.pc-admin-product #submitdiv #publish {
+  min-width: 100px;
+  min-height: 38px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+body.pc-admin-product #postimagediv #set-post-thumbnail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 140px;
+  padding: 16px;
+  border: 1px dashed #aaa;
+  border-radius: 8px;
+  background: #fafafa;
+  color: var(--pc-product-accent);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+  text-decoration: none;
+}
+
+body.pc-admin-product #postimagediv #set-post-thumbnail img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 240px;
+  object-fit: contain;
+}
+
+body.pc-admin-product #postimagediv .inside > p,
+body.pc-admin-product #woocommerce-product-images .inside > p {
+  margin: 12px 0 0;
+  color: var(--pc-product-muted);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+body.pc-admin-product #postimagediv .inside > p:first-child {
+  margin-top: 0;
+}
+
+body.pc-admin-product #product_images_container {
+  padding: 0;
+}
+
+body.pc-admin-product #product_images_container ul.product_images {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+
+body.pc-admin-product #product_images_container ul.product_images li.image,
+body.pc-admin-product #product_images_container ul.product_images li.wc-metabox-sortable-placeholder {
+  float: none;
+  box-sizing: border-box;
+  width: auto;
+  margin: 0;
+  border: 1px solid var(--pc-product-line);
+  border-radius: 6px;
+  background: #fafafa;
+}
+
+body.pc-admin-product #product_images_container ul.product_images li.image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+body.pc-admin-product #product_catdiv .tabs-panel,
+body.pc-admin-product #tagsdiv-product_tag .tagchecklist {
+  box-sizing: border-box;
+  max-width: 100%;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--pc-product-line);
+  border-radius: 6px;
+  background: #fafafa;
+}
+
+body.pc-admin-product #product_catdiv .category-tabs {
+  margin: 0;
+}
+
+body.pc-admin-product #tagsdiv-product_tag .newtag {
+  box-sizing: border-box;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+body.pc-admin-product #tagsdiv-product_tag .taghint {
+  display: none;
+}
+
+body.pc-admin-product #tagsdiv-product_tag .tagchecklist:empty {
+  display: none;
+}
+
+body.pc-admin-product #poststuff .postbox,
+body.pc-admin-product #titlediv,
+body.pc-admin-product #postdivrich {
+  scroll-margin-top: 108px;
+}
+
+body.pc-admin-product .pc-product-focus-target:focus {
+  outline: 2px solid var(--pc-product-accent);
+  outline-offset: 4px;
+}
+
+body.pc-admin-product #woocommerce-product-data .woocommerce_options_panel .downloadable_files {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+@media (max-width: 1100px) {
+  body.pc-admin-product #post-body.columns-2 {
+    display: block;
+  }
+
+  body.pc-admin-product #post-body.columns-2 #postbox-container-1,
+  body.pc-admin-product #post-body.columns-2 #postbox-container-2,
+  body.pc-admin-product #post-body-content {
+    float: none;
+    width: 100%;
+    margin: 0;
+  }
+
+  body.pc-admin-product #side-sortables {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    column-gap: 16px;
+  }
+
+  body.pc-admin-product #side-sortables > .postbox {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 782px) {
+  /* The native Woo tools share the heading band instead of adding a third header. */
+  body.pc-admin-product .woocommerce-layout {
+    position: relative;
+    height: 0;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  body.pc-admin-product .woocommerce-layout__header {
+    position: absolute;
+    top: 36px;
+    right: 16px;
+    left: auto;
+    width: auto;
+    min-height: 32px;
+    z-index: 20;
+  }
+
+  body.pc-admin-product .woocommerce-layout__header-wrapper {
+    min-height: 32px;
+    padding: 0;
+  }
+
+  body.pc-admin-product #wpbody-content > .wrap > h1 {
+    box-sizing: border-box;
+    max-width: calc(100% - 128px);
+    margin-bottom: 12px;
+  }
+
+  body.pc-admin-product #titlediv {
+    padding: 0 0 18px;
+  }
+
+  body.pc-admin-product #titlediv #title {
+    min-height: 48px;
+    font-size: 16px;
+    line-height: 24px;
+  }
+
+  body.pc-admin-product .pc-product-section-heading {
+    padding: 16px;
+  }
+
+  body.pc-admin-product #postdivrich .wp-editor-wrap {
+    padding: 0 16px;
+  }
+
+  body.pc-admin-product #post-status-info {
+    padding: 8px 16px;
+  }
+
+  body.pc-admin-product #woocommerce-product-data .panel {
+    padding: 8px 16px;
+  }
+
+  body.pc-admin-product #woocommerce-product-data .product-data-wrapper {
+    width: 100%;
+  }
+
+  body.pc-admin-product #woocommerce-product-data ul.product_data_tabs li a::before {
+    display: none;
+  }
+
+  body.pc-admin-product #woocommerce-product-data ul.product_data_tabs li a span {
+    display: inline;
+  }
+
+  body.pc-admin-product #woocommerce-product-data .woocommerce_variation .form-row {
+    float: none;
+    width: 100%;
+  }
+
+  body.pc-admin-product .pc-product-sections {
+    gap: 4px;
+    padding-bottom: 8px;
+    margin-bottom: 14px;
+  }
+
+  body.pc-admin-product .pc-product-sections a {
+    box-sizing: border-box;
+    min-height: 36px;
+    padding: 4px 8px;
+    font-size: 12px;
+    line-height: 20px;
+  }
+}
+
+@media (max-width: 600px) {
+  body.pc-admin-product #side-sortables {
+    display: block;
+  }
+
+  body.pc-admin-product #woocommerce-product-data .wc-metaboxes-wrapper .toolbar .actions {
+    width: 100%;
+  }
+
+  body.pc-admin-product #woocommerce-product-data .wc-metaboxes-wrapper .toolbar .select2-container {
+    max-width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.pc-admin-product .pc-product-sections a {
+    transition: none;
+  }
+}
+
+/* Only direct actions move; fields and document geometry stay still. */
+body.pc-admin-product :is(.pc-product-sections a, #woocommerce-product-data ul.product_data_tabs li a) {
+  transition: transform 180ms cubic-bezier(.16, 1, .3, 1), opacity 180ms cubic-bezier(.16, 1, .3, 1);
+}
+body.pc-admin-product :is(.pc-product-sections a, #woocommerce-product-data ul.product_data_tabs li a):hover {
+  transform: none;
+}
+body.pc-admin-product :is(.pc-product-sections a, #woocommerce-product-data ul.product_data_tabs li a):active {
+  transform: translateY(1px);
+  opacity: .78;
+}
+@media (prefers-reduced-motion: reduce) {
+  body.pc-admin-product :is(.pc-product-sections a, #woocommerce-product-data ul.product_data_tabs li a) {
+    transition: none;
+    transform: none;
+    opacity: 1;
+  }
+}

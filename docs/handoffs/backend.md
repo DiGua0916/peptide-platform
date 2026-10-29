@@ -1679,3 +1679,360 @@
 - **注意**：WooCommerce 设置和 wc-admin 在菜单里各有一项不带标签/路径的项（不显示），WordPress 靠它判断页面能不能打开。销售的菜单过滤要保留这两项，否则支付、客户、分析也会被 WordPress 拒绝（这次改的时候碰到过，已加测试）。
 - **实测**：勾了全部菜单的销售：店铺页面（概览、客户、分析、支付、应用、基础配置）都是 200；平台页面（系统状态、VialCove 设置、WooCommerce 常规和高级、插件、用户、WordPress 设置、主题、站点健康、员工）都是 403。
 - **测试**：smoke-backend 增加 4 项（平台页面不属于任何菜单、店铺用到的标签、真实请求 403 和 200）。
+
+### HQ-MENU-01 总后台收起插件商店入口 · 2026-10-28 · Codex
+
+- 用户在总后台 `plugin-install.php` 看到插件推荐页，询问这些插件的来源及是否多余。
+- 实际浏览器核对：页面是 WordPress 插件商店推荐，不代表推荐项已经安装；已安装/已启用都只有 1 个，即本项目必需的 `Peptide HQ（总后台）0.2.0`。
+- 在 `peptide-hq/includes/admin/class-menu.php` 的 `Menu::clean_menu()` 清理列表增加 `plugins.php`，收起“插件 / 已安装插件 / 安装插件”菜单。和现有清理逻辑一致，只隐藏入口，管理员仍可用直接地址做维护，不更改能力或安装策略。
+- 保留 Peptide HQ 的启用状态；不改变店铺的插件管理入口、HQ用户/设置菜单或站点配置。没有安装、卸载、禁用或更新任何插件。
+- 实际验证：PHP 8.3.29 语法检查、`git diff --check` 通过；浏览器打开总后台概览，左侧插件入口已消失，概览/店铺/服务器/销售账号/告警仍在，页面正常。当前用户的内置浏览器已停在概览。
+- 这次是菜单入口的小改动，没有运行会写入测试店铺/告警和请求真实店铺的 `smoke-hq.php`，没有新增与实现重复的测试。
+- 未提交或推送；改动留在当前 `claude/backend` 工作区。页面结果截图保存在本次任务outputs。
+
+### STORE-ADMIN-QA-01 普通店铺后台首轮验收与修复 · 2026-10-28 · Codex（peptide-core 0.27.2）
+
+用户明确选择“优先做后台，后台做好了，再优化总后台”。本轮承接普通店铺后台的现有流程验收；HQ跨店订单中心、商品同步、一键开店等扩展延后。本聊天未绑定群聊，没有向其他会话或群发消息。
+
+**修复了四个实际问题：**
+- 独立营销权限：`Admin_Menus::add_menus()`原先先检查`manage_woocommerce`，导致只勾营销的员工根本没有注册营销页面。三个营销页面现在独立按`Marketing::CAP`注册，不给营销员工额外订单/设置/数据能力。
+- 发货时间：Woo履约的`date_fulfilled`已经是UTC，`Shipping_Tracking::customer_view()`不再按店铺时区再换算一次。用洛杉矶时区和固定UTC时刻验证，避免7/8小时偏差。
+- 发货接口权限：Woo原生履约接口把共享的`manage_woocommerce`视为全部履约权限。`Staff::guard_fulfillment_rest()`在实际`/wc/v3/orders/<id>/fulfillments`及子路径执行订单模块检查，无订单权限的销售返回403；管理员、订单销售及顾客原生只读规则保留。
+- 无订单权限的空白错误页：Woo在`admin_menu`优先级9就检查HPOS订单权限，早于`admin_init`和`current_screen`，默认`wp_die()`产生500。新增`admin_menu`优先级1的精确订单页检查，统一返回403、说明和回到可用页面链接。
+
+**实际验证（最终全部通过）：**
+- PHP8.3语法检查和`git diff --check`。
+- `smoke-admin-menus`61、`smoke-shipping-support`32、`smoke-backend`70、`smoke-staff-fulfillments`29、`smoke-marketing`81、`smoke-order-batches`18，共291项。
+- 新增履约回归覆盖POST/PATCH/metadata/DELETE、拒绝后数据指纹不变、权限撤销、管理员和顾客行为。原有营销回归补充三个页面、真实表单nonce及无效提交，确认进入字段验证而非权限失败。
+- 额外8项本地手动退款验证：经真正后台AJAX入口测试部分退款、全额退款和超额拒绝，订单员工允许，设置/数据/营销员工拒绝。只用新建合成订单，COD测试标记、无客户邮箱、`api_refund=false`、不调用真实支付网关、不回补真实库存。
+- 临时销售账号的34个菜单页面及10个单独授权模块默认页，实际HTTP全部200，未出现PHP fatal。
+- 原订单#54、退款#55和所查6项设置前后哈希一致；本轮测试账号/退款fixture残留数量均0。
+
+**测试中发现的边界：**
+- 初次新增跨模块断言抓到了订单页500，修复后重跑70项全通过，没有放宽成接受500。
+- 退款测试通过HTTP写入后，CLI仍持有旧订单缓存，初次2项误报；刷新本测试进程缓存后实际8项通过。不是产品退款逻辑缺陷。
+- 内置浏览器自动化连续超时，未完成可视交互、手机布局和真实浏览器点击流程验收；以上页面与表单结果是实际HTTP集成验证，不冒充浏览器视觉检查。
+- 正式收款、SMTP及生产环境仍未配置/验证。本轮未上线、未处理真实交易。
+
+**文件与交付：**
+- 产品：`includes/admin/class-admin-menus.php`、`includes/class-shipping-tracking.php`、`includes/class-staff.php`、插件头版本。
+- 回归：`tests/smoke-backend.php`、`tests/smoke-shipping-support.php`、新增`tests/smoke-staff-fulfillments.php`。
+- 临时只读页面巡检/退款验证及日志：`D:\Codex\Tasks\2026-10-28\new-chat\work\store-admin-qa`及同级脚本。
+- 验收报告：`D:\Codex\Tasks\2026-10-28\new-chat\outputs\店铺后台验收报告_2026-10-28.txt`。
+- 当前分支仍为`claude/backend`，未提交/推送；保留前一轮HQ菜单清理的工作区改动，不覆盖其他工作树。下一步继续普通后台的交互验收与正式配置，暂不扩展HQ。
+
+### HQ-MENU-02 移除总后台的 WordPress 通用设置入口 · 2026-10-28 · Codex
+
+- 用户在HQ的`options-general.php`看到站点标题、URL、语言、时区等通用设置，明确要求删掉这个设置入口。
+- 这是HQ自身WordPress的通用配置页，并非店铺业务设置。仅在`peptide-hq/includes/admin/class-menu.php`的菜单清理数组增加`options-general.php`，移除“设置”及常规/连接/撰写/阅读/讨论/媒体/固定链接/隐私等子入口。
+- 不删除配置、数据库或WordPress文件；管理员直链维护能力保留，不改变HQ“用户”、店铺侧设置及总后台5个业务页面。保留已有插件菜单清理与普通后台0.27.2修复。
+- 实际验证：PHP8.3语法、`git diff --check`通过；本轮HQ内置浏览器连接正常，点击概览后确认左侧设置入口已消失，概览/店铺/服务器/销售账号/告警保留且页面正常。当前用户标签已返回概览。
+- 截图：`D:\Codex\Tasks\2026-10-28\new-chat\outputs\总后台菜单_已移除通用设置.png`。已同步项目主记忆；未提交/推送。本轮只是按用户定点清理默认入口，普通后台优先的总计划不变。
+
+### ADMIN-PERF-01 本地两个后台延迟排查 · 2026-10-28 · Codex（实施前）
+
+- 用户明确反馈店铺和HQ后台点击有延迟，授权继续处理。本地18次带临时管理员会话的只读HTTP测量均200：店铺稳态约0.92–0.98秒；HQ概览/店铺约0.30–0.32秒，销售账号约1.10–1.15秒（同步请求店铺约0.8秒）。
+- 采样显示店铺PHP加载约0.85秒、数据库约0.05秒，两站实际HTTP均未加载OPcache；Xdebug模式已关闭。首次店铺请求另有wp-cron触发约0.73秒，不把它误作所有请求的固定成本。
+- 计划在本站`conf/php/php.ini.hbs`取消排除Apache的OPcache外层条件，并同步当前生成INI；使用已有PHP8.3.29自带DLL，开启时间戳检查和每请求校验，独立cache_id。配置备份保存在本次任务work/admin-perf-backups。仅重启已核对属于本站Apache的CGI工作进程与HQ10090服务，不改MySQL或其他站点；随后复测并移除临时采样MU插件。此段是实施计划，结果另追加。
+
+### ADMIN-PERF-01 实施与最终验收 · 2026-10-28 · Codex
+
+**实际变更：**
+- 完成上述项目PHP配置：HBS只移除排除Apache的最外层条件，保留Windows/内置OPcache判断；当前生成INI同步。192MB、interned strings16MB、10000 scripts、`validate_timestamps=1`、`revalidate_freq=0`、项目cache_id。原件在任务`work/admin-perf-backups`。C盘Local配置入口是指向D盘LocalWP/data的junction，核实两路径是同一文件后才更改。
+- 只回收Apache39976所属的本站PHP-CGI三个worker，由fcgid重建；独立HQ10090以相同INI隐藏启动。未动MySQL、Local其他监听worker或全局配置。两站实际HTTP的OPcache均enabled，cache_full=false、oom_restarts=0；店铺约87MB、HQ约40MB已用。
+- 新增`tools/localwp/local-cron-transport.php`、独立边界测试和README；已分别复制到两个站点`wp-content/mu-plugins/vialcove-local-cron-transport.php`。只为精确本站local非阻塞cron POST选择已有Fsockopen。对于店铺路由，核对当前Apache的loopback地址、有效端口、真实DocumentRoot==ABSPATH后，通过per-request socket hook直连当前Apache，保留逻辑URL/Host/path。无代理、无自定义传输才介入；HTTPS不改TCP，不满足条件保持原路径，不修改vendor/全局router、定时计划或锁。
+- 最初只替换Fsockopen的候选在店铺经router时只发出请求但事件未执行，真实探针抓到失败，已撤回；不能以“非阻塞返回”视作任务执行成功。最终动态Apache直连版与HQ loopback路径都完成事件执行及队列消耗。CLI探针清理前先刷新cron/alloptions缓存，避免跨进程旧缓存误判或覆盖已更新队列。
+- HQ `Client::request_raw()`加入随机保留查询参数`pc_hq_nonce`，参与既有canonical_query/HMAC，修复加速后同秒重复请求被旧防重放误拒绝的问题。店铺verify未变，签名重放保护保留；兼容当前旧店铺服务端。HQ版本0.2.1、DB schema版本仍3；店铺维持0.27.2。
+
+**最终真实HTTP结果（每页前后各3次，HTML响应中位数ms）：**
+
+| 页面 | 前 | 后 | 减少 |
+|---|---:|---:|---:|
+| pc-overview | 947.7 | 303.8 | 67.9% |
+| pc-shipping | 968.1 | 284.8 | 70.6% |
+| pc-promotions | 928.0 | 288.9 | 68.9% |
+| pchq | 307.9 | 85.7 | 72.2% |
+| pchq-sites | 308.0 | 100.0 | 67.5% |
+| pchq-accounts | 1115.8 | 292.2 | 73.8% |
+
+- 最终18次均HTTP200，采样工具已移除后才测后列。是本机预热后的完整HTML响应，不包含浏览器脚本、渲染和资源加载；3个样本不报告P95。进程重启首次需建立代码缓存，不能承诺每次相同耗时。
+- 定时任务：临时专用MU注册唯一探针hook，CLI只安排该事件，经正常管理员页面触发，最终两站`ran=true/event_consumed=true`；采样cron触发店铺2.22ms、HQ23.9ms（原cURL约1秒）。保留原任务队列及锁。最终两站探针事件剩余0。
+- 43项独立传输边界回归通过：本机`php -n`及加载现有扩展配置各运行，覆盖真实WP Requests hook桥、URL/环境/方法/端口/目录/代理/TLS/保留传输等条件。独立`peptide-hq/tests/smoke-client-nonce.php`回归14项通过，含status与staff真实只读各连续3次、nonce篡改拒绝、原签名重放仍401、合成标记清理。不运行会写业务fixture的全套smoke-hq。
+- PHP语法、`git diff --check`通过；原订单54、退款55及6项设置哈希与前轮验收后相同。两站各2个临时采样/事件MU加载器共4个已移除，SAVEQUERIES未保留，只保留上述本地cron工具MU。临时管理员session只单独销毁本次token，没有销毁既有登录。
+- 店铺内置浏览器自动化标签读取仍超时；未声称视觉、JS点击或移动端验证。本地优化不等于生产部署；本地MU不要自动装到正式服务器，新拓扑另验。
+
+**交付与后续：**报告在本次任务`outputs/后台响应速度对比_2026-10-28.txt`及同名JSON；原始分阶段测量与采样日志留任务work。已追加原项目主记忆。`claude/backend`改动未提交/推送，保留前轮所有修复。继续普通后台交互验收及正式支付/邮件配置，HQ扩展仍延后。
+
+### CUSTOMER-ADMIN-GAP-01 客户后台对照YY复核 · 2026-10-28 · Codex（只读审计）
+
+- 用户确定后续称呼：**客户后台=店铺运营/站点装修等店铺端后台；管理后台=统一管理各站点的HQ**。顾客/买家另指购物者。本轮只记录沟通命名，没有批量改界面或代码标识。
+- 对照`shopname-gap-report.md`的10/19只读记录、10/23–27各功能交接，以及D盘旧任务`outputs/editor-handoff-20261020/yy-audit-catalog.json`和`outputs/yy-module-audit-20261019/index.html`。YY现有标签连接超时，未声称当天完成现场重扫。
+- 当前站点真实只读Registry共35种：basic34、product1（product_collection）、operation0，未运行写库测试。不能用YY71类减35算差距；已有基础模块、主题及Fallback渲染应纳入判断。
+- 客户后台主要差距：页头/页脚编辑及主题接入；全局视觉与商品互动配置；非首页统一积木装修（当前home启用，product/category/custom禁用）；专题独立layout（专题内容/SEO等已有）；商品轮播/滚动/选项卡/最近浏览等；订阅、营销公告及优惠券/满减/运费折扣等运营积木嵌入；顾客标签/等级/积分；SEO/博客AI及博客收录查询/手动提交。
+- 营销业务已实现不等于运营积木已实现；原Woo/WordPress的商品和页面可编辑不等于已接统一积木编辑器。轮播、热点、对比图、数字增长等已有，不能重复列缺失。
+- 旧表缺项中弃单、满减、运费折扣、导航、SEO、博客、像素、素材、日志、员工权限等已补齐，旧表不能整体沿用。商品收藏按用户10/27决定继续暂缓。A/B正式管理和自定义脚本/文件/话术工具列后续待核，不将历史菜单或演示当作已验证完整功能。
+- 建议先页头/页脚+全局配置闭环，再多页面/专题装修和常用商品积木，后做分层运营。用户本轮请求是查看差距，未因此自动实施全部新功能。正式支付、邮件、证书/CDN等仍是上线配置及验收待办。
+- 报告：`D:\Codex\Tasks\2026-10-28\new-chat\outputs\客户后台与YY功能差距_2026-10-28.txt`。已追加原项目记忆。只新增报告、更新本交接与记忆；业务代码/数据库/装修草稿及发布状态未改，没有提交/推送或接群，前轮未提交改动均保留。
+
+### CUSTOMER-ADMIN-ALL-01 用户批准全量补齐 · 2026-10-28 · Codex（实施中）
+
+- 用户明确“做吧，这些都做”，批准上轮六类已核差距：页头/页脚、全局、多页面装修、商品/运营积木、顾客分层积分、AI/收录工具。包括必要主题适配；不自动纳入A/B、已暂缓收藏或HQ扩展。
+- 共享变更：沿用pc_layout、草稿发布快照及权限，增加页面种类和每对象布局，主题消费已发布部件/全局设置，未配置时保持原输出。商品和账户必要正文保留，结账继续Woo Blocks。Registry增加原始definitions扩展点，Renderer增加null兼容HTML扩展点与singleRender，避免同一表单在手机/电脑渲染两份。
+- 并行按独立文件分工，root统一boot/版本/权限和集成；积分默认不追溯历史或开启金额抵扣。AI/搜索外部配置缺失时明确不可用，不用模板假称AI。本段是实施授权与方案，结果另记。
+- 保护旧订单54/退款55、真实装修草稿和快照；没有CRK绑定，不接群或跨会话发信。
+
+
+### CUSTOMER-ADMIN-ALL-01-RESULT 客户后台本批实现及验证 · 2026-10-28 · Codex（0.28.0）
+
+- 承接用户“这些都做”及后续“AI先不做”。本批完成页头/页脚、全局、17类页面和资源独立装修、33种商品/运营积木、顾客分层积分、订阅评论媒体及收录工具代码与接口验收；当前Registry72种。AI界面、生成/应用动作已关闭，旧请求403；A/B、收藏、HQ扩展和生产部署继续不在范围。
+- 主要新增Design_Pages、Site_Design、Commerce_Blocks、Customer_Segments、Loyalty、Subscriptions、Content_Tools及对应Admin页面、CSS/JS、中文映射、本地字体及OFL；修改Templates/Layout/API/editor、Registry/Renderer、Menus、Staff、营销资格和boot。前端header/footer/functions适配已发布部件和商品卡扩展，保留未配置fallback、原生查询、Woo购买/账户/Blocks流程。接口详见CONTRACT同日追加。
+- 保存使用文档锁与内容/发布状态revision防止同秒覆盖；context_content在header/footer/global禁用，商品和账户发布严格保留一次正文。预览包含首块未保存内容和资源真实URL；空资源类型提示先创建，不错误显示首页。公开导航排除草稿资源，cart/checkout先于预览接管排除。
+- 积分已独立审查和回归修复并发赚取/退款、返还券再次使用、金额型部分退款、兑换币种舍入，以及首次赚分前已部分退款等边界。实际enabled/redeem_enabled/notify_enabled均false；无历史追溯或现有客户余额改写。
+- 最终12组555PASS/0FAIL：modules58、design-editor39、store-design37、admin-menus61、backend70、marketing81、staff-fulfillments29、commerce-blocks19、subscriptions22、customer-loyalty57、page-design57、content-tools25。最终日志均在本次work/store-admin-qa，content-tools于收尾重跑留存25项日志。
+- 所有变更PHP57份、JS6份语法及两个工作树diff检查通过。四新增后台入口实际HTTP200；公开7URL符合预期，空车结账转购物车、未知页404。订单54/退款55、8设置、4原布局哈希一致；测试fixture清理，临时会话单独销毁。已软刷新路由，collections和pc-points可达。
+- 性能18请求均200：客户概览/物流/营销中位356/371/365ms，HQ概览/站点/账号300/122/499ms。只为本地HTML耗时，非浏览器/生产压力测试。
+- 浏览器实际点击及视觉验收未完成：IAB定位到用户已登录标签，但getTab/控件读取反复超时，用户重开后仍失败；后续该工具不再可用。不能声称成功控制两个标签或完成手机布局实看。SMTP/GSC/IndexNow/实际支付未实联，订阅测试邮件拦截，搜索协议mock不等于已收录。
+- 代码在claude/backend与codex/frontend既有工作树，未提交/推送，未覆盖此前改动；无CRK绑定，不接群/发群消息。结果报告：D:/Codex/Tasks/2026-10-28/new-chat/outputs/客户后台补齐验收_2026-10-28.txt及同名JSON。已补项目记忆。下一步补实际PC/手机交互验收及正式服务配置，再按用户顺序优化管理后台。
+
+
+### CUSTOMER-COMMERCE-01 商品/运营积木、订阅与评论媒体 · 2026-10-28 · Codex
+
+- 新增 `includes/modules/class-commerce-blocks.php`、`includes/class-subscriptions.php`、`includes/admin/class-subscriptions-page.php`，以及 commerce/subscriptions 自有 assets、中文补充映射与两项独立回归。Registry/Renderer 仅加约定扩展点、singleRender 和空公开模块隐藏支持；boot/版本由集成代理统一处理。
+- 33 种新积木使用真实 Woo 商品、营销规则、已审核评论及已发布博客/专题；评论照片/视频/精选由原生评论页编辑并校验权限。订阅含 pending→双重确认→active、退订/取消、同意证据、限流、营销名单 CSV/删除；默认不发布装修、不群发邮件、不伪造内容。
+- 已实际运行 `smoke-commerce-blocks.php` 19 PASS / 0 FAIL 与 `smoke-subscriptions.php` 22 PASS / 0 FAIL。前者覆盖真实商品选择/排名/属性比较、各类选项卡、私有内容排除、浏览历史、真实审核评论媒体、实际促销期限与受限优惠码；后者覆盖匿名 REST、确认 GET 不激活、错误/过期/重放令牌、退订、邮件失败，以及 marketing/data/settings 的真实后台 HTTP 权限、CSV 和删除。另完成新增 PHP 6 文件 lint、4 个 JS 的 node --check、共享改动 diff --check。
+- 测试只使用本轮临时商品/分类/评论/附件元数据/活动/优惠券、`example.invalid` 订阅与临时员工，并在 finally 精准清理；邮件以 `pre_wp_mail` 拦截。未改旧订单 54/退款 55、既有装修或业务设置，未保存/恢复整份 options。
+- 测试日志：`D:\Codex\Tasks\2026-10-28\new-chat\work\store-admin-qa\smoke-commerce-blocks.php.log`、同目录 `smoke-subscriptions.php.log`。未测试真实 SMTP/外部邮箱送达，也未把 PHP/HTTP 与 JS 语法结果表述为浏览器视觉或移动端点击验收；实际邮件配置与投递仍需独立验收。
+
+
+### 2026-10-28 · Codex：客户后台浏览器补验及修复（CUSTOMER-ADMIN-UI-01，0.28.1）
+
+- 用户“继续”，承接前轮客户后台验收。当前没有内置浏览器控制工具，改用既有Edge的独立本地headless实例，不接管或改动用户IAB标签；以临时管理员会话、新建未分配模板和合成商品/菜单验收。
+- 修复确认菜单提前卸载导致放弃修改/取消发布确认后不执行；轮播无视减少动画、hover覆盖焦点暂停；轮播包含块造成390px页面撑到839px；手机搜索框跑出视口与Logo不能收缩；极窄屏长编号挤进相邻商品卡。改动design-editor.js、commerce-blocks.js/.css、site-design.css及版本入口，升0.28.1，本轮没有修改主题PHP。
+- 实际浏览器45项交互通过、JS异常0，含保存刷新、复制/撤销/隐藏/确认删除/拖拽、发布/放弃/取消发布、PC/手机/全屏、页头单例和全局切换、PC宽度和手机字号独立保存发布并生效、本地字体、选项卡/轮播键盘与减少动画、快速查看/焦点返回、搜索/手机菜单/底部导航和访客隔离。另4项最终响应式专项通过：320/390/768/1280px无页面横向溢出，搜索弹层和长编号完整容纳；截图实际查看。是桌面Edge视口测试，不冒称真实手机触摸/设备全兼容。
+- 因此此前“装修浏览器点击/多宽度目视未完成”的停点由本条更新：本轮上述范围已在独立测试浏览器补验，用户IAB接管仍不可用。签名订阅预览不提交表单/发邮件是预期设计；真实订阅邮件/SMTP、支付、GSC/IndexNow实联仍未做。AI继续暂缓，客户后台优先、管理后台随后。
+- 原订单54/退款55、8项设置、4份原布局正文及全部_pc_元数据前后指纹相同。测试帖子剩余0、预览transient清理、仅销毁本轮临时会话，含登录cookie的临时文件已删除；没有分配/发布现有真实装修、真实收款/发信或生产部署。两份变更JS语法、入口PHP及diff检查通过；前轮555服务端检查是历史已通过记录，本轮未重复整套执行。
+- 报告D:/Codex/Tasks/2026-10-28/new-chat/outputs/客户后台浏览器验收_2026-10-28.txt及JSON；截图在同目录customer-ui。工具脚本和结果在work/customer-ui*。既有工作树仍未提交/推送，无CRK群绑定；双方handoff与CONTRACT已追加。
+
+
+### 2026-10-28 · Codex：客户后台剩余缺项复核（CUSTOMER-ADMIN-GAP-02）
+
+- 用户要求“检查还有什么缺的”，本轮业务只读，非新一轮全量开发授权。实际0.28.1、72模块、17文档类型；系统设置4类都非占位。对照当前源码和10/19–27 YY历史观察，未重新登录YY全站重扫，数量72不能当作逐字段完全对齐。
+- 明确剩余功能：全局标题/正文独立字体字重/字间距、统一转场/留白及评论轮播等精细控制；买家自主图片/视频评论上传（现为后台绑定+审核后展示）；订阅后营销群发/定时活动（现有订阅确认/退订/名单/CSV）；独立赠品SKU加赠及固定/多变体套餐（已有组合价、满X免Y及Woo grouped基础，不能重报全部促销缺失）；站点级脚本/自定义路径文件/常用话术管理。高级套餐和YY应用子功能属于待定义扩展，不能把应用卡片名称当完整实测。
+- 新查两项代码可靠性边界：积分通知failed无重试、排程或领取中断的queued/sending无扫描/租约恢复；不影响已提交积分账本/兑换，通知目前关闭。上线体检仅查Woo配送区域，未识别Shipping\Plans接管，未来可能误报；本次实际自定义方案0、1测试区+1零费率方法、正费率0，所以当前正式运费缺失属实。
+- 当前默认模板home20块已发布，header/footer/global均0块未发布。三部分编辑能力已经做，但还未配置到实际使用模板。顾客标签/等级各0，赚取/兑换/积分通知关闭，属于待配置/主动关闭，不是功能不存在。弃单邮件因店铺地址未填被阻断，真实SMTP/支付/运费/搜索和像素平台仍需配置及实联；条款隐私/用途与确认文案、真实商品资料/生产域名HTTPS待办。
+- AI、收藏、正式A/B继续保持原暂缓/不扩展决定。已有素材分组/采集重试/批量/CSV/PDF、分层营销、评论媒体展示、订阅、装修等不再照旧表列缺。此前45+4浏览器验收只覆盖已记录的装修/组件和桌面Edge视口，不等于所有客户后台页或真实手机都验完。
+- 建议先通知重试/运费体检，再装修细项/买家上传与当前模板配置；营销群发、高级套餐、工具按业务定义后扩展。详细证据在D:/Codex/Tasks/2026-10-28/new-chat/outputs/客户后台剩余缺项_2026-10-28.txt及JSON。没有改业务代码、数据、装修、发布或跑写库测试，没有提交/推送/群消息；仅报告、记忆及交接追加。
+
+
+### CUSTOMER-ADMIN-ALL-02 用户批准剩余项实施 · 2026-10-28 · Codex（实施中）
+2026-10-28 Codex · CUSTOMER-ADMIN-ALL-02
+用户新授权：上一答复剩余功能及可靠性问题都做，买家评价优先，且要可后台编辑和添加。
+既有记忆绑定多肽独立站，无需再询问。AI/收藏/正式A-B仍暂缓；外部真实账号和内容不可编造。
+root：Reviews服务（买家上传/审核/安全媒体/来源标记）与Admin Reviews_Page添加编辑、集成、浏览器验收、boot/menu/staff/版本/交接/记忆。
+find_project_memories：Loyalty通知重试/租约恢复、Launch_Check适配ShippingPlans；新增Site_Tools和Admin Site_Tools_Page。
+find_claude_memories：Email_Campaigns/Admin Email_Campaigns_Page；随后Product_Offers/Admin Product_Offers_Page（独立赠品/固定套餐/变体槽）。
+design_details：Site_Design/CSS/fonts/中文；字段细化、全局评论设置API、转场独立JS、独立测试；不动Commerce/boot。
+共享接口先在本文件及handoff提案记录；各agent独立文件，root统一接线。数据测试需避免并行覆盖共享options，保护订单54/退款55、原布局和现有设置，精确清理。
+评价正常管理员录入/导入允许，来源保留；已购买徽标仅根据Woo真实订单，不手填伪造。公开买家上传默认待审，审核前文件不可匿名访问。测试记录明确合成，默认不发真实邮件、不收真实款、不分配测试模板为默认。
+外部发信和付款配置缺失先实现可预览/草稿闭环，不假称实联。只写D盘，无CRK绑定，不读ROOM或发群。
+
+
+
+### 2026-10-28 · Codex：评价来源展示新决定（CUSTOMER-REVIEWS-SOURCE-01）
+- 用户明确：店铺录入/历史导入这类来源提示只在后台看见，前台不显示。已据此将来源、内部备注与编辑记录保留在商品评价管理，前台仅呈现评价内容/星级/图片视频；已购买仍按登录身份与真实订单核验。此前实施提案中来源公开的安排由本条更新。
+
+
+### 2026-10-28 · Codex：三项外部服务明确留空（CUSTOMER-EXTERNAL-DEFER-01）
+- 用户明确：支付先留空，后续提供支付API时再对接；邮件发送服务和搜索平台连接也全部留空。保留本地功能与配置入口，不创建或填入任何正式服务账号、密钥，不启用真实群发或搜索提交。本地评价及其他已授权缺项继续；此前询问服务账号已由本条解决，不再追问这些账号。
+
+
+### 2026-10-28 · Codex：客户后台第二批完成（CUSTOMER-ADMIN-ALL-02-RESULT，0.29.0）
+
+- 用户批准的剩余本地项已完成，评价优先；用户随后明确来源提示仅后台及三项外部服务全部留空，这两项覆盖早期提案。后续不再询问支付/邮件/搜索账号；支付API由用户以后提供。AI/收藏/正式A-B仍暂缓，管理后台业务扩展未加入本批。
+- 商品→商品评价可新增/编辑/审核/撤审/垃圾/回收，记录内部来源、备注、操作历史。买家真实文字/PNG/WebM上传进入pending；审核前私有，批准后可公开播放，撤审/移除立即失效。前台无来源、店铺编辑、邮箱、备注或审计记录。已购买只认登录身份及真实订单。旧6图编辑不丢失，新超限不静默截断。
+- 完成装修细项和评价全局renderer接线、营销活动草稿/预览/定时/队列/退订、高级真实SKU赠品/固定与变体套餐、管理员脚本/CSS/虚拟文本文件/话术、积分通知退避重试租约恢复、Shipping Plans上线体检。正式邮件/积分通知/站点代码保持关闭，新优惠默认停用草稿；不自动发布真实装修。
+- 主要文件：includes/class-reviews.php、admin/class-reviews-page.php、reviews*.js/.css/翻译；class-email-campaigns.php及admin/assets/翻译；class-product-offers.php及admin/assets/翻译；class-site-tools.php及admin/assets/翻译；class-loyalty.php、class-launch-check.php、modules/class-site-design.php、class-commerce-blocks.php及site-design*资源；统一class-plugin.php、Admin_Menus、Staff、版本。完整契约追加docs/CONTRACT.md。
+- 最终本批20套836PASS/0FAIL；独立Edge实际WordPress19PASS/0FAIL/JS0，含管理员新增编辑审核、真实买家上传、图片解码与视频实际播放、390px；独立装修HTML harness12PASS/0FAIL/JS0，320/390/768/1280px。后者不冒称真实装修面板点击；群发/套餐/工具含真实HTTP但未逐项可视点击。此前555与45+4为历史，不计入本批重复总数。
+- 真实HTTP曾发现admin-post被Woo保留comment_type=comment、Windows附件路径反斜杠、form.action被同名字段覆盖、390px文件控件溢出，现已修复回归。另补媒体原子保存、no-store撤审、所属校验、访客邮箱伪装、后台6图保留及审核审计。新测试smoke-review-legacy-media最后3PASS；早期1PASS/2FAIL由缺少附件路径的fixture造成，补真实PNG后通过。
+- 最后语法：backend变更PHP77、JS12，frontend原变更PHP3；两工作树diff检查通过。订单54/退款55、8设置、4原装修哈希与基线相同。独立媒体残留6项均0、浏览器3评论/4媒体/2用户/1商品及会话/MU/私有cookie清理。无真实发信/收款、未改正式服务配置。
+- 实际0.29.0、72模块、17文档；正式支付未配置，邮件发送/积分通知/站点代码关闭，GSC/Google/Bing/IndexNow空。外部集成、实体手机、生产库存压力未验证；积分通知存在传输接受后崩溃重发窗口。真实模板header/footer/global仍保留原未配置状态。
+- 报告D:/Codex/Tasks/2026-10-28/new-chat/outputs/客户后台第二批完成与评价验收_2026-10-28.txt及JSON。只保留成功轮review截图，旧溢出截图移到work诊断。已更新主记忆，后续按既定顺序管理后台优化及用户提供API后集成。无CRK绑定或群消息；既有claude/backend与codex/frontend未提交/未推送，未生产部署。
+
+
+### 2026-10-29 · Codex：评价按主商品分组完成（REVIEWS-BY-PRODUCT-01，0.29.1）
+
+- 用户明确：商品评价入口要显示每一个主商品，A的15/20等规格不单独列，进入A后再管理其评价。沿用本聊天已有多肽记忆绑定，已完成实现。
+- 入口改主商品分页列表，包含零评价、已发布/草稿/待审/私密/定时且有管理权限的商品；不列variation/回收站/自动草稿。每页20，按名称搜索，无原200商品下拉截断。每行显示总数/已发布/待审与管理入口；详情只列该商品评价，新建隐藏绑定该主商品，编辑不能借POST换商品，保存/审核后返回同一商品并保留合法筛选。
+- 保留旧edit链接和variation链接归父导航，不迁移历史数据。新增load阶段上下文校验，跨商品无效GET正确404，篡改保存/审核403。修复旧空comment_type被WP type__in忽略导致汇总有但列表漏的问题；只纳入空类型/review顶层，排除普通comment/回复/pingback。两级分页稳定并夹越界页到末页。
+- 本轮4套137PASS/0FAIL（评价40/历史多图3/菜单61/新分组33），独立本地headless Edge真实操作17PASS/0FAIL/JS0，含两规格归父、零评价、增改审核、返回、篡改拒绝、员工权限与390px布局；实际查看截图。不是IAB接管或实体手机验收，未把上批836项算成本轮。
+- 两套fixture确认原订单54/退款55、全部原布局_pc_元数据和8项设置指纹不变；临时商品/变体/评论/用户/会话/邮件MU清理，临时私有cookie JSON删除。本轮3份PHP语法及diff检查通过；来源、内部备注和编辑记录仍仅后台，三项外部连接继续留空。
+- 主要改动：backend/includes/admin/class-reviews-page.php、assets/reviews-admin.css、插件版本入口及tests/smoke-review-products.php（均在wp-content/plugins/peptide-core下）；CONTRACT与backend handoff追加。Reviews服务/公开评价数据模型未改，异常直接绑product_variation的历史评论未迁移。没有提交/推送/生产部署或CRK群绑定。
+- 报告：D:/Codex/Tasks/2026-10-29/reviews-by-product/outputs/评价按主商品管理验收_2026-10-29.txt及JSON；同目录3张390px成功截图。刷新商品评价入口即可看到新版。
+
+
+### 2026-10-29 · Codex：装修积木实际功能与后台关联审计（BLOCK-INTEGRATION-AUDIT-01）
+
+- 用户要求检查截图积木是否有实际功能及是否关联后台商品/活动。只做审计，未修改业务代码/真实装修/活动；既有0.29.1不变。34种截图积木均已注册可渲染编辑预览，warning0，但进一步核对发现连接缺口，更新此前笼统“功能完成”的表述：模块主体已实现不等于每个绑定和字段完整。
+- 15商品类读真实Woo商品/销量/库存/分类/专题，轮播/选项卡有实际JS，规格/购买继续Woo。限时卡可绑定原Promotions活动及真实截止时间；券/满减/运费折扣读真实规则，但这三类不能选择指定某几条活动。公告是手填文字链接，不随活动启停；新高级赠品/套餐虽后台/购物车/短代码可用，尚未接装修积木或原活动卡。
+- 评价4类读真实已审核数据且后台来源/备注仍不公开，但没有全店/指定商品/当前商品选择；公共renderer旧type__in空类型仍会被WP忽略，缺顶层回复过滤，且先200再筛媒体/精选有规模边界。上轮Admin查询修复未覆盖此处。博客专辑列表/专题列表带不消费的blogCategory无效控件；文章/专题/促销select仅前100，超出或停用后保存旧绑定有被清空风险（非已发生事实）。
+- **确认搜索实际故障**：真实GET s=a基础16张product-card；min_price=&max_price=变0；仅填最低价/最高价空仍0；最高价明确大值恢复16。价格过滤已接Woo，但空max_price变0。**本地复制降级**：实际HTTP .local isSecureContext=false/clipboard不可用，实际JS隔离harness点击仅选中文本未一键复制。以上未修，需列后续待办。
+- 当前公开合格券0/公开促销0/运费折扣0/已发布高级优惠0，空块隐藏属正常。文档685草稿/发布20块未被改，库中34类不等于全已摆进首页。订阅名单/确认/退订真实连接；支付、外部邮件、搜索连接按用户决定留空，不再当缺项；AI/收藏/正式A-B仍暂缓。
+- 本轮实际重跑原积木测试19PASS，加保护指纹1PASS，共20/0；另6真实搜索GET、独立Edge隔离复制harness。没有逐个点击/发布当前34块、没有IAB接管或实体手机验收，不把旧836项算本轮。合成fixture精确清理，订单54/55、全部原布局_pc_元数据及8设置保护一致，未真实收款/发信/提交外部服务。
+- 建议下一步先修搜索/复制/公开评价query，再补优惠指定绑定/新套餐/公告联动/按商品评价及无效字段与选择器。该段是建议和已确认待办，尚未实施。报告D:/Codex/Tasks/2026-10-29/layout-block-audit/outputs/积木真实功能与后台关联检查_2026-10-29.txt及JSON和三份详细矩阵。无提交/推送/生产部署，无CRK群绑定。
+
+
+### 2026-10-29 · Codex：积木联动修复授权与共享接口（BLOCK-INTEGRATION-FIX-01，实施中）
+
+- 用户问是否会修并要求不会的说明；按本聊天任务授权直接实施上轮明确六类缺口及相关故障，暂没有需用户另教的实现。优先修搜索空价格/复制，补指定优惠绑定、公告联动、高级优惠积木、按商品评价、博客有效字段与分页选择器。保持真实装修/活动不变，三项外部连接仍留空，不新增虚构业务数据。
+- 分工：营销agent独占Commerce_Blocks营销段与新增测试；评价agent新增Review_Blocks definitions/render helper及测试；内容agent新增Content_Blocks helper/测试；root统一C接线、Records字段/搜索分页AJAX、module-controls、搜索服务/复制JS、boot版本与浏览器验收。各测试先写后按root安排串行执行，避免共享options竞争。
+- 共享接口提案：新增Fields type=record，resource=promotion/coupon/shipping_discount/product_offer/post/topic/blog_category；保存正整数ID，不因前100或停/删记录而静默清空；各公开renderer必须再验真实类型/公开状态/资格，手选失效不得回全店。编辑器仅装修权限+nonce可查询标题/ID元数据，分页20条。
+- Review_Blocks::definitions($defs)/render($type,$settings)，Content_Blocks::definitions($defs)/render($type,$settings,$items)，由Commerce_Blocks整合，保持原外层/已发布布局默认行为。促销采用selection auto/manual、公告mode manual/bound，新product_offer复用既有真实业务，不另造价格库存算法。
+- 本段为授权/接口与实施安排，尚未作为完成事实；最终实际结果另记。无CRK，不读写群。
+
+
+### 2026-10-29 · Codex：积木联动缺口修复与验收完成（BLOCK-INTEGRATION-FIX-01-RESULT，0.30.0）
+
+- 已落实用户本轮修复授权：券/满减/运费列表自动或手选真实活动；公告手填或绑定券/促销/运费/高级优惠，随规则及启停期限更新；新增独立赠品与套餐积木且限时卡可绑高级优惠。无效手选不回全店，默认兼容旧布局。
+- 评价4类支持全店/指定/当前商品、规格归父；修旧空类型/回复混入与200候选截断，global最多100、单块24，查询20–48分批；保全局轮播/发布预览/星级/视频比及后台来源隐私。博客分类生效，文章/专题可精确手选，移除专题无效分类控件，私密/删除/密码/全禁用不退全店。
+- 新record字段及后台搜索分页20条替代前100静态选择，停/删ID保留并标不可用，各renderer最终校验真实资源。已有product字段仍做存在性清理，无效指定商品不串全店。Records需装修权限+nonce，只返标题/ID/状态；新增测试证明设计员工看不到私密商品及定向运费活动名。编辑器旧products兼容数组只保留公开可见无密码商品，实际选择器走动态查询。
+- 内部商品搜索JS formdata+server init去空价格，保留0；空最高价不再误筛0，也不禁用返回后的价格输入。复制支持HTTP真实回退，拒绝时明确选中手动复制。高级优惠复用原SKU/库存/价格/购买form，singleRender；编辑器及签名预览禁购买/应用券。公开分组活动按当前资格读且禁共享整页缓存，原邮箱限制券非公开保护未放宽。
+- 本轮9套**302PASS/0FAIL**：活动35、Records23、内容29、评价27、积木19、全局评价35、模块58、编辑器39、装修37；独立Edge真实WordPress **21PASS/0FAIL/JS0**，11次record AJAX均200，实际保存重载发布测试模板、绑定精确、停P1后公告/列表消失及390/1280无溢出。另复制/搜索4项浏览器验证、5次真实搜索GET符合预期。不是IAB接管或实体手机，不重计旧836/137历史测试。
+- 最终90份已改PHP/13份JS语法、diff检查通过（含前轮保留改动）。订单54/55、全部原布局_pc_及8设置指纹一致，活动套另9设置；临时模板/商品/优惠/评价/分类/用户/会话/MU/私有cookie精确清理，孤立评价媒体0。没有新虚构真实业务活动；当前公开券/促销/运费折扣0，真实首页仍20块。
+- 实际0.30.0、73积木、17通用文档。正式支付/外部邮件/搜索连接继续空，相关发送/提交未启用；AI/收藏/正式A-B保持暂缓。原审计六类联动待办由本条完成结果更新，不宣称YY所有字段或生产联调/库存压力/视觉定稿全验。
+- 源码主要backend的Commerce_Blocks和新增Content_Blocks/Review_Blocks/Records/Commerce_Search，Fields/Blocks/Plugin/版本、module-controls/commerce-blocks JS/CSS及翻译/测试。CONTRACT及双方handoff已追加，claude/backend既有未提交工作保留；没有commit/push/生产部署，无CRK群。
+- 报告D:/Codex/Tasks/2026-10-29/block-integration-fixes/outputs/积木功能与后台联动修复验收_2026-10-29.txt及JSON；bindings-browser三张成功截图。刷新装修页可见新选择字段。具体真实活动及装修仍由后续运营配置，本次没有替用户发布到现用模板。
+
+
+### 2026-10-29 · Codex：测试数据清理完成及新品准备（PRODUCTION-CLEANUP-01，0.30.0）
+
+- 用户明确“把有关测试的都去掉”，并单独确认“这96个商品也全部删除”；随后说明将提供新图上新品。本决定覆盖旧记录/AGENTS中保护演示订单54/退款55及演示商品的历史约定，不能再按旧规则恢复或重新seed。项目仍沿用本聊天选定的多肽独立站记忆。
+- 清理前完成店铺/HQ两套运行时数据库导出及3份ZIP（两站public、店铺private），ZIP CRC与5份文件SHA256/大小核对通过，未做恢复演练。私有备份目录D:/Codex/Tasks/2026-10-29/production-cleanup/work/backup；有效SQL为store-runtime.sql及hq-runtime.sql，早期失败的store.sql不是有效备份。配置/数据库/日志内容不写入记忆或Git。
+- 原生删除96主商品（94报价导入+2seed）和171变体，210演示对比价随元数据删除；另3seed批次、2seed报告及2私有演示PDF。删除演示订单54/退款55、旧未付款checkout-draft59、空auto-draft订单3353、空商品auto-draft6225；未真实退款/收款/发信。清掉测试COD设置、唯一测试配送区/零费率方法、2个旧商品购物车会话，demo_mode=false、demo_notice空。
+- 删除66条精确测试审计、保留65条其他审计；删除2个精确匹配的WP默认占位内容。两站关闭WP_DEBUG/屏幕调试，日志配置在公开根目录外；移走公开debug.log及两个local-xdebuginfo入口，保留私有归档。保留共享品牌图库/真实账号/装修、源码测试、A/B及手机预览工具历史、本地cron性能MU。正式部署不得无判断复制本地专用工具。
+- 最终直接查库主商品0、变体0、全部HPOS订单0、demo记录0、五张Woo统计表0；商品API200/[]、首页200无demo横幅和商品卡片，两站诊断文件不存在且新请求未重生；店铺诊断URL403，HQ已删路径为普通回退200但无Xdebug内容，不能称两站URL均403。两站运行时debug/display关闭、日志在公开目录外；临时数据库CNF0。
+- HQ现有签名连接刷新92天数据/状态成功，订单/销售额0、访客17保留；连接和服务器设置指纹不变。全部原装修正文/_pc_元数据指纹一致。中间两个清理快照发现额外空草稿后的guard退出已由补清和最终验证覆盖，最终check_pass=true；未重新创建测试商品或重跑会写fixture的功能套。
+- 仍本地0.30.0/73积木，插件/主题业务代码本轮未改，无commit/push/生产部署。三项外部服务继续留空；真实商品/运费/条款隐私/正式域名HTTPS等运营准备尚需完成，不把清理通过称正式可营业。下一步等用户发新品图和实际名称、规格、价格等资料后上架，不虚构库存/报告/评价。
+- 验收报告D:/Codex/Tasks/2026-10-29/production-cleanup/outputs/测试数据清理验收_2026-10-29.txt及同名JSON；脚本/原始结果在work，私有备份不在公开outputs。无CRK绑定、没有读写群或跨聊天发消息。
+
+
+### 2026-10-29 · Codex：两套后台UI重做与验收（ADMIN-UI-REDESIGN-01，0.31.0）
+
+- 用户明确两套后台全部UI重做，先备份；进一步要求“精细一些、自己设计、不要像UI包”，参考别人的信息布局但不抄袭，并要求查阅公开资料。已使用本地frontend-design/landing-page-design技能，参考Shopify官方Layout/Details/App structure及Woo商品编辑器；未安装新UI包。范围按当前会话明确为客户后台与管理后台，不改公开店铺已发布装修。
+- 先备份当前清理后状态：两套SQL+3ZIP，CRC和5文件SHA256通过，未恢复演练；私有目录D:/Codex/Tasks/2026-10-29/admin-ui-redesign/work/backup。包括实际未提交源码，不能以主仓库旧版覆盖。增加外观回退开关PEPTIDE_ADMIN_UI_DISABLED，当前未启用。
+- 自写独立展示层：品牌导航/面包屑/返回/表单表格/筛选分页/状态按钮/弹窗/登录；商品编辑主区与发布图库侧栏、原生区域导航；概览重新组织7KPI/待办/趋势与辅助信息，去大横幅渐变；装修编辑器工具/积木库/属性及390上下分窗；HQ5主页面和用户/登录统一。Manrope本地字体与CJK回退，VialCove蓝绿，保留原表单/字段/nonce/REST/权限和业务服务。
+- 修复真实布局冲突：Woo宽屏右侧残留留白、价格左缩进、手机tabs文本隐藏；原生SelectWoo隐藏select与基础配置不可见tooltip制造手机滚动；页面搜索/个人资料窄屏溢出；装修手机保存发布/设备按钮挤出及子项动作裁切；HQ手机顶栏遮挡/图表日期重叠。原staff隐藏路由403在备份中已存在，本轮3行隐藏别名修复，仍create_users：有权200、临时禁权403、还原后200，角色/真实用户未改。
+- 最终真实独立Edge：客户后台62地址×1600/390+折叠菜单/手机导航=126PASS/0FAIL/JS0；商品26PASS/JS0（TinyMCE、Woo tabs/变体还原/媒体取消/响应式）；现有装修文档685共13PASS/JS0，20模块及dirty状态不变，未保存发布；HQ24登录后+3匿名登录通过。概览1600/1280/390实际CSS加载复验；商品DOM harness另15项，不冒充真实页面。6PHP/4JS语法及diff通过，未重跑写业务fixture的服务端大套、实体手机/生产压力/真实交易。
+- 清前SQL逐项核对15个实际业务option哈希一致，313个原商品/模板/装修记录及385条_pc_元数据一致。用户自己的商品页操作新建1个空auto-draft（保留），导致初始cleanup粗守卫false；后续逐记录对比已确认仅此新增，未删用户草稿或覆写中间证据。临时QA2账号/会话/cookie清完，16个QA原生空草稿精确删除，未回填演示商品；订单/规格/非自动草稿商品0，公开商品API[]，前台和两个登录页200。
+- 新增Workspace class、admin-workspace.css/js、workspace-login.css、product-workspace.css/js、editor-workspace.css、overview-workspace.css；class-plugin/版本接线，design-editor.js只调整预览选中颜色和去位置过渡；staff-page隐藏别名。HQ Menu/class-plugin与hq-workspace.css/js、hq-login.css及本地字体。既有工作树改动保留，核心0.31.0/HQ0.2.1，无commit/push/正式部署，无CRK群操作。
+- 支付/外部邮件/搜索仍留空；AI/收藏/正式A-B仍暂缓，真实商品新图未收到/未上架。当前为第一轮全后台改版，视觉最终满意度待用户查看；不承诺以后零UI兼容问题。报告D:/Codex/Tasks/2026-10-29/admin-ui-redesign/outputs/后台UI改版验收_2026-10-29.txt及JSON，成功截图同目录各子文件夹，私有备份不在outputs。
+
+
+### 2026-10-29 · Codex：黑白UI、丝滑交互、自适应与Woo向导修复（ADMIN-UI-MONOCHROME-02，0.31.1）
+
+- 用户要求两后台采用黑白配色、动画丝滑，明确覆盖上轮蓝绿选择；随后指出浏览器布局“明显少一半”及点击进入“欢迎使用Woo”。本轮一并完成。后台用黑白灰，错误/删除保留必要语义辨识；真实商品照片/公开预览品牌不整体灰化，不改公开店铺已发布内容。
+- 先做352文件插件/文档源ZIP回退快照，CRC/SHA通过；私有路径D:/Codex/Tasks/2026-10-29/admin-monochrome/work/backup。上轮完整SQL/文件备份保留，未恢复演练。无新UI包/依赖。
+- 菜单、按钮、弹窗、下拉与面板使用短transform/opacity交互反馈，原操作即时执行、不动画布局宽高。开关改transform，商品分区及装修选中滚动尊重reduced-motion；系统减少动画开启会取消本轮在途动画，无新增轮询/接口。普通/减少动画真实回归通过。
+- 访客“半页”确认：空态前3固定小卡只占左侧；现3卡grid均分全宽。动态实时/归档/详情表原本DOM后生成且无响应式标签，新增tracking-workspace.css/js按实际父容器宽度两列/单列字段，每列/操作可见，保留原tr事件。HQ改容器宽度驱动记录卡/整行操作，修正“只无整页横滚不等于右侧列可见”的旧验收边界。
+- Woo欢迎根因：profile completed=false/skipped=false、needs_completion=true，进入无path wc-admin原生首页会转setup-wizard，activation transient当时false。Admin_Menus增加同源本地首页/向导/Profiler→已有概览的安全导航，保留customers/analytics等实际业务路由，过滤自动安装向导跳转；JS只捕获这些明确的原生首页/向导链接。不写profile已完成，不改Woo核心或真实业务配置。当前欢迎页刷新会回概览。
+- 实测客户34页/导航检查、动效10、路由8、特殊页14、访客15全部通过；访客6宽600–1440每字段/操作可见，17行8列DOM文本/链接/标题哈希同基线，真实点击打开时间线；20装修模块及dirty不变、未保存发布。HQ原24+登录3+动效8+自适应41通过（8宽320–1920，全数据区/td/展开控件可见），最终JS0。首次快导航造成依赖初始化异常的原始诊断保留，完整加载重跑不再出现；前一轮126并未当作本轮重跑。3PHP/5JS语法及diff通过，未测实体手机/真实交易/生产压力。
+- 两临时QA账号/会话/cookie已清理，3个临时原生空草稿精确删除。15项业务option及全部原商品/模板/装修/385条_pc_元数据与本轮前哈希一致，订单0，用户草稿保留；未重新填测试数据。核心0.31.1/HQ0.2.1，原未提交改动保留，无commit/push/正式部署、无CRK或群操作。
+- 文件：core workspace/login/overview/product/editor资产及design-editor.js视觉/滚动；新增tracking-workspace.css/js；Workspace enqueue、Admin_Menus路由保护、核心版本；HQ workspace/login三资产。报告D:/Codex/Tasks/2026-10-29/admin-monochrome/outputs/黑白UI与自适应修复_2026-10-29.txt及JSON，截图同目录tracking/hq/special/workspace。支付/邮件/搜索仍空，AI/收藏/正式A-B暂缓，用户新品图未收到。
+
+
+### 2026-10-29 · Codex：当前剩余功能只读复核（REMAINING-FUNCTION-AUDIT-04）
+
+- 用户问还缺什么功能，本轮只读审计，不是新增功能实施授权。客户后台原批准清单未确认新的核心遗漏；原生Woo后台退款/CSV、履约单号追踪、运费方案、评价、商品/批次/报告、促销装修和报表已有，不能因数据空就误报未做。未重跑全流程写库验收或重新重扫YY。
+- 确认管理后台后期未开发：跨店订单明细/统一处理，主商品/报告同步，通用批量配置和装修发布，统一插件/主题升级/回滚调度，自动创建/部署新店。当前已有统计汇总、自动接入/签名、逐店config/服务器IP分配重发、账号/一键登录及监控告警；开店区是配置说明，平台升级工具打开单店WP页，不等于自动部署/批量升级。
+- HQ内定时备份/恢复点/恢复流程未实现；此前私有ZIP/SQL备份已完成，不能重报无备份，恢复演练尚无完成证据。未检查外部主机控制台，不断言外部绝无备份。
+- 客户后台新增可选候选：买家售后申请（申请/凭证/审核/进度）及物流购单/面单/状态API。现有商家退款/填单号/承运商官网链接可用，这两项不是已承诺却未交的核心模块。
+- **正式上新注意**：core/includes/cli/class-import-command.php约330–340的自定义quote XLSX仍硬编码演示描述与PRODUCT_IS_DEMO=1；若复用该入口须先增加正式模式，不能直接拿它上真实新品。普通手工录入/Woo原生CSV已有，不是缺整个导入模块。不自动改旧CLI或填新商品。
+- 本轮运行时0.31.1/73块/17文档，公开商品/规格/订单0，仍local；home20已发布，header0/未发布、footer1草稿未发布、global0/未发布（旧footer0条目过时）。运费方案/启用原生配送0，客服关闭/0渠道，税费关闭；积分赚取/兑换/通知、营销发送与站点代码关闭，属于未配/主动关闭。条款隐私、真实商品/运费客服地址、装修定稿、正式域名HTTPS及真实环境链路仍待准备。
+- 支付/外部邮件/搜索按用户决定留空，AI/收藏/正式A-B暂缓，不作为催办。本轮仅报告/记忆/交接，无业务代码、设置、测试数据、API外发、commit/push/部署或CRK群操作。建议按上线准备与多站扩展分阶段，未把建议写成已完成。
+- 报告D:/Codex/Tasks/2026-10-29/remaining-function-audit/outputs/当前剩余功能复核_2026-10-29.txt及JSON；work/current-state.json、commerce.txt、hq.txt保留具体证据。
+
+### 2026-10-29 · Codex：管理后台三项运维实施中（HQ-OPS-01）
+
+- 用户明确订单先手工填写物流单号，批准前次清单最后三项：统一插件/主题升级回滚、自动创建部署新店、定时备份与恢复。本轮不扩展统一订单/商品报告同步/通用装修分发。三项外部服务仍留空。
+- 已做两站源码/私有文件和两库完整备份，ZIP CRC及SQL完成/SHA核对；备份在 D:/Codex/Tasks/2026-10-29/hq-operations/work/backup，尚不把恢复演练写为完成。
+- 共享接口提案并进入实施：独立peptide-ops稳定MU加载器，私有存储和HMAC/replay保护，CLI后台任务；HQ新增Operations/运维页面，统一排队/阶段进度/明确错误，升级预检+整站回退点+原目录文件回滚；新店由受控部署profile限定源码、目录、数据库和域名；备份文件+当前前缀数据库，恢复前校验归属/完整性并保留当前连接。
+- 生产服务器未提供，先实现并实际验收本机独立新站；远程agent/profile接入口预留且未配置不得假成功。不自动购买主机或改DNS/TLS。当前开发联接目录阻止自动覆盖，所有写入升级/恢复演练使用全新独立数据库及真实文件目录，原未提交代码/用户草稿保留。
+- 运维页延续用户黑白灰、现有本地字体和响应式，自写分区表单及任务列表；不另装UI包。任务执行、现场恢复、后续服务器配置的实际结果另记。未commit/push，无CRK绑定。
+
+
+### 2026-10-29 · Codex：管理后台三项运维完成（HQ-OPS-01-RESULT）
+
+- 本聊天用户明确订单物流先手填单号，批准的最后三项已实现：统一插件/主题升级与文件回滚、受控独立新店创建/自动接入、完整备份恢复和每日计划。旧只读审计中这三项“未开发”由本条更新；统一订单/商品报告同步/通用装修分发不属于本次。支付/外部邮件/搜索保持空，AI/收藏/正式A-B暂缓。
+- HQ0.3.0新增“站点运维”（pchq-operations）五页签；独立peptide-ops0.1.0由稳定MU加载，HMAC+HQ绑定/防重放、私有文件账本、独立CLI排队/进度/幂等，避开HQ单线程HTTP阻塞。黑白灰响应式，无新UI包。当前业务core0.31.1未改。
+- 升级先验ZIP/路径/版本/依赖和目标，保存整站备份及原组件文件，目录交换和双健康核验；正常失败自动复位。新站独立库/数据库用户、随机私有凭据、空商品订单、不复制旧客户数据，健康UUID、自动注册及HQ签名回连都验证。完整备份含本站前缀DB、文件/私有报告；恢复前完整回退点，SHA/CRC/本站身份与DB绑定校验，保留当前配置/网址/HQ/运维入口，故障回退及中断人工保护通过。下载包CLI预生成+短时一次票据，保留清理有明确结果/失败提示。
+- 当前店（HQ id2）真实手动完整备份和今日定时备份均完成，2份下载包已准备。每天北京时间03:00保留7份定时备份，手动/升级/恢复保护快照不自动删；本机private config opt-in隐藏Python每60秒CLI检查，真实tick code0。电脑需开机；重启后打开HQ拉起，正式环境需系统cron，不是机器服务/公网托管备份。
+- 实际证据：Archive79/Junction5/Runtime27/真实Release30；备份安全43/真实DB恢复24/调度33/导出20；建站预检23/站点进程10/本机scheduler8。独立Edge原始18项、实际表单8项、权限4项、清理后6项均通过且JS0；HMAC等8、导出传输4、保留错误/幂等5另通过。真实3个定时点清到2，保留4个手动/保护点；16PHP/3Python/1JS语法及diff通过。各套范围不同，不把stub称生产验证，不重计旧历史套。
+- 原15项业务option、314原商品/模板/装修记录及385装修元数据与操作前SQL全同；原HQ身份/地址/加密密钥全同且签名连接成功。公开商品/规格/订单0，用户草稿10950保留。2个隔离真实站的进程/库/DB用户/目录/私有资料/HQ记录均清理，QA账号/会话/cookie/profile/上传包清理；实时保留原店2个成功任务。两条任务目录测试junction清理被自动审批 blocked by policy 拒绝，停止尝试并留在work/releases/junction-cases，非站点目录。
+- 当前开发联接目录会阻止自动升级/恢复覆盖工作树，实体目录隔离站已验。文件回滚不逆第三方DB迁移，掉电/强杀后的致命插件可能需服务器入口恢复；正式服务器、域名DNS/HTTPS尚未配置和公网验收。无真实交易/生产压力/实体手机测试，不声称上线。未commit/push，无CRK或跨聊天消息，保留所有原未提交代码。
+- 文件：backend新增peptide-ops插件/工具/README，HQ Operations/Backup_Schedules/Operations_Scheduler/Operations_Page及CSS/JS，HQ boot/版本；两站runtime wp-config加私有路径/代理配置和稳定MU入口。正式服务器配置说明在peptide-ops/README.md，不把密钥写进记忆或Git。私有操作前备份D:/Codex/Tasks/2026-10-29/hq-operations/work/backup。
+- 验收报告D:/Codex/Tasks/2026-10-29/hq-operations/outputs/管理后台运维三项验收_2026-10-29.txt及JSON；原始报告在work/backups、releases、provision和browser相关JSON。下一步按用户提供新品图/资料上新或配置正式服务器；不自动恢复旧演示记录。
+
+### 2026-10-29 · Codex：Impeccable 后台重设计实施中（IMPECCABLE-ADMIN-01）
+
+用户要求安装impeccable并重新设计UI，本聊天沿用多肽记忆，范围为客户后台与管理后台，黑白/自适应/顺滑及业务保留约束持续有效。已使用官方skill-installer从pbakaus/impeccable的5e745ace7e151feb2a93d360d0281fe39448b857安装.agents/skills/impeccable到用户Codex skills，4.8.0；自动context引擎下载未完成及checksum失败，已告知直接读已有项目资料继续，未安装自动hook或宣称引擎成功。已读SKILL/new-work/operate/craft-floor，并依据现有确认事实补PRODUCT.md。
+
+已完成backup-v2：店铺/HQ公开目录、两套私有资料（排除进程锁）4ZIP CRC/SHA及两库SQL完成核对；backup与hq-private.zip早期不完整文件不作为有效恢复点。路径D:/Codex/Tasks/2026-10-29/impeccable-admin-redesign/work/backup-v2。尚未改展示层或业务，不把计划写成完成。
+
+实施采用轻导航/黑主操作、紧凑商务工作台；直接整理owner CSS而非堆第三张皮肤，减少重复标题和卡片套卡。root共用框架/令牌，子任务各自独占特殊页与HQ/登录CSS；最终串联独立浏览器两轮批量验收、独立审查及指纹核对。无需新UI依赖，不改业务、公开装修、Woo路由保护及已有表格响应式；保留原未提交改动。方向合约在任务work/direction-contract.md，最终结果另记，无CRK绑定。
+
+
+### 2026-10-29 · Codex：Impeccable 后台重设计完成（IMPECCABLE-ADMIN-01-RESULT，core0.32.0/HQ0.3.1）
+
+- 用户要求安装impeccable再重新设计UI，已从官方pbakaus/impeccable的5e745ace7e151feb2a93d360d0281fe39448b857安装4.8.0到C:/Users/JingYue/.codex/skills/impeccable。原生context引擎下载未完成，受控停止后部分文件校验失败，按SKILL的fallback告知并直接读取项目资料。未安装hook，不宣称自动context/concept/detector/schema检查通过；本轮为文档指导、实际浏览器及独立审查。后续消息可用已安装技能。
+- 已重设计两后台展示层：220px浅色导航/黑色当前项与主操作、52px工作区头、14px正文/13px控件、紧凑表格/分区。客户概览指标摘要及业务优先、商品标题/详情/发布区、装修行式积木及属性、访客页面和两登录统一；HQ工作台/运维也同步。直接整理9份owner CSS，2份JS只改反馈时长及扩展原导航保护，无新UI包；用户黑白配色与减少动画、自适应要求延续，公开店铺发布装修未改。
+- 先备份：有效work/backup-v2共4ZIP+2SQL，CRC/SHA及完成标记通过，私有进程锁排除。早期work/backup及backup-v2/hq-private.zip不完整尝试不作为恢复点。未对本轮手工归档重复恢复演练，不能套用前轮ops格式恢复点。
+- 实测两轮各98页面/尺寸检查，JS0；独立审查3项问题后修复，手机header回归又做6项定向检查，header y46–98、概览首内容114/商品首字段263且滚动不遮挡。同一新上下文reviewer最终ship，范围仅原3视觉问题及header回归。原生交互最终20、原生导览关闭另1、装修13均通过；20积木及dirty不变、不保存发布。初始路由8，后续补晚期wp_redirect/History后服务端9/History4通过，customers/analytics不受影响。3PHP/2JS语法、9CSS平衡及diff通过。
+- 无外部拦截交互复现Woo晚期/History跳向导，已在原保护上扩展，仅旧Home/Setup/Profiler导航，不写profile已完成。另“规格页点不了”实为原生产品导览pointer-events锁，真实点“知道了”后可操作，未用CSS绕过；媒体隐藏DOM的测试断言已纠正。这些限制和早期证据保留，不把中间失败改写为从未出现。
+- 清前SQL核对15业务option、314原商品/模板/装修记录及385装修元数据全同，用户草稿10950保留、订单/公开商品0。精确清理3临时账号、11个本人空草稿、会话/cookie；未恢复演示数据。原未提交代码保留，无commit/push、无CRK。
+- 新增backend根PRODUCT.md、DESIGN.md、.impeccable/design.json；本地文档结构/引用核对通过，官方引擎/schema/panel-render未运行。业务core0.32.0/HQ0.3.1，ops仍0.1.0。当前本机运行，不称正式上线/生产压力/实体手机验收；支付/邮件/搜索空及其他暂缓决定不变。
+- 报告D:/Codex/Tasks/2026-10-29/impeccable-admin-redesign/outputs/Impeccable后台重设计验收_2026-10-29.txt/JSON；最终审查截图round1（最后修正已覆盖）、初版before-review-fixes、全量第二轮round2，原始功能/指纹/审查在work。原本运维每日03:00 Asia/Shanghai保留7份计划未改。后续按用户反馈微调或收到新品资料上架，不自动接外部服务。
+
+### 2026-10-29 · Codex：后台密度偏好明确确认
+
+用户回复页面密度选项，明确选择“紧凑高效：一屏看到更多商品、订单和设置（推荐）”。此前Impeccable重设计按该推荐方向实施，现在由用户明确确认；后续两套后台继续采用紧凑布局，同时保留黑白配色、文字可读、完整功能、可达操作和自适应。本次确认范围为页面密度。已更新PRODUCT.md、DESIGN.md及任务方向合约；本轮仅记录确认，未再改UI源码或业务数据。
+
+
+### 2026-10-29 · Codex：侧边栏点击/展开状态修复（ADMIN-MENU-STATE-01）
+
+修复两后台侧边栏点击/展开后的深色与蓝色状态：原 workspace 当前父项自身设为黑色，WordPress Modern 更具体的选择器又覆盖子菜单背景及焦点文字。改在所属 CSS 里覆盖完整导航路径，保留原生菜单开关、定位、键盘可达性和业务逻辑。
+
+菜单面板 #fafafa；展开父项 #eaeaea；当前子项 #e5e5e5；hover #f0f0f0；文字 #171717；键盘 focus-visible #737373 内侧轮廓。折叠浮层标题、收起按钮、移动菜单开关同步中性化，窄屏图标文字间距修正。主操作按钮仍为黑色。当前 core0.32.0/HQ0.3.1不变，资源已有filemtime缓存版本。
+
+实际 Edge 最终52/52定向断言通过，JS错误0：营销优惠码/满减/运费折扣和HQ店铺/运维真实菜单点击，1600/1280/850/390视口、hover、current、键盘焦点、折叠浮层、展开关闭、标题/按钮/移动开关颜色及窄屏文字间距。截图复核后修掉初版42项断言漏掉的原生蓝色浮层标题和收起按钮，扩为48项。新上下文审查又发现HQ手机首行被品牌栏遮挡及折叠浮层底色漂移；已修正HQ移动导航top46px（品牌底98、首行顶112）和浮层var(--vc-nav)。补两站垂直几何/命中检查及各自摘要，总52断言（含两条详细位置+对应摘要），复验通过。早期误用shop_coupon定位导致超时，改为真实pc-coupons菜单后完成；不把中间失败写成从未发生。
+
+新上下文独立审查仅针对侧边栏组件，结论见menu-finish-review.txt。未重跑全后台98项、未做实体手机/其他浏览器或生产压力验收。本机运行，不称正式上线。
+
+两站两轮共4个临时验证账号/会话/私有cookie文件已清理，没有新增草稿；选定业务设置、装修内容/元数据、商品与订单指纹前后相同。无需保存设置、发布装修或重建演示数据；本轮未改PHP/JS或公开店铺。未commit/push，无CRK绑定。
+
+修改：backend的peptide-core/assets/admin-workspace.css、peptide-hq/assets/hq-workspace.css；PRODUCT.md、DESIGN.md、.impeccable/design.json同步最新导航规范。原CSS备份在任务work/customer-before.css和hq-before.css；只读差异在outputs/menu-style.patch。
+
+报告及截图：D:/Codex/Tasks/2026-10-29/admin-menu-state-fix/outputs/menu-verification.json、store-1280-current.png、store-folded.png、store-390-open.png、hq-1280-current.png等。下一步仅按用户反馈微调或继续已授权项目工作；支付、邮件、搜索留空及其他暂缓决定不变。
+
+### 2026-10-29 · Codex：ADMIN-MENU-SWAP-01
+
+按用户要求在Admin_Menus::order_menu()对调完整“分析/顾客”菜单项。分析现在订单后，顾客现在营销活动后、访客数据前；slug/权限/子菜单不变。仅改peptide-core/includes/admin/class-admin-menus.php。PHP语法、已有菜单冒烟61项和diff通过，独立源代码审查无问题；Edge概览实际13项顺序与顾客2子项DOM链接核对。顾客展开态额外断言未适配Woo SPA，未宣称完整SPA交互验收。1临时账号/会话/cookie清理、选定业务指纹不变，无新草稿；未改CSS/业务、未提交/推送/部署。任务备份/截图/JSON在D:/Codex/Tasks/2026-10-29/admin-menu-order-swap/work，无CRK。
+
+### 2026-10-30 · Codex：STORE-BUILDER-REDESIGN-01 部分实施与新增接口提案（全量目标未完成）
+
+用户明确授权在现有两角色工作树内重做装修UI/设置/图标/实际渲染与后台关联；要求参考登录站404一次学一块、只删本人新增、不发布。沿用已选多肽项目记忆与D盘规则；没有CRK绑定，不使用旧默认ROOM自动汇报。既有未提交工作不重置、不清理、不擅自commit/push。
+
+已备份4 ZIP/两库SQL并校验CRC/SHA和完成标记，本轮手工归档未做恢复演练。详情D:/Codex/Tasks/2026-10-29/store-builder-redesign/work/backup；私有备份不入Git/outputs。当前73定义的完整参考学习和全量重做尚未完成。
+
+已接入的实施：原创73 SVG库、黑白紧凑编辑器与三列搜索库/窄窗切换/独立滚动/last-good iframe重试、真实活动阶梯与券卡/倒计时、优惠券复制、商品专辑tabs、基本块现有断链、4类真实评价/手动精选媒体/公开商家回复与全站评价列表。旧keys/defaults/条目ID/合法手机sparse内容和手填链接保留；singleRender手机共用base；源码展示变化须另看已发布外观，不以DB未改冒充外观不变。
+
+新增/扩展接口合同在此记录并拟同步CONTRACT（以后续完整验收为准）：
+
+- pc_layout_records：保留resource/term/paged/selected旧调用；新增selected_ids CSV正整数去重最多100、metadata_only原始字面1；只返回原权限/资源可用的元信息，缺失如实unavailable。review资源按SKU母商品、媒体/精确星级过滤后分页，授权CAP_EDIT与nonce不变；不返回客户邮箱/IP/内部来源与备注。
+- Reviews公开More兼容旧none/auto；新精选可选择真实全站评价页。Review_Index仅运行时处理/comments，plain permalink或既有同名资产采用?pc_review_index=1，不创建Page/option/flush rewrite，优先保留访问保护。12条签名keyset分页，purpose/scope/筛选绑定与时效校验，当前公开资格逐页重审；正常无评价是200空态，真实SQL故障503且可重试，不假0/假空。统计最多600对象+1条ID探测，完成才显示精确全scope总数/均分/5桶，超或错显示unknown；不把首屏当全站统计。
+- Review_Replies：既有后台权限+独立nonce表单创建/编辑/回收/恢复真实child comment；identity由服务端管理员确定，parent正整数与所属商品再次验证、冲突指纹/锁/幂等。公开DTO仅id/content/date/datetime；内部备注/来源不混入回复，无邮件外发、不抬高主评价计数。
+- 新通用站内链接选择器拟采用pc_layout_link_targets只读GET、独立nonce+CAP_EDIT、分真实公开资源20分页/resolve再验可见/无密码；选择只填既有href，保留label/target，不声称随资源改名动态追踪。type=url通过ui:site-link显式启用，视频资源URL不混用。无真实路由不编造活动详情链接，不暴露客户或无权限营销记录；取消/Esc不改值。当前Links已首版实施，独立及真实WP定向验收待完成，不称已交付。
+
+验证分范围：原站限定29项真实WP控件/保存/预览/响应式检查通过且本人身份/草稿/会话已精确清理，858posts/2555非锁meta与原baseline同SHA；20配置仅两个运行时间戳叶子漂移、规范化后同。Reviews另用独立空库/loopback真实WP+Woo正向测试，最新Index19组（14+定向5）、SQL故障6、同请求缓存恢复2通过；32核心/13作用域/媒体等旧批次另有各自报告，不简单加总称全部73已验。回复ID0/core alias与异常评分SQL/PHP排序等真实失败前后证据保留。报表与最终pin见work/reviews-runtime-positive-report.md、commerce-review-owner-handoff.md、index-replies-owner-handoff.md，不能把纯fixture当真站。
+
+隔离测试站work/reviews-positive-site/127.0.0.1:56139尚保留给Links及基本块后续定向验收，owner reviews_runtime_positive负责双标记和最终精确停进程/删本人独立库/私有凭据；原站不创建测试商品/评论。此状态不同于此前已清理的29项原站QA。
+
+当前分工：root独占参考Browser；reference_basic_study负责Links/共享控件/Blocks最小挂钩；builder_settings_audit已交出Commerce/Reviews/Records7源最终pin并只读做70参考→73本地映射；positive负责独立真WP测试实例。根合同/DESIGN后续同步只限本目标实际改变，保留既有规范历史。下一步继续逐块观察剩余基础/商品/运营、补真实差距并做PC手机回归、fresh UI review，最后清理QA/回核原数据/完成全量交接。支付/外部邮件/搜索仍空，AI/收藏/正式AB暂缓；无部署或提交。

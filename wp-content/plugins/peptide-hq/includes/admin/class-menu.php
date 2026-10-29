@@ -1,7 +1,7 @@
 <?php
 /**
  * 总后台的后台菜单和表单处理。菜单：总后台 → 概览、店铺、销售账号、告警。
- * 这个 WordPress 只用来当总后台：文章、媒体、页面、评论、外观、工具菜单去掉，仪表盘直接转到概览。
+ * 这个 WordPress 只用来当总后台：文章、媒体、页面、评论、外观、插件、工具、通用设置菜单去掉，仪表盘直接转到概览。
  * 所有页面和操作都只给管理员（manage_options）。
  *
  * @package PeptideHq
@@ -26,7 +26,9 @@ final class Menu {
 		add_action( 'admin_menu', array( self::class, 'menu' ) );
 		add_action( 'admin_menu', array( self::class, 'clean_menu' ), 999 );
 		add_action( 'admin_init', array( self::class, 'redirect_dashboard' ) );
-		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
+		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ), 1000 );
+		add_filter( 'admin_body_class', array( self::class, 'workspace_body_class' ) );
+		add_action( 'in_admin_header', array( self::class, 'workspace_header' ) );
 		foreach ( self::ACTIONS as $action ) {
 			add_action( 'admin_post_' . $action, array( self::class, 'handle' ) );
 		}
@@ -61,7 +63,7 @@ final class Menu {
 
 	/** 这个 WordPress 只当总后台用，去掉用不上的菜单（页面地址还在）。 */
 	public static function clean_menu(): void {
-		foreach ( array( 'index.php', 'edit.php', 'upload.php', 'edit.php?post_type=page', 'edit-comments.php', 'themes.php', 'tools.php' ) as $slug ) {
+		foreach ( array( 'index.php', 'edit.php', 'upload.php', 'edit.php?post_type=page', 'edit-comments.php', 'themes.php', 'plugins.php', 'tools.php', 'options-general.php' ) as $slug ) {
 			remove_menu_page( $slug );
 		}
 	}
@@ -75,11 +77,63 @@ final class Menu {
 	}
 
 	public static function enqueue( string $hook ): void {
-		if ( ! str_contains( $hook, 'pchq' ) ) {
+		if ( ! self::workspace_enabled() ) {
 			return;
 		}
-		$file = PEPTIDE_HQ_DIR . '/assets/hq-admin.css';
-		wp_enqueue_style( 'peptide-hq-admin', plugins_url( 'assets/hq-admin.css', PEPTIDE_HQ_FILE ), array(), PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $file ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		$dependencies = array();
+		if ( str_contains( $hook, 'pchq' ) ) {
+			$file = PEPTIDE_HQ_DIR . '/assets/hq-admin.css';
+			wp_enqueue_style( 'peptide-hq-admin', plugins_url( 'assets/hq-admin.css', PEPTIDE_HQ_FILE ), array(), PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $file ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+			$dependencies[] = 'peptide-hq-admin';
+		}
+		$file = PEPTIDE_HQ_DIR . '/assets/hq-workspace.css';
+		wp_enqueue_style( 'peptide-hq-workspace', plugins_url( 'assets/hq-workspace.css', PEPTIDE_HQ_FILE ), $dependencies, PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $file ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		$file = PEPTIDE_HQ_DIR . '/assets/hq-workspace.js';
+		wp_enqueue_script( 'peptide-hq-workspace', plugins_url( 'assets/hq-workspace.js', PEPTIDE_HQ_FILE ), array(), PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $file ), true ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+	}
+
+	/** Presentation hooks also used on the separate HQ login screen. */
+	public static function register_login_hooks(): void {
+		add_action( 'login_enqueue_scripts', array( self::class, 'login_assets' ) );
+		add_filter( 'login_headerurl', static fn(): string => admin_url() );
+		add_filter( 'login_headertext', static fn(): string => 'VialCove' );
+	}
+
+	public static function login_assets(): void {
+		if ( ! self::workspace_enabled() ) { return; }
+		$file = PEPTIDE_HQ_DIR . '/assets/hq-login.css';
+		wp_enqueue_style( 'peptide-hq-login', plugins_url( 'assets/hq-login.css', PEPTIDE_HQ_FILE ), array(), PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $file ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+	}
+
+	private static function workspace_enabled(): bool {
+		return ! ( defined( 'PEPTIDE_ADMIN_UI_DISABLED' ) && PEPTIDE_ADMIN_UI_DISABLED ) && ! wp_doing_ajax() && ! ( defined( 'IFRAME_REQUEST' ) && IFRAME_REQUEST );
+	}
+
+	public static function workspace_body_class( string $classes ): string {
+		return self::workspace_enabled() ? $classes . ' pchq-workspace' : $classes;
+	}
+
+	/** A read-only workspace frame; native WordPress forms and menu behavior remain intact. */
+	public static function workspace_header(): void {
+		if ( ! self::workspace_enabled() ) {
+			return;
+		}
+		global $title;
+		$zh = str_starts_with( determine_locale(), 'zh' );
+		$user = wp_get_current_user();
+		?>
+		<a class="pchq-workspace-brand" href="<?php echo esc_url( admin_url( 'admin.php?page=' . Dashboard_Page::SLUG ) ); ?>">
+			<span class="pchq-workspace-mark" aria-hidden="true">V</span>
+			<span><strong>VialCove</strong><small><?php echo esc_html( $zh ? '管理后台' : 'Management' ); ?></small></span>
+		</a>
+		<header class="pchq-workspace-head">
+			<nav class="pchq-workspace-location" aria-label="<?php echo esc_attr( $zh ? '当前位置' : 'Current location' ); ?>">
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=' . Dashboard_Page::SLUG ) ); ?>"><?php echo esc_html( $zh ? '管理后台' : 'Management' ); ?></a>
+				<span aria-hidden="true">/</span><span aria-current="page"><?php echo esc_html( wp_strip_all_tags( (string) $title ) ); ?></span>
+			</nav>
+			<a class="pchq-workspace-account" href="<?php echo esc_url( admin_url( 'profile.php' ) ); ?>"><span class="pchq-workspace-account__mark" aria-hidden="true"><?php echo esc_html( $zh ? '我' : 'Me' ); ?></span><span><?php echo esc_html( $user->display_name ); ?></span></a>
+		</header>
+		<?php
 	}
 
 	// ---------- 提示 ----------

@@ -200,7 +200,7 @@ final class Layout {
 	 */
 	public static function published_modules( string $doc = 'home', ?int $template_id = null ): array {
 		$template_id = $template_id ?? Templates::current_id();
-		$doc_id      = $template_id ? Templates::document_id( $template_id, $doc ) : 0;
+		$doc_id      = $template_id ? Templates::document_id( $template_id, $doc, false ) : 0;
 		if ( ! $doc_id || ! self::is_published( $doc_id ) ) {
 			return array();
 		}
@@ -211,7 +211,12 @@ final class Layout {
 	 * 本次请求是否由插件输出这个页面：员工预览模板时，或当前模板已发布且有模块时。
 	 */
 	public static function takes_over( string $doc = 'home' ): bool {
-		return Templates::previewing_id() || (bool) self::published_modules( $doc );
+		if ( Templates::previewing_id() ) {
+			$id = Templates::document_id( Templates::previewing_id(), $doc, false );
+			$draft = self::preview_draft( Templates::previewing_id(), $doc );
+			return $draft ? (bool) $draft['modules'] : ( $id > 0 && '' !== trim( (string) get_post_field( 'post_content', $id ) ) );
+		}
+		return (bool) self::published_modules( $doc );
 	}
 
 	/**
@@ -222,7 +227,7 @@ final class Layout {
 			return self::render_preview( $doc );
 		}
 		$template_id = Templates::current_id();
-		return self::render_modules( self::published_modules( $doc, $template_id ), 'public', Templates::document_id( $template_id, $doc ) );
+		return self::render_modules( self::published_modules( $doc, $template_id ), 'public', Templates::document_id( $template_id, $doc, false ) );
 	}
 
 	// ---------- 预览草稿 ----------
@@ -257,7 +262,7 @@ final class Layout {
 			return null;
 		}
 		$data = get_transient( 'pc_layout_preview_' . $token );
-		if ( ! is_array( $data ) || (int) $data['user'] !== get_current_user_id() || (int) $data['document'] !== Templates::document_id( $template_id, $doc ) ) {
+		if ( ! is_array( $data ) || (int) $data['user'] !== get_current_user_id() || (int) $data['document'] !== Templates::document_id( $template_id, $doc, false ) ) {
 			return null;
 		}
 		return array(
@@ -278,6 +283,9 @@ final class Layout {
 	 * 主题可以提供 peptide-layout.php 自己接管这个页面。
 	 */
 	public static function preview_template( string $template ): string {
+		if ( class_exists( '\PeptideCore\Design_Pages' ) ) {
+			return \PeptideCore\Design_Pages::template_page( $template );
+		}
 		if ( ! ( is_front_page() || is_home() ) || ! self::takes_over( 'home' ) ) {
 			return $template;
 		}
@@ -290,7 +298,7 @@ final class Layout {
 	 */
 	public static function render_preview( string $doc = 'home' ): string {
 		$template_id = Templates::previewing_id();
-		$doc_id      = Templates::document_id( $template_id, $doc );
+		$doc_id      = Templates::document_id( $template_id, $doc, false );
 		$draft       = self::preview_draft( $template_id, $doc );
 		$modules     = $draft ? $draft['modules'] : self::modules_from_content( (string) get_post_field( 'post_content', $doc_id ) );
 		if ( ! $modules ) {

@@ -143,7 +143,8 @@ final class Shipping_Tracking {
 				'provider_name'   => '' !== $name ? $name : null,
 				'tracking_number' => '' !== $number ? $number : null,
 				'tracking_url'    => '' !== $url ? esc_url_raw( $url ) : null,
-				'shipped_at'      => $date ? gmdate( 'c', (int) strtotime( get_gmt_from_date( $date ) . ' UTC' ) ) : null,
+				// WooCommerce returns date_fulfilled as UTC; do not convert it from the store timezone again.
+				'shipped_at'      => $date ? gmdate( 'c', (int) strtotime( $date . ' UTC' ) ) : null,
 				'items'           => $items,
 			);
 		}

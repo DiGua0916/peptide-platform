@@ -41,15 +41,8 @@ final class Launch_Check {
 		$add( 'Real payment method', $real ? 'ok' : 'fail', $real ? implode( ', ', $real ) : 'No real payment method is enabled.' );
 
 		// 配送。
-		$zones = \WC_Shipping_Zones::get_zones();
-		$test  = array_filter( $zones, static fn( $z ) => str_contains( (string) $z['zone_name'], '(test shipping)' ) );
-		if ( $test ) {
-			$add( 'Shipping', 'fail', 'Only the $0 test shipping zone is configured. Replace it with real rates.' );
-		} elseif ( ! $zones ) {
-			$add( 'Shipping', 'fail', 'No shipping zone is configured.' );
-		} else {
-			$add( 'Shipping', 'ok', count( $zones ) . ' shipping zone(s).' );
-		}
+		$shipping = self::shipping_status();
+		$add( 'Shipping', $shipping['level'], $shipping['detail'] );
 
 		// 物流单号追踪（SHIP-TRACK-01）：使用 WooCommerce 原生订单履约。
 		if ( ! Shipping_Tracking::native_enabled() ) {
@@ -146,6 +139,40 @@ final class Launch_Check {
 		$add( 'Selling countries', 'info', (string) $countries );
 
 		return $out;
+	}
+
+	/** Inspect the shipping source WooCommerce actually uses; this does not prove a carrier quote or delivery policy. */
+	public static function shipping_status(): array {
+		$is_test = static fn( $label ) => (bool) preg_match( '/\b(?:test|demo)\b|测试|演示/i', (string) $label );
+		if ( Shipping\Plans::active() ) {
+			$allowed = array_keys( WC()->countries->get_shipping_countries() );
+			$usable = 0; $test = 0; $positive = 0; $general = 0; $invalid = 0;
+			foreach ( Shipping\Plans::all() as $plan ) {
+				if ( ! array_intersect( $allowed, array_column( $plan['regions'], 'country' ) ) ) { continue; }
+				if ( 'custom' === $plan['type'] && ! array_filter( $plan['products'], static fn( $id ) => (bool) wc_get_product( $id ) ) ) { continue; }
+				foreach ( $plan['rates'] as $rate ) {
+					if ( ! $rate['enabled'] ) { continue; }
+					if ( ! is_finite( $rate['fee'] ) || ! is_finite( $rate['min'] ) || ( null !== $rate['max'] && ( ! is_finite( $rate['max'] ) || $rate['max'] <= $rate['min'] ) ) ) { ++$invalid; continue; }
+					++$usable;
+					if ( $is_test( $plan['name'] . ' ' . $rate['name'] ) ) { ++$test; }
+					if ( $rate['fee'] > 0 ) { ++$positive; }
+					if ( 'general' === $plan['type'] ) { ++$general; }
+				}
+			}
+			if ( ! $usable ) { return array( 'level' => 'fail', 'detail' => 'Shipping plans override native zones, but no enabled valid rate covers the allowed shipping countries.' ); }
+			if ( $test === $usable ) { return array( 'level' => 'fail', 'detail' => 'Shipping plans override native zones, but every usable rate is labelled as test/demo.' ); }
+			$warn = $test || $invalid || ! $positive || ! $general;
+			return array( 'level' => $warn ? 'warn' : 'ok', 'detail' => sprintf( 'Shipping plans are active: %d usable rate(s), %d paid, %d test/demo, %d invalid. %s', $usable, $positive, $test, $invalid, $warn ? 'Confirm free rates, test labels, general coverage and checkout totals before launch.' : 'Check actual addresses, thresholds and checkout totals before launch.' ) );
+		}
+		$zones = \WC_Shipping_Zones::get_zones(); $zones[] = array( 'zone_id' => 0, 'zone_name' => '' );
+		$enabled = 0; $test = 0;
+		foreach ( $zones as $zone ) {
+			$object = new \WC_Shipping_Zone( $zone['zone_id'] );
+			foreach ( $object->get_shipping_methods( true ) as $method ) { ++$enabled; if ( $is_test( $zone['zone_name'] . ' ' . $method->get_title() ) ) { ++$test; } }
+		}
+		if ( ! $enabled ) { return array( 'level' => 'fail', 'detail' => 'No enabled shipping rate is configured in plans or native zones.' ); }
+		if ( $enabled === $test ) { return array( 'level' => 'fail', 'detail' => 'Only test/demo shipping methods are enabled. Configure the real delivery policy and rates.' ); }
+		return array( 'level' => $test ? 'warn' : 'ok', 'detail' => sprintf( '%d enabled native shipping method(s), %d labelled test/demo. Validate actual checkout addresses and totals.', $enabled, $test ) );
 	}
 
 	/**

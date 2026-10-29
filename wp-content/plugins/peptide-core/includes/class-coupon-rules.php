@@ -150,6 +150,10 @@ final class Coupon_Rules {
 			return $valid; // 后台给订单加优惠码：只检查时间。
 		}
 		$id                = $coupon->get_id();
+		$rule = get_post_meta( $id, Customer_Segments::COUPON_META, true );
+		if ( is_array( $rule ) && ! Customer_Segments::matches( $rule, Customer_Segments::current_email() ) ) {
+			throw new \Exception( __( 'This code is not available for your customer group.', 'peptide-core' ) );
+		}
 		[ $qty, $subtotal ] = self::eligible( $coupon, $cart );
 		$min_qty           = (int) get_post_meta( $id, self::MIN_QTY_META, true );
 		if ( $min_qty > 0 && $qty < $min_qty ) {

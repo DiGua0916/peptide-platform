@@ -1,9 +1,9 @@
 /**
- * 装修编辑器（EDIT-BLOCKS-04），界面参照 YY（Shopname）的装修页。
+ * VialCove 装修工作台：真实预览、积木导航与属性编辑。
  *
  * 数据：window.pcDesignEditor（文档、接口路径、积木库、文案）；window.pcModules / window.pcModuleUI（字段定义与控件）。
  * 保存：POST /peptide/v1/layouts/{id}，带上打开时的修改时间，别人改过时返回 409。
- * 预览：每次改动后约 0.6 秒，把当前内容发到 /preview 生成短期预览地址，刷新左侧 iframe（保留滚动位置）。
+ * 预览：修改后约 0.5 秒生成短期预览地址，加载成功后替换画布并保留滚动位置。
  */
 ( function ( wp, cfg, data, ui ) {
 	'use strict';
@@ -78,14 +78,22 @@
 	}
 
 	function Icon( props ) {
-		return el( 'span', { className: 'dashicons dashicons-' + props.name + ( props.className ? ' ' + props.className : '' ), 'aria-hidden': 'true' } );
+		var icons = window.PeptideDesignIcons;
+		var options = { size: props.size || 18, className: 'pc-de-icon' + ( props.className ? ' ' + props.className : '' ), createElement: el };
+		if ( icons ) {
+			return props.block ? icons.render( props.block, options ) : icons.renderAction( props.name, options );
+		}
+		// Keep controls usable if an asset was interrupted; never depend on an icon font.
+		return el( 'svg', { viewBox: '0 0 24 24', width: options.size, height: options.size, className: options.className, fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, 'aria-hidden': true, focusable: false }, el( 'rect', { x: 4, y: 4, width: 16, height: 16, rx: 2 } ) );
 	}
 
 	function App() {
 		var modulesState = useState( cfg.document.modules || [] );
 		var modules = modulesState[ 0 ];
 		var setModulesRaw = modulesState[ 1 ];
-		var selectedState = useState( null );
+		var latestModulesRef = useRef( modules );
+		latestModulesRef.current = modules;
+		var selectedState = useState( /^(header|footer|global)$/.test( cfg.document.document ) && cfg.document.modules.length ? cfg.document.modules[ 0 ].attrs.moduleId : null );
 		var selected = selectedState[ 0 ];
 		var setSelected = selectedState[ 1 ];
 		var tabState = useState( 'modules' );
@@ -102,16 +110,36 @@
 		var notice = noticeState[ 0 ];
 		var setNotice = noticeState[ 1 ];
 		var modifiedRef = useRef( cfg.document.modified );
+		var revisionRef = useRef( cfg.document.revision );
 		var statusState = useState( cfg.document.status || { published: false, changed: true } );
 		var status = statusState[ 0 ];
 		var menuState = useState( false );
 		var menuOpen = menuState[ 0 ];
 		var busyState = useState( false );
 		var busy = busyState[ 0 ];
-		var previewState = useState( cfg.document.previewBase );
-		var previewUrl = previewState[ 0 ];
-		var loadingState = useState( true );
-		var loading = loadingState[ 0 ];
+		// Two native-size frames keep the last successful preview visible while the next loads.
+		var frameEntriesState = useState( [ { url: cfg.document.previewBase, request: 0 }, null ] );
+		var frameEntries = frameEntriesState[ 0 ];
+		var activeFrameState = useState( 0 );
+		var activeFrame = activeFrameState[ 0 ];
+		var activeFrameRef = useRef( 0 );
+		var activeFrameRequestRef = useRef( 0 );
+		var framesRef = useRef( [ null, null ] );
+		var previewRequestRef = useRef( 0 );
+		var pendingFrameRef = useRef( null );
+		var previewTimeoutRef = useRef( null );
+		var initialFrameReadyRef = useRef( false );
+		var previewPhaseState = useState( 'loading' );
+		var previewPhase = previewPhaseState[ 0 ];
+		var loading = previewPhase === 'loading' || previewPhase === 'requesting';
+		var previewErrorState = useState( null );
+		var previewError = previewErrorState[ 0 ];
+		var previewRetryState = useState( 0 );
+		var paneState = useState( 'preview' );
+		var workspaceRef = useRef( null );
+		var narrowState = useState( false );
+		var libraryQueryState = useState( '' );
+		var libraryQuery = libraryQueryState[ 0 ];
 		var dragState = useState( { from: null, over: null } );
 		var drag = dragState[ 0 ];
 		var setDrag = dragState[ 1 ];
@@ -128,6 +156,17 @@
 		var commitDragRef = useRef( function () {} );
 		var firstRef = useRef( true );
 		var historyTick = useState( 0 );
+
+		function openDocument( key ) {
+			var url = cfg.documentLinks && cfg.documentLinks[ key ];
+			if ( ! url ) { return; }
+			if ( cfg.document.document === key ) {
+				tabState[ 1 ]( 'modules' );
+				if ( modules.length ) { setSelected( modules[ 0 ].attrs.moduleId ); }
+				return;
+			}
+			window.location.assign( url );
+		}
 
 		function setModules( next, coalesce ) {
 			var h = historyRef.current;
@@ -188,15 +227,20 @@
 		}
 
 		function insert( block ) {
+			if ( data.modules[ block ] && data.modules[ block ].multiple === false && modules.some( function ( m ) { return m.block === block; } ) ) {
+				setNotice( { type: 'warning', text: S.singleton } ); return;
+			}
 			var m = newModule( block );
 			var at = indexOf( selected );
 			var list = modules.slice();
 			list.splice( at === -1 ? list.length : at + 1, 0, m );
 			setModules( list );
 			setSelected( m.attrs.moduleId );
+			paneState[ 1 ]( 'settings' );
 		}
 
 		function duplicate( index ) {
+			if ( defOf( modules[ index ] ) && defOf( modules[ index ] ).multiple === false ) { setNotice( { type: 'warning', text: S.singleton } ); return; }
 			var c = copyModule( modules[ index ] );
 			var list = modules.slice();
 			list.splice( index + 1, 0, c );
@@ -224,7 +268,7 @@
 		}
 
 		function move( from, to ) {
-			if ( from === null || to === null || from === to ) {
+			if ( from === null || to === null || from === to || from < 0 || to < 0 || from >= modules.length || to >= modules.length ) {
 				return;
 			}
 			var list = modules.slice();
@@ -247,11 +291,14 @@
 				return Promise.reject( { message: S.saving } );
 			}
 			savingState[ 1 ]( true );
-			return apiFetch( { path: cfg.restPath, method: 'POST', data: { modules: modules, modified: modifiedRef.current } } )
+			var savedModules = modules;
+			return apiFetch( { path: cfg.restPath, method: 'POST', data: { modules: modules, modified: modifiedRef.current, revision: revisionRef.current } } )
 				.then( function ( doc ) {
 					modifiedRef.current = doc.modified;
+					revisionRef.current = doc.revision;
 					statusState[ 1 ]( doc.status );
-					dirtyState[ 1 ]( false );
+					// Typing while a save is pending must not mark those newer edits as saved.
+					dirtyState[ 1 ]( latestModulesRef.current !== savedModules );
 					if ( ! quiet ) {
 						setNotice( { type: 'success', text: S.saved } );
 					}
@@ -280,11 +327,12 @@
 			busyState[ 1 ]( true );
 			( dirty ? save( true ) : Promise.resolve() )
 				.then( function () {
-					return apiFetch( { path: cfg.restPath + '/publish', method: 'POST', data: { modified: modifiedRef.current } } );
+					return apiFetch( { path: cfg.restPath + '/publish', method: 'POST', data: { modified: modifiedRef.current, revision: revisionRef.current } } );
 				} )
 				.then( function ( doc ) {
 					statusState[ 1 ]( doc.status );
 					setNotice( { type: 'success', text: S.published } );
+					revisionRef.current = doc.revision;
 				} )
 				.catch( showError )
 				.finally( function () {
@@ -293,16 +341,17 @@
 		}
 
 		function unpublish() {
-			menuState[ 1 ]( false );
 			// eslint-disable-next-line no-alert
 			if ( ! window.confirm( S.unpublishConfirm ) ) {
 				return;
 			}
+			menuState[ 1 ]( false );
 			busyState[ 1 ]( true );
-			apiFetch( { path: cfg.restPath + '/unpublish', method: 'POST' } )
+			apiFetch( { path: cfg.restPath + '/unpublish', method: 'POST', data: { revision: revisionRef.current } } )
 				.then( function ( doc ) {
 					statusState[ 1 ]( doc.status );
 					setNotice( { type: 'success', text: S.unpublished } );
+					revisionRef.current = doc.revision;
 				} )
 				.catch( showError )
 				.finally( function () {
@@ -311,15 +360,16 @@
 		}
 
 		function discard() {
-			menuState[ 1 ]( false );
 			// eslint-disable-next-line no-alert
 			if ( ! window.confirm( S.discardConfirm ) ) {
 				return;
 			}
+			menuState[ 1 ]( false );
 			busyState[ 1 ]( true );
-			apiFetch( { path: cfg.restPath + '/discard', method: 'POST' } )
+			apiFetch( { path: cfg.restPath + '/discard', method: 'POST', data: { revision: revisionRef.current } } )
 				.then( function ( doc ) {
 					modifiedRef.current = doc.modified;
+					revisionRef.current = doc.revision;
 					statusState[ 1 ]( doc.status );
 					historyRef.current = { past: [], future: [], last: 0 };
 					setModulesRaw( doc.modules );
@@ -333,33 +383,111 @@
 				} );
 		}
 
-		// 预览：改动后稍等一下再刷新。
-		useEffect(
-			function () {
-				if ( firstRef.current ) {
-					firstRef.current = false;
-					return undefined;
+		function failPreview( message ) {
+			clearTimeout( previewTimeoutRef.current );
+			pendingFrameRef.current = null;
+			previewPhaseState[ 1 ]( 'error' );
+			previewErrorState[ 1 ]( message || S.previewFailed || '预览暂时无法更新，已保留上次成功预览。' );
+		}
+
+		// Every edit invalidates the previous request, including its staged iframe.
+		useEffect( function () {
+			if ( firstRef.current ) {
+				firstRef.current = false;
+				return undefined;
+			}
+			var request = ++previewRequestRef.current;
+			var controller = window.AbortController ? new window.AbortController() : null;
+			var disposed = false;
+			var expired = false;
+			pendingFrameRef.current = null;
+			previewErrorState[ 1 ]( null );
+			previewPhaseState[ 1 ]( 'pending' );
+			var timer = setTimeout( function () {
+				previewPhaseState[ 1 ]( 'requesting' );
+				previewTimeoutRef.current = setTimeout( function () {
+					if ( disposed || request !== previewRequestRef.current ) { return; }
+					expired = true;
+					if ( controller ) { controller.abort(); }
+					failPreview( S.previewTimeout || '预览加载超时，已保留上次成功预览。请重试。' );
+				}, 30000 );
+				var options = { path: cfg.restPath + '/preview', method: 'POST', data: { modules: modules } };
+				if ( controller ) { options.signal = controller.signal; }
+				apiFetch( options ).then( function ( result ) {
+					if ( disposed || expired || request !== previewRequestRef.current ) { return; }
+					if ( ! result || ! result.url ) { throw new Error( S.previewInvalid || '预览地址未返回，请重试。' ); }
+					var slot = 1 - activeFrameRef.current;
+					var entry = { url: result.url, request: request };
+					pendingFrameRef.current = { slot: slot, entry: entry };
+					frameEntriesState[ 1 ]( function ( entries ) {
+						var next = entries.slice();
+						next[ slot ] = entry;
+						return next;
+					} );
+				} ).catch( function ( error ) {
+					if ( disposed || expired || request !== previewRequestRef.current || ( error && error.name === 'AbortError' ) ) { return; }
+					failPreview( ( S.previewFailed || '预览暂时无法更新，已保留上次成功预览。' ) + ( error && error.message ? ' ' + error.message : '' ) );
+				} );
+			}, previewRetryState[ 0 ] ? 120 : 500 );
+			return function () {
+				disposed = true;
+				clearTimeout( timer );
+				clearTimeout( previewTimeoutRef.current );
+				if ( controller ) { controller.abort(); }
+			};
+		}, [ modules, previewRetryState[ 0 ] ] );
+
+		useEffect( function () {
+			var timer = setTimeout( function () {
+				if ( previewRequestRef.current === 0 && ! initialFrameReadyRef.current ) {
+					failPreview( S.previewTimeout || '预览加载超时，请重试。' );
 				}
-				var timer = setTimeout( function () {
-					apiFetch( { path: cfg.restPath + '/preview', method: 'POST', data: { modules: modules } } )
-						.then( function ( r ) {
-							var frame = frameRef.current;
-							try {
-								scrollRef.current = frame && frame.contentWindow ? frame.contentWindow.scrollY : 0;
-							} catch ( e ) {
-								scrollRef.current = 0;
-							}
-							loadingState[ 1 ]( true );
-							previewState[ 1 ]( r.url );
-						} )
-						.catch( function () {} );
-				}, 600 );
-				return function () {
-					clearTimeout( timer );
-				};
-			},
-			[ modules ]
-		);
+			}, 30000 );
+			return function () { clearTimeout( timer ); };
+		}, [] );
+
+		// Resize the composition, not the iframe contents. No transform scaling or clipping.
+		useEffect( function () {
+			var workspace = workspaceRef.current;
+			function measure() { narrowState[ 1 ]( !! workspace && workspace.getBoundingClientRect().width < 1060 ); }
+			measure();
+			if ( window.ResizeObserver && workspace ) {
+				var observer = new window.ResizeObserver( measure );
+				observer.observe( workspace );
+				return function () { observer.disconnect(); };
+			}
+			window.addEventListener( 'resize', measure );
+			return function () { window.removeEventListener( 'resize', measure ); };
+		}, [] );
+
+		useEffect( function () {
+			if ( ! menuOpen ) { return undefined; }
+			var publishRoot = document.querySelector( '.pc-de-publish' );
+			if ( ! publishRoot ) { return undefined; }
+			var toggleButton = publishRoot.querySelector( '[aria-haspopup="menu"]' );
+			var buttons = Array.prototype.filter.call( publishRoot.querySelectorAll( '[role="menuitem"]' ), function ( button ) { return ! button.disabled; } );
+			var timer = setTimeout( function () { if ( buttons.length ) { buttons[ 0 ].focus(); } }, 0 );
+			function onOutside( event ) { if ( ! publishRoot.contains( event.target ) ) { menuState[ 1 ]( false ); } }
+			function onMenuKey( event ) {
+				if ( event.key === 'Escape' ) {
+					event.preventDefault();
+					menuState[ 1 ]( false );
+					if ( toggleButton ) { toggleButton.focus(); }
+				} else if ( buttons.length && /^(ArrowDown|ArrowUp|Home|End)$/.test( event.key ) ) {
+					event.preventDefault();
+					var at = buttons.indexOf( document.activeElement );
+					var next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : ( at + ( event.key === 'ArrowDown' ? 1 : -1 ) + buttons.length ) % buttons.length;
+					buttons[ next ].focus();
+				}
+			}
+			document.addEventListener( 'pointerdown', onOutside );
+			document.addEventListener( 'keydown', onMenuKey );
+			return function () {
+				clearTimeout( timer );
+				document.removeEventListener( 'pointerdown', onOutside );
+				document.removeEventListener( 'keydown', onMenuKey );
+			};
+		}, [ menuOpen ] );
 
 		function frameDoc() {
 			try {
@@ -508,13 +636,12 @@
 			box.firstChild.textContent = label;
 			placeOverlay();
 			if ( target && scroll ) {
-				target.scrollIntoView( { block: 'center', behavior: 'smooth' } );
+				target.scrollIntoView( { block: 'center', behavior: window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches ? 'auto' : 'smooth' } );
 			}
 		}
 
 		// 预览加载完成：恢复滚动、绑定点击选中、画高亮框。
 		function onFrameLoad() {
-			loadingState[ 1 ]( false );
 			var frame = frameRef.current;
 			var doc = frameDoc();
 			if ( ! doc ) {
@@ -522,12 +649,12 @@
 			}
 			var style = doc.createElement( 'style' );
 			style.textContent =
-				'.vc-m{cursor:pointer}.vc-m:hover{outline:1px dashed rgba(238,125,51,.7);outline-offset:-1px}' +
-				'.site-header:hover,.site-footer:hover{outline:1px dashed rgba(238,125,51,.7);outline-offset:-1px}' +
-				'html{scrollbar-width:none}html::-webkit-scrollbar{width:0;height:0;display:none}' +
+				'.vc-m{cursor:pointer}.vc-m:hover{outline:1px dashed rgba(24,24,24,.55);outline-offset:-1px}' +
+				'.site-header:hover,.site-footer:hover{outline:1px dashed rgba(24,24,24,.55);outline-offset:-1px}' +
+				'html{scrollbar-width:thin;scrollbar-color:#b5b5b5 #f4f4f4}' +
 				'[data-pc-drag]{cursor:move}' +
-				'#pc-de-highlight{position:absolute;z-index:2147483646;pointer-events:none;border:2px solid #ee7d33;box-shadow:0 0 0 9999px rgba(15,23,42,.06);border-radius:2px;display:none;transition:top .15s,left .15s,width .15s,height .15s}' +
-				'#pc-de-highlight>span{position:absolute;left:-2px;top:-24px;background:#ee7d33;color:#fff;font:600 12px/24px system-ui,sans-serif;padding:0 8px;border-radius:2px 2px 0 0;white-space:nowrap;max-width:60vw;overflow:hidden;text-overflow:ellipsis}';
+				'#pc-de-highlight{position:absolute;z-index:2147483646;pointer-events:none;border:1px solid #181818;border-radius:2px;display:none}' +
+				'#pc-de-highlight>span{position:absolute;left:-2px;top:-24px;background:#181818;color:#fff;font:600 12px/16px Manrope,system-ui,sans-serif;padding:4px 8px;border-radius:2px 2px 0 0;white-space:nowrap;max-width:60vw;overflow:hidden;text-overflow:ellipsis}';
 			doc.head.appendChild( style );
 			frame.contentWindow.scrollTo( 0, scrollRef.current );
 			frame.contentWindow.addEventListener( 'scroll', placeOverlay, { passive: true } );
@@ -597,6 +724,7 @@
 						pendingItemRef.current = item && m.contains( item ) ? item.getAttribute( 'data-module-item' ) : null;
 						tabState[ 1 ]( 'modules' );
 						setSelected( m.id.replace( /^vc-/, '' ) );
+						paneState[ 1 ]( 'settings' );
 						// 点同一个积木里不属于任何条目的地方：取消锁定条目，回到整个积木。
 						openItemState[ 1 ]( pendingItemRef.current );
 						return;
@@ -617,6 +745,50 @@
 				}
 			} );
 			highlight( false );
+		}
+
+		function acceptFrame( slot, entry ) {
+			var pending = pendingFrameRef.current;
+			var initial = slot === activeFrameRef.current && entry.request === 0 && activeFrameRequestRef.current === 0;
+			if ( ! initial && ( ! pending || pending.slot !== slot || pending.entry !== entry || entry.request !== previewRequestRef.current ) ) { return; }
+			var frame = framesRef.current[ slot ];
+			var doc;
+			try { doc = frame && frame.contentDocument; } catch ( error ) { doc = null; }
+			if ( ! doc || ! doc.body || ( doc.getElementById( 'loginform' ) && doc.body.classList && doc.body.classList.contains( 'login' ) ) || doc.querySelector( '.wp-die-message' ) ) {
+				failPreview( S.previewSession || '无法打开预览，请确认后台仍已登录后重试。' );
+				return;
+			}
+			if ( ! initial ) {
+				try { scrollRef.current = frameRef.current.contentWindow.scrollY; } catch ( error ) { scrollRef.current = 0; }
+				clearTimeout( previewTimeoutRef.current );
+				pendingFrameRef.current = null;
+				activeFrameRef.current = slot;
+				activeFrameRequestRef.current = entry.request;
+				activeFrameState[ 1 ]( slot );
+				// A successful replacement is now the last good preview. Unmount older
+				// hidden browsing contexts, checking latest state so queued cleanup
+				// cannot remove a newer candidate or a subsequently activated frame.
+				frameEntriesState[ 1 ]( function ( entries ) {
+					var currentSlot = activeFrameRef.current;
+					var current = entries[ currentSlot ];
+					if ( ! current ) { return entries; }
+					var changed = false;
+					var next = entries.map( function ( candidate, index ) {
+						if ( ! candidate || index === currentSlot || candidate.request >= current.request ) { return candidate; }
+						changed = true;
+						return null;
+					} );
+					return changed ? next : entries;
+				} );
+				previewPhaseState[ 1 ]( 'idle' );
+				previewErrorState[ 1 ]( null );
+			} else if ( previewRequestRef.current === 0 ) {
+				previewPhaseState[ 1 ]( 'idle' );
+			}
+			if ( initial ) { initialFrameReadyRef.current = true; }
+			frameRef.current = frame;
+			onFrameLoad();
+			window.requestAnimationFrame( function () { highlight( false ); } );
 		}
 
 		// 拖动卡片后保存位置：在当前设备的条目里找到这张卡片（例如轮播某一张的 highlights），写入 x / y 的当前设备值。
@@ -678,7 +850,7 @@
 
 		useEffect( function () {
 			function onKey( e ) {
-				if ( 'Escape' === e.key && ! e.defaultPrevented && ! document.querySelector( '.components-modal__frame, .media-modal' ) ) {
+				if ( 'Escape' === e.key && ! e.defaultPrevented && ! document.querySelector( '.components-modal__frame, .media-modal, .pc-de-publish__menu' ) ) {
 					clearRef.current();
 				}
 			}
@@ -756,6 +928,7 @@
 					'aria-label': label,
 					onClick: function () {
 						deviceState[ 1 ]( key );
+						paneState[ 1 ]( 'preview' );
 					},
 				},
 				el( Icon, { name: icon } )
@@ -779,7 +952,7 @@
 					el( 'span', { className: 'screen-reader-text' }, S.page ),
 					el(
 						'select',
-						{ value: 'home', onChange: function () {} },
+						{ value: cfg.document.document, onChange: function ( e ) { openDocument( e.target.value ); } },
 						cfg.pages.map( function ( p ) {
 							return el( 'option', { key: p.value, value: p.value, disabled: ! p.enabled }, p.label );
 						} )
@@ -796,7 +969,7 @@
 			),
 			el(
 				'div',
-				{ className: 'pc-de-top__center' },
+				{ className: 'pc-de-top__center', role: 'group', 'aria-label': S.previewDevice || '预览设备' },
 				deviceButton( 'desktop', 'desktop', S.desktop ),
 				deviceButton( 'mobile', 'smartphone', S.mobile ),
 				deviceButton( 'full', 'editor-expand', S.full )
@@ -804,12 +977,12 @@
 			el(
 				'div',
 				{ className: 'pc-de-top__right' },
-				el( 'button', { type: 'button', className: 'pc-de-top__btn', disabled: ! historyRef.current.past.length, onClick: undo, title: S.undo }, el( Icon, { name: 'undo' } ), el( 'span', null, S.undo ) ),
-				el( 'button', { type: 'button', className: 'pc-de-top__btn', disabled: ! historyRef.current.future.length, onClick: redo, title: S.redo }, el( Icon, { name: 'redo' } ), el( 'span', null, S.redo ) ),
-				el( 'a', { className: 'pc-de-top__btn', href: cfg.storeUrl, target: '_blank', rel: 'noopener' }, el( Icon, { name: 'visibility' } ), el( 'span', null, S.viewStore ) ),
+				el( 'button', { type: 'button', className: 'pc-de-top__btn', disabled: ! historyRef.current.past.length, onClick: undo, title: S.undo, 'aria-label': S.undo }, el( Icon, { name: 'undo' } ), el( 'span', null, S.undo ) ),
+				el( 'button', { type: 'button', className: 'pc-de-top__btn', disabled: ! historyRef.current.future.length, onClick: redo, title: S.redo, 'aria-label': S.redo }, el( Icon, { name: 'redo' } ), el( 'span', null, S.redo ) ),
+				el( 'a', { className: 'pc-de-top__btn', href: cfg.storeUrl, target: '_blank', rel: 'noopener', title: S.viewStore, 'aria-label': S.viewStore }, el( Icon, { name: 'visibility' } ), el( 'span', null, S.viewStore ) ),
 				el(
 					'button',
-					{ type: 'button', className: 'pc-de-top__btn pc-de-top__save' + ( dirty ? ' is-dirty' : '' ), onClick: onSave, disabled: saving || busy },
+					{ type: 'button', className: 'pc-de-top__btn pc-de-top__save' + ( dirty ? ' is-dirty' : '' ), onClick: onSave, disabled: saving || busy, title: saving ? S.saving : S.save, 'aria-label': saving ? S.saving : S.save },
 					el( Icon, { name: 'saved' } ),
 					el( 'span', null, saving ? S.saving : S.save )
 				),
@@ -818,7 +991,7 @@
 					{ className: 'pc-de-publish' },
 					el(
 						'button',
-						{ type: 'button', className: 'pc-de-top__publish', onClick: publish, disabled: busy || saving },
+						{ type: 'button', className: 'pc-de-top__publish', onClick: publish, disabled: busy || saving || ! cfg.canPublish, title: ! cfg.canPublish ? S.publishDenied : S.publish, 'aria-label': busy ? S.working : S.publish },
 						el( Icon, { name: 'upload' } ),
 						el( 'span', null, busy ? S.working : S.publish )
 					),
@@ -829,6 +1002,8 @@
 							className: 'pc-de-top__publish pc-de-top__publish--more',
 							'aria-label': S.publishMenu,
 							'aria-expanded': menuOpen,
+							'aria-haspopup': 'menu',
+							'aria-controls': 'pc-de-publish-menu',
 							title: S.publishMenu,
 							onClick: function () {
 								menuState[ 1 ]( ! menuOpen );
@@ -839,7 +1014,7 @@
 					menuOpen
 						? el(
 							'div',
-							{ className: 'pc-de-publish__menu', role: 'menu' },
+							{ id: 'pc-de-publish-menu', className: 'pc-de-publish__menu', role: 'menu' },
 							el( 'button', { type: 'button', role: 'menuitem', disabled: ! status.published, onClick: discard }, S.discard ),
 							el( 'button', { type: 'button', role: 'menuitem', disabled: ! status.published || ! cfg.canPublish, onClick: unpublish, className: 'is-danger' }, S.unpublish )
 						)
@@ -857,10 +1032,10 @@
 					type: 'button',
 					className: 'pc-de-row pc-de-row--pinned' + ( selected === key ? ' is-selected' : '' ),
 					onClick: function () {
-						setSelected( key );
+						openDocument( key );
 					},
 				},
-				el( Icon, { name: 'admin-post', className: 'pc-de-row__pin' } ),
+				el( Icon, { block: key === 'header' ? 'site_header' : 'site_footer', className: 'pc-de-row__pin', size: 16 } ),
 				el( 'span', { className: 'pc-de-row__title' }, label )
 			);
 		}
@@ -870,6 +1045,7 @@
 			{
 				className: 'pc-de-list',
 				role: 'list',
+				'aria-label': S.tabModules,
 				// 点积木列表下方的空白：取消选中。
 				onClick: function ( e ) {
 					if ( e.target === e.currentTarget ) {
@@ -877,6 +1053,7 @@
 					}
 				},
 			},
+			el( 'div', { className: 'pc-de-list__heading' }, el( 'span', null, S.pageBlocks || '页面积木' ), el( 'span', { className: 'pc-de-list__count' }, modules.length ) ),
 			pinned( 'header', S.header ),
 			modules.length
 				? null
@@ -923,17 +1100,23 @@
 						{
 							type: 'button',
 							className: 'pc-de-row__title',
+							'aria-pressed': selected === id,
+							title: titleOf( m ),
 							onClick: function () {
 								tabState[ 1 ]( 'modules' );
 								setSelected( id );
+								paneState[ 1 ]( 'settings' );
 							},
 						},
-						titleOf( m )
+						el( Icon, { block: m.block, size: 15 } ),
+						el( 'span', null, titleOf( m ) )
 					),
 					hidden || partial ? el( 'span', { className: 'pc-de-row__flag', title: S.hide }, el( Icon, { name: 'hidden' } ) ) : null,
 					el(
 						'span',
-						{ className: 'pc-de-row__actions' },
+						{ className: 'pc-de-row__actions', 'aria-label': S.blockActions || '积木操作' },
+						el( 'button', { type: 'button', title: S.moveUp || '上移', 'aria-label': S.moveUp || '上移', disabled: i === 0, onClick: function () { move( i, i - 1 ); } }, el( Icon, { name: 'up', size: 14 } ) ),
+						el( 'button', { type: 'button', title: S.moveDown || '下移', 'aria-label': S.moveDown || '下移', disabled: i === modules.length - 1, onClick: function () { move( i, i + 1 ); } }, el( Icon, { name: 'down', size: 14 } ) ),
 						el( 'button', { type: 'button', title: S.duplicate, 'aria-label': S.duplicate, onClick: function () { duplicate( i ); } }, el( Icon, { name: 'admin-page' } ) ),
 						el( 'button', { type: 'button', title: hidden ? S.show : S.hide, 'aria-label': hidden ? S.show : S.hide, onClick: function () { toggle( i ); } }, el( Icon, { name: hidden ? 'visibility' : 'hidden' } ) ),
 						el( 'button', { type: 'button', title: S.remove, 'aria-label': S.remove, className: 'is-danger', onClick: function () { remove( i ); } }, el( Icon, { name: 'trash' } ) )
@@ -947,6 +1130,7 @@
 					className: 'pc-de-row pc-de-row--add' + ( selected === 'library' ? ' is-selected' : '' ),
 					onClick: function () {
 						setSelected( 'library' );
+						paneState[ 1 ]( 'settings' );
 					},
 				},
 				el( Icon, { name: 'plus-alt2' } ),
@@ -961,14 +1145,25 @@
 		var panel;
 		var current = selected && selected !== 'header' && selected !== 'footer' && selected !== 'library' ? modules[ indexOf( selected ) ] : null;
 		if ( tab === 'global' ) {
-			panel = el( 'div', { className: 'pc-de-note' }, el( Icon, { name: 'admin-appearance' } ), el( 'p', null, S.globalNote ) );
+			panel = el( 'div', { className: 'pc-de-note' }, el( 'button', { type: 'button', className: 'button button-primary', onClick: function () { openDocument( 'global' ); } }, S.tabGlobal ) );
 		} else if ( selected === 'library' ) {
 			panel = el(
 				'div',
 				{ className: 'pc-de-library' },
-				el( 'h2', null, S.library ),
-				el( 'p', { className: 'pc-de-hint' }, S.libraryHint ),
+				el( 'div', { className: 'pc-de-library__head' },
+					el( 'h2', null, S.library ),
+					el( 'label', { className: 'pc-de-search' },
+						el( Icon, { name: 'search', size: 16 } ),
+						el( 'span', { className: 'screen-reader-text' }, S.searchBlocks || '搜索积木' ),
+						el( 'input', { type: 'search', value: libraryQuery, placeholder: S.searchBlocks || '搜索积木', onChange: function ( event ) { libraryQueryState[ 1 ]( event.target.value ); } } )
+					)
+				),
+				cfg.library.some( function ( group ) {
+					return group.cards.some( function ( card ) { return ( card.title + ' ' + card.block + ' ' + group.label ).toLowerCase().indexOf( libraryQuery.trim().toLowerCase() ) !== -1; } );
+				} ) ? null : el( 'p', { className: 'pc-de-hint', role: 'status' }, S.noMatchingBlocks || '未找到匹配的积木，请换个关键词。' ),
 				cfg.library.map( function ( group ) {
+					var cards = group.cards.filter( function ( card ) { return ( card.title + ' ' + card.block + ' ' + group.label ).toLowerCase().indexOf( libraryQuery.trim().toLowerCase() ) !== -1; } );
+					if ( ! cards.length ) { return null; }
 					return el(
 						'section',
 						{ key: group.label },
@@ -976,18 +1171,21 @@
 						el(
 							'div',
 							{ className: 'pc-de-library__grid' },
-							group.cards.map( function ( card ) {
+							cards.map( function ( card ) {
 								return el(
 									'button',
 									{
 										key: card.block,
 										type: 'button',
 										className: 'pc-de-card',
+										title: card.title,
+										'aria-label': ( S.addModule || '添加积木' ) + ' · ' + card.title,
+										disabled: !! ( data.modules[ card.block ] && data.modules[ card.block ].multiple === false && modules.some( function ( module ) { return module.block === card.block; } ) ),
 										onClick: function () {
 											insert( card.block );
 										},
 									},
-									el( Icon, { name: card.icon } ),
+									el( Icon, { block: card.block, size: 28 } ),
 									el( 'span', null, card.title )
 								);
 							} )
@@ -996,20 +1194,22 @@
 				} )
 			);
 		} else if ( selected === 'header' || selected === 'footer' ) {
-			panel = el( 'div', { className: 'pc-de-note' }, el( Icon, { name: 'info-outline' } ), el( 'p', null, selected === 'header' ? S.headerNote : S.footerNote ) );
-		} else if ( current ) {
+			panel = el( 'div', { className: 'pc-de-note' }, el( 'button', { type: 'button', className: 'button button-primary', onClick: function () { openDocument( selected ); } }, selected === 'header' ? S.header : S.footer ) );
+		} else if ( current && defOf( current ) ) {
 			var def = defOf( current );
 			var isMobile = settingsDevice === 'mobile';
 			var mob = mobileOf( current );
 			var baseValues = ui.withDefaults( def.defaults, current.attrs.settings );
-			// 手机：电脑的设置 + 手机单独改过的字段；条目有手机版时整份用手机版。
-			var values = isMobile ? Object.assign( {}, baseValues, mob.settings ) : baseValues;
-			var shownItems = isMobile && mob.items ? mob.items : current.attrs.items;
+			// Single-render blocks share content; only their explicit device fields vary by viewport.
+			// Keep legacy mobile attributes intact without presenting values the renderer does not use.
+			var values = isMobile && ! def.singleRender ? Object.assign( {}, baseValues, mob.settings ) : baseValues;
+			var shownItems = isMobile && ! def.singleRender && mob.items ? mob.items : current.attrs.items;
 			var fieldDefs = {};
 			def.settings.forEach( function ( f ) {
 				fieldDefs[ f.key ] = f;
 			} );
 			var perDevice = function ( key ) {
+				if ( def.singleRender ) { return true; }
 				var f = fieldDefs[ key ];
 				return ! f || f.device || ( f.group || 'content' ) === 'general';
 			};
@@ -1021,35 +1221,17 @@
 				updateModule( current.attrs.moduleId, { mobile: m }, true );
 			};
 			var count = mobileCount( current );
-			var mobileBar = isMobile
-				? el(
-					'div',
-					{ className: 'pc-de-mobilebar' + ( count ? ' has-changes' : '' ) },
-					el( 'p', null, el( Icon, { name: 'smartphone' } ), ' ', S.mobileEditing ),
-					count
-						? el(
-							'p',
-							null,
-							S.mobileChanged.replace( '%d', count ),
-							' ',
-							el(
-								C.Button,
-								{
-									variant: 'link',
-									onClick: function () {
-										updateModule( current.attrs.moduleId, { mobile: {} } );
-									},
-								},
-								S.mobileResetAll
-							)
-						)
-						: null
+			var mobileBar = isMobile && ! def.singleRender
+				? el( 'div', { className: 'pc-de-mobilebar' + ( count ? ' has-changes' : '' ) },
+					el( Icon, { name: 'smartphone', size: 14 } ),
+					el( 'span', null, count ? ( S.mobileOverrideCount || '手机已单独设置 %d 项' ).replace( '%d', count ) : ( S.mobileInherited || '手机沿用电脑设置' ) ),
+					count ? el( 'button', { type: 'button', className: 'pc-de-text-button', onClick: function () { updateModule( current.attrs.moduleId, { mobile: {} } ); } }, S.mobileResetShort || '恢复一致' ) : null
 				)
-				: null;
+				: ( isMobile && def.singleRender ? el( 'div', { className: 'pc-de-mobilebar' }, el( 'span', null, S.sharedDeviceSettings || '内容和绑定共用；带设备选项的布局分别生效。' ) ) : null );
 			panel = el(
 				'div',
 				{ className: 'pc-de-settings__inner', key: current.attrs.moduleId },
-				el( 'h2', { className: 'pc-de-settings__title' }, def.title ),
+				el( 'h2', { className: 'pc-de-settings__title' }, el( Icon, { block: current.block, size: 19 } ), el( 'span', null, def.title ) ),
 				ui.needsDeviceSwitch( def )
 					? el(
 						'div',
@@ -1058,8 +1240,8 @@
 						el(
 							C.ButtonGroup,
 							null,
-							el( C.Button, { variant: settingsDevice === 'desktop' ? 'primary' : 'secondary', size: 'small', icon: 'desktop', onClick: function () { deviceState[ 1 ]( 'desktop' ); } }, data.strings.desktop ),
-							el( C.Button, { variant: settingsDevice === 'mobile' ? 'primary' : 'secondary', size: 'small', icon: 'smartphone', onClick: function () { deviceState[ 1 ]( 'mobile' ); } }, data.strings.mobile )
+							el( C.Button, { variant: settingsDevice === 'desktop' ? 'primary' : 'secondary', size: 'small', icon: el( Icon, { name: 'desktop', size: 15 } ), onClick: function () { deviceState[ 1 ]( 'desktop' ); } }, data.strings.desktop ),
+							el( C.Button, { variant: settingsDevice === 'mobile' ? 'primary' : 'secondary', size: 'small', icon: el( Icon, { name: 'smartphone', size: 15 } ), onClick: function () { deviceState[ 1 ]( 'mobile' ); } }, data.strings.mobile )
 						)
 					)
 					: null,
@@ -1069,6 +1251,8 @@
 					null,
 					ui.settingsPanels( {
 						def: def,
+						pairedDeviceSafe: function ( key ) { return ! Object.prototype.hasOwnProperty.call( mob.settings, key ); },
+						panels: def.panels,
 						settings: values,
 						device: settingsDevice,
 						items: shownItems,
@@ -1084,18 +1268,18 @@
 							updateModule( current.attrs.moduleId, { settings: next }, true );
 						},
 						setItems: function ( items ) {
-							if ( isMobile ) {
+							if ( isMobile && ! def.singleRender ) {
 								setMobile( { settings: mob.settings, items: items } );
 								return;
 							}
 							updateModule( current.attrs.moduleId, { items: items }, true );
 						},
-						overridden: isMobile
+						overridden: isMobile && ! def.singleRender
 							? function ( key ) {
 								return Object.prototype.hasOwnProperty.call( mob.settings, key );
 							}
 							: null,
-						resetOverride: function ( key ) {
+						resetOverride: def.singleRender ? null : function ( key ) {
 							var ms = Object.assign( {}, mob.settings );
 							delete ms[ key ];
 							setMobile( { settings: ms, items: mob.items } );
@@ -1107,26 +1291,36 @@
 					} )
 				)
 			);
+		} else if ( current ) {
+			panel = el( 'div', { className: 'pc-de-note' }, el( Icon, { name: 'warning' } ), el( 'p', null, ( S.unknownBlock || '此积木暂不可编辑，内容已保留：' ) + ' ' + current.block ) );
 		} else {
 			panel = el( 'div', { className: 'pc-de-note' }, el( Icon, { name: 'arrow-left-alt' } ), el( 'p', null, S.selectHint ) );
 		}
 
 		var side = el(
 			'aside',
-			{ className: 'pc-de-side' },
+			{ id: 'pc-de-inspector', className: 'pc-de-side', 'aria-label': S.editorSettings || '装修设置' },
 			el(
 				'div',
 				{ className: 'pc-de-tabs', role: 'tablist' },
 				el( 'button', { type: 'button', role: 'tab', 'aria-selected': tab === 'modules', className: tab === 'modules' ? 'is-active' : '', onClick: function () { tabState[ 1 ]( 'modules' ); } }, S.tabModules ),
-				el( 'button', { type: 'button', role: 'tab', 'aria-selected': tab === 'global', className: tab === 'global' ? 'is-active' : '', onClick: function () { tabState[ 1 ]( 'global' ); } }, S.tabGlobal )
+					el( 'button', { type: 'button', role: 'tab', 'aria-selected': cfg.document.document === 'global', className: cfg.document.document === 'global' ? 'is-active' : '', onClick: function () { openDocument( 'global' ); } }, S.tabGlobal )
 			),
-			el( 'div', { className: 'pc-de-cols' }, tab === 'modules' ? list : null, el( 'div', { className: 'pc-de-settings' }, panel ) )
+			el( 'div', { className: 'pc-de-cols' }, tab === 'modules' ? list : null, el( 'div', { className: 'pc-de-settings', role: 'region', 'aria-label': S.blockSettings || '积木属性' }, panel ) )
 		);
+
+		var previewFeedback = previewError ? el( 'div', { className: 'pc-de-preview__error', role: 'alert' },
+			el( Icon, { name: 'warning', size: 17 } ),
+			el( 'span', null, previewError ),
+			el( 'button', { type: 'button', className: 'pc-de-text-button', onClick: function () { previewRetryState[ 1 ]( function ( count ) { return count + 1; } ); } }, S.retryPreview || '重试预览' )
+		) : null;
 
 		var preview = el(
 			'main',
 			{
+				id: 'pc-de-canvas',
 				className: 'pc-de-preview',
+				'aria-label': S.livePreview || '真实页面预览',
 				// 点预览四周的灰色空白（不是预览页面本身）：取消选中。
 				onClick: function ( e ) {
 					if ( ! e.target.closest( 'iframe, button, a' ) ) {
@@ -1136,17 +1330,40 @@
 			},
 			el(
 				'div',
-				{ className: 'pc-de-frame pc-de-frame--' + device },
-				el( 'iframe', { ref: frameRef, src: previewUrl, title: S.previewNote, onLoad: onFrameLoad } ),
-				loading ? el( 'div', { className: 'pc-de-frame__loading' }, el( C.Spinner ), S.loadingPreview ) : null
+				{ className: 'pc-de-frame pc-de-frame--' + device, 'aria-busy': loading },
+				frameEntries.map( function ( entry, slot ) {
+					if ( ! entry ) { return null; }
+					return el( 'iframe', {
+						key: slot,
+						className: slot === activeFrame ? 'is-active' : 'is-staging',
+						ref: function ( frame ) { framesRef.current[ slot ] = frame; if ( slot === activeFrameRef.current ) { frameRef.current = frame; } },
+						src: entry.url,
+						title: S.previewNote,
+						'aria-hidden': slot !== activeFrame,
+						tabIndex: slot === activeFrame ? 0 : -1,
+						onLoad: function () { acceptFrame( slot, entry ); },
+						onError: function () { if ( slot === activeFrameRef.current || ( pendingFrameRef.current && pendingFrameRef.current.entry === entry ) ) { failPreview(); } },
+					} );
+				} ),
+				loading ? el( 'div', { className: 'pc-de-frame__loading', role: 'status' }, el( C.Spinner ), S.loadingPreview ) : null
 			),
-			el( 'p', { className: 'pc-de-preview__note' }, dirty ? S.unsaved + ' ' + S.previewNote : S.previewNote )
+			el( 'div', { className: 'pc-de-preview__footer' },
+				el( 'p', { className: 'pc-de-preview__note', role: 'status', 'aria-live': 'polite' },
+					el( 'span', { className: 'pc-de-preview__state' + ( previewPhase === 'error' ? ' is-error' : '' ) } ),
+					previewPhase === 'error' ? ( S.previewErrorStatus || '预览更新失败' ) : previewPhase === 'pending' ? ( S.previewPending || '修改后将自动更新预览' ) : loading ? S.loadingPreview : dirty ? S.unsaved : ( S.previewReady || '预览已更新' )
+				),
+				el( 'span', { className: 'pc-de-preview__device' }, device === 'mobile' ? ( S.mobile + ' · 390 px' ) : S.desktop )
+			)
 		);
 
 		return el(
 			'div',
-			{ className: 'pc-de__app' + ( device === 'full' ? ' is-full' : '' ) },
+			{ ref: workspaceRef, className: 'pc-de__app pane-' + paneState[ 0 ] + ( narrowState[ 0 ] ? ' is-narrow' : '' ) + ( device === 'full' ? ' is-full' : '' ) },
 			top,
+			device !== 'full' ? el( 'nav', { className: 'pc-de-pane-switch', 'aria-label': S.workspaceView || '工作区视图' },
+				el( 'button', { type: 'button', 'aria-pressed': paneState[ 0 ] === 'preview', 'aria-controls': 'pc-de-canvas', onClick: function () { paneState[ 1 ]( 'preview' ); } }, el( Icon, { name: 'visibility', size: 16 } ), S.livePreview || '真实预览' ),
+				el( 'button', { type: 'button', 'aria-pressed': paneState[ 0 ] === 'settings', 'aria-controls': 'pc-de-inspector', onClick: function () { paneState[ 1 ]( 'settings' ); } }, el( Icon, { name: 'settings', size: 16 } ), S.editorSettings || '装修设置' )
+			) : null,
 			notice
 				? el(
 					C.Notice,
@@ -1170,6 +1387,7 @@
 					notice.text
 				)
 				: null,
+			previewFeedback,
 			el( 'div', { className: 'pc-de-body' }, preview, device === 'full' ? null : side )
 		);
 	}

@@ -64,7 +64,7 @@ include_once WC()->plugin_path() . '/includes/admin/class-wc-admin-settings.php'
 WC_Admin_Settings::get_settings_pages();
 $ok( 'hidden tabs still open from direct links (their settings actions remain)', has_action( 'woocommerce_settings_email' ) && has_action( 'woocommerce_settings_shipping' ) && has_action( 'woocommerce_settings_checkout' ) );
 $_GET['page'] = 'wc-orders';
-$ok( 'store settings menu: shipping, tax, system (payments has its own WooCommerce menu; staff moved to the master admin)', array( 'pc-shipping', 'pc-tax', 'pc-system' ) === array_column( $submenu['admin.php?page=wc-settings'] ?? array(), 2 ) );
+$ok( 'store settings menu includes shipping, tax, system and administrator site tools', array( 'pc-shipping', 'pc-tax', 'pc-system', 'pc-site-tools' ) === array_column( $submenu['admin.php?page=wc-settings'] ?? array(), 2 ) );
 $ok( 'no Users menu on the store (accounts are managed in the master admin)', ! in_array( 'users.php', $slugs, true ) );
 $ok( 'no Plugins menu on the store (platform tools open from the master admin)', ! in_array( 'plugins.php', $slugs, true ) );
 foreach ( array( 'wc-orders' => 'admin.php?page=wc-orders', 'wc-settings' => 'admin.php?page=wc-settings', 'pc-settings' => 'admin.php?page=wc-settings', 'wc-status' => 'admin.php?page=wc-settings', 'pc-system' => 'admin.php?page=wc-settings', 'pc-tax' => 'admin.php?page=wc-settings' ) as $page => $parent ) {

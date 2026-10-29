@@ -218,6 +218,47 @@ $tax  = $http( admin_url( 'admin.php?page=wc-settings&tab=tax' ), array( 'cookie
 $ok( 'with “Store settings” the tax tab opens and its tab bar has no platform tabs (real request)', 200 === (int) wp_remote_retrieve_response_code( $tax ) && ! str_contains( (string) wp_remote_retrieve_body( $tax ), 'tab=advanced' ) && ! str_contains( (string) wp_remote_retrieve_body( $tax ), 'tab=general' ) );
 $ok( 'platform pages are refused even with “Store settings”: system status, WooCommerce general and advanced (403)', 403 === $code( 'admin.php?page=wc-status' ) && 403 === $code( 'admin.php?page=wc-settings' ) && 403 === $code( 'admin.php?page=wc-settings&tab=advanced' ) && 403 === $code( 'admin.php?page=wc-admin' ) );
 $ok( 'WooCommerce pages of ticked menus still open: customers, payments (200)', 200 === $code( 'admin.php?page=wc-admin&path=/customers' ) && 200 === $code( 'admin.php?page=wc-settings&tab=checkout&from=PAYMENTS_MENU_ITEM' ) );
+
+// 营销独立授权：真实请求跑过 WordPress 的菜单注册和页面权限检查，再提交一个无效表单走保存权限与验证。
+// 表单故意缺少必填信息，不创建活动；跟随返回的编辑页读取并清掉临时错误/表单内容。
+Staff::set_modules( $sid, array( 'marketing' ) );
+$ok( 'Marketing alone does not grant the shared store-management capability', user_can( $sid, 'edit_shop_coupons' ) && ! user_can( $sid, 'manage_woocommerce' ) );
+$marketing_pages = array(
+	'pc-promotions'         => 'pc_promo_save',
+	'pc-coupons'            => 'pc_coupon_save',
+	'pc-shipping-discounts' => 'pc_shipdisc_save',
+);
+$marketing_jar = $cookies( $sid ); // 读取表单和提交时复用同一会话，WordPress nonce 绑定登录令牌。
+foreach ( $marketing_pages as $page => $action ) {
+	$list = $http( admin_url( 'admin.php?page=' . $page ), array( 'cookies' => $marketing_jar ) );
+	$form = $http( admin_url( 'admin.php?page=' . $page . '&new=1' ), array( 'cookies' => $marketing_jar ) );
+	$body = (string) wp_remote_retrieve_body( $form );
+	$ok( "Marketing alone opens $page and its new-item form (real requests)", 200 === (int) wp_remote_retrieve_response_code( $list ) && str_contains( (string) wp_remote_retrieve_body( $list ), 'id="adminmenu"' ) && 200 === (int) wp_remote_retrieve_response_code( $form ) && str_contains( $body, 'name="action" value="' . $action . '"' ) );
+	$matched = preg_match( '#name="action" value="' . preg_quote( $action, '#' ) . '".*?name="_wpnonce" value="([^"]+)"#s', $body, $nonce_match );
+	$submitted = $matched ? wp_remote_post(
+		admin_url( 'admin-post.php' ),
+		array(
+			'timeout'     => 30,
+			'redirection' => 0,
+			'cookies'     => $marketing_jar,
+			'body'        => array( 'action' => $action, '_wpnonce' => html_entity_decode( $nonce_match[1] ), 'name' => '' ),
+		)
+	) : new WP_Error( 'pc_smoke_nonce_missing' );
+	$returned = $http( admin_url( 'admin.php?page=' . $page . '&new=1' ), array( 'cookies' => $marketing_jar ) );
+	$ok( "Marketing alone can submit $action and receives field validation instead of 403", 302 === (int) wp_remote_retrieve_response_code( $submitted ) && str_contains( (string) wp_remote_retrieve_header( $submitted, 'location' ), 'page=' . $page ) && 200 === (int) wp_remote_retrieve_response_code( $returned ) && str_contains( (string) wp_remote_retrieve_body( $returned ), 'notice-error' ) );
+}
+$home = $http( admin_url(), array( 'cookies' => $cookies( $sid ) ) );
+$ok( 'Marketing-only login lands on its usable promotions page (real request)', 302 === (int) wp_remote_retrieve_response_code( $home ) && str_contains( (string) wp_remote_retrieve_header( $home, 'location' ), 'page=pc-promotions' ) );
+$marketing_access = array( 'orders' => $code( 'admin.php?page=wc-orders' ), 'data' => $code( 'admin.php?page=pc-overview' ), 'settings' => $code( 'admin.php?page=pc-shipping' ) );
+$ok( 'Marketing alone cannot open Orders, Data or Store settings (403): ' . wp_json_encode( $marketing_access ), array( 'orders' => 403, 'data' => 403, 'settings' => 403 ) === $marketing_access );
+
+Staff::set_modules( $sid, array( 'data' ) );
+$data_access = array( 'data' => $code( 'admin.php?page=pc-overview' ), 'marketing' => $code( 'admin.php?page=pc-promotions' ), 'orders' => $code( 'admin.php?page=wc-orders' ), 'settings' => $code( 'admin.php?page=pc-shipping' ) );
+$ok( 'Data alone keeps its overview and cannot gain Marketing, Orders or Store settings (real requests): ' . wp_json_encode( $data_access ), array( 'data' => 200, 'marketing' => 403, 'orders' => 403, 'settings' => 403 ) === $data_access );
+Staff::set_modules( $sid, array( 'settings' ) );
+$settings_access = array( 'settings' => $code( 'admin.php?page=pc-shipping' ), 'marketing' => $code( 'admin.php?page=pc-promotions' ), 'orders' => $code( 'admin.php?page=wc-orders' ), 'data' => $code( 'admin.php?page=pc-overview' ) );
+$ok( 'Store settings alone keeps shipping and cannot gain Marketing, Orders or Data (real requests): ' . wp_json_encode( $settings_access ), array( 'settings' => 200, 'marketing' => 403, 'orders' => 403, 'data' => 403 ) === $settings_access );
+
 Staff_Page::save( $sid, array( 'email' => 'pc-smoke-staff@example.com', 'name' => 'Smoke Staff', 'modules' => array( 'products', 'backend' ) ) );
 Staff::flush_cache();
 

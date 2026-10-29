@@ -210,6 +210,9 @@ final class Fields {
 			case 'product':
 				$id = absint( is_scalar( $value ) ? $value : 0 );
 				return $id && 'product' === get_post_type( $id ) ? $id : null;
+			case 'record':
+				// Preserve unavailable IDs so a stopped/deleted binding never silently turns into automatic mode.
+				return Records::sanitize( $value );
 			case 'repeater':
 				$out = array();
 				foreach ( is_array( $value ) ? $value : array() as $row ) {

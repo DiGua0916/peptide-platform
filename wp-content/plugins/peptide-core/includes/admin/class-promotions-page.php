@@ -209,6 +209,7 @@ final class Promotions_Page {
 			$in_other
 		);
 
+		Marketing::customers_card( (string) ( $c['customer_rule']['customers'] ?? 'all' ), (array) ( $c['customer_rule']['emails'] ?? array() ), true, '', (array) $c['customer_rule'] );
 		Marketing::card_open( __( 'Usage rules', 'peptide-core' ), 'pc-mk-rules' );
 		echo '<p>' . esc_html__( 'You can choose all products, some products or collections for this promotion.', 'peptide-core' ) . '</p><p>' . esc_html__( 'Notes:', 'peptide-core' ) . '</p><ol>';
 		echo '<li>' . esc_html__( 'At the same time, a product or a collection can only be in one promotion, and only one promotion can cover all products.', 'peptide-core' ) . '</li>';
@@ -258,6 +259,7 @@ final class Promotions_Page {
 			'categories' => (array) ( $in['categories'] ?? array() ),
 			'sort'       => (string) ( $in['sort'] ?? '' ),
 			'public'     => true,
+			'customer_rule' => $in,
 		);
 		return array( (string) ( $in['name'] ?? '' ), $raw, $errors );
 	}

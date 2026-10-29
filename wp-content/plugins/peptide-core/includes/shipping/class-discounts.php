@@ -50,6 +50,9 @@ final class Discounts {
 			'stages'      => array(),  // [{start, end, value}]
 			'customers'   => 'all',    // all / emails
 			'emails'      => array(),
+			'segment_tags' => array(),
+			'segment_levels' => array(),
+			'visitor_ids' => array(),
 			'created'     => 0,
 		);
 	}
@@ -146,8 +149,9 @@ final class Discounts {
 		if ( $d['member_day'] && ! $d['member_days'] ) {
 			$errors[] = __( 'Choose at least one member day.', 'peptide-core' );
 		}
-		$d['customers'] = 'emails' === ( $raw['customers'] ?? '' ) ? 'emails' : 'all';
-		$d['emails']    = self::emails( $raw['emails'] ?? array() );
+		[ $customer_rule, $segment_errors ] = \PeptideCore\Customer_Segments::clean_rule( $raw );
+		$d = array_merge( $d, $customer_rule );
+		$errors = array_merge( $errors, $segment_errors );
 		if ( 'emails' === $d['customers'] && ! $d['emails'] ) {
 			$errors[] = __( 'Enter at least one customer email.', 'peptide-core' );
 		}
@@ -249,7 +253,7 @@ final class Discounts {
 		if ( $d['member_day'] && ( ! $user_id || ! in_array( (int) wp_date( 'N', $now ), $d['member_days'], true ) ) ) {
 			return false;
 		}
-		return 'emails' !== $d['customers'] || ( '' !== $email && in_array( strtolower( $email ), $d['emails'], true ) );
+		return \PeptideCore\Customer_Segments::matches( $d, $email, $user_id );
 	}
 
 	/** 当前顾客：[邮箱, 用户 ID]。结账里填的邮箱优先，登录顾客没填时用账户邮箱。 */

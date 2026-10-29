@@ -69,6 +69,8 @@ final class Design_Editor {
 		if ( ! $doc_id ) {
 			return;
 		}
+		$document_key = (string) get_post_meta( $doc_id, Templates::DOC_META, true );
+		\PeptideCore\Design_Pages::seed( $doc_id, $document_key );
 		require_once ABSPATH . 'wp-admin/includes/post.php';
 		wp_set_post_lock( $doc_id );
 
@@ -79,10 +81,24 @@ final class Design_Editor {
 		wp_enqueue_script( 'peptide-core-design-editor', $url . 'design-editor.js', array( Blocks::CONTROLS_SCRIPT, 'wp-api-fetch', 'wp-element', 'wp-components' ), $ver( 'design-editor.js' ), array( 'in_footer' => true ) );
 
 		$template = (int) wp_get_post_parent_id( $doc_id );
+		$pages = array();
+		$document_links = array();
+		$document_labels = Templates::documents();
+		if ( ! isset( $document_labels[ $document_key ] ) ) {
+			$document_labels[ $document_key ] = \PeptideCore\Design_Pages::label( $document_key );
+		}
+		foreach ( $document_labels as $key => $label ) {
+			$document_links[ $key ] = html_entity_decode( \PeptideCore\Design_Pages::open_url( $template, $key ), ENT_QUOTES, 'UTF-8' );
+			$pages[] = array( 'value' => $key, 'label' => $label, 'enabled' => true, 'url' => $document_links[ $key ] );
+		}
 		$library  = array();
 		foreach ( Registry::categories() as $cat => $label ) {
 			$cards = array();
 			foreach ( Registry::all() as $def ) {
+				if ( in_array( $document_key, array( 'header', 'footer', 'global' ), true ) && 'context_content' === $def['type'] ) { continue; }
+				$special = array( 'site_header' => 'header', 'site_footer' => 'footer', 'site_styles' => 'global' );
+				if ( isset( $special[ $def['type'] ] ) && $special[ $def['type'] ] !== $document_key ) { continue; }
+				if ( 'global' === $document_key && 'site_styles' !== $def['type'] ) { continue; }
 				if ( $def['category'] === $cat ) {
 					$cards[] = array(
 						'block' => $def['block'],
@@ -106,15 +122,11 @@ final class Design_Editor {
 					'document'  => Layout_Controller::document( $doc_id ),
 					'restPath'  => '/peptide/v1/layouts/' . $doc_id,
 					'backUrl'   => admin_url( 'admin.php?page=' . Store_Design::SLUG ),
-					'storeUrl'  => home_url( '/' ),
+					'storeUrl'  => \PeptideCore\Design_Pages::sample_url( $document_key ),
+					'documentLinks' => $document_links,
 					'canPublish' => current_user_can( Templates::CAP_MANAGE ),
 					'library'   => $library,
-					'pages'     => array(
-						array( 'value' => 'home', 'label' => __( 'Homepage', 'peptide-core' ), 'enabled' => true ),
-						array( 'value' => 'product', 'label' => __( 'Product page (coming soon)', 'peptide-core' ), 'enabled' => false ),
-						array( 'value' => 'category', 'label' => __( 'Category page (coming soon)', 'peptide-core' ), 'enabled' => false ),
-						array( 'value' => 'custom', 'label' => __( 'Custom pages (coming soon)', 'peptide-core' ), 'enabled' => false ),
-					),
+					'pages'     => $pages,
 					'strings'   => array(
 						'back'          => __( 'Back to theme design', 'peptide-core' ),
 						'page'          => __( 'Page', 'peptide-core' ),
@@ -148,6 +160,7 @@ final class Design_Editor {
 						'header'        => __( 'Header', 'peptide-core' ),
 						'footer'        => __( 'Footer', 'peptide-core' ),
 						'addModule'     => __( 'Add block', 'peptide-core' ),
+						'singleton'     => __( 'This block can only appear once on a page.', 'peptide-core' ),
 						'library'       => __( 'Block library', 'peptide-core' ),
 						'libraryHint'   => __( 'Click a card to add it below the selected block.', 'peptide-core' ),
 						'duplicate'     => __( 'Duplicate', 'peptide-core' ),
@@ -169,6 +182,7 @@ final class Design_Editor {
 						'previewNote'   => __( 'Live preview of what you are editing. Only you can see it.', 'peptide-core' ),
 						'editing'       => __( 'Editing values for', 'peptide-core' ),
 						'mobileEditing'  => __( 'Mobile version: changes here only affect phones. Anything you do not change stays the same as on desktop.', 'peptide-core' ),
+						'sharedDeviceSettings' => __( '内容和绑定共用；带设备选项的布局分别生效。', 'peptide-core' ),
 						/* translators: %d: number of changed settings */
 						'mobileChanged'  => __( '%d setting(s) changed for mobile.', 'peptide-core' ),
 						'mobileResetAll' => __( 'Make mobile the same as desktop again', 'peptide-core' ),

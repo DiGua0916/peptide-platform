@@ -38,9 +38,11 @@ final class Staff {
 		add_action( 'init', array( self::class, 'logout_disabled' ), 1 );
 		add_action( 'wp_login', array( self::class, 'record_login' ), 10, 2 );
 		add_filter( 'login_redirect', array( self::class, 'login_redirect' ), 20, 3 );
+		add_action( 'admin_menu', array( self::class, 'guard_orders_page' ), 1 );
 		add_action( 'admin_menu', array( self::class, 'filter_menu' ), 9999 );
 		add_action( 'admin_init', array( self::class, 'redirect_dashboard' ), 1 );
 		add_action( 'current_screen', array( self::class, 'gate' ) );
+		add_filter( 'rest_request_before_callbacks', array( self::class, 'guard_fulfillment_rest' ), 10, 3 );
 		add_filter( 'gettext_with_context', array( self::class, 'role_name' ), 10, 4 );
 	}
 
@@ -201,6 +203,32 @@ final class Staff {
 		return $caps;
 	}
 
+	/**
+	 * WooCommerce grants every fulfillment operation to manage_woocommerce, which several unrelated
+	 * staff modules also need. Enforce the Orders module before those native REST callbacks run.
+	 * Administrators and customer order-owner access still use WooCommerce's own permission checks.
+	 *
+	 * @param mixed            $response An earlier filter's response, normally null.
+	 * @param array            $handler  Matched REST route handler.
+	 * @param \WP_REST_Request $request  Current REST request.
+	 * @return mixed
+	 */
+	public static function guard_fulfillment_rest( $response, $handler, $request ) {
+		if ( null !== $response || ! $request instanceof \WP_REST_Request
+			|| ! preg_match( '#^/wc/v3/orders/[0-9]+/fulfillments(?:/|$)#', $request->get_route() ) ) {
+			return $response;
+		}
+		$id = get_current_user_id();
+		if ( ! $id || ! self::is_staff( $id ) || in_array( 'orders', self::granted( $id ), true ) ) {
+			return $response;
+		}
+		return new \WP_Error(
+			'pc_staff_orders_required',
+			__( 'Your account does not have permission for this menu. Ask the administrator to allow it for your account.', 'peptide-core' ),
+			array( 'status' => 403 )
+		);
+	}
+
 	// ---------- 登录 ----------
 
 	public static function block_disabled( $user ) {
@@ -275,6 +303,12 @@ final class Staff {
 	 * $tab 是 WooCommerce 设置的标签（空 = 常规）。
 	 */
 	public static function module_for( string $file, string $page = '', string $post_type = '', string $taxonomy = '', string $path = '', string $tab = '' ): ?string {
+		if ( 'pc-site-tools' === $page ) { return 'settings'; }
+		if ( 'comment.php' === $file ) {
+			$id = absint( $_POST['comment_ID'] ?? $_GET['c'] ?? 0 );
+			$comment = $id ? get_comment( $id ) : null;
+			return $comment && 'product' === get_post_type( $comment->comment_post_ID ) ? 'products' : null;
+		}
 		if ( in_array( $file, self::ALWAYS, true ) ) {
 			return 'always';
 		}
@@ -283,6 +317,8 @@ final class Staff {
 				'wc-orders'             => 'orders',
 				'pc-recovery'           => 'orders',
 				'pc-overview'           => 'data',
+				'pc-customers'          => 'customers',
+				'pc-blog-content-tools' => 'blog',
 				'pc-visitors'           => 'data',
 				'pc-data'               => 'data',
 				'pc-store-design'       => 'design',
@@ -297,6 +333,7 @@ final class Staff {
 				'pc-activity'           => 'backend',
 				'pc-apps'               => 'apps',
 				'product-reviews'       => 'products',
+				'pc-product-reviews'    => 'products',
 				'product_attributes'    => 'products',
 				'product_importer'      => 'products',
 				'product_exporter'      => 'products',
@@ -378,6 +415,22 @@ final class Staff {
 		return self::module_for( wp_basename( $path ), (string) ( $args['page'] ?? '' ), $post_type, (string) ( $args['taxonomy'] ?? '' ), (string) ( $args['path'] ?? '' ), sanitize_key( (string) ( $args['tab'] ?? '' ) ) );
 	}
 
+	/**
+	 * HPOS checks order permissions while WooCommerce builds its menu (priority 9), before
+	 * admin_init/current_screen. Return our normal 403 first instead of WooCommerce's default 500.
+	 */
+	public static function guard_orders_page(): void {
+		global $pagenow;
+		$page = isset( $_GET['page'] ) && is_string( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( 'admin.php' !== $pagenow || 'wc-orders' !== $page ) {
+			return;
+		}
+		$id = get_current_user_id();
+		if ( $id && self::is_staff( $id ) && ! self::allowed( $id, 'orders' ) ) {
+			self::deny( $id, 'orders' );
+		}
+	}
+
 	/** 打开后台页面时检查：员工没勾这个模块就拒绝。 */
 	public static function gate( $screen ): void {
 		$id = get_current_user_id();
@@ -392,6 +445,11 @@ final class Staff {
 		if ( self::allowed( $id, $module ) ) {
 			return;
 		}
+		self::deny( $id, $module );
+	}
+
+	/** 页面入口和提前运行的 HPOS 检查共用同一提示、返回链接及 HTTP 状态。 */
+	private static function deny( int $id, ?string $module ): void {
 		$why = null === $module
 			? __( 'This page is not part of the store admin. It is managed by the administrator.', 'peptide-core' )
 			: __( 'Your account does not have permission for this menu. Ask the administrator to allow it for your account.', 'peptide-core' );

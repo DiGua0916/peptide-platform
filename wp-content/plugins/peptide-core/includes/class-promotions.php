@@ -115,6 +115,7 @@ final class Promotions {
 			'with_coupons' => true,
 			'public'       => false,
 			'text'         => '',
+			'customer_rule' => array( 'customers' => 'all' ),
 		);
 	}
 
@@ -214,6 +215,8 @@ final class Promotions {
 		$c['public']       = ! empty( $raw['public'] );
 		$text              = is_scalar( $raw['text'] ?? null ) ? sanitize_textarea_field( (string) $raw['text'] ) : '';
 		$c['text']         = function_exists( 'mb_substr' ) ? mb_substr( $text, 0, 500 ) : substr( $text, 0, 500 );
+		[ $c['customer_rule'], $segment_errors ] = Customer_Segments::clean_rule( (array) ( $raw['customer_rule'] ?? array() ) );
+		$errors = array_merge( $errors, $segment_errors );
 		return array( $c, array_values( array_unique( $errors ) ) );
 	}
 
@@ -481,7 +484,7 @@ final class Promotions {
 		foreach ( array( 'products', 'categories', 'all' ) as $level ) {
 			foreach ( $ids as $id ) {
 				$c = self::config( $id );
-				if ( $c['scope'] === $level && self::covers( $c, $product ) ) {
+				if ( $c['scope'] === $level && Customer_Segments::matches( $c['customer_rule'], Customer_Segments::current_email() ) && self::covers( $c, $product ) ) {
 					return (int) $id;
 				}
 			}
@@ -628,7 +631,10 @@ final class Promotions {
 				return array(); // 用了“替换满减活动”的优惠码。
 			}
 		}
-		return array_values( array_filter( self::active_ids(), static fn( $id ) => ! $codes || self::config( $id )['with_coupons'] ) );
+		return array_values( array_filter( self::active_ids(), static function ( $id ) use ( $codes ) {
+			$c = self::config( $id );
+			return ( ! $codes || $c['with_coupons'] ) && Customer_Segments::matches( $c['customer_rule'], Customer_Segments::current_email() );
+		} ) );
 	}
 
 	/**

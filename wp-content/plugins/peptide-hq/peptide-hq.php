@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Peptide HQ
  * Description:       Master admin for all VialCove stores: sales and orders of every store, alerts, one-click login and salesperson accounts.
- * Version:           0.2.0
+ * Version:           0.3.1
  * Requires at least: 6.5
  * Requires PHP:      8.1
  * Author:            DiGua
@@ -16,7 +16,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'PEPTIDE_HQ_VERSION', '0.2.0' );
+define( 'PEPTIDE_HQ_VERSION', '0.3.1' );
 define( 'PEPTIDE_HQ_FILE', __FILE__ );
 define( 'PEPTIDE_HQ_DIR', __DIR__ );
 

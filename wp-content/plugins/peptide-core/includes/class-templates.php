@@ -45,12 +45,12 @@ final class Templates {
 	 * @return array<string,string> 文档键 => 名称
 	 */
 	public static function documents(): array {
-		return array(
+		return (array) apply_filters( 'peptide_core_template_documents', array(
 			'home'   => __( 'Homepage', 'peptide-core' ),
 			'header' => __( 'Header', 'peptide-core' ),
 			'footer' => __( 'Footer', 'peptide-core' ),
 			'global' => __( 'Global styles', 'peptide-core' ),
-		);
+		) );
 	}
 
 	public static function register_hooks(): void {
@@ -161,8 +161,9 @@ final class Templates {
 	/**
 	 * 某个模板的装修文档 ID，缺少时自动补建（草稿内容为空）。
 	 */
-	public static function document_id( int $template_id, string $doc ): int {
-		if ( ! self::exists( $template_id ) || ! isset( self::documents()[ $doc ] ) ) {
+	public static function document_id( int $template_id, string $doc, bool $create = true ): int {
+		$label = self::documents()[ $doc ] ?? apply_filters( 'peptide_core_layout_document_label', '', $doc, $template_id );
+		if ( ! self::exists( $template_id ) || ! is_string( $label ) || '' === $label ) {
 			return 0;
 		}
 		$found = get_posts(
@@ -180,12 +181,15 @@ final class Templates {
 		if ( $found ) {
 			return (int) $found[0];
 		}
+		if ( ! $create ) {
+			return 0;
+		}
 		$id = wp_insert_post(
 			array(
 				'post_type'    => self::LAYOUT,
 				'post_status'  => 'publish', // 文档本身不公开；“已发布到网站”由单独的发布快照决定。
 				'post_parent'  => $template_id,
-				'post_title'   => self::documents()[ $doc ],
+				'post_title'   => $label,
 				'post_content' => '',
 				'post_author'  => (int) get_post_field( 'post_author', $template_id ),
 				'meta_input'   => array( self::DOC_META => $doc ),
@@ -265,7 +269,11 @@ final class Templates {
 			return 0;
 		}
 		update_post_meta( $copy, self::THEME_META, (string) get_post_meta( $template_id, self::THEME_META, true ) );
-		foreach ( array_keys( self::documents() ) as $doc ) {
+		$keys = array_keys( self::documents() );
+		foreach ( get_children( array( 'post_parent' => $template_id, 'post_type' => self::LAYOUT, 'post_status' => 'any' ) ) as $child ) {
+			$keys[] = (string) get_post_meta( $child->ID, self::DOC_META, true );
+		}
+		foreach ( array_unique( $keys ) as $doc ) {
 			$from = self::document_id( $template_id, $doc );
 			$to   = self::document_id( $copy, $doc );
 			if ( ! $from || ! $to ) {

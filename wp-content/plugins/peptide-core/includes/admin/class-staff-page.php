@@ -37,6 +37,9 @@ final class Staff_Page {
 
 	public static function add_menu(): void {
 		add_submenu_page( Admin_Menus::SETTINGS, __( 'Staff', 'peptide-core' ), __( 'Staff', 'peptide-core' ), self::CAP, self::SLUG, array( self::class, 'render' ) );
+		// The visible entry is removed by Admin_Menus, so keep its direct admin.php route registered.
+		// An empty string creates a hidden alias without PHP 8.3's null parent deprecation.
+		add_submenu_page( '', __( 'Staff', 'peptide-core' ), __( 'Staff', 'peptide-core' ), self::CAP, self::SLUG, array( self::class, 'render' ) );
 	}
 
 	public static function url( array $args = array() ): string {
