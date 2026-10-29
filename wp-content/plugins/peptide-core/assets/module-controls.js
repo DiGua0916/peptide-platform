@@ -507,6 +507,76 @@
 		} );
 	}
 
+	/** Raw code keeps a separate modal draft; only Apply writes the original field. */
+	function CodeField( props ) {
+		var field = props.field, raw = props.value === null || props.value === undefined ? '' : String( props.value );
+		var id = useState( uid() )[ 0 ], open = useState( false ), pending = useState( '' );
+		var trigger = useRef( null ), dialog = useRef( null ), input = useRef( null ), session = useRef( null );
+		function sameSession() { return session.current && session.current.value === raw && session.current.scope === props.scope && session.current.key === field.key; }
+		function finish( restoreFocus ) {
+			session.current = null; pending[ 1 ]( '' );
+			if ( dialog.current && dialog.current.open ) { dialog.current.close(); }
+			open[ 1 ]( false );
+			if ( restoreFocus && trigger.current ) { trigger.current.focus( { preventScroll: true } ); }
+		}
+		useEffect( function () {
+			if ( open[ 0 ] && ! sameSession() ) { finish( false ); }
+		}, [ raw, props.scope, field.key ] );
+		useEffect( function () {
+			if ( ! open[ 0 ] || ! dialog.current ) { return; }
+			var node = dialog.current;
+			node.showModal();
+			if ( input.current ) { input.current.focus(); }
+			return function () { session.current = null; if ( node.open ) { node.close(); } };
+		}, [ open[ 0 ] ] );
+		function expand() {
+			session.current = { value: raw, scope: props.scope, key: field.key };
+			pending[ 1 ]( raw ); open[ 1 ]( true );
+		}
+		function apply() {
+			if ( ! sameSession() ) { finish( true ); return; }
+			var next = pending[ 0 ]; finish( true );
+			if ( next !== raw ) { props.onChange( next ); }
+		}
+		function keys( event ) {
+			if ( event.key === 'Escape' ) { event.preventDefault(); event.stopPropagation(); finish( true ); return; }
+			if ( event.key !== 'Tab' || ! dialog.current ) { return; }
+			var targets = Array.prototype.filter.call( dialog.current.querySelectorAll( 'button,textarea' ), function ( node ) { return ! node.disabled; } );
+			var first = targets[ 0 ], last = targets[ targets.length - 1 ];
+			if ( event.shiftKey && document.activeElement === first ) { event.preventDefault(); last.focus(); }
+			else if ( ! event.shiftKey && document.activeElement === last ) { event.preventDefault(); first.focus(); }
+		}
+		return el( 'div', { className: 'pc-me-code-field' },
+			el( 'div', { className: 'pc-me-code-field__head' },
+				el( 'label', { className: 'pc-me-label', htmlFor: id }, field.label ),
+				el( 'span', { className: 'pc-me-code-field__badge', 'aria-hidden': true }, '代码' ),
+				el( 'button', { type: 'button', ref: trigger, className: 'pc-me-code-expand', 'aria-label': '扩大编辑 ' + field.label, title: '扩大编辑', onClick: expand },
+					el( 'svg', { viewBox: '0 0 24 24', width: 18, height: 18, fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true, focusable: false }, el( 'path', { d: 'M8 3H3v5m13-5h5v5m0 8v5h-5M3 16v5h5M3 3l6 6m12-6-6 6m6 12-6-6M3 21l6-6' } ) )
+				)
+			),
+			el( 'textarea', { id: id, className: 'pc-me-code-field__input', rows: 10, spellCheck: false, autoCapitalize: 'off', autoCorrect: 'off', wrap: 'off', value: raw,
+				'aria-describedby': field.help ? id + '-help' : undefined, onChange: function ( event ) { props.onChange( event.target.value ); } } ),
+			field.help ? el( 'p', { id: id + '-help', className: 'pc-me-help' }, field.help ) : null,
+			open[ 0 ] ? el( 'dialog', { ref: dialog, className: 'pc-me-code-dialog', 'aria-labelledby': id + '-dialog-title', 'aria-describedby': id + '-dialog-note', 'aria-modal': true,
+				onCancel: function ( event ) { event.preventDefault(); event.stopPropagation(); finish( true ); }, onClose: function () { if ( session.current ) { finish( true ); } }, onKeyDown: keys },
+				el( 'div', { className: 'pc-me-code-dialog__head' },
+					el( 'h3', { id: id + '-dialog-title' }, '编辑 ' + field.label + ' 代码' ),
+					el( 'button', { type: 'button', className: 'pc-me-code-expand', 'aria-label': '关闭并取消', onClick: function () { finish( true ); } },
+						el( 'svg', { viewBox: '0 0 24 24', width: 18, height: 18, fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', 'aria-hidden': true, focusable: false }, el( 'path', { d: 'M6 6l12 12M18 6L6 18' } ) )
+					)
+				),
+				el( 'div', { className: 'pc-me-code-dialog__body' },
+					el( 'textarea', { ref: input, className: 'pc-me-code-field__input pc-me-code-dialog__input', 'aria-label': field.label + ' 代码', rows: 20, spellCheck: false, autoCapitalize: 'off', autoCorrect: 'off', wrap: 'off', value: pending[ 0 ], onChange: function ( event ) { pending[ 1 ]( event.target.value ); } } ),
+					el( 'p', { id: id + '-dialog-note', className: 'pc-me-code-dialog__note' }, '应用后更新此字段；取消或按 Esc 保留原内容。' )
+				),
+				el( 'div', { className: 'pc-me-code-dialog__actions' },
+					el( 'button', { type: 'button', className: 'pc-me-code-dialog__cancel', onClick: function () { finish( true ); } }, '取消' ),
+					el( 'button', { type: 'button', className: 'pc-me-code-dialog__apply', onClick: apply }, '应用' )
+				)
+			) : null
+		);
+	}
+
 	function HtmlField( props ) {
 		var mode = useRef( null );
 		if ( ! mode.current ) { mode.current = { value: props.value, scope: props.scope, source: legacyRichSource( props.value ), emitted: undefined }; }
@@ -1316,6 +1386,7 @@
 				if ( f.ui === 'richtext' || f.ui === 'template' ) { return el( HtmlField, { field: f, value: value, scope: ctx && ctx.device || 'desktop', onChange: onChange } ); }
 				return el( C.TextareaControl, { label: f.label, help: f.help || S.htmlHelp, value: value || '', rows: 5, onChange: onChange } );
 			case 'code':
+				if ( f.ui === 'expanded-code' ) { return el( CodeField, { field: f, value: value, scope: ctx && ctx.device || 'desktop', onChange: onChange } ); }
 				return el( C.TextareaControl, { className: 'pc-me-code', label: f.label, help: f.help, value: value || '', rows: 10, onChange: onChange } );
 			case 'url':
 				if ( f.ui === 'site-link' ) { return el( SiteLinkInput, { field: f, value: value, onChange: onChange } ); }

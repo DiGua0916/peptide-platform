@@ -991,7 +991,12 @@ final class Registry {
 				'settings' => array(
 					Fields::f( 'text', 'title', __( 'Title', 'peptide-core' ), '' ),
 					self::full_width(),
-					Fields::f( 'code', 'html', __( 'HTML', 'peptide-core' ), '', array( 'help' => __( 'Scripts only run when the last editor of this design is an administrator. Do not paste code you do not trust.', 'peptide-core' ) ) ),
+					Fields::f( 'code', 'html', __( 'HTML', 'peptide-core' ), '', array( 'ui' => 'expanded-code', 'help' => __( '请仅粘贴可信 HTML。完整预览按当前账号权限过滤；编辑器安全预览仍会过滤代码。应用修改不会发布网站。', 'peptide-core' ) ) ),
+				),
+				'panels' => array(
+					array( 'id' => 'content', 'label' => '内容与代码', 'initialOpen' => true, 'fields' => array( 'title', 'html' ) ),
+					array( 'id' => 'layout', 'label' => '宽度', 'initialOpen' => true, 'fields' => array( 'fullWidth' ) ),
+					array( 'id' => 'general', 'label' => '显示与间距', 'fields' => array( 'showDesktop', 'showMobile', 'paddingTopPx', 'paddingBottomPx', 'backgroundColor' ) ),
 				),
 			),
 
