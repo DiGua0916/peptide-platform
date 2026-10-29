@@ -726,6 +726,7 @@ final class Registry {
 							array(
 								'grid'     => __( 'Grid', 'peptide-core' ),
 								'carousel' => __( 'Carousel', 'peptide-core' ),
+								'masonry'  => __( '瀑布流', 'peptide-core' ),
 							)
 						),
 						self::select( 'textAlign', __( 'Text alignment', 'peptide-core' ), 'left', $align ),

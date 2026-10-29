@@ -127,6 +127,113 @@
 		restart();
 	}
 
+	/** Preserve narrow legacy column/gap values with discoverable, keyboard-accessible scrolling. */
+	function cardGrid( root ) {
+		if ( root.dataset.vcCardGridReady === '1' ) { return; }
+		root.dataset.vcCardGridReady = '1';
+		var hint = document.createElement( 'p' );
+		hint.className = 'vc-card-list__scroll-hint';
+		hint.textContent = root.dataset.scrollLabel || 'Scroll horizontally to see all cards';
+		root.parentNode.insertBefore( hint, root.nextSibling );
+		function measure() {
+			var scrollable = root.scrollWidth > root.clientWidth + 1;
+			root.tabIndex = scrollable ? 0 : -1;
+			hint.hidden = ! scrollable;
+		}
+		if ( window.ResizeObserver ) { new window.ResizeObserver( measure ).observe( root ); }
+		else { window.addEventListener( 'resize', measure ); }
+		measure();
+	}
+
+	/** One-card steps mirror the configured card width; native scrolling remains the no-JS fallback. */
+	function cardCarousel( root ) {
+		if ( root.dataset.vcCardReady === '1' ) { return; }
+		root.dataset.vcCardReady = '1';
+		var cards = Array.prototype.slice.call( root.children );
+		if ( cards.length < 2 ) { root.tabIndex = -1; return; }
+		var controls = document.createElement( 'div' );
+		controls.className = 'vc-card-list__controls';
+		var pages = document.createElement( 'div' );
+		pages.className = 'vc-card-list__pages';
+		var status = document.createElement( 'span' );
+		status.className = 'vc-card-list__status';
+		status.setAttribute( 'aria-live', 'polite' );
+		status.setAttribute( 'aria-atomic', 'true' );
+		var stops = [], current = 0, frame = null;
+		function arrow( previous ) {
+			var button = document.createElement( 'button' );
+			button.type = 'button'; button.className = 'vc-card-list__arrow';
+			button.setAttribute( 'aria-label', previous ? root.dataset.prevLabel : root.dataset.nextLabel );
+			button.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" focusable="false"><path d="' + ( previous ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7' ) + '"/></svg>';
+			button.addEventListener( 'click', function () { go( current + ( previous ? -1 : 1 ) ); } );
+			return button;
+		}
+		var previous = arrow( true ), next = arrow( false );
+		controls.appendChild( previous ); controls.appendChild( pages ); controls.appendChild( next ); controls.appendChild( status );
+		root.parentNode.insertBefore( controls, root.nextSibling );
+		function update() {
+			var at = Math.abs( root.scrollLeft );
+			current = 0;
+			stops.forEach( function ( point, i ) { if ( Math.abs( point - at ) < Math.abs( stops[ current ] - at ) ) { current = i; } } );
+			previous.disabled = current === 0; next.disabled = current === stops.length - 1;
+			Array.prototype.forEach.call( pages.children, function ( button, i ) {
+				var value = i === current ? 'true' : 'false';
+				if ( button.getAttribute( 'aria-current' ) !== value ) { button.setAttribute( 'aria-current', value ); }
+			} );
+			var message = ( root.dataset.statusLabel || 'Page %d of %t' ).replace( '%d', current + 1 ).replace( '%t', stops.length );
+			if ( status.textContent !== message ) { status.textContent = message; }
+		}
+		function measure() {
+			var maximum = Math.max( 0, root.scrollWidth - root.clientWidth );
+			var first = cards[ 0 ].getBoundingClientRect();
+			stops = [];
+			cards.forEach( function ( card ) {
+				var point = Math.min( maximum, Math.abs( card.getBoundingClientRect().left - first.left ) );
+				if ( ! stops.length || Math.abs( point - stops[ stops.length - 1 ] ) > 1 ) { stops.push( point ); }
+			} );
+			if ( pages.children.length !== stops.length ) {
+				var focused = Array.prototype.indexOf.call( pages.children, document.activeElement );
+				pages.textContent = '';
+				stops.forEach( function ( point, i ) {
+					var button = document.createElement( 'button' );
+					button.type = 'button'; button.className = 'vc-card-list__page';
+					button.setAttribute( 'aria-label', ( root.dataset.pageLabel || 'Go to page %d' ).replace( '%d', i + 1 ) );
+					button.addEventListener( 'click', function () { go( i ); } );
+					pages.appendChild( button );
+				} );
+				if ( focused >= 0 && pages.children.length ) { pages.children[ Math.min( focused, pages.children.length - 1 ) ].focus( { preventScroll: true } ); }
+			}
+			controls.hidden = maximum <= 1 || stops.length < 2;
+			root.tabIndex = controls.hidden ? -1 : 0;
+			update();
+		}
+		function go( index ) {
+			var target = stops[ Math.max( 0, Math.min( stops.length - 1, index ) ) ];
+			var direction = window.getComputedStyle( root ).direction === 'rtl' ? -1 : 1;
+			root.scrollTo( { left: target * direction, behavior: reduce ? 'auto' : 'smooth' } );
+		}
+		root.addEventListener( 'scroll', function () {
+			if ( frame !== null ) { return; }
+			frame = requestAnimationFrame( function () { frame = null; update(); } );
+		}, { passive: true } );
+		root.addEventListener( 'keydown', function ( event ) {
+			if ( event.target !== root ) { return; }
+			var direction = window.getComputedStyle( root ).direction === 'rtl' ? -1 : 1;
+			var index = event.key === 'ArrowRight' ? current + direction : event.key === 'ArrowLeft' ? current - direction : event.key === 'Home' ? 0 : event.key === 'End' ? stops.length - 1 : null;
+			if ( index === null ) { return; }
+			event.preventDefault(); go( index );
+		} );
+		root.addEventListener( 'vc:select-item', function ( event ) {
+			var target = event.target && event.target.closest ? event.target.closest( '[data-module-item]' ) : null;
+			var index = cards.indexOf( target );
+			if ( index < 0 ) { return; }
+			event.preventDefault(); go( index );
+		} );
+		if ( window.ResizeObserver ) { new window.ResizeObserver( measure ).observe( root ); }
+		else { window.addEventListener( 'resize', measure ); }
+		measure();
+	}
+
 	function timeline( root ) {
 		if ( root.dataset.autoScroll !== '1' ) { return; }
 		var desktop = window.matchMedia ? window.matchMedia( '(min-width: 768px)' ) : { matches: true };
@@ -302,6 +409,8 @@
 
 	function init() {
 		each( '.vc-m .vc-carousel', carousel );
+		each( '.vc-m [data-vc-card-grid]', cardGrid );
+		each( '.vc-m [data-vc-card-carousel]', cardCarousel );
 		each( '.vc-m .vc-timeline--horizontal', timeline );
 		each( '.vc-m .vc-showcase', showcase );
 		each( '.vc-m .vc-btn', buttonEffect );

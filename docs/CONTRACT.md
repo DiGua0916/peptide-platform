@@ -508,12 +508,13 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
 
 ### 2026-10-30 · 装修接口增量（STORE-BUILDER-REDESIGN-01，已验证阶段）
 
-本段记录本轮已实现/验证的接口边界，不表示70参考或73本地积木已全量改造交付。用户已授权完整装修UI/设置/实际渲染重做，原业务、旧字段与默认、引用ID、合法设备数据和草稿/发布分离持续保留。变更提案和分阶段实测已先记录docs/handoffs/backend.md；未部署、提交或推送。
+本段记录本轮已实现/验证的接口边界，不表示70参考或73本地积木已全量改造交付。用户已授权完整装修UI/设置/实际渲染重做，原业务、旧字段与默认、引用ID、合法设备数据和草稿/发布分离持续保留。变更提案和分阶段实测已先记录docs/handoffs/backend.md；后续按用户授权在每个已验证阶段提交并推送GitHub，仍未部署。
 
 1. `pc_layout_records` 保留旧resource/term/paged/selected调用；`selected_ids`为正整数CSV去重最多100，`metadata_only`仅原始字面`1`启用元信息读取。每个结果仍经原资源/权限资格；缺失引用明确unavailable，不自动换成全站。review资源只搜索可公开母商品主评价，支持SKU精确归母品、媒体/精确星级过滤后分页，不返回邮箱/IP/内部来源备注。权限与nonce不放宽。
 2. 新 `pc_layout_link_targets` 是仅认证GET AJAX，`Templates::CAP_EDIT`和同名nonce；type为route/product/category/page/post/实际公开topic白名单。`mode=list`支持term（UTF-8最多100字符）/paged（1–1000），固定20目标/页；`mode=resolve`以type/id在确认前重新核验公开/发布/无密码/商品可见资格。DTO仅type/id/key/label/url，response为options+more或target；不创建Page/options，不提供客户、订单或营销私有记录。400参数、403权限/nonce、404目标不可用、405方法和503读取故障有明确恢复路径，不返回SQL诊断。
 3. 通用link仍是既有`{label,href,target}`；选择目标仅把其真实permalink快照写到href，不覆盖label/target，也不保存动态跟踪目标的ID。type=url仅`ui:site-link`显式启用站内选择器；其他素材/视频URL不受影响。新选择器不能生成不存在的路由，取消/关闭/失败/晚到响应不得更改原值。手填允许协议继续由既有Fields处理，不接纳javascript/data。
 4. `Review_Index`只在运行时提供公开评价列表：正常/comments路径，plain permalink或已有同名资产时使用`?pc_review_index=1`，保留现有资产/访问和robots保护，无建页或flush rewrite。签名keyset绑定用途、范围、筛选与有效期；固定12条，列表每次最多240个候选对象。统计最多600个候选对象加末尾最多1条ID-only耗尽探测，完整才显示准确总数/均分/五星分布，否则unknown；不是首屏统计，也不是假0。逐页重新检查当前审核和商品资格；正常功能关闭/无评价是200空态，真实列表SQL失败为503/可重试，统计单独失败保留正常评论但统计unknown。读取失败须能恢复，不能复用失败空缓存冒充正常空结果。
 5. `Review_Replies`在原有审核/商品编辑权限下用独立nonce创建/编辑/回收/恢复真实child comment；服务端决定管理员身份，parent须正整数且属当前商品主评价，保留并发指纹/锁/幂等。公开DTO仅id/content/date/datetime。内部来源/备注/编辑历史不转成公开回复；不自动外发邮件、不把child reply计入商品主评价数。
+6. `card_list.display`追加`masonry`合法值，保留`grid`/`carousel`和旧默认；CSS columns按列向下流动。新增展示与轮播控件只消费原合法设备列数、gap、媒体及条目ID/href，不迁移数据；旧desktop6/mobile5/gap120等合法组合保留，极端窄屏仅在本块内部有界横滚。无JS仍输出原卡片/链接并可原生滚动，不把初始化脚本当内容来源。该阶段的五组真实设置/REST/签名iframe验收及独立fixture边界见backend-card-list-2026-10-30.md。
 
 验证按阶段记录，不混计：Records独立34及控件12不当真WP；原站限定29项已精确清理并与858posts/2555非锁meta基线同指纹；独立WordPress+Woo评价/Index各范围见任务work/reviews-runtime-positive-report.md，Index19组及SQL6/同请求恢复2等有真实前后证据；Links真实API7+UI8通过，取消/权限/状态变化/390/错误恢复均覆盖。共享条目panels/paired和首7基础块属于后续单独阶段，最终真实性/版本/限制以对应报告为准，不以已有定义数代替全量验收。

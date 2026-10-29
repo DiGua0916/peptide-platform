@@ -585,8 +585,14 @@ final class Fallback {
 	}
 
 	private static function render_card_list( array $s, array $items ): string {
-		$out = '<div class="' . esc_attr( self::inner_class( $s ) ) . '"' . self::style( array( 'text-align' => $s['textAlign'] ) ) . '>' . self::heading( $s );
-		$out .= '<div class="vc-grid vc-grid--' . esc_attr( $s['display'] ) . '"' . self::cols_style( $s ) . '>';
+		$out = '<div class="' . esc_attr( self::inner_class( $s ) . ' vc-card-list' ) . '"' . self::style( array( 'text-align' => $s['textAlign'] ) ) . '>' . self::heading( $s );
+		$behavior = ' role="region" tabindex="0" aria-label="' . esc_attr( $s['title'] ?: __( 'Card list', 'peptide-core' ) ) . '"';
+		if ( 'carousel' === $s['display'] ) {
+			$behavior .= ' data-vc-card-carousel aria-roledescription="' . esc_attr__( 'Carousel', 'peptide-core' ) . '" data-prev-label="' . esc_attr__( 'Previous cards', 'peptide-core' ) . '" data-next-label="' . esc_attr__( 'Next cards', 'peptide-core' ) . '" data-page-label="' . esc_attr__( 'Go to page %d', 'peptide-core' ) . '" data-status-label="' . esc_attr__( 'Page %d of %t', 'peptide-core' ) . '"';
+		} else {
+			$behavior .= ' data-vc-card-grid data-scroll-label="' . esc_attr__( 'Scroll horizontally to see all cards', 'peptide-core' ) . '"';
+		}
+		$out .= '<div class="vc-grid vc-grid--' . esc_attr( $s['display'] ) . '"' . self::cols_style( $s ) . $behavior . '>';
 		foreach ( $items as $it ) {
 			$card = self::picture( $it['media'], 'vc-card__media', '(max-width: 767px) 100vw, 33vw' ) . '<div class="vc-card__body">';
 			if ( '' !== $it['title'] ) {

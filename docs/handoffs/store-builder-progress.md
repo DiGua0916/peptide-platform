@@ -13,7 +13,7 @@ Author: Codex. User authorized pulling the collaborator's GitHub work, committin
 - Activity tiers, coupon tickets, collection tabs, four review block types, manual featured reviews, merchant replies and the public review index are implemented. Review source/internal notes/edit history remain merchant-only. Review indexing uses bounded, signed continuation and reports unknown aggregates when it cannot establish a complete result.
 - Site-link selection uses authenticated read-only lookup and confirmation-time visibility checks. It writes only the existing href, preserving button labels, targets and manual URLs.
 - First basic batch: carousel, image, image row, image grid, and three/four/five-image compositions. Original keys, defaults, item IDs and legal device data remain. Optional richer descriptions distinguish null inheritance from an explicit empty value. Old row scrolling remains available alongside the new inline layout.
-- Second batch is partially implemented: media/text properties and editor placeholder layout; card-list properties are in progress. Do not advertise masonry or the entire second batch as verified.
+- Second batch includes media/text properties and editor placeholder layout, whose remaining actual-theme checks are separate. Card-list now has CSS-columns masonry, native-scroll carousel controls and bounded overflow for legal legacy columns/gaps. Five scoped actual WordPress groups verified its settings/save/preview path; this does not certify every second-batch option.
 
 ## Actual verification and limits
 
@@ -27,11 +27,13 @@ Author: Codex. User authorized pulling the collaborator's GitHub work, committin
 
 ## Work still open
 
-1. Card-list masonry, interactive carousel controls and legal old mobile column/gap overflow cases are being implemented; this checkpoint does not include or certify those in-flight files.
-2. Continue one-block-at-a-time reference study, real rendering and association checks. The reference catalog has 70 blocks, while local definitions contain 73 types; these counts are not a coverage proof. Fifteen reference blocks have been studied and their temporary instances removed; the card-list reference is currently the next active scratch block, not completed.
+1. Complete the remaining media/text actual-theme checks, then continue video and the other reference types; do not reuse one block's checks as acceptance for another.
+2. Continue one-block-at-a-time reference study, real rendering and association checks. The reference catalog has 70 blocks, while local definitions contain 73 types; these counts are not a coverage proof. Sixteen reference blocks have been studied and their temporary instances removed; video is the next active scratch block, not completed. The card-list instance was removed only after its real carousel, masonry, alignment and link-binding observations.
 3. TikTok and the order fulfillment board lack dedicated equivalents. AI and payment-related exclusions remain subject to the user's earlier deferral. Keep third-party payment, mail and search integrations unconfigured until separately supplied.
 
 The earlier carousel minimum-height, rich-text compatibility and buyer-login items above are resolved within the specifically stated checks. See backend-builder-compatibility-2026-10-30.md and the latest frontend handoff; this is not a declaration that every editor or legacy HTML protocol has been exercised.
+
+Card-list acceptance is separately recorded in backend-card-list-2026-10-30.md: five real WordPress groups, with the owner's independent 44/18/17 fixture scopes kept separate. No saved column count, gap, item ID or href was migrated or clamped.
 
 The reference site is a disposable 404 editor page. Never Publish. Delete only the temporary block added by this task. Existing business data and published layout records are not test fixtures.
 
