@@ -756,13 +756,37 @@ final class Fallback {
 	}
 
 	private static function render_gallery( array $s, array $items ): string {
-		$out = '<div class="' . esc_attr( self::inner_class( $s ) ) . '">' . self::heading( $s ) . '<div class="vc-gallery"' . self::cols_style( $s ) . '>';
+		$rail = 'rail' === ( $s['display'] ?? 'grid' );
+		$out = '<div class="' . esc_attr( self::inner_class( $s ) ) . '">' . self::heading( $s );
+		if ( $rail ) { $out .= '<div class="vc-gallery-rail">'; }
+		$out .= '<div class="vc-gallery' . ( $rail ? ' vc-gallery--rail' : '' ) . '"' . ( $rail ? ' data-vc-gallery-rail="1" tabindex="0" aria-label="' . esc_attr__( 'Gallery', 'peptide-core' ) . '" data-scroll-label="' . esc_attr__( 'Gallery position', 'peptide-core' ) . '"' : self::cols_style( $s ) ) . '>';
 		foreach ( $items as $it ) {
-			$fig  = self::img( $it['image'], 'vc-gallery__img' );
-			$fig .= '' !== $it['caption'] ? '<figcaption>' . esc_html( $it['caption'] ) . '</figcaption>' : '';
-			$out .= '<figure class="' . esc_attr( self::item_class( $it, 'vc-gallery__item' ) ) . '"' . self::item_attr( $it ) . '>' . self::maybe_link( $fig, $it['href'] ) . '</figure>';
+			$image = self::img( $it['image'], 'vc-gallery__img' );
+			$rich = $it['captionHtml'] ?? null;
+			if ( ! $rail && null === $rich ) {
+				// Preserve the original plain-caption grid markup and link behavior.
+				$fig = $image . ( '' !== $it['caption'] ? '<figcaption>' . esc_html( $it['caption'] ) . '</figcaption>' : '' );
+				$out .= '<figure class="' . esc_attr( self::item_class( $it, 'vc-gallery__item' ) ) . '"' . self::item_attr( $it ) . '>' . self::maybe_link( $fig, $it['href'] ) . '</figure>';
+				continue;
+			}
+			$caption = null === $rich ? esc_html( $it['caption'] ) : ( '' !== $rich ? self::html( $rich ) : '' );
+			$fig = '' !== $image ? self::maybe_link( $image, $it['href'] ) : '';
+			if ( '' !== $caption ) {
+				$caption = preg_match( '/<a(?:\s|>)/i', $caption ) ? $caption : self::maybe_link( $caption, $it['href'], 'vc-gallery__caption-link' );
+				$fig .= '<figcaption class="vc-gallery__caption">' . $caption . '</figcaption>';
+			}
+			$ratio = 1;
+			if ( $rail ) {
+				$resolved = Assets::resolve( $it['image'] );
+				if ( $resolved && $resolved['width'] > 0 && $resolved['height'] > 0 ) {
+					$natural_ratio = (float) $resolved['width'] / (float) $resolved['height'];
+					if ( is_finite( $natural_ratio ) && $natural_ratio > 0 ) { $ratio = $natural_ratio; }
+				}
+			}
+			$out .= '<figure class="' . esc_attr( self::item_class( $it, 'vc-gallery__item' ) ) . '"' . self::item_attr( $it ) . ( $rail ? self::style( array( '--vc-gallery-ratio' => max( 0.000001, round( $ratio, 6 ) ) ) ) : '' ) . '>' . $fig . '</figure>';
 		}
 		$out .= '</div>';
+		if ( $rail ) { $out .= '</div>'; }
 		$btn  = self::button( $s['button'], $s );
 		return $out . ( '' !== $btn ? '<p class="vc-m__actions">' . $btn . '</p>' : '' ) . '</div>';
 	}

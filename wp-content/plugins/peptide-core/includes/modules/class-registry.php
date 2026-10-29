@@ -187,12 +187,13 @@ final class Registry {
 
 	/** Observed content blocks use the same saved fields with task-specific panels. */
 	private static function reference_content_controls( string $type, array $def ): array {
-		if ( ! in_array( $type, array( 'media_text', 'card_list', 'video', 'video_text', 'slogan', 'counter' ), true ) ) { return $def; }
+		if ( ! in_array( $type, array( 'media_text', 'card_list', 'video', 'video_text', 'slogan', 'counter', 'gallery' ), true ) ) { return $def; }
 		foreach ( $def['settings'] as &$field ) {
 			if ( 'bodyHtml' === $field['key'] ) { $field['ui'] = 'richtext'; }
 			if ( 'effectDurationMs' === $field['key'] ) { $field['uiMin'] = 1000; }
 			if ( 'effectIntervalMs' === $field['key'] ) { $field['uiMin'] = 500; $field['uiMax'] = 5000; }
-			if ( in_array( $type, array( 'card_list', 'video', 'video_text', 'slogan', 'counter' ), true ) && 'description' === $field['key'] ) { $field['uiHidden'] = true; }
+			if ( in_array( $type, array( 'card_list', 'video', 'video_text', 'slogan', 'counter', 'gallery' ), true ) && 'description' === $field['key'] ) { $field['uiHidden'] = true; }
+			if ( 'gallery' === $type && 'columns' === $field['key'] ) { $field['show_if'] = array( 'display' => 'grid' ); $field['deviceUI'] = 'paired'; }
 			if ( 'counter' === $type ) {
 				if ( 'numberSizePx' === $field['key'] ) { $field['label'] = '数字字号'; $field['min'] = 14; $field['uiMin'] = 14; $field['uiMax'] = 52; }
 				if ( 'columns' === $field['key'] ) { $field['uiMin'] = 1; $field['uiMax'] = array( 'desktop' => 5, 'mobile' => 2 ); $field['deviceUI'] = 'paired'; }
@@ -211,7 +212,27 @@ final class Registry {
 			if ( 'card_list' === $type && 'columns' === $field['key'] ) { $field['uiMin'] = array( 'desktop' => 3, 'mobile' => 1 ); $field['uiMax'] = array( 'desktop' => 5, 'mobile' => 2 ); $field['deviceUI'] = 'paired'; }
 		}
 		unset( $field );
-		if ( 'counter' === $type ) {
+		if ( 'gallery' === $type ) {
+			$def['settings'][] = Fields::f( 'html', 'descriptionHtml', '简短描述', null, array( 'ui' => 'richtext', 'legacyKey' => 'description' ) );
+			$def['settings'][] = Fields::f( 'select', 'display', '展示方式', 'grid', array( 'options' => array( 'grid' => '多列图片', 'rail' => '横向画廊' ), 'help' => '横向画廊以相同图片高度排列，保留每张图片的比例；多列图片沿用原列数。' ) );
+			$def['editorDefaults'] = array( 'display' => 'rail' );
+			$def['panels'] = array(
+				array( 'id' => 'content', 'label' => '标题与描述', 'initialOpen' => true, 'fields' => array( 'title', 'descriptionHtml' ) ),
+				array( 'id' => 'layout', 'label' => '画廊排列', 'initialOpen' => true, 'fields' => array( 'display', 'fullWidth', 'columns' ) ),
+				array( 'id' => 'button', 'label' => '按钮与特效', 'fields' => array( 'button', 'buttonEffect', 'effectDurationMs', 'effectIntervalMs' ) ),
+				array( 'id' => 'general', 'label' => '显示与间距', 'fields' => array( 'showDesktop', 'showMobile', 'paddingTopPx', 'paddingBottomPx', 'backgroundColor' ) ),
+			);
+			foreach ( $def['items']['fields'] as &$field ) {
+				if ( 'caption' === $field['key'] ) { $field['uiHidden'] = true; }
+				if ( 'href' === $field['key'] ) { $field['help'] = '链接用于图片和说明；说明内已有链接时，只为图片应用此链接，保留说明中的独立链接。'; }
+			}
+			unset( $field );
+			$def['items']['fields'][] = Fields::f( 'html', 'captionHtml', '简短描述', null, array( 'ui' => 'richtext', 'legacyKey' => 'caption' ) );
+			$def['items']['panels'] = array(
+				array( 'id' => 'image', 'label' => '图片与链接', 'initialOpen' => true, 'fields' => array( 'image', 'href' ) ),
+				array( 'id' => 'caption', 'label' => '简短描述', 'initialOpen' => true, 'fields' => array( 'captionHtml' ) ),
+			);
+		} elseif ( 'counter' === $type ) {
 			$def['settings'][] = Fields::f( 'html', 'descriptionHtml', '简短描述', null, array( 'ui' => 'richtext', 'legacyKey' => 'description' ) );
 			$def['panels'] = array(
 				array( 'id' => 'content', 'label' => '标题与描述', 'initialOpen' => true, 'fields' => array( 'title', 'descriptionHtml' ) ),
