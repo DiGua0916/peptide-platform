@@ -807,9 +807,12 @@ final class Fallback {
 	}
 
 	/**
-	 * 当前文档最后的编辑者是否可以使用未过滤的 HTML（管理员）。
+	 * Preview code is supplied by the current actor; public content keeps the saved-editor policy.
 	 */
 	private static function trusted_author(): bool {
+		if ( 'preview' === self::$context ) {
+			return current_user_can( 'unfiltered_html' );
+		}
 		$doc  = Renderer::$document_id;
 		$user = $doc ? (int) get_post_meta( $doc, '_edit_last', true ) : 0;
 		return $user && user_can( $user, 'unfiltered_html' );
