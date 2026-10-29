@@ -11694,3 +11694,53 @@ msgstr "查看发送记录"
 #: includes/admin/class-data-pages.php:655
 msgid "No emails were sent in this period."
 msgstr "这个时间段没有发送邮件。"
+
+#: includes/admin/class-data-pages.php:684
+msgid "Landing page path"
+msgstr "落地页"
+
+#: includes/admin/class-data-pages.php:685
+msgid "Unknown landing page"
+msgstr "未知落地页"
+
+#: includes/admin/class-data-pages.php:686
+msgid "UV"
+msgstr "UV"
+
+#: includes/admin/class-data-pages.php:688
+msgid "Viewing UV"
+msgstr "查看 UV"
+
+#: includes/admin/class-data-pages.php:689
+msgid "Add-to-cart UV"
+msgstr "加购 UV"
+
+#: includes/admin/class-data-pages.php:690
+msgid "Paying UV"
+msgstr "付款 UV"
+
+#: includes/admin/class-data-pages.php:695
+msgid "UV value"
+msgstr "UV 价值"
+
+#: includes/admin/class-data-pages.php:696
+msgid "Sales / UV"
+msgstr "销售额 / UV"
+
+#: includes/admin/class-data-pages.php:697
+msgid "Paid orders / UV × 100%"
+msgstr "已付款订单数 / UV × 100%"
+
+#: includes/admin/class-data-pages.php:699
+msgid "Search landing pages"
+msgstr "搜索落地页"
+
+#. translators: %d: number of landing pages
+#: includes/admin/class-data-pages.php:702
+#, php-format
+msgid "%d landing pages in total"
+msgstr "共 %d 个落地页"
+
+#: includes/admin/class-data-pages.php:708
+msgid "The landing page is the first page of each visit, without URL parameters. Orders count toward the landing page of the visit they were placed in. Orders without a recorded visit, or placed in a visit that did not start on a page, appear under \"Unknown landing page\"."
+msgstr "落地页是每次访问打开的第一个页面，不含链接参数。订单算在下单那次访问的落地页上；没有访问记录、或者那次访问不是从页面开始的订单，归在“未知落地页”。"

@@ -20,6 +20,7 @@ use PeptideCore\Api\Rest_Controller;
 use PeptideCore\Data\Apps;
 use PeptideCore\Data\Conversion;
 use PeptideCore\Data\Emails;
+use PeptideCore\Data\Landing;
 use PeptideCore\Data\Operations;
 use PeptideCore\Data\Page_Visits;
 use PeptideCore\Data\Products;
@@ -234,6 +235,28 @@ final class Data_Pages {
 						'permission_callback' => $permission,
 					)
 				);
+				// 落地页转化页（DATA-01 第 9 步）：每个落地页路径的 UV、顾客数、查看 / 加购 / 付款 UV、订单数、转化率、销售额、客单价、UV 价值（只有本期，没有对比期）；可排序、搜索、分页。
+				register_rest_route(
+					Rest_Controller::ROUTE_NAMESPACE,
+					'/data/landing',
+					array(
+						'methods'             => \WP_REST_Server::READABLE,
+						'callback'            => static function ( \WP_REST_Request $request ) {
+							$r = Range::from_params( $request->get_params() );
+							if ( is_wp_error( $r ) ) {
+								return $r;
+							}
+							$a = Landing::params( $request->get_params() );
+							if ( is_wp_error( $a ) ) {
+								return $a;
+							}
+							$res = new \WP_REST_Response( Landing::table( $r, $a ) );
+							$res->header( 'Cache-Control', 'no-store' );
+							return $res;
+						},
+						'permission_callback' => $permission,
+					)
+				);
 				// 邮件详情数据页（DATA-01 第 8 步）：邮件发送数和成功率（本期、对比期、变化），以及本期每封邮件的发送数和成功率。
 				register_rest_route(
 					Rest_Controller::ROUTE_NAMESPACE,
@@ -293,16 +316,17 @@ final class Data_Pages {
 			self::SCRIPT,
 			'window.pcData = ' . wp_json_encode(
 				array(
-					'page'      => $key,
-					'title'     => self::titles()[ $key ],
-					'range'     => Range::from_params( array() ), // 今天，由服务器按店铺时区算好。
-					'showRange' => 'realtime' !== $key,           // 实时数据页没有时间段工具栏。
-					'timezone'  => wp_timezone_string() . ' (UTC' . wp_date( 'P' ) . ')',
-					'currency'  => array(
+					'page'        => $key,
+					'title'       => self::titles()[ $key ],
+					'range'       => Range::from_params( array() ), // 今天，由服务器按店铺时区算好。
+					'showRange'   => 'realtime' !== $key,           // 实时数据页没有时间段工具栏。
+					'showCompare' => 'landing' !== $key,           // 落地页转化页只有本期。
+					'timezone'    => wp_timezone_string() . ' (UTC' . wp_date( 'P' ) . ')',
+					'currency'    => array(
 						'code'   => get_woocommerce_currency(),
 						'symbol' => html_entity_decode( get_woocommerce_currency_symbol() ),
 					),
-					'strings'   => self::strings(),
+					'strings'     => self::strings(),
 				)
 			) . ';',
 			'before'
@@ -370,6 +394,17 @@ final class Data_Pages {
 			wp_add_inline_script(
 				'peptide-core-data-apps',
 				'window.pcDataApps = ' . wp_json_encode( array( 'strings' => self::apps_strings() ) ) . ';',
+				'before'
+			);
+		}
+
+		// 落地页转化页的报表（落地页路径表格、搜索、排序、分页），同样在 data.js 之后加载，用 PcData.register( 'landing', … ) 画进页面。
+		if ( 'landing' === $key ) {
+			wp_enqueue_style( 'peptide-core-data-landing', $url . 'data-landing.css', array( 'peptide-core-data' ), $ver( 'data-landing.css' ) );
+			wp_enqueue_script( 'peptide-core-data-landing', $url . 'data-landing.js', array( self::SCRIPT ), $ver( 'data-landing.js' ), array( 'in_footer' => true ) );
+			wp_add_inline_script(
+				'peptide-core-data-landing',
+				'window.pcDataLanding = ' . wp_json_encode( array( 'strings' => self::landing_strings() ) ) . ';',
 				'before'
 			);
 		}
@@ -640,6 +675,37 @@ final class Data_Pages {
 			'off'          => __( 'Off', 'peptide-core' ),
 			'settings'     => __( 'Settings', 'peptide-core' ),
 			'noApps'       => __( 'No apps are installed.', 'peptide-core' ),
+		);
+	}
+
+	/** 落地页转化页脚本里的文字：路径列、十个指标的表头、两个说明、搜索、每页条数、总数、空表、分页、页面说明。 */
+	private static function landing_strings(): array {
+		return array(
+			'path'           => __( 'Landing page path', 'peptide-core' ),
+			'unknown'        => __( 'Unknown landing page', 'peptide-core' ),
+			'uv'             => __( 'UV', 'peptide-core' ),
+			'customers'      => __( 'Customer count', 'peptide-core' ),
+			'viewed_uv'      => __( 'Viewing UV', 'peptide-core' ),
+			'carted_uv'      => __( 'Add-to-cart UV', 'peptide-core' ),
+			'paid_uv'        => __( 'Paying UV', 'peptide-core' ),
+			'orders'         => __( 'Order count', 'peptide-core' ),
+			'conversion'     => __( 'Conversion rate', 'peptide-core' ),
+			'sales'          => __( 'Sales', 'peptide-core' ),
+			'aov'            => __( 'Average order value', 'peptide-core' ),
+			'uv_value'       => __( 'UV value', 'peptide-core' ),
+			'uvValueHelp'    => __( 'Sales / UV', 'peptide-core' ),
+			'conversionHelp' => __( 'Paid orders / UV × 100%', 'peptide-core' ),
+			'open'           => __( 'Open page', 'peptide-core' ),
+			'search'         => __( 'Search landing pages', 'peptide-core' ),
+			'perPage'        => __( 'Per page', 'peptide-core' ),
+			/* translators: %d: number of landing pages */
+			'total'          => __( '%d landing pages in total', 'peptide-core' ),
+			'noData'         => __( 'No visits or paid orders in this period.', 'peptide-core' ),
+			/* translators: 1: current page number, 2: total number of pages */
+			'page'           => __( 'Page %1$d of %2$d', 'peptide-core' ),
+			'prev'           => __( 'Previous', 'peptide-core' ),
+			'next'           => __( 'Next', 'peptide-core' ),
+			'note'           => __( 'The landing page is the first page of each visit, without URL parameters. Orders count toward the landing page of the visit they were placed in. Orders without a recorded visit, or placed in a visit that did not start on a page, appear under "Unknown landing page".', 'peptide-core' ),
 		);
 	}
 

@@ -10,6 +10,7 @@
  * 没有注册报表的页面显示“正在开发中”。
  * 页面可以不要时间段工具栏（实时数据页）：pcData.showRange 为 false 时只画标题、时区说明和报表，
  * 不读地址栏里的时间段，直接画报表；没有这个键时和以前一样（有工具栏）。
+ * pcData.showCompare 为 false 时只画本期日期，忽略地址栏里的对比期；没有这个键时保留对比期。
  */
 ( function ( wp, cfg ) {
 	'use strict';
@@ -21,6 +22,8 @@
 	var S = cfg.strings;
 	// 没有 showRange 这个键就是要工具栏（其他数据页不变）；只有明确是 false（实时数据页）才不要。
 	var showRange = cfg.showRange !== false;
+	// 没有 showCompare 时保留对比期；落地页转化页只有本期。
+	var showCompare = cfg.showCompare !== false;
 	var PRESETS = [ 'today', 'yesterday', '7d', '30d' ];
 	var RANGE_PATH = '/peptide/v1/data/range';
 	var URL_KEYS = [ 'range', 'from', 'to', 'compare_from', 'compare_to' ];
@@ -90,10 +93,10 @@
 						'<span class="pc-data-label">' + esc( S.custom ) + '</span>' +
 						dateInput( 'pc-data-from', S.startDate ) + '<span class="pc-data-dash">–</span>' + dateInput( 'pc-data-to', S.endDate ) +
 					'</div>' +
-					'<div class="pc-data-group pc-data-compare" role="group" aria-label="' + esc( S.compareWith ) + '">' +
+					( showCompare ? '<div class="pc-data-group pc-data-compare" role="group" aria-label="' + esc( S.compareWith ) + '">' +
 						'<span class="pc-data-vs">' + esc( S.vs ) + '</span>' +
 						dateInput( 'pc-data-cfrom', S.compareWith + ': ' + S.startDate ) + '<span class="pc-data-dash">–</span>' + dateInput( 'pc-data-cto', S.compareWith + ': ' + S.endDate ) +
-					'</div>' +
+					'</div>' : '' ) +
 					'<button type="button" class="button button-primary pc-data-apply">' + esc( S.apply ) + '</button>' +
 				'</div>';
 		}
@@ -113,8 +116,8 @@
 		els.presets = root.querySelectorAll( '.pc-data-preset' );
 		els.from = root.querySelector( '.pc-data-from' );
 		els.to = root.querySelector( '.pc-data-to' );
-		els.cfrom = root.querySelector( '.pc-data-cfrom' );
-		els.cto = root.querySelector( '.pc-data-cto' );
+		els.cfrom = showCompare ? root.querySelector( '.pc-data-cfrom' ) : null;
+		els.cto = showCompare ? root.querySelector( '.pc-data-cto' ) : null;
 		els.apply = root.querySelector( '.pc-data-apply' );
 
 		each( els.presets, function ( b ) {
@@ -133,8 +136,10 @@
 		var d = state.dates;
 		els.from.value = d.from;
 		els.to.value = d.to;
-		els.cfrom.value = d.compare_from;
-		els.cto.value = d.compare_to;
+		if ( showCompare && els.cfrom && els.cto ) {
+			els.cfrom.value = d.compare_from;
+			els.cto.value = d.compare_to;
+		}
 		each( els.presets, function ( b ) {
 			var on = !! state.preset && b.getAttribute( 'data-preset' ) === state.preset;
 			b.setAttribute( 'aria-pressed', on ? 'true' : 'false' );
@@ -175,7 +180,7 @@
 			showError( S.rangeError );
 			return;
 		}
-		if ( els.cfrom.value && els.cto.value ) {
+		if ( showCompare && els.cfrom && els.cto && els.cfrom.value && els.cto.value ) {
 			params.compare_from = els.cfrom.value;
 			params.compare_to = els.cto.value;
 		}
@@ -213,7 +218,7 @@
 		} else if ( q.get( 'from' ) && q.get( 'to' ) ) {
 			params.from = q.get( 'from' );
 			params.to = q.get( 'to' );
-			if ( q.get( 'compare_from' ) && q.get( 'compare_to' ) ) {
+			if ( showCompare && q.get( 'compare_from' ) && q.get( 'compare_to' ) ) {
 				params.compare_from = q.get( 'compare_from' );
 				params.compare_to = q.get( 'compare_to' );
 			}

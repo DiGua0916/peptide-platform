@@ -11642,3 +11642,53 @@ msgstr ""
 #: includes/admin/class-tracking-page.php:299
 msgid "Never recorded: staff accounts, browsers with GPC (when ticked) and browsers that opened the opt-out link (?pc_px_optout=1). Older data is deleted every day. A customer’s visits are included when you use Export / Erase personal data. Mention this in your privacy policy; suggested text is in the WordPress privacy policy guide."
 msgstr ""
+
+#: includes/admin/class-data-pages.php:684
+msgid "Landing page path"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:685
+msgid "Unknown landing page"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:686
+msgid "UV"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:688
+msgid "Viewing UV"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:689
+msgid "Add-to-cart UV"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:690
+msgid "Paying UV"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:695
+msgid "UV value"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:696
+msgid "Sales / UV"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:697
+msgid "Paid orders / UV × 100%"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:699
+msgid "Search landing pages"
+msgstr ""
+
+#. translators: %d: number of landing pages
+#: includes/admin/class-data-pages.php:702
+#, php-format
+msgid "%d landing pages in total"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:708
+msgid "The landing page is the first page of each visit, without URL parameters. Orders count toward the landing page of the visit they were placed in. Orders without a recorded visit, or placed in a visit that did not start on a page, appear under \"Unknown landing page\"."
+msgstr ""

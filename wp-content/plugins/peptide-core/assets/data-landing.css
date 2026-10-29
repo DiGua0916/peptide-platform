@@ -1,0 +1,159 @@
+/* 落地页转化页（DATA-01 第 9 步）：工具栏（搜索、每页条数）、说明、页面路径表格、页脚（总数和分页）。都放在 .pc-landing 下面。 */
+
+.pc-landing {
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
+}
+
+.pc-landing .pc-landing-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 12px;
+	margin-bottom: 8px;
+}
+
+.pc-landing .pc-landing-search {
+	box-sizing: border-box;
+	width: 280px;
+	max-width: 100%;
+	min-height: 30px;
+	padding: 0 8px;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	background: #fff;
+	color: #1d2327;
+}
+
+.pc-landing .pc-landing-per {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	color: #50575e;
+	font-size: 13px;
+}
+
+.pc-landing .pc-landing-note {
+	margin: 0 0 12px;
+	font-size: 12px;
+}
+
+/* 表格在窄屏上自己横向滚动，页面不出现横向滚动条。 */
+.pc-landing .pc-landing-wrap {
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
+	overflow-x: auto;
+}
+
+.pc-landing .pc-landing-table {
+	width: 100%;
+	min-width: 1100px;
+	border-collapse: collapse;
+	background: #fff;
+	font-size: 13px;
+}
+
+.pc-landing .pc-landing-table th,
+.pc-landing .pc-landing-table td {
+	padding: 8px 10px;
+	border: 1px solid #dcdcde;
+	vertical-align: top;
+	text-align: left;
+}
+
+.pc-landing .pc-landing-table thead th {
+	background: #f6f7f7;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.pc-landing .pc-landing-th--path,
+.pc-landing .pc-landing-path {
+	min-width: 200px;
+}
+
+.pc-landing .pc-landing-path {
+	overflow-wrap: anywhere;
+}
+
+.pc-landing .pc-landing-open {
+	margin-left: 6px;
+	font-size: 12px;
+	white-space: nowrap;
+}
+
+.pc-landing .pc-landing-num {
+	white-space: nowrap;
+}
+
+.pc-landing .pc-landing-sort {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: #1d2327;
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.pc-landing .pc-landing-empty {
+	padding: 24px 12px;
+	text-align: center;
+	color: #646970;
+}
+
+.pc-landing .pc-landing-path-text.is-unknown {
+	color: #646970;
+}
+
+.pc-landing .pc-landing-sort:focus-visible {
+	outline: 2px solid #2271b1;
+	outline-offset: 3px;
+}
+
+.pc-landing .pc-landing-sort:hover,
+.pc-landing .pc-landing-sort.is-active {
+	color: #2271b1;
+}
+
+.pc-landing .pc-landing-help {
+	color: #646970;
+	font-size: 12px;
+	font-weight: 400;
+}
+
+.pc-landing .pc-landing-foot {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px 12px;
+	margin-top: 12px;
+}
+
+.pc-landing .pc-landing-total,
+.pc-landing .pc-landing-page {
+	color: #646970;
+	font-size: 13px;
+}
+
+.pc-landing .pc-landing-pager {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+@media (max-width: 600px) {
+	.pc-landing .pc-landing-search {
+		width: 100%;
+	}
+
+	.pc-landing .pc-landing-th--path,
+	.pc-landing .pc-landing-path {
+		min-width: 140px;
+	}
+}
