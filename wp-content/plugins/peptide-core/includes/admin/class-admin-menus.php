@@ -76,6 +76,7 @@ final class Admin_Menus {
 	public static function register_hooks(): void {
 		// The store uses its own operational dashboard and configuration pages.
 		add_action( 'admin_init', array( self::class, 'route_woocommerce_home' ), 0 );
+		add_action( 'current_screen', array( self::class, 'keep_product_list' ), 20 );
 		add_filter( 'woocommerce_prevent_automatic_wizard_redirect', '__return_true' );
 		add_filter( 'wp_redirect', array( self::class, 'keep_operational_redirect' ), 1000 );
 		add_action( 'admin_menu', array( self::class, 'add_menus' ), 60 );
@@ -106,6 +107,23 @@ final class Admin_Menus {
 	public static function is_onboarding_path( string $path ): bool {
 		$path = rtrim( strtok( $path, '?' ) ?: '', '/' );
 		return '' === $path || '/setup-wizard' === $path || str_starts_with( $path, '/setup-wizard/' ) || '/profiler' === $path;
+	}
+
+	/** Empty catalogs still use the ordinary product list and its Add product action. */
+	public static function keep_product_list( $screen ): void {
+		if ( ! $screen || 'edit' !== $screen->base || 'product' !== $screen->post_type || ! current_user_can( 'edit_products' ) || wp_doing_ajax() || is_network_admin() ) {
+			return;
+		}
+		$task_lists = \Automattic\WooCommerce\Admin\Features\OnboardingTasks\TaskLists::class;
+		if ( ! is_callable( array( $task_lists, 'get_task' ) ) ) {
+			return;
+		}
+		$task = $task_lists::get_task( 'products' );
+		if ( $task instanceof \Automattic\WooCommerce\Admin\Features\OnboardingTasks\Tasks\Products ) {
+			// Woo registers this at 30 when its onboarding task is incomplete.
+			// Remove only that diversion; do not fake task completion or alter product data.
+			remove_action( 'current_screen', array( $task, 'maybe_redirect_to_add_product_tasklist' ), 30 );
+		}
 	}
 
 	/** Catch later native redirects as well as direct page requests, without changing setup data. */
