@@ -266,3 +266,70 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
   - 模板：主题的 `single-pc_topic.php`，没有时用 `page.php`。现在用的是 page.php，Codex 可以以后做专门的模板。
   - “展示专题标题”关掉时，`the_title` 在专题页主循环里返回空（page.php 的 h1 会是空的，模板里可以判断 `get_post_meta( $id, '_pc_topic_show_title', true ) === '0'` 不输出 h1）。
   - 专题页有自己的 SEO（标题、描述、关键词），没填时用标题和摘要；有封面时输出 og:image。
+
+## 域名管理（2026-10-27，Claude，YY-DOMAINS-01，照 YY 后台）
+
+店铺装修 → 域名管理（`PeptideCore\Domains` + `Admin\Domains_Page`），选项 `peptide_core_domains`。
+
+- **多个域名打开同一个店铺**：访客打开的是已绑定的域名时，插件把 `home` / `siteurl` 换成这个域名（`option_home` / `option_siteurl` 过滤），页面里的链接留在这个域名上。没绑定的域名、IP 地址不变。主题生成链接请继续用 `home_url()` 等函数，不要写死域名。
+- **主域名**就是 WordPress 的网站地址。后台切换主域名会改 `home` / `siteurl`；只有“已连接”的域名能切换，wp-config 里写死 WP_HOME 时不能切换。旧网站地址留在列表里，照样能用。
+- **检查**：`GET /?pc_domain_check=任意值` 在 `init` 最早返回纯文本校验码（本站给这个域名算的 HMAC），不经过主题、追踪和跳转。服务器请求 http 和 https（验证证书），返回校验码才算“已连接 / HTTPS 生效”。新域名 7 天内每小时检查（cron `pc_domains_check`），之后每天。7 天没连上只显示“未连接”，不自动删除。
+- **前台跳转**（`template_redirect` 优先级 -10，只对 GET / HEAD，不对后台、REST、admin-ajax、wc-ajax、预览）：
+  - 设置了“域名跳转”的域名 301 到目标域名的同一路径（目标只能是已绑定、自己不跳转的域名）。
+  - HTTPS 生效的域名，http 访问 301 到 https。判断 https 时也认 `X-Forwarded-Proto` 和 Cloudflare 的 `CF-Visitor`，避免灵活 SSL 下循环跳转。
+- 主题装修的“域名指定模板”和首页SEO 的域名列表会列出这里绑定的域名。
+
+## 博客、素材管理、操作记录、员工管理（2026-10-27，Claude，YY-BACKEND-01，照 YY 后台）
+
+### 博客（`PeptideCore\Blog` + `Admin\Blog_Admin`）
+- WordPress 文章 = 博客，分类 = 博客专辑。后台菜单“博客 → 博客管理 / 博客专辑”。
+- 网址：
+  - 博客列表 `/blogs/`（文章类型 post 的归档，`is_post_type_archive('post')`；模板顺序 archive-post.php → archive.php → index.php）；
+  - 博客 `/blogs/<别名>/`（旧的 `/<别名>/` 301 过来）；
+  - 博客专辑 `/news/<别名>/`（分类归档，category.php → archive.php → index.php）。
+- 列表第一页把置顶的博客放在最前面（插件处理，主题照常循环）。
+- 简短描述 = 摘要，封面 = 特色图片。作者：填了“作者”时 `the_author` 返回这个名字。
+- 关联商品：`Blog::related_products( $post_id )` 返回已发布商品 ID。主题没有 `add_theme_support( 'pc-blog-products' )` 时，插件在正文后输出 `<section class="pc-blog-products">` + WooCommerce `[products]` 列表；主题想自己排版就声明这个支持。
+- 博客专辑的封面、顶部描述、底部描述：`Blog::term_extras( $term_id )` 返回 `{cover, top, bottom}`（HTML 已清理）。
+- SEO：插件在博客和博客专辑页输出 title / description / keywords / og（和首页SEO 相同的方式），有封面时输出 og:image。
+- 访问量：博客 `_pc_views`（文章 meta），博客专辑 `_pc_views`（分类 meta），员工和预览不算。
+
+### 素材管理（`PeptideCore\Media_Library` + `Admin\Media_Page`）
+- 后台菜单“后台设置 → 素材管理”。素材就是 WordPress 媒体库。
+- 分组是附件上的私有分类 `pc_media_group`。
+- 采集：把地址排进队列（选项 `peptide_core_media_queue`），用 WordPress 的安全下载（不下载内网地址），定时任务 `pc_media_collect` 每次处理 5 个。来源地址存在附件 meta `_pc_source_url`。
+
+### 操作记录（`PeptideCore\Activity_Log` + `Admin\Activity_Page`）
+- 表 `{prefix}pc_activity`，保留 365 天（每天清理，cron `pc_activity_prune`）。只记后台人员（管理员、员工等）在浏览器里的操作；命令行和网站自己发出的请求不记。
+- 查看权限 `pc_view_activity`：有 manage_options 的人自动有；员工勾“后台设置”时有。
+
+### 员工管理（`PeptideCore\Staff` + `Admin\Staff_Page`）
+- 后台菜单“店铺设置 → 员工管理”，只有管理员（create_users）能用。
+- 员工角色 `pc_staff`，勾选的模块存在用户 meta `pc_staff_modules`。模块有 orders / products / customers / marketing / data / blog / design / settings / backend / apps。
+- 勾选的模块通过 `user_has_cap` 临时给能力；没勾的菜单不显示，打开对应后台页面返回 403（不认识的后台页面也拒绝）。
+- 停用（`pc_staff_disabled`）的员工不能登录，已登录的会被退出。
+- 新的后台页面请告诉 Claude 归到哪个模块（`Staff::module_for()`），否则员工打不开。
+
+## 总后台（2026-10-27，Claude，HQ-01）
+
+用户要求：一个销售一个店铺，店铺都是用户开的，一定连着总后台。账号在总后台管理，店铺后台不要“用户”菜单，也不要连接页面。
+
+- **总后台**是单独的一个 WordPress，装新插件 `peptide-hq`（同一个仓库的 `wp-content/plugins/peptide-hq/`，说明见它的 README）。店铺上不装。
+- **店铺自动接入**：
+  - 店铺的 `wp-config.php` 里有 `PEPTIDE_HQ_URL` 和 `PEPTIDE_HQ_SECRET` 时，peptide-core 自己生成连接密钥，向总后台注册（`POST ?rest_route=/peptide-hq/v1/register`）。
+  - 注册在这些时候发生：进后台时、每天一次、密钥变了时。
+- **总后台调用店铺**：`?rest_route=/peptide/v1/hq/status | summary | login | staff | staff/delete`。每次请求都用店铺的连接密钥做 HMAC 签名；时间、签名、重放都会检查。
+  - **一键登录**：店铺发一个 2 分钟内有效、只能用一次的链接 `/?pc_hq_login=…`，登录成最早的管理员。
+  - **顾客个人信息**：不经过这些接口。
+- **店铺后台的变化**：
+  - 没有“用户”菜单；
+  - “员工管理”不在菜单里，改到总后台的“销售账号”。两个页面的地址还在。
+  - 规则仍然是店铺的 `Staff`（pc_staff + 勾选菜单）。
+- **前后台彻底隔开**（2026-10-27 用户要求：平台的操作都放到总后台，店铺后台不让销售看到）。
+  - **服务器 IP**：在总后台分配，通过 `config` 接口下发；店铺“域名管理”只显示，不能改。销售可以自己管理域名（店铺装修权限）。
+  - **搜索引擎收录、访客追踪的开关和保留天数**：只在总后台设置。店铺“实时访客”页只显示当前状态。
+  - **平台页面不在店铺后台的菜单里**：插件、主题、更新、系统状态、计划任务、站点健康、WooCommerce 设置、VialCove 设置、WordPress 常规 / 阅读 / 固定链接 / 隐私 / 讨论、个人数据导出 / 抹除、用户。
+    - 这些页面从总后台“平台工具”一键打开；店铺“系统设置”只剩基础配置、广告像素、邮件通知、交易条款。
+    - 顶部工具条去掉了 WordPress 标志、更新、评论、新建用户；WordPress 的更新提示不显示。
+  - 店铺有固定编号（uuid），换主域名后总后台仍认得。
+- **对主题没有影响。**

@@ -3,6 +3,7 @@
  * 后台左侧菜单整理（ADMIN-MENU-01）。用户 2026-10-22 要求删掉“文章、媒体、评论、WooCommerce”四个菜单。
  *
  * - 文章、媒体、评论：直接去掉菜单。页面本身还在：商品图片等仍然用媒体库选图，地址仍可以直接打开。
+ *   2026-10-27 起文章改成“博客”菜单（Blog_Admin），媒体由“后台设置 → 素材管理”管理（Media_Page）。
  * - WooCommerce：去掉顶层菜单，但订单、顾客、设置是开店必需的，按 Shopname 的方式移到新的顶层菜单：
  *   订单（WooCommerce 订单列表，带待处理数量）、顾客（WooCommerce 顾客）、
  *   店铺设置（STORE-SETTINGS-01 起按 Shopname 分为：物流设置、税费设置、支付设置、系统设置；
@@ -75,6 +76,7 @@ final class Admin_Menus {
 	public static function register_hooks(): void {
 		add_action( 'admin_menu', array( self::class, 'add_menus' ), 60 );
 		add_action( 'admin_menu', array( self::class, 'remove_menus' ), 1000 );
+		add_action( 'admin_menu', array( self::class, 'order_menu' ), 10000 );
 		add_filter( 'parent_file', array( self::class, 'parent_file' ), 20 );
 		add_filter( 'submenu_file', array( self::class, 'submenu_file' ), 20 );
 		add_filter( 'woocommerce_settings_tabs_array', array( self::class, 'settings_tabs' ), 999 );
@@ -82,6 +84,28 @@ final class Admin_Menus {
 		add_action( 'adminmenu', array( self::class, 'restore_parent' ) );
 		add_action( 'admin_init', array( self::class, 'block_removed_pages' ) );
 		add_filter( 'map_meta_cap', array( self::class, 'no_file_editors' ), 10, 2 );
+		add_action( 'admin_bar_menu', array( self::class, 'clean_admin_bar' ), 999 );
+		add_action( 'admin_init', array( self::class, 'no_update_nags' ) );
+	}
+
+	/**
+	 * 店铺后台和总后台彻底隔开（用户 2026-10-27）：顶部工具条去掉 WordPress 标志菜单、更新提示、评论和“新建用户”。
+	 * 插件、主题、更新这些平台操作从总后台进入。
+	 */
+	public static function clean_admin_bar( $bar ): void {
+		if ( ! $bar instanceof \WP_Admin_Bar ) {
+			return;
+		}
+		foreach ( array( 'wp-logo', 'updates', 'comments', 'new-user' ) as $node ) {
+			$bar->remove_node( $node );
+		}
+	}
+
+	/** 店铺后台不显示 WordPress 和插件的更新提示（更新由总后台统一处理）。 */
+	public static function no_update_nags(): void {
+		remove_action( 'admin_notices', 'update_nag', 3 );
+		remove_action( 'network_admin_notices', 'update_nag', 3 );
+		remove_action( 'admin_notices', 'maintenance_nag', 10 );
 	}
 
 	/** 打开已经删掉的页面时转到“系统设置”（带提示）。 */
@@ -159,14 +183,48 @@ final class Admin_Menus {
 		}
 		// 分析：只留顶层菜单。没有子菜单时 WordPress 直接链接到顶层菜单自己的页面（分析概览）。
 		unset( $submenu[ self::ANALYTICS ] );
-		// 文章、媒体、评论、WooCommerce（订单、顾客、设置已移到上面的新菜单）、WooCommerce 营销（换成营销活动）。
+		// 媒体、评论、WooCommerce（订单、顾客、设置已移到上面的新菜单）、WooCommerce 营销（换成营销活动）。
+		// 文章改成“博客”（Blog_Admin，2026-10-27），媒体在“后台设置 → 素材管理”。
 		// remove_menu_page() 每次只去掉第一个匹配项，所以重复执行到没有为止。
-		foreach ( array( 'edit.php', 'upload.php', 'edit-comments.php', 'woocommerce', 'woocommerce-marketing', 'themes.php', 'tools.php', 'options-general.php' ) as $slug ) {
+		// 插件（2026-10-27 前后台隔开）：插件、主题、更新是平台操作，从总后台的“平台工具”进入。
+		// 用户（2026-10-27 用户要求）：一个销售一个站点，账号在总后台管理，店铺后台不需要“用户”菜单；
+		// 员工管理也移到总后台（销售账号）。两个页面的地址还在，管理员直接打开地址仍能用。
+		foreach ( array( 'upload.php', 'edit-comments.php', 'woocommerce', 'woocommerce-marketing', 'themes.php', 'tools.php', 'options-general.php', 'users.php', 'plugins.php' ) as $slug ) {
 			while ( false !== remove_menu_page( $slug ) ) {
 				continue;
 			}
 		}
+		remove_submenu_page( self::SETTINGS, Staff_Page::SLUG );
 		self::product_menu();
+	}
+
+	/**
+	 * 顶层菜单按 YY 的顺序：……访客数据、博客、……店铺设置、后台设置、应用中心。
+	 * WordPress 按位置的文字排序（58.12345 排在 58.5 后面），小数位置靠不住，所以排好后重新编号。
+	 */
+	public static function order_menu(): void {
+		global $menu;
+		if ( empty( $menu ) || ! is_array( $menu ) ) {
+			return;
+		}
+		uksort( $menu, 'strnatcasecmp' );
+		$items = array_values( $menu );
+		$move  = static function ( string $slug, string $after ) use ( &$items ): void {
+			$from = array_search( $slug, array_column( $items, 2 ), true );
+			if ( false === $from ) {
+				return;
+			}
+			$item = $items[ $from ];
+			array_splice( $items, $from, 1 );
+			$to = array_search( $after, array_column( $items, 2 ), true );
+			array_splice( $items, false === $to ? count( $items ) : $to + 1, 0, array( $item ) );
+		};
+		$move( 'edit.php', 'pc-visitors' );
+		$move( Media_Page::SLUG, self::SETTINGS );
+		$menu = array(); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		foreach ( $items as $i => $item ) {
+			$menu[ ( $i + 1 ) * 5 ] = $item; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		}
 	}
 
 	/** 商品菜单：改名、排序，去掉用不上的子菜单（其他插件加的子菜单放在最后，不去掉）。 */
@@ -234,6 +292,10 @@ final class Admin_Menus {
 	public static function settings_tabs( $tabs ) {
 		if ( ! is_array( $tabs ) || 'wc-settings' !== self::current_page() ) {
 			return $tabs;
+		}
+		// 销售只看到店铺后台用到的标签（常规、高级等平台设置在总后台）。
+		if ( \PeptideCore\Staff::is_staff( get_current_user_id() ) ) {
+			$tabs = array_intersect_key( $tabs, array_flip( \PeptideCore\Staff::STORE_TABS ) );
 		}
 		return array_diff_key( $tabs, array_flip( self::HIDDEN_TABS ) );
 	}
@@ -381,7 +443,7 @@ final class Admin_Menus {
 			return 'edit.php?post_type=product';
 		}
 		// 插件自己放在这些菜单下的页面：WordPress 只在 $submenu_file 为空时才按 page 参数高亮，这里直接指定。
-		if ( in_array( $page, array( Recovery_Page::SLUG, Shipping_Page::SLUG, Tax_Page::SLUG, Store_Settings::SYSTEM_SLUG ), true ) ) {
+		if ( in_array( $page, array( Recovery_Page::SLUG, Shipping_Page::SLUG, Tax_Page::SLUG, Store_Settings::SYSTEM_SLUG, Staff_Page::SLUG ), true ) ) {
 			return $page;
 		}
 		return $submenu_file;

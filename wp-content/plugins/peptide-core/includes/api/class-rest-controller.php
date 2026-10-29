@@ -329,7 +329,7 @@ final class Rest_Controller {
 	/**
 	 * @param string[] $list IP 或 CIDR。
 	 */
-	private static function ip_in_list( string $ip, array $list ): bool {
+	public static function ip_in_list( string $ip, array $list ): bool {
 		$bin = @inet_pton( $ip ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 		if ( false === $bin ) {
 			return false;

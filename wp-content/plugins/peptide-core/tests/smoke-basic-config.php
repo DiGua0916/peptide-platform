@@ -409,3 +409,8 @@ foreach ( $orig as $k => $v ) {
 	}
 }
 $ok( 'settings restored', $orig['woocommerce_email_from_address'] === get_option( 'woocommerce_email_from_address' ) && $orig['woocommerce_permalinks'] === get_option( 'woocommerce_permalinks' ) );
+// 手动 SPU 重复的测试会留下一条 WooCommerce 商品编辑提示（关闭时写进选项），不然下次打开后台会看到“SPU 已被使用”。
+if ( class_exists( 'WC_Admin_Meta_Boxes' ) ) {
+	WC_Admin_Meta_Boxes::$meta_box_errors = array();
+}
+delete_option( 'woocommerce_meta_box_errors' );

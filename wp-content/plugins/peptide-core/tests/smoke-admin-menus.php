@@ -31,6 +31,11 @@ add_action( 'admin_menu', static function () { add_submenu_page( 'woocommerce', 
 \PeptideCore\Admin\Admin_Menus::register_hooks();
 \PeptideCore\Admin\Store_Settings::register_hooks();
 \PeptideCore\Admin\Recovery_Page::register_hooks();
+\PeptideCore\Admin\Tracking_Page::register_hooks();
+\PeptideCore\Admin\Blog_Admin::register_hooks();
+\PeptideCore\Admin\Media_Page::register_hooks();
+\PeptideCore\Admin\Activity_Page::register_hooks();
+\PeptideCore\Admin\Staff_Page::register_hooks();
 // WooCommerce 的营销菜单（Internal\Admin\Marketing 在后台请求里注册），这里补一个同名菜单来模拟。
 // WooCommerce 的顶层“支付”菜单（PaymentsController 在后台请求里注册）。
 add_action( 'admin_menu', static function () { add_menu_page( 'Payments', 'Payments', 'manage_woocommerce', 'admin.php?page=wc-settings&tab=checkout&from=PAYMENTS_MENU_ITEM', null, 'dashicons-money-alt', 56 ); }, 6 );
@@ -40,7 +45,11 @@ add_action( 'admin_menu', static function () { add_menu_page( 'Marketing', 'Mark
 require ABSPATH . 'wp-admin/menu.php';
 
 $slugs = array_column( $menu, 2 );
-$ok( 'posts, media and comments removed', ! array_intersect( array( 'edit.php', 'upload.php', 'edit-comments.php' ), $slugs ) );
+$ok( 'media and comments removed (posts are the Blog menu now)', ! array_intersect( array( 'upload.php', 'edit-comments.php' ), $slugs ) );
+// 2026-10-27 照 YY：……访客数据、博客、店铺设置、后台设置、应用中心；员工管理在店铺设置里。
+$pos = array_flip( array_values( array_filter( $slugs, static fn( $s ) => $s && ! str_starts_with( (string) $s, 'separator' ) ) ) );
+$ok( 'Blog comes after Visitors; Admin settings between Store settings and App center', isset( $pos['edit.php'], $pos['pc-visitors'], $pos['pc-media'], $pos['pc-apps'], $pos['admin.php?page=wc-settings'] ) && $pos['edit.php'] === $pos['pc-visitors'] + 1 && $pos['pc-media'] === $pos['admin.php?page=wc-settings'] + 1 && $pos['pc-apps'] === $pos['pc-media'] + 1 );
+$ok( 'Blog has Blog posts and Blog collections only; Admin settings has Media library and Activity log', array( 'edit.php', 'edit-tags.php?taxonomy=category' ) === array_column( $submenu['edit.php'] ?? array(), 2 ) && array( 'pc-media', 'pc-activity' ) === array_column( $submenu['pc-media'] ?? array(), 2 ) );
 $ok( 'appearance, tools and settings removed', ! array_intersect( array( 'themes.php', 'tools.php', 'options-general.php' ), $slugs ) );
 $ok( 'WooCommerce top-level menu removed', ! in_array( 'woocommerce', $slugs, true ) );
 $ok( 'dashboard first, then orders and customers', 'pc-overview' === array_values( array_filter( $slugs ) )[0] && in_array( 'admin.php?page=wc-orders', $slugs, true ) && in_array( 'admin.php?page=wc-admin&path=/customers', $slugs, true ) );
@@ -55,7 +64,9 @@ include_once WC()->plugin_path() . '/includes/admin/class-wc-admin-settings.php'
 WC_Admin_Settings::get_settings_pages();
 $ok( 'hidden tabs still open from direct links (their settings actions remain)', has_action( 'woocommerce_settings_email' ) && has_action( 'woocommerce_settings_shipping' ) && has_action( 'woocommerce_settings_checkout' ) );
 $_GET['page'] = 'wc-orders';
-$ok( 'store settings menu: shipping, tax, system (payments has its own WooCommerce menu)', array( 'pc-shipping', 'pc-tax', 'pc-system' ) === array_column( $submenu['admin.php?page=wc-settings'] ?? array(), 2 ) );
+$ok( 'store settings menu: shipping, tax, system (payments has its own WooCommerce menu; staff moved to the master admin)', array( 'pc-shipping', 'pc-tax', 'pc-system' ) === array_column( $submenu['admin.php?page=wc-settings'] ?? array(), 2 ) );
+$ok( 'no Users menu on the store (accounts are managed in the master admin)', ! in_array( 'users.php', $slugs, true ) );
+$ok( 'no Plugins menu on the store (platform tools open from the master admin)', ! in_array( 'plugins.php', $slugs, true ) );
 foreach ( array( 'wc-orders' => 'admin.php?page=wc-orders', 'wc-settings' => 'admin.php?page=wc-settings', 'pc-settings' => 'admin.php?page=wc-settings', 'wc-status' => 'admin.php?page=wc-settings', 'pc-system' => 'admin.php?page=wc-settings', 'pc-tax' => 'admin.php?page=wc-settings' ) as $page => $parent ) {
 	$_GET['page'] = $page;
 	$plugin_page  = $page;
@@ -135,8 +146,8 @@ ob_start();
 \PeptideCore\Admin\Store_Settings::render_system();
 $html = ob_get_clean();
 $ok( 'system settings shows the four section cards (with ad pixels)', 4 === substr_count( $html, 'page=pc-system&#038;section=' ) + substr_count( $html, 'page=pc-system&section=' ) && false !== strpos( $html, 'section=pixels' ) );
-$ok( 'system settings lists the WordPress settings and tools', str_contains( $html, 'options-reading.php' ) && str_contains( $html, 'options-permalink.php' ) && str_contains( $html, 'erase-personal-data.php' ) && str_contains( $html, 'page=action-scheduler' ) );
-$ok( 'system settings links the old store settings pages', false !== strpos( $html, 'page=pc-settings' ) && false !== strpos( $html, 'page=wc-status' ) && false !== strpos( $html, 'tab=general' ) );
+// 2026-10-27 前后台隔开：WordPress 设置和工具、WooCommerce 设置、VialCove 设置、系统状态从总后台的“平台工具”进入，店铺后台不显示。
+$ok( 'system settings no longer lists platform tools (they open from the master admin)', ! str_contains( $html, 'options-reading.php' ) && ! str_contains( $html, 'options-permalink.php' ) && ! str_contains( $html, 'page=wc-status' ) && ! str_contains( $html, 'page=pc-settings' ) );
 $_GET['section'] = 'email';
 ob_start();
 \PeptideCore\Admin\Store_Settings::render_system();

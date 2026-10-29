@@ -41,6 +41,12 @@ final class Plugin {
 		Exit_Intent::register_hooks();
 		Pixels::register_hooks();
 		Seo::register_hooks();
+		Domains::register_hooks();
+		Blog::register_hooks();
+		Media_Library::register_hooks();
+		Activity_Log::register_hooks();
+		Staff::register_hooks();
+		Hq_Connector::register_hooks();
 		Topics::register_hooks();
 		Promotions::register_hooks();
 		Recovery::register_hooks();
@@ -91,6 +97,11 @@ final class Plugin {
 			Admin\Pixels_Page::register_hooks();
 			Admin\Seo_Page::register_hooks();
 			Admin\Data_Pages::register_hooks();
+			Admin\Domains_Page::register_hooks();
+			Admin\Blog_Admin::register_hooks();
+			Admin\Media_Page::register_hooks();
+			Admin\Activity_Page::register_hooks();
+			Admin\Staff_Page::register_hooks();
 		}
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {

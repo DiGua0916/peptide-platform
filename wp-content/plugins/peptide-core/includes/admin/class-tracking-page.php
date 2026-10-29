@@ -27,9 +27,7 @@ final class Tracking_Page {
 	public static function register_hooks(): void {
 		add_action( 'admin_menu', array( self::class, 'add_menu' ), 57 );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
-		add_action( 'admin_post_pc_tracking_toggle', array( self::class, 'handle_toggle' ) );
 		add_action( 'admin_post_pc_tracking_purge', array( self::class, 'handle_purge' ) );
-		add_action( 'admin_post_pc_tracking_settings', array( self::class, 'handle_settings' ) );
 	}
 
 	public static function add_menu(): void {
@@ -208,27 +206,9 @@ final class Tracking_Page {
 		);
 	}
 
-	// ---------- 开关 ----------
+	// ---------- 测试版数据 ----------
 
-	public static function handle_toggle(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'peptide-core' ), 403 );
-		}
-		check_admin_referer( 'pc_tracking_toggle' );
-		Tracker::set_enabled( ! empty( $_POST['enable'] ) );
-		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG ) );
-		exit;
-	}
-
-	public static function handle_settings(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'peptide-core' ), 403 );
-		}
-		check_admin_referer( 'pc_tracking_settings' );
-		Tracker::save_settings( absint( $_POST['retention_days'] ?? 0 ), ! empty( $_POST['gpc'] ) );
-		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG . '&pc_saved=1' ) );
-		exit;
-	}
+	// 访客追踪的开关、保留天数、GPC 由总后台下发（Hq_Connector::config_route，2026-10-27 前后台隔开）。
 
 	public static function handle_purge(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -266,38 +246,21 @@ final class Tracking_Page {
 			<?php if ( isset( $_GET['pc_saved'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
 				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Settings saved.', 'peptide-core' ); ?></p></div>
 			<?php endif; ?>
-			<?php if ( 'live' === $view && current_user_can( 'manage_options' ) ) : ?>
+			<?php if ( 'live' === $view ) : ?>
 				<?php $s = Tracker::settings(); ?>
 				<div class="pc-trk-controls">
-					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="pc-trk-switch-form">
-						<input type="hidden" name="action" value="pc_tracking_toggle">
-						<?php wp_nonce_field( 'pc_tracking_toggle' ); ?>
-						<?php if ( ! $enabled ) : ?>
-							<input type="hidden" name="enable" value="1">
-						<?php endif; ?>
-						<button type="submit" class="pc-trk-switch <?php echo $enabled ? 'is-on' : 'is-off'; ?>" role="switch" aria-checked="<?php echo $enabled ? 'true' : 'false'; ?>">
-							<span class="pc-trk-switch__track" aria-hidden="true"><span class="pc-trk-switch__knob"></span></span>
-							<span class="pc-trk-switch__label"><?php esc_html_e( 'Visitor tracking', 'peptide-core' ); ?></span>
-							<span class="pc-trk-switch__state"><?php echo $enabled ? esc_html__( 'On', 'peptide-core' ) : esc_html__( 'Off', 'peptide-core' ); ?></span>
-						</button>
-					</form>
-					<p class="description"><?php echo $enabled ? esc_html__( 'Customers’ visits are being recorded. Click the switch to stop; the data already collected is kept.', 'peptide-core' ) : esc_html__( 'Nothing is recorded. Click the switch to start recording customers’ visits.', 'peptide-core' ); ?></p>
-					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="pc-trk-settings">
-						<input type="hidden" name="action" value="pc_tracking_settings">
-						<?php wp_nonce_field( 'pc_tracking_settings' ); ?>
-						<label><?php esc_html_e( 'Keep data for', 'peptide-core' ); ?>
-							<select name="retention_days">
-								<?php foreach ( Tracker::RETENTION_CHOICES as $d ) : ?>
-									<?php /* translators: %d: number of days */ ?>
-									<option value="<?php echo esc_attr( (string) $d ); ?>" <?php selected( $s['retention_days'], $d ); ?>><?php echo esc_html( sprintf( _n( '%d day', '%d days', $d, 'peptide-core' ), $d ) ); ?></option>
-								<?php endforeach; ?>
-							</select>
-						</label>
-						<label><input type="checkbox" name="gpc" value="1" <?php checked( $s['gpc'] ); ?>> <?php esc_html_e( 'Do not record browsers that send the Global Privacy Control (GPC) signal', 'peptide-core' ); ?></label>
-						<button class="button"><?php esc_html_e( 'Save', 'peptide-core' ); ?></button>
-					</form>
-					<p class="description"><?php esc_html_e( 'Never recorded: staff accounts, browsers with GPC (when ticked) and browsers that opened the opt-out link (?pc_px_optout=1). Older data is deleted every day. A customer’s visits are included when you use Export / Erase personal data. Mention this in your privacy policy; suggested text is in the WordPress privacy policy guide.', 'peptide-core' ); ?></p>
-					<?php $test_left = Schema::test_visitors(); ?>
+					<p class="description">
+						<?php
+						echo esc_html(
+							$enabled
+								/* translators: %d: number of days */
+								? sprintf( __( 'Visitor tracking is set by the master admin: on, data kept for %d days.', 'peptide-core' ), (int) $s['retention_days'] )
+								: __( 'Visitor tracking is set by the master admin: off. Nothing is recorded.', 'peptide-core' )
+						);
+						?>
+					</p>
+					<p class="description"><?php esc_html_e( 'Never recorded: staff accounts and browsers that opened the opt-out link (?pc_px_optout=1). A customer’s visits are included when personal data is exported or erased.', 'peptide-core' ); ?></p>
+					<?php $test_left = current_user_can( 'manage_options' ) ? Schema::test_visitors() : 0; ?>
 					<?php if ( $test_left ) : ?>
 						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="pc-trk-purge" onsubmit="return confirm(<?php echo esc_attr( wp_json_encode( __( 'Delete the data from the test version? This cannot be undone.', 'peptide-core' ) ) ); ?>);">
 							<input type="hidden" name="action" value="pc_tracking_purge">
