@@ -664,11 +664,13 @@ picture.vc-img,
 /* slogan / 信息列表 */
 .vc-slogan {
 	display: grid;
-	grid-auto-flow: column;
-	grid-auto-columns: minmax(0, 1fr);
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
 	gap: 24px;
 	text-align: center;
 }
+
+.vc-slogan__item { min-width: 0; overflow-wrap: anywhere; }
+.vc-slogan__pages { display: none; }
 
 .vc-slogan__icon {
 	width: var(--vc-icon, 30px);
@@ -677,6 +679,8 @@ picture.vc-img,
 	display: block;
 }
 
+.vc-slogan-symbol { height: var(--vc-icon, 30px); }
+
 .vc-slogan .vc-ph {
 	width: var(--vc-icon, 30px);
 	height: var(--vc-icon, 30px);
@@ -684,16 +688,21 @@ picture.vc-img,
 	margin: 0 auto 10px;
 }
 
-.vc-slogan__title {
+.vc-slogan .vc-slogan__title {
 	margin: 0 0 4px;
 	font-size: var(--vc-t, 16px);
 }
 
-.vc-slogan__text {
+.vc-slogan .vc-slogan__text {
 	margin: 0;
-	opacity: 0.75;
 	font-size: 14px;
+	color: inherit;
 }
+.vc-slogan__text > :first-child { margin-top: 0; }
+.vc-slogan__text > :last-child { margin-bottom: 0; }
+.vc-slogan__text p { color: inherit; }
+.vc-slogan__text ul, .vc-slogan__text ol { display: inline-block; max-width: 100%; padding-inline-start: 1.5em; text-align: start; }
+.vc-slogan__text a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
 
 .vc-info {
 	list-style: none;
@@ -1688,6 +1697,36 @@ picture.vc-img,
 	.vc-video-block--left,
 	.vc-video-block--right { grid-template-columns: 1fr; }
 	.vc-video-block--left .vc-video { order: 0; }
+
+	.vc-slogan { grid-template-columns: minmax(0, 1fr); gap: 30px; }
+	.vc-slogan--carousel {
+		display: flex;
+		align-items: flex-start;
+		gap: 30px;
+		overflow-x: auto;
+		scroll-snap-type: x mandatory;
+		overscroll-behavior-x: contain;
+	}
+	.vc-slogan--carousel > .vc-slogan__item { flex: 0 0 100%; scroll-snap-align: start; }
+	.vc-slogan--carousel.is-enhanced { overflow-y: hidden; scrollbar-width: none; }
+	.vc-slogan--carousel.is-enhanced::-webkit-scrollbar { display: none; }
+	.vc-slogan--carousel:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+	.vc-slogan__pages:not([hidden]) { display: flex; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+	.vc-slogan__page {
+		display: grid;
+		place-items: center;
+		width: 24px;
+		height: 24px;
+		padding: 0;
+		border: 0;
+		border-radius: 0;
+		background: transparent;
+		color: inherit;
+		cursor: pointer;
+	}
+	.vc-slogan__page::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: .35; }
+	.vc-slogan__page[aria-current="true"]::before { opacity: 1; }
+	.vc-slogan__page:focus-visible { outline: 2px solid currentColor; outline-offset: -2px; }
 
 	.vc-swipe-m {
 		display: flex !important;

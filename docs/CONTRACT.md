@@ -519,4 +519,6 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
 7. Registry内部`video_text`的块名是`vialcove/video-text`。新增设备字段`heightPreset`使用PC/手机像素预设、`screen`、`custom`完整白名单；默认custom继续原heightPx，旧600/420与九位置不改，新插入才采用550/300和四个播放flags=false。标题同key仍是纯字符串，textarea真实换行经escape再安全br；可选nullable descriptionHtml保留null继承/空字符串清除。只在本块file且关闭auto/原生controls时增加真实manual播放/暂停、状态与无JS媒体出口；现有普通video helper不改。
 8. 共享select的`uiOptionsByDevice`仅筛选显示既有schema选项，合法当前值在偏好子集之外仍显示，不能扩server白名单。只有显式top-level deviceUI=paired、原nested形状合法且父safe guard通过才同屏配对；每次原单field回调只改一个slot，mobile reset仅写null。numeric旧路径、条目/sparse/坏形状原单设备回退和服务器设备合同不改。18与该共享增量合批的五组实际WP结果见backend-video-text-2026-10-30.md及对应运行报告，不以独立fixture累计冒称全量。
 
+9. `slogan`新增独立条目`symbol`，仅none及40个固定原创SVG的白名单；原`icon`图片对象及合法尺寸保留，有效图片优先。全局`descriptionHtml`和条目`textHtml`为nullable，null沿用旧纯文案、空字符串明确清空。手机轮播使用原生滚动和真实分页/键盘增强，关闭后纵排；不新增自动播放，禁JS仍有SSR内容和原生横滚。增强态只跟随当前项自然高度并禁止内部纵滚。六组真实WP和独立fixture边界见backend-slogan-2026-10-30.md。
+
 验证按阶段记录，不混计：Records独立34及控件12不当真WP；原站限定29项已精确清理并与858posts/2555非锁meta基线同指纹；独立WordPress+Woo评价/Index各范围见任务work/reviews-runtime-positive-report.md，Index19组及SQL6/同请求恢复2等有真实前后证据；Links真实API7+UI8通过，取消/权限/状态变化/390/错误恢复均覆盖。共享条目panels/paired和首7基础块属于后续单独阶段，最终真实性/版本/限制以对应报告为准，不以已有定义数代替全量验收。

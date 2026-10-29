@@ -187,12 +187,17 @@ final class Registry {
 
 	/** Observed content blocks use the same saved fields with task-specific panels. */
 	private static function reference_content_controls( string $type, array $def ): array {
-		if ( ! in_array( $type, array( 'media_text', 'card_list', 'video', 'video_text' ), true ) ) { return $def; }
+		if ( ! in_array( $type, array( 'media_text', 'card_list', 'video', 'video_text', 'slogan' ), true ) ) { return $def; }
 		foreach ( $def['settings'] as &$field ) {
 			if ( 'bodyHtml' === $field['key'] ) { $field['ui'] = 'richtext'; }
 			if ( 'effectDurationMs' === $field['key'] ) { $field['uiMin'] = 1000; }
 			if ( 'effectIntervalMs' === $field['key'] ) { $field['uiMin'] = 500; $field['uiMax'] = 5000; }
-			if ( in_array( $type, array( 'card_list', 'video', 'video_text' ), true ) && 'description' === $field['key'] ) { $field['uiHidden'] = true; }
+			if ( in_array( $type, array( 'card_list', 'video', 'video_text', 'slogan' ), true ) && 'description' === $field['key'] ) { $field['uiHidden'] = true; }
+			if ( 'slogan' === $type ) {
+				if ( 'iconWidthPx' === $field['key'] ) { $field['label'] = '图标宽度'; $field['uiMin'] = 20; $field['uiMax'] = 100; }
+				if ( 'titleSizePx' === $field['key'] ) { $field['label'] = '条目标题字号'; $field['uiMin'] = 14; $field['uiMax'] = 30; }
+				if ( 'mobileCarousel' === $field['key'] ) { $field['label'] = '手机轮播'; $field['help'] = '开启时一屏显示一项，可滑动或点击圆点；关闭时逐项排列。'; }
+			}
 			if ( 'video_text' === $type ) {
 				if ( 'title' === $field['key'] ) { $field['type'] = 'textarea'; $field['help'] = '回车换行，不使用 HTML 标记。'; }
 				if ( 'titleSizePx' === $field['key'] ) { $field['uiMin'] = 40; $field['uiMax'] = 100; }
@@ -202,7 +207,25 @@ final class Registry {
 			if ( 'card_list' === $type && 'columns' === $field['key'] ) { $field['uiMin'] = array( 'desktop' => 3, 'mobile' => 1 ); $field['uiMax'] = array( 'desktop' => 5, 'mobile' => 2 ); $field['deviceUI'] = 'paired'; }
 		}
 		unset( $field );
-		if ( 'card_list' === $type ) {
+		if ( 'slogan' === $type ) {
+			$def['settings'][] = Fields::f( 'html', 'descriptionHtml', '简短描述', null, array( 'ui' => 'richtext', 'legacyKey' => 'description' ) );
+			$def['panels'] = array(
+				array( 'id' => 'content', 'label' => '标题与描述', 'initialOpen' => true, 'fields' => array( 'title', 'descriptionHtml' ) ),
+				array( 'id' => 'layout', 'label' => '图标与手机排列', 'initialOpen' => true, 'fields' => array( 'iconWidthPx', 'titleSizePx', 'mobileCarousel' ) ),
+				array( 'id' => 'general', 'label' => '显示与间距', 'fields' => array( 'showDesktop', 'showMobile', 'paddingTopPx', 'paddingBottomPx', 'backgroundColor' ) ),
+			);
+			foreach ( $def['items']['fields'] as &$field ) {
+				if ( 'text' === $field['key'] ) { $field['uiHidden'] = true; }
+				if ( 'icon' === $field['key'] ) { $field['label'] = '自定义图标图片'; $field['help'] = '图片优先显示；清空图片后显示所选内置图标。建议使用正方形图片。'; }
+			}
+			unset( $field );
+			array_unshift( $def['items']['fields'], Fields::f( 'select', 'symbol', '内置图标', 'none', array( 'options' => array( 'none' => '无图标' ) + Slogan_Symbols::options() ) ) );
+			$def['items']['fields'][] = Fields::f( 'html', 'textHtml', '内容', null, array( 'ui' => 'richtext', 'legacyKey' => 'text' ) );
+			$def['items']['panels'] = array(
+				array( 'id' => 'icon', 'label' => '图标', 'initialOpen' => true, 'fields' => array( 'symbol', 'icon' ) ),
+				array( 'id' => 'content', 'label' => '标题与内容', 'initialOpen' => true, 'fields' => array( 'title', 'textHtml' ) ),
+			);
+		} elseif ( 'card_list' === $type ) {
 			$def['settings'][] = Fields::f( 'html', 'descriptionHtml', '简短描述', null, array( 'ui' => 'richtext', 'legacyKey' => 'description' ) );
 			$def['editorDefaults'] = array( 'gapPx' => 30, 'textAlign' => 'center' );
 			$def['panels'] = array(

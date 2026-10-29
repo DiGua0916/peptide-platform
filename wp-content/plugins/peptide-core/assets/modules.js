@@ -234,6 +234,88 @@
 		measure();
 	}
 
+	/** Slogan keeps native swipe without JS; phone-only dots scroll the actual item into view. */
+	function sloganCarousel( root ) {
+		if ( root.dataset.vcSloganReady === '1' ) { return; }
+		root.dataset.vcSloganReady = '1';
+		var items = Array.prototype.slice.call( root.children );
+		if ( ! items.length ) { root.tabIndex = -1; return; }
+		var phone = window.matchMedia ? window.matchMedia( '(max-width: 767px)' ) : null;
+		var pages = document.createElement( 'div' );
+		pages.className = 'vc-slogan__pages'; pages.hidden = true;
+		root.parentNode.insertBefore( pages, root.nextSibling );
+		var current = 0, stops = [], frame = null, measuredWidth = -1;
+		function active() { return phone ? phone.matches : window.innerWidth < 768; }
+		function height() {
+			if ( ! active() ) { root.style.height = ''; return; }
+			var value = items[ current ].getBoundingClientRect().height;
+			if ( value > 0 && root.style.height !== value + 'px' ) { root.style.height = value + 'px'; }
+		}
+		function update() {
+			if ( ! active() || ! stops.length ) { return; }
+			var at = Math.abs( root.scrollLeft );
+			current = 0;
+			stops.forEach( function ( point, i ) { if ( Math.abs( point - at ) < Math.abs( stops[ current ] - at ) ) { current = i; } } );
+			Array.prototype.forEach.call( pages.children, function ( button, i ) { button.setAttribute( 'aria-current', i === current ? 'true' : 'false' ); } );
+			height();
+		}
+		function go( index, immediate ) {
+			if ( ! active() || ! stops.length ) { return; }
+			var target = Math.max( 0, Math.min( stops.length - 1, index ) );
+			var sign = window.getComputedStyle( root ).direction === 'rtl' ? -1 : 1;
+			root.scrollTo( { left: stops[ target ] * sign, behavior: immediate || reduce ? 'auto' : 'smooth' } );
+		}
+		items.forEach( function ( item, i ) {
+			var button = document.createElement( 'button' );
+			button.type = 'button'; button.className = 'vc-slogan__page';
+			button.setAttribute( 'aria-label', ( root.dataset.pageLabel || 'Go to slide %d' ).replace( '%d', i + 1 ) );
+			button.addEventListener( 'click', function () { go( i ); } );
+			pages.appendChild( button );
+		} );
+		function measure() {
+			measuredWidth = root.getBoundingClientRect().width;
+			if ( ! active() ) {
+				pages.hidden = true; root.tabIndex = -1; root.style.height = ''; root.classList.remove( 'is-enhanced' ); return;
+			}
+			root.classList.add( 'is-enhanced' );
+			var maximum = Math.max( 0, root.scrollWidth - root.clientWidth );
+			var first = items[ 0 ].getBoundingClientRect();
+			stops = items.map( function ( item ) { return Math.min( maximum, Math.abs( item.getBoundingClientRect().left - first.left ) ); } );
+			pages.hidden = items.length < 2 || maximum <= 1;
+			root.tabIndex = pages.hidden ? -1 : 0;
+			go( current, true ); update();
+		}
+		root.addEventListener( 'scroll', function () {
+			if ( frame !== null ) { return; }
+			frame = requestAnimationFrame( function () { frame = null; update(); } );
+		}, { passive: true } );
+		function keydown( event ) {
+			if ( ! active() || ( event.target !== root && ! pages.contains( event.target ) ) ) { return; }
+			var sign = window.getComputedStyle( root ).direction === 'rtl' ? -1 : 1;
+			var target = event.key === 'ArrowRight' ? current + sign : event.key === 'ArrowLeft' ? current - sign : event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : null;
+			if ( target === null ) { return; }
+			event.preventDefault(); go( target );
+		}
+		root.addEventListener( 'keydown', keydown ); pages.addEventListener( 'keydown', keydown );
+		root.addEventListener( 'focusin', function ( event ) {
+			var item = event.target.closest && event.target.closest( '.vc-slogan__item' );
+			var index = items.indexOf( item );
+			if ( index >= 0 ) { go( index, true ); update(); }
+		} );
+		root.addEventListener( 'vc:select-item', function ( event ) {
+			var item = event.target.closest && event.target.closest( '[data-module-item]' );
+			var index = items.indexOf( item );
+			if ( active() && index >= 0 ) { event.preventDefault(); go( index ); }
+		} );
+		if ( window.ResizeObserver ) {
+			new window.ResizeObserver( function () { if ( root.getBoundingClientRect().width !== measuredWidth ) { measure(); } else { height(); } } ).observe( root );
+			var itemObserver = new window.ResizeObserver( height );
+			items.forEach( function ( item ) { itemObserver.observe( item ); } );
+		} else { window.addEventListener( 'resize', measure ); root.addEventListener( 'load', height, true ); }
+		mediaChange( phone, measure );
+		measure();
+	}
+
 	function timeline( root ) {
 		if ( root.dataset.autoScroll !== '1' ) { return; }
 		var desktop = window.matchMedia ? window.matchMedia( '(min-width: 768px)' ) : { matches: true };
@@ -453,6 +535,7 @@
 		each( '.vc-m .vc-carousel', carousel );
 		each( '.vc-m [data-vc-card-grid]', cardGrid );
 		each( '.vc-m [data-vc-card-carousel]', cardCarousel );
+		each( '.vc-m [data-vc-slogan-carousel]', sloganCarousel );
 		each( '.vc-m .vc-timeline--horizontal', timeline );
 		each( '.vc-m .vc-showcase', showcase );
 		each( '.vc-m .vc-btn', buttonEffect );

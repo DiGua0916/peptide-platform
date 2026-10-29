@@ -712,16 +712,20 @@ final class Fallback {
 
 	private static function render_slogan( array $s, array $items ): string {
 		$out = '<div class="vc-m__inner">' . self::heading( $s );
-		$out .= '<div class="vc-slogan' . ( $s['mobileCarousel'] ? ' vc-swipe-m' : '' ) . '"' . self::style(
+		$out .= '<div class="vc-slogan' . ( $s['mobileCarousel'] ? ' vc-slogan--carousel' : '' ) . '"' . ( $s['mobileCarousel'] ? ' data-vc-slogan-carousel="1" tabindex="0" aria-label="' . esc_attr__( 'Highlights', 'peptide-core' ) . '" data-page-label="' . esc_attr__( 'Go to slide %d', 'peptide-core' ) . '"' : '' ) . self::style(
 			array(
 				'--vc-icon' => (int) $s['iconWidthPx'] . 'px',
 				'--vc-t'    => (int) $s['titleSizePx'] . 'px',
 			)
 		) . '>';
 		foreach ( $items as $it ) {
-			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-slogan__item' ) ) . '"' . self::item_attr( $it ) . '>' . self::img( $it['icon'], 'vc-slogan__icon', __( 'Icon', 'peptide-core' ) );
+			$symbol = Slogan_Symbols::svg( $it['symbol'] ?? 'none' );
+			$icon = Assets::resolve( $it['icon'] ) ? self::img( $it['icon'], 'vc-slogan__icon', __( 'Icon', 'peptide-core' ) ) : ( '' !== $symbol ? $symbol : self::placeholder( __( 'Icon', 'peptide-core' ) ) );
+			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-slogan__item' ) ) . '"' . self::item_attr( $it ) . '>' . $icon;
 			$out .= '' !== $it['title'] ? '<h3 class="vc-slogan__title">' . esc_html( $it['title'] ) . '</h3>' : '';
-			$out .= '' !== $it['text'] ? '<p class="vc-slogan__text">' . esc_html( $it['text'] ) . '</p>' : '';
+			$rich = $it['textHtml'] ?? null;
+			if ( null !== $rich && '' !== $rich ) { $out .= '<div class="vc-slogan__text">' . self::html( $rich ) . '</div>'; }
+			elseif ( null === $rich && '' !== $it['text'] ) { $out .= '<p class="vc-slogan__text">' . esc_html( $it['text'] ) . '</p>'; }
 			$out .= '</div>';
 		}
 		return $out . '</div></div>';
