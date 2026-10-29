@@ -1,0 +1,15 @@
+# Builder compatibility follow-up — 2026-10-30
+
+Author: Codex. This phase resolves two scoped issues from the builder checkpoint without changing saved layout keys, link IDs, lookup permissions or the server sanitization contract.
+
+The common login target now uses a configured, public WooCommerce account page and labels it as buyer login. When that page is missing or ineligible, it clearly names the native WordPress fallback. It reuses the existing page resolution and URL checks, including confirmation-time visibility checks.
+
+The visual HTML control preserves server-allowed h3/h4, span class, b/i and link target/rel attributes during actual edits. It retains useful nofollow/ugc/sponsored tokens and adds safe opener restrictions. Previously legal links that the visual editor cannot represent, including FTP and absent/empty href forms, use the existing text HTML control. Raw HTML stays textarea text; it is not inserted into the DOM. A local edit does not unexpectedly switch controls and lose focus. The existing safeHref and server KSES policy remain authoritative; script, event, style and unsafe URL handling were not loosened.
+
+Changed sources under peptide-core are assets/module-controls.js (SHA256 92529c42bec9d79a6abb7f3512b6eaf2a5dc6ead6d401654a5268b77f8ae157a) and includes/modules/class-links.php (bb0a181963f32513995ef7ed03ba01678ecdc3a184b5e5bcba168c38e42a8397).
+
+PHP/JavaScript syntax checks passed. Seven independent native-browser control fixtures, four actual installed-WP KSES checks without a database bootstrap, and two pure login fixtures passed; they are separate evidence layers. Five subsequent real WordPress/WooCommerce groups passed: configured account resolution plus anonymous buyer-login form, missing-account fallback, old-markup edit/save/REST readback/reload, unsafe paste handling, and FTP text fallback/save/readback. There were zero JavaScript exceptions. Fixture selection and browser-generated style false alarms were corrected in the test harness, preserving their initial evidence; they did not require product-source changes.
+
+The actual WordPress evidence and exact boundaries are D:/Codex/Tasks/2026-10-30/store-builder-shared-check/work/shared-runtime-check.md and its JSON. Temporary accounts, templates, documents, account-page settings, credentials and browser profiles were precisely cleaned up; the independent site's existing fixtures and the original store's read-only fingerprints stayed unchanged. The loopback QA instance remains with its existing cleanup owner. This phase does not repeat or expand earlier all-link, review-index, Gutenberg or full-editor acceptance claims.
+
+The parallel one-line fixed-carousel-height repair is described in the frontend handoff and has its own independent real-theme height probes. Card-list changes and the remaining reference study are separate unfinished work. Root integrates and pushes verified phases under the user's standing authorization; no reference Publish or site deployment is part of this phase.

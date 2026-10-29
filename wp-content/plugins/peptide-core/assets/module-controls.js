@@ -104,7 +104,8 @@
 	// Server sanitization remains authoritative when these strings are saved/rendered.
 	function safeRichHtml( value ) {
 		var doc = new window.DOMParser().parseFromString( String( value || '' ), 'text/html' );
-		var allowed = { P: 'p', DIV: 'p', BR: 'br', STRONG: 'strong', B: 'strong', EM: 'em', I: 'em', U: 'u', A: 'a', UL: 'ul', OL: 'ol', LI: 'li' };
+		// Match Fields::HTML_TAGS; DIV is only normalized to an allowed editor paragraph.
+		var allowed = { P: 'p', DIV: 'p', BR: 'br', STRONG: 'strong', B: 'b', EM: 'em', I: 'i', U: 'u', A: 'a', UL: 'ul', OL: 'ol', LI: 'li', H3: 'h3', H4: 'h4', SPAN: 'span' };
 		function clean( node ) {
 			if ( node.nodeType === 3 ) { return escapeText( node.nodeValue ); }
 			if ( node.nodeType !== 1 || /^(SCRIPT|STYLE|IFRAME|OBJECT|EMBED|SVG|MATH|FORM|INPUT|BUTTON|TEXTAREA|SELECT|TEMPLATE)$/.test( node.nodeName ) ) { return ''; }
@@ -114,8 +115,13 @@
 			if ( tag === 'br' ) { return '<br>'; }
 			if ( tag === 'a' ) {
 				var href = safeHref( node.getAttribute( 'href' ) );
-				return href ? '<a href="' + escapeText( href ) + '" rel="noopener noreferrer">' + content + '</a>' : content;
+				if ( ! href ) { return content; }
+				var target = node.hasAttribute( 'target' ) ? ' target="' + escapeText( node.getAttribute( 'target' ) ) + '"' : '';
+				var rel = ( node.getAttribute( 'rel' ) || '' ).split( /\s+/ ).filter( function ( token ) { return token && token.toLowerCase() !== 'opener'; } );
+				[ 'noopener', 'noreferrer' ].forEach( function ( token ) { if ( ! rel.some( function ( old ) { return old.toLowerCase() === token; } ) ) { rel.push( token ); } } );
+				return '<a href="' + escapeText( href ) + '"' + target + ' rel="' + escapeText( rel.join( ' ' ) ) + '">' + content + '</a>';
 			}
+			if ( tag === 'span' && node.hasAttribute( 'class' ) ) { return '<span class="' + escapeText( node.getAttribute( 'class' ) ) + '">' + content + '</span>'; }
 			return '<' + tag + '>' + content + '</' + tag + '>';
 		}
 		var html = Array.prototype.map.call( doc.body.childNodes, clean ).join( '' );
@@ -313,6 +319,38 @@
 	}
 
 	// ---------- 单个字段 ----------
+
+	function legacyRichSource( value ) {
+		var doc = new window.DOMParser().parseFromString( String( value || '' ), 'text/html' );
+		// Current WordPress wp_allowed_protocols(); this only chooses a text control,
+		// never permits a URL in the visual editor or replaces server sanitization.
+		var protocols = /^(https?|ftp|ftps|mailto|news|irc|irc6|ircs|gopher|nntp|feed|telnet|mms|rtsp|sms|svn|tel|fax|xmpp|webcal|urn)$/i;
+		return Array.prototype.some.call( doc.querySelectorAll( 'a' ), function ( node ) {
+			if ( ! node.hasAttribute( 'href' ) ) { return true; }
+			var href = node.getAttribute( 'href' ).trim();
+			if ( ! href ) { return true; }
+			if ( safeHref( href ) ) { return false; }
+			var scheme = /^([a-z][a-z0-9+.-]*):/i.exec( href );
+			return scheme ? protocols.test( scheme[ 1 ] ) : ! /[\u0000-\u001f\u007f]/.test( href );
+		} );
+	}
+
+	function HtmlField( props ) {
+		var mode = useRef( null );
+		if ( ! mode.current ) { mode.current = { value: props.value, source: legacyRichSource( props.value ), emitted: undefined }; }
+		else if ( mode.current.value !== props.value ) {
+			// Own keystrokes retain their control and focus; a different incoming
+			// module/device value is assessed before it can reach innerHTML.
+			if ( mode.current.emitted !== props.value ) { mode.current.source = legacyRichSource( props.value ); }
+			mode.current.value = props.value;
+			mode.current.emitted = undefined;
+		}
+		function changed( value ) { mode.current.emitted = value; props.onChange( value ); }
+		if ( mode.current.source ) {
+			return el( C.TextareaControl, { label: props.field.label, help: ( props.field.help ? props.field.help + ' ' : '' ) + '此内容含已有链接格式，使用 HTML 文本编辑以保留原格式。', value: props.value || '', rows: 5, onChange: changed } );
+		}
+		return el( RichTextField, { field: props.field, value: props.value, onChange: changed } );
+	}
 
 	function RichTextField( props ) {
 		var field = props.field, editor = useRef( null ), selection = useRef( null );
@@ -894,7 +932,7 @@
 			case 'textarea':
 				return el( C.TextareaControl, { label: f.label, help: f.help, value: value || '', rows: 3, onChange: onChange } );
 			case 'html':
-				if ( f.ui === 'richtext' || f.ui === 'template' ) { return el( RichTextField, { field: f, value: value, onChange: onChange } ); }
+				if ( f.ui === 'richtext' || f.ui === 'template' ) { return el( HtmlField, { field: f, value: value, onChange: onChange } ); }
 				return el( C.TextareaControl, { label: f.label, help: f.help || S.htmlHelp, value: value || '', rows: 5, onChange: onChange } );
 			case 'code':
 				return el( C.TextareaControl, { className: 'pc-me-code', label: f.label, help: f.help, value: value || '', rows: 10, onChange: onChange } );

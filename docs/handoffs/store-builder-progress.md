@@ -20,17 +20,18 @@ Author: Codex. User authorized pulling the collaborator's GitHub work, committin
 - The prior real local WordPress editor checks covered 29 scoped cases and their temporary original-site accounts/drafts/sessions were precisely removed. This is not a 73-type acceptance result.
 - Reviews have independent real WordPress/WooCommerce, HTTP and native-browser evidence. The index completed 19 groups, with separate targeted SQL-failure, recovery, rating and invalid-parent regressions. Historical failed probes are retained in task reports.
 - Site-link lookup completed seven actual API and eight native UI groups, zero JavaScript exceptions. Shared item panels and paired top-level device numbers completed seven actual editor/save/readback groups.
+- After the integration checkpoint, five targeted real WordPress groups verified buyer-account login/fallback, preservation of old legal rich-text markup during editing and saving, rejection of unsafe pasted markup, and a plain-text HTML fallback for legal legacy links that the visual editor cannot represent. The server allowlist and URL policy were not expanded.
+- The fixed carousel height follow-up passed two real-theme probes: desktop image340px and mobile image260px, with the CSS source, QA copy and actual browser response matching. Forty separate native-browser fixture groups preserved auto/screen geometry, long-copy growth and position controls; those fixtures are not additional real WordPress cases.
 - First seven basic types and three commerce bindings completed 33 scoped actual-theme integration groups. An additional height probe found the unresolved carousel issue below; the passing cases must not be represented as covering that boundary.
 - Independent pure/HTML fixtures remain explicitly separate from real WordPress results. Task evidence is under `D:/Codex/Tasks/2026-10-29/store-builder-redesign/work`; database dumps, credentials, accounts and synthetic business records are not part of Git.
 
 ## Work still open
 
-1. Carousel: the existing theme's overlay image minimum height forces a configured mobile fixed height of 260px to render at 280px. The narrow fixed-mode CSS repair has not been applied at this checkpoint.
-2. Rich-text editing: the client sanitizer currently flattens some old server-allowed h3/h4/span/link attributes. Preserve compatible old markup before treating the new rich-text controls as finished.
-3. Common login target: prefer the actual public WooCommerce buyer account route when configured, with a clearly named native WordPress fallback. This small correction is not yet applied.
-4. Card-list masonry and a legal old mobile five-column overflow case remain incomplete.
-5. Continue one-block-at-a-time reference study, real rendering and association checks. The reference catalog has 70 blocks, while local definitions contain 73 types; these counts are not a coverage proof. Fifteen reference blocks have been studied and their temporary instances removed; the card-list reference is currently the next active scratch block, not completed.
-6. TikTok and the order fulfillment board lack dedicated equivalents. AI and payment-related exclusions remain subject to the user's earlier deferral. Keep third-party payment, mail and search integrations unconfigured until separately supplied.
+1. Card-list masonry, interactive carousel controls and legal old mobile column/gap overflow cases are being implemented; this checkpoint does not include or certify those in-flight files.
+2. Continue one-block-at-a-time reference study, real rendering and association checks. The reference catalog has 70 blocks, while local definitions contain 73 types; these counts are not a coverage proof. Fifteen reference blocks have been studied and their temporary instances removed; the card-list reference is currently the next active scratch block, not completed.
+3. TikTok and the order fulfillment board lack dedicated equivalents. AI and payment-related exclusions remain subject to the user's earlier deferral. Keep third-party payment, mail and search integrations unconfigured until separately supplied.
+
+The earlier carousel minimum-height, rich-text compatibility and buyer-login items above are resolved within the specifically stated checks. See backend-builder-compatibility-2026-10-30.md and the latest frontend handoff; this is not a declaration that every editor or legacy HTML protocol has been exercised.
 
 The reference site is a disposable 404 editor page. Never Publish. Delete only the temporary block added by this task. Existing business data and published layout records are not test fixtures.
 

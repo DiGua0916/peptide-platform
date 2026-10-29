@@ -81,7 +81,15 @@ final class Links {
 	}
 	private static function routes(): array {
 		$rows = array();
-		foreach ( array( 'home' => array( '首页', home_url( '/' ) ), 'search' => array( '站内搜索', get_search_link( '' ) ), 'login' => array( '登录', wp_login_url() ) ) as $id => $value ) { $row = self::row( 'route', $id, $value[0], $value[1] ); if ( $row ) { $rows[] = $row; } }
+		$login = array( 'WordPress 登录（备用）', wp_login_url() );
+		if ( function_exists( 'wc_get_page_id' ) && function_exists( 'wc_get_page_permalink' ) ) {
+			$account_id = (int) wc_get_page_id( 'myaccount' );
+			if ( $account_id > 0 && self::resolve( 'page', (string) $account_id ) ) {
+				$account_url = Fields::url( (string) wc_get_page_permalink( 'myaccount' ) );
+				if ( '' !== $account_url ) { $login = array( '买家登录', $account_url ); }
+			}
+		}
+		foreach ( array( 'home' => array( '首页', home_url( '/' ) ), 'search' => array( '站内搜索', get_search_link( '' ) ), 'login' => $login ) as $id => $value ) { $row = self::row( 'route', $id, $value[0], $value[1] ); if ( $row ) { $rows[] = $row; } }
 		if ( function_exists( 'wc_get_page_id' ) && function_exists( 'wc_get_page_permalink' ) ) {
 			foreach ( array( 'shop' => '商品列表', 'cart' => '购物车', 'checkout' => '结账', 'myaccount' => '我的账户' ) as $key => $label ) {
 				$id = (int) wc_get_page_id( $key );
