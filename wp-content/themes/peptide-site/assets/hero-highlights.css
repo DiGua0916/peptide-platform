@@ -1,0 +1,53 @@
+/* Real navigation, not simulated laboratory data. Keep the packaging unobscured. */
+.home .hero-scene--packaging { margin-top: 48px; margin-bottom: 28px; }
+.hero-product-stage { position: relative; padding-bottom: 34px; }
+.hero-highlight {
+  position: absolute; z-index: 1; display: flex; flex-direction: column; gap: 10px;
+  padding: 18px 20px; color: var(--ink); background: #ffffffed;
+  border: 1px solid #ffffff; border-radius: 12px;
+  box-shadow: 0 12px 30px #28465016, 0 2px 5px #28465008;
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  transition: transform 220ms cubic-bezier(.22,1,.36,1), box-shadow 220ms ease;
+}
+.hero-highlight--batch { left: -14px; top: -20px; width: 222px; background: #177e9bf5; border-color: #348fa9; color: white; }
+.hero-highlight--testing { right: -12px; top: -28px; width: 268px; }
+.hero-highlight--library { right: 14px; bottom: 4px; width: 260px; }
+.hero-highlight-label { display: flex; align-items: center; gap: 7px; font-size: 10px; line-height: 1.4; color: #526e78; }
+.hero-highlight-label svg { width: 15px; height: 15px; flex-shrink: 0; }
+.hero-highlight strong { font-size: 23px; line-height: 1.15; font-weight: 500; letter-spacing: -.035em; }
+.hero-highlight-action { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 10px; line-height: 1.45; }
+.hero-highlight-action svg { width: 16px; height: 16px; flex-shrink: 0; }
+.hero-highlight--batch .hero-highlight-label { color: #e3f2f6; }
+.hero-highlight--library strong { font-size: 21px; }
+.home .hero-scene--packaging figcaption { margin-top: 10px; }
+.hero-highlight:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; }
+@media (hover: hover) and (pointer: fine) {
+  .hero-highlight:hover { transform: translateY(-4px); box-shadow: 0 18px 34px #28465020, 0 2px 5px #28465008; }
+}
+@media (max-width: 1250px) {
+  .home .hero-scene--packaging { margin-top: 24px; margin-bottom: 24px; }
+  .hero-product-stage { padding-bottom: 0; }
+  .hero-highlights { display: grid; gap: 8px; margin-top: 12px; }
+  .hero-highlight { position: relative; inset: auto; width: auto; display: grid; grid-template-columns: 1fr auto; padding: 11px 15px; gap: 4px 12px; border-radius: 8px; box-shadow: 0 4px 12px #28465008; }
+  .hero-highlight-label { grid-column: 1; grid-row: 1; font-size: 10px; }
+  .hero-highlight strong, .hero-highlight--library strong { grid-column: 1; grid-row: 2; font-size: 17px; }
+  .hero-highlight-action { grid-column: 2; grid-row: 1 / 3; align-self: center; }
+  .hero-highlight-action > span { display: none; }
+  .home .hero-scene--packaging figcaption { margin-top: 14px; }
+}
+@media (max-width: 760px) {
+  .home .hero-scene--packaging { margin-bottom: 18px; }
+}
+@keyframes vc-highlight-arrive {
+  from { opacity: 0; translate: 0 12px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hero-slide.is-active .hero-highlight { animation: vc-highlight-arrive 650ms cubic-bezier(.22,1,.36,1) 450ms backwards; }
+  .hero-slide.is-active .hero-highlight--testing { animation-delay: 560ms; }
+  .hero-slide.is-active .hero-highlight--library { animation-delay: 670ms; }
+  .hero-slide.is-active .hero-highlight:focus-visible { animation: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-highlight, .hero-highlight:hover { transition: none; transform: none; }
+}

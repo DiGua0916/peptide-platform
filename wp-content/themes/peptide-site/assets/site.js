@@ -1,19 +1,5 @@
 (() => {
   'use strict';
-  const menu = document.querySelector('.menu-toggle');
-  const nav = document.querySelector('#primary-nav');
-  const closeMenu = () => { menu?.setAttribute('aria-expanded', 'false'); menu?.setAttribute('aria-label', 'Open menu'); nav?.classList.remove('is-open'); };
-  menu?.addEventListener('click', () => {
-    const open = menu.getAttribute('aria-expanded') !== 'true';
-    menu.setAttribute('aria-expanded', String(open));
-    menu.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
-    nav?.classList.toggle('is-open', open);
-  });
-  nav?.addEventListener('click', event => { if (event.target.closest('a')) closeMenu(); });
-  document.addEventListener('keydown', event => { if (event.key === 'Escape' && menu?.getAttribute('aria-expanded') === 'true') { closeMenu(); menu.focus(); } });
-  document.addEventListener('click', event => { if (!event.target.closest('.site-header')) closeMenu(); });
-  matchMedia('(min-width: 601px)').addEventListener('change', closeMenu);
-
   // WooCommerce Blocks owns the cart; mirror its live count in the header.
   const syncCart = () => {
     if (!document.querySelector('.wp-block-woocommerce-cart, .wp-block-woocommerce-checkout')) return;
@@ -34,29 +20,6 @@
     window.addEventListener('pagehide', event => { if (!event.persisted) unsubscribe(); });
   };
   document.readyState === 'complete' ? syncCart() : window.addEventListener('load', syncCart, { once: true });
-
-  // Reuse the purchased template's Spline scene, without Webflow commerce/form scripts.
-  const canvas = document.querySelector('#vialcove-dna');
-  if (canvas && !matchMedia('(prefers-reduced-motion: reduce)').matches && !navigator.connection?.saveData) {
-    const loadScene = async () => {
-      try {
-        const { Application } = await import('https://cdn.jsdelivr.net/npm/@splinetool/runtime@2.0.75/build/runtime.js');
-        const scene = new Application(canvas);
-        await scene.load(canvas.dataset.scene);
-        canvas.closest('.hero-art').classList.add('is-loaded');
-        const motion = document.querySelector('.motion-toggle');
-        let paused = false;
-        if (typeof scene.stop === 'function' && typeof scene.play === 'function') {
-          motion.hidden = false;
-          motion.addEventListener('click', () => { paused = !paused; paused ? scene.stop() : scene.play(); motion.textContent = paused ? 'Play animation' : 'Pause animation'; });
-          document.addEventListener('visibilitychange', () => { document.hidden || paused ? scene.stop() : scene.play(); });
-        }
-        window.addEventListener('pagehide', event => { if (!event.persisted) scene.dispose(); else scene.stop?.(); });
-        window.addEventListener('pageshow', event => { if (event.persisted && !paused) scene.play?.(); });
-      } catch (error) { console.info('VialCove: using the lightweight DNA illustration; 3D scene unavailable.'); }
-    };
-    'requestIdleCallback' in window ? requestIdleCallback(loadScene, { timeout: 1500 }) : setTimeout(loadScene, 300);
-  }
 
   const form = document.querySelector('#batch-lookup');
   if (!form || typeof VialCove === 'undefined') return;

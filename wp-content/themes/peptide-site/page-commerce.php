@@ -13,7 +13,11 @@ $vc_title = $vc_is_cart ? 'Your selection.' : ( is_wc_endpoint_url( 'order-recei
         <nav aria-label="Order progress"><ol class="vc-order-steps"><li<?php echo $vc_is_cart ? ' aria-current="step"' : ''; ?>><span>01</span><?php if ( ! $vc_is_cart ) : ?><a href="<?php echo esc_url( vc_url( 'cart' ) ); ?>">Cart</a><?php else : ?>Cart<?php endif; ?></li><li<?php echo ! $vc_is_cart ? ' aria-current="step"' : ''; ?>><span>02</span>Checkout</li></ol></nav>
         <?php endif; ?>
     </div>
+    <?php if ( ! $vc_is_cart && ! $vc_is_endpoint ) : ?>
+    <div id="vc-checkout-pricing" class="vc-checkout-pricing"></div>
+    <?php endif; ?>
     <div class="entry-content vc-commerce-content"><?php while ( have_posts() ) : the_post(); the_content(); endwhile; ?></div>
+    <?php if ( ! $vc_is_cart && ! $vc_is_endpoint ) { echo vc_checkout_terms_html(); } ?>
     <?php if ( ! $vc_is_endpoint ) { vc_use_statement(); } ?>
     <div class="vc-order-help"><span><?php echo vc_icon( 'file' ); ?> Product documentation, in one place.</span><a href="<?php echo esc_url( vc_url( 'reports' ) ); ?>">Find a batch report <?php echo vc_icon(); ?></a></div>
 </main>

@@ -1,0 +1,37 @@
+{
+  "brand": "VialCovePeptides",
+  "version": "2.0-final",
+  "date": "2026-10-13",
+  "colors": {
+    "primary": "#177E9B",
+    "red_c": "#D95755",
+    "ink": "#284650",
+    "muted": "#627B85",
+    "paper": "#F4F8FB",
+    "line": "#D8E5EA",
+    "ice": "#DDEEF1"
+  },
+  "logo": {
+    "red_letter": "C",
+    "ink_colors": [
+      "#177E9B",
+      "#D95755"
+    ],
+    "master": "logos/VialCovePeptides_Logo_Horizontal.svg",
+    "compact": "logos/VialCovePeptides_Logo_Compact.svg",
+    "symbol": "logos/VialCovePeptides_Peptide_Symbol.svg",
+    "descriptor_min_width_px": 320,
+    "small_symbol_terminal_style": "solid below 48px"
+  },
+  "typography": {
+    "logo": "Inter 500, outlined and optically spaced",
+    "heading": "Inter 500 or 600",
+    "body": "Inter 400",
+    "chinese": "Noto Sans SC"
+  },
+  "applications": {
+    "product_scene": "AI-generated blank mockup with exact SVG branding; not an actual product photo",
+    "website": "Visual application only; not deployed"
+  },
+  "symbol_note": "Abstract sequence and terminal units; not a chemical structure."
+}

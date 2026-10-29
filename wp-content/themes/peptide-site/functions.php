@@ -1,5 +1,14 @@
 <?php
 defined( 'ABSPATH' ) || exit;
+require_once __DIR__ . '/inc/navigation.php';
+require_once __DIR__ . '/inc/navigation-menu.php';
+require_once __DIR__ . '/inc/storefront-content.php';
+require_once __DIR__ . '/inc/product-options.php';
+require_once __DIR__ . '/inc/sale-pricing.php';
+require_once __DIR__ . '/inc/cart-pricing.php';
+require_once __DIR__ . '/inc/cart-drawer.php';
+require_once __DIR__ . '/inc/layout-modules.php';
+require_once __DIR__ . '/inc/visitor-tracking.php';
 
 add_action( 'after_setup_theme', function () {
     add_theme_support( 'title-tag' );
@@ -13,13 +22,36 @@ add_action( 'after_setup_theme', function () {
     remove_action( 'woocommerce_sidebar', 'woocommerce_get_sidebar', 10 );
 } );
 
-add_filter( 'document_title_parts', function ( $parts ) { $parts['site'] = 'VialCove'; if ( is_front_page() ) { $parts['title'] = 'VialCove — A clearer view of peptides'; unset( $parts['tagline'] ); } return $parts; } );
+add_filter( 'document_title_parts', function ( $parts ) { $parts['site'] = 'VialCovePeptides'; if ( is_front_page() ) { $parts['title'] = 'VialCovePeptides — A clearer view of peptides'; unset( $parts['tagline'], $parts['site'] ); } return $parts; } );
+
+// Frontend identity only; do not alter the site's saved admin/email settings.
+remove_action( 'wp_head', 'wp_site_icon', 99 );
+add_action( 'wp_head', function () {
+    $brand = get_template_directory_uri() . '/assets/brand/';
+    echo '<link rel="icon" type="image/svg+xml" href="' . esc_url( $brand . 'favicon.svg' ) . '">';
+    echo '<link rel="icon" type="image/png" sizes="32x32" href="' . esc_url( $brand . 'favicon-32.png' ) . '">';
+    echo '<meta name="theme-color" content="#177E9B">';
+    echo '<link rel="preload" href="' . esc_url( $brand . 'Inter-Variable.ttf' ) . '" as="font" type="font/ttf" crossorigin>';
+}, 2 );
 
 add_action( 'wp_enqueue_scripts', function () {
     $root = get_template_directory_uri();
-    wp_enqueue_style( 'vialcove-fonts', 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600&display=swap', array(), null );
     wp_enqueue_style( 'vialcove', $root . '/assets/site.css', array(), (string) filemtime( __DIR__ . '/assets/site.css' ) );
     wp_enqueue_script( 'vialcove', $root . '/assets/site.js', array(), (string) filemtime( __DIR__ . '/assets/site.js' ), true );
+    if ( is_front_page() ) {
+        wp_enqueue_style( 'vialcove-carousel', $root . '/assets/carousel.css', array( 'vialcove' ), (string) filemtime( __DIR__ . '/assets/carousel.css' ) );
+        wp_enqueue_script( 'vialcove-carousel', $root . '/assets/carousel.js', array(), (string) filemtime( __DIR__ . '/assets/carousel.js' ), true );
+    }
+    wp_enqueue_style( 'vialcove-brand', $root . '/assets/brand.css', is_front_page() ? array( 'vialcove', 'vialcove-carousel' ) : array( 'vialcove' ), (string) filemtime( __DIR__ . '/assets/brand.css' ) );
+    wp_enqueue_style( 'vialcove-navigation', $root . '/assets/navigation.css', array( 'vialcove-brand' ), (string) filemtime( __DIR__ . '/assets/navigation.css' ) );
+    wp_enqueue_script( 'vialcove-navigation', $root . '/assets/navigation.js', array(), (string) filemtime( __DIR__ . '/assets/navigation.js' ), true );
+    wp_enqueue_style( 'vialcove-experience', $root . '/assets/experience.css', array( 'vialcove-navigation' ), (string) filemtime( __DIR__ . '/assets/experience.css' ) );
+    wp_enqueue_script( 'vialcove-experience', $root . '/assets/experience.js', array( 'vialcove-navigation' ), (string) filemtime( __DIR__ . '/assets/experience.js' ), true );
+    wp_enqueue_style( 'vialcove-product-preview', $root . '/assets/product-preview.css', array( 'vialcove-experience' ), (string) filemtime( __DIR__ . '/assets/product-preview.css' ) );
+    wp_enqueue_style( 'vialcove-product-images', $root . '/assets/product-images.css', array( 'vialcove-product-preview' ), (string) filemtime( __DIR__ . '/assets/product-images.css' ) );
+    if ( is_front_page() ) {
+        wp_enqueue_style( 'vialcove-hero-highlights', $root . '/assets/hero-highlights.css', array( 'vialcove-experience' ), (string) filemtime( __DIR__ . '/assets/hero-highlights.css' ) );
+    }
     wp_localize_script( 'vialcove', 'VialCove', array(
         'lookupUrl' => rest_url( 'peptide/v1/batches/lookup' ),
         'nonce' => is_user_logged_in() ? wp_create_nonce( 'wp_rest' ) : '',
@@ -27,7 +59,21 @@ add_action( 'wp_enqueue_scripts', function () {
     ) );
 } );
 
+/** Exact supplied SVGs; never reconstruct the wordmark as styled text. */
+function vc_brand_logo( bool $compact = false ): void {
+    $root = get_template_directory_uri() . '/assets/brand/';
+    if ( $compact ) {
+        echo '<img class="brand-logo-compact" src="' . esc_url( $root . 'VialCovePeptides_Logo_Compact.svg' ) . '" width="1196" height="205" alt="VialCovePeptides">';
+        return;
+    }
+    echo '<picture class="brand-logo"><source media="(max-width: 1200px)" srcset="' . esc_url( $root . 'VialCovePeptides_Logo_Compact.svg' ) . '" width="1196" height="205"><img src="' . esc_url( $root . 'VialCovePeptides_Logo_Horizontal.svg' ) . '" width="1196" height="285" alt="VialCovePeptides"></picture>';
+}
+
 function vc_url( string $page ): string {
+    if ( in_array( $page, array( 'certificates', 'faq', 'about-us', 'quality-standards', 'methodology' ), true ) ) {
+        $content_page = get_page_by_path( $page );
+        return $content_page ? get_permalink( $content_page ) : home_url( '/' . $page . '/' );
+    }
     if ( 'reports' === $page ) {
         $reports = get_page_by_path( 'batch-reports' );
         return $reports ? get_permalink( $reports ) : home_url( '/?vc_reports=1' );
@@ -101,23 +147,33 @@ function vc_icon( string $name = 'arrow' ): string {
 function vc_vial( string $label = 'PEPTIDE COLLECTION', string $sku = 'DESIGN CONCEPT' ): void {
     ?>
     <div class="vial-scene" role="img" aria-label="Illustrative VialCove vial packaging; not a product photograph">
-        <div class="vial-shadow"></div><div class="vial"><div class="vial-cap"></div><div class="vial-neck"></div><div class="vial-glass"><div class="vial-label"><span class="vial-wordmark">VialCove</span><span class="vial-product"><?php echo esc_html( $label ); ?></span><span class="vial-line"></span><span class="vial-sku"><?php echo esc_html( $sku ); ?></span></div></div></div>
+        <div class="vial-shadow"></div><div class="vial"><div class="vial-cap"></div><div class="vial-neck"></div><div class="vial-glass"><div class="vial-label"><span class="vial-wordmark"><?php vc_brand_logo( true ); ?></span><span class="vial-product"><?php echo esc_html( $label ); ?></span><span class="vial-line"></span><span class="vial-sku"><?php echo esc_html( $sku ); ?></span></div></div></div>
         <span class="concept-label">Packaging concept</span>
     </div>
     <?php
 }
 
-function vc_product_card( $product ): void {
+/** Catalogue presentation only; retain native variation, cart and checkout prices. */
+function vc_card_price_html( $product ): string {
+    return vc_public_price_html( $product );
+}
+
+function vc_product_card( $product, bool $report_preview = true ): void {
     $extra = vc_product_data( $product );
+    $hover = $report_preview && function_exists( 'peptide_core_get_product_hover' )
+        ? peptide_core_get_product_hover( $product )
+        : array( 'mode' => $report_preview ? 'placeholder' : 'none' );
+    $report_preview = $report_preview && 'none' !== ( $hover['mode'] ?? 'placeholder' );
     ?>
     <article class="product-card">
-        <a class="product-visual" href="<?php echo esc_url( $product->get_permalink() ); ?>" aria-label="<?php echo esc_attr( 'View ' . $product->get_name() ); ?>">
-            <?php if ( $product->get_image_id() ) { echo wp_kses_post( $product->get_image( 'woocommerce_thumbnail' ) ); } else { vc_vial( $product->get_name(), $product->get_sku() ); } ?>
+        <a class="product-visual<?php echo $report_preview ? ' product-visual--report' : ''; ?><?php echo $product->get_image_id() ? ' product-visual--photo' : ''; ?>" href="<?php echo esc_url( $product->get_permalink() ); ?>" aria-label="<?php echo esc_attr( 'View ' . $product->get_name() ); ?>">
+            <?php if ( $product->get_image_id() ) { echo wp_kses_post( $product->get_image( 'woocommerce_single' ) ); } else { vc_vial( $product->get_name(), $product->get_sku() ); } ?>
+            <?php if ( $report_preview ) { get_template_part( 'template-parts/product-hover', null, array( 'name' => $product->get_name(), 'hover' => $hover ) ); } ?>
             <?php if ( ! empty( $extra['is_demo'] ) ) : ?><span class="demo-badge">Demo product</span><?php endif; ?>
             <span class="product-open"><?php echo vc_icon(); ?></span>
         </a>
         <div class="product-meta"><span><?php echo esc_html( $product->get_sku() ?: 'PEPTIDE COLLECTION' ); ?></span><span><?php echo esc_html( vc_report_label( $extra['report_state'] ?? '' ) ); ?></span></div>
-        <div class="product-heading"><h3><a href="<?php echo esc_url( $product->get_permalink() ); ?>"><?php echo esc_html( $product->get_name() ); ?></a></h3><span class="product-price"><?php echo wp_kses_post( $product->get_price_html() ); ?></span></div>
+        <div class="product-heading"><h3><a href="<?php echo esc_url( $product->get_permalink() ); ?>"><?php echo esc_html( $product->get_name() ); ?></a></h3><span class="product-price"><?php echo wp_kses_post( vc_card_price_html( $product ) ); ?></span></div>
         <div class="product-card-bottom"><span><?php echo isset( $extra['batch_count'] ) ? esc_html( sprintf( _n( '%d published batch', '%d published batches', $extra['batch_count'], 'vialcove' ), $extra['batch_count'] ) ) : 'Batch data unavailable'; ?></span><a href="<?php echo esc_url( $product->get_permalink() ); ?>">View details <?php echo vc_icon(); ?></a></div>
     </article>
     <?php
@@ -191,7 +247,11 @@ add_filter( 'woocommerce_add_to_cart_fragments', function ( $fragments ) {
     return $fragments;
 } );
 
-add_filter( 'body_class', function ( $classes ) { $classes[] = 'vialcove-site'; return $classes; } );
+add_filter( 'body_class', function ( $classes ) {
+    $classes[] = 'vialcove-site';
+    if ( is_front_page() || ( function_exists( 'is_shop' ) && ( is_shop() || is_product_taxonomy() ) ) ) { $classes[] = 'vc-experience'; }
+    return $classes;
+} );
 
 // The fallback route keeps the report tool reachable before its WordPress page is created.
 add_filter( 'template_include', function ( $template ) {

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>VialCove · 手机预览</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;font:14px/1.5 system-ui,sans-serif;color:#284650;background:#edf3f6}
+    header{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:14px 22px;background:#fff;border-bottom:1px solid #d8e5ea}
+    h1{font-size:17px;margin:0 14px 0 0;font-weight:600}nav{display:flex;gap:8px;flex-wrap:wrap}button,select,a{font:inherit;color:inherit}button,select{min-height:36px;border:1px solid #d8e5ea;border-radius:6px;background:#fff;padding:6px 12px;cursor:pointer}button:hover,button:focus-visible{border-color:#177e9b;background:#f4f8fb}button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid #177e9b;outline-offset:3px}
+    .settings{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap}main{padding:18px 12px 28px;text-align:center}.hint{margin:0 0 15px;font-size:12px;color:#526e78}.stage{position:relative;margin:auto}.phone{position:absolute;top:0;left:0;padding:8px;background:#284650;border-radius:32px;box-shadow:0 16px 45px #28465026;transform-origin:top left}.screen{overflow:hidden;border-radius:25px;background:white}iframe{display:block;border:0;background:#fff}.page-address{max-width:700px;margin:18px auto 0;font-size:11px;color:#627b85;overflow-wrap:anywhere}.page-address a{text-underline-offset:3px}.status{font-size:11px;color:#627b85;margin:6px auto 0}button[data-page="/"]{color:#11657d}
+    @media(max-width:620px){header{padding:12px;gap:9px}.settings{margin-left:0}main{padding-top:14px}h1{width:100%}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>VialCove · 手机预览</h1>
+    <nav aria-label="预览页面"><button data-page="/">首页</button><button data-page="/shop/">全部产品</button><button data-page="/product/tirzepatide/">产品详情</button><button data-page="/cart/">购物车</button></nav>
+    <div class="settings"><label for="size">屏幕</label><select id="size"><option value="390,844">390 × 844</option><option value="375,812">375 × 812</option><option value="430,932">430 × 932</option><option value="360,800">360 × 800</option></select><select id="zoom" aria-label="预览缩放"><option value="fit">适合窗口</option><option value="1">原大 100%</option></select><button id="reload">刷新</button></div>
+  </header>
+  <main>
+    <p class="hint">直接在手机框里滚动、点商品、切规格、加入购物车。此预览连接当前网站，购物车与原网页共用。</p>
+    <div class="stage"><div class="phone"><div class="screen"><iframe id="site" title="VialCove 手机网页" src="/" width="390" height="844"></iframe></div></div></div>
+    <p class="page-address"><a id="address" href="/" target="_blank" rel="noopener">打开当前页面</a></p>
+    <p class="status" id="status" role="status">正在加载手机页面…</p>
+  </main>
+  <script>
+    (() => {
+      const frame = document.getElementById('site');
+      const size = document.getElementById('size');
+      const zoom = document.getElementById('zoom');
+      const stage = document.querySelector('.stage');
+      const phone = document.querySelector('.phone');
+      const address = document.getElementById('address');
+      const status = document.getElementById('status');
+      let current = new URL('/', location.origin).href;
+      function fit() {
+        const [width, height] = size.value.split(',').map(Number);
+        frame.style.width = width + 'px'; frame.style.height = height + 'px';
+        frame.width = width; frame.height = height;
+        const outerWidth = width + 16, outerHeight = height + 16;
+        const availableHeight = Math.max(260, innerHeight - stage.getBoundingClientRect().top - 82);
+        const scale = zoom.value === '1' ? 1 : Math.min(1, (innerWidth - 28) / outerWidth, availableHeight / outerHeight);
+        phone.style.width = outerWidth + 'px';
+        phone.style.transform = `scale(${scale})`;
+        stage.style.width = outerWidth * scale + 'px'; stage.style.height = outerHeight * scale + 'px';
+      }
+      document.querySelectorAll('[data-page]').forEach(button => button.addEventListener('click', () => {
+        frame.src = button.dataset.page; status.textContent = '正在加载…';
+      }));
+      frame.addEventListener('load', () => {
+        try {
+          current = frame.contentWindow.location.href;
+          address.href = current;
+          address.textContent = frame.contentDocument.title + ' ↗';
+          status.textContent = '手机尺寸预览 · 实际页面可操作';
+        } catch {
+          status.textContent = '当前页面已跳转到外部网站。可点击上方「首页」返回预览。';
+        }
+        fit();
+      });
+      document.getElementById('reload').addEventListener('click', () => {
+        try { frame.contentWindow.location.reload(); } catch { frame.src = current; }
+      });
+      size.addEventListener('change', fit); zoom.addEventListener('change', fit);
+      window.addEventListener('resize', fit); fit();
+    })();
+  </script>
+</body>
+</html>
