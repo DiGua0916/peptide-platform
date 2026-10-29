@@ -72,6 +72,7 @@ final class Shipping_Discounts_Page {
 	public static function customers_text( array $d ): string {
 		/* translators: %d: number of customers */
 		$who = 'emails' === $d['customers'] ? sprintf( _n( '%d specific customer', '%d specific customers', count( $d['emails'] ), 'peptide-core' ), count( $d['emails'] ) ) : __( 'All customers', 'peptide-core' );
+		if ( in_array( $d['customers'], array( 'tags', 'levels', 'visitor' ), true ) ) { $who = array( 'tags' => '指定顾客标签', 'levels' => '指定顾客等级', 'visitor' => '指定访客ID' )[ $d['customers'] ]; }
 		if ( $d['member_day'] ) {
 			/* translators: %s: weekdays */
 			$who .= ' · ' . sprintf( __( 'Member days: %s', 'peptide-core' ), implode( ', ', array_map( array( self::class, 'weekday' ), $d['member_days'] ) ) );
@@ -143,7 +144,7 @@ final class Shipping_Discounts_Page {
 		Marketing::card_close();
 		// phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
 
-		Marketing::customers_card( (string) $d['customers'], (array) $d['emails'], true );
+		Marketing::customers_card( (string) $d['customers'], (array) $d['emails'], true, '', $d );
 		Marketing::save_bar( self::url() );
 		echo '</form></div>';
 	}
@@ -188,6 +189,9 @@ final class Shipping_Discounts_Page {
 				'stages'      => $stages,
 				'customers'   => (string) ( $in['customers'] ?? '' ),
 				'emails'      => (string) ( $in['emails'] ?? '' ),
+				'segment_tags' => (array) ( $in['segment_tags'] ?? array() ),
+				'segment_levels' => (array) ( $in['segment_levels'] ?? array() ),
+				'visitor_ids' => $in['visitor_ids'] ?? array(),
 			),
 			$errors,
 		);

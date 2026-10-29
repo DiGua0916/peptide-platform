@@ -602,6 +602,11 @@ final class Menus {
 		return $id ? self::tree( $id, true ) : null;
 	}
 
+	/** Published, resolved links for a template-specific navigation selection. */
+	public static function public_menu( int $menu_id ): ?array {
+		return self::exists( $menu_id ) ? self::tree( $menu_id, true ) : null;
+	}
+
 	/**
 	 * 清理编辑器提交的菜单项。返回 [items, errors]。
 	 *

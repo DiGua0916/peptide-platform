@@ -1,0 +1,516 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-29T11:39:07+08:00",
+  "title": "Design System: VialCove Admin Workspaces",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Operating Ink",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(72% 0 0)",
+          "oklch(86% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "primary-hover": {
+        "role": "primary",
+        "displayName": "Pressed Charcoal",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(72% 0 0)",
+          "oklch(86% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "White Work Surface",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(72% 0 0)",
+          "oklch(86% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "customer-canvas": {
+        "role": "neutral",
+        "displayName": "Customer Canvas",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(72% 0 0)",
+          "oklch(86% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "management-canvas": {
+        "role": "neutral",
+        "displayName": "Management Canvas",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(72% 0 0)",
+          "oklch(86% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "navigation": {
+        "role": "neutral",
+        "displayName": "Navigation Paper",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(72% 0 0)",
+          "oklch(86% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "soft": {
+        "role": "neutral",
+        "displayName": "Soft Wash",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(72% 0 0)",
+          "oklch(86% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "management-soft": {
+        "role": "neutral",
+        "displayName": "Management Soft Wash",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(72% 0 0)",
+          "oklch(86% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Quiet Text",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(72% 0 0)",
+          "oklch(86% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(72% 0 0)",
+          "oklch(86% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "control-line": {
+        "role": "neutral",
+        "displayName": "Customer Control Stroke",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(72% 0 0)",
+          "oklch(86% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "management-control-line": {
+        "role": "neutral",
+        "displayName": "Management Control Stroke",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(72% 0 0)",
+          "oklch(86% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "status-text": {
+        "role": "neutral",
+        "displayName": "Status Ink",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(72% 0 0)",
+          "oklch(86% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "status-surface": {
+        "role": "neutral",
+        "displayName": "Status Wash",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(45% 0 0)",
+          "oklch(58% 0 0)",
+          "oklch(72% 0 0)",
+          "oklch(86% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "error-text": {
+        "role": "semantic",
+        "displayName": "Error Ink",
+        "tonalRamp": [
+          "oklch(15% 0.025 28)",
+          "oklch(25% 0.06 28)",
+          "oklch(35% 0.09 28)",
+          "oklch(45% 0.12 28)",
+          "oklch(58% 0.13 28)",
+          "oklch(72% 0.09 28)",
+          "oklch(86% 0.04 28)",
+          "oklch(95% 0.012 28)"
+        ]
+      },
+      "error-surface": {
+        "role": "semantic",
+        "displayName": "Error Paper",
+        "tonalRamp": [
+          "oklch(15% 0.012 28)",
+          "oklch(25% 0.025 28)",
+          "oklch(35% 0.04 28)",
+          "oklch(45% 0.05 28)",
+          "oklch(58% 0.06 28)",
+          "oklch(72% 0.05 28)",
+          "oklch(86% 0.025 28)",
+          "oklch(95% 0.012 28)"
+        ]
+      },
+      "error-line": {
+        "role": "semantic",
+        "displayName": "Error Stroke",
+        "tonalRamp": [
+          "oklch(15% 0.012 28)",
+          "oklch(25% 0.025 28)",
+          "oklch(35% 0.04 28)",
+          "oklch(45% 0.05 28)",
+          "oklch(58% 0.06 28)",
+          "oklch(72% 0.05 28)",
+          "oklch(86% 0.025 28)",
+          "oklch(95% 0.012 28)"
+        ]
+      },
+      "warning-surface": {
+        "role": "semantic",
+        "displayName": "Warning Paper",
+        "tonalRamp": [
+          "oklch(15% 0.012 85)",
+          "oklch(25% 0.025 85)",
+          "oklch(35% 0.04 85)",
+          "oklch(45% 0.05 85)",
+          "oklch(58% 0.06 85)",
+          "oklch(72% 0.05 85)",
+          "oklch(86% 0.025 85)",
+          "oklch(95% 0.012 85)"
+        ]
+      },
+      "warning-line": {
+        "role": "semantic",
+        "displayName": "Warning Stroke",
+        "tonalRamp": [
+          "oklch(15% 0.012 85)",
+          "oklch(25% 0.025 85)",
+          "oklch(35% 0.04 85)",
+          "oklch(45% 0.05 85)",
+          "oklch(58% 0.06 85)",
+          "oklch(72% 0.05 85)",
+          "oklch(86% 0.025 85)",
+          "oklch(95% 0.012 85)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "page-title-customer": {
+        "displayName": "Customer Page Title",
+        "purpose": "Store workspace titles; native mobile size reduces to 20px/28px."
+      },
+      "page-title-management": {
+        "displayName": "Management Page Title",
+        "purpose": "Site management titles; small screens reduce to 24px/32px."
+      },
+      "section-title-customer": {
+        "displayName": "Customer Section",
+        "purpose": "Customer overview and feature section headings."
+      },
+      "section-title-management": {
+        "displayName": "Management Section",
+        "purpose": "Management cards and operations panel headings."
+      },
+      "body": {
+        "displayName": "Workspace Body",
+        "purpose": "Default shell rhythm. Management uses the same locally bundled face under its VialCove Manrope alias."
+      },
+      "control": {
+        "displayName": "Compact Control",
+        "purpose": "Workspace buttons and shared label hierarchy."
+      },
+      "caption": {
+        "displayName": "Supporting Caption",
+        "purpose": "Short descriptions, timestamps and metadata; longer hints retain their source-specific line height."
+      },
+      "metric-management": {
+        "displayName": "Management Metric",
+        "purpose": "Management summary strip values with tabular numerals."
+      },
+      "login-field": {
+        "displayName": "Login Field",
+        "purpose": "Larger native login inputs."
+      }
+    },
+    "shadows": [
+      {
+        "name": "customer-toolbar-dropdown",
+        "value": "0 8px 24px #1818181a",
+        "purpose": "Native customer toolbar submenus."
+      },
+      {
+        "name": "management-toolbar-dropdown",
+        "value": "0 8px 24px #00000014",
+        "purpose": "Native management toolbar submenus."
+      },
+      {
+        "name": "customer-dialog",
+        "value": "0 24px 64px #18181826",
+        "purpose": "Customer modal separation."
+      },
+      {
+        "name": "editor-publish-menu",
+        "value": "0 8px 28px rgb(0 0 0 / 14%)",
+        "purpose": "Transient decoration editor publish menu."
+      },
+      {
+        "name": "editor-preview-frame",
+        "value": "0 5px 22px rgb(0 0 0 / 8%)",
+        "purpose": "Actual storefront preview frame on the tool canvas."
+      },
+      {
+        "name": "editor-notice",
+        "value": "0 6px 24px rgb(0 0 0 / 12%)",
+        "purpose": "Transient editor feedback."
+      },
+      {
+        "name": "marketing-save-bar",
+        "value": "0 4px 16px #1818180a",
+        "purpose": "Existing customer marketing save-bar exception."
+      }
+    ],
+    "motion": [
+      {
+        "name": "workspace-feedback",
+        "value": "180ms cubic-bezier(.22,1,.36,1)",
+        "purpose": "Customer shell color, border and press feedback; management transform feedback."
+      },
+      {
+        "name": "tool-feedback",
+        "value": "180ms cubic-bezier(.16,1,.3,1)",
+        "purpose": "Overview, product and decoration control press/opacity feedback."
+      },
+      {
+        "name": "dialog-entry",
+        "value": "220ms cubic-bezier(.22,1,.36,1)",
+        "purpose": "Customer dialog entry following an explicit opening."
+      },
+      {
+        "name": "customer-switch",
+        "value": "300ms cubic-bezier(.22,1,.36,1)",
+        "purpose": "Existing customer switch-knob transform."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "login-compact",
+        "value": "480px"
+      },
+      {
+        "name": "small-screen",
+        "value": "600px"
+      },
+      {
+        "name": "native-mobile",
+        "value": "782px"
+      },
+      {
+        "name": "customer-auto-fold-upper",
+        "value": "960px"
+      },
+      {
+        "name": "product-and-operations-stack",
+        "value": "1100px"
+      },
+      {
+        "name": "management-summary-wrap",
+        "value": "1200px"
+      },
+      {
+        "name": "overview-support-stack",
+        "value": "1400px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Workspace Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "A compact enabled primary action from the customer workspace.",
+      "html": "<button class=\"ds-primary\" type=\"button\">保存更改</button>",
+      "css": ".ds-primary{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:7px 12px;border:1px solid #171717;border-radius:6px;background:#171717;color:#fff;font:600 13px/20px Manrope,'Microsoft YaHei','PingFang SC',sans-serif;cursor:pointer;transition:background-color 180ms cubic-bezier(.22,1,.36,1),transform 180ms cubic-bezier(.22,1,.36,1)}.ds-primary:hover{background:#333333}.ds-primary:focus-visible{outline:2px solid #171717;outline-offset:2px}.ds-primary:active:not(:disabled){transform:translateY(1px)}.ds-primary:disabled{color:#a3a3a3;background:#f0f0f0;border-color:#e6e6e6;cursor:default}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}.ds-primary:active{transform:none}}"
+    },
+    {
+      "name": "Secondary Workspace Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "A neutral customer workspace action with a visible control stroke.",
+      "html": "<button class=\"ds-secondary\" type=\"button\">取消</button>",
+      "css": ".ds-secondary{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:7px 12px;border:1px solid #d4d4d4;border-radius:6px;background:#fff;color:#171717;font:600 13px/20px Manrope,'Microsoft YaHei','PingFang SC',sans-serif;cursor:pointer;transition:background-color 180ms cubic-bezier(.22,1,.36,1),border-color 180ms cubic-bezier(.22,1,.36,1),transform 180ms cubic-bezier(.22,1,.36,1)}.ds-secondary:hover{background:#f5f5f5;color:#333333;border-color:#171717}.ds-secondary:focus-visible{outline:2px solid #171717;outline-offset:2px}.ds-secondary:active:not(:disabled){transform:translateY(1px)}.ds-secondary:disabled{color:#a3a3a3;background:#f0f0f0;border-color:#e6e6e6;cursor:default}@media(prefers-reduced-motion:reduce){.ds-secondary{transition:none}.ds-secondary:active{transform:none}}"
+    },
+    {
+      "name": "Customer Text Field",
+      "kind": "input",
+      "refersTo": "input-customer",
+      "description": "A bounded native-style customer text input.",
+      "html": "<label class=\"ds-field-label\" for=\"ds-store-name\">店铺名称</label><input class=\"ds-field\" id=\"ds-store-name\" type=\"text\" />",
+      "css": ".ds-field-label{display:block;margin-bottom:7px;color:#171717;font:600 13px/20px Manrope,'Microsoft YaHei','PingFang SC',sans-serif}.ds-field{box-sizing:border-box;display:block;width:100%;max-width:100%;min-height:36px;padding:7px 12px;border:1px solid #d4d4d4;border-radius:6px;background:#fff;color:#171717;font:400 14px/20px Manrope,'Microsoft YaHei','PingFang SC',sans-serif;caret-color:#171717;transition:border-color 180ms cubic-bezier(.22,1,.36,1)}.ds-field:focus{border-color:#171717;outline:2px solid #171717;outline-offset:1px;box-shadow:none}.ds-field:disabled{background:#f0f0f0;color:#666666}@media(prefers-reduced-motion:reduce){.ds-field{box-sizing:border-box;transition:none}}"
+    },
+    {
+      "name": "Management Navigation",
+      "kind": "nav",
+      "description": "The light management rail with neutral open/current selections, dark text and an inset neutral keyboard outline; compact density is preserved.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"管理后台\"><a class=\"ds-nav-item\" href=\"#overview\">概览</a><a class=\"ds-nav-item\" href=\"#stores\" aria-current=\"page\">店铺</a><a class=\"ds-nav-item\" href=\"#servers\">服务器</a></nav>",
+      "css": ".ds-nav{box-sizing:border-box;width:220px;max-width:100%;padding:10px;background:#fafafa;border-right:1px solid #e6e6e6;font:400 13px/20px 'VialCove Manrope','Microsoft YaHei','PingFang SC',sans-serif}.ds-nav-item{display:block;margin:2px 0;padding:8px 12px 8px 35px;border-radius:6px;color:#171717;text-decoration:none}.ds-nav-item:hover,.ds-nav-item:focus{background:#f0f0f0;color:#171717;box-shadow:none}.ds-nav-item[aria-expanded=true]{background:#eaeaea;color:#171717}.ds-nav-item[aria-current]{background:#e5e5e5;color:#171717;font-weight:600}.ds-nav-item:focus-visible{outline:2px solid #737373;outline-offset:-2px}"
+    },
+    {
+      "name": "Neutral Status Chip",
+      "kind": "chip",
+      "refersTo": "status-chip",
+      "description": "The compact neutral order/operations state shape; semantic errors retain separate colors.",
+      "html": "<span class=\"ds-chip\">待处理</span>",
+      "css": ".ds-chip{display:inline-flex;align-items:center;padding:4px 8px;border-radius:4px;background:#f1f1f1;color:#404040;font:600 12px/16px Manrope,'Microsoft YaHei','PingFang SC',sans-serif}"
+    },
+    {
+      "name": "Customer Feature Card",
+      "kind": "card",
+      "refersTo": "feature-card",
+      "description": "The flat 8px customer feature container; not the 12px panel default.",
+      "html": "<section class=\"ds-feature\"><h2 class=\"ds-feature-title\">店铺设置</h2><p class=\"ds-feature-copy\">管理店铺信息与展示设置。</p></section>",
+      "css": ".ds-feature{padding:24px;border:1px solid #e6e6e6;border-radius:8px;background:#fff;color:#171717;box-shadow:none;font:400 14px/22px Manrope,'Microsoft YaHei','PingFang SC',sans-serif}.ds-feature-title{margin:0 0 16px;font-size:16px;line-height:24px;font-weight:600}.ds-feature-copy{margin:0;color:#666666;font-size:14px;line-height:20px}"
+    },
+    {
+      "name": "Management Panel",
+      "kind": "card",
+      "refersTo": "management-panel",
+      "description": "A flat management card with its own 12px geometry and 20px padding.",
+      "html": "<section class=\"ds-management-panel\"><h2 class=\"ds-management-title\">店铺管理</h2><p class=\"ds-management-copy\">管理独立店铺与站点连接。</p></section>",
+      "css": ".ds-management-panel{padding:20px;border:1px solid #e6e6e6;border-radius:12px;background:#fff;color:#171717;box-shadow:none;font:400 14px/22px 'VialCove Manrope','Microsoft YaHei','PingFang SC',sans-serif}.ds-management-title{margin:0 0 12px;font-size:17px;line-height:26px;font-weight:650}.ds-management-copy{margin:0;color:#666666;font-size:14px;line-height:22px}@media(max-width:782px){.ds-management-panel{padding:16px}}"
+    },
+    {
+      "name": "Login Text Field",
+      "kind": "input",
+      "refersTo": "login-field",
+      "description": "The shared larger native login field with a neutral focus treatment.",
+      "html": "<label class=\"ds-login-label\" for=\"ds-login-name\">用户名或电子邮箱地址</label><input class=\"ds-login-field\" id=\"ds-login-name\" type=\"text\" autocomplete=\"username\" />",
+      "css": ".ds-login-label{display:block;color:#171717;font:550 13px/20px 'VialCove Manrope','Microsoft YaHei','PingFang SC',sans-serif}.ds-login-field{box-sizing:border-box;display:block;width:100%;max-width:100%;min-height:44px;padding:9px 11px;margin:7px 0 20px;border:1px solid #d5d5d5;border-radius:6px;background:#fff;color:#171717;font:400 16px/24px 'VialCove Manrope','Microsoft YaHei','PingFang SC',sans-serif;caret-color:#171717}.ds-login-field:focus{border-color:#171717;outline:2px solid #dedede;outline-offset:1px;box-shadow:none}.ds-login-field:focus-visible{outline:2px solid #171717;outline-offset:3px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Precision Operating Desk",
+    "overview": "VialCove's administrative surfaces are calm, compact workspaces. Light navigation with neutral selection washes, white working surfaces and dark primary actions make location and action easy to read. Alignment, spacing and type weight carry the hierarchy. Black and white are the confirmed brand direction; color remains available for real validation states and the content being edited.\n\nThis system applies to the customer backend, which operates and decorates an individual store, and the separate management backend, which manages stores and their infrastructure. It also covers both login pages. It does not govern the public storefront or force its content preview into monochrome. WordPress and WooCommerce retain ownership of their forms, editing controls, mobile navigation and business behavior.",
+    "keyCharacteristics": [
+      "A light navigation rail with neutral current selections and dark text.",
+      "Compact controls and continuous data surfaces.",
+      "Local Manrope with system Chinese fallbacks.",
+      "Responsive records that preserve fields and actions.",
+      "Brief interaction feedback with reduced motion support."
+    ],
+    "rules": [
+      {
+        "name": "The Operational Contrast Rule",
+        "body": "Use neutral navigation selection washes with dark text and dark primary actions to establish hierarchy; reserve semantic color for a real state or content asset.",
+        "section": "colors"
+      },
+      {
+        "name": "The Role Before Scale Rule",
+        "body": "Choose the owning surface's established title, body or control role before adding a new size; the two workspaces do not require identical metrics in every component.",
+        "section": "typography"
+      },
+      {
+        "name": "The Reachable Record Rule",
+        "body": "Reflow dense records and controls around the available pane; never hide a field or action to fit a smaller viewport.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat Work Surface Rule",
+        "body": "Keep ordinary information surfaces flat; use ambient depth for transient layers, preview frames and the existing save-bar exception.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use the owning workspace's neutral canvas, font alias, title role and native navigation structure.",
+      "Do use flat surfaces, alignment and type weight to make real actions and data legible.",
+      "Do retain visible keyboard focus and reduced motion support.",
+      "Do reflow complete records around the available pane while preserving headings, fields and actions.",
+      "Do preserve native WordPress and WooCommerce controls, form semantics and save behavior.",
+      "Do show truthful empty states and retain the actual colors of uploaded content and storefront previews."
+    ],
+    "donts": [
+      "Don't apply this admin system to the public storefront without a separate request.",
+      "Don't invent metrics, inventory, reviews, qualifications or other business evidence for a layout.",
+      "Don't standardize every card to the panel radius; feature cards and native components have established exceptions.",
+      "Don't add decorative accent colors, gradients or elevated card stacks to ordinary operational surfaces.",
+      "Don't animate layout dimensions, data refreshes or full-page entrances.",
+      "Don't promote native icon-font usage into a new icon system or add glyph icons to imitate it."
+    ]
+  }
+}

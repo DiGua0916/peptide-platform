@@ -25,6 +25,9 @@ final class Client {
 	 * @return array|\WP_Error 店铺返回的 JSON
 	 */
 	public static function request_raw( string $site_url, string $key, string $method, string $route, array $query = array(), ?array $body = null ) {
+		// The store rejects replayed signatures. A seconds-resolution timestamp alone collides when
+		// the same endpoint is called twice quickly, so sign a fresh reserved query value each time.
+		$query['pc_hq_nonce'] = wp_generate_uuid4();
 		$time    = time();
 		$payload = null === $body ? '' : (string) wp_json_encode( (object) $body );
 		$sign    = hash_hmac( 'sha256', strtoupper( $method ) . "\n" . $route . "\n" . self::canonical_query( $query ) . "\n" . $time . "\n" . hash( 'sha256', $payload ), $key );

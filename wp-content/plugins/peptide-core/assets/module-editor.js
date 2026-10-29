@@ -63,6 +63,7 @@
 		var settings = ui.withDefaults( def.defaults, attrs.settings );
 		var panels = ui.settingsPanels( {
 			def: def,
+			pairedDeviceSafe: function ( key ) { return ! Object.prototype.hasOwnProperty.call( ( attrs.mobile || {} ).settings || {}, key ); },
 			settings: settings,
 			device: device,
 			items: attrs.items,

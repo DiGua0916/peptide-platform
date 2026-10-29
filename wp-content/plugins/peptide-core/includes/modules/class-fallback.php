@@ -2,7 +2,7 @@
 /**
  * 模块的默认外观（EDIT-BLOCKS-03）。主题提供 template-parts/modules/<type>.php 时不使用这里的输出。
  *
- * 目标是“能看清内容和布局、可以正常使用”，不追求最终视觉；正式样式由 Codex 在主题里实现。
+ * 由实际模块字段驱动布局与交互；主题可为同一数据合同提供专用模板。
  * 所有输出都经过转义；缺图片时编辑器里显示占位框，公开页面不输出空图片。
  *
  * @package PeptideCore
@@ -75,7 +75,7 @@ final class Fallback {
 		if ( ! is_array( $value ) || ! array_key_exists( 'desktop', $value ) ) {
 			return $value;
 		}
-		return 'mobile' === $device && null !== $value['mobile'] ? $value['mobile'] : $value['desktop'];
+		return 'mobile' === $device && null !== ( $value['mobile'] ?? null ) ? $value['mobile'] : $value['desktop'];
 	}
 
 	private static function inner_class( array $s ): string {
@@ -85,14 +85,17 @@ final class Fallback {
 	private static function heading( array $s, string $tag = 'h2' ): string {
 		$title = (string) ( $s['title'] ?? '' );
 		$desc  = (string) ( $s['description'] ?? '' );
-		if ( '' === $title && '' === $desc ) {
+		$rich  = $s['descriptionHtml'] ?? null;
+		if ( '' === $title && ( null !== $rich ? '' === $rich : '' === $desc ) ) {
 			return '';
 		}
 		$out = '<header class="vc-m__head">';
 		if ( '' !== $title ) {
 			$out .= sprintf( '<%1$s class="vc-m__title">%2$s</%1$s>', $tag, esc_html( $title ) );
 		}
-		if ( '' !== $desc ) {
+		if ( null !== $rich && '' !== $rich ) {
+			$out .= '<div class="vc-m__desc">' . self::html( $rich ) . '</div>';
+		} elseif ( null === $rich && '' !== $desc ) {
 			$out .= '<p class="vc-m__desc">' . nl2br( esc_html( $desc ) ) . '</p>';
 		}
 		return $out . '</header>';
@@ -151,19 +154,26 @@ final class Fallback {
 			return self::placeholder();
 		}
 		$main  = $desk ? $desk : $mob;
-		$fp    = $media['desktop']['focalPoint'] ?? array( 'xPercent' => 50, 'yPercent' => 50 );
+		$desk_ref = $desk ? ( $media['desktop'] ?? array() ) : ( $media['mobile'] ?? array() );
+		$mob_ref  = $mob ? ( $media['mobile'] ?? $desk_ref ) : $desk_ref;
+		$fp       = $desk_ref['focalPoint'] ?? array( 'xPercent' => 50, 'yPercent' => 50 );
+		$fp_m     = $mob_ref['focalPoint'] ?? $fp;
 		$style = self::style(
 			array(
-				'object-fit'      => (string) ( $media['desktop']['fit'] ?? 'cover' ),
-				'object-position' => (int) $fp['xPercent'] . '% ' . (int) $fp['yPercent'] . '%',
+				'--vc-media-fit-d' => (string) ( $desk_ref['fit'] ?? 'cover' ),
+				'--vc-media-fit-m' => (string) ( $mob_ref['fit'] ?? $desk_ref['fit'] ?? 'cover' ),
+				'--vc-media-pos-d' => (int) $fp['xPercent'] . '% ' . (int) $fp['yPercent'] . '%',
+				'--vc-media-pos-m' => (int) $fp_m['xPercent'] . '% ' . (int) $fp_m['yPercent'] . '%',
+				'object-fit' => 'var(--vc-media-fit-active,var(--vc-media-fit-d,cover))',
+				'object-position' => 'var(--vc-media-pos-active,var(--vc-media-pos-d,50% 50%))',
 			)
 		);
 		$out = '<picture class="' . esc_attr( $class ) . '">';
 		if ( $mob && $desk ) {
-			$out .= sprintf( '<source media="(max-width: 767px)" srcset="%s">', esc_attr( '' !== $mob['srcset'] ? $mob['srcset'] : $mob['src'] ) );
+			$out .= sprintf( '<source media="(max-width: 767px)" srcset="%1$s" sizes="%2$s"%3$s%4$s>', esc_attr( '' !== $mob['srcset'] ? $mob['srcset'] : $mob['src'] ), esc_attr( $sizes ), $mob['width'] ? ' width="' . (int) $mob['width'] . '"' : '', $mob['height'] ? ' height="' . (int) $mob['height'] . '"' : '' );
 		}
 		$out .= sprintf(
-			'<img src="%1$s"%2$s alt="%3$s"%4$s%5$s loading="lazy" decoding="async"%6$s>',
+			'<img data-vc-media-fit src="%1$s"%2$s alt="%3$s"%4$s%5$s loading="lazy" decoding="async"%6$s>',
 			esc_url( $main['src'] ),
 			'' !== $main['srcset'] ? ' srcset="' . esc_attr( $main['srcset'] ) . '" sizes="' . esc_attr( $sizes ) . '"' : '',
 			esc_attr( $main['alt'] ),
@@ -233,13 +243,13 @@ final class Fallback {
 		return 'vc-pos-d-' . sanitize_html_class( (string) self::dv( $position, 'desktop' ) ) . ' vc-pos-m-' . sanitize_html_class( (string) self::dv( $position, 'mobile' ) );
 	}
 
-	private static function cols_style( array $s, string $gap_key = 'gapPx' ): string {
+	private static function cols_style( array $s, string $gap_key = 'gapPx', array $extra = array() ): string {
 		return self::style(
-			array(
+			array_merge( array(
 				'--vc-cols'   => isset( $s['columns'] ) ? (int) self::dv( $s['columns'], 'desktop' ) : null,
 				'--vc-cols-m' => isset( $s['columns'] ) ? (int) self::dv( $s['columns'], 'mobile' ) : null,
 				'--vc-gap'    => isset( $s[ $gap_key ] ) ? (int) $s[ $gap_key ] . 'px' : null,
-			)
+			), $extra )
 		);
 	}
 
@@ -345,6 +355,7 @@ final class Fallback {
 			if ( $it['facts'] ) {
 				$text .= '<ul class="vc-slide__facts">';
 				foreach ( $it['facts'] as $fact ) {
+					if ( array_key_exists( 'enabled', $fact ) && ! $fact['enabled'] && ! self::editor() ) { continue; }
 					$text .= '<li><strong>' . esc_html( $fact['settings']['label'] ) . '</strong> ' . esc_html( $fact['settings']['text'] ) . '</li>';
 				}
 				$text .= '</ul>';
@@ -362,6 +373,7 @@ final class Fallback {
 				$cl          = $it['cardLayout'];
 				$cards_html .= sprintf( '<div class="vc-slide__cards vc-cards-d-%1$s vc-cards-m-%2$s">', esc_attr( (string) self::dv( $cl, 'desktop' ) ), esc_attr( (string) self::dv( $cl, 'mobile' ) ) );
 				foreach ( $it['highlights'] as $card ) {
+					if ( array_key_exists( 'enabled', $card ) && ! $card['enabled'] && ! self::editor() ) { continue; }
 					$c     = $card['settings'];
 					$pos   = self::style(
 						array(
@@ -413,8 +425,9 @@ final class Fallback {
 			)
 		);
 		$text = '';
-		if ( '' !== $s['title'] || '' !== $s['description'] || '' !== $s['button']['label'] ) {
-			$text = '<div class="vc-banner__text ' . esc_attr( self::pos_class( $s['position'] ) ) . '">' . self::heading( $s ) . self::button( $s['button'], $s ) . '</div>';
+		$heading = self::heading( $s );
+		if ( '' !== $heading || '' !== $s['button']['label'] ) {
+			$text = '<div class="vc-banner__text ' . esc_attr( self::pos_class( $s['position'] ) ) . '">' . $heading . self::button( $s['button'], $s ) . '</div>';
 		}
 		$media = self::maybe_link( self::picture( $s['media'], 'vc-banner__media' ), $s['href'], 'vc-banner__link' );
 		return sprintf( '<div class="%1$s"><div class="vc-banner"%2$s>%3$s<div class="vc-banner__overlay"></div>%4$s</div></div>', esc_attr( self::inner_class( $s ) ), $vars, $media, $text );
@@ -439,13 +452,18 @@ final class Fallback {
 
 	private static function mosaic( array $s, array $items, int $count ): string {
 		$out = '<div class="vc-m__inner">' . self::heading( $s );
-		$out .= sprintf( '<div class="vc-mosaic vc-mosaic--%1$d vc-mosaic--%2$s"%3$s>', $count, esc_attr( $s['layout'] ), self::style( array( '--vc-gap' => (int) $s['gapPx'] . 'px' ) ) );
+		$poster = 4 === $count && 'poster' === ( $s['displayShape'] ?? 'mosaic' );
+		$out .= sprintf( '<div class="vc-mosaic vc-mosaic--%1$d vc-mosaic--%2$s%3$s"%4$s>', $count, esc_attr( $s['layout'] ), $poster ? ' vc-mosaic--poster' : '', self::style( array( '--vc-gap' => (int) $s['gapPx'] . 'px', '--vc-gap-m' => isset( $s['mobileGapPx'] ) ? (int) $s['mobileGapPx'] . 'px' : null ) ) );
 		foreach ( $items as $i => $it ) {
 			$tile = self::picture( $it['media'], 'vc-mosaic__media' );
+			$titled = $poster && 0 === $i && str_starts_with( $tile, '<picture' ) && '' !== ( $s['mainTitle'] ?? '' );
+			if ( $titled ) {
+				$tile .= '<h3 class="vc-mosaic__title' . ( '' !== $it['buttonLabel'] ? ' vc-mosaic__title--with-button' : '' ) . '">' . esc_html( $s['mainTitle'] ) . '</h3>';
+			}
 			if ( '' !== $it['buttonLabel'] ) {
 				$tile .= '<span class="vc-btn vc-mosaic__btn">' . esc_html( $it['buttonLabel'] ) . '</span>';
 			}
-			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-mosaic__tile vc-mosaic__tile--' . ( $i + 1 ) ) ) . '"' . self::item_attr( $it ) . '>' . self::maybe_link( $tile, $it['href'], 'vc-mosaic__link' ) . '</div>';
+			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-mosaic__tile vc-mosaic__tile--' . ( $i + 1 ) . ( $titled ? ' vc-mosaic__tile--titled' : '' ) ) ) . '"' . self::item_attr( $it ) . '>' . self::maybe_link( $tile, $it['href'], 'vc-mosaic__link' ) . '</div>';
 		}
 		return $out . '</div></div>';
 	}
@@ -525,13 +543,13 @@ final class Fallback {
 			'full'    => 'vc-m__inner vc-m__inner--full',
 		)[ $s['container'] ] ?? 'vc-m__inner';
 		$head = '';
-		if ( '' !== $s['eyebrow'] || '' !== $s['title'] || '' !== $s['descriptionHtml'] ) {
+		if ( '' !== $s['eyebrow'] || '' !== $s['title'] || '' !== $s['titleAccent'] || '' !== $s['descriptionHtml'] ) {
 			$head = '<header class="vc-m__head">';
 			if ( '' !== $s['eyebrow'] ) {
 				$head .= '<p class="vc-eyebrow">' . esc_html( $s['eyebrow'] ) . '</p>';
 			}
-			if ( '' !== $s['title'] ) {
-				$head .= '<h2 class="vc-m__title">' . esc_html( $s['title'] ) . ( '' !== $s['titleAccent'] ? '<br><em>' . esc_html( $s['titleAccent'] ) . '</em>' : '' ) . '</h2>';
+			if ( '' !== $s['title'] || '' !== $s['titleAccent'] ) {
+				$head .= '<h2 class="vc-m__title">' . esc_html( $s['title'] ) . ( '' !== $s['titleAccent'] ? ( '' !== $s['title'] ? '<br>' : '' ) . '<em>' . esc_html( $s['titleAccent'] ) . '</em>' : '' ) . '</h2>';
 			}
 			if ( '' !== $s['descriptionHtml'] ) {
 				$head .= '<div class="vc-m__desc">' . self::html( $s['descriptionHtml'] ) . '</div>';
@@ -595,7 +613,7 @@ final class Fallback {
 			}
 			$params = array_filter(
 				array(
-					'autoplay' => $s['autoplay'] ? '1' : null,
+					'autoplay' => null,
 					'mute'     => ( $s['muted'] || $s['autoplay'] ) ? '1' : null,
 					'loop'     => $s['loop'] ? '1' : null,
 					'playlist' => $s['loop'] ? $id : null,
@@ -603,11 +621,20 @@ final class Fallback {
 					'rel'      => '0',
 				)
 			);
+			$url = add_query_arg( $params, 'https://www.youtube-nocookie.com/embed/' . rawurlencode( $id ) );
+			$play_url = add_query_arg( array_merge( $params, array( 'autoplay' => '1' ) ), 'https://www.youtube-nocookie.com/embed/' . rawurlencode( $id ) );
+			$cover = $poster ? '<button type="button" class="vc-video__cover" aria-label="' . esc_attr__( 'Play video', 'peptide-core' ) . '">' . self::img( $s['poster'], 'vc-video__poster' ) . '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 4l12 8-12 8z"/></svg></button>' : '';
 			return sprintf(
-				'<div class="%1$s"><iframe src="%2$s" title="%3$s" loading="lazy" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>',
+				'<div class="%1$s" data-vc-video-src="%2$s" data-vc-video-play="%4$s" data-vc-autoplay="%5$s"><iframe src="%6$s" title="%3$s" loading="lazy" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>%7$s<noscript><a class="vc-video__fallback" href="%8$s">%9$s</a></noscript></div>',
 				esc_attr( $class ),
-				esc_url( add_query_arg( $params, 'https://www.youtube-nocookie.com/embed/' . rawurlencode( $id ) ) ),
-				esc_attr( (string) ( $s['title'] ?? '' ) ?: __( 'Video', 'peptide-core' ) )
+				esc_url( $url ),
+				esc_attr( (string) ( $s['title'] ?? '' ) ?: __( 'Video', 'peptide-core' ) ),
+				esc_url( $play_url ),
+				$s['autoplay'] ? '1' : '0',
+				$s['autoplay'] ? 'about:blank' : esc_url( $url ),
+				$cover,
+				esc_url( $s['youtubeUrl'] ),
+				esc_html__( 'Watch video', 'peptide-core' )
 			);
 		}
 		$url = ! empty( $s['video']['attachmentId'] ) ? wp_get_attachment_url( (int) $s['video']['attachmentId'] ) : '';
@@ -620,7 +647,7 @@ final class Fallback {
 			esc_attr( $class ),
 			esc_url( $url ),
 			$poster ? ' poster="' . esc_url( $poster['src'] ) . '"' : '',
-			$s['autoplay'] ? ' autoplay' : '',
+			$s['autoplay'] ? ' data-vc-video-autoplay="1"' : '',
 			( $s['muted'] || $s['autoplay'] ) ? ' muted' : '',
 			$s['loop'] ? ' loop' : '',
 			$s['controls'] ? ' controls' : ''
@@ -678,7 +705,7 @@ final class Fallback {
 	}
 
 	private static function render_counter( array $s, array $items ): string {
-		$out = '<div class="vc-m__inner">' . self::heading( $s ) . '<div class="vc-grid vc-counter"' . self::cols_style( $s ) . self::style( array( '--vc-num' => (int) $s['numberSizePx'] . 'px' ) ) . '>';
+		$out = '<div class="vc-m__inner">' . self::heading( $s ) . '<div class="vc-grid vc-counter"' . self::cols_style( $s, 'gapPx', array( '--vc-num' => (int) $s['numberSizePx'] . 'px' ) ) . '>';
 		foreach ( $items as $it ) {
 			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-counter__item' ) ) . '"' . self::item_attr( $it ) . '>' . self::icon_or_image( $it, 32 );
 			$out .= sprintf( '<p class="vc-counter__num"><span data-count="%1$d">%2$s</span>%3$s</p>', (int) $it['number'], esc_html( number_format_i18n( (int) $it['number'] ) ), '' !== $it['unit'] ? '<small>' . esc_html( $it['unit'] ) . '</small>' : '' );
@@ -731,7 +758,7 @@ final class Fallback {
 				'--vc-fg'      => $s['textColor'],
 			)
 		) . '>' . self::heading( $s );
-		$out .= '<ol class="vc-timeline vc-timeline--' . esc_attr( $s['style'] ) . '">';
+		$out .= '<ol class="vc-timeline vc-timeline--' . esc_attr( $s['style'] ) . '" data-auto-scroll="' . ( 'horizontal' === $s['style'] && $s['autoScroll'] ? '1' : '0' ) . '" data-pause-label="' . esc_attr__( 'Pause scrolling', 'peptide-core' ) . '" data-resume-label="' . esc_attr__( 'Resume scrolling', 'peptide-core' ) . '"' . ( 'horizontal' === $s['style'] ? ' tabindex="0" aria-label="' . esc_attr__( 'Timeline', 'peptide-core' ) . '"' : '' ) . '>';
 		foreach ( $items as $it ) {
 			$out .= '<li class="' . esc_attr( self::item_class( $it, 'vc-timeline__item vc-timeline__item--' . $it['imagePosition'] ) ) . '"' . self::item_attr( $it ) . '' . self::style( array( '--vc-accent' => $it['color'] ) ) . '>';
 			if ( 'vertical' === $s['style'] ) {
@@ -744,7 +771,7 @@ final class Fallback {
 		}
 		$out .= '</ol>';
 		if ( 'vertical' === $s['style'] && $s['collapsible'] && count( $items ) > 3 ) {
-			$out .= sprintf( '<button type="button" class="vc-btn vc-btn--ghost vc-timeline__toggle" data-expand="%1$s" data-collapse="%2$s">%1$s</button>', esc_attr( $s['expandLabel'] ), esc_attr( $s['collapseLabel'] ) );
+			$out .= sprintf( '<button type="button" class="vc-btn vc-btn--ghost vc-timeline__toggle" data-expand="%1$s" data-collapse="%2$s" aria-expanded="false">%1$s</button>', esc_attr( $s['expandLabel'] ), esc_attr( $s['collapseLabel'] ) );
 		}
 		return $out . '</div>';
 	}
@@ -758,11 +785,11 @@ final class Fallback {
 				'--vc-accent'    => $s['accentColor'],
 			)
 		);
-		$bg  = Assets::resolve( $s['media']['desktop'] ) ? self::picture( $s['media'], 'vc-contact__bg' ) . '<div class="vc-banner__overlay"></div>' : '';
+		$bg  = ( Assets::resolve( $s['media']['desktop'] ) || Assets::resolve( $s['media']['mobile'] ?? null ) ) ? self::picture( $s['media'], 'vc-contact__bg' ) . '<div class="vc-banner__overlay"></div>' : '';
 		$out = '<div class="' . esc_attr( self::inner_class( $s ) ) . '"><div class="vc-contact"' . $vars . '>' . $bg . '<div class="vc-contact__body">' . self::heading( $s ) . '<ul class="vc-contact__list">';
 		foreach ( $items as $it ) {
 			$row  = '<span class="vc-contact__icon">' . self::icon_or_image( $it, (int) $s['iconSizePx'] ) . '</span><span><strong>' . esc_html( $it['title'] ) . '</strong><br>' . esc_html( $it['text'] ) . '</span>';
-			$out .= '<li class="' . esc_attr( self::item_class( $it, 'vc-contact__item' ) ) . '"' . self::item_attr( $it ) . '>' . self::maybe_link( $row, $it['href'] ) . '</li>';
+			$out .= '<li class="' . esc_attr( self::item_class( $it, 'vc-contact__item' ) ) . '"' . self::item_attr( $it ) . '>' . ( '' !== $it['href'] ? self::maybe_link( $row, $it['href'] ) : '<div class="vc-contact__method">' . $row . '</div>' ) . '</li>';
 		}
 		return $out . '</ul></div></div></div>';
 	}
@@ -867,7 +894,7 @@ final class Fallback {
 				'--vc-overlay' => '' !== $s['overlayColor'] ? $s['overlayColor'] : null,
 				'--vc-icon'    => (int) $s['iconWidthPx'] . 'px',
 			)
-		) . '>' . self::picture( $s['media'], 'vc-hotspots__media' );
+		) . '>' . self::picture( $s['media'], 'vc-hotspots__media' ) . '<div class="vc-hotspots__overlay" aria-hidden="true"></div>';
 		foreach ( $items as $i => $it ) {
 			$vars = self::style(
 				array(
@@ -913,7 +940,7 @@ final class Fallback {
 	}
 
 	private static function render_product_showcase( array $s, array $items ): string {
-		$out = sprintf( '<div class="vc-m__inner"><div class="vc-carousel vc-carousel--auto vc-showcase" data-autoplay="%1$s" data-interval="%2$d" data-dots="1">', $s['autoplay'] ? '1' : '0', (int) $s['intervalMs'] );
+		$out = sprintf( '<div class="vc-m__inner"><div class="vc-carousel vc-carousel--auto vc-showcase" data-autoplay="%1$s" data-interval="%2$d" data-dots="1" data-hover-preview="%3$s">', $s['autoplay'] ? '1' : '0', (int) $s['intervalMs'], $s['hoverPreview'] ? '1' : '0' );
 		foreach ( $items as $i => $it ) {
 			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-slide vc-showcase__scene' . ( 0 === $i ? ' is-active' : '' ) ) ) . '"' . self::item_attr( $it ) . '' . self::style(
 				array(
@@ -922,6 +949,7 @@ final class Fallback {
 				)
 			) . '>' . self::picture( $it['media'], 'vc-slide__media' ) . '<div class="vc-slide__overlay"></div>';
 			foreach ( $it['spots'] as $spot ) {
+				if ( array_key_exists( 'enabled', $spot ) && ! $spot['enabled'] && ! self::editor() ) { continue; }
 				$product = $spot['settings']['product'] ? wc_get_product( (int) $spot['settings']['product'] ) : null;
 				if ( ! $product || ( 'publish' !== $product->get_status() && ! self::staff() ) ) {
 					continue;
@@ -936,15 +964,18 @@ final class Fallback {
 						'--y-m' => (int) self::dv( $y, 'mobile' ) . '%',
 					)
 				);
-				// 价格来自 WooCommerce，不在装修数据里保存。
+				// 图片和价格来自 WooCommerce，不在装修数据里复制商品资料。
+				$thumb = $product->get_image_id() ? self::img( array( 'attachmentId' => $product->get_image_id(), 'alt' => $product->get_name() ), 'vc-showcase__product-image' ) : '';
+				$button = self::button( array( 'label' => $spot['settings']['buttonLabel'], 'href' => $product->get_permalink() ) );
 				$out .= sprintf(
-					'<details class="vc-hotspot"%1$s%2$s><summary aria-label="%3$s"><span class="vc-hotspot__dot"></span></summary><div class="vc-hotspot__pop"><strong>%3$s</strong><p class="vc-price">%4$s</p><a class="vc-btn" href="%5$s">%6$s</a></div></details>',
+					'<details class="vc-hotspot" data-module-item="%7$s"%1$s%2$s><summary aria-label="%3$s"><span class="vc-hotspot__dot"></span></summary><div class="vc-hotspot__pop">%5$s<strong>%3$s</strong><p class="vc-price">%4$s</p>%6$s</div></details>',
 					$vars,
 					$spot['settings']['open'] ? ' open' : '',
-					esc_html( $product->get_name() ),
+					esc_attr( $product->get_name() ),
 					wp_kses_post( $product->get_price_html() ),
-					esc_url( $product->get_permalink() ),
-					esc_html( $spot['settings']['buttonLabel'] )
+					$thumb,
+					$button,
+					esc_attr( (string) $spot['id'] )
 				);
 			}
 			$out .= '</div>';
@@ -1008,7 +1039,7 @@ final class Fallback {
 				'--vc-border'  => $s['border'] ? ( '' !== $s['borderColor'] ? $s['borderColor'] : 'currentColor' ) : null,
 				'--vc-fs'      => (int) $s['fontSizePx'] . 'px',
 				'--vc-pad'     => (int) $s['innerPaddingPx'] . 'px',
-				'font-weight'  => $s['bold'] ? '600' : null,
+				'font-weight'  => $s['bold'] ? '600' : '400',
 			)
 		);
 		return '<div class="' . esc_attr( self::inner_class( $s ) ) . '"><nav class="vc-nav vc-nav--' . esc_attr( $s['align'] ) . ( $s['border'] ? ' vc-nav--border' : '' ) . '"' . $vars . ' aria-label="' . esc_attr__( 'Menu', 'peptide-core' ) . '">' . (string) $menu . '</nav></div>';

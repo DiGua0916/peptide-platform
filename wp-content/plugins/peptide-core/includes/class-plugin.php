@@ -21,6 +21,19 @@ final class Plugin {
 
 		// 优先级 0：要早于 init 上注册文章类型时用到的翻译。
 		add_action( 'init', array( self::class, 'load_textdomain' ), 0 );
+		Customer_Admin_I18n::register_hooks();
+		Design_Pages::register_hooks();
+		Reviews::register_hooks();
+		Email_Campaigns::register_hooks();
+		Site_Tools::register_hooks();
+		Product_Offers::register_hooks();
+		Modules\Site_Design::register_hooks();
+		Modules\Records::register_hooks();
+		Modules\Commerce_Search::register_hooks();
+		Admin\Workspace::register_hooks();
+		foreach ( array( Customer_Segments::class, Loyalty::class, Modules\Commerce_Blocks::class, Subscriptions::class, Content_Tools::class ) as $feature ) {
+			if ( class_exists( $feature ) ) { $feature::register_hooks(); }
+		}
 
 		Post_Types::register_hooks();
 		Meta::register_hooks();
@@ -64,6 +77,13 @@ final class Plugin {
 		Api\Store_Api::register_hooks();
 
 		if ( is_admin() ) {
+			Admin\Reviews_Page::register_hooks();
+			Admin\Email_Campaigns_Page::register_hooks();
+			Admin\Site_Tools_Page::register_hooks();
+			Admin\Product_Offers_Page::register_hooks();
+			foreach ( array( Admin\Customers_Page::class, Admin\Subscriptions_Page::class, Admin\Content_Tools_Page::class ) as $feature ) {
+				if ( class_exists( $feature ) ) { $feature::register_hooks(); }
+			}
 			Admin_Notices::register_hooks();
 			Admin\Product_Panel::register_hooks();
 			Admin\Batch_Metabox::register_hooks();

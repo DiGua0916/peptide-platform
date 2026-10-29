@@ -154,6 +154,34 @@ $ok( 'two shipments for the customer', 2 === count( $view['shipments'] ) );
 $s = $view['shipments'][0];
 $ok( 'shipment has provider, number, url, date', 'ups' === $s['provider'] && 'UPS' === $s['provider_name'] && '1Z999AA10123456784' === $s['tracking_number'] && str_starts_with( (string) $s['tracking_url'], 'https://www.ups.com/' ) && 1 === preg_match( '/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\+00:00$/', (string) $s['shipped_at'] ) );
 
+// WooCommerce stores fulfillment dates in UTC. A non-UTC shop timezone must not shift that instant.
+// Only change the fulfillment created above for this smoke order, then restore it and the shop timezone.
+$timezone_before_utc_test = get_option( 'timezone_string', null );
+$date_before_utc_test     = $r instanceof Fulfillment ? $r->get_date_fulfilled() : null;
+try {
+	update_option( 'timezone_string', 'America/Los_Angeles' );
+	if ( $r instanceof Fulfillment ) {
+		$r->set_date_fulfilled( '2026-01-15T12:34:56+00:00' );
+		$r->save();
+		$utc_fixture = new Fulfillment( $r->get_id() );
+		$utc_view    = Shipping_Tracking::customer_view( wc_get_order( $order->get_id() ) );
+		$ok( 'fixed UTC shipment time stays exact in a non-UTC shop timezone', '2026-01-15 12:34:56' === $utc_fixture->get_date_fulfilled() && in_array( '2026-01-15T12:34:56+00:00', array_column( $utc_view['shipments'], 'shipped_at' ), true ) );
+	} else {
+		$ok( 'fixed UTC shipment time stays exact in a non-UTC shop timezone', false );
+	}
+} finally {
+	if ( null === $timezone_before_utc_test ) {
+		delete_option( 'timezone_string' );
+	} else {
+		update_option( 'timezone_string', $timezone_before_utc_test );
+	}
+	if ( $r instanceof Fulfillment && null !== $date_before_utc_test ) {
+		$r->set_date_fulfilled( $date_before_utc_test . ' UTC' );
+		$r->save();
+	}
+}
+$ok( 'UTC regression restores the shop timezone and its temporary shipment date', get_option( 'timezone_string', null ) === $timezone_before_utc_test && $r instanceof Fulfillment && ( new Fulfillment( $r->get_id() ) )->get_date_fulfilled() === $date_before_utc_test );
+
 $wb = Workbench::orders_awaiting_shipment();
 $ok( 'workbench no longer lists the shipped order', ! in_array( $order->get_id(), array_column( $wb['items'], 'id' ), true ) );
 

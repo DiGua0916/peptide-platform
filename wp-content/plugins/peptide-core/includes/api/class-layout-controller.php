@@ -124,9 +124,10 @@ final class Layout_Controller {
 			),
 			'modules'     => Layout::modules_from_content( (string) get_post_field( 'post_content', $id ) ),
 			'modified'    => (string) get_post_field( 'post_modified_gmt', $id ),
+			'revision'    => self::revision( $id ),
 			'lockedBy'    => $locker ? $locker->display_name : null,
 			'status'      => Layout::status( $id ),
-			'previewBase' => Templates::preview_url( $template, true ),
+			'previewBase' => \PeptideCore\Design_Pages::preview_url( $template, (string) get_post_meta( $id, Templates::DOC_META, true ) ),
 		);
 	}
 
@@ -134,10 +135,42 @@ final class Layout_Controller {
 		return rest_ensure_response( self::document( (int) $request['id'] ) );
 	}
 
+	private static function revision( int $id ): string {
+		return hash( 'sha256', wp_json_encode( array(
+			get_post_field( 'post_modified_gmt', $id ), get_post_field( 'post_content', $id ),
+			Layout::is_published( $id ), get_post_meta( $id, Layout::PUBLISHED_META, true ),
+			get_post_meta( $id, Layout::PUBLISHED_AT, true ), get_post_meta( $id, Layout::PUBLISHED_BY, true ),
+		) ) );
+	}
+
+	private static function locked( \WP_REST_Request $request, string $method ) {
+		global $wpdb;
+		$id = (int) $request['id'];
+		$key = 'pc-layout-' . substr( hash( 'sha256', DB_NAME . '|' . $wpdb->prefix . '|' . $id ), 0, 48 );
+		if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 3)', $key ) ) ) {
+			return new \WP_Error( 'pc_layout_busy', __( 'This design is being saved. Try again in a moment.', 'peptide-core' ), array( 'status' => 409 ) );
+		}
+		try {
+			clean_post_cache( $id );
+			$expected = (string) $request->get_param( 'revision' );
+			if ( '' !== $expected && ! hash_equals( self::revision( $id ), $expected ) ) {
+				return new \WP_Error( 'pc_layout_conflict', __( 'This design was changed after you opened it. Reload, check the changes, then publish.', 'peptide-core' ), array( 'status' => 409 ) );
+			}
+			return self::$method( $request );
+		} finally {
+			$wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $key ) );
+		}
+	}
+
+	public static function save( \WP_REST_Request $request ) { return self::locked( $request, 'save_locked' ); }
+	public static function publish( \WP_REST_Request $request ) { return self::locked( $request, 'publish_locked' ); }
+	public static function unpublish( \WP_REST_Request $request ) { return self::locked( $request, 'unpublish_locked' ); }
+	public static function discard( \WP_REST_Request $request ) { return self::locked( $request, 'discard_locked' ); }
+
 	/**
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function save( \WP_REST_Request $request ) {
+	private static function save_locked( \WP_REST_Request $request ) {
 		require_once ABSPATH . 'wp-admin/includes/post.php';
 		$id       = (int) $request['id'];
 		$expected = (string) $request->get_param( 'modified' );
@@ -176,17 +209,19 @@ final class Layout_Controller {
 	/**
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function publish( \WP_REST_Request $request ) {
+	private static function publish_locked( \WP_REST_Request $request ) {
 		$id       = (int) $request['id'];
 		$expected = (string) $request->get_param( 'modified' );
 		if ( '' !== $expected && $expected !== (string) get_post_field( 'post_modified_gmt', $id ) ) {
 			return new \WP_Error( 'pc_layout_conflict', __( 'This design was changed after you opened it. Reload, check the changes, then publish.', 'peptide-core' ), array( 'status' => 409 ) );
 		}
+		$invalid = \PeptideCore\Design_Pages::validate_publish( $id );
+		if ( $invalid ) { return $invalid; }
 		Layout::publish( $id );
 		return rest_ensure_response( self::document( $id ) );
 	}
 
-	public static function unpublish( \WP_REST_Request $request ): \WP_REST_Response {
+	private static function unpublish_locked( \WP_REST_Request $request ): \WP_REST_Response {
 		Layout::unpublish( (int) $request['id'] );
 		return rest_ensure_response( self::document( (int) $request['id'] ) );
 	}
@@ -194,7 +229,7 @@ final class Layout_Controller {
 	/**
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function discard( \WP_REST_Request $request ) {
+	private static function discard_locked( \WP_REST_Request $request ) {
 		$id = (int) $request['id'];
 		if ( ! Layout::discard_draft( $id ) ) {
 			return new \WP_Error( 'pc_layout_not_published', __( 'There is no published version to go back to.', 'peptide-core' ), array( 'status' => 400 ) );
@@ -209,7 +244,7 @@ final class Layout_Controller {
 		$token   = Layout::store_preview( $id, $modules );
 		return rest_ensure_response(
 			array(
-				'url' => add_query_arg( Layout::PREVIEW_PARAM, $token, Templates::preview_url( (int) wp_get_post_parent_id( $id ), true ) ),
+				'url' => add_query_arg( Layout::PREVIEW_PARAM, $token, \PeptideCore\Design_Pages::preview_url( (int) wp_get_post_parent_id( $id ), (string) get_post_meta( $id, Templates::DOC_META, true ) ) ),
 			)
 		);
 	}

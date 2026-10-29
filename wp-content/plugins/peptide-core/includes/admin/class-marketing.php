@@ -190,8 +190,8 @@ final class Marketing {
 		return array( $start, $end, $errors );
 	}
 
-	/** 适用顾客：所有人 / 指定顾客（邮箱）；顾客标签、级别、访客 ID 本站没有，显示为不可选并说明。 */
-	public static function customers_card( string $mode, array $emails, bool $visitor_id = false, string $tip = '' ): void {
+	/** All customer targeting is validated server-side by Customer_Segments. */
+	public static function customers_card( string $mode, array $emails, bool $visitor_id = false, string $tip = '', array $rule = array() ): void {
 		self::card_open( __( 'Eligible customers', 'peptide-core' ), 'pc-mk-customers', $tip );
 		echo '<div class="pc-mk-stack">';
 		echo self::radio( 'customers', 'all', $mode, __( 'Everyone', 'peptide-core' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -202,10 +202,22 @@ final class Marketing {
 			$na['visitor'] = __( 'Specific visitor IDs', 'peptide-core' );
 		}
 		$na['levels'] = __( 'Specific customer levels', 'peptide-core' );
+		$catalog = \PeptideCore\Customer_Segments::catalog();
 		foreach ( $na as $k => $text ) {
-			echo self::radio( 'customers_na', $k, '', $text, true ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			echo self::radio( 'customers', $k, $mode, $text ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			echo '<div class="pc-mk-sub" data-show="customers=' . esc_attr( $k ) . '">';
+			if ( 'visitor' === $k ) {
+				echo '<label>' . esc_html__( 'Visitor IDs (one per line)', 'peptide-core' ) . '<textarea name="visitor_ids" rows="3" class="large-text">' . esc_textarea( implode( "\n", (array) ( $rule['visitor_ids'] ?? array() ) ) ) . '</textarea></label><p class="pc-bc-note">' . esc_html__( 'Matches the existing opaque tracking cookie; entering an ID in a URL does not qualify a visitor. Tracking consent must be active.', 'peptide-core' ) . '</p>';
+			} else {
+				$field = 'tags' === $k ? 'segment_tags' : 'segment_levels';
+				foreach ( $catalog[ $k ] as $slug => $label ) {
+					echo '<label style="display:block"><input type="checkbox" name="' . esc_attr( $field ) . '[]" value="' . esc_attr( $slug ) . '"' . checked( in_array( $slug, (array) ( $rule[ $field ] ?? array() ), true ), true, false ) . '> ' . esc_html( $label ) . '</label>';
+				}
+				if ( ! $catalog[ $k ] ) { echo '<p>' . esc_html__( 'Create customer tags and levels in Customer operations first.', 'peptide-core' ) . '</p>'; }
+			}
+			echo '</div>';
 		}
-		echo '<p class="pc-bc-note">' . esc_html( $visitor_id ? __( 'Customer tags and levels do not exist on this site yet, and visitor tracking is still a test feature, so these options cannot be chosen.', 'peptide-core' ) : __( 'Customer tags and levels do not exist on this site yet, so these options cannot be chosen.', 'peptide-core' ) ) . '</p>';
+		echo '<p class="pc-bc-note">' . esc_html__( 'Tags and levels require the customer to sign in. Multiple choices within a condition match any one of them.', 'peptide-core' ) . '</p>';
 		echo '</div>';
 		self::card_close();
 	}

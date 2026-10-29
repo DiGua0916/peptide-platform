@@ -18,8 +18,10 @@ final class Blocks {
 
 	public const EDITOR_SCRIPT   = 'peptide-core-module-editor';
 	public const CONTROLS_SCRIPT = 'peptide-core-module-controls';
+	public const ICONS_SCRIPT    = 'peptide-core-design-icons';
 
 	public static function register_hooks(): void {
+		Links::register_hooks();
 		add_action( 'init', array( self::class, 'register' ), 20 );
 		add_filter( 'block_categories_all', array( self::class, 'categories' ), 10, 2 );
 		add_action( 'enqueue_block_editor_assets', array( self::class, 'enqueue_editor' ) );
@@ -74,7 +76,7 @@ final class Blocks {
 						'reusable'        => false,
 						'customClassName' => false,
 						'className'       => false,
-						'multiple'        => 'hero_h1' !== $def['type'],
+						'multiple'        => $def['multiple'] ?? ( 'hero_h1' !== $def['type'] ),
 					),
 					'render_callback' => array( Renderer::class, 'render_block' ),
 				)
@@ -159,10 +161,11 @@ final class Blocks {
 		$url = plugins_url( 'assets/', PEPTIDE_CORE_FILE );
 		$ver = static fn( string $file ): string => PEPTIDE_CORE_VERSION . '.' . (int) @filemtime( PEPTIDE_CORE_DIR . '/assets/' . $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 		wp_enqueue_style( self::EDITOR_SCRIPT, $url . 'module-editor.css', array( 'wp-components' ), $ver( 'module-editor.css' ) );
+		wp_enqueue_script( self::ICONS_SCRIPT, $url . 'design-icons.js', array( 'wp-element' ), $ver( 'design-icons.js' ), array( 'in_footer' => true ) );
 		wp_enqueue_script(
 			self::CONTROLS_SCRIPT,
 			$url . 'module-controls.js',
-			array( 'wp-element', 'wp-components', 'wp-data', 'wp-core-data', 'wp-media-utils', 'wp-block-editor', 'wp-i18n' ),
+			array( self::ICONS_SCRIPT, 'wp-element', 'wp-components', 'wp-data', 'wp-core-data', 'wp-media-utils', 'wp-block-editor', 'wp-i18n' ),
 			$ver( 'module-controls.js' ),
 			array( 'in_footer' => true )
 		);
@@ -182,10 +185,14 @@ final class Blocks {
 				$items['defaults'] = self::item_defaults( $def['items']['fields'] );
 			}
 			$modules[ $def['block'] ] = array(
+				'multiple' => $def['multiple'] ?? ( 'hero_h1' !== $type ),
+				'singleRender' => ! empty( $def['singleRender'] ),
 				'type'     => $type,
 				'title'    => $def['title'],
 				'settings' => $def['settings'],
 				'defaults' => self::item_defaults( $def['settings'] ),
+				'panels'   => $def['panels'] ?? array(),
+				'editorDefaults' => $def['editorDefaults'] ?? array(),
 				'items'    => $items,
 			);
 		}
@@ -203,11 +210,13 @@ final class Blocks {
 				$cats[] = array(
 					'value' => (string) $term->term_id,
 					'label' => $term->name,
+					'count' => (int) ( $term->count ?? 0 ),
 				);
 			}
 		}
 		$products = array();
-		foreach ( wc_get_products( array( 'limit' => 500, 'status' => array( 'publish', 'private' ), 'orderby' => 'title', 'order' => 'ASC', 'type' => array( 'simple', 'variable' ) ) ) as $product ) {
+		foreach ( wc_get_products( array( 'limit' => 20, 'status' => 'publish', 'orderby' => 'title', 'order' => 'ASC', 'type' => array( 'simple', 'variable' ) ) ) as $product ) {
+			if ( ! $product->is_visible() || post_password_required( $product->get_id() ) ) { continue; }
 			$products[] = array(
 				'value' => (string) $product->get_id(),
 				'label' => $product->get_name(),
@@ -221,6 +230,8 @@ final class Blocks {
 			'menus'      => $menus,
 			'categories' => $cats,
 			'products'   => $products,
+			'recordLookup' => array( 'url' => admin_url( 'admin-ajax.php' ), 'security' => wp_create_nonce( 'pc_layout_records' ) ),
+			'linkLookup' => Links::config(),
 			'strings'    => array(
 				'desktop'      => __( 'Desktop', 'peptide-core' ),
 				'mobile'       => __( 'Mobile', 'peptide-core' ),

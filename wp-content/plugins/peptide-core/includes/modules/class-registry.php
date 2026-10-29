@@ -52,12 +52,25 @@ final class Registry {
 	public static function all(): array {
 		if ( null === self::$cache ) {
 			$defs = array();
-			foreach ( self::definitions() as $type => $def ) {
+			foreach ( (array) apply_filters( 'peptide_core_layout_definitions', self::definitions() ) as $type => $def ) {
 				$def['type']     = $type;
 				$def['block']    = 'vialcove/' . str_replace( '_', '-', $type );
 				$def['version']  = $def['version'] ?? 1;
 				$def['category'] = $def['category'] ?? 'basic';
 				$def['settings'] = array_merge( $def['settings'], self::general_fields() );
+				// Global styles emit no public module wrapper, so these spacer controls have no target.
+				if ( 'site_styles' === $type ) {
+					foreach ( $def['settings'] as &$field ) {
+						if ( in_array( $field['key'], array( 'paddingTopPx', 'paddingBottomPx' ), true ) ) { $field['uiHidden'] = true; }
+					}
+					unset( $field );
+				}
+				if ( 'basic' === $def['category'] && ! in_array( $type, array( 'site_header', 'site_footer', 'site_styles', 'context_content' ), true ) ) {
+					$def['settings'] = self::control_metadata( $def['settings'] );
+					if ( ! empty( $def['items']['fields'] ) ) { $def['items']['fields'] = self::control_metadata( $def['items']['fields'] ); }
+					$def = self::reference_controls( $type, $def );
+					$def = self::reference_content_controls( $type, $def );
+				}
 				$defs[ $type ]   = $def;
 			}
 			self::$cache = (array) apply_filters( 'peptide_core_layout_modules', $defs );
@@ -83,6 +96,127 @@ final class Registry {
 
 	public static function flush(): void {
 		self::$cache = null;
+	}
+
+	/** Presentation metadata only: persisted units, defaults and bounds stay unchanged. */
+	private static function control_metadata( array $fields ): array {
+		foreach ( $fields as &$field ) {
+			if ( 'number' === $field['type'] ) {
+				if ( str_ends_with( $field['key'], 'Ms' ) ) {
+					$field['ui'] = 'seconds';
+					$field['unit'] = 's';
+					$field['label'] = trim( preg_replace( '/\s*[(（](?:ms|毫秒)[)）]/u', '', $field['label'] ) );
+				} elseif ( str_ends_with( $field['key'], 'Px' ) ) {
+					$field['unit'] = 'px';
+					if ( null !== ( $field['default'] ?? null ) ) { $field['ui'] = 'slider'; }
+				} elseif ( in_array( $field['key'], array( 'overlayOpacity', 'startPercent', 'x', 'y' ), true ) ) {
+					$field['ui'] = 'slider'; $field['unit'] = '%';
+				} elseif ( 'columns' === $field['key'] ) {
+					$field['ui'] = 'slider';
+				} elseif ( 'durationS' === $field['key'] ) {
+					$field['ui'] = 'slider'; $field['unit'] = 's';
+				}
+			}
+			if ( ! empty( $field['fields'] ) ) { $field['fields'] = self::control_metadata( $field['fields'] ); }
+		}
+		unset( $field );
+		return $fields;
+	}
+
+	/** Organize observed basic controls without rewriting saved module values. */
+	private static function reference_controls( string $type, array $def ): array {
+		$observed = array( 'carousel', 'image', 'image_row', 'image_grid', 'mosaic_3', 'mosaic_4', 'mosaic_5' );
+		if ( ! in_array( $type, $observed, true ) ) { return $def; }
+		$general = array( 'id' => 'general', 'label' => '显示与间距', 'fields' => array( 'showDesktop', 'showMobile', 'paddingTopPx', 'paddingBottomPx', 'backgroundColor' ) );
+		foreach ( $def['settings'] as &$field ) {
+			if ( 'intervalMs' === $field['key'] ) { $field['uiMax'] = 5000; }
+			if ( 'titleSizePx' === $field['key'] && 'carousel' === $type ) { $field['label'] = '标题字号上限'; $field['help'] = '字体随可用宽度缩放，此值控制最大字号。'; }
+			if ( 'columns' === $field['key'] && 'image_grid' === $type ) { $field['max'] = 8; $field['uiMax'] = array( 'desktop' => 8, 'mobile' => 4 ); $field['deviceUI'] = 'paired'; }
+			if ( 'gapPx' === $field['key'] && in_array( $type, array( 'image_row', 'image_grid' ), true ) ) { $field['max'] = 200; }
+			if ( 'overlayOpacity' === $field['key'] && 'image' === $type ) { $field['max'] = 100; }
+			if ( 'mobileStyle' === $field['key'] && 'image_row' === $type ) { $field['options']['inline'] = '横向平铺'; $field['options']['stack'] = '竖向平铺'; }
+			if ( 'description' === $field['key'] && 'carousel' !== $type ) { $field['uiHidden'] = true; }
+		}
+		unset( $field );
+		if ( 'carousel' !== $type ) {
+			$def['settings'][] = Fields::f( 'html', 'descriptionHtml', '简短描述', null, array( 'ui' => 'richtext', 'legacyKey' => 'description' ) );
+		}
+		if ( 'carousel' === $type ) {
+			$def['panels'] = array(
+				array( 'id' => 'layout', 'label' => '轮播设置', 'initialOpen' => true, 'fields' => array( 'autoplay', 'pagination', 'intervalMs', 'height', 'heightPx', 'fullWidth', 'titleSizePx' ) ),
+				array( 'id' => 'advanced', 'label' => '更多轮播选项', 'fields' => array( 'arrows' ) ),
+				$general,
+			);
+			$def['items']['panels'] = array(
+				array( 'id' => 'slide', 'label' => '图片与文字', 'initialOpen' => true, 'fields' => array( 'media', 'position', 'eyebrow', 'title', 'button' ) ),
+				array( 'id' => 'colors', 'label' => '蒙层与颜色', 'fields' => array( 'overlayColor', 'overlayOpacity', 'textColor', 'buttonTextColor', 'buttonBgColor' ) ),
+				array( 'id' => 'advanced', 'label' => '更多内容与布局', 'fields' => array( 'name', 'layout', 'titleAccent', 'description', 'secondaryLink', 'facts', 'cardLayout', 'highlights', 'footnote', 'sceneNumber', 'captionTitle', 'captionNote' ) ),
+			);
+		} elseif ( 'image' === $type ) {
+			$def['panels'] = array(
+				array( 'id' => 'image', 'label' => '图片设置', 'initialOpen' => true, 'fields' => array( 'media', 'href', 'height', 'fullWidth' ) ),
+				array( 'id' => 'content', 'label' => '标题与描述', 'initialOpen' => true, 'fields' => array( 'title', 'descriptionHtml', 'position' ) ),
+				array( 'id' => 'button', 'label' => '按钮与特效', 'fields' => array( 'button', 'buttonEffect', 'effectDurationMs', 'effectIntervalMs', 'buttonTextColor', 'buttonBgColor' ) ),
+				array( 'id' => 'style', 'label' => '蒙层与文字颜色', 'fields' => array( 'overlayColor', 'overlayOpacity', 'titleColor', 'textColor' ) ),
+				$general,
+			);
+		} else {
+			$def['panels'] = array(
+				array( 'id' => 'content', 'label' => '标题与描述', 'initialOpen' => true, 'fields' => array( 'title', 'descriptionHtml' ) ),
+				array( 'id' => 'layout', 'label' => '图片排列', 'initialOpen' => true, 'fields' => array( 'fullWidth', 'columns', 'mobileStyle', 'layout', 'gapPx', 'mobileGapPx' ) ),
+				$general,
+			);
+			if ( 'image_row' === $type ) { $def['editorDefaults'] = array( 'gapPx' => 30, 'mobileStyle' => 'stack' ); }
+			if ( in_array( $type, array( 'mosaic_3', 'mosaic_4', 'mosaic_5' ), true ) ) {
+				$def['panels'][1]['fields'] = array( 'displayShape', 'layout', 'mainTitle' );
+				array_splice( $def['panels'], 2, 0, array( array( 'id' => 'advanced', 'label' => '更多间距选项', 'fields' => array( 'gapPx', 'mobileGapPx' ) ) ) );
+				$def['settings'][] = Fields::f( 'number', 'mobileGapPx', '手机图片间距', null, array( 'group' => 'layout', 'ui' => 'range', 'unit' => 'px', 'min' => 0, 'max' => 80, 'help' => '留空时沿用电脑间距。' ) );
+				$def['editorDefaults'] = array( 'gapPx' => 30, 'mobileGapPx' => 15 );
+			}
+			if ( 'mosaic_4' === $type ) {
+				$def['settings'][] = Fields::f( 'select', 'displayShape', '展示形态', 'mosaic', array( 'group' => 'layout', 'options' => array( 'mosaic' => '一主三辅拼贴', 'poster' => '水平联排拼贴' ) ) );
+				$def['settings'][] = Fields::f( 'text', 'mainTitle', '主图标题', '', array( 'group' => 'layout', 'show_if' => array( 'displayShape' => 'poster' ) ) );
+			}
+		}
+		foreach ( $def['settings'] as &$field ) {
+			foreach ( $def['panels'] as $panel ) { if ( in_array( $field['key'], $panel['fields'], true ) ) { $field['panel'] = $panel['id']; break; } }
+		}
+		unset( $field );
+		return $def;
+	}
+
+	/** Observed content blocks use the same saved fields with task-specific panels. */
+	private static function reference_content_controls( string $type, array $def ): array {
+		if ( ! in_array( $type, array( 'media_text', 'card_list' ), true ) ) { return $def; }
+		foreach ( $def['settings'] as &$field ) {
+			if ( 'bodyHtml' === $field['key'] ) { $field['ui'] = 'richtext'; }
+			if ( 'effectDurationMs' === $field['key'] ) { $field['uiMin'] = 1000; }
+			if ( 'effectIntervalMs' === $field['key'] ) { $field['uiMin'] = 500; $field['uiMax'] = 5000; }
+			if ( 'card_list' === $type && 'description' === $field['key'] ) { $field['uiHidden'] = true; }
+			if ( 'card_list' === $type && 'columns' === $field['key'] ) { $field['uiMin'] = array( 'desktop' => 3, 'mobile' => 1 ); $field['uiMax'] = array( 'desktop' => 5, 'mobile' => 2 ); $field['deviceUI'] = 'paired'; }
+		}
+		unset( $field );
+		if ( 'card_list' === $type ) {
+			$def['settings'][] = Fields::f( 'html', 'descriptionHtml', '简短描述', null, array( 'ui' => 'richtext', 'legacyKey' => 'description' ) );
+			$def['editorDefaults'] = array( 'gapPx' => 30, 'textAlign' => 'center' );
+			$def['panels'] = array(
+				array( 'id' => 'content', 'label' => '标题与描述', 'initialOpen' => true, 'fields' => array( 'title', 'descriptionHtml' ) ),
+				array( 'id' => 'layout', 'label' => '宽度与排列', 'initialOpen' => true, 'fields' => array( 'fullWidth', 'display', 'textAlign', 'columns', 'gapPx' ) ),
+				array( 'id' => 'general', 'label' => '显示与间距', 'fields' => array( 'showDesktop', 'showMobile', 'paddingTopPx', 'paddingBottomPx', 'backgroundColor' ) ),
+			);
+		} else { $def['panels'] = array(
+			array( 'id' => 'media', 'label' => '图片设置', 'initialOpen' => true, 'fields' => array( 'media', 'imagePosition', 'textAlign', 'fullWidth' ) ),
+			array( 'id' => 'content', 'label' => '标题与内容', 'initialOpen' => true, 'fields' => array( 'title', 'bodyHtml' ) ),
+			array( 'id' => 'style', 'label' => '文字与背景颜色', 'fields' => array( 'titleColor', 'textColor', 'contentBgColor' ) ),
+			array( 'id' => 'button', 'label' => '按钮与特效', 'fields' => array( 'button', 'buttonEffect', 'effectDurationMs', 'effectIntervalMs' ) ),
+			array( 'id' => 'advanced', 'label' => '更多内容与动效', 'fields' => array( 'caption', 'eyebrow', 'label', 'animation' ) ),
+			array( 'id' => 'general', 'label' => '显示与间距', 'fields' => array( 'showDesktop', 'showMobile', 'paddingTopPx', 'paddingBottomPx', 'backgroundColor' ) ),
+		); }
+		foreach ( $def['settings'] as &$field ) {
+			foreach ( $def['panels'] as $panel ) { if ( in_array( $field['key'], $panel['fields'], true ) ) { $field['panel'] = $panel['id']; break; } }
+		}
+		unset( $field );
+		return $def;
 	}
 
 	/**
@@ -134,9 +268,14 @@ final class Registry {
 				'none',
 				$b + array(
 					'options' => array(
-						'none'  => __( 'None', 'peptide-core' ),
-						'pulse' => __( 'Pulse', 'peptide-core' ),
-						'shine' => __( 'Shine', 'peptide-core' ),
+						'none'       => __( 'None', 'peptide-core' ),
+						'bounce'     => __( '跳动', 'peptide-core' ),
+						'rubberband' => __( '橡皮筋', 'peptide-core' ),
+						'shake'      => __( '左右抖动', 'peptide-core' ),
+						'swing'      => __( '摇摆', 'peptide-core' ),
+						'wobble'     => __( '摇晃', 'peptide-core' ),
+						'pulse'      => __( '呼吸', 'peptide-core' ),
+						'shine'      => __( '流光', 'peptide-core' ),
 					),
 				)
 			),
@@ -188,7 +327,7 @@ final class Registry {
 	}
 
 	private static function link_url( string $key = 'href', string $label = '' ): array {
-		return Fields::f( 'url', $key, '' !== $label ? $label : __( 'Link', 'peptide-core' ), '' );
+		return Fields::f( 'url', $key, '' !== $label ? $label : __( 'Link', 'peptide-core' ), '', array( 'ui' => 'site-link' ) );
 	}
 
 	/**

@@ -16,8 +16,13 @@ final class Plugin {
 		Db::maybe_upgrade();
 		Monitor::register_hooks();
 		Register::register_hooks();
+		Operations::register_hooks();
+		if ( is_callable( array( Admin\Menu::class, 'register_login_hooks' ) ) ) {
+			Admin\Menu::register_login_hooks();
+		}
 		if ( is_admin() ) {
 			Admin\Menu::register_hooks();
+			Admin\Operations_Page::hooks();
 		}
 	}
 }

@@ -155,13 +155,14 @@ final class Renderer {
 			wp_enqueue_script( self::SCRIPT );
 		}
 
-		if ( self::has_mobile( $module ) ) {
-			$inner = '<div class="vc-v vc-v--desktop">' . self::inner( self::variant( $module, 'desktop' ), $context, 'desktop' ) . '</div>'
-				. '<div class="vc-v vc-v--mobile">' . self::inner( self::variant( $module, 'mobile' ), $context, 'mobile' ) . '</div>';
+		if ( self::has_mobile( $module ) && empty( Registry::get( $type )['singleRender'] ) ) {
+			$desktop = self::inner( self::variant( $module, 'desktop' ), $context, 'desktop' );
+			$mobile  = self::inner( self::variant( $module, 'mobile' ), $context, 'mobile' );
+			$inner   = '' === $desktop && '' === $mobile ? '' : '<div class="vc-v vc-v--desktop">' . $desktop . '</div><div class="vc-v vc-v--mobile">' . $mobile . '</div>';
 		} else {
 			$inner = self::inner( $module, $context, 'all' );
 		}
-		return self::wrap( $module, $inner, $editor );
+		return '' === $inner && ! $editor ? '' : self::wrap( $module, $inner, $editor );
 	}
 
 	/**
@@ -170,6 +171,10 @@ final class Renderer {
 	 * @param array<string,mixed> $module
 	 */
 	private static function inner( array $module, string $context, string $device ): string {
+		$html = apply_filters( 'peptide_core_module_html', null, $module, $context, $device );
+		if ( is_string( $html ) ) {
+			return $html;
+		}
 		$html = self::theme_template( $module, $context, $device );
 		return null !== $html ? $html : Fallback::render( $module, $context, $device );
 	}

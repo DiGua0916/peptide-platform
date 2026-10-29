@@ -144,6 +144,7 @@ final class Coupons_Page {
 			'amount'      => '',
 			'customers'   => 'all',
 			'emails'      => array(),
+			'customer_rule' => array(),
 			'scope'       => 'all',
 			'products'    => array(),
 			'categories'  => array(),
@@ -177,6 +178,7 @@ final class Coupons_Page {
 					'amount'      => (string) $c->get_amount(),
 					'customers'   => $c->get_email_restrictions() ? 'emails' : 'all',
 					'emails'      => $c->get_email_restrictions(),
+					'customer_rule' => (array) get_post_meta( $id, \PeptideCore\Customer_Segments::COUPON_META, true ),
 					'scope'       => $c->get_product_ids() ? 'products' : ( $c->get_product_categories() ? 'categories' : 'all' ),
 					'products'    => array_map( 'intval', $c->get_product_ids() ),
 					'categories'  => array_map( 'intval', $c->get_product_categories() ),
@@ -239,7 +241,9 @@ final class Coupons_Page {
 		Marketing::card_close();
 		// phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
 
-		Marketing::customers_card( (string) $f['customers'], (array) $f['emails'], false, __( 'Specific customers: only these emails can use the code (WooCommerce checks the checkout email).', 'peptide-core' ) );
+		$rule = $f['customer_rule'] ?? ( $id ? get_post_meta( $id, \PeptideCore\Customer_Segments::COUPON_META, true ) : array() );
+		$rule = is_array( $rule ) ? $rule : array();
+		Marketing::customers_card( (string) ( $rule['customers'] ?? $f['customers'] ), (array) $f['emails'], false, __( 'Specific customers: only these emails can use the code (WooCommerce checks the checkout email).', 'peptide-core' ), $rule );
 		Marketing::scope_card(
 			(string) $f['scope'],
 			(array) $f['products'],
@@ -288,13 +292,16 @@ final class Coupons_Page {
 			'cond_value'  => is_numeric( $in['cond_value'] ?? null ) ? (float) $in['cond_value'] : 0.0,
 			'dtype'       => 'fixed_cart' === ( $in['dtype'] ?? '' ) ? 'fixed_cart' : 'percent',
 			'amount'      => is_numeric( $in['amount'] ?? null ) ? round( (float) $in['amount'], 2 ) : 0.0,
-			'customers'   => 'emails' === ( $in['customers'] ?? '' ) ? 'emails' : 'all',
+			'customers'   => in_array( $in['customers'] ?? '', array( 'emails', 'tags', 'levels' ), true ) ? (string) $in['customers'] : 'all',
 			'emails'      => Discounts::emails( $in['emails'] ?? '' ),
 			'scope'       => in_array( $in['scope'] ?? '', array( 'products', 'categories' ), true ) ? (string) $in['scope'] : 'all',
 			'products'    => array_values( array_filter( array_map( 'absint', (array) ( $in['products'] ?? array() ) ), static fn( $p ) => $p && 'product' === get_post_type( $p ) ) ),
 			'categories'  => array_values( array_filter( array_map( 'absint', (array) ( $in['categories'] ?? array() ) ), static fn( $t ) => $t && term_exists( $t, 'product_cat' ) ) ),
 			'sort'        => isset( \PeptideCore\Promotions::SORTS[ $in['sort'] ?? '' ] ) ? (string) $in['sort'] : 'date_desc',
 		);
+		[ $f['customer_rule'], $segment_errors ] = \PeptideCore\Customer_Segments::clean_rule( array_merge( $in, array( 'customers' => $f['customers'] ) ) );
+		$errors = array_merge( $errors, $segment_errors );
+		if ( 'all' !== $f['customers'] ) { $f['public'] = 'no'; }
 		if ( '' === $f['name'] ) {
 			$errors[] = __( 'Enter a promotion name.', 'peptide-core' );
 		} elseif ( $len( $f['name'] ) > self::NAME_MAX ) {
@@ -368,6 +375,7 @@ final class Coupons_Page {
 		update_post_meta( $saved, Coupon_Rules::MIN_QTY_META, 'qty' === $f['condition'] ? max( 1, (int) round( $f['cond_value'] ) ) : 0 );
 		update_post_meta( $saved, Coupon_Rules::SORT_META, $f['sort'] );
 		update_post_meta( $saved, Coupon_Rules::LABEL_META, $f['code'] );
+		update_post_meta( $saved, \PeptideCore\Customer_Segments::COUPON_META, $f['customer_rule'] );
 		update_post_meta( $saved, Coupons::PUBLIC_META, $f['public'] );
 		if ( 'yes' === $f['public'] ) {
 			Coupons::ensure_page();
