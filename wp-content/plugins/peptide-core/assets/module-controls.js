@@ -102,7 +102,8 @@
 
 	// The visual editor never inserts arbitrary markup, attributes or executable URLs.
 	// Server sanitization remains authoritative when these strings are saved/rendered.
-	function safeRichHtml( value ) {
+	function safeRichHtml( value, policy ) {
+		if ( policy && policy.color === true ) { return safeColorRichHtml( value, policy.legacy === true ); }
 		var doc = new window.DOMParser().parseFromString( String( value || '' ), 'text/html' );
 		// Match Fields::HTML_TAGS; DIV is only normalized to an allowed editor paragraph.
 		var allowed = { P: 'p', DIV: 'p', BR: 'br', STRONG: 'strong', B: 'b', EM: 'em', I: 'i', U: 'u', A: 'a', UL: 'ul', OL: 'ol', LI: 'li', H3: 'h3', H4: 'h4', SPAN: 'span' };
@@ -123,6 +124,160 @@
 			}
 			if ( tag === 'span' && node.hasAttribute( 'class' ) ) { return '<span class="' + escapeText( node.getAttribute( 'class' ) ) + '">' + content + '</span>'; }
 			return '<' + tag + '>' + content + '</' + tag + '>';
+		}
+		var html = Array.prototype.map.call( doc.body.childNodes, clean ).join( '' );
+		return plainText( html ) ? html : '';
+	}
+
+	var ColorOperation = ( function () {
+  function hex(value) {
+    var text=String(value||'').trim(), match;
+    if(/^#[0-9a-f]{3}$/i.test(text)) return '#'+text.slice(1).split('').map(function(c){return c+c;}).join('').toLowerCase();
+    if(/^#[0-9a-f]{6}$/i.test(text)) return text.toLowerCase();
+    match=/^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i.exec(text);
+    if(match&&match.slice(1).every(function(v){return Number(v)<=255;})) return '#'+match.slice(1).map(function(v){return Number(v).toString(16).padStart(2,'0');}).join('');
+    return null;
+  }
+  function styleColor(value) {
+    var match=/^\s*color\s*:\s*([^;]+)\s*;?\s*$/i.exec(String(value||''));
+    return match?hex(match[1]):null;
+  }
+  function offsets(editor,range) {
+    if(!range||range.collapsed||!editor.contains(range.startContainer)||!editor.contains(range.endContainer)) return null;
+    var prefix=range.cloneRange();prefix.selectNodeContents(editor);prefix.setEnd(range.startContainer,range.startOffset);
+    var start=prefix.toString().length;
+    return {start:start,end:start+range.toString().length};
+  }
+  function restore(editor,selection) {
+    var walker=document.createTreeWalker(editor,NodeFilter.SHOW_TEXT),node,at=0,start=null,end=null;
+    while((node=walker.nextNode())) {
+      var next=at+node.nodeValue.length;
+      if(!start&&selection.start<=next) start={node:node,offset:Math.max(0,selection.start-at)};
+      if(!end&&selection.end<=next) {end={node:node,offset:Math.max(0,selection.end-at)};break;}
+      at=next;
+    }
+    if(!start||!end) return false;
+    var range=document.createRange();range.setStart(start.node,start.offset);range.setEnd(end.node,end.offset);
+    editor.focus();var current=getSelection();current.removeAllRanges();current.addRange(range);return true;
+  }
+  function build(editor,selection,color) {
+    if(!selection||selection.start<0||selection.end<=selection.start||selection.end>editor.textContent.length) return null;
+    if(color!==null&&!hex(color)) return null;
+    var at=0,doc=editor.ownerDocument,unsupported=false;
+    function zone(offset) {return offset<selection.start?'before':offset>=selection.end?'after':'selected';}
+    function walk(node) {
+      if(node.nodeType===3) {
+        var text=node.nodeValue,start=at,end=at+text.length;at=end;
+        var cuts=[0,Math.max(0,Math.min(text.length,selection.start-start)),Math.max(0,Math.min(text.length,selection.end-start)),text.length].filter(function(n,i,a){return a.indexOf(n)===i;}).sort(function(a,b){return a-b;});
+        var segments=[];
+        for(var i=0;i<cuts.length-1;i++) {
+          var left=cuts[i],right=cuts[i+1];if(right===left)continue;
+          var selected=start+left>=selection.start&&start+right<=selection.end;
+          var ink=selected?color:null,child=doc.createTextNode(text.slice(left,right));
+          if(ink) {var span=doc.createElement('span');span.setAttribute('style','color:'+hex(ink));span.appendChild(child);child=span;}
+          segments.push({zone:zone(start+left),node:child});
+        }
+        return segments;
+      }
+      if(node.nodeType!==1)return [];
+      var name=node.nodeName,block=/^(P|DIV|UL|OL|LI|H3|H4)$/.test(name),segments=[];
+      Array.prototype.forEach.call(node.childNodes,function(child){segments=segments.concat(walk(child));});
+      if(block){var container=node.cloneNode(false);segments.forEach(function(item){container.appendChild(item.node);});return [{zone:'block',node:container}];}
+      if(segments.some(function(item){return item.zone==='block';})){unsupported=true;return [];}
+      if(!segments.length)segments=[{zone:zone(at),node:doc.createDocumentFragment()}];
+      var groups=[];
+      segments.forEach(function(item){var last=groups[groups.length-1];if(!last||last.zone!==item.zone){last={zone:item.zone,items:[]};groups.push(last);}last.items.push(item.node);});
+      return groups.map(function(group){
+        var output=name==='FONT'?doc.createElement('span'):node.cloneNode(false);
+        if(name==='FONT'){var old=styleColor(node.getAttribute('style'))||hex(node.getAttribute('color'));if(old)output.setAttribute('style','color:'+old);}
+        if(group.zone==='selected'&&(name==='SPAN'||name==='FONT')){output.removeAttribute('style');output.removeAttribute('color');}
+        group.items.forEach(function(child){output.appendChild(child);});
+        if(output.nodeName==='SPAN'&&!output.attributes.length){var fragment=doc.createDocumentFragment();while(output.firstChild)fragment.appendChild(output.firstChild);output=fragment;}
+        return {zone:group.zone,node:output};
+      });
+    }
+    var root=doc.createElement('div');Array.prototype.forEach.call(editor.childNodes,function(node){walk(node).forEach(function(item){root.appendChild(item.node);});});
+    return unsupported?null:root.innerHTML;
+  }
+  function apply(editor,selection,color,sanitize) {
+    var html=build(editor,selection,color);if(html===null)return false;
+    if(sanitize)html=sanitize(html);
+    var all=document.createRange();all.selectNodeContents(editor);editor.focus();var current=getSelection();current.removeAllRanges();current.addRange(all);
+    if(!document.execCommand('insertHTML',false,html))return false;
+    restore(editor,selection);return true;
+  }
+		return { hex: hex, styleColor: styleColor, offsets: offsets, restore: restore, build: build, apply: apply };
+	} )();
+
+	function colorField( field ) { return field && field.type === 'html' && field.ui === 'richtext'; }
+	function hasRichColor( doc ) {
+		return Array.prototype.some.call( doc.querySelectorAll( 'span,font' ), function ( node ) { return ColorOperation.styleColor( node.getAttribute( 'style' ) ) || ( node.nodeName === 'FONT' && ColorOperation.hex( node.getAttribute( 'color' ) ) ); } );
+	}
+	// Completeness guard only; never uses string replacement to parse or rewrite HTML.
+	function colorInputTokens( raw ) {
+		var at = 0, blocked = [], cursor = 0, pieces = [];
+		while ( ( at = raw.indexOf( '<', at ) ) !== -1 ) {
+			if ( raw.slice( at, at + 4 ) === '<!--' ) { var comment = raw.indexOf( '-->', at + 4 ); if ( comment < 0 ) { return { complete: false }; } at = comment + 3; continue; }
+			var match = /^<(\/?)([a-z][a-z0-9:-]*)/i.exec( raw.slice( at ) );
+			if ( ! match ) { at++; continue; }
+			var quote = null, end = at + match[ 0 ].length;
+			for ( ; end < raw.length; end++ ) { var ch = raw[ end ]; if ( quote ) { if ( ch === quote ) { quote = null; } } else if ( ch === '"' || ch === "'" ) { quote = ch; } else if ( ch === '>' ) { break; } }
+			if ( end >= raw.length ) { return { complete: false }; }
+			var tag = match[ 2 ].toUpperCase(), closer = !! match[ 1 ];
+			if ( /^(SCRIPT|STYLE|IFRAME|TEXTAREA)$/.test( tag ) && ! closer ) {
+				var close = new RegExp( '</' + tag + '(?=[\\t\\n\\f\\r />])', 'ig' ); close.lastIndex = end + 1; var found = close.exec( raw ); if ( ! found ) { return { complete: false }; }
+				var closeEnd = close.lastIndex, closeQuote = null;
+				for ( ; closeEnd < raw.length; closeEnd++ ) { var closingChar = raw[ closeEnd ]; if ( closeQuote ) { if ( closingChar === closeQuote ) { closeQuote = null; } } else if ( closingChar === '"' || closingChar === "'" ) { closeQuote = closingChar; } else if ( closingChar === '>' ) { break; } }
+				if ( closeEnd >= raw.length ) { return { complete: false }; }
+				if ( ! blocked.length ) { pieces.push( raw.slice( cursor, at ) ); cursor = closeEnd + 1; }
+				at = closeEnd + 1; continue;
+			}
+			if ( /^(EMBED|INPUT|IMG)$/.test( tag ) && ! closer ) { if ( ! blocked.length ) { pieces.push( raw.slice( cursor, at ) ); cursor = end + 1; } }
+			else if ( /^(OBJECT|SVG|MATH|FORM|BUTTON|SELECT|TEMPLATE)$/.test( tag ) ) {
+				if ( closer ) { if ( blocked[ blocked.length - 1 ] === tag ) { blocked.pop(); if ( ! blocked.length ) { cursor = end + 1; } } }
+				else { if ( ! blocked.length ) { pieces.push( raw.slice( cursor, at ) ); } blocked.push( tag ); }
+			}
+			at = end + 1;
+		}
+		if ( blocked.length ) { return { complete: false }; }
+		pieces.push( raw.slice( cursor ) );
+		return { complete: true, html: pieces.join( '' ) };
+	}
+	function completeColorInput( raw ) { return colorInputTokens( raw ).complete; }
+	function safeColorRichHtml( value, legacy ) {
+		var raw = String( value || '' );
+		if ( ! /color/i.test( raw ) ) { return legacy ? raw : safeRichHtml( raw ); }
+		var doc = new window.DOMParser().parseFromString( raw, 'text/html' );
+		var hasColor = hasRichColor( doc );
+		if ( ! hasColor ) { return legacy ? raw : safeRichHtml( raw ); }
+		var tokens = colorInputTokens( raw );
+		if ( ! tokens.complete ) { return safeRichHtml( raw ); }
+		doc = new window.DOMParser().parseFromString( tokens.html, 'text/html' );
+		var allowed = { P: 'p', DIV: 'p', BR: 'br', STRONG: 'strong', B: 'b', EM: 'em', I: 'i', U: 'u', A: 'a', UL: 'ul', OL: 'ol', LI: 'li', H3: 'h3', H4: 'h4', SPAN: 'span', FONT: 'span' };
+		var protocols = /^(https?|ftp|ftps|mailto|news|irc|irc6|ircs|gopher|nntp|feed|telnet|mms|rtsp|sms|svn|tel|fax|xmpp|webcal|urn):/i;
+		function clean( node ) {
+			if ( node.nodeType === 3 ) { return escapeText( node.nodeValue ); }
+			if ( node.nodeType !== 1 || /^(SCRIPT|STYLE|IFRAME|OBJECT|EMBED|SVG|MATH|FORM|INPUT|BUTTON|TEXTAREA|SELECT|TEMPLATE)$/.test( node.nodeName.toUpperCase() ) ) { return ''; }
+			var content = Array.prototype.map.call( node.childNodes, clean ).join( '' ), tag = allowed[ node.nodeName ];
+			if ( ! tag ) { return content; }
+			if ( tag === 'br' ) { return '<br>'; }
+			if ( tag === 'a' ) {
+				var original = node.getAttribute( 'href' ), href = safeHref( original ), attrs = '';
+				if ( ! href && legacy && typeof original === 'string' && ! /[\u0000-\u001f\u007f]/.test( original ) && ( ! original.trim() || protocols.test( original.trim() ) || ! /^[a-z][a-z0-9+.-]*:/i.test( original.trim() ) ) ) { href = original.trim(); }
+				if ( ! href && ! ( legacy && ( original === null || original.trim() === '' ) ) ) { return content; }
+				if ( original !== null ) { attrs += ' href="' + escapeText( href ) + '"'; }
+				if ( node.hasAttribute( 'target' ) ) { attrs += ' target="' + escapeText( node.getAttribute( 'target' ) ) + '"'; }
+				var rel = ( node.getAttribute( 'rel' ) || '' ).split( /\s+/ ).filter( function ( token ) { return token && token.toLowerCase() !== 'opener'; } );
+				[ 'noopener', 'noreferrer' ].forEach( function ( token ) { if ( ! rel.some( function ( old ) { return old.toLowerCase() === token; } ) ) { rel.push( token ); } } );
+				return '<a' + attrs + ' rel="' + escapeText( rel.join( ' ' ) ) + '">' + content + '</a>';
+			}
+			var attrs = '';
+			if ( tag === 'span' ) {
+				if ( node.nodeName === 'SPAN' && node.hasAttribute( 'class' ) ) { attrs += ' class="' + escapeText( node.getAttribute( 'class' ) ) + '"'; }
+				var color = ColorOperation.styleColor( node.getAttribute( 'style' ) ) || ( node.nodeName === 'FONT' ? ColorOperation.hex( node.getAttribute( 'color' ) ) : null );
+				if ( color ) { attrs += ' style="color:' + color + '"'; }
+			}
+			return '<' + tag + attrs + '>' + content + '</' + tag + '>';
 		}
 		var html = Array.prototype.map.call( doc.body.childNodes, clean ).join( '' );
 		return plainText( html ) ? html : '';
@@ -373,6 +528,90 @@
 	function RichTextField( props ) {
 		var field = props.field, editor = useRef( null ), selection = useRef( null ), host = useRef( null ), sourceInput = useRef( null );
 		var id = useState( uid() )[ 0 ];
+		var colorEnabled = colorField( field ), colorState = useState( false ), customState = useState( false ), colorNotice = useState( '' );
+		var colorSelection = useRef( null ), colorButton = useRef( null ), customButton = useRef( null ), customDialog = useRef( null ), hexInput = useRef( null ), applyingColor = useRef( false );
+		var colorDraft = useState( { hex: '000000', red: '0', green: '0', blue: '0', last: 'hex', error: '' } );
+		function clean( value, legacy ) { return safeRichHtml( value, colorEnabled ? { color: true, legacy: !! legacy } : null ); }
+		useEffect( function () {
+			if ( ! customState[ 0 ] || ! customDialog.current ) { return; }
+			var node = customDialog.current;
+			if ( typeof node.showModal === 'function' && ! node.open ) { node.showModal(); }
+			if ( hexInput.current ) { hexInput.current.focus(); }
+			return function () { if ( node.open ) { node.close(); } };
+		}, [ customState[ 0 ] ] );
+		function closeColor() {
+			customState[ 1 ]( false ); colorState[ 1 ]( false );
+			if ( editor.current && colorSelection.current ) { ColorOperation.restore( editor.current, colorSelection.current ); }
+		}
+		function openColor() {
+			var range = selection.current, selected = editor.current && ColorOperation.offsets( editor.current, range );
+			if ( ! selected ) { colorNotice[ 1 ]( '请先选中要设置颜色的文字。' ); return; }
+			colorSelection.current = selected; colorNotice[ 1 ]( '' ); linkState[ 1 ]( false ); helpState[ 1 ]( false ); colorState[ 1 ]( ! colorState[ 0 ] );
+		}
+		function applyColor( color ) {
+			if ( ! editor.current || ! colorSelection.current ) { colorNotice[ 1 ]( '请重新选中文字。' ); return; }
+			if ( customDialog.current && customDialog.current.open ) { customDialog.current.close(); }
+			customState[ 1 ]( false );
+			applyingColor.current = true;
+			var ok;
+			try { ok = ColorOperation.apply( editor.current, colorSelection.current, color, function ( html ) { return clean( html ); } ); }
+			finally { applyingColor.current = false; }
+			if ( ! ok ) { colorNotice[ 1 ]( '当前选区暂不支持设置颜色，请重新选择文字。' ); return; }
+			changed(); closeColor();
+		}
+		function customDraft( color ) {
+			var hex = ColorOperation.hex( color ) || '#000000';
+			return { hex: hex.slice( 1 ), red: String( parseInt( hex.slice( 1, 3 ), 16 ) ), green: String( parseInt( hex.slice( 3, 5 ), 16 ) ), blue: String( parseInt( hex.slice( 5, 7 ), 16 ) ), last: 'hex', error: '' };
+		}
+		function openCustom() {
+			if ( editor.current && colorSelection.current ) { ColorOperation.restore( editor.current, colorSelection.current ); remember(); }
+			var node = selection.current && selection.current.startContainer;
+			if ( node && node.nodeType === 3 ) { node = node.parentElement; }
+			colorDraft[ 1 ]( customDraft( node ? getComputedStyle( node ).color : '#000000' ) ); customState[ 1 ]( true );
+		}
+		function cancelCustom() { if ( customDialog.current && customDialog.current.open ) { customDialog.current.close(); } customState[ 1 ]( false ); if ( customButton.current ) { customButton.current.focus(); } }
+		function updateColorHex( value ) {
+			var next = Object.assign( {}, colorDraft[ 0 ], { hex: value, last: 'hex', error: '' } );
+			if ( /^[0-9a-f]{6}$/i.test( value ) ) { next = customDraft( '#' + value ); }
+			colorDraft[ 1 ]( next );
+		}
+		function updateColorRgb( key, value ) {
+			var next = Object.assign( {}, colorDraft[ 0 ] ); next[ key ] = value; next.last = 'rgb'; next.error = '';
+			var values = [ next.red, next.green, next.blue ];
+			if ( values.every( function ( item ) { return /^\d{1,3}$/.test( item ) && Number( item ) <= 255; } ) ) { next.hex = values.map( function ( item ) { return Number( item ).toString( 16 ).padStart( 2, '0' ); } ).join( '' ); }
+			colorDraft[ 1 ]( next );
+		}
+		function saveCustom() {
+			var current = colorDraft[ 0 ], valid = current.last === 'hex' ? /^[0-9a-f]{6}$/i.test( current.hex ) : [ current.red, current.green, current.blue ].every( function ( value ) { return /^\d{1,3}$/.test( value ) && Number( value ) <= 255; } );
+			if ( ! valid ) { colorDraft[ 1 ]( Object.assign( {}, current, { error: 'HEX请输入6位十六进制；RGB请输入0–255的整数。' } ) ); return; }
+			applyColor( '#' + current.hex );
+		}
+		function colorUi() {
+			if ( ! colorEnabled ) { return null; }
+			var swatches = [["Light Green", "#bfedd2"], ["Light Yellow", "#fbeeb8"], ["Light Red", "#f8cac6"], ["Light Purple", "#eccafa"], ["Light Blue", "#c2e0f4"], ["绿色", "#2dc26b"], ["黄色", "#f1c40f"], ["红色", "#e03e2d"], ["紫色", "#b96ad9"], ["蓝色", "#3598db"], ["深蓝绿色", "#169179"], ["橙色", "#e67e23"], ["深红色", "#ba372a"], ["Dark Purple", "#843fa1"], ["Dark Blue", "#236fa1"], ["浅灰色", "#ecf0f1"], ["中灰色", "#ced4d9"], ["灰色", "#95a5a6"], ["深灰色", "#7e8c8d"], ["海军蓝", "#34495e"], ["黑色", "#000000"], ["白色", "#ffffff"]];
+			return el( Fragment, null,
+				colorState[ 0 ] ? el( 'div', { className: 'pc-me-richtext__colors', role: 'group', 'aria-label': '文字颜色' },
+					el( 'div', { className: 'pc-me-richtext__swatches', onKeyDown: function ( event ) {
+						var directions = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: 8, ArrowUp: -8 }, items = event.currentTarget.querySelectorAll( 'button' ), index = Array.prototype.indexOf.call( items, document.activeElement );
+						if ( index >= 0 && directions[ event.key ] ) { event.preventDefault(); items[ ( index + directions[ event.key ] + items.length ) % items.length ].focus(); }
+					} }, swatches.map( function ( item ) { return el( 'button', { key: item[ 1 ], type: 'button', className: 'pc-me-richtext__swatch', style: { backgroundColor: item[ 1 ] }, 'aria-label': item[ 0 ] + ' ' + item[ 1 ], title: item[ 0 ] + ' ' + item[ 1 ], onMouseDown: function ( event ) { event.preventDefault(); }, onClick: function () { applyColor( item[ 1 ] ); } } ); } ) ),
+					el( 'div', { className: 'pc-me-richtext__color-actions' },
+						el( C.Button, { variant: 'tertiary', size: 'small', onMouseDown: function ( event ) { event.preventDefault(); }, onClick: function () { applyColor( null ); } }, '移除颜色' ),
+						el( C.Button, { variant: 'secondary', size: 'small', ref: customButton, onClick: openCustom }, '自定义颜色' )
+					)
+				) : null,
+				colorNotice[ 0 ] ? el( 'p', { className: 'pc-me-richtext__color-notice', role: 'status' }, colorNotice[ 0 ] ) : null,
+				customState[ 0 ] ? el( 'dialog', { ref: customDialog, className: 'pc-me-richtext__color-dialog', 'aria-labelledby': id + '-color-title', onCancel: function ( event ) { event.preventDefault(); cancelCustom(); } },
+					el( 'h3', { id: id + '-color-title' }, '自定义文字颜色' ),
+					el( 'div', { className: 'pc-me-richtext__rgb' }, [ [ 'red', 'Red' ], [ 'green', 'Green' ], [ 'blue', 'Blue' ] ].map( function ( item ) { return el( 'label', { key: item[ 0 ] }, item[ 1 ], el( 'input', { type: 'text', inputMode: 'numeric', value: colorDraft[ 0 ][ item[ 0 ] ], onChange: function ( event ) { updateColorRgb( item[ 0 ], event.target.value ); } } ) ); } ) ),
+					el( 'label', { className: 'pc-me-richtext__hex-label' }, 'HEX', el( 'span', null, '#', el( 'input', { ref: hexInput, type: 'text', 'aria-label': 'HEX', maxLength: 6, value: colorDraft[ 0 ].hex, onChange: function ( event ) { updateColorHex( event.target.value ); }, onKeyDown: function ( event ) { if ( event.key === 'Enter' ) { event.preventDefault(); saveCustom(); } } } ) ) ),
+					el( 'div', { className: 'pc-me-richtext__color-preview', style: { backgroundColor: /^[0-9a-f]{6}$/i.test( colorDraft[ 0 ].hex ) ? '#' + colorDraft[ 0 ].hex : 'transparent' }, 'aria-hidden': true } ),
+					colorDraft[ 0 ].error ? el( 'p', { className: 'pc-me-error', role: 'alert' }, colorDraft[ 0 ].error ) : null,
+					el( 'div', { className: 'pc-me-richtext__color-actions' }, el( C.Button, { variant: 'secondary', onClick: cancelCustom }, '取消' ), el( C.Button, { variant: 'primary', onClick: saveCustom }, '保存颜色' ) )
+				) : null
+			);
+		}
+
 		var linkState = useState( false ), hrefState = useState( '' ), errorState = useState( '' );
 		var sourceButton = useRef( null ), fullscreenButton = useRef( null ), helpButton = useRef( null );
 		var fullscreenState = useState( false ), helpState = useState( false );
@@ -383,7 +622,7 @@
 		var sourceState = useState( props.legacySource ? draft( props.value ) : null );
 		var source = sourceState[ 0 ] || ( props.legacySource ? draft( props.value ) : null );
 		var fullscreen = fullscreenState[ 0 ], sourceOpen = !! source;
-		var html = safeRichHtml( props.value );
+		var html = clean( props.value );
 		useEffect( function () {
 			if ( incoming.current.value !== props.value || incoming.current.scope !== props.scope ) {
 				var ownChange = incoming.current.scope === props.scope && emitted.current === props.value;
@@ -392,12 +631,12 @@
 					// A different module/device value must never inherit a pending source draft.
 					focusSource.current = false; returnSourceFocus.current = false; returnFullscreenFocus.current = false;
 					sourceState[ 1 ]( props.legacySource ? draft( props.value ) : null );
-					fullscreenState[ 1 ]( false ); helpState[ 1 ]( false ); linkState[ 1 ]( false ); selection.current = null;
+					fullscreenState[ 1 ]( false ); helpState[ 1 ]( false ); linkState[ 1 ]( false ); selection.current = null; colorState[ 1 ]( false ); customState[ 1 ]( false ); colorNotice[ 1 ]( '' ); colorSelection.current = null;
 				}
 			}
 		}, [ props.value, props.scope ] );
 		useEffect( function () {
-			if ( editor.current && safeRichHtml( editor.current.innerHTML ) !== html ) { editor.current.innerHTML = html; }
+			if ( editor.current && clean( editor.current.innerHTML ) !== html ) { editor.current.innerHTML = html; }
 		}, [ html, sourceOpen ] );
 		useEffect( function () {
 			if ( sourceOpen && focusSource.current && sourceInput.current ) { sourceInput.current.focus(); }
@@ -422,6 +661,7 @@
 			var current = window.getSelection();
 			if ( current && current.rangeCount && editor.current && editor.current.contains( current.anchorNode ) && editor.current.contains( current.focusNode ) ) {
 				selection.current = current.getRangeAt( 0 ).cloneRange();
+				if ( colorEnabled && colorState[ 0 ] && ! customState[ 0 ] ) { colorSelection.current = ColorOperation.offsets( editor.current, selection.current ); }
 			}
 		}
 		function restore() {
@@ -436,7 +676,8 @@
 			emitted.current = value; props.onChange( value, sourceMode );
 		}
 		function changed() {
-			emit( safeRichHtml( editor.current.innerHTML ) );
+			if ( applyingColor.current ) { return; }
+			emit( clean( editor.current.innerHTML ) );
 			remember();
 		}
 		function command( name, argument ) {
@@ -453,29 +694,43 @@
 			return icons && typeof icons.render === 'function' ? icons.render( name, { kind: block ? 'block' : 'action', size: 16 } ) : fallback;
 		}
 		function openSource() {
-			linkState[ 1 ]( false ); helpState[ 1 ]( false );
+			colorNotice[ 1 ]( '' );
+			linkState[ 1 ]( false ); helpState[ 1 ]( false ); colorState[ 1 ]( false ); customState[ 1 ]( false );
 			if ( sourceOpen ) { if ( sourceInput.current ) { sourceInput.current.focus(); } return; }
 			focusSource.current = true;
 			sourceState[ 1 ]( draft( props.value ) );
 		}
 		function cancelSource() {
+			colorNotice[ 1 ]( '' );
 			returnSourceFocus.current = ! props.legacySource;
 			sourceState[ 1 ]( props.legacySource ? draft( props.value ) : null );
 			if ( props.legacySource && sourceInput.current ) { sourceInput.current.focus(); }
 		}
 		function applySource() {
+			if ( colorEnabled && ! completeColorInput( source.value ) && hasRichColor( new window.DOMParser().parseFromString( source.value, 'text/html' ) ) ) { colorNotice[ 1 ]( '源码标记不完整或包含暂不支持的结构，请修正后再应用。' ); return; }
+			colorNotice[ 1 ]( '' );
 			var preserve = legacyRichSource( source.value );
 			returnSourceFocus.current = ! preserve;
 			// Legacy links remain inert text, preserving their original server-cleaned
 			// source path. They must never be assigned to contentEditable.innerHTML.
-			if ( source.value !== source.initial ) { emit( preserve ? source.value : safeRichHtml( source.value ), preserve ); }
+			if ( source.value !== source.initial ) { emit( colorEnabled ? clean( source.value, preserve ) : ( preserve ? source.value : clean( source.value ) ), preserve ); }
 			sourceState[ 1 ]( preserve ? draft( source.value ) : null );
 			if ( preserve && sourceInput.current ) { sourceInput.current.focus(); }
 		}
 		function keyboard( event ) {
 			if ( event.defaultPrevented ) { return; }
+			if ( customState[ 0 ] && event.key === 'Tab' ) {
+				var colorTargets = customDialog.current && Array.prototype.filter.call( customDialog.current.querySelectorAll( 'input,button' ), function ( node ) { return ! node.disabled && node.getClientRects().length; } );
+				if ( colorTargets && colorTargets.length ) {
+					var colorFirst = colorTargets[ 0 ], colorLast = colorTargets[ colorTargets.length - 1 ];
+					if ( event.shiftKey && document.activeElement === colorFirst || ! event.shiftKey && document.activeElement === colorLast ) { event.preventDefault(); event.stopPropagation(); ( event.shiftKey ? colorLast : colorFirst ).focus(); }
+				}
+				return;
+			}
 			if ( event.key === 'Escape' ) {
-				if ( helpState[ 0 ] ) { event.preventDefault(); event.stopPropagation(); helpState[ 1 ]( false ); if ( helpButton.current ) { helpButton.current.focus(); } }
+				if ( customState[ 0 ] ) { event.preventDefault(); event.stopPropagation(); cancelCustom(); }
+				else if ( colorState[ 0 ] ) { event.preventDefault(); event.stopPropagation(); closeColor(); }
+				else if ( helpState[ 0 ] ) { event.preventDefault(); event.stopPropagation(); helpState[ 1 ]( false ); if ( helpButton.current ) { helpButton.current.focus(); } }
 				else if ( linkState[ 0 ] ) { event.preventDefault(); event.stopPropagation(); linkState[ 1 ]( false ); restore(); }
 				else if ( fullscreen ) { event.preventDefault(); event.stopPropagation(); returnFullscreenFocus.current = true; fullscreenState[ 1 ]( false ); }
 				else if ( sourceOpen ) { event.preventDefault(); event.stopPropagation(); cancelSource(); }
@@ -502,12 +757,14 @@
 					formatButton( '清除格式', icon( 'clear', '清除格式' ), function () { command( 'removeFormat' ); command( 'unlink' ); }, { disabled: sourceOpen } ),
 					el( 'span', { className: 'pc-me-richtext__separator', 'aria-hidden': true } ),
 					formatButton( 'HTML 源码', icon( 'custom_html', 'HTML', true ), openSource, { ref: sourceButton, 'aria-pressed': sourceOpen, 'aria-controls': id + '-source' } ),
+					colorEnabled ? formatButton( '文字颜色', icon( 'color', '颜色' ), openColor, { ref: colorButton, disabled: sourceOpen, 'aria-expanded': colorState[ 0 ] } ) : null,
 					formatButton( fullscreen ? '退出编辑全屏' : '编辑全屏', icon( fullscreen ? 'collapse_fullscreen' : 'fullscreen', fullscreen ? '退出全屏' : '全屏' ), function () { returnFullscreenFocus.current = fullscreen; fullscreenState[ 1 ]( ! fullscreen ); }, { ref: fullscreenButton, 'aria-pressed': fullscreen } ),
 					formatButton( '富文本帮助', icon( 'help', '帮助' ), function () { helpState[ 1 ]( ! helpState[ 0 ] ); }, { ref: helpButton, 'aria-expanded': helpState[ 0 ], 'aria-controls': id + '-tool-help' } )
 				),
+				colorUi(),
 				helpState[ 0 ] ? el( 'div', { id: id + '-tool-help', className: 'pc-me-richtext__help' },
 					el( 'p', null, '支持加粗、斜体和链接；选中文字后使用工具栏，也可使用 Ctrl / ⌘ + B、I。' ),
-					el( 'p', null, '源码先在草稿中编辑，点“应用源码”后更新内容；“取消”保留原内容。图片和文字颜色暂不支持。' ),
+					el( 'p', null, '源码先在草稿中编辑，点“应用源码”后更新内容；“取消”保留原内容。图片暂不支持。' ),
 					el( 'p', null, 'Esc 关闭帮助或退出编辑全屏。普通源码模式下，Esc 取消本次源码修改。' )
 				) : null,
 				! sourceOpen && linkState[ 0 ] ? el( 'div', { className: 'pc-me-richtext__link' },
@@ -525,7 +782,7 @@
 					el( 'label', { htmlFor: id + '-source', className: 'screen-reader-text' }, field.label + ' HTML 源码' ),
 					el( 'textarea', { id: id + '-source', ref: sourceInput, className: 'pc-me-richtext__source-input', value: source.value, rows: 7, spellCheck: false,
 						'aria-describedby': id + '-source-help', onChange: function ( event ) { sourceState[ 1 ]( { initial: source.initial, value: event.target.value } ); } } ),
-					el( 'p', { id: id + '-source-help', className: 'pc-me-richtext__source-help', role: props.legacySource ? 'status' : undefined }, props.legacySource ? '此内容含已有链接格式，使用源码编辑以保留原格式。转换为支持的链接后，可应用并返回可视化。' : '应用时仅保留支持的富文本格式；图片和文字颜色暂不支持。' ),
+					el( 'p', { id: id + '-source-help', className: 'pc-me-richtext__source-help', role: props.legacySource ? 'status' : undefined }, props.legacySource ? '此内容含已有链接格式，使用源码编辑以保留原格式。转换为支持的链接后，可应用并返回可视化。' : '应用时仅保留支持的富文本格式；图片暂不支持。' ),
 					el( 'div', { className: 'pc-me-richtext__source-actions' },
 						el( C.Button, { variant: 'primary', size: 'small', onClick: applySource }, '应用源码' ),
 						el( C.Button, { variant: 'secondary', size: 'small', onClick: cancelSource }, S.cancel || '取消' )
@@ -533,13 +790,13 @@
 				) : el( 'div', { key: 'visual', id: id, ref: editor, className: 'pc-me-richtext__input', contentEditable: true, suppressContentEditableWarning: true,
 					role: 'textbox', 'aria-multiline': true, 'aria-labelledby': id + '-label', 'aria-describedby': field.help ? id + '-help' : undefined,
 					onInput: changed, onKeyUp: remember, onMouseUp: remember,
-					onBlur: function () { var clean = safeRichHtml( editor.current.innerHTML ); if ( clean !== editor.current.innerHTML ) { editor.current.innerHTML = clean; } },
+					onBlur: function () { if ( ! editor.current ) { return; } var sanitized = clean( editor.current.innerHTML ); if ( sanitized !== editor.current.innerHTML ) { editor.current.innerHTML = sanitized; } },
 					onPaste: function ( event ) {
 						event.preventDefault();
 						var clipboard = event.clipboardData || window.clipboardData;
 						if ( ! clipboard ) { return; }
 						var pasted = clipboard.getData( 'text/html' );
-						document.execCommand( 'insertHTML', false, pasted ? safeRichHtml( pasted ) : escapeText( clipboard.getData( 'text/plain' ) ).replace( /\r?\n/g, '<br>' ) ); changed();
+						document.execCommand( 'insertHTML', false, pasted ? clean( pasted ) : escapeText( clipboard.getData( 'text/plain' ) ).replace( /\r?\n/g, '<br>' ) ); changed();
 					},
 					onDrop: function ( event ) { event.preventDefault(); var text = event.dataTransfer && event.dataTransfer.getData( 'text/plain' ); if ( text ) { document.execCommand( 'insertText', false, text ); changed(); } }
 				} )

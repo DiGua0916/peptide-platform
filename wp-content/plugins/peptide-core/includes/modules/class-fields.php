@@ -151,6 +151,7 @@ final class Fields {
 			case 'textarea':
 				return is_scalar( $value ) ? self::cut( sanitize_textarea_field( (string) $value ), 2000 ) : $default;
 			case 'html':
+				if ( Rich_Html::supports_color( $field ) && is_scalar( $value ) ) { return Rich_Html::sanitize( (string) $value, self::HTML_TAGS ); }
 				return is_scalar( $value ) ? trim( wp_kses( (string) $value, self::HTML_TAGS ) ) : $default;
 			case 'code':
 				// 自定义 HTML 原样保存；渲染时只有具备 unfiltered_html 能力的人最后编辑的文档才会原样输出。

@@ -528,4 +528,6 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
 
 13. `custom_html`完整preview的原始代码信任改按当前服务端actor的`unfiltered_html`，不再由文档旧`_edit_last`给未保存payload背书。editor仍强制KSES；public保留原saved-editor判断与发布快照来源，代码存储、角色、nonce、user/document绑定短期preview token均不改。低权限预览已保存管理员代码同样被过滤；当前有能力的actor包括直接doc0预览仍合法。三组真实WP回归、原确认问题和未证实边界见backend-color-trust-2026-10-30.md；该文ColorB是另一个尚待验收scope。MediaText15旧主题缺口已由backend-media-text-2026-10-30.md真实三组另行关闭。
 
+14. 共享富文本颜色仅由可信服务器字段`type=html,ui=richtext`选入；客户端JSON声明不授予策略，普通HTML/template/code和number precision不变。仅新增严格HEX/整数RGB→canonical span color，旧class/格式/合法链接保持，不放开任意CSS/img。22色/Custom/选中文字Remove与原生Undo是一笔事务；null继承/空串明确清除/取消/原样Apply及同值设备切换保持。折叠选区和SPAN包block结构操作明确拒绝且0emit；不设未来键入颜色。四组真实WP及独立fixture边界见backend-color-trust-2026-10-30.md；此增量更新第11条当时颜色未启用的历史状态，正文图片仍未启用。
+
 验证按阶段记录，不混计：Records独立34及控件12不当真WP；原站限定29项已精确清理并与858posts/2555非锁meta基线同指纹；独立WordPress+Woo评价/Index各范围见任务work/reviews-runtime-positive-report.md，Index19组及SQL6/同请求恢复2等有真实前后证据；Links真实API7+UI8通过，取消/权限/状态变化/390/错误恢复均覆盖。共享条目panels/paired和首7基础块属于后续单独阶段，最终真实性/版本/限制以对应报告为准，不以已有定义数代替全量验收。
