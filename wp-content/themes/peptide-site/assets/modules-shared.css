@@ -9,6 +9,7 @@
 .vc-m .is-hidden { opacity: .55; outline: 1px dashed var(--line); }
 .vc-m .vc-button-effect-ready, .vc-m .vc-button-effect-ready::after { animation: none; }
 .vc-button-effect-ready { position: relative; isolation: isolate; }
+.vc-button-effect-ready.vc-button-effect-swing { transform-origin: 50% 100%; }
 .vc-button-effect-ready.vc-button-effect-shine { overflow: hidden; }
 .vc-button-shine { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(110deg,transparent 30%,#ffffff60 50%,transparent 70%); transform: translateX(-110%); }
 @media (max-width: 767px) {

@@ -108,6 +108,7 @@
 
 /* Use saved positions, not nth-child: reordering or hiding rows must not change a row's side. */
 @media (min-width: 768px) {
+  .vc-m--media-text .vc-story__row { column-gap: 30px; }
   .vc-story__row--d-right .vc-story__media { order: 2; }
   .vc-story__row--d-top, .vc-story__row--d-bottom { grid-template-columns: minmax(0, 1fr); gap: 28px; }
   .vc-story__row--d-bottom .vc-story__media { order: 2; }
@@ -147,6 +148,7 @@
 .vc-media-text .vc-story__media figcaption { color: var(--vc-story-text-color, var(--muted, #526e78)); }
 .vc-media-text .vc-story__copy--colored { padding: clamp(20px, 3vw, 36px); background: var(--vc-story-copy-bg); border-radius: 12px; }
 .vc-media-text .vc-story__body { max-width: none; }
+.vc-media-text .vc-story__row:not(.vc-story__row--single) .vc-story__copy { max-width: none; }
 .vc-media-text__button-effect { display: inline-block; max-width: 100%; }
 .vc-media-text .vc-story__button { color: var(--vc-story-button-color, #fff); background: var(--vc-story-button-bg, var(--blue, #177e9b)); }
 .vc-media-text .vc-story__button:hover { background: var(--vc-story-button-bg, var(--vc-primary-hover, #11657d)); }
