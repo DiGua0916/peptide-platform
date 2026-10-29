@@ -187,12 +187,18 @@ final class Registry {
 
 	/** Observed content blocks use the same saved fields with task-specific panels. */
 	private static function reference_content_controls( string $type, array $def ): array {
-		if ( ! in_array( $type, array( 'media_text', 'card_list', 'video' ), true ) ) { return $def; }
+		if ( ! in_array( $type, array( 'media_text', 'card_list', 'video', 'video_text' ), true ) ) { return $def; }
 		foreach ( $def['settings'] as &$field ) {
 			if ( 'bodyHtml' === $field['key'] ) { $field['ui'] = 'richtext'; }
 			if ( 'effectDurationMs' === $field['key'] ) { $field['uiMin'] = 1000; }
 			if ( 'effectIntervalMs' === $field['key'] ) { $field['uiMin'] = 500; $field['uiMax'] = 5000; }
-			if ( in_array( $type, array( 'card_list', 'video' ), true ) && 'description' === $field['key'] ) { $field['uiHidden'] = true; }
+			if ( in_array( $type, array( 'card_list', 'video', 'video_text' ), true ) && 'description' === $field['key'] ) { $field['uiHidden'] = true; }
+			if ( 'video_text' === $type ) {
+				if ( 'title' === $field['key'] ) { $field['type'] = 'textarea'; $field['help'] = '回车换行，不使用 HTML 标记。'; }
+				if ( 'titleSizePx' === $field['key'] ) { $field['uiMin'] = 40; $field['uiMax'] = 100; }
+				if ( 'overlayOpacity' === $field['key'] ) { $field['max'] = 100; }
+				if ( 'heightPx' === $field['key'] ) { $field['label'] = '自定义高度'; $field['deviceUI'] = 'paired'; $field['help'] = '高度预设选择“自定义高度”时使用此值。'; }
+			}
 			if ( 'card_list' === $type && 'columns' === $field['key'] ) { $field['uiMin'] = array( 'desktop' => 3, 'mobile' => 1 ); $field['uiMax'] = array( 'desktop' => 5, 'mobile' => 2 ); $field['deviceUI'] = 'paired'; }
 		}
 		unset( $field );
@@ -214,6 +220,25 @@ final class Registry {
 				array( 'id' => 'media', 'label' => '视频来源与封面', 'initialOpen' => true, 'fields' => array( 'source', 'video', 'youtubeUrl', 'poster' ) ),
 				array( 'id' => 'layout', 'label' => '布局与比例', 'initialOpen' => true, 'fields' => array( 'layout', 'fullWidth', 'ratio' ) ),
 				array( 'id' => 'play', 'label' => '播放设置', 'fields' => array( 'autoplay', 'loop', 'muted', 'controls' ) ),
+				array( 'id' => 'general', 'label' => '显示与间距', 'fields' => array( 'showDesktop', 'showMobile', 'paddingTopPx', 'paddingBottomPx', 'backgroundColor' ) ),
+			);
+		} elseif ( 'video_text' === $type ) {
+			$desktop_heights = array( '450px' => '450px', '550px' => '550px', '650px' => '650px', '750px' => '750px', 'screen' => '全屏', 'custom' => '自定义高度' );
+			$mobile_heights = array( '250px' => '250px', '300px' => '300px', '400px' => '400px', '500px' => '500px', 'screen' => '全屏', 'custom' => '自定义高度' );
+			$def['settings'][] = Fields::f( 'html', 'descriptionHtml', '描述', null, array( 'ui' => 'richtext', 'legacyKey' => 'description' ) );
+			$def['settings'][] = Fields::f( 'select', 'heightPreset', '高度预设', 'custom', array(
+				'device' => true,
+				'deviceUI' => 'paired',
+				'options' => array( '450px' => '450px', '550px' => '550px', '650px' => '650px', '750px' => '750px', '250px' => '250px', '300px' => '300px', '400px' => '400px', '500px' => '500px', 'screen' => '全屏', 'custom' => '自定义高度' ),
+				'uiOptionsByDevice' => array( 'desktop' => $desktop_heights, 'mobile' => $mobile_heights ),
+			) );
+			$def['editorDefaults'] = array( 'heightPreset' => array( 'desktop' => '550px', 'mobile' => '300px' ), 'heightPx' => array( 'desktop' => 550, 'mobile' => 300 ), 'autoplay' => false, 'loop' => false, 'controls' => false, 'muted' => false );
+			$def['panels'] = array(
+				array( 'id' => 'content', 'label' => '标题、描述与按钮', 'initialOpen' => true, 'fields' => array( 'title', 'descriptionHtml', 'titleSizePx', 'button' ) ),
+				array( 'id' => 'media', 'label' => '视频来源与封面', 'initialOpen' => true, 'fields' => array( 'source', 'video', 'youtubeUrl', 'poster' ) ),
+				array( 'id' => 'layout', 'label' => '高度、位置与蒙层', 'initialOpen' => true, 'fields' => array( 'heightPreset', 'position', 'overlayOpacity', 'textColor' ) ),
+				array( 'id' => 'play', 'label' => '播放设置', 'fields' => array( 'autoplay', 'loop', 'controls', 'muted' ) ),
+				array( 'id' => 'custom', 'label' => '自定义高度', 'fields' => array( 'heightPx' ) ),
 				array( 'id' => 'general', 'label' => '显示与间距', 'fields' => array( 'showDesktop', 'showMobile', 'paddingTopPx', 'paddingBottomPx', 'backgroundColor' ) ),
 			);
 		} else { $def['panels'] = array(

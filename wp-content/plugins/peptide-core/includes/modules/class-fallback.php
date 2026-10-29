@@ -82,7 +82,7 @@ final class Fallback {
 		return ! empty( $s['fullWidth'] ) ? 'vc-m__inner vc-m__inner--full' : 'vc-m__inner';
 	}
 
-	private static function heading( array $s, string $tag = 'h2' ): string {
+	private static function heading( array $s, string $tag = 'h2', bool $multiline_title = false ): string {
 		$title = (string) ( $s['title'] ?? '' );
 		$desc  = (string) ( $s['description'] ?? '' );
 		$rich  = $s['descriptionHtml'] ?? null;
@@ -91,7 +91,8 @@ final class Fallback {
 		}
 		$out = '<header class="vc-m__head">';
 		if ( '' !== $title ) {
-			$out .= sprintf( '<%1$s class="vc-m__title">%2$s</%1$s>', $tag, esc_html( $title ) );
+			$safe_title = esc_html( $title );
+			$out .= sprintf( '<%1$s class="vc-m__title">%2$s</%1$s>', $tag, $multiline_title ? nl2br( $safe_title ) : $safe_title );
 		}
 		if ( null !== $rich && '' !== $rich ) {
 			$out .= '<div class="vc-m__desc">' . self::html( $rich ) . '</div>';
@@ -679,18 +680,34 @@ final class Fallback {
 		);
 	}
 
+	private static function video_text_height( array $s, string $device ): string {
+		$preset = (string) self::dv( $s['heightPreset'] ?? 'custom', $device );
+		if ( 'screen' === $preset ) { return 'var(--vc-video-screen-height,100vh)'; }
+		if ( in_array( $preset, array( '450px', '550px', '650px', '750px', '250px', '300px', '400px', '500px' ), true ) ) { return $preset; }
+		return (int) self::dv( $s['heightPx'], $device ) . 'px';
+	}
+
 	private static function render_video_text( array $s ): string {
 		$vars = self::style(
 			array(
-				'--vc-h'         => (int) self::dv( $s['heightPx'], 'desktop' ) . 'px',
-				'--vc-h-m'       => (int) self::dv( $s['heightPx'], 'mobile' ) . 'px',
+				'--vc-h'         => self::video_text_height( $s, 'desktop' ),
+				'--vc-h-m'       => self::video_text_height( $s, 'mobile' ),
 				'--vc-overlay-o' => (string) ( (int) $s['overlayOpacity'] / 100 ),
 				'--vc-fg'        => $s['textColor'],
 				'--vc-title'     => (int) $s['titleSizePx'] . 'px',
 			)
 		);
-		$text = '<div class="vc-banner__text ' . esc_attr( self::pos_class( $s['position'] ) ) . '">' . self::heading( $s ) . self::button( $s['button'] ) . '</div>';
-		return '<div class="vc-banner vc-banner--video"' . $vars . '>' . self::video_player( $s, 'vc-banner__media vc-video--cover' ) . '<div class="vc-banner__overlay"></div>' . $text . '</div>';
+		$manual_url = 'file' === $s['source'] && ! $s['autoplay'] && ! $s['controls'] && ! empty( $s['video']['attachmentId'] ) ? wp_get_attachment_url( (int) $s['video']['attachmentId'] ) : '';
+		$controls = '';
+		if ( $manual_url ) {
+			$controls = '<button type="button" class="vc-video-text__toggle" hidden aria-pressed="false" aria-label="' . esc_attr__( 'Play video', 'peptide-core' ) . '" data-play-label="' . esc_attr__( 'Play video', 'peptide-core' ) . '" data-pause-label="' . esc_attr__( 'Pause video', 'peptide-core' ) . '" data-loading-label="' . esc_attr__( 'Loading video', 'peptide-core' ) . '"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path class="vc-video-text__play" d="M8 4l12 8-12 8z"/><path class="vc-video-text__pause" d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg><span class="vc-video-text__label">' . esc_html__( 'Play video', 'peptide-core' ) . '</span></button>';
+			$controls .= '<a class="vc-video-text__fallback" href="' . esc_url( $manual_url ) . '">' . esc_html__( 'Open video', 'peptide-core' ) . '</a>';
+		}
+		$actions = self::button( $s['button'] ) . $controls;
+		$text = '<div class="vc-banner__text ' . esc_attr( self::pos_class( $s['position'] ) ) . '">' . self::heading( $s, 'h2', true ) . ( '' !== $actions ? '<div class="vc-video-text__actions">' . $actions . '</div>' : '' );
+		if ( $manual_url ) { $text .= '<p class="vc-video-text__status" role="status" aria-live="polite" hidden data-error-label="' . esc_attr__( 'This video could not play. Try again or open the video.', 'peptide-core' ) . '"></p>'; }
+		$text .= '</div>';
+		return '<div class="vc-banner vc-banner--video"' . ( $manual_url ? ' data-vc-video-text-manual="1"' : '' ) . $vars . '>' . self::video_player( $s, 'vc-banner__media vc-video--cover' ) . '<div class="vc-banner__overlay"></div>' . $text . '</div>';
 	}
 
 	private static function render_slogan( array $s, array $items ): string {

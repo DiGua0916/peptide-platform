@@ -370,6 +370,48 @@
 		update();
 	}
 
+	function manualVideoText( root ) {
+		if ( root.dataset.vcVideoTextReady === '1' ) { return; }
+		var video = root.querySelector( 'video' ), button = root.querySelector( '.vc-video-text__toggle' );
+		var label = root.querySelector( '.vc-video-text__label' ), fallback = root.querySelector( '.vc-video-text__fallback' ), status = root.querySelector( '.vc-video-text__status' );
+		if ( ! video || ! button || ! label ) { return; }
+		root.dataset.vcVideoTextReady = '1';
+		var pending = false;
+		function idle() { pending = false; button.removeAttribute( 'aria-disabled' ); button.removeAttribute( 'aria-busy' ); }
+		function sync() {
+			var playing = ! video.paused && ! video.ended;
+			var text = playing ? button.dataset.pauseLabel : button.dataset.playLabel;
+			button.setAttribute( 'aria-pressed', playing ? 'true' : 'false' );
+			button.setAttribute( 'aria-label', text ); label.textContent = text;
+		}
+		function failed() {
+			video.pause(); idle(); sync();
+			if ( fallback ) { fallback.hidden = false; }
+			if ( status ) { status.textContent = status.dataset.errorLabel; status.hidden = false; }
+		}
+		button.addEventListener( 'click', function () {
+			if ( pending ) { return; }
+			if ( ! video.paused && ! video.ended ) { video.pause(); return; }
+			if ( status ) { status.hidden = true; status.textContent = ''; }
+			if ( fallback ) { fallback.hidden = true; }
+			pending = true; button.setAttribute( 'aria-disabled', 'true' ); button.setAttribute( 'aria-busy', 'true' );
+			label.textContent = button.dataset.loadingLabel; button.setAttribute( 'aria-label', button.dataset.loadingLabel );
+			try {
+				var result = video.play();
+				if ( result && result.then ) { result.then( function () { idle(); sync(); } ).catch( failed ); }
+				else { idle(); sync(); }
+			} catch ( error ) { failed(); }
+		} );
+		video.addEventListener( 'playing', function () { idle(); sync(); if ( fallback ) { fallback.hidden = true; } if ( status ) { status.hidden = true; } } );
+		video.addEventListener( 'pause', function () { idle(); sync(); } );
+		video.addEventListener( 'ended', function () { idle(); sync(); } );
+		video.addEventListener( 'error', failed );
+		button.hidden = false;
+		if ( fallback ) { fallback.hidden = true; }
+		sync();
+		if ( video.error ) { failed(); }
+	}
+
 	function compare( root ) {
 		var range = root.querySelector( '.vc-compare__range' );
 		if ( range ) {
@@ -416,6 +458,7 @@
 		each( '.vc-m .vc-btn', buttonEffect );
 		each( '.vc-m [data-vc-video-src]', embeddedVideo );
 		each( '.vc-m video[data-vc-video-autoplay]', fileVideo );
+		each( '.vc-m [data-vc-video-text-manual]', manualVideoText );
 		each( '.vc-m .vc-compare', compare );
 		each( '.vc-m .vc-textblock__toggle', function ( b ) {
 			toggle( b, b.closest( '.vc-textblock' ), 'is-open' );

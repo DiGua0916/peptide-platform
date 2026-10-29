@@ -145,6 +145,23 @@
 		return out;
 	}
 
+	function deviceOptions( field, value, device ) {
+		var all = options( field.options ), menus = field.uiOptionsByDevice;
+		var own = function ( object, key ) { return Object.prototype.hasOwnProperty.call( object, key ); };
+		if ( ! menus || typeof menus !== 'object' || Array.isArray( menus ) || ( device !== 'desktop' && device !== 'mobile' ) || ! own( menus, device ) ) { return all; }
+		var menu = menus[ device ];
+		if ( ! menu || typeof menu !== 'object' || Array.isArray( menu ) ) { return all; }
+		var requested = Object.keys( menu );
+		if ( ! requested.length || requested.some( function ( key ) { return typeof menu[ key ] !== 'string'; } ) ) { return all; }
+		var schema = field.options || {}, keys = requested.filter( function ( key ) { return own( schema, key ); } );
+		if ( ! keys.length ) { return all; }
+		// Device menus are only a presentation subset of the original schema.
+		// Keep a legal stored or inherited value visible without changing it.
+		var current = typeof value === 'string' || typeof value === 'number' ? String( value ) : null;
+		if ( current !== null && own( schema, current ) && keys.indexOf( current ) === -1 ) { keys.push( current ); }
+		return keys.map( function ( key ) { return { value: key, label: schema[ key ] }; } );
+	}
+
 	// ---------- 媒体 ----------
 
 	function MediaThumb( props ) {
@@ -942,7 +959,7 @@
 			case 'toggle':
 				return el( ToggleField, { field: f, value: value, onChange: onChange } );
 			case 'select':
-				return el( C.SelectControl, { label: f.label, help: f.help, value: value, options: options( f.options ), onChange: onChange } );
+				return el( C.SelectControl, { label: f.label, help: f.help, value: value, options: deviceOptions( f, value, ctx.device ), onChange: onChange } );
 			case 'icon':
 				return el( C.SelectControl, {
 					label: f.label,
@@ -1059,6 +1076,22 @@
 				el( NumberField, { field: Object.assign( {}, field, { label: field.label + ' · ' + ( S.desktop || '电脑' ) } ), value: Number( value.desktop ), device: 'desktop', onChange: function ( n ) { updateSlot( 'desktop', n ); } } ),
 				el( 'div', null, el( NumberField, { field: Object.assign( {}, field, { label: field.label + ' · ' + ( S.mobile || '手机' ) } ), value: Number( inheritedPair ? value.desktop : value.mobile ), device: 'mobile', onChange: function ( n ) { updateSlot( 'mobile', n ); } } ),
 					el( 'div', { className: 'pc-me-device-state' }, el( 'span', null, inheritedPair ? S.sameAsDesk : S.mobileOnly ), ! inheritedPair ? el( C.Button, { variant: 'link', size: 'small', onClick: function () { updateSlot( 'mobile', null ); } }, S.sameAsDesk ) : null )
+				)
+			);
+		}
+		var pairedSelect = false;
+		if ( ctx.paired && field.type === 'select' && field.deviceUI === 'paired' && typeof ctx.pairedDeviceSafe === 'function' && value && typeof value === 'object' && ! Array.isArray( value ) && Object.prototype.hasOwnProperty.call( value, 'desktop' ) && Object.prototype.hasOwnProperty.call( value, 'mobile' ) && Object.keys( value ).every( function ( key ) { return key === 'desktop' || key === 'mobile'; } ) ) {
+			var legalChoice = function ( choice ) { return ( typeof choice === 'string' || ( typeof choice === 'number' && Number.isFinite( choice ) ) ) && Object.prototype.hasOwnProperty.call( field.options || {}, String( choice ) ); };
+			try { pairedSelect = legalChoice( value.desktop ) && ( value.mobile === null || legalChoice( value.mobile ) ) && ctx.pairedDeviceSafe( field.key ) === true; } catch ( invalid ) { pairedSelect = false; }
+		}
+		if ( pairedSelect ) {
+			var inheritedSelect = value.mobile === null;
+			function updateChoiceSlot( device, choice ) { var next = Object.assign( {}, value ); next[ device ] = choice; onChange( next ); }
+			return el( 'div', { className: 'pc-me-device-pair pc-me-device-pair--select' },
+				single( Object.assign( {}, field, { label: field.label + ' · ' + ( S.desktop || '电脑' ) } ), value.desktop, function ( choice ) { updateChoiceSlot( 'desktop', choice ); }, Object.assign( {}, ctx, { device: 'desktop' } ) ),
+				el( 'div', null,
+					single( Object.assign( {}, field, { label: field.label + ' · ' + ( S.mobile || '手机' ) } ), inheritedSelect ? value.desktop : value.mobile, function ( choice ) { updateChoiceSlot( 'mobile', choice ); }, Object.assign( {}, ctx, { device: 'mobile' } ) ),
+					el( 'div', { className: 'pc-me-device-state' }, el( 'span', null, inheritedSelect ? S.sameAsDesk : S.mobileOnly ), ! inheritedSelect ? el( C.Button, { variant: 'link', size: 'small', onClick: function () { updateChoiceSlot( 'mobile', null ); } }, S.sameAsDesk ) : null )
 				)
 			);
 		}
