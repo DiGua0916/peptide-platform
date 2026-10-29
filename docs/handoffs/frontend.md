@@ -775,3 +775,11 @@ WordPress：当前没有可运行的主题前端，尚未执行 WordPress 页面
 当前主题改动包括既有header/footer动态导航关联与functions资产缓存，以及本轮modules-shared CSS/JS的6类按钮效果、减少动画/隐藏/离屏暂停；新批media-text.php和modules-media-text.css仅修编辑预览空图两列与PC30px间距/内容盒。前7基本块冻结时主题111文件未改，后续图文增量另有10PHP/33独立Edge检查，不以其代替真实全量主题验收。保持原source/模板/旧keys与扩展数据，未重写其它主题组件。
 
 首7基本+3Commerce真实主题33个限定组主体已验证，另发现carousel显式手机260px被旧img最小280px撑大，该专属CSS修复尚未写入；不得称高度边界已过。未发布参考页/本地装修，未部署或配置外部支付/邮件/搜索。完整当前状态和未完成项见集成后docs/handoffs/store-builder-progress.md；原始记录留在各自handoff，不混写同事数据分析成果。
+
+### 2026-10-30 · Codex：轮播固定高度最小值窄修（真实WP增量已验）
+
+已更新 `assets/modules-carousel.css` 现有fixed图片规则，补 `min-height:0`，解除overlay旧280px最小值对合法200/260固定高度的覆盖。仅改一行CSS，PHP、auto/screen、九位置、长文案增长及已存设置不变。旧段“修复尚未写入”由本段更新，不能把源码完成等同于真实WP定向验收完成。
+
+独立原生Edge加载实际轮播PHP模板与media helper（明确API doubles、无WP/DB），20场景×1280/390形成40组：overlay/split fixed200/260/280图像与stage精确、自适应/满屏几何与before一致、长文案增长不裁、九位置和item ID保留、无水平溢出，JS0/外部请求0。before四项复现旧280限制；两张fixed260几何截图已实际查看。不是全站或真实WP验收。限定CSS diff/空白检查通过。
+
+最终CSS SHA256 `33aef152d8e4a2914cabc49d20718dab620579f45b0afa82dc4b502467cd23b0`，证据 `D:/Codex/Tasks/2026-10-30/carousel-fixed-height/work/{before,after}.json` 与 `handoff.md`。现有独立WP实例owner只同步此CSS后，真实主题PC340/mobile260两个定向探针均通过，fixed图像min-height为0、无横向溢出且JS0；源/副本/实际浏览器响应SHA一致。报告 `D:/Codex/Tasks/2026-10-30/store-builder-shared-check/work/carousel-height-runtime-check.md`。没有重跑旧33组或另造auto/screen业务数据，不能把独立40组当真WP。临时profile已清，原QA夹具及原站只读指纹保持；root统一提交推送。源码owner未操作Git、原业务库、参考浏览器或任何发布。
