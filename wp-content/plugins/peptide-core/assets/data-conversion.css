@@ -178,3 +178,12 @@
 		padding: 12px;
 	}
 }
+/* Checkout observations stay separate from the existing funnel. */
+.pc-conv-checkout { margin: 28px 0; min-width: 0; }
+.pc-conv-table-wrap { max-width: 100%; overflow-x: auto; margin: 12px 0 22px; }
+.pc-conv-checkout table { width: 100%; border-collapse: collapse; background: #fff; }
+.pc-conv-checkout th, .pc-conv-checkout td { padding: 10px 12px; border-bottom: 1px solid #dcdcde; text-align: left; vertical-align: top; }
+.pc-conv-checkout-table { min-width: 550px; }
+.pc-conv-channel-table { min-width: 1150px; }
+.pc-conv-checkout small { display: block; color: #646970; font-weight: 400; margin-top: 4px; }
+.pc-conv-local { border-left: 4px solid #dba617; padding: 10px; background: #fff8e5; }

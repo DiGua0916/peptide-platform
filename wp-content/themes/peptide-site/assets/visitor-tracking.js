@@ -12,6 +12,10 @@
     cart_change_attempt: ['source', 'action', 'item_id', 'quantity'],
     cart_change_response: ['source', 'action', 'item_id', 'quantity'],
     variant_select: ['product_id', 'attribute', 'value'],
+    checkout_submit_attempt: [],
+    checkout_address_completed: ['source'],
+    checkout_shipping_selected: ['method', 'origin'], checkout_payment_selected: ['method', 'origin'],
+    checkout_step_applicability: ['address_required', 'shipping_required'],
     video_play: [], video_pause: [], video_progress: [], video_seek: [], video_end: []
   };
   function cleanData(type, input = {}) {
@@ -26,6 +30,10 @@
       if (['item_id', 'product_id'].includes(key)) { if (integer(value)) result[key] = integer(value); }
       else if (key.endsWith('_s') || key === 'quantity') { if (Number.isFinite(Number(value)) && Number(value) >= 0) result[key] = Math.min(1e7, Number(value)); }
       else if (key === 'autoplay') result[key] = value === true;
+      else if (key === 'address_required' || key === 'shipping_required') { if (typeof value === 'boolean') result[key] = value; }
+      else if (key === 'origin') { if (['initial', 'user', 'automatic'].includes(value)) result[key] = value; }
+      else if (key === 'source' && type === 'checkout_address_completed') { if (value === 'native_blocks') result[key] = value; }
+      else if (key === 'method') { if (typeof value === 'string') result[key] = value.slice(0, 80); }
       else if (typeof value === 'string') result[key] = value.slice(0, 120);
     }
     return result;
@@ -56,7 +64,8 @@
     let retryAt = 0;
     let pageId = id(), seq = 0, lastActivity = Date.now(), stopped = false, suspended = false;
     let sending = false, flushTimer, flushAt = Infinity, requestController, requestTimer, heartbeatTimer;
-    let videoObserver, exitController, exitTimer;
+    let videoObserver, exitController, exitTimer, checkoutBridge;
+    const bridgeCall = name => { try { checkoutBridge?.[name]?.(); } catch { try { checkoutBridge?.stop?.(); } catch {} checkoutBridge = null; } };
     const pending = [], listeners = [], cleanups = [];
     const stats = {created: 0, acknowledged: 0, dropped: 0, failedBatches: 0};
     const listen = (target, type, listener, opts) => {
@@ -178,6 +187,7 @@
     ['pointerdown', 'pointermove', 'keydown', 'scroll', 'touchstart'].forEach(type => listen(document, type, activity, {passive: true}));
     listen(document, 'visibilitychange', () => { videoObserver?.flush(); emit('visibility_change', state()); if (document.hidden) void flush(); });
     listen(window, 'pagehide', event => {
+      bridgeCall('suspend');
       videoObserver?.flush();
       emit('page_exit', {persisted: event.persisted, ...state()});
       void flush({unload: true});
@@ -191,6 +201,7 @@
     listen(window, 'pageshow', event => {
       if (!event.persisted || stopped) return;
       suspended = false; pageId = id(); seq = 0; lastActivity = Date.now(); begin('bfcache');
+      bridgeCall('reset'); bridgeCall('resume');
       // A restored document has a new page instance; reset its video counters too.
       videoObserver?.stop(); observeVideos();
       clearInterval(heartbeatTimer); heartbeat();
@@ -221,7 +232,7 @@
       const button = event.target.closest?.('.single_add_to_cart_button, .ajax_add_to_cart, .wc-block-components-checkout-place-order-button');
       if (!button || button.disabled || button.classList.contains('disabled') || button.getAttribute('aria-disabled') === 'true') return;
       if (button.matches('.wc-block-components-checkout-place-order-button')) {
-        if (page.page_type === 'checkout') emit('checkout_submit_attempt');
+        if (page.page_type === 'checkout' && checkoutBridge?.nativeSubmit !== true) emit('checkout_submit_attempt');
       } else addAttempt(button.closest('form.cart'), button);
     }, {capture: true});
     listen(document, 'submit', event => { if (event.isTrusted && event.target.matches('form.cart')) addAttempt(event.target, event.submitter); });
@@ -238,6 +249,7 @@
       });
     }
     cleanups.push(() => videoObserver?.stop());
+    cleanups.push(() => bridgeCall('stop'));
     function stop() {
       if (stopped) return;
       stopped = true; requestController?.abort(); exitController?.abort();
@@ -249,6 +261,14 @@
     const api = {flush, stop, getStats: () => ({...stats, queued: pending.length, sending, stopped})};
     active = api;
     begin('navigation'); observeVideos(); heartbeat();
+    if (page.page_type === 'checkout') {
+      try {
+        checkoutBridge = window.PeptideCheckoutBridge?.create((type, input) => {
+          if (!Object.hasOwn(allowed, type) || !type.startsWith('checkout_')) return;
+          const data = cleanData(type, input); if (data) emit(type, data);
+        });
+      } catch { checkoutBridge = null; }
+    }
     return api;
   }
   window.VialCoveVisitorObserver = {start};

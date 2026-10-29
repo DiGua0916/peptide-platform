@@ -120,16 +120,24 @@ final class Server_Events {
 		if ( ! $order instanceof \WC_Order ) {
 			return;
 		}
-		$visitor = self::browser_visitor();
-		if ( ! $visitor || Tracker::is_staff( (int) $order->get_customer_id() ) ) {
+		if ( Tracker::is_staff( (int) $order->get_customer_id() ) || Tracker::is_staff( Tracker::cookie_user_id() ) || Tracker::declined() ) {
 			return;
 		}
-		$visit = self::live_visit( $visitor );
-		$order->update_meta_data( self::ORDER_VISITOR_META, $visitor['id'] );
-		$order->update_meta_data( self::ORDER_VISIT_META, $visit );
-		$order->save_meta_data();
-		if ( $order->get_customer_id() ) {
-			Tracker::link_user( $visitor['id'], (int) $order->get_customer_id(), $visit );
+		if ( $order->meta_exists( self::ORDER_VISITOR_META ) || $order->meta_exists( self::ORDER_VISIT_META ) ) {
+			// Retries keep the first association. Partial/deleted links never adopt a new browser.
+			[ $visitor_id, $visit ] = self::order_link( $order );
+			if ( ! $visitor_id || ! $visit ) { return; }
+			$visitor = array( 'id' => $visitor_id );
+		} else {
+			$visitor = self::browser_visitor();
+			if ( ! $visitor ) { return; }
+			$visit = self::live_visit( $visitor );
+			$order->update_meta_data( self::ORDER_VISITOR_META, $visitor['id'] );
+			$order->update_meta_data( self::ORDER_VISIT_META, $visit );
+			$order->save_meta_data();
+			if ( $order->get_customer_id() ) {
+				Tracker::link_user( $visitor['id'], (int) $order->get_customer_id(), $visit );
+			}
 		}
 		$placed = self::record(
 			$visitor['id'],
@@ -159,8 +167,13 @@ final class Server_Events {
 	 *
 	 * @return array{0:int,1:int}
 	 */
-	private static function order_link( \WC_Order $order ): array {
-		return array( (int) $order->get_meta( self::ORDER_VISITOR_META ), (int) $order->get_meta( self::ORDER_VISIT_META ) );
+	public static function order_link( \WC_Order $order ): array {
+		global $wpdb;
+		$visitor = (int) $order->get_meta( self::ORDER_VISITOR_META );
+		$visit = (int) $order->get_meta( self::ORDER_VISIT_META );
+		if ( ! $visitor || ! $visit || ! Schema::installed() ) { return array( 0, 0 ); }
+		$exists = $wpdb->get_var( $wpdb->prepare( 'SELECT s.id FROM ' . Schema::table( 'visits' ) . ' s INNER JOIN ' . Schema::table( 'visitors' ) . ' v ON v.id=s.visitor_id WHERE s.id=%d AND v.id=%d', $visit, $visitor ) );
+		return $exists ? array( $visitor, $visit ) : array( 0, 0 );
 	}
 
 	private static function paid( \WC_Order $order ): void {

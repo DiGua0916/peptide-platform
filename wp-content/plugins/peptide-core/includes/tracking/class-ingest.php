@@ -68,6 +68,10 @@ final class Ingest {
 			'variant_select'          => array( 'product_id' => 'int', 'attribute' => 'str:60', 'value' => 'str:120' ),
 			'add_to_cart_attempt'     => array( 'product_id' => 'int', 'variation_id' => 'int', 'quantity' => 'num' ),
 			'checkout_submit_attempt' => array(),
+			'checkout_address_completed' => array( 'source' => 'enum:native_blocks' ),
+			'checkout_shipping_selected' => array( 'method' => 'str:80', 'origin' => 'enum:initial|user|automatic' ),
+			'checkout_payment_selected' => array( 'method' => 'str:80', 'origin' => 'enum:initial|user|automatic' ),
+			'checkout_step_applicability' => array( 'address_required' => 'bool', 'shipping_required' => 'bool' ),
 			'cart_open'               => array( 'source' => 'str:40' ),
 			'cart_close'              => array( 'source' => 'str:40' ),
 			'cart_change_attempt'     => $cart,
@@ -143,6 +147,7 @@ final class Ingest {
 		$out  = array();
 		foreach ( $spec as $key => $kind ) {
 			$v = self::clean_value( is_array( $data ) ? ( $data[ $key ] ?? null ) : null, $kind );
+			if ( 'method' === $key && in_array( $type, array( 'checkout_shipping_selected', 'checkout_payment_selected' ), true ) && ( ! is_string( $v ) || ! preg_match( '/^[A-Za-z0-9_:-]{1,80}$/D', $v ) ) ) { continue; }
 			if ( null !== $v ) {
 				$out[ $key ] = $v;
 			}

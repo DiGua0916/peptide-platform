@@ -156,8 +156,8 @@
 		if ( ! data.tracking ) {
 			html += '<p class="pc-conv-note">' + esc( T.trackingOff ) + '</p>';
 		}
-		html += '<p class="pc-conv-note">' + esc( T.notYet ) + '</p>';
 		html += overall( data, ctx );
+		html += checkoutSteps( data.checkout_steps, ctx );
 		if ( rows.length ) {
 			html += '<div class="pc-conv-cards">' + rows.map( function ( row ) {
 				return card( group, row, ctx );
@@ -166,6 +166,44 @@
 			html += '<p class="pc-data-empty">' + esc( T.noGroups ) + '</p>';
 		}
 		return html;
+	}
+
+	function checkoutSteps( data, ctx ) {
+		if ( ! data ) { return '<p class="pc-data-empty">' + ctx.esc( ctx.strings.loadError ) + '</p>'; }
+		var esc = ctx.esc;
+		var current = data.current || {};
+		var previous = data.previous || {};
+		var changes = data.change || {};
+		var labels = data.labels || {};
+		var keys = Object.keys( labels );
+		var html = '<section class="pc-conv-checkout"><h2>' + esc( T.checkoutTitle ) + '</h2>';
+		if ( data.local_simulation ) { html += '<p class="pc-conv-note pc-conv-local">' + esc( T.localNotice ) + '</p>'; }
+		html += '<p class="pc-conv-note">' + esc( T.checkoutHelp ) + '</p>';
+		if ( ! keys.some( function ( key ) { return current[ key ] || previous[ key ]; } ) ) {
+			html += '<p class="pc-data-empty">' + esc( T.emptyCheckout ) + '</p>';
+		}
+		html += '<div class="pc-conv-table-wrap" tabindex="0"><table class="pc-conv-checkout-table"><thead><tr><th>' + esc( T.observedStep ) + '</th><th>' + esc( T.currentPeriod ) + '</th><th>' + esc( T.previousPeriod ) + '</th><th>' + esc( T.periodChange ) + '</th></tr></thead><tbody>';
+		keys.forEach( function ( key ) {
+			html += '<tr><th scope="row">' + esc( labels[ key ] ) + '<small>' + esc( data.sources[ key ] === 'server' ? T.serverFact : T.browserObservation ) + '</small></th><td>' + esc( ctx.number( current[ key ] || 0 ) ) + '</td><td>' + esc( ctx.number( previous[ key ] || 0 ) ) + '</td><td>' + changeHtml( changes[ key ], ctx, 'pc-conv-change' ) + '</td></tr>';
+		} );
+		html += '</tbody></table></div><h3>' + esc( T.checkoutChannels ) + '</h3><p class="pc-conv-note">' + esc( T.channelHelp ) + '</p>';
+		var channels = data.channels || [];
+		if ( ! channels.length ) { return html + '<p class="pc-data-empty">' + esc( T.emptyChannels ) + '</p></section>'; }
+		var metrics = [ 'initial', 'user', 'automatic', 'attempts', 'attempt_visits', 'attempt_orders', 'succeeded', 'failed', 'success_rate' ];
+		html += '<div class="pc-conv-table-wrap" tabindex="0"><table class="pc-conv-channel-table"><thead><tr><th>' + esc( T.paymentChannel ) + '</th>';
+		metrics.forEach( function ( key ) { html += '<th>' + esc( T[ key ] ) + '</th>'; } );
+		html += '</tr></thead><tbody>';
+		channels.forEach( function ( channel ) {
+			var title = channel.method === 'pc_local_card' ? T.localCard : ( channel.method === 'pc_local_wallet' ? T.localWallet : channel.method === 'unknown' ? T.unknown : channel.method );
+			html += '<tr><th scope="row">' + esc( title ) + '</th>';
+			metrics.forEach( function ( key ) {
+				var c = channel.current || {}, p = channel.previous || {}, d = channel.change || {};
+				var format = key === 'success_rate' ? pct : ctx.number;
+				html += '<td><strong>' + esc( format( c[ key ] ) ) + '</strong><small>' + esc( ctx.strings.vs + ' ' + format( p[ key ] ) ) + '</small>' + changeHtml( d[ key ], ctx, 'pc-conv-change' ) + '</td>';
+			} );
+			html += '</tr>';
+		} );
+		return html + '</tbody></table></div></section>';
 	}
 
 	// ---------- 报表 ----------

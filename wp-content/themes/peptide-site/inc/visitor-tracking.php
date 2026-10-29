@@ -43,7 +43,11 @@ add_action( 'wp_enqueue_scripts', function (): void {
     $root = get_template_directory();
     $url = get_template_directory_uri();
     wp_enqueue_script( 'vialcove-visitor-video', $url . '/assets/visitor-video.js', array(), (string) filemtime( $root . '/assets/visitor-video.js' ), true );
-    wp_enqueue_script( 'vialcove-visitor-observer', $url . '/assets/visitor-tracking.js', array( 'vialcove-visitor-video' ), (string) filemtime( $root . '/assets/visitor-tracking.js' ), true );
+    $observer_dependencies = array( 'vialcove-visitor-video' );
+    if ( function_exists( 'wp_script_is' ) && wp_script_is( 'peptide-core-tracking-checkout', 'registered' ) ) {
+        $observer_dependencies[] = 'peptide-core-tracking-checkout';
+    }
+    wp_enqueue_script( 'vialcove-visitor-observer', $url . '/assets/visitor-tracking.js', $observer_dependencies, (string) filemtime( $root . '/assets/visitor-tracking.js' ), true );
     wp_add_inline_script( 'vialcove-visitor-observer', 'window.VialCoveVisitorPage = ' . wp_json_encode( vc_visitor_page_context(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) . ';', 'before' );
     $transport = array(
         'enabled' => true,

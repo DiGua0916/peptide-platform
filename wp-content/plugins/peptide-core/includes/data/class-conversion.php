@@ -19,7 +19,8 @@
  * - visitors 或 paid 不为 0 的分组值才出现；排序：visitors 从多到少，再 paid 从多到少，再 key 从小到大（strcmp）；
  *   所有分组的 paid 之和 = 整体的 paid。访客追踪的表没装时：tracking 为 false，访问数字都是 0，每个已付款订单都归在 unknown。
  *
- * 还没做（没有数据）：添加地址 / 添加物流 / 添加支付（需要结账步骤事件）；按 UTM、国家、域名、操作系统、屏幕尺寸分组（需要服务端采集）；
+ * checkout_steps 兄弟字段单独报告收到的结账步骤和支付通道，不改变上面的旧漏斗口径。
+ * 还没做（没有数据）：按 UTM、国家、域名、操作系统、屏幕尺寸分组（需要服务端采集）；
  * 全部访客 / 正常访客 / 异常操作和域名筛选；CSV 导出。
  *
  * @package PeptideCore
@@ -80,6 +81,7 @@ final class Conversion {
 				'change'   => $change,
 			),
 			'rows'     => self::rows( $from, $to, $group ),
+			'checkout_steps' => Checkout_Steps::summary( $range ),
 		);
 	}
 

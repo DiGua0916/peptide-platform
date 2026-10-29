@@ -11744,3 +11744,140 @@ msgstr "共 %d 个落地页"
 #: includes/admin/class-data-pages.php:708
 msgid "The landing page is the first page of each visit, without URL parameters. Orders count toward the landing page of the visit they were placed in. Orders without a recorded visit, or placed in a visit that did not start on a page, appear under \"Unknown landing page\"."
 msgstr "落地页是每次访问打开的第一个页面，不含链接参数。订单算在下单那次访问的落地页上；没有访问记录、或者那次访问不是从页面开始的订单，归在“未知落地页”。"
+
+#: includes/admin/class-data-pages.php:661
+msgid "Observed checkout steps"
+msgstr "已观察到的结账步骤"
+
+#: includes/admin/class-data-pages.php:662
+msgid "Distinct visits grouped by visit start time. Browser observations are best effort and need not form a cumulative funnel; default selections can precede address readiness."
+msgstr "按访问开始时间分组，统计不同访问数。浏览器采集可能缺失，各项不一定逐层递减；默认选项可能早于地址就绪。"
+
+#: includes/admin/class-data-pages.php:663
+msgid "Browser observation"
+msgstr "浏览器观察"
+
+#: includes/admin/class-data-pages.php:665
+msgid "Payment channels"
+msgstr "支付通道"
+
+#: includes/admin/class-data-pages.php:666
+msgid "Success rate uses distinct orders with observed server processing attempts in this visit cohort. Retries count as separate attempts; outcomes use WooCommerce orders and server payment facts. This differs from the existing all-orders payment success metric."
+msgstr "成功率分母为本访问分组内已观察到服务端支付处理的不同订单数。重试分别计为尝试；结果以 WooCommerce 订单和服务端付款事实为准。此口径与原有按全部订单计算的支付成功率不同。"
+
+#: includes/admin/class-data-pages.php:667
+msgid "Initial / restored selections (visits)"
+msgstr "初始／恢复选择（访问数）"
+
+#: includes/admin/class-data-pages.php:668
+msgid "Explicit selections (visits)"
+msgstr "主动选择（访问数）"
+
+#: includes/admin/class-data-pages.php:669
+msgid "Automatic changes (visits)"
+msgstr "自动变更（访问数）"
+
+#: includes/admin/class-data-pages.php:670
+msgid "Processing attempts (events)"
+msgstr "支付处理尝试（事件数）"
+
+#: includes/admin/class-data-pages.php:671
+msgid "Processing visits"
+msgstr "支付处理访问数"
+
+#: includes/admin/class-data-pages.php:672
+msgid "Processing orders"
+msgstr "支付处理订单数"
+
+#: includes/admin/class-data-pages.php:673
+msgid "Succeeded processing orders"
+msgstr "处理成功订单数"
+
+#: includes/admin/class-data-pages.php:674
+msgid "Failed processing orders"
+msgstr "处理失败订单数"
+
+#: includes/admin/class-data-pages.php:675
+msgid "Success / processing orders"
+msgstr "成功／处理订单数"
+
+#: includes/admin/class-data-pages.php:676
+msgid "Observed step"
+msgstr "观察步骤"
+
+#: includes/admin/class-data-pages.php:677
+msgid "Current"
+msgstr "本期"
+
+#: includes/admin/class-data-pages.php:680
+msgid "Payment channel"
+msgstr "支付通道"
+
+#: includes/admin/class-data-pages.php:681
+msgid "No checkout signals in this visit-start cohort."
+msgstr "本访问开始时间分组内没有结账信号。"
+
+#: includes/admin/class-data-pages.php:682
+msgid "No observed payment selection or processing in this cohort."
+msgstr "本分组内没有观察到支付选择或支付处理。"
+
+#: includes/admin/class-data-pages.php:683
+msgid "Local simulation is enabled. These simulated orders appear in local Data reports; no money is charged."
+msgstr "本地模拟付款已开启。这些模拟订单会计入本地数据报表，不会扣款。"
+
+#: includes/admin/class-tracking-page.php:187
+#: includes/data/class-checkout-steps.php:24
+msgid "Submit attempted in browser"
+msgstr "浏览器尝试提交订单"
+
+#: includes/admin/class-tracking-page.php:188
+#: includes/data/class-checkout-steps.php:21
+msgid "Address ready in browser"
+msgstr "浏览器地址已就绪"
+
+#: includes/admin/class-tracking-page.php:189
+#: includes/data/class-checkout-steps.php:22
+msgid "Shipping selected"
+msgstr "已选择配送方式"
+
+#: includes/admin/class-tracking-page.php:190
+#: includes/data/class-checkout-steps.php:23
+msgid "Payment method selected"
+msgstr "已选择支付方式"
+
+#: includes/admin/class-tracking-page.php:191
+msgid "Checkout step applicability"
+msgstr "结账步骤适用性"
+
+#: includes/admin/class-tracking-page.php:192
+#: includes/data/class-checkout-steps.php:25
+msgid "Payment processing started"
+msgstr "已开始支付处理"
+
+#: includes/data/class-checkout-steps.php:20
+msgid "Entered checkout"
+msgstr "进入结账"
+
+#: includes/data/class-checkout-steps.php:26
+msgid "Paid, confirmed by server"
+msgstr "已付款（服务端确认）"
+
+#: includes/payments/class-local-gateway.php:24
+msgid "Local payment is unavailable for this order."
+msgstr "此订单无法使用本地模拟付款。"
+
+#: includes/payments/class-local-gateway.php:36
+msgid "Local simulation completed; no money was charged."
+msgstr "本地模拟付款已完成，未扣取任何款项。"
+
+#: includes/payments/class-local-payments.php:16
+msgid "Local simulation — card (no charge)"
+msgstr "本地模拟—银行卡（不扣款）"
+
+#: includes/payments/class-local-payments.php:16
+msgid "Local simulation — wallet (no charge)"
+msgstr "本地模拟—钱包（不扣款）"
+
+#: includes/payments/class-local-payments.php:20
+msgid "Local test payment only. No charge will be made."
+msgstr "仅用于本地测试付款，不会扣款。"

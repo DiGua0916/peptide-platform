@@ -11692,3 +11692,140 @@ msgstr ""
 #: includes/admin/class-data-pages.php:708
 msgid "The landing page is the first page of each visit, without URL parameters. Orders count toward the landing page of the visit they were placed in. Orders without a recorded visit, or placed in a visit that did not start on a page, appear under \"Unknown landing page\"."
 msgstr ""
+
+#: includes/admin/class-data-pages.php:661
+msgid "Observed checkout steps"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:662
+msgid "Distinct visits grouped by visit start time. Browser observations are best effort and need not form a cumulative funnel; default selections can precede address readiness."
+msgstr ""
+
+#: includes/admin/class-data-pages.php:663
+msgid "Browser observation"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:665
+msgid "Payment channels"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:666
+msgid "Success rate uses distinct orders with observed server processing attempts in this visit cohort. Retries count as separate attempts; outcomes use WooCommerce orders and server payment facts. This differs from the existing all-orders payment success metric."
+msgstr ""
+
+#: includes/admin/class-data-pages.php:667
+msgid "Initial / restored selections (visits)"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:668
+msgid "Explicit selections (visits)"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:669
+msgid "Automatic changes (visits)"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:670
+msgid "Processing attempts (events)"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:671
+msgid "Processing visits"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:672
+msgid "Processing orders"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:673
+msgid "Succeeded processing orders"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:674
+msgid "Failed processing orders"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:675
+msgid "Success / processing orders"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:676
+msgid "Observed step"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:677
+msgid "Current"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:680
+msgid "Payment channel"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:681
+msgid "No checkout signals in this visit-start cohort."
+msgstr ""
+
+#: includes/admin/class-data-pages.php:682
+msgid "No observed payment selection or processing in this cohort."
+msgstr ""
+
+#: includes/admin/class-data-pages.php:683
+msgid "Local simulation is enabled. These simulated orders appear in local Data reports; no money is charged."
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:187
+#: includes/data/class-checkout-steps.php:24
+msgid "Submit attempted in browser"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:188
+#: includes/data/class-checkout-steps.php:21
+msgid "Address ready in browser"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:189
+#: includes/data/class-checkout-steps.php:22
+msgid "Shipping selected"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:190
+#: includes/data/class-checkout-steps.php:23
+msgid "Payment method selected"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:191
+msgid "Checkout step applicability"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php:192
+#: includes/data/class-checkout-steps.php:25
+msgid "Payment processing started"
+msgstr ""
+
+#: includes/data/class-checkout-steps.php:20
+msgid "Entered checkout"
+msgstr ""
+
+#: includes/data/class-checkout-steps.php:26
+msgid "Paid, confirmed by server"
+msgstr ""
+
+#: includes/payments/class-local-gateway.php:24
+msgid "Local payment is unavailable for this order."
+msgstr ""
+
+#: includes/payments/class-local-gateway.php:36
+msgid "Local simulation completed; no money was charged."
+msgstr ""
+
+#: includes/payments/class-local-payments.php:16
+msgid "Local simulation — card (no charge)"
+msgstr ""
+
+#: includes/payments/class-local-payments.php:16
+msgid "Local simulation — wallet (no charge)"
+msgstr ""
+
+#: includes/payments/class-local-payments.php:20
+msgid "Local test payment only. No charge will be made."
+msgstr ""
