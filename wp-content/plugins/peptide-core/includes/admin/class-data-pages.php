@@ -240,9 +240,7 @@ final class Data_Pages {
 							if ( is_wp_error( $g ) ) {
 								return $g;
 							}
-							$res = new \WP_REST_Response( Conversion::summary( $r, $g ) );
-							$res->header( 'Cache-Control', 'no-store' );
-							return $res;
+							return Report_Exports::conversion_response( $request, $r, $g );
 						},
 						'permission_callback' => $permission,
 					)
@@ -416,7 +414,8 @@ final class Data_Pages {
 		// 转化率详情页的报表（整体转化步骤和分组漏斗卡片），同样在 data.js 之后加载，用 PcData.register( 'conversion', … ) 画进页面。
 		if ( 'conversion' === $key ) {
 			wp_enqueue_style( 'peptide-core-data-conversion', $url . 'data-conversion.css', array( 'peptide-core-data' ), $ver( 'data-conversion.css' ) );
-			wp_enqueue_script( 'peptide-core-data-conversion', $url . 'data-conversion.js', array( self::SCRIPT ), $ver( 'data-conversion.js' ), array( 'in_footer' => true ) );
+			wp_register_script( 'peptide-core-data-export', $url . 'data-export.js', array( self::SCRIPT, 'wp-api-fetch', 'wp-url' ), $ver( 'data-export.js' ), array( 'in_footer' => true ) );
+			wp_enqueue_script( 'peptide-core-data-conversion', $url . 'data-conversion.js', array( self::SCRIPT, 'peptide-core-data-export' ), $ver( 'data-conversion.js' ), array( 'in_footer' => true ) );
 			wp_add_inline_script(
 				'peptide-core-data-conversion',
 				'window.pcDataConversion = ' . wp_json_encode( array( 'strings' => self::conversion_strings() ) ) . ';',
@@ -737,7 +736,9 @@ final class Data_Pages {
 
 	/** 转化率详情页脚本里的文字：整体步骤、分组选择、设备和浏览器名、卡片文字和说明。 */
 	private static function conversion_strings(): array {
-		return self::visitor_funnel_strings() + array(
+		return self::export_strings() + self::visitor_funnel_strings() + array(
+			'retry'          => __( 'Retry', 'peptide-core' ),
+			'exportHelp'     => __( 'Export all results in the selected grouping, eight visitor steps, both transition views, observed visits and payment channels. Group figures cover the current period only.', 'peptide-core' ),
 			'conversion'     => __( 'Conversion rate', 'peptide-core' ),
 			'conversionHelp' => __( 'Paid successfully / visited users × 100%', 'peptide-core' ),
 			'paid'           => __( 'Paid successfully', 'peptide-core' ),

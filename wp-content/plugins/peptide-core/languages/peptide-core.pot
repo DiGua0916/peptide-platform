@@ -11994,3 +11994,11 @@ msgstr ""
 #: includes/admin/class-data-pages.php
 msgid "Export every matching ranking row, across all result pages."
 msgstr ""
+
+#: includes/data/class-report-exports.php
+msgid "Conversion export is unavailable. Refresh the report and try again."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Export all results in the selected grouping, eight visitor steps, both transition views, observed visits and payment channels. Group figures cover the current period only."
+msgstr ""

@@ -27,7 +27,7 @@ final class Csv_Response extends \WP_REST_Response {
 
 	/** Runs after native REST header emission and respects the final response authority. */
 	public static function serve( $served, $response, $request, $server ) {
-		if ( $served || ! $response instanceof self || 200 !== $response->get_status() || ! in_array( $request->get_route(), array( '/peptide/v1/data/products', '/peptide/v1/data/pages', '/peptide/v1/data/rankings/table' ), true ) || ! in_array( $request->get_method(), array( 'GET', 'HEAD' ), true ) ) {
+		if ( $served || ! $response instanceof self || 200 !== $response->get_status() || ! in_array( $request->get_route(), array( '/peptide/v1/data/products', '/peptide/v1/data/pages', '/peptide/v1/data/rankings/table', '/peptide/v1/data/conversion' ), true ) || ! in_array( $request->get_method(), array( 'GET', 'HEAD' ), true ) ) {
 			return $served;
 		}
 		if ( 'HEAD' === $request->get_method() ) { return true; }

@@ -23,6 +23,7 @@
 
 	// 请求计数：改分组 / 切换时间段之后，旧请求晚到的结果不再画。
 	var requests = 0;
+	var activeDispose = null;
 	// 在两次 render 之间保留的状态：选中的分组。
 	var state = { group: readGroup() };
 
@@ -237,6 +238,7 @@
 	// ---------- 报表 ----------
 
 	function render( bodyEl, range, ctx ) {
+		if ( activeDispose ) { activeDispose(); }
 		var esc = ctx.esc;
 		var options = GROUPS.map( function ( key ) {
 			return '<option value="' + esc( key ) + '"' + ( key === state.group ? ' selected' : '' ) + '>' + esc( T[ key ] ) + '</option>';
@@ -247,14 +249,47 @@
 			'<div class="pc-conv-toolbar">' +
 				'<label class="pc-conv-label" for="pc-conv-group">' + esc( T.groupBy ) + '</label>' +
 				'<select id="pc-conv-group" class="pc-conv-group">' + options + '</select>' +
+				'<button type="button" class="button pc-conv-export" disabled title="' + esc( T.exportHelp ) + '">' + esc( T.exportCsv ) + '</button>' +
+				'<span class="pc-conv-export-status" role="status" aria-live="polite"></span>' +
 			'</div>' +
+			'<p class="pc-conv-export-help">' + esc( T.exportHelp ) + '</p>' +
 			'<div class="pc-conv-result"></div>' +
 		'</div>';
 		var select = bodyEl.querySelector( '.pc-conv-group' );
 		var result = bodyEl.querySelector( '.pc-conv-result' );
 		var loadedData = null;
+		var retainedData = null, settled = false, rangeBusy = false, exporting = false;
+		var exportToken = 0, disposed = false, unsubscribe = null, resumeTimer = null;
+		var exportButton = bodyEl.querySelector( '.pc-conv-export' );
+		var exportStatus = bodyEl.querySelector( '.pc-conv-export-status' );
+		var acceptedRange = range;
+		function attached() { return ! disposed && ( ! document.documentElement || ! document.documentElement.contains || document.documentElement.contains( bodyEl ) ); }
+		function datesOf( data ) { var d = data && data.range && data.range.dates; return d && [ 'from', 'to', 'compare_from', 'compare_to' ].every( function ( key ) { return typeof d[ key ] === 'string' && d[ key ]; } ) ? d : null; }
+		function eligible( data ) {
+			return !! data && !! datesOf( data ) && data.group === state.group && data.visitor_funnel && data.visitor_funnel.unit === 'visitors' && data.visitor_funnel.current && data.visitor_funnel.current.length === 8 && data.visitor_funnel.previous && data.visitor_funnel.previous.length === 8 && !! data.checkout_steps;
+		}
+		function contextKey( data ) { var d = datesOf( data ); return d ? [ data.group, d.from, d.to, d.compare_from, d.compare_to ].join( '|' ) : ''; }
+		function syncExport() { exportButton.disabled = ! attached() || ! settled || ! eligible( loadedData ) || rangeBusy || exporting || ! window.PcDataExport; select.disabled = rangeBusy; exportButton.setAttribute( 'aria-busy', exporting ? 'true' : 'false' ); }
+		function cancelExport() { ++exportToken; exporting = false; exportStatus.textContent = ''; syncExport(); }
+		activeDispose = function () { disposed = true; ++requests; ++exportToken; if ( resumeTimer !== null ) { window.clearTimeout( resumeTimer ); } if ( unsubscribe ) { unsubscribe(); } };
+		exportButton.addEventListener( 'click', function () {
+			if ( exportButton.disabled || ! eligible( loadedData ) || ! window.PcDataExport ) { return; }
+			var mine = ++exportToken, key = contextKey( loadedData ), dates = datesOf( loadedData );
+			var params = { format: 'csv', group: loadedData.group, from: dates.from, to: dates.to, compare_from: dates.compare_from, compare_to: dates.compare_to };
+			function current() { return attached() && mine === exportToken && ! rangeBusy && settled && eligible( loadedData ) && contextKey( loadedData ) === key; }
+			function failedExport() { if ( current() ) { exporting = false; exportStatus.textContent = T.exportError; syncExport(); } }
+			exporting = true; syncExport(); exportStatus.textContent = T.exportBusy;
+			try {
+				window.PcDataExport.prepare( PATH, params ).then( function ( file ) {
+					if ( ! current() ) { return; }
+					try { var started = window.PcDataExport.download( file, current ); if ( current() ) { exporting = false; exportStatus.textContent = started ? T.exportDone : T.exportError; syncExport(); } }
+					catch ( e ) { failedExport(); }
+				}, failedExport );
+			} catch ( e ) { failedExport(); }
+		} );
 		result.addEventListener( 'click', function ( event ) {
 			var button = event.target;
+			if ( button && button.getAttribute && button.getAttribute( 'data-conv-retry' ) && ! rangeBusy ) { load( true ); return; }
 			while ( button && button !== result && ( ! button.getAttribute || ! button.getAttribute( 'data-conv-toggle' ) ) ) { button = button.parentNode; }
 			if ( ! loadedData || ! button || button === result ) { return; }
 			var token = button.getAttribute( 'data-conv-toggle' );
@@ -268,40 +303,46 @@
 		} );
 
 		function failed() {
-			result.innerHTML = '<p class="pc-data-empty">' + esc( ctx.strings.loadError ) + '</p>';
+			loadedData = null; retainedData = null; settled = true; cancelExport();
+			result.innerHTML = '<p class="pc-data-empty">' + esc( ctx.strings.loadError ) + '</p><button type="button" class="button" data-conv-retry="1">' + esc( T.retry ) + '</button>';
 		}
 
-		function load() {
-			loadedData = null;
-			var mine = ++requests;
-			var params = rangeParams( range );
-			params.group = state.group;
-
+		function load( explicit ) {
+			if ( ! attached() || rangeBusy ) { return; }
+			loadedData = null; settled = false; cancelExport();
+			var mine = ++requests, wanted = state.group;
+			var params = explicit ? { from: acceptedRange.dates.from, to: acceptedRange.dates.to, compare_from: acceptedRange.dates.compare_from, compare_to: acceptedRange.dates.compare_to } : rangeParams( range );
+			params.group = wanted;
 			result.innerHTML = '<p class="pc-data-muted">' + esc( ctx.strings.loading ) + '</p>';
-			ctx.api( PATH, params ).then(
-				function ( data ) {
-					if ( mine !== requests ) {
-						return;
-					}
-					try {
-						result.innerHTML = view( data, ctx );
-						loadedData = data;
-					} catch ( e ) {
-						failed();
-					}
-				},
-				function () {
-					if ( mine !== requests ) {
-						return;
-					}
-					failed();
+			ctx.api( PATH, params ).then( function ( data ) {
+				if ( ! attached() || rangeBusy || mine !== requests || wanted !== state.group ) { return; }
+				try {
+					if ( ! data || ( data.group && data.group !== wanted ) ) { throw new Error( 'Invalid report grouping' ); }
+					result.innerHTML = view( data, ctx ); loadedData = data; retainedData = data; settled = true;
+					if ( datesOf( data ) ) { acceptedRange = data.range; }
+					syncExport();
+				} catch ( e ) { failed(); }
+			}, function () { if ( attached() && ! rangeBusy && mine === requests && wanted === state.group ) { failed(); } } );
+		}
+
+		if ( 'function' === typeof ctx.onRangeState ) {
+			var firstRangeNotice = true;
+			unsubscribe = ctx.onRangeState( function ( on ) {
+				if ( disposed ) { return; }
+				var wasBusy = rangeBusy; rangeBusy = on;
+				if ( on ) { ++requests; cancelExport(); if ( resumeTimer !== null ) { window.clearTimeout( resumeTimer ); resumeTimer = null; } }
+				if ( ! on && wasBusy && ! firstRangeNotice ) {
+					if ( settled && eligible( retainedData ) ) { loadedData = retainedData; }
+					else { resumeTimer = window.setTimeout( function () { resumeTimer = null; if ( attached() && ! rangeBusy ) { load( true ); } }, 0 ); }
 				}
-			);
+				firstRangeNotice = false; syncExport();
+			} );
 		}
 
 		select.addEventListener( 'change', function () {
 			var wanted = select.value;
 			state.group = GROUPS.indexOf( wanted ) !== -1 ? wanted : GROUPS[ 0 ];
+			retainedData = null; loadedData = null; cancelExport();
 			saveGroup( state.group );
 			load();
 		} );

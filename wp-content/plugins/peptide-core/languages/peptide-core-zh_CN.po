@@ -12046,3 +12046,11 @@ msgstr "百分点"
 #: includes/admin/class-data-pages.php
 msgid "Export every matching ranking row, across all result pages."
 msgstr "导出所有符合筛选条件的排行结果，涵盖全部结果页。"
+
+#: includes/data/class-report-exports.php
+msgid "Conversion export is unavailable. Refresh the report and try again."
+msgstr "转化率报表暂时无法导出，请刷新报表后重试。"
+
+#: includes/admin/class-data-pages.php
+msgid "Export all results in the selected grouping, eight visitor steps, both transition views, observed visits and payment channels. Group figures cover the current period only."
+msgstr "导出当前分组维度下的全部结果、八步访客数据、精简和完整两套步骤衔接、已观察访问及支付通道。分组数据仅包含本期。"
