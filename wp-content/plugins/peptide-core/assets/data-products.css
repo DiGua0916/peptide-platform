@@ -47,8 +47,33 @@
 .pc-prod-columns__item {
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	justify-content: space-between;
+	min-width: 0;
+	gap: 8px;
 }
+
+.pc-prod-columns__label {
+	display: flex;
+	align-items: flex-start;
+	gap: 6px;
+	min-width: 0;
+	flex: 1;
+}
+.pc-prod-columns__label span { overflow-wrap: anywhere; }
+.pc-prod-columns__label input { flex: 0 0 auto; }
+.pc-prod-columns__moves { display: flex; flex: 0 0 auto; gap: 4px; }
+.pc-prod-columns__move {
+	min-width: 28px;
+	min-height: 30px;
+	padding: 2px 6px;
+	border: 1px solid #d4d4d4;
+	border-radius: 4px;
+	background: #fff;
+	color: #171717;
+	cursor: pointer;
+}
+.pc-prod-columns__move:disabled { color: #999; cursor: default; }
+.pc-prod-columns__move:focus-visible { outline: 2px solid #171717; outline-offset: 2px; }
 
 /* 表格在窄屏上自己横向滚动，页面不出现横向滚动条。 */
 .pc-prod-wrap {

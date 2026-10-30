@@ -107,18 +107,23 @@
 		}
 	}
 
-	// 当前显示的列：用户的选择（没选过就是接口的默认列），去掉未知的，始终按 data.metrics 的顺序。
+	// Validate keys against the response, deduplicate without changing wanted order.
+	function normalizeColumns( wanted, metrics ) {
+		var columns = [];
+		( wanted || [] ).forEach( function ( key ) {
+			if ( 'string' === typeof key && metrics.indexOf( key ) !== -1 && columns.indexOf( key ) === -1 ) { columns.push( key ); }
+		} );
+		return columns;
+	}
+
+	// A stored [] is deliberate; a nonempty entirely obsolete choice uses defaults.
 	function visibleColumns( data ) {
 		var metrics = data.metrics || [];
-		var wanted = state.columns || data.defaults || [];
-		var cols = metrics.filter( function ( k ) {
-			return wanted.indexOf( k ) !== -1;
-		} );
+		var wanted = null === state.columns ? data.defaults || [] : state.columns;
+		var cols = normalizeColumns( wanted, metrics );
 		// 存的列全部过期（指标改名了）时回到默认列；用户主动一列都不选（存的是空数组）则保持为空。
 		if ( ! cols.length && wanted.length ) {
-			cols = metrics.filter( function ( k ) {
-				return ( data.defaults || [] ).indexOf( k ) !== -1;
-			} );
+			cols = normalizeColumns( data.defaults || [], metrics );
 		}
 		return cols;
 	}
@@ -250,16 +255,38 @@
 		view.search.value = state.q;
 
 		function failed() {
+			invalidate();
 			view.wrap.innerHTML = '<p class="pc-data-empty">' + esc( ctx.strings.loadError ) + '</p>';
 			view.pager.innerHTML = '';
 		}
 
+		function invalidate() {
+			view.data = null;
+			view.button.disabled = true;
+			view.button.setAttribute( 'aria-expanded', 'false' );
+			view.panel.setAttribute( 'hidden', '' );
+			view.panel.innerHTML = '';
+		}
+
+		function focusColumn( key ) {
+			each( view.panel.querySelectorAll( 'input[data-key]' ), function ( box ) {
+				if ( box.getAttribute( 'data-key' ) === key ) { box.focus(); }
+			} );
+		}
+
 		function drawPanel() {
 			var data = view.data;
+			if ( ! data ) { return; }
 			var shown = visibleColumns( data );
-			view.panel.innerHTML = ( data.metrics || [] ).map( function ( k ) {
-				return '<label class="pc-prod-columns__item"><input type="checkbox" data-key="' + esc( k ) + '"' +
-					( shown.indexOf( k ) !== -1 ? ' checked' : '' ) + '> ' + esc( T[ k ] || k ) + '</label>';
+			var unselected = normalizeColumns( data.metrics || [], data.metrics || [] ).filter( function ( key ) { return shown.indexOf( key ) === -1; } );
+			view.panel.innerHTML = shown.concat( unselected ).map( function ( k ) {
+				var index = shown.indexOf( k );
+				var label = T[ k ] || k;
+				var controls = index < 0 ? '' : '<span class="pc-prod-columns__moves">' +
+					'<button type="button" class="pc-prod-columns__move" data-move-key="' + esc( k ) + '" data-move-dir="-1" aria-label="' + esc( fill( T.moveUp, { '%s': label } ) ) + '"' + ( index === 0 ? ' disabled' : '' ) + '>↑</button>' +
+					'<button type="button" class="pc-prod-columns__move" data-move-key="' + esc( k ) + '" data-move-dir="1" aria-label="' + esc( fill( T.moveDown, { '%s': label } ) ) + '"' + ( index === shown.length - 1 ? ' disabled' : '' ) + '>↓</button></span>';
+				return '<div class="pc-prod-columns__item"><label class="pc-prod-columns__label"><input type="checkbox" data-key="' + esc( k ) + '"' +
+					( index !== -1 ? ' checked' : '' ) + '><span>' + esc( label ) + '</span></label>' + controls + '</div>';
 			} ).join( '' );
 		}
 
@@ -302,10 +329,12 @@
 			drawPanel();
 			drawTable();
 			drawPager();
+			view.button.disabled = false;
 		}
 
 		function load() {
 			var mine = ++requests;
+			invalidate();
 			var params = rangeParams( range );
 			params.sort = state.sort;
 			params.order = state.order;
@@ -370,6 +399,7 @@
 
 		// 编辑表头：面板开关；勾选改变后立刻重画表格并记住。
 		view.button.addEventListener( 'click', function () {
+			if ( ! view.data ) { return; }
 			var opening = view.panel.hasAttribute( 'hidden' );
 			if ( opening ) {
 				view.panel.removeAttribute( 'hidden' );
@@ -378,16 +408,37 @@
 			}
 			view.button.setAttribute( 'aria-expanded', opening ? 'true' : 'false' );
 		} );
-		view.panel.addEventListener( 'change', function () {
-			var cols = [];
-			each( view.panel.querySelectorAll( 'input[data-key]' ), function ( box ) {
-				if ( box.checked ) {
-					cols.push( box.getAttribute( 'data-key' ) );
-				}
-			} );
+		view.panel.addEventListener( 'change', function ( event ) {
+			if ( ! view.data ) { return; }
+			var box = findAttr( event.target, 'data-key', view.panel );
+			var key = box ? box.getAttribute( 'data-key' ) : null;
+			if ( ! box || ( view.data.metrics || [] ).indexOf( key ) === -1 ) { return; }
+			var cols = visibleColumns( view.data );
+			if ( box.checked && cols.indexOf( key ) === -1 ) { cols.push( key ); }
+			if ( ! box.checked ) { cols = cols.filter( function ( k ) { return k !== key; } ); }
 			state.columns = cols;
 			saveColumns( cols );
+			drawPanel();
 			drawTable();
+			focusColumn( key );
+		} );
+		view.panel.addEventListener( 'click', function ( event ) {
+			if ( ! view.data ) { return; }
+			var button = findAttr( event.target, 'data-move-key', view.panel );
+			if ( ! button || button.disabled ) { return; }
+			var key = button.getAttribute( 'data-move-key' );
+			var direction = Number( button.getAttribute( 'data-move-dir' ) );
+			if ( direction !== -1 && direction !== 1 ) { return; }
+			var cols = visibleColumns( view.data );
+			var index = cols.indexOf( key );
+			var next = index + direction;
+			if ( index < 0 || next < 0 || next >= cols.length ) { return; }
+			cols[ index ] = cols[ next ]; cols[ next ] = key;
+			state.columns = cols;
+			saveColumns( cols );
+			drawPanel();
+			drawTable();
+			focusColumn( key );
 		} );
 
 		// 表头排序、款式展开 / 收起。

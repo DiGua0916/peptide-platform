@@ -337,7 +337,7 @@ final class Data_Pages {
 					'title'       => self::titles()[ $key ],
 					'range'       => Range::from_params( array() ), // 今天，由服务器按店铺时区算好。
 					'showRange'   => 'realtime' !== $key,           // 实时数据页没有时间段工具栏。
-					'showCompare' => 'landing' !== $key,           // 落地页转化页只有本期。
+					'showCompare' => ! in_array( $key, array( 'landing', 'pages' ), true ), // 这两页只统计本期。
 					'timezone'    => wp_timezone_string() . ' (UTC' . wp_date( 'P' ) . ')',
 					'currency'    => array(
 						'code'   => get_woocommerce_currency(),
@@ -651,6 +651,10 @@ final class Data_Pages {
 			'net_sales'   => __( 'Net sales', 'peptide-core' ),
 			'search'      => __( 'Search products', 'peptide-core' ),
 			'columns'     => __( 'Edit columns', 'peptide-core' ),
+			/* translators: %s: metric name */
+			'moveUp'      => __( 'Move %s up', 'peptide-core' ),
+			/* translators: %s: metric name */
+			'moveDown'    => __( 'Move %s down', 'peptide-core' ),
 			'variations'  => __( 'Variation details', 'peptide-core' ),
 			'noData'      => __( 'No product data in this period.', 'peptide-core' ),
 			/* translators: 1: current page number, 2: total number of pages */

@@ -11924,3 +11924,13 @@ msgstr ""
 #: includes/admin/class-data-pages.php
 msgid "Detailed visitor steps are unavailable in this response. The legacy five-step report is shown; its paid count may use orders."
 msgstr ""
+
+#. translators: %s: metric name
+#: includes/admin/class-data-pages.php
+msgid "Move %s up"
+msgstr ""
+
+#. translators: %s: metric name
+#: includes/admin/class-data-pages.php
+msgid "Move %s down"
+msgstr ""

@@ -11976,3 +11976,13 @@ msgstr "每一步按所选访问范围内的独立访客去重，完成支付须
 #: includes/admin/class-data-pages.php
 msgid "Detailed visitor steps are unavailable in this response. The legacy five-step report is shown; its paid count may use orders."
 msgstr "本次响应没有详细访客步骤，现显示原有五步统计，其中付款数可能按订单计数。"
+
+#. translators: %s: metric name
+#: includes/admin/class-data-pages.php
+msgid "Move %s up"
+msgstr "上移%s"
+
+#. translators: %s: metric name
+#: includes/admin/class-data-pages.php
+msgid "Move %s down"
+msgstr "下移%s"
