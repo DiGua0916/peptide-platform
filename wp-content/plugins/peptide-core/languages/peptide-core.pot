@@ -11958,3 +11958,39 @@ msgstr ""
 #: includes/admin/class-data-pages.php
 msgid "Export all matching page paths, across every result page."
 msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Showing %1$d of %2$d"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Open full results"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Open full results: %s"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Close full results"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Search ranking names or keys"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "%d matching rows"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Retry"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Percentage points"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Export every matching ranking row, across all result pages."
+msgstr ""

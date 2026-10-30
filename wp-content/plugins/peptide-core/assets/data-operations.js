@@ -50,6 +50,7 @@
 
 	// 请求计数：切换时间段后，旧请求晚到的结果不再画。
 	var requests = 0;
+	var disposePreviousRankings = null;
 
 	// 把文字里的占位符换成值（用 split / join，不用 replace：值里的 $ 不会被当成特殊符号）。
 	function fill( text, map ) {
@@ -427,7 +428,10 @@
 				'</tr></thead>' +
 				'<tbody>' + body + '</tbody>' +
 			'</table></div>' +
-			more +
+			'<div class="pc-ops-rank__actions">' + more +
+				'<span class="pc-ops-rank__count" data-rank-visible="' + esc( rows.length ) + '" data-rank-total="' + esc( table ? table.total_rows : 0 ) + '">' + esc( fill( T.rankShowing, { '%1$d': Math.min( RANK_SHOW, rows.length ), '%2$d': table ? table.total_rows : 0 } ) ) + '</span>' +
+				'<button type="button" class="button pc-ops-rank__open" data-rank-open="' + esc( name ) + '" aria-expanded="false" aria-label="' + esc( fill( T.rankOpenLabel, { '%s': title } ) ) + '">' + esc( T.rankOpen ) + '</button>' +
+			'</div>' +
 		'</div>';
 	}
 
@@ -436,19 +440,21 @@
 		return '<h2 class="pc-ops-rankings__title">' + ctx.esc( T.rankings ) + '</h2>' +
 			RANK_TABLES.map( function ( name ) {
 				return rankCard( name, tables[ name ], ctx );
-			} ).join( '' );
+			} ).join( '' ) + '<div class="pc-ranks-panel" hidden></div>';
 	}
 
 	// “查看更多” / “收起”：只切换卡片的 is-expanded 类、按钮的 aria-expanded 和文字，不重画卡片。
 	function toggleRank( box, e ) {
 		var btn = findAttr( e.target, 'data-rank-toggle', box );
-		var card = btn ? btn.parentNode : null;
+		var card = btn ? findAttr( btn, 'data-rank', box ) : null;
 		if ( ! card ) {
 			return;
 		}
 		var opening = 'true' !== btn.getAttribute( 'aria-expanded' );
 		btn.setAttribute( 'aria-expanded', opening ? 'true' : 'false' );
 		btn.textContent = opening ? T.rankLess : T.rankMore;
+		var count = card.querySelector( '[data-rank-total]' );
+		if ( count ) { count.textContent = fill( T.rankShowing, { '%1$d': opening ? Number( count.getAttribute( 'data-rank-visible' ) ) : Math.min( RANK_SHOW, Number( count.getAttribute( 'data-rank-visible' ) ) ), '%2$d': Number( count.getAttribute( 'data-rank-total' ) ) } ); }
 		if ( opening ) {
 			card.classList.add( 'is-expanded' );
 		} else {
@@ -478,11 +484,16 @@
 
 	function render( bodyEl, range, ctx ) {
 		var mine = ++requests;
+		if ( disposePreviousRankings ) { disposePreviousRankings(); }
+		var rankPanel = null, rangeBusy = false, unsubscribeRange = null;
+		disposePreviousRankings = function () { if ( rankPanel ) { rankPanel.dispose(); rankPanel = null; } if ( unsubscribeRange ) { unsubscribeRange(); unsubscribeRange = null; } };
+		if ( typeof ctx.onRangeState === 'function' ) { unsubscribeRange = ctx.onRangeState( function ( on ) { rangeBusy = on; if ( rankPanel ) { rankPanel.setRangeBusy( on ); } } ); }
 		var d = range.dates || {};
 		var params = range.preset ?
 			{ range: range.preset } :
 			{ from: d.from, to: d.to, compare_from: d.compare_from, compare_to: d.compare_to };
 		var failed = function () {
+			if ( rankPanel ) { rankPanel.dispose(); rankPanel = null; }
 			bodyEl.innerHTML = '<p class="pc-data-empty">' + ctx.esc( ctx.strings.loadError ) + '</p>';
 		};
 		// 三个请求的结果各自留着：运营数据画好页面（opsData），趋势数据到了（trends：{ data } 或 { error }），排行数据到了（rankings，同样）。
@@ -501,12 +512,14 @@
 			if ( ! box ) {
 				return;
 			}
+			if ( rankPanel ) { rankPanel.dispose(); rankPanel = null; }
 			if ( rankings.error ) {
 				rankingsFailed( box );
 				return;
 			}
 			try {
 				box.innerHTML = rankingsView( rankings.data, ctx );
+				if ( window.PcDataRankings ) { rankPanel = window.PcDataRankings.mount( box, rankings.data, ctx, { strings: T, rangeBusy: rangeBusy, rankLabel: rankLabel, rankValue: rankValue } ); }
 				box.addEventListener( 'click', function ( e ) {
 					toggleRank( box, e );
 				} );

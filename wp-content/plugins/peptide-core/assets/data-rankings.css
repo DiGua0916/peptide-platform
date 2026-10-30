@@ -1,0 +1,20 @@
+/* Full ranking results stay inside the existing neutral Operations workspace. */
+.pc-ops-rank__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 8px; min-width: 0; }
+.pc-ops-rank__actions .button { max-width: 100%; height: auto; white-space: normal; }
+.pc-ops-rank__count { color: #646970; overflow-wrap: anywhere; }
+.pc-ranks-panel { grid-column: 1 / -1; min-width: 0; max-width: 100%; box-sizing: border-box; padding: 16px; border: 1px solid #e6e6e6; background: #fff; color: #171717; }
+.pc-ranks-panel[hidden] { display: none; }
+.pc-ranks-head, .pc-ranks-toolbar, .pc-ranks-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; margin-bottom: 12px; }
+.pc-ranks-head { justify-content: space-between; }
+.pc-ranks-title { margin: 0; font-size: 15px; min-width: 0; overflow-wrap: anywhere; }
+.pc-ranks-search { width: 260px; max-width: 100%; min-width: 0; box-sizing: border-box; }
+.pc-ranks-per { display: inline-flex; align-items: center; gap: 6px; }
+.pc-ranks-panel .button { max-width: 100%; height: auto; white-space: normal; }
+.pc-ranks-status { min-width: 0; overflow-wrap: anywhere; }
+.pc-ranks-result, .pc-ranks-scroll { min-width: 0; max-width: 100%; }
+.pc-ranks-scroll { overflow-x: auto; }
+.pc-ranks-table { min-width: 560px; }
+.pc-ranks-table th:first-child { min-width: 160px; max-width: 340px; overflow-wrap: anywhere; white-space: normal; }
+.pc-ranks-table td { white-space: nowrap; }
+.pc-ranks-title:focus { outline: 2px solid #171717; outline-offset: 3px; }
+.pc-ranks-panel .pc-ranks-retry[hidden] { display: none !important; }

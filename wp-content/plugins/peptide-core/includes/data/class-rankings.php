@@ -38,6 +38,7 @@
 namespace PeptideCore\Data;
 
 use PeptideCore\Overview;
+use PeptideCore\Api\Errors;
 use PeptideCore\Tracking\Schema;
 use PeptideCore\Tracking\Server_Events;
 
@@ -85,6 +86,81 @@ final class Rankings {
 			'tracking' => Schema::installed(),
 			'tables'   => $tables,
 		);
+	}
+
+
+	/** Strict additive full-table query contract; old summary parameters are untouched. */
+	public static function query_params( array $params ) {
+		$errors = array();
+		$table = $params['table'] ?? null;
+		if ( ! is_string( $table ) || ! in_array( $table, self::TABLES, true ) ) { $errors['table'] = 'invalid_format'; }
+		$q = $params['q'] ?? '';
+		if ( ( array_key_exists( 'q', $params ) && ! is_string( $params['q'] ) ) || mb_strlen( trim( is_string( $q ) ? $q : '' ) ) > 100 ) { $errors['q'] = 'invalid_format'; }
+		$page = Params::whole( $params, 'page', 1, 1, 999999999 );
+		$per_page = Params::whole( $params, 'per_page', 20, 1, 100 );
+		foreach ( array( 'page' => $page, 'per_page' => $per_page ) as $key => $value ) { if ( null === $value || ( array_key_exists( $key, $params ) && null === $params[$key] ) ) { $errors[$key] = 'invalid_format'; } }
+		$format = $params['format'] ?? 'json';
+		if ( array_key_exists( 'format', $params ) && ( ! is_string( $params['format'] ) || ! in_array( $format, array( 'json', 'csv' ), true ) ) ) { $errors['format'] = 'invalid_format'; }
+		if ( $errors ) { return Errors::invalid( $errors ); }
+		return array( 'table' => $table, 'q' => trim( $q ), 'page' => $page, 'per_page' => $per_page, 'format' => $format );
+	}
+
+	public static function units( string $table ): array {
+		$money = in_array( $table, array( 'products_sales', 'categories_sales' ), true );
+		return array( 'value_unit' => $money ? 'currency' : ( 'payment_success' === $table ? 'percent' : 'count' ), 'change_unit' => 'payment_success' === $table ? 'percentage_points' : 'percent', 'currency' => $money ? get_woocommerce_currency() : '' );
+	}
+
+	public static function listing( array $range, array $args ): array {
+		$selected = self::selection( $range, $args );
+		$total = count( $selected['rows'] ); $page = $args['page']; $per_page = $args['per_page'];
+		$slice = $page > (int) ceil( $total / $per_page ) ? array() : array_slice( $selected['rows'], ( $page - 1 ) * $per_page, $per_page );
+		if ( '' === $args['q'] ) { self::prime_products( $args['table'], $slice, $selected['cache'] ); }
+		$units = self::units( $args['table'] );
+		return array( 'range' => $range, 'tracking' => Schema::installed(), 'table' => $args['table'], 'q' => $args['q'], 'page' => $page, 'per_page' => $per_page, 'total' => $total, 'value_unit' => $units['value_unit'], 'change_unit' => $units['change_unit'], 'currency' => $units['currency'], 'rows' => self::name_rows( $args['table'], $slice, $selected['cache'] ) );
+	}
+
+	/** A single complete selection, never repeated paginated summary calls. */
+	public static function all_rows( array $range, array $args ): iterable {
+		$selected = self::selection( $range, $args, true );
+		foreach ( $selected['rows'] as $row ) { yield self::name_rows( $args['table'], array( $row ), $selected['cache'] )[0]; }
+	}
+
+	private static function selection( array $range, array $args, bool $complete = false ): array {
+		$cache = array( 'product_terms' => array(), 'term_names' => array(), 'methods' => array(), 'products' => array() );
+		$current = self::period( (int) $range['from'], (int) $range['to'], $cache );
+		$previous = self::period( (int) $range['compare_from'], (int) $range['compare_to'], $cache );
+		$table = $args['table'];
+		$rows = self::candidates( $table, $current[$table], $previous[$table] );
+		if ( $complete || '' !== $args['q'] ) { self::prime_products( $table, $rows, $cache ); }
+		if ( '' !== $args['q'] ) {
+			$rows = array_values( array_filter( $rows, static function ( array $row ) use ( $table, $args, &$cache ): bool {
+				$label = self::named( $table, $row['key'], $cache )['label'];
+				foreach ( array( $row['key'], $label, self::display_alias( $table, $label ) ) as $text ) { if ( false !== mb_stripos( $text, $args['q'] ) ) { return true; } }
+				return false;
+			} ) );
+		}
+		return array( 'rows' => $rows, 'cache' => $cache );
+	}
+
+	/** New full-table paths batch native post/term/meta caches before resolving many product labels. */
+	private static function prime_products( string $table, array $rows, array &$cache ): void {
+		if ( ! $rows || ! in_array( $table, self::PRODUCT_TABLES, true ) ) { return; }
+		$ids = array_map( static fn( array $row ): int => (int) $row['key'], $rows );
+		_prime_post_caches( $ids, true, true );
+		// Native caches do not cache misses. One ID-only query proves absence without one miss per deleted row.
+		global $wpdb;
+		$present = array_fill_keys( array_map( 'intval', $wpdb->get_col( "SELECT ID FROM {$wpdb->posts} WHERE ID IN (" . implode( ',', $ids ) . ')' ) ), true ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		foreach ( $ids as $id ) { if ( ! isset( $present[$id] ) ) { $cache['products'][$id] = false; } }
+	}
+
+	/** Only aliases already displayed by Operations; literal product/category/coupon labels are unchanged. */
+	private static function display_alias( string $table, string $label ): string {
+		if ( 'unknown' === $label && in_array( $table, array( 'order_countries', 'customer_countries', 'visitor_browsers', 'order_browsers', 'payment_methods', 'payment_success', 'devices' ), true ) ) { return __( 'Unknown', 'peptide-core' ); }
+		if ( 'devices' === $table ) {
+			$names = array( 'desktop' => __( 'Desktop', 'peptide-core' ), 'mobile' => __( 'Mobile', 'peptide-core' ), 'tablet' => __( 'Tablet', 'peptide-core' ) );
+			return $names[$label] ?? '';
+		}
+		return 'Other' === $label && in_array( $table, array( 'visitor_browsers', 'order_browsers' ), true ) ? __( 'Other', 'peptide-core' ) : '';
 	}
 
 	/**
@@ -307,6 +383,12 @@ final class Rankings {
 	 * @return array{rows:array,total_rows:int}
 	 */
 	private static function table( string $name, array $current, array $previous, array &$cache ): array {
+		$rows = self::candidates( $name, $current, $previous );
+		return array( 'rows' => self::name_rows( $name, array_slice( $rows, 0, self::MAX_ROWS ), $cache ), 'total_rows' => count( $rows ) );
+	}
+
+	/** Eligibility, values and comparator are shared; the legacy caller still names only its first 50. */
+	private static function candidates( string $name, array $current, array $previous ): array {
 		$rate = 'payment_success' === $name;
 		$rows = array();
 		foreach ( array_keys( $current + $previous ) as $key ) {
@@ -346,8 +428,10 @@ final class Rankings {
 			}
 		);
 
-		$total = count( $rows );
-		$rows  = array_slice( $rows, 0, self::MAX_ROWS );
+		return $rows;
+	}
+
+	private static function name_rows( string $name, array $rows, array &$cache ): array {
 		foreach ( $rows as $i => $row ) {
 			$named      = self::named( $name, $row['key'], $cache );
 			$rows[ $i ] = array(
@@ -359,11 +443,7 @@ final class Rankings {
 				'change'   => $row['change'],
 			);
 		}
-
-		return array(
-			'rows'       => array_values( $rows ),
-			'total_rows' => $total,
-		);
+		return array_values( $rows );
 	}
 
 	/**

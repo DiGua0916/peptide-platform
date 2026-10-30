@@ -8,6 +8,28 @@ defined( 'ABSPATH' ) || exit;
 
 final class Report_Exports {
 
+	/** Complete ranking rows share the same narrow transport and typed cells as the two existing exports. */
+	public static function ranking_response( \WP_REST_Request $request, array $range, array $args ) {
+		if ( 'json' === $args['format'] ) {
+			$response = new \WP_REST_Response( Rankings::listing( $range, $args ) );
+			$response->header( 'Cache-Control', 'no-store' );
+			return $response;
+		}
+		$errors = array();
+		foreach ( array( '_envelope', '_jsonp', '_fields' ) as $key ) { if ( array_key_exists( $key, $request->get_params() ) ) { $errors[$key] = 'invalid_format'; } }
+		if ( $errors ) { return Errors::invalid( $errors ); }
+		return new Csv_Response( self::rankings( $range, $args ), 'data-rankings-' . $args['table'] . '-' . $range['dates']['from'] . '-' . $range['dates']['to'] . '.csv' );
+	}
+
+	private static function rankings( array $range, array $args ): iterable {
+		yield array( 'table', 'key', 'label', 'current', 'previous', 'change', 'value_unit', 'change_unit', 'currency', 'current_from_epoch_s', 'current_to_epoch_s', 'previous_from_epoch_s', 'previous_to_epoch_s' );
+		$units = Rankings::units( $args['table'] );
+		$metadata = array( Csv_Response::text( $units['value_unit'] ), Csv_Response::text( $units['change_unit'] ), Csv_Response::text( $units['currency'] ), (string) $range['from'], (string) $range['to'], (string) $range['compare_from'], (string) $range['compare_to'] );
+		foreach ( Rankings::all_rows( $range, $args ) as $row ) {
+			yield array_merge( array( Csv_Response::text( $args['table'] ), Csv_Response::text( $row['key'] ), Csv_Response::text( $row['label'] ), self::number( $row['current'], 'count' !== $units['value_unit'] ), self::number( $row['previous'], 'count' !== $units['value_unit'] ), self::number( $row['change'], true ) ), $metadata );
+		}
+	}
+
 	public static function response( \WP_REST_Request $request, string $report, array $range, array $args ) {
 		$params = $request->get_params();
 		$format = $params['format'] ?? 'json';

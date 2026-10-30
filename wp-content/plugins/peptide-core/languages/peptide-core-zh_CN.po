@@ -12010,3 +12010,39 @@ msgstr "导出所有符合筛选条件的商品及有数据的款式，包含已
 #: includes/admin/class-data-pages.php
 msgid "Export all matching page paths, across every result page."
 msgstr "导出所有符合筛选条件的页面路径，涵盖全部结果页。"
+
+#: includes/admin/class-data-pages.php
+msgid "Showing %1$d of %2$d"
+msgstr "显示%1$d／%2$d条"
+
+#: includes/admin/class-data-pages.php
+msgid "Open full results"
+msgstr "打开完整结果"
+
+#: includes/admin/class-data-pages.php
+msgid "Open full results: %s"
+msgstr "打开完整结果：%s"
+
+#: includes/admin/class-data-pages.php
+msgid "Close full results"
+msgstr "关闭完整结果"
+
+#: includes/admin/class-data-pages.php
+msgid "Search ranking names or keys"
+msgstr "搜索排行名称或标识"
+
+#: includes/admin/class-data-pages.php
+msgid "%d matching rows"
+msgstr "共%d条匹配结果"
+
+#: includes/admin/class-data-pages.php
+msgid "Retry"
+msgstr "重试"
+
+#: includes/admin/class-data-pages.php
+msgid "Percentage points"
+msgstr "百分点"
+
+#: includes/admin/class-data-pages.php
+msgid "Export every matching ranking row, across all result pages."
+msgstr "导出所有符合筛选条件的排行结果，涵盖全部结果页。"

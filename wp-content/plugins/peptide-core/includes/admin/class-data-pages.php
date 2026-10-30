@@ -171,6 +171,20 @@ final class Data_Pages {
 						'permission_callback' => $permission,
 					)
 				);
+				register_rest_route(
+					Rest_Controller::ROUTE_NAMESPACE,
+					'/data/rankings/table',
+					array(
+						'methods' => \WP_REST_Server::READABLE,
+						'callback' => static function ( \WP_REST_Request $request ) {
+							$r = Range::from_params( $request->get_params() );
+							if ( is_wp_error( $r ) ) { return $r; }
+							$a = Rankings::query_params( $request->get_params() );
+							return is_wp_error( $a ) ? $a : Report_Exports::ranking_response( $request, $r, $a );
+						},
+						'permission_callback' => $permission,
+					)
+				);
 				// 商品详情数据页（DATA-01 第 3 步）：每个商品（和它的款式）的查看、加购、付款数字，本期和对比期；可排序、搜索、分页。
 				register_rest_route(
 					Rest_Controller::ROUTE_NAMESPACE,
@@ -362,7 +376,10 @@ final class Data_Pages {
 		// 运营数据页的报表（指标卡片和转化漏斗），在 data.js 之后加载，用 PcData.register( 'operations', … ) 画进页面。
 		if ( 'operations' === $key ) {
 			wp_enqueue_style( 'peptide-core-data-operations', $url . 'data-operations.css', array( 'peptide-core-data' ), $ver( 'data-operations.css' ) );
-			wp_enqueue_script( 'peptide-core-data-operations', $url . 'data-operations.js', array( self::SCRIPT ), $ver( 'data-operations.js' ), array( 'in_footer' => true ) );
+			wp_register_script( 'peptide-core-data-export', $url . 'data-export.js', array( self::SCRIPT, 'wp-api-fetch', 'wp-url' ), $ver( 'data-export.js' ), array( 'in_footer' => true ) );
+			wp_enqueue_style( 'peptide-core-data-rankings', $url . 'data-rankings.css', array( 'peptide-core-data-operations' ), $ver( 'data-rankings.css' ) );
+			wp_register_script( 'peptide-core-data-rankings', $url . 'data-rankings.js', array( self::SCRIPT, 'peptide-core-data-export' ), $ver( 'data-rankings.js' ), array( 'in_footer' => true ) );
+			wp_enqueue_script( 'peptide-core-data-operations', $url . 'data-operations.js', array( self::SCRIPT, 'peptide-core-data-rankings' ), $ver( 'data-operations.js' ), array( 'in_footer' => true ) );
 			wp_add_inline_script(
 				'peptide-core-data-operations',
 				'window.pcDataOperations = ' . wp_json_encode( array( 'strings' => self::operations_strings() ) ) . ';',
@@ -558,7 +575,7 @@ final class Data_Pages {
 
 	/** 运营数据页脚本里的文字：12 个指标、漏斗的五层、表头和说明，以及九张趋势图的标题、说明和提示。 */
 	private static function operations_strings(): array {
-		return self::visitor_funnel_strings() + array(
+		return self::visitor_funnel_strings() + self::export_strings() + array(
 			'sales'           => __( 'Sales', 'peptide-core' ),
 			'visitors'        => __( 'Visited users', 'peptide-core' ),
 			'registered'      => __( 'New sign-ups', 'peptide-core' ),
@@ -608,6 +625,22 @@ final class Data_Pages {
 
 			// 排行表（第 7b 步）：标题、表头、查看更多 / 收起、空表和出错的文字，设备和浏览器的名称，十四张表的标题（t_ + 表的 key）。
 			'rankings'      => __( 'Rankings', 'peptide-core' ),
+			/* translators: 1: visible rows, 2: matching rows */
+			'rankShowing'   => __( 'Showing %1$d of %2$d', 'peptide-core' ),
+			'rankOpen'      => __( 'Open full results', 'peptide-core' ),
+			/* translators: %s: ranking table name */
+			'rankOpenLabel' => __( 'Open full results: %s', 'peptide-core' ),
+			'rankClose'     => __( 'Close full results', 'peptide-core' ),
+			'rankSearch'    => __( 'Search ranking names or keys', 'peptide-core' ),
+			'rankPerPage'   => __( 'Per page', 'peptide-core' ),
+			'rankPage'      => __( 'Page %1$d of %2$d', 'peptide-core' ),
+			'rankTotal'     => __( '%d matching rows', 'peptide-core' ),
+			'rankPrev'      => __( 'Previous', 'peptide-core' ),
+			'rankNext'      => __( 'Next', 'peptide-core' ),
+			'rankRetry'     => __( 'Retry', 'peptide-core' ),
+			'rankPoints'    => __( 'Percentage points', 'peptide-core' ),
+			'rankExportHelp' => __( 'Export every matching ranking row, across all result pages.', 'peptide-core' ),
+
 			'rankName'      => __( 'Name', 'peptide-core' ),
 			'rankMore'      => __( 'View more', 'peptide-core' ),
 			'rankLess'      => __( 'Show less', 'peptide-core' ),
