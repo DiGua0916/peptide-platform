@@ -179,6 +179,11 @@
 	}
 }
 /* Checkout observations stay separate from the existing funnel. */
+.pc-conv-detail-toggle { margin-bottom: 12px !important; }
+.pc-conv-detail-toggle:focus-visible { outline: 2px solid #171717; outline-offset: 2px; }
+.pc-conv-cards > [data-conv-slot] { min-width: 0; }
+.pc-conv .pc-conv-bar__fill { background: #171717; }
+
 .pc-conv-checkout { margin: 28px 0; min-width: 0; }
 .pc-conv-table-wrap { max-width: 100%; overflow-x: auto; margin: 12px 0 22px; }
 .pc-conv-checkout table { width: 100%; border-collapse: collapse; background: #fff; }

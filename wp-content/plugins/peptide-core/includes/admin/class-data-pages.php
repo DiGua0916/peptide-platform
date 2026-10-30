@@ -475,8 +475,23 @@ final class Data_Pages {
 	}
 
 	/** 实时数据页脚本里的文字：更新时间、三张卡片和六个指标、“今日”、访客行为漏斗、每分钟图、四个今日列表、说明。 */
-	private static function realtime_strings(): array {
+	private static function visitor_funnel_strings(): array {
 		return array(
+			'address' => __( 'Address completed', 'peptide-core' ),
+			'shipping' => __( 'Shipping selected', 'peptide-core' ),
+			'payment' => __( 'Payment selected', 'peptide-core' ),
+			'paidVisitors' => __( 'Paying visitors', 'peptide-core' ),
+			'visitorConversion' => __( 'Paying visitor conversion rate', 'peptide-core' ),
+			'viewDetails' => __( 'View details', 'peptide-core' ),
+			'hideDetails' => __( 'Hide details', 'peptide-core' ),
+			'orderVsVisitor' => __( 'The KPI conversion rate counts paid orders per visitor. These funnels count paying visitors per visitor; one customer can place several orders.', 'peptide-core' ),
+			'detailHelp' => __( 'Each step counts distinct visitors in the selected visit cohort. Payment requires a recorded server confirmation. Optional steps, default selections and missing historical observations can make steps noncumulative. Missing observations are not backfilled. Sales and order cards count orders separately.', 'peptide-core' ),
+			'detailUnavailable' => __( 'Detailed visitor steps are unavailable in this response. The legacy five-step report is shown; its paid count may use orders.', 'peptide-core' ),
+		);
+	}
+
+	private static function realtime_strings(): array {
+		return self::visitor_funnel_strings() + array(
 			/* translators: %s: date and time */
 			'updated'        => __( 'Last updated: %s', 'peptide-core' ),
 			'refresh'        => __( 'Refresh', 'peptide-core' ),
@@ -540,7 +555,7 @@ final class Data_Pages {
 
 	/** 运营数据页脚本里的文字：12 个指标、漏斗的五层、表头和说明，以及九张趋势图的标题、说明和提示。 */
 	private static function operations_strings(): array {
-		return array(
+		return self::visitor_funnel_strings() + array(
 			'sales'           => __( 'Sales', 'peptide-core' ),
 			'visitors'        => __( 'Visited users', 'peptide-core' ),
 			'registered'      => __( 'New sign-ups', 'peptide-core' ),
@@ -671,7 +686,7 @@ final class Data_Pages {
 
 	/** 转化率详情页脚本里的文字：整体步骤、分组选择、设备和浏览器名、卡片文字和说明。 */
 	private static function conversion_strings(): array {
-		return array(
+		return self::visitor_funnel_strings() + array(
 			'conversion'     => __( 'Conversion rate', 'peptide-core' ),
 			'conversionHelp' => __( 'Paid successfully / visited users × 100%', 'peptide-core' ),
 			'paid'           => __( 'Paid successfully', 'peptide-core' ),

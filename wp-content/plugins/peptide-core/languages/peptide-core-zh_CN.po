@@ -11944,3 +11944,35 @@ msgstr "请按先后顺序填写有效的开始和结束日期，最多选择366
 #: includes/admin/class-data-pages.php
 msgid "Visitors, funnel and chart use visits that started in this period. A visitor counts once in the period and once in each chart bucket they visited. Page views use event time. Paid orders use creation time, exclude test orders and subtract current refunds. Completed payment counts visitors in the funnel, and orders in the cards."
 msgstr "访客数、漏斗和图表按所选时段内开始的访问统计。每位访客在整个时段内只计一次，在各个有访问的图表时段内分别去重。浏览量按事件发生时间统计。已付款订单按创建时间统计，排除测试订单并扣除当前退款。完成支付在漏斗中按访客计数，在卡片中按订单计数。"
+
+#: includes/admin/class-data-pages.php
+msgid "Address completed"
+msgstr "填写地址"
+
+#: includes/admin/class-data-pages.php
+msgid "Payment selected"
+msgstr "选择支付"
+
+#: includes/admin/class-data-pages.php
+msgid "Paying visitors"
+msgstr "完成支付（访客）"
+
+#: includes/admin/class-data-pages.php
+msgid "Paying visitor conversion rate"
+msgstr "付款访客转化率"
+
+#: includes/admin/class-data-pages.php
+msgid "Hide details"
+msgstr "收起详情"
+
+#: includes/admin/class-data-pages.php
+msgid "The KPI conversion rate counts paid orders per visitor. These funnels count paying visitors per visitor; one customer can place several orders."
+msgstr "指标卡的转化率按付款订单数除以访客数计算；以下漏斗按付款访客数除以访客数计算。同一客户可以有多笔订单。"
+
+#: includes/admin/class-data-pages.php
+msgid "Each step counts distinct visitors in the selected visit cohort. Payment requires a recorded server confirmation. Optional steps, default selections and missing historical observations can make steps noncumulative. Missing observations are not backfilled. Sales and order cards count orders separately."
+msgstr "每一步按所选访问范围内的独立访客去重，完成支付须有服务端确认记录。可选步骤、默认选项和历史缺少观察记录，可能导致各步骤数量并非依次递减；缺少的记录不会回填。销售额和订单卡片另按订单统计。"
+
+#: includes/admin/class-data-pages.php
+msgid "Detailed visitor steps are unavailable in this response. The legacy five-step report is shown; its paid count may use orders."
+msgstr "本次响应没有详细访客步骤，现显示原有五步统计，其中付款数可能按订单计数。"

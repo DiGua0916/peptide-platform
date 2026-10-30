@@ -11892,3 +11892,35 @@ msgstr ""
 #: includes/admin/class-data-pages.php
 msgid "Visitors, funnel and chart use visits that started in this period. A visitor counts once in the period and once in each chart bucket they visited. Page views use event time. Paid orders use creation time, exclude test orders and subtract current refunds. Completed payment counts visitors in the funnel, and orders in the cards."
 msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Address completed"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Payment selected"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Paying visitors"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Paying visitor conversion rate"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Hide details"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "The KPI conversion rate counts paid orders per visitor. These funnels count paying visitors per visitor; one customer can place several orders."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Each step counts distinct visitors in the selected visit cohort. Payment requires a recorded server confirmation. Optional steps, default selections and missing historical observations can make steps noncumulative. Missing observations are not backfilled. Sales and order cards count orders separately."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Detailed visitor steps are unavailable in this response. The legacy five-step report is shown; its paid count may use orders."
+msgstr ""

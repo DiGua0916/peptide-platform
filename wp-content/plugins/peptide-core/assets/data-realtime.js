@@ -22,8 +22,8 @@
 	var KEY_MINUTES = 'pcDataRealtimeMinutes';
 	var REFRESH_MS = 60000;
 	// 和 Operations::LAYERS 的顺序一致；对应 strings 里的 key（第一层用 funnelVisitors，避免和卡片的 visitors 混）。
-	var LAYERS = [ 'visitors', 'viewed', 'carted', 'checkout', 'paid' ];
-	var LAYER_TEXT = { visitors: 'funnelVisitors', viewed: 'viewed', carted: 'carted', checkout: 'checkout', paid: 'paid' };
+	var LAYERS = [ 'visitors', 'viewed', 'carted', 'checkout', 'address', 'shipping', 'payment', 'paid' ];
+	var LAYER_TEXT = { visitors: 'funnelVisitors', viewed: 'viewed', carted: 'carted', checkout: 'checkout', address: 'address', shipping: 'shipping', payment: 'payment', paid: 'paidVisitors' };
 
 	var state = { funnel: readWindow( KEY_FUNNEL ), minutes: readWindow( KEY_MINUTES ) };
 	var wanted = { mode: 'live', params: {} };
@@ -139,12 +139,13 @@
 		'</div>';
 	}
 
-	function steps( layers ) {
-		return LAYERS.map( function ( key, i ) {
+	function steps( layers, detailed ) {
+		var keys = detailed ? LAYERS : [ 'visitors', 'viewed', 'carted', 'checkout', 'paid' ];
+		return '<p class="pc-rt-muted pc-rt-funnel-help">' + esc( detailed ? T.detailHelp : T.detailUnavailable ) + '</p>' + keys.map( function ( key, i ) {
 			var layer = layers[ i ] || { count: 0, visitor_rate: null };
 			var width = isNum( layer.visitor_rate ) ? Math.max( 0, Math.min( 100, Number( layer.visitor_rate ) ) ) : 0;
 			return '<div class="pc-rt-step">' +
-				'<span class="pc-rt-step__label">' + esc( T[ LAYER_TEXT[ key ] ] ) + '</span>' +
+				'<span class="pc-rt-step__label">' + esc( T[ detailed ? LAYER_TEXT[ key ] : ( 'paid' === key ? 'paid' : LAYER_TEXT[ key ] ) ] ) + '</span>' +
 				'<span class="pc-rt-bar"><span class="pc-rt-bar__fill" style="width:' + esc( width ) + '%"></span></span>' +
 				'<span class="pc-rt-step__count">' + esc( ctx.number( layer.count ) ) + '</span>' +
 				'<span class="pc-rt-step__rate">' + esc( fill( T.ofVisitors, { '%s': pct( layer.visitor_rate ) } ) ) + '</span>' +
@@ -406,7 +407,8 @@
 		els.updated.textContent = fill( T.updated, { '%s': data.updated || '' } );
 		els.notes.innerHTML = notes( data );
 		els.cards.innerHTML = cards( data );
-		els.steps.innerHTML = steps( ( data.funnel || {} ).layers || [] );
+		var detail = data.visitor_funnel && data.visitor_funnel.unit === 'visitors' && data.visitor_funnel.layers && data.visitor_funnel.layers.length === 8;
+		els.steps.innerHTML = steps( detail ? data.visitor_funnel.layers : ( data.funnel || {} ).layers || [], detail );
 		els.chart.innerHTML = chart( ( ( displayedHistory ? data.series : data.minutes ) || {} ).points || [] );
 		els.lists.innerHTML = lists( data );
 		painted = true;

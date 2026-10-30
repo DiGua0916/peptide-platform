@@ -23,6 +23,8 @@
 	// 和 Operations::KPIS / LAYERS 的顺序一致（Shopname 的卡片顺序）。
 	var KPIS = [ 'sales', 'visitors', 'registered', 'orders', 'conversion', 'aov', 'items', 'net_item_sales', 'refunds', 'avg_duration', 'customers', 'mobile' ];
 	var LAYERS = [ 'visitors', 'viewed', 'carted', 'checkout', 'paid' ];
+	var DETAIL_LAYERS = [ 'visitors', 'viewed', 'carted', 'checkout', 'address', 'shipping', 'payment', 'paid' ];
+	var expanded = { visitor: false, returning: false };
 	var MONEY = { sales: true, aov: true, net_item_sales: true, refunds: true };
 	// 九张趋势图，顺序 = Shopname 的顺序：key 是趋势接口里的指标，title / help 是 strings 的 key，kind 决定纵轴和数值的格式。
 	var TRENDS = [
@@ -138,28 +140,39 @@
 		return text;
 	}
 
-	function funnel( title, block, ctx ) {
+	function funnel( title, block, ctx, id ) {
 		var esc = ctx.esc;
-		var cur = block.current || [];
-		var prev = block.previous || [];
+		var detailed = block.unit === 'visitors' && block.current && block.current.length === 8;
+		var keys = detailed && expanded[ id ] ? DETAIL_LAYERS : LAYERS;
+		function project( values ) {
+			var byKey = {};
+			( values || [] ).forEach( function ( value ) { byKey[ value.key ] = value; } );
+			return keys.map( function ( key, index ) {
+				var value = byKey[ key ] || { count: 0, visitor_rate: null };
+				var previous = index ? byKey[ keys[ index - 1 ] ] : null;
+				return { count: value.count, visitor_rate: value.visitor_rate, step_rate: previous && previous.count ? Math.round( value.count / previous.count * 10000 ) / 100 : null };
+			} );
+		}
+		var cur = project( block.current );
+		var prev = project( block.previous );
 		var change = block.change || {};
 		var last = cur[ cur.length - 1 ] || {};
 		var prevLast = prev[ prev.length - 1 ] || {};
 
-		var bars = LAYERS.map( function ( key, i ) {
+		var bars = keys.map( function ( key, i ) {
 			var layer = cur[ i ] || { count: 0, visitor_rate: null };
 			var width = isNum( layer.visitor_rate ) ? Math.max( 0, Math.min( 100, Number( layer.visitor_rate ) ) ) : 0;
 			return '<div class="pc-ops-step">' +
-				'<span class="pc-ops-step__label">' + esc( T[ key ] ) + '</span>' +
+				'<span class="pc-ops-step__label">' + esc( T[ detailed && key === 'paid' ? 'paidVisitors' : key ] ) + '</span>' +
 				'<span class="pc-ops-bar"><span class="pc-ops-bar__fill" style="width:' + esc( width ) + '%"></span></span>' +
 				'<span class="pc-ops-step__count">' + esc( ctx.number( layer.count ) ) + '</span>' +
 				'<span class="pc-ops-step__rate">' + esc( fill( T.ofVisitors, { '%s': pct( layer.visitor_rate ) } ) ) + '</span>' +
 			'</div>';
 		} );
 
-		var rows = LAYERS.map( function ( key, i ) {
+		var rows = keys.map( function ( key, i ) {
 			return '<tr>' +
-				'<th scope="row">' + esc( T[ key ] ) + '</th>' +
+				'<th scope="row">' + esc( T[ detailed && key === 'paid' ? 'paidVisitors' : key ] ) + '</th>' +
 				'<td>' + esc( countWithStep( cur[ i ], ctx ) ) + '</td>' +
 				'<td>' + esc( countWithStep( prev[ i ], ctx ) ) + '</td>' +
 				'<td>' + changeHtml( change[ key ], ctx, 'pc-ops-change' ) + '</td>' +
@@ -171,7 +184,9 @@
 				' <span class="pc-ops-funnel__rate">' + esc( pct( last.visitor_rate ) ) + '</span>' +
 				' <span class="pc-ops-muted">' + esc( ctx.strings.vs + ' ' + pct( prevLast.visitor_rate ) ) + '</span>' +
 			'</h2>' +
-			'<div class="pc-ops-steps">' + bars.join( '' ) + '</div>' +
+			'<p class="pc-ops-detail-help">' + esc( detailed ? T.detailHelp : T.detailUnavailable ) + '</p>' +
+			( detailed ? '<button type="button" class="button pc-ops-detail-toggle" data-funnel-toggle="' + esc( id ) + '" aria-expanded="' + ( expanded[ id ] ? 'true' : 'false' ) + '" aria-controls="pc-ops-detail-' + esc( id ) + '">' + esc( expanded[ id ] ? T.hideDetails : T.viewDetails ) + '</button>' : '' ) +
+			'<div id="pc-ops-detail-' + esc( id ) + '"><div class="pc-ops-steps">' + bars.join( '' ) + '</div>' +
 			'<div class="pc-ops-table-wrap"><table class="pc-ops-table">' +
 				'<thead><tr>' +
 					'<th scope="col">' + esc( T.event ) + '</th>' +
@@ -180,7 +195,7 @@
 					'<th scope="col">' + esc( T.change ) + '</th>' +
 				'</tr></thead>' +
 				'<tbody>' + rows.join( '' ) + '</tbody>' +
-			'</table></div>' +
+			'</table></div></div>' +
 		'</section>';
 	}
 
@@ -451,8 +466,9 @@
 			html += '<p class="pc-ops-note">' + esc( fill( T.testOrders, { '%d': Number( data.test_orders ) } ) ) + '</p>';
 		}
 		html += kpis( data, ctx );
-		html += funnel( T.visitorFunnel, data.funnel || {}, ctx );
-		html += funnel( T.returningFunnel, data.returning || {}, ctx );
+		html += '<p class="pc-ops-detail-help">' + esc( T.orderVsVisitor ) + '</p>';
+		html += '<div data-funnel-slot="visitor">' + funnel( T.visitorFunnel, data.visitor_funnel || data.funnel || {}, ctx, 'visitor' ) + '</div>';
+		html += '<div data-funnel-slot="returning">' + funnel( T.returningFunnel, data.returning_visitor_funnel || data.returning || {}, ctx, 'returning' ) + '</div>';
 		// 趋势图的位置：趋势数据到了再填（见 render）。
 		html += '<section class="pc-ops-trends" aria-live="polite"></section>';
 		// 排行表的位置：排行数据到了再填（见 render）。
@@ -523,6 +539,17 @@
 				try {
 					bodyEl.innerHTML = view( data, ctx );
 					opsData = data;
+					var box = bodyEl.querySelector( '.pc-ops' );
+					box.addEventListener( 'click', function ( event ) {
+						var button = findAttr( event.target, 'data-funnel-toggle', box );
+						if ( ! button ) { return; }
+						var id = button.getAttribute( 'data-funnel-toggle' );
+						if ( id !== 'visitor' && id !== 'returning' ) { return; }
+						expanded[ id ] = ! expanded[ id ];
+						var slot = box.querySelector( '[data-funnel-slot="' + id + '"]' );
+						slot.innerHTML = funnel( id === 'visitor' ? T.visitorFunnel : T.returningFunnel, id === 'visitor' ? data.visitor_funnel : data.returning_visitor_funnel, ctx, id );
+						slot.querySelector( '[data-funnel-toggle]' ).focus();
+					} );
 				} catch ( e ) {
 					failed();
 					return;

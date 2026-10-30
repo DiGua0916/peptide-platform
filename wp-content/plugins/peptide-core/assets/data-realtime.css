@@ -155,6 +155,9 @@
 	gap: 8px;
 }
 
+.pc-rt-funnel-help { margin-bottom: 8px; line-height: 1.6; }
+.pc-rt .pc-rt-bar__fill { background: #171717; }
+
 .pc-rt-step {
 	display: flex;
 	flex-wrap: wrap;

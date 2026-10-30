@@ -18,6 +18,8 @@
 	var OVERALL = [ 'conversion', 'paid', 'visitors', 'viewed', 'carted', 'checkout' ];
 	var GROUPS = [ 'device', 'browser' ];
 	var LAYERS = [ 'visitors', 'viewed', 'carted', 'checkout', 'paid' ];
+	var DETAIL_LAYERS = [ 'visitors', 'viewed', 'carted', 'checkout', 'address', 'shipping', 'payment', 'paid' ];
+	var expanded = {};
 
 	// 请求计数：改分组 / 切换时间段之后，旧请求晚到的结果不再画。
 	var requests = 0;
@@ -102,10 +104,25 @@
 		var cur = o.current || {};
 		var prev = o.previous || {};
 		var chg = o.change || {};
-		var tiles = OVERALL.map( function ( key ) {
+		var detail = data.visitor_funnel;
+		var detailed = detail && detail.unit === 'visitors' && detail.current && detail.current.length === 8;
+		if ( detailed ) {
+			cur = {}; prev = {}; chg = detail.change || {};
+			detail.current.forEach( function ( layer ) { cur[ layer.key ] = layer.count; } );
+			detail.previous.forEach( function ( layer ) { prev[ layer.key ] = layer.count; } );
+			cur.conversion = detail.current[ 7 ].visitor_rate;
+			prev.conversion = detail.previous[ 7 ].visitor_rate;
+			// Copy before adding a display-only percentage-point delta.
+			var changes = {};
+			Object.keys( chg ).forEach( function ( key ) { changes[ key ] = chg[ key ]; } );
+			changes.conversion = isNum( cur.conversion ) && isNum( prev.conversion ) ? Math.round( ( cur.conversion - prev.conversion ) * 100 ) / 100 : null;
+			chg = changes;
+		}
+		var keys = detailed ? OVERALL.concat( [ 'address', 'shipping', 'payment' ] ) : OVERALL;
+		var tiles = keys.map( function ( key ) {
 			var help = 'conversion' === key;
 			return '<div class="pc-conv-tile"' + ( help ? ' title="' + esc( T.conversionHelp ) + '"' : '' ) + '>' +
-				'<div class="pc-conv-tile__label">' + esc( T[ key ] ) +
+				'<div class="pc-conv-tile__label">' + esc( T[ detailed && key === 'paid' ? 'paidVisitors' : ( detailed && key === 'conversion' ? 'visitorConversion' : key ) ] ) +
 					( help ? ' <span class="pc-conv-info" aria-hidden="true">ⓘ</span>' : '' ) +
 				'</div>' +
 				'<div class="pc-conv-tile__value">' + esc( overallValue( key, cur[ key ], ctx ) ) + '</div>' +
@@ -115,7 +132,7 @@
 				'</div>' +
 			'</div>';
 		} );
-		return '<div class="pc-conv-overall">' + tiles.join( '' ) + '</div>';
+		return '<p class="pc-conv-note">' + esc( detailed ? T.detailHelp : T.detailUnavailable ) + '</p><div class="pc-conv-overall">' + tiles.join( '' ) + '</div>';
 	}
 
 	// ---------- 分组卡片 ----------
@@ -123,14 +140,24 @@
 	function card( group, row, ctx ) {
 		var esc = ctx.esc;
 		var code = ctx.currency && ctx.currency.code ? ctx.currency.code : '';
-		var funnel = row.funnel || [];
+		var detailed = row.visitor_funnel && row.visitor_funnel.unit === 'visitors' && row.visitor_funnel.layers && row.visitor_funnel.layers.length === 8;
+		var token = encodeURIComponent( group + ':' + row.key );
+		var all = detailed ? row.visitor_funnel.layers : row.funnel || [];
+		var byKey = {};
+		all.forEach( function ( layer ) { byKey[ layer.key ] = layer; } );
+		var keys = detailed && expanded[ token ] ? DETAIL_LAYERS : LAYERS;
+		var funnel = keys.map( function ( key, index ) {
+			var layer = byKey[ key ] || { count: 0, visitor_rate: null };
+			var previous = index ? byKey[ keys[ index - 1 ] ] : null;
+			return { count: layer.count, visitor_rate: layer.visitor_rate, step_rate: previous && previous.count ? Math.round( layer.count / previous.count * 10000 ) / 100 : null };
+		} );
 		var title = fill( T.groupRate, { '%s': groupLabel( group, row.key ) } );
-		var steps = LAYERS.map( function ( key, i ) {
+		var steps = keys.map( function ( key, i ) {
 			var layer = funnel[ i ] || { count: 0, visitor_rate: null };
 			var next = funnel[ i + 1 ];
 			var width = isNum( layer.visitor_rate ) ? Math.max( 0, Math.min( 100, Number( layer.visitor_rate ) ) ) : 0;
 			var html = '<div class="pc-conv-step">' +
-				'<span class="pc-conv-step__label">' + esc( T[ key ] ) + '</span>' +
+				'<span class="pc-conv-step__label">' + esc( T[ detailed && key === 'paid' ? 'paidVisitors' : key ] ) + '</span>' +
 				'<span class="pc-conv-bar"><span class="pc-conv-bar__fill" style="width:' + esc( width ) + '%"></span></span>' +
 				'<span class="pc-conv-step__count">' + esc( ctx.number( layer.count ) ) + '</span>' +
 				'<span class="pc-conv-step__rate">' + esc( fill( T.ofVisitors, { '%s': pct( layer.visitor_rate ) } ) ) + '</span>' +
@@ -142,9 +169,10 @@
 			return html;
 		} );
 		return '<section class="pc-conv-card">' +
-			'<h2 class="pc-conv-card__title">' + esc( title ) + ' <span class="pc-conv-card__rate">' + esc( pct( row.conversion ) ) + '</span></h2>' +
+			'<h2 class="pc-conv-card__title">' + esc( title ) + ' <span class="pc-conv-card__rate">' + esc( pct( detailed ? byKey.paid.visitor_rate : row.conversion ) ) + '</span></h2>' +
 			'<p class="pc-conv-card__sales">' + esc( T.groupSales ) + ' <strong>' + esc( ctx.money( row.sales ) + ( code ? ' ' + code : '' ) ) + '</strong></p>' +
-			'<div class="pc-conv-steps">' + steps.join( '' ) + '</div>' +
+			( detailed ? '<button type="button" class="button pc-conv-detail-toggle" data-conv-toggle="' + esc( token ) + '" aria-expanded="' + ( expanded[ token ] ? 'true' : 'false' ) + '" aria-controls="pc-conv-detail-' + esc( token ) + '">' + esc( expanded[ token ] ? T.hideDetails : T.viewDetails ) + '</button>' : '<p class="pc-conv-note">' + esc( T.detailUnavailable ) + '</p>' ) +
+			'<div id="pc-conv-detail-' + esc( token ) + '" class="pc-conv-steps">' + steps.join( '' ) + '</div>' +
 		'</section>';
 	}
 
@@ -160,7 +188,7 @@
 		html += checkoutSteps( data.checkout_steps, ctx );
 		if ( rows.length ) {
 			html += '<div class="pc-conv-cards">' + rows.map( function ( row ) {
-				return card( group, row, ctx );
+				return '<div data-conv-slot="' + esc( encodeURIComponent( group + ':' + row.key ) ) + '">' + card( group, row, ctx ) + '</div>';
 			} ).join( '' ) + '</div>';
 		} else {
 			html += '<p class="pc-data-empty">' + esc( T.noGroups ) + '</p>';
@@ -224,12 +252,27 @@
 		'</div>';
 		var select = bodyEl.querySelector( '.pc-conv-group' );
 		var result = bodyEl.querySelector( '.pc-conv-result' );
+		var loadedData = null;
+		result.addEventListener( 'click', function ( event ) {
+			var button = event.target;
+			while ( button && button !== result && ( ! button.getAttribute || ! button.getAttribute( 'data-conv-toggle' ) ) ) { button = button.parentNode; }
+			if ( ! loadedData || ! button || button === result ) { return; }
+			var token = button.getAttribute( 'data-conv-toggle' );
+			var group = loadedData.group || state.group;
+			var row = ( loadedData.rows || [] ).filter( function ( item ) { return encodeURIComponent( group + ':' + item.key ) === token; } )[ 0 ];
+			if ( ! row ) { return; }
+			expanded[ token ] = ! expanded[ token ];
+			var slot = result.querySelector( '[data-conv-slot="' + token + '"]' );
+			slot.innerHTML = card( group, row, ctx );
+			slot.querySelector( '[data-conv-toggle]' ).focus();
+		} );
 
 		function failed() {
 			result.innerHTML = '<p class="pc-data-empty">' + esc( ctx.strings.loadError ) + '</p>';
 		}
 
 		function load() {
+			loadedData = null;
 			var mine = ++requests;
 			var params = rangeParams( range );
 			params.group = state.group;
@@ -242,6 +285,7 @@
 					}
 					try {
 						result.innerHTML = view( data, ctx );
+						loadedData = data;
 					} catch ( e ) {
 						failed();
 					}

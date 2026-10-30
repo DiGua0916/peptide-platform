@@ -110,6 +110,7 @@ final class Realtime {
 
 		return array(
 			'now_ms'   => $now_ms,
+			'visitor_funnel' => ( new Visitor_Funnel() )->period( self::window_ms( $now_ms, $funnel )[0], $now_ms + 1, 'last_ms', '', $now_ms )['overall'] + array( 'window' => $funnel ),
 			'updated'  => wp_date( 'Y-m-d H:i:s', $sec ),
 			'tracking' => Schema::installed(),
 			'cards'    => $cards,
@@ -214,6 +215,7 @@ final class Realtime {
 		$query = $range['preset'] ? array( 'range' => $range['preset'] ) : array( 'from' => $range['dates']['from'], 'to' => $range['dates']['to'] );
 		return array(
 			'mode'     => 'history',
+			'visitor_funnel' => ( new Visitor_Funnel() )->period( $fm, $tm )['overall'],
 			'range'    => array_intersect_key( $range, array_flip( array( 'preset', 'from', 'to', 'days', 'bucket' ) ) ) + array( 'dates' => array( 'from' => $range['dates']['from'], 'to' => $range['dates']['to'] ), 'timezone' => wp_timezone_string() ),
 			'updated'  => wp_date( 'Y-m-d H:i:s' ),
 			'tracking' => Schema::installed(),
