@@ -11934,3 +11934,27 @@ msgstr ""
 #: includes/admin/class-data-pages.php
 msgid "Move %s down"
 msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Export CSV"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Preparing CSV…"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "CSV download started."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "CSV could not be downloaded. Try again, or refresh the page if your session expired."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Export all matching products and their data-bearing variations, including collapsed variations."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Export all matching page paths, across every result page."
+msgstr ""

@@ -56,6 +56,36 @@ final class Products {
 	 * @param array $args  sort, order, page, per_page, q (already validated by params()).
 	 */
 	public static function table( array $range, array $args ): array {
+		$selection = self::selection( $range, $args );
+		$total = count( $selection['ids'] );
+		$page = $selection['page']; $per_page = $selection['per_page'];
+		$slice = $page > (int) ceil( $total / $per_page ) ? array() : array_slice( $selection['ids'], ( $page - 1 ) * $per_page, $per_page );
+		$rows = array();
+		foreach ( $slice as $id ) { $rows[] = self::assemble_row( $id, $selection ); }
+		return array(
+			'range'    => $range,
+			'tracking' => Schema::installed(),
+			'metrics'  => self::METRICS,
+			'defaults' => self::DEFAULTS,
+			'sort'     => $selection['sort'],
+			'order'    => $selection['order'],
+			'page'     => $selection['page'],
+			'per_page' => $selection['per_page'],
+			'q'        => $selection['q'],
+			'total'    => $total,
+			'rows'     => $rows,
+		);
+	}
+
+
+	/** Every matching parent, in table order, with the same variation rows. Pagination alone is omitted. */
+	public static function all_rows( array $range, array $args ): iterable {
+		$selection = self::selection( $range, $args );
+		foreach ( $selection['ids'] as $id ) { yield self::assemble_row( $id, $selection ); }
+	}
+
+	/** One shared selection/calculation per report request; product cache remains request-local. */
+	private static function selection( array $range, array $args ): array {
 		$sort     = in_array( $args['sort'] ?? '', self::METRICS, true ) ? (string) $args['sort'] : 'views';
 		$order    = 'asc' === ( $args['order'] ?? 'desc' ) ? 'asc' : 'desc';
 		$page     = max( 1, (int) ( $args['page'] ?? 1 ) );
@@ -108,35 +138,19 @@ final class Products {
 			}
 		);
 
-		$total = count( $ids );
-		$slice = $page > (int) ceil( $total / $per_page ) ? array() : array_slice( $ids, ( $page - 1 ) * $per_page, $per_page );
+		return compact( 'sort', 'order', 'page', 'per_page', 'q', 'current', 'previous', 'ids', 'load' );
+	}
 
-		$rows = array();
-		foreach ( $slice as $id ) {
-			$product = $load( $id );
-			$cur     = $current['products'][ $id ] ?? self::metrics( array(), false );
-			$prev    = $previous['products'][ $id ] ?? self::metrics( array(), false );
-			$rows[]  = array(
-				'product'    => self::product_info( $id, $product ),
-				'current'    => $cur,
-				'previous'   => $prev,
-				'change'     => self::change( $cur, $prev ),
-				'variations' => self::variation_rows( $id, $current['variations'][ $id ] ?? array(), $previous['variations'][ $id ] ?? array() ),
-			);
-		}
-
+	private static function assemble_row( int $id, array $selection ): array {
+		$product = $selection['load']( $id );
+		$cur     = $selection['current']['products'][ $id ] ?? self::metrics( array(), false );
+		$prev    = $selection['previous']['products'][ $id ] ?? self::metrics( array(), false );
 		return array(
-			'range'    => $range,
-			'tracking' => Schema::installed(),
-			'metrics'  => self::METRICS,
-			'defaults' => self::DEFAULTS,
-			'sort'     => $sort,
-			'order'    => $order,
-			'page'     => $page,
-			'per_page' => $per_page,
-			'q'        => $q,
-			'total'    => $total,
-			'rows'     => $rows,
+			'product'    => self::product_info( $id, $product ),
+			'current'    => $cur,
+			'previous'   => $prev,
+			'change'     => self::change( $cur, $prev ),
+			'variations' => self::variation_rows( $id, $selection['current']['variations'][ $id ] ?? array(), $selection['previous']['variations'][ $id ] ?? array() ),
 		);
 	}
 

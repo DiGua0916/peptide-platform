@@ -228,6 +228,7 @@
 		var esc = ctx.esc;
 		var view = { data: null };
 		var composing = false;
+		var exportToken = 0, exporting = false, rangeBusy = false, searchDirty = false;
 
 		// 上一次画的页面已经被 data.js 清掉了：它的搜索计时器不能再触发。
 		window.clearTimeout( searchTimer );
@@ -242,6 +243,8 @@
 			'<div class="pc-prod-toolbar">' +
 				'<input type="search" class="pc-prod-search" maxlength="100" placeholder="' + esc( T.search ) + '" aria-label="' + esc( T.search ) + '">' +
 				'<button type="button" class="button pc-prod-columns-btn" aria-expanded="false">' + esc( T.columns ) + '</button>' +
+				'<button type="button" class="button pc-prod-export" title="' + esc( T.exportHelp ) + '" disabled>' + esc( T.exportCsv ) + '</button>' +
+				'<span class="pc-prod-export-status" role="status" aria-live="polite"></span>' +
 			'</div>' +
 			'<div class="pc-prod-columns" hidden></div>' +
 			'<div class="pc-prod-wrap"></div>' +
@@ -253,6 +256,38 @@
 		view.wrap = bodyEl.querySelector( '.pc-prod-wrap' );
 		view.pager = bodyEl.querySelector( '.pc-prod-pager' );
 		view.search.value = state.q;
+		view.exportButton = bodyEl.querySelector( '.pc-prod-export' );
+		view.exportStatus = bodyEl.querySelector( '.pc-prod-export-status' );
+		function syncExport() {
+			view.exportButton.disabled = ! view.data || searchDirty || composing || rangeBusy || exporting;
+			view.exportButton.setAttribute( 'aria-busy', exporting ? 'true' : 'false' );
+		}
+		function cancelExport() {
+			++exportToken; exporting = false;
+			view.exportStatus.textContent = '';
+			syncExport();
+		}
+		if ( 'function' === typeof ctx.onRangeState ) {
+			ctx.onRangeState( function ( on ) { rangeBusy = on; if ( on ) { cancelExport(); } syncExport(); } );
+		}
+		view.exportButton.addEventListener( 'click', function () {
+			if ( view.exportButton.disabled || ! window.PcDataExport ) { return; }
+			var mine = ++exportToken;
+			var dates = view.data.range.dates;
+			var params = { from: dates.from, to: dates.to, compare_from: dates.compare_from, compare_to: dates.compare_to };
+			params.format = 'csv'; params.sort = view.data.sort; params.order = view.data.order;
+			params.page = view.data.page; params.per_page = view.data.per_page; params.q = view.data.q;
+			params.columns = visibleColumns( view.data ).join( ',' );
+			exporting = true; syncExport(); view.exportStatus.textContent = T.exportBusy;
+			function current() { return mine === exportToken && ! rangeBusy && ! searchDirty && ! composing && !! view.data && document.documentElement.contains( view.exportButton ); }
+			window.PcDataExport.prepare( PATH, params ).then( function ( file ) {
+				if ( ! current() ) { return; }
+				try { if ( window.PcDataExport.download( file, current ) ) { view.exportStatus.textContent = T.exportDone; } }
+				catch ( e ) { view.exportStatus.textContent = T.exportError; }
+				exporting = false; syncExport();
+			}, function () { if ( current() ) { exporting = false; syncExport(); view.exportStatus.textContent = T.exportError; } } );
+		} );
+
 
 		function failed() {
 			invalidate();
@@ -262,6 +297,7 @@
 
 		function invalidate() {
 			view.data = null;
+			cancelExport();
 			view.button.disabled = true;
 			view.button.setAttribute( 'aria-expanded', 'false' );
 			view.panel.setAttribute( 'hidden', '' );
@@ -326,6 +362,7 @@
 			state.sort = data.sort;
 			state.order = data.order;
 			state.page = Number( data.page );
+			syncExport();
 			drawPanel();
 			drawTable();
 			drawPager();
@@ -367,6 +404,7 @@
 		// 搜索：回车马上搜，停止输入 400 毫秒后搜；输入法组字中（拼音）不搜。
 		function applySearch() {
 			window.clearTimeout( searchTimer );
+			searchDirty = false; syncExport();
 			var q = view.search.value.replace( /^\s+|\s+$/g, '' );
 			if ( q === state.q ) {
 				return;
@@ -376,15 +414,16 @@
 			load();
 		}
 		view.search.addEventListener( 'compositionstart', function () {
-			composing = true;
+			composing = true; cancelExport();
 			window.clearTimeout( searchTimer );
 		} );
 		view.search.addEventListener( 'compositionend', function () {
-			composing = false;
+			composing = false; searchDirty = true; cancelExport();
 			window.clearTimeout( searchTimer );
 			searchTimer = window.setTimeout( applySearch, SEARCH_DELAY );
 		} );
 		view.search.addEventListener( 'input', function () {
+			searchDirty = true; cancelExport();
 			window.clearTimeout( searchTimer );
 			if ( ! composing ) {
 				searchTimer = window.setTimeout( applySearch, SEARCH_DELAY );
@@ -417,6 +456,7 @@
 			if ( box.checked && cols.indexOf( key ) === -1 ) { cols.push( key ); }
 			if ( ! box.checked ) { cols = cols.filter( function ( k ) { return k !== key; } ); }
 			state.columns = cols;
+			cancelExport();
 			saveColumns( cols );
 			drawPanel();
 			drawTable();
@@ -435,6 +475,7 @@
 			if ( index < 0 || next < 0 || next >= cols.length ) { return; }
 			cols[ index ] = cols[ next ]; cols[ next ] = key;
 			state.columns = cols;
+			cancelExport();
 			saveColumns( cols );
 			drawPanel();
 			drawTable();

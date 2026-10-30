@@ -11986,3 +11986,27 @@ msgstr "上移%s"
 #: includes/admin/class-data-pages.php
 msgid "Move %s down"
 msgstr "下移%s"
+
+#: includes/admin/class-data-pages.php
+msgid "Export CSV"
+msgstr "导出CSV"
+
+#: includes/admin/class-data-pages.php
+msgid "Preparing CSV…"
+msgstr "正在生成CSV…"
+
+#: includes/admin/class-data-pages.php
+msgid "CSV download started."
+msgstr "CSV下载已开始。"
+
+#: includes/admin/class-data-pages.php
+msgid "CSV could not be downloaded. Try again, or refresh the page if your session expired."
+msgstr "CSV下载失败，请重试；如果登录已过期，请刷新页面。"
+
+#: includes/admin/class-data-pages.php
+msgid "Export all matching products and their data-bearing variations, including collapsed variations."
+msgstr "导出所有符合筛选条件的商品及有数据的款式，包含已折叠的款式。"
+
+#: includes/admin/class-data-pages.php
+msgid "Export all matching page paths, across every result page."
+msgstr "导出所有符合筛选条件的页面路径，涵盖全部结果页。"
