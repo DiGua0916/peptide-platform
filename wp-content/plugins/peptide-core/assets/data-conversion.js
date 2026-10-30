@@ -86,10 +86,18 @@
 		return 'Other' === key ? T.other : key;
 	}
 
-	// 变化：文字由 ctx.change() 给出（转化率的变化是百分点，同样带正负号和 %），涨绿跌红。
-	function changeHtml( v, ctx, cls ) {
-		var dir = isNum( v ) && Number( v ) > 0 ? ' is-up' : ( isNum( v ) && Number( v ) < 0 ? ' is-down' : '' );
-		return '<span class="' + cls + dir + '">' + ctx.esc( ctx.change( v ) ) + '</span>';
+	// 变化：数量用 ctx.change() 显示相对百分比，转化率差值显示百分点；涨绿跌红。
+	function changeHtml( v, ctx, cls, points ) {
+		var valid = isNum( v ) && ( ! points || isFinite( Number( v ) ) );
+		var dir = valid && Number( v ) > 0 ? ' is-up' : ( valid && Number( v ) < 0 ? ' is-down' : '' );
+		var text;
+		if ( points ) {
+			var value = valid ? Math.round( Number( v ) * 100 ) / 100 : null;
+			text = value === null ? '-' : ( value > 0 ? '+' : '' ) + value + ' ' + T.percentagePoints;
+		} else {
+			text = ctx.change( v );
+		}
+		return '<span class="' + cls + dir + '">' + ctx.esc( text ) + '</span>';
 	}
 
 	// 整体步骤的显示值：转化率是百分比，其他是个数。
@@ -129,7 +137,7 @@
 				'<div class="pc-conv-tile__value">' + esc( overallValue( key, cur[ key ], ctx ) ) + '</div>' +
 				'<div class="pc-conv-tile__foot">' +
 					'<span class="pc-conv-muted">' + esc( ctx.strings.vs + ' ' + overallValue( key, prev[ key ], ctx ) ) + '</span> ' +
-					changeHtml( chg[ key ], ctx, 'pc-conv-tile__change' ) +
+					changeHtml( chg[ key ], ctx, 'pc-conv-tile__change', key === 'conversion' ) +
 				'</div>' +
 			'</div>';
 		} );
@@ -228,7 +236,7 @@
 			metrics.forEach( function ( key ) {
 				var c = channel.current || {}, p = channel.previous || {}, d = channel.change || {};
 				var format = key === 'success_rate' ? pct : ctx.number;
-				html += '<td><strong>' + esc( format( c[ key ] ) ) + '</strong><small>' + esc( ctx.strings.vs + ' ' + format( p[ key ] ) ) + '</small>' + changeHtml( d[ key ], ctx, 'pc-conv-change' ) + '</td>';
+				html += '<td><strong>' + esc( format( c[ key ] ) ) + '</strong><small>' + esc( ctx.strings.vs + ' ' + format( p[ key ] ) ) + '</small>' + changeHtml( d[ key ], ctx, 'pc-conv-change', key === 'success_rate' ) + '</td>';
 			} );
 			html += '</tr>';
 		} );
