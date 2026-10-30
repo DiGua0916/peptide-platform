@@ -117,14 +117,14 @@ final class Tracking_Controller {
 			}
 			return $result;
 		}
-		return self::respond(
-			array(
+		$data = array(
 				'protocol'    => Tracker::PROTOCOL,
 				'ack'         => $result['ack'],
 				'rejected'    => $result['rejected'],
 				'server_time' => gmdate( 'Y-m-d\TH:i:s', (int) floor( Tracker::now_ms() / 1000 ) ) . 'Z',
-			)
-		);
+			);
+		if ( isset( $result['extensions'] ) ) { $data['extensions'] = $result['extensions']; }
+		return self::respond( $data );
 	}
 
 	/**

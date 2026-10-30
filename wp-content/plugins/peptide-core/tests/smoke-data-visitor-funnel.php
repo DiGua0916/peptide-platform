@@ -52,7 +52,7 @@ $strip = static function ( array $data ) use ( &$strip ): array {
 	return $data;
 };
 try {
-	$check( 'schema v3 installed unchanged', Schema::installed() && Schema::DB_VERSION === '3' );
+	$check( 'schema v4 installed after additive attribution migration', Schema::installed() && Schema::DB_VERSION === '4' );
 	$a = $visit( $fm + 1, 'desktop', 5, 0, 'Chrome', $now, $fm - 365 * DAY_IN_SECONDS * 1000 );
 	$b = $visit( $fm + 2, 'mobile', 3, $a[0], 'Chrome', $now );
 	$o1 = $order( $a ); $o2 = $order( $a );

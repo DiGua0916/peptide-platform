@@ -12002,3 +12002,27 @@ msgstr ""
 #: includes/admin/class-data-pages.php
 msgid "Export all results in the selected grouping, eight visitor steps, both transition views, observed visits and payment channels. Group figures cover the current period only."
 msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Show allowed URL parameters"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Source unknown"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Applying date range…"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Groups use the first successfully captured entry host, path and allowed utm_source/utm_medium values. Query value case is preserved. Visits without this observation remain source unknown, separately from captured empty parameters. This does not identify a direct source; storefront collection must supply the optional metadata."
+msgstr ""
+
+#: includes/tracking/class-privacy.php
+msgid "Visit attribution snapshot (JSON)"
+msgstr ""
+
+#: includes/tracking/class-privacy.php
+msgid "When supplied by the storefront, we also keep the first successfully captured visit entry domain, path, allowed utm_source/utm_medium query values and referrer domain. Older visits without this observation remain unknown. An unavailable value (null), an observed empty value and an absent UTM key are distinct; we do not infer a direct source. The normalized visit snapshot is included in personal data exports and is deleted with the visit. Rejected attribution values are not stored."
+msgstr ""

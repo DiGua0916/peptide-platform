@@ -810,6 +810,11 @@ final class Data_Pages {
 	/** 落地页转化页脚本里的文字：路径列、十个指标的表头、两个说明、搜索、每页条数、总数、空表、分页、页面说明。 */
 	private static function landing_strings(): array {
 		return array(
+			'showParams'     => __( 'Show allowed URL parameters', 'peptide-core' ),
+			'sourceUnknown'  => __( 'Source unknown', 'peptide-core' ),
+			'retry'          => __( 'Retry', 'peptide-core' ),
+			'applyingRange'  => __( 'Applying date range…', 'peptide-core' ),
+			'paramsNote'     => __( 'Groups use the first successfully captured entry host, path and allowed utm_source/utm_medium values. Query value case is preserved. Visits without this observation remain source unknown, separately from captured empty parameters. This does not identify a direct source; storefront collection must supply the optional metadata.', 'peptide-core' ),
 			'path'           => __( 'Landing page path', 'peptide-core' ),
 			'unknown'        => __( 'Unknown landing page', 'peptide-core' ),
 			'uv'             => __( 'UV', 'peptide-core' ),
