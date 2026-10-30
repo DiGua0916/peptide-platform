@@ -187,12 +187,12 @@ final class Registry {
 
 	/** Observed content blocks use the same saved fields with task-specific panels. */
 	private static function reference_content_controls( string $type, array $def ): array {
-		if ( ! in_array( $type, array( 'media_text', 'card_list', 'video', 'video_text', 'slogan', 'counter', 'gallery', 'timeline' ), true ) ) { return $def; }
+		if ( ! in_array( $type, array( 'media_text', 'card_list', 'video', 'video_text', 'slogan', 'counter', 'gallery', 'timeline', 'contact' ), true ) ) { return $def; }
 		foreach ( $def['settings'] as &$field ) {
 			if ( 'bodyHtml' === $field['key'] ) { $field['ui'] = 'richtext'; }
 			if ( 'effectDurationMs' === $field['key'] ) { $field['uiMin'] = 1000; }
 			if ( 'effectIntervalMs' === $field['key'] ) { $field['uiMin'] = 500; $field['uiMax'] = 5000; }
-			if ( in_array( $type, array( 'card_list', 'video', 'video_text', 'slogan', 'counter', 'gallery', 'timeline' ), true ) && 'description' === $field['key'] ) { $field['uiHidden'] = true; }
+			if ( in_array( $type, array( 'card_list', 'video', 'video_text', 'slogan', 'counter', 'gallery', 'timeline', 'contact' ), true ) && 'description' === $field['key'] ) { $field['uiHidden'] = true; }
 			if ( 'gallery' === $type && 'columns' === $field['key'] ) { $field['show_if'] = array( 'display' => 'grid' ); $field['deviceUI'] = 'paired'; }
 			if ( 'counter' === $type ) {
 				if ( 'numberSizePx' === $field['key'] ) { $field['label'] = '数字字号'; $field['min'] = 14; $field['uiMin'] = 14; $field['uiMax'] = 52; }
@@ -212,7 +212,40 @@ final class Registry {
 			if ( 'card_list' === $type && 'columns' === $field['key'] ) { $field['uiMin'] = array( 'desktop' => 3, 'mobile' => 1 ); $field['uiMax'] = array( 'desktop' => 5, 'mobile' => 2 ); $field['deviceUI'] = 'paired'; }
 		}
 		unset( $field );
-		if ( 'timeline' === $type ) {
+		if ( 'contact' === $type ) {
+			$def['settings'][] = Fields::f( 'html', 'descriptionHtml', '简短描述', null, array( 'ui' => 'richtext', 'legacyKey' => 'description' ) );
+			$def['settings'][] = Fields::f( 'color', 'themeColor', '主题颜色', null, array( 'group' => 'style', 'help' => '设置标题、正文、链接与内置图标的基础颜色；未设置时保留店铺文字颜色与原图标颜色。正文单独设置的文字颜色仍有效。' ) );
+			$def['settings'][] = Fields::f( 'select', 'backgroundFallback', '缺图时的背景', 'inherit', array( 'group' => 'layout', 'options' => array( 'inherit' => '沿用另一端图片', 'color' => '使用背景颜色' ), 'help' => '“使用背景颜色”让电脑与手机背景保持独立，未设置图片的一端显示背景颜色并叠加蒙层；需要共用图片时选择“沿用另一端图片”。' ) );
+			$def['editorDefaults'] = array( 'backgroundFallback' => 'color', 'bgColor' => '#171717', 'themeColor' => '#ffffff' );
+			foreach ( $def['settings'] as &$field ) {
+				if ( 'overlayOpacity' === $field['key'] ) { $field['max'] = 100; }
+				if ( 'iconSizePx' === $field['key'] ) { $field['uiMin'] = 24; $field['uiMax'] = 56; }
+				if ( 'accentColor' === $field['key'] ) { $field['label'] = '原图标颜色'; $field['help'] = '未设置主题颜色时，只影响内置图标；保留已有颜色设置。'; }
+				if ( 'media' === $field['key'] ) { $field['mobileImageLabel'] = '手机图片'; $field['help'] = '分别选择电脑与手机图片；未设置图片时按上面的背景方式显示。建议电脑2400×656px、手机1242×1138px。'; }
+			}
+			unset( $field );
+			$def['panels'] = array(
+				array( 'id' => 'content', 'label' => '标题与说明', 'initialOpen' => true, 'fields' => array( 'title', 'descriptionHtml' ) ),
+				array( 'id' => 'background', 'label' => '背景与宽度', 'initialOpen' => true, 'fields' => array( 'fullWidth', 'backgroundFallback', 'media', 'overlayOpacity', 'bgColor' ) ),
+				array( 'id' => 'style', 'label' => '图标与主题颜色', 'initialOpen' => true, 'fields' => array( 'iconSizePx', 'themeColor' ) ),
+				array( 'id' => 'legacy-color', 'label' => '其他图标颜色', 'fields' => array( 'accentColor' ) ),
+				array( 'id' => 'general', 'label' => '显示与间距', 'fields' => array( 'showDesktop', 'showMobile', 'paddingTopPx', 'paddingBottomPx', 'backgroundColor' ) ),
+			);
+			foreach ( $def['items']['fields'] as &$field ) {
+				if ( 'text' === $field['key'] ) { $field['uiHidden'] = true; }
+				if ( 'icon' === $field['key'] ) { $field['label'] = '其他图标'; $field['help'] = '联系图标选择“沿用原图标”、且未使用自定义图片时显示。'; }
+				if ( 'image' === $field['key'] ) { $field['label'] = '自定义图标图片'; $field['help'] = '建议48×48px；有效图片优先于内置图标显示。'; }
+				if ( 'href' === $field['key'] ) { $field['help'] = '链接应用于此联系方式；正文含独立链接时，图标和标题使用此链接。图标与标题都未设置时，显示独立的联系链接，正文链接保持可用。'; }
+			}
+			unset( $field );
+			array_unshift( $def['items']['fields'], Fields::f( 'select', 'symbol', '联系图标', 'none', array( 'options' => array( 'none' => '沿用原图标', 'hidden' => '不显示内置图标' ) + Contact_Symbols::options(), 'help' => '自定义图片优先；选择图标不会改动已填写的标题、正文或链接。' ) ) );
+			$def['items']['fields'][] = Fields::f( 'html', 'textHtml', '内容', null, array( 'ui' => 'richtext', 'legacyKey' => 'text' ) );
+			$def['items']['panels'] = array(
+				array( 'id' => 'visual', 'label' => '图标与图片', 'initialOpen' => true, 'fields' => array( 'symbol', 'image' ) ),
+				array( 'id' => 'content', 'label' => '内容与链接', 'initialOpen' => true, 'fields' => array( 'title', 'textHtml', 'href' ) ),
+				array( 'id' => 'legacy-icon', 'label' => '其他图标', 'fields' => array( 'icon' ) ),
+			);
+		} elseif ( 'timeline' === $type ) {
 			$def['settings'][] = Fields::f( 'html', 'descriptionHtml', '简短描述', null, array( 'ui' => 'richtext', 'legacyKey' => 'description' ) );
 			$def['settings'][] = Fields::f( 'number', 'itemWidthPx', '电脑时间线宽度', 200, array( 'group' => 'layout', 'min' => 150, 'max' => 350, 'ui' => 'slider', 'unit' => 'px', 'show_if' => array( 'style' => 'horizontal' ), 'help' => '推荐 150、200、250、300 或 350px；手机自动改为纵向排列。' ) );
 			$padding = array( 'contentPaddingTopPx' => '上', 'contentPaddingRightPx' => '右', 'contentPaddingBottomPx' => '下', 'contentPaddingLeftPx' => '左' );

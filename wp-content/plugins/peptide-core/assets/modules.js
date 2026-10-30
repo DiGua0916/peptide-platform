@@ -483,6 +483,15 @@
 		} );
 	}
 
+	function contact( root ) {
+		root.addEventListener( 'vc:select-item', function ( event ) {
+			var item = event.target && event.target.closest ? event.target.closest( '[data-module-item]' ) : null;
+			if ( ! item || item.parentNode !== root || ! item.classList.contains( 'vc-contact__item' ) || ! event.detail || event.detail.item !== item.getAttribute( 'data-module-item' ) || item.hidden || item.inert ) { return; }
+			event.preventDefault();
+			item.scrollIntoView( { block: 'nearest', inline: 'nearest', behavior: 'auto' } );
+		} );
+	}
+
 	function showcase( root ) {
 		if ( root.dataset.hoverPreview !== '1' ) { return; }
 		var hover = window.matchMedia ? window.matchMedia( '(hover: hover) and (pointer: fine)' ) : { matches: false };
@@ -674,6 +683,7 @@
 		each( '.vc-m [data-vc-slogan-carousel]', sloganCarousel );
 		each( '.vc-m [data-vc-gallery-rail]', galleryRail );
 		each( '.vc-m [data-vc-counter-overflow]', counterOverflow );
+		each( '.vc-m [data-vc-contact-list]', contact );
 		each( '.vc-m .vc-timeline--horizontal', timeline );
 		each( '.vc-m .vc-showcase', showcase );
 		each( '.vc-m .vc-btn', buttonEffect );

@@ -868,19 +868,62 @@ final class Fallback {
 	}
 
 	private static function render_contact( array $s, array $items ): string {
+		$theme = (string) ( $s['themeColor'] ?? '' );
 		$vars = self::style(
 			array(
 				'--vc-overlay-o' => (string) ( (int) $s['overlayOpacity'] / 100 ),
 				'--vc-icon'      => (int) $s['iconSizePx'] . 'px',
 				'--vc-bg'        => $s['bgColor'],
-				'--vc-accent'    => $s['accentColor'],
+				'--vc-accent'    => '' !== $theme ? $theme : $s['accentColor'],
+				'--vc-contact-fg' => $theme,
+				'--vc-fg'        => $theme,
+				'--vc-title-c'   => $theme,
+				'--vc-contact-count' => max( 1, count( $items ) ),
 			)
 		);
-		$bg  = ( Assets::resolve( $s['media']['desktop'] ) || Assets::resolve( $s['media']['mobile'] ?? null ) ) ? self::picture( $s['media'], 'vc-contact__bg' ) . '<div class="vc-banner__overlay"></div>' : '';
-		$out = '<div class="' . esc_attr( self::inner_class( $s ) ) . '"><div class="vc-contact"' . $vars . '>' . $bg . '<div class="vc-contact__body">' . self::heading( $s ) . '<ul class="vc-contact__list">';
+		if ( 'color' === ( $s['backgroundFallback'] ?? 'inherit' ) ) {
+			$bg = '';
+			foreach ( array( 'desktop', 'mobile' ) as $device ) {
+				if ( Assets::resolve( $s['media'][ $device ] ?? null ) ) {
+					$bg .= self::picture( array( 'desktop' => $s['media'][ $device ], 'mobile' => null ), 'vc-contact__bg vc-contact__bg--' . $device );
+				}
+			}
+			$bg .= '<div class="vc-banner__overlay"></div>';
+		} else {
+			$bg  = ( Assets::resolve( $s['media']['desktop'] ) || Assets::resolve( $s['media']['mobile'] ?? null ) ) ? self::picture( $s['media'], 'vc-contact__bg' ) . '<div class="vc-banner__overlay"></div>' : '';
+		}
+		$out = '<div class="' . esc_attr( self::inner_class( $s ) . ' vc-contact-frame' ) . '"><div class="vc-contact"' . $vars . '>' . $bg . '<div class="vc-contact__body">' . self::heading( $s ) . '<ul class="vc-contact__list" data-vc-contact-list>';
 		foreach ( $items as $it ) {
-			$row  = '<span class="vc-contact__icon">' . self::icon_or_image( $it, (int) $s['iconSizePx'] ) . '</span><span><strong>' . esc_html( $it['title'] ) . '</strong><br>' . esc_html( $it['text'] ) . '</span>';
-			$out .= '<li class="' . esc_attr( self::item_class( $it, 'vc-contact__item' ) ) . '"' . self::item_attr( $it ) . '>' . ( '' !== $it['href'] ? self::maybe_link( $row, $it['href'] ) : '<div class="vc-contact__method">' . $row . '</div>' ) . '</li>';
+			$symbol = (string) ( $it['symbol'] ?? 'none' );
+			if ( Assets::resolve( $it['image'] ) ) {
+				$icon = self::img( $it['image'], 'vc-m__icon-img' );
+			} elseif ( 'hidden' === $symbol ) {
+				$icon = '';
+			} elseif ( 'none' !== $symbol && '' !== ( $svg = Contact_Symbols::render( $symbol, (int) $s['iconSizePx'] ) ) ) {
+				$icon = $svg;
+			} else {
+				$icon = self::icon( (string) $it['icon'], (int) $s['iconSizePx'] );
+			}
+			$head = '' !== $icon ? '<span class="vc-contact__icon">' . $icon . '</span>' : '';
+			$head .= '' !== $it['title'] ? '<h3 class="vc-contact__title">' . esc_html( $it['title'] ) . '</h3>' : '';
+			$rich = $it['textHtml'] ?? null;
+			$content = null !== $rich ? ( '' !== $rich ? self::html( $rich ) : '' ) : esc_html( $it['text'] );
+			$body = '' !== $content ? '<div class="vc-contact__text">' . $content . '</div>' : '';
+			$href = (string) $it['href'];
+			$label = trim( (string) $it['title'] );
+			if ( '' === $label ) { $label = trim( wp_strip_all_tags( $content ) ); }
+			if ( '' === $label ) { $label = __( 'Open contact link', 'peptide-core' ); }
+			if ( '' !== $href && 1 === preg_match( '/<a(?:\s|>)/i', $content ) ) {
+				$head_link = '' !== $head
+					? '<a class="vc-contact__heading-link" href="' . esc_url( $href ) . '"' . ( '' === $it['title'] ? ' aria-label="' . esc_attr( $label ) . '"' : '' ) . '>' . $head . '</a>'
+					: '<a class="vc-contact__heading-link vc-contact__heading-link--fallback" href="' . esc_url( $href ) . '">' . esc_html__( 'Open contact link', 'peptide-core' ) . '</a>';
+				$method = '<div class="vc-contact__method">' . $head_link . $body . '</div>';
+			} elseif ( '' !== $href && '' !== ( $head . $body ) ) {
+				$method = '<a class="vc-contact__method vc-contact__method--linked" href="' . esc_url( $href ) . '"' . ( '' === $it['title'] && '' === trim( wp_strip_all_tags( $content ) ) ? ' aria-label="' . esc_attr( $label ) . '"' : '' ) . '>' . $head . $body . '</a>';
+			} else {
+				$method = '<div class="vc-contact__method">' . $head . $body . '</div>';
+			}
+			$out .= '<li class="' . esc_attr( self::item_class( $it, 'vc-contact__item' ) ) . '"' . self::item_attr( $it ) . '>' . $method . '</li>';
 		}
 		return $out . '</ul></div></div></div>';
 	}

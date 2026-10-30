@@ -534,4 +534,6 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
 
 16. `timeline`保留旧horizontal/vertical、字段/defaultfalse、3项/ID/自由日期和设备合同，仅新insert editorDefaults auto/collapsible true。itemWidthPx为PC最小宽，有空间均分、超宽原生滚动，phone纵排；nullable rich和独立plain dateTitle/dateText沿null回退/空串抑制，inherited-text不把日期HTML编码。四个device number显式boxmodel布局，不新增Fields类型，极端左右padding仅视觉限40%不回写存储。JS保留fraction游标防亚像素停滞、实际暂停/恢复；折叠完整前3项且无JS全显。合法vc:select-item接管并展开/滚动，防通用fallback误隐藏兄弟，双device DOM按实际可见项处理。五组真实WP及native9/适配3分开记录在backend-timeline-2026-10-30.md；不称像素复制参考645px截断或相同Swiper循环。
 
+17. `contact`新增nullable descriptionHtml/textHtml、显式themeColor、十二固定原创symbol与backgroundFallback。旧三空项/ID/14图标/图片/12–64尺寸保留；null沿plain、空串清除，有效图片优先，选symbol不改文案或href。PC按实际项数均分、phone两列；未绑定为非交互内容，正文自有链接与配置联系链接分开，空heading仍有可见独立出口。旧schema inherit保留共享picture继承；仅新insert用color/171717/white，逐端缺图用底色且消费0–100蒙层。共享Controls仅允许Contact显式覆盖手机图标签，不改media存储/Fields/HTML策略。合法item选择接管而不隐藏兄弟。独立8组与五组真实WP及具体边界见backend-contact-2026-10-30.md；正文插图C尚未实现。
+
 验证按阶段记录，不混计：Records独立34及控件12不当真WP；原站限定29项已精确清理并与858posts/2555非锁meta基线同指纹；独立WordPress+Woo评价/Index各范围见任务work/reviews-runtime-positive-report.md，Index19组及SQL6/同请求恢复2等有真实前后证据；Links真实API7+UI8通过，取消/权限/状态变化/390/错误恢复均覆盖。共享条目panels/paired和首7基础块属于后续单独阶段，最终真实性/版本/限制以对应报告为准，不以已有定义数代替全量验收。

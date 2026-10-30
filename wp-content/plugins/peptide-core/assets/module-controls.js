@@ -482,7 +482,7 @@
 			el( 'p', { className: 'pc-me-label pc-me-label--strong' }, props.field.label ),
 			props.field.help ? el( 'p', { className: 'components-base-control__help' }, props.field.help ) : null,
 			part( 'desktop', S.desktopImage ),
-			part( 'mobile', S.mobileImage ),
+			part( 'mobile', props.field.mobileImageLabel || S.mobileImage ),
 			el( C.SelectControl, {
 				label: S.fit,
 				value: v.desktop.fit || 'cover',

@@ -2036,3 +2036,11 @@ design_details：Site_Design/CSS/fonts/中文；字段细化、全局评论设�
 隔离测试站work/reviews-positive-site/127.0.0.1:56139尚保留给Links及基本块后续定向验收，owner reviews_runtime_positive负责双标记和最终精确停进程/删本人独立库/私有凭据；原站不创建测试商品/评论。此状态不同于此前已清理的29项原站QA。
 
 当前分工：root独占参考Browser；reference_basic_study负责Links/共享控件/Blocks最小挂钩；builder_settings_audit已交出Commerce/Reviews/Records7源最终pin并只读做70参考→73本地映射；positive负责独立真WP测试实例。根合同/DESIGN后续同步只限本目标实际改变，保留既有规范历史。下一步继续逐块观察剩余基础/商品/运营、补真实差距并做PC手机回归、fresh UI review，最后清理QA/回核原数据/完成全量交接。支付/外部邮件/搜索仍空，AI/收藏/正式AB暂缓；无部署或提交。
+
+### 2026-10-30 · Contact24 verified phase
+
+This dated update supersedes earlier pending-stage wording for Contact. Root integrated five existing sources plus the authored Contact_Symbols helper, preserving old schema defaults/IDs/media behavior while adding the observed panels, equal desktop methods, phone two-column layout, rich companions, real link handling and explicit independent-background policy. The single shared Controls delta is a Contact-only mobile image label override; Fields/Rich_Html and the editor stylesheet are unchanged. New inserts use the approved black/white independent-background preset; old records keep inherit defaults.
+
+Final source/fresh review, eight independent native groups and five actual WordPress groups have separate scopes. Actual WP5 passed with observed native editor/frame JS0 and no source fix; one task RTE selector required a harness rerun. Native save/reopen/media/link/sidebar/theme checks and twenty final source/dependency/theme SHA entries passed. Own layout/template/revisions/editor,38 previews/MU/private and3 closed runtime profiles were removed; retained QA fixtures/WebM16 and fresh original before/after fingerprints matched. The source-owner closed fixture profile is retained separately. Full method limits, including the owned anonymous route rather than normal production routing, are in backend-contact-2026-10-30.md.
+
+Reference learning is24/70 after guarded Contact cleanup, with no reference Publish. Root is studying25 promo grid. Inline-rich-image C remains a read-only design candidate; payment/mail/search and other deferrals remain. This verified phase is automatically committed/synchronized per user authorization, not a deployment or full-goal completion.
