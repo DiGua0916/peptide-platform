@@ -41,9 +41,11 @@ final class Realtime_Dimensions {
 	}
 
 	/** One request, bounded raw batches, distinct aggregates only. Anchor is a cutoff, not MVCC. */
-	public static function summary( array $validated ): array {
+	public static function summary( array $validated, ?Realtime_Filter $filter = null ): array {
 		global $wpdb;
 		$history = 'history' === $validated['mode'];
+		if ( $filter && $filter->is_all() ) { $filter = null; }
+		if ( $filter ) { $filter = $filter->at( $history ? $validated['range']['to'] * 1000 : $validated['anchor_ms'] + 1 ); $filter->require_ready(); }
 		$out = array( 'mode' => $validated['mode'], 'anchor_ms' => $validated['anchor_ms'], 'range' => $history ? array( 'from' => $validated['range']['from'], 'to' => $validated['range']['to'], 'dates' => array_intersect_key( $validated['range']['dates'], array_flip( array( 'from', 'to' ) ) ), 'timezone' => wp_timezone_string() ) : null, 'timezone' => wp_timezone_string(), 'panels' => array() );
 		foreach ( self::PANELS as $key ) {
 			$window = $history ? null : $validated['windows'][ $key ];
@@ -53,10 +55,11 @@ final class Realtime_Dimensions {
 			$coverage = in_array( $key, array( 'viewed', 'carted', 'sold', 'pages' ), true ) ? null : array( 'base_unit' => in_array( $key, array( 'popular_countries', 'collections' ), true ) ? 'page_views' : 'visits', 'base_count' => null, 'known' => null, 'unknown' => null, 'unobserved' => null, 'unavailable' => null );
 			$out['panels'][ $key ] = array( 'from_ms' => $from, 'to_ms' => $to, 'window' => $window, 'unit' => $unit, 'state' => 'unavailable', 'reason' => 'dependency_unavailable', 'coverage' => $coverage, 'rows' => null, 'top_n' => 'map' === $key ? null : 5, 'total_rows' => null );
 		}
+		if ( $filter ) { $out['filter'] = $filter->normalized(); $sold = $out['panels']['sold']; $filter->prime_orders( (int) ceil( $sold['from_ms'] / 1000 ), (int) ceil( $sold['to_ms'] / 1000 ) ); }
 		foreach ( array( 'viewed', 'carted', 'sold', 'pages' ) as $key ) {
 			try {
 				if ( 'sold' === $key && ! function_exists( 'wc_get_orders' ) ) { continue; }
-				$p = &$out['panels'][ $key ]; $list = Realtime::ranged_list( $key, $p['from_ms'], $p['to_ms'] );
+				$p = &$out['panels'][ $key ]; $list = Realtime::ranged_list( $key, $p['from_ms'], $p['to_ms'], $filter );
 				if ( $wpdb->last_error ) { throw new \RuntimeException( 'List dependency failed.' ); }
 				$p['rows'] = $list['rows']; $p['total_rows'] = $list['total_rows']; $p['state'] = $list['total_rows'] ? 'available' : 'empty'; $p['reason'] = null; unset( $p );
 			} catch ( \Throwable $e ) { unset( $p ); }
@@ -68,12 +71,12 @@ final class Realtime_Dimensions {
 		foreach ( $cohorts as $keys ) {
 			$p = $out['panels'][ $keys[0] ];
 			try {
-				$aggregates = self::visits( $p['from_ms'], $p['to_ms'], $history, in_array( 'sources', $keys, true ), count( array_diff( $keys, array( 'sources' ) ) ) > 0 );
+				$aggregates = self::visits( $p['from_ms'], $p['to_ms'], $history, in_array( 'sources', $keys, true ), count( array_diff( $keys, array( 'sources' ) ) ) > 0, $filter );
 				foreach ( $keys as $key ) { $out['panels'][ $key ] = self::finish( $out['panels'][ $key ], $aggregates[ 'sources' === $key ? 'sources' : 'geo' ], 'map' === $key ); }
 			} catch ( \Throwable $e ) { /* Independent sections retain truthful unavailable/null. */ }
 		}
 		try {
-			$pv = self::page_views( $out['panels']['popular_countries'], $out['panels']['collections'] );
+			$pv = self::page_views( $out['panels']['popular_countries'], $out['panels']['collections'], $filter );
 			foreach ( array( 'popular_countries', 'collections' ) as $key ) { $out['panels'][ $key ] = self::finish( $out['panels'][ $key ], $pv[ $key ] ); }
 		} catch ( \Throwable $e ) { /* Other panels remain usable. */ }
 		return $out;
@@ -89,13 +92,14 @@ final class Realtime_Dimensions {
 	private static function check_db(): void { global $wpdb; if ( $wpdb->last_error ) { throw new \RuntimeException( 'Observation query failed.' ); } }
 
 	/** Visit-start history / last-activity live; latest geo is unbounded below within each visit. */
-	private static function visits( int $from, int $to, bool $history, bool $sources, bool $geo ): array {
+	private static function visits( int $from, int $to, bool $history, bool $sources, bool $geo, ?Realtime_Filter $filter = null ): array {
 		global $wpdb;
+		$predicate = $filter ? ' AND ' . $filter->visit_sql() : '';
 		$out = array( 'geo' => self::aggregate( 'visits' ), 'sources' => self::aggregate( 'visits' ) );
 		$out['sources']['coverage'] += array( 'valued' => 0, 'captured_missing' => 0, 'captured_empty' => 0 );
 		$column = $history ? 'start_ms' : 'last_ms'; $cursor = 0; $visits = Schema::table( 'visits' ); $events = Schema::table( 'events' );
 		do {
-			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT id, visitor_id, ' . implode( ', ', Attribution::COLUMNS ) . " FROM {$visits} WHERE {$column} >= %d AND {$column} < %d AND id > %d ORDER BY id ASC LIMIT %d", $from, $to, $cursor, self::BATCH ), ARRAY_A ); self::check_db();
+			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT id, visitor_id, ' . implode( ', ', Attribution::COLUMNS ) . " FROM {$visits} WHERE {$column} >= %d AND {$column} < %d AND id > %d{$predicate} ORDER BY id ASC LIMIT %d", $from, $to, $cursor, self::BATCH ), ARRAY_A ); self::check_db();
 			$owners = array(); foreach ( (array) $rows as $row ) { $owners[ (int) $row['id'] ] = (int) $row['visitor_id']; }
 			$latest = array();
 			if ( $geo && $owners ) {
@@ -128,13 +132,14 @@ final class Realtime_Dimensions {
 	}
 
 	/** One keyset scan over the union of the two PV windows; no raw JSON retained across batches. */
-	private static function page_views( array $popular, array $collections ): array {
+	private static function page_views( array $popular, array $collections, ?Realtime_Filter $filter = null ): array {
 		global $wpdb;
+		$predicate = $filter ? ' AND ' . $filter->event_sql() : '';
 		$out = array( 'popular_countries' => self::aggregate( 'page_views' ), 'collections' => self::aggregate( 'page_views' ) );
 		$out['collections']['coverage'] += array( 'collection' => 0, 'known_non_collection' => 0 );
 		$from = min( $popular['from_ms'], $collections['from_ms'] ); $to = max( $popular['to_ms'], $collections['to_ms'] ); $at = $from; $id = 0; $table = Schema::table( 'events' );
 		do {
-			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT id, occurred_ms, data FROM {$table} WHERE type = 'page_view' AND occurred_ms >= %d AND occurred_ms < %d AND (occurred_ms > %d OR (occurred_ms = %d AND id > %d)) ORDER BY occurred_ms ASC, id ASC LIMIT %d", $from, $to, $at, $at, $id, self::BATCH ), ARRAY_A ); self::check_db();
+			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT id, occurred_ms, data FROM {$table} WHERE type = 'page_view' AND occurred_ms >= %d AND occurred_ms < %d AND (occurred_ms > %d OR (occurred_ms = %d AND id > %d)) {$predicate} ORDER BY occurred_ms ASC, id ASC LIMIT %d", $from, $to, $at, $at, $id, self::BATCH ), ARRAY_A ); self::check_db();
 			foreach ( (array) $rows as $row ) {
 				$at = (int) $row['occurred_ms']; $id = (int) $row['id']; $data = json_decode( (string) $row['data'], true ); $context = Page_Context::saved( is_array( $data ) ? ( $data['page_context'] ?? null ) : null );
 				if ( $at >= $popular['from_ms'] && $at < $popular['to_ms'] ) { $g = $context['geo'] ?? array( 'status' => 'unobserved' ); self::observed( $out['popular_countries'], $g['status'] ); if ( 'known' === $g['status'] ) { $key = $g['country_code']; $out['popular_countries']['rows'][ $key ]['count'] = ( $out['popular_countries']['rows'][ $key ]['count'] ?? 0 ) + 1; } }

@@ -30,6 +30,8 @@ use PeptideCore\Data\Rankings;
 use PeptideCore\Data\Range;
 use PeptideCore\Data\Realtime;
 use PeptideCore\Data\Realtime_Dimensions;
+use PeptideCore\Data\Realtime_Filter;
+use PeptideCore\Data\Realtime_Filter_Options;
 use PeptideCore\Data\Trends;
 
 defined( 'ABSPATH' ) || exit;
@@ -126,11 +128,47 @@ final class Data_Pages {
 						'callback' => static function ( \WP_REST_Request $request ) {
 							$params = Realtime_Dimensions::params( $request->get_params() );
 							if ( is_wp_error( $params ) ) { return $params; }
-							$response = new \WP_REST_Response( Realtime_Dimensions::summary( $params ) );
+							$filter = Realtime_Filter::params( $request->get_params() );
+							if ( is_wp_error( $filter ) ) { return $filter; }
+							try { $response = new \WP_REST_Response( Realtime_Dimensions::summary( $params, $filter->is_all() ? null : $filter ) ); }
+							catch ( \Throwable $error ) { return new \WP_Error( 'pc_realtime_filter_unavailable', __( 'Realtime entry attribution is unavailable.', 'peptide-core' ), array( 'status' => 503 ) ); }
 							$response->header( 'Cache-Control', 'no-store' );
 							return $response;
 						},
 						'permission_callback' => $permission,
+					)
+				);
+				register_rest_route(
+					Rest_Controller::ROUTE_NAMESPACE, '/data/realtime/filtered',
+					array(
+						'methods' => \WP_REST_Server::READABLE,
+						'permission_callback' => $permission,
+						'callback' => static function ( \WP_REST_Request $request ) {
+							$raw = $request->get_params(); $now = (int) round( microtime( true ) * 1000 );
+							$filter = Realtime_Filter::params( $raw ); if ( is_wp_error( $filter ) ) { return $filter; }
+							$mode = \PeptideCore\Data\Params::word( $raw, 'mode', 'live', array( 'live', 'history' ) );
+							if ( null === $mode || ( array_key_exists( 'format', $raw ) && ( ! is_string( $raw['format'] ) || 'json' !== $raw['format'] ) ) ) { return \PeptideCore\Api\Errors::invalid( array( null === $mode ? 'mode' : 'format' => 'invalid_format' ) ); }
+							$params = Realtime::params( $raw ); if ( is_wp_error( $params ) ) { return $params; }
+							$range = 'history' === $mode ? Realtime::history_params( $raw, intdiv( $now, 1000 ) ) : null;
+							if ( is_wp_error( $range ) ) { return $range; }
+							try {
+								$data = 'history' === $mode ? Realtime::filtered_history( $range, $filter ) : Realtime::filtered_summary( $now, $params['funnel'], $params['minutes'], $filter );
+								$response = new \WP_REST_Response( $data ); $response->header( 'Cache-Control', 'no-store' ); return $response;
+							} catch ( \Throwable $error ) { return new \WP_Error( 'pc_realtime_filter_unavailable', __( 'Realtime entry attribution is unavailable.', 'peptide-core' ), array( 'status' => 503 ) ); }
+						},
+					)
+				);
+				register_rest_route(
+					Rest_Controller::ROUTE_NAMESPACE, '/data/realtime/filter-options',
+					array(
+						'methods' => \WP_REST_Server::READABLE,
+						'permission_callback' => $permission,
+						'callback' => static function ( \WP_REST_Request $request ) {
+							$raw = $request->get_params(); $params = Realtime_Filter_Options::params( $raw ); if ( is_wp_error( $params ) ) { return $params; }
+							$filter = Realtime_Filter::params( $raw ); if ( is_wp_error( $filter ) ) { return $filter; }
+							try { $response = new \WP_REST_Response( Realtime_Filter_Options::summary( $params, $filter ) ); $response->header( 'Cache-Control', 'no-store' ); return $response; }
+							catch ( \Throwable $error ) { return new \WP_Error( 'pc_realtime_filter_unavailable', __( 'Realtime entry attribution is unavailable.', 'peptide-core' ), array( 'status' => 503 ) ); }
+						},
 					)
 				);
 				// 运营数据页（DATA-01 第 2 步）：指标卡片和两个转化漏斗，本期和对比期。
@@ -382,7 +420,9 @@ final class Data_Pages {
 			wp_enqueue_style( 'peptide-core-data-realtime-dimensions', $url . 'data-realtime-dimensions.css', array( 'peptide-core-data-realtime' ), $ver( 'data-realtime-dimensions.css' ) );
 			wp_register_script( 'peptide-core-data-realtime-countries', $url . 'data-realtime-countries.js', array(), $ver( 'data-realtime-countries.js' ), array( 'in_footer' => true ) );
 			wp_register_script( 'peptide-core-data-realtime-dimensions', $url . 'data-realtime-dimensions.js', array( self::SCRIPT, 'peptide-core-data-realtime-countries' ), $ver( 'data-realtime-dimensions.js' ), array( 'in_footer' => true ) );
-			wp_enqueue_script( 'peptide-core-data-realtime', $url . 'data-realtime.js', array( self::SCRIPT, 'peptide-core-data-realtime-dimensions' ), $ver( 'data-realtime.js' ), array( 'in_footer' => true ) );
+			wp_enqueue_style( 'peptide-core-data-realtime-filters', $url . 'data-realtime-filters.css', array( 'peptide-core-data-realtime' ), $ver( 'data-realtime-filters.css' ) );
+			wp_register_script( 'peptide-core-data-realtime-filters', $url . 'data-realtime-filters.js', array( self::SCRIPT ), $ver( 'data-realtime-filters.js' ), array( 'in_footer' => true ) );
+			wp_enqueue_script( 'peptide-core-data-realtime', $url . 'data-realtime.js', array( self::SCRIPT, 'peptide-core-data-realtime-dimensions', 'peptide-core-data-realtime-filters' ), $ver( 'data-realtime.js' ), array( 'in_footer' => true ) );
 			wp_add_inline_script(
 				'peptide-core-data-realtime',
 				'window.pcDataRealtime = ' . wp_json_encode( array( 'strings' => self::realtime_strings(), 'timezone' => wp_timezone_string() ) ) . ';',
@@ -587,9 +627,41 @@ final class Data_Pages {
 		);
 	}
 
+	private static function realtime_filter_strings(): array {
+		return array(
+			'entry_domain' => __( 'Entry domain (first captured)', 'peptide-core' ),
+			'utm_source' => __( 'UTM source (first captured)', 'peptide-core' ),
+			'all' => __( 'All entry sources', 'peptide-core' ),
+			'unobserved' => __( 'No entry attribution observed', 'peptide-core' ),
+			'missing' => __( 'Captured without a UTM source key', 'peptide-core' ),
+			'empty' => __( 'Captured empty UTM source', 'peptide-core' ),
+			'help' => __( 'Entry filters use the first successfully captured visit snapshot. Domain and UTM conditions are combined with AND. Orders use creation time and their original visit entry, not revenue from visits in the selected period. Values preserve case; unknown is not direct traffic.', 'peptide-core' ),
+			'search' => __( 'Search entry values', 'peptide-core' ),
+			'more' => __( 'More entry values', 'peptide-core' ),
+			'previous' => __( 'Previous entry values', 'peptide-core' ),
+			'notObserved' => __( 'Selected entry value was not observed in this period.', 'peptide-core' ),
+			'notObservedOption' => __( 'Not observed in this period', 'peptide-core' ),
+			'reset' => __( 'Reset entry filters to All', 'peptide-core' ),
+			'loading' => __( 'Loading entry-filtered data…', 'peptide-core' ),
+			'stale' => __( 'Showing the last accepted entry filter; the new request has not succeeded.', 'peptide-core' ),
+			'error' => __( 'Entry-filter data could not be loaded. Retry or reset to All.', 'peptide-core' ),
+			'urlError' => __( 'Entry filters in the URL are invalid. Correct them or reset to All.', 'peptide-core' ),
+			'unavailable' => __( 'Entry filters are unavailable; the All report remains available.', 'peptide-core' ),
+			'optionsError' => __( 'Entry values could not be loaded. The accepted report remains unchanged.', 'peptide-core' ),
+			'retry' => __( 'Retry entry filters', 'peptide-core' ),
+			'coverage' => __( 'Candidate coverage: distinct visits', 'peptide-core' ),
+			'captured' => __( 'Captured entry snapshots', 'peptide-core' ),
+			'v0' => __( 'Visits without captured attribution', 'peptide-core' ),
+			'late_capture' => __( 'Snapshots received after this cutoff', 'peptide-core' ),
+			'unlinked_events' => __( 'Unlinked eligible events (separate count)', 'peptide-core' ),
+			'unlinked_orders' => __( 'Unlinked eligible orders (separate count)', 'peptide-core' ),
+		);
+	}
+
 	private static function realtime_strings(): array {
 		return self::visitor_funnel_strings() + array(
 			'dimensions' => self::realtime_dimension_strings(),
+			'filters' => self::realtime_filter_strings(),
 			/* translators: %s: date and time */
 			'updated'        => __( 'Last updated: %s', 'peptide-core' ),
 			'refresh'        => __( 'Refresh', 'peptide-core' ),

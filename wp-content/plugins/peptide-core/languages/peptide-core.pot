@@ -12281,3 +12281,111 @@ msgstr ""
 msgctxt "realtime ranking item"
 msgid "Page"
 msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Realtime entry attribution is unavailable."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Entry domain (first captured)"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "UTM source (first captured)"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "All entry sources"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "No entry attribution observed"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Captured without a UTM source key"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Captured empty UTM source"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Entry filters use the first successfully captured visit snapshot. Domain and UTM conditions are combined with AND. Orders use creation time and their original visit entry, not revenue from visits in the selected period. Values preserve case; unknown is not direct traffic."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Search entry values"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "More entry values"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Previous entry values"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Selected entry value was not observed in this period."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Not observed in this period"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Reset entry filters to All"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Loading entry-filtered data…"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Showing the last accepted entry filter; the new request has not succeeded."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Entry-filter data could not be loaded. Retry or reset to All."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Entry filters in the URL are invalid. Correct them or reset to All."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Entry filters are unavailable; the All report remains available."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Entry values could not be loaded. The accepted report remains unchanged."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Retry entry filters"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Candidate coverage: distinct visits"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Captured entry snapshots"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Visits without captured attribution"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Snapshots received after this cutoff"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Unlinked eligible events (separate count)"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Unlinked eligible orders (separate count)"
+msgstr ""

@@ -5,7 +5,7 @@
 	var sequence = 0, PATH = '/peptide/v1/data/realtime/dimensions';
 	function mount( host, ctx, strings, mapData ) {
 		var T = strings || {}, esc = ctx.esc, number = ctx.number, id = ++sequence;
-		var disposed = false, generation = 0, mainBusy = false, rangeBusy = false, pending = false, context = null, accepted = null, coalesce = 0, recovery = 0, unsubscribe = null, panels = {}, windows = {}, stale = false, focusReturn = null, bindings = [];
+		var disposed = false, generation = 0, mainBusy = false, rangeBusy = false, pending = false, context = null, accepted = null, coalesce = 0, recovery = 0, unsubscribe = null, panels = {}, windows = {}, stale = false, focusReturn = null, bindings = [], windowsListener = null;
 		function on( element, type, handler ) { element.addEventListener( type, handler ); bindings.push( { element: element, type: type, handler: handler } ); }
 		function text( key ) { return T[ key ] || key; }
 		function hasShare( key ) { return key === 'popular_countries' || key === 'collections'; }
@@ -39,7 +39,7 @@
 			on( panels[ key ].select, 'change', function () {
 				var n = Number( panels[ key ].select.value ); if ( [ 10, 20, 30 ].indexOf( n ) < 0 || mainBusy || rangeBusy || ! context || context.mode === 'history' ) { return; }
 				windows[ key ] = n; try { w.localStorage.setItem( 'pcDataRealtimeDimension_' + key, String( n ) ); } catch ( e ) { /* Storage is optional. */ }
-				invalidate(); coalesce = w.setTimeout( function () { coalesce = 0; request(); }, 0 );
+				invalidate(); coalesce = w.setTimeout( function () { coalesce = 0; request(); if ( windowsListener ) { windowsListener(); } }, 0 );
 			} );
 			on( panels[ key ].retry, 'click', function () { if ( ! pending && ! mainBusy && ! rangeBusy && context ) { request(); } } );
 		} );
@@ -62,8 +62,9 @@
 			else if ( panel.coverage && panel.coverage.unknown > 0 && panel.coverage.known === 0 ) { legend = text( 'unknown' ) + ' (' + text( panel.coverage.base_unit ) + '): ' + number( panel.coverage.unknown ); }
 			mapBox.querySelector( '.pc-rt-dim-legend' ).textContent = legend;
 		}
-		function params() { var p = { mode: context.mode }; if ( p.mode === 'live' ) { p.anchor_ms = context.anchor; KEYS.forEach( function ( key ) { p[ key ] = windows[ key ]; } ); } else { p.from = context.from; p.to = context.to; } return p; }
+		function params() { var p = { mode: context.mode }; if ( p.mode === 'live' ) { p.anchor_ms = context.anchor; KEYS.forEach( function ( key ) { p[ key ] = windows[ key ]; } ); } else { p.from = context.from; p.to = context.to; } if ( context.filter ) { Object.keys( context.filter ).forEach( function ( key ) { p[ key ] = context.filter[ key ]; } ); } return p; }
 		function validResponse( data, p ) {
+			if ( context.filter ? ! w.PcDataRealtimeFilters || ! w.PcDataRealtimeFilters.same( data && data.filter, context.filter ) : data && data.filter !== undefined ) { return false; }
 			if ( ! data || data.mode !== p.mode || ! data.panels || ( context.timezone && data.timezone !== context.timezone ) || ( p.mode === 'live' ? data.anchor_ms !== p.anchor_ms : ( ! data.range || ! data.range.dates || data.range.dates.from !== p.from || data.range.dates.to !== p.to || data.range.from !== context.epochFrom || data.range.to !== context.epochTo || data.range.timezone !== context.timezone ) ) ) { return false; }
 			function count( value ) { return typeof value === 'number' && isFinite( value ) && value >= 0 && Math.floor( value ) === value; }
 			return KEYS.every( function ( key ) {
@@ -100,12 +101,13 @@
 			var next;
 			if ( selection.mode === 'history' ) { if ( data.mode !== 'history' || ! data.range || ! data.range.dates || ! /^\d{4}-\d{2}-\d{2}$/.test( data.range.dates.from ) || ! /^\d{4}-\d{2}-\d{2}$/.test( data.range.dates.to ) || typeof data.range.from !== 'number' || ! isFinite( data.range.from ) || typeof data.range.to !== 'number' || ! isFinite( data.range.to ) || data.range.to <= data.range.from || typeof data.range.timezone !== 'string' || ! data.range.timezone ) { failMain(); return; } next = { mode: 'history', from: data.range.dates.from, to: data.range.dates.to, epochFrom: data.range.from, epochTo: data.range.to, timezone: data.range.timezone }; }
 			else { if ( data.mode === 'history' || typeof data.now_ms !== 'number' || ! isFinite( data.now_ms ) || data.now_ms <= 0 || Math.floor( data.now_ms ) !== data.now_ms ) { failMain(); return; } next = { mode: 'live', anchor: data.now_ms, timezone: typeof data.timezone === 'string' ? data.timezone : null }; }
+			if ( selection.filter && w.PcDataRealtimeFilters && w.PcDataRealtimeFilters.active( selection.filter ) ) { if ( ! w.PcDataRealtimeFilters.same( selection.filter, data.filter ) ) { failMain(); return; } next.filter = w.PcDataRealtimeFilters.normalize( selection.filter ); }
 			next.signature = JSON.stringify( next ); context = next; mainBusy = false; stale = false; invalidate(); controls(); request();
 		}
 		function failMain() { if ( ! attached() ) { return; } mainBusy = false; stale = true; invalidate(); if ( context && ! rangeBusy ) { request(); } else { status( text( 'error' ) ); } }
 		if ( ctx.onRangeState ) { unsubscribe = ctx.onRangeState( function ( busy ) { var changed = rangeBusy !== !! busy; if ( busy ) { rememberFocus(); } rangeBusy = !! busy; if ( rangeBusy ) { invalidate(); status( text( 'loading' ) ); } else if ( changed && ! mainBusy && context && attached() ) { recovery = w.setTimeout( function () { recovery = 0; request(); }, 0 ); } controls(); } ); }
 		controls(); status( text( 'loading' ) );
-		return { beginMain: beginMain, acceptMain: acceptMain, failMain: failMain, dispose: function () { if ( disposed ) { return; } disposed = true; ++generation; stopTimers(); bindings.forEach( function ( binding ) { binding.element.removeEventListener( binding.type, binding.handler ); } ); bindings = []; document.removeEventListener( 'focusin', movedFocus ); if ( unsubscribe ) { unsubscribe(); unsubscribe = null; } focusReturn = null; context = null; accepted = null; } };
+		return { getWindows: function () { var copy = {}; KEYS.forEach( function ( key ) { copy[ key ] = windows[ key ]; } ); return copy; }, setWindowsListener: function ( fn ) { windowsListener = typeof fn === 'function' ? fn : null; }, beginMain: beginMain, acceptMain: acceptMain, failMain: failMain, dispose: function () { if ( disposed ) { return; } disposed = true; ++generation; stopTimers(); bindings.forEach( function ( binding ) { binding.element.removeEventListener( binding.type, binding.handler ); } ); bindings = []; document.removeEventListener( 'focusin', movedFocus ); if ( unsubscribe ) { unsubscribe(); unsubscribe = null; } focusReturn = null; context = null; accepted = null; windowsListener = null; } };
 	}
 	w.PcDataRealtimeDimensions = { mount: mount };
 }( window ) );

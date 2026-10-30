@@ -219,7 +219,7 @@
 			box( displayedHistory ? T.historyPages : T.listPages, l.pages, 'page', links.pages );
 	}
 
-	var dimensions = null;
+	var dimensions = null, filters = null, acceptedMain = null, rangeBusy = false, rangeUnsubscribe = null, rangeRecovery = 0;
 	function notes( data ) {
 		var html = '';
 		if ( ! data.tracking ) {
@@ -243,7 +243,7 @@
 
 	function build( bodyEl ) {
 		bodyEl.innerHTML = '<div class="pc-rt">' +
-			'<form class="pc-rt-range" novalidate>' +
+			'<div class="pc-rt-filters-host"></div><form class="pc-rt-range" novalidate>' +
 				'<div class="pc-rt-modes" role="group" aria-label="' + esc( T.period ) + '">' +
 					'<button type="button" class="button pc-rt-live" aria-pressed="false">' + esc( T.live ) + '</button>' +
 					'<button type="button" class="button pc-rt-today" aria-pressed="false">' + esc( T.todayOption ) + '</button>' +
@@ -301,6 +301,15 @@
 			els.lists.hidden = true;
 		}
 
+		if ( window.PcDataRealtimeFilters ) {
+			filters = window.PcDataRealtimeFilters.mount( bodyEl.querySelector( '.pc-rt-filters-host' ), ctx, T.filters, {
+				onChange: changeFilter, onRetry: load,
+				getMainWindows: function () { return { funnel: state.funnel, minutes: state.minutes }; },
+				getWindows: function () { if ( dimensions && dimensions.getWindows ) { return dimensions.getWindows(); } var values = {}; [ 'viewed', 'carted', 'sold', 'map', 'active_countries', 'popular_countries', 'sources', 'collections', 'pages' ].forEach( function ( key ) { values[ key ] = 10; } ); return values; }
+			} );
+			if ( dimensions && dimensions.setWindowsListener ) { dimensions.setWindowsListener( function () { if ( filters ) { filters.windowsChanged(); } } ); }
+		} else if ( T.filters && typeof T.filters === 'object' ) { bodyEl.querySelector( '.pc-rt-filters-host' ).textContent = T.filters.unavailable; }
+
 		els.refresh.addEventListener( 'click', function () {
 			load();
 		} );
@@ -317,12 +326,13 @@
 		els.range.addEventListener( 'submit', function ( event ) {
 			event.preventDefault();
 			if ( ! validDates( els.from.value, els.to.value ) ) {
-				wanted = { mode: 'history', params: { from: els.from.value, to: els.to.value } };
+				wanted = { mode: 'history', params: { from: els.from.value, to: els.to.value }, filter: wanted.filter };
 				urlAction = 'push';
 				schedule();
 				++requests;
 				setBusy( false );
 				showError( T.rangeError );
+				if ( filters ) { filters.beginMain(); filters.failMain(); els.root.classList.toggle( 'is-stale', painted ); }
 				if ( dimensions ) { dimensions.failMain(); }
 				return;
 			}
@@ -346,11 +356,12 @@
 	function fromUrl() {
 		try {
 			if ( ! window.URLSearchParams || ! window.location ) { return { mode: 'live', params: {} }; }
-			var q = new window.URLSearchParams( window.location.search );
-			var params = {};
+			var q = new window.URLSearchParams( window.location.search ), params = {}, result;
 			[ 'range', 'from', 'to' ].forEach( function ( key ) { if ( q.has( key ) ) { params[ key ] = q.get( key ); } } );
-			return { mode: Object.keys( params ).length ? 'history' : 'live', params: params };
-		} catch ( e ) { return { mode: 'live', params: {} }; }
+			result = { mode: Object.keys( params ).length ? 'history' : 'live', params: params };
+			if ( filters ) { result.filter = window.PcDataRealtimeFilters.parseUrl( window.location.search ); result.filterError = ! result.filter; }
+			return result;
+		} catch ( error ) { return filters ? { mode: 'live', params: {}, filterError: true } : { mode: 'live', params: {} }; }
 	}
 
 	function writeUrl( data, action ) {
@@ -360,9 +371,15 @@
 			[ 'range', 'from', 'to', 'compare_from', 'compare_to' ].forEach( function ( key ) { url.searchParams[ 'delete' ]( key ); } );
 			if ( 'history' === data.mode ) {
 				var range = data.range;
-				if ( range.preset ) { url.searchParams.set( 'range', range.preset ); }
+				if ( range.preset && ! filters ) { url.searchParams.set( 'range', range.preset ); }
 				else { url.searchParams.set( 'from', range.dates.from ); url.searchParams.set( 'to', range.dates.to ); }
 			}
+			if ( filters ) {
+				[ 'rt_entry_state', 'rt_entry', 'rt_utm_state', 'rt_utm' ].forEach( function ( key ) { url.searchParams[ 'delete' ]( key ); } );
+				var value = data.filter;
+				if ( value ) { url.searchParams.set( 'rt_entry_state', value.entry_domain_state ); url.searchParams.set( 'rt_utm_state', value.utm_source_state ); if ( value.entry_domain_state === 'value' ) { url.searchParams.set( 'rt_entry', value.entry_domain ); } if ( value.utm_source_state === 'value' ) { url.searchParams.set( 'rt_utm', value.utm_source ); } }
+			}
+
 			var method = 'push' === action ? 'pushState' : 'replaceState';
 			if ( window.history[ method ] && ( 'replace' === action || url.toString() !== window.location.href ) ) {
 				window.history[ method ]( null, '', url.toString() );
@@ -371,6 +388,7 @@
 	}
 
 	function select( selection, action ) {
+		if ( filters && ! selection.filterError ) { selection.filter = window.PcDataRealtimeFilters.normalize( selection.filter || wanted.filter || window.PcDataRealtimeFilters.all() ); filters.setDesired( selection.filter ); }
 		wanted = selection;
 		if ( Object.prototype.hasOwnProperty.call( selection.params, 'from' ) || Object.prototype.hasOwnProperty.call( selection.params, 'to' ) ) {
 			els.from.value = selection.params.from || '';
@@ -379,6 +397,14 @@
 		urlAction = action;
 		schedule();
 		load();
+	}
+
+	function changeFilter( value, force ) {
+		if ( ! filters || rangeBusy ) { return; }
+		if ( ! force && wanted.filter && window.PcDataRealtimeFilters.same( wanted.filter, value ) ) { return; }
+		var base = acceptedMain || wanted;
+		if ( base.mode === 'history' && ( ! acceptedMain && ( base.params.from !== undefined || base.params.to !== undefined ) && ! validDates( base.params.from, base.params.to ) ) ) { filters.failMain(); showError( T.rangeError ); return; }
+		select( { mode: base.mode, params: base.params, filter: value }, 'push' );
 	}
 
 	// 选了新的窗口：只认 10 / 20 / 30，记下来，马上重新取数。
@@ -434,24 +460,28 @@
 	}
 
 	function load() {
-		if ( ! els ) {
-			return;
-		}
+		if ( ! els || rangeBusy ) { return; }
+		if ( filters && wanted.filterError ) { ++requests; setBusy( false ); dimensions && dimensions.beginMain(); dimensions && dimensions.failMain(); filters.failMain( true ); showError( T.filters.urlError ); return; }
 		var mine = ++requests;
 		var selection = wanted;
 		var action = urlAction;
 		setBusy( true );
 		if ( dimensions ) { dimensions.beginMain(); }
-		ctx.api( PATH + ( 'history' === selection.mode ? '/history' : '' ), 'history' === selection.mode ? selection.params : { funnel: state.funnel, minutes: state.minutes } ).then(
+		if ( filters ) { filters.beginMain(); els.root.classList.toggle( 'is-stale', painted ); }
+		var active = filters && window.PcDataRealtimeFilters.active( selection.filter ), params = 'history' === selection.mode ? selection.params : { funnel: state.funnel, minutes: state.minutes };
+		if ( active ) { var filtered = { mode: selection.mode }; Object.keys( params ).forEach( function ( key ) { filtered[ key ] = params[ key ]; } ); Object.keys( selection.filter ).forEach( function ( key ) { filtered[ key ] = selection.filter[ key ]; } ); params = filtered; }
+		ctx.api( active ? PATH + '/filtered' : PATH + ( 'history' === selection.mode ? '/history' : '' ), params ).then(
 			function ( data ) {
-				if ( mine !== requests ) {
+				if ( mine !== requests || ! attached() ) {
 					return;
 				}
 				setBusy( false );
 				try {
 					if ( ( 'history' === selection.mode ) !== ( 'history' === data.mode ) ) { throw new Error( 'Unexpected report mode' ); }
 					if ( dimensions && ( selection.mode === 'live' ? typeof data.now_ms !== 'number' || ! isFinite( data.now_ms ) || data.now_ms <= 0 || Math.floor( data.now_ms ) !== data.now_ms : ! data.range || ! data.range.dates || ! validDates( data.range.dates.from, data.range.dates.to ) || typeof data.range.from !== 'number' || ! isFinite( data.range.from ) || typeof data.range.to !== 'number' || ! isFinite( data.range.to ) || data.range.to <= data.range.from || typeof data.range.timezone !== 'string' || ! data.range.timezone ) ) { throw new Error( 'Invalid accepted realtime context' ); }
+					if ( filters && ( active ? ! window.PcDataRealtimeFilters.same( data.filter, selection.filter ) : data.filter !== undefined ) ) { throw new Error( 'Unexpected entry filter echo' ); }
 					paint( data );
+					if ( filters ) { acceptedMain = { mode: selection.mode, params: selection.mode === 'history' ? { from: data.range.dates.from, to: data.range.dates.to } : {}, filter: window.PcDataRealtimeFilters.normalize( selection.filter ) }; wanted = acceptedMain; filters.acceptMain( acceptedMain, data ); els.root.classList.toggle( 'is-stale', false ); }
 					if ( dimensions ) { dimensions.acceptMain( selection, data ); }
 					writeUrl( data, action );
 					urlAction = '';
@@ -459,15 +489,17 @@
 					els.error.hidden = true;
 				} catch ( e ) {
 					showError();
+					if ( filters ) { filters.failMain(); }
 					if ( dimensions ) { dimensions.failMain(); }
 				}
 			},
 			function ( error ) {
-				if ( mine !== requests ) {
+				if ( mine !== requests || ! attached() ) {
 					return;
 				}
 				setBusy( false );
 				showError( error && ( 'pc_invalid_param' === error.code || error.data && 400 === Number( error.data.status ) ) ? T.rangeError : '' );
+				if ( filters ) { filters.failMain( false, error ); }
 				if ( dimensions ) { dimensions.failMain(); }
 			}
 		);
@@ -512,6 +544,10 @@
 	}
 
 	function render( bodyEl, range, c ) {
+		if ( rangeRecovery ) { window.clearTimeout( rangeRecovery ); rangeRecovery = 0; }
+		if ( rangeUnsubscribe ) { rangeUnsubscribe(); rangeUnsubscribe = null; }
+		if ( filters ) { filters.dispose(); filters = null; }
+		acceptedMain = null; rangeBusy = false;
 		if ( dimensions ) { dimensions.dispose(); dimensions = null; }
 		ctx = c;
 		// 旧框架上还没回来的请求作废，再建新框架。
@@ -519,6 +555,8 @@
 		build( bodyEl );
 		if ( range && range.dates ) { els.from.value = range.dates.from; els.to.value = range.dates.to; }
 		wanted = fromUrl();
+		if ( filters && ! wanted.filterError ) { filters.setDesired( wanted.filter ); }
+		if ( filters && ctx.onRangeState ) { rangeUnsubscribe = ctx.onRangeState( function ( on ) { var changed = rangeBusy !== !! on; rangeBusy = !! on; if ( rangeRecovery ) { window.clearTimeout( rangeRecovery ); rangeRecovery = 0; } if ( rangeBusy ) { ++requests; setBusy( true ); filters.beginMain(); dimensions && dimensions.beginMain(); els.root.classList.toggle( 'is-stale', painted ); } else if ( changed && attached() ) { rangeRecovery = window.setTimeout( function () { rangeRecovery = 0; if ( ! attached() || rangeBusy ) { return; } if ( acceptedMain ) { wanted = acceptedMain; filters.setDesired( wanted.filter ); load(); } else { setBusy( false ); filters.failMain(); dimensions && dimensions.failMain(); } }, 0 ); } } ); }
 		if ( wanted.params.from !== undefined ) { els.from.value = wanted.params.from; }
 		if ( wanted.params.to !== undefined ) { els.to.value = wanted.params.to; }
 		urlAction = 'replace';

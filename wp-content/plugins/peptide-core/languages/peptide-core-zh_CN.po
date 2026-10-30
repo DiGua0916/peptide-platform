@@ -12333,3 +12333,111 @@ msgstr "专辑"
 msgctxt "realtime ranking item"
 msgid "Page"
 msgstr "页面"
+
+#: includes/admin/class-data-pages.php
+msgid "Realtime entry attribution is unavailable."
+msgstr "实时入口来源数据暂不可用。"
+
+#: includes/admin/class-data-pages.php
+msgid "Entry domain (first captured)"
+msgstr "入口域名（首次捕获）"
+
+#: includes/admin/class-data-pages.php
+msgid "UTM source (first captured)"
+msgstr "UTM 来源（首次捕获）"
+
+#: includes/admin/class-data-pages.php
+msgid "All entry sources"
+msgstr "全部入口来源"
+
+#: includes/admin/class-data-pages.php
+msgid "No entry attribution observed"
+msgstr "未观察到入口来源"
+
+#: includes/admin/class-data-pages.php
+msgid "Captured without a UTM source key"
+msgstr "已捕获，但缺少 UTM 来源键"
+
+#: includes/admin/class-data-pages.php
+msgid "Captured empty UTM source"
+msgstr "已捕获空 UTM 来源值"
+
+#: includes/admin/class-data-pages.php
+msgid "Entry filters use the first successfully captured visit snapshot. Domain and UTM conditions are combined with AND. Orders use creation time and their original visit entry, not revenue from visits in the selected period. Values preserve case; unknown is not direct traffic."
+msgstr "入口筛选使用访问首次成功捕获的快照，域名与 UTM 条件须同时满足。订单按创建时间及原访问入口筛选，不代表所选访问时段产生的收入。值区分大小写；未观察到不等于直接访问。"
+
+#: includes/admin/class-data-pages.php
+msgid "Search entry values"
+msgstr "搜索入口候选值"
+
+#: includes/admin/class-data-pages.php
+msgid "More entry values"
+msgstr "更多入口候选值"
+
+#: includes/admin/class-data-pages.php
+msgid "Previous entry values"
+msgstr "上一页入口候选值"
+
+#: includes/admin/class-data-pages.php
+msgid "Selected entry value was not observed in this period."
+msgstr "本期未观察到所选入口值，仍保留当前选择。"
+
+#: includes/admin/class-data-pages.php
+msgid "Not observed in this period"
+msgstr "本期未观察到"
+
+#: includes/admin/class-data-pages.php
+msgid "Reset entry filters to All"
+msgstr "重置入口筛选为全部"
+
+#: includes/admin/class-data-pages.php
+msgid "Loading entry-filtered data…"
+msgstr "正在加载入口筛选数据…"
+
+#: includes/admin/class-data-pages.php
+msgid "Showing the last accepted entry filter; the new request has not succeeded."
+msgstr "当前显示上次成功接受的入口筛选；新请求尚未成功。"
+
+#: includes/admin/class-data-pages.php
+msgid "Entry-filter data could not be loaded. Retry or reset to All."
+msgstr "入口筛选数据加载失败，请重试或重置为全部。"
+
+#: includes/admin/class-data-pages.php
+msgid "Entry filters in the URL are invalid. Correct them or reset to All."
+msgstr "网址中的入口筛选无效，请修正或重置为全部。"
+
+#: includes/admin/class-data-pages.php
+msgid "Entry filters are unavailable; the All report remains available."
+msgstr "入口筛选暂不可用，仍可查看全部报表。"
+
+#: includes/admin/class-data-pages.php
+msgid "Entry values could not be loaded. The accepted report remains unchanged."
+msgstr "入口候选加载失败，已接受的报表保持不变。"
+
+#: includes/admin/class-data-pages.php
+msgid "Retry entry filters"
+msgstr "重试入口筛选"
+
+#: includes/admin/class-data-pages.php
+msgid "Candidate coverage: distinct visits"
+msgstr "候选覆盖：访问数（按访问去重）"
+
+#: includes/admin/class-data-pages.php
+msgid "Captured entry snapshots"
+msgstr "已捕获入口快照"
+
+#: includes/admin/class-data-pages.php
+msgid "Visits without captured attribution"
+msgstr "尚无来源快照的访问"
+
+#: includes/admin/class-data-pages.php
+msgid "Snapshots received after this cutoff"
+msgstr "原事件接收时间晚于截止的快照"
+
+#: includes/admin/class-data-pages.php
+msgid "Unlinked eligible events (separate count)"
+msgstr "未关联的入选事件（单独计数）"
+
+#: includes/admin/class-data-pages.php
+msgid "Unlinked eligible orders (separate count)"
+msgstr "未关联的入选订单（单独计数）"

@@ -47,7 +47,7 @@ final class Visitor_Funnel {
 	}
 
 	/** [from,to) integer milliseconds; live additionally bounds observation time. */
-	public function period( int $from, int $to, string $basis = 'start_ms', string $group = '', ?int $now = null ): array {
+	public function period( int $from, int $to, string $basis = 'start_ms', string $group = '', ?int $now = null, ?Realtime_Filter $filter = null ): array {
 		global $wpdb;
 		if ( ! in_array( $basis, array( 'start_ms', 'last_ms' ), true ) || ! in_array( $group, array( '', 'device', 'browser' ), true ) ) {
 			throw new \InvalidArgumentException( 'Invalid internal visitor funnel cohort.' );
@@ -64,6 +64,7 @@ final class Visitor_Funnel {
 		// Match Operations' documented returning-day/offset convention exactly.
 		$ret = $wpdb->prepare( 'v.id IS NOT NULL AND s.start_ms >= ( FLOOR( ( v.first_ms + %d ) / 86400000 ) + 1 ) * 86400000 - %d + %d', $off, $off, $gap );
 		$cohort = $wpdb->prepare( "s.{$basis} >= %d AND s.{$basis} < %d", $from, $to );
+		if ( $filter ) { $filter->require_ready(); $cohort .= ' AND ' . $filter->visit_sql( 's' ); }
 		$select = array();
 		foreach ( array( 'visitors' => 0, 'viewed' => 1, 'carted' => 2, 'checkout' => 3 ) as $key => $stage ) {
 			$select[] = "COUNT(DISTINCT CASE WHEN s.stage >= {$stage} THEN s.visitor_id END) AS {$key}";
@@ -71,6 +72,7 @@ final class Visitor_Funnel {
 		}
 		$columns = implode( ',', $select );
 		$row = $wpdb->get_row( "SELECT {$columns} FROM {$visits} s LEFT JOIN {$visitors} v ON v.id=s.visitor_id WHERE {$cohort}", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			if ( $filter && $wpdb->last_error ) { throw new \RuntimeException( 'Filtered visitor funnel unavailable.' ); }
 		foreach ( array_slice( self::KEYS, 0, 4 ) as $key ) {
 			$counts[ $key ] = (int) ( $row[ $key ] ?? 0 );
 			$returning[ $key ] = (int) ( $row[ 'r_' . $key ] ?? 0 );
@@ -78,6 +80,7 @@ final class Visitor_Funnel {
 		$g = 'browser' === $group ? "COALESCE(v.browser,'')" : 's.device';
 		if ( $group ) {
 			$rows = $wpdb->get_results( "SELECT {$g} AS g,{$columns} FROM {$visits} s LEFT JOIN {$visitors} v ON v.id=s.visitor_id WHERE {$cohort} GROUP BY {$g}", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			if ( $filter && $wpdb->last_error ) { throw new \RuntimeException( 'Filtered visitor funnel unavailable.' ); }
 			foreach ( (array) $rows as $row ) {
 				$key = '' === $row['g'] ? 'unknown' : (string) $row['g'];
 				$groups[ $key ] = self::zero();
@@ -91,6 +94,7 @@ final class Visitor_Funnel {
 		$time = null === $now ? '' : $wpdb->prepare( ' AND e.occurred_ms <= %d', $now );
 		do {
 			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT e.id,e.type,e.source,e.visit_id,e.visitor_id,e.order_id,s.order_id AS linked_order,{$g} AS g,({$ret}) AS returning_visit FROM {$events} e INNER JOIN {$visits} s ON s.id=e.visit_id AND s.visitor_id=e.visitor_id INNER JOIN {$visitors} v ON v.id=s.visitor_id WHERE {$cohort} AND e.id > %d AND ((e.source='client' AND e.type IN ('checkout_address_completed','checkout_shipping_selected','checkout_payment_selected')) OR (e.source='server' AND e.type='payment_success')) {$time} ORDER BY e.id LIMIT 500", $cursor ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			if ( $filter && $wpdb->last_error ) { throw new \RuntimeException( 'Filtered visitor funnel unavailable.' ); }
 			$need = array();
 			foreach ( (array) $rows as $row ) {
 				$id = (int) ( $row['order_id'] ?: ( 'client' === $row['source'] ? $row['linked_order'] : 0 ) );
