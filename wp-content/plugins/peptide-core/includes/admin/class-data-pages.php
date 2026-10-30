@@ -19,6 +19,7 @@ namespace PeptideCore\Admin;
 use PeptideCore\Api\Rest_Controller;
 use PeptideCore\Data\Apps;
 use PeptideCore\Data\Conversion;
+use PeptideCore\Data\Checkout_Steps;
 use PeptideCore\Data\Emails;
 use PeptideCore\Data\Landing;
 use PeptideCore\Data\Operations;
@@ -33,6 +34,8 @@ use PeptideCore\Data\Realtime_Dimensions;
 use PeptideCore\Data\Realtime_Filter;
 use PeptideCore\Data\Realtime_Filter_Options;
 use PeptideCore\Data\Trends;
+use PeptideCore\Tracking\Schema;
+use Automattic\WooCommerce\Blocks\Utils\CartCheckoutUtils;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -187,6 +190,28 @@ final class Data_Pages {
 							return $res;
 						},
 						'permission_callback' => $permission,
+					)
+				);
+				register_rest_route(
+					Rest_Controller::ROUTE_NAMESPACE, '/data/checkout-steps',
+					array(
+						'methods' => \WP_REST_Server::READABLE,
+						'permission_callback' => $permission,
+						'callback' => static function ( \WP_REST_Request $request ) {
+							$raw = $request->get_params(); $range = Range::from_params( $raw );
+							if ( is_wp_error( $range ) ) { return $range; }
+							if ( array_key_exists( 'format', $raw ) && ( ! is_string( $raw['format'] ) || 'json' !== $raw['format'] ) ) { return \PeptideCore\Api\Errors::invalid( array( 'format' => 'invalid_format' ) ); }
+							try {
+								$type = class_exists( CartCheckoutUtils::class ) && is_callable( array( CartCheckoutUtils::class, 'is_checkout_block_default' ) ) && CartCheckoutUtils::is_checkout_block_default() ? 'blocks' : 'unconfirmed';
+								$steps = Checkout_Steps::summary( $range );
+								$response = new \WP_REST_Response( array(
+									'range' => $range, 'tracking' => Schema::installed(), 'checkout_type' => $type,
+									'checkout_type_scope' => 'current_configuration', 'steps' => $steps,
+									'details_url' => add_query_arg( array( 'page' => 'pc-data-conversion', 'from' => $range['dates']['from'], 'to' => $range['dates']['to'], 'compare_from' => $range['dates']['compare_from'], 'compare_to' => $range['dates']['compare_to'] ), admin_url( 'admin.php' ) ),
+								) );
+								$response->header( 'Cache-Control', 'no-store' ); return $response;
+							} catch ( \Throwable $error ) { return new \WP_Error( 'pc_checkout_steps_unavailable', __( 'Checkout observations could not be loaded.', 'peptide-core' ), array( 'status' => 500 ) ); }
+							},
 					)
 				);
 				// 运营数据页的趋势图（DATA-01 第 7a 步）：九张趋势图的本期合计、对比期合计、变化和每个桶的点。
@@ -436,7 +461,9 @@ final class Data_Pages {
 			wp_register_script( 'peptide-core-data-export', $url . 'data-export.js', array( self::SCRIPT, 'wp-api-fetch', 'wp-url' ), $ver( 'data-export.js' ), array( 'in_footer' => true ) );
 			wp_enqueue_style( 'peptide-core-data-rankings', $url . 'data-rankings.css', array( 'peptide-core-data-operations' ), $ver( 'data-rankings.css' ) );
 			wp_register_script( 'peptide-core-data-rankings', $url . 'data-rankings.js', array( self::SCRIPT, 'peptide-core-data-export' ), $ver( 'data-rankings.js' ), array( 'in_footer' => true ) );
-			wp_enqueue_script( 'peptide-core-data-operations', $url . 'data-operations.js', array( self::SCRIPT, 'peptide-core-data-rankings' ), $ver( 'data-operations.js' ), array( 'in_footer' => true ) );
+			wp_enqueue_style( 'peptide-core-data-operations-checkout', $url . 'data-operations-checkout.css', array( 'peptide-core-data-operations' ), $ver( 'data-operations-checkout.css' ) );
+			wp_register_script( 'peptide-core-data-operations-checkout', $url . 'data-operations-checkout.js', array( self::SCRIPT ), $ver( 'data-operations-checkout.js' ), array( 'in_footer' => true ) );
+			wp_enqueue_script( 'peptide-core-data-operations', $url . 'data-operations.js', array( self::SCRIPT, 'peptide-core-data-rankings', 'peptide-core-data-operations-checkout' ), $ver( 'data-operations.js' ), array( 'in_footer' => true ) );
 			wp_add_inline_script(
 				'peptide-core-data-operations',
 				'window.pcDataOperations = ' . wp_json_encode( array( 'strings' => self::operations_strings() ) ) . ';',
@@ -726,6 +753,7 @@ final class Data_Pages {
 	/** 运营数据页脚本里的文字：12 个指标、漏斗的五层、表头和说明，以及九张趋势图的标题、说明和提示。 */
 	private static function operations_strings(): array {
 		return self::visitor_funnel_strings() + self::export_strings() + array(
+			'checkoutPanel'   => self::operations_checkout_strings(),
 			'sales'           => __( 'Sales', 'peptide-core' ),
 			'visitors'        => __( 'Visited users', 'peptide-core' ),
 			'registered'      => __( 'New sign-ups', 'peptide-core' ),
@@ -816,6 +844,29 @@ final class Data_Pages {
 			't_payment_success'    => __( 'Payment success rate', 'peptide-core' ),
 			't_coupons'            => __( 'Coupon usage', 'peptide-core' ),
 			't_devices'            => __( 'Devices', 'peptide-core' ),
+		);
+	}
+
+	/** Operations-only labels; existing Conversion output and its translations are untouched. */
+	private static function operations_checkout_strings(): array {
+		$existing = self::conversion_strings();
+		return array_intersect_key( $existing, array_flip( array( 'checkoutTitle', 'checkoutHelp', 'browserObservation', 'serverFact', 'checkoutChannels', 'channelHelp', 'initial', 'user', 'automatic', 'attempts', 'attempt_visits', 'attempt_orders', 'succeeded', 'failed', 'observedStep', 'paymentChannel', 'emptyCheckout', 'emptyChannels', 'localNotice', 'localCard', 'localWallet' ) ) ) + array(
+			'blocks' => __( 'Current checkout type: WooCommerce Blocks', 'peptide-core' ),
+			'unconfirmed' => __( 'Current checkout type is unconfirmed', 'peptide-core' ),
+			'typeHelp' => __( 'Checkout type describes the current configuration only. These observations are not grouped by historical checkout mode.', 'peptide-core' ),
+			'currentVisits' => __( 'Current visits', 'peptide-core' ),
+			'previousVisits' => __( 'Previous period visits', 'peptide-core' ),
+			'relativeChange' => __( 'Relative change (%)', 'peptide-core' ),
+			'currentPeriod' => __( 'Current period', 'peptide-core' ),
+			'previousPeriod' => __( 'Previous period', 'peptide-core' ),
+			'success_rate' => __( 'Processing success rate (%)', 'peptide-core' ),
+			'points' => __( 'Percentage points', 'peptide-core' ),
+			'unknown' => __( 'Unknown', 'peptide-core' ),
+			'details' => __( 'View detailed checkout analysis', 'peptide-core' ),
+			'loading' => __( 'Loading checkout observations…', 'peptide-core' ),
+			'error' => __( 'Checkout observations could not be loaded.', 'peptide-core' ),
+			'retry' => __( 'Retry checkout observations', 'peptide-core' ),
+			'applyingRange' => __( 'Applying date range…', 'peptide-core' ),
 		);
 	}
 

@@ -475,6 +475,7 @@
 		html += '<p class="pc-ops-detail-help">' + esc( T.orderVsVisitor ) + '</p>';
 		html += '<div data-funnel-slot="visitor">' + funnel( T.visitorFunnel, data.visitor_funnel || data.funnel || {}, ctx, 'visitor' ) + '</div>';
 		html += '<div data-funnel-slot="returning">' + funnel( T.returningFunnel, data.returning_visitor_funnel || data.returning || {}, ctx, 'returning' ) + '</div>';
+		html += '<section class="pc-ops-checkout-slot"></section>';
 		// 趋势图的位置：趋势数据到了再填（见 render）。
 		html += '<section class="pc-ops-trends" aria-live="polite"></section>';
 		// 排行表的位置：排行数据到了再填（见 render）。
@@ -485,15 +486,16 @@
 	function render( bodyEl, range, ctx ) {
 		var mine = ++requests;
 		if ( disposePreviousRankings ) { disposePreviousRankings(); }
-		var rankPanel = null, rangeBusy = false, unsubscribeRange = null;
-		disposePreviousRankings = function () { if ( rankPanel ) { rankPanel.dispose(); rankPanel = null; } if ( unsubscribeRange ) { unsubscribeRange(); unsubscribeRange = null; } };
-		if ( typeof ctx.onRangeState === 'function' ) { unsubscribeRange = ctx.onRangeState( function ( on ) { rangeBusy = on; if ( rankPanel ) { rankPanel.setRangeBusy( on ); } } ); }
+		var rankPanel = null, checkoutPanel = null, rangeBusy = false, unsubscribeRange = null;
+		disposePreviousRankings = function () { if ( rankPanel ) { rankPanel.dispose(); rankPanel = null; } if ( checkoutPanel ) { checkoutPanel.dispose(); checkoutPanel = null; } if ( unsubscribeRange ) { unsubscribeRange(); unsubscribeRange = null; } };
+		if ( typeof ctx.onRangeState === 'function' ) { unsubscribeRange = ctx.onRangeState( function ( on ) { rangeBusy = on; if ( rankPanel ) { rankPanel.setRangeBusy( on ); } if ( checkoutPanel ) { checkoutPanel.setRangeBusy( on ); } } ); }
 		var d = range.dates || {};
 		var params = range.preset ?
 			{ range: range.preset } :
 			{ from: d.from, to: d.to, compare_from: d.compare_from, compare_to: d.compare_to };
 		var failed = function () {
 			if ( rankPanel ) { rankPanel.dispose(); rankPanel = null; }
+			if ( checkoutPanel ) { checkoutPanel.dispose(); checkoutPanel = null; }
 			bodyEl.innerHTML = '<p class="pc-data-empty">' + ctx.esc( ctx.strings.loadError ) + '</p>';
 		};
 		// 三个请求的结果各自留着：运营数据画好页面（opsData），趋势数据到了（trends：{ data } 或 { error }），排行数据到了（rankings，同样）。
@@ -501,6 +503,17 @@
 		var opsData = null;
 		var trends = null;
 		var rankings = null;
+		var showCheckout = function () {
+			var slot = null;
+			try {
+				slot = opsData ? bodyEl.querySelector( '.pc-ops-checkout-slot' ) : null;
+				if ( ! slot ) { return; }
+				if ( checkoutPanel ) { checkoutPanel.dispose(); checkoutPanel = null; }
+				if ( window.PcDataOperationsCheckout && typeof window.PcDataOperationsCheckout.mount === 'function' ) {
+					checkoutPanel = window.PcDataOperationsCheckout.mount( slot, opsData.range, ctx, { strings: T.checkoutPanel, rangeBusy: rangeBusy } );
+				} else { slot.innerHTML = '<p class="pc-data-empty">' + ctx.esc( T.checkoutPanel ? T.checkoutPanel.error : ctx.strings.loadError ) + '</p>'; }
+			} catch ( ignored ) { if ( slot ) { slot.innerHTML = '<p class="pc-data-empty">' + ctx.esc( T.checkoutPanel ? T.checkoutPanel.error : ctx.strings.loadError ) + '</p>'; } }
+		};
 		var trendsFailed = function ( box ) {
 			box.innerHTML = '<p class="pc-data-empty">' + ctx.esc( T.trendsError ) + '</p>';
 		};
@@ -567,6 +580,7 @@
 					failed();
 					return;
 				}
+				showCheckout();
 				showTrends();
 				showRankings();
 			},

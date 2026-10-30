@@ -12441,3 +12441,51 @@ msgstr "未关联的入选事件（单独计数）"
 #: includes/admin/class-data-pages.php
 msgid "Unlinked eligible orders (separate count)"
 msgstr "未关联的入选订单（单独计数）"
+
+#: includes/admin/class-data-pages.php:854
+msgid "Current checkout type: WooCommerce Blocks"
+msgstr "当前结账类型：WooCommerce Blocks"
+
+#: includes/admin/class-data-pages.php:855
+msgid "Current checkout type is unconfirmed"
+msgstr "当前结账类型未确认"
+
+#: includes/admin/class-data-pages.php:856
+msgid "Checkout type describes the current configuration only. These observations are not grouped by historical checkout mode."
+msgstr "结账类型仅描述当前配置；这些观察数据未按历史结账模式分组。"
+
+#: includes/admin/class-data-pages.php:857
+msgid "Current visits"
+msgstr "本期访问次数"
+
+#: includes/admin/class-data-pages.php:858
+msgid "Previous period visits"
+msgstr "对比期访问次数"
+
+#: includes/admin/class-data-pages.php:859
+msgid "Relative change (%)"
+msgstr "相对变化（%）"
+
+#: includes/admin/class-data-pages.php:860
+msgid "Current period"
+msgstr "本期"
+
+#: includes/admin/class-data-pages.php:862
+msgid "Processing success rate (%)"
+msgstr "支付处理成功率（%）"
+
+#: includes/admin/class-data-pages.php:865
+msgid "View detailed checkout analysis"
+msgstr "查看详细结账分析"
+
+#: includes/admin/class-data-pages.php:866
+msgid "Loading checkout observations…"
+msgstr "正在加载结账观察…"
+
+#: includes/admin/class-data-pages.php:213
+msgid "Checkout observations could not be loaded."
+msgstr "无法加载结账观察数据。"
+
+#: includes/admin/class-data-pages.php:868
+msgid "Retry checkout observations"
+msgstr "重试结账观察"
