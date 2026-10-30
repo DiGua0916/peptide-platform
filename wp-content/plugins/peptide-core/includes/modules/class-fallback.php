@@ -819,28 +819,52 @@ final class Fallback {
 	}
 
 	private static function render_timeline( array $s, array $items ): string {
-		$out = '<div class="vc-m__inner"' . self::style(
-			array(
+		$vars = array(
 				'--vc-title-c' => $s['titleColor'],
 				'--vc-fg'      => $s['textColor'],
-			)
-		) . '>' . self::heading( $s );
-		$out .= '<ol class="vc-timeline vc-timeline--' . esc_attr( $s['style'] ) . '" data-auto-scroll="' . ( 'horizontal' === $s['style'] && $s['autoScroll'] ? '1' : '0' ) . '" data-pause-label="' . esc_attr__( 'Pause scrolling', 'peptide-core' ) . '" data-resume-label="' . esc_attr__( 'Resume scrolling', 'peptide-core' ) . '"' . ( 'horizontal' === $s['style'] ? ' tabindex="0" aria-label="' . esc_attr__( 'Timeline', 'peptide-core' ) . '"' : '' ) . '>';
+				'--vc-timeline-width' => max( 150, min( 350, (int) ( $s['itemWidthPx'] ?? 200 ) ) ) . 'px',
+		);
+		foreach ( array( 'Top', 'Right', 'Bottom', 'Left' ) as $side ) {
+			foreach ( array( 'desktop' => 'd', 'mobile' => 'm' ) as $device => $suffix ) {
+				$vars[ '--vc-timeline-pad-' . strtolower( $side ) . '-' . $suffix ] = max( 0, min( 240, (int) self::dv( $s[ 'contentPadding' . $side . 'Px' ] ?? 0, $device ) ) ) . 'px';
+			}
+		}
+		$list_id = wp_unique_id( 'vc-timeline-' );
+		$out = '<div class="vc-m__inner"' . self::style( $vars ) . '><div class="vc-timeline-content">' . self::heading( $s );
+		$out .= '<ol id="' . esc_attr( $list_id ) . '" class="vc-timeline vc-timeline--' . esc_attr( $s['style'] ) . '" data-auto-scroll="' . ( 'horizontal' === $s['style'] && $s['autoScroll'] ? '1' : '0' ) . '" data-pause-label="' . esc_attr__( 'Pause scrolling', 'peptide-core' ) . '" data-resume-label="' . esc_attr__( 'Resume scrolling', 'peptide-core' ) . '"' . ( 'horizontal' === $s['style'] ? ' tabindex="0" aria-label="' . esc_attr__( 'Timeline', 'peptide-core' ) . '"' : '' ) . '>';
 		foreach ( $items as $it ) {
 			$out .= '<li class="' . esc_attr( self::item_class( $it, 'vc-timeline__item vc-timeline__item--' . $it['imagePosition'] ) ) . '"' . self::item_attr( $it ) . '' . self::style( array( '--vc-accent' => $it['color'] ) ) . '>';
+			$date = (string) $it['date'];
+			$year = '';
+			if ( preg_match( '/^(\d{4})-(\d{2})-(\d{2})$/D', $date, $parts ) && checkdate( (int) $parts[2], (int) $parts[3], (int) $parts[1] ) ) { $year = $parts[1]; }
 			if ( 'vertical' === $s['style'] ) {
-				$out .= self::img( $it['image'], 'vc-timeline__img' );
+				$year = null !== ( $it['dateTitle'] ?? null ) ? (string) $it['dateTitle'] : $date;
+				$date = null !== ( $it['dateText'] ?? null ) ? (string) $it['dateText'] : $date;
+				$image = self::img( $it['image'], 'vc-timeline__img' );
+				if ( '' !== $image ) { $out .= '<div class="vc-timeline__visual">' . $image . '</div>'; }
+			} else {
+				$out .= '<span class="vc-timeline__arrow" aria-hidden="true"></span>';
 			}
-			$out .= '<div class="vc-timeline__body"><p class="vc-timeline__date">' . esc_html( $it['date'] ) . '</p>';
+			$out .= '<div class="vc-timeline__body">';
+			$out .= '' !== $year ? '<p class="vc-timeline__year">' . esc_html( $year ) . '</p>' : '';
 			$out .= '' !== $it['title'] ? '<h3 class="vc-timeline__title">' . esc_html( $it['title'] ) . '</h3>' : '';
-			$out .= '' !== $it['text'] ? '<p>' . nl2br( esc_html( $it['text'] ) ) . '</p>' : '';
+			$rich = $it['textHtml'] ?? null;
+			if ( null !== $rich ) {
+				if ( '' !== $rich ) { $out .= '<div class="vc-timeline__text">' . self::html( $rich ) . '</div>'; }
+			} elseif ( '' !== $it['text'] ) {
+				$out .= '<div class="vc-timeline__text"><p>' . nl2br( esc_html( $it['text'] ) ) . '</p></div>';
+			}
+			$out .= '' !== $date ? '<p class="vc-timeline__date">' . esc_html( $date ) . '</p>' : '';
 			$out .= '</div></li>';
 		}
 		$out .= '</ol>';
 		if ( 'vertical' === $s['style'] && $s['collapsible'] && count( $items ) > 3 ) {
-			$out .= sprintf( '<button type="button" class="vc-btn vc-btn--ghost vc-timeline__toggle" data-expand="%1$s" data-collapse="%2$s" aria-expanded="false">%1$s</button>', esc_attr( $s['expandLabel'] ), esc_attr( $s['collapseLabel'] ) );
+			$effect = (string) ( $s['buttonEffect'] ?? 'none' );
+			$button_class = 'vc-btn vc-btn--ghost vc-timeline__toggle' . ( 'none' !== $effect ? ' vc-btn--' . $effect : '' );
+			$button_style = 'none' !== $effect ? self::style( array( '--vc-btn-duration' => (int) ( $s['effectDurationMs'] ?? 1000 ) . 'ms', '--vc-btn-interval' => (int) ( $s['effectIntervalMs'] ?? 1500 ) . 'ms' ) ) : '';
+			$out .= '<button type="button" hidden class="' . esc_attr( $button_class ) . '"' . $button_style . ' data-expand="' . esc_attr( $s['expandLabel'] ) . '" data-collapse="' . esc_attr( $s['collapseLabel'] ) . '" aria-controls="' . esc_attr( $list_id ) . '" aria-expanded="true">' . esc_html( $s['collapseLabel'] ) . '</button>';
 		}
-		return $out . '</div>';
+		return $out . '</div></div>';
 	}
 
 	private static function render_contact( array $s, array $items ): string {

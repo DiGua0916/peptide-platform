@@ -25,6 +25,19 @@
 .pc-me-code-dialog__apply:hover { background: #333; }
 .pc-me-code-dialog__actions button:focus-visible { outline: 2px solid #737373; outline-offset: 2px; }
 
+.pc-me-boxmodel { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: start; }
+.pc-me-boxmodel > .pc-me-field { min-width: 0; margin: 0; }
+.pc-me-boxmodel > .pc-me-field:nth-child(1) { grid-column: 2; grid-row: 1; }
+.pc-me-boxmodel > .pc-me-field:nth-child(2) { grid-column: 3; grid-row: 2; }
+.pc-me-boxmodel > .pc-me-field:nth-child(3) { grid-column: 2; grid-row: 3; }
+.pc-me-boxmodel > .pc-me-field:nth-child(4) { grid-column: 1; grid-row: 2; }
+.pc-me-boxmodel__unit { grid-column: 2; grid-row: 2; place-self: center; color: #666; font-size: 12px; }
+.pc-me-boxmodel .pc-me-number__value { width: 100%; min-width: 0; }
+.pc-me-boxmodel .pc-me-number__unit { display: none; }
+.pc-me-boxmodel .pc-me-number__value input { width: 100%; min-width: 0; padding-inline: 6px; }
+.pc-me-boxmodel .pc-me-device-state { display: block; font-size: 11px; line-height: 16px; }
+.pc-me-boxmodel .pc-me-device-state button { white-space: normal; text-align: start; font-size: 11px; }
+.pc-me-inherited-text .pc-me-device-state { margin-top: 4px; }
 .pc-me-devices {
 	display: flex;
 	align-items: center;

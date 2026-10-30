@@ -532,4 +532,6 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
 
 15. `custom_html.html`保持code类型/默认，仅显式ui=expanded-code选入独立原始代码控件。扩大dialog有pending副本，Apply同步核base值/fieldkey/device scope再单字段提交；Cancel/Close/Escape/原样Apply不写，外部同值scope/换块卸载清pending。原始模型CRLF不因无编辑打开应用回写，真正textarea编辑采用浏览器值语义；不调用richtext清理或增加代码执行授权。三组真实WP及modal外部inert的测试方法边界见backend-custom-html-editor-2026-10-30.md；原预览信任与发布边界不变。
 
+16. `timeline`保留旧horizontal/vertical、字段/defaultfalse、3项/ID/自由日期和设备合同，仅新insert editorDefaults auto/collapsible true。itemWidthPx为PC最小宽，有空间均分、超宽原生滚动，phone纵排；nullable rich和独立plain dateTitle/dateText沿null回退/空串抑制，inherited-text不把日期HTML编码。四个device number显式boxmodel布局，不新增Fields类型，极端左右padding仅视觉限40%不回写存储。JS保留fraction游标防亚像素停滞、实际暂停/恢复；折叠完整前3项且无JS全显。合法vc:select-item接管并展开/滚动，防通用fallback误隐藏兄弟，双device DOM按实际可见项处理。五组真实WP及native9/适配3分开记录在backend-timeline-2026-10-30.md；不称像素复制参考645px截断或相同Swiper循环。
+
 验证按阶段记录，不混计：Records独立34及控件12不当真WP；原站限定29项已精确清理并与858posts/2555非锁meta基线同指纹；独立WordPress+Woo评价/Index各范围见任务work/reviews-runtime-positive-report.md，Index19组及SQL6/同请求恢复2等有真实前后证据；Links真实API7+UI8通过，取消/权限/状态变化/390/错误恢复均覆盖。共享条目panels/paired和首7基础块属于后续单独阶段，最终真实性/版本/限制以对应报告为准，不以已有定义数代替全量验收。

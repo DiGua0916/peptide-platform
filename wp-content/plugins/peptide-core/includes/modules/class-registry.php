@@ -187,12 +187,12 @@ final class Registry {
 
 	/** Observed content blocks use the same saved fields with task-specific panels. */
 	private static function reference_content_controls( string $type, array $def ): array {
-		if ( ! in_array( $type, array( 'media_text', 'card_list', 'video', 'video_text', 'slogan', 'counter', 'gallery' ), true ) ) { return $def; }
+		if ( ! in_array( $type, array( 'media_text', 'card_list', 'video', 'video_text', 'slogan', 'counter', 'gallery', 'timeline' ), true ) ) { return $def; }
 		foreach ( $def['settings'] as &$field ) {
 			if ( 'bodyHtml' === $field['key'] ) { $field['ui'] = 'richtext'; }
 			if ( 'effectDurationMs' === $field['key'] ) { $field['uiMin'] = 1000; }
 			if ( 'effectIntervalMs' === $field['key'] ) { $field['uiMin'] = 500; $field['uiMax'] = 5000; }
-			if ( in_array( $type, array( 'card_list', 'video', 'video_text', 'slogan', 'counter', 'gallery' ), true ) && 'description' === $field['key'] ) { $field['uiHidden'] = true; }
+			if ( in_array( $type, array( 'card_list', 'video', 'video_text', 'slogan', 'counter', 'gallery', 'timeline' ), true ) && 'description' === $field['key'] ) { $field['uiHidden'] = true; }
 			if ( 'gallery' === $type && 'columns' === $field['key'] ) { $field['show_if'] = array( 'display' => 'grid' ); $field['deviceUI'] = 'paired'; }
 			if ( 'counter' === $type ) {
 				if ( 'numberSizePx' === $field['key'] ) { $field['label'] = '数字字号'; $field['min'] = 14; $field['uiMin'] = 14; $field['uiMax'] = 52; }
@@ -212,7 +212,47 @@ final class Registry {
 			if ( 'card_list' === $type && 'columns' === $field['key'] ) { $field['uiMin'] = array( 'desktop' => 3, 'mobile' => 1 ); $field['uiMax'] = array( 'desktop' => 5, 'mobile' => 2 ); $field['deviceUI'] = 'paired'; }
 		}
 		unset( $field );
-		if ( 'gallery' === $type ) {
+		if ( 'timeline' === $type ) {
+			$def['settings'][] = Fields::f( 'html', 'descriptionHtml', '简短描述', null, array( 'ui' => 'richtext', 'legacyKey' => 'description' ) );
+			$def['settings'][] = Fields::f( 'number', 'itemWidthPx', '电脑时间线宽度', 200, array( 'group' => 'layout', 'min' => 150, 'max' => 350, 'ui' => 'slider', 'unit' => 'px', 'show_if' => array( 'style' => 'horizontal' ), 'help' => '推荐 150、200、250、300 或 350px；手机自动改为纵向排列。' ) );
+			$padding = array( 'contentPaddingTopPx' => '上', 'contentPaddingRightPx' => '右', 'contentPaddingBottomPx' => '下', 'contentPaddingLeftPx' => '左' );
+			foreach ( $padding as $key => $label ) {
+				$def['settings'][] = Fields::f( 'number', $key, $label, 0, array( 'group' => 'layout', 'device' => true, 'min' => 0, 'max' => 240, 'ui' => 'input', 'unit' => 'px' ) );
+			}
+			foreach ( self::button( false ) as $field ) {
+				if ( 'button' === $field['key'] ) { continue; }
+				if ( str_ends_with( $field['key'], 'Ms' ) ) { $field['label'] = 'effectDurationMs' === $field['key'] ? '按钮动画时间' : '按钮动画间隔'; $field['ui'] = 'seconds'; $field['unit'] = 's'; $field['uiMin'] = 'effectDurationMs' === $field['key'] ? 1000 : 500; $field['uiMax'] = 5000; }
+				$def['settings'][] = $field;
+			}
+			$def['editorDefaults'] = array( 'autoScroll' => true, 'collapsible' => true );
+			$def['panels'] = array(
+				array( 'id' => 'content', 'label' => '标题与说明', 'initialOpen' => true, 'fields' => array( 'title', 'descriptionHtml' ) ),
+				array( 'id' => 'layout', 'label' => '时间轴样式', 'initialOpen' => true, 'fields' => array( 'style', 'itemWidthPx', 'autoScroll', 'collapsible', 'expandLabel', 'collapseLabel' ) ),
+				array( 'id' => 'inner-padding', 'label' => '内容留白', 'ui' => 'boxmodel', 'initialOpen' => true, 'fields' => array_keys( $padding ) ),
+				array( 'id' => 'style', 'label' => '文字与背景颜色', 'fields' => array( 'titleColor', 'textColor', 'backgroundColor' ) ),
+				array( 'id' => 'button', 'label' => '展开按钮动效', 'fields' => array( 'buttonEffect', 'effectDurationMs', 'effectIntervalMs' ) ),
+				array( 'id' => 'general', 'label' => '显示与间距', 'fields' => array( 'showDesktop', 'showMobile', 'paddingTopPx', 'paddingBottomPx' ) ),
+			);
+			foreach ( $def['settings'] as &$field ) {
+				if ( 'autoScroll' === $field['key'] ) { $field['show_if'] = array( 'style' => 'horizontal' ); $field['help'] = '仅电脑端自动滚动；悬停、聚焦或手动操作时暂停，也可使用页面上的暂停按钮。'; }
+				if ( in_array( $field['key'], array( 'collapsible', 'expandLabel', 'collapseLabel', 'buttonEffect', 'effectDurationMs', 'effectIntervalMs' ), true ) ) { $field['show_if'] = array( 'style' => 'vertical' ); }
+			}
+			unset( $field );
+			foreach ( $def['items']['fields'] as &$field ) {
+				if ( 'text' === $field['key'] ) { $field['uiHidden'] = true; }
+				if ( 'date' === $field['key'] ) { $field['help'] = '样式一使用此日期；有效的 YYYY-MM-DD 日期会同时显示年份。其他日期文字原样保留，条目按列表顺序显示。'; }
+				if ( 'title' === $field['key'] ) { $field['label'] = '副标题'; }
+			}
+			unset( $field );
+			$def['items']['fields'][] = Fields::f( 'html', 'textHtml', '简短描述', null, array( 'ui' => 'richtext', 'legacyKey' => 'text' ) );
+			$def['items']['fields'][] = Fields::f( 'text', 'dateTitle', '日期标题', null, array( 'ui' => 'inherited-text', 'legacyTextKey' => 'date', 'help' => '未单独设置时沿用原日期；清空后不显示。' ) );
+			$def['items']['fields'][] = Fields::f( 'text', 'dateText', '日期文字', null, array( 'ui' => 'inherited-text', 'legacyTextKey' => 'date', 'help' => '未单独设置时沿用原日期；清空后不显示。' ) );
+			$def['items']['panels'] = array(
+				array( 'id' => 'content', 'label' => '内容与颜色', 'initialOpen' => true, 'fields' => array( 'title', 'textHtml', 'color' ) ),
+				array( 'id' => 'style-one', 'label' => '样式一日期', 'fields' => array( 'date' ) ),
+				array( 'id' => 'style-two', 'label' => '样式二图片与日期', 'fields' => array( 'image', 'imagePosition', 'dateTitle', 'dateText' ) ),
+			);
+		} elseif ( 'gallery' === $type ) {
 			$def['settings'][] = Fields::f( 'html', 'descriptionHtml', '简短描述', null, array( 'ui' => 'richtext', 'legacyKey' => 'description' ) );
 			$def['settings'][] = Fields::f( 'select', 'display', '展示方式', 'grid', array( 'options' => array( 'grid' => '多列图片', 'rail' => '横向画廊' ), 'help' => '横向画廊以相同图片高度排列，保留每张图片的比例；多列图片沿用原列数。' ) );
 			$def['editorDefaults'] = array( 'display' => 'rail' );

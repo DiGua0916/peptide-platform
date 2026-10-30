@@ -292,6 +292,17 @@
 		return value;
 	}
 
+	/** Explicit timeline text fields can inherit without serializing the fallback. */
+	function InheritedTextField( props ) {
+		var inherited = props.value === null || props.value === undefined;
+		return el( 'div', { className: 'pc-me-inherited-text' },
+			el( C.TextControl, { label: props.field.label, help: props.field.help, value: inherited ? ( props.fallback || '' ) : props.value, onChange: props.onChange } ),
+			el( 'div', { className: 'pc-me-device-state' },
+				inherited ? el( 'span', null, '沿用原日期' ) : el( C.Button, { variant: 'link', size: 'small', onClick: function () { props.onChange( null ); } }, '沿用原日期' )
+			)
+		);
+	}
+
 	function options( map, withNone ) {
 		var out = withNone ? [ { value: '', label: S.none } ] : [];
 		Object.keys( map || {} ).forEach( function ( k ) {
@@ -1379,6 +1390,7 @@
 		var f = field;
 		switch ( f.type ) {
 			case 'text':
+				if ( f.ui === 'inherited-text' && f.legacyTextKey ) { return el( InheritedTextField, { field: f, value: value, fallback: ctx.legacyText, onChange: onChange } ); }
 				return el( C.TextControl, { label: f.label, help: f.help, value: value || '', onChange: onChange } );
 			case 'textarea':
 				return el( C.TextareaControl, { label: f.label, help: f.help, value: value || '', rows: 3, onChange: onChange } );
@@ -1564,12 +1576,13 @@
 			} )
 			.map( function ( f ) {
 				var overridden = ctx.overridden && ctx.overridden( f.key );
+				var fieldCtx = f.ui === 'inherited-text' && f.legacyTextKey ? Object.assign( {}, ctx, { legacyText: effective( values[ f.legacyTextKey ], ctx.device ) } ) : ctx;
 				return el(
 					'div',
 					{ key: f.key, className: 'pc-me-field pc-me-field--' + f.type + ( overridden ? ' is-overridden' : '' ) },
 					control( f, fieldValue( f, values, ctx.device ), function ( v ) {
 						setValue( f.key, v );
-					}, ctx ),
+					}, fieldCtx ),
 					! f.device && ctx.device === 'mobile' && ctx.overridden && f.group !== 'general'
 						? el(
 							'div',
@@ -1759,7 +1772,7 @@
 			var keys = panel.fields;
 			var fields = Array.isArray( keys ) ? keys.map( function ( key ) { return definitions.find( function ( field ) { return field.key === ( typeof key === 'string' ? key : key.key ); } ); } ).filter( Boolean ) : definitions.filter( function ( field ) { return ( field.panel || field.group || 'content' ) === panel.id; } );
 			fields = fields.filter( function ( field ) { if ( assigned[ field.key ] ) { return false; } assigned[ field.key ] = true; return true; } );
-			return { id: panel.id, label: panel.label || panel.title || groups[ panel.id ] || panel.id, initialOpen: panel.initialOpen !== undefined ? panel.initialOpen : !! panel.open, fields: fields };
+			return { id: panel.id, label: panel.label || panel.title || groups[ panel.id ] || panel.id, initialOpen: panel.initialOpen !== undefined ? panel.initialOpen : !! panel.open, fields: fields, ui: panel.ui };
 		} );
 		Object.keys( groups ).forEach( function ( group ) {
 			var fields = definitions.filter( function ( field ) { return ! assigned[ field.key ] && ( field.group || 'content' ) === group; } );
@@ -1776,7 +1789,9 @@
 				return el(
 					C.PanelBody,
 					{ key: section.id, className: 'pc-me-panel', title: section.label, initialOpen: section.initialOpen },
-					fieldList( fields, props.settings, props.setSetting, ctx )
+					section.ui === 'boxmodel' && fields.length === 4 && fields.every( function ( field ) { return field.type === 'number' && field.device; } )
+						? el( 'div', { className: 'pc-me-boxmodel', role: 'group', 'aria-label': section.label }, fieldList( fields, props.settings, props.setSetting, ctx ), el( 'span', { className: 'pc-me-boxmodel__unit', 'aria-hidden': true }, 'px' ) )
+						: fieldList( fields, props.settings, props.setSetting, ctx )
 				);
 			} )
 			.filter( Boolean );

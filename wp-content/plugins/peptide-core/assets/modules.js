@@ -398,47 +398,89 @@
 	function timeline( root ) {
 		if ( root.dataset.autoScroll !== '1' ) { return; }
 		var desktop = window.matchMedia ? window.matchMedia( '(min-width: 768px)' ) : { matches: true };
-		var paused = false, hovered = false, focused = false, visible = true;
-		var frame = null, last = null, direction = 1, resumeTimer = null;
+		var paused = false, hovered = false, focused = false, visible = true, interacting = false;
+		var frame = null, last = null, direction = 1, resumeTimer = null, cursor = null;
 		var button = document.createElement( 'button' );
 		button.type = 'button'; button.className = 'vc-timeline__autoscroll';
+		if ( root.id ) { button.setAttribute( 'aria-controls', root.id ); }
 		root.parentNode.insertBefore( button, root.nextSibling );
 		function label() {
 			button.textContent = paused ? root.dataset.resumeLabel : root.dataset.pauseLabel;
 			button.setAttribute( 'aria-pressed', paused ? 'true' : 'false' );
 			button.hidden = ! desktop.matches || reduce || root.scrollWidth <= root.clientWidth;
 		}
-		function stop() { if ( frame !== null ) { cancelAnimationFrame( frame ); } frame = null; last = null; }
-		function available() { return ! paused && ! hovered && ! focused && visible && desktop.matches && ! reduce && ! document.hidden && root.getClientRects().length && root.scrollWidth > root.clientWidth; }
+		function stop() { if ( frame !== null ) { cancelAnimationFrame( frame ); } frame = null; last = null; cursor = null; }
+		function available() { return ! paused && ! hovered && ! focused && ! interacting && ! resumeTimer && visible && desktop.matches && ! reduce && ! document.hidden && root.getClientRects().length && root.scrollWidth > root.clientWidth; }
 		function step( time ) {
 			frame = null;
 			if ( ! available() ) { last = null; return; }
 			var elapsed = last === null ? 0 : Math.min( 80, time - last ); last = time;
 			var sign = window.getComputedStyle( root ).direction === 'rtl' ? -1 : 1;
 			var max = root.scrollWidth - root.clientWidth;
-			var position = Math.abs( root.scrollLeft ) + direction * elapsed * .028;
+			var position = ( cursor === null ? Math.abs( root.scrollLeft ) : cursor ) + direction * elapsed * .028;
 			if ( position >= max ) { position = max; direction = -1; }
 			if ( position <= 0 ) { position = 0; direction = 1; }
+			cursor = position;
 			root.scrollLeft = position * sign;
 			frame = requestAnimationFrame( step );
 		}
 		function start() { stop(); label(); if ( available() ) { frame = requestAnimationFrame( step ); } }
-		function manualPause() { stop(); clearTimeout( resumeTimer ); resumeTimer = setTimeout( start, 5000 ); }
-		button.addEventListener( 'click', function () { paused = ! paused; start(); } );
+		function manualPause() { stop(); clearTimeout( resumeTimer ); resumeTimer = setTimeout( function () { resumeTimer = null; start(); }, 5000 ); }
+		button.addEventListener( 'click', function () { paused = ! paused; clearTimeout( resumeTimer ); resumeTimer = null; start(); } );
 		root.addEventListener( 'mouseenter', function () { hovered = true; stop(); } );
 		root.addEventListener( 'mouseleave', function () { hovered = false; start(); } );
 		root.addEventListener( 'focusin', function () { focused = true; stop(); } );
 		root.addEventListener( 'focusout', function ( event ) { focused = !! ( event.relatedTarget && root.contains( event.relatedTarget ) ); start(); } );
 		root.addEventListener( 'wheel', manualPause, { passive: true } );
-		root.addEventListener( 'pointerdown', manualPause, { passive: true } );
+		root.addEventListener( 'pointerdown', function () { interacting = true; manualPause(); }, { passive: true } );
+		window.addEventListener( 'pointerup', function () { if ( interacting ) { interacting = false; manualPause(); } }, { passive: true } );
+		window.addEventListener( 'pointercancel', function () { if ( interacting ) { interacting = false; manualPause(); } }, { passive: true } );
 		root.addEventListener( 'keydown', manualPause );
+		root.addEventListener( 'vc:select-item', function ( event ) { if ( timelineSelectedItem( root, event ) ) { paused = true; start(); } } );
 		document.addEventListener( 'visibilitychange', start );
 		window.addEventListener( 'resize', start );
+		if ( window.ResizeObserver ) { new window.ResizeObserver( start ).observe( root ); }
 		mediaChange( desktop, start ); mediaChange( motionQuery, start );
 		if ( window.IntersectionObserver ) {
 			new window.IntersectionObserver( function ( entries ) { visible = entries[ 0 ].isIntersecting; start(); } ).observe( root );
 		}
 		start();
+	}
+
+	function timelineCollapse( button ) {
+		var list = document.getElementById( button.getAttribute( 'aria-controls' ) );
+		if ( ! list || ! list.classList.contains( 'vc-timeline--vertical' ) ) { return; }
+		var items = Array.prototype.filter.call( list.children, function ( item ) { return item.classList.contains( 'vc-timeline__item' ); } );
+		if ( items.length <= 3 ) { return; }
+		var collapsed = true;
+		function update() {
+			if ( collapsed && items.slice( 3 ).some( function ( item ) { return item.contains( document.activeElement ); } ) ) { button.focus(); }
+			items.forEach( function ( item, index ) { item.hidden = collapsed && index >= 3; } );
+			list.classList.toggle( 'is-collapsed', collapsed );
+			button.textContent = collapsed ? button.dataset.expand : button.dataset.collapse;
+			button.setAttribute( 'aria-expanded', collapsed ? 'false' : 'true' );
+			button.hidden = false;
+		}
+		button.addEventListener( 'click', function () { collapsed = ! collapsed; update(); } );
+		list.addEventListener( 'vc:select-item', function ( event ) {
+			var item = timelineSelectedItem( list, event );
+			if ( item && collapsed && items.indexOf( item ) >= 3 ) { collapsed = false; update(); }
+		} );
+		update();
+	}
+
+	function timelineSelectedItem( root, event ) {
+		var item = event.target && event.target.closest ? event.target.closest( '[data-module-item]' ) : null;
+		return item && item.parentNode === root && item.classList.contains( 'vc-timeline__item' ) && event.detail && event.detail.item === item.getAttribute( 'data-module-item' ) ? item : null;
+	}
+
+	function timelineSelection( root ) {
+		root.addEventListener( 'vc:select-item', function ( event ) {
+			var item = timelineSelectedItem( root, event );
+			if ( ! item || item.hidden || item.inert ) { return; }
+			event.preventDefault();
+			item.scrollIntoView( { block: 'nearest', inline: 'nearest', behavior: 'auto' } );
+		} );
 	}
 
 	function showcase( root ) {
@@ -642,17 +684,8 @@
 		each( '.vc-m .vc-textblock__toggle', function ( b ) {
 			toggle( b, b.closest( '.vc-textblock' ), 'is-open' );
 		} );
-		each( '.vc-m .vc-timeline__toggle', function ( b ) {
-			var list = b.parentNode.querySelector( '.vc-timeline' );
-			if ( list ) {
-				list.classList.add( 'is-collapsed' );
-				b.addEventListener( 'click', function () {
-					var collapsed = list.classList.toggle( 'is-collapsed' );
-					b.textContent = collapsed ? b.dataset.expand : b.dataset.collapse;
-					b.setAttribute( 'aria-expanded', collapsed ? 'false' : 'true' );
-				} );
-			}
-		} );
+		each( '.vc-m .vc-timeline__toggle', timelineCollapse );
+		each( '.vc-m .vc-timeline', timelineSelection );
 
 		if ( ! ( 'IntersectionObserver' in window ) ) {
 			return;
