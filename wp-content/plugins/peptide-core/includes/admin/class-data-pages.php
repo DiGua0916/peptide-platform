@@ -97,6 +97,23 @@ final class Data_Pages {
 						'permission_callback' => $permission,
 					)
 				);
+				register_rest_route(
+					Rest_Controller::ROUTE_NAMESPACE,
+					'/data/realtime/history',
+					array(
+						'methods'             => \WP_REST_Server::READABLE,
+						'callback'            => static function ( \WP_REST_Request $request ) {
+							$r = Realtime::history_params( $request->get_params() );
+							if ( is_wp_error( $r ) ) {
+								return $r;
+							}
+							$res = new \WP_REST_Response( Realtime::history( $r ) );
+							$res->header( 'Cache-Control', 'no-store' );
+							return $res;
+						},
+						'permission_callback' => $permission,
+					)
+				);
 				// 运营数据页（DATA-01 第 2 步）：指标卡片和两个转化漏斗，本期和对比期。
 				register_rest_route(
 					Rest_Controller::ROUTE_NAMESPACE,
@@ -338,7 +355,7 @@ final class Data_Pages {
 			wp_enqueue_script( 'peptide-core-data-realtime', $url . 'data-realtime.js', array( self::SCRIPT ), $ver( 'data-realtime.js' ), array( 'in_footer' => true ) );
 			wp_add_inline_script(
 				'peptide-core-data-realtime',
-				'window.pcDataRealtime = ' . wp_json_encode( array( 'strings' => self::realtime_strings() ) ) . ';',
+				'window.pcDataRealtime = ' . wp_json_encode( array( 'strings' => self::realtime_strings(), 'timezone' => wp_timezone_string() ) ) . ';',
 				'before'
 			);
 		}
@@ -496,8 +513,28 @@ final class Data_Pages {
 			'listPages'      => __( 'Popular pages today', 'peptide-core' ),
 			'details'        => __( 'View details', 'peptide-core' ),
 			'empty'          => __( 'No data yet.', 'peptide-core' ),
-			'notYet'         => __( 'Address, shipping and payment steps, the visitor map, countries, sources and collections need data that is not collected yet.', 'peptide-core' ),
+			'notYet'         => __( 'The visitor map, countries, sources and collections need data that is not collected yet.', 'peptide-core' ),
 			'trackingOff'    => __( 'Visitor tracking is off, so visitor numbers, conversion and the funnels stay at zero.', 'peptide-core' ),
+			'live'          => __( 'Real time', 'peptide-core' ),
+			'todayOption'   => __( 'Today', 'peptide-core' ),
+			'yesterday'     => __( 'Yesterday', 'peptide-core' ),
+			'from'          => __( 'Start date', 'peptide-core' ),
+			'to'            => __( 'End date', 'peptide-core' ),
+			'apply'         => __( 'Query', 'peptide-core' ),
+			'custom'        => __( 'Custom dates', 'peptide-core' ),
+			'period'        => __( 'Selected period', 'peptide-core' ),
+			'historyVisits' => __( 'Period visits', 'peptide-core' ),
+			'historySales'  => __( 'Period sales', 'peptide-core' ),
+			'historyPower'  => __( 'Period buying power', 'peptide-core' ),
+			'historyFunnel' => __( 'Visitor behaviour in this period', 'peptide-core' ),
+			'historyChart'  => __( 'Visitors by visit start time', 'peptide-core' ),
+			'historyViewed'=> __( 'Most viewed products in this period', 'peptide-core' ),
+			'historyCarted'=> __( 'Most added to cart in this period', 'peptide-core' ),
+			'historySold'  => __( 'Best sellers in this period', 'peptide-core' ),
+			'historyPages' => __( 'Popular pages in this period', 'peptide-core' ),
+			'manualRefresh'=> __( 'History updates when you query or refresh.', 'peptide-core' ),
+			'rangeError'   => __( 'Enter valid start and end dates in order, up to 366 days.', 'peptide-core' ),
+			'historyNote'  => __( 'Visitors, funnel and chart use visits that started in this period. A visitor counts once in the period and once in each chart bucket they visited. Page views use event time. Paid orders use creation time, exclude test orders and subtract current refunds. Completed payment counts visitors in the funnel, and orders in the cards.', 'peptide-core' ),
 		);
 	}
 

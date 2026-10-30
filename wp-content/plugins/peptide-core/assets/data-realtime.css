@@ -4,6 +4,22 @@
 	max-width: 100%;
 }
 
+.pc-rt [hidden] { display: none !important; }
+.pc-rt-range {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 8px 12px;
+	margin-bottom: 12px;
+}
+.pc-rt-modes { display: flex; flex-wrap: wrap; gap: 4px; }
+.pc-rt-range label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.pc-rt-range input[type="date"] { width: 148px; max-width: 100%; min-height: 30px; }
+.pc-rt-modes .is-active { color: #fff; background: #1d2327; border-color: #1d2327; }
+.pc-rt-period { margin: 0 0 12px; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.pc-rt.is-history .pc-rt-col { flex-basis: 90px; min-width: 90px; }
+.pc-rt-chart-wrap:focus-visible { outline: 2px solid #1d2327; outline-offset: 2px; }
+
 .pc-rt-head {
 	display: flex;
 	flex-wrap: wrap;

@@ -11881,3 +11881,66 @@ msgstr "本地模拟—钱包（不扣款）"
 #: includes/payments/class-local-payments.php:20
 msgid "Local test payment only. No charge will be made."
 msgstr "仅用于本地测试付款，不会扣款。"
+#: includes/admin/class-data-pages.php
+msgid "The visitor map, countries, sources and collections need data that is not collected yet."
+msgstr "访客地图、国家、来源和集合需要的数据尚未采集。"
+
+#: includes/admin/class-data-pages.php
+msgid "Query"
+msgstr "查询"
+
+#: includes/admin/class-data-pages.php
+msgid "Custom dates"
+msgstr "自定义日期"
+
+#: includes/admin/class-data-pages.php
+msgid "Selected period"
+msgstr "所选时间段"
+
+#: includes/admin/class-data-pages.php
+msgid "Period visits"
+msgstr "所选时段访问"
+
+#: includes/admin/class-data-pages.php
+msgid "Period sales"
+msgstr "所选时段销售"
+
+#: includes/admin/class-data-pages.php
+msgid "Period buying power"
+msgstr "所选时段购买力"
+
+#: includes/admin/class-data-pages.php
+msgid "Visitor behaviour in this period"
+msgstr "所选时段访客行为"
+
+#: includes/admin/class-data-pages.php
+msgid "Visitors by visit start time"
+msgstr "按访问开始时间统计的访客数"
+
+#: includes/admin/class-data-pages.php
+msgid "Most viewed products in this period"
+msgstr "所选时段浏览最多的商品"
+
+#: includes/admin/class-data-pages.php
+msgid "Most added to cart in this period"
+msgstr "所选时段加购最多的商品"
+
+#: includes/admin/class-data-pages.php
+msgid "Best sellers in this period"
+msgstr "所选时段热卖商品"
+
+#: includes/admin/class-data-pages.php
+msgid "Popular pages in this period"
+msgstr "所选时段热门页面"
+
+#: includes/admin/class-data-pages.php
+msgid "History updates when you query or refresh."
+msgstr "历史数据在查询或刷新时更新。"
+
+#: includes/admin/class-data-pages.php
+msgid "Enter valid start and end dates in order, up to 366 days."
+msgstr "请按先后顺序填写有效的开始和结束日期，最多选择366天。"
+
+#: includes/admin/class-data-pages.php
+msgid "Visitors, funnel and chart use visits that started in this period. A visitor counts once in the period and once in each chart bucket they visited. Page views use event time. Paid orders use creation time, exclude test orders and subtract current refunds. Completed payment counts visitors in the funnel, and orders in the cards."
+msgstr "访客数、漏斗和图表按所选时段内开始的访问统计。每位访客在整个时段内只计一次，在各个有访问的图表时段内分别去重。浏览量按事件发生时间统计。已付款订单按创建时间统计，排除测试订单并扣除当前退款。完成支付在漏斗中按访客计数，在卡片中按订单计数。"

@@ -163,6 +163,116 @@ final class Realtime {
 		);
 	}
 
+	/** History validates raw keys before the shared range parser can default empty values. */
+	public static function history_params( array $params, ?int $now = null ) {
+		$errors = array();
+		$custom = array_key_exists( 'from', $params ) || array_key_exists( 'to', $params );
+		foreach ( array( 'range', 'from', 'to' ) as $key ) {
+			if ( array_key_exists( $key, $params ) && ! is_scalar( $params[ $key ] ) ) {
+				$errors[ $key ] = 'invalid_format';
+			}
+		}
+		if ( array_key_exists( 'range', $params ) && ! isset( $errors['range'] ) && ! in_array( trim( (string) $params['range'] ), Range::PRESETS, true ) ) {
+			$errors['range'] = 'invalid_format';
+		}
+		if ( $custom ) {
+			foreach ( array( 'from', 'to' ) as $key ) {
+				if ( ! isset( $errors[ $key ] ) && ( ! array_key_exists( $key, $params ) || '' === trim( (string) $params[ $key ] ) ) ) {
+					$errors[ $key ] = 'required';
+				}
+			}
+		}
+		if ( $errors ) {
+			return Errors::invalid( $errors );
+		}
+		return Range::from_params( array_intersect_key( $params, array_flip( array( 'range', 'from', 'to' ) ) ), $now );
+	}
+
+	/**
+	 * Calendar history, [from,to) in the shop timezone. Visitors/funnel/chart share
+	 * the visit-start cohort (distinct visitors, never a sum of bucket UV). Events
+	 * use occurred_ms; paid non-test orders use creation time and current refunds.
+	 * Funnel paid visitors are independent of the native paid-order card count.
+	 * Paid orders are fetched once; this path does not query buyer history.
+	 */
+	public static function history( array $range ): array {
+		global $wpdb;
+		$from = (int) $range['from'];
+		$to   = (int) $range['to'];
+		$fm   = $from * 1000;
+		$tm   = $to * 1000;
+		$counts = array_fill_keys( Operations::LAYERS, 0 );
+		if ( Schema::installed() ) {
+			$visits = Schema::table( 'visits' );
+			$row = $wpdb->get_row( $wpdb->prepare( "SELECT COUNT(DISTINCT visitor_id) AS visitors, COUNT(DISTINCT CASE WHEN stage >= 1 THEN visitor_id END) AS viewed, COUNT(DISTINCT CASE WHEN stage >= 2 THEN visitor_id END) AS carted, COUNT(DISTINCT CASE WHEN stage >= 3 THEN visitor_id END) AS checkout, COUNT(DISTINCT CASE WHEN stage >= 5 THEN visitor_id END) AS paid FROM {$visits} WHERE start_ms >= %d AND start_ms < %d", $fm, $tm ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			foreach ( $counts as $key => $zero ) {
+				$counts[ $key ] = (int) ( $row[ $key ] ?? 0 );
+			}
+		}
+		$orders = self::real_orders( Operations::paid_orders( $from, $to ) );
+		$numbers = self::order_numbers( $orders );
+		$query = $range['preset'] ? array( 'range' => $range['preset'] ) : array( 'from' => $range['dates']['from'], 'to' => $range['dates']['to'] );
+		return array(
+			'mode'     => 'history',
+			'range'    => array_intersect_key( $range, array_flip( array( 'preset', 'from', 'to', 'days', 'bucket' ) ) ) + array( 'dates' => array( 'from' => $range['dates']['from'], 'to' => $range['dates']['to'] ), 'timezone' => wp_timezone_string() ),
+			'updated'  => wp_date( 'Y-m-d H:i:s' ),
+			'tracking' => Schema::installed(),
+			'cards'    => array(
+				'visitors' => $counts['visitors'],
+				'pageviews' => self::count_page_views( $fm, $tm ),
+				'orders' => $numbers['orders'],
+				'sales' => $numbers['sales'],
+				'units_per_order' => $numbers['orders'] ? round( $numbers['units'] / $numbers['orders'], 2 ) : 0.0,
+				'aov' => $numbers['orders'] ? round( $numbers['sales'] / $numbers['orders'], 2 ) : 0.0,
+			),
+			'funnel' => array( 'layers' => Operations::layers( $counts ) ),
+			'series' => self::history_series( $range ),
+			'lists' => array(
+				'viewed' => self::top_products( 'product_view', $fm, $tm ),
+				'carted' => self::top_products( 'add_to_cart', $fm, $tm ),
+				'sold' => self::top_sold( $orders ),
+				'pages' => self::top_pages( $fm, $tm, true ),
+			),
+			'links' => array(
+				'products' => add_query_arg( $query, admin_url( 'admin.php?page=pc-data-products' ) ),
+				'pages' => add_query_arg( $query, admin_url( 'admin.php?page=pc-data-pages' ) ),
+			),
+		);
+	}
+
+	/** At most 366 aggregate rows, one SQL query, no raw visitor IDs or per-bucket queries. */
+	private static function history_series( array $range ): array {
+		global $wpdb;
+		$from = (int) $range['from'];
+		$to = (int) $range['to'];
+		$hour = 'hour' === $range['bucket'];
+		$points = array();
+		$day = ( new \DateTimeImmutable( '@' . $from ) )->setTimezone( wp_timezone() );
+		for ( $start = $from; $start < $to; $start = $next ) {
+			$next = $hour ? $start + HOUR_IN_SECONDS : $day->modify( '+1 day' )->getTimestamp();
+			$points[] = array( 'start' => $start, 'end' => min( $next, $to ), 'label' => wp_date( $hour ? 'H:i T' : 'Y-m-d', $start ), 'visitors' => 0 );
+			$day = $day->modify( '+1 day' );
+		}
+		if ( $points && Schema::installed() ) {
+			$cases = array();
+			$args = array();
+			foreach ( $points as $i => $point ) {
+				$cases[] = 'WHEN start_ms < %d THEN %d';
+				$args[] = $point['end'] * 1000;
+				$args[] = $i;
+			}
+			$args[] = $from * 1000;
+			$args[] = $to * 1000;
+			$visits = Schema::table( 'visits' );
+			$case = implode( ' ', $cases );
+			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT CASE {$case} END AS bucket, COUNT(DISTINCT visitor_id) AS visitors FROM {$visits} WHERE start_ms >= %d AND start_ms < %d GROUP BY bucket", $args ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			foreach ( (array) $rows as $row ) {
+				$points[ (int) $row['bucket'] ]['visitors'] = (int) $row['visitors'];
+			}
+		}
+		return array( 'bucket' => $range['bucket'], 'points' => $points );
+	}
+
 	/**
 	 * (now − W·60 000, now] 换成左闭右开的毫秒区间 [from, to)（整数毫秒，两种写法完全一样）。
 	 *
@@ -336,13 +446,14 @@ final class Realtime {
 	 *
 	 * @return array<int,array{path:string,url:string,count:int}>
 	 */
-	private static function top_pages( int $from_ms, int $to_ms ): array {
+	private static function top_pages( int $from_ms, int $to_ms, bool $bounded = false ): array {
 		global $wpdb;
 		if ( ! Schema::installed() ) {
 			return array();
 		}
 		$events = Schema::table( 'events' );
-		$rows   = $wpdb->get_results( $wpdb->prepare( "SELECT path, COUNT(*) AS cnt FROM {$events} WHERE type = 'page_view' AND path <> '' AND occurred_ms >= %d AND occurred_ms < %d GROUP BY path", $from_ms, $to_ms ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		$limit = $bounded ? ' ORDER BY cnt DESC, BINARY path ASC LIMIT ' . self::LIST_SIZE : '';
+		$rows   = $wpdb->get_results( $wpdb->prepare( "SELECT path, COUNT(*) AS cnt FROM {$events} WHERE type = 'page_view' AND path <> '' AND occurred_ms >= %d AND occurred_ms < %d GROUP BY path{$limit}", $from_ms, $to_ms ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		$pages  = array();
 		foreach ( (array) $rows as $row ) {
 			$pages[] = array(

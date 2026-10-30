@@ -11829,3 +11829,66 @@ msgstr ""
 #: includes/payments/class-local-payments.php:20
 msgid "Local test payment only. No charge will be made."
 msgstr ""
+#: includes/admin/class-data-pages.php
+msgid "The visitor map, countries, sources and collections need data that is not collected yet."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Query"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Custom dates"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Selected period"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Period visits"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Period sales"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Period buying power"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Visitor behaviour in this period"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Visitors by visit start time"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Most viewed products in this period"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Most added to cart in this period"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Best sellers in this period"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Popular pages in this period"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "History updates when you query or refresh."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Enter valid start and end dates in order, up to 366 days."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Visitors, funnel and chart use visits that started in this period. A visitor counts once in the period and once in each chart bucket they visited. Page views use event time. Paid orders use creation time, exclude test orders and subtract current refunds. Completed payment counts visitors in the funnel, and orders in the cards."
+msgstr ""
