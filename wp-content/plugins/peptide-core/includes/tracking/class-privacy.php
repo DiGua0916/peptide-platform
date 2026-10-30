@@ -22,6 +22,7 @@ final class Privacy {
 	public const BATCH      = 500;
 
 	public static function register_hooks(): void {
+		Page_Context_Privacy::register_hooks();
 		add_action( self::PRUNE_HOOK, array( self::class, 'prune_now' ) );
 		add_filter( 'wp_privacy_personal_data_exporters', array( self::class, 'add_exporter' ) );
 		add_filter( 'wp_privacy_personal_data_erasers', array( self::class, 'add_eraser' ) );

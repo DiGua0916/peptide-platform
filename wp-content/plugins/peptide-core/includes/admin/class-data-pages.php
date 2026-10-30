@@ -29,6 +29,7 @@ use PeptideCore\Data\Report_Exports;
 use PeptideCore\Data\Rankings;
 use PeptideCore\Data\Range;
 use PeptideCore\Data\Realtime;
+use PeptideCore\Data\Realtime_Dimensions;
 use PeptideCore\Data\Trends;
 
 defined( 'ABSPATH' ) || exit;
@@ -113,6 +114,21 @@ final class Data_Pages {
 							$res = new \WP_REST_Response( Realtime::history( $r ) );
 							$res->header( 'Cache-Control', 'no-store' );
 							return $res;
+						},
+						'permission_callback' => $permission,
+					)
+				);
+				register_rest_route(
+					Rest_Controller::ROUTE_NAMESPACE,
+					'/data/realtime/dimensions',
+					array(
+						'methods' => \WP_REST_Server::READABLE,
+						'callback' => static function ( \WP_REST_Request $request ) {
+							$params = Realtime_Dimensions::params( $request->get_params() );
+							if ( is_wp_error( $params ) ) { return $params; }
+							$response = new \WP_REST_Response( Realtime_Dimensions::summary( $params ) );
+							$response->header( 'Cache-Control', 'no-store' );
+							return $response;
 						},
 						'permission_callback' => $permission,
 					)
@@ -363,7 +379,10 @@ final class Data_Pages {
 		// 实时数据页的报表（三张卡片、访客行为漏斗、每分钟访客数量、今日列表），在 data.js 之后加载，用 PcData.register( 'realtime', … ) 画进页面。
 		if ( 'realtime' === $key ) {
 			wp_enqueue_style( 'peptide-core-data-realtime', $url . 'data-realtime.css', array( 'peptide-core-data' ), $ver( 'data-realtime.css' ) );
-			wp_enqueue_script( 'peptide-core-data-realtime', $url . 'data-realtime.js', array( self::SCRIPT ), $ver( 'data-realtime.js' ), array( 'in_footer' => true ) );
+			wp_enqueue_style( 'peptide-core-data-realtime-dimensions', $url . 'data-realtime-dimensions.css', array( 'peptide-core-data-realtime' ), $ver( 'data-realtime-dimensions.css' ) );
+			wp_register_script( 'peptide-core-data-realtime-countries', $url . 'data-realtime-countries.js', array(), $ver( 'data-realtime-countries.js' ), array( 'in_footer' => true ) );
+			wp_register_script( 'peptide-core-data-realtime-dimensions', $url . 'data-realtime-dimensions.js', array( self::SCRIPT, 'peptide-core-data-realtime-countries' ), $ver( 'data-realtime-dimensions.js' ), array( 'in_footer' => true ) );
+			wp_enqueue_script( 'peptide-core-data-realtime', $url . 'data-realtime.js', array( self::SCRIPT, 'peptide-core-data-realtime-dimensions' ), $ver( 'data-realtime.js' ), array( 'in_footer' => true ) );
 			wp_add_inline_script(
 				'peptide-core-data-realtime',
 				'window.pcDataRealtime = ' . wp_json_encode( array( 'strings' => self::realtime_strings(), 'timezone' => wp_timezone_string() ) ) . ';',
@@ -509,8 +528,68 @@ final class Data_Pages {
 		);
 	}
 
+	private static function realtime_dimension_strings(): array {
+		return array(
+			'viewed' => __( 'Recently viewed products', 'peptide-core' ),
+			'carted' => __( 'Recently carted products', 'peptide-core' ),
+			'sold' => __( 'Recently sold product units', 'peptide-core' ),
+			'map' => __( 'Visitor countries map', 'peptide-core' ),
+			'active_countries' => __( 'Active countries — visitors', 'peptide-core' ),
+			'popular_countries' => __( 'Popular countries — page views', 'peptide-core' ),
+			'sources' => __( 'Visit sources — visitors', 'peptide-core' ),
+			'collections' => __( 'Collections — page views', 'peptide-core' ),
+			'pages' => __( 'Popular pages in this range', 'peptide-core' ),
+			'events' => _x( 'Events', 'realtime event count', 'peptide-core' ),
+			'units' => __( 'Product units', 'peptide-core' ),
+			'page_views' => __( 'Page views', 'peptide-core' ),
+			'visitors' => _x( 'Visitors', 'realtime distinct visitor count', 'peptide-core' ),
+			'visits' => __( 'Visits', 'peptide-core' ),
+			'loading' => __( 'Loading…', 'peptide-core' ),
+			'error' => __( 'These panels could not be loaded. Retry this accepted range.', 'peptide-core' ),
+			'retry' => __( 'Retry', 'peptide-core' ),
+			'stale' => __( 'Showing the last accepted range; these results may be stale.', 'peptide-core' ),
+			'empty' => __( 'No matching observations in this range.', 'peptide-core' ),
+			'unavailable' => __( 'Unavailable', 'peptide-core' ),
+			'partial' => __( 'Partial observation coverage', 'peptide-core' ),
+			'available' => __( 'Available', 'peptide-core' ),
+			'not_collected' => __( 'No observations have been collected for these records.', 'peptide-core' ),
+			'source_unavailable' => __( 'The source reported that country data was unavailable.', 'peptide-core' ),
+			'not_collected_and_source_unavailable' => __( 'Records contain both missing observations and source-reported unavailability.', 'peptide-core' ),
+			'dependency_unavailable' => __( 'A report dependency is unavailable; counts are unknown.', 'peptide-core' ),
+			'known' => __( 'Known', 'peptide-core' ),
+			'unknown' => __( 'Observed unknown', 'peptide-core' ),
+			'unobserved' => __( 'Unobserved', 'peptide-core' ),
+			'coverage' => __( 'Observation coverage', 'peptide-core' ),
+			'coverageNA' => __( 'Observation coverage does not apply to this event/unit ranking.', 'peptide-core' ),
+			'base' => __( 'Base records', 'peptide-core' ),
+			'top' => __( 'Showing %1$d of %2$d matching rows (Top 5).', 'peptide-core' ),
+			'allCountries' => __( 'All observed country codes', 'peptide-core' ),
+			'productLabel' => _x( 'Product', 'realtime ranking item', 'peptide-core' ),
+			'countryLabel' => _x( 'Country', 'realtime ranking item', 'peptide-core' ),
+			'sourceLabel' => _x( 'Source', 'realtime ranking item', 'peptide-core' ),
+			'collectionLabel' => _x( 'Collection', 'realtime ranking item', 'peptide-core' ),
+			'pageLabel' => _x( 'Page', 'realtime ranking item', 'peptide-core' ),
+			'count' => __( 'Count', 'peptide-core' ),
+			'share' => __( 'Share of page views', 'peptide-core' ),
+			'window' => __( '%d minutes', 'peptide-core' ),
+			'history' => __( 'Selected calendar range', 'peptide-core' ),
+			'captured_missing' => __( 'Captured source key absent', 'peptide-core' ),
+			'captured_empty' => __( 'Captured source observed empty', 'peptide-core' ),
+			'noOutline' => __( 'No outline in this map', 'peptide-core' ),
+			'zoomIn' => __( 'Zoom map in', 'peptide-core' ),
+			'zoomOut' => __( 'Zoom map out', 'peptide-core' ),
+			'resetMap' => __( 'Reset map', 'peptide-core' ),
+			'mapHelp' => __( 'Offline country outlines show source-reported visitor counts, not visitor coordinates. Countries without an outline remain in the table. Use arrow keys to pan the focused map; page scrolling is unchanged.', 'peptide-core' ),
+			'geoHelp' => __( 'Country observations are source reported, not verified by IP. Visitor counts use each visit’s latest country observation before the cutoff; one visitor may appear in several countries. Popular countries counts each page view instead.', 'peptide-core' ),
+			'sourceHelp' => __( 'Sources use the first successfully captured visit snapshot and preserve absent, empty and case-sensitive values. No direct source is inferred. Late claims can update an earlier cutoff; this is not an as-of snapshot.', 'peptide-core' ),
+			'collectionHelp' => __( 'Collections count saved collection observations, not today’s product categories or guessed URL paths. Deleted collections retain their identifier.', 'peptide-core' ),
+			'rangeHelp' => __( 'Each live panel has its own window. All historical panels use the accepted calendar dates. Counts may change after late observations; visitor counts across rows are not additive.', 'peptide-core' ),
+		);
+	}
+
 	private static function realtime_strings(): array {
 		return self::visitor_funnel_strings() + array(
+			'dimensions' => self::realtime_dimension_strings(),
 			/* translators: %s: date and time */
 			'updated'        => __( 'Last updated: %s', 'peptide-core' ),
 			'refresh'        => __( 'Refresh', 'peptide-core' ),

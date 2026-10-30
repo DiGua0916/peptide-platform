@@ -189,6 +189,35 @@ final class Realtime {
 		return Range::from_params( array_intersect_key( $params, array_flip( array( 'range', 'from', 'to' ) ) ), $now );
 	}
 
+	/** Additive ranged adapter; old list helpers and their eligibility remain authoritative. */
+	public static function ranged_list( string $kind, int $from_ms, int $to_ms ): array {
+		global $wpdb;
+		if ( ! in_array( $kind, array( 'viewed', 'carted', 'sold', 'pages' ), true ) || $from_ms >= $to_ms ) { throw new \InvalidArgumentException( 'Invalid realtime list range.' ); }
+		if ( 'sold' === $kind ) {
+			$orders = self::real_orders( Operations::paid_orders( (int) ceil( $from_ms / 1000 ), (int) ceil( $to_ms / 1000 ) ) );
+			$units = array();
+			foreach ( $orders as $order ) {
+				foreach ( $order->get_items() as $item ) {
+					if ( ! $item instanceof \WC_Order_Item_Product ) { continue; }
+					$id = (int) $item->get_product_id();
+					if ( $id > 0 ) { $units[ $id ] = ( $units[ $id ] ?? 0 ) + (int) $item->get_quantity() - abs( (int) $order->get_qty_refunded_for_item( $item->get_id() ) ); }
+				}
+			}
+			return array( 'rows' => self::top_sold( $orders ), 'total_rows' => count( array_filter( $units, static fn( int $n ): bool => $n > 0 ) ) );
+		}
+		if ( ! Schema::installed() ) { throw new \RuntimeException( 'Tracking tables are unavailable.' ); }
+		$table = Schema::table( 'events' );
+		if ( 'pages' === $kind ) {
+			$total = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM (SELECT path FROM {$table} WHERE type = 'page_view' AND path <> '' AND occurred_ms >= %d AND occurred_ms < %d GROUP BY path) AS paths", $from_ms, $to_ms ) );
+			if ( $wpdb->last_error ) { throw new \RuntimeException( 'Page list query failed.' ); }
+			return array( 'rows' => self::top_pages( $from_ms, $to_ms, true ), 'total_rows' => (int) $total );
+		}
+		$type = 'viewed' === $kind ? 'product_view' : 'add_to_cart';
+		$total = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(DISTINCT product_id) FROM {$table} WHERE type = %s AND product_id > 0 AND occurred_ms >= %d AND occurred_ms < %d", $type, $from_ms, $to_ms ) );
+		if ( $wpdb->last_error ) { throw new \RuntimeException( 'Product list query failed.' ); }
+		return array( 'rows' => self::top_products( $type, $from_ms, $to_ms ), 'total_rows' => (int) $total );
+	}
+
 	/**
 	 * Calendar history, [from,to) in the shop timezone. Visitors/funnel/chart share
 	 * the visit-start cohort (distinct visitors, never a sum of bucket UV). Events

@@ -12078,3 +12078,258 @@ msgstr "访问来源快照（JSON）"
 #: includes/tracking/class-privacy.php
 msgid "When supplied by the storefront, we also keep the first successfully captured visit entry domain, path, allowed utm_source/utm_medium query values and referrer domain. Older visits without this observation remain unknown. An unavailable value (null), an observed empty value and an absent UTM key are distinct; we do not infer a direct source. The normalized visit snapshot is included in personal data exports and is deleted with the visit. Rejected attribution values are not stored."
 msgstr "独立站提供相关数据时，我们还会保存首次成功捕获的访问入口域名、路径、允许的 utm_source／utm_medium 查询值及引荐域名。没有这项观察的历史访问仍为未知。不可用值（null）、观察到的空值和缺少的 UTM 键含义不同；我们不会据此推断直接来源。标准化的访问快照会包含在个人数据导出中，并随访问记录删除。被拒绝的来源值不会保存。"
+
+#: includes/admin/class-data-pages.php
+msgid "Recently viewed products"
+msgstr "最近浏览的商品"
+
+#: includes/admin/class-data-pages.php
+msgid "Recently carted products"
+msgstr "最近加购的商品"
+
+#: includes/admin/class-data-pages.php
+msgid "Recently sold product units"
+msgstr "最近售出的商品件数"
+
+#: includes/admin/class-data-pages.php
+msgid "Visitor countries map"
+msgstr "访客国家地图"
+
+#: includes/admin/class-data-pages.php
+msgid "Active countries — visitors"
+msgstr "活跃国家 — 访客数"
+
+#: includes/admin/class-data-pages.php
+msgid "Popular countries — page views"
+msgstr "热门国家 — 页面访问量"
+
+#: includes/admin/class-data-pages.php
+msgid "Visit sources — visitors"
+msgstr "访问来源 — 访客数"
+
+#: includes/admin/class-data-pages.php
+msgid "Collections — page views"
+msgstr "专辑 — 页面访问量"
+
+#: includes/admin/class-data-pages.php
+msgid "Popular pages in this range"
+msgstr "所选时段的热门页面"
+
+#: includes/admin/class-data-pages.php
+msgid "Product units"
+msgstr "商品件数"
+
+#: includes/admin/class-data-pages.php
+msgid "These panels could not be loaded. Retry this accepted range."
+msgstr "这些面板加载失败。请重试最后已接受的时段。"
+
+#: includes/admin/class-data-pages.php
+msgid "Showing the last accepted range; these results may be stale."
+msgstr "正在显示最后已接受的时段，数据可能已过时。"
+
+#: includes/admin/class-data-pages.php
+msgid "No matching observations in this range."
+msgstr "此时段内没有匹配的观察记录。"
+
+#: includes/admin/class-data-pages.php
+msgid "Unavailable"
+msgstr "不可用"
+
+#: includes/admin/class-data-pages.php
+msgid "Partial observation coverage"
+msgstr "观察覆盖不完整"
+
+#: includes/admin/class-data-pages.php
+msgid "Available"
+msgstr "可用"
+
+#: includes/admin/class-data-pages.php
+msgid "No observations have been collected for these records."
+msgstr "这些记录尚未采集相关观察。"
+
+#: includes/admin/class-data-pages.php
+msgid "The source reported that country data was unavailable."
+msgstr "来源报告国家数据不可用。"
+
+#: includes/admin/class-data-pages.php
+msgid "Records contain both missing observations and source-reported unavailability."
+msgstr "记录中同时存在未采集和来源报告不可用的情况。"
+
+#: includes/admin/class-data-pages.php
+msgid "A report dependency is unavailable; counts are unknown."
+msgstr "报表依赖不可用，数量未知。"
+
+#: includes/admin/class-data-pages.php
+msgid "Known"
+msgstr "已知"
+
+#: includes/admin/class-data-pages.php
+msgid "Observed unknown"
+msgstr "已观察但未知"
+
+#: includes/admin/class-data-pages.php
+msgid "Unobserved"
+msgstr "未观察"
+
+#: includes/admin/class-data-pages.php
+msgid "Observation coverage"
+msgstr "观察覆盖情况"
+
+#: includes/admin/class-data-pages.php
+msgid "Observation coverage does not apply to this event/unit ranking."
+msgstr "此事件／商品件数排行不适用观察覆盖率。"
+
+#: includes/admin/class-data-pages.php
+msgid "Base records"
+msgstr "基础记录数"
+
+#: includes/admin/class-data-pages.php
+msgid "Showing %1$d of %2$d matching rows (Top 5)."
+msgstr "显示 %1$d／%2$d 条匹配记录（前 5 名）。"
+
+#: includes/admin/class-data-pages.php
+msgid "All observed country codes"
+msgstr "全部已观察的国家代码"
+
+#: includes/admin/class-data-pages.php
+msgid "Count"
+msgstr "数量"
+
+#: includes/admin/class-data-pages.php
+msgid "Share of page views"
+msgstr "页面访问量占比"
+
+#: includes/admin/class-data-pages.php
+msgid "Selected calendar range"
+msgstr "所选日历时段"
+
+#: includes/admin/class-data-pages.php
+msgid "Captured source key absent"
+msgstr "已捕获来源：键缺失"
+
+#: includes/admin/class-data-pages.php
+msgid "Captured source observed empty"
+msgstr "已捕获来源：观察到空值"
+
+#: includes/admin/class-data-pages.php
+msgid "No outline in this map"
+msgstr "此地图无对应轮廓"
+
+#: includes/admin/class-data-pages.php
+msgid "Zoom map in"
+msgstr "放大地图"
+
+#: includes/admin/class-data-pages.php
+msgid "Zoom map out"
+msgstr "缩小地图"
+
+#: includes/admin/class-data-pages.php
+msgid "Reset map"
+msgstr "重置地图"
+
+#: includes/admin/class-data-pages.php
+msgid "Offline country outlines show source-reported visitor counts, not visitor coordinates. Countries without an outline remain in the table. Use arrow keys to pan the focused map; page scrolling is unchanged."
+msgstr "离线国家轮廓显示来源报告的访客数，不是访客坐标。无轮廓的国家仍保留在表格中。聚焦地图后可用方向键平移，不影响页面正常滚动。"
+
+#: includes/admin/class-data-pages.php
+msgid "Country observations are source reported, not verified by IP. Visitor counts use each visit’s latest country observation before the cutoff; one visitor may appear in several countries. Popular countries counts each page view instead."
+msgstr "国家观察由来源报告，未经 IP 验证。访客数使用各次访问在截止时间前最近一次国家观察；同一访客可能出现在多个国家。热门国家则逐条统计页面访问。"
+
+#: includes/admin/class-data-pages.php
+msgid "Sources use the first successfully captured visit snapshot and preserve absent, empty and case-sensitive values. No direct source is inferred. Late claims can update an earlier cutoff; this is not an as-of snapshot."
+msgstr "来源使用首次成功捕获的访问快照，区分键缺失、空值和大小写。不推断直接来源。较晚完成的捕获可能更新较早截止时间的结果，这不是当时状态的快照。"
+
+#: includes/admin/class-data-pages.php
+msgid "Collections count saved collection observations, not today’s product categories or guessed URL paths. Deleted collections retain their identifier."
+msgstr "专辑仅统计已保存的专辑观察，不使用商品当前分类或猜测页面路径。已删除专辑保留原标识。"
+
+#: includes/admin/class-data-pages.php
+msgid "Each live panel has its own window. All historical panels use the accepted calendar dates. Counts may change after late observations; visitor counts across rows are not additive."
+msgstr "实时模式下各面板有独立窗口；历史面板统一使用已接受的日历日期。迟到观察可能改变结果，各行访客数不可相加。"
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Page kind"
+msgstr "页面类型"
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Collection ID"
+msgstr "专辑标识"
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Country observation"
+msgstr "国家观察"
+
+#: includes/admin/class-tracking-page.php
+msgid "Source reported"
+msgstr "来源报告"
+
+#: includes/admin/class-tracking-page.php
+msgid "Entry host"
+msgstr "入口域名"
+
+#: includes/admin/class-tracking-page.php
+msgid "Key absent"
+msgstr "键缺失"
+
+#: includes/admin/class-tracking-page.php
+msgid "Observed empty"
+msgstr "观察到空值"
+
+#: includes/admin/class-tracking-page.php
+msgid "Referrer host"
+msgstr "引荐域名"
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Store page context"
+msgstr "店铺页面上下文"
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Observed at (UTC)"
+msgstr "观察时间（UTC）"
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Context source"
+msgstr "上下文来源"
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Country code"
+msgstr "国家代码"
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "When supplied by the storefront, page views may include a normalized page kind, collection identifier and source-reported country observation. Country observations are not verified physical locations or IP-derived coordinates. Missing observations remain unobserved. These facts follow the store visit retention, account/order association and erasure rules, and are included in a separate personal-data export."
+msgstr "独立站提供时，页面访问记录可包含规范化页面类型、专辑标识和来源报告的国家观察。国家观察不代表经过验证的实际位置或由 IP 推导的坐标。缺失观察保持未观察状态。这些事实遵循店铺访问记录的保存期限、账号／订单关联及抹除规则，并包含在独立的个人数据导出中。"
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime event count"
+msgid "Events"
+msgstr "事件数"
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime distinct visitor count"
+msgid "Visitors"
+msgstr "访客数"
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime ranking item"
+msgid "Product"
+msgstr "商品"
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime ranking item"
+msgid "Country"
+msgstr "国家"
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime ranking item"
+msgid "Source"
+msgstr "来源"
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime ranking item"
+msgid "Collection"
+msgstr "专辑"
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime ranking item"
+msgid "Page"
+msgstr "页面"

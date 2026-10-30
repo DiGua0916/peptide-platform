@@ -12026,3 +12026,258 @@ msgstr ""
 #: includes/tracking/class-privacy.php
 msgid "When supplied by the storefront, we also keep the first successfully captured visit entry domain, path, allowed utm_source/utm_medium query values and referrer domain. Older visits without this observation remain unknown. An unavailable value (null), an observed empty value and an absent UTM key are distinct; we do not infer a direct source. The normalized visit snapshot is included in personal data exports and is deleted with the visit. Rejected attribution values are not stored."
 msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Recently viewed products"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Recently carted products"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Recently sold product units"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Visitor countries map"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Active countries — visitors"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Popular countries — page views"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Visit sources — visitors"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Collections — page views"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Popular pages in this range"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Product units"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "These panels could not be loaded. Retry this accepted range."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Showing the last accepted range; these results may be stale."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "No matching observations in this range."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Unavailable"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Partial observation coverage"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Available"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "No observations have been collected for these records."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "The source reported that country data was unavailable."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Records contain both missing observations and source-reported unavailability."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "A report dependency is unavailable; counts are unknown."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Known"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Observed unknown"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Unobserved"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Observation coverage"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Observation coverage does not apply to this event/unit ranking."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Base records"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Showing %1$d of %2$d matching rows (Top 5)."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "All observed country codes"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Count"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Share of page views"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Selected calendar range"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Captured source key absent"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Captured source observed empty"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "No outline in this map"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Zoom map in"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Zoom map out"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Reset map"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Offline country outlines show source-reported visitor counts, not visitor coordinates. Countries without an outline remain in the table. Use arrow keys to pan the focused map; page scrolling is unchanged."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Country observations are source reported, not verified by IP. Visitor counts use each visit’s latest country observation before the cutoff; one visitor may appear in several countries. Popular countries counts each page view instead."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Sources use the first successfully captured visit snapshot and preserve absent, empty and case-sensitive values. No direct source is inferred. Late claims can update an earlier cutoff; this is not an as-of snapshot."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Collections count saved collection observations, not today’s product categories or guessed URL paths. Deleted collections retain their identifier."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Each live panel has its own window. All historical panels use the accepted calendar dates. Counts may change after late observations; visitor counts across rows are not additive."
+msgstr ""
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Page kind"
+msgstr ""
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Collection ID"
+msgstr ""
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Country observation"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php
+msgid "Source reported"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php
+msgid "Entry host"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php
+msgid "Key absent"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php
+msgid "Observed empty"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php
+msgid "Referrer host"
+msgstr ""
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Store page context"
+msgstr ""
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Observed at (UTC)"
+msgstr ""
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Context source"
+msgstr ""
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Country code"
+msgstr ""
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "When supplied by the storefront, page views may include a normalized page kind, collection identifier and source-reported country observation. Country observations are not verified physical locations or IP-derived coordinates. Missing observations remain unobserved. These facts follow the store visit retention, account/order association and erasure rules, and are included in a separate personal-data export."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime event count"
+msgid "Events"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime distinct visitor count"
+msgid "Visitors"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime ranking item"
+msgid "Product"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime ranking item"
+msgid "Country"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime ranking item"
+msgid "Source"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime ranking item"
+msgid "Collection"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime ranking item"
+msgid "Page"
+msgstr ""

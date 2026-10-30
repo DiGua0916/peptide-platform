@@ -218,11 +218,14 @@ final class Ingest {
 		$rejected = array();
 		$clean    = array();
 		$attempts = array();
+		$contexts = array();
 		// Indexed by request position, never UID: duplicate UIDs still receive separate receipts.
 		foreach ( $events as $index => $e ) {
 			$eid = is_array( $e ) && is_string( $e['event_id'] ?? null ) ? $e['event_id'] : '';
 			$attempted = is_array( $e ) && is_array( $e['data'] ?? null ) && array_key_exists( 'attribution', $e['data'] );
 			if ( $attempted ) { $attempts[ $index ] = Attribution::receipt( preg_match( self::ID_PATTERN, $eid ) ? $eid : '', 'rejected', 'core_rejected' ); }
+			$context_attempted = is_array( $e ) && is_array( $e['data'] ?? null ) && array_key_exists( 'page_context', $e['data'] );
+			if ( $context_attempted ) { $contexts[ $index ] = Page_Context::receipt( preg_match( self::ID_PATTERN, $eid ) ? $eid : '', 'rejected', 'core_rejected' ); }
 			if ( ! preg_match( self::ID_PATTERN, $eid ) ) {
 				$rejected[] = array( 'event_id' => is_scalar( $e['event_id'] ?? null ) ? substr( (string) $e['event_id'], 0, 64 ) : '', 'code' => 'bad_event_id', 'retry' => false );
 				continue;
@@ -260,6 +263,14 @@ final class Ingest {
 					} else { $attempts[ $index ] = Attribution::receipt( $eid, 'rejected', $metadata['code'] ); }
 				}
 			}
+			if ( $context_attempted ) {
+				if ( 'page_view' !== $type ) { $contexts[ $index ] = Page_Context::receipt( $eid, 'rejected', 'wrong_event_type' ); }
+				else {
+					$context = Page_Context::clean( $e['data']['page_context'] );
+					if ( $context['ok'] ) { $data['page_context'] = $context['value']; $contexts[ $index ] = Page_Context::receipt( $eid, 'retry', 'server_error', true ); }
+					else { $contexts[ $index ] = Page_Context::receipt( $eid, 'rejected', $context['code'] ); }
+				}
+			}
 			$clean[] = array(
 				'index'            => $index,
 				'event_id'         => $eid,
@@ -273,7 +284,7 @@ final class Ingest {
 			);
 		}
 		if ( ! $clean ) {
-			return self::result( $ack, $rejected, 0, 0, $attempts );
+			return self::result( $ack, $rejected, 0, 0, $attempts, $contexts );
 		}
 
 		// 按发生时间处理，同一页面按序号。
@@ -284,14 +295,14 @@ final class Ingest {
 			foreach ( $clean as $c ) {
 				$rejected[] = array( 'event_id' => $c['event_id'], 'code' => 'server_error', 'retry' => true );
 			}
-			return self::result( $ack, $rejected, 0, 0, $attempts );
+			return self::result( $ack, $rejected, 0, 0, $attempts, $contexts );
 		}
 		// Pure extension replays belong to their saved visit, even after session rollover.
 		// Legacy batches retain their exact visit creation/update behavior.
 		$saved = array();
-		$only_replays = (bool) $attempts;
+		$only_replays = (bool) ( $attempts || $contexts );
 		foreach ( $clean as $c ) {
-			if ( ! isset( $attempts[ $c['index'] ] ) ) { $only_replays = false; continue; }
+			if ( ! isset( $attempts[ $c['index'] ] ) && ! isset( $contexts[ $c['index'] ] ) ) { $only_replays = false; continue; }
 			$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . Schema::table( 'events' ) . ' WHERE visitor_id = %d AND event_uid = %s', $visitor['id'], $c['event_id'] ), ARRAY_A );
 			if ( $wpdb->last_error ) { $only_replays = false; }
 			if ( $row ) { $saved[ $c['event_id'] ] = $row; } else { $only_replays = false; }
@@ -311,7 +322,14 @@ final class Ingest {
 			if ( $only_replays ) {
 				$ack[] = $c['event_id'];
 				if ( isset( $data['attribution'] ) ) { $attempts[ $c['index'] ] = self::replay( $visitor['id'], $c, $saved[ $c['event_id'] ] ); }
+				if ( isset( $data['page_context'] ) ) { $contexts[ $c['index'] ] = Page_Context::replay( $visitor['id'], $c, $saved[ $c['event_id'] ] ); }
 				continue;
+			}
+			// Keep the normalized incoming value in $c for a lost-race replay; only
+			// the prospective new row omits metadata that fails today's catalog.
+			if ( isset( $data['page_context'] ) && ! isset( $saved[ $c['event_id'] ] ) && ! Page_Context::valid_new( $data['page_context'] ) ) {
+				unset( $data['page_context'] );
+				$contexts[ $c['index'] ] = Page_Context::receipt( $c['event_id'], 'rejected', 'bad_page_context' );
 			}
 			$inserted = $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 				$wpdb->prepare(
@@ -337,13 +355,23 @@ final class Ingest {
 				continue;
 			}
 			$ack[] = $c['event_id'];
+			$original = null;
+			$read_failed = false;
+			if ( 1 !== (int) $inserted && ( isset( $data['attribution'] ) || isset( $c['data']['page_context'] ) ) ) {
+				$original = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$events_table} WHERE visitor_id = %d AND event_uid = %s", $visitor['id'], $c['event_id'] ), ARRAY_A );
+				$read_failed = (bool) $wpdb->last_error;
+			}
 			if ( isset( $data['attribution'] ) ) {
 				if ( 1 === (int) $inserted ) {
 					$attempts[ $c['index'] ] = Attribution::capture( $visitor['id'], array( 'event_uid' => $c['event_id'], 'visitor_id' => $visitor['id'], 'visit_id' => $visit, 'path' => $page['path'], 'received_ms' => $now_ms ), $data['attribution'] );
 				} else {
-					$original = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$events_table} WHERE visitor_id = %d AND event_uid = %s", $visitor['id'], $c['event_id'] ), ARRAY_A );
-					$attempts[ $c['index'] ] = $wpdb->last_error ? Attribution::receipt( $c['event_id'], 'retry', 'server_error', true ) : ( $original ? self::replay( $visitor['id'], $c, $original ) : Attribution::receipt( $c['event_id'], 'rejected', 'original_visit_missing' ) );
+					$attempts[ $c['index'] ] = $read_failed ? Attribution::receipt( $c['event_id'], 'retry', 'server_error', true ) : ( $original ? self::replay( $visitor['id'], $c, $original ) : Attribution::receipt( $c['event_id'], 'rejected', 'original_visit_missing' ) );
 				}
+			}
+			if ( isset( $c['data']['page_context'] ) ) {
+				if ( 1 === (int) $inserted ) {
+					if ( isset( $data['page_context'] ) ) { $contexts[ $c['index'] ] = Page_Context::receipt( $c['event_id'], 'applied', 'saved_context' ); }
+				} else { $contexts[ $c['index'] ] = $read_failed ? Page_Context::receipt( $c['event_id'], 'retry', 'server_error', true ) : ( $original ? Page_Context::replay( $visitor['id'], $c, $original ) : Page_Context::receipt( $c['event_id'], 'rejected', 'original_visit_missing' ) ); }
 			}
 			if ( 1 !== (int) $inserted ) {
 				continue; // 重复事件：确认收到，但不再更新状态。
@@ -366,7 +394,7 @@ final class Ingest {
 				Tracker::raise_stage( $visit, $stage );
 			}
 		}
-		return self::result( $ack, $rejected, $visitor['id'], $visit, $attempts );
+		return self::result( $ack, $rejected, $visitor['id'], $visit, $attempts, $contexts );
 	}
 
 	private static function replay( int $visitor, array $incoming, array $saved ): array {
@@ -376,9 +404,10 @@ final class Ingest {
 		return Attribution::capture( $visitor, $saved, $data['attribution'] );
 	}
 
-	private static function result( array $ack, array $rejected, int $visitor, int $visit, array $attempts ): array {
+	private static function result( array $ack, array $rejected, int $visitor, int $visit, array $attempts, array $contexts = array() ): array {
 		$out = array( 'ack' => $ack, 'rejected' => $rejected, 'visitor_id' => $visitor, 'visit_id' => $visit );
 		if ( $attempts ) { $out['extensions'] = array( 'attribution' => array( 'version' => 1, 'results' => array_values( $attempts ) ) ); }
+		if ( $contexts ) { $out['extensions']['page_context'] = array( 'version' => 1, 'results' => array_values( $contexts ) ); }
 		return $out;
 	}
 

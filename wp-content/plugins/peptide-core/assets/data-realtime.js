@@ -219,12 +219,13 @@
 			box( displayedHistory ? T.historyPages : T.listPages, l.pages, 'page', links.pages );
 	}
 
+	var dimensions = null;
 	function notes( data ) {
 		var html = '';
 		if ( ! data.tracking ) {
 			html += '<p class="pc-rt-note">' + esc( T.trackingOff ) + '</p>';
 		}
-		html += '<p class="pc-rt-muted">' + esc( T.notYet ) + '</p>';
+		if ( ! dimensions ) { html += '<p class="pc-rt-muted">' + esc( T.notYet ) + '</p>'; }
 		if ( displayedHistory ) {
 			html += '<p class="pc-rt-muted">' + esc( T.historyNote ) + '</p>';
 		}
@@ -275,7 +276,7 @@
 				'</div>' +
 				'<div class="pc-rt-chart-wrap" tabindex="0" role="region" aria-label="' + esc( T.historyChart ) + '"></div>' +
 			'</section>' +
-			'<div class="pc-rt-lists"></div>' +
+			'<div class="pc-rt-lists"></div><div class="pc-rt-dimensions-host"></div>' +
 		'</div>';
 
 		els = {
@@ -295,6 +296,10 @@
 			els[ name ] = bodyEl.querySelector( '.pc-rt-' + name );
 		} );
 		painted = false;
+		if ( window.PcDataRealtimeDimensions ) {
+			dimensions = window.PcDataRealtimeDimensions.mount( bodyEl.querySelector( '.pc-rt-dimensions-host' ), ctx, T.dimensions, window.PcDataRealtimeCountries );
+			els.lists.hidden = true;
+		}
 
 		els.refresh.addEventListener( 'click', function () {
 			load();
@@ -318,6 +323,7 @@
 				++requests;
 				setBusy( false );
 				showError( T.rangeError );
+				if ( dimensions ) { dimensions.failMain(); }
 				return;
 			}
 			select( { mode: 'history', params: { from: els.from.value, to: els.to.value } }, 'push' );
@@ -435,6 +441,7 @@
 		var selection = wanted;
 		var action = urlAction;
 		setBusy( true );
+		if ( dimensions ) { dimensions.beginMain(); }
 		ctx.api( PATH + ( 'history' === selection.mode ? '/history' : '' ), 'history' === selection.mode ? selection.params : { funnel: state.funnel, minutes: state.minutes } ).then(
 			function ( data ) {
 				if ( mine !== requests ) {
@@ -443,13 +450,16 @@
 				setBusy( false );
 				try {
 					if ( ( 'history' === selection.mode ) !== ( 'history' === data.mode ) ) { throw new Error( 'Unexpected report mode' ); }
+					if ( dimensions && ( selection.mode === 'live' ? typeof data.now_ms !== 'number' || ! isFinite( data.now_ms ) || data.now_ms <= 0 || Math.floor( data.now_ms ) !== data.now_ms : ! data.range || ! data.range.dates || ! validDates( data.range.dates.from, data.range.dates.to ) || typeof data.range.from !== 'number' || ! isFinite( data.range.from ) || typeof data.range.to !== 'number' || ! isFinite( data.range.to ) || data.range.to <= data.range.from || typeof data.range.timezone !== 'string' || ! data.range.timezone ) ) { throw new Error( 'Invalid accepted realtime context' ); }
 					paint( data );
+					if ( dimensions ) { dimensions.acceptMain( selection, data ); }
 					writeUrl( data, action );
 					urlAction = '';
 					els.error.textContent = '';
 					els.error.hidden = true;
 				} catch ( e ) {
 					showError();
+					if ( dimensions ) { dimensions.failMain(); }
 				}
 			},
 			function ( error ) {
@@ -458,6 +468,7 @@
 				}
 				setBusy( false );
 				showError( error && ( 'pc_invalid_param' === error.code || error.data && 400 === Number( error.data.status ) ) ? T.rangeError : '' );
+				if ( dimensions ) { dimensions.failMain(); }
 			}
 		);
 	}
@@ -501,6 +512,7 @@
 	}
 
 	function render( bodyEl, range, c ) {
+		if ( dimensions ) { dimensions.dispose(); dimensions = null; }
 		ctx = c;
 		// 旧框架上还没回来的请求作废，再建新框架。
 		requests++;
