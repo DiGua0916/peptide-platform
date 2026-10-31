@@ -5,6 +5,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Gateway extends \WC_Payment_Gateway {
 	public const ID = 'pc_panapay';
+	private ?array $central_config = null;
 
 	public function __construct() {
 		$this->id = self::ID;
@@ -18,6 +19,17 @@ final class Gateway extends \WC_Payment_Gateway {
 		$this->title = $this->get_option( 'title', __( 'Credit card', 'peptide-panapay' ) );
 		if ( '' === trim( (string) $this->title ) ) { $this->title = __( 'Credit card', 'peptide-panapay' ); }
 		$this->description = $this->get_option( 'description', __( 'Continue to the secure payment page to pay for your order.', 'peptide-panapay' ) );
+		if ( Bridge::enabled() ) {
+			$this->enabled = 'no';
+			$this->title = __( 'Credit card', 'peptide-panapay' );
+			$this->description = __( 'Continue to the secure payment page to pay for your order.', 'peptide-panapay' );
+			try {
+				$this->central_config = Bridge::configuration();
+				$this->enabled = $this->central_config['enabled'] ? 'yes' : 'no';
+				$this->title = $this->central_config['title'];
+				$this->description = $this->central_config['description'];
+			} catch ( \Throwable $error ) { /* A missing HQ policy never enables local merchant fallback. */ }
+		}
 		$this->description .= ' ' . __( 'A contact phone number is required for this payment method.', 'peptide-panapay' );
 		if ( $this->is_test_mode() ) {
 			$this->title .= ' ' . __( '(test mode)', 'peptide-panapay' );
@@ -27,6 +39,7 @@ final class Gateway extends \WC_Payment_Gateway {
 	}
 
 	public function init_form_fields() {
+		if ( Bridge::enabled() ) { $this->form_fields = array(); return; }
 		$this->form_fields = array(
 			'enabled' => array( 'title' => __( 'Enable', 'peptide-panapay' ), 'type' => 'checkbox', 'label' => __( 'Enable Panapay', 'peptide-panapay' ), 'default' => 'no' ),
 			'title' => array( 'title' => __( 'Checkout title', 'peptide-panapay' ), 'type' => 'text', 'default' => __( 'Credit card', 'peptide-panapay' ) ),
@@ -40,6 +53,20 @@ final class Gateway extends \WC_Payment_Gateway {
 			'mode' => array( 'title' => __( 'Provider request mode', 'peptide-panapay' ), 'type' => 'select', 'default' => '2', 'options' => array( '2' => __( '2 — asynchronous', 'peptide-panapay' ), '1' => __( '1 — synchronous', 'peptide-panapay' ) ), 'description' => __( 'Both modes require a verified server notification before an order can be marked paid.', 'peptide-panapay' ) ),
 			'payment_hosts' => array( 'title' => __( 'Trusted hosted payment domains', 'peptide-panapay' ), 'type' => 'textarea', 'description' => __( 'One exact hostname per line. The gateway hostname is included automatically. Add other checkout domains only after confirming them with the provider; wildcards are not accepted.', 'peptide-panapay' ) ),
 		);
+	}
+
+	public function admin_options() {
+		if ( ! Bridge::enabled() ) { parent::admin_options(); return; }
+		echo '<h2>' . esc_html__( 'Panapay', 'peptide-panapay' ) . '</h2><p>'
+			. esc_html__( '付款方式由总后台统一管理。商户配置、支付开关和交易记录请在总后台的支付中心管理。', 'peptide-panapay' )
+			. '</p><p>' . esc_html( 'yes' === $this->enabled
+				? __( '当前站点已获总后台授权使用此付款方式。', 'peptide-panapay' )
+				: __( '当前站点尚未启用，或暂时无法取得总后台的支付配置。', 'peptide-panapay' ) ) . '</p>';
+	}
+
+	/** Store staff cannot write a merchant configuration once HQ owns payments. */
+	public function process_admin_options() {
+		return Bridge::enabled() ? false : parent::process_admin_options();
 	}
 
 	public function generate_panapay_secret_html( $key, $data ) {
@@ -68,6 +95,7 @@ final class Gateway extends \WC_Payment_Gateway {
 	}
 
 	public function is_test_mode(): bool {
+		if ( Bridge::enabled() ) { return $this->central_config['test_mode'] ?? true; }
 		return in_array( $this->get_option( 'test_mode', 'yes' ), array( true, 'yes', '1', 1 ), true );
 	}
 
@@ -75,7 +103,9 @@ final class Gateway extends \WC_Payment_Gateway {
 		if ( ! parent::is_available() || ! Store::installed() ) { return false; }
 		try {
 			$config = Configuration::load();
-			if ( '' === $config['gateway'] || '' === $config['mchid'] || '' === $config['secret'] ) { return false; }
+			if ( ! empty( $config['central'] ) ) {
+				if ( empty( $config['enabled'] ) || '' === $config['secret'] ) { return false; }
+			} elseif ( '' === $config['gateway'] || '' === $config['mchid'] || '' === $config['secret'] ) { return false; }
 			if ( $config['test_mode'] && 'production' === wp_get_environment_type() ) { return false; }
 			if ( ! $config['test_mode'] && 'https' !== wp_parse_url( home_url( '/' ), PHP_URL_SCHEME ) ) { return false; }
 			return true;
@@ -83,13 +113,13 @@ final class Gateway extends \WC_Payment_Gateway {
 	}
 
 	public function process_payment( $order_id ) {
-		if ( ! $this->is_available() ) { return $this->failure(); }
 		try {
 			$order = wc_get_order( $order_id );
 			if ( ! $order instanceof \WC_Order || self::ID !== $order->get_payment_method() ) { return $this->failure(); }
 			if ( $order->is_paid() && Persistence::is_paid( $order->get_id(), (string) $order->get_transaction_id() ) ) {
 				return array( 'result' => 'success', 'redirect' => $this->get_return_url( $order ) );
 			}
+			if ( ! $this->is_available() && ! Session_Service::has_open_attempt( $order ) ) { return $this->failure(); }
 			Checkout_Fields::apply_to_order( $order );
 			$session = Session_Service::start( $order->get_id() );
 			return array( 'result' => 'success', 'redirect' => 'redirect' === $session['type'] ? $session['url'] : $order->get_checkout_payment_url( true ) );

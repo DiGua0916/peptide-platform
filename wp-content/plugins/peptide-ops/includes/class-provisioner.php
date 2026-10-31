@@ -7,6 +7,7 @@ defined( 'ABSPATH' ) || exit;
 final class Provisioner {
 	private const MARKER = '.peptide-ops-owner.json';
 	private const RESUMABLE = array( 'prepared', 'database', 'files', 'installed', 'configured', 'served', 'registered', 'complete' );
+	private const STORE_PLUGINS = array( 'woocommerce', 'peptide-core', 'peptide-panapay' );
 
 	/** Public profile metadata. Secrets, paths and commands stay on the deployment agent. */
 	public static function profiles(): array {
@@ -83,8 +84,7 @@ final class Provisioner {
 			}
 			if ( self::before( $state, 'configured' ) ) {
 				$progress( 60, 'configure', '启用店铺组件并配置独立登录及管理后台接入。' );
-				self::wp( $p, $state, array( 'plugin', 'activate', 'woocommerce', '--quiet' ), $rel );
-				self::wp( $p, $state, array( 'plugin', 'activate', 'peptide-core', '--quiet' ), $rel );
+				self::activate_store_plugins( $p, $state, $rel );
 				self::wp( $p, $state, array( 'theme', 'activate', 'peptide-site', '--quiet' ), $rel );
 				self::configure_empty_store( $p, $state, $credentials, $rel );
 				$state['phase'] = 'configured'; Storage::write_json( $rel . '/state.json', $state );
@@ -149,6 +149,8 @@ final class Provisioner {
 		foreach ( array( 'managed_root', 'private_root', 'wp_source', 'theme_source', 'ops_source' ) as $field ) { if ( ! is_dir( $p[ $field ] ) || ! realpath( $p[ $field ] ) ) { return self::error( 'source', '部署环境的站点根目录或源码目录不存在。' ); } $p[ $field ] = str_replace( '\\', '/', realpath( $p[ $field ] ) ); }
 		if ( ! is_writable( $p['managed_root'] ) || ! is_writable( $p['private_root'] ) || ! is_file( $p['php_binary'] ) || ! is_file( $p['wp_cli'] ) || ! is_file( self::join( $p['wp_source'], 'wp-load.php' ) ) || ! is_file( self::join( $p['ops_source'], 'peptide-ops.php' ) ) || ! is_file( self::join( $p['theme_source'], 'style.css' ) ) || ! empty( $p['php_ini'] ) && ! is_file( $p['php_ini'] ) ) { return self::error( 'dependencies', '部署环境缺少可执行工具、WordPress源码或写入权限。' ); }
 		foreach ( array( 'woocommerce', 'peptide-core' ) as $slug_key ) { if ( empty( $p['plugin_sources'][ $slug_key ] ) || ! is_dir( $p['plugin_sources'][ $slug_key ] ) ) { return self::error( 'plugin_source', '部署环境缺少必要店铺插件源码。' ); } }
+		$p = self::payment_source( $p );
+		if ( is_wp_error( $p ) ) { return $p; }
 		if ( empty( $p['db']['host'] ) || empty( $p['db']['user'] ) || ! preg_match( '/^[a-z][a-z0-9_]{1,30}$/D', (string) ( $p['db']['name_prefix'] ?? '' ) ) ) { return self::error( 'database_profile', '部署环境的数据库管理连接或数据库前缀未配置。' ); }
 		$p['db']['create_user'] = $p['db']['create_user'] ?? true;
 		if ( empty( $p['db']['create_user'] ) && 'local' !== ( $p['environment'] ?? '' ) ) { return self::error( 'database_isolation', '正式部署必须为新店创建独立数据库账号。' ); }
@@ -180,6 +182,30 @@ final class Provisioner {
 		$request_hash = hash( 'sha256', wp_json_encode( array( $profile_id, $slug, $title, $login, $email, $url ) ) );
 		if ( $state && ( $state['request_hash'] ?? '' ) !== $request_hash ) { return self::error( 'operation_conflict', '同一个任务编号不能修改站点名称、网址或管理员信息。' ); }
 		return array( 'operation_id' => $id, 'profile_id' => $profile_id, 'profile' => $p, 'profile_hash' => $profile_hash, 'request_hash' => $request_hash, 'slug' => $slug, 'title' => $title, 'admin_login' => $login, 'admin_email' => $email, 'target' => $target, 'url' => $url );
+	}
+
+	/** Resolve code only, never a merchant option or the HQ runtime configuration. */
+	private static function payment_source( array $p ): array|\WP_Error {
+		$sources = $p['plugin_sources'] ?? array();
+		if ( ! is_array( $sources ) ) { return self::error( 'payment_source', '部署环境缺少有效的支付连接组件源码。' ); }
+		$explicit = array_key_exists( 'peptide-panapay', $sources );
+		$candidates = $explicit ? array( $sources['peptide-panapay'] ) : array();
+		if ( ! $explicit ) {
+			if ( defined( 'WP_PLUGIN_DIR' ) ) { $candidates[] = self::join( WP_PLUGIN_DIR, 'peptide-panapay' ); }
+			if ( is_string( $sources['peptide-core'] ?? null ) ) { $candidates[] = self::join( dirname( $sources['peptide-core'] ), 'peptide-panapay' ); }
+		}
+		foreach ( $candidates as $candidate ) {
+			if ( ! is_string( $candidate ) || ! self::absolute( $candidate ) || str_contains( $candidate, "\0" ) ) { continue; }
+			$actual = realpath( $candidate );
+			if ( false === $actual || ! is_dir( $actual ) || ! is_readable( $actual ) ) { continue; }
+			$entry = self::join( $actual, 'peptide-panapay.php' );
+			if ( ! is_file( $entry ) || ! is_readable( $entry ) || is_link( $entry ) ) { continue; }
+			$header = get_file_data( $entry, array( 'name' => 'Plugin Name' ), 'plugin' );
+			if ( '' === trim( (string) ( $header['name'] ?? '' ) ) ) { continue; }
+			$p['plugin_sources']['peptide-panapay'] = str_replace( '\\', '/', $actual );
+			return $p;
+		}
+		return self::error( 'payment_source', '部署环境缺少有效的支付连接组件。请安装 peptide-panapay，或在部署环境 plugin_sources 中配置其完整源码目录。' );
 	}
 
 	private static function absolute( string $p ): bool { return str_starts_with( $p, '/' ) || 1 === preg_match( '/^[A-Za-z]:[\\\\\/]/', $p ); }
@@ -255,7 +281,7 @@ final class Provisioner {
 		$core_files = array( 'index.php', 'license.txt', 'readme.html', 'wp-activate.php', 'wp-blog-header.php', 'wp-comments-post.php', 'wp-config-sample.php', 'wp-cron.php', 'wp-links-opml.php', 'wp-load.php', 'wp-login.php', 'wp-mail.php', 'wp-settings.php', 'wp-signup.php', 'wp-trackback.php', 'xmlrpc.php', 'wp-admin', 'wp-includes' );
 		foreach ( $core_files as $name ) { $source = self::join( $p['wp_source'], $name ); if ( file_exists( $source ) ) { self::copy_tree( $source, self::join( $public, $name ), $p['wp_source'] ); } }
 		foreach ( $p['plugin_sources'] as $slug => $source ) {
-			if ( ! in_array( $slug, array( 'woocommerce', 'peptide-core' ), true ) ) { continue; }
+			if ( ! in_array( $slug, self::STORE_PLUGINS, true ) ) { continue; }
 			self::copy_tree( $source, self::join( $public, 'wp-content/plugins/' . $slug ), (string) realpath( $source ) );
 		}
 		self::copy_tree( $p['theme_source'], self::join( $public, 'wp-content/themes/peptide-site' ), (string) realpath( $p['theme_source'] ) );
@@ -302,6 +328,9 @@ final class Provisioner {
 		$result = Storage::run( array_merge( $command, $args ), array( 'cwd' => $state['root'], 'timeout' => 180, 'env' => array( 'WP_CLI_CACHE_DIR' => Storage::path( 'cli-cache' ), 'PEPTIDE_OPS_PROVISIONING' => '1' ) ) );
 		if ( ! is_array( $result ) || ! empty( $result['timed_out'] ) || 0 !== (int) ( $result['code'] ?? 1 ) ) { throw new \RuntimeException( 'wordpress_command' ); }
 	}
+	private static function activate_store_plugins( array $p, array $state, string $rel ): void {
+		foreach ( self::STORE_PLUGINS as $slug ) { self::wp( $p, $state, array( 'plugin', 'activate', $slug, '--quiet' ), $rel ); }
+	}
 	private static function configure_empty_store( array $p, array $state, array $credentials, string $rel ): void {
 		$helper = Storage::path( $rel . '/configure-site.php' );
 		$code = '<?php defined("ABSPATH") || exit; ';
@@ -319,7 +348,7 @@ final class Provisioner {
 		file_put_contents( $helper, $code, LOCK_EX ); @chmod( $helper, 0600 );
 		try { self::wp( $p, $state, array( 'eval-file', $helper ), $rel ); } finally { if ( is_file( $helper ) ) { unlink( $helper ); } }
 		$mu = self::join( $state['root'], 'public/wp-content/mu-plugins/vialcove-site-health.php' );
-		$health_code = '<?php defined("ABSPATH") || exit; add_action("rest_api_init",static function(){register_rest_route("peptide-ops/v1","/site-identity",array("methods"=>"GET","permission_callback"=>"__return_true","callback"=>static function(){return new WP_REST_Response(array("uuid"=>PEPTIDE_OPS_SITE_UUID,"store_ready"=>class_exists("WooCommerce")&&defined("PEPTIDE_CORE_VERSION")),200,array("Cache-Control"=>"no-store"));}));});';
+		$health_code = '<?php defined("ABSPATH") || exit; add_action("rest_api_init",static function(){register_rest_route("peptide-ops/v1","/site-identity",array("methods"=>"GET","permission_callback"=>"__return_true","callback"=>static function(){return new WP_REST_Response(array("uuid"=>PEPTIDE_OPS_SITE_UUID,"store_ready"=>class_exists("WooCommerce")&&defined("PEPTIDE_CORE_VERSION")&&defined("PEPTIDE_PANAPAY_FILE")),200,array("Cache-Control"=>"no-store"));}));});';
 		file_put_contents( $mu, $health_code, LOCK_EX );
 	}
 

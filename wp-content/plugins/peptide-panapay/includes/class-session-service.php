@@ -40,6 +40,56 @@ final class Session_Service {
 		return $attempt;
 	}
 
+	/** Allows only continuing an existing attempt when new HQ payments are disabled. */
+	public static function has_open_attempt( \WC_Order $order ): bool {
+		try {
+			$book = self::book( $order );
+			$attempt = $book['attempts'][ $book['active'] ] ?? null;
+			return is_array( $attempt ) && 'failed' !== ( $attempt['state'] ?? '' )
+				&& Gateway::ID === $order->get_payment_method() && $order->has_status( array( 'pending', 'failed' ) ) && $order->needs_payment();
+		} catch ( \Throwable $error ) { return false; }
+	}
+
+	private static function attempt_config( array $attempt ): array {
+		if ( empty( $attempt['central'] ) ) { return Configuration::legacy(); }
+		// A valid saved checkout does not depend on HQ remaining online. Fresh authenticated
+		// policy may update approved hosts; otherwise keep the hosts approved at reservation.
+		try { $config = Bridge::configuration(); }
+		catch ( \Throwable $error ) { $config = array( 'gateway' => '', 'payment_hosts' => $attempt['payment_hosts'] ?? array() ); }
+		$config['test_mode'] = ! empty( $attempt['test_mode'] );
+		return $config;
+	}
+
+	/** A read-only HQ status request can recover its saved result, never recreate remotely. */
+	private static function recover_central( \WC_Order $order, array $book, array $lock, array $config ): array {
+		$id = $book['active'];
+		$attempt = $book['attempts'][ $id ];
+		if ( ! Bridge::enabled() || ! is_string( $attempt['hub_url'] ?? null )
+			|| ! hash_equals( $attempt['hub_url'], Bridge::hq_url() ) || ! isset( $attempt['creation_reservation'] ) ) {
+			throw new Customer_Error( __( 'Please contact the store to reconcile this payment.', 'peptide-panapay' ) );
+		}
+		Store::assert_owner( $lock );
+		$response = Bridge::recover( $attempt['reference'] );
+		Store::assert_owner( $lock );
+		if ( ! in_array( $response['state'], array( 'created', 'failed' ), true ) ) { return $book; }
+		if ( 'created' === $response['state'] && ! Configuration::payment_url( $response['url'], $config ) ) { return $book; }
+		$attempt['state'] = $response['state'];
+		if ( 'created' === $response['state'] ) {
+			$attempt['type'] = $response['type'];
+			$attempt['url_box'] = Crypto::encrypt( $response['url'], 'checkout-url' );
+		} else { unset( $attempt['type'], $attempt['url_box'] ); }
+		$book['attempts'][ $id ] = $attempt;
+		self::save( $order, $book );
+		if ( 'failed' === $response['state'] ) {
+			Store::set_creation_state( $attempt['creation_reservation'], 'failed' );
+		} elseif ( ! Store::creation_ready( $order->get_id() ) ) {
+			Store::set_creation_state( $attempt['creation_reservation'], 'created' );
+		}
+		// An unknown reservation remains unknown: recovery updates its persisted book,
+		// not the original creation authority, and never makes a second provider call.
+		return $book;
+	}
+
 	public static function start( int $order_id ): array {
 		$lock = Store::acquire( $order_id );
 		try {
@@ -48,20 +98,26 @@ final class Session_Service {
 				throw new Customer_Error( __( 'This order cannot start another payment.', 'peptide-panapay' ) );
 			}
 			Store::assert_no_completion( $order_id );
-			$config = Configuration::load();
-			if ( ( $config['test_mode'] && 'production' === wp_get_environment_type() )
-				|| ( ! $config['test_mode'] && 'https' !== wp_parse_url( home_url( '/' ), PHP_URL_SCHEME ) ) ) {
-				throw new Customer_Error( __( 'Payment is not configured for this environment.', 'peptide-panapay' ) );
-			}
 			$book = self::book( $order );
 			$existing = $book['attempts'][ $book['active'] ] ?? null;
 			if ( is_array( $existing ) && 'failed' !== ( $existing['state'] ?? '' ) ) {
-				if ( ! Store::creation_ready( $order_id ) ) { throw new Customer_Error( __( 'Payment setup has not been confirmed. Please contact the store before paying again.', 'peptide-panapay' ) ); }
 				Persistence::assert_book( $order, $book );
 				if ( ! hash_equals( $existing['fingerprint'], Order_Payload::fingerprint( $order ) ) ) {
 					throw new Customer_Error( __( 'This order changed after payment was started. Please contact the store before paying again.', 'peptide-panapay' ) );
 				}
+				$config = self::attempt_config( $existing );
+				if ( ! empty( $existing['central'] ) && in_array( $existing['state'], array( 'creating', 'unknown' ), true ) ) {
+					$book = self::recover_central( $order, $book, $lock, $config );
+					$existing = $book['attempts'][ $book['active'] ];
+				}
+				if ( ! Store::creation_ready( $order_id ) ) { throw new Customer_Error( __( 'Payment setup has not been confirmed. Please contact the store before paying again.', 'peptide-panapay' ) ); }
 				return self::session_url( $existing, $config );
+			}
+			$config = Configuration::load();
+			if ( ( ! empty( $config['central'] ) && empty( $config['enabled'] ) )
+				|| ( $config['test_mode'] && 'production' === wp_get_environment_type() )
+				|| ( ! $config['test_mode'] && 'https' !== wp_parse_url( home_url( '/' ), PHP_URL_SCHEME ) ) ) {
+				throw new Customer_Error( __( 'Payment is not configured for this environment.', 'peptide-panapay' ) );
 			}
 			if ( count( $book['attempts'] ) >= self::MAX_ATTEMPTS ) {
 				throw new Customer_Error( __( 'Please contact the store to continue payment for this order.', 'peptide-panapay' ) );
@@ -78,6 +134,11 @@ final class Session_Service {
 				'return_token_hash' => hash( 'sha256', $token ), 'test_mode' => $config['test_mode'],
 				'merchant_scope' => hash( 'sha256', $config['gateway'] . '|' . $config['mchid'] ),
 			);
+			if ( ! empty( $config['central'] ) ) {
+				$attempt['central'] = true;
+				$attempt['hub_url'] = Bridge::hq_url();
+				$attempt['payment_hosts'] = $config['payment_hosts'];
+			}
 			$book['active'] = $id;
 			$book['attempts'][ $id ] = $attempt;
 			// Reserve space for the largest accepted hosted URL before creating a remote session.
@@ -91,7 +152,7 @@ final class Session_Service {
 			self::save( $order, $book );
 			Store::assert_owner( $lock );
 			Store::assert_creation( $reservation );
-			$response = Provider_Client::create( $payload, $config );
+			$response = ! empty( $config['central'] ) ? Bridge::create( $payload, $config['secret'] ) : Provider_Client::create( $payload, $config );
 			unset( $payload, $token );
 			Store::assert_owner( $lock );
 			Store::assert_creation( $reservation );
@@ -111,6 +172,9 @@ final class Session_Service {
 	private static function session_url( array $attempt, array $config ): array {
 		if ( ! empty( $attempt['test_mode'] ) && 'production' === wp_get_environment_type() ) {
 			throw new Customer_Error( __( 'Test payments cannot be continued on this store.', 'peptide-panapay' ) );
+		}
+		if ( empty( $attempt['test_mode'] ) && 'https' !== wp_parse_url( home_url( '/' ), PHP_URL_SCHEME ) ) {
+			throw new Customer_Error( __( 'Live payments require this store to use HTTPS.', 'peptide-panapay' ) );
 		}
 		if ( 'failed' === ( $attempt['state'] ?? '' ) ) {
 			throw new Customer_Error( __( 'The payment provider could not start this payment. Please check your details and try again.', 'peptide-panapay' ) );
@@ -135,11 +199,11 @@ final class Session_Service {
 		if ( ! hash_equals( $attempt['fingerprint'], Order_Payload::fingerprint( $order ) ) ) {
 			throw new Customer_Error( __( 'This order changed after payment was started. Please contact the store.', 'peptide-panapay' ) );
 		}
-		return self::session_url( $attempt, Configuration::load() );
+		return self::session_url( $attempt, self::attempt_config( $attempt ) );
 	}
 
 	/** Signed server notification only. The browser-return path never calls this method. */
-	public static function apply_notification( array $data ): void {
+	public static function apply_notification( array $data, bool $central = false ): void {
 		foreach ( array( 'order_number', 'status', 'transaction_id', 'sign' ) as $key ) {
 			if ( ! is_string( $data[ $key ] ?? null ) ) { throw new Protocol_Error( 'invalid_notification' ); }
 		}
@@ -153,6 +217,7 @@ final class Session_Service {
 		$order = wc_get_order( $parsed['order_id'] );
 		if ( ! $order instanceof \WC_Order ) { throw new Protocol_Error( 'invalid_notification' ); }
 		$attempt = self::attempt( $order, $reference );
+		if ( ! empty( $attempt['central'] ) !== $central ) { throw new Protocol_Error( 'notification_route_mismatch' ); }
 		$fields = array_intersect_key( $data, array_flip( array( 'order_number', 'status', 'transaction_id' ) ) );
 		if ( ! Signature::verify( $fields, $data['sign'], Crypto::decrypt( $attempt['secret_box'] ) ) ) {
 			throw new Protocol_Error( 'invalid_notification' );
@@ -165,6 +230,7 @@ final class Session_Service {
 		try {
 			$order = new \WC_Order( $order->get_id() );
 			$attempt = self::attempt( $order, $reference );
+			if ( ! empty( $attempt['central'] ) !== $central ) { throw new Protocol_Error( 'notification_route_mismatch' ); }
 			if ( ! Store::creation_ready( $order->get_id() ) ) { throw new Protocol_Error( 'notification_creation_in_progress', 503 ); }
 			if ( ! Signature::verify( $fields, $data['sign'], Crypto::decrypt( $attempt['secret_box'] ) ) ) {
 				throw new Protocol_Error( 'invalid_notification' );
@@ -233,6 +299,28 @@ final class Session_Service {
 			if ( isset( $attempt['creation_reservation'] ) ) { Store::set_creation_state( $attempt['creation_reservation'], 'paid' ); }
 			Store::set_transaction_state( $transaction, $order->get_id(), 'applied', $scope );
 		} finally { Store::release( $lock ); }
+	}
+
+	/** Called only after the authenticated bridge has applied this exact notification. */
+	public static function notification_disposition( array $data ): string {
+		$parsed = self::parse_reference( $data['order_number'] );
+		$order = new \WC_Order( $parsed['order_id'] );
+		$attempt = self::attempt( $order, $data['order_number'] );
+		if ( empty( $attempt['central'] ) ) { throw new Protocol_Error( 'notification_route_mismatch' ); }
+		$book = self::book( $order );
+		Persistence::assert_book( $order, $book );
+		if ( 'SUCCEEDED' === $data['status'] && 'paid' === $attempt['state']
+			&& Persistence::is_paid( $order->get_id(), self::native_transaction_id( $data['transaction_id'] ) ) ) {
+			// Do not call a recovered, uncertain native completion "fully applied" just
+			// because the native paid status was written before its worker interrupted.
+			foreach ( Store::admin_transactions( $order->get_id() ) as $row ) {
+				if ( $row['attempt_id'] === $parsed['attempt_id'] && $row['state'] === 'applied'
+					&& hash_equals( $data['transaction_id'], $row['transaction'] ) ) { return 'paid'; }
+			}
+		}
+		if ( 'FAILED' === $data['status'] && $book['active'] === $parsed['attempt_id'] && 'failed' === $attempt['state']
+			&& Persistence::has_status( $order->get_id(), array( 'failed' ) ) ) { return 'failed'; }
+		return 'review';
 	}
 
 	public static function native_transaction_id( string $transaction ): string {

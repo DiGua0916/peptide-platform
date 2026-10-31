@@ -61,6 +61,7 @@ final class Plugin {
 		Media_Library::register_hooks();
 		Activity_Log::register_hooks();
 		Staff::register_hooks();
+		Staff_Entry::register_hooks();
 		Hq_Connector::register_hooks();
 		Topics::register_hooks();
 		Promotions::register_hooks();

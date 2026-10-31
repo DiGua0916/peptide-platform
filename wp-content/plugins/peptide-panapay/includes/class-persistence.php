@@ -9,6 +9,19 @@ defined( 'ABSPATH' ) || exit;
 
 final class Persistence {
 	private const META = '_pc_panapay_sessions';
+	public static function has_status( int $order_id, array $statuses ): bool {
+		if ( $order_id <= 0 || ! $statuses ) { return false; }
+		foreach ( $statuses as $status ) {
+			if ( ! is_string( $status ) || ! preg_match( '/^[a-z0-9_-]{1,20}$/D', $status ) ) { throw new \RuntimeException( 'payment_status_invalid' ); }
+		}
+		global $wpdb;
+		$store = self::store();
+		$sql = $store['hpos']
+			? $wpdb->prepare( "SELECT status FROM `{$store['orders']}` WHERE id=%d AND type='shop_order' LIMIT 2", $order_id )
+			: $wpdb->prepare( "SELECT post_status AS status FROM `{$store['orders']}` WHERE ID=%d AND post_type='shop_order' LIMIT 2", $order_id );
+		$rows = self::rows( $sql );
+		return count( $rows ) === 1 && in_array( $rows[0]['status'], array_map( static fn( $s ) => 'wc-' . $s, $statuses ), true );
+	}
 
 	/** A successful WC_Order::save return alone does not prove that its metadata was written. */
 	public static function assert_book( \WC_Order $order, array $book ): void {

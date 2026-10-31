@@ -535,6 +535,7 @@ final class Hq_Connector {
 			'disabled'   => Staff::disabled( $u->ID ),
 			'last_login' => (int) get_user_meta( $u->ID, Staff::META_LOGIN, true ),
 			'created'    => (int) strtotime( $u->user_registered . ' UTC' ),
+			'staff_entry_url' => Staff_Entry::url( $u->ID ),
 		);
 	}
 

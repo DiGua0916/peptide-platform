@@ -2,10 +2,9 @@
 /**
  * Plugin Name: VialCove — Panapay Payments
  * Description: Hosted Panapay payments for native WooCommerce and Checkout Blocks.
- * Version: 0.1.0
+ * Version: 0.2.0
  * Requires at least: 6.7
  * Requires PHP: 8.1
- * Requires Plugins: woocommerce
  * Text Domain: peptide-panapay
  */
 namespace VialCove\Panapay;
@@ -14,7 +13,7 @@ defined( 'ABSPATH' ) || exit;
 
 define( 'PEPTIDE_PANAPAY_FILE', __FILE__ );
 define( 'PEPTIDE_PANAPAY_DIR', __DIR__ );
-define( 'PEPTIDE_PANAPAY_VERSION', '0.1.0' );
+define( 'PEPTIDE_PANAPAY_VERSION', '0.2.0' );
 
 spl_autoload_register( static function ( $class ) {
 	$prefix = __NAMESPACE__ . '\\';
@@ -25,7 +24,12 @@ spl_autoload_register( static function ( $class ) {
 	if ( is_file( $file ) ) { require_once $file; }
 } );
 
-register_activation_hook( __FILE__, array( Store::class, 'install' ) );
+register_activation_hook( __FILE__, static function () {
+	if ( defined( 'PEPTIDE_HQ_FILE' ) && class_exists( '\PeptideHq\Sites' ) ) { Hub_Store::install(); }
+	elseif ( class_exists( '\WC_Payment_Gateway' ) ) { Store::install(); }
+	else { throw new \RuntimeException( 'Activate Peptide HQ or WooCommerce before the payment connector.' ); }
+} );
+register_deactivation_hook( __FILE__, static function () { wp_clear_scheduled_hook( Hub::CRON ); } );
 add_action( 'before_woocommerce_init', static function () {
 	if ( class_exists( '\Automattic\WooCommerce\Utilities\FeaturesUtil' ) ) {
 		\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true );
@@ -33,7 +37,13 @@ add_action( 'before_woocommerce_init', static function () {
 	}
 } );
 add_action( 'plugins_loaded', static function () {
+	if ( defined( 'PEPTIDE_HQ_FILE' ) && class_exists( '\PeptideHq\Sites' ) ) {
+		Hub::register_hooks(); Hub_Page::register_hooks();
+		return;
+	}
 	if ( ! class_exists( '\WC_Payment_Gateway' ) ) { return; }
+	Bridge::register_hooks();
+	Store_Admin::register_hooks();
 	Checkout_Fields::register_hooks();
 	add_action( 'woocommerce_admin_order_data_after_order_details', array( Admin::class, 'order_details' ) );
 	add_filter( 'woocommerce_payment_gateways', static function ( $gateways ) {

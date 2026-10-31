@@ -1,0 +1,69 @@
+.pc-pay-hub { --pay-ink: #171717; --pay-muted: #666; --pay-line: #e6e6e6; --pay-soft: #f5f5f5; color: var(--pay-ink); }
+.pc-pay-hub *, .pc-pay-hub *::before, .pc-pay-hub *::after { box-sizing: border-box; }
+.pc-pay-hub ::selection { color: #fff; background: #171717; }
+.pc-pay-hub :focus-visible { outline: 2px solid #737373; outline-offset: 2px; }
+.pc-pay-hub h1, .pc-pay-hub h2, .pc-pay-hub h3, .pc-pay-hub p { text-wrap: pretty; }
+.pc-pay-hub h1 { margin: 0; }
+.pc-pay-hub h2 { margin: 0; font-size: 18px; line-height: 28px; font-weight: 650; }
+.pc-pay-hub h3 { margin: 0 0 8px; font-size: 16px; line-height: 24px; }
+.pc-pay-hub p { margin: 8px 0; }
+.pc-pay-muted { color: var(--pay-muted); font-size: 12px; line-height: 16px; }
+.pc-pay-heading, .pc-pay-section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.pc-pay-heading { margin: 0 0 16px; }
+.pc-pay-heading p { margin-bottom: 0; font-size: 14px; line-height: 20px; }
+.pc-pay-state { display: inline-flex; align-items: center; padding: 4px 8px; color: #404040; background: #f1f1f1; border-radius: 4px; font-size: 12px; line-height: 16px; font-weight: 600; }
+.pc-pay-jump { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px; }
+.pc-pay-jump a { color: var(--pay-ink); text-decoration-thickness: 1px; text-underline-offset: 4px; }
+.pc-pay-section { margin: 0 0 16px; padding: 16px; min-width: 0; background: #fff; border: 1px solid var(--pay-line); border-radius: 12px; scroll-margin-top: 80px; }
+.pc-pay-section-head form { margin: 0; }
+.pc-pay-hub .button { min-height: 32px; padding: 4px 12px; font-size: 14px; line-height: 20px; transition: background-color 200ms cubic-bezier(.22, 1, .36, 1), color 200ms cubic-bezier(.22, 1, .36, 1); }
+.pc-pay-hub .button:active { transform: translateY(1px); }
+.pc-pay-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin: 16px 0; padding: 12px 16px; background: var(--pay-soft); border-radius: 8px; font-size: 14px; line-height: 20px; }
+.pc-pay-summary > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px 24px; }
+.pc-pay-summary p, .pc-pay-summary p span { display: inline-flex; gap: 8px; align-items: baseline; margin: 0; }
+.pc-pay-summary p { gap: 16px; }
+.pc-pay-amount { font-variant-numeric: tabular-nums; }
+.pc-pay-amount small { color: var(--pay-muted); margin-left: 8px; font-size: 12px; }
+.pc-pay-filters { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+.pc-pay-filters label { display: grid; gap: 4px; min-width: 160px; font-size: 12px; line-height: 16px; font-weight: 600; }
+.pc-pay-hub select, .pc-pay-hub input[type=text], .pc-pay-hub input[type=password], .pc-pay-hub textarea { width: 100%; max-width: 100%; min-height: 36px; margin: 0; padding: 8px 12px; color: var(--pay-ink); background: #fff; border: 1px solid #d5d5d5; border-radius: 6px; font: inherit; font-size: 14px; line-height: 20px; caret-color: var(--pay-ink); }
+.pc-pay-hub select { padding-right: 32px; }
+.pc-pay-hub input::placeholder, .pc-pay-hub textarea::placeholder { color: #737373; opacity: 1; }
+.pc-pay-hub input:disabled { color: #666; background: #f5f5f5; cursor: not-allowed; }
+.pc-pay-table-scroll { overflow-x: auto; max-width: 100%; scrollbar-color: #b5b5b5 #f5f5f5; scrollbar-width: thin; }
+.pc-pay-table { min-width: 760px; border-collapse: collapse; border: 0; font-size: 14px; line-height: 20px; }
+.pc-pay-table thead th { background: #fafafa; color: #666; font-size: 12px; line-height: 16px; font-weight: 600; white-space: nowrap; }
+.pc-pay-table th, .pc-pay-table td { padding: 12px; border-bottom: 1px solid var(--pay-line); vertical-align: top; }
+.pc-pay-table tr:last-child td { border-bottom: 0; }
+.pc-pay-table tbody tr:hover { background: #fafafa; }
+.pc-pay-table td > span { display: block; color: var(--pay-muted); font-size: 12px; line-height: 16px; margin-top: 4px; }
+.pc-pay-table .pc-pay-number { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pc-pay-reference { max-width: 224px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.pc-pay-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; font-size: 12px; line-height: 16px; color: var(--pay-muted); }
+.pc-pay-pagination > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.pc-pay-empty { padding: 32px 16px; text-align: center; }
+.pc-pay-empty p { color: var(--pay-muted); }
+.pc-pay-settings > summary { cursor: pointer; font-size: 18px; line-height: 28px; font-weight: 650; padding: 0; }
+.pc-pay-settings[open] > summary { margin-bottom: 16px; }
+.pc-pay-setting-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr); gap: 24px; align-items: start; }
+.pc-pay-switches { margin: 0 0 24px; padding: 0; }
+.pc-pay-switches label { display: flex; align-items: center; gap: 8px; min-height: 32px; font-size: 14px; line-height: 20px; font-weight: 600; }
+.pc-pay-switches p { margin: 0 0 12px 24px; }
+.pc-pay-hub input[type=checkbox] { flex: 0 0 auto; margin: 0; accent-color: #171717; }
+.pc-pay-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.pc-pay-field { min-width: 0; }
+.pc-pay-field label { display: block; margin-bottom: 8px; font-size: 14px; line-height: 20px; font-weight: 600; }
+.pc-pay-field p { margin: 8px 0 0; }
+.pc-pay-field-wide { grid-column: 1 / -1; }
+.pc-pay-store-access { min-width: 0; margin: 0; padding: 0; }
+.pc-pay-store-access legend { padding: 0; font-size: 16px; line-height: 24px; font-weight: 650; }
+.pc-pay-store-access > p { margin: 8px 0 16px; }
+.pc-pay-store-option { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; cursor: pointer; }
+.pc-pay-store-option input { margin-top: 4px !important; }
+.pc-pay-store-option span { min-width: 0; }
+.pc-pay-store-option strong { display: block; font-size: 14px; line-height: 20px; font-weight: 600; }
+.pc-pay-store-option small { display: block; margin-top: 4px; overflow-wrap: anywhere; color: var(--pay-muted); font-size: 12px; line-height: 16px; }
+.pc-pay-form-footer { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; margin-top: 24px; }
+@media (max-width: 1000px) { .pc-pay-setting-grid { grid-template-columns: minmax(0, 1fr); } .pc-pay-store-access { max-height: 320px; overflow-y: auto; scrollbar-color: #b5b5b5 #f5f5f5; } }
+@media (max-width: 600px) { .pc-pay-section { padding: 12px; } .pc-pay-fields { grid-template-columns: minmax(0, 1fr); } .pc-pay-filters label { flex: 1 1 100%; min-width: 0; } .pc-pay-summary { align-items: flex-start; padding: 12px; } .pc-pay-summary > div { align-items: flex-start; flex-direction: column; gap: 8px; } .pc-pay-form-footer { align-items: stretch; flex-direction: column; } .pc-pay-form-footer .button { width: 100%; } }
+@media (prefers-reduced-motion: reduce) { .pc-pay-hub .button { transition: none; } .pc-pay-hub .button:active { transform: none; } }

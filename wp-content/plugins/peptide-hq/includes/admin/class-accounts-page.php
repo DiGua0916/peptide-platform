@@ -95,6 +95,7 @@ final class Accounts_Page {
 						<th scope="col"><?php esc_html_e( 'Account', 'peptide-hq' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Name', 'peptide-hq' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Email', 'peptide-hq' ); ?></th>
+						<th scope="col"><?php echo esc_html( str_starts_with( determine_locale(), 'zh' ) ? '账号专属登录入口' : __( 'Account login entry', 'peptide-hq' ) ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Menus they can use', 'peptide-hq' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Status', 'peptide-hq' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Last login', 'peptide-hq' ); ?></th>
@@ -108,6 +109,15 @@ final class Accounts_Page {
 							<td data-label="<?php esc_attr_e( 'Account', 'peptide-hq' ); ?>"><strong><?php echo esc_html( (string) $a['login'] ); ?></strong></td>
 							<td data-label="<?php esc_attr_e( 'Name', 'peptide-hq' ); ?>"><?php echo esc_html( (string) $a['name'] ); ?></td>
 							<td data-label="<?php esc_attr_e( 'Email', 'peptide-hq' ); ?>"><?php echo esc_html( (string) $a['email'] ); ?></td>
+							<td data-label="<?php echo esc_attr( str_starts_with( determine_locale(), 'zh' ) ? '登录入口' : __( 'Login entry', 'peptide-hq' ) ); ?>">
+								<?php if ( ! $off && ! empty( $a['staff_entry_url'] ) && is_string( $a['staff_entry_url'] ) ) : ?>
+									<label class="screen-reader-text" for="pchq-entry-<?php echo (int) $a['id']; ?>"><?php echo esc_html( str_starts_with( determine_locale(), 'zh' ) ? '账号专属登录入口' : __( 'Account login entry', 'peptide-hq' ) ); ?></label>
+									<input type="url" readonly class="regular-text code" id="pchq-entry-<?php echo (int) $a['id']; ?>" value="<?php echo esc_url( $a['staff_entry_url'] ); ?>" spellcheck="false">
+									<p class="description"><?php echo esc_html( str_starts_with( determine_locale(), 'zh' ) ? '复制此入口给该销售；仍需输入账号和密码。' : __( 'Copy this entry for this salesperson. Their account and password are still required.', 'peptide-hq' ) ); ?></p>
+								<?php else : ?>
+									<span class="pchq-muted"><?php echo esc_html( str_starts_with( determine_locale(), 'zh' ) ? '暂不可用' : __( 'Unavailable', 'peptide-hq' ) ); ?></span>
+								<?php endif; ?>
+							</td>
 							<td data-label="<?php esc_attr_e( 'Menus they can use', 'peptide-hq' ); ?>" class="pchq-perms"><?php echo esc_html( $a['modules'] ? self::labels( (array) $a['modules'] ) : __( 'None', 'peptide-hq' ) ); ?></td>
 							<td data-label="<?php esc_attr_e( 'Status', 'peptide-hq' ); ?>">
 								<a class="pchq-switch<?php echo $off ? '' : ' is-on'; ?>" role="switch" aria-checked="<?php echo $off ? 'false' : 'true'; ?>" href="<?php echo esc_url( Menu::action_url( 'pchq_account_toggle', array( 'site' => $site, 'user' => (int) $a['id'] ) ) ); ?>" aria-label="<?php echo esc_attr( (string) $a['login'] ); ?>" onclick="return confirm(<?php echo esc_attr( wp_json_encode( $off ? __( 'Enable this account?', 'peptide-hq' ) : __( 'Disable this account? The salesperson is logged out at once and cannot log in until enabled again.', 'peptide-hq' ) ) ); ?>);"></a>

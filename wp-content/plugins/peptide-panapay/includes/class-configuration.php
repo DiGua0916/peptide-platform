@@ -8,10 +8,20 @@ final class Configuration {
 	private static array $public_hosts = array();
 
 	public static function load(): array {
+		return Bridge::enabled() ? Bridge::configuration() : self::legacy();
+	}
+
+	/** Existing direct-provider attempts retain their original local configuration. */
+	public static function legacy(): array {
 		$settings = get_option( 'woocommerce_pc_panapay_settings', array() );
 		if ( ! is_array( $settings ) ) {
 			throw new \RuntimeException( 'Panapay configuration is invalid.' );
 		}
+		return self::from_settings( $settings );
+	}
+
+	/** Provider parsing is also used at HQ; the result must remain server-side. */
+	public static function from_settings( array $settings ): array {
 		$gateway = self::override( 'PC_PANAPAY_GATEWAY', self::text( $settings, 'gateway' ) );
 		$mchid = self::override( 'PC_PANAPAY_MCHID', self::text( $settings, 'mchid' ) );
 		if ( '' !== $mchid && ! preg_match( '/\A[A-Za-z0-9_-]{1,128}\z/', $mchid ) ) {
