@@ -786,3 +786,17 @@ WordPress：当前没有可运行的主题前端，尚未执行 WordPress 页面
 
 
 2026-10-31 Codex：本积木批次保留此前5主题文件在途成果，并仅给modules-content.css的context-content原文h1加overflow-wrap:anywhere。真实长标题手机根scrollWidth657→380，标题637→340；O22局部轮播仍692可滚，End后rootLeft0/railLeft352。QA/本frontend d2cf60f3→5b7c4cfa，原件D:/Codex/Tasks/2026-10-31/builder-shipping-mobile-overflow/work/modules-content.before.css；未回盖backend旧主题镜像。当前实际匿名390页面innerWidth390/client375/scroll375，热点底部弹层/真实单商品/图片/价格通过。完整批次联调与限制在backend-builder-batch-2026-10-30.md的10-31追加记录；未部署，原685未刷新保存退出。
+
+### 2026-10-31 · Codex：真实元数据/双商品/博客发布验收与两项实际缺陷修复
+
+新增single-post.php（SHA9c8d6bb6a8436995689a493fdc18403f4bc1907510d9056ef35bd317e0b94548），只作用原生post单篇，不改index/其他CPT/查询。旧主题无单篇模板，文章错误沿索引h1 journal+h2链接；正常匿名/?p=1935已真实复现。新模板复用container standard-page/entry-content，真实纯文本h1、Core日期作者、完整正文/分页；封面只在无需密码且有真实缩略图时输出。已发布article装修与原生无装修两路验证正文完整、main/header/footer各1；390根client/scroll375/375，h1 client/scroll335/335。没有把QA文章数据或媒体复制正式。
+
+并修design-editor.js发布下拉菜单的确认联动（5d1f09ea→d2d49649）：菜单document pointerdown会在鼠标点确认OK时卸载原menuitem，而全局确认器只重放isConnected目标，导致取消发布/放弃修改失效。Root在600ms守卫等待后真鼠标复现“dialog/menu没了但仍Published”。只让该菜单两个handler忽略现有.pc-dialog-overlay事件，保400ms防误触/全局确认/服务端权限/nonce/revision不变。QA真实鼠标取消发布后状态Not published、普通公开博客恢复无marker；Cancel不执行动作，ArrowDown焦点仍在modal Cancel，原菜单保留。Discard同机制源码路径随修，不冒称实际执行过Discard。
+
+本轮补齐原缺口：O04真实官方oEmbed HTTP200，标题/作者/封面地址返回且编辑器缩略图loaded；两层QA测试隔离原规则临时只允许QA78/doc1917一个公开样本HTTPS GET（3分钟自动失效/TLStrue/redirect0），经现有系统代理，不配置API key。完成后wp-config逐字恢复、临时helper删、原MU隔离原hash不变，fresh UI reload仍成功读取缓存。不是Browser权限绕过，早期http_request_not_executed是自有QA WP_HTTP_BLOCK_EXTERNAL第二层限制，付费Data API/cron未扩接受。
+
+O05通过实际控件把现有1940+10关联到一个视频，保存并仅发布自有隔离文档1917。匿名PC轨道0→202.666/405，Product10真实落地标题/10美元/AddCart（未点击）；390 CSS手机两商品stack320/root390无横溢。原生截图API有DPI裁切差异，不冒逐像素匹配/触摸实测/多个不同provider视频成功。测试营业状态临时Open后已用新会话正常表单恢复Closed，旧nonce提交的expired失败如实保留。
+
+O08–O11通过正常UI在原已存在blog1930文档关联post1935/category77/topic1934，草稿5块/真实发布，普通无preview参数博客地址匿名出现四标记和实际链接；article1931原1块加富文本标记后发布，普通文章地址有标记/原正文，引出并验证上述单篇缺陷修复。最后1930、1931和1917均通过已修正常UI取消临时发布，公开首页恢复原生collection/our-story/questions，文章标记消失且h1/正文正确。草稿保留供检查；1954原12公开/12草稿及review2不改。
+
+Root接受用户指出95%误导，后续不再给无依据百分比。当前Source-bridge逐旧pin核验表明B/P及O07/O23既有真UI限定范围可沿用，不把55链接/源存在当通过。社交X/Pinterest/完整FB Timeline未闭合；Gutenberg已同一child frame两次blob loaderId对应ERR_ABORTED、无frameNavigated，属导航未提交，未盲改Core/CSP。遗留卡片极长无断行真WP样本已清，不能开旧ID冒通过。证据根D:/Codex/Tasks/2026-10-31/builder-completion-audit/{outputs,work}，完整目标继续，不报100%。
