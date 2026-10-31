@@ -688,3 +688,9 @@ nonce两源独立静态复核报告builder-editor-auth-nonce-recovery-independen
 原生兼容复查：旧39实为tab编号不是post；一次误开post39只返回不存在，无写入。回到真实旧post1917仍灰画布；受支持CUA CDP只读DOM确认iframe src为blob但contentDocument URL为about:blank且HEAD/BODY均0，与旧仅body空相比更窄。Console warning/error仍0；刷新后2条Document ERR_ABORTED未能关联请求，不能归因canvas/Core/插件。NATIVE-REVIEW纠正post/tab混淆，未改Core/安全策略/发布1917。
 
 登录恢复修复225016d已本地commit并正常ff main/backend（正式开发插件源随树更新，不发布装修）；GitHub前几次push发生reset/连接443超时，包含Everything up-to-date的非零返回不能作远端成功。后续推送只有ls-remote真实确认才能报同步。最后窄auth层修复与本追加单独commit；QA资料/私有文件不入Git，完整目标继续，外部社交实显与原生compat不称已通过。
+
+### 2026-10-31 · Codex：恢复网络并正常整合同事支付提交
+
+只读网络诊断确认Windows当前系统代理已启用127.0.0.1:8800且本机监听，Git/环境未设置；仅本次git用-c http.proxy沿用现有代理，未改全局Git/系统网络/TLS/防火墙。实际ls-remote已返回，225016d/bcba090两项已成功push到两个role分支；main因同事刚推进6b313a9而正常拒绝非ff，不强推。fetch亲读Panapay handoff，远端新增仅独立支付插件及文档27文件，本积木两源/handoff与之无文件重叠。main正常merge为60ec588659a0d156f580a64eeefce3e85c18dcf6，无冲突；git diff对origin/main核对全部支付文件/文档完全不变。没有改支付分支、运行支付测试、激活/配置支付或调用商户服务，支付实际状态以同事handoff为准。
+
+本记录提交后将把两个role正常ff到共同main并push三分支，实际远端核验写D任务outputs/GIT-FINAL.json和项目记忆，不能把将来操作当已完成。本轮新增UI真实恢复证据为ACTUAL-AUTH-RECOVERY.json / ACTUAL-AUTH-LAYER.json；原生画布仍about:blank事实、X/Pinterest限制均保持，不报整项目100%。
