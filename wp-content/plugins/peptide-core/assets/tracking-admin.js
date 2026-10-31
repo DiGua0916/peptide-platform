@@ -149,11 +149,35 @@
 	// ---------- 访客详情 ----------
 
 	var hideHeartbeats = true;
+	var contextKinds = [ 'home', 'shop', 'product', 'cart', 'checkout', 'account', 'order_received', 'order_pay', 'content', 'collection', 'search', 'unknown' ];
+	function contextDetails( value ) {
+		if ( ! value || value.version !== 1 || contextKinds.indexOf( value.kind ) < 0 ) { return null; }
+		if ( value.kind === 'collection' ? ( typeof value.term_id !== 'number' || value.term_id <= 0 || Math.floor( value.term_id ) !== value.term_id ) : Object.prototype.hasOwnProperty.call( value, 'term_id' ) ) { return null; }
+		var geo = value.geo, parts = [ ( S.pageKind || 'Page kind' ) + '=' + value.kind ];
+		if ( value.kind === 'collection' ) { parts.push( ( S.collectionId || 'Collection ID' ) + '=#' + value.term_id ); }
+		if ( Object.prototype.hasOwnProperty.call( value, 'geo' ) ) {
+			if ( ! geo || [ 'known', 'unknown', 'unavailable' ].indexOf( geo.status ) < 0 ) { return null; }
+			if ( geo.status === 'known' ? ( typeof geo.country_code !== 'string' || geo.country_code.length !== 2 || ! /^[A-Z]{2}$/.test( geo.country_code ) ) : Object.prototype.hasOwnProperty.call( geo, 'country_code' ) ) { return null; }
+			parts.push( ( S.countryObservation || 'Country observation' ) + '=' + geo.status + ( geo.status === 'known' ? ':' + geo.country_code : '' ) );
+		} else { parts.push( ( S.countryObservation || 'Country observation' ) + '=unobserved' ); }
+		parts.push( S.sourceReported || 'Source reported' );
+		return parts.join( ', ' );
+	}
+	function attributionDetails( value ) {
+		function host( h ) { return typeof h === 'string' && h.length > 0 && h.length <= 253 && ! /\s/.test( h ) && h.split( '.' ).every( function ( label ) { return label.length > 0 && label.length <= 63 && /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test( label ); } ); }
+		if ( ! value || value.version !== 1 || ! host( value.host ) || ! value.landing_query || typeof value.landing_query !== 'object' || ( Array.isArray( value.landing_query ) && value.landing_query.length !== 0 ) || ( value.referrer_host !== null && value.referrer_host !== '' && ! host( value.referrer_host ) ) ) { return null; }
+		var parts = [ ( S.entryHost || 'Entry host' ) + '=' + value.host ], valid = true;
+		[ 'utm_source', 'utm_medium' ].forEach( function ( key ) { var present = Object.prototype.hasOwnProperty.call( value.landing_query, key ), text = value.landing_query[ key ]; if ( present && ( typeof text !== 'string' || /[\x00-\x1f\x7f]/.test( text ) || text.replace( /[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '_' ).length > 120 ) ) { valid = false; return; } parts.push( key + '=' + ( ! present ? ( S.notObservedKey || 'Key absent' ) : ( text === '' ? ( S.observedEmpty || 'Observed empty' ) : text ) ) ); } );
+		if ( ! valid ) { return null; }
+		parts.push( ( S.referrerHost || 'Referrer host' ) + '=' + ( value.referrer_host === null ? ( S.unavailable || 'Unavailable' ) : ( value.referrer_host === '' ? ( S.observedEmpty || 'Observed empty' ) : value.referrer_host ) ) );
+		return parts.join( ', ' );
+	}
 
 	function detailText( e ) {
 		var d = e.data || {};
 		var parts = [];
 		Object.keys( d ).forEach( function ( k ) {
+			if ( e.type === 'page_view' && ( k === 'page_context' || k === 'attribution' ) ) { var text = k === 'page_context' ? contextDetails( d[ k ] ) : attributionDetails( d[ k ] ); if ( text !== null ) { parts.push( text ); } return; }
 			if ( 'product_name' === k && e.type !== 'add_to_cart' ) {
 				return;
 			}

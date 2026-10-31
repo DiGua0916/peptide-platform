@@ -19,15 +19,23 @@ namespace PeptideCore\Admin;
 use PeptideCore\Api\Rest_Controller;
 use PeptideCore\Data\Apps;
 use PeptideCore\Data\Conversion;
+use PeptideCore\Data\Checkout_Steps;
 use PeptideCore\Data\Emails;
 use PeptideCore\Data\Landing;
 use PeptideCore\Data\Operations;
 use PeptideCore\Data\Page_Visits;
 use PeptideCore\Data\Products;
+use PeptideCore\Data\Csv_Response;
+use PeptideCore\Data\Report_Exports;
 use PeptideCore\Data\Rankings;
 use PeptideCore\Data\Range;
 use PeptideCore\Data\Realtime;
+use PeptideCore\Data\Realtime_Dimensions;
+use PeptideCore\Data\Realtime_Filter;
+use PeptideCore\Data\Realtime_Filter_Options;
 use PeptideCore\Data\Trends;
+use PeptideCore\Tracking\Schema;
+use Automattic\WooCommerce\Blocks\Utils\CartCheckoutUtils;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -57,6 +65,7 @@ final class Data_Pages {
 
 	/** REST 路由在任何请求里都要注册（后台页面通过 REST 取数据）。 */
 	public static function register_rest(): void {
+		add_filter( 'rest_pre_serve_request', array( Csv_Response::class, 'serve' ), 10, 4 );
 		add_action(
 			'rest_api_init',
 			static function (): void {
@@ -97,6 +106,74 @@ final class Data_Pages {
 						'permission_callback' => $permission,
 					)
 				);
+				register_rest_route(
+					Rest_Controller::ROUTE_NAMESPACE,
+					'/data/realtime/history',
+					array(
+						'methods'             => \WP_REST_Server::READABLE,
+						'callback'            => static function ( \WP_REST_Request $request ) {
+							$r = Realtime::history_params( $request->get_params() );
+							if ( is_wp_error( $r ) ) {
+								return $r;
+							}
+							$res = new \WP_REST_Response( Realtime::history( $r ) );
+							$res->header( 'Cache-Control', 'no-store' );
+							return $res;
+						},
+						'permission_callback' => $permission,
+					)
+				);
+				register_rest_route(
+					Rest_Controller::ROUTE_NAMESPACE,
+					'/data/realtime/dimensions',
+					array(
+						'methods' => \WP_REST_Server::READABLE,
+						'callback' => static function ( \WP_REST_Request $request ) {
+							$params = Realtime_Dimensions::params( $request->get_params() );
+							if ( is_wp_error( $params ) ) { return $params; }
+							$filter = Realtime_Filter::params( $request->get_params() );
+							if ( is_wp_error( $filter ) ) { return $filter; }
+							try { $response = new \WP_REST_Response( Realtime_Dimensions::summary( $params, $filter->is_all() ? null : $filter ) ); }
+							catch ( \Throwable $error ) { return new \WP_Error( 'pc_realtime_filter_unavailable', __( 'Realtime entry attribution is unavailable.', 'peptide-core' ), array( 'status' => 503 ) ); }
+							$response->header( 'Cache-Control', 'no-store' );
+							return $response;
+						},
+						'permission_callback' => $permission,
+					)
+				);
+				register_rest_route(
+					Rest_Controller::ROUTE_NAMESPACE, '/data/realtime/filtered',
+					array(
+						'methods' => \WP_REST_Server::READABLE,
+						'permission_callback' => $permission,
+						'callback' => static function ( \WP_REST_Request $request ) {
+							$raw = $request->get_params(); $now = (int) round( microtime( true ) * 1000 );
+							$filter = Realtime_Filter::params( $raw ); if ( is_wp_error( $filter ) ) { return $filter; }
+							$mode = \PeptideCore\Data\Params::word( $raw, 'mode', 'live', array( 'live', 'history' ) );
+							if ( null === $mode || ( array_key_exists( 'format', $raw ) && ( ! is_string( $raw['format'] ) || 'json' !== $raw['format'] ) ) ) { return \PeptideCore\Api\Errors::invalid( array( null === $mode ? 'mode' : 'format' => 'invalid_format' ) ); }
+							$params = Realtime::params( $raw ); if ( is_wp_error( $params ) ) { return $params; }
+							$range = 'history' === $mode ? Realtime::history_params( $raw, intdiv( $now, 1000 ) ) : null;
+							if ( is_wp_error( $range ) ) { return $range; }
+							try {
+								$data = 'history' === $mode ? Realtime::filtered_history( $range, $filter ) : Realtime::filtered_summary( $now, $params['funnel'], $params['minutes'], $filter );
+								$response = new \WP_REST_Response( $data ); $response->header( 'Cache-Control', 'no-store' ); return $response;
+							} catch ( \Throwable $error ) { return new \WP_Error( 'pc_realtime_filter_unavailable', __( 'Realtime entry attribution is unavailable.', 'peptide-core' ), array( 'status' => 503 ) ); }
+						},
+					)
+				);
+				register_rest_route(
+					Rest_Controller::ROUTE_NAMESPACE, '/data/realtime/filter-options',
+					array(
+						'methods' => \WP_REST_Server::READABLE,
+						'permission_callback' => $permission,
+						'callback' => static function ( \WP_REST_Request $request ) {
+							$raw = $request->get_params(); $params = Realtime_Filter_Options::params( $raw ); if ( is_wp_error( $params ) ) { return $params; }
+							$filter = Realtime_Filter::params( $raw ); if ( is_wp_error( $filter ) ) { return $filter; }
+							try { $response = new \WP_REST_Response( Realtime_Filter_Options::summary( $params, $filter ) ); $response->header( 'Cache-Control', 'no-store' ); return $response; }
+							catch ( \Throwable $error ) { return new \WP_Error( 'pc_realtime_filter_unavailable', __( 'Realtime entry attribution is unavailable.', 'peptide-core' ), array( 'status' => 503 ) ); }
+						},
+					)
+				);
 				// 运营数据页（DATA-01 第 2 步）：指标卡片和两个转化漏斗，本期和对比期。
 				register_rest_route(
 					Rest_Controller::ROUTE_NAMESPACE,
@@ -113,6 +190,28 @@ final class Data_Pages {
 							return $res;
 						},
 						'permission_callback' => $permission,
+					)
+				);
+				register_rest_route(
+					Rest_Controller::ROUTE_NAMESPACE, '/data/checkout-steps',
+					array(
+						'methods' => \WP_REST_Server::READABLE,
+						'permission_callback' => $permission,
+						'callback' => static function ( \WP_REST_Request $request ) {
+							$raw = $request->get_params(); $range = Range::from_params( $raw );
+							if ( is_wp_error( $range ) ) { return $range; }
+							if ( array_key_exists( 'format', $raw ) && ( ! is_string( $raw['format'] ) || 'json' !== $raw['format'] ) ) { return \PeptideCore\Api\Errors::invalid( array( 'format' => 'invalid_format' ) ); }
+							try {
+								$type = class_exists( CartCheckoutUtils::class ) && is_callable( array( CartCheckoutUtils::class, 'is_checkout_block_default' ) ) && CartCheckoutUtils::is_checkout_block_default() ? 'blocks' : 'unconfirmed';
+								$steps = Checkout_Steps::summary( $range );
+								$response = new \WP_REST_Response( array(
+									'range' => $range, 'tracking' => Schema::installed(), 'checkout_type' => $type,
+									'checkout_type_scope' => 'current_configuration', 'steps' => $steps,
+									'details_url' => add_query_arg( array( 'page' => 'pc-data-conversion', 'from' => $range['dates']['from'], 'to' => $range['dates']['to'], 'compare_from' => $range['dates']['compare_from'], 'compare_to' => $range['dates']['compare_to'] ), admin_url( 'admin.php' ) ),
+								) );
+								$response->header( 'Cache-Control', 'no-store' ); return $response;
+							} catch ( \Throwable $error ) { return new \WP_Error( 'pc_checkout_steps_unavailable', __( 'Checkout observations could not be loaded.', 'peptide-core' ), array( 'status' => 500 ) ); }
+							},
 					)
 				);
 				// 运营数据页的趋势图（DATA-01 第 7a 步）：九张趋势图的本期合计、对比期合计、变化和每个桶的点。
@@ -151,6 +250,20 @@ final class Data_Pages {
 						'permission_callback' => $permission,
 					)
 				);
+				register_rest_route(
+					Rest_Controller::ROUTE_NAMESPACE,
+					'/data/rankings/table',
+					array(
+						'methods' => \WP_REST_Server::READABLE,
+						'callback' => static function ( \WP_REST_Request $request ) {
+							$r = Range::from_params( $request->get_params() );
+							if ( is_wp_error( $r ) ) { return $r; }
+							$a = Rankings::query_params( $request->get_params() );
+							return is_wp_error( $a ) ? $a : Report_Exports::ranking_response( $request, $r, $a );
+						},
+						'permission_callback' => $permission,
+					)
+				);
 				// 商品详情数据页（DATA-01 第 3 步）：每个商品（和它的款式）的查看、加购、付款数字，本期和对比期；可排序、搜索、分页。
 				register_rest_route(
 					Rest_Controller::ROUTE_NAMESPACE,
@@ -166,9 +279,7 @@ final class Data_Pages {
 							if ( is_wp_error( $a ) ) {
 								return $a;
 							}
-							$res = new \WP_REST_Response( Products::table( $r, $a ) );
-							$res->header( 'Cache-Control', 'no-store' );
-							return $res;
+							return Report_Exports::response( $request, 'products', $r, $a );
 						},
 						'permission_callback' => $permission,
 					)
@@ -188,9 +299,7 @@ final class Data_Pages {
 							if ( is_wp_error( $a ) ) {
 								return $a;
 							}
-							$res = new \WP_REST_Response( Page_Visits::table( $r, $a ) );
-							$res->header( 'Cache-Control', 'no-store' );
-							return $res;
+							return Report_Exports::response( $request, 'pages', $r, $a );
 						},
 						'permission_callback' => $permission,
 					)
@@ -210,9 +319,7 @@ final class Data_Pages {
 							if ( is_wp_error( $g ) ) {
 								return $g;
 							}
-							$res = new \WP_REST_Response( Conversion::summary( $r, $g ) );
-							$res->header( 'Cache-Control', 'no-store' );
-							return $res;
+							return Report_Exports::conversion_response( $request, $r, $g );
 						},
 						'permission_callback' => $permission,
 					)
@@ -320,7 +427,7 @@ final class Data_Pages {
 					'title'       => self::titles()[ $key ],
 					'range'       => Range::from_params( array() ), // 今天，由服务器按店铺时区算好。
 					'showRange'   => 'realtime' !== $key,           // 实时数据页没有时间段工具栏。
-					'showCompare' => 'landing' !== $key,           // 落地页转化页只有本期。
+					'showCompare' => ! in_array( $key, array( 'landing', 'pages' ), true ), // 这两页只统计本期。
 					'timezone'    => wp_timezone_string() . ' (UTC' . wp_date( 'P' ) . ')',
 					'currency'    => array(
 						'code'   => get_woocommerce_currency(),
@@ -335,10 +442,15 @@ final class Data_Pages {
 		// 实时数据页的报表（三张卡片、访客行为漏斗、每分钟访客数量、今日列表），在 data.js 之后加载，用 PcData.register( 'realtime', … ) 画进页面。
 		if ( 'realtime' === $key ) {
 			wp_enqueue_style( 'peptide-core-data-realtime', $url . 'data-realtime.css', array( 'peptide-core-data' ), $ver( 'data-realtime.css' ) );
-			wp_enqueue_script( 'peptide-core-data-realtime', $url . 'data-realtime.js', array( self::SCRIPT ), $ver( 'data-realtime.js' ), array( 'in_footer' => true ) );
+			wp_enqueue_style( 'peptide-core-data-realtime-dimensions', $url . 'data-realtime-dimensions.css', array( 'peptide-core-data-realtime' ), $ver( 'data-realtime-dimensions.css' ) );
+			wp_register_script( 'peptide-core-data-realtime-countries', $url . 'data-realtime-countries.js', array(), $ver( 'data-realtime-countries.js' ), array( 'in_footer' => true ) );
+			wp_register_script( 'peptide-core-data-realtime-dimensions', $url . 'data-realtime-dimensions.js', array( self::SCRIPT, 'peptide-core-data-realtime-countries' ), $ver( 'data-realtime-dimensions.js' ), array( 'in_footer' => true ) );
+			wp_enqueue_style( 'peptide-core-data-realtime-filters', $url . 'data-realtime-filters.css', array( 'peptide-core-data-realtime' ), $ver( 'data-realtime-filters.css' ) );
+			wp_register_script( 'peptide-core-data-realtime-filters', $url . 'data-realtime-filters.js', array( self::SCRIPT ), $ver( 'data-realtime-filters.js' ), array( 'in_footer' => true ) );
+			wp_enqueue_script( 'peptide-core-data-realtime', $url . 'data-realtime.js', array( self::SCRIPT, 'peptide-core-data-realtime-dimensions', 'peptide-core-data-realtime-filters' ), $ver( 'data-realtime.js' ), array( 'in_footer' => true ) );
 			wp_add_inline_script(
 				'peptide-core-data-realtime',
-				'window.pcDataRealtime = ' . wp_json_encode( array( 'strings' => self::realtime_strings() ) ) . ';',
+				'window.pcDataRealtime = ' . wp_json_encode( array( 'strings' => self::realtime_strings(), 'timezone' => wp_timezone_string() ) ) . ';',
 				'before'
 			);
 		}
@@ -346,7 +458,12 @@ final class Data_Pages {
 		// 运营数据页的报表（指标卡片和转化漏斗），在 data.js 之后加载，用 PcData.register( 'operations', … ) 画进页面。
 		if ( 'operations' === $key ) {
 			wp_enqueue_style( 'peptide-core-data-operations', $url . 'data-operations.css', array( 'peptide-core-data' ), $ver( 'data-operations.css' ) );
-			wp_enqueue_script( 'peptide-core-data-operations', $url . 'data-operations.js', array( self::SCRIPT ), $ver( 'data-operations.js' ), array( 'in_footer' => true ) );
+			wp_register_script( 'peptide-core-data-export', $url . 'data-export.js', array( self::SCRIPT, 'wp-api-fetch', 'wp-url' ), $ver( 'data-export.js' ), array( 'in_footer' => true ) );
+			wp_enqueue_style( 'peptide-core-data-rankings', $url . 'data-rankings.css', array( 'peptide-core-data-operations' ), $ver( 'data-rankings.css' ) );
+			wp_register_script( 'peptide-core-data-rankings', $url . 'data-rankings.js', array( self::SCRIPT, 'peptide-core-data-export' ), $ver( 'data-rankings.js' ), array( 'in_footer' => true ) );
+			wp_enqueue_style( 'peptide-core-data-operations-checkout', $url . 'data-operations-checkout.css', array( 'peptide-core-data-operations' ), $ver( 'data-operations-checkout.css' ) );
+			wp_register_script( 'peptide-core-data-operations-checkout', $url . 'data-operations-checkout.js', array( self::SCRIPT ), $ver( 'data-operations-checkout.js' ), array( 'in_footer' => true ) );
+			wp_enqueue_script( 'peptide-core-data-operations', $url . 'data-operations.js', array( self::SCRIPT, 'peptide-core-data-rankings', 'peptide-core-data-operations-checkout' ), $ver( 'data-operations.js' ), array( 'in_footer' => true ) );
 			wp_add_inline_script(
 				'peptide-core-data-operations',
 				'window.pcDataOperations = ' . wp_json_encode( array( 'strings' => self::operations_strings() ) ) . ';',
@@ -354,10 +471,14 @@ final class Data_Pages {
 			);
 		}
 
+		if ( in_array( $key, array( 'products', 'pages' ), true ) ) {
+			wp_enqueue_script( 'peptide-core-data-export', $url . 'data-export.js', array( self::SCRIPT, 'wp-api-fetch', 'wp-url' ), $ver( 'data-export.js' ), array( 'in_footer' => true ) );
+		}
+
 		// 商品详情数据页的报表（商品表格、款式展开、排序搜索分页），同样在 data.js 之后加载，用 PcData.register( 'products', … ) 画进页面。
 		if ( 'products' === $key ) {
 			wp_enqueue_style( 'peptide-core-data-products', $url . 'data-products.css', array( 'peptide-core-data' ), $ver( 'data-products.css' ) );
-			wp_enqueue_script( 'peptide-core-data-products', $url . 'data-products.js', array( self::SCRIPT ), $ver( 'data-products.js' ), array( 'in_footer' => true ) );
+			wp_enqueue_script( 'peptide-core-data-products', $url . 'data-products.js', array( self::SCRIPT, 'peptide-core-data-export' ), $ver( 'data-products.js' ), array( 'in_footer' => true ) );
 			wp_add_inline_script(
 				'peptide-core-data-products',
 				'window.pcDataProducts = ' . wp_json_encode( array( 'strings' => self::products_strings() ) ) . ';',
@@ -368,7 +489,7 @@ final class Data_Pages {
 		// 页面访问统计页的报表（页面路径表格、搜索、排序、分页），同样在 data.js 之后加载，用 PcData.register( 'pages', … ) 画进页面。
 		if ( 'pages' === $key ) {
 			wp_enqueue_style( 'peptide-core-data-pages', $url . 'data-pages.css', array( 'peptide-core-data' ), $ver( 'data-pages.css' ) );
-			wp_enqueue_script( 'peptide-core-data-pages', $url . 'data-pages.js', array( self::SCRIPT ), $ver( 'data-pages.js' ), array( 'in_footer' => true ) );
+			wp_enqueue_script( 'peptide-core-data-pages', $url . 'data-pages.js', array( self::SCRIPT, 'peptide-core-data-export' ), $ver( 'data-pages.js' ), array( 'in_footer' => true ) );
 			wp_add_inline_script(
 				'peptide-core-data-pages',
 				'window.pcDataPages = ' . wp_json_encode( array( 'strings' => self::pages_strings() ) ) . ';',
@@ -379,7 +500,8 @@ final class Data_Pages {
 		// 转化率详情页的报表（整体转化步骤和分组漏斗卡片），同样在 data.js 之后加载，用 PcData.register( 'conversion', … ) 画进页面。
 		if ( 'conversion' === $key ) {
 			wp_enqueue_style( 'peptide-core-data-conversion', $url . 'data-conversion.css', array( 'peptide-core-data' ), $ver( 'data-conversion.css' ) );
-			wp_enqueue_script( 'peptide-core-data-conversion', $url . 'data-conversion.js', array( self::SCRIPT ), $ver( 'data-conversion.js' ), array( 'in_footer' => true ) );
+			wp_register_script( 'peptide-core-data-export', $url . 'data-export.js', array( self::SCRIPT, 'wp-api-fetch', 'wp-url' ), $ver( 'data-export.js' ), array( 'in_footer' => true ) );
+			wp_enqueue_script( 'peptide-core-data-conversion', $url . 'data-conversion.js', array( self::SCRIPT, 'peptide-core-data-export' ), $ver( 'data-conversion.js' ), array( 'in_footer' => true ) );
 			wp_add_inline_script(
 				'peptide-core-data-conversion',
 				'window.pcDataConversion = ' . wp_json_encode( array( 'strings' => self::conversion_strings() ) ) . ';',
@@ -458,8 +580,115 @@ final class Data_Pages {
 	}
 
 	/** 实时数据页脚本里的文字：更新时间、三张卡片和六个指标、“今日”、访客行为漏斗、每分钟图、四个今日列表、说明。 */
-	private static function realtime_strings(): array {
+	private static function visitor_funnel_strings(): array {
 		return array(
+			'address' => __( 'Address completed', 'peptide-core' ),
+			'shipping' => __( 'Shipping selected', 'peptide-core' ),
+			'payment' => __( 'Payment selected', 'peptide-core' ),
+			'paidVisitors' => __( 'Paying visitors', 'peptide-core' ),
+			'visitorConversion' => __( 'Paying visitor conversion rate', 'peptide-core' ),
+			'viewDetails' => __( 'View details', 'peptide-core' ),
+			'hideDetails' => __( 'Hide details', 'peptide-core' ),
+			'orderVsVisitor' => __( 'The KPI conversion rate counts paid orders per visitor. These funnels count paying visitors per visitor; one customer can place several orders.', 'peptide-core' ),
+			'detailHelp' => __( 'Each step counts distinct visitors in the selected visit cohort. Payment requires a recorded server confirmation. Optional steps, default selections and missing historical observations can make steps noncumulative. Missing observations are not backfilled. Sales and order cards count orders separately.', 'peptide-core' ),
+			'detailUnavailable' => __( 'Detailed visitor steps are unavailable in this response. The legacy five-step report is shown; its paid count may use orders.', 'peptide-core' ),
+		);
+	}
+
+	private static function realtime_dimension_strings(): array {
+		return array(
+			'viewed' => __( 'Recently viewed products', 'peptide-core' ),
+			'carted' => __( 'Recently carted products', 'peptide-core' ),
+			'sold' => __( 'Recently sold product units', 'peptide-core' ),
+			'map' => __( 'Visitor countries map', 'peptide-core' ),
+			'active_countries' => __( 'Active countries — visitors', 'peptide-core' ),
+			'popular_countries' => __( 'Popular countries — page views', 'peptide-core' ),
+			'sources' => __( 'Visit sources — visitors', 'peptide-core' ),
+			'collections' => __( 'Collections — page views', 'peptide-core' ),
+			'pages' => __( 'Popular pages in this range', 'peptide-core' ),
+			'events' => _x( 'Events', 'realtime event count', 'peptide-core' ),
+			'units' => __( 'Product units', 'peptide-core' ),
+			'page_views' => __( 'Page views', 'peptide-core' ),
+			'visitors' => _x( 'Visitors', 'realtime distinct visitor count', 'peptide-core' ),
+			'visits' => __( 'Visits', 'peptide-core' ),
+			'loading' => __( 'Loading…', 'peptide-core' ),
+			'error' => __( 'These panels could not be loaded. Retry this accepted range.', 'peptide-core' ),
+			'retry' => __( 'Retry', 'peptide-core' ),
+			'stale' => __( 'Showing the last accepted range; these results may be stale.', 'peptide-core' ),
+			'empty' => __( 'No matching observations in this range.', 'peptide-core' ),
+			'unavailable' => __( 'Unavailable', 'peptide-core' ),
+			'partial' => __( 'Partial observation coverage', 'peptide-core' ),
+			'available' => __( 'Available', 'peptide-core' ),
+			'not_collected' => __( 'No observations have been collected for these records.', 'peptide-core' ),
+			'source_unavailable' => __( 'The source reported that country data was unavailable.', 'peptide-core' ),
+			'not_collected_and_source_unavailable' => __( 'Records contain both missing observations and source-reported unavailability.', 'peptide-core' ),
+			'dependency_unavailable' => __( 'A report dependency is unavailable; counts are unknown.', 'peptide-core' ),
+			'known' => __( 'Known', 'peptide-core' ),
+			'unknown' => __( 'Observed unknown', 'peptide-core' ),
+			'unobserved' => __( 'Unobserved', 'peptide-core' ),
+			'coverage' => __( 'Observation coverage', 'peptide-core' ),
+			'coverageNA' => __( 'Observation coverage does not apply to this event/unit ranking.', 'peptide-core' ),
+			'base' => __( 'Base records', 'peptide-core' ),
+			'top' => __( 'Showing %1$d of %2$d matching rows (Top 5).', 'peptide-core' ),
+			'allCountries' => __( 'All observed country codes', 'peptide-core' ),
+			'productLabel' => _x( 'Product', 'realtime ranking item', 'peptide-core' ),
+			'countryLabel' => _x( 'Country', 'realtime ranking item', 'peptide-core' ),
+			'sourceLabel' => _x( 'Source', 'realtime ranking item', 'peptide-core' ),
+			'collectionLabel' => _x( 'Collection', 'realtime ranking item', 'peptide-core' ),
+			'pageLabel' => _x( 'Page', 'realtime ranking item', 'peptide-core' ),
+			'count' => __( 'Count', 'peptide-core' ),
+			'share' => __( 'Share of page views', 'peptide-core' ),
+			'window' => __( '%d minutes', 'peptide-core' ),
+			'history' => __( 'Selected calendar range', 'peptide-core' ),
+			'captured_missing' => __( 'Captured source key absent', 'peptide-core' ),
+			'captured_empty' => __( 'Captured source observed empty', 'peptide-core' ),
+			'noOutline' => __( 'No outline in this map', 'peptide-core' ),
+			'zoomIn' => __( 'Zoom map in', 'peptide-core' ),
+			'zoomOut' => __( 'Zoom map out', 'peptide-core' ),
+			'resetMap' => __( 'Reset map', 'peptide-core' ),
+			'mapHelp' => __( 'Offline country outlines show source-reported visitor counts, not visitor coordinates. Countries without an outline remain in the table. Use arrow keys to pan the focused map; page scrolling is unchanged.', 'peptide-core' ),
+			'geoHelp' => __( 'Country observations are source reported, not verified by IP. Visitor counts use each visit’s latest country observation before the cutoff; one visitor may appear in several countries. Popular countries counts each page view instead.', 'peptide-core' ),
+			'sourceHelp' => __( 'Sources use the first successfully captured visit snapshot and preserve absent, empty and case-sensitive values. No direct source is inferred. Late claims can update an earlier cutoff; this is not an as-of snapshot.', 'peptide-core' ),
+			'collectionHelp' => __( 'Collections count saved collection observations, not today’s product categories or guessed URL paths. Deleted collections retain their identifier.', 'peptide-core' ),
+			'rangeHelp' => __( 'Each live panel has its own window. All historical panels use the accepted calendar dates. Counts may change after late observations; visitor counts across rows are not additive.', 'peptide-core' ),
+		);
+	}
+
+	private static function realtime_filter_strings(): array {
+		return array(
+			'entry_domain' => __( 'Entry domain (first captured)', 'peptide-core' ),
+			'utm_source' => __( 'UTM source (first captured)', 'peptide-core' ),
+			'all' => __( 'All entry sources', 'peptide-core' ),
+			'unobserved' => __( 'No entry attribution observed', 'peptide-core' ),
+			'missing' => __( 'Captured without a UTM source key', 'peptide-core' ),
+			'empty' => __( 'Captured empty UTM source', 'peptide-core' ),
+			'help' => __( 'Entry filters use the first successfully captured visit snapshot. Domain and UTM conditions are combined with AND. Orders use creation time and their original visit entry, not revenue from visits in the selected period. Values preserve case; unknown is not direct traffic.', 'peptide-core' ),
+			'search' => __( 'Search entry values', 'peptide-core' ),
+			'more' => __( 'More entry values', 'peptide-core' ),
+			'previous' => __( 'Previous entry values', 'peptide-core' ),
+			'notObserved' => __( 'Selected entry value was not observed in this period.', 'peptide-core' ),
+			'notObservedOption' => __( 'Not observed in this period', 'peptide-core' ),
+			'reset' => __( 'Reset entry filters to All', 'peptide-core' ),
+			'loading' => __( 'Loading entry-filtered data…', 'peptide-core' ),
+			'stale' => __( 'Showing the last accepted entry filter; the new request has not succeeded.', 'peptide-core' ),
+			'error' => __( 'Entry-filter data could not be loaded. Retry or reset to All.', 'peptide-core' ),
+			'urlError' => __( 'Entry filters in the URL are invalid. Correct them or reset to All.', 'peptide-core' ),
+			'unavailable' => __( 'Entry filters are unavailable; the All report remains available.', 'peptide-core' ),
+			'optionsError' => __( 'Entry values could not be loaded. The accepted report remains unchanged.', 'peptide-core' ),
+			'retry' => __( 'Retry entry filters', 'peptide-core' ),
+			'coverage' => __( 'Candidate coverage: distinct visits', 'peptide-core' ),
+			'captured' => __( 'Captured entry snapshots', 'peptide-core' ),
+			'v0' => __( 'Visits without captured attribution', 'peptide-core' ),
+			'late_capture' => __( 'Snapshots received after this cutoff', 'peptide-core' ),
+			'unlinked_events' => __( 'Unlinked eligible events (separate count)', 'peptide-core' ),
+			'unlinked_orders' => __( 'Unlinked eligible orders (separate count)', 'peptide-core' ),
+		);
+	}
+
+	private static function realtime_strings(): array {
+		return self::visitor_funnel_strings() + array(
+			'dimensions' => self::realtime_dimension_strings(),
+			'filters' => self::realtime_filter_strings(),
 			/* translators: %s: date and time */
 			'updated'        => __( 'Last updated: %s', 'peptide-core' ),
 			'refresh'        => __( 'Refresh', 'peptide-core' ),
@@ -496,14 +725,35 @@ final class Data_Pages {
 			'listPages'      => __( 'Popular pages today', 'peptide-core' ),
 			'details'        => __( 'View details', 'peptide-core' ),
 			'empty'          => __( 'No data yet.', 'peptide-core' ),
-			'notYet'         => __( 'Address, shipping and payment steps, the visitor map, countries, sources and collections need data that is not collected yet.', 'peptide-core' ),
+			'notYet'         => __( 'The visitor map, countries, sources and collections need data that is not collected yet.', 'peptide-core' ),
 			'trackingOff'    => __( 'Visitor tracking is off, so visitor numbers, conversion and the funnels stay at zero.', 'peptide-core' ),
+			'live'          => __( 'Real time', 'peptide-core' ),
+			'todayOption'   => __( 'Today', 'peptide-core' ),
+			'yesterday'     => __( 'Yesterday', 'peptide-core' ),
+			'from'          => __( 'Start date', 'peptide-core' ),
+			'to'            => __( 'End date', 'peptide-core' ),
+			'apply'         => __( 'Query', 'peptide-core' ),
+			'custom'        => __( 'Custom dates', 'peptide-core' ),
+			'period'        => __( 'Selected period', 'peptide-core' ),
+			'historyVisits' => __( 'Period visits', 'peptide-core' ),
+			'historySales'  => __( 'Period sales', 'peptide-core' ),
+			'historyPower'  => __( 'Period buying power', 'peptide-core' ),
+			'historyFunnel' => __( 'Visitor behaviour in this period', 'peptide-core' ),
+			'historyChart'  => __( 'Visitors by visit start time', 'peptide-core' ),
+			'historyViewed'=> __( 'Most viewed products in this period', 'peptide-core' ),
+			'historyCarted'=> __( 'Most added to cart in this period', 'peptide-core' ),
+			'historySold'  => __( 'Best sellers in this period', 'peptide-core' ),
+			'historyPages' => __( 'Popular pages in this period', 'peptide-core' ),
+			'manualRefresh'=> __( 'History updates when you query or refresh.', 'peptide-core' ),
+			'rangeError'   => __( 'Enter valid start and end dates in order, up to 366 days.', 'peptide-core' ),
+			'historyNote'  => __( 'Visitors, funnel and chart use visits that started in this period. A visitor counts once in the period and once in each chart bucket they visited. Page views use event time. Paid orders use creation time, exclude test orders and subtract current refunds. Completed payment counts visitors in the funnel, and orders in the cards.', 'peptide-core' ),
 		);
 	}
 
 	/** 运营数据页脚本里的文字：12 个指标、漏斗的五层、表头和说明，以及九张趋势图的标题、说明和提示。 */
 	private static function operations_strings(): array {
-		return array(
+		return self::visitor_funnel_strings() + self::export_strings() + array(
+			'checkoutPanel'   => self::operations_checkout_strings(),
 			'sales'           => __( 'Sales', 'peptide-core' ),
 			'visitors'        => __( 'Visited users', 'peptide-core' ),
 			'registered'      => __( 'New sign-ups', 'peptide-core' ),
@@ -553,6 +803,22 @@ final class Data_Pages {
 
 			// 排行表（第 7b 步）：标题、表头、查看更多 / 收起、空表和出错的文字，设备和浏览器的名称，十四张表的标题（t_ + 表的 key）。
 			'rankings'      => __( 'Rankings', 'peptide-core' ),
+			/* translators: 1: visible rows, 2: matching rows */
+			'rankShowing'   => __( 'Showing %1$d of %2$d', 'peptide-core' ),
+			'rankOpen'      => __( 'Open full results', 'peptide-core' ),
+			/* translators: %s: ranking table name */
+			'rankOpenLabel' => __( 'Open full results: %s', 'peptide-core' ),
+			'rankClose'     => __( 'Close full results', 'peptide-core' ),
+			'rankSearch'    => __( 'Search ranking names or keys', 'peptide-core' ),
+			'rankPerPage'   => __( 'Per page', 'peptide-core' ),
+			'rankPage'      => __( 'Page %1$d of %2$d', 'peptide-core' ),
+			'rankTotal'     => __( '%d matching rows', 'peptide-core' ),
+			'rankPrev'      => __( 'Previous', 'peptide-core' ),
+			'rankNext'      => __( 'Next', 'peptide-core' ),
+			'rankRetry'     => __( 'Retry', 'peptide-core' ),
+			'rankPoints'    => __( 'Percentage points', 'peptide-core' ),
+			'rankExportHelp' => __( 'Export every matching ranking row, across all result pages.', 'peptide-core' ),
+
 			'rankName'      => __( 'Name', 'peptide-core' ),
 			'rankMore'      => __( 'View more', 'peptide-core' ),
 			'rankLess'      => __( 'Show less', 'peptide-core' ),
@@ -581,9 +847,32 @@ final class Data_Pages {
 		);
 	}
 
+	/** Operations-only labels; existing Conversion output and its translations are untouched. */
+	private static function operations_checkout_strings(): array {
+		$existing = self::conversion_strings();
+		return array_intersect_key( $existing, array_flip( array( 'checkoutTitle', 'checkoutHelp', 'browserObservation', 'serverFact', 'checkoutChannels', 'channelHelp', 'initial', 'user', 'automatic', 'attempts', 'attempt_visits', 'attempt_orders', 'succeeded', 'failed', 'observedStep', 'paymentChannel', 'emptyCheckout', 'emptyChannels', 'localNotice', 'localCard', 'localWallet' ) ) ) + array(
+			'blocks' => __( 'Current checkout type: WooCommerce Blocks', 'peptide-core' ),
+			'unconfirmed' => __( 'Current checkout type is unconfirmed', 'peptide-core' ),
+			'typeHelp' => __( 'Checkout type describes the current configuration only. These observations are not grouped by historical checkout mode.', 'peptide-core' ),
+			'currentVisits' => __( 'Current visits', 'peptide-core' ),
+			'previousVisits' => __( 'Previous period visits', 'peptide-core' ),
+			'relativeChange' => __( 'Relative change (%)', 'peptide-core' ),
+			'currentPeriod' => __( 'Current period', 'peptide-core' ),
+			'previousPeriod' => __( 'Previous period', 'peptide-core' ),
+			'success_rate' => __( 'Processing success rate (%)', 'peptide-core' ),
+			'points' => __( 'Percentage points', 'peptide-core' ),
+			'unknown' => __( 'Unknown', 'peptide-core' ),
+			'details' => __( 'View detailed checkout analysis', 'peptide-core' ),
+			'loading' => __( 'Loading checkout observations…', 'peptide-core' ),
+			'error' => __( 'Checkout observations could not be loaded.', 'peptide-core' ),
+			'retry' => __( 'Retry checkout observations', 'peptide-core' ),
+			'applyingRange' => __( 'Applying date range…', 'peptide-core' ),
+		);
+	}
+
 	/** 商品详情数据页脚本里的文字：商品列、12 个指标的表头、搜索、编辑表头、分页。 */
 	private static function products_strings(): array {
-		return array(
+		return self::export_strings() + array(
 			'product'     => __( 'Product', 'peptide-core' ),
 			'views'       => __( 'Product views', 'peptide-core' ),
 			'view_users'  => __( 'Viewing users', 'peptide-core' ),
@@ -599,6 +888,11 @@ final class Data_Pages {
 			'net_sales'   => __( 'Net sales', 'peptide-core' ),
 			'search'      => __( 'Search products', 'peptide-core' ),
 			'columns'     => __( 'Edit columns', 'peptide-core' ),
+			/* translators: %s: metric name */
+			'moveUp'      => __( 'Move %s up', 'peptide-core' ),
+			/* translators: %s: metric name */
+			'moveDown'    => __( 'Move %s down', 'peptide-core' ),
+			'exportHelp'  => __( 'Export all matching products and their data-bearing variations, including collapsed variations.', 'peptide-core' ),
 			'variations'  => __( 'Variation details', 'peptide-core' ),
 			'noData'      => __( 'No product data in this period.', 'peptide-core' ),
 			/* translators: 1: current page number, 2: total number of pages */
@@ -610,9 +904,18 @@ final class Data_Pages {
 		);
 	}
 
+	private static function export_strings(): array {
+		return array(
+			'exportCsv' => __( 'Export CSV', 'peptide-core' ),
+			'exportBusy' => __( 'Preparing CSV…', 'peptide-core' ),
+			'exportDone' => __( 'CSV download started.', 'peptide-core' ),
+			'exportError' => __( 'CSV could not be downloaded. Try again, or refresh the page if your session expired.', 'peptide-core' ),
+		);
+	}
+
 	/** 页面访问统计页脚本里的文字：表头、跳出率说明、搜索、每页条数、总数、分页。 */
 	private static function pages_strings(): array {
-		return array(
+		return self::export_strings() + array(
 			'path'         => __( 'Page path', 'peptide-core' ),
 			'views'        => __( 'Page visits', 'peptide-core' ),
 			'visitors'     => __( 'Visited users', 'peptide-core' ),
@@ -628,13 +931,16 @@ final class Data_Pages {
 			'page'         => __( 'Page %1$d of %2$d', 'peptide-core' ),
 			'prev'         => __( 'Previous', 'peptide-core' ),
 			'next'         => __( 'Next', 'peptide-core' ),
+			'exportHelp'   => __( 'Export all matching page paths, across every result page.', 'peptide-core' ),
 			'trackingNote' => __( 'Page visits come from the visitor tracking script in the browser; without it this page stays empty.', 'peptide-core' ),
 		);
 	}
 
 	/** 转化率详情页脚本里的文字：整体步骤、分组选择、设备和浏览器名、卡片文字和说明。 */
 	private static function conversion_strings(): array {
-		return array(
+		return self::export_strings() + self::visitor_funnel_strings() + array(
+			'retry'          => __( 'Retry', 'peptide-core' ),
+			'exportHelp'     => __( 'Export all results in the selected grouping, eight visitor steps, both transition views, observed visits and payment channels. Group figures cover the current period only.', 'peptide-core' ),
 			'conversion'     => __( 'Conversion rate', 'peptide-core' ),
 			'conversionHelp' => __( 'Paid successfully / visited users × 100%', 'peptide-core' ),
 			'paid'           => __( 'Paid successfully', 'peptide-core' ),
@@ -675,7 +981,8 @@ final class Data_Pages {
 			'success_rate'   => __( 'Success / processing orders', 'peptide-core' ),
 			'observedStep'   => __( 'Observed step', 'peptide-core' ),
 			'currentPeriod'  => __( 'Current', 'peptide-core' ),
-			'previousPeriod' => __( 'Previous', 'peptide-core' ),
+			'previousPeriod' => __( 'Previous period', 'peptide-core' ),
+			'percentagePoints' => __( 'Percentage points', 'peptide-core' ),
 			'periodChange'   => __( 'Change', 'peptide-core' ),
 			'paymentChannel' => __( 'Payment channel', 'peptide-core' ),
 			'emptyCheckout' => __( 'No checkout signals in this visit-start cohort.', 'peptide-core' ),
@@ -706,6 +1013,11 @@ final class Data_Pages {
 	/** 落地页转化页脚本里的文字：路径列、十个指标的表头、两个说明、搜索、每页条数、总数、空表、分页、页面说明。 */
 	private static function landing_strings(): array {
 		return array(
+			'showParams'     => __( 'Show allowed URL parameters', 'peptide-core' ),
+			'sourceUnknown'  => __( 'Source unknown', 'peptide-core' ),
+			'retry'          => __( 'Retry', 'peptide-core' ),
+			'applyingRange'  => __( 'Applying date range…', 'peptide-core' ),
+			'paramsNote'     => __( 'Groups use the first successfully captured entry host, path and allowed utm_source/utm_medium values. Query value case is preserved. Visits without this observation remain source unknown, separately from captured empty parameters. This does not identify a direct source; storefront collection must supply the optional metadata.', 'peptide-core' ),
 			'path'           => __( 'Landing page path', 'peptide-core' ),
 			'unknown'        => __( 'Unknown landing page', 'peptide-core' ),
 			'uv'             => __( 'UV', 'peptide-core' ),

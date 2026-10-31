@@ -55,6 +55,14 @@ final class Conversion {
 		$to       = (int) $range['to'];
 		$current  = self::overall( Operations::period( $from, $to ) );
 		$previous = self::overall( Operations::period( (int) $range['compare_from'], (int) $range['compare_to'] ) );
+		$reader = new Visitor_Funnel();
+		$detail = $reader->period( $from * 1000, $to * 1000, 'start_ms', $group );
+		$before = $reader->period( (int) $range['compare_from'] * 1000, (int) $range['compare_to'] * 1000 );
+		$rows = self::rows( $from, $to, $group );
+		foreach ( $rows as &$row ) {
+			$row['visitor_funnel'] = $detail['groups'][ $row['key'] ] ?? array( 'unit' => 'visitors', 'layers' => Visitor_Funnel::layers( Visitor_Funnel::zero() ) );
+		}
+		unset( $row );
 
 		$change = array();
 		foreach ( self::OVERALL as $key ) {
@@ -80,7 +88,8 @@ final class Conversion {
 				'previous' => $previous,
 				'change'   => $change,
 			),
-			'rows'     => self::rows( $from, $to, $group ),
+			'rows'     => $rows,
+			'visitor_funnel' => Visitor_Funnel::compare( $detail['overall'], $before['overall'] ),
 			'checkout_steps' => Checkout_Steps::summary( $range ),
 		);
 	}

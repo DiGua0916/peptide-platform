@@ -254,7 +254,7 @@ try {
 		Data_Pages::enqueue();
 		$cfg = $last_config( Data_Pages::SCRIPT, 'pcData' );
 		$ok( 'landing script/style absent on ' . $key . '; its own assets present', ! wp_script_is( 'peptide-core-data-landing', 'enqueued' ) && ! wp_style_is( 'peptide-core-data-landing', 'enqueued' ) && wp_script_is( 'peptide-core-data-' . $key, 'enqueued' ) && wp_style_is( 'peptide-core-data-' . $key, 'enqueued' ) );
-		$ok( $key . ' shell retains comparison config and expected range toolbar flag', true === ( $cfg['showCompare'] ?? null ) && ( 'realtime' !== $key ) === ( $cfg['showRange'] ?? null ) && $key === ( $cfg['page'] ?? null ) );
+		$ok( $key . ' shell comparison matches report capability and expected range toolbar flag', ( 'pages' !== $key ) === ( $cfg['showCompare'] ?? null ) && ( 'realtime' !== $key ) === ( $cfg['showRange'] ?? null ) && $key === ( $cfg['page'] ?? null ) );
 	}
 } catch ( Throwable $e ) {
 	echo 'FAIL landing fixture exception: ', $e->getMessage(), "\n";

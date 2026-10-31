@@ -150,6 +150,7 @@
 		var esc = ctx.esc;
 		var view = { data: null };
 		var composing = false;
+		var exportToken = 0, exporting = false, rangeBusy = false, searchDirty = false;
 
 		// 上一次画的页面已经被 data.js 清掉了：它的搜索计时器不能再触发。
 		window.clearTimeout( searchTimer );
@@ -170,6 +171,8 @@
 				'<label class="pc-pages-per"><span class="pc-pages-per-label">' + esc( T.perPage ) + '</span>' +
 					'<select class="pc-pages-perpage">' + options + '</select>' +
 				'</label>' +
+				'<button type="button" class="button pc-pages-export" title="' + esc( T.exportHelp ) + '" disabled>' + esc( T.exportCsv ) + '</button>' +
+				'<span class="pc-pages-export-status" role="status" aria-live="polite"></span>' +
 			'</div>' +
 			'<p class="pc-data-muted pc-pages-note">' + esc( T.trackingNote ) + '</p>' +
 			'<div class="pc-pages-wrap"></div>' +
@@ -180,8 +183,41 @@
 		view.wrap = bodyEl.querySelector( '.pc-pages-wrap' );
 		view.foot = bodyEl.querySelector( '.pc-pages-foot' );
 		view.search.value = state.q;
+		view.exportButton = bodyEl.querySelector( '.pc-pages-export' );
+		view.exportStatus = bodyEl.querySelector( '.pc-pages-export-status' );
+		function syncExport() {
+			view.exportButton.disabled = ! view.data || searchDirty || composing || rangeBusy || exporting;
+			view.exportButton.setAttribute( 'aria-busy', exporting ? 'true' : 'false' );
+		}
+		function cancelExport() {
+			++exportToken; exporting = false;
+			view.exportStatus.textContent = '';
+			syncExport();
+		}
+		if ( 'function' === typeof ctx.onRangeState ) {
+			ctx.onRangeState( function ( on ) { rangeBusy = on; if ( on ) { cancelExport(); } syncExport(); } );
+		}
+		view.exportButton.addEventListener( 'click', function () {
+			if ( view.exportButton.disabled || ! window.PcDataExport ) { return; }
+			var mine = ++exportToken;
+			var dates = view.data.range.dates;
+			var params = { from: dates.from, to: dates.to, compare_from: dates.compare_from, compare_to: dates.compare_to };
+			params.format = 'csv'; params.sort = view.data.sort; params.order = view.data.order;
+			params.page = view.data.page; params.per_page = view.data.per_page; params.q = view.data.q;
+
+			exporting = true; syncExport(); view.exportStatus.textContent = T.exportBusy;
+			function current() { return mine === exportToken && ! rangeBusy && ! searchDirty && ! composing && !! view.data && document.documentElement.contains( view.exportButton ); }
+			window.PcDataExport.prepare( PATH, params ).then( function ( file ) {
+				if ( ! current() ) { return; }
+				try { if ( window.PcDataExport.download( file, current ) ) { view.exportStatus.textContent = T.exportDone; } }
+				catch ( e ) { view.exportStatus.textContent = T.exportError; }
+				exporting = false; syncExport();
+			}, function () { if ( current() ) { exporting = false; syncExport(); view.exportStatus.textContent = T.exportError; } } );
+		} );
+
 
 		function failed() {
+			view.data = null; cancelExport();
 			view.wrap.innerHTML = '<p class="pc-data-empty">' + esc( ctx.strings.loadError ) + '</p>';
 			view.foot.innerHTML = '';
 		}
@@ -226,12 +262,14 @@
 			state.sort = data.sort;
 			state.order = data.order;
 			state.page = Number( data.page );
+			syncExport();
 			drawTable();
 			drawFoot();
 		}
 
 		function load() {
 			var mine = ++requests;
+			view.data = null; cancelExport();
 			var params = rangeParams( range );
 			params.sort = state.sort;
 			params.order = state.order;
@@ -264,6 +302,7 @@
 		// 搜索：回车马上搜，停止输入 400 毫秒后搜；输入法组字中（拼音）不搜；新的搜索回到第 1 页。
 		function applySearch() {
 			window.clearTimeout( searchTimer );
+			searchDirty = false; syncExport();
 			var q = view.search.value.replace( /^\s+|\s+$/g, '' );
 			if ( q === state.q ) {
 				return;
@@ -273,15 +312,16 @@
 			load();
 		}
 		view.search.addEventListener( 'compositionstart', function () {
-			composing = true;
+			composing = true; cancelExport();
 			window.clearTimeout( searchTimer );
 		} );
 		view.search.addEventListener( 'compositionend', function () {
-			composing = false;
+			composing = false; searchDirty = true; cancelExport();
 			window.clearTimeout( searchTimer );
 			searchTimer = window.setTimeout( applySearch, SEARCH_DELAY );
 		} );
 		view.search.addEventListener( 'input', function () {
+			searchDirty = true; cancelExport();
 			window.clearTimeout( searchTimer );
 			if ( ! composing ) {
 				searchTimer = window.setTimeout( applySearch, SEARCH_DELAY );

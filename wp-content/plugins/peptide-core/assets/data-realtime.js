@@ -3,11 +3,11 @@
  * 实时访客行为漏斗、每分钟访客数量（柱状图），以及今日的四个列表（浏览最多、加购最多、热卖商品、热门页面）。
  * 数字都来自实时数据接口（见下面的 PATH；口径都在 PeptideCore\Data\Realtime，这里不自己算），
  * 文字来自 window.pcDataRealtime.strings，插入页面的值都经过 ctx.esc() 转义。
- * 文件末尾把 render 注册成 realtime 页面的报表，由 data.js 的外壳调用（这个页面没有时间段工具栏，range 用不上）。
+ * 文件末尾把 render 注册成 realtime 页面的报表；日期工具栏由本文件管理，保留 data.js 外壳的原有实时页行为。
  *
  * 在脚本里保留的状态：两个窗口选择（漏斗、每分钟图，10 / 20 / 30 分钟，记在浏览器的 localStorage 里）、请求计数（晚到的旧响应不再画）、
  * 唯一的自动刷新定时器。页面框架只在 render() 里建一次，每次刷新只换里面的数字，所以选择框不会在刷新时被重画。
- * 自动刷新：页面可见时每 60 秒取一次数；页面从隐藏变回可见时马上取一次；render() 被调用多次也只有一个定时器、一个 visibilitychange 监听。
+ * 自动刷新仅用于实时模式；历史按查询或手动刷新取数。成功后才同步所选日期和 URL，popstate 恢复时不追加历史。
  */
 ( function ( PcData, cfg ) {
 	'use strict';
@@ -22,10 +22,13 @@
 	var KEY_MINUTES = 'pcDataRealtimeMinutes';
 	var REFRESH_MS = 60000;
 	// 和 Operations::LAYERS 的顺序一致；对应 strings 里的 key（第一层用 funnelVisitors，避免和卡片的 visitors 混）。
-	var LAYERS = [ 'visitors', 'viewed', 'carted', 'checkout', 'paid' ];
-	var LAYER_TEXT = { visitors: 'funnelVisitors', viewed: 'viewed', carted: 'carted', checkout: 'checkout', paid: 'paid' };
+	var LAYERS = [ 'visitors', 'viewed', 'carted', 'checkout', 'address', 'shipping', 'payment', 'paid' ];
+	var LAYER_TEXT = { visitors: 'funnelVisitors', viewed: 'viewed', carted: 'carted', checkout: 'checkout', address: 'address', shipping: 'shipping', payment: 'payment', paid: 'paidVisitors' };
 
 	var state = { funnel: readWindow( KEY_FUNNEL ), minutes: readWindow( KEY_MINUTES ) };
+	var wanted = { mode: 'live', params: {} };
+	var urlAction = '';
+	var displayedHistory = false;
 	var requests = 0;
 	var timer = 0;
 	var listening = false;
@@ -98,14 +101,14 @@
 		return '<div class="pc-rt-metric">' +
 			'<div class="pc-rt-metric__label">' + esc( label ) + '</div>' +
 			'<div class="pc-rt-metric__value">' + esc( value ) +
-				' <span class="pc-rt-metric__today">' + esc( fill( T.today, { '%s': today } ) ) + '</span>' +
+				( displayedHistory ? '' : ' <span class="pc-rt-metric__today">' + esc( fill( T.today, { '%s': today } ) ) + '</span>' ) +
 			'</div>' +
 		'</div>';
 	}
 
 	function card( title, first, second ) {
 		return '<section class="pc-rt-card">' +
-			'<h2 class="pc-rt-card__title">' + esc( title ) + ' <span class="pc-rt-muted">' + esc( T.windowNote ) + '</span></h2>' +
+			'<h2 class="pc-rt-card__title">' + esc( title ) + ' <span class="pc-rt-muted">' + esc( displayedHistory ? T.period : T.windowNote ) + '</span></h2>' +
 			'<div class="pc-rt-card__metrics">' + first + second + '</div>' +
 		'</section>';
 	}
@@ -119,29 +122,30 @@
 		};
 		return '<div class="pc-rt-cards">' +
 			card(
-				T.visits,
+				displayedHistory ? T.historyVisits : T.visits,
 				metric( T.visitors, ctx.number( now.visitors ), ctx.number( day.visitors ) ),
 				metric( T.pageviews, ctx.number( now.pageviews ), ctx.number( day.pageviews ) )
 			) +
 			card(
-				T.sales,
+				displayedHistory ? T.historySales : T.sales,
 				metric( T.orders, ctx.number( now.orders ), ctx.number( day.orders ) ),
 				metric( withCode( T.salesAmount ), ctx.money( now.sales ), ctx.money( day.sales ) )
 			) +
 			card(
-				T.power,
+				displayedHistory ? T.historyPower : T.power,
 				metric( T.unitsPerOrder, dec2( now.units_per_order ), dec2( day.units_per_order ) ),
 				metric( withCode( T.aov ), ctx.money( now.aov ), ctx.money( day.aov ) )
 			) +
 		'</div>';
 	}
 
-	function steps( layers ) {
-		return LAYERS.map( function ( key, i ) {
+	function steps( layers, detailed ) {
+		var keys = detailed ? LAYERS : [ 'visitors', 'viewed', 'carted', 'checkout', 'paid' ];
+		return '<p class="pc-rt-muted pc-rt-funnel-help">' + esc( detailed ? T.detailHelp : T.detailUnavailable ) + '</p>' + keys.map( function ( key, i ) {
 			var layer = layers[ i ] || { count: 0, visitor_rate: null };
 			var width = isNum( layer.visitor_rate ) ? Math.max( 0, Math.min( 100, Number( layer.visitor_rate ) ) ) : 0;
 			return '<div class="pc-rt-step">' +
-				'<span class="pc-rt-step__label">' + esc( T[ LAYER_TEXT[ key ] ] ) + '</span>' +
+				'<span class="pc-rt-step__label">' + esc( T[ detailed ? LAYER_TEXT[ key ] : ( 'paid' === key ? 'paid' : LAYER_TEXT[ key ] ) ] ) + '</span>' +
 				'<span class="pc-rt-bar"><span class="pc-rt-bar__fill" style="width:' + esc( width ) + '%"></span></span>' +
 				'<span class="pc-rt-step__count">' + esc( ctx.number( layer.count ) ) + '</span>' +
 				'<span class="pc-rt-step__rate">' + esc( fill( T.ofVisitors, { '%s': pct( layer.visitor_rate ) } ) ) + '</span>' +
@@ -161,7 +165,7 @@
 			var height = max > 0 ? Math.round( v / max * 80 ) : 0;
 			var ago = Number( p.ago ) || 0;
 			// 20 / 30 分钟时只给 ago 是偶数的列写标签，这样“现在”（ago 0）一定有标签。
-			var label = ! sparse || 0 === ago % 2 ? ( 0 === ago ? T.now : fill( T.minutesAgo, { '%d': ago } ) ) : '';
+			var label = displayedHistory ? p.label : ( ! sparse || 0 === ago % 2 ? ( 0 === ago ? T.now : fill( T.minutesAgo, { '%d': ago } ) ) : '' );
 			return '<div class="pc-rt-col">' +
 				'<div class="pc-rt-col__plot">' +
 					'<span class="pc-rt-col__count">' + esc( ctx.number( v ) ) + '</span>' +
@@ -209,18 +213,22 @@
 	function lists( data ) {
 		var l = data.lists || {};
 		var links = data.links || {};
-		return box( T.listViewed, l.viewed, 'product', links.products ) +
-			box( T.listCarted, l.carted, 'product', links.products ) +
-			box( T.listSold, l.sold, 'product', links.products ) +
-			box( T.listPages, l.pages, 'page', links.pages );
+		return box( displayedHistory ? T.historyViewed : T.listViewed, l.viewed, 'product', links.products ) +
+			box( displayedHistory ? T.historyCarted : T.listCarted, l.carted, 'product', links.products ) +
+			box( displayedHistory ? T.historySold : T.listSold, l.sold, 'product', links.products ) +
+			box( displayedHistory ? T.historyPages : T.listPages, l.pages, 'page', links.pages );
 	}
 
+	var dimensions = null, filters = null, acceptedMain = null, rangeBusy = false, rangeUnsubscribe = null, rangeRecovery = 0;
 	function notes( data ) {
 		var html = '';
 		if ( ! data.tracking ) {
 			html += '<p class="pc-rt-note">' + esc( T.trackingOff ) + '</p>';
 		}
-		html += '<p class="pc-rt-muted">' + esc( T.notYet ) + '</p>';
+		if ( ! dimensions ) { html += '<p class="pc-rt-muted">' + esc( T.notYet ) + '</p>'; }
+		if ( displayedHistory ) {
+			html += '<p class="pc-rt-muted">' + esc( T.historyNote ) + '</p>';
+		}
 		return html;
 	}
 
@@ -235,29 +243,40 @@
 
 	function build( bodyEl ) {
 		bodyEl.innerHTML = '<div class="pc-rt">' +
+			'<div class="pc-rt-filters-host"></div><form class="pc-rt-range" novalidate>' +
+				'<div class="pc-rt-modes" role="group" aria-label="' + esc( T.period ) + '">' +
+					'<button type="button" class="button pc-rt-live" aria-pressed="false">' + esc( T.live ) + '</button>' +
+					'<button type="button" class="button pc-rt-today" aria-pressed="false">' + esc( T.todayOption ) + '</button>' +
+					'<button type="button" class="button pc-rt-yesterday" aria-pressed="false">' + esc( T.yesterday ) + '</button>' +
+				'</div>' +
+				'<label>' + esc( T.from ) + '<input class="pc-rt-from" type="date" required></label>' +
+				'<label>' + esc( T.to ) + '<input class="pc-rt-to" type="date" required></label>' +
+				'<button type="submit" class="button pc-rt-apply">' + esc( T.apply ) + '</button>' +
+			'</form>' +
+			'<p class="pc-rt-period" aria-live="polite"></p>' +
 			'<div class="pc-rt-head">' +
 				'<span class="pc-rt-updated"></span>' +
 				'<button type="button" class="button pc-rt-refresh">' + esc( T.refresh ) + '</button>' +
-				'<span class="pc-rt-muted">' + esc( T.autoRefresh ) + '</span>' +
+				'<span class="pc-rt-muted pc-rt-refresh-note"></span>' +
 			'</div>' +
 			'<p class="pc-rt-error" role="alert" hidden></p>' +
 			'<div class="pc-rt-notes"></div>' +
 			'<div class="pc-rt-cards-wrap"><p class="pc-rt-muted">' + esc( ctx.strings.loading ) + '</p></div>' +
 			'<section class="pc-rt-section">' +
 				'<div class="pc-rt-section__head">' +
-					'<h2 class="pc-rt-section__title">' + esc( T.behaviour ) + '</h2>' +
+					'<h2 class="pc-rt-section__title pc-rt-funnel-title">' + esc( T.behaviour ) + '</h2>' +
 					selectHtml( 'pc-rt-funnel-select', T.behaviour, state.funnel ) +
 				'</div>' +
 				'<div class="pc-rt-steps"></div>' +
 			'</section>' +
 			'<section class="pc-rt-section">' +
 				'<div class="pc-rt-section__head">' +
-					'<h2 class="pc-rt-section__title">' + esc( T.perMinute ) + '</h2>' +
+					'<h2 class="pc-rt-section__title pc-rt-chart-title">' + esc( T.perMinute ) + '</h2>' +
 					selectHtml( 'pc-rt-minutes-select', T.perMinute, state.minutes ) +
 				'</div>' +
-				'<div class="pc-rt-chart-wrap"></div>' +
+				'<div class="pc-rt-chart-wrap" tabindex="0" role="region" aria-label="' + esc( T.historyChart ) + '"></div>' +
 			'</section>' +
-			'<div class="pc-rt-lists"></div>' +
+			'<div class="pc-rt-lists"></div><div class="pc-rt-dimensions-host"></div>' +
 		'</div>';
 
 		els = {
@@ -273,7 +292,23 @@
 			funnelSelect: bodyEl.querySelector( '.pc-rt-funnel-select' ),
 			minutesSelect: bodyEl.querySelector( '.pc-rt-minutes-select' )
 		};
+		[ 'range', 'from', 'to', 'live', 'today', 'yesterday', 'period', 'refresh-note', 'funnel-title', 'chart-title' ].forEach( function ( name ) {
+			els[ name ] = bodyEl.querySelector( '.pc-rt-' + name );
+		} );
 		painted = false;
+		if ( window.PcDataRealtimeDimensions ) {
+			dimensions = window.PcDataRealtimeDimensions.mount( bodyEl.querySelector( '.pc-rt-dimensions-host' ), ctx, T.dimensions, window.PcDataRealtimeCountries );
+			els.lists.hidden = true;
+		}
+
+		if ( window.PcDataRealtimeFilters ) {
+			filters = window.PcDataRealtimeFilters.mount( bodyEl.querySelector( '.pc-rt-filters-host' ), ctx, T.filters, {
+				onChange: changeFilter, onRetry: load,
+				getMainWindows: function () { return { funnel: state.funnel, minutes: state.minutes }; },
+				getWindows: function () { if ( dimensions && dimensions.getWindows ) { return dimensions.getWindows(); } var values = {}; [ 'viewed', 'carted', 'sold', 'map', 'active_countries', 'popular_countries', 'sources', 'collections', 'pages' ].forEach( function ( key ) { values[ key ] = 10; } ); return values; }
+			} );
+			if ( dimensions && dimensions.setWindowsListener ) { dimensions.setWindowsListener( function () { if ( filters ) { filters.windowsChanged(); } } ); }
+		} else if ( T.filters && typeof T.filters === 'object' ) { bodyEl.querySelector( '.pc-rt-filters-host' ).textContent = T.filters.unavailable; }
 
 		els.refresh.addEventListener( 'click', function () {
 			load();
@@ -284,6 +319,92 @@
 		els.minutesSelect.addEventListener( 'change', function () {
 			choose( 'minutes', els.minutesSelect.value );
 		} );
+		els.live.addEventListener( 'click', function () { select( { mode: 'live', params: {} }, 'push' ); } );
+		[ 'today', 'yesterday' ].forEach( function ( preset ) {
+			els[ preset ].addEventListener( 'click', function () { select( { mode: 'history', params: { range: preset } }, 'push' ); } );
+		} );
+		els.range.addEventListener( 'submit', function ( event ) {
+			event.preventDefault();
+			if ( ! validDates( els.from.value, els.to.value ) ) {
+				wanted = { mode: 'history', params: { from: els.from.value, to: els.to.value }, filter: wanted.filter };
+				urlAction = 'push';
+				schedule();
+				++requests;
+				setBusy( false );
+				showError( T.rangeError );
+				if ( filters ) { filters.beginMain(); filters.failMain(); els.root.classList.toggle( 'is-stale', painted ); }
+				if ( dimensions ) { dimensions.failMain(); }
+				return;
+			}
+			select( { mode: 'history', params: { from: els.from.value, to: els.to.value } }, 'push' );
+		} );
+	}
+
+	function validDates( from, to ) {
+		function day( value ) {
+			if ( ! /^\d{4}-\d{2}-\d{2}$/.test( value ) ) { return null; }
+			var parts = value.split( '-' );
+			var date = new Date( 0 );
+			date.setUTCFullYear( Number( parts[ 0 ] ), Number( parts[ 1 ] ) - 1, Number( parts[ 2 ] ) );
+			return date.getUTCFullYear() === Number( parts[ 0 ] ) && date.getUTCMonth() === Number( parts[ 1 ] ) - 1 && date.getUTCDate() === Number( parts[ 2 ] ) ? date.getTime() : null;
+		}
+		var first = day( from );
+		var last = day( to );
+		return null !== first && null !== last && last >= first && ( last - first ) / 86400000 < 366;
+	}
+
+	function fromUrl() {
+		try {
+			if ( ! window.URLSearchParams || ! window.location ) { return { mode: 'live', params: {} }; }
+			var q = new window.URLSearchParams( window.location.search ), params = {}, result;
+			[ 'range', 'from', 'to' ].forEach( function ( key ) { if ( q.has( key ) ) { params[ key ] = q.get( key ); } } );
+			result = { mode: Object.keys( params ).length ? 'history' : 'live', params: params };
+			if ( filters ) { result.filter = window.PcDataRealtimeFilters.parseUrl( window.location.search ); result.filterError = ! result.filter; }
+			return result;
+		} catch ( error ) { return filters ? { mode: 'live', params: {}, filterError: true } : { mode: 'live', params: {} }; }
+	}
+
+	function writeUrl( data, action ) {
+		if ( ! action || ! window.history || ! window.URL ) { return; }
+		try {
+			var url = new window.URL( window.location.href );
+			[ 'range', 'from', 'to', 'compare_from', 'compare_to' ].forEach( function ( key ) { url.searchParams[ 'delete' ]( key ); } );
+			if ( 'history' === data.mode ) {
+				var range = data.range;
+				if ( range.preset && ! filters ) { url.searchParams.set( 'range', range.preset ); }
+				else { url.searchParams.set( 'from', range.dates.from ); url.searchParams.set( 'to', range.dates.to ); }
+			}
+			if ( filters ) {
+				[ 'rt_entry_state', 'rt_entry', 'rt_utm_state', 'rt_utm' ].forEach( function ( key ) { url.searchParams[ 'delete' ]( key ); } );
+				var value = data.filter;
+				if ( value ) { url.searchParams.set( 'rt_entry_state', value.entry_domain_state ); url.searchParams.set( 'rt_utm_state', value.utm_source_state ); if ( value.entry_domain_state === 'value' ) { url.searchParams.set( 'rt_entry', value.entry_domain ); } if ( value.utm_source_state === 'value' ) { url.searchParams.set( 'rt_utm', value.utm_source ); } }
+			}
+
+			var method = 'push' === action ? 'pushState' : 'replaceState';
+			if ( window.history[ method ] && ( 'replace' === action || url.toString() !== window.location.href ) ) {
+				window.history[ method ]( null, '', url.toString() );
+			}
+		} catch ( e ) { /* Browser URL support is optional. */ }
+	}
+
+	function select( selection, action ) {
+		if ( filters && ! selection.filterError ) { selection.filter = window.PcDataRealtimeFilters.normalize( selection.filter || wanted.filter || window.PcDataRealtimeFilters.all() ); filters.setDesired( selection.filter ); }
+		wanted = selection;
+		if ( Object.prototype.hasOwnProperty.call( selection.params, 'from' ) || Object.prototype.hasOwnProperty.call( selection.params, 'to' ) ) {
+			els.from.value = selection.params.from || '';
+			els.to.value = selection.params.to || '';
+		}
+		urlAction = action;
+		schedule();
+		load();
+	}
+
+	function changeFilter( value, force ) {
+		if ( ! filters || rangeBusy ) { return; }
+		if ( ! force && wanted.filter && window.PcDataRealtimeFilters.same( wanted.filter, value ) ) { return; }
+		var base = acceptedMain || wanted;
+		if ( base.mode === 'history' && ( ! acceptedMain && ( base.params.from !== undefined || base.params.to !== undefined ) && ! validDates( base.params.from, base.params.to ) ) ) { filters.failMain(); showError( T.rangeError ); return; }
+		select( { mode: base.mode, params: base.params, filter: value }, 'push' );
 	}
 
 	// 选了新的窗口：只认 10 / 20 / 30，记下来，马上重新取数。
@@ -300,11 +421,27 @@
 	// ---------- 取数和画 ----------
 
 	function paint( data ) {
+		displayedHistory = 'history' === data.mode;
+		els.root.classList.toggle( 'is-history', displayedHistory );
+		var range = data.range || {};
+		els.period.textContent = displayedHistory ? ( ( range.preset === 'today' ? T.todayOption : ( range.preset === 'yesterday' ? T.yesterday : T.custom ) ) + ': ' + range.dates.from + ' – ' + range.dates.to + ' · ' + range.timezone ) : T.live + ' · ' + ( cfg.timezone || '' );
+		[ 'live', 'today', 'yesterday' ].forEach( function ( key ) {
+			var on = 'live' === key ? ! displayedHistory : displayedHistory && range.preset === key;
+			els[ key ].setAttribute( 'aria-pressed', on ? 'true' : 'false' );
+			els[ key ].classList.toggle( 'is-active', on );
+		} );
+		els.funnelSelect.hidden = displayedHistory;
+		els.minutesSelect.hidden = displayedHistory;
+		els[ 'funnel-title' ].textContent = displayedHistory ? T.historyFunnel : T.behaviour;
+		els[ 'chart-title' ].textContent = displayedHistory ? T.historyChart : T.perMinute;
+		els[ 'refresh-note' ].textContent = displayedHistory ? T.manualRefresh : T.autoRefresh;
+		if ( displayedHistory ) { els.from.value = range.dates.from; els.to.value = range.dates.to; }
 		els.updated.textContent = fill( T.updated, { '%s': data.updated || '' } );
 		els.notes.innerHTML = notes( data );
 		els.cards.innerHTML = cards( data );
-		els.steps.innerHTML = steps( ( data.funnel || {} ).layers || [] );
-		els.chart.innerHTML = chart( ( data.minutes || {} ).points || [] );
+		var detail = data.visitor_funnel && data.visitor_funnel.unit === 'visitors' && data.visitor_funnel.layers && data.visitor_funnel.layers.length === 8;
+		els.steps.innerHTML = steps( detail ? data.visitor_funnel.layers : ( data.funnel || {} ).layers || [], detail );
+		els.chart.innerHTML = chart( ( ( displayedHistory ? data.series : data.minutes ) || {} ).points || [] );
 		els.lists.innerHTML = lists( data );
 		painted = true;
 	}
@@ -313,41 +450,57 @@
 		els.refresh.disabled = on;
 	}
 
-	function showError() {
+	function showError( message ) {
 		// 第一次就失败：把“正在加载”拿掉；以后失败：保留上一次的数字，只显示错误。
 		if ( ! painted ) {
 			els.cards.innerHTML = '';
 		}
-		els.error.textContent = ctx.strings.loadError;
+		els.error.textContent = message || ctx.strings.loadError;
 		els.error.hidden = false;
 	}
 
 	function load() {
-		if ( ! els ) {
-			return;
-		}
+		if ( ! els || rangeBusy ) { return; }
+		if ( filters && wanted.filterError ) { ++requests; setBusy( false ); dimensions && dimensions.beginMain(); dimensions && dimensions.failMain(); filters.failMain( true ); showError( T.filters.urlError ); return; }
 		var mine = ++requests;
+		var selection = wanted;
+		var action = urlAction;
 		setBusy( true );
-		ctx.api( PATH, { funnel: state.funnel, minutes: state.minutes } ).then(
+		if ( dimensions ) { dimensions.beginMain(); }
+		if ( filters ) { filters.beginMain(); els.root.classList.toggle( 'is-stale', painted ); }
+		var active = filters && window.PcDataRealtimeFilters.active( selection.filter ), params = 'history' === selection.mode ? selection.params : { funnel: state.funnel, minutes: state.minutes };
+		if ( active ) { var filtered = { mode: selection.mode }; Object.keys( params ).forEach( function ( key ) { filtered[ key ] = params[ key ]; } ); Object.keys( selection.filter ).forEach( function ( key ) { filtered[ key ] = selection.filter[ key ]; } ); params = filtered; }
+		ctx.api( active ? PATH + '/filtered' : PATH + ( 'history' === selection.mode ? '/history' : '' ), params ).then(
 			function ( data ) {
-				if ( mine !== requests ) {
+				if ( mine !== requests || ! attached() ) {
 					return;
 				}
 				setBusy( false );
 				try {
+					if ( ( 'history' === selection.mode ) !== ( 'history' === data.mode ) ) { throw new Error( 'Unexpected report mode' ); }
+					if ( dimensions && ( selection.mode === 'live' ? typeof data.now_ms !== 'number' || ! isFinite( data.now_ms ) || data.now_ms <= 0 || Math.floor( data.now_ms ) !== data.now_ms : ! data.range || ! data.range.dates || ! validDates( data.range.dates.from, data.range.dates.to ) || typeof data.range.from !== 'number' || ! isFinite( data.range.from ) || typeof data.range.to !== 'number' || ! isFinite( data.range.to ) || data.range.to <= data.range.from || typeof data.range.timezone !== 'string' || ! data.range.timezone ) ) { throw new Error( 'Invalid accepted realtime context' ); }
+					if ( filters && ( active ? ! window.PcDataRealtimeFilters.same( data.filter, selection.filter ) : data.filter !== undefined ) ) { throw new Error( 'Unexpected entry filter echo' ); }
 					paint( data );
+					if ( filters ) { acceptedMain = { mode: selection.mode, params: selection.mode === 'history' ? { from: data.range.dates.from, to: data.range.dates.to } : {}, filter: window.PcDataRealtimeFilters.normalize( selection.filter ) }; wanted = acceptedMain; filters.acceptMain( acceptedMain, data ); els.root.classList.toggle( 'is-stale', false ); }
+					if ( dimensions ) { dimensions.acceptMain( selection, data ); }
+					writeUrl( data, action );
+					urlAction = '';
 					els.error.textContent = '';
 					els.error.hidden = true;
 				} catch ( e ) {
 					showError();
+					if ( filters ) { filters.failMain(); }
+					if ( dimensions ) { dimensions.failMain(); }
 				}
 			},
-			function () {
-				if ( mine !== requests ) {
+			function ( error ) {
+				if ( mine !== requests || ! attached() ) {
 					return;
 				}
 				setBusy( false );
-				showError();
+				showError( error && ( 'pc_invalid_param' === error.code || error.data && 400 === Number( error.data.status ) ) ? T.rangeError : '' );
+				if ( filters ) { filters.failMain( false, error ); }
+				if ( dimensions ) { dimensions.failMain(); }
 			}
 		);
 	}
@@ -363,13 +516,14 @@
 			window.clearInterval( timer );
 			timer = 0;
 		}
+		if ( 'live' !== wanted.mode ) { return; }
 		timer = window.setInterval( function () {
 			if ( ! attached() ) {
 				window.clearInterval( timer );
 				timer = 0;
 				return;
 			}
-			if ( 'hidden' !== document.visibilityState ) {
+			if ( 'live' === wanted.mode && 'hidden' !== document.visibilityState ) {
 				load();
 			}
 		}, REFRESH_MS );
@@ -382,17 +536,30 @@
 		}
 		listening = true;
 		document.addEventListener( 'visibilitychange', function () {
-			if ( 'hidden' !== document.visibilityState && attached() ) {
+			if ( 'live' === wanted.mode && 'hidden' !== document.visibilityState && attached() ) {
 				load();
 			}
 		} );
+		window.addEventListener( 'popstate', function () { if ( attached() ) { select( fromUrl(), '' ); } } );
 	}
 
 	function render( bodyEl, range, c ) {
+		if ( rangeRecovery ) { window.clearTimeout( rangeRecovery ); rangeRecovery = 0; }
+		if ( rangeUnsubscribe ) { rangeUnsubscribe(); rangeUnsubscribe = null; }
+		if ( filters ) { filters.dispose(); filters = null; }
+		acceptedMain = null; rangeBusy = false;
+		if ( dimensions ) { dimensions.dispose(); dimensions = null; }
 		ctx = c;
 		// 旧框架上还没回来的请求作废，再建新框架。
 		requests++;
 		build( bodyEl );
+		if ( range && range.dates ) { els.from.value = range.dates.from; els.to.value = range.dates.to; }
+		wanted = fromUrl();
+		if ( filters && ! wanted.filterError ) { filters.setDesired( wanted.filter ); }
+		if ( filters && ctx.onRangeState ) { rangeUnsubscribe = ctx.onRangeState( function ( on ) { var changed = rangeBusy !== !! on; rangeBusy = !! on; if ( rangeRecovery ) { window.clearTimeout( rangeRecovery ); rangeRecovery = 0; } if ( rangeBusy ) { ++requests; setBusy( true ); filters.beginMain(); dimensions && dimensions.beginMain(); els.root.classList.toggle( 'is-stale', painted ); } else if ( changed && attached() ) { rangeRecovery = window.setTimeout( function () { rangeRecovery = 0; if ( ! attached() || rangeBusy ) { return; } if ( acceptedMain ) { wanted = acceptedMain; filters.setDesired( wanted.filter ); load(); } else { setBusy( false ); filters.failMain(); dimensions && dimensions.failMain(); } }, 0 ); } } ); }
+		if ( wanted.params.from !== undefined ) { els.from.value = wanted.params.from; }
+		if ( wanted.params.to !== undefined ) { els.to.value = wanted.params.to; }
+		urlAction = 'replace';
 		schedule();
 		listen();
 		load();

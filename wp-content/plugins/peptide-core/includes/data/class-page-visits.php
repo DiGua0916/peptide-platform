@@ -38,6 +38,33 @@ final class Page_Visits {
 	 * @param array $args  sort, order, page, per_page, q (already validated by params()).
 	 */
 	public static function table( array $range, array $args ): array {
+		$selection = self::selection( $range, $args );
+		$total = count( $selection['paths'] );
+		$page = $selection['page']; $per_page = $selection['per_page'];
+		$slice = $page > (int) ceil( $total / $per_page ) ? array() : array_slice( $selection['paths'], ( $page - 1 ) * $per_page, $per_page );
+		$rows = array();
+		foreach ( $slice as $row ) { $rows[] = self::assemble_row( $row, $selection['origin'] ); }
+		return array(
+			'range'    => $range,
+			'tracking' => Schema::installed(),
+			'sort'     => $selection['sort'],
+			'order'    => $selection['order'],
+			'page'     => $selection['page'],
+			'per_page' => $selection['per_page'],
+			'q'        => $selection['q'],
+			'total'    => $total,
+			'rows'     => $rows,
+		);
+	}
+
+
+	/** Same filtered/sorted paths as table(), without pagination. */
+	public static function all_rows( array $range, array $args ): iterable {
+		$selection = self::selection( $range, $args );
+		foreach ( $selection['paths'] as $row ) { yield self::assemble_row( $row, $selection['origin'] ); }
+	}
+
+	private static function selection( array $range, array $args ): array {
 		$sort     = in_array( $args['sort'] ?? '', self::METRICS, true ) ? (string) $args['sort'] : 'views';
 		$order    = 'asc' === ( $args['order'] ?? 'desc' ) ? 'asc' : 'desc';
 		$page     = max( 1, (int) ( $args['page'] ?? 1 ) );
@@ -67,35 +94,20 @@ final class Page_Visits {
 			}
 		);
 
-		$total = count( $paths );
-		$slice = $page > (int) ceil( $total / $per_page ) ? array() : array_slice( $paths, ( $page - 1 ) * $per_page, $per_page );
-
 		// 链接 = 站点的协议 + 域名（+ 端口）+ 存下来的路径。存下来的路径是浏览器的 location.pathname，已经带着 WordPress 的子目录，所以不能再用 home_url( $path )。
 		$home   = (array) wp_parse_url( home_url() );
 		$origin = empty( $home['host'] ) ? '' : ( $home['scheme'] ?? 'http' ) . '://' . $home['host'] . ( isset( $home['port'] ) ? ':' . $home['port'] : '' );
+		return compact( 'sort', 'order', 'page', 'per_page', 'q', 'paths', 'origin' );
+	}
 
-		$rows = array();
-		foreach ( $slice as $row ) {
-			$rows[] = array(
-				'path'        => $row['path'],
-				'url'         => $origin . $row['path'],
-				'views'       => $row['views'],
-				'visitors'    => $row['visitors'],
-				'bounced'     => $row['bounced'],
-				'bounce_rate' => $row['bounce_rate'],
-			);
-		}
-
+	private static function assemble_row( array $row, string $origin ): array {
 		return array(
-			'range'    => $range,
-			'tracking' => Schema::installed(),
-			'sort'     => $sort,
-			'order'    => $order,
-			'page'     => $page,
-			'per_page' => $per_page,
-			'q'        => $q,
-			'total'    => $total,
-			'rows'     => $rows,
+			'path'        => $row['path'],
+			'url'         => $origin . $row['path'],
+			'views'       => $row['views'],
+			'visitors'    => $row['visitors'],
+			'bounced'     => $row['bounced'],
+			'bounce_rate' => $row['bounce_rate'],
 		);
 	}
 

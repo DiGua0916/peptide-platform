@@ -16,6 +16,10 @@
 	font-weight: 600;
 }
 
+.pc-conv .pc-conv-export { max-width: 100%; height: auto; white-space: normal; }
+.pc-conv .pc-conv-export-status { min-width: 0; overflow-wrap: anywhere; }
+.pc-conv .pc-conv-export-help { margin: 0 0 12px; color: #646970; overflow-wrap: anywhere; }
+
 .pc-conv .pc-conv-note {
 	margin: 0 0 12px;
 	padding: 8px 12px;
@@ -179,6 +183,11 @@
 	}
 }
 /* Checkout observations stay separate from the existing funnel. */
+.pc-conv-detail-toggle { margin-bottom: 12px !important; }
+.pc-conv-detail-toggle:focus-visible { outline: 2px solid #171717; outline-offset: 2px; }
+.pc-conv-cards > [data-conv-slot] { min-width: 0; }
+.pc-conv .pc-conv-bar__fill { background: #171717; }
+
 .pc-conv-checkout { margin: 28px 0; min-width: 0; }
 .pc-conv-table-wrap { max-width: 100%; overflow-x: auto; margin: 12px 0 22px; }
 .pc-conv-checkout table { width: 100%; border-collapse: collapse; background: #fff; }
