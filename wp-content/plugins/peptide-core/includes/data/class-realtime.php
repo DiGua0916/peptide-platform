@@ -110,6 +110,7 @@ final class Realtime {
 
 		return array(
 			'now_ms'   => $now_ms,
+			'visitor_funnel' => ( new Visitor_Funnel() )->period( self::window_ms( $now_ms, $funnel )[0], $now_ms + 1, 'last_ms', '', $now_ms )['overall'] + array( 'window' => $funnel ),
 			'updated'  => wp_date( 'Y-m-d H:i:s', $sec ),
 			'tracking' => Schema::installed(),
 			'cards'    => $cards,
@@ -133,6 +134,130 @@ final class Realtime {
 				'pages'    => admin_url( 'admin.php?page=pc-data-pages&range=today' ),
 			),
 		);
+	}
+
+	/** Whole-page active filter; All delegates byte-exact legacy behavior. */
+	public static function filtered_summary( int $now_ms, int $funnel, int $minutes, Realtime_Filter $filter ): array {
+		if ( $filter->is_all() ) { return self::summary( $now_ms, $funnel, $minutes ); }
+		$filter = $filter->at( $now_ms + 1 ); $filter->require_ready();
+		$funnel  = in_array( $funnel, self::WINDOWS, true ) ? $funnel : self::WINDOWS[0];
+		$minutes = in_array( $minutes, self::WINDOWS, true ) ? $minutes : self::WINDOWS[0];
+		$sec     = intdiv( $now_ms, 1000 );
+		$day     = Overview::window( 'today', $sec );
+		$day_ms  = array( $day[0] * 1000, $day[1] * 1000 );
+
+		$filter->prime_orders( min( $day[0], $sec - self::CARD_WINDOW * 60 + 1 ), max( $day[1], $sec + 1 ) );
+		// 访问的漏斗数：卡片的 10 分钟和漏斗窗口相同时只查一次。
+		$visits = array( self::CARD_WINDOW => self::visit_counts( $now_ms, self::CARD_WINDOW, $filter ) );
+		if ( ! isset( $visits[ $funnel ] ) ) {
+			$visits[ $funnel ] = self::visit_counts( $now_ms, $funnel, $filter );
+		}
+
+		// 卡片：10 分钟窗口的订单（整秒）和事件。
+		$card_orders = self::order_numbers( $filter->orders( $sec - self::CARD_WINDOW * 60 + 1, $sec + 1 ) );
+		$card_window = self::window_ms( $now_ms, self::CARD_WINDOW );
+		$cards       = array(
+			'window'          => self::CARD_WINDOW,
+			'visitors'        => $visits[ self::CARD_WINDOW ]['visitors'],
+			'pageviews'       => self::count_page_views( $card_window[0], $card_window[1], $filter ),
+			'orders'          => $card_orders['orders'],
+			'sales'           => $card_orders['sales'],
+			'units_per_order' => $card_orders['orders'] ? round( $card_orders['units'] / $card_orders['orders'], 2 ) : 0.0,
+			'aov'             => $card_orders['orders'] ? round( $card_orders['sales'] / $card_orders['orders'], 2 ) : 0.0,
+		);
+
+		// 今日：筛选访问及原生创建期订单，金融数字复用同一原生辅助函数。
+		$day_counts = self::cohort_counts( $day_ms[0], $day_ms[1], $filter );
+		$numbers = self::order_numbers( $filter->orders( $day[0], $day[1] ) );
+		$kpis = array( 'visitors' => $day_counts['visitors'], 'orders' => $numbers['orders'], 'sales' => $numbers['sales'], 'items' => $numbers['units'], 'aov' => $numbers['orders'] ? round( $numbers['sales'] / $numbers['orders'], 2 ) : 0.0 );
+		$today  = array(
+			'visitors'        => (int) $kpis['visitors'],
+			'pageviews'       => self::count_page_views( $day_ms[0], $day_ms[1], $filter ),
+			'orders'          => (int) $kpis['orders'],
+			'sales'           => (float) $kpis['sales'],
+			'units_per_order' => (int) $kpis['orders'] ? round( (int) $kpis['items'] / (int) $kpis['orders'], 2 ) : 0.0,
+			'aov'             => (float) $kpis['aov'],
+		);
+
+		return array(
+			'filter' => $filter->normalized(),
+			'now_ms'   => $now_ms,
+			'visitor_funnel' => ( new Visitor_Funnel() )->period( self::window_ms( $now_ms, $funnel )[0], $now_ms + 1, 'last_ms', '', $now_ms, $filter )['overall'] + array( 'window' => $funnel ),
+			'updated'  => wp_date( 'Y-m-d H:i:s', $sec ),
+			'tracking' => Schema::installed(),
+			'cards'    => $cards,
+			'today'    => $today,
+			'funnel'   => array(
+				'window' => $funnel,
+				'layers' => Operations::layers( $visits[ $funnel ] ),
+			),
+			'minutes'  => array(
+				'window' => $minutes,
+				'points' => self::per_minute( $now_ms, $minutes, $filter ),
+			),
+			'lists'    => array(
+				'viewed' => self::top_products( 'product_view', $day_ms[0], $day_ms[1], $filter ),
+				'carted' => self::top_products( 'add_to_cart', $day_ms[0], $day_ms[1], $filter ),
+				'sold'   => self::top_sold( $filter->orders( $day[0], $day[1] ) ),
+				'pages'  => self::top_pages( $day_ms[0], $day_ms[1], false, $filter ),
+			),
+			'links'    => array(
+				'products' => '',
+				'pages'    => '',
+			),
+		);
+	}
+
+	public static function filtered_history( array $range, Realtime_Filter $filter ): array {
+		if ( $filter->is_all() ) { return self::history( $range ); }
+		$filter = $filter->at( (int) $range['to'] * 1000 ); $filter->require_ready();
+		global $wpdb;
+		$from = (int) $range['from'];
+		$to   = (int) $range['to'];
+		$fm   = $from * 1000;
+		$tm   = $to * 1000;
+		$counts = self::cohort_counts( $fm, $tm, $filter );
+		$orders = $filter->orders( $from, $to );
+		$numbers = self::order_numbers( $orders );
+		$query = $range['preset'] ? array( 'range' => $range['preset'] ) : array( 'from' => $range['dates']['from'], 'to' => $range['dates']['to'] );
+		return array(
+			'filter' => $filter->normalized(),
+			'mode'     => 'history',
+			'visitor_funnel' => ( new Visitor_Funnel() )->period( $fm, $tm, 'start_ms', '', null, $filter )['overall'],
+			'range'    => array_intersect_key( $range, array_flip( array( 'preset', 'from', 'to', 'days', 'bucket' ) ) ) + array( 'dates' => array( 'from' => $range['dates']['from'], 'to' => $range['dates']['to'] ), 'timezone' => wp_timezone_string() ),
+			'updated'  => wp_date( 'Y-m-d H:i:s' ),
+			'tracking' => Schema::installed(),
+			'cards'    => array(
+				'visitors' => $counts['visitors'],
+				'pageviews' => self::count_page_views( $fm, $tm, $filter ),
+				'orders' => $numbers['orders'],
+				'sales' => $numbers['sales'],
+				'units_per_order' => $numbers['orders'] ? round( $numbers['units'] / $numbers['orders'], 2 ) : 0.0,
+				'aov' => $numbers['orders'] ? round( $numbers['sales'] / $numbers['orders'], 2 ) : 0.0,
+			),
+			'funnel' => array( 'layers' => Operations::layers( $counts ) ),
+			'series' => self::history_series( $range, $filter ),
+			'lists' => array(
+				'viewed' => self::top_products( 'product_view', $fm, $tm, $filter ),
+				'carted' => self::top_products( 'add_to_cart', $fm, $tm, $filter ),
+				'sold' => self::top_sold( $orders ),
+				'pages' => self::top_pages( $fm, $tm, true, $filter ),
+			),
+			'links' => array(
+				'products' => '',
+				'pages' => '',
+			),
+		);
+	}
+
+
+	/** Active visit-start cohort. Default reports keep their original readers/SQL. */
+	private static function cohort_counts( int $from, int $to, Realtime_Filter $filter ): array {
+		global $wpdb;
+		$visits = Schema::table( 'visits' ); $predicate = $filter->visit_sql();
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT COUNT(DISTINCT visitor_id) AS visitors, COUNT(DISTINCT CASE WHEN stage >= 1 THEN visitor_id END) AS viewed, COUNT(DISTINCT CASE WHEN stage >= 2 THEN visitor_id END) AS carted, COUNT(DISTINCT CASE WHEN stage >= 3 THEN visitor_id END) AS checkout, COUNT(DISTINCT CASE WHEN stage >= 5 THEN visitor_id END) AS paid FROM {$visits} WHERE start_ms >= %d AND start_ms < %d AND {$predicate}", $from, $to ), ARRAY_A );
+		if ( $wpdb->last_error ) { throw new \RuntimeException( 'Filtered cohort unavailable.' ); }
+		$out = array_fill_keys( Operations::LAYERS, 0 ); foreach ( $out as $key => $zero ) { $out[ $key ] = (int) $row[ $key ]; } return $out;
 	}
 
 	/**
@@ -161,6 +286,149 @@ final class Realtime {
 			'funnel'  => (int) $funnel,
 			'minutes' => (int) $minutes,
 		);
+	}
+
+	/** History validates raw keys before the shared range parser can default empty values. */
+	public static function history_params( array $params, ?int $now = null ) {
+		$errors = array();
+		$custom = array_key_exists( 'from', $params ) || array_key_exists( 'to', $params );
+		foreach ( array( 'range', 'from', 'to' ) as $key ) {
+			if ( array_key_exists( $key, $params ) && ! is_scalar( $params[ $key ] ) ) {
+				$errors[ $key ] = 'invalid_format';
+			}
+		}
+		if ( array_key_exists( 'range', $params ) && ! isset( $errors['range'] ) && ! in_array( trim( (string) $params['range'] ), Range::PRESETS, true ) ) {
+			$errors['range'] = 'invalid_format';
+		}
+		if ( $custom ) {
+			foreach ( array( 'from', 'to' ) as $key ) {
+				if ( ! isset( $errors[ $key ] ) && ( ! array_key_exists( $key, $params ) || '' === trim( (string) $params[ $key ] ) ) ) {
+					$errors[ $key ] = 'required';
+				}
+			}
+		}
+		if ( $errors ) {
+			return Errors::invalid( $errors );
+		}
+		return Range::from_params( array_intersect_key( $params, array_flip( array( 'range', 'from', 'to' ) ) ), $now );
+	}
+
+	/** Additive ranged adapter; old list helpers and their eligibility remain authoritative. */
+	public static function ranged_list( string $kind, int $from_ms, int $to_ms, ?Realtime_Filter $filter = null ): array {
+		global $wpdb;
+		$predicate = $filter ? ' AND ' . $filter->event_sql() : '';
+		if ( ! in_array( $kind, array( 'viewed', 'carted', 'sold', 'pages' ), true ) || $from_ms >= $to_ms ) { throw new \InvalidArgumentException( 'Invalid realtime list range.' ); }
+		if ( 'sold' === $kind ) {
+			$orders = $filter ? $filter->orders( (int) ceil( $from_ms / 1000 ), (int) ceil( $to_ms / 1000 ) ) : self::real_orders( Operations::paid_orders( (int) ceil( $from_ms / 1000 ), (int) ceil( $to_ms / 1000 ) ) );
+			$units = array();
+			foreach ( $orders as $order ) {
+				foreach ( $order->get_items() as $item ) {
+					if ( ! $item instanceof \WC_Order_Item_Product ) { continue; }
+					$id = (int) $item->get_product_id();
+					if ( $id > 0 ) { $units[ $id ] = ( $units[ $id ] ?? 0 ) + (int) $item->get_quantity() - abs( (int) $order->get_qty_refunded_for_item( $item->get_id() ) ); }
+				}
+			}
+			return array( 'rows' => self::top_sold( $orders ), 'total_rows' => count( array_filter( $units, static fn( int $n ): bool => $n > 0 ) ) );
+		}
+		if ( ! Schema::installed() ) { throw new \RuntimeException( 'Tracking tables are unavailable.' ); }
+		$table = Schema::table( 'events' );
+		if ( 'pages' === $kind ) {
+			$total = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM (SELECT path FROM {$table} WHERE type = 'page_view' AND path <> '' AND occurred_ms >= %d AND occurred_ms < %d{$predicate} GROUP BY path) AS paths", $from_ms, $to_ms ) );
+			if ( $wpdb->last_error ) { throw new \RuntimeException( 'Page list query failed.' ); }
+			return array( 'rows' => self::top_pages( $from_ms, $to_ms, true, $filter ), 'total_rows' => (int) $total );
+		}
+		$type = 'viewed' === $kind ? 'product_view' : 'add_to_cart';
+		$total = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(DISTINCT product_id) FROM {$table} WHERE type = %s AND product_id > 0 AND occurred_ms >= %d AND occurred_ms < %d{$predicate}", $type, $from_ms, $to_ms ) );
+		if ( $wpdb->last_error ) { throw new \RuntimeException( 'Product list query failed.' ); }
+		return array( 'rows' => self::top_products( $type, $from_ms, $to_ms, $filter ), 'total_rows' => (int) $total );
+	}
+
+	/**
+	 * Calendar history, [from,to) in the shop timezone. Visitors/funnel/chart share
+	 * the visit-start cohort (distinct visitors, never a sum of bucket UV). Events
+	 * use occurred_ms; paid non-test orders use creation time and current refunds.
+	 * Funnel paid visitors are independent of the native paid-order card count.
+	 * Paid orders are fetched once; this path does not query buyer history.
+	 */
+	public static function history( array $range ): array {
+		global $wpdb;
+		$from = (int) $range['from'];
+		$to   = (int) $range['to'];
+		$fm   = $from * 1000;
+		$tm   = $to * 1000;
+		$counts = array_fill_keys( Operations::LAYERS, 0 );
+		if ( Schema::installed() ) {
+			$visits = Schema::table( 'visits' );
+			$row = $wpdb->get_row( $wpdb->prepare( "SELECT COUNT(DISTINCT visitor_id) AS visitors, COUNT(DISTINCT CASE WHEN stage >= 1 THEN visitor_id END) AS viewed, COUNT(DISTINCT CASE WHEN stage >= 2 THEN visitor_id END) AS carted, COUNT(DISTINCT CASE WHEN stage >= 3 THEN visitor_id END) AS checkout, COUNT(DISTINCT CASE WHEN stage >= 5 THEN visitor_id END) AS paid FROM {$visits} WHERE start_ms >= %d AND start_ms < %d", $fm, $tm ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			foreach ( $counts as $key => $zero ) {
+				$counts[ $key ] = (int) ( $row[ $key ] ?? 0 );
+			}
+		}
+		$orders = self::real_orders( Operations::paid_orders( $from, $to ) );
+		$numbers = self::order_numbers( $orders );
+		$query = $range['preset'] ? array( 'range' => $range['preset'] ) : array( 'from' => $range['dates']['from'], 'to' => $range['dates']['to'] );
+		return array(
+			'mode'     => 'history',
+			'visitor_funnel' => ( new Visitor_Funnel() )->period( $fm, $tm )['overall'],
+			'range'    => array_intersect_key( $range, array_flip( array( 'preset', 'from', 'to', 'days', 'bucket' ) ) ) + array( 'dates' => array( 'from' => $range['dates']['from'], 'to' => $range['dates']['to'] ), 'timezone' => wp_timezone_string() ),
+			'updated'  => wp_date( 'Y-m-d H:i:s' ),
+			'tracking' => Schema::installed(),
+			'cards'    => array(
+				'visitors' => $counts['visitors'],
+				'pageviews' => self::count_page_views( $fm, $tm ),
+				'orders' => $numbers['orders'],
+				'sales' => $numbers['sales'],
+				'units_per_order' => $numbers['orders'] ? round( $numbers['units'] / $numbers['orders'], 2 ) : 0.0,
+				'aov' => $numbers['orders'] ? round( $numbers['sales'] / $numbers['orders'], 2 ) : 0.0,
+			),
+			'funnel' => array( 'layers' => Operations::layers( $counts ) ),
+			'series' => self::history_series( $range ),
+			'lists' => array(
+				'viewed' => self::top_products( 'product_view', $fm, $tm ),
+				'carted' => self::top_products( 'add_to_cart', $fm, $tm ),
+				'sold' => self::top_sold( $orders ),
+				'pages' => self::top_pages( $fm, $tm, true ),
+			),
+			'links' => array(
+				'products' => add_query_arg( $query, admin_url( 'admin.php?page=pc-data-products' ) ),
+				'pages' => add_query_arg( $query, admin_url( 'admin.php?page=pc-data-pages' ) ),
+			),
+		);
+	}
+
+	/** At most 366 aggregate rows, one SQL query, no raw visitor IDs or per-bucket queries. */
+	private static function history_series( array $range, ?Realtime_Filter $filter = null ): array {
+		global $wpdb;
+		$predicate = $filter ? ' AND ' . $filter->visit_sql() : '';
+		$from = (int) $range['from'];
+		$to = (int) $range['to'];
+		$hour = 'hour' === $range['bucket'];
+		$points = array();
+		$day = ( new \DateTimeImmutable( '@' . $from ) )->setTimezone( wp_timezone() );
+		for ( $start = $from; $start < $to; $start = $next ) {
+			$next = $hour ? $start + HOUR_IN_SECONDS : $day->modify( '+1 day' )->getTimestamp();
+			$points[] = array( 'start' => $start, 'end' => min( $next, $to ), 'label' => wp_date( $hour ? 'H:i T' : 'Y-m-d', $start ), 'visitors' => 0 );
+			$day = $day->modify( '+1 day' );
+		}
+		if ( $points && Schema::installed() ) {
+			$cases = array();
+			$args = array();
+			foreach ( $points as $i => $point ) {
+				$cases[] = 'WHEN start_ms < %d THEN %d';
+				$args[] = $point['end'] * 1000;
+				$args[] = $i;
+			}
+			$args[] = $from * 1000;
+			$args[] = $to * 1000;
+			$visits = Schema::table( 'visits' );
+			$case = implode( ' ', $cases );
+			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT CASE {$case} END AS bucket, COUNT(DISTINCT visitor_id) AS visitors FROM {$visits} WHERE start_ms >= %d AND start_ms < %d{$predicate} GROUP BY bucket", $args ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			foreach ( (array) $rows as $row ) {
+				$points[ (int) $row['bucket'] ]['visitors'] = (int) $row['visitors'];
+			}
+		}
+		if ( $filter && $wpdb->last_error ) { throw new \RuntimeException( 'Filtered series unavailable.' ); }
+		return array( 'bucket' => $range['bucket'], 'points' => $points );
 	}
 
 	/**
@@ -211,8 +479,9 @@ final class Realtime {
 	 *
 	 * @return array{visitors:int,viewed:int,carted:int,checkout:int,paid:int}
 	 */
-	private static function visit_counts( int $now_ms, int $minutes ): array {
+	private static function visit_counts( int $now_ms, int $minutes, ?Realtime_Filter $filter = null ): array {
 		global $wpdb;
+		$predicate = $filter ? ' AND ' . $filter->visit_sql() : '';
 		$out = array(
 			'visitors' => 0,
 			'viewed'   => 0,
@@ -225,23 +494,27 @@ final class Realtime {
 		}
 		$visits = Schema::table( 'visits' );
 		$w      = self::window_ms( $now_ms, $minutes );
-		$row    = $wpdb->get_row( $wpdb->prepare( "SELECT COUNT(DISTINCT visitor_id) AS visitors, COUNT(DISTINCT CASE WHEN stage >= 1 THEN visitor_id END) AS viewed, COUNT(DISTINCT CASE WHEN stage >= 2 THEN visitor_id END) AS carted, COUNT(DISTINCT CASE WHEN stage >= 3 THEN visitor_id END) AS checkout, COUNT(DISTINCT CASE WHEN stage >= 5 THEN visitor_id END) AS paid FROM {$visits} WHERE last_ms >= %d AND last_ms < %d", $w[0], $w[1] ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		$row    = $wpdb->get_row( $wpdb->prepare( "SELECT COUNT(DISTINCT visitor_id) AS visitors, COUNT(DISTINCT CASE WHEN stage >= 1 THEN visitor_id END) AS viewed, COUNT(DISTINCT CASE WHEN stage >= 2 THEN visitor_id END) AS carted, COUNT(DISTINCT CASE WHEN stage >= 3 THEN visitor_id END) AS checkout, COUNT(DISTINCT CASE WHEN stage >= 5 THEN visitor_id END) AS paid FROM {$visits} WHERE last_ms >= %d AND last_ms < %d{$predicate}", $w[0], $w[1] ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		if ( is_array( $row ) ) {
 			foreach ( array_keys( $out ) as $key ) {
 				$out[ $key ] = (int) $row[ $key ];
 			}
 		}
+		if ( $filter && $wpdb->last_error ) { throw new \RuntimeException( 'Filtered query unavailable.' ); }
 		return $out;
 	}
 
 	/** page_view 事件数，occurred_ms 在 [from, to)（毫秒）里；表没装时 0。 */
-	private static function count_page_views( int $from_ms, int $to_ms ): int {
+	private static function count_page_views( int $from_ms, int $to_ms, ?Realtime_Filter $filter = null ): int {
 		global $wpdb;
+		$predicate = $filter ? ' AND ' . $filter->event_sql() : '';
 		if ( ! Schema::installed() ) {
 			return 0;
 		}
 		$events = Schema::table( 'events' );
-		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$events} WHERE type = 'page_view' AND occurred_ms >= %d AND occurred_ms < %d", $from_ms, $to_ms ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		$count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$events} WHERE type = 'page_view' AND occurred_ms >= %d AND occurred_ms < %d{$predicate}", $from_ms, $to_ms ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		if ( $filter && $wpdb->last_error ) { throw new \RuntimeException( 'Filtered page views unavailable.' ); }
+		return $count;
 	}
 
 	/**
@@ -249,15 +522,16 @@ final class Realtime {
 	 *
 	 * @return array<int,array{ago:int,visitors:int}>
 	 */
-	private static function per_minute( int $now_ms, int $minutes ): array {
+	private static function per_minute( int $now_ms, int $minutes, ?Realtime_Filter $filter = null ): array {
 		global $wpdb;
+		$predicate = $filter ? ' AND ' . $filter->event_sql() : '';
 		$by_ago = array();
 		if ( Schema::installed() ) {
 			$events = Schema::table( 'events' );
 			$types  = self::activity_types();
 			$marks  = implode( ', ', array_fill( 0, count( $types ), '%s' ) );
 			// 差值先转成有符号数再相减（occurred_ms 是无符号的，负数时 MySQL 会报“超出范围”）。
-			$sql  = "SELECT FLOOR( ( %d - CAST( occurred_ms AS SIGNED ) ) / 60000 ) AS ago, COUNT( DISTINCT visitor_id ) AS visitors FROM {$events} WHERE type IN ( {$marks} ) AND occurred_ms > %d AND occurred_ms <= %d GROUP BY ago";
+			$sql  = "SELECT FLOOR( ( %d - CAST( occurred_ms AS SIGNED ) ) / 60000 ) AS ago, COUNT( DISTINCT visitor_id ) AS visitors FROM {$events} WHERE type IN ( {$marks} ) AND occurred_ms > %d AND occurred_ms <= %d{$predicate} GROUP BY ago";
 			$args = array_merge( array( $now_ms ), $types, array( $now_ms - $minutes * 60000, $now_ms ) );
 			$rows = $wpdb->get_results( $wpdb->prepare( $sql, $args ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 			foreach ( (array) $rows as $row ) {
@@ -272,6 +546,7 @@ final class Realtime {
 				'visitors' => $by_ago[ $ago ] ?? 0,
 			);
 		}
+		if ( $filter && $wpdb->last_error ) { throw new \RuntimeException( 'Filtered series unavailable.' ); }
 		return $points;
 	}
 
@@ -281,17 +556,19 @@ final class Realtime {
 	 * @param string $type product_view 或 add_to_cart（本类传入的固定值）。
 	 * @return array<int,array{id:int,name:string,count:int,edit_url:string}>
 	 */
-	private static function top_products( string $type, int $from_ms, int $to_ms ): array {
+	private static function top_products( string $type, int $from_ms, int $to_ms, ?Realtime_Filter $filter = null ): array {
 		global $wpdb;
+		$predicate = $filter ? ' AND ' . $filter->event_sql() : '';
 		if ( ! Schema::installed() ) {
 			return array();
 		}
 		$events = Schema::table( 'events' );
-		$rows   = $wpdb->get_results( $wpdb->prepare( "SELECT product_id, COUNT(*) AS cnt FROM {$events} WHERE type = %s AND product_id > 0 AND occurred_ms >= %d AND occurred_ms < %d GROUP BY product_id ORDER BY cnt DESC, product_id ASC LIMIT %d", $type, $from_ms, $to_ms, self::LIST_SIZE ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		$rows   = $wpdb->get_results( $wpdb->prepare( "SELECT product_id, COUNT(*) AS cnt FROM {$events} WHERE type = %s AND product_id > 0 AND occurred_ms >= %d AND occurred_ms < %d{$predicate} GROUP BY product_id ORDER BY cnt DESC, product_id ASC LIMIT %d", $type, $from_ms, $to_ms, self::LIST_SIZE ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		$out    = array();
 		foreach ( (array) $rows as $row ) {
 			$out[] = self::product_entry( (int) $row['product_id'], (int) $row['cnt'] );
 		}
+		if ( $filter && $wpdb->last_error ) { throw new \RuntimeException( 'Filtered query unavailable.' ); }
 		return $out;
 	}
 
@@ -336,13 +613,15 @@ final class Realtime {
 	 *
 	 * @return array<int,array{path:string,url:string,count:int}>
 	 */
-	private static function top_pages( int $from_ms, int $to_ms ): array {
+	private static function top_pages( int $from_ms, int $to_ms, bool $bounded = false, ?Realtime_Filter $filter = null ): array {
 		global $wpdb;
+		$predicate = $filter ? ' AND ' . $filter->event_sql() : '';
 		if ( ! Schema::installed() ) {
 			return array();
 		}
 		$events = Schema::table( 'events' );
-		$rows   = $wpdb->get_results( $wpdb->prepare( "SELECT path, COUNT(*) AS cnt FROM {$events} WHERE type = 'page_view' AND path <> '' AND occurred_ms >= %d AND occurred_ms < %d GROUP BY path", $from_ms, $to_ms ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		$limit = $bounded ? ' ORDER BY cnt DESC, BINARY path ASC LIMIT ' . self::LIST_SIZE : '';
+		$rows   = $wpdb->get_results( $wpdb->prepare( "SELECT path, COUNT(*) AS cnt FROM {$events} WHERE type = 'page_view' AND path <> '' AND occurred_ms >= %d AND occurred_ms < %d{$predicate} GROUP BY path{$limit}", $from_ms, $to_ms ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		$pages  = array();
 		foreach ( (array) $rows as $row ) {
 			$pages[] = array(
@@ -370,6 +649,7 @@ final class Realtime {
 				'count' => $page['count'],
 			);
 		}
+		if ( $filter && $wpdb->last_error ) { throw new \RuntimeException( 'Filtered query unavailable.' ); }
 		return $out;
 	}
 

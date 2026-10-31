@@ -54,6 +54,9 @@ final class Operations {
 	public static function summary( array $range ): array {
 		$current  = self::period( (int) $range['from'], (int) $range['to'] );
 		$previous = self::period( (int) $range['compare_from'], (int) $range['compare_to'] );
+		$reader = new Visitor_Funnel();
+		$detail = $reader->period( (int) $range['from'] * 1000, (int) $range['to'] * 1000 );
+		$before = $reader->period( (int) $range['compare_from'] * 1000, (int) $range['compare_to'] * 1000 );
 
 		$change = array();
 		foreach ( self::KPIS as $key ) {
@@ -76,6 +79,8 @@ final class Operations {
 			'funnel'      => self::compare( $current['funnel'], $previous['funnel'] ),
 			'returning'   => self::compare( $current['returning'], $previous['returning'] ),
 			'test_orders' => $current['test_orders'],
+			'visitor_funnel' => Visitor_Funnel::compare( $detail['overall'], $before['overall'] ),
+			'returning_visitor_funnel' => Visitor_Funnel::compare( $detail['returning'], $before['returning'] ),
 		);
 	}
 

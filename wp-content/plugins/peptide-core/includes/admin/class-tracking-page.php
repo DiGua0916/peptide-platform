@@ -83,6 +83,14 @@ final class Tracking_Page {
 
 	private static function strings(): array {
 		return array(
+			'pageKind' => __( 'Page kind', 'peptide-core' ),
+			'collectionId' => __( 'Collection ID', 'peptide-core' ),
+			'countryObservation' => __( 'Country observation', 'peptide-core' ),
+			'sourceReported' => __( 'Source reported', 'peptide-core' ),
+			'entryHost' => __( 'Entry host', 'peptide-core' ),
+			'notObservedKey' => __( 'Key absent', 'peptide-core' ),
+			'observedEmpty' => __( 'Observed empty', 'peptide-core' ),
+			'referrerHost' => __( 'Referrer host', 'peptide-core' ),
 			'active'      => __( 'Active', 'peptide-core' ),
 			'idle'        => __( 'Idle', 'peptide-core' ),
 			'away'        => __( 'No signal (away)', 'peptide-core' ),

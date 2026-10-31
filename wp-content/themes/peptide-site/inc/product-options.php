@@ -1,15 +1,20 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-add_action( 'wp_enqueue_scripts', function () {
-    if ( ! function_exists( 'is_product' ) || ! is_product() ) { return; }
+/** Both callers use the same existing files; only a real showcase form opts in off the PDP. */
+function vc_enqueue_product_options( $product ): void {
     $root = get_template_directory_uri();
     wp_enqueue_style( 'vialcove-product-options', $root . '/assets/product-options.css', array( 'vialcove-navigation' ), (string) filemtime( __DIR__ . '/../assets/product-options.css' ) );
-    $product = wc_get_product( get_queried_object_id() );
     if ( $product && $product->is_type( 'variable' ) ) {
         wp_enqueue_script( 'vialcove-product-options', $root . '/assets/product-options.js', array( 'jquery', 'wc-add-to-cart-variation' ), (string) filemtime( __DIR__ . '/../assets/product-options.js' ), true );
     }
+}
+
+add_action( 'wp_enqueue_scripts', function () {
+    if ( ! function_exists( 'is_product' ) || ! is_product() ) { return; }
+    vc_enqueue_product_options( wc_get_product( get_queried_object_id() ) );
 }, 20 );
+add_action( 'peptide_core_showcase_quick_view_assets', 'vc_enqueue_product_options' );
 
 // Single-spec products have no variation selector. Surface the published Pack
 // from the plugin's public product extension without inventing another option.

@@ -23,6 +23,8 @@
 	// 和 Operations::KPIS / LAYERS 的顺序一致（Shopname 的卡片顺序）。
 	var KPIS = [ 'sales', 'visitors', 'registered', 'orders', 'conversion', 'aov', 'items', 'net_item_sales', 'refunds', 'avg_duration', 'customers', 'mobile' ];
 	var LAYERS = [ 'visitors', 'viewed', 'carted', 'checkout', 'paid' ];
+	var DETAIL_LAYERS = [ 'visitors', 'viewed', 'carted', 'checkout', 'address', 'shipping', 'payment', 'paid' ];
+	var expanded = { visitor: false, returning: false };
 	var MONEY = { sales: true, aov: true, net_item_sales: true, refunds: true };
 	// 九张趋势图，顺序 = Shopname 的顺序：key 是趋势接口里的指标，title / help 是 strings 的 key，kind 决定纵轴和数值的格式。
 	var TRENDS = [
@@ -48,6 +50,7 @@
 
 	// 请求计数：切换时间段后，旧请求晚到的结果不再画。
 	var requests = 0;
+	var disposePreviousRankings = null;
 
 	// 把文字里的占位符换成值（用 split / join，不用 replace：值里的 $ 不会被当成特殊符号）。
 	function fill( text, map ) {
@@ -138,28 +141,39 @@
 		return text;
 	}
 
-	function funnel( title, block, ctx ) {
+	function funnel( title, block, ctx, id ) {
 		var esc = ctx.esc;
-		var cur = block.current || [];
-		var prev = block.previous || [];
+		var detailed = block.unit === 'visitors' && block.current && block.current.length === 8;
+		var keys = detailed && expanded[ id ] ? DETAIL_LAYERS : LAYERS;
+		function project( values ) {
+			var byKey = {};
+			( values || [] ).forEach( function ( value ) { byKey[ value.key ] = value; } );
+			return keys.map( function ( key, index ) {
+				var value = byKey[ key ] || { count: 0, visitor_rate: null };
+				var previous = index ? byKey[ keys[ index - 1 ] ] : null;
+				return { count: value.count, visitor_rate: value.visitor_rate, step_rate: previous && previous.count ? Math.round( value.count / previous.count * 10000 ) / 100 : null };
+			} );
+		}
+		var cur = project( block.current );
+		var prev = project( block.previous );
 		var change = block.change || {};
 		var last = cur[ cur.length - 1 ] || {};
 		var prevLast = prev[ prev.length - 1 ] || {};
 
-		var bars = LAYERS.map( function ( key, i ) {
+		var bars = keys.map( function ( key, i ) {
 			var layer = cur[ i ] || { count: 0, visitor_rate: null };
 			var width = isNum( layer.visitor_rate ) ? Math.max( 0, Math.min( 100, Number( layer.visitor_rate ) ) ) : 0;
 			return '<div class="pc-ops-step">' +
-				'<span class="pc-ops-step__label">' + esc( T[ key ] ) + '</span>' +
+				'<span class="pc-ops-step__label">' + esc( T[ detailed && key === 'paid' ? 'paidVisitors' : key ] ) + '</span>' +
 				'<span class="pc-ops-bar"><span class="pc-ops-bar__fill" style="width:' + esc( width ) + '%"></span></span>' +
 				'<span class="pc-ops-step__count">' + esc( ctx.number( layer.count ) ) + '</span>' +
 				'<span class="pc-ops-step__rate">' + esc( fill( T.ofVisitors, { '%s': pct( layer.visitor_rate ) } ) ) + '</span>' +
 			'</div>';
 		} );
 
-		var rows = LAYERS.map( function ( key, i ) {
+		var rows = keys.map( function ( key, i ) {
 			return '<tr>' +
-				'<th scope="row">' + esc( T[ key ] ) + '</th>' +
+				'<th scope="row">' + esc( T[ detailed && key === 'paid' ? 'paidVisitors' : key ] ) + '</th>' +
 				'<td>' + esc( countWithStep( cur[ i ], ctx ) ) + '</td>' +
 				'<td>' + esc( countWithStep( prev[ i ], ctx ) ) + '</td>' +
 				'<td>' + changeHtml( change[ key ], ctx, 'pc-ops-change' ) + '</td>' +
@@ -171,7 +185,9 @@
 				' <span class="pc-ops-funnel__rate">' + esc( pct( last.visitor_rate ) ) + '</span>' +
 				' <span class="pc-ops-muted">' + esc( ctx.strings.vs + ' ' + pct( prevLast.visitor_rate ) ) + '</span>' +
 			'</h2>' +
-			'<div class="pc-ops-steps">' + bars.join( '' ) + '</div>' +
+			'<p class="pc-ops-detail-help">' + esc( detailed ? T.detailHelp : T.detailUnavailable ) + '</p>' +
+			( detailed ? '<button type="button" class="button pc-ops-detail-toggle" data-funnel-toggle="' + esc( id ) + '" aria-expanded="' + ( expanded[ id ] ? 'true' : 'false' ) + '" aria-controls="pc-ops-detail-' + esc( id ) + '">' + esc( expanded[ id ] ? T.hideDetails : T.viewDetails ) + '</button>' : '' ) +
+			'<div id="pc-ops-detail-' + esc( id ) + '"><div class="pc-ops-steps">' + bars.join( '' ) + '</div>' +
 			'<div class="pc-ops-table-wrap"><table class="pc-ops-table">' +
 				'<thead><tr>' +
 					'<th scope="col">' + esc( T.event ) + '</th>' +
@@ -180,7 +196,7 @@
 					'<th scope="col">' + esc( T.change ) + '</th>' +
 				'</tr></thead>' +
 				'<tbody>' + rows.join( '' ) + '</tbody>' +
-			'</table></div>' +
+			'</table></div></div>' +
 		'</section>';
 	}
 
@@ -412,7 +428,10 @@
 				'</tr></thead>' +
 				'<tbody>' + body + '</tbody>' +
 			'</table></div>' +
-			more +
+			'<div class="pc-ops-rank__actions">' + more +
+				'<span class="pc-ops-rank__count" data-rank-visible="' + esc( rows.length ) + '" data-rank-total="' + esc( table ? table.total_rows : 0 ) + '">' + esc( fill( T.rankShowing, { '%1$d': Math.min( RANK_SHOW, rows.length ), '%2$d': table ? table.total_rows : 0 } ) ) + '</span>' +
+				'<button type="button" class="button pc-ops-rank__open" data-rank-open="' + esc( name ) + '" aria-expanded="false" aria-label="' + esc( fill( T.rankOpenLabel, { '%s': title } ) ) + '">' + esc( T.rankOpen ) + '</button>' +
+			'</div>' +
 		'</div>';
 	}
 
@@ -421,19 +440,21 @@
 		return '<h2 class="pc-ops-rankings__title">' + ctx.esc( T.rankings ) + '</h2>' +
 			RANK_TABLES.map( function ( name ) {
 				return rankCard( name, tables[ name ], ctx );
-			} ).join( '' );
+			} ).join( '' ) + '<div class="pc-ranks-panel" hidden></div>';
 	}
 
 	// “查看更多” / “收起”：只切换卡片的 is-expanded 类、按钮的 aria-expanded 和文字，不重画卡片。
 	function toggleRank( box, e ) {
 		var btn = findAttr( e.target, 'data-rank-toggle', box );
-		var card = btn ? btn.parentNode : null;
+		var card = btn ? findAttr( btn, 'data-rank', box ) : null;
 		if ( ! card ) {
 			return;
 		}
 		var opening = 'true' !== btn.getAttribute( 'aria-expanded' );
 		btn.setAttribute( 'aria-expanded', opening ? 'true' : 'false' );
 		btn.textContent = opening ? T.rankLess : T.rankMore;
+		var count = card.querySelector( '[data-rank-total]' );
+		if ( count ) { count.textContent = fill( T.rankShowing, { '%1$d': opening ? Number( count.getAttribute( 'data-rank-visible' ) ) : Math.min( RANK_SHOW, Number( count.getAttribute( 'data-rank-visible' ) ) ), '%2$d': Number( count.getAttribute( 'data-rank-total' ) ) } ); }
 		if ( opening ) {
 			card.classList.add( 'is-expanded' );
 		} else {
@@ -451,8 +472,10 @@
 			html += '<p class="pc-ops-note">' + esc( fill( T.testOrders, { '%d': Number( data.test_orders ) } ) ) + '</p>';
 		}
 		html += kpis( data, ctx );
-		html += funnel( T.visitorFunnel, data.funnel || {}, ctx );
-		html += funnel( T.returningFunnel, data.returning || {}, ctx );
+		html += '<p class="pc-ops-detail-help">' + esc( T.orderVsVisitor ) + '</p>';
+		html += '<div data-funnel-slot="visitor">' + funnel( T.visitorFunnel, data.visitor_funnel || data.funnel || {}, ctx, 'visitor' ) + '</div>';
+		html += '<div data-funnel-slot="returning">' + funnel( T.returningFunnel, data.returning_visitor_funnel || data.returning || {}, ctx, 'returning' ) + '</div>';
+		html += '<section class="pc-ops-checkout-slot"></section>';
 		// 趋势图的位置：趋势数据到了再填（见 render）。
 		html += '<section class="pc-ops-trends" aria-live="polite"></section>';
 		// 排行表的位置：排行数据到了再填（见 render）。
@@ -462,11 +485,17 @@
 
 	function render( bodyEl, range, ctx ) {
 		var mine = ++requests;
+		if ( disposePreviousRankings ) { disposePreviousRankings(); }
+		var rankPanel = null, checkoutPanel = null, rangeBusy = false, unsubscribeRange = null;
+		disposePreviousRankings = function () { if ( rankPanel ) { rankPanel.dispose(); rankPanel = null; } if ( checkoutPanel ) { checkoutPanel.dispose(); checkoutPanel = null; } if ( unsubscribeRange ) { unsubscribeRange(); unsubscribeRange = null; } };
+		if ( typeof ctx.onRangeState === 'function' ) { unsubscribeRange = ctx.onRangeState( function ( on ) { rangeBusy = on; if ( rankPanel ) { rankPanel.setRangeBusy( on ); } if ( checkoutPanel ) { checkoutPanel.setRangeBusy( on ); } } ); }
 		var d = range.dates || {};
 		var params = range.preset ?
 			{ range: range.preset } :
 			{ from: d.from, to: d.to, compare_from: d.compare_from, compare_to: d.compare_to };
 		var failed = function () {
+			if ( rankPanel ) { rankPanel.dispose(); rankPanel = null; }
+			if ( checkoutPanel ) { checkoutPanel.dispose(); checkoutPanel = null; }
 			bodyEl.innerHTML = '<p class="pc-data-empty">' + ctx.esc( ctx.strings.loadError ) + '</p>';
 		};
 		// 三个请求的结果各自留着：运营数据画好页面（opsData），趋势数据到了（trends：{ data } 或 { error }），排行数据到了（rankings，同样）。
@@ -474,6 +503,17 @@
 		var opsData = null;
 		var trends = null;
 		var rankings = null;
+		var showCheckout = function () {
+			var slot = null;
+			try {
+				slot = opsData ? bodyEl.querySelector( '.pc-ops-checkout-slot' ) : null;
+				if ( ! slot ) { return; }
+				if ( checkoutPanel ) { checkoutPanel.dispose(); checkoutPanel = null; }
+				if ( window.PcDataOperationsCheckout && typeof window.PcDataOperationsCheckout.mount === 'function' ) {
+					checkoutPanel = window.PcDataOperationsCheckout.mount( slot, opsData.range, ctx, { strings: T.checkoutPanel, rangeBusy: rangeBusy } );
+				} else { slot.innerHTML = '<p class="pc-data-empty">' + ctx.esc( T.checkoutPanel ? T.checkoutPanel.error : ctx.strings.loadError ) + '</p>'; }
+			} catch ( ignored ) { if ( slot ) { slot.innerHTML = '<p class="pc-data-empty">' + ctx.esc( T.checkoutPanel ? T.checkoutPanel.error : ctx.strings.loadError ) + '</p>'; } }
+		};
 		var trendsFailed = function ( box ) {
 			box.innerHTML = '<p class="pc-data-empty">' + ctx.esc( T.trendsError ) + '</p>';
 		};
@@ -485,12 +525,14 @@
 			if ( ! box ) {
 				return;
 			}
+			if ( rankPanel ) { rankPanel.dispose(); rankPanel = null; }
 			if ( rankings.error ) {
 				rankingsFailed( box );
 				return;
 			}
 			try {
 				box.innerHTML = rankingsView( rankings.data, ctx );
+				if ( window.PcDataRankings ) { rankPanel = window.PcDataRankings.mount( box, rankings.data, ctx, { strings: T, rangeBusy: rangeBusy, rankLabel: rankLabel, rankValue: rankValue } ); }
 				box.addEventListener( 'click', function ( e ) {
 					toggleRank( box, e );
 				} );
@@ -523,10 +565,22 @@
 				try {
 					bodyEl.innerHTML = view( data, ctx );
 					opsData = data;
+					var box = bodyEl.querySelector( '.pc-ops' );
+					box.addEventListener( 'click', function ( event ) {
+						var button = findAttr( event.target, 'data-funnel-toggle', box );
+						if ( ! button ) { return; }
+						var id = button.getAttribute( 'data-funnel-toggle' );
+						if ( id !== 'visitor' && id !== 'returning' ) { return; }
+						expanded[ id ] = ! expanded[ id ];
+						var slot = box.querySelector( '[data-funnel-slot="' + id + '"]' );
+						slot.innerHTML = funnel( id === 'visitor' ? T.visitorFunnel : T.returningFunnel, id === 'visitor' ? data.visitor_funnel : data.returning_visitor_funnel, ctx, id );
+						slot.querySelector( '[data-funnel-toggle]' ).focus();
+					} );
 				} catch ( e ) {
 					failed();
 					return;
 				}
+				showCheckout();
 				showTrends();
 				showRankings();
 			},

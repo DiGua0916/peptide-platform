@@ -11829,3 +11829,611 @@ msgstr ""
 #: includes/payments/class-local-payments.php:20
 msgid "Local test payment only. No charge will be made."
 msgstr ""
+#: includes/admin/class-data-pages.php
+msgid "The visitor map, countries, sources and collections need data that is not collected yet."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Query"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Custom dates"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Selected period"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Period visits"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Period sales"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Period buying power"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Visitor behaviour in this period"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Visitors by visit start time"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Most viewed products in this period"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Most added to cart in this period"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Best sellers in this period"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Popular pages in this period"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "History updates when you query or refresh."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Enter valid start and end dates in order, up to 366 days."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Visitors, funnel and chart use visits that started in this period. A visitor counts once in the period and once in each chart bucket they visited. Page views use event time. Paid orders use creation time, exclude test orders and subtract current refunds. Completed payment counts visitors in the funnel, and orders in the cards."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Address completed"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Payment selected"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Paying visitors"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Paying visitor conversion rate"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Hide details"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "The KPI conversion rate counts paid orders per visitor. These funnels count paying visitors per visitor; one customer can place several orders."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Each step counts distinct visitors in the selected visit cohort. Payment requires a recorded server confirmation. Optional steps, default selections and missing historical observations can make steps noncumulative. Missing observations are not backfilled. Sales and order cards count orders separately."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Detailed visitor steps are unavailable in this response. The legacy five-step report is shown; its paid count may use orders."
+msgstr ""
+
+#. translators: %s: metric name
+#: includes/admin/class-data-pages.php
+msgid "Move %s up"
+msgstr ""
+
+#. translators: %s: metric name
+#: includes/admin/class-data-pages.php
+msgid "Move %s down"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Export CSV"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Preparing CSV…"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "CSV download started."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "CSV could not be downloaded. Try again, or refresh the page if your session expired."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Export all matching products and their data-bearing variations, including collapsed variations."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Export all matching page paths, across every result page."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Showing %1$d of %2$d"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Open full results"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Open full results: %s"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Close full results"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Search ranking names or keys"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "%d matching rows"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Retry"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Percentage points"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Export every matching ranking row, across all result pages."
+msgstr ""
+
+#: includes/data/class-report-exports.php
+msgid "Conversion export is unavailable. Refresh the report and try again."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Export all results in the selected grouping, eight visitor steps, both transition views, observed visits and payment channels. Group figures cover the current period only."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Show allowed URL parameters"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Source unknown"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Applying date range…"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Groups use the first successfully captured entry host, path and allowed utm_source/utm_medium values. Query value case is preserved. Visits without this observation remain source unknown, separately from captured empty parameters. This does not identify a direct source; storefront collection must supply the optional metadata."
+msgstr ""
+
+#: includes/tracking/class-privacy.php
+msgid "Visit attribution snapshot (JSON)"
+msgstr ""
+
+#: includes/tracking/class-privacy.php
+msgid "When supplied by the storefront, we also keep the first successfully captured visit entry domain, path, allowed utm_source/utm_medium query values and referrer domain. Older visits without this observation remain unknown. An unavailable value (null), an observed empty value and an absent UTM key are distinct; we do not infer a direct source. The normalized visit snapshot is included in personal data exports and is deleted with the visit. Rejected attribution values are not stored."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Recently viewed products"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Recently carted products"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Recently sold product units"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Visitor countries map"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Active countries — visitors"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Popular countries — page views"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Visit sources — visitors"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Collections — page views"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Popular pages in this range"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Product units"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "These panels could not be loaded. Retry this accepted range."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Showing the last accepted range; these results may be stale."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "No matching observations in this range."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Unavailable"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Partial observation coverage"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Available"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "No observations have been collected for these records."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "The source reported that country data was unavailable."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Records contain both missing observations and source-reported unavailability."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "A report dependency is unavailable; counts are unknown."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Known"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Observed unknown"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Unobserved"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Observation coverage"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Observation coverage does not apply to this event/unit ranking."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Base records"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Showing %1$d of %2$d matching rows (Top 5)."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "All observed country codes"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Count"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Share of page views"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Selected calendar range"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Captured source key absent"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Captured source observed empty"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "No outline in this map"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Zoom map in"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Zoom map out"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Reset map"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Offline country outlines show source-reported visitor counts, not visitor coordinates. Countries without an outline remain in the table. Use arrow keys to pan the focused map; page scrolling is unchanged."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Country observations are source reported, not verified by IP. Visitor counts use each visit’s latest country observation before the cutoff; one visitor may appear in several countries. Popular countries counts each page view instead."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Sources use the first successfully captured visit snapshot and preserve absent, empty and case-sensitive values. No direct source is inferred. Late claims can update an earlier cutoff; this is not an as-of snapshot."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Collections count saved collection observations, not today’s product categories or guessed URL paths. Deleted collections retain their identifier."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Each live panel has its own window. All historical panels use the accepted calendar dates. Counts may change after late observations; visitor counts across rows are not additive."
+msgstr ""
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Page kind"
+msgstr ""
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Collection ID"
+msgstr ""
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Country observation"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php
+msgid "Source reported"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php
+msgid "Entry host"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php
+msgid "Key absent"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php
+msgid "Observed empty"
+msgstr ""
+
+#: includes/admin/class-tracking-page.php
+msgid "Referrer host"
+msgstr ""
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Store page context"
+msgstr ""
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Observed at (UTC)"
+msgstr ""
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Context source"
+msgstr ""
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Country code"
+msgstr ""
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "When supplied by the storefront, page views may include a normalized page kind, collection identifier and source-reported country observation. Country observations are not verified physical locations or IP-derived coordinates. Missing observations remain unobserved. These facts follow the store visit retention, account/order association and erasure rules, and are included in a separate personal-data export."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime event count"
+msgid "Events"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime distinct visitor count"
+msgid "Visitors"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime ranking item"
+msgid "Product"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime ranking item"
+msgid "Country"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime ranking item"
+msgid "Source"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime ranking item"
+msgid "Collection"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime ranking item"
+msgid "Page"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Realtime entry attribution is unavailable."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Entry domain (first captured)"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "UTM source (first captured)"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "All entry sources"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "No entry attribution observed"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Captured without a UTM source key"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Captured empty UTM source"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Entry filters use the first successfully captured visit snapshot. Domain and UTM conditions are combined with AND. Orders use creation time and their original visit entry, not revenue from visits in the selected period. Values preserve case; unknown is not direct traffic."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Search entry values"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "More entry values"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Previous entry values"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Selected entry value was not observed in this period."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Not observed in this period"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Reset entry filters to All"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Loading entry-filtered data…"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Showing the last accepted entry filter; the new request has not succeeded."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Entry-filter data could not be loaded. Retry or reset to All."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Entry filters in the URL are invalid. Correct them or reset to All."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Entry filters are unavailable; the All report remains available."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Entry values could not be loaded. The accepted report remains unchanged."
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Retry entry filters"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Candidate coverage: distinct visits"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Captured entry snapshots"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Visits without captured attribution"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Snapshots received after this cutoff"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Unlinked eligible events (separate count)"
+msgstr ""
+
+#: includes/admin/class-data-pages.php
+msgid "Unlinked eligible orders (separate count)"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:854
+msgid "Current checkout type: WooCommerce Blocks"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:855
+msgid "Current checkout type is unconfirmed"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:856
+msgid "Checkout type describes the current configuration only. These observations are not grouped by historical checkout mode."
+msgstr ""
+
+#: includes/admin/class-data-pages.php:857
+msgid "Current visits"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:858
+msgid "Previous period visits"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:859
+msgid "Relative change (%)"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:860
+msgid "Current period"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:862
+msgid "Processing success rate (%)"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:865
+msgid "View detailed checkout analysis"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:866
+msgid "Loading checkout observations…"
+msgstr ""
+
+#: includes/admin/class-data-pages.php:213
+msgid "Checkout observations could not be loaded."
+msgstr ""
+
+#: includes/admin/class-data-pages.php:868
+msgid "Retry checkout observations"
+msgstr ""

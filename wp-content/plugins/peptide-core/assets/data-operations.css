@@ -326,6 +326,11 @@
 }
 
 /* 第 11 行起默认藏起来，点“查看更多”（卡片有 is-expanded 类）才显示。 */
+.pc-ops-detail-help { margin: 8px 0 12px; color: #666; font-size: 12px; line-height: 1.6; }
+.pc-ops-detail-toggle { margin-bottom: 12px !important; }
+.pc-ops-detail-toggle:focus-visible { outline: 2px solid #171717; outline-offset: 2px; }
+.pc-ops-funnel .pc-ops-bar__fill { background: #171717; }
+
 .pc-ops-rank__row.is-extra {
 	display: none;
 }

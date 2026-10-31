@@ -85,6 +85,7 @@
 	blocks.product_scroll = [ R( 2, 5, 6, 11 ), R( 10, 5, 6, 11 ), P( 'M18 5h4v11h-4M4 5V3M6 5V3M12 5V3M14 5V3M3 21h18M18 18l3 3-3 2' ) ];
 	blocks.product_waterfall = [ R( 3, 5, 8, 7 ), R( 13, 5, 8, 11 ), R( 3, 14, 8, 7 ), R( 13, 18, 8, 3, .5 ), P( 'M5 5V3h4v2M15 5V3h4v2' ) ];
 	blocks.product_ranking = [ P( 'M3 20V12h5v8M9.5 20V8h5v12M16 20v-5h5v5M2 21h20' ), star( 12, 3.6, 2.4 ) ];
+	blocks.behavior_product_ranking = [ R( 2, 3, 6, 3, .6 ), R( 9, 3, 6, 3, .6 ), R( 16, 3, 6, 3, .6 ), P( 'M3 21V14h5v7M9.5 21V10h5v11M16 21v-4h5v4M2 22h20' ) ];
 	blocks.product_comparison = [ R( 3, 5, 7, 12 ), R( 14, 5, 7, 12 ), P( 'M5 5V3h3v2M16 5V3h3v2M7 21h10M9 19l-2 2 2 2M15 19l2 2-2 2' ) ];
 	blocks.featured_product = bag( 4, 5, 13, 16 ).concat( [ star( 18, 6, 4 ) ] );
 	blocks.video_products = [ R( 2, 5, 10, 14 ), P( 'M5 9l4 3-4 3z' ) ].concat( bag( 15, 5, 7, 14 ) );
@@ -97,6 +98,9 @@
 	blocks.topic_tabs = [ frame(), P( 'M3 8h18M9 4v4M15 4v4M8 18v-7h8l-2 2 2 2H8' ) ];
 
 	// Marketing/content blocks: the symbol describes the bound entity, not a generic quote.
+	blocks.promotion_trio = [ R( 2, 4, 6, 16 ), R( 9, 4, 6, 16 ), R( 16, 4, 6, 16 ), P( 'M3.5 16h3M17.5 16h3' ) ].concat( percent( 10.5, 9, 3 ) );
+	blocks.ai_product_waterfall = [ R( 3, 4, 8, 7 ), R( 13, 4, 8, 11 ), R( 3, 13, 8, 8 ), R( 13, 17, 8, 4 ), P( 'M6 7h2M16 7h2M6 16h2M16 20h2' ) ];
+	blocks.pricing_cards = [ R( 2, 4, 6, 16 ), R( 9, 2, 6, 18 ), R( 16, 4, 6, 16 ), P( 'M3.5 9h3M10.5 7h3M17.5 9h3M3.5 16h3M10.5 16h3M17.5 16h3' ) ];
 	blocks.promotion_card = [ P( 'M3 5h11v4a2 2 0 0 0 0 4v6H3v-6a2 2 0 0 0 0-4zM6 8h5M6 16h3' ) ].concat( clock( 18, 7, 4 ) );
 	blocks.product_offer = [ R( 3, 8, 18, 4, .6 ), P( 'M5 12v9h14v-9M12 8v13M12 8H7C2 8 5 1 8 4zM12 8h5c5 0 2-7-1-4z' ) ];
 	blocks.subscribe = [ R( 2, 5, 18, 14 ), P( 'M3 7l8 6 8-6M19 13v8M15 17h8' ) ];
@@ -109,9 +113,14 @@
 	blocks.video_reviews = [ bubble(), P( 'M10 7l6 3.5-6 3.5z' ) ];
 	blocks.featured_reviews = [ bubble(), star( 12, 10.5, 4.3 ) ];
 	blocks.youtube_list = [ P( 'M6 3h15v14M3 7h14v14H3zM8 11l5 3-5 3z' ) ];
+	blocks.tiktok_list = [ R( 3, 2, 11, 20, 1.4 ), P( 'M7 8l4 3-4 3zM18 4v11M18 4l4 1v4l-4-1' ), C( 16, 16, 2 ) ];
 	blocks.social_links = [ C( 5, 12, 3 ), C( 19, 5, 3 ), C( 19, 19, 3 ), P( 'M7.8 10.5l8.5-4M7.8 13.5l8.5 4' ) ];
-	blocks.partners = [ P( 'M2 8l4-3 5 2 2-1 5-1 4 4-5 10-3 2-3-2-3-1zM7 7l4 3 3-2 5 5M8 15l6 6M10 12l7 7' ) ];
+	blocks.x_timeline = [ frame(), P( 'M6 8h7M6 12h10M6 16h7M17 7l3 3M20 7l-3 3' ) ];
+	blocks.pinterest_profile = [ C( 12, 5, 2.5 ), R( 3, 11, 5, 10, .6 ), R( 9.5, 11, 5, 7, .6 ), R( 16, 11, 5, 10, .6 ), P( 'M8 8h8' ) ];
+	blocks.facebook_page = [ frame(), R( 5, 7, 5, 5, .6 ), P( 'M13 7h6M13 10h4M5 15h14M5 18h9' ) ];
+	blocks.partners = [ R( 2, 5, 5, 5, 1 ), R( 9.5, 5, 5, 5, 1 ), R( 17, 5, 5, 5, 1 ), P( 'M2 13h5M9.5 13h5M17 13h5M2 17h20M7 20h10' ) ];
 	blocks.product_search = bag( 3, 3, 12, 17 ).concat( [ C( 17, 15, 4 ), L( 20, 18, 23, 21 ) ] );
+	blocks.site_search_hero = [ R( 2, 3, 20, 18, 1.6 ), C( 9, 10, 3.5 ), L( 11.5, 12.5, 15, 16 ), P( 'M16 7h3M16 10h3M5 18h4M11 18h4M17 18h2' ) ];
 	blocks.search_terms = [ C( 7, 8, 4 ), P( 'M10 11l3 3M15 5h7M15 9h5M3 19h7M13 19h8' ) ];
 	blocks.blog_posts = page().concat( [ P( 'M9 11h6M9 14h4M9 18l2 2 4-4' ) ] );
 	blocks.category_blog = [ folder(), P( 'M7 10h10v8H7zM9 12h6M9 15h4' ) ];
@@ -271,6 +280,26 @@
 		} );
 		return text + '</svg>';
 	}
+
+	// O16 authored transport geometry; isolated from the global Fields icon enum.
+	blocks.order_fulfillment = [ P( 'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10M7 5l10 4' ) ];
+	actions.fulfillment_box = [ P( 'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10M7 5l10 4' ) ];
+	actions.fulfillment_truck = [ P( 'M2 5h12v12H2zM14 9h4l4 5v3h-8M5 17a2 2 0 1 0 4 0 2 2 0 1 0-4 0M16 17a2 2 0 1 0 4 0 2 2 0 1 0-4 0M18 9v5h4' ) ];
+	actions.fulfillment_plane = [ P( 'M3 12l7-2 1-7 2 0 1 7 7 2v2l-7-1-1 6 3 2v1l-4-1-4 1v-1l3-2-1-6-7 1z' ) ];
+	actions.fulfillment_ship = [ P( 'M3 13l9-3 9 3-3 6H6zM7 11V5h10v6M10 5V2h4v3M2 21c2-2 3 2 5 0s3 2 5 0 3 2 5 0 3 2 5 0' ) ];
+
+
+	// O21 authored geometry. This namespace never changes the global icon enumeration.
+	actions.announcement_megaphone = [ P( 'M3 10v4h4l10 4V6L7 10zM7 14l2 6h3l-2-5M20 9v6' ) ];
+	actions.announcement_bell = [ P( 'M5 17h14l-2-3v-4a5 5 0 0 0-10 0v4zM10 20h4M12 3V2' ) ];
+	actions.announcement_gift = [ P( 'M3 10h18v4H3zM5 14v7h14v-7M12 10v11M12 10C5 10 5 3 8 3c3 0 4 7 4 7s1-7 4-7c3 0 3 7-4 7' ) ];
+	actions.announcement_tag = [ P( 'M3 3h8l10 10-8 8L3 11zM7 7h.01' ) ];
+	actions.announcement_spark = [ P( 'M12 2l3 7 7 3-7 3-3 7-3-7-7-3 7-3z' ) ];
+	actions.announcement_ticket = [ P( 'M3 5h18v5a2 2 0 0 0 0 4v5H3v-5a2 2 0 0 0 0-4zM15 5v3M15 11v2M15 16v3' ) ];
+	actions.announcement_clock = [ P( 'M12 3a9 9 0 1 0 0 18 9 9 0 1 0 0-18M12 7v5l4 2' ) ];
+
+	// O24 shoppable media gallery; no change to either legacy block icon.
+	blocks.shop_by_gram = [ R( 3, 3, 18, 18, 3 ), P( 'm3 15 5-5 5 5 3-3 5 5M17 6v6M14 9h6' ) ];
 
 	global.PeptideDesignIcons = {
 		version: '1.0.0',

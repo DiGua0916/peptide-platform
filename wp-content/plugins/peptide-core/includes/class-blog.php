@@ -47,6 +47,12 @@ final class Blog {
 		add_filter( 'post_type_labels_post', array( self::class, 'post_labels' ) );
 		add_filter( 'taxonomy_labels_category', array( self::class, 'category_labels' ) );
 		add_action( 'init', array( self::class, 'rewrite' ), 20 );
+		add_filter( 'query_vars', static function( $vars ) { return array_merge( $vars, array( 'pc_blog_collections', 'pc_blog_collections_page' ) ); } );
+		add_action( 'pre_get_posts', array( self::class, 'collections_query' ) );
+		add_filter( 'pre_handle_404', array( self::class, 'collections_404' ), 10, 2 );
+		add_filter( 'redirect_canonical', static fn( $url ) => '1' === (string) get_query_var( 'pc_blog_collections' ) ? false : $url );
+		add_filter( 'template_include', array( self::class, 'collections_template' ), 10001 );
+		add_filter( 'pre_get_document_title', static function( $title ) { return '1' === (string) get_query_var( 'pc_blog_collections' ) ? __( 'Blog collections', 'peptide-core' ) . ( (int) get_query_var( 'pc_blog_collections_page' ) > 1 ? ' — ' . sprintf( __( 'Page %d', 'peptide-core' ), (int) get_query_var( 'pc_blog_collections_page' ) ) : '' ) . ' | ' . get_bloginfo( 'name' ) : $title; }, 31 );
 		add_action( 'init', array( self::class, 'maybe_flush' ), 99 );
 		add_filter( 'post_link', array( self::class, 'post_link' ), 10, 2 );
 		add_filter( 'post_type_archive_link', array( self::class, 'archive_link' ), 10, 2 );
@@ -120,6 +126,7 @@ final class Blog {
 
 	/** 博客列表和博客的网址规则（放在最前面，不和页面的网址冲突）。 */
 	public static function rewrite(): void {
+		add_rewrite_rule( '^' . self::TERM_BASE . '/?$', 'index.php?pc_blog_collections=1', 'top' );
 		add_rewrite_rule( '^' . self::BASE . '/?$', 'index.php?post_type=post', 'top' );
 		add_rewrite_rule( '^' . self::BASE . '/page/([0-9]{1,})/?$', 'index.php?post_type=post&paged=$matches[1]', 'top' );
 		add_rewrite_rule( '^' . self::BASE . '/([^/]+)/?$', 'index.php?name=$matches[1]', 'top' );
@@ -142,7 +149,10 @@ final class Blog {
 	}
 
 	public static function archive_link( $link, $post_type ) {
-		return 'post' === $post_type && get_option( 'permalink_structure' ) ? home_url( user_trailingslashit( '/' . self::BASE ) ) : $link;
+		if ( 'post' !== $post_type ) { return $link; }
+		if ( get_option( 'permalink_structure' ) ) { return home_url( user_trailingslashit( '/' . self::BASE ) ); }
+		$home = home_url( '/' );
+		return untrailingslashit( (string) $link ) === untrailingslashit( $home ) ? add_query_arg( 'post_type', 'post', $home ) : $link;
 	}
 
 	/** 是不是博客列表（/blogs/）的主查询。 */
@@ -483,5 +493,27 @@ final class Blog {
 			}
 		}
 		return array_slice( $out, 0, self::MAX_PRODUCTS );
+	}
+
+	/** Real category index; no page is created and no rewrite flush is triggered here. */
+	public static function collections_url( int $page = 1 ): string {
+		$url = home_url( user_trailingslashit( '/' . self::TERM_BASE ) );
+		return $page > 1 ? add_query_arg( 'pc_blog_collections_page', max( 1, min( 1000, $page ) ), $url ) : $url;
+	}
+	public static function collections_query( $query ): void {
+		if ( is_admin() || ! $query->is_main_query() || '1' !== (string) $query->get( 'pc_blog_collections' ) ) { return; }
+		$query->is_home = false; $query->is_page = false; $query->is_archive = true; $query->is_404 = false;
+		$query->set( 'post_type', 'post' ); $query->set( 'post__in', array( 0 ) ); $query->set( 'posts_per_page', 1 );
+	}
+	public static function collections_404( $preempt, $query ) {
+		if ( ! is_admin() && '1' === (string) $query->get( 'pc_blog_collections' ) ) { status_header( 200 ); return true; }
+		return $preempt;
+	}
+	public static function collections_template( string $template ): string {
+		if ( is_admin() || '1' !== (string) get_query_var( 'pc_blog_collections' ) || \PeptideCore\Modules\Renderer::$in_editor || Templates::previewing_id() ) { return $template; }
+		// Actual rewriting and canonical behavior still require controlled real-WP acceptance.
+		if ( ! \PeptideCore\Modules\Content_Blocks::blog_allowed( 'public' ) ) { return $template; }
+		status_header( 200 );
+		return PEPTIDE_CORE_DIR . '/templates/blog-collections.php';
 	}
 }

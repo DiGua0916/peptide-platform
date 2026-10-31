@@ -536,4 +536,41 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
 
 17. `contact`新增nullable descriptionHtml/textHtml、显式themeColor、十二固定原创symbol与backgroundFallback。旧三空项/ID/14图标/图片/12–64尺寸保留；null沿plain、空串清除，有效图片优先，选symbol不改文案或href。PC按实际项数均分、phone两列；未绑定为非交互内容，正文自有链接与配置联系链接分开，空heading仍有可见独立出口。旧schema inherit保留共享picture继承；仅新insert用color/171717/white，逐端缺图用底色且消费0–100蒙层。共享Controls仅允许Contact显式覆盖手机图标签，不改media存储/Fields/HTML策略。合法item选择接管而不隐藏兄弟。独立8组与五组真实WP及具体边界见backend-contact-2026-10-30.md；正文插图C尚未实现。
 
+18. `promo_grid`保留旧schema默认及合法值，仅新insert用balanced/黑点；legacy为电脑2:1和手机单列，balanced两端等宽、分类term/name/thumbnail/permalink仍真实动态绑定。仅两个category字段ui=collection-confirm选入pending确认/取消，同值/失效/空分类保留原合同；共享普通category选择不改。dotColor与旧dots分别控制，1–5s仅UI建议不缩1000–20000合法间隔；10点保持24px命中并在窄栏换行。Blocks分类DTO仅label做一次特殊字符解码，value/label/count与权限/查询不变，pcModules JSON使用四HEXflags而React继续纯文本输出。五个真实WP功能scope与Blocks单源增量/八条harness边界分别记录在backend-builder-batch-2026-10-30.md。用户最新要求本批整批完成再统一GitHub，覆盖本批此前逐阶段同步。
+
+19. 共享正文图片C已在Contact的`descriptionHtml`/条目`textHtml`及RichText的`bodyHtml`三个受信服务器字段启用，更新第11、14、17条当时“正文图片未启用”的阶段状态，不扩大普通HTML/code或客户端JSON的权限。图片资格依可信文档/模式/选定发布快照上下文及本地附件当前资格，src由服务器规范化；预览不批准，成功保存才更新批准引用，发布保存精确快照引用。坏图、解析器不可用或含图超模块/条目预算在写前拒绝并保留旧内容；无C原生REST保留原完整树。原生媒体close/select增量为Controls9cd587e8；专属`Layout_Posts_Controller`/Templates注册补上原生`pc_layout`REST读取守卫，单条/集合/后代沿真实文档编辑权限，不凭raw publish或仅登录放行。真实C五组及31项目+6只读核心pin、版本差异、路由/清理/历史网络错误边界统一见backend-builder-batch-2026-10-30.md与其引用的richtext-image-runtime-check.md，不把独立fixture或历史范围累计为最终同版本全套。
+
+20. 29–31六源已受控装入本地，当前32项目+6只读核心pin，实际WP验收仍在进行：`compare`保留旧standard/after画幅/default50，新增natural/before画幅与仅新insert初值39；`hotspots`保留旧standard/图标/方向/坐标，新增plus、独立popupImage和手机dialog，侧栏选项仅显露不抢父焦点；`faq`保留side/stacked、旧openFirsttrue及40项，新增panel/新insert closed，真实主题与Fallback同步处理空行、纯回答和多项展开。新增五个受信C路径为`compare.descriptionHtml`、`hotspots.descriptionHtml`/条目`textHtml`、`faq.descriptionHtml`/条目`answerHtml`，连同第19条共八处；动态carrier复用共同媒体资格/预算，普通HTML、合法旧格式/链接及shared API不变。此条记录当前本地合同，不表示本组真实WP或32 QuickView已完成；QuickView仍为获准任务副本工作，支付、邮件及搜索服务暂缓决定不变。
+
 验证按阶段记录，不混计：Records独立34及控件12不当真WP；原站限定29项已精确清理并与858posts/2555非锁meta基线同指纹；独立WordPress+Woo评价/Index各范围见任务work/reviews-runtime-positive-report.md，Index19组及SQL6/同请求恢复2等有真实前后证据；Links真实API7+UI8通过，取消/权限/状态变化/390/错误恢复均覆盖。共享条目panels/paired和首7基础块属于后续单独阶段，最终真实性/版本/限制以对应报告为准，不以已有定义数代替全量验收。
+
+21. 2026-10-30更新第20条阶段状态：29–31真实WP四域已完成；32产品展示九源及后续真实nested sidebar接线三源已本地受控安装并实际Q1–Q4完成。原生Woo simple/variable form、完整attribute_名字、库存/数量及Store API事实为购买来源；BuyNow仅确认真实加购成功且当前操作仍有效时去既有checkout，保原cart，不创建订单/支付。未知结果只GET校准和人工核对、不盲重POST；同抽屉start/settle epoch防迟到read/mutation回退。公开精选支持publish/publicly_viewable/no password及真实库存，不把hidden catalog公开PDP误作private。仅product_showcase.spots可信previewSelect把真实nested展开传Host，空直属hint由其模块接管，不伪造商品/隐藏兄弟。正式32总37项目+Core6+aux19，第三方均readonly；actual证据、不同版本范围与task失败见backend-builder-batch-2026-10-30.md及product-showcase-runtime报告。后续同日单Host b68返回修复保持总数：未保存Back改用既有wp.components.Modal明确继续/不保存离开，原refresh/close beforeunload与正确back href保留；不自动保存/发布/丢弃。四项真实WP验证及旧数据保护见builder-back-navigation-runtime报告。当前live可信C仍八处，33–37及P01 task副本不是已交付合同；AI、支付、SMTP与外部搜索联调仍按用户暂缓，整批积木完成后统一GitHub。
+
+
+22. 2026-10-30更新阶段：33–37已真实WP四域与57项受影响既有smoke闭合。当前受信C为12：在原八处基础上，仅加info_list.items.textHtml、logo_list.descriptionHtml、donation_tip.descriptionHtml、text_block.bodyRichHtml；new shadow null继承oldbodyHtml/空串清，旧ordinary HTML不迁移不扩大。nav旧WP walker保留，新store/picker复用真实菜单/Core edit权限与单取确认，未新增API或菜单写权；logo三新模式保旧合法列数/IDs；donation_tip只有服务端聚合适配，无provider公开隐藏，无收款。P01七源本地已装但实际WP正在验：旧card合同保留、新insert detail，独立subtitle字段走原Woo nonce/edit-product保存链，同原Quick唯一operation/nonce/unknown/reconcile引擎的inline host，不复制购买系统。正式46primary/Core10/aux19及两份额外Woo管理员只读依赖，版本/实际边界见本轮handoff。P02新C13仍仅任务副本，不是已安装合同；全部70积木完成后才统一GitHub，外部服务暂缓不变。
+
+
+23. 2026-10-30更新阶段：P01实际三域及本人精清已闭合，独立subtitle与原Woo nonce/edit_product保存链、唯一购买engine inline adapter实际行为见featured-product-runtime报告。P02四源已审查/备份/受控本地安装，视频商品新insert showcase、旧manual/legacy合同和旧空items不变；只追加video_products.settings.descriptionHtml为精确global C13，null沿plain/空串清，未放开其它HTML。公开有效product+真实video附件才显示，原生媒体控制播放/静音/进度/循环，自动切换依真实ended，编辑器/少动态仅阻自动播放，真实PDP出口无购买引擎。当前46/Core10/aux19/Woo2，P02实际WP两域仍待验，不将fixture或参考空src当真播放。P03及C14仅私有任务未安装。整70后统一GitHub及外部服务暂缓不变。
+
+
+24. 2026-10-30阶段更新：P02实际两域/精清已闭合，真实Layout preview上下文已由其局部三谓词修复，C13真实媒体/保存闭合。P03仅新collection分支已受控安装47primary/Core10/aux19/admin2/查询readonly8，实际三域待验；唯一新增C14是product_waterfall.descriptionHtml，旧for_module/Quick唯一engine/legacy合同保持。公共分页GET仅签名category/批数/页大小上下文、只读/force_login与每批公开资格，固定stride+1probe、真实主题SSR卡，失败保卡可重试，末端及无JS有真分类链接。P04/P05的C15/C16和个人history API仅task候选。详见本轮handoff与catalog-waterfall-runtime后续报告，不将fixture当真实WP。
+
+
+25. 2026-10-30阶段更新：第24条P03实际pending已由catalog-waterfall-runtime三必要域及精清闭合，C14真媒体/SaveGET/无损拒绝、实际Woo分页/签名GET/故障重试/公开资格、追加变量原Quick/两端/noJS通过。正常Abort/device实际与更强ignoreAbort仅native证据分列，不承诺目录并发快照。正式47/Core10/aux19/admin2/query8保持FDFF字节；P04/P05/P06和C15–17仍task候选，不将其个人history cookie/API说成已live。
+
+
+26. 2026-10-30阶段更新：P04/P05/P06三个Commerce源已审查/备份/受控安装，47primary/Core10/aux19/admin2/query8及cookieHistory只读3；C15/16/17仅三个精确global nullable字段，actual WP三域仍待验。P04独立主推公开hidden-PDP与catalog grid资格分开，真实term/原卡/原Quick；P05新签名100项cookie仅真实PDP跟踪，私有no-store只读GET仅当前cookie+total、不接受ids，public空壳/无JS隐藏且旧24链完整不变；P06新明确term圆图/实效label/独立1–8列，旧自动fallback保持。C15手机长rich图片裁切最终CSS在task窄修后才安装，不冒称fixture为真WP。P07/P08与C18/C19/共享复制metadata修复仅task未安装。
+
+
+### P04–06 actual accepted; P07/P08 installed (2026-10-30 Codex)
+
+P04/P05/P06 three necessary actual WP domains passed. ComingSoon exposed an early-history/cache defect, corrected only new signed-history timing to real pre-template include; old24 and recorder/query/cookie bytes remain. A/C retain 06eb epoch, B uses corrected4008; normal Back was not bfcache. Final97 source/QA hashes and protected data matched, owned database fixtures/MU/tokens removed. Six closed task profiles were retained after a policy-blocked deletion; no retry. Original685 remains untouched.
+
+P07/P08 are now locally installed as four existing files (Commerce PHP/CSS/JS and Controls). Formal catalog-scroll-navigation-rebased/work/integration/freeze-pin.json88764825..., candidate4ebddf95..., PHP15e484fe..., 47primary +52readonly =99 unique. Exact inherited P05 correction, scoped C18/C19, true collections-index route, and triple-opt-in nested-copy IDs; old functionality preserved. Root backups/6LFhunk reconstruction/fresh dependencies/PHP1JS2 passed. Actual WP scroll/navigation/media/Host validation is pending with the sole QA owner; no claim of completed integration. P09/P10 c645 candidate remains task-only, not installed. Reference48/70, currentP13. All70 builder work completes before one Git sync batch; deferred external services remain blank.
+
+
+### P07/P08 actual accepted; P09/P10 installed (2026-10-30 Codex)
+
+P07/P08 necessary actual WP three domains and exact DB/MU/token cleanup complete, production/QA99 hashes and protected media/data/Original matched. True native mobile parent copy/child Host selection, actual30s/pause/reduced/focus resize/noJS, true links/routes and C18/C19 passed. ComingSoon category-body and untested31/document.hidden limits remain explicit. Ten closed task profiles are retained; no retry of earlier policy-blocked deletion.
+
+Root installed only three existing Commerce sources for P09 collection products and P10 product carousel after independent c645/eac4 review. Formal collection-products-carousel-integration/work/freeze-pin.json2c7c9648..., 47primary+53readonly=100 unique, five LF hunks/exact inverse/fresh dependencies/backups/PHP1JS1 passed. Original Registry/theme/Controls/P05/P07/P08 behavior and precise C20/C21 scope preserved; new theme-template dependency is readonly. P09 had no reference full-width setting, so none invented; P10 keeps its confirmed control. Actual WP validation remains pending with sole QA; reference48/70 currentP13, later tabs remain task-only. Whole70 batch Git and deferred external-service policy remain.

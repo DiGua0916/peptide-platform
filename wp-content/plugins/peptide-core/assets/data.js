@@ -31,6 +31,7 @@
 	var renderers = {};
 	var state = cfg.range;
 	var busy = false;
+	var rangeListeners = [];
 	var els = {};
 
 	// ---------- 小工具（报表脚本也会用到） ----------
@@ -62,6 +63,12 @@
 	window.PcData = {
 		register: function ( key, fn ) {
 			renderers[ key ] = fn;
+		},
+		onRangeState: function ( listener ) {
+			var listeners = rangeListeners;
+			listeners.push( listener );
+			try { listener( busy ); } catch ( e ) {}
+			return function () { var index = listeners.indexOf( listener ); if ( index !== -1 ) { listeners.splice( index, 1 ); } };
 		},
 		api: function ( path, params ) {
 			return wp.apiFetch( { path: wp.url.addQueryArgs( path, params || {} ) } );
@@ -153,6 +160,7 @@
 
 	function setBusy( on ) {
 		busy = on;
+		rangeListeners.slice().forEach( function ( listener ) { try { listener( on ); } catch ( e ) {} } );
 		if ( ! showRange ) {
 			return;
 		}
@@ -257,6 +265,7 @@
 	// ---------- 报表内容 ----------
 
 	function renderBody() {
+		rangeListeners = [];
 		var fn = renderers[ cfg.page ];
 		els.body.innerHTML = '';
 		if ( 'function' !== typeof fn ) {

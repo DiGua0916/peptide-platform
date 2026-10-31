@@ -22,6 +22,7 @@ final class Privacy {
 	public const BATCH      = 500;
 
 	public static function register_hooks(): void {
+		Page_Context_Privacy::register_hooks();
 		add_action( self::PRUNE_HOOK, array( self::class, 'prune_now' ) );
 		add_filter( 'wp_privacy_personal_data_exporters', array( self::class, 'add_exporter' ) );
 		add_filter( 'wp_privacy_personal_data_erasers', array( self::class, 'add_eraser' ) );
@@ -153,7 +154,7 @@ final class Privacy {
 		$ids   = self::visitors_for_email( $email );
 		if ( $ids ) {
 			$in   = implode( ',', $ids );
-			$rows = $wpdb->get_results( 'SELECT id, start_ms, last_ms, landing_path, device, order_id FROM ' . Schema::table( 'visits' ) . " WHERE visitor_id IN ({$in}) ORDER BY start_ms ASC", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+			$rows = $wpdb->get_results( 'SELECT id, start_ms, last_ms, landing_path, device, order_id, ' . implode( ', ', Attribution::COLUMNS ) . ' FROM ' . Schema::table( 'visits' ) . " WHERE visitor_id IN ({$in}) ORDER BY start_ms ASC", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
 			foreach ( (array) $rows as $r ) {
 				$pages   = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . Schema::table( 'events' ) . " WHERE visit_id = %d AND type = 'page_view'", (int) $r['id'] ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
 				$items[] = array(
@@ -167,6 +168,7 @@ final class Privacy {
 						array( 'name' => __( 'Device', 'peptide-core' ), 'value' => (string) $r['device'] ),
 						array( 'name' => __( 'Pages viewed', 'peptide-core' ), 'value' => (string) $pages ),
 						array( 'name' => __( 'Order', 'peptide-core' ), 'value' => (int) $r['order_id'] ? '#' . (int) $r['order_id'] : '—' ),
+						array( 'name' => __( 'Visit attribution snapshot (JSON)', 'peptide-core' ), 'value' => wp_json_encode( Attribution::snapshot( $r ) ) ),
 					),
 				);
 			}
@@ -199,6 +201,7 @@ final class Privacy {
 			esc_html__( 'When you browse this store we record which pages and products you view, what you add to your cart and whether you check out, so we can understand how the store is used and improve it. We use a first-party cookie (pc_vid) that only identifies your browser, not you. If you sign in or place an order, these visits are linked to your account or order. The records are kept for %d days and are not sold or shared with advertisers. Browsers that send the Global Privacy Control signal, and browsers that used our opt-out link, are not recorded. You can ask us to export or delete this data.', 'peptide-core' ),
 			$days
 		) . '</p>';
+		$text .= '<p>' . esc_html__( 'When supplied by the storefront, we also keep the first successfully captured visit entry domain, path, allowed utm_source/utm_medium query values and referrer domain. Older visits without this observation remain unknown. An unavailable value (null), an observed empty value and an absent UTM key are distinct; we do not infer a direct source. The normalized visit snapshot is included in personal data exports and is deleted with the visit. Rejected attribution values are not stored.', 'peptide-core' ) . '</p>';
 		wp_add_privacy_policy_content( __( 'Store visit analytics', 'peptide-core' ), wp_kses_post( $text ) );
 	}
 }

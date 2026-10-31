@@ -113,6 +113,8 @@ final class Store_Config {
 			'finance_email'    => '',
 			'company_name'     => '',
 			'company_phone'    => '',
+			'other_contact_mode' => '0',
+			'other_contact_placeholder' => 'WhatsApp / Skype',
 		);
 	}
 
@@ -127,7 +129,21 @@ final class Store_Config {
 	}
 
 	public static function update( array $values ): void {
+		if ( array_key_exists( 'other_contact_mode', $values ) ) { $values['other_contact_mode'] = is_string( $values['other_contact_mode'] ) && in_array( $values['other_contact_mode'], array( '0', '1', '2' ), true ) ? $values['other_contact_mode'] : '0'; }
+		if ( array_key_exists( 'other_contact_placeholder', $values ) ) { $values['other_contact_placeholder'] = self::other_contact_placeholder( $values['other_contact_placeholder'] ); }
 		update_option( self::OPTION, array_replace( self::all(), array_intersect_key( $values, self::defaults() ) ), false );
+	}
+
+	/** Store preference only; reference subscription forms additionally need their own signed opt-in. */
+	public static function other_contact_preferences(): array {
+		$mode = self::get( 'other_contact_mode' );
+		return array( 'mode' => is_string( $mode ) && in_array( $mode, array( '0', '1', '2' ), true ) ? $mode : '0', 'placeholder' => self::other_contact_placeholder( self::get( 'other_contact_placeholder' ) ) );
+	}
+
+	private static function other_contact_placeholder( $value ): string {
+		if ( ! is_string( $value ) || strlen( $value ) > 1000 ) { return 'WhatsApp / Skype'; }
+		$value = sanitize_text_field( $value );
+		return preg_match( '/\A.{0,100}/us', $value, $m ) ? $m[0] : 'WhatsApp / Skype';
 	}
 
 	public static function register_hooks(): void {

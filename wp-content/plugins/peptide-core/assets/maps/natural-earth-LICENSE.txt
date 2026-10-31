@@ -1,0 +1,12 @@
+Natural Earth data is in the public domain.
+
+Natural Earth states that its raster and vector map data may be used freely
+for personal, educational and commercial purposes, and that no permission is
+needed to use it. Natural Earth makes no warranty about the data.
+
+Authoritative terms: https://www.naturalearthdata.com/about/terms-of-use/
+Geometry maintainer: https://github.com/nvkelso/natural-earth-vector
+
+This asset uses the reviewed 110m admin-0 country geometry. The exact input
+digest, projection, excluded non-ISO features and generated output digest are
+recorded in realtime-countries-provenance.json. Runtime rendering is offline.

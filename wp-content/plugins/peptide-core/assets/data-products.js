@@ -107,18 +107,23 @@
 		}
 	}
 
-	// 当前显示的列：用户的选择（没选过就是接口的默认列），去掉未知的，始终按 data.metrics 的顺序。
+	// Validate keys against the response, deduplicate without changing wanted order.
+	function normalizeColumns( wanted, metrics ) {
+		var columns = [];
+		( wanted || [] ).forEach( function ( key ) {
+			if ( 'string' === typeof key && metrics.indexOf( key ) !== -1 && columns.indexOf( key ) === -1 ) { columns.push( key ); }
+		} );
+		return columns;
+	}
+
+	// A stored [] is deliberate; a nonempty entirely obsolete choice uses defaults.
 	function visibleColumns( data ) {
 		var metrics = data.metrics || [];
-		var wanted = state.columns || data.defaults || [];
-		var cols = metrics.filter( function ( k ) {
-			return wanted.indexOf( k ) !== -1;
-		} );
+		var wanted = null === state.columns ? data.defaults || [] : state.columns;
+		var cols = normalizeColumns( wanted, metrics );
 		// 存的列全部过期（指标改名了）时回到默认列；用户主动一列都不选（存的是空数组）则保持为空。
 		if ( ! cols.length && wanted.length ) {
-			cols = metrics.filter( function ( k ) {
-				return ( data.defaults || [] ).indexOf( k ) !== -1;
-			} );
+			cols = normalizeColumns( data.defaults || [], metrics );
 		}
 		return cols;
 	}
@@ -223,6 +228,7 @@
 		var esc = ctx.esc;
 		var view = { data: null };
 		var composing = false;
+		var exportToken = 0, exporting = false, rangeBusy = false, searchDirty = false;
 
 		// 上一次画的页面已经被 data.js 清掉了：它的搜索计时器不能再触发。
 		window.clearTimeout( searchTimer );
@@ -237,6 +243,8 @@
 			'<div class="pc-prod-toolbar">' +
 				'<input type="search" class="pc-prod-search" maxlength="100" placeholder="' + esc( T.search ) + '" aria-label="' + esc( T.search ) + '">' +
 				'<button type="button" class="button pc-prod-columns-btn" aria-expanded="false">' + esc( T.columns ) + '</button>' +
+				'<button type="button" class="button pc-prod-export" title="' + esc( T.exportHelp ) + '" disabled>' + esc( T.exportCsv ) + '</button>' +
+				'<span class="pc-prod-export-status" role="status" aria-live="polite"></span>' +
 			'</div>' +
 			'<div class="pc-prod-columns" hidden></div>' +
 			'<div class="pc-prod-wrap"></div>' +
@@ -248,18 +256,73 @@
 		view.wrap = bodyEl.querySelector( '.pc-prod-wrap' );
 		view.pager = bodyEl.querySelector( '.pc-prod-pager' );
 		view.search.value = state.q;
+		view.exportButton = bodyEl.querySelector( '.pc-prod-export' );
+		view.exportStatus = bodyEl.querySelector( '.pc-prod-export-status' );
+		function syncExport() {
+			view.exportButton.disabled = ! view.data || searchDirty || composing || rangeBusy || exporting;
+			view.exportButton.setAttribute( 'aria-busy', exporting ? 'true' : 'false' );
+		}
+		function cancelExport() {
+			++exportToken; exporting = false;
+			view.exportStatus.textContent = '';
+			syncExport();
+		}
+		if ( 'function' === typeof ctx.onRangeState ) {
+			ctx.onRangeState( function ( on ) { rangeBusy = on; if ( on ) { cancelExport(); } syncExport(); } );
+		}
+		view.exportButton.addEventListener( 'click', function () {
+			if ( view.exportButton.disabled || ! window.PcDataExport ) { return; }
+			var mine = ++exportToken;
+			var dates = view.data.range.dates;
+			var params = { from: dates.from, to: dates.to, compare_from: dates.compare_from, compare_to: dates.compare_to };
+			params.format = 'csv'; params.sort = view.data.sort; params.order = view.data.order;
+			params.page = view.data.page; params.per_page = view.data.per_page; params.q = view.data.q;
+			params.columns = visibleColumns( view.data ).join( ',' );
+			exporting = true; syncExport(); view.exportStatus.textContent = T.exportBusy;
+			function current() { return mine === exportToken && ! rangeBusy && ! searchDirty && ! composing && !! view.data && document.documentElement.contains( view.exportButton ); }
+			window.PcDataExport.prepare( PATH, params ).then( function ( file ) {
+				if ( ! current() ) { return; }
+				try { if ( window.PcDataExport.download( file, current ) ) { view.exportStatus.textContent = T.exportDone; } }
+				catch ( e ) { view.exportStatus.textContent = T.exportError; }
+				exporting = false; syncExport();
+			}, function () { if ( current() ) { exporting = false; syncExport(); view.exportStatus.textContent = T.exportError; } } );
+		} );
+
 
 		function failed() {
+			invalidate();
 			view.wrap.innerHTML = '<p class="pc-data-empty">' + esc( ctx.strings.loadError ) + '</p>';
 			view.pager.innerHTML = '';
 		}
 
+		function invalidate() {
+			view.data = null;
+			cancelExport();
+			view.button.disabled = true;
+			view.button.setAttribute( 'aria-expanded', 'false' );
+			view.panel.setAttribute( 'hidden', '' );
+			view.panel.innerHTML = '';
+		}
+
+		function focusColumn( key ) {
+			each( view.panel.querySelectorAll( 'input[data-key]' ), function ( box ) {
+				if ( box.getAttribute( 'data-key' ) === key ) { box.focus(); }
+			} );
+		}
+
 		function drawPanel() {
 			var data = view.data;
+			if ( ! data ) { return; }
 			var shown = visibleColumns( data );
-			view.panel.innerHTML = ( data.metrics || [] ).map( function ( k ) {
-				return '<label class="pc-prod-columns__item"><input type="checkbox" data-key="' + esc( k ) + '"' +
-					( shown.indexOf( k ) !== -1 ? ' checked' : '' ) + '> ' + esc( T[ k ] || k ) + '</label>';
+			var unselected = normalizeColumns( data.metrics || [], data.metrics || [] ).filter( function ( key ) { return shown.indexOf( key ) === -1; } );
+			view.panel.innerHTML = shown.concat( unselected ).map( function ( k ) {
+				var index = shown.indexOf( k );
+				var label = T[ k ] || k;
+				var controls = index < 0 ? '' : '<span class="pc-prod-columns__moves">' +
+					'<button type="button" class="pc-prod-columns__move" data-move-key="' + esc( k ) + '" data-move-dir="-1" aria-label="' + esc( fill( T.moveUp, { '%s': label } ) ) + '"' + ( index === 0 ? ' disabled' : '' ) + '>↑</button>' +
+					'<button type="button" class="pc-prod-columns__move" data-move-key="' + esc( k ) + '" data-move-dir="1" aria-label="' + esc( fill( T.moveDown, { '%s': label } ) ) + '"' + ( index === shown.length - 1 ? ' disabled' : '' ) + '>↓</button></span>';
+				return '<div class="pc-prod-columns__item"><label class="pc-prod-columns__label"><input type="checkbox" data-key="' + esc( k ) + '"' +
+					( index !== -1 ? ' checked' : '' ) + '><span>' + esc( label ) + '</span></label>' + controls + '</div>';
 			} ).join( '' );
 		}
 
@@ -299,13 +362,16 @@
 			state.sort = data.sort;
 			state.order = data.order;
 			state.page = Number( data.page );
+			syncExport();
 			drawPanel();
 			drawTable();
 			drawPager();
+			view.button.disabled = false;
 		}
 
 		function load() {
 			var mine = ++requests;
+			invalidate();
 			var params = rangeParams( range );
 			params.sort = state.sort;
 			params.order = state.order;
@@ -338,6 +404,7 @@
 		// 搜索：回车马上搜，停止输入 400 毫秒后搜；输入法组字中（拼音）不搜。
 		function applySearch() {
 			window.clearTimeout( searchTimer );
+			searchDirty = false; syncExport();
 			var q = view.search.value.replace( /^\s+|\s+$/g, '' );
 			if ( q === state.q ) {
 				return;
@@ -347,15 +414,16 @@
 			load();
 		}
 		view.search.addEventListener( 'compositionstart', function () {
-			composing = true;
+			composing = true; cancelExport();
 			window.clearTimeout( searchTimer );
 		} );
 		view.search.addEventListener( 'compositionend', function () {
-			composing = false;
+			composing = false; searchDirty = true; cancelExport();
 			window.clearTimeout( searchTimer );
 			searchTimer = window.setTimeout( applySearch, SEARCH_DELAY );
 		} );
 		view.search.addEventListener( 'input', function () {
+			searchDirty = true; cancelExport();
 			window.clearTimeout( searchTimer );
 			if ( ! composing ) {
 				searchTimer = window.setTimeout( applySearch, SEARCH_DELAY );
@@ -370,6 +438,7 @@
 
 		// 编辑表头：面板开关；勾选改变后立刻重画表格并记住。
 		view.button.addEventListener( 'click', function () {
+			if ( ! view.data ) { return; }
 			var opening = view.panel.hasAttribute( 'hidden' );
 			if ( opening ) {
 				view.panel.removeAttribute( 'hidden' );
@@ -378,16 +447,39 @@
 			}
 			view.button.setAttribute( 'aria-expanded', opening ? 'true' : 'false' );
 		} );
-		view.panel.addEventListener( 'change', function () {
-			var cols = [];
-			each( view.panel.querySelectorAll( 'input[data-key]' ), function ( box ) {
-				if ( box.checked ) {
-					cols.push( box.getAttribute( 'data-key' ) );
-				}
-			} );
+		view.panel.addEventListener( 'change', function ( event ) {
+			if ( ! view.data ) { return; }
+			var box = findAttr( event.target, 'data-key', view.panel );
+			var key = box ? box.getAttribute( 'data-key' ) : null;
+			if ( ! box || ( view.data.metrics || [] ).indexOf( key ) === -1 ) { return; }
+			var cols = visibleColumns( view.data );
+			if ( box.checked && cols.indexOf( key ) === -1 ) { cols.push( key ); }
+			if ( ! box.checked ) { cols = cols.filter( function ( k ) { return k !== key; } ); }
 			state.columns = cols;
+			cancelExport();
 			saveColumns( cols );
+			drawPanel();
 			drawTable();
+			focusColumn( key );
+		} );
+		view.panel.addEventListener( 'click', function ( event ) {
+			if ( ! view.data ) { return; }
+			var button = findAttr( event.target, 'data-move-key', view.panel );
+			if ( ! button || button.disabled ) { return; }
+			var key = button.getAttribute( 'data-move-key' );
+			var direction = Number( button.getAttribute( 'data-move-dir' ) );
+			if ( direction !== -1 && direction !== 1 ) { return; }
+			var cols = visibleColumns( view.data );
+			var index = cols.indexOf( key );
+			var next = index + direction;
+			if ( index < 0 || next < 0 || next >= cols.length ) { return; }
+			cols[ index ] = cols[ next ]; cols[ next ] = key;
+			state.columns = cols;
+			cancelExport();
+			saveColumns( cols );
+			drawPanel();
+			drawTable();
+			focusColumn( key );
 		} );
 
 		// 表头排序、款式展开 / 收起。

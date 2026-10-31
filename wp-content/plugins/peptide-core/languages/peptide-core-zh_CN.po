@@ -11881,3 +11881,611 @@ msgstr "本地模拟—钱包（不扣款）"
 #: includes/payments/class-local-payments.php:20
 msgid "Local test payment only. No charge will be made."
 msgstr "仅用于本地测试付款，不会扣款。"
+#: includes/admin/class-data-pages.php
+msgid "The visitor map, countries, sources and collections need data that is not collected yet."
+msgstr "访客地图、国家、来源和集合需要的数据尚未采集。"
+
+#: includes/admin/class-data-pages.php
+msgid "Query"
+msgstr "查询"
+
+#: includes/admin/class-data-pages.php
+msgid "Custom dates"
+msgstr "自定义日期"
+
+#: includes/admin/class-data-pages.php
+msgid "Selected period"
+msgstr "所选时间段"
+
+#: includes/admin/class-data-pages.php
+msgid "Period visits"
+msgstr "所选时段访问"
+
+#: includes/admin/class-data-pages.php
+msgid "Period sales"
+msgstr "所选时段销售"
+
+#: includes/admin/class-data-pages.php
+msgid "Period buying power"
+msgstr "所选时段购买力"
+
+#: includes/admin/class-data-pages.php
+msgid "Visitor behaviour in this period"
+msgstr "所选时段访客行为"
+
+#: includes/admin/class-data-pages.php
+msgid "Visitors by visit start time"
+msgstr "按访问开始时间统计的访客数"
+
+#: includes/admin/class-data-pages.php
+msgid "Most viewed products in this period"
+msgstr "所选时段浏览最多的商品"
+
+#: includes/admin/class-data-pages.php
+msgid "Most added to cart in this period"
+msgstr "所选时段加购最多的商品"
+
+#: includes/admin/class-data-pages.php
+msgid "Best sellers in this period"
+msgstr "所选时段热卖商品"
+
+#: includes/admin/class-data-pages.php
+msgid "Popular pages in this period"
+msgstr "所选时段热门页面"
+
+#: includes/admin/class-data-pages.php
+msgid "History updates when you query or refresh."
+msgstr "历史数据在查询或刷新时更新。"
+
+#: includes/admin/class-data-pages.php
+msgid "Enter valid start and end dates in order, up to 366 days."
+msgstr "请按先后顺序填写有效的开始和结束日期，最多选择366天。"
+
+#: includes/admin/class-data-pages.php
+msgid "Visitors, funnel and chart use visits that started in this period. A visitor counts once in the period and once in each chart bucket they visited. Page views use event time. Paid orders use creation time, exclude test orders and subtract current refunds. Completed payment counts visitors in the funnel, and orders in the cards."
+msgstr "访客数、漏斗和图表按所选时段内开始的访问统计。每位访客在整个时段内只计一次，在各个有访问的图表时段内分别去重。浏览量按事件发生时间统计。已付款订单按创建时间统计，排除测试订单并扣除当前退款。完成支付在漏斗中按访客计数，在卡片中按订单计数。"
+
+#: includes/admin/class-data-pages.php
+msgid "Address completed"
+msgstr "填写地址"
+
+#: includes/admin/class-data-pages.php
+msgid "Payment selected"
+msgstr "选择支付"
+
+#: includes/admin/class-data-pages.php
+msgid "Paying visitors"
+msgstr "完成支付（访客）"
+
+#: includes/admin/class-data-pages.php
+msgid "Paying visitor conversion rate"
+msgstr "付款访客转化率"
+
+#: includes/admin/class-data-pages.php
+msgid "Hide details"
+msgstr "收起详情"
+
+#: includes/admin/class-data-pages.php
+msgid "The KPI conversion rate counts paid orders per visitor. These funnels count paying visitors per visitor; one customer can place several orders."
+msgstr "指标卡的转化率按付款订单数除以访客数计算；以下漏斗按付款访客数除以访客数计算。同一客户可以有多笔订单。"
+
+#: includes/admin/class-data-pages.php
+msgid "Each step counts distinct visitors in the selected visit cohort. Payment requires a recorded server confirmation. Optional steps, default selections and missing historical observations can make steps noncumulative. Missing observations are not backfilled. Sales and order cards count orders separately."
+msgstr "每一步按所选访问范围内的独立访客去重，完成支付须有服务端确认记录。可选步骤、默认选项和历史缺少观察记录，可能导致各步骤数量并非依次递减；缺少的记录不会回填。销售额和订单卡片另按订单统计。"
+
+#: includes/admin/class-data-pages.php
+msgid "Detailed visitor steps are unavailable in this response. The legacy five-step report is shown; its paid count may use orders."
+msgstr "本次响应没有详细访客步骤，现显示原有五步统计，其中付款数可能按订单计数。"
+
+#. translators: %s: metric name
+#: includes/admin/class-data-pages.php
+msgid "Move %s up"
+msgstr "上移%s"
+
+#. translators: %s: metric name
+#: includes/admin/class-data-pages.php
+msgid "Move %s down"
+msgstr "下移%s"
+
+#: includes/admin/class-data-pages.php
+msgid "Export CSV"
+msgstr "导出CSV"
+
+#: includes/admin/class-data-pages.php
+msgid "Preparing CSV…"
+msgstr "正在生成CSV…"
+
+#: includes/admin/class-data-pages.php
+msgid "CSV download started."
+msgstr "CSV下载已开始。"
+
+#: includes/admin/class-data-pages.php
+msgid "CSV could not be downloaded. Try again, or refresh the page if your session expired."
+msgstr "CSV下载失败，请重试；如果登录已过期，请刷新页面。"
+
+#: includes/admin/class-data-pages.php
+msgid "Export all matching products and their data-bearing variations, including collapsed variations."
+msgstr "导出所有符合筛选条件的商品及有数据的款式，包含已折叠的款式。"
+
+#: includes/admin/class-data-pages.php
+msgid "Export all matching page paths, across every result page."
+msgstr "导出所有符合筛选条件的页面路径，涵盖全部结果页。"
+
+#: includes/admin/class-data-pages.php
+msgid "Showing %1$d of %2$d"
+msgstr "显示%1$d／%2$d条"
+
+#: includes/admin/class-data-pages.php
+msgid "Open full results"
+msgstr "打开完整结果"
+
+#: includes/admin/class-data-pages.php
+msgid "Open full results: %s"
+msgstr "打开完整结果：%s"
+
+#: includes/admin/class-data-pages.php
+msgid "Close full results"
+msgstr "关闭完整结果"
+
+#: includes/admin/class-data-pages.php
+msgid "Search ranking names or keys"
+msgstr "搜索排行名称或标识"
+
+#: includes/admin/class-data-pages.php
+msgid "%d matching rows"
+msgstr "共%d条匹配结果"
+
+#: includes/admin/class-data-pages.php
+msgid "Retry"
+msgstr "重试"
+
+#: includes/admin/class-data-pages.php
+msgid "Percentage points"
+msgstr "百分点"
+
+#: includes/admin/class-data-pages.php
+msgid "Export every matching ranking row, across all result pages."
+msgstr "导出所有符合筛选条件的排行结果，涵盖全部结果页。"
+
+#: includes/data/class-report-exports.php
+msgid "Conversion export is unavailable. Refresh the report and try again."
+msgstr "转化率报表暂时无法导出，请刷新报表后重试。"
+
+#: includes/admin/class-data-pages.php
+msgid "Export all results in the selected grouping, eight visitor steps, both transition views, observed visits and payment channels. Group figures cover the current period only."
+msgstr "导出当前分组维度下的全部结果、八步访客数据、精简和完整两套步骤衔接、已观察访问及支付通道。分组数据仅包含本期。"
+
+#: includes/admin/class-data-pages.php
+msgid "Show allowed URL parameters"
+msgstr "显示允许的 URL 参数"
+
+#: includes/admin/class-data-pages.php
+msgid "Source unknown"
+msgstr "来源未知"
+
+#: includes/admin/class-data-pages.php
+msgid "Applying date range…"
+msgstr "正在应用日期范围…"
+
+#: includes/admin/class-data-pages.php
+msgid "Groups use the first successfully captured entry host, path and allowed utm_source/utm_medium values. Query value case is preserved. Visits without this observation remain source unknown, separately from captured empty parameters. This does not identify a direct source; storefront collection must supply the optional metadata."
+msgstr "分组使用首次成功捕获的入口域名、路径及允许的 utm_source／utm_medium 值，保留参数值大小写。没有这项观察的访问仍为来源未知，与已捕获的空参数分开。这不能确认直接来源；独立站采集端需要提供可选元数据。"
+
+#: includes/tracking/class-privacy.php
+msgid "Visit attribution snapshot (JSON)"
+msgstr "访问来源快照（JSON）"
+
+#: includes/tracking/class-privacy.php
+msgid "When supplied by the storefront, we also keep the first successfully captured visit entry domain, path, allowed utm_source/utm_medium query values and referrer domain. Older visits without this observation remain unknown. An unavailable value (null), an observed empty value and an absent UTM key are distinct; we do not infer a direct source. The normalized visit snapshot is included in personal data exports and is deleted with the visit. Rejected attribution values are not stored."
+msgstr "独立站提供相关数据时，我们还会保存首次成功捕获的访问入口域名、路径、允许的 utm_source／utm_medium 查询值及引荐域名。没有这项观察的历史访问仍为未知。不可用值（null）、观察到的空值和缺少的 UTM 键含义不同；我们不会据此推断直接来源。标准化的访问快照会包含在个人数据导出中，并随访问记录删除。被拒绝的来源值不会保存。"
+
+#: includes/admin/class-data-pages.php
+msgid "Recently viewed products"
+msgstr "最近浏览的商品"
+
+#: includes/admin/class-data-pages.php
+msgid "Recently carted products"
+msgstr "最近加购的商品"
+
+#: includes/admin/class-data-pages.php
+msgid "Recently sold product units"
+msgstr "最近售出的商品件数"
+
+#: includes/admin/class-data-pages.php
+msgid "Visitor countries map"
+msgstr "访客国家地图"
+
+#: includes/admin/class-data-pages.php
+msgid "Active countries — visitors"
+msgstr "活跃国家 — 访客数"
+
+#: includes/admin/class-data-pages.php
+msgid "Popular countries — page views"
+msgstr "热门国家 — 页面访问量"
+
+#: includes/admin/class-data-pages.php
+msgid "Visit sources — visitors"
+msgstr "访问来源 — 访客数"
+
+#: includes/admin/class-data-pages.php
+msgid "Collections — page views"
+msgstr "专辑 — 页面访问量"
+
+#: includes/admin/class-data-pages.php
+msgid "Popular pages in this range"
+msgstr "所选时段的热门页面"
+
+#: includes/admin/class-data-pages.php
+msgid "Product units"
+msgstr "商品件数"
+
+#: includes/admin/class-data-pages.php
+msgid "These panels could not be loaded. Retry this accepted range."
+msgstr "这些面板加载失败。请重试最后已接受的时段。"
+
+#: includes/admin/class-data-pages.php
+msgid "Showing the last accepted range; these results may be stale."
+msgstr "正在显示最后已接受的时段，数据可能已过时。"
+
+#: includes/admin/class-data-pages.php
+msgid "No matching observations in this range."
+msgstr "此时段内没有匹配的观察记录。"
+
+#: includes/admin/class-data-pages.php
+msgid "Unavailable"
+msgstr "不可用"
+
+#: includes/admin/class-data-pages.php
+msgid "Partial observation coverage"
+msgstr "观察覆盖不完整"
+
+#: includes/admin/class-data-pages.php
+msgid "Available"
+msgstr "可用"
+
+#: includes/admin/class-data-pages.php
+msgid "No observations have been collected for these records."
+msgstr "这些记录尚未采集相关观察。"
+
+#: includes/admin/class-data-pages.php
+msgid "The source reported that country data was unavailable."
+msgstr "来源报告国家数据不可用。"
+
+#: includes/admin/class-data-pages.php
+msgid "Records contain both missing observations and source-reported unavailability."
+msgstr "记录中同时存在未采集和来源报告不可用的情况。"
+
+#: includes/admin/class-data-pages.php
+msgid "A report dependency is unavailable; counts are unknown."
+msgstr "报表依赖不可用，数量未知。"
+
+#: includes/admin/class-data-pages.php
+msgid "Known"
+msgstr "已知"
+
+#: includes/admin/class-data-pages.php
+msgid "Observed unknown"
+msgstr "已观察但未知"
+
+#: includes/admin/class-data-pages.php
+msgid "Unobserved"
+msgstr "未观察"
+
+#: includes/admin/class-data-pages.php
+msgid "Observation coverage"
+msgstr "观察覆盖情况"
+
+#: includes/admin/class-data-pages.php
+msgid "Observation coverage does not apply to this event/unit ranking."
+msgstr "此事件／商品件数排行不适用观察覆盖率。"
+
+#: includes/admin/class-data-pages.php
+msgid "Base records"
+msgstr "基础记录数"
+
+#: includes/admin/class-data-pages.php
+msgid "Showing %1$d of %2$d matching rows (Top 5)."
+msgstr "显示 %1$d／%2$d 条匹配记录（前 5 名）。"
+
+#: includes/admin/class-data-pages.php
+msgid "All observed country codes"
+msgstr "全部已观察的国家代码"
+
+#: includes/admin/class-data-pages.php
+msgid "Count"
+msgstr "数量"
+
+#: includes/admin/class-data-pages.php
+msgid "Share of page views"
+msgstr "页面访问量占比"
+
+#: includes/admin/class-data-pages.php
+msgid "Selected calendar range"
+msgstr "所选日历时段"
+
+#: includes/admin/class-data-pages.php
+msgid "Captured source key absent"
+msgstr "已捕获来源：键缺失"
+
+#: includes/admin/class-data-pages.php
+msgid "Captured source observed empty"
+msgstr "已捕获来源：观察到空值"
+
+#: includes/admin/class-data-pages.php
+msgid "No outline in this map"
+msgstr "此地图无对应轮廓"
+
+#: includes/admin/class-data-pages.php
+msgid "Zoom map in"
+msgstr "放大地图"
+
+#: includes/admin/class-data-pages.php
+msgid "Zoom map out"
+msgstr "缩小地图"
+
+#: includes/admin/class-data-pages.php
+msgid "Reset map"
+msgstr "重置地图"
+
+#: includes/admin/class-data-pages.php
+msgid "Offline country outlines show source-reported visitor counts, not visitor coordinates. Countries without an outline remain in the table. Use arrow keys to pan the focused map; page scrolling is unchanged."
+msgstr "离线国家轮廓显示来源报告的访客数，不是访客坐标。无轮廓的国家仍保留在表格中。聚焦地图后可用方向键平移，不影响页面正常滚动。"
+
+#: includes/admin/class-data-pages.php
+msgid "Country observations are source reported, not verified by IP. Visitor counts use each visit’s latest country observation before the cutoff; one visitor may appear in several countries. Popular countries counts each page view instead."
+msgstr "国家观察由来源报告，未经 IP 验证。访客数使用各次访问在截止时间前最近一次国家观察；同一访客可能出现在多个国家。热门国家则逐条统计页面访问。"
+
+#: includes/admin/class-data-pages.php
+msgid "Sources use the first successfully captured visit snapshot and preserve absent, empty and case-sensitive values. No direct source is inferred. Late claims can update an earlier cutoff; this is not an as-of snapshot."
+msgstr "来源使用首次成功捕获的访问快照，区分键缺失、空值和大小写。不推断直接来源。较晚完成的捕获可能更新较早截止时间的结果，这不是当时状态的快照。"
+
+#: includes/admin/class-data-pages.php
+msgid "Collections count saved collection observations, not today’s product categories or guessed URL paths. Deleted collections retain their identifier."
+msgstr "专辑仅统计已保存的专辑观察，不使用商品当前分类或猜测页面路径。已删除专辑保留原标识。"
+
+#: includes/admin/class-data-pages.php
+msgid "Each live panel has its own window. All historical panels use the accepted calendar dates. Counts may change after late observations; visitor counts across rows are not additive."
+msgstr "实时模式下各面板有独立窗口；历史面板统一使用已接受的日历日期。迟到观察可能改变结果，各行访客数不可相加。"
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Page kind"
+msgstr "页面类型"
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Collection ID"
+msgstr "专辑标识"
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Country observation"
+msgstr "国家观察"
+
+#: includes/admin/class-tracking-page.php
+msgid "Source reported"
+msgstr "来源报告"
+
+#: includes/admin/class-tracking-page.php
+msgid "Entry host"
+msgstr "入口域名"
+
+#: includes/admin/class-tracking-page.php
+msgid "Key absent"
+msgstr "键缺失"
+
+#: includes/admin/class-tracking-page.php
+msgid "Observed empty"
+msgstr "观察到空值"
+
+#: includes/admin/class-tracking-page.php
+msgid "Referrer host"
+msgstr "引荐域名"
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Store page context"
+msgstr "店铺页面上下文"
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Observed at (UTC)"
+msgstr "观察时间（UTC）"
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Context source"
+msgstr "上下文来源"
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "Country code"
+msgstr "国家代码"
+
+#: includes/tracking/class-page-context-privacy.php
+msgid "When supplied by the storefront, page views may include a normalized page kind, collection identifier and source-reported country observation. Country observations are not verified physical locations or IP-derived coordinates. Missing observations remain unobserved. These facts follow the store visit retention, account/order association and erasure rules, and are included in a separate personal-data export."
+msgstr "独立站提供时，页面访问记录可包含规范化页面类型、专辑标识和来源报告的国家观察。国家观察不代表经过验证的实际位置或由 IP 推导的坐标。缺失观察保持未观察状态。这些事实遵循店铺访问记录的保存期限、账号／订单关联及抹除规则，并包含在独立的个人数据导出中。"
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime event count"
+msgid "Events"
+msgstr "事件数"
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime distinct visitor count"
+msgid "Visitors"
+msgstr "访客数"
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime ranking item"
+msgid "Product"
+msgstr "商品"
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime ranking item"
+msgid "Country"
+msgstr "国家"
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime ranking item"
+msgid "Source"
+msgstr "来源"
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime ranking item"
+msgid "Collection"
+msgstr "专辑"
+
+#: includes/admin/class-data-pages.php
+msgctxt "realtime ranking item"
+msgid "Page"
+msgstr "页面"
+
+#: includes/admin/class-data-pages.php
+msgid "Realtime entry attribution is unavailable."
+msgstr "实时入口来源数据暂不可用。"
+
+#: includes/admin/class-data-pages.php
+msgid "Entry domain (first captured)"
+msgstr "入口域名（首次捕获）"
+
+#: includes/admin/class-data-pages.php
+msgid "UTM source (first captured)"
+msgstr "UTM 来源（首次捕获）"
+
+#: includes/admin/class-data-pages.php
+msgid "All entry sources"
+msgstr "全部入口来源"
+
+#: includes/admin/class-data-pages.php
+msgid "No entry attribution observed"
+msgstr "未观察到入口来源"
+
+#: includes/admin/class-data-pages.php
+msgid "Captured without a UTM source key"
+msgstr "已捕获，但缺少 UTM 来源键"
+
+#: includes/admin/class-data-pages.php
+msgid "Captured empty UTM source"
+msgstr "已捕获空 UTM 来源值"
+
+#: includes/admin/class-data-pages.php
+msgid "Entry filters use the first successfully captured visit snapshot. Domain and UTM conditions are combined with AND. Orders use creation time and their original visit entry, not revenue from visits in the selected period. Values preserve case; unknown is not direct traffic."
+msgstr "入口筛选使用访问首次成功捕获的快照，域名与 UTM 条件须同时满足。订单按创建时间及原访问入口筛选，不代表所选访问时段产生的收入。值区分大小写；未观察到不等于直接访问。"
+
+#: includes/admin/class-data-pages.php
+msgid "Search entry values"
+msgstr "搜索入口候选值"
+
+#: includes/admin/class-data-pages.php
+msgid "More entry values"
+msgstr "更多入口候选值"
+
+#: includes/admin/class-data-pages.php
+msgid "Previous entry values"
+msgstr "上一页入口候选值"
+
+#: includes/admin/class-data-pages.php
+msgid "Selected entry value was not observed in this period."
+msgstr "本期未观察到所选入口值，仍保留当前选择。"
+
+#: includes/admin/class-data-pages.php
+msgid "Not observed in this period"
+msgstr "本期未观察到"
+
+#: includes/admin/class-data-pages.php
+msgid "Reset entry filters to All"
+msgstr "重置入口筛选为全部"
+
+#: includes/admin/class-data-pages.php
+msgid "Loading entry-filtered data…"
+msgstr "正在加载入口筛选数据…"
+
+#: includes/admin/class-data-pages.php
+msgid "Showing the last accepted entry filter; the new request has not succeeded."
+msgstr "当前显示上次成功接受的入口筛选；新请求尚未成功。"
+
+#: includes/admin/class-data-pages.php
+msgid "Entry-filter data could not be loaded. Retry or reset to All."
+msgstr "入口筛选数据加载失败，请重试或重置为全部。"
+
+#: includes/admin/class-data-pages.php
+msgid "Entry filters in the URL are invalid. Correct them or reset to All."
+msgstr "网址中的入口筛选无效，请修正或重置为全部。"
+
+#: includes/admin/class-data-pages.php
+msgid "Entry filters are unavailable; the All report remains available."
+msgstr "入口筛选暂不可用，仍可查看全部报表。"
+
+#: includes/admin/class-data-pages.php
+msgid "Entry values could not be loaded. The accepted report remains unchanged."
+msgstr "入口候选加载失败，已接受的报表保持不变。"
+
+#: includes/admin/class-data-pages.php
+msgid "Retry entry filters"
+msgstr "重试入口筛选"
+
+#: includes/admin/class-data-pages.php
+msgid "Candidate coverage: distinct visits"
+msgstr "候选覆盖：访问数（按访问去重）"
+
+#: includes/admin/class-data-pages.php
+msgid "Captured entry snapshots"
+msgstr "已捕获入口快照"
+
+#: includes/admin/class-data-pages.php
+msgid "Visits without captured attribution"
+msgstr "尚无来源快照的访问"
+
+#: includes/admin/class-data-pages.php
+msgid "Snapshots received after this cutoff"
+msgstr "原事件接收时间晚于截止的快照"
+
+#: includes/admin/class-data-pages.php
+msgid "Unlinked eligible events (separate count)"
+msgstr "未关联的入选事件（单独计数）"
+
+#: includes/admin/class-data-pages.php
+msgid "Unlinked eligible orders (separate count)"
+msgstr "未关联的入选订单（单独计数）"
+
+#: includes/admin/class-data-pages.php:854
+msgid "Current checkout type: WooCommerce Blocks"
+msgstr "当前结账类型：WooCommerce Blocks"
+
+#: includes/admin/class-data-pages.php:855
+msgid "Current checkout type is unconfirmed"
+msgstr "当前结账类型未确认"
+
+#: includes/admin/class-data-pages.php:856
+msgid "Checkout type describes the current configuration only. These observations are not grouped by historical checkout mode."
+msgstr "结账类型仅描述当前配置；这些观察数据未按历史结账模式分组。"
+
+#: includes/admin/class-data-pages.php:857
+msgid "Current visits"
+msgstr "本期访问次数"
+
+#: includes/admin/class-data-pages.php:858
+msgid "Previous period visits"
+msgstr "对比期访问次数"
+
+#: includes/admin/class-data-pages.php:859
+msgid "Relative change (%)"
+msgstr "相对变化（%）"
+
+#: includes/admin/class-data-pages.php:860
+msgid "Current period"
+msgstr "本期"
+
+#: includes/admin/class-data-pages.php:862
+msgid "Processing success rate (%)"
+msgstr "支付处理成功率（%）"
+
+#: includes/admin/class-data-pages.php:865
+msgid "View detailed checkout analysis"
+msgstr "查看详细结账分析"
+
+#: includes/admin/class-data-pages.php:866
+msgid "Loading checkout observations…"
+msgstr "正在加载结账观察…"
+
+#: includes/admin/class-data-pages.php:213
+msgid "Checkout observations could not be loaded."
+msgstr "无法加载结账观察数据。"
+
+#: includes/admin/class-data-pages.php:868
+msgid "Retry checkout observations"
+msgstr "重试结账观察"
