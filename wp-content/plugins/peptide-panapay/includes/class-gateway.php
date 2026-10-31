@@ -99,6 +99,16 @@ final class Gateway extends \WC_Payment_Gateway {
 		return in_array( $this->get_option( 'test_mode', 'yes' ), array( true, 'yes', '1', 1 ), true );
 	}
 
+	/** Display selection is supplied by HQ; it does not register additional gateways. */
+	public function payment_icons(): array {
+		return Bridge::enabled() && is_array( $this->central_config['payment_icons'] ?? null )
+			? $this->central_config['payment_icons'] : array();
+	}
+
+	public function get_icon() {
+		return apply_filters( 'woocommerce_gateway_icon', Payment_Icons::markup( $this->payment_icons() ), $this->id );
+	}
+
 	public function is_available() {
 		if ( ! parent::is_available() || ! Store::installed() ) { return false; }
 		try {

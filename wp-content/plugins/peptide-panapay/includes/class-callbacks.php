@@ -115,7 +115,8 @@ final class Callbacks {
 		try {
 			$session = Session_Service::active_session( $order );
 			if ( 'iframe' === $session['type'] ) {
-				echo '<iframe title="' . esc_attr__( 'Secure payment', 'peptide-panapay' ) . '" src="' . esc_url( $session['url'] ) . '" style="display:block;width:100%;min-height:480px;border:0" referrerpolicy="no-referrer" allow="payment"></iframe>';
+				$height = $session['iframe_height'];
+				echo '<iframe title="' . esc_attr__( 'Secure payment', 'peptide-panapay' ) . '" src="' . esc_url( $session['url'] ) . '" style="display:block;width:100%;min-height:' . esc_attr( (string) $height ) . 'px;border:0" referrerpolicy="no-referrer" allow="payment"></iframe>';
 			}
 			echo '<p><a href="' . esc_url( $session['url'] ) . '" rel="noreferrer">' . esc_html__( 'Open the secure payment page', 'peptide-panapay' ) . '</a></p>';
 			echo '<p>' . esc_html__( 'Payment confirmation may take a moment after you return. Card details are entered on the payment provider’s page.', 'peptide-panapay' ) . '</p>';

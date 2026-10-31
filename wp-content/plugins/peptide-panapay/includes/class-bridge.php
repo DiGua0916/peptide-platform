@@ -42,18 +42,17 @@ final class Bridge {
 		$data = get_transient( $cache );
 		if ( false === $data ) {
 			$data = Hub_Protocol::request( $identity['url'], $identity['key'], $identity['uuid'], Hub_Protocol::CONFIG, array(), 5 );
-			self::validate_policy( $data );
+			$data = self::validate_policy( $data );
 			set_transient( $cache, $data, self::CACHE_TTL );
 		}
-		self::validate_policy( $data );
-		return $data;
+		return self::validate_policy( $data );
 	}
 
-	private static function validate_policy( $data ): void {
-		if ( ! is_array( $data ) || array_diff( array_keys( $data ), array( 'enabled', 'title', 'description', 'test_mode', 'payment_hosts' ) )
+	private static function validate_policy( $data ): array {
+		if ( ! is_array( $data ) || array_diff( array_keys( $data ), array( 'enabled', 'title', 'description', 'test_mode', 'payment_hosts', 'payment_icons', 'iframe_height' ) )
 			|| ! is_bool( $data['enabled'] ?? null ) || ! is_bool( $data['test_mode'] ?? null )
-			|| ! is_string( $data['title'] ?? null ) || '' === trim( $data['title'] ) || strlen( $data['title'] ) > 250
-			|| ! is_string( $data['description'] ?? null ) || strlen( $data['description'] ) > 2000
+			|| ! is_string( $data['title'] ?? null ) || '' === trim( $data['title'] ) || mb_strlen( $data['title'] ) > 120
+			|| ! is_string( $data['description'] ?? null ) || mb_strlen( $data['description'] ) > 1000
 			|| ! is_array( $data['payment_hosts'] ?? null ) || count( $data['payment_hosts'] ) > 32 ) {
 			throw new Protocol_Error( 'hub_policy_invalid', 503 );
 		}
@@ -63,6 +62,24 @@ final class Bridge {
 				throw new Protocol_Error( 'hub_policy_invalid', 503 );
 			}
 		}
+		// Accept the previous five-field policy during a rolling upgrade. A partially
+		// upgraded shape, unknown field or malformed presentation value is rejected.
+		if ( array_key_exists( 'payment_icons', $data ) !== array_key_exists( 'iframe_height', $data ) ) {
+			throw new Protocol_Error( 'hub_policy_invalid', 503 );
+		}
+		if ( ! array_key_exists( 'payment_icons', $data ) ) { $data['payment_icons'] = array(); $data['iframe_height'] = 530; }
+		if ( ! is_array( $data['payment_icons'] ) || count( $data['payment_icons'] ) > 6
+			|| ! is_int( $data['iframe_height'] ) || $data['iframe_height'] < 320 || $data['iframe_height'] > 1600 ) {
+			throw new Protocol_Error( 'hub_policy_invalid', 503 );
+		}
+		$allowed = array_keys( Payment_Icons::catalog() );
+		$icons = array();
+		foreach ( $data['payment_icons'] as $id ) {
+			if ( ! is_string( $id ) || ! in_array( $id, $allowed, true ) ) { throw new Protocol_Error( 'hub_policy_invalid', 503 ); }
+			if ( ! in_array( $id, $icons, true ) ) { $icons[] = $id; }
+		}
+		$data['payment_icons'] = $icons;
+		return $data;
 	}
 
 	public static function configuration(): array {
@@ -71,6 +88,7 @@ final class Bridge {
 		return array(
 			'central' => true, 'enabled' => $policy['enabled'], 'title' => $policy['title'], 'description' => $policy['description'],
 			'test_mode' => $policy['test_mode'], 'payment_hosts' => $policy['payment_hosts'],
+			'payment_icons' => $policy['payment_icons'], 'iframe_height' => $policy['iframe_height'],
 			'gateway' => '', 'mchid' => 'hub-' . $identity['uuid'], 'tag' => '', 'mode' => '2',
 			// A domain-separated store event key, never the payment provider's secret.
 			'secret' => Hub_Protocol::event_key( $identity['key'] ),

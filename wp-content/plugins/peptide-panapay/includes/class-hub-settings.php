@@ -15,6 +15,7 @@ final class Hub_Settings {
 			'enabled' => 'no', 'gateway' => '', 'mchid' => '', 'secret' => '', 'mode' => '2', 'tag' => '',
 			'test_mode' => 'yes', 'payment_hosts' => array(), 'sites' => array(),
 			'title' => 'Credit card', 'description' => 'Continue to the secure payment page to pay for your order.',
+			'account_name' => '', 'payment_icons' => array(), 'iframe_height' => 530,
 		), $value );
 	}
 
@@ -25,6 +26,9 @@ final class Hub_Settings {
 		$config['sites'] = self::site_ids( $settings['sites'] );
 		$config['title'] = self::plain( $settings['title'], 120 );
 		$config['description'] = self::plain( $settings['description'], 1000 );
+		$config['account_name'] = self::plain( $settings['account_name'], 120 );
+		$config['payment_icons'] = self::icons( $settings['payment_icons'] );
+		$config['iframe_height'] = self::height( $settings['iframe_height'] );
 		if ( '' === $config['title'] ) { $config['title'] = 'Credit card'; }
 		return $config;
 	}
@@ -46,6 +50,7 @@ final class Hub_Settings {
 		return array(
 			'enabled' => $ready, 'title' => $config['title'], 'description' => $config['description'],
 			'test_mode' => $config['test_mode'], 'payment_hosts' => array_values( array_unique( $hosts ) ),
+			'payment_icons' => $config['payment_icons'], 'iframe_height' => $config['iframe_height'],
 		);
 	}
 
@@ -60,6 +65,13 @@ final class Hub_Settings {
 			if ( in_array( $name, array( 'gateway', 'mchid' ), true ) && self::server_override( 'PC_PANAPAY_' . strtoupper( $name ) ) ) { continue; }
 			$candidate[ $name ] = trim( $input[ $name ] );
 		}
+		if ( array_key_exists( 'account_name', $input ) ) { $candidate['account_name'] = self::plain( $input['account_name'], 120 ); }
+		if ( array_key_exists( 'payment_icons_present', $input ) && ! in_array( $input['payment_icons_present'], array( '1', 1 ), true ) ) {
+			throw new \InvalidArgumentException( 'Payment display icons are invalid.' );
+		}
+		if ( array_key_exists( 'payment_icons', $input ) ) { $candidate['payment_icons'] = self::icons( $input['payment_icons'] ); }
+		elseif ( array_key_exists( 'payment_icons_present', $input ) ) { $candidate['payment_icons'] = array(); }
+		if ( array_key_exists( 'iframe_height', $input ) ) { $candidate['iframe_height'] = self::height( $input['iframe_height'] ); }
 		if ( array_key_exists( 'secret', $input ) ) {
 			if ( ! is_string( $input['secret'] ) || strlen( $input['secret'] ) > 1024 || preg_match( '/[\x00-\x1f\x7f]/', $input['secret'] ) ) {
 				throw new \InvalidArgumentException( 'Payment signing settings are invalid.' );
@@ -75,6 +87,9 @@ final class Hub_Settings {
 		}
 		$candidate['title'] = self::plain( $candidate['title'], 120 );
 		$candidate['description'] = self::plain( $candidate['description'], 1000 );
+		$candidate['account_name'] = self::plain( $candidate['account_name'], 120 );
+		$candidate['payment_icons'] = self::icons( $candidate['payment_icons'] );
+		$candidate['iframe_height'] = self::height( $candidate['iframe_height'] );
 		if ( '' === $candidate['title'] ) { throw new \InvalidArgumentException( 'Enter the payment method name.' ); }
 		$config = Configuration::from_settings( $candidate );
 		if ( 'yes' === $candidate['enabled'] ) {
@@ -88,7 +103,7 @@ final class Hub_Settings {
 			}
 		}
 		// Keep only this plugin's known settings; never save raw POST or plaintext credentials.
-		$names = array( 'enabled', 'gateway', 'mchid', 'secret', 'mode', 'tag', 'test_mode', 'payment_hosts', 'sites', 'title', 'description' );
+		$names = array( 'enabled', 'gateway', 'mchid', 'secret', 'mode', 'tag', 'test_mode', 'payment_hosts', 'sites', 'title', 'description', 'account_name', 'payment_icons', 'iframe_height' );
 		$candidate = array_intersect_key( $candidate, array_flip( $names ) );
 		if ( ! update_option( self::OPTION, $candidate, false ) && get_option( self::OPTION ) !== $candidate ) {
 			throw new \RuntimeException( 'Payment settings were not saved.' );
@@ -108,6 +123,27 @@ final class Hub_Settings {
 	private static function plain( $value, int $maximum ): string {
 		if ( ! is_string( $value ) || mb_strlen( $value ) > $maximum ) { throw new \InvalidArgumentException( 'Payment display text is invalid.' ); }
 		return trim( wp_strip_all_tags( $value, true ) );
+	}
+
+	/** These marks are presentation only; selecting one never enables a provider capability. */
+	private static function icons( $value ): array {
+		if ( ! is_array( $value ) || count( $value ) > 6 ) { throw new \InvalidArgumentException( 'Payment display icons are invalid.' ); }
+		$allowed = array_keys( Payment_Icons::catalog() );
+		$out = array();
+		foreach ( $value as $id ) {
+			if ( ! is_string( $id ) || ! in_array( $id, $allowed, true ) ) { throw new \InvalidArgumentException( 'Payment display icons are invalid.' ); }
+			if ( ! in_array( $id, $out, true ) ) { $out[] = $id; }
+		}
+		return $out;
+	}
+
+	private static function height( $value ): int {
+		if ( ! is_int( $value ) && ( ! is_string( $value ) || ! preg_match( '/^[0-9]{3,4}$/D', $value ) ) ) {
+			throw new \InvalidArgumentException( 'Payment frame height must be an integer from 320 to 1600.' );
+		}
+		$value = (int) $value;
+		if ( $value < 320 || $value > 1600 ) { throw new \InvalidArgumentException( 'Payment frame height must be an integer from 320 to 1600.' ); }
+		return $value;
 	}
 
 	private static function site_ids( $value ): array {

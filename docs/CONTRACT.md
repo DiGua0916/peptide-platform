@@ -1,5 +1,11 @@
 # 前后端契约
 
+## 2026-10-31 PAY-HQ-02：账号绑定与支付展示增量
+
+`peptide-panapay` 0.3 的 HQ 公开策略精确包含 `enabled,title,description,test_mode,payment_hosts,payment_icons,iframe_height`，原五字段新增后两项。`payment_icons` 只接受有序去重的 `american_express,mastercard,visa,discover,apple_pay,paypal`；只是结账标识，非独立渠道开通。`iframe_height` 为 320–1600 整数，默认530，原生尝试创建时冻结，仅实际 iframe 使用。内部 `account_name`、商户及密钥不下发。新 Bridge 兼容旧完整五字段并补无标识/530，拒绝部分升级形状及私密字段；须先升级全部店铺，再升级HQ，旧Bridge不接受新七字段。
+
+账号保存服务端保留已保存的收款开关和店铺授权；独立的授权保存仅消费开关/授权及既有测试模式。密钥空值沿用，权限/POST nonce不变。浏览器返回仍只读、供应商通知及原有单次创建/完成保护不变；没有新增快捷支付或独立 Apple Pay/PayPal 网关。
+
 ## 2026-10-31 PAY-HQ-01：中央支付与账号专属入口（最新用户决定）
 
 用户明确要求支付整体迁至总后台：支付方只作收款通道，各店订单和内部账目仍分开；不开发资金分账。用户只分配站点账号密码和专属链接，不需要手工管理站点连接密钥。以下取代早期每店设置商户/支付暂缓的相关约定。

@@ -61,6 +61,7 @@ final class Blocks extends AbstractPaymentMethodType {
 			'description' => $this->text( $this->gateway->get_description() ),
 			'test_mode'   => $this->gateway->is_test_mode(),
 			'supports'    => $this->get_supported_features(),
+			'payment_icons' => Payment_Icons::data( $this->gateway->payment_icons() ),
 		);
 	}
 

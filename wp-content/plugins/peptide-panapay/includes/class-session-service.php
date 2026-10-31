@@ -133,6 +133,7 @@ final class Session_Service {
 				'secret_box' => Crypto::encrypt( $config['secret'] ),
 				'return_token_hash' => hash( 'sha256', $token ), 'test_mode' => $config['test_mode'],
 				'merchant_scope' => hash( 'sha256', $config['gateway'] . '|' . $config['mchid'] ),
+				'iframe_height' => self::iframe_height( $config['iframe_height'] ?? 530 ),
 			);
 			if ( ! empty( $config['central'] ) ) {
 				$attempt['central'] = true;
@@ -186,7 +187,11 @@ final class Session_Service {
 		if ( ! Configuration::payment_url( $url, $config ) ) {
 			throw new Customer_Error( __( 'The secure payment page is not yet available. Please contact the store.', 'peptide-panapay' ) );
 		}
-		return array( 'type' => $attempt['type'], 'url' => $url );
+		return array( 'type' => $attempt['type'], 'url' => $url, 'iframe_height' => self::iframe_height( $attempt['iframe_height'] ?? 530 ) );
+	}
+
+	private static function iframe_height( $value ): int {
+		return is_int( $value ) && $value >= 320 && $value <= 1600 ? $value : 530;
 	}
 
 	public static function active_session( \WC_Order $order ): array {
