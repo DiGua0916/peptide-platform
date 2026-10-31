@@ -608,6 +608,11 @@ final class Fallback {
 		return $out . '</div></div>';
 	}
 
+	/** A file-only presentation adapter. The caller verifies public attachment eligibility. */
+	public static function local_file_video( int $attachment_id, bool $muted, bool $loop, string $class = 'vc-video' ): string {
+		return self::video_player( array( 'source' => 'file', 'video' => array( 'attachmentId' => $attachment_id ), 'poster' => Fields::empty_image(), 'title' => '', 'autoplay' => false, 'muted' => $muted, 'loop' => $loop, 'controls' => true ), $class );
+	}
+
 	/**
 	 * 视频本体：上传的视频或 YouTube（youtube-nocookie 嵌入）。
 	 */
@@ -929,6 +934,7 @@ final class Fallback {
 	}
 
 	private static function render_promo_grid( array $s, array $items ): string {
+		if ( 'balanced' === ( $s['layoutPreset'] ?? 'legacy' ) ) { return self::render_promo_grid_balanced( $s, $items ); }
 		$left = '<div class="vc-promo__left">' . ( '' !== $s['leftTitle'] ? '<h3 class="vc-promo__title">' . esc_html( $s['leftTitle'] ) . '</h3>' : '' );
 		$left .= sprintf( '<div class="vc-carousel vc-carousel--auto" data-autoplay="%1$s" data-interval="%2$d" data-dots="%3$s">', $s['autoplay'] ? '1' : '0', (int) $s['intervalMs'], $s['dots'] ? '1' : '0' );
 		foreach ( $items as $i => $it ) {
@@ -947,34 +953,76 @@ final class Fallback {
 			}
 		}
 		$right .= '</div>';
-		return '<div class="vc-m__inner"><div class="vc-promo">' . $left . $right . '</div></div>';
+		return '<div class="vc-m__inner"><div class="vc-promo"' . self::style( array( '--vc-promo-dot-color' => $s['dotColor'] ?? '' ) ) . '>' . $left . $right . '</div></div>';
+	}
+
+	/** Balanced columns reuse the original carousel and live category references. */
+	private static function render_promo_grid_balanced( array $s, array $items ): string {
+		$slides = '';
+		$slide_count = 0;
+		foreach ( $items as $it ) {
+			$image = self::img( $it['image'], 'vc-slide__media' );
+			if ( '' === $image ) { continue; }
+			$slides .= '<div class="' . esc_attr( self::item_class( $it, 'vc-slide' . ( 0 === $slide_count ? ' is-active' : '' ) ) ) . '"' . self::item_attr( $it ) . '>' . self::maybe_link( $image, $it['href'] ) . '</div>';
+			++$slide_count;
+		}
+		$cards = '';
+		foreach ( array( $s['category1'], $s['category2'] ) as $term_id ) {
+			$term = $term_id ? get_term( (int) $term_id, 'product_cat' ) : null;
+			if ( $term instanceof \WP_Term ) {
+				$href = get_term_link( $term );
+				if ( is_wp_error( $href ) ) { continue; }
+				$thumb = (int) get_term_meta( $term->term_id, 'thumbnail_id', true );
+				$image = $thumb ? self::img( array( 'attachmentId' => $thumb, 'alt' => $term->name ), 'vc-promo__img' ) : '';
+				$cards .= '<a class="vc-promo__cat" href="' . esc_url( $href ) . '">' . $image . '<span class="vc-promo__cat-title">' . esc_html( $term->name ) . '</span></a>';
+			} elseif ( self::staff() ) {
+				$cards .= '<div class="vc-promo__empty">' . self::placeholder( __( 'Choose a category', 'peptide-core' ) ) . '</div>';
+			}
+		}
+		if ( '' === $slides && '' === $cards ) { return ''; }
+		$left = '';
+		if ( '' !== $slides ) {
+			$left = '<div class="vc-promo__left vc-promo__column">' . ( '' !== $s['leftTitle'] ? '<h3 class="vc-promo__title">' . esc_html( $s['leftTitle'] ) . '</h3>' : '' );
+			$left .= sprintf( '<div class="vc-carousel vc-carousel--auto" role="region" aria-roledescription="%4$s" aria-label="%5$s"%6$s data-autoplay="%1$s" data-interval="%2$d" data-dots="%3$s">', $s['autoplay'] ? '1' : '0', (int) $s['intervalMs'], $s['dots'] ? '1' : '0', esc_attr__( 'Carousel', 'peptide-core' ), esc_attr__( 'Promotional slides', 'peptide-core' ), $slide_count > 1 ? ' tabindex="0"' : '' );
+			$left .= $slides . '</div></div>';
+		}
+		$right = '' !== $cards ? '<div class="vc-promo__right vc-promo__column">' . ( '' !== $s['rightTitle'] ? '<h3 class="vc-promo__title">' . esc_html( $s['rightTitle'] ) . '</h3>' : '' ) . '<div class="vc-promo__categories">' . $cards . '</div></div>' : '';
+		$class = 'vc-promo vc-promo--balanced' . ( '' === $left || '' === $right ? ' vc-promo--single-column' : '' );
+		return '<div class="vc-m__inner"><div class="' . esc_attr( $class ) . '"' . self::style( array( '--vc-promo-dot-color' => $s['dotColor'] ?? '' ) ) . '>' . $left . $right . '</div></div>';
 	}
 
 	private static function render_marquee( array $s, array $items ): string {
-		$texts = array_filter( array_map( static fn( $it ) => (string) $it['text'], $items ), 'strlen' );
-		if ( ! $texts ) {
+		$content = '';
+		foreach ( $items as $item ) {
+			$rich = $item['textHtml'] ?? null;
+			$html = null !== $rich ? self::html( (string) $rich ) : esc_html( (string) $item['text'] );
+			if ( '' === trim( html_entity_decode( wp_strip_all_tags( $html ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ) ) ) { continue; }
+			$content .= '<div class="vc-marquee__item" role="listitem" data-module-item="' . esc_attr( $item['_id'] ) . '">' . $html . '</div>';
+		}
+		if ( '' === $content ) {
 			return self::staff() ? Renderer::notice( __( 'Add some text.', 'peptide-core' ) ) : '';
 		}
-		$track = '';
-		foreach ( $texts as $t ) {
-			$track .= '<span class="vc-marquee__item">' . esc_html( $t ) . '</span>';
-		}
+		$viewport_id = wp_unique_id( 'vc-marquee-' );
+		$height = 'vh' === ( $s['heightUnit'] ?? 'px' ) ? (int) ( $s['heightVh'] ?? 12 ) . 'vh' : (int) $s['heightPx'] . 'px';
 		$vars = self::style(
 			array(
-				'--vc-h'        => (int) $s['heightPx'] . 'px',
+				'--vc-h'        => $height,
 				'--vc-fs'       => (int) $s['fontSizePx'] . 'px',
 				'--vc-duration' => (int) $s['durationS'] . 's',
 				'--vc-bg'       => $s['bgColor'],
 				'--vc-fg'       => $s['textColor'],
 			)
 		);
-		// 内容重复一次用于无缝滚动；第二份对读屏软件隐藏。
+		// One readable source; JS fills a continuous decorative track without cloning focus targets.
 		return sprintf(
-			'<div class="vc-marquee vc-marquee--%1$s%2$s"%3$s><div class="vc-marquee__track"><div class="vc-marquee__group">%4$s</div><div class="vc-marquee__group" aria-hidden="true">%4$s</div></div></div>',
+			'<div class="vc-marquee vc-marquee--%1$s%2$s" data-vc-marquee data-pause-label="%6$s" data-resume-label="%7$s"%3$s><div class="vc-marquee__viewport" id="%5$s"><div class="vc-marquee__track"><div class="vc-marquee__group" role="list">%4$s</div></div></div><button type="button" class="vc-marquee__toggle" hidden aria-pressed="false" aria-controls="%5$s">%6$s</button></div>',
 			esc_attr( $s['direction'] ),
 			$s['pauseOnHover'] ? ' vc-marquee--pause' : '',
 			$vars,
-			$track
+			$content,
+			esc_attr( $viewport_id ),
+			esc_attr__( 'Pause scrolling', 'peptide-core' ),
+			esc_attr__( 'Resume scrolling', 'peptide-core' )
 		);
 	}
 
@@ -989,8 +1037,7 @@ final class Fallback {
 	}
 
 	private static function render_rich_text( array $s ): string {
-		$vars = self::style(
-			array(
+		$values = array(
 				'--vc-w'       => (int) $s['contentWidthPx'] . 'px',
 				'--vc-pad'     => (int) self::dv( $s['innerPaddingPx'], 'desktop' ) . 'px',
 				'--vc-pad-m'   => (int) self::dv( $s['innerPaddingPx'], 'mobile' ) . 'px',
@@ -998,8 +1045,20 @@ final class Fallback {
 				'--vc-text-bg' => $s['contentBgColor'],
 				'--vc-fg'      => $s['textColor'],
 				'text-align'   => $s['textAlign'],
-			)
-		);
+			);
+		if ( 'percent' === ( $s['contentWidthMode'] ?? 'pixels' ) ) {
+			$values['--vc-w'] = (int) self::dv( $s['contentWidthPercent'], 'desktop' ) . '%';
+			$values['--vc-w-m'] = (int) self::dv( $s['contentWidthPercent'], 'mobile' ) . '%';
+		}
+		$padding = array( 't' => 'contentPaddingTopPx', 'r' => 'contentPaddingRightPx', 'b' => 'contentPaddingBottomPx', 'l' => 'contentPaddingLeftPx' );
+		foreach ( $padding as $side => $key ) {
+			$value = $s[ $key ] ?? null;
+			foreach ( array( 'desktop' => '', 'mobile' => '-m' ) as $device => $suffix ) {
+				$edge = self::dv( $value, $device );
+				if ( null !== $edge ) { $values[ '--vc-pad-' . $side . $suffix ] = (int) $edge . 'px'; }
+			}
+		}
+		$vars = self::style( $values );
 		$body = '' !== $s['title'] ? '<h2 class="vc-m__title">' . esc_html( $s['title'] ) . '</h2>' : '';
 		$body .= '' !== $s['bodyHtml'] ? '<div class="vc-richtext">' . self::html( $s['bodyHtml'] ) . '</div>' : ( self::staff() ? Renderer::notice( __( 'Write your text in the sidebar.', 'peptide-core' ) ) : '' );
 		$btn  = self::button( $s['button'], $s );
@@ -1007,29 +1066,46 @@ final class Fallback {
 	}
 
 	private static function render_compare( array $s ): string {
-		$before = self::img( $s['before'], 'vc-compare__img', __( 'Before image', 'peptide-core' ) );
-		$after  = self::img( $s['after'], 'vc-compare__img', __( 'After image', 'peptide-core' ) );
+		$has_before = (bool) Assets::resolve( $s['before'] );
+		$has_after = (bool) Assets::resolve( $s['after'] );
+		$head = self::heading( $s );
+		if ( ! $has_before && ! $has_after ) {
+			$empty = self::placeholder( __( 'Choose the before and after images.', 'peptide-core' ) );
+			return '' === $head . $empty ? '' : '<div class="vc-m__inner">' . $head . $empty . '</div>';
+		}
+		$before = $has_before ? self::img( $s['before'], 'vc-compare__img', __( 'Before image', 'peptide-core' ) ) : '';
+		$after  = $has_after ? self::img( $s['after'], 'vc-compare__img', __( 'After image', 'peptide-core' ) ) : '';
 		$label  = static fn( string $text, string $color, string $side ): string => '' !== $text ? '<span class="vc-compare__label vc-compare__label--' . $side . '"' . ( '' !== $color ? ' style="color:' . esc_attr( $color ) . '"' : '' ) . '>' . esc_html( $text ) . '</span>' : '';
-		return sprintf(
-			'<div class="vc-m__inner">%1$s<div class="vc-compare" style="--vc-pos:%2$d%%"><div class="vc-compare__after">%3$s%4$s</div><div class="vc-compare__before">%5$s%6$s</div><input class="vc-compare__range" type="range" min="0" max="100" value="%2$d" aria-label="%7$s"></div></div>',
-			self::heading( $s ),
-			(int) $s['startPercent'],
-			$after,
-			$label( $s['afterLabel'], $s['afterTextColor'], 'after' ),
-			$before,
-			$label( $s['beforeLabel'], $s['beforeTextColor'], 'before' ),
-			esc_attr__( 'Drag to compare', 'peptide-core' )
-		);
+		$class = 'vc-compare' . ( 'natural' === ( $s['displayStyle'] ?? 'standard' ) ? ' vc-compare--natural' : '' );
+		if ( ! $has_before || ! $has_after ) {
+			$side = $has_before ? 'before' : 'after';
+			return '<div class="vc-m__inner">' . $head . '<div class="' . $class . ' vc-compare--single"><div class="vc-compare__single">' . ( $has_before ? $before : $after ) . $label( $s[ $side . 'Label' ], $s[ $side . 'TextColor' ], $side ) . '</div></div></div>';
+		}
+		$before_frame = '<div class="vc-compare__before">' . $before . $label( $s['beforeLabel'], $s['beforeTextColor'], 'before' ) . '</div>';
+		$after_frame = '<div class="vc-compare__after">' . $after . $label( $s['afterLabel'], $s['afterTextColor'], 'after' ) . '</div>';
+		$frames = 'natural' === ( $s['displayStyle'] ?? 'standard' ) ? $before_frame . $after_frame : $after_frame . $before_frame;
+		$handle = '<span class="vc-compare__handle" aria-hidden="true"><svg width="28" height="35" viewBox="0 0 28 35" fill="none" focusable="false"><path d="M10 12v11m4-11v11m4-11v11" stroke="currentColor" stroke-width="1.5"/></svg></span>';
+		$range = '<input class="vc-compare__range" type="range" min="0" max="100" value="' . (int) $s['startPercent'] . '" dir="ltr" disabled aria-label="' . esc_attr__( 'Image comparison position (%)', 'peptide-core' ) . '">';
+		return '<div class="vc-m__inner">' . $head . '<div class="' . $class . '" style="--vc-pos:' . (int) $s['startPercent'] . '%">' . $frames . $handle . $range . '</div></div>';
 	}
 
 	private static function render_hotspots( array $s, array $items ): string {
-		$out = '<div class="vc-m__inner">' . self::heading( $s ) . '<div class="vc-hotspots"' . self::style(
+		$plus = 'plus' === ( $s['displayStyle'] ?? 'standard' );
+		$head = self::heading( $s );
+		if ( $plus && ! Assets::resolve( $s['media']['desktop'] ?? null ) && ! Assets::resolve( $s['media']['mobile'] ?? null ) && ! self::staff() ) {
+			return '' === $head ? '' : '<div class="vc-m__inner">' . $head . '</div>';
+		}
+		$out = '<div class="vc-m__inner' . ( $plus ? ' vc-m__inner--full vc-hotspots-layout--plus' : '' ) . '">' . $head . '<div class="vc-hotspots' . ( $plus ? ' vc-hotspots--plus' : '' ) . '"' . self::style(
 			array(
 				'--vc-overlay' => '' !== $s['overlayColor'] ? $s['overlayColor'] : null,
 				'--vc-icon'    => (int) $s['iconWidthPx'] . 'px',
 			)
 		) . '>' . self::picture( $s['media'], 'vc-hotspots__media' ) . '<div class="vc-hotspots__overlay" aria-hidden="true"></div>';
 		foreach ( $items as $i => $it ) {
+			$rich = $it['textHtml'] ?? null;
+			$popup_image = Assets::resolve( $it['popupImage'] ?? null ) ? self::img( $it['popupImage'], 'vc-hotspot__popup-image' ) : '';
+			$body_text = null === $rich ? (string) $it['text'] : wp_strip_all_tags( $rich );
+			if ( $plus && ! self::staff() && '' === $popup_image && '' === trim( $it['title'] . $body_text ) && ! ( is_string( $rich ) && preg_match( '/<\s*img\b/i', $rich ) ) ) { continue; }
 			$vars = self::style(
 				array(
 					'--x'   => (int) self::dv( $it['x'], 'desktop' ) . '%',
@@ -1038,83 +1114,104 @@ final class Fallback {
 					'--y-m' => (int) self::dv( $it['y'], 'mobile' ) . '%',
 				)
 			);
-			$icon = Assets::resolve( $it['icon'] ) ? self::img( $it['icon'], 'vc-hotspot__icon' ) : '<span class="vc-hotspot__dot"></span>';
+			$icon = $plus ? '<svg class="vc-hotspot__plus" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" focusable="false"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.5"/></svg>' : ( Assets::resolve( $it['icon'] ) ? self::img( $it['icon'], 'vc-hotspot__icon' ) : '<span class="vc-hotspot__dot"></span>' );
+			$direction = $plus ? ( 'right' === ( $it['popupSide'] ?? 'left' ) ? 'right' : 'left' ) : $it['popup'];
+			$body = null === $rich ? '<p>' . nl2br( esc_html( $it['text'] ) ) . '</p>' : ( '' !== $rich ? '<div class="vc-hotspot__detail">' . self::html( $rich ) . '</div>' : '' );
+			$image = '' !== $popup_image ? '<div class="vc-hotspot__popup-media" style="--vc-popup-image-width:' . (int) ( $it['imageWidthPx'] ?? 32 ) . 'px">' . $popup_image . '</div>' : '';
 			$out .= sprintf(
-				'<details class="%1$s"%2$s><summary aria-label="%3$s">%4$s</summary><div class="vc-hotspot__pop vc-hotspot__pop--%5$s"><strong>%6$s</strong><p>%7$s</p></div></details>',
+				'<details class="%1$s"%2$s><summary aria-label="%3$s">%4$s</summary><div class="vc-hotspot__pop vc-hotspot__pop--%5$s"%9$s>%8$s<strong%10$s>%6$s</strong>%7$s</div></details>',
 				esc_attr( self::item_class( $it, 'vc-hotspot' ) ),
 				$vars . self::item_attr( $it ),
 				esc_attr( '' !== $it['title'] ? $it['title'] : sprintf( /* translators: %d: hotspot number */ __( 'Hotspot %d', 'peptide-core' ), $i + 1 ) ),
 				$icon,
-				esc_attr( $it['popup'] ),
+				esc_attr( $direction ),
 				esc_html( $it['title'] ),
-				nl2br( esc_html( $it['text'] ) )
+				$body,
+				$image,
+				$plus ? ' data-vc-popup-side="' . esc_attr( $direction ) . '"' : '',
+				$plus ? ' class="vc-hotspot__title"' : ''
 			);
+		}
+		if ( $plus ) {
+			$out .= '<dialog class="vc-hotspots__dialog" aria-modal="true" aria-label="' . esc_attr__( 'Hotspot details', 'peptide-core' ) . '"><button type="button" class="vc-hotspots__dialog-close" aria-label="' . esc_attr__( 'Close hotspot details', 'peptide-core' ) . '"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.5"/></svg></button><div class="vc-hotspots__dialog-card" tabindex="0" aria-label="' . esc_attr__( 'Hotspot content', 'peptide-core' ) . '"></div></dialog>';
 		}
 		return $out . '</div></div>';
 	}
 
 	private static function render_faq( array $s, array $items ): string {
-		$head = self::heading_accent( $s, 'h2', self::text_link( $s['link'] ) );
+		$rich = $s['descriptionHtml'] ?? null;
+		$head_s = $s;
+		if ( null !== $rich ) { $head_s['description'] = ''; }
+		$extra = null !== $rich && '' !== $rich ? '<div class="vc-m__desc">' . self::html( $rich ) . '</div>' : '';
+		$head = self::heading_accent( $head_s, 'h2', $extra . self::text_link( $s['link'] ) );
+		$panel = 'panel' === $s['layout'];
+		if ( $panel && ! self::staff() ) {
+			$items = array_values( array_filter( $items, static function ( $item ) {
+				return '' !== trim( $item['question'] ) || (bool) preg_match( '/<img\b/i', $item['answerHtml'] ) || '' !== trim( html_entity_decode( wp_strip_all_tags( $item['answerHtml'] ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ), " \t\n\r\0\x0B\xc2\xa0" );
+			} ) );
+			if ( ! $items ) { return '' === $head ? '' : '<div class="vc-m__inner vc-faq-wrap vc-faq-wrap--panel">' . $head . '</div>'; }
+		}
 		$out  = '<div class="vc-m__inner vc-faq-wrap vc-faq-wrap--' . esc_attr( $s['layout'] ) . '">' . $head . '<div class="vc-faq"' . self::style(
 			array(
 				'--vc-answer-bg' => $s['answerBgColor'],
 				'--vc-answer-fg' => $s['answerTextColor'],
 			)
 		) . '>';
+		if ( $panel ) { $out .= '<div class="vc-faq__panel-list">'; }
+		$opened = false;
 		foreach ( $items as $i => $it ) {
+			$answer = self::html( $it['answerHtml'] );
+			$has_answer = (bool) preg_match( '/<img\b/i', $answer ) || '' !== trim( html_entity_decode( wp_strip_all_tags( $answer ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ), " \t\n\r\0\x0B\xc2\xa0" );
+			$has_question = '' !== trim( $it['question'] );
+			if ( $panel && ! $has_answer && ! $has_question && ! self::staff() ) { continue; }
+			if ( $panel && ! $has_answer ) {
+				$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-faq__item vc-faq__static' ) ) . '"' . self::item_attr( $it ) . '><p class="vc-faq__question">' . esc_html( $has_question ? $it['question'] : __( 'Add a question or answer', 'peptide-core' ) ) . '</p></div>';
+				continue;
+			}
+			$open = $panel ? ( ! $opened && $s['openFirst'] ) : ( 0 === $i && $s['openFirst'] );
+			$opened = true;
+			$question = '' !== $it['question'] ? $it['question'] : ( $panel ? __( 'View answer', 'peptide-core' ) : __( 'Question', 'peptide-core' ) );
+			$chevron = $panel ? '<span class="vc-faq__chevron" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg></span>' : '';
 			$out .= sprintf(
-				'<details class="%1$s"%2$s><summary>%3$s</summary><div class="vc-faq__answer">%4$s</div></details>',
+				'<details class="%1$s"%2$s><summary>%3$s%5$s</summary><div class="vc-faq__answer">%4$s</div></details>',
 				esc_attr( self::item_class( $it, 'vc-faq__item' ) ),
-				( ( 0 === $i && $s['openFirst'] ) ? ' open' : '' ) . self::item_attr( $it ),
-				esc_html( '' !== $it['question'] ? $it['question'] : __( 'Question', 'peptide-core' ) ),
-				self::html( $it['answerHtml'] )
+				( $open ? ' open' : '' ) . self::item_attr( $it ),
+				esc_html( $question ),
+				$answer,
+				$chevron
 			);
 		}
-		return $out . '</div></div>';
+		return $out . ( $panel ? '</div>' : '' ) . '</div></div>';
 	}
 
 	private static function render_product_showcase( array $s, array $items ): string {
-		$out = sprintf( '<div class="vc-m__inner"><div class="vc-carousel vc-carousel--auto vc-showcase" data-autoplay="%1$s" data-interval="%2$d" data-dots="1" data-hover-preview="%3$s">', $s['autoplay'] ? '1' : '0', (int) $s['intervalMs'], $s['hoverPreview'] ? '1' : '0' );
-		foreach ( $items as $i => $it ) {
-			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-slide vc-showcase__scene' . ( 0 === $i ? ' is-active' : '' ) ) ) . '"' . self::item_attr( $it ) . '' . self::style(
-				array(
-					'--vc-overlay'   => '' !== $it['overlayColor'] ? $it['overlayColor'] : null,
-					'--vc-overlay-o' => (string) ( (int) $it['overlayOpacity'] / 100 ),
-				)
-			) . '>' . self::picture( $it['media'], 'vc-slide__media' ) . '<div class="vc-slide__overlay"></div>';
+		$scenes = ''; $templates = ''; $count = 0;
+		foreach ( $items as $it ) {
+			$picture = self::picture( $it['media'], 'vc-slide__media' );
+			$spots = '';
 			foreach ( $it['spots'] as $spot ) {
 				if ( array_key_exists( 'enabled', $spot ) && ! $spot['enabled'] && ! self::editor() ) { continue; }
-				$product = $spot['settings']['product'] ? wc_get_product( (int) $spot['settings']['product'] ) : null;
-				if ( ! $product || ( 'publish' !== $product->get_status() && ! self::staff() ) ) {
+				$values = $spot['settings'];
+				$product = $values['product'] ? wc_get_product( (int) $values['product'] ) : null;
+				if ( ! $product || ( ! self::staff() && ( 'publish' !== $product->get_status() || ! $product->is_publicly_viewable() || '' !== $product->get_post_password() ) ) ) {
+					if ( self::staff() ) { $spots .= '<div class="vc-showcase__empty-spot" data-module-item="' . esc_attr( (string) $spot['id'] ) . '">' . Renderer::notice( __( 'Choose an available product for this hotspot.', 'peptide-core' ) ) . '</div>'; }
 					continue;
 				}
-				$x    = $spot['settings']['x'];
-				$y    = $spot['settings']['y'];
-				$vars = self::style(
-					array(
-						'--x'   => (int) self::dv( $x, 'desktop' ) . '%',
-						'--y'   => (int) self::dv( $y, 'desktop' ) . '%',
-						'--x-m' => (int) self::dv( $x, 'mobile' ) . '%',
-						'--y-m' => (int) self::dv( $y, 'mobile' ) . '%',
-					)
-				);
-				// 图片和价格来自 WooCommerce，不在装修数据里复制商品资料。
+				$vars = self::style( array( '--x' => self::dv( $values['x'], 'desktop' ) . '%', '--y' => self::dv( $values['y'], 'desktop' ) . '%', '--x-m' => self::dv( $values['x'], 'mobile' ) . '%', '--y-m' => self::dv( $values['y'], 'mobile' ) . '%' ) );
+				$position = $values['popupPosition'] ?? array( 'desktop' => 'top-center', 'mobile' => null );
+				$quick = 'quick_view' === ( $s['interaction'] ?? 'detail' ) && Showcase_Quick_View::supports( $product );
+				if ( $quick ) { $templates .= Showcase_Quick_View::template( $product ); }
 				$thumb = $product->get_image_id() ? self::img( array( 'attachmentId' => $product->get_image_id(), 'alt' => $product->get_name() ), 'vc-showcase__product-image' ) : '';
-				$button = self::button( array( 'label' => $spot['settings']['buttonLabel'], 'href' => $product->get_permalink() ) );
-				$out .= sprintf(
-					'<details class="vc-hotspot" data-module-item="%7$s"%1$s%2$s><summary aria-label="%3$s"><span class="vc-hotspot__dot"></span></summary><div class="vc-hotspot__pop">%5$s<strong>%3$s</strong><p class="vc-price">%4$s</p>%6$s</div></details>',
-					$vars,
-					$spot['settings']['open'] ? ' open' : '',
-					esc_attr( $product->get_name() ),
-					wp_kses_post( $product->get_price_html() ),
-					$thumb,
-					$button,
-					esc_attr( (string) $spot['id'] )
-				);
+				$price = function_exists( 'vc_card_price_html' ) ? vc_card_price_html( $product ) : $product->get_price_html();
+				$button = '' !== $values['buttonLabel'] ? '<a class="vc-showcase__action" href="' . esc_url( $product->get_permalink() ) . '"' . ( $quick ? ' data-vc-quick-open="' . (int) $product->get_id() . '"' : '' ) . '>' . esc_html( $values['buttonLabel'] ) . '</a>' : '';
+				$spots .= '<details class="vc-hotspot vc-showcase__spot' . ( empty( $spot['enabled'] ) ? ' is-hidden' : '' ) . '" data-module-item="' . esc_attr( (string) $spot['id'] ) . '" data-vc-default-open="' . ( $values['open'] ? '1' : '0' ) . '"' . $vars . ( $values['open'] ? ' open' : '' ) . '><summary aria-label="' . esc_attr( $product->get_name() ) . '"><span class="vc-hotspot__dot" aria-hidden="true"></span></summary><div class="vc-hotspot__pop vc-showcase__card" data-vc-position-d="' . esc_attr( self::dv( $position, 'desktop' ) ) . '" data-vc-position-m="' . esc_attr( self::dv( $position, 'mobile' ) ) . '">' . $thumb . '<div class="vc-showcase__copy"><strong>' . esc_html( $product->get_name() ) . '</strong><div class="vc-price">' . wp_kses_post( $price ) . '</div>' . $button . '</div></div></details>';
 			}
-			$out .= '</div>';
+			if ( '' === $picture . $spots && ! self::staff() ) { continue; }
+			$scenes .= '<div class="' . esc_attr( self::item_class( $it, 'vc-slide vc-showcase__scene' . ( 0 === $count ? ' is-active' : '' ) ) ) . '"' . self::item_attr( $it ) . ( str_starts_with( $picture, '<picture' ) ? '' : ' data-vc-showcase-static="1"' ) . self::style( array( '--vc-overlay' => '' !== $it['overlayColor'] ? $it['overlayColor'] : null, '--vc-overlay-o' => (string) ( (int) $it['overlayOpacity'] / 100 ) ) ) . '>' . $picture . '<div class="vc-slide__overlay"></div>' . $spots . '</div>';
+			++$count;
 		}
-		return $out . '</div></div>';
+		if ( '' === $scenes ) { return ''; }
+		return '<div class="vc-m__inner"><div class="vc-carousel vc-carousel--auto vc-showcase" data-autoplay="' . ( $s['autoplay'] ? '1' : '0' ) . '" data-interval="' . (int) $s['intervalMs'] . '" data-dots="1" data-hover-preview="' . ( $s['hoverPreview'] ? '1' : '0' ) . '">' . $scenes . '</div>' . $templates . '</div>';
 	}
 
 	private static function render_hero_h1( array $s ): string {
@@ -1145,14 +1242,33 @@ final class Fallback {
 	}
 
 	private static function render_info_list( array $s, array $items ): string {
+		if ( 'bar' === ( $s['displayStyle'] ?? 'standard' ) ) { return self::render_info_bar( $s, $items ); }
 		$out = '<div class="vc-m__inner"><ul class="vc-info vc-info--' . esc_attr( $s['align'] ) . ( $s['mobileSwipe'] ? ' vc-swipe-m' : '' ) . '">';
 		foreach ( $items as $it ) {
-			$out .= '<li class="' . esc_attr( self::item_class( $it, 'vc-info__item' ) ) . '"' . self::item_attr( $it ) . '>' . self::icon_or_image( $it, 22 ) . '<span>' . esc_html( $it['text'] ) . '</span></li>';
+			$text = $it['textHtml'] ?? null;
+			$out .= '<li class="' . esc_attr( self::item_class( $it, 'vc-info__item' ) ) . '"' . self::item_attr( $it ) . '>' . self::icon_or_image( $it, 22 ) . ( null === $text ? '<span>' . esc_html( $it['text'] ) . '</span>' : '<div class="vc-info__text">' . self::html( $text ) . '</div>' ) . '</li>';
 		}
 		return $out . '</ul></div>';
 	}
 
+	private static function render_info_bar( array $s, array $items ): string {
+		$rows = '';
+		foreach ( $items as $it ) {
+			$rich = $it['textHtml'] ?? null;
+			$text = null === $rich ? esc_html( $it['text'] ) : self::html( $rich );
+			$has_text = (bool) preg_match( '/<img\b/i', $text ) || '' !== trim( html_entity_decode( wp_strip_all_tags( $text ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ), " \t\n\r\0\x0B\xc2\xa0" );
+			$visual = self::icon_or_image( $it, 20 );
+			if ( ! $has_text && '' === $visual && ! self::staff() ) { continue; }
+			$body = ( '' !== $visual ? '<div class="vc-info-bar__visual">' . $visual . '</div>' : '' ) . ( $has_text ? '<div class="vc-info-bar__text">' . $text . '</div>' : '' );
+			if ( '' === $body && self::staff() ) { $body = '<span class="vc-info-bar__empty">' . esc_html__( 'Add an image or short description.', 'peptide-core' ) . '</span>'; }
+			$rows .= '<li class="' . esc_attr( self::item_class( $it, 'vc-info__item vc-info-bar__item' ) ) . '"' . self::item_attr( $it ) . '>' . $body . '</li>';
+		}
+		if ( '' === $rows ) { return ''; }
+		return '<div class="vc-info-bar-wrap' . ( $s['mobileSwipe'] ? ' vc-info-bar-wrap--swipe' : '' ) . '"><ul class="vc-info vc-info-bar vc-info-bar--' . esc_attr( $s['align'] ) . '"' . ( $s['mobileSwipe'] ? ' data-vc-info-carousel="1"' : '' ) . ' data-previous-label="' . esc_attr__( 'Previous item', 'peptide-core' ) . '" data-next-label="' . esc_attr__( 'Next item', 'peptide-core' ) . '">' . $rows . '</ul></div>';
+	}
+
 	private static function render_nav_bar( array $s ): string {
+		if ( 'store' === ( $s['menuMode'] ?? 'wordpress' ) ) { return self::render_store_nav( $s ); }
 		if ( ! $s['menu'] ) {
 			return self::staff() ? Renderer::notice( __( 'Choose a menu in the sidebar.', 'peptide-core' ) ) : '';
 		}
@@ -1179,12 +1295,84 @@ final class Fallback {
 		return '<div class="' . esc_attr( self::inner_class( $s ) ) . '"><nav class="vc-nav vc-nav--' . esc_attr( $s['align'] ) . ( $s['border'] ? ' vc-nav--border' : '' ) . '"' . $vars . ' aria-label="' . esc_attr__( 'Menu', 'peptide-core' ) . '">' . (string) $menu . '</nav></div>';
 	}
 
+	private static function render_store_nav( array $s ): string {
+		$menu = ! empty( $s['menu'] ) && class_exists( '\PeptideCore\Menus' ) ? \PeptideCore\Menus::public_menu( (int) $s['menu'] ) : null;
+		if ( null === $menu ) { return self::staff() ? Renderer::notice( __( 'Choose an available menu in the sidebar.', 'peptide-core' ) ) : ''; }
+		if ( ! $menu ) { return ''; }
+		$rows = '';
+		foreach ( $menu as $item ) {
+			$title = esc_html( (string) ( $item['title'] ?? '' ) );
+			if ( '' === $title ) { continue; }
+			$icon = $item['icon'] ?? null;
+			if ( is_array( $icon ) && ! empty( $icon['url'] ) ) { $title = '<img class="vc-store-nav__icon" src="' . esc_url( $icon['url'] ) . '" alt="' . esc_attr( (string) ( $icon['alt'] ?? '' ) ) . '" loading="lazy" decoding="async">' . $title; }
+			$url = 'none' === ( $item['type'] ?? '' ) ? '' : esc_url( (string) ( $item['url'] ?? '' ) );
+			$attrs = ! empty( $item['attr_title'] ) ? ' title="' . esc_attr( (string) $item['attr_title'] ) . '"' : '';
+			$style = safecss_filter_attr( (string) ( $item['style'] ?? '' ) );
+			if ( '' !== $style ) { $attrs .= ' style="' . esc_attr( $style ) . '"'; }
+			if ( '' !== $url ) {
+				$rels = array_intersect( preg_split( '/\s+/', (string) ( $item['rel'] ?? '' ) ), array( 'nofollow', 'noopener', 'noreferrer', 'sponsored', 'ugc' ) );
+				if ( '_blank' === ( $item['target'] ?? '' ) ) { $attrs .= ' target="_blank"'; $rels = array_merge( $rels, array( 'noopener', 'noreferrer' ) ); }
+				if ( $rels ) { $attrs .= ' rel="' . esc_attr( implode( ' ', array_unique( $rels ) ) ) . '"'; }
+				if ( ! empty( $item['current'] ) ) { $attrs .= ' aria-current="page"'; }
+				$label = '<a href="' . $url . '"' . $attrs . '>' . $title . '</a>';
+			} else { $label = '<span' . $attrs . '>' . $title . '</span>'; }
+			$rows .= '<li>' . $label . '</li>';
+		}
+		if ( '' === $rows ) { return ''; }
+		$vertical = (int) $s['innerPaddingPx'];
+		$vars = self::style( array(
+			'--vc-fg' => $s['textColor'], '--vc-bg' => $s['bgColor'], '--vc-border' => '' !== $s['borderColor'] ? $s['borderColor'] : 'currentColor',
+			'--vc-fs' => (int) $s['fontSizePx'] . 'px', 'font-weight' => $s['bold'] ? '700' : '400',
+			'--vc-nav-top' => ( $s['navPaddingTopPx'] ?? $vertical ) . 'px', '--vc-nav-right' => ( $s['navPaddingRightPx'] ?? 0 ) . 'px',
+			'--vc-nav-bottom' => ( $s['navPaddingBottomPx'] ?? $vertical ) . 'px', '--vc-nav-left' => ( $s['navPaddingLeftPx'] ?? 0 ) . 'px',
+		) );
+		return '<div class="' . esc_attr( self::inner_class( $s ) . ' vc-store-nav-wrap' ) . '"><nav class="vc-nav vc-nav--store vc-nav--' . esc_attr( $s['align'] ) . ' vc-store-nav--' . esc_attr( $s['borderEdges'] ?? 'both' ) . '"' . $vars . ' aria-label="' . esc_attr__( 'Store navigation', 'peptide-core' ) . '"><ul class="vc-nav__list">' . $rows . '</ul></nav></div>';
+	}
+
 	private static function render_logo_list( array $s, array $items ): string {
+		if ( in_array( $s['mode'], array( 'single', 'adaptive', 'double' ), true ) ) { return self::render_logo_strip( $s, $items ); }
 		$out = '<div class="vc-m__inner">' . self::heading( $s ) . '<div class="vc-logos vc-logos--' . esc_attr( $s['mode'] ) . '"' . self::cols_style( $s ) . '>';
 		foreach ( $items as $it ) {
 			$out .= '<div class="' . esc_attr( self::item_class( $it, 'vc-logos__item' ) ) . '"' . self::item_attr( $it ) . '>' . self::maybe_link( self::img( $it['image'], 'vc-logos__img', __( 'Logo', 'peptide-core' ) ), $it['href'] ) . '</div>';
 		}
 		return $out . '</div></div>';
+	}
+
+	/** One real list; CSS changes rows and native scrolling, never duplicates a link. */
+	private static function render_logo_strip( array $s, array $items ): string {
+		$rows = ''; $count = 0;
+		foreach ( $items as $it ) {
+			$image = self::img( $it['image'], 'vc-logos__img', __( 'Logo', 'peptide-core' ) );
+			if ( '' === $image && ! self::staff() ) { continue; }
+			$rows .= '<li class="' . esc_attr( self::item_class( $it, 'vc-logos__item' ) ) . '"' . self::item_attr( $it ) . '>' . self::maybe_link( $image, $it['href'] ) . '</li>';
+			++$count;
+		}
+		$columns = max( 1, (int) self::dv( $s['columns'], 'desktop' ) );
+		$mobile = max( 1, (int) self::dv( $s['columns'], 'mobile' ) );
+		$styles = self::cols_style( $s, 'gapPx', array( '--vc-logo-grid-d' => (string) max( $columns, (int) ceil( $count / 2 ) ), '--vc-logo-grid-m' => (string) max( $mobile, (int) ceil( $count / 2 ) ) ) );
+		$list = '' !== $rows ? '<div class="vc-logo-frame"><ul class="vc-logos vc-logos--reference vc-logos--' . esc_attr( $s['mode'] ) . '" data-vc-logo-mode="' . esc_attr( $s['mode'] ) . '" data-previous-label="' . esc_attr__( 'Previous logos', 'peptide-core' ) . '" data-next-label="' . esc_attr__( 'Next logos', 'peptide-core' ) . '" data-page-label="' . esc_attr__( 'Logo page', 'peptide-core' ) . '"' . $styles . '>' . $rows . '</ul></div>' : '';
+		return '<div class="vc-logo-list">' . self::heading( $s ) . $list . '</div>';
+	}
+
+	/** Totals are supplied only by a trusted server provider, never module settings. */
+	private static function render_donation_tip( array $s ): string {
+		$stats = Donation_Stats::read( (int) $s['statsDays'] );
+		$ready = 'ready' === $stats['status'];
+		$amount = '—';
+		if ( $ready ) {
+			try { $amount = wp_kses_post( wc_price( $stats['amount'], array( 'currency' => $stats['currency'] ) ) ); }
+			catch ( \Throwable $error ) { $ready = false; }
+		}
+		if ( ( ! $ready || $stats['donors'] < (int) $s['minDonors'] ) && ! self::staff() ) { return ''; }
+		$notice = '';
+		if ( self::staff() && ! $ready ) { $notice = Renderer::notice( '尚未连接经过核实的捐款 / 小费数据。公开页面隐藏此积木块；这里不提供收款功能。' ); }
+		elseif ( self::staff() && $stats['donors'] < (int) $s['minDonors'] ) { $notice = Renderer::notice( '当前真实人数尚未达到公开展示阈值；预览可见，公开页面隐藏。' ); }
+		$donors = $ready ? esc_html( number_format_i18n( $stats['donors'], 0 ) ) : '—';
+		$totals = '<dl class="vc-donation__totals"><div><dt>' . esc_html( $s['amountLabel'] ) . '</dt><dd>' . $amount . '</dd></div><div><dt>' . esc_html( $s['donorsLabel'] ) . '</dt><dd>' . $donors . '</dd></div></dl>';
+		$caption = '' !== $s['donorCaption'] ? '<p class="vc-donation__caption">' . nl2br( esc_html( $s['donorCaption'] ) ) . '</p>' : '';
+		$button = '' !== $s['buttonLabel'] && '' !== $s['buttonHref'] ? '<a class="vc-donation__link" href="' . esc_url( $s['buttonHref'] ) . '">' . esc_html( $s['buttonLabel'] ) . '</a>' : '';
+		$image = self::picture( $s['media'], 'vc-donation__image', '(max-width: 767px) 100vw, 50vw' );
+		return $notice . '<div class="vc-donation' . ( $s['fullWidth'] ? ' vc-donation--full' : '' ) . '"><div class="vc-donation__intro">' . self::heading( $s ) . $button . ( '' !== $image ? '<div class="vc-donation__media">' . $image . '</div>' : '' ) . '</div><div class="vc-donation__summary' . ( '' === $caption ? ' vc-donation__summary--no-caption' : '' ) . '">' . $totals . $caption . '</div></div>';
 	}
 
 	private static function render_product_collection( array $s, array $items, array $module ): string {
@@ -1263,7 +1451,7 @@ final class Fallback {
 		return $out . self::button( $s['button'] ) . '</div>';
 	}
 
-	private static function render_text_block( array $s ): string {
+	private static function render_text_block( array $s, array $items, array $module ): string {
 		$vars = self::style(
 			array(
 				'--vc-fg'        => $s['textColor'],
@@ -1272,10 +1460,15 @@ final class Fallback {
 				'--vc-collapsed' => $s['collapsedHeightPx'] ? (int) $s['collapsedHeightPx'] . 'px' : null,
 			)
 		);
-		$body = '' !== $s['title'] ? '<h2 class="vc-m__title">' . esc_html( $s['title'] ) . '</h2>' : '';
-		$body .= '<div class="vc-textblock__body">' . self::html( $s['bodyHtml'] ) . '</div>';
-		if ( $s['collapsedHeightPx'] ) {
-			$body .= sprintf( '<button type="button" class="vc-textblock__toggle" data-expand="%1$s" data-collapse="%2$s" aria-expanded="false">%1$s</button>', esc_attr( $s['expandLabel'] ), esc_attr( $s['collapseLabel'] ) );
+		$html = $s['bodyRichHtml'] ?? $s['bodyHtml'];
+		if ( '' === $html && '' === $s['title'] ) { return self::staff() ? '<div class="vc-m__inner">' . Renderer::notice( __( 'Add a title or content in the sidebar.', 'peptide-core' ) ) . '</div>' : ''; }
+		$id = 'vc-textbody-' . $module['id'] . '-' . self::$device;
+		$body = '' !== $s['title'] ? '<header class="vc-textblock__head"><h2 class="vc-m__title">' . esc_html( $s['title'] ) . '</h2></header>' : '';
+		$body .= '<div class="vc-textblock__body" id="' . esc_attr( $id ) . '">' . self::html( $html ) . '</div>';
+		if ( '' !== $html && $s['collapsedHeightPx'] ) {
+			$expand = '' !== $s['expandLabel'] ? $s['expandLabel'] : __( 'Read more', 'peptide-core' );
+			$collapse = '' !== $s['collapseLabel'] ? $s['collapseLabel'] : __( 'Show less', 'peptide-core' );
+			$body .= sprintf( '<button type="button" class="vc-textblock__toggle" data-expand="%1$s" data-collapse="%2$s" aria-expanded="false" aria-controls="%3$s" hidden>%4$s</button>', esc_attr( $expand ), esc_attr( $collapse ), esc_attr( $id ), esc_html( $expand ) );
 		}
 		return '<div class="vc-m__inner"><div class="vc-textblock' . ( $s['collapsedHeightPx'] ? ' is-collapsible' : '' ) . '"' . $vars . '>' . $body . '</div></div>';
 	}

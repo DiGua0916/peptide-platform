@@ -15,6 +15,7 @@ final class Meta {
 	// 商品（WooCommerce product）。
 	public const PRODUCT_IS_DEMO = '_pc_is_demo';
 	public const PRODUCT_SPECS   = '_pc_specs';
+	public const PRODUCT_SUBTITLE = '_pc_product_subtitle';
 
 	// 批次。
 	public const BATCH_NO             = '_pc_batch_no';

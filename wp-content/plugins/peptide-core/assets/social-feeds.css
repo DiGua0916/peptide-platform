@@ -1,0 +1,46 @@
+/* Scoped social sections; local controls remain independent of the isolated vendor documents. */
+.pc-social { display:grid; grid-template-columns:minmax(0,1.12fr) minmax(0,1fr); align-items:center; width:100%; max-width:1060px; margin-inline:auto; color:#171717; font:inherit; }
+.pc-social,.pc-social * { box-sizing:border-box; }
+.pc-social__copy { min-width:0; padding-inline-end:clamp(24px,8.65vw,100px); }
+.pc-social .pc-social__title { margin:0; color:inherit; font-family:inherit; font-size:40px; font-weight:600; line-height:1.5; letter-spacing:normal; overflow-wrap:anywhere; text-wrap:balance; }
+.pc-social__description { min-width:0; margin-top:12px; font-size:15px; line-height:1.5; overflow-wrap:anywhere; }
+.pc-social__description p { max-width:76ch; margin:0 0 1em; }
+.pc-social__description p:last-child { margin-bottom:0; }
+.pc-social__description img { max-width:100%; height:auto; }
+.pc-social__description [data-pc-social-deferred-image]:not([src]) { display:inline-block; max-width:100%; color:#666; background:#f5f5f5; }
+.pc-social__copy:only-child { grid-column:1/-1; padding-inline:0; }
+.pc-social__media { min-width:0; width:100%; max-width:500px; padding:15px; border:1px solid #e5e5e5; border-radius:20px; background:#fff; }
+.pc-social__target { min-width:0; max-width:100%; overflow:hidden; }
+.pc-social__target:not(:empty) { min-height:var(--pc-social-height,500px); }
+.pc-social__frame { display:block; width:100%; max-width:100%; margin:0; border:0; background:#fff; color:#171717; }
+.pc-social__actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin-top:12px; }
+.pc-social__target:empty + .pc-social__actions { margin-top:0; }
+.pc-social__actions button { min-height:36px; max-width:100%; margin:0; padding:7px 12px; border:1px solid #171717; border-radius:6px; background:#171717; color:#fff; font:inherit; font-size:14px; font-weight:500; line-height:20px; white-space:normal; overflow-wrap:anywhere; cursor:pointer; }
+.pc-social__actions button:hover { background:#333; border-color:#333; }
+.pc-social__actions button:active { background:#000; }
+.pc-social__actions button[data-pc-social-remove] { border-color:#d4d4d4; background:#fff; color:#171717; }
+.pc-social__actions button[data-pc-social-remove]:hover { background:#f5f5f5; }
+.pc-social__actions [hidden] { display:none; }
+.pc-social__actions a { color:#171717; font-size:14px; line-height:20px; text-decoration:underline; text-underline-offset:3px; overflow-wrap:anywhere; }
+.pc-social__actions button:focus-visible,.pc-social__actions a:focus-visible { outline:2px solid #171717; outline-offset:3px; }
+.pc-social .pc-social__status { max-width:76ch; margin:12px 0 0; color:#666; font-size:12px; line-height:18px; overflow-wrap:anywhere; }
+.pc-social__media noscript p { color:#666; font-size:12px; line-height:18px; }
+.pc-social[data-position="right"] { grid-template-columns:minmax(0,1fr) minmax(0,1.12fr); }
+.pc-social[data-position="right"] .pc-social__copy { grid-column:2; grid-row:1; padding-inline:clamp(24px,8.65vw,100px) 0; }
+.pc-social[data-position="right"] .pc-social__media { grid-column:1; grid-row:1; }
+.pc-social--pinterest { display:block; }
+.pc-social--pinterest .pc-social__copy { margin-bottom:20px; padding:0; text-align:center; }
+.pc-social--pinterest .pc-social__description p { margin-inline:auto; }
+.pc-social--pinterest .pc-social__media { max-width:none; padding:0; border:0; border-radius:0; }
+.pc-social ::selection { color:#fff; background:#171717; }
+@media (max-width:768px) {
+  .pc-social,.pc-social[data-position="right"] { display:flex; flex-direction:column; align-items:stretch; max-width:100%; }
+  .pc-social .pc-social__copy,.pc-social[data-position="right"] .pc-social__copy { order:0; margin:0 0 30px; padding:0 15px; text-align:center; }
+  .pc-social .pc-social__title { font-size:30px; line-height:45px; }
+  .pc-social__description { margin-top:5px; font-size:14px; line-height:21px; }
+  .pc-social .pc-social__media { order:1; max-width:100%; }
+  .pc-social__description p { margin-inline:auto; }
+  .pc-social__copy:only-child { margin-bottom:0; }
+  .pc-social--pinterest .pc-social__copy { margin-bottom:20px; }
+}
+@media (prefers-reduced-motion:reduce) { .pc-social * { scroll-behavior:auto; transition:none; animation:none; } }

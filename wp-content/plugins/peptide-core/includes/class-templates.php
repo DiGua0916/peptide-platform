@@ -112,6 +112,7 @@ final class Templates {
 				// 用区块编辑器编辑模块；修订用于历史版本。
 				'supports'     => array( 'title', 'editor', 'revisions', 'author', 'custom-fields' ),
 				'show_in_rest' => true,
+				'rest_controller_class' => Api\Layout_Posts_Controller::class,
 				'hierarchical' => false,
 			)
 		);

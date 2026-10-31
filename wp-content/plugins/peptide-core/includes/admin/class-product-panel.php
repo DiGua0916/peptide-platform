@@ -51,6 +51,17 @@ final class Product_Panel {
 
 		echo '<div id="' . esc_attr( self::PANEL_ID ) . '" class="panel woocommerce_options_panel hidden">';
 
+		$subtitle = $product->get_meta( Meta::PRODUCT_SUBTITLE );
+		woocommerce_wp_text_input(
+			array(
+				'id'          => 'pc_product_subtitle',
+				'label'       => __( 'Product subtitle', 'peptide-core' ),
+				'description' => __( 'Shown by the single product block when enabled. Leave blank to hide it.', 'peptide-core' ),
+				'desc_tip'    => false,
+				'value'       => is_string( $subtitle ) ? $subtitle : '',
+			)
+		);
+
 		woocommerce_wp_checkbox(
 			array(
 				'id'          => 'pc_is_demo',
@@ -168,6 +179,11 @@ final class Product_Panel {
 	public static function save( \WC_Product $product ): void {
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- WooCommerce 已在保存流程中校验 nonce。
 		$product->update_meta_data( Meta::PRODUCT_IS_DEMO, isset( $_POST['pc_is_demo'] ) ? '1' : '0' );
+		// The existing Woo save flow owns nonce and edit_product checks. Missing fields do not clear metadata.
+		if ( isset( $_POST['pc_product_subtitle'] ) && is_string( $_POST['pc_product_subtitle'] ) ) {
+			$product->update_meta_data( Meta::PRODUCT_SUBTITLE, sanitize_text_field( wp_unslash( $_POST['pc_product_subtitle'] ) ) );
+		}
+
 
 		if ( isset( $_POST['pc_specs'] ) ) {
 			$text = sanitize_textarea_field( wp_unslash( $_POST['pc_specs'] ) );

@@ -58,6 +58,8 @@ final class Layout_Command {
 			WP_CLI::error( 'Invalid file: expected {"modules": [...]}.' );
 		}
 
+		if ( \PeptideCore\Modules\Rich_Media::has_images( $data['modules'] ) ) { WP_CLI::error( 'Rich text images require the authorized design editor save flow; nothing was imported.' ); }
+
 		$template = isset( $assoc_args['template'] ) ? (int) $assoc_args['template'] : Templates::default_id();
 		if ( ! Templates::exists( $template ) ) {
 			WP_CLI::error( 'Template not found: ' . $template );
@@ -128,6 +130,7 @@ final class Layout_Command {
 		if ( ! Layout::modules_from_content( (string) get_post_field( 'post_content', $doc_id ) ) ) {
 			WP_CLI::error( 'The draft has no modules. Nothing to publish.' );
 		}
+		if ( \PeptideCore\Modules\Rich_Media::has_images( Layout::modules_from_content( (string) get_post_field( 'post_content', $doc_id ) ) ) ) { WP_CLI::error( 'Publish rich text images in the authorized design editor.' ); }
 		Layout::publish( $doc_id );
 		WP_CLI::success( 'Published.' );
 	}

@@ -130,17 +130,17 @@ final class Fields {
 	 * @param mixed               $value
 	 * @return mixed
 	 */
-	public static function sanitize( array $field, $value ) {
+	public static function sanitize( array $field, $value, ?Rich_Media $media = null ) {
 		if ( ! empty( $field['device'] ) ) {
 			$default = self::default_value( $field );
 			$value   = is_array( $value ) ? $value : array();
 			$single  = array_merge( $field, array( 'device' => false, 'default' => $default['desktop'] ) );
 			$mobile  = array_merge( $field, array( 'device' => false, 'default' => $default['mobile'] ) );
 			return array(
-				'desktop' => self::sanitize( $single, $value['desktop'] ?? $default['desktop'] ),
+				'desktop' => self::sanitize( $single, $value['desktop'] ?? $default['desktop'], $media ),
 				// 手机值为 null 表示沿用电脑的值（用户点了“和电脑一致”）；没有这个键时用默认值。
 				// 0、false 和空字符串是有效值，不当作 null。
-				'mobile'  => ! array_key_exists( 'mobile', $value ) ? $default['mobile'] : ( null === $value['mobile'] ? null : self::sanitize( $mobile, $value['mobile'] ) ),
+				'mobile'  => ! array_key_exists( 'mobile', $value ) ? $default['mobile'] : ( null === $value['mobile'] ? null : self::sanitize( $mobile, $value['mobile'], $media ) ),
 			);
 		}
 
@@ -151,6 +151,10 @@ final class Fields {
 			case 'textarea':
 				return is_scalar( $value ) ? self::cut( sanitize_textarea_field( (string) $value ), 2000 ) : $default;
 			case 'html':
+				if ( Rich_Media::supports( $field ) && is_scalar( $value ) && preg_match( '/<\s*img\b/i', (string) $value ) ) {
+					$result = self::rich_media_html( (string) $value, $media ?? Rich_Media::public_only() );
+					return is_wp_error( $result ) ? trim( wp_kses( (string) $value, self::HTML_TAGS ) ) : $result;
+				}
 				if ( Rich_Html::supports_color( $field ) && is_scalar( $value ) ) { return Rich_Html::sanitize( (string) $value, self::HTML_TAGS ); }
 				return is_scalar( $value ) ? trim( wp_kses( (string) $value, self::HTML_TAGS ) ) : $default;
 			case 'code':
@@ -223,7 +227,7 @@ final class Fields {
 					if ( count( $out ) >= (int) ( $field['max'] ?? 20 ) ) {
 						break;
 					}
-					$out[] = self::item( $field['fields'] ?? array(), is_array( $row ) ? $row : array() );
+					$out[] = self::item( $field['fields'] ?? array(), is_array( $row ) ? $row : array(), $media );
 				}
 				return $out;
 		}
@@ -237,11 +241,11 @@ final class Fields {
 	 * @param array<string,mixed>            $row
 	 * @return array<string,mixed>
 	 */
-	public static function item( array $fields, array $row ): array {
+	public static function item( array $fields, array $row, ?Rich_Media $media = null ): array {
 		$settings = is_array( $row['settings'] ?? null ) ? $row['settings'] : array();
 		$clean    = array();
 		foreach ( $fields as $field ) {
-			$clean[ $field['key'] ] = self::sanitize( $field, $settings[ $field['key'] ] ?? self::default_value( $field ) );
+			$clean[ $field['key'] ] = self::sanitize( $field, $settings[ $field['key'] ] ?? self::default_value( $field ), $media );
 		}
 		return array(
 			'id'       => self::id( $row['id'] ?? '' ),
@@ -249,6 +253,9 @@ final class Fields {
 			'settings' => $clean,
 		);
 	}
+
+	/** The original fixed text allowlist remains private and unchanged for all other fields. */
+	public static function rich_media_html( string $html, Rich_Media $media ) { return Rich_Html::with_images( $html, self::HTML_TAGS, $media ); }
 
 	/**
 	 * 模块和条目的稳定 ID：字母、数字、短横线，最长 40 位；缺少时生成新的。

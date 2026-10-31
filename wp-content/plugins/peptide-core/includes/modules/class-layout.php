@@ -54,7 +54,7 @@ final class Layout {
 	 * @param mixed $modules
 	 * @return array<int,array{block:string,attrs:array<string,mixed>}>
 	 */
-	public static function clean_modules( $modules ): array {
+	public static function clean_modules( $modules, ?Rich_Media $media = null ): array {
 		$out  = array();
 		$seen = array();
 		foreach ( is_array( $modules ) ? array_slice( $modules, 0, 80 ) : array() as $row ) {
@@ -63,7 +63,7 @@ final class Layout {
 			if ( ! $type ) {
 				continue;
 			}
-			$m = Renderer::normalize( $type, is_array( $row['attrs'] ?? null ) ? $row['attrs'] : array() );
+			$m = Renderer::normalize( $type, is_array( $row['attrs'] ?? null ) ? $row['attrs'] : array(), $media );
 			while ( isset( $seen[ $m['id'] ] ) ) {
 				$m['id'] = Fields::id( '' );
 			}
@@ -116,11 +116,12 @@ final class Layout {
 	public static function render_modules( array $modules, string $context, int $document_id = 0 ): string {
 		$previous              = Renderer::$document_id;
 		Renderer::$document_id = $document_id;
+		$media = 'public' === $context ? Rich_Media::published( $document_id, $modules ) : Rich_Media::editing( $document_id );
 		$html                  = '';
 		foreach ( $modules as $m ) {
 			$type = Registry::type_for_block( $m['block'] );
 			if ( $type ) {
-				$html .= Renderer::render( $type, $m['attrs'], $context );
+				$html .= Renderer::render( $type, $m['attrs'], $context, $media );
 			}
 		}
 		Renderer::$document_id = $previous;
@@ -136,13 +137,21 @@ final class Layout {
 	/**
 	 * 把当前草稿发布到网站。
 	 */
-	public static function publish( int $document_id ): void {
+	public static function publish( int $document_id ) {
+		$rows = self::modules_from_content( (string) get_post_field( 'post_content', $document_id ) );
+		$media = null;
+		if ( Rich_Media::has_images( $rows ) ) {
+			$actor = Rich_Media::editing( $document_id );
+			if ( ! $actor || ! current_user_can( Templates::CAP_MANAGE ) ) { return Rich_Media::error( __( 'You cannot publish images in this design.', 'peptide-core' ) ); }
+			$media = Rich_Media::preflight( $rows, $actor ); if ( is_wp_error( $media ) ) { return $media; }
+		}
 		$content   = (string) get_post_field( 'post_content', $document_id );
 		$revisions = wp_get_post_revisions( $document_id, array( 'numberposts' => 1, 'fields' => 'ids' ) );
 		update_post_meta( $document_id, self::PUBLISHED_META, wp_slash( $content ) );
 		update_post_meta( $document_id, self::PUBLISHED_REVISION, $revisions ? (int) reset( $revisions ) : 0 );
 		update_post_meta( $document_id, self::PUBLISHED_AT, current_time( 'mysql', true ) );
 		update_post_meta( $document_id, self::PUBLISHED_BY, get_current_user_id() );
+		if ( $media ) { $media->commit( true ); } else { delete_post_meta( $document_id, Rich_Media::PUBLISHED_META ); }
 		/**
 		 * 装修发布后触发（可用于清理页面缓存）。
 		 *
@@ -155,7 +164,7 @@ final class Layout {
 	 * 取消发布：网站恢复主题原来的页面。草稿保留。
 	 */
 	public static function unpublish( int $document_id ): void {
-		foreach ( array( self::PUBLISHED_META, self::PUBLISHED_REVISION, self::PUBLISHED_AT, self::PUBLISHED_BY ) as $key ) {
+		foreach ( array( self::PUBLISHED_META, self::PUBLISHED_REVISION, self::PUBLISHED_AT, self::PUBLISHED_BY, Rich_Media::PUBLISHED_META ) as $key ) {
 			delete_post_meta( $document_id, $key );
 		}
 		do_action( 'peptide_core_layout_published', $document_id );
@@ -175,6 +184,10 @@ final class Layout {
 			),
 			true
 		);
+		if ( ! is_wp_error( $result ) ) {
+			$refs = get_post_meta( $document_id, Rich_Media::PUBLISHED_META, true );
+			if ( is_array( $refs ) ) { update_post_meta( $document_id, Rich_Media::APPROVED_META, $refs ); } else { delete_post_meta( $document_id, Rich_Media::APPROVED_META ); }
+		}
 		return ! is_wp_error( $result );
 	}
 
@@ -237,7 +250,12 @@ final class Layout {
 	 *
 	 * @param array<int,array{block:string,attrs:array<string,mixed>}> $modules
 	 */
-	public static function store_preview( int $document_id, array $modules ): string {
+	public static function store_preview( int $document_id, array $modules ) {
+		if ( Rich_Media::has_images( $modules ) ) {
+			$context = Rich_Media::editing( $document_id );
+			if ( ! $context ) { return Rich_Media::error( __( 'You cannot preview images in this design.', 'peptide-core' ) ); }
+			$checked = Rich_Media::preflight( $modules, $context ); if ( is_wp_error( $checked ) ) { return $checked; }
+		}
 		$token = strtolower( wp_generate_password( 20, false ) );
 		set_transient(
 			'pc_layout_preview_' . $token,
