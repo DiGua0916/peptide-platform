@@ -678,3 +678,13 @@ nonce两源独立静态复核报告builder-editor-auth-nonce-recovery-independen
 前端角色两源只复制已独立审查且QA安装实测的候选：Blocks5c13e34a→27893357；Controlsdc642d65→aa152052。新增Core wp_refresh_nonces capability受控返回，Controls heartbeat依赖/原位token更新，custom页auth iframe出现→移除触发一次Core Heartbeat，不改鉴权/无anonymous端点/不清dirty。复制前严格核对before SHA并备份D任务；原21项离线替身与独立静态报告仍保留，本轮真实UI验证补齐record/link恢复与保存公开链，不冒称观察到了HTTP Heartbeat响应体或YouTube/native全面通过。
 
 本阶段证据D:/Codex/Tasks/2026-10-31/builder-resume-browser-qa/outputs及GIT-SNAPSHOT.md；Git fetch无新同事提交，三工作树原4bf46b5干净后才整合。下一按用户自动阶段同步commit/push并正常ff main/backend；正式源将在同步角色树后生效，不自动发布客户装修布局。X SDK/Pinterest外部阻挡及Gutenberg空iframe仍是未关项；整体约95%仅进度估计，不是70块同口径验收通过率。原生只读复核NATIVE-REVIEW.md未给出足以修改Core/生产的具体缺项，仍需真实portal链定位。
+
+### 2026-10-31 · Codex：原生评价dialog暂停/恢复解决登录层被遮挡
+
+真实复验还发现ReviewDialog使用showModal进入browser top layer，普通Core auth层z-index无法覆盖，需手动取消picker才点得到登录。最小修复只改ReviewDialog mount effect：custom页观察实际Core frame及可见wrap（含无frame fallback），auth活动时原生close暂退top layer但不卸载React组件，Core关闭后只恢复这次暂停的picker并归还焦点。只对body childList/subtree和实际authWrap的class做观察；unmount断开观察。没有调用props.onClose、改变query/candidate/error/nonce/dirty、重放请求、移动Core DOM或加z-index假修；原生post页保持原行为。
+
+仅装QA后真实第二轮：先未保存标题并选四星筛选/待选review3；正常logout后Core frame和wrap真显示，picker.open=false但filters=[all,4]、selectedId3及标题保留。未手动关闭picker，直接在可见Core框完成正常登录；frame/wrap关闭、picker.open=true，filters/selected/title逐项仍在。实际截图和ACTUAL-AUTH-LAYER.json已保存。随后取消未提交候选、恢复原标题并SaveDraft；公开仍本阶段12块/精选review2，未将临时候选3写入。fallback/取消未通过强制改Core来伪造实测，源码守卫保留且限制明记。Controls aa152052→d45311fe，根亲读patch后仅在真实通过后整入角色源；JS语法与diff检查过。
+
+原生兼容复查：旧39实为tab编号不是post；一次误开post39只返回不存在，无写入。回到真实旧post1917仍灰画布；受支持CUA CDP只读DOM确认iframe src为blob但contentDocument URL为about:blank且HEAD/BODY均0，与旧仅body空相比更窄。Console warning/error仍0；刷新后2条Document ERR_ABORTED未能关联请求，不能归因canvas/Core/插件。NATIVE-REVIEW纠正post/tab混淆，未改Core/安全策略/发布1917。
+
+登录恢复修复225016d已本地commit并正常ff main/backend（正式开发插件源随树更新，不发布装修）；GitHub前几次push发生reset/连接443超时，包含Everything up-to-date的非零返回不能作远端成功。后续推送只有ls-remote真实确认才能报同步。最后窄auth层修复与本追加单独commit；QA资料/私有文件不入Git，完整目标继续，外部社交实显与原生compat不称已通过。

@@ -1782,11 +1782,51 @@
 		var radioName = useState( uid() )[ 0 ], manage = recordUrl( 'review' );
 		useEffect( function () {
 			var dialog = dialogRef.current, previous = document.activeElement;
-			if ( dialog ) {
+			var observer = null, watchedAuthWrap = null, disposed = false, authPaused = false, resumeFocus = null;
+			var customPage = document.body && document.body.classList.contains( 'pc-design-editor-page' );
+			function showPicker() {
+				if ( disposed || ! dialog || ! dialog.isConnected || dialog.open ) { return; }
 				if ( typeof dialog.showModal === 'function' ) { dialog.showModal(); } else { dialog.setAttribute( 'open', '' ); }
-				var first = dialog.querySelector( 'select, input, button' ); if ( first ) { first.focus(); }
+				var target = resumeFocus && resumeFocus.isConnected && dialog.contains( resumeFocus ) ? resumeFocus : dialog.querySelector( 'select, input, button' );
+				resumeFocus = null;
+				if ( target && typeof target.focus === 'function' ) { target.focus(); }
+			}
+			function syncAuthState() {
+				if ( disposed || ! dialog || ! dialog.isConnected ) { return; }
+				var frame = document.getElementById( 'wp-auth-check-frame' );
+				var wrap = document.getElementById( 'wp-auth-check-wrap' );
+				if ( observer && wrap && wrap !== watchedAuthWrap ) {
+					observer.observe( wrap, { attributes: true, attributeFilter: [ 'class' ] } );
+					watchedAuthWrap = wrap;
+				}
+				var authActive = !! frame || !! ( wrap && ! wrap.classList.contains( 'hidden' ) );
+				if ( authActive ) {
+					if ( authPaused ) { return; }
+					resumeFocus = dialog.contains( document.activeElement ) ? document.activeElement : null;
+					authPaused = true;
+					// close exits the top layer without unmounting this picker or changing its state.
+					if ( dialog.open ) {
+						if ( typeof dialog.close === 'function' ) { dialog.close(); } else { dialog.removeAttribute( 'open' ); }
+					}
+					if ( frame && typeof frame.focus === 'function' ) { frame.focus(); }
+				} else if ( authPaused ) {
+					// Core closed its login UI; this does not prove authentication succeeded.
+					authPaused = false;
+					showPicker();
+				}
+			}
+			if ( dialog ) {
+				if ( customPage && window.MutationObserver ) {
+					observer = new window.MutationObserver( syncAuthState );
+					observer.observe( document.body, { childList: true, subtree: true } );
+					syncAuthState();
+					if ( ! authPaused ) { showPicker(); }
+				} else { showPicker(); }
 			}
 			return function () {
+				disposed = true;
+				if ( observer ) { observer.disconnect(); }
+				authPaused = false; resumeFocus = null;
 				if ( dialog && dialog.open && typeof dialog.close === 'function' ) { dialog.close(); }
 				if ( previous && previous.isConnected && typeof previous.focus === 'function' ) { previous.focus(); }
 			};
