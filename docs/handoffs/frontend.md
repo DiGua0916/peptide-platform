@@ -783,3 +783,6 @@ WordPress：当前没有可运行的主题前端，尚未执行 WordPress 页面
 独立原生Edge加载实际轮播PHP模板与media helper（明确API doubles、无WP/DB），20场景×1280/390形成40组：overlay/split fixed200/260/280图像与stage精确、自适应/满屏几何与before一致、长文案增长不裁、九位置和item ID保留、无水平溢出，JS0/外部请求0。before四项复现旧280限制；两张fixed260几何截图已实际查看。不是全站或真实WP验收。限定CSS diff/空白检查通过。
 
 最终CSS SHA256 `33aef152d8e4a2914cabc49d20718dab620579f45b0afa82dc4b502467cd23b0`，证据 `D:/Codex/Tasks/2026-10-30/carousel-fixed-height/work/{before,after}.json` 与 `handoff.md`。现有独立WP实例owner只同步此CSS后，真实主题PC340/mobile260两个定向探针均通过，fixed图像min-height为0、无横向溢出且JS0；源/副本/实际浏览器响应SHA一致。报告 `D:/Codex/Tasks/2026-10-30/store-builder-shared-check/work/carousel-height-runtime-check.md`。没有重跑旧33组或另造auto/screen业务数据，不能把独立40组当真WP。临时profile已清，原QA夹具及原站只读指纹保持；root统一提交推送。源码owner未操作Git、原业务库、参考浏览器或任何发布。
+
+
+2026-10-31 Codex：本积木批次保留此前5主题文件在途成果，并仅给modules-content.css的context-content原文h1加overflow-wrap:anywhere。真实长标题手机根scrollWidth657→380，标题637→340；O22局部轮播仍692可滚，End后rootLeft0/railLeft352。QA/本frontend d2cf60f3→5b7c4cfa，原件D:/Codex/Tasks/2026-10-31/builder-shipping-mobile-overflow/work/modules-content.before.css；未回盖backend旧主题镜像。当前实际匿名390页面innerWidth390/client375/scroll375，热点底部弹层/真实单商品/图片/价格通过。完整批次联调与限制在backend-builder-batch-2026-10-30.md的10-31追加记录；未部署，原685未刷新保存退出。
