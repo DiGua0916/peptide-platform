@@ -75,3 +75,5 @@ HQ 支付中心 pchq-payments 管理员 nonce 配置/按店筛选/分币种订�
 安装包 D:/Codex/Tasks/2026-10-31/panapay-hq-migration/outputs/peptide-panapay-0.2.0.zip，SHA256 9e10efa6118ce98592d132fc1f94f1aa7821740ac6206fdce00da4322a142ad9，28运行文件，排除tests/数据/配置/私有资料，双原站运行文件逐字匹配。Core/HQ/Ops配套增量在本阶段Git源码中，不包含在单独支付ZIP。交付不等于生产上线：真实provider创建此前仍http_request_failed，字符串引用支持/公网IPN/真实卡和到账未验；生产每分钟系统调度、日志WAF/缓存、迁移恢复与正式参数待落地。查单/退款/资金分账无接口，不虚构；积分/履约耐久消费者也未实现，支付回写outbox不替代其业务幂等。
 
 下一：完成本阶段自动GitHub同步；随后按服务器和支付方实际条件继续公网联调。正式启用前不测试真实收费，不自动重试此前未知provider原单。
+
+本阶段同步已完成：功能提交 e73b12e6e144bfe13c286d2a8533567cb3f12a0c，fetch核对同事main c287857后正常推进，支付分支与main均已push并ls-remote验证同e73b12e；工作树干净。下面这个记录提交仅补充交付事实，不修改已验收的运行代码/安装包。后续工作为真实服务器/支付方联调，不将本地安装、原生模拟付款或GitHub同步视为生产收款通过。
