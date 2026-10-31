@@ -820,3 +820,13 @@ Root接受用户指出95%误导，后续不再给无依据百分比。当前Sour
 未修改Core、CSP、API版本或浏览器权限，未改业务内容/保存/发布，也未创建WP对象。临时静态页按原SHA精确清理，两个诊断标签关闭，当前custom装修验收页保留。三社交按用户决定仍停止，其QA源码保持正式5a0c，没有重新加载它们。
 
 按OpenAI Docs实际检索并打开Browser官方说明，有限读集没有该blob故障修复开关；未据此声称官方永久不支持。用户此前指定内置，Root未擅自切换Chrome。已询问原生兼容后续处理或仅准Chrome做对照，未获选择前不做依赖动作。原生兼容仍未通过，不能把此次定位当成功修复，也不逆写当前custom已验收范围。证据D:/Codex/Tasks/2026-10-31/builder-completion-audit/outputs/native-core-and-static-control-2026-11-01.json及同名传输截图，分析work/NATIVE-TRANSPORT-RESULT-2026-11-01.md。
+
+### 2026-11-01 · Codex：Chrome原生对照与内容样式接线修复
+
+用户在原生灰画布异步问题中明确授权“允许仅用Chrome做原生画布对照”，Root随后恢复本任务（此前短暂blocked保留历史，不继续按旧浏览器限制停住）。只在Chrome新建本人QA页正常登录；未碰用户其它标签内容。普通post1935截图真实标题/正文已显示，受支持DOM命令确认canvas是真blob文档、head145/body12。一次高层Page.getFrameTree读取超时不等于页面灰空；随后标准DOM snapshot已恢复可用。IAB中相同普通文章与纯静态blob失败仍属已知当前环境差异，不宣称已修内置浏览器。
+
+Chrome同一原生layout1917又暴露实际产品缺陷：Partner列表默认block/disc/padding40px，iframe head没有commerce CSS。Core在enqueue_block_assets阶段冻结iframe资产，之后SSR请求内enqueue不能写回该快照。仅修改Blocks::enqueue_canvas现有pc_layout guard，CSS-only提前入队4既有handles：Commerce/Review/Gram/Social（Social本已有入口、同handle去重），版本/URL沿用原文件mtime；不调会附带JS的assets方法，不改主题6样式、Core、注册apiVersion、nonce/权限、业务或provider逻辑。Blocks原27893357→b279ac8808c21c0dbfb6fab6f0289d00916e3932812e0f3a1f3bc0e69f5d6ed8。
+
+仅QA安装后正常Chrome reload真实验证：四CSS各1、theme模块样式保留，Partner列表变flex/list-style none/padding0、原生预览恢复横向三卡；Commerce/Review/Gram运行脚本没有新增，原有Social本地脚本不等于provider加载。实际点击已有Partner block，只读Inspector完整字段/PC3-mobile2，Save仍disabled，三社交frames0；未改字段/Save/Publish。普通QA退出已显示You are now logged out，唯一本人Chrome临时标签关闭。用户原dirty685与YY未改/未发布，原QA工作文档保留。
+
+本轮相关检查为PHP语法、单hunk/反向精确还原、真实before/after CSS与资产去重/截图/Inspector/disabled Save。不是重新跑全部70参数或原生发布链；主custom此前真实验收范围继续保留。三社交按用户决定暂缓、未通过，CSS接线没有重新开启任何外部Load；其social-feeds.js仍正式5a0c，D任务CSP候选未进入Git。证据D:/Codex/Tasks/2026-10-31/builder-completion-audit/outputs/chrome-native-{post-identity,style-before,style-after,inspector}-2026-11-01及截图，候选work/native-canvas-css-candidate。
