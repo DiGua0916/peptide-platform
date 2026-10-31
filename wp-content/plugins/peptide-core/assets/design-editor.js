@@ -491,8 +491,12 @@
 			var toggleButton = publishRoot.querySelector( '[aria-haspopup="menu"]' );
 			var buttons = Array.prototype.filter.call( publishRoot.querySelectorAll( '[role="menuitem"]' ), function ( button ) { return ! button.disabled; } );
 			var timer = setTimeout( function () { if ( buttons.length ) { buttons[ 0 ].focus(); } }, 0 );
-			function onOutside( event ) { if ( ! publishRoot.contains( event.target ) ) { menuState[ 1 ]( false ); } }
+			function onOutside( event ) {
+				if ( event.target && event.target.closest && event.target.closest( '.pc-dialog-overlay' ) ) { return; }
+				if ( ! publishRoot.contains( event.target ) ) { menuState[ 1 ]( false ); }
+			}
 			function onMenuKey( event ) {
+				if ( event.target && event.target.closest && event.target.closest( '.pc-dialog-overlay' ) ) { return; }
 				if ( event.key === 'Escape' ) {
 					event.preventDefault();
 					menuState[ 1 ]( false );
