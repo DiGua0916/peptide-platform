@@ -43,3 +43,5 @@ Implement the provided createPayment, return and notify contract. Browser return
 本阶段 Git 提交/远端同步结果随后追加；积木、主题、同事数据改动不属于本支付提交。
 
 代码提交 33bfbcd；fetch 得到同事 main 4bf46b5 后已正常合并为 8d7d96f，合并无冲突，支付插件/部署文档与实测版本逐文件未改变。最终相对远端 main 的内容仅为本插件和支付文档27文件；未提交或覆盖同事在途工作树。仓库没有全局提交身份，使用单次 git -c Codex 身份完成，未改用户全局配置。远端同步在此记录提交后执行，不能仅凭本条宣称已经 push 成功。
+
+后续实际同步：本地交接提交7f19faa已成功推到 GitHub，ls-remote 核实 main 与 codex/panapay-payments 同为7f19faa671f411ab5ec49df5fa09639ec4e3aad3。最初两次直连 github:443 失败；读取用户已启用的系统代理127.0.0.1:8800后，仅对本次 git 命令使用 -c http.proxy，fetch/push/远端核实均成功，没有改全局代理或Git配置。最终原店标签已导航到 section=pc_panapay，但控件读取仍超时，未声称配置页视觉验收通过；独立QA结账实显证据有效。旧插件页临时标签未标记保留，原用户标签保持。
