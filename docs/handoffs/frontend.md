@@ -800,3 +800,33 @@ O05通过实际控件把现有1940+10关联到一个视频，保存并仅发布�
 O08–O11通过正常UI在原已存在blog1930文档关联post1935/category77/topic1934，草稿5块/真实发布，普通无preview参数博客地址匿名出现四标记和实际链接；article1931原1块加富文本标记后发布，普通文章地址有标记/原正文，引出并验证上述单篇缺陷修复。最后1930、1931和1917均通过已修正常UI取消临时发布，公开首页恢复原生collection/our-story/questions，文章标记消失且h1/正文正确。草稿保留供检查；1954原12公开/12草稿及review2不改。
 
 Root接受用户指出95%误导，后续不再给无依据百分比。当前Source-bridge逐旧pin核验表明B/P及O07/O23既有真UI限定范围可沿用，不把55链接/源存在当通过。社交X/Pinterest/完整FB Timeline未闭合；Gutenberg已同一child frame两次blob loaderId对应ERR_ABORTED、无frameNavigated，属导航未提交，未盲改Core/CSP。遗留卡片极长无断行真WP样本已清，不能开旧ID冒通过。证据根D:/Codex/Tasks/2026-10-31/builder-completion-audit/{outputs,work}，完整目标继续，不报100%。
+
+### 2026-10-31 · Codex：本地装修交付核对，三社交模块按用户决定暂缓
+
+用户明确X/Pinterest/Facebook暂时不需要，后续再优化；保留三个模块，不将它们记为验收通过，不再继续provider加载或实现。此前70参考学习与本人新增块清理记录保持；其余本轮约定的本地custom装修及真实内容关联主链已收口，可交用户检查。各旧UI范围经SOURCE-BRIDGE/PRODUCT-SOURCE-BRIDGE衔接，不冒全参数/全部浏览器/实体手机同版全覆盖，也不将支付、外部AI、SMTP等用户既定暂缓改为已接服务。
+
+补齐shared legacy .pc-cb-card h3/p修复后的真实WP极值收据：仅新本人pc_topic1970存180字符连续标题/440字符连续摘要，正常Layout→Content_Blocks真实查询，PC1280和phone390根client=scroll，卡片359/146均client=scroll、anywhere/visible完整自然换行。完整Range尾行留在卡内；无filters/doubles，不发布layout、不改旧实体、营业Closed保持。完成后精确删除本人1970与唯一临时MU，实际deleted/helperRemoved均true；不声称数据库计数/cache逐字回原。
+
+三社交暂缓前，仅QA候选使X官方loader/bundle进入实际iframe阶段，又通过本地纯DOM观测确认script-src-elem inline违规；未通过真实帖子。所有受限CSP、inline元素及观测候选均只留D任务，未进入Git或正式源。用户暂缓后正常Remove，三类frames0，QA social-feeds.js精确还原已发布5a0c9587e0c572adbe3cacbaa9a1698d705218d9534f31af9a3170580c619ca8并fresh reload核对；不重试Pinterest既有明确阻挡。
+
+已知可选兼容项：WordPress原生Gutenberg画布仍灰空，真实blob导航ERR_ABORTED/about:blank，未盲改Core/CSP/API版本。当前交付使用已实测编辑、关联、保存、发布、匿名PC/手机和会话恢复的custom装修编辑器；不能据此宣称原生host也已修好。Discard本轮未单独实际执行，不把已验Unpublish/Cancel/键盘扩大为每个菜单动作实点。
+
+本轮无新增产品运行代码；沿用功能9a014ce/整合94f4853，并已fetch亲读、正常ff同事支付交付d9ecc22，保留其24路径与独立支付工作树，不做真实收款或额外部署。本人1917/1930/1931临时发布均撤销，草稿保留；1954原12/12及review2、用户685/YY保持。证据D:/Codex/Tasks/2026-10-31/builder-completion-audit/outputs，最终具体范围work/FINAL-SCOPE-CHECK.md与70-EVIDENCE-MATRIX.md；三社交为用户暂缓，不是缺口被伪写成功。
+
+### 2026-11-01 · Codex：原生灰画布已在无WordPress静态对照复现
+
+同一内置浏览器、同QA origin下，本人普通post1935没有加载module-editor/controls脚本，正常reload仍两次canvas blob开始、未见child提交，最终DOM about:blank/HEAD0/BODY0。另以单个临时静态HTML创建同内容Blob与srcdoc框架：Blob实际src已赋值但稳定后仍about:blank/空head-body/无load marker；srcdoc实际about:srcdoc/marker可见且load true。页面没有WordPress、积木、vendor、storage或请求API，URL只在pagehide revoke。此证据排除了“需要某个积木Edit/SSR才出现”这一必要条件，不判具体浏览器内核/宿主策略/Core最终根因。
+
+未修改Core、CSP、API版本或浏览器权限，未改业务内容/保存/发布，也未创建WP对象。临时静态页按原SHA精确清理，两个诊断标签关闭，当前custom装修验收页保留。三社交按用户决定仍停止，其QA源码保持正式5a0c，没有重新加载它们。
+
+按OpenAI Docs实际检索并打开Browser官方说明，有限读集没有该blob故障修复开关；未据此声称官方永久不支持。用户此前指定内置，Root未擅自切换Chrome。已询问原生兼容后续处理或仅准Chrome做对照，未获选择前不做依赖动作。原生兼容仍未通过，不能把此次定位当成功修复，也不逆写当前custom已验收范围。证据D:/Codex/Tasks/2026-10-31/builder-completion-audit/outputs/native-core-and-static-control-2026-11-01.json及同名传输截图，分析work/NATIVE-TRANSPORT-RESULT-2026-11-01.md。
+
+### 2026-11-01 · Codex：Chrome原生对照与内容样式接线修复
+
+用户在原生灰画布异步问题中明确授权“允许仅用Chrome做原生画布对照”，Root随后恢复本任务（此前短暂blocked保留历史，不继续按旧浏览器限制停住）。只在Chrome新建本人QA页正常登录；未碰用户其它标签内容。普通post1935截图真实标题/正文已显示，受支持DOM命令确认canvas是真blob文档、head145/body12。一次高层Page.getFrameTree读取超时不等于页面灰空；随后标准DOM snapshot已恢复可用。IAB中相同普通文章与纯静态blob失败仍属已知当前环境差异，不宣称已修内置浏览器。
+
+Chrome同一原生layout1917又暴露实际产品缺陷：Partner列表默认block/disc/padding40px，iframe head没有commerce CSS。Core在enqueue_block_assets阶段冻结iframe资产，之后SSR请求内enqueue不能写回该快照。仅修改Blocks::enqueue_canvas现有pc_layout guard，CSS-only提前入队4既有handles：Commerce/Review/Gram/Social（Social本已有入口、同handle去重），版本/URL沿用原文件mtime；不调会附带JS的assets方法，不改主题6样式、Core、注册apiVersion、nonce/权限、业务或provider逻辑。Blocks原27893357→b279ac8808c21c0dbfb6fab6f0289d00916e3932812e0f3a1f3bc0e69f5d6ed8。
+
+仅QA安装后正常Chrome reload真实验证：四CSS各1、theme模块样式保留，Partner列表变flex/list-style none/padding0、原生预览恢复横向三卡；Commerce/Review/Gram运行脚本没有新增，原有Social本地脚本不等于provider加载。实际点击已有Partner block，只读Inspector完整字段/PC3-mobile2，Save仍disabled，三社交frames0；未改字段/Save/Publish。普通QA退出已显示You are now logged out，唯一本人Chrome临时标签关闭。用户原dirty685与YY未改/未发布，原QA工作文档保留。
+
+本轮相关检查为PHP语法、单hunk/反向精确还原、真实before/after CSS与资产去重/截图/Inspector/disabled Save。不是重新跑全部70参数或原生发布链；主custom此前真实验收范围继续保留。三社交按用户决定暂缓、未通过，CSS接线没有重新开启任何外部Load；其social-feeds.js仍正式5a0c，D任务CSP候选未进入Git。证据D:/Codex/Tasks/2026-10-31/builder-completion-audit/outputs/chrome-native-{post-identity,style-before,style-after,inspector}-2026-11-01及截图，候选work/native-canvas-css-candidate。
