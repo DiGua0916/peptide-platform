@@ -631,3 +631,16 @@ Root正常退出唯一QA合成账号（不影响主站/HQ/YY），真实匿名�
 静态实际：整入文件10PHP+6JS语法均过（实际16条），git diff --check过；frontend单CSS diffcheck过。Impeccable context本阶段成功、DESIGN全文及craft/adapt已读；detect对11实际目标跑一次exit2，221advisory/1warning，不称全绿。warning是HTML源编辑框Menlo，属于功能性代码字体；其余大多public参考组件颜色/字号/半径及用户参考要求保留的按钮effects，admin DESIGN不强制public预览黑白，不自动删已授权选项。完整impeccable-detect.json保D任务。
 
 Git网络已恢复，本阶段再次真实fetch成功（exit0），main/两role仍7c65a8d，Evan远端0e9160b可见；此前curl28失败保留事实。当前尚未commit/merge/push，下一整批受保护提交与同事main整合，再针对共享面收口。social3实内容仍外部阻挡/未确认；原生Gutenberg36新受支持frameLocator真读bodyChild0，gray兼容未修、不阻断主custom链，36已关，不猜改CSP/Core/apiVersion。整体goal仍active，70学习≠70最终通过。
+
+
+### 2026-10-31 · Codex：整批提交、同事合入及三分支实际远端同步
+
+实际提交：backend 45d9dcd（59文件，所有积木末包及既有在途源码，不含QA数据/凭据），frontend 8d1dd7b（6文件，既有5主题修复+handoff）。干净main先正常merge origin/evan/work=0e9160b为d1229bb，再merge backend为d334f96，再merge frontend为b721e450dc90041e824b80b0e74c04940baea560，无文本冲突/没有改写同事历史。真正git push成功，随后两角色ff到main并再次push；真实ls-remote确认main、claude/backend、codex/frontend三者均b721e450dc90041e824b80b0e74c04940baea560。不是cached ref或只本地commit。独立codex/panapay-payments工作树不动。main与两role干净；Git整批同步已完成，较早“未commit/fetch失败”仅保历史，不再是当前状态。
+
+合并后实际118个变化PHP/JS/CJS语法检查全部exit0；同事3个真正standalone纯函数脚本分别88/86/87=261项通过，无WP/DB/mock/network，MAIN-INTEGRATION-CHECKS.json。没有把118语法项目当业务测试。相关diff --check通过。Evan新增tracking v4有真正数据库边界：先只读备份4跟踪表/原schema option，17visitors/17visits/594events/17tabs（645行），private备份SHAd9a20287114c868382307246de064270816404016862b0232d8f492720522e3d。Root亲读schema diff：仅访问表新增9归因列、dbDelta后全面ready检查才标4；ff角色后正常本人37后台reload实际无fatal/heading主题装修，之后只读probe真实marker4，645旧行全保、每一旧列值完全相同，四表counts不变。formal-tracking-after.json。没有WP bootstrap去冒读probe，无宽恢复/队列跑/真实客户修改。该reload工具耗43s仍是实际延迟，不能冒称后台性能全通过；原dirty685仍不刷新保存退出。
+
+QA公开新增后续操作：正常退出QA合成账号后，真实未登录38已验O16/O17/O24及390；随后32旧编辑器能看到缓存页但出现wp-auth-check-frame过期弹层，不能据旧DOM推“仍认证”。Root仅从既有本人F1 auth.json在该QA iframe正常登录user78，未改密码/未输出凭据，认证材料未入记忆或Git。因此此后的38reload重新为登录态，匿名证据以早先anonymous-*精确阶段为准，不夸跨阶段。
+
+随后本人1954又通过UI添加X和Facebook并Save/本地Publish，当前8块（原6+这2）；X账号WordPress/360高，FB账号Meta/360/Events关/Timeline+Messages开。没有添加/重试此前被浏览器明确拦截的Pinterest。visible公开38普通X Load一次仍x-sdk-load-error，保存public-social-visible-x.json并普通Remove后frames0；没有改CSP/sandbox/换渠道。FB普通Load首次真正读到原生facebook.com/plugins/page.php的Meta主页、认证、106893236粉丝及Follow/Share控件，实际frame body也有Meta/粉丝/关注/分享，public-facebook-real-content.png与public-facebook-native-loaded.json；未点击关注或分享。此证明真实主页头部实显，不是所有Timeline帖子/Messages功能通过。Facebook自己的脚本报ErrorUtils缺元素，父端15s仍只能如实“未能确认内容显示”，不能把平台错误当本站修好或整个feed通过。最后普通Remove，X/FB全部frames0，public-social-removed-final.json。X/Pinterest仍未实内容通过；FB头部实显已替代旧“完全没看到真实内容”，但不扩接受范围。
+
+viewport已reset并普通reload确认1280恢复，未给用户永久改手机尺寸。QA38当前已重登录且8模块，原6模块阶段匿名证据保留，不重新覆盖。所有凭据与原生CSV、private backups均在D任务，不在仓库；对本批已提交docs扫描无literal runtime nonce/token URL。参考70学习保持，整批源与Git已闭合；源存在/语法通过/历史报告不冒70最终同口径验收，剩少数证据回归、数据收尾及外部加载限制仍在做，goal active。
