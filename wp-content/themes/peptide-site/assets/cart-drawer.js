@@ -17,6 +17,7 @@
   let opener = null;
   let closeTimer;
   let oldPadding = '';
+  let cartEpoch = 0;
   // Observations only; an optional collector may listen. Woo owns transaction facts.
   const observeAction = (type, data = {}) => document.dispatchEvent(new CustomEvent('vc:visitor-action', {detail: {type, data: {source: 'drawer', ...data}}}));
 
@@ -197,14 +198,38 @@
     dialog.querySelector('.vc-cart-pricing-note').hidden = !(hasSavings && summary.compare_is_demo);
   }
 
+  const cartShape = value => value && Array.isArray(value.items) && value.totals && typeof value.totals === 'object';
+  const recognized = detail => detail && ['drawer', 'showcase'].includes(detail.source);
+  const cartEvent = (data, mutation, stale = false) => document.dispatchEvent(new CustomEvent('vc:cart-updated', {detail: {source: 'drawer', cart: data, mutation, stale}}));
+  document.addEventListener('vc:cart-mutation-start', event => { if (recognized(event.detail)) cartEpoch++; });
+  document.addEventListener('vc:cart-updated', event => {
+    const detail = event.detail;
+    if (!recognized(detail)) return;
+    if (detail.mutation === true) cartEpoch++;
+    if (detail.source === 'drawer' || detail.stale || !cartShape(detail.cart)) return;
+    render(detail.cart); setBusy(busy);
+    if (!busy) setMessage();
+  });
+  async function synchronize() {
+    const epoch = cartEpoch;
+    const data = await request();
+    if (epoch !== cartEpoch) return false;
+    render(data); cartEvent(data, false);
+    return true;
+  }
+
   async function load() {
     if (busy) return;
     loading(); setMessage('Loading your cart…'); setBusy(true);
+    const epoch = cartEpoch;
     try {
       const data = await request();
+      if (epoch !== cartEpoch) { setMessage(cart ? 'Your cart changed. Showing the latest available cart.' : 'Your cart is changing. Please check again.', false, !cart); return; }
       render(data);
+      cartEvent(data, false);
       setMessage((data.errors || []).map(e => plain(e.message)).filter(Boolean).join(' '), Boolean(data.errors?.length));
     } catch (error) {
+      if (epoch !== cartEpoch && cart) { setMessage('Your cart changed. Showing the latest available cart.'); return; }
       setMessage(error.message, true, true);
       if (!cart) {
         items.replaceChildren();
@@ -223,23 +248,38 @@
     setBusy(true); setMessage('Updating your cart…');
     const endpoint = action === 'remove' ? '/remove-item' : '/update-item';
     const payload = action === 'remove' ? { key } : { key, quantity };
+    let mutationEpoch = cartEpoch;
+    let sent = false;
+    const mutate = async () => {
+      document.dispatchEvent(new CustomEvent('vc:cart-mutation-start', {detail: {source: 'drawer'}}));
+      mutationEpoch = cartEpoch; sent = true;
+      return request(endpoint, payload);
+    };
     try {
       if (!nonce) await request();
       let data;
-      try { data = await request(endpoint, payload); }
+      try { data = await mutate(); }
       catch (error) {
         if (!['woocommerce_rest_invalid_nonce', 'woocommerce_rest_missing_nonce'].includes(error.code)) throw error;
         await request();
-        data = await request(endpoint, payload);
+        data = await mutate();
       }
-      render(data);
-      setMessage(action === 'remove' ? 'Item removed.' : 'Quantity updated.');
+      const stale = mutationEpoch !== cartEpoch;
+      if (stale) {
+        cartEvent(data, true, true);
+        const synced = await synchronize();
+        setMessage(synced ? 'Your cart was updated and synchronized.' : 'Your cart changed again. Check it before continuing.', !synced, !synced);
+      } else {
+        render(data); cartEvent(data, true);
+        setMessage(action === 'remove' ? 'Item removed.' : 'Quantity updated.');
+      }
       observeAction('cart_change_response', {action: action === 'remove' ? 'remove' : 'quantity', item_id: itemId, quantity: action === 'remove' ? 0 : data.items.find(item => item.key === key)?.quantity});
       // Existing classic Woo widgets, if present, may refresh their own fragments.
       if (window.jQuery) window.jQuery(document.body).trigger('wc_fragment_refresh');
     } catch (error) {
       // Never retry an uncertain mutation; refresh authoritative state instead.
-      try { render(await request()); } catch { /* The full cart link remains available. */ }
+      if (sent) cartEvent(null, true, true);
+      try { await synchronize(); } catch { /* The full cart link remains available. */ }
       setMessage(error.message, true, true);
     } finally {
       setBusy(false); scroll.scrollTop = oldScroll;

@@ -59,15 +59,23 @@
 .vc-content-cta--right .vc-content-cta-description { margin-left:auto; }
 .vc-content-item-disabled { opacity:.5; }
 .vc-content-rich { width:100%; max-width:var(--vc-content-width,800px); margin-inline:auto; padding:var(--vc-content-padding,32px); border-radius:var(--vc-content-radius,0); background:var(--vc-content-bg,transparent); color:var(--vc-content-fg,var(--vc-ink,#284650)); box-sizing:border-box; overflow-wrap:anywhere; }
+/* Rich text keeps saved padding values; narrow cards bound each side to 40% of their actual width. */
+.vc-content-rich {
+  padding-top:var(--vc-content-pad-t,var(--vc-content-padding,32px));
+  padding-right:min(var(--vc-content-pad-r,var(--vc-content-padding,32px)),40%,calc(var(--vc-content-width,800px) * .4));
+  padding-bottom:var(--vc-content-pad-b,var(--vc-content-padding,32px));
+  padding-left:min(var(--vc-content-pad-l,var(--vc-content-padding,32px)),40%,calc(var(--vc-content-width,800px) * .4));
+}
 .vc-content-rich--left { text-align:left; }
 .vc-content-rich--center { text-align:center; }
 .vc-content-rich--right { text-align:right; }
 .vc-content-rich h2 { margin:0 0 24px; color:inherit; }
 .vc-content-rich-body { font-size:16px; line-height:1.8; }
 .vc-content-rich-body p { margin:0 0 18px; color:inherit; max-width:none; }
+.vc-content-rich .vc-content-rich-body :where(p,strong,b,em,i,u,ul,ol,li,h3,h4,a) { color:inherit; }
 .vc-content-rich-body a { text-decoration:underline; text-underline-offset:3px; }
 .vc-content-rich-body ul,.vc-content-rich-body ol { padding-left:24px; }
-.vc-content-rich .vc-content-rich-button { margin-top:24px; background:var(--vc-btn-bg,var(--vc-primary,#177e9b)); color:var(--vc-btn-fg,#fff); }
+.vc-content-rich .vc-content-rich-button { margin-top:24px; max-width:100%; min-width:0; white-space:normal; overflow-wrap:anywhere; padding-inline:min(22px,10%); background:var(--vc-btn-bg,var(--vc-primary,#177e9b)); color:var(--vc-btn-fg,#fff); }
 @media (max-width:767px) {
   .vc-content-heading { display:block; margin-bottom:28px; }
   .vc-content-heading h2 { font-size:34px; }
@@ -84,8 +92,41 @@
   .vc-content-report-card { padding:24px; }
   .vc-content-report-row { gap:12px; font-size:13px; }
   .vc-content-cta { padding:32px 24px; }
-  .vc-content-rich { padding:var(--vc-content-padding-mobile,var(--vc-content-padding,20px)); }
+  .vc-content-rich {
+    max-width:var(--vc-content-width-mobile,var(--vc-content-width,800px));
+    padding-top:var(--vc-content-pad-t-mobile,var(--vc-content-padding-mobile,var(--vc-content-padding,20px)));
+    padding-right:min(var(--vc-content-pad-r-mobile,var(--vc-content-padding-mobile,var(--vc-content-padding,20px))),40%,calc(var(--vc-content-width-mobile,var(--vc-content-width,800px)) * .4));
+    padding-bottom:var(--vc-content-pad-b-mobile,var(--vc-content-padding-mobile,var(--vc-content-padding,20px)));
+    padding-left:min(var(--vc-content-pad-l-mobile,var(--vc-content-padding-mobile,var(--vc-content-padding,20px))),40%,calc(var(--vc-content-width-mobile,var(--vc-content-width,800px)) * .4));
+  }
 }
 @media (prefers-reduced-motion:reduce) {
   .vc-content-questions summary > span { transition:none; }
 }
+
+/* FAQ panel: opt-in whole-area colors, independent native details, and bounded rich content. */
+.vc-content-faq--panel { grid-template-columns:minmax(0,1fr); gap:32px; }
+.vc-content-faq--panel .vc-content-heading { text-align:center; }
+.vc-content-faq--panel .vc-content-heading h2 { font-size:40px; line-height:1.5; }
+.vc-content-faq--panel .vc-content-intro { margin-inline:auto; font-size:15px; line-height:1.5; }
+.vc-content-faq--panel .vc-content-questions { padding:60px; background:var(--vc-content-answer-bg,#f6f6f6); color:var(--vc-content-answer-fg,#1d1f21); box-sizing:border-box; }
+.vc-content-faq-panel-list { padding-block:5px; }
+.vc-content-faq--panel .vc-content-question { border-top:0; border-bottom:1px solid #0000001a; padding:1.25rem 0; overflow-wrap:anywhere; }
+.vc-content-faq--panel .vc-content-question:last-child { border-bottom:0; }
+.vc-content-faq--panel summary,.vc-content-faq--panel .vc-content-question--static > p { margin:0; font-size:16px; font-weight:700; line-height:1.5; color:inherit; }
+.vc-content-faq--panel summary > .vc-content-faq-chevron { display:grid; place-items:center; width:24px; height:24px; flex:0 0 24px; border-radius:50%; background:#fff; color:#171717; transform:none; }
+.vc-content-faq--panel .vc-content-faq-chevron svg { width:16px; height:16px; }
+.vc-content-faq--panel details[open] > summary > .vc-content-faq-chevron { background:#171717; color:#fff; transform:none; }
+.vc-content-faq--panel details[open] > summary > .vc-content-faq-chevron svg { transform:rotate(180deg); }
+.vc-content-faq--panel .vc-content-answer { padding:0; background:transparent; color:inherit; border-radius:0; }
+.vc-content-faq--panel .vc-content-answer :where(p,strong,b,em,i,u,h3,h4,ul,ol,li,a),
+.vc-content-faq .vc-content-intro :where(p,strong,b,em,i,u,h3,h4,ul,ol,li,a) { color:inherit; }
+.vc-content-faq .vc-content-intro img.pc-rich-image,
+.vc-content-faq .vc-content-answer img.pc-rich-image { display:inline-block; max-inline-size:100%; block-size:auto; object-fit:contain; }
+@media (max-width:767px) {
+  .vc-content-faq--panel .vc-content-questions { padding:0 20px; }
+  .vc-content-faq--panel .vc-content-heading h2 { font-size:30px; }
+}
+
+/* Keep long authored page titles within the content block on narrow screens. */
+.vc-m--context-content .standard-page>h1{overflow-wrap:anywhere}
