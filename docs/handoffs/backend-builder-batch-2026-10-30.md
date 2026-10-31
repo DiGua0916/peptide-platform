@@ -644,3 +644,27 @@ QA公开新增后续操作：正常退出QA合成账号后，真实未登录38�
 随后本人1954又通过UI添加X和Facebook并Save/本地Publish，当前8块（原6+这2）；X账号WordPress/360高，FB账号Meta/360/Events关/Timeline+Messages开。没有添加/重试此前被浏览器明确拦截的Pinterest。visible公开38普通X Load一次仍x-sdk-load-error，保存public-social-visible-x.json并普通Remove后frames0；没有改CSP/sandbox/换渠道。FB普通Load首次真正读到原生facebook.com/plugins/page.php的Meta主页、认证、106893236粉丝及Follow/Share控件，实际frame body也有Meta/粉丝/关注/分享，public-facebook-real-content.png与public-facebook-native-loaded.json；未点击关注或分享。此证明真实主页头部实显，不是所有Timeline帖子/Messages功能通过。Facebook自己的脚本报ErrorUtils缺元素，父端15s仍只能如实“未能确认内容显示”，不能把平台错误当本站修好或整个feed通过。最后普通Remove，X/FB全部frames0，public-social-removed-final.json。X/Pinterest仍未实内容通过；FB头部实显已替代旧“完全没看到真实内容”，但不扩接受范围。
 
 viewport已reset并普通reload确认1280恢复，未给用户永久改手机尺寸。QA38当前已重登录且8模块，原6模块阶段匿名证据保留，不重新覆盖。所有凭据与原生CSV、private backups均在D任务，不在仓库；对本批已提交docs扫描无literal runtime nonce/token URL。参考70学习保持，整批源与Git已闭合；源存在/语法通过/历史报告不冒70最终同口径验收，剩少数证据回归、数据收尾及外部加载限制仍在做，goal active。
+
+
+### 2026-10-31 · Codex：基础抽验通过；重新登录选择器缺口与受控修复待实测
+
+Root已读取最终证据收口，单图/多图B02/B04–B07及评价O12–O15实际旧报告存在，不把旧索引缺链接当从未开发；另P11/O07/O23共12项能补历史链接，43→55只是有链接项数，不是当前通过数。主库实际82个cards（有legacy等），参考70均有真实库对应/图标；B29 donation_tip自定义SVG未带data-icon，Root结合实际title与Registry映射才确认，非真实缺块，ACTUAL-LIBRARY-70-COVERAGE.json。未假称82参考或捐款收款已接。
+
+当前源码抽查复用原69文档/qa-basic-runtime真实peptide-site，不重建fixture或切主题：单图PC420px/cover50/50→390手机420px/contain20/80，真实picture currentSrc使用手机placeholder替图、loadedtrue，rootScroll=client（1265/375）无横溢；不能只看img.src推替图没生效。M4poster左PC主638x492、右231方块pair+492x231底，phone334.67主→159.83pair→334.67底均loaded，根无溢出；真实PC/phone截图Root已看。basic-current-*在builder-final-source-integration work/outputs。viewport已reset，临时40/41关。
+
+QA1954另通过UI加四类评价，当前12块草稿SaveDraft成功，公开仍此前8块。实际preview text/photos/video均读现存真实合成审核记录及媒体，不是placeholder；精选尚空。此处发现真实登录恢复缺陷：Root正常logout→Core auth iframe re-login后，Save/Publish虽能用，recordLookup.security仍是登录前静态nonce，精选picker401/403正确报“权限或登录状态已失效”；不能把此当业务不存在。用户本机X/Pinterest可达性回答先是没用/不开，后明确修正“应该可以打开”，因此仅记X真实SDK error及Pinterest实际浏览器阻挡，不推断整网不可达。
+
+两源最窄修复已亲审并仅装QA：Blocks `wp_refresh_nonces` filter要CAP_EDIT才返回现有record/link动作nonce，保Core response；Controls用官方heartbeat.tick原位更新已有字段与YouTube REST nonce，加入heartbeat依赖；custom pc-design-editor-page观察实际auth iframe出现→移除一次connectNow，native跳过避免重复。无新anonymous endpoint/无绕过nonce/无重放业务/不reload丢编辑内容/不自动清缓存。候选D:/Codex/Tasks/2026-10-31/builder-editor-auth-nonce-recovery；before完整备份root-qa-before。Blocks5c13e34a→27893357，Controlsdc642d65→aa152052。PHP/JS语法过；Root实际重新执行离线7服务器+14客户端替身测试全过（不是WP/浏览器实测）。正式两源仍原版本、三远端仍832c27b，不称新补丁已交付。
+
+本次继续后调用CUA reload之前工具直接返回“Local browser use is disabled in Work settings”。没有执行reload/丢内容；Root如实说明并通过异步问题请求开启，在恢复前不切换Chrome/HTTP/CDP绕过。此时实际expired→re-login→Heartbeat→用户Retry实测尚未进行，不能以21离线测试代替。QA最新原209+Plans=210新sourceMap为builder-editor-auth-nonce-recovery/AFTER-210-QA-WITH-AUTH-RECOVERY.json SHAcc671d15157db574c85bc8b4ff24079ed593bb87350901da9831ef729110a389，210实际文件全hash核对；旧7a690map保历史。ROOT-VERIFICATION-STATUS.json明确QA only/actualUi notrun/正式未装，需浏览器重开后接续32本人已保存doc1954，原dirty685仍不能刷新/保存/退出。goal仍active，不提前交完工。
+
+
+### 2026-10-31 · Codex：用户已启用Browser，但工具状态尚未恢复
+
+用户明确回复“我开了呀”，并先发Computer Use任意应用/Chrome开启截图，后又发“Browser插件已启用/让ChatGPT控制内置浏览器”蓝色开启截图。Root接受用户已启用事实，不能继续说是用户未开。CUA在这些实际新状态之后再次只读getAXState/listTabs仍立刻报Local browser use is disabled in Work settings；Root做一次js_reset（只清工具JS状态，不关闭或重载页面）后，fresh getTab32也同样拒绝。用户ambient当前仅原doc685一页，因此32验收标签可能已关闭；拒绝发生在tab查找之前，不能声称它仍开着/已重新加载。原685未刷新/保存/关闭。没有切其它浏览器/HTTP/CDP绕过禁用。
+
+为解释设置，只读查了官方OpenAI Browser文档https://learn.chatgpt.com/docs/browser（支持@Browser点名内置浏览器，Browser设置与应用控制设置分开），并读OpenAI Docs技能。官方页未解释本次disabled报错的具体同步原因，未断言缓存/组织策略或app bug已证实。Plugin Management的Browser名权限查询返回not_installed、搜索目录也未列内置Browser，不能拿它否定用户已启用的内置功能；该目录并非这次内置control状态的可用证据。没有改权限或安装替代插件。
+
+nonce两源独立静态复核报告builder-editor-auth-nonce-recovery-independent/work/REVIEW.md SHAba78f090ca08d4547b58e17a02603a050da3488a553c556172e64fa9e5e94b55，Root已读，无P1/P2，Core hooks/heartbeat依赖与iframe移除路径确认；仅源码局部结论，不替代实际UI。仅QA安装两源/21offline过的状态不变，正式还未安装。当前缺的是控制恢复后正常expired→login→Retry及草稿12块保留的实际验证；未推补丁为已验正式版本。
+
+数据收尾只读报告builder-final-review-boundary/outputs/REVIEW-BOUNDARY.md已Root亲读，未发现本批QA业务误入正式或fixture/private误入Git；正式预期schema/marker升级不称零写。QA本人样本保留供user检查，无需销毁QA/广恢复旧baseline；未知旧cache/session/activity不擅自还原。临时关闭的是Gutenberg诊断tabs36/39，QA Woo fulfilments feature仍yes，正式未由本轮开启。主功能同步832c27b已有真实remote三分支确认；本追加记录仅记录权限阻挡，目标仍未完成/不暂停/不报100%。下一若用户用官方@Browser明确重连，先只读listTabs选同IAB2，不猜原32还存在，不动原dirty685。
