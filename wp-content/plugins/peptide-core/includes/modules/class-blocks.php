@@ -22,6 +22,7 @@ final class Blocks {
 
 	public static function register_hooks(): void {
 		Links::register_hooks();
+		add_filter( 'wp_refresh_nonces', array( self::class, 'refresh_ui_nonces' ) );
 		add_filter( 'rest_pre_insert_' . Templates::LAYOUT, array( self::class, 'preflight_rest_media' ), 10, 2 );
 		add_action( 'rest_after_insert_' . Templates::LAYOUT, array( self::class, 'approve_rest_media' ), 10, 3 );
 		add_action( 'init', array( self::class, 'register' ), 20 );
@@ -29,6 +30,16 @@ final class Blocks {
 		add_action( 'enqueue_block_editor_assets', array( self::class, 'enqueue_editor' ) );
 		add_action( 'enqueue_block_assets', array( self::class, 'enqueue_canvas' ) );
 		add_filter( 'rest_pre_dispatch', array( self::class, 'mark_editor_preview' ), 10, 3 );
+	}
+
+	/** Refresh existing picker tokens through authenticated Core Heartbeat only. */
+	public static function refresh_ui_nonces( array $response ): array {
+		if ( ! current_user_can( Templates::CAP_EDIT ) ) { return $response; }
+		$response['pc_module_ui_nonces'] = array(
+			'record' => wp_create_nonce( 'pc_layout_records' ),
+			'link'   => Links::config()['security'],
+		);
+		return $response;
 	}
 
 	public static function register(): void {
@@ -195,7 +206,7 @@ final class Blocks {
 		wp_enqueue_script(
 			self::CONTROLS_SCRIPT,
 			$url . 'module-controls.js',
-			array( self::ICONS_SCRIPT, 'wp-element', 'wp-components', 'wp-data', 'wp-core-data', 'wp-media-utils', 'wp-block-editor', 'wp-i18n', 'wp-api-fetch' ),
+			array( self::ICONS_SCRIPT, 'wp-element', 'wp-components', 'wp-data', 'wp-core-data', 'wp-media-utils', 'wp-block-editor', 'wp-i18n', 'wp-api-fetch', 'heartbeat' ),
 			$ver( 'module-controls.js' ),
 			array( 'in_footer' => true )
 		);

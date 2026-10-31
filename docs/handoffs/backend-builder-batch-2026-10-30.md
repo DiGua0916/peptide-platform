@@ -668,3 +668,13 @@ QA1954另通过UI加四类评价，当前12块草稿SaveDraft成功，公开仍�
 nonce两源独立静态复核报告builder-editor-auth-nonce-recovery-independent/work/REVIEW.md SHAba78f090ca08d4547b58e17a02603a050da3488a553c556172e64fa9e5e94b55，Root已读，无P1/P2，Core hooks/heartbeat依赖与iframe移除路径确认；仅源码局部结论，不替代实际UI。仅QA安装两源/21offline过的状态不变，正式还未安装。当前缺的是控制恢复后正常expired→login→Retry及草稿12块保留的实际验证；未推补丁为已验正式版本。
 
 数据收尾只读报告builder-final-review-boundary/outputs/REVIEW-BOUNDARY.md已Root亲读，未发现本批QA业务误入正式或fixture/private误入Git；正式预期schema/marker升级不称零写。QA本人样本保留供user检查，无需销毁QA/广恢复旧baseline；未知旧cache/session/activity不擅自还原。临时关闭的是Gutenberg诊断tabs36/39，QA Woo fulfilments feature仍yes，正式未由本轮开启。主功能同步832c27b已有真实remote三分支确认；本追加记录仅记录权限阻挡，目标仍未完成/不暂停/不报100%。下一若用户用官方@Browser明确重连，先只读listTabs选同IAB2，不猜原32还存在，不动原dirty685。
+
+### 2026-10-31 · Codex：Browser恢复后真实登录恢复验收及两源整合
+
+在隔离QA56139正常启动并用本人合成账号恢复doc1954（12草稿/此前8公开）；不动用户原dirty685，不修改/发布YY。通过真实原生logout使既有编辑页失去会话，评价选择器拒绝读取且Core弹出wp-auth-check-frame；未保存标题保留。记录选择器层曾盖住登录框，关闭前层后才在可见Core表单完成正常interim登录；没有注入登录成功事件、刷新页面、绕过nonce或自动重放请求。frame真实移除后重新打开评价选择器，现有审核合成记录#2等真实返回，无权限/加载失败，未保存标题仍在。另站内目标选择器真实返回常用页面，选择商品列表后服务端核验成功、显示已关联目标。
+
+随后选择真实合成评论#2，恢复原标题，SaveDraft→正常reload仍见关联#2；仅在本人隔离文档经Publish+OK确认发布。真实状态Published 2026-10-31 11:56（站点显示值），公开由8变12模块。再次正常logout后公开页无adminbar，四类评价区域均在，精选只1条、正文与商品链接正确。桌面client/scroll1620/1620；390viewport手机根client/scroll375/375无横溢，精选与商品链接仍在；截图实际已看，viewport已reset。图片/评价为明确合成QA素材，未复制到正式/Git。
+
+前端角色两源只复制已独立审查且QA安装实测的候选：Blocks5c13e34a→27893357；Controlsdc642d65→aa152052。新增Core wp_refresh_nonces capability受控返回，Controls heartbeat依赖/原位token更新，custom页auth iframe出现→移除触发一次Core Heartbeat，不改鉴权/无anonymous端点/不清dirty。复制前严格核对before SHA并备份D任务；原21项离线替身与独立静态报告仍保留，本轮真实UI验证补齐record/link恢复与保存公开链，不冒称观察到了HTTP Heartbeat响应体或YouTube/native全面通过。
+
+本阶段证据D:/Codex/Tasks/2026-10-31/builder-resume-browser-qa/outputs及GIT-SNAPSHOT.md；Git fetch无新同事提交，三工作树原4bf46b5干净后才整合。下一按用户自动阶段同步commit/push并正常ff main/backend；正式源将在同步角色树后生效，不自动发布客户装修布局。X SDK/Pinterest外部阻挡及Gutenberg空iframe仍是未关项；整体约95%仅进度估计，不是70块同口径验收通过率。原生只读复核NATIVE-REVIEW.md未给出足以修改Core/生产的具体缺项，仍需真实portal链定位。

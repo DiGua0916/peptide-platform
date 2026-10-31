@@ -25,6 +25,40 @@
 	var useSelect = wp.data.useSelect;
 	var S = data.strings;
 
+	// Heartbeat refreshes tokens in place; failed picker requests still require user retry.
+	function refreshModuleUINonces( response ) {
+		if ( ! response || typeof response !== 'object' ) { return; }
+		var nonces = response.pc_module_ui_nonces;
+		if ( nonces && typeof nonces === 'object' ) {
+			if ( data.recordLookup && typeof data.recordLookup.security === 'string' && typeof nonces.record === 'string' && nonces.record ) { data.recordLookup.security = nonces.record; }
+			if ( data.linkLookup && typeof data.linkLookup.security === 'string' && typeof nonces.link === 'string' && nonces.link ) { data.linkLookup.security = nonces.link; }
+		}
+		if ( data.youtubeMetadata && typeof data.youtubeMetadata.nonce === 'string' && typeof response.rest_nonce === 'string' && response.rest_nonce ) { data.youtubeMetadata.nonce = response.rest_nonce; }
+	}
+	if ( wp.hooks && typeof wp.hooks.addAction === 'function' ) {
+		wp.hooks.addAction( 'heartbeat.tick', 'peptide-core/module-ui-nonces', refreshModuleUINonces );
+	}
+
+	function observeCustomEditorLogin() {
+		// Core already accelerates Heartbeat on the native post editor screens.
+		if ( window.adminpage === 'post-php' || window.adminpage === 'post-new-php' || ! document.body || ! document.body.classList.contains( 'pc-design-editor-page' ) || ! window.MutationObserver || ! wp.heartbeat || typeof wp.heartbeat.connectNow !== 'function' ) { return; }
+		var frameSeen = !! document.getElementById( 'wp-auth-check-frame' );
+		new window.MutationObserver( function ( mutations ) {
+			// Also retain an appearance/removal delivered in the same mutation batch.
+			mutations.forEach( function ( mutation ) {
+				Array.prototype.forEach.call( mutation.addedNodes, function ( node ) {
+					if ( node.nodeType === 1 && ( node.id === 'wp-auth-check-frame' || node.querySelector( '#wp-auth-check-frame' ) ) ) { frameSeen = true; }
+				} );
+			} );
+			var framePresent = !! document.getElementById( 'wp-auth-check-frame' );
+			if ( frameSeen && ! framePresent ) {
+				frameSeen = false;
+				wp.heartbeat.connectNow();
+			} else if ( framePresent ) { frameSeen = true; }
+		} ).observe( document.body, { childList: true, subtree: true } );
+	}
+	observeCustomEditorLogin();
+
 	var PALETTE = [
 		{ name: 'Black', color: '#000000' },
 		{ name: 'White', color: '#ffffff' },
