@@ -812,3 +812,11 @@ Root接受用户指出95%误导，后续不再给无依据百分比。当前Sour
 已知可选兼容项：WordPress原生Gutenberg画布仍灰空，真实blob导航ERR_ABORTED/about:blank，未盲改Core/CSP/API版本。当前交付使用已实测编辑、关联、保存、发布、匿名PC/手机和会话恢复的custom装修编辑器；不能据此宣称原生host也已修好。Discard本轮未单独实际执行，不把已验Unpublish/Cancel/键盘扩大为每个菜单动作实点。
 
 本轮无新增产品运行代码；沿用功能9a014ce/整合94f4853，并已fetch亲读、正常ff同事支付交付d9ecc22，保留其24路径与独立支付工作树，不做真实收款或额外部署。本人1917/1930/1931临时发布均撤销，草稿保留；1954原12/12及review2、用户685/YY保持。证据D:/Codex/Tasks/2026-10-31/builder-completion-audit/outputs，最终具体范围work/FINAL-SCOPE-CHECK.md与70-EVIDENCE-MATRIX.md；三社交为用户暂缓，不是缺口被伪写成功。
+
+### 2026-11-01 · Codex：原生灰画布已在无WordPress静态对照复现
+
+同一内置浏览器、同QA origin下，本人普通post1935没有加载module-editor/controls脚本，正常reload仍两次canvas blob开始、未见child提交，最终DOM about:blank/HEAD0/BODY0。另以单个临时静态HTML创建同内容Blob与srcdoc框架：Blob实际src已赋值但稳定后仍about:blank/空head-body/无load marker；srcdoc实际about:srcdoc/marker可见且load true。页面没有WordPress、积木、vendor、storage或请求API，URL只在pagehide revoke。此证据排除了“需要某个积木Edit/SSR才出现”这一必要条件，不判具体浏览器内核/宿主策略/Core最终根因。
+
+未修改Core、CSP、API版本或浏览器权限，未改业务内容/保存/发布，也未创建WP对象。临时静态页按原SHA精确清理，两个诊断标签关闭，当前custom装修验收页保留。三社交按用户决定仍停止，其QA源码保持正式5a0c，没有重新加载它们。
+
+按OpenAI Docs实际检索并打开Browser官方说明，有限读集没有该blob故障修复开关；未据此声称官方永久不支持。用户此前指定内置，Root未擅自切换Chrome。已询问原生兼容后续处理或仅准Chrome做对照，未获选择前不做依赖动作。原生兼容仍未通过，不能把此次定位当成功修复，也不逆写当前custom已验收范围。证据D:/Codex/Tasks/2026-10-31/builder-completion-audit/outputs/native-core-and-static-control-2026-11-01.json及同名传输截图，分析work/NATIVE-TRANSPORT-RESULT-2026-11-01.md。
