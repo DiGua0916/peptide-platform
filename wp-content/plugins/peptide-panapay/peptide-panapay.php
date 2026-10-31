@@ -2,7 +2,7 @@
 /**
  * Plugin Name: VialCove — Panapay Payments
  * Description: Hosted Panapay payments for native WooCommerce and Checkout Blocks.
- * Version: 0.3.0
+ * Version: 0.4.0
  * Requires at least: 6.7
  * Requires PHP: 8.1
  * Text Domain: peptide-panapay
@@ -13,7 +13,7 @@ defined( 'ABSPATH' ) || exit;
 
 define( 'PEPTIDE_PANAPAY_FILE', __FILE__ );
 define( 'PEPTIDE_PANAPAY_DIR', __DIR__ );
-define( 'PEPTIDE_PANAPAY_VERSION', '0.3.0' );
+define( 'PEPTIDE_PANAPAY_VERSION', '0.4.0' );
 
 spl_autoload_register( static function ( $class ) {
 	$prefix = __NAMESPACE__ . '\\';
@@ -47,7 +47,11 @@ add_action( 'plugins_loaded', static function () {
 	Checkout_Fields::register_hooks();
 	add_action( 'woocommerce_admin_order_data_after_order_details', array( Admin::class, 'order_details' ) );
 	add_filter( 'woocommerce_payment_gateways', static function ( $gateways ) {
-		$gateways[] = Gateway::class;
+		foreach ( Gateway::account_configurations() as $id => $config ) {
+			$gateway = new Gateway( $id, $config );
+			$gateways[] = $gateway;
+			add_action( 'woocommerce_receipt_' . $gateway->id, array( Callbacks::class, 'receipt' ) );
+		}
 		return $gateways;
 	} );
 	// These are registered independently of lazy gateway construction.
@@ -59,9 +63,10 @@ add_action( 'plugins_loaded', static function () {
 		if ( current_user_can( 'activate_plugins' ) && ! Store::installed() ) { Store::install(); }
 	} );
 	add_action( 'woocommerce_blocks_payment_method_type_registration', static function ( $registry ) {
-		if ( class_exists( '\Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType' )
-			&& ! $registry->is_registered( 'pc_panapay' ) ) {
-			$registry->register( new Blocks() );
+		if ( class_exists( '\Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType' ) ) {
+			foreach ( Gateway::known_ids() as $id ) {
+				if ( ! $registry->is_registered( $id ) ) { $registry->register( new Blocks( $id ) ); }
+			}
 		}
 	} );
 }, 20 );

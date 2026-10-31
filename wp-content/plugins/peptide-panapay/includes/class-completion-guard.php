@@ -29,7 +29,7 @@ final class Completion_Guard {
 				self::$registered_statuses[ $status ] = true;
 			}
 		}
-		self::$active[ $id ] = array( 'transaction' => $transaction, 'blocked' => false );
+		self::$active[ $id ] = array( 'transaction' => $transaction, 'gateway' => $order->get_payment_method(), 'blocked' => false );
 		try {
 			$order->payment_complete( $transaction );
 			if ( self::$active[ $id ]['blocked'] ) { throw new \RuntimeException( 'payment_persistence_unconfirmed' ); }
@@ -45,7 +45,8 @@ final class Completion_Guard {
 	public static function guard( $id ): void {
 		if ( ! isset( self::$active[ $id ] ) ) { return; }
 		try {
-			if ( ! self::$active[ $id ]['blocked'] && Persistence::is_paid( (int) $id, self::$active[ $id ]['transaction'] ) ) { return; }
+			if ( ! self::$active[ $id ]['blocked'] && Persistence::has_gateway( (int) $id, self::$active[ $id ]['gateway'] )
+				&& Persistence::is_paid( (int) $id, self::$active[ $id ]['transaction'] ) ) { return; }
 		} catch ( \Throwable $error ) {
 			// A persistence read error is not permission to emit completion effects.
 		}

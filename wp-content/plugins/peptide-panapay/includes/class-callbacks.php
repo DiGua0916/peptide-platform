@@ -14,7 +14,14 @@ final class Callbacks {
 	}
 
 	public static function protect_payment_pages(): void {
-		if ( is_wc_endpoint_url( 'order-pay' ) ) { self::no_cache(); }
+		if ( is_wc_endpoint_url( 'order-pay' ) ) {
+			self::no_cache();
+			$order = wc_get_order( absint( get_query_var( 'order-pay' ) ) );
+			if ( $order instanceof \WC_Order ) {
+				$gateway = Session_Service::bound_gateway( $order );
+				if ( null !== $gateway ) { add_action( 'woocommerce_receipt_' . $gateway, array( self::class, 'receipt' ) ); }
+			}
+		}
 	}
 
 	private static function fields( array $source, array $keys ): array {
@@ -96,7 +103,8 @@ final class Callbacks {
 		self::no_cache();
 		$order = wc_get_order( $order_id );
 		$key = isset( $_GET['key'] ) && is_string( $_GET['key'] ) ? wc_clean( wp_unslash( $_GET['key'] ) ) : '';
-		if ( ! $order instanceof \WC_Order || '' === $key || ! hash_equals( $order->get_order_key(), $key ) || Gateway::ID !== $order->get_payment_method() ) {
+		if ( ! $order instanceof \WC_Order || '' === $key || ! hash_equals( $order->get_order_key(), $key )
+			|| Session_Service::bound_gateway( $order ) !== $order->get_payment_method() ) {
 			echo '<p>' . esc_html__( 'Unable to open this payment. Please open your order from checkout.', 'peptide-panapay' ) . '</p>';
 			return;
 		}

@@ -6,6 +6,7 @@ defined( 'ABSPATH' ) || exit;
 final class Hub_Protocol {
 	public const NS = 'pc-panapay/v1';
 	public const CONFIG = '/pc-panapay/v1/hub/config';
+	public const METHODS = '/pc-panapay/v1/hub/methods';
 	public const CREATE = '/pc-panapay/v1/hub/session';
 	public const STATUS = '/pc-panapay/v1/hub/session/status';
 	public const EVENT = '/pc-panapay/v1/store/event';
@@ -72,7 +73,7 @@ final class Hub_Protocol {
 		return trailingslashit( ( $p['scheme'] ?? '' ) . '://' . $host . ( isset( $p['port'] ) ? ':' . $p['port'] : '' ) . ( $p['path'] ?? '' ) );
 	}
 	public static function request( string $base, string $key, string $uuid, string $route, array $data, int $timeout = 20 ): array {
-		if ( ! in_array( $route, array( self::CONFIG, self::CREATE, self::STATUS, self::EVENT ), true ) ) { throw new Protocol_Error( 'connection_route_invalid', 503 ); }
+		if ( ! in_array( $route, array( self::CONFIG, self::METHODS, self::CREATE, self::STATUS, self::EVENT ), true ) ) { throw new Protocol_Error( 'connection_route_invalid', 503 ); }
 		$base = self::base_url( $base );
 		$body = self::json( $data ); $time = time(); $nonce = bin2hex( random_bytes( 16 ) );
 		$url = add_query_arg( 'rest_route', $route, $base );

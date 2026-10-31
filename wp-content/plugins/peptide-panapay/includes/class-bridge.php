@@ -37,15 +37,40 @@ final class Bridge {
 	public static function uuid(): string { return self::identity()['uuid']; }
 
 	/** Explicit public policy only; no merchant configuration is requested or cached. */
-	private static function policy( array $identity ): array {
-		$cache = 'pc_pay_policy_' . substr( hash( 'sha256', $identity['url'] . '|' . $identity['uuid'] . '|' . $identity['key'] ), 0, 32 );
+	private static function methods_policy( array $identity ): array {
+		$cache = 'pc_pay_methods_v1_' . substr( hash( 'sha256', $identity['url'] . '|' . $identity['uuid'] . '|' . $identity['key'] ), 0, 32 );
 		$data = get_transient( $cache );
 		if ( false === $data ) {
-			$data = Hub_Protocol::request( $identity['url'], $identity['key'], $identity['uuid'], Hub_Protocol::CONFIG, array(), 5 );
-			$data = self::validate_policy( $data );
+			// Deploy HQ first. Authentication, network or missing-route errors never
+			// fall back to a different merchant or a singleton configuration.
+			$data = Hub_Protocol::request( $identity['url'], $identity['key'], $identity['uuid'], Hub_Protocol::METHODS, array(), 5 );
+			$data = self::validate_methods( $data );
 			set_transient( $cache, $data, self::CACHE_TTL );
 		}
-		return self::validate_policy( $data );
+		return self::validate_methods( $data );
+	}
+
+	private static function valid_account_id( $value ): bool {
+		return is_string( $value ) && ( 'default' === $value || 1 === preg_match( '/^[a-f0-9]{32}$/D', $value ) );
+	}
+
+	private static function validate_methods( $data ): array {
+		if ( ! is_array( $data ) || count( $data ) !== 2 || array_diff( array_keys( $data ), array( 'version', 'methods' ) )
+			|| 1 !== ( $data['version'] ?? null ) || ! is_array( $data['methods'] ?? null ) || count( $data['methods'] ) > 20
+			|| ( $data['methods'] && array_keys( $data['methods'] ) !== range( 0, count( $data['methods'] ) - 1 ) ) ) {
+			throw new Protocol_Error( 'hub_policy_invalid', 503 );
+		}
+		$ids = array(); $methods = array();
+		foreach ( $data['methods'] as $method ) {
+			if ( ! is_array( $method ) || count( $method ) !== 8 || ! self::valid_account_id( $method['account_id'] ?? null )
+				|| in_array( $method['account_id'], $ids, true ) || ! array_key_exists( 'payment_icons', $method ) || ! array_key_exists( 'iframe_height', $method ) ) {
+				throw new Protocol_Error( 'hub_policy_invalid', 503 );
+			}
+			$id = $method['account_id']; unset( $method['account_id'] );
+			$method = self::validate_policy( $method ); $method = array_merge( array( 'account_id' => $id ), $method );
+			$ids[] = $id; $methods[] = $method;
+		}
+		return array( 'version' => 1, 'methods' => $methods );
 	}
 
 	private static function validate_policy( $data ): array {
@@ -82,20 +107,33 @@ final class Bridge {
 		return $data;
 	}
 
-	public static function configuration(): array {
+	public static function configurations(): array {
 		$identity = self::identity();
-		$policy = self::policy( $identity );
-		return array(
-			'central' => true, 'enabled' => $policy['enabled'], 'title' => $policy['title'], 'description' => $policy['description'],
-			'test_mode' => $policy['test_mode'], 'payment_hosts' => $policy['payment_hosts'],
-			'payment_icons' => $policy['payment_icons'], 'iframe_height' => $policy['iframe_height'],
-			'gateway' => '', 'mchid' => 'hub-' . $identity['uuid'], 'tag' => '', 'mode' => '2',
-			// A domain-separated store event key, never the payment provider's secret.
-			'secret' => Hub_Protocol::event_key( $identity['key'] ),
-		);
+		$out = array();
+		foreach ( self::methods_policy( $identity )['methods'] as $policy ) {
+			$id = $policy['account_id'];
+			$out[ $id ] = array(
+				'account_id' => $id,
+				'central' => true, 'enabled' => $policy['enabled'], 'title' => $policy['title'], 'description' => $policy['description'],
+				'test_mode' => $policy['test_mode'], 'payment_hosts' => $policy['payment_hosts'],
+				'payment_icons' => $policy['payment_icons'], 'iframe_height' => $policy['iframe_height'],
+				'gateway' => '', 'mchid' => 'hub-' . $identity['uuid'] . ( 'default' === $id ? '' : '-' . $id ), 'tag' => '', 'mode' => '2',
+				// A domain-separated store event key, never the payment provider's secret.
+				'secret' => Hub_Protocol::event_key( $identity['key'] ),
+			);
+		}
+		return $out;
 	}
 
-	public static function create( array $payload, ?string $expected_event_key = null ): array {
+	public static function configuration( string $account_id = 'default' ): array {
+		if ( ! self::valid_account_id( $account_id ) ) { throw new Protocol_Error( 'payment_method_unavailable', 503 ); }
+		$configs = self::configurations();
+		if ( ! isset( $configs[ $account_id ] ) ) { throw new Protocol_Error( 'payment_method_unavailable', 503 ); }
+		return $configs[ $account_id ];
+	}
+
+	public static function create( array $payload, ?string $expected_event_key = null, string $account_id = 'default' ): array {
+		if ( ! self::valid_account_id( $account_id ) ) { throw new Protocol_Error( 'payment_method_unavailable', 503 ); }
 		$identity = self::identity();
 		if ( null !== $expected_event_key && ! hash_equals( $expected_event_key, Hub_Protocol::event_key( $identity['key'] ) ) ) {
 			// No HTTP has happened for this new reference. A connection-key rotation
@@ -103,8 +141,9 @@ final class Bridge {
 			return array( 'state' => 'failed' );
 		}
 		unset( $payload['mchid'], $payload['tag'], $payload['mode'], $payload['sign'] );
+		$payload['account_id'] = $account_id;
 		try {
-			return self::session( Hub_Protocol::request( $identity['url'], $identity['key'], $identity['uuid'], Hub_Protocol::CREATE, $payload, 45 ) );
+			return self::session( Hub_Protocol::request( $identity['url'], $identity['key'], $identity['uuid'], Hub_Protocol::CREATE, $payload, 45 ), $account_id );
 		} catch ( \Throwable $error ) {
 			// An ambiguous transport result cannot authorize another provider creation.
 			return array( 'state' => 'unknown' );
@@ -112,15 +151,17 @@ final class Bridge {
 	}
 
 	/** This route only reads a previously reserved HQ session. It never creates one. */
-	public static function recover( string $reference ): array {
+	public static function recover( string $reference, string $account_id = 'default' ): array {
+		if ( ! self::valid_account_id( $account_id ) ) { throw new Protocol_Error( 'payment_method_unavailable', 503 ); }
 		$identity = self::identity();
 		try {
-			return self::session( Hub_Protocol::request( $identity['url'], $identity['key'], $identity['uuid'], Hub_Protocol::STATUS, array( 'reference' => $reference ), 10 ) );
+			return self::session( Hub_Protocol::request( $identity['url'], $identity['key'], $identity['uuid'], Hub_Protocol::STATUS, array( 'reference' => $reference ), 10 ), $account_id );
 		} catch ( \Throwable $error ) { return array( 'state' => 'unknown' ); }
 	}
 
-	private static function session( array $data ): array {
-		if ( ! in_array( $data['state'] ?? null, array( 'creating', 'created', 'unknown', 'failed' ), true ) ) {
+	private static function session( array $data, string $account_id ): array {
+		if ( ( $data['account_id'] ?? 'default' ) !== $account_id
+			|| ! in_array( $data['state'] ?? null, array( 'creating', 'created', 'unknown', 'failed' ), true ) ) {
 			throw new Protocol_Error( 'hub_session_invalid', 503 );
 		}
 		if ( 'created' !== $data['state'] ) { return array( 'state' => 'failed' === $data['state'] ? 'failed' : 'unknown' ); }
