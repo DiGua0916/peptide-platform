@@ -800,3 +800,15 @@ O05通过实际控件把现有1940+10关联到一个视频，保存并仅发布�
 O08–O11通过正常UI在原已存在blog1930文档关联post1935/category77/topic1934，草稿5块/真实发布，普通无preview参数博客地址匿名出现四标记和实际链接；article1931原1块加富文本标记后发布，普通文章地址有标记/原正文，引出并验证上述单篇缺陷修复。最后1930、1931和1917均通过已修正常UI取消临时发布，公开首页恢复原生collection/our-story/questions，文章标记消失且h1/正文正确。草稿保留供检查；1954原12公开/12草稿及review2不改。
 
 Root接受用户指出95%误导，后续不再给无依据百分比。当前Source-bridge逐旧pin核验表明B/P及O07/O23既有真UI限定范围可沿用，不把55链接/源存在当通过。社交X/Pinterest/完整FB Timeline未闭合；Gutenberg已同一child frame两次blob loaderId对应ERR_ABORTED、无frameNavigated，属导航未提交，未盲改Core/CSP。遗留卡片极长无断行真WP样本已清，不能开旧ID冒通过。证据根D:/Codex/Tasks/2026-10-31/builder-completion-audit/{outputs,work}，完整目标继续，不报100%。
+
+### 2026-10-31 · Codex：本地装修交付核对，三社交模块按用户决定暂缓
+
+用户明确X/Pinterest/Facebook暂时不需要，后续再优化；保留三个模块，不将它们记为验收通过，不再继续provider加载或实现。此前70参考学习与本人新增块清理记录保持；其余本轮约定的本地custom装修及真实内容关联主链已收口，可交用户检查。各旧UI范围经SOURCE-BRIDGE/PRODUCT-SOURCE-BRIDGE衔接，不冒全参数/全部浏览器/实体手机同版全覆盖，也不将支付、外部AI、SMTP等用户既定暂缓改为已接服务。
+
+补齐shared legacy .pc-cb-card h3/p修复后的真实WP极值收据：仅新本人pc_topic1970存180字符连续标题/440字符连续摘要，正常Layout→Content_Blocks真实查询，PC1280和phone390根client=scroll，卡片359/146均client=scroll、anywhere/visible完整自然换行。完整Range尾行留在卡内；无filters/doubles，不发布layout、不改旧实体、营业Closed保持。完成后精确删除本人1970与唯一临时MU，实际deleted/helperRemoved均true；不声称数据库计数/cache逐字回原。
+
+三社交暂缓前，仅QA候选使X官方loader/bundle进入实际iframe阶段，又通过本地纯DOM观测确认script-src-elem inline违规；未通过真实帖子。所有受限CSP、inline元素及观测候选均只留D任务，未进入Git或正式源。用户暂缓后正常Remove，三类frames0，QA social-feeds.js精确还原已发布5a0c9587e0c572adbe3cacbaa9a1698d705218d9534f31af9a3170580c619ca8并fresh reload核对；不重试Pinterest既有明确阻挡。
+
+已知可选兼容项：WordPress原生Gutenberg画布仍灰空，真实blob导航ERR_ABORTED/about:blank，未盲改Core/CSP/API版本。当前交付使用已实测编辑、关联、保存、发布、匿名PC/手机和会话恢复的custom装修编辑器；不能据此宣称原生host也已修好。Discard本轮未单独实际执行，不把已验Unpublish/Cancel/键盘扩大为每个菜单动作实点。
+
+本轮无新增产品运行代码；沿用功能9a014ce/整合94f4853，并已fetch亲读、正常ff同事支付交付d9ecc22，保留其24路径与独立支付工作树，不做真实收款或额外部署。本人1917/1930/1931临时发布均撤销，草稿保留；1954原12/12及review2、用户685/YY保持。证据D:/Codex/Tasks/2026-10-31/builder-completion-audit/outputs，最终具体范围work/FINAL-SCOPE-CHECK.md与70-EVIDENCE-MATRIX.md；三社交为用户暂缓，不是缺口被伪写成功。
