@@ -113,3 +113,5 @@ Hub_Accounts新独立option采用稳定default/32hex账号、最大20保留身�
 QA新3账号已归档，旧default启用状态和旧单例option恢复，schema3与三笔合成paid记录保留作证；本人购物车/临时标签及任务自有MU随后清理。支付方全部为隔离example.com模拟，未再次尝试此前真实unknown创建。公网HTTPS/真实钱包和卡/渠道开通/到账/服务器调度与恢复仍待联调；不能把本轮原生模拟称为正式收款。
 
 0.4最终收尾：32PHP/2JS语法、diff、原文真实secret内存扫描、37文件双原站指纹、ZIP完整性与私有/test排除通过。最终安装包D:/Codex/Tasks/2026-10-31/panapay-multiple-methods/outputs/peptide-panapay-0.4.0.zip，SHA256 a10923896e33723067eff998c5cb1b09915f05745f8ac1866c53536eac514f10。晚期HubAccounts/HubPage边界补丁与README已补拷至两原站，前一中间源另受限备份；最终复核无P1/P2。旧CONFIG模型旧“坏配置也200”的期望随正确旧客户端回退契约调整为抛错，仅该原有模型首跑不接受后修正测试；原生6与模型14/21最终通过。本人QA的请求捕获MU已移除、HQ原隔离MU逐字恢复；旧默认开关恢复，新3账号归档，原单例option不变，无本阶段真实支付方请求。旧83回归本轮未重跑；本轮原生范围以17/27/3/6和真浏览器为准，不混加历史。
+
+GitHub实际同步：功能提交4ae551e，正常合入同事main813f702为f940ce4dc7a79a938f6987b0d77b85901d4ae811，支付插件相对功能提交零差异。main与codex/panapay-payments均push并ls-remote同f940ce4，工作树干净；同事完整历史保留，未stage或改写其工作树，无强推。此后的交付记录提交不改变安装包/运行源。浏览器已确认本人购物车空、QA临时标签关闭，原未保存标签与新支付列表均标保留。
