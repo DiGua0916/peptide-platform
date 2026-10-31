@@ -22,6 +22,8 @@ final class Blocks {
 
 	public static function register_hooks(): void {
 		Links::register_hooks();
+		add_filter( 'rest_pre_insert_' . Templates::LAYOUT, array( self::class, 'preflight_rest_media' ), 10, 2 );
+		add_action( 'rest_after_insert_' . Templates::LAYOUT, array( self::class, 'approve_rest_media' ), 10, 3 );
 		add_action( 'init', array( self::class, 'register' ), 20 );
 		add_filter( 'block_categories_all', array( self::class, 'categories' ), 10, 2 );
 		add_action( 'enqueue_block_editor_assets', array( self::class, 'enqueue_editor' ) );
@@ -117,12 +119,40 @@ final class Blocks {
 	public static function mark_editor_preview( $result, $server, $request ) {
 		if ( $request instanceof \WP_REST_Request && str_starts_with( $request->get_route(), '/wp/v2/block-renderer/vialcove/' ) ) {
 			Renderer::$in_editor = true;
+			Renderer::$document_id = 0;
 			$post_id             = absint( $request->get_param( 'post_id' ) );
-			if ( $post_id && Templates::LAYOUT === get_post_type( $post_id ) ) {
+			if ( $post_id && Templates::LAYOUT === get_post_type( $post_id ) && current_user_can( 'edit_post', $post_id ) ) {
 				Renderer::$document_id = $post_id;
 			}
 		}
 		return $result;
+	}
+
+	/** Native REST must validate C before WordPress persists or sanitizes its content. */
+	public static function preflight_rest_media( $prepared, $request ) {
+		if ( is_wp_error( $prepared ) || ! isset( $prepared->post_content ) ) { return $prepared; }
+		$rows = Layout::modules_from_content( (string) $prepared->post_content );
+		if ( ! Rich_Media::has_images( $rows ) ) { return $prepared; }
+		$id = (int) $request['id']; $context = Rich_Media::editing( $id );
+		if ( ! $context ) { return Rich_Media::error( __( 'Save the design document before inserting rich text images.', 'peptide-core' ) ); }
+		$checked = Rich_Media::preflight( $rows, $context );
+		if ( is_wp_error( $checked ) ) { return $checked; }
+		$blocks = parse_blocks( (string) $prepared->post_content );
+		foreach ( $blocks as &$block ) {
+			if ( ! Registry::type_for_block( (string) ( $block['blockName'] ?? '' ) ) ) { continue; }
+			$clean = Layout::clean_modules( array( array( 'block' => $block['blockName'], 'attrs' => $block['attrs'] ?? array() ) ), $checked );
+			if ( $clean ) { $block['attrs'] = $clean[0]['attrs']; }
+		}
+		unset( $block );
+		$prepared->post_content = serialize_blocks( $blocks );
+		return $prepared;
+	}
+	public static function approve_rest_media( $post, $request, $creating ): void {
+		if ( ! $request->has_param( 'content' ) ) { return; }
+		$context = Rich_Media::editing( (int) $post->ID );
+		if ( ! $context ) { return; }
+		$checked = Rich_Media::preflight( Layout::modules_from_content( (string) get_post_field( 'post_content', $post->ID ) ), $context );
+		if ( ! is_wp_error( $checked ) ) { $checked->commit(); }
 	}
 
 	private static function is_layout_screen(): bool {
@@ -165,11 +195,11 @@ final class Blocks {
 		wp_enqueue_script(
 			self::CONTROLS_SCRIPT,
 			$url . 'module-controls.js',
-			array( self::ICONS_SCRIPT, 'wp-element', 'wp-components', 'wp-data', 'wp-core-data', 'wp-media-utils', 'wp-block-editor', 'wp-i18n' ),
+			array( self::ICONS_SCRIPT, 'wp-element', 'wp-components', 'wp-data', 'wp-core-data', 'wp-media-utils', 'wp-block-editor', 'wp-i18n', 'wp-api-fetch' ),
 			$ver( 'module-controls.js' ),
 			array( 'in_footer' => true )
 		);
-		wp_add_inline_script( self::CONTROLS_SCRIPT, 'window.pcModules = ' . wp_json_encode( self::editor_data() ) . ';', 'before' );
+		wp_add_inline_script( self::CONTROLS_SCRIPT, 'window.pcModules = ' . wp_json_encode( self::editor_data(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) . ';', 'before' );
 		wp_enqueue_media();
 	}
 
@@ -209,7 +239,7 @@ final class Blocks {
 			if ( $term instanceof \WP_Term ) {
 				$cats[] = array(
 					'value' => (string) $term->term_id,
-					'label' => $term->name,
+					'label' => wp_specialchars_decode( $term->name, ENT_QUOTES ),
 					'count' => (int) ( $term->count ?? 0 ),
 				);
 			}
@@ -228,9 +258,16 @@ final class Blocks {
 			'groups'     => Registry::groups(),
 			'icons'      => Fields::ICONS,
 			'menus'      => $menus,
+			'menuPicker' => array(
+				'path' => function_exists( 'rest_get_route_for_taxonomy_items' ) ? rest_get_route_for_taxonomy_items( 'nav_menu' ) : '/wp/v2/menus',
+				'canRefresh' => current_user_can( \PeptideCore\Menus::CAP ),
+				'canManage' => current_user_can( \PeptideCore\Menus::CAP ),
+				'manageUrl' => current_user_can( \PeptideCore\Menus::CAP ) ? \PeptideCore\Admin\Menu_Page::url() : '',
+			),
 			'categories' => $cats,
 			'products'   => $products,
 			'recordLookup' => array( 'url' => admin_url( 'admin-ajax.php' ), 'security' => wp_create_nonce( 'pc_layout_records' ) ),
+			'youtubeMetadata' => \PeptideCore\YouTube_Metadata::editor_config(),
 			'linkLookup' => Links::config(),
 			'strings'    => array(
 				'desktop'      => __( 'Desktop', 'peptide-core' ),

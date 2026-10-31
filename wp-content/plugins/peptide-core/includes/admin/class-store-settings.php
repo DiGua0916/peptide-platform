@@ -49,6 +49,22 @@ final class Store_Settings {
 					__( 'WordPress general settings (site title, language, time zone)', 'peptide-core' ) => admin_url( 'options-general.php' ),
 				),
 			),
+			'shopping' => array(
+				'icon' => 'dashicons-admin-users',
+				'title' => __( 'Shopping preferences', 'peptide-core' ),
+				'desc' => __( 'Other contact field preference for reference subscription blocks.', 'peptide-core' ),
+				'placeholder' => false,
+				'render' => array( Subscriptions_Page::class, 'render_contact_settings' ),
+				'now' => array(),
+			),
+			'youtube' => array(
+				'icon' => 'dashicons-video-alt3',
+				'title' => __( 'YouTube 视频信息', 'peptide-core' ),
+				'desc' => __( '自动读取公开视频的标题、封面和作者，配置来源或同步现有页面。', 'peptide-core' ),
+				'placeholder' => false,
+				'render' => array( YouTube_Settings::class, 'render' ),
+				'now' => array(),
+			),
 			'pixels' => array(
 				'icon'        => 'dashicons-chart-line',
 				'title'       => __( 'Ad pixels', 'peptide-core' ),

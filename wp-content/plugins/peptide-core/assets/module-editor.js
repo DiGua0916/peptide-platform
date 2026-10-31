@@ -13,6 +13,7 @@
 	var Fragment = wp.element.Fragment;
 	var useState = wp.element.useState;
 	var useEffect = wp.element.useEffect;
+	var useCallback = wp.element.useCallback;
 	var be = wp.blockEditor;
 	var C = wp.components;
 	var useSelect = wp.data.useSelect;
@@ -25,6 +26,10 @@
 		var setAttributes = props.setAttributes;
 		var deviceState = useState( 'desktop' );
 		var device = deviceState[ 0 ];
+		var metadataPreviewState = useState( 0 );
+		var refreshMetadataPreview = useCallback( function () {
+			metadataPreviewState[ 1 ]( function ( count ) { return count + 1; } );
+		}, [] );
 
 		var others = useSelect(
 			function ( select ) {
@@ -63,10 +68,14 @@
 		var settings = ui.withDefaults( def.defaults, attrs.settings );
 		var panels = ui.settingsPanels( {
 			def: def,
+			blogOwner: JSON.stringify( [ 'block', postId, props.clientId, attrs.moduleId ] ),
 			pairedDeviceSafe: function ( key ) { return ! Object.prototype.hasOwnProperty.call( ( attrs.mobile || {} ).settings || {}, key ); },
 			settings: settings,
 			device: device,
 			items: attrs.items,
+			metadataDocumentId: postId,
+			metadataMode: settings.youtubeMode,
+			onPreviewRefresh: refreshMetadataPreview,
 			setSetting: function ( key, v ) {
 				var next = Object.assign( {}, settings );
 				next[ key ] = v;
@@ -91,6 +100,11 @@
 			)
 			: null;
 
+		var previewQuery = { post_id: postId };
+		if ( def.type === 'youtube_list' && settings.youtubeMode === 'reference' && metadataPreviewState[ 0 ] ) {
+			// The real SSR hook watches path changes and retains its previous content while loading.
+			previewQuery.pc_metadata_refresh = metadataPreviewState[ 0 ];
+		}
 		return el(
 			Fragment,
 			null,
@@ -115,7 +129,7 @@
 				'div',
 				be.useBlockProps( { className: 'pc-module-block' + ( attrs.enabled === false ? ' is-hidden-module' : '' ) } ),
 				attrs.moduleId
-					? el( SSR, { block: props.name, attributes: attrs, httpMethod: 'POST', urlQueryArgs: { post_id: postId } } )
+					? el( SSR, { block: props.name, attributes: attrs, httpMethod: 'POST', urlQueryArgs: previewQuery } )
 					: el( C.Spinner )
 			)
 		);

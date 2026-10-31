@@ -91,6 +91,38 @@ final class Rich_Html {
 		return '' === preg_replace( '/[\p{Z}\s\x{FEFF}]+/u', '', $text ) ? '' : $out;
 	}
 
+	/** Strict image path: failure is observable before any caller writes or issues a token. */
+	public static function with_images( string $html, array $baseline, Rich_Media $media ) {
+		if ( ! preg_match( '/<\s*img\b/i', $html ) ) { return self::sanitize( $html, $baseline ); }
+		$fail = static fn() => Rich_Media::error( __( 'Rich text image markup could not be parsed. Correct the source before applying.', 'peptide-core' ) );
+		if ( ! self::available() ) { return $fail(); }
+		$prepared = self::prepare( $html, $baseline, $media );
+		if ( is_wp_error( $prepared ) ) { return $prepared; }
+		if ( null === $prepared ) { return $fail(); }
+		$processor = \WP_HTML_Processor::create_fragment( $prepared );
+		if ( ! $processor ) { return $fail(); }
+		foreach ( array( 'next_token', 'get_tag', 'is_tag_closer', 'get_attribute', 'get_modifiable_text', 'get_token_type', 'get_breadcrumbs', 'get_last_error', 'paused_at_incomplete_token' ) as $method ) { if ( ! is_callable( array( $processor, $method ) ) ) { return $fail(); } }
+		$out = ''; $stack = array(); $count = 0;
+		while ( $processor->next_token() ) {
+			if ( ++$count > 50000 ) { return $fail(); }
+			$type = $processor->get_token_type();
+			if ( '#text' === $type ) { $out .= self::escape( $processor->get_modifiable_text() ); continue; }
+			if ( '#tag' !== $type ) { continue; }
+			$tag = strtolower( (string) $processor->get_tag() );
+			if ( 'img' === $tag && ! $processor->is_tag_closer() ) { $image = $media->image( $processor ); if ( is_wp_error( $image ) ) { return $image; } $out .= $image; continue; }
+			$mapped = 'div' === $tag ? 'p' : ( 'font' === $tag ? 'span' : $tag );
+			if ( ! array_key_exists( $mapped, $baseline ) ) { continue; }
+			if ( $processor->is_tag_closer() ) { if ( $stack && end( $stack )['tag'] === $tag ) { $opened = array_pop( $stack ); if ( '' !== $opened['mapped'] ) { $out .= '</' . $opened['mapped'] . '>'; } } continue; }
+			if ( 'br' === $mapped ) { $out .= '<br>'; continue; }
+			$attrs = self::attributes( $processor, $tag, $mapped ); $stack[] = array( 'tag' => $tag, 'mapped' => $mapped );
+			if ( '' !== $mapped ) { $out .= '<' . $mapped . $attrs . '>'; }
+		}
+		if ( null !== $processor->get_last_error() || $processor->paused_at_incomplete_token() || $stack ) { return $fail(); }
+		$allowed = $baseline; $allowed['span']['style'] = true;
+		$allowed['img'] = array_fill_keys( array( 'class', 'data-pc-attachment', 'data-pc-asset', 'src', 'width', 'height', 'alt' ), true );
+		return trim( wp_kses( $out, $allowed ) );
+	}
+
 	private static function available(): bool {
 		return class_exists( '\WP_HTML_Tag_Processor' ) && class_exists( '\WP_HTML_Processor' ) && is_callable( array( '\WP_HTML_Processor', 'create_fragment' ) );
 	}
@@ -99,7 +131,7 @@ final class Rich_Html {
 	 * Public tokenizer pass: remove unsupported containers before structural parsing.
 	 * Only fixed baseline tags and canonical attributes are rebuilt, never raw tags.
 	 */
-	private static function prepare( string $html, array $baseline ): ?string {
+	private static function prepare( string $html, array $baseline, ?Rich_Media $media = null ) {
 		$scanner = new \WP_HTML_Tag_Processor( $html );
 		foreach ( array( 'next_token', 'get_token_type', 'get_tag', 'get_attribute', 'get_modifiable_text', 'is_tag_closer', 'paused_at_incomplete_token' ) as $method ) {
 			if ( ! is_callable( array( $scanner, $method ) ) ) { return null; }
@@ -121,8 +153,10 @@ final class Rich_Html {
 					elseif ( ! $closing && in_array( $upper, $containers, true ) ) { $blocked[] = $upper; }
 					continue;
 				}
+				if ( $media && ( in_array( $upper, $containers, true ) || in_array( $upper, $atomic, true ) ) ) { return Rich_Media::error( __( 'Unsupported structure around rich text images. Correct the source before applying.', 'peptide-core' ) ); }
 				if ( in_array( $upper, $containers, true ) ) { if ( ! $closing ) { $blocked[] = $upper; } continue; }
 				if ( in_array( $upper, $atomic, true ) ) { continue; }
+				if ( 'IMG' === $upper && $media && ! $closing ) { $image = $media->image( $scanner ); if ( is_wp_error( $image ) ) { return $image; } $out .= $image; continue; }
 				$tag = strtolower( (string) $upper );
 				$mapped = 'div' === $tag ? 'p' : ( 'font' === $tag ? 'span' : $tag );
 				if ( ! array_key_exists( $mapped, $baseline ) ) { continue; }

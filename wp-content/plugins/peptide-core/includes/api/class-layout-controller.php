@@ -17,6 +17,7 @@
 namespace PeptideCore\Api;
 
 use PeptideCore\Modules\Layout;
+use PeptideCore\Modules\Rich_Media;
 use PeptideCore\Templates;
 
 defined( 'ABSPATH' ) || exit;
@@ -115,7 +116,11 @@ final class Layout_Controller {
 		$template = (int) wp_get_post_parent_id( $id );
 		$lock     = wp_check_post_lock( $id );
 		$locker   = $lock ? get_userdata( (int) $lock ) : null;
+		$media = Rich_Media::editing( $id );
+		$checked_media = $media ? Rich_Media::preflight( Layout::modules_from_content( (string) get_post_field( 'post_content', $id ) ), $media ) : null;
 		return array(
+			'richMedia' => $checked_media && ! is_wp_error( $checked_media ) ? $checked_media->map() : new \stdClass(),
+			'richMediaError' => is_wp_error( $checked_media ) ? $checked_media->get_error_message() : null,
 			'id'          => $id,
 			'document'    => (string) get_post_meta( $id, Templates::DOC_META, true ),
 			'template'    => array(
@@ -187,7 +192,9 @@ final class Layout_Controller {
 				array( 'status' => 409 )
 			);
 		}
-		$modules = Layout::clean_modules( $request->get_param( 'modules' ) );
+		$media = Rich_Media::preflight( $request->get_param( 'modules' ), Rich_Media::editing( $id ) );
+		if ( is_wp_error( $media ) ) { return $media; }
+		$modules = Layout::clean_modules( $request->get_param( 'modules' ), $media );
 		$result  = wp_update_post(
 			array(
 				'ID'           => $id,
@@ -198,6 +205,7 @@ final class Layout_Controller {
 		if ( is_wp_error( $result ) ) {
 			return new \WP_Error( 'pc_layout_save_failed', $result->get_error_message(), array( 'status' => 500 ) );
 		}
+		$media->commit();
 		update_post_meta( $id, '_edit_last', get_current_user_id() );
 		if ( function_exists( 'wp_set_post_lock' ) ) {
 			wp_set_post_lock( $id );
@@ -217,7 +225,8 @@ final class Layout_Controller {
 		}
 		$invalid = \PeptideCore\Design_Pages::validate_publish( $id );
 		if ( $invalid ) { return $invalid; }
-		Layout::publish( $id );
+		$published = Layout::publish( $id );
+		if ( is_wp_error( $published ) ) { return $published; }
 		return rest_ensure_response( self::document( $id ) );
 	}
 
@@ -238,12 +247,16 @@ final class Layout_Controller {
 		return rest_ensure_response( self::document( $id ) );
 	}
 
-	public static function preview( \WP_REST_Request $request ): \WP_REST_Response {
+	public static function preview( \WP_REST_Request $request ) {
 		$id      = (int) $request['id'];
-		$modules = Layout::clean_modules( $request->get_param( 'modules' ) );
+		$media = Rich_Media::preflight( $request->get_param( 'modules' ), Rich_Media::editing( $id ) );
+		if ( is_wp_error( $media ) ) { return $media; }
+		$modules = Layout::clean_modules( $request->get_param( 'modules' ), $media );
 		$token   = Layout::store_preview( $id, $modules );
+		if ( is_wp_error( $token ) ) { return $token; }
 		return rest_ensure_response(
 			array(
+				'richMedia' => $media->map() ?: new \stdClass(),
 				'url' => add_query_arg( Layout::PREVIEW_PARAM, $token, \PeptideCore\Design_Pages::preview_url( (int) wp_get_post_parent_id( $id ), (string) get_post_meta( $id, Templates::DOC_META, true ) ) ),
 			)
 		);

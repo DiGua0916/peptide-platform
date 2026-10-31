@@ -221,7 +221,7 @@ final class Design_Pages {
 			$candidates = array( 'custom_' . $id, 'custom' );
 		}
 		elseif ( is_singular( 'post' ) ) { $candidates = array( 'article_' . $id, 'article' ); }
-		elseif ( is_home() || is_category() || is_tag() ) { return 'blog'; }
+		elseif ( is_home() || is_category() || is_tag() || is_post_type_archive( 'post' ) ) { return 'blog'; }
 		foreach ( $candidates as $doc ) { if ( self::usable( $doc ) ) { return $doc; } }
 		return $candidates ? (string) end( $candidates ) : '';
 	}

@@ -17,6 +17,7 @@
 	var useState = wp.element.useState;
 	var useEffect = wp.element.useEffect;
 	var useRef = wp.element.useRef;
+	var useCallback = wp.element.useCallback;
 	var C = wp.components;
 	var apiFetch = wp.apiFetch;
 	var S = cfg.strings;
@@ -102,6 +103,8 @@
 		var device = deviceState[ 0 ];
 		var dirtyState = useState( false );
 		var dirty = dirtyState[ 0 ];
+		var leaveState = useState( null );
+		var leaveRef = useRef( { approved: false, started: false, timer: null } );
 		var savingState = useState( false );
 		var saving = savingState[ 0 ];
 		var noticeState = useState(
@@ -135,6 +138,9 @@
 		var previewErrorState = useState( null );
 		var previewError = previewErrorState[ 0 ];
 		var previewRetryState = useState( 0 );
+		var refreshMetadataPreview = useCallback( function () {
+			previewRetryState[ 1 ]( function ( count ) { return count + 1; } );
+		}, [] );
 		var paneState = useState( 'preview' );
 		var workspaceRef = useRef( null );
 		var narrowState = useState( false );
@@ -156,6 +162,24 @@
 		var commitDragRef = useRef( function () {} );
 		var firstRef = useRef( true );
 		var historyTick = useState( 0 );
+
+		// Back uses a page-level choice; closing/reloading still uses beforeunload.
+		function resetLeave() {
+			clearTimeout( leaveRef.current.timer );
+			leaveRef.current = { approved: false, started: false, timer: null };
+		}
+		function confirmLeave() {
+			if ( ! leaveState[ 0 ] || leaveRef.current.started ) { return; }
+			var url = leaveState[ 0 ];
+			leaveRef.current.started = true;
+			leaveRef.current.approved = true;
+			leaveState[ 1 ]( null );
+			// Authorization covers one immediate attempt, never a later close/refresh.
+			leaveRef.current.timer = setTimeout( resetLeave, 1000 );
+			try { window.location.assign( url ); }
+			catch ( error ) { resetLeave(); setNotice( { type: 'error', text: S.leaveFailed || '无法返回，请继续编辑或重试。' } ); }
+		}
+		useEffect( function () { return resetLeave; }, [] );
 
 		function openDocument( key ) {
 			var url = cfg.documentLinks && cfg.documentLinks[ key ];
@@ -902,6 +926,7 @@
 		useEffect(
 			function () {
 				function onLeave( e ) {
+					if ( leaveRef.current.approved ) { leaveRef.current.approved = false; return; }
 					if ( dirty ) {
 						e.preventDefault();
 						e.returnValue = '';
@@ -943,7 +968,11 @@
 				{ className: 'pc-de-top__left' },
 				el(
 					'a',
-					{ className: 'pc-de-top__btn', href: cfg.backUrl, title: S.back, 'aria-label': S.back },
+					{ className: 'pc-de-top__btn', href: cfg.backUrl, title: S.back, 'aria-label': S.back, onClick: function ( event ) {
+						if ( ! dirty || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey ) { return; }
+						event.preventDefault();
+						if ( ! leaveRef.current.started ) { leaveState[ 1 ]( cfg.backUrl ); }
+					} },
 					el( Icon, { name: 'exit' } )
 				),
 				el(
@@ -1251,11 +1280,15 @@
 					null,
 					ui.settingsPanels( {
 						def: def,
+						blogOwner: JSON.stringify( [ 'design', cfg.document.id, cfg.document.document, current.attrs.moduleId ] ),
 						pairedDeviceSafe: function ( key ) { return ! Object.prototype.hasOwnProperty.call( mob.settings, key ); },
 						panels: def.panels,
 						settings: values,
 						device: settingsDevice,
 						items: shownItems,
+						metadataDocumentId: cfg.document.id,
+						metadataMode: baseValues.youtubeMode,
+						onPreviewRefresh: refreshMetadataPreview,
 						setSetting: function ( key, v ) {
 							if ( isMobile && ! perDevice( key ) ) {
 								var ms = Object.assign( {}, mob.settings );
@@ -1387,6 +1420,16 @@
 					notice.text
 				)
 				: null,
+			leaveState[ 0 ] ? el( C.Modal, {
+				title: S.leaveTitle || '离开装修编辑器？', focusOnMount: 'firstContentElement', shouldCloseOnClickOutside: false,
+				aria: { describedby: 'pc-de-leave-message' }, onRequestClose: function () { leaveState[ 1 ]( null ); }
+			},
+				el( 'p', { id: 'pc-de-leave-message' }, S.leaveMessage || '还有未保存的修改。离开会放弃这些修改；已保存草稿和发布版本不变。需要保留时，请取消并先保存草稿。' ),
+				el( 'div', null,
+					el( C.Button, { variant: 'secondary', onClick: function () { leaveState[ 1 ]( null ); } }, S.keepEditing || '继续编辑' ), ' ',
+					el( C.Button, { variant: 'primary', isDestructive: true, onClick: confirmLeave }, S.leaveWithoutSaving || '不保存并离开' )
+				)
+			) : null,
 			previewFeedback,
 			el( 'div', { className: 'pc-de-body' }, preview, device === 'full' ? null : side )
 		);

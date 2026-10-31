@@ -37,7 +37,7 @@ final class Renderer {
 	 * @param array<string,mixed> $attrs
 	 * @return array<string,mixed>|null
 	 */
-	public static function normalize( string $type, array $attrs ): ?array {
+	public static function normalize( string $type, array $attrs, ?Rich_Media $media = null ): ?array {
 		$def = Registry::get( $type );
 		if ( ! $def ) {
 			return null;
@@ -45,7 +45,7 @@ final class Renderer {
 		$raw      = is_array( $attrs['settings'] ?? null ) ? $attrs['settings'] : array();
 		$settings = array();
 		foreach ( $def['settings'] as $field ) {
-			$settings[ $field['key'] ] = Fields::sanitize( $field, array_key_exists( $field['key'], $raw ) ? $raw[ $field['key'] ] : Fields::default_value( $field ) );
+			$settings[ $field['key'] ] = Fields::sanitize( $field, array_key_exists( $field['key'], $raw ) ? $raw[ $field['key'] ] : Fields::default_value( $field ), $media );
 		}
 
 		$items = array();
@@ -53,7 +53,7 @@ final class Renderer {
 			$rows = is_array( $attrs['items'] ?? null ) ? array_values( $attrs['items'] ) : array();
 			$rows = array_slice( $rows, 0, (int) $def['items']['max'] );
 			foreach ( $rows as $row ) {
-				$items[] = Fields::item( $def['items']['fields'], is_array( $row ) ? $row : array() );
+				$items[] = Fields::item( $def['items']['fields'], is_array( $row ) ? $row : array(), $media );
 			}
 		}
 
@@ -68,12 +68,12 @@ final class Renderer {
 			if ( ! empty( $field['device'] ) || 'general' === ( $field['group'] ?? '' ) || ! array_key_exists( $field['key'], $m_set ) ) {
 				continue;
 			}
-			$mobile['settings'][ $field['key'] ] = Fields::sanitize( $field, $m_set[ $field['key'] ] );
+			$mobile['settings'][ $field['key'] ] = Fields::sanitize( $field, $m_set[ $field['key'] ], $media );
 		}
 		if ( ! empty( $def['items'] ) && is_array( $raw_m['items'] ?? null ) ) {
 			$mobile['items'] = array();
 			foreach ( array_slice( array_values( $raw_m['items'] ), 0, (int) $def['items']['max'] ) as $row ) {
-				$mobile['items'][] = Fields::item( $def['items']['fields'], is_array( $row ) ? $row : array() );
+				$mobile['items'][] = Fields::item( $def['items']['fields'], is_array( $row ) ? $row : array(), $media );
 			}
 		}
 
@@ -124,7 +124,7 @@ final class Renderer {
 		if ( ! $type ) {
 			return '';
 		}
-		return self::render( $type, $attrs, self::context() );
+		return self::render( $type, $attrs, self::context(), self::$in_editor ? Rich_Media::editing( self::$document_id ) : null );
 	}
 
 	public static function context(): string {
@@ -137,8 +137,8 @@ final class Renderer {
 	/**
 	 * @param array<string,mixed> $attrs
 	 */
-	public static function render( string $type, array $attrs, string $context = 'public' ): string {
-		$module = self::normalize( $type, $attrs );
+	public static function render( string $type, array $attrs, string $context = 'public', ?Rich_Media $media = null ): string {
+		$module = self::normalize( $type, $attrs, $media );
 		if ( ! $module ) {
 			return 'editor' === $context ? self::notice( __( 'Unknown module type.', 'peptide-core' ) ) : '';
 		}
@@ -155,7 +155,7 @@ final class Renderer {
 			wp_enqueue_script( self::SCRIPT );
 		}
 
-		if ( self::has_mobile( $module ) && empty( Registry::get( $type )['singleRender'] ) ) {
+		if ( self::has_mobile( $module ) && empty( Registry::get( $type )['singleRender'] ) && ! ( 'announcement' === $type && 'reference' === ( $module['settings']['announcementStyle'] ?? 'legacy' ) ) ) {
 			$desktop = self::inner( self::variant( $module, 'desktop' ), $context, 'desktop' );
 			$mobile  = self::inner( self::variant( $module, 'mobile' ), $context, 'mobile' );
 			$inner   = '' === $desktop && '' === $mobile ? '' : '<div class="vc-v vc-v--desktop">' . $desktop . '</div><div class="vc-v vc-v--mobile">' . $mobile . '</div>';

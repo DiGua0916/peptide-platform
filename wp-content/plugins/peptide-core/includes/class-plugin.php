@@ -30,6 +30,8 @@ final class Plugin {
 		Modules\Site_Design::register_hooks();
 		Modules\Records::register_hooks();
 		Modules\Commerce_Search::register_hooks();
+		Public_Site_Search::register_hooks();
+		YouTube_Metadata::register_hooks();
 		Admin\Workspace::register_hooks();
 		foreach ( array( Customer_Segments::class, Loyalty::class, Modules\Commerce_Blocks::class, Subscriptions::class, Content_Tools::class ) as $feature ) {
 			if ( class_exists( $feature ) ) { $feature::register_hooks(); }
@@ -105,6 +107,7 @@ final class Plugin {
 			Admin\Overview_Page::register_hooks();
 			Admin\Admin_Menus::register_hooks();
 			Admin\Store_Settings::register_hooks();
+			Admin\YouTube_Settings::register_hooks();
 			Admin\Basic_Config_Page::register_hooks();
 			Admin\Shipping_Page::register_hooks();
 			Admin\Tax_Page::register_hooks();

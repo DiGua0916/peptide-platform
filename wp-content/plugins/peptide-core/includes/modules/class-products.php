@@ -83,4 +83,36 @@ final class Products {
 		}
 		return array_values( wc_get_products( $args ) );
 	}
+	/** A bounded, catalog-only page. Existing for_module queries remain unchanged. */
+	public static function collection_page( int $category, int $page, int $per_page ): array {
+		$empty = array( 'products' => array(), 'hasMore' => false );
+		if ( ! function_exists( 'wc_get_products' ) || $category < 1 || $page < 1 || $page > 20 || $per_page < 1 || $per_page > 50 ) { return $empty; }
+		$term = get_term( $category, 'product_cat' );
+		if ( ! $term instanceof \WP_Term ) { return $empty; }
+		global $wpdb;
+		$queries = (int) ( $wpdb->num_queries ?? 0 );
+		$suppress = is_object( $wpdb ) && method_exists( $wpdb, 'suppress_errors' );
+		$previous = $suppress ? $wpdb->suppress_errors( true ) : null;
+		try {
+		$products = wc_get_products( array(
+			'status' => 'publish', 'visibility' => 'visible', 'has_password' => false,
+			'category' => array( $term->slug ), 'return' => 'objects', 'cache_results' => false,
+			'limit' => $per_page + 1, 'offset' => ( $page - 1 ) * $per_page,
+			'orderby' => array( 'menu_order' => 'ASC', 'title' => 'ASC', 'ID' => 'ASC' ), 'order' => 'ASC',
+		) );
+			if ( (int) ( $wpdb->num_queries ?? 0 ) > $queries && '' !== (string) ( $wpdb->last_error ?? '' ) ) { throw new \RuntimeException( 'Product data is unavailable.' ); }
+		} finally { if ( $suppress ) { $wpdb->suppress_errors( $previous ); } }
+		if ( ! is_array( $products ) ) { throw new \UnexpectedValueException( 'Product query failed.' ); }
+		$more = count( $products ) > $per_page;
+		$products = array_values( array_filter( array_slice( $products, 0, $per_page ), array( self::class, 'public_catalog_product' ) ) );
+		return array( 'products' => $products, 'hasMore' => $more );
+	}
+
+	/** A signature never grants access to a nonpublic or password-protected product. */
+	public static function public_catalog_product( $product ): bool {
+		return $product instanceof \WC_Product && 'product' === get_post_type( $product->get_id() )
+			&& 'publish' === $product->get_status() && $product->is_publicly_viewable()
+			&& '' === $product->get_post_password() && $product->is_visible();
+	}
+
 }

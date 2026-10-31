@@ -32,6 +32,8 @@ final class Topics {
 
 	public static function register_hooks(): void {
 		add_action( 'init', array( self::class, 'register' ) );
+		add_action( 'pre_get_posts', array( self::class, 'archive_query' ) );
+		add_filter( 'template_include', array( self::class, 'archive_template' ), 10002 );
 		add_action( 'init', array( self::class, 'maybe_flush' ), 99 );
 		add_filter( 'single_template_hierarchy', array( self::class, 'template_hierarchy' ) );
 		add_filter( 'the_title', array( self::class, 'hide_title' ), 10, 2 );
@@ -69,8 +71,8 @@ final class Topics {
 				'show_ui'         => true,
 				'show_in_menu'    => false, // 入口在“店铺装修 → 活动专题页”。
 				'show_in_rest'    => true,
-				'has_archive'     => false,
-				'rewrite'         => array( 'slug' => self::SLUG, 'with_front' => false ),
+				'has_archive'     => self::SLUG,
+				'rewrite'         => array( 'slug' => self::SLUG, 'with_front' => false, 'feeds' => false ),
 				'capability_type' => 'page',
 				'map_meta_cap'    => true,
 				'supports'        => array( 'title', 'editor', 'excerpt', 'thumbnail', 'revisions' ),
@@ -215,5 +217,17 @@ final class Topics {
 			$q->set( 'meta_key', self::META_VIEWS ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 			$q->set( 'orderby', 'meta_value_num' );
 		}
+	}
+
+	/** Only the new topic archive query is narrowed; single pages and editor queries stay unchanged. */
+	public static function archive_query( $query ): void {
+		if ( is_admin() || ! $query->is_main_query() || ! $query->is_post_type_archive( self::POST_TYPE ) ) { return; }
+		$query->set( 'post_status', 'publish' ); $query->set( 'has_password', false ); $query->set( 'posts_per_page', 12 );
+		if ( ! \PeptideCore\Modules\Content_Blocks::blog_allowed( 'public' ) ) { $query->set( 'post__in', array( 0 ) ); }
+	}
+	public static function archive_template( string $template ): string {
+		if ( is_admin() || ! is_post_type_archive( self::POST_TYPE ) || \PeptideCore\Modules\Renderer::$in_editor || Templates::previewing_id() ) { return $template; }
+		if ( ! \PeptideCore\Modules\Content_Blocks::blog_allowed( 'public' ) ) { return $template; }
+		return PEPTIDE_CORE_DIR . '/templates/topic-list.php';
 	}
 }

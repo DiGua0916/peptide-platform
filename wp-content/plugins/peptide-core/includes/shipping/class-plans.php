@@ -74,6 +74,10 @@ final class Plans {
 
 	public static function save_rules( array $rules ): void {
 		update_option( self::RULES, array( 'combine' => 'max' === ( $rules['combine'] ?? '' ) ? 'max' : 'sum', 'sort' => 'manual' === ( $rules['sort'] ?? '' ) ? 'manual' : 'price' ), false );
+		// Refresh WooCommerce's package-rate cache after a plan or calculation-rule change.
+		if ( class_exists( '\WC_Cache_Helper' ) ) {
+			\WC_Cache_Helper::get_transient_version( 'shipping', true );
+		}
 	}
 
 	/** 方案的标准形式（同时用于清理后台提交的内容）。 */
@@ -157,6 +161,10 @@ final class Plans {
 		}
 		$all[ $plan['id'] ] = $plan;
 		update_option( self::OPTION, array_values( $all ), false );
+		// Refresh WooCommerce's package-rate cache after a plan or calculation-rule change.
+		if ( class_exists( '\WC_Cache_Helper' ) ) {
+			\WC_Cache_Helper::get_transient_version( 'shipping', true );
+		}
 		return $plan;
 	}
 
@@ -164,6 +172,10 @@ final class Plans {
 		$all = self::all();
 		unset( $all[ $id ] );
 		update_option( self::OPTION, array_values( $all ), false );
+		// Refresh WooCommerce's package-rate cache after a plan or calculation-rule change.
+		if ( class_exists( '\WC_Cache_Helper' ) ) {
+			\WC_Cache_Helper::get_transient_version( 'shipping', true );
+		}
 	}
 
 	/** 有方案（至少一个方案选了区域）时，方案是唯一的运费来源。 */
