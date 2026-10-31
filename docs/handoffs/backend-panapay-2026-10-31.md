@@ -115,3 +115,13 @@ QA新3账号已归档，旧default启用状态和旧单例option恢复，schema3
 0.4最终收尾：32PHP/2JS语法、diff、原文真实secret内存扫描、37文件双原站指纹、ZIP完整性与私有/test排除通过。最终安装包D:/Codex/Tasks/2026-10-31/panapay-multiple-methods/outputs/peptide-panapay-0.4.0.zip，SHA256 a10923896e33723067eff998c5cb1b09915f05745f8ac1866c53536eac514f10。晚期HubAccounts/HubPage边界补丁与README已补拷至两原站，前一中间源另受限备份；最终复核无P1/P2。旧CONFIG模型旧“坏配置也200”的期望随正确旧客户端回退契约调整为抛错，仅该原有模型首跑不接受后修正测试；原生6与模型14/21最终通过。本人QA的请求捕获MU已移除、HQ原隔离MU逐字恢复；旧默认开关恢复，新3账号归档，原单例option不变，无本阶段真实支付方请求。旧83回归本轮未重跑；本轮原生范围以17/27/3/6和真浏览器为准，不混加历史。
 
 GitHub实际同步：功能提交4ae551e，正常合入同事main813f702为f940ce4dc7a79a938f6987b0d77b85901d4ae811，支付插件相对功能提交零差异。main与codex/panapay-payments均push并ls-remote同f940ce4，工作树干净；同事完整历史保留，未stage或改写其工作树，无强推。此后的交付记录提交不改变安装包/运行源。浏览器已确认本人购物车空、QA临时标签关闭，原未保存标签与新支付列表均标保留。
+
+### 2026-11-01 · Codex：PAY-HQ-04 归档恢复（0.4.1）
+
+用户询问归档支付怎么恢复。查明确实遗漏恢复入口，已补归档行右侧“恢复”POST操作，沿用manage_options/nonce/版本校验。Hub_Accounts::restore只接受已归档身份，保持ID和原参数/加密凭据不变，只改archived=no、enabled=no；不在恢复时解密/DNS校验，方便先恢复修正旧配置，真正开启仍走原完整校验。过期版本/非归档/不存在身份拒绝；原财务账本和在途处理不变。没有替用户选择恢复原站账号或开启收款。
+
+独立隔离HQ实际10项通过（run094e6aa08690），完整账号簿finally原样恢复，0HTTP/未访问财务表；三个变更文件静态复审无P1/P2。浏览器实测、原站安装及自动Git同步随后补记，证据D:/Codex/Tasks/2026-11-01/payment-archive-restore/outputs。
+
+收尾实测：隔离浏览器点恢复后条目显示已关闭，编辑/开启按钮恢复；随后经原生UI重新归档，未发起支付。原后台真页面已见原Credit card已归档和右侧恢复按钮，仅查看未恢复/开启原账号。当前编辑字段用HTML初始属性比对确认无改动后才刷新。早先使用defaultValue/defaultChecked的读取在浏览器只读封装不可靠，不能据其判断用户确有未保存草稿；历史“检测到未保存”表述更正为当时保守保留原页，不作为已证草稿事实。
+
+3PHP语法、diff、改动内真实secret内存扫描、37源双原端一致、ZIP完整性通过；写前核对旧源并私有备份SHA35e108daee3cbcd3c3a129dd2aa5c3fe89f03cd5d65d2d439402165d79039423。包D:/Codex/Tasks/2026-11-01/payment-archive-restore/outputs/peptide-panapay-0.4.1.zip，SHA62a160d17043a4a12d2641f4e3d83f2ce52437c233eaa934ae5a733eb9347069；原设置未改、DBschema未变，37运行文件不含tests/私有资料。原截图同outputs/original-restore-button.png，浏览器QA标签已关闭，原标签保留。

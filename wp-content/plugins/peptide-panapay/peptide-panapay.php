@@ -2,7 +2,7 @@
 /**
  * Plugin Name: VialCove — Panapay Payments
  * Description: Hosted Panapay payments for native WooCommerce and Checkout Blocks.
- * Version: 0.4.0
+ * Version: 0.4.1
  * Requires at least: 6.7
  * Requires PHP: 8.1
  * Text Domain: peptide-panapay
@@ -13,7 +13,7 @@ defined( 'ABSPATH' ) || exit;
 
 define( 'PEPTIDE_PANAPAY_FILE', __FILE__ );
 define( 'PEPTIDE_PANAPAY_DIR', __DIR__ );
-define( 'PEPTIDE_PANAPAY_VERSION', '0.4.0' );
+define( 'PEPTIDE_PANAPAY_VERSION', '0.4.1' );
 
 spl_autoload_register( static function ( $class ) {
 	$prefix = __NAMESPACE__ . '\\';

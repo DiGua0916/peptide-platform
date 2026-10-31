@@ -60,9 +60,11 @@ final class Hub_Page {
 			if ( ! is_string( $revision ) || ! preg_match( '/\A(?:0|[1-9][0-9]{0,14})\z/', $revision ) ) { throw new \InvalidArgumentException( 'Payment settings changed. Reload before saving again.' ); }
 			$operation = $_POST['operation'] ?? '';
 			if ( 'archive' === $operation ) { Hub_Accounts::archive( $id, (int) $revision ); }
+			elseif ( 'restore' === $operation ) { Hub_Accounts::restore( $id, (int) $revision ); }
 			elseif ( 'enable' === $operation || 'disable' === $operation ) { Hub_Accounts::toggle( $id, 'enable' === $operation, (int) $revision ); }
 			else { throw new \InvalidArgumentException( 'Payment settings are invalid.' ); }
-			self::flash( 'success', 'archive' === $operation ? '付款方式已归档并停止新支付。在途记录和结果回写继续保留。' : '收款状态已更新，授权店铺会自动获取。' );
+			$messages = array( 'archive' => '付款方式已归档并停止新支付。在途记录和结果回写继续保留。', 'restore' => '付款方式已恢复，原参数已保留，目前保持关闭。核对后可单独开启。' );
+			self::flash( 'success', $messages[ $operation ] ?? '收款状态已更新，授权店铺会自动获取。' );
 		} catch ( \Throwable $error ) {
 			self::flash( 'error', self::validation_message( $error->getMessage() ) );
 		}
@@ -92,6 +94,7 @@ final class Hub_Page {
 	private static function validation_message( string $message ): string {
 		$messages = array(
 			'Enter the payment method name.' => '请填写买家看到的付款方式名称。',
+			'Payment account is not archived.' => '这个付款方式未归档，请刷新列表后重试。',
 			'Complete the gateway, merchant and signing settings before enabling payment.' => '开启收款前，请补齐网关地址、商户号和签名密钥。',
 			'Select at least one store before enabling payment.' => '开启收款前，请至少授权一个店铺。',
 			'Test payments cannot be enabled in production.' => '正式环境不能启用测试收款，请核对支付方账户和测试模式。',
@@ -236,7 +239,7 @@ final class Hub_Page {
 				<?php if ( ! $archived ) : ?><div class="pc-pay-method-actions"><a class="button" href="<?php echo esc_url( self::url( array( 'edit_account' => $account_id ) ) ); ?>" <?php echo $id === $account_id ? 'data-pc-pay-open' : ''; ?>>编辑</a>
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><?php self::action_fields( $account_id, $revision ); ?><button class="button" type="submit" name="operation" value="<?php echo $enabled ? 'disable' : 'enable'; ?>"><?php echo $enabled ? '关闭' : '开启'; ?></button></form>
 					<details class="pc-pay-archive"><summary>更多</summary><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><?php self::action_fields( $account_id, $revision ); ?><p>归档后停止新支付，保留历史记录与在途结果。</p><button class="button" type="submit" name="operation" value="archive">归档付款方式</button></form></details>
-				</div><?php endif; ?>
+				</div><?php else : ?><div class="pc-pay-method-actions"><span class="pc-pay-muted">恢复后保持关闭</span><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><?php self::action_fields( $account_id, $revision ); ?><button class="button" type="submit" name="operation" value="restore">恢复</button></form></div><?php endif; ?>
 			</div>
 		<?php endforeach; ?>
 		</div>

@@ -110,6 +110,18 @@ final class Hub_Accounts {
 		self::commit( $snapshot, $accounts );
 	}
 
+	/** Restore the same identity and configuration, without resuming new collection. */
+	public static function restore( string $id, ?int $revision = null ): void {
+		$snapshot = self::snapshot();
+		if ( null !== $revision ) { self::guard_revision( $snapshot['book']['revision'], $revision ); }
+		$accounts = $snapshot['book']['accounts'];
+		if ( ! self::valid_id( $id ) || ! isset( $accounts[ $id ] ) ) { throw new \InvalidArgumentException( 'Payment account was not found.' ); }
+		if ( ! self::flag( $accounts[ $id ]['archived'] ) ) { throw new \InvalidArgumentException( 'Payment account is not archived.' ); }
+		$accounts[ $id ]['archived'] = 'no';
+		$accounts[ $id ]['enabled'] = 'no';
+		self::commit( $snapshot, $accounts );
+	}
+
 	public static function defaults( string $id = '' ): array {
 		return array( 'id' => $id, 'protocol' => 'panapay', 'account_name' => '', 'enabled' => 'no', 'title' => 'Credit card',
 			'description' => 'Continue to the secure payment page to pay for your order.', 'gateway' => '', 'mchid' => '', 'secret' => '',
