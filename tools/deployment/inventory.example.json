@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "status": "template_not_deployed",
+  "purchase_assumptions": {
+    "provider": "DigitalOcean",
+    "region": "nyc3",
+    "os": "Ubuntu 24.04 LTS",
+    "billing": "monthly",
+    "first_store_count": null,
+    "local_store_target_role": null
+  },
+  "hosts": [
+    {"role": "core", "needed_at_first_launch": null, "ipv4": null, "ipv6": null, "ssh_user": null, "ssh_port": 22, "ssh_host_key_sha256": null, "ssh_identity_local_path": null, "fqdn": null, "vcpu": 4, "ram_gib": 8, "disk_gib": 160},
+    {"role": "ads", "needed_at_first_launch": null, "ipv4": null, "ipv6": null, "ssh_user": null, "ssh_port": 22, "ssh_host_key_sha256": null, "ssh_identity_local_path": null, "fqdn": null, "vcpu": 4, "ram_gib": 8, "disk_gib": 160},
+    {"role": "hq", "needed_at_first_launch": true, "ipv4": null, "ipv6": null, "ssh_user": null, "ssh_port": 22, "ssh_host_key_sha256": null, "ssh_identity_local_path": null, "fqdn": null, "vcpu": 2, "ram_gib": 4, "disk_gib": 80}
+  ],
+  "runtime": {"php": "8.3", "database": "MySQL 8.0", "webserver": "Nginx", "system_cron_seconds": 60, "full_page_cache_enabled_initially": false},
+  "security": {
+    "cloud_account_mfa": null,
+    "dns_account_mfa": null,
+    "admin_access": "protect_hq_admin_and_login_paths; preserve_authenticated_machine_routes",
+    "origin_ingress": "choose_zone_specific_mtls_or_tunnel_after_network_validation",
+    "database_public_port": false,
+    "passwords_tokens_private_keys_in_this_file": false,
+    "offsite_encrypted_backup": {"provider": null, "account_or_project_reference": null, "immutable_retention_days": null, "rpo_minutes": null, "rto_minutes": null, "restore_verified_at": null}
+  },
+  "migration": {
+    "source_customer_site": "http://vialcovepeptidescom.local",
+    "source_hq_site": "http://127.0.0.1:10090",
+    "target_urls": {"customer": null, "hq": null},
+    "preserve_existing_instance_identity_and_encryption_dependencies": true,
+    "fresh_store_must_use_new_identity_and_database": true,
+    "database_export_reference": null,
+    "uploads_backup_reference": null,
+    "private_report_backup_reference": null,
+    "restricted_ops_configuration_backup_reference": null,
+    "outbound_payment_mail_search_enabled_by_migration": false
+  }
+}
