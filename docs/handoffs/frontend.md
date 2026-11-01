@@ -912,3 +912,15 @@ functions.php新增vc_card_display_product，使用Woo get_visible_children的me
 验证：2PHP lint、diffcheck通过；独立真实WP按menu_order+ID查询全部82已发布可见商品，首规格匹配82/82，自有图与实际附件文件82/82。四卡原价/售价/角标/图、三处属性链接及观察身份核对，真实SSR与实际IAB DOM一致；点击首页Tirzepatide真实进入20mg/TR20/55/78/29%且图库1张。无真实simple商品，因此简单商品兼容仅未保存内存对象验证，非实站simple视觉验收。没有新购物车/订单操作。最终检查收据native-render-check.json。截图home-first-spec.png。全部证据D:/Codex/Tasks/2026-11-01/first-spec-cards/outputs。
 
 本轮范围为主题共享商品卡（首页原手选商品区、商店列表、关联商品等），不冒称插件内其它独立商品展示块均改写。无数据库恢复需求，回滚主题本次diff即可；价格与库存由后台原生数据决定。下一步提交同步结果记群和项目记忆。
+
+### 2026-11-01 · Codex：手机优先的五区首页独立预览
+
+用户以缩窄至手机比例的 Protide 首页为参考，要求先简化主页，商品详情后续再做。沿用 VialCove 蓝绿/白色、Manrope、英文及既有后台积木。新增独立未发布模板11462（VialCove · 首页精简预览 · 20261101），首页11463、空页头11464、空页尾11465、全局11466。全局从688的已发布值复制，头尾走原主题fallback。没有切换活动模板、域名映射或发布任何新文档；原684/685–688及草稿逐字保持。编辑入口 /wp-admin/admin.php?page=pc-design-editor&document=11463，使用原登录态nonce预览，不提供匿名预览后门。
+
+首页5块：hero_h1双入口与包装图 → 四服务info_list → 4品product_collection → 报告查询rich_text → 四问faq。首屏主按钮直达商品，次按钮进入报告库；手机商品2列，只呈现品名、实际首规格价格/优惠、规格和Choose options。隐藏的重复报告摘要仍可在原详情页查看，没有添加虚构检测、发货时效、评价或客服事实。
+
+主题增量：inc/layout-modules.php经既有definitions过滤器提供hero_h1的presentation/secondaryLink/caption与product_collection的cardPresentation，原字段框架负责清洗、保存和编辑器展示；默认standard保持旧文档渲染。hero-h1.php及modules-home.css只对选择focused的首屏启用紧凑移动排版；product-collection.php将compact透传到共享vc_product_card，第五参数默认false。functions.php仅精简展示并调用Woo原生格式化规格；首规格图、原价/售价、红角标、变体链接逻辑不改。插件、产品、库存、订单无改动。
+
+验证：4PHP lint、git diff检查通过；独立真实WP74检查全部通过，包括原4文档/映射原样、5块保存后normalize稳定、字段编辑器可见、原标准hero及4卡DOM与修改前一致、四首规格图价优惠链接一致。IAB已检查桌面及390×844手机预览，手机document宽375≤viewport390，无横向溢出；Shop peptides实际到商品区；FAQ实际展开显示规格说明。手机实测4规格20mg/20mg/10mg/100mg，非实体iPhone测试。Impeccable detector无阻断；9条建议中的8颜色/1字号来自仓库后台设计规范，与本次保留已确认店铺VI的范围不同，未强行覆盖为后台配色。
+
+工作与证据 D:/Codex/Tasks/2026-11-01/homepage-simple-preview。outputs/audit.json、browser-check.json、create-result.json、mobile-home-top.png、mobile-products.png、mobile-lower.png；work/create-preview.php具备源文档hash及目标hash保护，可重复更新本次草稿但不覆盖其他会话的新编辑。原4文档精确备份仅保存在D任务，不入Git。手机全页截图API失败，使用真实分屏截图，未冒称整页截图。下一步用户查看此独立预览，确定后才通过原后台流程迁移到正式首页；本次不改商品详情页。源码提交/同步状态另记群和记忆。

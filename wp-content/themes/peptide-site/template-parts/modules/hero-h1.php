@@ -16,7 +16,9 @@ $vc_home_picture = $vc_home_s['showMedia']
     : '';
 $vc_home_has_media = $vc_home_s['showMedia'] && ( '' !== $vc_home_picture || $vc_home_staff );
 $vc_home_button = vc_module_button( $vc_home_s['button'], 'button vc-home-hero__button' );
-$vc_home_has_copy = $vc_home_staff || '' !== $vc_home_s['title'] || '' !== $vc_home_s['description'] || '' !== $vc_home_button;
+$vc_home_secondary = vc_module_button( $vc_home_s['secondaryLink'] ?? null, 'vc-home-hero__secondary' );
+$vc_home_focused = 'focused' === ( $vc_home_s['presentation'] ?? 'standard' );
+$vc_home_has_copy = $vc_home_staff || '' !== $vc_home_s['title'] || '' !== $vc_home_s['description'] || '' !== $vc_home_button || '' !== $vc_home_secondary;
 $vc_home_styles = array( 'text-align:' . $vc_home_s['textAlign'] );
 foreach ( array(
     'titleColor' => '--vc-home-title-color',
@@ -30,7 +32,7 @@ foreach ( array(
     }
 }
 ?>
-<div class="vc-home-hero vc-home-hero--<?php echo $vc_home_s['fullWidth'] ? 'full' : 'content'; ?> vc-home-hero--align-<?php echo esc_attr( $vc_home_s['textAlign'] ); ?> vc-home-hero--d-<?php echo esc_attr( $vc_home_desktop ); ?> vc-home-hero--m-<?php echo esc_attr( $vc_home_mobile ); ?><?php echo ! $vc_home_has_media || ! $vc_home_has_copy ? ' vc-home-hero--single' : ''; ?>" style="<?php echo esc_attr( implode( ';', $vc_home_styles ) ); ?>">
+<div class="vc-home-hero vc-home-hero--<?php echo $vc_home_s['fullWidth'] ? 'full' : 'content'; ?> vc-home-hero--align-<?php echo esc_attr( $vc_home_s['textAlign'] ); ?> vc-home-hero--d-<?php echo esc_attr( $vc_home_desktop ); ?> vc-home-hero--m-<?php echo esc_attr( $vc_home_mobile ); ?><?php echo $vc_home_focused ? ' vc-home-hero--focused' : ''; ?><?php echo ! $vc_home_has_media || ! $vc_home_has_copy ? ' vc-home-hero--single' : ''; ?>" style="<?php echo esc_attr( implode( ';', $vc_home_styles ) ); ?>">
     <?php if ( $vc_home_has_copy ) : ?>
         <div class="vc-home-hero__copy<?php echo '' !== $vc_home_s['contentBgColor'] ? ' vc-home-hero__copy--colored' : ''; ?>">
             <?php if ( '' !== $vc_home_s['title'] ) : ?>
@@ -39,15 +41,18 @@ foreach ( array(
                 <?php echo \PeptideCore\Modules\Renderer::notice( __( 'Add the headline.', 'peptide-site' ) ); ?>
             <?php endif; ?>
             <?php if ( '' !== $vc_home_s['description'] ) : ?><p class="vc-home-hero__description"><?php echo nl2br( esc_html( $vc_home_s['description'] ) ); ?></p><?php endif; ?>
+            <?php if ( '' !== $vc_home_secondary ) : ?><div class="vc-home-hero__actions"><?php endif; ?>
             <?php if ( '' !== $vc_home_button ) : ?>
                 <span class="vc-home-hero__button-effect"<?php if ( ! $vc_home_editor && 'none' !== $vc_home_s['buttonEffect'] ) : ?> data-vc-button-effect="<?php echo esc_attr( $vc_home_s['buttonEffect'] ); ?>" data-vc-effect-duration="<?php echo (int) $vc_home_s['effectDurationMs']; ?>" data-vc-effect-interval="<?php echo (int) $vc_home_s['effectIntervalMs']; ?>"<?php endif; ?>><?php echo $vc_home_button; // Escaped by the shared link helper. ?></span>
             <?php endif; ?>
+            <?php if ( '' !== $vc_home_secondary ) : ?><?php echo $vc_home_secondary; // Escaped by shared link helper. ?></div><?php endif; ?>
         </div>
     <?php endif; ?>
     <?php if ( $vc_home_has_media ) : ?>
         <figure class="vc-home-hero__media">
             <?php echo $vc_home_picture; // Escaped by the shared responsive media helper. ?>
             <?php if ( '' === $vc_home_picture && $vc_home_staff ) : ?><div class="vc-home-hero__placeholder"><?php esc_html_e( 'Choose an image', 'peptide-site' ); ?></div><?php endif; ?>
+            <?php if ( '' !== ( $vc_home_s['caption'] ?? '' ) ) : ?><figcaption><?php echo esc_html( $vc_home_s['caption'] ); ?></figcaption><?php endif; ?>
         </figure>
     <?php endif; ?>
 </div>

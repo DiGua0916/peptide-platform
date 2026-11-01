@@ -134,3 +134,30 @@
 }
 
 .vc-m--hero-h1 .vc-home-hero.vc-home-hero--single { grid-template-columns: minmax(0, 1fr); }
+
+/* Opt-in homepage composition; existing saved heroes keep their presentation. */
+.vc-m--hero-h1 .vc-home-hero--focused { --vc-home-title-size:48px; gap:48px; }
+.vc-m--hero-h1 .vc-home-hero--focused .vc-home-hero__title { max-width:15ch; font-weight:650; letter-spacing:-.035em; }
+.vc-m--hero-h1 .vc-home-hero--focused .vc-home-hero__description { max-width:42ch; font-size:18px; }
+.vc-m--hero-h1 .vc-home-hero__actions { display:flex; flex-wrap:wrap; align-items:center; gap:12px 24px; margin-top:24px; }
+.vc-m--hero-h1 .vc-home-hero__actions .vc-home-hero__button-effect { margin-top:0; }
+.vc-m--hero-h1 .vc-home-hero__secondary { display:inline-flex; align-items:center; min-height:48px; color:var(--vc-home-title-color,var(--pc-heading,#203b45)); font-size:16px; font-weight:600; text-underline-offset:5px; }
+.vc-m--hero-h1 .vc-home-hero__secondary:hover { text-decoration:underline; }
+.vc-m--hero-h1 .vc-home-hero__secondary:focus-visible { outline:2px solid currentColor; outline-offset:4px; }
+.vc-m--hero-h1 .vc-home-hero__media figcaption { margin-top:8px; font-size:12px; line-height:1.5; color:var(--pc-muted,#415d68); text-align:right; }
+.vc-content-collection--compact .product-heading { margin-top:16px; }
+.vc-content-collection--compact .vc-card-specification { margin:8px 0 0; color:var(--pc-muted,#415d68); font-size:14px; line-height:1.5; }
+.vc-content-collection--compact .product-card-bottom { margin-top:0; padding-top:4px; }
+.vc-content-collection--compact .product-card-bottom a { font-weight:600; }
+@media(max-width:767px) {
+  .vc-m--hero-h1 .vc-home-hero--focused { --vc-home-title-size:36px; gap:24px; }
+  .vc-m--hero-h1 .vc-home-hero--focused .vc-home-hero__copy { text-align:center; }
+  .vc-m--hero-h1 .vc-home-hero--focused .vc-home-hero__title,
+  .vc-m--hero-h1 .vc-home-hero--focused .vc-home-hero__description { margin-inline:auto; }
+  .vc-m--hero-h1 .vc-home-hero--focused .vc-home-hero__description { font-size:16px; line-height:1.6; }
+  .vc-m--hero-h1 .vc-home-hero--focused .vc-home-hero__actions { justify-content:center; gap:8px 20px; }
+  .vc-m--hero-h1 .vc-home-hero--focused .vc-home-hero__actions .vc-home-hero__button-effect { width:auto; }
+  .vc-m--hero-h1 .vc-home-hero--focused .vc-home-hero__actions .vc-home-hero__button { width:auto; padding-inline:20px; }
+  .vc-m--hero-h1 .vc-home-hero--focused .vc-home-hero__media figcaption { text-align:center; }
+  .vc-content-collection--compact .vc-card-specification { font-size:12px; }
+}
