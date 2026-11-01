@@ -334,6 +334,7 @@ final class Staff {
 				'pc-apps'               => 'apps',
 				'product-reviews'       => 'products',
 				'pc-product-reviews'    => 'products',
+				'pc-collections'        => 'products',
 				'product_attributes'    => 'products',
 				'product_importer'      => 'products',
 				'product_exporter'      => 'products',

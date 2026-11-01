@@ -184,7 +184,7 @@ final class Seo {
 		return $s['domains'][ $host ] ?? $s['home'];
 	}
 
-	/** 当前页面的 SEO（首页、活动专题页、博客、博客专辑）；其他页面为 null。 */
+	/** 当前页面的 SEO（首页、活动专题页、博客及商品/博客专辑）；其他页面为 null。 */
 	public static function current(): ?array {
 		if ( is_front_page() ) {
 			return self::home_set();
@@ -197,6 +197,21 @@ final class Seo {
 		}
 		if ( is_category() ) {
 			return Blog::seo_term( (int) get_queried_object_id() );
+		}
+		if ( is_tax( 'product_cat' ) ) {
+			$term = get_queried_object();
+			if ( is_404() || ! $term instanceof \WP_Term || 'product_cat' !== $term->taxonomy ) {
+				return null;
+			}
+			$own = get_term_meta( $term->term_id, Blog::META_SEO, true );
+			$set = self::clean_set( is_array( $own ) ? $own : array() );
+			if ( '' === $set['title'] ) {
+				$set['title'] = sanitize_text_field( $term->name );
+			}
+			if ( '' === $set['description'] ) {
+				$set['description'] = mb_substr( trim( wp_strip_all_tags( strip_shortcodes( $term->description ) ) ), 0, self::MAX_TEXT );
+			}
+			return $set;
 		}
 		return null;
 	}
@@ -213,21 +228,32 @@ final class Seo {
 		}
 		$title = '' !== $set['title'] ? self::vars( $set['title'] ) : wp_get_document_title();
 		$desc  = self::vars( $set['description'] );
+		$collection = is_tax( 'product_cat' );
 		if ( is_front_page() ) {
 			$url = home_url( '/' );
 		} elseif ( is_category() ) {
 			$url = (string) get_term_link( (int) get_queried_object_id(), 'category' );
+		} elseif ( $collection ) {
+			$link = get_term_link( get_queried_object() );
+			$url = is_wp_error( $link ) ? '' : $link;
+			$paged = max( 1, (int) get_query_var( 'paged' ) );
+			if ( '' !== $url && $paged > 1 ) {
+				$url = get_pagenum_link( $paged, false );
+			}
 		} else {
 			$url = (string) get_permalink( get_queried_object_id() );
 		}
 		echo "\n<!-- peptide-core SEO -->\n";
+		if ( $collection && '' !== $url ) {
+			echo '<link rel="canonical" href="' . esc_url( $url ) . '">' . "\n";
+		}
 		if ( '' !== $desc ) {
 			echo '<meta name="description" content="' . esc_attr( $desc ) . '">' . "\n";
 		}
 		if ( $set['keywords'] ) {
 			echo '<meta name="keywords" content="' . esc_attr( self::vars( implode( ', ', $set['keywords'] ) ) ) . '">' . "\n";
 		}
-		echo '<meta property="og:type" content="' . ( is_front_page() ? 'website' : 'article' ) . '">' . "\n";
+		echo '<meta property="og:type" content="' . ( is_front_page() || $collection ? 'website' : 'article' ) . '">' . "\n";
 		echo '<meta property="og:site_name" content="' . esc_attr( get_bloginfo( 'name' ) ) . '">' . "\n";
 		echo '<meta property="og:title" content="' . esc_attr( $title ) . '">' . "\n";
 		if ( '' !== $desc ) {
@@ -236,6 +262,11 @@ final class Seo {
 		echo '<meta property="og:url" content="' . esc_url( $url ) . '">' . "\n";
 		if ( is_singular( array( Topics::POST_TYPE, 'post' ) ) ) {
 			$image = (string) get_the_post_thumbnail_url( get_queried_object_id(), 'large' );
+		} elseif ( $collection ) {
+			$cover = absint( get_term_meta( (int) get_queried_object_id(), 'thumbnail_id', true ) );
+			// An unpublished/private attachment parent must not supply public SEO media.
+			$image = $cover && wp_attachment_is_image( $cover ) && 'publish' === get_post_status( $cover )
+				? (string) wp_get_attachment_image_url( $cover, 'large' ) : '';
 		} else {
 			$image = is_category() ? Blog::term_cover( (int) get_queried_object_id() ) : '';
 		}

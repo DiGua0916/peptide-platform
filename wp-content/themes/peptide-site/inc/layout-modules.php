@@ -104,6 +104,31 @@ function vc_module_button( $link, string $class = 'button' ): string {
         . '>' . esc_html( $link['label'] ) . '</a>';
 }
 
+/** An optional artwork reference for one card render, including products without a main image. */
+function vc_module_card_image( array $ref, string $sizes = '100vw' ): string {
+    $image = vc_module_media_ref( $ref );
+    if ( ! $image ) { return ''; }
+    return '<img class="attachment-woocommerce_single size-woocommerce_single" src="' . esc_url( $image['src'] ) . '"'
+        . ( ! empty( $image['srcset'] ) ? ' srcset="' . esc_attr( $image['srcset'] ) . '"' : '' )
+        . ' sizes="' . esc_attr( $sizes ) . '"'
+        . ' width="' . (int) $image['width'] . '" height="' . (int) $image['height'] . '"'
+        . ' alt="' . esc_attr( $image['alt'] ) . '" loading="lazy" decoding="async">';
+}
+
+/** Optional card artwork is stored in the same builder row, never on the Woo product. */
+add_filter( 'peptide_core_layout_definitions', function ( array $definitions ): array {
+    if ( ! isset( $definitions['product_collection']['settings'] ) ) { return $definitions; }
+    foreach ( $definitions['product_collection']['settings'] as &$field ) {
+        if ( 'products' === ( $field['key'] ?? '' ) ) {
+            $field['fields'][] = \PeptideCore\Modules\Fields::f( 'image', 'cardImage', __( '普通商品备用展示图（不影响商品详情）', 'peptide-site' ), null,
+                array( 'help' => __( '多规格商品的图片、价格和优惠自动跟随后台排序的第一个可见规格，不使用此图；规格无图时显示示意占位。普通商品可使用此图，留空使用商品主图。', 'peptide-site' ) ) );
+            break;
+        }
+    }
+    unset( $field );
+    return $definitions;
+}, 100 );
+
 /** Same styles in the theme preview and the Gutenberg canvas. */
 function vc_enqueue_layout_module_assets(): void {
     if ( ! class_exists( '\PeptideCore\Modules\Registry' ) ) {
@@ -124,7 +149,7 @@ function vc_enqueue_layout_module_assets(): void {
     if ( wp_style_is( 'peptide-core-modules', 'registered' ) ) {
         $dependency[] = 'peptide-core-modules';
     }
-    foreach ( array( 'modules-shared', 'modules-media-text', 'modules-carousel', 'modules-content' ) as $asset ) {
+    foreach ( array( 'modules-shared', 'modules-media-text', 'modules-carousel', 'modules-content', 'modules-home', 'modules-editorial' ) as $asset ) {
         $file = __DIR__ . '/../assets/' . $asset . '.css';
         if ( is_file( $file ) ) {
             wp_enqueue_style( 'vialcove-' . $asset, $root . '/assets/' . $asset . '.css', $dependency, (string) filemtime( $file ) );

@@ -329,7 +329,7 @@ final class Admin_Menus {
 		if ( 'edit.php?post_type=product' === $slug ) {
 			return 'all';
 		}
-		if ( str_contains( $slug, 'taxonomy=product_cat' ) ) {
+		if ( 'pc-collections' === $slug || str_contains( $slug, 'taxonomy=product_cat' ) ) {
 			return 'cat';
 		}
 		if ( 'product-reviews' === $slug || 'pc-product-reviews' === $slug || str_contains( $slug, 'page=product-reviews' ) || str_contains( $slug, 'page=pc-product-reviews' ) ) {
