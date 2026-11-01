@@ -100,14 +100,14 @@
 			return '<p class="pc-ov-muted">' + esc( S.noData ) + '</p>';
 		}
 		var base = f[ 0 ].count;
-		// 版式参照 Shopname：条形逐级变窄；条内是人数和占访客的比例，两条之间的箭头旁是相对上一步的转化率。
+		// Stage bars taper; the in-flow connector shows the conversion from the previous stage.
 		var frac = function ( i ) {
 			return 1 - ( i * 0.36 ) / Math.max( 1, f.length - 1 );
 		};
 		return '<div class="pc-ov-funnel">' + f.map( function ( s, i ) {
 			var link = '';
 			if ( i ) {
-				link = '<div class="pc-ov-link" style="--f1:' + frac( i - 1 ) + ';--f2:' + frac( i ) + '" title="' + esc( S.stepRate ) + '"><i></i><span>' + esc( pct( s.count, f[ i - 1 ].count ) ) + '</span></div>';
+				link = '<div class="pc-ov-link" title="' + esc( S.stepRate ) + '"><i aria-hidden="true"></i><span>' + esc( pct( s.count, f[ i - 1 ].count ) ) + '</span></div>';
 			}
 			return link + '<div class="pc-ov-step" style="--f:' + frac( i ) + '"><b>' + esc( S.stages[ s.stage ] ) + ': ' + esc( s.count ) + '</b>' + ( i ? '<span>' + esc( fmt( S.ofVisitors, pct( s.count, base ) ) ) + '</span>' : '' ) + '</div>';
 		} ).join( '' ) + '</div>';

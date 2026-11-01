@@ -2,7 +2,7 @@
 /**
  * 服务端事实事件（source=server）。前端只能上报“尝试”，成交结果以 WooCommerce 为准：
  *
- * - add_to_cart：商品真的进了购物车（woocommerce_add_to_cart，经典购物车和 Store API / 区块都会触发）。一次成功记一次。
+ * - add_to_cart：商品真的进了购物车（经典成功钩子，及请求内 Store API 成功补充）。一次成功记一次。
  * - order_placed：客户提交订单（经典结账 woocommerce_checkout_order_processed、区块结账
  *   woocommerce_store_api_checkout_order_processed）。订单上记下访客和访问编号，以后的支付回调靠它关联。
  * - payment_success：woocommerce_payment_complete，或订单第一次变成已付款状态（processing / completed）。
@@ -24,14 +24,89 @@ final class Server_Events {
 	public const ORDER_VISITOR_META = '_pc_track_visitor';
 	public const ORDER_VISIT_META   = '_pc_track_visit';
 
+	/** Request objects, including unrelated nested REST calls which must shadow an outer add. */
+	private static array $rest_requests = array();
+	private static array $store_api_additions = array();
+
 	public static function register_hooks(): void {
 		add_action( 'woocommerce_add_to_cart', array( self::class, 'on_add_to_cart' ), 20, 6 );
+		add_filter( 'rest_request_before_callbacks', array( self::class, 'before_rest_request' ), 20, 3 );
+		add_filter( 'woocommerce_store_api_add_to_cart_data', array( self::class, 'scope_store_api_add' ), 20, 2 );
+		add_action( 'internal_woocommerce_cart_item_added_from_user_request', array( self::class, 'on_store_api_add_success' ), 20, 2 );
+		add_filter( 'rest_request_after_callbacks', array( self::class, 'after_rest_request' ), 20, 3 );
 		add_action( 'woocommerce_checkout_order_processed', array( self::class, 'on_classic_order' ), 20, 3 );
 		add_action( 'woocommerce_store_api_checkout_order_processed', array( self::class, 'on_order_placed' ), 20 );
 		add_action( 'woocommerce_payment_complete', array( self::class, 'on_payment_complete' ), 20 );
 		add_action( 'woocommerce_order_status_changed', array( self::class, 'on_status_changed' ), 20, 4 );
 		add_action( 'wp_login', array( self::class, 'on_login' ), 20, 2 );
 		add_action( 'user_register', array( self::class, 'on_register' ), 20 );
+	}
+
+	/** Observe dispatch boundaries without changing REST responses or request data. */
+	public static function before_rest_request( $response, $handler, $request ) {
+		if ( $request instanceof \WP_REST_Request ) {
+			self::$rest_requests[] = $request;
+		}
+		return $response;
+	}
+
+	public static function scope_store_api_add( $data, $request ) {
+		if ( $request instanceof \WP_REST_Request && end( self::$rest_requests ) === $request && 'POST' === $request->get_method() && '/wc/store/v1/cart/add-item' === $request->get_route() ) {
+			self::$store_api_additions[ spl_object_id( $request ) ] = array();
+		}
+		return $data;
+	}
+
+	private static function store_api_scope(): ?int {
+		$request = end( self::$rest_requests );
+		$id = $request instanceof \WP_REST_Request ? spl_object_id( $request ) : null;
+		return null !== $id && isset( self::$store_api_additions[ $id ] ) ? $id : null;
+	}
+
+	public static function after_rest_request( $response, $handler, $request ) {
+		if ( $request instanceof \WP_REST_Request ) {
+			unset( self::$store_api_additions[ spl_object_id( $request ) ] );
+			self::$rest_requests = array_values( array_filter( self::$rest_requests, static fn( $active ) => $active !== $request ) );
+		}
+		return $response;
+	}
+
+	/** Woo 11.2 (hook since 10.6): both new and existing items, quantity is this add's increment. */
+	public static function on_store_api_add_success( $product_id, $quantity ): void {
+		$scope = self::store_api_scope();
+		if ( null === $scope ) {
+			return;
+		}
+		$legacy = self::$store_api_additions[ $scope ];
+		unset( self::$store_api_additions[ $scope ] );
+		if ( ! is_numeric( $product_id ) || (int) $product_id <= 0 || (float) $product_id !== (float) (int) $product_id || ! is_numeric( $quantity ) || ! is_finite( (float) $quantity ) || (float) $quantity <= 0 ) {
+			return;
+		}
+		try {
+			$product = wc_get_product( (int) $product_id );
+			if ( ! $product instanceof \WC_Product ) {
+				return;
+			}
+			$variation_id = 0;
+			if ( $product instanceof \WC_Product_Variation ) {
+				$variation_id = $product->get_id();
+				$product = wc_get_product( $product->get_parent_id() );
+				if ( ! $product instanceof \WC_Product || $product instanceof \WC_Product_Variation ) {
+					return;
+				}
+			}
+			$addition = array( (int) $product->get_id(), (int) $variation_id, (float) $quantity );
+			foreach ( $legacy as $observed ) {
+				// New-item limits can normalize the actual legacy quantity away from the raw API quantity.
+				if ( $addition[0] === $observed[0] && $addition[1] === $observed[1] ) {
+					return;
+				}
+			}
+			self::on_add_to_cart( '', $addition[0], $addition[2], $addition[1] );
+		} catch ( \Throwable $error ) {
+			// An observation failure must not turn an already successful native cart add into a REST error.
+			return;
+		}
 	}
 
 	/**
@@ -92,6 +167,10 @@ final class Server_Events {
 	}
 
 	public static function on_add_to_cart( $cart_item_key, $product_id, $quantity, $variation_id = 0, $variation = array(), $cart_item_data = array() ): void {
+		$scope = self::store_api_scope();
+		if ( null !== $scope ) {
+			self::$store_api_additions[ $scope ][] = array( (int) $product_id, (int) $variation_id, (float) $quantity );
+		}
 		$visitor = self::browser_visitor();
 		if ( ! $visitor ) {
 			return;

@@ -725,6 +725,14 @@
       "language": "node",
       "core": true,
       "stage": "063-shared-seam"
+    },
+    {
+      "name": "tracking-store-api-cart-success-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/tracking-store-api-cart-success-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "final-source-gate"
     }
   ]
 }
