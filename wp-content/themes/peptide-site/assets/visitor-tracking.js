@@ -252,6 +252,27 @@
       if (previous) return previous.signature === signature && (!previous.retired || previous.retired === 'acknowledged') ? snapshot.eventId : false;
       // Do not evict tombstones and silently allow a previously used UID again.
       if (productActions.size >= 2000 || pending.some(entry => entry.record.event_id === snapshot.eventId)) return false;
+      if (type === 'product_intent' && snapshot.data.kind === 'quick_view_open') {
+        // Reserve the whole local pair; failure must not retire or enqueue either half.
+        const removeCount = Math.max(0, Math.ceil(pending.length + 2 - maxQueue));
+        const removable = pending.filter(entry => !entry.inFlight).slice(0, removeCount);
+        if (removable.length < removeCount) return false;
+        let records;
+        try {
+          const viewId = id();
+          if (typeof viewId !== 'string' || !/^[A-Za-z0-9-]{8,64}$/.test(viewId) || viewId === snapshot.eventId || productActions.has(viewId) || pending.some(entry => entry.record.event_id === viewId)) return false;
+          const occurredAt = new Date().toISOString(), currentPage = Object.freeze({...page});
+          records = [
+            Object.freeze({event_id: snapshot.eventId, page_instance_id: pageId, seq: seq + 1, type, occurred_at: occurredAt, page: currentPage, data: snapshot.data}),
+            Object.freeze({event_id: viewId, page_instance_id: pageId, seq: seq + 2, type: 'product_view', occurred_at: occurredAt, page: currentPage, data: Object.freeze({product_id: snapshot.data.product_id})})
+          ];
+        } catch { return false; }
+        for (const entry of removable) { retire(entry, 'overflow'); stats.dropped++; }
+        seq += 2; productActions.set(snapshot.eventId, {signature, retired: null});
+        pending.push(...records.map(record => ({record, attempts: 0, readyAt: 0, inFlight: false})));
+        stats.created += 2; schedule();
+        return snapshot.eventId;
+      }
       if (pending.length >= maxQueue) {
         const removable = pending.findIndex(entry => !entry.inFlight);
         if (removable < 0) return false;

@@ -29,7 +29,7 @@ function fixture(overrides = {}, options = {}) {
     setTimeout: (fn, ms) => later(fn, ms), clearTimeout: id => timers.delete(id),
     setInterval: (fn, ms) => later(fn, ms, ms), clearInterval: id => timers.delete(id),
     sessionStorage: {getItem: key => { if (options.storageBlocked) throw Error('blocked'); return store.get(key); }, setItem: (key, val) => store.set(key, val)},
-    VialCoveVisitorPage: {page_type: 'product', product_id: 101, product_name: 'Synthetic item', path: '/product/item/?private=SECRET#SECRET'},
+    VialCoveVisitorPage: options.page || {page_type: 'product', product_id: 101, product_name: 'Synthetic item', path: '/product/item/?private=SECRET#SECRET'},
     VialCoveVisitorConfig: {enabled: true, protocol: 1, test_mode: false, mode: 'live', endpoint: 'https://visitor.test/wp-json/peptide/v1/track/events', heartbeat_ms: 15000, idle_ms: 60000, batch_max: 20, ...overrides},
     VialCoveVisitorVideo: {observe: () => ({flush() {}, stop: () => videoStops++})},
     fetch: async (url, init) => {
@@ -98,6 +98,29 @@ async function run() {
     check('ACKed operation retains idempotence tombstone',api.pushProductAction('product_favorite',action('favorite-00000001',{action:'add'}))==='favorite-00000001');
     await f.advance(300);check('ACKed callback does not create another request',f.calls.length===1); f.stop();
     check('Explicit stop refuses pushes without restarting',api.pushProductAction('product_favorite',action('stopped-0000001',{action:'add'}))===false&&api.getStats().stopped);
+  }
+  {
+    const f=fixture({product_actions_protocol:1},{page:{page_type:'home',path:'/featured/?private=SECRET#SECRET'}}), api=f.window.VialCoveVisitorTransport;
+    const facts=action('quick-open-000001',{variation_id:303,kind:'quick_view_open',result:'completed'});
+    check('Quick preview queues canonical source operation',api.pushProductAction('product_intent',facts)===facts.event_id);
+    const created=f.stats().created;
+    check('Same pre-ACK callback creates neither duplicate record',api.pushProductAction('product_intent',{...facts})===facts.event_id&&f.stats().created===created);
+    await f.advance(300);const rows=f.calls.flatMap(call=>call.body.events), intent=rows.find(e=>e.event_id===facts.event_id), views=rows.filter(e=>e.type==='product_view');
+    check('Nonproduct quick preview adds one existing parent view',views.length===1&&JSON.stringify(views[0].data)==='{"product_id":101}');
+    check('Quick preview does not fabricate another page view',rows.filter(e=>e.type==='page_view').length===1);
+    check('Pair uses actual current page rather than product document',intent.page.page_type==='home'&&intent.page.path==='/featured/'&&JSON.stringify(intent.page)===JSON.stringify(views[0].page));
+    check('Pair shares observation time/page identity and consecutive sequence',intent.occurred_at===views[0].occurred_at&&intent.page_instance_id===views[0].page_instance_id&&views[0].seq===intent.seq+1&&views[0].event_id!==intent.event_id);
+    check('Post-ACK callback retains pair tombstone',api.pushProductAction('product_intent',{...facts})===facts.event_id);await f.advance(300);
+    check('Post-ACK callback sends neither record again',f.calls.length===1);
+    api.pushProductAction('product_intent',{...facts,event_id:'quick-open-000002'});await f.advance(300);
+    check('A new opening UID counts a new view',f.calls.flatMap(call=>call.body.events).filter(e=>e.type==='product_view').length===2);
+    api.pushProductAction('product_favorite',action('favorite-no-view',{action:'add'}));
+    api.pushProductAction('product_share',action('sharing-no-view',{method:'native',result:'completed'}));
+    api.pushProductAction('product_intent',action('buy-now-no-view',{kind:'buy_now',result:'completed'}));await f.advance(300);
+    check('Favorite share and buy-now do not infer product views',f.calls.flatMap(call=>call.body.events).filter(e=>e.type==='product_view').length===2);f.stop();
+    const detail=fixture({product_actions_protocol:1});await detail.advance(300);
+    const detailViews=detail.calls.flatMap(call=>call.body.events).filter(e=>e.type==='product_view');
+    check('Ordinary product document initial view remains unchanged',detailViews.length===1&&JSON.stringify(detailViews[0].data)==='{"product_id":101}'&&detailViews[0].page.page_type==='product');detail.stop();
   }
   {
     const f=fixture({product_actions_protocol:1}); f.responses.push({network:true});
