@@ -151,3 +151,9 @@ Cloudflare官方2026.10.7 Windows工具已下载、SHA256与官方release digest
 只改隔离HQ/store各自MU URL过滤器：本地空path返回无尾斜杠基址，非空path只连接单斜杠。可信公网代理分支不安装此filter，未放宽Host/token/XFP、机器路由或后台公网访问，也未动原站、生产支付插件、数据库或商户参数。
 
 实际原生script/style base规范，combined CSS/JS、hub.css/js共4资源HTTP200且正确MIME、非HTML；独立源码复核通过。内置浏览器重载前确认无未保存编辑，再实际看到恢复后的整页和native dialog增强；1280宽页面无横向溢出，390宽列表和编辑窗口内按钮可见，弹窗left12/right378/bottom832在844视口内。资源路径双斜杠0，临时视口已重置；未保存/启停支付或发起付款。证据在 `D:/Codex/Tasks/2026-11-01/payment-layout-fix/outputs` 和既有任务 `staging-provision/admin-assets-repair.json`。URL适配helper及私有测试运行文件继续不入Git，仅同步这份交接；公网和真实扣款仍待用户后续填写参数与联调。
+
+### 2026-11-01 · Codex：按用户要求关闭临时支付测试
+
+用户反馈支付方要求先在其后台绑定域名，决定停止这次临时域名测试。已核命令路径和监听归属，仅停止本隔离任务的HQ52831、店铺52832和前置52830三个loopback进程，实际复核三端均无监听；对应内置浏览器测试标签已关闭。独立只读复核未发现本任务其他运行进程或cloudflared，公网origin和激活门均未配置；本次从未开启临时隧道。
+
+测试库、已保存配置和私有资料保留，没有删除、重置或覆盖。共享MySQL52818、旧QA与原管理后台10090保持运行（两监听已核）。关闭证据 `D:/Codex/Tasks/2026-11-01/payment-live-preflight/outputs/closed.json`。不再自动重启随机域名测试；后续用户准备正式域名并完成支付方绑定后，再按其新指示继续实付联调。未修改生产支付运行代码、商户配置或发起交易。
