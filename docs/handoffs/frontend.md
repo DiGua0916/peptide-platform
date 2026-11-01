@@ -884,3 +884,5 @@ Chrome同一原生layout1917又暴露实际产品缺陷：Partner列表默认blo
 浏览器真实验证：后台390px手机预览四服务2列、商品2列、可见cardImage更换控件；已发布桌面首屏、图文行截图确认。Tirzepatide由20mg切10mg后实际TR10图片/$40/选中状态正确，桌面购物车入口打开原Your cart对话框；未加购或下单。原始UA/实体iPhone与所有其它模板未逐页重验，不将HTTP通过等同完整视觉全覆盖。
 
 证据：D:/Codex/Tasks/2026-11-01/frontend-block-rollout/outputs/{before-home.json,before-header.json,before-footer.json,before-global.json,save-result.json,publish-result.json,verification.json,catalog-audit.json,public-http-audit.json,published-home.png,published-story.png,mobile-editor.png,mobile-products.png}。数据库内容/媒体/备份均不入Git。回滚时只针对685/688使用保存前文档，先读取当前revision再通过原REST保存发布，不覆盖其它人的后续修改。下一步用户可在后台继续换图/改字/排序；新cardImage设置受主题定义提供，迁移需同时带主题和当前WP数据库/媒体。
+
+本阶段源码提交2039de8，随后读取并正常合并同事新商品专辑51d0ec5，整合1df925c，本地main已ff到该整合；首页manual查询与分类独立排序无冲突，实际WP相关检查复跑通过。GitHub push尝试出现connection reset及443连接超时（含HTTP/1.1正常重试），尚未推送成功；不得将本地整合说成GitHub已同步。网络恢复后正常push codex/frontend与main即可，不force。
