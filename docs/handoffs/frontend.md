@@ -924,3 +924,15 @@ functions.php新增vc_card_display_product，使用Woo get_visible_children的me
 验证：4PHP lint、git diff检查通过；独立真实WP74检查全部通过，包括原4文档/映射原样、5块保存后normalize稳定、字段编辑器可见、原标准hero及4卡DOM与修改前一致、四首规格图价优惠链接一致。IAB已检查桌面及390×844手机预览，手机document宽375≤viewport390，无横向溢出；Shop peptides实际到商品区；FAQ实际展开显示规格说明。手机实测4规格20mg/20mg/10mg/100mg，非实体iPhone测试。Impeccable detector无阻断；9条建议中的8颜色/1字号来自仓库后台设计规范，与本次保留已确认店铺VI的范围不同，未强行覆盖为后台配色。
 
 工作与证据 D:/Codex/Tasks/2026-11-01/homepage-simple-preview。outputs/audit.json、browser-check.json、create-result.json、mobile-home-top.png、mobile-products.png、mobile-lower.png；work/create-preview.php具备源文档hash及目标hash保护，可重复更新本次草稿但不覆盖其他会话的新编辑。原4文档精确备份仅保存在D任务，不入Git。手机全页截图API失败，使用真实分屏截图，未冒称整页截图。下一步用户查看此独立预览，确定后才通过原后台流程迁移到正式首页；本次不改商品详情页。源码提交/同步状态另记群和记忆。
+
+### 2026-11-01 · Codex：四项服务改为生成插画
+
+用户不接受线条图标，要求真正画图。使用内置imagegen分别生成透明底1280px PNG：双样品瓶、文件/放大镜、配送车、客服耳机，统一蓝绿/白色材质。原图与提示词在D:/Codex/Tasks/2026-11-01/homepage-service-illustrations，原件复制到D输出，导入现有媒体库附件11482–11485并生成原生派生尺寸；没有把图片或真实媒体记录提交Git。
+
+只用原layouts REST修改独立未发布首页11463的info_list，四项原生image引用替代icon；首项文字缩短为Product details，仍链接#vc-collection。其余链接/文案保持。source685–688、preview其他4块及11464–11466、active/domain映射逐字核对保持，没有发布11463。旧homepage-simple-preview生成脚本保留旧内容hash，会拒绝回盖本次更新；后续应读取当前草稿后小范围修改。
+
+主题仅inc/layout-modules.php、assets/modules-home.css：info_list新增默认standard/可选illustrated及可分别调整的illustrationSizePx；只对standard且非手机滑动的插画模式包装原Fallback HTML，不另造业务renderer。图片继续原生media字段及srcset，只修正sizes至实际72/64px，窄手机列限制34%以保留文字空间；标准/bar/swipe模式原样。电脑4列左图右字，手机2列14px文字、44px文字链接点击高度。
+
+验证：PHP lint/diffcheck；独立12项实际WP内存检查通过（默认/原样透传、字段与设备尺寸、HTML安全渲染、srcset/sizes、链接、SVG fallback不重复、上下限与bar/swipe透传）。两次原生保存后4项保护检查通过。实际IAB电脑图片72px且currentSrc150px，390手机图约48px且currentSrc100px，四图加载成功、页面scrollWidth375≤390；首项断词已纠正，手机截图已重验。未作实体手机验收。静态detector仅既有后台DESIGN与店铺VI的9条advisory，无新增阻断。
+
+证据outputs/update-result.json、desktop-metrics.json、mobile-metrics.json、services-mobile.png、services-desktop.png和4图ZIP；desktop截图拍摄于首项文字缩短前，最终手机图为新文案。用户预览tab19保留。下一步用户审阅插画；正式主页仍未替换。素材可在媒体库/原信息列表的图片字段逐项更换；提交同步结果记群与记忆。

@@ -139,8 +139,38 @@ add_filter( 'peptide_core_layout_definitions', function ( array $definitions ): 
     if ( isset( $definitions['product_collection']['settings'] ) ) {
         $definitions['product_collection']['settings'][] = \PeptideCore\Modules\Fields::f( 'select', 'cardPresentation', __( '商品卡片排版', 'peptide-site' ), 'standard', array( 'group' => 'layout', 'options' => array( 'standard' => '完整资料', 'compact' => '简洁选购' ), 'help' => '简洁选购展示当前规格、价格和详情入口；报告状态在商品详情中查看。真实价格和规格顺序不变。' ) );
     }
+    if ( isset( $definitions['info_list']['settings'] ) ) {
+        $definitions['info_list']['settings'][] = \PeptideCore\Modules\Fields::f( 'select', 'visualPresentation', __( '图片呈现', 'peptide-site' ), 'standard', array( 'group' => 'layout', 'options' => array( 'standard' => '原图标尺寸', 'illustrated' => '服务插画' ), 'help' => '服务插画用于原信息条且关闭手机滑动时；在每项的图片字段上传插画。' ) );
+        $definitions['info_list']['settings'][] = \PeptideCore\Modules\Fields::f( 'number', 'illustrationSizePx', __( '插画尺寸', 'peptide-site' ), array( 'desktop' => 72, 'mobile' => 64 ), array( 'group' => 'layout', 'device' => true, 'min' => 40, 'max' => 112, 'unit' => 'px', 'show_if' => array( 'visualPresentation' => 'illustrated' ), 'help' => '电脑和手机分别设置；窄列会适当缩小图片，为文字保留空间。' ) );
+        foreach ( $definitions['info_list']['items']['fields'] as &$field ) {
+            if ( 'image' === ( $field['key'] ?? '' ) ) {
+                $field['help'] = '图片保留原比例。信息列表样式最高20px；原信息条默认40px，选服务插画后使用可调尺寸。';
+            }
+        }
+        unset( $field );
+    }
     return $definitions;
 }, 110 );
+
+/** Add illustration sizing without duplicating information-list content or interactions. */
+add_filter( 'peptide_core_module_html', function ( $html, array $module, string $context, string $device ) {
+    $settings = $module['settings'];
+    if ( null !== $html || 'info_list' !== $module['type'] || 'illustrated' !== ( $settings['visualPresentation'] ?? 'standard' )
+        || 'standard' !== ( $settings['displayStyle'] ?? 'standard' ) || ! empty( $settings['mobileSwipe'] ) ) {
+        return $html;
+    }
+    $size = $settings['illustrationSizePx'] ?? array( 'desktop' => 72, 'mobile' => 64 );
+    $desktop = max( 40, min( 112, (int) $size['desktop'] ) );
+    $mobile = max( 40, min( 112, (int) ( $size['mobile'] ?? $desktop ) ) );
+    $style = '--vc-service-visual-size:' . $desktop . 'px;--vc-service-visual-size-mobile:' . $mobile . 'px';
+    $content = new WP_HTML_Tag_Processor( \PeptideCore\Modules\Fallback::render( $module, $context, $device ) );
+    while ( $content->next_tag( array( 'tag_name' => 'IMG', 'class_name' => 'vc-m__icon-img' ) ) ) {
+        // Keep WordPress srcset; choose an icon-sized derivative instead of a half-page image.
+        $content->set_attribute( 'sizes', '(max-width: 767px) ' . $mobile . 'px, ' . $desktop . 'px' );
+    }
+    return '<div class="vc-service-illustrations" style="' . esc_attr( $style ) . '">'
+        . $content->get_updated_html() . '</div>';
+}, 20, 4 );
 
 /** Same styles in the theme preview and the Gutenberg canvas. */
 function vc_enqueue_layout_module_assets(): void {
