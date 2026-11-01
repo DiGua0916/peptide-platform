@@ -898,3 +898,17 @@ inc/product-options.php 在 wp 时对 variable PDP 移除 woocommerce_product_th
 验证：PHP lint、JS syntax、git diff检查通过；独立实际WP只读45检查通过（四商品原价格HTML逐字不变及15组有效/无效价格对照）。独立审查Woo原生变体切图不依赖缩略图、当前变体无自有gallery。真实IAB选10mg→TR10/$40/无角标；选60mg→TR60/$130/$219/40% OFF；主图库始终1张。移除前已验20mg有29%、10mg无优惠、Clear移除角标。390px实际截图验证PDP主图直接接商品信息、首页2列38%红色角标；桌面截图验证缩略图不存在。没有加购、下单或发布其它积木；不冒称实体iPhone验收。当前首页图片按后台最新内容呈现，不回写此前图片选择。
 
 证据：D:/Codex/Tasks/2026-11-01/frontend-offer-corner/outputs/{runtime-audit.json,home-ribbon.png,product-one-image.png,product-mobile.png,home-mobile.png}。旧D任务sale-ribbon是另一窗口已撤回候选，未作为本次验证。回滚只需回退本次主题源码，不需要数据库恢复。源码提交见本段所属Git提交，远程同步结果另记群/项目记忆。
+
+### 2026-11-01 · Codex：商品卡片改为后台首规格，图价优惠统一
+
+用户发现Tirzepatide设置优惠但首页无标识，明确要求按第一个规格展示、不按最小规格/最低价。只读确认原父商品price_pair使用最低价10mg（40、无促销）；后台首规格20mg为55/78、29%。本轮替代此前卡片默认最低价的展示决定，不调整真实商品定价。
+
+functions.php新增vc_card_display_product，使用Woo get_visible_children的menu_order+ID顺序，核对父子关系、variation_is_visible，首个可见有价规格作为展示对象；保留Woo隐藏缺货和禁用规则，不另按价格、剂量或默认属性重排。共享vc_product_card的图片、public price_pair、红角标、三处详情链接与观察variation ID同源；标题、报告和extras仍为父商品。vc_public_price_html本身和插件父price_pair、购物车/结账/PDP原生定价未改。链接使用原生variation permalink，进入详情自动选相同规格。
+
+多规格商品采用首变体get_image_id(edit)自有图，避免继承旧低规格主图或之前cardImage覆盖；如首规格无图，用既有明确示意占位，不取其它规格图。普通商品原cardImage/主图逻辑保持。inc/layout-modules.php保留同一cardImage字段键及保存结构，将后台标签/说明改为普通商品备用图，明确多规格跟随首规格，无需另造后台状态。原已保存cardImage值不清空；首页685及其它装修文档、商品、规格、媒体记录都未写入。
+
+真实首页结果：Tirzepatide11307/TR20/20mg $55原78/29%；Retatrutide11007/RT20/20mg $86.30原102/15%；Semaglutide11370/SM10/10mg $42原52/19%；NAD+11055/NJ100/100mg $35无促销。后续后台调整规格排序会沿同一路径反映。
+
+验证：2PHP lint、diffcheck通过；独立真实WP按menu_order+ID查询全部82已发布可见商品，首规格匹配82/82，自有图与实际附件文件82/82。四卡原价/售价/角标/图、三处属性链接及观察身份核对，真实SSR与实际IAB DOM一致；点击首页Tirzepatide真实进入20mg/TR20/55/78/29%且图库1张。无真实simple商品，因此简单商品兼容仅未保存内存对象验证，非实站simple视觉验收。没有新购物车/订单操作。最终检查收据native-render-check.json。截图home-first-spec.png。全部证据D:/Codex/Tasks/2026-11-01/first-spec-cards/outputs。
+
+本轮范围为主题共享商品卡（首页原手选商品区、商店列表、关联商品等），不冒称插件内其它独立商品展示块均改写。无数据库恢复需求，回滚主题本次diff即可；价格与库存由后台原生数据决定。下一步提交同步结果记群和项目记忆。

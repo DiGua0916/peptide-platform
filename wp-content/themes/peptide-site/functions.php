@@ -153,35 +153,55 @@ function vc_vial( string $label = 'PEPTIDE COLLECTION', string $sku = 'DESIGN CO
     <?php
 }
 
+/** Follow the merchant's native variation order, never price or dosage order. */
+function vc_card_display_product( $product ) {
+    if ( ! $product->is_type( 'variable' ) ) { return $product; }
+    // Woo orders visible children by menu_order then ID and respects its
+    // hide-out-of-stock setting. Disabled or unpriced variants are not offers.
+    foreach ( $product->get_visible_children() as $variation_id ) {
+        $variation = wc_get_product( $variation_id );
+        if ( $variation instanceof WC_Product_Variation && $variation->get_parent_id() === $product->get_id() && $variation->variation_is_visible() ) {
+            return $variation;
+        }
+    }
+    return $product;
+}
+
 /** Catalogue presentation only; retain native variation, cart and checkout prices. */
 function vc_card_price_html( $product ): string {
-    return vc_public_price_html( $product );
+    return vc_public_price_html( vc_card_display_product( $product ) );
 }
 
 function vc_product_card( $product, bool $report_preview = true, ?array $card_image = null, string $card_sizes = '100vw' ): void {
-    $card_image_html = $card_image ? vc_module_card_image( $card_image, $card_sizes ) : '';
-    $extra = vc_product_data( $product );
+    $display_product = vc_card_display_product( $product );
+    $is_variation = $display_product->is_type( 'variation' );
+    // A parent/artwork fallback may show a different dosage. An image-less
+    // variation gets the labelled concept instead of another specification.
+    $display_image_id = $display_product->get_image_id( $is_variation ? 'edit' : 'view' );
+    $card_image_html = ! $is_variation && $card_image ? vc_module_card_image( $card_image, $card_sizes ) : '';
+    $extra = vc_product_data( $display_product );
+    $card_url = $display_product->get_permalink();
     $sale_percent = vc_sale_percent( is_array( $extra['price_pair'] ?? null ) ? $extra['price_pair'] : array() );
     $hover = $report_preview && function_exists( 'peptide_core_get_product_hover' )
         ? peptide_core_get_product_hover( $product )
         : array( 'mode' => $report_preview ? 'placeholder' : 'none' );
     $report_preview = $report_preview && 'none' !== ( $hover['mode'] ?? 'placeholder' );
-    $observation_parent = $product instanceof WC_Product ? (int) $product->get_parent_id() : 0;
+    $observation_parent = $display_product instanceof WC_Product ? (int) $display_product->get_parent_id() : 0;
     $observation_product = $product instanceof WC_Product ? ( $observation_parent > 0 ? $observation_parent : (int) $product->get_id() ) : 0;
-    $observation_variation = $observation_parent > 0 ? (int) $product->get_id() : 0;
+    $observation_variation = $observation_parent > 0 ? (int) $display_product->get_id() : 0;
     $observation_valid = $observation_product > 0 && $observation_product <= 9007199254740991 && $observation_variation >= 0 && $observation_variation <= 9007199254740991;
     ?>
     <article class="product-card<?php echo $sale_percent ? ' product-card--offer' : ''; ?>"<?php if ( $observation_valid ) { echo ' data-vc-observe-product="' . esc_attr( (string) $observation_product ) . '" data-vc-observe-variation="' . esc_attr( (string) $observation_variation ) . '"'; } ?>>
-        <a class="product-visual<?php echo $report_preview ? ' product-visual--report' : ''; ?><?php echo '' !== $card_image_html || $product->get_image_id() ? ' product-visual--photo' : ''; ?>" href="<?php echo esc_url( $product->get_permalink() ); ?>" aria-label="<?php echo esc_attr( 'View ' . $product->get_name() ); ?>">
-            <?php if ( '' !== $card_image_html ) { echo $card_image_html; /* Escaped by vc_module_card_image. */ } elseif ( $product->get_image_id() ) { echo wp_kses_post( $product->get_image( 'woocommerce_single' ) ); } else { vc_vial( $product->get_name(), $product->get_sku() ); } ?>
+        <a class="product-visual<?php echo $report_preview ? ' product-visual--report' : ''; ?><?php echo '' !== $card_image_html || $display_image_id ? ' product-visual--photo' : ''; ?>" href="<?php echo esc_url( $card_url ); ?>" aria-label="<?php echo esc_attr( 'View ' . $product->get_name() ); ?>">
+            <?php if ( '' !== $card_image_html ) { echo $card_image_html; /* Escaped by vc_module_card_image. */ } elseif ( $display_image_id ) { echo wp_kses_post( $display_product->get_image( 'woocommerce_single' ) ); } else { vc_vial( $display_product->get_name(), $display_product->get_sku() ); } ?>
             <?php if ( $report_preview ) { get_template_part( 'template-parts/product-hover', null, array( 'name' => $product->get_name(), 'hover' => $hover ) ); } ?>
             <?php if ( $sale_percent ) : ?><span class="vc-sale-ribbon" aria-hidden="true"><span><?php echo esc_html( (string) $sale_percent ); ?>% OFF</span></span><?php endif; ?>
             <?php if ( ! empty( $extra['is_demo'] ) ) : ?><span class="demo-badge">Demo product</span><?php endif; ?>
             <span class="product-open"><?php echo vc_icon(); ?></span>
         </a>
         <div class="product-meta"><span><?php echo esc_html( $product->get_sku() ?: 'PEPTIDE COLLECTION' ); ?></span><span><?php echo esc_html( vc_report_label( $extra['report_state'] ?? '' ) ); ?></span></div>
-        <div class="product-heading"><h3><a href="<?php echo esc_url( $product->get_permalink() ); ?>"><?php echo esc_html( $product->get_name() ); ?></a></h3><span class="product-price"><?php echo wp_kses_post( vc_card_price_html( $product ) ); ?></span></div>
-        <div class="product-card-bottom"><span><?php echo isset( $extra['batch_count'] ) ? esc_html( sprintf( _n( '%d published batch', '%d published batches', $extra['batch_count'], 'vialcove' ), $extra['batch_count'] ) ) : 'Batch data unavailable'; ?></span><a href="<?php echo esc_url( $product->get_permalink() ); ?>">View details <?php echo vc_icon(); ?></a></div>
+        <div class="product-heading"><h3><a href="<?php echo esc_url( $card_url ); ?>"><?php echo esc_html( $product->get_name() ); ?></a></h3><span class="product-price"><?php echo wp_kses_post( vc_card_price_html( $display_product ) ); ?></span></div>
+        <div class="product-card-bottom"><span><?php echo isset( $extra['batch_count'] ) ? esc_html( sprintf( _n( '%d published batch', '%d published batches', $extra['batch_count'], 'vialcove' ), $extra['batch_count'] ) ) : 'Batch data unavailable'; ?></span><a href="<?php echo esc_url( $card_url ); ?>">View details <?php echo vc_icon(); ?></a></div>
         <?php do_action( 'peptide_core_product_card_extras', $product ); ?>
     </article>
     <?php
