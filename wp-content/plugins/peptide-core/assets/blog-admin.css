@@ -9,8 +9,8 @@
 
 .pc-blog-toolbar.is-inline {
 	display: inline-flex;
-	margin: 0 0 0 4px;
-	vertical-align: top;
+	margin: 0 0 20px 4px;
+	vertical-align: middle;
 }
 
 .pc-blog-toolbar.is-inline .button {
@@ -18,8 +18,10 @@
 }
 
 .pc-blog-toolbar .button .dashicons {
-	margin: 3px 4px 0 -2px;
+	margin: 0;
+	flex: 0 0 16px;
 	font-size: 16px;
+	line-height: 16px;
 	width: 16px;
 	height: 16px;
 }
@@ -33,13 +35,23 @@
 }
 
 .pc-blog-import {
-	position: relative;
+	min-width: 0;
+	max-width: 100%;
+}
+
+.pc-blog-toolbar.is-inline:has(.pc-blog-import[open]) {
+	display: flex;
+	width: 100%;
+	margin-inline-start: 0;
+}
+
+.pc-blog-import[open] {
+	flex: 1 1 100%;
 }
 
 .pc-blog-import[open] form {
-	position: absolute;
-	z-index: 10;
-	width: min(560px, 90vw);
+	box-sizing: border-box;
+	width: 100%;
 	margin-top: 8px;
 	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 	padding: 8px 12px;
@@ -155,4 +167,12 @@ a.pc-blog-switch:focus {
 
 .pc-term-seo .large-text {
 	width: 100%;
+}
+
+@media (max-width: 782px) {
+	.pc-blog-toolbar.is-inline {
+		display: flex;
+		width: 100%;
+		margin: 0 0 16px;
+	}
 }

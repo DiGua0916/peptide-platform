@@ -2078,3 +2078,15 @@ Reference learning is24/70 after guarded Contact cleanup, with no reference Publ
 实际同一IAB测量商品、订单、概述和顾客页。商品/订单标题h34 y151.667与按钮h36 y150.667中心相同；商品3按钮gap8，搜索框/按钮同y206。顾客页header/primary/main左边均248，公共顶栏bottom84低于页面标题top108；桌面和390测试（client375含滚动条扣除）的概述无页面横向溢出，窄屏chart y1519在funnel y1099+h396后24px，5连接行各24px。汇总10项几何检查全true，独立源码review无P1/P2、Node语法/diff检查通过、impeccable layout detect=[]。未写镜像单元测试或制造演示数据。
 
 证据D:/Codex/Tasks/2026-11-01/admin-layout-alignment/outputs/{VERIFICATION.json,products-desktop-metrics.json,overview-desktop-metrics.json,overview-mobile-metrics.json,customers-before-metrics.json,customers-after-metrics.json,products-desktop.png,overview-desktop.png}。窄屏全页截屏失败，普通截屏受浏览器缩放，不当实体手机签收；桌面正常截图已看。临时viewport已reset、设备尺寸clear后普通概述截图恢复正常，未改安全设置。独立CSS解析库未安装，未把其算通过。未逐项保存全部后台业务表单，也不宣称全站所有状态均逐页验收；本轮以共用布局修正和代表页面验收交付，旧源码回退按本提交范围即可。
+
+### 2026-11-01 · Codex：ADMIN-WIDE-LAYOUT-02 截图之外的后台布局补查
+
+用户追问“除了我说的，其他的呢？”，继续按既有黑白紧凑设计检查其余客户后台。实际读取菜单后去重48个入口（不含独立装修画布入口），用同一IAB四个临时页逐批读取真实DOM；覆盖弃单/分析、商品专辑/评价/标签/报告、装修导航/SEO/域名/专题、营销各列表、各数据统计、顾客分组积分、访客归档/转化、博客专辑、物流/税费/系统/站点工具、素材/操作记录/应用。48入口均加载且无整页横向溢出；原生quick-edit左移隐藏和Woo裁成1px/clip rect(0)的原显示选项替代控件属预期隐藏，已实际查父级裁剪后从异常列表排除，未把它们乱改成可见。
+
+实际新增修复8个CSS：blog-admin（标题旁导出导入工具栏middle/底间距、图标居中、导入展开进入正常流）；media-admin（标题旁导出form同轴，分组图标对齐，上传/采集表单正常流且toolbar整行、不互盖，搜索/main可收缩）；reviews-admin（仅评价详情固定列宽，长正文/URL折行、保650px内部横滚，不改商品汇总表）；marketing（恢复标签/字段grid的真实分工，去掉被公共card样式重复加的24px，计数字段预留56px，避免文字穿到计数下）；plans（配送税费搜索/操作组可收缩换行、长名折行、dialog border-box+vh/dvh限高内滚/foot换行，弃单搜索不再min280px撑破窄栏）；store-settings（favicon组换行/缩略图不压缩、保存行对齐、960px单列tooltip方向修正）；site-tools（路径折行/话术搜索组和保存按钮对齐）；tracking-workspace（标题旁状态chip与H1同mb20/手机16，实际中心均125）。
+
+2个PHP仅呈现接入：Reviews_Page的CSS版本追加mtime避免缓存旧样式；Site_Tools_Page同样CSSmtime，并把话术搜索input显式type=search（保留name=q、值与GET流程）。手机实测先发现话术input28px高/按钮36且带mb4，补type与仅该GET表单input/按钮margin0后两者均h36/y274.667。未改JS业务、权限/nonce、统计/表单提交或真实商品订单内容，未导入/上传/保存任何业务表单。
+
+重点实际展开桌面博客导入、素材上传与采集、配送添加国家弹窗、满减编辑；博客面板bottom351.55到表格top462.89、素材两面板bottom350.22/679.10到表格top731.10，均正常流无遮盖。用独立可见临时页和browser viewport设置进入innerWidth390/client375，验证8种状态：配送弹窗、博客导入、素材采集、营销编辑、评价详情、基础配置、话术搜索、商品编辑。8种均无整页越界；配送dialog border-box宽340.67、高598.10、footer底639.05在720高屏内；评价fixed表650宽在342.67自动滚动容器内；营销counter padding56；favicon可wrap；商品主栏/侧栏依次全宽在342.67内。汇总20项真实几何/样式断言全true。2PHP lint、git diffcheck、8CSS impeccable layout detect=[]，交叉源码review无P1/P2。未写镜像单元测试或伪造填充数据。
+
+限制：48是入口初始布局检查，不等于48页每个错误/填充/提交状态全验；手机仅8种代表状态，不冒全站每页手机签收。首次多标签CDP尺寸请求超时后实际仍桌面1265，未算手机通过，相关文件重命名expanded-viewport-attempt-*；切单独可见页的高层viewport设置后才取得真实375数据及清晰截图。最后viewport已reset、5个本人临时标签均关闭，无浏览器安全/持久偏好改动。证据根D:/Codex/Tasks/2026-11-01/admin-wide-layout/outputs，含DESKTOP-ROUTES.json、各route读数、expanded-desktop-*、各*-narrow-confirmed/final、VERIFICATION.json和shipping-dialog-mobile.png。备份按settings/content/marketing/root分组在work内，全部私有不入Git。

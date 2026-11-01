@@ -28,7 +28,7 @@ final class Reviews_Page {
 
 	public static function assets(): void {
 		if ( self::SLUG !== ( $_GET['page'] ?? '' ) || ! Reviews::can_manage() ) { return; }
-		wp_enqueue_style( 'pc-reviews-admin', plugins_url( 'assets/reviews-admin.css', PEPTIDE_CORE_FILE ), array(), PEPTIDE_CORE_VERSION );
+		wp_enqueue_style( 'pc-reviews-admin', plugins_url( 'assets/reviews-admin.css', PEPTIDE_CORE_FILE ), array(), PEPTIDE_CORE_VERSION . '.' . (int) filemtime( PEPTIDE_CORE_DIR . '/assets/reviews-admin.css' ) );
 		wp_enqueue_style( 'pc-review-replies-admin', plugins_url( 'assets/review-replies-admin.css', PEPTIDE_CORE_FILE ), array( 'pc-reviews-admin' ), (string) filemtime( PEPTIDE_CORE_DIR . '/assets/review-replies-admin.css' ) );
 		if ( ! empty( $_GET['product'] ) || ! empty( $_GET['edit'] ) ) {
 			wp_enqueue_media();

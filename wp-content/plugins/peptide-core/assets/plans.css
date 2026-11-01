@@ -47,6 +47,7 @@
 
 .pc-pl-tabs {
 	display: flex;
+	flex-wrap: wrap;
 	gap: 28px;
 	padding: 0 20px;
 	border-bottom: 1px solid var(--pc-pl-line);
@@ -83,7 +84,20 @@
 
 .pc-pl-search {
 	display: flex;
+	align-items: center;
 	gap: 6px;
+	min-width: 0;
+	max-width: 100%;
+}
+
+.pc-pl-search input[type="search"] {
+	flex: 1 1 180px;
+	width: 180px;
+	min-width: 0;
+}
+
+.pc-pl-search .button {
+	flex: 0 0 auto;
 }
 
 .pc-pl-info {
@@ -110,6 +124,11 @@
 
 .pc-pl-plan__head .button {
 	margin-left: auto;
+}
+
+.pc-pl-plan__head > strong {
+	min-width: 0;
+	overflow-wrap: anywhere;
 }
 
 .pc-pl-muted {
@@ -172,6 +191,12 @@
 }
 
 .pc-pl-actions {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	max-width: 100%;
 	margin-left: auto;
 }
 
@@ -203,10 +228,13 @@
 	display: inline-flex;
 	align-items: center;
 	gap: 12px;
+	min-width: 0;
+	max-width: 100%;
 }
 
 .pc-pl-product img,
 .pc-pl-noimg {
+	flex: none;
 	width: 44px;
 	height: 44px;
 	border-radius: 3px;
@@ -217,6 +245,8 @@
 .pc-pl-product > span {
 	display: grid;
 	gap: 2px;
+	min-width: 0;
+	overflow-wrap: anywhere;
 }
 
 .pc-pl-product small {
@@ -290,7 +320,12 @@
 
 /* 弹窗 */
 .pc-pl-dialog {
+	box-sizing: border-box;
 	width: min(560px, calc(100vw - 32px));
+	max-height: calc(100vh - 32px);
+	max-height: calc(100dvh - 32px);
+	overflow: auto;
+	overscroll-behavior: contain;
 	padding: 20px 24px;
 	border: 0;
 	border-radius: 6px;
@@ -307,6 +342,8 @@
 
 .pc-pl-dialog__foot {
 	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
 	justify-content: flex-end;
 	gap: 8px;
 	margin-top: 16px;
@@ -503,7 +540,9 @@
 }
 
 .pc-rc-filter input[type="search"] {
-	min-width: 280px;
+	width: 280px;
+	min-width: 0;
+	max-width: 100%;
 }
 
 .pc-rc-scroll {
