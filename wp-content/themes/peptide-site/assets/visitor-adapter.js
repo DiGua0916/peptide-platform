@@ -154,9 +154,11 @@
     const identityEnabled = metadataEnabled || productEnabled || actionsEnabled;
     const identities = new Map();
     const diagnostics = {extensionUnresolved: 0, extensionRejected: 0};
+    const pageViewListeners = new Map();
+    let currentPageView = null, acknowledgedPageView = null, pageViewsSuspended = false;
     const batchMax = Math.max(1, Math.min(20, Math.floor(Number(config.batch_max) || 20)));
-    const empty = () => ({ackEventIds: [], discardEventIds: []});
-    const merge = (a, b) => ({ackEventIds: [...a.ackEventIds, ...b.ackEventIds], discardEventIds: [...a.discardEventIds, ...b.discardEventIds], retryAfterMs: Math.max(a.retryAfterMs || 0, b.retryAfterMs || 0)});
+    const empty = () => ({ackEventIds: [], discardEventIds: [], pageViewAckIds: []});
+    const merge = (a, b) => ({ackEventIds: [...a.ackEventIds, ...b.ackEventIds], discardEventIds: [...a.discardEventIds, ...b.discardEventIds], pageViewAckIds: [...a.pageViewAckIds, ...b.pageViewAckIds], retryAfterMs: Math.max(a.retryAfterMs || 0, b.retryAfterMs || 0)});
     const waitResult = () => ({...empty(), retryAfterMs: Math.max(0, cooldown - Date.now())});
     const payload = (events, identity) => JSON.stringify({protocol: 1, ...((identityEnabled ? identity : tabId) ? {tab_id: identityEnabled ? identity : tabId} : {}), sent_at: new Date().toISOString(), events});
     const byteLength = value => new TextEncoder().encode(value).length;
@@ -214,9 +216,9 @@
           const previous = decisions.get(event.event_id);
           decisions.set(event.event_id, previous === 'pending' || decision === 'pending' ? 'pending' : previous === 'discard' || decision === 'discard' ? 'discard' : decision);
         }
-        return {...empty(), ackEventIds: [...decisions].filter(([, value]) => value === 'ack').map(([id]) => id), discardEventIds: [...decisions].filter(([, value]) => value === 'discard').map(([id]) => id)};
+        return {...empty(), ackEventIds: [...decisions].filter(([, value]) => value === 'ack').map(([id]) => id), discardEventIds: [...decisions].filter(([, value]) => value === 'discard').map(([id]) => id), pageViewAckIds: events.filter(event => event.type === 'page_view' && coreAck.has(event.event_id) && decisions.get(event.event_id) === 'ack').map(event => event.event_id)};
       }
-      return {...empty(), ackEventIds: [...new Set(acknowledged.filter(value => typeof value === 'string' && sentIds.has(value)))]};
+      return {...empty(), ackEventIds: [...new Set(acknowledged.filter(value => typeof value === 'string' && sentIds.has(value)))], pageViewAckIds: events.filter(event => event.type === 'page_view' && data.ack.includes(event.event_id)).map(event => event.event_id)};
     }
     async function sendBatch(events, hint = {}) {
       if (stopped || hint.signal?.aborted) throw new DOMException('Tracking stopped', 'AbortError');
@@ -242,6 +244,38 @@
       }
       return result;
     }
+    const clearPageViewSource = (listeners = false) => { currentPageView = null; acknowledgedPageView = null; if (listeners) pageViewListeners.clear(); };
+    function pageViewSourceAllowed() {
+      let allowed = false;
+      try { allowed = !stopped && config.enabled === true && config.protocol === 1 && window.navigator?.globalPrivacyControl !== true; } catch {}
+      if (!allowed) clearPageViewSource(true);
+      return allowed;
+    }
+    function publishPageView() {
+      if (!pageViewSourceAllowed() || pageViewsSuspended || document.hidden || document.visibilityState === 'hidden' || !acknowledgedPageView || currentPageView?.event_id !== acknowledgedPageView.event_id) return;
+      const reference = acknowledgedPageView;
+      for (const [listener, previous] of [...pageViewListeners]) {
+        if (!pageViewSourceAllowed() || pageViewsSuspended || document.hidden || document.visibilityState === 'hidden' || currentPageView?.event_id !== reference.event_id) break;
+        if (!pageViewListeners.has(listener) || previous === reference.event_id) continue;
+        pageViewListeners.set(listener, reference.event_id);
+        try { listener(reference); } catch { /* Optional source callbacks cannot change tracking. */ }
+      }
+    }
+    function pageViewCreated(reference) {
+      clearPageViewSource();
+      if (pageViewSourceAllowed() && !pageViewsSuspended) currentPageView = reference;
+    }
+    function pageViewAcknowledged(reference) {
+      if (!pageViewSourceAllowed() || pageViewsSuspended || currentPageView?.event_id !== reference.event_id || currentPageView.page_instance_id !== reference.page_instance_id) return;
+      acknowledgedPageView = currentPageView; publishPageView();
+    }
+    function subscribePageViews(listener) {
+      const inert = () => {};
+      if (!pageViewSourceAllowed() || typeof listener !== 'function' || (!pageViewListeners.has(listener) && pageViewListeners.size >= 20)) return inert;
+      if (!pageViewListeners.has(listener)) pageViewListeners.set(listener, null);
+      publishPageView();
+      return () => pageViewListeners.delete(listener);
+    }
     const post = message => { try { channel?.postMessage({...message, owner, tab_id: tabId}); } catch { /* Tab coordination is best effort. */ } };
     const rotate = () => { tabId = uuid(); saveTab(); post({type: 'probe'}); };
     function openChannel() {
@@ -259,13 +293,14 @@
         post({type: 'probe'});
       } catch { channel = null; }
     }
-    const closeChannel = () => { channel?.close(); channel = null; };
-    const restoreChannel = event => { if (event.persisted) openChannel(); };
+    const closeChannel = () => { channel?.close(); channel = null; pageViewsSuspended = true; clearPageViewSource(); };
+    const restoreChannel = event => { if (event.persisted) { pageViewsSuspended = false; clearPageViewSource(); openChannel(); } };
     function boot() {
       if (stopped) return;
       ready = true;
       observer = window.VialCoveVisitorObserver.start({context: pageObservation?.page || context, heartbeatMs: config.heartbeat_ms, idleMs: config.idle_ms, batchMax, sendBatch,
         ...(metadataEnabled ? {pageViewMetadata: () => ({...(capabilities.attribution ? {attribution: attribution()} : {}), ...(capabilities.page_context ? {page_context: pageObservation ? {...pageObservation.context, ...(environmentEnabled ? {environment: clientEnvironment()} : {})} : null} : {})})} : {}),
+        onPageViewCreated: pageViewCreated, onPageViewAcknowledged: pageViewAcknowledged,
         ...(actionsEnabled ? {productActionsProtocol: 1} : {}),
         ...(identityEnabled ? {onEventRetired: eventId => identities.delete(eventId)} : {}),
         ...(productEnabled ? {productObservation: {protocol: 1, page: pageObservation.page, context: pageObservation.context}} : {})});
@@ -273,22 +308,24 @@
       if (!observer) stop();
     }
     function stop() {
-      if (stopped) { identities.clear(); return; }
+      if (stopped) { identities.clear(); clearPageViewSource(true); return; }
       stopped = true; clearTimeout(bootTimer); closeChannel(); observer?.stop();
-      identities.clear();
+      identities.clear(); clearPageViewSource(true);
+      document.removeEventListener('visibilitychange', publishPageView);
       window.removeEventListener('pagehide', closeChannel);
       window.removeEventListener('pageshow', restoreChannel);
       if (active === api) active = null;
     }
-    const api = {stop, pushProductAction: (type, facts) => !stopped && ready && actionsEnabled ? observer?.pushProductAction(type, facts) || false : false, getStats: () => ({...(observer?.getStats() || {queued: 0}), ...(metadataEnabled ? {...diagnostics, metadataPending: identities.size} : {}), stopped, starting: !ready && !stopped, requests, lastStatus, retryAfterMs: Math.max(0, cooldown - Date.now())})};
+    const api = {stop, subscribePageViews, pushProductAction: (type, facts) => !stopped && ready && actionsEnabled ? observer?.pushProductAction(type, facts) || false : false, getStats: () => ({...(observer?.getStats() || {queued: 0}), ...(metadataEnabled ? {...diagnostics, metadataPending: identities.size} : {}), stopped, starting: !ready && !stopped, requests, lastStatus, retryAfterMs: Math.max(0, cooldown - Date.now())})};
     active = api;
     last = api;
     window.addEventListener('pagehide', closeChannel);
     window.addEventListener('pageshow', restoreChannel);
+    document.addEventListener('visibilitychange', publishPageView);
     openChannel();
     if (channel) bootTimer = setTimeout(boot, 80); else boot();
     return api;
   }
-  window.VialCoveVisitorTransport = {start, pushProductAction: (type, facts) => active?.pushProductAction(type, facts) || false, stop: () => active?.stop(), getStats: () => (active || last)?.getStats() || {stopped: true, starting: false, queued: 0, requests: 0}};
+  window.VialCoveVisitorTransport = {start, subscribePageViews: listener => active?.subscribePageViews(listener) || (() => {}), pushProductAction: (type, facts) => active?.pushProductAction(type, facts) || false, stop: () => active?.stop(), getStats: () => (active || last)?.getStats() || {stopped: true, starting: false, queued: 0, requests: 0}};
   start();
 })();
