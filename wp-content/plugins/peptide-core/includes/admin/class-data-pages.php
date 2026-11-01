@@ -434,7 +434,7 @@ final class Data_Pages {
 			// 第一个页面和顶层菜单同一个 slug，WordPress 就把它显示成第一个子菜单，而不是多出一个“数据”。
 			add_submenu_page( self::SLUG, $titles[ $key ], $titles[ $key ], self::CAP, $slug, array( self::class, 'render' ) );
 		}
-		remove_submenu_page( self::SLUG, self::PAGES['sources'] );
+		add_action( 'admin_head', static function (): void { remove_submenu_page( self::SLUG, self::PAGES['sources'] ); } );
 	}
 
 	public static function submenu_file( $file ) { return 'sources' === self::current_key() ? self::PAGES['operations'] : $file; }
