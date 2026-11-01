@@ -2,6 +2,8 @@
 
 2026-11-01 · Codex。**状态：本地准备，尚未接入或部署服务器。** 本手册承接10月30日客户隐私需求文档，当前实现以 Panapay 0.4、Ops/HQ 实码为准。旧 `backend-deploy-checklist.md` 的自动删除演示、五分钟支付调度和每店商户配置不可直接执行。
 
+用户最新要求提高安全性与性能；当前采购模板已改独享vCPU，原共享CPU成本为历史。当前配置与费用见[购买建议](server-buying-guide-2026-11-01.md)，实际访问/压测与安全联合验收见[性能验收](performance-and-security-acceptance.md)。未以更高配置替代实际验证。
+
 ## 1. 明天先取得的输入
 
 使用 [inventory.example.json](../../tools/deployment/inventory.example.json) 在D盘任务私有目录制作实际资产表；只保存主机、域名、配置位置与状态引用，不保存密码/令牌/私钥。
@@ -94,6 +96,10 @@ URL替换先 `wp search-replace <old> <new> --all-tables-with-prefix --skip-colu
 ## 7. 备份、验收与切换
 
 Ops `files.zip` / `database.sql` 是未加密本地备份，可能含配置；SHA256只证明完整性。独立任务先客户端加密再上传异地桶，备份身份无删除历史权限，恢复身份独立受控，并核实不可变策略；应用UI备份与每日主机快照都不能代替这一层。
+
+最新采购核实：DO整机自动备份未做静态加密且不包含外挂Volume，不能把它当已加密客户备份。本次模板默认不开启这项；每实例客户DB/私有配置及文件规划在原生静态加密Volume中，根盘仅可重建系统与源码，临时文件/swap/日志/故障转储同样核隐私边界。网络盘IO需要实测，加密盘与同服务商快照不能代替独立客户端加密异地恢复。详见[官方备份限制](https://docs.digitalocean.com/products/backups/details/limits/)、[Volume加密](https://docs.digitalocean.com/products/volumes/details/features/)。本段替代上版“默认每日机器快照”的采购取向，未改变任何实际云资源。
+
+**挂载失效必须停止相关服务，不能静默回落根盘。** 目标机按实际挂载点给MySQL/PHP/备份任务配置 `RequiresMountsFor` 等依赖，并实际验证挂载点及异常卸载后的停止/告警；不能只用 `fstab nofail` 然后让进程在空目录新建数据。逐项核MySQL数据/binlog/redo/undo/tmpdir及各日志、PHP upload_tmp_dir/session.save_path、Nginx请求体/FastCGI临时目录、SQL导出恢复与加密前暂存、journald/core dump/swap。资产表记录各类路径和挂载检查，重启/缺盘负例不通过就不能接收客户资料。该目标不表示整台VM的所有系统配置均已加密；静态加密也不能阻止运行中root或失守应用读取已挂载明文，仍需最小权限和修补。
 
 10月30日建议的核心RPO≤5分钟/RTO≤2小时是目标，**不是已购SLA**。每日快照的备份间隔为24小时，不能拿它承诺5分钟RPO。若确定该目标，需补MySQL一致性全备+受控binlog连续归档/PITR、异地密钥和实际恢复计时；费用、延迟与恢复步骤另验。至少完成一次隔离恢复，验证旧密文/订单/商品/媒体/私有报告以及恢复后重放删除记录不会复活已要求删除的数据。
 
