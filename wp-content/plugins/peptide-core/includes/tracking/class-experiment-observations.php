@@ -8,7 +8,6 @@ final class Experiment_Observations {
 		return get_current_user_id() > 0 && current_user_can( 'manage_woocommerce' ) ? true : new \WP_Error( 'pc_forbidden', __( 'Experiment observations require an authenticated store manager.', 'peptide-core' ), array( 'status' => rest_authorization_required_code() ) );
 	}
 	public static function register_hooks(): void {
-		Experiment_Bindings::register_hooks();
 		add_filter( 'wp_privacy_personal_data_exporters', array( self::class, 'exporters' ) );
 		add_action( 'admin_init', array( self::class, 'policy' ) );
 	}

@@ -80,6 +80,7 @@ final class Data_Pages {
 				register_rest_route( Rest_Controller::ROUTE_NAMESPACE, '/data/visit-classifications', array( 'methods' => 'POST', 'permission_callback' => array( \PeptideCore\Tracking\Visit_Classifications::class, 'permission' ), 'callback' => array( \PeptideCore\Tracking\Visit_Classifications::class, 'receive' ) ) );
 				register_rest_route( Rest_Controller::ROUTE_NAMESPACE, '/data/experiments', array( 'methods' => \WP_REST_Server::READABLE, 'permission_callback' => $permission, 'callback' => array( \PeptideCore\Data\Experiments::class, 'response' ) ) );
 				register_rest_route( Rest_Controller::ROUTE_NAMESPACE, '/data/experiments/events', array( 'methods' => 'POST', 'permission_callback' => array( \PeptideCore\Tracking\Experiment_Observations::class, 'permission' ), 'callback' => array( \PeptideCore\Tracking\Experiment_Observations::class, 'receive' ) ) );
+				\PeptideCore\Tracking\Experiment_Bindings::register_routes();
 				register_rest_route(
 					Rest_Controller::ROUTE_NAMESPACE,
 					'/data/range',

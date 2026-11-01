@@ -5,6 +5,8 @@ namespace PeptideCore\Tracking {
 }
 namespace {
  define( 'ABSPATH', __DIR__ ); define( 'ARRAY_A', 'ARRAY_A' );
+ define( 'MINUTE_IN_SECONDS', 60 );
+ class WP_REST_Server { public const READABLE = 'GET'; }
  class WP_Error { public function __construct( public string $code, public string $message, public array $data ) {} }
  class WP_REST_Request { public int $reads = 0; public function __construct( private string $body ) {} public function get_body(): string { ++$this->reads; return $this->body; } }
  class WP_REST_Response { private array $headers = array(); public function __construct( private $data, private int $status = 200 ) {} public function get_data() { return $this->data; } public function get_status(): int { return $this->status; } public function header( $key, $value ): void { $this->headers[$key] = $value; } public function get_headers(): array { return $this->headers; } }
@@ -13,6 +15,7 @@ namespace {
  function get_current_user_id() { return $GLOBALS['user']; }
  function current_user_can( $cap ) { return $cap === 'manage_woocommerce' && $GLOBALS['manager']; }
  function rest_authorization_required_code() { return get_current_user_id() > 0 ? 403 : 401; }
+ function is_admin(): bool { return false; }
  function get_transient( $key ) { ++$GLOBALS['rate_reads']; return $GLOBALS['rate'][$key] ?? false; }
  function set_transient( $key, $value, $ttl ) { $GLOBALS['rate'][$key] = $value; $GLOBALS['rate_writes'][] = array( $key, $ttl ); return true; }
  function add_action( $name, $callback ) { $GLOBALS['hooks'][$name][] = $callback; }
@@ -41,6 +44,8 @@ namespace {
  require dirname( __DIR__ ) . '/includes/tracking/class-impressions.php';
  require dirname( __DIR__ ) . '/includes/tracking/class-experiment-observations.php';
  require dirname( __DIR__ ) . '/includes/tracking/class-experiment-bindings.php';
+ require dirname( __DIR__ ) . '/includes/api/class-rest-controller.php';
+ require dirname( __DIR__ ) . '/includes/admin/class-data-pages.php';
  use PeptideCore\Tracking\Experiment_Bindings as Bindings073; use PeptideCore\Tracking\Experiment_Observations as Observations073; use PeptideCore\Tracking\Schema as Schema073;
  $passed = 0; $check = static function ( $name, $ok ) use ( &$passed ) { if ( ! $ok ) { throw new RuntimeException( 'FAIL ' . $name ); } ++$passed; };
  $status = static fn( $response ) => $response instanceof WP_Error ? $response->data['status'] : $response->get_status();
@@ -51,10 +56,20 @@ namespace {
   $wpdb->events = array( array( 'visitor_id' => 1, 'visit_id' => 11, 'event_uid' => 'pv-reference-0001', 'page_instance_id' => 'page-instance-0001', 'path' => '/landing/', 'occurred_ms' => '11000', 'type' => 'page_view', 'source' => 'client', 'is_test' => 0 ) );
   $rate = array(); $rate_reads = 0; $rate_writes = array(); Schema073::$available = true; Schema073::$checks = 0;
  };
- $reset(); Observations073::register_hooks();
- $check( 'existing registration adds binding rest hook and preserves privacy hooks', count( $hooks['rest_api_init'] ) === 1 && isset( $hooks['wp_privacy_personal_data_exporters'], $hooks['admin_init'] ) );
- call_user_func( $hooks['rest_api_init'][0] ); list( $namespace, $route, $config ) = $routes[0];
+ $reset();
+ $check( 'ordinary REST starts without admin-only hooks', ! is_admin() && $hooks === array() && $routes === array() );
+ PeptideCore\Admin\Data_Pages::register_rest();
+ $check( 'actual DataPages defers routes until rest_api_init without admin hooks', count( $hooks['rest_api_init'] ) === 1 && $routes === array() && ! isset( $hooks['admin_init'] ) && ! isset( $hooks['wp_privacy_personal_data_exporters'] ) );
+ foreach ( $hooks['rest_api_init'] as $callback ) { call_user_func( $callback ); }
+ $bindings = array_values( array_filter( $routes, static fn( $registered ) => $registered[0] === 'peptide/v1' && $registered[1] === '/data/experiments/binding' ) );
+ $check( 'nonadmin callback registers binding exactly once among real Data routes', count( $bindings ) === 1 && count( $routes ) > 1 && ! isset( $hooks['admin_init'] ) && ! isset( $hooks['wp_privacy_personal_data_exporters'] ) );
+ list( $namespace, $route, $config ) = $bindings[0];
+ $registered_count = count( $routes ); Observations073::register_hooks();
+ $check( 'separate admin privacy hooks remain and cannot duplicate REST authority', count( $hooks['rest_api_init'] ) === 1 && count( $routes ) === $registered_count && isset( $hooks['wp_privacy_personal_data_exporters'], $hooks['admin_init'] ) && ! method_exists( Bindings073::class, 'register_hooks' ) );
  $check( 'native POST route reuses exact058 permission', $namespace === 'peptide/v1' && $route === '/data/experiments/binding' && $config['methods'] === 'POST' && $config['permission_callback'] === array( Observations073::class, 'permission' ) && $config['callback'] === array( Bindings073::class, 'receive' ) );
+ $boot = file_get_contents( dirname( __DIR__ ) . '/includes/class-plugin.php' ); $rest_at = strpos( $boot, 'Admin\\Data_Pages::register_rest();' ); $admin_at = strpos( $boot, 'if ( is_admin() ) {' );
+ $check( 'native Plugin invokes Data REST registration before its admin-only branch', $rest_at !== false && $admin_at !== false && $rest_at < $admin_at );
+ $user = 0; $manager = false; $check( 'registered permission callback returns native401 without storage', $status( call_user_func( $config['permission_callback'] ) ) === 401 && ! $wpdb->queries && $rate_reads === 0 );
  foreach ( array( array( 0, false, 401 ), array( 9, false, 403 ) ) as list( $user, $manager, $expected ) ) { $r = $request(); $check( 'permission precedes body/rate/storage', $status( Bindings073::receive( $r ) ) === $expected && $r->reads === 0 && $rate_reads === 0 && Schema073::$checks === 0 && ! $wpdb->queries ); }
  $user = 5; $manager = true;
  $invalid = array( array(), array( 'protocol' => '1', 'page_view' => $reference['page_view'] ), array( 'protocol' => 1.0, 'page_view' => $reference['page_view'] ), $reference + array( 'visitor_id' => 1 ) );

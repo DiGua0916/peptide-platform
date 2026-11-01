@@ -5,8 +5,6 @@ namespace PeptideCore\Tracking;
 defined( 'ABSPATH' ) || exit;
 
 final class Experiment_Bindings {
-	public static function register_hooks(): void { add_action( 'rest_api_init', array( self::class, 'register_routes' ) ); }
-
 	public static function register_routes(): void {
 		register_rest_route( 'peptide/v1', '/data/experiments/binding', array( 'methods' => 'POST', 'callback' => array( self::class, 'receive' ), 'permission_callback' => array( Experiment_Observations::class, 'permission' ) ) );
 	}
