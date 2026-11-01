@@ -936,3 +936,11 @@ functions.php新增vc_card_display_product，使用Woo get_visible_children的me
 验证：PHP lint/diffcheck；独立12项实际WP内存检查通过（默认/原样透传、字段与设备尺寸、HTML安全渲染、srcset/sizes、链接、SVG fallback不重复、上下限与bar/swipe透传）。两次原生保存后4项保护检查通过。实际IAB电脑图片72px且currentSrc150px，390手机图约48px且currentSrc100px，四图加载成功、页面scrollWidth375≤390；首项断词已纠正，手机截图已重验。未作实体手机验收。静态detector仅既有后台DESIGN与店铺VI的9条advisory，无新增阻断。
 
 证据outputs/update-result.json、desktop-metrics.json、mobile-metrics.json、services-mobile.png、services-desktop.png和4图ZIP；desktop截图拍摄于首项文字缩短前，最终手机图为新文案。用户预览tab19保留。下一步用户审阅插画；正式主页仍未替换。素材可在媒体库/原信息列表的图片字段逐项更换；提交同步结果记群与记忆。
+
+### 2026-11-01 · Codex：商品卡片促销角标按卡片宽度缩放
+
+用户指出装修预览内商品图缩小但红色角标仍固定，要求自适应。仅修改 assets/sale-pricing.css：共享 product-card 的 product-visual 作为 inline-size 容器，角标字号用6cqw、整体几何用em同比例缩放；右下角箭头按钮宽16%、边距5%、SVG为按钮50%。整张商品图仍是原链接，不缩小实际点击区域。支持容器单位的浏览器使用新规则，旧规则保留为兼容回退；详情页 gallery 与 detail 角标不受本次新增选择器影响。
+
+实际IAB独立预览11463检查：1280视口卡片274.17px、角标122.77px、文字16.37px；1100视口内部卡片228px、角标103px、文字13.67px；390手机内部卡片159px、角标72px、文字9.54px，箭头35px→24px，四卡图像正常。桌面与手机截图确认文字完整、角标没有盖住大半图，scrollWidth分别1085≤1100和375≤390。首规格链接/价格55、86.30、42、35及29/15/19%保持；无优惠NAD+不新增角标。未声称实体手机验证，也未刷新用户正在编辑的后台草稿。临时视口覆盖已reset。
+
+独立只读代码复核通过，git diff --check通过。Impeccable源文件扫描只有12条advisory（既有字号/VI颜色及复用阴影色），无阻断。本轮只有CSS及本交接，无数据库/媒体/商品/插件/积木字段写入；独立首页仍未发布。证据 D:/Codex/Tasks/2026-11-01/homepage-fluid-card-scale/outputs/{narrow-desktop.png,mobile.png,narrow-metrics.json,mobile-metrics.json}。Git提交/远程同步结果记群和项目记忆。用户刷新预览后即可看到缩放效果。

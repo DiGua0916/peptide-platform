@@ -52,3 +52,27 @@
   .vc-sale-ribbon--detail { width: 128px; height: 128px; }
   .vc-sale-ribbon--detail > span { top: 28px; right: -40px; width: 176px; font-size: 16px; line-height: 24px; }
 }
+
+/* Card overlays follow the image's own width, including narrow builder frames.
+   Keep the gallery's separate sizing and the native whole-image link intact. */
+.product-card .product-visual { container-type: inline-size; }
+.product-card .product-visual > .product-open {
+  width: 16%;
+  height: auto;
+  aspect-ratio: 1;
+  right: 5%;
+  bottom: 5%;
+}
+.product-card .product-visual > .product-open svg { width: 50%; height: 50%; }
+@supports (font-size: 1cqw) {
+  .product-card .vc-sale-ribbon { font-size: 6cqw; width: 7.5em; height: 7.5em; }
+  .product-card .vc-sale-ribbon > span {
+    top: 1.6em;
+    right: -2.7em;
+    width: 11em;
+    padding: .35em 0;
+    font-size: inherit;
+    line-height: 1.4;
+    box-shadow: 0 .125em .25em #45101526;
+  }
+}
