@@ -856,3 +856,15 @@ Chrome同一原生layout1917又暴露实际产品缺陷：Partner列表默认blo
 实际同一IAB前台Retatrutide可见标题、9规格、20mg价86.30/原102、库存1002；只看页面，未加入购物车/下单。点击Description后innerText与AX读取超时，但标准同浏览器截图实际见Description选中、Product Overview及分子量/CAS；截图已保存，未因此改权限/换Chrome。该页面为现有管理员登录状态，不冒称匿名浏览器验收。tab23已保留，用户原post-new/编辑页未刷新或保存。
 
 本轮无运行源码/契约改动，正常ff同事ede0fdd及后续仅支付文档978ac31，未碰独立支付工作树/隔离收款站，交接文档随本阶段同步。证据D:/Codex/Tasks/2026-11-01/product-publish-and-mapping/outputs/PUBLISH-RESULT.json、CURRENT-CATALOG-STATUS.json、图片对应确认.txt、published-retatrutide.png；before/publisher/backup收据在同任务work，SQL只在private，不入Git。
+
+### 2026-11-01 · Codex：确认15组商品上架、详细描述默认展示与后台统一居中
+
+用户确认上一轮15组图片对应关系全部可用；参数冲突按图片，7号明确为每盒10瓶（不是10盒），11号只保留图示总量不补成分比例，12号统一GLOW70，15号按Retatrutide20mg+Tirzepatide40mg。基于原表另存校正版（artifact-tool实际编辑14格），原件SHA23028771a0709b387f0bc43118d3110716db9ac7d98fc0521d71e48c833556bd不变；校正版SHA1f07f70619f916249ca5350e39029f81af04a97b7fc2994b49e4c6c3d10c2432，其他非空单元格/数值/公式逐格核对未变。5-Amino-1MQ按图改CAS42464-96-0、C10H11IN2、286.11g/mol，窄改冲突温度；未把图无标注的配比、用户原稿中的检测宣称当作独立核验结果。
+
+原客户站按新run 20261101-shopname-confirmed-v2实际新增15个母商品/27个规格、27张规格图及2张详情图，共29媒体。先完整私有DB备份，预检后导入draft，再按用户沿用的上架授权逐项publish；最终独立只读checker实际exit0、passed=true/errors=[]，15/27/29及2详情图通过。描述有效正文、参数表格及图数按修正版G回读，源61尾部未闭合li属性残片仅作非正文窄清理。原67/156共223对象的已记录业务字段与描述hash、既有订单快照保持；不声称全部日期/元数据逐字没变。两批现共82母商品183规格已上架，7品依用户跳过，HGH191AA/HGH重复H15与MelanotanI混II这3品10规格仍未导入。
+
+用户发现前台只有图片/看不到文案：不是描述缺失，而是主题将空Specifications & batch reports设priority5抢在原生Description10之前。functions.php仅将其改15，保原生tab模板、描述回调、评价/附加信息锚点及键盘交互。实际11389描述25403字符、ProductOverview与已确认CAS存在；运行过滤后排序description10/vialcove_details15/additional_information20/reviews30。PHP语法、diffcheck、独立窄审通过，Impeccable机械detect返回[]。同一IAB实际截图已看到Description、参数及后续完整段落；AX读取连续超时后改用同浏览器标准截图，不改浏览器权限/不切Chrome。
+
+用户随后要求所有商品详情文案居中并在后台设置。现有global site_styles无描述对齐字段；复用WordPress原生额外CSS，先快照既有设置/校验edit_css与本站主题，再wp_update_custom_css_post追加仅.single-product #tab-description的规则，保留既有CSS；没有批量覆盖商品post_content或新增重复设置。标题/正文/列表/表格文字居中，段落与表格margin-inline:auto，列表marker inside，价格/加购/评价等面板不受选择器影响。fresh进程verify通过；IAB Retatrutide真实截图确认参数表及长段落现位于页面中央。后台入口customize.php?autofocus[section]=custom_css，设置属于数据库，服务器迁移须带WordPress custom_css记录，Git提交不包含数据库。
+
+证据：D:/Codex/Tasks/2026-11-01/product-import-confirmed/outputs/{IMPORT-RESULT.json,PUBLISH-RESULT.json,IMPORT-INDEPENDENT-CHECK.json,11389-DESCRIPTION-TABS-READONLY.json,WORKBOOK-CORRECTIONS-CHECK.json,PRODUCT-DESCRIPTION-ALIGNMENT.json,商品表_图片参数校正版.xlsx,product-description-visible.png,product-description-centered.png}。精确manifest/journal/变更CSS及保存助手在同任务work，SQL与CSS前置快照仅private，不入Git。此次运行源码仅theme functions.php，后台原设置不改其他草稿/首页发布。检查为当前本地管理员登录前台，不冒匿名、实体手机或服务器部署验收；原生Gutenberg兼容与三社交暂缓决定不变。

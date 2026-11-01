@@ -205,7 +205,8 @@ function vc_render_batches( array $batches ): void {
 }
 
 add_filter( 'woocommerce_product_tabs', function ( $tabs ) {
-    $tabs['vialcove_details'] = array( 'title' => 'Specifications & batch reports', 'priority' => 5, 'callback' => 'vc_product_details' );
+    // Keep the native product description (priority 10) visible on first load.
+    $tabs['vialcove_details'] = array( 'title' => 'Specifications & batch reports', 'priority' => 15, 'callback' => 'vc_product_details' );
     return $tabs;
 } );
 
