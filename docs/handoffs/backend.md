@@ -2044,3 +2044,17 @@ This dated update supersedes earlier pending-stage wording for Contact. Root int
 Final source/fresh review, eight independent native groups and five actual WordPress groups have separate scopes. Actual WP5 passed with observed native editor/frame JS0 and no source fix; one task RTE selector required a harness rerun. Native save/reopen/media/link/sidebar/theme checks and twenty final source/dependency/theme SHA entries passed. Own layout/template/revisions/editor,38 previews/MU/private and3 closed runtime profiles were removed; retained QA fixtures/WebM16 and fresh original before/after fingerprints matched. The source-owner closed fixture profile is retained separately. Full method limits, including the owned anonymous route rather than normal production routing, are in backend-contact-2026-10-30.md.
 
 Reference learning is24/70 after guarded Contact cleanup, with no reference Publish. Root is studying25 promo grid. Inline-rich-image C remains a read-only design candidate; payment/mail/search and other deferrals remain. This verified phase is automatically committed/synchronized per user authorization, not a deployment or full-goal completion.
+
+### 2026-11-01 · Codex：COLLECTIONS-ADMIN-01 商品专辑后台与独立排序
+
+用户明确本聊天后端分工，并提供三张YY专辑列表/编辑/专辑商品参考，要求专辑内排序就是前台展示顺序。本轮仅Peptide Core后台、数据与查询，未改主题或前端窗口在途文件。原站实际82母商品183规格已上架，353 Bestselling已有82关联；原生term.php只有分类资料不是丢商品。7个源品按用户跳过、3个冲突未导入的旧决定不变。
+
+已实现pc-collections列表/编辑/真实商品管理：搜索、类型/常用筛选、原生封面、上下富文本、SEO、真实数量与修改时间、复制/删除、JSON导入导出；商品选择/移出仅改当前专辑，自动条件有预览确认，列表/网格与分页，手动上移/下移/置顶。并发token覆盖真实关系和原生编辑，事务+advisory lock保护term及meta，单项失败回滚，批次部分失败如实提示。无可靠累计访问量所以明确未统计，不写假0或参考站历史值。现有未保存文案先保存再允许关联/排序，不被回包覆盖。
+
+每term独立manual_order，不改全局menu_order；原生专辑主查询与Modules Products类别源/分页已接同一排序，访客明确改排序时尊重其选择；首次从default切manual会初始化完整当前顺序。公开peptide_core_get_collection只提供名称/slug/URL/上下描述/公开封面/sort，无revision/rules/成员ID，供前端窗口读取。原生product_cat SEO已消费现有_pc_seo，分页canonical/OG正确。上下文案/封面只完成后台与公开数据接口，公开主题的对应排版接入留给前端，不冒本轮已重做店铺前台。
+
+实际验证：领域服务在56139有marker隔离WP真实38组通过、控制器与积木排序实际17组通过、SEO无数据库17断言通过；本轮各次唯一前缀商品/term均精确清理，非全库清理。独立原站只读15断言及最终9项通过，原站仍17专辑/82母商品/183规格，Bestselling IDs与初始audit相同。8PHP文件lint及新增publicgetter运行、Nodecheck/diffcheck通过。root最初误用PHP -n执行SEO测试缺mbstring，仅测试启动错误；改用项目INI/关闭auto_prepend后实际17通过，未改生产mb实现。中间原生tag移除漏hook实际发现并补deleted_term_relationships；首次手动排序初始化和include查询已真测修复。没有把同请求模拟Woo价格排序残留当Core缺陷。各失败原收据保留。
+
+真实同一IAB列表/编辑AJAX成功见82商品和图片价格，原1257宽度一条264px卡片经实图反馈改为紧凑75px表格，fresh截图一屏5行；宽表仅内部横滚，760以下卡片保留字段。截图outputs/collections-list.png、collection-products.png。原站未点击保存/增删/排序，不造演示商品；不宣称浏览器逐项写操作、实体手机或所有参考项逐像素验收。技能detect仅1条已文档化20px移动标题advisory，未改设计规范。
+
+完整合同/边界见docs/handoffs/backend-collections.md。证据D:/Codex/Tasks/2026-11-01/product-album-management/outputs/{ALBUM-AUDIT.json,COLLECTIONS-NATIVE-CHECK.json,CONTROLLER-NATIVE-CHECK.json,FINAL-READONLY-CHECK.json}；独立原站只读报告在D:/Codex/Tasks/2026-11-01/collections-controller-review/outputs。SQL/媒体/真实客户资料未入Git，无CRK绑定，不发旧默认群，不启公网/支付测试。

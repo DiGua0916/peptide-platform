@@ -27,6 +27,7 @@ final class Plugin {
 		Email_Campaigns::register_hooks();
 		Site_Tools::register_hooks();
 		Product_Offers::register_hooks();
+		if ( class_exists( Collections::class ) ) { Collections::register_hooks(); }
 		Modules\Site_Design::register_hooks();
 		Modules\Records::register_hooks();
 		Modules\Commerce_Search::register_hooks();
@@ -92,6 +93,7 @@ final class Plugin {
 			}
 			Admin_Notices::register_hooks();
 			Admin\Product_Panel::register_hooks();
+			if ( class_exists( Collections::class ) && is_readable( PEPTIDE_CORE_DIR . '/assets/collections-admin.js' ) && is_readable( PEPTIDE_CORE_DIR . '/assets/collections-admin.css' ) ) { Admin\Collections_Page::register_hooks(); }
 			Admin\Batch_Metabox::register_hooks();
 			Admin\Report_Metabox::register_hooks();
 			Admin\Order_Metabox::register_hooks();

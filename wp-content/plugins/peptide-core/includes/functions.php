@@ -156,3 +156,8 @@ function peptide_core_get_product_promotions( $product ): array {
 	$product = $product instanceof WC_Product ? $product : wc_get_product( (int) $product );
 	return $product ? \PeptideCore\Promotions::for_product( $product ) : array();
 }
+
+/** Published collection copy/cover and sort preference, without management data. */
+function peptide_core_get_collection( int $id ): ?array {
+	return \PeptideCore\Collections::public_data( $id );
+}
