@@ -172,7 +172,7 @@ function vc_card_price_html( $product ): string {
     return vc_public_price_html( vc_card_display_product( $product ) );
 }
 
-function vc_product_card( $product, bool $report_preview = true, ?array $card_image = null, string $card_sizes = '100vw' ): void {
+function vc_product_card( $product, bool $report_preview = true, ?array $card_image = null, string $card_sizes = '100vw', bool $compact = false ): void {
     $display_product = vc_card_display_product( $product );
     $is_variation = $display_product->is_type( 'variation' );
     // A parent/artwork fallback may show a different dosage. An image-less
@@ -199,9 +199,10 @@ function vc_product_card( $product, bool $report_preview = true, ?array $card_im
             <?php if ( ! empty( $extra['is_demo'] ) ) : ?><span class="demo-badge">Demo product</span><?php endif; ?>
             <span class="product-open"><?php echo vc_icon(); ?></span>
         </a>
-        <div class="product-meta"><span><?php echo esc_html( $product->get_sku() ?: 'PEPTIDE COLLECTION' ); ?></span><span><?php echo esc_html( vc_report_label( $extra['report_state'] ?? '' ) ); ?></span></div>
+        <?php if ( ! $compact ) : ?><div class="product-meta"><span><?php echo esc_html( $product->get_sku() ?: 'PEPTIDE COLLECTION' ); ?></span><span><?php echo esc_html( vc_report_label( $extra['report_state'] ?? '' ) ); ?></span></div><?php endif; ?>
         <div class="product-heading"><h3><a href="<?php echo esc_url( $card_url ); ?>"><?php echo esc_html( $product->get_name() ); ?></a></h3><span class="product-price"><?php echo wp_kses_post( vc_card_price_html( $display_product ) ); ?></span></div>
-        <div class="product-card-bottom"><span><?php echo isset( $extra['batch_count'] ) ? esc_html( sprintf( _n( '%d published batch', '%d published batches', $extra['batch_count'], 'vialcove' ), $extra['batch_count'] ) ) : 'Batch data unavailable'; ?></span><a href="<?php echo esc_url( $card_url ); ?>">View details <?php echo vc_icon(); ?></a></div>
+        <?php if ( $compact && $is_variation ) : ?><p class="vc-card-specification"><?php echo esc_html( wc_get_formatted_variation( $display_product, true, false, false ) ); ?></p><?php endif; ?>
+        <div class="product-card-bottom"><?php if ( ! $compact ) : ?><span><?php echo isset( $extra['batch_count'] ) ? esc_html( sprintf( _n( '%d published batch', '%d published batches', $extra['batch_count'], 'vialcove' ), $extra['batch_count'] ) ) : 'Batch data unavailable'; ?></span><?php endif; ?><a href="<?php echo esc_url( $card_url ); ?>"><?php echo $compact && $is_variation ? 'Choose options' : 'View details'; ?> <?php echo vc_icon(); ?></a></div>
         <?php do_action( 'peptide_core_product_card_extras', $product ); ?>
     </article>
     <?php

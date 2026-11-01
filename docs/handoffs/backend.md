@@ -2066,3 +2066,15 @@ Reference learning is24/70 after guarded Contact cleanup, with no reference Publ
 保存前备份原文档/发布模块和revision，拒绝有未发布草稿或过期revision的写入；4图均与源manifest/journal及文件SHA独立核对。实际保存/发布成功，4项范围/发布内容/草稿一致/商品与规格数据不变检查通过。同一IAB真实截图确认4张新参数图可见、TR悬浮不再覆盖报告占位，见D:/Codex/Tasks/2026-11-01/catalog-card-images/outputs/home-new-product-images.png。一次导航后的AX读取超时，重新绑定同页后截图成功；未切浏览器、未改安全设置。
 
 本阶段只改本地原站装修数据库配置；Git本次仅记录本交接，不包含真实装修文档或上传图片。迁移仍需当前数据库和媒体。原站配置回退应读取当前revision并小范围恢复本任务before.json里的5项设置，避免覆盖其它窗口的后续修改。前端窗口在途sale-pricing等文件完全保留，未纳入本提交。
+
+### 2026-11-01 · Codex：ADMIN-LAYOUT-ALIGNMENT-01 后台排列与重叠修正
+
+用户指出漏斗箭头乱飞、订单/添加订单和产品/添加/导入/导出错位、概述缩进及其它重叠。保留现有黑白紧凑Operate设计与原生DOM，仅改4个后台资源：admin-workspace.css、overview.css、overview-workspace.css、overview.js；未改公开主题、表单提交、统计计算或商品/订单数据。文件修改前备份在D:/Codex/Tasks/2026-11-01/admin-layout-alignment/work。
+
+原生标题/按钮统一middle与底边距，相邻按钮间隔8px；内嵌标题按钮不再多占24px。搜索框与按钮单行伸缩，筛选/分页居中；Woo已有原生标题的工具条从强制64px收为其原生32px，去掉嵌入页重复padding。完整Woo顾客/分析应用保留一套28px外边距，清掉primary额外40px与main32px重复缩进；其wpcontent为内部滚动容器，公共sticky header使用top0，实测y64改y32，不再压下面标题。Woo局部header层级降到1，保留工具/原生抽屉，公共顶栏100不再被其1001盖过。
+
+漏斗保留阶梯条，箭头/转化率改为正常流24px连接行，取消按条尾百分比绝对定位；performance卡按实际内容宽度820px切上下排列，split子项/长标签/tooltip加边界。JS仅调整aria-hidden和移除已不用的连线坐标变量，不改真实统计或请求。
+
+实际同一IAB测量商品、订单、概述和顾客页。商品/订单标题h34 y151.667与按钮h36 y150.667中心相同；商品3按钮gap8，搜索框/按钮同y206。顾客页header/primary/main左边均248，公共顶栏bottom84低于页面标题top108；桌面和390测试（client375含滚动条扣除）的概述无页面横向溢出，窄屏chart y1519在funnel y1099+h396后24px，5连接行各24px。汇总10项几何检查全true，独立源码review无P1/P2、Node语法/diff检查通过、impeccable layout detect=[]。未写镜像单元测试或制造演示数据。
+
+证据D:/Codex/Tasks/2026-11-01/admin-layout-alignment/outputs/{VERIFICATION.json,products-desktop-metrics.json,overview-desktop-metrics.json,overview-mobile-metrics.json,customers-before-metrics.json,customers-after-metrics.json,products-desktop.png,overview-desktop.png}。窄屏全页截屏失败，普通截屏受浏览器缩放，不当实体手机签收；桌面正常截图已看。临时viewport已reset、设备尺寸clear后普通概述截图恢复正常，未改安全设置。独立CSS解析库未安装，未把其算通过。未逐项保存全部后台业务表单，也不宣称全站所有状态均逐页验收；本轮以共用布局修正和代表页面验收交付，旧源码回退按本提交范围即可。
