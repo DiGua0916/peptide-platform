@@ -868,3 +868,19 @@ Chrome同一原生layout1917又暴露实际产品缺陷：Partner列表默认blo
 用户随后要求所有商品详情文案居中并在后台设置。现有global site_styles无描述对齐字段；复用WordPress原生额外CSS，先快照既有设置/校验edit_css与本站主题，再wp_update_custom_css_post追加仅.single-product #tab-description的规则，保留既有CSS；没有批量覆盖商品post_content或新增重复设置。标题/正文/列表/表格文字居中，段落与表格margin-inline:auto，列表marker inside，价格/加购/评价等面板不受选择器影响。fresh进程verify通过；IAB Retatrutide真实截图确认参数表及长段落现位于页面中央。后台入口customize.php?autofocus[section]=custom_css，设置属于数据库，服务器迁移须带WordPress custom_css记录，Git提交不包含数据库。
 
 证据：D:/Codex/Tasks/2026-11-01/product-import-confirmed/outputs/{IMPORT-RESULT.json,PUBLISH-RESULT.json,IMPORT-INDEPENDENT-CHECK.json,11389-DESCRIPTION-TABS-READONLY.json,WORKBOOK-CORRECTIONS-CHECK.json,PRODUCT-DESCRIPTION-ALIGNMENT.json,商品表_图片参数校正版.xlsx,product-description-visible.png,product-description-centered.png}。精确manifest/journal/变更CSS及保存助手在同任务work，SQL与CSS前置快照仅private，不入Git。此次运行源码仅theme functions.php，后台原设置不改其他草稿/首页发布。检查为当前本地管理员登录前台，不冒匿名、实体手机或服务器部署验收；原生Gutenberg兼容与三社交暂缓决定不变。
+
+### 2026-11-01 · Codex：确认的图文首页已通过现有积木发布
+
+用户明确批准将独立图文预览同步到现有店铺，并要求继续使用后台更新后的积木体系。本次目标是原 LocalWP 客户站 vialcovepeptidescom.local，不是外网部署。实际首页仍经 Design_Pages → Layout → Renderer 渲染；没有导入静态预览 HTML/JS/catalog 快照或建立第二套商品状态。使用原 REST save/publish 与 revision/modified 并发校验，将活动模板684的首页685由20块整理为11块，全局688发布Manrope/正文16/深色文字；页头686及页尾687草稿保持，未发布页尾现有未发布模块。旧主/手机内容快照保留于D任务。
+
+首页块：hero_h1、包装说明rich_text、四服务info_list、4品product_collection、section_heading、三段media_text、section_heading、faq、场景说明rich_text。电脑图文左/右/左，手机上图下文；商品电脑4列/手机2列。文字、图片、顺序、列数、图位置、手机设置与全局字体都继续用原编辑器字段。文案只说明产品/报告/配送信息入口，不新增检测通过或具体时效承诺。
+
+主题新增hero-h1.php及modules-home.css，复用既有字段/包装器；新增modules-editorial.css只作用于已启用全局样式的对应积木，尊重字号/颜色/图片fit变量。inc/layout-modules.php将这两CSS用于真实页和编辑预览，并通过既有definitions过滤器在手选商品repeater加入可选image字段cardImage（界面：首页展示图，不影响商品详情）。仅原有商品目录legacy + manual路径使用；专辑商品collection模式仍为插件原渲染。vc_module_card_image沿用原媒体resolver，vc_product_card新增可选图片/尺寸参数、其余调用原样；没有临时Woo图片filter，没有修改产品/变体/媒体记录。留空正常回退商品图，即使商品主图为空也能显示所选卡图。footer.php将原fallback帮助锚点修正为现有#vc-questions。
+
+四品使用当前真实Woo ID 11306/11006/11369/11054，首页纯瓶图458/468/477/486分别对应10mg/10mg/2mg/500mg；详情仍原当前主图与全部规格图。价格仍走当前Woo最低价及原折扣逻辑；没有恢复旧演示价。另一个任务已提交a514c99的Description优先级15与数据库额外CSS均保留。
+
+验证：5PHP lint、diff检查、normalize往返、四图渲染、清空回退/无主图/其它卡片不受影响、内存标题编辑渲染及未保存、页尾draft原字节保持。全catalog hash初次不等仅后台11276 _edit_lock心跳；独立只读内存回代该锁时间精确复现原hash，实际四品业务字段/图片/规格核对保持。未修改数据库锁。匿名HTTP确认11块/1H1/Manrope及四图，104静态资源、92内部链接、8锚点全部可达且无重复ID。
+
+浏览器真实验证：后台390px手机预览四服务2列、商品2列、可见cardImage更换控件；已发布桌面首屏、图文行截图确认。Tirzepatide由20mg切10mg后实际TR10图片/$40/选中状态正确，桌面购物车入口打开原Your cart对话框；未加购或下单。原始UA/实体iPhone与所有其它模板未逐页重验，不将HTTP通过等同完整视觉全覆盖。
+
+证据：D:/Codex/Tasks/2026-11-01/frontend-block-rollout/outputs/{before-home.json,before-header.json,before-footer.json,before-global.json,save-result.json,publish-result.json,verification.json,catalog-audit.json,public-http-audit.json,published-home.png,published-story.png,mobile-editor.png,mobile-products.png}。数据库内容/媒体/备份均不入Git。回滚时只针对685/688使用保存前文档，先读取当前revision再通过原REST保存发布，不覆盖其它人的后续修改。下一步用户可在后台继续换图/改字/排序；新cardImage设置受主题定义提供，迁移需同时带主题和当前WP数据库/媒体。

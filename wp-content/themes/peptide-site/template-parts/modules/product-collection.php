@@ -8,6 +8,17 @@ $vc_content_products = class_exists( '\PeptideCore\Modules\Products' )
 $vc_content_cols = $vc_content_s['columns'];
 $vc_content_desktop = max( 1, min( 6, (int) $vc_content_cols['desktop'] ) );
 $vc_content_mobile = max( 1, min( 6, (int) ( null !== $vc_content_cols['mobile'] ? $vc_content_cols['mobile'] : $vc_content_cols['desktop'] ) ) );
+$vc_content_sizes = '(max-width:767px) ' . (int) ceil( 100 / $vc_content_mobile ) . 'vw, ' . (int) ceil( 100 / $vc_content_desktop ) . 'vw';
+$vc_content_images = array();
+if ( 'manual' === $vc_content_s['source'] ) {
+    foreach ( $vc_content_s['products'] as $vc_content_row ) {
+        if ( false === ( $vc_content_row['enabled'] ?? true ) ) { continue; }
+        $vc_content_image = $vc_content_row['settings']['cardImage'] ?? null;
+        if ( is_array( $vc_content_image ) ) {
+            $vc_content_images[ (int) $vc_content_row['settings']['product'] ] = $vc_content_image;
+        }
+    }
+}
 ?>
 <div class="container vc-content-collection">
     <header class="vc-content-heading">
@@ -22,7 +33,11 @@ $vc_content_mobile = max( 1, min( 6, (int) ( null !== $vc_content_cols['mobile']
     </header>
     <?php if ( $vc_content_products ) : ?>
         <div class="home-product-grid vc-content-products" style="<?php echo esc_attr( '--vc-content-cols:' . $vc_content_desktop . ';--vc-content-cols-mobile:' . $vc_content_mobile ); ?>">
-            <?php foreach ( $vc_content_products as $vc_content_product ) { vc_product_card( $vc_content_product, (bool) $vc_content_s['reportPreview'] ); } ?>
+            <?php
+            foreach ( $vc_content_products as $vc_content_product ) {
+                vc_product_card( $vc_content_product, (bool) $vc_content_s['reportPreview'], $vc_content_images[ $vc_content_product->get_id() ] ?? null, $vc_content_sizes );
+            }
+            ?>
         </div>
     <?php elseif ( '' !== $vc_content_s['emptyText'] ) : ?>
         <p class="vc-content-empty"><?php echo esc_html( $vc_content_s['emptyText'] ); ?></p>

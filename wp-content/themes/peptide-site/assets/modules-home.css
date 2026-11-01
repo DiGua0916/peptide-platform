@@ -1,0 +1,136 @@
+/* Home block presentation. Renderer retains outer spacing, visibility and background. */
+.vc-m--hero-h1 .vc-home-hero {
+  --vc-home-gutter: var(--pc-pageGutter, 32px);
+  --vc-home-title-size: 60px;
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  align-items: center;
+  gap: 48px;
+  width: min(var(--pc-width, 1280px), calc(100% - var(--vc-home-gutter) * 2));
+  margin-inline: auto;
+  overflow-wrap: anywhere;
+}
+
+.vc-m--hero-h1 .vc-home-hero--full { width: 100%; }
+.vc-m--hero-h1 .vc-home-hero__copy,
+.vc-m--hero-h1 .vc-home-hero__media { min-width: 0; margin: 0; }
+.vc-m--hero-h1 .vc-home-hero__copy { order: 0; }
+.vc-m--hero-h1 .vc-home-hero__media { order: 1; }
+.vc-m--hero-h1 .vc-home-hero__copy--colored {
+  padding: 32px;
+  background: var(--vc-home-copy-bg);
+  border-radius: var(--pc-radius, 12px);
+}
+.vc-m--hero-h1 .vc-home-hero__title {
+  max-width: 680px;
+  margin: 0;
+  color: var(--vc-home-title-color, var(--pc-heading, #203b45));
+  font-size: var(--pc-headingSize, var(--vc-home-title-size));
+  line-height: 1.1;
+  text-wrap: balance;
+}
+/* The published site font weight and tracking remain more specific than these defaults. */
+:where(.vc-m--hero-h1) .vc-home-hero__title { font-weight: 600; letter-spacing: -.035em; }
+.vc-m--hero-h1 .vc-home-hero__description {
+  max-width: 440px;
+  margin: 24px 0 0;
+  color: var(--vc-home-text-color, var(--pc-text, #415d68));
+  font-size: var(--pc-bodySize, 18px);
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+.vc-m--hero-h1 .vc-home-hero--align-center :is(.vc-home-hero__title, .vc-home-hero__description) { margin-inline: auto; }
+.vc-m--hero-h1 .vc-home-hero--align-right :is(.vc-home-hero__title, .vc-home-hero__description) { margin-inline-start: auto; }
+.vc-m--hero-h1 .vc-home-hero__button-effect { display: inline-block; max-width: 100%; margin-top: 32px; }
+.vc-m--hero-h1 .vc-home-hero .vc-home-hero__button {
+  min-height: 48px;
+  max-width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--vc-home-button-bg, var(--pc-buttonBackground, #126b82));
+  border-radius: var(--pc-radius, 6px);
+  background: var(--vc-home-button-bg, var(--pc-buttonBackground, #126b82));
+  color: var(--vc-home-button-color, var(--pc-buttonText, #fff));
+  font-size: var(--pc-bodySize, 16px);
+  line-height: 1.5;
+  white-space: normal;
+  text-align: center;
+}
+.vc-m--hero-h1 .vc-home-hero__button:hover { opacity: .9; }
+.vc-m--hero-h1 .vc-home-hero__button:focus-visible { outline: 3px solid var(--pc-heading, #203b45); outline-offset: 4px; }
+.vc-m--hero-h1 .vc-home-hero__picture {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  border-radius: var(--pc-radius, 12px);
+}
+.vc-m--hero-h1 .vc-home-hero__picture img { width: 100%; height: 100%; }
+.vc-m--hero-h1 .vc-home-hero__placeholder {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 3 / 2;
+  padding: 24px;
+  border: 1px dashed var(--pc-muted, #526c76);
+  border-radius: var(--pc-radius, 12px);
+  background: var(--pc-secondaryBackground, #f1f7f9);
+  color: var(--vc-home-text-color, var(--pc-text, #415d68));
+}
+
+/* Standard, non-swiping information only. Bar/carousel modes keep their own renderer styles. */
+.vc-m--info-list .vc-info:not(.vc-info-bar):not(.vc-swipe-m) {
+  --vc-home-service-gap: 32px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, calc((100% - 3 * var(--vc-home-service-gap)) / 4)), 1fr));
+  gap: 24px var(--vc-home-service-gap);
+}
+.vc-m--info-list .vc-info:not(.vc-info-bar):not(.vc-swipe-m) > .vc-info__item {
+  min-width: 0;
+  min-height: 48px;
+  gap: 12px;
+  font-size: var(--pc-bodySize, 14px);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.vc-m--info-list .vc-info:not(.vc-info-bar):not(.vc-swipe-m) > .vc-info__item > :is(.vc-icon, .vc-m__icon-img) { flex: none; }
+.vc-m--info-list .vc-info:not(.vc-info-bar):not(.vc-swipe-m) > .vc-info__item > :is(span, .vc-info__text) { min-width: 0; }
+.vc-m--info-list .vc-info:not(.vc-info-bar):not(.vc-swipe-m) .vc-info__text > :first-child { margin-top: 0; }
+.vc-m--info-list .vc-info:not(.vc-info-bar):not(.vc-swipe-m) .vc-info__text > :last-child { margin-bottom: 0; }
+.vc-m--info-list .vc-info--left:not(.vc-info-bar):not(.vc-swipe-m) > .vc-info__item { justify-content: flex-start; text-align: left; }
+.vc-m--info-list .vc-info--center:not(.vc-info-bar):not(.vc-swipe-m) > .vc-info__item { justify-content: center; text-align: center; }
+.vc-m--info-list .vc-info--right:not(.vc-info-bar):not(.vc-swipe-m) > .vc-info__item { justify-content: flex-end; text-align: right; }
+
+@media (min-width: 768px) {
+  .vc-m--hero-h1 .vc-home-hero--d-left { grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); }
+  .vc-m--hero-h1 :is(.vc-home-hero--d-left, .vc-home-hero--d-top) .vc-home-hero__media { order: -1; }
+  .vc-m--hero-h1 :is(.vc-home-hero--d-top, .vc-home-hero--d-bottom) { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (min-width: 768px) and (max-width: 1100px) {
+  .vc-m--hero-h1 .vc-home-hero { --vc-home-title-size: 48px; gap: 32px; }
+}
+
+@media (max-width: 767px) {
+  .vc-m--hero-h1 .vc-home-hero {
+    --vc-home-gutter: var(--pc-pageGutter, 24px);
+    --vc-home-title-size: 36px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+  }
+  .vc-m--hero-h1 :is(.vc-home-hero--m-left, .vc-home-hero--m-right) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  .vc-m--hero-h1 :is(.vc-home-hero--m-left, .vc-home-hero--m-top) .vc-home-hero__media { order: -1; }
+  .vc-m--hero-h1 .vc-home-hero__copy--colored { padding: 24px; }
+  .vc-m--hero-h1 .vc-home-hero__description { margin-top: 16px; font-size: var(--pc-bodySize, 16px); }
+  .vc-m--hero-h1 .vc-home-hero__button-effect { width: 100%; margin-top: 24px; }
+  .vc-m--hero-h1 .vc-home-hero__button { width: 100%; }
+  .vc-m--info-list .vc-info:not(.vc-info-bar):not(.vc-swipe-m) {
+    --vc-home-service-gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, calc((100% - var(--vc-home-service-gap)) / 2)), 1fr));
+    row-gap: 16px;
+  }
+}
+
+@media (max-width: 359px) {
+  .vc-m--hero-h1 .vc-home-hero { --vc-home-gutter: var(--pc-pageGutter, 16px); }
+}
+
+.vc-m--hero-h1 .vc-home-hero.vc-home-hero--single { grid-template-columns: minmax(0, 1fr); }

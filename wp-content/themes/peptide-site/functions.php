@@ -158,7 +158,8 @@ function vc_card_price_html( $product ): string {
     return vc_public_price_html( $product );
 }
 
-function vc_product_card( $product, bool $report_preview = true ): void {
+function vc_product_card( $product, bool $report_preview = true, ?array $card_image = null, string $card_sizes = '100vw' ): void {
+    $card_image_html = $card_image ? vc_module_card_image( $card_image, $card_sizes ) : '';
     $extra = vc_product_data( $product );
     $hover = $report_preview && function_exists( 'peptide_core_get_product_hover' )
         ? peptide_core_get_product_hover( $product )
@@ -170,8 +171,8 @@ function vc_product_card( $product, bool $report_preview = true ): void {
     $observation_valid = $observation_product > 0 && $observation_product <= 9007199254740991 && $observation_variation >= 0 && $observation_variation <= 9007199254740991;
     ?>
     <article class="product-card"<?php if ( $observation_valid ) { echo ' data-vc-observe-product="' . esc_attr( (string) $observation_product ) . '" data-vc-observe-variation="' . esc_attr( (string) $observation_variation ) . '"'; } ?>>
-        <a class="product-visual<?php echo $report_preview ? ' product-visual--report' : ''; ?><?php echo $product->get_image_id() ? ' product-visual--photo' : ''; ?>" href="<?php echo esc_url( $product->get_permalink() ); ?>" aria-label="<?php echo esc_attr( 'View ' . $product->get_name() ); ?>">
-            <?php if ( $product->get_image_id() ) { echo wp_kses_post( $product->get_image( 'woocommerce_single' ) ); } else { vc_vial( $product->get_name(), $product->get_sku() ); } ?>
+        <a class="product-visual<?php echo $report_preview ? ' product-visual--report' : ''; ?><?php echo '' !== $card_image_html || $product->get_image_id() ? ' product-visual--photo' : ''; ?>" href="<?php echo esc_url( $product->get_permalink() ); ?>" aria-label="<?php echo esc_attr( 'View ' . $product->get_name() ); ?>">
+            <?php if ( '' !== $card_image_html ) { echo $card_image_html; /* Escaped by vc_module_card_image. */ } elseif ( $product->get_image_id() ) { echo wp_kses_post( $product->get_image( 'woocommerce_single' ) ); } else { vc_vial( $product->get_name(), $product->get_sku() ); } ?>
             <?php if ( $report_preview ) { get_template_part( 'template-parts/product-hover', null, array( 'name' => $product->get_name(), 'hover' => $hover ) ); } ?>
             <?php if ( ! empty( $extra['is_demo'] ) ) : ?><span class="demo-badge">Demo product</span><?php endif; ?>
             <span class="product-open"><?php echo vc_icon(); ?></span>
