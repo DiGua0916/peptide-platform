@@ -2,6 +2,11 @@
 /** Additional Data report translations; existing catalogue entries remain authoritative. */
 defined( 'ABSPATH' ) || exit;
 return array(
+	'Visit assessment' => '访问判定',
+	'Not assessed' => '未判定',
+	'All sections use the same selected visit-start period and original visits and visitors. For each period, the highest assessment version received before its end is used; missing or conflicting assessments remain not assessed. Stage and checkout progress are accumulated historical facts, not a snapshot of events at the period end. Financial orders must also be created in the period and linked to a selected visit. An empty subset does not mean there are no real normal visitors.' => '所有区域使用同一所选访问开始时段及原始访问和访客。各时段采用结束前收到的最高判定版本；缺失或冲突的判定保持未判定。访问阶段和结账进度使用历史累计事实，不是时段结束时的事件快照。财务订单还须在时段内创建并关联所选访问。空子集不代表没有真实正常访客。',
+	'Assessment coverage: %o / %n candidate visits. Normal: %a; abnormal: %b; not assessed: %u; conflicting versions: %c. Complete assessment coverage is not established.' => '判定覆盖：%o / %n 次候选访问。正常：%a；异常：%b；未判定：%u；版本冲突：%c。不能据此认定判定已覆盖全部访问。',
+	'Visit assessment uses configured server rules, manual corrections and authenticated source labels. Missing or conflicting assessments remain not assessed. Open Visit classification to view each visit reason and rule version, adjust rules or record a correction. Country values require a configured source. OS and screen facts are browser-reported, not verified hardware.' => '访问判定使用已配置的服务端规则、人工修订及经过认证的来源标签。缺失或冲突的判定保持未判定。可在“访客判定”查看每次访问的原因和规则版本、调整规则或记录修订。国家值需要配置来源；操作系统和屏幕事实由浏览器报告，不代表已经核验的硬件。',
 	'Automatic traffic channel' => '自动流量渠道',
 	'Channels use the first saved UTM and referrer values for each visit. An empty referrer may mean direct access or a hidden source. Saved UTM values stay unchanged.' => '渠道按本次访问首次保存的 UTM 与引荐来源归类；空引荐可能是直接访问或来源隐藏；不会改变已保存的 UTM。',
 	'Channel observations: %v / %n %t. Unknown: %u; not observed: %o.' => '渠道观察：%v / %n %t。未知：%u；未观察：%o。',
