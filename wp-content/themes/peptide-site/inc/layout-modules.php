@@ -155,15 +155,24 @@ add_filter( 'peptide_core_layout_definitions', function ( array $definitions ): 
     return $definitions;
 }, 110 );
 
-/** Keep the native number formatting, item editing and count-up animation. */
+/** Keep native formatting and item editing; isolate the card-specific motion. */
 add_filter( 'peptide_core_module_html', function ( $html, array $module, string $context, string $device ) {
     if ( null !== $html || 'counter' !== $module['type'] || 'cards' !== ( $module['settings']['presentation'] ?? 'standard' ) ) {
         return $html;
     }
     $s = $module['settings'];
     $has_intro = '' !== trim( $s['title'] ?? '' ) || '' !== trim( wp_strip_all_tags( $s['descriptionHtml'] ?? $s['description'] ?? '' ) );
+    $content = \PeptideCore\Modules\Fallback::render( $module, $context, $device );
+    $tags = new WP_HTML_Tag_Processor( $content );
+    while ( $tags->next_tag( 'SPAN' ) ) {
+        $target = $tags->get_attribute( 'data-count' );
+        if ( null !== $target ) {
+            $tags->set_attribute( 'data-vc-count', $target );
+            $tags->remove_attribute( 'data-count' );
+        }
+    }
     return '<div class="vc-counter-cards' . ( $has_intro ? ' vc-counter-cards--intro' : '' ) . '">'
-        . \PeptideCore\Modules\Fallback::render( $module, $context, $device ) . '</div>';
+        . $tags->get_updated_html() . '</div>';
 }, 20, 4 );
 
 /** Add illustration sizing without duplicating information-list content or interactions. */
@@ -198,6 +207,10 @@ function vc_enqueue_layout_module_assets(): void {
         }
     }
     $root = get_template_directory_uri();
+    // Reuse the bundled, self-hosted Geist faces even when global fonts inherit.
+    if ( defined( 'PEPTIDE_CORE_FILE' ) && defined( 'PEPTIDE_CORE_VERSION' ) ) {
+        wp_enqueue_style( 'peptide-site-fonts', plugins_url( 'assets/site-fonts.css', PEPTIDE_CORE_FILE ), array(), PEPTIDE_CORE_VERSION );
+    }
     if ( is_admin() ) {
         wp_enqueue_style( 'vialcove-module-base', $root . '/assets/site.css', array(), (string) filemtime( __DIR__ . '/../assets/site.css' ) );
         wp_enqueue_style( 'vialcove-module-brand', $root . '/assets/brand.css', array( 'vialcove-module-base' ), (string) filemtime( __DIR__ . '/../assets/brand.css' ) );
@@ -213,7 +226,7 @@ function vc_enqueue_layout_module_assets(): void {
         }
     }
     if ( ! is_admin() ) {
-        foreach ( array( 'modules-shared', 'modules-carousel' ) as $asset ) {
+        foreach ( array( 'modules-shared', 'modules-carousel', 'modules-counter' ) as $asset ) {
             $file = __DIR__ . '/../assets/' . $asset . '.js';
             if ( is_file( $file ) ) {
                 wp_enqueue_script( 'vialcove-' . $asset, $root . '/assets/' . $asset . '.js', array(), (string) filemtime( $file ), true );

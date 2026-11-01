@@ -956,3 +956,16 @@ functions.php新增vc_card_display_product，使用Woo get_visible_children的me
 验证：独立实际WP内存渲染26检查通过，PHP lint、git diff --check通过。Impeccable只有15项advisory（原店铺VI及本次16px圆角/32px标题与后台DESIGN不同），无阻断。真实IAB桌面1280三卡横排；390手机说明上方/数字并排，pageWidth375，数字卡141px且无内部越界，最终显示82和99.67%。原modules.js加载及原data-count精度挂钩已核对；浏览器只读环境不支持MutationObserver，未取得逐帧动画记录，不冒称实测1200ms或实体手机。原生动画源码复核、DOM终值及视觉截图已验。
 
 证据D:/Codex/Tasks/2026-11-01/homepage-proof-counter/outputs：update-result.json、counter-cards-audit.json、read-only-data-audit.json、mobile-browser-check.json、counter-desktop.png、counter-mobile.png。编辑入口document11463；当前预览tab19已保留、视口恢复。数据库/截图不入Git。下一步用户审阅独立预览，通过原后台流程再发布启用；本次不替换正式首页。源提交及push结果另记群/项目记忆。
+
+
+### 2026-11-01 · Codex：透明粗体数字区与先快后慢计数
+
+用户本轮要求先快后慢、冷峻字体、透明底，随后明确改为参考图的大粗体及相同英文文案。本轮以最新要求为准：仅counter的presentation=cards使用本地Geist 700数字、600标题，百分号/加号与数字同号；透明背景、无填充卡片和圆角，细竖线分隔。普通standard counter和全站字体不变。原numberSizePx、设备列数、文字数字单位继续由后台积木控制，容器字号上限避免手机溢出。
+
+主题inc/layout-modules.php对cards沿用Fallback后以WP_HTML_Tag_Processor把data-count改成data-vc-count，保留原精度/单位/ARIA，隔离插件原1200ms动画。新增assets/modules-counter.js仅观察该模式，首次进入视口同步运行2400ms easeOutQuart；重复进入不重播，减少动态/切后台/离页/无IO保留或恢复SSR精确终值。assets/modules-home.css为透明、粗体和响应式排版；复用插件既有自托管site-fonts.css，不新下载字体、不修改插件。
+
+仅用原layouts REST及revision/modified保护修改11463草稿的collection-stats：Tested Before Release；Every batch verified by an independent US analytical lab before release.；50+ RESEARCH COMPOUNDS；99.67% AVG. BATCH PURITY · EXAMPLE。50+替代上一轮82目录快照展示，属于用户参考文案预览。逐批验证尚无本店核验依据，说明附Preview content · verification pending.；没有将参考检测声明发布到正式首页。其它5块、正式685–688、预览11464–11466、active/domain及11463原发布快照全部不变，保存后5项保护通过。独立11462仍未激活，11463已有旧发布快照不能称从未发布。
+
+验证：独立Node VM对生产JS17项、实际WP内存合同11项全部通过；2400ms四段600ms样本0→68.13→93.44→99.28→99.67，验证先快后慢/两数同步/精度/终值/重复IO/减少动态/后台/离页/无IO回退。PHP lint、node --check、diffcheck通过。真实IAB桌面1280和手机390截图与DOM确认Geist700、全透明、原data-count为0/自有为2、终值50+/99.67%；手机pageWidth375且数字内部不溢出。未作实体手机测试或浏览器逐帧计时，动画时序证据为生产脚本VM实跑。设计扫描2条字体warning（通用字体及后台DESIGN未列Geist）是保留本地店铺数字排版的明确取舍，不修改后台设计规范。
+
+证据D:/Codex/Tasks/2026-11-01/counter-type-motion/outputs：copy-update-result.json、counter-motion-behavior.json、counter-php-contract.json、production-counter-verification.txt、bold-desktop-metrics.json、bold-mobile-metrics.json、bold-section.png、bold-mobile.png。视口已恢复、预览tab19保留，编辑入口document11463。源码/交接入Git，草稿数据和截图不入Git。回滚源码可恢复上版样式动画；草稿回滚必须先读当前revision并仅恢复目标模块，避免覆盖协作内容。下一步用户查看预览，再按原后台流程决定发布；正式首页本次保持。

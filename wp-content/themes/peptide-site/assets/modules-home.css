@@ -161,30 +161,38 @@
 .vc-content-collection--compact .product-card-bottom { margin-top:0; padding-top:4px; }
 .vc-content-collection--compact .product-card-bottom a { font-weight:600; }
 
-/* Opt-in counter cards reuse the plugin's editable content and native animation. */
+/* Opt-in editorial metrics: transparent surface, restrained type, shared content. */
+.vc-m--counter .vc-counter-cards { font-family: 'Geist', sans-serif; background:transparent; }
 .vc-m--counter .vc-counter-cards--intro > .vc-m__inner { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,2fr); gap:24px; align-items:stretch; }
 .vc-m--counter .vc-counter-cards .vc-m__head,
-.vc-m--counter .vc-counter-cards .vc-counter__item { margin:0; padding:32px 24px; border-radius:16px; background:var(--pc-secondaryBackground,#f1f7f9); color:var(--pc-heading,#203b45); text-align:center; }
-.vc-m--counter .vc-counter-cards .vc-m__head { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; }
-.vc-m--counter .vc-counter-cards .vc-m__title { margin:0; font-size:32px; line-height:1.2; letter-spacing:-.025em; font-weight:600; text-wrap:balance; }
-.vc-m--counter .vc-counter-cards .vc-m__desc { margin:0; max-width:32ch; color:var(--pc-text,#415d68); font-size:16px; line-height:1.65; }
+.vc-m--counter .vc-counter-cards .vc-counter__item { margin:0; padding:32px 24px; border:0; border-radius:0; background:transparent; box-shadow:none; color:var(--pc-heading,#203b45); text-align:center; }
+.vc-m--counter .vc-counter-cards .vc-m__head { display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:16px; padding-inline-start:0; text-align:left; }
+.vc-m--counter .vc-counter-cards .vc-m__title { margin:0; max-width:16ch; font-family:inherit; font-size:36px; line-height:40px; letter-spacing:-.03em; font-weight:600; text-wrap:balance; }
+.vc-m--counter .vc-counter-cards .vc-m__desc { margin:0; max-width:32ch; color:var(--pc-text,#415d68); font-size:14px; line-height:20px; font-weight:400; text-wrap:pretty; }
 .vc-m--counter .vc-counter-cards .vc-m__desc p { margin:0; font-size:inherit; line-height:inherit; }
+.vc-m--counter .vc-counter-cards .vc-m__desc p + p { margin-top:12px; }
+.vc-m--counter .vc-counter-cards .vc-m__desc small { font-size:12px; line-height:16px; }
 .vc-m--counter .vc-counter-cards .vc-counter { gap:24px; grid-template-columns:repeat(var(--vc-cols,2),minmax(0,1fr)); align-items:stretch; overflow:visible; }
 .vc-m--counter .vc-counter-cards .vc-counter__item { container-type:inline-size; flex-direction:column; flex-wrap:nowrap; justify-content:center; min-height:224px; gap:16px; }
 .vc-m--counter .vc-counter-cards .vc-counter__item::before { display:none; }
+.vc-m--counter .vc-counter-cards--intro .vc-counter__item::before,
+.vc-m--counter .vc-counter-cards .vc-counter__item:not(.vc-counter__item--row-start)::before { display:block; content:''; position:absolute; inset-block:32px; inset-inline-start:-12px; width:1px; background:var(--vc-line,#D8E5EA); opacity:1; }
 .vc-m--counter .vc-counter-cards .vc-counter__copy { width:100%; }
-.vc-m--counter .vc-counter-cards .vc-counter__num { font-size:var(--vc-num,80px); line-height:1.15; letter-spacing:-.03em; color:var(--pc-heading,#203b45); }
+.vc-m--counter .vc-counter-cards .vc-counter__num { font-family:inherit; font-size:var(--vc-num,88px); font-weight:700; font-variant-numeric:lining-nums tabular-nums; line-height:1.1; letter-spacing:-.03em; color:var(--pc-heading,#203b45); }
+.vc-m--counter .vc-counter-cards .vc-counter__unit { display:inline-block; margin-inline-start:0; font-size:1em; font-weight:inherit; letter-spacing:inherit; }
 @supports (font-size:1cqw) {
-  .vc-m--counter .vc-counter-cards .vc-counter__num { font-size:min(var(--vc-num,80px),26cqw); }
+  .vc-m--counter .vc-counter-cards .vc-counter__num { font-size:min(var(--vc-num,88px),26cqw); }
 }
-.vc-m--counter .vc-counter-cards .vc-counter__label { margin-top:24px; color:var(--pc-text,#415d68); font-size:14px; line-height:1.5; font-weight:500; text-wrap:balance; }
+.vc-m--counter .vc-counter-cards .vc-counter__label { margin-top:24px; color:var(--pc-text,#415d68); font-size:12px; line-height:20px; font-weight:400; letter-spacing:.08em; text-wrap:balance; }
 @media(max-width:767px) {
-  .vc-m--counter .vc-counter-cards--intro > .vc-m__inner { grid-template-columns:minmax(0,1fr); gap:12px; }
-  .vc-m--counter .vc-counter-cards .vc-m__head { padding:24px; gap:12px; }
-  .vc-m--counter .vc-counter-cards .vc-m__title { font-size:28px; }
-  .vc-m--counter .vc-counter-cards .vc-counter { grid-template-columns:repeat(var(--vc-cols-m,2),minmax(0,1fr)); gap:12px; }
-  .vc-m--counter .vc-counter-cards .vc-counter__item { min-height:156px; padding:24px 16px; }
-  .vc-m--counter .vc-counter-cards .vc-counter__label { margin-top:16px; font-size:12px; }
+  .vc-m--counter .vc-counter-cards--intro > .vc-m__inner { grid-template-columns:minmax(0,1fr); gap:24px; }
+  .vc-m--counter .vc-counter-cards .vc-m__head { padding:0; gap:12px; }
+  .vc-m--counter .vc-counter-cards .vc-m__title { max-width:none; font-size:30px; line-height:36px; }
+  .vc-m--counter .vc-counter-cards .vc-counter { grid-template-columns:repeat(var(--vc-cols-m,2),minmax(0,1fr)); gap:0; }
+  .vc-m--counter .vc-counter-cards .vc-counter__item { min-height:156px; padding:24px 12px; }
+  .vc-m--counter .vc-counter-cards .vc-counter__item::before { inset-inline-start:0; inset-block:24px; }
+  .vc-m--counter .vc-counter-cards .vc-counter__item:first-child::before { display:none; }
+  .vc-m--counter .vc-counter-cards .vc-counter__label { margin-top:16px; font-size:12px; line-height:16px; letter-spacing:.04em; }
   .vc-m--hero-h1 .vc-home-hero--focused { --vc-home-title-size:36px; gap:24px; }
   .vc-m--hero-h1 .vc-home-hero--focused .vc-home-hero__copy { text-align:center; }
   .vc-m--hero-h1 .vc-home-hero--focused .vc-home-hero__title,
