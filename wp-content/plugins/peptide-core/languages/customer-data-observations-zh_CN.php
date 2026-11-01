@@ -2,6 +2,21 @@
 /** Additional Data report translations; existing catalogue entries remain authoritative. */
 defined( 'ABSPATH' ) || exit;
 return array(
+	'Automatic traffic channel' => '自动流量渠道',
+	'Channels use the first saved UTM and referrer values for each visit. An empty referrer may mean direct access or a hidden source. Saved UTM values stay unchanged.' => '渠道按本次访问首次保存的 UTM 与引荐来源归类；空引荐可能是直接访问或来源隐藏；不会改变已保存的 UTM。',
+	'Channel observations: %v / %n %t. Unknown: %u; not observed: %o.' => '渠道观察：%v / %n %t。未知：%u；未观察：%o。',
+	'Paid social' => '付费社交',
+	'Paid search' => '付费搜索',
+	'Other paid traffic' => '其他付费流量',
+	'Organic search' => '自然搜索',
+	'Organic social' => '自然社交',
+	'Referral' => '引荐流量',
+	'Display advertising' => '展示广告',
+	'Affiliate' => '联盟推广',
+	'Other tagged traffic' => '其他带标签流量',
+	'Direct / source hidden' => '直接访问／来源隐藏',
+	'Internal referral' => '站内引荐',
+	'Traffic source unknown' => '流量来源未知',
 	'View user rate after exposure' => '曝光后查看用户转化率',
 	'Cart user rate after exposure' => '曝光后加购用户转化率',
 	'Paid user rate after exposure' => '曝光后付款用户转化率',

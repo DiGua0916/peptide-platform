@@ -8,7 +8,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Dimension_Reports {
 
-	public const GROUPS = array( 'utm' => 'utm_source', 'domain' => 'entry_domain', 'country' => 'country', 'os' => 'operating_system', 'screen' => 'screen_size' );
+	public const GROUPS = array( 'utm' => 'utm_source', 'domain' => 'entry_domain', 'country' => 'country', 'os' => 'operating_system', 'screen' => 'screen_size', 'channel' => 'channel' );
 	public const TABLES = array( 'visitor_source', 'order_source', 'visitor_domain', 'order_domain', 'visitor_country' );
 
 	/** Visits, not page rows; saved facts are read in bounded batches at the same cutoff. */
@@ -25,6 +25,7 @@ final class Dimension_Reports {
 	}
 
 	public static function label( array $typed, string $dimension ): string {
+		if ( 'channel' === $dimension ) { return Report_Dimensions::channel_label( $typed ); }
 		if ( 'value' === $typed['state'] ) {
 			$value = (string) $typed['value'];
 			if ( 'country' === $dimension && function_exists( 'WC' ) && WC() && WC()->countries ) { $countries = WC()->countries->get_countries(); return html_entity_decode( $countries[$value] ?? $value, ENT_QUOTES, 'UTF-8' ); }

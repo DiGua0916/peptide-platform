@@ -1,0 +1,16 @@
+{
+  "commit": "d19bc8fb2ccc96d11f9b059ff1dd3deb9323b1da",
+  "purpose": "Immutable legacy UTM JSON/CSV source oracle; no customer data, DB or runtime bootstrap.",
+  "files": [
+    {
+      "path": "class-sources.php",
+      "source": "wp-content/plugins/peptide-core/includes/data/class-sources.php",
+      "sha256": "1575d14e625694ee073226c49a56578a9576dad146a9dfd07eeccb1a044ef478"
+    },
+    {
+      "path": "class-report-exports.php",
+      "source": "wp-content/plugins/peptide-core/includes/data/class-report-exports.php",
+      "sha256": "c0c9853004efebe2d956565dc446454199932898d97503cf7c02034ba0a79148"
+    }
+  ]
+}

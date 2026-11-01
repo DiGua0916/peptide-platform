@@ -41,7 +41,7 @@ final class Conversion {
 	public const OVERALL = array( 'conversion', 'paid', 'visitors', 'viewed', 'carted', 'checkout' );
 
 	/** 可以分组的维度；第一个是默认值。 */
-	public const GROUPS = array( 'device', 'browser', 'utm', 'domain', 'country', 'os', 'screen' );
+	public const GROUPS = array( 'device', 'browser', 'utm', 'domain', 'country', 'os', 'screen', 'channel' );
 
 	/**
 	 * 转化率详情页的全部数字：整体步骤（本期、对比期、变化）和分组卡片（本期）。
@@ -50,9 +50,9 @@ final class Conversion {
 	 * @param string $group One of GROUPS; anything else is treated as 'device'.
 	 */
 	public static function summary( array $range, string $group, string $visitor_status = 'all' ): array {
-		if ( $visitor_status !== 'all' ) { return Classified_Conversion::summary( $range, $group, $visitor_status ); }
+		if ( $visitor_status !== 'all' ) { $out = Classified_Conversion::summary( $range, $group, $visitor_status ); if ( 'channel' === $group ) { $out['channel_policy'] = Report_Dimensions::CHANNEL_POLICY; } return $out; }
 		$group    = in_array( $group, self::GROUPS, true ) ? $group : 'device';
-		if ( isset( Dimension_Reports::GROUPS[$group] ) ) { return Dimension_Conversion::summary( $range, $group ); }
+		if ( isset( Dimension_Reports::GROUPS[$group] ) ) { $out = Dimension_Conversion::summary( $range, $group ); if ( 'channel' === $group ) { $out['channel_policy'] = Report_Dimensions::CHANNEL_POLICY; } return $out; }
 		$from     = (int) $range['from'];
 		$to       = (int) $range['to'];
 		$current  = self::overall( Operations::period( $from, $to ) );

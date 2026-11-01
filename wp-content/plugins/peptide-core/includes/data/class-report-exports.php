@@ -14,11 +14,22 @@ final class Report_Exports {
 		if ( 'csv' === $format ) { foreach ( array( '_envelope', '_jsonp', '_fields' ) as $key ) { if ( array_key_exists( $key, $params ) ) { return Errors::invalid( array( $key => 'invalid_format' ) ); } } }
 		try {
 			if ( 'json' === $format ) { $response = new \WP_REST_Response( Sources::table( $range, $args ) ); $response->header( 'Cache-Control', 'no-store' ); return $response; }
-			$rows = iterator_to_array( Sources::all_rows( $range, $args ) );
-			return new Csv_Response( self::source_rows( $rows, $range, $args ), 'data-sources-' . $range['dates']['from'] . '-' . $range['dates']['to'] . '.csv' );
+			$coverage = null; $rows = iterator_to_array( Sources::all_rows( $range, $args, $coverage ) );
+			return new Csv_Response( self::source_rows( $rows, $range, $args, $coverage ), 'data-sources-' . $range['dates']['from'] . '-' . $range['dates']['to'] . '.csv' );
 		} catch ( \Throwable $error ) { return new \WP_Error( 'pc_report_unavailable', __( 'Report dimensions are unavailable. Try again.', 'peptide-core' ), array( 'status' => 503 ) ); }
 	}
-	private static function source_rows( array $rows, array $range, array $args ): iterable {
+	private static function source_rows( array $rows, array $range, array $args, ?array $coverage = null ): iterable {
+		if ( 'channel' === ( $args['group_by'] ?? 'utm' ) ) {
+			$head = array( 'channel_state', 'channel', 'channel_label', 'channel_policy', 'currency', 'current_from_epoch_s', 'current_to_epoch_s' );
+			foreach ( array( 'visits', 'orders' ) as $unit ) { foreach ( array( 'base_count', 'value', 'unknown', 'unobserved' ) as $state ) { $head[] = 'coverage_' . $unit . '_' . $state; } }
+			foreach ( Sources::METRICS as $key ) { $head[] = $key . ( 'conversion' === $key ? '_pct' : '' ); } yield $head;
+			foreach ( $rows as $row ) {
+				$cells = array( $row['channel']['state'], Csv_Response::text( $row['channel']['value'] ?? '' ), Csv_Response::text( $row['channel_label'] ), Report_Dimensions::CHANNEL_POLICY, Csv_Response::text( get_woocommerce_currency() ), (string) $range['from'], (string) $range['to'] );
+				foreach ( array( 'visits', 'orders' ) as $unit ) { foreach ( array( 'base_count', 'value', 'unknown', 'unobserved' ) as $state ) { $cells[] = (string) ( $coverage[$unit][$state] ?? 0 ); } }
+				foreach ( Sources::METRICS as $key ) { $cells[] = self::number( $row[$key], in_array( $key, array( 'conversion', 'sales', 'aov', 'uv_value' ), true ) ); } yield $cells;
+			}
+			return;
+		}
 		$head = array( 'utm_source_state', 'utm_source', 'utm_medium_state', 'utm_medium', 'split_medium', 'currency', 'current_from_epoch_s', 'current_to_epoch_s' );
 			foreach ( Sources::METRICS as $key ) { $head[] = $key . ( 'conversion' === $key ? '_pct' : '' ); } yield $head;
 		foreach ( $rows as $row ) {
@@ -102,6 +113,7 @@ final class Report_Exports {
 		$row = static function ( string $section, string $group, string $key, string $metric, string $unit, $current, $previous = null, $change = null, string $change_unit = '', string $source = '', string $comparison = 'current_only' ) use ( $currency, $bounds, $local ): array {
 			return array_merge( array( Csv_Response::text( $section ), Csv_Response::text( $group ), Csv_Response::text( $key ), Csv_Response::text( $metric ), Csv_Response::text( $unit ), self::number( $current, in_array( $unit, array( 'percent', 'currency' ), true ) ), self::number( $previous, in_array( $unit, array( 'percent', 'currency' ), true ) ), self::number( $change, true ), Csv_Response::text( $change_unit ), Csv_Response::text( 'currency' === $unit ? $currency : '' ), Csv_Response::text( $source ), Csv_Response::text( $comparison ) ), $bounds, array( $local ) );
 		};
+		if ( 'channel' === $s['group'] ) { yield $row( 'traffic_channel_policy', 'channel', $s['channel_policy'], 'derived_policy', 'label', null, null, null, '', 'saved_entry_snapshot', 'current_only' ); }
 		if ( isset( $s['visitor_status'] ) && $s['visitor_status'] !== 'all' ) {
 			yield $row( 'classification_filter', 'visitor_status', $s['visitor_status'], 'selected_scope', 'label', null, null, null, '', $s['overall_scope'], 'periods' );
 			yield $row( 'classification_filter', 'visitor_status', $s['visitor_status'], 'received_cutoff', 'epoch_milliseconds', $s['classification_cutoffs']['current'], $s['classification_cutoffs']['previous'], null, '', 'server_received_ms_exclusive', 'periods' );
@@ -121,6 +133,7 @@ final class Report_Exports {
 		}
 		foreach ( $s['rows'] as $group ) {
 			$by_key = array_column( $group['visitor_funnel']['layers'], null, 'key' ); $name = $s['group']; $key = $group['key'];
+			if ( 'channel' === $name ) { yield $row( 'traffic_channel_label', $name, $group['label'], 'channel_label', 'label', null ); }
 			yield $row( 'visitor_groups', $name, $key, 'conversion', 'percent', $by_key['paid']['visitor_rate'] );
 			yield $row( 'visitor_groups', $name, $key, 'sales', 'currency', $group['sales'] );
 			foreach ( Visitor_Funnel::KEYS as $step ) {
