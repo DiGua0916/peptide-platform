@@ -69,7 +69,7 @@ body.pc-admin-workspace #wpadminbar #wp-admin-bar-menu-toggle>.ab-item:is(:hover
 .pc-workspace-header__actions>a{white-space:nowrap;text-decoration:none;font-weight:600}
 .pc-admin-workspace:not(.pc-design-editor-page) #wpbody-content{box-sizing:border-box;padding-bottom:64px}
 .pc-admin-workspace:not(.pc-design-editor-page) #wpbody-content>.wrap{margin:24px 28px 0;max-width:none;min-width:0}
-.pc-admin-workspace #wpbody-content>.wrap>h1{display:inline-block;margin:0 12px 20px 0;padding:0;font-size:26px;line-height:34px;font-weight:650;letter-spacing:-.02em}
+.pc-admin-workspace #wpbody-content>.wrap>h1{display:inline-block;vertical-align:middle;margin:0 12px 20px 0;padding:0;font-size:26px;line-height:34px;font-weight:650;letter-spacing:-.02em}
 .pc-admin-workspace #screen-meta-links{margin-right:32px}
 .pc-admin-workspace #wpfooter{padding:16px 32px;color:var(--pc-ui-muted);font-size:12px;line-height:16px}
 .pc-admin-workspace .notice{margin:16px 0;padding:8px 16px;border:1px solid var(--pc-ui-line);border-radius:4px;background:#ffffff;box-shadow:none}
@@ -79,7 +79,11 @@ body.pc-admin-workspace #wpadminbar #wp-admin-bar-menu-toggle>.ab-item:is(:hover
 
 /* Controls: one hierarchy, including native list screens and Woo settings. */
 .pc-admin-workspace #wpbody-content :is(.button,.page-title-action){box-sizing:border-box;display:inline-flex;justify-content:center;align-items:center;gap:4px;min-height:36px;padding:7px 12px;border:1px solid #d4d4d4;border-radius:6px;background:#ffffff;color:var(--pc-ui-text);font-size:13px;line-height:20px;font-weight:600;box-shadow:none;text-shadow:none;text-decoration:none;vertical-align:middle;cursor:pointer}
-.pc-admin-workspace #wpbody-content .page-title-action{position:static;top:auto;margin:0 0 24px}
+.pc-admin-workspace #wpbody-content .page-title-action{position:static;top:auto;margin:0}
+/* Keep native title/actions in their original DOM order and on one optical axis. */
+.pc-admin-workspace #wpbody-content>.wrap>.page-title-action{margin-bottom:20px}
+.pc-admin-workspace #wpbody-content>.wrap>.page-title-action+.page-title-action{margin-inline-start:8px}
+.pc-admin-workspace #wpbody-content>.wrap>h1>.page-title-action{margin-inline-start:12px}
 .pc-admin-workspace #wpbody-content :is(.button-primary,.woocommerce-save-button){border-color:var(--pc-ui-accent);background:var(--pc-ui-accent);color:#ffffff}
 .pc-admin-workspace #wpbody-content :is(.button:hover,.page-title-action:hover){border-color:var(--pc-ui-accent);background:var(--pc-ui-soft);color:var(--pc-ui-hover)}
 .pc-admin-workspace #wpbody-content .button-primary:hover{background:var(--pc-ui-hover);color:#ffffff}
@@ -108,11 +112,13 @@ body.pc-admin-workspace #wpadminbar #wp-admin-bar-menu-toggle>.ab-item:is(:hover
 .pc-admin-workspace .subsubsub a{padding:4px;font-size:14px;line-height:20px}
 .pc-admin-workspace .subsubsub .current{color:var(--pc-ui-text);font-weight:700}
 .pc-admin-workspace .tablenav{display:flow-root;height:auto;min-height:48px;margin:8px 0;padding:0}
-.pc-admin-workspace .tablenav .actions{display:flex;gap:8px;padding:0 12px 8px 0;flex-wrap:wrap}
+.pc-admin-workspace .tablenav .actions{display:flex;align-items:center;gap:8px;padding:0 12px 8px 0;flex-wrap:wrap}
 .pc-admin-workspace .tablenav .actions select{margin:0;max-width:240px}
 .pc-admin-workspace .tablenav .tablenav-pages{margin:8px 0}
-.pc-admin-workspace .search-box{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
-.pc-admin-workspace .search-box input[type=search]{margin:0;min-width:min(240px,100%)}
+.pc-admin-workspace .tablenav-pages .pagination-links,.pc-admin-workspace .tablenav-pages .paging-input{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap}
+.pc-admin-workspace .search-box{display:flex;align-items:center;flex-wrap:nowrap;gap:8px;max-width:100%;margin:0 0 16px}
+.pc-admin-workspace .search-box input[type=search]{flex:1 1 240px;width:240px;min-width:0;margin:0}
+.pc-admin-workspace .search-box .button{flex:0 0 auto}
 .pc-admin-workspace .select2-container .select2-selection{box-sizing:border-box;min-height:40px;border-color:#d4d4d4;border-radius:4px;font-size:14px;line-height:20px}
 .pc-admin-workspace .select2-container .select2-selection--single .select2-selection__rendered{padding:8px 32px 8px 12px;line-height:20px}
 .pc-admin-workspace .select2-container .select2-selection--single .select2-selection__arrow{height:40px}
@@ -180,11 +186,19 @@ body.pc-admin-workspace #wpadminbar #wp-admin-bar-menu-toggle>.ab-item:is(:hover
 .pc-admin-workspace .pc-ss-card__text strong{font-size:16px;line-height:24px}
 .pc-admin-workspace :is(.pc-ss-back a,.pc-ss-card__text a){color:var(--pc-ui-accent)}
 .pc-admin-workspace .woocommerce-layout{background:var(--pc-ui-bg);font-family:inherit}
-.pc-admin-workspace .woocommerce-layout__header{position:relative;left:auto;top:auto;min-height:64px;box-shadow:none;background:#ffffff;border-bottom:1px solid var(--pc-ui-line)}
+.pc-admin-workspace .woocommerce-layout__header{position:relative;left:auto;top:auto;z-index:1;min-height:64px;box-shadow:none;background:#ffffff;border-bottom:1px solid var(--pc-ui-line)}
 .pc-admin-workspace .woocommerce-layout__header-heading{font-size:20px;line-height:28px}
 .pc-admin-workspace .woocommerce-layout__activity-panel{z-index:99}
 .pc-admin-workspace .woocommerce-layout__main{padding:24px 32px}
 .pc-admin-workspace .woocommerce-layout__header-breadcrumbs{font-size:14px;line-height:20px}
+/* Full Woo apps already sit inside the workspace gutter; do not add another one. */
+.pc-admin-workspace.woocommerce-admin-page:not(.woocommerce-embed-page) .pc-workspace-header{top:0}
+.pc-admin-workspace.woocommerce-admin-page:not(.woocommerce-embed-page) .woocommerce-layout__primary{min-width:0;margin:24px 0 64px}
+.pc-admin-workspace.woocommerce-admin-page:not(.woocommerce-embed-page) .woocommerce-layout__main{padding:0}
+.pc-admin-workspace.woocommerce-admin-page:not(.woocommerce-embed-page) .woocommerce-layout__header-heading{padding-inline-start:0}
+/* Woo's embedded screens already have a native page title, unlike its React apps. */
+.pc-admin-workspace.woocommerce-embed-page:not(.pc-design-editor-page) #wpbody-content>.wrap{padding:0}
+.pc-admin-workspace.woocommerce-embed-page:has(#wpbody-content>.wrap>h1.wp-heading-inline) .woocommerce-layout__header{min-height:32px}
 .pc-admin-workspace .woocommerce-card{border:1px solid var(--pc-ui-line);border-radius:8px;box-shadow:none}
 .pc-admin-workspace .woocommerce-order-data,.pc-admin-workspace .woocommerce_order_items_wrapper{background:#ffffff}
 .pc-admin-workspace #order_data{padding:24px}
@@ -232,6 +246,7 @@ body.pc-admin-workspace.folded #adminmenu li.menu-top>.wp-submenu>li>a{padding-l
  .pc-admin-workspace .pc-workspace-header__actions{font-size:12px;line-height:16px}
  .pc-admin-workspace:not(.pc-design-editor-page) #wpbody-content>.wrap{margin:16px 16px 0}
  .pc-admin-workspace #wpbody-content>.wrap>h1{font-size:20px;line-height:28px;margin-bottom:16px}
+ .pc-admin-workspace #wpbody-content>.wrap>.page-title-action{margin-bottom:16px}
  .pc-admin-workspace #wpbody-content .form-table,.pc-admin-workspace #wpbody-content .form-table :is(tbody,tr,th,td){display:block;box-sizing:border-box;width:100%}
  .pc-admin-workspace #wpbody-content .form-table :is(th,td){padding:16px}
  .pc-admin-workspace #wpbody-content .form-table td{padding-top:0}
