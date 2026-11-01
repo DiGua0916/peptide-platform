@@ -138,11 +138,13 @@
 
 | type | 来源 | 去重 |
 | --- | --- | --- |
-| add_to_cart | `woocommerce_add_to_cart`，经典购物车和 Store API / Blocks 都会触发 | 每次成功加购记一次 |
+| add_to_cart | 经典/程序加购 `woocommerce_add_to_cart`；精确 Store API 加购请求内的 `internal_woocommerce_cart_item_added_from_user_request` 补充已有购物车商品成功加购 | 每次成功加购记一次；同请求已观察到相同父商品和变体的经典成功钩子时不重复记，保留其实际归一化增量 |
 | order_placed | 经典结账 `woocommerce_checkout_order_processed`；区块结账 `woocommerce_store_api_checkout_order_processed` | 每个订单一次 |
 | payment_success | `woocommerce_payment_complete`，或订单第一次进入已付款状态 | 每个订单一次 |
 | payment_failed / order_status | `woocommerce_order_status_changed` | 每个订单、每个状态一次 |
 | login / register | `wp_login` / `user_register` | — |
+
+Store API 原生加购来源已核对 WooCommerce **11.2**：内部成功钩子自 **10.6** 引入，新商品和已有购物车商品均触发，quantity 为本次加购增量。观察器只在真实 `WP_REST_Request` 的 `POST /wc/store/v1/cart/add-item` 数据过滤器内启用，并按请求对象隔离批次/嵌套调用；成功结束或 REST 回调清理时释放。失败请求、其他路由、购物车数量编辑/减少和浏览器尝试不会由此推断为加购。沿用原有访客、隐私和阶段 2 记录规则，原样返回请求业务数据和响应。此来源依赖内部钩子，升级 WooCommerce 时须重新核对钩子及新/已有商品分支语义，不保证任意版本兼容。
 
 下单时，订单上会记下访客和访问编号（`_pc_track_visitor`、`_pc_track_visit`）。之后支付网关的回调没有浏览器 cookie，也能关联回原来的访问。
 

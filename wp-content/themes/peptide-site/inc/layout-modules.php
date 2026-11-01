@@ -120,8 +120,8 @@ add_filter( 'peptide_core_layout_definitions', function ( array $definitions ): 
     if ( ! isset( $definitions['product_collection']['settings'] ) ) { return $definitions; }
     foreach ( $definitions['product_collection']['settings'] as &$field ) {
         if ( 'products' === ( $field['key'] ?? '' ) ) {
-            $field['fields'][] = \PeptideCore\Modules\Fields::f( 'image', 'cardImage', __( '首页展示图（不影响商品详情）', 'peptide-site' ), null,
-                array( 'help' => __( '留空则使用商品主图；规格图片仍在商品后台维护。', 'peptide-site' ) ) );
+            $field['fields'][] = \PeptideCore\Modules\Fields::f( 'image', 'cardImage', __( '普通商品备用展示图（不影响商品详情）', 'peptide-site' ), null,
+                array( 'help' => __( '多规格商品的图片、价格和优惠自动跟随后台排序的第一个可见规格，不使用此图；规格无图时显示示意占位。普通商品可使用此图，留空使用商品主图。', 'peptide-site' ) ) );
             break;
         }
     }

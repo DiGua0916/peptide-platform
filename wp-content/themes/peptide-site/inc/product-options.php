@@ -16,6 +16,16 @@ add_action( 'wp_enqueue_scripts', function () {
 }, 20 );
 add_action( 'peptide_core_showcase_quick_view_assets', 'vc_enqueue_product_options' );
 
+// Specifications are the image selector on variable product pages. Keep the
+// primary gallery image for WooCommerce's native variation image updates.
+add_action( 'wp', function () {
+    if ( ! function_exists( 'is_product' ) || ! is_product() ) { return; }
+    $product = wc_get_product( get_queried_object_id() );
+    if ( $product && $product->is_type( 'variable' ) ) {
+        remove_action( 'woocommerce_product_thumbnails', 'woocommerce_show_product_thumbnails', 20 );
+    }
+} );
+
 // Single-spec products have no variation selector. Surface the published Pack
 // from the plugin's public product extension without inventing another option.
 add_action( 'woocommerce_single_product_summary', function () {
