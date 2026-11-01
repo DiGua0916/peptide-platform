@@ -191,6 +191,27 @@
   catch (_) { op.synced = false; op.message = op.confirmed ? op.name + ' was added, but your cart could not be synchronized. Open your cart before continuing.' : "We couldn't confirm whether " + op.name + ' was added, or synchronize your cart. Open your cart before retrying.'; }
   op.state = 'unknown'; paint();
  }
+ function observeBuyNow(op) {
+  try {
+   if (op.dataBuyNowQueued) { return; }
+   var api = window.VialCoveVisitorTransport;
+   if (!api || typeof api.pushProductAction !== 'function') { return; }
+   var parentId = Number(op.parentId), selectedId = op.payload.id;
+   if (!Number.isSafeInteger(parentId) || parentId <= 0 || !Number.isSafeInteger(selectedId) || selectedId <= 0) { return; }
+   if (!op.dataBuyNowUid) {
+    var crypto = window.crypto, uid;
+    if (crypto && typeof crypto.randomUUID === 'function') { uid = crypto.randomUUID(); }
+    else if (crypto && typeof crypto.getRandomValues === 'function') {
+     var bytes = new Uint8Array(16); crypto.getRandomValues(bytes);
+     uid = Array.prototype.map.call(bytes, function (value) { return value.toString(16).padStart(2, '0'); }).join('');
+    } else { return; }
+    if (typeof uid !== 'string' || !/^(?:[A-Fa-f0-9]{32}|[A-Fa-f0-9]{8}(?:-[A-Fa-f0-9]{4}){3}-[A-Fa-f0-9]{12})$/.test(uid)) { return; }
+    op.dataBuyNowUid = 'buynow-' + uid;
+   }
+   var queued = api.pushProductAction('product_intent', {version: 1, product_id: parentId, variation_id: selectedId === parentId ? 0 : selectedId, kind: 'buy_now', result: 'completed', event_id: op.dataBuyNowUid});
+   if (queued === op.dataBuyNowUid) { op.dataBuyNowQueued = true; }
+  } catch (_) { /* Optional observation cannot change the native cart or navigation result. */ }
+ }
  async function submit(view, mode) {
   var op = snapshot(view, mode); if (!op) { return; } operation = op; paint();
   try {
@@ -215,7 +236,7 @@
      $(document.body).trigger('added_to_cart', [{}, '', $(op.trigger)]); $(document.body).trigger('wc_fragment_refresh');
     } else {
      applyCart(result.data, true, op.trigger); op.state = 'success'; op.message = op.name + ' was added to your cart.'; paint();
-     if (op.mode === 'buy' && current(op)) { location.assign(op.config.checkoutUrl); }
+     if (op.mode === 'buy' && current(op)) { location.assign(op.config.checkoutUrl); observeBuyNow(op); }
     }
    } else if (result.response.status >= 400 && result.response.status < 500 && result.data && typeof result.data.code === 'string') {
     op.state = 'failed'; op.message = plain(result.data.message) || 'This product could not be added. Check the selected specification and quantity.'; paint();
