@@ -2,6 +2,9 @@
 /** Additional Data report translations; existing catalogue entries remain authoritative. */
 defined( 'ABSPATH' ) || exit;
 return array(
+	'More dimension data' => '更多维度数据',
+	'Sources by UTM' => 'UTM来源',
+	'Back to Operations data' => '返回运营数据',
 	'Visit assessment' => '访问判定',
 	'Not assessed' => '未判定',
 	'All sections use the same selected visit-start period and original visits and visitors. For each period, the highest assessment version received before its end is used; missing or conflicting assessments remain not assessed. Stage and checkout progress are accumulated historical facts, not a snapshot of events at the period end. Financial orders must also be created in the period and linked to a selected visit. An empty subset does not mean there are no real normal visitors.' => '所有区域使用同一所选访问开始时段及原始访问和访客。各时段采用结束前收到的最高判定版本；缺失或冲突的判定保持未判定。访问阶段和结账进度使用历史累计事实，不是时段结束时的事件快照。财务订单还须在时段内创建并关联所选访问。空子集不代表没有真实正常访客。',

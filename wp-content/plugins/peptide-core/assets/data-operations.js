@@ -467,9 +467,16 @@
 		}
 	}
 
+	function dimensionsNavigation( data, ctx ) {
+		var dates = data && data.range && data.range.dates;
+		if ( typeof cfg.sourcesUrl !== 'string' || ! cfg.sourcesUrl || ! dates || typeof dates.from !== 'string' || typeof dates.to !== 'string' || ! /^\d{4}-\d{2}-\d{2}$/.test( dates.from ) || ! /^\d{4}-\d{2}-\d{2}$/.test( dates.to ) || ! T.moreDimensions || ! T.utmSources ) { return ''; }
+		var href = cfg.sourcesUrl + ( cfg.sourcesUrl.indexOf( '?' ) < 0 ? '?' : '&' ) + 'from=' + encodeURIComponent( dates.from ) + '&to=' + encodeURIComponent( dates.to );
+		return '<details class="pc-ops-dimensions"><summary>' + ctx.esc( T.moreDimensions ) + '</summary><nav aria-label="' + ctx.esc( T.moreDimensions ) + '"><a href="' + ctx.esc( href ) + '">' + ctx.esc( T.utmSources ) + '</a></nav></details>';
+	}
+
 	function view( data, ctx ) {
 		var esc = ctx.esc;
-		var html = '';
+		var html = dimensionsNavigation( data, ctx );
 		if ( ! data.tracking ) {
 			html += '<p class="pc-ops-note">' + esc( T.trackingOff ) + '</p>';
 		}

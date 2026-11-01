@@ -5,11 +5,17 @@
 	var T = cfg.strings, PATH = '/peptide/v1/data/sources';
 	var METRICS = [ 'uv', 'customers', 'viewed_uv', 'carted_uv', 'paid_uv', 'orders', 'conversion', 'sales', 'aov', 'uv_value' ];
 	var state = { sort: 'uv', order: 'desc', page: 1, per_page: 20, split_medium: 0, group_by: 'utm', q: '' }, generation = 0, disposePrevious = null;
+	function operationsNavigation( data, esc ) {
+		var dates = data && data.range && data.range.dates;
+		if ( typeof cfg.operationsUrl !== 'string' || ! cfg.operationsUrl || ! dates || typeof dates.from !== 'string' || typeof dates.to !== 'string' || ! /^\d{4}-\d{2}-\d{2}$/.test( dates.from ) || ! /^\d{4}-\d{2}-\d{2}$/.test( dates.to ) || ! T.backToOperations ) { return ''; }
+		var href = cfg.operationsUrl + ( cfg.operationsUrl.indexOf( '?' ) < 0 ? '?' : '&' ) + 'from=' + encodeURIComponent( dates.from ) + '&to=' + encodeURIComponent( dates.to );
+		return '<a href="' + esc( href ) + '">' + esc( T.backToOperations ) + '</a>';
+	}
 	function render( body, range, ctx ) {
 		if ( disposePrevious ) { disposePrevious(); }
 		var esc = ctx.esc, accepted = null, disposed = false, rangeBusy = false, exporting = false, exportToken = 0, unsubscribe = null;
 		state.page = 1;
-		body.innerHTML = '<div class="pc-sources"><div class="pc-sources-toolbar"><label>' + esc( T.groupBy ) + ' <select class="pc-sources-group"><option value="utm">' + esc( T.utm ) + '</option><option value="channel">' + esc( T.channel ) + '</option></select></label><label><input type="checkbox" class="pc-sources-split"' + ( state.split_medium ? ' checked' : '' ) + '> ' + esc( T.split ) + '</label><label>' + esc( T.search ) + ' <input type="search" class="pc-sources-search" maxlength="100"></label><button type="button" class="button pc-sources-apply">' + esc( T.search ) + '</button><button type="button" class="button pc-sources-export" disabled>' + esc( T.exportCsv ) + '</button></div><p class="pc-data-muted pc-sources-note">' + esc( state.group_by === 'channel' ? T.channelNote : T.note ) + '</p><p class="pc-sources-status" role="status" aria-live="polite"></p><div class="pc-sources-wrap"></div><div class="pc-sources-foot"></div></div>';
+		body.innerHTML = '<div class="pc-sources"><div class="pc-sources-back"></div><div class="pc-sources-toolbar"><label>' + esc( T.groupBy ) + ' <select class="pc-sources-group"><option value="utm">' + esc( T.utm ) + '</option><option value="channel">' + esc( T.channel ) + '</option></select></label><label><input type="checkbox" class="pc-sources-split"' + ( state.split_medium ? ' checked' : '' ) + '> ' + esc( T.split ) + '</label><label>' + esc( T.search ) + ' <input type="search" class="pc-sources-search" maxlength="100"></label><button type="button" class="button pc-sources-apply">' + esc( T.search ) + '</button><button type="button" class="button pc-sources-export" disabled>' + esc( T.exportCsv ) + '</button></div><p class="pc-data-muted pc-sources-note">' + esc( state.group_by === 'channel' ? T.channelNote : T.note ) + '</p><p class="pc-sources-status" role="status" aria-live="polite"></p><div class="pc-sources-wrap"></div><div class="pc-sources-foot"></div></div>';
 		var split = body.querySelector( '.pc-sources-split' ), search = body.querySelector( '.pc-sources-search' ), apply = body.querySelector( '.pc-sources-apply' ), button = body.querySelector( '.pc-sources-export' ), status = body.querySelector( '.pc-sources-status' ), wrap = body.querySelector( '.pc-sources-wrap' ), foot = body.querySelector( '.pc-sources-foot' );
 		var group = body.querySelector( '.pc-sources-group' ), note = body.querySelector( '.pc-sources-note' );
 		search.value = state.q; group.value = state.group_by;
@@ -26,6 +32,7 @@
 			var coverageHtml = '';
 			if ( state.group_by === 'channel' ) { [ 'visits', 'orders' ].forEach( function ( unit ) { var c = data.coverage && data.coverage[ unit ]; if ( ! c || c.unit !== unit || [ 'base_count', 'value', 'unknown', 'unobserved' ].some( function ( key ) { return typeof c[ key ] !== 'number' || c[ key ] < 0; } ) || c.value + c.unknown + c.unobserved !== c.base_count ) { throw new Error( 'Invalid channel coverage' ); } var values = { '%v': ctx.number( c.value ), '%n': ctx.number( c.base_count ), '%u': ctx.number( c.unknown ), '%o': ctx.number( c.unobserved ), '%t': T[ unit ] }; coverageHtml += '<p class="pc-data-muted">' + esc( T.channelCoverage.replace( /%[vnuot]/g, function ( token ) { return values[ token ]; } ) ) + '</p>'; } ); }
 			accepted = data; status.textContent = '';
+			var back = body.querySelector( '.pc-sources-back' ); if ( back ) { back.innerHTML = operationsNavigation( data, esc ); }
 			if ( ! data.rows.length ) { wrap.innerHTML = coverageHtml + '<p class="pc-data-empty">' + esc( T.noData ) + '</p>'; }
 			else {
 				var html = coverageHtml + '<table><thead><tr><th>' + esc( state.group_by === 'channel' ? T.channel : T.source ) + '</th>' + ( state.split_medium ? '<th>' + esc( T.medium ) + '</th>' : '' );

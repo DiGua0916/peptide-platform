@@ -67,6 +67,7 @@ final class Data_Pages {
 		\PeptideCore\Tracking\Visit_Classifications::register_hooks();
 		add_action( 'admin_menu', array( self::class, 'add_menu' ), 60 );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
+		add_filter( 'submenu_file', array( self::class, 'submenu_file' ) );
 	}
 
 	/** REST 路由在任何请求里都要注册（后台页面通过 REST 取数据）。 */
@@ -433,7 +434,10 @@ final class Data_Pages {
 			// 第一个页面和顶层菜单同一个 slug，WordPress 就把它显示成第一个子菜单，而不是多出一个“数据”。
 			add_submenu_page( self::SLUG, $titles[ $key ], $titles[ $key ], self::CAP, $slug, array( self::class, 'render' ) );
 		}
+		remove_submenu_page( self::SLUG, self::PAGES['sources'] );
 	}
+
+	public static function submenu_file( $file ) { return 'sources' === self::current_key() ? self::PAGES['operations'] : $file; }
 
 	/** 当前打开的是哪个数据页面（PAGES 的 key），不是数据页面时为 null。 */
 	public static function current_key(): ?string {
@@ -499,7 +503,7 @@ final class Data_Pages {
 			wp_enqueue_script( 'peptide-core-data-operations', $url . 'data-operations.js', array( self::SCRIPT, 'peptide-core-data-rankings', 'peptide-core-data-operations-checkout' ), $ver( 'data-operations.js' ), array( 'in_footer' => true ) );
 			wp_add_inline_script(
 				'peptide-core-data-operations',
-				'window.pcDataOperations = ' . wp_json_encode( array( 'strings' => self::operations_strings() ) ) . ';',
+				'window.pcDataOperations = ' . wp_json_encode( array( 'strings' => self::operations_strings(), 'sourcesUrl' => admin_url( 'admin.php?page=' . self::PAGES['sources'] ) ) ) . ';',
 				'before'
 			);
 		}
@@ -508,7 +512,7 @@ final class Data_Pages {
 		if ( 'sources' === $key ) {
 			wp_enqueue_script( 'peptide-core-data-export', $url . 'data-export.js', array( self::SCRIPT, 'wp-api-fetch', 'wp-url' ), $ver( 'data-export.js' ), array( 'in_footer' => true ) );
 			wp_enqueue_script( 'peptide-core-data-sources', $url . 'data-sources.js', array( self::SCRIPT, 'peptide-core-data-export' ), $ver( 'data-sources.js' ), array( 'in_footer' => true ) );
-			wp_add_inline_script( 'peptide-core-data-sources', 'window.pcDataSources = ' . wp_json_encode( array( 'strings' => self::sources_strings() ) ) . ';', 'before' );
+			wp_add_inline_script( 'peptide-core-data-sources', 'window.pcDataSources = ' . wp_json_encode( array( 'strings' => self::sources_strings(), 'operationsUrl' => admin_url( 'admin.php?page=' . self::PAGES['operations'] ) ) ) . ';', 'before' );
 		}
 		if ( 'experiments' === $key ) {
 			wp_enqueue_style( 'peptide-core-data-experiments', $url . 'data-sources.css', array( 'peptide-core-data' ), $ver( 'data-sources.css' ) );
@@ -605,7 +609,7 @@ final class Data_Pages {
 			'apps'            => __( 'App statistics', 'peptide-core' ),
 			'landing'         => __( 'Landing page conversion', 'peptide-core' ),
 			'experiments'     => __( 'Landing A/B analysis', 'peptide-core' ),
-			'sources'         => __( 'UTM sources', 'peptide-core' ),
+			'sources'         => __( 'Sources by UTM', 'peptide-core' ),
 			'conversion'      => __( 'Conversion rate details', 'peptide-core' ),
 			'emails'          => __( 'Email details data', 'peptide-core' ),
 		);
@@ -806,6 +810,8 @@ final class Data_Pages {
 	/** 运营数据页脚本里的文字：12 个指标、漏斗的五层、表头和说明，以及九张趋势图的标题、说明和提示。 */
 	private static function operations_strings(): array {
 		return self::visitor_funnel_strings() + self::export_strings() + array(
+			'moreDimensions' => __( 'More dimension data', 'peptide-core' ),
+			'utmSources' => __( 'Sources by UTM', 'peptide-core' ),
 			'checkoutPanel'   => self::operations_checkout_strings(),
 			'sales'           => __( 'Sales', 'peptide-core' ),
 			'visitors'        => __( 'Visited users', 'peptide-core' ),
@@ -1049,8 +1055,9 @@ final class Data_Pages {
 		);
 	}
 	private static function sources_strings(): array {
+		$navigation = array( 'backToOperations' => __( 'Back to Operations data', 'peptide-core' ) );
 		$channels = array( 'groupBy' => __( 'Group by', 'peptide-core' ), 'utm' => __( 'UTM source', 'peptide-core' ), 'channel' => __( 'Automatic traffic channel', 'peptide-core' ), 'channelNote' => __( 'Channels use the first saved UTM and referrer values for each visit. An empty referrer may mean direct access or a hidden source. Saved UTM values stay unchanged.', 'peptide-core' ), 'channelCoverage' => __( 'Channel observations: %v / %n %t. Unknown: %u; not observed: %o.', 'peptide-core' ), 'visits' => __( 'Visits', 'peptide-core' ) );
-		return $channels + self::export_strings() + array( 'source' => __( 'UTM source', 'peptide-core' ), 'medium' => __( 'UTM medium', 'peptide-core' ), 'split' => __( 'Split by UTM medium', 'peptide-core' ), 'search' => __( 'Search source and medium values', 'peptide-core' ), 'unobserved' => __( 'Not observed', 'peptide-core' ), 'missing' => __( 'Captured key absent', 'peptide-core' ), 'empty' => __( 'Captured empty value', 'peptide-core' ), 'uv' => __( 'Visitors (UV)', 'peptide-core' ), 'customers' => __( 'Customers', 'peptide-core' ), 'viewed_uv' => __( 'Viewed product UV', 'peptide-core' ), 'carted_uv' => __( 'Added to cart UV', 'peptide-core' ), 'paid_uv' => __( 'Paid UV', 'peptide-core' ), 'orders' => __( 'Paid orders', 'peptide-core' ), 'conversion' => __( 'Conversion rate', 'peptide-core' ), 'sales' => __( 'Sales', 'peptide-core' ), 'aov' => __( 'Average order value', 'peptide-core' ), 'uv_value' => __( 'UV value', 'peptide-core' ), 'prev' => __( 'Previous', 'peptide-core' ), 'next' => __( 'Next', 'peptide-core' ), 'noData' => __( 'No source data in this period.', 'peptide-core' ), 'retry' => __( 'Retry', 'peptide-core' ), 'note' => __( 'First successfully captured source values preserve case, absent keys and empty values. Visits use start time; paid orders use creation time and their original visit. Rows overlap in visitors. Test visits and test orders are excluded. No direct traffic is inferred.', 'peptide-core' ) );
+		return $navigation + $channels + self::export_strings() + array( 'source' => __( 'UTM source', 'peptide-core' ), 'medium' => __( 'UTM medium', 'peptide-core' ), 'split' => __( 'Split by UTM medium', 'peptide-core' ), 'search' => __( 'Search source and medium values', 'peptide-core' ), 'unobserved' => __( 'Not observed', 'peptide-core' ), 'missing' => __( 'Captured key absent', 'peptide-core' ), 'empty' => __( 'Captured empty value', 'peptide-core' ), 'uv' => __( 'Visitors (UV)', 'peptide-core' ), 'customers' => __( 'Customers', 'peptide-core' ), 'viewed_uv' => __( 'Viewed product UV', 'peptide-core' ), 'carted_uv' => __( 'Added to cart UV', 'peptide-core' ), 'paid_uv' => __( 'Paid UV', 'peptide-core' ), 'orders' => __( 'Paid orders', 'peptide-core' ), 'conversion' => __( 'Conversion rate', 'peptide-core' ), 'sales' => __( 'Sales', 'peptide-core' ), 'aov' => __( 'Average order value', 'peptide-core' ), 'uv_value' => __( 'UV value', 'peptide-core' ), 'prev' => __( 'Previous', 'peptide-core' ), 'next' => __( 'Next', 'peptide-core' ), 'noData' => __( 'No source data in this period.', 'peptide-core' ), 'retry' => __( 'Retry', 'peptide-core' ), 'note' => __( 'First successfully captured source values preserve case, absent keys and empty values. Visits use start time; paid orders use creation time and their original visit. Rows overlap in visitors. Test visits and test orders are excluded. No direct traffic is inferred.', 'peptide-core' ) );
 	}
 
 	private static function export_strings(): array {
