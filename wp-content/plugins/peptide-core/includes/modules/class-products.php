@@ -81,6 +81,9 @@ final class Products {
 				$args['orderby'] = 'menu_order title';
 				$args['order']   = 'ASC';
 		}
+		if ( 'category' === $source && isset( $term ) && $term instanceof \WP_Term && class_exists( '\\PeptideCore\\Collections' ) ) {
+			$args = \PeptideCore\Collections::product_query_args( $term->term_id, $args );
+		}
 		return array_values( wc_get_products( $args ) );
 	}
 	/** A bounded, catalog-only page. Existing for_module queries remain unchanged. */
@@ -94,12 +97,14 @@ final class Products {
 		$suppress = is_object( $wpdb ) && method_exists( $wpdb, 'suppress_errors' );
 		$previous = $suppress ? $wpdb->suppress_errors( true ) : null;
 		try {
-		$products = wc_get_products( array(
+		$args = array(
 			'status' => 'publish', 'visibility' => 'visible', 'has_password' => false,
 			'category' => array( $term->slug ), 'return' => 'objects', 'cache_results' => false,
 			'limit' => $per_page + 1, 'offset' => ( $page - 1 ) * $per_page,
 			'orderby' => array( 'menu_order' => 'ASC', 'title' => 'ASC', 'ID' => 'ASC' ), 'order' => 'ASC',
-		) );
+		);
+		if ( class_exists( '\\PeptideCore\\Collections' ) ) { $args = \PeptideCore\Collections::product_query_args( $category, $args ); }
+		$products = wc_get_products( $args );
 			if ( (int) ( $wpdb->num_queries ?? 0 ) > $queries && '' !== (string) ( $wpdb->last_error ?? '' ) ) { throw new \RuntimeException( 'Product data is unavailable.' ); }
 		} finally { if ( $suppress ) { $wpdb->suppress_errors( $previous ); } }
 		if ( ! is_array( $products ) ) { throw new \UnexpectedValueException( 'Product query failed.' ); }
