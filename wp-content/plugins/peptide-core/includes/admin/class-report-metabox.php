@@ -136,6 +136,18 @@ final class Report_Metabox {
 				</td>
 			</tr>
 			<tr>
+				<th scope="row">独立 COA 资料库</th>
+				<td>
+					<?php if ( current_user_can( 'publish_pc_reports' ) ) : ?>
+						<input type="hidden" name="pc_report_library_present" value="1">
+						<label><input type="checkbox" name="pc_report_library_public" value="1" <?php checked( Meta::bool( get_post_meta( $post->ID, Meta::REPORT_LIBRARY_PUBLIC, true ) ) ); ?>> 在独立 COA 页面公开展示，并允许访客查看及下载原文件</label>
+						<p class="description">这是独立资料库的公开开关。不会改变下方批次报告状态或订单访问权限，也不会自动关联销售批次。关闭后，资料库及其文件接口停止公开这份资料。</p>
+					<?php else : ?>
+						<p>公开设置由有报告发布权限的账号管理。</p>
+					<?php endif; ?>
+				</td>
+			</tr>
+			<tr>
 				<th scope="row"><label for="pc_report_status"><?php esc_html_e( 'Report status', 'peptide-core' ); ?></label></th>
 				<td><?php self::select( 'pc_report_status', $status_labels, '' !== $status ? $status : 'draft' ); ?></td>
 			</tr>
@@ -254,6 +266,11 @@ final class Report_Metabox {
 			} else {
 				$old_file = get_post_meta( $post_id, Meta::REPORT_FILE, true );
 				update_post_meta( $post_id, Meta::REPORT_FILE, $stored );
+				$old_thumbnail = get_post_meta( $post_id, Meta::REPORT_LIBRARY_THUMBNAIL, true );
+				if ( is_array( $old_thumbnail ) && ! empty( $old_thumbnail['stored'] ) ) { Private_Files::delete( (string) $old_thumbnail['stored'] ); }
+				delete_post_meta( $post_id, Meta::REPORT_LIBRARY_THUMBNAIL );
+				// A replacement without an explicit publication field must not inherit public access.
+				update_post_meta( $post_id, Meta::REPORT_LIBRARY_PUBLIC, false );
 				$stored_path = Private_Files::path( (string) $stored['stored'] );
 				if ( $stored_path && is_readable( $stored_path ) ) { update_post_meta( $post_id, Meta::REPORT_SOURCE_SHA256, hash_file( 'sha256', $stored_path ) ); }
 				if ( is_array( $old_file ) && ! empty( $old_file['stored'] ) ) {
@@ -270,6 +287,10 @@ final class Report_Metabox {
 		}
 
 		update_post_meta( $post_id, Meta::REPORT_STATUS, $status );
+		if ( isset( $_POST['pc_report_library_present'] ) && current_user_can( 'publish_pc_reports' ) ) {
+			$library_public = ! empty( $_POST['pc_report_library_public'] ) && ! in_array( $status, array( 'withdrawn', 'superseded' ), true ) && ! isset( $_POST['pc_is_demo'] ) && is_array( $file ) && ! empty( $file['stored'] );
+			update_post_meta( $post_id, Meta::REPORT_LIBRARY_PUBLIC, $library_public );
+		}
 		if ( 'published' === $status ) {
 			delete_post_meta( $post_id, Meta::REPORT_SUPERSEDED_BY );
 			if ( 'published' !== $old_status || $batch_id !== $old_batch_id || $type !== $old_type ) {

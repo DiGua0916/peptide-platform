@@ -161,3 +161,14 @@ function peptide_core_get_product_promotions( $product ): array {
 function peptide_core_get_collection( int $id ): ?array {
 	return \PeptideCore\Collections::public_data( $id );
 }
+
+/**
+ * Explicitly public COA library documents, independent of sales batch publication.
+ * Filters: q, product_id, date_from, date_to, sort, page, per_page.
+ * Only public display fields and controlled view/download/thumbnail URLs are returned.
+ *
+ * @return array|WP_Error
+ */
+function peptide_core_get_report_library( array $filters = array() ) {
+	return \PeptideCore\Report_Archive::query( $filters );
+}

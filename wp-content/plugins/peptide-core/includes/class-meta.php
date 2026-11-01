@@ -39,6 +39,8 @@ final class Meta {
 	public const REPORT_SOURCE_CLIENT = '_pc_report_source_client';
 	public const REPORT_SOURCE_LOT    = '_pc_report_source_lot';
 	public const REPORT_SOURCE_SHA256 = '_pc_report_source_sha256';
+	public const REPORT_LIBRARY_PUBLIC = '_pc_report_library_public';
+	public const REPORT_LIBRARY_THUMBNAIL = '_pc_report_library_thumbnail';
 	public const REPORT_TYPE          = '_pc_type';
 	public const REPORT_VERSION       = '_pc_version';
 	public const REPORT_STATUS        = '_pc_report_status';
@@ -60,6 +62,7 @@ final class Meta {
 	public static function register(): void {
 		$batch_auth  = static fn() => current_user_can( 'edit_pc_batches' );
 		$report_auth = static fn() => current_user_can( 'edit_pc_reports' );
+		$library_auth = static fn() => current_user_can( 'publish_pc_reports' );
 
 		$batch = array(
 			self::BATCH_NO             => array( 'string', '', array( self::class, 'sanitize_text' ) ),
@@ -86,6 +89,8 @@ final class Meta {
 			self::REPORT_SOURCE_CLIENT => array( 'string', '', array( self::class, 'sanitize_text' ) ),
 			self::REPORT_SOURCE_LOT    => array( 'string', '', array( self::class, 'sanitize_text' ) ),
 			self::REPORT_SOURCE_SHA256 => array( 'string', '', array( self::class, 'sanitize_text' ) ),
+			self::REPORT_LIBRARY_PUBLIC => array( 'boolean', false, 'rest_sanitize_boolean' ),
+			self::REPORT_LIBRARY_THUMBNAIL => array( 'object', array(), null ),
 			self::REPORT_TYPE          => array( 'string', 'other', array( self::class, 'sanitize_text' ) ),
 			self::REPORT_VERSION       => array( 'integer', 0, 'absint' ),
 			self::REPORT_STATUS        => array( 'string', 'draft', array( self::class, 'sanitize_text' ) ),
@@ -98,7 +103,8 @@ final class Meta {
 			self::REPORT_SUPERSEDED_BY => array( 'integer', 0, 'absint' ),
 		);
 		foreach ( $report as $key => $def ) {
-			self::register_one( Post_Types::REPORT, $key, $def, $report_auth );
+			$auth = in_array( $key, array( self::REPORT_LIBRARY_PUBLIC, self::REPORT_LIBRARY_THUMBNAIL ), true ) ? $library_auth : $report_auth;
+			self::register_one( Post_Types::REPORT, $key, $def, $auth );
 		}
 	}
 

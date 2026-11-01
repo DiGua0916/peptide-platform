@@ -84,6 +84,10 @@ final class Report_Library_Page {
 		$product_id  = ctype_digit( $selection ) ? (int) $selection : -1;
 		echo '<div class="wrap pc-report-library"><div class="pc-report-library__heading"><h1>' . esc_html__( '检测报告', 'peptide-core' ) . '</h1><div class="pc-report-library__actions">';
 		self::new_report_link( $is_selected && $product_id > 0 && isset( $data['products'][ $product_id ] ) ? $product_id : null );
+		$archive_page_id = (int) get_option( 'pc_report_library_page_id', 0 );
+		if ( 'page' === get_post_type( $archive_page_id ) && 'publish' === get_post_status( $archive_page_id ) ) {
+			echo '<a class="button" target="_blank" rel="noopener" href="' . esc_url( get_permalink( $archive_page_id ) ) . '">查看 COA 页面</a>';
+		}
 		echo '<a class="button" href="' . esc_url( admin_url( 'edit.php?post_type=' . Post_Types::REPORT ) ) . '">' . esc_html__( '原生报告列表', 'peptide-core' ) . '</a></div></div>';
 		echo '<p class="pc-report-library__intro">' . esc_html__( '先选产品，再按报告签发日期管理。未填写日期的资料列在最后；来源资料与实物批次的关系需逐份核对。', 'peptide-core' ) . '</p>';
 
@@ -237,6 +241,7 @@ final class Report_Library_Page {
 		if ( $batch_id <= 0 ) {
 			echo '<span class="pc-report-library__subtext">' . esc_html__( '来源资料 · 待核验', 'peptide-core' ) . '</span>';
 		}
+		echo '<span class="pc-report-library__subtext">' . esc_html( Meta::bool( get_post_meta( $id, Meta::REPORT_LIBRARY_PUBLIC, true ) ) ? '独立资料库：公开' : '独立资料库：未公开' ) . '</span>';
 		echo '</td><td>' . esc_html( $filename ?: __( '未附文件', 'peptide-core' ) ) . '</td><td><div class="pc-report-library__row-actions">';
 		if ( $edit ) {
 			echo '<a href="' . esc_url( $edit ) . '">' . esc_html__( '编辑', 'peptide-core' ) . '</a>';

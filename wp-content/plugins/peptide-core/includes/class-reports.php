@@ -141,5 +141,9 @@ final class Reports {
 		if ( is_array( $file ) && ! empty( $file['stored'] ) ) {
 			Private_Files::delete( (string) $file['stored'] );
 		}
+		$thumbnail = get_post_meta( $post_id, Meta::REPORT_LIBRARY_THUMBNAIL, true );
+		if ( is_array( $thumbnail ) && ! empty( $thumbnail['stored'] ) ) {
+			Private_Files::delete( (string) $thumbnail['stored'] );
+		}
 	}
 }

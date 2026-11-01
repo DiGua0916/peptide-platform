@@ -41,6 +41,8 @@ final class Plugin {
 		Post_Types::register_hooks();
 		Meta::register_hooks();
 		Reports::register_hooks();
+		if ( class_exists( Report_Archive::class ) ) { Report_Archive::register_hooks(); }
+		if ( class_exists( Report_Archive_Page::class ) ) { Report_Archive_Page::register_hooks(); }
 		Order_Batches::register_hooks();
 		Pricing::register_hooks();
 		Checkout_Ack::register_hooks();
