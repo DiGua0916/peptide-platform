@@ -47,3 +47,10 @@ Partial failure:
     {"protocol":1,"ack":["classification-demo-0001"],"rejected":[{"event_id":"classification-demo-0002","code":"server_error","retry":true}]}
 
 There is no independent retry array. Confirm only the event IDs listed in ack. For rejected entries, resend the original unchanged observation only when retry is exactly true; retry false is terminal and requires reconciliation instead of a new UID or altered payload. Handle whole-request HTTP400, unauthenticated HTTP401, authenticated-but-unauthorized HTTP403 and other transport-level failures separately; they are not a per-event acknowledgement.
+
+
+## 072 approved native operational policy and manual correction
+
+The four-field authenticated external contract remains compatible. Automatic labels now have a separate server-internal writer, triggered only after genuine accepted client persistence; public clients cannot submit origin:automatic. Canonical optional manual reason and frozen automatic policy/evidence are documented in data-visit-classifier-policy-v1.md. Public management authentication, limits, exact native ownership, immutable visitor/UID namespace and server received cutoffs remain unchanged. This is source-only until Root integrates; do not infer runtime enablement from these files.
+
+072 revision2 serializes public/external, internal automatic and manual classification writers under the same database/prefix/original-visit GET_LOCK (at most2seconds). Manual expected-revision selection and insert, and automatic priority/policy verification, run inside that guard. INSERT SELECT independently requires IS_USED_LOCK(name)=CONNECTION_ID() so reconnect cannot perform an unguarded retry. Lock timeout/SQL errors or lost ownership without an immutable winner remain retryable server_error; there is no false ACK. Release runs in finally; no nested lock or business transaction. Native visitor/event UID uniqueness, four-field payload and exclusive server receipt cutoffs are unchanged.
