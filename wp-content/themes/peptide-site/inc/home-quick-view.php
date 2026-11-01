@@ -1,6 +1,7 @@
 <?php
 /** Homepage presentation for the plugin's native WooCommerce quick-view flow. */
 defined( 'ABSPATH' ) || exit;
+require_once __DIR__ . '/product-dialog-content.php';
 
 /** This adapter adds no cart endpoint, variation matcher, or browser cart storage. */
 function vc_home_quick_view_assets(): void {
@@ -95,5 +96,12 @@ function vc_home_quick_view_template( $product ): string {
         $tags->add_class( 'vc-home-quick-product' );
         $tags->set_attribute( 'data-vc-home-initial', wp_json_encode( $initial, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) );
     }
-    return $tags->get_updated_html();
+    $html = $tags->get_updated_html();
+    // The native template has one product root. Keep the existing purchase form
+    // intact and put the public PDP content in the same dialog, after its summary.
+    $content = vc_product_dialog_content( $product );
+    if ( '' !== $content ) {
+        $html = preg_replace_callback( '~</div>\s*</template>\s*$~i', static fn( $match ) => $content . $match[0], $html, 1 );
+    }
+    return $html;
 }
