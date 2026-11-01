@@ -1,5 +1,17 @@
 # Landing A/B received-data contract
 
+## Current delivery status — 2026-11-01
+
+The original source-checkpoint paragraphs and gate results below are historical provenance. Their source-only, no-runtime, no-commit and pending-review statements describe those checkpoints, not the current delivery state.
+
+The Data implementation is included in source commit 828731b2d3ef00303101ff0f5e21a50bd5687c6e and the accepted 085 package of 480 production files on the original service on port 8091. Stage 086 fresh fetch, nonforce main push and remote readback confirmed that commit. Local operational evidence is at D:/Projects/peptide-platform/plans/verification/085-local-release/result.json, D:/Projects/peptide-platform/plans/verification/085-native-release/result.json and D:/Projects/peptide-platform/plans/verification/086-git-main-sync/result.json; these are local evidence paths, not files promised in a remote checkout.
+
+Original-PV binding, order and channel native proofs from stages 074/078 are retained separately. They do not establish that real customer favorite, share or A/B exposure sources were produced, accepted or tested. DiGua owns persistent NEW favorite additions, completed share callbacks, actual variant display/assignment and the trusted-server connector; the current integration contract is [data-digua-integration-v1.md](data-digua-integration-v1.md).
+
+SMTP/provider/account configuration and actual external delivery belong to mail business/operations. Data records and aggregates supported actual sending outcomes and image/link requests: transport acceptance does not prove inbox delivery, and an image/link request does not prove human reading. External joint acceptance is a dependency, not missing Data coding. This phase requests no SMTP credentials or configuration changes.
+
+## Original 058 checkpoint context (historical)
+
 058 is a source-only receiver and analysis page based on frozen052. It does not create experiments, assign variants, route/randomize traffic, activate campaigns, calculate significance, choose winners or assert a causal effect. The reference nonempty hidden formula was unavailable and is not claimed to be copied.
 
 ## Trusted source integration
@@ -73,4 +85,4 @@ The module registers a separate personal exporter via DataPages admin hooks. It 
 
 Focused actual code gates:66 PHP assertions cover permission/body/batch/rate, typed parser/PII discard, age/PV/owner, exact replay/conflict/native namespaces, INSERT IGNORE races/no winner, no activity mutation,500/501/1001 reads, malformed500 lookahead, contamination, native order identity/time/refund/test/dedup, filters/cutoff, empty/unavailable/SQL failures, actual route callbacks/Range/config, privacy501 and real CSV GET/HEAD. Actual renderer `node --test` has23 assertions for accepted dates/domain/country/search/sort/paging, out-of-order/error/retry/range cancellation, draft CSV, escaping and empty coverage. Existing actual CSV guard has61 assertions. Commands, outputs, source hashes and skips are in `plans/058-verification.json`.
 
-All test fixtures are portable, in memory and relative to the repository. No WordPress bootstrap, native fixture/customer/catalog mutation, real DB, HTTP/browser, mail, install, service, cleanup, commit, merge or push was performed. Source is held for Root full read/rerun/integration; it is not deployed or native/browser accepted. Frozen052/054/055/056 and the user/runtime trees remain untouched.
+**Original 058 source-checkpoint result (historical):** All test fixtures are portable, in memory and relative to the repository. No WordPress bootstrap, native fixture/customer/catalog mutation, real DB, HTTP/browser, mail, install, service, cleanup, commit, merge or push was performed. Source is held for Root full read/rerun/integration; it is not deployed or native/browser accepted. Frozen052/054/055/056 and the user/runtime trees remain untouched.
