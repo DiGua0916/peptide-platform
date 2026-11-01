@@ -45,6 +45,7 @@ namespace {
  require dirname( __DIR__ ) . '/includes/tracking/class-experiment-observations.php';
  require dirname( __DIR__ ) . '/includes/tracking/class-experiment-bindings.php';
  require dirname( __DIR__ ) . '/includes/api/class-rest-controller.php';
+ require dirname( __DIR__ ) . '/includes/data/class-dimension-details.php';
  require dirname( __DIR__ ) . '/includes/admin/class-data-pages.php';
  use PeptideCore\Tracking\Experiment_Bindings as Bindings073; use PeptideCore\Tracking\Experiment_Observations as Observations073; use PeptideCore\Tracking\Schema as Schema073;
  $passed = 0; $check = static function ( $name, $ok ) use ( &$passed ) { if ( ! $ok ) { throw new RuntimeException( 'FAIL ' . $name ); } ++$passed; };

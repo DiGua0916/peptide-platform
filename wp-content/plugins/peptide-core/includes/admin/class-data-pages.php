@@ -56,10 +56,11 @@ final class Data_Pages {
 		'page_conversion' => 'pc-data-page-conversion',
 		'apps'            => 'pc-data-apps',
 		'landing'         => 'pc-data-landing',
-		'experiments'     => 'pc-data-experiments',
 		'sources'         => 'pc-data-sources',
+		'dimension_details' => 'pc-data-dimensions',
 		'conversion'      => 'pc-data-conversion',
 		'emails'          => 'pc-data-emails',
+		'experiments'     => 'pc-data-experiments',
 	);
 
 	public static function register_hooks(): void {
@@ -82,6 +83,7 @@ final class Data_Pages {
 				register_rest_route( Rest_Controller::ROUTE_NAMESPACE, '/data/experiments', array( 'methods' => \WP_REST_Server::READABLE, 'permission_callback' => $permission, 'callback' => array( \PeptideCore\Data\Experiments::class, 'response' ) ) );
 				register_rest_route( Rest_Controller::ROUTE_NAMESPACE, '/data/experiments/events', array( 'methods' => 'POST', 'permission_callback' => array( \PeptideCore\Tracking\Experiment_Observations::class, 'permission' ), 'callback' => array( \PeptideCore\Tracking\Experiment_Observations::class, 'receive' ) ) );
 				\PeptideCore\Tracking\Experiment_Bindings::register_routes();
+				\PeptideCore\Data\Dimension_Details::register_routes();
 				register_rest_route(
 					Rest_Controller::ROUTE_NAMESPACE,
 					'/data/range',
@@ -434,10 +436,10 @@ final class Data_Pages {
 			// 第一个页面和顶层菜单同一个 slug，WordPress 就把它显示成第一个子菜单，而不是多出一个“数据”。
 			add_submenu_page( self::SLUG, $titles[ $key ], $titles[ $key ], self::CAP, $slug, array( self::class, 'render' ) );
 		}
-		add_action( 'admin_head', static function (): void { remove_submenu_page( self::SLUG, self::PAGES['sources'] ); } );
+		add_action( 'admin_head', static function (): void { remove_submenu_page( self::SLUG, self::PAGES['sources'] ); remove_submenu_page( self::SLUG, self::PAGES['dimension_details'] ); } );
 	}
 
-	public static function submenu_file( $file ) { return 'sources' === self::current_key() ? self::PAGES['operations'] : $file; }
+	public static function submenu_file( $file ) { return in_array( self::current_key(), array( 'sources', 'dimension_details' ), true ) ? self::PAGES['operations'] : $file; }
 
 	/** 当前打开的是哪个数据页面（PAGES 的 key），不是数据页面时为 null。 */
 	public static function current_key(): ?string {
@@ -503,7 +505,7 @@ final class Data_Pages {
 			wp_enqueue_script( 'peptide-core-data-operations', $url . 'data-operations.js', array( self::SCRIPT, 'peptide-core-data-rankings', 'peptide-core-data-operations-checkout' ), $ver( 'data-operations.js' ), array( 'in_footer' => true ) );
 			wp_add_inline_script(
 				'peptide-core-data-operations',
-				'window.pcDataOperations = ' . wp_json_encode( array( 'strings' => self::operations_strings(), 'sourcesUrl' => admin_url( 'admin.php?page=' . self::PAGES['sources'] ) ) ) . ';',
+				'window.pcDataOperations = ' . wp_json_encode( array( 'strings' => self::operations_strings(), 'sourcesUrl' => admin_url( 'admin.php?page=' . self::PAGES['sources'] ), 'dimensionLinks' => self::dimension_links() ) ) . ';',
 				'before'
 			);
 		}
@@ -513,6 +515,13 @@ final class Data_Pages {
 			wp_enqueue_script( 'peptide-core-data-export', $url . 'data-export.js', array( self::SCRIPT, 'wp-api-fetch', 'wp-url' ), $ver( 'data-export.js' ), array( 'in_footer' => true ) );
 			wp_enqueue_script( 'peptide-core-data-sources', $url . 'data-sources.js', array( self::SCRIPT, 'peptide-core-data-export' ), $ver( 'data-sources.js' ), array( 'in_footer' => true ) );
 			wp_add_inline_script( 'peptide-core-data-sources', 'window.pcDataSources = ' . wp_json_encode( array( 'strings' => self::sources_strings(), 'operationsUrl' => admin_url( 'admin.php?page=' . self::PAGES['operations'] ) ) ) . ';', 'before' );
+		}
+		if ( 'dimension_details' === $key ) {
+			$dimension = self::dimension_page();
+			wp_enqueue_style( 'peptide-core-data-dimension-details', $url . 'data-dimension-details.css', array( 'peptide-core-data' ), $ver( 'data-dimension-details.css' ) );
+			wp_enqueue_script( 'peptide-core-data-export', $url . 'data-export.js', array( self::SCRIPT, 'wp-api-fetch', 'wp-url' ), $ver( 'data-export.js' ), array( 'in_footer' => true ) );
+			wp_enqueue_script( 'peptide-core-data-dimension-details', $url . 'data-dimension-details.js', array( self::SCRIPT, 'peptide-core-data-export' ), $ver( 'data-dimension-details.js' ), array( 'in_footer' => true ) );
+			wp_add_inline_script( 'peptide-core-data-dimension-details', 'window.pcDataDimensionDetails = ' . wp_json_encode( array( 'operationsUrl' => admin_url( 'admin.php?page=' . self::PAGES['operations'] ), 'dimension' => $dimension['dimension'], 'invalidDimension' => $dimension['invalid'], 'strings' => self::dimension_details_strings() ) ) . ';', 'before' );
 		}
 		if ( 'experiments' === $key ) {
 			wp_enqueue_style( 'peptide-core-data-experiments', $url . 'data-sources.css', array( 'peptide-core-data' ), $ver( 'data-sources.css' ) );
@@ -610,9 +619,45 @@ final class Data_Pages {
 			'landing'         => __( 'Landing page conversion', 'peptide-core' ),
 			'experiments'     => __( 'Landing A/B analysis', 'peptide-core' ),
 			'sources'         => __( 'Sources by UTM', 'peptide-core' ),
+			'dimension_details' => self::dimension_title( self::dimension_page()['dimension'] ),
 			'conversion'      => __( 'Conversion rate details', 'peptide-core' ),
 			'emails'          => __( 'Email details data', 'peptide-core' ),
 		);
+	}
+
+	/** Invalid explicit query values never become a different report. */
+	private static function dimension_page(): array {
+		if ( ! array_key_exists( 'dimension', $_GET ) ) { return array( 'dimension' => 'utm', 'invalid' => false ); }
+		$value = is_string( $_GET['dimension'] ) ? wp_unslash( $_GET['dimension'] ) : null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$valid = is_string( $value ) && in_array( $value, array( 'utm', 'country', 'browser', 'domain', 'device', 'channel' ), true );
+		return array( 'dimension' => $valid ? $value : null, 'invalid' => ! $valid );
+	}
+
+	private static function dimension_title( ?string $dimension ): string {
+		$titles = array( 'utm' => __( 'Source data', 'peptide-core' ), 'channel' => __( 'Source data', 'peptide-core' ), 'country' => __( 'Country / region data', 'peptide-core' ), 'browser' => __( 'Browser / app data', 'peptide-core' ), 'domain' => __( 'Entry domain data', 'peptide-core' ), 'device' => __( 'Device data', 'peptide-core' ) );
+		return $titles[$dimension] ?? __( 'Dimension data', 'peptide-core' );
+	}
+
+	private static function dimension_links(): array {
+		$links = array();
+		$labels = array( 'country' => __( 'Country / region', 'peptide-core' ), 'utm' => __( 'Sources by UTM', 'peptide-core' ), 'browser' => __( 'Browser / app', 'peptide-core' ), 'domain' => __( 'Domain', 'peptide-core' ), 'device' => __( 'Device', 'peptide-core' ) );
+		foreach ( array( 'country', 'utm', 'browser', 'domain', 'device' ) as $dimension ) { $links[] = array( 'label' => $labels[$dimension], 'url' => admin_url( 'admin.php?page=' . self::PAGES['dimension_details'] . '&dimension=' . $dimension ) ); }
+		return $links;
+	}
+
+	private static function dimension_details_strings(): array {
+		return array(
+			'dimension_utm' => __( 'Source data', 'peptide-core' ), 'dimension_country' => __( 'Country / region data', 'peptide-core' ), 'dimension_browser' => __( 'Browser / app data', 'peptide-core' ), 'dimension_domain' => __( 'Entry domain data', 'peptide-core' ), 'dimension_device' => __( 'Device data', 'peptide-core' ), 'dimension_channel' => __( 'Automatic traffic channel', 'peptide-core' ),
+			'entryDomain' => __( 'Entry domain (first captured)', 'peptide-core' ), 'domainAll' => __( 'All entry domains', 'peptide-core' ), 'domainUnobserved' => __( 'Not observed', 'peptide-core' ), 'domainValue' => __( 'Exact entry domain', 'peptide-core' ), 'hostPlaceholder' => 'example.com',
+			'search' => __( 'Search dimension values', 'peptide-core' ), 'apply' => __( 'Apply', 'peptide-core' ), 'sortPeriod' => __( 'Sort period', 'peptide-core' ), 'currentPeriod' => __( 'Current period', 'peptide-core' ), 'previousPeriod' => __( 'Previous period', 'peptide-core' ), 'changePeriod' => __( 'Change', 'peptide-core' ), 'perPage' => __( 'Rows per page', 'peptide-core' ),
+			'columns' => __( 'Columns', 'peptide-core' ), 'columnsHelp' => __( 'Keep at least one metric column. Column order applies to the table and full CSV export.', 'peptide-core' ), 'restoreColumns' => __( 'Restore default columns', 'peptide-core' ), 'cancel' => __( 'Cancel', 'peptide-core' ), 'save' => __( 'Save', 'peptide-core' ), 'moveUp' => __( 'Move %s up', 'peptide-core' ), 'moveDown' => __( 'Move %s down', 'peptide-core' ),
+			'noData' => __( 'No matching dimension data in this period.', 'peptide-core' ), 'error' => __( 'Dimension data could not be loaded. Try again.', 'peptide-core' ), 'loading' => __( 'Loading…', 'peptide-core' ), 'invalidDimension' => __( 'Invalid dimension. Return to Operations data and choose an available report.', 'peptide-core' ),
+			'unknown' => __( 'Observed unknown', 'peptide-core' ), 'unavailable' => __( 'Source unavailable', 'peptide-core' ), 'unitVisits' => __( 'Visits', 'peptide-core' ), 'unitOrders' => __( 'Paid order records', 'peptide-core' ), 'coverage' => __( '%p · %u: %m / %b matched. Values: %v; not observed: %o; unknown: %k; unavailable: %a; empty: %e; missing key: %s.', 'peptide-core' ),
+			'help' => __( 'Visitors are counted by visit start time; paid orders by creation time, with refunds deducted from sales. Paid visitor counts come from these orders and cover a different time window from visiting users. The same visitor may appear in multiple groups.', 'peptide-core' ),
+			'countryHelp' => __( 'Countries are grouped by the visit country recorded before each period ends. Not collected, unknown and temporarily unavailable are shown separately.', 'peptide-core' ),
+			'browserHelp' => __( 'Groups use the browser type reported in visit requests, such as Chrome or Safari. Each browser type may include multiple visitors.', 'peptide-core' ), 'deviceHelp' => __( 'Devices are grouped as desktop, mobile or tablet as reported in visit requests. Visitors are deduplicated by browser identifiers, not by IP address.', 'peptide-core' ),
+			'sourceHelp' => __( 'Groups use the first recorded UTM source, with an optional medium split. Automatic traffic channels combine UTM and referrer information.', 'peptide-core' ), 'domainHelp' => __( 'Groups use the domain where visitors first entered the store. Visits without a recorded domain are shown separately.', 'peptide-core' ), 'points' => __( 'Percentage points', 'peptide-core' ),
+		) + self::sources_strings();
 	}
 
 	/** 页面脚本里显示的所有文字（在这里翻译，脚本里不写死文字）。 */

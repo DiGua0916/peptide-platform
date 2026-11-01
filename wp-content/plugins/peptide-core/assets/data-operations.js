@@ -469,6 +469,22 @@
 
 	function dimensionsNavigation( data, ctx ) {
 		var dates = data && data.range && data.range.dates;
+		if ( Array.isArray( cfg.dimensionLinks ) ) {
+			var keys = [ 'from', 'to', 'compare_from', 'compare_to' ], dimensions = [ 'country', 'utm', 'browser', 'domain', 'device' ], links = [];
+			if ( cfg.dimensionLinks.length !== dimensions.length || ! dates || ! T.moreDimensions || typeof window.URL !== 'function' || ! window.location || typeof window.location.href !== 'string' ) { return ''; }
+			if ( keys.some( function ( key ) { var value = dates[ key ]; if ( typeof value !== 'string' || ! /^\d{4}-\d{2}-\d{2}$/.test( value ) ) { return true; } var parsed = new Date( value + 'T00:00:00Z' ); return isNaN( parsed.getTime() ) || parsed.toISOString().slice( 0, 10 ) !== value; } ) ) { return ''; }
+			try {
+				var origin = new window.URL( window.location.href ).origin;
+				cfg.dimensionLinks.forEach( function ( link, index ) {
+					if ( ! link || typeof link.label !== 'string' || ! link.label || typeof link.url !== 'string' || ! link.url ) { throw new Error( 'Invalid dimension link' ); }
+					var url = new window.URL( link.url, window.location.href );
+					if ( ! /^https?:$/.test( url.protocol ) || url.origin !== origin || url.searchParams.get( 'page' ) !== 'pc-data-dimensions' || url.searchParams.get( 'dimension' ) !== dimensions[ index ] ) { throw new Error( 'Invalid dimension destination' ); }
+					keys.forEach( function ( key ) { url.searchParams.set( key, dates[ key ] ); } ); url.hash = '';
+					links.push( '<a href="' + ctx.esc( url.href ) + '">' + ctx.esc( link.label ) + '</a>' );
+				} );
+			} catch ( error ) { return ''; }
+			return '<details class="pc-ops-dimensions"><summary>' + ctx.esc( T.moreDimensions ) + '</summary><nav aria-label="' + ctx.esc( T.moreDimensions ) + '">' + links.join( '' ) + '</nav></details>';
+		}
 		if ( typeof cfg.sourcesUrl !== 'string' || ! cfg.sourcesUrl || ! dates || typeof dates.from !== 'string' || typeof dates.to !== 'string' || ! /^\d{4}-\d{2}-\d{2}$/.test( dates.from ) || ! /^\d{4}-\d{2}-\d{2}$/.test( dates.to ) || ! T.moreDimensions || ! T.utmSources ) { return ''; }
 		var href = cfg.sourcesUrl + ( cfg.sourcesUrl.indexOf( '?' ) < 0 ? '?' : '&' ) + 'from=' + encodeURIComponent( dates.from ) + '&to=' + encodeURIComponent( dates.to );
 		return '<details class="pc-ops-dimensions"><summary>' + ctx.esc( T.moreDimensions ) + '</summary><nav aria-label="' + ctx.esc( T.moreDimensions ) + '"><a href="' + ctx.esc( href ) + '">' + ctx.esc( T.utmSources ) + '</a></nav></details>';
