@@ -12,7 +12,7 @@ final class Site_Tools_Page {
 		add_action( 'admin_post_pc_site_tools_delete', array( self::class, 'delete' ) );
 		add_action( 'admin_enqueue_scripts', static function () {
 			if ( self::SLUG !== ( $_GET['page'] ?? '' ) ) { return; }
-			wp_enqueue_style( 'pc-site-tools', plugins_url( 'assets/site-tools.css', PEPTIDE_CORE_FILE ), array(), PEPTIDE_CORE_VERSION );
+			wp_enqueue_style( 'pc-site-tools', plugins_url( 'assets/site-tools.css', PEPTIDE_CORE_FILE ), array(), PEPTIDE_CORE_VERSION . '.' . (int) filemtime( PEPTIDE_CORE_DIR . '/assets/site-tools.css' ) );
 			wp_enqueue_script( 'pc-site-tools', plugins_url( 'assets/site-tools.js', PEPTIDE_CORE_FILE ), array(), PEPTIDE_CORE_VERSION, true );
 		} );
 	}
@@ -83,7 +83,7 @@ final class Site_Tools_Page {
 	}
 	private static function phrases_form( array $kept ): void {
 		$items = Site_Tools::phrases(); $edit = absint( $_GET['edit'] ?? 0 ); $q = sanitize_text_field( wp_unslash( $_GET['q'] ?? '' ) ); $r = array_merge( array( 'id' => 0, 'title' => '', 'category' => '', 'text' => '' ), $items[ $edit ] ?? array(), $kept );
-		echo '<p>保存常用回复，点击复制后自行发送；本工具不会向顾客自动发消息。</p><form method="get"><input type="hidden" name="page" value="' . esc_attr( self::SLUG ) . '"><input type="hidden" name="tab" value="phrases"><label class="screen-reader-text" for="pc-tools-search">搜索话术</label><input id="pc-tools-search" name="q" value="' . esc_attr( $q ) . '" placeholder="搜索名称、分类或正文"> <button class="button">搜索</button></form><div class="pc-tools-grid"><section class="pc-tools-card"><h2>常用话术</h2>';
+		echo '<p>保存常用回复，点击复制后自行发送；本工具不会向顾客自动发消息。</p><form method="get"><input type="hidden" name="page" value="' . esc_attr( self::SLUG ) . '"><input type="hidden" name="tab" value="phrases"><label class="screen-reader-text" for="pc-tools-search">搜索话术</label><input type="search" id="pc-tools-search" name="q" value="' . esc_attr( $q ) . '" placeholder="搜索名称、分类或正文"> <button class="button">搜索</button></form><div class="pc-tools-grid"><section class="pc-tools-card"><h2>常用话术</h2>';
 		if ( ! $items ) { echo '<p>还没有常用话术。先添加一条实际使用的回复。</p>'; }
 		foreach ( $items as $item ) { if ( $q && false === stripos( $item['title'] . ' ' . $item['category'] . ' ' . $item['text'], $q ) ) { continue; } echo '<article class="pc-tools-item"><h3><a href="' . esc_url( self::url( array( 'tab' => 'phrases', 'edit' => $item['id'] ) ) ) . '">' . esc_html( $item['title'] ) . '</a></h3><p>' . esc_html( $item['category'] ) . '</p><textarea readonly class="widefat" rows="4" id="pc-phrase-' . (int) $item['id'] . '" aria-label="' . esc_attr( $item['title'] ) . '">' . esc_textarea( $item['text'] ) . '</textarea><button type="button" class="button" data-copy-phrase="pc-phrase-' . (int) $item['id'] . '">复制话术</button>'; self::remove_button( 'phrase', Site_Tools::PHRASES, $item['id'] ); echo '</article>'; }
 		echo '</section><section class="pc-tools-card"><h2>' . ( $edit ? '编辑话术' : '添加话术' ) . '</h2>'; self::start_form( 'phrase', Site_Tools::PHRASES, (int) $r['id'] ); echo '<p><label>名称<input class="widefat" name="title" value="' . esc_attr( $r['title'] ) . '" maxlength="100" required></label></p><p><label>分类<input class="widefat" name="category" value="' . esc_attr( $r['category'] ) . '" maxlength="50"></label></p><p><label>正文<textarea class="widefat" name="text" rows="12" required>' . esc_textarea( $r['text'] ) . '</textarea></label></p>'; submit_button( '保存话术' ); echo '<a href="' . esc_url( self::url( array( 'tab' => 'phrases' ) ) ) . '">添加新话术</a></form></section></div>';

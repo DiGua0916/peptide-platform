@@ -5,6 +5,17 @@ body.pc-admin-workspace .pc-trk .pc-trk-split > div {
   min-width: 0;
 }
 
+/* Match the native page title's inline margin box, not only its text baseline. */
+body.pc-admin-workspace .pc-trk > h1 + .pc-trk-chip {
+  margin-bottom: 20px;
+}
+
+@media (max-width: 782px) {
+  body.pc-admin-workspace .pc-trk > h1 + .pc-trk-chip {
+    margin-bottom: 16px;
+  }
+}
+
 body.pc-admin-workspace .pc-trk .pc-trk-cards {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

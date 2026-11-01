@@ -52,6 +52,7 @@
 	display: grid;
 	gap: 6px;
 	min-width: 0;
+	overflow-wrap: anywhere;
 }
 
 .pc-ss-card__text strong {
@@ -154,6 +155,7 @@
 }
 
 .pc-bc-field {
+	min-width: 0;
 	margin-bottom: 20px;
 }
 
@@ -168,6 +170,7 @@
 }
 
 .pc-bc .pc-bc-input {
+	box-sizing: border-box;
 	width: 100%;
 	max-width: none;
 }
@@ -329,12 +332,14 @@
 
 .pc-bc-favicon {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
 	gap: 12px;
 }
 
 .pc-bc-favicon__img {
 	display: inline-flex;
+	flex: 0 0 64px;
 	align-items: center;
 	justify-content: center;
 	width: 64px;
@@ -385,6 +390,10 @@
 
 .pc-bc-bar {
 	position: sticky;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
 	bottom: 0;
 	z-index: 5;
 	margin-top: 16px;
@@ -395,6 +404,12 @@
 @media (max-width: 960px) {
 	.pc-bc-grid {
 		grid-template-columns: 1fr;
+	}
+
+	/* Both sections now share the left column; a left-opening tip would leave the canvas. */
+	.pc-bc-grid > div:last-child .pc-bc-help::after {
+		right: auto;
+		left: -12px;
 	}
 }
 

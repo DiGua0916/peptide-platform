@@ -243,6 +243,21 @@
 	min-width: 0;
 }
 
+/* These are label/field grid columns, not full-width card headers and bodies. */
+body.pc-admin-workspace .pc-mk .pc-mk-card {
+	align-items: start;
+}
+
+body.pc-admin-workspace .pc-mk .pc-mk-card__title {
+	padding: 0;
+	background: transparent;
+	overflow-wrap: anywhere;
+}
+
+body.pc-admin-workspace .pc-mk .pc-mk-card__body {
+	padding: 0;
+}
+
 .pc-mk-seo {
 	display: block;
 	padding-bottom: 20px;
@@ -350,6 +365,15 @@
 	box-sizing: border-box;
 	width: 100%;
 	padding-right: 56px;
+}
+
+/* Keep the native input text clear of the overlaid character counter. */
+body.pc-admin-workspace #wpbody-content .pc-mk .pc-mk-count input {
+	padding-inline-end: 56px;
+}
+
+.pc-mk-count {
+	min-width: 0;
 }
 
 .pc-mk-count small {

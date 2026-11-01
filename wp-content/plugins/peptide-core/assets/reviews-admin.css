@@ -4,3 +4,8 @@
 .pc-review-filters{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin:16px 0}.pc-review-filters label{display:grid;gap:6px}.pc-review-filters select{max-width:260px}.pc-review-table{overflow-x:auto}.pc-review-table table{min-width:650px}.pc-review-table th:first-child{width:48%}.pc-review-status-form{display:inline-block;margin:0 10px 8px 0}.pc-review-status-form button{white-space:nowrap}.pc-review-media{display:flex;gap:8px;flex-wrap:wrap}.pc-review-media img{width:70px;height:70px;object-fit:cover}.pc-review-media video{width:180px;max-height:140px}.pc-review-provenance{margin:8px 0}.pc-review-source{display:inline-block;font-size:12px;background:#edf3f0;padding:3px 6px;margin:0 4px 4px 0}
 .pc-review-products th:first-child{width:44%}.pc-review-products td{vertical-align:middle}.pc-review-product-title{display:flex;align-items:center;gap:12px}.pc-review-product-title img{width:48px;height:48px;object-fit:cover;flex:none}.pc-review-product-title strong{display:block;overflow-wrap:anywhere}.pc-review-product-title small{display:block;margin-top:4px;color:#646970}.pc-reviews-admin h1{overflow-wrap:anywhere}
 @media(max-width:782px){.pc-review-grid{grid-template-columns:1fr}.pc-review-editor{padding:12px}}
+/* Keep long review text within its column and leave the real horizontal table scroller intact. */
+.pc-review-table:not(.pc-review-products) table{width:100%;table-layout:fixed}
+.pc-review-table td,.pc-review-readonly{overflow-wrap:anywhere}
+.pc-review-filters label,.pc-review-grid>label{min-width:0;max-width:100%}
+.pc-review-inline input[type=checkbox]{flex:none}
