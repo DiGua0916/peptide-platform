@@ -364,6 +364,7 @@ final class Ingest {
 		}
 
 		$events_table = Schema::table( 'events' );
+		$classifier_new = array();
 		$new          = 0;
 		$views        = 0;
 		$stage        = 0;
@@ -397,6 +398,7 @@ final class Ingest {
 				if ( false === $inserted ) { $impression_results[$index] = 'server_error'; continue; }
 				if ( (int) $inserted !== 1 ) { $impression_results[$index] = 'pending'; $impression_pending[$uid] = true; continue; }
 				$impression_results[$index] = 'ack'; ++$impression_new;
+				$classifier_new[$impression_visit][] = $uid;
 				$impression_saved[$uid] = array( 'event_uid' => $uid, 'visitor_id' => $visitor['id'], 'visit_id' => $impression_visit, 'matched_visitor_id' => $visitor['id'], 'matched_visit_id' => $impression_visit, 'tab_id' => $c['tab_id'], 'page_instance_id' => $c['page_instance_id'], 'seq' => $c['seq'], 'type' => $c['type'], 'source' => 'client', 'page_type' => $page['page_type'], 'path' => $page['path'], 'product_id' => $data['product_id'], 'variation_id' => $data['variation_id'], 'data' => wp_json_encode( $data ) );
 				Impressions::signal( $visitor['id'], $impression_visit, $c['tab_id'], $now_ms );
 				continue;
@@ -459,6 +461,7 @@ final class Ingest {
 				continue; // 重复事件：确认收到，但不再更新状态。
 			}
 			++$new;
+			$classifier_new[$visit][] = $c['event_id'];
 			if ( 'page_view' === $c['type'] ) {
 				++$views;
 			}
@@ -493,6 +496,11 @@ final class Ingest {
 			if ( $stage ) {
 				Tracker::raise_stage( $visit, $stage );
 			}
+		}
+		// Optional Data verdicts follow genuine new persistence, never retries/rejections.
+		foreach ( $classifier_new as $original_visit => $new_uids ) {
+			try { do_action( 'peptide_core_tracking_client_persisted', (int) $visitor['id'], (int) $original_visit, $new_uids ); }
+			catch ( \Throwable $optional_failure ) { /* Classifier failure must not change tracking ACK. */ }
 		}
 		return self::result( $ack, $rejected, $visitor['id'], $visit ?: ( $impression_visit ?: ( $impression_replays ? reset( $impression_replays ) : 0 ) ), $attempts, $contexts );
 	}
