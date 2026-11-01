@@ -2058,3 +2058,11 @@ Reference learning is24/70 after guarded Contact cleanup, with no reference Publ
 真实同一IAB列表/编辑AJAX成功见82商品和图片价格，原1257宽度一条264px卡片经实图反馈改为紧凑75px表格，fresh截图一屏5行；宽表仅内部横滚，760以下卡片保留字段。截图outputs/collections-list.png、collection-products.png。原站未点击保存/增删/排序，不造演示商品；不宣称浏览器逐项写操作、实体手机或所有参考项逐像素验收。技能detect仅1条已文档化20px移动标题advisory，未改设计规范。
 
 完整合同/边界见docs/handoffs/backend-collections.md。证据D:/Codex/Tasks/2026-11-01/product-album-management/outputs/{ALBUM-AUDIT.json,COLLECTIONS-NATIVE-CHECK.json,CONTROLLER-NATIVE-CHECK.json,FINAL-READONLY-CHECK.json}；独立原站只读报告在D:/Codex/Tasks/2026-11-01/collections-controller-review/outputs。SQL/媒体/真实客户资料未入Git，无CRK绑定，不发旧默认群，不启公网/支付测试。
+
+### 2026-11-01 · Codex：CATALOG-CARD-IMAGES-01 首页使用新商品图
+
+用户要求首页外部商品图也使用其提供的新套图。商品数据已经导入新图，实际原因是首页685的collection手选商品行cardImage仍覆盖为旧附件458/468/477/486，reportPreview还显示报告占位。通过既有装修REST保存/发布流程，仅将4个展示图片改为11306→11298（TR10）、11006→10998（RT10）、11369→11368（SM2）、11054→11051（NAD+100mg），并关闭该模块报告悬浮预览；每图对应现有最低价规格。未改主题、价格、商品主图/规格图库、其它积木及全局设置。
+
+保存前备份原文档/发布模块和revision，拒绝有未发布草稿或过期revision的写入；4图均与源manifest/journal及文件SHA独立核对。实际保存/发布成功，4项范围/发布内容/草稿一致/商品与规格数据不变检查通过。同一IAB真实截图确认4张新参数图可见、TR悬浮不再覆盖报告占位，见D:/Codex/Tasks/2026-11-01/catalog-card-images/outputs/home-new-product-images.png。一次导航后的AX读取超时，重新绑定同页后截图成功；未切浏览器、未改安全设置。
+
+本阶段只改本地原站装修数据库配置；Git本次仅记录本交接，不包含真实装修文档或上传图片。迁移仍需当前数据库和媒体。原站配置回退应读取当前revision并小范围恢复本任务before.json里的5项设置，避免覆盖其它窗口的后续修改。前端窗口在途sale-pricing等文件完全保留，未纳入本提交。
