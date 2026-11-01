@@ -10,6 +10,8 @@ defined( 'ABSPATH' ) || exit;
 
 final class Report_Dimensions {
 
+	public const CHANNEL_POLICY = 'traffic-v1';
+
 	public static function positive_id( $value ): ?int {
 		if ( is_int( $value ) ) { return $value > 0 ? $value : null; }
 		if ( ! is_string( $value ) || ! preg_match( '/\A[0-9]+\z/', $value ) ) { return null; }
@@ -19,7 +21,7 @@ final class Report_Dimensions {
 
 	public static function unknown(): array {
 		$out = array( 'visitor_id' => 0 );
-		foreach ( array( 'entry_domain', 'utm_source', 'utm_medium', 'country', 'operating_system', 'screen_size' ) as $key ) { $out[ $key ] = array( 'state' => 'unobserved', 'value' => null ); }
+		foreach ( array( 'entry_domain', 'utm_source', 'utm_medium', 'country', 'operating_system', 'screen_size', 'channel' ) as $key ) { $out[ $key ] = array( 'state' => 'unobserved', 'value' => null ); }
 		return $out;
 	}
 
@@ -43,6 +45,7 @@ final class Report_Dimensions {
 			foreach ( (array) $rows as $row ) {
 				$id = (int) $row['id']; $fact = self::unknown(); $fact['visitor_id'] = (int) $row['visitor_id'];
 				if ( $fact['visitor_id'] > 0 && 1 === (int) $row['attribution_version'] && (int) $row['attribution_ms'] < $cutoff_ms ) {
+					$fact['channel'] = self::channel( $row );
 					$fact['entry_domain'] = array( 'state' => 'value', 'value' => (string) $row['attribution_host'] );
 					foreach ( array( 'utm_source', 'utm_medium' ) as $key ) { $value = $row[ $key ]; $fact[ $key ] = array( 'state' => null === $value ? 'missing' : ( '' === $value ? 'empty' : 'value' ), 'value' => $value ); }
 				}
@@ -70,6 +73,63 @@ final class Report_Dimensions {
 			} while ( count( (array) $observations ) === 500 );
 		}
 		return $out;
+	}
+
+	/** Project policy v1, derived only from a saved entry snapshot; never rewrites tags. */
+	public static function channel( array $saved ): array {
+		$result = static fn( string $state, ?string $value = null ): array => array( 'state' => $state, 'value' => $value );
+		if ( 1 !== (int) ( $saved['attribution_version'] ?? 0 ) ) { return $result( 'unobserved' ); }
+		$source = is_string( $saved['utm_source'] ?? null ) ? strtolower( trim( $saved['utm_source'] ) ) : '';
+		$medium = is_string( $saved['utm_medium'] ?? null ) ? strtolower( trim( $saved['utm_medium'] ) ) : '';
+		$search = array( 'google.com', 'google.co.uk', 'google.com.hk', 'google.cn', 'bing.com', 'search.yahoo.com', 'duckduckgo.com', 'baidu.com', 'yandex.ru' );
+		$social = array( 'facebook.com', 'fb.com', 'instagram.com', 'tiktok.com', 'x.com', 't.co', 'pinterest.com', 'reddit.com', 'linkedin.com', 'youtube.com' );
+		$matches = static function ( string $host, array $domains ): bool { foreach ( $domains as $domain ) { if ( $host === $domain || str_ends_with( $host, '.' . $domain ) ) { return true; } } return false; };
+		if ( '' !== $source || '' !== $medium ) {
+			if ( '(direct)' === $source && '(none)' === $medium ) { return $result( 'value', 'direct_or_hidden' ); }
+			$channel = null;
+			if ( 'email' === $medium ) { $channel = 'email'; }
+			elseif ( in_array( $medium, array( 'paid_social', 'social_paid', 'paidsocial' ), true ) ) { $channel = 'paid_social'; }
+			elseif ( in_array( $medium, array( 'cpc', 'ppc', 'paidsearch', 'paid_search' ), true ) ) {
+				$is_social = in_array( $source, array( 'facebook', 'fb', 'instagram', 'tiktok', 'x', 'twitter', 'pinterest', 'reddit', 'linkedin', 'youtube', 'meta' ), true ) || $matches( $source, $social );
+				$is_search = in_array( $source, array( 'google', 'bing', 'yahoo', 'duckduckgo', 'baidu', 'yandex' ), true ) || $matches( $source, $search );
+				$channel = $is_social ? 'paid_social' : ( $is_search ? 'paid_search' : 'paid_other' );
+			}
+			elseif ( 'organic' === $medium ) { $channel = 'organic_search'; }
+			elseif ( in_array( $medium, array( 'social', 'social-network', 'social-media', 'sm' ), true ) ) { $channel = 'organic_social'; }
+			elseif ( in_array( $medium, array( 'referral', 'app', 'link' ), true ) ) { $channel = 'referral'; }
+			elseif ( in_array( $medium, array( 'display', 'cpm', 'banner' ), true ) ) { $channel = 'display'; }
+			elseif ( in_array( $medium, array( 'affiliates', 'affiliate' ), true ) ) { $channel = 'affiliate'; }
+			elseif ( in_array( $medium, array( 'paid', 'retargeting' ), true ) ) { $channel = 'paid_other'; }
+			return $result( 'value', $channel ?? 'tagged_other' );
+		}
+		$referrer = $saved['referrer_host'] ?? null;
+		if ( null === $referrer ) { return $result( 'unknown' ); }
+		if ( '' === $referrer ) { return $result( 'value', 'direct_or_hidden' ); }
+		$referrer = self::channel_host( $referrer );
+		if ( null === $referrer ) { return $result( 'unknown' ); }
+		$entry = self::channel_host( $saved['attribution_host'] ?? null );
+		if ( null !== $entry && $matches( $referrer, array( $entry ) ) ) { return $result( 'value', 'internal_referral' ); }
+		return $result( 'value', $matches( $referrer, $search ) ? 'organic_search' : ( $matches( $referrer, $social ) ? 'organic_social' : 'referral' ) );
+	}
+
+	private static function channel_host( $value ): ?string {
+		if ( ! is_string( $value ) || '' === $value || strlen( $value ) > 253 ) { return null; }
+		$value = strtolower( $value ); if ( str_ends_with( $value, '.' ) ) { $value = substr( $value, 0, -1 ); }
+		foreach ( explode( '.', $value ) as $label ) { if ( ! preg_match( '/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/D', $label ) ) { return null; } }
+		return $value;
+	}
+
+	public static function channel_label( array $typed ): string {
+		if ( 'value' !== $typed['state'] ) { return 'unknown' === $typed['state'] ? __( 'Traffic source unknown', 'peptide-core' ) : __( 'Not observed', 'peptide-core' ); }
+		$labels = array(
+			'email' => __( 'Email', 'peptide-core' ), 'paid_social' => __( 'Paid social', 'peptide-core' ),
+			'paid_search' => __( 'Paid search', 'peptide-core' ), 'paid_other' => __( 'Other paid traffic', 'peptide-core' ),
+			'organic_search' => __( 'Organic search', 'peptide-core' ), 'organic_social' => __( 'Organic social', 'peptide-core' ),
+			'referral' => __( 'Referral', 'peptide-core' ), 'display' => __( 'Display advertising', 'peptide-core' ),
+			'affiliate' => __( 'Affiliate', 'peptide-core' ), 'tagged_other' => __( 'Other tagged traffic', 'peptide-core' ),
+			'direct_or_hidden' => __( 'Direct / source hidden', 'peptide-core' ), 'internal_referral' => __( 'Internal referral', 'peptide-core' ),
+		);
+		return $labels[$typed['value']] ?? __( 'Traffic source unknown', 'peptide-core' );
 	}
 
 	public static function check_db(): void { global $wpdb; if ( $wpdb->last_error ) { throw new \RuntimeException( 'Report dimension query failed.' ); } }

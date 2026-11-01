@@ -16,7 +16,7 @@
 	var STORE_KEY = 'pcDataConversionGroup';
 	// 和 Conversion::OVERALL / GROUPS 以及 Operations::LAYERS 的顺序一致。
 	var OVERALL = [ 'conversion', 'paid', 'visitors', 'viewed', 'carted', 'checkout' ];
-	var GROUPS = [ 'device', 'browser', 'utm', 'domain', 'country', 'os', 'screen' ];
+	var GROUPS = [ 'device', 'browser', 'utm', 'domain', 'country', 'os', 'screen', 'channel' ];
 	var LAYERS = [ 'visitors', 'viewed', 'carted', 'checkout', 'paid' ];
 	var DETAIL_LAYERS = [ 'visitors', 'viewed', 'carted', 'checkout', 'address', 'shipping', 'payment', 'paid' ];
 	var expanded = {};
@@ -191,6 +191,7 @@
 		var group = data.group || state.group;
 		var rows = data.rows || [];
 		var html = '';
+		if ( group === 'channel' ) { html += '<p class="pc-conv-note">' + esc( T.channelNote ) + '</p>'; }
 		if ( ! data.tracking ) {
 			html += '<p class="pc-conv-note">' + esc( T.trackingOff ) + '</p>';
 		}
@@ -289,7 +290,7 @@
 		function attached() { return ! disposed && ( ! document.documentElement || ! document.documentElement.contains || document.documentElement.contains( bodyEl ) ); }
 		function datesOf( data ) { var d = data && data.range && data.range.dates; return d && [ 'from', 'to', 'compare_from', 'compare_to' ].every( function ( key ) { return typeof d[ key ] === 'string' && d[ key ]; } ) ? d : null; }
 		function eligible( data ) {
-			return !! data && !! datesOf( data ) && data.group === state.group && ( data.visitor_status || 'all' ) === state.visitorStatus && data.visitor_funnel && data.visitor_funnel.unit === 'visitors' && data.visitor_funnel.current && data.visitor_funnel.current.length === 8 && data.visitor_funnel.previous && data.visitor_funnel.previous.length === 8 && !! data.checkout_steps;
+			return !! data && !! datesOf( data ) && data.group === state.group && ( state.group !== 'channel' || data.channel_policy === 'traffic-v1' ) && ( data.visitor_status || 'all' ) === state.visitorStatus && data.visitor_funnel && data.visitor_funnel.unit === 'visitors' && data.visitor_funnel.current && data.visitor_funnel.current.length === 8 && data.visitor_funnel.previous && data.visitor_funnel.previous.length === 8 && !! data.checkout_steps;
 		}
 		function contextKey( data ) { var d = datesOf( data ); return d ? [ data.group, data.visitor_status || 'all', d.from, d.to, d.compare_from, d.compare_to ].join( '|' ) : ''; }
 		function syncExport() { exportButton.disabled = ! attached() || ! settled || ! eligible( loadedData ) || rangeBusy || exporting || ! window.PcDataExport; select.disabled = statusSelect.disabled = rangeBusy; exportButton.setAttribute( 'aria-busy', exporting ? 'true' : 'false' ); }
@@ -342,7 +343,7 @@
 			ctx.api( PATH, params ).then( function ( data ) {
 				if ( ! attached() || rangeBusy || mine !== requests || wanted !== state.group || wantedStatus !== state.visitorStatus ) { return; }
 				try {
-					if ( ! data || ( data.group && data.group !== wanted ) || ( data.visitor_status || 'all' ) !== wantedStatus || ( wantedStatus !== 'all' && ( data.overall_scope !== 'classified_visit_start_cohort' || data.checkout_steps_scope !== 'classified_visit_start_cohort' || ! data.classification_coverage || ! data.classification_coverage.current ) ) ) { throw new Error( 'Invalid report grouping' ); }
+					if ( ! data || ( data.group && data.group !== wanted ) || ( wanted === 'channel' && data.channel_policy !== 'traffic-v1' ) || ( data.visitor_status || 'all' ) !== wantedStatus || ( wantedStatus !== 'all' && ( data.overall_scope !== 'classified_visit_start_cohort' || data.checkout_steps_scope !== 'classified_visit_start_cohort' || ! data.classification_coverage || ! data.classification_coverage.current ) ) ) { throw new Error( 'Invalid report grouping' ); }
 					result.innerHTML = view( data, ctx ); loadedData = data; retainedData = data; settled = true;
 					if ( datesOf( data ) ) { acceptedRange = data.range; }
 					syncExport();
