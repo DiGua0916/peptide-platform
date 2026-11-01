@@ -844,3 +844,15 @@ Chrome同一原生layout1917又暴露实际产品缺陷：Partner列表默认blo
 原站Retatrutide11006页面真实截图显示草稿/产品描述Product Overview，已保留交付标签；未点保存/发布或刷新用户原post-new编辑页。IAB初次AX读取超时，标准同浏览器截图成功，不借此声称所有原生控件完整验收。
 
 本次无运行源码/契约变更，导入器与数据清单只在D任务，媒体/原表/SQL备份不入Git。先fetch/正常ff共同6b56d41完成实际导入，再正常ff同事8f6db90（新增Operations维度，未改商品字段），独立支付工作树未触。证据D:/Codex/Tasks/2026-11-01/product-import-review/outputs/IMPORT-RESULT.json、IMPORT-INDEPENDENT-CHECK.json、待核对商品.txt、imported-retatrutide-description.png；任务work包含精确manifest/journal/独立审查，可按原run验证复查，不盲目覆盖后续人工编辑。
+
+### 2026-11-01 · Codex：本批67商品已上架，单位/缺描述跳过，15组图片待用户确认
+
+用户最新明确已有商品可直接上架；前述mg/mL冲突与没描述者直接跳过，剩余映射由用户逐项告诉。原客户站已用Woo CRUD仅将本批精确67个父商品从draft设publish，156个规格不改。每项先落盘当前快照、核run与源IDs和目标/权限，再保存、fresh回读状态/业务hash/描述hash；67/156全部通过，订单ID/类型/状态/修改时间/数量快照不变。全量前置DB备份7.8MB在D受限private，进程内抑制邮件、不改全局设置。payload覆盖所列父/子业务字段与7项meta，排除了created/modified等自然日期；不冒全部元数据/日期逐字不变。原import报告及journal的draft是当时历史，当前以本次PUBLISH-RESULT发布状态为准，不重跑旧draft-only importer覆盖人工编辑。
+
+按用户最新决定跳过7品：LC526/LC553/LC120三Lipo-C、VitaminB12及LC216 Lipo-C with vitamins B12（5个mg/mL冲突），Acetic Acid water0.6%和TR20+RT40（2个原G空）。原16组映射中的LC216因此也跳过，现为15组/27规格候选，未自动绑定或继续导入。另HGH191AA/HGH两组重复H15与Melanotan I混II这3品仍未解决，不当成用户已跳过或已通过。完整当前分布：67已上架、7跳过、15图片待确认、3其它未决＝原92品。
+
+15组候选已按编号整理到D任务；涉及5-Amino图/表CAS及分子式不同、GLOW描述夹有BBG70代号、FR2瓶数、BA抑菌水身份、Cagri/Sema总10mg配比、RET60的20/40方向，均如实列明，不借SKU候选推断参数或配方已确认。后续依用户答复处理，不自动补值/猜比率。
+
+实际同一IAB前台Retatrutide可见标题、9规格、20mg价86.30/原102、库存1002；只看页面，未加入购物车/下单。点击Description后innerText与AX读取超时，但标准同浏览器截图实际见Description选中、Product Overview及分子量/CAS；截图已保存，未因此改权限/换Chrome。该页面为现有管理员登录状态，不冒称匿名浏览器验收。tab23已保留，用户原post-new/编辑页未刷新或保存。
+
+本轮无运行源码/契约改动，正常ff同事ede0fdd及后续仅支付文档978ac31，未碰独立支付工作树/隔离收款站，交接文档随本阶段同步。证据D:/Codex/Tasks/2026-11-01/product-publish-and-mapping/outputs/PUBLISH-RESULT.json、CURRENT-CATALOG-STATUS.json、图片对应确认.txt、published-retatrutide.png；before/publisher/backup收据在同任务work，SQL只在private，不入Git。
