@@ -886,3 +886,15 @@ Chrome同一原生layout1917又暴露实际产品缺陷：Partner列表默认blo
 证据：D:/Codex/Tasks/2026-11-01/frontend-block-rollout/outputs/{before-home.json,before-header.json,before-footer.json,before-global.json,save-result.json,publish-result.json,verification.json,catalog-audit.json,public-http-audit.json,published-home.png,published-story.png,mobile-editor.png,mobile-products.png}。数据库内容/媒体/备份均不入Git。回滚时只针对685/688使用保存前文档，先读取当前revision再通过原REST保存发布，不覆盖其它人的后续修改。下一步用户可在后台继续换图/改字/排序；新cardImage设置受主题定义提供，迁移需同时带主题和当前WP数据库/媒体。
 
 本阶段源码提交2039de8，随后读取并正常合并同事新商品专辑51d0ec5，整合1df925c，本地main已ff到该整合；首页manual查询与分类独立排序无冲突，实际WP相关检查复跑通过。GitHub push尝试出现connection reset及443连接超时（含HTTP/1.1正常重试），尚未推送成功；不得将本地整合说成GitHub已同步。网络恢复后正常push codex/frontend与main即可，不force。
+
+### 2026-11-01 · Codex：图片折扣角标及按规格切换单张主图
+
+用户要求将微小浅蓝折扣标签改为商品图右上角红色斜角促销条；随后要求移除可变商品主图下全部规格缩略图，仅由规格按钮切换主图。主题实现，无商品/变体/媒体/价格/积木文档写入，无插件改动。原有后台积木渲染和 Woo 规格状态仍为来源。
+
+functions.php 的 vc_product_card 在有效后台 price_pair 折扣时输出图片角标；inc/sale-pricing.php 抽取原验证谓词供角标和原价格HTML共用，不变更最低价、原价、取整或折扣计算。sale-pricing.css 为红白45度角标和手机缩放，仅有角标时视觉隐藏原小标签、保留读屏文本。新 sale-ribbon.js 只监听详情页原服务端格式化价格DOM更新，跟随原 product-options 的规格价格镜像；无优惠或清除规格时移除角标，不自行维护变体状态。无JS仍显示价格旁红色标签。
+
+inc/product-options.php 在 wp 时对 variable PDP 移除 woocommerce_product_thumbnails 上20优先级的 woocommerce_show_product_thumbnails。原首图、Woo原生变体切图/放大链接及媒体映射保留，simple 商品和其它页面不受此条件影响。没有删图片或清空商品图库。
+
+验证：PHP lint、JS syntax、git diff检查通过；独立实际WP只读45检查通过（四商品原价格HTML逐字不变及15组有效/无效价格对照）。独立审查Woo原生变体切图不依赖缩略图、当前变体无自有gallery。真实IAB选10mg→TR10/$40/无角标；选60mg→TR60/$130/$219/40% OFF；主图库始终1张。移除前已验20mg有29%、10mg无优惠、Clear移除角标。390px实际截图验证PDP主图直接接商品信息、首页2列38%红色角标；桌面截图验证缩略图不存在。没有加购、下单或发布其它积木；不冒称实体iPhone验收。当前首页图片按后台最新内容呈现，不回写此前图片选择。
+
+证据：D:/Codex/Tasks/2026-11-01/frontend-offer-corner/outputs/{runtime-audit.json,home-ribbon.png,product-one-image.png,product-mobile.png,home-mobile.png}。旧D任务sale-ribbon是另一窗口已撤回候选，未作为本次验证。回滚只需回退本次主题源码，不需要数据库恢复。源码提交见本段所属Git提交，远程同步结果另记群/项目记忆。

@@ -1,24 +1,40 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-/** Format the plugin's public, same-variation price pair; never invent a compare price. */
-function vc_sale_pair_html( array $pair, $product ): string {
+/** The ribbon and price use the same validated, same-variation public pair. */
+function vc_valid_price_pair( array $pair ): bool {
     $unit = $pair['currency_minor_unit'] ?? null;
     $amount = $pair['price'] ?? null;
     $currency = $pair['currency_code'] ?? '';
-    if ( ! is_int( $unit ) || $unit < 0 || $unit > 6 || ! is_string( $amount ) || ! ctype_digit( $amount ) || strlen( $amount ) > 14 || ! is_string( $currency ) || ! preg_match( '/^[A-Z]{3}$/', $currency ) ) {
-        return '';
-    }
+    return is_int( $unit ) && $unit >= 0 && $unit <= 6 && is_string( $amount ) && ctype_digit( $amount ) && strlen( $amount ) <= 14 && is_string( $currency ) && 1 === preg_match( '/^[A-Z]{3}$/', $currency );
+}
+
+function vc_price_pair_on_sale( array $pair ): bool {
+    $regular = $pair['regular_price'] ?? '';
+    return vc_valid_price_pair( $pair ) && true === ( $pair['on_sale'] ?? false ) && is_string( $regular ) && ctype_digit( $regular ) && strlen( $regular ) <= 14 && (int) $regular > (int) $pair['price'];
+}
+
+function vc_sale_percent( array $pair ): int {
+    $percent = $pair['percent_off'] ?? 0;
+    return vc_price_pair_on_sale( $pair ) && is_numeric( $percent ) && (int) $percent > 0 && (int) $percent <= 100 ? (int) $percent : 0;
+}
+
+/** Format the plugin's public, same-variation price pair; never invent a compare price. */
+function vc_sale_pair_html( array $pair, $product ): string {
+    if ( ! vc_valid_price_pair( $pair ) ) { return ''; }
+    $unit = $pair['currency_minor_unit'];
+    $amount = $pair['price'];
+    $currency = $pair['currency_code'];
     $format = static fn( string $value ): string => wc_price( (int) $value / ( 10 ** $unit ), array( 'currency' => $currency, 'decimals' => $unit ) );
     $regular = $pair['regular_price'] ?? '';
-    $sale = true === ( $pair['on_sale'] ?? false ) && is_string( $regular ) && ctype_digit( $regular ) && strlen( $regular ) <= 14 && (int) $regular > (int) $amount;
+    $sale = vc_price_pair_on_sale( $pair );
     $html = '<span class="vc-price-set' . ( $sale ? ' vc-price-set--sale' : '' ) . '">';
     $html .= '<span class="vc-price-current"><span class="screen-reader-text">Current price: </span>' . $format( $amount ) . '</span>';
     if ( $sale ) {
         $demo = true === ( $pair['compare_is_demo'] ?? false );
         $html .= '<del class="vc-price-compare"><span class="screen-reader-text">' . ( $demo ? 'Demo comparison price: ' : 'Regular price: ' ) . '</span>' . $format( $regular ) . '</del>';
-        $percent = $pair['percent_off'] ?? 0;
-        if ( is_numeric( $percent ) && (int) $percent > 0 && (int) $percent <= 100 ) {
+        $percent = vc_sale_percent( $pair );
+        if ( $percent > 0 ) {
             $html .= '<span class="vc-sale-badge">' . esc_html( (int) $percent ) . '% off</span>';
         }
         if ( $demo ) {
@@ -79,4 +95,7 @@ add_filter( 'woocommerce_available_variation', function ( $data, $parent, $varia
 
 add_action( 'wp_enqueue_scripts', function () {
     wp_enqueue_style( 'vialcove-sale-pricing', get_template_directory_uri() . '/assets/sale-pricing.css', array( 'vialcove-product-preview' ), (string) filemtime( __DIR__ . '/../assets/sale-pricing.css' ) );
+    if ( function_exists( 'is_product' ) && is_product() ) {
+        wp_enqueue_script( 'vialcove-sale-ribbon', get_template_directory_uri() . '/assets/sale-ribbon.js', array( 'jquery' ), (string) filemtime( __DIR__ . '/../assets/sale-ribbon.js' ), true );
+    }
 }, 25 );
