@@ -983,3 +983,9 @@ functions.php新增vc_card_display_product，使用Woo get_visible_children的me
 手机验证补充：真实IAB 390视口下流程为单列三行，卡片约295px，pageWidth375无横向溢出；恢复的三组图文图片均已加载。报告核对FAQ实际点击展开，原文完整可见。并非实体手机测试。临时视口覆盖已reset，预览tab19保留并定位How It Works。桌面截图desktop-process.png为可交付视觉证据；mobile-process.png为文档区域截取，其中固定导航出现在截图中部，不能当作固定导航实际版式错误。PHP lint及git diff --check通过。
 
 证据：D:/Codex/Tasks/2026-11-02/homepage-lower-content/outputs/{before-home.json,update-result.json,independent-verification.json,mobile-metrics.json,faq-browser-check.json,desktop-process.png}；只读验证脚本在同任务work/verify-restoration.php。草稿/快照和测试输出保存在D任务，不入Git。只更新本次11463草稿，未发布、未改商品/订单/媒体；后续发布仍走原后台流程并先读取当前revision以避免覆盖其他编辑。
+
+### 2026-11-02 · Codex：整版 Demo 首页接入现有积木并发布
+
+用户确认同步整版首页、保留当前页商品弹窗。当前模板684的home685已通过原layouts REST发布8块，header686/footer687各1块；global688及模板/域名映射保持。商品与购物车仍复用Woo后端，保留完整商品页；弹窗懒加载、规格图价SKU联动、电脑侧栏/手机独立购物车均核对。82/183来自现有目录，计数可见才运行。临时加购的Retatrutide10mg已清空，无下单或订单改动。
+
+具体字段、文件、发布边界和检查证据见 [frontend-home-demo-integration-20261102.md](frontend-home-demo-integration-20261102.md)。本阶段源码提交将由任务提交记录定位；运行数据/备份/插画和COA文件全部留在D盘任务及媒体库，不入Git。
