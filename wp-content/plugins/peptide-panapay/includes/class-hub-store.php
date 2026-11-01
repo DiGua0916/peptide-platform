@@ -4,7 +4,7 @@ namespace VialCove\Panapay;
 defined( 'ABSPATH' ) || exit;
 
 final class Hub_Store {
-	public const VERSION = '2';
+	public const VERSION = '3';
 	public static function table( string $name ): string {
 		global $wpdb;
 		if ( ! in_array( $name, array( 'attempts', 'events' ), true ) ) { throw new \RuntimeException( 'invalid_table' ); }
@@ -20,6 +20,7 @@ final class Hub_Store {
  site_uuid varchar(64) NOT NULL,
  order_id bigint(20) unsigned NOT NULL,
  local_reference varchar(96) NOT NULL,
+ account_id varchar(32) NOT NULL DEFAULT 'default',
  request_hash char(64) NOT NULL,
  state varchar(16) NOT NULL,
  owner_token char(32) NOT NULL,
@@ -30,6 +31,7 @@ final class Hub_Store {
  link_key_box text NOT NULL,
  scope_hash char(64) NOT NULL,
  checkout_box text NOT NULL,
+ hosts_box text NOT NULL,
  return_box text NOT NULL,
  return_token_hash char(64) NOT NULL,
  type varchar(16) NOT NULL DEFAULT '',
@@ -71,6 +73,16 @@ CREATE TABLE {$e} (
 				}
 			}
 		}
+		// Do not advance the marker after a partially failed ALTER. Old rows keep the
+		// default account and an empty frozen-hosts value for the bounded legacy path.
+		$fields = $wpdb->get_results( "SHOW COLUMNS FROM {$a}", ARRAY_A );
+		if ( ! is_array( $fields ) || '' !== (string) $wpdb->last_error ) { throw new \RuntimeException( 'hub_storage_unavailable' ); }
+		$fields = array_column( $fields, null, 'Field' );
+		if ( 'varchar(32)' !== strtolower( (string) ( $fields['account_id']['Type'] ?? '' ) )
+			|| 'NO' !== ( $fields['account_id']['Null'] ?? '' ) || 'default' !== ( $fields['account_id']['Default'] ?? null )
+			|| 'text' !== strtolower( (string) ( $fields['hosts_box']['Type'] ?? '' ) ) || 'NO' !== ( $fields['hosts_box']['Null'] ?? '' ) ) {
+			throw new \RuntimeException( 'hub_storage_unavailable' );
+		}
 		update_option( 'pc_panapay_hub_db', self::VERSION, false );
 	}
 	private static function read( string $sql ): array {
@@ -92,7 +104,11 @@ CREATE TABLE {$e} (
 		return count( $r ) === 1 ? $r[0] : null;
 	}
 	/** Only the winner of the committed unique insert may send the provider request. */
-	public static function reserve( array $record ): array {
+	public static function reserve( array $record, ?string $legacy_hash = null ): array {
+		$record['account_id'] = $record['account_id'] ?? 'default';
+		if ( ! is_string( $record['account_id'] ) || ! preg_match( '/^(?:default|[a-f0-9]{32})$/D', $record['account_id'] ) ) {
+			throw new Protocol_Error( 'invalid_payment_account', 400 );
+		}
 		$record['active_order'] = hash( 'sha256', $record['site_id'] . '|' . $record['site_uuid'] . '|' . $record['order_id'] );
 		$db = Database::open(); $t = self::table( 'attempts' );
 		try {
@@ -103,7 +119,16 @@ CREATE TABLE {$e} (
 			$winner = $n === 1;
 		} finally { $db->close(); }
 		$row = self::find( (int) $record['site_id'], $record['local_reference'] );
-		if ( ! $row || ! hash_equals( $record['site_uuid'], $row['site_uuid'] ) || ! hash_equals( $record['request_hash'], $row['request_hash'] ) ) { throw new Protocol_Error( 'payment_reference_conflict', 409 ); }
+		$account_matches = $row && $record['account_id'] === ( $row['account_id'] ?? 'default' );
+		$hash_matches = $row && hash_equals( $record['request_hash'], $row['request_hash'] );
+		if ( ! $hash_matches && $row && $account_matches && 'default' === $record['account_id']
+			&& '' === ( $row['hosts_box'] ?? '' ) && is_string( $legacy_hash )
+			&& 1 === preg_match( '/^[a-f0-9]{64}$/D', $legacy_hash ) ) {
+			// Existing singleton references predate account-bound request hashes. Never
+			// grant this exception to a new frozen row or another account.
+			$hash_matches = hash_equals( $legacy_hash, $row['request_hash'] );
+		}
+		if ( ! $row || ! hash_equals( $record['site_uuid'], $row['site_uuid'] ) || ! $account_matches || ! $hash_matches ) { throw new Protocol_Error( 'payment_reference_conflict', 409 ); }
 		return array( 'winner' => $winner, 'row' => $row );
 	}
 	public static function finish_create( array $record, array $response ): void {
@@ -180,12 +205,13 @@ CREATE TABLE {$e} (
 		global $wpdb; $a = self::table( 'attempts' ); $e = self::table( 'events' );
 		$where = '1=1';
 		if ( ! empty( $filters['site_id'] ) ) { $where .= $wpdb->prepare( ' AND a.site_id=%d', (int) $filters['site_id'] ); }
+		if ( is_string( $filters['account_id'] ?? null ) && preg_match( '/^(?:default|[a-f0-9]{32})$/D', $filters['account_id'] ) ) { $where .= $wpdb->prepare( ' AND a.account_id=%s', $filters['account_id'] ); }
 		if ( in_array( $filters['state'] ?? '', array( 'creating', 'created', 'unknown', 'failed' ), true ) ) { $where .= $wpdb->prepare( ' AND a.state=%s', $filters['state'] ); }
 		if ( in_array( $filters['status'] ?? '', array( 'SUCCEEDED', 'FAILED', 'pending', 'delivered', 'review' ), true ) ) {
 			$where .= $wpdb->prepare( " AND EXISTS (SELECT 1 FROM {$e} f WHERE f.ref=a.ref AND (f.status=%s OR f.delivery_state=%s))", $filters['status'], $filters['status'] );
 		}
 		$total = self::read( "SELECT COUNT(*) AS total FROM {$a} a WHERE {$where}" );
-		$rows = self::read( $wpdb->prepare( "SELECT a.ref,a.site_id,a.site_uuid,a.order_id,a.local_reference,a.amount,a.currency,a.state,a.created_at,a.updated_at FROM {$a} a WHERE {$where} ORDER BY a.created_at DESC,a.ref DESC LIMIT 20 OFFSET %d", ( max( 1, min( 100000, $page ) ) - 1 ) * 20 ) );
+		$rows = self::read( $wpdb->prepare( "SELECT a.ref,a.site_id,a.site_uuid,a.order_id,a.local_reference,a.account_id,a.amount,a.currency,a.state,a.created_at,a.updated_at FROM {$a} a WHERE {$where} ORDER BY a.created_at DESC,a.ref DESC LIMIT 20 OFFSET %d", ( max( 1, min( 100000, $page ) ) - 1 ) * 20 ) );
 		foreach ( $rows as &$row ) {
 			$events = self::read( $wpdb->prepare( "SELECT status AS event_status,delivery_state,disposition FROM {$e} WHERE ref=%s ORDER BY (status='SUCCEEDED') DESC,created_at DESC,event_id DESC LIMIT 1", $row['ref'] ) );
 			$row = array_merge( $row, $events[0] ?? array( 'event_status' => '', 'delivery_state' => '', 'disposition' => '' ) );

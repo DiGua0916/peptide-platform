@@ -93,3 +93,35 @@ HQ 支付中心 pchq-payments 管理员 nonce 配置/按店筛选/分币种订�
 0.3收尾：31份PHP与2份JS语法、diff、原文真实secret内存扫描、精确6个无外部引用静态SVG、ZIP完整性通过；36运行文件双原站逐字匹配。安装包 D:/Codex/Tasks/2026-10-31/panapay-account-binding/outputs/peptide-panapay-0.3.0.zip，SHA256 e4635fefd81542cdc741f23c487b1459199991c37db102cc4be0f567539dec7b。隔离HQ配置已从受限备份恢复，QA购物车随后按原生UI清理；原站只保留用户指定6图标偏好，收款仍关。GitHub同步单独核实后追加，不以本条代替push结果。
 
 GitHub实际同步：功能提交96d027a；fetch后正常合入同事main94f4853为923cd99415ec60ff2ba252c6ee1e5b9edb101d20，支付插件相对功能提交零差异。支付分支与main均已push且ls-remote核实同923cd99，工作树干净；没有stage或改写同事在途工作树，无强推。此后的文档记录提交不改变已验收运行源或0.3安装包。本人QA购物车原生清空并确认0，临时QA标签已关闭；原总后台支付标签保留交付，未修改YY。
+
+### 2026-10-31 起 · Codex：PAY-HQ-03 多付款方式（0.4）
+
+用户纠正0.3只能一个账号，明确要可连续添加多条支付，不需要官方服务商目录；填写各条网关参数后统一下发各店，买家可分别选择信用卡或PayPal。本轮按当前已提供的网关创建/通知协议实施多账号路由，不把名称/图标当官方PayPal或ApplePay OAuth接口。其他协议须真实文档。
+
+Hub_Accounts新独立option采用稳定default/32hex账号、最大20保留身份、revision+独立主库CAS防覆盖；旧单例原样导入default，不扩大原授权/开启。新条目默认全部已接入及后续接入店铺、收款默认关闭，实际开启须完整参数；编辑、启停、归档分别nonce POST，归档保留身份和在途。来源alias不下发，秘密只HQ加密。新METHODS v1每method精确account_id加原7公开字段，关闭/归档DTO保留注册但不可新创；旧CONFIG仍仅default精确7。0.3→0.4顺序HQ先、店铺后，新Bridge无METHODS故障回退。仅旧CONFIG保留关闭default的可信域名；配置失败沿旧503使旧店在途可回退已保存域名，新METHODS逐账号隔离不变。
+
+各原生Gateway/Blocks使用pc_panapay或pc_panapay_<32hex>，不同选项对应不同原生支付ID。请求签名包括账号选择，HQ请求哈希/创建引用/账号及加密可信域名冻结；账户归档/当前密钥网关变化不改在途。HQ schema3仅追加account_id/hosts_box并核列/唯一索引后标记；同单跨渠道创建、已成功订单和商户流水唯一约束保持。店铺尝试冻结账号/原生渠道，缺旧字段只识别default；混合/不符字段拒绝。Persistence与完成guard增加实际HPOS/CPT主库payment_method核对，缓存对象不能冒充另一渠道付款；回调、receipt、ACK均对账本冻结渠道。原生phone条件enum含各真实方式，非本集成方式仍隐藏，原确认不变。
+
+实际原生与浏览器：HQ2→3保留原4尝试与全部事件，17项通过；A HPOS/B CPT实际签名METHODS都注册3方式其中2开启。3原生合成订单A133卡/A134钱包/B133钱包，预期不同商户，书中账号/渠道/高度冻结、仍pending。中央HTTP27通过：精确公开策略、错身份、同引用换账号409、未知账号拒绝、错误商户密钥400；编辑卡网关/密钥与归档钱包后旧STATUS/原生610px iframe receipt可续，已归档新创403；旧冻结签名确认和独立回写仅各店所属订单，A stock9/8、B9，重复不重复HTTP/库存，总provider模拟创建仅3。原生缓存渠道负例3、旧CONFIG兼容/坏配置新旧隔离6通过。旧83未在本阶段重跑，不用历史总数冒充当前检查。
+
+实际QA浏览器添加第4条ApplePay命名关闭草稿、default独立开启再关闭；Card/PayPal两个radio不同native ID，phone/原确认保留，切bank隐藏phone，无PlaceOrder/卡输入。原站HQ新列表/Add/取消及390宽验收：body390、dialogx12/w366/right378/bottom832在844内、保存按钮可见。原站旧标签检测到未保存输入，保持未刷新并保留；另开新版标签交付，不丢原草稿、不读取回显密钥。
+
+独立审查首发现单个退休网关DNS/坏密钥会导致全部策略503，已改成先安全显示DTO，停用/归档/无授权不解密/DNS，活动失败仅本账号关闭；另修32自定义域名加gateway变33时整体拒绝问题，启用配置限制有效并集32，坏单项策略隔离不截断信任。两次复核无新增P1/P2；旧CONFIG兼容修经复核建议及原生6补证。模型HQ27、配置21、弹窗11、策略隔离/host14、店铺28和JS6均模型/源码层，非独立原生功能数。
+
+原站先私有备份旧0.3运行源，逐字核实基线，再HQ→店铺安装37文件；源备份SHA7c90d9e1d66f452d18fabfa2679d79ebfc53c811e3288a1da5ba64836293dde5，设置、原金融DDL/行另受限备份。原HQ金融行0→0、schema3和default迁移逐项原参数/凭据/六标识/关闭/指定店铺全同；原店真实签名新策略仅关闭default/无商户字段，未加入原站合成账号/订单、未启用原收款、YY未改。后续两条边界补丁与完整包的最终指纹随后补记。
+
+QA新3账号已归档，旧default启用状态和旧单例option恢复，schema3与三笔合成paid记录保留作证；本人购物车/临时标签及任务自有MU随后清理。支付方全部为隔离example.com模拟，未再次尝试此前真实unknown创建。公网HTTPS/真实钱包和卡/渠道开通/到账/服务器调度与恢复仍待联调；不能把本轮原生模拟称为正式收款。
+
+0.4最终收尾：32PHP/2JS语法、diff、原文真实secret内存扫描、37文件双原站指纹、ZIP完整性与私有/test排除通过。最终安装包D:/Codex/Tasks/2026-10-31/panapay-multiple-methods/outputs/peptide-panapay-0.4.0.zip，SHA256 a10923896e33723067eff998c5cb1b09915f05745f8ac1866c53536eac514f10。晚期HubAccounts/HubPage边界补丁与README已补拷至两原站，前一中间源另受限备份；最终复核无P1/P2。旧CONFIG模型旧“坏配置也200”的期望随正确旧客户端回退契约调整为抛错，仅该原有模型首跑不接受后修正测试；原生6与模型14/21最终通过。本人QA的请求捕获MU已移除、HQ原隔离MU逐字恢复；旧默认开关恢复，新3账号归档，原单例option不变，无本阶段真实支付方请求。旧83回归本轮未重跑；本轮原生范围以17/27/3/6和真浏览器为准，不混加历史。
+
+GitHub实际同步：功能提交4ae551e，正常合入同事main813f702为f940ce4dc7a79a938f6987b0d77b85901d4ae811，支付插件相对功能提交零差异。main与codex/panapay-payments均push并ls-remote同f940ce4，工作树干净；同事完整历史保留，未stage或改写其工作树，无强推。此后的交付记录提交不改变安装包/运行源。浏览器已确认本人购物车空、QA临时标签关闭，原未保存标签与新支付列表均标保留。
+
+### 2026-11-01 · Codex：PAY-HQ-04 归档恢复（0.4.1）
+
+用户询问归档支付怎么恢复。查明确实遗漏恢复入口，已补归档行右侧“恢复”POST操作，沿用manage_options/nonce/版本校验。Hub_Accounts::restore只接受已归档身份，保持ID和原参数/加密凭据不变，只改archived=no、enabled=no；不在恢复时解密/DNS校验，方便先恢复修正旧配置，真正开启仍走原完整校验。过期版本/非归档/不存在身份拒绝；原财务账本和在途处理不变。没有替用户选择恢复原站账号或开启收款。
+
+独立隔离HQ实际10项通过（run094e6aa08690），完整账号簿finally原样恢复，0HTTP/未访问财务表；三个变更文件静态复审无P1/P2。浏览器实测、原站安装及自动Git同步随后补记，证据D:/Codex/Tasks/2026-11-01/payment-archive-restore/outputs。
+
+收尾实测：隔离浏览器点恢复后条目显示已关闭，编辑/开启按钮恢复；随后经原生UI重新归档，未发起支付。原后台真页面已见原Credit card已归档和右侧恢复按钮，仅查看未恢复/开启原账号。当前编辑字段用HTML初始属性比对确认无改动后才刷新。早先使用defaultValue/defaultChecked的读取在浏览器只读封装不可靠，不能据其判断用户确有未保存草稿；历史“检测到未保存”表述更正为当时保守保留原页，不作为已证草稿事实。
+
+3PHP语法、diff、改动内真实secret内存扫描、37源双原端一致、ZIP完整性通过；写前核对旧源并私有备份SHA35e108daee3cbcd3c3a129dd2aa5c3fe89f03cd5d65d2d439402165d79039423。包D:/Codex/Tasks/2026-11-01/payment-archive-restore/outputs/peptide-panapay-0.4.1.zip，SHA62a160d17043a4a12d2641f4e3d83f2ce52437c233eaa934ae5a733eb9347069；原设置未改、DBschema未变，37运行文件不含tests/私有资料。原截图同outputs/original-restore-button.png，浏览器QA标签已关闭，原标签保留。

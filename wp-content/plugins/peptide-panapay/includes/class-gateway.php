@@ -6,9 +6,32 @@ defined( 'ABSPATH' ) || exit;
 final class Gateway extends \WC_Payment_Gateway {
 	public const ID = 'pc_panapay';
 	private ?array $central_config = null;
+	private string $account;
 
-	public function __construct() {
-		$this->id = self::ID;
+	public static function valid_account_id( string $id ): bool { return 'default' === $id || 1 === preg_match( '/^[a-f0-9]{32}$/D', $id ); }
+	public static function native_id( string $account_id = 'default' ): string {
+		if ( ! self::valid_account_id( $account_id ) ) { throw new \InvalidArgumentException( 'Invalid payment account.' ); }
+		return 'default' === $account_id ? self::ID : self::ID . '_' . $account_id;
+	}
+	/** Syntax alone is not authorization; new payments still require its HQ policy. */
+	public static function account_from_id( string $id ): ?string {
+		if ( self::ID === $id ) { return 'default'; }
+		return preg_match( '/^pc_panapay_([a-f0-9]{32})$/D', $id, $match ) ? $match[1] : null;
+	}
+	public static function account_configurations(): array {
+		if ( ! Bridge::enabled() ) { return array( 'default' => null ); }
+		try { $configs = Bridge::configurations(); }
+		catch ( \Throwable $error ) { $configs = array(); }
+		// The disabled default object keeps old native payment/receipt registration intact.
+		if ( ! array_key_exists( 'default', $configs ) ) { $configs = array_merge( array( 'default' => null ), $configs ); }
+		return $configs;
+	}
+	public static function known_ids(): array { return array_map( array( self::class, 'native_id' ), array_keys( self::account_configurations() ) ); }
+	public function account_id(): string { return $this->account; }
+
+	public function __construct( string $account_id = 'default', ?array $central_config = null ) {
+		$this->account = $account_id;
+		$this->id = self::native_id( $account_id );
 		$this->has_fields = false;
 		$this->supports = array( 'products' );
 		$this->method_title = __( 'Panapay', 'peptide-panapay' );
@@ -19,12 +42,13 @@ final class Gateway extends \WC_Payment_Gateway {
 		$this->title = $this->get_option( 'title', __( 'Credit card', 'peptide-panapay' ) );
 		if ( '' === trim( (string) $this->title ) ) { $this->title = __( 'Credit card', 'peptide-panapay' ); }
 		$this->description = $this->get_option( 'description', __( 'Continue to the secure payment page to pay for your order.', 'peptide-panapay' ) );
-		if ( Bridge::enabled() ) {
+		if ( Bridge::enabled() || 'default' !== $this->account ) {
 			$this->enabled = 'no';
 			$this->title = __( 'Credit card', 'peptide-panapay' );
 			$this->description = __( 'Continue to the secure payment page to pay for your order.', 'peptide-panapay' );
 			try {
-				$this->central_config = Bridge::configuration();
+				if ( null !== $central_config && ( $central_config['account_id'] ?? '' ) !== $this->account ) { throw new \RuntimeException( 'Payment account mismatch.' ); }
+				$this->central_config = $central_config ?? Bridge::configuration( $this->account );
 				$this->enabled = $this->central_config['enabled'] ? 'yes' : 'no';
 				$this->title = $this->central_config['title'];
 				$this->description = $this->central_config['description'];
@@ -39,7 +63,7 @@ final class Gateway extends \WC_Payment_Gateway {
 	}
 
 	public function init_form_fields() {
-		if ( Bridge::enabled() ) { $this->form_fields = array(); return; }
+		if ( Bridge::enabled() || 'default' !== $this->account ) { $this->form_fields = array(); return; }
 		$this->form_fields = array(
 			'enabled' => array( 'title' => __( 'Enable', 'peptide-panapay' ), 'type' => 'checkbox', 'label' => __( 'Enable Panapay', 'peptide-panapay' ), 'default' => 'no' ),
 			'title' => array( 'title' => __( 'Checkout title', 'peptide-panapay' ), 'type' => 'text', 'default' => __( 'Credit card', 'peptide-panapay' ) ),
@@ -56,7 +80,7 @@ final class Gateway extends \WC_Payment_Gateway {
 	}
 
 	public function admin_options() {
-		if ( ! Bridge::enabled() ) { parent::admin_options(); return; }
+		if ( ! Bridge::enabled() && 'default' === $this->account ) { parent::admin_options(); return; }
 		echo '<h2>' . esc_html__( 'Panapay', 'peptide-panapay' ) . '</h2><p>'
 			. esc_html__( '付款方式由总后台统一管理。商户配置、支付开关和交易记录请在总后台的支付中心管理。', 'peptide-panapay' )
 			. '</p><p>' . esc_html( 'yes' === $this->enabled
@@ -66,7 +90,7 @@ final class Gateway extends \WC_Payment_Gateway {
 
 	/** Store staff cannot write a merchant configuration once HQ owns payments. */
 	public function process_admin_options() {
-		return Bridge::enabled() ? false : parent::process_admin_options();
+		return Bridge::enabled() || 'default' !== $this->account ? false : parent::process_admin_options();
 	}
 
 	public function generate_panapay_secret_html( $key, $data ) {
@@ -95,11 +119,11 @@ final class Gateway extends \WC_Payment_Gateway {
 	}
 
 	public function is_test_mode(): bool {
-		if ( Bridge::enabled() ) { return $this->central_config['test_mode'] ?? true; }
+		if ( Bridge::enabled() || 'default' !== $this->account ) { return $this->central_config['test_mode'] ?? true; }
 		return in_array( $this->get_option( 'test_mode', 'yes' ), array( true, 'yes', '1', 1 ), true );
 	}
 
-	/** Display selection is supplied by HQ; it does not register additional gateways. */
+	/** Display marks remain separate from the independently registered native methods. */
 	public function payment_icons(): array {
 		return Bridge::enabled() && is_array( $this->central_config['payment_icons'] ?? null )
 			? $this->central_config['payment_icons'] : array();
@@ -110,9 +134,11 @@ final class Gateway extends \WC_Payment_Gateway {
 	}
 
 	public function is_available() {
-		if ( ! parent::is_available() || ! Store::installed() ) { return false; }
+		if ( ! Store::installed() ) { return false; }
+		if ( $this->order_pay_continuation() ) { return true; }
+		if ( ! parent::is_available() ) { return false; }
 		try {
-			$config = Configuration::load();
+			$config = Configuration::load( $this->account );
 			if ( ! empty( $config['central'] ) ) {
 				if ( empty( $config['enabled'] ) || '' === $config['secret'] ) { return false; }
 			} elseif ( '' === $config['gateway'] || '' === $config['mchid'] || '' === $config['secret'] ) { return false; }
@@ -122,16 +148,28 @@ final class Gateway extends \WC_Payment_Gateway {
 		} catch ( \Throwable $error ) { return false; }
 	}
 
+	/** Disabled/archived accounts can continue only their own authenticated saved attempt. */
+	private function order_pay_continuation(): bool {
+		if ( ! function_exists( 'is_wc_endpoint_url' ) || ! is_wc_endpoint_url( 'order-pay' ) ) { return false; }
+		try {
+			$order = wc_get_order( absint( get_query_var( 'order-pay' ) ) );
+			$key = isset( $_GET['key'] ) && is_string( $_GET['key'] ) ? wc_clean( wp_unslash( $_GET['key'] ) ) : '';
+			if ( ! $order instanceof \WC_Order || '' === $key || ! hash_equals( $order->get_order_key(), $key ) || $this->id !== $order->get_payment_method() ) { return false; }
+			if ( $order->get_customer_id() && get_current_user_id() !== $order->get_customer_id() && ! current_user_can( 'manage_woocommerce' ) ) { return false; }
+			return Session_Service::has_open_attempt( $order, $this->id );
+		} catch ( \Throwable $error ) { return false; }
+	}
+
 	public function process_payment( $order_id ) {
 		try {
 			$order = wc_get_order( $order_id );
-			if ( ! $order instanceof \WC_Order || self::ID !== $order->get_payment_method() ) { return $this->failure(); }
-			if ( $order->is_paid() && Persistence::is_paid( $order->get_id(), (string) $order->get_transaction_id() ) ) {
+			if ( ! $order instanceof \WC_Order || $this->id !== $order->get_payment_method() ) { return $this->failure(); }
+			if ( $order->is_paid() && Persistence::has_gateway( $order->get_id(), $this->id ) && Persistence::is_paid( $order->get_id(), (string) $order->get_transaction_id() ) ) {
 				return array( 'result' => 'success', 'redirect' => $this->get_return_url( $order ) );
 			}
-			if ( ! $this->is_available() && ! Session_Service::has_open_attempt( $order ) ) { return $this->failure(); }
+			if ( ! $this->is_available() && ! Session_Service::has_open_attempt( $order, $this->id ) ) { return $this->failure(); }
 			Checkout_Fields::apply_to_order( $order );
-			$session = Session_Service::start( $order->get_id() );
+			$session = Session_Service::start( $order->get_id(), $this->id );
 			return array( 'result' => 'success', 'redirect' => 'redirect' === $session['type'] ? $session['url'] : $order->get_checkout_payment_url( true ) );
 		} catch ( \Throwable $error ) {
 			$message = $error instanceof Customer_Error ? $error->getMessage() : __( 'Payment could not be started. Please try again later or contact the store before paying again.', 'peptide-panapay' );

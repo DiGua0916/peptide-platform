@@ -178,6 +178,16 @@ final class Blocks {
 	public static function enqueue_canvas(): void {
 		if ( self::is_layout_screen() ) {
 			wp_enqueue_style( Renderer::STYLE );
+			// Capture content CSS in the iframe assets; later SSR requests cannot update this list.
+			$url = plugins_url( 'assets/', PEPTIDE_CORE_FILE );
+			foreach ( array(
+				'pc-commerce-blocks' => 'commerce-blocks.css',
+				'pc-review-blocks'   => 'review-blocks.css',
+				'pc-shop-by-gram'    => 'shop-by-gram.css',
+				'pc-social-feeds'    => 'social-feeds.css',
+			) as $handle => $file ) {
+				wp_enqueue_style( $handle, $url . $file, array(), (string) filemtime( PEPTIDE_CORE_DIR . '/assets/' . $file ) );
+			}
 		}
 	}
 

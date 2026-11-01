@@ -43,7 +43,7 @@ final class Checkout_Fields {
 			'properties' => array(
 				'checkout' => array(
 					'type'       => 'object',
-					'properties' => array( 'payment_method' => array( 'const' => 'pc_panapay' ) ),
+					'properties' => array( 'payment_method' => array( 'enum' => Gateway::known_ids() ) ),
 					'required'   => array( 'payment_method' ),
 				),
 			),
@@ -76,7 +76,9 @@ final class Checkout_Fields {
 
 	/** Copy only a field already persisted on this same order by native checkout. */
 	public static function apply_to_order( \WC_Order $order ): void {
-		if ( 'pc_panapay' !== $order->get_payment_method() || '' !== trim( $order->get_billing_phone() ) ) { return; }
+		if ( ! in_array( $order->get_payment_method(), Gateway::known_ids(), true )
+			&& Session_Service::bound_gateway( $order ) !== $order->get_payment_method() ) { return; }
+		if ( '' !== trim( $order->get_billing_phone() ) ) { return; }
 		if ( ! self::native_phone_hidden() ) { return; } // Existing native validation remains authoritative.
 
 		$fields = self::service();
@@ -114,8 +116,14 @@ final class Checkout_Fields {
 
 	public static function admin_notice(): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) || ! self::native_phone_hidden() ) { return; }
-		$settings = get_option( 'woocommerce_pc_panapay_settings', array() );
-		if ( ! is_array( $settings ) || 'yes' !== ( $settings['enabled'] ?? 'no' ) ) { return; }
+		if ( Bridge::enabled() ) {
+			try { $enabled = array_filter( Bridge::configurations(), static fn( array $config ): bool => ! empty( $config['enabled'] ) ); }
+			catch ( \Throwable $error ) { return; }
+			if ( ! $enabled ) { return; }
+		} else {
+			$settings = get_option( 'woocommerce_pc_panapay_settings', array() );
+			if ( ! is_array( $settings ) || 'yes' !== ( $settings['enabled'] ?? 'no' ) ) { return; }
+		}
 		$fields = self::service();
 		if ( ! self::$registration_failed && $fields && $fields->is_field( self::FIELD_ID ) ) { return; }
 		echo '<div class="notice notice-error"><p>' . esc_html__( 'Panapay needs a phone number, but the native phone field is hidden and the conditional checkout field is unavailable. Show the native phone field in the Checkout block settings, or use a supported WooCommerce version (11.2 or newer). No checkout setting has been changed automatically.', 'peptide-panapay' ) . '</p></div>';

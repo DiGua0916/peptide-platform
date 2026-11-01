@@ -26,7 +26,7 @@
 .pc-pay-amount small { color: var(--pay-muted); margin-left: 8px; font-size: 12px; }
 .pc-pay-filters { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
 .pc-pay-filters label { display: grid; gap: 4px; min-width: 160px; font-size: 12px; line-height: 16px; font-weight: 600; }
-.pc-pay-hub select, .pc-pay-hub input[type=text], .pc-pay-hub input[type=password], .pc-pay-hub textarea { width: 100%; max-width: 100%; min-height: 36px; margin: 0; padding: 8px 12px; color: var(--pay-ink); background: #fff; border: 1px solid #d5d5d5; border-radius: 6px; font: inherit; font-size: 14px; line-height: 20px; caret-color: var(--pay-ink); }
+.pc-pay-hub select, .pc-pay-hub input[type=text], .pc-pay-hub input[type=password], .pc-pay-hub input[type=number], .pc-pay-hub textarea { width: 100%; max-width: 100%; min-height: 36px; margin: 0; padding: 8px 12px; color: var(--pay-ink); background: #fff; border: 1px solid #d5d5d5; border-radius: 6px; font: inherit; font-size: 14px; line-height: 20px; caret-color: var(--pay-ink); }
 .pc-pay-hub select { padding-right: 32px; }
 .pc-pay-hub input::placeholder, .pc-pay-hub textarea::placeholder { color: #737373; opacity: 1; }
 .pc-pay-hub input:disabled { color: #666; background: #f5f5f5; cursor: not-allowed; }
@@ -68,7 +68,24 @@
 @media (max-width: 600px) { .pc-pay-section { padding: 12px; } .pc-pay-fields { grid-template-columns: minmax(0, 1fr); } .pc-pay-filters label { flex: 1 1 100%; min-width: 0; } .pc-pay-summary { align-items: flex-start; padding: 12px; } .pc-pay-summary > div { align-items: flex-start; flex-direction: column; gap: 8px; } .pc-pay-form-footer { align-items: stretch; flex-direction: column; } .pc-pay-form-footer .button { width: 100%; } }
 @media (prefers-reduced-motion: reduce) { .pc-pay-hub .button { transition: none; } .pc-pay-hub .button:active { transform: none; } }
 
-/* A single account row leads onboarding; account binding and activation are separate actions. */
+/* Compact accounts list. Payment brands remain optional checkout presentation only. */
+.pc-pay-method-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.pc-pay-method-heading > p { flex: 1 1 320px; margin: 0; max-width: 70ch; }
+.pc-pay-accounts { border-top: 1px solid var(--pay-line); }
+.pc-pay-method-row { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 24px; padding: 16px 0; border-bottom: 1px solid var(--pay-line); }
+.pc-pay-method-row:last-child { border-bottom: 0; }
+.pc-pay-method-row.is-archived .pc-pay-account-copy { color: #666; }
+.pc-pay-method-row .pc-pay-account-copy > p { margin-bottom: 0; }
+.pc-pay-method-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pc-pay-method-actions form { margin: 0; }
+.pc-pay-archive { position: relative; font-size: 12px; }
+.pc-pay-archive > summary { cursor: pointer; padding: 8px; text-decoration: underline; text-underline-offset: 4px; }
+.pc-pay-archive > form { position: absolute; right: 0; top: 100%; z-index: 5; width: 240px; padding: 16px; background: #fff; border: 1px solid var(--pay-line); border-radius: 8px; }
+.pc-pay-archive p { color: var(--pay-muted); font-size: 12px; line-height: 18px; }
+.pc-pay-site-picker { margin: 16px 0 0; }
+.pc-pay-site-picker > summary { cursor: pointer; font-size: 12px; line-height: 20px; }
+.pc-pay-site-picker .pc-pay-store-option { font-weight: 400; align-items: flex-start; }
+.pc-pay-account-dialog > .pc-pay-config { display: flex; flex-direction: column; min-height: 0; margin: 0; max-height: inherit; }
 .pc-pay-onboarding > h2 { margin-bottom: 16px; }
 .pc-pay-account-row { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; padding-bottom: 24px; border-bottom: 1px solid var(--pay-line); }
 .pc-pay-account-mark { display: grid; place-items: center; flex: 0 0 56px; width: 56px; height: 56px; color: #171717; background: #f2f2f2; border-radius: 12px; }
@@ -128,3 +145,4 @@ html.pc-pay-modal-open { overflow: hidden; }
 @media (max-width: 800px) { .pc-pay-access-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
 @media (max-width: 600px) { .pc-pay-account-mark { flex-basis: 44px; width: 44px; height: 44px; } .pc-pay-account-row { gap: 12px; } .pc-pay-account-row > .button { margin-left: 56px; } .pc-pay-account-copy { flex-basis: calc(100% - 56px); } .pc-pay-store-options { grid-template-columns: minmax(0, 1fr); } .pc-pay-account-dialog.is-enhanced[open] { width: calc(100vw - 24px); max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); } .pc-pay-dialog-header, .pc-pay-dialog-scroll { padding: 16px; } .pc-pay-dialog-footer { padding: 12px 16px; align-items: stretch; } .pc-pay-dialog-footer p { flex-basis: 100%; } .pc-pay-dialog-footer > div { flex: 1 1 auto; justify-content: flex-end; } .pc-pay-icon-options { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pc-pay-icon-options .pc-pay-icon-option { flex-wrap: wrap; } }
 @media (prefers-reduced-motion: reduce) { .pc-pay-account-dialog.is-enhanced[open] { animation: none; } .pc-pay-dialog-close:active { transform: none; } }
+@media (max-width: 600px) { .pc-pay-method-heading > .button { width: 100%; text-align: center; } .pc-pay-method-actions { width: 100%; } .pc-pay-archive > form { right: auto; left: 0; width: min(240px, calc(100vw - 64px)); } }

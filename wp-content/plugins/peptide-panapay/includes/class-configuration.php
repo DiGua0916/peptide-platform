@@ -7,8 +7,10 @@ defined( 'ABSPATH' ) || exit;
 final class Configuration {
 	private static array $public_hosts = array();
 
-	public static function load(): array {
-		return Bridge::enabled() ? Bridge::configuration() : self::legacy();
+	public static function load( string $account_id = 'default' ): array {
+		if ( Bridge::enabled() ) { return Bridge::configuration( $account_id ); }
+		if ( 'default' !== $account_id ) { throw new Protocol_Error( 'payment_method_unavailable', 503 ); }
+		return self::legacy();
 	}
 
 	/** Existing direct-provider attempts retain their original local configuration. */
@@ -21,13 +23,13 @@ final class Configuration {
 	}
 
 	/** Provider parsing is also used at HQ; the result must remain server-side. */
-	public static function from_settings( array $settings ): array {
-		$gateway = self::override( 'PC_PANAPAY_GATEWAY', self::text( $settings, 'gateway' ) );
-		$mchid = self::override( 'PC_PANAPAY_MCHID', self::text( $settings, 'mchid' ) );
+	public static function from_settings( array $settings, bool $server_overrides = true ): array {
+		$gateway = $server_overrides ? self::override( 'PC_PANAPAY_GATEWAY', self::text( $settings, 'gateway' ) ) : self::text( $settings, 'gateway' );
+		$mchid = $server_overrides ? self::override( 'PC_PANAPAY_MCHID', self::text( $settings, 'mchid' ) ) : self::text( $settings, 'mchid' );
 		if ( '' !== $mchid && ! preg_match( '/\A[A-Za-z0-9_-]{1,128}\z/', $mchid ) ) {
 			throw new \RuntimeException( 'Panapay merchant configuration is invalid.' );
 		}
-		$secret = self::override( 'PC_PANAPAY_SECRET', null );
+		$secret = $server_overrides ? self::override( 'PC_PANAPAY_SECRET', null ) : null;
 		if ( null === $secret ) {
 			$stored = self::text( $settings, 'secret', false );
 			$secret = '' === $stored ? '' : Crypto::decrypt( $stored, 'secret' );

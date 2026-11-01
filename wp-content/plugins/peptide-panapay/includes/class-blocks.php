@@ -16,6 +16,12 @@ final class Blocks extends AbstractPaymentMethodType {
 
 	/** @var Gateway|null */
 	private $gateway = null;
+	private static bool $script_registered = false;
+
+	public function __construct( string $gateway_id = Gateway::ID ) {
+		if ( null === Gateway::account_from_id( $gateway_id ) ) { throw new \InvalidArgumentException( 'Invalid payment method.' ); }
+		$this->name = $gateway_id;
+	}
 
 	public function initialize() {
 		if ( ! function_exists( 'WC' ) || ! WC() ) {
@@ -36,13 +42,17 @@ final class Blocks extends AbstractPaymentMethodType {
 		if ( ! $this->is_active() ) {
 			return array();
 		}
-		wp_register_script(
-			'peptide-panapay-checkout',
-			plugins_url( 'assets/checkout.js', PEPTIDE_PANAPAY_FILE ),
-			array( 'wc-blocks-registry', 'wc-settings', 'wp-element' ),
-			PEPTIDE_PANAPAY_VERSION,
-			true
-		);
+		if ( ! self::$script_registered ) {
+			wp_register_script(
+				'peptide-panapay-checkout',
+				plugins_url( 'assets/checkout.js', PEPTIDE_PANAPAY_FILE ),
+				array( 'wc-blocks-registry', 'wc-settings', 'wp-element' ),
+				PEPTIDE_PANAPAY_VERSION,
+				true
+			);
+			wp_add_inline_script( 'peptide-panapay-checkout', 'window.pcPanapayMethodNames=' . wp_json_encode( Gateway::known_ids() ) . ';', 'before' );
+			self::$script_registered = true;
+		}
 		return array( 'peptide-panapay-checkout' );
 	}
 
@@ -57,6 +67,7 @@ final class Blocks extends AbstractPaymentMethodType {
 		}
 		// This explicit DTO must never include gateway settings or order data.
 		return array(
+			'account_id' => $this->gateway->account_id(),
 			'title'       => $this->text( $this->gateway->get_title() ),
 			'description' => $this->text( $this->gateway->get_description() ),
 			'test_mode'   => $this->gateway->is_test_mode(),

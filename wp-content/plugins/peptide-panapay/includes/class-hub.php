@@ -17,7 +17,7 @@ final class Hub {
 		if ( Hub_Store::installed() && ! wp_next_scheduled( self::CRON ) ) { wp_schedule_event( time() + 60, 'pc_pay_minute', self::CRON ); }
 	}
 	public static function routes(): void {
-		foreach ( array( '/hub/config' => 'configuration', '/hub/session' => 'create', '/hub/session/status' => 'status' ) as $route => $method ) {
+		foreach ( array( '/hub/config' => 'configuration', '/hub/methods' => 'methods', '/hub/session' => 'create', '/hub/session/status' => 'status' ) as $route => $method ) {
 			register_rest_route( Hub_Protocol::NS, $route, array( 'methods' => 'POST', 'permission_callback' => array( self::class, 'permission' ), 'callback' => array( self::class, $method ) ) );
 		}
 		register_rest_route( Hub_Protocol::NS, '/hub/notify', array( 'methods' => 'POST', 'permission_callback' => '__return_true', 'callback' => array( self::class, 'notify' ) ) );
@@ -47,8 +47,16 @@ final class Hub {
 		return new \WP_Error( 'payment_center_unavailable', 'Payment request could not be accepted. Please contact the store before paying again.', array( 'status' => $status ) );
 	}
 	public static function configuration( \WP_REST_Request $request ) {
-		try { $a = self::auth( $request ); return Hub_Protocol::response( Hub_Settings::policy( $a['site']['id'] ), $a['nonce'], $a['key'] ); }
+		try { $a = self::auth( $request ); return Hub_Protocol::response( Hub_Accounts::legacy_policy( $a['site']['id'] ), $a['nonce'], $a['key'] ); }
 		catch ( \Throwable $e ) { return self::error( $e ); }
+	}
+	public static function methods( \WP_REST_Request $request ) {
+		try { $a = self::auth( $request ); return Hub_Protocol::response( Hub_Accounts::policy( $a['site']['id'] ), $a['nonce'], $a['key'] ); }
+		catch ( \Throwable $e ) { return self::error( $e ); }
+	}
+	private static function account_id( $value ): string {
+		if ( ! is_string( $value ) || ! preg_match( '/^(?:default|[a-f0-9]{32})$/D', $value ) ) { throw new Protocol_Error( 'invalid_payment_account', 400 ); }
+		return $value;
 	}
 	private static function payload( array $p, array $site ): array {
 		$allowed = array( 'order_id', 'currency', 'amount', 'email', 'phone', 'ip', 'accept_language', 'user_agent', 'return_url', 'products' );
@@ -87,21 +95,30 @@ final class Hub {
 	}
 	public static function create( \WP_REST_Request $request ) {
 		try {
-			$a = self::auth( $request ); $site = $a['site']; $config = Hub_Settings::load();
-			if ( ! Hub_Settings::allows_site( $site['id'] ) || ! $config['enabled'] || '' === $config['gateway'] || '' === $config['mchid'] || '' === $config['secret'] ) { throw new Protocol_Error( 'store_payment_disabled', 403 ); }
+			$a = self::auth( $request ); $site = $a['site']; $input = $request->get_json_params();
+			if ( ! is_array( $input ) ) { throw new Protocol_Error( 'invalid_order', 400 ); }
+			$account = self::account_id( array_key_exists( 'account_id', $input ) ? $input['account_id'] : 'default' );
+			try { $config = Hub_Accounts::load( $account ); }
+			catch ( \InvalidArgumentException $error ) { throw new Protocol_Error( 'store_payment_disabled', 403 ); }
+			$allowed = $config['all_sites'] || in_array( $site['id'], $config['sites'], true );
+			if ( ! $allowed || ! $config['enabled'] || $config['archived'] || '' === $config['gateway'] || '' === $config['mchid'] || '' === $config['secret'] ) { throw new Protocol_Error( 'store_payment_disabled', 403 ); }
 			if ( ( $config['test_mode'] && 'production' === wp_get_environment_type() ) || ( ! $config['test_mode'] && ( 'https' !== wp_parse_url( home_url(), PHP_URL_SCHEME ) || 'https' !== wp_parse_url( $site['url'], PHP_URL_SCHEME ) ) ) ) { throw new Protocol_Error( 'environment_not_ready', 503 ); }
-			$p = self::payload( (array) $request->get_json_params(), $site );
-			$reference = $p['order_id']; $parsed = Session_Service::parse_reference( $reference ); $hash = hash( 'sha256', Hub_Protocol::json( $p ) );
+			$p = self::payload( $input, $site );
+			$reference = $p['order_id']; $parsed = Session_Service::parse_reference( $reference );
+			$legacy_hash = hash( 'sha256', Hub_Protocol::json( $p ) );
+			$hash = hash( 'sha256', Hub_Protocol::json( array( 'account_id' => $account, 'payload' => $p ) ) );
 			// A completed central order can never acquire a new provider session.
 			$summary = self::has_success( $site['id'], $site['uuid'], $parsed['order_id'] );
 			if ( $summary ) { throw new Protocol_Error( 'order_already_confirmed', 409 ); }
 			$ref = 'PH' . bin2hex( random_bytes( 16 ) ); $token = bin2hex( random_bytes( 24 ) );
-			$record = array( 'ref' => $ref, 'site_id' => $site['id'], 'site_uuid' => $site['uuid'], 'order_id' => $parsed['order_id'], 'local_reference' => $reference,
+			$record = array( 'ref' => $ref, 'site_id' => $site['id'], 'site_uuid' => $site['uuid'], 'order_id' => $parsed['order_id'], 'local_reference' => $reference, 'account_id' => $account,
 				'request_hash' => $hash, 'state' => 'creating', 'owner_token' => bin2hex( random_bytes( 16 ) ), 'amount' => $p['amount'], 'currency' => $p['currency'],
 				'secret_box' => Crypto::encrypt( $config['secret'], 'hub-provider' ), 'link_key_box' => Crypto::encrypt( Hub_Protocol::event_key( $a['key'] ), 'hub-link' ),
-				'scope_hash' => hash( 'sha256', $config['gateway'] . '|' . $config['mchid'] ), 'checkout_box' => '', 'return_box' => Crypto::encrypt( $p['return_url'], 'hub-return' ),
+				'scope_hash' => hash( 'sha256', $config['gateway'] . '|' . $config['mchid'] ), 'checkout_box' => '',
+				'hosts_box' => Crypto::encrypt( Hub_Protocol::json( array( 'gateway' => $config['gateway'], 'payment_hosts' => $config['payment_hosts'] ) ), 'hub-hosts' ),
+				'return_box' => Crypto::encrypt( $p['return_url'], 'hub-return' ),
 				'return_token_hash' => hash( 'sha256', $token ), 'type' => '', 'test_mode' => $config['test_mode'] ? 1 : 0, 'created_at' => time(), 'updated_at' => time() );
-			$reserved = Hub_Store::reserve( $record );
+			$reserved = Hub_Store::reserve( $record, $legacy_hash );
 			if ( $reserved['winner'] ) {
 				$p['site'] = $site['url']; $p['order_id'] = $ref;
 				$p['notify_url'] = add_query_arg( 'rest_route', '/' . Hub_Protocol::NS . '/hub/notify', home_url( '/' ) );
@@ -125,15 +142,27 @@ final class Hub {
 	}
 	private static function session( ?array $row ): array {
 		if ( ! $row ) { throw new Protocol_Error( 'payment_not_found', 404 ); }
-		if ( self::has_success( (int) $row['site_id'], $row['site_uuid'], (int) $row['order_id'] ) ) { return array( 'state' => 'unknown' ); }
-		$result = array( 'state' => $row['state'] );
+		$account = self::account_id( $row['account_id'] ?? 'default' );
+		if ( self::has_success( (int) $row['site_id'], $row['site_uuid'], (int) $row['order_id'] ) ) { return array( 'state' => 'unknown', 'account_id' => $account ); }
+		$result = array( 'state' => $row['state'], 'account_id' => $account );
 		if ( 'created' === $row['state'] ) {
 			$url = Crypto::decrypt( $row['checkout_box'], 'hub-checkout' );
-			if ( Configuration::payment_url( $url, Hub_Settings::load() ) && ! ( $row['test_mode'] && 'production' === wp_get_environment_type() ) ) {
+			if ( Configuration::payment_url( $url, self::checkout_trust( $row ) ) && ! ( $row['test_mode'] && 'production' === wp_get_environment_type() ) ) {
 				$result['type'] = $row['type']; $result['url'] = $url;
 			} else { $result['state'] = 'unknown'; }
 		}
 		return $result;
+	}
+	private static function checkout_trust( array $row ): array {
+		if ( is_string( $row['hosts_box'] ?? null ) && '' !== $row['hosts_box'] ) {
+			$trust = json_decode( Crypto::decrypt( $row['hosts_box'], 'hub-hosts' ), true, 8, JSON_THROW_ON_ERROR );
+			if ( ! is_array( $trust ) || array_diff( array_keys( $trust ), array( 'gateway', 'payment_hosts' ) )
+				|| ! is_string( $trust['gateway'] ?? null ) || ! is_array( $trust['payment_hosts'] ?? null ) ) { throw new \RuntimeException( 'hub_checkout_trust_unavailable' ); }
+			return $trust;
+		}
+		if ( 'default' !== self::account_id( $row['account_id'] ?? 'default' ) ) { throw new \RuntimeException( 'hub_checkout_trust_unavailable' ); }
+		// Only singleton attempts created before schema 3 may lack a host snapshot.
+		return Hub_Accounts::load( 'default' );
 	}
 	public static function status( \WP_REST_Request $request ) {
 		try {
@@ -173,6 +202,7 @@ final class Hub {
 				$transaction = Crypto::decrypt( $event['transaction_box'], 'hub-transaction' );
 				$data = array( 'order_number' => $row['local_reference'], 'status' => $event['status'], 'transaction_id' => $transaction );
 				$data['sign'] = Signature::generate( $data, Crypto::decrypt( $row['link_key_box'], 'hub-link' ) ); $data['event_id'] = $event['event_id'];
+				$data['account_id'] = self::account_id( $row['account_id'] ?? 'default' );
 				$result = Hub_Protocol::request( $site['url'], \PeptideHq\Sites::key( $site['id'] ), $site['uuid'], Hub_Protocol::EVENT, $data, 15 );
 				if ( true !== ( $result['accepted'] ?? null ) || ! in_array( $result['disposition'] ?? '', array( 'paid', 'failed', 'review' ), true ) ) { throw new \RuntimeException( 'store_not_confirmed' ); }
 				Hub_Store::delivery_result( $event['event_id'], 'delivered', $result['disposition'] );

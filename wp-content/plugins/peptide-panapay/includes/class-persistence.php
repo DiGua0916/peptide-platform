@@ -9,6 +9,18 @@ defined( 'ABSPATH' ) || exit;
 
 final class Persistence {
 	private const META = '_pc_panapay_sessions';
+	/** Verify the selected native gateway on the committed writer, without order caches. */
+	public static function has_gateway( int $order_id, string $expected ): bool {
+		if ( $order_id <= 0 || ! preg_match( '/^pc_panapay(?:_[a-f0-9]{32})?$/D', $expected ) ) { return false; }
+		global $wpdb;
+		$store = self::store();
+		$sql = $store['hpos']
+			? $wpdb->prepare( "SELECT payment_method FROM `{$store['orders']}` WHERE id=%d AND type='shop_order' LIMIT 2", $order_id )
+			: $wpdb->prepare( "SELECT m.meta_value AS payment_method FROM `{$store['meta']}` m INNER JOIN `{$store['orders']}` o ON o.ID=m.post_id WHERE m.post_id=%d AND m.meta_key='_payment_method' AND o.post_type='shop_order' ORDER BY m.meta_id LIMIT 2", $order_id );
+		$rows = self::rows( $sql );
+		return count( $rows ) === 1 && is_string( $rows[0]['payment_method'] ?? null ) && hash_equals( $expected, $rows[0]['payment_method'] );
+	}
+
 	public static function has_status( int $order_id, array $statuses ): bool {
 		if ( $order_id <= 0 || ! $statuses ) { return false; }
 		foreach ( $statuses as $status ) {

@@ -1,5 +1,13 @@
 # 前后端契约
 
+## PAY-HQ-03：多付款方式（0.4，后续用户决定）
+
+用户明确要求简单“添加支付→填写参数→下发店铺→继续添加”，不做官方服务商目录。`pc_panapay_hub_accounts` 是带revision/CAS的账号集合，默认单例导入为`default`保留开关和原店铺授权；新32hex身份默认all_sites，可独立编辑、开启、停用及归档，最多20个保留身份。秘密只HQ；当前适配当前文档的网关协议，PayPal等名称不等于另一套官方接口。
+
+新POST `/pc-panapay/v1/hub/methods` 返回 `{version:1,methods:[...]}`，每项精确`account_id,enabled,title,description,test_mode,payment_hosts,payment_icons,iframe_height`。关闭/归档身份以disabledDTO保留旧订单注册；坏账号仅关闭自身，无授权身份拒绝。旧CONFIG精确7字段仅default并保留关闭时可信域名，异常仍走旧失败/旧客户端冻结域名回退。0.3升级0.4必须先HQ后店铺；新Bridge策略失败不回退其他账号。
+
+Gateway/Blocks为`pc_panapay`或`pc_panapay_<32hex>`。订单尝试、HQ引用/请求哈希冻结选择，HQ schema3追加account_id及加密可信域名快照；旧行default/空快照保留。归档或改当前密钥不改在途凭据/通知/URL；同一订单创建与成功唯一保护仍跨全部渠道。原生渠道主库落库核对阻止缓存串单，receipt/通知/完成/ACK匹配冻结ID。配置保存后授权店通过签名策略取得展示和路由配置，商户密钥绝不下发。
+
 ## 2026-10-31 PAY-HQ-02：账号绑定与支付展示增量
 
 `peptide-panapay` 0.3 的 HQ 公开策略精确包含 `enabled,title,description,test_mode,payment_hosts,payment_icons,iframe_height`，原五字段新增后两项。`payment_icons` 只接受有序去重的 `american_express,mastercard,visa,discover,apple_pay,paypal`；只是结账标识，非独立渠道开通。`iframe_height` 为 320–1600 整数，默认530，原生尝试创建时冻结，仅实际 iframe 使用。内部 `account_name`、商户及密钥不下发。新 Bridge 兼容旧完整五字段并补无标识/530，拒绝部分升级形状及私密字段；须先升级全部店铺，再升级HQ，旧Bridge不接受新七字段。
