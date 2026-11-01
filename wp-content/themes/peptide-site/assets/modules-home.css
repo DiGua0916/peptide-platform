@@ -161,6 +161,22 @@
 .vc-content-collection--compact .product-card-bottom { margin-top:0; padding-top:4px; }
 .vc-content-collection--compact .product-card-bottom a { font-weight:600; }
 
+/* Editable process cards; original card-list presentations remain untouched. */
+.vc-m--card-list .vc-process-cards { font-family:'Geist',sans-serif; }
+.vc-m--card-list .vc-process-cards .vc-m__head { margin-bottom:40px; text-align:center; }
+.vc-m--card-list .vc-process-cards .vc-m__title { margin:0; font-family:inherit; font-size:48px; line-height:1; font-weight:600; letter-spacing:-.03em; text-wrap:balance; }
+.vc-m--card-list .vc-process-cards .vc-card { display:flex; flex-direction:column; border-radius:16px; background:var(--pc-secondaryBackground,#f1f7f9); }
+.vc-m--card-list .vc-process-cards .vc-ph { display:none; }
+.vc-m--card-list .vc-process-cards .vc-card__body { display:flex; flex:1; flex-direction:column; justify-content:center; padding:40px 32px; overflow-wrap:break-word; }
+.vc-m--card-list .vc-process-cards .vc-card__title { margin:0 0 24px; font-family:inherit; font-size:30px; line-height:36px; font-weight:600; letter-spacing:-.025em; color:var(--pc-heading,#203b45); text-wrap:balance; }
+.vc-m--card-list .vc-process-cards .vc-card__text { margin:0; font-size:16px; line-height:24px; font-weight:400; opacity:1; color:var(--pc-text,#415d68); text-wrap:pretty; }
+@media(max-width:767px) {
+  .vc-m--card-list .vc-process-cards .vc-m__head { margin-bottom:24px; }
+  .vc-m--card-list .vc-process-cards .vc-m__title { font-size:36px; line-height:40px; }
+  .vc-m--card-list .vc-process-cards .vc-card__body { padding:32px 24px; }
+  .vc-m--card-list .vc-process-cards .vc-card__title { margin-bottom:16px; font-size:24px; line-height:32px; }
+}
+
 /* Opt-in editorial metrics: transparent surface, restrained type, shared content. */
 .vc-m--counter .vc-counter-cards { font-family: 'Geist', sans-serif; background:transparent; }
 .vc-m--counter .vc-counter-cards--intro > .vc-m__inner { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,2fr); gap:24px; align-items:stretch; }
