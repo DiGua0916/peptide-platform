@@ -1,5 +1,7 @@
 # 2026-11-02 · Codex · DATA-TRACKING-QA-01
 
+> 当前状态由文末 DATA-TRACKING-VISITOR-US-02 更新：用户要求中文、仅访客访问，已切换全新独立库；前文的合成商品/顾客/订单环境仅保留为历史归档，不再是当前测试站。用户进一步决定本次只完成真实美国出口，其他国家后续测试。
+
 用户要求开测试环境，实际检查数据与客户追踪是否可用。本轮创建独立测试站并保留供用户操作，没有修改应用源码/主题样式，没有在原站导入测试订单或客户。
 
 ## 环境与入口
@@ -36,3 +38,25 @@
 原站前后只读count快照完全相同：82父品/183规格、219报告、2账号，tracking18访客/18访问/782事件/18标签；未导出客户行、订单明细或原数据库。本轮唯一仓库改动为本交接；真实测试库、配置/账号/源码副本/合成业务/日志/截图均在Git外。数据接口没有变更。
 
 证据根：D:/Codex/Tasks/2026-11-02/data-tracking-qa/outputs，重点environment-health.json、source-snapshot.json、tracking-http-results.json、tracking-targeted-followup.json、tracking-native-readback.json、analytics-browser-readback.json、analytics-order-fixture.json、analytics-final-qa.json、analytics-verification-final-qa.json、analytics-permissions.json、QA-fixture-time-repair.json、analytics-duration-before/after.json、original-before/after.json及DELIVERY.json。实际Git提交和远程校验记录在交付收据/主记忆，无CRK，不发默认群。
+
+## DATA-TRACKING-VISITOR-US-02：中文纯访客环境与真实美国出口
+
+用户纠正测试范围：中文，只模拟进入、浏览和停留，不改原站业务数据；国家必须来自真实网络出口，不手填国家或伪造请求头。用户明确选择临时受限测试入口，随后选择“先完成美国，其他国家后续再测”。前一轮合成订单、客户、商品范围至此停止，不继续生成。
+
+当前本机入口仍为 http://localhost:64791 ，实际站点为任务内 work/visitor-site，数据库 qa_visitor_tracking_229655ece7、独立受限账号与盐，只有一个系统管理员。WP/管理员均 zh_CN，复制本机已有 459 份中文包。旧 work/site、qa_data_tracking_74f003cabc 和历史证据保留；旧服务停止，未删除原站或旧库。商品/规格、客户账号、旧订单及 HPOS 订单均为 0；注册、加购、结账和业务写入受测试 guard 拦截。浏览追踪、隐私门、员工排除保持。修复仅在测试副本 qa-router.php 的 /wp-admin/ 目录分派，新增带路径/marker/库标记校验的 start-visitor-server.ps1；没有改应用仓库或前端主题源码。
+
+DB-IP Country Lite November 2026 下载自官方，解压 8,515,063 bytes，官方 MD5 5974b336a7409ec854f67eacd52c2061、SHA1 09eea8433fe3eed71984fd6aac9d8ab3d9ca51f0 均匹配，SHA256 145ce5dfb812d8de28547e6289bb5c5f8b3df2f1dea21d324d5b575e0431311f。资源与机器路径仅在任务内，配置本地 MMDB 和精确 db-ip 署名，显示原有署名链接；环回地址仍真实 unknown，不回填国家。
+
+实际网络链路：显式本机 QuickQ HTTP 代理 → 真实美国出口 → Cloudflare 临时 HTTPS 隧道 → 仅 loopback 的受限网关 → 独立签名 PHP 路由 → 本测试库。只开放固定中文浏览页、固定资源与追踪 session/events，随机 Bearer、固定 origin、已验证来源 HMAC 摘要白名单、请求大小/限额/短期限；后台、登录、商品 API 和业务路由不公开。上游签名绑定方法/路径/正文/来源/时间/nonce 及隐私元数据；验证后只在这一请求规范化 REMOTE_ADDR，不改原站代理配置或数据库 home/siteurl。
+
+初次真实入口因 QuickTunnel 自身 CF-Worker=trycloudflare.com 被严格拒绝，保留失败收据。认证诊断只回安全域名和来源摘要，没有原始 IP。该摘要与同一显式代理独立 Cloudflare trace 的瞬时 IP 在内存计算结果一致（US/LAX）；仅对此固定 QuickTunnel Worker 和已核来源放行，其余 Worker/未知来源继续拒绝。前后真实出口摘要一致，128 次认证上游请求全部命中同一已核美国来源（121×200、7×301）。没有从节点名称或 CF-IPCountry 填国家；生产页面实际根据规范化地址查询 MMDB，模拟器只复制该次页面的真实 boot geo。此信任链依赖 Cloudflare 隧道与本机账号安全，不代表当前生产 collector 已独立鉴证每个客户端国家；原报表的来源观察说明保留。
+
+一次有界运行：10 个独立 Cookie 模拟会话、10 次访问、20 PV、50 heartbeat、20 page_exit；客户端 90 事件全部 ACK，另有 10 条原生自动分类，共 100 事件。3/4/3 会话分别浏览 1/2/3 页，只访问首页和已存在的说明页。用真实墙钟等待，平均访问时长 100.1557 秒，无负时长、加购、结账、订单关联或客户登录。自动化 HTTP 会话经过真实出口，不是 10 个真人或 10 个不同公网 IP，也不是本轮真实浏览器 SDK 验收；没有时间回拨、SQL 造访客、国家手填或伪造转发头。
+
+实际只读 SQL 独立对账：US 10 UV / 20 PV；业务计数仍商品 0、客户 0、订单 0、仅系统管理员 1。IAB 中文今日报表显示美国 10、美国浏览量 20、订单/销售额 0；真实访客轨迹单独保留。实时面板只反映其活动窗口，结束后下线正常。没有修改原站商品、客户、订单或原站网络配置。
+
+验证分开记录：环境 HTTP 12/12、目录路由/普通测试登录 7/7、GeoIP 运行 5/5、网关离线策略/签名 55/55、模拟器离线 19/19；最后真实入口 5/5（无凭证 401、公共后台 404、首页 200、原生 geo known、无签名上游 403）。Worker 例外补丁另有编译/配置检查与真实最终入口核验，没有声称初版 55 项在补丁后完整重跑。所有国家数均来自这次真实链路，其他国家尚未测试。
+
+测试完关闭云隧道及 64821/64822/64823 进程，禁用私有网关配置，撤销公共运行清单；只保留 loopback 64791 的中文后台供用户查看。任务内凭据/签名密钥/模拟 Cookie/数据库/资源及临时入口均不入 Git；没有安装系统服务、全局切换代理或向生产制造流量。
+
+新证据根 D:/Codex/Tasks/2026-11-02/visitor-real-ip-network/outputs：before-network.json、during-us.json、after-us.json、ingress-http-check.json（初次失败）、worker-denied-diagnostic.json、ingress-http-check-final.json、us-egress-correlation-final.json、gateway-offline-tests.json、chinese-us-realtime.png、chinese-us-country.png 及最终 DELIVERY.json。模拟器收据在 visitor-entry-simulation/outputs/visitor-only-20261102-055508-a4358cd6.json；环境/路由/GeoIP 证据在 data-tracking-qa/outputs/visitor-*.json。后续国家须重新开放受限入口、验证新真实出口再执行，不复用已关闭入口的验证标记。
