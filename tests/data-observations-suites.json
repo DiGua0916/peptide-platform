@@ -384,6 +384,347 @@
       "core": true,
       "node_test": false,
       "status": "Root-approved056 final-source-gate"
+    },
+    {
+      "name": "experiment-data-pure",
+      "path": "wp-content/plugins/peptide-core/tests/experiment-data-pure.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "data-experiments",
+      "path": "wp-content/plugins/peptide-core/tests/data-experiments.cjs",
+      "language": "node",
+      "core": true,
+      "stage": "063-approved-integration",
+      "node_test": true
+    },
+    {
+      "name": "tracking-visit-classifications-pure",
+      "path": "wp-content/plugins/peptide-core/tests/tracking-visit-classifications-pure.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "data-classified-conversion-pure",
+      "path": "wp-content/plugins/peptide-core/tests/data-classified-conversion-pure.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "data-classified-conversion",
+      "path": "wp-content/plugins/peptide-core/tests/data-classified-conversion.cjs",
+      "language": "node",
+      "core": true,
+      "stage": "063-approved-integration"
+    },
+    {
+      "name": "visitor-new-search-native",
+      "path": "wp-content/themes/peptide-site/tests/visitor-new-search.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "args": [
+        "native"
+      ],
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "visitor-new-search-spy",
+      "path": "wp-content/themes/peptide-site/tests/visitor-new-search.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "args": [
+        "spy"
+      ],
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "visitor-new-search-absent",
+      "path": "wp-content/themes/peptide-site/tests/visitor-new-search.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "args": [
+        "absent"
+      ],
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "visitor-new-search",
+      "path": "wp-content/themes/peptide-site/tests/visitor-new-search.cjs",
+      "language": "node",
+      "core": true,
+      "stage": "063-approved-integration",
+      "node_test": true
+    },
+    {
+      "name": "visitor-intents-config-enabled",
+      "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "args": [
+        "enabled"
+      ],
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "visitor-intents-config-no_helper",
+      "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "args": [
+        "no_helper"
+      ],
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "visitor-intents-config-no_clean",
+      "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "args": [
+        "no_clean"
+      ],
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "visitor-intents-config-no_saved",
+      "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "args": [
+        "no_saved"
+      ],
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "visitor-intents-config-wrong_version",
+      "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "args": [
+        "wrong_version"
+      ],
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "visitor-intents-config-wrong_type",
+      "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "args": [
+        "wrong_type"
+      ],
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "visitor-intents-config-admin",
+      "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "args": [
+        "admin"
+      ],
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "visitor-intents-config-preview",
+      "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "args": [
+        "preview"
+      ],
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "visitor-intents-config-customize",
+      "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "args": [
+        "customize"
+      ],
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "visitor-intents-config-staff",
+      "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "args": [
+        "staff"
+      ],
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "visitor-intents-config-options",
+      "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "args": [
+        "options"
+      ],
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "visitor-intents-config-frame",
+      "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "args": [
+        "frame"
+      ],
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "visitor-intents-config-preview_arg",
+      "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "args": [
+        "preview_arg"
+      ],
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "visitor-intents-config-preview_token",
+      "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "args": [
+        "preview_token"
+      ],
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "visitor-intents-config-templates",
+      "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "args": [
+        "templates"
+      ],
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "visitor-intents-config-disabled",
+      "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "args": [
+        "disabled"
+      ],
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "visitor-intents-config-wrong_protocol",
+      "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "args": [
+        "wrong_protocol"
+      ],
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "visitor-intents-config-no_endpoint",
+      "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+      "language": "php",
+      "core": true,
+      "stage": "063-approved-integration",
+      "args": [
+        "no_endpoint"
+      ],
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "visitor-intents",
+      "path": "wp-content/themes/peptide-site/tests/visitor-intents.cjs",
+      "language": "node",
+      "core": true,
+      "stage": "063-approved-integration",
+      "node_test": true
+    },
+    {
+      "name": "data-conversion-units",
+      "path": "wp-content/plugins/peptide-core/tests/data-conversion-units.cjs",
+      "language": "node",
+      "core": true,
+      "stage": "063-shared-seam"
     }
   ]
 }

@@ -29,7 +29,7 @@ get_header();
 		<?php else : ?>
 			<ul class="pc-site-search-page__results">
 				<?php foreach ( $pc_search['results'] as $pc_result ) : ?>
-					<li><a class="pc-site-search__result" href="<?php echo esc_url( $pc_result['url'] ); ?>">
+					<li><a class="pc-site-search__result" href="<?php echo esc_url( $pc_result['url'] ); ?>"<?php if ( 'products' === ( $pc_result['type'] ?? null ) && is_int( $pc_result['id'] ?? null ) && $pc_result['id'] > 0 && $pc_result['id'] <= 9007199254740991 ) : ?> data-vc-observe-product="<?php echo esc_attr( (string) $pc_result['id'] ); ?>" data-vc-observe-variation="0"<?php endif; ?>>
 						<?php if ( ! empty( $pc_result['image']['src'] ) ) : ?><img loading="lazy" src="<?php echo esc_url( $pc_result['image']['src'] ); ?>" alt="<?php echo esc_attr( $pc_result['image']['alt'] ); ?>" width="64" height="64"><?php endif; ?>
 						<span class="pc-site-search__result-copy"><span class="pc-site-search__result-title"><?php echo esc_html( $pc_result['title'] ); ?></span>
 							<?php if ( ! empty( $pc_result['subtitle'] ) ) : ?><span class="pc-site-search__result-subtitle"><?php echo esc_html( $pc_result['subtitle'] ); ?></span><?php endif; ?>

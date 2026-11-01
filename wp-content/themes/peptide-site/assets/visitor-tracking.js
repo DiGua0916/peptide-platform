@@ -181,7 +181,7 @@
     let retryAt = 0;
     let pageId = id(), seq = 0, lastActivity = Date.now(), stopped = false, suspended = false;
     let sending = false, flushTimer, flushAt = Infinity, requestController, requestTimer, heartbeatTimer;
-    let videoObserver, productObserver, exitController, exitTimer, checkoutBridge;
+    let videoObserver, productObserver, intentObserver, exitController, exitTimer, checkoutBridge;
     const bridgeCall = name => { try { checkoutBridge?.[name]?.(); } catch { try { checkoutBridge?.stop?.(); } catch {} checkoutBridge = null; } };
     const pending = [], listeners = [], cleanups = [];
     // Retain bounded operation tombstones for this observer, including ACKed IDs.
@@ -355,6 +355,7 @@
     listen(window, 'pagehide', event => {
       bridgeCall('suspend');
       productObserver?.suspend();
+      intentObserver?.suspend();
       videoObserver?.flush();
       emit('page_exit', {persisted: event.persisted, ...state()});
       void flush({unload: true});
@@ -372,6 +373,7 @@
       // A restored document has a new page instance; reset its video counters too.
       videoObserver?.stop(); observeVideos();
       productObserver?.stop(); observeProducts();
+      intentObserver?.stop(); observeIntents();
       clearInterval(heartbeatTimer); heartbeat();
     });
     listen(window, 'online', () => schedule(0));
@@ -422,8 +424,13 @@
         const snapshot = productSnapshot(data); if (snapshot) emit('product_impression', snapshot);
       }, options.productObservation);
     }
+    function observeIntents() {
+      if (options.productActionsProtocol !== 1 || typeof window.VialCoveVisitorIntent?.observe !== 'function') return;
+      intentObserver = window.VialCoveVisitorIntent.observe(document, facts => pushProductAction('product_intent', facts));
+    }
     cleanups.push(() => videoObserver?.stop());
     cleanups.push(() => productObserver?.stop());
+    cleanups.push(() => intentObserver?.stop());
     cleanups.push(() => bridgeCall('stop'));
     function stop() {
       if (stopped) return;
@@ -435,7 +442,7 @@
     }
     const api = {flush, stop, pushProductAction, getStats: () => ({...stats, queued: pending.length, sending, stopped})};
     active = api;
-    begin('navigation'); observeVideos(); observeProducts(); heartbeat();
+    begin('navigation'); observeVideos(); observeProducts(); observeIntents(); heartbeat();
     if (page.page_type === 'checkout') {
       try {
         checkoutBridge = window.PeptideCheckoutBridge?.create((type, input) => {

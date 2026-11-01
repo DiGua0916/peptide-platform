@@ -1,0 +1,13 @@
+{
+  "authority": "Root explicit one-correction approval",
+  "changes": [
+    {
+      "path": "wp-content/plugins/peptide-core/tests/experiment-data-pure.php",
+      "change": "relative native autoload after ABSPATH, existing66 assertions retained"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/data-conversion-export.cjs",
+      "change": "group select exact7 values; export/race algorithms unchanged"
+    }
+  ]
+}

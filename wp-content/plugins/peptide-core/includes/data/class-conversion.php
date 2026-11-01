@@ -49,7 +49,8 @@ final class Conversion {
 	 * @param array  $range A successful Range::from_params() result.
 	 * @param string $group One of GROUPS; anything else is treated as 'device'.
 	 */
-	public static function summary( array $range, string $group ): array {
+	public static function summary( array $range, string $group, string $visitor_status = 'all' ): array {
+		if ( $visitor_status !== 'all' ) { return Classified_Conversion::summary( $range, $group, $visitor_status ); }
 		$group    = in_array( $group, self::GROUPS, true ) ? $group : 'device';
 		if ( isset( Dimension_Reports::GROUPS[$group] ) ) { return Dimension_Conversion::summary( $range, $group ); }
 		$from     = (int) $range['from'];
@@ -111,6 +112,13 @@ final class Conversion {
 			return self::GROUPS[0];
 		}
 		return in_array( $text, self::GROUPS, true ) ? $text : Errors::invalid( array( 'group' => 'invalid_format' ) );
+	}
+
+	/** Explicit query state; the existing group-only params return contract is unchanged. */
+	public static function classification_param( array $params ) {
+		if ( ! array_key_exists( 'visitor_status', $params ) ) { return 'all'; }
+		$value = $params['visitor_status'];
+		return is_string( $value ) && in_array( $value, array( 'all', 'normal', 'abnormal', 'unclassified' ), true ) ? $value : Errors::invalid( array( 'visitor_status' => 'invalid_format' ) );
 	}
 
 	/**

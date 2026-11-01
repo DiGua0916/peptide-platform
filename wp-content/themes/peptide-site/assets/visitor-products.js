@@ -2,7 +2,7 @@
  * At most 1,000 product/context keys and 2,000 live placements per page instance. */
 (() => {
   'use strict';
-  const CARD = 'article.product-card[data-vc-observe-product]';
+  const CARD = 'article.product-card[data-vc-observe-product], a.pc-site-search__result[data-vc-observe-product]';
   const GALLERY = '.woocommerce-product-gallery, .vc-product-gallery';
   const KINDS = ['home', 'shop', 'product', 'cart', 'checkout', 'account', 'order_received', 'order_pay', 'content', 'collection', 'search', 'unknown'];
   const id = value => typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : null;

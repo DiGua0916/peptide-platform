@@ -1,0 +1,11 @@
+{
+  "upstream41_business_files": 41,
+  "subscription_wrapper_unchanged": true,
+  "class_plugin_unchanged": true,
+  "package061_files": 469,
+  "package061_manifest_sha256": "80fbd72d7987c2ebb0b9908d153225c1fbae5d2cc9c131daddf101910443a451",
+  "all061_hashes_unchanged": true,
+  "bootstrap_sha256": "fd53dacd7a9014755d69a5dd97401b3614c38c284e92bd01b9740b2f64fa7ee0",
+  "release061_or_runtime_mutated": false,
+  "source_ready_business_limit": "Existing published eligible source buttons may be absent; no design publication or artificial analytics data."
+}

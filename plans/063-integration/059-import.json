@@ -1,0 +1,78 @@
+{
+  "pin": "281a6a4d8171a0d52e5a770fbd6a9b093778cd7323514a233f75b28daf0fc347",
+  "owned_verified": 14,
+  "production": 7,
+  "records": [
+    {
+      "path": "wp-content/plugins/peptide-core/includes/tracking/class-visit-classifications.php",
+      "new_exact_source": true,
+      "sha256": "af6610b54baedbdee6ae0143f5d04518ce30580cc5f303ec932239d224c583c5"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-classified-conversion.php",
+      "new_exact_source": true,
+      "sha256": "a69e70c519b2162660cd288502f6d21905b2c5a306e90f00bcbb98a8c4f3b5e2"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-conversion.php",
+      "before": "228157d864492b6efd0fcb3c91835863b890d05c2e9469bf1657fed74e17649f",
+      "after": "1f2f5368e57f689aa5c00ab3b8010298b40dcf21613afb02235b0ec5ffe8a692",
+      "hunks": 2
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/data-conversion.js",
+      "before": "717e51b19a7904613d4d4c50401515577992569acd219e579e79fd32b76a5d41",
+      "after": "5a7a374f6380081e9e24c4c0878cd3dc0709b7d472385c5b1a5ff189eead6098",
+      "hunks": 6
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-report-exports.php",
+      "before": "b700aaa6669b4d2cf813e62dcb973ef3f99a5da13e1ce28aa3c80a7c3157f964",
+      "after": "3f18f165a3c1b601483904e8b379fbe54606ce88d4ecfdc8e26fdd6277a9db82",
+      "hunks": 2
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/admin/class-data-pages.php",
+      "mode": "058 and059 hooks/routes coexist; onlyclassification strings changed",
+      "before": "bfd7508934bc2668095a364726a3fc0cb70b678ffcfaba886d1720f5d0ed0d55",
+      "after": "4f7d30fd9083d188c1e98444d7b991c212245c06d1dfe1df4b11f6b5a807a2bd"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/languages/customer-data-observations-zh_CN.php",
+      "mode": "additive014classificationtranslations",
+      "keys": 14,
+      "before": "005f874d8975af79a2d6176175e9224750ec495c57e9042e08d08a0162cfc831",
+      "after": "7524b215badfa00100d18d9e891bb7de868f773659ee3ae46768837115a9eaae"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/tracking-visit-classifications-pure.php",
+      "test_or_document_exact_sha256": "e60d44c4da39fc538038f499594f34dd51933cbdd14347c76b988f7ed675ca34"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/data-classified-conversion-pure.php",
+      "test_or_document_exact_sha256": "8c19b903c475fb33e7b1d522ec5e0307e45e1f918e31a11523acb17f9aa23126"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/data-classified-conversion.cjs",
+      "test_or_document_exact_sha256": "f03af27758924e1ac7ca477bcd5d9509338ca2691f04e0487f56b6fe43658ab8"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/fixtures/visit-classification-boundaries.php",
+      "test_or_document_exact_sha256": "a03c0b7911393c8ddd34aa40d8327cfda0576f7026e315d0fb6efd127eb1495b"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/fixtures/059-legacy-class-conversion.php",
+      "test_or_document_exact_sha256": "228157d864492b6efd0fcb3c91835863b890d05c2e9469bf1657fed74e17649f"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/fixtures/059-legacy-class-report-exports.php",
+      "test_or_document_exact_sha256": "5af62c330b7f8f7fae6f7b4acd467bf208fdb430e94f2d75408b5be27b9bab38"
+    },
+    {
+      "path": "docs/handoffs/data-visit-classification-v1.md",
+      "test_or_document_exact_sha256": "d83db516ac43aedd0b92cbf6158bc5eee0b1c4d63121831d77ebc7c71ae8a1a5"
+    }
+  ],
+  "privacy_hooks058059_both": true,
+  "old054056057_preserved": true
+}

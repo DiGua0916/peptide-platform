@@ -1,0 +1,32 @@
+{
+  "base": "2f0ddd878d0ec451b75d7a5741bc2f389cf27bbc",
+  "inputs": {
+    "058": "4cd04c8be53f821d6aa1ede9da2034e7b647a629f6b4b404963f24c06be22359",
+    "062": "c9f0b8aadd5a4f6e8c1085bc179c2e751af6a068ec43778b3c82732ce5a91cc9"
+  },
+  "translationSharedContextMismatchResolvedByAdditiveUnion": true,
+  "newTranslationKeys": 27,
+  "searchFeatureHunks": [
+    {
+      "path": "wp-content/themes/peptide-site/inc/visitor-tracking.php",
+      "hunks": 2,
+      "before_sha256": "51bfbbd2bc2bff8e884cdb437bc384e54b47a6cedd9007395c66f2324619dd65",
+      "after_sha256": "50d9dd73f655f554c419da5ea990d28e4ab482f65bc01721e8946c59b93c8f99"
+    },
+    {
+      "path": "wp-content/themes/peptide-site/assets/visitor-products.js",
+      "hunks": 1,
+      "before_sha256": "b35176d12030bde45a8d0425f3b41eef9195608249b6e0545ec481603fe414fa",
+      "after_sha256": "185b48ef07e8440c42305d885fd0c5c5c8dd04eccddc2b4f40148b86275dfad1"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/templates/site-search-results.php",
+      "hunks": 1,
+      "before_sha256": "440c9856f3f4a9e3088ddff5ada28f3bf27ac2ed8cb6195035535ee1bbfb599a",
+      "after_sha256": "bc9c7b23a80b1f650c6fd3827f69ac7f9f3ab4673d36c58018c85313f6e6d83e"
+    }
+  ],
+  "dependencyEolOverlaysCopied": 0,
+  "testsPortableCopied": true,
+  "original055MetadataAndCountryAndBusinessPreserved": true
+}

@@ -1,0 +1,606 @@
+{
+  "stage": "SOURCE_ONLY",
+  "first_attempt": {
+    "passed": 32,
+    "failed": 2
+  },
+  "one_retry": {
+    "passed": 2,
+    "failed": 0
+  },
+  "final": {
+    "passed": 34,
+    "failed": 0,
+    "results": [
+      {
+        "name": "data-product-created-php",
+        "path": "wp-content/plugins/peptide-core/tests/data-product-created.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "wp-content/plugins/peptide-core/tests/data-product-created.php"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 35,
+        "stdout": "PASS 20 product user ratio assertions, 0 FAIL\nPASS 25 product creation metadata assertions, 0 FAIL\n",
+        "stderr": ""
+      },
+      {
+        "name": "data-exports",
+        "path": "wp-content/plugins/peptide-core/tests/data-exports.cjs",
+        "command": [
+          "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+          "wp-content/plugins/peptide-core/tests/data-exports.cjs"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 56,
+        "stdout": "{\"passed\":61,\"failed\":0}\n",
+        "stderr": ""
+      },
+      {
+        "name": "data-conversion-export",
+        "path": "wp-content/plugins/peptide-core/tests/data-conversion-export.cjs",
+        "command": [
+          "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+          "wp-content/plugins/peptide-core/tests/data-conversion-export.cjs"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 69,
+        "stdout": "{\"passed\":45,\"failed\":0}\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-products",
+        "path": "wp-content/themes/peptide-site/tests/visitor-products.cjs",
+        "command": [
+          "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+          "wp-content/themes/peptide-site/tests/visitor-products.cjs"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 81,
+        "stdout": "{\"suite\":\"visitor-products\",\"passed\":52,\"failed\":0}\n",
+        "stderr": ""
+      },
+      {
+        "name": "country-resource-attribution-pure",
+        "path": "wp-content/plugins/peptide-core/tests/country-resource-attribution-pure.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "wp-content/plugins/peptide-core/tests/country-resource-attribution-pure.php"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 299,
+        "stdout": "{\"suite\":\"country-resource-attribution-pure\",\"passed\":46,\"failed\":0,\"wordpress_bootstrap\":false,\"network\":false}\n",
+        "stderr": ""
+      },
+      {
+        "name": "experiment-data-pure",
+        "path": "wp-content/plugins/peptide-core/tests/experiment-data-pure.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/plugins/peptide-core/tests/experiment-data-pure.php"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 73,
+        "stdout": "{\"passed\":66,\"failed\":0,\"database\":\"memory\",\"network_calls\":0,\"successful_exposure_example\":{\"protocol\":1,\"ack\":[\"exposure-0001\"],\"rejected\":[],\"retry\":[]}}\n",
+        "stderr": ""
+      },
+      {
+        "name": "data-experiments",
+        "path": "wp-content/plugins/peptide-core/tests/data-experiments.cjs",
+        "command": [
+          "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+          "--test",
+          "wp-content/plugins/peptide-core/tests/data-experiments.cjs"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 95,
+        "stdout": "{\"suite\":\"landing-experiments-ui\",\"passed\":24,\"failed\":0}\n✔ landing experiment accepted contexts, drafts and partial measurements (20.2212ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 64.6064\n",
+        "stderr": ""
+      },
+      {
+        "name": "tracking-visit-classifications-pure",
+        "path": "wp-content/plugins/peptide-core/tests/tracking-visit-classifications-pure.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/plugins/peptide-core/tests/tracking-visit-classifications-pure.php"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 39,
+        "stdout": "PASS 49 source classification intake/revision/export assertions, 0 FAIL\n",
+        "stderr": ""
+      },
+      {
+        "name": "data-classified-conversion-pure",
+        "path": "wp-content/plugins/peptide-core/tests/data-classified-conversion-pure.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/plugins/peptide-core/tests/data-classified-conversion-pure.php"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 49,
+        "stdout": "PASS 48 classified conversion and oldall oracle assertions, 0 FAIL\n",
+        "stderr": ""
+      },
+      {
+        "name": "data-classified-conversion",
+        "path": "wp-content/plugins/peptide-core/tests/data-classified-conversion.cjs",
+        "command": [
+          "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+          "wp-content/plugins/peptide-core/tests/data-classified-conversion.cjs"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 51,
+        "stdout": "{\"suite\":\"classified-conversion-ui\",\"passed\":16,\"failed\":0}\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-new-search-native",
+        "path": "wp-content/themes/peptide-site/tests/visitor-new-search.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/themes/peptide-site/tests/visitor-new-search.php",
+          "native"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 28,
+        "stdout": "RESULT 20 PASS\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-new-search-spy",
+        "path": "wp-content/themes/peptide-site/tests/visitor-new-search.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/themes/peptide-site/tests/visitor-new-search.php",
+          "spy"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 27,
+        "stdout": "RESULT 5 PASS\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-new-search-absent",
+        "path": "wp-content/themes/peptide-site/tests/visitor-new-search.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/themes/peptide-site/tests/visitor-new-search.php",
+          "absent"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 27,
+        "stdout": "RESULT 1 PASS\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-new-search",
+        "path": "wp-content/themes/peptide-site/tests/visitor-new-search.cjs",
+        "command": [
+          "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+          "--test",
+          "wp-content/themes/peptide-site/tests/visitor-new-search.cjs"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 97,
+        "stdout": "{\"suite\":\"new-search-products\",\"passed\":14,\"failed\":0}\n✔ native search product anchors reuse the original received-visibility reducer (8.6225ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 66.217\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-intents-config-enabled",
+        "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+          "enabled"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 26,
+        "stdout": "RESULT 7 PASS\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-intents-config-no_helper",
+        "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+          "no_helper"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 26,
+        "stdout": "RESULT 5 PASS\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-intents-config-no_clean",
+        "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+          "no_clean"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 26,
+        "stdout": "RESULT 5 PASS\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-intents-config-no_saved",
+        "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+          "no_saved"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 27,
+        "stdout": "RESULT 5 PASS\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-intents-config-wrong_version",
+        "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+          "wrong_version"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 26,
+        "stdout": "RESULT 5 PASS\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-intents-config-wrong_type",
+        "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+          "wrong_type"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 26,
+        "stdout": "RESULT 5 PASS\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-intents-config-admin",
+        "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+          "admin"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 26,
+        "stdout": "RESULT 5 PASS\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-intents-config-preview",
+        "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+          "preview"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 27,
+        "stdout": "RESULT 5 PASS\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-intents-config-customize",
+        "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+          "customize"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 27,
+        "stdout": "RESULT 5 PASS\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-intents-config-staff",
+        "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+          "staff"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 27,
+        "stdout": "RESULT 5 PASS\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-intents-config-options",
+        "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+          "options"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 26,
+        "stdout": "RESULT 5 PASS\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-intents-config-frame",
+        "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+          "frame"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 26,
+        "stdout": "RESULT 5 PASS\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-intents-config-preview_arg",
+        "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+          "preview_arg"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 26,
+        "stdout": "RESULT 5 PASS\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-intents-config-preview_token",
+        "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+          "preview_token"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 27,
+        "stdout": "RESULT 5 PASS\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-intents-config-templates",
+        "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+          "templates"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 27,
+        "stdout": "RESULT 5 PASS\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-intents-config-disabled",
+        "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+          "disabled"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 26,
+        "stdout": "RESULT 5 PASS\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-intents-config-wrong_protocol",
+        "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+          "wrong_protocol"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 26,
+        "stdout": "RESULT 5 PASS\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-intents-config-no_endpoint",
+        "path": "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/themes/peptide-site/tests/visitor-intents-config.php",
+          "no_endpoint"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 26,
+        "stdout": "RESULT 5 PASS\n",
+        "stderr": ""
+      },
+      {
+        "name": "visitor-intents",
+        "path": "wp-content/themes/peptide-site/tests/visitor-intents.cjs",
+        "command": [
+          "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+          "--test",
+          "wp-content/themes/peptide-site/tests/visitor-intents.cjs"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 113,
+        "stdout": "{\"suite\":\"native-intent-module\",\"passed\":47,\"failed\":0}\n{\"suite\":\"native-intent-integration\",\"cumulative_assertions\":54,\"failed\":0}\n✔ native quick-view observed opening module (13.0895ms)\n✔ actual056 collector/adapter queues canonical intent and immutable retry (22.1926ms)\nℹ tests 2\nℹ suites 0\nℹ pass 2\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 82.9356\n",
+        "stderr": ""
+      },
+      {
+        "name": "data-conversion-units",
+        "path": "wp-content/plugins/peptide-core/tests/data-conversion-units.cjs",
+        "command": [
+          "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+          "wp-content/plugins/peptide-core/tests/data-conversion-units.cjs"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 53,
+        "stdout": "{\"passed\":76,\"failed\":0}\n",
+        "stderr": ""
+      }
+    ]
+  },
+  "unchanged_gates_not_repeated": true
+}

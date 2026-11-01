@@ -81,6 +81,22 @@ function vc_visitor_search_capable(): bool {
     return 1 === \PeptideCore\Tracking\Page_Context::search_protocol();
 }
 
+/** Read only an already validated native result state; never parse request/query values here. */
+function vc_visitor_search_observation(): ?array {
+    if ( ! vc_visitor_search_capable() ) { return null; }
+    $native = '\\PeptideCore\\Public_Site_Search';
+    if ( is_callable( array( $native, 'is_results_request' ) ) ) {
+        try { $results = $native::is_results_request(); } catch ( \Throwable $error ) { return null; }
+        if ( true === $results ) {
+            if ( ! is_callable( array( $native, 'page_state' ) ) ) { return null; }
+            try { $state = $native::page_state(); } catch ( \Throwable $error ) { return null; }
+            return is_array( $state ) && is_string( $state['q'] ?? null ) ? \PeptideCore\Tracking\Search_Context::source( $state['q'] ) : null;
+        }
+        if ( false !== $results ) { return null; }
+    }
+    return function_exists( 'get_search_query' ) ? \PeptideCore\Tracking\Search_Context::source( get_search_query( false ) ) : null;
+}
+
 /** Side-effect-free document observation, independent of the legacy page resolver. */
 function vc_visitor_page_observation(): ?array {
     $page = vc_visitor_page_context();
@@ -95,7 +111,8 @@ function vc_visitor_page_observation(): ?array {
         if ( null === $path ) { return null; }
         $page = array( 'page_type' => 'content', 'path' => $path );
         $context['kind'] = 'search';
-        if ( vc_visitor_search_capable() && function_exists( 'get_search_query' ) ) { $context['search'] = \PeptideCore\Tracking\Search_Context::source( get_search_query( false ) ); }
+        $search_observation = vc_visitor_search_observation();
+        if ( null !== $search_observation ) { $context['search'] = $search_observation; }
     } elseif ( ! $private && ( 'shop' === $kind || $taxonomy || $archive ) ) {
         $path = vc_visitor_observation_path( get_pagenum_link( max( 1, absint( get_query_var( 'paged' ) ) ), false ) );
         if ( null === $path ) { return null; }
@@ -127,6 +144,11 @@ add_action( 'wp_enqueue_scripts', function (): void {
     $url = get_template_directory_uri();
     wp_enqueue_script( 'vialcove-visitor-video', $url . '/assets/visitor-video.js', array(), (string) filemtime( $root . '/assets/visitor-video.js' ), true );
     $observer_dependencies = array( 'vialcove-visitor-video' );
+    $product_actions = is_callable( array( '\\PeptideCore\\Tracking\\Product_Actions', 'protocol' ) ) && 1 === \PeptideCore\Tracking\Product_Actions::protocol() && is_callable( array( '\\PeptideCore\\Tracking\\Product_Actions', 'clean' ) ) && is_callable( array( '\\PeptideCore\\Tracking\\Product_Actions', 'saved' ) );
+    if ( $product_actions ) {
+        wp_enqueue_script( 'vialcove-visitor-intents', $url . '/assets/visitor-intents.js', array(), (string) filemtime( $root . '/assets/visitor-intents.js' ), true );
+        $observer_dependencies[] = 'vialcove-visitor-intents';
+    }
     $product_impressions = is_callable( array( '\\PeptideCore\\Tracking\\Impressions', 'clean' ) ) && is_callable( array( '\\PeptideCore\\Tracking\\Impressions', 'saved' ) ) && is_callable( array( '\\PeptideCore\\Tracking\\Impressions', 'replay_code' ) );
     if ( $product_impressions ) {
         wp_enqueue_script( 'vialcove-visitor-products', $url . '/assets/visitor-products.js', array(), (string) filemtime( $root . '/assets/visitor-products.js' ), true );
@@ -147,7 +169,7 @@ add_action( 'wp_enqueue_scripts', function (): void {
         'idle_ms' => (int) ( $config['idle_ms'] ?? 60000 ),
         'batch_max' => min( 20, max( 1, (int) ( $config['batch_max'] ?? 20 ) ) ),
     );
-    if ( is_callable( array( '\\PeptideCore\\Tracking\\Product_Actions', 'protocol' ) ) && 1 === \PeptideCore\Tracking\Product_Actions::protocol() && is_callable( array( '\\PeptideCore\\Tracking\\Product_Actions', 'clean' ) ) && is_callable( array( '\\PeptideCore\\Tracking\\Product_Actions', 'saved' ) ) ) { $transport['product_actions_protocol'] = 1; }
+    if ( $product_actions ) { $transport['product_actions_protocol'] = 1; }
     $metadata_protocols = array();
     if ( $product_impressions ) { $transport['product_impression_protocol'] = 1; }
     if ( is_callable( array( '\\PeptideCore\\Tracking\\Attribution', 'clean' ) ) && is_callable( array( '\\PeptideCore\\Tracking\\Attribution', 'capture' ) ) ) { $metadata_protocols['attribution'] = 1; }

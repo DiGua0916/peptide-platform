@@ -1,0 +1,25 @@
+{
+  "pin": "ba5da938f7d3cd0a10c20fef4799d998d8db4ddff22e19333949e2e1715d3c6b",
+  "patch_pin": "9d193c299f5b8b7bf89996054d5dc904ce60c58085252a69f0829f4293405503",
+  "owned_verified": 6,
+  "records": [
+    {
+      "path": "wp-content/themes/peptide-site/assets/visitor-intents.js",
+      "new": true,
+      "after": "bd4150d01418280ae0fea8944f223b9f212c44d43208633e316282ef651d929d"
+    },
+    {
+      "path": "wp-content/themes/peptide-site/assets/visitor-tracking.js",
+      "hunks": 5,
+      "before": "4feb269d24634b021a8f858c8bfe2596f8f84afb6190b0fb89b766b660a0233d",
+      "after": "dd488dcec5c63527f3463c7e247c510a3cfebe0ff12f060dcb78e197663b357a"
+    },
+    {
+      "path": "wp-content/themes/peptide-site/inc/visitor-tracking.php",
+      "hunks": 2,
+      "before": "50d9dd73f655f554c419da5ea990d28e4ab482f65bc01721e8946c59b93c8f99",
+      "after": "673a1c04f4d897d2bc856fd59e3135d200c7509acc532111778b0587369bebc7"
+    }
+  ],
+  "source062_and057_and056_preserved": true
+}

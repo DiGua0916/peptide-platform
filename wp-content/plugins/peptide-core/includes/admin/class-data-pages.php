@@ -56,12 +56,15 @@ final class Data_Pages {
 		'page_conversion' => 'pc-data-page-conversion',
 		'apps'            => 'pc-data-apps',
 		'landing'         => 'pc-data-landing',
+		'experiments'     => 'pc-data-experiments',
 		'sources'         => 'pc-data-sources',
 		'conversion'      => 'pc-data-conversion',
 		'emails'          => 'pc-data-emails',
 	);
 
 	public static function register_hooks(): void {
+		\PeptideCore\Tracking\Experiment_Observations::register_hooks();
+		\PeptideCore\Tracking\Visit_Classifications::register_hooks();
 		add_action( 'admin_menu', array( self::class, 'add_menu' ), 60 );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
 	}
@@ -74,6 +77,9 @@ final class Data_Pages {
 			static function (): void {
 				// 所有数据接口共用的权限判断。
 				$permission = static fn() => current_user_can( self::CAP ) ? true : new \WP_Error( 'pc_forbidden', __( 'Sorry, you are not allowed to view store data.', 'peptide-core' ), array( 'status' => rest_authorization_required_code() ) );
+				register_rest_route( Rest_Controller::ROUTE_NAMESPACE, '/data/visit-classifications', array( 'methods' => 'POST', 'permission_callback' => array( \PeptideCore\Tracking\Visit_Classifications::class, 'permission' ), 'callback' => array( \PeptideCore\Tracking\Visit_Classifications::class, 'receive' ) ) );
+				register_rest_route( Rest_Controller::ROUTE_NAMESPACE, '/data/experiments', array( 'methods' => \WP_REST_Server::READABLE, 'permission_callback' => $permission, 'callback' => array( \PeptideCore\Data\Experiments::class, 'response' ) ) );
+				register_rest_route( Rest_Controller::ROUTE_NAMESPACE, '/data/experiments/events', array( 'methods' => 'POST', 'permission_callback' => array( \PeptideCore\Tracking\Experiment_Observations::class, 'permission' ), 'callback' => array( \PeptideCore\Tracking\Experiment_Observations::class, 'receive' ) ) );
 				register_rest_route(
 					Rest_Controller::ROUTE_NAMESPACE,
 					'/data/range',
@@ -453,7 +459,7 @@ final class Data_Pages {
 					'title'       => self::titles()[ $key ],
 					'range'       => Range::from_params( array() ), // 今天，由服务器按店铺时区算好。
 					'showRange'   => 'realtime' !== $key,           // 实时数据页没有时间段工具栏。
-					'showCompare' => ! in_array( $key, array( 'landing', 'pages', 'sources' ), true ),
+					'showCompare' => ! in_array( $key, array( 'landing', 'pages', 'sources', 'experiments' ), true ),
 					'timezone'    => wp_timezone_string() . ' (UTC' . wp_date( 'P' ) . ')',
 					'currency'    => array(
 						'code'   => get_woocommerce_currency(),
@@ -502,6 +508,12 @@ final class Data_Pages {
 			wp_enqueue_script( 'peptide-core-data-export', $url . 'data-export.js', array( self::SCRIPT, 'wp-api-fetch', 'wp-url' ), $ver( 'data-export.js' ), array( 'in_footer' => true ) );
 			wp_enqueue_script( 'peptide-core-data-sources', $url . 'data-sources.js', array( self::SCRIPT, 'peptide-core-data-export' ), $ver( 'data-sources.js' ), array( 'in_footer' => true ) );
 			wp_add_inline_script( 'peptide-core-data-sources', 'window.pcDataSources = ' . wp_json_encode( array( 'strings' => self::sources_strings() ) ) . ';', 'before' );
+		}
+		if ( 'experiments' === $key ) {
+			wp_enqueue_style( 'peptide-core-data-experiments', $url . 'data-sources.css', array( 'peptide-core-data' ), $ver( 'data-sources.css' ) );
+			wp_enqueue_script( 'peptide-core-data-export', $url . 'data-export.js', array( self::SCRIPT, 'wp-api-fetch', 'wp-url' ), $ver( 'data-export.js' ), array( 'in_footer' => true ) );
+			wp_enqueue_script( 'peptide-core-data-experiments', $url . 'data-experiments.js', array( self::SCRIPT, 'peptide-core-data-export' ), $ver( 'data-experiments.js' ), array( 'in_footer' => true ) );
+			wp_add_inline_script( 'peptide-core-data-experiments', 'window.pcDataExperiments = ' . wp_json_encode( array( 'strings' => self::experiments_strings() ) ) . ';', 'before' );
 		}
 		if ( in_array( $key, array( 'products', 'pages' ), true ) ) {
 			wp_enqueue_script( 'peptide-core-data-export', $url . 'data-export.js', array( self::SCRIPT, 'wp-api-fetch', 'wp-url' ), $ver( 'data-export.js' ), array( 'in_footer' => true ) );
@@ -591,6 +603,7 @@ final class Data_Pages {
 			'page_conversion' => __( 'Page product conversion', 'peptide-core' ),
 			'apps'            => __( 'App statistics', 'peptide-core' ),
 			'landing'         => __( 'Landing page conversion', 'peptide-core' ),
+			'experiments'     => __( 'Landing A/B analysis', 'peptide-core' ),
 			'sources'         => __( 'UTM sources', 'peptide-core' ),
 			'conversion'      => __( 'Conversion rate details', 'peptide-core' ),
 			'emails'          => __( 'Email details data', 'peptide-core' ),
@@ -1024,6 +1037,16 @@ final class Data_Pages {
 	private static function report_filter_strings(): array {
 		return array( 'filterDomain' => __( 'Entry domain (first captured)', 'peptide-core' ), 'filterCountry' => __( 'Visit country at period end', 'peptide-core' ), 'filterAll' => __( 'All', 'peptide-core' ), 'filterUnobserved' => __( 'Not observed', 'peptide-core' ), 'filterUnknown' => __( 'Observed unknown', 'peptide-core' ), 'filterUnavailable' => __( 'Source unavailable', 'peptide-core' ), 'filterValue' => __( 'Exact value', 'peptide-core' ), 'filterApply' => __( 'Apply filters', 'peptide-core' ), 'filterCurrent' => __( 'Current period', 'peptide-core' ), 'filterPrevious' => __( 'Previous period', 'peptide-core' ), 'filterEvents' => __( 'Event records', 'peptide-core' ), 'filterVisits' => __( 'Visit records', 'peptide-core' ), 'filterOrders' => __( 'Order records', 'peptide-core' ), 'filterCoverage' => __( 'Matching / candidate records; country values / unknown / unavailable / unobserved:', 'peptide-core' ), 'filterHelp' => __( 'Domain and country are combined with AND. Country uses the original visit’s latest saved observation before each period ends; missing observations and source unavailability are separate. No billing country is inferred. Late facts can change earlier reports.', 'peptide-core' ) );
 	}
+	private static function experiments_strings(): array {
+		return self::report_filter_strings() + self::export_strings() + array(
+			'experiment_id' => __( 'Experiment ID', 'peptide-core' ), 'landing_path' => __( 'Landing path', 'peptide-core' ), 'variant_id' => __( 'Variant ID', 'peptide-core' ),
+			'exposures' => __( 'Reported exposure events', 'peptide-core' ), 'exposed_visitors' => __( 'Raw exposed visitors', 'peptide-core' ), 'eligible_visitors' => __( 'Eligible exposed visitors', 'peptide-core' ), 'contaminated_visits' => __( 'Contaminated visits', 'peptide-core' ),
+			'viewed_visitors' => __( 'Viewed visitors after exposure', 'peptide-core' ), 'carted_visitors' => __( 'Carted visitors after exposure', 'peptide-core' ), 'checkout_visitors' => __( 'Checkout visitors after exposure', 'peptide-core' ), 'paid_visitors' => __( 'Paid visitors after exposure', 'peptide-core' ), 'orders' => __( 'Native paid orders', 'peptide-core' ), 'conversion' => __( 'Eligible visitor payment rate', 'peptide-core' ), 'revenue' => __( 'Native revenue less refunds', 'peptide-core' ),
+			'search' => __( 'Search experiment or landing path', 'peptide-core' ), 'prev' => __( 'Previous', 'peptide-core' ), 'next' => __( 'Next', 'peptide-core' ), 'retry' => __( 'Retry', 'peptide-core' ), 'perPage' => __( 'Per page', 'peptide-core' ), 'partial' => __( 'Partial received exposure observations', 'peptide-core' ),
+			'noData' => __( 'No experiment exposures were observed. The authenticated source contract is ready; no variants or control counts are inferred.', 'peptide-core' ), 'unavailable' => __( 'Experiment observations are unavailable.', 'peptide-core' ),
+			'note' => __( 'Partial received exposure cohorts only. Repeated assignments share visitor outcomes. A visit with conflicting variants or landing paths is excluded from every conversion and revenue comparison for that experiment. Outcomes must follow the first exposure in this period and use its exact original visit and visitor. Paid orders use native creation time and revenue less refunds. Rates use eligible observed visitor IDs, not buyer email. No significance, winner, traffic allocation or causal effect is inferred.', 'peptide-core' )
+		);
+	}
 	private static function sources_strings(): array {
 		return self::export_strings() + array( 'source' => __( 'UTM source', 'peptide-core' ), 'medium' => __( 'UTM medium', 'peptide-core' ), 'split' => __( 'Split by UTM medium', 'peptide-core' ), 'search' => __( 'Search source and medium values', 'peptide-core' ), 'unobserved' => __( 'Not observed', 'peptide-core' ), 'missing' => __( 'Captured key absent', 'peptide-core' ), 'empty' => __( 'Captured empty value', 'peptide-core' ), 'uv' => __( 'Visitors (UV)', 'peptide-core' ), 'customers' => __( 'Customers', 'peptide-core' ), 'viewed_uv' => __( 'Viewed product UV', 'peptide-core' ), 'carted_uv' => __( 'Added to cart UV', 'peptide-core' ), 'paid_uv' => __( 'Paid UV', 'peptide-core' ), 'orders' => __( 'Paid orders', 'peptide-core' ), 'conversion' => __( 'Conversion rate', 'peptide-core' ), 'sales' => __( 'Sales', 'peptide-core' ), 'aov' => __( 'Average order value', 'peptide-core' ), 'uv_value' => __( 'UV value', 'peptide-core' ), 'prev' => __( 'Previous', 'peptide-core' ), 'next' => __( 'Next', 'peptide-core' ), 'noData' => __( 'No source data in this period.', 'peptide-core' ), 'retry' => __( 'Retry', 'peptide-core' ), 'note' => __( 'First successfully captured source values preserve case, absent keys and empty values. Visits use start time; paid orders use creation time and their original visit. Rows overlap in visitors. Test visits and test orders are excluded. No direct traffic is inferred.', 'peptide-core' ) );
 	}
@@ -1082,7 +1105,14 @@ final class Data_Pages {
 			'screen' => __( 'Screen size (CSS pixels)', 'peptide-core' ),
 			'dimensionHelp'  => __( 'Groups use saved visit facts. Overall covers all visitors; checkout observations cover all visits.', 'peptide-core' ),
 			'dimensionCoverage' => __( 'Observed values: %v / %n visits. Unknown: %u; unavailable: %a; not observed: %o.', 'peptide-core' ),
-			'unsupportedDimensions' => __( 'Normal/abnormal classification is not collected. Country values require a configured source. OS and screen facts are browser-reported, not verified hardware.', 'peptide-core' ),
+			'visitorStatusLabel' => __( 'Source-marked visit status', 'peptide-core' ),
+			'visitorStatusAll' => __( 'All visits', 'peptide-core' ),
+			'visitorStatusNormal' => __( 'Source-marked normal', 'peptide-core' ),
+			'visitorStatusAbnormal' => __( 'Source-marked abnormal', 'peptide-core' ),
+			'visitorStatusUnclassified' => __( 'Unclassified', 'peptide-core' ),
+			'classifiedScopeHelp' => __( 'All sections use the same selected visit-start cohort and exact original owners. Source status is the highest non-conflicting revision received before each period ends; missing or conflicting labels remain unclassified. Stage and checkout progress are accumulated historical facts, not an event-time snapshot. Financial orders must also be created in the period and linked to a selected visit. A zero subset is not evidence that no real normal customers exist.', 'peptide-core' ),
+			'classificationCoverage' => __( 'Partial source observations: %o / %n candidate visits. Normal: %a; abnormal: %b; unclassified: %u; conflicting revision: %c. Complete classification coverage is not established.', 'peptide-core' ),
+			'unsupportedDimensions' => __( 'Visit status uses explicit authenticated source labels, not an inferred normal/abnormal algorithm. Missing or conflicting labels remain unclassified. Country values require a configured source. OS and screen facts are browser-reported, not verified hardware.', 'peptide-core' ),
 			'desktop'        => __( 'Desktop', 'peptide-core' ),
 			'mobile'         => __( 'Mobile', 'peptide-core' ),
 			'tablet'         => __( 'Tablet', 'peptide-core' ),

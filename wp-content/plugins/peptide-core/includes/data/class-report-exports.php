@@ -37,7 +37,9 @@ final class Report_Exports {
 			foreach ( array( '_envelope', '_jsonp', '_fields' ) as $key ) { if ( array_key_exists( $key, $params ) ) { $errors[$key] = 'invalid_format'; } }
 			if ( $errors ) { return Errors::invalid( $errors ); }
 		}
-		$summary = Conversion::summary( $range, $group );
+		$visitor_status = Conversion::classification_param( $params ); if ( is_wp_error( $visitor_status ) ) { return $visitor_status; }
+		if ( $visitor_status === 'all' ) { $summary = Conversion::summary( $range, $group ); }
+		else { try { $summary = Conversion::summary( $range, $group, $visitor_status ); } catch ( \Throwable $error ) { return new \WP_Error( 'pc_report_unavailable', __( 'Source visit status observations are unavailable. Try again.', 'peptide-core' ), array( 'status' => 503 ) ); } }
 		if ( 'json' === $format ) {
 			$response = new \WP_REST_Response( $summary );
 			$response->header( 'Cache-Control', 'no-store' );
@@ -100,6 +102,11 @@ final class Report_Exports {
 		$row = static function ( string $section, string $group, string $key, string $metric, string $unit, $current, $previous = null, $change = null, string $change_unit = '', string $source = '', string $comparison = 'current_only' ) use ( $currency, $bounds, $local ): array {
 			return array_merge( array( Csv_Response::text( $section ), Csv_Response::text( $group ), Csv_Response::text( $key ), Csv_Response::text( $metric ), Csv_Response::text( $unit ), self::number( $current, in_array( $unit, array( 'percent', 'currency' ), true ) ), self::number( $previous, in_array( $unit, array( 'percent', 'currency' ), true ) ), self::number( $change, true ), Csv_Response::text( $change_unit ), Csv_Response::text( 'currency' === $unit ? $currency : '' ), Csv_Response::text( $source ), Csv_Response::text( $comparison ) ), $bounds, array( $local ) );
 		};
+		if ( isset( $s['visitor_status'] ) && $s['visitor_status'] !== 'all' ) {
+			yield $row( 'classification_filter', 'visitor_status', $s['visitor_status'], 'selected_scope', 'label', null, null, null, '', $s['overall_scope'], 'periods' );
+			yield $row( 'classification_filter', 'visitor_status', $s['visitor_status'], 'received_cutoff', 'epoch_milliseconds', $s['classification_cutoffs']['current'], $s['classification_cutoffs']['previous'], null, '', 'server_received_ms_exclusive', 'periods' );
+			foreach ( array( 'base_count', 'normal', 'abnormal', 'unclassified', 'conflict', 'observed' ) as $key ) { yield $row( 'classification_coverage', 'visitor_status', $key, 'count', 'visits', $s['classification_coverage']['current'][$key], $s['classification_coverage']['previous'][$key], null, '', 'partial_not_full_coverage', 'periods' ); }
+		}
 		$f = $s['visitor_funnel']; $current = array_column( $f['current'], null, 'key' ); $previous = array_column( $f['previous'], null, 'key' );
 		foreach ( array( 'conversion', 'paid', 'visitors', 'viewed', 'carted', 'checkout', 'address', 'shipping', 'payment' ) as $key ) {
 			$c = 'conversion' === $key ? $current['paid']['visitor_rate'] : $current[$key]['count'];

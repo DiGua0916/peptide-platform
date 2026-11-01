@@ -25,7 +25,8 @@
 	var requests = 0;
 	var activeDispose = null;
 	// 在两次 render 之间保留的状态：选中的分组。
-	var state = { group: readGroup() };
+	var state = { group: readGroup(), visitorStatus: 'all' };
+	var VISITOR_STATUSES = [ 'all', 'normal', 'abnormal', 'unclassified' ];
 
 	// ---------- 小工具 ----------
 
@@ -195,9 +196,14 @@
 		}
 		html += overall( data, ctx );
 		html += checkoutSteps( data.checkout_steps, ctx );
+		if ( data.visitor_status && data.visitor_status !== 'all' ) {
+			html += '<p class="pc-conv-note pc-conv-source-scope">' + esc( T.classifiedScopeHelp ) + '</p>';
+			var classified = data.classification_coverage.current;
+			html += '<p class="pc-conv-note">' + esc( fill( T.classificationCoverage, { '%n': ctx.number( classified.base_count ), '%o': ctx.number( classified.observed ), '%a': ctx.number( classified.normal ), '%b': ctx.number( classified.abnormal ), '%u': ctx.number( classified.unclassified ), '%c': ctx.number( classified.conflict ) } ) ) + '</p>';
+		}
 		if ( data.dimension_coverage ) {
 			var coverage = data.dimension_coverage;
-			html += '<p class="pc-conv-note">' + esc( T.dimensionHelp || 'Groups use saved visit facts. Overall covers all visitors; checkout observations cover all visits.' ) + '</p>';
+			if ( ! data.visitor_status || data.visitor_status === 'all' ) { html += '<p class="pc-conv-note">' + esc( T.dimensionHelp || 'Groups use saved visit facts. Overall covers all visitors; checkout observations cover all visits.' ) + '</p>'; }
 			html += '<p class="pc-conv-note">' + esc( fill( T.dimensionCoverage || 'Observed values: %v / %n visits. Unknown: %u; unavailable: %a; not observed: %o.', { '%v': ctx.number( coverage.value ), '%n': ctx.number( coverage.base_count ), '%u': ctx.number( coverage.unknown ), '%a': ctx.number( coverage.unavailable ), '%o': ctx.number( coverage.unobserved ) } ) ) + '</p>';
 		}
 		if ( rows.length ) {
@@ -262,14 +268,17 @@
 			'<div class="pc-conv-toolbar">' +
 				'<label class="pc-conv-label" for="pc-conv-group">' + esc( T.groupBy ) + '</label>' +
 				'<select id="pc-conv-group" class="pc-conv-group">' + options + '</select>' +
+				'<label class="pc-conv-label" for="pc-conv-visitor-status">' + esc( T.visitorStatusLabel ) + '</label>' +
+				'<select id="pc-conv-visitor-status" class="pc-conv-visitor-status">' + VISITOR_STATUSES.map( function ( key ) { return '<option value="' + key + '"' + ( key === state.visitorStatus ? ' selected' : '' ) + '>' + esc( T[ { all: 'visitorStatusAll', normal: 'visitorStatusNormal', abnormal: 'visitorStatusAbnormal', unclassified: 'visitorStatusUnclassified' }[key] ] ) + '</option>'; } ).join( '' ) + '</select>' +
 				'<button type="button" class="button pc-conv-export" disabled title="' + esc( T.exportHelp ) + '">' + esc( T.exportCsv ) + '</button>' +
 				'<span class="pc-conv-export-status" role="status" aria-live="polite"></span>' +
 			'</div>' +
 			'<p class="pc-conv-export-help">' + esc( T.exportHelp ) + '</p>' +
-			'<p class="pc-conv-note">' + esc( T.unsupportedDimensions || 'Normal/abnormal classification is not collected. Country values require a configured source. OS and screen facts are browser-reported, not verified hardware.' ) + '</p>' +
+			'<p class="pc-conv-note">' + esc( T.unsupportedDimensions || 'Visit status uses explicit authenticated source labels, not an inferred normal/abnormal algorithm. Missing or conflicting labels remain unclassified. Country values require a configured source. OS and screen facts are browser-reported, not verified hardware.' ) + '</p>' +
 			'<div class="pc-conv-result"></div>' +
 		'</div>';
 		var select = bodyEl.querySelector( '.pc-conv-group' );
+		var statusSelect = bodyEl.querySelector( '.pc-conv-visitor-status' );
 		var result = bodyEl.querySelector( '.pc-conv-result' );
 		var loadedData = null;
 		var retainedData = null, settled = false, rangeBusy = false, exporting = false;
@@ -280,16 +289,17 @@
 		function attached() { return ! disposed && ( ! document.documentElement || ! document.documentElement.contains || document.documentElement.contains( bodyEl ) ); }
 		function datesOf( data ) { var d = data && data.range && data.range.dates; return d && [ 'from', 'to', 'compare_from', 'compare_to' ].every( function ( key ) { return typeof d[ key ] === 'string' && d[ key ]; } ) ? d : null; }
 		function eligible( data ) {
-			return !! data && !! datesOf( data ) && data.group === state.group && data.visitor_funnel && data.visitor_funnel.unit === 'visitors' && data.visitor_funnel.current && data.visitor_funnel.current.length === 8 && data.visitor_funnel.previous && data.visitor_funnel.previous.length === 8 && !! data.checkout_steps;
+			return !! data && !! datesOf( data ) && data.group === state.group && ( data.visitor_status || 'all' ) === state.visitorStatus && data.visitor_funnel && data.visitor_funnel.unit === 'visitors' && data.visitor_funnel.current && data.visitor_funnel.current.length === 8 && data.visitor_funnel.previous && data.visitor_funnel.previous.length === 8 && !! data.checkout_steps;
 		}
-		function contextKey( data ) { var d = datesOf( data ); return d ? [ data.group, d.from, d.to, d.compare_from, d.compare_to ].join( '|' ) : ''; }
-		function syncExport() { exportButton.disabled = ! attached() || ! settled || ! eligible( loadedData ) || rangeBusy || exporting || ! window.PcDataExport; select.disabled = rangeBusy; exportButton.setAttribute( 'aria-busy', exporting ? 'true' : 'false' ); }
+		function contextKey( data ) { var d = datesOf( data ); return d ? [ data.group, data.visitor_status || 'all', d.from, d.to, d.compare_from, d.compare_to ].join( '|' ) : ''; }
+		function syncExport() { exportButton.disabled = ! attached() || ! settled || ! eligible( loadedData ) || rangeBusy || exporting || ! window.PcDataExport; select.disabled = statusSelect.disabled = rangeBusy; exportButton.setAttribute( 'aria-busy', exporting ? 'true' : 'false' ); }
 		function cancelExport() { ++exportToken; exporting = false; exportStatus.textContent = ''; syncExport(); }
 		activeDispose = function () { disposed = true; ++requests; ++exportToken; if ( resumeTimer !== null ) { window.clearTimeout( resumeTimer ); } if ( unsubscribe ) { unsubscribe(); } };
 		exportButton.addEventListener( 'click', function () {
 			if ( exportButton.disabled || ! eligible( loadedData ) || ! window.PcDataExport ) { return; }
 			var mine = ++exportToken, key = contextKey( loadedData ), dates = datesOf( loadedData );
 			var params = { format: 'csv', group: loadedData.group, from: dates.from, to: dates.to, compare_from: dates.compare_from, compare_to: dates.compare_to };
+			if ( loadedData.visitor_status && loadedData.visitor_status !== 'all' ) { params.visitor_status = loadedData.visitor_status; }
 			function current() { return attached() && mine === exportToken && ! rangeBusy && settled && eligible( loadedData ) && contextKey( loadedData ) === key; }
 			function failedExport() { if ( current() ) { exporting = false; exportStatus.textContent = T.exportError; syncExport(); } }
 			exporting = true; syncExport(); exportStatus.textContent = T.exportBusy;
@@ -324,19 +334,20 @@
 		function load( explicit ) {
 			if ( ! attached() || rangeBusy ) { return; }
 			loadedData = null; settled = false; cancelExport();
-			var mine = ++requests, wanted = state.group;
+			var mine = ++requests, wanted = state.group, wantedStatus = state.visitorStatus;
 			var params = explicit ? { from: acceptedRange.dates.from, to: acceptedRange.dates.to, compare_from: acceptedRange.dates.compare_from, compare_to: acceptedRange.dates.compare_to } : rangeParams( range );
 			params.group = wanted;
+			if ( wantedStatus !== 'all' ) { params.visitor_status = wantedStatus; }
 			result.innerHTML = '<p class="pc-data-muted">' + esc( ctx.strings.loading ) + '</p>';
 			ctx.api( PATH, params ).then( function ( data ) {
-				if ( ! attached() || rangeBusy || mine !== requests || wanted !== state.group ) { return; }
+				if ( ! attached() || rangeBusy || mine !== requests || wanted !== state.group || wantedStatus !== state.visitorStatus ) { return; }
 				try {
-					if ( ! data || ( data.group && data.group !== wanted ) ) { throw new Error( 'Invalid report grouping' ); }
+					if ( ! data || ( data.group && data.group !== wanted ) || ( data.visitor_status || 'all' ) !== wantedStatus || ( wantedStatus !== 'all' && ( data.overall_scope !== 'classified_visit_start_cohort' || data.checkout_steps_scope !== 'classified_visit_start_cohort' || ! data.classification_coverage || ! data.classification_coverage.current ) ) ) { throw new Error( 'Invalid report grouping' ); }
 					result.innerHTML = view( data, ctx ); loadedData = data; retainedData = data; settled = true;
 					if ( datesOf( data ) ) { acceptedRange = data.range; }
 					syncExport();
 				} catch ( e ) { failed(); }
-			}, function () { if ( attached() && ! rangeBusy && mine === requests && wanted === state.group ) { failed(); } } );
+			}, function () { if ( attached() && ! rangeBusy && mine === requests && wanted === state.group && wantedStatus === state.visitorStatus ) { failed(); } } );
 		}
 
 		if ( 'function' === typeof ctx.onRangeState ) {
@@ -359,6 +370,11 @@
 			retainedData = null; loadedData = null; cancelExport();
 			saveGroup( state.group );
 			load();
+		} );
+
+		statusSelect.addEventListener( 'change', function () {
+			state.visitorStatus = VISITOR_STATUSES.indexOf( statusSelect.value ) !== -1 ? statusSelect.value : 'all';
+			retainedData = null; loadedData = null; cancelExport(); load();
 		} );
 
 		load();

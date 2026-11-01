@@ -1,0 +1,42 @@
+{
+  "stage": "SOURCE_ONLY_PURE_TESTS",
+  "failed": 0,
+  "passed": 2,
+  "results": [
+    {
+      "name": "data-conversion-export",
+      "path": "wp-content/plugins/peptide-core/tests/data-conversion-export.cjs",
+      "command": [
+        "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "wp-content/plugins/peptide-core/tests/data-conversion-export.cjs"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 69,
+      "stdout": "{\"passed\":45,\"failed\":0}\n",
+      "stderr": ""
+    },
+    {
+      "name": "experiment-data-pure",
+      "path": "wp-content/plugins/peptide-core/tests/experiment-data-pure.php",
+      "command": [
+        "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+        "-n",
+        "-d",
+        "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+        "-d",
+        "extension=mbstring",
+        "wp-content/plugins/peptide-core/tests/experiment-data-pure.php"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 73,
+      "stdout": "{\"passed\":66,\"failed\":0,\"database\":\"memory\",\"network_calls\":0,\"successful_exposure_example\":{\"protocol\":1,\"ack\":[\"exposure-0001\"],\"rejected\":[],\"retry\":[]}}\n",
+      "stderr": ""
+    }
+  ],
+  "limits": [
+    "No WordPress bootstrap or native/private database fixture.",
+    "Unchanged historical gates are indexed with source provenance; not rerun by default."
+  ]
+}
