@@ -5,6 +5,8 @@ namespace PeptideCore\Tracking;
 defined( 'ABSPATH' ) || exit;
 
 final class Page_Context {
+	public static function search_protocol(): int { return 1; }
+	public static function client_environment_protocol(): int { return 1; }
 	public const KINDS = array( 'home', 'shop', 'product', 'cart', 'checkout', 'account', 'order_received', 'order_pay', 'content', 'collection', 'search', 'unknown' );
 
 	/** Pure, atomic allowlist normalization. No WordPress/database/network calls. */
@@ -26,6 +28,18 @@ final class Page_Context {
 				if ( ! is_string( $geo['country_code'] ?? null ) || 1 !== preg_match( '/\A[A-Za-z]{2}\z/', $geo['country_code'] ) ) { return $bad; }
 				$out['geo']['country_code'] = strtoupper( $geo['country_code'] );
 			} elseif ( array_key_exists( 'country_code', $geo ) ) { return $bad; }
+		}
+		if ( array_key_exists( 'search', $input ) ) {
+			if ( 'search' !== $input['kind'] || ! is_callable( array( Search_Context::class, 'clean' ) ) ) { return $bad; }
+			$search = Search_Context::clean( $input['search'] );
+			if ( ! $search['ok'] ) { return $bad; }
+			$out['search'] = $search['value'];
+		}
+		if ( array_key_exists( 'environment', $input ) ) {
+			if ( ! is_callable( array( Client_Environment::class, 'clean' ) ) ) { return $bad; }
+			$environment = Client_Environment::clean( $input['environment'] );
+			if ( ! $environment['ok'] ) { return $bad; }
+			$out['environment'] = $environment['value'];
 		}
 		return array( 'ok' => true, 'value' => $out );
 	}

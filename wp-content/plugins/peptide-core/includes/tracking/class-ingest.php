@@ -60,6 +60,8 @@ final class Ingest {
 		return array(
 			'page_view'               => array_merge( array( 'cause' => 'str:20' ), self::STATE ),
 			'product_view'            => array( 'product_id' => 'int' ),
+			'product_impression'      => array(),
+			'product_favorite' => array(), 'product_share' => array(), 'product_intent' => array(),
 			'cart_view'               => array( 'source' => 'str:40' ),
 			'checkout_view'           => array(),
 			'visibility_change'       => self::STATE,
@@ -252,6 +254,16 @@ final class Ingest {
 				continue;
 			}
 			$data = self::clean_data( $type, $e['data'] ?? null );
+			if ( 'product_impression' === $type ) {
+				$observation = Impressions::clean( $e['data'] ?? null );
+				if ( ! $observation['ok'] ) { $rejected[] = array( 'event_id' => $eid, 'code' => $observation['code'], 'retry' => false ); continue; }
+				$data = $observation['value'];
+			}
+			if ( Product_Actions::is_type( $type ) ) {
+				$observation = Product_Actions::clean( $type, $e['data'] ?? null );
+				if ( ! $observation['ok'] || Impressions::path( $e['page']['path'] ?? null ) === null ) { $rejected[] = array( 'event_id' => $eid, 'code' => $observation['ok'] ? 'bad_product_action' : $observation['code'], 'retry' => false ); continue; }
+				$data = $observation['value'];
+			}
 			if ( $attempted ) {
 				if ( 'page_view' !== $type ) {
 					$attempts[ $index ] = Attribution::receipt( $eid, 'rejected', 'wrong_event_type' );
@@ -271,6 +283,8 @@ final class Ingest {
 					else { $contexts[ $index ] = Page_Context::receipt( $eid, 'rejected', $context['code'] ); }
 				}
 			}
+			$canonical_page = self::clean_page( $e['page'] ?? null );
+			if ( Product_Actions::is_type( $type ) ) { $canonical_page['path'] = $e['page']['path']; }
 			$clean[] = array(
 				'index'            => $index,
 				'event_id'         => $eid,
@@ -279,7 +293,7 @@ final class Ingest {
 				'seq'              => is_numeric( $e['seq'] ?? null ) ? max( 0, min( 1000000, (int) $e['seq'] ) ) : 0,
 				'type'             => $type,
 				'at'               => $at,
-				'page'             => self::clean_page( $e['page'] ?? null ),
+				'page'             => $canonical_page,
 				'data'             => $data,
 			);
 		}
@@ -290,25 +304,62 @@ final class Ingest {
 		// 按发生时间处理，同一页面按序号。
 		usort( $clean, static fn( $a, $b ) => array( $a['at'], $a['page_instance_id'], $a['seq'] ) <=> array( $b['at'], $b['page_instance_id'], $b['seq'] ) );
 
-		$visitor = Tracker::visitor( $vid, $now_ms );
-		if ( ! $visitor['id'] ) {
+		$impressions = array_values( array_filter( $clean, static fn( $c ) => ( $c['type'] === 'product_impression' || Product_Actions::is_type( $c['type'] ) ) ) );
+		$legacy = array_values( array_filter( $clean, static fn( $c ) => ( $c['type'] !== 'product_impression' && ! Product_Actions::is_type( $c['type'] ) ) ) );
+		$impression_saved = array(); $impression_catalog = array(); $impression_error = false;
+		if ( $impressions && ! $legacy ) {
+			// Read current identity without allocating rows for invalid or duplicate-only batches.
+			$row = $wpdb->get_row( $wpdb->prepare( 'SELECT id, user_id FROM ' . Schema::table( 'visitors' ) . ' WHERE vid = %s', $vid ), ARRAY_A );
+			$impression_error = (bool) $wpdb->last_error;
+			$visitor = array( 'id' => (int) ( $row['id'] ?? 0 ), 'user_id' => (int) ( $row['user_id'] ?? 0 ) );
+		} else { $visitor = Tracker::visitor( $vid, $now_ms ); }
+		if ( $legacy && ! $visitor['id'] ) {
 			foreach ( $clean as $c ) {
 				$rejected[] = array( 'event_id' => $c['event_id'], 'code' => 'server_error', 'retry' => true );
 			}
 			return self::result( $ack, $rejected, 0, 0, $attempts, $contexts );
 		}
+		if ( $impressions && ! $impression_error ) {
+			$uids = array_column( $impressions, 'event_id' );
+			$impression_saved = Impressions::winners( $visitor['id'], $uids );
+			if ( $impression_saved === null ) { $impression_saved = array(); $impression_error = true; }
+			else {
+				$candidates = array_values( array_filter( $impressions, static fn( $c ) => ! isset( $impression_saved[$c['event_id']] ) ) );
+				$impression_catalog = Impressions::catalog( $candidates );
+				if ( $impression_catalog === null ) { $impression_catalog = array(); $impression_error = true; }
+				else {
+					$invalid = array(); foreach ( $candidates as $c ) { if ( ! $impression_catalog[$c['index']] ) { $invalid[] = $c['event_id']; } }
+					// A concurrent winner may precede a catalog delete/draft, even without an INSERT attempt.
+					if ( ! $visitor['id'] && $invalid ) {
+						// First-visit races can create the identity after our initial miss. Read only;
+						// never allocate an identity just to decide a catalog-invalid candidate.
+						$identity = $wpdb->get_row( $wpdb->prepare( 'SELECT id, user_id FROM ' . Schema::table( 'visitors' ) . ' WHERE vid = %s', $vid ), ARRAY_A );
+						if ( $wpdb->last_error ) { $impression_error = true; }
+						elseif ( $identity ) { $visitor = array( 'id' => (int) $identity['id'], 'user_id' => (int) $identity['user_id'] ); }
+					}
+					$reread = $impression_error ? null : Impressions::winners( $visitor['id'], $invalid );
+					if ( $reread === null ) { $impression_error = true; } else { $impression_saved = array_replace( $impression_saved, $reread ); }
+					$needs_visitor = false; foreach ( $candidates as $c ) { if ( ! isset( $impression_saved[$c['event_id']] ) && $impression_catalog[$c['index']] ) { $needs_visitor = true; } }
+					if ( ! $visitor['id'] && $needs_visitor && ! $impression_error ) {
+						$visitor = Tracker::visitor( $vid, $now_ms );
+						if ( ! $visitor['id'] ) { $impression_error = true; }
+						else { $reread = Impressions::winners( $visitor['id'], $uids ); if ( $reread === null ) { $impression_error = true; } else { $impression_saved = array_replace( $impression_saved, $reread ); } }
+					}
+				}
+			}
+		}
 		// Pure extension replays belong to their saved visit, even after session rollover.
 		// Legacy batches retain their exact visit creation/update behavior.
 		$saved = array();
 		$only_replays = (bool) ( $attempts || $contexts );
-		foreach ( $clean as $c ) {
+		foreach ( $legacy as $c ) {
 			if ( ! isset( $attempts[ $c['index'] ] ) && ! isset( $contexts[ $c['index'] ] ) ) { $only_replays = false; continue; }
 			$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . Schema::table( 'events' ) . ' WHERE visitor_id = %d AND event_uid = %s', $visitor['id'], $c['event_id'] ), ARRAY_A );
 			if ( $wpdb->last_error ) { $only_replays = false; }
 			if ( $row ) { $saved[ $c['event_id'] ] = $row; } else { $only_replays = false; }
 		}
-		$visit = $only_replays ? (int) $saved[ $clean[0]['event_id'] ]['visit_id'] : Tracker::visit( $visitor['id'], $now_ms, $clean[0]['page']['path'] );
-		if ( $user_id && $user_id !== $visitor['user_id'] ) {
+		$visit = $legacy ? ( $only_replays ? (int) $saved[ $legacy[0]['event_id'] ]['visit_id'] : Tracker::visit( $visitor['id'], $now_ms, $legacy[0]['page']['path'] ) ) : 0;
+		if ( $legacy && $user_id && $user_id !== $visitor['user_id'] ) {
 			Tracker::link_user( $visitor['id'], $user_id, $visit );
 		}
 
@@ -316,9 +367,40 @@ final class Ingest {
 		$new          = 0;
 		$views        = 0;
 		$stage        = 0;
+		$impression_visit = $legacy && ! $only_replays ? $visit : 0;
+		$impression_visit_attempted = (bool) $impression_visit;
+		$impression_visit_checked = false; $impression_visit_ready = false; $impression_visit_error = false;
+		$impression_new = 0; $impression_results = array(); $impression_pending = array(); $impression_replays = array();
 		foreach ( $clean as $c ) {
 			$page = $c['page'];
 			$data = $c['data'];
+			if ( ( $c['type'] === 'product_impression' || Product_Actions::is_type( $c['type'] ) ) ) {
+				$index = $c['index']; $uid = $c['event_id'];
+				// Placeholders retain the legacy core ordering while lost-race reads coalesce.
+				$ack[] = array( 'impression_index' => $index ); $rejected[] = array( 'impression_index' => $index );
+				if ( isset( $impression_saved[$uid] ) ) { $impression_results[$index] = self::observation_replay( $visitor['id'], $c, $impression_saved[$uid] ); $impression_replays[$index] = (int) $impression_saved[$uid]['visit_id']; continue; }
+				if ( $impression_error ) { $impression_results[$index] = 'server_error'; continue; }
+				if ( isset( $impression_pending[$uid] ) ) { $impression_results[$index] = 'pending'; continue; }
+				if ( ! ( $impression_catalog[$index] ?? false ) ) { $impression_results[$index] = Product_Actions::is_type( $c['type'] ) ? 'bad_product_action' : 'bad_product_impression'; continue; }
+				if ( ! $impression_visit_attempted ) { $impression_visit_attempted = true; $impression_visit = Tracker::visit( $visitor['id'], $now_ms, $page['path'] ); $impression_visit_error = (bool) $wpdb->last_error; }
+				if ( ! $impression_visit || $impression_visit_error ) { $impression_results[$index] = 'server_error'; continue; }
+				if ( ! $impression_visit_checked ) {
+					$impression_visit_checked = true;
+					$valid_visit = $wpdb->get_var( $wpdb->prepare( 'SELECT s.id FROM ' . Schema::table( 'visits' ) . ' s JOIN ' . Schema::table( 'visitors' ) . ' v ON v.id=s.visitor_id WHERE s.id=%d AND s.visitor_id=%d', $impression_visit, $visitor['id'] ) );
+					$impression_visit_ready = ! $wpdb->last_error && (int) $valid_visit === $impression_visit;
+				}
+				if ( ! $impression_visit_ready ) { $impression_results[$index] = 'server_error'; continue; }
+				$inserted = $wpdb->query( $wpdb->prepare(
+					"INSERT IGNORE INTO {$events_table} (event_uid,visitor_id,visit_id,tab_id,page_instance_id,seq,type,source,occurred_ms,received_ms,page_type,path,product_id,variation_id,data,is_test) VALUES (%s,%d,%d,%s,%s,%d,%s,'client',%d,%d,%s,%s,%d,%d,%s,0)",
+					$uid, $visitor['id'], $impression_visit, $c['tab_id'], $c['page_instance_id'], $c['seq'], $c['type'], $c['at'], $now_ms, $page['page_type'], $page['path'], $data['product_id'], $data['variation_id'], wp_json_encode( $data )
+				) );
+				if ( false === $inserted ) { $impression_results[$index] = 'server_error'; continue; }
+				if ( (int) $inserted !== 1 ) { $impression_results[$index] = 'pending'; $impression_pending[$uid] = true; continue; }
+				$impression_results[$index] = 'ack'; ++$impression_new;
+				$impression_saved[$uid] = array( 'event_uid' => $uid, 'visitor_id' => $visitor['id'], 'visit_id' => $impression_visit, 'matched_visitor_id' => $visitor['id'], 'matched_visit_id' => $impression_visit, 'tab_id' => $c['tab_id'], 'page_instance_id' => $c['page_instance_id'], 'seq' => $c['seq'], 'type' => $c['type'], 'source' => 'client', 'page_type' => $page['page_type'], 'path' => $page['path'], 'product_id' => $data['product_id'], 'variation_id' => $data['variation_id'], 'data' => wp_json_encode( $data ) );
+				Impressions::signal( $visitor['id'], $impression_visit, $c['tab_id'], $now_ms );
+				continue;
+			}
 			if ( $only_replays ) {
 				$ack[] = $c['event_id'];
 				if ( isset( $data['attribution'] ) ) { $attempts[ $c['index'] ] = self::replay( $visitor['id'], $c, $saved[ $c['event_id'] ] ); }
@@ -387,6 +469,24 @@ final class Ingest {
 			}
 			self::update_tab( $visitor['id'], $visit, $c, $now_ms );
 		}
+		if ( $impression_pending ) {
+			$winners = Impressions::winners( $visitor['id'], array_keys( $impression_pending ) );
+			foreach ( $impressions as $c ) { if ( ( $impression_results[$c['index']] ?? '' ) === 'pending' ) { $row = $winners[$c['event_id']] ?? null; $impression_results[$c['index']] = $row ? self::observation_replay( $visitor['id'], $c, $row ) : 'server_error'; if ( $row ) { $impression_replays[$c['index']] = (int) $row['visit_id']; } } }
+		}
+		foreach ( $impressions as $c ) {
+			$index = $c['index']; $code = $impression_results[$index];
+			if ( $code === 'bad_product_impression' ) {
+				if ( isset( $attempts[$index] ) ) { $attempts[$index] = Attribution::receipt( $c['event_id'], 'rejected', 'core_rejected' ); }
+				if ( isset( $contexts[$index] ) ) { $contexts[$index] = Page_Context::receipt( $c['event_id'], 'rejected', 'core_rejected' ); }
+			}
+		}
+		$resolved_ack = array(); foreach ( $ack as $item ) { if ( is_array( $item ) ) { $i = $item['impression_index']; if ( $impression_results[$i] === 'ack' ) { $resolved_ack[] = $events[$i]['event_id']; } } else { $resolved_ack[] = $item; } } $ack = $resolved_ack;
+		$resolved_rejected = array(); foreach ( $rejected as $item ) { if ( isset( $item['impression_index'] ) ) { $i = $item['impression_index']; $code = $impression_results[$i]; if ( $code !== 'ack' ) { $resolved_rejected[] = array( 'event_id' => $events[$i]['event_id'], 'code' => $code, 'retry' => $code === 'server_error' ); } } else { $resolved_rejected[] = $item; } } $rejected = $resolved_rejected;
+		if ( $impression_new ) {
+			$wpdb->query( $wpdb->prepare( 'UPDATE ' . Schema::table( 'visits' ) . ' SET events=events+%d,last_ms=GREATEST(last_ms,%d) WHERE id=%d', $impression_new, $now_ms, $impression_visit ) );
+			$wpdb->query( $wpdb->prepare( 'UPDATE ' . Schema::table( 'visitors' ) . ' SET last_ms=GREATEST(last_ms,%d) WHERE id=%d', $now_ms, $visitor['id'] ) );
+			if ( ! $legacy && $user_id && $user_id !== $visitor['user_id'] ) { Tracker::link_user( $visitor['id'], $user_id, $impression_visit ); }
+		}
 		if ( $new ) {
 			$wpdb->query( $wpdb->prepare( 'UPDATE ' . Schema::table( 'visits' ) . ' SET events = events + %d, pageviews = pageviews + %d, last_ms = GREATEST(last_ms, %d) WHERE id = %d', $new, $views, $now_ms, $visit ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
 			$wpdb->query( $wpdb->prepare( 'UPDATE ' . Schema::table( 'visitors' ) . ' SET last_ms = GREATEST(last_ms, %d) WHERE id = %d', $now_ms, $visitor['id'] ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
@@ -394,7 +494,11 @@ final class Ingest {
 				Tracker::raise_stage( $visit, $stage );
 			}
 		}
-		return self::result( $ack, $rejected, $visitor['id'], $visit, $attempts, $contexts );
+		return self::result( $ack, $rejected, $visitor['id'], $visit ?: ( $impression_visit ?: ( $impression_replays ? reset( $impression_replays ) : 0 ) ), $attempts, $contexts );
+	}
+
+	private static function observation_replay( int $visitor, array $c, array $row ): string {
+		return Product_Actions::is_type( $c['type'] ) ? Product_Actions::replay_code( $visitor, $c, $row ) : Impressions::replay_code( $visitor, $c, $row );
 	}
 
 	private static function replay( int $visitor, array $incoming, array $saved ): array {

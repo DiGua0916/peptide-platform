@@ -1,0 +1,14 @@
+[
+  {
+    "path": "wp-content/plugins/peptide-core/includes/tracking/class-country-provider.php",
+    "sha256": "cf0aa2b0e8b9de5c55f67957ece8478f93ca225d48727f1249b19de525f13351"
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/includes/admin/class-data-pages.php",
+    "sha256": "02aa4e89ec048ff0de5e56a1f63a45bda1f235ec759ae28701e30c6cd029dee8"
+  },
+  {
+    "path": "wp-content/themes/peptide-site/inc/visitor-tracking.php",
+    "sha256": "e6f8c0512c3fd6b398e7aba97ab21376765080eeed2033ac3034c5031264eeb6"
+  }
+]

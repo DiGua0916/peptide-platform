@@ -4,6 +4,26 @@
 	max-width: 100%;
 }
 
+.pc-emails-data .pc-emails-filters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	margin: 12px 0;
+}
+
+.pc-emails-data .pc-emails-filters label {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+	max-width: 100%;
+}
+
+.pc-emails-data .pc-emails-filters select {
+	max-width: 100%;
+}
+
 /* 1px 的间隔露出底色，看起来就是格子之间的边框。 */
 .pc-emails-data .pc-emails-tiles {
 	display: grid;

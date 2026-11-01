@@ -164,8 +164,12 @@ function vc_product_card( $product, bool $report_preview = true ): void {
         ? peptide_core_get_product_hover( $product )
         : array( 'mode' => $report_preview ? 'placeholder' : 'none' );
     $report_preview = $report_preview && 'none' !== ( $hover['mode'] ?? 'placeholder' );
+    $observation_parent = $product instanceof WC_Product ? (int) $product->get_parent_id() : 0;
+    $observation_product = $product instanceof WC_Product ? ( $observation_parent > 0 ? $observation_parent : (int) $product->get_id() ) : 0;
+    $observation_variation = $observation_parent > 0 ? (int) $product->get_id() : 0;
+    $observation_valid = $observation_product > 0 && $observation_product <= 9007199254740991 && $observation_variation >= 0 && $observation_variation <= 9007199254740991;
     ?>
-    <article class="product-card">
+    <article class="product-card"<?php if ( $observation_valid ) { echo ' data-vc-observe-product="' . esc_attr( (string) $observation_product ) . '" data-vc-observe-variation="' . esc_attr( (string) $observation_variation ) . '"'; } ?>>
         <a class="product-visual<?php echo $report_preview ? ' product-visual--report' : ''; ?><?php echo $product->get_image_id() ? ' product-visual--photo' : ''; ?>" href="<?php echo esc_url( $product->get_permalink() ); ?>" aria-label="<?php echo esc_attr( 'View ' . $product->get_name() ); ?>">
             <?php if ( $product->get_image_id() ) { echo wp_kses_post( $product->get_image( 'woocommerce_single' ) ); } else { vc_vial( $product->get_name(), $product->get_sku() ); } ?>
             <?php if ( $report_preview ) { get_template_part( 'template-parts/product-hover', null, array( 'name' => $product->get_name(), 'hover' => $hover ) ); } ?>

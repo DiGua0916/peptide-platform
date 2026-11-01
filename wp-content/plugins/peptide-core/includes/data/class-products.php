@@ -40,14 +40,17 @@ defined( 'ABSPATH' ) || exit;
 
 final class Products {
 
-	/** 12 个指标，顺序 = 页面“编辑表头”里的顺序（页面和测试都依赖这个顺序）。 */
-	public const METRICS = array( 'views', 'view_users', 'carts', 'cart_users', 'cart_units', 'cart_rate', 'paid_orders', 'paid_users', 'paid_units', 'conversion', 'sales', 'net_sales' );
+	/** 原26项保序，末尾追加两个现有用户计数的比率；顺序也是CSV/列配置契约。 */
+	public const METRICS = array( 'views', 'view_users', 'carts', 'cart_users', 'cart_units', 'cart_rate', 'paid_orders', 'paid_users', 'paid_units', 'conversion', 'sales', 'net_sales', 'exposed_users', 'impressions', 'exposure_viewed_users', 'exposure_view_user_rate', 'exposure_views', 'exposure_view_rate', 'exposure_cart_users', 'exposure_cart_user_rate', 'exposure_carts', 'exposure_cart_rate', 'exposure_paid_users', 'exposure_paid_user_rate', 'exposure_paid_units', 'exposure_paid_rate', 'cart_user_rate', 'paid_user_rate', 'favorite_count', 'share_count', 'share_users', 'intent_count', 'intent_users' );
 
 	/** 默认显示的列（Shopname 的默认列里我们有数据的那些）。 */
-	public const DEFAULTS = array( 'views', 'carts', 'cart_rate', 'cart_units', 'paid_units', 'conversion', 'sales' );
+	public const DEFAULTS = array( 'views', 'carts', 'cart_rate', 'cart_units', 'paid_units', 'conversion', 'sales', 'exposed_users', 'impressions', 'exposure_view_user_rate' );
 
-	/** 两个比率：变化用百分点差。 */
-	public const RATES = array( 'cart_rate', 'conversion' );
+	/** 所有比率的变化用百分点差。 */
+	public const RATES = array( 'cart_rate', 'conversion', 'exposure_view_user_rate', 'exposure_view_rate', 'exposure_cart_user_rate', 'exposure_cart_rate', 'exposure_paid_user_rate', 'exposure_paid_rate', 'cart_user_rate', 'paid_user_rate' );
+
+	/** Ordered selectable columns; creation time is metadata, never a numeric metric. */
+	public static function columns(): array { return array_merge( self::METRICS, array( 'created_at' ) ); }
 
 	/**
 	 * 商品详情数据页的全部数字：每个商品（和它的款式）的本期、对比期和变化，排序、搜索、分页之后的一页。
@@ -62,10 +65,12 @@ final class Products {
 		$slice = $page > (int) ceil( $total / $per_page ) ? array() : array_slice( $selection['ids'], ( $page - 1 ) * $per_page, $per_page );
 		$rows = array();
 		foreach ( $slice as $id ) { $rows[] = self::assemble_row( $id, $selection ); }
-		return array(
+		$out = array(
 			'range'    => $range,
 			'tracking' => Schema::installed(),
 			'metrics'  => self::METRICS,
+			'columns'  => self::columns(),
+			'report_timezone' => wp_timezone()->getName(),
 			'defaults' => self::DEFAULTS,
 			'sort'     => $selection['sort'],
 			'order'    => $selection['order'],
@@ -75,6 +80,10 @@ final class Products {
 			'total'    => $total,
 			'rows'     => $rows,
 		);
+		if ( isset( $args['filter'] ) ) { $out['filter'] = $args['filter']; $out['filter_coverage'] = array( 'current' => $selection['current']['filter_coverage'] ?? array(), 'previous' => $selection['previous']['filter_coverage'] ?? array() ); }
+		$out['action_measurement'] = array( 'current' => $selection['current']['action_coverage']['coverage'], 'previous' => $selection['previous']['action_coverage']['coverage'] );
+		$out['exposure_measurement'] = Page_Conversion::measurement() + array( 'scope' => 'parent_product', 'availability' => Schema::installed() ? 'received_observations' : 'unavailable' );
+		return $out;
 	}
 
 
@@ -92,8 +101,8 @@ final class Products {
 		$per_page = max( 1, min( 100, (int) ( $args['per_page'] ?? 20 ) ) );
 		$q        = (string) ( $args['q'] ?? '' );
 
-		$current  = self::period( (int) $range['from'], (int) $range['to'] );
-		$previous = self::period( (int) $range['compare_from'], (int) $range['compare_to'] );
+		$current  = self::period( (int) $range['from'], (int) $range['to'], Report_Filter::active( $args, (int) $range['to'] * 1000 ) );
+		$previous = self::period( (int) $range['compare_from'], (int) $range['compare_to'], Report_Filter::active( $args, (int) $range['compare_to'] * 1000 ) );
 
 		// 商品 = 本期和对比期里有数据的商品的并集。
 		$ids = array();
@@ -126,14 +135,16 @@ final class Products {
 
 		// 本期的值排序（null 当作 -1；只在对比期有数据的商品，本期是全 0），相同的按商品 ID 从小到大。
 		$zero  = self::metrics( array(), false );
-		$value = static function ( int $id ) use ( $current, $zero, $sort ) {
+		$exposure_sort = array_key_exists( $sort, Product_Exposure::MAP ) || in_array( $sort, array_merge( array( 'cart_user_rate', 'paid_user_rate' ), Product_Actions::METRICS ), true );
+		$value = static function ( int $id ) use ( $current, $zero, $sort, $exposure_sort ) {
 			$v = ( $current['products'][ $id ] ?? $zero )[ $sort ];
-			return null === $v ? -1 : $v;
+			return ! $exposure_sort && null === $v ? -1 : $v;
 		};
 		usort(
 			$ids,
-			static function ( int $a, int $b ) use ( $value, $order ): int {
-				$cmp = 'asc' === $order ? $value( $a ) <=> $value( $b ) : $value( $b ) <=> $value( $a );
+			static function ( int $a, int $b ) use ( $value, $order, $exposure_sort ): int {
+				$x = $value( $a ); $y = $value( $b );
+				$cmp = $exposure_sort && ( null === $x || null === $y ) ? (int) ( null === $x ) <=> (int) ( null === $y ) : ( 'asc' === $order ? $x <=> $y : $y <=> $x );
 				return 0 !== $cmp ? $cmp : $a <=> $b;
 			}
 		);
@@ -150,8 +161,13 @@ final class Products {
 			'current'    => $cur,
 			'previous'   => $prev,
 			'change'     => self::change( $cur, $prev ),
+			'action_coverage' => array( 'current' => self::action_coverage( $selection['current'], $id ), 'previous' => self::action_coverage( $selection['previous'], $id ) ),
 			'variations' => self::variation_rows( $id, $selection['current']['variations'][ $id ] ?? array(), $selection['previous']['variations'][ $id ] ?? array() ),
 		);
+	}
+
+	private static function action_coverage( array $period, int $id ): array {
+		return $period['action_coverage']['product_coverage'][$id] ?? array_fill_keys( array( 'favorite', 'share', 'intent' ), Product_Actions::coverage( 0, Schema::installed() ) );
 	}
 
 	/**
@@ -186,13 +202,15 @@ final class Products {
 		// 搜索词不会出错：去掉首尾空白，最多 100 个字符。
 		$q = isset( $params['q'] ) && is_scalar( $params['q'] ) ? mb_substr( trim( (string) $params['q'] ), 0, 100 ) : '';
 
-		return array(
+		$out = array(
 			'sort'     => $sort,
 			'order'    => $order,
 			'page'     => $page,
 			'per_page' => $per_page,
 			'q'        => $q,
 		);
+		$filter = Report_Filter::params( $params ); if ( is_wp_error( $filter ) ) { return $filter; } if ( null !== $filter ) { $out['filter'] = $filter; }
+		return $out;
 	}
 
 	/**
@@ -200,12 +218,12 @@ final class Products {
 	 *
 	 * @return array{products:array<int,array>,variations:array<int,array<int,array>>} 商品 ID => 指标；商品 ID => 款式 ID => 指标。
 	 */
-	private static function period( int $from, int $to ): array {
+	private static function period( int $from, int $to, ?Report_Filter $filter = null ): array {
 		global $wpdb;
 		$p = array();
 		$v = array();
 
-		if ( Schema::installed() ) {
+		if ( Schema::installed() && ! $filter ) {
 			$events = Schema::table( 'events' );
 			$fm     = $from * 1000;
 			$tm     = $to * 1000;
@@ -238,8 +256,28 @@ final class Products {
 			}
 		}
 
+		if ( $filter ) {
+			$counts = array(); $carts = array();
+			foreach ( $filter->events( $from, $to, array( 'product_view', 'add_to_cart' ) ) as $event ) {
+				$pid = (int) $event['product_id']; if ( $pid <= 0 ) { continue; }
+				$type = $event['type']; $visitor = (int) $event['visitor_id'];
+				$counts[ $pid ][ $type ]['n'] = ( $counts[ $pid ][ $type ]['n'] ?? 0 ) + 1;
+				$counts[ $pid ][ $type ]['visitors'][ $visitor ] = true;
+				if ( 'add_to_cart' === $type ) {
+					$vid = (int) $event['variation_id']; $data = json_decode( (string) $event['data'], true ); $quantity = $data['quantity'] ?? 0;
+					$carts[ $pid ][ $vid ]['n'] = ( $carts[ $pid ][ $vid ]['n'] ?? 0 ) + 1;
+					$carts[ $pid ][ $vid ]['visitors'][ $visitor ] = true;
+					$carts[ $pid ][ $vid ]['units'] = ( $carts[ $pid ][ $vid ]['units'] ?? 0 ) + ( is_numeric( $quantity ) ? round( (float) $quantity, 2 ) : 0 );
+				}
+			}
+			foreach ( $counts as $pid => $types ) { foreach ( $types as $type => $raw ) { $viewed = 'product_view' === $type; $p[ $pid ][ $viewed ? 'views' : 'carts' ] = $raw['n']; $p[ $pid ][ $viewed ? 'view_users' : 'cart_users' ] = count( $raw['visitors'] ); } }
+			foreach ( $carts as $pid => $variants ) { foreach ( $variants as $vid => $raw ) { $units = (int) round( $raw['units'] ); $p[ $pid ]['cart_units'] = ( $p[ $pid ]['cart_units'] ?? 0 ) + $units; if ( $vid > 0 ) { $v[ $pid ][ $vid ] = array( 'carts' => $raw['n'], 'cart_users' => count( $raw['visitors'] ), 'cart_units' => $units ); } } }
+		}
+
 		// 订单：一遍过时间段内的已付款（非测试）订单，商品和款式各累加一份。
-		foreach ( Operations::paid_orders( $from, $to ) as $order ) {
+		$native_orders = Operations::paid_orders( $from, $to );
+		if ( $filter ) { $native_orders = $filter->orders( $native_orders ); }
+		foreach ( $native_orders as $order ) {
 			if ( Overview::is_test_order( $order ) ) {
 				continue;
 			}
@@ -278,10 +316,16 @@ final class Products {
 				$v[ $pid ][ $vid ] = self::metrics( $raw, true );
 			}
 		}
+		if ( Schema::installed() ) {
+			foreach ( Page_Conversion::product_period( $from * 1000, $to * 1000, $filter ) as $pid => $metrics ) { $p[$pid] = array_replace( $p[$pid] ?? self::metrics( array(), false ), Product_Exposure::metrics( $metrics ) ); }
+		}
+		$actions = Product_Actions::period( $from, $to, $filter );
+		foreach ( $actions['products'] as $pid => $metrics ) { $p[$pid] = array_replace( $p[$pid] ?? self::metrics( array(), false ), $metrics ); }
 		return array(
+			'action_coverage' => $actions,
 			'products'   => $p,
 			'variations' => $v,
-		);
+		) + ( $filter ? array( 'filter_coverage' => $filter->coverage() ) : array() );
 	}
 
 	/**
@@ -308,11 +352,12 @@ final class Products {
 	 */
 	private static function metrics( array $raw, bool $variation ): array {
 		$views      = $variation ? null : (int) ( $raw['views'] ?? 0 );
+		$view_users = $variation ? null : (int) ( $raw['view_users'] ?? 0 );
 		$carts      = (int) ( $raw['carts'] ?? 0 );
 		$paid_units = (int) ( $raw['paid_units'] ?? 0 );
 		return array(
 			'views'       => $views,
-			'view_users'  => $variation ? null : (int) ( $raw['view_users'] ?? 0 ),
+			'view_users'  => $view_users,
 			'carts'       => $carts,
 			'cart_users'  => (int) ( $raw['cart_users'] ?? 0 ),
 			'cart_units'  => (int) ( $raw['cart_units'] ?? 0 ),
@@ -323,7 +368,11 @@ final class Products {
 			'conversion'  => $views ? round( $paid_units / $views * 100, 2 ) : null,
 			'sales'       => round( (float) ( $raw['sales'] ?? 0 ), 2 ),
 			'net_sales'   => round( (float) ( $raw['net_sales'] ?? 0 ), 2 ),
-		);
+		) + Product_Exposure::metrics( $variation || ! Schema::installed() ? null : Page_Conversion::metrics( array() ) ) + array(
+			// Existing cart visitors and native buyers have distinct identity/time-window definitions.
+			'cart_user_rate' => $view_users ? round( (int) ( $raw['cart_users'] ?? 0 ) / $view_users * 100, 2 ) : null,
+			'paid_user_rate' => $view_users ? round( count( $raw['buyers'] ?? array() ) / $view_users * 100, 2 ) : null,
+		) + Product_Actions::empty_metrics();
 	}
 
 	/**
@@ -387,7 +436,7 @@ final class Products {
 					'id'   => (int) $vid,
 					'name' => '' !== $name ? $name : sprintf( '#%d', $vid ),
 					'sku'  => $sku,
-				),
+				) + self::created_info( $variation ),
 				'current'   => $cur,
 				'previous'  => $prev,
 				'change'    => self::change( $cur, $prev ),
@@ -410,7 +459,7 @@ final class Products {
 				'image'    => '',
 				'edit_url' => '',
 				'view_url' => '',
-			);
+			) + self::created_info( null );
 		}
 		$image = $product->get_image_id() ? wp_get_attachment_image_url( (int) $product->get_image_id(), 'thumbnail' ) : '';
 		return array(
@@ -420,6 +469,14 @@ final class Products {
 			'image'    => $image ? (string) $image : '',
 			'edit_url' => (string) get_edit_post_link( $id, 'raw' ),
 			'view_url' => (string) get_permalink( $id ),
-		);
+		) + self::created_info( $product );
+	}
+
+	/** Native cached product metadata; display in store timezone, serialize/export in UTC. */
+	private static function created_info( $product ): array {
+		$date = $product instanceof \WC_Product ? $product->get_date_created() : null;
+		if ( ! $date instanceof \DateTimeInterface ) { return array( 'created_at' => null, 'created_at_label' => null ); }
+		$epoch = $date->getTimestamp();
+		return array( 'created_at' => gmdate( 'Y-m-d\TH:i:s\Z', $epoch ), 'created_at_label' => wp_date( 'Y-m-d H:i:s', $epoch, wp_timezone() ) );
 	}
 }

@@ -1,0 +1,333 @@
+{
+  "status": "VERIFIED_BEFORE_SOURCE_IMPORT",
+  "baseline0e": "0e9160ba32f54f1a545987109034ed04523e6076",
+  "git_base": "41a679a90fa4dc452af4760574ae541f0fc03bf4",
+  "input_manifest_sha256": "a3b455c83cef61c555659adeb5be38e3175fc5a7b013b0ee6afcc07e5449fed6",
+  "paths": [
+    {
+      "path": "docs/039-release-notes.md",
+      "sha256": "07ea0484bbadaa416d61298e7b0024fa64ee0c50f82c6a2015213889ced30c24",
+      "base0e_sha256": null
+    },
+    {
+      "path": "docs/042-release-notes.md",
+      "sha256": "bba9f9206f60e94ffece13a629e3b402233b79bfc3656bca9c7a1d8e3cc619f8",
+      "base0e_sha256": null
+    },
+    {
+      "path": "docs/044-release-notes.md",
+      "sha256": "18c102b8a85a2635b832ae44a9252cb9643f9d069b1064d22db9c765aea83de6",
+      "base0e_sha256": null
+    },
+    {
+      "path": "docs/048-release-notes.md",
+      "sha256": "117e090cb1b1487a5e69d98a80e6e2512db951aa0facf06107f630dd32eb7357",
+      "base0e_sha256": null
+    },
+    {
+      "path": "docs/052-release-notes.md",
+      "sha256": "9fb6d154765d6440ba2406807af438901651a018cb6f86bad3cbcf77b3873386",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/data-conversion.js",
+      "sha256": "717e51b19a7904613d4d4c50401515577992569acd219e579e79fd32b76a5d41",
+      "base0e_sha256": "b1e635b02e5222b6a8fdbf80921a4f4192a5b769b1273f775ede9bfb7ed44ea6"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/data-emails.css",
+      "sha256": "f9d9214bb5840bd872126c0cf061e2f0b3d052af0b79c081058291ebd49f3618",
+      "base0e_sha256": "cd2229f5b636ec8b05989c0091b70ff35e80b36c5a7bf8b64bfbda03ba34536b"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/data-emails.js",
+      "sha256": "a5968e30efb588d3239d8edc5a8c587765dfaa30ec28886f0cd90521fabff0c4",
+      "base0e_sha256": "c8743f9def5419e63b605bd77718cab2fa46954007c938921bb1abcf64707fda"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/data-landing.js",
+      "sha256": "49898dc3b6b091b3e4466d79ef35e9b3aa177cc5a4e6164648f3b4be1caf906d",
+      "base0e_sha256": "d562907b6977fac3460c064f115c3d1331784b41a350fe22dcc9af371d4e05f5"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/data-operations.js",
+      "sha256": "402173a2f7f6002a0fd7e4964a2c8a855f0926e1351c3bb6b2189e7a35f353a5",
+      "base0e_sha256": "ae9a8b66587be1e9406876ee101374bd7b5fdebc19328cec56dbd0dbce3a7cce"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/data-page-conversion.css",
+      "sha256": "4f1b5a05c723535e9000e274e6b00cb7d0aedb80a81a8e3192c60907f34e0698",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/data-page-conversion.js",
+      "sha256": "f1658ea6a2566b9a27b87e40dce7baf76e734d3a0046bea2fefd7531f827092d",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/data-pages.js",
+      "sha256": "6cbd2daeeac7de898ff59c8ef5615161dd75b15fb56f34a900d87feb062d3e0e",
+      "base0e_sha256": "2fcd73d135dbeff127d29cc3befb57dd090f9cd0f65c2da5d30d0532bf9c6aad"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/data-products.js",
+      "sha256": "53d10f4e0868fc62f951f9a7daaf4949b5fe64033e47c6b55719aab4dc228bd0",
+      "base0e_sha256": "14c34fa7ef132d436827abace04e7ebfe63528f50684cb61878492cc8206cda5"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/data-rankings.js",
+      "sha256": "8828c52d9b866c2d6fe74dfac1c7c9e5b8da1963c97b04404b6437b244d529bc",
+      "base0e_sha256": "0bc27945c336e2ab9d38d38c3acd6bf191f36d76fb19be033ef4b01e96505df0"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/data-sources.css",
+      "sha256": "ea94b358ea8416fab026d0ff7efaaae5c5c9b591848a57666d0430e4419641d6",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/data-sources.js",
+      "sha256": "b26b66d4949596ffe84b21ed67a47e9bb95330f8631a4be156318d791af27d77",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/tracking-admin.js",
+      "sha256": "c4e08b7b58aa47ea21b3e81aefb0df9247481bcd0b17b8b0f9797196796a2c56",
+      "base0e_sha256": "1a0a4514b8324fbb96c8aeba03255a7692adc15bb92f1d3ab7fa838ae5b64eed"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/admin/class-data-pages.php",
+      "sha256": "7a41f5ae7a8983c28146e238365e9f4da448325f70bf2e306387c987ca440694",
+      "base0e_sha256": "f7ea403bf44935a1530fa74674b930891289a174fe817c820ce4da9f4ef86132"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/admin/class-tracking-page.php",
+      "sha256": "09e682768a5ffeb19356d2a8b192b508e2bc99d52c0e22d399b2735026b1ba86",
+      "base0e_sha256": "b583b51564dd2268edc068196c114418d76233a8f0d228a6927a98aecd6b53b0"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/class-email-campaigns.php",
+      "sha256": "7091dc836b2b6c9e7e768bd326eeb3b5cd42e0ed30313a207d3c6ba16b84024a",
+      "base0e_sha256": "ed4356c8f9227e73734fc22789ed8f1af85e704c5fb88f768e283afdfac2c5ab"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/class-loyalty.php",
+      "sha256": "eec7fba350c93950f3992e0b214aac5dabd4ab01b9ee0f930f0d8185be38133c",
+      "base0e_sha256": "a41e03c81d293d94cc55d0e520dacc443fbd6266ee04333d47983cfb889090cf"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/class-subscriptions.php",
+      "sha256": "d625bc85a8e20748713ed1c1950f29d6245d86436ee87cfa1fd0ed185a163471",
+      "base0e_sha256": "b7ace15aed16113efdda750155404fd09978188f1151d4e06f0e2914a1353ce2"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-conversion.php",
+      "sha256": "228157d864492b6efd0fcb3c91835863b890d05c2e9469bf1657fed74e17649f",
+      "base0e_sha256": "e0dc5dd2005da957cad10a70a9c7742bab7706502da6d2aef14ac0b100ad6156"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-csv-response.php",
+      "sha256": "a561e83c0bc82141803d9a104fb80949cf825bc6b971d1f863ca6804ac85665d",
+      "base0e_sha256": "31de74f873e56d43f8f9df1298aef24babaac73fcb8d6c33370b315b0c0d9f8d"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-dimension-conversion.php",
+      "sha256": "2c931c03855f64031d2de9b8733e025b3dd1a2ba7b63ff113a0f26581f04fc45",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-dimension-reports.php",
+      "sha256": "0dd69d0c936bb7d3383e3b30e8a79b3f49c007006f998f6738602dd2152d20ba",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-emails.php",
+      "sha256": "c2ef14ab6cd44a3f8f4032af57db73aef3b1afc88fa536e8da4682c972369b08",
+      "base0e_sha256": "d860c787832b16020850536791497270bf6eb5cb140f223dcfc1e61078c4fff8"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-landing.php",
+      "sha256": "60f508a0a7d86191dec3bf99c47f6ad796fbf26c6539e832d38d533bb43dcc74",
+      "base0e_sha256": "0921fa6a8f11cecf4b218cfd4019ae36dd6fdefbf88244a74b12f427ba0e1858"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-page-conversion.php",
+      "sha256": "8da346c65c99071af2ccc3200cd656c934d985a63fe10e100bed15e323c423b6",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-page-visits.php",
+      "sha256": "5e599a4a561b9a1148740cce94eb9d5789e2fd2323046e0517505c7914cb9796",
+      "base0e_sha256": "e7efec82e45476e48df37652dda268181c0e384a23f877261f6e4b5d50a3186c"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-product-exposure.php",
+      "sha256": "0ccef192b2d6e73d81ed1efd575bcf7016f8afe73bb3c48bed44bda7f02c39dc",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-products.php",
+      "sha256": "1b2a4984848b593412ffad514c11dcab52cf30faca45bf474f3f40171b55cbf4",
+      "base0e_sha256": "b909bac58f946b992bc322fb8c027b02411bbde926b403f713939c9277675172"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-rankings.php",
+      "sha256": "beaf1e82fdf9bc10c2ff21231db05fb681776b1f44c4eee69d92873258e5c49e",
+      "base0e_sha256": "4e35cfa3d24695aff8ed7eb22beb5611a6af30c76cc2305753799a1956cd987b"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-report-dimensions.php",
+      "sha256": "3d1331c2ef8ad0b2d62cb358fa6327bd5cabdc640a863cd49104ef4894743f7c",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-report-exports.php",
+      "sha256": "5af62c330b7f8f7fae6f7b4acd467bf208fdb430e94f2d75408b5be27b9bab38",
+      "base0e_sha256": "0ed629917b6888991cc5f09c4d28484d5db4ec9502185bfec595e55c6663c1a9"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-report-filter.php",
+      "sha256": "63ad9e435a2f23b68ca7d5f6b5a9a1124a994e8c0df266249cd353ca541f3768",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-search-observations.php",
+      "sha256": "058ab7f5c807a6b1995efad265de8ea2ab567fd03814751f76c3b21c7909822a",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-sources.php",
+      "sha256": "1575d14e625694ee073226c49a56578a9576dad146a9dfd07eeccb1a044ef478",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-visit-metrics.php",
+      "sha256": "fc343e8370e9893291d64f78af4b8f36cadec4555045c61fadbe41fa6219a29e",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-visitor-funnel.php",
+      "sha256": "7a13e1a4a750a4c3e6825db858451db642f7380994a9f002f904b41c6abe2d1e",
+      "base0e_sha256": "14d17c71f6db23945139f198ae2053ee13e11a7f62d2b14bffbe5f881cd480d9"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/emails/class-log.php",
+      "sha256": "d6e9b15a201614f084fbbff8929a46bf3d5faba5e82f8876f84e977804557cfd",
+      "base0e_sha256": "43657a95592fcdd4fe8d36041d677f1672f78058cc805af6698ec06352124968"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/emails/class-message-observations.php",
+      "sha256": "ed68cd9419a6a4cc20ee688e95ab3a2953a9351380e40d03fb86786c2b6c81fa",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/emails/class-observation-labels.php",
+      "sha256": "397c051e5a7e9b9c108daa7072827894c8f8997ad648475d3d33c7976e32ab37",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/emails/class-observation-links.php",
+      "sha256": "acc00ff4136b672e1d39693d37895f51843d18386b6be86260c1131d1a3e4fde",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/emails/class-observation-store.php",
+      "sha256": "94f37b1c043aaaf47d1294391866f3d8dc3f826818148aad9fbace6e4fff77f8",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/emails/class-registry.php",
+      "sha256": "1386fa45a2e3d02b545d3d5c0dbbf1dfe892789beead43999b3bcb591bb677a5",
+      "base0e_sha256": "28c4827ed03f8ae5141d73a766dc051a21346773b532c4bb77e233080ac3736f"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/tracking/class-client-environment.php",
+      "sha256": "fe6ee09970ebd00ee583c91fc6cd98546561bc0e49a19785e41b17f3cac9105f",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/tracking/class-country-provider.php",
+      "sha256": "cf0aa2b0e8b9de5c55f67957ece8478f93ca225d48727f1249b19de525f13351",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/tracking/class-impressions.php",
+      "sha256": "54294458fc9fc5c70f022982246ab2b67a5d230f007de21de77bb860845cf445",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/tracking/class-ingest.php",
+      "sha256": "97645f9eb1276dcddad7920e31dc4d6a2ac6e00df2cb699e3b556d4c53b4b770",
+      "base0e_sha256": "67494fe4f8462c9aeb23136c8269dacd292fcca0e15b50d647ec506ae7543419"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/tracking/class-page-context-privacy.php",
+      "sha256": "7c66cc0cd0292774a77b13341d2d22d255f8bb683e2cf54105d02b10ad10f6e5",
+      "base0e_sha256": "93d78240c36e889bbb6611c789fea5d7e985219d1095f15c423ef410f22a11da"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/tracking/class-page-context.php",
+      "sha256": "a462054effba6a9ca090797c24c238236b6363656b29c69a2705133496ac1d5a",
+      "base0e_sha256": "08acb3622c5ea109ffc8fedf7c09b5bf7fe1c7140e6c013670c26e5bff034663"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/tracking/class-privacy.php",
+      "sha256": "95882ab4e237433a3607738c0af97ecf39a0b774205c31dd4aa799b5761a1f9f",
+      "base0e_sha256": "98a19affb632f2205196b80beb2cacf87e02dbf6daf263d199b5acfe6cda086e"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/tracking/class-search-context.php",
+      "sha256": "01f2159bd2affc46aa7164acca7c368810db587999d61768143ae0db32efa15b",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/languages/customer-data-observations-zh_CN.php",
+      "sha256": "4792f06a0d3e5905c42fcf0d49d674db67049c1ac6fa9e8ce9cd22c55b4850b1",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/languages/customer-mail-observations-zh_CN.php",
+      "sha256": "9399209185b0c67b68d7d4445c6bd22c6dd653cb5e4166070b1657679d885154",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/languages/peptide-core-zh_CN.mo",
+      "sha256": "434a9d5e0498f49be77f58585d678d7f711ac898ff0f1c8283305d786c59f1a2",
+      "base0e_sha256": "dbc033f95f1ce35c99454d8361cc1f6ca6a351a89b77b09bb7735b923eb5d00a"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/languages/peptide-core-zh_CN.po",
+      "sha256": "0e9aa0711247dd8fccd6604234c11a783382be951d08a818ea27d8a4ad6cc6fe",
+      "base0e_sha256": "588e07696a463d2d5e48095bbf8906a741c3ce204d06dde823a7f34befca9fe8"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/languages/peptide-core.pot",
+      "sha256": "a94bd7cfc80d14c2233aeb917efe5ed923537c588ac7262e94d76784c673faa9",
+      "base0e_sha256": "515ba6df1094f28341827ae8b59fef0195d418c7d430e5681576314c744c3ed8"
+    },
+    {
+      "path": "wp-content/themes/peptide-site/assets/visitor-adapter.js",
+      "sha256": "0e4c147e74b8acca5c0ad05df5f4e5f63a26f2e9f621715efc02d16a19f7c969",
+      "base0e_sha256": "43b8755eac13d774e2d3d80c99dd60a1d47aff1f47468f77ec5e3aadcd9f86d5"
+    },
+    {
+      "path": "wp-content/themes/peptide-site/assets/visitor-products.js",
+      "sha256": "b35176d12030bde45a8d0425f3b41eef9195608249b6e0545ec481603fe414fa",
+      "base0e_sha256": null
+    },
+    {
+      "path": "wp-content/themes/peptide-site/assets/visitor-tracking.js",
+      "sha256": "e306f6e96ff3b137a04d90bc45c4eb5d58339d098290015b0c99a189fd01e1eb",
+      "base0e_sha256": "9b1ca90c20476f90a5d35636baeb8f776444a7b256fb76d2656558326ddbfacd"
+    },
+    {
+      "path": "wp-content/themes/peptide-site/functions.php",
+      "sha256": "5d0e681d69aed30e4e6dc85c81f9cb58684f1bc1d351d73fa8d127d113100df3",
+      "base0e_sha256": "1c74fbdc491fc897d783416dc0f571b190de5d2b879cbafcc4633ae7e10115cf"
+    },
+    {
+      "path": "wp-content/themes/peptide-site/inc/visitor-tracking.php",
+      "sha256": "e6f8c0512c3fd6b398e7aba97ab21376765080eeed2033ac3034c5031264eeb6",
+      "base0e_sha256": "1e38e8883881d92ca9027c6501f3ab9c56faa7ed3c7dcfbc33f381c37d8133aa"
+    }
+  ]
+}

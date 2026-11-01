@@ -40,6 +40,7 @@ final class Registry {
 	private const BROWSE_META = '_pc_browse_sent';
 
 	public static function register_hooks(): void {
+		Message_Observations::register_hooks();
 		add_filter( 'woocommerce_email_classes', array( self::class, 'add_classes' ) );
 		add_filter( 'woocommerce_prepare_email_for_preview', array( self::class, 'preview' ), 20 );
 		add_action( 'woocommerce_email', array( self::class, 'adjust_new_order' ), 20 );

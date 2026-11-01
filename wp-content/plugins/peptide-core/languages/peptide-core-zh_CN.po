@@ -12489,3 +12489,342 @@ msgstr "无法加载结账观察数据。"
 #: includes/admin/class-data-pages.php:868
 msgid "Retry checkout observations"
 msgstr "重试结账观察"
+
+
+# DATA-035/036 report dimensions
+
+msgid "Added to cart UV"
+msgstr "加购UV"
+
+msgid "Apply filters"
+msgstr "应用筛选"
+
+msgid "Captured empty value"
+msgstr "已捕获空值"
+
+msgid "Captured key absent"
+msgstr "已捕获但未提供此参数"
+
+msgid "Country source unavailable"
+msgstr "国家来源不可用"
+
+msgid "Country unknown"
+msgstr "国家未知"
+
+msgid "Domain and country are combined with AND. Country uses the original visit’s latest saved observation before each period ends; missing observations and source unavailability are separate. No billing country is inferred. Late facts can change earlier reports."
+msgstr "域名与国家条件同时满足才计入。国家取原访问在各报告期结束前的最新已保存观察，未观察与来源不可用分别处理，不推断账单国家。迟到事实可能改变历史报表。"
+
+msgid "Entry domain"
+msgstr "入口域名"
+
+msgid "Exact value"
+msgstr "指定值"
+
+msgid "First successfully captured source values preserve case, absent keys and empty values. Visits use start time; paid orders use creation time and their original visit. Rows overlap in visitors. Test visits and test orders are excluded. No direct traffic is inferred."
+msgstr "来源使用首次成功捕获值，区分大小写、缺少参数与空值。访问按开始时间统计；付款订单按创建时间和原始访问归因。访客可能出现在多行。排除测试访问及测试订单，不推断直接流量。"
+
+msgid "Groups use saved visit facts. Overall and checkout observations cover all visitors."
+msgstr "分组使用已保存访问事实。总体和结账观察仍覆盖全部访客。"
+
+msgid "No source data in this period."
+msgstr "本期暂无来源数据。"
+
+msgid "Not observed"
+msgstr "未观察"
+
+msgid "Observed country"
+msgstr "已观察国家"
+
+msgid "Observed values: %v / %n visits. Unknown: %u; unavailable: %a; not observed: %o."
+msgstr "有效值：%v / %n 次访问。未知：%u；来源不可用：%a；未观察：%o。"
+
+msgid "Observed visitor countries"
+msgstr "已观察访客国家"
+
+msgid "Operating system, screen size and normal/abnormal classification are not collected. Country values require a configured source."
+msgstr "操作系统、屏幕尺寸和正常／异常分类尚未采集。国家值需要配置真实来源。"
+
+msgid "Order UTM sources"
+msgstr "订单UTM来源"
+
+msgid "Order entry domains"
+msgstr "订单入口域名"
+
+msgid "Paid UV"
+msgstr "付款UV"
+
+msgid "Report dimensions are unavailable. Try again."
+msgstr "报表维度暂不可用，请重试。"
+
+msgid "Saved values: %v / %n %s. Missing, empty and unobserved facts remain separate."
+msgstr "已保存有效值：%v / %n %s。缺少、空值和未观察分别统计。"
+
+msgid "Search source and medium values"
+msgstr "搜索来源与媒介值"
+
+msgid "Source means saved UTM source; domain means saved entry domain. Visitor groups count distinct visitors per group. Country uses saved observations; favorites and search terms are not collected."
+msgstr "来源为已保存的UTM来源，域名为已保存的入口域名。访客在每组内去重；国家使用已保存观察。收藏和搜索词尚未采集。"
+
+msgid "Source unavailable"
+msgstr "来源不可用"
+
+msgid "Split by UTM medium"
+msgstr "按UTM媒介拆分"
+
+msgid "UTM medium"
+msgstr "UTM媒介"
+
+msgid "UTM source"
+msgstr "UTM来源"
+
+msgid "UTM source empty"
+msgstr "UTM来源为空"
+
+msgid "UTM source missing"
+msgstr "未提供UTM来源"
+
+msgid "UTM sources"
+msgstr "UTM来源报表"
+
+msgid "Viewed product UV"
+msgstr "浏览商品UV"
+
+msgid "Visit country at period end"
+msgstr "报告期结束前的访问国家"
+
+msgid "Visitor UTM sources"
+msgstr "访客UTM来源"
+
+msgid "Visitor entry domains"
+msgstr "访客入口域名"
+
+msgid "Visitors (UV)"
+msgstr "访客数（UV）"
+
+msgid "orders"
+msgstr "笔订单"
+
+msgid "visits"
+msgstr "次访问"
+
+
+# DATA-035 candidate coverage units
+
+msgid "Event records"
+msgstr "事件记录"
+
+msgid "Matching / candidate records; country values / unknown / unavailable / unobserved:"
+msgstr "匹配／候选记录数；国家有效值／未知／来源不可用／未观察："
+
+msgid "Order records"
+msgstr "订单记录"
+
+msgid "Visit records"
+msgstr "访问记录"
+
+
+# DATA-039 union of reviewed028 entries
+
+#: wp-content/plugins/peptide-core/includes/tracking/class-privacy.php:163
+msgid "Product visibility observations"
+msgstr "商品可见性观察记录"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-tracking-page.php:220
+msgid "Observed product ID"
+msgstr "上报商品 ID"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-tracking-page.php:221
+msgid "Observed variation ID"
+msgstr "上报规格 ID"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-tracking-page.php:222
+msgid "Visible fraction"
+msgstr "可见比例"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-tracking-page.php:223
+msgid "Visible duration (ms)"
+msgstr "上报可见时长（毫秒）"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-tracking-page.php:224
+msgid "Page entity ID"
+msgstr "页面对象 ID"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-tracking-page.php:225
+msgid "Template ID"
+msgstr "模板 ID"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-tracking-page.php:226
+msgid "Module ID"
+msgstr "模块 ID"
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Home"
+msgstr "首页"
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Shop"
+msgstr "商店列表"
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Product"
+msgstr "商品页"
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Cart"
+msgstr "购物车"
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Checkout"
+msgstr "结账页"
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Account"
+msgstr "账户页"
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Order received"
+msgstr "订单成功页"
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Order payment"
+msgstr "订单付款页"
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Content"
+msgstr "内容页"
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Collection"
+msgstr "专辑页"
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Search"
+msgstr "搜索页"
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Unknown"
+msgstr "未知"
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:150
+msgid "Unavailable #%d"
+msgstr "不可用 #%d"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-tracking-page.php:186
+msgid "Product exposure observed"
+msgstr "观察到商品曝光"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:903
+msgid "Product exposure observations could not be loaded."
+msgstr "无法加载商品曝光观察数据。"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:897
+msgid "Page or page kind"
+msgstr "页面或页面类型"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:898
+msgid "Search page path or name"
+msgstr "搜索页面路径或名称"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:900
+msgid "Back to page kinds"
+msgstr "返回页面类型"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:901
+msgid "View pages"
+msgstr "查看页面"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:902
+msgid "Loading exposure observations…"
+msgstr "正在加载曝光观察数据…"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:905
+msgid "No product exposures were reported for this selection."
+msgstr "当前条件下没有上报的商品曝光。"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:906
+msgid "Counts begin with reported product visibility of at least 40% for 500 ms. Page visits alone do not count as exposures. Views, successful cart additions and non-COD payments count only after an exposure in the same visit and period. Missing visibility observations stay missing."
+msgstr "按至少 40% 可见并持续 500 毫秒的上报记录统计曝光。页面访问本身不计曝光。查看、成功加购和非货到付款的付款，仅统计同次访问、同一统计期内曝光时或之后的行为。缺失的可见性观察保持缺失。"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:907
+msgid "A user may appear in several page groups. Rates can exceed 100%; refunded units can differ from users who paid."
+msgstr "同一用户可能出现在多个页面分组中。比率可以超过 100%；退款后的净件数与曾付款用户数可能不同。"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:908
+msgid "Search terms are not collected."
+msgstr "不采集搜索词。"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:915
+msgid "Matching groups: %s"
+msgstr "匹配分组：%s"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:916
+msgid "Rows per page"
+msgstr "每页行数"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:920
+msgid "Exposed users"
+msgstr "曝光用户数"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:920
+msgid "Viewed users after exposure"
+msgstr "曝光后查看用户数"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:920
+msgid "View user rate"
+msgstr "查看用户占比"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:921
+msgid "Cart users after exposure"
+msgstr "曝光后加购用户数"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:921
+msgid "Cart user rate"
+msgstr "加购用户占比"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:921
+msgid "Paid users after exposure"
+msgstr "曝光后付款用户数"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:921
+msgid "Paid user rate"
+msgstr "付款用户占比"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:922
+msgid "Reported exposure episodes"
+msgstr "上报曝光次数"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:922
+msgid "Views after exposure"
+msgstr "曝光后查看次数"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:922
+msgid "View rate per exposure"
+msgstr "查看次数/曝光"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:923
+msgid "Cart additions after exposure"
+msgstr "曝光后成功加购次数"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:923
+msgid "Cart rate per exposure"
+msgstr "加购次数/曝光"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:923
+msgid "Net paid units after exposure"
+msgstr "曝光后付款净件数"
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:923
+msgid "Paid unit rate per exposure"
+msgstr "付款净件数/曝光"

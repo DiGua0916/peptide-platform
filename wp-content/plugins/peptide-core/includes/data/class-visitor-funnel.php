@@ -47,11 +47,12 @@ final class Visitor_Funnel {
 	}
 
 	/** [from,to) integer milliseconds; live additionally bounds observation time. */
-	public function period( int $from, int $to, string $basis = 'start_ms', string $group = '', ?int $now = null, ?Realtime_Filter $filter = null ): array {
+	public function period( int $from, int $to, string $basis = 'start_ms', string $group = '', ?int $now = null, ?Realtime_Filter $filter = null, ?array $group_map = null ): array {
 		global $wpdb;
 		if ( ! in_array( $basis, array( 'start_ms', 'last_ms' ), true ) || ! in_array( $group, array( '', 'device', 'browser' ), true ) ) {
 			throw new \InvalidArgumentException( 'Invalid internal visitor funnel cohort.' );
 		}
+		if ( null !== $group_map && '' !== $group ) { throw new \InvalidArgumentException( 'Mapped and legacy groups are separate.' ); }
 		$counts = self::zero();
 		$returning = self::zero();
 		$groups = array();
@@ -87,6 +88,20 @@ final class Visitor_Funnel {
 				foreach ( array_slice( self::KEYS, 0, 4 ) as $step ) { $groups[ $key ][ $step ] = (int) $row[ $step ]; }
 			}
 		}
+		if ( null !== $group_map ) {
+			$cursor = 0; $mapped = array();
+			do {
+				$rows = $wpdb->get_results( $wpdb->prepare( "SELECT s.id,s.visitor_id,s.stage FROM {$visits} s WHERE {$cohort} AND s.id > %d ORDER BY s.id LIMIT 500", $cursor ), ARRAY_A );
+				if ( $wpdb->last_error ) { throw new \RuntimeException( 'Mapped visitor funnel unavailable.' ); }
+				foreach ( (array) $rows as $row ) {
+					$cursor = (int) $row['id']; $visitor = (int) $row['visitor_id']; $entry = $group_map[$cursor] ?? null;
+					if ( ! $entry || $visitor <= 0 || $entry['visitor_id'] !== $visitor ) { continue; }
+					$key = $entry['key'];
+					foreach ( array( 'visitors' => 0, 'viewed' => 1, 'carted' => 2, 'checkout' => 3 ) as $step => $stage ) { if ( (int) $row['stage'] >= $stage ) { $mapped[$key][$step][$visitor] = true; } }
+				}
+			} while ( count( (array) $rows ) === 500 );
+			foreach ( $mapped as $key => $steps ) { $groups[$key] = self::zero(); foreach ( array_slice( self::KEYS, 0, 4 ) as $step ) { $groups[$key][$step] = count( $steps[$step] ?? array() ); } }
+		}
 		$seen = array();
 		$seen_returning = array();
 		$seen_groups = array();
@@ -116,6 +131,10 @@ final class Visitor_Funnel {
 				if ( $group ) {
 					$key = '' === $row['g'] ? 'unknown' : (string) $row['g'];
 					$seen_groups[ $key ][ $step ][ $visitor ] = true;
+				}
+				if ( null !== $group_map ) {
+					$entry = $group_map[(int) $row['visit_id']] ?? null;
+					if ( $entry && $visitor > 0 && $entry['visitor_id'] === $visitor ) { $seen_groups[$entry['key']][$step][$visitor] = true; }
 				}
 			}
 		} while ( count( (array) $rows ) === 500 );

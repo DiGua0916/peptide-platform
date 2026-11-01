@@ -1,0 +1,79 @@
+{
+  "stage": "SOURCE_ONLY_PURE_TESTS",
+  "failed": 0,
+  "passed": 4,
+  "results": [
+    {
+      "name": "page-context-personal-export-pure",
+      "path": "wp-content/plugins/peptide-core/tests/page-context-personal-export-pure.php",
+      "command": [
+        "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+        "-n",
+        "-d",
+        "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+        "-d",
+        "extension=mbstring",
+        "wp-content/plugins/peptide-core/tests/page-context-personal-export-pure.php"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 29,
+      "stdout": "{\"passed\":56,\"failed\":0,\"old_export_oracle\":\"048\",\"database\":\"memory\",\"wordpress_bootstrap\":false,\"payload_output\":false}\n",
+      "stderr": ""
+    },
+    {
+      "name": "mail-source-observations",
+      "path": "wp-content/plugins/peptide-core/tests/mail-source-observations.php",
+      "command": [
+        "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+        "-n",
+        "-d",
+        "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+        "-d",
+        "extension=mbstring",
+        "wp-content/plugins/peptide-core/tests/mail-source-observations.php"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 49,
+      "stdout": "{\"passed\":63,\"failed\":0,\"native_mime\":true,\"database\":\"in-memory boundary double\",\"network_calls\":0,\"external_mail\":0}\n{\"new_passed\":31,\"total_passed\":94,\"failed\":0,\"native_mime\":true,\"database\":\"memory\",\"network_calls\":0,\"payload_output\":false}\n",
+      "stderr": ""
+    },
+    {
+      "name": "mail-source-producers",
+      "path": "wp-content/plugins/peptide-core/tests/mail-source-producers.php",
+      "command": [
+        "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+        "-n",
+        "wp-content/plugins/peptide-core/tests/mail-source-producers.php"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 32,
+      "stdout": "{\"passed\":50,\"failed\":0,\"database\":\"memory\",\"network_calls\":0,\"payload_output\":false}\n",
+      "stderr": ""
+    },
+    {
+      "name": "data-native-search-pure",
+      "path": "wp-content/plugins/peptide-core/tests/data-native-search-pure.php",
+      "command": [
+        "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+        "-n",
+        "-d",
+        "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+        "-d",
+        "extension=mbstring",
+        "wp-content/plugins/peptide-core/tests/data-native-search-pure.php"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 63,
+      "stdout": "PASS 18 standalone dimension report assertions\nPASS 63 native search assertions\n",
+      "stderr": ""
+    }
+  ],
+  "limits": [
+    "No WordPress bootstrap or native/private database fixture.",
+    "Unchanged historical gates are indexed with source provenance; not rerun by default."
+  ]
+}

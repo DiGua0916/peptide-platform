@@ -1,0 +1,219 @@
+{
+  "stage": "SOURCE_ONLY_PURE_TESTS",
+  "failed": 1,
+  "passed": 14,
+  "results": [
+    {
+      "name": "data-product-created-php",
+      "path": "wp-content/plugins/peptide-core/tests/data-product-created.php",
+      "command": [
+        "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+        "-n",
+        "wp-content/plugins/peptide-core/tests/data-product-created.php"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 36,
+      "stdout": "PASS 20 product user ratio assertions, 0 FAIL\nPASS 25 product creation metadata assertions, 0 FAIL\n",
+      "stderr": ""
+    },
+    {
+      "name": "data-product-created",
+      "path": "wp-content/plugins/peptide-core/tests/data-product-created.cjs",
+      "command": [
+        "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "--test",
+        "wp-content/plugins/peptide-core/tests/data-product-created.cjs"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 112,
+      "stdout": "{\"suite\":\"product-created-ui\",\"passed\":23,\"failed\":0}\n✔ product creation metadata is ordered, optional and separate from numeric measures (36.2884ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 81.1501\n",
+      "stderr": ""
+    },
+    {
+      "name": "data-product-user-ratios-node",
+      "path": "tests/data-product-user-ratios.cjs",
+      "command": [
+        "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "tests/data-product-user-ratios.cjs"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 88,
+      "stdout": "{\"suite\":\"product-user-ratios-ui\",\"passed\":31,\"failed\":0}\n",
+      "stderr": ""
+    },
+    {
+      "name": "data-full-rankings",
+      "path": "wp-content/plugins/peptide-core/tests/data-full-rankings.cjs",
+      "command": [
+        "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "wp-content/plugins/peptide-core/tests/data-full-rankings.cjs"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 84,
+      "stdout": "{\"passed\":53,\"failed\":0}\n",
+      "stderr": ""
+    },
+    {
+      "name": "data-operations-checkout",
+      "path": "wp-content/plugins/peptide-core/tests/data-operations-checkout.cjs",
+      "command": [
+        "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "wp-content/plugins/peptide-core/tests/data-operations-checkout.cjs"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 101,
+      "stdout": "{\"passed\":64,\"failed\":0}\n",
+      "stderr": ""
+    },
+    {
+      "name": "data-exports",
+      "path": "wp-content/plugins/peptide-core/tests/data-exports.cjs",
+      "command": [
+        "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "wp-content/plugins/peptide-core/tests/data-exports.cjs"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 56,
+      "stdout": "{\"passed\":61,\"failed\":0}\n",
+      "stderr": ""
+    },
+    {
+      "name": "country-resource-attribution-pure",
+      "path": "wp-content/plugins/peptide-core/tests/country-resource-attribution-pure.php",
+      "command": [
+        "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+        "-n",
+        "wp-content/plugins/peptide-core/tests/country-resource-attribution-pure.php"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 304,
+      "stdout": "{\"suite\":\"country-resource-attribution-pure\",\"passed\":46,\"failed\":0,\"wordpress_bootstrap\":false,\"network\":false}\n",
+      "stderr": ""
+    },
+    {
+      "name": "tracking-product-actions-pure",
+      "path": "wp-content/plugins/peptide-core/tests/tracking-product-actions-pure.php",
+      "command": [
+        "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+        "-n",
+        "wp-content/plugins/peptide-core/tests/tracking-product-actions-pure.php"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 29,
+      "stdout": "PASS 39 strict product action receiver assertions, 0 FAIL\n",
+      "stderr": ""
+    },
+    {
+      "name": "data-product-actions-pure",
+      "path": "wp-content/plugins/peptide-core/tests/data-product-actions-pure.php",
+      "command": [
+        "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+        "-n",
+        "wp-content/plugins/peptide-core/tests/data-product-actions-pure.php"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 39,
+      "stdout": "PASS 20 product user ratio assertions, 0 FAIL\nPASS 15 product action report assertions, 0 FAIL\n",
+      "stderr": ""
+    },
+    {
+      "name": "tracking-product-actions-export-pure",
+      "path": "wp-content/plugins/peptide-core/tests/tracking-product-actions-export-pure.php",
+      "command": [
+        "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+        "-n",
+        "wp-content/plugins/peptide-core/tests/tracking-product-actions-export-pure.php"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 29,
+      "stdout": "PASS 7 product action personal export assertions, 0 FAIL\n",
+      "stderr": ""
+    },
+    {
+      "name": "data-product-action-rankings-pure",
+      "path": "wp-content/plugins/peptide-core/tests/data-product-action-rankings-pure.php",
+      "command": [
+        "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+        "-n",
+        "-d",
+        "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+        "-d",
+        "extension=mbstring",
+        "wp-content/plugins/peptide-core/tests/data-product-action-rankings-pure.php"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 87,
+      "stdout": "PASS 18 standalone dimension report assertions\nPASS 63 native search assertions\nPASS 9 favorite full ranking assertions, 0 FAIL\n",
+      "stderr": ""
+    },
+    {
+      "name": "data-product-action-rankings",
+      "path": "wp-content/plugins/peptide-core/tests/data-product-action-rankings.cjs",
+      "command": [
+        "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "wp-content/plugins/peptide-core/tests/data-product-action-rankings.cjs"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 59,
+      "stdout": "{\"suite\":\"favorite-ranking-ui\",\"passed\":7,\"failed\":0}\n",
+      "stderr": ""
+    },
+    {
+      "name": "visitor-product-actions",
+      "path": "wp-content/themes/peptide-site/tests/visitor-product-actions.cjs",
+      "command": [
+        "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "--test",
+        "wp-content/themes/peptide-site/tests/visitor-product-actions.cjs"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 106,
+      "stdout": "{\"suite\":\"visitor-product-actions\",\"passed\":63,\"failed\":0}\n✔ wp-content\\themes\\peptide-site\\tests\\visitor-product-actions.cjs (71.4284ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 76.3087\n",
+      "stderr": ""
+    },
+    {
+      "name": "visitor-product-actions-config",
+      "path": "wp-content/themes/peptide-site/tests/visitor-product-actions-config.php",
+      "command": [
+        "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+        "-n",
+        "wp-content/themes/peptide-site/tests/visitor-product-actions-config.php"
+      ],
+      "exit_code": 255,
+      "error": null,
+      "elapsed_ms": 27,
+      "stdout": "\nFatal error: Uncaught Error: Call to undefined function PeptideCore\\Tracking\\mb_strtolower() in D:\\Projects\\peptide-platform-wt\\data-055-integrated-20261101\\wp-content\\plugins\\peptide-core\\includes\\tracking\\class-search-context.php:10\nStack trace:\n#0 D:\\Projects\\peptide-platform-wt\\data-055-integrated-20261101\\wp-content\\themes\\peptide-site\\inc\\visitor-tracking.php(98): PeptideCore\\Tracking\\Search_Context::source(' Demo\\xE3\\x80\\x80Peptide...')\n#1 D:\\Projects\\peptide-platform-wt\\data-055-integrated-20261101\\wp-content\\themes\\peptide-site\\inc\\visitor-tracking.php(159): vc_visitor_page_observation()\n#2 D:\\Projects\\peptide-platform-wt\\data-055-integrated-20261101\\wp-content\\themes\\peptide-site\\tests\\visitor-native-search-config.php(40): {closure}()\n#3 D:\\Projects\\peptide-platform-wt\\data-055-integrated-20261101\\wp-content\\themes\\peptide-site\\tests\\visitor-product-actions-config.php(5): require('D:\\\\Projects\\\\pep...')\n#4 {main}\n  thrown in D:\\Projects\\peptide-platform-wt\\data-055-integrated-20261101\\wp-content\\plugins\\peptide-core\\includes\\tracking\\class-search-context.php on line 10\n",
+      "stderr": ""
+    },
+    {
+      "name": "data-product-actions",
+      "path": "tests/data-product-actions.cjs",
+      "command": [
+        "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "tests/data-product-actions.cjs"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 64,
+      "stdout": "{\"suite\":\"product-actions-ui\",\"passed\":5,\"failed\":0}\n",
+      "stderr": ""
+    }
+  ],
+  "limits": [
+    "No WordPress bootstrap or native/private database fixture.",
+    "Unchanged historical gates are indexed with source provenance; not rerun by default."
+  ]
+}

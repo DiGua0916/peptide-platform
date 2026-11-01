@@ -1,7 +1,7 @@
 /* Real timeline startup and asynchronous event rendering, with a pinned independent old script oracle. */
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
 const source=fs.readFileSync(path.join(__dirname,'../assets/tracking-admin.js'),'utf8');
-const original=fs.readFileSync(path.join(__dirname,'../../../../plans/verification/031-execution/oracle/tracking-admin.js'),'utf8');
+const original=fs.readFileSync(path.join(__dirname,'../../../../tests/fixtures/data-observations/028/tracking-admin.js'),'utf8');
 let passed=0;const check=(name,ok)=>{assert.ok(ok,name);++passed;};const flush=()=>new Promise(r=>setImmediate(r));
 async function render(script,events){
  const calls=[];class Element{constructor(){this.innerHTML='';this.children={};}querySelector(key){return this.children[key]||(this.children[key]=new Element());}querySelectorAll(){return [];}addEventListener(){} }

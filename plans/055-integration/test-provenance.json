@@ -1,0 +1,729 @@
+{
+  "status": "PORTABLE_CORE_GATES_PASS_HISTORICAL_EVIDENCE_INDEXED",
+  "tests": [
+    {
+      "n": "051",
+      "path": "wp-content/plugins/peptide-core/tests/data-sources.cjs",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-051-product-ratios-20261101\\wp-content\\plugins\\peptide-core\\tests\\data-sources.cjs",
+      "source_sha256": "3174bdbd43162a0107ed6d6710327554f3301815639f228c6c9bd9d5db60d43e",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-051-product-ratios-20261101\\plans\\051-source-freeze.json",
+      "freeze_manifest_sha256": "398a6739db769e23c856b645dc3ebf44dd8e4c81a2d05418eae735bb734d360c",
+      "exact_owned_freeze_match": false,
+      "target_sha256": "3174bdbd43162a0107ed6d6710327554f3301815639f228c6c9bd9d5db60d43e"
+    },
+    {
+      "n": "051",
+      "path": "wp-content/plugins/peptide-core/tests/data-page-conversion.cjs",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-051-product-ratios-20261101\\wp-content\\plugins\\peptide-core\\tests\\data-page-conversion.cjs",
+      "source_sha256": "9db77550d6a84692b244aafc5c4565fa48c56a6c7628166bf23836604dbcb233",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-051-product-ratios-20261101\\plans\\051-source-freeze.json",
+      "freeze_manifest_sha256": "398a6739db769e23c856b645dc3ebf44dd8e4c81a2d05418eae735bb734d360c",
+      "exact_owned_freeze_match": false,
+      "target_sha256": "9db77550d6a84692b244aafc5c4565fa48c56a6c7628166bf23836604dbcb233"
+    },
+    {
+      "n": "051",
+      "path": "wp-content/plugins/peptide-core/tests/data-product-exposure.cjs",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-051-product-ratios-20261101\\wp-content\\plugins\\peptide-core\\tests\\data-product-exposure.cjs",
+      "source_sha256": "ac321bf80426473b937cc06a11d6fba18a3815accb63c2d6664984307555a481",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-051-product-ratios-20261101\\plans\\051-source-freeze.json",
+      "freeze_manifest_sha256": "398a6739db769e23c856b645dc3ebf44dd8e4c81a2d05418eae735bb734d360c",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "ac321bf80426473b937cc06a11d6fba18a3815accb63c2d6664984307555a481"
+    },
+    {
+      "n": "051",
+      "path": "wp-content/plugins/peptide-core/tests/data-product-user-ratios.php",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-051-product-ratios-20261101\\wp-content\\plugins\\peptide-core\\tests\\data-product-user-ratios.php",
+      "source_sha256": "f378c4c7f291715ed929c4134425e2ef518d8daf908befb1d172384b7110a007",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-051-product-ratios-20261101\\plans\\051-source-freeze.json",
+      "freeze_manifest_sha256": "398a6739db769e23c856b645dc3ebf44dd8e4c81a2d05418eae735bb734d360c",
+      "exact_owned_freeze_match": true,
+      "accepted054_native_boundary_source": {
+        "path": "D:/Projects/peptide-platform-wt/data-054-product-created-20261101/plans/054-verify/wp-content/plugins/peptide-core/tests/data-product-user-ratios.php",
+        "sha256": "194d99a80f0b914f9ce75a745718a3deec597d51aa799f2c52f07c459d5f1731",
+        "notes": "Root-reviewed054 native date/REST boundary and creation metadata excluded from old26 projection; numeric assertions unchanged"
+      },
+      "target_sha256": "518433d72db343e91203b5df3e26acfd3a9113b902be14d776bdd486d80c1ac2"
+    },
+    {
+      "n": "051",
+      "path": "tests/data-product-user-ratios.cjs",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-051-product-ratios-20261101\\tests\\data-product-user-ratios.cjs",
+      "source_sha256": "4bd7f09b9224944d0a0a677d9382ec1846d7bd4320df60f27b1594b129e722e6",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-051-product-ratios-20261101\\plans\\051-source-freeze.json",
+      "freeze_manifest_sha256": "398a6739db769e23c856b645dc3ebf44dd8e4c81a2d05418eae735bb734d360c",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "4bd7f09b9224944d0a0a677d9382ec1846d7bd4320df60f27b1594b129e722e6"
+    },
+    {
+      "n": "035",
+      "path": "wp-content/plugins/peptide-core/tests/data-late-renderer.cjs",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-035-sources-20261101\\wp-content\\plugins\\peptide-core\\tests\\data-late-renderer.cjs",
+      "source_sha256": "3dbc91d48a232602edbc3c5ea6a2d14057580fd6bf7932873b4663ced6b5f225",
+      "freeze_manifest": null,
+      "freeze_manifest_sha256": null,
+      "exact_owned_freeze_match": false,
+      "target_sha256": "3dbc91d48a232602edbc3c5ea6a2d14057580fd6bf7932873b4663ced6b5f225"
+    },
+    {
+      "n": "035",
+      "path": "wp-content/plugins/peptide-core/tests/tracking-impressions-admin.cjs",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-035-sources-20261101\\wp-content\\plugins\\peptide-core\\tests\\tracking-impressions-admin.cjs",
+      "source_sha256": "505ac7fe5dde3aec840152fe9f50082419bccd9d01b6c66666bcd8f530371c3b",
+      "freeze_manifest": null,
+      "freeze_manifest_sha256": null,
+      "exact_owned_freeze_match": false,
+      "target_sha256": "f463b2f641df795fe9d984d0102e2802db50c6d34b8c5ad778071f2e0d178e5a"
+    },
+    {
+      "n": "035",
+      "path": "wp-content/plugins/peptide-core/tests/tracking-impressions-pure.php",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-035-sources-20261101\\wp-content\\plugins\\peptide-core\\tests\\tracking-impressions-pure.php",
+      "source_sha256": "2a10cf2ea6fb8f15558354150ccafbf5e3f23522e0e19b9e484bd35effa38292",
+      "freeze_manifest": null,
+      "freeze_manifest_sha256": null,
+      "exact_owned_freeze_match": false,
+      "target_sha256": "2a10cf2ea6fb8f15558354150ccafbf5e3f23522e0e19b9e484bd35effa38292"
+    },
+    {
+      "n": "035",
+      "path": "wp-content/plugins/peptide-core/tests/data-conversion-export.cjs",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-035-sources-20261101\\wp-content\\plugins\\peptide-core\\tests\\data-conversion-export.cjs",
+      "source_sha256": "94a225affbe2e8acced1005b14722954c09a7ca497917172476d0a23c341d0c6",
+      "freeze_manifest": null,
+      "freeze_manifest_sha256": null,
+      "exact_owned_freeze_match": false,
+      "target_sha256": "94a225affbe2e8acced1005b14722954c09a7ca497917172476d0a23c341d0c6"
+    },
+    {
+      "n": "046",
+      "path": "wp-content/plugins/peptide-core/tests/data-dimensions-pure.php",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-046-search-20261101\\wp-content\\plugins\\peptide-core\\tests\\data-dimensions-pure.php",
+      "source_sha256": "68d9016d36cead0c18da901b698520f8cafb719272bc895f69a147485c56be92",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-046-search-20261101\\plans\\046-source-freeze.json",
+      "freeze_manifest_sha256": "00a3203ed49a4d4c5617e184351a2905f9225062a0803954028a6d2cd73bd6a9",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "68d9016d36cead0c18da901b698520f8cafb719272bc895f69a147485c56be92"
+    },
+    {
+      "n": "046",
+      "path": "wp-content/plugins/peptide-core/tests/data-full-rankings.cjs",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-046-search-20261101\\wp-content\\plugins\\peptide-core\\tests\\data-full-rankings.cjs",
+      "source_sha256": "99189a554edbf2d6c8676be67f7fd0a623e9b8e6932355612984c803e5640c77",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-046-search-20261101\\plans\\046-source-freeze.json",
+      "freeze_manifest_sha256": "00a3203ed49a4d4c5617e184351a2905f9225062a0803954028a6d2cd73bd6a9",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "99189a554edbf2d6c8676be67f7fd0a623e9b8e6932355612984c803e5640c77"
+    },
+    {
+      "n": "046",
+      "path": "wp-content/plugins/peptide-core/tests/data-operations-checkout.cjs",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-046-search-20261101\\wp-content\\plugins\\peptide-core\\tests\\data-operations-checkout.cjs",
+      "source_sha256": "57ff1d6b86be58af4a67d8da0c19e5dd89cfa4ac88639ce3ca6260c89fe03670",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-046-search-20261101\\plans\\046-source-freeze.json",
+      "freeze_manifest_sha256": "00a3203ed49a4d4c5617e184351a2905f9225062a0803954028a6d2cd73bd6a9",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "57ff1d6b86be58af4a67d8da0c19e5dd89cfa4ac88639ce3ca6260c89fe03670"
+    },
+    {
+      "n": "046",
+      "path": "wp-content/plugins/peptide-core/tests/data-native-search-pure.php",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-046-search-20261101\\wp-content\\plugins\\peptide-core\\tests\\data-native-search-pure.php",
+      "source_sha256": "97be1fcf87905a1169ffeec9d10c6848bee7a43c41b4bf879fd7057553166b54",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-046-search-20261101\\plans\\046-source-freeze.json",
+      "freeze_manifest_sha256": "00a3203ed49a4d4c5617e184351a2905f9225062a0803954028a6d2cd73bd6a9",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "f65a86484f3b77787562d91819c4e2071ed514e40a84064740e9e4c3680d1414"
+    },
+    {
+      "n": "046",
+      "path": "wp-content/plugins/peptide-core/tests/data-native-search.cjs",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-046-search-20261101\\wp-content\\plugins\\peptide-core\\tests\\data-native-search.cjs",
+      "source_sha256": "87195623ac2a227e1d93c9e969e443c3679bf7a46200d588f78071f9d963a182",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-046-search-20261101\\plans\\046-source-freeze.json",
+      "freeze_manifest_sha256": "00a3203ed49a4d4c5617e184351a2905f9225062a0803954028a6d2cd73bd6a9",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "87195623ac2a227e1d93c9e969e443c3679bf7a46200d588f78071f9d963a182"
+    },
+    {
+      "n": "043",
+      "path": "wp-content/plugins/peptide-core/tests/data-sources-standalone.php",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-043-client-environment-20261101\\wp-content\\plugins\\peptide-core\\tests\\data-sources-standalone.php",
+      "source_sha256": "7ef07c66d29aabafc35295eb07101b0e6afa1251d36f603df8a66e3134dca342",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-043-client-environment-20261101\\plans\\043-client-environment-manifest.json",
+      "freeze_manifest_sha256": "b8ba4c28388ff44ce65eb2714d9b216c85f812fcb6393fa0fb5362aad9857a67",
+      "exact_owned_freeze_match": false,
+      "target_sha256": "7ef07c66d29aabafc35295eb07101b0e6afa1251d36f603df8a66e3134dca342"
+    },
+    {
+      "n": "043",
+      "path": "wp-content/plugins/peptide-core/tests/client-environment-pure.php",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-043-client-environment-20261101\\wp-content\\plugins\\peptide-core\\tests\\client-environment-pure.php",
+      "source_sha256": "5e90d80ba190c6b647c2d6f306f6348c0c96df4d2bddeddec0fc1a34e2a42a17",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-043-client-environment-20261101\\plans\\043-client-environment-manifest.json",
+      "freeze_manifest_sha256": "b8ba4c28388ff44ce65eb2714d9b216c85f812fcb6393fa0fb5362aad9857a67",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "5e90d80ba190c6b647c2d6f306f6348c0c96df4d2bddeddec0fc1a34e2a42a17"
+    },
+    {
+      "n": "043",
+      "path": "wp-content/plugins/peptide-core/tests/data-client-environment.cjs",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-043-client-environment-20261101\\wp-content\\plugins\\peptide-core\\tests\\data-client-environment.cjs",
+      "source_sha256": "920fe9fc97c599ded9dd0617aaf118c308e5722b1c8a3096ea94a363f6442c3b",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-043-client-environment-20261101\\plans\\043-client-environment-manifest.json",
+      "freeze_manifest_sha256": "b8ba4c28388ff44ce65eb2714d9b216c85f812fcb6393fa0fb5362aad9857a67",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "920fe9fc97c599ded9dd0617aaf118c308e5722b1c8a3096ea94a363f6442c3b"
+    },
+    {
+      "n": "047",
+      "path": "wp-content/plugins/peptide-core/tests/data-email-observations.cjs",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-047-mail-sources-20261101\\wp-content\\plugins\\peptide-core\\tests\\data-email-observations.cjs",
+      "source_sha256": "d33762cc51818bfc247479fdeed4c1fe353b91fa32d911ac2a2a0aba8977f4e1",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-047-mail-sources-20261101\\plans\\047-source-freeze.json",
+      "freeze_manifest_sha256": "fe96dc3b99d9c2574e1da1fbe9c51d592d098973a9f6e3f0a7fec9ba36fcdefe",
+      "exact_owned_freeze_match": false,
+      "target_sha256": "d33762cc51818bfc247479fdeed4c1fe353b91fa32d911ac2a2a0aba8977f4e1"
+    },
+    {
+      "n": "047",
+      "path": "wp-content/plugins/peptide-core/tests/mail-observations-standalone.php",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-047-mail-sources-20261101\\wp-content\\plugins\\peptide-core\\tests\\mail-observations-standalone.php",
+      "source_sha256": "7806467b9b411b3ad129152bde643dd4ab591c2272522e5b86fa8c876a2ab5e5",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-047-mail-sources-20261101\\plans\\047-source-freeze.json",
+      "freeze_manifest_sha256": "fe96dc3b99d9c2574e1da1fbe9c51d592d098973a9f6e3f0a7fec9ba36fcdefe",
+      "exact_owned_freeze_match": false,
+      "target_sha256": "c73bb87b0737b08b6d61191240b9943b3727f8ae552a6f9a721f28a74d2bbac4"
+    },
+    {
+      "n": "047",
+      "path": "wp-content/plugins/peptide-core/tests/mail-source-observations.php",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-047-mail-sources-20261101\\wp-content\\plugins\\peptide-core\\tests\\mail-source-observations.php",
+      "source_sha256": "1b5412148c2152987ae961ffadc719283794ac4861d623e032825521e359544f",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-047-mail-sources-20261101\\plans\\047-source-freeze.json",
+      "freeze_manifest_sha256": "fe96dc3b99d9c2574e1da1fbe9c51d592d098973a9f6e3f0a7fec9ba36fcdefe",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "ba6ecf2868881725d5bfeb57da63da63ff71b1267c639959cece8f72acbe1156"
+    },
+    {
+      "n": "047",
+      "path": "wp-content/plugins/peptide-core/tests/mail-source-producers.php",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-047-mail-sources-20261101\\wp-content\\plugins\\peptide-core\\tests\\mail-source-producers.php",
+      "source_sha256": "dc0f9ea0c6880c24e2f857a7355433b7cc30326044a335a2bc956aa101ea1bed",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-047-mail-sources-20261101\\plans\\047-source-freeze.json",
+      "freeze_manifest_sha256": "fe96dc3b99d9c2574e1da1fbe9c51d592d098973a9f6e3f0a7fec9ba36fcdefe",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "2e9dcedb1b37f6872845d325b52d46238dad5ab912b92e353a9f2ae513e30e05"
+    },
+    {
+      "n": "047",
+      "path": "tests/data-mail-sources.cjs",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-047-mail-sources-20261101\\tests\\data-mail-sources.cjs",
+      "source_sha256": "ad5653ed1e9f6f84cf1791a4652bddb4a41e3f2b56337103d17d17a7f771cf2b",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-047-mail-sources-20261101\\plans\\047-source-freeze.json",
+      "freeze_manifest_sha256": "fe96dc3b99d9c2574e1da1fbe9c51d592d098973a9f6e3f0a7fec9ba36fcdefe",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "cb6a194a93090f72b54f98f27f61d11a958ae7497b0d6bf44e6fa681e0a01cfc"
+    },
+    {
+      "n": "040",
+      "path": "wp-content/plugins/peptide-core/tests/country-provider-pure.php",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-040-country-provider-20261101\\wp-content\\plugins\\peptide-core\\tests\\country-provider-pure.php",
+      "source_sha256": "bff5cceed8024355679d0d75d792dc24a845d1d2a011c89b8d50569e58154bf6",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-040-country-provider-20261101\\plans\\040-country-provider-manifest.json",
+      "freeze_manifest_sha256": "28fca3e1426c7a4e05f482a3808a3d002db6c407f706838d4aec7b99224a4754",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "bff5cceed8024355679d0d75d792dc24a845d1d2a011c89b8d50569e58154bf6"
+    },
+    {
+      "n": "041",
+      "path": "wp-content/plugins/peptide-core/tests/data-product-exposure-pure.php",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-041-product-exposure-20261101\\wp-content\\plugins\\peptide-core\\tests\\data-product-exposure-pure.php",
+      "source_sha256": "7c43c6742353ad87993b85a12199432bd9e5a038021c0a5218086328247ffcd0",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-041-product-exposure-20261101\\plans\\041-source-freeze.json",
+      "freeze_manifest_sha256": "bd19352f3a2c1625bab7106c01d10749ae58f1025fe73a60e22e65434e5ad19c",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "cf31cdf05ddb66d049baddd724937fecf9f46fcd908af2eaac72186126e2a414"
+    },
+    {
+      "n": "049",
+      "path": "wp-content/plugins/peptide-core/tests/page-context-personal-export-pure.php",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-035-sources-20261101\\plans\\049-source\\wp-content\\plugins\\peptide-core\\tests\\page-context-personal-export-pure.php",
+      "source_sha256": "83bf79b8f7bbc3c0ce300ea6eee030ee5ff734d38123c6f828a16a902cb7a29e",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-035-sources-20261101\\plans\\049-source\\plans\\049-source-freeze.json",
+      "freeze_manifest_sha256": "7b4893e244d8ad54cdbac427d122dba3865dddc266f94c55bc81ef2036a0545e",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "7c8e6c0445840ee7bd452141493a79394c1c57143f4bfbbbdc2bf3d758e98722"
+    },
+    {
+      "n": "038",
+      "path": "wp-content/themes/peptide-site/tests/visitor-products.cjs",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-038-product-observation-20261101\\wp-content\\themes\\peptide-site\\tests\\visitor-products.cjs",
+      "source_sha256": "3fcfe4f831568e10f247a965c29be652374f8548216102d97abb5f710aea8a31",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-038-product-observation-20261101\\plans\\038-source-freeze.json",
+      "freeze_manifest_sha256": "fc40a731d89f67925068453b79916c2b1912c6d1982ad9add5ad54e0fd55aa0d",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "3fcfe4f831568e10f247a965c29be652374f8548216102d97abb5f710aea8a31"
+    },
+    {
+      "n": "038",
+      "path": "wp-content/themes/peptide-site/tests/visitor-products-config.php",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-038-product-observation-20261101\\wp-content\\themes\\peptide-site\\tests\\visitor-products-config.php",
+      "source_sha256": "8fb57f63dbfef45dff87854778f58f51cea7092880c174ef98c7ec7e14c0beb4",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-038-product-observation-20261101\\plans\\038-source-freeze.json",
+      "freeze_manifest_sha256": "fc40a731d89f67925068453b79916c2b1912c6d1982ad9add5ad54e0fd55aa0d",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "8fb57f63dbfef45dff87854778f58f51cea7092880c174ef98c7ec7e14c0beb4"
+    },
+    {
+      "n": "043",
+      "path": "wp-content/themes/peptide-site/tests/visitor-client-environment.cjs",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-043-client-environment-20261101\\wp-content\\themes\\peptide-site\\tests\\visitor-client-environment.cjs",
+      "source_sha256": "154430eca91810fef77f684e100310961619e466c7673de16a3fa2b92bd9e059",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-043-client-environment-20261101\\plans\\043-client-environment-manifest.json",
+      "freeze_manifest_sha256": "b8ba4c28388ff44ce65eb2714d9b216c85f812fcb6393fa0fb5362aad9857a67",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "154430eca91810fef77f684e100310961619e466c7673de16a3fa2b92bd9e059"
+    },
+    {
+      "n": "043",
+      "path": "wp-content/themes/peptide-site/tests/visitor-client-environment-config.php",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-043-client-environment-20261101\\wp-content\\themes\\peptide-site\\tests\\visitor-client-environment-config.php",
+      "source_sha256": "f31b4abdb9de8a41fc332f46fb324e29ce3eb5f1970e0a2c3d60fe75af5733a2",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-043-client-environment-20261101\\plans\\043-client-environment-manifest.json",
+      "freeze_manifest_sha256": "b8ba4c28388ff44ce65eb2714d9b216c85f812fcb6393fa0fb5362aad9857a67",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "f31b4abdb9de8a41fc332f46fb324e29ce3eb5f1970e0a2c3d60fe75af5733a2"
+    },
+    {
+      "n": "046",
+      "path": "wp-content/themes/peptide-site/tests/visitor-metadata-push.cjs",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-046-search-20261101\\wp-content\\themes\\peptide-site\\tests\\visitor-metadata-push.cjs",
+      "source_sha256": "a3401fb5d34909fa2f98f434dcc979f619cbb92b8cbb8910ed0c122fb32273a8",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-046-search-20261101\\plans\\046-source-freeze.json",
+      "freeze_manifest_sha256": "00a3203ed49a4d4c5617e184351a2905f9225062a0803954028a6d2cd73bd6a9",
+      "exact_owned_freeze_match": false,
+      "target_sha256": "a3401fb5d34909fa2f98f434dcc979f619cbb92b8cbb8910ed0c122fb32273a8"
+    },
+    {
+      "n": "046",
+      "path": "wp-content/themes/peptide-site/tests/visitor-native-search.cjs",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-046-search-20261101\\wp-content\\themes\\peptide-site\\tests\\visitor-native-search.cjs",
+      "source_sha256": "0afa7882d3e014a100500950ed78d4e89fa433403df06527c2fd38db20ae7dba",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-046-search-20261101\\plans\\046-source-freeze.json",
+      "freeze_manifest_sha256": "00a3203ed49a4d4c5617e184351a2905f9225062a0803954028a6d2cd73bd6a9",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "0afa7882d3e014a100500950ed78d4e89fa433403df06527c2fd38db20ae7dba"
+    },
+    {
+      "n": "046",
+      "path": "wp-content/themes/peptide-site/tests/visitor-native-search-config.php",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-046-search-20261101\\wp-content\\themes\\peptide-site\\tests\\visitor-native-search-config.php",
+      "source_sha256": "7c76f8b609331196fa32e40fbc7312202f4a6bc3300ebac13f706e01c5987a26",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-046-search-20261101\\plans\\046-source-freeze.json",
+      "freeze_manifest_sha256": "00a3203ed49a4d4c5617e184351a2905f9225062a0803954028a6d2cd73bd6a9",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "7c76f8b609331196fa32e40fbc7312202f4a6bc3300ebac13f706e01c5987a26"
+    },
+    {
+      "n": "040",
+      "path": "wp-content/themes/peptide-site/tests/visitor-metadata-context.php",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-040-country-provider-20261101\\wp-content\\themes\\peptide-site\\tests\\visitor-metadata-context.php",
+      "source_sha256": "b92ceefdc7b35fd32592b892b1b99fc765a012cb8a4b1b75803d26baafa47282",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-040-country-provider-20261101\\plans\\040-country-provider-manifest.json",
+      "freeze_manifest_sha256": "28fca3e1426c7a4e05f482a3808a3d002db6c407f706838d4aec7b99224a4754",
+      "exact_owned_freeze_match": false,
+      "target_sha256": "b92ceefdc7b35fd32592b892b1b99fc765a012cb8a4b1b75803d26baafa47282"
+    },
+    {
+      "n": "054",
+      "path": "wp-content/plugins/peptide-core/tests/data-product-created.cjs",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-054-product-created-20261101\\wp-content\\plugins\\peptide-core\\tests\\data-product-created.cjs",
+      "source_sha256": "bf3fa26c8ba3b0df28353d7a2870308aa8cfbe14104f807daa71d7e54c9f4c78",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-054-product-created-20261101\\plans\\054-source-freeze.json",
+      "freeze_manifest_sha256": "4684357cf0a6c305f57356a996174e93bc143cb355175be6c291200dfb388828",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "3df09d24963636fcb1e40b8e6415107840e2c6fbf4d666e7d94b0dae2592ae5b"
+    },
+    {
+      "n": "054",
+      "path": "wp-content/plugins/peptide-core/tests/data-product-created.php",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-054-product-created-20261101\\wp-content\\plugins\\peptide-core\\tests\\data-product-created.php",
+      "source_sha256": "773c2ed8f19848ac4fbbc055385e2338799138a606c5ace94db1f74cc730c1d5",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-054-product-created-20261101\\plans\\054-source-freeze.json",
+      "freeze_manifest_sha256": "4684357cf0a6c305f57356a996174e93bc143cb355175be6c291200dfb388828",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "56d2c033ab6726d6f3b1ba95de61baed8be6dd5675e34b530b2773f9655239a4"
+    },
+    {
+      "n": "054",
+      "path": "docs/handoffs/data-product-created-v1.md",
+      "source": "D:\\Projects\\peptide-platform-wt\\data-054-product-created-20261101\\docs\\handoffs\\data-product-created-v1.md",
+      "source_sha256": "64a02c660aadd526a8d4ea81be03ce87d9a6519d53bea17587098a48b7721c0c",
+      "freeze_manifest": "D:\\Projects\\peptide-platform-wt\\data-054-product-created-20261101\\plans\\054-source-freeze.json",
+      "freeze_manifest_sha256": "4684357cf0a6c305f57356a996174e93bc143cb355175be6c291200dfb388828",
+      "exact_owned_freeze_match": true,
+      "target_sha256": "64a02c660aadd526a8d4ea81be03ce87d9a6519d53bea17587098a48b7721c0c"
+    }
+  ],
+  "fixtures": [
+    {
+      "source": "D:\\Projects\\peptide-platform-wt\\data-041-product-exposure-20261101\\plans\\041-oracles\\class-page-conversion.php",
+      "path": "tests/fixtures/data-observations/041/class-page-conversion.php",
+      "sha256": "aecccfd907e3e1f9c57f0ff28fe59f880976b6a48de432b6bab2d86803729e78",
+      "freeze_sha256_verified": true
+    },
+    {
+      "source": "D:\\Projects\\peptide-platform-wt\\data-041-product-exposure-20261101\\plans\\041-oracles\\class-products.php",
+      "path": "tests/fixtures/data-observations/041/class-products.php",
+      "sha256": "79f77ad0659690f03dc7456328b90f4d98191e2a597041efc628030afb0e9935",
+      "freeze_sha256_verified": true
+    },
+    {
+      "source": "D:\\Projects\\peptide-platform-wt\\data-041-product-exposure-20261101\\plans\\041-oracles\\class-report-exports.php",
+      "path": "tests/fixtures/data-observations/041/class-report-exports.php",
+      "sha256": "72e999453fde7ca3e0d52dd010045f3038cf23737afa087d58c210a5030c9fbb",
+      "freeze_sha256_verified": true
+    },
+    {
+      "source": "D:\\Projects\\peptide-platform-wt\\data-041-product-exposure-20261101\\plans\\041-oracles\\class-report-filter.php",
+      "path": "tests/fixtures/data-observations/041/class-report-filter.php",
+      "sha256": "bb3e487f5b6fd420efeaf066f8aa32c89c549f1ebe7523bade29c0caf0115edb",
+      "freeze_sha256_verified": true
+    },
+    {
+      "source": "D:\\Projects\\peptide-platform-wt\\data-051-product-ratios-20261101\\plans\\051-oracles\\old26-table.json",
+      "path": "tests/fixtures/data-observations/051/old26-table.json",
+      "sha256": "3e5362d4de140d19b7c6053ec0ea7f570391f6657f8cc9742cc326ec810bb7e9",
+      "freeze_sha256_verified": true
+    },
+    {
+      "source": "D:\\Projects\\peptide-platform-wt\\data-051-product-ratios-20261101\\plans\\051-oracles\\old26.csv",
+      "path": "tests/fixtures/data-observations/051/old26.csv",
+      "sha256": "cc011d58e0c96fce19b8050cfd148eb353a92d6344b0de417543c3a4f5dc29b6",
+      "freeze_sha256_verified": true
+    },
+    {
+      "source": "D:\\Projects\\peptide-platform-wt\\data-047-mail-sources-20261101\\plans\\047-dependencies\\source\\wp-content\\plugins\\peptide-core\\includes\\class-loyalty.php",
+      "path": "tests/fixtures/data-observations/047/includes/class-loyalty.php",
+      "sha256": "a41e03c81d293d94cc55d0e520dacc443fbd6266ee04333d47983cfb889090cf",
+      "freeze_sha256_verified": false
+    },
+    {
+      "source": "D:\\Projects\\peptide-platform-wt\\data-047-mail-sources-20261101\\plans\\047-dependencies\\source\\wp-content\\plugins\\peptide-core\\includes\\emails\\class-message-observations.php",
+      "path": "tests/fixtures/data-observations/047/includes/emails/class-message-observations.php",
+      "sha256": "b32174788aa6068093a265256671726ae3a5261cd74faf6bafdc7f12b52b5774",
+      "freeze_sha256_verified": false
+    },
+    {
+      "source": "D:\\Projects\\peptide-platform-wt\\data-047-mail-sources-20261101\\plans\\047-dependencies\\source\\wp-content\\plugins\\peptide-core\\includes\\data\\class-emails.php",
+      "path": "tests/fixtures/data-observations/047/includes/data/class-emails.php",
+      "sha256": "9e19820b2a6ee70b43b44ebca1013e32f44e81a9f425e9614e816185da91c043",
+      "freeze_sha256_verified": false
+    },
+    {
+      "source": "D:\\Projects\\peptide-platform-wt\\data-047-mail-sources-20261101\\plans\\047-dependencies\\source\\wp-content\\plugins\\peptide-core\\languages\\customer-mail-observations-zh_CN.php",
+      "path": "tests/fixtures/data-observations/047/languages/customer-mail-observations-zh_CN.php",
+      "sha256": "f49afd956f61529288f3a955c94da873dd7babcefcfbe12f30d7f0bf93172e0d",
+      "freeze_sha256_verified": false
+    },
+    {
+      "source": "D:\\Projects\\peptide-platform-wt\\data-035-sources-20261101\\plans\\049-source\\plans\\049-dependencies\\source\\wp-content\\plugins\\peptide-core\\includes\\tracking\\class-page-context-privacy.php",
+      "path": "tests/fixtures/data-observations/049/class-page-context-privacy.php",
+      "sha256": "93d78240c36e889bbb6611c789fea5d7e985219d1095f15c423ef410f22a11da",
+      "freeze_sha256_verified": false
+    },
+    {
+      "source": "D:\\Projects\\peptide-platform-wt\\data-035-sources-20261101\\plans\\049-source\\plans\\049-dependencies\\source\\wp-content\\plugins\\peptide-core\\languages\\customer-data-observations-zh_CN.php",
+      "path": "tests/fixtures/data-observations/049/customer-data-observations-zh_CN.php",
+      "sha256": "b4ce54faf2ec4555e6bec1eb0ef45c88821a36ffd87b58674bd05dd40b5c7f80",
+      "freeze_sha256_verified": false
+    },
+    {
+      "source": "D:\\Projects\\peptide-platform-wt\\data-046-search-20261101\\wp-content\\plugins\\peptide-core\\tests\\fixtures\\native-search-legacy19.json",
+      "path": "tests/fixtures/data-observations/046/native-search-legacy19.json",
+      "sha256": "d1ed843f38a2ba5fcd903cdfdfbe9b387861b48dce8ce3ae00bb2c66314ac2fa",
+      "freeze_sha256_verified": false
+    },
+    {
+      "source": "D:\\Projects\\peptide-platform-wt\\data-054-product-created-20261101\\plans\\054-preedit\\numeric28-table.json",
+      "path": "tests/fixtures/data-observations/054/numeric28-table.json",
+      "sha256": "c2cce8fa874a061e3e88e4dce0c968e8f7a245fd4c74167320b4a55ce4f68cc4",
+      "freeze_sha256_verified": false
+    },
+    {
+      "source": "D:\\Projects\\peptide-platform-wt\\data-054-product-created-20261101\\plans\\054-preedit\\numeric28.csv",
+      "path": "tests/fixtures/data-observations/054/numeric28.csv",
+      "sha256": "53f7e923889d6c69408dc10794275e68c1108840c2aa231d9b85d66f7bf625b4",
+      "freeze_sha256_verified": false
+    },
+    {
+      "source": "git 0e9160ba32f54f1a545987109034ed04523e6076:includes/data/class-landing.php",
+      "path": "tests/fixtures/data-observations/035/class-landing.php",
+      "sha256": "0921fa6a8f11cecf4b218cfd4019ae36dd6fdefbf88244a74b12f427ba0e1858"
+    },
+    {
+      "source": "git 0e9160ba32f54f1a545987109034ed04523e6076:includes/data/class-products.php",
+      "path": "tests/fixtures/data-observations/035/class-products.php",
+      "sha256": "b909bac58f946b992bc322fb8c027b02411bbde926b403f713939c9277675172"
+    },
+    {
+      "source": "git 0e9160ba32f54f1a545987109034ed04523e6076:includes/data/class-page-visits.php",
+      "path": "tests/fixtures/data-observations/035/class-page-visits.php",
+      "sha256": "e7efec82e45476e48df37652dda268181c0e384a23f877261f6e4b5d50a3186c"
+    },
+    {
+      "source": "git 0e9160ba32f54f1a545987109034ed04523e6076:includes/data/class-report-exports.php",
+      "path": "tests/fixtures/data-observations/035/class-report-exports.php",
+      "sha256": "0ed629917b6888991cc5f09c4d28484d5db4ec9502185bfec595e55c6663c1a9"
+    },
+    {
+      "source": "D:/Projects/peptide-platform-wt/data-035-sources-20261101/plans/049-source/plans/049-new-messages.json",
+      "path": "tests/fixtures/data-observations/049/new-messages.json",
+      "sha256": "f564c0f3f7f883ba2e8e01fa13aa9e11247553288c8abf92d7869b74cd14d46d"
+    },
+    {
+      "source": "D:/Projects/peptide-platform-wt/data-018-realtime-history-20261030/plans/verification/028-execution/source-baselines/tracking-admin.js",
+      "path": "tests/fixtures/data-observations/028/tracking-admin.js",
+      "sha256": "1a0a4514b8324fbb96c8aeba03255a7692adc15bb92f1d3ab7fa838ae5b64eed"
+    },
+    {
+      "path": "tests/fixtures/data-observations/047/includes/class-subscriptions.php",
+      "source": "git41a679a exact native pre-wrapper subscription; Root approved current-business oracle",
+      "sha256": "6c10c271cca2fafe74cf020da91a929d40168f9efa26f75773c180e27fa3df25"
+    },
+    {
+      "source": "D:\\Projects\\peptide-test\\public\\wp-includes\\PHPMailer\\Exception.php",
+      "path": "tests/fixtures/data-observations/native-wp-mail/wp-includes/PHPMailer/Exception.php",
+      "sha256": "22ab858ae438d98f58f41f38ad2191d1b0d59570aebea0463a7948cfae1021b7",
+      "native_read_only_dependency": true
+    },
+    {
+      "source": "D:\\Projects\\peptide-test\\public\\wp-includes\\PHPMailer\\PHPMailer.php",
+      "path": "tests/fixtures/data-observations/native-wp-mail/wp-includes/PHPMailer/PHPMailer.php",
+      "sha256": "45599a196ae7944ee2dcd4f3d3da0ac4243513d346b2d77bbd15dbd0c37f7064",
+      "native_read_only_dependency": true
+    },
+    {
+      "source": "D:\\Projects\\peptide-test\\public\\wp-includes\\PHPMailer\\SMTP.php",
+      "path": "tests/fixtures/data-observations/native-wp-mail/wp-includes/PHPMailer/SMTP.php",
+      "sha256": "522bcf0d07be7e7e00114711db5c9ce2b4d59ac041c5ec36eaadd979d5fa7046",
+      "native_read_only_dependency": true
+    },
+    {
+      "source": "D:\\Projects\\peptide-test\\public\\wp-includes\\class-wp-phpmailer.php",
+      "path": "tests/fixtures/data-observations/native-wp-mail/wp-includes/class-wp-phpmailer.php",
+      "sha256": "4033b95890bc5f228381f55c89cb538ac02ad624f2db35758a98cc9b56b8d33d",
+      "native_read_only_dependency": true
+    },
+    {
+      "source": "D:\\Projects\\peptide-test\\public\\wp-includes\\pluggable.php",
+      "path": "tests/fixtures/data-observations/native-wp-mail/wp-includes/pluggable.php",
+      "sha256": "3a2482a65b50d62ebae75a728be98b78985d3a3f5a3e007cb2d0c1338bf05777",
+      "native_read_only_dependency": true
+    },
+    {
+      "source": "D:\\Projects\\peptide-test\\public\\wp-includes\\class-wp-token-map.php",
+      "path": "tests/fixtures/data-observations/native-wp-mail/wp-includes/class-wp-token-map.php",
+      "sha256": "6ad92f304fb637aea0e895b10ba5076713be5622c06282a3217890ef2a872aab",
+      "native_read_only_dependency": true
+    },
+    {
+      "source": "D:\\Projects\\peptide-test\\public\\wp-includes\\utf8.php",
+      "path": "tests/fixtures/data-observations/native-wp-mail/wp-includes/utf8.php",
+      "sha256": "6115a3ffac15321e08fcb3ebe39ba0bd83121e0fecc226911f4a801fd896ec77",
+      "native_read_only_dependency": true
+    },
+    {
+      "source": "D:\\Projects\\peptide-test\\public\\wp-includes\\html-api\\class-wp-html-attribute-token.php",
+      "path": "tests/fixtures/data-observations/native-wp-mail/wp-includes/html-api/class-wp-html-attribute-token.php",
+      "sha256": "39b8761050a833f03db5b4695c2981a0f287c135406cbf0d4e3fce805775bd6f",
+      "native_read_only_dependency": true
+    },
+    {
+      "source": "D:\\Projects\\peptide-test\\public\\wp-includes\\html-api\\class-wp-html-span.php",
+      "path": "tests/fixtures/data-observations/native-wp-mail/wp-includes/html-api/class-wp-html-span.php",
+      "sha256": "b702cd418b898a373316e71d22e51ccf60943275ccc96a8f39e76c3f51b86174",
+      "native_read_only_dependency": true
+    },
+    {
+      "source": "D:\\Projects\\peptide-test\\public\\wp-includes\\html-api\\class-wp-html-text-replacement.php",
+      "path": "tests/fixtures/data-observations/native-wp-mail/wp-includes/html-api/class-wp-html-text-replacement.php",
+      "sha256": "fa5d1dd7457cf6e884f713e674d4174b67f3ae0039e06c239defdfa84f8b9620",
+      "native_read_only_dependency": true
+    },
+    {
+      "source": "D:\\Projects\\peptide-test\\public\\wp-includes\\html-api\\html5-named-character-references.php",
+      "path": "tests/fixtures/data-observations/native-wp-mail/wp-includes/html-api/html5-named-character-references.php",
+      "sha256": "2a3941baab9845abd796d5243dee4e2e4b6824c2bc6a4b9b9ebf8a71604275ec",
+      "native_read_only_dependency": true
+    },
+    {
+      "source": "D:\\Projects\\peptide-test\\public\\wp-includes\\html-api\\class-wp-html-decoder.php",
+      "path": "tests/fixtures/data-observations/native-wp-mail/wp-includes/html-api/class-wp-html-decoder.php",
+      "sha256": "1ece39fcc40380d7c5faa047577be0944a9308d75ac46355b1d1844790341ffe",
+      "native_read_only_dependency": true
+    },
+    {
+      "source": "D:\\Projects\\peptide-test\\public\\wp-includes\\html-api\\class-wp-html-tag-processor.php",
+      "path": "tests/fixtures/data-observations/native-wp-mail/wp-includes/html-api/class-wp-html-tag-processor.php",
+      "sha256": "e2d3c1511d02a60637ad94b9a2d6a76da234d55f4f86c9d1a6bf016a26c69bd6",
+      "native_read_only_dependency": true
+    },
+    {
+      "source": "D:\\Projects\\peptide-test\\public\\wp-content\\plugins\\woocommerce\\includes\\emails\\class-wc-email.php",
+      "path": "tests/fixtures/data-observations/native-wp-mail/wp-content/plugins/woocommerce/includes/emails/class-wc-email.php",
+      "sha256": "65afc9d645acb841fc7f4fbd011ab885d3f03196d63bd088ac5c7ab10e7bd140",
+      "native_read_only_dependency": true
+    },
+    {
+      "source": "D:\\Projects\\peptide-test\\public\\license.txt",
+      "path": "tests/fixtures/data-observations/native-wp-mail/WORDPRESS-LICENSE.txt",
+      "sha256": "49e97f629ce763abb2f8f1f13da74cb5a8a9a72a0e72a7477d1540c98cef5141",
+      "license": true
+    },
+    {
+      "source": "D:\\Projects\\peptide-test\\public\\wp-content\\plugins\\woocommerce\\license.txt",
+      "path": "tests/fixtures/data-observations/native-wp-mail/WOOCOMMERCE-LICENSE.txt",
+      "sha256": "03fdcdce033d6d7c061234e447195bf50fdaf3724708eb712dd4d90a6279ba12",
+      "license": true
+    }
+  ],
+  "approved054": {
+    "freeze_sha256": "4684357cf0a6c305f57356a996174e93bc143cb355175be6c291200dfb388828",
+    "production": [
+      {
+        "path": "wp-content/plugins/peptide-core/assets/data-products.js",
+        "bytes": 28518,
+        "sha256": "1cf184411e585a0ae8820090c7151b4e12e9bf9bb8f7db2832a4b00f9155c69e"
+      },
+      {
+        "path": "wp-content/plugins/peptide-core/includes/admin/class-data-pages.php",
+        "bytes": 79686,
+        "sha256": "02aa4e89ec048ff0de5e56a1f63a45bda1f235ec759ae28701e30c6cd029dee8"
+      },
+      {
+        "path": "wp-content/plugins/peptide-core/includes/data/class-products.php",
+        "bytes": 23826,
+        "sha256": "e37b7acb9653ea93411c47346567ca6216385e5172e08b43d289215dfc144acf"
+      },
+      {
+        "path": "wp-content/plugins/peptide-core/includes/data/class-report-exports.php",
+        "bytes": 17993,
+        "sha256": "b700aaa6669b4d2cf813e62dcb973ef3f99a5da13e1ce28aa3c80a7c3157f964"
+      },
+      {
+        "path": "wp-content/plugins/peptide-core/languages/customer-data-observations-zh_CN.php",
+        "bytes": 6202,
+        "sha256": "6f4158c7c234b3e1167d0bf0e73c293d34b8ef06d01c8f07309820d2926659e2"
+      }
+    ]
+  },
+  "path_rewrites": [
+    {
+      "path": "wp-content/plugins/peptide-core/tests/data-product-user-ratios.php",
+      "from": "/plans/051-oracles",
+      "to": "/tests/fixtures/data-observations/051",
+      "count": 1
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/mail-source-observations.php",
+      "from": "/plans/047-dependencies/source/wp-content/plugins/peptide-core/includes/",
+      "to": "/tests/fixtures/data-observations/047/includes/",
+      "count": 1
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/mail-source-producers.php",
+      "from": "/plans/047-dependencies/source/wp-content/plugins/peptide-core/includes/",
+      "to": "/tests/fixtures/data-observations/047/includes/",
+      "count": 1
+    },
+    {
+      "path": "tests/data-mail-sources.cjs",
+      "from": "../plans/047-dependencies/source/wp-content/plugins/peptide-core/languages/customer-mail-observations-zh_CN.php",
+      "to": "fixtures/data-observations/047/languages/customer-mail-observations-zh_CN.php",
+      "count": 1
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/data-product-exposure-pure.php",
+      "from": "/plans/041-oracles",
+      "to": "/tests/fixtures/data-observations/041",
+      "count": 1
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/data-native-search-pure.php",
+      "from": "__DIR__ . '/fixtures/native-search-legacy19.json'",
+      "to": "dirname(__DIR__,4) . '/tests/fixtures/data-observations/046/native-search-legacy19.json'",
+      "count": 1
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/page-context-personal-export-pure.php",
+      "from": "/plans/049-dependencies/source/wp-content/plugins/peptide-core/includes/tracking/class-page-context-privacy.php",
+      "to": "/tests/fixtures/data-observations/049/class-page-context-privacy.php",
+      "count": 1
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/page-context-personal-export-pure.php",
+      "from": "/plans/049-dependencies/source/wp-content/plugins/peptide-core/languages/customer-data-observations-zh_CN.php",
+      "to": "/tests/fixtures/data-observations/049/customer-data-observations-zh_CN.php",
+      "count": 1
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/page-context-personal-export-pure.php",
+      "from": "/plans/049-new-messages.json",
+      "to": "/tests/fixtures/data-observations/049/new-messages.json",
+      "count": 1
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/data-product-created.cjs",
+      "from": "path.join(root,'plans/054-verify')",
+      "to": "root",
+      "count": 1
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/data-product-created.php",
+      "from": "dirname(__DIR__,4).'/plans/054-verify/wp-content/plugins/peptide-core/tests/data-product-user-ratios.php'",
+      "to": "__DIR__.'/data-product-user-ratios.php'",
+      "count": 1
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/data-product-created.php",
+      "from": "/plans/054-preedit/",
+      "to": "/tests/fixtures/data-observations/054/",
+      "count": 2
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/tracking-impressions-admin.cjs",
+      "from": "../../../../plans/verification/031-execution/oracle/tracking-admin.js",
+      "to": "../../../../tests/fixtures/data-observations/028/tracking-admin.js",
+      "count": 1
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/tracking-impressions-admin.cjs",
+      "from": "../../../../plans/verification/028-execution/source-baselines/tracking-admin.js",
+      "to": "../../../../tests/fixtures/data-observations/028/tracking-admin.js",
+      "count": 1
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/tracking-page-context.cjs",
+      "from": "../../../../plans/verification/031-execution/oracle/tracking-admin.js",
+      "to": "../../../../tests/fixtures/data-observations/028/tracking-admin.js",
+      "count": 1
+    }
+  ],
+  "approved_contract_updates": [
+    {
+      "path": "wp-content/plugins/peptide-core/tests/data-product-exposure-pure.php",
+      "changes": "26 metrics → 28; 89 CSV headers → 95; algorithm/oracle comparisons unchanged",
+      "authority": "Root explicit approval"
+    }
+  ],
+  "approved_native_boundary_updates": [
+    {
+      "path": "wp-content/plugins/peptide-core/tests/mail-source-producers.php",
+      "changes": "current41a SCHEMA2 memory option and native Store_Config::other_contact_preferences pure mode0 boundary; native body/result/call assertions unchanged",
+      "authority": "Root explicit approval"
+    }
+  ]
+}

@@ -12437,3 +12437,342 @@ msgstr ""
 #: includes/admin/class-data-pages.php:868
 msgid "Retry checkout observations"
 msgstr ""
+
+
+# DATA-035/036 report dimensions
+
+msgid "Added to cart UV"
+msgstr ""
+
+msgid "Apply filters"
+msgstr ""
+
+msgid "Captured empty value"
+msgstr ""
+
+msgid "Captured key absent"
+msgstr ""
+
+msgid "Country source unavailable"
+msgstr ""
+
+msgid "Country unknown"
+msgstr ""
+
+msgid "Domain and country are combined with AND. Country uses the original visit’s latest saved observation before each period ends; missing observations and source unavailability are separate. No billing country is inferred. Late facts can change earlier reports."
+msgstr ""
+
+msgid "Entry domain"
+msgstr ""
+
+msgid "Exact value"
+msgstr ""
+
+msgid "First successfully captured source values preserve case, absent keys and empty values. Visits use start time; paid orders use creation time and their original visit. Rows overlap in visitors. Test visits and test orders are excluded. No direct traffic is inferred."
+msgstr ""
+
+msgid "Groups use saved visit facts. Overall and checkout observations cover all visitors."
+msgstr ""
+
+msgid "No source data in this period."
+msgstr ""
+
+msgid "Not observed"
+msgstr ""
+
+msgid "Observed country"
+msgstr ""
+
+msgid "Observed values: %v / %n visits. Unknown: %u; unavailable: %a; not observed: %o."
+msgstr ""
+
+msgid "Observed visitor countries"
+msgstr ""
+
+msgid "Operating system, screen size and normal/abnormal classification are not collected. Country values require a configured source."
+msgstr ""
+
+msgid "Order UTM sources"
+msgstr ""
+
+msgid "Order entry domains"
+msgstr ""
+
+msgid "Paid UV"
+msgstr ""
+
+msgid "Report dimensions are unavailable. Try again."
+msgstr ""
+
+msgid "Saved values: %v / %n %s. Missing, empty and unobserved facts remain separate."
+msgstr ""
+
+msgid "Search source and medium values"
+msgstr ""
+
+msgid "Source means saved UTM source; domain means saved entry domain. Visitor groups count distinct visitors per group. Country uses saved observations; favorites and search terms are not collected."
+msgstr ""
+
+msgid "Source unavailable"
+msgstr ""
+
+msgid "Split by UTM medium"
+msgstr ""
+
+msgid "UTM medium"
+msgstr ""
+
+msgid "UTM source"
+msgstr ""
+
+msgid "UTM source empty"
+msgstr ""
+
+msgid "UTM source missing"
+msgstr ""
+
+msgid "UTM sources"
+msgstr ""
+
+msgid "Viewed product UV"
+msgstr ""
+
+msgid "Visit country at period end"
+msgstr ""
+
+msgid "Visitor UTM sources"
+msgstr ""
+
+msgid "Visitor entry domains"
+msgstr ""
+
+msgid "Visitors (UV)"
+msgstr ""
+
+msgid "orders"
+msgstr ""
+
+msgid "visits"
+msgstr ""
+
+
+# DATA-035 candidate coverage units
+
+msgid "Event records"
+msgstr ""
+
+msgid "Matching / candidate records; country values / unknown / unavailable / unobserved:"
+msgstr ""
+
+msgid "Order records"
+msgstr ""
+
+msgid "Visit records"
+msgstr ""
+
+
+# DATA-039 union of reviewed028 entries
+
+#: wp-content/plugins/peptide-core/includes/tracking/class-privacy.php:163
+msgid "Product visibility observations"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-tracking-page.php:220
+msgid "Observed product ID"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-tracking-page.php:221
+msgid "Observed variation ID"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-tracking-page.php:222
+msgid "Visible fraction"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-tracking-page.php:223
+msgid "Visible duration (ms)"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-tracking-page.php:224
+msgid "Page entity ID"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-tracking-page.php:225
+msgid "Template ID"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-tracking-page.php:226
+msgid "Module ID"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Home"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Shop"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Product"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Cart"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Checkout"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Account"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Order received"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Order payment"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Content"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Collection"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Search"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:142
+msgctxt "Page conversion kind"
+msgid "Unknown"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/data/class-page-conversion.php:150
+msgid "Unavailable #%d"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-tracking-page.php:186
+msgid "Product exposure observed"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:903
+msgid "Product exposure observations could not be loaded."
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:897
+msgid "Page or page kind"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:898
+msgid "Search page path or name"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:900
+msgid "Back to page kinds"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:901
+msgid "View pages"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:902
+msgid "Loading exposure observations…"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:905
+msgid "No product exposures were reported for this selection."
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:906
+msgid "Counts begin with reported product visibility of at least 40% for 500 ms. Page visits alone do not count as exposures. Views, successful cart additions and non-COD payments count only after an exposure in the same visit and period. Missing visibility observations stay missing."
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:907
+msgid "A user may appear in several page groups. Rates can exceed 100%; refunded units can differ from users who paid."
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:908
+msgid "Search terms are not collected."
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:915
+msgid "Matching groups: %s"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:916
+msgid "Rows per page"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:920
+msgid "Exposed users"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:920
+msgid "Viewed users after exposure"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:920
+msgid "View user rate"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:921
+msgid "Cart users after exposure"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:921
+msgid "Cart user rate"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:921
+msgid "Paid users after exposure"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:921
+msgid "Paid user rate"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:922
+msgid "Reported exposure episodes"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:922
+msgid "Views after exposure"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:922
+msgid "View rate per exposure"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:923
+msgid "Cart additions after exposure"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:923
+msgid "Cart rate per exposure"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:923
+msgid "Net paid units after exposure"
+msgstr ""
+
+#: wp-content/plugins/peptide-core/includes/admin/class-data-pages.php:923
+msgid "Paid unit rate per exposure"
+msgstr ""

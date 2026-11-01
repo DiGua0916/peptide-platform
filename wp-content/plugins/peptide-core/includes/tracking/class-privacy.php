@@ -23,6 +23,7 @@ final class Privacy {
 
 	public static function register_hooks(): void {
 		Page_Context_Privacy::register_hooks();
+		Product_Actions::register_hooks();
 		add_action( self::PRUNE_HOOK, array( self::class, 'prune_now' ) );
 		add_filter( 'wp_privacy_personal_data_exporters', array( self::class, 'add_exporter' ) );
 		add_filter( 'wp_privacy_personal_data_erasers', array( self::class, 'add_eraser' ) );
@@ -133,7 +134,36 @@ final class Privacy {
 			'exporter_friendly_name' => __( 'Store visits', 'peptide-core' ),
 			'callback'               => array( self::class, 'export' ),
 		);
+		$exporters['peptide-core-impressions'] = array( 'exporter_friendly_name' => __( 'Product visibility observations', 'peptide-core' ), 'callback' => array( self::class, 'export_impressions' ) );
 		return $exporters;
+	}
+
+	/** Independent export; raw 500-row pages advance even when syntax filtering removes every item. */
+	public static function export_impressions( string $email, int $page = 1 ): array {
+		global $wpdb;
+		if ( $page < 1 || $page - 1 > intdiv( PHP_INT_MAX, 500 ) ) { return array( 'data' => array(), 'done' => true ); }
+		$ids = self::visitors_for_email( $email );
+		if ( ! $ids ) { return array( 'data' => array(), 'done' => true ); }
+		$e = Schema::table( 'events' ); $s = Schema::table( 'visits' ); $v = Schema::table( 'visitors' );
+		$sql = "SELECT e.id,e.visitor_id,e.visit_id,e.type,e.source,e.path,e.occurred_ms,e.product_id,e.variation_id,e.data,v.id AS matched_visitor_id,s.id AS matched_visit_id FROM {$e} e JOIN {$s} s ON s.id=e.visit_id AND s.visitor_id=e.visitor_id JOIN {$v} v ON v.id=e.visitor_id WHERE e.visitor_id IN (" . implode( ',', array_map( 'intval', $ids ) ) . ") AND e.type='product_impression' AND e.source='client' ORDER BY e.id ASC LIMIT 501 OFFSET %d";
+		$rows = $wpdb->get_results( $wpdb->prepare( $sql, ( $page - 1 ) * 500 ), ARRAY_A );
+		if ( $wpdb->last_error || ! is_array( $rows ) ) { throw new \RuntimeException( 'Product visibility export unavailable' ); }
+		$items = array();
+		foreach ( array_slice( $rows, 0, 500 ) as $row ) {
+			$d = Impressions::saved( $row ); if ( $d === null ) { continue; }
+			$fields = array(
+				array( 'name' => __( 'Observed at (UTC)', 'peptide-core' ), 'value' => gmdate( 'Y-m-d H:i:s', intdiv( (int) $row['occurred_ms'], 1000 ) ) . ' UTC' ),
+				array( 'name' => __( 'Page path', 'peptide-core' ), 'value' => $row['path'] ),
+				array( 'name' => __( 'Observed product ID', 'peptide-core' ), 'value' => (string) $d['product_id'] ),
+			);
+			if ( $d['variation_id'] ) { $fields[] = array( 'name' => __( 'Observed variation ID', 'peptide-core' ), 'value' => (string) $d['variation_id'] ); }
+			$fields[] = array( 'name' => __( 'Visible fraction', 'peptide-core' ), 'value' => (string) $d['visible_fraction'] );
+			$fields[] = array( 'name' => __( 'Visible duration (ms)', 'peptide-core' ), 'value' => (string) $d['visible_ms'] );
+			$fields[] = array( 'name' => __( 'Page kind', 'peptide-core' ), 'value' => $d['context']['kind'] );
+			foreach ( array( 'entity_id' => __( 'Page entity ID', 'peptide-core' ), 'template_id' => __( 'Template ID', 'peptide-core' ), 'module_id' => __( 'Module ID', 'peptide-core' ) ) as $key => $label ) { if ( isset( $d['context'][$key] ) ) { $fields[] = array( 'name' => $label, 'value' => (string) $d['context'][$key] ); } }
+			$items[] = array( 'group_id' => 'peptide-core-impressions', 'group_label' => __( 'Product visibility observations', 'peptide-core' ), 'item_id' => 'impression-' . $row['id'], 'data' => $fields );
+		}
+		return array( 'data' => $items, 'done' => count( $rows ) <= 500 );
 	}
 
 	public static function add_eraser( $erasers ): array {
@@ -202,6 +232,7 @@ final class Privacy {
 			$days
 		) . '</p>';
 		$text .= '<p>' . esc_html__( 'When supplied by the storefront, we also keep the first successfully captured visit entry domain, path, allowed utm_source/utm_medium query values and referrer domain. Older visits without this observation remain unknown. An unavailable value (null), an observed empty value and an absent UTM key are distinct; we do not infer a direct source. The normalized visit snapshot is included in personal data exports and is deleted with the visit. Rejected attribution values are not stored.', 'peptide-core' ) . '</p>';
+		$text .= '<p>' . esc_html__( 'Supported search result pages can additionally report a lowercased search term of up to 80 Unicode characters. Control characters, contact-like delimiters and long digit sequences are filtered before collection; rejected raw terms are not stored. These checks cannot guarantee that every sensitive phrase is removed. Missing historical terms are not reconstructed. Search observations follow the same visit retention, collection opt-out and deletion rules.', 'peptide-core' ) . '</p>';
 		wp_add_privacy_policy_content( __( 'Store visit analytics', 'peptide-core' ), wp_kses_post( $text ) );
 	}
 }

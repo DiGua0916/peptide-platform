@@ -7,6 +7,85 @@
   const id = () => crypto.randomUUID ? crypto.randomUUID() : Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
   const integer = value => Number.isSafeInteger(Number(value)) && Number(value) > 0 ? Number(value) : undefined;
   const text = (value, max = 120) => typeof value === 'string' ? value.slice(0, max) : undefined;
+  const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+  const host = value => {
+    if (typeof value !== 'string' || !value.length || value.length > 253 || /[^\x21-\x7e]/.test(value)) return null;
+    const normalized = value.toLowerCase().replace(/\.$/, '');
+    return normalized.split('.').every(label => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label)) ? normalized : null;
+  };
+  // Copy only protocol fields. The callback's objects never become queue storage.
+  function environmentSnapshot(input) {
+    if (!object(input) || input.version !== 1) return null;
+    const result = {version: 1};
+    for (const key of ['os', 'screen']) {
+      if (!Object.hasOwn(input, key)) continue;
+      const fact = input[key];
+      if (!object(fact) || !['known', 'unknown', 'unavailable'].includes(fact.status)) return null;
+      const normalized = {status: fact.status};
+      if (key === 'os') {
+        if (fact.status === 'known') {
+          if (!['Windows', 'macOS', 'Linux', 'ChromeOS', 'Android', 'iOS'].includes(fact.family)) return null;
+          normalized.family = fact.family;
+        } else if (Object.hasOwn(fact, 'family')) return null;
+      } else if (fact.status === 'known') {
+        if (!Number.isInteger(fact.width) || !Number.isInteger(fact.height) || fact.width < 1 || fact.width > 16384 || fact.height < 1 || fact.height > 16384) return null;
+        normalized.width = fact.width; normalized.height = fact.height;
+      } else if (Object.hasOwn(fact, 'width') || Object.hasOwn(fact, 'height')) return null;
+      result[key] = Object.freeze(normalized);
+    }
+    return Object.keys(result).length > 1 ? Object.freeze(result) : null;
+  }
+  function searchSnapshot(input) {
+    if (!object(input) || input.version !== 1 || !['known', 'empty', 'filtered'].includes(input.status)) return null;
+    const result = {version: 1, status: input.status};
+    if (input.status === 'known') {
+      const term = input.term;
+      if (typeof term !== 'string' || !term.length || [...term].length > 80 || term !== term.toLowerCase().replace(/[\p{Z}\s]+/gu, ' ').trim() || !/^[\p{L}\p{M}\p{N} '\-+.]+$/u.test(term) || /[\x00-\x1f\x7f-\x9f@:/\\?&%#<>=]/u.test(term) || (term.match(/\p{N}/gu) || []).length >= 7) return null;
+      if (/(?:^|[^\p{L}\p{M}\p{N}])[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*\.[\p{L}]{2,}(?:$|[^\p{L}\p{M}\p{N}])/u.test(term)) return null;
+      result.term = term;
+    } else if (Object.hasOwn(input, 'term')) return null;
+    return Object.freeze(result);
+  }
+  function metadataSnapshot(key, input) {
+    if (!object(input) || input.version !== 1) return null;
+    if (key === 'attribution') {
+      const domain = host(input.host), query = input.landing_query, ref = input.referrer_host;
+      if (!domain || !object(query) || !Object.hasOwn(input, 'referrer_host') || (ref !== null && ref !== '' && !host(ref))) return null;
+      const landing = {};
+      for (const name of ['utm_source', 'utm_medium']) if (Object.hasOwn(query, name)) {
+        const value = query[name];
+        if (typeof value !== 'string' || [...value].length > 120 || /[\x00-\x1f\x7f]/.test(value)) return null;
+        landing[name] = value;
+      }
+      return Object.freeze({version: 1, host: domain, landing_query: Object.freeze(landing), referrer_host: ref === null || ref === '' ? ref : host(ref)});
+    }
+    const kinds = ['home', 'shop', 'product', 'cart', 'checkout', 'account', 'order_received', 'order_pay', 'content', 'collection', 'search', 'unknown'];
+    if (!kinds.includes(input.kind)) return null;
+    const result = {version: 1, kind: input.kind};
+    if (input.kind === 'collection') {
+      if (!Number.isSafeInteger(input.term_id) || input.term_id <= 0) return null;
+      result.term_id = input.term_id;
+    } else if (Object.hasOwn(input, 'term_id')) return null;
+    if (Object.hasOwn(input, 'geo')) {
+      if (!object(input.geo) || !['known', 'unknown', 'unavailable'].includes(input.geo.status)) return null;
+      const geo = {status: input.geo.status};
+      if (geo.status === 'known') {
+        if (typeof input.geo.country_code !== 'string' || input.geo.country_code.length !== 2 || !/^[A-Za-z]{2}$/.test(input.geo.country_code)) return null;
+        geo.country_code = input.geo.country_code.toUpperCase();
+      } else if (Object.hasOwn(input.geo, 'country_code')) return null;
+      result.geo = Object.freeze(geo);
+    }
+    if (Object.hasOwn(input, 'search')) {
+      if (input.kind !== 'search') return null;
+      const search = searchSnapshot(input.search); if (!search) return null; result.search = search;
+    }
+    if (Object.hasOwn(input, 'environment')) {
+      const environment = environmentSnapshot(input.environment);
+      if (!environment) return null;
+      result.environment = environment;
+    }
+    return Object.freeze(result);
+  }
   const allowed = {
     cart_open: ['source'], cart_close: ['source'],
     cart_change_attempt: ['source', 'action', 'item_id', 'quantity'],
@@ -50,6 +129,44 @@
     }
     return page;
   }
+  // This private path is deliberately absent from cleanData/the public action allowlist.
+  function productSnapshot(input) {
+    if (!object(input) || input.version !== 1 || !Number.isSafeInteger(input.product_id) || input.product_id <= 0 || !Number.isSafeInteger(input.variation_id) || input.variation_id < 0 || !Number.isFinite(input.visible_fraction) || input.visible_fraction < 0.4 || input.visible_fraction > 1 || !Number.isInteger(input.visible_ms) || input.visible_ms < 500 || input.visible_ms > 2147483647 || !object(input.context)) return null;
+    const source = input.context;
+    if (!['home', 'shop', 'product', 'cart', 'checkout', 'account', 'order_received', 'order_pay', 'content', 'collection', 'search', 'unknown'].includes(source.kind)) return null;
+    const context = {kind: source.kind};
+    if (Object.hasOwn(source, 'entity_id')) {
+      if (!['product', 'collection'].includes(source.kind) || !Number.isSafeInteger(source.entity_id) || source.entity_id <= 0) return null;
+      context.entity_id = source.entity_id;
+    }
+    if (Object.hasOwn(source, 'module_id')) {
+      if (typeof source.module_id !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9-]{0,39}$/.test(source.module_id)) return null;
+      context.module_id = source.module_id;
+    }
+    return Object.freeze({version: 1, product_id: input.product_id, variation_id: input.variation_id, visible_fraction: input.visible_fraction, visible_ms: input.visible_ms, context: Object.freeze(context)});
+  }
+  // Explicit source-confirmed product operations only; never infer success from clicks.
+  function productActionSnapshot(type, input) {
+    if (!['product_favorite', 'product_share', 'product_intent'].includes(type) || !object(input) || input.version !== 1 || typeof input.event_id !== 'string' || !/^[A-Za-z0-9-]{8,64}$/.test(input.event_id) || !Number.isSafeInteger(input.product_id) || input.product_id <= 0) return null;
+    const variation = Object.hasOwn(input, 'variation_id') ? input.variation_id : 0;
+    if (!Number.isSafeInteger(variation) || variation < 0) return null;
+    const data = {version: 1, product_id: input.product_id, variation_id: variation};
+    if (type === 'product_favorite') {
+      if (input.action !== 'add') return null;
+      data.action = 'add';
+    } else {
+      if (input.result !== 'completed') return null;
+      if (type === 'product_share') {
+        if (!['native', 'copy_link', 'other'].includes(input.method)) return null;
+        data.method = input.method;
+      } else {
+        if (!['quick_view_open', 'buy_now'].includes(input.kind)) return null;
+        data.kind = input.kind;
+      }
+      data.result = 'completed';
+    }
+    return {eventId: input.event_id, data: Object.freeze(data)};
+  }
   function start(options = {}) {
     if (typeof options.sendBatch !== 'function' || !options.context || !window.crypto?.getRandomValues) return null;
     active?.stop();
@@ -64,10 +181,25 @@
     let retryAt = 0;
     let pageId = id(), seq = 0, lastActivity = Date.now(), stopped = false, suspended = false;
     let sending = false, flushTimer, flushAt = Infinity, requestController, requestTimer, heartbeatTimer;
-    let videoObserver, exitController, exitTimer, checkoutBridge;
+    let videoObserver, productObserver, exitController, exitTimer, checkoutBridge;
     const bridgeCall = name => { try { checkoutBridge?.[name]?.(); } catch { try { checkoutBridge?.stop?.(); } catch {} checkoutBridge = null; } };
     const pending = [], listeners = [], cleanups = [];
+    // Retain bounded operation tombstones for this observer, including ACKed IDs.
+    // A source may repeat its success callback, but must never create a new UID for it.
+    const productActions = new Map();
     const stats = {created: 0, acknowledged: 0, dropped: 0, failedBatches: 0};
+    const metadataEnabled = typeof options.pageViewMetadata === 'function';
+    if (metadataEnabled) Object.assign(stats, {extensionUnsupported: 0, extensionDropped: 0});
+    function retire(entry, reason) {
+      const index = pending.indexOf(entry);
+      if (index < 0) return false;
+      pending.splice(index, 1);
+      const action = productActions.get(entry.record.event_id);
+      if (action) action.retired = reason;
+      if (metadataEnabled && ['exhausted', 'overflow', 'stopped'].includes(reason) && ['attribution', 'page_context'].some(key => Object.hasOwn(entry.record.data, key))) stats.extensionDropped++;
+      try { options.onEventRetired?.(entry.record.event_id, reason); } catch { /* Retirement cannot affect collection. */ }
+      return true;
+    }
     const listen = (target, type, listener, opts) => {
       target.addEventListener(type, listener, opts);
       listeners.push(() => target.removeEventListener(type, listener, opts));
@@ -90,11 +222,46 @@
       if (pending.length >= maxQueue) {
         const removable = pending.findIndex(entry => !entry.inFlight);
         if (removable < 0) { stats.dropped++; return; }
-        pending.splice(removable, 1); stats.dropped++;
+        retire(pending[removable], 'overflow'); stats.dropped++;
       }
-      pending.push({record: {event_id: id(), page_instance_id: pageId, seq: ++seq, type, occurred_at: new Date().toISOString(), page: {...page}, data}, attempts: 0, readyAt: 0, inFlight: false});
+      const record = {event_id: id(), page_instance_id: pageId, seq: ++seq, type, occurred_at: new Date().toISOString(), page: {...page}, data};
+      if (type === 'page_view' && metadataEnabled) {
+        try {
+          const metadata = options.pageViewMetadata();
+          if (!object(metadata)) stats.extensionUnsupported++;
+          else for (const key of ['attribution', 'page_context']) if (Object.hasOwn(metadata, key)) {
+            try {
+              const snapshot = metadataSnapshot(key, metadata[key]);
+              if (snapshot) record.data[key] = snapshot; else stats.extensionUnsupported++;
+            } catch { stats.extensionUnsupported++; }
+          }
+        } catch { stats.extensionUnsupported++; }
+      }
+      pending.push({record, attempts: 0, readyAt: 0, inFlight: false});
       stats.created++;
       schedule();
+    }
+    function pushProductAction(type, facts) {
+      if (options.productActionsProtocol !== 1 || stopped || suspended) return false;
+      try { if (window.navigator?.globalPrivacyControl === true) return false; } catch { return false; }
+      let snapshot;
+      try { snapshot = productActionSnapshot(type, facts); } catch { return false; }
+      if (!snapshot) return false;
+      const signature = JSON.stringify({type, data: snapshot.data});
+      const previous = productActions.get(snapshot.eventId);
+      if (previous) return previous.signature === signature && (!previous.retired || previous.retired === 'acknowledged') ? snapshot.eventId : false;
+      // Do not evict tombstones and silently allow a previously used UID again.
+      if (productActions.size >= 2000 || pending.some(entry => entry.record.event_id === snapshot.eventId)) return false;
+      if (pending.length >= maxQueue) {
+        const removable = pending.findIndex(entry => !entry.inFlight);
+        if (removable < 0) return false;
+        retire(pending[removable], 'overflow'); stats.dropped++;
+      }
+      const record = Object.freeze({event_id: snapshot.eventId, page_instance_id: pageId, seq: ++seq, type, occurred_at: new Date().toISOString(), page: Object.freeze({...page}), data: snapshot.data});
+      productActions.set(snapshot.eventId, {signature, retired: null});
+      pending.push({record, attempts: 0, readyAt: 0, inFlight: false});
+      stats.created++; schedule();
+      return snapshot.eventId;
     }
     function schedulePending() {
       const waiting = pending.filter(entry => !entry.inFlight);
@@ -133,8 +300,8 @@
         for (const entry of stopped ? [] : batch) {
           entry.inFlight = false;
           if (ack.has(entry.record.event_id) || discarded.has(entry.record.event_id) || entry.attempts >= maxAttempts) {
-            const index = pending.indexOf(entry); if (index >= 0) pending.splice(index, 1);
-            if (ack.has(entry.record.event_id)) stats.acknowledged++; else stats.dropped++;
+            const reason = ack.has(entry.record.event_id) ? 'acknowledged' : discarded.has(entry.record.event_id) ? 'discarded' : 'exhausted';
+            if (retire(entry, reason)) { if (reason === 'acknowledged') stats.acknowledged++; else stats.dropped++; }
           } else entry.readyAt = Math.max(retryAt, Date.now() + Math.min(20000, 1000 * 2 ** (entry.attempts - 1)));
         }
         sending = false;
@@ -163,15 +330,14 @@
         const discarded = new Set(Array.isArray(result?.discardEventIds) ? result.discardEventIds : []);
         if (Number.isFinite(result?.retryAfterMs) && result.retryAfterMs > 0) retryAt = Math.max(retryAt, Date.now() + Math.min(3600000, result.retryAfterMs));
         for (const entry of batch) if (ack.has(entry.record.event_id) || discarded.has(entry.record.event_id)) {
-          const index = pending.indexOf(entry); if (index >= 0) { pending.splice(index, 1); if (ack.has(entry.record.event_id)) stats.acknowledged++; else stats.dropped++; }
+          if (retire(entry, ack.has(entry.record.event_id) ? 'acknowledged' : 'discarded')) { if (ack.has(entry.record.event_id)) stats.acknowledged++; else stats.dropped++; }
         }
       }).catch(() => { if (!stopped) stats.failedBatches++; }).finally(() => {
         clearTimeout(exitTimer); exitController = null;
         for (const entry of batch) {
           entry.inFlight = false;
           entry.readyAt = Math.max(retryAt, Date.now() + 1000);
-          const index = pending.indexOf(entry);
-          if (index >= 0 && entry.attempts >= maxAttempts) { pending.splice(index, 1); if (!stopped) stats.dropped++; }
+          if (entry.attempts >= maxAttempts && retire(entry, 'exhausted') && !stopped) stats.dropped++;
         }
         schedulePending();
       });
@@ -188,6 +354,7 @@
     listen(document, 'visibilitychange', () => { videoObserver?.flush(); emit('visibility_change', state()); if (document.hidden) void flush(); });
     listen(window, 'pagehide', event => {
       bridgeCall('suspend');
+      productObserver?.suspend();
       videoObserver?.flush();
       emit('page_exit', {persisted: event.persisted, ...state()});
       void flush({unload: true});
@@ -204,6 +371,7 @@
       bridgeCall('reset'); bridgeCall('resume');
       // A restored document has a new page instance; reset its video counters too.
       videoObserver?.stop(); observeVideos();
+      productObserver?.stop(); observeProducts();
       clearInterval(heartbeatTimer); heartbeat();
     });
     listen(window, 'online', () => schedule(0));
@@ -248,19 +416,26 @@
         emit(type, cleanData(type, data));
       });
     }
+    function observeProducts() {
+      if (options.productObservation?.protocol !== 1 || typeof window.VialCoveVisitorProducts?.observe !== 'function') return;
+      productObserver = window.VialCoveVisitorProducts.observe(document, data => {
+        const snapshot = productSnapshot(data); if (snapshot) emit('product_impression', snapshot);
+      }, options.productObservation);
+    }
     cleanups.push(() => videoObserver?.stop());
+    cleanups.push(() => productObserver?.stop());
     cleanups.push(() => bridgeCall('stop'));
     function stop() {
       if (stopped) return;
       stopped = true; requestController?.abort(); exitController?.abort();
       clearTimeout(flushTimer); clearTimeout(requestTimer); clearTimeout(exitTimer); clearInterval(heartbeatTimer); sending = false;
       listeners.forEach(remove => remove()); cleanups.forEach(cleanup => cleanup());
-      pending.length = 0;
+      for (const entry of [...pending]) retire(entry, 'stopped');
       if (active === api) active = null;
     }
-    const api = {flush, stop, getStats: () => ({...stats, queued: pending.length, sending, stopped})};
+    const api = {flush, stop, pushProductAction, getStats: () => ({...stats, queued: pending.length, sending, stopped})};
     active = api;
-    begin('navigation'); observeVideos(); heartbeat();
+    begin('navigation'); observeVideos(); observeProducts(); heartbeat();
     if (page.page_type === 'checkout') {
       try {
         checkoutBridge = window.PeptideCheckoutBridge?.create((type, input) => {

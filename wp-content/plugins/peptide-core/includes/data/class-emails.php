@@ -15,7 +15,8 @@
  * 表格（rows）只有本期，和 Shopname 一样：每种邮件（email_id）一行，只列时间段内发送过的；先按发送数从大到小，相同的按名称（strcmp）。
  * 名称来自 Admin\Email_Center::names()，不在其中的邮件显示原来的 id。
  *
- * 邮件的打开数、打开率、点击数、点击率现在没有统计（发送记录只有“是否交给了邮件服务器”），所以这里没有这四项，页面上说明了。
+ * 新 observations 独立返回新采集消息的打开图片请求和目录链接请求；分母仅为同一发送时段中已被传输接受且具备对应测量能力的新尝试。
+ * 旧日志不能补出发送身份或互动，也不能与营销投递生命周期行相加；旧 current/previous/rows 的 Woo 口径保持兼容。
  * 发送记录的表没装时：数字都是 0、成功率是 null、rows 是空的；这个页面只读数据，永远不会去创建表。
  *
  * 这个类是数据类里第一个用到 Admin\* 类的（邮件名称、发送记录页的链接来自 Admin\Email_Center），是有意这样做的：邮件的名称只有一份。
@@ -27,6 +28,7 @@ namespace PeptideCore\Data;
 
 use PeptideCore\Admin\Email_Center;
 use PeptideCore\Emails\Log;
+use PeptideCore\Emails\Message_Observations;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -37,13 +39,22 @@ final class Emails {
 	 *
 	 * @param array $range A successful Range::from_params() result.
 	 */
-	public static function summary( array $range ): array {
+	public static function summary( array $range, array $observation_filters = array() ): array {
 		$logging  = Log::installed();
 		$current  = $logging ? self::period( (int) $range['from'], (int) $range['to'] ) : array();
 		$previous = $logging ? self::period( (int) $range['compare_from'], (int) $range['compare_to'] ) : array();
 
 		$cur_totals  = self::totals( $current );
 		$prev_totals = self::totals( $previous );
+		$observations = Message_Observations::report( $range, $observation_filters );
+		if ( $observations['rows'] ) {
+			$observation_names = Email_Center::names();
+			foreach ( $observations['rows'] as &$observation_row ) {
+				if ( 'woo' === $observation_row['family'] ) { $observation_row['name'] = (string) ( $observation_names[ $observation_row['source_key'] ] ?? $observation_row['source_key'] ); }
+				elseif ( 'subscription' === $observation_row['family'] && 'confirmation' === $observation_row['source_key'] ) { $observation_row['name'] = __( 'Subscription confirmation', 'peptide-core' ); }
+				elseif ( 'loyalty' === $observation_row['family'] && 'points_notice' === $observation_row['source_key'] ) { $observation_row['name'] = __( 'Points activity notice', 'peptide-core' ); }
+			} unset( $observation_row );
+		}
 
 		$rows = array();
 		if ( $current ) {
@@ -78,6 +89,7 @@ final class Emails {
 			),
 			'rows'     => $rows,
 			'log_url'  => Email_Center::url( 'log' ),
+			'observations' => $observations,
 		);
 	}
 

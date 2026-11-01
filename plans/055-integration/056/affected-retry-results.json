@@ -1,0 +1,29 @@
+{
+  "stage": "SOURCE_ONLY_PURE_TESTS",
+  "failed": 0,
+  "passed": 1,
+  "results": [
+    {
+      "name": "visitor-product-actions-config",
+      "path": "wp-content/themes/peptide-site/tests/visitor-product-actions-config.php",
+      "command": [
+        "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+        "-n",
+        "-d",
+        "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+        "-d",
+        "extension=mbstring",
+        "wp-content/themes/peptide-site/tests/visitor-product-actions-config.php"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 28,
+      "stdout": "RESULT 5 PASS\nPASS 1 actual theme product action capability assertion\n",
+      "stderr": ""
+    }
+  ],
+  "limits": [
+    "No WordPress bootstrap or native/private database fixture.",
+    "Unchanged historical gates are indexed with source provenance; not rerun by default."
+  ]
+}

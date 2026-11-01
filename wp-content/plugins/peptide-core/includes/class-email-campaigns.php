@@ -155,7 +155,7 @@ KEY work (campaign_id,status,id)
 				if ( 1 !== $wpdb->query( $wpdb->prepare( "UPDATE $d SET status='processing',attempts=attempts+1,claimed_at=%d WHERE id=%d AND status='pending'", time(), $delivery['id'] ) ) ) { continue; }
 				$headers = array( 'Content-Type: text/html; charset=UTF-8', 'From: ' . sanitize_text_field( get_option( 'woocommerce_email_from_name' ) ) . ' <' . sanitize_email( get_option( 'woocommerce_email_from_address' ) ) . '>', 'List-Unsubscribe: <' . self::unsubscribe_url( $subscriber ) . '>' );
 				$uncertain = false;
-				try { $sent = wp_mail( $subscriber['email'], $campaign['subject'], self::message( $campaign, $subscriber ), $headers ); }
+				try { $sent = Emails\Message_Observations::send( 'wp_mail', array( $subscriber['email'], $campaign['subject'], self::message( $campaign, $subscriber ), $headers ), array( 'family' => 'campaign', 'key' => (string) $id, 'attempt' => $delivery['id'] . ':' . ( (int) $delivery['attempts'] + 1 ) ) ); }
 				catch ( \Throwable $e ) { $sent = false; $uncertain = true; }
 				$wpdb->update( $d, array( 'status' => $sent ? 'sent' : ( $uncertain ? 'uncertain' : 'failed' ), 'sent_at' => $sent ? gmdate( 'Y-m-d H:i:s' ) : null, 'last_error' => $sent ? '' : ( $uncertain ? __( 'An interrupted send needs manual review; it will not be automatically resent.', 'peptide-core' ) : __( 'The mail transport did not accept this message.', 'peptide-core' ) ) ), array( 'id' => $delivery['id'], 'status' => 'processing' ) );
 				// Renew between messages so another worker cannot claim the campaign during a slow batch.

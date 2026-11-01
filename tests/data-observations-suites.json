@@ -1,0 +1,389 @@
+{
+  "git_base": "41a679a90fa4dc452af4760574ae541f0fc03bf4",
+  "production_inputs": [
+    "052 accepted application deltas",
+    "054 Root-approved presentation overlay"
+  ],
+  "suites": [
+    {
+      "name": "data-product-created-php",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/data-product-created.php",
+      "core": true,
+      "node_test": false,
+      "status": "final-source-gate"
+    },
+    {
+      "name": "data-product-created",
+      "language": "node",
+      "path": "wp-content/plugins/peptide-core/tests/data-product-created.cjs",
+      "core": true,
+      "node_test": true,
+      "status": "final-source-gate"
+    },
+    {
+      "name": "data-product-user-ratios-node",
+      "language": "node",
+      "path": "tests/data-product-user-ratios.cjs",
+      "core": true,
+      "node_test": false,
+      "status": "final-source-gate"
+    },
+    {
+      "name": "page-context-personal-export-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/page-context-personal-export-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "final-source-gate",
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "mail-source-observations",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/mail-source-observations.php",
+      "core": true,
+      "node_test": false,
+      "status": "final-source-gate",
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "mail-source-producers",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/mail-source-producers.php",
+      "core": true,
+      "node_test": false,
+      "status": "final-source-gate"
+    },
+    {
+      "name": "data-mail-sources",
+      "language": "node",
+      "path": "tests/data-mail-sources.cjs",
+      "core": true,
+      "node_test": false,
+      "status": "final-source-gate"
+    },
+    {
+      "name": "data-full-rankings",
+      "language": "node",
+      "path": "wp-content/plugins/peptide-core/tests/data-full-rankings.cjs",
+      "core": true,
+      "node_test": false,
+      "status": "final-source-gate"
+    },
+    {
+      "name": "data-operations-checkout",
+      "language": "node",
+      "path": "wp-content/plugins/peptide-core/tests/data-operations-checkout.cjs",
+      "core": true,
+      "node_test": false,
+      "status": "final-source-gate"
+    },
+    {
+      "name": "data-native-search-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/data-native-search-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "final-source-gate",
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "data-product-exposure",
+      "language": "node",
+      "path": "wp-content/plugins/peptide-core/tests/data-product-exposure.cjs",
+      "core": true,
+      "node_test": false,
+      "status": "final-source-gate"
+    },
+    {
+      "name": "data-exports",
+      "language": "node",
+      "path": "wp-content/plugins/peptide-core/tests/data-exports.cjs",
+      "core": true,
+      "node_test": false,
+      "status": "final-source-gate"
+    },
+    {
+      "name": "data-sources",
+      "language": "node",
+      "path": "wp-content/plugins/peptide-core/tests/data-sources.cjs",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite"
+    },
+    {
+      "name": "data-page-conversion",
+      "language": "node",
+      "path": "wp-content/plugins/peptide-core/tests/data-page-conversion.cjs",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite"
+    },
+    {
+      "name": "data-product-user-ratios",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/data-product-user-ratios.php",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite"
+    },
+    {
+      "name": "data-late-renderer",
+      "language": "node",
+      "path": "wp-content/plugins/peptide-core/tests/data-late-renderer.cjs",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite"
+    },
+    {
+      "name": "tracking-impressions-admin",
+      "language": "node",
+      "path": "wp-content/plugins/peptide-core/tests/tracking-impressions-admin.cjs",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite"
+    },
+    {
+      "name": "tracking-impressions-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/tracking-impressions-pure.php",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite"
+    },
+    {
+      "name": "data-conversion-export",
+      "language": "node",
+      "path": "wp-content/plugins/peptide-core/tests/data-conversion-export.cjs",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite"
+    },
+    {
+      "name": "data-dimensions-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/data-dimensions-pure.php",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite"
+    },
+    {
+      "name": "data-native-search",
+      "language": "node",
+      "path": "wp-content/plugins/peptide-core/tests/data-native-search.cjs",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite"
+    },
+    {
+      "name": "data-sources-standalone",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/data-sources-standalone.php",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite"
+    },
+    {
+      "name": "client-environment-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/client-environment-pure.php",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite"
+    },
+    {
+      "name": "data-client-environment",
+      "language": "node",
+      "path": "wp-content/plugins/peptide-core/tests/data-client-environment.cjs",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite"
+    },
+    {
+      "name": "data-email-observations",
+      "language": "node",
+      "path": "wp-content/plugins/peptide-core/tests/data-email-observations.cjs",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite"
+    },
+    {
+      "name": "mail-observations-standalone",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/mail-observations-standalone.php",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite",
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "country-provider-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/country-provider-pure.php",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite"
+    },
+    {
+      "name": "data-product-exposure-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/data-product-exposure-pure.php",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite"
+    },
+    {
+      "name": "visitor-products",
+      "language": "node",
+      "path": "wp-content/themes/peptide-site/tests/visitor-products.cjs",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite"
+    },
+    {
+      "name": "visitor-products-config",
+      "language": "php",
+      "path": "wp-content/themes/peptide-site/tests/visitor-products-config.php",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite"
+    },
+    {
+      "name": "visitor-client-environment",
+      "language": "node",
+      "path": "wp-content/themes/peptide-site/tests/visitor-client-environment.cjs",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite"
+    },
+    {
+      "name": "visitor-client-environment-config",
+      "language": "php",
+      "path": "wp-content/themes/peptide-site/tests/visitor-client-environment-config.php",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite"
+    },
+    {
+      "name": "visitor-metadata-push",
+      "language": "node",
+      "path": "wp-content/themes/peptide-site/tests/visitor-metadata-push.cjs",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite"
+    },
+    {
+      "name": "visitor-native-search",
+      "language": "node",
+      "path": "wp-content/themes/peptide-site/tests/visitor-native-search.cjs",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite"
+    },
+    {
+      "name": "visitor-native-search-config",
+      "language": "php",
+      "path": "wp-content/themes/peptide-site/tests/visitor-native-search-config.php",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite",
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "visitor-metadata-context",
+      "language": "php",
+      "path": "wp-content/themes/peptide-site/tests/visitor-metadata-context.php",
+      "core": false,
+      "node_test": false,
+      "status": "accepted historical evidence; optional explicit suite"
+    },
+    {
+      "name": "country-resource-attribution-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/country-resource-attribution-pure.php",
+      "core": true,
+      "status": "final-source-gate057"
+    },
+    {
+      "name": "tracking-product-actions-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/tracking-product-actions-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "Root-approved056 final-source-gate"
+    },
+    {
+      "name": "data-product-actions-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/data-product-actions-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "Root-approved056 final-source-gate"
+    },
+    {
+      "name": "tracking-product-actions-export-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/tracking-product-actions-export-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "Root-approved056 final-source-gate"
+    },
+    {
+      "name": "data-product-action-rankings-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/data-product-action-rankings-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "Root-approved056 final-source-gate",
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "data-product-action-rankings",
+      "language": "node",
+      "path": "wp-content/plugins/peptide-core/tests/data-product-action-rankings.cjs",
+      "core": true,
+      "node_test": false,
+      "status": "Root-approved056 final-source-gate"
+    },
+    {
+      "name": "visitor-product-actions",
+      "language": "node",
+      "path": "wp-content/themes/peptide-site/tests/visitor-product-actions.cjs",
+      "core": true,
+      "node_test": true,
+      "status": "Root-approved056 final-source-gate"
+    },
+    {
+      "name": "visitor-product-actions-config",
+      "language": "php",
+      "path": "wp-content/themes/peptide-site/tests/visitor-product-actions-config.php",
+      "core": true,
+      "node_test": false,
+      "status": "Root-approved056 final-source-gate",
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "data-product-actions",
+      "language": "node",
+      "path": "tests/data-product-actions.cjs",
+      "core": true,
+      "node_test": false,
+      "status": "Root-approved056 final-source-gate"
+    }
+  ]
+}

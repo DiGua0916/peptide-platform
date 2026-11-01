@@ -1,0 +1,77 @@
+{
+  "dataPages": {
+    "before": "23f7bafa18c72dc41b345da756b713e72fbfc73684a98f1d4a9b1649b1a8f1f5",
+    "after": "b96b741af5f7eb1af61d96478da47da7f25f52f8741b45c2e5abafe6cab17c15",
+    "preserved054Dates": true,
+    "preserved057Credit": true
+  },
+  "catalog": {
+    "before": "6f4158c7c234b3e1167d0bf0e73c293d34b8ef06d01c8f07309820d2926659e2",
+    "after": "cef5f8c93eba9b1538c2e04360f6e2268251835d9bba4748412087aa60025639",
+    "oldEntriesBytePreserved": true,
+    "added": 14
+  },
+  "tests": [
+    {
+      "path": "wp-content/plugins/peptide-core/tests/tracking-product-actions-pure.php",
+      "source_sha256": "527d2409281de99cdeb8066994614bb9e9b6d4d856907dfdc5e473e8419cd57b",
+      "method": "exact056 approved revision1"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/data-product-actions-pure.php",
+      "source_sha256": "aaa14fd6e4213167747b5fd69ebc937d155e638e2f9f3bcb6a35c5faacc09f10",
+      "method": "exact056 approved revision1"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/tracking-product-actions-export-pure.php",
+      "source_sha256": "f0ef2eac2b2bf2ae5f8238edab9a4f7616d6c5af9eb66129c44beef3f3020e51",
+      "method": "exact056 approved revision1"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/data-product-action-rankings-pure.php",
+      "source_sha256": "ddedbaa9b6bd4dc470a5410d661ca1be460728cc60ce0d9bc2b859d359e49cc2",
+      "method": "exact056 approved revision1"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/data-product-action-rankings.cjs",
+      "source_sha256": "6657e1dfb8e709c2686b8814d01dffd7e84facfded6a5351057db10a4f262b46",
+      "method": "exact056 approved revision1"
+    },
+    {
+      "path": "wp-content/themes/peptide-site/tests/visitor-product-actions.cjs",
+      "source_sha256": "f38943b95354a92681a785d8eb7cd666113f05c2d6bcf2916071bdd1aeaad0d2",
+      "method": "exact056 approved revision1"
+    },
+    {
+      "path": "wp-content/themes/peptide-site/tests/visitor-product-actions-config.php",
+      "source_sha256": "bba52b403567aa74384d8ea377dd697dbd1cf114d53a4c76e893162045a420a8",
+      "method": "exact056 approved revision1"
+    },
+    {
+      "path": "tests/data-product-actions.cjs",
+      "source_sha256": "6a131a6e1ec32ca7be9f31a73ebe72d640df04dcaf849e970e1038f1d6463278",
+      "method": "exact056 approved revision1"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/data-native-search-pure.php",
+      "source_sha256": "794f0d226d4a7ca544b6eca21093a22a3ab83b3f42eece91e23568402303415d",
+      "method": "exact056 approved revision1"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/data-dimensions-pure.php",
+      "source_sha256": "32e3a97c8171e643447f529c4d6018da7cfcd0e7e9072eb14a3a44dbb9490026",
+      "method": "exact056 approved revision1"
+    },
+    {
+      "path": "docs/handoffs/data-product-actions-v1.md",
+      "source_sha256": "c08765f0bea9c89573e3279150ed74c2746a535709194344ce51cf0d55169fdf",
+      "method": "exact056 approved revision1"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/tests/product-actions-test-autoload.php",
+      "source_sha256": "9e5db196434900bd5390ebbaa52dc8b3486c2b96c451549540cecf1b73413b10",
+      "method": "exact056 approved revision1"
+    }
+  ],
+  "ratiosMergeStatus": 1
+}

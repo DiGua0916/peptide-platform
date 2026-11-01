@@ -1,0 +1,21 @@
+{
+  "ratios_conflicts": 1,
+  "resolution": "union054 creation metadata and056 action fields only in old26 test projection; old financial/count assertions retained",
+  "relative_autoload": "tests/product-actions-test-autoload.php loaded by common helper",
+  "creation_old28_csv": "fixed original054 old28keys; no new numeric fields removed from production",
+  "contracts": {
+    "numeric": 33,
+    "columns": 34,
+    "defaults": 10
+  },
+  "rankCardCountEdits": [
+    {
+      "file": "data-full-rankings.cjs",
+      "count": 2
+    },
+    {
+      "file": "data-operations-checkout.cjs",
+      "count": 6
+    }
+  ]
+}

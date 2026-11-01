@@ -1,0 +1,32 @@
+[
+  {
+    "path": "wp-content/plugins/peptide-core/includes/tracking/class-country-provider.php",
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in wp-content/plugins/peptide-core/includes/tracking/class-country-provider.php\n",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/includes/admin/class-data-pages.php",
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in wp-content/plugins/peptide-core/includes/admin/class-data-pages.php\n",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/themes/peptide-site/inc/visitor-tracking.php",
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in wp-content/themes/peptide-site/inc/visitor-tracking.php\n",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/tests/country-resource-attribution-pure.php",
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in wp-content/plugins/peptide-core/tests/country-resource-attribution-pure.php\n",
+    "stderr": ""
+  },
+  {
+    "path": "plans/057-release/geoip-bootstrap.php",
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in plans/057-release/geoip-bootstrap.php\n",
+    "stderr": ""
+  }
+]

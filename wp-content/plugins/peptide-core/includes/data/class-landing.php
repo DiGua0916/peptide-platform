@@ -61,7 +61,8 @@ final class Landing {
 		$q        = (string) ( $args['q'] ?? '' );
 		$show_params = 1 === ( $args['show_params'] ?? 0 );
 
-		$paths = self::period( (int) $range['from'], (int) $range['to'], $show_params );
+		$filter = Report_Filter::active( $args, (int) $range['to'] * 1000 );
+		$paths = self::period( (int) $range['from'], (int) $range['to'], $show_params, $filter );
 
 		if ( '' !== $q ) {
 			$paths = array_values(
@@ -121,6 +122,7 @@ final class Landing {
 			'rows'     => $rows,
 		);
 		if ( $show_params ) { $out['show_params'] = 1; }
+		if ( isset( $args['filter'] ) ) { $out['filter'] = $args['filter']; $out['filter_coverage'] = array( 'current' => $filter ? $filter->coverage() : array() ); }
 		return $out;
 	}
 
@@ -166,6 +168,7 @@ final class Landing {
 			'q'        => $q,
 		);
 		if ( '1' === (string) $show_params ) { $out['show_params'] = 1; }
+		$filter = Report_Filter::params( $params ); if ( is_wp_error( $filter ) ) { return $filter; } if ( null !== $filter ) { $out['filter'] = $filter; }
 		return $out;
 	}
 
@@ -176,7 +179,7 @@ final class Landing {
 	 *
 	 * @return array<int,array<string,mixed>> 每行 path 加 METRICS 的十个数字；没有排序，没有搜索。
 	 */
-	private static function period( int $from, int $to, bool $show_params = false ): array {
+	private static function period( int $from, int $to, bool $show_params = false, ?Report_Filter $filter = null ): array {
 		global $wpdb;
 		$tracking = Schema::installed();
 
@@ -186,66 +189,45 @@ final class Landing {
 		if ( $tracking ) {
 			$visits = Schema::table( 'visits' );
 			$extra = $show_params ? ', ' . implode( ', ', Attribution::COLUMNS ) : '';
-			$rows   = $wpdb->get_results( $wpdb->prepare( "SELECT id, visitor_id, user_id, landing_path, stage{$extra} FROM {$visits} WHERE start_ms >= %d AND start_ms < %d ORDER BY id", $from * 1000, $to * 1000 ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
-			foreach ( (array) $rows as $row ) {
-				$identity = $show_params ? self::identity( $row ) : array();
+			$rows   = $filter ? $filter->visits( $from, $to ) : (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, visitor_id, user_id, landing_path, stage{$extra} FROM {$visits} WHERE start_ms >= %d AND start_ms < %d ORDER BY id", $from * 1000, $to * 1000 ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			foreach ( $rows as $row ) {
+				$identity = $show_params ? self::identity( $row, $filter ? $to * 1000 : 0 ) : array();
 				$path = $show_params ? $identity['path'] : (string) $row['landing_path'];
 				$key  = $show_params ? $identity['_key'] : strtolower( $path );
 				if ( ! isset( $groups[ $key ] ) ) {
 					$groups[ $key ] = self::blank( $path, (int) $row['id'], true ) + $identity;
 				}
-				$visitor = (int) $row['visitor_id'];
-				$stage   = (int) $row['stage'];
-				$user    = (int) $row['user_id'];
-
-				$groups[ $key ]['visitors'][ $visitor ] = true;
-				if ( $stage >= 1 ) {
-					$groups[ $key ]['viewed'][ $visitor ] = true;
-				}
-				if ( $stage >= 2 ) {
-					$groups[ $key ]['carted'][ $visitor ] = true;
-				}
-				if ( $user > 0 ) {
-					$groups[ $key ]['customers'][ 'u' . $user ] = true;
-				}
+				Visit_Metrics::visit( $groups[ $key ], $row );
 			}
 		}
 
 		// 已付款的非测试订单；meta 值 0 表示“没有”（没带追踪信息的订单）。
 		$orders = array();
-		foreach ( Operations::paid_orders( $from, $to ) as $order ) {
-			if ( Overview::is_test_order( $order ) ) {
-				continue;
-			}
-			// 买家：有账号按账号，游客按账单邮箱（不分大小写）；没有邮箱的游客订单没有键。
-			$customer_id = (int) $order->get_customer_id();
-			$buyer       = '';
-			if ( $customer_id > 0 ) {
-				$buyer = 'u' . $customer_id;
-			} else {
-				$email = strtolower( trim( (string) $order->get_billing_email() ) );
-				if ( '' !== $email ) {
-					$buyer = 'e' . $email;
-				}
-			}
-			$orders[] = array(
-				'sales'   => (float) $order->get_total() - (float) $order->get_total_refunded(),
-				'visitor' => (int) $order->get_meta( Server_Events::ORDER_VISITOR_META ),
-				'visit'   => (int) $order->get_meta( Server_Events::ORDER_VISIT_META ),
-				'buyer'   => $buyer,
-			);
+		$native_orders = Operations::paid_orders( $from, $to );
+		if ( $filter ) { $native_orders = $filter->orders( $native_orders ); }
+		foreach ( $native_orders as $order ) {
+			if ( Overview::is_test_order( $order ) ) { continue; }
+			$fact = Visit_Metrics::order_fact( $order );
+			if ( $filter ) { $fact['visit'] = Report_Dimensions::positive_id( $order->get_meta( Server_Events::ORDER_VISIT_META ) ) ?? 0; $fact['visitor'] = Report_Dimensions::positive_id( $order->get_meta( Server_Events::ORDER_VISITOR_META ) ) ?? 0; }
+			$orders[] = $fact;
 		}
 
 		// 订单对应的访问行一次查出来（最多一条查询）：id => 落地页路径。
 		$landing = array();
 		if ( $orders && $tracking ) {
-			$landing = self::lookup( array_column( $orders, 'visit' ), $show_params );
+			$landing = self::lookup( array_column( $orders, 'visit' ), $show_params, null !== $filter );
 		}
 
 		foreach ( $orders as $o ) {
 			// 没有访问 meta、访问行不存在、或落地页是空字符串的订单归在 '' 那一行。
+			if ( $filter ) {
+				$linked = $landing[ $o['visit'] ] ?? array(); if ( $o['visitor'] <= 0 || (int) ( $linked['visitor_id'] ?? 0 ) !== $o['visitor'] ) { $linked = array(); }
+				$identity = $show_params ? self::identity( $linked, $to * 1000 ) : array();
+				$path = $show_params ? $identity['path'] : (string) ( $linked['landing_path'] ?? '' );
+			} else {
 			$identity = $show_params ? self::identity( $landing[ $o['visit'] ] ?? array() ) : array();
 			$path     = $show_params ? $identity['path'] : ( ( $o['visit'] > 0 && isset( $landing[ $o['visit'] ] ) ) ? $landing[ $o['visit'] ] : '' );
+			}
 			$visit_id = '' === $path ? 0 : $o['visit'];
 			$key      = $show_params ? $identity['_key'] : strtolower( $path );
 			if ( ! isset( $groups[ $key ] ) ) {
@@ -257,37 +239,14 @@ final class Landing {
 				if ( $show_params ) { $groups[ $key ] = array_replace( $groups[ $key ], $identity ); }
 			}
 
-			++$groups[ $key ]['orders'];
-			$groups[ $key ]['sales'] += $o['sales'];
-			if ( $o['visitor'] > 0 ) {
-				$groups[ $key ]['paid_visitors'][ $o['visitor'] ] = true;
-			}
-			if ( '' !== $o['buyer'] ) {
-				$groups[ $key ]['customers'][ $o['buyer'] ] = true;
-			}
+			Visit_Metrics::order( $groups[ $key ], $o );
 		}
 
 		$out = array();
 		foreach ( $groups as $g ) {
-			$uv    = count( $g['visitors'] );
-			$count = (int) $g['orders'];
-			if ( $uv <= 0 && $count <= 0 ) {
-				continue;
-			}
-			$sales = round( (float) $g['sales'], 2 );
-			$row = array(
-				'path'       => $g['path'],
-				'uv'         => $uv,
-				'customers'  => count( $g['customers'] ),
-				'viewed_uv'  => count( $g['viewed'] ),
-				'carted_uv'  => count( $g['carted'] ),
-				'paid_uv'    => count( $g['paid_visitors'] ),
-				'orders'     => $count,
-				'conversion' => $uv > 0 ? round( $count / $uv * 100, 2 ) : null,
-				'sales'      => $sales,
-				'aov'        => $count > 0 ? round( $sales / $count, 2 ) : 0.0,
-				'uv_value'   => $uv > 0 ? round( $sales / $uv, 2 ) : null,
-			);
+			$metrics = Visit_Metrics::finish( $g );
+			if ( $metrics['uv'] <= 0 && $metrics['orders'] <= 0 ) { continue; }
+			$row = array( 'path' => $g['path'] ) + $metrics;
 			if ( $show_params ) { foreach ( array( '_key', 'attribution_status', 'host', 'query', 'display_path' ) as $key ) { $row[ $key ] = $g[ $key ]; } }
 			$out[] = $row;
 		}
@@ -300,14 +259,7 @@ final class Landing {
 			'path'          => $path,
 			'label_id'      => $label_id,
 			'has_visits'    => $has_visits,
-			'visitors'      => array(),
-			'viewed'        => array(),
-			'carted'        => array(),
-			'customers'     => array(),
-			'paid_visitors' => array(),
-			'orders'        => 0,
-			'sales'         => 0.0,
-		);
+		) + Visit_Metrics::blank();
 	}
 
 	/**
@@ -316,24 +268,25 @@ final class Landing {
 	 * @param int[] $ids 访问 id（0 表示没有，会被去掉）。
 	 * @return array<int,string>
 	 */
-	private static function lookup( array $ids, bool $show_params = false ): array {
+	private static function lookup( array $ids, bool $show_params = false, bool $strict = false ): array {
 		global $wpdb;
 		$ids = array_values( array_unique( array_filter( array_map( 'intval', $ids ) ) ) );
 		if ( ! $ids ) {
 			return array();
 		}
 		$in   = implode( ',', $ids );
-		$extra = $show_params ? ', ' . implode( ', ', Attribution::COLUMNS ) : '';
+		$extra = ( $strict ? ', visitor_id' : '' ) . ( $show_params ? ', ' . implode( ', ', Attribution::COLUMNS ) : '' );
 		$rows = $wpdb->get_results( 'SELECT id, landing_path' . $extra . ' FROM ' . Schema::table( 'visits' ) . " WHERE id IN ({$in}) ORDER BY id", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
 		$out  = array();
 		foreach ( (array) $rows as $row ) {
-			$out[ (int) $row['id'] ] = $show_params ? $row : (string) $row['landing_path'];
+			$out[ (int) $row['id'] ] = $show_params || $strict ? $row : (string) $row['landing_path'];
 		}
 		return $out;
 	}
 
 	/** The same immutable identity is used for visit denominators and linked order numerators. */
-	private static function identity( array $visit ): array {
+	private static function identity( array $visit, int $cutoff = 0 ): array {
+		if ( $cutoff > 0 && (int) ( $visit['attribution_ms'] ?? 0 ) >= $cutoff ) { $visit['attribution_version'] = 0; }
 		$snapshot = Attribution::snapshot( $visit );
 		$captured = 'captured' === $snapshot['status'];
 		$path = $captured ? $snapshot['path'] : (string) ( $visit['landing_path'] ?? '' );

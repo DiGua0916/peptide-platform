@@ -1,0 +1,22 @@
+[
+  {
+    "name": "057 pure attribution",
+    "exit_code": 0,
+    "output": "{\"suite\":\"country-resource-attribution-pure\",\"passed\":46,\"failed\":0,\"wordpress_bootstrap\":false,\"network\":false}\n"
+  },
+  {
+    "name": "040 existing provider",
+    "exit_code": 0,
+    "output": "RESULT 3 PASS, 0 SKIP\nRESULT 64 PASS, 0 SKIP\nRESULT 3 PASS, 0 SKIP\nRESULT 3 PASS, 0 SKIP\nRESULT 2 PASS, 0 SKIP\nRESULT 64 PASS, 0 SKIP\nSKIP actual MMDB lookup: no existing trusted fixture was supplied or adopted.\nRESULT 0 PASS, 1 SKIP\nTOTAL 139 PASS, 0 FAIL, 1 SKIP\n"
+  },
+  {
+    "name": "057 native local resource probe",
+    "exit_code": 0,
+    "output": "{\"known_public\":4,\"unknown_private\":3,\"resource_readonly\":true,\"wordpress_bootstrap\":false,\"customer_events\":0,\"service_activation\":false}\n"
+  },
+  {
+    "name": "057 changed PHP syntax",
+    "exit_code": 0,
+    "output": "{\"passed\":5,\"failures\":[]}\n"
+  }
+]

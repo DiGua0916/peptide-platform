@@ -1,0 +1,10 @@
+{
+  "Operating system observation": "操作系统观察状态",
+  "Operating system family": "操作系统类别",
+  "Screen size observation": "屏幕尺寸观察状态",
+  "Screen width (CSS pixels)": "屏幕宽度（CSS 像素）",
+  "Screen height (CSS pixels)": "屏幕高度（CSS 像素）",
+  "Search observation": "搜索词观察状态",
+  "Observed search term": "已采集搜索词",
+  "When supplied by the storefront, page views may include a normalized page kind, collection identifier, source-reported country observation, browser-reported operating-system and screen-size observations, and a bounded normalized search term. Country observations are not verified physical locations or IP-derived coordinates. Browser reports are not verified hardware facts. Missing observations remain unobserved. These facts follow the store visit retention, account/order association and erasure rules, and are included in a separate personal-data export.": "店铺前台提供时，页面浏览可包含规范化页面类型、集合标识、来源报告的国家观察、浏览器报告的操作系统和屏幕尺寸观察，以及受长度和内容限制的规范化搜索词。国家观察不代表已经核验的实际位置或根据 IP 推导的坐标；浏览器报告不代表已经核验的硬件事实。缺失的观察保持未采集。这些事实遵循店铺访问记录的保留、账户／订单关联及删除规则，并包含在单独的个人数据导出中。"
+}

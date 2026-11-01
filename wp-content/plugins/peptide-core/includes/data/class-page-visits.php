@@ -44,7 +44,7 @@ final class Page_Visits {
 		$slice = $page > (int) ceil( $total / $per_page ) ? array() : array_slice( $selection['paths'], ( $page - 1 ) * $per_page, $per_page );
 		$rows = array();
 		foreach ( $slice as $row ) { $rows[] = self::assemble_row( $row, $selection['origin'] ); }
-		return array(
+		$out = array(
 			'range'    => $range,
 			'tracking' => Schema::installed(),
 			'sort'     => $selection['sort'],
@@ -55,6 +55,8 @@ final class Page_Visits {
 			'total'    => $total,
 			'rows'     => $rows,
 		);
+		if ( isset( $args['filter'] ) ) { $out['filter'] = $args['filter']; $out['filter_coverage'] = array( 'current' => $selection['filter_coverage'] ?? array() ); }
+		return $out;
 	}
 
 
@@ -71,7 +73,8 @@ final class Page_Visits {
 		$per_page = max( 1, min( 100, (int) ( $args['per_page'] ?? 20 ) ) );
 		$q        = (string) ( $args['q'] ?? '' );
 
-		$paths = self::period( (int) $range['from'], (int) $range['to'] );
+		$filter = Report_Filter::active( $args, (int) $range['to'] * 1000 );
+		$paths = self::period( (int) $range['from'], (int) $range['to'], $filter );
 
 		if ( '' !== $q ) {
 			$paths = array_values(
@@ -97,7 +100,8 @@ final class Page_Visits {
 		// 链接 = 站点的协议 + 域名（+ 端口）+ 存下来的路径。存下来的路径是浏览器的 location.pathname，已经带着 WordPress 的子目录，所以不能再用 home_url( $path )。
 		$home   = (array) wp_parse_url( home_url() );
 		$origin = empty( $home['host'] ) ? '' : ( $home['scheme'] ?? 'http' ) . '://' . $home['host'] . ( isset( $home['port'] ) ? ':' . $home['port'] : '' );
-		return compact( 'sort', 'order', 'page', 'per_page', 'q', 'paths', 'origin' );
+		$filter_coverage = $filter ? $filter->coverage() : array();
+		return compact( 'sort', 'order', 'page', 'per_page', 'q', 'paths', 'origin', 'filter_coverage' );
 	}
 
 	private static function assemble_row( array $row, string $origin ): array {
@@ -143,13 +147,15 @@ final class Page_Visits {
 		// 搜索词不会出错：去掉首尾空白，最多 100 个字符。
 		$q = isset( $params['q'] ) && is_scalar( $params['q'] ) ? mb_substr( trim( (string) $params['q'] ), 0, 100 ) : '';
 
-		return array(
+		$out = array(
 			'sort'     => $sort,
 			'order'    => $order,
 			'page'     => $page,
 			'per_page' => $per_page,
 			'q'        => $q,
 		);
+		$filter = Report_Filter::params( $params ); if ( is_wp_error( $filter ) ) { return $filter; } if ( null !== $filter ) { $out['filter'] = $filter; }
+		return $out;
 	}
 
 	/**
@@ -157,9 +163,10 @@ final class Page_Visits {
 	 *
 	 * @return array<int,array{path:string,views:int,visitors:int,bounced:int,bounce_rate:?float}> 没有排序；追踪的表没装时是空数组。
 	 */
-	private static function period( int $from, int $to ): array {
+	private static function period( int $from, int $to, ?Report_Filter $filter = null ): array {
 		global $wpdb;
 		if ( ! Schema::installed() ) {
+			if ( $filter ) { throw new \RuntimeException( 'Report dimensions unavailable.' ); }
 			return array();
 		}
 
@@ -168,11 +175,20 @@ final class Page_Visits {
 		$fm     = $from * 1000;
 		$tm     = $to * 1000;
 
+		if ( $filter ) {
+			$view_sets = array(); $bounce_sets = array();
+			foreach ( $filter->events( $from, $to, array( 'page_view' ) ) as $event ) { $key = strtolower( (string) $event['path'] ); if ( ! isset( $view_sets[ $key ] ) ) { $view_sets[ $key ] = array( 'path' => (string) $event['path'], 'views' => 0, 'visitors' => array() ); } ++$view_sets[ $key ]['views']; $view_sets[ $key ]['visitors'][ (int) $event['visitor_id'] ] = true; }
+			foreach ( $filter->visits( $from, $to ) as $visit ) { if ( 1 === (int) $visit['pageviews'] ) { $key = strtolower( (string) $visit['landing_path'] ); $bounce_sets[ $key ][ (int) $visit['visitor_id'] ] = true; } }
+			$views = array(); foreach ( $view_sets as $row ) { $row['visitors'] = count( $row['visitors'] ); $views[] = $row; }
+			$bounces = array(); foreach ( $bounce_sets as $path => $set ) { $bounces[] = array( 'landing_path' => $path, 'bounced' => count( $set ) ); }
+		} else {
 		// 访问量和访问用户：每个路径的 page_view 事件数和不同访客数。
 		$views = $wpdb->get_results( $wpdb->prepare( "SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS visitors FROM {$events} WHERE type = 'page_view' AND occurred_ms >= %d AND occurred_ms < %d GROUP BY path", $fm, $tm ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 
 		// 跳出用户：时间段内开始、只看了 1 个页面的访问，按落地页分组的不同访客数。
 		$bounces = $wpdb->get_results( $wpdb->prepare( "SELECT landing_path, COUNT(DISTINCT visitor_id) AS bounced FROM {$visits} WHERE start_ms >= %d AND start_ms < %d AND pageviews = 1 GROUP BY landing_path", $fm, $tm ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+
+		}
 
 		// 两个查询按路径在 PHP 里合并。MySQL 分组时按表的排序规则不分大小写（/A/ 和 /a/ 是同一组，只返回其中一个写法），
 		// 所以两边都用 strtolower( 路径 ) 做键；显示用 page_view 那边 MySQL 返回的路径。落地页里有、page_view 里没有的路径忽略。

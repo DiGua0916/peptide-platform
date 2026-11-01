@@ -33,6 +33,20 @@
 		range: ''
 	};
 
+	var reportFilter = null;
+	function addReportFilter( params, value ) { if ( value ) { Object.keys( value ).forEach( function ( key ) { params[ key ] = value[ key ]; } ); } }
+	function checkReportFilter( data ) { if ( reportFilter && JSON.stringify( data.filter ) !== JSON.stringify( reportFilter ) ) { throw new Error( 'Invalid report filter context' ); } }
+	function drawReportCoverage( data, bodyEl ) {
+		var parts = [], coverage = data.filter_coverage || {};
+		Object.keys( coverage ).forEach( function ( period ) { Object.keys( coverage[ period ] ).forEach( function ( unit ) { var c = coverage[ period ][ unit ], g = c.country || {}; parts.push( ( period === 'current' ? T.filterCurrent : T.filterPrevious ) + ' ' + ( T[ { events: 'filterEvents', visits: 'filterVisits', orders: 'filterOrders' }[ unit ] ] || unit ) + ': ' + Number( c.matched_count ) + '/' + Number( c.base_count ) + ' · ' + [ g.value, g.unknown, g.unavailable, g.unobserved ].map( Number ).join( '/' ) ); } ); } );
+		bodyEl.querySelector( '.pc-report-coverage' ).textContent = parts.length ? T.filterCoverage + ' ' + parts.join( '; ' ) : '';
+	}
+
+	function filterToolbar( esc ) {
+		function select( key, states ) { return '<select class="pc-report-' + key + '-state">' + states.map( function ( state ) { return '<option value="' + state + '">' + esc( T[ { all: 'filterAll', unobserved: 'filterUnobserved', unknown: 'filterUnknown', unavailable: 'filterUnavailable', value: 'filterValue' }[ state ] ] ) + '</option>'; } ).join( '' ) + '</select>'; }
+		return '<div class="pc-report-filters"><label>' + esc( T.filterDomain ) + select( 'domain', [ 'all', 'unobserved', 'value' ] ) + '<input type="text" class="pc-report-domain" maxlength="253" aria-label="' + esc( T.filterDomain ) + '"></label><label>' + esc( T.filterCountry ) + select( 'country', [ 'all', 'unobserved', 'unknown', 'unavailable', 'value' ] ) + '<input type="text" class="pc-report-country" maxlength="2" aria-label="' + esc( T.filterCountry ) + '"></label><button type="button" class="button pc-report-filter-apply">' + esc( T.filterApply ) + '</button><p class="pc-data-muted pc-report-filter-help">' + esc( T.filterHelp ) + '</p><p class="pc-report-coverage" role="status"></p></div>';
+	}
+
 	// ---------- 小工具 ----------
 
 	function isNum( v ) {
@@ -165,7 +179,7 @@
 		} ).join( '' );
 
 		// 工具栏、说明、表格容器、页脚每次 render 只建一次；后面只改表格容器和页脚的内容。
-		bodyEl.innerHTML = '<div class="pc-pages">' +
+		bodyEl.innerHTML = '<div class="pc-pages">' + filterToolbar( esc ) +
 			'<div class="pc-pages-toolbar">' +
 				'<input type="search" class="pc-pages-search" maxlength="100" placeholder="' + esc( T.search ) + '" aria-label="' + esc( T.search ) + '">' +
 				'<label class="pc-pages-per"><span class="pc-pages-per-label">' + esc( T.perPage ) + '</span>' +
@@ -183,10 +197,44 @@
 		view.wrap = bodyEl.querySelector( '.pc-pages-wrap' );
 		view.foot = bodyEl.querySelector( '.pc-pages-foot' );
 		view.search.value = state.q;
+
+		var domainState = bodyEl.querySelector( '.pc-report-domain-state' ), domainValue = bodyEl.querySelector( '.pc-report-domain' ), countryState = bodyEl.querySelector( '.pc-report-country-state' ), countryValue = bodyEl.querySelector( '.pc-report-country' ), filterApply = bodyEl.querySelector( '.pc-report-filter-apply' );
+		var filterDirty = false, filterApplyPending = false;
+		var acceptedFilter = reportFilter || { entry_domain_state: 'all', country_state: 'all' };
+		function filterDraft() {
+			var draft = { entry_domain_state: domainState.value };
+			if ( draft.entry_domain_state === 'value' ) { draft.entry_domain = domainValue.value.toLowerCase().replace( /\.$/, '' ); }
+			draft.country_state = countryState.value;
+			if ( draft.country_state === 'value' ) { draft.country = countryValue.value.toUpperCase(); }
+			return draft;
+		}
+		function writeFilterControls( filter ) { domainState.value = filter.entry_domain_state; domainValue.value = filter.entry_domain || ''; countryState.value = filter.country_state; countryValue.value = filter.country || ''; }
+		writeFilterControls( acceptedFilter );
+		function acceptFilterControls( data ) {
+			acceptedFilter = data.filter || { entry_domain_state: 'all', country_state: 'all' };
+			if ( filterApplyPending || ! filterDirty ) { writeFilterControls( acceptedFilter ); }
+			filterDirty = JSON.stringify( filterDraft() ) !== JSON.stringify( acceptedFilter );
+			filterApplyPending = false;
+		}
+		function showFilterDraft() {
+			if ( ! filterDirty ) { return; }
+			view.wrap.innerHTML = '<p class="pc-data-muted">' + esc( T.filterApply ) + '</p>';
+			( view.pager || view.foot ).innerHTML = '';
+			bodyEl.querySelector( '.pc-report-coverage' ).textContent = T.filterApply;
+		}
+		function filterEdited() { filterDirty = JSON.stringify( filterDraft() ) !== JSON.stringify( acceptedFilter ); filterApplyPending = false; ++requests; view.data = null; if ( typeof cancelExport === 'function' ) { cancelExport(); } showFilterDraft(); }
+		[ domainState, countryState ].forEach( function ( element ) { element.addEventListener( 'change', filterEdited ); } );
+		[ domainValue, countryValue ].forEach( function ( element ) { element.addEventListener( 'input', filterEdited ); } );
+		filterApply.addEventListener( 'click', function () {
+			if ( rangeBusy ) { return; }
+			reportFilter = filterDraft(); filterApplyPending = true; filterDirty = true;
+			state.page = 1; load();
+		} );
+
 		view.exportButton = bodyEl.querySelector( '.pc-pages-export' );
 		view.exportStatus = bodyEl.querySelector( '.pc-pages-export-status' );
 		function syncExport() {
-			view.exportButton.disabled = ! view.data || searchDirty || composing || rangeBusy || exporting;
+			view.exportButton.disabled = ! view.data || filterDirty || searchDirty || composing || rangeBusy || exporting;
 			view.exportButton.setAttribute( 'aria-busy', exporting ? 'true' : 'false' );
 		}
 		function cancelExport() {
@@ -204,9 +252,10 @@
 			var params = { from: dates.from, to: dates.to, compare_from: dates.compare_from, compare_to: dates.compare_to };
 			params.format = 'csv'; params.sort = view.data.sort; params.order = view.data.order;
 			params.page = view.data.page; params.per_page = view.data.per_page; params.q = view.data.q;
+			addReportFilter( params, view.data.filter );
 
 			exporting = true; syncExport(); view.exportStatus.textContent = T.exportBusy;
-			function current() { return mine === exportToken && ! rangeBusy && ! searchDirty && ! composing && !! view.data && document.documentElement.contains( view.exportButton ); }
+			function current() { return mine === exportToken && ! filterDirty && ! rangeBusy && ! searchDirty && ! composing && !! view.data && document.documentElement.contains( view.exportButton ); }
 			window.PcDataExport.prepare( PATH, params ).then( function ( file ) {
 				if ( ! current() ) { return; }
 				try { if ( window.PcDataExport.download( file, current ) ) { view.exportStatus.textContent = T.exportDone; } }
@@ -252,6 +301,9 @@
 		}
 
 		function accept( data ) {
+			checkReportFilter( data );
+			acceptFilterControls( data );
+			drawReportCoverage( data, bodyEl );
 			view.data = data;
 			// 页码超出了最后一页（数据变少了）：回到最后一页重新取。
 			if ( ! ( data.rows || [] ).length && Number( data.total ) > 0 && Number( data.page ) > 1 ) {
@@ -265,6 +317,7 @@
 			syncExport();
 			drawTable();
 			drawFoot();
+			showFilterDraft();
 		}
 
 		function load() {
@@ -276,6 +329,7 @@
 			params.page = state.page;
 			params.per_page = state.per_page;
 			params.q = state.q;
+			addReportFilter( params, reportFilter );
 
 			view.wrap.innerHTML = '<p class="pc-data-muted">' + esc( ctx.strings.loading ) + '</p>';
 			view.foot.innerHTML = '';

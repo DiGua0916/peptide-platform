@@ -1,0 +1,220 @@
+{
+  "stage": "SOURCE_COMPLETE_NOT_ACTIVATED",
+  "initial_core_attempt": {
+    "passed": 8,
+    "failed": 4,
+    "retained": "pure-results.json"
+  },
+  "one_retry": {
+    "passed": 4,
+    "failed": 0,
+    "retained": "pure-retry-results.json"
+  },
+  "final_core": {
+    "passed": 12,
+    "failed": 0,
+    "results": [
+      {
+        "name": "data-product-created-php",
+        "path": "wp-content/plugins/peptide-core/tests/data-product-created.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "wp-content/plugins/peptide-core/tests/data-product-created.php"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 35,
+        "stdout": "PASS 20 product user ratio assertions, 0 FAIL\nPASS 25 product creation metadata assertions, 0 FAIL\n",
+        "stderr": ""
+      },
+      {
+        "name": "data-product-created",
+        "path": "wp-content/plugins/peptide-core/tests/data-product-created.cjs",
+        "command": [
+          "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+          "--test",
+          "wp-content/plugins/peptide-core/tests/data-product-created.cjs"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 109,
+        "stdout": "{\"suite\":\"product-created-ui\",\"passed\":23,\"failed\":0}\n✔ product creation metadata is ordered, optional and separate from numeric measures (33.691ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 78.3415\n",
+        "stderr": ""
+      },
+      {
+        "name": "data-product-user-ratios-node",
+        "path": "tests/data-product-user-ratios.cjs",
+        "command": [
+          "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+          "tests/data-product-user-ratios.cjs"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 91,
+        "stdout": "{\"suite\":\"product-user-ratios-ui\",\"passed\":31,\"failed\":0}\n",
+        "stderr": ""
+      },
+      {
+        "name": "page-context-personal-export-pure",
+        "path": "wp-content/plugins/peptide-core/tests/page-context-personal-export-pure.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/plugins/peptide-core/tests/page-context-personal-export-pure.php"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 29,
+        "stdout": "{\"passed\":56,\"failed\":0,\"old_export_oracle\":\"048\",\"database\":\"memory\",\"wordpress_bootstrap\":false,\"payload_output\":false}\n",
+        "stderr": ""
+      },
+      {
+        "name": "mail-source-observations",
+        "path": "wp-content/plugins/peptide-core/tests/mail-source-observations.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/plugins/peptide-core/tests/mail-source-observations.php"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 49,
+        "stdout": "{\"passed\":63,\"failed\":0,\"native_mime\":true,\"database\":\"in-memory boundary double\",\"network_calls\":0,\"external_mail\":0}\n{\"new_passed\":31,\"total_passed\":94,\"failed\":0,\"native_mime\":true,\"database\":\"memory\",\"network_calls\":0,\"payload_output\":false}\n",
+        "stderr": ""
+      },
+      {
+        "name": "mail-source-producers",
+        "path": "wp-content/plugins/peptide-core/tests/mail-source-producers.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "wp-content/plugins/peptide-core/tests/mail-source-producers.php"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 32,
+        "stdout": "{\"passed\":50,\"failed\":0,\"database\":\"memory\",\"network_calls\":0,\"payload_output\":false}\n",
+        "stderr": ""
+      },
+      {
+        "name": "data-mail-sources",
+        "path": "tests/data-mail-sources.cjs",
+        "command": [
+          "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+          "tests/data-mail-sources.cjs"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 33,
+        "stdout": "PASS data-mail-sources: 34 checks\n",
+        "stderr": ""
+      },
+      {
+        "name": "data-full-rankings",
+        "path": "wp-content/plugins/peptide-core/tests/data-full-rankings.cjs",
+        "command": [
+          "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+          "wp-content/plugins/peptide-core/tests/data-full-rankings.cjs"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 91,
+        "stdout": "{\"passed\":53,\"failed\":0}\n",
+        "stderr": ""
+      },
+      {
+        "name": "data-operations-checkout",
+        "path": "wp-content/plugins/peptide-core/tests/data-operations-checkout.cjs",
+        "command": [
+          "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+          "wp-content/plugins/peptide-core/tests/data-operations-checkout.cjs"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 110,
+        "stdout": "{\"passed\":64,\"failed\":0}\n",
+        "stderr": ""
+      },
+      {
+        "name": "data-native-search-pure",
+        "path": "wp-content/plugins/peptide-core/tests/data-native-search-pure.php",
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+          "-n",
+          "-d",
+          "extension_dir=C:\\Users\\Administrator\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe\\ext",
+          "-d",
+          "extension=mbstring",
+          "wp-content/plugins/peptide-core/tests/data-native-search-pure.php"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 63,
+        "stdout": "PASS 18 standalone dimension report assertions\nPASS 63 native search assertions\n",
+        "stderr": ""
+      },
+      {
+        "name": "data-product-exposure",
+        "path": "wp-content/plugins/peptide-core/tests/data-product-exposure.cjs",
+        "command": [
+          "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+          "wp-content/plugins/peptide-core/tests/data-product-exposure.cjs"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 86,
+        "stdout": "{\"suite\":\"product-exposure-controls\",\"passed\":24,\"failed\":0}\n",
+        "stderr": ""
+      },
+      {
+        "name": "data-exports",
+        "path": "wp-content/plugins/peptide-core/tests/data-exports.cjs",
+        "command": [
+          "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+          "wp-content/plugins/peptide-core/tests/data-exports.cjs"
+        ],
+        "exit_code": 0,
+        "error": null,
+        "elapsed_ms": 57,
+        "stdout": "{\"passed\":61,\"failed\":0}\n",
+        "stderr": ""
+      }
+    ]
+  },
+  "country_resource": [
+    {
+      "name": "057 pure attribution",
+      "exit_code": 0,
+      "output": "{\"suite\":\"country-resource-attribution-pure\",\"passed\":46,\"failed\":0,\"wordpress_bootstrap\":false,\"network\":false}\n"
+    },
+    {
+      "name": "040 existing provider",
+      "exit_code": 0,
+      "output": "RESULT 3 PASS, 0 SKIP\nRESULT 64 PASS, 0 SKIP\nRESULT 3 PASS, 0 SKIP\nRESULT 3 PASS, 0 SKIP\nRESULT 2 PASS, 0 SKIP\nRESULT 64 PASS, 0 SKIP\nSKIP actual MMDB lookup: no existing trusted fixture was supplied or adopted.\nRESULT 0 PASS, 1 SKIP\nTOTAL 139 PASS, 0 FAIL, 1 SKIP\n"
+    },
+    {
+      "name": "057 native local resource probe",
+      "exit_code": 0,
+      "output": "{\"known_public\":4,\"unknown_private\":3,\"resource_readonly\":true,\"wordpress_bootstrap\":false,\"customer_events\":0,\"service_activation\":false}\n"
+    },
+    {
+      "name": "057 changed PHP syntax",
+      "exit_code": 0,
+      "output": "{\"passed\":5,\"failures\":[]}\n"
+    }
+  ],
+  "skips": [
+    "040 optional actual-MMDB gate skipped without fixture; separate057 verified resource probe passed4public/3private.",
+    "Historical unchanged cold gates indexed in test provenance, not rerun.",
+    "No WP/native DB/customer fixtures, HTTP/browser, deployment or activation."
+  ]
+}

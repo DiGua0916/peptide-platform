@@ -1,0 +1,173 @@
+{
+  "stage": "SOURCE_ONLY_PURE_TESTS",
+  "failed": 4,
+  "passed": 8,
+  "results": [
+    {
+      "name": "data-product-created-php",
+      "path": "wp-content/plugins/peptide-core/tests/data-product-created.php",
+      "command": [
+        "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+        "-n",
+        "wp-content/plugins/peptide-core/tests/data-product-created.php"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 35,
+      "stdout": "PASS 20 product user ratio assertions, 0 FAIL\nPASS 25 product creation metadata assertions, 0 FAIL\n",
+      "stderr": ""
+    },
+    {
+      "name": "data-product-created",
+      "path": "wp-content/plugins/peptide-core/tests/data-product-created.cjs",
+      "command": [
+        "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "--test",
+        "wp-content/plugins/peptide-core/tests/data-product-created.cjs"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 109,
+      "stdout": "{\"suite\":\"product-created-ui\",\"passed\":23,\"failed\":0}\n✔ product creation metadata is ordered, optional and separate from numeric measures (33.691ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 78.3415\n",
+      "stderr": ""
+    },
+    {
+      "name": "data-product-user-ratios-node",
+      "path": "tests/data-product-user-ratios.cjs",
+      "command": [
+        "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "tests/data-product-user-ratios.cjs"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 91,
+      "stdout": "{\"suite\":\"product-user-ratios-ui\",\"passed\":31,\"failed\":0}\n",
+      "stderr": ""
+    },
+    {
+      "name": "page-context-personal-export-pure",
+      "path": "wp-content/plugins/peptide-core/tests/page-context-personal-export-pure.php",
+      "command": [
+        "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+        "-n",
+        "wp-content/plugins/peptide-core/tests/page-context-personal-export-pure.php"
+      ],
+      "exit_code": 255,
+      "error": null,
+      "elapsed_ms": 27,
+      "stdout": "\nFatal error: Uncaught Error: Call to undefined function PeptideCore\\Tracking\\mb_strtolower() in D:\\Projects\\peptide-platform-wt\\data-055-integrated-20261101\\wp-content\\plugins\\peptide-core\\includes\\tracking\\class-search-context.php:10\nStack trace:\n#0 D:\\Projects\\peptide-platform-wt\\data-055-integrated-20261101\\wp-content\\plugins\\peptide-core\\includes\\tracking\\class-search-context.php(23): PeptideCore\\Tracking\\Search_Context::source('\\xE7\\xA0\\x94\\xE7\\xA9\\xB6 \\xE8\\x82\\xBD')\n#1 D:\\Projects\\peptide-platform-wt\\data-055-integrated-20261101\\wp-content\\plugins\\peptide-core\\includes\\tracking\\class-page-context.php(34): PeptideCore\\Tracking\\Search_Context::clean(Array)\n#2 D:\\Projects\\peptide-platform-wt\\data-055-integrated-20261101\\wp-content\\plugins\\peptide-core\\includes\\tracking\\class-page-context.php(49): PeptideCore\\Tracking\\Page_Context::clean(Array)\n#3 D:\\Projects\\peptide-platform-wt\\data-055-integrated-20261101\\wp-content\\plugins\\peptide-core\\includes\\tracking\\class-page-context-privacy.php(28): PeptideCore\\Tracking\\Page_Context::saved(Array)\n#4 D:\\Projects\\peptide-platform-wt\\data-055-integrated-20261101\\wp-content\\plugins\\peptide-core\\tests\\page-context-personal-export-pure.php(56): PeptideCore\\Tracking\\Page_Context_Privacy::export('synthetic@examp...')\n#5 {main}\n  thrown in D:\\Projects\\peptide-platform-wt\\data-055-integrated-20261101\\wp-content\\plugins\\peptide-core\\includes\\tracking\\class-search-context.php on line 10\n",
+      "stderr": ""
+    },
+    {
+      "name": "mail-source-observations",
+      "path": "wp-content/plugins/peptide-core/tests/mail-source-observations.php",
+      "command": [
+        "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+        "-n",
+        "wp-content/plugins/peptide-core/tests/mail-source-observations.php"
+      ],
+      "exit_code": 2,
+      "error": null,
+      "elapsed_ms": 25,
+      "stdout": "",
+      "stderr": "Pass the installed WordPress public directory; it is read only.\n"
+    },
+    {
+      "name": "mail-source-producers",
+      "path": "wp-content/plugins/peptide-core/tests/mail-source-producers.php",
+      "command": [
+        "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+        "-n",
+        "wp-content/plugins/peptide-core/tests/mail-source-producers.php"
+      ],
+      "exit_code": 1,
+      "error": null,
+      "elapsed_ms": 30,
+      "stdout": "",
+      "stderr": "FAIL subscription native args and credential body hash unchanged success\n"
+    },
+    {
+      "name": "data-mail-sources",
+      "path": "tests/data-mail-sources.cjs",
+      "command": [
+        "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "tests/data-mail-sources.cjs"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 33,
+      "stdout": "PASS data-mail-sources: 34 checks\n",
+      "stderr": ""
+    },
+    {
+      "name": "data-full-rankings",
+      "path": "wp-content/plugins/peptide-core/tests/data-full-rankings.cjs",
+      "command": [
+        "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "wp-content/plugins/peptide-core/tests/data-full-rankings.cjs"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 91,
+      "stdout": "{\"passed\":53,\"failed\":0}\n",
+      "stderr": ""
+    },
+    {
+      "name": "data-operations-checkout",
+      "path": "wp-content/plugins/peptide-core/tests/data-operations-checkout.cjs",
+      "command": [
+        "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "wp-content/plugins/peptide-core/tests/data-operations-checkout.cjs"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 110,
+      "stdout": "{\"passed\":64,\"failed\":0}\n",
+      "stderr": ""
+    },
+    {
+      "name": "data-native-search-pure",
+      "path": "wp-content/plugins/peptide-core/tests/data-native-search-pure.php",
+      "command": [
+        "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+        "-n",
+        "wp-content/plugins/peptide-core/tests/data-native-search-pure.php"
+      ],
+      "exit_code": 255,
+      "error": null,
+      "elapsed_ms": 38,
+      "stdout": "PASS 18 standalone dimension report assertions\n\nFatal error: Uncaught Error: Call to undefined function PeptideCore\\Tracking\\mb_strtolower() in D:\\Projects\\peptide-platform-wt\\data-055-integrated-20261101\\wp-content\\plugins\\peptide-core\\includes\\tracking\\class-search-context.php:10\nStack trace:\n#0 D:\\Projects\\peptide-platform-wt\\data-055-integrated-20261101\\wp-content\\plugins\\peptide-core\\tests\\data-native-search-pure.php(20): PeptideCore\\Tracking\\Search_Context::source(' Demo  PEPTIDE ')\n#1 {main}\n  thrown in D:\\Projects\\peptide-platform-wt\\data-055-integrated-20261101\\wp-content\\plugins\\peptide-core\\includes\\tracking\\class-search-context.php on line 10\n",
+      "stderr": ""
+    },
+    {
+      "name": "data-product-exposure",
+      "path": "wp-content/plugins/peptide-core/tests/data-product-exposure.cjs",
+      "command": [
+        "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "wp-content/plugins/peptide-core/tests/data-product-exposure.cjs"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 86,
+      "stdout": "{\"suite\":\"product-exposure-controls\",\"passed\":24,\"failed\":0}\n",
+      "stderr": ""
+    },
+    {
+      "name": "data-exports",
+      "path": "wp-content/plugins/peptide-core/tests/data-exports.cjs",
+      "command": [
+        "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "wp-content/plugins/peptide-core/tests/data-exports.cjs"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_ms": 57,
+      "stdout": "{\"passed\":61,\"failed\":0}\n",
+      "stderr": ""
+    }
+  ],
+  "limits": [
+    "No WordPress bootstrap or native/private database fixture.",
+    "Unchanged historical gates are indexed with source provenance; not rerun by default."
+  ]
+}

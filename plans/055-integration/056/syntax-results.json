@@ -1,0 +1,381 @@
+[
+  {
+    "path": "wp-content/plugins/peptide-core/includes/tracking/class-product-actions.php",
+    "sha256": "2a4e7f1db7f978acdba6f0f969ba3ec2b472968916c087a258985dd8702a3b16",
+    "command": [
+      "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+      "-n",
+      "-l",
+      "wp-content/plugins/peptide-core/includes/tracking/class-product-actions.php"
+    ],
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in wp-content/plugins/peptide-core/includes/tracking/class-product-actions.php\n",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/includes/tracking/class-ingest.php",
+    "sha256": "6ad70e697c5ef6f9220973efc40a6f89f0f8dc601aa3b487db27ac731168e9e3",
+    "command": [
+      "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+      "-n",
+      "-l",
+      "wp-content/plugins/peptide-core/includes/tracking/class-ingest.php"
+    ],
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in wp-content/plugins/peptide-core/includes/tracking/class-ingest.php\n",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/includes/tracking/class-privacy.php",
+    "sha256": "49a2c6a8eb07ded6573d2b2f0c846f3c1cb687e49d1702606b49af0f95921369",
+    "command": [
+      "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+      "-n",
+      "-l",
+      "wp-content/plugins/peptide-core/includes/tracking/class-privacy.php"
+    ],
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in wp-content/plugins/peptide-core/includes/tracking/class-privacy.php\n",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/includes/data/class-product-actions.php",
+    "sha256": "84662638c8f6ac05521ae274fe3b353be32f088f068ba5e9284359abc451c7c6",
+    "command": [
+      "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+      "-n",
+      "-l",
+      "wp-content/plugins/peptide-core/includes/data/class-product-actions.php"
+    ],
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in wp-content/plugins/peptide-core/includes/data/class-product-actions.php\n",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/includes/data/class-products.php",
+    "sha256": "e419ad7c02ea952599e6ca439a814d3437581db0eed75795290217b95ceab678",
+    "command": [
+      "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+      "-n",
+      "-l",
+      "wp-content/plugins/peptide-core/includes/data/class-products.php"
+    ],
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in wp-content/plugins/peptide-core/includes/data/class-products.php\n",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/includes/data/class-rankings.php",
+    "sha256": "83ee8aad4d097512f2dfead4695b88cba190e7d7f74513a322f70a1639cb2e35",
+    "command": [
+      "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+      "-n",
+      "-l",
+      "wp-content/plugins/peptide-core/includes/data/class-rankings.php"
+    ],
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in wp-content/plugins/peptide-core/includes/data/class-rankings.php\n",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/assets/data-products.js",
+    "sha256": "7e80385a83e2f79021a4d2f79bab5fab24fd1a56df5acdc96ac24c45357411a7",
+    "command": [
+      "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "--check",
+      "wp-content/plugins/peptide-core/assets/data-products.js"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/assets/data-operations.js",
+    "sha256": "4845766717415f5f36bdb43c82729a888e5a4e53e5bee8e929a662a55821d761",
+    "command": [
+      "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "--check",
+      "wp-content/plugins/peptide-core/assets/data-operations.js"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/assets/data-rankings.js",
+    "sha256": "38a5ebed2e9ecfaa9d1639258d8d7739684d617044eb072b35e6d0337e92569f",
+    "command": [
+      "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "--check",
+      "wp-content/plugins/peptide-core/assets/data-rankings.js"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/includes/admin/class-data-pages.php",
+    "sha256": "b96b741af5f7eb1af61d96478da47da7f25f52f8741b45c2e5abafe6cab17c15",
+    "command": [
+      "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+      "-n",
+      "-l",
+      "wp-content/plugins/peptide-core/includes/admin/class-data-pages.php"
+    ],
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in wp-content/plugins/peptide-core/includes/admin/class-data-pages.php\n",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/languages/customer-data-observations-zh_CN.php",
+    "sha256": "cef5f8c93eba9b1538c2e04360f6e2268251835d9bba4748412087aa60025639",
+    "command": [
+      "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+      "-n",
+      "-l",
+      "wp-content/plugins/peptide-core/languages/customer-data-observations-zh_CN.php"
+    ],
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in wp-content/plugins/peptide-core/languages/customer-data-observations-zh_CN.php\n",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/themes/peptide-site/assets/visitor-tracking.js",
+    "sha256": "4feb269d24634b021a8f858c8bfe2596f8f84afb6190b0fb89b766b660a0233d",
+    "command": [
+      "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "--check",
+      "wp-content/themes/peptide-site/assets/visitor-tracking.js"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/themes/peptide-site/assets/visitor-adapter.js",
+    "sha256": "315670e59b0548618d7b10dddfb1e21287719cc176e854309b10775d909bca0d",
+    "command": [
+      "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "--check",
+      "wp-content/themes/peptide-site/assets/visitor-adapter.js"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/themes/peptide-site/inc/visitor-tracking.php",
+    "sha256": "51bfbbd2bc2bff8e884cdb437bc384e54b47a6cedd9007395c66f2324619dd65",
+    "command": [
+      "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+      "-n",
+      "-l",
+      "wp-content/themes/peptide-site/inc/visitor-tracking.php"
+    ],
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in wp-content/themes/peptide-site/inc/visitor-tracking.php\n",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/tests/tracking-product-actions-pure.php",
+    "sha256": "527d2409281de99cdeb8066994614bb9e9b6d4d856907dfdc5e473e8419cd57b",
+    "command": [
+      "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+      "-n",
+      "-l",
+      "wp-content/plugins/peptide-core/tests/tracking-product-actions-pure.php"
+    ],
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in wp-content/plugins/peptide-core/tests/tracking-product-actions-pure.php\n",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/tests/data-product-actions-pure.php",
+    "sha256": "aaa14fd6e4213167747b5fd69ebc937d155e638e2f9f3bcb6a35c5faacc09f10",
+    "command": [
+      "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+      "-n",
+      "-l",
+      "wp-content/plugins/peptide-core/tests/data-product-actions-pure.php"
+    ],
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in wp-content/plugins/peptide-core/tests/data-product-actions-pure.php\n",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/tests/tracking-product-actions-export-pure.php",
+    "sha256": "f0ef2eac2b2bf2ae5f8238edab9a4f7616d6c5af9eb66129c44beef3f3020e51",
+    "command": [
+      "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+      "-n",
+      "-l",
+      "wp-content/plugins/peptide-core/tests/tracking-product-actions-export-pure.php"
+    ],
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in wp-content/plugins/peptide-core/tests/tracking-product-actions-export-pure.php\n",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/tests/data-product-action-rankings-pure.php",
+    "sha256": "ddedbaa9b6bd4dc470a5410d661ca1be460728cc60ce0d9bc2b859d359e49cc2",
+    "command": [
+      "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+      "-n",
+      "-l",
+      "wp-content/plugins/peptide-core/tests/data-product-action-rankings-pure.php"
+    ],
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in wp-content/plugins/peptide-core/tests/data-product-action-rankings-pure.php\n",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/tests/data-product-action-rankings.cjs",
+    "sha256": "6657e1dfb8e709c2686b8814d01dffd7e84facfded6a5351057db10a4f262b46",
+    "command": [
+      "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "--check",
+      "wp-content/plugins/peptide-core/tests/data-product-action-rankings.cjs"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/themes/peptide-site/tests/visitor-product-actions.cjs",
+    "sha256": "f38943b95354a92681a785d8eb7cd666113f05c2d6bcf2916071bdd1aeaad0d2",
+    "command": [
+      "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "--check",
+      "wp-content/themes/peptide-site/tests/visitor-product-actions.cjs"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/themes/peptide-site/tests/visitor-product-actions-config.php",
+    "sha256": "bba52b403567aa74384d8ea377dd697dbd1cf114d53a4c76e893162045a420a8",
+    "command": [
+      "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+      "-n",
+      "-l",
+      "wp-content/themes/peptide-site/tests/visitor-product-actions-config.php"
+    ],
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in wp-content/themes/peptide-site/tests/visitor-product-actions-config.php\n",
+    "stderr": ""
+  },
+  {
+    "path": "tests/data-product-actions.cjs",
+    "sha256": "6a131a6e1ec32ca7be9f31a73ebe72d640df04dcaf849e970e1038f1d6463278",
+    "command": [
+      "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "--check",
+      "tests/data-product-actions.cjs"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/tests/data-product-user-ratios.php",
+    "sha256": "4bfb386d9a42119c7461f039dcb4fb074b8913ac82587772b1caf65ab33e7973",
+    "command": [
+      "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+      "-n",
+      "-l",
+      "wp-content/plugins/peptide-core/tests/data-product-user-ratios.php"
+    ],
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in wp-content/plugins/peptide-core/tests/data-product-user-ratios.php\n",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/tests/data-native-search-pure.php",
+    "sha256": "4d207d07b938c43d9a1e5781b45e00653b71b9e4b221ec508a534b5d2e78fbce",
+    "command": [
+      "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+      "-n",
+      "-l",
+      "wp-content/plugins/peptide-core/tests/data-native-search-pure.php"
+    ],
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in wp-content/plugins/peptide-core/tests/data-native-search-pure.php\n",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/tests/data-dimensions-pure.php",
+    "sha256": "32e3a97c8171e643447f529c4d6018da7cfcd0e7e9072eb14a3a44dbb9490026",
+    "command": [
+      "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+      "-n",
+      "-l",
+      "wp-content/plugins/peptide-core/tests/data-dimensions-pure.php"
+    ],
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in wp-content/plugins/peptide-core/tests/data-dimensions-pure.php\n",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/tests/product-actions-test-autoload.php",
+    "sha256": "9e5db196434900bd5390ebbaa52dc8b3486c2b96c451549540cecf1b73413b10",
+    "command": [
+      "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+      "-n",
+      "-l",
+      "wp-content/plugins/peptide-core/tests/product-actions-test-autoload.php"
+    ],
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in wp-content/plugins/peptide-core/tests/product-actions-test-autoload.php\n",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/tests/data-product-created.php",
+    "sha256": "08d3718dede1ecf5a4451e986fb86abd5f7ca4bd7e5759fdeecfdfd8347d8863",
+    "command": [
+      "C:/Users/Administrator/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe/php.exe",
+      "-n",
+      "-l",
+      "wp-content/plugins/peptide-core/tests/data-product-created.php"
+    ],
+    "exit_code": 0,
+    "stdout": "No syntax errors detected in wp-content/plugins/peptide-core/tests/data-product-created.php\n",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/tests/data-product-created.cjs",
+    "sha256": "261093c2bee194e0ed52b83ce15c63b7fe135686cf8cf33e08e75a661d8e9438",
+    "command": [
+      "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "--check",
+      "wp-content/plugins/peptide-core/tests/data-product-created.cjs"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/tests/data-full-rankings.cjs",
+    "sha256": "bf028799190d43cdfb68f3a81069c520cb41b177bda9cc9387ac12cc1da2b8a0",
+    "command": [
+      "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "--check",
+      "wp-content/plugins/peptide-core/tests/data-full-rankings.cjs"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "path": "wp-content/plugins/peptide-core/tests/data-operations-checkout.cjs",
+    "sha256": "fc5e67735d96fd663aa9627eb1aa8036d455eff5431c694ab9a53003acc694e3",
+    "command": [
+      "C:\\Users\\Administrator\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "--check",
+      "wp-content/plugins/peptide-core/tests/data-operations-checkout.cjs"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+]

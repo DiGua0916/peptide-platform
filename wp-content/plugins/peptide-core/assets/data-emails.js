@@ -14,12 +14,23 @@
 	}
 	var T = cfg.strings;
 	var PATH = '/peptide/v1/data/emails';
+	var FAMILY_LABEL_KEYS = { woo: 'wooSource', campaign: 'campaignSource', subscription: 'subscriptionSource', loyalty: 'loyaltySource' };
+
+	function familyLabel( family ) {
+		return Object.prototype.hasOwnProperty.call( FAMILY_LABEL_KEYS, family ) ? T[ FAMILY_LABEL_KEYS[ family ] ] : T.unknownSource;
+	}
 
 	// 请求计数：切换时间段后，旧请求晚到的结果不再画。
 	var requests = 0;
+	var filters = { family: '', sender: '' };
+	try {
+		var initial = new window.URL( window.location.href );
+		filters.family = initial.searchParams.get( 'mail_family' ) || '';
+		filters.sender = initial.searchParams.get( 'mail_sender' ) || '';
+	} catch ( e ) {}
 
 	function isNum( v ) {
-		return v !== undefined && v !== null && ! isNaN( Number( v ) );
+		return v !== undefined && v !== null && isFinite( Number( v ) );
 	}
 
 	// 成功率：没有值（发送数是 0）显示“-”，最多 2 位小数。
@@ -83,16 +94,61 @@
 		'</table></div>';
 	}
 
+	function observationValue( key, value, ctx ) {
+		if ( ! isNum( value ) ) { return '-'; }
+		return /_rate$/.test( key ) ? pct( value ) : ctx.number( value );
+	}
+
+	function observationTiles( report, ctx ) {
+		return [ 'opened', 'open_rate', 'clicked', 'click_rate' ].map( function ( key ) {
+			return '<div class="pc-emails-tile"><div class="pc-emails-tile__label">' + ctx.esc( T[ key ] ) + '</div>' +
+				'<div class="pc-emails-tile__value">' + ctx.esc( observationValue( key, report.current && report.current[ key ], ctx ) ) + '</div>' +
+				'<div class="pc-emails-tile__prev">' + ctx.esc( ctx.strings.vs + ' ' + observationValue( key, report.previous && report.previous[ key ], ctx ) ) + '</div></div>';
+		} ).join( '' );
+	}
+
+	function observationFilters( report, ctx ) {
+		var esc = ctx.esc;
+		var option = function ( value, label, current ) { return '<option value="' + esc( value ) + '"' + ( value === current ? ' selected' : '' ) + '>' + esc( label ) + '</option>'; };
+		var senders = option( '', T.allSenders, filters.sender );
+		var found = ! filters.sender;
+		( report.senders || [] ).forEach( function ( sender ) {
+			if ( sender.sender_key === filters.sender ) { found = true; }
+			senders += option( sender.sender_key, sender.sender, filters.sender );
+		} );
+		if ( ! found ) { senders += option( filters.sender, T.unobservedSender, filters.sender ); }
+		return '<div class="pc-emails-filters"><label>' + esc( T.sourceFamily ) + ' <select class="pc-mail-family">' +
+			option( '', T.allSources, filters.family ) + Object.keys( FAMILY_LABEL_KEYS ).map( function ( family ) { return option( family, familyLabel( family ), filters.family ); } ).join( '' ) +
+			'</select></label><label>' + esc( T.sender ) + ' <select class="pc-mail-sender">' + senders + '</select></label></div>';
+	}
+
+	function observationTable( report, ctx ) {
+		var esc = ctx.esc;
+		var columns = [ 'attempts', 'accepted', 'failed', 'uncertain', 'pending', 'open_eligible', 'opened', 'open_rate', 'click_eligible', 'clicked', 'click_rate' ];
+		var head = '<th scope="col">' + esc( T.sourceFamily ) + '</th><th scope="col">' + esc( T.name ) + '</th><th scope="col">' + esc( T.sender ) + '</th><th scope="col">' + esc( T.coverage ) + '</th>';
+		columns.forEach( function ( key ) { head += '<th scope="col">' + esc( T[ key ] ) + '</th>'; } );
+		var rows = ( report.rows || [] ).map( function ( row ) {
+			return '<tr><td>' + esc( familyLabel( row.family ) ) + '</td><th scope="row">' + esc( row.name || row.source_key ) + '</th><td>' + esc( row.sender || T.unknownSender ) + '</td><td>' + esc( T[ 'coverage_' + row.coverage ] || T.coverageUnknown ) + '<br><small>' + esc( row.mime || '-' ) + '</small></td>' +
+				columns.map( function ( key ) { return '<td>' + esc( observationValue( key, row[ key ], ctx ) ) + '</td>'; } ).join( '' ) + '</tr>';
+		} ).join( '' );
+		if ( ! rows ) { rows = '<tr><td colspan="15">' + esc( T.noObservedMessages ) + '</td></tr>'; }
+		return '<div class="pc-emails-table-wrap"><table class="pc-emails-table"><thead><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+	}
+
 	function view( data, ctx ) {
 		var esc = ctx.esc;
+		var report = data.observations || { status: 'unavailable', current: null, previous: null, rows: [] };
 		var logUrl = safeUrl( data.log_url );
 		var link = logUrl ?
 			' <a class="pc-emails-loglink" href="' + esc( logUrl ) + '">' + esc( T.logLink ) + '</a>' :
 			'';
 		return '<div class="pc-emails-data">' +
-			'<div class="pc-emails-tiles">' + tile( 'sent', data, ctx ) + tile( 'success_rate', data, ctx ) + '</div>' +
-			'<p class="pc-data-muted pc-emails-note">' + esc( T.notTracked ) + link + '</p>' +
+			'<h2>' + esc( T.legacyTitle ) + '</h2><div class="pc-emails-tiles">' + tile( 'sent', data, ctx ) + tile( 'success_rate', data, ctx ) + '</div>' +
+			'<p class="pc-data-muted pc-emails-note">' + esc( T.legacyHelp ) + link + '</p>' +
 			tableHtml( data.rows || [], ctx ) +
+			'<h2>' + esc( T.observationTitle ) + '</h2><div class="pc-emails-tiles">' + observationTiles( report, ctx ) + '</div><p class="pc-data-muted">' + esc( T.observationHelp ) + '</p>' +
+			'<p role="status">' + esc( T[ 'observation_' + report.status ] || T.observation_unavailable ) + '</p>' +
+			observationFilters( report, ctx ) + observationTable( report, ctx ) +
 		'</div>';
 	}
 
@@ -102,6 +158,8 @@
 		var params = range.preset ?
 			{ range: range.preset } :
 			{ from: d.from, to: d.to, compare_from: d.compare_from, compare_to: d.compare_to };
+		params.mail_family = filters.family;
+		params.mail_sender = filters.sender;
 		var failed = function () {
 			bodyEl.innerHTML = '<p class="pc-data-empty">' + ctx.esc( ctx.strings.loadError ) + '</p>';
 		};
@@ -114,6 +172,19 @@
 				}
 				try {
 					bodyEl.innerHTML = view( data, ctx );
+					var reload = function () {
+						filters.family = bodyEl.querySelector( '.pc-mail-family' ).value;
+						filters.sender = bodyEl.querySelector( '.pc-mail-sender' ).value;
+						try {
+							var url = new window.URL( window.location.href );
+							if ( filters.family ) { url.searchParams.set( 'mail_family', filters.family ); } else { url.searchParams['delete']( 'mail_family' ); }
+							if ( filters.sender ) { url.searchParams.set( 'mail_sender', filters.sender ); } else { url.searchParams['delete']( 'mail_sender' ); }
+							window.history.replaceState( null, '', url.href );
+						} catch ( e ) {}
+						render( bodyEl, range, ctx );
+					};
+					bodyEl.querySelector( '.pc-mail-family' ).addEventListener( 'change', reload );
+					bodyEl.querySelector( '.pc-mail-sender' ).addEventListener( 'change', reload );
 				} catch ( e ) {
 					failed();
 				}

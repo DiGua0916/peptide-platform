@@ -1,0 +1,27 @@
+.pc-page-conversion { min-width: 0; max-width: 100%; }
+.pc-page-conversion [hidden] { display: none !important; }
+.pc-pc-toolbar, .pc-pc-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 14px 0; }
+.pc-pc-toolbar label { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; max-width: 100%; }
+.pc-pc-toolbar input { width: 250px; max-width: 100%; min-width: 0; }
+.pc-pc-toolbar button, .pc-pc-footer button { white-space: normal; }
+.pc-pc-scroll { overflow-x: auto; max-width: 100%; border: 1px solid #dedede; }
+.pc-pc-table { width: max-content; min-width: 100%; border: 0; }
+.pc-pc-table th, .pc-pc-table td { padding: 10px 12px; vertical-align: top; }
+.pc-pc-table td { min-width: 145px; white-space: nowrap; }
+.pc-pc-table th:first-child { min-width: 190px; max-width: 300px; overflow-wrap: anywhere; }
+.pc-pc-table td span { display: inline-block; margin-right: 5px; font-size: 11px; }
+.pc-pc-table button { color: inherit; background: transparent; border: 0; padding: 0; text-align: left; cursor: pointer; }
+.pc-pc-table th button { font-weight: 600; }
+.pc-pc-chooser { padding: 12px; border: 1px solid #dedede; margin: 10px 0; }
+.pc-pc-choice { display: flex; align-items: center; gap: 8px; margin: 7px 0; }
+.pc-pc-choice label { flex: 1; overflow-wrap: anywhere; }
+.pc-pc-choice button { flex: 0 0 30px; min-height: 30px; border: 1px solid #ccc; background: white; color: #171717; cursor: pointer; }
+.pc-pc-choice button:disabled { color: #aaa; cursor: default; }
+.pc-page-conversion :focus-visible { outline: 2px solid #737373; outline-offset: 3px; }
+@media (max-width: 600px) {
+ .pc-pc-toolbar { align-items: flex-start; }
+ .pc-pc-toolbar label { width: 100%; }
+ .pc-pc-toolbar input { flex: 1; }
+ .pc-pc-table th:first-child { min-width: 160px; max-width: 220px; }
+}
+.pc-page-conversion .pc-report-filters{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin:12px 0}.pc-page-conversion .pc-report-filters label{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.pc-page-conversion .pc-report-filters input{max-width:220px;width:100%;min-width:0}.pc-page-conversion .pc-report-filters p{flex-basis:100%;margin:0}@media(max-width:600px){.pc-page-conversion .pc-report-filters label{width:100%}.pc-page-conversion .pc-report-filters input{max-width:100%}}

@@ -179,7 +179,7 @@ final class Subscriptions {
 		$confirm_url = self::token_url( 'confirm', $id, $token ); $unsubscribe_url = self::token_url( 'unsubscribe', $id, $unsubscribe );
 		$subject = sprintf( __( 'Confirm your subscription to %s', 'peptide-core' ), wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ) );
 		$body = __( 'Please confirm that you asked to receive store emails:', 'peptide-core' ) . "\n\n" . $confirm_url . "\n\n" . __( 'This confirmation link expires in 48 hours. If you did not request it, ignore this email or cancel below.', 'peptide-core' ) . "\n\n" . __( 'Unsubscribe or cancel this request:', 'peptide-core' ) . "\n" . $unsubscribe_url;
-		if ( ! wp_mail( $email, $subject, $body, array( 'Content-Type: text/plain; charset=UTF-8' ) ) ) { return self::error( 'pc_subscription_mail', __( 'The confirmation email could not be handed to the mail service. Your address remains unconfirmed. Please try again later.', 'peptide-core' ), 503 ); }
+		if ( ! \PeptideCore\Emails\Message_Observations::send( 'wp_mail', array( $email, $subject, $body, array( 'Content-Type: text/plain; charset=UTF-8' ) ), array( 'family' => 'subscription', 'key' => 'confirmation', 'attempt' => $id . ':' . wp_generate_uuid4() ) ) ) { return self::error( 'pc_subscription_mail', __( 'The confirmation email could not be handed to the mail service. Your address remains unconfirmed. Please try again later.', 'peptide-core' ), 503 ); }
 		return self::success();
 	}
 

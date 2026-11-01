@@ -1,0 +1,82 @@
+{
+  "manifest_sha256": "6cc947579ba578eb2a0d6eeb8f41e4659010287863c426d25daf2a0cb6062d55",
+  "verifiedOwned": 27,
+  "records": [
+    {
+      "path": "wp-content/plugins/peptide-core/includes/tracking/class-product-actions.php",
+      "method": "exact056 approved production",
+      "before": null,
+      "after": "2a4e7f1db7f978acdba6f0f969ba3ec2b472968916c087a258985dd8702a3b16"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/tracking/class-ingest.php",
+      "method": "exact056 approved production",
+      "before": "97645f9eb1276dcddad7920e31dc4d6a2ac6e00df2cb699e3b556d4c53b4b770",
+      "after": "6ad70e697c5ef6f9220973efc40a6f89f0f8dc601aa3b487db27ac731168e9e3"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/tracking/class-privacy.php",
+      "method": "exact056 approved production",
+      "before": "95882ab4e237433a3607738c0af97ecf39a0b774205c31dd4aa799b5761a1f9f",
+      "after": "49a2c6a8eb07ded6573d2b2f0c846f3c1cb687e49d1702606b49af0f95921369"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-product-actions.php",
+      "method": "exact056 approved production",
+      "before": null,
+      "after": "84662638c8f6ac05521ae274fe3b353be32f088f068ba5e9284359abc451c7c6"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-products.php",
+      "method": "three-way052 base; preserve054/057",
+      "before": "e37b7acb9653ea93411c47346567ca6216385e5172e08b43d289215dfc144acf",
+      "after": "e419ad7c02ea952599e6ca439a814d3437581db0eed75795290217b95ceab678",
+      "source056": "3eecdcda7ee74c1c4ae7e62687f12f2b47afe86ff21c5edae6c48a32040819d0"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/data/class-rankings.php",
+      "method": "exact056 approved production",
+      "before": "beaf1e82fdf9bc10c2ff21231db05fb681776b1f44c4eee69d92873258e5c49e",
+      "after": "83ee8aad4d097512f2dfead4695b88cba190e7d7f74513a322f70a1639cb2e35"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/data-products.js",
+      "method": "three-way052 base; preserve054/057",
+      "before": "1cf184411e585a0ae8820090c7151b4e12e9bf9bb8f7db2832a4b00f9155c69e",
+      "after": "7e80385a83e2f79021a4d2f79bab5fab24fd1a56df5acdc96ac24c45357411a7",
+      "source056": "6cd5f83c8f65809230c5aba18c8a62563d4936e4ce0604d8a4100355eed03d58"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/data-operations.js",
+      "method": "exact056 approved production",
+      "before": "402173a2f7f6002a0fd7e4964a2c8a855f0926e1351c3bb6b2189e7a35f353a5",
+      "after": "4845766717415f5f36bdb43c82729a888e5a4e53e5bee8e929a662a55821d761"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/data-rankings.js",
+      "method": "exact056 approved production",
+      "before": "8828c52d9b866c2d6fe74dfac1c7c9e5b8da1963c97b04404b6437b244d529bc",
+      "after": "38a5ebed2e9ecfaa9d1639258d8d7739684d617044eb072b35e6d0337e92569f"
+    },
+    {
+      "path": "wp-content/themes/peptide-site/assets/visitor-tracking.js",
+      "method": "exact056 approved production",
+      "before": "e306f6e96ff3b137a04d90bc45c4eb5d58339d098290015b0c99a189fd01e1eb",
+      "after": "4feb269d24634b021a8f858c8bfe2596f8f84afb6190b0fb89b766b660a0233d"
+    },
+    {
+      "path": "wp-content/themes/peptide-site/assets/visitor-adapter.js",
+      "method": "exact056 approved production",
+      "before": "0e4c147e74b8acca5c0ad05df5f4e5f63a26f2e9f621715efc02d16a19f7c969",
+      "after": "315670e59b0548618d7b10dddfb1e21287719cc176e854309b10775d909bca0d"
+    },
+    {
+      "path": "wp-content/themes/peptide-site/inc/visitor-tracking.php",
+      "method": "three-way052 base; preserve054/057",
+      "before": "4e0dffff621eb20cce91400e4ba59dac60a554434036b0662d4ebedd9cc8585b",
+      "after": "51bfbbd2bc2bff8e884cdb437bc384e54b47a6cedd9007395c66f2324619dd65",
+      "source056": "8d936211619a8d0851f07a5bf1764e3a418d0558e179bdd1579752659a138e5d"
+    }
+  ],
+  "conflicts": []
+}

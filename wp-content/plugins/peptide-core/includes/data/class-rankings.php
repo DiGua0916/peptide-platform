@@ -1,6 +1,6 @@
 <?php
 /**
- * 运营数据页排行表（DATA-01 第 7b 步）：十四张排行表，每张有名称、本期值、对比期值和变化；口径见 Shopname 帮助中心“运营数据”。
+ * 运营数据页排行表：原十四张排行保留计算规则，另加五张基于原访问来源/域名/国家观察的排行。
  *
  * 时间段是 [from, to)（Unix 秒，店铺时区由 Data\Range 换算好）；本期和对比期用同一套规则各算一遍。
  * 每个时间段只查一次订单（类型 shop_order、状态 any、创建时间在时间段内；HPOS 的 any 已经不含 checkout-draft 和回收站），去掉测试订单（Overview::is_test_order()）后：
@@ -46,17 +46,17 @@ defined( 'ABSPATH' ) || exit;
 
 final class Rankings {
 
-	/** 十四张表，顺序 = Shopname 的页面顺序（页面和测试都依赖这个顺序）。 */
-	public const TABLES = array( 'products_units', 'products_sales', 'products_viewed', 'products_carted', 'categories_units', 'categories_sales', 'order_countries', 'customer_countries', 'visitor_browsers', 'order_browsers', 'payment_methods', 'payment_success', 'coupons', 'devices' );
+	/** 原十四张表顺序不变，末尾为五张有明确数据来源的新排行。 */
+	public const TABLES = array( 'products_units', 'products_sales', 'products_viewed', 'products_carted', 'categories_units', 'categories_sales', 'order_countries', 'customer_countries', 'visitor_browsers', 'order_browsers', 'payment_methods', 'payment_success', 'coupons', 'devices', 'visitor_source', 'order_source', 'visitor_domain', 'order_domain', 'visitor_country', 'search_terms', 'products_favorited' );
 
 	/** 每张表最多返回的行数。 */
 	public const MAX_ROWS = 50;
 
 	/** key 是商品 ID 或分类 ID 的表（排序按数字）。 */
-	private const NUMERIC_KEYS = array( 'products_units', 'products_sales', 'products_viewed', 'products_carted', 'categories_units', 'categories_sales' );
+	private const NUMERIC_KEYS = array( 'products_units', 'products_sales', 'products_viewed', 'products_carted', 'categories_units', 'categories_sales', 'products_favorited' );
 
 	/** key 是商品 ID 的表（名称和编辑链接取自商品）。 */
-	private const PRODUCT_TABLES = array( 'products_units', 'products_sales', 'products_viewed', 'products_carted' );
+	private const PRODUCT_TABLES = array( 'products_units', 'products_sales', 'products_viewed', 'products_carted', 'products_favorited' );
 
 	/**
 	 * 十四张排行表：每张表的行（名称、本期、对比期、变化）和截断前的行数。
@@ -79,6 +79,9 @@ final class Rankings {
 		$tables = array();
 		foreach ( self::TABLES as $name ) {
 			$tables[ $name ] = self::table( $name, $current[ $name ], $previous[ $name ], $cache );
+			if ( in_array( $name, Dimension_Reports::TABLES, true ) ) { $tables[$name]['coverage'] = array( 'current' => $cache['dimension_coverage'][$name][0], 'previous' => $cache['dimension_coverage'][$name][1] ); }
+			if ( 'products_favorited' === $name ) { $tables[$name]['coverage'] = array( 'current' => $cache['action_coverage'][0], 'previous' => $cache['action_coverage'][1] ); }
+			if ( 'search_terms' === $name ) { $tables[$name]['coverage'] = array( 'current' => $cache['search_coverage'][0], 'previous' => $cache['search_coverage'][1] ); }
 		}
 
 		return array(
@@ -116,7 +119,11 @@ final class Rankings {
 		$slice = $page > (int) ceil( $total / $per_page ) ? array() : array_slice( $selected['rows'], ( $page - 1 ) * $per_page, $per_page );
 		if ( '' === $args['q'] ) { self::prime_products( $args['table'], $slice, $selected['cache'] ); }
 		$units = self::units( $args['table'] );
-		return array( 'range' => $range, 'tracking' => Schema::installed(), 'table' => $args['table'], 'q' => $args['q'], 'page' => $page, 'per_page' => $per_page, 'total' => $total, 'value_unit' => $units['value_unit'], 'change_unit' => $units['change_unit'], 'currency' => $units['currency'], 'rows' => self::name_rows( $args['table'], $slice, $selected['cache'] ) );
+		$out = array( 'range' => $range, 'tracking' => Schema::installed(), 'table' => $args['table'], 'q' => $args['q'], 'page' => $page, 'per_page' => $per_page, 'total' => $total, 'value_unit' => $units['value_unit'], 'change_unit' => $units['change_unit'], 'currency' => $units['currency'], 'rows' => self::name_rows( $args['table'], $slice, $selected['cache'] ) );
+		if ( in_array( $args['table'], Dimension_Reports::TABLES, true ) ) { $out['coverage'] = array( 'current' => $selected['cache']['dimension_coverage'][$args['table']][0], 'previous' => $selected['cache']['dimension_coverage'][$args['table']][1] ); }
+		if ( 'products_favorited' === $args['table'] ) { $out['coverage'] = array( 'current' => $selected['cache']['action_coverage'][0], 'previous' => $selected['cache']['action_coverage'][1] ); }
+		if ( 'search_terms' === $args['table'] ) { $out['coverage'] = array( 'current' => $selected['cache']['search_coverage'][0], 'previous' => $selected['cache']['search_coverage'][1] ); }
+		return $out;
 	}
 
 	/** A single complete selection, never repeated paginated summary calls. */
@@ -190,6 +197,7 @@ final class Rankings {
 		$successes     = array();
 		$buyers        = array();
 		$visitor_ids   = array();
+		$dimension_orders = array();
 		foreach ( is_array( $orders ) ? $orders : array() as $order ) {
 			if ( ! $order instanceof \WC_Order || Overview::is_test_order( $order ) ) {
 				continue;
@@ -238,6 +246,7 @@ final class Rankings {
 			}
 
 			$visitor_ids[] = (int) $order->get_meta( Server_Events::ORDER_VISITOR_META );
+			$dimension_orders[] = array( 'visitor' => (int) $order->get_meta( Server_Events::ORDER_VISITOR_META ), 'visit' => (int) $order->get_meta( Server_Events::ORDER_VISIT_META ) );
 
 			foreach ( $order->get_items() as $item ) {
 				if ( ! $item instanceof \WC_Order_Item_Product ) {
@@ -280,6 +289,11 @@ final class Rankings {
 		if ( Schema::installed() ) {
 			$out = self::tracked( $out, $from, $to );
 		}
+		foreach ( Dimension_Reports::rankings( $from, $to, $dimension_orders, $cache ) as $name => $rows ) { $out[$name] = $rows; }
+		$search = Search_Observations::period( $from, $to ); $out['search_terms'] = $search['rows']; $cache['search_coverage'][] = $search['coverage'];
+		$actions = Product_Actions::period( $from, $to );
+		foreach ( $actions['products'] as $id => $metrics ) { if ( $metrics['favorite_count'] !== null ) { $out['products_favorited'][$id] = $metrics['favorite_count']; } }
+		$cache['action_coverage'][] = $actions['kind_coverage']['favorite'];
 		return $out;
 	}
 
@@ -397,6 +411,9 @@ final class Rankings {
 				$c      = $current[ $key ] ?? null;
 				$p      = $previous[ $key ] ?? null;
 				$change = ( null === $c || null === $p ) ? null : round( (float) $c - (float) $p, 2 );
+			} elseif ( 'products_favorited' === $name ) {
+				$c = $current[$key] ?? null; $p = $previous[$key] ?? null;
+				$change = null === $c || null === $p ? null : Range::change( (float) $c, (float) $p );
 			} else {
 				$c = $current[ $key ] ?? 0;
 				$p = $previous[ $key ] ?? 0;
@@ -453,6 +470,7 @@ final class Rankings {
 	 * @return array{label:string,edit_url:string}
 	 */
 	private static function named( string $table, string $key, array &$cache ): array {
+		if ( in_array( $table, Dimension_Reports::TABLES, true ) ) { return array( 'label' => $cache['dimension_labels'][$table][$key] ?? '', 'edit_url' => '' ); }
 		if ( in_array( $table, self::PRODUCT_TABLES, true ) ) {
 			$id = (int) $key;
 			if ( ! array_key_exists( $id, $cache['products'] ) ) {

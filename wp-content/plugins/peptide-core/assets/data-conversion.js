@@ -16,7 +16,7 @@
 	var STORE_KEY = 'pcDataConversionGroup';
 	// 和 Conversion::OVERALL / GROUPS 以及 Operations::LAYERS 的顺序一致。
 	var OVERALL = [ 'conversion', 'paid', 'visitors', 'viewed', 'carted', 'checkout' ];
-	var GROUPS = [ 'device', 'browser' ];
+	var GROUPS = [ 'device', 'browser', 'utm', 'domain', 'country', 'os', 'screen' ];
 	var LAYERS = [ 'visitors', 'viewed', 'carted', 'checkout', 'paid' ];
 	var DETAIL_LAYERS = [ 'visitors', 'viewed', 'carted', 'checkout', 'address', 'shipping', 'payment', 'paid' ];
 	var expanded = {};
@@ -160,7 +160,7 @@
 			var previous = index ? byKey[ keys[ index - 1 ] ] : null;
 			return { count: layer.count, visitor_rate: layer.visitor_rate, step_rate: previous && previous.count ? Math.round( layer.count / previous.count * 10000 ) / 100 : null };
 		} );
-		var title = fill( T.groupRate, { '%s': groupLabel( group, row.key ) } );
+		var title = fill( T.groupRate, { '%s': row.dimension && typeof row.label === 'string' ? row.label : groupLabel( group, row.key ) } );
 		var steps = keys.map( function ( key, i ) {
 			var layer = funnel[ i ] || { count: 0, visitor_rate: null };
 			var next = funnel[ i + 1 ];
@@ -195,6 +195,11 @@
 		}
 		html += overall( data, ctx );
 		html += checkoutSteps( data.checkout_steps, ctx );
+		if ( data.dimension_coverage ) {
+			var coverage = data.dimension_coverage;
+			html += '<p class="pc-conv-note">' + esc( T.dimensionHelp || 'Groups use saved visit facts. Overall covers all visitors; checkout observations cover all visits.' ) + '</p>';
+			html += '<p class="pc-conv-note">' + esc( fill( T.dimensionCoverage || 'Observed values: %v / %n visits. Unknown: %u; unavailable: %a; not observed: %o.', { '%v': ctx.number( coverage.value ), '%n': ctx.number( coverage.base_count ), '%u': ctx.number( coverage.unknown ), '%a': ctx.number( coverage.unavailable ), '%o': ctx.number( coverage.unobserved ) } ) ) + '</p>';
+		}
 		if ( rows.length ) {
 			html += '<div class="pc-conv-cards">' + rows.map( function ( row ) {
 				return '<div data-conv-slot="' + esc( encodeURIComponent( group + ':' + row.key ) ) + '">' + card( group, row, ctx ) + '</div>';
@@ -261,6 +266,7 @@
 				'<span class="pc-conv-export-status" role="status" aria-live="polite"></span>' +
 			'</div>' +
 			'<p class="pc-conv-export-help">' + esc( T.exportHelp ) + '</p>' +
+			'<p class="pc-conv-note">' + esc( T.unsupportedDimensions || 'Normal/abnormal classification is not collected. Country values require a configured source. OS and screen facts are browser-reported, not verified hardware.' ) + '</p>' +
 			'<div class="pc-conv-result"></div>' +
 		'</div>';
 		var select = bodyEl.querySelector( '.pc-conv-group' );

@@ -175,6 +175,21 @@
 
 	function detailText( e ) {
 		var d = e.data || {};
+		if ( e.type === 'product_impression' ) {
+			var safeId = function ( n, zero ) { return typeof n === 'number' && isFinite( n ) && Math.floor( n ) === n && n >= ( zero ? 0 : 1 ) && n <= 9007199254740991; };
+			var c = d.context, variation = Object.prototype.hasOwnProperty.call( d, 'variation_id' ) ? d.variation_id : 0;
+			if ( e.source !== 'client' || d.version !== 1 || ! safeId( d.product_id ) || ! safeId( variation, true ) || e.product_id !== d.product_id || e.variation_id !== variation || typeof d.visible_fraction !== 'number' || ! isFinite( d.visible_fraction ) || d.visible_fraction < 0.4 || d.visible_fraction > 1 || ! safeId( d.visible_ms ) || d.visible_ms < 500 || d.visible_ms > 2147483647 || ! c || typeof c !== 'object' || contextKinds.indexOf( c.kind ) < 0 ) { return ''; }
+			if ( Object.prototype.hasOwnProperty.call( c, 'entity_id' ) && ( [ 'product', 'collection' ].indexOf( c.kind ) < 0 || ! safeId( c.entity_id ) ) ) { return ''; }
+			if ( Object.prototype.hasOwnProperty.call( c, 'template_id' ) && ! safeId( c.template_id ) ) { return ''; }
+			if ( Object.prototype.hasOwnProperty.call( c, 'module_id' ) && ( typeof c.module_id !== 'string' || ! /^[A-Za-z0-9][A-Za-z0-9-]{0,39}$/.test( c.module_id ) || /[\r\n]/.test( c.module_id ) ) ) { return ''; }
+			var observed = [ ( S.observedProduct || 'Observed product ID' ) + '=#' + d.product_id ];
+			if ( variation ) { observed.push( ( S.observedVariation || 'Observed variation ID' ) + '=#' + variation ); }
+			observed.push( ( S.visibleFraction || 'Visible fraction' ) + '=' + Math.round( d.visible_fraction * 10000 ) / 100 + '%' );
+			observed.push( ( S.visibleDuration || 'Visible duration (ms)' ) + '=' + d.visible_ms );
+			observed.push( ( S.pageKind || 'Page kind' ) + '=' + c.kind );
+			[ [ 'entity_id', S.pageEntity || 'Page entity ID' ], [ 'template_id', S.templateId || 'Template ID' ], [ 'module_id', S.moduleId || 'Module ID' ] ].forEach( function ( item ) { if ( Object.prototype.hasOwnProperty.call( c, item[ 0 ] ) ) { observed.push( item[ 1 ] + '=' + c[ item[ 0 ] ] ); } } );
+			return observed.join( ', ' );
+		}
 		var parts = [];
 		Object.keys( d ).forEach( function ( k ) {
 			if ( e.type === 'page_view' && ( k === 'page_context' || k === 'attribution' ) ) { var text = k === 'page_context' ? contextDetails( d[ k ] ) : attributionDetails( d[ k ] ); if ( text !== null ) { parts.push( text ); } return; }

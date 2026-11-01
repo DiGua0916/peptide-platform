@@ -1,0 +1,14 @@
+<?php
+namespace PeptideCore\Tracking { final class Schema { public static function table($n){return 'export_'.$n;} } final class Privacy { public static function visitors_for_email($email){return $email==='owner@example.test'?array(1):array();} } }
+namespace { define('ABSPATH',__DIR__.'/');define('ARRAY_A','ARRAY_A');function __($s,$d=''){return $s;}function wp_json_encode($v){return json_encode($v);}
+require dirname(__DIR__).'/includes/tracking/class-impressions.php';require dirname(__DIR__).'/includes/tracking/class-product-actions.php';
+class ExportDB056 {public string $last_error='';public array $rows=array();public array $queries=array();public function prepare($s,...$a){return str_replace('%d',(string)$a[0],$s);}public function get_results($s,$f){$this->queries[]=$s;preg_match('/OFFSET ([0-9]+)/',$s,$m);return array_slice($this->rows,(int)$m[1],501);}}
+$wpdb=new ExportDB056();$d=array('version'=>1,'product_id'=>10,'variation_id'=>0,'action'=>'add');for($i=1;$i<=501;++$i){$wpdb->rows[]=array('id'=>$i,'event_uid'=>'export-'.str_pad((string)$i,4,'0',STR_PAD_LEFT),'visitor_id'=>1,'visit_id'=>2,'matched_visitor_id'=>1,'matched_visit_id'=>2,'type'=>'product_favorite','source'=>'client','path'=>'/actual/','occurred_ms'=>1000,'product_id'=>10,'variation_id'=>0,'data'=>json_encode($d));}
+$n=0;$check=static function($s,$ok)use(&$n){if(!$ok){throw new RuntimeException($s);}++$n;};$c=\PeptideCore\Tracking\Product_Actions::class;
+$r=$c::export('owner@example.test',1);$check('501 lookahead raw500 progresses',count($r['data'])===500&&!$r['done']&&$r['data'][0]['item_id']==='product-action-1');$r=$c::export('owner@example.test',2);$check('second raw page completes',count($r['data'])===1&&$r['done']&&str_contains(end($wpdb->queries),'OFFSET 500'));
+$before=count($wpdb->queries);$r=$c::export('other@example.test');$check('unassociated email no query/no facts',$r===array('data'=>array(),'done'=>true)&&count($wpdb->queries)===$before);
+foreach($wpdb->rows as&$row){$row['matched_visit_id']=null;}unset($row);$r=$c::export('owner@example.test');$check('fully filtered raw500 still not done',$r['data']===array()&&!$r['done']);
+$wpdb->rows=array_slice($wpdb->rows,0,1);$wpdb->rows[0]['matched_visit_id']=2;$wpdb->rows[0]['visitor_id']=9;$r=$c::export('owner@example.test');$check('even boundary rows cannot export another owner',$r['data']===array());
+$wpdb->rows[0]['visitor_id']=1;$raw=$d;$raw['recipient']='discard@example.test';$wpdb->rows[0]['data']=json_encode($raw);$r=$c::export('owner@example.test');$check('noncanonical extra not exported',$r['data']===array());
+$check('SQL original owner join/strict bounded shape',str_contains($wpdb->queries[0],'s.id=e.visit_id AND s.visitor_id=e.visitor_id')&&str_contains($wpdb->queries[0],'e.visitor_id IN (1)')&&str_contains($wpdb->queries[0],'LIMIT 501'));
+echo 'PASS ',$n," product action personal export assertions, 0 FAIL\n"; }

@@ -271,7 +271,7 @@ KEY notice_due (notice_status,notice_next)
 			if ( ! $u || ! is_email( $u->user_email ) || ! self::settings()['notify_enabled'] ) { $wpdb->update( $l, array( 'notice_status' => 'skipped', 'notice_claim' => '', 'notice_lease' => 0 ), array( 'id' => $id, 'notice_claim' => $claim ) ); return; }
 			$text = self::kind_label( $r['kind'] ) . "\n" . sprintf( __( 'Points change: %1$+d; available points: %2$d; refund recovery: %3$d.', 'peptide-core' ), $r['delta'], $r['balance'], $r['debt'] ) . "\n" . wc_get_account_endpoint_url( self::ENDPOINT );
 			$headers = array( 'X-Peptide-Points-Event: ' . hash( 'sha256', self::table( 'ledger' ) . ':' . $id ) );
-			try { $sent = wp_mail( $u->user_email, __( 'Your points activity', 'peptide-core' ), $text, $headers ); } catch ( \Throwable $e ) { $sent = false; }
+			try { $sent = \PeptideCore\Emails\Message_Observations::send( 'wp_mail', array( $u->user_email, __( 'Your points activity', 'peptide-core' ), $text, $headers ), array( 'family' => 'loyalty', 'key' => 'points_notice', 'attempt' => $id . ':' . (int) $r['notice_attempts'] ) ); } catch ( \Throwable $e ) { $sent = false; }
 			$retry = ! $sent && (int) $r['notice_attempts'] < self::NOTICE_ATTEMPTS;
 			$delays = array( 60, 300, 1800, 7200 ); $next = $retry ? time() + $delays[ min( 3, max( 0, (int) $r['notice_attempts'] - 1 ) ) ] : 0;
 			$wpdb->update( $l, array( 'notice_status' => $sent ? 'sent' : ( $retry ? 'queued' : 'failed' ), 'notice_next' => $next, 'notice_claim' => '', 'notice_lease' => 0 ), array( 'id' => $id, 'notice_claim' => $claim ) );

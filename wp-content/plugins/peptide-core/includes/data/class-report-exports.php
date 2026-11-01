@@ -8,6 +8,25 @@ defined( 'ABSPATH' ) || exit;
 
 final class Report_Exports {
 
+	public static function sources_response( \WP_REST_Request $request, array $range, array $args ) {
+		$params = $request->get_params(); $format = $params['format'] ?? 'json';
+		if ( ! is_string( $format ) || ! in_array( $format, array( 'json', 'csv' ), true ) ) { return Errors::invalid( array( 'format' => 'invalid_format' ) ); }
+		if ( 'csv' === $format ) { foreach ( array( '_envelope', '_jsonp', '_fields' ) as $key ) { if ( array_key_exists( $key, $params ) ) { return Errors::invalid( array( $key => 'invalid_format' ) ); } } }
+		try {
+			if ( 'json' === $format ) { $response = new \WP_REST_Response( Sources::table( $range, $args ) ); $response->header( 'Cache-Control', 'no-store' ); return $response; }
+			$rows = iterator_to_array( Sources::all_rows( $range, $args ) );
+			return new Csv_Response( self::source_rows( $rows, $range, $args ), 'data-sources-' . $range['dates']['from'] . '-' . $range['dates']['to'] . '.csv' );
+		} catch ( \Throwable $error ) { return new \WP_Error( 'pc_report_unavailable', __( 'Report dimensions are unavailable. Try again.', 'peptide-core' ), array( 'status' => 503 ) ); }
+	}
+	private static function source_rows( array $rows, array $range, array $args ): iterable {
+		$head = array( 'utm_source_state', 'utm_source', 'utm_medium_state', 'utm_medium', 'split_medium', 'currency', 'current_from_epoch_s', 'current_to_epoch_s' );
+			foreach ( Sources::METRICS as $key ) { $head[] = $key . ( 'conversion' === $key ? '_pct' : '' ); } yield $head;
+		foreach ( $rows as $row ) {
+			$cells = array( $row['utm_source']['state'], Csv_Response::text( $row['utm_source']['value'] ?? '' ), $row['utm_medium']['state'] ?? 'not_grouped', Csv_Response::text( $row['utm_medium']['value'] ?? '' ), (string) $args['split_medium'], Csv_Response::text( get_woocommerce_currency() ), (string) $range['from'], (string) $range['to'] );
+			foreach ( Sources::METRICS as $key ) { $cells[] = self::number( $row[ $key ], in_array( $key, array( 'conversion', 'sales', 'aov', 'uv_value' ), true ) ); } yield $cells;
+		}
+	}
+
 	/** One unchanged report snapshot feeds either the legacy JSON or the typed export. */
 	public static function conversion_response( \WP_REST_Request $request, array $range, string $group ) {
 		$params = $request->get_params();
@@ -137,7 +156,7 @@ final class Report_Exports {
 		$format = $params['format'] ?? 'json';
 		if ( array_key_exists( 'format', $params ) && ( ! is_string( $params['format'] ) || ! in_array( $format, array( 'json', 'csv' ), true ) ) ) { return Errors::invalid( array( 'format' => 'invalid_format' ) ); }
 		if ( 'json' === $format ) {
-			$res = new \WP_REST_Response( 'products' === $report ? Products::table( $range, $args ) : Page_Visits::table( $range, $args ) );
+			try { $res = new \WP_REST_Response( 'products' === $report ? Products::table( $range, $args ) : Page_Visits::table( $range, $args ) ); } catch ( \Throwable $error ) { return new \WP_Error( 'pc_report_unavailable', __( 'Report dimensions are unavailable. Try again.', 'peptide-core' ), array( 'status' => 503 ) ); }
 			$res->header( 'Cache-Control', 'no-store' );
 			return $res;
 		}
@@ -148,11 +167,12 @@ final class Report_Exports {
 			if ( ! is_string( $params['columns'] ) ) { $errors['columns'] = 'invalid_format'; }
 			else {
 				$columns = '' === $params['columns'] ? array() : array_values( array_unique( explode( ',', $params['columns'] ) ) );
-				if ( array_diff( $columns, Products::METRICS ) ) { $errors['columns'] = 'invalid_format'; }
+				if ( array_diff( $columns, Products::columns() ) ) { $errors['columns'] = 'invalid_format'; }
 			}
 		}
 		if ( $errors ) { return Errors::invalid( $errors ); }
 		$rows = 'products' === $report ? self::products( $range, $args, $columns ) : self::pages( $range, $args );
+		if ( isset( $args['filter'] ) ) { try { $rows = iterator_to_array( $rows ); } catch ( \Throwable $error ) { return new \WP_Error( 'pc_report_unavailable', __( 'Report dimensions are unavailable. Try again.', 'peptide-core' ), array( 'status' => 503 ) ); } }
 		return new Csv_Response( $rows, 'data-' . $report . '-' . $range['dates']['from'] . '-' . $range['dates']['to'] . '.csv' );
 	}
 
@@ -162,10 +182,11 @@ final class Report_Exports {
 		return $decimal ? number_format( (float) $value, 2, '.', '' ) : (string) (int) $value;
 	}
 
-	private static function metrics( array $row, array $columns ): array {
+	private static function metrics( array $row, array $columns, array $identity = array() ): array {
 		$cells = array();
 		foreach ( $columns as $key ) {
-			$decimal = in_array( $key, array( 'sales', 'net_sales', 'cart_rate', 'conversion' ), true );
+			if ( 'created_at' === $key ) { $cells[] = Csv_Response::text( $identity['created_at'] ?? '' ); continue; }
+			$decimal = in_array( $key, array( 'sales', 'net_sales' ), true ) || in_array( $key, Products::RATES, true );
 			$cells[] = self::number( $row['current'][ $key ], $decimal );
 			$cells[] = self::number( $row['previous'][ $key ], $decimal );
 			$cells[] = self::number( $row['change'][ $key ], true );
@@ -176,6 +197,7 @@ final class Report_Exports {
 	private static function products( array $range, array $args, array $columns ): iterable {
 		$head = array( 'row_type', 'product_id', 'variation_id', 'product_name', 'variation_name', 'sku', 'currency', 'current_from_epoch_s', 'current_to_epoch_s', 'previous_from_epoch_s', 'previous_to_epoch_s' );
 		foreach ( $columns as $key ) {
+			if ( 'created_at' === $key ) { $head[] = 'created_at_utc'; continue; }
 			$rate = in_array( $key, Products::RATES, true );
 			$head[] = 'current_' . $key . ( $rate ? '_pct' : '' );
 			$head[] = 'previous_' . $key . ( $rate ? '_pct' : '' );
@@ -185,10 +207,10 @@ final class Report_Exports {
 		$metadata = array( Csv_Response::text( get_woocommerce_currency() ), (string) $range['from'], (string) $range['to'], (string) $range['compare_from'], (string) $range['compare_to'] );
 		foreach ( Products::all_rows( $range, $args ) as $row ) {
 			$p = $row['product'];
-			yield array_merge( array( 'product', (string) $p['id'], '', Csv_Response::text( $p['name'] ), '', Csv_Response::text( $p['sku'] ) ), $metadata, self::metrics( $row, $columns ) );
+			yield array_merge( array( 'product', (string) $p['id'], '', Csv_Response::text( $p['name'] ), '', Csv_Response::text( $p['sku'] ) ), $metadata, self::metrics( $row, $columns, $p ) );
 			foreach ( $row['variations'] as $variation ) {
 				$v = $variation['variation'];
-				yield array_merge( array( 'variation', (string) $p['id'], (string) $v['id'], Csv_Response::text( $p['name'] ), Csv_Response::text( $v['name'] ), Csv_Response::text( $v['sku'] ) ), $metadata, self::metrics( $variation, $columns ) );
+				yield array_merge( array( 'variation', (string) $p['id'], (string) $v['id'], Csv_Response::text( $p['name'] ), Csv_Response::text( $v['name'] ), Csv_Response::text( $v['sku'] ) ), $metadata, self::metrics( $variation, $columns, $v ) );
 			}
 		}
 	}

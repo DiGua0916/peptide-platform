@@ -60,7 +60,7 @@ final class Log {
 		}
 		$object = $email instanceof \WC_Email ? $email->object : null;
 		$oid    = $object instanceof \WC_Order ? $object->get_id() : ( $object instanceof \WP_User ? $object->ID : 0 );
-		$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$recorded = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			self::table(),
 			array(
 				'email_id'  => substr( (string) $id, 0, 64 ),
@@ -71,6 +71,7 @@ final class Log {
 				'sent_ms'   => (int) floor( microtime( true ) * 1000 ),
 			)
 		);
+		Message_Observations::bind_log( $email, false === $recorded ? 0 : (int) $wpdb->insert_id );
 		if ( 1 === wp_rand( 1, 200 ) ) {
 			$wpdb->query( $wpdb->prepare( 'DELETE FROM ' . self::table() . ' WHERE sent_ms < %d', (int) ( ( time() - self::KEEP_DAYS * DAY_IN_SECONDS ) * 1000 ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
 		}

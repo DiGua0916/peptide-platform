@@ -36,6 +36,24 @@ final class Page_Context_Privacy {
 			);
 			if ( isset( $context['term_id'] ) ) { $fields[] = array( 'name' => __( 'Collection ID', 'peptide-core' ), 'value' => (string) $context['term_id'] ); }
 			if ( isset( $context['geo']['country_code'] ) ) { $fields[] = array( 'name' => __( 'Country code', 'peptide-core' ), 'value' => $context['geo']['country_code'] ); }
+			if ( isset( $context['environment']['os'] ) ) {
+				$os = $context['environment']['os'];
+				$fields[] = array( 'name' => __( 'Operating system observation', 'peptide-core' ), 'value' => $os['status'] );
+				if ( 'known' === $os['status'] ) { $fields[] = array( 'name' => __( 'Operating system family', 'peptide-core' ), 'value' => $os['family'] ); }
+			}
+			if ( isset( $context['environment']['screen'] ) ) {
+				$screen = $context['environment']['screen'];
+				$fields[] = array( 'name' => __( 'Screen size observation', 'peptide-core' ), 'value' => $screen['status'] );
+				if ( 'known' === $screen['status'] ) {
+					$fields[] = array( 'name' => __( 'Screen width (CSS pixels)', 'peptide-core' ), 'value' => (string) $screen['width'] );
+					$fields[] = array( 'name' => __( 'Screen height (CSS pixels)', 'peptide-core' ), 'value' => (string) $screen['height'] );
+				}
+			}
+			if ( isset( $context['search'] ) ) {
+				$search = $context['search'];
+				$fields[] = array( 'name' => __( 'Search observation', 'peptide-core' ), 'value' => $search['status'] );
+				if ( 'known' === $search['status'] ) { $fields[] = array( 'name' => __( 'Observed search term', 'peptide-core' ), 'value' => $search['term'] ); }
+			}
 			$items[] = array( 'group_id' => 'peptide-core-page-context', 'group_label' => __( 'Store page context', 'peptide-core' ), 'item_id' => 'page-context-' . wp_hash( 'page-context|' . $row['id'] ), 'data' => $fields );
 		}
 		return array( 'data' => $items, 'done' => count( (array) $rows ) <= 500 );
@@ -43,7 +61,7 @@ final class Page_Context_Privacy {
 
 	public static function policy_text(): void {
 		if ( function_exists( 'wp_add_privacy_policy_content' ) ) {
-			wp_add_privacy_policy_content( __( 'Store page context', 'peptide-core' ), '<p>' . esc_html__( 'When supplied by the storefront, page views may include a normalized page kind, collection identifier and source-reported country observation. Country observations are not verified physical locations or IP-derived coordinates. Missing observations remain unobserved. These facts follow the store visit retention, account/order association and erasure rules, and are included in a separate personal-data export.', 'peptide-core' ) . '</p>' );
+			wp_add_privacy_policy_content( __( 'Store page context', 'peptide-core' ), '<p>' . esc_html__( 'When supplied by the storefront, page views may include a normalized page kind, collection identifier, source-reported country observation, browser-reported operating-system and screen-size observations, and a bounded normalized search term. Country observations are not verified physical locations or IP-derived coordinates. Browser reports are not verified hardware facts. Missing observations remain unobserved. These facts follow the store visit retention, account/order association and erasure rules, and are included in a separate personal-data export.', 'peptide-core' ) . '</p>' );
 		}
 	}
 }

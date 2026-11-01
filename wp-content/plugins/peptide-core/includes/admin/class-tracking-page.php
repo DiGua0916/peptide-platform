@@ -183,6 +183,7 @@ final class Tracking_Page {
 				'content'        => __( 'Page', 'peptide-core' ),
 			),
 			'types'       => array(
+				'product_impression'      => __( 'Product exposure observed', 'peptide-core' ),
 				'page_view'               => __( 'Opened page', 'peptide-core' ),
 				'product_view'            => __( 'Viewed product', 'peptide-core' ),
 				'cart_view'               => __( 'Viewed cart', 'peptide-core' ),
@@ -216,6 +217,13 @@ final class Tracking_Page {
 				'register'                => __( 'Registered', 'peptide-core' ),
 			),
 			'hideHeartbeats' => __( 'Hide heartbeats', 'peptide-core' ),
+			'observedProduct' => __( 'Observed product ID', 'peptide-core' ),
+			'observedVariation' => __( 'Observed variation ID', 'peptide-core' ),
+			'visibleFraction' => __( 'Visible fraction', 'peptide-core' ),
+			'visibleDuration' => __( 'Visible duration (ms)', 'peptide-core' ),
+			'pageEntity' => __( 'Page entity ID', 'peptide-core' ),
+			'templateId' => __( 'Template ID', 'peptide-core' ),
+			'moduleId' => __( 'Module ID', 'peptide-core' ),
 		);
 	}
 

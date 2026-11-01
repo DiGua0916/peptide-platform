@@ -40,7 +40,7 @@
 	];
 	var TREND_MONEY = { sales: true, aov: true, repurchase_sales: true, repurchase_aov: true };
 	// 十四张排行表，顺序 = Rankings::TABLES（Shopname 的页面顺序）；标题是 strings 里的 't_' + key。
-	var RANK_TABLES = [ 'products_units', 'products_sales', 'products_viewed', 'products_carted', 'categories_units', 'categories_sales', 'order_countries', 'customer_countries', 'visitor_browsers', 'order_browsers', 'payment_methods', 'payment_success', 'coupons', 'devices' ];
+	var RANK_TABLES = [ 'products_units', 'products_sales', 'products_viewed', 'products_carted', 'categories_units', 'categories_sales', 'order_countries', 'customer_countries', 'visitor_browsers', 'order_browsers', 'payment_methods', 'payment_success', 'coupons', 'devices', 'visitor_source', 'order_source', 'visitor_domain', 'order_domain', 'visitor_country', 'search_terms', 'products_favorited' ];
 	var RANK_MONEY = { products_sales: true, categories_sales: true };
 	// 名称是 unknown 时要翻译的表（商品、分类和优惠券的名称是真实的名字，不翻译）。
 	var RANK_UNKNOWN = { order_countries: true, customer_countries: true, visitor_browsers: true, order_browsers: true, payment_methods: true, payment_success: true, devices: true };
@@ -419,6 +419,9 @@
 			'';
 		return '<div class="pc-ops-rank" data-rank="' + esc( name ) + '">' +
 			'<h3 class="pc-ops-rank__title">' + esc( title ) + '</h3>' +
+			( name === 'search_terms' && table && table.coverage ? '<p class="pc-ops-rank__coverage">' + esc( fill( T.rankSearchCoverage || 'Search page views: %n; known: %k; empty: %e; filtered: %f; not observed: %u.', { '%n': ctx.number( table.coverage.current.base_count ), '%k': ctx.number( table.coverage.current.known ), '%e': ctx.number( table.coverage.current.empty ), '%f': ctx.number( table.coverage.current.filtered ), '%u': ctx.number( table.coverage.current.unobserved ) } ) ) + '</p>' : '' ) +
+			( name === 'products_favorited' && table && table.coverage ? '<p class="pc-ops-rank__coverage">' + esc( table.coverage.current.availability === 'not_observed' ? T.rankActionNotObserved : ( table.coverage.current.availability === 'unavailable' ? T.rankActionUnavailable : fill( T.rankActionCoverage, { '%n': ctx.number( table.coverage.current.received_operations ) } ) ) ) + '</p>' : '' ) +
+			( name !== 'search_terms' && name !== 'products_favorited' && table && table.coverage ? '<p class="pc-ops-rank__coverage">' + esc( fill( T.rankDimensionCoverage || 'Saved values: %v / %n %s. Missing, empty and unobserved facts remain separate.', { '%v': ctx.number( table.coverage.current.value ), '%n': ctx.number( table.coverage.current.base_count ), '%s': table.coverage.current.unit === 'orders' ? T.rankOrdersUnit || 'orders' : T.rankVisitsUnit || 'visits' } ) ) + '</p>' : '' ) +
 			'<div class="pc-ops-table-wrap"><table class="pc-ops-table">' +
 				'<thead><tr>' +
 					'<th scope="col">' + esc( T.rankName ) + '</th>' +
@@ -438,6 +441,8 @@
 	function rankingsView( data, ctx ) {
 		var tables = ( data && data.tables ) || {};
 		return '<h2 class="pc-ops-rankings__title">' + ctx.esc( T.rankings ) + '</h2>' +
+			'<p class="pc-data-muted">' + ctx.esc( T.rankDimensionHelp || 'Source means saved UTM source; domain means saved entry domain. Visitor groups count distinct visitors per group. Country uses saved observations; favorites are not collected.' ) + '</p>' +
+			'<p class="pc-data-muted">' + ctx.esc( T.rankSearchHelp || 'Search terms count accepted search result page views. Reloads and pagination count again; retries do not. Only bounded observed terms are retained; missing historical terms are not reconstructed.' ) + '</p>' +
 			RANK_TABLES.map( function ( name ) {
 				return rankCard( name, tables[ name ], ctx );
 			} ).join( '' ) + '<div class="pc-ranks-panel" hidden></div>';

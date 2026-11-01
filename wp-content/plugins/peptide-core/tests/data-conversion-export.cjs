@@ -91,5 +91,15 @@ function raw({ok=true,type='text/csv; charset=UTF-8',blobError=false,blob}={}) {
   h.el('export').fire('click');const detached=h.last();h.root.innerHTML='';detached.resolve(raw());await flush();check('detached DOM suppresses the final download',h.downloads.length===2);
   const fresh=harness('conversion');const firstJson=fresh.last();fresh.range('yesterday');const firstRange=fresh.last();firstJson.resolve(data());await flush();firstRange.reject(Error('range'));await flush();fresh.tick(0);check('initial pending JSON plus rejected range reloads once using shell explicit dates',fresh.calls.length===3&&fresh.last().params.from==='2026-10-30'&&!Object.hasOwn(fresh.last().params,'range'));fresh.last().resolve(data());await flush();
   const legacy=data();delete legacy.visitor_funnel;legacy.rows[0].funnel=[];delete legacy.rows[0].visitor_funnel;fresh.el('group').fire('change');fresh.last().resolve(legacy);await flush();check('legacy display fallback retained without granting detailed export',fresh.el('export').disabled&&fresh.el('result').innerHTML.includes('detailUnavailable'));
+  const dimensions=harness('conversion');dimensions.last().resolve(data());await flush();
+  check('all five supported groups are selectable',dimensions.el('group').querySelectorAll('option').length===5);
+  for(const group of ['utm','domain','country']) {
+    dimensions.el('group').value=group;dimensions.el('group').fire('change');
+    const report=data(group);report.rows[0].key='typed-'+group;report.rows[0].dimension={state:'value',value:'unknown'};report.rows[0].label='unknown';report.dimension_coverage={base_count:4,value:2,unknown:1,unavailable:0,unobserved:1};
+    dimensions.last().resolve(report);await flush();
+    check(group+' uses typed labels without sentinel translation and permits accepted export',dimensions.el('result').innerHTML.includes('unknown rate')&&!dimensions.el('export').disabled&&dimensions.el('group').value===group);
+    dimensions.el('export').fire('click');const csv=dimensions.last();check(group+' CSV snapshots the new grouping',csv.params.group===group&&csv.params.from===dates.from&&csv.params.format==='csv');
+    dimensions.el('group').value='device';dimensions.el('group').fire('change');csv.resolve(raw());await flush();check(group+' stale CSV cannot download after group change',dimensions.downloads.length===0&&dimensions.el('export').disabled);dimensions.last().resolve(data());await flush();
+  }
   console.log(JSON.stringify({passed,failed:0}));
 })().catch(error=>{console.error(error);process.exitCode=1;});

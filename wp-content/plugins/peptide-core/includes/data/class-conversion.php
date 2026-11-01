@@ -20,8 +20,8 @@
  *   所有分组的 paid 之和 = 整体的 paid。访客追踪的表没装时：tracking 为 false，访问数字都是 0，每个已付款订单都归在 unknown。
  *
  * checkout_steps 兄弟字段单独报告收到的结账步骤和支付通道，不改变上面的旧漏斗口径。
- * 还没做（没有数据）：按 UTM、国家、域名、操作系统、屏幕尺寸分组（需要服务端采集）；
- * 全部访客 / 正常访客 / 异常操作和域名筛选；CSV 导出。
+	 * UTM 来源、入口域名和已观察国家采用独立的原访问事实路径；缺失、空值、未观察不混为直接来源。
+	 * 操作系统和屏幕尺寸来自新页面观察；正常/异常分类仍没有采集。分组不筛选整体或结账观察。
  *
  * @package PeptideCore
  */
@@ -41,7 +41,7 @@ final class Conversion {
 	public const OVERALL = array( 'conversion', 'paid', 'visitors', 'viewed', 'carted', 'checkout' );
 
 	/** 可以分组的维度；第一个是默认值。 */
-	public const GROUPS = array( 'device', 'browser' );
+	public const GROUPS = array( 'device', 'browser', 'utm', 'domain', 'country', 'os', 'screen' );
 
 	/**
 	 * 转化率详情页的全部数字：整体步骤（本期、对比期、变化）和分组卡片（本期）。
@@ -51,6 +51,7 @@ final class Conversion {
 	 */
 	public static function summary( array $range, string $group ): array {
 		$group    = in_array( $group, self::GROUPS, true ) ? $group : 'device';
+		if ( isset( Dimension_Reports::GROUPS[$group] ) ) { return Dimension_Conversion::summary( $range, $group ); }
 		$from     = (int) $range['from'];
 		$to       = (int) $range['to'];
 		$current  = self::overall( Operations::period( $from, $to ) );
@@ -118,7 +119,7 @@ final class Conversion {
 	 * @param array $period Operations::period() 的结果。
 	 * @return array{conversion:?float,paid:int,visitors:int,viewed:int,carted:int,checkout:int}
 	 */
-	private static function overall( array $period ): array {
+	public static function overall( array $period ): array {
 		$counts = array();
 		foreach ( (array) ( $period['funnel'] ?? array() ) as $layer ) {
 			$counts[ $layer['key'] ] = (int) $layer['count'];
@@ -239,7 +240,7 @@ final class Conversion {
 	 *
 	 * @return array<string,array{paid:int,sales:float}>
 	 */
-	private static function paid_groups( int $from, int $to, string $group ): array {
+	public static function paid_groups( int $from, int $to, string $group ): array {
 		$orders = array();
 		foreach ( Operations::paid_orders( $from, $to ) as $order ) {
 			if ( Overview::is_test_order( $order ) ) {
@@ -251,6 +252,17 @@ final class Conversion {
 				'visitor' => (int) $order->get_meta( Server_Events::ORDER_VISITOR_META ),
 				'visit'   => (int) $order->get_meta( Server_Events::ORDER_VISIT_META ),
 			);
+		}
+		// New dimensions use only the exact saved order visit and its owner. No legacy fallback.
+		if ( isset( Dimension_Reports::GROUPS[$group] ) ) {
+			$dimension = Dimension_Reports::GROUPS[$group];
+			$facts = Schema::installed() ? Report_Dimensions::visit_facts( array_column( $orders, 'visit' ), $to * 1000 ) : array(); $out = array();
+			foreach ( $orders as $order ) {
+				$fact = Report_Dimensions::for_visit( $facts, $order['visit'], $order['visitor'] ); $typed = $fact[$dimension]; $key = Report_Dimensions::key( $typed );
+				if ( ! isset( $out[$key] ) ) { $out[$key] = array( 'paid' => 0, 'sales' => 0.0, 'dimension' => $typed ); }
+				++$out[$key]['paid']; $out[$key]['sales'] += $order['sales'];
+			}
+			return $out;
 		}
 
 		// 需要的访问 / 访客行一次查出来（最多两条查询）。

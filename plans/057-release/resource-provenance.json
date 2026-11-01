@@ -1,0 +1,46 @@
+{
+  "stage": "SOURCE_ONLY_NOT_ACTIVATED",
+  "upstream": "https://db-ip.com/db/download/ip-to-country-lite",
+  "resource": {
+    "edition": "DB-IP Country Lite October 2026",
+    "bytes": 8348509,
+    "sha256": "dbd70ccfa2a13627eaf4913d19920a1a229f1b3c5439ac01c509995b6364202a",
+    "md5": "b8647f712bcabbe01f8afe3ff9e7569e",
+    "sha1": "e515b63075ad48847f9c4332b724742e8ba15b0e",
+    "license": "CC BY 4.0",
+    "root_verified_official_uncompressed_digests": true
+  },
+  "bootstrap": {
+    "local_only": true,
+    "sha256": "fd53dacd7a9014755d69a5dd97401b3614c38c284e92bd01b9740b2f64fa7ee0",
+    "committed": false
+  },
+  "pre057": [
+    {
+      "path": "wp-content/plugins/peptide-core/includes/tracking/class-country-provider.php",
+      "sha256": "cf0aa2b0e8b9de5c55f67957ece8478f93ca225d48727f1249b19de525f13351"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/admin/class-data-pages.php",
+      "sha256": "02aa4e89ec048ff0de5e56a1f63a45bda1f235ec759ae28701e30c6cd029dee8"
+    },
+    {
+      "path": "wp-content/themes/peptide-site/inc/visitor-tracking.php",
+      "sha256": "e6f8c0512c3fd6b398e7aba97ab21376765080eeed2033ac3034c5031264eeb6"
+    }
+  ],
+  "post057": [
+    {
+      "path": "wp-content/plugins/peptide-core/includes/tracking/class-country-provider.php",
+      "sha256": "bf73e65aeb73b27612d453a9edc3a059d150afc8764c5ca75b702e389ffadadc"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/admin/class-data-pages.php",
+      "sha256": "23f7bafa18c72dc41b345da756b713e72fbfc73684a98f1d4a9b1649b1a8f1f5"
+    },
+    {
+      "path": "wp-content/themes/peptide-site/inc/visitor-tracking.php",
+      "sha256": "4e0dffff621eb20cce91400e4ba59dac60a554434036b0662d4ebedd9cc8585b"
+    }
+  ]
+}

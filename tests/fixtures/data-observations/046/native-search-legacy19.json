@@ -1,0 +1,2205 @@
+{
+    "summary": {
+        "products_units": {
+            "rows": [],
+            "total_rows": 0
+        },
+        "products_sales": {
+            "rows": [],
+            "total_rows": 0
+        },
+        "products_viewed": {
+            "rows": [],
+            "total_rows": 0
+        },
+        "products_carted": {
+            "rows": [],
+            "total_rows": 0
+        },
+        "categories_units": {
+            "rows": [],
+            "total_rows": 0
+        },
+        "categories_sales": {
+            "rows": [],
+            "total_rows": 0
+        },
+        "order_countries": {
+            "rows": [
+                {
+                    "key": "US",
+                    "label": "United States",
+                    "edit_url": "",
+                    "current": 3,
+                    "previous": 0,
+                    "change": null
+                }
+            ],
+            "total_rows": 1
+        },
+        "customer_countries": {
+            "rows": [],
+            "total_rows": 0
+        },
+        "visitor_browsers": {
+            "rows": [],
+            "total_rows": 0
+        },
+        "order_browsers": {
+            "rows": [
+                {
+                    "key": "unknown",
+                    "label": "unknown",
+                    "edit_url": "",
+                    "current": 3,
+                    "previous": 0,
+                    "change": null
+                }
+            ],
+            "total_rows": 1
+        },
+        "payment_methods": {
+            "rows": [
+                {
+                    "key": "local",
+                    "label": "Local",
+                    "edit_url": "",
+                    "current": 3,
+                    "previous": 0,
+                    "change": null
+                }
+            ],
+            "total_rows": 1
+        },
+        "payment_success": {
+            "rows": [
+                {
+                    "key": "local",
+                    "label": "Local",
+                    "edit_url": "",
+                    "current": 100,
+                    "previous": null,
+                    "change": null
+                }
+            ],
+            "total_rows": 1
+        },
+        "coupons": {
+            "rows": [],
+            "total_rows": 0
+        },
+        "devices": {
+            "rows": [],
+            "total_rows": 0
+        },
+        "visitor_source": {
+            "rows": [
+                {
+                    "key": "a:2:{i:0;s:10:\"unobserved\";i:1;N;}",
+                    "label": "Not observed",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"empty\";i:1;s:0:\"\";}",
+                    "label": "UTM source empty",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:5:\"Other\";}",
+                    "label": "Other",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:7:\"UNKNOWN\";}",
+                    "label": "UNKNOWN",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:7:\"unknown\";}",
+                    "label": "unknown",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:8:\"=formula\";}",
+                    "label": "=formula",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:8:\"Source-7\";}",
+                    "label": "Source-7",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:8:\"Source-8\";}",
+                    "label": "Source-8",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:8:\"Source-9\";}",
+                    "label": "Source-9",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-10\";}",
+                    "label": "Source-10",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-11\";}",
+                    "label": "Source-11",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-12\";}",
+                    "label": "Source-12",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-13\";}",
+                    "label": "Source-13",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-14\";}",
+                    "label": "Source-14",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-15\";}",
+                    "label": "Source-15",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-16\";}",
+                    "label": "Source-16",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-17\";}",
+                    "label": "Source-17",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-18\";}",
+                    "label": "Source-18",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-19\";}",
+                    "label": "Source-19",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-20\";}",
+                    "label": "Source-20",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-21\";}",
+                    "label": "Source-21",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-22\";}",
+                    "label": "Source-22",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-23\";}",
+                    "label": "Source-23",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-24\";}",
+                    "label": "Source-24",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-25\";}",
+                    "label": "Source-25",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-26\";}",
+                    "label": "Source-26",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-27\";}",
+                    "label": "Source-27",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-28\";}",
+                    "label": "Source-28",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-29\";}",
+                    "label": "Source-29",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-30\";}",
+                    "label": "Source-30",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-31\";}",
+                    "label": "Source-31",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-32\";}",
+                    "label": "Source-32",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-33\";}",
+                    "label": "Source-33",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-34\";}",
+                    "label": "Source-34",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-35\";}",
+                    "label": "Source-35",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-36\";}",
+                    "label": "Source-36",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-37\";}",
+                    "label": "Source-37",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-38\";}",
+                    "label": "Source-38",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-39\";}",
+                    "label": "Source-39",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-40\";}",
+                    "label": "Source-40",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-41\";}",
+                    "label": "Source-41",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-42\";}",
+                    "label": "Source-42",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-43\";}",
+                    "label": "Source-43",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-44\";}",
+                    "label": "Source-44",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-45\";}",
+                    "label": "Source-45",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-46\";}",
+                    "label": "Source-46",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-47\";}",
+                    "label": "Source-47",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-48\";}",
+                    "label": "Source-48",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-49\";}",
+                    "label": "Source-49",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-50\";}",
+                    "label": "Source-50",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                }
+            ],
+            "total_rows": 67,
+            "coverage": {
+                "current": {
+                    "unit": "visits",
+                    "base_count": 66,
+                    "value": 63,
+                    "missing": 1,
+                    "empty": 1,
+                    "unknown": 0,
+                    "unavailable": 0,
+                    "unobserved": 1
+                },
+                "previous": {
+                    "unit": "visits",
+                    "base_count": 1,
+                    "value": 1,
+                    "missing": 0,
+                    "empty": 0,
+                    "unknown": 0,
+                    "unavailable": 0,
+                    "unobserved": 0
+                }
+            }
+        },
+        "order_source": {
+            "rows": [
+                {
+                    "key": "a:2:{i:0;s:10:\"unobserved\";i:1;N;}",
+                    "label": "Not observed",
+                    "edit_url": "",
+                    "current": 2,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:7:\"unknown\";}",
+                    "label": "unknown",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                }
+            ],
+            "total_rows": 2,
+            "coverage": {
+                "current": {
+                    "unit": "orders",
+                    "base_count": 3,
+                    "value": 1,
+                    "missing": 0,
+                    "empty": 0,
+                    "unknown": 0,
+                    "unavailable": 0,
+                    "unobserved": 2
+                },
+                "previous": {
+                    "unit": "orders",
+                    "base_count": 0,
+                    "value": 0,
+                    "missing": 0,
+                    "empty": 0,
+                    "unknown": 0,
+                    "unavailable": 0,
+                    "unobserved": 0
+                }
+            }
+        },
+        "visitor_domain": {
+            "rows": [
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:10:\"entry.test\";}",
+                    "label": "entry.test",
+                    "edit_url": "",
+                    "current": 64,
+                    "previous": 1,
+                    "change": 6300
+                },
+                {
+                    "key": "a:2:{i:0;s:10:\"unobserved\";i:1;N;}",
+                    "label": "Not observed",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                }
+            ],
+            "total_rows": 2,
+            "coverage": {
+                "current": {
+                    "unit": "visits",
+                    "base_count": 66,
+                    "value": 65,
+                    "missing": 0,
+                    "empty": 0,
+                    "unknown": 0,
+                    "unavailable": 0,
+                    "unobserved": 1
+                },
+                "previous": {
+                    "unit": "visits",
+                    "base_count": 1,
+                    "value": 1,
+                    "missing": 0,
+                    "empty": 0,
+                    "unknown": 0,
+                    "unavailable": 0,
+                    "unobserved": 0
+                }
+            }
+        },
+        "order_domain": {
+            "rows": [
+                {
+                    "key": "a:2:{i:0;s:10:\"unobserved\";i:1;N;}",
+                    "label": "Not observed",
+                    "edit_url": "",
+                    "current": 2,
+                    "previous": 0,
+                    "change": null
+                },
+                {
+                    "key": "a:2:{i:0;s:5:\"value\";i:1;s:10:\"entry.test\";}",
+                    "label": "entry.test",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                }
+            ],
+            "total_rows": 2,
+            "coverage": {
+                "current": {
+                    "unit": "orders",
+                    "base_count": 3,
+                    "value": 1,
+                    "missing": 0,
+                    "empty": 0,
+                    "unknown": 0,
+                    "unavailable": 0,
+                    "unobserved": 2
+                },
+                "previous": {
+                    "unit": "orders",
+                    "base_count": 0,
+                    "value": 0,
+                    "missing": 0,
+                    "empty": 0,
+                    "unknown": 0,
+                    "unavailable": 0,
+                    "unobserved": 0
+                }
+            }
+        },
+        "visitor_country": {
+            "rows": [
+                {
+                    "key": "a:2:{i:0;s:10:\"unobserved\";i:1;N;}",
+                    "label": "Not observed",
+                    "edit_url": "",
+                    "current": 65,
+                    "previous": 1,
+                    "change": 6400
+                },
+                {
+                    "key": "a:2:{i:0;s:7:\"unknown\";i:1;N;}",
+                    "label": "Country unknown",
+                    "edit_url": "",
+                    "current": 1,
+                    "previous": 0,
+                    "change": null
+                }
+            ],
+            "total_rows": 2,
+            "coverage": {
+                "current": {
+                    "unit": "visits",
+                    "base_count": 66,
+                    "value": 0,
+                    "missing": 0,
+                    "empty": 0,
+                    "unknown": 1,
+                    "unavailable": 0,
+                    "unobserved": 65
+                },
+                "previous": {
+                    "unit": "visits",
+                    "base_count": 1,
+                    "value": 0,
+                    "missing": 0,
+                    "empty": 0,
+                    "unknown": 0,
+                    "unavailable": 0,
+                    "unobserved": 1
+                }
+            }
+        }
+    },
+    "csv": {
+        "products_units": [
+            [
+                "table",
+                "key",
+                "label",
+                "current",
+                "previous",
+                "change",
+                "value_unit",
+                "change_unit",
+                "currency",
+                "current_from_epoch_s",
+                "current_to_epoch_s",
+                "previous_from_epoch_s",
+                "previous_to_epoch_s"
+            ]
+        ],
+        "products_sales": [
+            [
+                "table",
+                "key",
+                "label",
+                "current",
+                "previous",
+                "change",
+                "value_unit",
+                "change_unit",
+                "currency",
+                "current_from_epoch_s",
+                "current_to_epoch_s",
+                "previous_from_epoch_s",
+                "previous_to_epoch_s"
+            ]
+        ],
+        "products_viewed": [
+            [
+                "table",
+                "key",
+                "label",
+                "current",
+                "previous",
+                "change",
+                "value_unit",
+                "change_unit",
+                "currency",
+                "current_from_epoch_s",
+                "current_to_epoch_s",
+                "previous_from_epoch_s",
+                "previous_to_epoch_s"
+            ]
+        ],
+        "products_carted": [
+            [
+                "table",
+                "key",
+                "label",
+                "current",
+                "previous",
+                "change",
+                "value_unit",
+                "change_unit",
+                "currency",
+                "current_from_epoch_s",
+                "current_to_epoch_s",
+                "previous_from_epoch_s",
+                "previous_to_epoch_s"
+            ]
+        ],
+        "categories_units": [
+            [
+                "table",
+                "key",
+                "label",
+                "current",
+                "previous",
+                "change",
+                "value_unit",
+                "change_unit",
+                "currency",
+                "current_from_epoch_s",
+                "current_to_epoch_s",
+                "previous_from_epoch_s",
+                "previous_to_epoch_s"
+            ]
+        ],
+        "categories_sales": [
+            [
+                "table",
+                "key",
+                "label",
+                "current",
+                "previous",
+                "change",
+                "value_unit",
+                "change_unit",
+                "currency",
+                "current_from_epoch_s",
+                "current_to_epoch_s",
+                "previous_from_epoch_s",
+                "previous_to_epoch_s"
+            ]
+        ],
+        "order_countries": [
+            [
+                "table",
+                "key",
+                "label",
+                "current",
+                "previous",
+                "change",
+                "value_unit",
+                "change_unit",
+                "currency",
+                "current_from_epoch_s",
+                "current_to_epoch_s",
+                "previous_from_epoch_s",
+                "previous_to_epoch_s"
+            ],
+            [
+                "order_countries",
+                "US",
+                "United States",
+                "3",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ]
+        ],
+        "customer_countries": [
+            [
+                "table",
+                "key",
+                "label",
+                "current",
+                "previous",
+                "change",
+                "value_unit",
+                "change_unit",
+                "currency",
+                "current_from_epoch_s",
+                "current_to_epoch_s",
+                "previous_from_epoch_s",
+                "previous_to_epoch_s"
+            ]
+        ],
+        "visitor_browsers": [
+            [
+                "table",
+                "key",
+                "label",
+                "current",
+                "previous",
+                "change",
+                "value_unit",
+                "change_unit",
+                "currency",
+                "current_from_epoch_s",
+                "current_to_epoch_s",
+                "previous_from_epoch_s",
+                "previous_to_epoch_s"
+            ]
+        ],
+        "order_browsers": [
+            [
+                "table",
+                "key",
+                "label",
+                "current",
+                "previous",
+                "change",
+                "value_unit",
+                "change_unit",
+                "currency",
+                "current_from_epoch_s",
+                "current_to_epoch_s",
+                "previous_from_epoch_s",
+                "previous_to_epoch_s"
+            ],
+            [
+                "order_browsers",
+                "unknown",
+                "unknown",
+                "3",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ]
+        ],
+        "payment_methods": [
+            [
+                "table",
+                "key",
+                "label",
+                "current",
+                "previous",
+                "change",
+                "value_unit",
+                "change_unit",
+                "currency",
+                "current_from_epoch_s",
+                "current_to_epoch_s",
+                "previous_from_epoch_s",
+                "previous_to_epoch_s"
+            ],
+            [
+                "payment_methods",
+                "local",
+                "Local",
+                "3",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ]
+        ],
+        "payment_success": [
+            [
+                "table",
+                "key",
+                "label",
+                "current",
+                "previous",
+                "change",
+                "value_unit",
+                "change_unit",
+                "currency",
+                "current_from_epoch_s",
+                "current_to_epoch_s",
+                "previous_from_epoch_s",
+                "previous_to_epoch_s"
+            ],
+            [
+                "payment_success",
+                "local",
+                "Local",
+                "100.00",
+                "",
+                "",
+                "percent",
+                "percentage_points",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ]
+        ],
+        "coupons": [
+            [
+                "table",
+                "key",
+                "label",
+                "current",
+                "previous",
+                "change",
+                "value_unit",
+                "change_unit",
+                "currency",
+                "current_from_epoch_s",
+                "current_to_epoch_s",
+                "previous_from_epoch_s",
+                "previous_to_epoch_s"
+            ]
+        ],
+        "devices": [
+            [
+                "table",
+                "key",
+                "label",
+                "current",
+                "previous",
+                "change",
+                "value_unit",
+                "change_unit",
+                "currency",
+                "current_from_epoch_s",
+                "current_to_epoch_s",
+                "previous_from_epoch_s",
+                "previous_to_epoch_s"
+            ]
+        ],
+        "visitor_source": [
+            [
+                "table",
+                "key",
+                "label",
+                "current",
+                "previous",
+                "change",
+                "value_unit",
+                "change_unit",
+                "currency",
+                "current_from_epoch_s",
+                "current_to_epoch_s",
+                "previous_from_epoch_s",
+                "previous_to_epoch_s"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:10:\"unobserved\";i:1;N;}",
+                "Not observed",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"empty\";i:1;s:0:\"\";}",
+                "UTM source empty",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:5:\"Other\";}",
+                "Other",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:7:\"UNKNOWN\";}",
+                "UNKNOWN",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:7:\"unknown\";}",
+                "unknown",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:8:\"=formula\";}",
+                "'=formula",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:8:\"Source-7\";}",
+                "Source-7",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:8:\"Source-8\";}",
+                "Source-8",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:8:\"Source-9\";}",
+                "Source-9",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-10\";}",
+                "Source-10",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-11\";}",
+                "Source-11",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-12\";}",
+                "Source-12",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-13\";}",
+                "Source-13",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-14\";}",
+                "Source-14",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-15\";}",
+                "Source-15",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-16\";}",
+                "Source-16",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-17\";}",
+                "Source-17",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-18\";}",
+                "Source-18",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-19\";}",
+                "Source-19",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-20\";}",
+                "Source-20",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-21\";}",
+                "Source-21",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-22\";}",
+                "Source-22",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-23\";}",
+                "Source-23",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-24\";}",
+                "Source-24",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-25\";}",
+                "Source-25",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-26\";}",
+                "Source-26",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-27\";}",
+                "Source-27",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-28\";}",
+                "Source-28",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-29\";}",
+                "Source-29",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-30\";}",
+                "Source-30",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-31\";}",
+                "Source-31",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-32\";}",
+                "Source-32",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-33\";}",
+                "Source-33",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-34\";}",
+                "Source-34",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-35\";}",
+                "Source-35",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-36\";}",
+                "Source-36",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-37\";}",
+                "Source-37",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-38\";}",
+                "Source-38",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-39\";}",
+                "Source-39",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-40\";}",
+                "Source-40",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-41\";}",
+                "Source-41",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-42\";}",
+                "Source-42",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-43\";}",
+                "Source-43",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-44\";}",
+                "Source-44",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-45\";}",
+                "Source-45",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-46\";}",
+                "Source-46",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-47\";}",
+                "Source-47",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-48\";}",
+                "Source-48",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-49\";}",
+                "Source-49",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-50\";}",
+                "Source-50",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-51\";}",
+                "Source-51",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-52\";}",
+                "Source-52",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-53\";}",
+                "Source-53",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-54\";}",
+                "Source-54",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-55\";}",
+                "Source-55",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-56\";}",
+                "Source-56",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-57\";}",
+                "Source-57",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-58\";}",
+                "Source-58",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-59\";}",
+                "Source-59",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-60\";}",
+                "Source-60",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-61\";}",
+                "Source-61",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-62\";}",
+                "Source-62",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-63\";}",
+                "Source-63",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-64\";}",
+                "Source-64",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:9:\"Source-65\";}",
+                "Source-65",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:7:\"missing\";i:1;N;}",
+                "UTM source missing",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:13:\"Previous-only\";}",
+                "Previous-only",
+                "0",
+                "1",
+                "-100.00",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ]
+        ],
+        "order_source": [
+            [
+                "table",
+                "key",
+                "label",
+                "current",
+                "previous",
+                "change",
+                "value_unit",
+                "change_unit",
+                "currency",
+                "current_from_epoch_s",
+                "current_to_epoch_s",
+                "previous_from_epoch_s",
+                "previous_to_epoch_s"
+            ],
+            [
+                "order_source",
+                "a:2:{i:0;s:10:\"unobserved\";i:1;N;}",
+                "Not observed",
+                "2",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "order_source",
+                "a:2:{i:0;s:5:\"value\";i:1;s:7:\"unknown\";}",
+                "unknown",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ]
+        ],
+        "visitor_domain": [
+            [
+                "table",
+                "key",
+                "label",
+                "current",
+                "previous",
+                "change",
+                "value_unit",
+                "change_unit",
+                "currency",
+                "current_from_epoch_s",
+                "current_to_epoch_s",
+                "previous_from_epoch_s",
+                "previous_to_epoch_s"
+            ],
+            [
+                "visitor_domain",
+                "a:2:{i:0;s:5:\"value\";i:1;s:10:\"entry.test\";}",
+                "entry.test",
+                "64",
+                "1",
+                "6300.00",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_domain",
+                "a:2:{i:0;s:10:\"unobserved\";i:1;N;}",
+                "Not observed",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ]
+        ],
+        "order_domain": [
+            [
+                "table",
+                "key",
+                "label",
+                "current",
+                "previous",
+                "change",
+                "value_unit",
+                "change_unit",
+                "currency",
+                "current_from_epoch_s",
+                "current_to_epoch_s",
+                "previous_from_epoch_s",
+                "previous_to_epoch_s"
+            ],
+            [
+                "order_domain",
+                "a:2:{i:0;s:10:\"unobserved\";i:1;N;}",
+                "Not observed",
+                "2",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "order_domain",
+                "a:2:{i:0;s:5:\"value\";i:1;s:10:\"entry.test\";}",
+                "entry.test",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ]
+        ],
+        "visitor_country": [
+            [
+                "table",
+                "key",
+                "label",
+                "current",
+                "previous",
+                "change",
+                "value_unit",
+                "change_unit",
+                "currency",
+                "current_from_epoch_s",
+                "current_to_epoch_s",
+                "previous_from_epoch_s",
+                "previous_to_epoch_s"
+            ],
+            [
+                "visitor_country",
+                "a:2:{i:0;s:10:\"unobserved\";i:1;N;}",
+                "Not observed",
+                "65",
+                "1",
+                "6400.00",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ],
+            [
+                "visitor_country",
+                "a:2:{i:0;s:7:\"unknown\";i:1;N;}",
+                "Country unknown",
+                "1",
+                "0",
+                "",
+                "count",
+                "percent",
+                "",
+                "100",
+                "200",
+                "50",
+                "100"
+            ]
+        ]
+    }
+}
