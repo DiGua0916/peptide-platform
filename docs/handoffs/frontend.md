@@ -944,3 +944,15 @@ functions.php新增vc_card_display_product，使用Woo get_visible_children的me
 实际IAB独立预览11463检查：1280视口卡片274.17px、角标122.77px、文字16.37px；1100视口内部卡片228px、角标103px、文字13.67px；390手机内部卡片159px、角标72px、文字9.54px，箭头35px→24px，四卡图像正常。桌面与手机截图确认文字完整、角标没有盖住大半图，scrollWidth分别1085≤1100和375≤390。首规格链接/价格55、86.30、42、35及29/15/19%保持；无优惠NAD+不新增角标。未声称实体手机验证，也未刷新用户正在编辑的后台草稿。临时视口覆盖已reset。
 
 独立只读代码复核通过，git diff --check通过。Impeccable源文件扫描只有12条advisory（既有字号/VI颜色及复用阴影色），无阻断。本轮只有CSS及本交接，无数据库/媒体/商品/插件/积木字段写入；独立首页仍未发布。证据 D:/Codex/Tasks/2026-11-01/homepage-fluid-card-scale/outputs/{narrow-desktop.png,mobile.png,narrow-metrics.json,mobile-metrics.json}。Git提交/远程同步结果记群和项目记忆。用户刷新预览后即可看到缩放效果。
+
+### 2026-11-01 · Codex：可编辑的说明与数字卡片
+
+用户要求参考 Protide 的三卡片布局和递增数字，并指定纯度数字99.67。复用原counter积木，主题inc/layout-modules.php新增可选presentation=cards（默认standard），只包装原Fallback；modules-home.css把标题/描述排左卡，原数字条目排右侧，手机说明在上、两数字并列。字号受原numberSizePx和容器宽共同控制，配色取现有店铺变量，保持Manrope。原生小数、单位、条目启停、设备覆盖和1200ms首次进入可视区计数/减少动画偏好保留，没有新计数JS或插件改动。
+
+经原layouts REST和revision/modified并发校验，向独立首页11463的collection后新增collection-stats；原5块逐字保持。数字82来自当前已发布且catalog可见商品总数（183规格）；99.67%使用用户指定值，因当前0公开批次/报告而显示AVG. BATCH PURITY · EXAMPLE，不当作已核验汇总。文字、数字、单位、列数在后台原积木编辑；82是本次核对后保存的可编辑值，不自动随目录增删。
+
+本轮读取发现11463已经有发布快照，但模板11462仍未激活，活动模板仍684。最初保护检查拒绝写入后，只调整为允许保存其草稿并精确保护已有发布快照；没有覆盖发布快照、发布本次内容或切换模板。685–688、11464–11466和active/domain保持；9项保存后核对全部通过。任务中没有修改产品、媒体、订单或加购。
+
+验证：独立实际WP内存渲染26检查通过，PHP lint、git diff --check通过。Impeccable只有15项advisory（原店铺VI及本次16px圆角/32px标题与后台DESIGN不同），无阻断。真实IAB桌面1280三卡横排；390手机说明上方/数字并排，pageWidth375，数字卡141px且无内部越界，最终显示82和99.67%。原modules.js加载及原data-count精度挂钩已核对；浏览器只读环境不支持MutationObserver，未取得逐帧动画记录，不冒称实测1200ms或实体手机。原生动画源码复核、DOM终值及视觉截图已验。
+
+证据D:/Codex/Tasks/2026-11-01/homepage-proof-counter/outputs：update-result.json、counter-cards-audit.json、read-only-data-audit.json、mobile-browser-check.json、counter-desktop.png、counter-mobile.png。编辑入口document11463；当前预览tab19已保留、视口恢复。数据库/截图不入Git。下一步用户审阅独立预览，通过原后台流程再发布启用；本次不替换正式首页。源提交及push结果另记群/项目记忆。
