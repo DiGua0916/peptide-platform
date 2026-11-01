@@ -999,3 +999,8 @@ functions.php新增vc_card_display_product，使用Woo get_visible_children的me
 验证：node --check、git diff --check通过；独立review确认滚动条修改不影响筛选/overflow。触屏逻辑由执行实际函数的Node VM检查停止/恢复/轮换，真实IAB390px核对FAQ左右列211/107px、文档宽375无横向溢出，分类barHeight0、scrollbar-width none、overflowX auto；报告points元素0，About图加载及链接/模块顺序正确，手机截图已保存。浏览器触屏媒体条件为true、离屏无活动类；原生IO诊断报告在屏外，与另一DOM视图滚动位置不同，因此不声称已在实体手机或实际浏览器逐帧观察到自动浮动。视口和临时触屏模拟均恢复。CLI有本机imagick DLL加载警告但REST保存发布检查成功，与本次改动无关。
 
 证据在D:/Codex/Tasks/2026-11-02/demo-home-integration/outputs/{mobile-faq-side-by-side.png,mobile-about-restored.png,report-points-before.json,report-points-after.json,about-entry-before.json,about-entry-after.json}。发布脚本及候选资料在同任务work，未入Git。源码本阶段提交由git日志定位；不改Woo商品、价格、订单或结账。此前53c87d8也需随本次网络恢复补推远程。
+### 2026-11-02 · Codex：修复窄屏页头悬空
+
+用户截图显示滚动到About us时公告与导航悬在图片中间。实际IAB564px登录状态：WP管理员栏position:absolute已滚出屏幕，Demo sticky wrapper仍top46px，公告top46/导航top70。WordPress core在max-width600px将工具栏从fixed改absolute，原Demo样式遗漏了对应偏移归零。
+
+仅修改assets/demo-site-parts.css，在同600px断点给.vc-m--site-header:has(.vc-demo-header--sticky)设置top:0；无JS/数据库/后端积木字段改动。真实浏览器刷新后564px wrapper与公告top0，导航top24；1280px管理员栏仍fixed且bottom32，wrapper top32，桌面不重叠。临时视口恢复。git diff --check通过。截图D:/Codex/Tasks/2026-11-02/demo-home-integration/outputs/mobile-header-fixed.png。未实体手机测试。源码提交由本节对应git日志定位。
