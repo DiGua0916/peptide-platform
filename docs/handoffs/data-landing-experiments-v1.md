@@ -6,7 +6,19 @@
 
 `POST /wp-json/peptide/v1/data/experiments/events` uses native WordPress REST authentication and requires an authenticated user with `manage_woocommerce`. A remote trusted server must use HTTPS and native application-password authentication; a native logged-in cookie request must pass WordPress's REST nonce validation. This endpoint adds no hardcoded key, anonymous bypass or credential UI. Never put an application password in storefront JavaScript.
 
-An existing storefront page view must first be accepted by the ordinary tracking endpoint. Its actual ACK supplies `visitor_id` and `visit_id` (the existing Ingest result); retain the exact acknowledged page view's `page_instance_id` and local path. The external assignment/display integration sends the actual experiment/variant exposure only after that page view. There is no URL/query inference and no new public visitor action or event producer in this patch.
+The public tracking ACK does **not** expose visitor_id or visit_id. The adapter also does not expose database IDs. Opt in to window.VialCoveVisitorTransport.subscribePageViews(listener): only a genuinely ACKed current page view supplies an immutable opaque reference containing event_id, page_instance_id, path, page_type and occurred_at. This is not a source of experiment decisions.
+
+Send that reference to the assignment owner's trusted server. After verifying the real variant is still displayed, retain the actual observation time. The trusted server uses the same native manage_woocommerce authentication to POST /wp-json/peptide/v1/data/experiments/binding:
+
+~~~json
+{"protocol":1,"page_view":{"event_id":"synthetic-page-view-0001","page_instance_id":"synthetic-page-instance-0001","path":"/campaign/"}}
+~~~
+
+This example contains synthetic opaque references, not real customer facts. Only these three page_view fields are accepted; pick them from the SDK reference rather than forwarding extra fields. A unique existing non-test client page view and its exact non-test original visitor/visit must match all three values. Success returns protocol:1 and binding containing visitor_id, visit_id, page_view_event_id, page_instance_id, path, page_view_occurred_ms. No matching PV returns404; ambiguous original matches return409; unavailable storage/SQL returns503. The read-only lookup never creates a visitor, visit or PV. It is authenticated server/admin only and does not change the public ACK.
+
+The lookup accepts at most8192 bytes, strict protocol integer1, and at most300 valid-shape requests per authenticated user per300 seconds. Invalid shapes return400, oversize413, rate excess429, unauthenticated401 and insufficient capability403. Native REST authentication runs before storage access. Responses are not cacheable; no application password belongs in storefront JavaScript.
+
+The server then submits the exposure below using the resolved binding. The actual observed exposure must be at/after the saved PV, in the same page instance/path, not in the future and within24 hours. If the callback arrives late, verify the currently visible variant and record a new real observation time; do not invent an earlier display or rewrite an old timestamp merely to pass validation. See data-digua-integration-v1.md for the complete Chinese source-owner checklist.
 
 Build this object on the trusted source server from those existing facts, then JSON-encode it as the request body. Variables represent real observed facts, not new identifiers invented for a customer:
 
@@ -15,15 +27,15 @@ const body = {
   protocol: 1,
   events: [{
     event_id: stableOpaqueExposureId, // 8–64 ASCII opaque characters; preserve on retry
-    visitor_id: trackAck.visitor_id,
-    visit_id: trackAck.visit_id,
-    page_instance_id: acknowledgedPageView.page_instance_id,
+    visitor_id: binding.visitor_id,
+    visit_id: binding.visit_id,
+    page_instance_id: binding.page_instance_id,
     occurred_ms: actualDisplayEpochMilliseconds,
     data: {
       version: 1,
-      experiment_id: "landing-hero-v1",
-      variant_id: "A",
-      landing_path: "/campaign/"
+      experiment_id: actualExperimentId,
+      variant_id: actualDisplayedVariantId,
+      landing_path: binding.path
     }
   }]
 };

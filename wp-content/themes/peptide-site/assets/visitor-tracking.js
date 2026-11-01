@@ -129,6 +129,9 @@
     }
     return page;
   }
+  function pageViewReference(record) {
+    return Object.freeze({event_id: record.event_id, page_instance_id: record.page_instance_id, path: record.page.path, page_type: record.page.page_type, occurred_at: record.occurred_at});
+  }
   // This private path is deliberately absent from cleanData/the public action allowlist.
   function productSnapshot(input) {
     if (!object(input) || input.version !== 1 || !Number.isSafeInteger(input.product_id) || input.product_id <= 0 || !Number.isSafeInteger(input.variation_id) || input.variation_id < 0 || !Number.isFinite(input.visible_fraction) || input.visible_fraction < 0.4 || input.visible_fraction > 1 || !Number.isInteger(input.visible_ms) || input.visible_ms < 500 || input.visible_ms > 2147483647 || !object(input.context)) return null;
@@ -190,7 +193,7 @@
     const stats = {created: 0, acknowledged: 0, dropped: 0, failedBatches: 0};
     const metadataEnabled = typeof options.pageViewMetadata === 'function';
     if (metadataEnabled) Object.assign(stats, {extensionUnsupported: 0, extensionDropped: 0});
-    function retire(entry, reason) {
+    function retire(entry, reason, acknowledgedPageView = false) {
       const index = pending.indexOf(entry);
       if (index < 0) return false;
       pending.splice(index, 1);
@@ -198,6 +201,9 @@
       if (action) action.retired = reason;
       if (metadataEnabled && ['exhausted', 'overflow', 'stopped'].includes(reason) && ['attribution', 'page_context'].some(key => Object.hasOwn(entry.record.data, key))) stats.extensionDropped++;
       try { options.onEventRetired?.(entry.record.event_id, reason); } catch { /* Retirement cannot affect collection. */ }
+      if (acknowledgedPageView && reason === 'acknowledged' && entry.record.type === 'page_view') {
+        try { options.onPageViewAcknowledged?.(pageViewReference(entry.record)); } catch { /* Optional source notification. */ }
+      }
       return true;
     }
     const listen = (target, type, listener, opts) => {
@@ -239,6 +245,7 @@
       }
       pending.push({record, attempts: 0, readyAt: 0, inFlight: false});
       stats.created++;
+      if (type === 'page_view') { try { options.onPageViewCreated?.(pageViewReference(record)); } catch { /* Optional source notification. */ } }
       schedule();
     }
     function pushProductAction(type, facts) {
@@ -301,6 +308,7 @@
       const controller = requestController;
       let ack = new Set();
       let discarded = new Set();
+      let acceptedPageViews = new Set();
       try {
         const timeout = new Promise((_, reject) => {
           controller.signal.addEventListener('abort', () => reject(new Error('Observer transport cancelled')), {once: true});
@@ -313,6 +321,7 @@
         }), timeout]);
         if (Array.isArray(result?.ackEventIds)) ack = new Set(result.ackEventIds);
         if (Array.isArray(result?.discardEventIds)) discarded = new Set(result.discardEventIds);
+        acceptedPageViews = new Set(Array.isArray(result?.pageViewAckIds) ? result.pageViewAckIds : ack);
         if (Number.isFinite(result?.retryAfterMs) && result.retryAfterMs > 0) retryAt = Math.max(retryAt, Date.now() + Math.min(3600000, result.retryAfterMs));
         if (!stopped && batch.some(entry => !ack.has(entry.record.event_id) && !discarded.has(entry.record.event_id))) stats.failedBatches++;
       } catch { if (!stopped) stats.failedBatches++; }
@@ -322,7 +331,7 @@
           entry.inFlight = false;
           if (ack.has(entry.record.event_id) || discarded.has(entry.record.event_id) || entry.attempts >= maxAttempts) {
             const reason = ack.has(entry.record.event_id) ? 'acknowledged' : discarded.has(entry.record.event_id) ? 'discarded' : 'exhausted';
-            if (retire(entry, reason)) { if (reason === 'acknowledged') stats.acknowledged++; else stats.dropped++; }
+            if (retire(entry, reason, acceptedPageViews.has(entry.record.event_id))) { if (reason === 'acknowledged') stats.acknowledged++; else stats.dropped++; }
           } else entry.readyAt = Math.max(retryAt, Date.now() + Math.min(20000, 1000 * 2 ** (entry.attempts - 1)));
         }
         sending = false;
@@ -349,9 +358,10 @@
         if (stopped) return;
         const ack = new Set(Array.isArray(result?.ackEventIds) ? result.ackEventIds : []);
         const discarded = new Set(Array.isArray(result?.discardEventIds) ? result.discardEventIds : []);
+        const acceptedPageViews = new Set(Array.isArray(result?.pageViewAckIds) ? result.pageViewAckIds : ack);
         if (Number.isFinite(result?.retryAfterMs) && result.retryAfterMs > 0) retryAt = Math.max(retryAt, Date.now() + Math.min(3600000, result.retryAfterMs));
         for (const entry of batch) if (ack.has(entry.record.event_id) || discarded.has(entry.record.event_id)) {
-          if (retire(entry, ack.has(entry.record.event_id) ? 'acknowledged' : 'discarded')) { if (ack.has(entry.record.event_id)) stats.acknowledged++; else stats.dropped++; }
+          if (retire(entry, ack.has(entry.record.event_id) ? 'acknowledged' : 'discarded', acceptedPageViews.has(entry.record.event_id))) { if (ack.has(entry.record.event_id)) stats.acknowledged++; else stats.dropped++; }
         }
       }).catch(() => { if (!stopped) stats.failedBatches++; }).finally(() => {
         clearTimeout(exitTimer); exitController = null;
