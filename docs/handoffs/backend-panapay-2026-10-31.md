@@ -143,3 +143,11 @@ Cloudflare官方2026.10.7 Windows工具已下载、SHA256与官方release digest
 本阶段不修改支付生产运行代码；临时站、数据库、私有配置、测试helper和下载工具均不提交Git。主线同事更新正常快进合入，支付插件源码没有变化。后续进度与真实测试结果须据实际证据追加，不能把本地隔离准备等同上线收款验收。
 
 前置收尾：本地实际HTTP路径/门禁/原生HTML、单SKU购物车与StoreAPI、批量子请求/静态、签名机器路由拒绝检查38/38；IP准入另10/10实际HTTP、cookie/本地头3模型单列。公网模式验证Cloudflare单个global IP后重建X-Real-IP，丢弃用户XFF/Real-IP；只向Woo传购物车/会话cookie，后台及门禁cookie不转发。原PHP访问URI日志和客户IP两个预审问题已修，独立源码复核无剩余P1/P2阻断；Cloudflare真实边缘、HTTPS后的私有后台登录/混合资源、Woo最终落库IP、实际付款和公网IPN仍未验。未POST原生checkout、未发provider创建、未启用任何商户或临时隧道。
+
+### 2026-11-01 · Codex：隔离测试后台整页排版修复
+
+用户反馈整页排版崩溃。原10090后台桌面/390检查正常，支付运行文件与源码逐字一致；实际故障在新隔离52831。晚期加入的本地管理URL适配把 `site_url('')` 返回为带尾斜杠基址，WordPress资源加载器再拼 `/wp-admin`、`/wp-includes` 后出现双斜杠，部分CSS/JS请求落到HTML页面，浏览器报 `Unexpected token '<'`。这项晚期适配未被先前那张正常参数页截图覆盖，不把旧截图当修改后的验收。
+
+只改隔离HQ/store各自MU URL过滤器：本地空path返回无尾斜杠基址，非空path只连接单斜杠。可信公网代理分支不安装此filter，未放宽Host/token/XFP、机器路由或后台公网访问，也未动原站、生产支付插件、数据库或商户参数。
+
+实际原生script/style base规范，combined CSS/JS、hub.css/js共4资源HTTP200且正确MIME、非HTML；独立源码复核通过。内置浏览器重载前确认无未保存编辑，再实际看到恢复后的整页和native dialog增强；1280宽页面无横向溢出，390宽列表和编辑窗口内按钮可见，弹窗left12/right378/bottom832在844视口内。资源路径双斜杠0，临时视口已重置；未保存/启停支付或发起付款。证据在 `D:/Codex/Tasks/2026-11-01/payment-layout-fix/outputs` 和既有任务 `staging-provision/admin-assets-repair.json`。URL适配helper及私有测试运行文件继续不入Git，仅同步这份交接；公网和真实扣款仍待用户后续填写参数与联调。
