@@ -1,26 +1,24 @@
 # 访客追踪接收协议
 
-VISITOR-ANALYTICS-TEST-01 · protocol 1 · peptide-core 0.11.0 · 2026-10-22 · Claude
+历史起点：VISITOR-ANALYTICS-TEST-01 · protocol 1 · peptide-core 0.11.0 · 2026-10-22 · Claude。当前加载与配置规则见第1节；生产者及专项协议总索引见 [Data 对接总入口](data-digua-integration-v1.md)。
 
-> **2026-10-27 起是正式版（TRACKING-LIVE-01）**：配置里 `test_mode:false, mode:"live"`，主题要改为不再要求 test_mode；新数据 is_test = 0。
+> **2026-10-27 起是正式版（TRACKING-LIVE-01）**：当前配置为 `test_mode:false, mode:"live"`，主题已不再要求 test_mode 为 true；新数据 is_test = 0。
 > 开关、不要追踪的浏览器（GPC / 退出链接，403 `pc_track_declined`）、保存期限、隐私请求见 CONTRACT“访客追踪”和第 8 节。协议本身（事件格式、ack、限流）没有变。
 
-本文件是已经实现、测试过的接口，不是草案。代码位置：`includes/tracking/`、`includes/api/class-tracking-controller.php`。测试：`tests/smoke-tracking.php`（45 项）。
+本文件是已经实现的接口，不是草案。代码位置：`includes/tracking/`、`includes/api/class-tracking-controller.php`。`tests/smoke-tracking.php`（45 项）为早期测试记录，本次文档更正没有重跑该测试或创建测试环境。
 
 ## 1. 开关与前端加载
 
-- 默认关闭。开启方式：
-  - 后台“访客数据 → 实时访客”里的“开启测试追踪”；
-  - 或者命令 `wp peptide tracking enable`，关闭用 `disable`，查看用 `status`，清空测试数据用 `purge --yes`。
-- 开启后，插件接管主题的过滤器 `vialcove_visitor_observer_config`（优先级 20），返回：
+- 采集开关由 peptide-core 管理，默认关闭；使用既有访客追踪设置，或命令 `wp peptide tracking enable`，关闭用 `disable`，查看用 `status`。早期“开启测试追踪”名称属于历史测试阶段，不是当前必须开启 test_mode 的要求。
+- 开启后，插件通过过滤器 `vialcove_visitor_observer_config`（优先级 20）提供现行配置。下例仅为 illustrative shape，假设当前站点 origin 是 `https://store.example.invalid`；endpoint 必须使用 core 实际下发的同源地址，不照抄示例域名：
 
 ```json
-{"enabled":true,"test_mode":true,"protocol":1,
- "endpoint":"http://vialcovepeptidescom.local/wp-json/peptide/v1/track/events",
+{"enabled":true,"test_mode":false,"mode":"live","protocol":1,
+ "endpoint":"https://store.example.invalid/wp-json/peptide/v1/track/events",
  "heartbeat_ms":15000,"idle_ms":60000,"batch_max":20}
 ```
 
-主题现在的加载判断（enabled + test_mode、排除员工和预览）可以保持不变。建议把 `endpoint`、`heartbeat_ms`、`idle_ms` 用 `wp_add_inline_script` 交给适配器，再传给 `start({heartbeatMs, idleMs})`。
+现有主题 `inc/visitor-tracking.php` 的配置加载门要求 `enabled === true`、整数 `protocol === 1` 和非空 endpoint；不要求 `test_mode === true`。主题把实际 test_mode／mode、endpoint 与节奏配置传给现有适配器，适配器保留同源 HTTP(S) endpoint 校验。员工、后台、装修／预览／frame 排除及 GPC／退出采集门均保留；不得为接入绕过这些门或把正式配置切回 test。`GET /track/session` 当前也返回 `test_mode:false`，以服务端实际配置与状态为准。
 
 ## 2. 身份（前端不用生成访客或会话编号）
 

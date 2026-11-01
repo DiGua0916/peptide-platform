@@ -1,6 +1,25 @@
 # DiGua 数据源对接说明 v1
 
-基线：d19bc8fb2ccc96d11f9b059ff1dd3deb9323b1da，073 Data 补缝。本文只交付数据接口和业务成功点对接要求；不实现或启用收藏、分享、A/B 分流/选版/发布。所有示例均为 synthetic，不是客户数据或已完成的真实验收。
+历史协议基线：d19bc8fb2ccc96d11f9b059ff1dd3deb9323b1da，073 Data 补缝。当前交付状态及全部生产者入口见下节；后文保留原有字段、认证、隐私、重试和业务成功点约束。所有示例均为 synthetic，不是客户数据或已完成的真实验收。
+
+## 当前 Data-owned 交付状态与生产者对接总索引
+
+Data 所属的可运行 API／SDK、协议、字段及权限校验、稳定身份与去重、入库、统计报表和 CSV 已交付。当前实现源码为55f2c3ddc8d04ecd849da7476ca3aec686df85a5，091包运行于原8091。090／091的源码与协议回归、已有原生请求及报表证明按各自范围保留；本次文档收尾没有新增测试或客户旅程验收。历史专项协议中的源码检查点不替代本节的当前交付状态。
+
+| 生产者类别 | 可用 Data 接口／原生观察接线 | 协议与实现索引 |
+|---|---|---|
+| 普通 PV／页面上下文与 SDK | 既有同源 `POST /wp-json/peptide/v1/track/events`；SDK 管理真实页面身份、ACK和重试，`subscribePageViews(listener)` 只通知当前已接受 PV | [通用追踪协议](tracking-protocol.md)、[页面上下文](data-page-context-protocol-v1.md)、[来源归因](data-attribution-protocol-v1.md)、[现有搜索结果适配](data-new-ui-search-adapter-v1.md)；[visitor-adapter.js](../../wp-content/themes/peptide-site/assets/visitor-adapter.js) |
+| 原生 Woo 加购／订单／付款／状态 | `woocommerce_add_to_cart`、经典及 Blocks 下单、`woocommerce_payment_complete`、`woocommerce_order_status_changed` 已接原生事实；稳定订单 UID 与原 owner 关联由 Data 保存，不接收浏览器自称 paid | [通用追踪协议第6节](tracking-protocol.md#6-服务端事实前端不用也不应该上报)；[Server_Events::register_hooks](../../wp-content/plugins/peptide-core/includes/tracking/class-server-events.php) |
+| 收藏／分享真实成功回调 | `pushProductAction(type,facts)` 接持久化 NEW 收藏、完成分享或商品链接复制；返回 queued UID／false，queued 不是服务端 ACK | [商品动作协议](data-product-actions-v1.md)及本文第二节；DiGua 提供实际业务成功点 |
+| 原生 quickview／buyNow | 已接原生快速预览成功打开；Buy now 确认请求商品的加购成功响应并完成当前操作的 checkout 导航赋值，不代表 payment success。quickview 自动配对 parent `product_view`，业务方不得为同一操作再次 push 或补 PV | [原生 quickview 观察](data-native-quickview-intent-v1.md)、[商品动作协议](data-product-actions-v1.md)；[native quick-view source](../../wp-content/plugins/peptide-core/assets/showcase-quick-view.js) |
+| A/B 真实版本展示 | 真实 display 取得原 PV reference；可信服务器认证调用既有 `/data/experiments/binding` 和 `/data/experiments/events`，Data 校验及分析已收到的展示，不负责分流／选版／发布 | [A/B 接收与分析协议](data-landing-experiments-v1.md)及本文第一节；[Experiment_Bindings](../../wp-content/plugins/peptide-core/includes/tracking/class-experiment-bindings.php)、[Experiment_Observations](../../wp-content/plugins/peptide-core/includes/tracking/class-experiment-observations.php) |
+| 四类原生邮件：Woo／campaign／subscription／loyalty | 已有四类 adapter 被动观察原发送回调、`wp_mail_succeeded`／`wp_mail_failed` 和合格 HTML 像素／链接请求，保存稳定 message 关联及去重结果；不提供 SMTP 或供应商发送接口 | [邮件观察交付及证据边界](data-observations-integration-v1.md)；[Message_Observations::register_hooks／send](../../wp-content/plugins/peptide-core/includes/emails/class-message-observations.php)、[campaign adapter](../../wp-content/plugins/peptide-core/includes/class-email-campaigns.php)、[subscription adapter](../../wp-content/plugins/peptide-core/includes/class-subscriptions.php)、[loyalty adapter](../../wp-content/plugins/peptide-core/includes/class-loyalty.php) |
+
+其他既有协议与报表入口：[流量渠道](data-traffic-channels-v1.md)、[访客状态接收](data-visit-classification-v1.md)、[原生分类规则与人工纠正](data-visit-classifier-policy-v1.md)、[Operations 维度详情](data-operations-dimension-details-v1.md)、[国家本地资源及可信 REMOTE_ADDR 前提](data-country-resource-v1.md)。这是已有实现索引，不新增生产者或 API。
+
+DiGua 业务入口未发布、尚未接入真实收藏／分享／A-B producer，以及 native quickview／buyNow 尚无已发布客户入口，统一标为 `EXTERNAL_INTEGRATION_PENDING`；这些是业务方接入及联合验收状态，不是 Data 开发未完成。访客国家公网客户验收与真实支付提供商通知集成为用户暂缓的 `DEFERRED`；支付模块负责供应商通知验签和订单 paid 状态，Data 观察原生已确认事实。SMTP／账号／服务商及实际发送属于邮件业务方，不以外部送达阻断 Data 交付。
+
+Data-owned 已交付不表示这些外部旅程已通过：`wp_mail` accepted 不等于到达收件箱，图片／链接请求不等于人类阅读；未观察值保持原协议的空值／coverage，不造来源或对照组。当前“意向”采用披露的成功 quickview／buyNow 操作定义，不宣称与 Shopname 隐藏语义精确等价，也不宣称所有组合或全部联合测试已通过。下文历史本地证明条件仅用于解释对应证据；本机 plans 证据路径不承诺存在于远端源码检出。
 
 ## 接口与责任
 
@@ -154,6 +173,6 @@ Data 提供接口实现/协议/纯内存 gate，DiGua 提供业务成功事实�
 4. 实际已显示版本收到当前 PV reference；可信服务器 lookup 唯一原PV后提交058。核对原 owner/path/page instance/time，绝不人工选择别的visit。
 5. 对每条操作重放原UID/envelope验证幂等；错误shape/权限/不存在PV/歧义必须拒绝。source是否成功与Data是否接受分开记录。
 6. 校验产品、收藏排行、A/B分析和完整CSV的对应增量及partial coverage；未观察的kind/period仍空，不补0、不制造control。
-7. 检查 GPC/opt-out/停止时无回调/新观察，Data失败不影响业务；报告实际执行结果、失败及未做项。接口完成不等于DiGua已接、真实外部邮件已送达或whole Data完成。
+7. 检查 GPC/opt-out/停止时无回调/新观察，Data失败不影响业务；报告实际执行结果、失败及未做项。Data-owned API／SDK／接收与报表交付独立于 `EXTERNAL_INTEGRATION_PENDING` 的业务接入；外部联合验收未完成不改写为 Data 开发未完成，也不宣称 DiGua 已接或真实邮件已送达。
 
 对应英文原协议：data-product-actions-v1.md、data-landing-experiments-v1.md。073 focused tests执行实际handler/route与collector/adapter，属于source验证；本次没有真实客户、邮件、UI或业务发布验收。
