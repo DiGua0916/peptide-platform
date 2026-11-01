@@ -129,6 +129,19 @@ add_filter( 'peptide_core_layout_definitions', function ( array $definitions ): 
     return $definitions;
 }, 100 );
 
+/** Optional storefront presentations use the builder's existing field contract. */
+add_filter( 'peptide_core_layout_definitions', function ( array $definitions ): array {
+    if ( isset( $definitions['hero_h1']['settings'] ) ) {
+        $definitions['hero_h1']['settings'][] = \PeptideCore\Modules\Fields::f( 'select', 'presentation', __( '首页排版', 'peptide-site' ), 'standard', array( 'group' => 'layout', 'options' => array( 'standard' => '原图文排版', 'focused' => '简洁首页（手机居中）' ) ) );
+        $definitions['hero_h1']['settings'][] = \PeptideCore\Modules\Fields::f( 'link', 'secondaryLink', __( '次要入口', 'peptide-site' ), null, array( 'help' => '例如报告资料入口；文字或链接留空时不显示。' ) );
+        $definitions['hero_h1']['settings'][] = \PeptideCore\Modules\Fields::f( 'text', 'caption', __( '图片说明', 'peptide-site' ), '' );
+    }
+    if ( isset( $definitions['product_collection']['settings'] ) ) {
+        $definitions['product_collection']['settings'][] = \PeptideCore\Modules\Fields::f( 'select', 'cardPresentation', __( '商品卡片排版', 'peptide-site' ), 'standard', array( 'group' => 'layout', 'options' => array( 'standard' => '完整资料', 'compact' => '简洁选购' ), 'help' => '简洁选购展示当前规格、价格和详情入口；报告状态在商品详情中查看。真实价格和规格顺序不变。' ) );
+    }
+    return $definitions;
+}, 110 );
+
 /** Same styles in the theme preview and the Gutenberg canvas. */
 function vc_enqueue_layout_module_assets(): void {
     if ( ! class_exists( '\PeptideCore\Modules\Registry' ) ) {

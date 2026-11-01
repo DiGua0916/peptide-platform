@@ -20,7 +20,7 @@ if ( 'manual' === $vc_content_s['source'] ) {
     }
 }
 ?>
-<div class="container vc-content-collection">
+<div class="container vc-content-collection<?php echo 'compact' === ( $vc_content_s['cardPresentation'] ?? '' ) ? ' vc-content-collection--compact' : ''; ?>">
     <header class="vc-content-heading">
         <div>
             <?php if ( '' !== $vc_content_s['eyebrow'] ) : ?><p class="eyebrow"><?php echo esc_html( $vc_content_s['eyebrow'] ); ?></p><?php endif; ?>
@@ -35,7 +35,7 @@ if ( 'manual' === $vc_content_s['source'] ) {
         <div class="home-product-grid vc-content-products" style="<?php echo esc_attr( '--vc-content-cols:' . $vc_content_desktop . ';--vc-content-cols-mobile:' . $vc_content_mobile ); ?>">
             <?php
             foreach ( $vc_content_products as $vc_content_product ) {
-                vc_product_card( $vc_content_product, (bool) $vc_content_s['reportPreview'], $vc_content_images[ $vc_content_product->get_id() ] ?? null, $vc_content_sizes );
+                vc_product_card( $vc_content_product, (bool) $vc_content_s['reportPreview'], $vc_content_images[ $vc_content_product->get_id() ] ?? null, $vc_content_sizes, 'compact' === ( $vc_content_s['cardPresentation'] ?? '' ) );
             }
             ?>
         </div>
