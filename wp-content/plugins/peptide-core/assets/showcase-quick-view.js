@@ -93,14 +93,14 @@
   if (generation === mutationGeneration) { applyCart(result.data, false); }
   return {cart: result.data, applied: generation === mutationGeneration};
  }
- function pauseRoot(root, value) { if (root) { root.dispatchEvent(new CustomEvent('vc:showcase-quick-state', {detail: {open: value}})); } }
+ function pauseRoot(root, value, opener) { var target = root || opener; if (target) { target.dispatchEvent(new CustomEvent('vc:showcase-quick-state', {detail: {open: value}})); } }
  function close() {
   if (warm) { warm.abort(); warm = null; }
   if (operation && !operation.view?.inline && operation.state === 'pending' && !operation.sent) { operation.cancelled = true; }
   var previous = active; active = null; sequence++;
   if (dialog?.open) { dialog.close(); }
   if (previous) {
-   pauseRoot(previous.root, false);
+   pauseRoot(previous.root, false, previous.opener);
    body.replaceChildren(); // View remains in the pool; its native form is never initialized twice.
    if (previous.opener.isConnected && previous.opener.getClientRects().length && !previous.opener.closest('[inert]')) { previous.opener.focus({preventScroll: true}); }
   }
@@ -158,7 +158,7 @@
   active = {id: id, view: view, token: ++sequence, opener: button, root: button.closest('.vc-showcase'), config: config};
   body.replaceChildren(view.element);
   var title = view.element.querySelector('h2'); if (!title.id) { title.id = 'vc-quick-title-' + sequence; } dialog.setAttribute('aria-labelledby', title.id);
-  pauseRoot(active.root, true);
+  pauseRoot(active.root, true, active.opener);
   try { dialog.showModal(); } catch (_) { close(); return false; }
   if (view.form) {
    view.form.reset();

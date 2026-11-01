@@ -1,6 +1,7 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),{webcrypto}=require('node:crypto');
 const moduleSource=fs.readFileSync(path.join(__dirname,'../assets/visitor-intents.js'),'utf8');
+const nativeSource=fs.readFileSync(path.join(__dirname,'../../../plugins/peptide-core/assets/showcase-quick-view.js'),'utf8');
 class Target060 {
  constructor(){this.listeners=new Map();}
  addEventListener(type,fn,capture=false){if(!this.listeners.has(type))this.listeners.set(type,[]);this.listeners.get(type).push({fn,capture:capture===true||capture?.capture===true});}
@@ -11,31 +12,86 @@ class Element060 {
  constructor(tag,classes,doc,attrs={}){this.tagName=tag.toUpperCase();this.classes=classes.split(' ').filter(Boolean);this.ownerDocument=doc;this.attrs={...attrs};this.isConnected=true;this.hidden=false;this.disabled=false;this.parentElement=null;this.children=[];this.style={display:'block',visibility:'visible',opacity:'1'};this.rect={left:20,top:20,right:220,bottom:170,width:200,height:150};}
  append(node){this.children.push(node);node.parentElement=this;return node;}
  getAttribute(key){return this.attrs[key]??null;}
- matches(selector){if(selector==='.vc-showcase')return this.classes.includes('vc-showcase');if(selector==='button[data-vc-quick-open]')return this.tagName==='BUTTON'&&Object.hasOwn(this.attrs,'data-vc-quick-open');if(selector==='dialog.vc-showcase-quick')return this.tagName==='DIALOG'&&this.classes.includes('vc-showcase-quick');if(selector==='.vc-showcase-quick__body')return this.classes.includes('vc-showcase-quick__body');if(selector==='.vc-showcase-quick-product[data-vc-product-id]')return this.classes.includes('vc-showcase-quick-product')&&Object.hasOwn(this.attrs,'data-vc-product-id');return false;}
+ setAttribute(key,value){this.attrs[key]=String(value);}
+ get dataset(){return Object.fromEntries(Object.entries(this.attrs).filter(([key])=>key.startsWith('data-')).map(([key,value])=>[key.slice(5).replace(/-([a-z])/g,(_,letter)=>letter.toUpperCase()),value]));}
+ matches(selector){if(selector==='.vc-showcase')return this.classes.includes('vc-showcase');if(selector==='[data-vc-quick-open]')return Object.hasOwn(this.attrs,'data-vc-quick-open');if(selector==='button[data-vc-quick-open]')return this.tagName==='BUTTON'&&Object.hasOwn(this.attrs,'data-vc-quick-open');if(selector==='dialog.vc-showcase-quick')return this.tagName==='DIALOG'&&this.classes.includes('vc-showcase-quick');if(selector==='.vc-showcase-quick__body')return this.classes.includes('vc-showcase-quick__body');if(selector==='.vc-showcase-quick-product[data-vc-product-id]')return this.classes.includes('vc-showcase-quick-product')&&Object.hasOwn(this.attrs,'data-vc-product-id');return false;}
  closest(selector){for(let node=this;node;node=node.parentElement)if(node.matches(selector))return node;return null;}
- querySelector(selector){for(const child of this.children){if(child.matches(selector))return child;const nested=child.querySelector(selector);if(nested)return nested;}return null;}
+ querySelector(selector){for(const child of this.children){if(child.matches(selector)||selector==='h2'&&child.tagName==='H2')return child;const nested=child.querySelector(selector);if(nested)return nested;}return null;}
+ replaceChildren(...nodes){for(const child of this.children)child.parentElement=null;this.children=[];for(const node of nodes)this.append(node);}
+ focus(){}
  contains(target){return this===target||this.children.some(child=>child.contains(target));}
+ dispatchEvent(event){event.target=this;deliver060(this.ownerDocument,event,event.bubbles===true);return true;}
  getClientRects(){return this.isConnected&&this.rect.width>0&&this.rect.height>0?[this.rect]:[];}
  getBoundingClientRect(){return this.rect;}
 }
-function mount060(window,document){
+function deliver060(document,event,bubbles=false){if(document instanceof Target060){for(const row of [...(document.listeners.get(event.type)||[])])if(row.capture||bubbles)row.fn(event);}else document.dispatchEvent(event);}
+function mount060(window,document,options={}){
  const html=new Element060('html','',document),body=html.append(new Element060('body','',document));document.documentElement=html;document.visibilityState='visible';document.hidden=false;
- const root=body.append(new Element060('section','vc-showcase',document)),opener=root.append(new Element060('button','',document,{'data-vc-quick-open':'101'}));
+ const root=body.append(new Element060('section','vc-showcase',document)),opener=(options.outside?body:root).append(new Element060(options.openerTag||'a','vc-showcase__action',document,{'data-vc-quick-open':'101',href:'/product/native-item/'})),sourceRoot=options.outside?opener:root;
  const dialog=body.append(new Element060('dialog','vc-showcase-quick woocommerce',document,{'aria-modal':'true'}));dialog.open=false;const modalBody=dialog.append(new Element060('div','vc-showcase-quick__body',document));const product=modalBody.append(new Element060('div','vc-showcase-quick-product product',document,{'data-vc-product-id':'101'}));
+ product.append(new Element060('h2','vc-showcase-quick__title',document));dialog.showModal=()=>{if(options.showFailure)throw Error('native show failed');dialog.open=true;};dialog.close=()=>{dialog.open=false;};
  document.querySelectorAll=selector=>selector==='dialog.vc-showcase-quick'?[dialog].filter(node=>node.matches(selector)):[];
  const frames=new Map(),watchers=[];let nextFrame=0;
  window.requestAnimationFrame=fn=>{frames.set(++nextFrame,fn);return nextFrame;};window.cancelAnimationFrame=id=>frames.delete(id);window.innerWidth=400;window.innerHeight=300;window.getComputedStyle=node=>node.style;
  window.MutationObserver=class {constructor(fn){this.fn=fn;watchers.push(this);}observe(){this.active=true;}disconnect(){this.active=false;}};
  const tasks=new Map();let nextTask=0,activeClick=null;
  if(typeof window.setTimeout!=='function'){window.setTimeout=fn=>{tasks.set(++nextTask,fn);return nextTask;};window.clearTimeout=id=>tasks.delete(id);}
- const deliver=(event,bubbles=false)=>{if(document instanceof Target060){for(const row of [...(document.listeners.get(event.type)||[])])if(row.capture||bubbles)row.fn(event);}else document.dispatchEvent(event);};
- const beginClick=(target=opener,trust=true)=>{if(activeClick)activeClick.eventPhase=0;const event={type:'click',target,button:0,isTrusted:trust,eventPhase:1};if(trust==='missing')delete event.isTrusted;activeClick=event;deliver(event,true);return event;};
+ const deliver=(event,bubbles=false)=>deliver060(document,event,bubbles);
+ const beginClick=(target=opener,trust=true,extra={})=>{if(activeClick)activeClick.eventPhase=0;const event={type:'click',target,button:0,isTrusted:trust,eventPhase:1,...extra};if(trust==='missing')delete event.isTrusted;activeClick=event;deliver(event,true);return event;};
  const endClick=()=>{if(activeClick)activeClick.eventPhase=0;};
- const state=(open,target=root)=>{deliver({type:'vc:showcase-quick-state',target,detail:{open,product_id:999,email:'ignored'},isTrusted:false,eventPhase:1});if(open===true)endClick();};
- return {window,document,root,opener,dialog,modalBody,product,frames,watchers,tasks,beginClick,endClick,click:(target=opener,trust=true)=>{const event=beginClick(target,trust);event.eventPhase=3;return event;},bubble:(event,fn)=>{event.eventPhase=3;try{fn();}finally{endClick();}},expireTasks:()=>{const pending=[...tasks.values()];tasks.clear();pending.forEach(fn=>fn());},state,paint:()=>{const pending=[...frames.values()];frames.clear();pending.forEach(fn=>fn());},mutate:records=>watchers.filter(w=>w.active).forEach(w=>w.fn(records)),visibility:hidden=>{document.hidden=hidden;document.visibilityState=hidden?'hidden':'visible';document.dispatchEvent({type:'visibilitychange',target:document});},open(){this.click(opener,true);this.state(true);dialog.open=true;this.paint();},close(){dialog.open=false;this.state(false);}};
+ const state=(open,target=sourceRoot)=>{window.__nativeState(target===opener?null:target,open,opener);if(open===true)endClick();};
+ const jq=()=>({});jq.fn={};window.jQuery=jq;window.matchMedia=()=>({addEventListener(){}});window.CustomEvent=class {constructor(type,init){this.type=type;this.bubbles=false;Object.assign(this,init);}};
+ window.location ||= new URL('https://native.test/featured/');window.URL=URL;window.AbortController=AbortController;const originalFetch=window.fetch;window.fetch=async(url,init)=>new URL(url,window.location.href).pathname==='/cart-api'?{ok:true,headers:{get:()=>null},json:async()=>({items:[],totals:{},items_count:0})}:originalFetch(url,init);
+ const config={cartApi:'/cart-api',addApi:'/cart-add',cartUrl:'/cart',checkoutUrl:'/checkout'};document.querySelector=selector=>selector==='template[data-vc-quick-product="101"]'?{dataset:{vcQuickConfig:JSON.stringify(config)}}:null;
+ const ending='})(window.jQuery);';assert.equal(nativeSource.split(ending).length,2);
+ const bridge='window.__nativeState=pauseRoot;window.__nativeQuick={open:open,close:close,prepare:function(platform){dialog=platform.dialog;body=platform.body;views.set("101",{element:platform.product,form:null});status={};checkButton={};acknowledge={};cartLink={};closeButton={focus:function(){}};}};';
+ vm.runInNewContext(nativeSource.replace(ending,bridge+ending),window);window.__nativeQuick.prepare({dialog,body:modalBody,product});
+ return {window,document,root,opener,sourceRoot,dialog,modalBody,product,frames,watchers,tasks,beginClick,endClick,click:(target=opener,trust=true)=>{const event=beginClick(target,trust);event.eventPhase=3;return event;},bubble:(event,fn)=>{event.eventPhase=3;try{fn();}finally{endClick();}},expireTasks:()=>{const pending=[...tasks.values()];tasks.clear();pending.forEach(fn=>fn());},state,paint:()=>{const pending=[...frames.values()];frames.clear();pending.forEach(fn=>fn());},mutate:records=>watchers.filter(w=>w.active).forEach(w=>w.fn(records)),visibility:hidden=>{document.hidden=hidden;document.visibilityState=hidden?'hidden':'visible';document.dispatchEvent({type:'visibilitychange',target:document});},open(){this.click(opener,true);this.state(true);dialog.open=true;this.paint();},close(){dialog.open=false;this.state(false);},nativeOpen(target=opener,paint=true){this.click(target,true);let opened;try{opened=window.__nativeQuick.open(opener);}finally{endClick();}if(paint)this.paint();return opened;},nativeClose(){window.__nativeQuick.close();}};
 }
-function fixture060(){const document=new Target060(),window=new Target060();Object.assign(window,{window,document,crypto:webcrypto,navigator:{},Uint8Array,Promise});const env=mount060(window,document);vm.runInNewContext(moduleSource,window);env.facts=[];env.api=window.VialCoveVisitorIntent.observe(document,facts=>env.facts.push(facts));return env;}
+function fixture060(options={}){const document=new Target060(),window=new Target060();Object.assign(window,{window,document,crypto:webcrypto,navigator:{},Uint8Array,Promise});const env=mount060(window,document,options);vm.runInNewContext(moduleSource,window);env.facts=[];env.api=window.VialCoveVisitorIntent.observe(document,facts=>env.facts.push(facts));return env;}
 let passed060=0;const check060=(name,ok)=>{assert.ok(ok,name);passed060++;};
+test('native anchor/button resolver and exact outside-showcase state fallback',()=>{
+ for(const outside of [false,true])for(const openerTag of ['a','button']){
+  const e=fixture060({outside,openerTag});const nested=e.opener.append(new Element060('span','label',e.document));
+  e.click(nested,true);e.state(true);e.dialog.open=true;e.paint();assert.equal(e.facts.length,1,`${openerTag} nested click outside=${outside}`);
+  const uid=e.facts[0].event_id;e.state(true);e.paint();assert.equal(e.facts.length,1);e.close();e.open();assert.equal(e.facts.length,2);assert.notEqual(e.facts[1].event_id,uid);e.api.stop();
+ }
+ for(const outside of [false,true]){
+  let e=fixture060({outside,openerTag:'span'});e.open();assert.equal(e.facts.length,0,'unsupported attributed span is never an opener');e.api.stop();
+  for(const modifier of [{button:1},{metaKey:true},{ctrlKey:true},{shiftKey:true},{altKey:true},{defaultPrevented:true}]){
+   e=fixture060({outside});e.beginClick(e.opener,true,modifier);e.state(true);e.dialog.open=true;e.paint();assert.equal(e.facts.length,0,'modified or prevented click');e.api.stop();
+  }
+ }
+ for(const mode of ['no-state','wrong-opener','wrong-root','wrong-parent','wrong-product','reparented','changed-click','false-state','failed-show','detached','suspend','gpc']){
+  const e=fixture060({outside:true});e.click();let target=e.opener;
+  if(mode==='wrong-opener')target=e.root.parentElement.append(new Element060('a','',e.document,{'data-vc-quick-open':'101',href:'/product/native-item/'}));
+  if(mode==='wrong-root')target=e.root;
+  if(mode==='wrong-parent')e.opener.attrs['data-vc-quick-open']='202';
+  if(mode==='wrong-product')e.product.attrs['data-vc-product-id']='202';
+  if(mode==='reparented')e.root.append(e.opener);
+  if(mode==='changed-click')e.opener.tagName='SPAN';
+  if(mode!=='no-state')e.state(mode!=='false-state',target);
+  e.dialog.open=mode!=='failed-show';if(mode==='detached')e.opener.isConnected=false;if(mode==='suspend')e.api.suspend();if(mode==='gpc')e.window.navigator.globalPrivacyControl=true;
+  e.paint();assert.equal(e.facts.length,0,mode);e.api.stop();
+ }
+ for(const mode of ['untrusted','missing','late','expired','hidden']){
+  const e=fixture060({outside:true});if(mode==='hidden')e.visibility(true);e.click(e.opener,mode==='untrusted'?false:mode==='missing'?'missing':true);
+  if(mode==='late'||mode==='expired')e.endClick();if(mode==='expired')e.expireTasks();e.state(true);e.dialog.open=true;e.paint();assert.equal(e.facts.length,0,mode);e.api.stop();
+ }
+});
+test('actual native open/close uses exact state targets and failed show cancels before frame',()=>{
+ for(const outside of [false,true])for(const showFailure of [false,true]){
+  const e=fixture060({outside,showFailure}),states=[];
+  e.document.addEventListener('vc:showcase-quick-state',event=>states.push({target:event.target,open:event.detail.open,bubbles:event.bubbles}),true);
+  const nested=e.opener.append(new Element060('span','label',e.document));assert.equal(e.nativeOpen(nested,false),!showFailure);assert.ok(states[0],'native open publishes its matching state');assert.equal(states[0].target,e.sourceRoot);assert.equal(states[0].open,true);assert.equal(states[0].bubbles,false);
+  if(showFailure){assert.equal(states.length,2);assert.equal(states[1].target,e.sourceRoot);assert.equal(states[1].open,false);assert.equal(e.frames.size,0,'show failure cancels before any RAF');e.paint();assert.equal(e.facts.length,0);}
+  else{assert.equal(e.frames.size,1);e.paint();assert.equal(e.facts.length,1);e.nativeClose();assert.ok(states[1],'native close publishes its matching false state');assert.equal(states[1].target,e.sourceRoot);assert.equal(states[1].open,false);assert.equal(e.dialog.open,false);assert.equal(e.nativeOpen(),true);assert.equal(e.facts.length,2);}
+  e.api.stop();
+ }
+ const e=fixture060({outside:true});let states=0;e.document.addEventListener('vc:showcase-quick-state',()=>states++,true);e.window.__nativeState(null,true);assert.equal(states,0,'no root/opener is a no-op');e.api.stop();
+ for(const outside of [false,true]){const before=fixture060({outside});assert.equal(before.nativeOpen(before.opener,false),true);assert.equal(before.frames.size,1);before.nativeClose();assert.equal(before.frames.size,0,'actual close cancels before any RAF');before.paint();assert.equal(before.facts.length,0);before.api.stop();}
+ const failing=fixture060({outside:true});failing.api.stop();const observer=failing.window.VialCoveVisitorIntent.observe(failing.document,()=>{throw Error('optional observer failed');});assert.equal(failing.nativeOpen(),true);assert.equal(failing.dialog.open,true);failing.nativeClose();observer.stop();
+});
 test('native quick-view observed opening module',async()=>{
  let e=fixture060();check060('nonbubbling native state uses capture',e.document.listeners.get('vc:showcase-quick-state').every(row=>row.capture));e.click();e.state(true);e.paint();check060('preopen state without successful show does not count',e.facts.length===0);e.dialog.open=true;e.paint();check060('no polling after unsuccessful first frame',e.facts.length===0&&e.frames.size===0);e.api.stop();
  e=fixture060();e.click();e.state(true);e.state(false);e.paint();check060('native show failure/close before paint cancel',e.facts.length===0);e.api.stop();
@@ -62,12 +118,13 @@ test('native quick-view observed opening module',async()=>{
  e=fixture060();e.click(e.opener,true);check060('unused trusted opener has a bounded timer',e.tasks.size===1);e.api.stop();check060('stop clears unused opener timer',e.tasks.size===0&&e.frames.size===0);
  console.log(JSON.stringify({suite:'native-intent-module',passed:passed060,failed:0}));
 });
-test('actual056 collector/adapter queues canonical intent and immutable retry',async()=>{
+for(const outside of [false,true]) test('actual native '+(outside?'outside-root':'showcase')+' anchor with056 collector/adapter queues canonical intent and immutable retry',async()=>{
  const original=fs.readFileSync(path.join(__dirname,'visitor-product-actions.cjs'),'utf8');let source=original.split('async function run()')[0];
  source=source.replace("const context = vm.createContext(window);","if (options.intentSetup) options.intentSetup(window, document);\n  const context = vm.createContext(window);").replace("['visitor-tracking.js', 'visitor-adapter.js']","['visitor-intents.js', 'visitor-tracking.js', 'visitor-adapter.js']");
- const scope={require,__dirname,console,URL,Headers,AbortController,DOMException,TextEncoder,Uint8Array};vm.runInNewContext(source+';this.fixture=fixture;this.drain=drain;',scope);
+ source=source.replace("vm.runInContext(fs.readFileSync(path.join(__dirname, '../assets', name), 'utf8'), context, {filename: name});","vm.runInContext(name === 'visitor-intents.js' ? intentModuleSource : fs.readFileSync(path.join(__dirname, '../assets', name), 'utf8'), context, {filename: name});");
+ const scope={require,__dirname,console,URL,Headers,AbortController,DOMException,TextEncoder,Uint8Array,intentModuleSource:moduleSource};vm.runInNewContext(source+';this.fixture=fixture;this.drain=drain;',scope);
  const page={page_type:'home',path:'/featured/?private=SECRET#SECRET'};let env;
- const f=scope.fixture({product_actions_protocol:1},{page,intentSetup:(window,doc)=>{env=mount060(window,doc);}});f.responses.push({network:true});env.open();await f.advance(300);
+ const f=scope.fixture({product_actions_protocol:1},{page,intentSetup:(window,doc)=>{env=mount060(window,doc,{outside});}});f.responses.push({network:true});assert.equal(env.nativeOpen(),true);await f.advance(300);
  let all=f.calls.flatMap(call=>call.body.events),records=all.filter(row=>row.type==='product_intent'),views=all.filter(row=>row.type==='product_view');
  check060('actual helper delegates exactly one canonical queued intent',records.length===1&&JSON.stringify(records[0].data)==='{"version":1,"product_id":101,"variation_id":0,"kind":"quick_view_open","result":"completed"}');const first=JSON.stringify(records[0]),firstView=JSON.stringify(views[0]);
  check060('actual native preview pairs one exact parent view on nonproduct page',views.length===1&&JSON.stringify(views[0].data)==='{"product_id":101}'&&views[0].page.page_type==='home'&&views[0].page.path==='/featured/');
@@ -76,7 +133,7 @@ test('actual056 collector/adapter queues canonical intent and immutable retry',a
  f.window.dispatchEvent({type:'pagehide',persisted:true});await scope.drain();f.window.dispatchEvent({type:'pageshow',persisted:true});await f.advance(1100);all=f.calls.flatMap(call=>call.body.events);records=all.filter(row=>row.type==='product_intent');views=all.filter(row=>row.type==='product_view');
  check060('lost ACK retry/BFCache keeps exact original UID and payload',records.length>=2&&records.every(row=>JSON.stringify(row)===first));check060('BFCache alone has no second intent UID',new Set(records.map(row=>row.event_id)).size===1);
  check060('view half also retries unchanged across BFCache',views.length>=2&&views.every(row=>JSON.stringify(row)===firstView));
- env.close();env.open();await f.advance(300);all=f.calls.flatMap(call=>call.body.events);
+ env.nativeClose();env.nativeOpen();await f.advance(300);all=f.calls.flatMap(call=>call.body.events);
  check060('real native close/reopen queues a second view episode',new Set(all.filter(row=>row.type==='product_view').map(row=>row.event_id)).size===2&&new Set(all.filter(row=>row.type==='product_intent').map(row=>row.event_id)).size===2);f.stop();
  check060('actual collector stop removes helper state listener',f.document.listeners.get('vc:showcase-quick-state').size===0);
  for(const config of [{enabled:false,product_actions_protocol:1},{product_actions_protocol:'1'},{product_actions_protocol:1}]){let candidate;const privacy=config.enabled!==false&&config.product_actions_protocol===1;const off=scope.fixture(config,{page,navigator:privacy?{globalPrivacyControl:true}:{},intentSetup:(window,doc)=>{candidate=mount060(window,doc);}});candidate.open();await off.advance(300);check060('disabled wrong-protocol/GPC starts no intent queue',!off.calls.flatMap(call=>call.body.events).some(row=>row.type==='product_intent'));check060('disabled wrong-protocol/GPC starts no mirrored view',!off.calls.flatMap(call=>call.body.events).some(row=>row.type==='product_view'));off.stop();}

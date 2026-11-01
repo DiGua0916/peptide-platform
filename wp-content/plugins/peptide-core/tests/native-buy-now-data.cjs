@@ -41,7 +41,7 @@ function fixture(options = {}) {
   const source = fs.readFileSync(path.join(__dirname, '../assets/showcase-quick-view.js'), 'utf8');
   const ending = '})(window.jQuery);';
   assert.equal(source.split(ending).length, 2, 'one native closure ending');
-  const bridge = `window.__native = {submit:submit, observe:observeBuyNow, operation:function(){return operation;}, invalidate:invalidateInlineIntent, configure:function(view){
+  const bridge = `window.__native = {submit:submit, observe:observeBuyNow, pause:pauseRoot, operation:function(){return operation;}, invalidate:invalidateInlineIntent, configure:function(view){
     if(view.inline){inlineViews.set('fixture',view);}else{views.set(view.id,view);dialog={open:true};active={id:view.id,view:view,token:view.token,config:view.config,opener:{}};status={};checkButton={};acknowledge={};cartLink={};}
   }};`;
   const context = vm.createContext(window);
@@ -72,6 +72,20 @@ function canonical(f, variation = 0) {
   assert.equal(f.navigation.length, 1);
   assert.ok(f.order.indexOf('navigate') < f.order.indexOf('observe'));
 }
+
+test('native passive state keeps showcase target and uses only exact opener when root is absent', () => {
+  const f = fixture(), root = new Target(), opener = new Target(), seen = [];
+  root.addEventListener('vc:showcase-quick-state', event => seen.push({target: root, event}));
+  opener.addEventListener('vc:showcase-quick-state', event => seen.push({target: opener, event}));
+  for (const open of [true, false]) f.native.pause(root, open, opener);
+  for (const open of [true, false]) f.native.pause(null, open, opener);
+  f.native.pause(null, true); f.native.pause(null, false);
+  assert.equal(seen.length, 4);
+  assert.deepEqual(seen.map(row => row.target), [root, root, opener, opener]);
+  assert.deepEqual(seen.map(row => json(row.event.detail)), [{open: true}, {open: false}, {open: true}, {open: false}]);
+  assert.ok(seen.every(row => row.event.bubbles !== true));
+  assert.equal(f.calls.length, 0); assert.equal(f.navigation.length, 0); assert.equal(f.observations.length, 0);
+});
 
 for (const modal of [false, true]) test((modal ? 'modal' : 'inline') + ' native successful buy queues exactly canonical facts after navigation', async () => {
   const f = fixture({modal}); await f.native.submit(f.view, 'buy'); canonical(f);

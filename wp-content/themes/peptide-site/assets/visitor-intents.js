@@ -3,6 +3,11 @@
   'use strict';
   const inert = () => Object.freeze({stop() {}, suspend() {}, resume() {}});
   const parentId = value => typeof value === 'string' && /^[1-9]\d*$/.test(value) && Number.isSafeInteger(Number(value)) ? Number(value) : null;
+  const nativeOpener = target => {
+    const opener = target?.closest?.('[data-vc-quick-open]');
+    return opener && (opener.tagName === 'A' || opener.tagName === 'BUTTON') ? opener : null;
+  };
+  const sourceRoot = opener => opener?.closest('.vc-showcase') || opener;
   const privacyAllows = () => { try { return window.navigator?.globalPrivacyControl !== true; } catch { return false; } };
   function observe(doc, callback) {
     if (doc !== window.document || typeof callback !== 'function' || typeof window.requestAnimationFrame !== 'function' || typeof window.cancelAnimationFrame !== 'function' || typeof window.getComputedStyle !== 'function' || typeof window.MutationObserver !== 'function' || typeof window.setTimeout !== 'function' || typeof window.clearTimeout !== 'function' || !window.crypto?.getRandomValues) return inert();
@@ -43,7 +48,7 @@
       frame = null;
       const current = episode;
       if (!current || current.sent || stopped || suspended || !privacyAllows()) { cancel(); return; }
-      if (![current.root, current.opener, current.dialog, current.body, current.product].every(connected) || !current.dialog.open || current.opener.closest('.vc-showcase') !== current.root || parentId(current.product.getAttribute('data-vc-product-id')) !== current.id || parentId(current.opener.getAttribute('data-vc-quick-open')) !== current.id) { cancel(); return; }
+      if (![current.root, current.opener, current.dialog, current.body, current.product].every(connected) || !current.dialog.open || nativeOpener(current.opener) !== current.opener || sourceRoot(current.opener) !== current.root || parentId(current.product.getAttribute('data-vc-product-id')) !== current.id || parentId(current.opener.getAttribute('data-vc-quick-open')) !== current.id) { cancel(); return; }
       if (hidden()) { if (current.initiallyHidden && !current.foregroundUsed) current.waitingForVisibility = true; else cancel(); return; }
       const rectangles = [current.dialog, current.body, current.product].map(visibleRect);
       if (rectangles.some(rect => !rect)) { cancel(); return; }
@@ -57,8 +62,8 @@
     function schedule() { if (frame === null) frame = window.requestAnimationFrame(check); }
     function openerClick(event) {
       if (stopped || suspended || !privacyAllows() || event.isTrusted !== true || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      const opener = event.target?.closest?.('button[data-vc-quick-open]');
-      const root = opener?.closest('.vc-showcase');
+      const opener = nativeOpener(event.target);
+      const root = sourceRoot(opener);
       const id = parentId(opener?.getAttribute('data-vc-quick-open'));
       if (!id || !connected(opener) || !connected(root) || opener.disabled) return;
       clearPending();
@@ -69,14 +74,14 @@
     }
     function quickState(event) {
       const root = event.target;
-      if (!connected(root) || !root.matches?.('.vc-showcase')) return;
+      if (!connected(root) || !(root.matches?.('.vc-showcase') || sourceRoot(nativeOpener(root)) === root)) return;
       if (event.detail?.open === false) { if (episode?.root === root) cancel(); return; }
       if (event.detail?.open !== true || stopped || suspended || !privacyAllows()) return;
       if (episode?.root === root && !pendingOpener) return;
       const pending = pendingOpener;
       if (!pending || pending.root !== root) return;
       clearPending();
-      if (pending.click.isTrusted !== true || ![1, 2, 3].includes(pending.click.eventPhase) || pending.click.target?.closest?.('button[data-vc-quick-open]') !== pending.opener || pending.opener.closest('.vc-showcase') !== root) return;
+      if (pending.click.isTrusted !== true || ![1, 2, 3].includes(pending.click.eventPhase) || nativeOpener(pending.click.target) !== pending.opener || sourceRoot(pending.opener) !== root) return;
       cancel();
       const native = nativeDialog(pending.opener, pending.id);
       if (!native) return;
