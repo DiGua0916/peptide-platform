@@ -142,6 +142,9 @@ add_filter( 'peptide_core_layout_definitions', function ( array $definitions ): 
     if ( isset( $definitions['counter']['settings'] ) ) {
         $definitions['counter']['settings'][] = \PeptideCore\Modules\Fields::f( 'select', 'presentation', __( '数字区域排版', 'peptide-site' ), 'standard', array( 'group' => 'layout', 'options' => array( 'standard' => '原数字列表', 'cards' => '说明与数字卡片' ), 'help' => '标题和简短描述显示为左侧说明卡片；数字及单位使用原有条目。手机将说明放在数字上方。' ) );
     }
+    if ( isset( $definitions['card_list']['settings'] ) ) {
+        $definitions['card_list']['settings'][] = \PeptideCore\Modules\Fields::f( 'select', 'presentation', __( '卡片排版', 'peptide-site' ), 'standard', array( 'group' => 'layout', 'options' => array( 'standard' => '原图文卡片', 'process' => '流程说明卡片' ), 'help' => '流程样式用于网格展示；每个步骤的标题、说明、图片和链接继续在原卡片条目中编辑。' ) );
+    }
     if ( isset( $definitions['info_list']['settings'] ) ) {
         $definitions['info_list']['settings'][] = \PeptideCore\Modules\Fields::f( 'select', 'visualPresentation', __( '图片呈现', 'peptide-site' ), 'standard', array( 'group' => 'layout', 'options' => array( 'standard' => '原图标尺寸', 'illustrated' => '服务插画' ), 'help' => '服务插画用于原信息条且关闭手机滑动时；在每项的图片字段上传插画。' ) );
         $definitions['info_list']['settings'][] = \PeptideCore\Modules\Fields::f( 'number', 'illustrationSizePx', __( '插画尺寸', 'peptide-site' ), array( 'desktop' => 72, 'mobile' => 64 ), array( 'group' => 'layout', 'device' => true, 'min' => 40, 'max' => 112, 'unit' => 'px', 'show_if' => array( 'visualPresentation' => 'illustrated' ), 'help' => '电脑和手机分别设置；窄列会适当缩小图片，为文字保留空间。' ) );
@@ -154,6 +157,15 @@ add_filter( 'peptide_core_layout_definitions', function ( array $definitions ): 
     }
     return $definitions;
 }, 110 );
+
+/** A process layout retains native card fields, links and editor item selection. */
+add_filter( 'peptide_core_module_html', function ( $html, array $module, string $context, string $device ) {
+    $settings = $module['settings'];
+    if ( null !== $html || 'card_list' !== $module['type'] || 'process' !== ( $settings['presentation'] ?? 'standard' ) || 'grid' !== ( $settings['display'] ?? 'grid' ) ) {
+        return $html;
+    }
+    return '<div class="vc-process-cards">' . \PeptideCore\Modules\Fallback::render( $module, $context, $device ) . '</div>';
+}, 20, 4 );
 
 /** Keep native formatting and item editing; isolate the card-specific motion. */
 add_filter( 'peptide_core_module_html', function ( $html, array $module, string $context, string $device ) {

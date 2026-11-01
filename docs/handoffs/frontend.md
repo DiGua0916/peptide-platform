@@ -969,3 +969,17 @@ functions.php新增vc_card_display_product，使用Woo get_visible_children的me
 验证：独立Node VM对生产JS17项、实际WP内存合同11项全部通过；2400ms四段600ms样本0→68.13→93.44→99.28→99.67，验证先快后慢/两数同步/精度/终值/重复IO/减少动态/后台/离页/无IO回退。PHP lint、node --check、diffcheck通过。真实IAB桌面1280和手机390截图与DOM确认Geist700、全透明、原data-count为0/自有为2、终值50+/99.67%；手机pageWidth375且数字内部不溢出。未作实体手机测试或浏览器逐帧计时，动画时序证据为生产脚本VM实跑。设计扫描2条字体warning（通用字体及后台DESIGN未列Geist）是保留本地店铺数字排版的明确取舍，不修改后台设计规范。
 
 证据D:/Codex/Tasks/2026-11-01/counter-type-motion/outputs：copy-update-result.json、counter-motion-behavior.json、counter-php-contract.json、production-counter-verification.txt、bold-desktop-metrics.json、bold-mobile-metrics.json、bold-section.png、bold-mobile.png。视口已恢复、预览tab19保留，编辑入口document11463。源码/交接入Git，草稿数据和截图不入Git。回滚源码可恢复上版样式动画；草稿回滚必须先读当前revision并仅恢复目标模块，避免覆盖协作内容。下一步用户查看预览，再按原后台流程决定发布；正式首页本次保持。
+
+### 2026-11-02 · Codex：恢复首页下半部、流程卡片与注意事项
+
+用户发现精简预览的数字区下方缺少原有内容，要求补回并加入流程说明。本轮仅通过原layouts REST及revision/modified校验更新独立首页11463草稿，共14个积木；模板11462仍未激活，11463已有发布快照保持不变。数字区collection-stats仅将catalog-count的标签由RESEARCH COMPOUNDS改为RESEARCH PEPTIDES，50+、99.67%及原预览/示例标识保持。
+
+新增how-it-works复用原card_list积木，主题inc/layout-modules.php提供presentation=process选项，默认standard保持原图文卡片；process仅在grid模式包装原Fallback，carousel等其它呈现原样透传。assets/modules-home.css负责流程外观，标题、说明、图片、链接、条目启停及电脑/手机列数仍由原后台字段编辑。三步为Select Your Peptides、Review & Checkout、Follow Your Delivery，没有另建业务内容副本或修改插件。
+
+从正式首页685的已发布快照恢复六块：our-story、story-israel、story-china、story-united-states、scene-context、approach；恢复块逐块序列化字节与来源一致。保留精简版hero、service-overview、collection、report-guide原内容；questions保留原四问并追加685的specification、reports两条原文，恢复规格及报告供应商/批次对应提醒。末尾新增important-information，含For laboratory research use only. Not for human or veterinary use.及核对规格、批次、报告日期和检测机构的说明。这是本轮新增的可编辑注意事项，不将它误记为原全局use_statement_html的恢复；只读核对时该全局字段为空。
+
+保护与验证：独立实际WP只读检查26/26通过，原685–688、11464–11466正文/元数据/发布快照、活动模板/域名映射及11463原发布快照均保持；四原块保持、六恢复块原字节一致、FAQ只增指定两条、counter只改标签均已核实。process schema、standard/carousel透传、图片/链接/条目编辑与启停合同通过。保存脚本normalizedRoundTrip严格比较出现false，独立定位唯一差异为counter数字JSON整数50经清理变为PHP浮点50.0；数值和规范序列化内容完全相同，无内容丢失，不需要重复保存或回滚。桌面实际三列流程卡片已由根代理验证；手机视觉验证仍由根代理进行中，本条不记手机通过。
+
+手机验证补充：真实IAB 390视口下流程为单列三行，卡片约295px，pageWidth375无横向溢出；恢复的三组图文图片均已加载。报告核对FAQ实际点击展开，原文完整可见。并非实体手机测试。临时视口覆盖已reset，预览tab19保留并定位How It Works。桌面截图desktop-process.png为可交付视觉证据；mobile-process.png为文档区域截取，其中固定导航出现在截图中部，不能当作固定导航实际版式错误。PHP lint及git diff --check通过。
+
+证据：D:/Codex/Tasks/2026-11-02/homepage-lower-content/outputs/{before-home.json,update-result.json,independent-verification.json,mobile-metrics.json,faq-browser-check.json,desktop-process.png}；只读验证脚本在同任务work/verify-restoration.php。草稿/快照和测试输出保存在D任务，不入Git。只更新本次11463草稿，未发布、未改商品/订单/媒体；后续发布仍走原后台流程并先读取当前revision以避免覆盖其他编辑。
