@@ -139,6 +139,9 @@ add_filter( 'peptide_core_layout_definitions', function ( array $definitions ): 
     if ( isset( $definitions['product_collection']['settings'] ) ) {
         $definitions['product_collection']['settings'][] = \PeptideCore\Modules\Fields::f( 'select', 'cardPresentation', __( '商品卡片排版', 'peptide-site' ), 'standard', array( 'group' => 'layout', 'options' => array( 'standard' => '完整资料', 'compact' => '简洁选购' ), 'help' => '简洁选购展示当前规格、价格和详情入口；报告状态在商品详情中查看。真实价格和规格顺序不变。' ) );
     }
+    if ( isset( $definitions['counter']['settings'] ) ) {
+        $definitions['counter']['settings'][] = \PeptideCore\Modules\Fields::f( 'select', 'presentation', __( '数字区域排版', 'peptide-site' ), 'standard', array( 'group' => 'layout', 'options' => array( 'standard' => '原数字列表', 'cards' => '说明与数字卡片' ), 'help' => '标题和简短描述显示为左侧说明卡片；数字及单位使用原有条目。手机将说明放在数字上方。' ) );
+    }
     if ( isset( $definitions['info_list']['settings'] ) ) {
         $definitions['info_list']['settings'][] = \PeptideCore\Modules\Fields::f( 'select', 'visualPresentation', __( '图片呈现', 'peptide-site' ), 'standard', array( 'group' => 'layout', 'options' => array( 'standard' => '原图标尺寸', 'illustrated' => '服务插画' ), 'help' => '服务插画用于原信息条且关闭手机滑动时；在每项的图片字段上传插画。' ) );
         $definitions['info_list']['settings'][] = \PeptideCore\Modules\Fields::f( 'number', 'illustrationSizePx', __( '插画尺寸', 'peptide-site' ), array( 'desktop' => 72, 'mobile' => 64 ), array( 'group' => 'layout', 'device' => true, 'min' => 40, 'max' => 112, 'unit' => 'px', 'show_if' => array( 'visualPresentation' => 'illustrated' ), 'help' => '电脑和手机分别设置；窄列会适当缩小图片，为文字保留空间。' ) );
@@ -151,6 +154,17 @@ add_filter( 'peptide_core_layout_definitions', function ( array $definitions ): 
     }
     return $definitions;
 }, 110 );
+
+/** Keep the native number formatting, item editing and count-up animation. */
+add_filter( 'peptide_core_module_html', function ( $html, array $module, string $context, string $device ) {
+    if ( null !== $html || 'counter' !== $module['type'] || 'cards' !== ( $module['settings']['presentation'] ?? 'standard' ) ) {
+        return $html;
+    }
+    $s = $module['settings'];
+    $has_intro = '' !== trim( $s['title'] ?? '' ) || '' !== trim( wp_strip_all_tags( $s['descriptionHtml'] ?? $s['description'] ?? '' ) );
+    return '<div class="vc-counter-cards' . ( $has_intro ? ' vc-counter-cards--intro' : '' ) . '">'
+        . \PeptideCore\Modules\Fallback::render( $module, $context, $device ) . '</div>';
+}, 20, 4 );
 
 /** Add illustration sizing without duplicating information-list content or interactions. */
 add_filter( 'peptide_core_module_html', function ( $html, array $module, string $context, string $device ) {
