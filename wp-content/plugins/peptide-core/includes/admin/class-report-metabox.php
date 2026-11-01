@@ -59,6 +59,11 @@ final class Report_Metabox {
 		$version       = (int) get_post_meta( $post->ID, Meta::REPORT_VERSION, true );
 		$superseded_by = (int) get_post_meta( $post->ID, Meta::REPORT_SUPERSEDED_BY, true );
 		$file          = get_post_meta( $post->ID, Meta::REPORT_FILE, true );
+		$product_id    = Reports::product_id( $post->ID );
+		if ( ! $product_id && 'auto-draft' === $post->post_status && isset( $_GET['pc_product_id'] ) ) {
+			$preselected = absint( $_GET['pc_product_id'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Prefill only.
+			$product_id = Batches::is_valid_product( $preselected ) ? $preselected : 0;
+		}
 
 		$type_labels   = array(
 			'coa'   => __( 'Certificate of analysis (COA)', 'peptide-core' ),
@@ -81,7 +86,19 @@ final class Report_Metabox {
 		?>
 		<table class="form-table" role="presentation">
 			<tr>
-				<th scope="row"><label for="pc_batch_id"><?php esc_html_e( 'Batch', 'peptide-core' ); ?> *</label></th>
+				<th scope="row"><label for="pc_report_product_id">所属产品</label></th>
+				<td><select id="pc_report_product_id" name="pc_report_product_id">
+					<option value="0">待匹配商品</option>
+					<?php foreach ( Batch_Metabox::product_options() as $id => $label ) : ?>
+						<option value="<?php echo esc_attr( (string) $id ); ?>" <?php selected( $product_id, $id ); ?>><?php echo esc_html( $label ); ?></option>
+					<?php endforeach; ?>
+				</select><p class="description">可先按产品和报告日期归档；关联批次后以批次所属产品为准。无批次的资料保留为后台草稿。</p></td>
+			</tr>
+			<?php foreach ( array( 'pc_report_specification' => array( '规格', Meta::REPORT_SPECIFICATION ), 'pc_report_reference_id' => array( '原报告编号', Meta::REPORT_REFERENCE_ID ), 'pc_report_source_product' => array( '证书原产品名', Meta::REPORT_SOURCE_PRODUCT ), 'pc_report_source_client' => array( '证书原委托方', Meta::REPORT_SOURCE_CLIENT ), 'pc_report_source_lot' => array( '证书原批号', Meta::REPORT_SOURCE_LOT ) ) as $field => $definition ) : ?>
+			<tr><th scope="row"><label for="<?php echo esc_attr( $field ); ?>"><?php echo esc_html( $definition[0] ); ?></label></th><td><input class="regular-text" type="text" id="<?php echo esc_attr( $field ); ?>" name="<?php echo esc_attr( $field ); ?>" value="<?php echo esc_attr( (string) get_post_meta( $post->ID, $definition[1], true ) ); ?>"></td></tr>
+			<?php endforeach; ?>
+			<tr>
+				<th scope="row"><label for="pc_batch_id"><?php esc_html_e( 'Batch', 'peptide-core' ); ?></label></th>
 				<td>
 					<select id="pc_batch_id" name="pc_batch_id">
 						<option value=""><?php esc_html_e( '— Select a batch —', 'peptide-core' ); ?></option>
@@ -196,16 +213,26 @@ final class Report_Metabox {
 				$batch_id = $made;
 			}
 		}
-		if ( ! $batch_id ) {
-			$errors[] = __( 'Please select the batch this report belongs to.', 'peptide-core' );
-		}
 		$batch_id = $batch_id ?: $old_batch_id;
+		$product_id = isset( $_POST['pc_report_product_id'] ) ? absint( $_POST['pc_report_product_id'] ) : (int) get_post_meta( $post_id, Meta::REPORT_PRODUCT_ID, true );
+		$product_id = Batches::is_valid_product( $product_id ) ? $product_id : 0;
+		if ( $batch_id ) {
+			$batch_product = (int) get_post_meta( $batch_id, Meta::BATCH_PRODUCT_ID, true );
+			if ( $product_id && $product_id !== $batch_product ) {
+				$errors[] = '产品选择与已关联批次不一致，已保留批次所属产品。';
+			}
+			$product_id = Batches::is_valid_product( $batch_product ) ? $batch_product : 0;
+		}
 
 		$type   = self::choice( 'pc_type', Reports::TYPES, 'other' );
 		$status = self::choice( 'pc_report_status', Reports::STATUSES, 'draft' );
 		$access = self::choice( 'pc_access', Reports::ACCESS, 'public' );
 
 		update_post_meta( $post_id, Meta::REPORT_BATCH_ID, $batch_id );
+		update_post_meta( $post_id, Meta::REPORT_PRODUCT_ID, $product_id );
+		foreach ( array( 'pc_report_specification' => Meta::REPORT_SPECIFICATION, 'pc_report_reference_id' => Meta::REPORT_REFERENCE_ID, 'pc_report_source_product' => Meta::REPORT_SOURCE_PRODUCT, 'pc_report_source_client' => Meta::REPORT_SOURCE_CLIENT, 'pc_report_source_lot' => Meta::REPORT_SOURCE_LOT ) as $field => $key ) {
+			if ( isset( $_POST[ $field ] ) ) { update_post_meta( $post_id, $key, sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) ); }
+		}
 		update_post_meta( $post_id, Meta::REPORT_TYPE, $type );
 		update_post_meta( $post_id, Meta::REPORT_ACCESS, $access );
 		update_post_meta( $post_id, Meta::REPORT_ISSUED_ON, Meta::sanitize_date( wp_unslash( $_POST['pc_issued_on'] ?? '' ) ) );
@@ -227,6 +254,8 @@ final class Report_Metabox {
 			} else {
 				$old_file = get_post_meta( $post_id, Meta::REPORT_FILE, true );
 				update_post_meta( $post_id, Meta::REPORT_FILE, $stored );
+				$stored_path = Private_Files::path( (string) $stored['stored'] );
+				if ( $stored_path && is_readable( $stored_path ) ) { update_post_meta( $post_id, Meta::REPORT_SOURCE_SHA256, hash_file( 'sha256', $stored_path ) ); }
 				if ( is_array( $old_file ) && ! empty( $old_file['stored'] ) ) {
 					Private_Files::delete( (string) $old_file['stored'] );
 				}

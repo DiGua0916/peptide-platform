@@ -96,6 +96,7 @@ final class Plugin {
 			if ( class_exists( Collections::class ) && is_readable( PEPTIDE_CORE_DIR . '/assets/collections-admin.js' ) && is_readable( PEPTIDE_CORE_DIR . '/assets/collections-admin.css' ) ) { Admin\Collections_Page::register_hooks(); }
 			Admin\Batch_Metabox::register_hooks();
 			Admin\Report_Metabox::register_hooks();
+			if ( class_exists( Admin\Report_Library_Page::class ) ) { Admin\Report_Library_Page::register_hooks(); }
 			Admin\Order_Metabox::register_hooks();
 			Admin\Dashboard::register_hooks();
 			Admin\Dialogs::register_hooks();

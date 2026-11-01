@@ -31,6 +31,14 @@ final class Meta {
 
 	// 报告。
 	public const REPORT_BATCH_ID      = '_pc_batch_id';
+	// Product-first document archive; does not imply a stock-batch association.
+	public const REPORT_PRODUCT_ID    = '_pc_report_product_id';
+	public const REPORT_SPECIFICATION = '_pc_report_specification';
+	public const REPORT_REFERENCE_ID  = '_pc_report_reference_id';
+	public const REPORT_SOURCE_PRODUCT = '_pc_report_source_product';
+	public const REPORT_SOURCE_CLIENT = '_pc_report_source_client';
+	public const REPORT_SOURCE_LOT    = '_pc_report_source_lot';
+	public const REPORT_SOURCE_SHA256 = '_pc_report_source_sha256';
 	public const REPORT_TYPE          = '_pc_type';
 	public const REPORT_VERSION       = '_pc_version';
 	public const REPORT_STATUS        = '_pc_report_status';
@@ -71,6 +79,13 @@ final class Meta {
 
 		$report = array(
 			self::REPORT_BATCH_ID      => array( 'integer', 0, 'absint' ),
+			self::REPORT_PRODUCT_ID    => array( 'integer', 0, 'absint' ),
+			self::REPORT_SPECIFICATION => array( 'string', '', array( self::class, 'sanitize_text' ) ),
+			self::REPORT_REFERENCE_ID  => array( 'string', '', array( self::class, 'sanitize_text' ) ),
+			self::REPORT_SOURCE_PRODUCT => array( 'string', '', array( self::class, 'sanitize_text' ) ),
+			self::REPORT_SOURCE_CLIENT => array( 'string', '', array( self::class, 'sanitize_text' ) ),
+			self::REPORT_SOURCE_LOT    => array( 'string', '', array( self::class, 'sanitize_text' ) ),
+			self::REPORT_SOURCE_SHA256 => array( 'string', '', array( self::class, 'sanitize_text' ) ),
 			self::REPORT_TYPE          => array( 'string', 'other', array( self::class, 'sanitize_text' ) ),
 			self::REPORT_VERSION       => array( 'integer', 0, 'absint' ),
 			self::REPORT_STATUS        => array( 'string', 'draft', array( self::class, 'sanitize_text' ) ),

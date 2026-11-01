@@ -338,9 +338,10 @@ final class Admin_Menus {
 		if ( str_contains( $slug, 'taxonomy=product_tag' ) ) {
 			return 'tag';
 		}
-		if ( 'edit.php?post_type=' . \PeptideCore\Post_Types::REPORT === $slug ) {
+		if ( Report_Library_Page::SLUG === $slug ) {
 			return 'reports';
 		}
+		if ( 'edit.php?post_type=' . \PeptideCore\Post_Types::REPORT === $slug ) { return 'hide'; }
 		if ( 'post-new.php?post_type=product' === $slug || str_contains( $slug, 'taxonomy=product_brand' ) || 'product_attributes' === $slug || 'edit.php?post_type=' . \PeptideCore\Post_Types::BATCH === $slug ) {
 			return 'hide';
 		}
@@ -495,8 +496,8 @@ final class Admin_Menus {
 		}
 		// 商品菜单里隐藏的页面：批次算“检测报告”，添加商品、品牌、属性算“商品管理”。
 		global $typenow, $pagenow, $taxonomy;
-		if ( \PeptideCore\Post_Types::BATCH === $typenow ) {
-			return 'edit.php?post_type=' . \PeptideCore\Post_Types::REPORT;
+		if ( in_array( $typenow, array( \PeptideCore\Post_Types::BATCH, \PeptideCore\Post_Types::REPORT ), true ) ) {
+			return Report_Library_Page::SLUG;
 		}
 		if ( 'product' === $typenow && ( 'post-new.php' === $pagenow || 'product_attributes' === $page || 'product_brand' === $taxonomy || ( is_string( $taxonomy ) && '' !== $taxonomy && taxonomy_is_product_attribute( $taxonomy ) ) ) ) {
 			return 'edit.php?post_type=product';

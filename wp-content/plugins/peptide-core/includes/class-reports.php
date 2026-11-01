@@ -22,6 +22,21 @@ final class Reports {
 		add_action( 'before_delete_post', array( self::class, 'delete_file_with_post' ), 10, 2 );
 	}
 
+	/** Administrative association only; an actual batch always owns its product. */
+	public static function product_id( int $report_id ): int {
+		if ( Post_Types::REPORT !== get_post_type( $report_id ) ) {
+			return 0;
+		}
+		$batch_id = (int) get_post_meta( $report_id, Meta::REPORT_BATCH_ID, true );
+		if ( $batch_id > 0 ) {
+			if ( Post_Types::BATCH !== get_post_type( $batch_id ) ) { return 0; }
+			$product_id = (int) get_post_meta( $batch_id, Meta::BATCH_PRODUCT_ID, true );
+		} else {
+			$product_id = (int) get_post_meta( $report_id, Meta::REPORT_PRODUCT_ID, true );
+		}
+		return Batches::is_valid_product( $product_id ) ? $product_id : 0;
+	}
+
 	/**
 	 * 同一批次、同一类型的下一个版本号。
 	 */
