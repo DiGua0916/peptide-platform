@@ -3,6 +3,72 @@
   'use strict';
   const initialized = new WeakSet();
   const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const touchReports = window.matchMedia('(max-width: 767px) and (hover: none), (max-width: 767px) and (pointer: coarse)');
+  const reportAnimations = new Map();
+
+  function initReportMotion(stack) {
+    if (reportAnimations.has(stack) || !('IntersectionObserver' in window)) return;
+    const papers = [...stack.querySelectorAll('.vc-demo-report-paper')];
+    if (papers.length < 2) return;
+    let inView = false;
+    let timer = null;
+    let index = 0;
+    let activePaper = null;
+    let disposed = false;
+
+    function clearPeek() {
+      activePaper?.classList.remove('is-touch-peeking');
+      activePaper = null;
+    }
+    function pause() {
+      if (timer !== null) window.clearTimeout(timer);
+      timer = null;
+      clearPeek();
+    }
+    function allowed() {
+      return !disposed && stack.isConnected && inView && touchReports.matches && !motion.matches && !document.hidden && !reportDialog?.open;
+    }
+    function peek() {
+      timer = null;
+      if (!allowed()) { pause(); return; }
+      activePaper = papers[index % papers.length];
+      index += 1;
+      activePaper.classList.add('is-touch-peeking');
+      timer = window.setTimeout(() => {
+        timer = null;
+        clearPeek();
+        if (allowed()) timer = window.setTimeout(peek, 2900);
+        else pause();
+      }, 1100);
+    }
+    function update() {
+      if (!allowed()) { pause(); return; }
+      if (timer === null) timer = window.setTimeout(peek, 1400);
+    }
+    const observer = new IntersectionObserver(changes => {
+      const change = changes.find(entry => entry.target === stack);
+      if (change) inView = change.isIntersecting && change.intersectionRatio >= 0.35;
+      update();
+    }, { threshold: [0, 0.35, 1] });
+    function destroy() {
+      disposed = true;
+      pause();
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', update);
+      motion.removeEventListener?.('change', update);
+      touchReports.removeEventListener?.('change', update);
+      reportAnimations.delete(stack);
+    }
+    reportAnimations.set(stack, { update, destroy });
+    document.addEventListener('visibilitychange', update);
+    motion.addEventListener?.('change', update);
+    touchReports.addEventListener?.('change', update);
+    observer.observe(stack);
+  }
+
+  function updateReportMotion() {
+    reportAnimations.forEach(animation => animation.update());
+  }
 
   function initCounters(section) {
     if (initialized.has(section)) return;
@@ -97,6 +163,7 @@
     dialog.addEventListener('close', () => {
       dialog.querySelector('iframe').removeAttribute('src');
       reportTrigger?.focus({ preventScroll: true });
+      updateReportMotion();
     });
     document.body.append(dialog);
     return dialog;
@@ -117,16 +184,23 @@
     reportDialog.querySelector('.vc-demo-report-dialog-body>a').href = link.href;
     reportDialog.querySelector('iframe').src = link.href;
     reportDialog.showModal();
+    updateReportMotion();
   });
 
   function boot(root = document) {
     if (root.matches?.('[data-vc-demo-counters]')) initCounters(root);
     root.querySelectorAll?.('[data-vc-demo-counters]').forEach(initCounters);
+    if (root.matches?.('.vc-demo-report-stack')) initReportMotion(root);
+    root.querySelectorAll?.('.vc-demo-report-stack').forEach(initReportMotion);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot(), { once: true });
   else boot();
   // The builder can refresh only the edited section. Initialize only new subtrees.
   new MutationObserver(records => {
+    // Editor previews replace whole sections; release timers and listeners for the old ones.
+    if (records.some(record => record.removedNodes.length)) {
+      reportAnimations.forEach((animation, stack) => { if (!stack.isConnected) animation.destroy(); });
+    }
     records.forEach(record => record.addedNodes.forEach(node => { if (node.nodeType === 1) boot(node); }));
   }).observe(document.documentElement, { childList: true, subtree: true });
 })();

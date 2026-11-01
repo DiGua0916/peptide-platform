@@ -989,3 +989,13 @@ functions.php新增vc_card_display_product，使用Woo get_visible_children的me
 用户确认同步整版首页、保留当前页商品弹窗。当前模板684的home685已通过原layouts REST发布8块，header686/footer687各1块；global688及模板/域名映射保持。商品与购物车仍复用Woo后端，保留完整商品页；弹窗懒加载、规格图价SKU联动、电脑侧栏/手机独立购物车均核对。82/183来自现有目录，计数可见才运行。临时加购的Retatrutide10mg已清空，无下单或订单改动。
 
 具体字段、文件、发布边界和检查证据见 [frontend-home-demo-integration-20261102.md](frontend-home-demo-integration-20261102.md)。本阶段源码提交将由任务提交记录定位；运行数据/备份/插画和COA文件全部留在D盘任务及媒体库，不入Git。
+
+### 2026-11-02 · Codex：首页手机交互与 About us 恢复
+
+用户连续要求隐藏分类横向滚动条、手机证书间歇模拟hover、FAQ介绍文字与耳机左右排列、去掉报告三枚内容标签，并恢复About us入口。主题assets/demo-catalog.css仅隐藏分类条滚动条，保留overflow-x:auto；assets/demo-home.css/js增加≤767px无hover/粗指针时轮流浮起报告纸张，进入可见区域35%后等待1.4秒、每4秒一张、停留1.1秒，500ms减速位移；离屏/后台/减少动态/打开报告/切桌面停止，builder替换区块清理观察器和计时器。FAQ手机文本左、耳机右，问答仍整行，缺图及stacked设置保持原模式。
+
+通过原layouts REST的revision/modified保护仅更新正式home685：清空approach.settings.points，移除Sample & specification、Laboratory & date、Reported results；其余报告内容/来源/原文件不变。随后用现有media-text在how-it-works后questions前插入about-story，复用原About页面420的品牌愿景文案、原story-israel-research图和Brand concept图注，按钮/about-us/；首页共9块。仍使用原后台字段，无新增后端接口。两次发布均保存前后备份，逐一核对其他8块未变；移除标签时另核对686–688、模板及域名映射未变。
+
+验证：node --check、git diff --check通过；独立review确认滚动条修改不影响筛选/overflow。触屏逻辑由执行实际函数的Node VM检查停止/恢复/轮换，真实IAB390px核对FAQ左右列211/107px、文档宽375无横向溢出，分类barHeight0、scrollbar-width none、overflowX auto；报告points元素0，About图加载及链接/模块顺序正确，手机截图已保存。浏览器触屏媒体条件为true、离屏无活动类；原生IO诊断报告在屏外，与另一DOM视图滚动位置不同，因此不声称已在实体手机或实际浏览器逐帧观察到自动浮动。视口和临时触屏模拟均恢复。CLI有本机imagick DLL加载警告但REST保存发布检查成功，与本次改动无关。
+
+证据在D:/Codex/Tasks/2026-11-02/demo-home-integration/outputs/{mobile-faq-side-by-side.png,mobile-about-restored.png,report-points-before.json,report-points-after.json,about-entry-before.json,about-entry-after.json}。发布脚本及候选资料在同任务work，未入Git。源码本阶段提交由git日志定位；不改Woo商品、价格、订单或结账。此前53c87d8也需随本次网络恢复补推远程。
