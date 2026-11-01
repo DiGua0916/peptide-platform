@@ -81,5 +81,7 @@ html.vc-demo-part-open{overflow:hidden}
  .vc-demo-footer-nav .vc-demo-nav-children{position:static;box-shadow:none;border:0;padding:8px 0 0 12px;min-width:0}.vc-demo-footer-nav .vc-demo-nav-children .vc-demo-nav-list{display:block}.vc-demo-footer-nav .vc-demo-nav-children .vc-menu-entry{padding:8px 0}
  .vc-demo-footer-bottom{display:block;margin-top:24px;padding-top:24px}.vc-demo-footer-bottom p+p{margin-top:16px}
 }
+/* WordPress's mobile admin bar scrolls away at this breakpoint. */
+@media(max-width:600px){.vc-m--site-header:has(.vc-demo-header--sticky){top:0}}
 @media(max-width:360px){.vc-demo-header-inner{gap:8px}.vc-demo-header-actions{gap:0}.vc-demo-brand{max-width:40vw}.vc-demo-header .vc-demo-icon-button{width:36px}.vc-demo-header .vc-demo-bag{width:auto}}
 @media(prefers-reduced-motion:reduce){.vc-demo-header *,.vc-demo-footer *{scroll-behavior:auto!important;transition:none!important}}
