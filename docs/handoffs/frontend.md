@@ -830,3 +830,17 @@ Chrome同一原生layout1917又暴露实际产品缺陷：Partner列表默认blo
 仅QA安装后正常Chrome reload真实验证：四CSS各1、theme模块样式保留，Partner列表变flex/list-style none/padding0、原生预览恢复横向三卡；Commerce/Review/Gram运行脚本没有新增，原有Social本地脚本不等于provider加载。实际点击已有Partner block，只读Inspector完整字段/PC3-mobile2，Save仍disabled，三社交frames0；未改字段/Save/Publish。普通QA退出已显示You are now logged out，唯一本人Chrome临时标签关闭。用户原dirty685与YY未改/未发布，原QA工作文档保留。
 
 本轮相关检查为PHP语法、单hunk/反向精确还原、真实before/after CSS与资产去重/截图/Inspector/disabled Save。不是重新跑全部70参数或原生发布链；主custom此前真实验收范围继续保留。三社交按用户决定暂缓、未通过，CSS接线没有重新开启任何外部Load；其social-feeds.js仍正式5a0c，D任务CSP候选未进入Git。证据D:/Codex/Tasks/2026-10-31/builder-completion-audit/outputs/chrome-native-{post-identity,style-before,style-after,inspector}-2026-11-01及截图，候选work/native-canvas-css-candidate。
+
+### 2026-11-01 · Codex：首批真实商品草稿导入，完整保留描述
+
+用户授权先导入可明确对应的商品，特别要求产品描述及参数不遗漏。本次实际在原客户站 vialcovepeptidescom.local（非loopback隔离QA）用WooCommerce CRUD新增67个variable母商品、156个完整规格；全部母商品draft，未上架/未发布。25个母商品44规格因图表单位/归属/重复SKU/名称或缺描述暂留，未拆掉有问题的部分子项来冒完整商品。原表92项中90有描述，Acetic Acid water0.6%与TR20+RT40两项原描述为空，未生成文案。
+
+67份完整G描述按安全HTML保留，逐份回读正文、td/th内容及图片数量；三份源HTML末尾只有未闭合编辑器div残片，窄清理后仍按原G全文核对，不删除参数段落或把详情改成摘要。10张原描述配图实际下载/校验并存本地媒体后替换src，156张明确规格图各绑定对应规格，共166张媒体。图片原件不改，不生成或标记本店已核验COA/批次；原描述内检测图片仅按用户原稿迁移。两维L-carnitine保留全部两维属性，不额外补组合。
+
+价格照源Z/AA数值写入当前USD店铺：AA为0时常规价=Z/促销空，正原价高于售价时保留划线价；未做币种转换或新定价。库存跟踪按原表，规则1不允许缺货超卖；真实运营库存/币种仍待上架前确认，未知物流重量不以mg内容规格代填。副标题/SPU/slug/分类一并保存；不把虚拟或旧销量写入真实销量，不创建历史订单；未扩商品SEO功能。
+
+已先作受限D盘完整DB备份；WP CLI db导出需显式实际port10006，初次默认3306失败未作写入，后续完整备份exit0。实际pilot3商品15规格fresh通过后才全批；全批exit0/partial0，另独立SELECT/CRUD读取checker实际67/156/10描述图/166媒体通过、errors=[]，源XLSX hash保持，CPT/HPOS订单ID/类型/状态/修改时间/数量快照不变；既有auto-draft仍3（前置只记数量，不冒逐字段不变）。首次独立checker的attachment inherit解析及数字ID类型导致假差异，已保留原收据、只修比较后重跑一次通过，未因此改商品。
+
+原站Retatrutide11006页面真实截图显示草稿/产品描述Product Overview，已保留交付标签；未点保存/发布或刷新用户原post-new编辑页。IAB初次AX读取超时，标准同浏览器截图成功，不借此声称所有原生控件完整验收。
+
+本次无运行源码/契约变更，导入器与数据清单只在D任务，媒体/原表/SQL备份不入Git。先fetch/正常ff共同6b56d41完成实际导入，再正常ff同事8f6db90（新增Operations维度，未改商品字段），独立支付工作树未触。证据D:/Codex/Tasks/2026-11-01/product-import-review/outputs/IMPORT-RESULT.json、IMPORT-INDEPENDENT-CHECK.json、待核对商品.txt、imported-retatrutide-description.png；任务work包含精确manifest/journal/独立审查，可按原run验证复查，不盲目覆盖后续人工编辑。

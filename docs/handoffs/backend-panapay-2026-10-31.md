@@ -125,3 +125,21 @@ GitHub实际同步：功能提交4ae551e，正常合入同事main813f702为f940c
 收尾实测：隔离浏览器点恢复后条目显示已关闭，编辑/开启按钮恢复；随后经原生UI重新归档，未发起支付。原后台真页面已见原Credit card已归档和右侧恢复按钮，仅查看未恢复/开启原账号。当前编辑字段用HTML初始属性比对确认无改动后才刷新。早先使用defaultValue/defaultChecked的读取在浏览器只读封装不可靠，不能据其判断用户确有未保存草稿；历史“检测到未保存”表述更正为当时保守保留原页，不作为已证草稿事实。
 
 3PHP语法、diff、改动内真实secret内存扫描、37源双原端一致、ZIP完整性通过；写前核对旧源并私有备份SHA35e108daee3cbcd3c3a129dd2aa5c3fe89f03cd5d65d2d439402165d79039423。包D:/Codex/Tasks/2026-11-01/payment-archive-restore/outputs/peptide-panapay-0.4.1.zip，SHA62a160d17043a4a12d2641f4e3d83f2ce52437c233eaa934ae5a733eb9347069；原设置未改、DBschema未变，37运行文件不含tests/私有资料。原截图同outputs/original-restore-button.png，浏览器QA标签已关闭，原标签保留。
+
+### 2026-11-01 · Codex：真实支付测试前置与隔离参数填写入口
+
+用户最新决定先接信用卡与 Apple Pay，PayPal 暂不接。用户反馈 YY 按固定名称 `Credit Card` / `APPLE_PAY` 判断通道；截图证明界面值，未证明创建请求字段或签名范围。原提供文档只有商品 `products[].name` 和业务 `tag`，当前代码的 title/icons 不向支付方传递通道。不得猜字段或将商品名/tag 改成通道；Apple Pay 的实际路由仍待支付方补充协议。信用卡测试先按已有网关文档进行。
+
+用户希望真实扣款测试，确认尚无服务器/域名，选择先准备临时隔离环境，并要求新商户参数由他自己在表单填写，不发到聊天。原站只读预检：两端支付0.4.1、HTTP local；HQ原default已解除归档但关闭，已填参数不等于确认正式商户。当前本地URL无法接收公网通知，test_mode只是环境保护，不会替支付方切沙箱；旧真实unknown创建不盲重试。
+
+隔离任务位于 `D:/Codex/Tasks/2026-11-01/payment-live-preflight`。新HQ 52831、店铺52832及前置代理52830仅绑定127.0.0.1，使用两份新库和新店铺身份；复用本人已有QA MySQL实例但未重启、重建或修改原站/旧QA数据库。只复制引擎和插件源码，没有复制客户、订单、上传、原商户或登录凭据。HQ无Woo，支付0.4.1/schema3；店铺Woo11.2.1、原生Blocks及原确认项，一件明确标为隔离测试的SKU。USD1仅准备占位，不构成用户已批准扣款金额；实付前须核支付方允许金额。
+
+本机参数入口为 `http://127.0.0.1:52831/wp-admin/admin.php?page=pchq-payments&edit_account=default`，已通过内置浏览器登录并打开空参数表单；唯一付款账号初始关闭、title为Credit Card，仅关联该新测试站。用户可填写并保存参数，暂不启用。随机管理员/数据库/认证凭据、日志与进程记录只存任务受限private目录，不入Git或本交接。两PHP访问日志丢弃完整URI，邮件与外部PHP HTTP默认拦截，保存商户不会自动放行真实provider请求。
+
+实际完成：两原站只读预检；隔离两端原生启动/版本/新身份/关闭配置/原生Blocks检查；签名METHODS经本地前置代理/hq返回200并原生验签；公开origin激活脚本只读预检通过，要求精确HTTPS单标签trycloudflare域名、全部付款关闭及金融行0，保留新UUID/key/账号且不触及原站；空队列原生回写hook执行，观测0HTTP/0provider创建。空购物车HTTP200不冒充结账视觉检查。参数页截图在任务outputs/isolated-payment-parameters.png。
+
+Cloudflare官方2026.10.7 Windows工具已下载、SHA256与官方release digest一致，仅运行--version，未启动隧道。临时公网前置计划只开放带访问门的测试结账及签名机器/通知路由，admin/login保留本机；公网域名、可信代理头、客户端IP、真实收银台/卡/到账与通知回写仍须相应目标环境验证。尚未开放公网、启用收款、创建支付或真实扣款。实际测试前需用户完成参数、确认支付方允许临时域名与测试金额，并确认具体公网开放范围；付款资料与最终确认由用户操作。只准备现有协议，不宣称ApplePay已接入。
+
+本阶段不修改支付生产运行代码；临时站、数据库、私有配置、测试helper和下载工具均不提交Git。主线同事更新正常快进合入，支付插件源码没有变化。后续进度与真实测试结果须据实际证据追加，不能把本地隔离准备等同上线收款验收。
+
+前置收尾：本地实际HTTP路径/门禁/原生HTML、单SKU购物车与StoreAPI、批量子请求/静态、签名机器路由拒绝检查38/38；IP准入另10/10实际HTTP、cookie/本地头3模型单列。公网模式验证Cloudflare单个global IP后重建X-Real-IP，丢弃用户XFF/Real-IP；只向Woo传购物车/会话cookie，后台及门禁cookie不转发。原PHP访问URI日志和客户IP两个预审问题已修，独立源码复核无剩余P1/P2阻断；Cloudflare真实边缘、HTTPS后的私有后台登录/混合资源、Woo最终落库IP、实际付款和公网IPN仍未验。未POST原生checkout、未发provider创建、未启用任何商户或临时隧道。
