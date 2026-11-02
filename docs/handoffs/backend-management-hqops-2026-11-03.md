@@ -12,13 +12,15 @@
 - Ops 新店可显式提交管理/顾客 URL，均受私有 profile 域名白名单约束；顾客地址缺省同管理。`url`/安装 URL/健康检查使用管理地址；新建 UUID 同时写管理 UUID 常量与 Hq option。
 - 双域配置固定 `WP_SITEURL`，不定义 `WP_HOME`，DB `home` 初始为 public；旧单域和本机 driver 保留原行为。新店仍使用独立 DB/DB 账号、密码和 salts，不复制客户资料。
 - 新字段进入任务请求哈希，任务重试不能改顾客地址。受限 vhost 参数增加管理/顾客地址占位符；未扩展任意命令、DNS、TLS 或云资源购买。
+- 窄审查补充：Ops 状态中的机器地址与完整备份下载票据使用 core 固定管理地址，顾客 home 变化不能把下载票据转到 public；显式配置缺失有效 core helper 时拒绝生成票据。发布后的前台 HTTP 健康检查保留原 public home 意图，不放开 public 的 Ops REST。
 
 ## 实际验证
 
 - HQ 内存注册与真实源码路由测试：36 项通过。包括 public 切换、同密钥/UUID、pending key、legacy fallback、防止旧客户端覆盖、管理 origin 与子路径检查。
 - Ops 纯配置边界测试：23 项通过。包括 profile 白名单、非法 URL、本机拒绝双域、同域起步、无 WP_HOME、双域 siteurl/home、独立 UUID/DB/salts 与 legacy 保持。
+- Ops 机器地址纯测试：9 项通过，覆盖实际状态 DTO、下载 URL 构造、顾客域切换不影响票据与失效配置先于私有存储检查被拒绝。
 - HQ 测试第一次在裸 `php -n` 下因 mbstring 未加载失败；加载本机已安装 mbstring 后重跑通过，未安装额外依赖。两套测试无 WordPress bootstrap、数据库、网络或文件操作。
-- 16 个变更 PHP 文件逐文件语法检查通过，`git diff --check` 通过；提交标识见根代理本次整合记录。
+- 首候选 16 个变更 PHP 文件及机器地址补充的 2 个 PHP 文件逐文件语法检查通过，`git diff --check` 通过；提交标识见根代理本次整合记录。
 
 ## 待根代理验收
 
