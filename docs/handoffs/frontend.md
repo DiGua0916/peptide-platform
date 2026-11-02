@@ -1016,3 +1016,30 @@ functions.php新增vc_card_display_product，使用Woo get_visible_children的me
 验证：PHP lint、node --check、diffcheck；内容合同22/22、匿名实际REST18/18。全目录只读82/82均含描述/报告/属性/评论，5个短描述、33个已有FAQ全部保留，空内容/异常/重复ID/危险表单/数据库写入均0。IAB桌面实测详情仍在当前URL、固定关闭栏；20mg $55/TR20切10mg $40/TR10图价SKU对应，实际加购1件留弹窗显示成功，购物车显示$40，测试商品移除恢复0。390px手机dialog clientWidth=scrollWidth=359，一份form/feedback，重开焦点Close，详情与批次空态正常展开。未下单/支付，Buy now只核对复用原绑定与按钮可用性，未点击进入结算。未实体手机测试。临时视口恢复，tab27保留桌面商品弹窗。
 
 证据D:/Codex/Tasks/2026-11-02/product-detail-review：work含3组只读检查脚本/JSON，outputs含product-dialog-desktop.png、product-dialog-details.png、product-dialog-mobile.png及mobile-dialog-check.json。原参考视频复制到outputs/商品详情页设计参考_原视频.mp4。文件、运行数据与截图不入Git。源商品描述中的纯度拼写和储存文案冲突未擅自改医学内容，后续需用户核定后台商品文案。
+
+### 2026-11-03 · Codex：正式商品弹窗与购物车联动（PRODUCT-CART-LIVE-SYNC）
+
+用户明确授权将 17863 今天确认的商品详情/购物车 Demo 同步到正式本机站，并要求通过后台积木管理、主页/商品弹窗/购物车互通。目标是现有 LocalWP `vialcovepeptidescom.local`，不是公开服务器部署。主题 junction 指向 frontend 工作树，插件 junction 指向 backend；本轮不覆盖后端插件文件。
+
+通过原模板/布局保存发布链新增并发布通用 product 文档 **11725**（product-experience 配置积木 + context-content）及 cart 文档 **11727**（context-content 购物车设置）。活动模板684、首页685、页头686、页尾687、全局688的revision和已发布内容逐项保持。商品专属 product_ID 已发布配置优先；未提供时继承通用product。配置只读取发布快照。商品描述及可支持的内容积木仍由原后台编辑，价格、规格、库存、公开报告、评价均取原数据。新增主题配置字段属于展示层，未创建另一套商品/购物车/订单存储。
+
+商品弹窗：迁移已确认手机布局、斜角优惠带、原生规格/价格/图片联动、完整描述与折叠资料、底部购买操作；主图先显示商品，COA按当前商品及完整规格匹配、报告日期取最新，可手动滑动，缺报告整块隐藏。PDF采用随主题自托管的PDF.js worker/cmaps/fonts/wasm及许可证，白底分页，避免原生PDF插件黑屏；报告来源/参考属性保留。真实评价为0时隐藏评价区域，不发布虚构星级/客户头像。WhatsApp号码目前为空，入口隐藏，可在商品体验积木按商品配置；预填消息跟随 product/specification/sku。
+
+正式会话与购物车：同源原生Woo Cookie+Nonce会话，未移植Demo Cart-Token、本地袋、静态价格快照或Python桥。电脑右侧抽屉、手机独立/cart/；商品标题/主图/详情链接、最近浏览及推荐的查看入口打开同一商品弹窗。优惠进度使用cart.extensions.peptide_core.activity_listener；小号档位金额整行、黑线按30/50/100门槛定位、无外框，差额提示在下方，推荐为紧凑提示模块，与车内商品行区分。真实Woo费用/优惠券/税运费/总额不前端重复计算。原生Cart block作为首次加载失败回退，/cart/?vc_native_cart=1可显式使用原生车；checkout仍原生Woo Blocks。
+
+历史栈：新增live-commerce-navigation.js，实际弹层打开顺序决定栈，不依赖DOM顺序；每层push一条历史，Back/关闭先退出当前产品/图片/报告/购物车层，全部关闭后允许正常离页。Forward恢复规格、数量、滚动和确切公开报告URL；异步商品/报告加载遇到Back会取消打开意图。手机进入独立购物车前记住当前商品状态，返回恢复。真实最近浏览通过后端签名cookie令牌记录成功可见view，规格变化只record selection；不从公开访客分析伪造个人推荐。
+
+后台应用配置：product-broadcast从已存在的3条通用文案补为4条并应用启用；activity-listener保留活动10980和原门槛，仅启用已有recommendation子开关。配置与发布前快照均保存在任务work，不入Git。播报仍由应用中心管理导入/姓名/关键词/顺序；加购成功仅以原生确认事件为准，不因GET推测成功或不确定请求自动重试。
+
+实际验证：发布/原文档保护23项、配置helper22项、导航fake DOM/history7项通过。产品数据与最近浏览6项、报告取消/Forward/WhatsApp生命周期4项通过。隔离原生cookie购物车HTTP15项通过：5盒275；6盒330-25=305；8盒440-25=415/下档差60；10盒550-55=495；20盒1100-120=980；降回5盒撤销优惠。测试车清空，不操作用户现有购物车，未提交订单/支付。非空测试车checkout确认仍为Woo Blocks。8项初版购物车资源HTTP内容SHA与工作树一致，后续适配修正随文件mtime刷新。PHP/JS语法及diff检查通过，最终细分回归数另追加。
+
+**未完成/限制**：推荐报价接口 POST /peptide/v1/activity-listener/recommendations 返回409 pc_activity_cart_unsupported_calculation，真实最近浏览记录成功但候选为空。只读定位是WooPayments普通REST原生的3个强制默认币种hook被Quote_Cart默认币种安全校验拒绝；普通CLI通过不能替代REST验收。已在项目群发送给后端做精确兼容，前端收到拒绝就隐藏推荐，不捏造额外优惠。后台8f899fd/b447d85第一版适配已读取，将正常合并；本问题针对该版本仍遗漏的REST分支。浏览器工具本轮因Windows URL识别失败被系统停止，未再尝试浏览器；不能声称正式手机视觉、触屏、sticky和真机返回手势已验收。
+
+文件：主题functions.php、inc/{home-quick-view,product-dialog-content,live-commerce-settings,live-cart-experience,live-commerce-navigation}.php；assets/home-quick-view.js/css、product-dialog-*、live-cart-*、live-commerce-navigation.js。PDF依赖用于真实多页COA渲染。证据和发布前备份位于 D:/Codex/Tasks/2026-11-02/product-cart-live-sync/work。已执行只读旧订单#54/#55查询，当前两者不存在；本轮没有任务前存在性基线，不能作保留/丢失因果结论，也没有执行任何订单清理。
+
+下一步：后端兼容默认币种REST后用隔离车重验推荐和候选；浏览器恢复后补正式手机视觉及iOS/Android返回验收。代码提交与远程同步结果另记群/项目记忆。需要回退本轮时先读当前revision，按task/work/before-documents.json和before-app-configs.json做定向恢复，避免覆盖后续编辑；不要盲目重跑一次性发布脚本。
+
+最终适配补充（2026-11-03 Codex）：已按后端8f899fd/b447d85合同补齐普通商品加购的pendingText/successText/successDurationMs/bagPulseEnabled/burstEnabled/burstDurationMs及enabled，主按钮与底部按钮共享原生确认结果；初始设备visibility遵守发布配置。购物车进度开关与推荐开关解耦；同规则下真实有效购物车stateKey改变且优惠生效可再庆祝，首载/同态刷新/错误恢复/隐藏恢复/规则变化保持静态。推荐支持简单商品空规格、缺图占位、数量上限100、0–8位币种精度及安全整数/有符号差额，行价保留后端合法舍入，不用单价乘数量硬校验替换后端。推荐加购购物车计数与bagPulseEnabled同步。
+
+最终实际状态回归：商品数据/生命周期/反馈18/18，购物车17/17、进度15/15、推荐34/34、反馈20/20，共86/86。另有导航7/7、发布23/23、设置22/22及隔离真实购物车15项通过；接口推荐409仍按上段阻断记录，不计为通过。最后修改的JS语法、PHP lint与Git whitespace检查通过。反馈适配新增assets/product-dialog-feedback.js。所有回归为源代码执行或HTTP证据，未替代本轮缺失的手机视觉与真机操作验收。
+打包检查补充：PDF.js及其字体/cmaps/wasm许可证保留官方包原始字节（含其原有尾随空格），Git whitespace检查对该第三方目录作排除；本轮自有代码的EOF空行已清理，自有源码检查通过。

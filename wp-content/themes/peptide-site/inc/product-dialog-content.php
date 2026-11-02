@@ -25,7 +25,7 @@ function vc_product_dialog_tabs( WC_Product $product ): string {
                     . ( $rating > 0 && $rating <= 5 ? wc_get_rating_html( $rating ) : '' ) . '<div>'
                     . apply_filters( 'comment_text', $comment->comment_content, $comment, array() ) . '</div></article>';
             }
-            if ( '' === $body ) { $body = '<p>' . esc_html__( 'There are no reviews yet.', 'woocommerce' ) . '</p>'; }
+            if ( '' === $body ) { continue; }
             $html .= '<details class="vc-product-dialog-panel" data-vc-dialog-tab="reviews"><summary>'
                 . esc_html( wp_strip_all_tags( $tab['title'] ?? __( 'Reviews', 'woocommerce' ) ) )
                 . '</summary><div class="vc-product-dialog-panel__body">' . $body . '</div></details>';
