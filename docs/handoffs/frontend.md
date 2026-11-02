@@ -1069,3 +1069,11 @@ functions.php新增vc_card_display_product，使用Woo get_visible_children的me
 核对原page420模板、旧git和备份，单段原文为：Israeli research. Chinese manufacturing. U.S. warehousing. Three distinct roles at the heart of the VialCovePeptides brand vision. 用户已明确不要拆三段，现通过原layouts REST保存/发布home685，将about-story由media-text改为原生rich-text，只保留该段bodyHtml，清空标题/按钮，无图片/图注/额外小标题。使用当前revision/modified、拒绝已有未发布差异；保留moduleId、其他8模块逐字一致、686/687/688/11725/11727未变。活动模板仍684，未改About独立页420、应用开关或商品/购物车。
 
 实际发布返回成功，published snapshot与保存稿一致；IAB手机预览刷新后DOM只有该原段，前后流程/FAQ保留。内容仍在后台rich-text积木的正文编辑。备份和结果 D:/Codex/Tasks/2026-11-03/about-copy-mobile-preview/work/{before-home,after-home}.json，截图outputs/mobile-live-preview.png；用户页面URL http://vialcovepeptidescom.local/wp-content/themes/peptide-site/tools/mobile-preview.html，默认390×844可切375/430/360。没有写浏览器购物车、订单或扩充业务声明。源码无业务改动，仅本交接入Git。
+
+### 2026-11-03 · Codex：以用户提供截图纠正About Us完整文案
+
+用户发来蓝底About Us长文截图，明确这才是要恢复的文案；此前恢复page420旧短简介的理解已过时。本轮逐字转录截图，并由独立只读代理核对：标题About Us，完整五段正文，两处strong为Certificate of Analysis (COA)及Vanguard Laboratory in the United States。内容属于用户提供的营销文案，按原文恢复；不将这次转录/发布记录当作对实验室、团队、批次、仓储等陈述的独立核验。
+
+通过原layouts REST+revision/modified仅更新home685 about-story原生rich-text的title/bodyHtml，保留现有布局、无图片/按钮，不恢复三地卡片或蓝底；源文件保存在任务work/about-full-copy.html。其他8块逐字保持，686/687/688/11725/11727及active684保持，独立page420和应用开关未改。发布返回成功，保存稿=发布快照；完整前后备份为before-full-copy-home.json/after-full-copy-home.json。
+
+实际IAB正式390×844手机预览刷新后DOM含标题、五段全文及两处加粗；滚动定位到About Us，截图D:/Codex/Tasks/2026-11-03/about-copy-mobile-preview/outputs/mobile-about-full.png，手机预览tab已保留。未修改商品、用户车/订单或后台源码；无需新插件、无业务源码变化。用户仍可在后台对应富文本积木编辑。此前“只留那句短简介”的状态已被本次明确截图要求替代。
