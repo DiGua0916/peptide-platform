@@ -163,7 +163,7 @@ final class History {
 		return array(
 			'productId' => $product->get_id(), 'name' => html_entity_decode( wp_strip_all_tags( $product->get_name() ), ENT_QUOTES, 'UTF-8' ), 'permalink' => get_permalink( $product->get_id() ),
 			'image' => array( 'id' => $image_id, 'url' => $url ?: '', 'alt' => wp_strip_all_tags( $product->get_name() ) ),
-			'variationId' => $variation ? $variation->get_id() : 0, 'variationLabel' => $variation ? html_entity_decode( wp_strip_all_tags( wc_get_formatted_variation( $variation, true, false, true ) ), ENT_QUOTES, 'UTF-8' ) : '',
+			'variationId' => $variation ? $variation->get_id() : 0, 'variationLabel' => $variation ? html_entity_decode( wp_strip_all_tags( wc_get_formatted_variation( $variation, true, false, false ) ), ENT_QUOTES, 'UTF-8' ) : '',
 			'price' => $current, 'regularPrice' => $original, 'currency' => get_woocommerce_currency(), 'currencyMinorUnit' => wc_get_price_decimals(), 'priceIsFrom' => ! $variation && $product->is_type( 'variable' ), 'purchasable' => true,
 		);
 	}
@@ -172,6 +172,29 @@ final class History {
 		$expiry = time() + self::TOKEN_SECONDS; $tokens = array();
 		foreach ( array( 'record', 'clear' ) as $action ) { $tokens[ $action ] = $expiry . '.' . hash_hmac( 'sha256', 'pc-recent-' . $action . ':POST:' . self::context() . ':' . $data['browser'] . ':' . $expiry, wp_salt( 'nonce' ) ); }
 		return array( 'writeTokens' => $tokens, 'tokenExpiresAt' => $expiry );
+	}
+
+	/** Ranking hints only: unlike the two-item recent display these include products already in the cart. */
+	private static function recommendation_candidates( array $entries ): array {
+		$candidates = array();
+		foreach ( $entries as $entry ) {
+			// Native variation reads can repair stale titles. The quote's read-only loader avoids that,
+			// and refuses unknown pricing/read integrations instead of invoking them for twenty hints.
+			$product = \PeptideCore\Activity\Catalog_Read::product( $entry['productId'] );
+			if ( ! Products::public_catalog_product( $product ) || ! $product->is_purchasable() || ! $product->is_in_stock() || ! in_array( $product->get_type(), array( 'simple', 'variable' ), true ) ) { continue; }
+			if ( $entry['variationId'] ) {
+				$variation = \PeptideCore\Activity\Catalog_Read::product( $entry['variationId'] );
+				if ( ! $product->is_type( 'variable' ) || ! $variation instanceof \WC_Product_Variation || 'publish' !== $variation->get_status() || $variation->get_parent_id() !== $product->get_id() || '' !== $variation->get_post_password() || '' !== (string) get_post_field( 'post_password', $variation->get_id(), 'raw' ) || ! $variation->variation_is_active() || ! $variation->variation_is_visible() || ! $variation->is_purchasable() || ! $variation->is_in_stock() ) { continue; }
+				$attributes = $variation->get_variation_attributes(); $required = array();
+				foreach ( $product->get_attributes() as $attribute ) { if ( $attribute->get_variation() ) { $required[] = wc_variation_attribute_name( $attribute->get_name() ); } }
+				if ( ! $required ) { continue; }
+				foreach ( $required as $name ) { if ( ! is_string( $attributes[ $name ] ?? null ) || '' === trim( $attributes[ $name ] ) ) { continue 2; } }
+				foreach ( $attributes as $value ) { if ( ! is_string( $value ) || '' === trim( $value ) ) { continue 2; } }
+			}
+			$candidates[] = array( 'productId' => $product->get_id(), 'variationId' => $entry['variationId'], 'viewCount' => $entry['viewCount'], 'lastViewedAt' => null === $entry['lastCountedAt'] ? null : gmdate( 'Y-m-d\TH:i:s\Z', $entry['seenAt'] ) );
+		}
+		usort( $candidates, static fn( $a, $b ) => ( $b['viewCount'] <=> $a['viewCount'] ) ?: ( strcmp( $b['lastViewedAt'] ?? '', $a['lastViewedAt'] ?? '' ) ?: ( ( $a['productId'] <=> $b['productId'] ) ?: ( $a['variationId'] <=> $b['variationId'] ) ) ) );
+		return array_slice( $candidates, 0, self::MAX_ITEMS );
 	}
 	public static function authorize( string $token, string $action ): bool {
 		if ( ! in_array( $action, array( 'record', 'clear' ), true ) || ! preg_match( '/^(\d{10})\.([a-f0-9]{64})$/D', $token, $parts ) || (int) $parts[1] < time() || (int) $parts[1] > time() + self::TOKEN_SECONDS + 60 ) { return false; }
@@ -185,9 +208,10 @@ final class History {
 		$config = Store::effective(); $data = self::read();
 		$enabled = self::enabled( $config );
 		if ( $enabled && '' === $data['browser'] ) { $data = self::write( $data, $config ); if ( is_wp_error( $data ) ) { return $data; } }
-		$out = array_merge( array( 'version' => 1, 'revision' => $config['revision'] ?? 0, 'enabled' => $enabled, 'title' => $config['title'], 'visible' => false, 'items' => array(), 'count' => 0, 'storage' => 'browser_cookie' ), '' !== $data['browser'] ? self::tokens( $data ) : array( 'writeTokens' => null, 'tokenExpiresAt' => null ) );
+		$out = array_merge( array( 'version' => 1, 'revision' => $config['revision'] ?? 0, 'enabled' => $enabled, 'title' => $config['title'], 'visible' => false, 'items' => array(), 'count' => 0, 'candidates' => array(), 'storage' => 'browser_cookie' ), '' !== $data['browser'] ? self::tokens( $data ) : array( 'writeTokens' => null, 'tokenExpiresAt' => null ) );
 		if ( ! $enabled ) { return $out; }
 		$entries = self::entries( $data, $config ); if ( ! $entries ) { return $out; }
+		$out['candidates'] = self::recommendation_candidates( $entries );
 		$excluded = array();
 		if ( $config['excludeCartProducts'] ) {
 			$cart = $cart ?? ( function_exists( 'WC' ) ? WC()->cart : null );
@@ -216,7 +240,7 @@ final class History {
 		$path = wp_parse_url( home_url( '/' ), PHP_URL_PATH ) ?: '/';
 		if ( ! setcookie( self::COOKIE, '', array( 'expires' => time() - DAY_IN_SECONDS, 'path' => $path, 'secure' => is_ssl(), 'httponly' => true, 'samesite' => 'Lax' ) ) ) { return self::error( 'storage_unavailable', '浏览器历史暂时无法清除。', 503 ); }
 		unset( $_COOKIE[ self::COOKIE ] );
-		return array( 'version' => 1, 'cleared' => true, 'visible' => false, 'items' => array(), 'count' => 0, 'writeTokens' => null );
+		return array( 'version' => 1, 'cleared' => true, 'visible' => false, 'items' => array(), 'count' => 0, 'candidates' => array(), 'writeTokens' => null );
 	}
 	private static function error( string $reason, string $message, int $status ): \WP_Error { return new \WP_Error( 'pc_recently_viewed_' . $reason, $message, array( 'status' => $status ) ); }
 }

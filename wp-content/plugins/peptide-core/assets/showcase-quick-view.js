@@ -7,7 +7,7 @@
  function plain(value) { return String(value || '').replace(/<[^>]*>/g, ' ').trim(); }
  function available() { return window.HTMLDialogElement && HTMLDialogElement.prototype.showModal && window.fetch && window.AbortController && $; }
  function sameOrigin(value) { var url = new URL(value, location.href); if (url.origin !== location.origin || !/^https?:$/.test(url.protocol)) { throw new Error('The product service is unavailable. Open the product page to continue.'); } return url.href; }
- function cartShape(value) { return value && Array.isArray(value.items) && value.totals && typeof value.totals === 'object'; }
+ function cartShape(value) { return value && !Array.isArray(value) && Array.isArray(value.items) && value.totals && typeof value.totals === 'object' && !Array.isArray(value.totals); }
  function blocked() { return operation && ['pending', 'checking', 'unknown'].indexOf(operation.state) >= 0; }
  function current(op) {
   if (op.view?.inline) { return pageActive && op.view.token === op.token && op.view.element.isConnected && !!op.view.element.getClientRects().length && op.view.id === op.parentId; }
@@ -246,10 +246,10 @@
    else { await reconcile(op); }
   }
  }
- document.addEventListener('vc:cart-mutation-start', function (event) { if (event.detail && ['drawer', 'showcase'].indexOf(event.detail.source) >= 0) { mutationGeneration++; } });
+ document.addEventListener('vc:cart-mutation-start', function (event) { if (event.detail && ['drawer', 'showcase', 'live-cart'].indexOf(event.detail.source) >= 0) { mutationGeneration++; } });
  document.addEventListener('vc:cart-updated', function (event) {
   var detail = event.detail;
-  if (!detail || ['drawer', 'showcase'].indexOf(detail.source) < 0) { return; }
+  if (!detail || ['drawer', 'showcase', 'live-cart'].indexOf(detail.source) < 0) { return; }
   if (detail.mutation === true) { mutationGeneration++; }
   if (detail.source === 'showcase' || detail.stale || !cartShape(detail.cart)) { return; }
   lastCart = detail.cart;

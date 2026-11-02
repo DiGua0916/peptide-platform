@@ -63,7 +63,7 @@ final class Quote_Cart extends \WC_Cart {
 			'woocommerce_before_calculate_totals' => array( Product_Offers::class . '::sync_cart' ),
 			'woocommerce_after_calculate_totals'  => array( 'WC_Cart_Session::set_session' ),
 			'woocommerce_product_get_price'       => array( 'Automattic\\WooCommerce\\Internal\\ScheduledSalePriceReconciler::reconcile_price' ),
-			'woocommerce_is_purchasable'          => array( Store_Config::class . '::offline_purchasable' ),
+			'woocommerce_is_purchasable'          => array( Store_Config::class . '::offline_purchasable', 'WC_Payments_Subscriptions_Disabler::make_subscription_products_unpurchasable' ),
 			'woocommerce_variation_is_purchasable' => array( Store_Config::class . '::offline_variation_purchasable' ),
 			'woocommerce_variation_is_visible'     => array( Store_Config::class . '::variation_visible' ),
 			'woocommerce_add_to_cart_validation'  => array( 'wc_protected_product_add_to_cart' ),
@@ -82,6 +82,8 @@ final class Quote_Cart extends \WC_Cart {
 			'woocommerce_variation_is_active', 'woocommerce_variation_is_visible', 'woocommerce_product_is_visible',
 			'woocommerce_query_for_reserved_stock', 'woocommerce_product_title',
 			'woocommerce_is_virtual', 'woocommerce_product_needs_shipping',
+			'woocommerce_currency', 'wc_get_price_decimals', 'wc_get_price_decimal_separator',
+			'wc_get_price_thousand_separator', 'woocommerce_price_format', 'option_woocommerce_currency_pos',
 		);
 		$hooks = array_merge( $hooks, array_keys( $allow ) );
 		foreach ( array( 'price', 'regular_price', 'sale_price', 'date_on_sale_from', 'date_on_sale_to', 'parent_id', 'tax_class', 'tax_status', 'manage_stock', 'stock_quantity', 'stock_status', 'backorders', 'sold_individually', 'status', 'catalog_visibility', 'name', 'virtual' ) as $property ) {
@@ -92,9 +94,10 @@ final class Quote_Cart extends \WC_Cart {
 			if ( str_starts_with( $hook, 'woocommerce_cart_get_' ) || str_starts_with( $hook, 'woocommerce_quantity_input_' ) || str_starts_with( $hook, 'woocommerce_store_api_product_quantity_' ) || in_array( $hook, array( 'woocommerce_customer_get_is_vat_exempt', 'woocommerce_customer_get_billing_email' ), true ) ) { $hooks[] = $hook; }
 		}
 		foreach ( array_unique( $hooks ) as $hook ) {
-			foreach ( ( $wp_filter[ $hook ]->callbacks ?? array() ) as $callbacks ) {
+			foreach ( ( $wp_filter[ $hook ]->callbacks ?? array() ) as $priority => $callbacks ) {
 				foreach ( $callbacks as $callback ) {
 					$fn = $callback['function'] ?? null;
+					if ( self::default_only_wcpay_callback( $hook, $priority, $callback ) ) { continue; }
 					// Woo's adapter is a no-op only while none of its legacy pricing hooks are in use.
 					if ( is_array( $fn ) && 2 === count( $fn ) && is_object( $fn[0] ) && 'WC_Deprecated_Filter_Hooks' === get_class( $fn[0] ) && 'maybe_handle_deprecated_hook' === $fn[1] ) {
 						foreach ( $fn[0]->get_old_hooks( $hook ) as $legacy ) { if ( has_filter( $legacy ) ) { return $legacy; } }
@@ -106,6 +109,49 @@ final class Quote_Cart extends \WC_Cart {
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * WooPayments installs price filters even with only the store's base currency enabled.
+	 * Accept only that already-initialized, read-only no-conversion path. Never initialize its
+	 * currency service, inspect a shopper's selection, remove hooks or enable conversions.
+	 */
+	private static function default_only_wcpay_callback( string $hook, $priority, array $callback ): bool {
+		$fn = $callback['function'] ?? null;
+		if ( ! is_array( $fn ) || 2 !== count( $fn ) || ! is_object( $fn[0] ) ) { return false; }
+		$class = get_class( $fn[0] );
+		$prices = array( 'woocommerce_product_get_price', 'woocommerce_product_get_regular_price', 'woocommerce_product_get_sale_price', 'woocommerce_product_variation_get_price', 'woocommerce_product_variation_get_regular_price', 'woocommerce_product_variation_get_sale_price' );
+		$formatters = array( 'woocommerce_currency' => 'get_woocommerce_currency', 'wc_get_price_decimals' => 'get_price_decimals', 'wc_get_price_decimal_separator' => 'get_price_decimal_separator', 'wc_get_price_thousand_separator' => 'get_price_thousand_separator', 'woocommerce_price_format' => 'get_woocommerce_price_format', 'option_woocommerce_currency_pos' => 'get_woocommerce_currency_pos' );
+		$is_price = 'WCPay\\MultiCurrency\\FrontendPrices' === $class && 'get_product_price_string' === $fn[1] && in_array( $hook, $prices, true ) && 99 === (int) $priority && 2 === ( $callback['accepted_args'] ?? null );
+		$is_formatter = 'WCPay\\MultiCurrency\\FrontendCurrencies' === $class && ( $formatters[ $hook ] ?? null ) === $fn[1] && 900 === (int) $priority && 1 === ( $callback['accepted_args'] ?? null );
+		if ( ! $is_price && ! $is_formatter ) { return false; }
+		global $wp_filter;
+		// Unknown compatibility/currency overrides must not run, even when they might return base currency.
+		foreach ( array_keys( (array) $wp_filter ) as $name ) { if ( str_starts_with( $name, 'wcpay_multi_currency_' ) && has_filter( $name ) ) { return false; } }
+		foreach ( array( 'pre_option_woocommerce_currency', 'option_woocommerce_currency', 'default_option_woocommerce_currency' ) as $name ) { if ( has_filter( $name ) ) { return false; } }
+		try {
+			$read = static function ( object $object, string $name ) {
+				$property = new \ReflectionProperty( $object, $name );
+				$property->setAccessible( true );
+				return $property->getValue( $object );
+			};
+			$multi = $read( $fn[0], 'multi_currency' ); $compatibility = $read( $fn[0], 'compatibility' );
+			if ( ! is_object( $multi ) || 'WCPay\\MultiCurrency\\MultiCurrency' !== get_class( $multi ) || ! is_object( $compatibility ) || 'WCPay\\MultiCurrency\\Compatibility' !== get_class( $compatibility ) || $read( $multi, 'compatibility' ) !== $compatibility ) { return false; }
+			$default = $read( $multi, 'default_currency' ); $enabled = $read( $multi, 'enabled_currencies' );
+			$base = get_option( 'woocommerce_currency', '' );
+			if ( ! is_string( $base ) || ! preg_match( '/^[A-Z]{3}$/D', $base ) || ! is_object( $default ) || 'WCPay\\MultiCurrency\\Currency' !== get_class( $default ) || ! is_array( $enabled ) || array_keys( $enabled ) !== array( $base ) ) { return false; }
+			foreach ( array( $default, $enabled[ $base ] ) as $currency ) {
+				if ( ! is_object( $currency ) || 'WCPay\\MultiCurrency\\Currency' !== get_class( $currency ) || $currency->get_code() !== $base || true !== $currency->get_is_default() || 1.0 !== (float) $currency->get_rate() ) { return false; }
+			}
+			if ( $is_formatter ) {
+				if ( null !== $read( $fn[0], 'order_currency' ) ) { return false; }
+				$store = $read( $fn[0], 'store_currency' );
+				if ( null !== $store && ( ! is_object( $store ) || 'WCPay\\MultiCurrency\\Currency' !== get_class( $store ) || $store->get_code() !== $base || true !== $store->get_is_default() ) ) { return false; }
+				foreach ( array( 'woocommerce_currency', 'selected_currency_code' ) as $name ) { $cached = $read( $fn[0], $name ); if ( null !== $cached && '' !== $cached && $cached !== $base ) { return false; } }
+				if ( true === $read( $fn[0], 'has_explicit_currency_selection' ) ) { return false; }
+			}
+			return true;
+		} catch ( \Throwable $error ) { return false; }
 	}
 
 	/** No session hydration, global cart getter filters or loading events. */
