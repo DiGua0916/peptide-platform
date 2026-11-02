@@ -10,6 +10,15 @@ if ( ! $vc_management_host || strtolower( $vc_management_host ) !== $vc_request_
 }
 
 add_filter( 'determine_locale', static fn(): string => 'zh_CN' );
+add_filter( 'locale', static fn(): string => 'zh_CN' );
+add_filter( 'gettext', static function ( string $translated, string $text, string $domain ): string {
+	$labels = array(
+		'Username or Email Address' => '用户名或邮箱', 'Password' => '密码',
+		'Remember Me' => '记住登录', 'Log In' => '登录', 'Lost your password?' => '忘记密码？',
+		'Show password' => '显示密码', 'Hide password' => '隐藏密码', 'Log In Again' => '重新登录',
+	);
+	return 'default' === $domain && isset( $labels[ $text ] ) ? $labels[ $text ] : $translated;
+}, 10, 3 );
 add_filter( 'login_display_language_dropdown', '__return_false' );
 add_filter( 'login_site_html_link', '__return_empty_string' );
 add_filter( 'login_remember_me_help_text', '__return_empty_string' );
