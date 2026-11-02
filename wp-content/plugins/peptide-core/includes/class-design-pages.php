@@ -181,7 +181,8 @@ final class Design_Pages {
 	public static function preview_url( int $template, string $doc ): string {
 		$args = array();
 		parse_str( (string) wp_parse_url( Templates::preview_url( $template, true ), PHP_URL_QUERY ), $args );
-		return add_query_arg( array_merge( $args, array( self::PREVIEW_DOC => $doc ) ), self::sample_url( $doc ) );
+		$url = add_query_arg( array_merge( $args, array( self::PREVIEW_DOC => $doc ) ), self::sample_url( $doc ) );
+		return Management_Host::enabled() ? Management_Host::management_link( $url ) : $url;
 	}
 
 	private static function usable( string $doc ): bool {

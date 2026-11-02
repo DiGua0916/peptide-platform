@@ -70,10 +70,12 @@ final class Monitor {
 		if ( '' === $pending ) {
 			return;
 		}
-		$ok = Client::request_raw( $site['url'], $pending, 'GET', '/peptide/v1/hq/status' );
+		$url = Site_Urls::management( $site );
+		$ok = '' !== $url ? Client::request_raw( $url, $pending, 'GET', '/peptide/v1/hq/status' ) : new \WP_Error( 'pchq_management_url', 'Invalid management address.' );
+		$matches = ! is_wp_error( $ok ) && ( '' === $site['uuid'] || hash_equals( $site['uuid'], (string) ( $ok['uuid'] ?? '' ) ) );
 		Sites::update(
 			$id,
-			is_wp_error( $ok ) ? array( 'key_pending' => null ) : array(
+			! $matches ? array( 'key_pending' => null ) : array(
 				'key_enc'     => Crypto::encrypt( $pending ),
 				'key_pending' => null,
 			)

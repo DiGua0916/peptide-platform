@@ -12,6 +12,7 @@ defined( 'ABSPATH' ) || exit;
 final class Plugin {
 
 	public static function boot(): void {
+		Management_Host::register_hooks();
 		if ( ! class_exists( 'WooCommerce' ) ) {
 			add_action( 'admin_notices', array( self::class, 'render_missing_woocommerce_notice' ) );
 			return;

@@ -54,7 +54,19 @@ final class Runtime {
 	}
 
 	public static function status(): array {
-		return array( 'version' => PEPTIDE_OPS_VERSION, 'site_uuid' => Storage::site_uuid(), 'site_url' => home_url( '/' ), 'worker_ready' => self::worker_ready(), 'actions' => self::ACTIONS );
+		return array( 'version' => PEPTIDE_OPS_VERSION, 'site_uuid' => Storage::site_uuid(), 'site_url' => self::management_url(), 'worker_ready' => self::worker_ready(), 'actions' => self::ACTIONS );
+	}
+
+	/** Machine transport must remain on the pinned management origin after public home changes. */
+	public static function management_url(): string {
+		if ( class_exists( '\\PeptideCore\\Management_Host' ) && \PeptideCore\Management_Host::enabled() ) { return \PeptideCore\Management_Host::management_url(); }
+		if ( defined( 'PEPTIDE_CORE_MANAGEMENT_URL' ) || defined( 'PEPTIDE_CORE_MANAGEMENT_UUID' ) ) { return ''; }
+		return home_url( '/' );
+	}
+
+	private static function download_url( string $token ): string {
+		$base = self::management_url();
+		return '' === $base ? '' : add_query_arg( array( 'rest_route' => '/' . self::NS . '/download', 'ticket' => $token ), $base );
 	}
 
 	public static function inventory(): array {
@@ -249,6 +261,7 @@ final class Runtime {
 	private static function reset_upload( string $id, bool $final = false ): void { foreach ( $final ? array( '.part', '.json', '.zip' ) : array( '.part', '.json' ) as $suffix ) { $file = Storage::path( 'packages/' . $id . $suffix ); if ( is_file( $file ) && ! unlink( $file ) ) { throw new \RuntimeException( 'Unable to clean incomplete private upload.' ); } } }
 
 	public static function ticket( \WP_REST_Request $r ) {
+		if ( '' === self::management_url() ) { return new \WP_Error( 'pc_ops_management', '固定管理地址尚未通过配置校验。', array( 'status' => 503 ) ); }
 		$p = (array) $r->get_json_params(); $id = (string) ( $p['backup_id'] ?? '' );
 		if ( ! self::valid_id( $id ) ) { return new \WP_Error( 'pc_ops_backup', '无效备份。' ); }
 		$dir = Storage::path( 'backups/' . $id );
@@ -264,7 +277,7 @@ final class Runtime {
 			return new \WP_Error( 'pc_ops_export_preparing', '完整下载包正在后台准备，请稍后再点下载。', array( 'status' => 409 ) );
 		}
 		$token = bin2hex( random_bytes( 32 ) ); Storage::mkdir( 'tickets' ); Storage::write_json( 'tickets/' . hash( 'sha256', $token ) . '.json', array( 'id' => $id, 'expires' => time() + 120 ) );
-		return array( 'url' => add_query_arg( array( 'rest_route' => '/' . self::NS . '/download', 'ticket' => $token ), home_url( '/' ) ), 'expires_in' => 120 );
+		return array( 'url' => self::download_url( $token ), 'expires_in' => 120 );
 	}
 
 	public static function download( \WP_REST_Request $r ) {

@@ -101,7 +101,7 @@ final class Sites_Page {
 		<tr>
 			<td data-label="<?php esc_attr_e( 'Store', 'peptide-hq' ); ?>">
 				<strong><?php echo esc_html( $s['name'] ); ?></strong><br>
-				<a class="pchq-muted" href="<?php echo esc_url( $s['url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( $s['url'] ); ?></a>
+				<a class="pchq-muted" href="<?php echo esc_url( \PeptideHq\Site_Urls::public_url( $s ) ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( \PeptideHq\Site_Urls::public_url( $s ) ); ?></a>
 			</td>
 			<td data-label="<?php esc_attr_e( 'Status', 'peptide-hq' ); ?>">
 				<?php echo Menu::status_badge( $s ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>

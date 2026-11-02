@@ -2,13 +2,13 @@
 /**
  * Plugin Name: VialCove Operations Agent
  * Description: Private authenticated maintenance worker for VialCove managed sites.
- * Version: 0.1.0
+ * Version: 0.2.0
  * Requires PHP: 8.1
  */
 defined( 'ABSPATH' ) || exit;
 if ( defined( 'PEPTIDE_OPS_DIR' ) ) { return; }
 define( 'PEPTIDE_OPS_DIR', __DIR__ );
-define( 'PEPTIDE_OPS_VERSION', '0.1.0' );
+define( 'PEPTIDE_OPS_VERSION', '0.2.0' );
 spl_autoload_register( static function ( $class ): void {
 	$prefix = 'PeptideOps\\';
 	if ( ! str_starts_with( $class, $prefix ) ) { return; }

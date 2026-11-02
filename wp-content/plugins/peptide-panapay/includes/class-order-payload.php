@@ -10,7 +10,7 @@ final class Order_Payload {
 		if ( ! isset( get_woocommerce_currencies()[ $currency ] ) || ! preg_match( '/^[0-9]+(?:[.][0-9]+)?$/D', $amount ) || (float) $amount <= 0 ) {
 			throw new Customer_Error( __( 'The order amount or currency is not supported.', 'peptide-panapay' ) );
 		}
-		$payload = array( 'site' => home_url( '/' ), 'order_id' => $reference, 'currency' => $currency, 'amount' => $amount );
+		$payload = array( 'site' => self::customer_url( home_url( '/' ) ), 'order_id' => $reference, 'currency' => $currency, 'amount' => $amount );
 		foreach ( array( 'billing', 'shipping' ) as $type ) {
 			$address = $order->get_address( $type );
 			if ( 'shipping' === $type && ! $order->needs_shipping_address()
@@ -49,14 +49,22 @@ final class Order_Payload {
 		$payload['ip'] = (string) $order->get_customer_ip_address();
 		$payload['accept_language'] = substr( sanitize_text_field( wp_unslash( $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '' ) ), 0, 255 );
 		$payload['user_agent'] = (string) $order->get_customer_user_agent();
-		$payload['return_url'] = add_query_arg( array( 'reference' => $reference, 'token' => $return_token ), WC()->api_request_url( 'pc_panapay_return' ) );
-		$payload['notify_url'] = WC()->api_request_url( 'pc_panapay_notify' );
+		$payload['return_url'] = self::customer_url( add_query_arg( array( 'reference' => $reference, 'token' => $return_token ), WC()->api_request_url( 'pc_panapay_return' ) ) );
+		$payload['notify_url'] = self::customer_url( WC()->api_request_url( 'pc_panapay_notify' ) );
 		$payload['platform_id'] = 6;
 		$payload['mchid'] = $config['mchid'];
 		$payload['tag'] = $config['tag'];
 		$payload['mode'] = $config['mode'];
 		$payload['sign'] = Signature::generate( array_intersect_key( $payload, array_flip( array( 'mchid', 'currency', 'amount', 'site', 'order_id' ) ) ), $config['secret'] );
 		return $payload;
+	}
+
+	/** New managed attempts use the registered public primary, not a request's alias. */
+	public static function customer_url( string $url ): string {
+		if ( ! class_exists( '\\PeptideCore\\Management_Host' ) || ! \PeptideCore\Management_Host::enabled() ) { return $url; }
+		$origin = \PeptideCore\Management_Host::normalize_url( \PeptideCore\Management_Host::public_url() );
+		if ( '' === $origin ) { throw new Customer_Error( __( 'The public store address is not ready for payment.', 'peptide-panapay' ) ); }
+		return \PeptideCore\Management_Host::on_origin( $url, $origin );
 	}
 
 	/** Order data only: excludes mutable domain/media URLs and browser request headers. */

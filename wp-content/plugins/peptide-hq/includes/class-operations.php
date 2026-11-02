@@ -15,7 +15,8 @@ final class Operations {
 	public static function target( int $site ) {
 		if ( $site > 0 ) {
 			$s = Sites::get( $site ); $key = Sites::key( $site );
-			return $s && 64 === strlen( $key ) ? array( 'url' => $s['url'], 'key' => $key, 'label' => $s['name'], 'uuid' => $s['uuid'] ) : new \WP_Error( 'pchq_ops_site', '店铺不存在或连接尚未确认。' );
+			$url = $s ? Site_Urls::management( $s ) : '';
+			return $s && '' !== $url && 64 === strlen( $key ) ? array( 'url' => $url, 'key' => $key, 'label' => $s['name'], 'uuid' => $s['uuid'] ) : new \WP_Error( 'pchq_ops_site', '店铺不存在或连接尚未确认。' );
 		}
 		if ( 0 === $site && defined( 'PEPTIDE_OPS_SERVER_KEY' ) ) { return array( 'url' => home_url( '/' ), 'key' => PEPTIDE_OPS_SERVER_KEY, 'label' => '本机部署代理', 'uuid' => Storage::site_uuid() ); }
 		$agents = (array) get_option( 'pchq_ops_agents', array() ); $s = $agents[ abs( $site ) ] ?? null;

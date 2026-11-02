@@ -82,6 +82,7 @@ final class Hq_Connector {
 			'registered' => (int) ( $s['registered'] ?? 0 ),
 			'reg_key'    => (string) ( $s['reg_key'] ?? '' ),
 			'reg_url'    => (string) ( $s['reg_url'] ?? '' ),
+			'reg_public_url' => (string) ( $s['reg_public_url'] ?? '' ),
 			'reg_error'  => (string) ( $s['reg_error'] ?? '' ),
 			'uuid'       => (string) ( $s['uuid'] ?? '' ),
 		);
@@ -133,7 +134,9 @@ final class Hq_Connector {
 			return;
 		}
 		$s = self::settings();
-		if ( $s['reg_key'] === hash( 'sha256', self::key() ) && home_url( '/' ) === $s['reg_url'] && time() - $s['registered'] < DAY_IN_SECONDS ) {
+		$url = self::connection_url();
+		$public_unchanged = ! Management_Host::enabled() || Management_Host::public_url() === $s['reg_public_url'];
+		if ( $s['reg_key'] === hash( 'sha256', self::key() ) && $url === $s['reg_url'] && $public_unchanged && time() - $s['registered'] < DAY_IN_SECONDS ) {
 			return;
 		}
 		if ( get_transient( 'pc_hq_reg_wait' ) ) {
@@ -158,15 +161,19 @@ final class Hq_Connector {
 		if ( ! self::configured() ) {
 			return new \WP_Error( 'pc_hq_unset', 'PEPTIDE_HQ_URL / PEPTIDE_HQ_SECRET are not set in wp-config.php.' );
 		}
+		if ( Management_Host::enabled() && '' !== Management_Host::configuration_error() ) {
+			return new \WP_Error( 'pc_management_configuration', 'The store management identity is not configured correctly.' );
+		}
 		$key  = self::key();
+		$origins = Management_Host::enabled() ? array( 'management_url' => Management_Host::management_url(), 'public_url' => Management_Host::public_url() ) : array();
 		$body = (string) wp_json_encode(
-			array(
-				'url'     => home_url( '/' ),
+			array_merge( array(
+				'url'     => self::connection_url(),
 				'name'    => get_bloginfo( 'name' ),
 				'key'     => $key,
 				'uuid'    => self::uuid(),
 				'version' => PEPTIDE_CORE_VERSION,
-			),
+			), $origins ),
 			JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
 		);
 		$time = time();
@@ -191,10 +198,16 @@ final class Hq_Connector {
 		}
 		$s['registered'] = time();
 		$s['reg_key']    = hash( 'sha256', $key );
-		$s['reg_url']    = home_url( '/' );
+		$s['reg_url']    = self::connection_url();
+		if ( Management_Host::enabled() ) { $s['reg_public_url'] = Management_Host::public_url(); }
 		$s['reg_error']  = '';
 		self::save( $s );
 		return true;
+	}
+
+	/** Stable machine address; customer aliases must never change the HQ destination. */
+	public static function connection_url(): string {
+		return Management_Host::enabled() ? trailingslashit( Management_Host::management_url() ) : home_url( '/' );
 	}
 
 	// ---------- 签名 ----------
@@ -373,7 +386,9 @@ final class Hq_Connector {
 		return array(
 			'uuid'        => self::uuid(),
 			'name'        => get_bloginfo( 'name' ),
-			'url'         => home_url( '/' ),
+			'url'         => self::connection_url(),
+			'management_url' => Management_Host::enabled() ? Management_Host::management_url() : untrailingslashit( home_url( '/' ) ),
+			'public_url'  => Management_Host::enabled() ? Management_Host::public_url() : untrailingslashit( home_url( '/' ) ),
 			'admin_url'   => admin_url(),
 			'config'      => self::config(),
 			'theme'       => $theme->get( 'Name' ) . ' ' . $theme->get( 'Version' ),
@@ -488,14 +503,14 @@ final class Hq_Connector {
 		$token = wp_generate_password( 40, false );
 		set_transient(
 			'pc_hq_login_' . hash( 'sha256', $token ),
-			array(
+			array_merge( array(
 				'user' => $user,
 				'to'   => self::PLATFORM_PAGES[ $to ] ?? '',
-			),
+			), Management_Host::enabled() ? array( 'management_url' => Management_Host::management_url(), 'uuid' => self::uuid() ) : array() ),
 			self::LOGIN_TTL
 		);
 		return array(
-			'url'  => add_query_arg( self::LOGIN_ARG, $token, home_url( '/' ) ),
+			'url'  => add_query_arg( self::LOGIN_ARG, $token, self::connection_url() ),
 			'user' => $user ? (string) get_userdata( $user )->user_login : '',
 		);
 	}
@@ -511,7 +526,10 @@ final class Hq_Connector {
 		$user  = is_array( $data ) ? (int) ( $data['user'] ?? 0 ) : 0;
 		delete_transient( $key );
 		nocache_headers();
-		if ( ! $user || ! user_can( $user, 'manage_options' ) ) {
+		$bound = ! Management_Host::enabled() || ( Management_Host::is_management_request() && is_array( $data )
+			&& hash_equals( self::uuid(), (string) ( $data['uuid'] ?? '' ) )
+			&& hash_equals( Management_Host::management_url(), (string) ( $data['management_url'] ?? '' ) ) );
+		if ( ! $bound || ! $user || ! user_can( $user, 'manage_options' ) ) {
 			wp_safe_redirect( wp_login_url() );
 			exit;
 		}

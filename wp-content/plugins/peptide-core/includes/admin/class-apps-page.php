@@ -10,6 +10,7 @@ namespace PeptideCore\Admin;
 
 use PeptideCore\Coupons;
 use PeptideCore\Exit_Intent;
+use PeptideCore\Management_Host;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -243,7 +244,9 @@ final class Apps_Page {
 		Marketing::card_close();
 		// phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
 
-		echo '</div><aside class="pc-exit-admin__side"><div class="pc-mk-card pc-mk-seo"><div class="pc-mk-seo__head"><strong>' . esc_html__( 'Preview', 'peptide-core' ) . '</strong><span><a href="' . esc_url( add_query_arg( 'pc_exit_preview', '1', home_url( '/' ) ) ) . '" target="_blank" rel="noopener"><span class="dashicons dashicons-visibility" aria-hidden="true"></span>' . esc_html__( 'Preview in the store', 'peptide-core' ) . '</a></span></div>';
+		$preview_url = add_query_arg( 'pc_exit_preview', '1', home_url( '/' ) );
+		if ( Management_Host::enabled() ) { $preview_url = Management_Host::management_link( $preview_url ); }
+		echo '</div><aside class="pc-exit-admin__side"><div class="pc-mk-card pc-mk-seo"><div class="pc-mk-seo__head"><strong>' . esc_html__( 'Preview', 'peptide-core' ) . '</strong><span><a href="' . esc_url( $preview_url ) . '" target="_blank" rel="noopener"><span class="dashicons dashicons-visibility" aria-hidden="true"></span>' . esc_html__( 'Preview in the store', 'peptide-core' ) . '</a></span></div>';
 		echo '<div class="pc-exit-admin__stage"></div><p class="pc-bc-note">' . esc_html__( 'The preview in the store uses the saved settings and shows the popup right away. Staff never see the popup otherwise, and previews are not counted.', 'peptide-core' ) . '</p></div></aside></div>';
 		Marketing::save_bar( self::url() );
 		echo '</form></div>';
