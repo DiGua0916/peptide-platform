@@ -4,6 +4,7 @@ namespace PeptideCore\Api;
 
 use PeptideCore\Broadcast\Config;
 use PeptideCore\Broadcast\Importer;
+use PeptideCore\Broadcast\Playback;
 use PeptideCore\Broadcast\Store;
 
 defined( 'ABSPATH' ) || exit;
@@ -92,7 +93,9 @@ final class Product_Broadcast_Controller {
 		$data = self::body( $request, array( 'config' ) );
 		if ( is_wp_error( $data ) ) { return $data; }
 		$config = Config::normalize( $data['config'] ?? null );
-		return is_wp_error( $config ) ? $config : self::respond( array( 'config' => $config, 'warnings' => Config::warnings( $config ) ) );
+		if ( is_wp_error( $config ) ) { return $config; }
+		$playback = Playback::compile( $config );
+		return is_wp_error( $playback ) ? $playback : self::respond( array( 'config' => $config, 'playback' => $playback, 'warnings' => Config::warnings( $config ) ) );
 	}
 
 	public static function import( \WP_REST_Request $request ) {
@@ -122,12 +125,13 @@ final class Product_Broadcast_Controller {
 		$examples = array(
 			'txt' => array( 'txt', 'text/plain;charset=utf-8', "{product} · Choose a pack\n{specification} · {price}\nProduct details in one place\n" ),
 			'csv' => array( 'csv', 'text/csv;charset=utf-8', "text\r\n\"{product}, choose a pack\"\r\n\"{specification} · {price}\"\r\n" ),
+			'parameters-csv' => array( 'csv', 'text/csv;charset=utf-8', "{test},{shopping},{go}\r\nA,D,G\r\nB,E,\r\nC,,\r\n" ),
 			'csv-names' => array( 'csv', 'text/csv;charset=utf-8', "text,name\r\n\"{name}: explore {product}\",\"示例名称 A\"\r\n\"{name}: view {specification}\",\"示例名称 B\"\r\n" ),
 			'json' => array( 'json', 'application/json;charset=utf-8', wp_json_encode( Config::defaults(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT ) . "\n" ),
 		);
 		if ( ! isset( $examples[ $format ] ) ) { return self::invalid( 'format', 'invalid_format' ); }
 		[ $extension, $mime, $content ] = $examples[ $format ];
-		return self::respond( array( 'filename' => 'product-broadcast-example' . ( 'csv-names' === $format ? '-names' : '' ) . '.' . $extension, 'mime' => $mime, 'content' => $content ) );
+		return self::respond( array( 'filename' => 'product-broadcast-example' . ( 'csv-names' === $format ? '-names' : ( 'parameters-csv' === $format ? '-parameters' : '' ) ) . '.' . $extension, 'mime' => $mime, 'content' => $content ) );
 	}
 
 	private static function invalid( string $field, string $reason ): \WP_Error {

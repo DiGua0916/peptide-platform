@@ -40,7 +40,7 @@ final class Product_Broadcast_Page {
 		<div class="wrap pc-broadcast-admin">
 			<div class="pc-bra-head">
 				<div><a href="<?php echo esc_url( Apps_Page::url() ); ?>"><?php esc_html_e( '返回应用中心', 'peptide-core' ); ?></a><h1><?php esc_html_e( '商品播报', 'peptide-core' ); ?></h1></div>
-				<p><?php esc_html_e( '统一管理商品播报文案。仅保存草稿不会改变客户看到的内容，保存并应用后才更新公开版本。', 'peptide-core' ); ?></p>
+				<p><?php esc_html_e( '填写文案，按需导入参数。右侧自动轮播预览；保存并应用后才更新客户页。', 'peptide-core' ); ?></p>
 			</div>
 			<div id="pc-product-broadcast" aria-busy="true"><p role="status"><?php esc_html_e( '正在读取商品播报配置…', 'peptide-core' ); ?></p></div>
 			<noscript><p><?php esc_html_e( '请启用 JavaScript 后编辑商品播报。', 'peptide-core' ); ?></p></noscript>

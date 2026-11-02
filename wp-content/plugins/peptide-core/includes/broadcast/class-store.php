@@ -9,7 +9,7 @@ final class Store {
 	public const OPTION = 'pc_product_broadcast_v1';
 	public const CONFIG_ID = 'default';
 	public const VERSION = 1;
-	private const MAX_RECORD_BYTES = 8 * 1024 * 1024;
+	private const MAX_RECORD_BYTES = 16 * 1024 * 1024;
 
 	public static function can_manage(): bool {
 		if ( ! is_user_logged_in() || ! current_user_can( 'manage_woocommerce' ) ) { return false; }
@@ -23,7 +23,7 @@ final class Store {
 		$published['enabled'] = false;
 		$published['items'] = array();
 		$published['keywords'] = array();
-		$published['name'] = '';
+		$published['parameters'] = array();
 		return array(
 			'version' => self::VERSION, 'revision' => 0,
 			'draft' => array( 'config' => Config::defaults(), 'updatedAt' => null ),
@@ -70,7 +70,8 @@ final class Store {
 		$record = self::record();
 		if ( is_wp_error( $record ) ) { return $record; }
 		$published = $record['state']['published'];
-		$config = $published['config'];
+		$config = Playback::compile( $published['config'] );
+		if ( is_wp_error( $config ) ) { return $config; }
 		if ( ! $config['enabled'] || ! $config['items'] ) {
 			$config['enabled'] = false;
 			$config['items'] = array();
@@ -84,7 +85,7 @@ final class Store {
 	public static function effective(): array {
 		$config = self::public_config();
 		if ( ! is_wp_error( $config ) ) { return $config; }
-		return array_merge( array( 'configId' => self::CONFIG_ID, 'revision' => 0, 'updatedAt' => null ), self::initial()['published']['config'] );
+		return array_merge( array( 'configId' => self::CONFIG_ID, 'revision' => 0, 'updatedAt' => null ), Playback::compile( self::initial()['published']['config'] ) );
 	}
 
 	/** Save draft, or atomically save and apply. Invalid/stale requests write nothing. */

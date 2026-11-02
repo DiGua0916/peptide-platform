@@ -63,7 +63,7 @@ final class Product_Broadcast {
 		if ( self::TYPE !== ( $module['type'] ?? '' ) ) { return $html; }
 		if ( 'editor' === $context ) {
 			return '<div class="vc-m__notice"><strong>' . esc_html__( '商品播报', 'peptide-core' ) . '</strong><p>'
-				. esc_html__( '引用店铺已应用配置。文案、姓名和播放时间在应用中心维护；未应用草稿不会显示给客户。', 'peptide-core' )
+				. esc_html__( '引用店铺已应用配置。文案模板、参数表和播放时间在应用中心维护；未应用草稿不会显示给客户。', 'peptide-core' )
 				. '</p><a href="' . esc_url( admin_url( 'admin.php?page=pc-apps&app=product-broadcast' ) ) . '" target="_blank" rel="noopener">'
 				. esc_html__( '打开商品播报设置', 'peptide-core' ) . '</a></div>';
 		}
