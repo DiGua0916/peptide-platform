@@ -34,3 +34,9 @@ HQ/Ops/Panapay 已组合到本分支：HQ 0.3.2 / schema 4、Ops 0.2.0、Panapay
 尚未完成的上线门槛：两个真实 Host 的 Nginx/TLS、浏览器 WP 登录和 host-only cookies、REST nonce、媒体与全部预览（含 Customizer selective refresh 的纯 POST）、顾客登录/退出/忘密、public primary 切换后 HQ 管理连接、支付异步回写及浏览器回跳、真实受控邮件收件、不同店账号/订单/导出隔离。源码夹具通过不能替代这些实测；未声称全功能或生产跨域验收通过。
 
 本分支不 push、不直接合并 main，不纳入私有 profile、主机 IP、指纹、凭据、运行配置或真实客户资料。HQ schema 改动在实际迁移前需要备份；本任务没有执行迁移。
+
+## 真实 HTTP 发现与恢复检查点
+
+2026-11-03 · Codex：在单独任务目录创建两套官方 WordPress 7.1.4 / WooCommerce 11.2.1、独立且带 marker 的合成测试库/账号/salts，使用 loopback HTTPS 与仅测试客户端信任的 CA；没有 bootstrap 原站或访问原业务库。实际请求发现管理 Host 登录/后台在 Woo 首次认证调用 `home_url()` 时，会被 Customizer 链接过滤器提前触发 `current_user_can()`，形成认证递归并耗尽内存。现窄修先判断真实 Customizer preview 对象，再检查能力，普通 home URL 不再启动用户认证；增加精确回归断言，原生 helper 检查 103 项通过。
+
+修复后前一轮真实 HTTP 收据 77 项中 76 项通过；剩余断言针对跨店匿名 CSV 的实际 HTTP 400（没有 CSV 内容）遗漏允许拒绝码，测试期望已改而尚待复跑。A/B 管理员和销售真实登录、host-only secure cookies、REST nonce、订单/CSV正例和跨店拒绝、public Host 人员/机器请求拒绝、UUID失配503、Woo顾客登录/退出/忘密页面及 public primary 切换均已有实际 HTTP 证据。Customizer 控制页实际200，iframe和纯POST selective refresh仍未完成。用户取消部署时已按PID/命令路径停止本人三个服务，测试库/文件保留；恢复授权后继续独立验收，不能将此检查点称作最终或生产验收通过。

@@ -49,7 +49,7 @@ function is_admin(){return str_starts_with($_SERVER['REQUEST_URI'],'/wp-admin/')
 function wp_doing_ajax(){return str_contains($_SERVER['REQUEST_URI'],'admin-ajax.php');}
 function wp_doing_cron(){return false;}
 function wp_get_current_user(){return $GLOBALS['actor']??new WP_User(0,array());}
-function current_user_can($cap){return user_can(wp_get_current_user(),$cap);}
+function current_user_can($cap){$GLOBALS['cap_calls']=($GLOBALS['cap_calls']??0)+1;return user_can(wp_get_current_user(),$cap);}
 function wc_get_page_permalink($page){return home_url('/my-account/');}
 function wc_get_account_endpoint_url($endpoint){return home_url('/my-account/'.$endpoint.'/?_wpnonce=synthetic');}
 function user_can($u,$cap){return in_array($cap,$u->caps,true);}
@@ -111,6 +111,7 @@ Domains::register_hooks();
 if('legacy'===$mode){check('legacy has no host enforcement',!isset($GLOBALS['filters']['init'][-1000]));check('legacy retains both domain filters',isset($GLOBALS['filters']['option_siteurl'][99]));check('legacy payment URL unchanged','http://127.0.0.1:18080/?wc-api=pc_panapay_return'===\VialCove\Panapay\Order_Payload::customer_url('http://127.0.0.1:18080/?wc-api=pc_panapay_return'));echo"PASS legacy $count\n";exit;}
 if(in_array($mode,array('bad-cookie','bad-home','bad-path','wrong-uuid','wrong-siteurl'),true)){check('bad binding fails closed',str_starts_with(outcome(fn()=>Host::guard_request()),'denied:503'));echo"PASS $mode $count\n";exit;}
 check('valid explicit binding',''===Host::configuration_error());
+$GLOBALS['cap_calls']=0;Host::customizer_link('https://shop-a.example/');check('ordinary home URL filter cannot hydrate authentication',0===$GLOBALS['cap_calls']);
 foreach(array('http://a.example','https://a.example:444','https://u:p@a.example','https://a.example/path','https://a.example/?x=1','https://a.example/#x','https://127.0.0.1','https://a.example\\evil')as$url){check('reject malformed management origin '.$url,''===Host::normalize_url($url));}
 check('normalize uppercase host','https://a.example'===Host::normalize_url('https://A.EXAMPLE/'));
 check('unknown host not admitted',!in_array('other.platform.example',Host::allowed_hosts(),true));

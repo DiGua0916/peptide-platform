@@ -149,7 +149,9 @@ final class Management_Host {
 
 	public static function customizer_link( $url ) {
 		$manager = $GLOBALS['wp_customize'] ?? null;
-		return self::is_management_request() && current_user_can( 'customize' ) && $manager instanceof \WP_Customize_Manager && $manager->is_preview()
+		// Woo's initial authentication itself calls home_url(); do not hydrate a user here
+		// until a native Customizer has actually entered preview mode.
+		return $manager instanceof \WP_Customize_Manager && $manager->is_preview() && self::is_management_request() && current_user_can( 'customize' )
 			? self::management_link( $url ) : $url;
 	}
 
