@@ -94,7 +94,7 @@ final class Parameter_Table {
 		return false;
 	}
 
-	/** Strict base64 XLSX, single visible worksheet; XML is read directly from a bounded in-memory ZIP. */
+	/** Strict base64 XLSX, exactly one populated visible worksheet; empty sheets are fully validated then ignored. */
 	public static function xlsx( string $encoded ) {
 		if ( strlen( $encoded ) > 4 * (int) ceil( self::MAX_BYTES / 3 ) || strlen( $encoded ) % 4 || strspn( $encoded, 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=' ) !== strlen( $encoded ) ) { return self::error( 'invalid_base64', 'XLSX 必须以标准 Base64 上传，文件最大 1 MiB。' ); }
 		$binary = base64_decode( $encoded, true );
@@ -122,21 +122,37 @@ final class Parameter_Table {
 			if ( preg_match( '/macro|vba|activex|oleobject/i', (string) $type['ContentType'] ) ) { return self::error( 'active_content', 'XLSX 不允许宏、ActiveX 或嵌入对象。' ); }
 		}
 		$sheets = $xml_parts['xl/workbook.xml']->xpath( './*[local-name()="sheets"]/*[local-name()="sheet"]' );
-		if ( 1 !== count( $sheets ) || isset( $sheets[0]['state'] ) && 'visible' !== (string) $sheets[0]['state'] ) { return self::error( 'single_sheet_required', '请使用只有一个可见工作表的 XLSX；多工作表不会被部分导入。' ); }
-		$ids = $sheets[0]->xpath( './@*[local-name()="id"]' ); $target = '';
-		if ( 1 !== count( $ids ) ) { return self::error( 'invalid_xlsx', '工作表关系无效。' ); }
-		foreach ( $xml_parts['xl/_rels/workbook.xml.rels']->xpath( './*[local-name()="Relationship"]' ) as $rel ) {
-			if ( (string) $rel['Id'] === (string) $ids[0] && str_ends_with( (string) $rel['Type'], '/worksheet' ) ) { $target = (string) $rel['Target']; }
-		}
-		$target = str_starts_with( $target, '/' ) ? ltrim( $target, '/' ) : 'xl/' . $target;
-		if ( ! preg_match( '~\Axl/worksheets/[A-Za-z0-9_.-]+\.xml\z~D', $target ) || ! isset( $xml_parts[ $target ] ) ) { return self::error( 'invalid_sheet_path', '工作表路径无效或不受支持。' ); }
-		if ( 'worksheet' !== $xml_parts[ $target ]->getName() ) { return self::error( 'invalid_xlsx', '工作表 XML 结构无效。' ); }
+		if ( ! $sheets ) { return self::error( 'single_sheet_required', 'XLSX 至少需要一张包含参数表的可见工作表。' ); }
 		$strings = array();
 		if ( isset( $xml_parts['xl/sharedStrings.xml'] ) ) {
 			foreach ( $xml_parts['xl/sharedStrings.xml']->xpath( './*[local-name()="si"]' ) as $item ) { $strings[] = self::rich_text( $item ); if ( count( $strings ) > self::MAX_CELLS ) { return self::error( 'shared_strings_limit', '共享文本数量超过安全上限。' ); } }
 		}
-		$matrix = array(); $count = 0; $warnings = array();
-		foreach ( $xml_parts[ $target ]->xpath( './*[local-name()="sheetData"]/*[local-name()="row"]' ) as $row ) {
+		$selected = null; $count = 0; $warnings = array(); $sheet_ids = array();
+		foreach ( $sheets as $sheet ) {
+			$ids = $sheet->xpath( './@*[local-name()="id"]' ); $target = '';
+			if ( 1 !== count( $ids ) || isset( $sheet_ids[ (string) $ids[0] ] ) ) { return self::error( 'invalid_xlsx', '工作表关系无效或重复。' ); }
+			$sheet_ids[ (string) $ids[0] ] = true;
+			foreach ( $xml_parts['xl/_rels/workbook.xml.rels']->xpath( './*[local-name()="Relationship"]' ) as $rel ) {
+				if ( (string) $rel['Id'] === (string) $ids[0] && str_ends_with( (string) $rel['Type'], '/worksheet' ) ) { $target = (string) $rel['Target']; }
+			}
+			$target = str_starts_with( $target, '/' ) ? ltrim( $target, '/' ) : 'xl/' . $target;
+			if ( ! preg_match( '~\Axl/worksheets/[A-Za-z0-9_.-]+\.xml\z~D', $target ) || ! isset( $xml_parts[ $target ] ) ) { return self::error( 'invalid_sheet_path', '工作表路径无效或不受支持。' ); }
+			if ( 'worksheet' !== $xml_parts[ $target ]->getName() ) { return self::error( 'invalid_xlsx', '工作表 XML 结构无效。' ); }
+			$records = self::worksheet_rows( $xml_parts[ $target ], $strings, $count, $warnings );
+			if ( is_wp_error( $records ) ) { return $records; }
+			if ( ! $records ) { continue; }
+			if ( null !== $selected || isset( $sheet['state'] ) && 'visible' !== (string) $sheet['state'] ) { return self::error( 'single_sheet_required', 'XLSX 只能有一张包含数据的可见参数表；多个非空工作表不会被部分导入。空白工作表可保留。' ); }
+			$selected = $records;
+		}
+		if ( null === $selected ) { return self::error( 'missing_header', 'XLSX 没有包含参数表的非空工作表。' ); }
+		$result = self::rows( $selected, 'xlsx' ); if ( ! is_wp_error( $result ) ) { $result['report']['warnings'] = array_values( $warnings ); }
+		return $result;
+	}
+
+	/** Validate even blank sheets; a workbook-wide cell counter bounds all of them together. */
+	private static function worksheet_rows( \SimpleXMLElement $sheet, array $strings, int &$count, array &$warnings ) {
+		$matrix = array();
+		foreach ( $sheet->xpath( './*[local-name()="sheetData"]/*[local-name()="row"]' ) as $row ) {
 			foreach ( $row->xpath( './*[local-name()="c"]' ) as $cell ) {
 				if ( ++$count > self::MAX_CELLS || ! preg_match( '/\A([A-Z]{1,3})([1-9][0-9]{0,6})\z/D', (string) $cell['r'], $match ) ) { return self::error( 'cell_limit', '单元格数量或位置无效。' ); }
 				$col = 0; foreach ( str_split( $match[1] ) as $letter ) { $col = $col * 26 + ord( $letter ) - 64; } $line = (int) $match[2];
@@ -161,8 +177,7 @@ final class Parameter_Table {
 			$list = array_fill( 0, max( $width, $last ), '' ); foreach ( $cells as $col => $value ) { if ( $col <= count( $list ) ) { $list[ $col - 1 ] = $value; } }
 			$records[] = array( 'cells' => $list, 'line' => $line );
 		}
-		$result = self::rows( $records, 'xlsx' ); if ( ! is_wp_error( $result ) ) { $result['report']['warnings'] = array_values( $warnings ); }
-		return $result;
+		return $records;
 	}
 
 	private static function rich_text( \SimpleXMLElement $node ): string {

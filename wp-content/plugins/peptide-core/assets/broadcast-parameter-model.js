@@ -31,6 +31,18 @@
     return input.map(value => text(value)).filter(Boolean);
   }
 
+  /** Merchant-summary convenience only; public playback pools are already masked by PHP. */
+  function maskValue(input) {
+    const value = text(input);
+    if (!value) return '';
+    return value.split(' ').map(word => {
+      // Idempotent for server-redacted pools and the one-character fallback.
+      if (word === '***' || /^.\*{3}$/u.test(word)) return word;
+      const points = [...word];
+      return points.length > 1 ? points[0] + '***' : '***';
+    }).join(' ');
+  }
+
   function contains(template, key) { return template.includes('{' + key + '}'); }
 
   /** Exactly one replacement pass: custom values and native context are literal insertions. */
@@ -68,10 +80,16 @@
       if (!/^[\p{L}_][\p{L}\p{N}_-]{0,39}$/u.test(key) || ['__proto__', 'constructor', 'prototype'].includes(key.toLowerCase()) || columns.has(key)) {
         throw new TypeError('Invalid or duplicate parameter key.');
       }
+      if (Object.prototype.hasOwnProperty.call(entry, 'privacy') && typeof entry.privacy !== 'boolean') {
+        throw new TypeError('Parameter privacy must be a boolean.');
+      }
+      const pool = list(entry.values);
       const unique = new Map();
-      for (const value of list(entry.values)) if (!unique.has(value.toLowerCase())) unique.set(value.toLowerCase(), value);
-      const values = [...unique.values()];
-      if (!values.length || (total += values.length) > 1000) throw new RangeError('Invalid parameter value count.');
+      for (const value of pool) if (!unique.has(value.toLowerCase())) unique.set(value.toLowerCase(), value);
+      // PHP has already masked private pools. Equal-looking redactions still represent
+      // distinct original choices, so preserve their probability and ordered positions.
+      const values = entry.privacy === true ? pool : [...unique.values()];
+      if (!values.length || (total += values.length) > 2000) throw new RangeError('Invalid parameter value count.');
       columns.set(key, values);
     }
     const random = options.random === undefined ? Math.random : options.random;
@@ -135,14 +153,14 @@
     const byItems = new WeakMap();
     const adapter = Object.freeze(Object.assign({}, base, {
       normalizeConfig(input) {
-        const isRandom = input && input.parameterMode === 'random' && Array.isArray(input.parameters) && input.parameters.length > 0;
-        // These strings are height probes only in the random session. The old controller
+        const hasSession = input && ['random', 'ordered'].includes(input.parameterMode) && Array.isArray(input.parameters) && input.parameters.length > 0;
+        // These strings are height probes only in a parameter session. The old controller
         // rejects a literal {name} in its legacy list before consulting our frame renderer.
-        const fallback = isRandom && Array.isArray(input.items)
+        const fallback = hasSession && Array.isArray(input.items)
           ? Object.assign({}, input, {items: input.items.map(value => typeof value === 'string' ? value.replace(/\{name\}/g, '｛name｝') : value)})
           : input;
         const result = base.normalizeConfig(fallback);
-        if (!isRandom) return result;
+        if (!hasSession) return result;
         const session = create(input);
         if (!session.count()) return result;
         byItems.set(result.items, session);
@@ -169,5 +187,5 @@
     return adapter;
   }
 
-  return Object.freeze({create, install});
+  return Object.freeze({create, install, maskValue});
 });
