@@ -103,7 +103,7 @@ final class Product_Broadcast_Controller {
 		if ( is_wp_error( $data ) ) { return $data; }
 		foreach ( array( 'content', 'filename', 'mode' ) as $key ) { if ( ! is_string( $data[ $key ] ?? null ) ) { return self::invalid( $key, 'string_required' ); } }
 		if ( isset( $data['restore'] ) && ! is_bool( $data['restore'] ) ) { return self::invalid( 'restore', 'boolean_required' ); }
-		$config = Config::normalize( $data['config'] ?? null );
+		$config = Config::normalize_for_import( $data['config'] ?? null );
 		if ( is_wp_error( $config ) ) { return $config; }
 		return self::respond( Importer::parse( $data['content'], $data['filename'], $config, $data['mode'], $data['restore'] ?? false ) );
 	}

@@ -16,7 +16,7 @@ final class Importer {
 		$extension = strtolower( pathinfo( $filename, PATHINFO_EXTENSION ) );
 		if ( ! in_array( $extension, array( 'txt', 'csv', 'json', 'xlsx' ), true ) ) { return Config::error( 'file', 'unsupported_format', '参数表支持 CSV 或 XLSX；配置备份支持 JSON，旧文案支持 TXT / CSV。不支持 .xls。' ); }
 		if ( $restore && 'json' !== $extension ) { return Config::error( 'restore', 'unsupported_format', '完整配置恢复只支持 JSON 配置对象。' ); }
-		$current = Config::normalize( $current ); if ( is_wp_error( $current ) ) { return $current; }
+		$current = Config::normalize_for_import( $current ); if ( is_wp_error( $current ) ) { return $current; }
 		if ( 'xlsx' === $extension ) { $table = Parameter_Table::xlsx( $text ); return is_wp_error( $table ) ? $table : self::parameters( $table, $current, $mode ); }
 		$limit = $restore && 'json' === $extension ? self::MAX_BACKUP_BYTES : self::MAX_BYTES;
 		if ( strlen( $text ) > $limit ) { return Config::error( 'file', 'too_large', $restore ? 'JSON 配置备份最大为 8 MiB，未应用此次恢复。' : '导入文件最大为 1 MiB，未应用此次导入。' ); }
@@ -41,7 +41,7 @@ final class Importer {
 				if ( $restore ) {
 					if ( ! array_key_exists( 'items', $json ) ) { return Config::error( 'items', 'required', '完整配置恢复需要包含 items 的 JSON 配置对象。' ); }
 					$json['items'] = self::json_items( $json['items'] ); if ( is_wp_error( $json['items'] ) ) { return $json['items']; }
-					$next = Config::normalize( $json ); if ( is_wp_error( $next ) ) { return $next; }
+					$next = Config::normalize_for_import( $json ); if ( is_wp_error( $next ) ) { return $next; }
 					$columns = count( $next['parameters'] ); $values = $columns ? self::value_count( $next['parameters'] ) : count( $next['items'] );
 					return array( 'config' => $next, 'report' => array( 'sourceCount' => $values, 'validCount' => $values, 'duplicateCount' => 0, 'addedCount' => $values, 'totalCount' => $values, 'blankCount' => 0, 'columnCount' => $columns, 'mode' => 'replace', 'restored' => true, 'warnings' => Config::warnings( $next ) ) );
 				}

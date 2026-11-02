@@ -11,7 +11,7 @@ final class Config {
 	public const MAX_TEXT_LENGTH = 500;
 	public const MAX_NAME_LENGTH = 120;
 	public const MAX_COLUMNS = 32;
-	public const MAX_PARAMETER_VALUES = 1000;
+	public const MAX_PARAMETER_VALUES = 2000;
 	public const KEYS = array( 'version', 'enabled', 'badgeEnabled', 'items', 'keywords', 'parameters', 'parameterMode', 'enterMs', 'holdMs', 'exitMs', 'gapMs' );
 	public const TIMINGS = array( 'enterMs' => array( 150, 2000 ), 'holdMs' => array( 1500, 15000 ), 'exitMs' => array( 150, 2000 ), 'gapMs' => array( 0, 2000 ) );
 	public const TOKENS = array( 'product', 'specification', 'price', 'sku' );
@@ -63,8 +63,22 @@ final class Config {
 		return is_wp_error( $playback ) ? $playback : $out;
 	}
 
+	/** Only import may fill empty editing placeholders; all keys, values and limits remain validated. */
+	public static function normalize_for_import( $input ) {
+		if ( is_array( $input ) && array_key_exists( 'parameters', $input ) ) {
+			$parameters = self::parameter_columns( $input['parameters'], true );
+			if ( is_wp_error( $parameters ) ) { return $parameters; }
+			$input['parameters'] = array_values( array_filter( $parameters, static fn( array $column ): bool => (bool) $column['values'] ) );
+		}
+		return self::normalize( $input );
+	}
+
 	/** Independent ordered columns; a parameter table is data, never an expression. */
 	public static function normalize_parameters( $input ) {
+		return self::parameter_columns( $input, false );
+	}
+
+	private static function parameter_columns( $input, bool $allow_empty ) {
 		if ( ! is_array( $input ) || ! array_is_list( $input ) ) { return self::error( 'parameters', 'invalid_type', '参数表必须是有序列数组。' ); }
 		if ( count( $input ) > self::MAX_COLUMNS ) { return self::error( 'parameters', 'too_many_columns', '最多支持 32 个参数列。' ); }
 		$out = array(); $keys = array(); $total = 0;
@@ -78,9 +92,9 @@ final class Config {
 			if ( isset( $keys[ $key ] ) ) { return self::error( $path . '.key', 'duplicate_key', '参数表存在重复列 {' . $key . '}。' ); }
 			$values = self::normalize_items( $column['values'] ?? null, $path . '.values' );
 			if ( is_wp_error( $values ) ) { return $values; }
-			if ( ! $values ) { return self::error( $path . '.values', 'empty_column', '参数 {' . $key . '} 至少需要一个非空值。' ); }
+			if ( ! $values && ! $allow_empty ) { return self::error( $path . '.values', 'empty_column', '参数 {' . $key . '} 至少需要一个非空值。' ); }
 			$total += count( $values );
-			if ( $total > self::MAX_PARAMETER_VALUES ) { return self::error( 'parameters', 'too_many_values', '参数表各列合计最多 1,000 个有效值。' ); }
+			if ( $total > self::MAX_PARAMETER_VALUES ) { return self::error( 'parameters', 'too_many_values', '参数表各列合计最多 2,000 个有效值；单列最多 1,000 个。' ); }
 			$keys[ $key ] = true; $out[] = array( 'key' => $key, 'values' => $values );
 		}
 		return $out;

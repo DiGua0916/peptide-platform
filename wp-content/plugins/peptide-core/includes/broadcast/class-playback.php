@@ -42,8 +42,9 @@ final class Playback {
 				if ( is_wp_error( $text ) ) { return $text; }
 				$lower = Config::lower( $text ); if ( is_wp_error( $lower ) ) { return $lower; }
 				if ( '' === $text || isset( $seen[ $lower ] ) ) { continue; }
+				// Legacy clients receive a bounded fallback; the complete runtime pools/templates remain below.
+				if ( count( $keywords ) >= Config::MAX_ITEMS ) { break 2; }
 				$seen[ $lower ] = true; $keywords[] = $text;
-				if ( count( $keywords ) > Config::MAX_ITEMS ) { return Config::error( 'keywords', 'too_many_expanded', '重点词替换参数后最多 1,000 项，请减少重点词或参数值。' ); }
 			}
 		}
 		// Only referenced parameter values belong in public playback. Unused table columns stay private.

@@ -62,12 +62,24 @@
 .pc-broadcast-admin .pc-bra-parameter-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e6e6e6; }
 .pc-broadcast-admin .pc-bra-parameter-head h3 { margin: 0; color: #171717; font-size: 14px; line-height: 20px; font-weight: 600; }
 .pc-broadcast-admin .pc-bra-parameters { display: grid; gap: 12px; margin-top: 12px; }
-.pc-broadcast-admin .pc-bra-parameter { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(0, 2fr) auto; align-items: start; gap: 12px; padding-top: 12px; border-top: 1px solid #e6e6e6; min-width: 0; }
+.pc-broadcast-admin .pc-bra-parameter { display: grid; grid-template-columns: minmax(128px, .8fr) minmax(0, 1.4fr) auto; align-items: start; gap: 12px; padding-top: 12px; border-top: 1px solid #e6e6e6; min-width: 0; }
 .pc-broadcast-admin .pc-bra-parameter:first-child { padding-top: 0; border: 0; }
-.pc-broadcast-admin .pc-bra-parameter-name, .pc-broadcast-admin .pc-bra-parameter-values { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pc-broadcast-admin .pc-bra-parameter-name, .pc-broadcast-admin .pc-bra-parameter-values, .pc-broadcast-admin .pc-bra-parameter-summary { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .pc-broadcast-admin .pc-bra-parameter label { color: #666; font-size: 12px; line-height: 20px; }
-.pc-broadcast-admin .pc-bra-parameter textarea { resize: vertical; min-height: 76px; }
-.pc-broadcast-admin .pc-bra-parameter > button { margin-top: 26px; }
+.pc-broadcast-admin .pc-bra-parameter-total { margin: 12px 0 0; color: #404040; font-size: 13px; line-height: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pc-broadcast-admin .pc-bra-parameter-summary { grid-column: 2; grid-row: 1; }
+.pc-broadcast-admin .pc-bra-parameter-summary-head { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; min-height: 20px; color: #666; font-size: 12px; line-height: 20px; }
+.pc-broadcast-admin .pc-bra-parameter-count { color: #404040; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pc-broadcast-admin .pc-bra-parameter-examples { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 36px; color: #404040; font-size: 12px; line-height: 20px; }
+.pc-broadcast-admin .pc-bra-parameter-example { flex: 0 1 auto; min-width: 0; max-width: 24ch; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.pc-broadcast-admin .pc-bra-parameter-more { flex: 0 0 auto; color: #666; white-space: nowrap; }
+.pc-broadcast-admin .pc-bra-parameter-empty { color: #666; overflow-wrap: anywhere; }
+.pc-broadcast-admin .pc-bra-parameter-actions { grid-column: 3; grid-row: 1; display: flex; flex-wrap: wrap; gap: 8px; padding-top: 26px; }
+.pc-broadcast-admin .pc-bra-parameter-actions .button { min-height: 36px; padding: 7px 10px; white-space: nowrap; }
+.pc-broadcast-admin .pc-bra-parameter-values { grid-column: 1 / -1; grid-row: 2; }
+.pc-broadcast-admin .pc-bra-parameter textarea { resize: vertical; height: 136px; min-height: 120px; }
+.pc-broadcast-admin .pc-bra-parameter-values .pc-bra-hint { margin: 0; }
+.pc-broadcast-admin .pc-bra-parameter-count.is-over, .pc-broadcast-admin .pc-bra-parameter-total.is-over { color: #933a32; }
 .pc-broadcast-admin .pc-bra-preview-row { display: flex; align-items: center; gap: 8px; min-width: 0; margin-top: 16px; padding: 10px 12px; background: #f5f5f5; border-radius: 6px; }
 .pc-broadcast-admin .pc-bra-preview-row .dashicons { flex: 0 0 20px; width: 20px; height: 20px; }
 .pc-broadcast-admin .pc-bra-preview-text { display: block; min-width: 0; flex: 1 1 auto; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 14px; line-height: 20px; }
@@ -89,6 +101,6 @@
 @keyframes pc-bra-exit { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-6px); } }
 @media (max-width: 1200px) { .pc-broadcast-admin .pc-bra-grid { grid-template-columns: minmax(0,1fr); } .pc-broadcast-admin .pc-bra-side { position: static; display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 20px; } }
 @media (max-width: 782px) { .pc-broadcast-admin .pc-bra-side { display: block; } .pc-broadcast-admin .pc-bra-times { grid-template-columns: minmax(0,1fr) minmax(0,1fr); } .pc-broadcast-admin .pc-bra-section { padding: 16px; } }
-@media (max-width: 600px) { .pc-broadcast-admin .pc-bra-parameter { grid-template-columns: minmax(0,1fr) auto; } .pc-broadcast-admin .pc-bra-parameter-values { grid-column: 1 / -1; grid-row: 2; } .pc-broadcast-admin .pc-bra-parameter > button { grid-column: 2; grid-row: 1; } }
+@media (max-width: 600px) { .pc-broadcast-admin .pc-bra-parameter { grid-template-columns: minmax(0,1fr); gap: 8px; } .pc-broadcast-admin .pc-bra-parameter-name, .pc-broadcast-admin .pc-bra-parameter-summary, .pc-broadcast-admin .pc-bra-parameter-actions, .pc-broadcast-admin .pc-bra-parameter-values { grid-column: 1; grid-row: auto; } .pc-broadcast-admin .pc-bra-parameter-name { order: 0; } .pc-broadcast-admin .pc-bra-parameter-summary { order: 1; } .pc-broadcast-admin .pc-bra-parameter-values { order: 3; } .pc-broadcast-admin .pc-bra-parameter-actions { order: 2; padding-top: 0; } .pc-broadcast-admin .pc-bra-parameter-examples { min-height: 28px; } }
 @media (max-width: 420px) { .pc-broadcast-admin .pc-bra-head > div { align-items: flex-start; flex-direction: column; gap: 8px; } .pc-broadcast-admin .pc-bra-actions > .button { max-width: 100%; } .pc-broadcast-admin .pc-bra-import-mode, .pc-broadcast-admin .pc-bra-file { flex-basis: 100%; } }
 @media (prefers-reduced-motion: reduce) { .pc-broadcast-admin .button { transition: none; } .pc-broadcast-admin .button:active:not(:disabled) { transform: none; } .pc-broadcast-admin .pc-bra-preview-text { animation: none !important; transform: none !important; } }

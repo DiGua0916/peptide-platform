@@ -71,7 +71,7 @@
       const unique = new Map();
       for (const value of list(entry.values)) if (!unique.has(value.toLowerCase())) unique.set(value.toLowerCase(), value);
       const values = [...unique.values()];
-      if (!values.length || (total += values.length) > 1000) throw new RangeError('Invalid parameter value count.');
+      if (!values.length || (total += values.length) > 2000) throw new RangeError('Invalid parameter value count.');
       columns.set(key, values);
     }
     const random = options.random === undefined ? Math.random : options.random;
@@ -135,14 +135,14 @@
     const byItems = new WeakMap();
     const adapter = Object.freeze(Object.assign({}, base, {
       normalizeConfig(input) {
-        const isRandom = input && input.parameterMode === 'random' && Array.isArray(input.parameters) && input.parameters.length > 0;
-        // These strings are height probes only in the random session. The old controller
+        const hasSession = input && ['random', 'ordered'].includes(input.parameterMode) && Array.isArray(input.parameters) && input.parameters.length > 0;
+        // These strings are height probes only in a parameter session. The old controller
         // rejects a literal {name} in its legacy list before consulting our frame renderer.
-        const fallback = isRandom && Array.isArray(input.items)
+        const fallback = hasSession && Array.isArray(input.items)
           ? Object.assign({}, input, {items: input.items.map(value => typeof value === 'string' ? value.replace(/\{name\}/g, '｛name｝') : value)})
           : input;
         const result = base.normalizeConfig(fallback);
-        if (!isRandom) return result;
+        if (!hasSession) return result;
         const session = create(input);
         if (!session.count()) return result;
         byItems.set(result.items, session);
