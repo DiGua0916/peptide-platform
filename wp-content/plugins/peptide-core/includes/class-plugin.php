@@ -57,6 +57,8 @@ final class Plugin {
 		Coupons::register_hooks();
 		Coupon_Rules::register_hooks();
 		Exit_Intent::register_hooks();
+		Modules\Product_Broadcast::register_hooks();
+		Api\Product_Broadcast_Controller::register_hooks();
 		Pixels::register_hooks();
 		Seo::register_hooks();
 		Domains::register_hooks();
@@ -126,6 +128,7 @@ final class Plugin {
 			Admin\Coupons_Page::register_hooks();
 			Admin\Shipping_Discounts_Page::register_hooks();
 			Admin\Apps_Page::register_hooks();
+			Admin\Product_Broadcast_Page::register_hooks();
 			Admin\Pixels_Page::register_hooks();
 			Admin\Seo_Page::register_hooks();
 			Admin\Data_Pages::register_hooks();

@@ -36,6 +36,12 @@ final class Apps_Page {
 				'icon' => 'dashicons-undo',
 				'on'   => (bool) Exit_Intent::settings()['enabled'],
 			),
+			'product-broadcast' => array(
+				'name' => __( '商品播报', 'peptide-core' ),
+				'text' => __( '按顺序轮播商品说明；统一管理文案、重点词、姓名与播放时间，供装修积木和商品弹窗引用。', 'peptide-core' ),
+				'icon' => 'dashicons-visibility',
+				'on' => (bool) \PeptideCore\Broadcast\Store::effective()['enabled'],
+			),
 		);
 	}
 
@@ -72,6 +78,10 @@ final class Apps_Page {
 
 	public static function render(): void {
 		if ( ! current_user_can( self::CAP ) ) {
+			return;
+		}
+		if ( 'product-broadcast' === ( $_GET['app'] ?? '' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only routing; the page and API enforce permissions.
+			Product_Broadcast_Page::render();
 			return;
 		}
 		if ( 'exit-intent' === ( $_GET['app'] ?? '' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended

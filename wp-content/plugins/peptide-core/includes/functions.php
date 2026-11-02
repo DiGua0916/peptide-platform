@@ -172,3 +172,18 @@ function peptide_core_get_collection( int $id ): ?array {
 function peptide_core_get_report_library( array $filters = array() ) {
 	return \PeptideCore\Report_Archive::query( $filters );
 }
+
+/** Published product broadcast only. Draft/editor identities never enter the storefront DTO. */
+function peptide_core_product_broadcast_config(): array {
+	return \PeptideCore\Broadcast\Store::effective();
+}
+
+/** Resolve against this WordPress site; callers must not hard-code a domain or another store. */
+function peptide_core_product_broadcast_url(): string {
+	return \PeptideCore\Modules\Product_Broadcast::config_url();
+}
+
+/** Inert mount data, or empty when disabled. Frontend owns placement and playback. */
+function peptide_core_product_broadcast_markup(): string {
+	return \PeptideCore\Modules\Product_Broadcast::markup();
+}

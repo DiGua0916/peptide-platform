@@ -162,7 +162,8 @@ final class Renderer {
 		} else {
 			$inner = self::inner( $module, $context, 'all' );
 		}
-		return '' === $inner && ! $editor ? '' : self::wrap( $module, $inner, $editor );
+		if ( '' === $inner && ! $editor ) { return ''; }
+		return (string) apply_filters( 'peptide_core_module_wrapper', self::wrap( $module, $inner, $editor ), $module, $editor );
 	}
 
 	/**
