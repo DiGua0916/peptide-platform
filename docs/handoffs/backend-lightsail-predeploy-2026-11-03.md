@@ -40,6 +40,8 @@
 
 三者均未解包启用。完整性核验不等于项目兼容、邮件投递或支付验收。FluentSMTP 计划提供真实运输配置入口，不能启用 Email Simulation；盐连续性、邮件日志权限/保留及既有营销队列另需验收。
 
+WP-CLI 2.12.0 已从官方固定 release 准备；官方 SHA256/SHA512 和 GPG 签名均通过，签名指纹为 `63AF7AA15067C05616FDDD88A3A2E8F226F0BC06`。PHAR SHA256 为 `ce34ddd838f7351d6759068d09793f26755463b4a4610a5a5c0a97b68220d85c`，上传后再验相同，安装在 `/usr/local/lib/vialcove-tools/wp-cli-2.12.0.phar`，root 所有且不可由站点用户改写，`/usr/local/bin/wp` 为固定 PHP 路径包装器。以无 sudo 的 `vialdeploy`、空 CLI 配置、非站点目录运行 `--version` 实际通过；未加载 WordPress 或处理业务数据。收据 `wpcli-verification-passed.json` 与 `wpcli-server-installed.json`，不能将工具可运行等同网站已上线。
+
 ### 原站只读容量盘点
 
 未 bootstrap WordPress 或写入原库。实际只读 SQL 统计 70 表均 InnoDB，data+index 估计 23,658,496 字节，2 用户、85 产品、183 规格，CPT/HPOS 订单 0。只输出计数，不读取客户字段值，不能据此认定所有数据均合成。uploads 约 801MB，私有报告存储候选约 557MB；这些是盘点时点数据，不是最终一致性快照或已核引用的迁移清单。
