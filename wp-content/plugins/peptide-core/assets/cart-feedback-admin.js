@@ -21,6 +21,8 @@
 		var settings = section( main, '反馈设置' ); toggle( settings, 'enabled', '启用加购反馈', '默认开启。仅配置真实加购过程的状态反馈，不会默认加购或跳转到购物车。' );
 		var duration = field( settings, 'successDurationMs', '成功提示时长（毫秒）', 'number', '800 至 2200 毫秒；仅在 WooCommerce 确认本次加购成功后使用。' ); duration.min = '800'; duration.max = '2200'; duration.step = '1';
 		toggle( settings, 'bagPulseEnabled', '购物袋数量更新时轻微强调', '客户使用减少动态效果时，前端保留静态状态和正确数量，不播放强调动画。' );
+		toggle( settings, 'burstEnabled', '加购成功时播放小烟花', '仅在 WooCommerce 确认本次加购成功后播放；客户使用减少动态效果时保持静态反馈。' );
+		var burstDuration = field( settings, 'burstDurationMs', '小烟花时长（毫秒）', 'number', '600 至 1000 毫秒；关闭小烟花时保留此设置。' ); burstDuration.min = '600'; burstDuration.max = '1000'; burstDuration.step = '1';
 		field( settings, 'pendingText', '处理中提示', 'text', '1 至 60 个字符，使用纯文本。' ).maxLength = 120;
 		field( settings, 'successText', '成功提示', 'text', '1 至 60 个字符，使用纯文本。' ).maxLength = 120;
 		var safety = section( main, '固定行为' ), list = el( 'ul', 'pc-cfa-rules' );
@@ -32,14 +34,15 @@
 		root.addEventListener( 'click', onClick ); [ 'input', 'change' ].forEach( function ( kind ) { root.addEventListener( kind, function ( event ) { if ( state && event.target.name ) updateDirty(); } ); } );
 		window.addEventListener( 'beforeunload', function ( event ) { if ( dirty ) { event.preventDefault(); event.returnValue = ''; } } );
 	}
-	function collect() { return { version:1, enabled:fields.enabled.checked, successDurationMs:Number( fields.successDurationMs.value ), bagPulseEnabled:fields.bagPulseEnabled.checked, successText:fields.successText.value, pendingText:fields.pendingText.value }; }
-	function configShape( c ) { return c && c.version === 1 && typeof c.enabled === 'boolean' && Number.isSafeInteger( c.successDurationMs ) && c.successDurationMs >= 800 && c.successDurationMs <= 2200 && typeof c.bagPulseEnabled === 'boolean' && typeof c.successText === 'string' && typeof c.pendingText === 'string'; }
+	function collect() { return { version:1, enabled:fields.enabled.checked, successDurationMs:Number( fields.successDurationMs.value ), bagPulseEnabled:fields.bagPulseEnabled.checked, burstEnabled:fields.burstEnabled.checked, burstDurationMs:Number( fields.burstDurationMs.value ), successText:fields.successText.value, pendingText:fields.pendingText.value }; }
+	function configShape( c ) { return c && c.version === 1 && typeof c.enabled === 'boolean' && Number.isSafeInteger( c.successDurationMs ) && c.successDurationMs >= 800 && c.successDurationMs <= 2200 && typeof c.bagPulseEnabled === 'boolean' && typeof c.burstEnabled === 'boolean' && Number.isSafeInteger( c.burstDurationMs ) && c.burstDurationMs >= 600 && c.burstDurationMs <= 1000 && typeof c.successText === 'string' && typeof c.pendingText === 'string'; }
 	function dtoShape( d ) { return d && Number.isSafeInteger( d.revision ) && d.revision >= 0 && d.draft && configShape( d.draft.config ) && d.published && configShape( d.published.config ) && Number.isSafeInteger( d.published.revision ) && d.published.revision >= 0 && d.published.revision <= d.revision && configShape( d.defaults ); }
 	function validate( c ) {
 		if ( fields.successDurationMs.value === '' || ! Number.isSafeInteger( c.successDurationMs ) || c.successDurationMs < 800 || c.successDurationMs > 2200 ) throw { message:'成功提示时长须为 800 至 2200 毫秒的整数。', data:{ fields:{ successDurationMs:'out_of_range' } } };
+		if ( fields.burstDurationMs.value === '' || ! Number.isSafeInteger( c.burstDurationMs ) || c.burstDurationMs < 600 || c.burstDurationMs > 1000 ) throw { message:'小烟花时长须为 600 至 1000 毫秒的整数。', data:{ fields:{ burstDurationMs:'out_of_range' } } };
 		[ 'successText', 'pendingText' ].forEach( function ( key ) { var value = c[key].normalize( 'NFC' ).replace( /[\s\p{Z}]+/gu, ' ' ).trim(); if ( Array.from( value ).length < 1 || Array.from( value ).length > 60 || /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test( value ) || /<\s*(?:\/?\s*[a-z][^>]*>|!--|!doctype\b|\?)/i.test( value ) ) { var invalid = {}; invalid[key] = 'invalid_format'; throw { message:'提示文案须为 1 至 60 个字符的纯文本。', data:{ fields:invalid } }; } c[key] = value; } ); return c;
 	}
-	function fill( c ) { fields.enabled.checked = c.enabled; fields.bagPulseEnabled.checked = c.bagPulseEnabled; fields.successDurationMs.value = String( c.successDurationMs ); fields.successText.value = c.successText; fields.pendingText.value = c.pendingText; clearInvalid(); }
+	function fill( c ) { fields.enabled.checked = c.enabled; fields.bagPulseEnabled.checked = c.bagPulseEnabled; fields.burstEnabled.checked = c.burstEnabled; fields.successDurationMs.value = String( c.successDurationMs ); fields.burstDurationMs.value = String( c.burstDurationMs ); fields.successText.value = c.successText; fields.pendingText.value = c.pendingText; clearInvalid(); }
 	function updateDirty() { dirty = JSON.stringify( collect() ) !== baseline; nodes.status.textContent = dirty ? '当前编辑内容尚未保存' : '当前草稿已与后台一致'; }
 	function clearInvalid() { root.querySelectorAll( '[aria-invalid]' ).forEach( function ( n ) { n.removeAttribute( 'aria-invalid' ); } ); }
 	function accept( data ) {

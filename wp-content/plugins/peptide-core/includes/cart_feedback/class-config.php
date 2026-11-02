@@ -8,10 +8,19 @@ final class Config {
 
 	public const VERSION = 1;
 	public const MAX_TEXT_LENGTH = 60;
-	public const KEYS = array( 'version', 'enabled', 'successDurationMs', 'bagPulseEnabled', 'successText', 'pendingText' );
+	public const KEYS = array( 'version', 'enabled', 'successDurationMs', 'bagPulseEnabled', 'burstEnabled', 'burstDurationMs', 'successText', 'pendingText' );
 
 	public static function defaults(): array {
-		return array( 'version' => 1, 'enabled' => true, 'successDurationMs' => 1400, 'bagPulseEnabled' => true, 'successText' => 'Added', 'pendingText' => 'Adding…' );
+		return array( 'version' => 1, 'enabled' => true, 'successDurationMs' => 1400, 'bagPulseEnabled' => true, 'burstEnabled' => true, 'burstDurationMs' => 850, 'successText' => 'Added', 'pendingText' => 'Adding…' );
+	}
+
+	/** Upgrade the complete, original v1 storage shape in memory only; new writes remain strict. */
+	public static function normalize_stored( $input ) {
+		if ( is_array( $input ) && ! array_key_exists( 'burstEnabled', $input ) && ! array_key_exists( 'burstDurationMs', $input ) ) {
+			$input['burstEnabled']    = true;
+			$input['burstDurationMs'] = 850;
+		}
+		return self::normalize( $input );
 	}
 
 	/** PUT/publish replace a full configuration; a missing guard cannot inherit an enabled default. */
@@ -24,10 +33,11 @@ final class Config {
 			if ( ! array_key_exists( $key, $input ) ) { return self::error( $key, 'required', '请重新读取并提交完整配置。' ); }
 		}
 		if ( 1 !== $input['version'] ) { return self::error( 'version', 'invalid_version', '仅支持整数版本 1。' ); }
-		foreach ( array( 'enabled', 'bagPulseEnabled' ) as $key ) {
+		foreach ( array( 'enabled', 'bagPulseEnabled', 'burstEnabled' ) as $key ) {
 			if ( ! is_bool( $input[ $key ] ) ) { return self::error( $key, 'boolean_required', '开关必须为 true 或 false。' ); }
 		}
 		if ( ! is_int( $input['successDurationMs'] ) || $input['successDurationMs'] < 800 || $input['successDurationMs'] > 2200 ) { return self::error( 'successDurationMs', 'out_of_range', '成功提示时长须为 800 至 2200 毫秒的整数。' ); }
+		if ( ! is_int( $input['burstDurationMs'] ) || $input['burstDurationMs'] < 600 || $input['burstDurationMs'] > 1000 ) { return self::error( 'burstDurationMs', 'out_of_range', '小烟花时长须为 600 至 1000 毫秒的整数。' ); }
 		foreach ( array( 'successText', 'pendingText' ) as $key ) {
 			$text = $input[ $key ];
 			if ( ! is_string( $text ) || 1 !== preg_match( '//u', $text ) || preg_match( '/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]|<\s*(?:\/?\s*[a-z][^>]*>|!--|!doctype\b|\?)/iu', $text ) ) { return self::error( $key, 'plain_text_required', '提示文案须为有效的纯文本，不能包含 HTML。' ); }
