@@ -18,6 +18,7 @@ final class Progress {
 		try {
 			$cart = $cart ?? ( function_exists( 'WC' ) ? WC()->cart : null );
 			if ( ! $cart instanceof \WC_Cart ) { return self::finish( $out, 'unavailable', 'cart_unavailable' ); }
+			$out['cartSnapshotKey'] = Cart_Snapshot::key( $cart );
 			$totals = self::cart_totals( $cart );
 			if ( null === $totals ) { return self::finish( $out, 'unavailable', 'cart_totals_unavailable' ); }
 			$out['cartSubtotal'] = self::money( $totals['subtotal'] );
@@ -72,7 +73,7 @@ final class Progress {
 			'version' => 1, 'enabled' => true === ( $settings['enabled'] ?? false ), 'visible' => false,
 			'revision' => is_int( $settings['revision'] ?? null ) ? $settings['revision'] : 0,
 			'title' => is_string( $settings['title'] ?? null ) ? $settings['title'] : '',
-			'promotionRevision' => '', 'stateKey' => '', 'status' => 'unavailable', 'reason' => '', 'message' => '',
+			'promotionRevision' => '', 'stateKey' => '', 'cartSnapshotKey' => '', 'status' => 'unavailable', 'reason' => '', 'message' => '',
 			'currency' => get_woocommerce_currency(), 'currencyMinorUnit' => wc_get_price_decimals(),
 			'cartSubtotal' => self::money( 0 ), 'eligibleSubtotal' => self::money( 0 ), 'actualDiscount' => self::money( 0 ),
 			'basis' => 'spend', 'measure' => '0', 'measureText' => '', 'progressPercent' => 0.0,

@@ -6,18 +6,53 @@ use PeptideCore\Activity\Config;
 use PeptideCore\Activity\Store;
 use PeptideCore\Activity\Progress;
 use PeptideCore\Promotions;
+use PeptideCore\Activity\Cart_Reader;
+use PeptideCore\Activity\Recommendations;
 
 defined( 'ABSPATH' ) || exit;
 
 final class Activity_Listener_Controller {
-	public static function register_hooks(): void { add_action( 'rest_api_init', array( self::class, 'register_routes' ) ); }
+	public static function register_hooks(): void { add_action( 'rest_api_init', array( self::class, 'register_routes' ) ); add_filter( 'rest_post_dispatch', array( self::class, 'private_headers' ), 10, 3 ); }
 	public static function register_routes(): void {
 		register_rest_route( Rest_Controller::ROUTE_NAMESPACE, '/activity-listener', array( 'methods' => 'GET', 'callback' => array( self::class, 'effective' ), 'permission_callback' => '__return_true' ) );
+		register_rest_route( Rest_Controller::ROUTE_NAMESPACE, '/activity-listener/recommendations', array( 'methods' => 'POST', 'callback' => array( self::class, 'recommendations' ), 'permission_callback' => array( self::class, 'can_recommend' ) ) );
 		foreach ( array( '/admin' => array( array( 'GET', 'read' ), array( 'PUT', 'save' ) ), '/publish' => array( array( 'POST', 'publish' ) ), '/preview' => array( array( 'POST', 'preview' ) ) ) as $path => $methods ) {
 			$routes = array();
 			foreach ( $methods as [ $method, $callback ] ) { $routes[] = array( 'methods' => $method, 'callback' => array( self::class, $callback ), 'permission_callback' => array( self::class, 'can_manage' ) ); }
 			register_rest_route( Rest_Controller::ROUTE_NAMESPACE, '/activity-listener' . $path, $routes );
 		}
+	}
+
+	/** Even validation/authentication errors must never become shared cart-cache entries. */
+	public static function private_headers( $response, $server, \WP_REST_Request $request ) {
+		if ( '/peptide/v1/activity-listener/recommendations' === $request->get_route() && $response instanceof \WP_REST_Response ) {
+			$response->header( 'Cache-Control', 'private, no-store, max-age=0' );
+			$response->header( 'Vary', 'Cookie, Origin, Cart-Token' );
+			$response->header( 'X-Content-Type-Options', 'nosniff' );
+		}
+		return $response;
+	}
+	public static function can_recommend( \WP_REST_Request $request ) {
+		if ( \PeptideCore\Store_Config::get( 'force_login' ) && ! is_user_logged_in() ) { return Recommendations::error( 'login_required', 401 ); }
+		if ( is_user_logged_in() && ! wp_verify_nonce( (string) $request->get_header( 'X-WP-Nonce' ), 'wp_rest' ) ) { return Recommendations::error( 'invalid_nonce', 403 ); }
+		$origin = (string) $request->get_header( 'Origin' );
+		if ( '' === $origin ) { $origin = (string) $request->get_header( 'Referer' ); }
+		$parts = wp_parse_url( $origin ); $home = wp_parse_url( home_url( '/' ) );
+		if ( ! is_array( $parts ) || ! is_array( $home ) || strtolower( $parts['scheme'] ?? '' ) !== strtolower( $home['scheme'] ?? '' ) || strtolower( $parts['host'] ?? '' ) !== strtolower( $home['host'] ?? '' ) || (int) ( $parts['port'] ?? ( 'https' === ( $parts['scheme'] ?? '' ) ? 443 : 80 ) ) !== (int) ( $home['port'] ?? ( 'https' === ( $home['scheme'] ?? '' ) ? 443 : 80 ) ) ) { return Recommendations::error( 'invalid_origin', 403 ); }
+		return true;
+	}
+	public static function recommendations( \WP_REST_Request $request ) {
+		$query = self::query( $request ); if ( is_wp_error( $query ) ) { return $query; }
+		if ( ! $request->is_json_content_type() || strlen( $request->get_body() ) > 16384 || ! json_decode( $request->get_body() ) instanceof \stdClass ) { return Recommendations::error( 'invalid_input' ); }
+		$input = Recommendations::validate( $request->get_json_params() ); if ( is_wp_error( $input ) ) { return $input; }
+		try {
+			$current = Cart_Reader::read( $request ); if ( is_wp_error( $current ) ) { return $current; }
+			// Security-only expiring state; no customer/cart/session/analytics record is written.
+			$key = 'pc-recommendation-' . $current['rateKey'];
+			if ( \WC_Rate_Limiter::retried_too_soon( $key ) ) { return Recommendations::error( 'rate_limited', 429, array( 'retryAfter' => 3 ) ); }
+			if ( ! \WC_Rate_Limiter::set_rate_limit( $key, 2 ) ) { return Recommendations::error( 'rate_limit_unavailable', 503 ); }
+			return self::respond( Recommendations::quote( $current['cart'], $input, null, $current['persistedTotals'] ) );
+		} catch ( \Throwable $error ) { return Recommendations::error( 'cart_unavailable', 503 ); }
 	}
 	public static function can_manage( \WP_REST_Request $request ) {
 		if ( ! Store::can_manage() ) { return new \WP_Error( 'pc_activity_listener_forbidden', __( '此账号没有应用配置权限。', 'peptide-core' ), array( 'status' => rest_authorization_required_code() ) ); }

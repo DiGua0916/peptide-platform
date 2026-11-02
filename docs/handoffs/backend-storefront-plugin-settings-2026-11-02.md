@@ -21,4 +21,4 @@ Admin entries remain `wp-admin/admin.php?page=pc-apps&app=activity-listener`, `.
 
 These are backend/configuration/native-fixture checks, not claims that the frontend Demo, animation, popup view counting or real add-to-cart request lifecycle has been browser-accepted. No live application configuration, promotion, product, price, stock, customer or order was edited. New uninstalled frontend drafts were moved out of plugin source into task work files.
 
-The new recommendation quotation endpoint and full-cart fingerprint are a separate implementation stage; do not treat the configuration object alone as a working recommendation.
+The recommendation quotation endpoint and full-cart fingerprint are delivered in the [separate quote handoff](backend-activity-recommendations-2026-11-02.md). Do not treat the configuration object alone as a working frontend recommendation card.
