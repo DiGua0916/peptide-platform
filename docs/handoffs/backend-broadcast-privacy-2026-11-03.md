@@ -31,3 +31,7 @@ The user's existing formal tab was read only: three parameter rows, current draf
 
 Evidence: `D:/Codex/Tasks/2026-11-03/broadcast-privacy/outputs/`. Local screenshots use synthetic names and do not prove a customer setting was applied. This feature needs the merchant to enable selected columns and click Save and apply.
 
+
+### Formal local page reopened after integration
+
+Read-only DOM inspection of the newly opened local WordPress admin confirms three enabled privacy controls, all initially off, alongside the existing3 parameter columns and1,078 saved values. The status reads that the current draft matches the backend. The final helper/admin asset URLs include their updated file modification versions. New in-app tab76 is selected and retained; old tab74 is preserved. No privacy switch, import, save or apply was performed on the actual store. The separate synthetic preview tab was closed and its task-owned server stopped. Receipt: `outputs/formal-reopened.json`.
