@@ -213,7 +213,7 @@ final class Hub_Page {
 		$revision = $accounts ? (int) reset( $accounts )['revision'] : 0;
 		$editing = isset( $_GET['edit_account'] ) && is_string( $_GET['edit_account'] ) ? wp_unslash( $_GET['edit_account'] ) : '';
 		$edit_valid = '' !== $editing && isset( $accounts[ $editing ] ) && ! self::is_on( $accounts[ $editing ]['archived'] ?? 'no' );
-		$raw = $edit_valid ? $accounts[ $editing ] : Hub_Accounts::defaults();
+		$raw = $edit_valid ? $accounts[ $editing ] : Hub_Accounts::new_account_defaults();
 		$id = $edit_valid ? $editing : '';
 		$auto_open = isset( $_GET['new_account'] ) || isset( $_GET['edit_account'] );
 		$account_error = isset( $_GET['account_error'] ) && '1' === $_GET['account_error'] && is_array( $notice ) && 'error' === $notice['type'];
@@ -262,7 +262,7 @@ final class Hub_Page {
 					<div class="pc-pay-field pc-pay-field-wide"><label for="pc-pay-description">付款说明</label><textarea id="pc-pay-description" name="description" maxlength="1000" rows="2"><?php echo esc_textarea( $raw['description'] ); ?></textarea></div>
 				</div></fieldset>
 				<fieldset class="pc-pay-account-fields pc-pay-switches"><legend>收款与店铺</legend>
-					<input type="hidden" name="enabled" value="no"><label><input type="checkbox" name="enabled" value="yes" <?php checked( self::is_on( $raw['enabled'] ) ); ?>>开启此付款方式</label><p class="pc-pay-muted">关闭后停止新支付，在途付款继续回写。</p>
+					<input type="hidden" name="enabled" value="no"><label><input type="checkbox" name="enabled" value="yes" <?php checked( self::is_on( $raw['enabled'] ) ); ?>>启用此付款方式</label><p class="pc-pay-muted">新增时默认开启，支持多位客户同时付款。仅需暂停整个付款方式时关闭；已发起的付款仍会更新结果。</p>
 					<input type="hidden" name="all_sites" value="no"><label><input type="checkbox" name="all_sites" value="yes" data-pc-pay-all-sites <?php checked( self::is_on( $raw['all_sites'] ) ); ?>>同步到全部已接入店铺</label><p class="pc-pay-muted">包括后续接入的店铺；各店只能取得付款展示配置。</p>
 					<details class="pc-pay-site-picker" <?php echo self::is_on( $raw['all_sites'] ) ? '' : 'open'; ?>><summary>指定店铺（未选择全部时生效）</summary><div class="pc-pay-store-options"><?php foreach ( $sites as $site ) : ?><label class="pc-pay-store-option"><input type="checkbox" name="sites[]" value="<?php echo esc_attr( (string) $site['id'] ); ?>" <?php checked( in_array( (int) $site['id'], $authorized, true ) ); ?>><span><strong><?php echo esc_html( $site['name'] ); ?></strong><small><?php echo esc_html( \PeptideHq\Site_Urls::public_url( $site ) ); ?></small></span></label><?php endforeach; ?><?php if ( ! $sites ) : ?><p class="pc-pay-muted">暂无已接入店铺。</p><?php endif; ?></div></details>
 				</fieldset>

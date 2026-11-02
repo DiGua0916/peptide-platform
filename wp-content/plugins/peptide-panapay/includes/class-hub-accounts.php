@@ -76,7 +76,7 @@ final class Hub_Accounts {
 		if ( '' === $id ) {
 			if ( count( $accounts ) >= self::LIMIT ) { throw new \InvalidArgumentException( 'The payment account limit has been reached.' ); }
 			do { $id = bin2hex( random_bytes( 16 ) ); } while ( isset( $accounts[ $id ] ) );
-			$candidate = self::defaults( $id );
+			$candidate = self::new_account_defaults( $id );
 		} else {
 			if ( ! isset( $accounts[ $id ] ) ) { throw new \InvalidArgumentException( 'Payment account was not found.' ); }
 			$candidate = $accounts[ $id ];
@@ -127,6 +127,13 @@ final class Hub_Accounts {
 			'description' => 'Continue to the secure payment page to pay for your order.', 'gateway' => '', 'mchid' => '', 'secret' => '',
 			'mode' => '2', 'tag' => '', 'test_mode' => 'yes', 'payment_hosts' => array(), 'payment_icons' => array(), 'iframe_height' => 530,
 			'all_sites' => 'yes', 'sites' => array(), 'archived' => 'no' );
+	}
+
+	/** New accounts start selected for collection; stored/legacy defaults remain fail-closed. */
+	public static function new_account_defaults( string $id = '' ): array {
+		$defaults = self::defaults( $id );
+		$defaults['enabled'] = 'yes';
+		return $defaults;
 	}
 
 	private static function configuration( array $raw ): array {
