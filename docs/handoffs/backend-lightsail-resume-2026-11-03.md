@@ -2,6 +2,8 @@
 
 2026-11-03 · Codex · LIGHTSAIL-RESUME-01
 
+> This document preserves the preceding deployment snapshot. The later user-authorized continuation updated both store runtimes, confirmed the new backup retention, and removed the merchant migration gate. Use [continued deployment and mail readiness](backend-store-mail-ready-2026-11-03.md) for the latest state; earlier `current` paths and retention/gate statements below are historical.
+
 投流店铺公开入口为 `https://s0001.vialcovepeptides.com`，固定管理入口已由另一获用户授权的聊天切换为 **`https://s0001.vialcoveresearch.com`**，独立店铺admin部署在后台服务器。web01承载公开PHP/API、主MySQL及数据文件，本机没有HQ。首次手动加密备份与隔离库/媒体恢复已通过，另一窗口接管的daily timer现为active。**站点能够访问，不代表已经可真实交易：doctor仍有6 fail、3 warn，支付和邮件实测未完成。**
 
 ## 当前发布与协作边界
