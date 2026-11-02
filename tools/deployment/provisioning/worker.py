@@ -171,6 +171,8 @@ php_admin_value[session.save_path] = {data}/sessions
 
 
 def vhost(t, host, *, tls=False):
+    write('/etc/nginx/conf.d/vialcove-tenant-login-limit.conf',
+          'limit_req_zone $binary_remote_addr zone=vialcove_tenant_login:10m rate=6r/m;\n', 0o644)
     path = Path('/etc/nginx/sites-available/vialcove-' + t['slug'])
     acme = '/var/www/vialcove-tenant-acme'
     Path(acme, '.well-known/acme-challenge').mkdir(parents=True, exist_ok=True)
@@ -204,6 +206,14 @@ def vhost(t, host, *, tls=False):
  location ~* \.(?:sql|bak|log|ini|cnf|pem|key|sh|py)(?:$|/) {{ return 404; }}
  location ~* ^/wp-content/.*\.(?:php[0-9]*|phtml|phar)(?:$|/) {{ return 404; }}
  location / {{ try_files $uri $uri/ /index.php?$args; }}
+ location = /wp-login.php {{
+  limit_req zone=vialcove_tenant_login burst=10 nodelay;
+  limit_req_status 429;
+  include fastcgi_params;
+  fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+  fastcgi_param HTTPS on; fastcgi_param HTTP_PROXY "";
+  fastcgi_pass unix:/run/php/vialcove-{t['slug']}.sock;
+ }}
  location ~ \.php$ {{
   try_files $uri =404;
   include fastcgi_params;
@@ -257,6 +267,9 @@ require ABSPATH.'wp-load.php';require ABSPATH.'wp-admin/includes/upgrade.php';
 add_filter('pre_wp_mail','__return_false',PHP_INT_MIN);
 if(!is_blog_installed()){wp_install($x['title'],$x['login'],$x['email'],false,'',$x['password'],'en_US');}
 update_option('home',$x['home']);update_option('siteurl',$x['siteurl']);update_option('blog_public','0');
+$identity=get_option('peptide_core_hq',[]);
+if(empty($identity['uuid'])){update_option('peptide_core_hq',['uuid'=>PEPTIDE_CORE_MANAGEMENT_UUID,'key'=>bin2hex(random_bytes(32)),'created'=>time()],false);}
+elseif($identity['uuid']!==PEPTIDE_CORE_MANAGEMENT_UUID){throw new RuntimeException('store_identity_mismatch');}
 '''
     write(script, code, 0o640, t['user'])
     try:
@@ -347,6 +360,17 @@ def seed_template(t, c):
         payload.unlink(missing_ok=True)
 
 
+def tenant_cron(t):
+    # Only the storefront host owns shared-database scheduled jobs.
+    name = 'vialcove-' + t['slug'] + '-cron'
+    script = Path('/usr/local/sbin', name)
+    write(script, '#!/bin/sh\nset -eu\n/usr/local/libexec/vialcove-storage-guard --mysql\nexec /usr/sbin/runuser -u ' + t['user'] + ' -- /usr/bin/flock -n ' + str(t['data'] / 'ops/cron.lock') + ' /usr/local/bin/wp --path=' + str(t['public']) + ' --url=' + t['public_url'] + ' --quiet cron event run --due-now\n', 0o700)
+    write('/etc/systemd/system/' + name + '.service', '[Unit]\nAfter=mysql.service\n[Service]\nType=oneshot\nExecStart=' + str(script) + '\nTimeoutStartSec=90\nUMask=0077\n', 0o644)
+    write('/etc/systemd/system/' + name + '.timer', '[Timer]\nOnBootSec=120\nOnUnitInactiveSec=60\n[Install]\nWantedBy=timers.target\n', 0o644)
+    run(['systemctl', 'daemon-reload'])
+    run(['systemctl', 'enable', '--now', name + '.timer'])
+
+
 def web_create(p, c):
     require(set(p) == {'request', 'slug', 'uuid', 'media_key', 'registration_secret'}, 'remote_shape')
     r = validate_request(p['request'])
@@ -401,6 +425,7 @@ def web_create(p, c):
         vhost(t, t['slug'] + '.' + c['public_domain'], tls=True)
         save('served')
     media_user = export_media(t, p['media_key'], c['admin_ip'])
+    tenant_cron(t)
     cfg = configuration(t, c, 'vca_' + t['slug'], state['admin_password'], state['salts'], p['registration_secret'])
     return {'config': cfg, 'media_user': media_user, 'uuid': t['uuid'], 'ready': True}
 
@@ -477,7 +502,7 @@ def admin_create(r, state, c, secret):
         run(['systemctl', 'reload', 'php8.3-fpm'])
     # Native registration retains new per-store UUID/key. No merchant credentials are inherited.
     helper = t['data'] / 'register.php'
-    write(helper, "<?php\n$r=PeptideCore\\Hq_Connector::register();if(is_wp_error($r)){throw new RuntimeException('registration_failed');}echo json_encode(['registered'=>true]);", 0o640, t['user'])
+    write(helper, "<?php\nPeptideCore\\Domains::ensure_primary();foreach(PeptideCore\\Domains::items() as $host=>$unused){PeptideCore\\Domains::check($host);}$r=PeptideCore\\Hq_Connector::register();if(is_wp_error($r)){throw new RuntimeException('registration_failed');}echo json_encode(['registered'=>true]);", 0o640, t['user'])
     try:
         result = json.loads(run(['/usr/local/bin/wp', '--path=' + str(t['public']), '--url=' + t['management_url'], 'eval-file', str(helper)], user=t['user']))
         require(result.get('registered'), 'registration_failed')
@@ -490,7 +515,7 @@ def confirm_hq(t, c, job):
     helper = job / 'hq-confirm.php'
     expected = json.dumps(t['management_url'])
     identity = json.dumps(t['uuid'])
-    code = "<?php\n$found=[];foreach(PeptideHq\\Sites::all() as $s){if(rtrim(PeptideHq\\Site_Urls::management($s),'/')===" + expected + " && $s['uuid']===" + identity + "){$found[]=$s;}}if(count($found)!==1){throw new RuntimeException('identity');}$id=(int)$found[0]['id'];if(!PeptideHq\\Monitor::poll($id,true)){throw new RuntimeException('monitor');}echo json_encode(['site_id'=>$id]);"
+    code = "<?php\n$found=[];foreach(PeptideHq\\Sites::all() as $s){if(rtrim(PeptideHq\\Site_Urls::management($s),'/')===" + expected + " && $s['uuid']===" + identity + "){$found[]=$s;}}if(count($found)!==1){throw new RuntimeException('identity');}$id=(int)$found[0]['id'];$server=0;foreach(PeptideHq\\Servers::all() as $v){if($v['ip']===" + json.dumps(c['public_ip']) + "){$server=$v['id'];break;}}if(!$server){$server=PeptideHq\\Servers::save(0,'VialCove storefront 01'," + json.dumps(c['public_ip']) + ",'Provisioned storefronts');}if(is_wp_error($server)||!$server||is_wp_error(PeptideHq\\Servers::assign($id,(int)$server))){throw new RuntimeException('server_assignment');}if(!PeptideHq\\Monitor::poll($id,true)){throw new RuntimeException('monitor');}echo json_encode(['site_id'=>$id]);"
     write(helper, code)
     try:
         data = json.loads(run(['php', '/usr/local/bin/wp', '--allow-root', '--path=' + c['hq_root'], 'eval-file', str(helper)]))
@@ -529,7 +554,14 @@ def process_queue(c):
             elif not (job / 'request.json').exists() and not (job / 'state.json').exists():
                 private_json(job / 'request.json', r)
             else:
-                require(json.loads((job / 'request.json').read_text()) == r, 'request_changed')
+                original = json.loads((job / 'request.json').read_text())
+                finished = (job / 'state.json').exists() and json.loads((job / 'state.json').read_text()).get('state') == 'complete'
+                if finished:
+                    # Completed operations are immutable; replay returns the same result,
+                    # never recreates or changes an account whose password was redacted.
+                    require({k: v for k, v in original.items() if k != 'password'} == {k: v for k, v in r.items() if k != 'password'}, 'request_changed')
+                else:
+                    require(original == r, 'request_changed')
             entry.unlink()
         except Exception:
             # Never interpolate request content or an exception carrying passwords into logs.
@@ -567,7 +599,10 @@ def process_queue(c):
             private_json(job / 'request.json', r)
             status(job.name, state='complete', message='店铺已创建，可从店铺列表一键进入。', slug=t['slug'], management_url=t['management_url'] + '/wp-admin/', public_url=t['public_url'] + '/', site_id=site_id)
         except Exception as e:
-            status(job.name, state='pending', message='部署尚未完成，服务会安全重试；管理员可查看私有部署记录。', slug=state.get('slug', ''))
+            if isinstance(e, ValueError) and str(e) == 'store_limit':
+                status(job.name, state='waiting_capacity', message='已达到当前服务器的开店容量上限，请管理员评估负载并调整容量后继续。', slug=state.get('slug', ''))
+            else:
+                status(job.name, state='pending', message='部署尚未完成，服务会安全重试；管理员可查看私有部署记录。', slug=state.get('slug', ''))
             write(job / 'error-code.txt', type(e).__name__ + ':' + (str(e) if isinstance(e, ValueError) and re.fullmatch(r'[a-z0-9_]+', str(e)) else 'deployment_step_failed'))
 
 
