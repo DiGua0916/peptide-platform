@@ -110,7 +110,7 @@ final class Accounts_Page {
 							<td data-label="<?php esc_attr_e( 'Name', 'peptide-hq' ); ?>"><?php echo esc_html( (string) $a['name'] ); ?></td>
 							<td data-label="<?php esc_attr_e( 'Email', 'peptide-hq' ); ?>"><?php echo esc_html( (string) $a['email'] ); ?></td>
 							<td data-label="<?php echo esc_attr( str_starts_with( determine_locale(), 'zh' ) ? '登录入口' : __( 'Login entry', 'peptide-hq' ) ); ?>">
-								<?php if ( ! $off && ! empty( $a['staff_entry_url'] ) && is_string( $a['staff_entry_url'] ) ) : ?>
+								<?php if ( ! $off && ! empty( $a['staff_entry_url'] ) && is_string( $a['staff_entry_url'] ) && \PeptideHq\Site_Urls::allows_login( Sites::get( $site ) ?? array(), $a['staff_entry_url'] ) ) : ?>
 									<label class="screen-reader-text" for="pchq-entry-<?php echo (int) $a['id']; ?>"><?php echo esc_html( str_starts_with( determine_locale(), 'zh' ) ? '账号专属登录入口' : __( 'Account login entry', 'peptide-hq' ) ); ?></label>
 									<input type="url" readonly class="regular-text code" id="pchq-entry-<?php echo (int) $a['id']; ?>" value="<?php echo esc_url( $a['staff_entry_url'] ); ?>" spellcheck="false">
 									<p class="description"><?php echo esc_html( str_starts_with( determine_locale(), 'zh' ) ? '复制此入口给该销售；仍需输入账号和密码。' : __( 'Copy this entry for this salesperson. Their account and password are still required.', 'peptide-hq' ) ); ?></p>

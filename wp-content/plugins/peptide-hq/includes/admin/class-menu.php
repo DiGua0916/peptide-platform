@@ -252,7 +252,7 @@ final class Menu {
 				$info = Sites::get( $site );
 				$url  = is_array( $res ) ? (string) ( $res['url'] ?? '' ) : '';
 				// 只跳到这个店铺自己的地址。
-				if ( $info && '' !== $url && wp_parse_url( $url, PHP_URL_HOST ) === wp_parse_url( $info['url'], PHP_URL_HOST ) ) {
+				if ( $info && '' !== $url && \PeptideHq\Site_Urls::allows_login( $info, $url ) ) {
 					wp_redirect( $url ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- 店铺地址来自总后台保存的记录。
 					exit;
 				}

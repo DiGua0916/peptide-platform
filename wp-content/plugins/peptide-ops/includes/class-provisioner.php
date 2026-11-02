@@ -22,7 +22,7 @@ final class Provisioner {
 	public static function preflight( array $input ): array|\WP_Error {
 		$plan = self::plan( $input );
 		if ( is_wp_error( $plan ) ) { return $plan; }
-		return array( 'ready' => true, 'profile_id' => $plan['profile_id'], 'slug' => $plan['slug'], 'title' => $plan['title'], 'driver' => $plan['profile']['driver'], 'environment' => $plan['profile']['environment'] ?? 'production', 'independent_database_user' => ! empty( $plan['profile']['db']['create_user'] ), 'url' => $plan['url'], 'url_assigned_on_start' => '' === $plan['url'], 'will_copy_customer_data' => false, 'will_send_email' => false, 'requires_external_dns' => 'webserver' === $plan['profile']['driver'] );
+		return array( 'ready' => true, 'profile_id' => $plan['profile_id'], 'slug' => $plan['slug'], 'title' => $plan['title'], 'driver' => $plan['profile']['driver'], 'environment' => $plan['profile']['environment'] ?? 'production', 'independent_database_user' => ! empty( $plan['profile']['db']['create_user'] ), 'url' => $plan['url'], 'management_url' => $plan['management_url'], 'public_url' => $plan['public_url'], 'dual_domain' => $plan['dual_domain'], 'url_assigned_on_start' => '' === $plan['url'], 'will_copy_customer_data' => false, 'will_send_email' => false, 'requires_external_dns' => 'webserver' === $plan['profile']['driver'] );
 	}
 
 	/** The caller supplies an operation UUID and a progress callback; it cannot choose commands or roots. */
@@ -46,6 +46,7 @@ final class Provisioner {
 				$private = self::join( $plan['profile']['private_root'], $plan['slug'] );
 				$uuid = wp_generate_uuid4();
 				$state = array( 'operation_id' => $id, 'profile_id' => $plan['profile_id'], 'profile_hash' => $plan['profile_hash'], 'request_hash' => $plan['request_hash'], 'slug' => $plan['slug'], 'root' => $plan['target'], 'private' => $private, 'url' => $plan['url'], 'uuid' => $uuid, 'phase' => 'prepared', 'created' => time(), 'db_name' => self::database_name( $plan ), 'db_user' => '', 'db_created' => false, 'user_created' => false, 'vhost_started' => false );
+				$state += array( 'dual_domain' => $plan['dual_domain'], 'management_url' => $plan['management_url'], 'public_url' => $plan['public_url'] );
 				Storage::write_json( $rel . '/state.json', $state );
 				self::mkdir_owned( $state['root'], $plan['profile']['managed_root'], $id );
 				self::mkdir_owned( $private, $plan['profile']['private_root'], $id );
@@ -64,6 +65,7 @@ final class Provisioner {
 				$port = self::reserve_port( $p, $id, $requested );
 				if ( is_wp_error( $port ) ) { throw new \RuntimeException( $port->get_error_code() ); }
 				$state['port'] = $port; $state['url'] = 'http://127.0.0.1:' . $port;
+				$state['management_url'] = $state['url']; $state['public_url'] = $state['url'];
 				Storage::write_json( $rel . '/state.json', $state );
 			}
 			if ( self::before( $state, 'database' ) ) {
@@ -100,6 +102,7 @@ final class Provisioner {
 			self::register_store( $p, $state, $rel );
 			$state['phase'] = 'registered'; Storage::write_json( $rel . '/state.json', $state );
 			$result = array( 'operation_id' => $id, 'profile_id' => $plan['profile_id'], 'slug' => $plan['slug'], 'url' => $state['url'], 'uuid' => $state['uuid'], 'admin_login' => $credentials['admin_login'], 'environment' => $p['environment'] ?? 'production', 'health_verified' => true, 'hq_registration_verified' => true, 'empty_store' => true, 'credentials_private' => true, 'external_dns_managed' => false, 'tls_provisioned' => false );
+			$result += array( 'management_url' => $state['management_url'] ?? $state['url'], 'public_url' => $state['public_url'] ?? $state['url'], 'dual_domain' => ! empty( $state['dual_domain'] ) );
 			$state['result'] = $result; $state['phase'] = 'complete'; $state['completed'] = time();
 			Storage::write_json( $rel . '/state.json', $state );
 			$progress( 100, 'complete', '新店已运行并接入管理后台，可通过管理后台登录。' );
@@ -166,6 +169,9 @@ final class Provisioner {
 		}
 		$url = trim( (string) ( $in['url'] ?? '' ) );
 		if ( '' === $url && ! empty( $in['domain'] ) && 'webserver' === $p['driver'] ) { $url = 'https://' . trim( (string) $in['domain'] ); }
+		$urls = self::dual_urls( $in, $p );
+		if ( is_wp_error( $urls ) ) { return $urls; }
+		if ( $urls['dual_domain'] ) { $url = $urls['management_url']; }
 		if ( 'php-server' === $p['driver'] ) {
 			if ( 'local' !== ( $p['environment'] ?? '' ) || empty( $p['python_binary'] ) || ! is_file( $p['python_binary'] ) || ! self::ports( $p ) ) { return self::error( 'local_runner', '本机部署环境需要Python、允许端口池和local环境标识。' ); }
 			if ( '' !== $url ) {
@@ -180,8 +186,32 @@ final class Provisioner {
 			$url = rtrim( $url, '/' );
 		}
 		$request_hash = hash( 'sha256', wp_json_encode( array( $profile_id, $slug, $title, $login, $email, $url ) ) );
+		if ( $urls['dual_domain'] ) { $request_hash = hash( 'sha256', wp_json_encode( array( $profile_id, $slug, $title, $login, $email, $url, $urls['public_url'] ) ) ); }
 		if ( $state && ( $state['request_hash'] ?? '' ) !== $request_hash ) { return self::error( 'operation_conflict', '同一个任务编号不能修改站点名称、网址或管理员信息。' ); }
-		return array( 'operation_id' => $id, 'profile_id' => $profile_id, 'profile' => $p, 'profile_hash' => $profile_hash, 'request_hash' => $request_hash, 'slug' => $slug, 'title' => $title, 'admin_login' => $login, 'admin_email' => $email, 'target' => $target, 'url' => $url );
+		return array( 'operation_id' => $id, 'profile_id' => $profile_id, 'profile' => $p, 'profile_hash' => $profile_hash, 'request_hash' => $request_hash, 'slug' => $slug, 'title' => $title, 'admin_login' => $login, 'admin_email' => $email, 'target' => $target, 'url' => $url, 'management_url' => $urls['dual_domain'] ? $urls['management_url'] : $url, 'public_url' => $urls['dual_domain'] ? $urls['public_url'] : $url, 'dual_domain' => $urls['dual_domain'] );
+	}
+
+	/** Both explicit addresses are constrained by the agent's private domain allowlist. */
+	private static function dual_urls( array $in, array $p ): array|\WP_Error {
+		foreach ( array( 'management_url', 'public_url' ) as $field ) { if ( isset( $in[ $field ] ) && ! is_string( $in[ $field ] ) ) { return self::error( 'domain', '管理地址和顾客地址必须是网址文本。' ); } }
+		$management = trim( (string) ( $in['management_url'] ?? '' ) );
+		$public = trim( (string) ( $in['public_url'] ?? '' ) );
+		if ( '' === $management && '' === $public ) { return array( 'dual_domain' => false ); }
+		if ( 'webserver' !== $p['driver'] || '' === $management ) { return self::error( 'management_url', '双域部署需要正式服务器和固定管理地址。' ); }
+		$management = self::https_root_url( $management );
+		$public = self::https_root_url( '' === $public ? $management : $public );
+		if ( '' === $management || '' === $public || ! self::allowed_web_url( $management, $p ) || ! self::allowed_web_url( $public, $p ) ) { return self::error( 'domain', '管理地址和顾客地址必须是部署环境允许的HTTPS根网址。' ); }
+		return array( 'dual_domain' => true, 'management_url' => rtrim( $management, '/' ), 'public_url' => rtrim( $public, '/' ) );
+	}
+
+	private static function https_root_url( string $url ): string {
+		if ( '' === $url || preg_match( '/[\x00-\x20\x7f\\\\]/', $url ) ) { return ''; }
+		$u = wp_parse_url( $url );
+		if ( ! is_array( $u ) || 'https' !== ( $u['scheme'] ?? '' ) || empty( $u['host'] ) || isset( $u['user'] ) || isset( $u['pass'] ) || isset( $u['query'] ) || isset( $u['fragment'] ) || isset( $u['port'] ) && 443 !== $u['port'] || ! in_array( $u['path'] ?? '', array( '', '/' ), true ) ) { return ''; }
+		$host = strtolower( $u['host'] );
+		if ( strlen( $host ) > 253 ) { return ''; }
+		foreach ( explode( '.', $host ) as $label ) { if ( strlen( $label ) > 63 || ! preg_match( '/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/D', $label ) ) { return ''; } }
+		return 'https://' . $host . '/';
 	}
 
 	/** Resolve code only, never a merchant option or the HQ runtime configuration. */
@@ -303,9 +333,7 @@ final class Provisioner {
 		}
 	}
 	private static function write_config( array $p, array $state, array $credentials ): void {
-		$dbhost = (string) $p['db']['host']; if ( ! str_contains( $dbhost, ':' ) && ! empty( $p['db']['port'] ) ) { $dbhost .= ':' . (int) $p['db']['port']; }
-		$constants = array( 'DB_NAME' => $state['db_name'], 'DB_USER' => $state['db_user'], 'DB_PASSWORD' => ! empty( $p['db']['create_user'] ) ? $credentials['db_password'] : (string) ( $p['db']['password'] ?? '' ), 'DB_HOST' => $dbhost, 'DB_CHARSET' => 'utf8mb4', 'DB_COLLATE' => '', 'WP_HOME' => $state['url'], 'WP_SITEURL' => $state['url'], 'WP_DEBUG' => false, 'WP_DEBUG_DISPLAY' => false, 'WP_ENVIRONMENT_TYPE' => (string) ( $p['environment'] ?? 'production' ), 'DISALLOW_FILE_EDIT' => true, 'PEPTIDE_CORE_PRIVATE_DIR' => self::join( $state['private'], 'peptide-core' ), 'PEPTIDE_OPS_PRIVATE_DIR' => self::join( $state['private'], 'peptide-ops' ), 'PEPTIDE_HQ_URL' => rtrim( (string) $p['hq_url'], '/' ) . '/', 'PEPTIDE_HQ_SECRET' => $p['hq_secret'], 'PEPTIDE_OPS_SITE_UUID' => $state['uuid'] );
-		foreach ( array( 'AUTH_KEY', 'SECURE_AUTH_KEY', 'LOGGED_IN_KEY', 'NONCE_KEY', 'AUTH_SALT', 'SECURE_AUTH_SALT', 'LOGGED_IN_SALT', 'NONCE_SALT' ) as $key ) { $constants[ $key ] = bin2hex( random_bytes( 32 ) ); }
+		$constants = self::config_constants( $p, $state, $credentials );
 		$config = "<?php\n// Created by the private VialCove deployment agent.\n";
 		foreach ( $constants as $key => $value ) { $config .= 'define(' . var_export( $key, true ) . ', ' . var_export( $value, true ) . ");\n"; }
 		$config .= "\$table_prefix = 'wp_';\nif (!defined('ABSPATH')) { define('ABSPATH', __DIR__ . '/'); }\nrequire_once ABSPATH . 'wp-settings.php';\n";
@@ -322,6 +350,18 @@ final class Provisioner {
 		if ( false === file_put_contents( $config_path, wp_json_encode( array( 'tools' => $tools ) ), LOCK_EX ) ) { throw new \RuntimeException( 'private_config_write' ); }
 		@chmod( $config_path, 0600 );
 	}
+	private static function config_constants( array $p, array $state, array $credentials ): array {
+		$dbhost = (string) $p['db']['host']; if ( ! str_contains( $dbhost, ':' ) && ! empty( $p['db']['port'] ) ) { $dbhost .= ':' . (int) $p['db']['port']; }
+		$constants = array( 'DB_NAME' => $state['db_name'], 'DB_USER' => $state['db_user'], 'DB_PASSWORD' => ! empty( $p['db']['create_user'] ) ? $credentials['db_password'] : (string) ( $p['db']['password'] ?? '' ), 'DB_HOST' => $dbhost, 'DB_CHARSET' => 'utf8mb4', 'DB_COLLATE' => '', 'WP_HOME' => $state['url'], 'WP_SITEURL' => $state['url'], 'WP_DEBUG' => false, 'WP_DEBUG_DISPLAY' => false, 'WP_ENVIRONMENT_TYPE' => (string) ( $p['environment'] ?? 'production' ), 'DISALLOW_FILE_EDIT' => true, 'PEPTIDE_CORE_PRIVATE_DIR' => self::join( $state['private'], 'peptide-core' ), 'PEPTIDE_OPS_PRIVATE_DIR' => self::join( $state['private'], 'peptide-ops' ), 'PEPTIDE_HQ_URL' => rtrim( (string) $p['hq_url'], '/' ) . '/', 'PEPTIDE_HQ_SECRET' => $p['hq_secret'], 'PEPTIDE_OPS_SITE_UUID' => $state['uuid'] );
+		foreach ( array( 'AUTH_KEY', 'SECURE_AUTH_KEY', 'LOGGED_IN_KEY', 'NONCE_KEY', 'AUTH_SALT', 'SECURE_AUTH_SALT', 'LOGGED_IN_SALT', 'NONCE_SALT' ) as $key ) { $constants[ $key ] = bin2hex( random_bytes( 32 ) ); }
+		if ( ! empty( $state['dual_domain'] ) ) {
+			unset( $constants['WP_HOME'] );
+			$constants['WP_SITEURL'] = $state['management_url'];
+			$constants['PEPTIDE_CORE_MANAGEMENT_URL'] = $state['management_url'];
+			$constants['PEPTIDE_CORE_MANAGEMENT_UUID'] = $state['uuid'];
+		}
+		return $constants;
+	}
 	private static function wp( array $p, array $state, array $args, string $rel ): void {
 		$command = array( $p['php_binary'] ); if ( ! empty( $p['php_ini'] ) ) { $command[] = '-c'; $command[] = $p['php_ini']; }
 		$command[] = $p['wp_cli']; $command[] = '--path=' . self::join( $state['root'], 'public' ); $command[] = '--no-color';
@@ -337,6 +377,7 @@ final class Provisioner {
 		$code .= 'add_filter("pre_wp_mail", static fn() => false, PHP_INT_MAX); ';
 		$code .= '$u=get_user_by("login",' . var_export( $credentials['admin_login'], true ) . ');if(!$u){throw new RuntimeException("admin_missing");}wp_set_password(' . var_export( $credentials['admin_password'], true ) . ',$u->ID); ';
 		$code .= '$hq=(array)get_option("peptide_core_hq",array());$hq["uuid"]=' . var_export( $state['uuid'], true ) . ';update_option("peptide_core_hq",$hq,false); ';
+		foreach ( self::installation_urls( $state ) as $option => $value ) { $code .= 'update_option(' . var_export( $option, true ) . ',' . var_export( $value, true ) . '); '; }
 		$code .= 'update_option("blog_public",0); update_option("woocommerce_coming_soon","yes"); update_option("woocommerce_currency","USD"); update_option("woocommerce_default_country","US"); update_option("woocommerce_allowed_countries","specific"); update_option("woocommerce_specific_allowed_countries",array("US")); update_option("pc_email_campaigns_enabled",false,false); ';
 		$code .= '$s=PeptideCore\\Settings::all();$s["brand_name"]=get_bloginfo("name");$s["demo_mode"]=false;$s["demo_notice"]="";update_option("peptide_core_settings",$s,false); ';
 		$code .= 'foreach(WC()->payment_gateways()->payment_gateways()as$gateway){$v=(array)get_option("woocommerce_".$gateway->id."_settings",array());$v["enabled"]="no";update_option("woocommerce_".$gateway->id."_settings",$v,false);} ';
@@ -350,6 +391,10 @@ final class Provisioner {
 		$mu = self::join( $state['root'], 'public/wp-content/mu-plugins/vialcove-site-health.php' );
 		$health_code = '<?php defined("ABSPATH") || exit; add_action("rest_api_init",static function(){register_rest_route("peptide-ops/v1","/site-identity",array("methods"=>"GET","permission_callback"=>"__return_true","callback"=>static function(){return new WP_REST_Response(array("uuid"=>PEPTIDE_OPS_SITE_UUID,"store_ready"=>class_exists("WooCommerce")&&defined("PEPTIDE_CORE_VERSION")&&defined("PEPTIDE_PANAPAY_FILE")),200,array("Cache-Control"=>"no-store"));}));});';
 		file_put_contents( $mu, $health_code, LOCK_EX );
+	}
+
+	private static function installation_urls( array $state ): array {
+		return empty( $state['dual_domain'] ) ? array() : array( 'siteurl' => $state['management_url'], 'home' => $state['public_url'] );
 	}
 
 	private static function reserve_port( array $p, string $id, int $requested = 0 ): int|\WP_Error {
@@ -385,7 +430,7 @@ final class Provisioner {
 	private static function tool( string $name ): string { return dirname( __DIR__ ) . '/tools/' . $name; }
 	private static function vhost_args( $args, array $state ): array {
 		if ( ! is_array( $args ) || ! $args || ! is_string( $args[0] ) || ! self::absolute( $args[0] ) || ! is_file( $args[0] ) ) { throw new \RuntimeException( 'vhost_command' ); }
-		$replace = array( '{root}' => self::join( $state['root'], 'public' ), '{host}' => wp_parse_url( $state['url'], PHP_URL_HOST ), '{slug}' => $state['slug'], '{url}' => $state['url'] );
+		$replace = array( '{root}' => self::join( $state['root'], 'public' ), '{host}' => wp_parse_url( $state['url'], PHP_URL_HOST ), '{slug}' => $state['slug'], '{url}' => $state['url'], '{management_url}' => $state['management_url'] ?? $state['url'], '{public_url}' => $state['public_url'] ?? $state['url'], '{public_host}' => wp_parse_url( $state['public_url'] ?? $state['url'], PHP_URL_HOST ) );
 		return array_map( static function ( $arg ) use ( $replace ) { if ( ! is_scalar( $arg ) || str_contains( (string) $arg, "\0" ) ) { throw new \RuntimeException( 'vhost_argument' ); } return strtr( (string) $arg, $replace ); }, $args );
 	}
 	private static function health( string $url, string $uuid, int $timeout ): array|\WP_Error {

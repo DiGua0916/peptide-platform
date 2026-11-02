@@ -70,7 +70,9 @@ final class Client {
 		if ( ! $site ) {
 			return new \WP_Error( 'pchq_missing', __( 'Store not found.', 'peptide-hq' ) );
 		}
-		return self::request_raw( $site['url'], Sites::key( $site_id ), $method, $route, $query, $body );
+		$url = Site_Urls::management( $site );
+		if ( '' === $url ) { return new \WP_Error( 'pchq_management_url', 'The registered management address is invalid.' ); }
+		return self::request_raw( $url, Sites::key( $site_id ), $method, $route, $query, $body );
 	}
 
 	public static function status( int $site_id ) {

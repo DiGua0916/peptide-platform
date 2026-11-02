@@ -3,6 +3,7 @@
  * 总后台的表：店铺、每天的数字、告警、服务器。
  * v2：店铺换密钥再注册时，新密钥先放在 key_pending，检查连得上才换。
  * v3：服务器表；店铺记录分配的服务器（server_id）和店铺的固定编号（uuid，换主域名后仍然认得）。
+ * v4：固定管理地址与可变顾客地址分开保存；旧 url 继续作为机器连接地址。
  *
  * @package PeptideHq
  */
@@ -13,7 +14,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Db {
 
-	public const VERSION = '3';
+	public const VERSION = '4';
 	public const OPTION  = 'pchq_db';
 
 	public static function table( string $name ): string {
@@ -40,6 +41,8 @@ final class Db {
   id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   name varchar(190) NOT NULL DEFAULT '',
   url varchar(255) NOT NULL DEFAULT '',
+  management_url varchar(255) NOT NULL DEFAULT '',
+  public_url varchar(255) NOT NULL DEFAULT '',
   key_enc text NOT NULL,
   key_pending text NULL,
   uuid varchar(64) NOT NULL DEFAULT '',

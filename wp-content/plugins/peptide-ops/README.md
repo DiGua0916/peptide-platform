@@ -38,6 +38,14 @@ if (is_readable($agent)) { require_once $agent; }
 
 本机 driver 只绑定允许池中的 `127.0.0.1` 端口。正式 driver 不购买服务器、不自动配置 DNS 或申请 TLS；未准备好的映射、域名和依赖会使预检失败。真实服务器配置与公网部署应另行验证。
 
+### 固定管理域与顾客域（显式启用）
+
+正式 `webserver` 建站可传 `management_url`、`public_url`。管理地址必须是固定 HTTPS 根网址；顾客地址留空时先使用管理地址，两者相同也支持。两者均须命中该私有环境的 `allowed_domains`；禁止路径、凭据、query、fragment 和非 443 端口。显式 `management_url` 接管机器连接和 WordPress 安装地址；旧 `url` 仅供没有显式双域字段的部署使用，本机 driver 保留旧行为。
+
+双域站点配置 `PEPTIDE_CORE_MANAGEMENT_URL` 和新生成的完整 `PEPTIDE_CORE_MANAGEMENT_UUID`，后者与初始化的 `peptide_core_hq.uuid` 相同。`WP_SITEURL` 固定管理地址，**不定义 `WP_HOME`**；数据库 `siteurl` 初始为管理地址、`home` 初始为顾客地址，后续顾客主域切换只改 `home`。需要配套实现管理域策略的 peptide-core，不能单独安装这次 Ops 后就声称双域安全可用。
+
+私有 `vhost_command` 与回收命令除原 `{url}`、`{host}`、`{root}`、`{slug}` 外，可用 `{management_url}`、`{public_url}`、`{public_host}`。管理员仍须事先准备两个 Host 的映射、TLS 及默认未知 Host 拒绝；此功能不自动配置 DNS/TLS。结果 DTO 的 `url`/`management_url` 用于机器/后台，`public_url` 仅用于顾客预览。
+
 新站随机密码存放在该建站任务的私有凭据文件中，页面与任务日志不回显。日常通过管理后台店铺列表一键登录。支付、外部邮件、搜索连接保持未配置；建站不发送邮件或复制演示商品。
 
 ## 定时备份
