@@ -4,7 +4,8 @@ defined( 'ABSPATH' ) || exit;
 
 $vc_management_host = defined( 'PEPTIDE_CORE_MANAGEMENT_URL' ) ? parse_url( PEPTIDE_CORE_MANAGEMENT_URL, PHP_URL_HOST ) : '';
 $vc_request_host = strtolower( (string) ( $_SERVER['HTTP_HOST'] ?? '' ) );
-if ( ! $vc_management_host || strtolower( $vc_management_host ) !== $vc_request_host || 'wp-login.php' !== ( $GLOBALS['pagenow'] ?? '' ) ) {
+$vc_request_path = parse_url( (string) ( $_SERVER['REQUEST_URI'] ?? '' ), PHP_URL_PATH );
+if ( ! $vc_management_host || strtolower( $vc_management_host ) !== $vc_request_host || '/wp-login.php' !== $vc_request_path ) {
 	return;
 }
 
