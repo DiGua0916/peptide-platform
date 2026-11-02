@@ -76,6 +76,15 @@
 .pc-broadcast-admin .pc-bra-parameter-empty { color: #666; overflow-wrap: anywhere; }
 .pc-broadcast-admin .pc-bra-parameter-actions { grid-column: 3; grid-row: 1; display: flex; flex-wrap: wrap; gap: 8px; padding-top: 26px; }
 .pc-broadcast-admin .pc-bra-parameter-actions .button { min-height: 36px; padding: 7px 10px; white-space: nowrap; }
+/* The privacy switch stays beside the actions; native input retains keyboard/form semantics. */
+.pc-broadcast-admin .pc-bra-parameter-privacy { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; margin: 0; cursor: pointer; white-space: nowrap; color: #171717; font-size: 13px; }
+.pc-broadcast-admin .pc-bra-parameter-privacy input[type="checkbox"] { appearance: none; position: relative; display: inline-block; flex: 0 0 32px; width: 32px; height: 20px; min-height: 20px; padding: 0; margin: 0; border: 1px solid #737373; border-radius: 12px; background: #fff; cursor: pointer; transition: background-color 200ms cubic-bezier(.22,1,.36,1); }
+.pc-broadcast-admin .pc-bra-parameter-privacy input[type="checkbox"]::before { content: ""; position: absolute; inset: 3px auto auto 3px; width: 12px; height: 12px; margin: 0; border-radius: 50%; background: #666; transform: none; transition: transform 200ms cubic-bezier(.22,1,.36,1); }
+.pc-broadcast-admin .pc-bra-parameter-privacy input[type="checkbox"]:checked { background: #171717; border-color: #171717; }
+.pc-broadcast-admin .pc-bra-parameter-privacy input[type="checkbox"]:checked::before { content: ""; background: #fff; transform: translateX(12px); }
+.pc-broadcast-admin .pc-bra-parameter-privacy:has(input:disabled) { cursor: default; }
+.pc-broadcast-admin .pc-bra-parameter-privacy input[type="checkbox"]:disabled { cursor: default; }
+.pc-broadcast-admin .pc-bra-parameter-privacy input[type="checkbox"]:disabled::before { background: #666; }
 .pc-broadcast-admin .pc-bra-parameter-values { grid-column: 1 / -1; grid-row: 2; }
 .pc-broadcast-admin .pc-bra-parameter textarea { resize: vertical; height: 136px; min-height: 120px; }
 .pc-broadcast-admin .pc-bra-parameter-values .pc-bra-hint { margin: 0; }
@@ -103,4 +112,4 @@
 @media (max-width: 782px) { .pc-broadcast-admin .pc-bra-side { display: block; } .pc-broadcast-admin .pc-bra-times { grid-template-columns: minmax(0,1fr) minmax(0,1fr); } .pc-broadcast-admin .pc-bra-section { padding: 16px; } }
 @media (max-width: 600px) { .pc-broadcast-admin .pc-bra-parameter { grid-template-columns: minmax(0,1fr); gap: 8px; } .pc-broadcast-admin .pc-bra-parameter-name, .pc-broadcast-admin .pc-bra-parameter-summary, .pc-broadcast-admin .pc-bra-parameter-actions, .pc-broadcast-admin .pc-bra-parameter-values { grid-column: 1; grid-row: auto; } .pc-broadcast-admin .pc-bra-parameter-name { order: 0; } .pc-broadcast-admin .pc-bra-parameter-summary { order: 1; } .pc-broadcast-admin .pc-bra-parameter-values { order: 3; } .pc-broadcast-admin .pc-bra-parameter-actions { order: 2; padding-top: 0; } .pc-broadcast-admin .pc-bra-parameter-examples { min-height: 28px; } }
 @media (max-width: 420px) { .pc-broadcast-admin .pc-bra-head > div { align-items: flex-start; flex-direction: column; gap: 8px; } .pc-broadcast-admin .pc-bra-actions > .button { max-width: 100%; } .pc-broadcast-admin .pc-bra-import-mode, .pc-broadcast-admin .pc-bra-file { flex-basis: 100%; } }
-@media (prefers-reduced-motion: reduce) { .pc-broadcast-admin .button { transition: none; } .pc-broadcast-admin .button:active:not(:disabled) { transform: none; } .pc-broadcast-admin .pc-bra-preview-text { animation: none !important; transform: none !important; } }
+@media (prefers-reduced-motion: reduce) { .pc-broadcast-admin .button, .pc-broadcast-admin .pc-bra-parameter-privacy input[type="checkbox"], .pc-broadcast-admin .pc-bra-parameter-privacy input[type="checkbox"]::before { transition: none; } .pc-broadcast-admin .button:active:not(:disabled) { transform: none; } .pc-broadcast-admin .pc-bra-preview-text { animation: none !important; transform: none !important; } }

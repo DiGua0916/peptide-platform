@@ -105,7 +105,8 @@ final class Product_Broadcast_Controller {
 		if ( isset( $data['restore'] ) && ! is_bool( $data['restore'] ) ) { return self::invalid( 'restore', 'boolean_required' ); }
 		$config = Config::normalize_for_import( $data['config'] ?? null );
 		if ( is_wp_error( $config ) ) { return $config; }
-		return self::respond( Importer::parse( $data['content'], $data['filename'], $config, $data['mode'], $data['restore'] ?? false ) );
+		// Importer validates again while retaining privacy choices from safely validated empty editing columns.
+		return self::respond( Importer::parse( $data['content'], $data['filename'], $data['config'], $data['mode'], $data['restore'] ?? false ) );
 	}
 
 	public static function export( \WP_REST_Request $request ) {
