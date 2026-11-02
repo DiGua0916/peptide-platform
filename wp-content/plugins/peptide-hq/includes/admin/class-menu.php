@@ -97,6 +97,27 @@ final class Menu {
 		add_action( 'login_enqueue_scripts', array( self::class, 'login_assets' ) );
 		add_filter( 'login_headerurl', static fn(): string => admin_url() );
 		add_filter( 'login_headertext', static fn(): string => 'VialCove' );
+		add_action( 'login_init', array( self::class, 'login_presentation' ) );
+	}
+
+	/** Login-only copy; native authentication and cookie lifetimes remain unchanged. */
+	public static function login_presentation(): void {
+		if ( ! self::workspace_enabled() ) { return; }
+		add_filter( 'gettext', static function ( string $translated, string $text, string $domain ): string {
+			$labels = array(
+				'Username or Email Address' => '用户名或邮箱', 'Password' => '密码',
+				'Remember Me' => '记住登录', 'Log In' => '登录',
+				'Lost your password?' => '忘记密码？', 'Show password' => '显示密码',
+				'Hide password' => '隐藏密码', 'Log In Again' => '重新登录',
+				'&larr; Go to %s' => '&larr; 返回 %s',
+			);
+			return 'default' === $domain && isset( $labels[ $text ] ) ? $labels[ $text ] : $translated;
+		}, 10, 3 );
+		// WP 7.1's toggletip can obscure the submit button on small touch screens.
+		add_filter( 'login_remember_me_help_text', '__return_empty_string' );
+		add_action( 'login_form', static function (): void {
+			echo '<p class="pchq-login-hint">仅在私人设备上勾选“记住登录”。</p>';
+		} );
 	}
 
 	public static function login_assets(): void {
