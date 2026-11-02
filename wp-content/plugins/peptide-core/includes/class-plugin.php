@@ -110,6 +110,7 @@ final class Plugin {
 			Admin\Design_Editor::register_hooks();
 			Admin\Menu_Page::register_hooks();
 			Admin\Tracking_Page::register_hooks();
+			Admin\Tracking_Product_Page::register_hooks();
 			Admin\Overview_Page::register_hooks();
 			Admin\Admin_Menus::register_hooks();
 			Admin\Store_Settings::register_hooks();

@@ -62,6 +62,7 @@ final class Tracking_Controller {
 		register_rest_route( $ns, '/track/admin/visitors/(?P<id>\d+)/visits', array( 'methods' => \WP_REST_Server::READABLE, 'callback' => array( self::class, 'visits' ), 'permission_callback' => $admin ) );
 		register_rest_route( $ns, '/track/admin/archive', array( 'methods' => \WP_REST_Server::READABLE, 'callback' => array( self::class, 'archive' ), 'permission_callback' => $admin ) );
 		register_rest_route( $ns, '/track/admin/stats', array( 'methods' => \WP_REST_Server::READABLE, 'callback' => array( self::class, 'stats' ), 'permission_callback' => $admin ) );
+		register_rest_route( $ns, '/track/admin/products', array( 'methods' => \WP_REST_Server::READABLE, 'callback' => array( self::class, 'products' ), 'permission_callback' => array( self::class, 'can_view_products' ) ) );
 	}
 
 	private static function disabled(): \WP_Error {
@@ -137,6 +138,22 @@ final class Tracking_Controller {
 	public static function live(): \WP_REST_Response {
 		$now = Tracker::now_ms();
 		return self::respond( array( 'now_ms' => $now, 'enabled' => Tracker::enabled(), 'visitors' => Query::live( $now ) ) );
+	}
+
+	/** Read-only interest ranking and the visitors who viewed a selected product. */
+	public static function can_view_products() {
+		$allowed = self::can_view();
+		if ( true !== $allowed ) { return $allowed; }
+		$id = get_current_user_id();
+		if ( \PeptideCore\Staff::is_staff( $id ) && ! in_array( 'data', \PeptideCore\Staff::granted( $id ), true ) ) {
+			return new \WP_Error( 'pc_track_forbidden', __( '此账号没有访客数据权限。', 'peptide-core' ), array( 'status' => 403 ) );
+		}
+		return true;
+	}
+
+	public static function products( \WP_REST_Request $request ) {
+		$result = \PeptideCore\Tracking\Product_Interest::report( $request->get_query_params() );
+		return is_wp_error( $result ) ? $result : self::respond( $result );
 	}
 
 	/**
