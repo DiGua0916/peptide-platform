@@ -1043,3 +1043,21 @@ functions.php新增vc_card_display_product，使用Woo get_visible_children的me
 
 最终实际状态回归：商品数据/生命周期/反馈18/18，购物车17/17、进度15/15、推荐34/34、反馈20/20，共86/86。另有导航7/7、发布23/23、设置22/22及隔离真实购物车15项通过；接口推荐409仍按上段阻断记录，不计为通过。最后修改的JS语法、PHP lint与Git whitespace检查通过。反馈适配新增assets/product-dialog-feedback.js。所有回归为源代码执行或HTTP证据，未替代本轮缺失的手机视觉与真机操作验收。
 打包检查补充：PDF.js及其字体/cmaps/wasm许可证保留官方包原始字节（含其原有尾随空格），Git whitespace检查对该第三方目录作排除；本轮自有代码的EOF空行已清理，自有源码检查通过。
+
+### 2026-11-03 · Codex：商品主图越界、独立FAQ、购物车更新跳动及应用开关纠正
+
+用户在正式站发现：桌面主图跟随滚动压住详情；COA后缺少Demo独立FAQ；购物车数量更新显示Updating your bag推开布局；后台只希望启用加购反馈/最近浏览，质疑前端是否固定占位。
+
+主图问题由本轮前版本给整个media设置sticky/top88、但根grid同时包含详情/COA导致。取消media sticky，保持概览内原位；工具栏/底部购买条继续原有固定行为。FAQ仍在真实Woo description内，没有数据丢失；新增PHP helper仅识别明确FAQ/Frequently asked questions标题到下个同级/更高标题，提取完整问题+答案到独立details区，保留不完整/无法识别的原文及其他正文，JS移至COA后。当前TR11306六问；无FAQ产品不套用示例。复用Demo耳机插画，事实文案不改。原后台商品描述继续作为编辑来源，不新增问答存储。
+
+购物车正常pending提示改为不占版式的读屏announcement，首次加载和真实错误仍可见。按Woo line key更新现有行/图片/按钮而非整列表replaceChildren，保留焦点及可见行锚点；后续点数量读取最新确认值，减少不重播成功。totals/coupons/recent仅内容变化时更新，pending不反复隐藏最近浏览。activity public配置首载/focus/visibility/30s/写入开始重读，新关闭状态可清掉旧cart pending中的进度/推荐，recent开关独立。
+
+应用开关纠正：只读实时DB/admin/public审计发现broadcast与activity当时实际published=true，截图Off可能是旧后台页；上一轮publish-experience.php确有启用broadcast及recommendation子开关（activity总开关原已true）。已向用户说明这不应随UI迁移擅改。按用户当前只启用两项要求，使用真实REST publish+expectedRevision将broadcast enabled=false（rev2）、activity enabled=false（rev3）；其他配置、文案、活动规则均保持，加购反馈/最近浏览原记录逐字未变且enabled=true。备份task/work/before-app-switches.json。注意关闭的是应用展示，不取消营销满减本身。不可再在UI同步脚本启用应用。商品播报不再先播旧SSR启用快照，改为no-store读取成功才显示；同一弹窗focus/可见/30s读取，失败安全隐藏，destroy清理轮询。
+
+推荐仍有后端问题：WooPayments普通REST默认USD三个hook被Quote_Cart拒绝，实际history能记但candidates为空，推荐报价409。BE仍b447d85，无新修复。前端请求合同正确；本轮不编辑后端或伪造跨档推荐，activity现关闭时自然不展示，未来重新开启仍需要后端兼容。详见任务work/backend-app-switch-and-recommendation-audit.md及此前群交接。
+
+实际验证：真实WP只读内容/边界/四应用状态16/16；生产商品JS生命周期含播报开→关和失败不播放旧快照9/9；购物车原client17+新增renderer DOM/状态13，共30/30。覆盖pending保留行图、数量/失败/焦点/删除/禁用和版本先后。PHP/JS语法、diffcheck通过。设计扫描保留原店铺Geist/青蓝/既有尺寸；DESIGN.md为后台规范，相关font/palette advisory不套到店铺做无关改版。
+
+本轮真实IAB桌面DOM及截图验证：主图position relative且bottom早于details top、不压详情；FAQ位于COA后、6问且第一问可展开；dialog width=scrollWidth=1230，播报hidden=true。截图outputs/desktop-faq-fixed.png（耳机装饰补入前截图）。当前IAB viewport.set(390x844)未反映到实际innerWidth1509，CDP设备模拟/清理调用超时；viewport.reset已返回成功，但CDP清理未得确认。不能把该截图/DOM误称手机版通过，也未操作用户购物车、下单或真机手势。用户已有购物车不用于写入测试。
+
+文件：assets/home-quick-view.css、product-dialog-experience.js、live-cart-experience.js/css、product-dialog-support.png；inc/product-dialog-content.php。任务证据D:/Codex/Tasks/2026-11-03/live-dialog-cart-polish。修改通过现有主题junction即时用于正式本机站；未改页面积木/商品资料/后台源码，提交同步结果另记群和项目记忆。下一步后端修复推荐REST默认币种兼容，以及工具可用后补390手机实际视觉验收。

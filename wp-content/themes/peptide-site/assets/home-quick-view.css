@@ -133,7 +133,7 @@ body:has(.vc-home-quick[open]) { overflow:hidden; }
 .vc-product-dialog .vc-dialog-heading .vc-showcase-quick__title{font-size:clamp(36px,4.2vw,60px);font-weight:750;line-height:1.04;letter-spacing:-.04em;margin:8px 0 0;text-wrap:balance}
 .vc-product-dialog .vc-dialog-heading .vc-home-quick__eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;margin-bottom:12px}
 .vc-product-dialog.woocommerce div.product.vc-product-experience>div.summary{grid-column:2;grid-row:2;padding:0 0 40px!important}
-.vc-product-dialog .vc-product-experience>.vc-showcase-quick__media{grid-column:1;grid-row:1/3;align-self:start;display:block;padding:16px!important;border-radius:12px;background:#f0f5f6;position:sticky;top:88px;overflow:hidden}
+.vc-product-dialog .vc-product-experience>.vc-showcase-quick__media{grid-column:1;grid-row:1/3;align-self:start;display:block;padding:16px!important;border-radius:12px;background:#f0f5f6;position:relative;top:auto;overflow:hidden}
 .vc-product-dialog .vc-dialog-gallery{display:flex;width:100%;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .vc-product-dialog .vc-dialog-gallery::-webkit-scrollbar{display:none}
 .vc-product-dialog .vc-dialog-slide{flex:0 0 100%;min-width:0;width:100%;position:relative;aspect-ratio:1;padding:0;margin:0;border:0;border-radius:0;background:transparent;overflow:hidden;scroll-snap-align:start;scroll-snap-stop:always;color:var(--ink);cursor:zoom-in}
@@ -161,6 +161,21 @@ body:has(.vc-home-quick[open]) { overflow:hidden; }
 .vc-product-dialog .vc-dialog-document-copy>p{color:var(--muted);font-size:14px;line-height:22px;margin:12px 0}
 .vc-product-dialog .vc-dialog-document-art{position:relative;max-height:400px;overflow:hidden;background:#f0f5f6;border:0;border-radius:12px;padding:24px 40px;cursor:zoom-in}
 .vc-product-dialog .vc-dialog-document-art img{width:100%;height:auto;transform:rotate(-4deg);box-shadow:0 8px 24px #26465022}
+.vc-product-dialog .vc-product-experience>.vc-product-dialog-questions{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:48px;margin:0 -48px;padding:48px;background:#f6f8f8;scroll-margin-top:80px}
+.vc-product-dialog-questions__heading{position:relative;min-width:0;padding-right:80px}
+.vc-product-dialog-questions__heading>p{margin:0 0 16px;font-size:14px;line-height:20px;color:var(--teal)}
+.vc-product-dialog-questions__heading h2{margin:0;font-size:36px;line-height:40px;font-weight:700;letter-spacing:-.03em;text-wrap:balance;color:var(--ink)}
+.vc-product-dialog-questions__heading img{position:absolute;right:0;top:0;width:64px;height:64px;object-fit:contain}
+.vc-product-dialog-questions__accordion{min-width:0}
+.vc-product-dialog-question{padding:0;border:0;border-bottom:1px solid var(--line)}
+.vc-product-dialog-question:first-child{border-top:1px solid var(--line)}
+.vc-product-dialog-question>summary{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:64px;padding:20px 0;list-style:none;cursor:pointer;color:var(--ink);font-size:18px;line-height:28px;font-weight:600;text-align:left}
+.vc-product-dialog-question>summary::-webkit-details-marker{display:none}
+.vc-product-dialog-question>summary::after{content:'+';flex:none;font-size:24px;font-weight:400}
+.vc-product-dialog-question[open]>summary::after{content:'−'}
+.vc-product-dialog-question__answer{padding:0 0 24px;color:var(--muted);font-size:16px;line-height:28px;text-align:left;overflow-wrap:anywhere}
+.vc-product-dialog-question__answer p{margin:0 0 16px;text-align:inherit!important}
+.vc-product-dialog-question__answer>:last-child{margin-bottom:0}
 .vc-product-dialog .vc-dialog-report-open{min-height:48px;margin-top:20px;padding:12px 20px;border:1px solid var(--line);background:white;border-radius:8px;color:var(--ink);font:600 14px/22px 'Geist',sans-serif}
 .vc-product-dialog .vc-dialog-sticky{grid-column:1/-1;position:sticky;bottom:0;z-index:6;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 48px;margin:0 -48px;background:#fffffff7;border-top:1px solid var(--line);box-shadow:0 -4px 24px #1639430a}
 .vc-product-dialog .vc-dialog-sticky-info{display:flex;flex-direction:column;min-width:0;gap:2px}
@@ -218,7 +233,10 @@ body:has(.vc-home-quick[open]) { overflow:hidden; }
  .vc-product-dialog .vc-product-experience>.vc-product-dialog-content{order:3;margin:0 -24px;padding:40px 24px}
  .vc-product-dialog .vc-dialog-documents{order:4;display:flex;flex-direction:column-reverse;gap:24px;padding:40px 0;align-items:stretch}
  .vc-product-dialog .vc-dialog-document-art{max-height:300px}
- .vc-product-dialog .vc-dialog-sticky{order:5;margin:0 -24px;padding:12px 24px calc(12px + env(safe-area-inset-bottom));gap:12px}
+ .vc-product-dialog .vc-product-experience>.vc-product-dialog-questions{order:5;display:block;margin:0 -24px;padding:40px 24px}
+ .vc-product-dialog-questions__heading{margin-bottom:24px}
+ .vc-product-dialog-questions__heading h2{font-size:30px;line-height:36px}
+ .vc-product-dialog .vc-dialog-sticky{order:6;margin:0 -24px;padding:12px 24px calc(12px + env(safe-area-inset-bottom));gap:12px}
  .vc-product-dialog .vc-dialog-sticky-add{min-width:155px;font-size:16px;padding:12px 16px}
  .vc-product-dialog .vc-home-quick__toolbar>button:not(.vc-showcase-quick__close){font-size:14px;padding-inline:12px}
  .vc-product-child-dialog{width:100vw;max-width:100vw;max-height:100dvh;min-height:100dvh;margin:0;border-radius:0;padding:16px}
@@ -227,6 +245,7 @@ body:has(.vc-home-quick[open]) { overflow:hidden; }
 @media(max-width:360px){
  .vc-product-dialog .vc-showcase-quick-product.vc-product-experience{padding-inline:16px}
  .vc-product-dialog .vc-product-experience>.vc-product-dialog-content{margin-inline:-16px;padding-inline:16px}
+ .vc-product-dialog .vc-product-experience>.vc-product-dialog-questions{margin-inline:-16px;padding-inline:16px}
  .vc-product-dialog .vc-dialog-sticky{margin-inline:-16px;padding-inline:16px}
  .vc-product-dialog .vc-dialog-sticky-add{min-width:140px}
  .vc-product-dialog .vc-dialog-sticky-info strong{font-size:24px}

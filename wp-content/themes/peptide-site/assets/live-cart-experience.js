@@ -13,9 +13,32 @@
             return new Intl.NumberFormat('en-US', { style: 'currency', currency: metadata.currency_code, minimumFractionDigits: precision, maximumFractionDigits: precision }).formatToParts(amount < 0n ? -1n : 1n).map(part => part.type === 'integer' ? whole : part.type === 'fraction' ? fraction : part.value).join('');
         } catch (_) { return '—'; }
     }
-    function activityPresentation(state, settings = {}) {
-        const activity = state.valid && !state.pending ? state.cart?.extensions?.peptide_core?.activity_listener || null : null;
+    function activityAllowed(latest, applied) {
+        if (!latest || latest.enabled === false || latest.visible === false) return false;
+        // A newly applied setting invalidates an older cart's presentation. A
+        // stale config read must never override a more recent native cart DTO.
+        if (applied && Number.isSafeInteger(applied.revision) && applied.revision >= (latest.revision || 0)) return applied.enabled === true && applied.revision === latest.revision;
+        return true;
+    }
+    function activityPresentation(state, settings = {}, applied = null) {
+        const latest = state.cart?.extensions?.peptide_core?.activity_listener;
+        const activity = state.valid && !state.pending && activityAllowed(latest, applied) ? latest : null;
         return { activity, progress: settings.cart_progress_enabled === false ? null : activity, recommendation: settings.cart_recommendations_enabled === false ? null : activity };
+    }
+    // Reconcile only changed keys. Replacing the entire list loses image state,
+    // keyboard focus and the browser's scroll anchor during each native request.
+    function reconcileRows(list, records, items, make, state) {
+        const keep = new Set(items.map(item => item.key));
+        for (const [key, record] of records) if (!keep.has(key)) { record.node.remove(); records.delete(key); }
+        items.forEach((item, index) => {
+            let record = records.get(item.key);
+            if (!record) { record = make(item, state); records.set(item.key, record); }
+            record.update(item, state);
+            if (list.children[index] !== record.node) list.insertBefore(record.node, list.children[index] || null);
+        });
+    }
+    function statusPresentation(state) {
+        return { text: state.error || (state.pending ? 'Updating your bag…' : state.valid ? '' : 'Loading your bag…'), announceOnly: !!state.cart && !state.error };
     }
     function totals(cart) {
         if (!validCart(cart)) return [];
@@ -97,7 +120,7 @@
         }
         return { snapshot, refresh, request, write, externalStart, externalUpdate, destroy() { destroyed = true; invalidate(); clearTimeout(externalTimer); } };
     }
-    if (typeof module === 'object' && module.exports) module.exports = { validCart, money, totals, createClient, activityPresentation };
+    if (typeof module === 'object' && module.exports) module.exports = { validCart, money, totals, createClient, activityAllowed, activityPresentation, reconcileRows, statusPresentation };
     if (!global?.document || !global.VialCoveLiveCartConfig) return;
     const document = global.document, config = global.VialCoveLiveCartConfig, settings = config.settings || {}, roots = [...document.querySelectorAll('[data-vc-live-cart]')];
     if (!roots.length) return;
@@ -105,14 +128,29 @@
     const el = (tag, cls, text) => { const node = document.createElement(tag); node.className = cls || ''; if (text !== undefined) node.textContent = text; return node; };
     const clean = value => { const node = document.createElement('textarea'); node.innerHTML = String(value || ''); return node.value; };
     const safeUrl = value => { try { const url = new URL(value, location.href); return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password ? url.href : ''; } catch (_) { return ''; } };
-    let recent = null, recommendation = null, enrichment = 0, enrichmentTimer = 0, sourceElement = null, quickOpener = null, disposed = false;
-    const views = roots.map(root => ({ root, progress: global.createCartProgress?.({ mount: root.querySelector('[data-cart-progress]') }), progressSignature: '', recommendation: global.createCartRecommendation?.({ mount: root.querySelector('[data-cart-recommendation]'), onChoose: candidate => choose(candidate.productId), onAdd: candidate => client.write('add-item', { id: candidate.purchasableId, quantity: candidate.quantity }) }) }));
+    let recent = null, recommendation = null, enrichmentPending = false, enrichment = 0, enrichmentTimer = 0, sourceElement = null, quickOpener = null, disposed = false;
+    let appliedActivity = global.vcLiveCommerce?.activity?.config || null, activityRead = null;
+    const views = roots.map(root => ({ root, rows: new Map(), recentSignature: '', totalsSignature: '', couponsSignature: '', progress: global.createCartProgress?.({ mount: root.querySelector('[data-cart-progress]') }), progressSignature: '', recommendation: global.createCartRecommendation?.({ mount: root.querySelector('[data-cart-recommendation]'), onChoose: candidate => choose(candidate.productId), onAdd: candidate => client.write('add-item', { id: candidate.purchasableId, quantity: candidate.quantity }) }) }));
     const client = createClient(config, { notify(type, detail) {
-        if (type === 'state') { render(detail); scheduleEnrichment(detail); }
+        if (type === 'state') { scheduleEnrichment(detail); render(detail); if (detail.pending) refreshActivityConfig(); }
         else document.dispatchEvent(new CustomEvent(type === 'start' ? 'vc:cart-mutation-start' : 'vc:cart-updated', { detail }));
     } });
     const deviceEnabled = () => (settings.visibility || {})[isDesktop.matches ? 'desktop' : 'mobile'] !== false;
     const canRead = () => deviceEnabled() && !document.hidden && roots.some(root => !root.closest('dialog') || root.closest('dialog').open);
+    function refreshActivityConfig() {
+        if (disposed || !config.activityConfigUrl || !canRead()) return Promise.resolve();
+        if (activityRead) return activityRead;
+        activityRead = client.request(config.activityConfigUrl).then(value => {
+            if (disposed || typeof value?.enabled !== 'boolean' || !Number.isSafeInteger(value.revision) || value.revision < 0 || value.revision < (appliedActivity?.revision || 0)) return;
+            const changed = JSON.stringify([value.enabled, value.revision]) !== JSON.stringify([appliedActivity?.enabled, appliedActivity?.revision]);
+            appliedActivity = value;
+            if (!changed) return;
+            // Disable offer UI without cancelling the independent recent-items read.
+            if (!activityAllowed(client.snapshot().cart?.extensions?.peptide_core?.activity_listener, appliedActivity)) { enrichmentPending = false; recommendation = null; }
+            render(client.snapshot());
+        }).catch(() => { /* Keep the latest confirmed native DTO/config, never enable a failed read. */ }).finally(() => { activityRead = null; });
+        return activityRead;
+    }
     function productLink(item, cls = 'vc-live-cart__product') {
         const link = el('a', cls, clean(item.name)); link.href = safeUrl(item.permalink) || config.shopUrl;
         const parent = parentIds.get(item.id); if (parent) { link.dataset.vcHomeProduct = String(parent); link.dataset.vcQuickOpen = String(parent); }
@@ -128,22 +166,34 @@
     function cartRow(item, state) {
         const row = el('article', 'vc-live-cart__line'); row.dataset.cartKey = item.key;
         const imageLink = productLink({ ...item, name: '' }, 'vc-live-cart__image');
-        const image = el('img'); image.src = safeUrl(item.images?.[0]?.thumbnail || item.images?.[0]?.src) || ''; image.alt = clean(item.name); image.width = 72; image.height = 80; imageLink.append(image);
-        const info = el('div', 'vc-live-cart__info'); info.append(productLink(item));
-        const pack = (item.variation || []).map(v => clean(v.value)).filter(Boolean).join(' · '); if (pack) info.append(el('p', 'vc-live-cart__pack', pack));
-        info.append(el('p', 'vc-live-cart__unit', money(item.prices?.price, item.prices) + ' / box'));
+        const image = el('img'); image.width = 72; image.height = 80; imageLink.append(image);
+        const info = el('div', 'vc-live-cart__info'), name = productLink(item), pack = el('p', 'vc-live-cart__pack'), unit = el('p', 'vc-live-cart__unit'); info.append(name, pack, unit);
         const controls = el('div', 'vc-live-cart__controls'), qty = el('div', 'vc-live-cart__quantity');
-        const limits = item.quantity_limits || {}, step = Number.isSafeInteger(limits.multiple_of) && limits.multiple_of > 0 ? limits.multiple_of : 1, min = Number.isSafeInteger(limits.minimum) ? Math.max(1, limits.minimum) : 1, max = Number.isSafeInteger(limits.maximum) ? limits.maximum : 9999;
-        for (const [action, text, quantity] of [['minus', '−', item.quantity - step], ['plus', '+', item.quantity + step]]) {
+        let current = item, targets = {};
+        const count = el('span'), buttons = {};
+        for (const [action, text] of [['minus', '−'], ['plus', '+']]) {
             const button = el('button', '', text); button.type = 'button'; button.dataset.cartAction = action;
-            button.setAttribute('aria-label', (action === 'minus' ? 'Decrease' : 'Increase') + ' quantity of ' + clean(item.name));
-            button.disabled = !state.valid || state.pending || limits.editable === false || quantity < min || quantity > max;
-            button.addEventListener('click', () => client.write('update-item', { key: item.key, quantity }).catch(() => {}));
-            qty.append(button); if (action === 'minus') { const count = el('span', '', String(item.quantity)); count.setAttribute('aria-label', item.quantity + (item.quantity === 1 ? ' box' : ' boxes')); qty.append(count); }
+            button.addEventListener('click', () => client.write('update-item', { key: current.key, quantity: targets[action] }).catch(() => {}));
+            buttons[action] = button; qty.append(button); if (action === 'minus') qty.append(count);
         }
-        const remove = el('button', 'vc-live-cart__remove', 'Remove'); remove.type = 'button'; remove.dataset.cartAction = 'remove'; remove.disabled = !state.valid || state.pending; remove.setAttribute('aria-label', 'Remove ' + clean(item.name));
-        remove.addEventListener('click', () => client.write('remove-item', { key: item.key }).catch(() => {})); controls.append(qty, remove); info.append(controls);
-        row.append(imageLink, info, el('strong', 'vc-live-cart__line-total', money(item.totals?.line_total, item.totals))); return row;
+        const remove = el('button', 'vc-live-cart__remove', 'Remove'); remove.type = 'button'; remove.dataset.cartAction = 'remove';
+        remove.addEventListener('click', () => client.write('remove-item', { key: current.key }).catch(() => {})); controls.append(qty, remove); info.append(controls);
+        const total = el('strong', 'vc-live-cart__line-total'); row.append(imageLink, info, total);
+        return { node: row, update(next, nextState) {
+            current = next;
+            const title = clean(next.name), src = safeUrl(next.images?.[0]?.thumbnail || next.images?.[0]?.src) || '';
+            if (image.getAttribute('src') !== src) { if (src) image.src = src; else image.removeAttribute('src'); }
+            image.alt = title; name.textContent = title;
+            for (const link of [name, imageLink]) { link.href = safeUrl(next.permalink) || config.shopUrl; const parent = parentIds.get(next.id); if (parent) { link.dataset.vcHomeProduct = String(parent); link.dataset.vcQuickOpen = String(parent); } }
+            pack.textContent = (next.variation || []).map(v => clean(v.value)).filter(Boolean).join(' · '); pack.hidden = !pack.textContent;
+            unit.textContent = money(next.prices?.price, next.prices) + ' / box';
+            total.textContent = money(next.totals?.line_total, next.totals);
+            count.textContent = String(next.quantity); count.setAttribute('aria-label', next.quantity + (next.quantity === 1 ? ' box' : ' boxes'));
+            const limits = next.quantity_limits || {}, step = Number.isSafeInteger(limits.multiple_of) && limits.multiple_of > 0 ? limits.multiple_of : 1, min = Number.isSafeInteger(limits.minimum) ? Math.max(1, limits.minimum) : 1, max = Number.isSafeInteger(limits.maximum) ? limits.maximum : 9999;
+            targets = { minus: next.quantity - step, plus: next.quantity + step };
+            for (const action of ['minus', 'plus']) { buttons[action].disabled = !nextState.valid || nextState.pending || limits.editable === false || targets[action] < min || targets[action] > max; buttons[action].setAttribute('aria-label', (action === 'minus' ? 'Decrease' : 'Increase') + ' quantity of ' + title); }
+            remove.disabled = !nextState.valid || nextState.pending; remove.setAttribute('aria-label', 'Remove ' + title);
+        } };
     }
     function render(state) {
         if (disposed) return;
@@ -153,39 +203,67 @@
             const root = view.root, firstReady = root.hidden && valid && deviceEnabled();
             if (!deviceEnabled()) { root.hidden = true; const fallback = root.nextElementSibling; if (fallback?.matches('[data-vc-native-cart-fallback]')) fallback.hidden = false; continue; }
             if (firstReady) { root.hidden = false; const fallback = root.nextElementSibling; if (fallback?.matches('[data-vc-native-cart-fallback]')) fallback.hidden = true; }
-            const status = root.querySelector('[data-cart-status]'); status.textContent = error ? clean(error) : pending ? 'Updating your bag…' : valid ? '' : 'Loading your bag…';
+            const active = document.activeElement, activeRow = root.contains(active) ? active?.closest('[data-cart-key]') : null, list = root.querySelector('[data-cart-items]');
+            // Keep a visible product in place when genuine totals/offer content above
+            // it changes. Native scroll anchoring may already have corrected it.
+            const scrollHost = root.closest('dialog') || document.scrollingElement;
+            const hostTop = root.closest('dialog')?.getBoundingClientRect().top || 0;
+            const anchor = root.hidden ? null : [...list.children].find(row => { const rect = row.getBoundingClientRect(); return rect.bottom > hostTop && rect.top < (global.innerHeight || 0); });
+            const anchorTop = anchor?.getBoundingClientRect().top;
+            if (pending && activeRow && active?.dataset.cartAction) view.restoreFocus = { node: active, key: activeRow.dataset.cartKey, action: active.dataset.cartAction, index: [...list.children].indexOf(activeRow) };
+            const status = root.querySelector('[data-cart-status]'), statusState = statusPresentation(state);
+            status.classList.toggle('is-announcement', statusState.announceOnly);
+            if (status.textContent !== clean(statusState.text)) status.textContent = clean(statusState.text);
             root.querySelector('[data-cart-retry]').hidden = !error || pending;
             root.querySelector('[data-cart-count]').textContent = cart ? cart.items_count + (cart.items_count === 1 ? ' box' : ' boxes') : '';
-            const presentation = activityPresentation(state, settings), activity = presentation.activity;
+            const presentation = activityPresentation(state, settings, appliedActivity), activity = presentation.activity;
             // Pending writes pause the visual but preserve its baseline for the confirmed next DTO.
             const progressMount = root.querySelector('[data-cart-progress]');
-            if (pending) { view.progress?.pause(); progressMount.setAttribute('aria-busy', 'true'); }
+            const latestActivity = cart?.extensions?.peptide_core?.activity_listener;
+            const activityDisabled = settings.cart_progress_enabled === false || !activityAllowed(latestActivity, appliedActivity);
+            if (pending && !activityDisabled) { view.progress?.pause(); progressMount.setAttribute('aria-busy', 'true'); }
             else { const signature = JSON.stringify(presentation.progress); if (view.progressSignature !== signature) { view.progressSignature = signature; view.progress?.update(presentation.progress); } progressMount.removeAttribute('aria-busy'); }
             const quoteActivity = activity && recommendation ? { ...activity, recommendation } : activity;
+            const quoteMount = root.querySelector('[data-cart-recommendation]');
+            const reserveQuote = !error && (pending || enrichmentPending) && activityAllowed(latestActivity, appliedActivity) && latestActivity?.enabled === true && latestActivity?.visible === true && settings.cart_recommendations_enabled !== false;
+            if (reserveQuote && !quoteMount.classList.contains('is-refreshing') && !quoteMount.hidden) quoteMount.style.setProperty('--vc-cart-quote-height', quoteMount.getBoundingClientRect().height + 'px');
+            quoteMount.classList.toggle('is-refreshing', reserveQuote && !!quoteMount.style.getPropertyValue('--vc-cart-quote-height'));
+            if (!reserveQuote) quoteMount.style.removeProperty('--vc-cart-quote-height');
             view.recommendation?.update({ activity: presentation.recommendation ? quoteActivity : null, snapshotKey: activity?.cartSnapshotKey || '', valid, pending });
-            const active = document.activeElement, activeRow = active?.closest('[data-cart-key]'), key = root.contains(active) ? activeRow?.dataset.cartKey : '', action = active?.dataset.cartAction, list = root.querySelector('[data-cart-items]');
-            const previousIndex = key ? [...list.children].findIndex(row => row.dataset.cartKey === key) : -1;
-            if (key && action) view.restoreFocus = { key, action, index: previousIndex };
-            if (cart) list.replaceChildren(...cart.items.map(item => cartRow(item, state)));
-            if (view.restoreFocus && !pending) { const saved = view.restoreFocus, rows = [...list.children], target = rows.find(row => row.dataset.cartKey === saved.key) || rows[Math.min(Math.max(saved.index, 0), rows.length - 1)]; (target?.querySelector('[data-cart-action="' + saved.action + '"]:not(:disabled)') || target?.querySelector('a') || root.querySelector('h1,h2'))?.focus({ preventScroll: true }); view.restoreFocus = null; }
+            list.setAttribute('aria-busy', String(pending));
+            if (cart) reconcileRows(list, view.rows, cart.items, cartRow, state);
+            if (view.restoreFocus && !pending) {
+                const saved = view.restoreFocus, focus = document.activeElement;
+                // Never steal focus if the user moved elsewhere during the request.
+                if (!focus || focus === document.body || focus === saved.node) { const rows = [...list.children], target = rows.find(row => row.dataset.cartKey === saved.key) || rows[Math.min(Math.max(saved.index, 0), rows.length - 1)]; (target?.querySelector('[data-cart-action="' + saved.action + '"]:not(:disabled)') || target?.querySelector('a') || root.querySelector('h1,h2'))?.focus({ preventScroll: true }); }
+                view.restoreFocus = null;
+            }
             root.querySelector('[data-cart-empty]').hidden = !valid || !!cart?.items.length;
             const summary = root.querySelector('[data-cart-summary]'); summary.hidden = !cart?.items.length;
-            root.querySelector('[data-cart-totals]').replaceChildren(...totals(cart).map(total => { const row = el('div', 'vc-live-cart__total-row' + (total.total ? ' is-total' : '') + (total.savings ? ' is-saving' : '')); row.append(el('span', '', clean(total.label)), el('strong', '', total.unknown ? 'At checkout' : money(total.minor, cart.totals))); return row; }));
+            const totalRows = totals(cart), totalsSignature = JSON.stringify([totalRows, cart?.totals?.currency_code, cart?.totals?.currency_minor_unit]);
+            if (view.totalsSignature !== totalsSignature) { view.totalsSignature = totalsSignature; root.querySelector('[data-cart-totals]').replaceChildren(...totalRows.map(total => { const row = el('div', 'vc-live-cart__total-row' + (total.total ? ' is-total' : '') + (total.savings ? ' is-saving' : '')); row.append(el('span', '', clean(total.label)), el('strong', '', total.unknown ? 'At checkout' : money(total.minor, cart.totals))); return row; })); }
             const checkout = root.querySelector('[data-cart-checkout]'); checkout.setAttribute('aria-disabled', String(!valid || pending || !cart?.items.length));
             root.querySelectorAll('[data-cart-coupon] input,[data-cart-coupon] button').forEach(node => { node.disabled = !valid || pending; });
-            root.querySelector('[data-cart-coupons]').replaceChildren(...(cart?.coupons || []).map(coupon => { const button = el('button', '', clean(coupon.code) + ' ×'); button.type = 'button'; button.disabled = !valid || pending; button.setAttribute('aria-label', 'Remove coupon ' + clean(coupon.code)); button.addEventListener('click', () => client.write('remove-coupon', { code: coupon.code }).catch(() => {})); return button; }));
-            renderRecent(root, state);
+            const coupons = root.querySelector('[data-cart-coupons]'), couponsSignature = JSON.stringify((cart?.coupons || []).map(coupon => coupon.code));
+            if (view.couponsSignature !== couponsSignature) { view.couponsSignature = couponsSignature; coupons.replaceChildren(...(cart?.coupons || []).map(coupon => { const button = el('button', '', clean(coupon.code) + ' ×'); button.type = 'button'; button.setAttribute('aria-label', 'Remove coupon ' + clean(coupon.code)); button.addEventListener('click', () => client.write('remove-coupon', { code: coupon.code }).catch(() => {})); return button; })); }
+            coupons.querySelectorAll('button').forEach(button => { button.disabled = !valid || pending; });
+            renderRecent(view, state);
+            if (anchor?.isConnected && scrollHost && !root.hidden) { const delta = anchor.getBoundingClientRect().top - anchorTop; if (Number.isFinite(delta) && Math.abs(delta) > 1) scrollHost.scrollTop += delta; }
         }
     }
-    function renderRecent(root, state) {
-        const section = root.querySelector('[data-cart-recent]'); section.hidden = settings.cart_recent_enabled === false || !state.valid || state.pending || !recent?.visible || !recent.items?.length;
+    function renderRecent(view, state) {
+        const root = view.root, section = root.querySelector('[data-cart-recent]'); section.hidden = settings.cart_recent_enabled === false || !recent?.visible || !recent.items?.length;
+        section.inert = !state.valid || state.pending; section.setAttribute('aria-busy', String(state.pending));
         if (section.hidden) return;
+        const signature = JSON.stringify([recent.title, recent.items.slice(0, 2)]); if (view.recentSignature === signature) return; view.recentSignature = signature;
         const heading = section.querySelector('h2'); heading.textContent = recent.title || 'Recently viewed';
         root.querySelector('[data-cart-recent-items]').replaceChildren(...recent.items.slice(0, 2).map(item => { const card = el('article', 'vc-live-cart__recent-card'), link = productLink({ id: item.productId, name: item.name, permalink: item.permalink }); link.dataset.vcHomeProduct = String(item.productId); link.dataset.vcQuickOpen = String(item.productId); const image = el('img'); image.src = safeUrl(item.image?.url); image.alt = item.image?.alt || item.name; image.width = 60; image.height = 68; const imageLink = link.cloneNode(false); imageLink.append(image); card.append(imageLink, link, el('p', '', item.variationLabel || ''), el('strong', '', (item.priceIsFrom ? 'From ' : '') + (item.price?.text || ''))); return card; }));
     }
     function scheduleEnrichment(state) {
         clearTimeout(enrichmentTimer); const generation = ++enrichment;
-        if (!state.valid || state.pending || !canRead()) { recent = null; recommendation = null; return; }
+        recommendation = null; enrichmentPending = false;
+        if (!state.valid || state.pending || !canRead()) return;
+        enrichmentPending = true;
         enrichmentTimer = setTimeout(async () => {
             const activity = state.cart?.extensions?.peptide_core?.activity_listener;
             const requests = state.cart.items.filter(item => !parentIds.has(item.id)).map(async item => { try { const product = await client.request(config.productsApiUrl + item.id); if (Number.isSafeInteger(product.id)) parentIds.set(item.id, product.parent > 0 ? product.parent : product.id); } catch (_) {} });
@@ -193,20 +271,21 @@
             try { history = await client.request(config.recentItemsUrl); } catch (_) { /* Private history unavailable: no invented recent list or ranking. */ }
             await Promise.all(requests);
             if (disposed || generation !== enrichment) return;
-            recent = history; recommendation = null; render(client.snapshot());
-            if (settings.cart_recommendations_enabled === false || !activity?.next || !history?.candidates?.length) return;
+            recent = history; recommendation = null;
+            if (settings.cart_recommendations_enabled === false || !activityAllowed(activity, appliedActivity) || activity?.enabled !== true || activity?.visible !== true || !activity?.next || !history?.candidates?.length) { enrichmentPending = false; render(client.snapshot()); return; }
+            render(client.snapshot());
             try {
                 const result = await client.request(config.recommendationsUrl, { cartStateKey: activity.stateKey, cartSnapshotKey: activity.cartSnapshotKey, promotionRevision: activity.promotionRevision, configRevision: activity.revision, candidates: history.candidates.slice(0, 20) });
                 if (disposed || generation !== enrichment) return;
-                recommendation = result.recommendation; render(client.snapshot());
-            } catch (_) { if (generation === enrichment) { recommendation = null; render(client.snapshot()); } }
+                recommendation = activityAllowed(activity, appliedActivity) ? result.recommendation : null; enrichmentPending = false; render(client.snapshot());
+            } catch (_) { if (generation === enrichment) { recommendation = null; enrichmentPending = false; render(client.snapshot()); } }
         }, 250);
     }
     function openDrawer(trigger) {
         if (!drawer || drawer.open || !isDesktop.matches || !deviceEnabled()) return;
         sourceElement = trigger; drawer.showModal(); document.documentElement.classList.add('vc-live-cart-open');
         document.dispatchEvent(new CustomEvent('vc:live-cart-opened', { detail: { dialog: drawer, trigger } }));
-        client.refresh();
+        refreshActivityConfig(); client.refresh();
     }
     function closeDrawer() {
         if (!drawer?.open) return;
@@ -231,10 +310,10 @@
     const updated = event => { if (event.detail?.owner !== 'live-cart') client.externalUpdate(event.detail); };
     document.addEventListener('vc:cart-mutation-start', started); document.addEventListener('vc:cart-updated', updated);
     document.addEventListener('vc:recently-viewed-updated', () => { if (!disposed && canRead()) scheduleEnrichment(client.snapshot()); });
-    const refreshVisible = () => { if (canRead()) client.refresh(); };
+    const refreshVisible = () => { if (canRead()) { refreshActivityConfig(); client.refresh(); } };
     document.addEventListener('visibilitychange', refreshVisible); global.addEventListener('focus', refreshVisible); global.addEventListener('pageshow', refreshVisible);
     const polling = setInterval(refreshVisible, 30000);
     global.VialCoveLiveCart = { open: trigger => isDesktop.matches && drawer ? openDrawer(trigger) : location.assign(config.cartUrl), close: closeDrawer, refresh: () => client.refresh(), snapshot: () => client.snapshot() };
     global.addEventListener('pagehide', event => { if (event.persisted) return; disposed = true; quickOpener?.remove(); clearInterval(polling); clearTimeout(enrichmentTimer); client.destroy(); views.forEach(view => { view.progress?.destroy(); view.recommendation?.destroy(); }); });
-    if (deviceEnabled() && roots.some(root => root.dataset.drawer === '0')) client.refresh();
+    if (deviceEnabled() && roots.some(root => root.dataset.drawer === '0')) refreshVisible();
 })(typeof window === 'undefined' ? null : window);

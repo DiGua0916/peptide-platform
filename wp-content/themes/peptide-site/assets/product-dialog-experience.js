@@ -70,6 +70,10 @@
     root.append(documents);
     const content = root.querySelector('.vc-product-dialog-content');
     if (content) content.querySelector('details[data-vc-dialog-tab="description"]')?.setAttribute('open', '');
+    // Keep the current product's real questions after its report, outside the
+    // description accordion. Empty products do not acquire another product's FAQ.
+    const questions = content?.querySelector('.vc-product-dialog-questions');
+    if (questions) root.append(questions);
     const toolbar = dialog.querySelector('.vc-home-quick__toolbar');
     const toolbarClose = toolbar?.querySelector('.vc-showcase-quick__close');
     const go = target => {
@@ -288,13 +292,23 @@
       else if (tickerRevision !== config.revision) ticker.configure(config);
       tickerRevision = config.revision;
     }
+    let tickerRead = false, tickerLastRead = 0;
     async function readTicker() {
       if (!settings.broadcastEnabled) return;
       const source = window.vcLiveCommerce?.broadcast; if (!source) return;
-      configureTicker(source.config);
+      if (tickerRead || destroyed || !dialog.open || document.hidden) return;
       const url = safeURL(source.url); if (!url) return;
-      try { const response = await fetch(url,{credentials:'same-origin',cache:'no-store',signal}); if(response.ok) configureTicker(await response.json()); } catch (_) {}
+      tickerRead = true;
+      try {
+        const response = await fetch(url,{credentials:'same-origin',cache:'no-store',signal});
+        const config = response.ok ? await response.json() : null;
+        if (!destroyed) configureTicker(config);
+      } catch (_) { if (!destroyed) configureTicker(null); }
+      finally { tickerRead = false; tickerLastRead = Date.now(); }
     }
+    const tickerPoll = setInterval(()=>{if(Date.now()-tickerLastRead>=30000)readTicker();},30000);
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)readTicker();},{signal});
+    window.addEventListener('focus',()=>readTicker(),{signal});
     function refresh() {
       if (destroyed) return;
       renderProduct(); syncSticky(); renderOffers(); const selection = selectedLabel();
@@ -321,7 +335,7 @@
       openReport,
       openImage,
       updateMedia(image) { productImage=image; renderProduct(); },
-      destroy() { if(destroyed)return; destroyed=true; reportOpenIntent++; pendingFeedback=null; nativeFeedback?.destroy(); window.jQuery?.(document.body).off(feedbackNamespace); lifecycle.abort(); reportRequest?.abort(); formObserver.disconnect(); cancelAnimationFrame(frame); ticker?.destroy(); closeNested(); viewer?.dispose(); nested?.remove(); root.vcExperience=null; }
+      destroy() { if(destroyed)return; destroyed=true; clearInterval(tickerPoll); reportOpenIntent++; pendingFeedback=null; nativeFeedback?.destroy(); window.jQuery?.(document.body).off(feedbackNamespace); lifecycle.abort(); reportRequest?.abort(); formObserver.disconnect(); cancelAnimationFrame(frame); ticker?.destroy(); closeNested(); viewer?.dispose(); nested?.remove(); root.vcExperience=null; }
     };
     refresh(); reportReadPromise=readReports(); readTicker(); return api;
   };
