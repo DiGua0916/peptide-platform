@@ -2104,3 +2104,7 @@ Reference learning is24/70 after guarded Contact cleanup, with no reference Publ
 已去统一姓名和手填商品预览字段，保留重点词；新增CSV/XLSX参数列导入与直接编辑，草稿自动轮播。用户例按ADG→BEG→CDG→ADG独立短列循环，非排列组合。存储v2、服务端编译为既有客户播放器v1，旧配置只读兼容，不需改主题。权限/nonce/CAS/草稿与应用分离保留，未自动发布样例。
 
 原生70、前端模型11、导入安全79、备份6、编辑器DOM52检查通过；隔离实际生产JS/CSS＋纯PHP的内置浏览器已验Excel3列6值、第三条及重置、桌面和390无越界。正式站浏览器绑定超时，因此不冒称正式登录保存/手机实机签收；原生TEMP测试覆盖保存与权限。原正式option私备份后仍byte-identical，rev2/off，没有商品/客户/订单改动。详细合同、限制和证据见 [参数播报交接](backend-broadcast-parameters-2026-11-03.md)。
+
+### 2026-11-03 · Codex：参数默认改为全部随机
+
+后续用户要求取代轮询，现新增“参数取值方式”：默认全部随机，也可选按顺序轮询。每次换条，各参数独立有放回抽取；本条重复参数及重点词使用同一结果，暂停/测量/切规格不重抽，单值固定。纯插件共享JS适配现有冻结ticker模型，不改前端主题。canonical新增parameterMode，公开v1追加原始模板与已引用列，关闭时清空。PHP32、原生WP17、实际旧ticker VM33、后台DOM69、enqueue7通过，实际本地HTTP依赖顺序与资产一致；隔离浏览器7次next已见随机组合。未应用样例/改真实数据，详见 [随机取值交接](backend-broadcast-random-2026-11-03.md)。
