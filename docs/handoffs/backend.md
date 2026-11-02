@@ -2120,3 +2120,7 @@ Reference learning is24/70 after guarded Contact cleanup, with no reference Publ
 ### 2026-11-03 · Codex：新增付款方式默认开启与文案澄清
 
 用户明确新增付款方式应默认开启。新增专用new_account_defaults，表单及新增保存候选使用它；旧记录补缺仍关闭，编辑/手动关闭/归档恢复保留状态。页面说明多人可同时付款，开关只控制整个方式的可用性。原29模型/真实类渲染检查通过、2PHP lint/diff通过；两本地runtime精确检查备份后更新，实际HQ新增页已见默认勾选及新文案，未提交表单、未启用历史账号或发起付款。用户随后问删除，当前只有归档/恢复，没有永久删除入口；未删除任何记录或实现永久删除。详情及限制见 [付款默认开启交接](backend-payment-default-2026-11-03.md)。
+
+### 2026-11-03 · Codex：按用户最新决定直接部署正式收款默认
+
+用户最终明确不建测试站、不改测试环境，直接上服务器正式版并自行下单。新账号enabled=yes/test_mode=no，旧账号状态保留；32模型及实际类渲染通过，生产保护不删除。已先完成HQ加密备份，再成对发布HubAccounts/Page到formal-payments-5dd0d844014d，4201代码/链接entries核复制、3746最终manifestfiles，PHP和实际新默认probe通过，production配置字节未改。实际已登录服务器IAB页面确认enabled勾选/test_mode不勾选，未提交表单或发起付款；截图后续超时不冒称截图通过。没有创建独立站/DB/进程，无staging切换。具体证据、回滚及未完成的支付方联调边界见 [正式付款交接](backend-payment-formal-2026-11-03.md)。

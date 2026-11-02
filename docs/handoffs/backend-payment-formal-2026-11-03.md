@@ -19,3 +19,13 @@ HQ encrypted backup completed before publication: 257,709 bytes; ciphertext SHA 
 No customer order, payment, card entry or merchant setting is submitted by the agent. This release does not constitute provider/notify/settlement acceptance. Source/Git synchronization does not imply unrelated frontend/main changes were deployed.
 
 Evidence root: D:/Codex/Tasks/2026-11-03/payment-test-mode/outputs/.
+
+## Deployed formal server result
+
+HQ is now `/srv/vialcove/hq/releases/formal-payments-5dd0d844014d`, based on the actual a32a9c1 runtime. Both payment PHP files were published together. All4,201 prior code/link entries were copied and checked before patching; the resulting manifest records3,746 files. PHP syntax and the actual deployed new_account_defaults() probe passed enabled=yes/test_mode=no. The root-owned rollback checkpoint and prior release are retained. HQ shared config remained byte-identical, including production; merchant and storefront configurations were never modified.
+
+The actual authenticated in-app server page at https://vialcoveresearch.com/wp-admin/admin.php?page=pchq-payments&new_account=1 showed the new account form, enabled checked, test_mode unchecked. No form was submitted. The screenshot follow-up timed out and reset the browser tool, so no server screenshot is claimed; the earlier actual DOM result and server/native file receipts are the evidence. The server tab was marked deliverable before that timeout. The local10090 tab and existing inputs were preserved.
+
+No test site was built, no environment switched to staging, no merchant record enabled/edited, and no order/payment created. The owner explicitly chose to place customer-flow orders themselves on the formal site. Existing provider credentials, precise gateway outbound authorization and actual provider/notify/settlement remain separate configuration/acceptance: do not describe this default/UI release as completed payment integration.
+
+Encrypted HQ backup receipt: 257,709 bytes, SHA25620f18ebefb1a79a08222963d61b5299a1d70e8d82b45711bb614c75d50e04dde. No decryption rehearsal in this task. Full receipts remain under the task outputs folder.
