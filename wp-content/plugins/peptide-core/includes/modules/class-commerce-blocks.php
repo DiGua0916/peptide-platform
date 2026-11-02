@@ -1483,6 +1483,7 @@ final class Commerce_Blocks {
 	}
 
 	private static function history_ids(): array {
+		if ( class_exists( '\PeptideCore\Recent\History' ) ) { return \PeptideCore\Recent\History::ids(); }
 		$raw = $_COOKIE[ self::HISTORY_COOKIE ] ?? '';
 		if ( ! is_string( $raw ) || strlen( $raw ) > 4096 || ! preg_match( '/^([A-Za-z0-9_-]+)\.([a-f0-9]{64})$/D', $raw, $parts ) || ! hash_equals( hash_hmac( 'sha256', 'pc-recent-history:v1:' . $parts[1], wp_salt( 'auth' ) ), $parts[2] ) ) { return array(); }
 		$data = json_decode( base64_decode( strtr( $parts[1], '-_', '+/' ), true ) ?: '', true );
@@ -1517,6 +1518,13 @@ final class Commerce_Blocks {
 	public static function record_recent_history(): void {
 		if ( 'GET' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || is_admin() || is_preview() || Renderer::$in_editor || ! function_exists( 'is_product' ) || ! is_product() || Templates::previewing_id() || headers_sent() || ! apply_filters( 'peptide_core_recent_history_enabled', true ) || ( \PeptideCore\Store_Config::get( 'force_login' ) && ! is_user_logged_in() ) ) { return; }
 		$product = wc_get_product( get_queried_object_id() ); if ( ! Products::public_catalog_product( $product ) ) { return; }
+		if ( class_exists( '\PeptideCore\Recent\History' ) ) {
+			try {
+				$result = \PeptideCore\Recent\History::record( $product->get_id() );
+				if ( ! is_wp_error( $result ) ) { nocache_headers(); header( 'Cache-Control: private, no-store, max-age=0, must-revalidate', true ); header( 'Vary: Cookie', false ); if ( ! defined( 'DONOTCACHEPAGE' ) ) { define( 'DONOTCACHEPAGE', true ); } }
+			} catch ( \Throwable $error ) { /* A history cookie must never block a product page. */ }
+			return;
+		}
 		$ids = self::history_ids(); array_unshift( $ids, $product->get_id() ); $ids = array_slice( array_values( array_unique( $ids ) ), 0, 100 );
 		try { $products = self::history_products( $ids, 100 ); } catch ( \Throwable $error ) { return; }
 		$ids = array_map( static fn( $item ) => $item->get_id(), $products );

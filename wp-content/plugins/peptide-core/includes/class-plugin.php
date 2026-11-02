@@ -61,6 +61,9 @@ final class Plugin {
 		Api\Product_Broadcast_Controller::register_hooks();
 		Activity\Mount::register_hooks();
 		Api\Activity_Listener_Controller::register_hooks();
+		Api\Cart_Feedback_Controller::register_hooks();
+		Recent\History::register_hooks();
+		Api\Recently_Viewed_Controller::register_hooks();
 		Pixels::register_hooks();
 		Seo::register_hooks();
 		Domains::register_hooks();
@@ -132,6 +135,8 @@ final class Plugin {
 			Admin\Apps_Page::register_hooks();
 			Admin\Product_Broadcast_Page::register_hooks();
 			Admin\Activity_Listener_Page::register_hooks();
+			Admin\Cart_Feedback_Page::register_hooks();
+			Admin\Recently_Viewed_Page::register_hooks();
 			Admin\Pixels_Page::register_hooks();
 			Admin\Seo_Page::register_hooks();
 			Admin\Data_Pages::register_hooks();

@@ -206,3 +206,21 @@ function peptide_core_activity_listener_progress( ?WC_Cart $cart = null ): array
 function peptide_core_activity_listener_markup(): string {
 	return \PeptideCore\Activity\Mount::markup();
 }
+
+/** Applied add-feedback settings; presentation consumes the existing Woo request result. */
+function peptide_core_cart_feedback_config(): array {
+	return \PeptideCore\Cart_Feedback\Store::effective();
+}
+
+function peptide_core_cart_feedback_url(): string {
+	return rest_url( 'peptide/v1/cart-feedback' );
+}
+
+/** Shared history application config; browser records remain in the existing signed cookie. */
+function peptide_core_recently_viewed_config(): array {
+	return \PeptideCore\Recent\Store::effective();
+}
+
+function peptide_core_recently_viewed_url(): string {
+	return rest_url( 'peptide/v1/recently-viewed' );
+}

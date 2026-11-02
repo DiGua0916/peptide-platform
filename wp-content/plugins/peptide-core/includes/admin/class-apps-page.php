@@ -48,6 +48,18 @@ final class Apps_Page {
 				'icon' => 'dashicons-chart-bar',
 				'on' => (bool) \PeptideCore\Activity\Store::effective()['enabled'],
 			),
+			'cart-feedback' => array(
+				'name' => __( '加购反馈', 'peptide-core' ),
+				'text' => __( '管理加购按钮的处理中与成功文案、反馈时长及购物袋轻动效。', 'peptide-core' ),
+				'icon' => 'dashicons-yes-alt',
+				'on' => (bool) \PeptideCore\Cart_Feedback\Store::effective()['enabled'],
+			),
+			'recently-viewed' => array(
+				'name' => __( '最近浏览', 'peptide-core' ),
+				'text' => __( '复用当前浏览器历史，展示最近查看的商品，并可排除购物车中已有商品。', 'peptide-core' ),
+				'icon' => 'dashicons-backup',
+				'on' => (bool) \PeptideCore\Recent\Store::effective()['enabled'],
+			),
 		);
 	}
 
@@ -92,6 +104,14 @@ final class Apps_Page {
 		}
 		if ( 'activity-listener' === ( $_GET['app'] ?? '' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The page and API enforce application permissions.
 			Activity_Listener_Page::render();
+			return;
+		}
+		if ( 'cart-feedback' === ( $_GET['app'] ?? '' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The page and API enforce application permissions.
+			Cart_Feedback_Page::render();
+			return;
+		}
+		if ( 'recently-viewed' === ( $_GET['app'] ?? '' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The page and API enforce application permissions.
+			Recently_Viewed_Page::render();
 			return;
 		}
 		if ( 'exit-intent' === ( $_GET['app'] ?? '' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
