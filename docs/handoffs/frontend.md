@@ -1061,3 +1061,11 @@ functions.php新增vc_card_display_product，使用Woo get_visible_children的me
 本轮真实IAB桌面DOM及截图验证：主图position relative且bottom早于details top、不压详情；FAQ位于COA后、6问且第一问可展开；dialog width=scrollWidth=1230，播报hidden=true。截图outputs/desktop-faq-fixed.png（耳机装饰补入前截图）。当前IAB viewport.set(390x844)未反映到实际innerWidth1509，CDP设备模拟/清理调用超时；viewport.reset已返回成功，但CDP清理未得确认。不能把该截图/DOM误称手机版通过，也未操作用户购物车、下单或真机手势。用户已有购物车不用于写入测试。
 
 文件：assets/home-quick-view.css、product-dialog-experience.js、live-cart-experience.js/css、product-dialog-support.png；inc/product-dialog-content.php。任务证据D:/Codex/Tasks/2026-11-03/live-dialog-cart-polish。修改通过现有主题junction即时用于正式本机站；未改页面积木/商品资料/后台源码，提交同步结果另记群和项目记忆。下一步后端修复推荐REST默认币种兼容，以及工具可用后补390手机实际视觉验收。
+
+### 2026-11-03 · Codex：正式手机预览与首页About单段原文
+
+用户要求手机预览，随后明确About us“就是一整个文案”，不需要三地分段图文。已找到原生现有tools/mobile-preview.html，打开其正式同源URL并markDeliverable；iframe390×844加载当前正式首页，菜单/商品/车都是实时页面并共用当前浏览器会话。IAB实际iframe body clientWidth=scrollWidth=375（390宽减滚动条），确认窄屏生效；这次没有依赖之前无效的viewport override，也没有新建Demo副本。
+
+核对原page420模板、旧git和备份，单段原文为：Israeli research. Chinese manufacturing. U.S. warehousing. Three distinct roles at the heart of the VialCovePeptides brand vision. 用户已明确不要拆三段，现通过原layouts REST保存/发布home685，将about-story由media-text改为原生rich-text，只保留该段bodyHtml，清空标题/按钮，无图片/图注/额外小标题。使用当前revision/modified、拒绝已有未发布差异；保留moduleId、其他8模块逐字一致、686/687/688/11725/11727未变。活动模板仍684，未改About独立页420、应用开关或商品/购物车。
+
+实际发布返回成功，published snapshot与保存稿一致；IAB手机预览刷新后DOM只有该原段，前后流程/FAQ保留。内容仍在后台rich-text积木的正文编辑。备份和结果 D:/Codex/Tasks/2026-11-03/about-copy-mobile-preview/work/{before-home,after-home}.json，截图outputs/mobile-live-preview.png；用户页面URL http://vialcovepeptidescom.local/wp-content/themes/peptide-site/tools/mobile-preview.html，默认390×844可切375/430/360。没有写浏览器购物车、订单或扩充业务声明。源码无业务改动，仅本交接入Git。
