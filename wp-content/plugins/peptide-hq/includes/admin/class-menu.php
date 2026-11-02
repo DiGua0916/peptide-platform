@@ -107,6 +107,7 @@ final class Menu {
 	public static function login_presentation(): void {
 		if ( ! self::workspace_enabled() ) { return; }
 		add_filter( 'login_display_language_dropdown', '__return_false' );
+		add_filter( 'login_site_html_link', '__return_empty_string' );
 		add_filter( 'gettext', static function ( string $translated, string $text, string $domain ): string {
 			$labels = array(
 				'Username or Email Address' => '用户名或邮箱', 'Password' => '密码',
