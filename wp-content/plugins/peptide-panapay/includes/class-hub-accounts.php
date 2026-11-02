@@ -133,6 +133,7 @@ final class Hub_Accounts {
 	public static function new_account_defaults( string $id = '' ): array {
 		$defaults = self::defaults( $id );
 		$defaults['enabled'] = 'yes';
+		$defaults['test_mode'] = 'no';
 		return $defaults;
 	}
 
