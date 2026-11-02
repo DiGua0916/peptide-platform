@@ -12,14 +12,14 @@ final class Config {
 	public const MAX_NAME_LENGTH = 120;
 	public const MAX_COLUMNS = 32;
 	public const MAX_PARAMETER_VALUES = 1000;
-	public const KEYS = array( 'version', 'enabled', 'badgeEnabled', 'items', 'keywords', 'parameters', 'enterMs', 'holdMs', 'exitMs', 'gapMs' );
+	public const KEYS = array( 'version', 'enabled', 'badgeEnabled', 'items', 'keywords', 'parameters', 'parameterMode', 'enterMs', 'holdMs', 'exitMs', 'gapMs' );
 	public const TIMINGS = array( 'enterMs' => array( 150, 2000 ), 'holdMs' => array( 1500, 15000 ), 'exitMs' => array( 150, 2000 ), 'gapMs' => array( 0, 2000 ) );
 	public const TOKENS = array( 'product', 'specification', 'price', 'sku' );
 
 	/** Defaults fill a draft; no content is enabled or published by this method. */
 	public static function defaults(): array {
 		return array(
-			'version' => self::VERSION, 'enabled' => false, 'badgeEnabled' => true, 'parameters' => array(),
+			'version' => self::VERSION, 'enabled' => false, 'badgeEnabled' => true, 'parameters' => array(), 'parameterMode' => 'random',
 			'items' => array( '{product} · Choose a pack', '{specification} · {price}', 'Product details in one place' ),
 			'keywords' => array( '{product}', '{price}', 'Product details' ),
 			'enterMs' => 550, 'holdMs' => 3200, 'exitMs' => 450, 'gapMs' => 200,
@@ -35,6 +35,7 @@ final class Config {
 		$out = array_replace( self::defaults(), $input );
 		if ( ! in_array( $out['version'], array( 1, self::VERSION ), true ) ) { return self::error( 'version', 'unsupported_version', '仅支持 version 为整数 1 或 2 的配置。' ); }
 		$out['version'] = self::VERSION;
+		if ( ! in_array( $out['parameterMode'], array( 'random', 'ordered' ), true ) ) { return self::error( 'parameterMode', 'invalid_mode', '参数抽取方式只能为 random（随机）或 ordered（按顺序）。' ); }
 		foreach ( array( 'enabled', 'badgeEnabled' ) as $key ) {
 			if ( ! is_bool( $out[ $key ] ) ) { return self::error( $key, 'invalid_type', '播报开关必须为 true 或 false。' ); }
 		}

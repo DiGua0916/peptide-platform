@@ -15,9 +15,24 @@ final class Product_Broadcast {
 	public static function register_hooks(): void {
 		if ( self::$registered ) { return; }
 		self::$registered = true;
+		add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue_parameter_runtime' ), 99 );
+		add_action( 'wp_print_footer_scripts', array( self::class, 'enqueue_parameter_runtime' ), 0 );
 		add_filter( 'peptide_core_layout_definitions', array( self::class, 'definitions' ) );
 		add_filter( 'peptide_core_module_html', array( self::class, 'render' ), 10, 4 );
 		add_filter( 'peptide_core_module_wrapper', array( self::class, 'wrapper' ), 10, 3 );
+	}
+
+	/** Extend the existing ticker's model before it runs; keep theme rendering and lifecycle intact. */
+	public static function enqueue_parameter_runtime(): void {
+		$ticker = 'vc-product-dialog-ticker';
+		if ( ! wp_script_is( $ticker, 'enqueued' ) || wp_script_is( $ticker, 'done' ) ) { return; }
+		$model = 'vc-product-dialog-ticker-model';
+		if ( ! wp_script_is( $model, 'registered' ) ) { return; }
+		$handle = 'peptide-core-broadcast-parameter-model';
+		$file = 'broadcast-parameter-model.js';
+		wp_enqueue_script( $handle, plugins_url( 'assets/' . $file, PEPTIDE_CORE_FILE ), array( $model ), PEPTIDE_CORE_VERSION . '.' . (int) @filemtime( PEPTIDE_CORE_DIR . '/assets/' . $file ), true ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		$scripts = wp_scripts();
+		if ( ! in_array( $handle, $scripts->registered[ $ticker ]->deps, true ) ) { $scripts->registered[ $ticker ]->deps[] = $handle; }
 	}
 
 	public static function definitions( array $definitions ): array {

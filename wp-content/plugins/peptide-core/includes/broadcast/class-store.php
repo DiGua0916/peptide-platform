@@ -77,6 +77,9 @@ final class Store {
 			$config['items'] = array();
 			$config['keywords'] = array();
 			$config['name'] = '';
+			$config['templates'] = array();
+			$config['keywordTemplates'] = array();
+			$config['parameters'] = array();
 		}
 		return array_merge( array( 'configId' => self::CONFIG_ID, 'revision' => $published['revision'], 'updatedAt' => $published['updatedAt'] ), $config );
 	}

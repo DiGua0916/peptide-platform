@@ -23,7 +23,8 @@ final class Product_Broadcast_Page {
 		$assets = plugins_url( 'assets/', PEPTIDE_CORE_FILE );
 		$version = static fn( string $file ): string => PEPTIDE_CORE_VERSION . '.' . (int) @filemtime( PEPTIDE_CORE_DIR . '/assets/' . $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 		wp_enqueue_style( 'peptide-core-product-broadcast-admin', $assets . 'product-broadcast-admin.css', array(), $version( 'product-broadcast-admin.css' ) );
-		wp_enqueue_script( 'peptide-core-product-broadcast-admin', $assets . 'product-broadcast-admin.js', array( 'wp-api-fetch' ), $version( 'product-broadcast-admin.js' ), array( 'in_footer' => true ) );
+		wp_enqueue_script( 'peptide-core-broadcast-parameter-model', $assets . 'broadcast-parameter-model.js', array(), $version( 'broadcast-parameter-model.js' ), array( 'in_footer' => true ) );
+		wp_enqueue_script( 'peptide-core-product-broadcast-admin', $assets . 'product-broadcast-admin.js', array( 'wp-api-fetch', 'peptide-core-broadcast-parameter-model' ), $version( 'product-broadcast-admin.js' ), array( 'in_footer' => true ) );
 		wp_add_inline_script(
 			'peptide-core-product-broadcast-admin',
 			'window.pcProductBroadcastAdmin = ' . wp_json_encode(
