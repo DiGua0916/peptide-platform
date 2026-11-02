@@ -59,6 +59,8 @@ final class Plugin {
 		Exit_Intent::register_hooks();
 		Modules\Product_Broadcast::register_hooks();
 		Api\Product_Broadcast_Controller::register_hooks();
+		Activity\Mount::register_hooks();
+		Api\Activity_Listener_Controller::register_hooks();
 		Pixels::register_hooks();
 		Seo::register_hooks();
 		Domains::register_hooks();
@@ -129,6 +131,7 @@ final class Plugin {
 			Admin\Shipping_Discounts_Page::register_hooks();
 			Admin\Apps_Page::register_hooks();
 			Admin\Product_Broadcast_Page::register_hooks();
+			Admin\Activity_Listener_Page::register_hooks();
 			Admin\Pixels_Page::register_hooks();
 			Admin\Seo_Page::register_hooks();
 			Admin\Data_Pages::register_hooks();

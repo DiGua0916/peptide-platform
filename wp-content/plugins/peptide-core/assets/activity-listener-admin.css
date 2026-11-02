@@ -1,0 +1,61 @@
+/* Scoped activity-listener controls; no customer cart styling. */
+.pc-activity-admin { min-width: 0; color: #171717; }
+.pc-activity-admin *, .pc-activity-admin *::before, .pc-activity-admin *::after { box-sizing: border-box; }
+.pc-activity-admin ::selection { background: #e5e5e5; color: #171717; }
+.pc-activity-admin .pc-ala-head { margin-bottom: 20px; }
+.pc-activity-admin .pc-ala-head > div { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.pc-activity-admin .pc-ala-head h1 { margin: 0; }
+.pc-activity-admin .pc-ala-head p { margin: 8px 0 0; max-width: 75ch; color: #666; font-size: 14px; line-height: 20px; text-wrap: pretty; }
+.pc-activity-admin a { color: #171717; text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; }
+.pc-activity-admin a:hover { color: #333; }
+.pc-activity-admin .pc-ala-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(300px,380px); align-items: start; gap: 24px; }
+.pc-activity-admin .pc-ala-main, .pc-activity-admin .pc-ala-side { min-width: 0; }
+.pc-activity-admin .pc-ala-section { min-width: 0; margin: 0 0 20px; padding: 20px; border: 1px solid #e6e6e6; border-radius: 12px; background: #fff; }
+.pc-activity-admin .pc-ala-section h2 { margin: 0 0 16px; font-size: 16px; line-height: 24px; font-weight: 600; text-wrap: balance; }
+.pc-activity-admin .pc-ala-section p { max-width: 75ch; font-size: 14px; line-height: 20px; text-wrap: pretty; }
+.pc-activity-admin .pc-ala-field { display: flex; flex-direction: column; min-width: 0; gap: 6px; margin: 16px 0; }
+.pc-activity-admin .pc-ala-field > label { font-size: 14px; line-height: 20px; font-weight: 600; }
+.pc-activity-admin .pc-ala-field input, .pc-activity-admin .pc-ala-field select { width: 100%; min-width: 0; max-width: 100%; min-height: 36px; margin: 0; padding: 7px 10px; border: 1px solid #d4d4d4; border-radius: 6px; background: #fff; color: #171717; caret-color: #171717; font: inherit; font-size: 14px; line-height: 20px; box-shadow: none; }
+.pc-activity-admin .pc-ala-field select { text-overflow: ellipsis; padding-right: 28px; }
+.pc-activity-admin input::placeholder { color: #666; opacity: 1; }
+.pc-activity-admin .pc-ala-toggle { margin-bottom: 16px; }
+.pc-activity-admin .pc-ala-toggle label, .pc-activity-admin .pc-ala-check { display: flex; align-items: flex-start; gap: 8px; color: #171717; font-size: 14px; line-height: 20px; }
+.pc-activity-admin .pc-ala-toggle label { font-weight: 600; }
+.pc-activity-admin .pc-ala-toggle input, .pc-activity-admin .pc-ala-check input { flex: 0 0 auto; margin: 2px 0 0; }
+.pc-activity-admin .pc-ala-hint { max-width: 75ch; margin: 6px 0 0; color: #666; font-size: 12px !important; line-height: 20px !important; text-wrap: pretty; }
+.pc-activity-admin .pc-ala-choice { margin: 12px 0; padding: 12px 16px; border: 1px solid #e6e6e6; border-radius: 6px; background: #fafafa; overflow-wrap: anywhere; }
+.pc-activity-admin .pc-ala-choice p { margin: 4px 0; font-size: 12px; line-height: 20px; }
+.pc-activity-admin .pc-ala-tier-summary { margin: 8px 0 0 20px; font-size: 12px; line-height: 20px; }
+.pc-activity-admin .pc-ala-status { margin: 0 0 12px; color: #404040; font-size: 12px; line-height: 16px; }
+.pc-activity-admin .pc-ala-message { margin: 0 0 16px; padding: 12px 16px; border: 1px solid #e6e6e6; border-radius: 6px; background: #fff; color: #404040; font-size: 14px; line-height: 20px; overflow-wrap: anywhere; text-wrap: pretty; }
+.pc-activity-admin .pc-ala-message.is-error { border-color: #e5bfba; background: #fff6f5; color: #933a32; }
+.pc-activity-admin .pc-ala-message:empty, .pc-activity-admin .pc-ala-status:empty { display: none; }
+.pc-activity-admin .button { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; margin: 0; padding: 7px 12px; border: 1px solid #d4d4d4; border-radius: 6px; background: #fff; color: #171717; font-size: 14px; line-height: 20px; font-weight: 600; box-shadow: none; white-space: normal; text-align: center; transition: background-color 180ms ease-out, border-color 180ms ease-out; }
+.pc-activity-admin .button:hover:not(:disabled) { border-color: #737373; background: #f5f5f5; color: #171717; }
+.pc-activity-admin .button:active:not(:disabled) { transform: translateY(1px); }
+.pc-activity-admin .button-primary { border-color: #171717; background: #171717; color: #fff; }
+.pc-activity-admin .button-primary:hover:not(:disabled) { border-color: #333; background: #333; color: #fff; }
+.pc-activity-admin .button:disabled, .pc-activity-admin :is(input,select):disabled { cursor: default; opacity: 1; background: #f5f5f5 !important; color: #666 !important; border-color: #e6e6e6 !important; }
+.pc-activity-admin :is(button,input,select,a):focus-visible { outline: 2px solid #737373; outline-offset: 2px; box-shadow: none; }
+.pc-activity-admin [aria-invalid="true"] { border-color: #933a32 !important; }
+.pc-activity-admin .pc-ala-side .pc-ala-section > .button { width: 100%; margin-top: 12px; }
+.pc-activity-admin .pc-ala-published { margin: 0 0 8px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pc-activity-admin .pc-ala-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.pc-activity-admin .pc-ala-check { margin-top: 20px; font-size: 12px; line-height: 20px; }
+.pc-activity-admin .pc-ala-preview { margin-top: 20px; padding-top: 16px; border-top: 1px solid #e6e6e6; min-width: 0; }
+.pc-activity-admin .pc-ala-preview h3 { margin: 0 0 8px; font-size: 14px; line-height: 20px; font-weight: 600; overflow-wrap: anywhere; }
+.pc-activity-admin .pc-ala-measure { font-size: 12px !important; line-height: 20px !important; font-variant-numeric: tabular-nums; }
+.pc-activity-admin .pc-ala-track { position: relative; height: 8px; margin: 24px 8px 20px; border-radius: 4px; background: #e6e6e6; }
+.pc-activity-admin .pc-ala-track-fill { display: block; height: 100%; border-radius: inherit; background: #171717; }
+.pc-activity-admin .pc-ala-marker { position: absolute; top: 50%; width: 16px; height: 16px; border: 2px solid #737373; border-radius: 50%; background: #fff; transform: translate(-50%,-50%); }
+.pc-activity-admin .pc-ala-marker.is-reached { border-color: #171717; background: #171717; }
+.pc-activity-admin .pc-ala-nodes { display: grid; grid-template-columns: minmax(0,1fr); margin: 0; padding: 0; list-style: none; border-top: 1px solid #e6e6e6; }
+.pc-activity-admin .pc-ala-nodes li { display: grid; grid-template-columns: minmax(64px,1fr) minmax(0,2fr); gap: 4px 12px; padding: 8px 0; border-bottom: 1px solid #e6e6e6; font-size: 12px; line-height: 20px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.pc-activity-admin .pc-ala-nodes strong { font-weight: 600; }
+.pc-activity-admin .pc-ala-nodes small { grid-column: 2; color: #666; font-size: 12px; line-height: 16px; }
+.pc-activity-admin .pc-ala-next { margin: 12px 0 0; font-size: 14px; line-height: 20px; font-weight: 600; overflow-wrap: anywhere; }
+.pc-activity-admin [hidden] { display: none !important; }
+@media (max-width:1200px) { .pc-activity-admin .pc-ala-grid { grid-template-columns: minmax(0,1fr); } .pc-activity-admin .pc-ala-side { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 20px; } }
+@media (max-width:782px) { .pc-activity-admin .pc-ala-side { display: block; } .pc-activity-admin .pc-ala-section { padding: 16px; } }
+@media (max-width:420px) { .pc-activity-admin .pc-ala-head > div { flex-direction: column; align-items: flex-start; gap: 8px; } .pc-activity-admin .pc-ala-actions > .button { max-width: 100%; } }
+@media (prefers-reduced-motion:reduce) { .pc-activity-admin .button { transition: none; } .pc-activity-admin .button:active:not(:disabled) { transform: none; } }

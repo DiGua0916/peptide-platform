@@ -42,6 +42,12 @@ final class Apps_Page {
 				'icon' => 'dashicons-visibility',
 				'on' => (bool) \PeptideCore\Broadcast\Store::effective()['enabled'],
 			),
+			'activity-listener' => array(
+				'name' => __( '活动监听', 'peptide-core' ),
+				'text' => __( '购物车优惠档位提示：引用已有活动，显示合资格金额、已达节点与距下一档的差额。', 'peptide-core' ),
+				'icon' => 'dashicons-chart-bar',
+				'on' => (bool) \PeptideCore\Activity\Store::effective()['enabled'],
+			),
 		);
 	}
 
@@ -82,6 +88,10 @@ final class Apps_Page {
 		}
 		if ( 'product-broadcast' === ( $_GET['app'] ?? '' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only routing; the page and API enforce permissions.
 			Product_Broadcast_Page::render();
+			return;
+		}
+		if ( 'activity-listener' === ( $_GET['app'] ?? '' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The page and API enforce application permissions.
+			Activity_Listener_Page::render();
 			return;
 		}
 		if ( 'exit-intent' === ( $_GET['app'] ?? '' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended

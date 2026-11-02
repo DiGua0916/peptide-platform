@@ -187,3 +187,22 @@ function peptide_core_product_broadcast_url(): string {
 function peptide_core_product_broadcast_markup(): string {
 	return \PeptideCore\Modules\Product_Broadcast::markup();
 }
+
+/** Published cart-activity application settings, never the management draft. */
+function peptide_core_activity_listener_config(): array {
+	return \PeptideCore\Activity\Store::effective();
+}
+
+function peptide_core_activity_listener_url(): string {
+	return rest_url( 'peptide/v1/activity-listener' );
+}
+
+/** Read the request's Woo cart; no recalculation, fees or customer-selected cart ID. */
+function peptide_core_activity_listener_progress( ?WC_Cart $cart = null ): array {
+	return \PeptideCore\Activity\Progress::for_cart( $cart );
+}
+
+/** Cart-page-only inert public config. Current private cart data is loaded through the Store API. */
+function peptide_core_activity_listener_markup(): string {
+	return \PeptideCore\Activity\Mount::markup();
+}
