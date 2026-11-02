@@ -23,6 +23,7 @@ final class Plugin {
 		if ( is_admin() ) {
 			Admin\Menu::register_hooks();
 			Admin\Operations_Page::hooks();
+			Admin\Provision_Page::hooks();
 		}
 	}
 }
