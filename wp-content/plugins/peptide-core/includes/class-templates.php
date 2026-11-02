@@ -453,7 +453,8 @@ final class Templates {
 		if ( $frame ) {
 			$args[ self::FRAME_PARAM ] = 1;
 		}
-		return add_query_arg( $args, home_url( '/' ) );
+		$url = add_query_arg( $args, home_url( '/' ) );
+		return Management_Host::enabled() ? Management_Host::management_link( $url ) : $url;
 	}
 
 	private static function in_frame(): bool {

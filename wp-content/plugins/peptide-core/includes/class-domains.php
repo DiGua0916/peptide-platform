@@ -47,7 +47,7 @@ final class Domains {
 	public static function register_hooks(): void {
 		add_action( 'init', array( self::class, 'answer_check' ), 0 );
 		add_filter( 'option_home', array( self::class, 'filter_url' ), 99 );
-		add_filter( 'option_siteurl', array( self::class, 'filter_url' ), 99 );
+		if ( ! Management_Host::enabled() ) { add_filter( 'option_siteurl', array( self::class, 'filter_url' ), 99 ); }
 		add_action( 'template_redirect', array( self::class, 'redirect' ), -10 );
 		add_action( self::CRON, array( self::class, 'run_checks' ) );
 		if ( self::stored_hosts() ) {
@@ -254,6 +254,9 @@ final class Domains {
 	 * @return true|\WP_Error
 	 */
 	public static function set_redirect( string $host, string $target ) {
+		if ( Management_Host::enabled() && $host === wp_parse_url( Management_Host::management_url(), PHP_URL_HOST ) ) {
+			return new \WP_Error( 'pc_management_domain_reserved', __( 'The management address is fixed by the platform.', 'peptide-core' ) );
+		}
 		$data  = self::data();
 		$items = $data['items'];
 		if ( ! isset( $items[ $host ] ) ) {
@@ -296,7 +299,7 @@ final class Domains {
 	 * @return true|\WP_Error
 	 */
 	public static function set_primary( string $host ) {
-		if ( defined( 'WP_HOME' ) || defined( 'WP_SITEURL' ) ) {
+		if ( defined( 'WP_HOME' ) || ( defined( 'WP_SITEURL' ) && ! Management_Host::enabled() ) ) {
 			return new \WP_Error( 'pc_primary_locked', __( 'The site address is fixed in wp-config.php (WP_HOME / WP_SITEURL), so it cannot be switched here.', 'peptide-core' ) );
 		}
 		$items = self::items();
@@ -309,6 +312,12 @@ final class Domains {
 		if ( 'connected' !== $items[ $host ]['conn'] ) {
 			return new \WP_Error( 'pc_primary_unconnected', __( 'Only a connected domain can become the primary domain. Check the domain first.', 'peptide-core' ) );
 		}
+		if ( Management_Host::enabled() && 'active' !== $items[ $host ]['https'] ) {
+			return new \WP_Error( 'pc_primary_https_required', __( 'A public primary domain must have verified HTTPS.', 'peptide-core' ) );
+		}
+		if ( Management_Host::enabled() && $host === wp_parse_url( Management_Host::management_url(), PHP_URL_HOST ) && $host !== self::primary_host() ) {
+			return new \WP_Error( 'pc_management_domain_reserved', __( 'The management address is fixed by the platform.', 'peptide-core' ) );
+		}
 		if ( '' !== $items[ $host ]['redirect'] ) {
 			return new \WP_Error( 'pc_primary_redirect', __( 'This domain redirects to another domain. Remove the redirect first.', 'peptide-core' ) );
 		}
@@ -317,7 +326,7 @@ final class Domains {
 		$swap      = static fn( string $url ): string => $scheme . '://' . $host . untrailingslashit( (string) wp_parse_url( $url, PHP_URL_PATH ) );
 		self::$raw = true;
 		update_option( 'home', $swap( (string) get_option( 'home' ) ) );
-		update_option( 'siteurl', $swap( (string) get_option( 'siteurl' ) ) );
+		if ( ! Management_Host::enabled() ) { update_option( 'siteurl', $swap( (string) get_option( 'siteurl' ) ) ); }
 		self::$raw = false;
 		return true;
 	}
@@ -519,10 +528,11 @@ final class Domains {
 
 	/** 访客打开的是另一个已绑定的域名时，home / siteurl 换成这个域名，链接就留在这个域名上。 */
 	public static function filter_url( $value ) {
-		if ( self::$raw || ! is_string( $value ) || '' === $value || empty( $_SERVER['HTTP_HOST'] ) ) {
+		if ( self::$raw || Management_Host::reading_raw() || ! is_string( $value ) || '' === $value || empty( $_SERVER['HTTP_HOST'] ) ) {
 			return $value;
 		}
 		$host = self::request_host();
+		if ( Management_Host::enabled() && $host === wp_parse_url( Management_Host::management_url(), PHP_URL_HOST ) ) { return $value; }
 		if ( '' === $host || ! isset( self::stored_hosts()[ $host ] ) ) {
 			return $value;
 		}
@@ -548,6 +558,7 @@ final class Domains {
 
 	/** 前台：域名跳转，或 HTTPS 生效后 http → https。 */
 	public static function redirect(): void {
+		if ( Management_Host::enabled() && Management_Host::is_management_request() ) { return; }
 		if ( is_admin() || wp_doing_ajax() || wp_doing_cron() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || isset( $_GET['wc-ajax'] ) || is_preview() || is_customize_preview() ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			return;
 		}

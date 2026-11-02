@@ -35,7 +35,8 @@ final class Staff_Entry {
 			update_user_meta( $user_id, self::META, $id );
 		}
 		if ( get_user_meta( $user_id, self::META, true ) !== $id ) { return ''; }
-		return add_query_arg( self::ARG, $id, site_url( 'wp-login.php', 'login' ) );
+		$url = site_url( 'wp-login.php', 'login' );
+		return add_query_arg( self::ARG, $id, Management_Host::enabled() ? Management_Host::management_link( $url ) : $url );
 	}
 
 	private static function valid_uuid( string $uuid ): bool {
