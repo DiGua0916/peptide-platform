@@ -32,6 +32,7 @@ namespace {
 			throw new \RuntimeException( 'Unhandled metadata query' );
 		}
 		public function get_row( string $sql, $format ): ?array { preg_match( '/WHERE id = (\d+)/', $sql, $m ); return $this->rows[ (int) $m[1] ] ?? null; }
+		public function get_col( string $sql ): array { preg_match( "/WHERE uuid = '([^']*)'/", $sql, $m ); return array_slice( array_keys( array_filter( $this->rows, static fn( $r ) => ( $r['uuid'] ?? '' ) === $m[1] ) ), 0, 2 ); }
 		public function insert( string $table, array $row ): void { $id = ++$this->insert_id; $this->rows[$id] = $row + array( 'id' => $id, 'status' => 'unknown', 'fails' => 0, 'error' => '', 'last_check' => 0, 'last_ok' => 0, 'last_full' => 0 ); }
 		public function update( string $table, array $fields, array $where ): void { $this->rows[ $where['id'] ] = array_replace( $this->rows[ $where['id'] ], $fields ); }
 	}
@@ -84,5 +85,9 @@ namespace {
 	check( 'legacy URL move still works', array( 2, 'moved' ) === Sites::register( 'http://127.0.0.1:18081/shop/', str_repeat( 'c', 64 ), 'Legacy', 'legacy-id' ) );
 	$bad = PeptideHq\Register::handle( new WP_REST_Request( array( 'url' => $mgmt, 'key' => $key, 'uuid' => $uuid, 'management_url' => array() ) ) );
 	check( 'payload non-string address rejected', is_wp_error( $bad ) );
+	$GLOBALS['wpdb']->rows[3] = array_replace( $GLOBALS['wpdb']->rows[1], array( 'id' => 3, 'url' => 'https://duplicate.manager.example.test/' ) );
+	$before_duplicates = $GLOBALS['wpdb']->rows;
+	check( 'duplicate historical UUID rejects registration', is_wp_error( Sites::register( $mgmt, $key, 'Store A', $uuid, $mgmt, $public ) ) );
+	check( 'duplicate UUID changes no row or pending key', $before_duplicates === $GLOBALS['wpdb']->rows );
 	echo 'PASS ', $checks, " in-memory HQ management checks; no WordPress, database, or network.\n";
 }

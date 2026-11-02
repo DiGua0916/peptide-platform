@@ -82,7 +82,9 @@ final class Sites {
 		$uuid = substr( sanitize_key( $uuid ), 0, 64 );
 		$name = mb_substr( '' !== trim( $name ) ? $name : (string) wp_parse_url( $url, PHP_URL_HOST ), 0, 190 );
 		// 先按店铺的固定编号找（店铺换了主域名，网址会变），再按网址找。
-		$id = '' !== $uuid ? (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$t} WHERE uuid = %s", $uuid ) ) : 0; // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		$matches = '' !== $uuid ? $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$t} WHERE uuid = %s LIMIT 2", $uuid ) ) : array(); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		if ( count( $matches ) > 1 ) { return new \WP_Error( 'pchq_store_ambiguous', 'The store UUID is registered more than once; registration was not changed.', array( 'status' => 409 ) ); }
+		$id = (int) ( $matches[0] ?? 0 );
 		if ( ! $id ) {
 			$id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$t} WHERE url = %s", $url ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		}

@@ -13,17 +13,22 @@
 - 双域配置固定 `WP_SITEURL`，不定义 `WP_HOME`，DB `home` 初始为 public；旧单域和本机 driver 保留原行为。新店仍使用独立 DB/DB 账号、密码和 salts，不复制客户资料。
 - 新字段进入任务请求哈希，任务重试不能改顾客地址。受限 vhost 参数增加管理/顾客地址占位符；未扩展任意命令、DNS、TLS 或云资源购买。
 - 窄审查补充：Ops 状态中的机器地址与完整备份下载票据使用 core 固定管理地址，顾客 home 变化不能把下载票据转到 public；显式配置缺失有效 core helper 时拒绝生成票据。发布后的前台 HTTP 健康检查保留原 public home 意图，不放开 public 的 Ops REST。
+- 支付窄审查补充：Panapay 0.4.2 的供应商 `site`、顾客返回校验及 HQ 付款授权店铺说明使用登记 public；事件回写使用 management。顾客返回只接受当前登记 public origin（含有效端口）下的原生 Woo `pc_panapay_return` callback：漂亮链接或根路径 `wc-api` query 两种；拒绝其他路径、query、Host、重复字段、凭据/fragment，且 reference 必须等于冻结本地引用、token 为原 48hex。返回时重新验证冻结地址；顾客主域已更换则旧域返回失败且提示回店查状态，不将令牌改派新域，异步机器回写照常。未注册顾客别名不能获得额外返回 origin 授权。
+- HQ 注册对已有 UUID 最多查两行，发现历史重复即 409 且不修改任一行/待定密钥；不清洗历史数据、不增加唯一索引。此保护没有证明历史库不存在重复。
 
 ## 实际验证
 
 - HQ 内存注册与真实源码路由测试：36 项通过。包括 public 切换、同密钥/UUID、pending key、legacy fallback、防止旧客户端覆盖、管理 origin 与子路径检查。
 - Ops 纯配置边界测试：23 项通过。包括 profile 白名单、非法 URL、本机拒绝双域、同域起步、无 WP_HOME、双域 siteurl/home、独立 UUID/DB/salts 与 legacy 保持。
 - Ops 机器地址纯测试：9 项通过，覆盖实际状态 DTO、下载 URL 构造、顾客域切换不影响票据与失效配置先于私有存储检查被拒绝。
+- 支付地址纯测试：33 项通过，调用实际 Hub 地址校验、payload 与 outbox relay；HTTP 仅内存模拟。覆盖双域分流、精确原生返回路径、不同 origin/端口/凭据、query 污染/重复、引用/令牌、public 切换与 legacy 本机子目录。HQ 注册测试增加历史重复 UUID 拒绝和无修改两项，现为 38 项。
 - HQ 测试第一次在裸 `php -n` 下因 mbstring 未加载失败；加载本机已安装 mbstring 后重跑通过，未安装额外依赖。两套测试无 WordPress bootstrap、数据库、网络或文件操作。
-- 首候选 16 个变更 PHP 文件及机器地址补充的 2 个 PHP 文件逐文件语法检查通过，`git diff --check` 通过；提交标识见根代理本次整合记录。
+- 首候选 16 个变更 PHP 文件、机器地址补充的 2 个 PHP 文件及支付/重复 UUID 补充的 7 个 PHP 文件逐文件语法检查通过，`git diff --check` 通过；提交标识见根代理本次整合记录。
 
 ## 待根代理验收
 
 需要配套 core 管理 Host/UUID 策略及实际 Nginx 双 Host 配置后，验证完整 WP cookies、REST nonce、canonical、销售账号与导出隔离，以及顾客域切换后的 HQ 连接和支付回调。此候选未证明公网部署、真实账号/订单/支付/邮件联调或双域生产验收完成。迁移旧 HQ 升 schema 4 前仍须备份；本次没有实际 DB migration。
+
+Panapay 地址拆分依赖 HQ `Site_Urls`：组合升级时先确保 HQ 0.3.2/schema 4，再加载 Panapay 0.4.2。支付纯测试不启动 WordPress/Woo、真实数据库或支付方，不证明真实支付或浏览器 302 已验收；既有 in-flight 返回域改变后的人工核账提示须在集成中验证。
 
 独立分支 `codex/management-hqops-20261102`，base `b447d85e0024932348a562fc3f51f75493989c98`。本任务不 push、不合并 main，由根代理 cherry-pick 后统一验收；本分支不纳入任何私有 profile、凭据、运行配置或收据。

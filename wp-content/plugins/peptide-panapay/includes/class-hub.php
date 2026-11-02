@@ -77,10 +77,7 @@ final class Hub {
 			}
 			if ( ! preg_match( '/^[A-Z]{2}$/D', $p[ $type . '_country' ] ) ) { throw new Protocol_Error( 'invalid_order', 400 ); }
 		}
-		$base = Hub_Protocol::base_url( $site['url'] ); $r = wp_parse_url( $p['return_url'] ); $b = wp_parse_url( $base );
-		if ( ! is_array( $r ) || isset( $r['user'] ) || isset( $r['pass'] ) || isset( $r['fragment'] )
-			|| ( $r['scheme'] ?? '' ) !== $b['scheme'] || strtolower( $r['host'] ?? '' ) !== strtolower( $b['host'] ) || ( $r['port'] ?? null ) !== ( $b['port'] ?? null )
-			|| ! str_starts_with( $r['path'] ?? '/', $b['path'] ?? '/' ) || str_contains( rawurldecode( $r['path'] ?? '' ), '..' ) ) { throw new Protocol_Error( 'invalid_return_target', 400 ); }
+		$p['return_url'] = Hub_Urls::return_url( $p['return_url'], $site, $p['order_id'] );
 		if ( ! is_array( $p['products'] ?? null ) || ! $p['products'] || count( $p['products'] ) > 100 ) { throw new Protocol_Error( 'invalid_order', 400 ); }
 		foreach ( $p['products'] as &$item ) {
 			if ( ! is_array( $item ) ) { throw new Protocol_Error( 'invalid_order', 400 ); }
@@ -102,7 +99,7 @@ final class Hub {
 			catch ( \InvalidArgumentException $error ) { throw new Protocol_Error( 'store_payment_disabled', 403 ); }
 			$allowed = $config['all_sites'] || in_array( $site['id'], $config['sites'], true );
 			if ( ! $allowed || ! $config['enabled'] || $config['archived'] || '' === $config['gateway'] || '' === $config['mchid'] || '' === $config['secret'] ) { throw new Protocol_Error( 'store_payment_disabled', 403 ); }
-			if ( ( $config['test_mode'] && 'production' === wp_get_environment_type() ) || ( ! $config['test_mode'] && ( 'https' !== wp_parse_url( home_url(), PHP_URL_SCHEME ) || 'https' !== wp_parse_url( $site['url'], PHP_URL_SCHEME ) ) ) ) { throw new Protocol_Error( 'environment_not_ready', 503 ); }
+			if ( ( $config['test_mode'] && 'production' === wp_get_environment_type() ) || ( ! $config['test_mode'] && ( 'https' !== wp_parse_url( home_url(), PHP_URL_SCHEME ) || 'https' !== wp_parse_url( Hub_Urls::management( $site ), PHP_URL_SCHEME ) || 'https' !== wp_parse_url( Hub_Urls::public_url( $site ), PHP_URL_SCHEME ) ) ) ) { throw new Protocol_Error( 'environment_not_ready', 503 ); }
 			$p = self::payload( $input, $site );
 			$reference = $p['order_id']; $parsed = Session_Service::parse_reference( $reference );
 			$legacy_hash = hash( 'sha256', Hub_Protocol::json( $p ) );
@@ -120,7 +117,7 @@ final class Hub {
 				'return_token_hash' => hash( 'sha256', $token ), 'type' => '', 'test_mode' => $config['test_mode'] ? 1 : 0, 'created_at' => time(), 'updated_at' => time() );
 			$reserved = Hub_Store::reserve( $record, $legacy_hash );
 			if ( $reserved['winner'] ) {
-				$p['site'] = $site['url']; $p['order_id'] = $ref;
+				$p['site'] = Hub_Urls::public_url( $site ); $p['order_id'] = $ref;
 				$p['notify_url'] = add_query_arg( 'rest_route', '/' . Hub_Protocol::NS . '/hub/notify', home_url( '/' ) );
 				$p['return_url'] = add_query_arg( array( 'rest_route' => '/' . Hub_Protocol::NS . '/hub/return', 'reference' => $ref, 'token' => $token ), home_url( '/' ) );
 				$p['mchid'] = $config['mchid']; $p['tag'] = $config['tag']; $p['mode'] = $config['mode']; $p['platform_id'] = 6;
@@ -203,7 +200,7 @@ final class Hub {
 				$data = array( 'order_number' => $row['local_reference'], 'status' => $event['status'], 'transaction_id' => $transaction );
 				$data['sign'] = Signature::generate( $data, Crypto::decrypt( $row['link_key_box'], 'hub-link' ) ); $data['event_id'] = $event['event_id'];
 				$data['account_id'] = self::account_id( $row['account_id'] ?? 'default' );
-				$result = Hub_Protocol::request( $site['url'], \PeptideHq\Sites::key( $site['id'] ), $site['uuid'], Hub_Protocol::EVENT, $data, 15 );
+				$result = Hub_Protocol::request( Hub_Urls::management( $site ), \PeptideHq\Sites::key( $site['id'] ), $site['uuid'], Hub_Protocol::EVENT, $data, 15 );
 				if ( true !== ( $result['accepted'] ?? null ) || ! in_array( $result['disposition'] ?? '', array( 'paid', 'failed', 'review' ), true ) ) { throw new \RuntimeException( 'store_not_confirmed' ); }
 				Hub_Store::delivery_result( $event['event_id'], 'delivered', $result['disposition'] );
 			} catch ( \Throwable $e ) { Hub_Store::delivery_result( $event['event_id'], 'pending', '', 'store_unavailable' ); }
@@ -222,7 +219,7 @@ final class Hub {
 			if ( ! $site || ! hash_equals( $row['site_uuid'], $site['uuid'] ) ) { throw new Protocol_Error( 'store_not_found', 400 ); }
 			$fields = array( 'status' => $p['status'], 'transaction_id' => $p['transaction_id'] );
 			$fields['sign'] = Signature::generate( $fields, Crypto::decrypt( $row['link_key_box'], 'hub-link' ) );
-			$url = Crypto::decrypt( $row['return_box'], 'hub-return' );
+			$url = Hub_Urls::return_url( Crypto::decrypt( $row['return_box'], 'hub-return' ), $site, $row['local_reference'] );
 			// Retain the exact original store return binding; never accept a browser-supplied target.
 			nocache_headers(); header( 'Referrer-Policy: no-referrer' ); header( 'X-Robots-Tag: noindex, nofollow' );
 			wp_redirect( add_query_arg( $fields, $url ), 302, 'VialCove payment center' ); exit;
