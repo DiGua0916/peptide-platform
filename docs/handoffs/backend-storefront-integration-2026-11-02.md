@@ -42,6 +42,20 @@ The existing Showcase cart consumer accepts the new `live-cart` source in additi
 - Actual production Showcase JavaScript runtime: 14/14; source-handler event compatibility: 4/4. PHP syntax, JavaScript syntax and Git whitespace checks pass.
 - Read-only current-theme contract probe accepts the real public variation quote. As of this stage, the frontend is still synchronizing. Its validator still rejects a valid simple product with an empty specification or a valid product with no image; its progress module still uses newly-crossed-tier-only celebration. These are frontend presentation/adapter follow-ups, not grounds to alter native product data or invent a specification/image.
 
-The initial settings table above is a timestamped snapshot. The frontend's separate publication may subsequently apply app configurations; re-read the applied configuration and document revisions rather than assuming this table is still current. This backend task itself does not publish placeholder broadcast copy or change marketing toggles.
+### Follow-up after the frontend published its settings
+
+The frontend window has now published the actual product/cart builder documents. Public HTTP verification of `/` and `/cart/` returns 200; all 13 new adapter JS/CSS resources return 200. Each page loads `live-cart-experience.js` exactly once, and neither loads the old `cart-drawer.js` or `activity-listener.js`. The original native Cart markup remains as a fallback until the new controller loads its real session.
+
+The frontend's separate publication changed broadcast to enabled/revision1/four texts and activity to revision2 with recommendation enabled. Cart feedback and recently viewed remain enabled/revision0. All four public configuration endpoints return 200. This backend task did not publish these application settings or change products/orders. Evidence: `live-public-http-final.json`; the initial table is preserved as the earlier snapshot.
+
+Current source-level adapter follow-ups (the frontend window is still working; per-file hashes and timestamps are in `frontend-adapter-final-audit.json`):
+
+1. `product-dialog-experience.js` emits `vc:product-dialog-selection`, but no current theme consumer sends signed `view`/`selection` POSTs to the recent-history endpoint. Successful visible product loading must record a view; changing variation must update only its existing selection. Without this, new browsers do not build the history used by recently viewed/recommendation.
+2. Recommendation buttons now receive feedback settings and zero-duration feedback works. Ordinary product-dialog add-to-cart still needs the same configured feedback lifecycle; `bagPulseEnabled` has no consumer in the current theme. Use actual confirmed native success, not button clicks or uncertain recovery.
+3. `live-cart-experience.js` nulls the activity payload when the presentation progress toggle is off and thereby also hides recommendations. Keep the real activity payload for quote validation and render progress/recommendation independently.
+4. `live-cart-progress.js` still celebrates newly crossed nodes only. The user's later instruction requires another celebration for a changed valid cart state that qualifies, while identical state, first load, recovery and changed rules remain static/deduplicated.
+5. The recommendation presentation validator also needs the documented empty-specification/missing-image fallbacks and native money/quantity bounds described above. Do not solve presentation requirements by inventing native product attributes or prices.
+
+Formal-site browser tab binding repeatedly timed out in this task, including after publication. HTTP/source/native checks are recorded separately and are not a claim that the actual visual/mobile interaction was accepted.
 
 Full evidence and final validation counts are in the task outputs `D:/Codex/Tasks/2026-11-02/storefront-integration-check/outputs/`. Frontend/theme files are owned by the actively synchronizing frontend window and are not overwritten by this backend task. A completed backend audit does not by itself certify UI that has not yet landed or been exercised in the actual browser.
