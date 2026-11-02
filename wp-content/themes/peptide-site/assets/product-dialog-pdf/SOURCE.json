@@ -1,0 +1,28 @@
+{
+  "package": "pdfjs-dist",
+  "version": "6.5.438",
+  "source": "https://registry.npmjs.org/pdfjs-dist/-/pdfjs-dist-6.5.438.tgz",
+  "upstream": "https://github.com/mozilla/pdf.js",
+  "license": "Apache-2.0",
+  "downloadedUtc": "2026-11-02T11:00:31.1325459Z",
+  "tarballSha1": "e7f8986ec4ea04057b5d9d2f0e5b63ea94d2303f",
+  "tarballIntegrity": "sha512-vg8Pw1x+AFKy4AMDvhuWl5cOYV8d698UoEANoFFhc79hqXDnZQqnOXoxw3HG907WHOg1JYOvLhP756boddFxpA==",
+  "files": [
+    "legacy/build/pdf.mjs -> pdf.mjs",
+    "legacy/build/pdf.worker.mjs -> pdf.worker.mjs",
+    "wasm/",
+    "cmaps/",
+    "standard_fonts/",
+    "LICENSE"
+  ],
+  "moduleHashes": [
+    {
+      "file": "pdf.mjs",
+      "sha256": "2792b7c390ad6d5f4245d326b70deebbc990fa4bcac691412f6df886abb9e867"
+    },
+    {
+      "file": "pdf.worker.mjs",
+      "sha256": "8336aabf764cb08c818555a2fd2545e4fed10837146de927564875c93b3c4f83"
+    }
+  ]
+}

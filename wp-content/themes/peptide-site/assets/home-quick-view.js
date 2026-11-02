@@ -55,6 +55,7 @@
     catch (_) { return {}; }
   };
   function media(root, image) {
+    if (root.vcExperience) { root.vcExperience.updateMedia(image); return; }
     let area = root.querySelector(':scope > .vc-showcase-quick__media');
     if (!area) { area = document.createElement('div'); area.className = 'vc-showcase-quick__media'; root.prepend(area); }
     const source = image && sameOriginImage(image.src);
@@ -133,7 +134,8 @@
       dialog.prepend(toolbar);
       if (restoreFocus) close.focus({preventScroll: true});
     }
-    toolbar.querySelector('strong').textContent = root.dataset.vcProductName || 'Product details';
+    const toolbarName = toolbar.querySelector('strong');
+    if (toolbarName) toolbarName.textContent = root.dataset.vcProductName || 'Product details';
     const link = summary.querySelector('.vc-showcase-quick__details');
     if (link?.tagName === 'A') {
       const button = document.createElement('button'); button.type = 'button'; button.className = link.className;
@@ -169,11 +171,12 @@
     }
     dialog.scrollTop = 0;
   }
-  function present(root) {
+  function present(root, opener) {
     const dialog = root.closest('dialog'); if (!dialog) return;
+    root.vcHomeOpener = opener;
     dialog.classList.add('vc-home-quick');
     const summary = root.querySelector('.summary'); if (!summary) return;
-    if (!summary.querySelector('.vc-home-quick__eyebrow')) {
+    if (!root.querySelector('.vc-home-quick__eyebrow')) {
       const eyebrow = document.createElement('p'); eyebrow.className = 'vc-home-quick__eyebrow'; eyebrow.textContent = 'The VialCove collection'; summary.prepend(eyebrow);
     }
     const buy = summary.querySelector('[data-vc-quick-buy]'); if (buy) buy.textContent = 'Buy now';
@@ -184,24 +187,31 @@
     price(root, root.vcHomePrice === undefined ? defaults.priceHtml : root.vcHomePrice);
     details(root, root.vcHomeSku === undefined ? defaults.sku : root.vcHomeSku); quantity(root);
     fullDetails(root, dialog, summary);
+    if (!root.vcExperience && window.createVcProductExperience) root.vcExperience = window.createVcProductExperience(root, dialog);
+    root.vcExperience?.update();
     const cart = dialog.querySelector('.vc-showcase-quick__feedback a');
     if (cart) { cart.classList.add('cart-link'); cart.textContent = 'View shopping bag'; }
     const close = dialog.querySelector('.vc-showcase-quick__close');
     if (close) close.setAttribute('aria-label', 'Close product');
+    document.dispatchEvent(new CustomEvent('vc:product-presented', {detail: {root, dialog, productId: Number(root.dataset.vcProductId)}}));
   }
   $(document).on('found_variation.vcHomeQuick', homeProduct + ' .variations_form', function (_, variation) {
     const root = this.closest(homeProduct); if (!root || !variation) return;
     root.vcHomeImage = Object.prototype.hasOwnProperty.call(variation, 'vc_home_image') ? variation.vc_home_image : variation.image;
     root.vcHomeSku = variation.sku || '';
+    root.vcHomePromotions = variation.vc_home_promotions || [];
     root.vcHomePrice = variation.price_html || '';
     price(root, root.vcHomePrice);
     media(root, root.vcHomeImage); details(root, root.vcHomeSku);
+    root.vcExperience?.update();
   });
   $(document).on('reset_data.vcHomeQuick hide_variation.vcHomeQuick', homeProduct + ' .variations_form', function () {
     const root = this.closest(homeProduct); const defaults = initial(root);
     root.vcHomeImage = defaults.image; root.vcHomeSku = defaults.sku;
+    root.vcHomePromotions = [];
     root.vcHomePrice = ''; price(root, '');
     media(root, defaults.image); details(root, defaults.sku);
+    root.vcExperience?.update();
   });
   // The page contains lightweight cards. Fetch one native template when needed,
   // then replay the click so the existing plugin owns opening and every write.
@@ -219,6 +229,7 @@
         announce(''); link.click();
       }).catch(() => {
         if (intent !== openIntent || !link.isConnected || document.visibilityState === 'hidden') return;
+        if (!link.href) { announce('Product details could not load. Please try again.'); return; }
         announce('Opening the product page…');
         // A failed read never triggers an add-to-cart attempt or hides the PDP.
         location.assign(link.href);
@@ -230,7 +241,7 @@
     // Lazy .click() replays previously masked this ordering difference.
     window.setTimeout(() => {
       const root = document.querySelector('dialog.vc-showcase-quick[open] > .vc-showcase-quick__body > ' + homeProduct);
-      if (root && root.dataset.vcProductId === link.dataset.vcHomeProduct) present(root);
+      if (root && root.dataset.vcProductId === link.dataset.vcHomeProduct) present(root, link);
     }, 0);
   }, true);
   // Avoid stacking the cart drawer above a still-open product dialog. Desktop
@@ -259,6 +270,7 @@
     }
   });
   const cancelPending = () => { ++openIntent; requests.forEach(request => request.controller.abort()); announce(''); };
+  document.addEventListener('vc:product-restore-cancel', cancelPending);
   document.addEventListener('keydown', event => { if (event.key === 'Escape') cancelPending(); });
   window.addEventListener('pagehide', cancelPending);
 })(window.jQuery);

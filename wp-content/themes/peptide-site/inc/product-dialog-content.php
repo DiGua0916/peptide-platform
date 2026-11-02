@@ -2,10 +2,125 @@
 /** Read-only product information inside the native Woo purchase dialog. */
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Separate only explicit, complete FAQ sections from this product's description.
+ * DOM ranges preserve surrounding wrappers and stop at the next peer/parent
+ * heading. Unrecognised or incomplete content remains in the original body.
+ */
+function vc_product_dialog_extract_questions( string $html, string $product_name ): array {
+    $result = array( 'body' => $html, 'questions' => '' );
+    if ( ! class_exists( 'DOMDocument' ) || '' === trim( $html ) ) { return $result; }
+    $document = new DOMDocument( '1.0', 'UTF-8' );
+    $previous = libxml_use_internal_errors( true );
+    try {
+        if ( ! $document->loadHTML( '<?xml encoding="UTF-8"><!doctype html><html><body>' . $html . '</body></html>', LIBXML_NONET ) ) { return $result; }
+        $body = $document->getElementsByTagName( 'body' )->item( 0 );
+        if ( ! $body ) { return $result; }
+        $positions = new SplObjectStorage(); $headings = array(); $counter = 0;
+        $text = static fn( $value ) => trim( (string) preg_replace( '/[\s\p{Z}]+/u', ' ', (string) $value ) );
+        $is_faq = static fn( $value ) => (bool) preg_match( '/^(?:FAQs?|Frequently asked questions)\s*[:：?]?$/iu', $text( $value ) );
+        $index = function ( DOMNode $node ) use ( &$index, &$counter, &$headings, $positions ): void {
+            $start = $counter++;
+            if ( $node instanceof DOMElement && preg_match( '/^h([1-6])$/i', $node->tagName, $match ) ) {
+                $headings[] = array( 'node' => $node, 'level' => (int) $match[1], 'start' => $start );
+            }
+            foreach ( $node->childNodes as $child ) { $index( $child ); }
+            $positions[ $node ] = array( $start, $counter );
+        };
+        $index( $body );
+        // Clone partial wrappers instead of flattening lists, tables or rich text.
+        $copy = function ( DOMNode $node, int $start, int $end ) use ( &$copy, $positions ): ?DOMNode {
+            [ $from, $to ] = $positions[ $node ];
+            if ( $to <= $start || $from >= $end ) { return null; }
+            if ( $from >= $start && $to <= $end ) { return $node->cloneNode( true ); }
+            $clone = $node->cloneNode( false );
+            if ( $clone instanceof DOMElement ) { $clone->removeAttribute( 'id' ); }
+            foreach ( $node->childNodes as $child ) {
+                $part = $copy( $child, $start, $end );
+                if ( $part ) { $clone->appendChild( $part ); }
+            }
+            return $clone->hasChildNodes() ? $clone : null;
+        };
+        $remove = function ( DOMNode $node, int $start, int $end ) use ( &$remove, $positions ): void {
+            [ $from, $to ] = $positions[ $node ];
+            if ( $to <= $start || $from >= $end ) { return; }
+            if ( $from >= $start && $to <= $end ) { $node->parentNode?->removeChild( $node ); return; }
+            foreach ( iterator_to_array( $node->childNodes ) as $child ) { $remove( $child, $start, $end ); }
+        };
+        $visible_text = function ( DOMNode $node ) use ( &$visible_text ): string {
+            if ( $node instanceof DOMText ) { return $node->nodeValue; }
+            if ( $node instanceof DOMElement && in_array( strtolower( $node->tagName ), array( 'script', 'style', 'template', 'form', 'input', 'button', 'select', 'textarea' ), true ) ) { return ''; }
+            $value = '';
+            foreach ( $node->childNodes as $child ) { $value .= $visible_text( $child ); }
+            return $value;
+        };
+        $items = array(); $ranges = array();
+        foreach ( $headings as $heading_index => $heading ) {
+            $node = $heading['node'];
+            if ( ! $is_faq( $node->textContent ) ) { continue; }
+            // Existing accordions/generated question areas already have a layout.
+            $existing = false;
+            for ( $parent = $node->parentNode; $parent && $parent !== $body; $parent = $parent->parentNode ) {
+                if ( $parent instanceof DOMElement && ( 'details' === strtolower( $parent->tagName ) || preg_match( '/(?:^|\s)vc-product-dialog-questions(?:\s|$)/', $parent->getAttribute( 'class' ) ) ) ) { $existing = true; break; }
+            }
+            if ( $existing ) { continue; }
+            $end = $positions[ $body ][1]; $candidates = array(); $level = 7; $nested_faq = false;
+            for ( $i = $heading_index + 1, $count = count( $headings ); $i < $count; $i++ ) {
+                $next = $headings[ $i ];
+                if ( $next['level'] <= $heading['level'] ) { $end = $next['start']; break; }
+                if ( $is_faq( $next['node']->textContent ) ) { $nested_faq = true; }
+                $candidates[] = $next; $level = min( $level, $next['level'] );
+            }
+            if ( ! $candidates || $nested_faq ) { continue; }
+            $section = $copy( $body, $positions[ $node ][1], $end );
+            if ( ! $section || ( $section instanceof DOMElement && $section->getElementsByTagName( 'details' )->length ) ) { continue; }
+            $questions = array_values( array_filter( $candidates, static fn( $item ) => $item['level'] === $level ) );
+            $section_ranges = array();
+            foreach ( $questions as $i => $question ) {
+                $question_text = $text( $question['node']->textContent );
+                $answer_end = $questions[ $i + 1 ]['start'] ?? $end;
+                $answer = $copy( $body, $positions[ $question['node'] ][1], $answer_end );
+                if ( '' === $question_text || ! $answer || '' === $text( $visible_text( $answer ) ) ) { continue; }
+                $answer_html = '';
+                foreach ( $answer->childNodes as $child ) { $answer_html .= $document->saveHTML( $child ); }
+                $id = $question['node']->getAttribute( 'id' );
+                $items[] = '<details class="vc-product-dialog-question"' . ( '' !== $id ? ' id="' . esc_attr( $id ) . '"' : '' ) . '><summary>'
+                    . esc_html( $question_text ) . '</summary><div class="vc-product-dialog-question__answer">' . $answer_html . '</div></details>';
+                $section_ranges[] = array( $question['start'], $answer_end );
+            }
+            if ( ! $section_ranges ) { continue; }
+            // Keep the FAQ heading when an introduction or incomplete question is left.
+            $cursor = $positions[ $node ][1]; $leftover = false;
+            foreach ( $section_ranges as [ $start, $finish ] ) {
+                $part = $copy( $body, $cursor, $start );
+                if ( $part && '' !== $text( $visible_text( $part ) ) ) { $leftover = true; }
+                $cursor = $finish;
+            }
+            $part = $copy( $body, $cursor, $end );
+            if ( $part && '' !== $text( $visible_text( $part ) ) ) { $leftover = true; }
+            if ( ! $leftover ) { $section_ranges[] = $positions[ $node ]; }
+            $ranges = array_merge( $ranges, $section_ranges );
+        }
+        if ( ! $items ) { return $result; }
+        foreach ( $ranges as [ $start, $end ] ) { $remove( $body, $start, $end ); }
+        $result['body'] = '';
+        foreach ( $body->childNodes as $child ) { $result['body'] .= $document->saveHTML( $child ); }
+        $result['questions'] = '<section class="vc-product-dialog-questions" data-vc-product-questions="description"><header class="vc-product-dialog-questions__heading"><p>'
+            . esc_html__( 'Product questions', 'peptide-site' ) . '</p><h2>'
+            . esc_html( sprintf( __( 'A little more about %s.', 'peptide-site' ), $product_name ) )
+            . '</h2><img src="' . esc_url( get_template_directory_uri() . '/assets/product-dialog-support.png' )
+            . '" width="64" height="64" loading="lazy" alt="' . esc_attr__( 'VialCove support', 'peptide-site' )
+            . '"></header><div class="vc-product-dialog-questions__accordion">' . implode( '', $items ) . '</div></section>';
+        return $result;
+    } finally {
+        libxml_clear_errors(); libxml_use_internal_errors( $previous );
+    }
+}
+
 /** Capture existing tab callbacks; reviews are published, read-only content. */
 function vc_product_dialog_tabs( WC_Product $product ): string {
     $tabs = apply_filters( 'woocommerce_product_tabs', array() );
-    $html = '';
+    $html = ''; $questions = '';
     $short = apply_filters( 'woocommerce_short_description', $product->get_short_description() );
     if ( is_string( $short ) && '' !== trim( $short ) ) {
         $html .= '<details class="vc-product-dialog-panel" data-vc-dialog-tab="overview"><summary>'
@@ -25,7 +140,7 @@ function vc_product_dialog_tabs( WC_Product $product ): string {
                     . ( $rating > 0 && $rating <= 5 ? wc_get_rating_html( $rating ) : '' ) . '<div>'
                     . apply_filters( 'comment_text', $comment->comment_content, $comment, array() ) . '</div></article>';
             }
-            if ( '' === $body ) { $body = '<p>' . esc_html__( 'There are no reviews yet.', 'woocommerce' ) . '</p>'; }
+            if ( '' === $body ) { continue; }
             $html .= '<details class="vc-product-dialog-panel" data-vc-dialog-tab="reviews"><summary>'
                 . esc_html( wp_strip_all_tags( $tab['title'] ?? __( 'Reviews', 'woocommerce' ) ) )
                 . '</summary><div class="vc-product-dialog-panel__body">' . $body . '</div></details>';
@@ -40,11 +155,16 @@ function vc_product_dialog_tabs( WC_Product $product ): string {
             while ( ob_get_level() > $level ) { ob_end_clean(); }
         }
         if ( '' === trim( $body ) ) { continue; }
+        if ( 'description' === $key ) {
+            $parts = vc_product_dialog_extract_questions( $body, $product->get_name() );
+            $body = $parts['body']; $questions .= $parts['questions'];
+            if ( '' === trim( $body ) ) { continue; }
+        }
         $title = wp_strip_all_tags( (string) ( $tab['title'] ?? $key ) );
         $html .= '<details class="vc-product-dialog-panel" data-vc-dialog-tab="' . esc_attr( (string) $key ) . '"><summary>' . esc_html( $title )
             . '</summary><div class="vc-product-dialog-panel__body">' . $body . '</div></details>';
     }
-    return $html;
+    return $html . $questions;
 }
 
 /** Only published content blocks are portable; commerce/global blocks keep their native route. */

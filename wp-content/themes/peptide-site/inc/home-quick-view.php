@@ -13,10 +13,19 @@ function vc_home_quick_view_assets(): void {
     wp_enqueue_script( 'vialcove-product-options', $base . 'product-options.js', array( 'jquery', 'wc-add-to-cart-variation' ), (string) filemtime( $path . 'product-options.js' ), true );
     \PeptideCore\Modules\Showcase_Quick_View::catalog_assets();
     wp_enqueue_style( 'vc-home-quick-view', $base . 'home-quick-view.css', array( 'vialcove-product-options' ), (string) filemtime( $path . 'home-quick-view.css' ) );
-    wp_enqueue_script( 'vc-home-quick-view', $base . 'home-quick-view.js', array( 'jquery', 'peptide-showcase-quick-view' ), (string) filemtime( $path . 'home-quick-view.js' ), true );
+    wp_enqueue_style( 'vc-live-cart-feedback', $base . 'live-cart-feedback.css', array(), (string) filemtime( $path . 'live-cart-feedback.css' ) );
+    wp_enqueue_script( 'vc-live-cart-feedback', $base . 'live-cart-feedback.js', array(), (string) filemtime( $path . 'live-cart-feedback.js' ), true );
+    foreach ( array( 'ticker-model', 'ticker', 'report-viewer', 'feedback', 'experience', 'recent' ) as $part ) {
+        $name = 'product-dialog-' . $part;
+        wp_enqueue_script( 'vc-' . $name, $base . $name . '.js', array(), (string) filemtime( $path . $name . '.js' ), true );
+    }
+    wp_enqueue_script( 'vc-home-quick-view', $base . 'home-quick-view.js', array( 'jquery', 'peptide-showcase-quick-view', 'vc-live-cart-feedback', 'vc-product-dialog-ticker-model', 'vc-product-dialog-ticker', 'vc-product-dialog-report-viewer', 'vc-product-dialog-feedback', 'vc-product-dialog-experience', 'vc-product-dialog-recent' ), (string) filemtime( $path . 'home-quick-view.js' ), true );
     wp_localize_script( 'vc-home-quick-view', 'vcHomeQuickView', array(
         'productApi' => rest_url( 'vialcove/v1/home-product/' ),
         'wpNonce' => is_user_logged_in() ? wp_create_nonce( 'wp_rest' ) : '',
+        'reportApi' => rest_url( 'peptide/v1/report-library' ),
+        'cartUrl' => function_exists( 'wc_get_cart_url' ) ? wc_get_cart_url() : '',
+        'assetBase' => $base,
     ) );
 }
 
@@ -63,8 +72,26 @@ function vc_home_quick_view_image( $product ): ?array {
 /** Native AJAX variation responses need the same exact-image semantics as the cards. */
 add_filter( 'woocommerce_available_variation', function ( array $data, $parent, $variation ): array {
     $data['vc_home_image'] = vc_home_quick_view_image( $variation );
+    $data['vc_home_promotions'] = vc_home_quick_view_promotions( $variation );
     return $data;
 }, 30, 3 );
+
+/** Read the existing public, eligible promotion DTO; no frontend discount engine. */
+function vc_home_quick_view_promotions( $product ): array {
+    if ( ! class_exists( '\PeptideCore\Promotions' ) ) { return array(); }
+    $items = \PeptideCore\Promotions::for_product( $product );
+    $plain = static fn( $value ) => html_entity_decode( wp_strip_all_tags( (string) $value ), ENT_QUOTES, 'UTF-8' );
+    foreach ( $items as &$item ) {
+        foreach ( $item['tiers'] as &$tier ) {
+            $tier['thresholdText'] = 'spend' === $item['basis'] ? $plain( wc_price( $tier['min'] ) ) : (string) $tier['min'];
+            $tier['rewardText'] = $plain( \PeptideCore\Promotions::reward_text( $item, $tier ) );
+            $tier['text'] = $plain( $tier['text'] );
+        }
+        unset( $tier );
+    }
+    unset( $item );
+    return $items;
+}
 
 /**
  * Render once per public product. Links retain the real permalink and use both
@@ -89,12 +116,18 @@ function vc_home_quick_view_template( $product ): string {
     if ( '' === $html ) { return ''; }
     $initial = array(
         'image' => vc_home_quick_view_image( $first ), 'sku' => $first->get_sku(), 'attributes' => $attributes,
+        'variationId' => $first->is_type( 'variation' ) ? $first->get_id() : 0,
+        'ratingHtml' => $product->get_rating_count() > 0 ? wp_kses_post( wc_get_rating_html( (float) $product->get_average_rating(), $product->get_rating_count() ) ) : '',
+        'ratingCount' => $product->get_rating_count(),
+        'promotions' => vc_home_quick_view_promotions( $first ),
         'priceHtml' => wp_kses_post( function_exists( 'vc_public_price_html' ) ? vc_public_price_html( $first ) : $first->get_price_html() ),
     );
     $tags = new WP_HTML_Tag_Processor( $html );
     if ( $tags->next_tag( array( 'tag_name' => 'DIV', 'class_name' => 'vc-showcase-quick-product' ) ) ) {
         $tags->add_class( 'vc-home-quick-product' );
         $tags->set_attribute( 'data-vc-home-initial', wp_json_encode( $initial, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) );
+        $settings = function_exists( 'vc_live_product_settings' ) ? vc_live_product_settings( $product->get_id() ) : array( 'enabled' => false );
+        $tags->set_attribute( 'data-vc-experience', wp_json_encode( $settings, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) );
     }
     $html = $tags->get_updated_html();
     // The native template has one product root. Keep the existing purchase form
