@@ -70,3 +70,57 @@ body:has(.vc-home-quick[open]) { overflow:hidden; }
 }
 .vc-home-quick__loading-status{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 [data-vc-home-product][aria-busy="true"]{cursor:progress}
+
+/* The full product experience shares the same native form and product data. */
+.vc-home-quick--full { overscroll-behavior:contain; scroll-padding-top:76px; }
+.vc-home-quick .vc-home-quick__toolbar { position:sticky; top:0; z-index:8; display:flex; align-items:center; gap:8px; min-height:64px; padding:8px 16px 8px 24px; border-bottom:1px solid var(--vc-home-line); background:#fff; }
+.vc-home-quick .vc-home-quick__toolbar-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:16px; font-weight:600; }
+.vc-home-quick .vc-home-quick__toolbar > button:not(.vc-showcase-quick__close) { min-height:44px; padding:10px 12px; border:0; background:transparent; color:var(--vc-home-ink); font:500 14px/20px 'Geist',sans-serif; border-radius:6px; }
+.vc-home-quick .vc-home-quick__toolbar > button:hover { background:#eef5f5; }
+.vc-home-quick .vc-home-quick__toolbar .vc-showcase-quick__close { position:static; flex:0 0 44px; }
+.vc-home-quick--full .vc-showcase-quick__media { align-items:flex-start; padding-top:48px; }
+.vc-home-quick--full .vc-showcase-quick__media img { position:sticky; top:104px; }
+.vc-home-quick--full.woocommerce div.product.vc-showcase-quick-product > div.summary { padding-top:48px; }
+.vc-home-quick .vc-showcase-quick__buy { width:100%; min-height:52px; margin:0; padding:12px 20px; border:1px solid var(--vc-home-line); border-radius:8px; background:white; color:var(--vc-home-ink); font:600 16px/24px 'Geist',sans-serif; }
+.vc-home-quick .vc-showcase-quick__buy:not(:disabled):hover { background:#eef5f5; border-color:var(--vc-home-teal); }
+.vc-home-quick .vc-showcase-quick__buy:disabled { opacity:.45; cursor:not-allowed; }
+.vc-home-quick .summary .vc-showcase-quick__feedback { margin:20px 0 0; padding:16px; border:1px solid var(--vc-home-line); border-radius:8px; background:#f3f8f8; }
+.vc-home-quick .summary .vc-showcase-quick__feedback p { margin:0; }
+.vc-home-quick button.vc-showcase-quick__details { min-height:44px; padding:8px 0; background:transparent; border:0; font:600 15px/24px 'Geist',sans-serif; text-align:left; }
+.vc-home-quick .vc-product-dialog-content { grid-column:1/-1; min-width:0; padding:48px; border-top:1px solid var(--vc-home-line); background:#fff; font-size:16px; line-height:1.65; overflow-wrap:anywhere; }
+.vc-home-quick .vc-product-dialog-heading { margin:0 0 32px; color:var(--vc-home-ink); font:600 36px/1.15 'Geist',sans-serif; letter-spacing:-.04em; }
+.vc-home-quick .vc-product-dialog-panel { margin:0; border:0; border-bottom:1px solid var(--vc-home-line); border-radius:0; background:transparent; }
+.vc-home-quick .vc-product-dialog-panel > summary { display:flex; align-items:center; justify-content:space-between; gap:24px; padding:24px 0; color:var(--vc-home-ink); font-size:20px; font-weight:600; line-height:28px; cursor:pointer; list-style:none; }
+.vc-home-quick .vc-product-dialog-panel > summary::-webkit-details-marker { display:none; }
+.vc-home-quick .vc-product-dialog-panel > summary::after { content:'+'; flex:0 0 24px; font:400 26px/1 'Geist',sans-serif; text-align:center; }
+.vc-home-quick .vc-product-dialog-panel[open] > summary::after { content:'−'; }
+.vc-home-quick .vc-product-dialog-panel__body { padding:0 0 32px; color:#425d67; }
+.vc-home-quick .vc-product-dialog-panel__body > :first-child { margin-top:0; }
+.vc-home-quick .vc-product-dialog-panel__body > h2:first-child { display:none; }
+.vc-home-quick .vc-product-dialog-panel__body :is(h2,h3,h4) { margin:28px 0 12px; color:var(--vc-home-ink); font-family:inherit; font-size:22px; font-weight:600; line-height:1.3; letter-spacing:-.02em; }
+.vc-home-quick .vc-product-dialog-panel__body p { margin:0 0 16px; }
+.vc-home-quick .vc-product-dialog-panel__body ul { margin:12px 0 24px; padding-left:22px; }
+.vc-home-quick .vc-product-dialog-panel__body li { margin:8px 0; }
+.vc-home-quick .vc-product-dialog-content img { max-width:100%; height:auto; }
+.vc-home-quick .vc-product-dialog-content :is(table,dl) { width:100%; max-width:100%; margin:20px 0; border-collapse:collapse; font-size:15px; line-height:1.6; }
+.vc-home-quick .vc-product-dialog-content table { table-layout:fixed; }
+.vc-home-quick .vc-product-dialog-content :is(th,td) { padding:12px 16px; border:1px solid var(--vc-home-line); vertical-align:top; text-align:left; background:transparent; }
+.vc-home-quick .vc-product-dialog-content :is(th,dt) { color:var(--vc-home-ink); font-weight:600; }
+.vc-home-quick .vc-product-dialog-content th { background:#f3f7f8; }
+.vc-home-quick .vc-product-dialog-content dd { margin:0 0 12px; }
+.vc-home-quick .vc-product-dialog-content :is(.vc-container,.vc-shell) { max-width:100%; padding-inline:0; }
+.vc-home-quick .vc-product-dialog-content a { color:#0d718a; text-underline-offset:3px; }
+.vc-home-quick .vc-product-dialog-content [tabindex="-1"]:focus { outline:none; }
+@media(max-width:767px) {
+ .vc-home-quick .vc-home-quick__toolbar { min-height:56px; padding:6px 8px 6px 16px; gap:0; }
+ .vc-home-quick .vc-home-quick__toolbar-name { font-size:14px; }
+ .vc-home-quick .vc-home-quick__toolbar > button:not(.vc-showcase-quick__close) { padding-inline:9px; font-size:13px; }
+ .vc-home-quick--full .vc-showcase-quick__media { padding:24px; }
+ .vc-home-quick--full .vc-showcase-quick__media img { position:static; }
+ .vc-home-quick--full.woocommerce div.product.vc-showcase-quick-product > div.summary { padding-top:24px; }
+ .vc-home-quick .vc-product-dialog-content { padding:32px 24px; font-size:16px; }
+ .vc-home-quick .vc-product-dialog-heading { margin-bottom:20px; font-size:30px; }
+ .vc-home-quick .vc-product-dialog-panel > summary { padding:20px 0; font-size:18px; line-height:26px; }
+ .vc-home-quick .vc-product-dialog-panel__body :is(h2,h3,h4) { font-size:20px; }
+ .vc-home-quick .vc-product-dialog-content :is(th,td) { padding:10px 8px; font-size:14px; }
+}

@@ -4,6 +4,7 @@
   if (!$) return;
   const homeProduct = '.vc-home-quick-product';
   const requests = new Map();
+  const feedbacks = new WeakMap();
   let openIntent = 0, loadingStatus;
   const templateFor = id => document.querySelector('template[data-vc-quick-product="' + id + '"]');
   const canOpen = () => window.HTMLDialogElement && HTMLDialogElement.prototype.showModal && window.fetch && window.AbortController;
@@ -106,6 +107,68 @@
       if (direction < 0) input.before(button); else input.after(button);
     }
   }
+  function moveTo(dialog, target) {
+    if (!target) return;
+    const top = target.getBoundingClientRect().top - dialog.getBoundingClientRect().top + dialog.scrollTop - 76;
+    dialog.scrollTo({top: Math.max(0, top), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'});
+    target.setAttribute('tabindex', '-1'); target.focus({preventScroll: true});
+  }
+  function fullDetails(root, dialog, summary) {
+    const content = root.querySelector('.vc-product-dialog-content');
+    if (!content) return;
+    dialog.classList.add('vc-home-quick--full');
+    let toolbar = dialog.querySelector('.vc-home-quick__toolbar');
+    if (!toolbar) {
+      toolbar = document.createElement('div'); toolbar.className = 'vc-home-quick__toolbar';
+      const name = document.createElement('strong'); name.className = 'vc-home-quick__toolbar-name';
+      toolbar.append(name);
+      for (const [label, selector] of [['Options', '.summary'], ['Details', '.vc-product-dialog-content']]) {
+        const button = document.createElement('button'); button.type = 'button'; button.textContent = label;
+        button.addEventListener('click', () => moveTo(dialog, dialog.querySelector(homeProduct + ' ' + selector)));
+        toolbar.append(button);
+      }
+      const close = dialog.querySelector('.vc-showcase-quick__close');
+      const restoreFocus = document.activeElement === close;
+      if (close) toolbar.append(close);
+      dialog.prepend(toolbar);
+      if (restoreFocus) close.focus({preventScroll: true});
+    }
+    toolbar.querySelector('strong').textContent = root.dataset.vcProductName || 'Product details';
+    const link = summary.querySelector('.vc-showcase-quick__details');
+    if (link?.tagName === 'A') {
+      const button = document.createElement('button'); button.type = 'button'; button.className = link.className;
+      button.textContent = 'Explore product details ↓';
+      button.addEventListener('click', () => moveTo(dialog, content)); link.replaceWith(button);
+    }
+    if (!content.querySelector(':scope > .vc-product-dialog-heading')) {
+      const heading = document.createElement('h2'); heading.className = 'vc-product-dialog-heading'; heading.textContent = 'A closer look.';
+      content.prepend(heading);
+    }
+    // Keep the plugin-owned status and recovery buttons beside the purchase form,
+    // even when its reusable product root is detached and opened again.
+    const feedback = feedbacks.get(dialog) || dialog.querySelector('.vc-showcase-quick__feedback');
+    if (feedback) {
+      feedbacks.set(dialog, feedback);
+      const sku = summary.querySelector('.vc-home-quick__sku');
+      if (sku) sku.before(feedback); else summary.append(feedback);
+    }
+    // Native Woo namespaces IDs after variation initialization. Preserve local
+    // description anchors without changing the page hash or leaving the dialog.
+    if (!content.dataset.vcAnchorsReady) {
+      content.dataset.vcAnchorsReady = '1';
+      content.addEventListener('click', event => {
+        const anchor = event.target.closest('a[href^="#"]'); if (!anchor) return;
+        const fragment = anchor.getAttribute('href').slice(1); if (!fragment) return;
+        const target = [...content.querySelectorAll('[id]')].find(node => node.id === fragment || node.id.endsWith('-' + fragment));
+        if (!target) return;
+        event.preventDefault();
+        let parent = target.parentElement;
+        while (parent && parent !== content) { if (parent.tagName === 'DETAILS') parent.open = true; parent = parent.parentElement; }
+        moveTo(dialog, target);
+      });
+    }
+    dialog.scrollTop = 0;
+  }
   function present(root) {
     const dialog = root.closest('dialog'); if (!dialog) return;
     dialog.classList.add('vc-home-quick');
@@ -113,13 +176,14 @@
     if (!summary.querySelector('.vc-home-quick__eyebrow')) {
       const eyebrow = document.createElement('p'); eyebrow.className = 'vc-home-quick__eyebrow'; eyebrow.textContent = 'The VialCove collection'; summary.prepend(eyebrow);
     }
-    summary.querySelector('[data-vc-quick-buy]')?.remove();
+    const buy = summary.querySelector('[data-vc-quick-buy]'); if (buy) buy.textContent = 'Buy now';
     summary.querySelector('.vc-showcase-quick__note')?.remove();
     summary.querySelectorAll('.variations label').forEach(label => { if (summary.querySelectorAll('.variations select').length === 1) label.textContent = 'Choose your specification'; });
     const add = summary.querySelector('.single_add_to_cart_button'); if (add) add.textContent = 'Add to bag';
     const defaults = initial(root); media(root, root.vcHomeImage === undefined ? defaults.image : root.vcHomeImage);
     price(root, root.vcHomePrice === undefined ? defaults.priceHtml : root.vcHomePrice);
     details(root, root.vcHomeSku === undefined ? defaults.sku : root.vcHomeSku); quantity(root);
+    fullDetails(root, dialog, summary);
     const cart = dialog.querySelector('.vc-showcase-quick__feedback a');
     if (cart) { cart.classList.add('cart-link'); cart.textContent = 'View shopping bag'; }
     const close = dialog.querySelector('.vc-showcase-quick__close');
@@ -182,7 +246,16 @@
     const link = event.target.closest?.('[data-vc-quick-open]');
     if (link && !link.hasAttribute('data-vc-home-product')) {
       ++openIntent;
-      Promise.resolve().then(() => document.querySelector('dialog.vc-showcase-quick:not(:has(.vc-home-quick-product))')?.classList.remove('vc-home-quick'));
+      const dialog = document.querySelector('dialog.vc-showcase-quick');
+      if (dialog) {
+        const feedback = feedbacks.get(dialog); if (feedback) dialog.append(feedback);
+        const toolbar = dialog.querySelector('.vc-home-quick__toolbar');
+        const close = toolbar?.querySelector('.vc-showcase-quick__close');
+        const restoreFocus = document.activeElement === close;
+        if (close) dialog.prepend(close);
+        toolbar?.remove(); dialog.classList.remove('vc-home-quick', 'vc-home-quick--full');
+        if (restoreFocus) close.focus({preventScroll: true});
+      }
     }
   });
   const cancelPending = () => { ++openIntent; requests.forEach(request => request.controller.abort()); announce(''); };

@@ -1004,3 +1004,15 @@ functions.php新增vc_card_display_product，使用Woo get_visible_children的me
 用户截图显示滚动到About us时公告与导航悬在图片中间。实际IAB564px登录状态：WP管理员栏position:absolute已滚出屏幕，Demo sticky wrapper仍top46px，公告top46/导航top70。WordPress core在max-width600px将工具栏从fixed改absolute，原Demo样式遗漏了对应偏移归零。
 
 仅修改assets/demo-site-parts.css，在同600px断点给.vc-m--site-header:has(.vc-demo-header--sticky)设置top:0；无JS/数据库/后端积木字段改动。真实浏览器刷新后564px wrapper与公告top0，导航top24；1280px管理员栏仍fixed且bottom32，wrapper top32，桌面不重叠。临时视口恢复。git diff --check通过。截图D:/Codex/Tasks/2026-11-02/demo-home-integration/outputs/mobile-header-fixed.png。未实体手机测试。源码提交由本节对应git日志定位。
+
+### 2026-11-02 · Codex：完整商品详情留在首页弹窗
+
+用户明确将商品详情页搬进现有弹窗，客户在当前页看资料、选规格和加购。主题新增inc/product-dialog-content.php，并接入inc/home-quick-view.php；assets/home-quick-view.js/css保留原图/价/规格布局，增加固定商品名、Options/Details导航和关闭按钮，原“View full product details”改为弹窗内跳转，下方详情用折叠面板。原生Buy now恢复，确认加购成功后仍走现有Blocks checkout，不在弹窗重造支付。桌面图左选购右，手机单列，保留原PDP有效URL作分享/浏览器不支持时的回退。
+
+内容来自原Woo短/长描述、过滤后的product tabs、产品规格批次API、附加属性及已批准评论（只读，无新增评论提交表单）。原描述中的FAQ保持，未造报告、评价或商品文案。已发布商品专属product_ID文档优先，其次通用product文档；context_content只替换成详情，复用19类内容积木，不重复渲染购买表单。复杂播放器/购物/全局块暂不嵌套，记录data-vc-dialog-omitted供开发检查；目前全目录82个商品都没有已发布商品装修文档，均走Woo内容，遗漏模块0。未写商品、布局或插件配置，未改peptide-core和共享合同。
+
+安全边界：拒绝非公开/隐藏/密码商品，内容去掉脚本、表单等主动节点，ID与引用隔离，保存并finally恢复全局产品/查询/渲染上下文；原生Showcase负责规格匹配、库存及Store API写入。反馈节点复用移动到购买区，保留原失败重试/恢复逻辑；修复Close移动到固定栏时丢焦点。
+
+验证：PHP lint、node --check、diffcheck；内容合同22/22、匿名实际REST18/18。全目录只读82/82均含描述/报告/属性/评论，5个短描述、33个已有FAQ全部保留，空内容/异常/重复ID/危险表单/数据库写入均0。IAB桌面实测详情仍在当前URL、固定关闭栏；20mg $55/TR20切10mg $40/TR10图价SKU对应，实际加购1件留弹窗显示成功，购物车显示$40，测试商品移除恢复0。390px手机dialog clientWidth=scrollWidth=359，一份form/feedback，重开焦点Close，详情与批次空态正常展开。未下单/支付，Buy now只核对复用原绑定与按钮可用性，未点击进入结算。未实体手机测试。临时视口恢复，tab27保留桌面商品弹窗。
+
+证据D:/Codex/Tasks/2026-11-02/product-detail-review：work含3组只读检查脚本/JSON，outputs含product-dialog-desktop.png、product-dialog-details.png、product-dialog-mobile.png及mobile-dialog-check.json。原参考视频复制到outputs/商品详情页设计参考_原视频.mp4。文件、运行数据与截图不入Git。源商品描述中的纯度拼写和储存文案冲突未擅自改医学内容，后续需用户核定后台商品文案。
