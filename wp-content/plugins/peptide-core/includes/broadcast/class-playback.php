@@ -8,6 +8,12 @@ final class Playback {
 
 	/** Deterministic legacy fallback plus the referenced templates needed for runtime parameter sampling. */
 	public static function compile( array $config ) {
+		// Mask before compiling either fallback text or runtime pools; raw values never leave the management DTO.
+		$config['parameters'] = array_map( static function ( array $column ): array {
+			$values = ! empty( $column['privacy'] ) ? array_map( array( self::class, 'mask_value' ), $column['values'] ) : $column['values'];
+			// This flag preserves independently sourced pool entries that happen to share the same masked display.
+			return array( 'key' => $column['key'], 'values' => $values, 'privacy' => ! empty( $column['privacy'] ) );
+		}, $config['parameters'] );
 		$mode = $config['parameterMode'] ?? 'random';
 		if ( ! in_array( $mode, array( 'random', 'ordered' ), true ) ) { return Config::error( 'parameterMode', 'invalid_mode', '参数抽取方式只能为 random 或 ordered。' ); }
 		if ( 'random' === $mode ) {
@@ -60,6 +66,16 @@ final class Playback {
 			'parameterMode' => $mode, 'templates' => $config['items'], 'keywordTemplates' => $config['keywords'], 'parameters' => $parameters,
 			'enterMs' => $config['enterMs'], 'holdMs' => $config['holdMs'], 'exitMs' => $config['exitMs'], 'gapMs' => $config['gapMs'],
 		);
+	}
+
+	/** Hide every whitespace-delimited word while retaining only its first Unicode character. */
+	public static function mask_value( string $value ): string {
+		if ( class_exists( '\Normalizer' ) ) { $value = (string) \Normalizer::normalize( $value, \Normalizer::FORM_C ); }
+		return implode( ' ', array_map( static function ( string $word ): string {
+			if ( '***' === $word || preg_match( '/\A.\*{3}\z/us', $word ) ) { return $word; }
+			preg_match_all( '/./us', $word, $characters );
+			return count( $characters[0] ) > 1 ? $characters[0][0] . '***' : '***';
+		}, preg_split( '/[\s\p{Z}]+/u', trim( $value ), -1, PREG_SPLIT_NO_EMPTY ) ) );
 	}
 
 	/** Bound every possible independent draw without enumerating a Cartesian product or consuming RNG. */

@@ -16,8 +16,16 @@ final class Importer {
 		$extension = strtolower( pathinfo( $filename, PATHINFO_EXTENSION ) );
 		if ( ! in_array( $extension, array( 'txt', 'csv', 'json', 'xlsx' ), true ) ) { return Config::error( 'file', 'unsupported_format', '参数表支持 CSV 或 XLSX；配置备份支持 JSON，旧文案支持 TXT / CSV。不支持 .xls。' ); }
 		if ( $restore && 'json' !== $extension ) { return Config::error( 'restore', 'unsupported_format', '完整配置恢复只支持 JSON 配置对象。' ); }
+		$editing = $current;
 		$current = Config::normalize_for_import( $current ); if ( is_wp_error( $current ) ) { return $current; }
-		if ( 'xlsx' === $extension ) { $table = Parameter_Table::xlsx( $text ); return is_wp_error( $table ) ? $table : self::parameters( $table, $current, $mode ); }
+		// Empty editing placeholders are validated before being discarded; retain their privacy choice for a later table fill.
+		$privacy = array();
+		foreach ( $editing['parameters'] ?? array() as $column ) {
+			$key = Config::clean_text( $column['key'], 'key', 42 );
+			if ( str_starts_with( $key, '{' ) && str_ends_with( $key, '}' ) ) { $key = substr( $key, 1, -1 ); }
+			$privacy[ $key ] = $column['privacy'] ?? false;
+		}
+		if ( 'xlsx' === $extension ) { $table = Parameter_Table::xlsx( $text ); return is_wp_error( $table ) ? $table : self::parameters( $table, $current, $mode, $privacy ); }
 		$limit = $restore && 'json' === $extension ? self::MAX_BACKUP_BYTES : self::MAX_BYTES;
 		if ( strlen( $text ) > $limit ) { return Config::error( 'file', 'too_large', $restore ? 'JSON 配置备份最大为 8 MiB，未应用此次恢复。' : '导入文件最大为 1 MiB，未应用此次导入。' ); }
 		if ( 1 !== preg_match( '//u', $text ) ) { return Config::error( 'file', 'invalid_utf8', '请使用 UTF-8 编码的导入文件。' ); }
@@ -30,7 +38,7 @@ final class Importer {
 		} elseif ( 'csv' === $extension ) {
 			$rows = Parameter_Table::csv_rows( $text ); if ( is_wp_error( $rows ) ) { return $rows; }
 			$legacy = self::legacy_csv( $rows ); if ( is_wp_error( $legacy ) ) { return $legacy; }
-			if ( null === $legacy ) { $table = Parameter_Table::rows( $rows ); return is_wp_error( $table ) ? $table : self::parameters( $table, $current, $mode ); }
+			if ( null === $legacy ) { $table = Parameter_Table::rows( $rows ); return is_wp_error( $table ) ? $table : self::parameters( $table, $current, $mode, $privacy ); }
 			$items = $legacy['items']; $lines = $legacy['lines']; $blank = $legacy['blankCount']; $name_applied = $legacy['nameApplied'];
 		} else {
 			try { $json = json_decode( $text, true, 32, JSON_THROW_ON_ERROR ); }
@@ -71,8 +79,12 @@ final class Importer {
 		return array( 'config' => $next, 'report' => array( 'sourceCount' => $source_count, 'validCount' => count( $normalized ), 'duplicateCount' => max( 0, $source_count - $added ), 'addedCount' => $added, 'totalCount' => count( $next['items'] ), 'blankCount' => $blank, 'columnCount' => 0, 'nameColumnApplied' => $name_applied, 'mode' => $mode, 'restored' => false, 'warnings' => Config::warnings( $next ) ) );
 	}
 
-	private static function parameters( array $table, array $current, string $mode ) {
+	private static function parameters( array $table, array $current, string $mode, ?array $privacy = null ) {
 		$next = $current; $before = self::value_count( $current['parameters'] );
+		if ( null !== $privacy ) {
+			foreach ( $table['parameters'] as &$column ) { $column['privacy'] = $privacy[ $column['key'] ] ?? false; }
+			unset( $column );
+		}
 		if ( 'replace' === $mode ) { $next['parameters'] = $table['parameters']; }
 		else {
 			$columns = array_column( $next['parameters'], 'key' );

@@ -31,6 +31,18 @@
     return input.map(value => text(value)).filter(Boolean);
   }
 
+  /** Merchant-summary convenience only; public playback pools are already masked by PHP. */
+  function maskValue(input) {
+    const value = text(input);
+    if (!value) return '';
+    return value.split(' ').map(word => {
+      // Idempotent for server-redacted pools and the one-character fallback.
+      if (word === '***' || /^.\*{3}$/u.test(word)) return word;
+      const points = [...word];
+      return points.length > 1 ? points[0] + '***' : '***';
+    }).join(' ');
+  }
+
   function contains(template, key) { return template.includes('{' + key + '}'); }
 
   /** Exactly one replacement pass: custom values and native context are literal insertions. */
@@ -68,9 +80,15 @@
       if (!/^[\p{L}_][\p{L}\p{N}_-]{0,39}$/u.test(key) || ['__proto__', 'constructor', 'prototype'].includes(key.toLowerCase()) || columns.has(key)) {
         throw new TypeError('Invalid or duplicate parameter key.');
       }
+      if (Object.prototype.hasOwnProperty.call(entry, 'privacy') && typeof entry.privacy !== 'boolean') {
+        throw new TypeError('Parameter privacy must be a boolean.');
+      }
+      const pool = list(entry.values);
       const unique = new Map();
-      for (const value of list(entry.values)) if (!unique.has(value.toLowerCase())) unique.set(value.toLowerCase(), value);
-      const values = [...unique.values()];
+      for (const value of pool) if (!unique.has(value.toLowerCase())) unique.set(value.toLowerCase(), value);
+      // PHP has already masked private pools. Equal-looking redactions still represent
+      // distinct original choices, so preserve their probability and ordered positions.
+      const values = entry.privacy === true ? pool : [...unique.values()];
       if (!values.length || (total += values.length) > 2000) throw new RangeError('Invalid parameter value count.');
       columns.set(key, values);
     }
@@ -169,5 +187,5 @@
     return adapter;
   }
 
-  return Object.freeze({create, install});
+  return Object.freeze({create, install, maskValue});
 });

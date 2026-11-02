@@ -84,7 +84,9 @@ final class Config {
 		$out = array(); $keys = array(); $total = 0;
 		foreach ( $input as $index => $column ) {
 			$path = 'parameters.' . $index;
-			if ( ! is_array( $column ) || array_is_list( $column ) || array_diff( array_keys( $column ), array( 'key', 'values' ) ) ) { return self::error( $path, 'invalid_type', '每个参数列只包含 key 和 values。' ); }
+			if ( ! is_array( $column ) || array_is_list( $column ) || array_diff( array_keys( $column ), array( 'key', 'values', 'privacy' ) ) ) { return self::error( $path, 'invalid_type', '每个参数列只包含 key、values 和可选 privacy 开关。' ); }
+			$privacy = $column['privacy'] ?? false;
+			if ( array_key_exists( 'privacy', $column ) && ! is_bool( $column['privacy'] ) ) { return self::error( $path . '.privacy', 'invalid_type', '参数隐私开关必须为 true 或 false。' ); }
 			$key = self::clean_text( $column['key'] ?? null, $path . '.key', 42 );
 			if ( is_wp_error( $key ) ) { return $key; }
 			if ( str_starts_with( $key, '{' ) && str_ends_with( $key, '}' ) ) { $key = substr( $key, 1, -1 ); }
@@ -95,7 +97,7 @@ final class Config {
 			if ( ! $values && ! $allow_empty ) { return self::error( $path . '.values', 'empty_column', '参数 {' . $key . '} 至少需要一个非空值。' ); }
 			$total += count( $values );
 			if ( $total > self::MAX_PARAMETER_VALUES ) { return self::error( 'parameters', 'too_many_values', '参数表各列合计最多 2,000 个有效值；单列最多 1,000 个。' ); }
-			$keys[ $key ] = true; $out[] = array( 'key' => $key, 'values' => $values );
+			$keys[ $key ] = true; $out[] = array( 'key' => $key, 'values' => $values, 'privacy' => $privacy );
 		}
 		return $out;
 	}
