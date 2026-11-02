@@ -126,3 +126,9 @@ Ops `files.zip` / `database.sql` 是未加密本地备份，可能含配置；SH
 已准备：采购依据、隔离/权限方案、无凭据资产模板、迁移/回退与生产验收清单、可复现受控源码打包工具。
 
 尚未执行：云账号/SSH接入、Linux安装、DNS/TLS/WAF配置、实际数据导出/传输、云端压测与安全验收、真实收款及恢复演练。IP到位后先核实资产与登录，不使用未知主机的一键root脚本。
+
+## 9. 首店实际部署后的运行覆盖层（2026-11-03）
+
+第8节是准备阶段的历史状态；首店已经部署，实际范围与限制见[双机店铺后台部署](../handoffs/backend-store-admin-deployment-2026-11-03.md)和后续[邮件与内部连接准备](../handoffs/backend-store-mail-ready-2026-11-03.md)。后者已解除商家后台的临时迁移邮件/HTTP门禁，不能在下次发布时重新加入旧 `migration.lock` 或复制旧迁移MU。HQ独立的邮件与供应方HTTP限制仍需按商户配置处理，不能把它与已解除的店铺迁移门禁混为一谈。
+
+新商家release保留 `tools/deployment/mu-plugins/vialcove-system-cron.php`，仅在 `DISABLE_WP_CRON` 已启用时关闭Action Scheduler的异步请求runner；安装前必须确认同一店库的外部分钟作业实际正常。此文件不发信、不调用供应方、不修改业务配置；新版本仍须保留存储挂载检查和固定人员入口隔离。恢复验证、真实SMTP及供应方付款的验收边界以对应交接为准。
