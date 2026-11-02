@@ -94,6 +94,9 @@ final class Menu {
 
 	/** Presentation hooks also used on the separate HQ login screen. */
 	public static function register_login_hooks(): void {
+		add_filter( 'determine_locale', static function ( string $locale ): string {
+			return 'wp-login.php' === ( $GLOBALS['pagenow'] ?? '' ) && self::workspace_enabled() ? 'zh_CN' : $locale;
+		} );
 		add_action( 'login_enqueue_scripts', array( self::class, 'login_assets' ) );
 		add_filter( 'login_headerurl', static fn(): string => admin_url() );
 		add_filter( 'login_headertext', static fn(): string => 'VialCove' );
@@ -103,6 +106,7 @@ final class Menu {
 	/** Login-only copy; native authentication and cookie lifetimes remain unchanged. */
 	public static function login_presentation(): void {
 		if ( ! self::workspace_enabled() ) { return; }
+		add_filter( 'login_display_language_dropdown', '__return_false' );
 		add_filter( 'gettext', static function ( string $translated, string $text, string $domain ): string {
 			$labels = array(
 				'Username or Email Address' => '用户名或邮箱', 'Password' => '密码',
