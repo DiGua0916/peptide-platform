@@ -1,0 +1,84 @@
+/* Scoped confirmation styling; incumbent dimensions and typography stay intact. */
+button[data-add-state],
+.primary[data-add-state]:disabled {
+  opacity: 1;
+  cursor: wait;
+}
+button[data-add-state] .add-feedback-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+button[data-add-state] .add-feedback-label {
+  font: inherit;
+}
+button[data-add-state="success"],
+button[data-add-state="success"]:hover,
+.primary[data-add-state="success"]:disabled,
+.primary[data-add-state="success"]:disabled:hover {
+  background: var(--ink, #193b45);
+  color: #fff;
+  cursor: default;
+}
+.add-feedback-check {
+  flex: none;
+  animation: add-feedback-check 500ms cubic-bezier(.22, 1, .36, 1) both;
+}
+.add-feedback-count {
+  animation: add-feedback-count 500ms cubic-bezier(.22, 1, .36, 1) both;
+}
+[data-add-feedback="success"] {
+  color: var(--ink, #193b45);
+}
+[data-add-feedback="error"] {
+  color: #982537;
+}
+.add-feedback-burst {
+  position: fixed;
+  width: 104px;
+  height: 104px;
+  overflow: clip;
+  contain: strict;
+  pointer-events: none;
+  z-index: 100;
+}
+.add-feedback-burst i {
+  position: absolute;
+  display: block;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 8px;
+  margin: -4px 0 0 -2px;
+  border-radius: 2px;
+  background: #d42b45;
+  pointer-events: none;
+  animation: add-feedback-particle var(--add-burst-duration, 850ms) cubic-bezier(.22, 1, .36, 1) both;
+}
+.add-feedback-burst i:nth-child(3n) { background: #0c7c94; }
+.add-feedback-burst i:nth-child(3n + 1) { background: #b88018; }
+@keyframes add-feedback-particle {
+  0% { opacity: 0; transform: translate(0, 0) rotate(var(--burst-angle)) scale(.4); }
+  12% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--burst-x), var(--burst-y)) rotate(var(--burst-angle)) scale(.7); }
+}
+@keyframes add-feedback-check {
+  from { opacity: .5; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes add-feedback-count {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .add-feedback-check,
+  .add-feedback-count { animation: none; }
+  .add-feedback-burst { display: none; }
+}

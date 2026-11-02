@@ -1,0 +1,20 @@
+/* A small offer notice, deliberately distinct from purchased cart items. */
+.vc-live-cart .cart-offer-suggestion{margin:-8px 0 28px;padding:14px 16px;background:#f0f5f5;border:0;border-radius:12px;box-shadow:none;color:var(--ink)}
+.vc-live-cart .cart-offer-suggestion[hidden]{display:none!important}
+.vc-live-cart .cart-progress:has(+.cart-offer-suggestion:not([hidden])){margin-bottom:20px}
+.vc-live-cart .cart-progress:has(+.cart-offer-suggestion:not([hidden])) .pc-activity-listener__message{display:none}
+.offer-suggestion-eyebrow{margin:0 0 6px;color:var(--teal);font-size:11px;font-weight:700;line-height:16px;letter-spacing:.08em;text-transform:uppercase}
+.offer-suggestion-gap{margin:0 0 12px;color:var(--ink);font-size:14px;font-weight:550;line-height:21px;overflow-wrap:anywhere}
+.offer-suggestion{display:grid;grid-template-columns:48px minmax(0,1fr);gap:12px;align-items:start;max-width:none;padding:0;border:0;background:transparent}
+.offer-suggestion-image{display:block;width:48px;height:56px;object-fit:contain;background:transparent;border-radius:4px}
+.offer-suggestion-image--empty{display:grid;place-items:center;background:#e6eeee;color:var(--muted);font-size:10px;line-height:14px;text-align:center}
+.offer-suggestion-info{min-width:0}
+.offer-suggestion-name{font-size:14px;font-weight:650;line-height:20px;letter-spacing:-.01em;margin:0;color:var(--ink);overflow-wrap:anywhere}
+.offer-suggestion-pack{font-size:12px;line-height:18px;color:var(--muted);margin:2px 0 0}
+.offer-suggestion-message{font-size:12px;line-height:18px;margin:5px 0 0;color:var(--ink)}
+.offer-suggestion-action{display:inline-flex;min-height:36px;max-width:100%;align-items:center;justify-content:center;margin-top:8px;padding:6px 12px;border:1px solid #b8cccf;border-radius:6px;background:white;color:var(--ink);font-family:inherit;font-weight:650;font-size:12px;line-height:18px;cursor:pointer}
+.offer-suggestion-action:hover{background:#e5eff0;border-color:var(--teal)}
+.offer-suggestion-action:focus-visible{outline:2px solid var(--teal);outline-offset:3px}
+.offer-suggestion-action:disabled{opacity:.65;cursor:wait}
+@media(max-width:480px){.offer-suggestion-action{min-height:40px}}
+@media(max-width:360px){.vc-live-cart .cart-offer-suggestion{padding:12px}.offer-suggestion{gap:10px}.offer-suggestion-gap{font-size:13px;line-height:20px}}
