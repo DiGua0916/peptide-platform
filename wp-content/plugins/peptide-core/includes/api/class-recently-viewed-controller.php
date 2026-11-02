@@ -98,9 +98,11 @@ final class Recently_Viewed_Controller {
 		try { return self::respond( History::listing() ); } catch ( \Throwable $error ) { return new \WP_Error( 'pc_recently_viewed_unavailable', '最近浏览暂不可用。', array( 'status' => 503 ) ); }
 	}
 	public static function record( \WP_REST_Request $request ) {
-		$data = self::history_body( $request, array( 'productId', 'variationId' ) ); if ( is_wp_error( $data ) ) { return $data; }
-		foreach ( array( 'productId' => 1, 'variationId' => 0 ) as $key => $min ) { $id = $data[ $key ] ?? ( 'variationId' === $key ? 0 : null ); if ( ! is_int( $id ) || $id < $min || $id > 2147483647 ) { return Config::error( $key, 'invalid_id', '商品及规格编号须为本站的有效整数。' ); } }
-		try { return self::respond( History::record( $data['productId'], $data['variationId'] ?? 0 ) ); } catch ( \Throwable $error ) { return new \WP_Error( 'pc_recently_viewed_unavailable', '最近浏览暂不可用。', array( 'status' => 503 ) ); }
+		$data = self::history_body( $request, array( 'productId', 'variationId', 'kind' ) ); if ( is_wp_error( $data ) ) { return $data; }
+		foreach ( array( 'productId' => 1, 'variationId' => 0 ) as $key => $min ) { $id = array_key_exists( $key, $data ) ? $data[ $key ] : ( 'variationId' === $key ? 0 : null ); if ( ! is_int( $id ) || $id < $min || $id > 2147483647 ) { return Config::error( $key, 'invalid_id', '商品及规格编号须为本站的有效整数。' ); } }
+		$kind = array_key_exists( 'kind', $data ) ? $data['kind'] : 'view';
+		if ( ! is_string( $kind ) || ! in_array( $kind, array( 'view', 'selection' ), true ) ) { return Config::error( 'kind', 'invalid_kind', '浏览记录类型仅支持 view 或 selection。' ); }
+		try { return self::respond( History::record( $data['productId'], $data['variationId'] ?? 0, $kind ) ); } catch ( \Throwable $error ) { return new \WP_Error( 'pc_recently_viewed_unavailable', '最近浏览暂不可用。', array( 'status' => 503 ) ); }
 	}
 	public static function clear( \WP_REST_Request $request ) {
 		$data = self::history_body( $request, array() ); return is_wp_error( $data ) ? $data : self::respond( History::clear() );

@@ -8,9 +8,13 @@ defined( 'ABSPATH' ) || exit;
 
 final class Config {
 	public const VERSION = 1;
-	public const KEYS = array( 'version', 'enabled', 'promotionId', 'title', 'celebrationEnabled', 'smileEnabled' );
+	public const KEYS = array( 'version', 'enabled', 'promotionId', 'title', 'celebrationEnabled', 'smileEnabled', 'recommendation' );
+	public const RECOMMENDATION_KEYS = array( 'enabled', 'maxGapRatio', 'maxGapMinor', 'maxGapQuantity', 'maxAddBoxes', 'maxVisible', 'ranking' );
 	public static function defaults(): array {
-		return array( 'version' => 1, 'enabled' => false, 'promotionId' => 0, 'title' => 'Your offer progress', 'celebrationEnabled' => true, 'smileEnabled' => true );
+		return array( 'version' => 1, 'enabled' => false, 'promotionId' => 0, 'title' => 'Your offer progress', 'celebrationEnabled' => true, 'smileEnabled' => true, 'recommendation' => self::recommendation_defaults() );
+	}
+	public static function recommendation_defaults(): array {
+		return array( 'enabled' => false, 'maxGapRatio' => 0.2, 'maxGapMinor' => null, 'maxGapQuantity' => 3, 'maxAddBoxes' => 3, 'maxVisible' => 1, 'ranking' => 'most_viewed_then_recent' );
 	}
 	public static function normalize( $input ) {
 		if ( ! is_array( $input ) || ( $input && array_is_list( $input ) ) ) { return self::error( 'config', 'object_required', '活动监听配置必须是对象。' ); }
@@ -25,7 +29,29 @@ final class Config {
 		$title = trim( (string) preg_replace( '/[\s\p{Z}]+/u', ' ', $title ) );
 		if ( preg_match_all( '/./us', $title ) > 100 ) { return self::error( 'title', 'too_long', '标题最多 100 个字符。' ); }
 		$config['title'] = $title;
+		// Missing the whole new object preserves legacy v1 storage and stays disabled.
+		$recommendation = self::normalize_recommendation( $config['recommendation'] );
+		if ( is_wp_error( $recommendation ) ) { return $recommendation; }
+		$config['recommendation'] = $recommendation;
 		return $config;
+	}
+
+	/** A supplied nested object is a complete replacement; absent safety flags never inherit true. */
+	private static function normalize_recommendation( $input ) {
+		if ( ! is_array( $input ) || array_is_list( $input ) ) { return self::error( 'recommendation', 'object_required', '凑单推荐配置必须是完整对象。' ); }
+		foreach ( array_keys( $input ) as $key ) { if ( ! in_array( $key, self::RECOMMENDATION_KEYS, true ) ) { return self::error( 'recommendation.' . (string) $key, 'unknown_field', '包含未支持的凑单推荐字段。' ); } }
+		foreach ( self::RECOMMENDATION_KEYS as $key ) { if ( ! array_key_exists( $key, $input ) ) { return self::error( 'recommendation.' . $key, 'required', '请重新读取并提交完整的凑单推荐配置。' ); } }
+		if ( ! is_bool( $input['enabled'] ) ) { return self::error( 'recommendation.enabled', 'boolean_required', '推荐开关必须为 true 或 false。' ); }
+		$ratio = $input['maxGapRatio'];
+		if ( ( ! is_int( $ratio ) && ! is_float( $ratio ) ) || ! is_finite( (float) $ratio ) || $ratio < 0 || $ratio > 1 ) { return self::error( 'recommendation.maxGapRatio', 'out_of_range', '差额比例须为 0 至 1 的数字，0.20 表示 20%。' ); }
+		$input['maxGapRatio'] = (float) $ratio;
+		$minor = $input['maxGapMinor'];
+		if ( null !== $minor && ( ! is_string( $minor ) || ! preg_match( '/\A(?:0|[1-9][0-9]{0,15})\z/', $minor ) || strlen( $minor ) > 16 || ( 16 === strlen( $minor ) && strcmp( $minor, '9007199254740991' ) > 0 ) ) ) { return self::error( 'recommendation.maxGapMinor', 'invalid_minor', '金额差额上限须为空或不超过 9007199254740991 的非负整数字符串。' ); }
+		foreach ( array( 'maxGapQuantity' => 10000, 'maxAddBoxes' => 100, 'maxVisible' => 3 ) as $key => $max ) { if ( ! is_int( $input[ $key ] ) || $input[ $key ] < 1 || $input[ $key ] > $max ) { return self::error( 'recommendation.' . $key, 'out_of_range', sprintf( '此项须为 1 至 %d 的整数。', $max ) ); } }
+		if ( 'most_viewed_then_recent' !== $input['ranking'] ) { return self::error( 'recommendation.ranking', 'invalid_ranking', '推荐排序仅支持先按浏览次数、再按最近浏览。' ); }
+		$out = array();
+		foreach ( self::RECOMMENDATION_KEYS as $key ) { $out[ $key ] = $input[ $key ]; }
+		return $out;
 	}
 
 	/** Publishing a live reference never publishes or changes the underlying promotion. */

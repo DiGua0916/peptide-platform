@@ -12,21 +12,23 @@ final class History {
 	private const MAX_ITEMS = 20;
 	private const TOKEN_SECONDS = 1800;
 	private const WRITES_PER_MINUTE = 20;
+	private const MAX_VIEWS = 1000000;
+	private const COUNT_COOLDOWN = 10;
 
 	public static function register_hooks(): void {
 		add_filter( 'peptide_core_recent_history_enabled', static fn( $enabled ) => (bool) $enabled && Store::effective()['enabled'] );
 	}
 
 	private static function context(): string { return get_current_blog_id() . ':' . untrailingslashit( home_url( '/' ) ); }
-	private static function signature( string $encoded, int $version ): string { return hash_hmac( 'sha256', 'pc-recent-history:v' . $version . ':' . ( 2 === $version ? self::context() . ':' : '' ) . $encoded, wp_salt( 'auth' ) ); }
-	private static function blank(): array { return array( 'v' => 2, 'iat' => time(), 'exp' => time(), 'browser' => '', 'items' => array(), 'writes' => array() ); }
+	private static function signature( string $encoded, int $version ): string { return hash_hmac( 'sha256', 'pc-recent-history:v' . $version . ':' . ( $version >= 2 ? self::context() . ':' : '' ) . $encoded, wp_salt( 'auth' ) ); }
+	private static function blank(): array { return array( 'v' => 3, 'iat' => time(), 'exp' => time(), 'browser' => '', 'items' => array(), 'writes' => array() ); }
 
 	/** Legacy signed IDs migrate as hints with their original issue time, never renewed per-product age. */
 	private static function read(): array {
 		$raw = $_COOKIE[ self::COOKIE ] ?? '';
 		if ( ! is_string( $raw ) || strlen( $raw ) > self::MAX_BYTES || ! preg_match( '/^([A-Za-z0-9_-]+)\.([a-f0-9]{64})$/D', $raw, $parts ) ) { return self::blank(); }
 		$data = json_decode( base64_decode( strtr( $parts[1], '-_', '+/' ), true ) ?: '', true, 8 );
-		if ( ! is_array( $data ) || ! in_array( $data['v'] ?? null, array( 1, 2 ), true ) || ! hash_equals( self::signature( $parts[1], $data['v'] ), $parts[2] ) ) { return self::blank(); }
+		if ( ! is_array( $data ) || ! in_array( $data['v'] ?? null, array( 1, 2, 3 ), true ) || ! hash_equals( self::signature( $parts[1], $data['v'] ), $parts[2] ) ) { return self::blank(); }
 		$now = time();
 		if ( ! is_int( $data['iat'] ?? null ) || ! is_int( $data['exp'] ?? null ) || $data['iat'] < 1 || $data['iat'] > $now + 60 || $data['exp'] < $now || $data['exp'] <= $data['iat'] || $data['exp'] > $data['iat'] + 30 * DAY_IN_SECONDS ) { return self::blank(); }
 		if ( 1 === $data['v'] ) {
@@ -34,16 +36,24 @@ final class History {
 			foreach ( $data['ids'] as $id ) { if ( ! is_int( $id ) || $id < 1 ) { return self::blank(); } }
 			if ( count( array_unique( $data['ids'], SORT_NUMERIC ) ) !== count( $data['ids'] ) ) { return self::blank(); }
 			$old = self::blank(); $old['browser'] = substr( hash( 'sha256', 'legacy:' . $parts[1] ), 0, 32 );
-			$old['items'] = array_map( static fn( $id ) => array( 'productId' => $id, 'variationId' => 0, 'seenAt' => $data['iat'] ), array_slice( $data['ids'], 0, self::MAX_ITEMS ) );
+			// v1 had no per-product view timestamp; iat remains only the conservative retention boundary.
+			$old['items'] = array_map( static fn( $id ) => array( 'productId' => $id, 'variationId' => 0, 'seenAt' => $data['iat'], 'viewCount' => 1, 'lastCountedAt' => null ), array_slice( $data['ids'], 0, self::MAX_ITEMS ) );
 			return $old;
 		}
 		if ( array_keys( $data ) !== array( 'v', 'iat', 'exp', 'browser', 'items', 'writes' ) || ! is_string( $data['browser'] ) || ! preg_match( '/^[a-f0-9]{32}$/D', $data['browser'] ) || ! is_array( $data['items'] ) || ! array_is_list( $data['items'] ) || count( $data['items'] ) > self::MAX_ITEMS || ! is_array( $data['writes'] ) || ! array_is_list( $data['writes'] ) || count( $data['writes'] ) > self::WRITES_PER_MINUTE ) { return self::blank(); }
-		$ids = array();
+		$ids = array(); $items = array();
 		foreach ( $data['items'] as $item ) {
-			if ( ! is_array( $item ) || array_keys( $item ) !== array( 'productId', 'variationId', 'seenAt' ) || ! is_int( $item['productId'] ) || $item['productId'] < 1 || ! is_int( $item['variationId'] ) || $item['variationId'] < 0 || ! is_int( $item['seenAt'] ) || $item['seenAt'] < 1 || $item['seenAt'] > $now + 60 || in_array( $item['productId'], $ids, true ) ) { return self::blank(); }
-			$ids[] = $item['productId'];
+			if ( 3 === $data['v'] ) {
+				// Compact signed tuples keep twenty records plus rate metadata within the 4096-byte cookie budget.
+				if ( ! is_array( $item ) || ! array_is_list( $item ) || 5 !== count( $item ) ) { return self::blank(); }
+				$item = array_combine( array( 'productId', 'variationId', 'seenAt', 'viewCount', 'lastCountedAt' ), $item );
+			} elseif ( ! is_array( $item ) || array_keys( $item ) !== array( 'productId', 'variationId', 'seenAt' ) ) { return self::blank(); }
+			else { $item['viewCount'] = 1; $item['lastCountedAt'] = $item['seenAt']; }
+			if ( ! is_int( $item['productId'] ) || $item['productId'] < 1 || $item['productId'] > 2147483647 || ! is_int( $item['variationId'] ) || $item['variationId'] < 0 || $item['variationId'] > 2147483647 || ! is_int( $item['seenAt'] ) || $item['seenAt'] < 1 || $item['seenAt'] > $now + 60 || ! is_int( $item['viewCount'] ) || $item['viewCount'] < 1 || $item['viewCount'] > self::MAX_VIEWS || ( null !== $item['lastCountedAt'] && ( ! is_int( $item['lastCountedAt'] ) || $item['lastCountedAt'] < 1 || $item['lastCountedAt'] > $item['seenAt'] ) ) || ( null === $item['lastCountedAt'] && 1 !== $item['viewCount'] ) || in_array( $item['productId'], $ids, true ) ) { return self::blank(); }
+			$ids[] = $item['productId']; $items[] = $item;
 		}
 		foreach ( $data['writes'] as $stamp ) { if ( ! is_int( $stamp ) || $stamp < 1 || $stamp > $now + 60 ) { return self::blank(); } }
+		$data['items'] = $items;
 		return $data;
 	}
 
@@ -64,12 +74,14 @@ final class History {
 
 	private static function write( array $data, array $config ) {
 		if ( headers_sent() ) { return self::error( 'storage_unavailable', '浏览器历史暂时无法保存。', 503 ); }
-		$now = time(); $data['v'] = 2; $data['iat'] = $now; $data['exp'] = $now + $config['retentionDays'] * DAY_IN_SECONDS;
+		$now = time(); $data['v'] = 3; $data['iat'] = $now; $data['exp'] = $now + $config['retentionDays'] * DAY_IN_SECONDS;
 		if ( '' === $data['browser'] ) { $data['browser'] = bin2hex( random_bytes( 16 ) ); }
 		$data['items'] = self::entries( $data, $config );
 		$data['writes'] = array_values( array_filter( $data['writes'], static fn( $stamp ) => $stamp > $now - 60 ) );
-		$encoded = rtrim( strtr( base64_encode( wp_json_encode( $data ) ), '+/', '-_' ), '=' );
-		$value = $encoded . '.' . self::signature( $encoded, 2 );
+		$stored = $data;
+		$stored['items'] = array_map( static fn( $item ) => array( $item['productId'], $item['variationId'], $item['seenAt'], $item['viewCount'], $item['lastCountedAt'] ), $data['items'] );
+		$encoded = rtrim( strtr( base64_encode( wp_json_encode( $stored ) ), '+/', '-_' ), '=' );
+		$value = $encoded . '.' . self::signature( $encoded, 3 );
 		if ( strlen( $value ) > self::MAX_BYTES ) { return self::error( 'storage_limit', '浏览记录超过浏览器存储上限。', 400 ); }
 		$path = wp_parse_url( home_url( '/' ), PHP_URL_PATH ) ?: '/';
 		if ( ! setcookie( self::COOKIE, $value, array( 'expires' => $data['exp'], 'path' => $path, 'secure' => is_ssl(), 'httponly' => true, 'samesite' => 'Lax' ) ) ) { return self::error( 'storage_unavailable', '浏览器历史暂时无法保存。', 503 ); }
@@ -99,20 +111,29 @@ final class History {
 	}
 
 	/** Popup callers invoke only after actual successful load. No prefetch/impression hook is installed. */
-	public static function record( int $product_id, int $variation_id = 0 ) {
+	public static function record( int $product_id, int $variation_id = 0, string $kind = 'view' ) {
+		if ( ! in_array( $kind, array( 'view', 'selection' ), true ) ) { return Config::error( 'kind', 'invalid_kind', '浏览记录类型仅支持 view 或 selection。' ); }
 		$config = Store::effective();
 		if ( ! self::enabled( $config ) ) { return self::error( 'disabled', '最近浏览已关闭。', 409 ); }
 		if ( ! self::allowed() ) { return self::error( 'login_required', '请先登录。', 401 ); }
 		$selection = self::selection( $product_id, $variation_id );
 		if ( ! $selection ) { return self::error( 'product_unavailable', '该商品或规格暂不可用于最近浏览。', 404 ); }
 		[ $product, $variation ] = $selection; $now = time(); $data = self::read(); $items = self::entries( $data, $config );
+		$index = array_search( $product->get_id(), array_column( $items, 'productId' ), true );
+		$previous = false === $index ? null : $items[ $index ];
+		if ( 'selection' === $kind && null === $previous ) { return self::error( 'view_required', '请先打开商品，再更新已浏览商品的规格。', 409 ); }
 		$writes = array_values( array_filter( $data['writes'], static fn( $stamp ) => $stamp > $now - 60 ) );
 		if ( count( $writes ) >= self::WRITES_PER_MINUTE ) { return self::error( 'rate_limited', '浏览记录更新过快，请稍后重试。', 429 ); }
-		$items = array_values( array_filter( $items, static fn( $item ) => $item['productId'] !== $product->get_id() ) );
-		array_unshift( $items, array( 'productId' => $product->get_id(), 'variationId' => $variation ? $variation->get_id() : 0, 'seenAt' => $now ) );
+		$counted = 'view' === $kind && ( null === $previous || null === $previous['lastCountedAt'] || $now - $previous['lastCountedAt'] >= self::COUNT_COOLDOWN );
+		if ( 'selection' === $kind ) { $items[ $index ]['variationId'] = $variation ? $variation->get_id() : 0; }
+		else {
+			$items = array_values( array_filter( $items, static fn( $item ) => $item['productId'] !== $product->get_id() ) );
+			array_unshift( $items, array( 'productId' => $product->get_id(), 'variationId' => $variation ? $variation->get_id() : 0, 'seenAt' => $now, 'viewCount' => min( self::MAX_VIEWS, ( $previous['viewCount'] ?? 0 ) + ( $counted ? 1 : 0 ) ), 'lastCountedAt' => $counted ? $now : $previous['lastCountedAt'] ) );
+		}
 		$data['items'] = $items; $data['writes'] = array_merge( $writes, array( $now ) );
 		$saved = self::write( $data, $config );
-		return is_wp_error( $saved ) ? $saved : array( 'recorded' => true, 'productId' => $product->get_id(), 'variationId' => $variation ? $variation->get_id() : 0 );
+		$entry = 'selection' === $kind ? $items[ $index ] : $items[0];
+		return is_wp_error( $saved ) ? $saved : array( 'recorded' => true, 'productId' => $product->get_id(), 'variationId' => $variation ? $variation->get_id() : 0, 'kind' => $kind, 'viewCount' => $entry['viewCount'], 'lastViewedAt' => null === $entry['lastCountedAt'] ? null : gmdate( 'Y-m-d\TH:i:s\Z', $entry['seenAt'] ) );
 	}
 
 	private static function allowed(): bool { return ! \PeptideCore\Store_Config::get( 'force_login' ) || is_user_logged_in(); }
@@ -180,6 +201,8 @@ final class History {
 			// A stale variation must not make an otherwise valid parent disappear or silently choose a different variation.
 			if ( ! $selection && $entry['variationId'] ) { $selection = self::selection( $entry['productId'] ); }
 			if ( ! $selection ) { continue; } $dto = self::product_dto( $selection ); if ( ! $dto ) { continue; }
+			$dto['viewCount'] = $entry['viewCount'];
+			$dto['lastViewedAt'] = null === $entry['lastCountedAt'] ? null : gmdate( 'Y-m-d\TH:i:s\Z', $entry['seenAt'] );
 			$out['items'][] = $dto;
 			if ( count( $out['items'] ) >= $config['maxVisible'] ) { break; }
 		}

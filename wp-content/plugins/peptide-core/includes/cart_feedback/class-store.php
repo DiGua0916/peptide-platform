@@ -37,7 +37,7 @@ final class Store {
 		$state = json_decode( $raw, true, 16 );
 		if ( ! is_array( $state ) || self::VERSION !== ( $state['version'] ?? null ) || ! is_int( $state['revision'] ?? null ) || $state['revision'] < 1 || ! is_array( $state['draft'] ?? null ) || ! is_array( $state['published'] ?? null ) || ! is_int( $state['published']['revision'] ?? null ) || $state['published']['revision'] < 0 || $state['published']['revision'] > $state['revision'] ) { return self::unavailable(); }
 		foreach ( array( 'draft', 'published' ) as $snapshot ) {
-			$config = Config::normalize( $state[ $snapshot ]['config'] ?? null );
+			$config = Config::normalize_stored( $state[ $snapshot ]['config'] ?? null );
 			if ( is_wp_error( $config ) || ! array_key_exists( 'updatedAt', $state[ $snapshot ] ) || ( null !== $state[ $snapshot ]['updatedAt'] && ( ! is_string( $state[ $snapshot ]['updatedAt'] ) || ! preg_match( '/\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\z/', $state[ $snapshot ]['updatedAt'] ) ) ) ) { return self::unavailable(); }
 			$state[ $snapshot ]['config'] = $config;
 		}
