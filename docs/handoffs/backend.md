@@ -2090,3 +2090,11 @@ Reference learning is24/70 after guarded Contact cleanup, with no reference Publ
 重点实际展开桌面博客导入、素材上传与采集、配送添加国家弹窗、满减编辑；博客面板bottom351.55到表格top462.89、素材两面板bottom350.22/679.10到表格top731.10，均正常流无遮盖。用独立可见临时页和browser viewport设置进入innerWidth390/client375，验证8种状态：配送弹窗、博客导入、素材采集、营销编辑、评价详情、基础配置、话术搜索、商品编辑。8种均无整页越界；配送dialog border-box宽340.67、高598.10、footer底639.05在720高屏内；评价fixed表650宽在342.67自动滚动容器内；营销counter padding56；favicon可wrap；商品主栏/侧栏依次全宽在342.67内。汇总20项真实几何/样式断言全true。2PHP lint、git diffcheck、8CSS impeccable layout detect=[]，交叉源码review无P1/P2。未写镜像单元测试或伪造填充数据。
 
 限制：48是入口初始布局检查，不等于48页每个错误/填充/提交状态全验；手机仅8种代表状态，不冒全站每页手机签收。首次多标签CDP尺寸请求超时后实际仍桌面1265，未算手机通过，相关文件重命名expanded-viewport-attempt-*；切单独可见页的高层viewport设置后才取得真实375数据及清晰截图。最后viewport已reset、5个本人临时标签均关闭，无浏览器安全/持久偏好改动。证据根D:/Codex/Tasks/2026-11-01/admin-wide-layout/outputs，含DESKTOP-ROUTES.json、各route读数、expanded-desktop-*、各*-narrow-confirmed/final、VERIFICATION.json和shipping-dialog-mobile.png。备份按settings/content/marketing/root分组在work内，全部私有不入Git。
+
+### 2026-11-02 · Codex：商品弹窗与新版购物车的后端适配核验
+
+已修复默认 USD 下 WooPayments 原生回调导致只读推荐被拒、完整浏览候选与两条展示列表混用、规格标题包含 20mg 时 DTO 省略规格，以及新购物车来源事件的兼容。实际设置只读核对，未改产品价格、库存、客户、订单或营销应用配置；前端窗口仍在同步主题与发布装修文档，本轮未代改其在途文件。
+
+实际检查：正式本地原生报价 39/39、隔离推荐 56/56、浏览候选 29/29、浏览频次 43/43、Showcase 实际脚本运行 14/14 与来源事件 4/4，PHP/JS 语法和 diff 检查通过。真实公开规格报价能被新版主题解析；原生 WordPress History 链接解析新增的唯一元数据 lazyloader 回调已单独确认。浏览器正式站绑定持续超时，不能冒称完整 UI/手机交互已验收。已列出前端当前仍待核对的空规格/缺图、反馈设置映射与同档位动画策略。
+
+完整接口、实际设置快照、修复和限制：[本次适配交接](backend-storefront-integration-2026-11-02.md)；[最近浏览候选补充](backend-recent-recommendation-candidates-2026-11-02.md)。测试证据 D:/Codex/Tasks/2026-11-02/storefront-integration-check/outputs/。
