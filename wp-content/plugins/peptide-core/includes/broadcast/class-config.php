@@ -6,18 +6,20 @@ defined( 'ABSPATH' ) || exit;
 
 final class Config {
 
-	public const VERSION = 1;
+	public const VERSION = 2;
 	public const MAX_ITEMS = 1000;
 	public const MAX_TEXT_LENGTH = 500;
 	public const MAX_NAME_LENGTH = 120;
-	public const KEYS = array( 'version', 'enabled', 'badgeEnabled', 'items', 'keywords', 'name', 'enterMs', 'holdMs', 'exitMs', 'gapMs' );
+	public const MAX_COLUMNS = 32;
+	public const MAX_PARAMETER_VALUES = 1000;
+	public const KEYS = array( 'version', 'enabled', 'badgeEnabled', 'items', 'keywords', 'parameters', 'enterMs', 'holdMs', 'exitMs', 'gapMs' );
 	public const TIMINGS = array( 'enterMs' => array( 150, 2000 ), 'holdMs' => array( 1500, 15000 ), 'exitMs' => array( 150, 2000 ), 'gapMs' => array( 0, 2000 ) );
-	public const TOKENS = array( 'name', 'product', 'specification', 'price', 'sku' );
+	public const TOKENS = array( 'product', 'specification', 'price', 'sku' );
 
 	/** Defaults fill a draft; no content is enabled or published by this method. */
 	public static function defaults(): array {
 		return array(
-			'version' => 1, 'enabled' => false, 'badgeEnabled' => true, 'name' => '',
+			'version' => self::VERSION, 'enabled' => false, 'badgeEnabled' => true, 'parameters' => array(),
 			'items' => array( '{product} · Choose a pack', '{specification} · {price}', 'Product details in one place' ),
 			'keywords' => array( '{product}', '{price}', 'Product details' ),
 			'enterMs' => 550, 'holdMs' => 3200, 'exitMs' => 450, 'gapMs' => 200,
@@ -28,10 +30,11 @@ final class Config {
 	public static function normalize( $input ) {
 		if ( ! is_array( $input ) || ( $input && array_is_list( $input ) ) ) { return self::error( 'config', 'invalid_type', '播报配置必须是一个对象。' ); }
 		foreach ( array_keys( $input ) as $key ) {
-			if ( ! in_array( $key, self::KEYS, true ) ) { return self::error( 'config', 'unknown_field', '播报配置包含不支持的字段。' ); }
+			if ( ! in_array( $key, array_merge( self::KEYS, array( 'name' ) ), true ) ) { return self::error( 'config', 'unknown_field', '播报配置包含不支持的字段。' ); }
 		}
 		$out = array_replace( self::defaults(), $input );
-		if ( 1 !== $out['version'] ) { return self::error( 'version', 'unsupported_version', '仅支持 version 为整数 1 的配置。' ); }
+		if ( ! in_array( $out['version'], array( 1, self::VERSION ), true ) ) { return self::error( 'version', 'unsupported_version', '仅支持 version 为整数 1 或 2 的配置。' ); }
+		$out['version'] = self::VERSION;
 		foreach ( array( 'enabled', 'badgeEnabled' ) as $key ) {
 			if ( ! is_bool( $out[ $key ] ) ) { return self::error( $key, 'invalid_type', '播报开关必须为 true 或 false。' ); }
 		}
@@ -40,16 +43,44 @@ final class Config {
 				return self::error( $key, 'out_of_range', sprintf( '%s 必须为 %d–%d 范围内的整数毫秒。', $key, $range[0], $range[1] ) );
 			}
 		}
-		$out['name'] = self::clean_text( $out['name'], 'name', self::MAX_NAME_LENGTH );
-		if ( is_wp_error( $out['name'] ) ) { return $out['name']; }
-		if ( '' === $out['name'] && is_array( $out['items'] ) && array_is_list( $out['items'] ) ) {
-			foreach ( $out['items'] as $index => $text ) {
-				if ( is_string( $text ) && str_contains( $text, '{name}' ) ) { return self::error( 'items.' . $index, 'name_required', sprintf( '第 %d 条文案使用了 {name}，请填写统一姓名或在 CSV 中提供该行姓名。', $index + 1 ) ); }
-			}
+		$out['parameters'] = self::normalize_parameters( $out['parameters'] );
+		if ( is_wp_error( $out['parameters'] ) ) { return $out['parameters']; }
+		// Keep old stored/backup configurations readable without a write-on-read migration.
+		if ( array_key_exists( 'name', $out ) ) {
+			$legacy_name = self::clean_text( $out['name'], 'name', self::MAX_NAME_LENGTH );
+			if ( is_wp_error( $legacy_name ) ) { return $legacy_name; }
+			if ( '' !== $legacy_name && ! in_array( 'name', array_column( $out['parameters'], 'key' ), true ) ) { $out['parameters'][] = array( 'key' => 'name', 'values' => array( $legacy_name ) ); }
+			unset( $out['name'] );
+			$out['parameters'] = self::normalize_parameters( $out['parameters'] );
+			if ( is_wp_error( $out['parameters'] ) ) { return $out['parameters']; }
 		}
 		foreach ( array( 'items', 'keywords' ) as $key ) {
 			$out[ $key ] = self::normalize_items( $out[ $key ], $key );
 			if ( is_wp_error( $out[ $key ] ) ) { return $out[ $key ]; }
+		}
+		$playback = Playback::compile( $out );
+		return is_wp_error( $playback ) ? $playback : $out;
+	}
+
+	/** Independent ordered columns; a parameter table is data, never an expression. */
+	public static function normalize_parameters( $input ) {
+		if ( ! is_array( $input ) || ! array_is_list( $input ) ) { return self::error( 'parameters', 'invalid_type', '参数表必须是有序列数组。' ); }
+		if ( count( $input ) > self::MAX_COLUMNS ) { return self::error( 'parameters', 'too_many_columns', '最多支持 32 个参数列。' ); }
+		$out = array(); $keys = array(); $total = 0;
+		foreach ( $input as $index => $column ) {
+			$path = 'parameters.' . $index;
+			if ( ! is_array( $column ) || array_is_list( $column ) || array_diff( array_keys( $column ), array( 'key', 'values' ) ) ) { return self::error( $path, 'invalid_type', '每个参数列只包含 key 和 values。' ); }
+			$key = self::clean_text( $column['key'] ?? null, $path . '.key', 42 );
+			if ( is_wp_error( $key ) ) { return $key; }
+			if ( str_starts_with( $key, '{' ) && str_ends_with( $key, '}' ) ) { $key = substr( $key, 1, -1 ); }
+			if ( ! preg_match( '/^[\p{L}_][\p{L}\p{N}_-]{0,39}$/uD', $key ) || in_array( strtolower( $key ), array( '__proto__', 'constructor', 'prototype' ), true ) ) { return self::error( $path . '.key', 'invalid_key', '参数名最多 40 字，以字母或下划线开头，可包含文字、数字、下划线和短横线。' ); }
+			if ( isset( $keys[ $key ] ) ) { return self::error( $path . '.key', 'duplicate_key', '参数表存在重复列 {' . $key . '}。' ); }
+			$values = self::normalize_items( $column['values'] ?? null, $path . '.values' );
+			if ( is_wp_error( $values ) ) { return $values; }
+			if ( ! $values ) { return self::error( $path . '.values', 'empty_column', '参数 {' . $key . '} 至少需要一个非空值。' ); }
+			$total += count( $values );
+			if ( $total > self::MAX_PARAMETER_VALUES ) { return self::error( 'parameters', 'too_many_values', '参数表各列合计最多 1,000 个有效值。' ); }
+			$keys[ $key ] = true; $out[] = array( 'key' => $key, 'values' => $values );
 		}
 		return $out;
 	}
@@ -62,7 +93,7 @@ final class Config {
 			$text = self::clean_text( $value, $field . '.' . $index, self::MAX_TEXT_LENGTH );
 			if ( is_wp_error( $text ) ) { return $text; }
 			if ( '' === $text ) { continue; }
-			$key = self::lower( $text );
+			$key = ! str_ends_with( $field, '.values' ) && preg_match( '/\{[^{}]+\}/u', $text ) ? "\x01" . $text : self::lower( $text );
 			if ( is_wp_error( $key ) ) { return $key; }
 			if ( isset( $seen[ $key ] ) ) { continue; }
 			$seen[ $key ] = true; $result[] = $text;
@@ -99,14 +130,15 @@ final class Config {
 	/** Unknown placeholders are literal text, not expressions or executable code. */
 	public static function warnings( array $config ): array {
 		$out = array(); $seen = array();
+		$known = array_merge( self::TOKENS, array_column( $config['parameters'] ?? array(), 'key' ) );
 		foreach ( array( 'items', 'keywords' ) as $field ) {
 			foreach ( $config[ $field ] ?? array() as $index => $text ) {
 				preg_match_all( '/\{([^{}]+)\}/u', $text, $matches );
 				foreach ( $matches[1] as $token ) {
 					$key = $field . ':' . $token;
-					if ( in_array( $token, self::TOKENS, true ) || isset( $seen[ $key ] ) ) { continue; }
+					if ( in_array( $token, $known, true ) || isset( $seen[ $key ] ) ) { continue; }
 					$seen[ $key ] = true;
-					$out[] = array( 'field' => $field . '.' . $index, 'token' => '{' . $token . '}', 'message' => '未知占位符 {' . $token . '} 将按原文字显示，不执行代码。' );
+					$out[] = array( 'field' => $field . '.' . $index, 'token' => '{' . $token . '}', 'message' => '参数 {' . $token . '} 尚未提供数据，将按原文字显示；请在参数表添加对应列。' );
 				}
 			}
 		}

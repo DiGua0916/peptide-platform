@@ -2098,3 +2098,9 @@ Reference learning is24/70 after guarded Contact cleanup, with no reference Publ
 实际检查：正式本地原生报价 39/39、隔离推荐 56/56、浏览候选 29/29、浏览频次 43/43、Showcase 实际脚本运行 14/14 与来源事件 4/4，PHP/JS 语法和 diff 检查通过。真实公开规格报价能被新版主题解析；原生 WordPress History 链接解析新增的唯一元数据 lazyloader 回调已单独确认。浏览器正式站绑定持续超时，不能冒称完整 UI/手机交互已验收。已列出前端当前仍待核对的空规格/缺图、反馈设置映射与同档位动画策略。
 
 完整接口、实际设置快照、修复和限制：[本次适配交接](backend-storefront-integration-2026-11-02.md)；[最近浏览候选补充](backend-recent-recommendation-candidates-2026-11-02.md)。测试证据 D:/Codex/Tasks/2026-11-02/storefront-integration-check/outputs/。
+
+### 2026-11-03 · Codex：商品播报改为模板＋参数列
+
+已去统一姓名和手填商品预览字段，保留重点词；新增CSV/XLSX参数列导入与直接编辑，草稿自动轮播。用户例按ADG→BEG→CDG→ADG独立短列循环，非排列组合。存储v2、服务端编译为既有客户播放器v1，旧配置只读兼容，不需改主题。权限/nonce/CAS/草稿与应用分离保留，未自动发布样例。
+
+原生70、前端模型11、导入安全79、备份6、编辑器DOM52检查通过；隔离实际生产JS/CSS＋纯PHP的内置浏览器已验Excel3列6值、第三条及重置、桌面和390无越界。正式站浏览器绑定超时，因此不冒称正式登录保存/手机实机签收；原生TEMP测试覆盖保存与权限。原正式option私备份后仍byte-identical，rev2/off，没有商品/客户/订单改动。详细合同、限制和证据见 [参数播报交接](backend-broadcast-parameters-2026-11-03.md)。
