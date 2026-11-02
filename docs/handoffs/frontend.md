@@ -1085,3 +1085,11 @@ functions.php新增vc_card_display_product，使用Woo get_visible_children的me
 主题product-dialog-content.php仅读发布快照，为显式fallback FAQ创建带设备可见性类的独立容器；product-dialog-experience.js将其置于COA后、购买栏前；home-quick-view.css手机标题/64px耳机左右、折叠问答适配。被安全清洗后失去图片外层的情况也有直接img尺寸规则。原有product-experience/context-content两块逐字保留；发布经原REST+revision/modified保护，无未发布草稿覆盖，home685/header686/footer687/global688/cart11727前后保持。不改后台插件源码、应用开关、商品描述、用户购物车或订单。
 
 实际检查：82商品渲染全部通过（32个专属FAQ、50个通用五问），TR11306没有通用重复，KLOW11408有五问；旧schema默认false、原生FAQ检测4例、被动HTML无form/script。PHP两文件lint、JS语法、git diff --check通过。真实IAB同源390×844 iframe：KLOW COA后新增问答，首/末问可展开；dialog宽=scrollWidth=380，64px耳机，Control+End到maxScroll3617，最后答案bottom727.89低于购买栏top768.41（没有遮挡）。未实体手机，未加购/下单。截图D:/Codex/Tasks/2026-11-03/product-dialog-common-footer/outputs/mobile-common-faq.png，预览已停在该处；work含inspection、发布前后与82商品验证。另源KLOW正文Overview出现BBKG80的错配只读发现，未擅改，应由商品维护方后续核定。
+
+### 2026-11-03 · Codex：结账浮动标签错位修复（CHECKOUT-FIELD-ALIGN）
+
+用户指出Email address与邮箱文字左右/上下错位。实际样式读到主题site.css通用.entry-content input:not(...)覆盖Woo Blocks浮动字段：padding13px、font shorthand使line-height normal，而原标签仍left10/top6/scale.82。只将.wp-block-woocommerce-checkout .wc-block-components-text-input input排除出该通用重置（:not(:where(...))不增加选择器权重），保留Woo原生active/autofill/focus几何，不硬编码另一套标签位移。主题其余边框/字号、普通文章与传统Woo表单维持；无JS/模板/后台积木/商品/车/订单/支付配置修改。
+
+实际IAB桌面1272px及同源390×844 iframe：已填邮箱恢复24px 9px 8px padding、25px line-height；6个空白姓名/地址/城市/ZIP/电话字段16px 12px padding、25px line-height；标签与值左缘差约0.33px（分数边框舍入），不再4px错位。两端均聚焦邮箱视觉确认；手机body375=scrollWidth375。未输入/提交客户信息或订单，未实际触发浏览器自动填充/错误状态或实体手机。修复保留这些原生状态的现有CSS，不声称未测分支已验。
+
+修改仅assets/site.css（2加1删：一条注释与通用规则的限定）；git diff --check通过。证据D:/Codex/Tasks/2026-11-03/checkout-mobile-polish/outputs/checkout-fields-aligned.png及checkout-fields-aligned-mobile.png。早期局部截图裁到页头，最终以这两张全页截图为准，未将错误裁图作为验收。只在本机LocalWP生效，不表示远端服务器部署。
