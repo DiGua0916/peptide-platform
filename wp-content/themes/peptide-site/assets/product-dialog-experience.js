@@ -74,6 +74,7 @@
     // description accordion. Empty products do not acquire another product's FAQ.
     const questions = content?.querySelector('.vc-product-dialog-questions');
     if (questions) root.append(questions);
+    content?.querySelectorAll('[data-vc-product-common-questions]').forEach(section => root.append(section));
     const toolbar = dialog.querySelector('.vc-home-quick__toolbar');
     const toolbarClose = toolbar?.querySelector('.vc-showcase-quick__close');
     const go = target => {
