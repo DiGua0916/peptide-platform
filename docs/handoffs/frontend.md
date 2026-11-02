@@ -1093,3 +1093,13 @@ functions.php新增vc_card_display_product，使用Woo get_visible_children的me
 实际IAB桌面1272px及同源390×844 iframe：已填邮箱恢复24px 9px 8px padding、25px line-height；6个空白姓名/地址/城市/ZIP/电话字段16px 12px padding、25px line-height；标签与值左缘差约0.33px（分数边框舍入），不再4px错位。两端均聚焦邮箱视觉确认；手机body375=scrollWidth375。未输入/提交客户信息或订单，未实际触发浏览器自动填充/错误状态或实体手机。修复保留这些原生状态的现有CSS，不声称未测分支已验。
 
 修改仅assets/site.css（2加1删：一条注释与通用规则的限定）；git diff --check通过。证据D:/Codex/Tasks/2026-11-03/checkout-mobile-polish/outputs/checkout-fields-aligned.png及checkout-fields-aligned-mobile.png。早期局部截图裁到页头，最终以这两张全页截图为准，未将错误裁图作为验收。只在本机LocalWP生效，不表示远端服务器部署。
+
+### 2026-11-03 · Codex：结账国家列表开放、美国默认保留（CHECKOUT-COUNTRY-OPTIONS）
+
+用户明确要求国家不能只有美国、可以默认美国，此新要求替代早期测试仅美国选择限制。实际原Woo allowed_countries=specific、specific_allowed=[US]，ship_to_countries空串继承销售范围，default_country=US:CA/default_customer_address=base。经原生WP配置API只将woocommerce_allowed_countries改all；其他五项前后逐项保护，保留旧specific=[US]供后续切回，当前被all忽略。未改前端JS/HTML国家列表，原生Billing/Shipping和服务端验证共用该设置；默认新访客US/CA。
+
+原生get_allowed_countries/get_shipping_countries均由1变250，浏览器/checkout/#shipping-country实际251个option（含一个不可选提示项）、selected=US，Canada/UK/Australia/Germany/France实有选项。未选择其他国家、未填客户资料/改用户购物车或下单；未实体手机或国际运费/付款成功验收。截图outputs/checkout-country-options.png为真实聚焦下拉框，浏览器原生下拉菜单未被页面截图捕获，因此不把截图当作各国选项的可见证明，选项来自实际DOM读取。
+
+配送配置保持：WC仅zone0且无method；另有PeptideCore Shipping Plans全局方式，按原国家/州精确匹配，每组缺运费则不返回价格，未新增全球免费率。自定义方案摘要另见work/country-shipping-verification.json。开放列表不等于所有地区均已有配送或支付能力；按原生结账结果展示。没有改后台插件源码、应用开关或支付方法。现站运行配置变化不会自动迁到服务器或改变新建店铺US-only默认；如后续要改模板策略，由后端协调。
+
+备份/验证脚本位于D:/Codex/Tasks/2026-11-03/checkout-mobile-polish/work/countries-before.json、countries-after.json、update-countries.php（一次性，不盲目重跑）；DB/私有配置不入Git。本轮源码无修改，只提交本交接，保留实际可审核记录。
