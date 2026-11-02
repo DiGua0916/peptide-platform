@@ -11,6 +11,10 @@ add_filter( 'peptide_core_template_documents', function ( array $documents ): ar
 add_filter( 'peptide_core_layout_definitions', function ( array $definitions ): array {
     if ( ! class_exists( '\PeptideCore\Modules\Fields' ) ) { return $definitions; }
     $field = '\PeptideCore\Modules\Fields';
+    if ( isset( $definitions['faq']['settings'] ) ) {
+        $definitions['faq']['settings'][] = $field::f( 'toggle', 'productFallback', __( '商品弹窗通用问答', 'peptide-site' ), false,
+            array( 'help' => '在商品弹窗的报告下方展示；当前商品描述已有专属 FAQ 时，优先展示专属问答。本开关不改变首页等其他页面。' ) );
+    }
     $definitions['product_experience'] = array(
         'title' => __( '商品弹窗体验', 'peptide-site' ),
         'description' => __( '控制商品弹窗的展示；商品、规格、价格及报告仍从原后台读取。放在通用商品详情文档或某个商品的专属文档中。', 'peptide-site' ),

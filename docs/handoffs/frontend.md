@@ -1077,3 +1077,11 @@ functions.php新增vc_card_display_product，使用Woo get_visible_children的me
 通过原layouts REST+revision/modified仅更新home685 about-story原生rich-text的title/bodyHtml，保留现有布局、无图片/按钮，不恢复三地卡片或蓝底；源文件保存在任务work/about-full-copy.html。其他8块逐字保持，686/687/688/11725/11727及active684保持，独立page420和应用开关未改。发布返回成功，保存稿=发布快照；完整前后备份为before-full-copy-home.json/after-full-copy-home.json。
 
 实际IAB正式390×844手机预览刷新后DOM含标题、五段全文及两处加粗；滚动定位到About Us，截图D:/Codex/Tasks/2026-11-03/about-copy-mobile-preview/outputs/mobile-about-full.png，手机预览tab已保留。未修改商品、用户车/订单或后台源码；无需新插件、无业务源码变化。用户仍可在后台对应富文本积木编辑。此前“只留那句短简介”的状态已被本次明确截图要求替代。
+
+### 2026-11-03 · Codex：无专属 FAQ 商品的底部补齐（PRODUCT-COMMON-FAQ）
+
+用户在正式390×844手机预览指出KLOW80商品COA后没有Demo底部。复现商品11408，description确实无FAQ，并非滚动截断；原修复只从当前商品提取FAQ，Demo专属Tirzepatide六问不能套给其他产品。现复用既有FAQ积木，主题展示字段追加productFallback（默认false，旧页面不变），在通用product11725发布product-common-questions。内容取已发布首页的五条一般选规格/价格/读报告/配送/购物袋问答，未增加产品处理或人体功效说明。已有专属FAQ优先，已有未抽取的FAQ标题/accordion也不重复插入；专属product_ID文档仍保持既有优先级，不强制继承公共积木。
+
+主题product-dialog-content.php仅读发布快照，为显式fallback FAQ创建带设备可见性类的独立容器；product-dialog-experience.js将其置于COA后、购买栏前；home-quick-view.css手机标题/64px耳机左右、折叠问答适配。被安全清洗后失去图片外层的情况也有直接img尺寸规则。原有product-experience/context-content两块逐字保留；发布经原REST+revision/modified保护，无未发布草稿覆盖，home685/header686/footer687/global688/cart11727前后保持。不改后台插件源码、应用开关、商品描述、用户购物车或订单。
+
+实际检查：82商品渲染全部通过（32个专属FAQ、50个通用五问），TR11306没有通用重复，KLOW11408有五问；旧schema默认false、原生FAQ检测4例、被动HTML无form/script。PHP两文件lint、JS语法、git diff --check通过。真实IAB同源390×844 iframe：KLOW COA后新增问答，首/末问可展开；dialog宽=scrollWidth=380，64px耳机，Control+End到maxScroll3617，最后答案bottom727.89低于购买栏top768.41（没有遮挡）。未实体手机，未加购/下单。截图D:/Codex/Tasks/2026-11-03/product-dialog-common-footer/outputs/mobile-common-faq.png，预览已停在该处；work含inspection、发布前后与82商品验证。另源KLOW正文Overview出现BBKG80的错配只读发现，未擅改，应由商品维护方后续核定。

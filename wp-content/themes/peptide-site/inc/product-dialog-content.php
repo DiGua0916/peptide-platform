@@ -167,6 +167,25 @@ function vc_product_dialog_tabs( WC_Product $product ): string {
     return $html . $questions;
 }
 
+/** Existing accordions may already provide a FAQ without needing extraction. */
+function vc_product_dialog_has_questions( string $html ): bool {
+    if ( str_contains( $html, 'data-vc-product-questions="description"' ) ) { return true; }
+    if ( ! class_exists( 'DOMDocument' ) ) { return false; }
+    $document = new DOMDocument( '1.0', 'UTF-8' );
+    $previous = libxml_use_internal_errors( true );
+    try {
+        $document->loadHTML( '<?xml encoding="UTF-8"><html><body>' . $html . '</body></html>', LIBXML_NONET );
+        $xpath = new DOMXPath( $document );
+        foreach ( $xpath->query( '//h1|//h2|//h3|//h4|//h5|//h6|//summary' ) as $node ) {
+            $title = trim( (string) preg_replace( '/[\s\p{Z}]+/u', ' ', $node->textContent ) );
+            if ( preg_match( '/^(?:FAQs?|Frequently asked questions)\s*[:：?]?$/iu', $title ) ) { return true; }
+        }
+        return false;
+    } finally {
+        libxml_clear_errors(); libxml_use_internal_errors( $previous );
+    }
+}
+
 /** Only published content blocks are portable; commerce/global blocks keep their native route. */
 function vc_product_dialog_layout( WC_Product $product, string $tabs ): array {
     $result = array( 'html' => $tabs, 'document' => '', 'omitted' => array() );
@@ -207,7 +226,20 @@ function vc_product_dialog_layout( WC_Product $product, string $tabs ): array {
             if ( ! $module['visibility']['mobile'] ) { $classes .= ' vc-hide-mobile'; }
             $html .= '<div class="' . esc_attr( $classes ) . '">' . $tabs . '</div>';
         } elseif ( in_array( $type, $portable, true ) ) {
-            $html .= \PeptideCore\Modules\Renderer::render( $type, (array) ( $row['attrs'] ?? array() ), 'public', $media );
+            $rendered = \PeptideCore\Modules\Renderer::render( $type, (array) ( $row['attrs'] ?? array() ), 'public', $media );
+            $module = 'faq' === $type ? \PeptideCore\Modules\Renderer::normalize( $type, (array) ( $row['attrs'] ?? array() ) ) : null;
+            if ( ! empty( $module['settings']['productFallback'] ) ) {
+                // Only an explicitly published common block may fill a missing
+                // product FAQ. Never borrow another product's handling advice.
+                if ( ! vc_product_dialog_has_questions( $tabs ) && '' !== trim( $rendered ) ) {
+                    $classes = 'vc-dialog-common-questions';
+                    if ( ! $module['visibility']['desktop'] ) { $classes .= ' vc-hide-desktop'; }
+                    if ( ! $module['visibility']['mobile'] ) { $classes .= ' vc-hide-mobile'; }
+                    $html .= '<div class="' . esc_attr( $classes ) . '" data-vc-product-common-questions>' . $rendered . '</div>';
+                }
+            } else {
+                $html .= $rendered;
+            }
         } else {
             $result['omitted'][] = $type ?: (string) ( $row['block'] ?? 'unknown' );
         }

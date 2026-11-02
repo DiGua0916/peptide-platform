@@ -176,6 +176,13 @@ body:has(.vc-home-quick[open]) { overflow:hidden; }
 .vc-product-dialog-question__answer{padding:0 0 24px;color:var(--muted);font-size:16px;line-height:28px;text-align:left;overflow-wrap:anywhere}
 .vc-product-dialog-question__answer p{margin:0 0 16px;text-align:inherit!important}
 .vc-product-dialog-question__answer>:last-child{margin-bottom:0}
+.vc-product-dialog .vc-product-experience>.vc-dialog-common-questions{grid-column:1/-1;margin:0 -48px;padding:48px;background:#f6f8f8;scroll-margin-top:80px}
+.vc-dialog-common-questions .vc-demo-faq{background:transparent;padding:0}
+.vc-dialog-common-questions .vc-demo-wrap{width:100%;max-width:none;margin:0}
+.vc-dialog-common-questions .vc-demo-faq-grid{gap:48px}
+.vc-dialog-common-questions .vc-demo-faq h2{font-size:36px;line-height:40px;font-weight:700;letter-spacing:-.03em}
+.vc-dialog-common-questions .vc-demo-faq-description:empty{display:none}
+.vc-dialog-common-questions .vc-demo-faq-image,.vc-dialog-common-questions .vc-demo-faq-grid>header>img{display:block;width:64px;height:64px;object-fit:contain;margin-top:24px}
 .vc-product-dialog .vc-dialog-report-open{min-height:48px;margin-top:20px;padding:12px 20px;border:1px solid var(--line);background:white;border-radius:8px;color:var(--ink);font:600 14px/22px 'Geist',sans-serif}
 .vc-product-dialog .vc-dialog-sticky{grid-column:1/-1;position:sticky;bottom:0;z-index:6;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 48px;margin:0 -48px;background:#fffffff7;border-top:1px solid var(--line);box-shadow:0 -4px 24px #1639430a}
 .vc-product-dialog .vc-dialog-sticky-info{display:flex;flex-direction:column;min-width:0;gap:2px}
@@ -234,6 +241,12 @@ body:has(.vc-home-quick[open]) { overflow:hidden; }
  .vc-product-dialog .vc-dialog-documents{order:4;display:flex;flex-direction:column-reverse;gap:24px;padding:40px 0;align-items:stretch}
  .vc-product-dialog .vc-dialog-document-art{max-height:300px}
  .vc-product-dialog .vc-product-experience>.vc-product-dialog-questions{order:5;display:block;margin:0 -24px;padding:40px 24px}
+ .vc-product-dialog .vc-product-experience>.vc-dialog-common-questions{order:5;margin:0 -24px;padding:40px 24px}
+ .vc-dialog-common-questions .vc-demo-faq-grid{display:block}
+ .vc-dialog-common-questions .vc-demo-faq-grid>header{position:relative;display:block;min-height:64px;margin-bottom:24px;padding-right:80px}
+ .vc-dialog-common-questions .vc-demo-faq h2{font-size:30px;line-height:36px}
+ .vc-dialog-common-questions .vc-demo-faq-image,.vc-dialog-common-questions .vc-demo-faq-grid>header>img{position:absolute;right:0;top:0;width:64px;height:64px;margin:0}
+ .vc-dialog-common-questions .vc-demo-faq-list summary{font-weight:600}
  .vc-product-dialog-questions__heading{margin-bottom:24px}
  .vc-product-dialog-questions__heading h2{font-size:30px;line-height:36px}
  .vc-product-dialog .vc-dialog-sticky{order:6;margin:0 -24px;padding:12px 24px calc(12px + env(safe-area-inset-bottom));gap:12px}
@@ -246,6 +259,7 @@ body:has(.vc-home-quick[open]) { overflow:hidden; }
  .vc-product-dialog .vc-showcase-quick-product.vc-product-experience{padding-inline:16px}
  .vc-product-dialog .vc-product-experience>.vc-product-dialog-content{margin-inline:-16px;padding-inline:16px}
  .vc-product-dialog .vc-product-experience>.vc-product-dialog-questions{margin-inline:-16px;padding-inline:16px}
+ .vc-product-dialog .vc-product-experience>.vc-dialog-common-questions{margin-inline:-16px;padding-inline:16px}
  .vc-product-dialog .vc-dialog-sticky{margin-inline:-16px;padding-inline:16px}
  .vc-product-dialog .vc-dialog-sticky-add{min-width:140px}
  .vc-product-dialog .vc-dialog-sticky-info strong{font-size:24px}
