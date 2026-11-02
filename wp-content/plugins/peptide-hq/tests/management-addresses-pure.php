@@ -55,6 +55,7 @@ namespace {
 	$mgmt = 'https://store-a.manager.example.test/'; $public = 'https://shop-a.example.test/';
 	foreach ( array( 'http://store.example.test', 'https://user@store.example.test', 'https://store.example.test:8443', 'https://store.example.test/path', 'https://store.example.test?x=1', 'https://store.example.test#x', "https://store.example.test\n", 'https://a..example.test', 'https://-a.example.test', 'https://a.example.test\\evil' ) as $bad ) { check( 'reject malformed root ' . $checks, '' === Site_Urls::https_root( $bad ) ); }
 	check( 'canonical HTTPS root and 443', 'https://store.example.test/' === Site_Urls::https_root( 'https://Store.Example.Test:443/' ) );
+	foreach ( array( 'https://localhost', 'https://127.0.0.1', 'https://[::1]' ) as $bad ) { check( 'explicit origin needs DNS hostname ' . $checks, '' === Site_Urls::https_root( $bad ) ); }
 	$new = Sites::register( $public, $key, 'Store A', $uuid, $mgmt, $public );
 	check( 'dual store registers', array( 1, 'new' ) === $new );
 	$site = Sites::get( 1 );

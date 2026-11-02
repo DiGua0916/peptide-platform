@@ -48,6 +48,7 @@ final class Management_Host {
 			|| ! preg_match( '/\A[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\z/D', PEPTIDE_CORE_MANAGEMENT_UUID ) ) { return 'management_configuration_invalid'; }
 		$store = get_option( Hq_Connector::OPTION, array() );
 		if ( ! is_array( $store ) || ! hash_equals( PEPTIDE_CORE_MANAGEMENT_UUID, (string) ( $store['uuid'] ?? '' ) ) ) { return 'management_store_mismatch'; }
+		if ( defined( 'WP_HOME' ) ) { return 'management_public_home_locked'; }
 		if ( defined( 'COOKIE_DOMAIN' ) && '' !== (string) COOKIE_DOMAIN ) { return 'management_cookie_domain_invalid'; }
 		foreach ( array( 'COOKIEPATH' => '/', 'SITECOOKIEPATH' => '/', 'ADMIN_COOKIE_PATH' => '/wp-admin' ) as $key => $path ) {
 			if ( defined( $key ) && $path !== constant( $key ) ) { return 'management_cookie_path_invalid'; }
@@ -257,7 +258,13 @@ final class Management_Host {
 		if ( ! self::is_management_request() && ( self::personnel_path( (string) ( $_SERVER['REQUEST_URI'] ?? '/' ), $_GET, $_POST ) || self::staff_user( wp_get_current_user() ) ) ) {
 			self::deny( 403, 'Use your assigned store management address.' );
 		}
-		$preview = self::preview_request( $_GET ) || self::exit_preview_ajax( $_GET );
+		$customizer_post = self::customizer_request( $_POST );
+		$manager = $GLOBALS['wp_customize'] ?? null;
+		if ( $customizer_post && ( ! self::is_management_request() || ! current_user_can( 'customize' ) || ! ( $manager instanceof \WP_Customize_Manager ) || ! $manager->is_preview() ) ) {
+			self::deny( 403, 'Your account cannot customize this store.' );
+		}
+		// Native selective refresh sends its context in POST to a clean frontend URL.
+		$preview = self::preview_request( $_GET ) || self::exit_preview_ajax( $_GET ) || $customizer_post;
 		if ( $preview && ! self::staff_user( wp_get_current_user() ) ) { self::deny( 403, 'Sign in at your store management address to preview.' ); }
 		if ( self::customizer_request( $_GET ) && ! current_user_can( 'customize' ) ) { self::deny( 403, 'Your account cannot customize this store.' ); }
 		// Keep the public storefront canonical while authenticated editor previews stay same-origin.

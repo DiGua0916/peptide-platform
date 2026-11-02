@@ -12,7 +12,7 @@ final class Site_Urls {
 		$u = wp_parse_url( $url );
 		if ( ! is_array( $u ) || 'https' !== ( $u['scheme'] ?? '' ) || empty( $u['host'] ) || isset( $u['user'] ) || isset( $u['pass'] ) || isset( $u['query'] ) || isset( $u['fragment'] ) || isset( $u['port'] ) && 443 !== $u['port'] || ! in_array( $u['path'] ?? '', array( '', '/' ), true ) ) { return ''; }
 		$host = strtolower( $u['host'] );
-		if ( strlen( $host ) > 253 || ! preg_match( '/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/D', $host ) ) { return ''; }
+		if ( strlen( $host ) > 253 || ! str_contains( $host, '.' ) || filter_var( $host, FILTER_VALIDATE_IP ) || ! preg_match( '/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/D', $host ) ) { return ''; }
 		foreach ( explode( '.', $host ) as $label ) { if ( strlen( $label ) > 63 || ! preg_match( '/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/D', $label ) ) { return ''; } }
 		return 'https://' . $host . '/';
 	}

@@ -14,6 +14,7 @@ if ( 'legacy' !== $mode ) {
 	define( 'PEPTIDE_CORE_MANAGEMENT_UUID', '01234567-89ab-cdef-0123-456789abcdef' );
 }
 define( 'COOKIE_DOMAIN', 'bad-cookie' === $mode ? '.platform.example' : '' );
+if('bad-home'===$mode){define('WP_HOME','https://shop-a.example');}
 if('bad-path'===$mode){define('SITECOOKIEPATH','/old-site/');}
 $GLOBALS['options'] = array(
 	'home' => 'https://shop-a.example', 'siteurl' => 'wrong-siteurl' === $mode ? 'https://shop-a.example' : 'https://store-a.platform.example',
@@ -84,6 +85,7 @@ class WP_REST_Request {private array $data;function __construct($data=array()){$
 class WP_Post {public int $ID=99;public string $post_type='attachment';public string $filter='raw';static function get_instance($id){return 99===$id?new self():null;}function filter($f){return$this;}}
 class WP_Customize_Manager {public string $url='https://shop-b.example/product/synthetic/';function get_preview_url(){return$this->url;}function set_preview_url($url){$this->url=$url;}function is_preview(){return true;}}
 require dirname(__DIR__).'/includes/autoload.php';
+require dirname(__DIR__,2).'/peptide-panapay/includes/class-order-payload.php';
 if ( '' !== $native ) {
 	if ( ! is_file($native.'/wp-includes/link-template.php') ) { throw new RuntimeException('Native WordPress source required'); }
 	define('WP_PLUGIN_URL','https://store-a.platform.example/wp-content/plugins');
@@ -106,8 +108,8 @@ function check($name,$ok){global$count;if(!$ok){throw new RuntimeException('FAIL
 function outcome($cb){try{$cb();return'allowed';}catch(RuntimeException$e){return$e->getMessage();}}
 Host::register_hooks();
 Domains::register_hooks();
-if('legacy'===$mode){check('legacy has no host enforcement',!isset($GLOBALS['filters']['init'][-1000]));check('legacy retains both domain filters',isset($GLOBALS['filters']['option_siteurl'][99]));echo"PASS legacy $count\n";exit;}
-if(in_array($mode,array('bad-cookie','bad-path','wrong-uuid','wrong-siteurl'),true)){check('bad binding fails closed',str_starts_with(outcome(fn()=>Host::guard_request()),'denied:503'));echo"PASS $mode $count\n";exit;}
+if('legacy'===$mode){check('legacy has no host enforcement',!isset($GLOBALS['filters']['init'][-1000]));check('legacy retains both domain filters',isset($GLOBALS['filters']['option_siteurl'][99]));check('legacy payment URL unchanged','http://127.0.0.1:18080/?wc-api=pc_panapay_return'===\VialCove\Panapay\Order_Payload::customer_url('http://127.0.0.1:18080/?wc-api=pc_panapay_return'));echo"PASS legacy $count\n";exit;}
+if(in_array($mode,array('bad-cookie','bad-home','bad-path','wrong-uuid','wrong-siteurl'),true)){check('bad binding fails closed',str_starts_with(outcome(fn()=>Host::guard_request()),'denied:503'));echo"PASS $mode $count\n";exit;}
 check('valid explicit binding',''===Host::configuration_error());
 foreach(array('http://a.example','https://a.example:444','https://u:p@a.example','https://a.example/path','https://a.example/?x=1','https://a.example/#x','https://127.0.0.1','https://a.example\\evil')as$url){check('reject malformed management origin '.$url,''===Host::normalize_url($url));}
 check('normalize uppercase host','https://a.example'===Host::normalize_url('https://A.EXAMPLE/'));
@@ -145,6 +147,8 @@ check('public primary switch succeeds',true===Domains::set_primary('shop-b.examp
 check('public home changes','https://shop-b.example'===$GLOBALS['options']['home']);check('siteurl fixed',$GLOBALS['options']['siteurl']==='https://store-a.platform.example');
 check('public switch cannot choose insecure host',Domains::set_primary('insecure.example')instanceof WP_Error);
 check('HQ URL unchanged after public switch','https://store-a.platform.example/'===Hq_Connector::connection_url());
+check('payment alias uses registered primary with unchanged native callback query','https://shop-b.example/?wc-api=pc_panapay_return&reference=synthetic&token=synthetic'===\VialCove\Panapay\Order_Payload::customer_url('https://shop-a.example/?wc-api=pc_panapay_return&reference=synthetic&token=synthetic'));
+check('provider site never exposes management origin','https://shop-b.example/'===\VialCove\Panapay\Order_Payload::customer_url('https://store-a.platform.example/'));
 $_SERVER['HTTP_HOST']='store-a.platform.example';$_SERVER['REQUEST_URI']='/wp-admin/';$GLOBALS['actor']=$staff;
 check('management staff auth retained',Host::authenticate($staff)===$staff);check('management REST same-origin','https://store-a.platform.example/wp-json/peptide/v1/site'===Host::request_link('https://shop-b.example/wp-json/peptide/v1/site'));
 check('staff password reset remains native management','https://store-a.platform.example/wp-login.php?action=lostpassword'===apply_filters('lostpassword_url','https://shop-b.example/my-account/lost-password/'));
@@ -171,6 +175,11 @@ if('cli'!==$mode){
 	check('Customizer initial preview management',$GLOBALS['wp_customize']->url==='https://store-a.platform.example/product/synthetic/');
 	check('Customizer allowed origins only management',array('https://store-a.platform.example/')===apply_filters('customize_allowed_urls',array('https://shop-b.example/','https://evil.example/')));
 	check('Customizer navigation management','https://store-a.platform.example/product/next/'===home_url('/product/next/'));
+	$_GET=array();$_POST=array('wp_customize'=>'on','customize_preview_nonce'=>'synthetic','customize_changeset_uuid'=>'synthetic');$_SERVER['REQUEST_METHOD']='POST';
+	check('Customizer selective refresh accepts native POST context','allowed'===outcome(fn()=>Host::guard_request()));
+	unset($GLOBALS['wp_customize']);check('Customizer POST requires native manager','denied:403'===outcome(fn()=>Host::guard_request()));
+	$GLOBALS['wp_customize']=new WP_Customize_Manager();$GLOBALS['actor']=$customer;check('Customizer POST requires customize capability','denied:403'===outcome(fn()=>Host::guard_request()));
+	$GLOBALS['actor']=new WP_User(15,array('manage_options','customize'),array('administrator'));$_POST=array();$_SERVER['REQUEST_METHOD']='GET';
 	unset($GLOBALS['wp_customize']);check('ordinary admin customer links stay public','https://shop-b.example/product/next/'===home_url('/product/next/'));$_GET=array();
 }
 if('cli'===$mode){define('WP_CLI',true);check('CLI customer assets public','https://shop-b.example/wp-content/a.css'===Host::asset_link('https://store-a.platform.example/wp-content/a.css'));}

@@ -23,8 +23,14 @@
 
 独立评审发现并修复了 REST cookie 认证返回 true、batch 子路由、大小写路由、WP_CONTENT_URL 提前初始化、旧 cookie 路径和既有预览/顾客账号链接的回归。纯 PHP 夹具覆盖这些边界；另只读加载本机 WordPress 7.1.4 的原生 link/cookie/post/media helper 检查真实 URL 和媒体算法，无 WordPress bootstrap、DB、网络或原站写入。
 
-运行入口为 `wp-content/plugins/peptide-core/tests/management-host-policy.php`，模式：`managed`、`legacy`、`cli`、`bad-cookie`、`bad-path`、`wrong-uuid`、`wrong-siteurl`。可追加 WordPress 源码根目录启用原生 helper 检查。最终断言数及 HQ/Ops/Panapay 组合检查记录在本次根代理交接中。
+运行入口为 `wp-content/plugins/peptide-core/tests/management-host-policy.php`，模式：`managed`、`legacy`、`cli`、`bad-cookie`、`bad-home`、`bad-path`、`wrong-uuid`、`wrong-siteurl`。可追加 WordPress 源码根目录启用原生 helper 检查。最终实际通过：managed 96、native helper 102、legacy 3、CLI 79、五个失效配置各 1 项；组合 HQ 41、Ops 26 + 9、Panapay 33。33 个变更 PHP 文件逐个 lint 及整个 base diff 的空白检查通过。
 
-尚未完成的上线门槛：两个真实 Host 的 Nginx/TLS、浏览器 WP 登录和 host-only cookies、REST nonce、媒体与全部预览、顾客登录/退出/忘密、public primary 切换后 HQ 管理连接、支付异步回写及浏览器回跳、真实受控邮件收件、不同店账号/订单/导出隔离。源码夹具通过不能替代这些实测；未声称全功能或生产跨域验收通过。
+HQ/Ops/Panapay 已组合到本分支：HQ 0.3.2 / schema 4、Ops 0.2.0、Panapay 0.4.2。显式 URL 校验统一为多段 DNS hostname，拒绝 IP/localhost，旧单域 fallback 不变。HQ schema/helper 必须先于新版 Panapay 启用；未做实际 schema 升级。HQ 对历史重复 UUID 的注册拒绝，未清洗数据或证明全部历史运维查询不存在歧义。
+
+支付补充：provider site 和浏览器 return 只用登记 public primary，机器事件只用管理地址。新增尝试在签名前把站点和原生 Woo callback origin 归一到 public primary，保留路径、引用和令牌；不改变旧冻结尝试。HQ 返回时再次核对当前登记 public 与精确 callback，换主域后的旧返回拒绝跳转，异步支付回写不依赖该跳转。主域切换后要确认 HQ 已接收新 public 地址，再开放新付款。
+
+不同顾客 alias 的 host-only 账号/购物车 cookie 不可互读。alias 付款返回 primary 后，会员订单页可能要求重新登录，游客可能需邮箱校验，alias 购物车也不会自动在 primary 清空；不通过共享 cookie 或关闭 Woo 原生校验绕过。实际发布应选择单一 public 主域并安排其他旧域跳转，或在接收 alias 结账前完成游客/会员两条独立验收。
+
+尚未完成的上线门槛：两个真实 Host 的 Nginx/TLS、浏览器 WP 登录和 host-only cookies、REST nonce、媒体与全部预览（含 Customizer selective refresh 的纯 POST）、顾客登录/退出/忘密、public primary 切换后 HQ 管理连接、支付异步回写及浏览器回跳、真实受控邮件收件、不同店账号/订单/导出隔离。源码夹具通过不能替代这些实测；未声称全功能或生产跨域验收通过。
 
 本分支不 push、不直接合并 main，不纳入私有 profile、主机 IP、指纹、凭据、运行配置或真实客户资料。HQ schema 改动在实际迁移前需要备份；本任务没有执行迁移。
