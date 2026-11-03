@@ -206,6 +206,44 @@ class Policy(unittest.TestCase):
             self.assertIn('fastcgi_pass unix:/run/php/vialcove-s0002.sock;',text)
             self.assertEqual(run.call_count,2)
 
+    def test_vhost_rejects_upper_mixed_case_existing_hosts_in_ipv6_blocks(self):
+        cases = [
+            'server { listen [::]:443 ssl; server_name WWW.EXAMPLE.COM EXAMPLE.COM; }',
+            '# Existing IPv6 tenant\nserver { listen [::]:80;\n server_name ExAmPlE.CoM # customer apex\n WwW.ExAmPlE.CoM; }',
+            'server { listen [::]:443 ssl; server_name "WWW.EXAMPLE.COM"; # quoted DNS name\n}',
+        ]
+        for existing in cases:
+            with self.subTest(existing=existing), tempfile.TemporaryDirectory(dir=TEST_ROOT) as folder:
+                root=Path(folder)
+                for name in ['conf.d','sites-available','sites-enabled']: (root/'etc/nginx'/name).mkdir(parents=True,exist_ok=True)
+                other=root/'etc/nginx/sites-enabled/another-tenant'
+                other.write_text(existing,encoding='utf-8')
+                real_path=Path
+                def mapped(*args):
+                    p=real_path(*args); name=str(p).replace('\\','/')
+                    return root/name.lstrip('/') if name.startswith(('/etc/nginx','/var/www/vialcove-tenant-acme')) else p
+                t=dict(w.tenant('s0002',self.config(),'example.com'),public='/srv/tenants/s0002/public')
+                with patch.object(w,'Path',side_effect=mapped), patch.object(Path,'symlink_to'), patch.object(w,'run') as run:
+                    with self.assertRaisesRegex(ValueError,'vhost_host_in_use'):
+                        w.vhost(t,'www.example.com',aliases=('example.com',),tls=True)
+                    run.assert_not_called()
+                self.assertFalse((root/'etc/nginx/sites-available/vialcove-s0002').exists())
+                self.assertEqual(other.read_text(encoding='utf-8'),existing)
+
+    def test_vhost_ignores_commented_server_names(self):
+        with tempfile.TemporaryDirectory(dir=TEST_ROOT) as folder:
+            root=Path(folder)
+            for name in ['conf.d','sites-available','sites-enabled']: (root/'etc/nginx'/name).mkdir(parents=True,exist_ok=True)
+            (root/'etc/nginx/sites-enabled/another-tenant').write_text('# server_name WWW.EXAMPLE.COM EXAMPLE.COM;\nserver { listen [::]:443 ssl; server_name OTHER.EXAMPLE.ORG; }')
+            real_path=Path
+            def mapped(*args):
+                p=real_path(*args); name=str(p).replace('\\','/')
+                return root/name.lstrip('/') if name.startswith(('/etc/nginx','/var/www/vialcove-tenant-acme')) else p
+            t=dict(w.tenant('s0002',self.config(),'example.com'),public='/srv/tenants/s0002/public')
+            with patch.object(w,'Path',side_effect=mapped), patch.object(Path,'symlink_to'), patch.object(w,'run',return_value=b''):
+                w.vhost(t,'www.example.com',aliases=('example.com',),tls=True)
+            self.assertTrue((root/'etc/nginx/sites-available/vialcove-s0002').exists())
+
     def test_certificate_requests_and_checks_two_names(self):
         t=dict(w.tenant('s0002',self.config(),'example.com'),server_ip='192.0.2.1')
         calls=[]

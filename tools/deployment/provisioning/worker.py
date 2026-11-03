@@ -280,8 +280,10 @@ def vhost(t, host, *, tls=False, aliases=()):
     for other in Path('/etc/nginx/sites-enabled').iterdir():
         if other.resolve() == path.resolve() or not other.is_file():
             continue
-        names = re.findall(r'\bserver_name\s+([^;{}]+);', other.read_text(encoding='utf-8'))
-        require(not set(hosts).intersection(n for group in names for n in group.split()), 'vhost_host_in_use')
+        source = re.sub(r'(?m)#.*$', '', other.read_text(encoding='utf-8'))
+        names = re.findall(r'\bserver_name\s+([^;{}]+);', source)
+        existing = {n.strip('\"\'').lower() for group in names for n in group.split()}
+        require(not set(hosts).intersection(existing), 'vhost_host_in_use')
     acme = '/var/www/vialcove-tenant-acme'
     Path(acme, '.well-known/acme-challenge').mkdir(parents=True, exist_ok=True)
     text = f'''server {{
