@@ -144,7 +144,9 @@ final class Session_Service {
 					$existing = $book['attempts'][ $book['active'] ];
 				}
 				if ( ! Store::creation_ready( $order_id ) ) { throw new Customer_Error( __( 'Payment setup has not been confirmed. Please contact the store before paying again.', 'peptide-panapay' ) ); }
-				return self::session_url( $existing, $config );
+				$result = self::session_url( $existing, $config );
+				self::remember_checkout_order( $order );
+				return $result;
 			}
 			$config = Configuration::load( $account_id );
 			if ( ( ! empty( $config['central'] ) && empty( $config['enabled'] ) )
@@ -200,8 +202,16 @@ final class Session_Service {
 			$book['attempts'][ $id ]['creation_reservation'] = $reservation;
 			self::save( $order, $book );
 			Store::set_creation_state( $reservation, $response['state'] );
-			return self::session_url( $attempt, $config );
+			$result = self::session_url( $attempt, $config );
+			self::remember_checkout_order( $order );
+			return $result;
 		} finally { Store::release( $lock ); }
+	}
+
+	/** Optional order discovery must not change the outcome of an accepted session. */
+	private static function remember_checkout_order( \WC_Order $order ): void {
+		try { do_action( 'pc_panapay_session_created', $order ); }
+		catch ( \Throwable $ignored ) { /* The native order and payment session remain authoritative. */ }
 	}
 
 	private static function session_url( array $attempt, array $config ): array {

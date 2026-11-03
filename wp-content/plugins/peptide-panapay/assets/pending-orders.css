@@ -1,0 +1,17 @@
+.pc-panapay-pending{margin:0 0 24px;padding:16px;border:1px solid var(--line,#e6e6e6);border-radius:12px;background:var(--paper,#f5f5f5);color:var(--ink,#171717);font:inherit}
+.pc-panapay-pending .pc-panapay-pending__title{margin:0 0 8px;font-family:inherit;font-size:18px;font-weight:600;line-height:28px;letter-spacing:normal;text-wrap:balance}
+.pc-panapay-pending .pc-panapay-pending__intro{margin:0 0 12px;font-size:14px;line-height:20px;text-wrap:pretty}
+.pc-panapay-pending__list{list-style:none;margin:0!important;padding:0!important}
+.pc-panapay-pending__list li{display:flex;justify-content:space-between;align-items:center;gap:16px;min-width:0;padding:12px 0;margin:0}
+.pc-panapay-pending__list li+li{border-top:1px solid var(--line,#e6e6e6)}
+.pc-panapay-pending__summary,.pc-panapay-pending__actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;min-width:0;font-size:14px;line-height:20px}
+.pc-panapay-pending__summary strong{font-weight:600;overflow-wrap:anywhere}
+.pc-panapay-pending__summary>span{font-variant-numeric:tabular-nums}
+.pc-panapay-pending__status,.pc-panapay-pending__detail{font-size:12px;line-height:16px}
+.pc-panapay-pending__detail{max-width:36ch;text-wrap:pretty}
+.pc-panapay-pending a{color:inherit;text-underline-offset:3px}
+.pc-panapay-pending .pc-panapay-pending__actions a.button{display:inline-flex;justify-content:center;align-items:center;min-height:44px;padding:8px 12px;border:1px solid currentColor;border-radius:6px;background:transparent!important;color:inherit!important;font-family:inherit;font-size:14px;font-weight:600;line-height:20px;text-decoration:none!important;box-shadow:none}
+.pc-panapay-pending .pc-panapay-pending__actions a.button:hover{background:var(--line,#e6e6e6)!important}
+.pc-panapay-pending a:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+.pc-panapay-pending__new{display:inline-block;padding:8px 0;font-size:14px;font-weight:600;line-height:20px}
+@media(max-width:600px){.pc-panapay-pending__list li{align-items:flex-start;flex-direction:column;gap:8px}.pc-panapay-pending__actions{width:100%}.pc-panapay-pending__actions .button{flex:1 0 auto}.pc-panapay-pending__detail{max-width:none}}
