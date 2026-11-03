@@ -95,6 +95,8 @@ final class Menu {
 		wp_enqueue_style( 'peptide-hq-workspace', plugins_url( 'assets/hq-workspace.css', PEPTIDE_HQ_FILE ), $dependencies, PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $file ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 		$file = PEPTIDE_HQ_DIR . '/assets/hq-workspace.js';
 		wp_enqueue_script( 'peptide-hq-workspace', plugins_url( 'assets/hq-workspace.js', PEPTIDE_HQ_FILE ), array(), PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $file ), true ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		$file = PEPTIDE_HQ_DIR . '/assets/workspace-touch.js';
+		wp_enqueue_script( 'peptide-hq-touch', plugins_url( 'assets/workspace-touch.js', PEPTIDE_HQ_FILE ), array( 'peptide-hq-workspace' ), PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $file ), true ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 		$page = isset( $_GET['page'] ) && is_string( $_GET['page'] ) ? $_GET['page'] : '';
 		if ( current_user_can( self::CAP ) && isset( self::navigation_policy()[ $page ] ) ) {
 			// All first-party HQ controllers are loaded once; fetched HTML never executes scripts.
@@ -146,7 +148,7 @@ final class Menu {
 		// Match wp-admin/admin-header.php exactly, including encoded Chinese menu names.
 		$screen_class = preg_replace( '/[^a-z0-9_-]+/i', '-', (string) ( $hook_suffix ?? $screen->id ) );
 		$build = array();
-		$files = array_map( static fn( string $relative ): string => PEPTIDE_HQ_DIR . '/' . $relative, array( 'assets/hq-admin.css', 'assets/hq-workspace.css', 'assets/hq-workspace.js', 'assets/hq-navigation.js', 'assets/hq-operations.css', 'assets/hq-operations.js', 'assets/hq-provision.js', 'includes/admin/class-menu.php', 'includes/admin/class-operations-page.php', 'includes/admin/class-provision-page.php' ) );
+		$files = array_map( static fn( string $relative ): string => PEPTIDE_HQ_DIR . '/' . $relative, array( 'assets/hq-admin.css', 'assets/hq-workspace.css', 'assets/hq-workspace.js', 'assets/workspace-touch.js', 'assets/hq-navigation.js', 'assets/hq-operations.css', 'assets/hq-operations.js', 'assets/hq-provision.js', 'includes/admin/class-menu.php', 'includes/admin/class-operations-page.php', 'includes/admin/class-provision-page.php' ) );
 		if ( defined( 'PEPTIDE_PANAPAY_DIR' ) && class_exists( \VialCove\Panapay\Hub_Page::class ) ) {
 			foreach ( array( 'assets/hub.css', 'assets/hub.js', 'includes/class-hub-page.php' ) as $relative ) { $files[] = PEPTIDE_PANAPAY_DIR . '/' . $relative; }
 		}
@@ -226,10 +228,11 @@ final class Menu {
 		$user = wp_get_current_user();
 		?>
 		<a class="pchq-workspace-brand" href="<?php echo esc_url( admin_url( 'admin.php?page=' . Dashboard_Page::SLUG ) ); ?>">
-			<span class="pchq-workspace-mark" aria-hidden="true">V</span>
+			<span class="pchq-workspace-mark" aria-hidden="true"><svg viewBox="0 0 28 24" width="28" height="24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m4 15 8-7 12 8"/><circle cx="4" cy="15" r="2.5" fill="currentColor"/><circle cx="12" cy="8" r="2.5" fill="currentColor"/><circle cx="24" cy="16" r="2.5" fill="currentColor"/></svg></span>
 			<span><strong>VialCove</strong><small><?php echo esc_html( $zh ? '管理后台' : 'Management' ); ?></small></span>
 		</a>
 		<header class="pchq-workspace-head">
+			<button type="button" class="pchq-mobile-nav-toggle" data-vc-nav-toggle aria-label="打开导航" aria-controls="adminmenuwrap" aria-expanded="false" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
 			<nav class="pchq-workspace-location" aria-label="<?php echo esc_attr( $zh ? '当前位置' : 'Current location' ); ?>">
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=' . Dashboard_Page::SLUG ) ); ?>"><?php echo esc_html( $zh ? '管理后台' : 'Management' ); ?></a>
 				<span aria-hidden="true">/</span><span aria-current="page"><?php echo esc_html( wp_strip_all_tags( (string) $title ) ); ?></span>
