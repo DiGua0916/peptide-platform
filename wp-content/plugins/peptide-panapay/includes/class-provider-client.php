@@ -10,6 +10,10 @@ final class Provider_Client {
 	 */
 	public static function create( array $payload, array $config ): array {
 		$endpoint = Configuration::origin( $config['gateway'] ) . '/index.php/admin/Payments/createPayment';
+		// This local policy decision precedes transport, so no provider session was created.
+		if ( _wp_http_get_object()->block_request( $endpoint ) ) {
+			return array( 'state' => 'failed' );
+		}
 		$response = wp_safe_remote_post( $endpoint, array(
 			'timeout' => 30, 'redirection' => 0, 'sslverify' => true, 'reject_unsafe_urls' => true,
 			'limit_response_size' => 65536,
