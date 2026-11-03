@@ -69,15 +69,28 @@ final class Order_Payload {
 
 	/** Order data only: excludes mutable domain/media URLs and browser request headers. */
 	public static function fingerprint( \WC_Order $order ): string {
-		$items = array();
-		foreach ( $order->get_items() as $item ) {
-			$items[] = array( $item->get_id(), $item->get_product_id(), $item->get_variation_id(), $item->get_name(),
-				(string) $item->get_quantity(), (string) $item->get_total(), $item->get_taxes() );
-		}
+		$items = self::fingerprint_items( $order );
 		return hash( 'sha256', wp_json_encode( array(
 			'currency' => $order->get_currency(), 'total' => (string) $order->get_total(), 'items' => $items,
 			'billing' => $order->get_address( 'billing' ), 'shipping' => $order->get_address( 'shipping' ),
 			'email' => $order->get_billing_email(), 'phone' => $order->get_billing_phone(),
 		) ) );
+	}
+
+	/** Payment authority binds the frozen amount, currency and exact order items, not contact corrections. */
+	public static function payment_fingerprint( \WC_Order $order ): string {
+		$items = self::fingerprint_items( $order );
+		return hash( 'sha256', wp_json_encode( array(
+			'currency' => $order->get_currency(), 'total' => (string) $order->get_total(), 'items' => $items,
+		) ) );
+	}
+
+	private static function fingerprint_items( \WC_Order $order ): array {
+		$items = array();
+		foreach ( $order->get_items() as $item ) {
+			$items[] = array( $item->get_id(), $item->get_product_id(), $item->get_variation_id(), $item->get_name(),
+				(string) $item->get_quantity(), (string) $item->get_total(), $item->get_taxes() );
+		}
+		return $items;
 	}
 }

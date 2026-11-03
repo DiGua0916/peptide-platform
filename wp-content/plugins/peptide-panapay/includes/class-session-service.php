@@ -162,6 +162,7 @@ final class Session_Service {
 			$attempt = array(
 				'reference' => $reference, 'state' => 'creating', 'created_at' => time(),
 				'fingerprint' => Order_Payload::fingerprint( $order ),
+				'payment_fingerprint' => Order_Payload::payment_fingerprint( $order ),
 				'amount' => (string) $order->get_total(), 'currency' => $order->get_currency(),
 				'secret_box' => Crypto::encrypt( $config['secret'] ),
 				'return_token_hash' => hash( 'sha256', $token ), 'test_mode' => $config['test_mode'],
@@ -243,6 +244,17 @@ final class Session_Service {
 		return self::session_url( $attempt, self::attempt_config( $attempt ) );
 	}
 
+	/** Legacy attempts keep the original full-order check; a malformed new field never downgrades it. */
+	private static function payment_fingerprint_matches( array $attempt, \WC_Order $order ): bool {
+		if ( array_key_exists( 'payment_fingerprint', $attempt ) ) {
+			$fingerprint = $attempt['payment_fingerprint'];
+			return is_string( $fingerprint ) && 1 === preg_match( '/\A[a-f0-9]{64}\z/D', $fingerprint )
+				&& hash_equals( $fingerprint, Order_Payload::payment_fingerprint( $order ) );
+		}
+		return is_string( $attempt['fingerprint'] ?? null )
+			&& hash_equals( $attempt['fingerprint'], Order_Payload::fingerprint( $order ) );
+	}
+
 	/** Signed server notification only. The browser-return path never calls this method. */
 	public static function apply_notification( array $data, bool $central = false ): void {
 		foreach ( array( 'order_number', 'status', 'transaction_id', 'sign' ) as $key ) {
@@ -304,7 +316,7 @@ final class Session_Service {
 			$persisted_paid = $same_gateway && Persistence::is_paid( $order->get_id(), $native_transaction );
 			$eligible = ! $order->is_paid() && $same_gateway
 				&& $order->has_status( array( 'pending', 'failed' ) )
-				&& hash_equals( $attempt['fingerprint'], Order_Payload::fingerprint( $order ) )
+				&& self::payment_fingerprint_matches( $attempt, $order )
 				&& (string) $order->get_total() === $attempt['amount'] && $order->get_currency() === $attempt['currency'];
 			$claim = Store::claim( $transaction, $order->get_id(), $id, $scope, $persisted_paid || $eligible );
 			if ( 'applied' === $claim['state'] ) { return; }
