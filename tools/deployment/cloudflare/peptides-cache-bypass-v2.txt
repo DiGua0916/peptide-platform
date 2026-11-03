@@ -1,0 +1,45 @@
+(http.host in {"vialcovepeptides.com" "www.vialcovepeptides.com"} and (
+  not (http.request.method in {"GET" "HEAD"}) or
+  any(http.request.headers["authorization"][*] ne "") or
+  not (
+    (
+      starts_with(http.request.uri.path, "/wp-content/uploads/") and
+      http.request.uri.path.extension in {"png" "jpg" "jpeg" "gif" "webp" "avif" "svg" "ico"}
+    ) or (
+      (
+        starts_with(http.request.uri.path, "/wp-content/themes/peptide-site/assets/") or
+        starts_with(http.request.uri.path, "/wp-content/plugins/peptide-core/assets/") or
+        starts_with(http.request.uri.path, "/wp-content/plugins/woocommerce/assets/") or
+        starts_with(http.request.uri.path, "/wp-includes/css/") or
+        starts_with(http.request.uri.path, "/wp-includes/js/") or
+        starts_with(http.request.uri.path, "/wp-includes/fonts/") or
+        starts_with(http.request.uri.path, "/wp-includes/images/")
+      ) and
+      http.request.uri.path.extension in {"css" "js" "mjs" "woff" "woff2" "ttf" "eot" "png" "jpg" "jpeg" "gif" "webp" "avif" "svg" "ico" "wasm" "bcmap"}
+    )
+  ) or
+  starts_with(http.request.uri.path, "/wp-content/uploads/peptide-core-private/") or
+  starts_with(http.request.uri.path, "/.well-known/") or
+  http.request.uri.query contains "rest_route" or
+  http.request.uri.query contains "wc-api" or
+  http.request.uri.query contains "wc-ajax" or
+  http.request.uri.query contains "add-to-cart" or
+  http.request.uri.query contains "download_file" or
+  http.request.uri.query contains "pc_" or
+  http.request.uri.query contains "nonce" or
+  http.request.uri.query contains "preview" or
+  http.request.uri.query contains "customize" or
+  http.request.uri.query contains "recovery_optout" or
+  http.request.uri.query contains "coupon" or
+  http.request.uri.query contains "token" or
+  http.request.uri.query contains "reference" or
+  http.request.uri.query contains "sign" or
+  http.request.uri.query contains "status" or
+  http.request.uri.query contains "transaction_id" or
+  http.cookie contains "wordpress_" or
+  http.cookie contains "wp-postpass_" or
+  http.cookie contains "wp_woocommerce_session_" or
+  http.cookie contains "woocommerce_items_in_cart=" or
+  http.cookie contains "woocommerce_cart_hash=" or
+  http.cookie contains "PHPSESSID="
+))
