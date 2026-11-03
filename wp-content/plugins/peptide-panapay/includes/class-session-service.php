@@ -144,7 +144,9 @@ final class Session_Service {
 					$existing = $book['attempts'][ $book['active'] ];
 				}
 				if ( ! Store::creation_ready( $order_id ) ) { throw new Customer_Error( __( 'Payment setup has not been confirmed. Please contact the store before paying again.', 'peptide-panapay' ) ); }
-				return self::session_url( $existing, $config );
+				$result = self::session_url( $existing, $config );
+				self::remember_checkout_order( $order );
+				return $result;
 			}
 			$config = Configuration::load( $account_id );
 			if ( ( ! empty( $config['central'] ) && empty( $config['enabled'] ) )
@@ -162,6 +164,7 @@ final class Session_Service {
 			$attempt = array(
 				'reference' => $reference, 'state' => 'creating', 'created_at' => time(),
 				'fingerprint' => Order_Payload::fingerprint( $order ),
+				'payment_fingerprint' => Order_Payload::payment_fingerprint( $order ),
 				'amount' => (string) $order->get_total(), 'currency' => $order->get_currency(),
 				'secret_box' => Crypto::encrypt( $config['secret'] ),
 				'return_token_hash' => hash( 'sha256', $token ), 'test_mode' => $config['test_mode'],
@@ -200,8 +203,16 @@ final class Session_Service {
 			$book['attempts'][ $id ]['creation_reservation'] = $reservation;
 			self::save( $order, $book );
 			Store::set_creation_state( $reservation, $response['state'] );
-			return self::session_url( $attempt, $config );
+			$result = self::session_url( $attempt, $config );
+			self::remember_checkout_order( $order );
+			return $result;
 		} finally { Store::release( $lock ); }
+	}
+
+	/** Optional order discovery must not change the outcome of an accepted session. */
+	private static function remember_checkout_order( \WC_Order $order ): void {
+		try { do_action( 'pc_panapay_session_created', $order ); }
+		catch ( \Throwable $ignored ) { /* The native order and payment session remain authoritative. */ }
 	}
 
 	private static function session_url( array $attempt, array $config ): array {
@@ -241,6 +252,17 @@ final class Session_Service {
 			throw new Customer_Error( __( 'This order changed after payment was started. Please contact the store.', 'peptide-panapay' ) );
 		}
 		return self::session_url( $attempt, self::attempt_config( $attempt ) );
+	}
+
+	/** Legacy attempts keep the original full-order check; a malformed new field never downgrades it. */
+	private static function payment_fingerprint_matches( array $attempt, \WC_Order $order ): bool {
+		if ( array_key_exists( 'payment_fingerprint', $attempt ) ) {
+			$fingerprint = $attempt['payment_fingerprint'];
+			return is_string( $fingerprint ) && 1 === preg_match( '/\A[a-f0-9]{64}\z/D', $fingerprint )
+				&& hash_equals( $fingerprint, Order_Payload::payment_fingerprint( $order ) );
+		}
+		return is_string( $attempt['fingerprint'] ?? null )
+			&& hash_equals( $attempt['fingerprint'], Order_Payload::fingerprint( $order ) );
 	}
 
 	/** Signed server notification only. The browser-return path never calls this method. */
@@ -304,7 +326,7 @@ final class Session_Service {
 			$persisted_paid = $same_gateway && Persistence::is_paid( $order->get_id(), $native_transaction );
 			$eligible = ! $order->is_paid() && $same_gateway
 				&& $order->has_status( array( 'pending', 'failed' ) )
-				&& hash_equals( $attempt['fingerprint'], Order_Payload::fingerprint( $order ) )
+				&& self::payment_fingerprint_matches( $attempt, $order )
 				&& (string) $order->get_total() === $attempt['amount'] && $order->get_currency() === $attempt['currency'];
 			$claim = Store::claim( $transaction, $order->get_id(), $id, $scope, $persisted_paid || $eligible );
 			if ( 'applied' === $claim['state'] ) { return; }
