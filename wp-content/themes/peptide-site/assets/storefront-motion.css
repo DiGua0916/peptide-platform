@@ -1,0 +1,14 @@
+/* Deliberate storefront feedback. Native state, layout and data stay immediate. */
+:root{--vc-motion-out:cubic-bezier(.22,1,.36,1)}
+dialog.vc-showcase-quick[open],dialog.vc-product-child-dialog[open]{animation:vc-product-arrive 360ms var(--vc-motion-out) backwards}
+dialog.vc-showcase-quick[open]::backdrop,dialog.vc-product-child-dialog[open]::backdrop{animation:vc-layer-shade 300ms var(--vc-motion-out) backwards}
+@keyframes vc-product-arrive{from{opacity:.2;transform:translateY(16px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes vc-layer-shade{from{opacity:.2}to{opacity:1}}
+:is(.vc-demo-button,.vc-demo-icon-button,.vc-variation-option,.single_add_to_cart_button,.vc-showcase-quick__buy,.vc-home-quick__quantity-button,.vc-live-cart__quantity button,.vc-live-cart__checkout,.vc-home-quick__toolbar button){transition:transform 200ms var(--vc-motion-out),background-color 200ms var(--vc-motion-out),border-color 200ms var(--vc-motion-out),color 200ms var(--vc-motion-out)}
+:is(.vc-demo-button,.vc-demo-icon-button,.vc-variation-option,.single_add_to_cart_button,.vc-showcase-quick__buy,.vc-home-quick__quantity-button,.vc-live-cart__quantity button,.vc-live-cart__checkout,.vc-home-quick__toolbar button):not(:disabled):not(.disabled):not([aria-disabled=true]):active{transform:scale(.98)}
+:is(.vc-demo-faq-list,.vc-product-dialog-content,.vc-product-dialog-questions) details[open]>:not(summary){animation:vc-answer-arrive 240ms var(--vc-motion-out)}
+@keyframes vc-answer-arrive{from{opacity:.35;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){
+ dialog.vc-showcase-quick[open],dialog.vc-product-child-dialog[open],dialog.vc-showcase-quick[open]::backdrop,dialog.vc-product-child-dialog[open]::backdrop,:is(.vc-demo-faq-list,.vc-product-dialog-content,.vc-product-dialog-questions) details[open]>:not(summary){animation:none}
+ :is(.vc-demo-button,.vc-demo-icon-button,.vc-variation-option,.single_add_to_cart_button,.vc-showcase-quick__buy,.vc-home-quick__quantity-button,.vc-live-cart__quantity button,.vc-live-cart__checkout,.vc-home-quick__toolbar button):active{transform:none}
+}

@@ -69,6 +69,19 @@ add_action( 'wp_enqueue_scripts', function () {
     ) );
 } );
 
+// Keep the current storefront's interaction feedback separate from business controllers.
+add_action( 'wp_enqueue_scripts', function () {
+    $root = get_template_directory_uri() . '/assets/';
+    foreach ( array( 'css', 'js' ) as $extension ) {
+        $path = __DIR__ . '/assets/storefront-motion.' . $extension;
+        if ( 'css' === $extension ) {
+            wp_enqueue_style( 'vialcove-storefront-motion', $root . 'storefront-motion.css', array( 'vialcove-brand' ), (string) filemtime( $path ) );
+        } else {
+            wp_enqueue_script( 'vialcove-storefront-motion', $root . 'storefront-motion.js', array(), (string) filemtime( $path ), true );
+        }
+    }
+}, 120 );
+
 /** Exact supplied SVGs; never reconstruct the wordmark as styled text. */
 function vc_brand_logo( bool $compact = false ): void {
     $root = get_template_directory_uri() . '/assets/brand/';
