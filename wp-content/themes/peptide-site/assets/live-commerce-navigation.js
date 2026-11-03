@@ -95,12 +95,14 @@
           const r=await waitProduct(item.productId); if(!r || ticket!==serial) return;
           for (const el of r.querySelectorAll('.variations select')) {
             const value=item.attributes?.[el.name];
-            if (typeof value==='string' && [...el.options].some(option=>option.value===value)) {
+            // Returning from a child layer must not rebuild an unchanged Woo
+            // variation form and displace the parent's current content/scroll.
+            if (typeof value==='string' && el.value!==value && [...el.options].some(option=>option.value===value)) {
               el.value=value; window.jQuery ? window.jQuery(el).trigger('change') : el.dispatchEvent(new Event('change',{bubbles:true}));
             }
           }
           const qty=r.querySelector('input.qty');
-          if(qty && /^\d+$/.test(item.quantity || '')) {qty.value=item.quantity;qty.dispatchEvent(new Event('change',{bubbles:true}));}
+          if(qty && /^\d+$/.test(item.quantity || '') && qty.value!==String(item.quantity)) {qty.value=item.quantity;qty.dispatchEvent(new Event('change',{bubbles:true}));}
           requestAnimationFrame(()=> {if(ticket===serial && productDialog()?.open) productDialog().scrollTop=Number(item.scroll)||0;});
         } else if (item.kind==='cart') window.VialCoveLiveCart?.open();
         else {
