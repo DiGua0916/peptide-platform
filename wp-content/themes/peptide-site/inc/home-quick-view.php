@@ -15,9 +15,13 @@ function vc_home_quick_view_assets(): void {
     wp_enqueue_style( 'vc-home-quick-view', $base . 'home-quick-view.css', array( 'vialcove-product-options' ), (string) filemtime( $path . 'home-quick-view.css' ) );
     wp_enqueue_style( 'vc-live-cart-feedback', $base . 'live-cart-feedback.css', array(), (string) filemtime( $path . 'live-cart-feedback.css' ) );
     wp_enqueue_script( 'vc-live-cart-feedback', $base . 'live-cart-feedback.js', array(), (string) filemtime( $path . 'live-cart-feedback.js' ), true );
+    foreach ( array( 'product-purchase-dock', 'product-purchase-return', 'product-dialog-meta' ) as $name ) {
+        wp_enqueue_script( 'vc-' . $name, $base . $name . '.js', array(), (string) filemtime( $path . $name . '.js' ), true );
+    }
     foreach ( array( 'ticker-model', 'ticker', 'report-viewer', 'feedback', 'experience', 'recent' ) as $part ) {
         $name = 'product-dialog-' . $part;
-        wp_enqueue_script( 'vc-' . $name, $base . $name . '.js', array(), (string) filemtime( $path . $name . '.js' ), true );
+        $dependencies = 'experience' === $part ? array( 'vc-product-purchase-dock', 'vc-product-purchase-return', 'vc-product-dialog-meta' ) : array();
+        wp_enqueue_script( 'vc-' . $name, $base . $name . '.js', $dependencies, (string) filemtime( $path . $name . '.js' ), true );
     }
     wp_enqueue_script( 'vc-home-quick-view', $base . 'home-quick-view.js', array( 'jquery', 'peptide-showcase-quick-view', 'vc-live-cart-feedback', 'vc-product-dialog-ticker-model', 'vc-product-dialog-ticker', 'vc-product-dialog-report-viewer', 'vc-product-dialog-feedback', 'vc-product-dialog-experience', 'vc-product-dialog-recent' ), (string) filemtime( $path . 'home-quick-view.js' ), true );
     wp_localize_script( 'vc-home-quick-view', 'vcHomeQuickView', array(

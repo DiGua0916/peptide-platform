@@ -70,6 +70,7 @@
     return {
       begin, confirm, cancel, sync:paint, configure(value) { if(value && typeof value === 'object')config=value; },
       destroy() { if(destroyed)return;cancel();destroyed=true;document.removeEventListener('visibilitychange',onHidden); },
+      get presentation() { return activeConfig ? {...activeConfig} : null; },
       get state() { return destroyed?'destroyed':state; }
     };
   };

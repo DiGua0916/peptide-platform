@@ -18,7 +18,7 @@ The user approved Impeccable + Interaction Design + Web Design Guidelines and as
 - PHP native cart entrypoint checks: 14 passed. Modified PHP lint, three JS syntax checks and git diff whitespace checks passed.
 - Impeccable static detection on the six changed/new JS/CSS assets returned exit 0 and `[]`. The explicitly backend-only DESIGN.md was excluded from this public-storefront scan; it was not rewritten. This source scan is not a device performance score.
 - Actual local formal site in a 390 × 844 same-origin frame: width=scrollWidth=390. Details and COA each became aria-current=location, with section top approximately 64.4px below the viewport and toolbar bottom approximately 56.7px. The 10mg real report rendered one PDF page in a 390 × 844 report shell. Product → Bag keeps the 390px product under a 378px right-side drawer and the same homepage URL. No quantity, customer address, order or payment action was performed.
-- Screenshot: `D:/Codex/Tasks/2026-11-03/storefront-interaction-polish/outputs/mobile-coa-polished.png`. Detailed regression output and source detector output are in the same task outputs directory. Final Back/refresh/publication verification is recorded separately after it actually runs.
+- Screenshot: `D:/Codex/Tasks/2026-11-03/storefront-interaction-polish/outputs/mobile-coa-polished.png`. Detailed regression output and source detector output are in the same task outputs directory. The completed local Back check, actual release receipts and bounded public-browser smoke are recorded below. Physical-device performance remains unmeasured.
 
 ## Boundaries and release
 
@@ -26,7 +26,7 @@ Full product-content exit remains constrained by the backend native close handle
 
 Runtime allowlist: functions.php, storefront-motion.css, home-quick-view.js, product-dialog-experience.js, new product-dialog-interaction.css, live-cart-experience.js and live-cart-experience.css. Public product-dialog-experience.js must receive only this reviewed delta relative to `7fc5de7`; its exact older public `8c1daed` bytes lack an earlier unrelated FAQ append line. The scoped generator preserves that omission rather than copying the entire local file. No PHP FAQ/content/API, settings, plugin, database or private configuration is part of this release.
 
-The new publication framework coordinates the actual canonical lifecycle locks and verifies the exact active store identity alongside the runtime/config/current-pointer guards. It must reject a changed, retiring or retired store rather than resurrect it. Preparation does not equal deployment. See task `work/interaction-deployment-runbook.txt` and later actual receipts for the publication outcome.
+The publication framework coordinates the actual canonical lifecycle locks and verifies the exact active store identity alongside the runtime/config/current-pointer guards. It rejects a changed, retiring or retired store rather than resurrecting it. The actual seven-file and separate navigation-only executions are recorded below. See task `work/interaction-deployment-runbook.txt` and `work/navigation-followup/navigation-deployment-runbook.txt` for their distinct guards and rollback boundaries.
 
 ## Final mobile check and bounded navigation follow-up
 
@@ -34,4 +34,23 @@ After reloading the final assets, the 10mg image actually has the authoritative 
 
 Independent review also found a genuine avoidable restoration issue: `live-commerce-navigation.js` dispatched Woo select/quantity changes even when the values already matched. The bounded follow-up adds only equality guards, retaining permitted-option checks, real changed-value restoration, serial cancellation and the original scroll restoration. Its 7 actual-IIFE popstate tests failed against the former no-op behavior and pass with the guards. This navigation-only publication is separate from the seven-file release; it cannot copy other theme files.
 
-Executed seven-file release receipts: web at 2026-11-03 09:23:24 UTC, runtime `storefront-interaction-73c973c6c6f8-web01`; admin at 09:27:41 UTC, runtime `storefront-interaction-73c973c6c6f8-admin01`. Both receipts confirm canonical lifecycle locks, exact active identity, unchanged configuration, whole-manifest allowlist, PHP lint, all six HTTPS asset hashes/types and homepage/login health. No backend, database, payment or customer-cart action was invoked. The navigation follow-up result is recorded only after its separate execution.
+## Actual seven-file release and one-file follow-up
+
+The seven-file source is `73c973c6c6f8eaf7fe0d1095cf1a241034954f9a`; the independent navigation-only source is `b7a0a6531adf49d076c4d839251cb0f7ffe37ad7`. Both are ancestors of integrated frontend checkpoint `238071810e84226c6238d5c3bec89aae650348fb`, which also preserves the concurrent backend history. The public dialog JS is the approved selective artifact, SHA256 `0fad24b99fb9a47cbe6f155ee6acaf86b9a7739660e74706b34599869b595657`; the unrelated previously unpublished FAQ append remains excluded. The follow-up changes only `assets/live-commerce-navigation.js`, whose served SHA256 is `9bef7b8601d3c0cf6bdfad637c9cb26591452ba2d2d411fba230eafdef549c44`.
+
+| Host | Seven-file release completed (UTC) | Navigation follow-up completed (UTC) | Final runtime |
+| --- | --- | --- | --- |
+| Web | 2026-11-03 09:23:24.481729 | 2026-11-03 09:44:55.741134 | `/srv/vialcove/releases/storefront-navigation-b7a0a6531adf-web01` |
+| Admin | 2026-11-03 09:27:41.723649 | 2026-11-03 09:50:27.731240 | `/srv/vialcove/store-admin/releases/storefront-navigation-b7a0a6531adf-admin01` |
+
+Each navigation candidate cloned its host's own `storefront-interaction-73c973c6c6f8-web01/admin01` runtime. Whole-manifest verification confirms exactly one file changed and preserves all seven preceding UI files, plugins, MU plugins, private configuration and upload links. Both release stages held the canonical lifecycle/deployment locks plus the existing UI compatibility lock, verified the exact active store identity, and guarded configuration and current-pointer inode before atomic replacement. The seven-file receipts include PHP lint and six exact HTTPS asset hashes/types; the one-file receipts include the exact navigation JavaScript HTTPS hash/type. Each stage also verified public-home or merchant-login HTTP health. No backend implementation, lifecycle state, configuration, database, payment settings, customer-cart contents, order or payment action was changed by these releases.
+
+Receipt evidence is under `D:/Codex/Tasks/2026-11-03/storefront-interaction-polish/outputs/`: `interaction-published-web.json`, `interaction-published-admin.json`, `navigation-followup/navigation-published-web.json` and `navigation-followup/navigation-published-admin.json`. Local payload/source/hash and runner validation are recorded separately in `interaction-final-readiness.json` and `navigation-followup/navigation-final-readiness.json`; readiness alone is not the deployment evidence.
+
+## Actual public-browser smoke
+
+Root completed a CUA check on the public `https://www.vialcovepeptides.com/` homepage. Its native View Tirzepatide link opened the actual product in place and kept that exact homepage URL. The browser exposed the real product title, specification options, stock, $55/$78 prices, FAQ, COA and Add to bag control. Clicking Details set the actual section navigation to `aria-current="location"`. The public page loaded the motion stylesheet, product interaction stylesheet and the new navigation JavaScript version `1793699083`; no pending product opener remained after loading (`busy=0`).
+
+The actual responsive product image was complete with `naturalWidth=499`, intrinsic attributes 600 × 600, an 807-character srcset, and sizes `(max-width: 767px) calc(100vw - 64px), 500px`. Its selected source was the public TR20 1024 × 1024 PNG. This verifies the live image DTO/rendering path rather than a fixture or local-only preview.
+
+This public smoke did not invoke Add to bag, alter a cart, submit an order or attempt payment. The actual PDF rendering and Bag → Back → COA scroll retention checks above were performed on the local formal site; this public smoke does not claim those additional interactions or physical iOS/Android gestures, FPS and payment completion were tested.
