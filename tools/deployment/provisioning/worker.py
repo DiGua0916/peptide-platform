@@ -4,6 +4,7 @@ import base64
 import fcntl
 import grp
 import hashlib
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -59,22 +60,109 @@ def private_json(path, obj, group=None):
     write(path, json.dumps(obj, ensure_ascii=False), 0o640 if group else 0o600, group)
 
 
-def validate_request(r):
-    require(isinstance(r, dict) and set(r) == {'version', 'operation_id', 'actor_id', 'title', 'login', 'email', 'password'}, 'request_shape')
-    require(r['version'] == 1 and isinstance(r['actor_id'], int) and r['actor_id'] > 0, 'actor')
+def customer_domain(value):
+    """Canonical customer base; no URL, wildcard, Unicode or guessed public suffix."""
+    require(isinstance(value, str), 'customer_domain')
+    require(not re.search(r'[\x00-\x1f\x7f]', value), 'customer_domain')
+    base = value.strip(' ').lower()
+    if base.startswith('www.'):
+        base = base[4:]
+    require(not base.startswith('www.') and 0 < len(base) <= 249, 'customer_domain')
+    labels = base.split('.')
+    require(len(labels) >= 2 and all(re.fullmatch(r'[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?', n) for n in labels)
+            and re.fullmatch(r'(?:[a-z]{2,63}|xn--[a-z0-9](?:[a-z0-9-]{0,57}[a-z0-9])?)', labels[-1]), 'customer_domain')
+    try:
+        ipaddress.ip_address(base)
+    except ValueError:
+        return base
+    raise ValueError('customer_domain')
+
+
+def validate_request(r, *, allow_legacy=False):
+    require(isinstance(r, dict), 'request_shape')
+    version = r.get('version')
+    require(type(version) is int and (version == 2 or allow_legacy and version == 1), 'request_version')
+    fields = {'version', 'operation_id', 'actor_id', 'title', 'login', 'email', 'password'}
+    require(set(r) == (fields | {'customer_domain'} if version == 2 else fields), 'request_shape')
+    require(type(r['actor_id']) is int and r['actor_id'] > 0, 'actor')
     require(isinstance(r['operation_id'], str) and str(uuid.UUID(r['operation_id'], version=4)) == r['operation_id'] and uuid.UUID(r['operation_id']).version == 4, 'operation_id')
     require(isinstance(r['title'], str) and 0 < len(r['title']) <= 100 and not re.search(r'[\x00-\x1f\x7f<>]', r['title']), 'title')
     require(isinstance(r['login'], str) and re.fullmatch(r'[a-z][a-z0-9_]{2,31}', r['login']), 'login')
     require(isinstance(r['email'], str) and len(r['email']) <= 190 and re.fullmatch(r'[^\s<>"\x00-\x1f@]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,63}', r['email']), 'email')
     require(isinstance(r['password'], str) and 12 <= len(r['password'].encode()) <= 128 and not re.search(r'[\x00-\x1f\x7f]', r['password']), 'password')
-    return r
+    return dict(r, customer_domain=customer_domain(r['customer_domain'])) if version == 2 else dict(r)
 
 
-def tenant(slug, c):
+def tenant(slug, c, domain=None):
     require(isinstance(slug, str) and re.fullmatch(r's[0-9]{4}', slug) and 2 <= int(slug[1:]) <= 9999, 'tenant_slug')
-    return {'slug': slug, 'user': 'vc' + slug, 'db': 'vc_' + slug,
-            'management_url': 'https://' + slug + '.' + c['management_domain'],
-            'public_url': 'https://' + slug + '.' + c['public_domain']}
+    result = {'slug': slug, 'user': 'vc' + slug, 'db': 'vc_' + slug,
+              'management_url': 'https://' + slug + '.' + c['management_domain']}
+    # No-domain lookup is retained only for immutable old job metadata/operations.
+    if domain is None:
+        result['public_url'] = 'https://' + slug + '.' + c['public_domain']
+    else:
+        base = customer_domain(domain)
+        for reserved in [c['management_domain'], c['public_domain']]:
+            reserved = reserved.lower().rstrip('.')
+            require(base != reserved and not base.endswith('.' + reserved), 'platform_domain_reserved')
+        result.update(customer_domain=base, public_url='https://www.' + base)
+    return result
+
+
+def dns_records(t, c):
+    address = str(ipaddress.IPv4Address(c['public_ip']))
+    return [{'type': 'A', 'name': name, 'value': address, 'ttl': 600} for name in ['@', 'www']]
+
+
+def claim_domain(root, t, operation_id):
+    """Root-only durable claim. Never transfer/release claims automatically on retry."""
+    return persist_domain_claim(root, dict(version=1, kind='provisioned', customer_domain=t['customer_domain'],
+                                          operation_id=operation_id, uuid=t['uuid'], slug=t['slug']))
+
+
+def reserve_legacy_domain(root, request):
+    """Explicit operator import; no job, account, SQL, HTTP or tenant installation."""
+    require(isinstance(request, dict) and set(request) == {'customer_domain', 'uuid', 'slug'}, 'legacy_claim_shape')
+    require(isinstance(request['uuid'], str) and str(uuid.UUID(request['uuid'])) == request['uuid'], 'legacy_claim_uuid')
+    require(isinstance(request['slug'], str) and re.fullmatch(r's[0-9]{4}', request['slug']) and int(request['slug'][1:]) >= 1, 'legacy_claim_slug')
+    return persist_domain_claim(root, dict(version=1, kind='legacy', customer_domain=customer_domain(request['customer_domain']),
+                                          uuid=request['uuid'], slug=request['slug']))
+
+
+def persist_domain_claim(root, claim):
+    base = claim['customer_domain']
+    directory = Path(root) / 'domain-claims'
+    require(not directory.is_symlink(), 'domain_claim_directory')
+    directory.mkdir(mode=0o700, exist_ok=True)
+    st = directory.stat()
+    require(st.st_uid == 0 and not st.st_mode & 0o077, 'domain_claim_directory')
+    sync_directory(Path(root))
+    path = directory / (hashlib.sha256(base.encode('ascii')).hexdigest() + '.json')
+    try:
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    except FileExistsError:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+        with os.fdopen(fd, 'rb') as f:
+            st = os.fstat(f.fileno())
+            require(stat.S_ISREG(st.st_mode) and st.st_uid == 0 and st.st_nlink == 1
+                    and not st.st_mode & 0o077 and st.st_size <= 1024, 'domain_claim_file')
+            previous = json.loads(f.read(1025))
+        require(previous == claim, 'domain_claim_conflict')
+    else:
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            json.dump(claim, f, sort_keys=True)
+            f.flush()
+            os.fsync(f.fileno())
+        sync_directory(directory)
+    return claim
+
+
+def sync_directory(path):
+    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
 
 
 def dns_ready(host, expected):
@@ -82,6 +170,19 @@ def dns_ready(host, expected):
         return {x[4][0] for x in socket.getaddrinfo(host, 443, socket.AF_INET)} == {expected}
     except socket.gaierror:
         return False
+
+
+def customer_dns_ready(t, c):
+    # The supplied instructions are A-only: an unexpected AAAA could send buyers elsewhere.
+    for host in [t['customer_domain'], 'www.' + t['customer_domain']]:
+        if not dns_ready(host, c['public_ip']):
+            return False
+        try:
+            if socket.getaddrinfo(host, 443, socket.AF_INET6):
+                return False
+        except socket.gaierror:
+            pass
+    return True
 
 
 def make_user(name):
@@ -170,23 +271,33 @@ php_admin_value[session.save_path] = {data}/sessions
     run(['systemctl', 'reload', 'php8.3-fpm'])
 
 
-def vhost(t, host, *, tls=False):
+def vhost(t, host, *, tls=False, aliases=()):
+    hosts = [host, *aliases]
+    require(len(hosts) == len(set(hosts)) and all(customer_domain(h) in {h, h.removeprefix('www.')} for h in hosts), 'vhost_hosts')
     write('/etc/nginx/conf.d/vialcove-tenant-login-limit.conf',
           'limit_req_zone $binary_remote_addr zone=vialcove_tenant_login:10m rate=6r/m;\n', 0o644)
     path = Path('/etc/nginx/sites-available/vialcove-' + t['slug'])
+    for other in Path('/etc/nginx/sites-enabled').iterdir():
+        if other.resolve() == path.resolve() or not other.is_file():
+            continue
+        source = re.sub(r'(?m)#.*$', '', other.read_text(encoding='utf-8'))
+        names = re.findall(r'\bserver_name\s+([^;{}]+);', source)
+        existing = {n.strip('\"\'').lower() for group in names for n in group.split()}
+        require(not set(hosts).intersection(existing), 'vhost_host_in_use')
     acme = '/var/www/vialcove-tenant-acme'
     Path(acme, '.well-known/acme-challenge').mkdir(parents=True, exist_ok=True)
     text = f'''server {{
- listen 80; listen [::]:80; server_name {host};
+ listen 80; listen [::]:80; server_name {' '.join(hosts)};
  location ^~ /.well-known/acme-challenge/ {{ root {acme}; default_type text/plain; try_files $uri =404; }}
- location / {{ return {'308 https://' + host + '$request_uri' if tls else '503'}; }}
+ location / {{ return {'308 https://$host$request_uri' if tls else '503'}; }}
 }}
 '''
     if tls:
         text += fr'''server {{
- listen 443 ssl; listen [::]:443 ssl; server_name {host};
- if ($host != {host}) {{ return 444; }}
- if ($ssl_server_name != {host}) {{ return 444; }}
+ listen 443 ssl; listen [::]:443 ssl; server_name {' '.join(hosts)};
+ if ($host !~ ^(?:{'|'.join(re.escape(h) for h in hosts)})$) {{ return 444; }}
+ if ($ssl_server_name !~ ^(?:{'|'.join(re.escape(h) for h in hosts)})$) {{ return 444; }}
+ if ($host != $ssl_server_name) {{ return 444; }}
  ssl_certificate /etc/letsencrypt/live/{host}/fullchain.pem;
  ssl_certificate_key /etc/letsencrypt/live/{host}/privkey.pem;
  ssl_protocols TLSv1.2 TLSv1.3;
@@ -225,7 +336,7 @@ def vhost(t, host, *, tls=False):
  }}
 }}
 '''
-    previous = path.read_text() if path.exists() else None
+    previous = path.read_text(encoding='utf-8') if path.exists() else None
     write(path, text, 0o644)
     enabled = Path('/etc/nginx/sites-enabled', path.name)
     if not enabled.exists():
@@ -239,12 +350,15 @@ def vhost(t, host, *, tls=False):
         raise
 
 
-def certificate(t, host):
-    require(dns_ready(host, t['server_ip']), 'waiting_dns')
-    vhost(t, host)
+def certificate(t, host, *, aliases=()):
+    require(all(dns_ready(name, t['server_ip']) for name in [host, *aliases]), 'waiting_dns')
+    vhost(t, host, aliases=aliases)
     if not Path('/etc/letsencrypt/live', host, 'fullchain.pem').exists():
-        run(['certbot', 'certonly', '--webroot', '-w', '/var/www/vialcove-tenant-acme', '-d', host,
+        run(['certbot', 'certonly', '--webroot', '-w', '/var/www/vialcove-tenant-acme',
+             *[arg for name in [host, *aliases] for arg in ['-d', name]],
              '--non-interactive', '--agree-tos', '--register-unsafely-without-email'], timeout=180)
+    for name in [host, *aliases]:
+        run(['openssl', 'x509', '-noout', '-checkhost', name, '-in', '/etc/letsencrypt/live/' + host + '/fullchain.pem'])
 
 
 def wrapper(t, config, shared=False):
@@ -371,10 +485,50 @@ def tenant_cron(t):
     run(['systemctl', 'enable', '--now', name + '.timer'])
 
 
+def domain_setup_php(t):
+    # Only validated DNS names are encoded; native APIs own options/connection checks.
+    hosts = json.dumps(['www.' + t['customer_domain'], t['customer_domain']])
+    return r"""<?php
+$hosts=json_decode('HOSTS',true);$primary=$hosts[0];$apex=$hosts[1];
+PeptideCore\Domains::ensure_primary();
+$missing=array_values(array_diff($hosts,PeptideCore\Domains::hosts()));
+if($missing){$r=PeptideCore\Domains::add($missing,'none');if(is_wp_error($r)){throw new RuntimeException('domain_binding');}}
+foreach($hosts as $host){$r=PeptideCore\Domains::check($host);if(!is_array($r)||$r['conn']!=='connected'||$r['https']!=='active'){throw new RuntimeException('domain_verification');}}
+$r=PeptideCore\Domains::set_primary($primary);if(is_wp_error($r)||PeptideCore\Domains::primary_host()!==$primary){throw new RuntimeException('public_primary');}
+// Native redirect excludes POST/REST/AJAX and answers domain checks before redirects.
+$r=PeptideCore\Domains::set_redirect($apex,$primary);if(is_wp_error($r)){throw new RuntimeException('apex_redirect');}
+echo json_encode(['domains_ready'=>true]);
+""".replace('HOSTS', hosts)
+
+
+def bind_customer_domains(t):
+    script = t['data'] / 'ops/bind-customer-domains.php'
+    write(script, domain_setup_php(t), 0o640, t['user'])
+    try:
+        result = json.loads(run(['/usr/local/bin/wp', '--path=' + str(t['public']), '--url=' + t['management_url'],
+                                 'eval-file', str(script)], user=t['user']))
+        require(result.get('domains_ready') is True, 'domain_verification')
+    finally:
+        script.unlink(missing_ok=True)
+
+
 def web_create(p, c):
+    # Forced commands can arrive concurrently; serialize domain/tenant claims and creation.
+    ledger = Path(c['web_ledger_root'])
+    require(not ledger.is_symlink(), 'web_ledger')
+    ledger.mkdir(parents=True, exist_ok=True, mode=0o700)
+    fd = os.open(ledger / 'create.lock', os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(fd, 'a') as lock:
+        st = os.fstat(lock.fileno())
+        require(stat.S_ISREG(st.st_mode) and st.st_uid == 0 and st.st_nlink == 1 and not st.st_mode & 0o077, 'web_lock')
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        return _web_create(p, c)
+
+
+def _web_create(p, c):
     require(set(p) == {'request', 'slug', 'uuid', 'media_key', 'registration_secret'}, 'remote_shape')
     r = validate_request(p['request'])
-    t = tenant(p['slug'], c)
+    t = tenant(p['slug'], c, r['customer_domain'])
     require(str(uuid.UUID(p['uuid'])) == p['uuid'], 'tenant_uuid')
     require(re.fullmatch(r'[a-f0-9]{64}', p['registration_secret']), 'registration_secret')
     t.update(uuid=p['uuid'], server_ip=c['public_ip'], data=Path(c['web_data_root']) / t['slug'], public=Path(c['web_store_root']) / t['slug'] / 'public')
@@ -382,9 +536,10 @@ def web_create(p, c):
     ledger.mkdir(parents=True, exist_ok=True, mode=0o700)
     digest = hashlib.sha256(json.dumps(p, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
     statefile = ledger / (t['slug'] + '.json')
-    state = json.loads(statefile.read_text()) if statefile.exists() else {}
+    state = json.loads(statefile.read_text(encoding='utf-8')) if statefile.exists() else {}
     require(not state or state.get('digest') == digest, 'tenant_ownership')
-    require(dns_ready(t['slug'] + '.' + c['public_domain'], c['public_ip']), 'waiting_dns')
+    claim_domain(ledger, t, r['operation_id'])
+    require(customer_dns_ready(t, c), 'waiting_dns')
     if not state:
         require(len(list(ledger.glob('s*.json'))) < c['max_new_stores'], 'store_limit')
         require(not t['public'].parent.exists() and not t['data'].exists(), 'tenant_path_exists')
@@ -393,7 +548,7 @@ def web_create(p, c):
         t['public'].parent.mkdir(parents=True, mode=0o755)
         for n in ['', 'uploads', 'reports', 'ops', 'tmp', 'sessions']:
             app_dir(t['data'] / n, t['user'], 0o755 if n == 'uploads' else (0o711 if n == '' else 0o700))
-        state = {'digest': digest, 'phase': 'reserved', 'front_password': secrets.token_hex(32), 'admin_password': secrets.token_hex(32),
+        state = {'digest': digest, 'phase': 'reserved', 'customer_domain': t['customer_domain'], 'front_password': secrets.token_hex(32), 'admin_password': secrets.token_hex(32),
                  'salts': {n: secrets.token_hex(32) for n in ['AUTH_KEY', 'SECURE_AUTH_KEY', 'LOGGED_IN_KEY', 'NONCE_KEY', 'AUTH_SALT', 'SECURE_AUTH_SALT', 'LOGGED_IN_SALT', 'NONCE_SALT']}}
         private_json(statefile, state)
     def save(phase):
@@ -420,10 +575,15 @@ def web_create(p, c):
         seed_template(t, c)
         save('template')
     if state['phase'] == 'template':
-        certificate(t, t['slug'] + '.' + c['public_domain'])
+        host = 'www.' + t['customer_domain']
+        certificate(t, host, aliases=(t['customer_domain'],))
         fpm(t)
-        vhost(t, t['slug'] + '.' + c['public_domain'], tls=True)
+        vhost(t, host, aliases=(t['customer_domain'],), tls=True)
         save('served')
+    if state['phase'] == 'served':
+        bind_customer_domains(t)
+        save('domains')
+    require(state['phase'] == 'domains', 'tenant_phase')
     media_user = export_media(t, p['media_key'], c['admin_ip'])
     tenant_cron(t)
     cfg = configuration(t, c, 'vca_' + t['slug'], state['admin_password'], state['salts'], p['registration_secret'])
@@ -453,11 +613,11 @@ def mount_media(t, c, key, remote_user):
 
 
 def admin_create(r, state, c, secret):
-    t = tenant(state['slug'], c)
+    t = tenant(state['slug'], c, r['customer_domain'])
     t.update(uuid=state['uuid'], server_ip=c['admin_ip'], data=Path(c['admin_store_root']) / t['slug'] / 'shared', public=Path(c['admin_store_root']) / t['slug'] / 'public')
     marker = t['public'].parent / '.provision-owner.json'
     if t['public'].parent.exists():
-        require(marker.is_file() and not marker.is_symlink() and json.loads(marker.read_text()) == {'operation_id': r['operation_id'], 'uuid': state['uuid']}, 'local_tenant_ownership')
+        require(marker.is_file() and not marker.is_symlink() and json.loads(marker.read_text(encoding='utf-8')) == {'operation_id': r['operation_id'], 'uuid': state['uuid']}, 'local_tenant_ownership')
     else:
         t['public'].parent.mkdir(parents=True, mode=0o755)
         private_json(marker, {'operation_id': r['operation_id'], 'uuid': state['uuid']})
@@ -467,7 +627,7 @@ def admin_create(r, state, c, secret):
     key = Path(c['state_root']) / 'jobs' / r['operation_id'] / 'media-key'
     if not key.exists():
         run(['ssh-keygen', '-q', '-t', 'ed25519', '-N', '', '-f', str(key)])
-    payload = {'request': r, 'slug': state['slug'], 'uuid': state['uuid'], 'media_key': key.with_suffix('.pub').read_text().strip(), 'registration_secret': secret}
+    payload = {'request': r, 'slug': state['slug'], 'uuid': state['uuid'], 'media_key': key.with_suffix('.pub').read_text(encoding='utf-8').strip(), 'registration_secret': secret}
     args = ['ssh', '-i', c['web_ssh_key'], '-o', 'IdentitiesOnly=yes', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes',
             '-o', 'UserKnownHostsFile=' + c['web_known_hosts'], '-o', 'GlobalKnownHostsFile=/dev/null', '-o', 'ConnectTimeout=12',
             c['web_ssh_user'] + '@' + c['web_host'], 'create']
@@ -488,7 +648,7 @@ def admin_create(r, state, c, secret):
     fpm(t)
     vhost(t, t['slug'] + '.' + c['management_domain'], tls=True)
     hq_config = Path(c['hq_config'])
-    previous = hq_config.read_text()
+    previous = hq_config.read_text(encoding='utf-8')
     pattern = r"define\(\s*['\"]WP_ACCESSIBLE_HOSTS['\"]\s*,\s*['\"]([^'\"]*)['\"]\s*\);"
     match = re.search(pattern, previous)
     require(match is not None and hq_config.stat().st_uid == 0 and not hq_config.is_symlink(), 'hq_allowlist_config')
@@ -515,7 +675,7 @@ def confirm_hq(t, c, job):
     helper = job / 'hq-confirm.php'
     expected = json.dumps(t['management_url'])
     identity = json.dumps(t['uuid'])
-    code = "<?php\n$found=[];foreach(PeptideHq\\Sites::all() as $s){if(rtrim(PeptideHq\\Site_Urls::management($s),'/')===" + expected + " && $s['uuid']===" + identity + "){$found[]=$s;}}if(count($found)!==1){throw new RuntimeException('identity');}$id=(int)$found[0]['id'];$server=0;foreach(PeptideHq\\Servers::all() as $v){if($v['ip']===" + json.dumps(c['public_ip']) + "){$server=$v['id'];break;}}if(!$server){$server=PeptideHq\\Servers::save(0,'VialCove storefront 01'," + json.dumps(c['public_ip']) + ",'Provisioned storefronts');}if(is_wp_error($server)||!$server||is_wp_error(PeptideHq\\Servers::assign($id,(int)$server))){throw new RuntimeException('server_assignment');}if(!PeptideHq\\Monitor::poll($id,true)){throw new RuntimeException('monitor');}echo json_encode(['site_id'=>$id]);"
+    code = "<?php\n$found=[];foreach(PeptideHq\\Sites::all() as $s){if(rtrim(PeptideHq\\Site_Urls::management($s),'/')===" + expected + " && rtrim(PeptideHq\\Site_Urls::public_url($s),'/')===" + json.dumps(t['public_url']) + " && $s['uuid']===" + identity + "){$found[]=$s;}}if(count($found)!==1){throw new RuntimeException('identity');}$id=(int)$found[0]['id'];$server=0;foreach(PeptideHq\\Servers::all() as $v){if($v['ip']===" + json.dumps(c['public_ip']) + "){$server=$v['id'];break;}}if(!$server){$server=PeptideHq\\Servers::save(0,'VialCove storefront 01'," + json.dumps(c['public_ip']) + ",'Provisioned storefronts');}if(is_wp_error($server)||!$server||is_wp_error(PeptideHq\\Servers::assign($id,(int)$server))){throw new RuntimeException('server_assignment');}if(!PeptideHq\\Monitor::poll($id,true)){throw new RuntimeException('monitor');}echo json_encode(['site_id'=>$id]);"
     write(helper, code)
     try:
         data = json.loads(run(['php', '/usr/local/bin/wp', '--allow-root', '--path=' + c['hq_root'], 'eval-file', str(helper)]))
@@ -524,16 +684,45 @@ def confirm_hq(t, c, job):
         helper.unlink(missing_ok=True)
 
 
+def accept_request(root, r):
+    """v1 may replay an already-complete job only; it never provisions or rewrites it."""
+    r = validate_request(r, allow_legacy=True)
+    job = Path(root) / 'jobs' / r['operation_id']
+    require(not job.is_symlink(), 'job_symlink')
+    statefile = job / 'state.json'
+    finished = statefile.exists() and json.loads(statefile.read_text(encoding='utf-8')).get('state') == 'complete'
+    if finished:
+        original = json.loads((job / 'request.json').read_text(encoding='utf-8'))
+        require({k: v for k, v in original.items() if k != 'password'} == {k: v for k, v in r.items() if k != 'password'}, 'request_changed')
+        return job
+    require(r['version'] == 2, 'legacy_request_requires_domain')
+    if not job.exists():
+        job.mkdir(mode=0o700)
+        private_json(job / 'request.json', r)
+    elif not (job / 'request.json').exists() and not statefile.exists():
+        private_json(job / 'request.json', r)
+    else:
+        require(json.loads((job / 'request.json').read_text(encoding='utf-8')) == r, 'request_changed')
+    return job
+
+
 def process_queue(c):
     root = Path(c['state_root'])
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
     for n in ['jobs', 'requests', 'results']:
         (root / n).mkdir(exist_ok=True, mode=0o700)
-    lock = (root / 'worker.lock').open('a')
-    try:
-        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except BlockingIOError:
-        return
+    fd = os.open(root / 'worker.lock', os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(fd, 'a') as lock:
+        st = os.fstat(lock.fileno())
+        require(stat.S_ISREG(st.st_mode) and st.st_uid == 0 and st.st_nlink == 1 and not st.st_mode & 0o022, 'worker_lock')
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return
+        return _process_queue_locked(c, root)
+
+
+def _process_queue_locked(c, root):
     def status(job, **fields):
         private_json(root / 'results' / (job + '.json'), fields, c['hq_user'])
     owner = pwd.getpwnam(c['hq_user']).pw_uid
@@ -545,45 +734,39 @@ def process_queue(c):
             with os.fdopen(fd, 'rb') as f:
                 st = os.fstat(f.fileno())
                 require(stat.S_ISREG(st.st_mode) and st.st_uid == owner and st.st_nlink == 1 and st.st_size <= 4096, 'queue_file')
-                r = validate_request(json.loads(f.read(4097)))
+                r = validate_request(json.loads(f.read(4097)), allow_legacy=True)
             require(entry.name == r['operation_id'] + '.json', 'queue_id')
-            job = root / 'jobs' / r['operation_id']
-            if not job.exists():
-                job.mkdir(mode=0o700)
-                private_json(job / 'request.json', r)
-            elif not (job / 'request.json').exists() and not (job / 'state.json').exists():
-                private_json(job / 'request.json', r)
-            else:
-                original = json.loads((job / 'request.json').read_text())
-                finished = (job / 'state.json').exists() and json.loads((job / 'state.json').read_text()).get('state') == 'complete'
-                if finished:
-                    # Completed operations are immutable; replay returns the same result,
-                    # never recreates or changes an account whose password was redacted.
-                    require({k: v for k, v in original.items() if k != 'password'} == {k: v for k, v in r.items() if k != 'password'}, 'request_changed')
-                else:
-                    require(original == r, 'request_changed')
+            accept_request(root, r)
             entry.unlink()
-        except Exception:
+        except Exception as e:
+            if isinstance(e, ValueError) and str(e) == 'legacy_request_requires_domain':
+                status(r['operation_id'], state='failed', message='旧版请求缺少顾客域名，请通过新开店表单提交新任务。原店铺不会修改。')
             # Never interpolate request content or an exception carrying passwords into logs.
             continue
     for job in sorted((root / 'jobs').iterdir()):
         if not job.is_dir() or job.is_symlink():
             continue
         statefile = job / 'state.json'
-        state = json.loads(statefile.read_text()) if statefile.exists() else {}
-        if state.get('state') == 'complete':
+        state = json.loads(statefile.read_text(encoding='utf-8')) if statefile.exists() else {}
+        if state.get('state') in {'complete', 'failed'}:
             continue
-        r = validate_request(json.loads((job / 'request.json').read_text()))
         try:
+            r = validate_request(json.loads((job / 'request.json').read_text(encoding='utf-8')), allow_legacy=True)
+            require(r['version'] == 2, 'legacy_request_requires_domain')
             if not state:
-                allocated = [json.loads(p.read_text())['slug'] for p in (root / 'jobs').glob('*/state.json')]
-                require(len(allocated) < c['max_new_stores'], 'store_limit')
+                records = [json.loads(p.read_text(encoding='utf-8')) for p in (root / 'jobs').glob('*/state.json')]
+                allocated = [s for row in records if re.fullmatch(r's[0-9]{4}', s := str(row.get('slug', '')))]
+                # Failed preflight identities are never reused, but own no VM/DB capacity.
+                require(sum(row.get('state') != 'failed' and 'slug' in row for row in records) < c['max_new_stores'], 'store_limit')
                 number = max([1] + [int(s[1:]) for s in allocated]) + 1
-                state = {'slug': 's' + str(number).zfill(4), 'uuid': str(uuid.uuid4()), 'state': 'pending'}
+                state = {'slug': 's' + str(number).zfill(4), 'uuid': str(uuid.uuid4()), 'state': 'pending', 'customer_domain': r['customer_domain']}
                 private_json(statefile, state)
-            t = tenant(state['slug'], c)
-            if not dns_ready(state['slug'] + '.' + c['management_domain'], c['admin_ip']) or not dns_ready(state['slug'] + '.' + c['public_domain'], c['public_ip']):
-                status(job.name, state='waiting_dns', message='等待泛解析生效，将自动继续。', slug=state['slug'])
+            t = tenant(state['slug'], c, r['customer_domain'])
+            t['uuid'] = state['uuid']
+            claim_domain(root, t, r['operation_id'])
+            if not dns_ready(state['slug'] + '.' + c['management_domain'], c['admin_ip']) or not customer_dns_ready(t, c):
+                status(job.name, state='waiting_dns', message='请为顾客域名添加以下两条 A 记录。解析正确后自动继续；固定管理地址由平台维护。',
+                       slug=state['slug'], customer_domain=t['customer_domain'], dns_records=dns_records(t, c))
                 continue
             status(job.name, state='running', message='正在创建独立数据库、账号、媒体目录与 HTTPS。', slug=state['slug'])
             # Registration secret is loaded on demand, never written to queue results or process argv.
@@ -597,20 +780,36 @@ def process_queue(c):
             # Retain no plaintext account password after native installation completes.
             r['password'] = ''
             private_json(job / 'request.json', r)
-            status(job.name, state='complete', message='店铺已创建，可从店铺列表一键进入。', slug=t['slug'], management_url=t['management_url'] + '/wp-admin/', public_url=t['public_url'] + '/', site_id=site_id)
+            status(job.name, state='complete', message='店铺已创建，可从店铺列表一键进入。', slug=t['slug'], management_url=t['management_url'] + '/wp-admin/',
+                   public_url=t['public_url'] + '/', site_id=site_id, customer_domain=t['customer_domain'], dns_records=dns_records(t, c))
         except Exception as e:
-            if isinstance(e, ValueError) and str(e) == 'store_limit':
+            code = str(e) if isinstance(e, ValueError) and re.fullmatch(r'[a-z0-9_]+', str(e)) else 'deployment_step_failed'
+            if code in {'domain_claim_conflict', 'platform_domain_reserved', 'legacy_request_requires_domain'}:
+                state['state'] = 'failed'
+                private_json(statefile, state)
+                status(job.name, state='failed', message='域名已被占用、属于平台保留地址，或请求缺少顾客域名。未变更已完成店铺，请核对后提交新任务。')
+            elif code == 'store_limit':
                 status(job.name, state='waiting_capacity', message='已达到当前服务器的开店容量上限，请管理员评估负载并调整容量后继续。', slug=state.get('slug', ''))
             else:
                 status(job.name, state='pending', message='部署尚未完成，服务会安全重试；管理员可查看私有部署记录。', slug=state.get('slug', ''))
-            write(job / 'error-code.txt', type(e).__name__ + ':' + (str(e) if isinstance(e, ValueError) and re.fullmatch(r'[a-z0-9_]+', str(e)) else 'deployment_step_failed'))
+            write(job / 'error-code.txt', type(e).__name__ + ':' + code)
 
 
 def main():
     require(os.geteuid() == 0, 'root_required')
     config_path = Path('/etc/vialcove-provision/config.json')
     require(config_path.stat().st_uid == 0 and not config_path.is_symlink() and config_path.stat().st_mode & 0o022 == 0, 'root_config')
-    c = json.loads(config_path.read_text())
+    c = json.loads(config_path.read_text(encoding='utf-8'))
+    if sys.argv[1:] == ['--reserve-legacy-domain']:
+        raw = sys.stdin.buffer.read(2049)
+        require(len(raw) <= 2048, 'legacy_claim_size')
+        require(c['role'] in {'web', 'admin'}, 'role')
+        root = c['web_ledger_root'] if c['role'] == 'web' else c['state_root']
+        claim = reserve_legacy_domain(root, json.loads(raw))
+        # UUID is private identity metadata, not a public result or process argument.
+        print(json.dumps({'reserved': True, 'customer_domain': claim['customer_domain'], 'kind': 'legacy'}))
+        return
+    require(not sys.argv[1:] or c['role'] == 'web' and sys.argv[1:] == ['create'], 'arguments')
     if c['role'] == 'web':
         raw = sys.stdin.buffer.read(16385)
         require(len(raw) <= 16384, 'request_size')

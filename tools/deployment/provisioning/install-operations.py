@@ -30,7 +30,8 @@ def main():
         install('vialcove-tenant-monitor', '/usr/bin/python3 -I -c "import sys;sys.path.insert(0,\'' + str(source) + '\');import monitor;monitor.main()"', 'OnBootSec=180\nOnUnitInactiveSec=300')
     elif c['role'] == 'web':
         for ledger in Path(c['web_ledger_root']).glob('s*.json'):
-            t = w.tenant(ledger.stem, c)
+            state = json.loads(ledger.read_text())
+            t = w.tenant(ledger.stem, c, state.get('customer_domain'))
             t.update(data=Path(c['web_data_root']) / t['slug'], public=Path(c['web_store_root']) / t['slug'] / 'public')
             w.tenant_cron(t)
     else:
