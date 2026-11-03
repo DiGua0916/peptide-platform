@@ -1,0 +1,22 @@
+(http.host in {"vialcoveresearch.com" "www.vialcoveresearch.com" "s0001.vialcoveresearch.com"} and not (
+  http.host in {"vialcoveresearch.com" "s0001.vialcoveresearch.com"} and
+  http.request.method in {"GET" "HEAD"} and
+  http.request.uri.path.extension in {"css" "js"} and
+  starts_with(http.request.uri.query, "ver=") and
+  http.request.uri.query ne "ver=" and
+  not (http.request.uri.query contains "&") and
+  not (http.request.uri.query contains ";") and
+  (
+    starts_with(http.request.uri.path, "/wp-admin/css/") or
+    starts_with(http.request.uri.path, "/wp-admin/js/") or
+    starts_with(http.request.uri.path, "/wp-admin/images/") or
+    starts_with(http.request.uri.path, "/wp-includes/css/") or
+    starts_with(http.request.uri.path, "/wp-includes/js/") or
+    starts_with(http.request.uri.path, "/wp-includes/fonts/") or
+    starts_with(http.request.uri.path, "/wp-includes/images/") or
+    starts_with(http.request.uri.path, "/wp-content/plugins/peptide-core/assets/") or
+    starts_with(http.request.uri.path, "/wp-content/plugins/peptide-hq/assets/") or
+    starts_with(http.request.uri.path, "/wp-content/plugins/peptide-panapay/assets/") or
+    starts_with(http.request.uri.path, "/wp-content/plugins/woocommerce/assets/")
+  )
+))
