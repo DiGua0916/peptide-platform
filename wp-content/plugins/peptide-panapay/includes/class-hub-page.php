@@ -61,9 +61,11 @@ final class Hub_Page {
 			$operation = $_POST['operation'] ?? '';
 			if ( 'archive' === $operation ) { Hub_Accounts::archive( $id, (int) $revision ); }
 			elseif ( 'restore' === $operation ) { Hub_Accounts::restore( $id, (int) $revision ); }
+			elseif ( 'delete' === $operation ) { Hub_Accounts::delete_archived( $id, (int) $revision ); }
+			elseif ( 'restore_deleted' === $operation ) { Hub_Accounts::restore_deleted( $id, (int) $revision ); }
 			elseif ( 'enable' === $operation || 'disable' === $operation ) { Hub_Accounts::toggle( $id, 'enable' === $operation, (int) $revision ); }
 			else { throw new \InvalidArgumentException( 'Payment settings are invalid.' ); }
-			$messages = array( 'archive' => '付款方式已归档并停止新支付。在途记录和结果回写继续保留。', 'restore' => '付款方式已恢复，原参数已保留，目前保持关闭。核对后可单独开启。' );
+			$messages = array( 'archive' => '付款方式已归档并停止新支付。在途记录和结果回写继续保留。', 'restore' => '付款方式已恢复，原参数已保留，目前保持关闭。核对后可单独开启。', 'delete' => '付款方式已删除，可在“已删除”列表恢复。历史订单和在途付款记录已保留。', 'restore_deleted' => '付款方式已恢复到归档列表，目前保持关闭。' );
 			self::flash( 'success', $messages[ $operation ] ?? '收款状态已更新，授权店铺会自动获取。' );
 		} catch ( \Throwable $error ) {
 			self::flash( 'error', self::validation_message( $error->getMessage() ) );
@@ -95,6 +97,9 @@ final class Hub_Page {
 		$messages = array(
 			'Enter the payment method name.' => '请填写买家看到的付款方式名称。',
 			'Payment account is not archived.' => '这个付款方式未归档，请刷新列表后重试。',
+			'Only archived payment accounts can be deleted.' => '请先归档这个付款方式，再删除。',
+			'Payment account is deleted.' => '这个付款方式已删除，请先在“已删除”列表恢复。',
+			'Payment account is not deleted.' => '这个付款方式不在已删除列表，请刷新后重试。',
 			'Complete the gateway, merchant and signing settings before enabling payment.' => '开启收款前，请补齐网关地址、商户号和签名密钥。',
 			'Select at least one store before enabling payment.' => '开启收款前，请至少授权一个店铺。',
 			'Test payments cannot be enabled in production.' => '正式环境不能启用测试收款，请核对支付方账户和测试模式。',
@@ -108,7 +113,7 @@ final class Hub_Page {
 			'Payment settings changed. Reload before saving again.' => '其他窗口已更新付款方式。本次没有覆盖修改，请刷新后重新编辑。',
 			'Payment account was not found.' => '找不到这个付款方式，请刷新列表后重新选择。',
 			'Archived payment accounts cannot be edited.' => '这个付款方式已归档，请添加新的付款方式。',
-			'The payment account limit has been reached.' => '最多保留 20 个付款方式，包括已归档记录。请联系管理员处理容量。',
+			'The payment account limit has been reached.' => '最多保留 20 个付款方式，包括归档及已删除记录。可恢复已有方式，或联系管理员处理容量。',
 			'Payment protocol is invalid.' => '当前仅支持已提供文档的网关协议，请核对接入资料。',
 			'Panapay gateway must be a public HTTPS origin.' => '网关须填写可公开访问的 HTTPS 地址，不包含路径或查询参数。',
 			'Payment host trust must contain no more than 32 unique hosts including the gateway.' => '可信收银台域名与网关域名合计最多 32 个，请减少额外域名后重试。',
@@ -147,7 +152,7 @@ final class Hub_Page {
 				$summary = Hub_Store::summary( $site_id );
 			}
 		} catch ( \Throwable $error ) { $ledger = null; $summary = null; }
-		$active_count = count( array_filter( $accounts, static function ( array $row ): bool { return self::is_on( $row['enabled'] ?? 'no' ) && ! self::is_on( $row['archived'] ?? 'no' ); } ) );
+		$active_count = count( array_filter( $accounts, static function ( array $row ): bool { return self::is_on( $row['enabled'] ?? 'no' ) && ! self::is_on( $row['archived'] ?? 'no' ) && ! self::is_on( $row['deleted'] ?? 'no' ); } ) );
 		?>
 		<div class="wrap pchq pc-pay-hub">
 			<div class="pc-pay-heading"><div><h1>支付中心</h1><p class="pc-pay-muted">统一收款，按店铺记录订单和金额。</p></div><span class="pc-pay-state"><?php echo esc_html( '已开启 ' . $active_count . ' 个付款方式' ); ?></span></div>
@@ -211,8 +216,11 @@ final class Hub_Page {
 
 	private static function render_settings( array $accounts, array $sites, ?array $notice = null ): void {
 		$revision = $accounts ? (int) reset( $accounts )['revision'] : 0;
+		$show_deleted = isset( $_GET['deleted'] ) && '1' === $_GET['deleted'];
+		$deleted_count = count( array_filter( $accounts, static fn( array $account ): bool => self::is_on( $account['deleted'] ?? 'no' ) ) );
+		$visible_accounts = array_filter( $accounts, static fn( array $account ): bool => self::is_on( $account['deleted'] ?? 'no' ) === $show_deleted );
 		$editing = isset( $_GET['edit_account'] ) && is_string( $_GET['edit_account'] ) ? wp_unslash( $_GET['edit_account'] ) : '';
-		$edit_valid = '' !== $editing && isset( $accounts[ $editing ] ) && ! self::is_on( $accounts[ $editing ]['archived'] ?? 'no' );
+		$edit_valid = '' !== $editing && isset( $accounts[ $editing ] ) && ! self::is_on( $accounts[ $editing ]['archived'] ?? 'no' ) && ! self::is_on( $accounts[ $editing ]['deleted'] ?? 'no' );
 		$raw = $edit_valid ? $accounts[ $editing ] : Hub_Accounts::new_account_defaults();
 		$id = $edit_valid ? $editing : '';
 		$auto_open = isset( $_GET['new_account'] ) || isset( $_GET['edit_account'] );
@@ -224,24 +232,29 @@ final class Hub_Page {
 		$has_secret = ( 'default' === $id && Hub_Settings::server_override( 'PC_PANAPAY_SECRET' ) ) || '' !== $raw['secret'];
 		?>
 		<div class="pc-pay-method-heading"><p class="pc-pay-muted">添加支付方提供的收款参数，保存后自动同步至授权店铺。每种付款方式单独记录。</p>
-			<?php if ( count( $accounts ) < 20 ) : ?><a class="button button-primary" href="<?php echo esc_url( self::url( array( 'new_account' => '1' ) ) ); ?>" <?php echo '' === $id ? 'data-pc-pay-open' : ''; ?>>添加付款方式</a><?php else : ?><span class="pc-pay-muted">已达 20 个付款方式上限（含归档）</span><?php endif; ?>
+			<div class="pc-pay-method-actions"><a class="button" href="<?php echo esc_url( self::url() ); ?>"<?php echo ! $show_deleted ? ' aria-current="page"' : ''; ?>>付款方式（<?php echo (int) ( count( $accounts ) - $deleted_count ); ?>）</a><a class="button" href="<?php echo esc_url( self::url( array( 'deleted' => '1' ) ) ); ?>"<?php echo $show_deleted ? ' aria-current="page"' : ''; ?>>已删除（<?php echo (int) $deleted_count; ?>）</a>
+			<?php if ( count( $accounts ) < 20 ) : ?><a class="button button-primary" href="<?php echo esc_url( self::url( array( 'new_account' => '1' ) ) ); ?>" <?php echo '' === $id ? 'data-pc-pay-open' : ''; ?>>添加付款方式</a><?php else : ?><span class="pc-pay-muted">已达 20 个付款方式上限（含归档及已删除）</span><?php endif; ?></div>
 		</div>
+		<?php if ( $show_deleted ) : ?><p class="pc-pay-muted">已删除的付款方式不会用于新收款。恢复后仍保持归档和关闭，历史订单与在途记录不受影响。</p><?php endif; ?>
 		<div class="pc-pay-accounts" aria-label="已添加的付款方式">
-		<?php foreach ( $accounts as $account_id => $account ) :
+		<?php foreach ( $visible_accounts as $account_id => $account ) :
+			$deleted = self::is_on( $account['deleted'] ?? 'no' );
 			$archived = self::is_on( $account['archived'] );
-			$enabled = self::is_on( $account['enabled'] ) && ! $archived;
+			$enabled = self::is_on( $account['enabled'] ) && ! $archived && ! $deleted;
 			$label = '' !== $account['account_name'] ? $account['account_name'] : $account['title'];
 			?>
 			<div class="pc-pay-method-row<?php echo $archived ? ' is-archived' : ''; ?>">
-				<div class="pc-pay-account-copy"><div class="pc-pay-account-title"><h3><?php echo esc_html( $label ); ?></h3><span class="pc-pay-state"><?php echo esc_html( $archived ? '已归档' : ( $enabled ? '已开启' : '已关闭' ) ); ?></span><?php if ( self::is_on( $account['test_mode'] ) ) : ?><span class="pc-pay-state">测试模式</span><?php endif; ?></div>
+				<div class="pc-pay-account-copy"><div class="pc-pay-account-title"><h3><?php echo esc_html( $label ); ?></h3><span class="pc-pay-state"><?php echo esc_html( $deleted ? '已删除' : ( $archived ? '已归档' : ( $enabled ? '已开启' : '已关闭' ) ) ); ?></span><?php if ( self::is_on( $account['test_mode'] ) ) : ?><span class="pc-pay-state">测试模式</span><?php endif; ?></div>
 					<p class="pc-pay-muted"><?php echo esc_html( $account['title'] ); ?> · <?php echo esc_html( self::is_on( $account['all_sites'] ) ? '全部已接入店铺' : '指定 ' . count( $account['sites'] ) . ' 个店铺' ); ?></p>
 				</div>
-				<?php if ( ! $archived ) : ?><div class="pc-pay-method-actions"><a class="button" href="<?php echo esc_url( self::url( array( 'edit_account' => $account_id ) ) ); ?>" <?php echo $id === $account_id ? 'data-pc-pay-open' : ''; ?>>编辑</a>
+				<?php if ( $deleted ) : ?><div class="pc-pay-method-actions"><span class="pc-pay-muted">恢复后仍为已归档</span><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><?php self::action_fields( $account_id, $revision ); ?><button class="button" type="submit" name="operation" value="restore_deleted">恢复到归档</button></form></div>
+				<?php elseif ( ! $archived ) : ?><div class="pc-pay-method-actions"><a class="button" href="<?php echo esc_url( self::url( array( 'edit_account' => $account_id ) ) ); ?>" <?php echo $id === $account_id ? 'data-pc-pay-open' : ''; ?>>编辑</a>
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><?php self::action_fields( $account_id, $revision ); ?><button class="button" type="submit" name="operation" value="<?php echo $enabled ? 'disable' : 'enable'; ?>"><?php echo $enabled ? '关闭' : '开启'; ?></button></form>
 					<details class="pc-pay-archive"><summary>更多</summary><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><?php self::action_fields( $account_id, $revision ); ?><p>归档后停止新支付，保留历史记录与在途结果。</p><button class="button" type="submit" name="operation" value="archive">归档付款方式</button></form></details>
-				</div><?php else : ?><div class="pc-pay-method-actions"><span class="pc-pay-muted">恢复后保持关闭</span><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><?php self::action_fields( $account_id, $revision ); ?><button class="button" type="submit" name="operation" value="restore">恢复</button></form></div><?php endif; ?>
+				</div><?php else : ?><div class="pc-pay-method-actions"><span class="pc-pay-muted">恢复后保持关闭</span><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><?php self::action_fields( $account_id, $revision ); ?><button class="button" type="submit" name="operation" value="restore">恢复</button></form><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><?php self::action_fields( $account_id, $revision ); ?><button class="button" type="submit" name="operation" value="delete" aria-label="<?php echo esc_attr( '删除已归档付款方式 ' . $label ); ?>">删除</button></form></div><?php endif; ?>
 			</div>
 		<?php endforeach; ?>
+		<?php if ( ! $visible_accounts ) : ?><p class="pc-pay-muted"><?php echo $show_deleted ? '暂无已删除的付款方式。' : '暂无付款方式。'; ?></p><?php endif; ?>
 		</div>
 		<?php if ( '' !== $editing && ! $edit_valid ) : ?><p role="alert">这个付款方式不存在或已归档，请从列表重新选择。</p><?php endif; ?>
 		<dialog id="pc-pay-account-dialog" class="pc-pay-account-dialog" open aria-labelledby="pc-pay-account-title" aria-describedby="pc-pay-account-help" data-pc-pay-account-dialog data-auto-open="<?php echo $auto_open && ( '' === $editing || $edit_valid ) ? '1' : '0'; ?>">
