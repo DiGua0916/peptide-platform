@@ -28,9 +28,10 @@ final class Hub_Urls {
 		$site_id = self::positive_id( $site['id'] ?? null );
 		$order_id = self::positive_id( $row['order_id'] ?? null );
 		$created = self::positive_id( $row['created_at'] ?? null );
+		// Preserve same-origin legacy identities already allowed by Hub::permission.
 		if ( null === $site_id || self::positive_id( $row['site_id'] ?? null ) !== $site_id || null === $order_id
 			|| ! is_string( $row['site_uuid'] ?? null ) || ! is_string( $site['uuid'] ?? null )
-			|| ! preg_match( '/\A[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\z/D', $row['site_uuid'] )
+			|| ! preg_match( '/\A[a-zA-Z0-9_-]{16,64}\z/D', $row['site_uuid'] )
 			|| ! hash_equals( $row['site_uuid'], $site['uuid'] ) || null === $created || time() - $created > 7 * DAY_IN_SECONDS
 			|| ! is_string( $row['local_reference'] ?? null ) || ! is_string( $row['return_box'] ?? null ) ) {
 			throw new Protocol_Error( 'invalid_return_target', 400 );
@@ -42,9 +43,11 @@ final class Hub_Urls {
 		if ( ! is_array( $base ) || ! is_array( $next ) || ! is_string( $next['host'] ?? null ) ) { throw new Protocol_Error( 'invalid_return_target', 400 ); }
 		if ( strtolower( $next['host'] ) !== strtolower( $base['host'] ?? '' ) ) {
 			// Only the hostname of a previously validated HTTPS root may differ.
+			// This exception requires the newer complete UUID registration contract.
 			// Scheme, port, installation path and callback structure stay strict.
 			$old = \PeptideHq\Site_Urls::https_root( 'https://' . $next['host'] );
-			if ( empty( $site['dual_domain'] ) || 'https' !== ( $base['scheme'] ?? '' ) || 443 !== (int) ( $base['port'] ?? 443 )
+			if ( ! preg_match( '/\A[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\z/D', $row['site_uuid'] )
+				|| empty( $site['dual_domain'] ) || 'https' !== ( $base['scheme'] ?? '' ) || 443 !== (int) ( $base['port'] ?? 443 )
 				|| ! in_array( $base['path'] ?? '', array( '', '/' ), true ) || '' === $old ) { throw new Protocol_Error( 'invalid_return_target', 400 ); }
 			$base['host'] = wp_parse_url( $old, PHP_URL_HOST );
 		}

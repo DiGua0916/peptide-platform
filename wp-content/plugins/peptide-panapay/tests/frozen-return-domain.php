@@ -114,26 +114,54 @@ namespace {
 	check( 'legacy HTTP hostname changes not implicitly authorized', rejects( static fn() => Hub_Urls::attempt_return_url( $r, $legacy_changed ) ) );
 	$changed_path = array_replace( $site, array( 'dual_domain' => false, 'url' => 'https://www.shop.local/new-install/' ) );
 	check( 'installation path changes are not hostname migrations', rejects( static fn() => Hub_Urls::attempt_return_url( $row, $changed_path ) ) );
+	foreach ( array( str_repeat( 'a', 16 ), 'Legacy_store-1234', str_repeat( 'a', 32 ), str_repeat( 'b', 64 ) ) as $legacy_identity ) {
+		$legacy_row = array_replace( $row, array( 'site_uuid' => $legacy_identity ) );
+		$legacy_site = array_replace( $site, array( 'uuid' => $legacy_identity, 'dual_domain' => false, 'url' => 'https://s0001.shop.local/' ) );
+		check( 'permission-compatible legacy identity retains same origin ' . $checks, $plain === Hub_Urls::attempt_return_url( $legacy_row, $legacy_site ) );
+		$legacy_dual = array_replace( $site, array( 'uuid' => $legacy_identity ) );
+		check( 'legacy identity cannot use dual-domain hostname exception ' . $checks, rejects( static fn() => Hub_Urls::attempt_return_url( $legacy_row, $legacy_dual ) ) );
+		$legacy_changed = array_replace( $legacy_site, array( 'url' => 'https://www.shop.local/' ) );
+		check( 'legacy identity cannot change hostname in legacy mode ' . $checks, rejects( static fn() => Hub_Urls::attempt_return_url( $legacy_row, $legacy_changed ) ) );
+	}
+	foreach ( array( str_repeat( 'a', 15 ), str_repeat( 'b', 65 ), 'invalid/identity-1234' ) as $invalid_identity ) {
+		$invalid_row = array_replace( $row, array( 'site_uuid' => $invalid_identity ) );
+		$invalid_site = array_replace( $site, array( 'uuid' => $invalid_identity, 'public_url' => 'https://s0001.shop.local/' ) );
+		check( 'outside permission identity syntax rejected even at same origin ' . $checks, rejects( static fn() => Hub_Urls::attempt_return_url( $invalid_row, $invalid_site ) ) );
+	}
 
 	// Exercise the real Hub return handler, including provider signature/browser token
 	// checks. Only its DB reads and final redirect are replaced with memory boundaries.
 	$query = array( 'reference' => $row['ref'], 'token' => $hq_token, 'status' => 'SUCCEEDED', 'transaction_id' => 'synthetic-transaction' );
 	$query['sign'] = Signature::generate( array_intersect_key( $query, array_flip( array( 'transaction_id', 'status' ) ) ), $provider_secret );
+	$baseline_row = $row; $baseline_site = $site; $baseline_query = $query;
+	$baseline_snapshot = serialize( array( $baseline_row, $baseline_site, $baseline_query ) );
 	function call_return( array $r, array $s, array $q ): array {
-		$GLOBALS['row'] = $r; $GLOBALS['current_site'] = $s; $GLOBALS['redirects'] = array();
-		$before = serialize( array( $GLOBALS['row'], $GLOBALS['current_site'] ) );
-		Hub::returned( new WP_REST_Request( $q ) );
-		check( 'return handler leaves persisted memory rows unchanged ' . $GLOBALS['checks'], $before === serialize( array( $GLOBALS['row'], $GLOBALS['current_site'] ) ) );
-		return $GLOBALS['redirects'];
+		$saved = array();
+		foreach ( array( 'row', 'current_site', 'redirects' ) as $key ) {
+			$saved[ $key ] = array( 'exists' => array_key_exists( $key, $GLOBALS ), 'value' => $GLOBALS[ $key ] ?? null );
+		}
+		try {
+			$GLOBALS['row'] = $r; $GLOBALS['current_site'] = $s; $GLOBALS['redirects'] = array();
+			$before = serialize( array( $GLOBALS['row'], $GLOBALS['current_site'] ) );
+			Hub::returned( new WP_REST_Request( $q ) );
+			check( 'return handler leaves persisted memory rows unchanged ' . $GLOBALS['checks'], $before === serialize( array( $GLOBALS['row'], $GLOBALS['current_site'] ) ) );
+			return $GLOBALS['redirects'];
+		} finally {
+			foreach ( $saved as $key => $entry ) {
+				if ( $entry['exists'] ) { $GLOBALS[ $key ] = $entry['value']; }
+				else { unset( $GLOBALS[ $key ] ); }
+			}
+		}
 	}
-	$redirects = call_return( $row, $site, $query );
+	$redirects = call_return( $baseline_row, $baseline_site, $baseline_query );
 	check( 'real return handler reaches original frozen hostname', count( $redirects ) === 1 && str_starts_with( $redirects[0]['url'], $plain . '&status=SUCCEEDED&' ) && $redirects[0]['status'] === 302 );
-	$failed_query = array_replace( $query, array( 'status' => 'FAILED', 'transaction_id' => '' ) );
+	check( 'return fixture restores absent site context and original row', ! array_key_exists( 'current_site', $GLOBALS ) && $row === $baseline_row );
+	$failed_query = array_replace( $baseline_query, array( 'status' => 'FAILED', 'transaction_id' => '' ) );
 	$failed_query['sign'] = Signature::generate( array_intersect_key( $failed_query, array_flip( array( 'transaction_id', 'status' ) ) ), $provider_secret );
-	$redirects = call_return( $row, $site, $failed_query );
+	$redirects = call_return( $baseline_row, $baseline_site, $failed_query );
 	check( 'failed browser hint also remains read only and bound', count( $redirects ) === 1 && str_starts_with( $redirects[0]['url'], $plain . '&status=FAILED&' ) );
 	foreach ( array( 'redirect_to', 'return_url', 'target', 'url', 'public_url' ) as $extra ) {
-		$redirects = call_return( $row, $site, array_replace( $query, array( $extra => 'https://evil.local/?token=attacker' ) ) );
+		$redirects = call_return( $baseline_row, $baseline_site, array_replace( $baseline_query, array( $extra => 'https://evil.local/?token=attacker' ) ) );
 		check( 'browser cannot supply an alternative target ' . $extra, count( $redirects ) === 1 && str_starts_with( $redirects[0]['url'], $plain . '&status=SUCCEEDED&' ) );
 	}
 	foreach ( array(
@@ -141,14 +169,23 @@ namespace {
 		array( 'reference' => 'PH' . str_repeat( 'f', 32 ) ), array( 'status' => 'REFUNDED' ),
 		array( 'transaction_id' => 'different-transaction' ), array( 'sign' => str_repeat( '0', 64 ) ),
 	) as $change ) {
-		check( 'invalid browser authentication rejected ' . $checks, call_return( $row, $site, array_replace( $query, $change ) ) === array() );
+		check( 'invalid browser authentication rejected ' . $checks, call_return( $baseline_row, $baseline_site, array_replace( $baseline_query, $change ) ) === array() );
 	}
 	foreach ( array(
-		array( 'created_at' => time() - 7 * DAY_IN_SECONDS - 1 ), array( 'site_id' => 3 ),
+		array( 'created_at' => time() - 7 * DAY_IN_SECONDS - 1 ), array( 'site_id' => 3 ), array( 'site_id' => '02' ),
 		array( 'site_uuid' => '22222222-2222-4222-8222-222222222222' ), array( 'order_id' => 43 ),
+		array( 'local_reference' => 'PP1234abcd-42-' . str_repeat( 'f', 32 ) ),
 	) as $change ) {
-		check( 'real return handler rejects stale or mismatched row ' . $checks, call_return( array_replace( $row, $change ), $site, $query ) === array() );
+		check( 'real return handler rejects isolated stale or mismatched row ' . $checks, call_return( array_replace( $baseline_row, $change ), $baseline_site, $baseline_query ) === array() );
+		check( 'each invalid row leaves immutable and global baseline fresh ' . $checks, $baseline_snapshot === serialize( array( $baseline_row, $baseline_site, $baseline_query ) ) && $row === $baseline_row );
 	}
+	$legacy_identity = 'Legacy_store-1234';
+	$legacy_row = array_replace( $baseline_row, array( 'site_uuid' => $legacy_identity ) );
+	$legacy_site = array_replace( $baseline_site, array( 'uuid' => $legacy_identity, 'dual_domain' => false, 'url' => 'https://s0001.shop.local/' ) );
+	$redirects = call_return( $legacy_row, $legacy_site, $baseline_query );
+	check( 'real handler accepts same-origin legacy permission identity', count( $redirects ) === 1 && str_starts_with( $redirects[0]['url'], $plain . '&status=SUCCEEDED&' ) );
+	check( 'real handler rejects legacy identity hostname migration', call_return( $legacy_row, array_replace( $baseline_site, array( 'uuid' => $legacy_identity ) ), $baseline_query ) === array() );
+	check( 'successful return still works after all isolated negative rows', count( call_return( $baseline_row, $baseline_site, $baseline_query ) ) === 1 && $row === $baseline_row );
 	check( 'no payment creation, notification application, HTTP or mail', $GLOBALS['financial_writes'] === 0 && $GLOBALS['external_calls'] === 0 && $GLOBALS['mail_calls'] === 0 );
 	echo 'PASS ', $checks, " frozen return hostname checks; real crypto and return code, synthetic rows/redirect only.\n";
 }
