@@ -1,10 +1,10 @@
 /* 总后台（peptide-hq）后台样式。 */
 .pchq {
-	--pchq-ink: #1d2327;
-	--pchq-muted: #646970;
-	--pchq-line: #dcdcde;
+	--pchq-ink: #171717;
+	--pchq-muted: #5f6368;
+	--pchq-line: #e5e5e5;
 	--pchq-grid: #ececec;
-	--pchq-accent: #2271b1;
+	--pchq-accent: #171717;
 	--pchq-surface: #fff;
 }
 
@@ -71,7 +71,6 @@
 	background: var(--pchq-surface);
 	color: var(--pchq-accent);
 	font-weight: 600;
-	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 .pchq-sitepick {
@@ -272,15 +271,15 @@ a.pchq-tile:hover {
 
 /* Store tools live outside the scrollable table, in the browser's modal layer. */
 .pchq-site-tools-trigger { display: inline-flex; margin: 0; vertical-align: top; }
-.pchq-site-dialog { display: none; position: fixed; inset: 0; box-sizing: border-box; width: min(760px, calc(100vw - 32px)); max-width: none; max-height: calc(100vh - 32px); margin: auto; padding: 0; border: 1px solid #e6e6e6; border-radius: 12px; background: #fff; color: #171717; overflow: hidden; z-index: 100100; }
+.pchq-site-dialog { display: none; position: fixed; inset: 0; box-sizing: border-box; width: min(760px, calc(100vw - 32px)); max-width: none; max-height: calc(100vh - 32px); margin: auto; padding: 0; border: 0; border-radius: 8px; background: #fff; color: #171717; overflow: hidden; z-index: 100100; box-shadow: 0 20px 60px #00000026; }
 .pchq-site-dialog[open] { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
 .pchq-site-dialog::backdrop { background: rgb(23 23 23 / 48%); }
 .pchq-site-dialog-open { overflow: hidden; }
 .pchq-site-dialog__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 20px 24px; border-bottom: 1px solid #e6e6e6; }
 .pchq-site-dialog__header > div { min-width: 0; }
-.pchq-site-dialog__header h2 { margin: 0; font-size: 20px; line-height: 28px; font-weight: 650; overflow-wrap: anywhere; }
+.pchq-site-dialog__header h2 { margin: 0; font-size: 18px; line-height: 26px; font-weight: 600; overflow-wrap: anywhere; }
 .pchq-site-dialog__header p { margin: 4px 0 0; font-size: 12px; line-height: 20px; overflow-wrap: anywhere; }
-.pchq-site-dialog__close { display: inline-flex; flex: 0 0 36px; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 6px; color: #666; text-decoration: none; }
+.pchq-site-dialog__close { display: inline-flex; flex: 0 0 44px; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 6px; color: #666; text-decoration: none; }
 .pchq-site-dialog__close:hover { background: #f5f5f5; color: #171717; }
 .pchq-site-dialog__close .dashicons { width: 20px; height: 20px; font-size: 20px; }
 .pchq-site-dialog__body { min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 20px 24px; scrollbar-width: thin; scrollbar-color: #aaa #f5f5f5; }
@@ -294,7 +293,7 @@ a.pchq-tile:hover {
 .pchq-site-dialog__body > form > :is(input:not([type=hidden]), select) { min-width: 0; width: 100%; }
 .pchq-site-dialog__retire h3 { margin: 0 0 4px; font-size: 14px; line-height: 20px; }
 .pchq-site-dialog__retire p { margin: 0; font-size: 12px; line-height: 20px; }
-.pchq-site-dialog__footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 24px; border-top: 1px solid #e6e6e6; }
+.pchq-site-dialog__footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 16px 24px; border-top: 1px solid #e6e6e6; }
 .pchq-server-dialog { width: min(560px, calc(100vw - 32px)); }
 .pchq-site-dialog__body > form.pchq-site-server-form { display: block; margin: 0; padding: 0; border: 0; }
 .pchq-server-options { display: grid; gap: 8px; min-width: 0; padding: 0; margin: 0; border: 0; }
@@ -309,15 +308,17 @@ a.pchq-tile:hover {
 .pchq-server-option__current { padding: 2px 6px; color: #555; background: #eaeaea; border-radius: 4px; font-size: 11px; line-height: 18px; white-space: nowrap; }
 @supports (height: 100dvh) { .pchq-site-dialog { max-height: calc(100dvh - 32px); } }
 @media (max-width: 600px) {
-	.pchq-site-dialog { width: calc(100vw - 24px); max-height: calc(100vh - 24px); }
-	.pchq-site-dialog__header { padding: 16px; gap: 8px; }
+	.pchq-site-dialog { width: calc(100vw - 16px); max-height: calc(100vh - 16px); }
+	.pchq-site-dialog__header { padding: max(12px,env(safe-area-inset-top)) 16px 12px; gap: 8px; align-items: center; }
 	.pchq-site-dialog__header h2 { font-size: 18px; line-height: 28px; }
 	.pchq-site-dialog__body { padding: 16px; }
-	.pchq-site-dialog__footer { padding: 12px 16px; }
+	.pchq-site-dialog__footer { padding: 12px 16px max(12px,env(safe-area-inset-bottom)); }
+	.pchq-site-dialog__footer > .button { flex: 1 1 auto; min-height: 44px; }
+	.pchq-tools a { display: inline-flex; align-items: center; min-height: 44px; }
 	.pchq-site-dialog__body > form { grid-template-columns: minmax(0, 1fr); }
-	.pchq-site-dialog__body > form > .button { justify-self: start; }
+	.pchq-site-dialog__body > form > .button { justify-self: stretch; min-height: 44px; }
 	.pchq-server-option { padding: 12px; gap: 8px; }
-	@supports (height: 100dvh) { .pchq-site-dialog { max-height: calc(100dvh - 24px); } }
+	@supports (height: 100dvh) { .pchq-site-dialog { max-height: calc(100dvh - 16px); } }
 }
 
 .pchq-delete {
@@ -360,8 +361,8 @@ a.pchq-tile:hover {
 }
 
 a.pchq-switch:focus {
-	outline: 0;
-	box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--pchq-accent);
+	outline: 2px solid var(--pchq-accent);
+	outline-offset: 3px;
 }
 
 /* 添加店铺、账号表单 */
@@ -416,61 +417,7 @@ a.pchq-switch:focus {
 	gap: 8px;
 }
 
-/* 手机：表格每行变成卡片 */
-@media screen and (max-width: 782px) {
-	.pchq-tile--hero {
-		grid-column: 1 / -1;
-	}
-
-	.pchq-tile--hero .pchq-tile__value {
-		font-size: 32px;
-	}
-
-	.pchq-table thead {
-		display: none;
-	}
-
-	.pchq-table,
-	.pchq-table tbody {
-		display: block;
-	}
-
-	.pchq-table tr {
-		display: block;
-		padding: 8px 12px;
-		border-bottom: 1px solid var(--pchq-line);
-	}
-
-	.pchq-table td {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		justify-content: flex-end;
-		gap: 4px 12px;
-		padding: 4px 0;
-		text-align: right;
-		overflow-wrap: anywhere;
-	}
-
-	.pchq-table td[data-label]::before {
-		content: attr(data-label);
-		flex: none;
-		max-width: 45%;
-		margin-right: auto;
-		font-weight: 600;
-		color: #50575e;
-		text-align: left;
-	}
-
-	.pchq-actions {
-		white-space: normal;
-	}
-
-	.pchq-error {
-		max-width: none;
-		text-align: right;
-	}
-}
+/* Responsive table records are owned by hq-workspace.css. */
 
 /* 店铺页：服务器下拉框、平台工具、系统信息 */
 .pchq-inline {

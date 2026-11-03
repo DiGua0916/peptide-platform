@@ -447,3 +447,53 @@
 .pc-me-announcement-target{margin-bottom:12px}
 .pc-me-announcement-target .pc-me-help{margin:8px 0 0;overflow-wrap:anywhere}
 .pc-me-announcement-rows{min-width:0}
+
+
+/* Builder-only hierarchy. Public previews and standalone native editors keep their own design. */
+.pc-de .pc-me-field { font-size: 14px; line-height: 22px; }
+.pc-de :is(.pc-me-label, .pc-me-field .components-base-control__label, .pc-me-field .components-input-control__label) { font-size: 13px; line-height: 20px; }
+.pc-de :is(.pc-me-help, .pc-me-device-state, .pc-me-boxmodel .pc-me-device-state) { font-size: 12px; line-height: 20px; }
+.pc-de .pc-me-panel > .components-panel__body-title .components-panel__body-toggle { min-height: 48px; font-size: 14px; line-height: 22px; }
+.pc-de .pc-me-record__summary { padding: 12px; border-radius: 6px; }
+.pc-de .pc-me-record__identity strong { font-size: 14px; line-height: 22px; }
+.pc-de .pc-me-record__meta { line-height: 20px; }
+.pc-de .pc-me-field .components-button { min-height: 36px; height: auto; font-size: 13px; line-height: 20px; }
+.pc-de .pc-me-field :is(input, select, textarea) { scroll-margin-block: 24px; }
+
+@media (max-width: 700px), (pointer: coarse) {
+ .pc-de .pc-me-field :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]), select, textarea),
+ .pc-de .pc-me-number__value input, .pc-de .pc-me-richtext__link input { min-height: 44px; font-size: 16px; line-height: 24px; padding: 9px 12px; }
+ .pc-de :is(.components-button, .pc-me-color__trigger, .pc-me-code-expand, .pc-me-richtext__tool, .pc-me-record__actions button, .pc-me-device-state button, .pc-me-text-button) { min-width: 44px; min-height: 44px; height: auto; touch-action: manipulation; }
+ .pc-de .pc-me-field .components-button { font-size: 14px; line-height: 22px; padding: 10px 12px; }
+ .pc-de .pc-me-record__actions { gap: 8px; }
+ .pc-de .pc-me-record__summary { flex-wrap: wrap; gap: 12px; }
+ .pc-de .pc-me-record__identity { flex-basis: 100%; }
+ .pc-de .pc-me-record__option { min-height: 48px; padding-block: 12px; font-size: 14px; line-height: 22px; }
+ .pc-de .pc-me-field :is(input[type=checkbox], input[type=radio]) { width: 20px; height: 20px; }
+ .pc-de .pc-me-field input[type=range] { min-height: 44px; margin: 0; touch-action: pan-y; }
+ .pc-de .pc-me-field :is(.components-checkbox-control__label, .components-toggle-control__label, .components-radio-control__option) { display: flex; align-items: center; min-height: 44px; }
+ .pc-de .pc-me-richtext__toolbar { gap: 6px; }
+ .pc-de .pc-me-richtext__tool { font-size: 14px; }
+ .pc-de .pc-me-boxmodel { gap: 10px; }
+ .pc-de .pc-me-boxmodel .pc-me-number__value input { padding-inline: 6px; }
+}
+@media (max-width: 700px) {
+ .pc-de .pc-me-richtext.is-fullscreen { inset: max(12px, env(safe-area-inset-top, 0px)) 12px max(12px, env(safe-area-inset-bottom, 0px)); max-height: calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
+ body.pc-design-editor-page :is(.pc-me-code-dialog, .pc-me-review-dialog, .pc-me-link-dialog) {
+  position: fixed; inset: auto 8px max(8px, env(safe-area-inset-bottom, 0px));
+  width: calc(100vw - 16px); max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  margin: 0; border-radius: 12px 12px 8px 8px; overflow: hidden;
+  box-shadow: 0 -12px 40px rgb(23 23 23 / 16%); overscroll-behavior: contain;
+ }
+ body.pc-design-editor-page :is(.pc-me-code-dialog__head, .pc-me-review-dialog__head, .pc-me-link-dialog__head) { padding: 16px; }
+ body.pc-design-editor-page :is(.pc-me-code-dialog__actions, .pc-me-review-dialog__foot, .pc-me-link-dialog__foot) { flex: 0 0 auto; padding: 12px 16px; gap: 8px; }
+ body.pc-design-editor-page :is(.pc-me-code-dialog, .pc-me-review-dialog, .pc-me-link-dialog) button { min-width: 44px; min-height: 44px; height: auto; font-size: 14px; touch-action: manipulation; }
+ body.pc-design-editor-page :is(.pc-me-code-dialog, .pc-me-review-dialog, .pc-me-link-dialog) :is(input:not([type=checkbox]):not([type=radio]):not([type=hidden]), select, textarea) { min-height: 44px; font-size: 16px; }
+ body.pc-design-editor-page :is(.pc-me-review-dialog__filters, .pc-me-link-dialog__filters) { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+ body.pc-design-editor-page :is(.pc-me-review-dialog__table, .pc-me-link-dialog__results) { min-height: 80px; overscroll-behavior: contain; }
+ body.pc-design-editor-page :is(.pc-me-review-dialog__foot, .pc-me-link-dialog__foot) > div { flex-wrap: wrap; }
+ body.pc-design-editor-page .components-modal__frame { max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
+ body.pc-design-editor-page .components-modal__content { overscroll-behavior: contain; padding-bottom: max(24px, env(safe-area-inset-bottom, 0px)); }
+ body.pc-design-editor-page .components-modal__content :is(button, .components-button) { min-height: 44px; height: auto; }
+}

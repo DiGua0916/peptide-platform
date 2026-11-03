@@ -76,16 +76,7 @@
     reduced.addEventListener('change', function () {
       if (reduced.matches) active.forEach(function (animation) { animation.cancel(); });
     });
-    // Observe the native menu state; never replace its click handler or layout rules.
-    const wrap = document.getElementById('wpwrap');
-    if (wrap) {
-      let wasOpen = wrap.classList.contains('wp-responsive-open');
-      new MutationObserver(function () {
-        const open = wrap.classList.contains('wp-responsive-open');
-        if (open && !wasOpen) reveal(document.getElementById('adminmenuwrap'), {opacity: 0, transform: 'translateX(-10px)'}, 200);
-        wasOpen = open;
-      }).observe(wrap, {attributes: true, attributeFilter: ['class']});
-    }
+    // The navigation drawer has one CSS transition, owned by workspace-touch.
     const collapse = document.getElementById('collapse-button');
     if (collapse) collapse.addEventListener('click', function () {
       reveal(document.querySelector('.pc-workspace-brand'), {opacity: 0.5, transform: 'translateY(2px)'}, 180);

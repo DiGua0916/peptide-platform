@@ -2,8 +2,8 @@
 body.pc-admin-workspace .pc-ov {
 	--pc-ov-orange: #171717;
 	--pc-ov-teal: #171717;
-	--pc-ov-line: var(--pc-ui-line, #e6e6e6);
-	--pc-ov-muted: var(--pc-ui-muted, #666);
+	--pc-ov-line: var(--pc-ui-line, #e5e5e5);
+	--pc-ov-muted: var(--pc-ui-muted, #5f6368);
 	--pc-ov-text: 14px;
 	--pc-ov-big: 28px;
 	margin-top: 0;
@@ -14,11 +14,11 @@ body.pc-admin-workspace .pc-ov {
 
 body.pc-admin-workspace .pc-ov > .pc-ov-grid {
 	grid-template-columns: minmax(0, 1fr) 264px;
-	gap: 28px;
+	gap: 24px;
 }
 
 body.pc-admin-workspace .pc-ov .pc-ov-main {
-	gap: 28px;
+	gap: 24px;
 }
 
 /* The native page title carries context. Repeated generated greeting is redundant. */
@@ -48,27 +48,26 @@ body.pc-admin-workspace .pc-ov .pc-ov-hero__hello {
 body.pc-admin-workspace .pc-ov .pc-ov-hero__panel {
 	display: flex;
 	flex-direction: column;
-	padding: 0;
-	border: 0;
-	border-radius: 0;
+	padding: 20px 20px 12px;
+	border: 1px solid var(--pc-ui-line, #e5e5e5);
+	border-radius: 8px;
 	background: #fff;
 	overflow: visible;
-	border-bottom: 1px solid var(--pc-ui-line, #e6e6e6);
 }
 
 body.pc-admin-workspace .pc-ov .pc-ov-hero__time {
 	order: 2;
 	padding: 10px 0 0;
 	background: transparent;
-	color: var(--pc-ui-muted, #666);
+	color: var(--pc-ui-muted, #5f6368);
 	font-size: 12px;
 	line-height: 18px;
 	font-variant-numeric: tabular-nums;
-	border-top: 1px solid var(--pc-ui-line, #e6e6e6);
+	border-top: 1px solid var(--pc-ui-line, #e5e5e5);
 }
 
 body.pc-admin-workspace .pc-ov .pc-ov-kpis {
-	padding: 4px 0 20px;
+	padding: 0 0 16px;
 	align-items: stretch;
 	grid-template-columns: minmax(112px, 1.3fr) repeat(6, minmax(0, 1fr));
 	gap: 0;
@@ -87,7 +86,7 @@ body.pc-admin-workspace .pc-ov .pc-ov-kpi span {
 	min-height: 34px;
 	font-size: 12px;
 	line-height: 17px;
-	color: var(--pc-ui-muted, #666);
+	color: var(--pc-ui-muted, #5f6368);
 	text-wrap: pretty;
 }
 
@@ -109,11 +108,11 @@ body.pc-admin-workspace .pc-ov .pc-ov-kpi:first-child b {
 /* One work queue contains both operational groups. Small counts are not cards. */
 body.pc-admin-workspace .pc-ov .pc-ov-row {
 	grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-	gap: 28px;
-	padding: 22px 24px;
-	background: #fafafa;
-	border: 0;
-	border-radius: 12px;
+	gap: 24px;
+	padding: 20px;
+	background: #ffffff;
+	border: 1px solid var(--pc-ui-line, #e5e5e5);
+	border-radius: 8px;
 }
 
 body.pc-admin-workspace .pc-ov .pc-ov-row > .pc-ov-card {
@@ -165,7 +164,7 @@ body.pc-admin-workspace .pc-ov .pc-ov-num span {
 	line-height: 17px;
 	white-space: normal;
 	text-overflow: clip;
-	color: var(--pc-ui-muted, #666);
+	color: var(--pc-ui-muted, #5f6368);
 }
 
 body.pc-admin-workspace .pc-ov .pc-ov-num b {
@@ -190,11 +189,11 @@ body.pc-admin-workspace .pc-ov .pc-ov-foot {
 /* A continuous auxiliary rail is quieter than a stack of identical cards. */
 body.pc-admin-workspace .pc-ov .pc-ov-side {
 	margin-top: 0;
-	gap: 26px;
-	padding: 22px;
-	background: #fafafa;
-	border: 0;
-	border-radius: 12px;
+	gap: 24px;
+	padding: 20px;
+	background: #ffffff;
+	border: 1px solid var(--pc-ui-line, #e5e5e5);
+	border-radius: 8px;
 }
 
 body.pc-admin-workspace .pc-ov .pc-ov-side > .pc-ov-card {
@@ -228,7 +227,7 @@ body.pc-admin-workspace .pc-ov .pc-ov-tag {
 	padding: 2px 4px;
 	background: #f1f1f1;
 	border-radius: 4px;
-	color: var(--pc-ui-muted, #666);
+	color: var(--pc-ui-muted, #5f6368);
 	font-size: 12px;
 	line-height: 16px;
 }
@@ -277,18 +276,17 @@ body.pc-admin-workspace .pc-ov .pc-ov-empty {
 	border: 0;
 	border-radius: 0;
 	background: transparent;
-	color: var(--pc-ui-muted, #666);
-	font-size: 12px;
-	line-height: 19px;
+	color: var(--pc-ui-muted, #5f6368);
+	font-size: 13px;
+	line-height: 21px;
 }
 
 /* Performance has its own working surface with a restrained period selector. */
 body.pc-admin-workspace .pc-ov .pc-ov-main > .pc-ov-card {
-	padding: 24px 0 0;
-	border: 0;
-	border-radius: 0;
+	padding: 20px;
+	border: 1px solid var(--pc-ui-line, #e5e5e5);
+	border-radius: 8px;
 	background: #fff;
-	border-top: 1px solid var(--pc-ui-line, #e6e6e6);
 	container: pc-ov-performance / inline-size;
 }
 
@@ -304,7 +302,7 @@ body.pc-admin-workspace .pc-ov .pc-ov-tab {
 	padding: 7px 12px;
 	border: 0;
 	border-radius: 4px;
-	color: var(--pc-ui-muted, #666);
+	color: var(--pc-ui-muted, #5f6368);
 	font-size: 12px;
 	line-height: 16px;
 	font-weight: 500;
@@ -320,7 +318,7 @@ body.pc-admin-workspace .pc-ov .pc-ov-headline {
 	margin: 0 0 24px;
 	font-size: 12px;
 	line-height: 16px;
-	color: var(--pc-ui-muted, #666);
+	color: var(--pc-ui-muted, #5f6368);
 }
 
 body.pc-admin-workspace .pc-ov .pc-ov-headline b {
@@ -337,7 +335,7 @@ body.pc-admin-workspace .pc-ov .pc-ov-headline .pc-ov-muted {
 
 body.pc-admin-workspace .pc-ov .pc-ov-split {
 	grid-template-columns: minmax(0, 1fr) minmax(0, 1.8fr);
-	gap: 28px;
+	gap: 24px;
 	align-items: start;
 }
 
@@ -378,13 +376,13 @@ body.pc-admin-workspace .pc-ov .pc-ov-step span {
 }
 
 body.pc-admin-workspace .pc-ov .pc-ov-link {
-	min-height: 24px;
+	min-height: 32px;
 	font-size: 12px;
 	line-height: 16px;
 }
 
 body.pc-admin-workspace .pc-ov .pc-ov-link span {
-	color: var(--pc-ui-muted, #666);
+	color: var(--pc-ui-muted, #5f6368);
 }
 
 body.pc-admin-workspace .pc-ov .pc-ov-chart-head {
@@ -403,7 +401,7 @@ body.pc-admin-workspace .pc-ov .pc-ov-chart-head h3 {
 	font-size: 12px;
 	line-height: 16px;
 	font-weight: 500;
-	color: var(--pc-ui-muted, #666);
+	color: var(--pc-ui-muted, #5f6368);
 }
 
 body.pc-admin-workspace .pc-ov .pc-ov-metric {
@@ -450,16 +448,15 @@ body.pc-admin-workspace .pc-ov .pc-ov-visitors small {
 	line-height: 16px;
 }
 
-body.pc-admin-workspace .pc-ov .pc-ov-chart text { fill: var(--pc-ui-muted, #666); }
-body.pc-admin-workspace .pc-ov .pc-ov-chart .pc-ov-grid { stroke: var(--pc-ui-line, #e6e6e6); }
+body.pc-admin-workspace .pc-ov .pc-ov-chart text { fill: var(--pc-ui-muted, #5f6368); }
+body.pc-admin-workspace .pc-ov .pc-ov-chart .pc-ov-grid { stroke: var(--pc-ui-line, #e5e5e5); }
 body.pc-admin-workspace .pc-ov .pc-ov-chart .pc-ov-cross { stroke: #a3a3a3; }
 body.pc-admin-workspace .pc-ov .pc-ov-dot-pt { stroke: #171717; }
 body.pc-admin-workspace .pc-ov :is(.pc-ov-tab, a.pc-ov-num, .pc-ov-visitors a) {
-	transition: transform 180ms cubic-bezier(.16, 1, .3, 1), opacity 180ms cubic-bezier(.16, 1, .3, 1);
+	transition: background-color 160ms cubic-bezier(.22,1,.36,1), transform 160ms cubic-bezier(.22,1,.36,1);
 }
 body.pc-admin-workspace .pc-ov :is(.pc-ov-tab, a.pc-ov-num, .pc-ov-visitors a):active {
 	transform: translateY(1px);
-	opacity: .78;
 }
 @media (prefers-reduced-motion: reduce) {
 	body.pc-admin-workspace .pc-ov :is(.pc-ov-tab, a.pc-ov-num, .pc-ov-visitors a) {
@@ -487,13 +484,16 @@ body.pc-admin-workspace .pc-ov :is(.pc-ov-tab, a.pc-ov-num, .pc-ov-visitors a):a
 		font-size: 18px;
 		line-height: 28px;
 	}
+	body.pc-admin-workspace .pc-ov .pc-ov-hero__panel {
+		padding: 16px 12px 12px;
+	}
 	body.pc-admin-workspace .pc-ov .pc-ov-kpis {
-	padding: 0 0 10px;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-}
+		padding: 0 0 10px;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
 	body.pc-admin-workspace .pc-ov .pc-ov-kpi {
-	gap: 8px;
-	padding: 14px 8px;
+		gap: 8px;
+		padding: 12px 8px;
 	}
 	body.pc-admin-workspace .pc-ov .pc-ov-kpi span {
 		min-height: 0;
@@ -502,8 +502,8 @@ body.pc-admin-workspace .pc-ov :is(.pc-ov-tab, a.pc-ov-num, .pc-ov-visitors a):a
 		flex-direction: row;
 		justify-content: space-between;
 		align-items: center;
-	grid-column: 1 / -1;
-}
+		grid-column: 1 / -1;
+	}
 	body.pc-admin-workspace .pc-ov :is(.pc-ov-row, .pc-ov-side, .pc-ov-split) {
 		grid-template-columns: minmax(0, 1fr);
 		gap: 24px;
@@ -519,6 +519,26 @@ body.pc-admin-workspace .pc-ov :is(.pc-ov-tab, a.pc-ov-num, .pc-ov-visitors a):a
 	}
 	body.pc-admin-workspace .pc-ov .pc-ov-tabs {
 		gap: 0;
+		max-width: 100%;
+		overflow-x: auto;
+		flex-wrap: nowrap;
+	}
+	body.pc-admin-workspace .pc-ov :is(.pc-ov-tab,.pc-ov-card__head a,.pc-ov-link) {
+		display: inline-flex;
+		align-items: center;
+		box-sizing: border-box;
+		min-height: 44px;
+	}
+	body.pc-admin-workspace .pc-ov .pc-ov-tab {
+		flex: 0 0 auto;
+		font-size: 13px;
+	}
+	body.pc-admin-workspace .pc-ov .pc-ov-metric {
+		min-height: 44px;
+		font-size: 16px;
+	}
+	body.pc-admin-workspace .pc-ov .pc-ov-chart-head {
+		flex-wrap: wrap;
 	}
 	body.pc-admin-workspace .pc-ov .pc-ov-tab {
 		padding-inline: 8px;
