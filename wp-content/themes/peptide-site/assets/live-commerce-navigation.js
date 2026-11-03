@@ -66,7 +66,7 @@
   function schedule() { clearTimeout(timer); timer = setTimeout(reconcile,0); }
   function close(dialog) {
     if (!dialog?.open) return;
-    if (dialog.id === 'vc-live-cart-drawer') window.VialCoveLiveCart?.close();
+    if (dialog.id === 'vc-live-cart-drawer') window.VialCoveLiveCart?.close(true);
     else dialog.close();
   }
   function waitProduct(id) {
@@ -123,12 +123,14 @@
   });
   document.addEventListener('click',event=> {
     const a=event.target.closest('a[href]');
-    if(!a || event.defaultPrevented || event.button!==0 || event.metaKey || event.ctrlKey || event.shiftKey) return;
+    if(!a || event.defaultPrevented || event.button!==0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     let url;try{url=new URL(a.href,location.href);}catch(_){return;}
     const cart=window.VialCoveCommerceNavigation?.cartUrl;
-    // The mobile bag is a real page. Keep the product entry for browser Back.
-    if(cart && url.pathname===new URL(cart,location.href).pathname && matchMedia('(max-width: 767px)').matches) {
-      remember(); navigating=true;
+    // A real /cart/ link remains the fallback. A supported bag trigger opens
+    // another history layer on both devices and keeps the product below it.
+    if(cart && url.origin===location.origin && url.pathname===new URL(cart,location.href).pathname) {
+      remember();
+      if(!a.matches('.cart-link,[data-vc-open-cart]') || !window.VialCoveLiveCart?.canOpen?.()) navigating=true;
     }
   },true);
   document.addEventListener('change',()=>setTimeout(remember,0));

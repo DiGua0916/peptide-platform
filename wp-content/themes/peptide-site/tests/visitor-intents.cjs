@@ -6,15 +6,16 @@ class Target060 {
  constructor(){this.listeners=new Map();}
  addEventListener(type,fn,capture=false){if(!this.listeners.has(type))this.listeners.set(type,[]);this.listeners.get(type).push({fn,capture:capture===true||capture?.capture===true});}
  removeEventListener(type,fn){this.listeners.set(type,(this.listeners.get(type)||[]).filter(row=>row.fn!==fn));}
- dispatchEvent(event){for(const row of [...(this.listeners.get(event.type)||[])])row.fn(event);}
+ dispatchEvent(event){for(const row of [...(this.listeners.get(event.type)||[])]){if(event.__stopImmediate)break;row.fn(event);}}
 }
 class Element060 {
  constructor(tag,classes,doc,attrs={}){this.tagName=tag.toUpperCase();this.classes=classes.split(' ').filter(Boolean);this.ownerDocument=doc;this.attrs={...attrs};this.isConnected=true;this.hidden=false;this.disabled=false;this.parentElement=null;this.children=[];this.style={display:'block',visibility:'visible',opacity:'1'};this.rect={left:20,top:20,right:220,bottom:170,width:200,height:150};}
  append(node){this.children.push(node);node.parentElement=this;return node;}
  getAttribute(key){return this.attrs[key]??null;}
  setAttribute(key,value){this.attrs[key]=String(value);}
+ removeAttribute(key){delete this.attrs[key];}
  get dataset(){return Object.fromEntries(Object.entries(this.attrs).filter(([key])=>key.startsWith('data-')).map(([key,value])=>[key.slice(5).replace(/-([a-z])/g,(_,letter)=>letter.toUpperCase()),value]));}
- matches(selector){if(selector==='.vc-showcase')return this.classes.includes('vc-showcase');if(selector==='[data-vc-quick-open]')return Object.hasOwn(this.attrs,'data-vc-quick-open');if(selector==='button[data-vc-quick-open]')return this.tagName==='BUTTON'&&Object.hasOwn(this.attrs,'data-vc-quick-open');if(selector==='dialog.vc-showcase-quick')return this.tagName==='DIALOG'&&this.classes.includes('vc-showcase-quick');if(selector==='.vc-showcase-quick__body')return this.classes.includes('vc-showcase-quick__body');if(selector==='.vc-showcase-quick-product[data-vc-product-id]')return this.classes.includes('vc-showcase-quick-product')&&Object.hasOwn(this.attrs,'data-vc-product-id');return false;}
+ matches(selector){if(selector==='.vc-showcase')return this.classes.includes('vc-showcase');if(selector==='[data-vc-home-product][data-vc-quick-open]')return Object.hasOwn(this.attrs,'data-vc-home-product')&&Object.hasOwn(this.attrs,'data-vc-quick-open');if(selector==='[data-vc-quick-open]')return Object.hasOwn(this.attrs,'data-vc-quick-open');if(selector==='button[data-vc-quick-open]')return this.tagName==='BUTTON'&&Object.hasOwn(this.attrs,'data-vc-quick-open');if(selector==='dialog.vc-showcase-quick')return this.tagName==='DIALOG'&&this.classes.includes('vc-showcase-quick');if(selector==='.vc-showcase-quick__body')return this.classes.includes('vc-showcase-quick__body');if(selector==='.vc-showcase-quick-product[data-vc-product-id]')return this.classes.includes('vc-showcase-quick-product')&&Object.hasOwn(this.attrs,'data-vc-product-id');return false;}
  closest(selector){for(let node=this;node;node=node.parentElement)if(node.matches(selector))return node;return null;}
  querySelector(selector){for(const child of this.children){if(child.matches(selector)||selector==='h2'&&child.tagName==='H2')return child;const nested=child.querySelector(selector);if(nested)return nested;}return null;}
  replaceChildren(...nodes){for(const child of this.children)child.parentElement=null;this.children=[];for(const node of nodes)this.append(node);}
@@ -24,7 +25,7 @@ class Element060 {
  getClientRects(){return this.isConnected&&this.rect.width>0&&this.rect.height>0?[this.rect]:[];}
  getBoundingClientRect(){return this.rect;}
 }
-function deliver060(document,event,bubbles=false){if(document instanceof Target060){for(const row of [...(document.listeners.get(event.type)||[])])if(row.capture||bubbles)row.fn(event);}else document.dispatchEvent(event);}
+function deliver060(document,event,bubbles=false){if(document instanceof Target060){const rows=[...(document.listeners.get(event.type)||[])];for(const row of [...rows.filter(row=>row.capture),...(bubbles?rows.filter(row=>!row.capture):[])]){if(event.__stopImmediate)break;row.fn(event);}}else document.dispatchEvent(event);}
 function mount060(window,document,options={}){
  const html=new Element060('html','',document),body=html.append(new Element060('body','',document));document.documentElement=html;document.visibilityState='visible';document.hidden=false;
  const root=body.append(new Element060('section','vc-showcase',document)),opener=(options.outside?body:root).append(new Element060(options.openerTag||'a','vc-showcase__action',document,{'data-vc-quick-open':'101',href:'/product/native-item/'})),sourceRoot=options.outside?opener:root;
@@ -37,7 +38,7 @@ function mount060(window,document,options={}){
  const tasks=new Map();let nextTask=0,activeClick=null;
  if(typeof window.setTimeout!=='function'){window.setTimeout=fn=>{tasks.set(++nextTask,fn);return nextTask;};window.clearTimeout=id=>tasks.delete(id);}
  const deliver=(event,bubbles=false)=>deliver060(document,event,bubbles);
- const beginClick=(target=opener,trust=true,extra={})=>{if(activeClick)activeClick.eventPhase=0;const event={type:'click',target,button:0,isTrusted:trust,eventPhase:1,...extra};if(trust==='missing')delete event.isTrusted;activeClick=event;deliver(event,true);return event;};
+ const beginClick=(target=opener,trust=true,extra={})=>{if(activeClick)activeClick.eventPhase=0;const event={type:'click',target,button:0,isTrusted:trust,eventPhase:1,preventDefault(){this.defaultPrevented=true;},stopImmediatePropagation(){this.__stopImmediate=true;this.cancelBubble=true;},...extra};if(trust==='missing')delete event.isTrusted;activeClick=event;window.dispatchEvent(event);if(!event.cancelBubble)deliver(event,true);return event;};
  const endClick=()=>{if(activeClick)activeClick.eventPhase=0;};
  const state=(open,target=sourceRoot)=>{window.__nativeState(target===opener?null:target,open,opener);if(open===true)endClick();};
  const jq=()=>({});jq.fn={};window.jQuery=jq;window.matchMedia=()=>({addEventListener(){}});window.CustomEvent=class {constructor(type,init){this.type=type;this.bubbles=false;Object.assign(this,init);}};
@@ -48,7 +49,7 @@ function mount060(window,document,options={}){
  vm.runInNewContext(nativeSource.replace(ending,bridge+ending),window);window.__nativeQuick.prepare({dialog,body:modalBody,product});
  return {window,document,root,opener,sourceRoot,dialog,modalBody,product,frames,watchers,tasks,beginClick,endClick,click:(target=opener,trust=true)=>{const event=beginClick(target,trust);event.eventPhase=3;return event;},bubble:(event,fn)=>{event.eventPhase=3;try{fn();}finally{endClick();}},expireTasks:()=>{const pending=[...tasks.values()];tasks.clear();pending.forEach(fn=>fn());},state,paint:()=>{const pending=[...frames.values()];frames.clear();pending.forEach(fn=>fn());},mutate:records=>watchers.filter(w=>w.active).forEach(w=>w.fn(records)),visibility:hidden=>{document.hidden=hidden;document.visibilityState=hidden?'hidden':'visible';document.dispatchEvent({type:'visibilitychange',target:document});},open(){this.click(opener,true);this.state(true);dialog.open=true;this.paint();},close(){dialog.open=false;this.state(false);},nativeOpen(target=opener,paint=true){this.click(target,true);let opened;try{opened=window.__nativeQuick.open(opener);}finally{endClick();}if(paint)this.paint();return opened;},nativeClose(){window.__nativeQuick.close();}};
 }
-function fixture060(options={}){const document=new Target060(),window=new Target060();Object.assign(window,{window,document,crypto:webcrypto,navigator:{},Uint8Array,Promise});const env=mount060(window,document,options);vm.runInNewContext(moduleSource,window);env.facts=[];env.api=window.VialCoveVisitorIntent.observe(document,facts=>env.facts.push(facts));return env;}
+function fixture060(options={}){const document=new Target060(),window=new Target060();Object.assign(window,{window,document,crypto:webcrypto,navigator:{},Uint8Array,Promise});const env=mount060(window,document,options);options.beforeObserve?.(env);vm.runInNewContext(moduleSource,window);env.facts=[];env.api=window.VialCoveVisitorIntent.observe(document,facts=>env.facts.push(facts));return env;}
 let passed060=0;const check060=(name,ok)=>{assert.ok(ok,name);passed060++;};
 test('native anchor/button resolver and exact outside-showcase state fallback',()=>{
  for(const outside of [false,true])for(const openerTag of ['a','button']){
@@ -118,6 +119,74 @@ test('native quick-view observed opening module',async()=>{
  e=fixture060();e.click(e.opener,true);check060('unused trusted opener has a bounded timer',e.tasks.size===1);e.api.stop();check060('stop clears unused opener timer',e.tasks.size===0&&e.frames.size===0);
  console.log(JSON.stringify({suite:'native-intent-module',passed:passed060,failed:0}));
 });
+test('lazy live template retains trusted source until matching presentation, never trusts replay alone',()=>{
+ const e=fixture060({outside:true});e.opener.setAttribute('data-vc-home-product','101');
+ e.click();e.endClick();
+ // Run the original synchronous-turn expiry, not the bounded fetch expiry.
+ const [syncId,syncTask]=e.tasks.entries().next().value;e.tasks.delete(syncId);syncTask();
+ assert.equal(e.tasks.size,1);e.click(e.opener,false);e.state(true);e.dialog.open=true;e.paint();
+ assert.equal(e.facts.length,0,'synthetic replay/state cannot count the product');
+ e.product.vcHomeOpener=e.opener;
+ e.document.dispatchEvent({type:'vc:product-presented',detail:{root:e.product,dialog:e.dialog,productId:101}});e.paint();
+ assert.equal(e.facts.length,1);assert.equal(e.facts[0].product_id,101);assert.equal(e.tasks.size,0);
+ e.document.dispatchEvent({type:'vc:product-presented',detail:{root:e.product,dialog:e.dialog,productId:101}});e.paint();
+ assert.equal(e.facts.length,1,'duplicate presentation cannot count again');e.api.stop();
+});
+
+test('real home capture can stop its first lazy click without hiding that trusted source from window capture',async()=>{
+ const home=fs.readFileSync(path.join(__dirname,'../assets/home-quick-view.js'),'utf8');
+ const start="  document.addEventListener('click', event => {",end='  // Keep the product selection underneath the live bag';
+ const capture=home.slice(home.indexOf(start),home.indexOf(end));assert.ok(capture.includes('event.stopImmediatePropagation()'));
+ let ready=false,complete,lateDocumentClicks=0,replays=0,presentTurn;
+ const request=new Promise(resolve=>{complete=()=>{ready=true;resolve();};});
+ const e=fixture060({outside:true,beforeObserve(env){
+  env.opener.setAttribute('data-vc-home-product','101');
+  const nativeQuery=env.document.querySelector;
+  env.document.querySelector=selector=>selector.startsWith('dialog.vc-showcase-quick[open]')?(env.dialog.open?env.product:null):nativeQuery(selector);
+  vm.runInNewContext(capture,{document:env.document,window:env.window,openIntent:0,homeProduct:'.vc-home-quick-product',canOpen:()=>true,templateFor:()=>ready?{}:null,announce(){},loadTemplate:()=>request,present(root,opener){root.vcHomeOpener=opener;env.document.dispatchEvent({type:'vc:product-presented',detail:{root,dialog:env.dialog,productId:101}});}});
+  // This document listener exists before the later visitor observer, matching
+  // the production enqueue order. The native lazy capture must suppress it.
+  env.document.addEventListener('click',()=>lateDocumentClicks++,true);
+ }});
+ e.opener.click=()=>{replays++;e.click(e.opener,false);presentTurn=[...e.tasks.entries()].at(-1);e.window.__nativeQuick.open(e.opener);e.endClick();};
+ const click=e.click();e.endClick();assert.equal(click.defaultPrevented,true);assert.equal(lateDocumentClicks,0);
+ assert.equal(e.window.listeners.get('click')[0].capture,true);assert.equal(e.tasks.size,2,'window retained the original source before document stopped propagation');
+ const [syncId,syncTask]=e.tasks.entries().next().value;e.tasks.delete(syncId);syncTask();
+ complete();for(let i=0;i<6;i++)await Promise.resolve();assert.equal(replays,1);assert.equal(e.dialog.open,true);assert.equal(e.facts.length,0);
+ const [presentId,presentTask]=presentTurn;e.tasks.delete(presentId);presentTask();e.paint();
+ assert.equal(e.facts.length,1);assert.equal(e.facts[0].product_id,101);assert.equal(lateDocumentClicks,1,'only the later cached synthetic replay reaches document listeners');
+ e.api.stop();assert.equal(e.window.listeners.get('click').length,0);
+});
+
+test('restore cancellation and Escape retire lazy eligibility before a synthetic forward restoration',()=>{
+ for(const cancellation of [{type:'vc:product-restore-cancel'},{type:'keydown',key:'Escape'}]){
+  const e=fixture060({outside:true});e.opener.setAttribute('data-vc-home-product','101');e.click();e.endClick();
+  e.document.dispatchEvent(cancellation);assert.equal(e.tasks.size,0);
+  e.click(e.opener,false);e.dialog.open=true;e.product.vcHomeOpener=e.opener;
+  e.document.dispatchEvent({type:'vc:product-presented',detail:{root:e.product,dialog:e.dialog,productId:101}});e.paint();assert.equal(e.facts.length,0,cancellation.type);
+  e.close();e.click();e.endClick();e.dialog.open=true;
+  e.document.dispatchEvent({type:'vc:product-presented',detail:{root:e.product,dialog:e.dialog,productId:101}});e.paint();assert.equal(e.facts.length,1,'a later trusted opening still qualifies');e.api.stop();
+ }
+ const e=fixture060({outside:true});e.opener.setAttribute('data-vc-home-product','101');e.click();e.endClick();e.document.dispatchEvent({type:'keydown',key:'Tab'});
+ assert.equal(e.tasks.size,2,'ordinary keys do not cancel pending native reads');e.api.stop();
+ assert.equal(e.document.listeners.get('vc:product-restore-cancel').length,0);assert.equal(e.document.listeners.get('keydown').length,0);
+});
+
+test('lazy product observation refuses missing, stale, failed and mismatched source confirmation',()=>{
+ for(const mode of ['no-click','untrusted','expired','suspended','stopped','wrong-opener','wrong-product','closed','detached','hidden']){
+  const e=fixture060({outside:true});e.opener.setAttribute('data-vc-home-product','101');
+  if(mode!=='no-click'){e.click(e.opener,mode!=='untrusted');e.endClick();}
+  if(mode==='expired')e.expireTasks();
+  if(mode==='suspended')e.api.suspend();
+  if(mode==='stopped')e.api.stop();
+  e.dialog.open=mode!=='closed';e.product.vcHomeOpener=mode==='wrong-opener'?e.root:e.opener;
+  if(mode==='detached')e.product.isConnected=false;
+  if(mode==='hidden')e.product.style.display='none';
+  e.document.dispatchEvent({type:'vc:product-presented',detail:{root:e.product,dialog:e.dialog,productId:mode==='wrong-product'?202:101}});e.paint();
+  assert.equal(e.facts.length,0,mode+' never produces product intent');e.api.stop();
+ }
+});
+
 for(const outside of [false,true]) test('actual native '+(outside?'outside-root':'showcase')+' anchor with056 collector/adapter queues canonical intent and immutable retry',async()=>{
  const original=fs.readFileSync(path.join(__dirname,'visitor-product-actions.cjs'),'utf8');let source=original.split('async function run()')[0];
  source=source.replace("const context = vm.createContext(window);","if (options.intentSetup) options.intentSetup(window, document);\n  const context = vm.createContext(window);").replace("['visitor-tracking.js', 'visitor-adapter.js']","['visitor-intents.js', 'visitor-tracking.js', 'visitor-adapter.js']");

@@ -1123,3 +1123,11 @@ functions.php新增vc_card_display_product，使用Woo get_visible_children的me
 只读代理检查CSS后发现的focus权重与错误标签覆盖均已补正。实际IAB桌面：已填邮箱focus后padding12px、height49.33px、label static/gap8px；手机390×844（body375）空/已填字段均gap8px，input/select同高、箭头在框内，聚焦first_name内容/高度不变且outline可见；360×800（body345）宽=scrollWidth、fieldOverflow0。标题计算字体/权重匹配新规则。仅聚焦/Tab/切预览尺寸，没有输入资料/改用户车数量/提交订单，未真实手机、实际浏览器autofill或字段错误交互验收；对应CSS保留并经源码评审，不冒称实测。
 
 PHP lint、git diff --check通过。Impeccable detect仅3项advisory（24/20字号和Woo #cc1818不在后台DESIGN.md），该设计文件明确不适用公开店铺；沿用现有店铺字体/品牌和原生错误色，不做无关后台规范改写。证据D:/Codex/Tasks/2026-11-03/checkout-ui-repair/outputs/checkout-desktop-fixed.png、checkout-mobile-fixed.png；临时验证tab已关闭，正式手机预览恢复390并保留。样式经本机主题junction即时生效；其他环境需正常主题部署，不声称公网已上线。
+
+### 2026-11-03 · Codex：手机右侧购物袋和商品卡片追踪
+
+用户最新要求手机也使用右侧卡片购物袋，取代旧的手机独立购物车页决定。沿用发布的商品/购物袋设置及真实 Woo Store API；修复 footer HTML 晚于脚本导致控制器静默退出的真实原因，普通 Checkout 也可打开抽屉并通过原生 contents-only action 同步已确认购物车，排除账单/收货地址及支付处理中写入。商品→Bag→浏览器 Back 保留原商品和宿主页，独立 /cart/ 仍作兼容出口。
+
+首次懒加载的 trusted click 改为 window capture，避开首页 document stopImmediatePropagation；原生呈现仍须来源/ID/连接/可见性全部匹配，取消/Escape/过期拒绝旧资格。新增被动 surface helper，用既有 heartbeat 显示当前商品 ID/名称或购物袋，保留实际宿主 path 及来源事件，不增加 PV。开关、员工、预览、GPC 排除保持，未开追踪或修改后端协议/数据库。
+
+联合 JS 36 项用例全部通过（内含 drawer20、surface17、intent9及旧83断言、pair7、transport48、product-actions74）；PHP cart14/config152/intents92通过。IAB实际390×844：Checkout Bag为378px右侧卡片，/checkout/不变、无横溢出；首页实际TR11306→Bag保留两层，浏览器Back只收购物袋并保留TR和/。无改车/地址/下单。员工排除故未冒称真实访客入库或实体手机验收。完整范围/限制/部署边界见 [frontend-mobile-cart-product-tracking-2026-11-03.md](frontend-mobile-cart-product-tracking-2026-11-03.md)。本段源码交接，公网部署回执另记，settings帮助文件不可整文件覆盖公网旧FAQ。

@@ -244,12 +244,12 @@
       if (root && root.dataset.vcProductId === link.dataset.vcHomeProduct) present(root, link);
     }, 0);
   }, true);
-  // Avoid stacking the cart drawer above a still-open product dialog. Desktop
-  // continues through the existing cart-link handler; mobile follows /cart/.
+  // Keep the product selection underneath the live bag on every viewport.
+  // Only a genuine full-page fallback needs to close this product first.
   document.addEventListener('click', event => {
     const link = event.target.closest?.('.vc-home-quick .vc-showcase-quick__feedback a.cart-link');
     if (link && !event.defaultPrevented && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
-      link.closest('dialog')?.querySelector('.vc-showcase-quick__close')?.click();
+      if (!window.VialCoveLiveCart?.canOpen?.()) link.closest('dialog')?.querySelector('.vc-showcase-quick__close')?.click();
     }
   }, true);
   // The shared plugin dialog can also be opened by older showcase modules.
