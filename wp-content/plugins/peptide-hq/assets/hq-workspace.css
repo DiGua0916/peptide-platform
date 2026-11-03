@@ -319,3 +319,16 @@ body.pchq-workspace .pchq-ok .dashicons{color:#404040}
  @media(max-width:900px){body.pchq-workspace .pchq-table tr{grid-template-columns:minmax(0,1fr);padding:16px}}
 }
 @media(prefers-reduced-motion:reduce){body.pchq-workspace *,body.pchq-workspace *::before,body.pchq-workspace *::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}body.pchq-workspace :is(.button,.page-title-action):active{transform:none!important}}
+
+/* Navigation keeps the current screen visible until the next native view is ready. */
+body.pchq-workspace .pchq-navigation-status{position:fixed;top:calc(32px + 61px);left:var(--vc-side,220px);right:0;z-index:1001;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:8px 28px;background:#fff;border-bottom:1px solid #e6e6e6;color:#404040;font-size:12px;line-height:20px}
+body.pchq-workspace .pchq-navigation-status[hidden]{display:none}
+body.pchq-workspace .pchq-navigation-status::before{content:"";position:absolute;top:0;left:0;width:28%;height:2px;background:#171717;animation:pchq-navigation-progress 1.2s ease-in-out infinite}
+body.pchq-workspace .pchq-navigation-status.is-error::before{display:none}
+body.pchq-workspace .pchq-navigation-status a{color:#171717;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+body.pchq-workspace.pchq-is-navigating #wpbody-content{pointer-events:none}
+@keyframes pchq-navigation-progress{from{transform:translateX(-100%)}to{transform:translateX(460%)}}
+@media(min-width:783px){body.pchq-workspace.folded .pchq-navigation-status{left:64px}}
+@media(max-width:782px){body.pchq-workspace .pchq-navigation-status{top:98px;left:0;padding:8px 16px}}
+@media(max-width:600px){body.pchq-workspace .pchq-navigation-status{top:98px}}
+@media(prefers-reduced-motion:reduce){body.pchq-workspace .pchq-navigation-status::before{animation:none;transform:none;width:100%}}
