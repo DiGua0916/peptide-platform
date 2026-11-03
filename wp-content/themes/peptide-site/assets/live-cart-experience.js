@@ -53,29 +53,39 @@
     /** One native dialog on every enabled device; keep its parent product open. */
     function createDrawerController({ dialog, document, window: win, enabled = () => true, refresh = () => {} }) {
         const page = document.documentElement, motion = win.matchMedia('(prefers-reduced-motion: reduce)');
-        let source = null, session = false, closeTimer = 0, frame = 0, previousPadding = '', disposed = false;
+        let source = null, session = false, closing = false, closeTimer = 0, frame = 0, motionSerial = 0, previousPadding = '', previousInert = false, disposed = false;
         const available = () => !disposed && !!dialog && typeof dialog.showModal === 'function' && enabled();
         const notify = (name, type) => {
             document.dispatchEvent(new win.CustomEvent(name, { detail: { dialog, trigger: source } }));
             document.dispatchEvent(new win.CustomEvent('vc:visitor-action', { detail: { type, data: { source: 'drawer' } } }));
         };
-        function cleanup(restoreFocus = true, announce = true) {
+        function cancelMotion() {
+            motionSerial++;
             win.clearTimeout(closeTimer); closeTimer = 0;
             if (frame) win.cancelAnimationFrame(frame); frame = 0;
-            dialog?.classList.remove('is-open');
+        }
+        function cleanup(restoreFocus = true, announce = true) {
+            cancelMotion(); closing = false;
+            dialog?.classList.remove('is-open', 'is-closing');
             if (!session) return;
+            dialog.inert = previousInert;
             session = false; page.classList.remove('vc-live-cart-open'); page.style.paddingRight = previousPadding;
             source?.setAttribute?.('aria-expanded', 'false');
-            if (restoreFocus && source?.isConnected) source.focus?.({ preventScroll: true });
+            if (restoreFocus && !document.hidden && source?.isConnected) source.focus?.({ preventScroll: true });
             if (announce) notify('vc:live-cart-closed', 'cart_close');
         }
-        function finishClose() { if (dialog?.open) dialog.close(); cleanup(); }
+        function finishClose(restoreFocus = true) { if (dialog?.open) dialog.close(); cleanup(restoreFocus); }
         function open(trigger) {
             if (!available()) return false;
-            win.clearTimeout(closeTimer); closeTimer = 0;
-            if (trigger?.isConnected) source = trigger;
+            cancelMotion(); closing = false;
+            dialog.classList.remove('is-closing');
+            if (trigger?.isConnected) {
+                if (source !== trigger) source?.setAttribute?.('aria-expanded', 'false');
+                source = trigger;
+            }
             if (!dialog.open) {
                 previousPadding = page.style.paddingRight;
+                previousInert = !!dialog.inert;
                 try { dialog.showModal(); } catch (_) { return false; }
                 session = true;
                 const gap = Math.max(0, win.innerWidth - page.clientWidth);
@@ -83,23 +93,48 @@
                 page.classList.add('vc-live-cart-open');
                 notify('vc:live-cart-opened', 'cart_open');
             }
+            dialog.inert = previousInert;
             source?.setAttribute?.('aria-haspopup', 'dialog'); source?.setAttribute?.('aria-controls', dialog.id); source?.setAttribute?.('aria-expanded', 'true');
             dialog.getBoundingClientRect();
-            if (frame) win.cancelAnimationFrame(frame);
-            frame = win.requestAnimationFrame(() => { frame = 0; if (dialog.open) dialog.classList.add('is-open'); });
-            dialog.querySelector('[data-cart-close]')?.focus({ preventScroll: true });
+            if (motion.matches || document.hidden) dialog.classList.add('is-open');
+            else {
+                const ticket = motionSerial;
+                frame = win.requestAnimationFrame(() => { if (ticket !== motionSerial) return; frame = 0; if (dialog.open && !closing) dialog.classList.add('is-open'); });
+            }
+            if (!document.hidden) dialog.querySelector('[data-cart-close]')?.focus({ preventScroll: true });
             refresh(); return true;
         }
         function close(immediate = false) {
             if (!dialog?.open) { cleanup(); return; }
-            if (frame) win.cancelAnimationFrame(frame); frame = 0;
-            dialog.classList.remove('is-open'); win.clearTimeout(closeTimer);
-            if (immediate || motion.matches) finishClose(); else closeTimer = win.setTimeout(finishClose, 320);
+            if (closing) { if (immediate || motion.matches || document.hidden) finishClose(); return; }
+            cancelMotion(); closing = true;
+            // Keep native modal focus/Back semantics until the shorter exit ends,
+            // but do not allow a fading quantity/checkout control to be activated.
+            dialog.inert = true; dialog.classList.add('is-closing'); dialog.classList.remove('is-open');
+            if (immediate || motion.matches || document.hidden) finishClose();
+            else {
+                const ticket = motionSerial;
+                closeTimer = win.setTimeout(() => { if (ticket !== motionSerial) return; closeTimer = 0; finishClose(); }, 200);
+            }
+        }
+        function settleMotion(restoreFocus = false) {
+            cancelMotion();
+            if (!dialog?.open) return;
+            if (closing) finishClose(restoreFocus); else dialog.classList.add('is-open');
         }
         const onClose = () => { if (!dialog.open) cleanup(); };
+        const onVisibility = () => { if (document.hidden) settleMotion(); };
+        const onMotion = () => { if (motion.matches) settleMotion(true); };
+        const onPageHide = () => settleMotion();
         dialog?.addEventListener('close', onClose);
+        document.addEventListener?.('visibilitychange', onVisibility);
+        win.addEventListener?.('pagehide', onPageHide);
+        if (motion.addEventListener) motion.addEventListener('change', onMotion); else motion.addListener?.(onMotion);
         return { available, open, close, destroy() {
             disposed = true; dialog?.removeEventListener('close', onClose);
+            document.removeEventListener?.('visibilitychange', onVisibility);
+            win.removeEventListener?.('pagehide', onPageHide);
+            if (motion.removeEventListener) motion.removeEventListener('change', onMotion); else motion.removeListener?.(onMotion);
             if (dialog?.open) dialog.close(); cleanup(false, false);
         } };
     }

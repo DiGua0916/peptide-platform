@@ -80,6 +80,10 @@ add_action( 'wp_enqueue_scripts', function () {
             wp_enqueue_script( 'vialcove-storefront-motion', $root . 'storefront-motion.js', array(), (string) filemtime( $path ), true );
         }
     }
+    $dialog_style = __DIR__ . '/assets/product-dialog-interaction.css';
+    if ( is_file( $dialog_style ) ) {
+        wp_enqueue_style( 'vialcove-product-dialog-interaction', $root . 'product-dialog-interaction.css', array( 'vialcove-storefront-motion' ), (string) filemtime( $dialog_style ) );
+    }
 }, 120 );
 
 /** Exact supplied SVGs; never reconstruct the wordmark as styled text. */

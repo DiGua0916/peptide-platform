@@ -1139,3 +1139,9 @@ PHP lint、git diff --check通过。Impeccable detect仅3项advisory（24/20字�
 用户反馈操作生硬，已定位旧navigation动画没有连接实际demo-site-parts页头。修改实际菜单/搜索owned controller为350ms进/200ms出、有限列表序列、可中断反转及native焦点/链接/减少动态效果/hidden/BFCache/builder清理；新增11生命周期用例通过。新增独立storefront-motion.css/js及functions前端加载：商品/子弹窗360ms轻入场、背板、按钮按压、原生FAQ答案淡入、新来源图片加载后淡入，相同来源去重。业务值立即更新，不改Woo、history、追踪或后端。
 
 本机正式390×844：资产实载，菜单宽=scrollWidth390、Escape收起，商品380无横溢；实际10mg选项得到10mg值和TR10图。未改车/地址/下单，非真实硬件FPS验收。商品正文退场仍由BE原生close立即清空，本轮不延迟Back或伪造表单；此限制与发布五文件边界见frontend-storefront-motion-2026-11-03.md。Impeccable detector报告旧Geist/品牌色与后台DESIGN不匹配，沿用用户现有公开店铺品牌，不无关改后台规范。用户中途要GitHub高星UI/mobile skills，已查询primary仓库/skill及当前stars，未授权/未安装新skill；研究答复单独交付。公网发布结果后补，不能从本机预览推断已上线。
+
+### 2026-11-03 · Codex：移动交互细节第二轮
+
+用户随后明确批准Impeccable+Interaction Design+Web Design Guidelines组合并要求实际优化，覆盖上段仅研究未安装的状态。已安装后两项、读取规则并用现有原生CSS/JS实现，没有给站点加库或更换架构。修复商品读取取消后立即重开复用已abort请求/旧finally删新请求、旧入口遗留pending；当前反馈在原图区域，不推开布局。修复子报告旧close销毁新viewer、实际阅读导航/偏移、同图/同报告DOM与焦点保持、响应式图片字段、空URL、画廊键盘及取消/纵向手势。购物袋快出慢入、可反转、closing inert及hidden/reduced/BFCache收束；金额/API/插件开关/history行为保持。
+
+联合Node63项（其中cart文件另含31内部检查）、PHP入口14项、语法/PHP lint/diff通过；静态设计扫描6资产exit0/[]。本机390实际Details/COA高亮与正文不被toolbar遮挡、COA一页正常绘制/390x844稳定、商品下层+Bag378px侧滑/原URL/无横溢。无改车/地址/订单/支付。完整范围、旧FAQ选择性发布边界和未测真机FPS见[frontend-storefront-interaction-polish-2026-11-03.md](frontend-storefront-interaction-polish-2026-11-03.md)。公网发布和最终Back验证以实际后续记录为准，不从源码存在推断完成。

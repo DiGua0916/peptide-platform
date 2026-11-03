@@ -1,5 +1,18 @@
 /* Deliberate storefront feedback. Native state, layout and data stay immediate. */
 :root{--vc-motion-out:cubic-bezier(.22,1,.36,1)}
+/* Pending reads occupy the existing product image, never a new layout row. */
+.product-card:has([data-vc-home-product][aria-busy=true]) .product-visual::after{content:'Opening…';position:absolute;bottom:12px;left:12px;max-width:calc(100% - 64px);padding:4px 8px;border-radius:4px;background:#17343f;color:#fff;font:500 12px/20px Geist,sans-serif;pointer-events:none}
+.product-card:has([data-vc-home-product][aria-busy=true]) .product-open svg{opacity:0}
+.product-card:has([data-vc-home-product][aria-busy=true]) .product-open::after,.vc-demo-hero-media>[aria-busy=true]::after{content:'';position:absolute;width:18px;height:18px;border:2px solid currentColor;border-inline-end-color:transparent;border-radius:50%;animation:vc-read-progress 800ms linear infinite;pointer-events:none}
+.vc-demo-hero-media>[aria-busy=true]::after{bottom:16px;left:16px;color:#137e98}
+@keyframes vc-read-progress{to{transform:rotate(1turn)}}
+:is(.vc-product-dialog,.vc-product-child-dialog,.vc-demo-catalog) :is(button,a,summary){touch-action:manipulation;-webkit-tap-highlight-color:#137e9820}
+.vc-product-dialog{scroll-padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+.vc-product-dialog .vc-dialog-sticky{padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+.vc-product-dialog .vc-dialog-gallery :focus-visible{outline-offset:-3px}
+:is(.vc-demo-catalog__filters button,.vc-demo-catalog__bottom button,.vc-dialog-sticky-add,.vc-product-child-close,.vc-dialog-slide,.vc-dialog-report-open){transition:background-color 160ms var(--vc-motion-out),color 160ms var(--vc-motion-out),border-color 160ms var(--vc-motion-out)}
+@media(hover:hover) and (pointer:fine){.vc-product-child-close:hover,.vc-product-pdf .pdf-zoom button:hover{background:#e6f0f2}}
+@media(pointer:coarse){.vc-product-pdf .pdf-zoom button{width:44px;height:44px}.vc-home-quick__toolbar button{min-height:44px}}
 dialog.vc-showcase-quick[open],dialog.vc-product-child-dialog[open]{animation:vc-product-arrive 360ms var(--vc-motion-out) backwards}
 dialog.vc-showcase-quick[open]::backdrop,dialog.vc-product-child-dialog[open]::backdrop{animation:vc-layer-shade 300ms var(--vc-motion-out) backwards}
 @keyframes vc-product-arrive{from{opacity:.2;transform:translateY(16px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
@@ -9,6 +22,7 @@ dialog.vc-showcase-quick[open]::backdrop,dialog.vc-product-child-dialog[open]::b
 :is(.vc-demo-faq-list,.vc-product-dialog-content,.vc-product-dialog-questions) details[open]>:not(summary){animation:vc-answer-arrive 240ms var(--vc-motion-out)}
 @keyframes vc-answer-arrive{from{opacity:.35;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){
+ .product-card:has([data-vc-home-product][aria-busy=true]) .product-open::after,.vc-demo-hero-media>[aria-busy=true]::after{animation:none}
  dialog.vc-showcase-quick[open],dialog.vc-product-child-dialog[open],dialog.vc-showcase-quick[open]::backdrop,dialog.vc-product-child-dialog[open]::backdrop,:is(.vc-demo-faq-list,.vc-product-dialog-content,.vc-product-dialog-questions) details[open]>:not(summary){animation:none}
  :is(.vc-demo-button,.vc-demo-icon-button,.vc-variation-option,.single_add_to_cart_button,.vc-showcase-quick__buy,.vc-home-quick__quantity-button,.vc-live-cart__quantity button,.vc-live-cart__checkout,.vc-home-quick__toolbar button):active{transform:none}
 }

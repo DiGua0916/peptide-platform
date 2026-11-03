@@ -2,6 +2,7 @@
 (function () {
   'use strict';
   const safeURL = value => {
+    if (typeof value !== 'string' || !value.trim()) return '';
     try { const u = new URL(value, location.href); return /^https?:$/.test(u.protocol) && u.origin === location.origin && !u.username && !u.password ? u.href : ''; }
     catch (_) { return ''; }
   };
@@ -24,6 +25,68 @@
     return items.filter(item => Number(item?.product?.id) === productId && spec(item.specification) === key && item.file?.mime === 'application/pdf' && safeURL(item.view_url))
       .sort((a, b) => date(b.issued_on).localeCompare(date(a.issued_on)) || Number(b.id) - Number(a.id))[0] || null;
   }
+  // A queued native close belongs to its own dialog, never a later PDF viewer.
+  function createChildDialogs(productId) {
+    let current = null;
+    const viewers = new WeakMap();
+    const dispose = box => { const owner = viewers.get(box); viewers.delete(box); owner?.dispose(); };
+    const close = box => { if (box?.open) box.close(); };
+    return {
+      create(className, label) {
+        if (current) { close(current); dispose(current); current.remove(); }
+        const box = node('dialog', className + ' vc-product-child-dialog'); current = box;
+        box.setAttribute('aria-label', label); box.dataset.vcProductParent = String(productId);
+        const dismiss = button('vc-product-child-close', '×', () => close(box));
+        dismiss.setAttribute('aria-label', 'Close ' + label); box.append(dismiss);
+        box.addEventListener('click', event => { if (event.target === box) close(box); });
+        box.addEventListener('close', () => dispose(box), {once:true});
+        document.body.append(box); return box;
+      },
+      attach(box, owner) { dispose(box); viewers.set(box, owner); },
+      destroy() { if (current) { close(current); dispose(current); current.remove(); current = null; } }
+    };
+  }
+  function createSectionNavigation(dialog, toolbar, sections, signal) {
+    let frame = 0, disposed = false;
+    const available = () => sections.filter(item => item.target && !item.target.hidden && !item.button.hidden);
+    function update() {
+      frame = 0; if (disposed || document.hidden || !dialog.open) return;
+      const items = available(); if (!items.length) return;
+      const inset = toolbar.getBoundingClientRect().height + (dialog.clientTop || 0) + 8;
+      const anchor = dialog.getBoundingClientRect().top + inset;
+      let active = items[0];
+      for (const item of items) { if (item.target.getBoundingClientRect().top <= anchor + 1) active = item; }
+      if (dialog.scrollTop > 0 && dialog.scrollTop + dialog.clientHeight >= dialog.scrollHeight - 2) active = items[items.length - 1];
+      for (const item of sections) {
+        item.button.classList.toggle('is-active', item === active);
+        if (item === active) item.button.setAttribute('aria-current', 'location');
+        else item.button.removeAttribute('aria-current');
+      }
+    }
+    const refresh = () => { if (!disposed && !frame && !document.hidden && dialog.open) frame = requestAnimationFrame(update); };
+    dialog.addEventListener('scroll', refresh, {passive:true,signal});
+    dialog.addEventListener('toggle', refresh, {capture:true,signal});
+    window.addEventListener('resize', refresh, {passive:true,signal});
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { cancelAnimationFrame(frame); frame = 0; } else refresh();
+    }, {signal});
+    refresh();
+    return {
+      refresh,
+      go(key) {
+        const item = available().find(item => item.key === key); if (!item || disposed || !dialog.open) return;
+        const top = item.target.getBoundingClientRect().top - dialog.getBoundingClientRect().top + dialog.scrollTop - toolbar.getBoundingClientRect().height - (dialog.clientTop || 0) - 8;
+        if (!item.target.hasAttribute('tabindex')) item.target.setAttribute('tabindex', '-1');
+        item.target.focus({preventScroll:true});
+        dialog.scrollTo({top:Math.max(0,top),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'});
+        refresh();
+      },
+      destroy() { disposed = true; cancelAnimationFrame(frame); frame = 0; }
+    };
+  }
+  function reportPresentationKey(item, selection, variationId) {
+    return JSON.stringify([selection, variationId, item ? [item.id, item.product?.id, item.source_product, item.specification, item.issued_on, item.issuer_name, item.title, item.report_number, item.source_lot, item.file?.mime, item.file?.size_bytes, item.view_url, item.download_url, item.thumbnail_url] : null]);
+  }
   window.vcProductReportMatch = Object.freeze({ specification: spec, latest: latestReport });
 
   window.createVcProductExperience = function (root, dialog) {
@@ -35,7 +98,8 @@
     const productId = Number(root.dataset.vcProductId), productName = root.dataset.vcProductName || '';
     const lifecycle = new AbortController(), signal = lifecycle.signal;
     let destroyed = false, productImage = root.vcHomeImage === undefined ? defaults.image : root.vcHomeImage;
-    let reports = [], report = null, ticker = null, tickerRevision = null, nested = null, viewer = null;
+    let reports = [], report = null, ticker = null, tickerRevision = null, reportSignature = '';
+    const children = createChildDialogs(productId);
     let reportRequest = null, reportReadPromise = null, lastReportRead = 0, lastSelection = '', frame = 0;
     let reportOpenIntent = 0;
     const knownImages = root.vcDialogImages instanceof Map ? root.vcDialogImages : new Map(); root.vcDialogImages=knownImages;
@@ -77,18 +141,16 @@
     content?.querySelectorAll('[data-vc-product-common-questions]').forEach(section => root.append(section));
     const toolbar = dialog.querySelector('.vc-home-quick__toolbar');
     const toolbarClose = toolbar?.querySelector('.vc-showcase-quick__close');
-    const go = target => {
-      if (!target) return;
-      dialog.scrollTo({top: Math.max(0, target.getBoundingClientRect().top - dialog.getBoundingClientRect().top + dialog.scrollTop - 72), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'});
-    };
-    const reportTab = button('', 'COA', () => go(documents)); reportTab.hidden = true;
+    let navigation = null;
+    const reportTab = button('', 'COA', () => navigation?.go('coa')); reportTab.hidden = true;
     if (toolbar) {
       const restoreCloseFocus = document.activeElement === toolbarClose;
-      const overviewTab = button('is-active', 'Overview', () => go(heading));
-      const detailsTab = button('', 'Details', () => go(content)); detailsTab.hidden = !content;
+      const overviewTab = button('is-active', 'Overview', () => navigation?.go('overview'));
+      const detailsTab = button('', 'Details', () => navigation?.go('details')); detailsTab.hidden = !content;
       const bag = node('a', 'vc-dialog-bag cart-link', 'Bag'); bag.href = safeURL(window.vcHomeQuickView?.cartUrl) || '#';
       toolbar.replaceChildren(overviewTab, detailsTab, reportTab, bag);
       if (toolbarClose) toolbar.append(toolbarClose);
+      navigation = createSectionNavigation(dialog, toolbar, [{key:'overview',target:heading,button:overviewTab},{key:'details',target:content,button:detailsTab},{key:'coa',target:documents,button:reportTab}], signal);
       if (restoreCloseFocus) toolbarClose.focus({preventScroll:true});
     }
     let support = summary.querySelector('.vc-dialog-support');
@@ -196,16 +258,28 @@
     function renderProduct() {
       const url = safeURL(productImage?.src); productImg.hidden = !url; emptyImage.hidden = !!url;
       productSlide.disabled = !url;
-      if (url) { knownImages.set(url,{src:url,alt:productImage.alt || productName}); productImg.src = url; productImg.alt = productImage.alt || productName; productImg.decoding = 'async'; }
+      // Preserve the responsive candidates and intrinsic size supplied by WordPress.
+      // Compare before writing: repeated native variation refreshes must not restart selection.
+      const attributes = {sizes:productImage?.sizes,srcset:productImage?.srcset,width:productImage?.width,height:productImage?.height};
+      for (const [key, raw] of Object.entries(attributes)) {
+        const value = key === 'width' || key === 'height' ? (Number.isSafeInteger(Number(raw)) && Number(raw) > 0 ? String(Number(raw)) : '') : (typeof raw === 'string' ? raw : '');
+        if (value) { if (productImg.getAttribute(key) !== value) productImg.setAttribute(key, value); }
+        else if (productImg.hasAttribute(key)) productImg.removeAttribute(key);
+      }
+      if (url) { knownImages.set(url,{src:url,alt:productImage.alt || productName}); productImg.decoding = 'async'; productImg.alt = productImage.alt || productName; if (productImg.getAttribute('src') !== url) productImg.src = url; }
       const text = summary.querySelector('.vc-sale-badge')?.textContent || '';
       ribbon.textContent = text.toUpperCase(); ribbon.hidden = !/^\s*\d+(?:\.\d+)?%\s*off\s*$/i.test(text);
       caption.textContent = selectedLabel(); caption.hidden = !caption.textContent;
     }
     function renderReport() {
       report = settings.reportGalleryEnabled ? latestReport(reports, productId, selectedLabel()) : null;
+      const signature = reportPresentationKey(report, selectedLabel(), root.querySelector('input.variation_id')?.value || '');
+      if (signature === reportSignature) return;
+      reportSignature = signature;
       reportTab.hidden = documents.hidden = !report;
       reportSlide.replaceChildren(); reportSlide.hidden = !report || !safeURL(report.thumbnail_url);
       documents.replaceChildren();
+      navigation?.refresh();
       if (!report) return;
       const name = report.source_product || productName;
       const titleText = name + (report.specification ? ' · ' + report.specification : '');
@@ -243,21 +317,11 @@
         clearTimeout(timer); if (reportRequest === abort) reportRequest = null;
       }
     }
-    function closeNested() { if (nested?.open) nested.close(); }
-    function createNested(className, label) {
-      closeNested(); nested?.remove(); viewer?.dispose(); viewer = null;
-      nested = node('dialog', className + ' vc-product-child-dialog'); nested.setAttribute('aria-label', label);
-      nested.dataset.vcProductParent = String(productId);
-      const close = button('vc-product-child-close', '×', closeNested); close.setAttribute('aria-label', 'Close ' + label); nested.append(close);
-      nested.addEventListener('click', event => { if (event.target === nested) closeNested(); });
-      nested.addEventListener('close', () => { viewer?.dispose(); });
-      document.body.append(nested); return nested;
-    }
     function openImage(requestedURL) {
       if (destroyed || !dialog.open) return false;
       const url = typeof requestedURL === 'string' && requestedURL ? safeURL(requestedURL) : safeURL(productImage?.src);
       const image = knownImages.get(url); if (!image) return false;
-      const box = createNested('vc-product-image-dialog', 'Product image'); const img = node('img', ''); img.src = url; img.alt = image.alt || productName;
+      const box = children.create('vc-product-image-dialog', 'Product image'); const img = node('img', ''); img.src = url; img.alt = image.alt || productName;
       box.append(img); box.dataset.vcHistoryImageUrl = url; box.showModal();
       return true;
     }
@@ -275,7 +339,7 @@
       // chosen. Restore only that exact, still-public document for this product.
       const opened = requested ? reports.find(item=>Number(item.product?.id)===productId && item.file?.mime==='application/pdf' && safeURL(item.view_url)===requested) : report;
       if (!opened) return false;
-      const box = createNested('vc-product-report-dialog', 'Reference COA');
+      const box = children.create('vc-product-report-dialog', 'Reference COA');
       const titleText = (opened.source_product || productName) + ' ' + (opened.specification || '') + ' · Reference COA';
       box.append(node('p', 'vc-home-quick__eyebrow', 'Third-party reference'), node('h2', '', titleText), node('p', 'vc-dialog-reference-note', 'Results apply to the sample named in the report. Not a verified VialCove stock batch certificate.'));
       const pdf = node('div', 'vc-product-pdf');
@@ -283,7 +347,7 @@
       box.append(pdf);
       const link = node('a', 'vc-dialog-pdf-download', 'Download reference PDF ↓'); link.href = safeURL(opened.download_url) || safeURL(opened.view_url); box.append(link);
       box.dataset.vcHistoryReportUrl = safeURL(opened.view_url);
-      box.showModal(); viewer = window.createProductReportViewer({element: pdf}); viewer.open({pdf:safeURL(opened.view_url),title:titleText});
+      box.showModal(); const viewer = window.createProductReportViewer({element: pdf}); children.attach(box, viewer); viewer.open({pdf:safeURL(opened.view_url),title:titleText});
       document.dispatchEvent(new CustomEvent('vc:product-report-opened',{detail:{dialog:box,url:safeURL(opened.view_url),productId}}));
       return true;
     }
@@ -312,7 +376,7 @@
     window.addEventListener('focus',()=>readTicker(),{signal});
     function refresh() {
       if (destroyed) return;
-      renderProduct(); syncSticky(); renderOffers(); const selection = selectedLabel();
+      renderProduct(); syncSticky(); renderOffers(); navigation?.refresh(); const selection = selectedLabel();
       if (selection !== lastSelection) { track.scrollLeft=0; lastSelection=selection; renderReport(); }
       ticker?.updateContext(context());
       if (support && settings.whatsappEnabled) {
@@ -323,11 +387,21 @@
       document.dispatchEvent(new CustomEvent('vc:product-dialog-selection',{detail:{root,dialog,productId,variationId:Number(root.querySelector('input.variation_id')?.value || 0),context:context()}}));
     }
     let pointer = null, dragged = false;
-    track.addEventListener('pointerdown', event => { pointer = {x:event.clientX,y:event.clientY}; dragged=false; },{signal});
-    track.addEventListener('pointermove', event => { if(pointer && Math.abs(event.clientX-pointer.x)>12) dragged=true; },{signal});
-    track.addEventListener('click', event => { if(dragged){event.preventDefault();event.stopImmediatePropagation();} },{capture:true,signal});
-    track.addEventListener('pointerup',()=>{pointer=null;},{signal});
-    track.addEventListener('keydown',event=>{if(event.key==='ArrowRight'||event.key==='ArrowLeft'){event.preventDefault();track.scrollBy({left:track.clientWidth*(event.key==='ArrowRight'?1:-1),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}},{signal});
+    track.addEventListener('pointerdown', event => { if (event.isPrimary === false || event.button !== 0) return; pointer = {id:event.pointerId,x:event.clientX,y:event.clientY}; dragged=false; },{signal});
+    track.addEventListener('pointermove', event => { if(pointer && event.pointerId===pointer.id){const x=Math.abs(event.clientX-pointer.x),y=Math.abs(event.clientY-pointer.y);if(x>12 && x>y)dragged=true;} },{signal});
+    track.addEventListener('click', event => { const suppress=dragged; dragged=false; if(suppress && event.detail!==0){event.preventDefault();event.stopImmediatePropagation();} },{capture:true,signal});
+    track.addEventListener('pointerup',event=>{if(pointer?.id===event.pointerId)pointer=null;},{signal});
+    const cancelPointer=event=>{if(pointer?.id===event.pointerId){pointer=null;dragged=false;}};
+    track.addEventListener('pointercancel',cancelPointer,{signal});track.addEventListener('lostpointercapture',cancelPointer,{signal});
+    document.addEventListener('visibilitychange',()=>{if(document.hidden){pointer=null;dragged=false;}},{signal});
+    track.addEventListener('keydown',event=>{
+      if(event.key!=='ArrowRight' && event.key!=='ArrowLeft')return;
+      const slides=[productSlide,reportSlide].filter(slide=>!slide.hidden && !slide.disabled);
+      const current=slides.indexOf(document.activeElement);if(current<0)return;
+      const target=slides[Math.max(0,Math.min(slides.length-1,current+(event.key==='ArrowRight'?1:-1)))];
+      event.preventDefault();const left=target.getBoundingClientRect().left-track.getBoundingClientRect().left+track.scrollLeft;
+      target.focus({preventScroll:true});track.scrollTo({left,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+    },{signal});
     document.addEventListener('visibilitychange',()=>{if(!document.hidden && !reportRequest && Date.now()-lastReportRead>60000)reportReadPromise=readReports();},{signal});
     document.addEventListener('vc:product-restore-cancel',()=>{reportOpenIntent++;},{signal});
     dialog.addEventListener('close',()=>api.destroy(),{once:true,signal});
@@ -336,7 +410,7 @@
       openReport,
       openImage,
       updateMedia(image) { productImage=image; renderProduct(); },
-      destroy() { if(destroyed)return; destroyed=true; clearInterval(tickerPoll); reportOpenIntent++; pendingFeedback=null; nativeFeedback?.destroy(); window.jQuery?.(document.body).off(feedbackNamespace); lifecycle.abort(); reportRequest?.abort(); formObserver.disconnect(); cancelAnimationFrame(frame); ticker?.destroy(); closeNested(); viewer?.dispose(); nested?.remove(); root.vcExperience=null; }
+      destroy() { if(destroyed)return; destroyed=true; clearInterval(tickerPoll); reportOpenIntent++; pendingFeedback=null; nativeFeedback?.destroy(); window.jQuery?.(document.body).off(feedbackNamespace); lifecycle.abort(); navigation?.destroy(); reportRequest?.abort(); formObserver.disconnect(); cancelAnimationFrame(frame); ticker?.destroy(); children.destroy(); root.vcExperience=null; }
     };
     refresh(); reportReadPromise=readReports(); readTicker(); return api;
   };
