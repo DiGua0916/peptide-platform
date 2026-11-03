@@ -195,7 +195,10 @@ final class Hub {
 	public static function notify( \WP_REST_Request $request ): \WP_REST_Response {
 		try {
 			if ( strlen( $request->get_body() ) > 8192 ) { throw new Protocol_Error( 'invalid_notification', 413 ); }
-			$p = $request->get_body_params();
+			// The live provider sends JSON notifications; keep legacy form callbacks too.
+			// Select one declared body format, never merge query/form/JSON parameters.
+			$p = $request->is_json_content_type() ? $request->get_json_params() : $request->get_body_params();
+			if ( ! is_array( $p ) ) { throw new Protocol_Error( 'invalid_notification', 400 ); }
 			foreach ( array( 'order_number', 'status', 'transaction_id', 'sign' ) as $key ) { if ( ! is_string( $p[ $key ] ?? null ) || strlen( $p[ $key ] ) > 512 ) { throw new Protocol_Error( 'invalid_notification', 400 ); } }
 			if ( ! in_array( $p['status'], array( 'SUCCEEDED', 'FAILED' ), true ) || ! preg_match( '/^[\x21-\x7e]{0,512}$/D', $p['transaction_id'] ) || ( 'SUCCEEDED' === $p['status'] && '' === $p['transaction_id'] ) ) { throw new Protocol_Error( 'invalid_notification', 400 ); }
 			$row = Hub_Store::get( $p['order_number'] );
