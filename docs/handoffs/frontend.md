@@ -1103,3 +1103,13 @@ functions.php新增vc_card_display_product，使用Woo get_visible_children的me
 配送配置保持：WC仅zone0且无method；另有PeptideCore Shipping Plans全局方式，按原国家/州精确匹配，每组缺运费则不返回价格，未新增全球免费率。自定义方案摘要另见work/country-shipping-verification.json。开放列表不等于所有地区均已有配送或支付能力；按原生结账结果展示。没有改后台插件源码、应用开关或支付方法。现站运行配置变化不会自动迁到服务器或改变新建店铺US-only默认；如后续要改模板策略，由后端协调。
 
 备份/验证脚本位于D:/Codex/Tasks/2026-11-03/checkout-mobile-polish/work/countries-before.json、countries-after.json、update-countries.php（一次性，不盲目重跑）；DB/私有配置不入Git。本轮源码无修改，只提交本交接，保留实际可审核记录。
+
+### 2026-11-03 · Codex：支付选择前置与完整账单信息（CHECKOUT-PAYMENT-FIRST）
+
+用户要求先选择后台实际开通的支付方式，Card展开正常付款信息，Apple Pay走钱包；澄清“正常的付款信息，国外是怎么填账单地址的，都要有”。前端保留完整联系/收货/账单地址，默认可同收货地址，也可单独填；Card卡号/有效期/CVV由支付方安全组件或托管收银台采集，不能以本地普通字段代替。后续真实渠道能力需求见同目录frontend-checkout-payment-first-2026-11-03.md（提案，不修改现行CONTRACT）。
+
+已用parse_blocks/serialize_blocks+原内容hash及编辑锁保护，发布原生checkout page8，仅将checkout-payment-block移至express之后/contact之前。全部12子块逐个序列化hash集合前后相同，attrs、原生附加字段/terms/actions均保留。原生页面编辑器和前台共用保存内容；自定义Design_Pages仍不支持checkout，不称新增了装修积木。未移动React托管DOM、未新增主题或插件业务源码、未改商户开关。一次性publisher与前后原内容/回执保留D:/Codex/Tasks/2026-11-03/checkout-payment-first/work，不入Git也不盲目重跑。
+
+桌面及正式同源390×844手机实际DOM确认payment在contact/shipping之前，最终Place Order仍存在。手机取消Use same address for billing后出现独立billing-country/first_name/last_name/address_1/address_2/city/state/postcode/phone，country251项含提示；恢复checked=true后billing-fields收起，body无横向溢出。只切换复选框并已恢复，未填资料、改用户车数量或提交订单。截图outputs/payment-first-mobile.png及billing-address-mobile.png，手机预览/正式结账标签保留；非实体手机验收。
+
+实际后端只读核对：本机所有原生gateway disabled/unavailable。Panapay has_fields=false、Blocks content仅description，现有流程在最终提交后创建hosted iframe/redirect；Apple Pay图标仅展示，无真正钱包会话/设备资格检测。故本轮完成原生顺序及账单表单验证，没有完成选卡站内收卡、Apple Pay授权/付款。已发群请求@Claude提供支付方确认的method_type/checkout_flow、托管字段SDK/令牌化及真实ApplePay，注意Bridge严格DTO与HQ→店铺版本协调；选择方式本身不下单/不创建会话。当前服务器/HQ是否另有开通账号须后端核对，未根据本机关闭推断其他环境。
