@@ -137,13 +137,14 @@ test('real home capture can stop its first lazy click without hiding that truste
  const home=fs.readFileSync(path.join(__dirname,'../assets/home-quick-view.js'),'utf8');
  const start="  document.addEventListener('click', event => {",end='  // Keep the product selection underneath the live bag';
  const capture=home.slice(home.indexOf(start),home.indexOf(end));assert.ok(capture.includes('event.stopImmediatePropagation()'));
+ const pendingSupport=home.slice(home.indexOf('  function clearPending()'),home.indexOf('  function announce('));
  let ready=false,complete,lateDocumentClicks=0,replays=0,presentTurn;
  const request=new Promise(resolve=>{complete=()=>{ready=true;resolve();};});
  const e=fixture060({outside:true,beforeObserve(env){
   env.opener.setAttribute('data-vc-home-product','101');
   const nativeQuery=env.document.querySelector;
   env.document.querySelector=selector=>selector.startsWith('dialog.vc-showcase-quick[open]')?(env.dialog.open?env.product:null):nativeQuery(selector);
-  vm.runInNewContext(capture,{document:env.document,window:env.window,openIntent:0,homeProduct:'.vc-home-quick-product',canOpen:()=>true,templateFor:()=>ready?{}:null,announce(){},loadTemplate:()=>request,present(root,opener){root.vcHomeOpener=opener;env.document.dispatchEvent({type:'vc:product-presented',detail:{root,dialog:env.dialog,productId:101}});}});
+  vm.runInNewContext(pendingSupport+capture,{document:env.document,window:env.window,openIntent:0,pendingOpeners:new Map(),loadingStatus:null,homeProduct:'.vc-home-quick-product',canOpen:()=>true,templateFor:()=>ready?{}:null,announce(){},loadTemplate:()=>request,present(root,opener){root.vcHomeOpener=opener;env.document.dispatchEvent({type:'vc:product-presented',detail:{root,dialog:env.dialog,productId:101}});}});
   // This document listener exists before the later visitor observer, matching
   // the production enqueue order. The native lazy capture must suppress it.
   env.document.addEventListener('click',()=>lateDocumentClicks++,true);

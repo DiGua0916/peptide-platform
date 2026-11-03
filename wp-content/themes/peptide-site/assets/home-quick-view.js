@@ -5,9 +5,23 @@
   const homeProduct = '.vc-home-quick-product';
   const requests = new Map();
   const feedbacks = new WeakMap();
+  const pendingOpeners = new Map();
   let openIntent = 0, loadingStatus;
   const templateFor = id => document.querySelector('template[data-vc-quick-product="' + id + '"]');
   const canOpen = () => window.HTMLDialogElement && HTMLDialogElement.prototype.showModal && window.fetch && window.AbortController;
+  function clearPending() {
+    for (const link of pendingOpeners.keys()) link.removeAttribute('aria-busy');
+    pendingOpeners.clear();
+    if (loadingStatus) loadingStatus.textContent = '';
+  }
+  function beginPending(link, intent) {
+    pendingOpeners.set(link, intent);
+    link.setAttribute('aria-busy', 'true');
+  }
+  function finishPending(link, intent) {
+    if (pendingOpeners.get(link) !== intent) return;
+    pendingOpeners.delete(link); link.removeAttribute('aria-busy');
+  }
   function announce(message) {
     if (!loadingStatus) {
       loadingStatus = document.createElement('span'); loadingStatus.className = 'vc-home-quick__loading-status';
@@ -17,7 +31,8 @@
   }
   async function loadTemplate(id) {
     if (templateFor(id)) return;
-    if (requests.has(id)) return requests.get(id).promise;
+    const existing = requests.get(id);
+    if (existing && !existing.controller.signal.aborted) return existing.promise;
     const settings = window.vcHomeQuickView;
     const api = new URL(settings?.productApi || '', location.href);
     if (!settings?.productApi || api.origin !== location.origin || !/^https?:$/.test(api.protocol)) throw new Error('Unavailable product service');
@@ -41,7 +56,7 @@
             template.dataset.vcQuickProduct !== id ||
             template.content.firstElementChild?.dataset.vcProductId !== id) throw new Error('Invalid product template');
         if (!templateFor(id)) document.body.append(template);
-      } finally { clearTimeout(timer); requests.delete(id); }
+      } finally { clearTimeout(timer); if (requests.get(id)?.controller === controller) requests.delete(id); }
     })();
     requests.set(id, {promise, controller});
     return promise;
@@ -221,9 +236,10 @@
     const id = link.dataset.vcHomeProduct;
     if (!/^[1-9]\d*$/.test(id) || !canOpen()) return;
     const intent = ++openIntent;
+    clearPending();
     if (!templateFor(id)) {
       event.preventDefault(); event.stopImmediatePropagation();
-      link.setAttribute('aria-busy', 'true'); announce('Loading product details…');
+      beginPending(link, intent); announce('Loading product details…');
       loadTemplate(id).then(() => {
         if (intent !== openIntent || !link.isConnected || document.visibilityState === 'hidden') return;
         announce(''); link.click();
@@ -233,7 +249,7 @@
         announce('Opening the product page…');
         // A failed read never triggers an add-to-cart attempt or hides the PDP.
         location.assign(link.href);
-      }).finally(() => link.removeAttribute('aria-busy'));
+      }).finally(() => finishPending(link, intent));
       return;
     }
     // A trusted browser click can run microtasks between capture and bubble.
@@ -257,6 +273,7 @@
     const link = event.target.closest?.('[data-vc-quick-open]');
     if (link && !link.hasAttribute('data-vc-home-product')) {
       ++openIntent;
+      clearPending();
       const dialog = document.querySelector('dialog.vc-showcase-quick');
       if (dialog) {
         const feedback = feedbacks.get(dialog); if (feedback) dialog.append(feedback);
@@ -269,8 +286,9 @@
       }
     }
   });
-  const cancelPending = () => { ++openIntent; requests.forEach(request => request.controller.abort()); announce(''); };
+  const cancelPending = () => { ++openIntent; clearPending(); requests.forEach(request => request.controller.abort()); announce(''); };
   document.addEventListener('vc:product-restore-cancel', cancelPending);
   document.addEventListener('keydown', event => { if (event.key === 'Escape') cancelPending(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) cancelPending(); });
   window.addEventListener('pagehide', cancelPending);
 })(window.jQuery);

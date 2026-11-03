@@ -1,0 +1,29 @@
+# Mobile storefront interaction polish
+
+2026-11-03 · Codex · STOREFRONT-INTERACTION-POLISH
+
+The user approved Impeccable + Interaction Design + Web Design Guidelines and asked for mobile-first interaction detail and smoother behavior. The two additional skills were installed through the standard skill installer and their actual guidance was read; the latest Vercel rules were fetched for this review. They are authoring tools, not storefront plugins. No new runtime library was added. Existing storefront identity, editable module settings, native Woo prices/forms, app switches and history ownership remain authoritative.
+
+## Implemented
+
+- `home-quick-view.js`: a current pending opener owns its feedback. A newer product, older showcase, Escape, restore cancellation, hidden page or pagehide clears obsolete feedback immediately. Completing an older request cannot clear a newer pending indicator or reopen the old product. A cancelled request is not reused on immediate retry, and its finally cannot delete the replacement request. Native modified clicks and the existing real product-page failure fallback are retained.
+- `storefront-motion.css`: pending reads use the existing card/image arrow area, with a compact Opening label and progress indicator, so no extra layout row is inserted. Existing product controls get intentional touch feedback, the clipped gallery gets an inset keyboard outline, the purchase bar accounts for the bottom safe area, and reduced-motion users keep a static loading state.
+- `product-dialog-experience.js`: each child dialog disposes only its own PDF viewer, including queued old close events. Overview/Details/COA follow the actual scroll position with aria-current, use measured toolbar height, and respect reduced motion. The same image source/WordPress responsive attributes and the same report presentation retain their DOM and focus; changed specification/date/identity/file/URLs still update. Empty URLs no longer become accidental same-origin requests. Gallery arrows move focus to the visible slide; pointer identity, vertical scrolling and cancelled gestures do not consume the wrong click.
+- `product-dialog-interaction.css`: the report viewer shell keeps its available viewport height while its PDF pages arrive. Width and product-image proportions remain responsive. `functions.php` loads this small stylesheet after the existing motion stylesheet.
+- `live-cart-experience.js/css`: keep the existing 320ms drawer entrance with a shorter 200ms exit. A closing drawer is temporarily inert, reopening cancels old motion, and stale callbacks/repeated close cannot close the new session or restart the timeout. Reduced motion, hidden state, pagehide/BFCache and disposal settle/clean the owned presentation. Native focus, actual cart API, keyed rows, totals, checkout processing guards and app switches are preserved.
+
+## Actual verification
+
+- Node combined regression: 63 top-level tests passed, including 8 pending-request cases, 10 product interaction cases, 11 menu lifecycle cases, native product observation, quick-view pairing and surface/history regressions. The cart test file additionally reports 31 drawer/checkout bridge checks; do not add these to the top-level total as if they were separate Node test cases.
+- PHP native cart entrypoint checks: 14 passed. Modified PHP lint, three JS syntax checks and git diff whitespace checks passed.
+- Impeccable static detection on the six changed/new JS/CSS assets returned exit 0 and `[]`. The explicitly backend-only DESIGN.md was excluded from this public-storefront scan; it was not rewritten. This source scan is not a device performance score.
+- Actual local formal site in a 390 × 844 same-origin frame: width=scrollWidth=390. Details and COA each became aria-current=location, with section top approximately 64.4px below the viewport and toolbar bottom approximately 56.7px. The 10mg real report rendered one PDF page in a 390 × 844 report shell. Product → Bag keeps the 390px product under a 378px right-side drawer and the same homepage URL. No quantity, customer address, order or payment action was performed.
+- Screenshot: `D:/Codex/Tasks/2026-11-03/storefront-interaction-polish/outputs/mobile-coa-polished.png`. Detailed regression output and source detector output are in the same task outputs directory. Final Back/refresh/publication verification is recorded separately after it actually runs.
+
+## Boundaries and release
+
+Full product-content exit remains constrained by the backend native close handler immediately clearing its body. This work does not delay system Back, clone purchase forms or monkeypatch close. A coordinated presentation teardown hook would be needed to add that exit safely. Multi-page PDF virtualization and physical iOS/Android FPS/gesture measurements were not performed; passing model tests and a desktop-hosted mobile viewport are not those measurements.
+
+Runtime allowlist: functions.php, storefront-motion.css, home-quick-view.js, product-dialog-experience.js, new product-dialog-interaction.css, live-cart-experience.js and live-cart-experience.css. Public product-dialog-experience.js must receive only this reviewed delta relative to `7fc5de7`; its exact older public `8c1daed` bytes lack an earlier unrelated FAQ append line. The scoped generator preserves that omission rather than copying the entire local file. No PHP FAQ/content/API, settings, plugin, database or private configuration is part of this release.
+
+The new publication framework coordinates the actual canonical lifecycle locks and verifies the exact active store identity alongside the runtime/config/current-pointer guards. It must reject a changed, retiring or retired store rather than resurrect it. Preparation does not equal deployment. See task `work/interaction-deployment-runbook.txt` and later actual receipts for the publication outcome.
