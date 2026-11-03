@@ -33,11 +33,27 @@ final class Provider_Client {
 		catch ( \Throwable $error ) { return self::observe( array( 'state' => 'unknown' ), 'response_json_invalid', $config, $response ); }
 		if ( ! is_array( $data ) ) { return self::observe( array( 'state' => 'unknown' ), 'response_shape_invalid', $config, $response, $data ); }
 		if ( 'FAILED' === ( $data['status'] ?? null ) ) { return self::observe( array( 'state' => 'failed' ), 'provider_failed', $config, $response, $data ); }
-		if ( 'SUCCEEDED' !== ( $data['status'] ?? null ) || ! in_array( $data['type'] ?? null, array( 'iframe', 'redirect' ), true )
-			|| ! is_string( $data['payment_url'] ?? null ) || '' === $data['payment_url'] || strlen( $data['payment_url'] ) > 8192 ) {
+		$valid = 'SUCCEEDED' === ( $data['status'] ?? null );
+		$containers = array( $data );
+		if ( is_array( $data['data'] ?? null ) ) { $containers[] = $data['data']; }
+		$session = null;
+		// Each supported level must supply its own complete pair; never combine levels.
+		foreach ( $containers as $container ) {
+			$has_type = array_key_exists( 'type', $container );
+			$has_url = array_key_exists( 'payment_url', $container );
+			if ( ! $has_type && ! $has_url ) { continue; }
+			if ( ! $has_type || ! $has_url || ! in_array( $container['type'], array( 'iframe', 'redirect' ), true )
+				|| ! is_string( $container['payment_url'] ) || '' === $container['payment_url'] || strlen( $container['payment_url'] ) > 8192 ) {
+				$valid = false; break;
+			}
+			$pair = array( 'type' => $container['type'], 'url' => $container['payment_url'] );
+			if ( null !== $session && $session !== $pair ) { $valid = false; break; }
+			$session = $pair;
+		}
+		if ( ! $valid || null === $session ) {
 			return self::observe( array( 'state' => 'unknown' ), 'response_contract_invalid', $config, $response, $data );
 		}
-		return self::observe( array( 'state' => 'created', 'type' => $data['type'], 'url' => $data['payment_url'] ), 'created', $config, $response, $data );
+		return self::observe( array_merge( array( 'state' => 'created' ), $session ), 'created', $config, $response, $data );
 	}
 
 	/** Optional fixed-shape diagnostics; observers cannot change the payment result. */
