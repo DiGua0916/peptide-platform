@@ -29,8 +29,8 @@ final class Workspace {
 		if ( self::$navigation_pending || ! self::enabled() || is_network_admin()
 			|| ( defined( 'IFRAME_REQUEST' ) && IFRAME_REQUEST ) ) { return; }
 		self::$navigation_pending = true;
-		// This is in <head>, before the normal admin styles/scripts. No timers or
-		// external resources delay the page; the marker releases on content parsing.
+		// Critical canvas/opt-in precede ordinary admin styles/scripts. SSR screens
+		// release on content parsing; only Woo's empty root gets a bounded footer gate.
 		echo '<style id="pc-workspace-navigation">html,body{background:#f7f7f7}@view-transition{navigation:auto}@media(prefers-reduced-motion:reduce){@view-transition{navigation:none}}</style>';
 		echo '<link rel="expect" href="#pc-workspace-content-ready" blocking="render">';
 	}
@@ -40,8 +40,74 @@ final class Workspace {
 		if ( ! self::$navigation_pending ) { return; }
 		self::$navigation_pending = false;
 		// Always release an expectation already emitted, even if a filter changes
-		// later in this request. Do not wait for media, analytics or editor boot.
+		// later in this request. Woo's empty React root may add one bounded blocker;
+		// the ordinary marker still releases when inline JS is disabled by CSP.
+		$page = isset( $_GET['page'] ) && is_string( $_GET['page'] ) ? $_GET['page'] : '';
+		if ( 'wc-admin' === $page && self::enabled() ) {
+			echo wp_get_inline_script_tag( self::react_navigation_readiness(), array( 'id' => 'pc-workspace-react-readiness' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static script; core applies inline-script attributes/CSP nonce filters.
+		}
 		echo '<span id="pc-workspace-content-ready" hidden aria-hidden="true"></span>';
+	}
+
+	/** Wait only for Woo's first layout commit, never report/API/data completion. */
+	private static function react_navigation_readiness(): string {
+		return <<<'JS'
+(function () {
+  'use strict';
+  var body = document.body;
+  if (!body || !body.classList.contains('pc-admin-workspace') || !body.classList.contains('woocommerce-admin-page') || body.classList.contains('woocommerce-embed-page')) return;
+  if (!document.querySelector('link[rel="expect"][href="#pc-workspace-content-ready"]') || document.getElementById('pc-workspace-react-expect') || document.getElementById('pc-workspace-react-ready')) return;
+  var root = document.querySelector('#wpbody-content > .wrap > #root');
+  if (!root || typeof MutationObserver !== 'function' || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+  function ready() {
+    // Woo synchronously adds an empty CES tracking div before React commits.
+    // Mere child nodes therefore do not prove that the application is painted.
+    if (root.querySelector('.woocommerce-global-error-boundary')) return true;
+    // Woo hides the whole work pane until its first mount effect removes this
+    // class. Observe that native change, without changing it or waiting for data.
+    return !body.classList.contains('woocommerce-admin-is-loading') && !!root.querySelector('.woocommerce-layout .woocommerce-layout__main');
+  }
+  if (ready()) return;
+  var gate = document.createElement('link');
+  try { if (!gate.relList || !gate.relList.supports || !gate.relList.supports('expect')) return; }
+  catch (_) { return; }
+  gate.id = 'pc-workspace-react-expect';
+  gate.rel = 'expect';
+  gate.href = '#pc-workspace-react-ready';
+  gate.setAttribute('blocking', 'render');
+  var observer = null;
+  var timer = null;
+  var finished = false;
+  function finish() {
+    if (finished) return;
+    finished = true;
+    if (observer) observer.disconnect();
+    if (timer !== null) window.clearTimeout(timer);
+    window.removeEventListener('pagehide', finish);
+    try {
+      var marker = document.createElement('span');
+      marker.id = 'pc-workspace-react-ready';
+      marker.hidden = true;
+      marker.setAttribute('aria-hidden', 'true');
+      if (document.body) document.body.appendChild(marker);
+    } finally {
+      if (gate.parentNode) gate.parentNode.removeChild(gate);
+    }
+  }
+  function check() { if (!root.isConnected || ready()) finish(); }
+  try {
+    // Install the fallback before adding a render blocker. A CSP-blocked script
+    // never adds this link, so the server-rendered ordinary marker stays enough.
+    timer = window.setTimeout(finish, 700);
+    observer = new MutationObserver(check);
+    window.addEventListener('pagehide', finish, {once: true});
+    document.head.appendChild(gate);
+    observer.observe(root, {childList: true, subtree: true});
+    observer.observe(body, {attributes: true, attributeFilter: ['class']});
+    check();
+  } catch (_) { finish(); }
+}());
+JS;
 	}
 
 	private static function canvas(): bool {
