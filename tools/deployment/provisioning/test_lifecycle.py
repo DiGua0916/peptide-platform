@@ -367,14 +367,54 @@ class Boundary(unittest.TestCase):
         @__import__('contextlib').contextmanager
         def record(path, nonblocking=False):
             events.append((str(path).replace('\\', '/'), nonblocking)); yield
+        @__import__('contextlib').contextmanager
+        def compat(path):
+            events.append((str(path).replace('\\', '/'), 'compatibility')); yield
         with patch.object(lifecycle, 'no_symlink_components'), \
              patch.object(lifecycle.Path, 'exists', return_value=True), \
              patch.object(lifecycle.Path, 'is_dir', return_value=True), \
              patch.object(lifecycle.Path, 'stat', return_value=types.SimpleNamespace(st_uid=0, st_mode=0o40700)), \
+             patch.object(lifecycle, 'private_dir', side_effect=lambda path: path) as anchor, \
+             patch.object(lifecycle, 'legacy_compat_lock', side_effect=compat), \
              patch.object(lifecycle, 'lock', side_effect=record):
-            with lifecycle.operation_locks({'role': 'web'}): pass
-        self.assertEqual(events, [('/var/lib/vialcove-deploy/nginx-update.lock', True),
+            with lifecycle.operation_locks({'role': 'web', 'web_ledger_root': '/var/lib/vialcove-provision-web'}): pass
+        anchor.assert_called_once_with(Path('/var/lib/vialcove-provision-web/locks'))
+        self.assertEqual(events, [('/var/lib/vialcove-provision-web/locks/nginx-update.lock', True),
+                                  ('/var/lib/vialcove-deploy/nginx-update.lock', 'compatibility'),
                                   ('/srv/vialcove-data/tenant-backups/backup.lock', True)])
+
+    def test_web_operation_never_falls_back_from_untrusted_canonical_anchor(self):
+        with patch.object(lifecycle, 'private_dir', side_effect=ValueError('private_directory_permissions')), \
+             patch.object(lifecycle, 'legacy_compat_lock') as legacy, \
+             patch.object(lifecycle, 'lock') as root_lock:
+            with self.assertRaisesRegex(ValueError, 'private_directory_permissions'):
+                with lifecycle.operation_locks({'role':'web','web_ledger_root':'/var/lib/vialcove-provision-web'}): pass
+        legacy.assert_not_called(); root_lock.assert_not_called()
+
+    def test_legacy_bridge_rejects_inode_replacement_without_creating_any_file(self):
+        with tempfile.TemporaryDirectory(dir=TEST_ROOT) as temp:
+            path=Path(temp)/'legacy.lock'; path.write_bytes(b''); path.chmod(0o600)
+            fd_stat, path_stat = os.fstat, lifecycle.Path.lstat
+            def root_private(info):
+                values=list(info); values[4]=0; values[0]=(values[0]&~0o777)|0o600
+                return os.stat_result(values)
+            changed=[False]
+            def linked_stat(p,*a,**kw):
+                values=list(root_private(path_stat(p,*a,**kw)))
+                if changed[0] and p == path: values[1] += 1
+                return os.stat_result(values)
+            with patch.object(lifecycle.os,'O_NOFOLLOW',getattr(os,'O_NOFOLLOW',0),create=True), \
+                 patch.object(lifecycle.os,'fstat',side_effect=lambda fd:root_private(fd_stat(fd))), \
+                 patch.object(lifecycle.Path,'lstat',linked_stat), \
+                 patch.object(lifecycle.fcntl,'flock'):
+                with lifecycle.legacy_compat_lock(path): pass
+                with self.assertRaisesRegex(ValueError,'legacy_deployment_lock_replaced'):
+                    with lifecycle.legacy_compat_lock(path):
+                        # Windows denies renaming open files; model changed
+                        # directory-entry inode without claiming OS certification.
+                        changed[0]=True
+                with self.assertRaises(FileNotFoundError):
+                    with lifecycle.legacy_compat_lock(Path(temp)/'missing.lock'): pass
 
     def test_purge_identity_rechecked_and_replaced_resource_not_deleted(self):
         with tempfile.TemporaryDirectory(dir=TEST_ROOT) as temp:

@@ -366,31 +366,60 @@ def lock(path, *, nonblocking=False):
 
 
 @contextlib.contextmanager
+def legacy_compat_lock(path):
+    """Transition aid for honest old publishers, NOT a security anchor.
+
+    The old deployment HOME is owned by the deployment account. Its existing
+    root-only lock leaf is checked before/after use but that account can replace
+    a directory entry. Security authority therefore remains the separate root
+    private canonical lock. No symlink, new legacy file or HOME ownership change
+    is allowed here. Once all publishers use canonical, remove this bridge.
+    """
+    path = Path(path)
+    no_symlink_components(path)
+    fd = os.open(path, os.O_RDWR | os.O_NOFOLLOW)
+    with os.fdopen(fd, 'a') as stream:
+        def check():
+            info, linked = os.fstat(stream.fileno()), path.lstat()
+            require(stat.S_ISREG(info.st_mode) and info.st_uid == 0 and info.st_nlink == 1
+                    and stat.S_IMODE(info.st_mode) == 0o600 and stat.S_ISREG(linked.st_mode)
+                    and linked.st_uid == 0 and linked.st_nlink == 1
+                    and stat.S_IMODE(linked.st_mode) == 0o600
+                    and (info.st_dev, info.st_ino) == (linked.st_dev, linked.st_ino),
+                    'legacy_deployment_lock_replaced')
+        check()
+        fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        check()
+        try:
+            yield
+        finally:
+            check()
+
+
+@contextlib.contextmanager
 def operation_locks(c):
-    """Web lock order: create.lock (caller) -> nginx -> backup, never HQ.
+    """Web: create.lock -> canonical nginx -> legacy bridge -> backup.
 
     Admin deployment locks are held by worker's caller, outside this module.
     Nonblocking acquisition prevents a timed-out SSH request from subsequently
     making a delayed destructive mutation after its coordinator has given up.
     """
     require(c['role'] == 'web', 'web_lock_role')
-    deployment = Path('/var/lib/vialcove-deploy')
-    no_symlink_components(deployment)
-    if not deployment.exists():
-        deployment.mkdir(mode=0o700)
-    require(deployment.stat().st_uid == 0 and not deployment.stat().st_mode & 0o022,
-            'deployment_lock_directory')
+    deployment = private_dir(Path(c['web_ledger_root']) / 'locks')
     backup = Path('/srv/vialcove-data/tenant-backups')
     no_symlink_components(backup)
     require(backup.is_dir() and backup.stat().st_uid == 0 and not backup.stat().st_mode & 0o077,
             'backup_lock_directory')
     with contextlib.ExitStack() as stack:
-        for path, code in ((deployment / 'nginx-update.lock', 'deployment_busy'),
-                           (backup / 'backup.lock', 'backup_busy')):
-            try:
-                stack.enter_context(lock(path, nonblocking=True))
-            except BlockingIOError:
-                raise ValueError(code)
+        try:
+            stack.enter_context(lock(deployment / 'nginx-update.lock', nonblocking=True))
+            stack.enter_context(legacy_compat_lock('/var/lib/vialcove-deploy/nginx-update.lock'))
+        except BlockingIOError:
+            raise ValueError('deployment_busy')
+        try:
+            stack.enter_context(lock(backup / 'backup.lock', nonblocking=True))
+        except BlockingIOError:
+            raise ValueError('backup_busy')
         yield
 
 
@@ -541,6 +570,14 @@ def preflight(c, request, site, *, restoring=False):
         checked_file(path)
     if role == 'web':
         database_check(resources['db'])
+        if not restoring:
+            # Restore may unlock only accounts this lifecycle found open and
+            # then locked itself. An operator's pre-existing security lock is
+            # never silently lifted by a later restore.
+            for account in resources['db']['accounts']:
+                require(mysql("SELECT account_locked FROM mysql.user WHERE User='" + account['user']
+                              + "' AND Host='" + account['host'] + "';") == 'N',
+                        'database_account_prelocked')
     return True
 
 
