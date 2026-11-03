@@ -80,6 +80,7 @@ final class Menu {
 		if ( ! self::workspace_enabled() ) {
 			return;
 		}
+		self::trim_command_palette();
 		$dependencies = array();
 		if ( str_contains( $hook, 'pchq' ) ) {
 			$file = PEPTIDE_HQ_DIR . '/assets/hq-admin.css';
@@ -90,6 +91,16 @@ final class Menu {
 		wp_enqueue_style( 'peptide-hq-workspace', plugins_url( 'assets/hq-workspace.css', PEPTIDE_HQ_FILE ), $dependencies, PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $file ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 		$file = PEPTIDE_HQ_DIR . '/assets/hq-workspace.js';
 		wp_enqueue_script( 'peptide-hq-workspace', plugins_url( 'assets/hq-workspace.js', PEPTIDE_HQ_FILE ), array(), PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $file ), true ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+	}
+
+	/** Keep the native palette on editors; HQ's own operational screens use the normal menu. */
+	private static function trim_command_palette(): void {
+		$screen = get_current_screen();
+		$page = isset( $_GET['page'] ) && is_string( $_GET['page'] ) ? $_GET['page'] : '';
+		if ( ! $screen || is_network_admin() || ! preg_match( '/\Apchq(?:-[a-z0-9-]+)?\z/', $page )
+			|| ! str_ends_with( $screen->id, '_page_' . $page ) || $screen->is_block_editor() ) { return; }
+		foreach ( array( 'wp-core-commands', 'wp-commands' ) as $handle ) { wp_dequeue_script( $handle ); }
+		wp_dequeue_style( 'wp-commands' );
 	}
 
 	/** Presentation hooks also used on the separate HQ login screen. */

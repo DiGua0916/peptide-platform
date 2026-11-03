@@ -4,7 +4,8 @@ defined( 'ABSPATH' ) || exit;
 
 function vc_live_cart_available(): bool {
     return function_exists( 'WC' ) && function_exists( 'vc_live_cart_active' ) && vc_live_cart_active()
-        && ! is_admin() && ! is_checkout() && ! isset( $_GET['vc_native_cart'] );
+        && ! is_admin() && ! isset( $_GET['vc_native_cart'] )
+        && ! ( is_checkout() && function_exists( 'is_wc_endpoint_url' ) && is_wc_endpoint_url() );
 }
 
 function vc_live_cart_markup( bool $drawer = false ): string {
@@ -48,11 +49,12 @@ add_filter( 'render_block_woocommerce/cart', function ( $html ) {
 add_action( 'wp_footer', function () {
     if ( ! vc_live_cart_available() || is_cart() ) { return; }
     echo '<dialog id="vc-live-cart-drawer" class="vc-live-cart-drawer" aria-labelledby="vc-live-bag-title">' . vc_live_cart_markup( true ) . '</dialog>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- markup escapes individual values.
-}, 20 );
+// wp_print_footer_scripts runs at 20: the controller must see its markup first.
+}, 10 );
 
 add_action( 'wp_enqueue_scripts', function () {
     if ( ! vc_live_cart_available() ) { return; }
-    // There is one cart controller. Checkout and its Blocks configuration are untouched.
+    // One cart controller; checkout keeps its native fields and data store.
     wp_dequeue_script( 'vialcove-cart-drawer' );
     wp_dequeue_style( 'vialcove-cart-drawer' );
     if ( is_cart() ) {
@@ -64,6 +66,7 @@ add_action( 'wp_enqueue_scripts', function () {
     foreach ( array( 'live-cart-feedback', 'live-cart-progress', 'live-cart-recommendation', 'live-cart-experience' ) as $asset ) {
         wp_enqueue_style( 'vc-' . $asset, $uri . $asset . '.css', array(), (string) filemtime( $dir . $asset . '.css' ) );
         $deps = 'live-cart-recommendation' === $asset ? array( 'vc-live-cart-feedback', 'vc-live-cart-progress' ) : ( 'live-cart-experience' === $asset ? array( 'vc-live-cart-recommendation' ) : array() );
+        if ( 'live-cart-experience' === $asset && is_checkout() ) { $deps = array_merge( $deps, array( 'wp-data', 'wc-blocks-data-store' ) ); }
         wp_enqueue_script( 'vc-' . $asset, $uri . $asset . '.js', $deps, (string) filemtime( $dir . $asset . '.js' ), true );
     }
     wp_localize_script( 'vc-live-cart-experience', 'VialCoveLiveCartConfig', array(
@@ -75,6 +78,7 @@ add_action( 'wp_enqueue_scripts', function () {
         'cartUrl' => esc_url_raw( wc_get_cart_url() ), 'checkoutUrl' => esc_url_raw( wc_get_checkout_url() ), 'shopUrl' => esc_url_raw( vc_url( 'shop' ) ),
         'mascotUrl' => $uri . 'live-cart-bean.png',
         'wpNonce' => is_user_logged_in() ? wp_create_nonce( 'wp_rest' ) : '',
+        'nativeCheckout' => is_checkout(),
         'settings' => vc_live_cart_settings(),
     ) );
 }, 90 );

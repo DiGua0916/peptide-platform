@@ -94,8 +94,8 @@ namespace {
     foreach ( array( false, true ) as $test_mode ) {
         $config = array_merge( $base, array( 'test_mode' => $test_mode, 'mode' => $test_mode ? 'test' : 'live' ) );
         enqueue_fixture( $config );
-        expect_same( array( 'vialcove-visitor-video', 'vialcove-visitor-observer', 'vialcove-visitor-adapter' ), array_keys( $scripts ), 'enabled mode loads all three scripts' );
-        expect_same( array( 'vialcove-visitor-video' ), $scripts['vialcove-visitor-observer']['dependencies'], 'observer follows video helper' );
+        expect_same( array( 'vialcove-visitor-video', 'vialcove-visitor-surfaces', 'vialcove-visitor-observer', 'vialcove-visitor-adapter' ), array_keys( $scripts ), 'enabled mode loads gated tracking helpers and transport' );
+        expect_same( array( 'vialcove-visitor-video', 'vialcove-visitor-surfaces' ), $scripts['vialcove-visitor-observer']['dependencies'], 'observer follows video and surface helpers' );
         expect_same( array( 'vialcove-visitor-observer' ), $scripts['vialcove-visitor-adapter']['dependencies'], 'transport follows observer' );
         foreach ( $scripts as $handle => $script ) {
             expect_same( true, $script['footer'], $handle . ' footer placement' );

@@ -50,6 +50,98 @@
         rows.push({ label: 'Estimated total', minor: t.total_price, total: true });
         return rows;
     }
+    /** One native dialog on every enabled device; keep its parent product open. */
+    function createDrawerController({ dialog, document, window: win, enabled = () => true, refresh = () => {} }) {
+        const page = document.documentElement, motion = win.matchMedia('(prefers-reduced-motion: reduce)');
+        let source = null, session = false, closeTimer = 0, frame = 0, previousPadding = '', disposed = false;
+        const available = () => !disposed && !!dialog && typeof dialog.showModal === 'function' && enabled();
+        const notify = (name, type) => {
+            document.dispatchEvent(new win.CustomEvent(name, { detail: { dialog, trigger: source } }));
+            document.dispatchEvent(new win.CustomEvent('vc:visitor-action', { detail: { type, data: { source: 'drawer' } } }));
+        };
+        function cleanup(restoreFocus = true, announce = true) {
+            win.clearTimeout(closeTimer); closeTimer = 0;
+            if (frame) win.cancelAnimationFrame(frame); frame = 0;
+            dialog?.classList.remove('is-open');
+            if (!session) return;
+            session = false; page.classList.remove('vc-live-cart-open'); page.style.paddingRight = previousPadding;
+            source?.setAttribute?.('aria-expanded', 'false');
+            if (restoreFocus && source?.isConnected) source.focus?.({ preventScroll: true });
+            if (announce) notify('vc:live-cart-closed', 'cart_close');
+        }
+        function finishClose() { if (dialog?.open) dialog.close(); cleanup(); }
+        function open(trigger) {
+            if (!available()) return false;
+            win.clearTimeout(closeTimer); closeTimer = 0;
+            if (trigger?.isConnected) source = trigger;
+            if (!dialog.open) {
+                previousPadding = page.style.paddingRight;
+                try { dialog.showModal(); } catch (_) { return false; }
+                session = true;
+                const gap = Math.max(0, win.innerWidth - page.clientWidth);
+                if (gap) page.style.paddingRight = ((parseFloat(win.getComputedStyle(page).paddingRight) || 0) + gap) + 'px';
+                page.classList.add('vc-live-cart-open');
+                notify('vc:live-cart-opened', 'cart_open');
+            }
+            source?.setAttribute?.('aria-haspopup', 'dialog'); source?.setAttribute?.('aria-controls', dialog.id); source?.setAttribute?.('aria-expanded', 'true');
+            dialog.getBoundingClientRect();
+            if (frame) win.cancelAnimationFrame(frame);
+            frame = win.requestAnimationFrame(() => { frame = 0; if (dialog.open) dialog.classList.add('is-open'); });
+            dialog.querySelector('[data-cart-close]')?.focus({ preventScroll: true });
+            refresh(); return true;
+        }
+        function close(immediate = false) {
+            if (!dialog?.open) { cleanup(); return; }
+            if (frame) win.cancelAnimationFrame(frame); frame = 0;
+            dialog.classList.remove('is-open'); win.clearTimeout(closeTimer);
+            if (immediate || motion.matches) finishClose(); else closeTimer = win.setTimeout(finishClose, 320);
+        }
+        const onClose = () => { if (!dialog.open) cleanup(); };
+        dialog?.addEventListener('close', onClose);
+        return { available, open, close, destroy() {
+            disposed = true; dialog?.removeEventListener('close', onClose);
+            if (dialog?.open) dialog.close(); cleanup(false, false);
+        } };
+    }
+    /** Woo's contents-only action deliberately preserves dirty address fields. */
+    function createNativeCheckoutBridge(win, enabled = false) {
+        let lastContents = '';
+        const stores = () => ({ data: win.wp?.data, cart: win.wc?.wcBlocksData?.cartStore, checkout: win.wc?.wcBlocksData?.checkoutStore });
+        function ready() {
+            if (!enabled) return true;
+            try { const { data, cart } = stores(); return !!cart && typeof data?.select(cart) === 'object' && typeof data?.dispatch(cart)?.receiveCartContents === 'function'; } catch (_) { return false; }
+        }
+        function processing() {
+            if (!enabled) return false;
+            try { const { data, checkout } = stores(); return !!(checkout && data?.select(checkout)?.isProcessing?.()); } catch (_) { return true; }
+        }
+        function busy() {
+            if (!enabled) return false;
+            try {
+                const { data, cart, checkout } = stores(), state = cart && data?.select(cart), order = checkout && data?.select(checkout);
+                return !state || !!(state.isCustomerDataUpdating?.() || state.isAddressFieldsForShippingRatesUpdating?.() || state.hasPendingItemsOperations?.() || order?.isCalculating?.() || order?.isProcessing?.());
+            } catch (_) { return true; }
+        }
+        function receive(cart) {
+            if (!enabled || !validCart(cart) || busy()) return false;
+            const { shipping_address, billing_address, ...contents } = cart;
+            const fingerprint = JSON.stringify(contents);
+            if (lastContents === fingerprint) return false;
+            const previous = lastContents; lastContents = fingerprint;
+            try {
+                const { data, cart: store } = stores(), actions = store && data?.dispatch(store);
+                if (typeof actions?.receiveCartContents !== 'function') { lastContents = previous; return false; }
+                actions.receiveCartContents(contents); return true;
+            } catch (_) { lastContents = previous; return false; }
+        }
+        function subscribe(callback) {
+            if (!enabled) return () => {};
+            const { data, cart, checkout } = stores(), stops = [];
+            if (typeof data?.subscribe === 'function') for (const store of [cart, checkout].filter(Boolean)) stops.push(data.subscribe(callback, store));
+            return () => stops.forEach(stop => stop?.());
+        }
+        return { enabled, ready, busy, processing, receive, subscribe };
+    }
     function createClient(config, environment = {}) {
         const fetcher = environment.fetch || global.fetch.bind(global), notify = environment.notify || (() => {});
         let cart = null, nonce = '', valid = false, pending = false, error = '', errorOperation = '', epoch = 0, readPromise = null, readController = null, externalTimer = null, destroyed = false;
@@ -93,7 +185,7 @@
         }
         function invalidate() { epoch++; readController?.abort(); readPromise = null; readController = null; valid = false; }
         async function write(action, body) {
-            if (destroyed || pending || !valid || !nonce) throw new Error('Your bag is updating. Please try again when it is ready.');
+            if (destroyed || pending || !valid || !nonce || (environment.canWrite && !environment.canWrite())) throw new Error('Your bag is updating. Please try again when it is ready.');
             invalidate(); const generation = epoch; pending = true; error = ''; errorOperation = ''; change(); notify('start', { source: 'drawer', owner: 'live-cart' });
             try {
                 const result = await request(config.cartApiUrl + '/' + action, body);
@@ -120,19 +212,20 @@
         }
         return { snapshot, refresh, request, write, externalStart, externalUpdate, destroy() { destroyed = true; invalidate(); clearTimeout(externalTimer); } };
     }
-    if (typeof module === 'object' && module.exports) module.exports = { validCart, money, totals, createClient, activityAllowed, activityPresentation, reconcileRows, statusPresentation };
+    if (typeof module === 'object' && module.exports) module.exports = { validCart, money, totals, createClient, activityAllowed, activityPresentation, reconcileRows, statusPresentation, createDrawerController, createNativeCheckoutBridge };
     if (!global?.document || !global.VialCoveLiveCartConfig) return;
     const document = global.document, config = global.VialCoveLiveCartConfig, settings = config.settings || {}, roots = [...document.querySelectorAll('[data-vc-live-cart]')];
     if (!roots.length) return;
     const drawer = document.getElementById('vc-live-cart-drawer'), isDesktop = global.matchMedia('(min-width: 768px)'), parentIds = new Map();
+    const nativeCheckout = createNativeCheckoutBridge(global, config.nativeCheckout === true);
     const el = (tag, cls, text) => { const node = document.createElement(tag); node.className = cls || ''; if (text !== undefined) node.textContent = text; return node; };
     const clean = value => { const node = document.createElement('textarea'); node.innerHTML = String(value || ''); return node.value; };
     const safeUrl = value => { try { const url = new URL(value, location.href); return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password ? url.href : ''; } catch (_) { return ''; } };
-    let recent = null, recommendation = null, enrichmentPending = false, enrichment = 0, enrichmentTimer = 0, sourceElement = null, quickOpener = null, disposed = false;
+    let recent = null, recommendation = null, enrichmentPending = false, enrichment = 0, enrichmentTimer = 0, quickOpener = null, disposed = false;
     let appliedActivity = global.vcLiveCommerce?.activity?.config || null, activityRead = null;
     const views = roots.map(root => ({ root, rows: new Map(), recentSignature: '', totalsSignature: '', couponsSignature: '', progress: global.createCartProgress?.({ mount: root.querySelector('[data-cart-progress]') }), progressSignature: '', recommendation: global.createCartRecommendation?.({ mount: root.querySelector('[data-cart-recommendation]'), onChoose: candidate => choose(candidate.productId), onAdd: candidate => client.write('add-item', { id: candidate.purchasableId, quantity: candidate.quantity }) }) }));
-    const client = createClient(config, { notify(type, detail) {
-        if (type === 'state') { scheduleEnrichment(detail); render(detail); if (detail.pending) refreshActivityConfig(); }
+    const client = createClient(config, { canWrite: () => !nativeCheckout.busy(), notify(type, detail) {
+        if (type === 'state') { if (detail.valid && !detail.pending) nativeCheckout.receive(detail.cart); scheduleEnrichment(detail); render(detail); if (detail.pending) refreshActivityConfig(); }
         else document.dispatchEvent(new CustomEvent(type === 'start' ? 'vc:cart-mutation-start' : 'vc:cart-updated', { detail }));
     } });
     const deviceEnabled = () => (settings.visibility || {})[isDesktop.matches ? 'desktop' : 'mobile'] !== false;
@@ -197,6 +290,7 @@
     }
     function render(state) {
         if (disposed) return;
+        if (nativeCheckout.busy()) state = { ...state, pending: true };
         const { cart, valid, pending, error } = state;
         if (valid) document.querySelectorAll('.vc-cart-count').forEach(node => { node.textContent = String(cart.items_count); });
         for (const view of views) {
@@ -281,27 +375,24 @@
             } catch (_) { if (generation === enrichment) { recommendation = null; enrichmentPending = false; render(client.snapshot()); } }
         }, 250);
     }
-    function openDrawer(trigger) {
-        if (!drawer || drawer.open || !isDesktop.matches || !deviceEnabled()) return;
-        sourceElement = trigger; drawer.showModal(); document.documentElement.classList.add('vc-live-cart-open');
-        document.dispatchEvent(new CustomEvent('vc:live-cart-opened', { detail: { dialog: drawer, trigger } }));
-        refreshActivityConfig(); client.refresh();
-    }
-    function closeDrawer() {
-        if (!drawer?.open) return;
-        drawer.close(); document.documentElement.classList.remove('vc-live-cart-open');
-        sourceElement?.focus?.({ preventScroll: true });
-        document.dispatchEvent(new CustomEvent('vc:live-cart-closed', { detail: { dialog: drawer, trigger: sourceElement } }));
-    }
+    const drawerController = createDrawerController({ dialog: drawer, document, window: global, enabled: () => deviceEnabled() && nativeCheckout.ready() && !nativeCheckout.processing(), refresh: () => { refreshActivityConfig(); client.refresh(); } });
+    const openDrawer = trigger => {
+        // A product opened from an already visible bag returns to that bag.
+        // Do not reorder/reuse one cart as both the parent and a new child layer.
+        const product = drawer?.open && trigger?.closest?.('dialog.vc-showcase-quick[open]');
+        if (product) { product.close(); return drawerController.open(); }
+        return drawerController.open(trigger);
+    };
+    const closeDrawer = immediate => drawerController.close(immediate);
     document.addEventListener('click', event => {
         const link = event.target.closest?.('.cart-link,[data-vc-open-cart]');
-        if (link && isDesktop.matches && deviceEnabled() && drawer && !event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) { event.preventDefault(); openDrawer(link); }
+        if (link && !event.defaultPrevented && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.button === 0 && openDrawer(link)) event.preventDefault();
         if (event.target.closest?.('[data-cart-close]')) closeDrawer();
         const checkout = event.target.closest?.('[data-cart-checkout]'); if (checkout?.getAttribute('aria-disabled') === 'true') event.preventDefault();
     });
     drawer?.addEventListener('click', event => { if (event.target === drawer) closeDrawer(); });
     drawer?.addEventListener('cancel', event => { event.preventDefault(); closeDrawer(); });
-    isDesktop.addEventListener('change', () => { if (!isDesktop.matches && drawer?.open) closeDrawer(); render(client.snapshot()); if (canRead()) client.refresh(); });
+    isDesktop.addEventListener('change', () => { if (!deviceEnabled() && drawer?.open) closeDrawer(true); render(client.snapshot()); if (canRead()) client.refresh(); });
     for (const root of roots) {
         root.querySelector('[data-cart-retry]').addEventListener('click', () => client.refresh());
         root.querySelector('[data-cart-coupon]').addEventListener('submit', event => { event.preventDefault(); const input = event.currentTarget.elements.coupon, code = input.value.trim(); if (code) client.write('apply-coupon', { code }).then(() => { input.value = ''; }).catch(() => {}); });
@@ -313,7 +404,14 @@
     const refreshVisible = () => { if (canRead()) { refreshActivityConfig(); client.refresh(); } };
     document.addEventListener('visibilitychange', refreshVisible); global.addEventListener('focus', refreshVisible); global.addEventListener('pageshow', refreshVisible);
     const polling = setInterval(refreshVisible, 30000);
-    global.VialCoveLiveCart = { open: trigger => isDesktop.matches && drawer ? openDrawer(trigger) : location.assign(config.cartUrl), close: closeDrawer, refresh: () => client.refresh(), snapshot: () => client.snapshot() };
-    global.addEventListener('pagehide', event => { if (event.persisted) return; disposed = true; quickOpener?.remove(); clearInterval(polling); clearTimeout(enrichmentTimer); client.destroy(); views.forEach(view => { view.progress?.destroy(); view.recommendation?.destroy(); }); });
+    let wasNativeBusy = nativeCheckout.busy(), nativeRefreshTimer = 0;
+    const stopNativeSubscription = nativeCheckout.subscribe(() => {
+        if (disposed) return;
+        const busy = nativeCheckout.busy(); render(client.snapshot());
+        if (wasNativeBusy && !busy && drawer?.open) { clearTimeout(nativeRefreshTimer); nativeRefreshTimer = setTimeout(refreshVisible, 0); }
+        wasNativeBusy = busy;
+    });
+    global.VialCoveLiveCart = { canOpen: drawerController.available, open: trigger => openDrawer(trigger) || location.assign(config.cartUrl), close: closeDrawer, refresh: () => client.refresh(), snapshot: () => client.snapshot() };
+    global.addEventListener('pagehide', event => { if (event.persisted) return; disposed = true; stopNativeSubscription(); clearTimeout(nativeRefreshTimer); drawerController.destroy(); quickOpener?.remove(); clearInterval(polling); clearTimeout(enrichmentTimer); client.destroy(); views.forEach(view => { view.progress?.destroy(); view.recommendation?.destroy(); }); });
     if (deviceEnabled() && roots.some(root => root.dataset.drawer === '0')) refreshVisible();
 })(typeof window === 'undefined' ? null : window);

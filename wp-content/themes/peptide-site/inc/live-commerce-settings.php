@@ -33,7 +33,7 @@ add_filter( 'peptide_core_layout_definitions', function ( array $definitions ): 
     );
     if ( isset( $definitions['context_content']['settings'] ) ) {
         $definitions['context_content']['settings'] = array_merge( $definitions['context_content']['settings'], array(
-            $field::f( 'toggle', 'cart_experience_enabled', __( '购物车使用新版布局', 'peptide-site' ), true, array( 'group' => 'layout', 'help' => '仅购物车文档生效。电脑右侧抽屉、手机独立购物车页；交易仍使用 WooCommerce。' ) ),
+            $field::f( 'toggle', 'cart_experience_enabled', __( '购物车使用新版布局', 'peptide-site' ), true, array( 'group' => 'layout', 'help' => '仅购物车文档生效。电脑和手机均使用右侧购物车抽屉，独立购物车页保留作备用入口；交易仍使用 WooCommerce。' ) ),
             $field::f( 'toggle', 'cart_progress_enabled', __( '显示活动进度', 'peptide-site' ), true, array( 'help' => '只展示活动监听插件返回的实际优惠，不在此设置门槛。' ) ),
             $field::f( 'toggle', 'cart_recommendations_enabled', __( '显示接近下一档时的已浏览商品', 'peptide-site' ), true, array( 'help' => '活动插件同时开启推荐且返回有效报价时才展示；不自动加入商品。' ) ),
             $field::f( 'toggle', 'cart_recent_enabled', __( '显示最近浏览', 'peptide-site' ), true, array( 'help' => '引用最近浏览插件的实际记录；没有记录时整块隐藏。' ) ),

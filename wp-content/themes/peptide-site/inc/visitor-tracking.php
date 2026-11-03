@@ -143,7 +143,8 @@ add_action( 'wp_enqueue_scripts', function (): void {
     $root = get_template_directory();
     $url = get_template_directory_uri();
     wp_enqueue_script( 'vialcove-visitor-video', $url . '/assets/visitor-video.js', array(), (string) filemtime( $root . '/assets/visitor-video.js' ), true );
-    $observer_dependencies = array( 'vialcove-visitor-video' );
+    wp_enqueue_script( 'vialcove-visitor-surfaces', $url . '/assets/visitor-surfaces.js', array(), (string) filemtime( $root . '/assets/visitor-surfaces.js' ), true );
+    $observer_dependencies = array( 'vialcove-visitor-video', 'vialcove-visitor-surfaces' );
     $product_actions = is_callable( array( '\\PeptideCore\\Tracking\\Product_Actions', 'protocol' ) ) && 1 === \PeptideCore\Tracking\Product_Actions::protocol() && is_callable( array( '\\PeptideCore\\Tracking\\Product_Actions', 'clean' ) ) && is_callable( array( '\\PeptideCore\\Tracking\\Product_Actions', 'saved' ) );
     if ( $product_actions ) {
         wp_enqueue_script( 'vialcove-visitor-intents', $url . '/assets/visitor-intents.js', array(), (string) filemtime( $root . '/assets/visitor-intents.js' ), true );

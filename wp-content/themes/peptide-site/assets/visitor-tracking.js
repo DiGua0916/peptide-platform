@@ -184,7 +184,7 @@
     let retryAt = 0;
     let pageId = id(), seq = 0, lastActivity = Date.now(), stopped = false, suspended = false;
     let sending = false, flushTimer, flushAt = Infinity, requestController, requestTimer, heartbeatTimer;
-    let videoObserver, productObserver, intentObserver, exitController, exitTimer, checkoutBridge;
+    let videoObserver, productObserver, intentObserver, surfaceObserver, exitController, exitTimer, checkoutBridge;
     const bridgeCall = name => { try { checkoutBridge?.[name]?.(); } catch { try { checkoutBridge?.stop?.(); } catch {} checkoutBridge = null; } };
     const pending = [], listeners = [], cleanups = [];
     // Retain bounded operation tombstones for this observer, including ACKed IDs.
@@ -215,6 +215,31 @@
       const age = Math.max(0, Date.now() - lastActivity);
       return {visibility: hidden ? 'hidden' : 'visible', activity: hidden || age >= idleMs ? 'idle' : 'active', last_activity_age_ms: age};
     };
+    // The physical page remains the source for views/impressions/actions.
+    // Native dialogs only change the current-content envelope of presence events.
+    const physicalTypes = new Set(['page_view', 'product_view', 'product_impression']);
+    function surfacePage() {
+      try {
+        if (window.navigator?.globalPrivacyControl === true) return null;
+        const surface = surfaceObserver?.snapshot?.();
+        if (!object(surface) || !['product', 'cart'].includes(surface.page_type)) return null;
+        if (surface.page_type === 'product' && (!integer(surface.product_id) || typeof surface.product_name !== 'string' || !surface.product_name.trim())) return null;
+        // Keep the real document pathname; opening a card is not a navigation.
+        return pageContext({...surface, path: page.path});
+      } catch { return null; }
+    }
+    const differentPage = value => value && JSON.stringify(value) !== JSON.stringify(page);
+    function reserve(count) {
+      const removeCount = Math.max(0, pending.length + count - maxQueue);
+      const removable = pending.filter(entry => !entry.inFlight).slice(0, removeCount);
+      if (removable.length < removeCount) { stats.dropped += count; return false; }
+      for (const entry of removable) { retire(entry, 'overflow'); stats.dropped++; }
+      return true;
+    }
+    const currentHeartbeat = (current, occurredAt = new Date().toISOString(), sequence = ++seq) => Object.freeze({
+      event_id: id(), page_instance_id: pageId, seq: sequence, type: 'heartbeat', occurred_at: occurredAt,
+      page: Object.freeze({...current}), data: Object.freeze(state())
+    });
     function schedule(delay = flushMs) {
       if (stopped || suspended || !pending.length) return;
       const wait = Math.max(0, delay, retryAt - Date.now());
@@ -225,12 +250,9 @@
     }
     function emit(type, data = {}) {
       if (stopped || suspended) return;
-      if (pending.length >= maxQueue) {
-        const removable = pending.findIndex(entry => !entry.inFlight);
-        if (removable < 0) { stats.dropped++; return; }
-        retire(pending[removable], 'overflow'); stats.dropped++;
-      }
-      const record = {event_id: id(), page_instance_id: pageId, seq: ++seq, type, occurred_at: new Date().toISOString(), page: {...page}, data};
+      const current = surfacePage(), physical = physicalTypes.has(type), restore = physical && differentPage(current);
+      if (!reserve(restore ? 2 : 1)) return;
+      const record = {event_id: id(), page_instance_id: pageId, seq: ++seq, type, occurred_at: new Date().toISOString(), page: {...(physical ? page : (current || page))}, data};
       if (type === 'page_view' && metadataEnabled) {
         try {
           const metadata = options.pageViewMetadata();
@@ -243,8 +265,12 @@
           }
         } catch { stats.extensionUnsupported++; }
       }
-      pending.push({record, attempts: 0, readyAt: 0, inFlight: false});
+      const presenceGroup = restore ? {} : null;
+      pending.push({record, attempts: 0, readyAt: 0, inFlight: false, presenceGroup});
       stats.created++;
+      // Ingest updates current tab context for every accepted event. Restore it
+      // after a physical-source observation so it cannot briefly revert to home.
+      if (restore) { pending.push({record: currentHeartbeat(current), attempts: 0, readyAt: 0, inFlight: false, presenceGroup}); stats.created++; }
       if (type === 'page_view') { try { options.onPageViewCreated?.(pageViewReference(record)); } catch { /* Optional source notification. */ } }
       schedule();
     }
@@ -260,8 +286,9 @@
       // Do not evict tombstones and silently allow a previously used UID again.
       if (productActions.size >= 2000 || pending.some(entry => entry.record.event_id === snapshot.eventId)) return false;
       if (type === 'product_intent' && snapshot.data.kind === 'quick_view_open') {
-        // Reserve the whole local pair; failure must not retire or enqueue either half.
-        const removeCount = Math.max(0, Math.ceil(pending.length + 2 - maxQueue));
+        // Reserve the source pair and optional presence restoration atomically.
+        const current = surfacePage(), restore = differentPage(current), count = restore ? 3 : 2;
+        const removeCount = Math.max(0, Math.ceil(pending.length + count - maxQueue));
         const removable = pending.filter(entry => !entry.inFlight).slice(0, removeCount);
         if (removable.length < removeCount) return false;
         let records;
@@ -273,22 +300,24 @@
             Object.freeze({event_id: snapshot.eventId, page_instance_id: pageId, seq: seq + 1, type, occurred_at: occurredAt, page: currentPage, data: snapshot.data}),
             Object.freeze({event_id: viewId, page_instance_id: pageId, seq: seq + 2, type: 'product_view', occurred_at: occurredAt, page: currentPage, data: Object.freeze({product_id: snapshot.data.product_id})})
           ];
+          if (restore) records.push(currentHeartbeat(current, occurredAt, seq + 3));
         } catch { return false; }
         for (const entry of removable) { retire(entry, 'overflow'); stats.dropped++; }
-        seq += 2; productActions.set(snapshot.eventId, {signature, retired: null});
-        pending.push(...records.map(record => ({record, attempts: 0, readyAt: 0, inFlight: false})));
-        stats.created += 2; schedule();
+        seq += records.length; productActions.set(snapshot.eventId, {signature, retired: null});
+        const presenceGroup = restore ? {} : null;
+        pending.push(...records.map(record => ({record, attempts: 0, readyAt: 0, inFlight: false, presenceGroup})));
+        stats.created += records.length; schedule();
         return snapshot.eventId;
       }
-      if (pending.length >= maxQueue) {
-        const removable = pending.findIndex(entry => !entry.inFlight);
-        if (removable < 0) return false;
-        retire(pending[removable], 'overflow'); stats.dropped++;
-      }
+      const current = surfacePage(), restore = differentPage(current);
+      if (!reserve(restore ? 2 : 1)) return false;
       const record = Object.freeze({event_id: snapshot.eventId, page_instance_id: pageId, seq: ++seq, type, occurred_at: new Date().toISOString(), page: Object.freeze({...page}), data: snapshot.data});
       productActions.set(snapshot.eventId, {signature, retired: null});
-      pending.push({record, attempts: 0, readyAt: 0, inFlight: false});
-      stats.created++; schedule();
+      const presenceGroup = restore ? {} : null;
+      pending.push({record, attempts: 0, readyAt: 0, inFlight: false, presenceGroup});
+      stats.created++;
+      if (restore) { pending.push({record: currentHeartbeat(current), attempts: 0, readyAt: 0, inFlight: false, presenceGroup}); stats.created++; }
+      schedule();
       return snapshot.eventId;
     }
     function schedulePending() {
@@ -300,7 +329,16 @@
       if (retryAt > Date.now()) { schedulePending(); return false; }
       if (sending) { if (hint.unload) return flushExit(); return false; }
       clearTimeout(flushTimer); flushTimer = null; flushAt = Infinity;
-      const batch = pending.filter(entry => !entry.inFlight && (hint.unload || entry.readyAt <= Date.now())).slice(0, batchMax);
+      const ready = pending.filter(entry => !entry.inFlight && (hint.unload || entry.readyAt <= Date.now()));
+      let batch = ready.slice(0, batchMax);
+      const boundaryGroup = batch.at(-1)?.presenceGroup;
+      if (boundaryGroup && ready[batch.length]?.presenceGroup === boundaryGroup) {
+        const groupSize = ready.filter(entry => entry.presenceGroup === boundaryGroup).length;
+        // Keep a source observation and its current-state heartbeat in one
+        // request whenever the configured cap can accommodate that group.
+        // Tiny configured caps still drain in order rather than stall or grow.
+        if (groupSize <= batchMax) batch = batch.filter(entry => entry.presenceGroup !== boundaryGroup);
+      }
       if (!batch.length) { schedulePending(); return false; }
       sending = true;
       batch.forEach(entry => { entry.inFlight = true; entry.attempts++; });
@@ -390,6 +428,7 @@
       videoObserver?.flush();
       emit('page_exit', {persisted: event.persisted, ...state()});
       void flush({unload: true});
+      surfaceObserver?.suspend();
       suspended = true; clearInterval(heartbeatTimer); clearTimeout(flushTimer); flushTimer = null; flushAt = Infinity;
     });
     // A background tab is still present, but is neither active nor watched.
@@ -399,7 +438,7 @@
     const heartbeat = () => { heartbeatTimer = setInterval(() => emit('heartbeat', state()), heartbeatMs); };
     listen(window, 'pageshow', event => {
       if (!event.persisted || stopped) return;
-      suspended = false; pageId = id(); seq = 0; lastActivity = Date.now(); begin('bfcache');
+      suspended = false; pageId = id(); seq = 0; lastActivity = Date.now(); surfaceObserver?.resume(); begin('bfcache');
       bridgeCall('reset'); bridgeCall('resume');
       // A restored document has a new page instance; reset its video counters too.
       videoObserver?.stop(); observeVideos();
@@ -459,9 +498,19 @@
       if (options.productActionsProtocol !== 1 || typeof window.VialCoveVisitorIntent?.observe !== 'function') return;
       intentObserver = window.VialCoveVisitorIntent.observe(document, facts => pushProductAction('product_intent', facts));
     }
+    function observeSurfaces() {
+      if (typeof window.VialCoveVisitorSurfaces?.observe !== 'function') return;
+      try {
+        surfaceObserver = window.VialCoveVisitorSurfaces.observe(document, () => {
+          // The callback is a DOM-validated change notification, never a page view.
+          if (!stopped && !suspended) emit('heartbeat', state());
+        });
+      } catch { surfaceObserver = null; }
+    }
     cleanups.push(() => videoObserver?.stop());
     cleanups.push(() => productObserver?.stop());
     cleanups.push(() => intentObserver?.stop());
+    cleanups.push(() => surfaceObserver?.stop());
     cleanups.push(() => bridgeCall('stop'));
     function stop() {
       if (stopped) return;
@@ -473,7 +522,7 @@
     }
     const api = {flush, stop, pushProductAction, getStats: () => ({...stats, queued: pending.length, sending, stopped})};
     active = api;
-    begin('navigation'); observeVideos(); observeProducts(); observeIntents(); heartbeat();
+    observeSurfaces(); begin('navigation'); observeVideos(); observeProducts(); observeIntents(); heartbeat();
     if (page.page_type === 'checkout') {
       try {
         checkoutBridge = window.PeptideCheckoutBridge?.create((type, input) => {

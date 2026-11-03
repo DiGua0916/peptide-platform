@@ -11,7 +11,7 @@
   const privacyAllows = () => { try { return window.navigator?.globalPrivacyControl !== true; } catch { return false; } };
   function observe(doc, callback) {
     if (doc !== window.document || typeof callback !== 'function' || typeof window.requestAnimationFrame !== 'function' || typeof window.cancelAnimationFrame !== 'function' || typeof window.getComputedStyle !== 'function' || typeof window.MutationObserver !== 'function' || typeof window.setTimeout !== 'function' || typeof window.clearTimeout !== 'function' || !window.crypto?.getRandomValues) return inert();
-    let stopped = false, suspended = false, pendingOpener = null, pendingTimer = null, episode = null, frame = null;
+    let stopped = false, suspended = false, pendingOpener = null, pendingTimer = null, pendingPresentation = null, presentationTimer = null, episode = null, frame = null;
     const hidden = () => doc.visibilityState !== 'visible' || doc.hidden === true || doc.prerendering === true;
     const connected = node => !!node && node.isConnected === true && node.ownerDocument === doc;
     const watcher = new window.MutationObserver(records => {
@@ -20,6 +20,7 @@
       if (targets.some(node => !connected(node)) || !episode.dialog.open || records.some(record => Array.from(record.removedNodes || []).some(node => targets.some(target => node === target || node.contains?.(target))))) cancel();
     });
     function clearPending() { if (pendingTimer !== null) window.clearTimeout(pendingTimer); pendingTimer = null; pendingOpener = null; }
+    function clearPresentation() { if (presentationTimer !== null) window.clearTimeout(presentationTimer); presentationTimer = null; pendingPresentation = null; }
     function cancel() { if (frame !== null) window.cancelAnimationFrame(frame); frame = null; watcher.disconnect(); episode = null; }
     function nativeDialog(opener, id) {
       const matches = Array.from(doc.querySelectorAll('dialog.vc-showcase-quick')).map(dialog => {
@@ -66,16 +67,22 @@
       const root = sourceRoot(opener);
       const id = parentId(opener?.getAttribute('data-vc-quick-open'));
       if (!id || !connected(opener) || !connected(root) || opener.disabled) return;
-      clearPending();
+      clearPending(); clearPresentation();
       const pending = {opener, root, id, click: event}; pendingOpener = pending;
       // Native input can checkpoint microtasks between capture and bubble listeners.
       // The event's active dispatch phase, not a millisecond window, proves this turn.
       pendingTimer = window.setTimeout(() => { if (pendingOpener === pending) clearPending(); }, 0);
+      // The live product controller may fetch its native template before replaying
+      // .click(). Keep the original trusted source, never trust that replay itself.
+      if (parentId(opener.getAttribute('data-vc-home-product')) === id) {
+        pendingPresentation = pending;
+        presentationTimer = window.setTimeout(() => { if (pendingPresentation === pending) clearPresentation(); }, 14000);
+      }
     }
     function quickState(event) {
       const root = event.target;
       if (!connected(root) || !(root.matches?.('.vc-showcase') || sourceRoot(nativeOpener(root)) === root)) return;
-      if (event.detail?.open === false) { if (episode?.root === root) cancel(); return; }
+      if (event.detail?.open === false) { if (episode?.root === root) cancel(); if (pendingPresentation?.root === root) clearPresentation(); return; }
       if (event.detail?.open !== true || stopped || suspended || !privacyAllows()) return;
       if (episode?.root === root && !pendingOpener) return;
       const pending = pendingOpener;
@@ -85,6 +92,21 @@
       cancel();
       const native = nativeDialog(pending.opener, pending.id);
       if (!native) return;
+      clearPresentation();
+      episode = {root: pending.root, opener: pending.opener, id: pending.id, ...native, initiallyHidden: hidden(), foregroundUsed: false, waitingForVisibility: false, sent: false};
+      watcher.observe(doc.documentElement, {childList: true, subtree: true, attributes: true, attributeFilter: ['open', 'hidden']});
+      schedule();
+    }
+    function presented(event) {
+      const pending = pendingPresentation;
+      if (!pending || stopped || suspended || !privacyAllows()) return;
+      const product = event.detail?.root, dialog = event.detail?.dialog;
+      if (!connected(pending.opener) || !connected(pending.root) || sourceRoot(pending.opener) !== pending.root ||
+          parentId(pending.opener.getAttribute('data-vc-home-product')) !== pending.id ||
+          product?.vcHomeOpener !== pending.opener || Number(event.detail?.productId) !== pending.id) return;
+      const native = nativeDialog(pending.opener, pending.id);
+      if (!native || native.product !== product || native.dialog !== dialog || !dialog.open) return;
+      clearPending(); clearPresentation(); cancel();
       episode = {root: pending.root, opener: pending.opener, id: pending.id, ...native, initiallyHidden: hidden(), foregroundUsed: false, waitingForVisibility: false, sent: false};
       watcher.observe(doc.documentElement, {childList: true, subtree: true, attributes: true, attributeFilter: ['open', 'hidden']});
       schedule();
@@ -94,11 +116,21 @@
       if (hidden()) { if (!episode.initiallyHidden) cancel(); return; }
       if (episode.waitingForVisibility && !episode.foregroundUsed) { episode.foregroundUsed = true; episode.waitingForVisibility = false; schedule(); }
     }
-    function suspend() { suspended = true; clearPending(); cancel(); }
+    function cancelled(event) {
+      if (event.type === 'keydown' && event.key !== 'Escape') return;
+      clearPending(); clearPresentation();
+      if (!episode?.sent) cancel();
+    }
+    function suspend() { suspended = true; clearPending(); clearPresentation(); cancel(); }
     function resume() { if (!stopped) suspended = false; }
-    function stop() { if (stopped) return; stopped = true; suspend(); doc.removeEventListener('click', openerClick, true); doc.removeEventListener('vc:showcase-quick-state', quickState, true); doc.removeEventListener('visibilitychange', visibility); window.removeEventListener('pagehide', suspend); }
-    doc.addEventListener('click', openerClick, true);
+    function stop() { if (stopped) return; stopped = true; suspend(); window.removeEventListener('click', openerClick, true); doc.removeEventListener('vc:showcase-quick-state', quickState, true); doc.removeEventListener('vc:product-presented', presented, true); doc.removeEventListener('vc:product-restore-cancel', cancelled, true); doc.removeEventListener('keydown', cancelled, true); doc.removeEventListener('visibilitychange', visibility); window.removeEventListener('pagehide', suspend); }
+    // The native document capture controller stops the first lazy-load click.
+    // Observe its trusted source at window capture, before that propagation stop.
+    window.addEventListener('click', openerClick, true);
     doc.addEventListener('vc:showcase-quick-state', quickState, true);
+    doc.addEventListener('vc:product-presented', presented, true);
+    doc.addEventListener('vc:product-restore-cancel', cancelled, true);
+    doc.addEventListener('keydown', cancelled, true);
     doc.addEventListener('visibilitychange', visibility);
     window.addEventListener('pagehide', suspend);
     return Object.freeze({stop, suspend, resume});

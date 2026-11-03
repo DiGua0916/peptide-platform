@@ -4,10 +4,14 @@ defined( 'ABSPATH' ) || exit;
 
 add_action( 'wp_enqueue_scripts', function (): void {
     $settings = function_exists( 'vc_live_product_settings' ) ? vc_live_product_settings() : array();
-    if ( empty( $settings['enabled'] ) || is_admin() || ( function_exists( 'is_checkout' ) && is_checkout() ) ) { return; }
-    vc_home_quick_view_assets();
+    $cart_enabled = function_exists( 'vc_live_cart_available' ) && vc_live_cart_available();
+    $product_enabled = ! empty( $settings['enabled'] ) && ( ! ( function_exists( 'is_checkout' ) && is_checkout() ) || $cart_enabled );
+    if ( is_admin() || ( ! $product_enabled && ! $cart_enabled ) ) { return; }
+    if ( $product_enabled ) { vc_home_quick_view_assets(); }
+    $dependencies = $product_enabled ? array( 'vc-home-quick-view' ) : array();
+    if ( $cart_enabled ) { $dependencies[] = 'vc-live-cart-experience'; }
     $path = get_template_directory() . '/assets/live-commerce-navigation.js';
-    wp_enqueue_script( 'vc-live-commerce-navigation', get_template_directory_uri() . '/assets/live-commerce-navigation.js', array( 'vc-home-quick-view' ), (string) filemtime( $path ), true );
+    wp_enqueue_script( 'vc-live-commerce-navigation', get_template_directory_uri() . '/assets/live-commerce-navigation.js', $dependencies, (string) filemtime( $path ), true );
     wp_localize_script( 'vc-live-commerce-navigation', 'VialCoveCommerceNavigation', array(
         'cartUrl' => wc_get_cart_url(),
         'shopUrl' => vc_url( 'shop' ),
