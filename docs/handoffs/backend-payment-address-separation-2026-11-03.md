@@ -21,3 +21,7 @@ The one-time metadata write's broad business-object post-check stopped because n
 At 10:59 UTC the HQ still had no durable event for the original success notification after the JSON fix. The visible provider record remained successful and exposed no notification resend control. The user has been asked for a provider resend, without another payment. Actual provider retry and native completion remain unverified; this document does not claim that the old payment has already been recovered. The temporary observer has a fixed expiry at 11:14 UTC and must not be extended without a concrete need; its later cleanup must preserve the current HQ release and colleague updates.
 
 The broader HQ navigation update remains paused at the user's request while this incident is handled. Paused UI files are excluded from payment commits and deployment.
+
+## Later user decision
+
+The user said the reported payment was a test order and chose to stop pursuing a provider notification resend. Stop asking the user to contact the provider, do not initiate another payment, and preserve the test order's actual unpaid/native record rather than inventing payment completion. The JSON transport and address-separation production fixes remain installed. A new real customer payment end-to-end after these fixes has not yet been verified; do not equate model or source deployment checks with that result. Any later test should use the ordinary customer flow, with incident investigation handled by the agent.
