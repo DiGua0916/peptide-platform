@@ -43,6 +43,10 @@ def main():
         else:
             # Explicitly exclude ephemeral QA credentials and duplicate mounted media.
             files += ['var/lib/vialcove-provision/jobs', 'var/lib/vialcove-provision/results', 'var/lib/vialcove-provision/requests', 'var/lib/vialcove-provision/web-command-key', 'var/lib/vialcove-provision/web-known-hosts']
+            claims = Path(c['state_root']) / 'domain-claims'
+            if claims.exists():
+                assert claims.is_dir() and not claims.is_symlink() and claims.stat().st_uid == 0 and not claims.stat().st_mode & 0o077
+                files.append(str(claims).lstrip('/'))
             for marker in sorted(Path(c['admin_store_root']).glob('s*/.provision-owner.json')):
                 files += [str(marker).lstrip('/'), str(marker.parent / 'shared/wp-config.php').lstrip('/')]
         files += ['etc/systemd/system', 'etc/nginx/sites-available', 'etc/php/8.3/fpm/pool.d', 'etc/letsencrypt']

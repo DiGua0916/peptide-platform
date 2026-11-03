@@ -18,20 +18,33 @@ final class Provision_Page {
 	public static function valid_id( string $id ): bool {
 		return 1 === preg_match( '/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/D', $id );
 	}
+	/** ASCII DNS name supplied by the customer; no registrable-domain guessing or DNS API. */
+	public static function customer_domain( string $value ): string {
+		if ( preg_match( '/[\x00-\x1f\x7f]/', $value ) ) { return ''; }
+		$host = strtolower( trim( $value ) );
+		if ( str_starts_with( $host, 'www.' ) ) { $host = substr( $host, 4 ); }
+		if ( strlen( $host ) > 249 || str_starts_with( $host, 'www.' ) || ! preg_match( '/\A(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{2,63}|xn--[a-z0-9](?:[a-z0-9-]{0,57}[a-z0-9])?)\z/D', $host ) || filter_var( $host, FILTER_VALIDATE_IP ) ) { return ''; }
+		return $host;
+	}
 	public static function submit(): void {
 		if ( ! current_user_can( Menu::CAP ) ) { wp_die( '无权开店。', '', array( 'response' => 403 ) ); }
 		check_admin_referer( 'pchq_create_store' );
 		$id = (string) wp_unslash( $_POST['operation_id'] ?? '' );
+		$root = self::root();
+		if ( ! self::valid_id( $id ) || '' === $root || ! is_dir( $root . '/requests' ) || ! is_writable( $root . '/requests' ) ) { wp_die( '开店服务尚未配置或请求编号无效。' ); }
+		// A completed v1 result is immutable, including retries from a previously opened form.
+		if ( 'complete' === ( self::result( $id )['state'] ?? '' ) ) {
+			wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG . '&job=' . rawurlencode( $id ) ) ); exit;
+		}
 		$title = sanitize_text_field( wp_unslash( $_POST['store_title'] ?? '' ) );
 		$login = (string) wp_unslash( $_POST['owner_login'] ?? '' );
 		$email = sanitize_email( wp_unslash( $_POST['owner_email'] ?? '' ) );
 		$password = (string) wp_unslash( $_POST['owner_password'] ?? '' );
-		if ( ! self::valid_id( $id ) || '' === $title || mb_strlen( $title ) > 100 || ! preg_match( '/^[a-z][a-z0-9_]{2,31}$/D', $login ) || ! is_email( $email ) || strlen( $password ) < 12 || strlen( $password ) > 128 || preg_match( '/[\x00-\x1f\x7f]/', $password ) ) {
-			wp_die( '请填写店名、有效邮箱、3至32位小写字母/数字/下划线账号，以及至少12位密码。' );
+		$domain = self::customer_domain( is_string( $_POST['customer_domain'] ?? null ) ? wp_unslash( $_POST['customer_domain'] ) : '' );
+		if ( '' === $title || mb_strlen( $title ) > 100 || ! preg_match( '/^[a-z][a-z0-9_]{2,31}$/D', $login ) || ! is_email( $email ) || strlen( $password ) < 12 || strlen( $password ) > 128 || preg_match( '/[\x00-\x1f\x7f]/', $password ) || '' === $domain ) {
+			wp_die( '请填写客户根域名（例如 example.com 或 www.example.com）、店名、有效邮箱、3至32位小写字母/数字/下划线账号，以及至少12位密码。域名请使用 ASCII 或 Punycode，不要填写网址路径。' );
 		}
-		$root = self::root();
-		if ( '' === $root || ! is_dir( $root . '/requests' ) || ! is_writable( $root . '/requests' ) ) { wp_die( '开店服务尚未配置。' ); }
-		$body = wp_json_encode( array( 'version' => 1, 'operation_id' => $id, 'actor_id' => get_current_user_id(), 'title' => $title, 'login' => $login, 'email' => $email, 'password' => $password ), JSON_UNESCAPED_UNICODE );
+		$body = wp_json_encode( array( 'version' => 2, 'operation_id' => $id, 'actor_id' => get_current_user_id(), 'title' => $title, 'login' => $login, 'email' => $email, 'password' => $password, 'customer_domain' => $domain ), JSON_UNESCAPED_UNICODE );
 		if ( ! is_string( $body ) || strlen( $body ) > 4096 ) { wp_die( '开店请求无效。' ); }
 		// Exclusive creation makes browser retries idempotent. Passwords never enter URLs/results.
 		if ( ! is_file( $root . '/results/' . $id . '.json' ) ) {
@@ -49,7 +62,33 @@ final class Provision_Page {
 		if ( ! self::valid_id( $id ) || '' === self::root() || ! is_file( $path ) || is_link( $path ) || filesize( $path ) > 8192 ) { return array( 'state' => 'queued', 'message' => '请求已提交，等待开店服务处理。' ); }
 		$r = json_decode( (string) file_get_contents( $path ), true );
 		if ( ! is_array( $r ) ) { return array( 'state' => 'pending', 'message' => '正在读取任务状态。' ); }
-		return array_intersect_key( $r, array_flip( array( 'state', 'message', 'slug', 'management_url', 'public_url', 'site_id' ) ) );
+		return self::safe_result( $r );
+	}
+	/** Only public progress and validated manual DNS instructions may leave the private queue. */
+	public static function safe_result( array $r ): array {
+		$out = array();
+		foreach ( array( 'state', 'message', 'slug' ) as $key ) { if ( is_string( $r[ $key ] ?? null ) ) { $out[ $key ] = mb_substr( $r[ $key ], 0, 'message' === $key ? 1000 : 80 ); } }
+		if ( is_int( $r['site_id'] ?? null ) && $r['site_id'] > 0 ) { $out['site_id'] = $r['site_id']; }
+		foreach ( array( 'management_url' => '/wp-admin/', 'public_url' => '/' ) as $key => $path ) {
+			$url = $r[ $key ] ?? null;
+			if ( ! is_string( $url ) || preg_match( '/[\x00-\x20\x7f\\\\]/', $url ) ) { continue; }
+			$p = wp_parse_url( $url );
+			if ( ! is_array( $p ) || 'https' !== ( $p['scheme'] ?? '' ) || isset( $p['user'] ) || isset( $p['pass'] ) || isset( $p['query'] ) || isset( $p['fragment'] ) || ( isset( $p['port'] ) && 443 !== $p['port'] ) || $path !== ( $p['path'] ?? '/' ) || '' === self::customer_domain( (string) ( $p['host'] ?? '' ) ) ) { continue; }
+			$out[ $key ] = $url;
+		}
+		$domain = is_string( $r['customer_domain'] ?? null ) ? self::customer_domain( $r['customer_domain'] ) : '';
+		if ( '' !== $domain ) { $out['customer_domain'] = $domain; }
+		$records = $r['dns_records'] ?? null;
+		if ( '' !== $domain && is_array( $records ) && array_is_list( $records ) && 2 === count( $records ) ) {
+			$clean = array();
+			foreach ( array( '@', 'www' ) as $i => $name ) {
+				$v = $records[ $i ];
+				if ( ! is_array( $v ) || 'A' !== ( $v['type'] ?? '' ) || $name !== ( $v['name'] ?? '' ) || 600 !== ( $v['ttl'] ?? null ) || ! is_string( $v['value'] ?? null ) || ! filter_var( $v['value'], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) ) { return $out; }
+				$clean[] = array( 'type' => 'A', 'name' => $name, 'value' => $v['value'], 'ttl' => 600 );
+			}
+			if ( $clean[0]['value'] === $clean[1]['value'] ) { $out['dns_records'] = $clean; }
+		}
+		return $out;
 	}
 	public static function status(): void {
 		if ( ! current_user_can( Menu::CAP ) ) { wp_send_json_error( null, 403 ); }
@@ -64,13 +103,14 @@ final class Provision_Page {
 		$job = self::valid_id( $id ) ? self::result( $id ) : null;
 		?>
 		<div class="wrap pchq"><h1>自动开店</h1>
-		<p>创建独立店铺、后台账号、固定管理地址和顾客地址。商品、订单和顾客数据不会从其他店铺复制；支付默认关闭。</p>
+		<p>填写客户自有域名，创建独立店铺和后台账号。顾客使用 www 地址；管理地址仍由平台固定分配。商品、订单和顾客数据不会从其他店铺复制；支付默认关闭。</p>
 		<?php if ( $job ) : ?>
-		<div class="pchq-card"><h2>开店进度</h2><p id="pchq-provision-status" role="status" aria-live="polite"><?php echo esc_html( $job['message'] ?? '' ); ?></p><div id="pchq-provision-links"></div></div>
+		<div class="pchq-card"><h2>开店进度</h2><p id="pchq-provision-status" role="status" aria-live="polite"><?php echo esc_html( $job['message'] ?? '' ); ?></p><div id="pchq-provision-dns"></div><div id="pchq-provision-links"></div></div>
 		<script>
-		(() => { const status = document.getElementById('pchq-provision-status'), links = document.getElementById('pchq-provision-links');
+		(() => { const status = document.getElementById('pchq-provision-status'), dns = document.getElementById('pchq-provision-dns'), links = document.getElementById('pchq-provision-links');
 		const base = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>, job = <?php echo wp_json_encode( $id ); ?>, nonce = <?php echo wp_json_encode( wp_create_nonce( 'pchq_create_store_status' ) ); ?>;
-		async function refresh() { try { const u = new URL(base); u.search = new URLSearchParams({action:'pchq_create_store_status',job,nonce}); const r = await fetch(u,{credentials:'same-origin',cache:'no-store'}); const data = await r.json(); if(!data.success) throw Error(); const d=data.data; status.textContent=d.message; links.replaceChildren(); if(d.state==='complete') { for(const [key,label] of [['management_url','商家后台'],['public_url','顾客店铺']]) { const a=document.createElement('a'), u=new URL(d[key]); if(u.protocol!=='https:') continue; a.href=u.href; a.textContent=label; a.className='button'; links.append(a,document.createTextNode(' ')); } return; } if(d.state==='failed') return; } catch { status.textContent='暂时无法读取进度，任务不会因此重新创建。'; } setTimeout(refresh,5000); } refresh(); })();
+		function showDns(d) { dns.replaceChildren(); if(!Array.isArray(d.dns_records)||d.dns_records.length!==2) return; const p=document.createElement('p'); p.textContent='请在域名服务商为 '+d.customer_domain+' 手动添加以下两条解析。无需修改管理后台域名。'; const table=document.createElement('table'); table.className='widefat striped'; const head=document.createElement('tr'); for(const label of ['主机记录','记录类型','记录值','TTL']) { const th=document.createElement('th'); th.textContent=label; head.append(th); } const thead=document.createElement('thead'); thead.append(head); const body=document.createElement('tbody'); for(const record of d.dns_records) { const tr=document.createElement('tr'); for(const value of [record.name,record.type,record.value,record.ttl]) { const td=document.createElement('td'); td.textContent=String(value); tr.append(td); } body.append(tr); } table.append(thead,body); dns.append(p,table); }
+		async function refresh() { try { const u = new URL(base); u.search = new URLSearchParams({action:'pchq_create_store_status',job,nonce}); const r = await fetch(u,{credentials:'same-origin',cache:'no-store'}); const data = await r.json(); if(!data.success) throw Error(); const d=data.data; status.textContent=d.message; links.replaceChildren(); showDns(d); if(d.state==='complete') { for(const [key,label] of [['management_url','商家后台'],['public_url','顾客店铺']]) { if(typeof d[key]!=='string') continue; const a=document.createElement('a'), u=new URL(d[key]); if(u.protocol!=='https:'||u.username||u.password||u.search||u.hash||u.pathname!==(key==='management_url'?'/wp-admin/':'/')) continue; a.href=u.href; a.textContent=label; a.className='button'; links.append(a,document.createTextNode(' ')); } return; } if(d.state==='failed') return; } catch { status.textContent='暂时无法读取进度，任务不会因此重新创建。'; } setTimeout(refresh,5000); } refresh(); })();
 		</script>
 		<?php else : ?>
 		<?php if ( '' === self::root() ) : ?><div class="notice notice-warning"><p>部署服务尚未配置，暂时不能创建新店。</p></div><?php endif; ?>
@@ -79,6 +119,7 @@ final class Provision_Page {
 		<?php wp_nonce_field( 'pchq_create_store' ); ?>
 		<table class="form-table"><tbody>
 		<tr><th><label for="store-title">店铺名称</label></th><td><input id="store-title" name="store_title" class="regular-text" maxlength="100" required></td></tr>
+		<tr><th><label for="customer-domain">客户自有域名</label></th><td><input id="customer-domain" name="customer_domain" class="regular-text" maxlength="253" placeholder="example.com" autocomplete="off" spellcheck="false" required><p class="description">填写根域名，例如 example.com 或 www.example.com（不要填写 https://、路径或端口）。顾客地址将使用 www；下一步会给出 @ 和 www 两条 A 记录及记录值，由你手动解析。</p></td></tr>
 		<tr><th><label for="owner-login">后台账号</label></th><td><input id="owner-login" name="owner_login" class="regular-text" pattern="[a-z][a-z0-9_]{2,31}" autocomplete="off" required><p class="description">3至32位，以小写字母开头，可使用数字和下划线。</p></td></tr>
 		<tr><th><label for="owner-email">账号邮箱</label></th><td><input id="owner-email" name="owner_email" class="regular-text" type="email" required></td></tr>
 		<tr><th><label for="owner-password">后台密码</label></th><td><input id="owner-password" name="owner_password" class="regular-text" type="password" minlength="12" maxlength="128" autocomplete="new-password" required><p class="description">至少12位。创建后页面不回显密码，请自行保存。</p></td></tr>
