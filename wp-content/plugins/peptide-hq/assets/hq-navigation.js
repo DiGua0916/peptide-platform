@@ -24,11 +24,35 @@
 				if (!Object.prototype.hasOwnProperty.call(rules, key)) return null;
 				var rule = rules[key];
 				if (Array.isArray(rule)) { if (rule.indexOf(value) === -1) return null; }
-				else if (rule !== 'positiveId' || !/^[1-9][0-9]*$/.test(value) || !Number.isSafeInteger(Number(value))) return null;
+				else if (rule === 'positiveId') { if (!/^[1-9][0-9]*$/.test(value) || !Number.isSafeInteger(Number(value))) return null; }
+				else if (rule === 'nonnegativeId') { if (!/^(?:0|[1-9][0-9]*)$/.test(value) || !Number.isSafeInteger(Number(value))) return null; }
+				else if (rule === 'signedId') { if (!/^(?:0|-?[1-9][0-9]*)$/.test(value) || !Number.isSafeInteger(Number(value))) return null; }
+				else if (rule === 'pageNumber') { if (!/^[1-9][0-9]*$/.test(value) || Number(value) > 100000) return null; }
+				else if (rule === 'accountId') { if (!/^(?:default|[a-f0-9]{32})$/.test(value)) return null; }
+				else if (rule === 'uuid4') { if (!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(value)) return null; }
+				else return null;
 			}
 			if (!seen.has('page') || (params.has('site_tools') && params.has('site_server')) || (params.has('add') && params.has('edit'))) return null;
+			if (page === 'pchq-payments' && ((params.has('new_account') && params.has('edit_account')) || (params.has('deleted') && (params.has('new_account') || params.has('edit_account'))))) return null;
 			return url;
 		} catch (e) { return null; }
+	}
+	function formURL(form, submitter, base, policy) {
+		try {
+			if (!form || form.tagName !== 'FORM' || (submitter && submitter.form !== form)) return null;
+			var method = (submitter && submitter.getAttribute('formmethod')) || form.method || 'get';
+			var target = (submitter && submitter.getAttribute('formtarget')) || form.target;
+			var encoding = (submitter && submitter.getAttribute('formenctype')) || form.enctype || 'application/x-www-form-urlencoded';
+			if (method.toLowerCase() !== 'get' || (target && target !== '_self') || encoding !== 'application/x-www-form-urlencoded') return null;
+			var root = new URL(base), action = (submitter && submitter.getAttribute('formaction')) || form.action || base, url = new URL(action, base);
+			if (url.origin !== root.origin || url.pathname !== root.pathname || url.username || url.password) return null;
+			if (url.search && !safeURL(url.href, base, policy)) return null;
+			// Match a native GET: successful controls replace the action's query string.
+			url.search = '';
+			var data = new form.ownerDocument.defaultView.FormData(form, submitter || undefined);
+			for (var pair of data) { if (typeof pair[1] !== 'string') return null; url.searchParams.append(pair[0], pair[1]); }
+			return safeURL(url.href, base, policy);
+		} catch (error) { return null; }
 	}
 	function formSignature(form) {
 		return JSON.stringify(Array.from(form.elements || []).filter(function (field) {
@@ -62,7 +86,7 @@
 		if (!meta || !target || meta.build !== currentMeta.build || meta.session !== currentMeta.session || meta.base !== currentMeta.base || meta.page !== target.searchParams.get('page') || JSON.stringify(meta.policy) !== JSON.stringify(currentMeta.policy)) return null;
 		if (!doc.body || !doc.body.classList.contains('pchq-workspace') || !doc.body.classList.contains(meta.screen) || doc.querySelectorAll('#wpbody-content').length !== 1) return null;
 		var content = doc.querySelector('#wpbody-content'), location = doc.querySelector('.pchq-workspace-location');
-		if (!content.querySelector('.wrap.pchq') || !location || content.querySelector('script,style,iframe,object,embed,base')) return null;
+		if (!content.querySelector(meta.page === 'pchq-payments' ? '.wrap.pc-pay-hub' : '.wrap.pchq') || !location || content.querySelector('script,style,iframe,object,embed,base')) return null;
 		for (var asset of assets(doc)) { if (!existingAssets.has(asset)) return null; }
 		return { content: content, meta: meta, location: location };
 	}
@@ -227,9 +251,15 @@
 		// Observe a real validated submit; never prevent, replay or serialize it.
 		on(doc, 'submit', function (event) {
 			var form = event.target;
-			if (event.defaultPrevented || !form || form.tagName !== 'FORM' || form.method.toLowerCase() !== 'post' || (form.target && form.target !== '_self')) return;
+			if (!event.defaultPrevented && form && form.tagName === 'FORM' && !form.closest('[data-pchq-no-navigation]')) {
+				var destination = formURL(form, event.submitter, meta.base, meta.policy);
+				if (destination) { event.preventDefault(); nativeSubmission = null; navigate(destination.href); return; }
+			}
+			if (event.defaultPrevented || !form || form.tagName !== 'FORM') return;
+			var submitter = event.submitter, method = (submitter && submitter.getAttribute('formmethod')) || form.method, target = (submitter && submitter.getAttribute('formtarget')) || form.target;
+			if (method.toLowerCase() !== 'post' || (target && target !== '_self')) return;
 			try {
-				var action = new URL(form.action, meta.base), root = new URL(meta.base);
+				var action = new URL((submitter && submitter.getAttribute('formaction')) || form.action, meta.base), root = new URL(meta.base);
 				if (action.origin === root.origin && action.pathname === root.pathname.replace(/admin\.php$/, 'admin-post.php')) nativeSubmission = event;
 			} catch (e) { /* Native navigation remains authoritative. */ }
 		});
@@ -251,5 +281,5 @@
 		if (!saveScroll()) { destroy(); return null; }
 		return { navigate: navigate, destroy: destroy, dirty: function () { return !!dirtyStamp(); } };
 	}
-	return { safeURL: safeURL, formSignature: formSignature, assets: assets, readMeta: readMeta, compatibleDocument: compatibleDocument, mount: mount };
+	return { safeURL: safeURL, formURL: formURL, formSignature: formSignature, assets: assets, readMeta: readMeta, compatibleDocument: compatibleDocument, mount: mount };
 }));

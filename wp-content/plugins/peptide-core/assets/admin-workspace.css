@@ -5,6 +5,18 @@ body.pc-admin-workspace{
  --wp-admin-theme-color:#181818;--wp-admin-theme-color-darker-10:#313131;--wp-admin-theme-color-darker-20:#404040;--wp-admin-theme-color--rgb:24,24,24;
  background:var(--pc-ui-bg);color:var(--pc-ui-text);font-family:Manrope,"Microsoft YaHei","PingFang SC",sans-serif;font-size:14px;line-height:22px;
 }
+/* Native document continuity: no full-root fade or shell movement between pages. */
+body.pc-admin-workspace #wpadminbar{view-transition-name:pc-workspace-toolbar}
+body.pc-admin-workspace #adminmenuwrap{view-transition-name:pc-workspace-sidebar}
+body.pc-admin-workspace .pc-workspace-header{view-transition-name:pc-workspace-header}
+::view-transition-group(root),
+::view-transition-group(pc-workspace-toolbar),
+::view-transition-group(pc-workspace-sidebar),
+::view-transition-group(pc-workspace-header){animation:none}
+::view-transition-old(root),::view-transition-new(root),
+::view-transition-old(pc-workspace-toolbar),::view-transition-new(pc-workspace-toolbar),
+::view-transition-old(pc-workspace-sidebar),::view-transition-new(pc-workspace-sidebar),
+::view-transition-old(pc-workspace-header),::view-transition-new(pc-workspace-header){animation:none;mix-blend-mode:normal}
 .pc-admin-workspace :is(input,textarea,select,button){font-family:inherit}
 .pc-admin-workspace :is(.dashicons,.dashicons-before::before){font-family:dashicons}
 .pc-admin-workspace :is(a,button,input,select,textarea):focus-visible{outline:2px solid var(--pc-ui-accent);outline-offset:2px;box-shadow:none}

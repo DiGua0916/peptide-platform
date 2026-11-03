@@ -11,6 +11,14 @@ final class Provision_Page {
 		} );
 		add_action( 'admin_post_pchq_create_store', array( self::class, 'submit' ) );
 		add_action( 'wp_ajax_pchq_create_store_status', array( self::class, 'status' ) );
+		add_action( 'admin_enqueue_scripts', array( self::class, 'assets' ), 1001 );
+	}
+	public static function assets(): void {
+		if ( self::SLUG === ( $_GET['page'] ?? '' ) ) { self::workspace_assets(); }
+	}
+	/** Safe to enqueue on every supported workspace route; mounts only a progress root. */
+	public static function workspace_assets(): void {
+		wp_enqueue_script( 'pchq-provision', plugins_url( 'assets/hq-provision.js', PEPTIDE_HQ_FILE ), array(), (string) filemtime( dirname( PEPTIDE_HQ_FILE ) . '/assets/hq-provision.js' ), true );
 	}
 	private static function root(): string {
 		return defined( 'PEPTIDE_HQ_PROVISION_QUEUE' ) ? rtrim( (string) PEPTIDE_HQ_PROVISION_QUEUE, '/' ) : '';
@@ -105,13 +113,7 @@ final class Provision_Page {
 		<div class="wrap pchq"><h1>自动开店</h1>
 		<p>填写客户自有域名，创建独立店铺和后台账号。顾客使用 www 地址；管理地址仍由平台固定分配。商品、订单和顾客数据不会从其他店铺复制；支付默认关闭。</p>
 		<?php if ( $job ) : ?>
-		<div class="pchq-card"><h2>开店进度</h2><p id="pchq-provision-status" role="status" aria-live="polite"><?php echo esc_html( $job['message'] ?? '' ); ?></p><div id="pchq-provision-dns"></div><div id="pchq-provision-links"></div></div>
-		<script>
-		(() => { const status = document.getElementById('pchq-provision-status'), dns = document.getElementById('pchq-provision-dns'), links = document.getElementById('pchq-provision-links');
-		const base = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>, job = <?php echo wp_json_encode( $id ); ?>, nonce = <?php echo wp_json_encode( wp_create_nonce( 'pchq_create_store_status' ) ); ?>;
-		function showDns(d) { dns.replaceChildren(); if(!Array.isArray(d.dns_records)||d.dns_records.length!==2) return; const p=document.createElement('p'); p.textContent='请在域名服务商为 '+d.customer_domain+' 手动添加以下两条解析。无需修改管理后台域名。'; const table=document.createElement('table'); table.className='widefat striped'; const head=document.createElement('tr'); for(const label of ['主机记录','记录类型','记录值','TTL']) { const th=document.createElement('th'); th.textContent=label; head.append(th); } const thead=document.createElement('thead'); thead.append(head); const body=document.createElement('tbody'); for(const record of d.dns_records) { const tr=document.createElement('tr'); for(const value of [record.name,record.type,record.value,record.ttl]) { const td=document.createElement('td'); td.textContent=String(value); tr.append(td); } body.append(tr); } table.append(thead,body); dns.append(p,table); }
-		async function refresh() { try { const u = new URL(base); u.search = new URLSearchParams({action:'pchq_create_store_status',job,nonce}); const r = await fetch(u,{credentials:'same-origin',cache:'no-store'}); const data = await r.json(); if(!data.success) throw Error(); const d=data.data; status.textContent=d.message; links.replaceChildren(); showDns(d); if(d.state==='complete') { for(const [key,label] of [['management_url','商家后台'],['public_url','顾客店铺']]) { if(typeof d[key]!=='string') continue; const a=document.createElement('a'), u=new URL(d[key]); if(u.protocol!=='https:'||u.username||u.password||u.search||u.hash||u.pathname!==(key==='management_url'?'/wp-admin/':'/')) continue; a.href=u.href; a.textContent=label; a.className='button'; links.append(a,document.createTextNode(' ')); } return; } if(d.state==='failed') return; } catch { status.textContent='暂时无法读取进度，任务不会因此重新创建。'; } setTimeout(refresh,5000); } refresh(); })();
-		</script>
+		<div class="pchq-card" data-pchq-provision data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-job="<?php echo esc_attr( $id ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'pchq_create_store_status' ) ); ?>"><h2>开店进度</h2><p id="pchq-provision-status" role="status" aria-live="polite"><?php echo esc_html( $job['message'] ?? '' ); ?></p><div id="pchq-provision-dns"></div><div id="pchq-provision-links"></div></div>
 		<?php else : ?>
 		<?php if ( '' === self::root() ) : ?><div class="notice notice-warning"><p>部署服务尚未配置，暂时不能创建新店。</p></div><?php endif; ?>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="pchq-card">
