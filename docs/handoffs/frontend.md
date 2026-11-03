@@ -1113,3 +1113,13 @@ functions.php新增vc_card_display_product，使用Woo get_visible_children的me
 桌面及正式同源390×844手机实际DOM确认payment在contact/shipping之前，最终Place Order仍存在。手机取消Use same address for billing后出现独立billing-country/first_name/last_name/address_1/address_2/city/state/postcode/phone，country251项含提示；恢复checked=true后billing-fields收起，body无横向溢出。只切换复选框并已恢复，未填资料、改用户车数量或提交订单。截图outputs/payment-first-mobile.png及billing-address-mobile.png，手机预览/正式结账标签保留；非实体手机验收。
 
 实际后端只读核对：本机所有原生gateway disabled/unavailable。Panapay has_fields=false、Blocks content仅description，现有流程在最终提交后创建hosted iframe/redirect；Apple Pay图标仅展示，无真正钱包会话/设备资格检测。故本轮完成原生顺序及账单表单验证，没有完成选卡站内收卡、Apple Pay授权/付款。已发群请求@Claude提供支付方确认的method_type/checkout_flow、托管字段SDK/令牌化及真实ApplePay，注意Bridge严格DTO与HQ→店铺版本协调；选择方式本身不下单/不创建会话。当前服务器/HQ是否另有开通账号须后端核对，未根据本机关闭推断其他环境。
+
+### 2026-11-03 · Codex：结账输入区仅 UI 修复（CHECKOUT-UI-REPAIR）
+
+用户截图指出已填写的邮箱/姓名/地址等label与文字挤在一起、输入框与国家/州选择框不一致，明确“你先改ui……其他的你别管”。本轮只新增主题assets/checkout.css和functions.php条件加载；不改DB、页面块顺序、字段/支付JS、后端插件、支付/配送开关或客户已填资料。此前page8顺序不在本轮处理范围。
+
+根因补充：上一轮site.css排除通用input重置已生效，但Woo固定50px输入仍同时容纳浮动label和24px9px8px padding，且focus/type选择器权重高，会继续挤压/跳字。现地址和联系邮箱原DOM的label固定上置、距控件8px；input/select统一16px/24px、12px padding、8px圆角和品牌边框，标题桌面24/32px600、手机20/28px600。兼容原生text-input__wrapper；focus/focus-within/autofill显式保持padding和border宽度，键盘focus-visible有2pxoutline。select边框直接设置实际select，箭头锚到控件底部；has-error标签/边框保持Woo红。coupon及非地址附加字段不在此scope，保留原native aria/id/for/required和反馈。没有隐藏真实业务错误提示。
+
+只读代理检查CSS后发现的focus权重与错误标签覆盖均已补正。实际IAB桌面：已填邮箱focus后padding12px、height49.33px、label static/gap8px；手机390×844（body375）空/已填字段均gap8px，input/select同高、箭头在框内，聚焦first_name内容/高度不变且outline可见；360×800（body345）宽=scrollWidth、fieldOverflow0。标题计算字体/权重匹配新规则。仅聚焦/Tab/切预览尺寸，没有输入资料/改用户车数量/提交订单，未真实手机、实际浏览器autofill或字段错误交互验收；对应CSS保留并经源码评审，不冒称实测。
+
+PHP lint、git diff --check通过。Impeccable detect仅3项advisory（24/20字号和Woo #cc1818不在后台DESIGN.md），该设计文件明确不适用公开店铺；沿用现有店铺字体/品牌和原生错误色，不做无关后台规范改写。证据D:/Codex/Tasks/2026-11-03/checkout-ui-repair/outputs/checkout-desktop-fixed.png、checkout-mobile-fixed.png；临时验证tab已关闭，正式手机预览恢复390并保留。样式经本机主题junction即时生效；其他环境需正常主题部署，不声称公网已上线。

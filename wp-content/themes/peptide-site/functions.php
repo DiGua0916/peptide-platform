@@ -50,6 +50,9 @@ add_action( 'wp_enqueue_scripts', function () {
         wp_enqueue_script( 'vialcove-carousel', $root . '/assets/carousel.js', array(), (string) filemtime( __DIR__ . '/assets/carousel.js' ), true );
     }
     wp_enqueue_style( 'vialcove-brand', $root . '/assets/brand.css', is_front_page() ? array( 'vialcove', 'vialcove-carousel' ) : array( 'vialcove' ), (string) filemtime( __DIR__ . '/assets/brand.css' ) );
+    if ( function_exists( 'is_checkout' ) && is_checkout() ) {
+        wp_enqueue_style( 'vialcove-checkout', $root . '/assets/checkout.css', array( 'vialcove-brand' ), (string) filemtime( __DIR__ . '/assets/checkout.css' ) );
+    }
     wp_enqueue_style( 'vialcove-navigation', $root . '/assets/navigation.css', array( 'vialcove-brand' ), (string) filemtime( __DIR__ . '/assets/navigation.css' ) );
     wp_enqueue_script( 'vialcove-navigation', $root . '/assets/navigation.js', array(), (string) filemtime( __DIR__ . '/assets/navigation.js' ), true );
     wp_enqueue_style( 'vialcove-experience', $root . '/assets/experience.css', array( 'vialcove-navigation' ), (string) filemtime( __DIR__ . '/assets/experience.css' ) );

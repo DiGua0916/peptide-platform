@@ -1,0 +1,157 @@
+/* Checkout presentation only. Keep Woo's fields, validation and payment state. */
+.vc-commerce-content .wp-block-woocommerce-checkout .wc-block-components-checkout-step__title {
+    font-family: var(--font);
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 32px;
+    letter-spacing: -.02em;
+}
+
+/* Labels stay above the control in empty, filled, focused and autofilled states.
+   Address/contact fields only; coupon forms stay native. */
+.vc-commerce-content .wp-block-woocommerce-checkout :is(
+    .wc-block-components-address-form .wc-block-components-text-input,
+    .wc-block-components-address-form__email
+),
+.vc-commerce-content .wp-block-woocommerce-checkout :is(
+    .wc-block-components-address-form .wc-block-components-text-input,
+    .wc-block-components-address-form__email
+) .wc-block-components-text-input__wrapper {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    min-width: 0;
+}
+
+.vc-commerce-content .wp-block-woocommerce-checkout :is(
+    .wc-block-components-address-form .wc-block-components-text-input,
+    .wc-block-components-address-form__email
+) label,
+.vc-commerce-content .wp-block-woocommerce-checkout .wc-blocks-components-select__label {
+    position: static;
+    order: -1;
+    display: block;
+    max-width: none;
+    margin: 0 0 8px;
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    overflow: visible;
+    white-space: normal;
+    transform: none;
+    transition: none;
+    pointer-events: auto;
+}
+
+.vc-commerce-content .wp-block-woocommerce-checkout :is(
+    .wc-block-components-address-form .wc-block-components-text-input,
+    .wc-block-components-address-form__email
+) input,
+.vc-commerce-content .wp-block-woocommerce-checkout .wc-blocks-components-select__select {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 48px;
+    margin: 0;
+    padding: 12px;
+    border: 1px solid var(--muted);
+    border-radius: 8px;
+    background-color: #fff;
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 24px;
+    box-shadow: none;
+}
+
+.vc-commerce-content .wp-block-woocommerce-checkout .wc-blocks-components-select__container {
+    display: flex;
+    flex-direction: column;
+    line-height: normal;
+    background: transparent;
+}
+
+.vc-commerce-content .wp-block-woocommerce-checkout .wc-blocks-components-select__select {
+    padding-inline-end: 40px;
+}
+
+.vc-commerce-content .wp-block-woocommerce-checkout .wc-blocks-components-select__expand {
+    top: auto;
+    bottom: 12px;
+    inset-inline-end: 12px;
+    width: 24px;
+    height: 24px;
+    transform: none;
+    pointer-events: none;
+}
+
+.vc-commerce-content .wp-block-woocommerce-checkout .wc-block-components-form :is(
+    .wc-block-components-address-form .wc-block-components-text-input,
+    .wc-block-components-address-form__email
+) input:is(:focus, :focus-within, :autofill, :-webkit-autofill),
+.vc-commerce-content .wp-block-woocommerce-checkout .wc-blocks-components-select__select:focus {
+    padding: 12px;
+    border-width: 1px;
+    box-shadow: none;
+}
+
+.vc-commerce-content .wp-block-woocommerce-checkout :is(
+    .wc-block-components-address-form .wc-block-components-text-input,
+    .wc-block-components-address-form__email
+) input:focus,
+.vc-commerce-content .wp-block-woocommerce-checkout .wc-blocks-components-select__select:focus {
+    border-color: var(--blue);
+}
+
+.vc-commerce-content .wp-block-woocommerce-checkout .wc-blocks-components-select__select:focus {
+    padding-inline-end: 40px;
+}
+
+.vc-commerce-content .wp-block-woocommerce-checkout :is(
+    .wc-block-components-address-form .wc-block-components-text-input,
+    .wc-block-components-address-form__email
+) input:focus-visible,
+.vc-commerce-content .wp-block-woocommerce-checkout .wc-blocks-components-select__select:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+}
+
+.vc-commerce-content .wp-block-woocommerce-checkout :is(
+    .wc-block-components-address-form .wc-block-components-text-input,
+    .wc-block-components-address-form__email
+) input:is(:disabled, [readonly]),
+.vc-commerce-content .wp-block-woocommerce-checkout .wc-blocks-components-select__select:disabled {
+    background-color: var(--paper);
+    color: var(--muted);
+}
+
+.vc-commerce-content .wp-block-woocommerce-checkout :is(
+    .wc-block-components-address-form .wc-block-components-text-input,
+    .wc-block-components-address-form__email
+).has-error input,
+.vc-commerce-content .wp-block-woocommerce-checkout .has-error .wc-blocks-components-select__select {
+    border-color: #cc1818;
+}
+
+.vc-commerce-content .wp-block-woocommerce-checkout :is(
+    .wc-block-components-address-form .wc-block-components-text-input,
+    .wc-block-components-address-form__email
+).has-error label,
+.vc-commerce-content .wp-block-woocommerce-checkout .has-error .wc-blocks-components-select__label {
+    color: #cc1818;
+}
+
+.vc-commerce-content .wp-block-woocommerce-checkout .wc-block-components-validation-error {
+    margin-top: 8px;
+}
+
+@media (max-width: 600px) {
+    .vc-commerce-content .wp-block-woocommerce-checkout .wc-block-components-checkout-step__title {
+        font-size: 20px;
+        line-height: 28px;
+    }
+}
