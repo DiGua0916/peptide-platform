@@ -42,6 +42,7 @@ final class Sites {
 		$t   = Db::table( 'sites' );
 		$out = array();
 		foreach ( (array) $wpdb->get_results( "SELECT * FROM {$t} ORDER BY name, id", ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			if ( ! Site_Lifecycle::active( (int) $r['id'] ) ) { continue; }
 			$out[ (int) $r['id'] ] = self::row( $r );
 		}
 		return $out;
@@ -80,6 +81,9 @@ final class Sites {
 			$url = $management_url;
 		}
 		$uuid = substr( sanitize_key( $uuid ), 0, 64 );
+		if ( Site_Lifecycle::retired_uuid( $uuid, $url ) || ( $explicit && Site_Lifecycle::retired_uuid( $uuid, $public_url ) ) ) {
+			return new \WP_Error( 'pchq_store_retired', 'This store identity is offline or has been removed; automatic registration is disabled.', array( 'status' => 403 ) );
+		}
 		$name = mb_substr( '' !== trim( $name ) ? $name : (string) wp_parse_url( $url, PHP_URL_HOST ), 0, 190 );
 		// 先按店铺的固定编号找（店铺换了主域名，网址会变），再按网址找。
 		$matches = '' !== $uuid ? $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$t} WHERE uuid = %s LIMIT 2", $uuid ) ) : array(); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
@@ -141,11 +145,8 @@ final class Sites {
 		}
 	}
 
-	/** 从总后台移除店铺：它的每日数字和告警一起删掉（店铺本身不受影响；店铺下次注册时会重新出现）。 */
+	/** Legacy hard deletion is deliberately unavailable; use the bounded lifecycle worker. */
 	public static function delete( int $id ): void {
-		global $wpdb;
-		$wpdb->delete( Db::table( 'sites' ), array( 'id' => $id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$wpdb->delete( Db::table( 'daily' ), array( 'site_id' => $id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$wpdb->delete( Db::table( 'alerts' ), array( 'site_id' => $id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		throw new \LogicException( 'Use Site_Lifecycle::request to retire a store safely.' );
 	}
 }

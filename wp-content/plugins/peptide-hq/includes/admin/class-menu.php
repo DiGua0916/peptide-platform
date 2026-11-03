@@ -20,7 +20,7 @@ final class Menu {
 
 	public const CAP = 'manage_options';
 
-	private const ACTIONS = array( 'pchq_site_refresh', 'pchq_site_rename', 'pchq_site_delete', 'pchq_site_server', 'pchq_site_config', 'pchq_secret_regenerate', 'pchq_server_save', 'pchq_server_delete', 'pchq_login', 'pchq_account_save', 'pchq_account_delete', 'pchq_account_toggle', 'pchq_alert_close' );
+	private const ACTIONS = array( 'pchq_site_refresh', 'pchq_site_rename', 'pchq_site_delete', 'pchq_site_retire', 'pchq_site_server', 'pchq_site_config', 'pchq_secret_regenerate', 'pchq_server_save', 'pchq_server_delete', 'pchq_login', 'pchq_account_save', 'pchq_account_delete', 'pchq_account_toggle', 'pchq_alert_close' );
 
 	public static function register_hooks(): void {
 		add_action( 'admin_menu', array( self::class, 'menu' ) );
@@ -228,8 +228,17 @@ final class Menu {
 				break;
 
 			case 'pchq_site_delete':
-				Sites::delete( $site );
-				self::flash( 'success', __( 'Store removed from the master admin. The store itself is not changed; if it still has the master admin lines in wp-config.php, it joins again by itself within a day.', 'peptide-hq' ) );
+				// Old bookmarked GET actions must never erase registration or start a removal.
+				self::flash( 'error', '旧移除入口已停用。请从店铺“更多”中选择“移除店铺”，完整下线并保留72小时恢复期。' );
+				break;
+
+			case 'pchq_site_retire':
+				if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) {
+					wp_die( '移除店铺必须通过表单提交。', '', array( 'response' => 405 ) );
+				}
+				$site = isset( $_POST['site'] ) && is_scalar( $_POST['site'] ) ? absint( $_POST['site'] ) : 0;
+				$res = \PeptideHq\Site_Lifecycle::request( $site, 'retire' );
+				self::flash( is_wp_error( $res ) ? 'error' : 'success', is_wp_error( $res ) ? $res->get_error_message() : '已提交完整下线任务。成功下线后数据保留72小时，可在店铺回收站查看进度及恢复。' );
 				break;
 
 			case 'pchq_site_server':

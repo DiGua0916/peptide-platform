@@ -86,7 +86,8 @@ body.pchq-workspace #adminmenu .awaiting-mod{background:#ddd;color:#171717}
 /* Shared controls and real validation states. */
 body.pchq-workspace :is(input,select,textarea,button,.button){font-family:var(--vc-font)}
 body.pchq-workspace :is(input[type=text],input[type=email],input[type=password],input[type=number],input[type=search],input[type=url],select,textarea){box-sizing:border-box;color:var(--vc-ink);background-color:#fff;border:1px solid #d5d5d5;border-radius:6px;font-size:13px;line-height:20px;min-height:36px;padding:7px 10px;max-width:100%;box-shadow:none}
-body.pchq-workspace select{padding-right:30px}
+/* Match the control rule's specificity so native arrows retain their own space. */
+body.pchq-workspace #wpbody-content select{padding-right:36px;background-position:right 10px center}
 body.pchq-workspace :is(input,textarea)::placeholder{color:#737373;opacity:1}
 body.pchq-workspace :is(input,select,textarea):focus{border-color:#171717;outline:2px solid #dedede;outline-offset:1px;box-shadow:none}
 body.pchq-workspace :is(input[readonly],textarea[readonly]){background-color:#fafafa}
@@ -165,6 +166,7 @@ body.pchq-workspace .pchq-table th{white-space:nowrap}
 body.pchq-workspace .pchq-table td>.pchq-muted{display:inline-block;margin-top:3px;overflow-wrap:anywhere}
 body.pchq-workspace .pchq-table td.pchq-actions{min-width:220px;white-space:normal}
 body.pchq-workspace .pchq-actions>.button{margin:0 4px 6px 0}
+body.pchq-workspace .pchq-actions>.pchq-site-tools-trigger{margin:0 4px 6px 0}
 body.pchq-workspace .pchq-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;color:var(--vc-muted);background:#f2f2f2;border-radius:4px;font-size:11px;line-height:17px;font-weight:600}
 body.pchq-workspace .pchq-badge.is-ok{color:#404040;background:#eee}
 body.pchq-workspace .pchq-badge.is-bad{color:#933a32;background:#fbefec}
@@ -177,6 +179,15 @@ body.pchq-workspace .pchq-more[open]{padding:14px;margin:6px 0;border:1px solid 
 body.pchq-workspace .pchq-more form{gap:8px;margin:12px 0}
 body.pchq-workspace .pchq-more__title{margin:14px 0 6px}
 body.pchq-workspace .pchq-more__title>.pchq-muted{display:block;margin-top:4px}
+body.pchq-workspace .pchq-site-dialog__header h2{margin:0;font-size:20px;line-height:28px}
+body.pchq-workspace .pchq-site-dialog__header p,body.pchq-workspace .pchq-site-dialog__retire p{font-size:12px;line-height:20px}
+body.pchq-workspace .pchq-server-picker.button{width:200px;max-width:100%;min-height:52px;justify-content:space-between;gap:12px;padding:7px 10px;text-align:left}
+body.pchq-workspace .pchq-server-picker__text{display:block;min-width:0}
+body.pchq-workspace .pchq-server-picker__text>:is(strong,span){display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.pchq-workspace .pchq-server-picker__text strong{font-size:13px;line-height:20px;font-weight:600}
+body.pchq-workspace .pchq-server-picker__text>span{color:var(--vc-muted);font-size:11px;line-height:17px;font-weight:400;font-variant-numeric:tabular-nums}
+body.pchq-workspace .pchq-server-picker>.dashicons{flex:0 0 16px;width:16px;height:16px;font-size:16px;color:var(--vc-muted)}
+body.pchq-workspace .pchq-server-option>input[type=radio]{width:16px;height:16px;min-height:16px;margin:0;flex:none}
 body.pchq-workspace .pchq-tools{gap:8px 12px;margin-bottom:14px}
 body.pchq-workspace .pchq-sysinfo{font-size:12px;line-height:20px}
 body.pchq-workspace .pchq-add{max-width:none}

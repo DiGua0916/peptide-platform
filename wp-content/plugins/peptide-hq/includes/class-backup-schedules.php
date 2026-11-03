@@ -34,7 +34,7 @@ final class Backup_Schedules {
 
 	/** Permissions and nonce verification belong to the caller's administrator form. */
 	public static function save( int $site_id, array $input ) {
-		if ( $site_id < 1 || ! Sites::get( $site_id ) ) { return self::error( 'site', '没有找到需要设置备份计划的店铺。' ); }
+		if ( $site_id < 1 || ! Site_Lifecycle::active( $site_id ) || ! Sites::get( $site_id ) ) { return self::error( 'site', '没有找到可设置备份计划的在线店铺。' ); }
 		$old = self::raw( $site_id );
 		$enabled = $input['enabled'] ?? $old['enabled'];
 		if ( ! in_array( $enabled, array( true, false, 0, 1, '0', '1' ), true ) ) { return self::error( 'enabled', '自动备份开关无效。' ); }

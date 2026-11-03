@@ -86,6 +86,7 @@ final class Monitor {
 	 * 检查一个店铺。返回是否连上了。
 	 */
 	public static function poll( int $id, bool $full = false ): bool {
+		if ( ! Site_Lifecycle::active( $id ) ) { return false; }
 		$site = Sites::get( $id );
 		if ( ! $site ) {
 			return false;

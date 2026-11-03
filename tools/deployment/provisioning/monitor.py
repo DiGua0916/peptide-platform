@@ -18,6 +18,8 @@ def main():
         state = json.loads(statefile.read_text())
         if state.get('state') != 'complete':
             continue
+        if not worker.lifecycle_active(c, state['uuid']):
+            continue
         t = worker.tenant(state['slug'], c)
         expected, identity = json.dumps(t['management_url']), json.dumps(state['uuid'])
         code = "<?php $ok=false;foreach(PeptideHq\\Sites::all() as $s){if($s['uuid']===" + identity + " && rtrim(PeptideHq\\Site_Urls::management($s),'/')===" + expected + "){$ok=PeptideHq\\Monitor::poll((int)$s['id'],true);break;}}if(!$ok){throw new RuntimeException('monitor_failed');}"

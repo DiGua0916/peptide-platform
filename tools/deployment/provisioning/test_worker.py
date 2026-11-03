@@ -1,5 +1,6 @@
 """Pure boundary checks. These tests do not execute provisioning commands."""
 import copy
+import contextlib
 import importlib.util
 import json
 import os
@@ -9,7 +10,7 @@ import sys
 import tempfile
 import types
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 import uuid
 
 # Windows can run the pure policy/models without adding POSIX packages or a VM.
@@ -22,6 +23,7 @@ if sys.platform == 'win32':
 spec = importlib.util.spec_from_file_location('worker', Path(__file__).with_name('worker.py'))
 w = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(w)
+REAL_LIFECYCLE_MODULE = w.lifecycle_module
 TEST_ROOT = Path(os.environ.get('VIALCOVE_TEST_TMPDIR', Path(__file__).parent))
 TEST_ROOT.mkdir(parents=True, exist_ok=True)
 
@@ -32,6 +34,15 @@ class Policy(unittest.TestCase):
         self.addCleanup(self.stack.close)
         # A forgotten mock must never execute host commands or contact a server.
         self.stack.enter_context(patch.object(w, 'run', side_effect=AssertionError('unmocked command')))
+        # The lifecycle broker is tested separately. Queue policy tests must not
+        # import a live root broker or acquire host-wide deployment locks.
+        self.lifecycle = types.SimpleNamespace(
+            process_queue=Mock(return_value=False),
+            register_provisioned=Mock(),
+            load_json=Mock(side_effect=AssertionError('unexpected lifecycle state read')),
+            lock=Mock(side_effect=lambda *a, **kw: contextlib.nullcontext()),
+        )
+        self.stack.enter_context(patch.object(w, 'lifecycle_module', return_value=self.lifecycle))
         if sys.platform == 'win32':
             self.stack.enter_context(patch.object(w.os, 'O_NOFOLLOW', 0, create=True))
             self.stack.enter_context(patch.object(w.os, 'chown', lambda *a: None, create=True))
@@ -261,7 +272,7 @@ class Policy(unittest.TestCase):
         self.root_stat_model()
         with tempfile.TemporaryDirectory(dir=TEST_ROOT) as folder:
             root=Path(folder)
-            c=dict(self.config(root),web_ledger_root=str(root/'ledger'),web_data_root=str(root/'data'),web_store_root=str(root/'stores'))
+            c=dict(self.config(root),role='web',web_ledger_root=str(root/'ledger'),web_data_root=str(root/'data'),web_store_root=str(root/'stores'))
             p=dict(request=self.request(),slug='s0002',uuid=str(uuid.uuid4()),media_key='synthetic-public-key',registration_secret='a'*64)
             with patch.object(w,'customer_dns_ready',return_value=False), patch.object(w,'make_user') as users, patch.object(w,'copy_runtime') as runtime, patch.object(w.fcntl,'flock') as lock:
                 with self.assertRaisesRegex(ValueError,'waiting_dns'): w.web_create(p,c)
@@ -323,6 +334,231 @@ class Policy(unittest.TestCase):
         self.assertNotIn('WP_HOME',cfg)
         self.assertIn("'WP_SITEURL','https://s0002.admin.example.invalid'",cfg)
         self.assertNotIn('CREATE USER',cfg)
+
+    def test_lifecycle_receipts_sync_before_new_provisioning(self):
+        self.root_stat_model()
+        with tempfile.TemporaryDirectory(dir=TEST_ROOT) as folder:
+            c=dict(self.config(folder),hq_root=str(Path(folder)/'hq'))
+            order=[]
+            self.lifecycle.process_queue.side_effect=lambda *a,**kw: order.append(('lifecycle',kw)) or True
+            with patch.object(w.pwd,'getpwnam',return_value=types.SimpleNamespace(pw_uid=0,pw_gid=0)), \
+                    patch.object(w,'run',side_effect=lambda args,**kw: order.append(('sync',args,kw)) or b''):
+                w.process_queue(c)
+            self.assertEqual(order[0],('lifecycle',{'lock_held':True}))
+            self.assertEqual(len(order),2)
+            self.assertEqual(order[1][1],['/usr/local/bin/wp','--path='+c['hq_root'],'eval','PeptideHq\\Site_Lifecycle::sync();'])
+            self.assertEqual(order[1][2],{'user':'test'})
+            self.assertEqual(len(self.lifecycle.lock.call_args_list),2)
+            self.assertTrue(all(call.kwargs=={'nonblocking':True} for call in self.lifecycle.lock.call_args_list))
+            self.lifecycle.register_provisioned.assert_not_called()
+
+    def test_lifecycle_dynamic_import_rejects_untrusted_file_or_parent(self):
+        trusted_file=types.SimpleNamespace(st_uid=0,st_mode=stat.S_IFREG|0o644)
+        trusted_parent=types.SimpleNamespace(st_uid=0,st_mode=stat.S_IFDIR|0o755)
+        unsafe=[
+            (types.SimpleNamespace(st_uid=1000,st_mode=stat.S_IFREG|0o644),trusted_parent),
+            (types.SimpleNamespace(st_uid=0,st_mode=stat.S_IFREG|0o664),trusted_parent),
+            (types.SimpleNamespace(st_uid=0,st_mode=stat.S_IFLNK|0o777),trusted_parent),
+            (trusted_file,types.SimpleNamespace(st_uid=1000,st_mode=stat.S_IFDIR|0o755)),
+            (trusted_file,types.SimpleNamespace(st_uid=0,st_mode=stat.S_IFDIR|0o775)),
+        ]
+        for entry,parent in unsafe:
+            with self.subTest(file=entry,parent=parent),patch.object(w.Path,'lstat',return_value=entry), \
+                    patch.object(w.Path,'stat',return_value=parent), \
+                    patch.object(w.importlib.util,'spec_from_file_location') as loader:
+                with self.assertRaisesRegex(ValueError,'lifecycle_module_owner'): REAL_LIFECYCLE_MODULE()
+                loader.assert_not_called()
+
+    def test_lifecycle_dynamic_import_only_executes_trusted_sibling(self):
+        module=types.SimpleNamespace(marker='synthetic module; no code executed')
+        loader=types.SimpleNamespace(exec_module=Mock())
+        spec=types.SimpleNamespace(loader=loader)
+        with patch.object(w.Path,'lstat',return_value=types.SimpleNamespace(st_uid=0,st_mode=stat.S_IFREG|0o644)), \
+                patch.object(w.Path,'stat',return_value=types.SimpleNamespace(st_uid=0,st_mode=stat.S_IFDIR|0o755)), \
+                patch.object(w.importlib.util,'spec_from_file_location',return_value=spec) as locate, \
+                patch.object(w.importlib.util,'module_from_spec',return_value=module):
+            self.assertIs(REAL_LIFECYCLE_MODULE(),module)
+        self.assertEqual(locate.call_args.args[1],Path(w.__file__).resolve().with_name('lifecycle.py'))
+        loader.exec_module.assert_called_once_with(module)
+
+    def test_lifecycle_active_without_history_does_not_load_broker(self):
+        with tempfile.TemporaryDirectory(dir=TEST_ROOT) as folder:
+            identity=str(uuid.uuid4())
+            for role in ['admin','web']:
+                c=dict(self.config(folder),role=role,web_ledger_root=str(Path(folder)/'web-ledger'))
+                with patch.object(w,'lifecycle_module') as load:
+                    self.assertTrue(w.lifecycle_active(c,identity))
+                    load.assert_not_called()
+
+    def test_lifecycle_active_uses_selected_role_root_and_exact_identity(self):
+        with tempfile.TemporaryDirectory(dir=TEST_ROOT) as folder:
+            root=Path(folder); identity=str(uuid.uuid4()); admin=root/'admin';web=root/'web'
+            for role,expected in [('admin',admin),('web',web)]:
+                with self.subTest(role=role):
+                    current=expected/'lifecycle/tenants'/identity/'current.json';current.parent.mkdir(parents=True);current.write_text('{}',encoding='utf-8')
+                    c=dict(self.config(admin),role=role,web_ledger_root=str(web))
+                    self.lifecycle.load_json.side_effect=None
+                    for state in ['active','retained','offlining','restoring','purging','purged','failed','unexpected']:
+                        self.lifecycle.load_json.return_value=dict(uuid=identity,state=state)
+                        self.assertEqual(w.lifecycle_active(c,identity),state=='active')
+                        self.lifecycle.load_json.assert_called_with(current,private=True)
+                    self.lifecycle.load_json.return_value=dict(uuid=str(uuid.uuid4()),state='active')
+                    with self.assertRaisesRegex(ValueError,'lifecycle_identity'):w.lifecycle_active(c,identity)
+
+    def test_lifecycle_active_corrupt_or_unreadable_history_stays_closed(self):
+        with tempfile.TemporaryDirectory(dir=TEST_ROOT) as folder:
+            identity=str(uuid.uuid4());c=dict(self.config(folder),role='admin')
+            current=Path(folder)/'lifecycle/tenants'/identity/'current.json';current.parent.mkdir(parents=True);current.write_text('synthetic corrupt json',encoding='utf-8')
+            for error in [ValueError('invalid_json'),PermissionError('synthetic denied'),OSError('synthetic truncated read')]:
+                with self.subTest(error=type(error).__name__):
+                    self.lifecycle.load_json.side_effect=error
+                    with self.assertRaises(type(error)):w.lifecycle_active(c,identity)
+            self.lifecycle.load_json.side_effect=None
+            for state in [None,{},[],{'state':'active'},{'uuid':identity}]:
+                with self.subTest(state=state):
+                    self.lifecycle.load_json.return_value=state
+                    try:active=w.lifecycle_active(c,identity)
+                    except (ValueError,AttributeError):active=False
+                    self.assertFalse(active)
+            for invalid in ['../escape','AAAAAAAA-BBBB-4CCC-8DDD-111111111111',False,None]:
+                with self.subTest(identity=invalid),self.assertRaises((ValueError,TypeError,AttributeError)):w.lifecycle_active(c,invalid)
+
+    def test_web_retired_identity_blocks_all_replayed_creation_commands(self):
+        self.root_stat_model()
+        with tempfile.TemporaryDirectory(dir=TEST_ROOT) as folder:
+            root=Path(folder);identity=str(uuid.uuid4())
+            c=dict(self.config(root),role='web',web_ledger_root=str(root/'ledger'),web_data_root=str(root/'data'),web_store_root=str(root/'stores'))
+            current=root/'ledger/lifecycle/tenants'/identity/'current.json';current.parent.mkdir(parents=True);current.write_text('{}',encoding='utf-8')
+            self.lifecycle.load_json.side_effect=None;self.lifecycle.load_json.return_value=dict(uuid=identity,state='purged')
+            payload=dict(request=self.request(),slug='s0002',uuid=identity,media_key='synthetic-public-key',registration_secret='a'*64)
+            with patch.object(w,'make_user') as users,patch.object(w,'copy_runtime') as runtime,patch.object(w,'customer_dns_ready') as dns,patch.object(w,'run') as command:
+                with self.assertRaisesRegex(ValueError,'store_retired'):w.web_create(payload,c)
+                users.assert_not_called();runtime.assert_not_called();dns.assert_not_called();command.assert_not_called()
+            self.assertFalse((root/'data').exists());self.assertFalse((root/'stores').exists());self.assertFalse((root/'ledger/domain-claims').exists())
+
+    def test_unchanged_lifecycle_does_not_boot_wordpress(self):
+        self.root_stat_model()
+        with tempfile.TemporaryDirectory(dir=TEST_ROOT) as folder, \
+                patch.object(w.pwd,'getpwnam',return_value=types.SimpleNamespace(pw_uid=0,pw_gid=0)), \
+                patch.object(w,'run') as command:
+            w.process_queue(self.config(folder))
+            self.lifecycle.process_queue.assert_called_once_with(self.config(folder),lock_held=True)
+            command.assert_not_called()
+
+    def test_retired_pending_job_cannot_recreate_resources(self):
+        self.root_stat_model()
+        for lifecycle_state in ['retained','offlining','restoring','purged','failed']:
+            with self.subTest(state=lifecycle_state), tempfile.TemporaryDirectory(dir=TEST_ROOT) as folder:
+                root=Path(folder); (root/'jobs').mkdir(); r=self.request(); job=w.accept_request(root,r)
+                identity=str(uuid.uuid4()); state=dict(state='pending',slug='s0002',uuid=identity,customer_domain='example.com')
+                (job/'state.json').write_text(json.dumps(state),encoding='utf-8')
+                current=root/'lifecycle/tenants'/identity/'current.json'; current.parent.mkdir(parents=True)
+                current.write_text('{}',encoding='utf-8')
+                self.lifecycle.load_json.side_effect=None
+                self.lifecycle.load_json.return_value=dict(uuid=identity,state=lifecycle_state)
+                with patch.object(w.pwd,'getpwnam',return_value=types.SimpleNamespace(pw_uid=0,pw_gid=0)), \
+                        patch.object(w.grp,'getgrnam',return_value=types.SimpleNamespace(gr_gid=0)), \
+                        patch.object(w,'admin_create') as create, patch.object(w,'dns_ready') as dns, patch.object(w,'run') as command:
+                    w.process_queue(self.config(root))
+                create.assert_not_called(); dns.assert_not_called(); command.assert_not_called()
+                self.lifecycle.register_provisioned.assert_not_called()
+                self.assertEqual(json.loads((job/'state.json').read_text(encoding='utf-8'))['state'],'failed')
+                self.assertEqual(json.loads((root/'results'/(r['operation_id']+'.json')).read_text(encoding='utf-8'))['state'],'failed')
+                self.assertFalse((root/'domain-claims').exists())
+
+    def test_confirmed_new_store_registered_before_password_scrub_and_complete(self):
+        self.root_stat_model()
+        with tempfile.TemporaryDirectory(dir=TEST_ROOT) as folder:
+            root=Path(folder); (root/'jobs').mkdir(); r=self.request(); job=w.accept_request(root,r)
+            c=dict(self.config(root),hq_root=str(root/'hq')); order=[]
+            def create(request,state,config,secret):
+                order.append('create')
+                return dict(w.tenant(state['slug'],config,request['customer_domain']),uuid=state['uuid'])
+            def confirm(t,config,jobpath): order.append('confirm'); return 12
+            def register(config,t,request,state,site_id):
+                order.append('register')
+                self.assertEqual(site_id,12)
+                self.assertEqual(json.loads((job/'state.json').read_text(encoding='utf-8'))['state'],'pending')
+                self.assertEqual(json.loads((job/'request.json').read_text(encoding='utf-8'))['password'],r['password'])
+                self.assertEqual(t['uuid'],state['uuid'])
+            self.lifecycle.register_provisioned.side_effect=register
+            with patch.object(w.pwd,'getpwnam',return_value=types.SimpleNamespace(pw_uid=0,pw_gid=0)), \
+                    patch.object(w.grp,'getgrnam',return_value=types.SimpleNamespace(gr_gid=0)), \
+                    patch.object(w,'dns_ready',return_value=True),patch.object(w,'customer_dns_ready',return_value=True), \
+                    patch.object(w,'admin_create',side_effect=create),patch.object(w,'confirm_hq',side_effect=confirm), \
+                    patch.object(w,'run',return_value=b'a'*64):
+                w.process_queue(c)
+            self.assertEqual(order,['create','confirm','register'])
+            self.assertEqual(json.loads((job/'state.json').read_text(encoding='utf-8'))['state'],'complete')
+            self.assertEqual(json.loads((job/'request.json').read_text(encoding='utf-8'))['password'],'')
+            self.assertEqual(json.loads((root/'results'/(r['operation_id']+'.json')).read_text(encoding='utf-8'))['site_id'],12)
+
+    def template_fixture(self, root):
+        source=root/'source'; source.mkdir(); uploads=source/'uploads'; uploads.mkdir()
+        image=uploads/'synthetic.png'; image.write_bytes(b'synthetic-template-image-not-a-customer-upload')
+        bundle=root/'template.json'; data=dict(version=1,documents={key:[] for key in ['home','header','footer','global']},images=[dict(old_id=7,file=str(image),title='Synthetic template image',alt='Synthetic')])
+        bundle.write_text(json.dumps(data),encoding='utf-8'); bundle.chmod(0o600)
+        t=dict(public=root/'target',data=root/'data',user='synthetic')
+        c=dict(source_web_root=str(source),source_uploads=str(uploads),template_bundle=str(bundle))
+        t['management_url']='https://s0002.admin.example.invalid'
+        return t,c,data
+
+    def test_template_bundle_never_exports_first_store_and_reuses_image_paths(self):
+        self.root_stat_model()
+        with tempfile.TemporaryDirectory(dir=TEST_ROOT) as folder:
+            root=Path(folder); t,c,data=self.template_fixture(root); payloads=[]; calls=[]
+            def importer(args,**kw):
+                calls.append(args)
+                payloads.append(json.loads(Path(kw['extra_env']['VIALCOVE_TEMPLATE_FILE']).read_text(encoding='utf-8')))
+                return b'Imported synthetic layout'
+            with patch.object(w.pwd,'getpwnam',return_value=types.SimpleNamespace(pw_uid=0,pw_gid=0)), \
+                    patch.object(w.grp,'getgrnam',return_value=types.SimpleNamespace(gr_gid=0)),patch.object(w,'run',side_effect=importer):
+                w.seed_template(t,c); first={p.name:p.read_bytes() for p in (t['data']/'uploads/master').iterdir()}
+                w.seed_template(t,c)
+            self.assertEqual({p.name:p.read_bytes() for p in (t['data']/'uploads/master').iterdir()},first)
+            self.assertEqual(list(first),['master-7.png'])
+            self.assertEqual(payloads[0],payloads[1])
+            self.assertEqual(payloads[0]['images'][0]['target'],'master-7.png')
+            self.assertNotIn('file',payloads[0]['images'][0])
+            self.assertFalse((t['data']/'template.json').exists())
+            self.assertEqual(len(calls),2)
+            self.assertTrue(all(args[-1]=='/usr/local/lib/vialcove-provision/import-template.php' for args in calls))
+            self.assertTrue(all('--path='+c['source_web_root'] not in args for args in calls))
+            self.assertFalse(any(any(token in {'mysql','mariadb','db','export'} for token in args) for args in calls))
+
+    def test_template_bundle_rejects_untrusted_owner_links_permissions_and_size(self):
+        self.root_stat_model()
+        for field,value in [('st_uid',1000),('st_nlink',2),('st_mode',stat.S_IFREG|0o622),('st_size',2*1024**2)]:
+            with self.subTest(field=field),tempfile.TemporaryDirectory(dir=TEST_ROOT) as folder:
+                t,c,data=self.template_fixture(Path(folder))
+                with Path(c['template_bundle']).open('rb') as handle: entry=os.fstat(handle.fileno())
+                # Model precisely the trust predicate; Windows ACL/O_NOFOLLOW is not certified here.
+                values=list(entry); values[dict(st_uid=4,st_nlink=3,st_mode=0,st_size=6)[field]]=value
+                with patch.object(w.os,'fstat',return_value=os.stat_result(values)),patch.object(w,'run') as command:
+                    with self.assertRaisesRegex(ValueError,'template_bundle_owner'): w.seed_template(t,c)
+                    command.assert_not_called()
+                self.assertFalse(t['data'].exists())
+
+    def test_template_bundle_rejects_outside_media_and_master_as_destination(self):
+        self.root_stat_model()
+        with tempfile.TemporaryDirectory(dir=TEST_ROOT) as folder:
+            root=Path(folder); t,c,data=self.template_fixture(root); foreign=root/'foreign.png';foreign.write_bytes(b'synthetic foreign bytes')
+            data['images'][0]['file']=str(foreign);Path(c['template_bundle']).write_text(json.dumps(data))
+            with patch.object(w.pwd,'getpwnam',return_value=types.SimpleNamespace(pw_uid=0,pw_gid=0)),patch.object(w,'run') as command:
+                with self.assertRaisesRegex(ValueError,'template_source_path'): w.seed_template(t,c)
+                command.assert_not_called()
+                self.assertFalse(list((t['data']/'uploads/master').iterdir()))
+                with self.assertRaisesRegex(ValueError,'master_is_target'): w.seed_template(dict(t,public=Path(c['source_web_root'])),c)
+
+    def test_template_payload_removed_when_import_fails(self):
+        self.root_stat_model()
+        with tempfile.TemporaryDirectory(dir=TEST_ROOT) as folder:
+            t,c,data=self.template_fixture(Path(folder))
+            with patch.object(w.pwd,'getpwnam',return_value=types.SimpleNamespace(pw_uid=0,pw_gid=0)), \
+                    patch.object(w.grp,'getgrnam',return_value=types.SimpleNamespace(gr_gid=0)), \
+                    patch.object(w,'run',side_effect=RuntimeError('synthetic import failure')):
+                with self.assertRaisesRegex(RuntimeError,'synthetic import failure'): w.seed_template(t,c)
+            self.assertFalse((t['data']/'template.json').exists())
 
 
 if __name__ == '__main__': unittest.main()

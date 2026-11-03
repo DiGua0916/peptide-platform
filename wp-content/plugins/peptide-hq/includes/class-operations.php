@@ -14,6 +14,7 @@ final class Operations {
 	public static function ready(): bool { try { return class_exists( Runtime::class ) && Runtime::worker_ready(); } catch ( \Throwable $e ) { return false; } }
 	public static function target( int $site ) {
 		if ( $site > 0 ) {
+			if ( ! Site_Lifecycle::active( $site ) ) { return new \WP_Error( 'pchq_store_retired', '店铺已下线，普通运维操作已暂停。' ); }
 			$s = Sites::get( $site ); $key = Sites::key( $site );
 			$url = $s ? Site_Urls::management( $s ) : '';
 			return $s && '' !== $url && 64 === strlen( $key ) ? array( 'url' => $url, 'key' => $key, 'label' => $s['name'], 'uuid' => $s['uuid'] ) : new \WP_Error( 'pchq_ops_site', '店铺不存在或连接尚未确认。' );

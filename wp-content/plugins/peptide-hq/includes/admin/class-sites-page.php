@@ -70,6 +70,10 @@ final class Sites_Page {
 						</tbody>
 					</table>
 				</div>
+				<?php foreach ( $sites as $s ) : ?>
+					<?php self::render_tools_dialog( $s ); ?>
+					<?php self::render_server_dialog( $s, $servers ); ?>
+				<?php endforeach; ?>
 			<?php endif; ?>
 		</div>
 		<?php
@@ -93,7 +97,9 @@ final class Sites_Page {
 		$want    = Servers::ip_for_site( $s['id'] );
 		$has     = (string) ( $conf['server_ip'] ?? '' );
 		$info    = $s['info'];
-		$v       = (array) ( $info['versions'] ?? array() );
+		$assigned = current( array_filter( $servers, static fn( $server ) => (int) $server['id'] === (int) $s['server_id'] ) );
+		$server_name = $assigned ? (string) $assigned['name'] : ( $s['server_id'] ? '当前服务器不可用' : '未分配服务器' );
+		$server_ip = $assigned ? (string) $assigned['ip'] : ( $s['server_id'] ? $has : '点击选择服务器' );
 		$domains = (array) ( $info['domains'] ?? array() );
 		$primary = current( array_filter( $domains, static fn( $d ) => ! empty( $d['primary'] ) ) );
 		$https   = array( 'active' => __( 'HTTPS in effect', 'peptide-hq' ), 'checking' => __( 'HTTPS being checked', 'peptide-hq' ), 'failed' => __( 'HTTPS not in effect', 'peptide-hq' ) );
@@ -113,18 +119,11 @@ final class Sites_Page {
 				<?php endif; ?>
 			</td>
 			<td data-label="<?php esc_attr_e( 'Server', 'peptide-hq' ); ?>">
-				<form class="pchq-inline" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-					<input type="hidden" name="action" value="pchq_site_server">
-					<input type="hidden" name="site" value="<?php echo (int) $s['id']; ?>">
-					<?php wp_nonce_field( 'pchq_site_server' ); ?>
-					<label class="screen-reader-text" for="pchq-srv-<?php echo (int) $s['id']; ?>"><?php esc_html_e( 'Server', 'peptide-hq' ); ?></label>
-					<select id="pchq-srv-<?php echo (int) $s['id']; ?>" name="server" onchange="this.form.submit()">
-						<option value="0"><?php esc_html_e( '— Not assigned —', 'peptide-hq' ); ?></option>
-						<?php foreach ( $servers as $sv ) : ?>
-							<option value="<?php echo (int) $sv['id']; ?>" <?php selected( $s['server_id'], $sv['id'] ); ?>><?php echo esc_html( $sv['name'] . ' · ' . $sv['ip'] ); ?></option>
-						<?php endforeach; ?>
-					</select>
-					<noscript><button type="submit" class="button button-small"><?php esc_html_e( 'Save', 'peptide-hq' ); ?></button></noscript>
+				<form class="pchq-site-tools-trigger" method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>">
+					<input type="hidden" name="page" value="<?php echo esc_attr( self::SLUG ); ?>">
+					<button type="submit" name="site_server" value="<?php echo (int) $s['id']; ?>" class="button pchq-server-picker" data-pchq-site-tools-open="pchq-site-server-<?php echo (int) $s['id']; ?>" aria-haspopup="dialog" aria-controls="pchq-site-server-<?php echo (int) $s['id']; ?>" aria-expanded="false" aria-label="<?php echo esc_attr( $s['name'] . '：选择服务器，当前为' . $server_name ); ?>" title="<?php echo esc_attr( $server_name . ' · ' . $server_ip ); ?>">
+						<span class="pchq-server-picker__text"><strong><?php echo esc_html( $server_name ); ?></strong><span><?php echo esc_html( $server_ip ); ?></span></span><span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span>
+					</button>
 				</form>
 				<?php if ( ! $servers ) : ?>
 					<a class="pchq-muted" href="<?php echo esc_url( admin_url( 'admin.php?page=' . Servers_Page::SLUG ) ); ?>"><?php esc_html_e( 'Add a server first', 'peptide-hq' ); ?></a>
@@ -165,15 +164,77 @@ final class Sites_Page {
 			<td data-label="<?php esc_attr_e( 'Actions', 'peptide-hq' ); ?>" class="pchq-actions">
 				<a class="button button-small button-primary" target="_blank" rel="noopener" href="<?php echo esc_url( Menu::action_url( 'pchq_login', array( 'site' => $s['id'] ) ) ); ?>"><?php esc_html_e( 'Open store admin', 'peptide-hq' ); ?></a>
 				<a class="button button-small" href="<?php echo esc_url( Menu::action_url( 'pchq_site_refresh', array( 'site' => $s['id'] ) ) ); ?>"><?php esc_html_e( 'Refresh', 'peptide-hq' ); ?></a>
-				<details class="pchq-more">
-					<summary><?php esc_html_e( 'More', 'peptide-hq' ); ?></summary>
-					<p class="pchq-more__title"><strong><?php esc_html_e( 'Platform tools', 'peptide-hq' ); ?></strong> <span class="pchq-muted"><?php esc_html_e( 'Not shown in the store admin; opens the store page logged in as administrator.', 'peptide-hq' ); ?></span></p>
+				<form class="pchq-site-tools-trigger" method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>">
+					<input type="hidden" name="page" value="<?php echo esc_attr( self::SLUG ); ?>">
+					<button type="submit" name="site_tools" value="<?php echo (int) $s['id']; ?>" class="button button-small" data-pchq-site-tools-open="pchq-site-tools-<?php echo (int) $s['id']; ?>" aria-haspopup="dialog" aria-controls="pchq-site-tools-<?php echo (int) $s['id']; ?>" aria-expanded="false"><?php esc_html_e( 'More', 'peptide-hq' ); ?></button>
+				</form>
+			</td>
+		</tr>
+		<?php
+	}
+
+	/** An explicit server choice preserves the existing POST contract without native option popups. */
+	private static function render_server_dialog( array $s, array $servers ): void {
+		$requested = isset( $_GET['site_server'] ) && is_string( $_GET['site_server'] ) ? $_GET['site_server'] : '';
+		$open = ctype_digit( $requested ) && (int) $requested === (int) $s['id'];
+		$back = admin_url( 'admin.php?page=' . self::SLUG );
+		$assigned = current( array_filter( $servers, static fn( $server ) => (int) $server['id'] === (int) $s['server_id'] ) );
+		?>
+		<dialog class="pchq-site-dialog pchq-server-dialog" id="pchq-site-server-<?php echo (int) $s['id']; ?>" aria-labelledby="pchq-site-server-title-<?php echo (int) $s['id']; ?>" aria-describedby="pchq-site-server-description-<?php echo (int) $s['id']; ?>" tabindex="-1"<?php echo $open ? ' open' : ''; ?>>
+			<header class="pchq-site-dialog__header">
+				<div><h2 id="pchq-site-server-title-<?php echo (int) $s['id']; ?>">选择服务器</h2><p class="pchq-muted" id="pchq-site-server-description-<?php echo (int) $s['id']; ?>"><?php echo esc_html( $s['name'] ); ?> · 选择后点击保存，才会更新分配。</p></div>
+				<a class="pchq-site-dialog__close" href="<?php echo esc_url( $back ); ?>" data-pchq-site-tools-close aria-label="关闭服务器选择"><span class="dashicons dashicons-no-alt" aria-hidden="true"></span></a>
+			</header>
+			<div class="pchq-site-dialog__body">
+				<form id="pchq-site-server-form-<?php echo (int) $s['id']; ?>" class="pchq-site-server-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" data-pchq-reset-on-open>
+					<input type="hidden" name="action" value="pchq_site_server">
+					<input type="hidden" name="site" value="<?php echo (int) $s['id']; ?>">
+					<?php wp_nonce_field( 'pchq_site_server' ); ?>
+					<?php if ( $s['server_id'] && ! $assigned ) : ?><p class="pchq-error">原服务器不在可用列表中，请重新选择后保存。</p><?php endif; ?>
+					<fieldset class="pchq-server-options">
+						<legend class="screen-reader-text"><?php echo esc_html( $s['name'] . '的服务器' ); ?></legend>
+						<label class="pchq-server-option" for="pchq-server-<?php echo (int) $s['id']; ?>-0">
+							<input type="radio" id="pchq-server-<?php echo (int) $s['id']; ?>-0" name="server" value="0" <?php checked( (int) $s['server_id'], 0 ); ?> required>
+							<span class="pchq-server-option__text"><strong>未分配服务器</strong><span>不指定服务器</span></span>
+							<?php if ( ! $s['server_id'] ) : ?><span class="pchq-server-option__current">当前</span><?php endif; ?>
+						</label>
+						<?php foreach ( $servers as $sv ) : ?>
+							<label class="pchq-server-option" for="pchq-server-<?php echo (int) $s['id']; ?>-<?php echo (int) $sv['id']; ?>">
+								<input type="radio" id="pchq-server-<?php echo (int) $s['id']; ?>-<?php echo (int) $sv['id']; ?>" name="server" value="<?php echo (int) $sv['id']; ?>" <?php checked( (int) $s['server_id'], (int) $sv['id'] ); ?> required>
+								<span class="pchq-server-option__text"><strong><?php echo esc_html( $sv['name'] ); ?></strong><span><?php echo esc_html( $sv['ip'] ); ?></span></span>
+								<?php if ( (int) $s['server_id'] === (int) $sv['id'] ) : ?><span class="pchq-server-option__current">当前</span><?php endif; ?>
+							</label>
+						<?php endforeach; ?>
+					</fieldset>
+				</form>
+			</div>
+			<footer class="pchq-site-dialog__footer"><a class="button" href="<?php echo esc_url( $back ); ?>" data-pchq-site-tools-close>取消</a><button type="submit" class="button button-primary" form="pchq-site-server-form-<?php echo (int) $s['id']; ?>">保存分配</button></footer>
+		</dialog>
+		<?php
+	}
+
+	/** Render outside the scrolling table: the native dialog owns its own viewport. */
+	private static function render_tools_dialog( array $s ): void {
+		$info = (array) $s['info'];
+		$conf = (array) ( $info['config'] ?? array() );
+		$v = (array) ( $info['versions'] ?? array() );
+		$requested = isset( $_GET['site_tools'] ) && is_string( $_GET['site_tools'] ) ? $_GET['site_tools'] : '';
+		$open = ctype_digit( $requested ) && (int) $requested === (int) $s['id'];
+		$back = admin_url( 'admin.php?page=' . self::SLUG );
+		?>
+		<dialog class="pchq-site-dialog" id="pchq-site-tools-<?php echo (int) $s['id']; ?>" aria-labelledby="pchq-site-tools-title-<?php echo (int) $s['id']; ?>" aria-describedby="pchq-site-tools-description-<?php echo (int) $s['id']; ?>" tabindex="-1"<?php echo $open ? ' open' : ''; ?>>
+			<header class="pchq-site-dialog__header">
+				<div><h2 id="pchq-site-tools-title-<?php echo (int) $s['id']; ?>"><?php echo esc_html( $s['name'] ); ?> · 更多操作</h2><p class="pchq-muted" id="pchq-site-tools-description-<?php echo (int) $s['id']; ?>"><?php echo esc_html( \PeptideHq\Site_Urls::public_url( $s ) ); ?></p></div>
+				<a class="pchq-site-dialog__close" href="<?php echo esc_url( $back ); ?>" data-pchq-site-tools-close aria-label="关闭店铺工具"><span class="dashicons dashicons-no-alt" aria-hidden="true"></span></a>
+			</header>
+			<div class="pchq-site-dialog__body">
+					<p class="pchq-site-dialog__section-title"><strong><?php esc_html_e( 'Platform tools', 'peptide-hq' ); ?></strong> <span class="pchq-muted"><?php esc_html_e( 'Not shown in the store admin; opens the store page logged in as administrator.', 'peptide-hq' ); ?></span></p>
 					<ul class="pchq-tools">
 						<?php foreach ( Platform::tools() as $key => [ $label, $desc ] ) : ?>
 							<li><a target="_blank" rel="noopener" title="<?php echo esc_attr( $desc ); ?>" href="<?php echo esc_url( Menu::action_url( 'pchq_login', array( 'site' => $s['id'], 'to' => $key ) ) ); ?>"><?php echo esc_html( $label ); ?></a></li>
 						<?php endforeach; ?>
 					</ul>
-					<p class="pchq-more__title"><strong><?php esc_html_e( 'System', 'peptide-hq' ); ?></strong></p>
+					<p class="pchq-site-dialog__section-title"><strong><?php esc_html_e( 'System', 'peptide-hq' ); ?></strong></p>
 					<p class="pchq-muted pchq-sysinfo">
 						<?php echo esc_html( 'peptide-core ' . ( $v['plugin'] ?? '?' ) . ' · WooCommerce ' . ( $v['wc'] ?? '?' ) . ' · WordPress ' . ( $v['wp'] ?? '?' ) . ' · PHP ' . ( $v['php'] ?? '?' ) ); ?><br>
 						<?php
@@ -216,10 +277,16 @@ final class Sites_Page {
 						<input type="text" id="pchq-rename-<?php echo (int) $s['id']; ?>" name="name" value="<?php echo esc_attr( $s['name'] ); ?>" maxlength="190" required>
 						<button type="submit" class="button button-small"><?php esc_html_e( 'Save name', 'peptide-hq' ); ?></button>
 					</form>
-					<a class="pchq-delete" href="<?php echo esc_url( Menu::action_url( 'pchq_site_delete', array( 'site' => $s['id'] ) ) ); ?>" onclick="return confirm(<?php echo esc_attr( wp_json_encode( __( 'Remove this store from the master admin? Its numbers and alerts here are deleted; the store itself keeps running.', 'peptide-hq' ) ) ); ?>);"><?php esc_html_e( 'Remove from master admin', 'peptide-hq' ); ?></a>
-				</details>
-			</td>
-		</tr>
+				<form class="pchq-site-dialog__retire" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return confirm('停止此店铺访问并移入回收站？数据保留72小时，期间可恢复，期满永久清理。');">
+					<input type="hidden" name="action" value="pchq_site_retire">
+					<input type="hidden" name="site" value="<?php echo (int) $s['id']; ?>">
+					<?php wp_nonce_field( 'pchq_site_retire' ); ?>
+					<div><h3>删除店铺</h3><p class="pchq-muted">停止此店铺访问并移入回收站。数据保留72小时，期间可恢复，期满永久清理。</p></div>
+					<button type="submit" class="button pchq-delete">删除店铺</button>
+				</form>
+			</div>
+			<footer class="pchq-site-dialog__footer"><a class="button" href="<?php echo esc_url( $back ); ?>" data-pchq-site-tools-close>关闭</a></footer>
+		</dialog>
 		<?php
 	}
 }

@@ -14,6 +14,7 @@ final class Plugin {
 	public static function boot(): void {
 		load_plugin_textdomain( 'peptide-hq', false, dirname( plugin_basename( PEPTIDE_HQ_FILE ) ) . '/languages' );
 		Db::maybe_upgrade();
+		Site_Lifecycle::register_hooks();
 		Monitor::register_hooks();
 		Register::register_hooks();
 		Operations::register_hooks();
@@ -24,6 +25,7 @@ final class Plugin {
 			Admin\Menu::register_hooks();
 			Admin\Operations_Page::hooks();
 			Admin\Provision_Page::hooks();
+			Admin\Lifecycle_Page::hooks();
 		}
 	}
 }

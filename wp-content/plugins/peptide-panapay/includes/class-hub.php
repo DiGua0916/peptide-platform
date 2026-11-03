@@ -218,6 +218,12 @@ final class Hub {
 			try {
 				$row = Hub_Store::get( $event['ref'] ); $site = $row ? \PeptideHq\Sites::get( (int) $row['site_id'] ) : null;
 				if ( ! $row || ! $site || ! hash_equals( $row['site_uuid'], $site['uuid'] ) ) { Hub_Store::delivery_result( $event['event_id'], 'review', 'review', 'store_identity_changed' ); continue; }
+				if ( class_exists( '\PeptideHq\Site_Lifecycle' ) && ! \PeptideHq\Site_Lifecycle::active( (int) $site['id'] ) ) {
+					// Keep the frozen accounting record; never relay it to an offline or reused host.
+					$lifecycle = \PeptideHq\Site_Lifecycle::record( (int) $site['id'] );
+					$purged = 'purged' === ( $lifecycle['state'] ?? '' );
+					Hub_Store::delivery_result( $event['event_id'], $purged ? 'review' : 'pending', $purged ? 'review' : '', $purged ? 'store_purged' : 'store_retained' ); continue;
+				}
 				$transaction = Crypto::decrypt( $event['transaction_box'], 'hub-transaction' );
 				$data = array( 'order_number' => $row['local_reference'], 'status' => $event['status'], 'transaction_id' => $transaction );
 				$data['sign'] = Signature::generate( $data, Crypto::decrypt( $row['link_key_box'], 'hub-link' ) ); $data['event_id'] = $event['event_id'];
@@ -239,6 +245,7 @@ final class Hub {
 				|| ! Signature::verify( array( 'transaction_id' => $p['transaction_id'], 'status' => $p['status'] ), $p['sign'], Crypto::decrypt( $row['secret_box'], 'hub-provider' ) ) ) { throw new Protocol_Error( 'invalid_return', 400 ); }
 			$site = \PeptideHq\Sites::get( (int) $row['site_id'] );
 			if ( ! $site || ! hash_equals( $row['site_uuid'], $site['uuid'] ) ) { throw new Protocol_Error( 'store_not_found', 400 ); }
+			if ( class_exists( '\PeptideHq\Site_Lifecycle' ) && ! \PeptideHq\Site_Lifecycle::active( (int) $site['id'] ) ) { throw new Protocol_Error( 'store_retained', 409 ); }
 			$fields = array( 'status' => $p['status'], 'transaction_id' => $p['transaction_id'] );
 			$fields['sign'] = Signature::generate( $fields, Crypto::decrypt( $row['link_key_box'], 'hub-link' ) );
 			$url = Hub_Urls::attempt_return_url( $row, $site );

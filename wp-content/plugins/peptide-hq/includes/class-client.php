@@ -66,6 +66,7 @@ final class Client {
 
 	/** @return array|\WP_Error */
 	public static function request( int $site_id, string $method, string $route, array $query = array(), ?array $body = null ) {
+		if ( ! Site_Lifecycle::active( $site_id ) ) { return new \WP_Error( 'pchq_store_retired', '店铺已下线，普通管理操作已暂停。' ); }
 		$site = Sites::get( $site_id );
 		if ( ! $site ) {
 			return new \WP_Error( 'pchq_missing', __( 'Store not found.', 'peptide-hq' ) );

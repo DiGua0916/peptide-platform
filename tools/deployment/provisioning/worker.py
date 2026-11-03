@@ -4,6 +4,7 @@ import base64
 import fcntl
 import grp
 import hashlib
+import importlib.util
 import ipaddress
 import json
 import os
@@ -18,6 +19,33 @@ import subprocess
 import sys
 import time
 import uuid
+
+
+def lifecycle_module():
+    """Only load the root-owned broker shipped beside this exact worker."""
+    path = Path(__file__).resolve().with_name('lifecycle.py')
+    entry = path.lstat()
+    require(stat.S_ISREG(entry.st_mode) and entry.st_uid == 0 and not entry.st_mode & 0o022
+            and path.parent.stat().st_uid == 0 and not path.parent.stat().st_mode & 0o022,
+            'lifecycle_module_owner')
+    spec = importlib.util.spec_from_file_location('vialcove_tenant_lifecycle', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def lifecycle_active(c, identity):
+    """Missing history is active; malformed/retired root history is closed."""
+    require(isinstance(identity, str) and str(uuid.UUID(identity)) == identity, 'lifecycle_identity')
+    root = Path(c['state_root'] if c['role'] == 'admin' else c['web_ledger_root'])
+    path = root / 'lifecycle/tenants' / identity / 'current.json'
+    require(not path.is_symlink(), 'lifecycle_history')
+    if not path.exists():
+        return True
+    engine = lifecycle_module()
+    state = engine.load_json(path, private=True)
+    require(state.get('uuid') == identity, 'lifecycle_identity')
+    return state.get('state') == 'active'
 
 
 def require(value, code):
@@ -442,8 +470,19 @@ Match all
 
 def seed_template(t, c):
     require(Path(c['source_web_root']).resolve() != t['public'].resolve(), 'master_is_target')
-    raw = run(['/usr/local/bin/wp', '--path=' + c['source_web_root'], '--url=' + c['source_management_url'],
-               'eval-file', '/usr/local/lib/vialcove-provision/export-template.php'], user=c['source_web_user'])
+    if c.get('template_bundle'):
+        # A root-owned published-layout snapshot keeps future creation independent of
+        # the first live store. The bundle contains no users, products or order DB.
+        bundle = Path(c['template_bundle'])
+        fd = os.open(bundle, os.O_RDONLY | os.O_NOFOLLOW)
+        with os.fdopen(fd, 'rb') as handle:
+            entry = os.fstat(handle.fileno())
+            require(stat.S_ISREG(entry.st_mode) and entry.st_uid == 0 and entry.st_nlink == 1
+                    and not entry.st_mode & 0o022 and entry.st_size < 2 * 1024**2, 'template_bundle_owner')
+            raw = handle.read(2 * 1024**2)
+    else:
+        raw = run(['/usr/local/bin/wp', '--path=' + c['source_web_root'], '--url=' + c['source_management_url'],
+                   'eval-file', '/usr/local/lib/vialcove-provision/export-template.php'], user=c['source_web_user'])
     require(len(raw) < 2 * 1024**2, 'template_manifest_size')
     data = json.loads(raw)
     require(data.get('version') == 1 and set(data['documents']) == {'home', 'header', 'footer', 'global'} and len(data['images']) <= 64, 'template_manifest')
@@ -530,6 +569,7 @@ def _web_create(p, c):
     r = validate_request(p['request'])
     t = tenant(p['slug'], c, r['customer_domain'])
     require(str(uuid.UUID(p['uuid'])) == p['uuid'], 'tenant_uuid')
+    require(lifecycle_active(c, p['uuid']), 'store_retired')
     require(re.fullmatch(r'[a-f0-9]{64}', p['registration_secret']), 'registration_secret')
     t.update(uuid=p['uuid'], server_ip=c['public_ip'], data=Path(c['web_data_root']) / t['slug'], public=Path(c['web_store_root']) / t['slug'] / 'public')
     ledger = Path(c['web_ledger_root'])
@@ -723,6 +763,14 @@ def process_queue(c):
 
 
 def _process_queue_locked(c, root):
+    lifecycle = lifecycle_module()
+    with lifecycle.lock(Path('/var/lib/vialcove-deploy/nginx-update.lock'), nonblocking=True), \
+            lifecycle.lock(Path('/var/lib/vialcove-deploy/store-admin-update.lock'), nonblocking=True):
+        lifecycle_changed = lifecycle.process_queue(c, lock_held=True)
+    if lifecycle_changed:
+        # Apply trusted receipts even when no administrator is visiting HQ.
+        run(['/usr/local/bin/wp', '--path=' + c['hq_root'], 'eval',
+             'PeptideHq\\Site_Lifecycle::sync();'], user=c['hq_user'])
     def status(job, **fields):
         private_json(root / 'results' / (job + '.json'), fields, c['hq_user'])
     owner = pwd.getpwnam(c['hq_user']).pw_uid
@@ -763,6 +811,10 @@ def _process_queue_locked(c, root):
                 private_json(statefile, state)
             t = tenant(state['slug'], c, r['customer_domain'])
             t['uuid'] = state['uuid']
+            lifecycle_state = root / 'lifecycle/tenants' / t['uuid'] / 'current.json'
+            if lifecycle_state.exists():
+                identity = lifecycle.load_json(lifecycle_state, private=True)
+                require(identity.get('uuid') == t['uuid'] and identity.get('state') == 'active', 'store_retired')
             claim_domain(root, t, r['operation_id'])
             if not dns_ready(state['slug'] + '.' + c['management_domain'], c['admin_ip']) or not customer_dns_ready(t, c):
                 status(job.name, state='waiting_dns', message='请为顾客域名添加以下两条 A 记录。解析正确后自动继续；固定管理地址由平台维护。',
@@ -775,6 +827,7 @@ def _process_queue_locked(c, root):
             require(re.fullmatch(r'[a-f0-9]{64}', secret), 'hq_registration_secret')
             t = admin_create(r, state, c, secret)
             site_id = confirm_hq(t, c, job)
+            lifecycle.register_provisioned(c, t, r, state, site_id)
             state['state'] = 'complete'
             private_json(statefile, state)
             # Retain no plaintext account password after native installation completes.
@@ -784,7 +837,7 @@ def _process_queue_locked(c, root):
                    public_url=t['public_url'] + '/', site_id=site_id, customer_domain=t['customer_domain'], dns_records=dns_records(t, c))
         except Exception as e:
             code = str(e) if isinstance(e, ValueError) and re.fullmatch(r'[a-z0-9_]+', str(e)) else 'deployment_step_failed'
-            if code in {'domain_claim_conflict', 'platform_domain_reserved', 'legacy_request_requires_domain'}:
+            if code in {'domain_claim_conflict', 'platform_domain_reserved', 'legacy_request_requires_domain', 'store_retired'}:
                 state['state'] = 'failed'
                 private_json(statefile, state)
                 status(job.name, state='failed', message='域名已被占用、属于平台保留地址，或请求缺少顾客域名。未变更已完成店铺，请核对后提交新任务。')
@@ -809,11 +862,15 @@ def main():
         # UUID is private identity metadata, not a public result or process argument.
         print(json.dumps({'reserved': True, 'customer_domain': claim['customer_domain'], 'kind': 'legacy'}))
         return
-    require(not sys.argv[1:] or c['role'] == 'web' and sys.argv[1:] == ['create'], 'arguments')
+    require(not sys.argv[1:] or c['role'] == 'web' and sys.argv[1:] in [['create'], ['lifecycle']], 'arguments')
     if c['role'] == 'web':
         raw = sys.stdin.buffer.read(16385)
         require(len(raw) <= 16384, 'request_size')
-        result = web_create(json.loads(raw), c)
+        payload = json.loads(raw)
+        # The existing forced-command wrapper deliberately discards SSH command
+        # text. Dispatch only a validated, bounded typed envelope, never that text.
+        controlled_lifecycle = isinstance(payload, dict) and 'phase' in payload
+        result = lifecycle_module().web_main(c, payload) if sys.argv[1:] == ['lifecycle'] or controlled_lifecycle else web_create(payload, c)
         sys.stdout.write(json.dumps(result))
     elif c['role'] == 'admin':
         process_queue(c)
