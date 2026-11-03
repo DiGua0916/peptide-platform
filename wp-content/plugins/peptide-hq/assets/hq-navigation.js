@@ -60,7 +60,7 @@
 	function compatibleDocument(doc, currentMeta, existingAssets, url) {
 		var meta = readMeta(doc), target = safeURL(url, currentMeta.base, currentMeta.policy);
 		if (!meta || !target || meta.build !== currentMeta.build || meta.session !== currentMeta.session || meta.base !== currentMeta.base || meta.page !== target.searchParams.get('page') || JSON.stringify(meta.policy) !== JSON.stringify(currentMeta.policy)) return null;
-		if (!doc.body || !doc.body.classList.contains('pchq-workspace') || doc.querySelectorAll('#wpbody-content').length !== 1) return null;
+		if (!doc.body || !doc.body.classList.contains('pchq-workspace') || !doc.body.classList.contains(meta.screen) || doc.querySelectorAll('#wpbody-content').length !== 1) return null;
 		var content = doc.querySelector('#wpbody-content'), location = doc.querySelector('.pchq-workspace-location');
 		if (!content.querySelector('.wrap.pchq') || !location || content.querySelector('script,style,iframe,object,embed,base')) return null;
 		for (var asset of assets(doc)) { if (!existingAssets.has(asset)) return null; }
@@ -69,7 +69,7 @@
 	function mount(env, options) {
 		options = options || {};
 		var doc = env.document, meta = readMeta(doc), content = doc.querySelector('#wpbody-content');
-		if (!meta || !content || !env.fetch || !env.AbortController || !env.DOMParser || !env.history.pushState || !doc.body.classList.contains('pchq-workspace')) return null;
+		if (!meta || !content || !env.fetch || !env.AbortController || !env.DOMParser || !env.history.pushState || !doc.body.classList.contains('pchq-workspace') || !doc.body.classList.contains(meta.screen)) return null;
 		var initial = safeURL(env.location.href, meta.base, meta.policy);
 		if (!initial) return null;
 		var existingAssets = assets(doc), currentURL = initial.href, sequence = 0, pending = null, destroyed = false;

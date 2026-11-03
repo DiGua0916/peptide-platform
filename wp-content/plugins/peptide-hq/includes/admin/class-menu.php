@@ -117,6 +117,9 @@ final class Menu {
 		if ( ! self::workspace_enabled() || ! current_user_can( self::CAP ) || ! isset( self::navigation_policy()[ $page ] ) ) { return; }
 		$screen = get_current_screen();
 		if ( ! $screen || $screen->is_block_editor() ) { return; }
+		global $hook_suffix;
+		// Match wp-admin/admin-header.php exactly, including encoded Chinese menu names.
+		$screen_class = preg_replace( '/[^a-z0-9_-]+/i', '-', (string) ( $hook_suffix ?? $screen->id ) );
 		$build = array();
 		foreach ( array( 'assets/hq-admin.css', 'assets/hq-workspace.css', 'assets/hq-workspace.js', 'assets/hq-navigation.js', 'includes/admin/class-menu.php' ) as $relative ) {
 			$file = PEPTIDE_HQ_DIR . '/' . $relative;
@@ -124,7 +127,7 @@ final class Menu {
 			$build[] = hash_file( 'sha256', $file );
 		}
 		printf( '<meta name="pchq-navigation" content="%1$s" data-base="%2$s" data-page="%3$s" data-screen="%4$s" data-session="%5$s" data-policy="%6$s">',
-			esc_attr( hash( 'sha256', implode( '|', $build ) ) ), esc_url( admin_url( 'admin.php' ) ), esc_attr( $page ), esc_attr( sanitize_html_class( $screen->id ) ),
+			esc_attr( hash( 'sha256', implode( '|', $build ) ) ), esc_url( admin_url( 'admin.php' ) ), esc_attr( $page ), esc_attr( $screen_class ),
 			esc_attr( wp_create_nonce( 'pchq_navigation_identity' ) ), esc_attr( wp_json_encode( self::navigation_policy() ) ) );
 	}
 
