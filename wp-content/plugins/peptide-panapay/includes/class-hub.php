@@ -7,6 +7,7 @@ final class Hub {
 	public const CRON = 'pc_panapay_hub_relay';
 	private static array $auth = array();
 	public static function register_hooks(): void {
+		Payment_Return_View::register_hooks();
 		add_action( 'rest_api_init', array( self::class, 'routes' ) );
 		add_filter( 'rest_pre_serve_request', array( self::class, 'serve_notification' ), 10, 4 );
 		add_filter( 'cron_schedules', static function ( $s ) { $s['pc_pay_minute'] = array( 'interval' => 60, 'display' => 'Payment result delivery' ); return $s; } );
@@ -239,22 +240,27 @@ final class Hub {
 		return $count;
 	}
 	public static function returned( \WP_REST_Request $request ) {
+		$validated_store_home = null;
 		try {
 			$p = $request->get_query_params();
-			foreach ( array( 'reference', 'token', 'status', 'transaction_id', 'sign' ) as $key ) { if ( ! is_string( $p[ $key ] ?? null ) || strlen( $p[ $key ] ) > 512 ) { throw new Protocol_Error( 'invalid_return', 400 ); } }
+			foreach ( array( 'reference', 'token' ) as $key ) { if ( ! is_string( $p[ $key ] ?? null ) || strlen( $p[ $key ] ) > 512 ) { throw new Protocol_Error( 'invalid_return', 400 ); } }
 			$row = Hub_Store::get( $p['reference'] );
 			if ( ! $row || time() - (int) $row['created_at'] > 7 * DAY_IN_SECONDS || ! hash_equals( $row['return_token_hash'], hash( 'sha256', $p['token'] ) )
-				|| ! in_array( $p['status'], array( 'SUCCEEDED', 'FAILED' ), true ) || ! preg_match( '/^[\x21-\x7e]{0,512}$/D', $p['transaction_id'] ) || ( $p['status'] === 'SUCCEEDED' && '' === $p['transaction_id'] )
-				|| ! Signature::verify( array( 'transaction_id' => $p['transaction_id'], 'status' => $p['status'] ), $p['sign'], Crypto::decrypt( $row['secret_box'], 'hub-provider' ) ) ) { throw new Protocol_Error( 'invalid_return', 400 ); }
+				) { throw new Protocol_Error( 'invalid_return', 400 ); }
 			$site = \PeptideHq\Sites::get( (int) $row['site_id'] );
 			if ( ! $site || ! hash_equals( $row['site_uuid'], $site['uuid'] ) ) { throw new Protocol_Error( 'store_not_found', 400 ); }
 			if ( class_exists( '\PeptideHq\Site_Lifecycle' ) && ! \PeptideHq\Site_Lifecycle::active( (int) $site['id'] ) ) { throw new Protocol_Error( 'store_retained', 409 ); }
+			// The browser binding may offer the registered home; it never authenticates payment.
+			$validated_store_home = Hub_Urls::public_url( $site );
+			foreach ( array( 'status', 'transaction_id', 'sign' ) as $key ) { if ( ! is_string( $p[ $key ] ?? null ) || strlen( $p[ $key ] ) > 512 ) { throw new Protocol_Error( 'invalid_return', 400 ); } }
+			if ( ! in_array( $p['status'], array( 'SUCCEEDED', 'FAILED' ), true ) || ! preg_match( '/^[\x21-\x7e]{0,512}$/D', $p['transaction_id'] ) || ( $p['status'] === 'SUCCEEDED' && '' === $p['transaction_id'] )
+				|| ! Signature::verify( array( 'transaction_id' => $p['transaction_id'], 'status' => $p['status'] ), $p['sign'], Crypto::decrypt( $row['secret_box'], 'hub-provider' ) ) ) { throw new Protocol_Error( 'invalid_return', 400 ); }
 			$fields = array( 'status' => $p['status'], 'transaction_id' => $p['transaction_id'] );
 			$fields['sign'] = Signature::generate( $fields, Crypto::decrypt( $row['link_key_box'], 'hub-link' ) );
 			$url = Hub_Urls::attempt_return_url( $row, $site );
 			// Retain the exact original store return binding; never accept a browser-supplied target.
 			nocache_headers(); header( 'Referrer-Policy: no-referrer' ); header( 'X-Robots-Tag: noindex, nofollow' );
 			wp_redirect( add_query_arg( $fields, $url ), 302, 'VialCove payment center' ); exit;
-		} catch ( \Throwable $e ) { return new \WP_Error( 'invalid_payment_return', 'Please return to your store order to check payment status.', array( 'status' => 400 ) ); }
+		} catch ( \Throwable $e ) { return Payment_Return_View::failure( $validated_store_home ); }
 	}
 }
