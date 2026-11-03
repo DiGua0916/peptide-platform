@@ -29,6 +29,7 @@ final class Menu {
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ), 1000 );
 		add_filter( 'admin_body_class', array( self::class, 'workspace_body_class' ) );
 		add_action( 'in_admin_header', array( self::class, 'workspace_header' ) );
+		add_action( 'admin_head', array( self::class, 'navigation_meta' ) );
 		foreach ( self::ACTIONS as $action ) {
 			add_action( 'admin_post_' . $action, array( self::class, 'handle' ) );
 		}
@@ -91,6 +92,40 @@ final class Menu {
 		wp_enqueue_style( 'peptide-hq-workspace', plugins_url( 'assets/hq-workspace.css', PEPTIDE_HQ_FILE ), $dependencies, PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $file ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 		$file = PEPTIDE_HQ_DIR . '/assets/hq-workspace.js';
 		wp_enqueue_script( 'peptide-hq-workspace', plugins_url( 'assets/hq-workspace.js', PEPTIDE_HQ_FILE ), array(), PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $file ), true ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		$page = isset( $_GET['page'] ) && is_string( $_GET['page'] ) ? $_GET['page'] : '';
+		if ( current_user_can( self::CAP ) && isset( self::navigation_policy()[ $page ] ) ) {
+			$file = PEPTIDE_HQ_DIR . '/assets/hq-navigation.js';
+			wp_enqueue_script( 'peptide-hq-navigation', plugins_url( 'assets/hq-navigation.js', PEPTIDE_HQ_FILE ), array( 'peptide-hq-workspace' ), PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $file ), true ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		}
+	}
+
+	/** Only these native read-only screens can retain the management frame. */
+	public static function navigation_policy(): array {
+		return array(
+			'pchq' => array( 'range' => array( 'today', 'yesterday', '7d', '30d' ) ),
+			'pchq-sites' => array( 'site_server' => 'positiveId', 'site_tools' => 'positiveId' ),
+			'pchq-servers' => array( 'edit' => 'positiveId' ),
+			'pchq-accounts' => array( 'site' => 'positiveId', 'edit' => 'positiveId', 'add' => array( '1' ) ),
+			'pchq-alerts' => array(),
+			'pchq-site-recycle' => array( 'restore_requested' => array( '1' ), 'retry_requested' => array( '1' ) ),
+		);
+	}
+
+	/** Identity/build markers let the browser reject login pages and stale shells. */
+	public static function navigation_meta(): void {
+		$page = isset( $_GET['page'] ) && is_string( $_GET['page'] ) ? $_GET['page'] : '';
+		if ( ! self::workspace_enabled() || ! current_user_can( self::CAP ) || ! isset( self::navigation_policy()[ $page ] ) ) { return; }
+		$screen = get_current_screen();
+		if ( ! $screen || $screen->is_block_editor() ) { return; }
+		$build = array();
+		foreach ( array( 'assets/hq-admin.css', 'assets/hq-workspace.css', 'assets/hq-workspace.js', 'assets/hq-navigation.js', 'includes/admin/class-menu.php' ) as $relative ) {
+			$file = PEPTIDE_HQ_DIR . '/' . $relative;
+			if ( ! is_readable( $file ) ) { return; }
+			$build[] = hash_file( 'sha256', $file );
+		}
+		printf( '<meta name="pchq-navigation" content="%1$s" data-base="%2$s" data-page="%3$s" data-screen="%4$s" data-session="%5$s" data-policy="%6$s">',
+			esc_attr( hash( 'sha256', implode( '|', $build ) ) ), esc_url( admin_url( 'admin.php' ) ), esc_attr( $page ), esc_attr( sanitize_html_class( $screen->id ) ),
+			esc_attr( wp_create_nonce( 'pchq_navigation_identity' ) ), esc_attr( wp_json_encode( self::navigation_policy() ) ) );
 	}
 
 	/** Keep the native palette on editors; HQ's own operational screens use the normal menu. */
