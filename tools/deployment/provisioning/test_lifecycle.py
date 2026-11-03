@@ -33,6 +33,10 @@ class Boundary(unittest.TestCase):
         self.stack = __import__('contextlib').ExitStack()
         self.addCleanup(self.stack.close)
         self.stack.enter_context(patch.object(lifecycle, 'command', side_effect=AssertionError('external command forbidden')))
+        # Synthetic queue owner, independent of host /etc/passwd. The suite
+        # must never require or create a real operating-system account 'test'.
+        self.stack.enter_context(patch.object(lifecycle.pwd, 'getpwnam',
+            return_value=types.SimpleNamespace(pw_uid=0, pw_gid=0)))
         self.request = dict(version=1, operation_id=str(uuid.uuid4()), actor_id=1, site_id=3,
                             uuid='00000000-0000-4000-8000-000000000002',
                             management_url='https://s0002.admin.example.net', public_url='https://www.example.com',
