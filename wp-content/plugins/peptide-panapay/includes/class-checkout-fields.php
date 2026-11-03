@@ -6,7 +6,7 @@ use Automattic\WooCommerce\Blocks\Package;
 
 defined( 'ABSPATH' ) || exit;
 
-/** A gateway-specific fallback when the merchant hides Woo's native phone field. */
+/** Native customer address normalization and the gateway's conditional phone field. */
 final class Checkout_Fields {
 
 	public const FIELD_ID = 'peptide-panapay/phone';
@@ -18,11 +18,39 @@ final class Checkout_Fields {
 	public static function register_hooks(): void {
 		if ( self::$hooks_registered ) { return; }
 		self::$hooks_registered = true;
+		add_filter( 'woocommerce_customer_get_billing_state', array( self::class, 'billing_state' ), 10, 2 );
+		add_filter( 'woocommerce_customer_get_shipping_state', array( self::class, 'shipping_state' ), 10, 2 );
 		add_action( 'admin_notices', array( self::class, 'admin_notice' ) );
 		if ( did_action( 'woocommerce_init' ) ) {
 			self::register_field();
 		} else {
 			add_action( 'woocommerce_init', array( self::class, 'register_field' ), 20 );
+		}
+	}
+
+	public static function billing_state( $value, $customer ) {
+		return self::territory_state( $value, $customer, 'billing' );
+	}
+
+	public static function shipping_state( $value, $customer ) {
+		return self::territory_state( $value, $customer, 'shipping' );
+	}
+
+	/** View-only: prevent a default US state being copied into a PR order before payment. */
+	private static function territory_state( $value, $customer, string $address_type ) {
+		if ( ! is_string( $value ) || '' === $value || ! $customer instanceof \WC_Customer || ! function_exists( 'WC' ) ) { return $value; }
+		try {
+			$getter = 'get_' . $address_type . '_country';
+			if ( 'PR' !== $customer->$getter( 'edit' ) ) { return $value; }
+			$woocommerce = WC();
+			$countries = $woocommerce->countries ?? null;
+			if ( ! is_object( $countries ) || ! is_callable( array( $countries, 'get_states' ) ) ) { return $value; }
+			$territory_states = $countries->get_states( 'PR' );
+			if ( ! is_array( $territory_states ) || array() !== $territory_states ) { return $value; }
+			$us_states = $countries->get_states( 'US' );
+			return is_array( $us_states ) && array_key_exists( $value, $us_states ) ? '' : $value;
+		} catch ( \Throwable $error ) {
+			return $value;
 		}
 	}
 
