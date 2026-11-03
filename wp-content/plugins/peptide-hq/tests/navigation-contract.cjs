@@ -139,6 +139,18 @@ test('initial replaceState disabled makes mount native-only and removes installe
   window.history.replaceState = () => { throw new window.DOMException('Synthetic history unavailable', 'SecurityError'); };
   try { assert.equal(nav.mount(window, { navigate: () => {} }), null); assert.ok(Array.from(tracked.values()).every(listeners => listeners.size === 0)); assert.equal(window.document.querySelector('.pchq-navigation-status'), null); assert.equal(busy(window.document), false); assert.equal(fetches, 0); } finally { window.close(); }
 });
+test('initial metadata screen absent from body makes mount native-only without handlers or fetch', () => {
+  const dom = new JSDOM(html(), { url: route('pchq') }), window = dom.window; let fetches = 0;
+  window.document.body.classList.remove(screen('pchq')); window.fetch = () => { fetches++; throw new Error('Forbidden model fetch'); }; window.AbortController = globalThis.AbortController;
+  try { assert.equal(nav.mount(window, { navigate: () => {} }), null); assert.equal(window.document.querySelector('.pchq-navigation-status'), null); assert.equal(fetches, 0); } finally { window.close(); }
+});
+test('target metadata screen absent from body falls back natively before current content replacement', async () => {
+  const f = fixture(); try {
+    const original = f.document.querySelector('#wpbody-content'), target = documentFor(html('pchq-alerts', 'Wrong body screen'), route('pchq-alerts')); target.body.classList.remove(screen('pchq-alerts'));
+    const work = f.controller.navigate(route('pchq-alerts')); f.requests[0].resolve(response('pchq-alerts', 'Wrong body screen', { text: async () => target.documentElement.outerHTML }));
+    assert.equal(await work, false); assert.equal(f.document.querySelector('#wpbody-content'), original); assert.deepEqual(f.native, [{ url: route('pchq-alerts'), replace: false }]); assert.equal(busy(f.document), false);
+  } finally { f.close(); }
+});
 test('pre-navigation replaceState failure immediately uses native path without fetch or busy content', async () => {
   const f = fixture(); try {
     const original = f.document.querySelector('#wpbody-content'); f.window.history.replaceState = () => { throw new f.window.DOMException('Synthetic history frequency limit', 'SecurityError'); };

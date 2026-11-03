@@ -19,3 +19,14 @@
 模型使用真实生产 JS 和 PHP 类，覆盖 URL/权限/构建/会话、并发/取消/错误、未保存/实际原生提交、历史、完整回退以及 workspace 多次初始化。模型不称真实 HTTP 或真实保存验收。准确计数、源 SHA 在 D:/Codex/Tasks/2026-11-03/hq-navigation/outputs/verification.json 和 workspace-lifecycle-checks.json。
 
 正式发布只叠加 HQ 的 hq-navigation.js、hq-workspace.js、hq-workspace.css、class-menu.php 四个文件，从实际 current 复制并做基线 SHA/CAS 校验；保留另窗口的收款/前端/CDN 改动。更新前加密 HQ 备份复制 D 盘密文并校验，不解密、不恢复或变更客户数据。部署/实际浏览器/限制以该任务目录最终收据为准。
+
+### 2026-11-03 正式验收
+
+- 最终生产源提交 `5161ffe6675a7c947189ff8eced3ce331f4fd541`，HQ current 为 `hq-navigation-5161ffe6675a`。独立只读核验四文件 SHA 与共享配置均匹配，HQ/客户后台登录 HTTPS 200。顾客与客户后台的 `storefront-motion-04c1bcedcb17-*` 切换早于本次 HQ 发布，未被本发布修改；CDN/DNS/Nginx 由并行窗口处理，不以本轮结果宣称已完成 CDN。
+- 首次上线实机发现中文父菜单编码导致元标识与 WordPress body class 不同，已按原生 `admin-header.php` 的 hook_suffix 规范修复。初始/目标 body 无匹配标识时安全回原生导航；修正后真实中文后台 `screenMatches=true`，不是仅模型通过。
+- 生产 JS 85 项、实际 Menu 类隔离模型 41 项、workspace 清理/重绑模型 31 项全部通过。源 SHA、独立测试边界和检查名保存在 `outputs/verification.json` 与 `workspace-lifecycle-checks.json`；模型不冒充真实保存、交易或删除测试。
+- 同一个已登录内置浏览器完成销售账号 → 店铺 → 后退销售账号 → 概览 → 服务器 → 告警 → 店铺回收站，并再次回到店铺。初始与末次 `performance.timeOrigin` 都为 `1793697342910.3`，navigation entry 始终 1，JS/CSS entries 始终 18：这组实际点击没有重建文档或重新加载静态资源。店铺“更多”能在局部切换后打开，Escape 关闭后焦点恢复到“更多”、body overflow 释放，无业务表单提交。
+- 实际 HTML fetch：店铺 570.7ms、后退销售账号 1176.3ms、概览 522.8ms、服务器 527.7ms、告警 551.3ms、回收站 527.9ms。只是这次会话的单次资源请求耗时，不是端到端 p95 或首次加载加速率。修复后首次完整 reload 为 2147.8ms、TTFB 802.4ms，不能与原 1861.4ms 基线直接宣称整体提速。
+- 检查覆盖用户窄窗口与临时桌面视口；测试结束已清除设备尺寸覆盖，页面停留店铺列表。截图 `outputs/navigation-live.png`，原始性能证据 `browser-fixed-enabled.json`、`browser-sites-navigation.json`、`browser-back-navigation.json`、`browser-six-routes.json`。会话/nonce/客户原始数据未写入证据或 Git。
+
+继续边界：这轮仅 HQ 六类常用页面局部导航。客户后台、支付中心、运维、自动开店、原生 WordPress 页面与原生保存动作保留完整导航；销售账号的远端实时 staff_list 仍可能等待最多 20 秒。未声称全部后台无等待、首屏不加载或 CDN 消除了动态请求成本。

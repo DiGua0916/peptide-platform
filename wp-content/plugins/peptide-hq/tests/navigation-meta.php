@@ -52,6 +52,8 @@ $GLOBALS['ajax'] = true; check( 'AJAX has no navigation shell identity', null ==
 $_GET = array( 'page' => 'pchq' ); $GLOBALS['screen'] = new Synthetic_Screen( 'master-admin_page_pchq', true ); ob_start(); Menu::navigation_meta(); check( 'native block editor never enhanced', '' === ob_get_clean() );
 $GLOBALS['screen'] = null; ob_start(); Menu::navigation_meta(); check( 'missing screen fails closed', '' === ob_get_clean() );
 $GLOBALS['session'] = 'different-synthetic-session'; $meta = meta( 'pchq' ); check( 'identity changes across synthetic sessions', $meta['data-session'] === 'different-synthetic-session:pchq_navigation_identity' );
+$GLOBALS['hook_suffix'] = '%e6%80%bb%e5%90%8e%e5%8f%b0_page_pchq-accounts'; $meta = meta( 'pchq-accounts' );
+check( 'encoded Chinese parent hook matches native admin-header body class instead of sanitized screen ID', $meta['data-screen'] === '-e6-80-bb-e5-90-8e-e5-8f-b0_page_pchq-accounts' ); unset( $GLOBALS['hook_suffix'] );
 $report = array( 'complete' => true, 'checks' => count( $GLOBALS['checks'] ), 'modelOnly' => true, 'cases' => $GLOBALS['checks'], 'realWordPress' => false, 'realHttp' => false );
 if ( isset( $argv[1] ) ) { file_put_contents( $argv[1], json_encode( $report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . "\n" ); }
 echo 'PASS ', $report['checks'], " actual Menu navigation metadata checks; synthetic boundaries only.\n";
