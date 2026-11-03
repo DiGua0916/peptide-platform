@@ -45,16 +45,88 @@
 	flex: 1 1 240px;
 }
 
-.pc-dm-filters select,
-.pc-dm-filters input[type="search"] {
+/* Native date inputs have a taller intrinsic size than selects. Keep the toolbar on one baseline. */
+.pc-dm-filters :is(select, input[type="search"], input[type="date"], .button),
+.pc-admin-workspace #wpbody-content .pc-dm-filters :is(select, input[type="search"], input[type="date"], .button) {
+	box-sizing: border-box;
+	height: 36px;
+	min-height: 36px;
+	min-width: 0;
 	max-width: 100%;
+	margin: 0;
+	padding: 7px 12px;
+	font-size: 14px;
+	line-height: 20px;
+	vertical-align: middle;
+}
+
+.pc-dm-filters > select[name],
+.pc-admin-workspace #wpbody-content .pc-dm-filters > select[name] {
+	flex: 0 1 auto;
+	padding-right: 32px;
 }
 
 .pc-dm-dates {
-	display: inline-flex;
-	flex-wrap: wrap;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+	flex: 0 1 320px;
 	align-items: center;
-	gap: 4px;
+	gap: 8px;
+	min-width: 0;
+	max-width: 100%;
+}
+
+.pc-dm-filters .pc-dm-dates input[type="date"] {
+	width: 100%;
+}
+
+.pc-dm-filters > input[type="search"] {
+	flex: 0 1 224px;
+	width: 224px;
+}
+
+.pc-dm-filters > .button {
+	flex: 0 0 auto;
+}
+
+.pc-dm-filters > a {
+	align-self: center;
+}
+
+@media screen and (max-width: 782px) {
+	.pc-dm-filters :is(select, input[type="search"], input[type="date"], .button),
+	.pc-admin-workspace #wpbody-content .pc-dm-filters :is(select, input[type="search"], input[type="date"], .button) {
+		height: 40px;
+		min-height: 40px;
+	}
+
+	.pc-dm-filters > select[name],
+	.pc-admin-workspace #wpbody-content .pc-dm-filters > select[name] {
+		flex: 1 1 140px;
+	}
+
+	.pc-dm-dates {
+		flex-grow: 1;
+	}
+
+	.pc-dm-filters > input[type="search"] {
+		flex-grow: 1;
+	}
+}
+
+@media screen and (max-width: 480px) {
+	.pc-dm-filters > select[name],
+	.pc-admin-workspace #wpbody-content .pc-dm-filters > select[name] {
+		flex-basis: calc(50% - 4px);
+	}
+
+	.pc-dm-dates {
+		flex-basis: 100%;
+	}
+
+	.pc-dm-filters > input[type="search"] {
+		flex-basis: 0;
+	}
 }
 
 .pc-dm-table td,

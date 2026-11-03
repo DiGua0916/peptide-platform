@@ -1085,3 +1085,41 @@ functions.php新增vc_card_display_product，使用Woo get_visible_children的me
 主题product-dialog-content.php仅读发布快照，为显式fallback FAQ创建带设备可见性类的独立容器；product-dialog-experience.js将其置于COA后、购买栏前；home-quick-view.css手机标题/64px耳机左右、折叠问答适配。被安全清洗后失去图片外层的情况也有直接img尺寸规则。原有product-experience/context-content两块逐字保留；发布经原REST+revision/modified保护，无未发布草稿覆盖，home685/header686/footer687/global688/cart11727前后保持。不改后台插件源码、应用开关、商品描述、用户购物车或订单。
 
 实际检查：82商品渲染全部通过（32个专属FAQ、50个通用五问），TR11306没有通用重复，KLOW11408有五问；旧schema默认false、原生FAQ检测4例、被动HTML无form/script。PHP两文件lint、JS语法、git diff --check通过。真实IAB同源390×844 iframe：KLOW COA后新增问答，首/末问可展开；dialog宽=scrollWidth=380，64px耳机，Control+End到maxScroll3617，最后答案bottom727.89低于购买栏top768.41（没有遮挡）。未实体手机，未加购/下单。截图D:/Codex/Tasks/2026-11-03/product-dialog-common-footer/outputs/mobile-common-faq.png，预览已停在该处；work含inspection、发布前后与82商品验证。另源KLOW正文Overview出现BBKG80的错配只读发现，未擅改，应由商品维护方后续核定。
+
+### 2026-11-03 · Codex：结账浮动标签错位修复（CHECKOUT-FIELD-ALIGN）
+
+用户指出Email address与邮箱文字左右/上下错位。实际样式读到主题site.css通用.entry-content input:not(...)覆盖Woo Blocks浮动字段：padding13px、font shorthand使line-height normal，而原标签仍left10/top6/scale.82。只将.wp-block-woocommerce-checkout .wc-block-components-text-input input排除出该通用重置（:not(:where(...))不增加选择器权重），保留Woo原生active/autofill/focus几何，不硬编码另一套标签位移。主题其余边框/字号、普通文章与传统Woo表单维持；无JS/模板/后台积木/商品/车/订单/支付配置修改。
+
+实际IAB桌面1272px及同源390×844 iframe：已填邮箱恢复24px 9px 8px padding、25px line-height；6个空白姓名/地址/城市/ZIP/电话字段16px 12px padding、25px line-height；标签与值左缘差约0.33px（分数边框舍入），不再4px错位。两端均聚焦邮箱视觉确认；手机body375=scrollWidth375。未输入/提交客户信息或订单，未实际触发浏览器自动填充/错误状态或实体手机。修复保留这些原生状态的现有CSS，不声称未测分支已验。
+
+修改仅assets/site.css（2加1删：一条注释与通用规则的限定）；git diff --check通过。证据D:/Codex/Tasks/2026-11-03/checkout-mobile-polish/outputs/checkout-fields-aligned.png及checkout-fields-aligned-mobile.png。早期局部截图裁到页头，最终以这两张全页截图为准，未将错误裁图作为验收。只在本机LocalWP生效，不表示远端服务器部署。
+
+### 2026-11-03 · Codex：结账国家列表开放、美国默认保留（CHECKOUT-COUNTRY-OPTIONS）
+
+用户明确要求国家不能只有美国、可以默认美国，此新要求替代早期测试仅美国选择限制。实际原Woo allowed_countries=specific、specific_allowed=[US]，ship_to_countries空串继承销售范围，default_country=US:CA/default_customer_address=base。经原生WP配置API只将woocommerce_allowed_countries改all；其他五项前后逐项保护，保留旧specific=[US]供后续切回，当前被all忽略。未改前端JS/HTML国家列表，原生Billing/Shipping和服务端验证共用该设置；默认新访客US/CA。
+
+原生get_allowed_countries/get_shipping_countries均由1变250，浏览器/checkout/#shipping-country实际251个option（含一个不可选提示项）、selected=US，Canada/UK/Australia/Germany/France实有选项。未选择其他国家、未填客户资料/改用户购物车或下单；未实体手机或国际运费/付款成功验收。截图outputs/checkout-country-options.png为真实聚焦下拉框，浏览器原生下拉菜单未被页面截图捕获，因此不把截图当作各国选项的可见证明，选项来自实际DOM读取。
+
+配送配置保持：WC仅zone0且无method；另有PeptideCore Shipping Plans全局方式，按原国家/州精确匹配，每组缺运费则不返回价格，未新增全球免费率。自定义方案摘要另见work/country-shipping-verification.json。开放列表不等于所有地区均已有配送或支付能力；按原生结账结果展示。没有改后台插件源码、应用开关或支付方法。现站运行配置变化不会自动迁到服务器或改变新建店铺US-only默认；如后续要改模板策略，由后端协调。
+
+备份/验证脚本位于D:/Codex/Tasks/2026-11-03/checkout-mobile-polish/work/countries-before.json、countries-after.json、update-countries.php（一次性，不盲目重跑）；DB/私有配置不入Git。本轮源码无修改，只提交本交接，保留实际可审核记录。
+
+### 2026-11-03 · Codex：支付选择前置与完整账单信息（CHECKOUT-PAYMENT-FIRST）
+
+用户要求先选择后台实际开通的支付方式，Card展开正常付款信息，Apple Pay走钱包；澄清“正常的付款信息，国外是怎么填账单地址的，都要有”。前端保留完整联系/收货/账单地址，默认可同收货地址，也可单独填；Card卡号/有效期/CVV由支付方安全组件或托管收银台采集，不能以本地普通字段代替。后续真实渠道能力需求见同目录frontend-checkout-payment-first-2026-11-03.md（提案，不修改现行CONTRACT）。
+
+已用parse_blocks/serialize_blocks+原内容hash及编辑锁保护，发布原生checkout page8，仅将checkout-payment-block移至express之后/contact之前。全部12子块逐个序列化hash集合前后相同，attrs、原生附加字段/terms/actions均保留。原生页面编辑器和前台共用保存内容；自定义Design_Pages仍不支持checkout，不称新增了装修积木。未移动React托管DOM、未新增主题或插件业务源码、未改商户开关。一次性publisher与前后原内容/回执保留D:/Codex/Tasks/2026-11-03/checkout-payment-first/work，不入Git也不盲目重跑。
+
+桌面及正式同源390×844手机实际DOM确认payment在contact/shipping之前，最终Place Order仍存在。手机取消Use same address for billing后出现独立billing-country/first_name/last_name/address_1/address_2/city/state/postcode/phone，country251项含提示；恢复checked=true后billing-fields收起，body无横向溢出。只切换复选框并已恢复，未填资料、改用户车数量或提交订单。截图outputs/payment-first-mobile.png及billing-address-mobile.png，手机预览/正式结账标签保留；非实体手机验收。
+
+实际后端只读核对：本机所有原生gateway disabled/unavailable。Panapay has_fields=false、Blocks content仅description，现有流程在最终提交后创建hosted iframe/redirect；Apple Pay图标仅展示，无真正钱包会话/设备资格检测。故本轮完成原生顺序及账单表单验证，没有完成选卡站内收卡、Apple Pay授权/付款。已发群请求@Claude提供支付方确认的method_type/checkout_flow、托管字段SDK/令牌化及真实ApplePay，注意Bridge严格DTO与HQ→店铺版本协调；选择方式本身不下单/不创建会话。当前服务器/HQ是否另有开通账号须后端核对，未根据本机关闭推断其他环境。
+
+### 2026-11-03 · Codex：结账输入区仅 UI 修复（CHECKOUT-UI-REPAIR）
+
+用户截图指出已填写的邮箱/姓名/地址等label与文字挤在一起、输入框与国家/州选择框不一致，明确“你先改ui……其他的你别管”。本轮只新增主题assets/checkout.css和functions.php条件加载；不改DB、页面块顺序、字段/支付JS、后端插件、支付/配送开关或客户已填资料。此前page8顺序不在本轮处理范围。
+
+根因补充：上一轮site.css排除通用input重置已生效，但Woo固定50px输入仍同时容纳浮动label和24px9px8px padding，且focus/type选择器权重高，会继续挤压/跳字。现地址和联系邮箱原DOM的label固定上置、距控件8px；input/select统一16px/24px、12px padding、8px圆角和品牌边框，标题桌面24/32px600、手机20/28px600。兼容原生text-input__wrapper；focus/focus-within/autofill显式保持padding和border宽度，键盘focus-visible有2pxoutline。select边框直接设置实际select，箭头锚到控件底部；has-error标签/边框保持Woo红。coupon及非地址附加字段不在此scope，保留原native aria/id/for/required和反馈。没有隐藏真实业务错误提示。
+
+只读代理检查CSS后发现的focus权重与错误标签覆盖均已补正。实际IAB桌面：已填邮箱focus后padding12px、height49.33px、label static/gap8px；手机390×844（body375）空/已填字段均gap8px，input/select同高、箭头在框内，聚焦first_name内容/高度不变且outline可见；360×800（body345）宽=scrollWidth、fieldOverflow0。标题计算字体/权重匹配新规则。仅聚焦/Tab/切预览尺寸，没有输入资料/改用户车数量/提交订单，未真实手机、实际浏览器autofill或字段错误交互验收；对应CSS保留并经源码评审，不冒称实测。
+
+PHP lint、git diff --check通过。Impeccable detect仅3项advisory（24/20字号和Woo #cc1818不在后台DESIGN.md），该设计文件明确不适用公开店铺；沿用现有店铺字体/品牌和原生错误色，不做无关后台规范改写。证据D:/Codex/Tasks/2026-11-03/checkout-ui-repair/outputs/checkout-desktop-fixed.png、checkout-mobile-fixed.png；临时验证tab已关闭，正式手机预览恢复390并保留。样式经本机主题junction即时生效；其他环境需正常主题部署，不声称公网已上线。

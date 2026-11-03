@@ -76,10 +76,11 @@ final class Hub_Accounts {
 		if ( '' === $id ) {
 			if ( count( $accounts ) >= self::LIMIT ) { throw new \InvalidArgumentException( 'The payment account limit has been reached.' ); }
 			do { $id = bin2hex( random_bytes( 16 ) ); } while ( isset( $accounts[ $id ] ) );
-			$candidate = self::defaults( $id );
+			$candidate = self::new_account_defaults( $id );
 		} else {
 			if ( ! isset( $accounts[ $id ] ) ) { throw new \InvalidArgumentException( 'Payment account was not found.' ); }
 			$candidate = $accounts[ $id ];
+			if ( self::flag( $candidate['deleted'] ) ) { throw new \InvalidArgumentException( 'Payment account is deleted.' ); }
 			if ( self::flag( $candidate['archived'] ) ) { throw new \InvalidArgumentException( 'Archived payment accounts cannot be edited.' ); }
 		}
 		$candidate = self::candidate( $candidate, $input );
@@ -93,6 +94,7 @@ final class Hub_Accounts {
 		if ( null !== $revision ) { self::guard_revision( $snapshot['book']['revision'], $revision ); }
 		$accounts = $snapshot['book']['accounts'];
 		if ( ! self::valid_id( $id ) || ! isset( $accounts[ $id ] ) ) { throw new \InvalidArgumentException( 'Payment account was not found.' ); }
+		if ( self::flag( $accounts[ $id ]['deleted'] ) ) { throw new \InvalidArgumentException( 'Payment account is deleted.' ); }
 		if ( self::flag( $accounts[ $id ]['archived'] ) ) { throw new \InvalidArgumentException( 'Archived payment accounts cannot be edited.' ); }
 		$accounts[ $id ]['enabled'] = $enabled ? 'yes' : 'no';
 		// Disabling must remain possible even if the provider is currently unavailable.
@@ -105,6 +107,7 @@ final class Hub_Accounts {
 		if ( null !== $revision ) { self::guard_revision( $snapshot['book']['revision'], $revision ); }
 		$accounts = $snapshot['book']['accounts'];
 		if ( ! self::valid_id( $id ) || ! isset( $accounts[ $id ] ) ) { throw new \InvalidArgumentException( 'Payment account was not found.' ); }
+		if ( self::flag( $accounts[ $id ]['deleted'] ) ) { throw new \InvalidArgumentException( 'Payment account is deleted.' ); }
 		$accounts[ $id ]['enabled'] = 'no';
 		$accounts[ $id ]['archived'] = 'yes';
 		self::commit( $snapshot, $accounts );
@@ -116,8 +119,36 @@ final class Hub_Accounts {
 		if ( null !== $revision ) { self::guard_revision( $snapshot['book']['revision'], $revision ); }
 		$accounts = $snapshot['book']['accounts'];
 		if ( ! self::valid_id( $id ) || ! isset( $accounts[ $id ] ) ) { throw new \InvalidArgumentException( 'Payment account was not found.' ); }
+		if ( self::flag( $accounts[ $id ]['deleted'] ) ) { throw new \InvalidArgumentException( 'Payment account is deleted.' ); }
 		if ( ! self::flag( $accounts[ $id ]['archived'] ) ) { throw new \InvalidArgumentException( 'Payment account is not archived.' ); }
 		$accounts[ $id ]['archived'] = 'no';
+		$accounts[ $id ]['enabled'] = 'no';
+		self::commit( $snapshot, $accounts );
+	}
+
+	/** Move an archived method out of the normal list without removing its payment identity. */
+	public static function delete_archived( string $id, int $revision ): void {
+		$snapshot = self::snapshot();
+		self::guard_revision( $snapshot['book']['revision'], $revision );
+		$accounts = $snapshot['book']['accounts'];
+		if ( ! self::valid_id( $id ) || ! isset( $accounts[ $id ] ) ) { throw new \InvalidArgumentException( 'Payment account was not found.' ); }
+		if ( self::flag( $accounts[ $id ]['deleted'] ) ) { throw new \InvalidArgumentException( 'Payment account is deleted.' ); }
+		if ( ! self::flag( $accounts[ $id ]['archived'] ) || self::flag( $accounts[ $id ]['enabled'] ) ) { throw new \InvalidArgumentException( 'Only archived payment accounts can be deleted.' ); }
+		$accounts[ $id ]['deleted'] = 'yes';
+		$accounts[ $id ]['archived'] = 'yes';
+		$accounts[ $id ]['enabled'] = 'no';
+		self::commit( $snapshot, $accounts );
+	}
+
+	/** Recovery returns to the archived, disabled state; it never reopens collection. */
+	public static function restore_deleted( string $id, int $revision ): void {
+		$snapshot = self::snapshot();
+		self::guard_revision( $snapshot['book']['revision'], $revision );
+		$accounts = $snapshot['book']['accounts'];
+		if ( ! self::valid_id( $id ) || ! isset( $accounts[ $id ] ) ) { throw new \InvalidArgumentException( 'Payment account was not found.' ); }
+		if ( ! self::flag( $accounts[ $id ]['deleted'] ) ) { throw new \InvalidArgumentException( 'Payment account is not deleted.' ); }
+		$accounts[ $id ]['deleted'] = 'no';
+		$accounts[ $id ]['archived'] = 'yes';
 		$accounts[ $id ]['enabled'] = 'no';
 		self::commit( $snapshot, $accounts );
 	}
@@ -126,12 +157,21 @@ final class Hub_Accounts {
 		return array( 'id' => $id, 'protocol' => 'panapay', 'account_name' => '', 'enabled' => 'no', 'title' => 'Credit card',
 			'description' => 'Continue to the secure payment page to pay for your order.', 'gateway' => '', 'mchid' => '', 'secret' => '',
 			'mode' => '2', 'tag' => '', 'test_mode' => 'yes', 'payment_hosts' => array(), 'payment_icons' => array(), 'iframe_height' => 530,
-			'all_sites' => 'yes', 'sites' => array(), 'archived' => 'no' );
+			'all_sites' => 'yes', 'sites' => array(), 'archived' => 'no', 'deleted' => 'no' );
+	}
+
+	/** New accounts start selected for collection; stored/legacy defaults remain fail-closed. */
+	public static function new_account_defaults( string $id = '' ): array {
+		$defaults = self::defaults( $id );
+		$defaults['enabled'] = 'yes';
+		$defaults['test_mode'] = 'no';
+		return $defaults;
 	}
 
 	private static function configuration( array $raw ): array {
 		$config = Configuration::from_settings( $raw, 'default' === $raw['id'] );
-		foreach ( array( 'enabled', 'all_sites', 'archived' ) as $key ) { $config[ $key ] = self::flag( $raw[ $key ] ); }
+		foreach ( array( 'enabled', 'all_sites', 'archived', 'deleted' ) as $key ) { $config[ $key ] = self::flag( $raw[ $key ] ); }
+		if ( $config['deleted'] ) { $config['enabled'] = false; $config['archived'] = true; }
 		$config['sites'] = self::site_ids( $raw['sites'] );
 		$config['id'] = $raw['id'];
 		$config['account_id'] = $raw['id'];
@@ -163,7 +203,7 @@ final class Hub_Accounts {
 			catch ( \Throwable $error ) { $valid = false; }
 		}
 		try {
-			if ( ! $valid || $site_id < 1 || self::flag( $row['archived'] ) || ! self::flag( $row['enabled'] )
+			if ( ! $valid || $site_id < 1 || self::flag( $row['deleted'] ) || self::flag( $row['archived'] ) || ! self::flag( $row['enabled'] )
 				|| ( ! self::flag( $row['all_sites'] ) && ! in_array( $site_id, self::site_ids( $row['sites'] ), true ) ) ) { return $method; }
 			$config = self::configuration( $row );
 			self::validate_enabled( $row, $config );
@@ -246,6 +286,8 @@ final class Hub_Accounts {
 		foreach ( $book['accounts'] as $id => &$raw ) {
 			if ( ! is_string( $id ) || ! self::valid_id( $id ) || ! is_array( $raw ) || $id !== ( $raw['id'] ?? null ) || 'panapay' !== ( $raw['protocol'] ?? null ) ) { throw new \RuntimeException( 'Payment settings cannot be read.' ); }
 			$raw = array_merge( self::defaults( $id ), array_intersect_key( $raw, self::defaults( $id ) ) );
+			// A deleted identity remains available to historical receipts, always closed. Reads do not migrate options.
+			if ( self::flag( $raw['deleted'] ) ) { $raw['enabled'] = 'no'; $raw['archived'] = 'yes'; }
 		}
 		unset( $raw );
 		return array( 'serialized' => $serialized, 'book' => $book );

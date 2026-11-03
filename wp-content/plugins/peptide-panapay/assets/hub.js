@@ -38,8 +38,8 @@
 		if (first && !first.disabled) first.focus({ preventScroll: true });
 	};
 
-	// The server renders an inline, open form for no-JavaScript use. Enhance only
-	// after native dialog support has been confirmed, so the fallback remains usable.
+	// The server already renders the centered editor for direct edit links.
+	// Enhance its focus handling without changing the visual presentation.
 	dialog.close();
 	dialog.classList.add('is-enhanced');
 	page.querySelectorAll('[data-pc-pay-open]').forEach(trigger => {

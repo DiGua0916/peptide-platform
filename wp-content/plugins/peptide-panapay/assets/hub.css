@@ -104,17 +104,18 @@
 .pc-pay-access-layout .pc-pay-store-access { max-height: none; overflow: visible; }
 .pc-pay-config[aria-busy="true"] [data-pc-pay-open], .pc-pay-config[aria-busy="true"] [data-pc-pay-cancel], .pc-pay-config [aria-disabled="true"] { pointer-events: none; opacity: .65; }
 
-/* Open inline by default for no-JavaScript operation; JS opts into native modality. */
-.pc-pay-account-dialog { position: static; width: auto; max-width: none; max-height: none; margin: 24px 0 0; padding: 0; color: var(--pay-ink); background: #fff; border: 1px solid var(--pay-line); border-radius: 12px; font: inherit; }
+/* The server and enhanced editor share one centered presentation, even before JS. */
+.pc-pay-account-dialog { padding: 0; color: var(--pay-ink); background: #fff; border-radius: 12px; font: inherit; }
 .pc-pay-account-dialog:not([open]) { display: none; }
 .pc-pay-account-dialog[open] { display: flex; flex-direction: column; }
-.pc-pay-account-dialog.is-enhanced[open] { position: fixed; inset: 0; width: min(860px, calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); margin: auto; border: 0; overflow: hidden; box-shadow: 0 16px 48px #0003; animation: pc-pay-account-enter 160ms cubic-bezier(.22, 1, .36, 1); }
+.pc-pay-account-dialog[open] { position: fixed; z-index: 100100; inset: 0; width: min(860px, calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); margin: auto; border: 0; overflow: hidden; box-shadow: 0 16px 48px #0003; animation: pc-pay-account-enter 160ms cubic-bezier(.22, 1, .36, 1); }
+.pc-pay-account-dialog[open]:not(:modal) { box-shadow: 0 16px 48px #0003, 0 0 0 100vmax #0006; }
 .pc-pay-account-dialog::backdrop { background: #0006; }
-html.pc-pay-modal-open { overflow: hidden; }
+html.pc-pay-modal-open, html:has(.pc-pay-account-dialog[open]) { overflow: hidden; }
 .pc-pay-dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex: 0 0 auto; padding: 24px; border-bottom: 1px solid var(--pay-line); }
 .pc-pay-hub .pc-pay-dialog-header h2 { margin: 0; font-size: 20px; line-height: 28px; font-weight: 650; }
 .pc-pay-hub .pc-pay-dialog-header p { margin: 4px 0 0; color: var(--pay-muted); font-size: 12px; line-height: 16px; }
-.pc-pay-dialog-close { display: none; align-items: center; justify-content: center; flex: 0 0 36px; width: 36px; height: 36px; margin: -4px -4px 0 0; padding: 8px; color: #555; background: transparent; border: 0; border-radius: 6px; cursor: pointer; }
+.pc-pay-dialog-close { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 36px; width: 36px; height: 36px; margin: -4px -4px 0 0; padding: 8px; color: #555; background: transparent; border: 0; border-radius: 6px; cursor: pointer; }
 .is-enhanced .pc-pay-dialog-close { display: inline-flex; }
 .pc-pay-dialog-close:hover { color: #171717; background: #f2f2f2; }
 .pc-pay-dialog-close:active { transform: translateY(1px); }
@@ -143,6 +144,6 @@ html.pc-pay-modal-open { overflow: hidden; }
 .pc-pay-dialog-error { margin: 0 0 24px !important; padding: 12px; color: #933a32; background: #fff6f5; border-radius: 6px; font-size: 14px; line-height: 20px; }
 @keyframes pc-pay-account-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 800px) { .pc-pay-access-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
-@media (max-width: 600px) { .pc-pay-account-mark { flex-basis: 44px; width: 44px; height: 44px; } .pc-pay-account-row { gap: 12px; } .pc-pay-account-row > .button { margin-left: 56px; } .pc-pay-account-copy { flex-basis: calc(100% - 56px); } .pc-pay-store-options { grid-template-columns: minmax(0, 1fr); } .pc-pay-account-dialog.is-enhanced[open] { width: calc(100vw - 24px); max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); } .pc-pay-dialog-header, .pc-pay-dialog-scroll { padding: 16px; } .pc-pay-dialog-footer { padding: 12px 16px; align-items: stretch; } .pc-pay-dialog-footer p { flex-basis: 100%; } .pc-pay-dialog-footer > div { flex: 1 1 auto; justify-content: flex-end; } .pc-pay-icon-options { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pc-pay-icon-options .pc-pay-icon-option { flex-wrap: wrap; } }
-@media (prefers-reduced-motion: reduce) { .pc-pay-account-dialog.is-enhanced[open] { animation: none; } .pc-pay-dialog-close:active { transform: none; } }
+@media (max-width: 600px) { .pc-pay-account-mark { flex-basis: 44px; width: 44px; height: 44px; } .pc-pay-account-row { gap: 12px; } .pc-pay-account-row > .button { margin-left: 56px; } .pc-pay-account-copy { flex-basis: calc(100% - 56px); } .pc-pay-store-options { grid-template-columns: minmax(0, 1fr); } .pc-pay-account-dialog[open] { width: calc(100vw - 24px); max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); } .pc-pay-dialog-header, .pc-pay-dialog-scroll { padding: 16px; } .pc-pay-dialog-footer { padding: 12px 16px; align-items: stretch; } .pc-pay-dialog-footer p { flex-basis: 100%; } .pc-pay-dialog-footer > div { flex: 1 1 auto; justify-content: flex-end; } .pc-pay-icon-options { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pc-pay-icon-options .pc-pay-icon-option { flex-wrap: wrap; } }
+@media (prefers-reduced-motion: reduce) { .pc-pay-account-dialog[open] { animation: none; } .pc-pay-dialog-close:active { transform: none; } }
 @media (max-width: 600px) { .pc-pay-method-heading > .button { width: 100%; text-align: center; } .pc-pay-method-actions { width: 100%; } .pc-pay-archive > form { right: auto; left: 0; width: min(240px, calc(100vw - 64px)); } }
