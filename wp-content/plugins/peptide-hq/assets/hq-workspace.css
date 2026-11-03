@@ -323,6 +323,8 @@ body.pchq-workspace .pchq-ok .dashicons{color:#404040}
 /* Navigation keeps the current screen visible until the next native view is ready. */
 body.pchq-workspace .pchq-navigation-status{position:fixed;top:calc(32px + 61px);left:var(--vc-side,220px);right:0;z-index:1001;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:8px 28px;background:#fff;border-bottom:1px solid #e6e6e6;color:#404040;font-size:12px;line-height:20px}
 body.pchq-workspace .pchq-navigation-status[hidden]{display:none}
+body.pchq-workspace .pchq-navigation-status:not(.is-error){height:2px;min-height:0;padding:0;background:transparent;border:0;pointer-events:none}
+body.pchq-workspace .pchq-navigation-status:not(.is-error)>span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 body.pchq-workspace .pchq-navigation-status::before{content:"";position:absolute;top:0;left:0;width:28%;height:2px;background:#171717;animation:pchq-navigation-progress 1.2s ease-in-out infinite}
 body.pchq-workspace .pchq-navigation-status.is-error::before{display:none}
 body.pchq-workspace .pchq-navigation-status a{color:#171717;font-weight:600;text-decoration:underline;text-underline-offset:3px}
@@ -332,3 +334,14 @@ body.pchq-workspace.pchq-is-navigating #wpbody-content{pointer-events:none}
 @media(max-width:782px){body.pchq-workspace .pchq-navigation-status{top:98px;left:0;padding:8px 16px}}
 @media(max-width:600px){body.pchq-workspace .pchq-navigation-status{top:98px}}
 @media(prefers-reduced-motion:reduce){body.pchq-workspace .pchq-navigation-status::before{animation:none;transform:none;width:100%}}
+
+/* Native WordPress screens keep their own initialization and submit lifecycle.
+   Supporting browsers retain the old rendered document until the new one is ready.
+   No cross-fade, slide, or white intermediate canvas is introduced. */
+@view-transition{navigation:auto}
+body.pchq-workspace #wpadminbar{view-transition-name:pchq-workspace-toolbar}
+body.pchq-workspace #adminmenuwrap{view-transition-name:pchq-workspace-sidebar}
+body.pchq-workspace .pchq-workspace-head{view-transition-name:pchq-workspace-header}
+::view-transition-group(root),::view-transition-group(pchq-workspace-toolbar),::view-transition-group(pchq-workspace-sidebar),::view-transition-group(pchq-workspace-header){animation:none}
+::view-transition-old(root),::view-transition-new(root),::view-transition-old(pchq-workspace-toolbar),::view-transition-new(pchq-workspace-toolbar),::view-transition-old(pchq-workspace-sidebar),::view-transition-new(pchq-workspace-sidebar),::view-transition-old(pchq-workspace-header),::view-transition-new(pchq-workspace-header){animation:none;mix-blend-mode:normal;opacity:1}
+@media(prefers-reduced-motion:reduce){@view-transition{navigation:none}}

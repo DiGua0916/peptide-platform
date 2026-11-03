@@ -6,9 +6,13 @@ defined( 'ABSPATH' ) || exit;
 
 final class Workspace {
 
+	private static bool $navigation_pending = false;
+
 	public static function register_hooks(): void {
 		add_filter( 'admin_body_class', array( self::class, 'body_class' ) );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ), 1000 );
+		add_action( 'admin_print_styles', array( self::class, 'navigation_head' ), 0 );
+		add_action( 'admin_footer', array( self::class, 'navigation_ready' ), 0 );
 		add_action( 'adminmenu', array( self::class, 'brand' ), 1000 );
 		add_action( 'in_admin_header', array( self::class, 'header' ) );
 		add_action( 'login_enqueue_scripts', array( self::class, 'login_assets' ) );
@@ -18,6 +22,26 @@ final class Workspace {
 
 	public static function enabled(): bool {
 		return ! ( defined( 'PEPTIDE_ADMIN_UI_DISABLED' ) && PEPTIDE_ADMIN_UI_DISABLED ) && (bool) apply_filters( 'peptide_admin_workspace_enabled', true );
+	}
+
+	/** Keep native document/editor lifecycles; the browser alone owns the transition. */
+	public static function navigation_head(): void {
+		if ( self::$navigation_pending || ! self::enabled() || is_network_admin()
+			|| ( defined( 'IFRAME_REQUEST' ) && IFRAME_REQUEST ) ) { return; }
+		self::$navigation_pending = true;
+		// This is in <head>, before the normal admin styles/scripts. No timers or
+		// external resources delay the page; the marker releases on content parsing.
+		echo '<style id="pc-workspace-navigation">html,body{background:#f7f7f7}@view-transition{navigation:auto}@media(prefers-reduced-motion:reduce){@view-transition{navigation:none}}</style>';
+		echo '<link rel="expect" href="#pc-workspace-content-ready" blocking="render">';
+	}
+
+	/** admin_footer follows wpbody-content, before the normal footer script queue. */
+	public static function navigation_ready(): void {
+		if ( ! self::$navigation_pending ) { return; }
+		self::$navigation_pending = false;
+		// Always release an expectation already emitted, even if a filter changes
+		// later in this request. Do not wait for media, analytics or editor boot.
+		echo '<span id="pc-workspace-content-ready" hidden aria-hidden="true"></span>';
 	}
 
 	private static function canvas(): bool {
