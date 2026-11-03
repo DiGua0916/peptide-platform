@@ -219,7 +219,7 @@ final class Hub {
 			if ( ! $site || ! hash_equals( $row['site_uuid'], $site['uuid'] ) ) { throw new Protocol_Error( 'store_not_found', 400 ); }
 			$fields = array( 'status' => $p['status'], 'transaction_id' => $p['transaction_id'] );
 			$fields['sign'] = Signature::generate( $fields, Crypto::decrypt( $row['link_key_box'], 'hub-link' ) );
-			$url = Hub_Urls::return_url( Crypto::decrypt( $row['return_box'], 'hub-return' ), $site, $row['local_reference'] );
+			$url = Hub_Urls::attempt_return_url( $row, $site );
 			// Retain the exact original store return binding; never accept a browser-supplied target.
 			nocache_headers(); header( 'Referrer-Policy: no-referrer' ); header( 'X-Robots-Tag: noindex, nofollow' );
 			wp_redirect( add_query_arg( $fields, $url ), 302, 'VialCove payment center' ); exit;
