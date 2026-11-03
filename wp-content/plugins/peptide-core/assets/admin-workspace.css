@@ -105,6 +105,8 @@ body.pc-admin-workspace #wpadminbar #wp-admin-bar-menu-toggle>.ab-item:is(:hover
 .pc-admin-workspace #wpbody-content :is(.button:disabled,.button.disabled){color:#a3a3a3;background:#f0f0f0;border-color:var(--pc-ui-line);cursor:default}
 .pc-admin-workspace #wpbody-content :is(.button-link-delete,.submitdelete){color:#a73636}
 .pc-admin-workspace #wpbody-content :is(input[type=text],input[type=search],input[type=email],input[type=url],input[type=number],input[type=password],input[type=datetime-local],input[type=date],select,textarea){box-sizing:border-box;max-width:100%;min-height:36px;padding:7px 12px;border:1px solid var(--pc-ui-control);border-radius:var(--pc-ui-control-radius);background-color:#ffffff;color:var(--pc-ui-text);font-size:14px;line-height:20px;box-shadow:none}
+/* Keep WordPress's single native arrow and reserve its full text gutter. */
+.pc-admin-workspace #wpbody-content select:not([multiple]){padding-right:36px}
 .pc-admin-workspace #wpbody-content input[type=color]{padding:4px;width:48px;height:40px;border:1px solid #d4d4d4;border-radius:4px}
 .pc-admin-workspace #wpbody-content input[type=file]{max-width:100%;font-size:14px;line-height:20px}
 .pc-admin-workspace #wpbody-content :is(input[type=checkbox],input[type=radio]){border-color:#a3a3a3;accent-color:var(--pc-ui-accent);box-shadow:none}
@@ -129,8 +131,8 @@ body.pc-admin-workspace #wpadminbar #wp-admin-bar-menu-toggle>.ab-item:is(:hover
 .pc-admin-workspace .subsubsub a{padding:4px;font-size:14px;line-height:20px}
 .pc-admin-workspace .subsubsub .current{color:var(--pc-ui-text);font-weight:700}
 .pc-admin-workspace .tablenav{display:flow-root;height:auto;min-height:48px;margin:8px 0;padding:0}
-.pc-admin-workspace .tablenav .actions{display:flex;align-items:center;gap:8px;padding:0 12px 8px 0;flex-wrap:wrap}
-.pc-admin-workspace .tablenav .actions select{margin:0;max-width:240px}
+.pc-admin-workspace .tablenav .actions{display:flex;align-items:center;gap:8px;min-width:0;max-width:100%;padding:0 12px 8px 0;flex-wrap:wrap}
+.pc-admin-workspace .tablenav .actions select{margin:0;max-width:min(240px,100%);flex:0 0 auto}
 .pc-admin-workspace .tablenav .tablenav-pages{margin:8px 0}
 .pc-admin-workspace .tablenav-pages .pagination-links,.pc-admin-workspace .tablenav-pages .paging-input{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap}
 .pc-admin-workspace .search-box{display:flex;align-items:center;flex-wrap:nowrap;gap:8px;max-width:100%;margin:0 0 16px}
@@ -153,6 +155,32 @@ body.pc-admin-workspace #wpadminbar #wp-admin-bar-menu-toggle>.ab-item:is(:hover
 .pc-admin-workspace .widefat :is(.row-title,strong){font-size:14px;line-height:20px;font-weight:600}
 .pc-admin-workspace .widefat .row-actions{padding-top:4px;font-size:12px;line-height:16px}
 .pc-admin-workspace .widefat .no-items td{padding:36px 24px;color:var(--pc-ui-muted);text-align:center}
+/* Native product columns have Woo percentage widths; keep them readable inside the existing scroll region.
+   Desktop only: WordPress retains its primary-row expansion and hidden-column rules on phones. */
+@media(min-width:783px){
+ .pc-admin-workspace.post-type-product #posts-filter>.tablenav{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
+ .pc-admin-workspace.post-type-product #posts-filter>.tablenav>.actions{float:none;clear:none;padding:0;flex:0 0 auto}
+ .pc-admin-workspace.post-type-product #posts-filter>.tablenav>.actions:not(.bulkactions){flex:1 1 640px}
+ .pc-admin-workspace.post-type-product #posts-filter>.tablenav>.actions select{width:auto;min-width:160px;max-width:min(260px,100%)}
+ .pc-admin-workspace.post-type-product #posts-filter>.tablenav>.tablenav-pages{float:none;margin:0 0 0 auto}
+ .pc-admin-workspace.post-type-product #posts-filter>.tablenav>br.clear{display:none}
+ .pc-admin-workspace.post-type-product #posts-filter .pc-workspace-table>table.wp-list-table{min-width:1400px;table-layout:fixed}
+ .pc-admin-workspace.post-type-product #posts-filter .pc-workspace-table>table.wp-list-table :is(th,td){box-sizing:border-box}
+ .pc-admin-workspace.post-type-product #posts-filter .pc-workspace-table .check-column{width:44px}
+ .pc-admin-workspace.post-type-product #posts-filter .pc-workspace-table .column-thumb{width:60px}
+ .pc-admin-workspace.post-type-product #posts-filter .pc-workspace-table .column-name{width:240px}
+ .pc-admin-workspace.post-type-product #posts-filter .pc-workspace-table .column-sku{width:172px;white-space:nowrap;word-break:normal;overflow-wrap:normal}
+ .pc-admin-workspace.post-type-product #posts-filter .pc-workspace-table .column-is_in_stock{width:112px}
+ .pc-admin-workspace.post-type-product #posts-filter .pc-workspace-table .column-price{width:104px;white-space:nowrap}
+ /* Woo declares these two widths !important; replace that owner constraint at this breakpoint. */
+ .pc-admin-workspace.post-type-product #posts-filter .pc-workspace-table .column-product_cat{width:168px!important}
+ .pc-admin-workspace.post-type-product #posts-filter .pc-workspace-table .column-product_tag{width:128px!important}
+ .pc-admin-workspace.post-type-product #posts-filter .pc-workspace-table .column-taxonomy-product_brand{width:136px}
+ .pc-admin-workspace.post-type-product #posts-filter .pc-workspace-table :is(.column-featured,.column-product_type){width:44px}
+ .pc-admin-workspace.post-type-product #posts-filter .pc-workspace-table .column-date{width:128px}
+ .pc-admin-workspace.post-type-product #posts-filter .pc-workspace-table :is(thead,tfoot) th{white-space:nowrap;word-break:normal;overflow-wrap:normal;hyphens:none}
+ .pc-admin-workspace.post-type-product #posts-filter .pc-workspace-table :is(td.column-product_cat,td.column-product_tag,td.column-taxonomy-product_brand){word-break:normal;overflow-wrap:normal;hyphens:none}
+}
 .pc-admin-workspace .postbox{border:1px solid var(--pc-ui-line);border-radius:8px;box-shadow:none;overflow:visible}
 .pc-admin-workspace .postbox-header{border-color:var(--pc-ui-line);background:#fafafa;border-radius:8px 8px 0 0}
 .pc-admin-workspace .postbox .hndle{font-size:14px;line-height:22px;padding:16px;font-weight:600}
