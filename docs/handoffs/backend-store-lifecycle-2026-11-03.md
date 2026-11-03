@@ -23,6 +23,19 @@
 
 恢复采用双方准备、后台先开、顾客入口最后开的顺序。网络分区无法保证跨主机物理原子切换；SSH 回包丢失时尝试核对和重新关闭，HQ 未获双方确认不标记 active，必须由运维核对实际状态。
 
+## 本轮实际交付
+
+- 源码部署基准为 c20b173ba1b5；HQ 完整 current 为 /srv/vialcove/hq/releases/site-lifecycle-complete-c20b173ba1b5。14 个 HQ/Panapay 文件和两机各 5 个 broker 文件最终逐项 SHA 匹配；两个应用 shared config 字节不变。期间同事将顾客端/商家管理端更新为 storefront-motion-04c1bcedcb17 两角色版本，本轮保留这些新版本，没有回退。
+- Linux 原生隔离模型：worker 36、lifecycle 29、backup 8，通过；与 Windows 使用相同测试。HQ 模型 62、实际支付/Menu/retry 处理器模型 66、UI DOM/renderer 45，通过。初次原生模型发现测试夹具依赖不存在的 test 账号，已改为显式模拟 UID/GID 后全组通过，没有创建系统测试账号。
+- 已从首店脱离独立版本模板：管理端 11,045、顾客端 11,044 个代码文件，四种已发布布局和四张引用图片；禁止的环境/SQL/密钥/日志等源文件扫描为零，不复制客户数据库。私有 profile 保留原版本 checkpoint，原生加密备份计划验证包含新模板及生命周期记录。
+- 旧首店精确库存已在双方登记，原生归属/独占 SQL 授权检查通过。三份关闭候选 vhost 在隔离 include 图中通过 nginx -t，没有加载这些关闭候选。实际通过既有强制命令 SSH 通道执行双方只读 preflight，没有排入 retire 请求或写入任何 current 生命周期记录。
+- Web 的旧 /var/lib/vialcove-deploy 实际是 nologin 部署账号 HOME，不能当 root 私有锁锚。已使用根私有 ledger/locks 作为 canonical 锚；原 root 0600 锁仅作老发布工具的过渡协调，并检查 inode，不能当安全边界。未改变 HOME 所有权、wrapper、sudoers 或访问范围。未来发布工具应统一 canonical 锚后移除旧锁兼容层。
+- 首次 HQ 发布清单误用了已提交后为空的工作区 diff，漏选 UI 和部分既有类；浏览器读回发现旧控件后，改为已提交范围的明确 14 文件清单并补齐发布。hq-runtime-first-incomplete.json 保留这次失误，最终 hq-runtime-deploy.json/final-check 两角色报告为完整结果，不能把首次三文件收据当完成证明。
+- 真实 IAB 已加载新的 filemtime 资源版本，两个独立 dialog 均可打开；More 位于 table/scroll 外且 matches(:modal)，行高打开前后均 88.667px。取消服务器弹窗没有更改原分配；Escape 关闭 More 后 body lock 清除、焦点回到 More。真实截图为 server-picker-live.png 和 site-tools-live.png。没有提交服务器分配/删除/恢复表单；窄屏规则已模型检查，本轮不宣称生产手机宽度实测。
+- 原有 worker timer active、最近 tick success；HQ/商家登录与顾客首页实际 HTTPS 200。回收站当前 0 条，现有正常登记 1 条；没有借 UI 验收删除生产店铺，也没有对历史孤立店铺重新登记或重启其 timer。
+
+自动清理/恢复的破坏性两机演练、真实 72 小时等待及备份恢复仍未执行；模型与只读生产 preflight 不能替代这些演练。暂态网络/备份锁会重试；资源归属变化和失败恢复需要管理员处理，不承诺故障时无条件准点抹除。
+
 ## 验证与发布范围
 
 本地实际类/处理器模型覆盖权限、POST/nonce、状态 CAS、根回执、重复任务、失败重试、期限、支付保留及旧入口拒绝；Python 模型禁止未 mock 的外部命令。另有真实服务器只读归属检查、隔离 Nginx 候选语法检查和真实浏览器 dialog 检查。模型不等于生产两机下线、恢复或真实到期删除演练，本轮不对生产店铺做破坏性验收。
