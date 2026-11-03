@@ -2128,3 +2128,7 @@ Reference learning is24/70 after guarded Contact cleanup, with no reference Publ
 ### 2026-11-03 · Codex：归档付款方式可删除
 
 新增归档项“删除”和“已删除”列表，可恢复到归档且保持关闭；保留历史身份、参数和在途回写，20总身份上限仍含归档及已删除。后端阻断普通启用/编辑绕过，保留nonce/权限/revision/CAS。57模型与实际类渲染通过、2PHP lint/diff通过，未操作真实账号或交易。正式服务器更新结果与证据见 [删除付款方式交接](backend-payment-delete-2026-11-03.md)。
+
+### 2026-11-03 · Codex：域名管理筛选栏对齐
+
+按用户截图修复客户后台日期框/下拉框/搜索与筛选按钮高低不齐及箭头挤文字，限定domains-admin.css；桌面36px、窄屏40px，日期等宽成组、窄屏自然换行，不改筛选或域名设置。实际1280/390本机页面及发布记录见 [域名筛选栏交接](backend-domain-filter-alignment-2026-11-03.md)。
