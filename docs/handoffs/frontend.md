@@ -1145,3 +1145,5 @@ PHP lint、git diff --check通过。Impeccable detect仅3项advisory（24/20字�
 用户随后明确批准Impeccable+Interaction Design+Web Design Guidelines组合并要求实际优化，覆盖上段仅研究未安装的状态。已安装后两项、读取规则并用现有原生CSS/JS实现，没有给站点加库或更换架构。修复商品读取取消后立即重开复用已abort请求/旧finally删新请求、旧入口遗留pending；当前反馈在原图区域，不推开布局。修复子报告旧close销毁新viewer、实际阅读导航/偏移、同图/同报告DOM与焦点保持、响应式图片字段、空URL、画廊键盘及取消/纵向手势。购物袋快出慢入、可反转、closing inert及hidden/reduced/BFCache收束；金额/API/插件开关/history行为保持。
 
 联合Node63项（其中cart文件另含31内部检查）、PHP入口14项、语法/PHP lint/diff通过；静态设计扫描6资产exit0/[]。本机390实际Details/COA高亮与正文不被toolbar遮挡、COA一页正常绘制/390x844稳定、商品下层+Bag378px侧滑/原URL/无横溢。无改车/地址/订单/支付。完整范围、旧FAQ选择性发布边界和未测真机FPS见[frontend-storefront-interaction-polish-2026-11-03.md](frontend-storefront-interaction-polish-2026-11-03.md)。公网发布和最终Back验证以实际后续记录为准，不从源码存在推断完成。
+
+实际七文件发布已完成：web09:23:24UTC/admin09:27:41UTC，均storefront-interaction-73c973c6c6f8，canonical生命周期锁/确切active身份/配置/全manifest/6HTTPS准确hash/type/PHP/健康通过。最终手机截图定位直接点击Bag，COA位置3694保持；系统Back仅收车，仍10mg/COA/3694和原首页URL。早先locator click自身scrollIntoView造成3310偏移，已用直接坐标区分，不归咎drawer。另消除真实无效恢复：navigation只给不同select/qty赋值并触发change，7实际IIFE测试通过；这是一文件独立后续scope发布，不能混称七文件回执含该修改。真机FPS/硬件手势仍未测，完整商品退场仍需BE生命周期协调。
