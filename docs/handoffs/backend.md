@@ -2132,3 +2132,7 @@ Reference learning is24/70 after guarded Contact cleanup, with no reference Publ
 ### 2026-11-03 · Codex：域名管理筛选栏对齐
 
 按用户截图修复客户后台日期框/下拉框/搜索与筛选按钮高低不齐及箭头挤文字，限定domains-admin.css；桌面36px、窄屏40px，日期等宽成组、窄屏自然换行，不改筛选或域名设置。实际1280/390本机页面及发布记录见 [域名筛选栏交接](backend-domain-filter-alignment-2026-11-03.md)。
+
+### 2026-11-03 · Codex：两个正式后台的导航性能
+
+已实测服务器authenticated首字节0.30–0.45s、用户浏览器域名页0.577s首字节/5.248s加载；找到禁用静态浏览器缓存、HQ缺压缩、普通页命令面板带入编辑器大依赖及表格二次包裹。按精确操作页卸载可选palette根，保留真实编辑器/共享依赖；复用原有表格scroll容器。受限源码静态private缓存map与正式发布、验证范围见 [后台性能交接](backend-admin-performance-2026-11-03.md)。

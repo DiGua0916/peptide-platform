@@ -40,14 +40,26 @@
       event.stopImmediatePropagation();
       location.assign(window.pcWorkspaceHome);
     }, true);
+    function scrollRegion(region, table) {
+      if (!region.hasAttribute('tabindex')) region.tabIndex = 0;
+      if (!region.hasAttribute('role')) region.setAttribute('role', 'region');
+      if (!region.hasAttribute('aria-label') && !region.hasAttribute('aria-labelledby')) {
+        region.setAttribute('aria-label', (table.getAttribute('aria-label') || document.querySelector('.wrap h1')?.textContent?.trim() || '数据') + '表格，可横向滚动');
+      }
+    }
     // Only server-rendered tables. React owns the WooCommerce application subtree.
     root.querySelectorAll('table.wp-list-table, table.widefat, table.pc-mk-table').forEach(function (table) {
-      if (table.closest('.woocommerce-layout, .block-editor, .media-modal, .pc-workspace-table, .pc-customer-scroll') || table.closest('#woocommerce-product-data')) return;
+      if (table.closest('.woocommerce-layout, .block-editor, .media-modal') || table.closest('#woocommerce-product-data')) return;
+      // Page-owned scrolling surfaces already exist in the HTML. Reuse them without
+      // moving the table or adding a second frame after the first render.
+      const owner = table.closest('.pc-workspace-table, .pc-customer-scroll, .pc-dm-scroll, .pc-media-scroll, .pc-review-table, .pc-col-table-wrap');
+      if (owner) {
+        scrollRegion(owner, table);
+        return;
+      }
       const wrap = document.createElement('div');
       wrap.className = 'pc-workspace-table';
-      wrap.tabIndex = 0;
-      wrap.setAttribute('role', 'region');
-      wrap.setAttribute('aria-label', (table.getAttribute('aria-label') || document.querySelector('.wrap h1')?.textContent?.trim() || '数据') + '表格，可横向滚动');
+      scrollRegion(wrap, table);
       table.parentNode.insertBefore(wrap, table);
       wrap.appendChild(table);
     });

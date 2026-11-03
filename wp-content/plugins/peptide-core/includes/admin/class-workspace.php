@@ -42,6 +42,7 @@ final class Workspace {
 			wp_enqueue_style( 'pc-editor-workspace', $url . 'editor-workspace.css', array( 'pc-admin-workspace' ), $ver( 'editor-workspace.css' ) );
 			return;
 		}
+		self::trim_command_palette();
 		wp_enqueue_script( 'pc-admin-workspace', $url . 'admin-workspace.js', array(), $ver( 'admin-workspace.js' ), true );
 		$home = \PeptideCore\Staff::is_staff( get_current_user_id() ) ? \PeptideCore\Staff::home_url( get_current_user_id() ) : Overview_Page::url();
 		wp_add_inline_script( 'pc-admin-workspace', 'window.pcWorkspaceHome=' . wp_json_encode( $home ) . ';', 'before' );
@@ -57,6 +58,21 @@ final class Workspace {
 			wp_enqueue_style( 'pc-product-workspace', $url . 'product-workspace.css', array( 'pc-admin-workspace' ), $ver( 'product-workspace.css' ) );
 			wp_enqueue_script( 'pc-product-workspace', $url . 'product-workspace.js', array( 'pc-admin-workspace' ), $ver( 'product-workspace.js' ), true );
 		}
+	}
+
+	/** Operational pages do not need the optional command palette's editor dependency tree. */
+	private static function trim_command_palette(): void {
+		$screen = get_current_screen();
+		$page = isset( $_GET['page'] ) && is_string( $_GET['page'] ) ? $_GET['page'] : '';
+		if ( ! $screen || ! in_array( $page, array( 'pc-overview', 'pc-store-design-domains', 'pc-data' ), true )
+			|| ! str_ends_with( $screen->id, '_page_' . $page )
+			|| ( defined( 'IFRAME_REQUEST' ) && IFRAME_REQUEST )
+			|| $screen->is_block_editor() ) { return; }
+		// Dequeue roots only. Shared packages remain registered and load if another feature needs them.
+		foreach ( array( 'wc-admin-command-palette', 'wc-admin-command-palette-analytics', 'wp-core-commands', 'wp-commands' ) as $handle ) {
+			wp_dequeue_script( $handle );
+		}
+		wp_dequeue_style( 'wp-commands' );
 	}
 
 	public static function brand(): void {
