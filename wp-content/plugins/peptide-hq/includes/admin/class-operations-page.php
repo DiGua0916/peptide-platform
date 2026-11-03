@@ -22,7 +22,8 @@ final class Operations_Page {
 	}
 	/** Shared workspace loads controllers once; each response supplies its own nonce in the DOM. */
 	public static function workspace_assets(): void {
-		wp_enqueue_style( 'pchq-operations', plugins_url( 'assets/hq-operations.css', PEPTIDE_HQ_FILE ), array( 'peptide-hq-workspace' ), PEPTIDE_HQ_VERSION );
+		$style_version = PEPTIDE_HQ_VERSION . '.' . (string) filemtime( dirname( PEPTIDE_HQ_FILE ) . '/assets/hq-operations.css' );
+		wp_enqueue_style( 'pchq-operations', plugins_url( 'assets/hq-operations.css', PEPTIDE_HQ_FILE ), array( 'peptide-hq-workspace' ), $style_version );
 		wp_enqueue_script( 'pchq-operations', plugins_url( 'assets/hq-operations.js', PEPTIDE_HQ_FILE ), array(), (string) filemtime( dirname( PEPTIDE_HQ_FILE ) . '/assets/hq-operations.js' ), true );
 	}
 	public static function url( string $tab = 'tasks', int $site = 0 ): string { return add_query_arg( array( 'page' => self::SLUG, 'tab' => $tab, 'site' => $site ), admin_url( 'admin.php' ) ); }
