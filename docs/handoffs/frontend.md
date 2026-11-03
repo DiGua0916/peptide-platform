@@ -1133,3 +1133,9 @@ PHP lint、git diff --check通过。Impeccable detect仅3项advisory（24/20字�
 联合 JS 36 项用例全部通过（内含 drawer20、surface17、intent9及旧83断言、pair7、transport48、product-actions74）；PHP cart14/config152/intents92通过。IAB实际390×844：Checkout Bag为378px右侧卡片，/checkout/不变、无横溢出；首页实际TR11306→Bag保留两层，浏览器Back只收购物袋并保留TR和/。无改车/地址/下单。员工排除故未冒称真实访客入库或实体手机验收。完整范围/限制/部署边界见 [frontend-mobile-cart-product-tracking-2026-11-03.md](frontend-mobile-cart-product-tracking-2026-11-03.md)。本段源码交接，公网部署回执另记，settings帮助文件不可整文件覆盖公网旧FAQ。
 
 正式发布补充：修复9a75aba，保留同期后台优化后0635585已atomic push main/frontend。已执行严格10文件公网发布：web从并发pay-paired-capture-3fc6fcd9741c派生cart-cards-0635585d19fa-web01；admin从admin-performance-d783d1ba4d81派生cart-cards-0635585d19fa-admin01。第一轮因current变化安全中止，fresh preflight后保留原guard重建，未覆盖付款更新。两机完整manifest/配置inode+hash保护、PHP lint、七份HTTPS资源hash及首页/登录健康检查通过，未改DB或支付配置。匿名公网真实Bag原地打开且www首页URL不变；本机手机预览停checkout、tab保留。具体回执/回滚边界见[deployment-mobile-cart-product-tracking-2026-11-03.md](deployment-mobile-cart-product-tracking-2026-11-03.md)。未查真实访客或声称真人真机付款验收。
+
+### 2026-11-03 · Codex：正式店铺交互动效首轮
+
+用户反馈操作生硬，已定位旧navigation动画没有连接实际demo-site-parts页头。修改实际菜单/搜索owned controller为350ms进/200ms出、有限列表序列、可中断反转及native焦点/链接/减少动态效果/hidden/BFCache/builder清理；新增11生命周期用例通过。新增独立storefront-motion.css/js及functions前端加载：商品/子弹窗360ms轻入场、背板、按钮按压、原生FAQ答案淡入、新来源图片加载后淡入，相同来源去重。业务值立即更新，不改Woo、history、追踪或后端。
+
+本机正式390×844：资产实载，菜单宽=scrollWidth390、Escape收起，商品380无横溢；实际10mg选项得到10mg值和TR10图。未改车/地址/下单，非真实硬件FPS验收。商品正文退场仍由BE原生close立即清空，本轮不延迟Back或伪造表单；此限制与发布五文件边界见frontend-storefront-motion-2026-11-03.md。Impeccable detector报告旧Geist/品牌色与后台DESIGN不匹配，沿用用户现有公开店铺品牌，不无关改后台规范。用户中途要GitHub高星UI/mobile skills，已查询primary仓库/skill及当前stars，未授权/未安装新skill；研究答复单独交付。公网发布结果后补，不能从本机预览推断已上线。

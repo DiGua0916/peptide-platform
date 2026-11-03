@@ -26,8 +26,9 @@
 .vc-demo-nav-children .vc-demo-nav-list{display:block}.vc-demo-nav-children :is(.vc-menu-entry,summary){padding:10px 0}.vc-demo-nav-children .vc-demo-nav-children{position:static;box-shadow:none;border:0;min-width:0;padding:0 0 0 16px}
 .vc-demo-nav-overview{border-bottom:1px solid var(--vc-demo-part-line);margin-bottom:6px}
 .vc-demo-header-actions{display:flex;gap:16px;align-items:center;flex:none}
-.vc-demo-header .vc-demo-icon-button,.vc-demo-part-dialog .vc-demo-icon-button{display:inline-flex;align-items:center;justify-content:center;flex:none;width:44px;min-height:44px;height:44px;padding:0;border:0;border-radius:8px;background:transparent;color:inherit;cursor:pointer;box-shadow:none;text-decoration:none;line-height:1;transition:background .2s}
+.vc-demo-header .vc-demo-icon-button,.vc-demo-part-dialog .vc-demo-icon-button{display:inline-flex;align-items:center;justify-content:center;flex:none;width:44px;min-height:44px;height:44px;padding:0;border:0;border-radius:8px;background:transparent;color:inherit;cursor:pointer;box-shadow:none;text-decoration:none;line-height:1;transition:background 200ms cubic-bezier(.22,1,.36,1),transform 200ms cubic-bezier(.22,1,.36,1)}
 .vc-demo-header .vc-demo-icon-button:hover,.vc-demo-part-dialog .vc-demo-icon-button:hover{background:color-mix(in srgb,currentColor 7%,transparent)}
+.vc-demo-header .vc-demo-icon-button:active,.vc-demo-part-dialog .vc-demo-icon-button:active{transform:scale(.96)}
 .vc-demo-icon-button svg{display:block;flex:none;width:24px;height:24px}
 .vc-demo-header .vc-demo-bag{width:auto;gap:8px;padding:0 8px}
 .vc-demo-bag .vc-cart-count{display:inline-block;width:auto;height:auto;min-width:16px;border:0;border-radius:0;font-size:12px;font-weight:500;line-height:16px;text-align:center;background:transparent;color:inherit}
@@ -36,6 +37,10 @@
 .vc-demo-secondary :is(a,summary){padding:6px 0}
 .vc-demo-part-dialog{box-sizing:border-box;color:var(--vc-demo-part-ink,#17343e);background:var(--vc-demo-part-bg,#fff);border:0;padding:0;max-width:calc(100% - 40px);max-height:calc(100dvh - 40px);border-radius:16px;box-shadow:0 24px 100px #17343e30;overscroll-behavior:contain}
 .vc-demo-part-dialog::backdrop{background:#17343e70;backdrop-filter:blur(6px)}
+.vc-demo-part-dialog[data-vc-part-motion=opening]::backdrop{animation:vc-part-backdrop-in 350ms cubic-bezier(.22,1,.36,1) both}
+.vc-demo-part-dialog[data-vc-part-motion=closing]::backdrop{animation:vc-part-backdrop-out 200ms cubic-bezier(.22,1,.36,1) both}
+@keyframes vc-part-backdrop-in{from{opacity:0}to{opacity:1}}
+@keyframes vc-part-backdrop-out{from{opacity:1}to{opacity:0}}
 .vc-demo-part-dialog:not([open]){display:none}
 html.vc-demo-part-open{overflow:hidden}
 .vc-demo-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px 32px;border-bottom:1px solid var(--vc-demo-part-line,#dce6e8)}
@@ -84,4 +89,4 @@ html.vc-demo-part-open{overflow:hidden}
 /* WordPress's mobile admin bar scrolls away at this breakpoint. */
 @media(max-width:600px){.vc-m--site-header:has(.vc-demo-header--sticky){top:0}}
 @media(max-width:360px){.vc-demo-header-inner{gap:8px}.vc-demo-header-actions{gap:0}.vc-demo-brand{max-width:40vw}.vc-demo-header .vc-demo-icon-button{width:36px}.vc-demo-header .vc-demo-bag{width:auto}}
-@media(prefers-reduced-motion:reduce){.vc-demo-header *,.vc-demo-footer *{scroll-behavior:auto!important;transition:none!important}}
+@media(prefers-reduced-motion:reduce){.vc-demo-header *,.vc-demo-footer *,.vc-demo-part-dialog *{scroll-behavior:auto!important;transition:none!important}.vc-demo-part-dialog::backdrop{animation:none!important}.vc-demo-header .vc-demo-icon-button:active,.vc-demo-part-dialog .vc-demo-icon-button:active{transform:none}}
