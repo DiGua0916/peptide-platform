@@ -140,7 +140,7 @@
     if (questions) root.append(questions);
     content?.querySelectorAll('[data-vc-product-common-questions]').forEach(section => root.append(section));
     const toolbar = dialog.querySelector('.vc-home-quick__toolbar');
-    const toolbarClose = toolbar?.querySelector('.vc-showcase-quick__close');
+    const toolbarClose = toolbar?.querySelector('.vc-showcase-quick__close') || dialog.querySelector('.vc-showcase-quick__close');
     let navigation = null;
     const reportTab = button('', 'COA', () => navigation?.go('coa')); reportTab.hidden = true;
     if (toolbar) {
@@ -172,36 +172,42 @@
       if (!active) return;
       const title = node('h2', '', 'Order savings');
       offers.append(title);
-      const list = node('ul', 'vc-dialog-offer-tiers');
+      const list = node('ul', 'vc-dialog-offer-tiers' + (active.type === 'spend_amount' && !active.unlimited ? ' vc-dialog-offer-tiers--thresholds' : ''));
       active.tiers.forEach(tier => {
         const item = node('li', '');
-        if (active.type === 'spend_amount' && !active.unlimited) item.append(node('strong', '', tier.rewardText), node('span', '', 'Spend ' + tier.thresholdText));
+        if (active.type === 'spend_amount' && !active.unlimited) {
+          const compact = text => String(text || '').replace(/\.00(?=\s|$)/g, '');
+          item.append(node('span', 'vc-dialog-offer-threshold', 'Spend ' + compact(tier.thresholdText)), node('strong', '', compact(tier.rewardText)));
+        }
         else item.append(node('strong', '', tier.text));
         list.append(item);
       });
       offers.append(list);
-      const details = node('details', 'vc-dialog-offer-details'); details.append(node('summary', '', 'Offer details'));
-      const rules = node('div', '');
-      if (active.text) rules.append(node('p', '', active.text));
-      if (active.type === 'spend_amount' && !active.unlimited) rules.append(node('p', '', 'The highest qualifying tier applies to eligible merchandise before coupons, tax and shipping.'));
-      rules.append(node('p', '', active.exclude_sale ? 'Sale items are excluded.' : 'Sale items are included.'));
-      rules.append(node('p', '', active.with_coupons ? 'Eligible coupons may be combined. Coupon restrictions still apply.' : 'Cannot be combined with coupon codes.'));
-      if (active.ends_text) rules.append(node('p', '', 'Offer ends: ' + active.ends_text));
-      rules.append(node('p', '', 'Final savings are confirmed in your shopping bag and at checkout.'));
-      details.append(rules); offers.append(details);
     }
-    let sticky = root.querySelector('.vc-dialog-sticky');
-    if (sticky) sticky.remove();
-    sticky = node('div', 'vc-dialog-sticky'); sticky.hidden = !settings.stickyPurchaseEnabled || !mainAdd;
-    const stickyInfo = node('div', 'vc-dialog-sticky-info'), stickyPrice = node('strong', ''), stickySpec = node('span', '');
-    const stickyAdd = button('button vc-dialog-sticky-add', 'Add to bag', () => {
-      if (mainAdd && !stickyAdd.disabled && !form.inert) { form.vcSubmitTrigger = stickyAdd; form.requestSubmit(mainAdd); }
+    const selectedLabel = () => [...root.querySelectorAll('.variations select')].map(select => select.value ? select.selectedOptions[0]?.textContent || '' : '').filter(Boolean).join(' / ');
+    const publicPriceText = () => summary.querySelector('.vc-price-current .woocommerce-Price-amount')?.textContent || summary.querySelector('.price .woocommerce-Price-amount')?.textContent || '';
+    const context = () => ({ product: productName, specification: selectedLabel(), price: publicPriceText(), sku: root.vcHomeSku ?? defaults.sku ?? '' });
+    const metaStrip = window.createVcProductMetaStrip?.({root,summary,form,signal,selectedLabel});
+    root.querySelector('.vc-dialog-sticky')?.remove();
+    const mainBuy = root.querySelector('[data-vc-quick-buy]');
+    const purchaseDock = window.createVcProductPurchaseDock?.({root,dialog,form,mainAdd,mainBuy,selectedLabel,priceNode:summary.querySelector(':scope > .price'),enabled:settings.stickyPurchaseEnabled,signal});
+    const purchaseReturn = window.createVcConfirmedPurchaseReturn?.({dialog,signal,
+      isCurrent: ticket => !destroyed && dialog.open && root.isConnected && Number(root.dataset.vcProductId) === ticket.productId && root.vcHomeOpener === ticket.opener
+        && ![...document.querySelectorAll('dialog[open]')].some(layer => layer !== dialog),
+      close: () => { if (toolbarClose?.isConnected && dialog.open) toolbarClose.click(); }
     });
-    stickyInfo.append(stickyPrice, stickySpec); sticky.append(stickyInfo, stickyAdd); root.append(sticky);
+    // Buy remains the plugin's real checkout action. Never let a previous Add
+    // success close this view while the customer starts a different action.
+    mainBuy?.addEventListener('click', () => purchaseReturn?.cancel(), {capture:true,signal});
+    // An explicit new interaction takes ownership from the short success beat.
+    // Pointerdown precedes the original Add submit, which starts a fresh ticket.
+    dialog.addEventListener('pointerdown', () => purchaseReturn?.cancel(), {capture:true,signal});
+    toolbar?.addEventListener('click', () => purchaseReturn?.cancel(), {capture:true,signal});
+    form?.addEventListener('change', () => purchaseReturn?.cancel(), {signal});
     // The plugin owns submitting, locking, failure/recovery and confirmed 201.
     // This listener only decorates that existing success, never guesses from cart totals.
     const feedbackConfig = window.vcLiveCommerce?.cartFeedback?.config || {};
-    const nativeFeedback = window.createVcNativeProductFeedback?.({buttons:[mainAdd,stickyAdd],bagCountElements:[...document.querySelectorAll('.vc-cart-count')],config:feedbackConfig});
+    const nativeFeedback = window.createVcNativeProductFeedback?.({buttons:[mainAdd],bagCountElements:[...document.querySelectorAll('.vc-cart-count')],config:feedbackConfig});
     const feedbackURL = safeURL(window.vcLiveCommerce?.cartFeedback?.url);
     if (feedbackURL) fetch(feedbackURL,{credentials:'same-origin',cache:'no-store',signal})
       .then(response=>response.ok?response.json():null).then(config=>{if(!destroyed && config)nativeFeedback?.configure(config);}).catch(()=>{});
@@ -210,7 +216,7 @@
     form?.addEventListener('submit',event=>{
       const trigger = form.vcSubmitTrigger || event.submitter || mainAdd; delete form.vcSubmitTrigger;
       if (destroyed || !dialog.open || !mainAdd || mainAdd.disabled || form.inert || mainAdd.classList.contains('disabled')) return;
-      pendingFeedback = {trigger,opener:root.vcHomeOpener,started:false,confirmed:false,stale:false};
+      pendingFeedback = {trigger,opener:root.vcHomeOpener,started:false,confirmed:false,stale:false,returnTicket:purchaseReturn?.begin({mode:'add',opener:root.vcHomeOpener,productId})};
       const submitted=pendingFeedback;
       Promise.resolve().then(()=>{
         // Native validation runs first. Decorate only a request it actually locks.
@@ -222,33 +228,30 @@
         if(!pendingFeedback.started && nativeFeedback?.state!=='pending')nativeFeedback?.begin(pendingFeedback.trigger);
         pendingFeedback.started = true;
       } else if(pendingFeedback?.started && ['drawer','live-cart'].includes(event.detail?.source)) {
-        pendingFeedback.stale=true; nativeFeedback?.cancel();
+        pendingFeedback.stale=true; nativeFeedback?.cancel(); purchaseReturn?.cancel();
       }
     },{signal});
     document.addEventListener('vc:cart-updated',event=>{
       const detail=event.detail;
       if(!pendingFeedback?.started || detail?.source!=='showcase' || detail.mutation!==true)return;
-      if(detail.stale===true) { pendingFeedback.stale=true;nativeFeedback?.cancel(); }
+      if(detail.stale===true) { pendingFeedback.stale=true;nativeFeedback?.cancel();purchaseReturn?.cancel(); }
       else if(detail.stale===false && Array.isArray(detail.cart?.items) && detail.cart?.totals) pendingFeedback.confirmed=true;
     },{signal});
     window.jQuery?.(document.body).on('added_to_cart' + feedbackNamespace,(_,fragments,hash,$trigger)=>{
       const pending = pendingFeedback;
       if (!pending?.started || destroyed || !dialog.open || !root.isConnected || $trigger?.[0] !== pending.opener) return;
       pendingFeedback = null;
-      if(pending.confirmed && !pending.stale)nativeFeedback?.confirm();
-      else nativeFeedback?.cancel();
+      if(pending.confirmed && !pending.stale) {
+        nativeFeedback?.confirm();
+        purchaseReturn?.confirm(pending.returnTicket,{confirmed:true,stale:false,presentation:nativeFeedback?.presentation});
+      } else { nativeFeedback?.cancel(); purchaseReturn?.cancel(); }
     });
-    const selectedLabel = () => [...root.querySelectorAll('.variations select')].map(select => select.value ? select.selectedOptions[0]?.textContent || '' : '').filter(Boolean).join(' / ');
-    const publicPriceText = () => summary.querySelector('.vc-price-current .woocommerce-Price-amount')?.textContent || summary.querySelector('.price .woocommerce-Price-amount')?.textContent || '';
-    const context = () => ({ product: productName, specification: selectedLabel(), price: publicPriceText(), sku: root.vcHomeSku ?? defaults.sku ?? '' });
     function syncSticky() {
       if (destroyed) return;
-      stickyPrice.textContent = publicPriceText(); stickySpec.textContent = selectedLabel();
-      stickyAdd.disabled = !mainAdd || mainAdd.disabled || mainAdd.classList.contains('disabled') || form.inert || form.getAttribute('aria-busy') === 'true';
-      stickyAdd.setAttribute('aria-busy', String(form?.getAttribute('aria-busy') === 'true'));
-      stickyAdd.textContent = mainAdd?.textContent.trim() || 'Add to bag';
+      purchaseDock?.update();
+      metaStrip?.update();
       if(pendingFeedback && nativeFeedback?.state==='pending' && form?.getAttribute('aria-busy')!=='true' && !pendingFeedback.confirmed) {
-        pendingFeedback=null;nativeFeedback?.cancel();
+        pendingFeedback=null;nativeFeedback?.cancel();purchaseReturn?.cancel();
       }
       nativeFeedback?.sync();
     }
@@ -410,7 +413,7 @@
       openReport,
       openImage,
       updateMedia(image) { productImage=image; renderProduct(); },
-      destroy() { if(destroyed)return; destroyed=true; clearInterval(tickerPoll); reportOpenIntent++; pendingFeedback=null; nativeFeedback?.destroy(); window.jQuery?.(document.body).off(feedbackNamespace); lifecycle.abort(); navigation?.destroy(); reportRequest?.abort(); formObserver.disconnect(); cancelAnimationFrame(frame); ticker?.destroy(); children.destroy(); root.vcExperience=null; }
+      destroy() { if(destroyed)return; destroyed=true; clearInterval(tickerPoll); reportOpenIntent++; pendingFeedback=null; purchaseReturn?.destroy(); nativeFeedback?.destroy(); window.jQuery?.(document.body).off(feedbackNamespace); lifecycle.abort(); navigation?.destroy(); reportRequest?.abort(); formObserver.disconnect(); cancelAnimationFrame(frame); metaStrip?.destroy(); purchaseDock?.destroy(); ticker?.destroy(); children.destroy(); root.vcExperience=null; }
     };
     refresh(); reportReadPromise=readReports(); readTicker(); return api;
   };

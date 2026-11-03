@@ -1,3 +1,71 @@
 /* Keep the report shell stationary while PDF pages arrive. Width stays responsive. */
 .vc-product-report-dialog{height:calc(100dvh - 40px)}
 @media(max-width:820px){.vc-product-report-dialog{height:100dvh}}
+
+/* Compact, real campaign tiers above the product title. */
+.vc-product-dialog .vc-dialog-heading .vc-home-quick__eyebrow{display:none}
+.vc-product-dialog .vc-dialog-offers{margin:0 0 16px;padding:12px;border:0;border-radius:8px;background:#fff4f3;color:#9b2436}
+.vc-product-dialog .vc-dialog-offers h2{margin:0 0 8px;font:600 14px/20px 'Geist',sans-serif;letter-spacing:0;color:#9b2436}
+.vc-product-dialog .vc-dialog-offer-tiers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.vc-product-dialog .vc-dialog-offer-tiers li{display:flex;min-width:0;gap:4px}
+.vc-product-dialog .vc-dialog-offer-tiers strong{font:700 18px/24px 'Geist',sans-serif;white-space:nowrap;letter-spacing:-.02em;color:#a62437}
+.vc-product-dialog .vc-dialog-offer-tiers .vc-dialog-offer-threshold{font:400 12px/16px 'Geist',sans-serif;white-space:nowrap;color:#74535a}
+.vc-product-dialog .vc-dialog-offer-tiers:not(.vc-dialog-offer-tiers--thresholds){grid-template-columns:minmax(0,1fr)}
+.vc-product-dialog .vc-dialog-offer-tiers:not(.vc-dialog-offer-tiers--thresholds) strong{white-space:normal;overflow-wrap:anywhere}
+@media(max-width:360px){.vc-product-dialog .vc-dialog-offer-tiers strong{font-size:16px;line-height:20px}}
+
+/* Selected specification and native metadata directly below the product image. */
+.vc-product-dialog .vc-product-meta-ready>.summary>.vc-home-quick__specification,.vc-product-dialog .vc-product-meta-ready>.vc-showcase-quick__media>.vc-dialog-media-caption,.vc-product-dialog .vc-product-meta-ready .single_variation .stock,.vc-product-dialog .vc-product-meta-ready>.summary>.stock{display:none}
+.vc-product-dialog.woocommerce div.product.vc-product-meta-ready form.cart{display:block;margin:0;padding:0}
+.vc-product-dialog.woocommerce div.product form.cart .vc-product-meta{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:0 8px;width:100%;margin:0 0 16px;padding:0}
+.vc-product-dialog .vc-product-meta__spec{grid-row:1;grid-column:1/3;min-width:0;font:600 14px/20px 'Geist',sans-serif;color:var(--ink);overflow-wrap:anywhere}
+.vc-product-dialog .vc-product-meta__stock{grid-row:1;grid-column:3;font:400 12px/20px 'Geist',sans-serif;color:var(--teal);text-align:right;white-space:nowrap}
+.vc-product-dialog .vc-product-meta__stock.out-of-stock{color:#be293c}
+.vc-product-dialog .vc-product-meta>.vc-home-quick__sku{grid-row:2;grid-column:1;margin:0;padding:0;border:0;font:400 12px/20px 'Geist',sans-serif;color:var(--muted);overflow-wrap:anywhere}
+.vc-product-dialog.woocommerce div.product form.cart .vc-product-meta>.reset_variations{grid-row:2;grid-column:2;display:inline-flex;align-items:center;min-height:44px;margin:0;padding:0;color:var(--muted);font:400 12px/20px 'Geist',sans-serif;text-decoration:underline;text-underline-offset:3px}
+.vc-product-dialog.woocommerce div.product form.cart .vc-product-meta>.vc-showcase-quick__details{grid-row:2;grid-column:3;display:inline-flex;justify-content:end;align-items:center;min-width:0;min-height:44px;width:auto;margin:0;padding:0;border:0;border-radius:0;background:transparent;color:var(--teal);font:600 12px/20px 'Geist',sans-serif;text-decoration:underline;text-underline-offset:3px;white-space:nowrap;transform:none}
+.vc-product-dialog .vc-product-meta [hidden]{display:none!important}
+.vc-product-dialog .vc-product-meta-ready form.variations_form .vc-product-meta:has(>.vc-product-meta__spec[hidden])>.vc-home-quick__sku{display:none}
+@media(max-width:820px){
+ .vc-product-dialog .vc-product-meta-ready>.vc-showcase-quick__media{margin-bottom:12px}
+ .vc-product-dialog.woocommerce div.product.vc-product-meta-ready>div.summary{padding-bottom:16px!important}
+ .vc-product-dialog.woocommerce div.product.vc-product-meta-ready form.cart{margin-bottom:0}
+}
+
+/* One native purchase area. Controls remain inside Woo's variation wrapper. */
+.vc-product-dialog.vc-product-purchase-docked{scroll-padding-bottom:calc(var(--vc-purchase-dock-height,144px) + 16px)}
+/* A translated ancestor would rebase the fixed footer while the layer arrives. */
+dialog.vc-product-dialog.vc-product-purchase-docked[open]{animation-name:vc-layer-shade}
+.vc-product-dialog .vc-product-experience.vc-product-purchase-docked{padding-bottom:calc(var(--vc-purchase-dock-height,144px) + 24px)}
+.vc-product-dialog .vc-product-purchase-docked>.summary>.price{display:none}
+.vc-product-dialog.woocommerce div.product form.cart .vc-purchase-dock{position:fixed;z-index:9;left:50%;bottom:24px;transform:translateX(-50%);box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:24px;width:min(1240px,calc(100vw - 48px));margin:0;padding:16px 32px calc(16px + env(safe-area-inset-bottom,0px));border:0;border-radius:0 0 12px 12px;background:#fff;box-shadow:0 -8px 24px #17343c0d;color:var(--ink);float:none;clear:none}
+.vc-purchase-dock__info{min-width:0;flex:1}
+.vc-purchase-dock__prices{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px}
+.vc-purchase-dock__current{font:700 30px/36px 'Geist',sans-serif;letter-spacing:-.03em;font-variant-numeric:tabular-nums;color:var(--ink);overflow-wrap:anywhere}
+.vc-purchase-dock__compare{color:var(--muted);font:400 14px/20px 'Geist',sans-serif;opacity:1;white-space:nowrap}
+.vc-purchase-dock__discount{display:inline-flex;align-items:center;padding:4px 8px;border-radius:4px;background:#be293c;color:#fff;font:700 14px/20px 'Geist',sans-serif;white-space:nowrap;text-transform:uppercase}
+.vc-purchase-dock__spec{display:block;margin-top:4px;color:var(--muted);font:400 12px/16px 'Geist',sans-serif;overflow-wrap:anywhere}
+.vc-purchase-dock__controls{display:flex;align-items:center;gap:12px;flex:none}
+.vc-product-dialog.woocommerce div.product form.cart .vc-purchase-dock .quantity.vc-home-quick__quantity{flex:0 0 128px;float:none;width:128px;margin:0;border:1px solid var(--line);border-radius:8px;min-height:48px;background:white}
+.vc-product-dialog.woocommerce .vc-purchase-dock .quantity .qty{flex:none;width:38px;min-width:0;height:44px;min-height:44px;padding:0;border:0;font:500 16px/24px 'Geist',sans-serif;color:var(--ink)}
+.vc-product-dialog .vc-purchase-dock .vc-home-quick__quantity-button{flex:none;width:44px;height:44px;padding:0;font-size:20px;line-height:24px}
+.vc-product-dialog.woocommerce div.product form.cart .vc-purchase-dock :is(.single_add_to_cart_button,.vc-showcase-quick__buy){float:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:144px;min-height:48px;width:auto;margin:0;padding:12px 16px;border:1px solid var(--ink);border-radius:8px;background:var(--ink);color:#fff;font:650 16px/24px 'Geist',sans-serif;white-space:normal;transition:transform 200ms var(--vc-motion-out),background-color 200ms var(--vc-motion-out)}
+.vc-product-dialog.woocommerce div.product form.cart .vc-purchase-dock .single_add_to_cart_button{border-color:var(--teal);background:#fff;color:var(--teal)}
+.vc-product-dialog .vc-purchase-dock :is(.single_add_to_cart_button,.vc-showcase-quick__buy):disabled,.vc-product-dialog .vc-purchase-dock .single_add_to_cart_button.disabled{opacity:.5;cursor:not-allowed}
+.vc-product-dialog .vc-purchase-dock :is(button,input):focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.vc-product-dialog .vc-purchase-dock [hidden]{display:none!important}
+@media(max-width:820px){
+ .vc-product-dialog.woocommerce div.product form.cart .vc-purchase-dock{bottom:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:8px 12px;width:100vw;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));border-radius:0}
+ .vc-purchase-dock__info{grid-row:1;grid-column:1;align-self:center}
+ .vc-purchase-dock__prices{gap:2px 8px}
+ .vc-purchase-dock__current{font-size:24px;line-height:28px}
+ .vc-purchase-dock__compare{font-size:12px;line-height:16px}
+ .vc-purchase-dock__discount{padding:2px 8px;font-size:14px;line-height:20px}
+ .vc-purchase-dock__spec{font-size:12px;line-height:16px;max-height:32px;overflow:hidden}
+ .vc-purchase-dock__controls{display:contents}
+ .vc-product-dialog.woocommerce div.product form.cart .vc-purchase-dock .quantity.vc-home-quick__quantity{grid-row:1;grid-column:2;justify-self:end;min-height:44px}
+ .vc-product-dialog.woocommerce div.product form.cart .vc-purchase-dock .single_add_to_cart_button{grid-row:2;grid-column:1}
+ .vc-product-dialog .vc-purchase-dock .vc-showcase-quick__buy{grid-row:2;grid-column:2}
+ .vc-product-dialog.woocommerce div.product form.cart .vc-purchase-dock :is(.single_add_to_cart_button,.vc-showcase-quick__buy){width:100%;min-width:0;min-height:48px;padding:12px}
+}
+@media(prefers-reduced-motion:reduce){.vc-product-dialog.vc-product-purchase-docked[open]{animation:none}.vc-product-dialog .vc-purchase-dock :is(button,input){transition:none}}
