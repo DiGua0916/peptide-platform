@@ -58,6 +58,27 @@ final class Hub {
 		if ( ! is_string( $value ) || ! preg_match( '/^(?:default|[a-f0-9]{32})$/D', $value ) ) { throw new Protocol_Error( 'invalid_payment_account', 400 ); }
 		return $value;
 	}
+	/** Explicit provider identifiers are scoped to one account and registered store identity. */
+	private static function provider_site( array $site, string $account ): string {
+		$public_url = Hub_Urls::public_url( $site );
+		$settings = get_option( 'pc_panapay_provider_site_bindings', null );
+		if ( null === $settings ) { return $public_url; }
+		if ( ! is_array( $settings ) || count( $settings ) !== 2 || array_diff( array_keys( $settings ), array( 'version', 'bindings' ) )
+			|| 1 !== ( $settings['version'] ?? null ) || ! is_array( $settings['bindings'] ?? null ) ) { throw new Protocol_Error( 'provider_site_invalid', 503 ); }
+		$key = $account . ':' . ( $site['uuid'] ?? '' );
+		if ( ! array_key_exists( $key, $settings['bindings'] ) ) { return $public_url; }
+		$binding = $settings['bindings'][ $key ];
+		$public_host = wp_parse_url( $public_url, PHP_URL_HOST );
+		$bare_domain = '/\A(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?\z/';
+		if ( ! is_array( $binding ) || count( $binding ) !== 3 || array_diff( array_keys( $binding ), array( 'site_id', 'public_host', 'provider_site' ) )
+			|| ! is_int( $binding['site_id'] ?? null ) || $binding['site_id'] < 1 || $binding['site_id'] !== ( $site['id'] ?? null )
+			|| ! is_string( $public_host ) || ! is_string( $binding['public_host'] ?? null ) || $public_host !== $binding['public_host']
+			|| ! is_string( $binding['provider_site'] ?? null ) || strlen( $binding['provider_site'] ) > 253 || ! preg_match( $bare_domain, $binding['provider_site'] )
+			|| ( $public_host !== $binding['provider_site'] && ! str_ends_with( $public_host, '.' . $binding['provider_site'] ) ) ) {
+			throw new Protocol_Error( 'provider_site_invalid', 503 );
+		}
+		return $binding['provider_site'];
+	}
 	private static function payload( array $p, array $site ): array {
 		$allowed = array( 'order_id', 'currency', 'amount', 'email', 'phone', 'ip', 'accept_language', 'user_agent', 'return_url', 'products' );
 		foreach ( array( 'billing', 'shipping' ) as $type ) {
@@ -101,6 +122,7 @@ final class Hub {
 			if ( ! $allowed || ! $config['enabled'] || $config['archived'] || '' === $config['gateway'] || '' === $config['mchid'] || '' === $config['secret'] ) { throw new Protocol_Error( 'store_payment_disabled', 403 ); }
 			if ( ( $config['test_mode'] && 'production' === wp_get_environment_type() ) || ( ! $config['test_mode'] && ( 'https' !== wp_parse_url( home_url(), PHP_URL_SCHEME ) || 'https' !== wp_parse_url( Hub_Urls::management( $site ), PHP_URL_SCHEME ) || 'https' !== wp_parse_url( Hub_Urls::public_url( $site ), PHP_URL_SCHEME ) ) ) ) { throw new Protocol_Error( 'environment_not_ready', 503 ); }
 			$p = self::payload( $input, $site );
+			$provider_site = self::provider_site( $site, $account );
 			$reference = $p['order_id']; $parsed = Session_Service::parse_reference( $reference );
 			$legacy_hash = hash( 'sha256', Hub_Protocol::json( $p ) );
 			$hash = hash( 'sha256', Hub_Protocol::json( array( 'account_id' => $account, 'payload' => $p ) ) );
@@ -117,7 +139,7 @@ final class Hub {
 				'return_token_hash' => hash( 'sha256', $token ), 'type' => '', 'test_mode' => $config['test_mode'] ? 1 : 0, 'created_at' => time(), 'updated_at' => time() );
 			$reserved = Hub_Store::reserve( $record, $legacy_hash );
 			if ( $reserved['winner'] ) {
-				$p['site'] = Hub_Urls::public_url( $site ); $p['order_id'] = $ref;
+				$p['site'] = $provider_site; $p['order_id'] = $ref;
 				$p['notify_url'] = add_query_arg( 'rest_route', '/' . Hub_Protocol::NS . '/hub/notify', home_url( '/' ) );
 				$p['return_url'] = add_query_arg( array( 'rest_route' => '/' . Hub_Protocol::NS . '/hub/return', 'reference' => $ref, 'token' => $token ), home_url( '/' ) );
 				$p['mchid'] = $config['mchid']; $p['tag'] = $config['tag']; $p['mode'] = $config['mode']; $p['platform_id'] = 6;
