@@ -15,8 +15,9 @@ $wp_version = '7.1.4';
 function is_admin() { return true; }
 function admin_url( $path ) { return 'https://fixture.invalid/wp-admin/' . $path; }
 function includes_url( $path ) { return 'https://fixture.invalid/wp-includes/' . $path; }
-function plugins_url( $path, $file ) { return 'https://fixture.invalid/wp-content/plugins/' . basename( dirname( $file ) ) . '/' . $path; }
+function plugins_url( $path, $file ) { return 'https://fixture.invalid/wp-content/plugins/' . basename( dirname( $file ) ) . ( '' === $path ? '' : '/' . $path ); }
 function wp_parse_url( $url, $component ) { return parse_url( $url, $component ); }
+function wp_register_script( $handle, $src, $deps, $version, $footer ) { global $wp_scripts; $wp_scripts->registered[ $handle ] = (object) array( 'src' => $src, 'deps' => $deps, 'version' => $version, 'footer' => $footer ); return true; }
 require $plugin . '/includes/admin/' . ( 'hq' === $role ? 'class-menu.php' : 'class-dialogs.php' );
 $class = 'hq' === $role ? 'PeptideHq\\Admin\\Menu' : 'PeptideCore\\Admin\\Dialogs';
 $class = str_replace( '\\\\', '\\', $class );
@@ -37,6 +38,16 @@ $url = 'https://fixture.invalid/wp-admin/js/common.min.js';
 verify_dialog_asset( $class::wordpress_dialogs( $url ) === $url, 'Unknown version must retain upstream rather than guessing a patch' );
 if ( 'hq' !== $role ) {
     $manifest = json_decode( file_get_contents( $plugin . '/assets/woocommerce-dialogs/manifest.json' ), true );
+    foreach ( $manifest['extraFiles'] ?? array() as $relative => $record ) {
+        $url = plugins_url( $relative, WC_PLUGIN_FILE ) . '?ver=11.2.1';
+        verify_dialog_asset( str_contains( $class::vendor_dialogs( $url ), '/assets/woocommerce-dialogs/' . $record['target'] ), 'Missing client override ' . $relative );
+    }
+    $wp_scripts = (object) array( 'registered' => array( 'wc-client-fixture' => (object) array( 'src' => plugins_url( 'assets/client/admin/app/index.js', WC_PLUGIN_FILE ), 'deps' => array() ) ) );
+    $class::vendor_chunks(); $class::vendor_chunks();
+    $deps = $wp_scripts->registered['wc-client-fixture']->deps;
+    verify_dialog_asset( 1 === count( $deps ), 'Chunk dependency missing or duplicated' );
+    verify_dialog_asset( str_contains( $wp_scripts->registered[ $deps[0] ]->src, 'client-analytics-settings.js' ), 'Wrong preloaded chunk' );
+    verify_dialog_asset( false === $wp_scripts->registered[ $deps[0] ]->footer, 'Chunk must be a blocking dependency before client entry' );
     foreach ( $manifest['files'] as $name => $record ) {
         foreach ( array( $name, str_replace( '.js', '.min.js', $name ) ) as $source ) {
             $url = plugins_url( 'assets/js/admin/' . $source, WC_PLUGIN_FILE ) . '?ver=11.2.1';

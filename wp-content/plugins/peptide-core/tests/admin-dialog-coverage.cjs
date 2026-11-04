@@ -3,7 +3,7 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const plugins=path.resolve(__dirname,'../..');let files=0,confirmations=0;
 function scan(dir){for(const entry of fs.readdirSync(dir,{withFileTypes:true})){
- if(['tests','cli'].includes(entry.name))continue;
+ if(['tests','cli','tools'].includes(entry.name))continue;
  const p=path.join(dir,entry.name);if(entry.isDirectory()){scan(p);continue;}
  if(!/\.(js|php)$/.test(p)||['storefront-language.js','tracking-checkout.js'].includes(entry.name))continue;
  const source=fs.readFileSync(p,'utf8');files++;

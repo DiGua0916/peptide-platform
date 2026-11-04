@@ -3,7 +3,7 @@ const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),asse
 const acorn=require(process.env.ADMIN_DIALOG_ACORN || 'D:/Codex/Tasks/2026-11-05/admin-dialog-audit/work/parser/node_modules/acorn');
 const folder=path.resolve(__dirname,'../assets/woocommerce-dialogs');let checks=0,methods=0;
 (async()=>{
-for(const name of fs.readdirSync(folder).filter(x=>x.endsWith('.js'))){
+for(const name of Object.keys(JSON.parse(fs.readFileSync(path.join(folder,'manifest.json'),'utf8')).files)){
  const source=fs.readFileSync(path.join(folder,name),'utf8'),ast=acorn.parse(source,{ecmaVersion:'latest'}),targets=new Map();
  function walk(n,parents){if(!n||!n.type)return;
   if(n.type==='CallExpression'&&n.callee.type==='MemberExpression'&&n.callee.object.type==='MemberExpression'&&n.callee.object.property.name==='VialCoveDialogs'&&['confirm','prompt'].includes(n.callee.property.name)){

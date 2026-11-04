@@ -53,5 +53,24 @@
       "upstream": "8c8bc85755a57c5d08a9bf1c64486ecab5d66482e620bc295a88726e7cd3baee",
       "adapted": "5f831e84f626a58dd235370d63cdba2653be532271ba6086d98d43baf4e11625"
     }
-  }
+  },
+  "extraFiles": {
+    "assets/client/admin/navigation/index.js": {
+      "upstream": "9f000185504ebc19108c8234e4b677cdb3bff2c927c9118e266eb0f18f4ec365",
+      "adapted": "8a3e7b8e7113bd08f0154dc3ee9493793098a4326c1aba1b9427320e40af37ec",
+      "target": "client-navigation.js"
+    },
+    "assets/client/admin/chunks/analytics-settings.js": {
+      "upstream": "5ff345f0725e6410cee8a50a7da767cd7ffb9b13b319a86f87eb45d7690fafb1",
+      "adapted": "4cf0254dee90f94dcf440ed5a16cd89589f7e23305c4c771b29479c30a27d8dc",
+      "target": "client-analytics-settings.js",
+      "webpackGlobal": "webpackChunk_wcAdmin_webpackJsonp",
+      "chunkIds": [
+        5941
+      ]
+    }
+  },
+  "preloadChunks": [
+    "assets/client/admin/chunks/analytics-settings.js"
+  ]
 }
