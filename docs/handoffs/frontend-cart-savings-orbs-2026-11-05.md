@@ -45,3 +45,15 @@
 ## 本机源码交付引用
 
 源码检查点`4b1331f`、收尾实现`4efe2ce63e0825e4c7160f9c7aca78ec656ad69a`；干净main已正常整合至`a47420163190a78ecf2357cc4b4a46d7556a0bad`，保留已fetch的语言后端5ecf886历史。此引用指本轮功能源码，后续文档提交不改变其验证范围。FE只剩原peer experience.js一行dirty/hash未变，未stage/覆盖；backend worktree未动。atomic push发生curl55/RPC连接reset，虽尾部打印Everything up-to-date，但没有成功ACK，不认作远端同步；独立ls-remote核验结果记群与项目记忆。最终手机预览tab8保留购物车，实际截图cart-savings-final.png；隔离鸭子fixture只作渲染检查，其HTTP helper已停止。
+
+## 最新明确纠正：鸭子仅一次动效，新增优惠汇总
+
+本节取代前文“动画结束回静态鸭子”及“本轮全部事项已验收”的中间状态。用户看到静态鸭子后明确要求：只播放一次，结束必须消失。
+
+- M05.03：删除全部静态驻留、图片加载/滚回/页面恢复时重新显示逻辑。原生真实 qualifying state 变化才播放原2.8秒动效，结束stop隐藏鸭子、清粒子及has-mascot，空间回12px。首次已经达标与重复快照静默；减少动态偏好只给2秒有界反馈后隐藏。离屏/页面隐藏/pending/失去资格/销毁均停止，迟到图片decode不能复活动效。10项生命周期检查通过，未修改真实客户车来触发。
+- M05.06/M05.07：totals helper与摘要renderer展示原价小计、商品价差、每张真实券、每笔实际活动费用、运费/税、原生Total payable和底部红色You save。中文既定黑五按精确pc-promo-ID关联applied_all显示Black Friday offer；不重复累计promotion预测额或activity_listener实际额。商品差严格币种/税口径对账，分配失配保守回退；有税组件时总省注明Before tax。
+- 未来运费优惠：后端目前只在下划线私有rate metadata保留部分原值，Woo不公开。前端不能反推，当前仍显示真实运费。新增严格可选shipping_savings消费者：同响应、同币种/税基、实际selected package/rate、原额-减免=实付、全包裹对账才展示痕迹；缺字段不伪造。后端增量提案见[订单汇总/运费契约](frontend-cart-summary-shipping-2026-11-05.md)，不代表后端已实现。
+
+最新联合124项Node顶层全过，JS语法/diff通过；日志outputs/final-transient-summary-tests.txt。3个本机静态资产HTTP200并与源文件逐字一致，inc原有filemtime版本化保持。未改后端、真实车/券/订单/支付或公网部署。peer product-dialog-experience.js哈希仍4E5C0C22689472162395733A6838F58F07FE1B3C8A9A2DEF94DC67540DDCA452，未stage。
+
+**浏览器核对限制：**最新阶段原tab8读回/刷新连续超时；重置连接及新开手机预览亦在30秒超时，无法获取最新实际截图。cart-savings-final.png只证明前一检查点的商品/推荐/近期样式；duck-isolated-render.png是已废止静态方案，不能当最新一次性动效证据。最新鸭子/摘要的浏览器画面仍待连接恢复复验，不虚报已完成。Git最终引用另记。

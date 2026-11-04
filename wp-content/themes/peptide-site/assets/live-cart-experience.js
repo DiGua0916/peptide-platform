@@ -128,13 +128,120 @@
     }
     function totals(cart) {
         if (!validCart(cart)) return [];
-        const t = cart.totals, rows = [{ label: 'Product subtotal', minor: t.total_items }];
-        if (Number(t.total_discount) > 0) rows.push({ label: 'Coupon savings', minor: String(-Number(t.total_discount)), savings: true });
-        for (const fee of cart.fees || []) if (isMinor(fee.totals?.total)) rows.push({ label: fee.name || 'Adjustment', minor: fee.totals.total, savings: Number(fee.totals.total) < 0 });
-        if (cart.needs_shipping) rows.push({ label: 'Shipping', minor: t.total_shipping, unknown: !cart.has_calculated_shipping });
-        if (Number(t.total_tax) > 0) rows.push({ label: 'Tax', minor: t.total_tax });
-        rows.push({ label: 'Estimated total', minor: t.total_price, total: true });
+        const t = cart.totals, rows = [], unsigned = value => isMinor(value) && BigInt(value) >= 0n;
+        const sameCurrency = metadata => metadata?.currency_code === t.currency_code && metadata?.currency_minor_unit === t.currency_minor_unit;
+        const positive = value => unsigned(value) && BigInt(value) > 0n;
+        const label = value => typeof value === 'string' && value.trim() ? value : '';
+        const nativeOfferName = name => name.trim() === '黑色星期五' ? 'Black Friday offer' : name;
+        let saved = 0n;
+
+        // This extension contains pre-coupon product comparisons, not another
+        // amount to subtract from the already discounted Woo subtotal.
+        const sale = cart.extensions?.peptide_core?.sale_savings;
+        let productSavings = 0n, regularSubtotal = null;
+        if (sameCurrency(sale) && [sale.regular_subtotal, sale.sale_subtotal, sale.sale_savings, t.total_items].every(unsigned)
+            && sale.sale_subtotal === t.total_items && BigInt(sale.regular_subtotal) - BigInt(sale.sale_subtotal) === BigInt(sale.sale_savings)) {
+            productSavings = BigInt(sale.sale_savings); regularSubtotal = sale.regular_subtotal;
+        } else if (unsigned(t.total_items) && cart.items.length) {
+            // Conservative fallback only when every exact SKU shares the same
+            // tax/currency basis as its native pre-coupon line subtotal.
+            let subtotal = 0n, savings = 0n, comparable = true;
+            for (const item of cart.items) {
+                const p = item.prices, line = item.totals;
+                if (!sameCurrency(p) || !sameCurrency(line) || !Number.isSafeInteger(item.quantity) || item.quantity < 1
+                    || ![p.price, p.regular_price, line.line_subtotal].every(unsigned)
+                    || BigInt(p.price) * BigInt(item.quantity) !== BigInt(line.line_subtotal)) { comparable = false; break; }
+                subtotal += BigInt(line.line_subtotal);
+                if (BigInt(p.regular_price) > BigInt(p.price)) savings += (BigInt(p.regular_price) - BigInt(p.price)) * BigInt(item.quantity);
+            }
+            if (comparable && subtotal === BigInt(t.total_items) && isMinor(String(subtotal + savings))) { productSavings = savings; regularSubtotal = String(subtotal + savings); }
+        }
+        rows.push({ key: 'products', label: productSavings > 0n ? 'Regular product subtotal' : 'Product subtotal', minor: regularSubtotal ?? t.total_items });
+        if (productSavings > 0n) { rows.push({ key: 'product-saving', label: 'Product savings', minor: String(-productSavings), savings: true }); saved += productSavings; }
+
+        // Coupon amounts are native per-code allocations; codes remain private
+        // in this presentation. The aggregate is a check, never an extra row.
+        if (positive(t.total_discount)) {
+            const coupons = Array.isArray(cart.coupons) ? cart.coupons : [], seen = new Set();
+            let allocated = 0n, complete = true;
+            const couponRows = [];
+            for (const coupon of coupons) {
+                if (typeof coupon?.code !== 'string' || seen.has(coupon.code) || !sameCurrency(coupon.totals) || !unsigned(coupon.totals?.total_discount)) { complete = false; break; }
+                seen.add(coupon.code); const amount = BigInt(coupon.totals.total_discount); allocated += amount;
+                if (amount > 0n) couponRows.push({ key: 'coupon-' + couponRows.length, label: 'Coupon discount', minor: String(-amount), savings: true });
+            }
+            if (complete && allocated === BigInt(t.total_discount) && couponRows.length) {
+                couponRows.forEach((row, index) => { if (couponRows.length > 1) row.label += ' ' + (index + 1); rows.push(row); });
+            } else rows.push({ key: 'coupon-total', label: 'Coupon savings', minor: String(-BigInt(t.total_discount)), savings: true });
+            saved += BigInt(t.total_discount);
+        }
+
+        // Promotion guidance is an evaluation, while fees are the final applied
+        // amounts (Woo can cap them). Associate names by exact native fee key.
+        const fees = Array.isArray(cart.fees) ? cart.fees : [], seenFees = new Set(), feeRows = [];
+        const applied = cart.extensions?.peptide_core?.promotion?.applied_all;
+        let feeSum = 0n, feeSavings = 0n, feesComplete = true;
+        for (const fee of fees) {
+            const key = typeof fee?.key === 'string' ? fee.key : fee?.id;
+            if (typeof key !== 'string' || seenFees.has(key) || !sameCurrency(fee.totals) || !isMinor(fee.totals?.total)) { feesComplete = false; break; }
+            seenFees.add(key); const amount = BigInt(fee.totals.total); feeSum += amount;
+            const promo = /^pc-promo-([1-9]\d*)$/.exec(key), record = promo && Array.isArray(applied) ? applied.find(entry => String(entry?.id) === promo[1]) : null;
+            const name = record ? nativeOfferName(label(record.title) || label(fee.name) || 'Order offer') : label(fee.name) || 'Order adjustment';
+            if (amount !== 0n) feeRows.push({ key: 'fee-' + key, label: name, minor: fee.totals.total, savings: amount < 0n });
+            if (amount < 0n) feeSavings -= amount;
+        }
+        if (feesComplete && isMinor(t.total_fees) && feeSum === BigInt(t.total_fees)) { rows.push(...feeRows); saved += feeSavings; }
+        else if (isMinor(t.total_fees) && BigInt(t.total_fees) !== 0n) rows.push({ key: 'fee-total', label: 'Order adjustments', minor: t.total_fees, savings: BigInt(t.total_fees) < 0n });
+
+        const shipping = shippingSavingsTrace(cart);
+        if (cart.needs_shipping) {
+            if (shipping) {
+                rows.push({ key: 'shipping-original', label: 'Shipping before offers', minor: shipping.original });
+                shipping.discounts.forEach((entry, index) => rows.push({ key: 'shipping-offer-' + entry.id, label: nativeOfferName(entry.name) + ' · Shipping', minor: String(-entry.amount), savings: true,
+                    detail: index === shipping.discounts.length - 1 ? 'Shipping after offers: ' + money(shipping.payable, t) : '' }));
+                saved += BigInt(shipping.discount);
+            } else rows.push({ key: 'shipping', label: 'Shipping', minor: t.total_shipping, unknown: !cart.has_calculated_shipping });
+        }
+        if (positive(t.total_tax)) rows.push({ key: 'tax', label: 'Tax', minor: t.total_tax });
+        rows.push({ key: 'payable', label: cart.needs_shipping && !cart.has_calculated_shipping ? 'Estimated total' : 'Total payable', minor: t.total_price, total: true });
+        const taxPresent = [t.total_tax, t.total_items_tax, t.total_discount_tax, t.total_shipping_tax, t.total_fees_tax,
+            ...fees.map(fee => fee?.totals?.total_tax)].some(value => isMinor(value) && BigInt(value) !== 0n);
+        if (saved > 0n && isMinor(String(saved))) rows.push({ key: 'saved', label: 'You save', minor: String(saved), savedTotal: true, savings: true,
+            detail: taxPresent ? 'Before tax' : '' });
         return rows;
+    }
+    /** Optional future server trace; absent metadata is never reverse-calculated. */
+    function shippingSavingsTrace(cart) {
+        const trace = cart?.extensions?.peptide_core?.shipping_savings, t = cart?.totals;
+        const unsigned = value => isMinor(value) && BigInt(value) >= 0n;
+        const sameCurrency = value => value?.currency_code === t?.currency_code && value?.currency_minor_unit === t?.currency_minor_unit;
+        const packageKey = value => Number.isSafeInteger(value) && value >= 0 ? String(value) : typeof value === 'string' && value.length > 0 && value.length <= 100 ? value : null;
+        if (!cart?.needs_shipping || cart.has_calculated_shipping !== true || !sameCurrency(trace) || trace?.version !== 1 || trace.complete !== true
+            || trace.status !== 'applied' || trace.tax_basis !== 'exclusive' || ![trace.original_shipping, trace.shipping_discount, trace.payable_shipping, t?.total_shipping].every(unsigned)
+            || trace.payable_shipping !== t.total_shipping || BigInt(trace.shipping_discount) <= 0n || !Array.isArray(trace.packages) || !trace.packages.length || trace.packages.length > 100 || !Array.isArray(cart.shipping_rates)) return null;
+        const selected = new Map();
+        for (const pack of cart.shipping_rates) {
+            const key = packageKey(pack?.package_id), rates = Array.isArray(pack?.shipping_rates) ? pack.shipping_rates.filter(rate => rate?.selected === true) : null;
+            if (key === null || !rates || rates.length !== 1 || selected.has(key) || typeof rates[0].rate_id !== 'string' || !rates[0].rate_id || !sameCurrency(rates[0]) || !unsigned(rates[0].price)) return null;
+            selected.set(key, rates[0]);
+        }
+        let original = 0n, discount = 0n, payable = 0n;
+        const seen = new Set(), discounts = new Map();
+        for (const pack of trace.packages) {
+            const key = packageKey(pack?.package_id), rate = selected.get(key);
+            if (key === null || !rate || seen.has(key) || pack.rate_id !== rate.rate_id || ![pack.original_shipping, pack.shipping_discount, pack.payable_shipping].every(unsigned)
+                || pack.payable_shipping !== rate.price || BigInt(pack.original_shipping) - BigInt(pack.shipping_discount) !== BigInt(pack.payable_shipping)) return null;
+            seen.add(key); original += BigInt(pack.original_shipping); discount += BigInt(pack.shipping_discount); payable += BigInt(pack.payable_shipping);
+            if (BigInt(pack.shipping_discount) > 0n) {
+                if (!Number.isSafeInteger(pack.discount_id) || pack.discount_id < 1 || typeof pack.discount_name !== 'string' || !pack.discount_name.trim() || pack.discount_name.length > 500) return null;
+                const entry = discounts.get(pack.discount_id);
+                if (entry && entry.name !== pack.discount_name) return null;
+                discounts.set(pack.discount_id, { id: pack.discount_id, name: pack.discount_name, amount: (entry?.amount || 0n) + BigInt(pack.shipping_discount) });
+            }
+        }
+        if (seen.size !== selected.size || original !== BigInt(trace.original_shipping) || discount !== BigInt(trace.shipping_discount) || payable !== BigInt(trace.payable_shipping)
+            || original - discount !== payable || ![original, discount, payable].every(value => isMinor(String(value)))) return null;
+        return { original: String(original), discount: String(discount), payable: String(payable), discounts: [...discounts.values()] };
     }
     /** One native dialog on every enabled device; keep its parent product open. */
     function createDrawerController({ dialog, document, window: win, enabled = () => true, refresh = () => {} }) {
@@ -472,7 +579,13 @@
             root.querySelector('[data-cart-empty]').hidden = !valid || !!cart?.items.length;
             const summary = root.querySelector('[data-cart-summary]'); summary.hidden = !cart?.items.length;
             const totalRows = totals(cart), totalsSignature = JSON.stringify([totalRows, cart?.totals?.currency_code, cart?.totals?.currency_minor_unit]);
-            if (view.totalsSignature !== totalsSignature) { view.totalsSignature = totalsSignature; root.querySelector('[data-cart-totals]').replaceChildren(...totalRows.map(total => { const row = el('div', 'vc-live-cart__total-row' + (total.total ? ' is-total' : '') + (total.savings ? ' is-saving' : '')); row.append(el('span', '', clean(total.label)), el('strong', '', total.unknown ? 'At checkout' : money(total.minor, cart.totals))); return row; })); }
+            if (view.totalsSignature !== totalsSignature) { view.totalsSignature = totalsSignature; root.querySelector('[data-cart-totals]').replaceChildren(...totalRows.map(total => {
+                const row = el('div', 'vc-live-cart__total-row' + (total.total ? ' is-total' : '') + (total.savings ? ' is-saving' : '') + (total.savedTotal ? ' is-saved-total' : ''));
+                row.dataset.summaryKey = total.key;
+                const label = el('span', 'vc-live-cart__total-label', clean(total.label));
+                if (total.detail) label.append(el('small', 'vc-live-cart__total-detail', clean(total.detail)));
+                row.append(label, el('strong', '', total.unknown ? 'At checkout' : money(total.minor, cart.totals))); return row;
+            })); }
             const checkout = root.querySelector('[data-cart-checkout]'); checkout.setAttribute('aria-disabled', String(!valid || pending || !cart?.items.length));
             root.querySelectorAll('[data-cart-coupon] input,[data-cart-coupon] button').forEach(node => { node.disabled = !valid || pending; });
             const coupons = root.querySelector('[data-cart-coupons]'), couponsSignature = JSON.stringify((cart?.coupons || []).map(coupon => { const display = couponPresentation(coupon); return [display.code, display.label, display.removeLabel]; }));

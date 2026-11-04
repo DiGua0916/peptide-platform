@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const file = path.join(__dirname, '../assets/live-cart-progress.js');
-const { normalize, decision, mascotTier } = require(file);
+const { normalize, decision } = require(file);
 
 function state(amount, changes = {}) {
     const thresholds = [30000, 50000, 100000], rewards = [2500, 5500, 12000];
@@ -67,19 +67,18 @@ function harness({ reduced = false, deferredImage = false, context = true } = {}
         resolveImage: () => resolveImage?.() };
 }
 
-test('still mascot uses only a positive applied native eligible tier and respects both toggles', () => {
-    assert.equal(mascotTier(normalize(state(50160))), 'native-tier-1');
+test('celebration requires a changed native eligible tier and positive applied discount', () => {
+    assert.equal(decision(normalize(state(29900)), normalize(state(50160))).celebrate, 'native-tier-1');
     for (const value of [state(25080), state(50160, { discountApplied: false }), state(50160, { actualDiscount: { minor: '0', text: '$0' } }),
-        state(50160, { celebration: { enabled: false, smileEnabled: true } }), state(50160, { celebration: { enabled: true, smileEnabled: false } })]) assert.equal(mascotTier(normalize(value)), null);
-    const noEligible = state(50160); noEligible.nodes.forEach(node => { node.celebrationEligible = false; }); assert.equal(mascotTier(noEligible), null);
-    assert.equal(mascotTier(null), null);
+        state(50160, { celebration: { enabled: false, smileEnabled: true } })]) assert.equal(decision(state(29900), normalize(value)).celebrate, null);
+    const noEligible = state(50160); noEligible.nodes.forEach(node => { node.celebrationEligible = false; }); assert.equal(decision(state(29900), noEligible).celebrate, null);
 });
 
-test('initial attained $500 tier shows a still duck without replaying a threshold event', () => {
+test('initial attained $500 tier stays silent without displaying or reserving a persistent duck', () => {
     const h = harness(), dto = state(50160); h.ui.update(dto);
-    assert.equal(decision(null, dto).celebrate, null); assert.equal(h.select('mascot').hidden, false); assert.equal(h.root.classList.contains('has-mascot'), true);
-    assert.equal(h.select('mascot').style['--pc-node-position'], '170px'); assert.equal(h.select('live').textContent, ''); assert.equal(h.raf.size, 0); assert.equal(h.timers.size, 0);
-    assert.equal(h.select('confetti').children.length, 0); assert.ok(h.canvasOps.length > 0);
+    assert.equal(decision(null, dto).celebrate, null); assert.equal(h.select('mascot').hidden, true); assert.equal(h.root.classList.contains('has-mascot'), false);
+    assert.equal(h.select('live').textContent, ''); assert.equal(h.raf.size, 0); assert.equal(h.timers.size, 0);
+    assert.equal(h.select('confetti').children.length, 0); assert.equal(h.canvasOps.length, 0);
 });
 
 test('below-tier, disabled, unavailable canvas or not-yet-loaded mascot has no reserved duck space', () => {
@@ -91,35 +90,38 @@ test('below-tier, disabled, unavailable canvas or not-yet-loaded mascot has no r
     assert.match(css, /\.has-mascot \.pc-activity-listener__milestones\s*\{ margin-top: 76px;/);
 });
 
-test('genuine changed qualifying state animates then returns to a persistent still marker', () => {
+test('genuine changed qualifying state animates once then hides duck and releases all reserve', () => {
     const h = harness(); h.ui.update(state(29900)); h.intersect(true); h.ui.update(state(50160));
-    assert.equal(h.root.dataset.celebrating, 'true'); assert.equal(h.raf.size, 1); h.step(0); h.step(700); assert.equal(h.select('confetti').children.length, 16);
-    h.step(2900); assert.equal(h.raf.size, 0); assert.equal(h.root.dataset.celebrating, 'false'); assert.equal(h.select('mascot').hidden, false); assert.equal(h.root.classList.contains('has-mascot'), true);
-    h.ui.update(state(50160)); assert.equal(h.raf.size, 0);
+    assert.equal(h.root.dataset.celebrating, 'true'); assert.equal(h.raf.size, 1); assert.equal(h.root.classList.contains('has-mascot'), true);
+    h.step(0); h.step(700); assert.equal(h.select('confetti').children.length, 16);
+    h.ui.update(state(50160)); h.intersect(true); assert.equal(h.raf.size, 1);
+    h.step(2900); assert.equal(h.raf.size, 0); assert.equal(h.root.dataset.celebrating, 'false'); assert.equal(h.select('mascot').hidden, true); assert.equal(h.root.classList.contains('has-mascot'), false);
+    for (let i = 0; i < 4; i++) { h.ui.update(state(50160)); h.intersect(true); }
+    assert.equal(h.raf.size, 0); assert.equal(h.select('mascot').hidden, true);
 });
 
 test('highest native tier, consecutive changed states and qualified decrease preserve original decisions', () => {
-    assert.equal(mascotTier(state(120000)), 'native-tier-2');
     for (const [a, b, tier] of [[50160, 55000, 1], [55000, 52000, 1], [29900, 120000, 2], [120000, 50160, 1]]) assert.equal(decision(state(a), state(b)).celebrate, 'native-tier-' + tier);
 });
 
-test('pending write pauses effects while preserving the last confirmed marker', () => {
+test('pending write hides effects and repeated last confirmed snapshot does not replay', () => {
     const h = harness(); h.ui.update(state(29900)); h.ui.update(state(50160)); h.ui.pause();
-    assert.equal(h.raf.size, 0); assert.equal(h.select('confetti').children.length, 0); assert.equal(h.root.dataset.celebrating, 'false'); assert.equal(h.select('mascot').hidden, false);
+    assert.equal(h.raf.size, 0); assert.equal(h.select('confetti').children.length, 0); assert.equal(h.root.dataset.celebrating, 'false'); assert.equal(h.select('mascot').hidden, true);
+    h.ui.update(state(50160)); assert.equal(h.raf.size, 0); assert.equal(h.select('mascot').hidden, true);
     h.ui.update(state(25080)); assert.equal(h.select('mascot').hidden, true); assert.equal(h.root.classList.contains('has-mascot'), false);
 });
 
-test('offscreen and hidden lifecycles stop animations; returning restores only the native still marker', () => {
+test('offscreen and hidden lifecycles stop animations; returning never restores a completed effect', () => {
     const h = harness(); h.ui.update(state(29900)); h.ui.update(state(50160)); h.offscreen(); assert.equal(h.raf.size, 0); assert.equal(h.select('mascot').hidden, true);
-    h.reenter(); assert.equal(h.select('mascot').hidden, false); assert.equal(h.raf.size, 0);
-    h.visibility(true); assert.equal(h.select('mascot').hidden, true); h.visibility(false); assert.equal(h.select('mascot').hidden, false); assert.equal(h.raf.size, 0);
-    h.listeners.get('pagehide')(); assert.equal(h.select('mascot').hidden, true); h.listeners.get('pageshow')(); assert.equal(h.select('mascot').hidden, false); assert.equal(h.raf.size, 0);
+    h.reenter(); h.ui.update(state(50160)); assert.equal(h.select('mascot').hidden, true); assert.equal(h.raf.size, 0);
+    h.visibility(true); h.visibility(false); h.ui.update(state(50160)); assert.equal(h.select('mascot').hidden, true); assert.equal(h.raf.size, 0);
+    h.listeners.get('pagehide')(); assert.equal(h.select('mascot').hidden, true); assert.equal(h.listeners.has('pageshow'), false); assert.equal(h.raf.size, 0);
 });
 
-test('reduced motion keeps static duck without animation frames or particles', () => {
+test('reduced motion shows only bounded static feedback then hides it without frames or particles', () => {
     const h = harness({ reduced: true }); h.ui.update(state(29900)); h.ui.update(state(50160));
     assert.equal(h.raf.size, 0); assert.equal(h.select('mascot').hidden, false); assert.equal(h.select('confetti').children.length, 0);
-    [...h.timers.values()].forEach(fn => fn()); assert.equal(h.select('mascot').hidden, false);
+    [...h.timers.values()].forEach(fn => fn()); assert.equal(h.select('mascot').hidden, true); assert.equal(h.root.classList.contains('has-mascot'), false);
 });
 
 test('late image decode cannot revive a downgraded or cleared native tier', async () => {
@@ -131,8 +133,8 @@ test('late image decode cannot revive a downgraded or cleared native tier', asyn
     }
 });
 
-test('removed eligibility clears an old marker and destroy releases listeners, timers and DOM', () => {
-    const h = harness(); h.ui.update(state(50160)); const noEligible = state(50160, { stateKey: 'rules-no-eligible' }); noEligible.nodes.forEach(node => { node.celebrationEligible = false; });
+test('removed eligibility clears an active duck and destroy releases listeners, timers and DOM', () => {
+    const h = harness(); h.ui.update(state(29900)); h.ui.update(state(50160)); const noEligible = state(50160, { stateKey: 'rules-no-eligible' }); noEligible.nodes.forEach(node => { node.celebrationEligible = false; });
     h.ui.update(noEligible); assert.equal(h.select('mascot').hidden, true); assert.equal(h.root.classList.contains('has-mascot'), false);
     h.ui.destroy(); assert.equal(h.root.children.length, 0); assert.equal(h.listeners.size, 0); assert.equal(h.docListeners.size, 0); assert.equal(h.raf.size, 0); assert.equal(h.timers.size, 0);
 });
