@@ -71,3 +71,20 @@
 第一次原生验证按“必须已有simple及variation”的前提停止，因为该 QA 实际只有1个已发布简单商品、0个变体；该初始未通过验收记录保留，不能计入通过数，也不是源码功能失败。随后按父任务明确范围，仅验现有simple，原生variation路径仍未验（79项纯fixture包含此分支）。未创建变体或任何永久业务样例来凑通过。原生脚本与完整收据在任务 `work/unit-pricing/verify-unit-pricing-native.php`、`native-results.json`，初始记录 `native-missing-variation-initial.json`。
 
 限制：本子任务没有部署、执行公开 HTTP/浏览器验收、保存真实商品、改生产数据库或测前端可见效果。原生 CLI 与纯 fixture 均不代表完整 WordPress/Woo 前端流程验收，父任务负责整合与发布。提交标识由父任务整合后记录。
+
+## 2026-11-04 · UNIT-P2-01：已验证旧规格键兼容修复
+
+用户授权继续完成可处理的后端问题。前端接线审计发现本机82主商品/183规格，实际使用 `Specificatio`、`Specification`、`Specifications`、`Size` 自定义变体属性；没有 Pack 键或显式瓶数，因此所有183规格均返回null。前端正确隐藏了null，原始Pack纯fixture不能代表当前导入数据已经兼容。上方较早“仅识别Pack”及“原生variation未验”描述的是首阶段历史，已被本段后续结果补充，不表示部署或浏览器已完成。
+
+本次仅在 `Unit_Pricing::count_for_product` 增加上述四个精确旧键。其父定义须为真实 `WC_Product_Attribute`、非taxonomy、用于variation，名称规范化后等于当前选项键，当前原始选择值必须精确属于父属性options。再走原有完整包装解析器；不扫描描述、标题、任意属性或附加型号，也不默认10瓶。识别到旧键但父定义不符、剂量/容量没有瓶数、混合包装或多个包装瓶数冲突时仍返回null，不把父瓶数用于掩盖这些错误。
+
+现有 `stored_pack` 来源枚举及DTO不变，前端无需新增别名解析或改协议。显式SKU瓶数继续覆盖可信包装，0仍隐藏；原有缺SKU包装时的显式父品瓶数沿用保留。为防显式瓶数绕过损坏的SKU身份，原有“所有必选属性非空”检查同时要求原始选值属于原生父 `get_variation_attributes()` 对应options；taxonomy属性沿原始slug比对，不调用可能插入term的 `get_terms/get_slugs`，也不扩大为taxonomy包装解析。
+
+实际验证：
+
+- 原79项全部保留，新增30项旧键/真实双属性L-carnitine/父定义类型与选项不符/非variation/taxonomy/混合与冲突/未知键/未选/显式覆盖及0隐藏/必选taxonomy原始slug等回归，纯PHP共109/109通过；PHP lint与 `git diff --check` 通过。
+- 本机实际 WordPress/Woo11.2.1 仅进程内把候选 `Unit_Pricing` 类映射到工作树；没有把文件复制到旧脏后端runtime或改junction。读取现有265条商品记录，0错误；183个已选规格全部返回非空DTO，82个未选可变父商品继续null。TR20为规格11307、父11306，真实55美元/10瓶得到每瓶550分/5.50美元。没有为此新增或保存任何商品。
+- 原生读取从插件bootstrap安装只读SQL守卫，0写入尝试；前后商品主记录、全部商品元数据（包括售价与库存）、全options值哈希一致。未查询/修改客户、订单或Session，未执行加购、支付或生产部署。
+- 本次原生证据是CLI候选类读取，不是HTTP/Store API或浏览器验收；父任务负责之后的本机安装、HTTP/页面与是否部署。
+
+候选源码 SHA256：`4d6ca1c3b2501b9536c4edeee77ee700e45b72106f46e62a43ffeb4fa99e0823`；纯测试 SHA256：`22d7f1e58437f45e57bc8deca795100a5b5eb79c9b81e0ecf145562fd02ce294`。完整证据位于 `D:/Codex/Tasks/2026-11-04/unit-pricing-legacy-fix/{work,outputs}`。本子任务不commit/push，交父任务统一整合。

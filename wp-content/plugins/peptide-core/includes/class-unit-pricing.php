@@ -9,6 +9,8 @@ final class Unit_Pricing {
 	private const FIELD = 'pc_vials_per_sales_unit';
 	private const MAX_COUNT = 10000;
 	private const SAFE_MINOR = 9007199254740991;
+	/** Verified legacy import keys only; model/ingredient/dose attributes are not packaging. */
+	private const LEGACY_PACK_KEYS = array( 'attribute_specificatio', 'attribute_specification', 'attribute_specifications', 'attribute_size' );
 
 	public static function register_hooks(): void {
 		add_action( 'woocommerce_product_options_general_product_data', array( self::class, 'render_product_field' ) );
@@ -37,7 +39,8 @@ final class Unit_Pricing {
 			if ( ! $required ) { return null; }
 			foreach ( $required as $name => $options ) {
 				$value = $attributes[ wc_variation_attribute_name( $name ) ] ?? null;
-				if ( ! is_string( $value ) || '' === trim( $value ) ) { return null; }
+				// Native variable data supplies raw option values, including taxonomy slugs.
+				if ( ! is_string( $value ) || '' === trim( $value ) || ! is_array( $options ) || ! in_array( $value, $options, true ) ) { return null; }
 			}
 		} else {
 			$parent = $product;
@@ -81,8 +84,17 @@ final class Unit_Pricing {
 		}
 		$values = array();
 		if ( $product->is_type( 'variation' ) ) {
+			$parent_attributes = null;
 			foreach ( $product->get_variation_attributes() as $key => $value ) {
 				if ( in_array( $key, array( 'attribute_pack', 'attribute_pa_pack' ), true ) && '' !== trim( (string) $value ) ) { $values[] = (string) $value; }
+				if ( ! in_array( $key, self::LEGACY_PACK_KEYS, true ) ) { continue; }
+				$parent_attributes ??= $parent->get_attributes();
+				$attribute = $parent_attributes[ substr( $key, strlen( 'attribute_' ) ) ] ?? null;
+				// A stale or unrelated legacy field must not fall through to a guessed parent count.
+				if ( ! $attribute instanceof \WC_Product_Attribute || $attribute->is_taxonomy() || ! $attribute->get_variation()
+					|| wc_variation_attribute_name( $attribute->get_name() ) !== $key || ! is_string( $value )
+					|| ! in_array( $value, $attribute->get_options(), true ) ) { return null; }
+				$values[] = $value;
 			}
 		} else {
 			foreach ( array( 'pack', 'pa_pack' ) as $key ) { $value = $product->get_attribute( $key ); if ( '' !== trim( $value ) ) { $values[] = $value; } }
