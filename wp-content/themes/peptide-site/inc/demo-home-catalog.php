@@ -80,3 +80,10 @@ add_action( 'wp_enqueue_scripts', function () {
     wp_enqueue_style( 'vialcove-demo-catalog', $uri . '/assets/demo-catalog.css', array( 'vialcove-modules-home' ), (string) filemtime( $base . '/assets/demo-catalog.css' ) );
     wp_enqueue_script( 'vialcove-demo-catalog', $uri . '/assets/demo-catalog.js', array(), (string) filemtime( $base . '/assets/demo-catalog.js' ), true );
 }, 45 );
+
+// Reuse the one real cart client and its confirmed-result feedback after it loads.
+add_action( 'wp_enqueue_scripts', function () {
+    if ( ! vc_demo_home_active() || ! function_exists( 'vc_live_cart_available' ) || ! vc_live_cart_available() ) { return; }
+    $path = get_template_directory() . '/assets/catalog-quick-add.js';
+    wp_enqueue_script( 'vc-catalog-quick-add', get_template_directory_uri() . '/assets/catalog-quick-add.js', array( 'vc-live-cart-experience', 'vc-live-cart-feedback' ), (string) filemtime( $path ), true );
+}, 95 );

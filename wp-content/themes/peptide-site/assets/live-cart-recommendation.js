@@ -219,5 +219,5 @@
  }
  const api={nearNextTier,quotedRecommendation,viewedSuggestion,safeImage,createCartRecommendation,quoteRequest,addPayload,addedMessage,offerUnconfirmed,regularUnitPrice,exactCardRegularPrice,enrichPresentation,productDiscountLabel};
  if(typeof module==='object'&&module.exports)module.exports=api;
- if(global){global.createCartRecommendation=createCartRecommendation;global.vcRecommendationContract={quoteRequest,addPayload,enrichPresentation};}
+ if(global){global.createCartRecommendation=createCartRecommendation;global.vcRecommendationContract={quoteRequest,addPayload,enrichPresentation,quotedRecommendation};}
 })(typeof window==='undefined'?null:window);

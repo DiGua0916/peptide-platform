@@ -1238,3 +1238,11 @@ HTTP聚合探针已证 catalogSupported=true、quoteHooksSupported=false、unsup
 本轮最新124项Node顶层通过、JS语法/diff通过，3个HTTP静态资产200且匹配源码；新增14项摘要边界检查。模块工作台及D盘用户副本包含本轮全部涉及模块和追加项。最新浏览器连接连续超时（旧tab、重置、新开均失败），因此新摘要/鸭子最终实际画面尚未复验；前一轮截图不是这两项最新证据。原peer experience.js哈希未变且不stage，未公网部署。源码提交/正常Git整合及远端结果另记。
 
 本轮网络已恢复，代码source52e3020/main198d163正常合并、atomic push成功，独立ls-remote两head确认；此前待推送offer-follow/配送/浮球/原生UI源码历史一并送达。主checkout clean，FE只留原peer experience.js未提交；不将Git同步说成公网部署。最新实际画面待CUA连接恢复，原生DB修改不随Git迁移。
+
+### 2026-11-05 · Codex：首页快捷加一盒与推荐刷新稳定性
+
+用户要求Choose options换卡片外快捷加购，并反馈推荐有时不显示。已实现仅首页demo-catalog开启的Add 1 box +，绑定卡片首展示SKU；fresh card核对ID/价格/币种/资格后复用原唯一client.addOne，先原车Nonce再HTTP201精确数量确认；成功才原配置烟花/Added，留列表继续选购。图片/标题仍换规格，失败/变价/无资格有原链接回退，无新端点或重复业务存储。
+
+已修三处确定FE问题：同车刷新先清空推荐、纯图片/比较价请求阻塞报价、活动配置晚到不立即重报价。新调度保留同快照未过期有效quote，与近期装饰解耦，正确代次/过期/停用/后端hidden清理。正常库存/候选/差额/券冲突仍可能合法隐藏，截图会话具体reason未实测。详见[本次交接](frontend-catalog-quick-add-recommendation-2026-11-05.md)。22专项/98联合Node、PHPcard51/template23、语法/diff通过；公共首页HTML读回82真实快捷按钮/脚本。用户Esc停止Computer Use后未再操控窗口，没有实际加购或最新UI截图验收；两peer dirty文件保持未动未stage，未公网部署。最终Git引用另记。
+
+本阶段追加完成：44px圆形SVG关闭入口修复拉伸；首页快捷加购成功下方不再留box added句，失败提示保留。M06结算小计划线原价/红优惠及M01.05页脚圆形联系入口为用户随后追加，独立处理中。保护新增peer storefront/checkout在途文件，functions.php仅本窗口card三个hunk入暂存。最新98联合Node与PHP关闭模板lint通过；实际UI未因Esc停止后重新操作。

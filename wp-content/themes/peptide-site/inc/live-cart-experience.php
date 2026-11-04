@@ -13,7 +13,7 @@ function vc_live_cart_markup( bool $drawer = false ): string {
     $id = $drawer ? 'vc-live-bag' : 'vc-live-cart-page';
     ob_start(); ?>
     <section id="<?php echo esc_attr( $id ); ?>" class="vc-live-cart" data-vc-live-cart data-drawer="<?php echo $drawer ? '1' : '0'; ?>" aria-labelledby="<?php echo esc_attr( $id ); ?>-title"<?php echo $drawer ? '' : ' hidden'; ?>>
-        <header class="vc-live-cart__heading<?php echo $drawer ? '' : ' vc-live-cart__heading--page'; ?>"><h2 id="<?php echo esc_attr( $id ); ?>-title" tabindex="-1"><?php echo esc_html( $s['cart_title'] ?? 'Shopping cart' ); ?></h2><?php if ( $drawer ) : ?><button type="button" class="vc-live-cart__close" data-cart-close aria-label="Close shopping bag">&#215;</button><?php endif; ?></header>
+        <header class="vc-live-cart__heading<?php echo $drawer ? '' : ' vc-live-cart__heading--page'; ?>"><h2 id="<?php echo esc_attr( $id ); ?>-title" tabindex="-1"><?php echo esc_html( $s['cart_title'] ?? 'Shopping cart' ); ?></h2><?php if ( $drawer ) : ?><button type="button" class="vc-live-cart__close" data-cart-close aria-label="Close shopping cart"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><?php endif; ?></header>
         <p data-cart-status class="vc-live-cart__status" role="status" aria-live="polite">Loading your bag…</p>
         <button data-cart-retry type="button" class="vc-live-cart__retry" hidden>Try again</button>
         <div class="vc-live-cart__layout">
