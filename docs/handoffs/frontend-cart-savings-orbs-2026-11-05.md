@@ -57,3 +57,5 @@
 最新联合124项Node顶层全过，JS语法/diff通过；日志outputs/final-transient-summary-tests.txt。3个本机静态资产HTTP200并与源文件逐字一致，inc原有filemtime版本化保持。未改后端、真实车/券/订单/支付或公网部署。peer product-dialog-experience.js哈希仍4E5C0C22689472162395733A6838F58F07FE1B3C8A9A2DEF94DC67540DDCA452，未stage。
 
 **浏览器核对限制：**最新阶段原tab8读回/刷新连续超时；重置连接及新开手机预览亦在30秒超时，无法获取最新实际截图。cart-savings-final.png只证明前一检查点的商品/推荐/近期样式；duck-isolated-render.png是已废止静态方案，不能当最新一次性动效证据。最新鸭子/摘要的浏览器画面仍待连接恢复复验，不虚报已完成。Git最终引用另记。
+
+最新代码source `52e3020b8f07a9c5c47cef440979fce87af05a2e`，正常整合main `198d1635b4a7a69443bd5b6ec03f31e7287ae155`；本轮网络恢复，fetch核对无新增peer历史，atomic push main/codex-frontend成功，独立ls-remote两head相符。此前offer-follow/配送及本轮旧检查点积压也随正常历史一起送达，不再标为Git未交付。没有自动部署公网；DB模块仍需单独迁移。角色交接和工作台后续文档提交不改变上述功能验收范围。
