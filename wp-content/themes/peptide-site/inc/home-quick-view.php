@@ -43,7 +43,11 @@ add_action( 'rest_api_init', function (): void {
     register_rest_route( 'vialcove/v1', '/home-product/(?P<id>[1-9][0-9]*)', array(
         'methods' => WP_REST_Server::READABLE,
         'permission_callback' => '__return_true',
-        'args' => array( 'id' => array( 'type' => 'integer', 'minimum' => 1, 'maximum' => PHP_INT_MAX ) ),
+        'args' => array(
+            'id' => array( 'type' => 'integer', 'minimum' => 1, 'maximum' => PHP_INT_MAX ),
+            'card' => array( 'type' => 'boolean', 'default' => false ),
+            'variation' => array( 'type' => 'integer', 'minimum' => 1, 'maximum' => PHP_INT_MAX ),
+        ),
         'callback' => 'vc_home_quick_view_response',
     ) );
 } );
@@ -54,11 +58,81 @@ function vc_home_quick_view_response( WP_REST_Request $request ) {
         || ! class_exists( '\PeptideCore\Modules\Showcase_Quick_View' ) || ! \PeptideCore\Modules\Showcase_Quick_View::supports( $product ) ) {
         return new WP_Error( 'vc_product_unavailable', 'This product is not available. Open the product page to continue.', array( 'status' => 404 ) );
     }
+    if ( true === $request['card'] ) {
+        $card = vc_home_quick_view_card( $product, $request->has_param( 'variation' ) ? (int) $request['variation'] : 0 );
+        if ( ! $card ) { return new WP_Error( 'vc_product_unavailable', 'This specification is not available. Choose another option.', array( 'status' => 404 ) ); }
+        $response = new WP_REST_Response( array( 'id' => $product->get_id(), 'card' => $card ) );
+        $response->header( 'Cache-Control', 'private, no-store' );
+        return $response;
+    }
     $html = vc_home_quick_view_template( $product );
     if ( '' === $html ) { return new WP_Error( 'vc_product_unavailable', 'Open the product page to continue.', array( 'status' => 404 ) ); }
     $response = new WP_REST_Response( array( 'id' => $product->get_id(), 'html' => $html ) );
     $response->header( 'Cache-Control', 'private, no-store' );
     return $response;
+}
+
+/** A display SKU never grants purchase authority; the native add route checks it again. */
+function vc_home_quick_view_card_can_add_one( $product, $sku ): bool {
+    if ( ! $product->is_purchasable() || ! $product->is_in_stock() || ! $sku->is_purchasable() || ! $sku->is_in_stock() ) { return false; }
+    if ( $sku->is_type( 'variation' ) ) {
+        $attributes = $sku->get_variation_attributes(); $required = $product->get_variation_attributes();
+        if ( ! $required ) { return false; }
+        foreach ( $required as $name => $options ) {
+            $value = $attributes[ wc_variation_attribute_name( $name ) ] ?? null;
+            if ( ! is_string( $value ) || '' === trim( $value ) ) { return false; }
+        }
+        foreach ( $attributes as $value ) { if ( ! is_string( $value ) || '' === trim( $value ) ) { return false; } }
+    }
+    $limits_class = '\\Automattic\\WooCommerce\\StoreApi\\Utilities\\QuantityLimits';
+    if ( ! class_exists( $limits_class ) ) { return false; }
+    try {
+        // Match native product reads: held-stock limits need Woo's ordinary
+        // session handler. Preparing it may refresh an anonymous session record,
+        // but must not load/create a cart or perform a cart/order mutation here.
+        if ( $sku->managing_stock() && ! $sku->backorders_allowed() && null !== $sku->get_stock_quantity() ) {
+            $woocommerce = function_exists( 'WC' ) ? WC() : null;
+            if ( ! is_object( $woocommerce ) ) { return false; }
+            if ( ! ( $woocommerce->session ?? null ) ) {
+                if ( ! method_exists( $woocommerce, 'initialize_session' ) ) { return false; }
+                $woocommerce->initialize_session();
+            }
+            if ( ! ( $woocommerce->session ?? null ) ) { return false; }
+        }
+        $limits = ( new $limits_class() )->get_add_to_cart_limits( $sku );
+        foreach ( array( 'minimum', 'maximum', 'multiple_of' ) as $key ) {
+            if ( ! isset( $limits[ $key ] ) || ! is_numeric( $limits[ $key ] ) || ! is_finite( (float) $limits[ $key ] ) ) { return false; }
+        }
+        $step = (float) $limits['multiple_of'];
+        return $step > 0 && (float) $limits['minimum'] <= 1 && (float) $limits['maximum'] >= 1
+            && abs( 1 / $step - round( 1 / $step ) ) < 0.0001;
+    } catch ( Throwable $error ) { return false; }
+}
+
+/** Read one exact SKU's label, image and display price without rendering a form. */
+function vc_home_quick_view_card( $product, int $variation_id = 0 ): ?array {
+    if ( ! $product instanceof WC_Product || ! \PeptideCore\Modules\Products::public_catalog_product( $product )
+        || ! \PeptideCore\Modules\Showcase_Quick_View::supports( $product ) ) { return null; }
+    $sku = $variation_id ? wc_get_product( $variation_id ) : ( function_exists( 'vc_card_display_product' ) ? vc_card_display_product( $product ) : $product );
+    if ( $product->is_type( 'variable' ) ) {
+        if ( ! $sku instanceof WC_Product_Variation || 'product_variation' !== get_post_type( $sku->get_id() )
+            || $sku->get_parent_id() !== $product->get_id() || 'publish' !== $sku->get_status()
+            || '' !== $sku->get_post_password() || '' !== (string) get_post_field( 'post_password', $sku->get_id(), 'raw' )
+            || ! $sku->variation_is_active() || ! $sku->variation_is_visible() ) { return null; }
+    } elseif ( $variation_id || $sku !== $product || ! $product->is_type( 'simple' ) ) { return null; }
+    if ( '' === $sku->get_price() ) { return null; }
+    $price = wc_get_price_to_display( $sku );
+    if ( ! is_numeric( $price ) || ! is_finite( (float) $price ) || (float) $price < 0 ) { return null; }
+    $plain = static fn( $value ) => html_entity_decode( wp_strip_all_tags( (string) $value ), ENT_QUOTES, 'UTF-8' );
+    $image = vc_home_quick_view_image( $sku );
+    return array(
+        'productId' => $product->get_id(), 'purchaseId' => $sku->get_id(),
+        'variationId' => $sku->is_type( 'variation' ) ? $sku->get_id() : 0,
+        'variationLabel' => $sku->is_type( 'variation' ) ? $plain( wc_get_formatted_variation( $sku, true, false, false ) ) : '',
+        'price' => array( 'text' => $plain( wc_price( $price ) ) ),
+        'image' => array( 'url' => $image['src'] ?? '', 'alt' => $image['alt'] ?? $plain( $product->get_name() ) ),
+        'canAddOne' => vc_home_quick_view_card_can_add_one( $product, $sku ),
+    );
 }
 
 /** Do not substitute a parent's different dosage when a variation has no artwork. */

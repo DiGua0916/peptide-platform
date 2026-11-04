@@ -1171,3 +1171,7 @@ HTTP聚合探针已证 catalogSupported=true、quoteHooksSupported=false、unsup
 已按用户前端UI需求完成主题与后台积木接线：首页紧凑卡片/独立报告说明隐藏/80+与180+概括统计/三理由/About全文层级/footer2025；右侧数量、单盒推荐与自动用券同201回执；同SKU每瓶参考价；native checkout紧凑、红优惠、圆形总价、移除文档导流；动态活动公告及可选真实WhatsApp。详见 [frontend-ui-refresh-2026-11-04.md](frontend-ui-refresh-2026-11-04.md)。LocalWP通过正常修订API发布home685/footer687，随后header686绑定同一活动10980；不改活动金额日期/券/客服开关或客户数据。首save的0.0→0类型差异已独立核哈希/语义后恢复发布，无内容丢失。
 
 联合Node53顶层、PHP15 guard与9实际模板渲染检查通过；实际375/390/430/1280布局与native summary验证，真实手机bag已显示一盒55的推荐；没有真实加购/用券/填地址/付款。新BE提交80b8894及473dd8f在任务中到达，最新本机协议已运行，早先“尚未安装”的临时审计是旧快照。后台客服/推荐券当前关闭，正确不造空入口或已用券声明。部分规格unitPricing:null（legacy Specificatio/Size未供可靠包装瓶数），前端隐藏，需BE/商家配count，不能猜10。未授权/执行公网发布；Git最终引用另记。
+
+### 2026-11-04 · Codex：活动移出固定页头、购物车遗漏清理与最近浏览真实加购
+
+用户追加截图要求活动滚走、删除购物车上下冗余文字/报告入口、缩小空白，并给最近浏览补规格与加购。已将同活动10980的native promotion_card以活动气泡外观放入home685正文首位，header686仅关闭公告，导航sticky保留；正常layout API发布，原模块不动。cart仅改主题模板/样式，不改11727：删Shipping and taxes句、VIALCOVE / YOUR ORDER、report导流，合并重复标题、收紧padding，实际底部gap24px。最近浏览通过原theme home-product GET的card可选分支读同SKU图/规格/原生价，完整资格允许时Add1box走一次native Store API；不明则Select & add沿用原生弹窗，未造固定推荐或硬写价格。managed-stock量限可初始化正常Woo会话，不改cart/order/stock，不能称zeroDB。详见 [frontend-campaign-cart-followup-2026-11-04.md](frontend-campaign-cart-followup-2026-11-04.md)。25+41PHP、16近期卡/传输、31drawer、14entrypoint、13推荐测试通过；实际手机content375/415无overflow、两张近期卡均有规格与44px可用加购。活动static且滚动后离开viewport，header无公告。未实际加购/下单/付款，未公网发布；本次Git最终引用记群与项目记忆。

@@ -297,3 +297,27 @@ summary:focus-visible, textarea:focus-visible { outline-color: var(--blue); }
   .hero-pagination { gap: 0; }
   .hero-dot { min-width: 28px; }
 }
+/* Cart-only page spacing: the full cart owns its content, the drawer is unchanged. */
+.vc-commerce-page.vc-cart-page{padding-top:16px;padding-bottom:24px}
+.vc-cart-page>.vc-back-link{min-height:44px;margin-bottom:8px}
+.vc-cart-page>.vc-commerce-heading{gap:16px;margin-bottom:16px}
+.vc-cart-page .vc-commerce-heading h1{margin:0}
+.vc-cart-page .vc-order-steps{gap:16px}
+.vc-cart-page .vc-order-steps li{gap:8px}
+.vc-cart-page .vc-order-steps li>span{width:24px;height:24px}
+.vc-cart-page .vc-live-cart{padding:0 0 8px;max-width:none}
+.vc-cart-page .vc-live-cart__heading{margin-bottom:16px}
+.vc-cart-page .vc-live-cart__heading--page{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.vc-cart-page .vc-live-cart__summary{padding:20px}
+.vc-cart-page .vc-live-cart__summary h2{margin-bottom:16px}
+.vc-cart-page .vc-live-cart__checkout{margin-top:16px}
+.vc-cart-page .vc-live-cart__continue{margin-top:4px;padding:8px;min-height:44px}
+.vc-cart-page .vc-commerce-content>:last-child{margin-bottom:0}
+@media(max-width:767px){
+ .vc-commerce-page.vc-cart-page{padding-top:12px;padding-bottom:16px}
+ .vc-cart-page>.vc-back-link{margin-bottom:4px}
+ .vc-cart-page>.vc-commerce-heading{gap:12px;margin-bottom:16px}
+ .vc-cart-page .vc-commerce-heading h1{font-size:36px;line-height:40px}
+ .vc-cart-page .vc-order-steps{font-size:12px;line-height:16px}
+ .vc-cart-page .vc-live-cart__summary{margin-top:20px;padding:16px}
+}

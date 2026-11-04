@@ -13,7 +13,7 @@ function vc_live_cart_markup( bool $drawer = false ): string {
     $id = $drawer ? 'vc-live-bag' : 'vc-live-cart-page';
     ob_start(); ?>
     <section id="<?php echo esc_attr( $id ); ?>" class="vc-live-cart" data-vc-live-cart data-drawer="<?php echo $drawer ? '1' : '0'; ?>" aria-labelledby="<?php echo esc_attr( $id ); ?>-title"<?php echo $drawer ? '' : ' hidden'; ?>>
-        <header class="vc-live-cart__heading"><h<?php echo $drawer ? '2' : '1'; ?> id="<?php echo esc_attr( $id ); ?>-title" tabindex="-1"><?php echo esc_html( $s['cart_title'] ?? 'Your bag.' ); ?></h<?php echo $drawer ? '2' : '1'; ?>><span data-cart-count></span><?php if ( $drawer ) : ?><button type="button" class="vc-live-cart__close" data-cart-close aria-label="Close shopping bag">&#215;</button><?php endif; ?></header>
+        <header class="vc-live-cart__heading<?php echo $drawer ? '' : ' vc-live-cart__heading--page'; ?>"><h2 id="<?php echo esc_attr( $id ); ?>-title" tabindex="-1"><?php echo esc_html( $s['cart_title'] ?? 'Your bag.' ); ?></h2><span data-cart-count></span><?php if ( $drawer ) : ?><button type="button" class="vc-live-cart__close" data-cart-close aria-label="Close shopping bag">&#215;</button><?php endif; ?></header>
         <p data-cart-status class="vc-live-cart__status" role="status" aria-live="polite">Loading your bag…</p>
         <button data-cart-retry type="button" class="vc-live-cart__retry" hidden>Try again</button>
         <div class="vc-live-cart__layout">
@@ -29,7 +29,6 @@ function vc_live_cart_markup( bool $drawer = false ): string {
                 <form data-cart-coupon class="vc-live-cart__coupon"><label for="<?php echo esc_attr( $id ); ?>-coupon">Discount code</label><div><input id="<?php echo esc_attr( $id ); ?>-coupon" name="coupon" autocomplete="off" maxlength="100"><button type="submit">Apply</button></div></form>
                 <div data-cart-coupons class="vc-live-cart__coupons"></div>
                 <a class="vc-live-cart__checkout" data-cart-checkout href="<?php echo esc_url( wc_get_checkout_url() ); ?>" aria-disabled="true">Continue to checkout &rarr;</a>
-                <p class="vc-live-cart__note">Shipping and taxes are confirmed at checkout.</p>
                 <a class="vc-live-cart__continue" href="<?php echo esc_url( $drawer ? wc_get_cart_url() : vc_url( 'shop' ) ); ?>"><?php echo esc_html( $drawer ? 'View full bag' : ( $s['cart_continue_label'] ?? 'Continue exploring' ) ); ?></a>
             </aside>
         </div>
@@ -74,6 +73,7 @@ add_action( 'wp_enqueue_scripts', function () {
         'productsApiUrl' => esc_url_raw( rest_url( 'wc/store/v1/products/' ) ),
         'recommendationsUrl' => esc_url_raw( rest_url( 'peptide/v1/activity-listener/recommendations' ) ),
         'recentItemsUrl' => esc_url_raw( rest_url( 'peptide/v1/recently-viewed/items' ) ),
+        'recentProductApiUrl' => esc_url_raw( rest_url( 'vialcove/v1/home-product/' ) ),
         'activityConfigUrl' => esc_url_raw( rest_url( 'peptide/v1/activity-listener' ) ),
         'cartUrl' => esc_url_raw( wc_get_cart_url() ), 'checkoutUrl' => esc_url_raw( wc_get_checkout_url() ), 'shopUrl' => esc_url_raw( vc_url( 'shop' ) ),
         'mascotUrl' => $uri . 'live-cart-bean.png',
