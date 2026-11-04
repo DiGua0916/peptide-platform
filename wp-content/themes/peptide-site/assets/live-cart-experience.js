@@ -726,7 +726,7 @@
         if (wasNativeBusy && !busy && drawer?.open) { clearTimeout(nativeRefreshTimer); nativeRefreshTimer = setTimeout(refreshVisible, 0); }
         wasNativeBusy = busy;
     });
-    global.VialCoveLiveCart = { canOpen: drawerController.available, open: trigger => openDrawer(trigger) || location.assign(config.cartUrl), close: closeDrawer, refresh: () => client.refresh(), snapshot: () => client.snapshot() };
+    global.VialCoveLiveCart = { canOpen: drawerController.available, open: trigger => openDrawer(trigger) || location.assign(config.cartUrl), close: closeDrawer, refresh: () => client.refresh(), snapshot: () => client.snapshot(), applyCoupon: code => client.write('apply-coupon', { code }) };
     global.addEventListener('pagehide', event => { if (event.persisted) return; disposed = true; stopNativeSubscription(); clearTimeout(nativeRefreshTimer); drawerController.destroy(); quickOpener?.remove(); clearInterval(polling); clearTimeout(enrichmentTimer); client.destroy(); views.forEach(view => { view.progress?.destroy(); view.recommendation?.destroy(); clearTimeout(view.recentResetTimer); for (const feedback of view.recentFeedbacks || []) feedback.destroy(); }); });
     if (deviceEnabled() && roots.some(root => root.dataset.drawer === '0')) refreshVisible();
 })(typeof window === 'undefined' ? null : window);

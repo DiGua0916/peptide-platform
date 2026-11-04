@@ -31,6 +31,24 @@ final class Apps_Page {
 	/** @return array<string,array{name:string,text:string,icon:string,on:bool}> */
 	public static function apps(): array {
 		return array(
+			'postal-assist' => array(
+				'name' => '邮编辅助',
+				'text' => '在地址信息精确匹配时补充邮编，保留手动填写和修改。',
+				'icon' => 'dashicons-location-alt',
+				'on' => (bool) \PeptideCore\Postal_Assist::settings()['enabled'],
+			),
+			'campaign-countdown' => array(
+				'name' => '活动倒计时',
+				'text' => '关联已有优惠活动，在结账与商品窗口显示同步的真实剩余时间。',
+				'icon' => 'dashicons-clock',
+				'on' => (bool) \PeptideCore\Campaign_Countdown::settings()['enabled'],
+			),
+			'first-order-offer' => array(
+				'name' => '首单 5% 优惠',
+				'text' => '管理首页新人优惠券，支持复制、原生购物车应用与首单资格核验。',
+				'icon' => 'dashicons-tickets-alt',
+				'on' => (bool) \PeptideCore\First_Order_Offer::settings()['enabled'],
+			),
 			'exit-intent' => array(
 				'name' => __( 'Exit-intent offers', 'peptide-core' ),
 				'text' => __( 'When a visitor is about to leave, win them back with a coupon, a prize wheel or your own message.', 'peptide-core' ),
@@ -97,6 +115,18 @@ final class Apps_Page {
 
 	public static function render(): void {
 		if ( ! current_user_can( self::CAP ) ) {
+			return;
+		}
+		if ( 'campaign-countdown' === ( $_GET['app'] ?? '' ) ) {
+			Campaign_Countdown_Page::render();
+			return;
+		}
+		if ( 'postal-assist' === ( $_GET['app'] ?? '' ) ) {
+			Postal_Assist_Page::render();
+			return;
+		}
+		if ( 'first-order-offer' === ( $_GET['app'] ?? '' ) ) {
+			First_Order_Offer_Page::render();
 			return;
 		}
 		if ( 'product-broadcast' === ( $_GET['app'] ?? '' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only routing; the page and API enforce permissions.

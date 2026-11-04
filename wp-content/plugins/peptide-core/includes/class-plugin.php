@@ -61,6 +61,9 @@ final class Plugin {
 		Custom_Pages::register_hooks();
 		Coupons::register_hooks();
 		Coupon_Rules::register_hooks();
+		Campaign_Countdown::register_hooks();
+		First_Order_Offer::register_hooks();
+		Postal_Assist::register_hooks();
 		Exit_Intent::register_hooks();
 		Modules\Product_Broadcast::register_hooks();
 		Api\Product_Broadcast_Controller::register_hooks();
@@ -140,6 +143,7 @@ final class Plugin {
 			Admin\Coupons_Page::register_hooks();
 			Admin\Shipping_Discounts_Page::register_hooks();
 			Admin\Apps_Page::register_hooks();
+			Admin\Campaign_Countdown_Page::register_hooks();
 			Admin\Product_Broadcast_Page::register_hooks();
 			Admin\Activity_Listener_Page::register_hooks();
 			Admin\Cart_Feedback_Page::register_hooks();

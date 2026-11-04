@@ -9,6 +9,7 @@ require_once __DIR__ . '/inc/cart-pricing.php';
 require_once __DIR__ . '/inc/cart-drawer.php';
 require_once __DIR__ . '/inc/layout-modules.php';
 require_once __DIR__ . '/inc/home-quick-view.php';
+require_once __DIR__ . '/inc/storefront-entry.php';
 require_once __DIR__ . '/inc/demo-home-catalog.php';
 require_once __DIR__ . '/inc/demo-home-modules.php';
 require_once __DIR__ . '/inc/demo-site-parts.php';
