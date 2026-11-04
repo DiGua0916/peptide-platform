@@ -1212,3 +1212,7 @@ HTTP聚合探针已证 catalogSupported=true、quoteHooksSupported=false、unsup
 用户进一步明确：横条只在原Before you begin阅读区展开，其他地方只留球；运输说明放FAQ下方，不开独立页。已改真实几何/35%阅读线、sticky祖先、IO+passive单RAF，离区自动收球，stale hash不绕过，单次dismiss和再次进入恢复；区外手动点击球只跟随有效原生WhatsApp链接。首页685正常Layout API增加原生可编辑faq delivery-details，置questions后/closing前，服务入口同页锚点，旧页11740保留草稿；7其它布局、所有原模块内容和全部店铺设置hash保护不变。手机页头logo允许flex收缩，修复新增语言入口将按钮挤出375屏幕的横溢根因。
 
 15 Node+15PHP guard/lint/diff通过。实际手机content375无横溢；FAQ内expanded true，实际向下滑FAQ bottom−261.21自动false；Order support回FAQ top104.79/true，Delivery details到首页inline top104.79/false、pathname /。最终截图与本机native迁移回执在D:/Codex/Tasks/2026-11-05/support-scope-inline-delivery；Tab5留物流效果。新专题[frontend-support-scope-inline-delivery-2026-11-05.md](frontend-support-scope-inline-delivery-2026-11-05.md)取代上轮独立物流页和hash长期展开方案。仅本机运行/布局和Git，未公网部署或改车/订单/支付/实际WA；原有peer product-dialog-experience.js一行改动保持不纳入。最终Git refs记群和记忆。
+
+### 2026-11-05 · Codex：商品弹窗优惠跟随
+
+用户要求Order savings满减档位随下滑持续可见。新增product-dialog-offer-follow.js监听既有selection/presented，把同一原生活动节点移至原sticky toolbar第二行；close归还heading、双事件去重、切商品释放与BFCache清理。未动peer experience.js/后台规则/金额；原导航动态测完整toolbar高度避让Details/COA。实际offer72px/toolbar132.67px；390和360两宽无横溢，Details/COA下滑仍offer top54，关闭重开仅1份。17 Node、JS/PHP语法/diff通过。新交接[frontend-product-offer-follow-2026-11-05.md](frontend-product-offer-follow-2026-11-05.md)，截图在D:/Codex/Tasks/2026-11-05/product-offer-follow/outputs。仅本机主题/Git，无DB/业务数据/公网部署。
