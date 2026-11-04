@@ -47,6 +47,7 @@ final class Plugin {
 		Order_Batches::register_hooks();
 		Pricing::register_hooks();
 		Unit_Pricing::register_hooks();
+		Api\Storefront_Language_Controller::register_hooks();
 		Checkout_Ack::register_hooks();
 		Shipping_Tracking::register_hooks();
 		Templates::register_hooks();
@@ -125,6 +126,7 @@ final class Plugin {
 			Admin\Admin_Menus::register_hooks();
 			Admin\Store_Settings::register_hooks();
 			Admin\YouTube_Settings::register_hooks();
+			Admin\Storefront_Language_Page::register_hooks();
 			Admin\Basic_Config_Page::register_hooks();
 			Admin\Shipping_Page::register_hooks();
 			Admin\Tax_Page::register_hooks();
