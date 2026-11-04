@@ -40,9 +40,10 @@
 .pc-activity-listener .pc-activity-listener__milestones {
 	position: relative;
 	min-width: 0;
-	margin: 76px 12px 0 0;
+	margin: 12px 12px 0 0;
 	padding-bottom: 60px;
 }
+.pc-activity-listener.has-mascot .pc-activity-listener__milestones { margin-top: 76px; }
 .pc-activity-listener .pc-activity-listener__track {
 	height: 8px;
 	overflow: hidden;

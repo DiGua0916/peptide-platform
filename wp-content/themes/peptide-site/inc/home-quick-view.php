@@ -19,12 +19,12 @@ function vc_home_quick_view_assets(): void {
         $dependencies = 'product-dialog-meta' === $name ? array( 'vc-product-unit-pricing', 'jquery' ) : array();
         wp_enqueue_script( 'vc-' . $name, $base . $name . '.js', $dependencies, (string) filemtime( $path . $name . '.js' ), true );
     }
-    foreach ( array( 'ticker-model', 'ticker', 'report-viewer', 'feedback', 'experience', 'recent' ) as $part ) {
+    foreach ( array( 'ticker-model', 'ticker', 'report-viewer', 'feedback', 'experience', 'offer-follow', 'recent' ) as $part ) {
         $name = 'product-dialog-' . $part;
         $dependencies = 'experience' === $part ? array( 'vc-product-purchase-dock', 'vc-product-purchase-return', 'vc-product-dialog-meta' ) : array();
         wp_enqueue_script( 'vc-' . $name, $base . $name . '.js', $dependencies, (string) filemtime( $path . $name . '.js' ), true );
     }
-    wp_enqueue_script( 'vc-home-quick-view', $base . 'home-quick-view.js', array( 'jquery', 'peptide-showcase-quick-view', 'vc-live-cart-feedback', 'vc-product-dialog-ticker-model', 'vc-product-dialog-ticker', 'vc-product-dialog-report-viewer', 'vc-product-dialog-feedback', 'vc-product-dialog-experience', 'vc-product-dialog-recent' ), (string) filemtime( $path . 'home-quick-view.js' ), true );
+    wp_enqueue_script( 'vc-home-quick-view', $base . 'home-quick-view.js', array( 'jquery', 'peptide-showcase-quick-view', 'vc-live-cart-feedback', 'vc-product-dialog-ticker-model', 'vc-product-dialog-ticker', 'vc-product-dialog-report-viewer', 'vc-product-dialog-feedback', 'vc-product-dialog-experience', 'vc-product-dialog-offer-follow', 'vc-product-dialog-recent' ), (string) filemtime( $path . 'home-quick-view.js' ), true );
     wp_localize_script( 'vc-home-quick-view', 'vcHomeQuickView', array(
         'productApi' => rest_url( 'vialcove/v1/home-product/' ),
         'wpNonce' => is_user_logged_in() ? wp_create_nonce( 'wp_rest' ) : '',
@@ -109,6 +109,24 @@ function vc_home_quick_view_card_can_add_one( $product, $sku ): bool {
     } catch ( Throwable $error ) { return false; }
 }
 
+/** One native display amount, retaining the store's actual currency precision. */
+function vc_home_quick_view_card_money( $amount ): ?array {
+    $precision = wc_get_price_decimals();
+    $currency = get_woocommerce_currency();
+    if ( ! is_int( $precision ) || $precision < 0 || $precision > 8 || ! is_string( $currency ) || ! preg_match( '/^[A-Z]{3}$/D', $currency )
+        || ! is_numeric( $amount ) || ! is_finite( (float) $amount ) || (float) $amount < 0 ) { return null; }
+    $decimal = wc_format_decimal( $amount, $precision );
+    if ( ! is_string( $decimal ) || ! preg_match( '/^\d+(?:\.\d+)?$/D', $decimal ) ) { return null; }
+    $parts = explode( '.', $decimal, 2 );
+    $minor = ltrim( $parts[0] . str_pad( $parts[1] ?? '', $precision, '0' ), '0' );
+    $minor = '' === $minor ? '0' : $minor;
+    if ( strlen( $minor ) > 16 || ( strlen( $minor ) === 16 && strcmp( $minor, '9007199254740991' ) > 0 ) ) { return null; }
+    return array(
+        'minor' => $minor, 'currency_code' => $currency, 'currency_minor_unit' => $precision,
+        'text' => html_entity_decode( wp_strip_all_tags( (string) wc_price( $amount ) ), ENT_QUOTES, 'UTF-8' ),
+    );
+}
+
 /** Read one exact SKU's label, image and display price without rendering a form. */
 function vc_home_quick_view_card( $product, int $variation_id = 0 ): ?array {
     if ( ! $product instanceof WC_Product || ! \PeptideCore\Modules\Products::public_catalog_product( $product )
@@ -125,11 +143,22 @@ function vc_home_quick_view_card( $product, int $variation_id = 0 ): ?array {
     if ( ! is_numeric( $price ) || ! is_finite( (float) $price ) || (float) $price < 0 ) { return null; }
     $plain = static fn( $value ) => html_entity_decode( wp_strip_all_tags( (string) $value ), ENT_QUOTES, 'UTF-8' );
     $image = vc_home_quick_view_image( $sku );
+    $display_price = vc_home_quick_view_card_money( $price );
+    $regular_price = null;
+    // A parent minimum or historical price is not a comparison for this SKU.
+    // Both values use this exact SKU and Woo's same tax/display conversion.
+    if ( $display_price && $sku->is_on_sale() && is_numeric( $sku->get_regular_price() ) ) {
+        $candidate = vc_home_quick_view_card_money( wc_get_price_to_display( $sku, array( 'price' => $sku->get_regular_price() ) ) );
+        if ( $candidate && $candidate['currency_code'] === $display_price['currency_code']
+            && $candidate['currency_minor_unit'] === $display_price['currency_minor_unit']
+            && (int) $candidate['minor'] > (int) $display_price['minor'] ) { $regular_price = $candidate; }
+    }
     return array(
         'productId' => $product->get_id(), 'purchaseId' => $sku->get_id(),
         'variationId' => $sku->is_type( 'variation' ) ? $sku->get_id() : 0,
         'variationLabel' => $sku->is_type( 'variation' ) ? $plain( wc_get_formatted_variation( $sku, true, false, false ) ) : '',
-        'price' => array( 'text' => $plain( wc_price( $price ) ) ),
+        'price' => $display_price ?? array( 'text' => $plain( wc_price( $price ) ) ),
+        'regularPrice' => $regular_price,
         'image' => array( 'url' => $image['src'] ?? '', 'alt' => $image['alt'] ?? $plain( $product->get_name() ) ),
         'canAddOne' => vc_home_quick_view_card_can_add_one( $product, $sku ),
     );

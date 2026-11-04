@@ -121,8 +121,9 @@ add_filter( 'peptide_core_module_html', function ( $html, array $module, string 
     $presentation = $module['settings'][ $key ] ?? '';
     if ( null !== $html || ( 'demo' !== $presentation && ! ( 'hero_h1' === $module['type'] && 'product_first' === $presentation ) ) ) { return $html; }
     if ( ! in_array( $module['type'], array( 'hero_h1', 'info_list', 'report_feature', 'counter', 'card_list', 'faq', 'cta', 'rich_text' ), true ) ) { return $html; }
+    $view = 'faq' === $module['type'] && 'delivery-details' === ( $module['id'] ?? '' ) ? 'delivery' : str_replace( '_', '-', $module['type'] );
     ob_start();
-    get_template_part( 'template-parts/modules/demo-' . str_replace( '_', '-', $module['type'] ), null, array( 'module' => $module, 'context' => $context, 'device' => $device ) );
+    get_template_part( 'template-parts/modules/demo-' . $view, null, array( 'module' => $module, 'context' => $context, 'device' => $device ) );
     return ob_get_clean();
 }, 15, 4 );
 

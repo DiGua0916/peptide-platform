@@ -14,6 +14,15 @@
 .vc-product-dialog .vc-dialog-offer-tiers:not(.vc-dialog-offer-tiers--thresholds) strong{white-space:normal;overflow-wrap:anywhere}
 @media(max-width:360px){.vc-product-dialog .vc-dialog-offer-tiers strong{font-size:16px;line-height:20px}}
 
+/* One sticky surface: tabs above, the same live offer node below. Navigation
+   already reads this whole toolbar's height, including translated copy. */
+.vc-product-dialog .vc-home-quick__toolbar.vc-offers-follow{flex-wrap:wrap;gap:4px 8px}
+.vc-product-dialog .vc-offers-follow>.vc-dialog-offers{flex:0 0 100%;min-width:0;width:100%;margin:0;padding:8px 12px}
+.vc-product-dialog .vc-offers-follow>.vc-dialog-offers[hidden]{display:none}
+.vc-product-dialog .vc-offers-follow>.vc-dialog-offers h2{margin:0 0 4px;font-size:12px;line-height:16px}
+.vc-product-dialog .vc-offers-follow .vc-dialog-offer-tiers strong{font-size:16px;line-height:20px}
+.vc-product-dialog .vc-offers-follow .vc-dialog-offer-tiers li{flex-direction:column;gap:0}
+
 /* Selected specification and native metadata directly below the product image. */
 .vc-product-dialog .vc-product-meta-ready>.summary>.vc-home-quick__specification,.vc-product-dialog .vc-product-meta-ready>.vc-showcase-quick__media>.vc-dialog-media-caption,.vc-product-dialog .vc-product-meta-ready .single_variation .stock,.vc-product-dialog .vc-product-meta-ready>.summary>.stock{display:none}
 .vc-product-dialog.woocommerce div.product.vc-product-meta-ready form.cart{display:block;margin:0;padding:0}

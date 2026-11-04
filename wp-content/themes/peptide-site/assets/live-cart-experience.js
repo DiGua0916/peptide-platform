@@ -13,6 +13,30 @@
             return new Intl.NumberFormat('en-US', { style: 'currency', currency: metadata.currency_code, minimumFractionDigits: precision, maximumFractionDigits: precision }).formatToParts(amount < 0n ? -1n : 1n).map(part => part.type === 'integer' ? whole : part.type === 'fraction' ? fraction : part.value).join('');
         } catch (_) { return '—'; }
     }
+    /** Native SKU markdowns and order discounts are separate amounts. */
+    function cartItemPricing(item) {
+        const prices = item?.prices, totals = item?.totals;
+        const result = { unit: money(prices?.price, prices), regularUnit: '', total: money(totals?.line_total, totals), regularTotal: '', savingsLabel: '', savingsDescription: '', orderDiscount: '' };
+        const unsigned = value => isMinor(value) && BigInt(value) >= 0n;
+        const metadata = value => value && /^[A-Z]{3}$/.test(value.currency_code || '') && validPrecision(value.currency_minor_unit);
+        if (metadata(totals) && unsigned(totals.line_subtotal) && unsigned(totals.line_total) && BigInt(totals.line_subtotal) > BigInt(totals.line_total)) {
+            result.orderDiscount = 'Order discount −' + money(String(BigInt(totals.line_subtotal) - BigInt(totals.line_total)), totals);
+        }
+        if (!metadata(prices) || !unsigned(prices.price) || !unsigned(prices.regular_price) || BigInt(prices.regular_price) <= BigInt(prices.price)) return result;
+        result.regularUnit = money(prices.regular_price, prices);
+        if (!metadata(totals) || prices.currency_code !== totals.currency_code || prices.currency_minor_unit !== totals.currency_minor_unit
+            || !Number.isSafeInteger(item.quantity) || item.quantity < 1 || !unsigned(totals.line_subtotal) || !unsigned(totals.line_total)) return result;
+        const quantity = BigInt(item.quantity), regular = BigInt(prices.regular_price), active = BigInt(prices.price), regularLine = regular * quantity, activeLine = active * quantity;
+        // Store API line totals exclude tax. A tax-inclusive display price or a
+        // different line-price basis cannot safely become its crossed-out total.
+        if (activeLine !== BigInt(totals.line_subtotal) || BigInt(totals.line_total) > activeLine || !isMinor(String(regularLine))) return result;
+        const savings = (regular - active) * quantity, percentage = ((regular - active) * 100n + regular / 2n) / regular;
+        result.regularTotal = money(String(regularLine), totals);
+        const percent = percentage === 0n ? '<1%' : percentage === 100n && active > 0n ? '>99%' : String(percentage) + '%';
+        result.savingsLabel = 'Save ' + percent + ' (' + money(String(savings), totals) + ')';
+        result.savingsDescription = 'Product savings before order discounts: ' + money(String(savings), totals) + ' (' + percent + ').';
+        return result;
+    }
     // The native Store API does not identify an applied coupon's origin across
     // GETs. A neutral name hides internal codes without guessing an activity.
     function couponPresentation(coupon) {
@@ -75,17 +99,27 @@
         if (Number.isSafeInteger(item.variationId) && item.variationId > 0) url.searchParams.set('variation', String(item.variationId));
         return url.href;
     }
+    function recentProductSaving(card) {
+        const price = card?.price, regular = card?.regularPrice;
+        if (!price || !regular || typeof regular.text !== 'string' || !regular.text.trim()
+            || price.currency_code !== regular.currency_code || price.currency_minor_unit !== regular.currency_minor_unit) return null;
+        const display = cartItemPricing({ quantity: 1,
+            prices: { ...price, price: price.minor, regular_price: regular.minor },
+            totals: { ...price, line_subtotal: price.minor, line_total: price.minor } });
+        if (!display.savingsLabel) return null;
+        return { regularText: regular.text, label: display.savingsLabel, description: display.savingsDescription };
+    }
     function recentPresentation(item, response) {
         const card = response?.card, id = item.productId;
         // A history parent carries a minimum price, not a selected specification.
         // A failed read keeps an options action; never combine that minimum with a guessed label.
-        const fallback = { ...item, variationLabel: item.variationLabel || 'Choose a specification', price: item.variationLabel ? item.price : null, canAddOne: false };
+        const fallback = { ...item, variationLabel: item.variationLabel || 'Choose a specification', price: item.variationLabel ? item.price : null, canAddOne: false, productSaving: null };
         if (response?.id !== id || card?.productId !== id || !Number.isSafeInteger(card.purchaseId) || card.purchaseId < 1 || !Number.isSafeInteger(card.variationId) || card.variationId < 0
             || (card.variationId === 0 ? card.purchaseId !== id : card.purchaseId !== card.variationId)
             || (item.variationId > 0 && card.variationId !== item.variationId)
             || typeof card.price?.text !== 'string' || !card.price.text.trim()
             || (card.variationId > 0 && (typeof card.variationLabel !== 'string' || !card.variationLabel.trim()))) return fallback;
-        return { ...item, ...card, priceIsFrom: false, variationLabel: card.variationLabel || 'Single specification', canAddOne: card.canAddOne === true };
+        return { ...item, ...card, priceIsFrom: false, variationLabel: card.variationLabel || 'Single specification', canAddOne: card.canAddOne === true, productSaving: recentProductSaving(card) };
     }
     function recentAddPayload(item) {
         if (item?.canAddOne !== true || !Number.isSafeInteger(item.productId) || item.productId < 1 || !Number.isSafeInteger(item.purchaseId) || item.purchaseId < 1 || !Number.isSafeInteger(item.variationId) || item.variationId < 0
@@ -94,13 +128,120 @@
     }
     function totals(cart) {
         if (!validCart(cart)) return [];
-        const t = cart.totals, rows = [{ label: 'Product subtotal', minor: t.total_items }];
-        if (Number(t.total_discount) > 0) rows.push({ label: 'Coupon savings', minor: String(-Number(t.total_discount)), savings: true });
-        for (const fee of cart.fees || []) if (isMinor(fee.totals?.total)) rows.push({ label: fee.name || 'Adjustment', minor: fee.totals.total, savings: Number(fee.totals.total) < 0 });
-        if (cart.needs_shipping) rows.push({ label: 'Shipping', minor: t.total_shipping, unknown: !cart.has_calculated_shipping });
-        if (Number(t.total_tax) > 0) rows.push({ label: 'Tax', minor: t.total_tax });
-        rows.push({ label: 'Estimated total', minor: t.total_price, total: true });
+        const t = cart.totals, rows = [], unsigned = value => isMinor(value) && BigInt(value) >= 0n;
+        const sameCurrency = metadata => metadata?.currency_code === t.currency_code && metadata?.currency_minor_unit === t.currency_minor_unit;
+        const positive = value => unsigned(value) && BigInt(value) > 0n;
+        const label = value => typeof value === 'string' && value.trim() ? value : '';
+        const nativeOfferName = name => name.trim() === '黑色星期五' ? 'Black Friday offer' : name;
+        let saved = 0n;
+
+        // This extension contains pre-coupon product comparisons, not another
+        // amount to subtract from the already discounted Woo subtotal.
+        const sale = cart.extensions?.peptide_core?.sale_savings;
+        let productSavings = 0n, regularSubtotal = null;
+        if (sameCurrency(sale) && [sale.regular_subtotal, sale.sale_subtotal, sale.sale_savings, t.total_items].every(unsigned)
+            && sale.sale_subtotal === t.total_items && BigInt(sale.regular_subtotal) - BigInt(sale.sale_subtotal) === BigInt(sale.sale_savings)) {
+            productSavings = BigInt(sale.sale_savings); regularSubtotal = sale.regular_subtotal;
+        } else if (unsigned(t.total_items) && cart.items.length) {
+            // Conservative fallback only when every exact SKU shares the same
+            // tax/currency basis as its native pre-coupon line subtotal.
+            let subtotal = 0n, savings = 0n, comparable = true;
+            for (const item of cart.items) {
+                const p = item.prices, line = item.totals;
+                if (!sameCurrency(p) || !sameCurrency(line) || !Number.isSafeInteger(item.quantity) || item.quantity < 1
+                    || ![p.price, p.regular_price, line.line_subtotal].every(unsigned)
+                    || BigInt(p.price) * BigInt(item.quantity) !== BigInt(line.line_subtotal)) { comparable = false; break; }
+                subtotal += BigInt(line.line_subtotal);
+                if (BigInt(p.regular_price) > BigInt(p.price)) savings += (BigInt(p.regular_price) - BigInt(p.price)) * BigInt(item.quantity);
+            }
+            if (comparable && subtotal === BigInt(t.total_items) && isMinor(String(subtotal + savings))) { productSavings = savings; regularSubtotal = String(subtotal + savings); }
+        }
+        rows.push({ key: 'products', label: productSavings > 0n ? 'Regular product subtotal' : 'Product subtotal', minor: regularSubtotal ?? t.total_items });
+        if (productSavings > 0n) { rows.push({ key: 'product-saving', label: 'Product savings', minor: String(-productSavings), savings: true }); saved += productSavings; }
+
+        // Coupon amounts are native per-code allocations; codes remain private
+        // in this presentation. The aggregate is a check, never an extra row.
+        if (positive(t.total_discount)) {
+            const coupons = Array.isArray(cart.coupons) ? cart.coupons : [], seen = new Set();
+            let allocated = 0n, complete = true;
+            const couponRows = [];
+            for (const coupon of coupons) {
+                if (typeof coupon?.code !== 'string' || seen.has(coupon.code) || !sameCurrency(coupon.totals) || !unsigned(coupon.totals?.total_discount)) { complete = false; break; }
+                seen.add(coupon.code); const amount = BigInt(coupon.totals.total_discount); allocated += amount;
+                if (amount > 0n) couponRows.push({ key: 'coupon-' + couponRows.length, label: 'Coupon discount', minor: String(-amount), savings: true });
+            }
+            if (complete && allocated === BigInt(t.total_discount) && couponRows.length) {
+                couponRows.forEach((row, index) => { if (couponRows.length > 1) row.label += ' ' + (index + 1); rows.push(row); });
+            } else rows.push({ key: 'coupon-total', label: 'Coupon savings', minor: String(-BigInt(t.total_discount)), savings: true });
+            saved += BigInt(t.total_discount);
+        }
+
+        // Promotion guidance is an evaluation, while fees are the final applied
+        // amounts (Woo can cap them). Associate names by exact native fee key.
+        const fees = Array.isArray(cart.fees) ? cart.fees : [], seenFees = new Set(), feeRows = [];
+        const applied = cart.extensions?.peptide_core?.promotion?.applied_all;
+        let feeSum = 0n, feeSavings = 0n, feesComplete = true;
+        for (const fee of fees) {
+            const key = typeof fee?.key === 'string' ? fee.key : fee?.id;
+            if (typeof key !== 'string' || seenFees.has(key) || !sameCurrency(fee.totals) || !isMinor(fee.totals?.total)) { feesComplete = false; break; }
+            seenFees.add(key); const amount = BigInt(fee.totals.total); feeSum += amount;
+            const promo = /^pc-promo-([1-9]\d*)$/.exec(key), record = promo && Array.isArray(applied) ? applied.find(entry => String(entry?.id) === promo[1]) : null;
+            const name = record ? nativeOfferName(label(record.title) || label(fee.name) || 'Order offer') : label(fee.name) || 'Order adjustment';
+            if (amount !== 0n) feeRows.push({ key: 'fee-' + key, label: name, minor: fee.totals.total, savings: amount < 0n });
+            if (amount < 0n) feeSavings -= amount;
+        }
+        if (feesComplete && isMinor(t.total_fees) && feeSum === BigInt(t.total_fees)) { rows.push(...feeRows); saved += feeSavings; }
+        else if (isMinor(t.total_fees) && BigInt(t.total_fees) !== 0n) rows.push({ key: 'fee-total', label: 'Order adjustments', minor: t.total_fees, savings: BigInt(t.total_fees) < 0n });
+
+        const shipping = shippingSavingsTrace(cart);
+        if (cart.needs_shipping) {
+            if (shipping) {
+                rows.push({ key: 'shipping-original', label: 'Shipping before offers', minor: shipping.original });
+                shipping.discounts.forEach((entry, index) => rows.push({ key: 'shipping-offer-' + entry.id, label: nativeOfferName(entry.name) + ' · Shipping', minor: String(-entry.amount), savings: true,
+                    detail: index === shipping.discounts.length - 1 ? 'Shipping after offers: ' + money(shipping.payable, t) : '' }));
+                saved += BigInt(shipping.discount);
+            } else rows.push({ key: 'shipping', label: 'Shipping', minor: t.total_shipping, unknown: !cart.has_calculated_shipping });
+        }
+        if (positive(t.total_tax)) rows.push({ key: 'tax', label: 'Tax', minor: t.total_tax });
+        rows.push({ key: 'payable', label: cart.needs_shipping && !cart.has_calculated_shipping ? 'Estimated total' : 'Total payable', minor: t.total_price, total: true });
+        const taxPresent = [t.total_tax, t.total_items_tax, t.total_discount_tax, t.total_shipping_tax, t.total_fees_tax,
+            ...fees.map(fee => fee?.totals?.total_tax)].some(value => isMinor(value) && BigInt(value) !== 0n);
+        if (saved > 0n && isMinor(String(saved))) rows.push({ key: 'saved', label: 'You save', minor: String(saved), savedTotal: true, savings: true,
+            detail: taxPresent ? 'Before tax' : '' });
         return rows;
+    }
+    /** Optional future server trace; absent metadata is never reverse-calculated. */
+    function shippingSavingsTrace(cart) {
+        const trace = cart?.extensions?.peptide_core?.shipping_savings, t = cart?.totals;
+        const unsigned = value => isMinor(value) && BigInt(value) >= 0n;
+        const sameCurrency = value => value?.currency_code === t?.currency_code && value?.currency_minor_unit === t?.currency_minor_unit;
+        const packageKey = value => Number.isSafeInteger(value) && value >= 0 ? String(value) : typeof value === 'string' && value.length > 0 && value.length <= 100 ? value : null;
+        if (!cart?.needs_shipping || cart.has_calculated_shipping !== true || !sameCurrency(trace) || trace?.version !== 1 || trace.complete !== true
+            || trace.status !== 'applied' || trace.tax_basis !== 'exclusive' || ![trace.original_shipping, trace.shipping_discount, trace.payable_shipping, t?.total_shipping].every(unsigned)
+            || trace.payable_shipping !== t.total_shipping || BigInt(trace.shipping_discount) <= 0n || !Array.isArray(trace.packages) || !trace.packages.length || trace.packages.length > 100 || !Array.isArray(cart.shipping_rates)) return null;
+        const selected = new Map();
+        for (const pack of cart.shipping_rates) {
+            const key = packageKey(pack?.package_id), rates = Array.isArray(pack?.shipping_rates) ? pack.shipping_rates.filter(rate => rate?.selected === true) : null;
+            if (key === null || !rates || rates.length !== 1 || selected.has(key) || typeof rates[0].rate_id !== 'string' || !rates[0].rate_id || !sameCurrency(rates[0]) || !unsigned(rates[0].price)) return null;
+            selected.set(key, rates[0]);
+        }
+        let original = 0n, discount = 0n, payable = 0n;
+        const seen = new Set(), discounts = new Map();
+        for (const pack of trace.packages) {
+            const key = packageKey(pack?.package_id), rate = selected.get(key);
+            if (key === null || !rate || seen.has(key) || pack.rate_id !== rate.rate_id || ![pack.original_shipping, pack.shipping_discount, pack.payable_shipping].every(unsigned)
+                || pack.payable_shipping !== rate.price || BigInt(pack.original_shipping) - BigInt(pack.shipping_discount) !== BigInt(pack.payable_shipping)) return null;
+            seen.add(key); original += BigInt(pack.original_shipping); discount += BigInt(pack.shipping_discount); payable += BigInt(pack.payable_shipping);
+            if (BigInt(pack.shipping_discount) > 0n) {
+                if (!Number.isSafeInteger(pack.discount_id) || pack.discount_id < 1 || typeof pack.discount_name !== 'string' || !pack.discount_name.trim() || pack.discount_name.length > 500) return null;
+                const entry = discounts.get(pack.discount_id);
+                if (entry && entry.name !== pack.discount_name) return null;
+                discounts.set(pack.discount_id, { id: pack.discount_id, name: pack.discount_name, amount: (entry?.amount || 0n) + BigInt(pack.shipping_discount) });
+            }
+        }
+        if (seen.size !== selected.size || original !== BigInt(trace.original_shipping) || discount !== BigInt(trace.shipping_discount) || payable !== BigInt(trace.payable_shipping)
+            || original - discount !== payable || ![original, discount, payable].every(value => isMinor(String(value)))) return null;
+        return { original: String(original), discount: String(discount), payable: String(payable), discounts: [...discounts.values()] };
     }
     /** One native dialog on every enabled device; keep its parent product open. */
     function createDrawerController({ dialog, document, window: win, enabled = () => true, refresh = () => {} }) {
@@ -303,7 +444,7 @@
         }
         return { snapshot, refresh, request, write, externalStart, externalUpdate, destroy() { destroyed = true; invalidate(); clearTimeout(externalTimer); } };
     }
-    if (typeof module === 'object' && module.exports) module.exports = { validCart, money, couponPresentation, confirmedCartAdd, totals, createClient, activityAllowed, activityPresentation, reconcileRows, statusPresentation, createDrawerController, createNativeCheckoutBridge, recentPresentationUrl, recentPresentation, recentAddPayload };
+    if (typeof module === 'object' && module.exports) module.exports = { validCart, money, cartItemPricing, couponPresentation, confirmedCartAdd, totals, createClient, activityAllowed, activityPresentation, reconcileRows, statusPresentation, createDrawerController, createNativeCheckoutBridge, recentPresentationUrl, recentPresentation, recentAddPayload };
     if (!global?.document || !global.VialCoveLiveCartConfig) return;
     const document = global.document, config = global.VialCoveLiveCartConfig, settings = config.settings || {}, roots = [...document.querySelectorAll('[data-vc-live-cart]')];
     if (!roots.length) return;
@@ -351,7 +492,9 @@
         const row = el('article', 'vc-live-cart__line'); row.dataset.cartKey = item.key;
         const imageLink = productLink({ ...item, name: '' }, 'vc-live-cart__image');
         const image = el('img'); image.width = 72; image.height = 80; imageLink.append(image);
-        const info = el('div', 'vc-live-cart__info'), name = productLink(item), pack = el('p', 'vc-live-cart__pack'), unit = el('p', 'vc-live-cart__unit'); info.append(name, pack, unit);
+        const info = el('div', 'vc-live-cart__info'), name = productLink(item), pack = el('p', 'vc-live-cart__pack'), unit = el('p', 'vc-live-cart__unit');
+        const regularUnit = el('del', 'vc-live-cart__unit-regular'), currentUnit = el('span', 'vc-live-cart__unit-current'), unitLabel = el('span', 'vc-live-cart__unit-label', '/ box');
+        unit.append(regularUnit, currentUnit, unitLabel); info.append(name, pack, unit);
         const controls = el('div', 'vc-live-cart__controls'), qty = el('div', 'vc-live-cart__quantity');
         let current = item, targets = {};
         const count = el('span'), buttons = {};
@@ -362,8 +505,9 @@
         }
         const remove = el('button', 'vc-live-cart__remove', 'Remove'); remove.type = 'button'; remove.dataset.cartAction = 'remove';
         remove.addEventListener('click', () => client.write('remove-item', { key: current.key }).catch(() => {})); controls.append(qty, remove);
-        const total = el('strong', 'vc-live-cart__line-total'), purchase = el('div', 'vc-live-cart__line-actions');
-        purchase.append(total, controls); row.append(imageLink, info, purchase);
+        const total = el('strong', 'vc-live-cart__line-total'), regularTotal = el('del', 'vc-live-cart__line-regular'), totalPrice = el('div', 'vc-live-cart__line-price'), purchase = el('div', 'vc-live-cart__line-actions');
+        const saving = el('span', 'vc-live-cart__sale-tag'), orderDiscount = el('span', 'vc-live-cart__order-discount');
+        totalPrice.append(regularTotal, total); purchase.append(totalPrice, orderDiscount, controls); row.append(imageLink, info, purchase, saving);
         return { node: row, update(next, nextState) {
             current = next;
             const title = clean(next.name), src = safeUrl(next.images?.[0]?.thumbnail || next.images?.[0]?.src) || '';
@@ -371,8 +515,17 @@
             image.alt = title; name.textContent = title;
             for (const link of [name, imageLink]) { link.href = safeUrl(next.permalink) || config.shopUrl; const parent = parentIds.get(next.id); if (parent) { link.dataset.vcHomeProduct = String(parent); link.dataset.vcQuickOpen = String(parent); } }
             pack.textContent = (next.variation || []).map(v => clean(v.value)).filter(Boolean).join(' · '); pack.hidden = !pack.textContent;
-            unit.textContent = money(next.prices?.price, next.prices) + ' / box';
-            total.textContent = money(next.totals?.line_total, next.totals);
+            const pricing = cartItemPricing(next);
+            regularUnit.textContent = pricing.regularUnit; regularUnit.hidden = !pricing.regularUnit;
+            regularUnit.setAttribute('aria-label', 'Regular price per box ' + pricing.regularUnit);
+            currentUnit.textContent = pricing.unit; currentUnit.setAttribute('aria-label', 'Current price per box ' + pricing.unit);
+            total.textContent = pricing.total; total.setAttribute('aria-label', 'Line total ' + pricing.total);
+            regularTotal.textContent = pricing.regularTotal; regularTotal.hidden = !pricing.regularTotal;
+            regularTotal.setAttribute('aria-label', 'Regular total for ' + next.quantity + (next.quantity === 1 ? ' box ' : ' boxes ') + pricing.regularTotal);
+            saving.textContent = pricing.savingsLabel; saving.hidden = !pricing.savingsLabel; saving.title = pricing.savingsDescription;
+            saving.setAttribute('aria-label', pricing.savingsDescription);
+            orderDiscount.textContent = pricing.orderDiscount; orderDiscount.hidden = !pricing.orderDiscount;
+            row.classList.toggle('has-product-saving', !!pricing.savingsLabel);
             count.textContent = String(next.quantity); count.setAttribute('aria-label', next.quantity + (next.quantity === 1 ? ' box' : ' boxes'));
             const limits = next.quantity_limits || {}, step = Number.isSafeInteger(limits.multiple_of) && limits.multiple_of > 0 ? limits.multiple_of : 1, min = Number.isSafeInteger(limits.minimum) ? Math.max(1, limits.minimum) : 1, max = Number.isSafeInteger(limits.maximum) ? limits.maximum : 9999;
             targets = { minus: next.quantity - step, plus: next.quantity + step };
@@ -401,7 +554,6 @@
             status.classList.toggle('is-announcement', statusState.announceOnly);
             if (status.textContent !== clean(statusState.text)) status.textContent = clean(statusState.text);
             root.querySelector('[data-cart-retry]').hidden = !error || pending;
-            root.querySelector('[data-cart-count]').textContent = cart ? cart.items_count + (cart.items_count === 1 ? ' box' : ' boxes') : '';
             const presentation = activityPresentation(state, settings, appliedActivity), activity = presentation.activity;
             // Pending writes pause the visual but preserve its baseline for the confirmed next DTO.
             const progressMount = root.querySelector('[data-cart-progress]');
@@ -427,7 +579,13 @@
             root.querySelector('[data-cart-empty]').hidden = !valid || !!cart?.items.length;
             const summary = root.querySelector('[data-cart-summary]'); summary.hidden = !cart?.items.length;
             const totalRows = totals(cart), totalsSignature = JSON.stringify([totalRows, cart?.totals?.currency_code, cart?.totals?.currency_minor_unit]);
-            if (view.totalsSignature !== totalsSignature) { view.totalsSignature = totalsSignature; root.querySelector('[data-cart-totals]').replaceChildren(...totalRows.map(total => { const row = el('div', 'vc-live-cart__total-row' + (total.total ? ' is-total' : '') + (total.savings ? ' is-saving' : '')); row.append(el('span', '', clean(total.label)), el('strong', '', total.unknown ? 'At checkout' : money(total.minor, cart.totals))); return row; })); }
+            if (view.totalsSignature !== totalsSignature) { view.totalsSignature = totalsSignature; root.querySelector('[data-cart-totals]').replaceChildren(...totalRows.map(total => {
+                const row = el('div', 'vc-live-cart__total-row' + (total.total ? ' is-total' : '') + (total.savings ? ' is-saving' : '') + (total.savedTotal ? ' is-saved-total' : ''));
+                row.dataset.summaryKey = total.key;
+                const label = el('span', 'vc-live-cart__total-label', clean(total.label));
+                if (total.detail) label.append(el('small', 'vc-live-cart__total-detail', clean(total.detail)));
+                row.append(label, el('strong', '', total.unknown ? 'At checkout' : money(total.minor, cart.totals))); return row;
+            })); }
             const checkout = root.querySelector('[data-cart-checkout]'); checkout.setAttribute('aria-disabled', String(!valid || pending || !cart?.items.length));
             root.querySelectorAll('[data-cart-coupon] input,[data-cart-coupon] button').forEach(node => { node.disabled = !valid || pending; });
             const coupons = root.querySelector('[data-cart-coupons]'), couponsSignature = JSON.stringify((cart?.coupons || []).map(coupon => { const display = couponPresentation(coupon); return [display.code, display.label, display.removeLabel]; }));
@@ -452,8 +610,16 @@
             const src = safeUrl(item.image?.url);
             if (src) { image.src = src; image.alt = item.image?.alt || item.name; image.width = 120; image.height = 120; imageLink.append(image); }
             else imageLink.append(el('span', 'vc-live-cart__recent-no-image', 'Image unavailable'));
+            if (item.productSaving) {
+                const saving = el('span', 'vc-live-cart__recent-sale', clean(item.productSaving.label));
+                saving.setAttribute('aria-label', clean(item.productSaving.description)); saving.title = clean(item.productSaving.description); imageLink.append(saving);
+            }
             card.append(imageLink, link, el('p', 'vc-live-cart__recent-pack', clean(item.variationLabel)));
-            if (item.price?.text) card.append(el('strong', 'vc-live-cart__recent-price', clean(item.price.text) + ' / box'));
+            if (item.price?.text) {
+                const prices = el('div', 'vc-live-cart__recent-pricing');
+                if (item.productSaving) prices.append(el('del', 'vc-live-cart__recent-regular', clean(item.productSaving.regularText)));
+                prices.append(el('strong', 'vc-live-cart__recent-price', clean(item.price.text)), el('span', 'vc-live-cart__recent-unit', '/ box')); card.append(prices);
+            }
             if (!item.canAddOne) {
                 const options = link.cloneNode(false); options.className = 'vc-live-cart__recent-action'; options.textContent = 'Select & add'; options.setAttribute('aria-label', 'Choose specification and add ' + clean(item.name)); card.append(options);
                 return card;
@@ -505,6 +671,22 @@
                 const result = await client.request(config.recommendationsUrl, body);
                 if (disposed || generation !== enrichment) return;
                 recommendation = activityAllowed(activity, appliedActivity) ? result.recommendation : null; enrichmentPending = false; render(client.snapshot());
+                const baseQuote = recommendation;
+                const isCurrent = () => {
+                    const current = client.snapshot(), live = current.cart?.extensions?.peptide_core?.activity_listener;
+                    return !disposed && generation === enrichment && recommendation === baseQuote && current.valid && !current.pending && !nativeCheckout.busy()
+                        && settings.cart_recommendations_enabled !== false && activityAllowed(live, appliedActivity)
+                        && live?.stateKey === activity.stateKey && live?.cartSnapshotKey === activity.cartSnapshotKey
+                        && live?.revision === activity.revision && live?.promotionRevision === activity.promotionRevision;
+                };
+                // Read this exact SKU only for optional compare-price presentation.
+                // Native quote eligibility, totals, token and add payload stay unchanged.
+                if (baseQuote && typeof global.vcRecommendationContract.enrichPresentation === 'function') {
+                    const decorated = await global.vcRecommendationContract.enrichPresentation(baseQuote, activity, activity.cartSnapshotKey, {
+                        isCurrent, read: candidate => client.request(recentPresentationUrl(config.recentProductApiUrl, candidate, location.origin)),
+                    });
+                    if (decorated && decorated !== baseQuote && isCurrent()) { recommendation = decorated; render(client.snapshot()); }
+                }
             } catch (_) { if (generation === enrichment) { recommendation = null; enrichmentPending = false; render(client.snapshot()); } }
         }, 250);
     }

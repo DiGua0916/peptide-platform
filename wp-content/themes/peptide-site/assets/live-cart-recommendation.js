@@ -46,6 +46,35 @@
   const gap=Number(activity.next.remaining),threshold=Number(activity.next.threshold);
   return Number.isSafeInteger(gap)&&gap>0&&Number.isSafeInteger(threshold)&&threshold>0&&gap<=threshold*Math.max(0,Math.min(.5,ratio));
  }
+ function regularUnitPrice(raw){
+  // Optional additive quote field: an order-level reward is never an item markdown.
+  return money(raw?.regularUnitPrice)&&money(raw?.unitPrice)&&BigInt(raw.regularUnitPrice.minor)>BigInt(raw.unitPrice.minor)?raw.regularUnitPrice:null;
+ }
+ function productDiscountLabel(candidate){
+  const regular=regularUnitPrice(candidate);
+  if(!regular)return '';
+  const before=BigInt(regular.minor),active=BigInt(candidate.unitPrice.minor),percentage=((before-active)*100n+before/2n)/before;
+  return (percentage===0n?'<1':percentage===100n&&active>0n?'>99':String(percentage))+'% OFF';
+ }
+ function exactCardRegularPrice(candidate,response){
+  const card=response?.card,price=card?.price,regular=card?.regularPrice;
+  if(!candidate||response?.id!==candidate.productId||card?.productId!==candidate.productId||card?.purchaseId!==candidate.purchasableId||card?.variationId!==candidate.variationId
+   ||!money(price)||!money(regular)||price.minor!==candidate.unitPrice?.minor
+   ||price.currency_code!==candidate.currency||regular.currency_code!==candidate.currency
+   ||price.currency_minor_unit!==candidate.currencyMinorUnit||regular.currency_minor_unit!==candidate.currencyMinorUnit
+   ||BigInt(regular.minor)<=BigInt(price.minor))return null;
+  return {minor:regular.minor,text:regular.text};
+ }
+ async function enrichPresentation(raw,activity,snapshotKey,{read,isCurrent=()=>true,now=()=>Date.now()}={}){
+  // The optional GET decorates an existing eligible quote. It cannot qualify a
+  // product, change an offer ticket, or revive a stale cart snapshot.
+  if(!isCurrent()||!quotedRecommendation(raw,activity,snapshotKey,now()))return null;
+  if(regularUnitPrice(raw)||typeof read!=='function')return raw;
+  let response;try{response=await read(raw);}catch(_){return isCurrent()&&quotedRecommendation(raw,activity,snapshotKey,now())?raw:null;}
+  if(!isCurrent()||!quotedRecommendation(raw,activity,snapshotKey,now()))return null;
+  const regular=exactCardRegularPrice(raw,response);
+  return regular?{...raw,regularUnitPrice:regular}:raw;
+ }
  function quotedRecommendation(raw,activity,snapshotKey,now=Date.now()){
   if(!raw||raw.version!==1||raw.visible!==true||raw.reachesNextTier!==true||!activity?.next||activity.completed||activity.enabled!==true||activity.visible!==true||activity.basis!=='spend'||!['tracking','tier_reached'].includes(activity.status))return null;
   if(!text(activity.stateKey)||!text(activity.promotionRevision)||!text(activity.next.key)||raw.targetNodeKey!==activity.next.key||!Number.isSafeInteger(activity.revision)||raw.configRevision!==activity.revision)return null;
@@ -67,7 +96,7 @@
   const after=raw.afterAdd;
   if(!after||after.calculationStatus!=='quoted'||after.targetReached!==true||String(after.remaining)!=='0'||!minor(activity.next.threshold)||BigInt(activity.next.threshold)<=0n||![after.eligibleSubtotal,after.promotionDiscount,after.allDiscountsBefore,after.allDiscountsAfter].every(v=>money(v))||!money(after.incrementalSavings,true))return null;
   if(BigInt(after.eligibleSubtotal.minor)<BigInt(activity.next.threshold)||BigInt(after.promotionDiscount.minor)!==projected||BigInt(after.incrementalSavings.minor)<=0n||BigInt(after.allDiscountsAfter.minor)-BigInt(after.allDiscountsBefore.minor)!==BigInt(after.incrementalSavings.minor))return null;
-  return {...raw,image,mode:'quoted',expires,displaySavings:after.incrementalSavings};
+  return {...raw,image,mode:'quoted',expires,displaySavings:after.incrementalSavings,regularUnitPrice:regularUnitPrice(raw)};
  }
  function viewedSuggestion(activity,frequent,catalog,cartItems=[],ratio=.2){
   if(!nearNextTier(activity,ratio)||!Array.isArray(frequent))return null;
@@ -150,21 +179,31 @@
    const gapCopy=gapMessage(activity),nextSignature=JSON.stringify([candidate,activity.stateKey,gapCopy]);if(signature===nextSignature)return;
    clear();signature=nextSignature;current=candidate;
    const eyebrow=el('p','offer-suggestion-eyebrow',candidate.mode==='quoted'?'Suggested add-on':'From your browsing');
+   const heading=el('div','offer-suggestion-heading');heading.append(eyebrow);
+   const productDiscount=candidate.mode==='quoted'?productDiscountLabel(candidate):'';
+   if(productDiscount){const tag=el('span','offer-suggestion-sale',productDiscount);tag.setAttribute('aria-label','Product discount '+productDiscount);heading.append(tag);}
    const gap=el('p','offer-suggestion-gap',gapCopy);gap.hidden=!gapCopy;
    const row=el('article','offer-suggestion');
    row.setAttribute('aria-label',candidate.mode==='quoted'?'A product for your next offer':'A product you viewed');
    const image=candidate.image?el('img','offer-suggestion-image'):el('span','offer-suggestion-image offer-suggestion-image--empty','No image');
    if(candidate.image){image.src=candidate.image;image.alt=(candidate.name+' '+candidate.specification).trim();image.width=48;image.height=56;}else image.setAttribute('aria-hidden','true');
    const info=el('div','offer-suggestion-info'),title=el('h3','offer-suggestion-name',candidate.name),pack=el('p','offer-suggestion-pack',candidate.specification);
-   const copy=candidate.mode==='quoted'?'Add 1 box to unlock '+candidate.displaySavings.text+' in additional savings.':'';
-   const message=copy?el('p','offer-suggestion-message offer-suggestion-message--saving',copy):null,button=el('button','offer-suggestion-action',candidate.mode==='quoted'?'Add 1 box · '+candidate.linePrice.text:'View options');button.type='button';
-   button.setAttribute('aria-label',button.textContent+' — '+candidate.name+' '+candidate.specification);
+   const button=el('button','offer-suggestion-action',candidate.mode==='quoted'?'Add 1 box':'View options');button.type='button';
+   button.setAttribute('aria-label',button.textContent+(candidate.mode==='quoted'?' · '+candidate.linePrice.text:'')+' — '+candidate.name+' '+candidate.specification);
    const notice=el('p','offer-suggestion-message');notice.hidden=true;notice.setAttribute('role','status');notice.setAttribute('aria-live','polite');notice.setAttribute('aria-atomic','true');
    button.addEventListener('click',()=>{if(destroyed||current!==candidate)return;if(candidate.mode==='quoted'){if(Date.now()>=candidate.expires){clear();return;}begin(candidate,button,notice);}else onChoose?.(candidate);});
    info.append(title);if(candidate.specification.trim())info.append(pack);
-   if(candidate.mode==='quoted')info.append(el('p','offer-suggestion-price',candidate.unitPrice.text+' / box'));
+   const commerce=el('div','offer-suggestion-commerce');
+   if(candidate.mode==='quoted'){
+    const price=el('p','offer-suggestion-price');
+    if(candidate.regularUnitPrice){const regular=el('del','offer-suggestion-regular',candidate.regularUnitPrice.text);regular.setAttribute('aria-label','Regular price '+candidate.regularUnitPrice.text+' per box');price.append(regular);}
+    const current=el('strong','offer-suggestion-current',candidate.unitPrice.text+' / box');
+    if(candidate.regularUnitPrice)current.classList.add('offer-suggestion-current--sale');
+    price.append(current);commerce.append(price);
+   }
+   commerce.append(button);info.append(commerce);
    if(candidate.automaticCoupon?.enabled)info.append(el('p','offer-suggestion-coupon',(candidate.automaticCoupon.message||'Automatic offer')+' · Applied when added'));
-   if(message)info.append(message);info.append(button,notice);row.append(image,info);mount.append(eyebrow,gap,row);mount.hidden=false;
+   info.append(notice);row.append(image,info);mount.append(heading,gap,row);mount.hidden=false;
    const feedbackConfig=global?.vcLiveCommerce?.cartFeedback?.config||{};
    if(candidate.mode==='quoted'&&typeof global?.createLiveCartFeedback==='function')feedback=global.createLiveCartFeedback({buttons:[button],bagCountElements:[...(document.querySelectorAll?.('.vc-cart-count')||[])],bagPulseEnabled:feedbackConfig.enabled!==false&&feedbackConfig.bagPulseEnabled!==false,announce:notice,timeoutMs:25000,successMs:feedbackConfig.enabled===false?0:feedbackConfig.successDurationMs,burstEnabled:feedbackConfig.enabled!==false&&feedbackConfig.burstEnabled!==false,burstDurationMs:feedbackConfig.burstDurationMs,successText:feedbackConfig.successText,pendingText:feedbackConfig.pendingText,onStateChange:state=>{
     const op=operation;if(!op||op.candidate!==candidate)return;
@@ -178,7 +217,7 @@
   }
   return {update,clear,destroy(){destroyed=true;latest=null;clear();}};
  }
- const api={nearNextTier,quotedRecommendation,viewedSuggestion,safeImage,createCartRecommendation,quoteRequest,addPayload,addedMessage,offerUnconfirmed};
+ const api={nearNextTier,quotedRecommendation,viewedSuggestion,safeImage,createCartRecommendation,quoteRequest,addPayload,addedMessage,offerUnconfirmed,regularUnitPrice,exactCardRegularPrice,enrichPresentation,productDiscountLabel};
  if(typeof module==='object'&&module.exports)module.exports=api;
- if(global){global.createCartRecommendation=createCartRecommendation;global.vcRecommendationContract={quoteRequest,addPayload};}
+ if(global){global.createCartRecommendation=createCartRecommendation;global.vcRecommendationContract={quoteRequest,addPayload,enrichPresentation};}
 })(typeof window==='undefined'?null:window);

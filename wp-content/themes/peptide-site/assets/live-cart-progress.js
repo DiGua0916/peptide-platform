@@ -68,7 +68,7 @@
         let destroyed = false;
         function visible() { const r = root.getBoundingClientRect(); return !root.hidden && !document.hidden && r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth; }
         const smooth = value => { value = Math.max(0, Math.min(1, value)); return value * value * (3 - 2 * value); };
-        function stop() { token++; cancelAnimationFrame(frame); clearTimeout(hideTimer); confetti.replaceChildren(); mascot.hidden = true; animationNode = null; root.dataset.celebrating = 'false'; if (ctx) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, 256, 128); } }
+        function stop() { token++; cancelAnimationFrame(frame); clearTimeout(hideTimer); confetti.replaceChildren(); mascot.hidden = true; animationNode = null; root.classList.remove('has-mascot'); root.dataset.celebrating = 'false'; if (ctx) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, 256, 128); } }
         function direction(view) {
             const node = last && last.nodes.find(item => nodeViews.get(item.key) === view), box = milestones.getBoundingClientRect(), edge = panel.getBoundingClientRect();
             const x = Math.max(24, Math.min(box.width, node ? box.width * node.positionPercent / 100 : view.getBoundingClientRect().left - box.left));
@@ -106,7 +106,7 @@
             mascot.style.setProperty('--pc-node-position', node.positionPercent + '%'); animationNode = view; direction(view);
             const start = () => {
                 if (generation !== token || destroyed || !visible()) return;
-                if (showBean && image.naturalWidth) mascot.hidden = false;
+                if (showBean && image.naturalWidth) { mascot.hidden = false; root.classList.add('has-mascot'); }
                 root.dataset.celebrating = 'true'; root.dataset.celebratedTier = key;
                 if (reduced.matches) { if (showBean && image.naturalWidth) paint(0, true); hideTimer = setTimeout(stop, 2000); return; }
                 let began = null, fired = false;
@@ -133,7 +133,8 @@
             const state = normalize(raw);
             if (!state) { hide(); return; }
             const action = decision(last, state);
-            if (action.baseline || last && (Number(state.measure) < Number(last.measure) || last.discountApplied && !state.discountApplied || state.celebration.enabled !== true || state.celebration.smileEnabled !== last.celebration.smileEnabled)) stop();
+            if (action.baseline || Number(state.actualDiscount.minor) <= 0 || animationNode && !state.nodes.some(node => nodeViews.get(node.key) === animationNode && node.reached && node.celebrationEligible)
+                || last && (Number(state.measure) < Number(last.measure) || last.discountApplied && !state.discountApplied || state.celebration.enabled !== true || state.celebration.smileEnabled !== last.celebration.smileEnabled)) stop();
             const signature = JSON.stringify(state.nodes.map(node => [node.key, node.positionPercent, node.thresholdText, node.rewardText]));
             if (signature !== nodeSignature) {
                 stop(); nodeViews.forEach(view => view.remove()); nodeViews = new Map(); nodeSignature = signature;
@@ -165,7 +166,7 @@
         function resize() { layoutLabels(); if (animationNode && !mascot.hidden) direction(animationNode); confetti.replaceChildren(); }
         function visibility() { stop(); last = null; if (!document.hidden) layoutLabels(); }
         function cartChanging() { stop(); }
-        const observer = typeof IntersectionObserver === 'function' ? new IntersectionObserver(entries => { last = null; if (!entries[0].isIntersecting) stop(); else layoutLabels(); }) : null;
+        const observer = typeof IntersectionObserver === 'function' ? new IntersectionObserver(entries => { if (!entries[0].isIntersecting) { stop(); last = null; } else layoutLabels(); }) : null;
         if (observer) observer.observe(root);
         const sizeObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(resize) : null;
         if (sizeObserver) sizeObserver.observe(panel);

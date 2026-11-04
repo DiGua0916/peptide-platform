@@ -19,7 +19,7 @@
 @media(prefers-reduced-motion:reduce){.vc-live-cart-drawer,.vc-live-cart-drawer::backdrop,.vc-live-cart button,.vc-live-cart__checkout{transition:none}.vc-live-cart button:not(:disabled):active,.vc-live-cart__checkout:not([aria-disabled=true]):active{transform:none}}
 
 /* The quantity and line total form one quiet control group at the right. */
-.vc-live-cart .vc-live-cart__line{grid-template-columns:64px minmax(0,1fr) auto;gap:16px;align-items:start;padding:24px 0}
+.vc-live-cart .vc-live-cart__line{grid-template-columns:64px minmax(0,1fr) auto;gap:16px;align-items:start;padding:24px 0;position:relative}
 .vc-live-cart .vc-live-cart__image img{width:64px;height:72px}
 .vc-live-cart .vc-live-cart__line-actions{display:grid;justify-items:end;gap:8px;min-width:108px}
 .vc-live-cart .vc-live-cart__line-total{grid-column:auto;justify-self:end;margin:0;font-size:20px;line-height:28px;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -30,12 +30,46 @@
 .vc-live-cart .vc-live-cart__remove{min-height:44px;padding:8px 0;font-size:12px;line-height:16px}
 .vc-live-cart .vc-live-cart__pack,.vc-live-cart .vc-live-cart__unit{margin:4px 0 0;font-size:14px;line-height:20px}
 @media(max-width:767px){.vc-live-cart .vc-live-cart__line{grid-template-columns:48px minmax(0,1fr) auto;gap:8px;padding:16px 0}.vc-live-cart .vc-live-cart__image img{width:48px;height:64px}.vc-live-cart .vc-live-cart__line-actions{min-width:100px}.vc-live-cart .vc-live-cart__line-total{font-size:18px;line-height:28px}.vc-live-cart .vc-live-cart__product{font-size:16px;line-height:24px;overflow-wrap:anywhere}.vc-live-cart .vc-live-cart__pack,.vc-live-cart .vc-live-cart__unit{font-size:12px;line-height:16px}}
+/* One native SKU markdown, kept separate from any order/coupon reduction. */
+.vc-live-cart .vc-live-cart__line.has-product-saving{padding-top:44px}
+.vc-live-cart .vc-live-cart__line-actions{width:clamp(108px,26vw,160px);min-width:0}
+.vc-live-cart .vc-live-cart__line-price{display:flex;justify-content:flex-end;align-items:baseline;flex-wrap:wrap;gap:2px 8px;max-width:100%;font-variant-numeric:tabular-nums}
+.vc-live-cart .vc-live-cart__line-regular{font-size:13px;line-height:20px;color:var(--muted);text-decoration-thickness:1px;overflow-wrap:anywhere}
+.vc-live-cart .vc-live-cart__line-total{white-space:normal;overflow-wrap:anywhere;text-align:right;max-width:100%}
+.vc-live-cart .vc-live-cart__unit{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 6px;font-variant-numeric:tabular-nums}
+.vc-live-cart .vc-live-cart__unit-regular{color:var(--muted);text-decoration-thickness:1px}
+.vc-live-cart .vc-live-cart__unit-current{font-weight:650}
+.vc-live-cart .vc-live-cart__unit-label{white-space:nowrap;color:var(--muted)}
+.vc-live-cart .vc-live-cart__sale-tag{position:absolute;top:8px;right:2px;display:inline-flex;align-items:center;padding:4px 8px;background:#be1e38;color:#fff;border-radius:4px;font-size:12px;line-height:18px;font-weight:750;white-space:nowrap;transform:rotate(-4deg);transform-origin:right center;font-variant-numeric:tabular-nums}
+.vc-live-cart .vc-live-cart__order-discount{max-width:100%;color:var(--muted);font-size:12px;line-height:16px;text-align:right;overflow-wrap:anywhere}
+.vc-live-cart .vc-live-cart__unit-regular[hidden],.vc-live-cart .vc-live-cart__line-regular[hidden],.vc-live-cart .vc-live-cart__sale-tag[hidden],.vc-live-cart .vc-live-cart__order-discount[hidden]{display:none}
+@media(max-width:767px){.vc-live-cart .vc-live-cart__line.has-product-saving{padding-top:40px}.vc-live-cart .vc-live-cart__line-actions{width:100px}.vc-live-cart .vc-live-cart__line-regular{font-size:12px;line-height:16px}.vc-live-cart .vc-live-cart__sale-tag{top:6px;line-height:16px}}
 .vc-live-cart .vc-live-cart__recent-card{display:flex;flex-direction:column;min-width:0}
 .vc-live-cart .vc-live-cart__recent-card>a:first-child{aspect-ratio:1;display:grid;place-items:center;margin-bottom:8px}
 .vc-live-cart .vc-live-cart__recent-card img{width:100%;height:100%;object-fit:contain}
 .vc-live-cart .vc-live-cart__recent-pack{min-height:16px;margin:4px 0;font-size:12px;line-height:16px}
 .vc-live-cart .vc-live-cart__recent-price{font-size:16px;line-height:24px;margin-bottom:8px}
+.vc-live-cart .vc-live-cart__recent-card>a:first-child{position:relative}
+.vc-live-cart .vc-live-cart__recent-sale{position:absolute;top:8px;right:4px;max-width:calc(100% - 12px);padding:4px 6px;border-radius:4px;background:#be1e38;color:#fff;font-size:12px;line-height:16px;font-weight:750;text-align:center;transform:rotate(-4deg);transform-origin:right center;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.vc-live-cart .vc-live-cart__recent-pricing{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 6px;margin:0 0 8px;font-variant-numeric:tabular-nums}
+.vc-live-cart .vc-live-cart__recent-pricing .vc-live-cart__recent-price{margin:0;white-space:nowrap}
+.vc-live-cart .vc-live-cart__recent-regular{color:var(--muted);font-size:13px;line-height:20px;text-decoration-thickness:1px}
+.vc-live-cart .vc-live-cart__recent-unit{font-size:12px;line-height:16px;color:var(--muted);white-space:nowrap}
 .vc-live-cart .vc-live-cart__recent-action{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:auto;min-height:44px;width:100%;padding:8px 12px;border:1px solid var(--teal);border-radius:8px;background:var(--teal);color:#fff;font-size:14px;line-height:20px;font-weight:650;text-decoration:none;text-align:center}
 .vc-live-cart .vc-live-cart__recent-status:empty{display:none}
 .vc-live-cart .vc-live-cart__recent-status{font-size:12px;line-height:16px;margin:8px 0 0}
 .vc-live-cart__recent-no-image{font-size:12px;line-height:20px;color:var(--muted)}
+/* A quiet cart title and one close control; item counts live on the cart orb. */
+.vc-live-cart .vc-live-cart__heading{justify-content:space-between;gap:12px}
+.vc-live-cart .vc-live-cart__heading h2,.vc-live-cart-drawer .vc-live-cart__heading h2{font-size:22px;line-height:28px;font-weight:650;letter-spacing:-.025em}
+.vc-live-cart-drawer .vc-live-cart__heading{padding-block:8px;margin-bottom:16px}
+/* Trace each native reduction once, with payable and total savings distinct. */
+.vc-live-cart__summary h2{font-size:20px;line-height:28px;margin-bottom:16px;font-weight:650}
+.vc-live-cart__summary .vc-live-cart__total-row{align-items:baseline;gap:12px;margin-block:10px;font-size:14px;line-height:20px}
+.vc-live-cart__summary .vc-live-cart__total-label{min-width:0}
+.vc-live-cart__total-detail{display:block;margin-top:4px;color:var(--muted);font-size:12px;line-height:16px;font-weight:400}
+.vc-live-cart__summary .vc-live-cart__total-row.is-saving{color:#b51f38}
+.vc-live-cart__summary .vc-live-cart__total-row.is-total{align-items:center;margin-top:16px;padding-top:16px;font-size:14px;font-weight:650}
+.vc-live-cart__summary .vc-live-cart__total-row.is-total strong{font-size:28px;line-height:32px;letter-spacing:-.025em}
+.vc-live-cart__summary .vc-live-cart__total-row.is-saved-total{align-items:center;gap:12px;margin-top:12px;margin-bottom:0;padding:8px 12px;border-radius:8px;background:#fff0f2;font-weight:650}
+.vc-live-cart__summary .vc-live-cart__total-row.is-saved-total strong{font-size:18px;line-height:24px}

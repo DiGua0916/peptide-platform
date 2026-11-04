@@ -1212,3 +1212,29 @@ HTTP聚合探针已证 catalogSupported=true、quoteHooksSupported=false、unsup
 用户进一步明确：横条只在原Before you begin阅读区展开，其他地方只留球；运输说明放FAQ下方，不开独立页。已改真实几何/35%阅读线、sticky祖先、IO+passive单RAF，离区自动收球，stale hash不绕过，单次dismiss和再次进入恢复；区外手动点击球只跟随有效原生WhatsApp链接。首页685正常Layout API增加原生可编辑faq delivery-details，置questions后/closing前，服务入口同页锚点，旧页11740保留草稿；7其它布局、所有原模块内容和全部店铺设置hash保护不变。手机页头logo允许flex收缩，修复新增语言入口将按钮挤出375屏幕的横溢根因。
 
 15 Node+15PHP guard/lint/diff通过。实际手机content375无横溢；FAQ内expanded true，实际向下滑FAQ bottom−261.21自动false；Order support回FAQ top104.79/true，Delivery details到首页inline top104.79/false、pathname /。最终截图与本机native迁移回执在D:/Codex/Tasks/2026-11-05/support-scope-inline-delivery；Tab5留物流效果。新专题[frontend-support-scope-inline-delivery-2026-11-05.md](frontend-support-scope-inline-delivery-2026-11-05.md)取代上轮独立物流页和hash长期展开方案。仅本机运行/布局和Git，未公网部署或改车/订单/支付/实际WA；原有peer product-dialog-experience.js一行改动保持不纳入。最终Git refs记群和记忆。
+
+### 2026-11-05 · Codex：商品弹窗优惠跟随
+
+用户要求Order savings满减档位随下滑持续可见。新增product-dialog-offer-follow.js监听既有selection/presented，把同一原生活动节点移至原sticky toolbar第二行；close归还heading、双事件去重、切商品释放与BFCache清理。未动peer experience.js/后台规则/金额；原导航动态测完整toolbar高度避让Details/COA。实际offer72px/toolbar132.67px；390和360两宽无横溢，Details/COA下滑仍offer top54，关闭重开仅1份。17 Node、JS/PHP语法/diff通过。新交接[frontend-product-offer-follow-2026-11-05.md](frontend-product-offer-follow-2026-11-05.md)，截图在D:/Codex/Tasks/2026-11-05/product-offer-follow/outputs。仅本机主题/Git，无DB/业务数据/公网部署。
+
+### 2026-11-05 · Codex：中美仓配送时效对照
+
+用户补充实际政策：中国仓5–8天/48小时内创建订单，美国仓2–5天/24小时内创建订单，FedEx，WhatsApp24小时支持。home685只更新原delivery-details模块富文本与3项；新demo-delivery.php按该唯一module id呈现两仓并排和支持入口，仍native编辑，号码动态取原配置。未把订单创建改成dispatch，未添加business days/即时回复/checkout仓库规则。原FAQ和其余10块、7其它装修/全部设置hash不变。手机两仓数字同一高度，360内容345无横溢，CTA45.33px，原FAQ和收球规则保留。PHP lint/diff及native readback通过；截图/回执D:/Codex/Tasks/2026-11-05/delivery-warehouse-layout/outputs，详见[frontend-delivery-warehouses-2026-11-05.md](frontend-delivery-warehouses-2026-11-05.md)。未公网部署或改车/订单/支付/发送WA；未碰peer experience.js。
+
+### 2026-11-05 · Codex：首页浮球/胶囊与购物车优惠检查点、模块分工
+
+首页完成真实cart-link立体浮球（客服上方，native数量/抽屉）、耳机缩至同视觉大小；活动条原生模块胶囊、长度不变/居中/透明外层/随滚动置顶及锚点避让。home685原closing整块已原生删除，其他10块保持。Cart11727只改原生标题Shopping cart、删除可见1box并收紧；商品行真实原价/现价/红斜标、紧凑推荐同行按钮、Recently viewed同SKU原价/现价/红斜标均已实现，已有真实手机读回。详细文件与实际验证见[本轮交接](frontend-cart-savings-orbs-2026-11-05.md)。
+
+当前是开发检查点，**仍在做M05.03进度空白/达标鸭子，M05.04推荐商品原价字段仍缺可信接口，未全轮完成/未公网发布。**用户要其它窗口共同装修，已交付[前端模块工作台](frontend-module-workboard-2026-11-05.md)：10大包、细分子项、全部本次涉及编号、共享文件和状态。根窗口独占M05及本轮共享在途文件；别窗可选M03/M06/M07，先报文件，不覆盖home-quick-view.php的card分支或peer experience.js。94Node+8独立sticky、PHPcard51/活动45/utilities15/entry14等实际检查通过；用户cart金额可自行变化，Codex未做业务写入。最终source/integration/push引用另记，peer旧西语一行保持不stage。
+
+后续收尾已解决上述两项：progress无实际鸭子时预留12px；已生效正优惠的eligible达标节点显示静态鸭子，真实变化才吹卷/烟花，10生命周期检查+隔离真实canvas绘制通过。推荐复用主题同SKU card比较价，全部ID/当前价/币种/小数位/快照/过期/pending校验，失败保留原报价、不给进行中的Add重建按钮；实际236/198与16%OFF，已不需要后端新增插件。联合110Node通过，真实窄屏header60px/无1box/无横溢，近期78/55/Save29%23与无优惠GHK读回。完整记录、截图与模块状态已更新至上述两份文档。本轮所有用户要求的UI改动已有本机实现/相关验收，未真实改车/券/订单/支付、未公网部署，Git最终引用仍另记。
+
+### 2026-11-05 · Codex：一次性鸭子纠正及订单优惠逐项汇总
+
+最新用户明确推翻上段静态鸭子：达标时只播一次后隐藏。已删除全部持久static/恢复逻辑，2.8秒动效后鸭子/粒子消失、空间回12px；首次/重复快照不播，减少动态2秒后隐藏，离屏/关闭/pending不复活。10项生命周期检查通过。
+
+随后新增M05.06/M05.07：英文Black Friday offer、商品降价/逐券/逐活动分列、保留原生应付金额并在底部列You save。使用最终原生fee而不重复计预测/activity汇总，产品比较严格对账且总省税口径明确。当前无公开折前运费，已准备可选shipping_savings严格消费者和[后端增量契约](frontend-cart-summary-shipping-2026-11-05.md)，缺失不伪造优惠。只做前端，不改后端插件或真实业务数据。
+
+本轮最新124项Node顶层通过、JS语法/diff通过，3个HTTP静态资产200且匹配源码；新增14项摘要边界检查。模块工作台及D盘用户副本包含本轮全部涉及模块和追加项。最新浏览器连接连续超时（旧tab、重置、新开均失败），因此新摘要/鸭子最终实际画面尚未复验；前一轮截图不是这两项最新证据。原peer experience.js哈希未变且不stage，未公网部署。源码提交/正常Git整合及远端结果另记。
+
+本轮网络已恢复，代码source52e3020/main198d163正常合并、atomic push成功，独立ls-remote两head确认；此前待推送offer-follow/配送/浮球/原生UI源码历史一并送达。主checkout clean，FE只留原peer experience.js未提交；不将Git同步说成公网部署。最新实际画面待CUA连接恢复，原生DB修改不随Git迁移。

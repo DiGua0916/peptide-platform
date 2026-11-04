@@ -144,7 +144,9 @@ function vc_demo_site_header( array $s ): string {
     if ( ! empty( $s['showAccount'] ) ) { $out .= '<a class="vc-demo-icon-button vc-demo-account" href="' . esc_url( $account ) . '" aria-label="My account">' . vc_demo_site_part_icon( 'user' ) . '</a>'; }
     if ( ! empty( $s['showCart'] ) ) {
         $count = function_exists( 'WC' ) && WC()->cart ? (int) WC()->cart->get_cart_contents_count() : 0;
-        $out .= '<a class="cart-link vc-demo-icon-button vc-demo-bag" href="' . esc_url( function_exists( 'wc_get_cart_url' ) ? wc_get_cart_url() : $home ) . '" aria-label="Open shopping bag">' . vc_demo_site_part_icon( 'bag' ) . '<span class="vc-cart-count">' . $count . '</span></a>';
+        $floating_cart = is_front_page();
+        $cart_image = $floating_cart ? '<img src="' . esc_url( get_template_directory_uri() . '/assets/storefront-cart-orb.webp' ) . '" width="48" height="48" alt="" decoding="async">' : vc_demo_site_part_icon( 'bag' );
+        $out .= '<a class="cart-link vc-demo-icon-button vc-demo-bag' . ( $floating_cart ? ' vc-demo-cart-orb' : '' ) . '" href="' . esc_url( function_exists( 'wc_get_cart_url' ) ? wc_get_cart_url() : $home ) . '" aria-label="Open shopping bag">' . $cart_image . '<span class="vc-cart-count">' . $count . '</span></a>';
     }
     $out .= '<button class="vc-demo-icon-button vc-demo-menu-trigger" type="button" data-vc-demo-menu aria-label="Open menu" aria-expanded="false" aria-haspopup="dialog" aria-controls="' . esc_attr( $id . '-menu' ) . '"><span class="vc-demo-menu-lines" aria-hidden="true"></span></button></div></div>';
     if ( $secondary ) { $out .= '<nav class="vc-demo-secondary vc-demo-part-wrap" aria-label="Secondary navigation">' . vc_demo_site_part_nav( $secondary ) . '</nav>'; }

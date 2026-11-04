@@ -47,7 +47,7 @@ test('an already submitted one-box request survives quote expiry and receives it
 test('partial coupon success remains readable after disabled feedback resets, with no second POST',async()=>{
   const f=fixture({feedbackEnabled:false});const button=f.button();button.click();button.click();await flush();assert.equal(f.writes,1);
   f.update({activity:f.changedCart(),snapshotKey:'after'});f.requests[0].resolve(f.result(false));await flush();await f.tick(50000);
-  assert.equal(f.mount.hidden,false);assert.match(f.notice().textContent,/box added.*could not be applied/);assert.equal(f.mount.querySelector('.offer-suggestion-message--saving').hidden,true);assert.ok(f.mount.querySelector('.offer-suggestion-review'));
+  assert.equal(f.mount.hidden,false);assert.match(f.notice().textContent,/box added.*could not be applied/);assert.equal(f.mount.querySelector('.offer-suggestion-gap').hidden,true);assert.ok(f.mount.querySelector('.offer-suggestion-review'));
   button.click();await flush();assert.equal(f.writes,1);f.ui.destroy();
 });
 test('config changes after native submission do not discard an added:true coupon_changed response',async()=>{
@@ -71,4 +71,26 @@ test('a new cart snapshot replaces a completed partial result rather than reusin
 test('destroy cancels presentation timers/listeners and a late native result cannot restore closed content',async()=>{
   const f=fixture();f.button().click();await flush();assert.ok(f.timers>0);assert.ok(f.listeners>0);f.ui.destroy();f.ui.destroy();assert.equal(f.timers,0);assert.equal(f.listeners,0);assert.equal(f.mount.hidden,true);
   f.requests[0].resolve(f.result());await flush();await f.tick(60000);assert.equal(f.mount.children.length,0);assert.equal(f.mount.hidden,true);assert.equal(f.writes,1);
+});
+test('compact quoted price and Add remain together, with only a same-quote regular price shown when supplied',()=>{
+ const f=fixture();
+ let commerce=f.mount.querySelector('.offer-suggestion-commerce');
+ assert.equal(f.button().parentNode,commerce);assert.equal(f.button().textContent,'Add 1 box');
+ assert.equal(commerce.querySelector('.offer-suggestion-current').textContent,'$55.00 / box');
+ assert.equal(commerce.querySelector('.offer-suggestion-regular'),null);
+ assert.doesNotMatch(f.mount.textContent,/Add 1 box to unlock|additional savings/);
+ assert.match(f.button().getAttribute('aria-label'),/\$55\.00.*Product.*20 mg/);
+ f.update({activity:{...f.activity,recommendation:{...f.activity.recommendation,regularUnitPrice:m(7800)}}});
+ commerce=f.mount.querySelector('.offer-suggestion-commerce');
+ assert.equal(commerce.querySelector('.offer-suggestion-regular').textContent,'$78.00');
+ assert.equal(commerce.querySelector('.offer-suggestion-current').classList.contains('offer-suggestion-current--sale'),true);
+ assert.equal(f.mount.querySelector('.offer-suggestion-sale').textContent,'29% OFF');
+ assert.equal(f.button().parentNode,commerce);assert.equal(f.writes,0);f.ui.destroy();
+});
+test('a display-only regular-price update never replaces an active native Add button or repeats the request',async()=>{
+ const f=fixture(),button=f.button();button.click();
+ f.update({activity:{...f.activity,recommendation:{...f.activity.recommendation,regularUnitPrice:m(7800)}}});
+ assert.equal(f.button(),button);assert.equal(f.mount.querySelector('.offer-suggestion-sale'),null);
+ await flush();assert.equal(f.writes,1);assert.equal(f.button(),button);
+ f.update({activity:f.changedCart(),snapshotKey:'after'});f.requests[0].resolve(f.result());await flush();assert.equal(f.button(),button);assert.match(f.notice().textContent,/box added/);f.ui.destroy();
 });
