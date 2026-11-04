@@ -1,6 +1,6 @@
 <?php
 /**
- * 总后台的后台菜单和表单处理。菜单：总后台 → 概览、店铺、销售账号、告警。
+ * 总后台的后台菜单和表单处理。菜单：总后台 → 概览、店铺、告警。
  * 这个 WordPress 只用来当总后台：文章、媒体、页面、评论、外观、插件、工具、通用设置菜单去掉，仪表盘直接转到概览。
  * 所有页面和操作都只给管理员（manage_options）。
  *
@@ -21,7 +21,7 @@ final class Menu {
 	public const CAP = 'manage_options';
 	private static bool $navigation_pending = false;
 
-	private const ACTIONS = array( 'pchq_site_refresh', 'pchq_site_rename', 'pchq_site_delete', 'pchq_site_retire', 'pchq_site_server', 'pchq_site_config', 'pchq_secret_regenerate', 'pchq_server_save', 'pchq_server_delete', 'pchq_login', 'pchq_account_save', 'pchq_account_delete', 'pchq_account_toggle', 'pchq_alert_close' );
+	private const ACTIONS = array( 'pchq_site_refresh', 'pchq_site_rename', 'pchq_site_delete', 'pchq_site_retire', 'pchq_site_server', 'pchq_site_config', 'pchq_secret_regenerate', 'pchq_server_save', 'pchq_server_delete', 'pchq_login', 'pchq_alert_close' );
 
 	public static function register_hooks(): void {
 		add_action( 'admin_enqueue_scripts', array( self::class, 'dialogs' ), 1 );
@@ -63,7 +63,6 @@ final class Menu {
 		add_submenu_page( Dashboard_Page::SLUG, __( 'Overview', 'peptide-hq' ), __( 'Overview', 'peptide-hq' ), self::CAP, Dashboard_Page::SLUG, array( Dashboard_Page::class, 'render' ) );
 		add_submenu_page( Dashboard_Page::SLUG, __( 'Stores', 'peptide-hq' ), __( 'Stores', 'peptide-hq' ), self::CAP, Sites_Page::SLUG, array( Sites_Page::class, 'render' ) );
 		add_submenu_page( Dashboard_Page::SLUG, __( 'Servers', 'peptide-hq' ), __( 'Servers', 'peptide-hq' ), self::CAP, Servers_Page::SLUG, array( Servers_Page::class, 'render' ) );
-		add_submenu_page( Dashboard_Page::SLUG, __( 'Salesperson accounts', 'peptide-hq' ), __( 'Salesperson accounts', 'peptide-hq' ), self::CAP, Accounts_Page::SLUG, array( Accounts_Page::class, 'render' ) );
 		add_submenu_page( Dashboard_Page::SLUG, __( 'Alerts', 'peptide-hq' ), __( 'Alerts', 'peptide-hq' ) . $badge, self::CAP, Alerts_Page::SLUG, array( Alerts_Page::class, 'render' ) );
 	}
 
@@ -76,6 +75,11 @@ final class Menu {
 
 	public static function redirect_dashboard(): void {
 		global $pagenow;
+		// Retired extra-account screen: a store uses its provisioning login.
+		if ( 'admin.php' === $pagenow && ( $_GET['page'] ?? '' ) === 'pchq-accounts' && current_user_can( self::CAP ) && ! wp_doing_ajax() ) {
+			wp_safe_redirect( admin_url( 'admin.php?page=' . Sites_Page::SLUG ) );
+			exit;
+		}
 		if ( 'index.php' === $pagenow && current_user_can( self::CAP ) && ! wp_doing_ajax() ) {
 			wp_safe_redirect( admin_url( 'admin.php?page=' . Dashboard_Page::SLUG ) );
 			exit;
@@ -142,7 +146,6 @@ final class Menu {
 			'pchq' => array( 'range' => array( 'today', 'yesterday', '7d', '30d' ) ),
 			'pchq-sites' => array( 'site_server' => 'positiveId', 'site_tools' => 'positiveId' ),
 			'pchq-servers' => array( 'edit' => 'positiveId' ),
-			'pchq-accounts' => array( 'site' => 'positiveId', 'edit' => 'positiveId', 'add' => array( '1' ) ),
 			'pchq-alerts' => array(),
 			'pchq-site-recycle' => array( 'restore_requested' => array( '1' ), 'retry_requested' => array( '1' ) ),
 			'pchq-operations' => array( 'tab' => array( 'tasks', 'releases', 'create', 'backups', 'agents' ), 'site' => 'signedId' ),
@@ -401,48 +404,6 @@ final class Menu {
 				}
 				self::flash( 'error', is_wp_error( $res ) ? $res->get_error_message() : __( 'The store did not return a login link.', 'peptide-hq' ) );
 				$back = admin_url( 'admin.php?page=' . Dashboard_Page::SLUG );
-				break;
-
-			case 'pchq_account_save':
-				$back    = admin_url( 'admin.php?page=' . Accounts_Page::SLUG . '&site=' . $site );
-				$account = array(
-					'id'       => isset( $_POST['user'] ) ? absint( $_POST['user'] ) : 0,
-					'login'    => isset( $_POST['login'] ) ? sanitize_user( wp_unslash( $_POST['login'] ), true ) : '',
-					'email'    => isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '',
-					'name'     => $text( 'name' ),
-					'password' => isset( $_POST['password'] ) ? (string) wp_unslash( $_POST['password'] ) : '', // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- 原样交给店铺加密保存。
-					'modules'  => isset( $_POST['modules'] ) ? array_values( array_intersect( array_keys( self::modules() ), array_map( 'sanitize_key', (array) wp_unslash( $_POST['modules'] ) ) ) ) : array(),
-					'disabled' => ! empty( $_POST['disabled'] ),
-				);
-				$res     = Client::staff_save( $site, $account );
-				if ( is_wp_error( $res ) ) {
-					unset( $account['password'] );
-					set_transient( 'pchq_form_' . get_current_user_id(), $account, 300 );
-					self::flash( 'error', $res->get_error_message() );
-					$back .= $account['id'] ? '&edit=' . $account['id'] : '&add=1';
-				} else {
-					self::flash( 'success', $account['id'] ? __( 'Salesperson account saved on the store.', 'peptide-hq' ) : __( 'Salesperson account created on the store. Tell the salesperson the account name and password.', 'peptide-hq' ) );
-				}
-				break;
-
-			case 'pchq_account_toggle':
-				$back = admin_url( 'admin.php?page=' . Accounts_Page::SLUG . '&site=' . $site );
-				$user = isset( $_REQUEST['user'] ) ? absint( $_REQUEST['user'] ) : 0;
-				$list = Client::staff_list( $site );
-				$acc  = is_array( $list ) ? current( array_filter( (array) ( $list['accounts'] ?? array() ), static fn( $a ) => (int) $a['id'] === $user ) ) : false;
-				if ( ! $acc ) {
-					self::flash( 'error', is_wp_error( $list ) ? $list->get_error_message() : __( 'Account not found on the store.', 'peptide-hq' ) );
-					break;
-				}
-				$acc['disabled'] = empty( $acc['disabled'] );
-				$res             = Client::staff_save( $site, $acc );
-				self::flash( is_wp_error( $res ) ? 'error' : 'success', is_wp_error( $res ) ? $res->get_error_message() : ( $acc['disabled'] ? __( 'Account disabled. The salesperson is logged out of the store.', 'peptide-hq' ) : __( 'Account enabled.', 'peptide-hq' ) ) );
-				break;
-
-			case 'pchq_account_delete':
-				$back = admin_url( 'admin.php?page=' . Accounts_Page::SLUG . '&site=' . $site );
-				$res  = Client::staff_delete( $site, isset( $_REQUEST['user'] ) ? absint( $_REQUEST['user'] ) : 0 );
-				self::flash( is_wp_error( $res ) ? 'error' : 'success', is_wp_error( $res ) ? $res->get_error_message() : __( 'Account deleted. Its posts and products were moved to the store administrator.', 'peptide-hq' ) );
 				break;
 
 			case 'pchq_alert_close':
