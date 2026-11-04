@@ -25,9 +25,16 @@ function vc_campaign_bubble_html( $html, array $module, string $context, string 
     if ( '' === trim( (string) ( $s['title'] ?? '' ) ) && '黑色星期五' === ( $activity['title'] ?? '' ) ) {
         $native = str_replace( 'class="pc-campaign__title">黑色星期五</h2>', 'class="pc-campaign__title">Black Friday</h2>', $native );
     }
-    // Break only the native default OFF suffix onto its own quiet line.
-    // The already formatted amount and other types (FREE / bundle price) stay native.
-    if ( '' === trim( (string) ( $s['discountTemplateHtml'] ?? '' ) ) ) { $native = str_replace( ' OFF</div>', '<small>off</small></div>', $native ); }
+    // Compact only the native default wording. Formatted amounts are copied
+    // intact; merchant templates, quantities, FREE/bundle rules and terms stay native.
+    if ( '' === trim( (string) ( $s['conditionTemplateHtml'] ?? '' ) ) ) {
+        $native = preg_replace_callback( '~(<div class="pc-campaign__condition">)Spend ([^<>]+), get(</div>)~',
+            static fn( $match ) => $match[1] . 'Spend ' . $match[2] . $match[3], $native );
+    }
+    if ( '' === trim( (string) ( $s['discountTemplateHtml'] ?? '' ) ) ) {
+        $native = preg_replace_callback( '~(<div class="pc-campaign__discount">)([^<>]+) OFF(</div>)~',
+            static fn( $match ) => $match[1] . $match[2] . '<small>off</small>' . $match[3], $native );
+    }
     if ( 'upcoming' === $activity['status'] ) { $native = str_replace( '</header>', '<p class="vc-campaign-bubble__status">Coming soon</p></header>', $native ); }
     return '<div class="vc-campaign-bubble" data-vc-campaign-bubble>' . $native . '</div>';
 }

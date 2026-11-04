@@ -33,11 +33,11 @@ namespace {
         ++$GLOBALS['passed'];
     }
     function module( array $settings = array() ): array {
-        return array( 'id' => 'campaign-bubble', 'type' => 'promotion_card', 'settings' => array_merge( array( 'presentation' => 'campaign_bubble', 'activityType' => 'promotion', 'promotion' => 10980, 'title' => '', 'discountTemplateHtml' => '' ), $settings ) );
+        return array( 'id' => 'campaign-bubble', 'type' => 'promotion_card', 'settings' => array_merge( array( 'presentation' => 'campaign_bubble', 'activityType' => 'promotion', 'promotion' => 10980, 'title' => '', 'conditionTemplateHtml' => '', 'discountTemplateHtml' => '' ), $settings ) );
     }
     function reset_campaign( array $change = array(), $native = null ): void {
         $GLOBALS['campaign_dto'] = array_merge( array( 'visible' => true, 'promotionId' => 10980, 'title' => '黑色星期五', 'status' => 'active' ), $change );
-        $GLOBALS['native_campaign_html'] = null === $native ? '<div class="pc-cb"><article class="pc-campaign" data-pc-campaign data-activity-id="10980"><header><h2 class="pc-campaign__title">黑色星期五</h2></header><div class="pc-campaign__value">$25.00 OFF</div><p class="native-terms">Native eligibility and coupon conditions.</p><a href="/offer/10980/">Native link</a></article></div>' : $native;
+        $GLOBALS['native_campaign_html'] = null === $native ? '<div class="pc-cb"><article class="pc-campaign" data-pc-campaign data-activity-id="10980"><header><h2 class="pc-campaign__title">黑色星期五</h2></header><div class="pc-campaign__tier"><div class="pc-campaign__condition">Spend $300.00, get</div><div class="pc-campaign__discount">$25.00 OFF</div></div><p class="native-terms">Native eligibility and coupon conditions.</p><a href="/offer/10980/">Native link</a></article></div>' : $native;
         \PeptideCore\Modules\Commerce_Blocks::$calls = 0;
         \PeptideCore\Modules\Commerce_Blocks::$arguments = array();
     }
@@ -57,6 +57,7 @@ namespace {
     check( str_contains( $rendered, 'Native eligibility and coupon conditions.' ) && str_contains( $rendered, 'href="/offer/10980/"' ), 'Native terms and links remain intact.' );
     check( str_contains( $rendered, '<h2 class="pc-campaign__title">Black Friday</h2>' ), 'Existing Chinese title localizes on the English storefront.' );
     check( str_contains( $rendered, '$25.00<small>off</small></div>' ), 'Default OFF suffix becomes a quiet separate line without changing native formatted amount.' );
+    check( str_contains( $rendered, '<div class="pc-campaign__condition">Spend $300.00</div>' ), 'Only redundant get wording is removed from the native default spend condition.' );
     check( ! str_contains( $rendered, 'Coming soon' ), 'Active activity does not become upcoming.' );
 
     foreach ( array( array('visible'=>false), array('status'=>'draft'), array('status'=>'expired'), array('promotionId'=>10981), array('promotionId'=>0) ) as $change ) {
@@ -73,13 +74,28 @@ namespace {
     $rendered = vc_campaign_bubble_html(null,module(),'public','mobile');
     check( str_contains($rendered,'Coming soon') && str_contains($rendered,'Native eligibility and coupon conditions.'), 'Upcoming status is explicit and retains native conditions.' );
 
-    $free='<article data-pc-campaign ><header><h2>Native title</h2></header><div class="pc-campaign__value">FREE</div></article>';
+    $free='<article data-pc-campaign ><header><h2>Native title</h2></header><div class="pc-campaign__discount">FREE</div></article>';
     reset_campaign(array('title'=>'Native title'),$free);
     $rendered=vc_campaign_bubble_html(null,module(),'public','all');
     check( str_contains($rendered,'>FREE</div>') && !str_contains($rendered,'<small>'), 'FREE and other native reward wording is not converted to an OFF claim.' );
     reset_campaign();
     $rendered=vc_campaign_bubble_html(null,module(array('discountTemplateHtml'=>'<strong>{{discount}} OFF</strong>')),'public','all');
     check( str_contains($rendered,'$25.00 OFF</div>') && !str_contains($rendered,'<small>off</small>'), 'Merchant custom discount template opts out of default suffix transformation.' );
+    reset_campaign();
+    $rendered=vc_campaign_bubble_html(null,module(array('conditionTemplateHtml'=>'Spend {{condition}}, get')),'public','mobile');
+    check( str_contains($rendered,'<div class="pc-campaign__condition">Spend $300.00, get</div>'), 'Even a merchant template identical to the default is preserved as authored.' );
+    $tiers='<div class="pc-campaign__tier"><div class="pc-campaign__condition">Spend $300.00, get</div><div class="pc-campaign__discount">$25.00 OFF</div></div>'
+        . '<div class="pc-campaign__tier"><div class="pc-campaign__condition">Spend $500.00, get</div><div class="pc-campaign__discount">$55.00 OFF</div></div>'
+        . '<div class="pc-campaign__tier"><div class="pc-campaign__condition">Spend $1,000.00, get</div><div class="pc-campaign__discount">$120.00 OFF</div></div>';
+    reset_campaign(array(),'<article data-pc-campaign ><header><h2>Native title</h2></header>'.$tiers.'<div class="pc-campaign__notes">Spend $1,000.00, get the qualifying native offer.</div></article>');
+    $rendered=vc_campaign_bubble_html(null,module(),'public','mobile');
+    check( substr_count($rendered,'class="pc-campaign__tier"')===3 && str_contains($rendered,'Spend $1,000.00</div>') && str_contains($rendered,'$120.00<small>off</small>'), 'All three native tiers preserve exact formatted thresholds and discount amounts.' );
+    check( str_contains($rendered,'<div class="pc-campaign__notes">Spend $1,000.00, get the qualifying native offer.</div>'), 'Native eligibility and terms are not rewritten as tier text.' );
+    foreach(array('Buy 3 items, get','Every $300.00 spent','Any 4 items','Qualifying item 2') as $condition){
+        reset_campaign(array(),'<article data-pc-campaign ><header></header><div class="pc-campaign__condition">'.$condition.'</div><div class="pc-campaign__discount">Native reward</div></article>');
+        $rendered=vc_campaign_bubble_html(null,module(),'public','mobile');
+        check(str_contains($rendered,'<div class="pc-campaign__condition">'.$condition.'</div>'),'Quantity, repeated-spend and bundle conditions retain their native meaning.');
+    }
     reset_campaign(array('title'=>'Other actual activity'),'<article data-pc-campaign ><header><h2 class="pc-campaign__title">Other actual activity</h2></header><div>Native amount</div></article>');
     $rendered=vc_campaign_bubble_html(null,module(),'public','all');
     check( str_contains($rendered,'Other actual activity') && !str_contains($rendered,'Black Friday'), 'Other activity titles are not renamed into Black Friday.' );

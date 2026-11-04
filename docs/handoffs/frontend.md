@@ -1175,3 +1175,9 @@ HTTP聚合探针已证 catalogSupported=true、quoteHooksSupported=false、unsup
 ### 2026-11-04 · Codex：活动移出固定页头、购物车遗漏清理与最近浏览真实加购
 
 用户追加截图要求活动滚走、删除购物车上下冗余文字/报告入口、缩小空白，并给最近浏览补规格与加购。已将同活动10980的native promotion_card以活动气泡外观放入home685正文首位，header686仅关闭公告，导航sticky保留；正常layout API发布，原模块不动。cart仅改主题模板/样式，不改11727：删Shipping and taxes句、VIALCOVE / YOUR ORDER、report导流，合并重复标题、收紧padding，实际底部gap24px。最近浏览通过原theme home-product GET的card可选分支读同SKU图/规格/原生价，完整资格允许时Add1box走一次native Store API；不明则Select & add沿用原生弹窗，未造固定推荐或硬写价格。managed-stock量限可初始化正常Woo会话，不改cart/order/stock，不能称zeroDB。详见 [frontend-campaign-cart-followup-2026-11-04.md](frontend-campaign-cart-followup-2026-11-04.md)。25+41PHP、16近期卡/传输、31drawer、14entrypoint、13推荐测试通过；实际手机content375/415无overflow、两张近期卡均有规格与44px可用加购。活动static且滚动后离开viewport，header无公告。未实际加购/下单/付款，未公网发布；本次Git最终引用记群与项目记忆。
+
+### 2026-11-04 · Codex：首页改为商品优先首屏
+
+用户批准“短介绍→紧凑真实活动券→分类/搜索商品→服务”方案，替代上一条活动先于大hero的顺序。home685仍保留10个原积木身份，仅前4项重排为hero/campaign-bubble/collection/service-benefits，其余COA、统计、三理由、About、FAQ、结尾内容不动。Hero新增已注册presentation=product_first，title为Research peptides. Clear choices.，description为Choose your specification. Order by the box.，按钮Shop peptides保留原href/target；原眉标、数量行、次CTA、大媒体只在紧凑模式不输出，原设置与素材仍保存可恢复。活动四个外padding为0，规则/绑定未改；collection新增catalogLayout=product_first，空eyebrow、title Shop peptides、空link，原cardPresentation/source/products/order/filter/价格不变。详见 [frontend-home-product-first-2026-11-04.md](frontend-home-product-first-2026-11-04.md)。
+
+根代理已正常layout API save/publish home685，draft/published同步，另7份文档revision/原文哈希保护均未变。名义390实际内容375px：hero188px、券99.33px、商品区top402、首行价格bottom803；名义375/430实际360/415无横向溢出，三档完整。Retatrutide搜索真实筛2件、清空回8件；真实Tirzepatide弹窗20mg*10vials原生Add启用，未实际Add/订单/付款。23新hero/catalog、33活动、41卡片、8Node及PHP lint/diff检查通过；桌面1280×720实检文档宽1265无横溢，hero136px、活动97.33px、商品区top354，四列商品正常。任务备份/候选/回执在D:/Codex/Tasks/2026-11-04/home-product-first/work，不入Git。当前本机已发布、源码待本轮正常Git交付最终ref；未公网部署，不改后端dirtytree/活动规则或商品价。
