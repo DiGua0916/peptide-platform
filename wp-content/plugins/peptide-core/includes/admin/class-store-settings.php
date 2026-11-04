@@ -65,6 +65,14 @@ final class Store_Settings {
 				'render' => array( YouTube_Settings::class, 'render' ),
 				'now' => array(),
 			),
+			'languages' => array(
+				'icon' => 'dashicons-translation',
+				'title' => __( '访客语言识别', 'peptide-core' ),
+				'desc' => __( '设置美国、波多黎各与其他地区的建议语言，客户手动选择优先。', 'peptide-core' ),
+				'placeholder' => false,
+				'render' => array( Storefront_Language_Page::class, 'render' ),
+				'now' => array(),
+			),
 			'pixels' => array(
 				'icon'        => 'dashicons-chart-line',
 				'title'       => __( 'Ad pixels', 'peptide-core' ),

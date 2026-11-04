@@ -393,4 +393,8 @@ body.pc-admin-workspace.folded #adminmenu li.menu-top>.wp-submenu>li>a{padding-l
 .pc-admin-workspace :is(.pc-dm-switch,.pc-blog-switch):focus-visible{outline:2px solid #181818;outline-offset:2px}
 .pc-admin-workspace :is(.pc-dm-switch.is-on,.pc-blog-switch.is-on)::after{left:2px;transform:translateX(16px)}
 .pc-admin-workspace .pc-trk-switch__knob{transition:transform 180ms cubic-bezier(.22,1,.36,1)}
+.pc-navigation-progress:not([hidden]){position:fixed;z-index:100000;inset:0 0 auto;height:3px;pointer-events:none;background:#e7e7e7;overflow:hidden}
+.pc-navigation-progress::after{content:"";display:block;width:35%;height:100%;background:#181818;animation:pc-navigation-progress 1.2s ease-in-out infinite}
+.pc-admin-workspace #adminmenu a.pc-navigation-pending{background:#e7e7e7;color:#181818}
+@keyframes pc-navigation-progress{from{transform:translateX(-100%)}to{transform:translateX(390%)}}
 @media(prefers-reduced-motion:reduce){.pc-admin-workspace *,.pc-admin-workspace *::before,.pc-admin-workspace *::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}

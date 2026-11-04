@@ -104,6 +104,40 @@ final class Session_Service {
 			'test_mode' => ! empty( $attempt['test_mode'] ) );
 	}
 
+	/** Only Bridge's authenticated, reference-bound HQ session policy can replace a cached snapshot. */
+	private static function bind_checkout_policy( array $attempt, array $response ): array {
+		if ( ! array_key_exists( 'checkout_policy', $response ) ) { return $attempt; }
+		$policy = $response['checkout_policy'];
+		if ( empty( $attempt['central'] ) || 'created' !== ( $response['state'] ?? null )
+			|| ! is_array( $policy ) || count( $policy ) !== 3 || array_diff( array_keys( $policy ), array( 'version', 'reference', 'payment_hosts' ) )
+			|| 1 !== ( $policy['version'] ?? null ) || ! is_string( $policy['reference'] ?? null )
+			|| ! is_string( $attempt['reference'] ?? null ) || ! hash_equals( $attempt['reference'], $policy['reference'] )
+			|| ! is_array( $policy['payment_hosts'] ?? null ) || ! array_is_list( $policy['payment_hosts'] )
+			|| ! $policy['payment_hosts'] || count( $policy['payment_hosts'] ) > 32 ) {
+			throw new Protocol_Error( 'hub_session_invalid', 503 );
+		}
+		$hosts = array();
+		foreach ( $policy['payment_hosts'] as $host ) {
+			if ( ! is_string( $host ) || strlen( $host ) > 253 || false !== filter_var( $host, FILTER_VALIDATE_IP )
+				|| 1 !== preg_match( '/\A(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?\z/', $host )
+				|| in_array( $host, $hosts, true ) ) { throw new Protocol_Error( 'hub_session_invalid', 503 ); }
+			$hosts[] = $host;
+		}
+		$attempt['payment_hosts'] = $hosts;
+		$attempt['checkout_policy_version'] = 1;
+		if ( ! is_string( $response['url'] ?? null ) || ! Configuration::payment_url( $response['url'], self::attempt_config( $attempt ) ) ) {
+			throw new Protocol_Error( 'hub_session_invalid', 503 );
+		}
+		return $attempt;
+	}
+
+	/** An old created session may have frozen a stale METHODS cache before HQ accepted creation. */
+	private static function needs_checkout_policy( array $attempt ): bool {
+		return ! empty( $attempt['central'] ) && 'created' === ( $attempt['state'] ?? null )
+			&& ! array_key_exists( 'checkout_policy_version', $attempt ) && is_string( $attempt['url_box'] ?? null )
+			&& ! Configuration::payment_url( Crypto::decrypt( $attempt['url_box'], 'checkout-url' ), self::attempt_config( $attempt ) );
+	}
+
 	/** A read-only HQ status request can recover its saved result, never recreate remotely. */
 	private static function recover_central( \WC_Order $order, array $book, array $lock, array $config ): array {
 		$id = $book['active'];
@@ -116,18 +150,43 @@ final class Session_Service {
 		$response = Bridge::recover( $attempt['reference'], self::attempt_account( $attempt ) );
 		Store::assert_owner( $lock );
 		if ( ! in_array( $response['state'], array( 'created', 'failed' ), true ) ) { return $book; }
+		$policy_repair = 'created' === $attempt['state'];
+		if ( $policy_repair ) {
+			// Repair only the policy of this already-saved session, never its cashier,
+			// financial state or creation authority. STATUS cannot create remotely.
+			if ( 'created' !== $response['state'] || ! array_key_exists( 'checkout_policy', $response )
+				|| ! is_string( $attempt['url_box'] ?? null ) || ! is_string( $response['url'] ?? null )
+				|| ! hash_equals( Crypto::decrypt( $attempt['url_box'], 'checkout-url' ), $response['url'] )
+				|| ( $attempt['type'] ?? null ) !== ( $response['type'] ?? null ) ) { return $book; }
+		}
+		$attempt = self::bind_checkout_policy( $attempt, $response );
+		if ( ! empty( $attempt['central'] ) ) { $config = self::attempt_config( $attempt ); }
 		if ( 'created' === $response['state'] && ! Configuration::payment_url( $response['url'], $config ) ) { return $book; }
+		$fresh = new \WC_Order( $order->get_id() );
+		Persistence::assert_book( $fresh, $book );
+		if ( ! $fresh->has_status( array( 'pending', 'failed' ) ) || ! $fresh->needs_payment()
+			|| $fresh->get_payment_method() !== self::attempt_gateway( $attempt )
+			|| ! Persistence::has_gateway( $fresh->get_id(), self::attempt_gateway( $attempt ) )
+			|| ! hash_equals( $attempt['fingerprint'], Order_Payload::fingerprint( $fresh ) ) ) {
+			throw new Customer_Error( __( 'This order changed while payment was being checked. Please reopen your order.', 'peptide-panapay' ) );
+		}
+		Store::assert_no_completion( $fresh->get_id() );
 		$attempt['state'] = $response['state'];
 		if ( 'created' === $response['state'] ) {
-			$attempt['type'] = $response['type'];
-			$attempt['url_box'] = Crypto::encrypt( $response['url'], 'checkout-url' );
+			if ( ! $policy_repair ) {
+				$attempt['type'] = $response['type'];
+				$attempt['url_box'] = Crypto::encrypt( $response['url'], 'checkout-url' );
+			}
 		} else { unset( $attempt['type'], $attempt['url_box'] ); }
 		$book['attempts'][ $id ] = $attempt;
-		self::save( $order, $book );
-		if ( 'failed' === $response['state'] ) {
-			Store::set_creation_state( $attempt['creation_reservation'], 'failed' );
-		} elseif ( ! Store::creation_ready( $order->get_id() ) ) {
-			Store::set_creation_state( $attempt['creation_reservation'], 'created' );
+		Store::assert_owner( $lock );
+		self::save( $fresh, $book );
+		if ( ! $policy_repair ) {
+			if ( 'failed' === $response['state'] ) {
+				Store::set_creation_state( $attempt['creation_reservation'], 'failed' );
+			} elseif ( ! Store::creation_ready( $order->get_id() ) ) {
+				Store::set_creation_state( $attempt['creation_reservation'], 'created' );
+			}
 		}
 		// An unknown reservation remains unknown: recovery updates its persisted book,
 		// not the original creation authority, and never makes a second provider call.
@@ -157,9 +216,10 @@ final class Session_Service {
 					throw new Customer_Error( __( 'This order changed after payment was started. Please contact the store before paying again.', 'peptide-panapay' ) );
 				}
 				$config = self::attempt_config( $existing );
-				if ( ! empty( $existing['central'] ) && in_array( $existing['state'], array( 'creating', 'unknown' ), true ) ) {
+				if ( ! empty( $existing['central'] ) && ( in_array( $existing['state'], array( 'creating', 'unknown' ), true ) || self::needs_checkout_policy( $existing ) ) ) {
 					$book = self::recover_central( $order, $book, $lock, $config );
 					$existing = $book['attempts'][ $book['active'] ];
+					$config = self::attempt_config( $existing );
 				}
 				if ( ! Store::creation_ready( $order_id ) ) { throw new Customer_Error( __( 'Payment setup has not been confirmed. Please contact the store before paying again.', 'peptide-panapay' ) ); }
 				$result = self::session_url( $existing, $config );
@@ -212,6 +272,8 @@ final class Session_Service {
 			unset( $payload, $token );
 			Store::assert_owner( $lock );
 			Store::assert_creation( $reservation );
+			$attempt = self::bind_checkout_policy( $attempt, $response );
+			if ( ! empty( $attempt['central'] ) ) { $config = self::attempt_config( $attempt ); }
 			$attempt['state'] = $response['state'];
 			if ( 'created' === $response['state'] ) {
 				$attempt['type'] = $response['type'];
@@ -268,6 +330,10 @@ final class Session_Service {
 			|| ! Persistence::has_gateway( $order->get_id(), self::attempt_gateway( $attempt ) ) ) { throw new Protocol_Error( 'payment_channel_mismatch', 409 ); }
 		if ( ! hash_equals( $attempt['fingerprint'], Order_Payload::fingerprint( $order ) ) ) {
 			throw new Customer_Error( __( 'This order changed after payment was started. Please contact the store.', 'peptide-panapay' ) );
+		}
+		if ( self::needs_checkout_policy( $attempt ) ) {
+			// start re-acquires the native order lease and rechecks ownership/state.
+			return self::start( $order->get_id(), self::attempt_gateway( $attempt ) );
 		}
 		return self::session_url( $attempt, self::attempt_config( $attempt ) );
 	}

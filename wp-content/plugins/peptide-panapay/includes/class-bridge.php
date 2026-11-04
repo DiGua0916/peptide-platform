@@ -143,7 +143,8 @@ final class Bridge {
 		unset( $payload['mchid'], $payload['tag'], $payload['mode'], $payload['sign'] );
 		$payload['account_id'] = $account_id;
 		try {
-			return self::session( Hub_Protocol::request( $identity['url'], $identity['key'], $identity['uuid'], Hub_Protocol::CREATE, $payload, 45 ), $account_id );
+			if ( ! is_string( $payload['order_id'] ?? null ) ) { throw new Protocol_Error( 'hub_session_invalid', 503 ); }
+			return self::session( Hub_Protocol::request( $identity['url'], $identity['key'], $identity['uuid'], Hub_Protocol::CREATE, $payload, 45 ), $account_id, $payload['order_id'] );
 		} catch ( \Throwable $error ) {
 			// An ambiguous transport result cannot authorize another provider creation.
 			return array( 'state' => 'unknown' );
@@ -155,13 +156,14 @@ final class Bridge {
 		if ( ! self::valid_account_id( $account_id ) ) { throw new Protocol_Error( 'payment_method_unavailable', 503 ); }
 		$identity = self::identity();
 		try {
-			return self::session( Hub_Protocol::request( $identity['url'], $identity['key'], $identity['uuid'], Hub_Protocol::STATUS, array( 'reference' => $reference ), 10 ), $account_id );
+			return self::session( Hub_Protocol::request( $identity['url'], $identity['key'], $identity['uuid'], Hub_Protocol::STATUS, array( 'reference' => $reference ), 10 ), $account_id, $reference );
 		} catch ( \Throwable $error ) { return array( 'state' => 'unknown' ); }
 	}
 
-	private static function session( array $data, string $account_id ): array {
+	private static function session( array $data, string $account_id, string $expected_reference ): array {
 		if ( ( $data['account_id'] ?? 'default' ) !== $account_id
-			|| ! in_array( $data['state'] ?? null, array( 'creating', 'created', 'unknown', 'failed' ), true ) ) {
+			|| ! in_array( $data['state'] ?? null, array( 'creating', 'created', 'unknown', 'failed' ), true )
+			|| ( 'created' !== $data['state'] && array_key_exists( 'checkout_policy', $data ) ) ) {
 			throw new Protocol_Error( 'hub_session_invalid', 503 );
 		}
 		if ( 'created' !== $data['state'] ) { return array( 'state' => 'failed' === $data['state'] ? 'failed' : 'unknown' ); }
@@ -169,7 +171,35 @@ final class Bridge {
 			|| ! is_string( $data['url'] ?? null ) || '' === $data['url'] || strlen( $data['url'] ) > 8192 ) {
 			throw new Protocol_Error( 'hub_session_invalid', 503 );
 		}
-		return array( 'state' => 'created', 'type' => $data['type'], 'url' => $data['url'] );
+		$result = array( 'state' => 'created', 'type' => $data['type'], 'url' => $data['url'] );
+		if ( array_key_exists( 'checkout_policy', $data ) ) {
+			// Hub_Protocol has authenticated the entire response against this request's
+			// nonce. Bind its frozen policy to the exact local attempt before using it.
+			$policy = self::session_policy( $data['checkout_policy'], $expected_reference );
+			if ( ! Configuration::payment_url( $data['url'], array( 'gateway' => '', 'payment_hosts' => $policy['payment_hosts'] ) ) ) {
+				throw new Protocol_Error( 'hub_session_invalid', 503 );
+			}
+			$result['checkout_policy'] = $policy;
+		}
+		return $result;
+	}
+	private static function session_policy( $policy, string $expected_reference ): array {
+		if ( ! is_array( $policy ) || count( $policy ) !== 3 || array_diff( array_keys( $policy ), array( 'version', 'reference', 'payment_hosts' ) )
+			|| 1 !== ( $policy['version'] ?? null ) || ! is_string( $policy['reference'] ?? null )
+			|| ! hash_equals( $expected_reference, $policy['reference'] ) || ! is_array( $policy['payment_hosts'] ?? null )
+			|| ! array_is_list( $policy['payment_hosts'] ) || ! $policy['payment_hosts'] || count( $policy['payment_hosts'] ) > 32 ) {
+			throw new Protocol_Error( 'hub_session_invalid', 503 );
+		}
+		$hosts = array();
+		foreach ( $policy['payment_hosts'] as $host ) {
+			if ( ! is_string( $host ) || strlen( $host ) > 253 || false !== filter_var( $host, FILTER_VALIDATE_IP )
+				|| 1 !== preg_match( '/\A(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?\z/', $host )
+				|| in_array( $host, $hosts, true ) ) {
+				throw new Protocol_Error( 'hub_session_invalid', 503 );
+			}
+			$hosts[] = $host;
+		}
+		return array( 'version' => 1, 'reference' => $policy['reference'], 'payment_hosts' => $hosts );
 	}
 
 	public static function routes(): void {
