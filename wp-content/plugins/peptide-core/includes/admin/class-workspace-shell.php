@@ -43,6 +43,9 @@ final class Workspace_Shell {
     }
 
     public static function render(): void {
+        // Notices belong to the active authenticated page, not to persistent chrome.
+        remove_all_actions( 'admin_notices' );
+        remove_all_actions( 'all_admin_notices' );
         require ABSPATH . 'wp-admin/admin-header.php';
         echo '<div id="pc-workspace-shell" data-page="' . esc_attr( sanitize_key( $_GET['page'] ) ) . '"><p class="pc-shell-status" role="status">正在打开页面…</p><noscript><p>请启用 JavaScript，或<a href="' . esc_url( add_query_arg( 'pc_embed', '1' ) ) . '">打开标准后台</a>。</p></noscript></div>';
         require ABSPATH . 'wp-admin/admin-footer.php';

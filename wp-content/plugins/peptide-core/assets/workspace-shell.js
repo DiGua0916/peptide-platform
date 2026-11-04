@@ -35,9 +35,11 @@
     let active = null, pending = null, timer = 0, generation = 0;
     let activeURL = location.href;
     let snapshots = new Map();
+    let edited = false;
     const base = location.href;
     function dirty() {
       if (!active) return false;
+      if (edited) return true;
       try {
         for (const [form,value] of snapshots) if (form.isConnected && signature(form) !== value) return true;
         return !!active.contentDocument.querySelector('[data-unsaved="true"],.is-dirty');
@@ -58,19 +60,29 @@
       if (heading && current) current.textContent = heading.textContent;
       document.querySelectorAll('#adminmenu li').forEach(li => li.classList.remove('current','wp-has-current-submenu','wp-menu-open'));
       document.querySelectorAll('#adminmenu a[href]').forEach(a => {
+        a.classList.remove('wp-has-current-submenu');
+        a.removeAttribute('aria-current');
         const item = canonical(a.href, base);
         if (!item || item.pathname !== url.pathname || item.search !== url.search) return;
         a.closest('li')?.classList.add('current');
+        a.setAttribute('aria-current','page');
         const parent = a.closest('#adminmenu > li');
         if (parent) { parent.classList.add('wp-has-current-submenu','wp-menu-open'); parent.classList.remove('wp-not-current-submenu'); }
       });
     }
     function watch(frame) {
       const doc = frame.contentDocument;
+      edited = false;
       snapshots = new Map();
       doc.querySelectorAll('form').forEach(form => {
         if ((form.method || 'get').toLowerCase() !== 'get') snapshots.set(form,signature(form));
       });
+      const changed = event => {
+        const form = event.target.closest && event.target.closest('form');
+        if (form && (form.method || 'get').toLowerCase() !== 'get' && !snapshots.has(form)) edited = true;
+      };
+      doc.addEventListener('input', changed);
+      doc.addEventListener('change', changed);
       doc.addEventListener('submit', event => {
         const form = event.target;
         const method = event.submitter?.getAttribute('formmethod') || form.method || 'get';
@@ -97,7 +109,8 @@
       const id = ++generation;
       const frame = document.createElement('iframe');
       frame.title = '店铺后台内容';
-      frame.hidden = true;
+      frame.classList.add('pc-shell-preparing');
+      frame.setAttribute('aria-hidden','true');
       frame.setAttribute('referrerpolicy','same-origin');
       const embedded = new URL(url.href); embedded.searchParams.set('pc_embed','1');
       status.textContent = '正在打开页面…'; status.hidden = false;
@@ -112,7 +125,7 @@
           clearTimeout(timer);
           if (active) active.remove(); // Cancels old document timers, requests and listeners.
           active = frame; pending = null;
-          frame.hidden = false; status.hidden = true; host.classList.remove('is-loading');
+          frame.classList.remove('pc-shell-preparing'); frame.removeAttribute('aria-hidden'); status.hidden = true; host.classList.remove('is-loading');
           activeURL = final.href;
           watch(frame); sync(final,doc);
           if (push) history.pushState({pcShell:true},'',final.href);
