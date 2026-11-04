@@ -4,7 +4,7 @@ define( 'ABSPATH', __DIR__ . '/' );
 final class WC_Product {
 	public string $status = 'publish', $password = '', $price = '55.00';
 	public bool $visible = true, $public = true, $purchasable = true, $stock = true, $active = true;
-	public array $meta = array(), $attributes = array(), $required = array();
+	public array $meta = array(), $attributes = array(), $required = array(), $attribute_definitions = array();
 	public function __construct( public int $id, public string $type = 'simple', public int $parent = 0 ) {}
 	public function get_id() { return $this->id; }
 	public function is_type( $types ) { return in_array( $this->type, (array) $types, true ); }
@@ -18,18 +18,26 @@ final class WC_Product {
 	public function variation_is_active() { return $this->active; }
 	public function variation_is_visible() { return $this->visible; }
 	public function get_variation_attributes() { return 'variable' === $this->type ? $this->required : $this->attributes; }
+	public function get_attributes() { return $this->attribute_definitions; }
 	public function get_attribute( $key ) { return $this->attributes[ $key ] ?? ''; }
 	public function get_meta( $key, ...$args ) { return $this->meta[ $key ] ?? ''; }
 	public function get_price() { return $this->price; }
 	public function update_meta_data( $key, $value ) { $this->meta[ $key ] = $value; }
 	public function delete_meta_data( $key ) { unset( $this->meta[ $key ] ); }
 }
+final class WC_Product_Attribute {
+	public function __construct( public string $name, public array $options, public bool $variation = true, public bool $taxonomy = false ) {}
+	public function get_name() { return $this->name; }
+	public function get_options() { return $this->options; }
+	public function get_variation() { return $this->variation; }
+	public function is_taxonomy() { return $this->taxonomy; }
+}
 final class WC_Admin_Meta_Boxes { public static array $errors = array(); public static function add_error( $message ) { self::$errors[] = $message; } }
 $products = array(); $decimals = 2; $currency = 'USD'; $tax = array( 'shop' => 'excl', 'cart' => 'excl' ); $hooks = array(); $fields = array();
 function wc_get_product( $id ) { global $products; return $products[ $id ] ?? null; }
 function wc_get_price_decimals() { global $decimals; return $decimals; }
 function get_woocommerce_currency() { global $currency; return $currency; }
-function wc_variation_attribute_name( $name ) { return 'attribute_' . $name; }
+function wc_variation_attribute_name( $name ) { return 'attribute_' . strtolower( $name ); }
 function get_option( $key, $default = null ) { global $tax; return $tax[ str_replace( 'woocommerce_tax_display_', '', $key ) ] ?? $default; }
 function wc_get_price_to_display( $product, $args ) { global $tax; if ( ! empty( $GLOBALS['throw_tax'] ) ) { throw new RuntimeException( 'Synthetic unavailable tax extension' ); } return $args['price'] * ( 'incl' === $tax[ $args['display_context'] ] ? 1.2 : 1 ); }
 function wc_price( $value ) { global $decimals, $currency; return '<span>' . $currency . ' ' . number_format( $value, $decimals, '.', '' ) . '</span>'; }
@@ -100,6 +108,81 @@ $_POST = array( 'pc_vials_per_sales_unit_variation' => array( 3 => '0' ) ); Unit
 $product_object = $simple; Unit::render_product_field(); Unit::render_variation_field( 3, array(), (object) array( 'ID' => 21 ) );
 $check( 'admin fields retain native semantics and bounded integers', count( $fields ) === 2 && 'pc_vials_per_sales_unit_variation[3]' === $fields[1]['name'] && '10000' === $fields[0]['custom_attributes']['max'] );
 Unit::register_hooks(); $check( 'only native admin and read-only variation hooks registered', count( $hooks ) === 5 && 'woocommerce_available_variation' === $hooks[4][0] );
+
+// UNIT-P2-01: actual imported aliases require exact native parent/selected-option ownership.
+$legacy_parent = new WC_Product( 30, 'variable' ); $products[30] = $legacy_parent;
+$legacy_variant = new WC_Product( 31, 'variation', 30 ); $products[31] = $legacy_variant;
+$legacy_fixture = static function( string $name, string $value = '20mg*10vials' ) use ( $legacy_parent, $legacy_variant ): void {
+	$key = strtolower( $name );
+	$legacy_parent->required = array( $key => array( $value ) );
+	$legacy_parent->attribute_definitions = array( $key => new WC_Product_Attribute( $name, array( $value ) ) );
+	$legacy_parent->meta = array();
+	$legacy_variant->attributes = array( 'attribute_' . $key => $value );
+	$legacy_variant->meta = array();
+	$legacy_variant->price = '55';
+};
+foreach ( array( 'Specificatio', 'Specification', 'Specifications', 'Size' ) as $name ) {
+	$legacy_fixture( $name ); $dto = Unit::for_product( $legacy_variant );
+	$check( 'verified legacy custom alias ' . $name, $dto && $dto['vialsPerSalesUnit'] === 10 && $dto['perVialPrice']['minor'] === '550' && $dto['countSource'] === 'stored_pack' );
+}
+$legacy_fixture( 'Specifications', '10ml*10vials' );
+$legacy_parent->required['l-carnitine'] = array( 'LC400', 'LC600' );
+$legacy_parent->attribute_definitions['l-carnitine'] = new WC_Product_Attribute( 'L-carnitine', array( 'LC400', 'LC600' ) );
+$legacy_variant->attributes['attribute_l-carnitine'] = 'LC400';
+$dto = Unit::for_product( $legacy_variant );
+$check( 'real two-attribute L-carnitine packaging ignores model code', $dto && $dto['vialsPerSalesUnit'] === 10 && $dto['perVialPrice']['minor'] === '550' );
+$legacy_variant->attributes['attribute_l-carnitine'] = 'LC999';
+$check( 'invalid nonpack required option rejects otherwise valid legacy packaging', null === Unit::for_product( $legacy_variant ) );
+$legacy_variant->meta[Unit::META] = '10';
+$check( 'explicit count cannot bypass invalid nonpack selected option', null === Unit::for_product( $legacy_variant ) );
+$legacy_fixture( 'Size' ); $legacy_parent->meta[Unit::META] = '20'; unset( $legacy_parent->attribute_definitions['size'] );
+$check( 'missing parent attribute cannot fall back to parent bottle count', null === Unit::for_product( $legacy_variant ) );
+$legacy_fixture( 'Size' ); $legacy_parent->attribute_definitions['size'] = array( 'name' => 'Size', 'options' => array( '20mg*10vials' ) );
+$check( 'non-native parent attribute object rejected', null === Unit::for_product( $legacy_variant ) );
+$legacy_fixture( 'Size' ); $legacy_parent->attribute_definitions['size']->variation = false;
+$check( 'parent display-only attribute is not a selectable pack', null === Unit::for_product( $legacy_variant ) );
+$legacy_fixture( 'Size' ); $legacy_parent->attribute_definitions['size']->taxonomy = true;
+$check( 'legacy alias taxonomy attribute rejected without term lookup', null === Unit::for_product( $legacy_variant ) );
+$legacy_fixture( 'Size' ); $legacy_parent->attribute_definitions['size']->name = 'Specification';
+$check( 'parent attribute name must normalize to the same selected key', null === Unit::for_product( $legacy_variant ) );
+$legacy_fixture( 'Size' ); $legacy_parent->attribute_definitions['size']->options = array( '30mg*5vials' );
+$check( 'legacy selected value must belong to parent native options', null === Unit::for_product( $legacy_variant ) );
+$legacy_fixture( 'Size' ); $legacy_parent->required['size'] = array( '30mg*5vials' );
+$check( 'selected value must also belong to native required variation options', null === Unit::for_product( $legacy_variant ) );
+$legacy_fixture( 'Size' ); $legacy_parent->required['size'] = null;
+$check( 'malformed native required options fail closed', null === Unit::for_product( $legacy_variant ) );
+$legacy_fixture( 'Size' ); $legacy_variant->attributes['attribute_size'] = '';
+$check( 'blank legacy selection is not a chosen SKU', null === Unit::for_product( $legacy_variant ) );
+foreach ( array( '20mg', '10ml', 'LC400', '10vials + 5vials', '20mg*10vials / 30mg*5vials' ) as $pack ) {
+	$legacy_fixture( 'Size', $pack ); $legacy_parent->meta[Unit::META] = '20';
+	$check( 'legacy dose/model/mixed packaging never guesses or falls back: ' . $pack, null === Unit::for_product( $legacy_variant ) );
+}
+$legacy_fixture( 'Size' );
+$legacy_parent->required['specification'] = array( '30mg*5vials' );
+$legacy_parent->attribute_definitions['specification'] = new WC_Product_Attribute( 'Specification', array( '30mg*5vials' ) );
+$legacy_variant->attributes['attribute_specification'] = '30mg*5vials';
+$check( 'two validated legacy packs with conflicting bottle counts rejected', null === Unit::for_product( $legacy_variant ) );
+$legacy_parent->required['specification'] = array( '30mg*10vials' );
+$legacy_parent->attribute_definitions['specification']->options = array( '30mg*10vials' );
+$legacy_variant->attributes['attribute_specification'] = '30mg*10vials';
+$dto = Unit::for_product( $legacy_variant ); $check( 'two validated legacy packs agreeing on count remain supported', $dto && $dto['vialsPerSalesUnit'] === 10 );
+$legacy_variant->meta[Unit::META] = '5';
+$dto = Unit::for_product( $legacy_variant ); $check( 'explicit SKU count retains priority over valid legacy packaging', $dto && $dto['vialsPerSalesUnit'] === 5 && $dto['countSource'] === 'explicit_sku' );
+$legacy_variant->meta[Unit::META] = '0';
+$check( 'explicit SKU zero still hides legacy packaging', null === Unit::for_product( $legacy_variant ) );
+$legacy_fixture( 'Unverified-packing', '20mg*10vials' );
+$check( 'arbitrary complete pack attribute is not promoted to a trusted alias', null === Unit::for_product( $legacy_variant ) );
+$legacy_fixture( 'Size' );
+$legacy_parent->required['pa_strength'] = array( 'twenty-mg', 'thirty-mg' );
+$legacy_parent->attribute_definitions['pa_strength'] = new WC_Product_Attribute( 'pa_strength', array( 101, 102 ), true, true );
+$legacy_variant->attributes['attribute_pa_strength'] = 'twenty-mg';
+$dto = Unit::for_product( $legacy_variant ); $check( 'native required taxonomy slug matches without terms or taxonomy-pack inference', $dto && $dto['vialsPerSalesUnit'] === 10 );
+$legacy_variant->attributes['attribute_pa_strength'] = 'ninety-nine-mg'; $legacy_variant->meta[Unit::META] = '10';
+$check( 'invalid taxonomy raw slug rejected even with explicit bottle count', null === Unit::for_product( $legacy_variant ) );
+$legacy_fixture( 'Size' ); unset( $legacy_variant->attributes['attribute_size'] );
+$check( 'missing required legacy selector cannot inherit a box count', null === Unit::for_product( $legacy_variant ) );
+$legacy_fixture( 'Strength', '20mg' ); $legacy_variant->meta[Unit::META] = '10'; $legacy_variant->attributes['attribute_strength'] = '99mg';
+$check( 'unselected orphan strength cannot bypass native SKU membership using explicit metadata', null === Unit::for_product( $legacy_variant ) );
 $passed = count( array_filter( $checks, static fn( $row ) => $row['pass'] ) );
 echo json_encode( array( 'kind' => 'Actual Unit_Pricing pure fixtures, no database or price mutations', 'passed' => $passed, 'total' => count( $checks ), 'checks' => $checks ), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT ) . PHP_EOL;
 exit( $passed === count( $checks ) ? 0 : 1 );

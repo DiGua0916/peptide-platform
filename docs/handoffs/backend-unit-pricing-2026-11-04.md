@@ -71,3 +71,37 @@
 第一次原生验证按“必须已有simple及variation”的前提停止，因为该 QA 实际只有1个已发布简单商品、0个变体；该初始未通过验收记录保留，不能计入通过数，也不是源码功能失败。随后按父任务明确范围，仅验现有simple，原生variation路径仍未验（79项纯fixture包含此分支）。未创建变体或任何永久业务样例来凑通过。原生脚本与完整收据在任务 `work/unit-pricing/verify-unit-pricing-native.php`、`native-results.json`，初始记录 `native-missing-variation-initial.json`。
 
 限制：本子任务没有部署、执行公开 HTTP/浏览器验收、保存真实商品、改生产数据库或测前端可见效果。原生 CLI 与纯 fixture 均不代表完整 WordPress/Woo 前端流程验收，父任务负责整合与发布。提交标识由父任务整合后记录。
+
+## 2026-11-04 · UNIT-P2-01：已验证旧规格键兼容修复
+
+用户授权继续完成可处理的后端问题。前端接线审计发现本机82主商品/183规格，实际使用 `Specificatio`、`Specification`、`Specifications`、`Size` 自定义变体属性；没有 Pack 键或显式瓶数，因此所有183规格均返回null。前端正确隐藏了null，原始Pack纯fixture不能代表当前导入数据已经兼容。上方较早“仅识别Pack”及“原生variation未验”描述的是首阶段历史，已被本段后续结果补充，不表示部署或浏览器已完成。
+
+本次仅在 `Unit_Pricing::count_for_product` 增加上述四个精确旧键。其父定义须为真实 `WC_Product_Attribute`、非taxonomy、用于variation，名称规范化后等于当前选项键，当前原始选择值必须精确属于父属性options。再走原有完整包装解析器；不扫描描述、标题、任意属性或附加型号，也不默认10瓶。识别到旧键但父定义不符、剂量/容量没有瓶数、混合包装或多个包装瓶数冲突时仍返回null，不把父瓶数用于掩盖这些错误。
+
+现有 `stored_pack` 来源枚举及DTO不变，前端无需新增别名解析或改协议。显式SKU瓶数继续覆盖可信包装，0仍隐藏；原有缺SKU包装时的显式父品瓶数沿用保留。为防显式瓶数绕过损坏的SKU身份，原有“所有必选属性非空”检查同时要求原始选值属于原生父 `get_variation_attributes()` 对应options；taxonomy属性沿原始slug比对，不调用可能插入term的 `get_terms/get_slugs`，也不扩大为taxonomy包装解析。
+
+实际验证：
+
+- 原79项全部保留，新增30项旧键/真实双属性L-carnitine/父定义类型与选项不符/非variation/taxonomy/混合与冲突/未知键/未选/显式覆盖及0隐藏/必选taxonomy原始slug等回归，纯PHP共109/109通过；PHP lint与 `git diff --check` 通过。
+- 本机实际 WordPress/Woo11.2.1 仅进程内把候选 `Unit_Pricing` 类映射到工作树；没有把文件复制到旧脏后端runtime或改junction。读取现有265条商品记录，0错误；183个已选规格全部返回非空DTO，82个未选可变父商品继续null。TR20为规格11307、父11306，真实55美元/10瓶得到每瓶550分/5.50美元。没有为此新增或保存任何商品。
+- 原生读取从插件bootstrap安装只读SQL守卫，0写入尝试；前后商品主记录、全部商品元数据（包括售价与库存）、全options值哈希一致。未查询/修改客户、订单或Session，未执行加购、支付或生产部署。
+- 本次原生证据是CLI候选类读取，不是HTTP/Store API或浏览器验收；父任务负责之后的本机安装、HTTP/页面与是否部署。
+
+候选源码 SHA256：`4d6ca1c3b2501b9536c4edeee77ee700e45b72106f46e62a43ffeb4fa99e0823`；纯测试 SHA256：`22d7f1e58437f45e57bc8deca795100a5b5eb79c9b81e0ecf145562fd02ce294`。完整证据位于 `D:/Codex/Tasks/2026-11-04/unit-pricing-legacy-fix/{work,outputs}`。本子任务不commit/push，交父任务统一整合。
+
+### 根代理安装、发布及实际联调结果
+
+运行来源提交 `cf33921b90decedd7cb6c6be37d3d26b995b88fb`，只选上述一份服务PHP。根代理独立重跑109项、两PHP纯lint/diff与源码SHA核对；独审亦重跑109项及既有前端消费7项，未发现P1/P2阻断。只把该文件安装到LocalWP原backend junction，精确旧SHA/备份/CAS；其余27个既有脏文件及原index保持。安装器不启动WordPress、不写数据库。
+
+实际匿名本机HTTP quick-view接口11306返回新unitPricing，原生9个variation载荷均带匹配ID/包装价；11307为5500分/10瓶/550分，Cache-Control private/no-store。真实IAB390手机商品弹窗：20mg显示$5.50/vial，切30mg显示$7.20/vial，Clear options后hidden=true且文字清空，再选20mg恢复$5.50/vial。仅选择规格，没有点击加购、数量、券、地址或支付；本机页面是前端窗口当前工作版本，不能据此声称新版主题已生产。最终保留20mg弹窗供用户检查，截图mobile-unit-price-final-20mg.png与30mg对照均在任务outputs。首次Clear定位用可见文字而忽略aria-label，未匹配无动作；确认真实名称Clear options后正常执行，不算功能失败。
+
+两台现有受控age加密备份完成并核密文模式/header/SHA，未解密或恢复。单PHP发布器保持前轮完整锁/CAS、实际current克隆、全非白名单源码/私有配置/CDN/payment/MU/挂载/HQ保护；28项本地合成guard检查及独审通过。根逐一冻结精确payload后发布：
+
+- Buyer 2026-11-04 11:53:17 UTC，current `/srv/vialcove/releases/unit-pricing-cf33921b90de-buyer-1793793182465371410`。
+- Merchant 11:53:41 UTC，current `/srv/vialcove/store-admin/releases/unit-pricing-cf33921b90de-merchant-1793793207540887046`。
+
+两机回执均deployed=true，仅一目标SHA4d6ca1c3...，其它源码/配置保持、纯PHP lint/优雅FPM reload/TLS HTML及Store API schema health通过。发布器不显式执行WPCLI/SQL/支付/cron/mail；普通HTTP仍可执行WordPress正常生命周期，不能称整个服务器零数据库副作用。未部署主题/HQ/装修布局/母版或未来新店包。
+
+发布后另行独立严格对照各两次匿名、正常CA的HTTPS：两机 `/wc/store/v1/products/11307` 200，精确product11306/variation11307/purchasable11307、10瓶、USD2位、sales5500/per550、stored_pack、不含券且仍盒卖；各父11306 200且unit_pricing=null。前后current与类文件SHA均精确保持。收据 `outputs/remote-selected-sku.json` SHA256 `2a9c599440730d039476c80d218f0dfd8253d694da2c2e5767855ab18a5f9094`。这比允许null的发布health更强，但不是购物车用券或真实付款验收。
+
+**后端已完成**：UNIT-P2-01旧字段兼容、数据/HTTP/手机选择器验证、本机及两机单PHP发布。**前端仍待处理**：自动券码的可见文字/aria展示、异常未确认加购先Added；本轮未改前端源码。**联调与部署仍待办**：前端冻结后选择性发布主题/相应装修配置，再选真实已有券验自动用券；WhatsApp真实渠道由原配置提供，不编造号码。根检查时的前端未上线结论不会因后端单文件发布而自动改变。
