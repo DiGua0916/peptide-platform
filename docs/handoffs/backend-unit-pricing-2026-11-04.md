@@ -88,3 +88,20 @@
 - 本次原生证据是CLI候选类读取，不是HTTP/Store API或浏览器验收；父任务负责之后的本机安装、HTTP/页面与是否部署。
 
 候选源码 SHA256：`4d6ca1c3b2501b9536c4edeee77ee700e45b72106f46e62a43ffeb4fa99e0823`；纯测试 SHA256：`22d7f1e58437f45e57bc8deca795100a5b5eb79c9b81e0ecf145562fd02ce294`。完整证据位于 `D:/Codex/Tasks/2026-11-04/unit-pricing-legacy-fix/{work,outputs}`。本子任务不commit/push，交父任务统一整合。
+
+### 根代理安装、发布及实际联调结果
+
+运行来源提交 `cf33921b90decedd7cb6c6be37d3d26b995b88fb`，只选上述一份服务PHP。根代理独立重跑109项、两PHP纯lint/diff与源码SHA核对；独审亦重跑109项及既有前端消费7项，未发现P1/P2阻断。只把该文件安装到LocalWP原backend junction，精确旧SHA/备份/CAS；其余27个既有脏文件及原index保持。安装器不启动WordPress、不写数据库。
+
+实际匿名本机HTTP quick-view接口11306返回新unitPricing，原生9个variation载荷均带匹配ID/包装价；11307为5500分/10瓶/550分，Cache-Control private/no-store。真实IAB390手机商品弹窗：20mg显示$5.50/vial，切30mg显示$7.20/vial，Clear options后hidden=true且文字清空，再选20mg恢复$5.50/vial。仅选择规格，没有点击加购、数量、券、地址或支付；本机页面是前端窗口当前工作版本，不能据此声称新版主题已生产。最终保留20mg弹窗供用户检查，截图mobile-unit-price-final-20mg.png与30mg对照均在任务outputs。首次Clear定位用可见文字而忽略aria-label，未匹配无动作；确认真实名称Clear options后正常执行，不算功能失败。
+
+两台现有受控age加密备份完成并核密文模式/header/SHA，未解密或恢复。单PHP发布器保持前轮完整锁/CAS、实际current克隆、全非白名单源码/私有配置/CDN/payment/MU/挂载/HQ保护；28项本地合成guard检查及独审通过。根逐一冻结精确payload后发布：
+
+- Buyer 2026-11-04 11:53:17 UTC，current `/srv/vialcove/releases/unit-pricing-cf33921b90de-buyer-1793793182465371410`。
+- Merchant 11:53:41 UTC，current `/srv/vialcove/store-admin/releases/unit-pricing-cf33921b90de-merchant-1793793207540887046`。
+
+两机回执均deployed=true，仅一目标SHA4d6ca1c3...，其它源码/配置保持、纯PHP lint/优雅FPM reload/TLS HTML及Store API schema health通过。发布器不显式执行WPCLI/SQL/支付/cron/mail；普通HTTP仍可执行WordPress正常生命周期，不能称整个服务器零数据库副作用。未部署主题/HQ/装修布局/母版或未来新店包。
+
+发布后另行独立严格对照各两次匿名、正常CA的HTTPS：两机 `/wc/store/v1/products/11307` 200，精确product11306/variation11307/purchasable11307、10瓶、USD2位、sales5500/per550、stored_pack、不含券且仍盒卖；各父11306 200且unit_pricing=null。前后current与类文件SHA均精确保持。收据 `outputs/remote-selected-sku.json` SHA256 `2a9c599440730d039476c80d218f0dfd8253d694da2c2e5767855ab18a5f9094`。这比允许null的发布health更强，但不是购物车用券或真实付款验收。
+
+**后端已完成**：UNIT-P2-01旧字段兼容、数据/HTTP/手机选择器验证、本机及两机单PHP发布。**前端仍待处理**：自动券码的可见文字/aria展示、异常未确认加购先Added；本轮未改前端源码。**联调与部署仍待办**：前端冻结后选择性发布主题/相应装修配置，再选真实已有券验自动用券；WhatsApp真实渠道由原配置提供，不编造号码。根检查时的前端未上线结论不会因后端单文件发布而自动改变。
