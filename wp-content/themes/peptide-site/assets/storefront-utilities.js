@@ -4,7 +4,7 @@
  function supportTarget(link, location) {
   try {
    const url = new URL(link.href, location.href);
-   return url.origin === location.origin && url.pathname === location.pathname && ['#vc-order-support','#vc-contact-support'].includes(url.hash);
+   return url.origin === location.origin && url.pathname === location.pathname && ['#vc-questions','#vc-contact-support'].includes(url.hash);
   } catch (_) { return false; }
  }
  function mountSupport(document, window) {
@@ -24,7 +24,7 @@
   const onClick = event => {
    const link = event.target.closest?.('a[href]');
    if (link && supportTarget(link, window.location)) {
-    // The normal anchor still scrolls to the editable contact section.
+    // The normal anchor still scrolls to the existing FAQ section.
     setExpanded(true); return;
    }
    if (!widget.contains(event.target)) setExpanded(false);
@@ -35,7 +35,7 @@
    setExpanded(false);
    if (restore) trigger.focus({preventScroll:true});
   };
-  const onHash = () => { if (['#vc-order-support','#vc-contact-support'].includes(window.location.hash)) setExpanded(true); };
+  const onHash = () => { if (['#vc-questions','#vc-contact-support'].includes(window.location.hash)) setExpanded(true); };
   const navigation = document.querySelector('.pc-mobile-fixed');
   const update = () => {
    frame = 0;

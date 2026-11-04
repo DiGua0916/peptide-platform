@@ -57,8 +57,8 @@ function fixture({href = 'https://shop.example.test/', navigation = false, absen
 
 test('supportTarget accepts only current-origin/current-path support anchors', () => {
     const location = new URL('https://shop.example.test/shop/');
-    for (const href of ['#vc-order-support', '#vc-contact-support', '/shop/#vc-order-support', 'https://shop.example.test/shop/#vc-contact-support']) assert.equal(supportTarget({href}, location), true, href);
-    for (const href of ['#vc-questions', '/#vc-order-support', '/faq/#vc-order-support', 'https://other.example.test/shop/#vc-order-support', 'http://shop.example.test/shop/#vc-order-support', 'javascript:alert(1)', 'mailto:support@example.test', 'http://[invalid']) assert.equal(supportTarget({href}, location), false, href);
+    for (const href of ['#vc-questions', '#vc-contact-support', '/shop/#vc-questions', 'https://shop.example.test/shop/#vc-contact-support']) assert.equal(supportTarget({href}, location), true, href);
+    for (const href of ['#vc-order-support', '/#vc-questions', '/faq/#vc-questions', 'https://other.example.test/shop/#vc-questions', 'http://shop.example.test/shop/#vc-questions', 'javascript:alert(1)', 'mailto:support@example.test', 'http://[invalid']) assert.equal(supportTarget({href}, location), false, href);
     assert.equal(supportTarget(null, location), false);
 });
 
@@ -87,12 +87,12 @@ test('without a mobile bottom bar the launcher still mounts and toggles accessib
     f.controller.destroy();
 });
 
-test('Order support expands without preventing its native scroll; FAQ and unrelated URLs are not intercepted', () => {
+test('FAQ support target expands without preventing native scroll; obsolete and unrelated targets are not intercepted', () => {
     const f = fixture(), link = f.node(), icon = f.node(link);
-    link.href = '/#vc-order-support';
+    link.href = '/#vc-questions';
     assert.equal(f.click(icon).defaultPrevented, false);
     assert.equal(f.expanded(), true);
-    for (const href of ['/#vc-questions', '/faq/#vc-order-support', 'https://other.example.test/#vc-order-support']) {
+    for (const href of ['/#vc-order-support', '/faq/#vc-questions', 'https://other.example.test/#vc-questions']) {
         f.controller.setExpanded(false); link.href = href;
         assert.equal(f.click(icon).defaultPrevented, false);
         assert.equal(f.expanded(), false, href);
@@ -121,13 +121,13 @@ test('Escape restores trigger focus only when support held focus; outside click 
 });
 
 test('initial and later support hashes expand; unrelated initial hash stays collapsed', () => {
-    for (const hash of ['#vc-order-support', '#vc-contact-support']) {
+    for (const hash of ['#vc-questions', '#vc-contact-support']) {
         const f = fixture({href: 'https://shop.example.test/' + hash});
         assert.equal(f.expanded(), true, hash); f.controller.destroy();
     }
-    const f = fixture({href: 'https://shop.example.test/#vc-questions'});
+    const f = fixture({href: 'https://shop.example.test/#vc-order-support'});
     assert.equal(f.expanded(), false);
-    f.window.location.hash = '#vc-order-support';
+    f.window.location.hash = '#vc-questions';
     f.window.dispatch('hashchange');
     assert.equal(f.expanded(), true);
     f.controller.destroy();
