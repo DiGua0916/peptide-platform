@@ -1,0 +1,27 @@
+# FAQ-scoped support and inline delivery · 2026-11-05
+
+Codex. This supersedes the standalone delivery destination and hash-driven support expansion in `frontend-support-delivery-2026-11-05.md`. The user clarified that the contact pill must expand only while reading the existing Before you begin FAQ, and delivery guidance belongs directly below it on the homepage.
+
+## Delivered locally
+
+- `storefront-utilities.js`: original `#vc-questions` geometry owns the disclosure. The reading line is 35% into the usable viewport below the actual sticky/fixed header ancestor, with a minimum visible FAQ area. A stale hash or a single visible pixel cannot expand it. Leaving retracts the pill, returning can reveal it again; manual/Escape/outside dismissal lasts for the current FAQ visit. One IntersectionObserver gates remote scroll work, a passive scroll listener coalesces into one RAF, and resize/BFCache cleanup remains. Outside FAQ, an explicit ball click follows only the validated configured wa.me link, rather than expanding another pill. No automatic external navigation or messaging.
+- Home685 now has the native editable `vialcove/faq` module `delivery-details`, immediately after `questions` and before `closing`. Three items explain existing checkout-dependent shipping options/charges, checking the delivery address, and order follow-up. The first is open. Existing VW illustration11714 is reused. No invented shipping price, speed or delivery promise.
+- Service-benefits delivery href now uses `/#vc-delivery-details`. Order support remains `/#vc-questions`. All incumbent modules and their content remain; no new support CTA. The previous standalone page11740 is preserved as a draft, not deleted or used for navigation.
+- `inline-delivery.css` styles only `#vc-delivery-details`, using the existing storefront type/palette, white background, compact24px internal vertical padding, mobile left text/right image header and existing native details behavior. It is enqueued on the homepage through `storefront-utilities.php` and remains compatible with native editing.
+- `demo-site-parts.css`: allow the mobile brand to shrink when the native language selector plus header actions need room. The previous flex:none logo pushed actions to x383 in the375px content viewport. This fixes the cause instead of masking horizontal overflow. Existing button dimensions/language selector are preserved.
+
+## Native data guard and ownership
+
+The reviewed local task script uses Layout_Controller save/publish, native clean_modules and rich-media preflight. It guards current revision/modified hashes, absence of unpublished edits, exact questions→closing placement and exact old delivery href. Every original module is compared except that single href; seven other layout documents and the entire store settings hash are protected and verified unchanged. The old delivery page body is preserved and only its status becomes draft. Native receipt confirms the11-module order and published revision.
+
+All plans/backups/receipts remain outside Git in `D:/Codex/Tasks/2026-11-05/support-scope-inline-delivery`. No customer data, phone, options export or database enters source. No backend implementation/API/schema changes required. No Woo cart/product/order/payment mutation, WhatsApp opening/message, proxy/network settings change, or public-server deployment. Public deployment, when authorized, needs the corresponding native home-module/link/status correction as well as theme files; pushing Git alone does not move the database.
+
+## Actual validation
+
+- 15 production support lifecycle/geometry/URL tests passed, including no FAQ, stale hash, one-pixel rejection, real sticky/fixed ancestor, dismiss/re-entry, outside-FAQ link validation, passive RAF/IO gating and BFCache teardown. 15 PHP presentation guards passed; PHP lint and git diff --check passed.
+- Actual IAB phone preview390×844/content375: width375=scrollWidth375 after header fix, header actions right354.67 inside viewport. FAQ reading region expanded=true. Actual downward native scroll put FAQ bottom−261.21 and expanded=false. Order support click returned FAQ top104.79/expanded=true. Delivery details click put inline section top104.79/FAQ bottom104.79/expanded=false with pathname `/`, not a standalone delivery page.
+- Saved actual screenshots `outputs/faq-expanded.png` and `outputs/delivery-inline.png`; the latter shows the inline explanation, first answer, native follow-up rows and collapsed ball. Tab5 is retained as the user preview. No physical-phone gesture/FPS or external WhatsApp-client claim.
+- CUA briefly timed out after reload; recovered the same tab rather than starting another browser. One subsequent English link lookup failed after the native language preference was ES; the visible language control was switched back to EN and the actual delivery navigation passed. No backend translation feature was altered.
+- Impeccable scan flags existing storefront Geist/teal against the ADMIN-only DESIGN.md. These are intentional retained storefront choices, not a claim that the detector is clean. Existing CLI php_imagick startup warning persists; native API/readback/lint succeeded.
+
+Peer modification to `assets/product-dialog-experience.js` was already present and is excluded from this task's commit. No reset/stash/clean or peer worktree edit. Git integration references are recorded after delivery in project memory and room.
