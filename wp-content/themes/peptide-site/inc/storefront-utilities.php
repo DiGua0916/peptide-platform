@@ -44,6 +44,9 @@ function vc_storefront_utilities_assets(): void {
     $dir = get_template_directory() . '/assets/';
     $uri = get_template_directory_uri() . '/assets/';
     wp_enqueue_style( 'vc-storefront-utilities', $uri . 'storefront-utilities.css', array( 'vialcove-brand', 'vialcove-demo-site-parts' ), (string) filemtime( $dir . 'storefront-utilities.css' ) );
+    if ( is_front_page() ) {
+        wp_enqueue_style( 'vc-inline-delivery', $uri . 'inline-delivery.css', array( 'vialcove-demo-home' ), (string) filemtime( $dir . 'inline-delivery.css' ) );
+    }
     wp_enqueue_script( 'vc-storefront-utilities', $uri . 'storefront-utilities.js', array(), (string) filemtime( $dir . 'storefront-utilities.js' ), true );
 }
 add_action( 'wp_enqueue_scripts', 'vc_storefront_utilities_assets', 95 );

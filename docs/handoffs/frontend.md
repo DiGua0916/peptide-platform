@@ -1206,3 +1206,9 @@ HTTP聚合探针已证 catalogSupported=true、quoteHooksSupported=false、unsup
 右下56px耳机球点击向左展开Contact support now/Add us on WhatsApp，Order support正常锚点定位后亦自动展开，真实wa.me动态取原后台；Escape/外点关闭、aria/tab顺序、reduced-motion/BFCache/底栏避让保留。球初被全站important样式压成8px圆角，已精确修回50%实际复核。8Node生命周期+15PHPguards、语法/diff通过；实际手机content375无横溢，support CTA304px在屏内、section top104.79，delivery独立页三节正常且返回客服自动展开。仅本机配置/装修发布，未实际打开WA/发消息/改车/下单/付款或公网部署；预览tab5保留最终展开态，D任务support-delivery有截图/plan/guard回执。Git最终ref记群与项目记忆。
 
 最新纠正：用户明确客服仍跳截图中的原FAQ区。已正常LayoutAPI将support链接恢复/#vc-questions、仅删除刚新增的order-support CTA，原10模块完整；独立Delivery页11740保留，其咨询链接也回FAQ。生产JS/test相应改为FAQ/contact-support目标，旧order-support不再作为目标。最终8Node通过，实点Order support后FAQ top104.79/球expanded true及radius50%、无extra support section、content375无溢出；截图support-delivery/outputs/faq-support-final.jpg。此条取代上面“新加独立客服CTA”的中间状态，不改WhatsApp配置或后台其它设置。
+
+### 2026-11-05 · Codex：FAQ限定客服展开、首页内物流说明
+
+用户进一步明确：横条只在原Before you begin阅读区展开，其他地方只留球；运输说明放FAQ下方，不开独立页。已改真实几何/35%阅读线、sticky祖先、IO+passive单RAF，离区自动收球，stale hash不绕过，单次dismiss和再次进入恢复；区外手动点击球只跟随有效原生WhatsApp链接。首页685正常Layout API增加原生可编辑faq delivery-details，置questions后/closing前，服务入口同页锚点，旧页11740保留草稿；7其它布局、所有原模块内容和全部店铺设置hash保护不变。手机页头logo允许flex收缩，修复新增语言入口将按钮挤出375屏幕的横溢根因。
+
+15 Node+15PHP guard/lint/diff通过。实际手机content375无横溢；FAQ内expanded true，实际向下滑FAQ bottom−261.21自动false；Order support回FAQ top104.79/true，Delivery details到首页inline top104.79/false、pathname /。最终截图与本机native迁移回执在D:/Codex/Tasks/2026-11-05/support-scope-inline-delivery；Tab5留物流效果。新专题[frontend-support-scope-inline-delivery-2026-11-05.md](frontend-support-scope-inline-delivery-2026-11-05.md)取代上轮独立物流页和hash长期展开方案。仅本机运行/布局和Git，未公网部署或改车/订单/支付/实际WA；原有peer product-dialog-experience.js一行改动保持不纳入。最终Git refs记群和记忆。
