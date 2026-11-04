@@ -24,6 +24,7 @@ let count=0;const check=(v)=>{assert.ok(v);count++;};
  // A changed action or changed form fields invalidates earlier approval.
  form.requestSubmit(submitter);await flush();form.elements.nonce.value='changed';d.querySelector('.vc-admin-dialog__primary').click();await flush();check(requests===1);
  form.requestSubmit(submitter);await flush();form.action='/different';d.querySelector('.vc-admin-dialog__primary').click();await flush();check(requests===1);
+ form.requestSubmit(submitter);await flush();submitter.value='different-operation';d.querySelector('.vc-admin-dialog__primary').click();await flush();check(requests===1);
  // Duplicate submits while awaiting confirmation do not queue duplicate actions.
  form.requestSubmit(submitter);form.requestSubmit(submitter);await flush();check(d.querySelectorAll('.vc-admin-dialog').length===1);d.querySelector('.vc-admin-dialog__primary').click();await flush();check(requests===2);check(!d.querySelector('.vc-admin-dialog'));
  // Legacy vendor default guards cancel synchronously and submit once after approval.

@@ -41,12 +41,14 @@
   async function confirmSubmit(form, submitter, message, onApprove) {
     if(waiting.has(form))return;
     waiting.add(form);
-    const snapshot=new FormData(form), action=form.action, method=form.method;
+    const snapshot=new FormData(form);
+    const configuration=()=>JSON.stringify([form.action,form.method,form.enctype,form.target,form.noValidate,submitter && [submitter.name,submitter.value,submitter.formAction,submitter.formMethod,submitter.formEnctype,submitter.formTarget,submitter.formNoValidate,submitter.disabled]]);
+    const originalConfiguration=configuration();
     const stamp=data=>JSON.stringify(Array.from(data.entries()).map(([k,v])=>[k,typeof v==='string'?v:[v.name,v.size,v.lastModified]]));
     const before=stamp(snapshot);
     try {
       if(!await ask('confirm',message))return;
-      if(!form.isConnected || form.action!==action || form.method!==method || before!==stamp(new FormData(form)) || submitter && (!submitter.isConnected || submitter.form!==form))return;
+      if(!form.isConnected || configuration()!==originalConfiguration || before!==stamp(new FormData(form)) || submitter && (!submitter.isConnected || submitter.form!==form))return;
       if(onApprove)onApprove();
       approvals.set(form,submitter || null);
       try { form.requestSubmit(submitter || undefined); } finally { approvals.delete(form); }
