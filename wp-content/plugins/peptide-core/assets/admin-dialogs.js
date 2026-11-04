@@ -103,6 +103,26 @@
     if(!link)return;
     event.preventDefault();event.stopImmediatePropagation();confirmLink(link,messageFor(link));
   },true);
+  // Async business handlers must not act on fields that changed while their dialog was open.
+  function actionContext() {
+    let trigger=currentEvent && currentEvent.target;
+    if(!trigger || !trigger.isConnected || typeof trigger.closest!=='function' || trigger.closest('.vc-admin-dialog'))trigger=document.activeElement;
+    if(trigger && typeof trigger.closest==='function')trigger=trigger.closest('button,input,a,select,textarea,[role="button"]') || trigger;
+    const form=trigger && (trigger.form || (typeof trigger.closest==='function' && trigger.closest('form')));
+    if(!form)return ()=>true;
+    const stamp=()=>JSON.stringify([form.action,form.method,form.enctype,form.target,form.noValidate,
+      Array.from(new FormData(form).entries()).map(([key,value])=>[key,typeof value==='string'?value:[value.name,value.size,value.lastModified]]),
+      trigger && [trigger.name,trigger.value,trigger.className,trigger.disabled,trigger.getAttribute('data-action')]]);
+    const before=stamp();
+    return ()=>form.isConnected && trigger.isConnected && before===stamp();
+  }
+  function decide(kind,message,initial) {
+    const unchanged=actionContext();
+    return ask(kind,message,initial).then(result=>{
+      if((kind==='confirm' && !result) || (kind==='prompt' && result===null))return result;
+      return unchanged()?result:kind==='prompt'?null:false;
+    });
+  }
   // Legacy vendor handlers that only confirm a browser default (link or form).
   // Cancel synchronously; approval performs that default without replaying click handlers.
   function confirmDefault(event,message,onApprove) {
@@ -118,5 +138,5 @@
     else if(target.form)confirmSubmit(target.form,target,message,onApprove);
     return false;
   }
-  window.VialCoveDialogs={confirm:message=>ask('confirm',message),alert:message=>ask('alert',message),prompt:(message,initial)=>ask('prompt',message,initial),confirmSubmit,approved,confirmLink,confirmDefault,currentEvent:()=>currentEvent};
+  window.VialCoveDialogs={confirm:message=>decide('confirm',message),alert:message=>ask('alert',message),prompt:(message,initial)=>decide('prompt',message,initial),confirmSubmit,approved,confirmLink,confirmDefault,currentEvent:()=>currentEvent};
 }());

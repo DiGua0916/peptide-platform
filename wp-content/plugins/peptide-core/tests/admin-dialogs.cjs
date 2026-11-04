@@ -41,6 +41,9 @@ let count=0;const check=(v)=>{assert.ok(v);count++;};
  const shortlink=d.createElement('input');shortlink.id='shortlink';shortlink.value='https://admin.invalid/?p=123';d.body.append(shortlink);
  const getLink=d.createElement('button');getLink.setAttribute('onclick',"prompt('URL:', jQuery('#shortlink').val());");d.body.append(getLink);
  getLink.click();await flush();box=d.querySelector('.vc-admin-dialog');check(box.querySelector('input').value===shortlink.value);box.querySelector('button').click();await flush();
+ // Woo-style async confirmations also freeze the active form's business fields.
+ const amount=d.createElement('input');amount.name='refund_amount';amount.value='10';form.append(amount);amount.focus();
+ answer=api.confirm('Refund synthetic amount?');await flush();amount.value='20';d.querySelector('.vc-admin-dialog__primary').click();check(await answer===false);
  // No HTML is interpreted in a supplied message.
  answer=api.alert('<img src=x onerror=alert(1)>');await flush();check(!d.querySelector('.vc-admin-dialog img'));d.querySelector('.vc-admin-dialog__primary').click();await answer;
  console.log(JSON.stringify({checks:count,passed:true,syntheticDOM:true}));dom.window.close();
