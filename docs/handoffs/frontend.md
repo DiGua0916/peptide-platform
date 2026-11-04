@@ -1189,3 +1189,12 @@ HTTP聚合探针已证 catalogSupported=true、quoteHooksSupported=false、unsup
 实际390/375名义预览内容375/360均无横溢，原hero与媒体恢复、紧凑模式节点0；新vc-campaign-strip横条高36px，避免旧announcement类padding碰撞。点击原生Explore后collectionY104.67/headerY0/公告bottom−944，公告随正文滚走。未实际Add/订单/付款，未公网部署。用户追加“左活动标题固定＋右优惠自动循环”正在另一前端代理增强，动效完成/实测结论待根补充，不把本次静态横条验收写成循环已完成。任务原文/候选/回执在D:/Codex/Tasks/2026-11-04/home-restore-announcement；不改后端dirtytree、活动规则或商品价。
 
 首页恢复后续｜2026-11-04｜Codex：已完成用户追加左主题固定、右优惠顺序循环。新theme campaign-announcement.js 26px/s、小数进度、overflow才滚动；hover/focus/touch/wheel暂停，离屏/隐藏/BFCache及reduced-motion处理，装饰copies inert/aria-hidden去ID/链接/事件。实际手机标题X20及strip36不变而scrollLeft274→122.67循环，原3+副本3，无重复ID链接；16生产JS+45PHP、语法/diff通过。完整原首页仍生效，仅LocalWP及正常Git交付，未公网发布。详见frontend-home-restoration-2026-11-04.md。
+### 2026-11-04 · Codex：修复自动券呈现及未确认加购误报
+
+用户截图要求处理审计两个前端P2。live-cart-experience.js私有transport保HTTPstatus但公共request仍DTO；add必须同201+同SKU聚合quantity精确增量，ticket另要同response requested/added严格true；unknown/200/错SKU/缺receipt/409/timeout不Added、不烟花，只一次GETreconcile不重POST。live-cart-recommendation.js券成功另须couponRequested与couponApplied均true；真实已加购但券失败保留partial并引导review，不重加。native其它mutation200保持。
+
+后端现无跨GET自动券origin/name映射，故全部coupon chips统一中性Order discount＋可信原生单券金额，代码仅保原remove请求，text/aria不露码、不猜活动名或自动来源。跨刷新稳定，同码金额变化更新signature。52顶层联合Node通过（recent16/drawer31为内部重叠不另加总）、JS语法/diff过；真实反馈VM覆盖不确认不庆祝，实际coupon renderer覆盖原码删除/坏metadata/刷新。未改插件/活动配置/客户车/订单/支付，未公网部署。详见frontend-cart-confirmation-coupon-2026-11-04.md，实际浏览器载入结果由根代理补。
+
+验收补充：两修复asset直连LocalWP均HTTP200且SHA与source完全一致；代理访问HTTP503导致手机iframe空白，未将空DOM当无券/已验。Local显示running，直连首页200，因此未执行重启，也没改代理/VPN/网络/证书或站点配置。真实手机加购/优惠验收仍待访问链路恢复，不替用户改车造状态。
+
+恢复复核：用户调整代理后，手机预览普通/直连HTTP均200（5226bytes），两修复asset普通访问也200且SHA与源码一致，旧503已在HTTP链路解除。内置浏览器现存错误页data URL仍被浏览器工具拒绝，正常原URL重进亦未完成，未换控制路径绕过限制，故不冒称实际手机加购/用券验收。独立终审无阻断问题；代码隐藏只针对UI，不声称从Woo原生REST DTO删除code。真实车/订单/付款全程未变更。

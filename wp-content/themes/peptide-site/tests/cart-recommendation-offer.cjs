@@ -1,6 +1,6 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
-const {quotedRecommendation,quoteRequest,addPayload,addedMessage}=require('../assets/live-cart-recommendation.js');
+const {quotedRecommendation,quoteRequest,addPayload,addedMessage,offerUnconfirmed}=require('../assets/live-cart-recommendation.js');
 const m=n=>({minor:String(n),text:'$'+(Number(n)/100).toFixed(2)});
 const now=Date.parse('2026-11-04T01:00:00Z');
 function fixture(){
@@ -41,9 +41,27 @@ test('one native mutation contains the ticket; never a separate coupon request',
 });
 test('only the same mutation receipt confirms coupon; partial success never asks to add again',()=>{
  const {quote}=fixture(),candidate={...quote,automaticCoupon:{enabled:true}};
- const response=couponApplied=>({rawCart:{extensions:{peptide_core:{activity_recommendation:{added:true,couponRequested:true,couponApplied}}}}});
+ const response=couponApplied=>({rawCart:{extensions:{peptide_core:{activity_recommendation:{requested:true,added:true,couponRequested:true,couponApplied}}}}});
  assert.match(addedMessage(candidate,response(true)),/offer has been applied/);
  assert.match(addedMessage(candidate,response(false)),/box added.*could not be applied/);
  assert.doesNotMatch(addedMessage(candidate,response(false)),/try again|add again|failed to add/i);
  assert.match(addedMessage(candidate,{rawCart:{}}),/Review your bag to confirm/);
+});
+test('an automatic coupon needs its own strict requested-and-applied receipt before claiming savings',()=>{
+ const {quote}=fixture(),candidate={...quote,automaticCoupon:{enabled:true}};
+ for(const couponRequested of [undefined,false,'true']){
+  const result={rawCart:{extensions:{peptide_core:{activity_recommendation:{requested:true,added:true,couponRequested,couponApplied:true}}}}};
+  assert.equal(offerUnconfirmed(candidate,result),true);
+  assert.match(addedMessage(candidate,result),/box added.*could not be applied/);
+  assert.doesNotMatch(addedMessage(candidate,result),/offer has been applied|add again/i);
+ }
+});
+test('missing or false requested confirmation does not become an Added message',()=>{
+ const {quote}=fixture(),candidate={...quote,automaticCoupon:{enabled:true}};
+ for(const requested of [undefined,false,'true']){
+  const result={rawCart:{extensions:{peptide_core:{activity_recommendation:{requested,added:true,couponRequested:true,couponApplied:true}}}}};
+  assert.equal(offerUnconfirmed(candidate,result),true);
+  assert.match(addedMessage(candidate,result),/Review your bag to confirm/);
+  assert.doesNotMatch(addedMessage(candidate,result),/box added|offer has been applied/);
+ }
 });
