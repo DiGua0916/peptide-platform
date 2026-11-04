@@ -1198,3 +1198,9 @@ HTTP聚合探针已证 catalogSupported=true、quoteHooksSupported=false、unsup
 验收补充：两修复asset直连LocalWP均HTTP200且SHA与source完全一致；代理访问HTTP503导致手机iframe空白，未将空DOM当无券/已验。Local显示running，直连首页200，因此未执行重启，也没改代理/VPN/网络/证书或站点配置。真实手机加购/优惠验收仍待访问链路恢复，不替用户改车造状态。
 
 恢复复核：用户调整代理后，手机预览普通/直连HTTP均200（5226bytes），两修复asset普通访问也200且SHA与源码一致，旧503已在HTTP链路解除。内置浏览器现存错误页data URL仍被浏览器工具拒绝，正常原URL重进亦未完成，未换控制路径绕过限制，故不冒称实际手机加购/用券验收。独立终审无阻断问题；代码隐藏只针对UI，不声称从Woo原生REST DTO删除code。真实车/订单/付款全程未变更。
+
+### 2026-11-05 · Codex：运输独立说明与客服球展开
+
+用户要求先显示球，并拆开Delivery details/Order support两个旧FAQ链接；已收到其实际WhatsApp号码，本机通过原生Settings sanitize/update启用，不写号码进源码或积木。新增正常WP可编辑Delivery details页11740；主题专用page-delivery-details.php/css，费用/选项沿现有FAQ按目的地结账确认，不造时效。home685仅改service-benefits两项link、在closing前新增原生CTA order-support，正常LayoutAPI发布；原模块保留，7其它布局revision/rawhash和非support设置全保护不变。完整交接 [frontend-support-delivery-2026-11-05.md](frontend-support-delivery-2026-11-05.md)。
+
+右下56px耳机球点击向左展开Contact support now/Add us on WhatsApp，Order support正常锚点定位后亦自动展开，真实wa.me动态取原后台；Escape/外点关闭、aria/tab顺序、reduced-motion/BFCache/底栏避让保留。球初被全站important样式压成8px圆角，已精确修回50%实际复核。8Node生命周期+15PHPguards、语法/diff通过；实际手机content375无横溢，support CTA304px在屏内、section top104.79，delivery独立页三节正常且返回客服自动展开。仅本机配置/装修发布，未实际打开WA/发消息/改车/下单/付款或公网部署；预览tab5保留最终展开态，D任务support-delivery有截图/plan/guard回执。Git最终ref记群与项目记忆。
