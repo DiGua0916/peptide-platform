@@ -10,7 +10,7 @@ User deliverables: `D:/Codex/Tasks/2026-11-04/frontend-backend-ui-split/outputs/
 
 The user confirmed **one existing sale unit / one box per recommendation**, not breaking a ten-vial box into individual purchases. The per-vial figure is an informational equivalent only. No new coupon amount, campaign schedule, address provider, phone number, or shipping promise was supplied. The source says both “180” and “183+”; the frontend document explicitly preserves the ambiguity and proposes 180+ consistently, without changing actual counts. Report and footer layout requests do not change underlying report ownership/access or necessary checkout acknowledgements.
 
-## Proposed backend integration (implementation in progress)
+## Backend integration design (implementation completed below)
 
 - Reuse the activity listener and Woo Store API; quote at most one box and one result, with a merchant-selected existing coupon and promotion. Do not write a cart while reading/quoting or trust client prices. Actual customer click must remain one native add-item mutation, validated against current configuration/cart/rules; use Woo coupon validation rather than a second discount engine.
 - Expose a selected SKU's actual packaging count and per-vial price. An explicit merchant count may override strictly recognized Pack data. Unknown/ambiguous counts and unselected variable parents must not manufacture a price. Keep current box pricing, inventory and orders.
@@ -38,3 +38,22 @@ Root independently installed only the reviewed WCPay method segment into the ori
 For BE-04/05, source review confirms that existing `Pricing::pair/cart_line/cart_summary` and Store API fields already expose paired price/percent and explicitly separate sale savings from Woo coupon discounts. Existing native Blocks checkout and shipping plans own country/state/postcode-dependent recalculation. No replacement arithmetic or address generator was added, and no real address/checkout was submitted. Unsupported ZIP auto-completion remains a frontend/browser service question, not a reason to guess personal addresses.
 
 Full feature installation, remote publication and final refs are recorded separately after they actually occur. No new coupon discount, promotion dates, WhatsApp number, published header document or application configuration has been invented or activated at this checkpoint. The frontend must implement the documented `supportsAutomaticCoupon`/`offerToken` single-request flow before enabling its new coupon UI; the capability gate prevents misleading old-client quotes.
+
+## Actual installation and selective publication
+
+Implementation checkpoint `80b8894` was normally merged with the peer's Data-menu change `54e3a9d`; resulting source `473dd8fb0046fe9563ca454938e50339c5ebe4f2` was pushed to main and this task branch and independently verified. This is the fourteen-file publication source, not a whole-repository production replacement.
+
+All fourteen files were installed into the original backend role tree used by the LocalWP plugin junction. Each baseline/source SHA and backup was checked. Fourteen unrelated pre-existing dirty files and the existing index were preserved; they were not restored, staged or committed by this task. Read-only actual local HTTP checks confirmed maximum one box/one visible result, disabled/unbound coupon config, reused support DTO, and the unit-pricing field on a Store API product (correctly null for an unselected variable parent). This does not claim a live admin settings save or the theme's new coupon implementation.
+
+Fresh existing encrypted backup services completed on both machines before deployment; ciphertext headers, private modes and SHA were verified. No restore was performed. Root reviewed/froze both exact publishers and reran fresh preflight against each actual current release, preserving the peer's merchant menu release. Both selective publications completed successfully on 2026-11-04:
+
+- Buyer: 09:59:12 UTC, current `/srv/vialcove/releases/ui-backend-473dd8fb0046-buyer-1793786336569121877`.
+- Merchant: 09:59:35 UTC, current `/srv/vialcove/store-admin/releases/ui-backend-473dd8fb0046-merchant-1793786362107684889`.
+
+Receipts `outputs/publication-buyer.json` and `publication-merchant.json` verify all fourteen target SHAs, complete nonallowlisted source preservation, config/CDN/payment/MU preservation, unchanged HQ pointer, PHP pure lint, graceful FPM reload, direct-origin TLS HTML 200 and exact admin-JS bytes/MIME. The publisher issued no explicit WP-CLI, database, payment, cron or mail mutation; ordinary HTML health requests can still run normal WordPress lifecycle hooks. No theme, mother template/future-store package or HQ release was deployed. There is no distributed transaction across the two machines.
+
+No application configuration, coupon discount, campaign date or support number was created/enabled by deployment. Original manual announcements and existing coupons remain governed by their own settings. The native variation test limitation and frontend token integration requirement above remain open. Actual public-contract verification is recorded below after it completes.
+
+At 10:06:46 UTC, an independent read-only check confirmed both currents still exactly match these publication receipts. Six anonymous, CA-verified direct-origin HTTPS GETs (activity config, site support, Store API product on each runtime) all returned 200/JSON with no Set-Cookie. Both report `maxVisible=1`/`maxAddBoxes=1`, correctly typed coupon/support fields and the unit-pricing extension. The sampled unselected variable parents return null; this is not a selected-SKU numerical assertion. No cart/session endpoint was requested. Receipt `outputs/remote-public-verification.json` SHA256 `23818c7ebc8453130a961785a967a5beccae356279341697695d6f4ad437c1c4`.
+
+The final illustrated Markdown ZIP was rebuilt after the integration notes; all nineteen archived entries byte-match current documents/assets, and all seventeen source image SHAs remain unchanged. The real local mobile recommendation screenshot is retained for user review. Frontend presentation and its new automatic-coupon action remain separate follow-up work, not reported as production end-to-end acceptance.
