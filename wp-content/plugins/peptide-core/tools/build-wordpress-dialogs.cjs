@@ -3,7 +3,7 @@ const fs=require('fs'),path=require('path'),crypto=require('crypto'),acorn=requi
 const input=process.argv[2],target=path.resolve(process.argv[3] || path.join(__dirname,'../assets/wordpress-dialogs'));if(!input)throw Error('Usage: node build-wordpress-dialogs.cjs FLAT_CORE_JS_DIRECTORY [OUTPUT_DIRECTORY]');fs.mkdirSync(target,{recursive:true});
 const manifest={version:'7.1.4',files:{}};
 const eventPrefix='\nvar vcEvent = arguments[0] && typeof arguments[0].preventDefault === "function" ? arguments[0] : window.VialCoveDialogs.currentEvent(); if(vcEvent){vcEvent.preventDefault();vcEvent.stopPropagation();}\n';
-for(const name of fs.readdirSync(input)){
+for(const name of ["application-passwords.js", "colorpicker.js", "common.js", "customize-controls.js", "edit-comments.js", "image-edit.js", "media-editor.js", "media-views.js", "nav-menu.js", "post.js", "quicktags.js", "set-post-thumbnail.js", "theme.js", "updates.js"]){
  const original=fs.readFileSync(path.join(input,name),'utf8');let s=original;
  // Preserve the Customizer requestClose() jQuery Deferred contract for its .done/.fail callers.
  if(name==='customize-controls.js'){

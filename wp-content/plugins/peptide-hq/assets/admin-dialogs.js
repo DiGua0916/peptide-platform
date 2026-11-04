@@ -38,11 +38,15 @@
   let currentEvent=null;
   ['click','submit'].forEach(type=>document.addEventListener(type,event=>{currentEvent=event;setTimeout(()=>{if(currentEvent===event)currentEvent=null;},0);},true));
   const approvals=new WeakMap(), waiting=new WeakSet();
+  function formSettings(form) {
+    // Named controls (notably WordPress's action field) can mask form properties.
+    return ['action','method','enctype','target','noValidate'].map(name=>Object.getOwnPropertyDescriptor(HTMLFormElement.prototype,name).get.call(form));
+  }
   async function confirmSubmit(form, submitter, message, onApprove) {
     if(waiting.has(form))return;
     waiting.add(form);
     const snapshot=new FormData(form);
-    const configuration=()=>JSON.stringify([form.action,form.method,form.enctype,form.target,form.noValidate,submitter && [submitter.name,submitter.value,submitter.formAction,submitter.formMethod,submitter.formEnctype,submitter.formTarget,submitter.formNoValidate,submitter.disabled]]);
+    const configuration=()=>JSON.stringify([formSettings(form),submitter && [submitter.name,submitter.value,submitter.formAction,submitter.formMethod,submitter.formEnctype,submitter.formTarget,submitter.formNoValidate,submitter.disabled]]);
     const originalConfiguration=configuration();
     const stamp=data=>JSON.stringify(Array.from(data.entries()).map(([k,v])=>[k,typeof v==='string'?v:[v.name,v.size,v.lastModified]]));
     const before=stamp(snapshot);
@@ -51,7 +55,7 @@
       if(!form.isConnected || configuration()!==originalConfiguration || before!==stamp(new FormData(form)) || submitter && (!submitter.isConnected || submitter.form!==form))return;
       if(onApprove)onApprove();
       approvals.set(form,submitter || null);
-      try { form.requestSubmit(submitter || undefined); } finally { approvals.delete(form); }
+      try { HTMLFormElement.prototype.requestSubmit.call(form,submitter || undefined); } finally { approvals.delete(form); }
     } finally {waiting.delete(form);}
   }
   function approved(form,submitter){return approvals.has(form) && approvals.get(form)===(submitter || null);}
@@ -110,7 +114,7 @@
     if(trigger && typeof trigger.closest==='function')trigger=trigger.closest('button,input,a,select,textarea,[role="button"]') || trigger;
     const form=trigger && (trigger.form || (typeof trigger.closest==='function' && trigger.closest('form')));
     if(!form)return ()=>true;
-    const stamp=()=>JSON.stringify([form.action,form.method,form.enctype,form.target,form.noValidate,
+    const stamp=()=>JSON.stringify([formSettings(form),
       Array.from(new FormData(form).entries()).map(([key,value])=>[key,typeof value==='string'?value:[value.name,value.size,value.lastModified]]),
       trigger && [trigger.name,trigger.value,trigger.className,trigger.disabled,trigger.getAttribute('data-action')]]);
     const before=stamp();

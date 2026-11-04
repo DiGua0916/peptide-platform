@@ -1,5 +1,5 @@
 'use strict';
-const {JSDOM}=require('D:/Codex/Tasks/2026-11-03/hq-navigation/work/model-deps/node_modules/jsdom');
+const {JSDOM}=require(process.env.ADMIN_DIALOG_JSDOM || 'D:/Codex/Tasks/2026-11-03/hq-navigation/work/model-deps/node_modules/jsdom');
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const source=fs.readFileSync(require.resolve('../assets/admin-dialogs.js'),'utf8');
 const dom=new JSDOM('<button id="before">Open</button><dialog id="parent" open><form method="post" action="/save" data-pc-confirm="删除？"><input name="nonce" value="synthetic"><button name="operation" value="delete">Delete</button></form></dialog>',{url:'https://admin.invalid/',runScripts:'outside-only'});
@@ -44,6 +44,13 @@ let count=0;const check=(v)=>{assert.ok(v);count++;};
  // Woo-style async confirmations also freeze the active form's business fields.
  const amount=d.createElement('input');amount.name='refund_amount';amount.value='10';form.append(amount);amount.focus();
  answer=api.confirm('Refund synthetic amount?');await flush();amount.value='20';d.querySelector('.vc-admin-dialog__primary').click();check(await answer===false);
+ // Named controls must neither hide the real action nor mask requestSubmit().
+ const masked=d.createElement('form');masked.method='post';masked.action='/correct';
+ const maskedButton=d.createElement('button');maskedButton.type='submit';masked.append(maskedButton);d.body.append(masked);
+ Object.defineProperty(masked,'action',{value:{},configurable:true});Object.defineProperty(masked,'requestSubmit',{value:{},configurable:true});
+ let maskedRequests=0;masked.addEventListener('submit',event=>{event.preventDefault();maskedRequests++;});
+ api.confirmSubmit(masked,maskedButton,'Submit masked form?');await flush();d.querySelector('.vc-admin-dialog__primary').click();await flush();check(maskedRequests===1);
+ api.confirmSubmit(masked,maskedButton,'Submit masked form?');await flush();masked.setAttribute('action','/changed');d.querySelector('.vc-admin-dialog__primary').click();await flush();check(maskedRequests===1);
  // No HTML is interpreted in a supplied message.
  answer=api.alert('<img src=x onerror=alert(1)>');await flush();check(!d.querySelector('.vc-admin-dialog img'));d.querySelector('.vc-admin-dialog__primary').click();await answer;
  console.log(JSON.stringify({checks:count,passed:true,syntheticDOM:true}));dom.window.close();

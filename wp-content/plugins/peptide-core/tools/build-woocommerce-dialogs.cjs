@@ -5,7 +5,7 @@ const input=process.argv[2]; if(!input)throw Error('Usage: node build-woocommerc
 const output=path.resolve(process.argv[3] || path.join(__dirname,'../assets/woocommerce-dialogs'));fs.mkdirSync(output,{recursive:true});
 const defaults=new Set(['quick-edit.js','settings.js','system-status.js','wc-customer-stock-notifications.js','woocommerce_admin.js']);
 const manifest={version:'11.2.1',files:{}};let report=[];
-for(const name of fs.readdirSync(input)){
+for(const name of ["meta-boxes-order.js", "meta-boxes-product-variation.js", "meta-boxes-product.js", "quick-edit.js", "settings-views-html-settings-tax.js", "settings.js", "system-status.js", "wc-customer-stock-notifications.js", "wc-shipping-classes.js", "wc-shipping-providers.js", "wc-shipping-zone-methods.js", "wc-shipping-zones.js", "woocommerce_admin.js"]){
  const original=fs.readFileSync(path.join(input,name),'utf8');let s=original;
  for(let pass=0;pass<2;pass++){
   const ast=acorn.parse(s,{ecmaVersion:'latest'}),edits=[],functions=new Set();
