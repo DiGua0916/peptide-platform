@@ -48,6 +48,8 @@ final class Plugin {
 		Pricing::register_hooks();
 		Unit_Pricing::register_hooks();
 		Api\Storefront_Language_Controller::register_hooks();
+		Storefront_Translation::register_hooks();
+		Storefront_Translator::register_hooks();
 		Checkout_Ack::register_hooks();
 		Shipping_Tracking::register_hooks();
 		Templates::register_hooks();

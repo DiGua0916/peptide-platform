@@ -1,8 +1,9 @@
 <?php
-/** Public, read-only language choice metadata. No translation, browser preference write or locale mutation. */
+/** Public, read-only language metadata. The callback never writes preference or switches locale. */
 namespace PeptideCore\Api;
 
 use PeptideCore\Storefront_Language;
+use PeptideCore\Storefront_Translation;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -27,9 +28,15 @@ final class Storefront_Language_Controller {
 			}
 		}
 		$settings = Storefront_Language::get();
+		$selection = Storefront_Language::current_request( $settings );
+		$runtime = class_exists( Storefront_Translation::class ) ? Storefront_Translation::selected() : null;
+		if ( is_array( $runtime ) && ! empty( $runtime['active'] ) ) {
+			$selection['translation_applied'] = ! empty( $runtime['applied'] );
+			$selection['locale'] = $runtime['locale'];
+		}
 		$response = rest_ensure_response( array(
 			'config' => Storefront_Language::public_config( $settings ),
-			'selection' => Storefront_Language::current_request( $settings ),
+			'selection' => $selection,
 		) );
 		return self::private_headers( $response, null, $request );
 	}

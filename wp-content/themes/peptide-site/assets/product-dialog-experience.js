@@ -271,7 +271,7 @@
       }
       if (url) { knownImages.set(url,{src:url,alt:productImage.alt || productName}); productImg.decoding = 'async'; productImg.alt = productImage.alt || productName; if (productImg.getAttribute('src') !== url) productImg.src = url; }
       const text = summary.querySelector('.vc-sale-badge')?.textContent || '';
-      ribbon.textContent = text.toUpperCase(); ribbon.hidden = !/^\s*\d+(?:\.\d+)?%\s*off\s*$/i.test(text);
+      ribbon.textContent = text.toUpperCase(); ribbon.hidden = !/^\s*\d+(?:[.,]\d+)?%\s*(?:off|dto\.)\s*$/i.test(text);
       caption.textContent = selectedLabel(); caption.hidden = !caption.textContent;
     }
     function renderReport() {
