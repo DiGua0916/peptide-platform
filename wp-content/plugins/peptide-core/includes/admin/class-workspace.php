@@ -134,6 +134,7 @@ JS;
 		}
 		self::trim_optional_assets();
 		wp_enqueue_script( 'pc-admin-workspace', $url . 'admin-workspace.js', array(), $ver( 'admin-workspace.js' ), true );
+		wp_enqueue_script( 'pc-workspace-navigation-feedback', $url . 'workspace-navigation-feedback.js', array( 'pc-admin-workspace' ), $ver( 'workspace-navigation-feedback.js' ), true );
 		wp_enqueue_script( 'pc-workspace-touch', $url . 'workspace-touch.js', array( 'pc-admin-workspace' ), $ver( 'workspace-touch.js' ), true );
 		$home = \PeptideCore\Staff::is_staff( get_current_user_id() ) ? \PeptideCore\Staff::home_url( get_current_user_id() ) : Overview_Page::url();
 		wp_add_inline_script( 'pc-admin-workspace', 'window.pcWorkspaceHome=' . wp_json_encode( $home ) . ';', 'before' );
