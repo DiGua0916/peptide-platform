@@ -11,6 +11,7 @@ defined( 'ABSPATH' ) || exit;
 final class Quote_Cart extends \WC_Cart {
 
 	private ?\WC_Customer $quote_customer;
+	private array $quote_coupons = array();
 
 	/** Never call the parent constructor: it installs session, cookie and persistent-cart hooks. */
 	public function __construct( array $contents = array(), ?\WC_Customer $customer = null ) {
@@ -29,12 +30,24 @@ final class Quote_Cart extends \WC_Cart {
 
 	public static function copy( \WC_Cart $source, ?\WC_Customer $customer = null ): self {
 		$customer = $customer ?? $source->get_customer();
-		return new self( $source->cart_contents, $customer instanceof \WC_Customer ? $customer : null );
+		$copy = new self( $source->cart_contents, $customer instanceof \WC_Customer ? $customer : null );
+		if ( $source instanceof self && $source->quote_coupons ) {
+			foreach ( $source->quote_coupons as $coupon ) { $copy->attach_quote_coupon( $coupon ); }
+		} elseif ( $source->get_applied_coupons() ) { throw new \RuntimeException( 'unsupported_existing_coupon' ); }
+		return $copy;
 	}
+
+	/** Called only after native WC_Discounts validation on this detached cart. */
+	public function attach_quote_coupon( \WC_Coupon $coupon ): void {
+		if ( $this->applied_coupons || ! Recommendation_Coupon::supported_coupon( $coupon ) ) { throw new \RuntimeException( 'unsupported_quote_coupon' ); }
+		$this->quote_coupons = array( $coupon->get_code() => clone $coupon );
+		$this->applied_coupons = array( $coupon->get_code() );
+	}
+	public function get_coupons( $deprecated = null ) { return 'order' === $deprecated ? array() : $this->quote_coupons; }
 
 	/** Fail closed when an omitted native/third-party pricing path could change a quote. */
 	public static function supported( \WC_Cart $source ): bool {
-		if ( ! in_array( get_class( $source ), array( \WC_Cart::class, self::class ), true ) || $source->applied_coupons || wc_tax_enabled() || wc_prices_include_tax() ) {
+		if ( ! in_array( get_class( $source ), array( \WC_Cart::class, self::class ), true ) || ( $source->applied_coupons && ( ! $source instanceof self || array_keys( $source->quote_coupons ) !== array_values( $source->applied_coupons ) ) ) || wc_tax_enabled() || wc_prices_include_tax() ) {
 			return false;
 		}
 		if ( ! self::supported_hooks() ) { return false; }
@@ -123,11 +136,11 @@ final class Quote_Cart extends \WC_Cart {
 		$prices = array( 'woocommerce_product_get_price', 'woocommerce_product_get_regular_price', 'woocommerce_product_get_sale_price', 'woocommerce_product_variation_get_price', 'woocommerce_product_variation_get_regular_price', 'woocommerce_product_variation_get_sale_price' );
 		$formatters = array( 'woocommerce_currency' => 'get_woocommerce_currency', 'wc_get_price_decimals' => 'get_price_decimals', 'wc_get_price_decimal_separator' => 'get_price_decimal_separator', 'wc_get_price_thousand_separator' => 'get_price_thousand_separator', 'woocommerce_price_format' => 'get_woocommerce_price_format', 'option_woocommerce_currency_pos' => 'get_woocommerce_currency_pos' );
 		$is_price = 'WCPay\\MultiCurrency\\FrontendPrices' === $class && 'get_product_price_string' === $fn[1] && in_array( $hook, $prices, true ) && 99 === (int) $priority && 2 === ( $callback['accepted_args'] ?? null );
+		$coupon_methods = array( 'woocommerce_coupon_get_amount' => array( 'get_coupon_amount', 2 ), 'woocommerce_coupon_get_minimum_amount' => array( 'get_coupon_min_max_amount', 1 ), 'woocommerce_coupon_get_maximum_amount' => array( 'get_coupon_min_max_amount', 1 ) );
+		$is_coupon = 'WCPay\\MultiCurrency\\FrontendPrices' === $class && isset( $coupon_methods[ $hook ] ) && $coupon_methods[ $hook ][0] === $fn[1] && 99 === (int) $priority && $coupon_methods[ $hook ][1] === ( $callback['accepted_args'] ?? null );
 		$is_formatter = 'WCPay\\MultiCurrency\\FrontendCurrencies' === $class && ( $formatters[ $hook ] ?? null ) === $fn[1] && 900 === (int) $priority && 1 === ( $callback['accepted_args'] ?? null );
-		if ( ! $is_price && ! $is_formatter ) { return false; }
+		if ( ! $is_price && ! $is_formatter && ! $is_coupon ) { return false; }
 		global $wp_filter;
-		// Unknown compatibility/currency overrides must not run, even when they might return base currency.
-		foreach ( array_keys( (array) $wp_filter ) as $name ) { if ( str_starts_with( $name, 'wcpay_multi_currency_' ) && has_filter( $name ) ) { return false; } }
 		foreach ( array( 'pre_option_woocommerce_currency', 'option_woocommerce_currency', 'default_option_woocommerce_currency' ) as $name ) { if ( has_filter( $name ) ) { return false; } }
 		try {
 			$read = static function ( object $object, string $name ) {
@@ -137,6 +150,7 @@ final class Quote_Cart extends \WC_Cart {
 			};
 			$multi = $read( $fn[0], 'multi_currency' ); $compatibility = $read( $fn[0], 'compatibility' );
 			if ( ! is_object( $multi ) || 'WCPay\\MultiCurrency\\MultiCurrency' !== get_class( $multi ) || ! is_object( $compatibility ) || 'WCPay\\MultiCurrency\\Compatibility' !== get_class( $compatibility ) || $read( $multi, 'compatibility' ) !== $compatibility ) { return false; }
+			if ( ! self::wcpay_rest_base_filters( $multi ) ) { return false; }
 			$default = $read( $multi, 'default_currency' ); $enabled = $read( $multi, 'enabled_currencies' );
 			$base = get_option( 'woocommerce_currency', '' );
 			if ( ! is_string( $base ) || ! preg_match( '/^[A-Z]{3}$/D', $base ) || ! is_object( $default ) || 'WCPay\\MultiCurrency\\Currency' !== get_class( $default ) || ! is_array( $enabled ) || array_keys( $enabled ) !== array( $base ) ) { return false; }
@@ -152,6 +166,50 @@ final class Quote_Cart extends \WC_Cart {
 			}
 			return true;
 		} catch ( \Throwable $error ) { return false; }
+	}
+	public static function native_default_coupon_callback( string $hook, $priority, array $callback ): bool {
+		return in_array( $hook, array( 'woocommerce_coupon_get_amount', 'woocommerce_coupon_get_minimum_amount', 'woocommerce_coupon_get_maximum_amount' ), true ) && self::default_only_wcpay_callback( $hook, $priority, $callback );
+	}
+
+	/**
+	 * WooPayments installs this exact no-conversion trio on non-Store REST requests.
+	 * Identity is inspected, never invoked. Any additional/replaced/foreign override still fails.
+	 */
+	private static function wcpay_rest_base_filters( object $multi ): bool {
+		global $wp_filter;
+		$active = array();
+		foreach ( array_keys( (array) $wp_filter ) as $name ) { if ( str_starts_with( $name, 'wcpay_multi_currency_' ) && has_filter( $name ) ) { $active[] = $name; } }
+		if ( ! $active ) { return true; }
+		$expected = array( 'wcpay_multi_currency_should_return_store_currency' => '__return_true', 'wcpay_multi_currency_should_convert_product_price' => '__return_false', 'wcpay_multi_currency_override_selected_currency' => null );
+		if ( array_diff( $active, array_keys( $expected ) ) || array_diff( array_keys( $expected ), $active ) || ! function_exists( 'WC' ) || ! WC()->is_rest_api_request() || isset( $_GET['currency'] ) || ! class_exists( '\\WCPay\\MultiCurrency\\Utils' ) || \WCPay\MultiCurrency\Utils::is_store_api_request() || \WCPay\MultiCurrency\Utils::is_store_batch_request() ) { return false; } // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reject query-selected currency; no mutation.
+		foreach ( $expected as $name => $function ) {
+			$priorities = $wp_filter[ $name ]->callbacks ?? array();
+			if ( array_keys( $priorities ) !== array( 10 ) || 1 !== count( $priorities[10] ) ) { return false; }
+			$callback = array_values( $priorities[10] )[0];
+			if ( 1 !== ( $callback['accepted_args'] ?? null ) ) { return false; }
+			$actual = $callback['function'] ?? null;
+			if ( null !== $function ) { if ( $actual !== $function ) { return false; } continue; }
+			if ( ! $actual instanceof \Closure ) { return false; }
+			$reflection = new \ReflectionFunction( $actual );
+			$class = new \ReflectionClass( $multi );
+			$file = $class->getFileName();
+			$method = $class->getMethod( 'init_hooks' );
+			$expected_file = defined( 'WP_PLUGIN_DIR' ) ? realpath( WP_PLUGIN_DIR . '/woocommerce-payments/includes/multi-currency/MultiCurrency.php' ) : false;
+			if ( ! is_string( $file ) || ! $expected_file || realpath( $file ) !== $expected_file || $reflection->getFileName() !== $file || $reflection->getClosureThis() !== $multi || ( $reflection->getClosureScopeClass()?->getName() ) !== 'WCPay\\MultiCurrency\\MultiCurrency' || 0 !== $reflection->getNumberOfParameters() || $reflection->getStaticVariables() || $reflection->getStartLine() < $method->getStartLine() || $reflection->getEndLine() > $method->getEndLine() ) { return false; }
+			// Release source is immutable. Cache bytes/hash only for this PHP request, never a verdict,
+			// filter list, object state, selected currency, quote, cart or promotion across requests.
+			static $sources = array();
+			if ( ! array_key_exists( $expected_file, $sources ) ) {
+				$source = file_get_contents( $file );
+				$source = is_string( $source ) ? str_replace( "\r\n", "\n", $source ) : null;
+				$sources[ $expected_file ] = null !== $source && hash_equals( '925ea6363029cd689be370d572544d823cc31b59209f172e136d2b839c7dea3b', hash( 'sha256', $source ) ) ? explode( "\n", $source ) : false;
+			}
+			$lines = $sources[ $expected_file ];
+			if ( false === $lines ) { return false; }
+			$body = trim( implode( "\n", array_slice( $lines, $reflection->getStartLine() - 1, $reflection->getEndLine() - $reflection->getStartLine() + 1 ) ) );
+			if ( ! hash_equals( '733e7622cec4ee19fbf7a0a8d24d32d7b297eb2086cfed305ddecdd0d729641d', hash( 'sha256', $body ) ) ) { return false; }
+		}
+		return true;
 	}
 
 	/** No session hydration, global cart getter filters or loading events. */

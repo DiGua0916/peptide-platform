@@ -70,10 +70,14 @@ final class Cart_Reader {
 				}
 			}
 			// Woo does not persist individual fees: do not invent pc-promo fees from aggregate fee_total.
-			return array( 'cart' => $cart, 'persistedTotals' => $totals, 'rateKey' => hash_hmac( 'sha256', 'pc-activity-recommendations:' . get_current_blog_id() . ':' . untrailingslashit( home_url( '/' ) ) . ':' . $id . ':' . get_current_user_id(), wp_salt( 'auth' ) ) );
+			return array( 'cart' => $cart, 'persistedTotals' => $totals, 'rateKey' => self::identity( $id ) );
 		} catch ( \Throwable $exception ) {
 			return self::error( 'cart_unavailable', 503 );
 		}
+	}
+	/** One-way native Woo identity for quote tickets; never exposes the session ID. */
+	public static function identity( string $id ): string {
+		return hash_hmac( 'sha256', 'pc-activity-recommendations:' . get_current_blog_id() . ':' . untrailingslashit( home_url( '/' ) ) . ':' . $id . ':' . get_current_user_id(), wp_salt( 'auth' ) );
 	}
 
 	private static function session_id( $id ): bool { return is_string( $id ) && 1 === preg_match( '/\A[A-Za-z0-9_-]{1,128}\z/', $id ); }

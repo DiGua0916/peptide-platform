@@ -51,7 +51,7 @@ final class Activity_Listener_Controller {
 			$key = 'pc-recommendation-' . $current['rateKey'];
 			if ( \WC_Rate_Limiter::retried_too_soon( $key ) ) { return Recommendations::error( 'rate_limited', 429, array( 'retryAfter' => 3 ) ); }
 			if ( ! \WC_Rate_Limiter::set_rate_limit( $key, 2 ) ) { return Recommendations::error( 'rate_limit_unavailable', 503 ); }
-			return self::respond( Recommendations::quote( $current['cart'], $input, null, $current['persistedTotals'] ) );
+			return self::respond( Recommendations::quote( $current['cart'], $input, null, $current['persistedTotals'], $current['rateKey'] ) );
 		} catch ( \Throwable $error ) { return Recommendations::error( 'cart_unavailable', 503 ); }
 	}
 	public static function can_manage( \WP_REST_Request $request ) {

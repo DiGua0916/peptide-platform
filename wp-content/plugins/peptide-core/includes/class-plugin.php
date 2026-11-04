@@ -46,6 +46,7 @@ final class Plugin {
 		if ( class_exists( Report_Archive_Page::class ) ) { Report_Archive_Page::register_hooks(); }
 		Order_Batches::register_hooks();
 		Pricing::register_hooks();
+		Unit_Pricing::register_hooks();
 		Checkout_Ack::register_hooks();
 		Shipping_Tracking::register_hooks();
 		Templates::register_hooks();
@@ -61,6 +62,7 @@ final class Plugin {
 		Modules\Product_Broadcast::register_hooks();
 		Api\Product_Broadcast_Controller::register_hooks();
 		Activity\Mount::register_hooks();
+		Activity\Recommendation_Coupon::register_hooks();
 		Api\Activity_Listener_Controller::register_hooks();
 		Api\Cart_Feedback_Controller::register_hooks();
 		Recent\History::register_hooks();

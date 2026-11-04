@@ -8,13 +8,13 @@ defined( 'ABSPATH' ) || exit;
 
 final class Config {
 	public const VERSION = 1;
-	public const KEYS = array( 'version', 'enabled', 'promotionId', 'title', 'celebrationEnabled', 'smileEnabled', 'recommendation' );
+	public const KEYS = array( 'version', 'enabled', 'promotionId', 'title', 'celebrationEnabled', 'smileEnabled', 'recommendation', 'recommendationCoupon' );
 	public const RECOMMENDATION_KEYS = array( 'enabled', 'maxGapRatio', 'maxGapMinor', 'maxGapQuantity', 'maxAddBoxes', 'maxVisible', 'ranking' );
 	public static function defaults(): array {
-		return array( 'version' => 1, 'enabled' => false, 'promotionId' => 0, 'title' => 'Your offer progress', 'celebrationEnabled' => true, 'smileEnabled' => true, 'recommendation' => self::recommendation_defaults() );
+		return array( 'version' => 1, 'enabled' => false, 'promotionId' => 0, 'title' => 'Your offer progress', 'celebrationEnabled' => true, 'smileEnabled' => true, 'recommendation' => self::recommendation_defaults(), 'recommendationCoupon' => array( 'enabled' => false, 'couponId' => 0, 'message' => '' ) );
 	}
 	public static function recommendation_defaults(): array {
-		return array( 'enabled' => false, 'maxGapRatio' => 0.2, 'maxGapMinor' => null, 'maxGapQuantity' => 3, 'maxAddBoxes' => 3, 'maxVisible' => 1, 'ranking' => 'most_viewed_then_recent' );
+		return array( 'enabled' => false, 'maxGapRatio' => 0.2, 'maxGapMinor' => null, 'maxGapQuantity' => 3, 'maxAddBoxes' => 1, 'maxVisible' => 1, 'ranking' => 'most_viewed_then_recent' );
 	}
 	public static function normalize( $input ) {
 		if ( ! is_array( $input ) || ( $input && array_is_list( $input ) ) ) { return self::error( 'config', 'object_required', '活动监听配置必须是对象。' ); }
@@ -33,6 +33,11 @@ final class Config {
 		$recommendation = self::normalize_recommendation( $config['recommendation'] );
 		if ( is_wp_error( $recommendation ) ) { return $recommendation; }
 		$config['recommendation'] = $recommendation;
+		$coupon = $config['recommendationCoupon'];
+		if ( ! is_array( $coupon ) || array_is_list( $coupon ) || array_diff( array_keys( $coupon ), array( 'enabled', 'couponId', 'message' ) ) || 3 !== count( $coupon ) || ! is_bool( $coupon['enabled'] ?? null ) || ! is_int( $coupon['couponId'] ?? null ) || $coupon['couponId'] < 0 || $coupon['couponId'] > 2147483647 || ! is_string( $coupon['message'] ?? null ) || ! preg_match( '//u', $coupon['message'] ) || preg_match( '/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]|<[^>]*>/u', $coupon['message'] ) || preg_match_all( '/./us', $coupon['message'] ) > 200 ) { return self::error( 'recommendationCoupon', 'invalid_coupon_settings', '推荐优惠券须包含开关、本站优惠券和200字以内纯文案。' ); }
+		$coupon['message'] = trim( (string) preg_replace( '/[\s\p{Z}]+/u', ' ', $coupon['message'] ) );
+		if ( $coupon['enabled'] && ( ! $coupon['couponId'] || ! $recommendation['enabled'] ) ) { return self::error( 'recommendationCoupon', 'selection_required', '启用推荐优惠券前，请启用凑单推荐并选择已有优惠券。' ); }
+		$config['recommendationCoupon'] = $coupon;
 		return $config;
 	}
 
@@ -48,6 +53,9 @@ final class Config {
 		$minor = $input['maxGapMinor'];
 		if ( null !== $minor && ( ! is_string( $minor ) || ! preg_match( '/\A(?:0|[1-9][0-9]{0,15})\z/', $minor ) || strlen( $minor ) > 16 || ( 16 === strlen( $minor ) && strcmp( $minor, '9007199254740991' ) > 0 ) ) ) { return self::error( 'recommendation.maxGapMinor', 'invalid_minor', '金额差额上限须为空或不超过 9007199254740991 的非负整数字符串。' ); }
 		foreach ( array( 'maxGapQuantity' => 10000, 'maxAddBoxes' => 100, 'maxVisible' => 3 ) as $key => $max ) { if ( ! is_int( $input[ $key ] ) || $input[ $key ] < 1 || $input[ $key ] > $max ) { return self::error( 'recommendation.' . $key, 'out_of_range', sprintf( '此项须为 1 至 %d 的整数。', $max ) ); } }
+		// Accept valid legacy fields, then canonicalize in memory. No option is written by a read.
+		$input['maxAddBoxes'] = 1;
+		$input['maxVisible'] = 1;
 		if ( 'most_viewed_then_recent' !== $input['ranking'] ) { return self::error( 'recommendation.ranking', 'invalid_ranking', '推荐排序仅支持先按浏览次数、再按最近浏览。' ); }
 		$out = array();
 		foreach ( self::RECOMMENDATION_KEYS as $key ) { $out[ $key ] = $input[ $key ]; }

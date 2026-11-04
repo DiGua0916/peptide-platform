@@ -59,6 +59,7 @@ final class Store {
 			'defaults' => Config::defaults(),
 			'publicUrl' => rest_url( 'peptide/v1/activity-listener' ),
 			'choices' => Config::choices( $state['draft']['config']['promotionId'] ),
+			'couponChoices' => Recommendation_Coupon::choices( $state['draft']['config']['recommendationCoupon']['couponId'] ),
 		);
 	}
 
@@ -87,6 +88,7 @@ final class Store {
 		if ( $publish && $config['enabled'] ) {
 			$selection = Config::validate_selection( $config['promotionId'] );
 			if ( is_wp_error( $selection ) ) { return $selection; }
+			if ( $config['recommendationCoupon']['enabled'] && ! Recommendation_Coupon::coupon( $config ) ) { return Config::error( 'recommendationCoupon.couponId', 'unavailable_coupon', '请选择可用的已有优惠券；此版本支持叠加满减的非定向金额或折扣券，不支持免运、首单或客户分组券。' ); }
 		}
 		$record = self::record();
 		if ( is_wp_error( $record ) ) { return $record; }

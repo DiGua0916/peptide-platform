@@ -17,7 +17,8 @@ final class Recommendations {
 	/** Only freshness identifiers and bounded browser-ranking hints are accepted. */
 	public static function validate( $input ) {
 		$keys = array( 'cartStateKey', 'cartSnapshotKey', 'promotionRevision', 'configRevision', 'candidates' );
-		if ( ! is_array( $input ) || array_is_list( $input ) || array_diff( array_keys( $input ), $keys ) || array_diff( $keys, array_keys( $input ) ) ) { return self::error( 'invalid_input' ); }
+		if ( ! is_array( $input ) || array_is_list( $input ) || array_diff( array_keys( $input ), array_merge( $keys, array( 'supportsAutomaticCoupon' ) ) ) || array_diff( $keys, array_keys( $input ) ) ) { return self::error( 'invalid_input' ); }
+		if ( array_key_exists( 'supportsAutomaticCoupon', $input ) && ! is_bool( $input['supportsAutomaticCoupon'] ) ) { return self::error( 'invalid_capability' ); }
 		foreach ( array( 'cartStateKey', 'cartSnapshotKey', 'promotionRevision' ) as $key ) { if ( ! is_string( $input[ $key ] ) || ! preg_match( '/^[a-f0-9]{64}$/D', $input[ $key ] ) ) { return self::error( 'invalid_' . $key ); } }
 		if ( ! is_int( $input['configRevision'] ) || $input['configRevision'] < 0 || $input['configRevision'] > 2147483646 || ! is_array( $input['candidates'] ) || ! array_is_list( $input['candidates'] ) || count( $input['candidates'] ) > 20 ) { return self::error( 'invalid_candidates' ); }
 		$parents = array();
@@ -37,7 +38,7 @@ final class Recommendations {
 	}
 
 	/** No calls to add_to_cart/calculate_totals/session setters or tracking hooks. */
-	public static function quote( \WC_Cart $source, array $input, ?array $settings = null, ?array $persisted_totals = null ) {
+	public static function quote( \WC_Cart $source, array $input, ?array $settings = null, ?array $persisted_totals = null, string $cart_identity = '' ) {
 		$valid = self::validate( $input ); if ( is_wp_error( $valid ) ) { return $valid; }
 		if ( \PeptideCore\Store_Config::get( 'force_login' ) && ! is_user_logged_in() ) { return self::error( 'login_required', 401 ); }
 		if ( ! in_array( get_class( $source ), array( \WC_Cart::class, Quote_Cart::class ), true ) || ! Quote_Cart::supported_hooks() || ! Catalog_Read::supported() ) { return self::error( 'unsupported_calculation', 409 ); }
@@ -45,7 +46,10 @@ final class Recommendations {
 		$progress = Progress::for_cart( $source, $settings );
 		$out = self::base( $progress );
 		if ( empty( $settings['enabled'] ) || empty( $settings['recommendation']['enabled'] ) ) { return self::hidden( $out, 'disabled' ); }
+		if ( ! empty( $settings['recommendationCoupon']['enabled'] ) && ( true !== ( $input['supportsAutomaticCoupon'] ?? false ) || ! preg_match( '/\A[a-f0-9]{64}\z/', $cart_identity ) ) ) { return self::hidden( $out, 'client_update_required' ); }
 		if ( $source->get_applied_coupons() ) { return self::hidden( $out, 'coupon_conflict' ); }
+		$coupon = Recommendation_Coupon::coupon( $settings );
+		if ( ! empty( $settings['recommendationCoupon']['enabled'] ) && ! $coupon ) { return self::hidden( $out, 'coupon_unavailable' ); }
 		// Unknown price integrations must not be partially simulated or have hooks removed.
 		if ( ! Quote_Cart::supported( $source ) || Product_Offers::all( true ) ) { return self::hidden( $out, 'unsupported_calculation' ); }
 		foreach ( Promotions::active_ids() as $id ) {
@@ -76,11 +80,13 @@ final class Recommendations {
 			foreach ( $input['candidates'] as $candidate ) {
 				$selection = self::selection( $candidate ); if ( ! $selection ) { continue; }
 				[ $parent, $product ] = $selection;
+				if ( $coupon && ! \PeptideCore\Coupon_Rules::covers( $coupon, $product ) ) { continue; }
 				if ( $id !== Promotions::owner( $product, Promotions::usable_ids( $before ) ) ) { continue; }
 				$existing = 0; $line_key = ''; $matches = 0;
 				foreach ( $before->cart_contents as $key => $line ) { if ( $line['data']->get_id() === $product->get_id() ) { $existing += (int) $line['quantity']; $line_key = (string) $key; $matches++; } }
 				if ( $matches > 1 ) { continue; } // Separate custom-price/custom-option rows cannot be merged safely.
-				for ( $add = 1; $add <= $config['maxAddBoxes']; $add++ ) {
+				// User-confirmed sales unit: exactly ONE box, never silently increase it to hit a tier.
+				for ( $add = 1; $add <= 1; $add++ ) {
 					// A cheap bound only skips amounts that cannot reach the target. The native trial decides savings.
 					if ( ( (float) $product->get_price() * $add * 10 ** wc_get_price_decimals() ) + (float) $progress['eligibleSubtotal']['minor'] + 0.000001 < (float) $next['threshold'] ) { continue; }
 					if ( ! self::quantity_ok( $product, $existing + $add, $add, $before ) ) { continue; }
@@ -89,11 +95,14 @@ final class Recommendations {
 					$after->cart_contents[ $key ] = array( 'key' => $key, 'product_id' => $parent->get_id(), 'variation_id' => $product->is_type( 'variation' ) ? $product->get_id() : 0, 'variation' => $product->is_type( 'variation' ) ? $product->get_variation_attributes() : array(), 'quantity' => $existing + $add, 'data' => clone $product );
 					if ( ++$trials > self::MAX_TRIALS ) { return self::hidden( $out, 'unsupported_calculation' ); }
 					$after->calculate_quote();
+					if ( $coupon && ! Recommendation_Coupon::attach_to_quote( $after, $coupon ) ) { continue; }
 					$after_progress = Progress::for_cart( $after, $settings );
 					$measure = (float) $after_progress['eligibleSubtotal']['minor'];
 					$before_discount = (float) $progress['actualDiscount']['minor']; $after_discount = (float) $after_progress['actualDiscount']['minor'];
 					if ( $measure < (float) $next['threshold'] || $after_discount <= $before_discount ) { continue; }
 					$dto = self::result( $out, $parent, $product, $add, $before, $after, $progress, $after_progress, $next );
+					$dto['couponDiscount'] = self::money( $coupon ? (float) $after->get_coupon_discount_amount( $coupon->get_code() ) : 0.0 );
+					$dto = Recommendation_Coupon::issue( $dto, $settings, $coupon, $cart_identity );
 					if ( (float) $dto['afterAdd']['incrementalSavings']['minor'] <= 0 ) { continue; }
 					$results[] = array( 'count' => $candidate['viewCount'], 'seen' => $candidate['lastViewedAt'] ?? '', 'burden' => (float) $dto['linePrice']['minor'], 'dto' => $dto );
 					break;
@@ -101,7 +110,7 @@ final class Recommendations {
 			}
 			if ( ! $results ) { return self::hidden( $out, 'no_eligible_candidate' ); }
 			usort( $results, static fn( $a, $b ) => ( $b['count'] <=> $a['count'] ) ?: ( strcmp( $b['seen'], $a['seen'] ) ?: ( ( $a['burden'] <=> $b['burden'] ) ?: ( $a['dto']['productId'] <=> $b['dto']['productId'] ) ) ) );
-			return array( 'recommendation' => $results[0]['dto'], 'recommendations' => array_column( array_slice( $results, 0, $config['maxVisible'] ), 'dto' ) );
+			return array( 'recommendation' => $results[0]['dto'], 'recommendations' => array( $results[0]['dto'] ) );
 		} catch ( \Throwable $error ) { return self::hidden( $out, 'unsupported_calculation' ); }
 	}
 

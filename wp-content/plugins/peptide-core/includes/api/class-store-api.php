@@ -45,13 +45,20 @@ final class Store_Api {
 			array(
 				'endpoint'        => \Automattic\WooCommerce\StoreApi\Schemas\V1\CartItemSchema::IDENTIFIER,
 				'namespace'       => self::EXT_NAMESPACE,
-				'data_callback'   => static fn( $cart_item ) => array( 'pricing' => \PeptideCore\Pricing::cart_line( (array) $cart_item ) ),
+				'data_callback'   => static fn( $cart_item ) => array(
+					'pricing' => \PeptideCore\Pricing::cart_line( (array) $cart_item ),
+					'unit_pricing' => \PeptideCore\Unit_Pricing::for_product( $cart_item['data'] ?? null, 'cart' ),
+				),
 				'schema_callback' => static fn() => array(
 					'pricing' => array(
 						'description' => __( 'Sale savings for this cart line (minor units). Excludes coupons.', 'peptide-core' ),
 						'type'        => 'object',
 						'context'     => array( 'view', 'edit' ),
 						'readonly'    => true,
+					),
+					'unit_pricing' => array(
+						'description' => __( 'Equivalent catalog price per vial for this exact sales SKU. Does not split the box or include coupons.', 'peptide-core' ),
+						'type' => array( 'object', 'null' ), 'context' => array( 'view', 'edit' ), 'readonly' => true,
 					),
 				),
 				'schema_type'     => ARRAY_A,
@@ -116,6 +123,7 @@ final class Store_Api {
 			'report_state' => Catalog::best_report_state( $product_id, get_current_user_id() ),
 			// 价格对（PRICE-SALE-01）：请求的是规格或简单商品时为它自己的价格对；请求父商品时为“当前成交价最低”那个规格的价格对。
 			'price_pair'   => $product->is_type( 'variable' ) ? \PeptideCore\Pricing::card_pair( $product ) : ( '' === $product->get_price() ? null : \PeptideCore\Pricing::pair( $product ) ),
+			'unit_pricing' => \PeptideCore\Unit_Pricing::for_product( $product ),
 		);
 	}
 
@@ -163,6 +171,10 @@ final class Store_Api {
 				'type'        => array( 'object', 'null' ),
 				'context'     => array( 'view', 'edit' ),
 				'readonly'    => true,
+			),
+			'unit_pricing' => array(
+				'description' => __( 'Equivalent price per vial for a selected SKU with a reliable package count. Null before variation selection.', 'peptide-core' ),
+				'type' => array( 'object', 'null' ), 'context' => array( 'view', 'edit' ), 'readonly' => true,
 			),
 		);
 	}
