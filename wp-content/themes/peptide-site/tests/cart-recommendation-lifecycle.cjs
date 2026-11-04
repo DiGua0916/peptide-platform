@@ -84,5 +84,13 @@ test('compact quoted price and Add remain together, with only a same-quote regul
  commerce=f.mount.querySelector('.offer-suggestion-commerce');
  assert.equal(commerce.querySelector('.offer-suggestion-regular').textContent,'$78.00');
  assert.equal(commerce.querySelector('.offer-suggestion-current').classList.contains('offer-suggestion-current--sale'),true);
+ assert.equal(f.mount.querySelector('.offer-suggestion-sale').textContent,'29% OFF');
  assert.equal(f.button().parentNode,commerce);assert.equal(f.writes,0);f.ui.destroy();
+});
+test('a display-only regular-price update never replaces an active native Add button or repeats the request',async()=>{
+ const f=fixture(),button=f.button();button.click();
+ f.update({activity:{...f.activity,recommendation:{...f.activity.recommendation,regularUnitPrice:m(7800)}}});
+ assert.equal(f.button(),button);assert.equal(f.mount.querySelector('.offer-suggestion-sale'),null);
+ await flush();assert.equal(f.writes,1);assert.equal(f.button(),button);
+ f.update({activity:f.changedCart(),snapshotKey:'after'});f.requests[0].resolve(f.result());await flush();assert.equal(f.button(),button);assert.match(f.notice().textContent,/box added/);f.ui.destroy();
 });

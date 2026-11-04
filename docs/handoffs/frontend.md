@@ -1226,3 +1226,5 @@ HTTP聚合探针已证 catalogSupported=true、quoteHooksSupported=false、unsup
 首页完成真实cart-link立体浮球（客服上方，native数量/抽屉）、耳机缩至同视觉大小；活动条原生模块胶囊、长度不变/居中/透明外层/随滚动置顶及锚点避让。home685原closing整块已原生删除，其他10块保持。Cart11727只改原生标题Shopping cart、删除可见1box并收紧；商品行真实原价/现价/红斜标、紧凑推荐同行按钮、Recently viewed同SKU原价/现价/红斜标均已实现，已有真实手机读回。详细文件与实际验证见[本轮交接](frontend-cart-savings-orbs-2026-11-05.md)。
 
 当前是开发检查点，**仍在做M05.03进度空白/达标鸭子，M05.04推荐商品原价字段仍缺可信接口，未全轮完成/未公网发布。**用户要其它窗口共同装修，已交付[前端模块工作台](frontend-module-workboard-2026-11-05.md)：10大包、细分子项、全部本次涉及编号、共享文件和状态。根窗口独占M05及本轮共享在途文件；别窗可选M03/M06/M07，先报文件，不覆盖home-quick-view.php的card分支或peer experience.js。94Node+8独立sticky、PHPcard51/活动45/utilities15/entry14等实际检查通过；用户cart金额可自行变化，Codex未做业务写入。最终source/integration/push引用另记，peer旧西语一行保持不stage。
+
+后续收尾已解决上述两项：progress无实际鸭子时预留12px；已生效正优惠的eligible达标节点显示静态鸭子，真实变化才吹卷/烟花，10生命周期检查+隔离真实canvas绘制通过。推荐复用主题同SKU card比较价，全部ID/当前价/币种/小数位/快照/过期/pending校验，失败保留原报价、不给进行中的Add重建按钮；实际236/198与16%OFF，已不需要后端新增插件。联合110Node通过，真实窄屏header60px/无1box/无横溢，近期78/55/Save29%23与无优惠GHK读回。完整记录、截图与模块状态已更新至上述两份文档。本轮所有用户要求的UI改动已有本机实现/相关验收，未真实改车/券/订单/支付、未公网部署，Git最终引用仍另记。

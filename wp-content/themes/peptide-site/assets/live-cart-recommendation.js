@@ -50,6 +50,31 @@
   // Optional additive quote field: an order-level reward is never an item markdown.
   return money(raw?.regularUnitPrice)&&money(raw?.unitPrice)&&BigInt(raw.regularUnitPrice.minor)>BigInt(raw.unitPrice.minor)?raw.regularUnitPrice:null;
  }
+ function productDiscountLabel(candidate){
+  const regular=regularUnitPrice(candidate);
+  if(!regular)return '';
+  const before=BigInt(regular.minor),active=BigInt(candidate.unitPrice.minor),percentage=((before-active)*100n+before/2n)/before;
+  return (percentage===0n?'<1':percentage===100n&&active>0n?'>99':String(percentage))+'% OFF';
+ }
+ function exactCardRegularPrice(candidate,response){
+  const card=response?.card,price=card?.price,regular=card?.regularPrice;
+  if(!candidate||response?.id!==candidate.productId||card?.productId!==candidate.productId||card?.purchaseId!==candidate.purchasableId||card?.variationId!==candidate.variationId
+   ||!money(price)||!money(regular)||price.minor!==candidate.unitPrice?.minor
+   ||price.currency_code!==candidate.currency||regular.currency_code!==candidate.currency
+   ||price.currency_minor_unit!==candidate.currencyMinorUnit||regular.currency_minor_unit!==candidate.currencyMinorUnit
+   ||BigInt(regular.minor)<=BigInt(price.minor))return null;
+  return {minor:regular.minor,text:regular.text};
+ }
+ async function enrichPresentation(raw,activity,snapshotKey,{read,isCurrent=()=>true,now=()=>Date.now()}={}){
+  // The optional GET decorates an existing eligible quote. It cannot qualify a
+  // product, change an offer ticket, or revive a stale cart snapshot.
+  if(!isCurrent()||!quotedRecommendation(raw,activity,snapshotKey,now()))return null;
+  if(regularUnitPrice(raw)||typeof read!=='function')return raw;
+  let response;try{response=await read(raw);}catch(_){return isCurrent()&&quotedRecommendation(raw,activity,snapshotKey,now())?raw:null;}
+  if(!isCurrent()||!quotedRecommendation(raw,activity,snapshotKey,now()))return null;
+  const regular=exactCardRegularPrice(raw,response);
+  return regular?{...raw,regularUnitPrice:regular}:raw;
+ }
  function quotedRecommendation(raw,activity,snapshotKey,now=Date.now()){
   if(!raw||raw.version!==1||raw.visible!==true||raw.reachesNextTier!==true||!activity?.next||activity.completed||activity.enabled!==true||activity.visible!==true||activity.basis!=='spend'||!['tracking','tier_reached'].includes(activity.status))return null;
   if(!text(activity.stateKey)||!text(activity.promotionRevision)||!text(activity.next.key)||raw.targetNodeKey!==activity.next.key||!Number.isSafeInteger(activity.revision)||raw.configRevision!==activity.revision)return null;
@@ -154,6 +179,9 @@
    const gapCopy=gapMessage(activity),nextSignature=JSON.stringify([candidate,activity.stateKey,gapCopy]);if(signature===nextSignature)return;
    clear();signature=nextSignature;current=candidate;
    const eyebrow=el('p','offer-suggestion-eyebrow',candidate.mode==='quoted'?'Suggested add-on':'From your browsing');
+   const heading=el('div','offer-suggestion-heading');heading.append(eyebrow);
+   const productDiscount=candidate.mode==='quoted'?productDiscountLabel(candidate):'';
+   if(productDiscount){const tag=el('span','offer-suggestion-sale',productDiscount);tag.setAttribute('aria-label','Product discount '+productDiscount);heading.append(tag);}
    const gap=el('p','offer-suggestion-gap',gapCopy);gap.hidden=!gapCopy;
    const row=el('article','offer-suggestion');
    row.setAttribute('aria-label',candidate.mode==='quoted'?'A product for your next offer':'A product you viewed');
@@ -175,7 +203,7 @@
    }
    commerce.append(button);info.append(commerce);
    if(candidate.automaticCoupon?.enabled)info.append(el('p','offer-suggestion-coupon',(candidate.automaticCoupon.message||'Automatic offer')+' · Applied when added'));
-   info.append(notice);row.append(image,info);mount.append(eyebrow,gap,row);mount.hidden=false;
+   info.append(notice);row.append(image,info);mount.append(heading,gap,row);mount.hidden=false;
    const feedbackConfig=global?.vcLiveCommerce?.cartFeedback?.config||{};
    if(candidate.mode==='quoted'&&typeof global?.createLiveCartFeedback==='function')feedback=global.createLiveCartFeedback({buttons:[button],bagCountElements:[...(document.querySelectorAll?.('.vc-cart-count')||[])],bagPulseEnabled:feedbackConfig.enabled!==false&&feedbackConfig.bagPulseEnabled!==false,announce:notice,timeoutMs:25000,successMs:feedbackConfig.enabled===false?0:feedbackConfig.successDurationMs,burstEnabled:feedbackConfig.enabled!==false&&feedbackConfig.burstEnabled!==false,burstDurationMs:feedbackConfig.burstDurationMs,successText:feedbackConfig.successText,pendingText:feedbackConfig.pendingText,onStateChange:state=>{
     const op=operation;if(!op||op.candidate!==candidate)return;
@@ -189,7 +217,7 @@
   }
   return {update,clear,destroy(){destroyed=true;latest=null;clear();}};
  }
- const api={nearNextTier,quotedRecommendation,viewedSuggestion,safeImage,createCartRecommendation,quoteRequest,addPayload,addedMessage,offerUnconfirmed,regularUnitPrice};
+ const api={nearNextTier,quotedRecommendation,viewedSuggestion,safeImage,createCartRecommendation,quoteRequest,addPayload,addedMessage,offerUnconfirmed,regularUnitPrice,exactCardRegularPrice,enrichPresentation,productDiscountLabel};
  if(typeof module==='object'&&module.exports)module.exports=api;
- if(global){global.createCartRecommendation=createCartRecommendation;global.vcRecommendationContract={quoteRequest,addPayload};}
+ if(global){global.createCartRecommendation=createCartRecommendation;global.vcRecommendationContract={quoteRequest,addPayload,enrichPresentation};}
 })(typeof window==='undefined'?null:window);

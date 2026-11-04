@@ -12,9 +12,9 @@
 - `assets/live-cart-experience.js/.css`：同一 native cart item 的 unit price/regular price、qty-aware 原价和 payable line_total；红色斜标仅计算商品自身 markdown。订单券与商品优惠分开，不能把订单折扣冒充商品折扣。BigInt 精确计算，币种/小数位/税基不一致时不作虚假行比较。稳定 keyed row、数量/移除与真实成功确认保持。
 - `assets/live-cart-recommendation.js/.css`：删除重复 Add-to-unlock 文案，price 与 Add 1 box 同行，按钮右对齐/44px；可选可信 regularUnitPrice 有效时展示划线原价/红现价。原报价、时效、插件开关、重复点击及失败/未确认路径保留。
 
-## 后端对接缺口（提案，不是已实现）
+## 后端字段提案（下述缺口已由主题只读接线解决，不再阻塞）
 
-当前 recommendation quote DTO 有 unitPrice/linePrice，没有同 SKU 原价。建议 Claude 在现有 v1 quoted recommendation 中追加可选 `regularUnitPrice: {minor: string, text: string}`，必须与当前 purchasableId/variationId、币种、小数位、单位和计税口径一致，取服务端同一报价快照。无可比原价就省略/null，前端隐藏。保留原 state/revision/expiry/token/一次加购和确认规则；不以推荐产生的订单 incrementalSavings 当商品降价，不改产品售价或活动规则。前端已兼容，当前 live 推荐不会伪造划线原价。
+原 recommendation quote DTO 有 unitPrice/linePrice，没有同 SKU 原价。最初提案让Claude追加可选 `regularUnitPrice: {minor: string, text: string}`。最新已改用现有主题card只读DTO：有效原生报价先显示，然后精确读取其product/variation的当前价与正常价，所有ID/当前单价minor/币种/小数位一致，且同generation/快照/修订、未过期且无加购pending时才补比较价。晚到/失败/不一致保持原生basequote；不覆盖有效服务端regular字段，不改令牌/资格/加购payload。实际推荐236/198与16% OFF已读回。因此后端字段仅是以后省一次GET的可选优化，本轮无需新增插件或等待字段。
 
 ## 原生积木清理
 
@@ -35,3 +35,9 @@
 - 最新联合Node94项、独立sticky8项、PHPcard51/活动45/utilities15/entry14均通过（内部数量与顶层不叠加），PHP/JS语法/diff通过。没有真实改车/加购/下单/付款。
 
 **未完：M05.03进度条固定预留76px导致空白、达标鸭子的静态呈现与真实跨档动画；M05.04推荐原价可信字段/接线；最终全部cart视觉及Git整合。**用户随后要求先细分本次全部模块给其它窗口，已交付[模块工作台](frontend-module-workboard-2026-11-05.md)，包含所有涉及编号/文件边界/状态；本窗口继续独占M05，当前M05.03。未把部分完成说成整轮完成。
+
+以上为4b1331f开发检查点时的剩余项，**后续已完成M05.03/M05.04及真实cart视觉检查**：
+
+- progress无鸭子时固定预留76px改12px；真实确认已达标/正数已用优惠/eligible节点/celebration和smile启用时，首屏显示最高达标节点的静态鸭子。动画只给真实changed qualifying state，结束回静态；离屏/隐藏/BFCache/取消/降档/无资格/图片坏均正确收束，first IOtrue不吞掉有效baseline。10项新生命周期检查通过。实际车未达标12px；独立HTTP渲染页用501.60 fixture实际画出鸭子、celebrating=false、无真实车写入，截图duck-isolated-render.png。
+- 推荐同SKU卡片补原价接线已完成（见上），小红斜标来自商品价差，不取订单incrementalSavings。价格+Add同行，44px按钮；pending期间不重建正在操作的Add按钮，失败/过期/切换快照不把basequote清掉。
+- 最新联合110项Node顶层通过；8独立sticky、PHPcard51/活动45/utilities15/entry14、JS/PHP语法与diff检查均通过。实际名义360/content345，drawer333=scroll333，Shopping cart顶部60px/count节点0，推荐236/198/16% OFF，近期78/55/29%与GHK无假优惠均已读回。未执行真实加购、数量/券写入、订单/支付或公网部署。最终提交/远端结果另记。

@@ -1,6 +1,6 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
-const {quotedRecommendation,quoteRequest,addPayload,addedMessage,offerUnconfirmed}=require('../assets/live-cart-recommendation.js');
+const {quotedRecommendation,quoteRequest,addPayload,addedMessage,offerUnconfirmed,enrichPresentation,productDiscountLabel}=require('../assets/live-cart-recommendation.js');
 const m=n=>({minor:String(n),text:'$'+(Number(n)/100).toFixed(2)});
 const now=Date.parse('2026-11-04T01:00:00Z');
 function fixture(){
@@ -75,4 +75,40 @@ test('optional regular unit price decorates the same native quote without turnin
   const safe=quotedRecommendation({...quote,regularUnitPrice:invalid},activity,'snapshot',now);
   assert.ok(safe);assert.equal(safe.regularUnitPrice,null);
  }
+});
+function cardFor(quote){
+ const native=(price)=>({...price,currency_code:quote.currency,currency_minor_unit:quote.currencyMinorUnit});
+ return {id:quote.productId,card:{productId:quote.productId,purchaseId:quote.purchasableId,variationId:quote.variationId,price:native(quote.unitPrice),regularPrice:native(m(7800))}};
+}
+test('same-SKU display enrichment copies only genuine regular price and keeps native offer fields intact',async()=>{
+ const {activity,quote}=fixture();let calls=0;
+ const result=await enrichPresentation(quote,activity,'snapshot',{now:()=>now,read:async candidate=>{calls++;assert.equal(candidate,quote);return cardFor(quote);}});
+ assert.equal(calls,1);assert.deepEqual(result,{...quote,regularUnitPrice:m(7800)});assert.equal(productDiscountLabel(result),'29% OFF');
+ assert.equal(result.additionalSavings.minor,'2500');assert.equal(result.afterAdd.incrementalSavings.minor,'3000');assert.equal(quote.regularUnitPrice,undefined);
+});
+test('display reads with a different SKU, active price or money metadata never decorate a native quote',async()=>{
+ const {activity,quote}=fixture(),exact=cardFor(quote);
+ for(const response of [
+  {...exact,id:13},{...exact,card:{...exact.card,productId:13}},{...exact,card:{...exact.card,purchaseId:15}},{...exact,card:{...exact.card,variationId:15}},
+  {...exact,card:{...exact.card,price:{...exact.card.price,minor:'5600'}}},{...exact,card:{...exact.card,price:{...exact.card.price,currency_code:'EUR'}}},
+  {...exact,card:{...exact.card,regularPrice:{...exact.card.regularPrice,currency_code:'EUR'}}},{...exact,card:{...exact.card,price:{...exact.card.price,currency_minor_unit:3}}},
+  {...exact,card:{...exact.card,regularPrice:{...exact.card.regularPrice,currency_minor_unit:3}}},{...exact,card:{...exact.card,regularPrice:{...exact.card.regularPrice,minor:'5500'}}},
+  {...exact,card:{...exact.card,price:{...exact.card.price,minor:'05500'}}},null,
+ ])assert.equal(await enrichPresentation(quote,activity,'snapshot',{now:()=>now,read:async()=>response}),quote);
+});
+test('an authoritative native regular price skips display GET and is never replaced',async()=>{
+ const {activity,quote}=fixture(),native={...quote,regularUnitPrice:m(8100)};let calls=0;
+ assert.equal(await enrichPresentation(native,activity,'snapshot',{now:()=>now,read:async()=>{calls++;return cardFor(quote);}}),native);assert.equal(calls,0);
+});
+test('failed optional display reads preserve the usable native quote',async()=>{
+ const {activity,quote}=fixture();assert.equal(await enrichPresentation(quote,activity,'snapshot',{now:()=>now,read:async()=>{throw Error('offline')}}),quote);
+});
+test('stale generation or expired quote cannot start or complete an optional display enrichment',async()=>{
+ const {activity,quote}=fixture();let calls=0,current=true,resolve,clock=now;
+ assert.equal(await enrichPresentation(quote,activity,'snapshot',{now:()=>now,isCurrent:()=>false,read:async()=>{calls++;}}),null);assert.equal(calls,0);
+ assert.equal(await enrichPresentation(quote,activity,'stale',{now:()=>now,read:async()=>{calls++;}}),null);assert.equal(calls,0);
+ const delayed=enrichPresentation(quote,activity,'snapshot',{now:()=>clock,isCurrent:()=>current,read:()=>new Promise(done=>{resolve=done;})});
+ current=false;resolve(cardFor(quote));assert.equal(await delayed,null);
+ current=true;const expired=enrichPresentation(quote,activity,'snapshot',{now:()=>clock,isCurrent:()=>current,read:()=>new Promise(done=>{resolve=done;})});
+ clock=Date.parse(quote.expiresAt);resolve(cardFor(quote));assert.equal(await expired,null);
 });
