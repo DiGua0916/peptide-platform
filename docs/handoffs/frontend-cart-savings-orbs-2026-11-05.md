@@ -41,3 +41,7 @@
 - progress无鸭子时固定预留76px改12px；真实确认已达标/正数已用优惠/eligible节点/celebration和smile启用时，首屏显示最高达标节点的静态鸭子。动画只给真实changed qualifying state，结束回静态；离屏/隐藏/BFCache/取消/降档/无资格/图片坏均正确收束，first IOtrue不吞掉有效baseline。10项新生命周期检查通过。实际车未达标12px；独立HTTP渲染页用501.60 fixture实际画出鸭子、celebrating=false、无真实车写入，截图duck-isolated-render.png。
 - 推荐同SKU卡片补原价接线已完成（见上），小红斜标来自商品价差，不取订单incrementalSavings。价格+Add同行，44px按钮；pending期间不重建正在操作的Add按钮，失败/过期/切换快照不把basequote清掉。
 - 最新联合110项Node顶层通过；8独立sticky、PHPcard51/活动45/utilities15/entry14、JS/PHP语法与diff检查均通过。实际名义360/content345，drawer333=scroll333，Shopping cart顶部60px/count节点0，推荐236/198/16% OFF，近期78/55/29%与GHK无假优惠均已读回。未执行真实加购、数量/券写入、订单/支付或公网部署。最终提交/远端结果另记。
+
+## 本机源码交付引用
+
+源码检查点`4b1331f`、收尾实现`4efe2ce63e0825e4c7160f9c7aca78ec656ad69a`；干净main已正常整合至`a47420163190a78ecf2357cc4b4a46d7556a0bad`，保留已fetch的语言后端5ecf886历史。此引用指本轮功能源码，后续文档提交不改变其验证范围。FE只剩原peer experience.js一行dirty/hash未变，未stage/覆盖；backend worktree未动。atomic push发生curl55/RPC连接reset，虽尾部打印Everything up-to-date，但没有成功ACK，不认作远端同步；独立ls-remote核验结果记群与项目记忆。最终手机预览tab8保留购物车，实际截图cart-savings-final.png；隔离鸭子fixture只作渲染检查，其HTTP helper已停止。
