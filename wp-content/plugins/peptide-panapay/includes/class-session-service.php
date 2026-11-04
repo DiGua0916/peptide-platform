@@ -52,6 +52,24 @@ final class Session_Service {
 
 	private static function attempt_gateway( array $attempt ): string { return Gateway::native_id( self::attempt_account( $attempt ) ); }
 
+	/** Recognise a persisted frozen checkout without trusting its currently mutable native method.
+	 * This is only a checkout-separation identity; it never grants payment or notification authority.
+	 */
+	public static function frozen_gateway( \WC_Order $order ): ?string {
+		try {
+			$book = self::book( $order );
+			if ( ! preg_match( '/\A[a-f0-9]{32}\z/', $book['active'] ) ) { return null; }
+			$attempt = $book['attempts'][ $book['active'] ] ?? null;
+			if ( ! is_array( $attempt ) || ! is_string( $attempt['reference'] ?? null )
+				|| ! in_array( $attempt['state'] ?? null, array( 'creating', 'created', 'unknown', 'failed' ), true ) ) { return null; }
+			$reference = self::parse_reference( $attempt['reference'] );
+			if ( $reference['order_id'] !== $order->get_id() || ! hash_equals( $book['active'], $reference['attempt_id'] ) ) { return null; }
+			$gateway = self::attempt_gateway( $attempt );
+			Persistence::assert_book( $order, $book );
+			return $gateway;
+		} catch ( \Throwable $error ) { return null; }
+	}
+
 	/** Syntax never grants access: receipts must match this order's persisted attempt. */
 	public static function bound_gateway( \WC_Order $order ): ?string {
 		try {
@@ -132,7 +150,7 @@ final class Session_Service {
 			$existing = $book['attempts'][ $book['active'] ] ?? null;
 			if ( is_array( $existing ) && 'failed' !== ( $existing['state'] ?? '' ) ) {
 				if ( self::attempt_gateway( $existing ) !== $gateway_id ) {
-					throw new Customer_Error( __( 'This order already has a payment in progress with another method. Please contact the store before paying again.', 'peptide-panapay' ) );
+					throw new Customer_Error( __( 'This order has an earlier payment attempt. Start a new order to change payment methods.', 'peptide-panapay' ) );
 				}
 				Persistence::assert_book( $order, $book );
 				if ( ! hash_equals( $existing['fingerprint'], Order_Payload::fingerprint( $order ) ) ) {
