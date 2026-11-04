@@ -17,7 +17,7 @@
     const records = cards.map(card => ({card, search: normalize(card.dataset.search || ''), categories: (card.dataset.categories || '').split(',')}));
     function render() {
       const query = normalize(search.value);
-      const matches = records.filter(r => (category === 'all' || r.categories.includes(category)) && (!query || query.split(' ').every(word => r.search.includes(word))));
+      const matches = records.filter(r => (category === 'all' || (Array.isArray(category) ? category.some(id => r.categories.includes(id)) : r.categories.includes(category))) && (!query || query.split(' ').every(word => r.search.includes(word))));
       const shown = new Set(matches.slice(0, limit).map(r => r.card));
       cards.forEach(card => { card.hidden = !shown.has(card); });
       more.hidden = matches.length <= limit;
@@ -31,6 +31,14 @@
       render();
     }));
     search.addEventListener('input', () => { limit = pageSize; render(); });
+    root.addEventListener('vc:catalog-restore', event => {
+      const value = event.detail;
+      if (!value || typeof value.query !== 'string' || value.query.length > 200 || !Array.isArray(value.categoryIds) || value.categoryIds.length > 300 || !value.categoryIds.every(id => typeof id === 'string' && /^[1-9]\d*$/.test(id))) return;
+      search.value = value.query;
+      category = value.categoryIds.length ? value.categoryIds : 'all'; limit = pageSize;
+      root.querySelectorAll('[data-vc-category]').forEach(button => button.setAttribute('aria-pressed', String(category === 'all' ? button.dataset.vcCategory === 'all' : button.dataset.vcCategory === value.categoryIds[0])));
+      render();
+    });
     more.addEventListener('click', () => { const old = limit; limit += pageSize; render(); const visible = cards.filter(c => !c.hidden); visible[old]?.querySelector('a')?.focus({preventScroll: true}); });
     root.querySelectorAll('.vc-demo-catalog__all, [data-vc-catalog-expand]').forEach(link => link.addEventListener('click', event => {
       if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0 || (link.target && link.target !== '_self') || link.hasAttribute('download')) return;

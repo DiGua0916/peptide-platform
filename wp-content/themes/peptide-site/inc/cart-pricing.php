@@ -13,4 +13,8 @@ add_action( 'wp_enqueue_scripts', function (): void {
 	$uri  = get_template_directory_uri();
 	wp_enqueue_style( 'vialcove-cart-pricing', $uri . '/assets/cart-pricing.css', array( 'vialcove-sale-pricing' ), (string) filemtime( $base . '/assets/cart-pricing.css' ) );
 	wp_enqueue_script( 'vialcove-cart-pricing', $uri . '/assets/cart-pricing.js', array( 'wc-blocks-checkout', 'wc-blocks-data-store', 'wp-data', 'wp-element', 'wp-plugins' ), (string) filemtime( $base . '/assets/cart-pricing.js' ), true );
+	if ( is_checkout() && ! is_wc_endpoint_url() ) {
+		wp_enqueue_style( 'vc-checkout-polish', $uri . '/assets/checkout-polish.css', array( 'vialcove-cart-pricing', 'vialcove-checkout' ), (string) filemtime( $base . '/assets/checkout-polish.css' ) );
+		wp_enqueue_script( 'vc-checkout-polish', $uri . '/assets/checkout-polish.js', array( 'vialcove-cart-pricing' ), (string) filemtime( $base . '/assets/checkout-polish.js' ), true );
+	}
 }, 35 );

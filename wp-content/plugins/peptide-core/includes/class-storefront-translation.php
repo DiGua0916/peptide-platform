@@ -167,7 +167,7 @@ final class Storefront_Translation {
 		if ( preg_match( '~(?:^|/)(?:admin(?:[-_][a-z]+)?|editor|design(?:-[a-z]+)?|layouts?|templates?|records?|settings?|staff|track|tracking|data|hq|hub|payments?|panapay|callbacks?|webhooks?|state|draft|save|publish|import|reset|outbox)(?:/|\z)~iD', $route ) ) { return false; }
 		if ( preg_match( '~\A/wc/store/v1(?:/|\z)~D', $route ) ) { return true; }
 		if ( preg_match( '~\A/vialcove/v1/home-product/[1-9][0-9]*/?\z~D', $route ) ) { return true; }
-		return (bool) preg_match( '~\A/peptide/v1/(?:site|products|batches|reports|coupons|menus|exit-intent|product-broadcast|activity-listener|cart-feedback|recently-viewed|storefront-language)(?:/|\z)~D', $route );
+		return (bool) preg_match( '~\A/peptide/v1/(?:site|products|batches|reports|coupons|menus|exit-intent|product-broadcast|activity-listener|cart-feedback|recently-viewed|storefront-language|campaign-countdown)(?:/|\z)~D', $route );
 	}
 
 	private static function request_scope(): string {

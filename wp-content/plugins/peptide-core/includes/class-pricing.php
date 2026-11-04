@@ -156,23 +156,54 @@ final class Pricing {
 		$regular = 0;
 		$sale    = 0;
 		$demo    = false;
+		$coupon  = 0;
+		$promotion = 0;
+		$display_regular = 0;
+		$display_sale = 0;
+		$available = true;
+		$including_tax = 'incl' === get_option( 'woocommerce_tax_display_cart' );
 		if ( $cart ) {
 			foreach ( $cart->get_cart() as $item ) {
 				$line     = self::cart_line( $item );
 				$regular += (int) ( $line['regular_subtotal'] ?? 0 );
 				$sale    += (int) ( $line['sale_subtotal'] ?? 0 );
 				$demo     = $demo || ! empty( $line['compare_is_demo'] );
+				$quantity = (int) ( $line['quantity'] ?? 0 );
+				if ( $quantity > 0 && function_exists( 'wc_get_price_to_display' ) && ( $item['data'] ?? null ) instanceof \WC_Product ) {
+					$product = $item['data'];
+					$current_price = (float) $product->get_price();
+					$regular_price = (float) $product->get_regular_price();
+					$compare_price = $product->is_on_sale() && $regular_price > $current_price && $current_price > 0 ? $regular_price : $current_price;
+					// Preserve native unit precision; round only after Woo applies quantity and tax.
+					$display_regular += self::to_cents( wc_get_price_to_display( $product, array( 'qty' => $quantity, 'price' => $compare_price, 'display_context' => 'cart' ) ) );
+					$display_sale += self::to_cents( wc_get_price_to_display( $product, array( 'qty' => $quantity, 'price' => $current_price, 'display_context' => 'cart' ) ) );
+				} else { $available = false; }
+			}
+			// Native calculated discounts only. Count our actually posted promotion
+			// fees, not another eligibility estimate or arbitrary negative fees.
+			$coupon = max( 0, self::to_cents( $cart->get_discount_total() + ( $including_tax ? $cart->get_discount_tax() : 0 ) ) );
+			foreach ( $cart->get_fees() as $fee ) {
+				if ( is_object( $fee ) && preg_match( '/\Apc-promo-[1-9][0-9]*\z/D', (string) ( $fee->id ?? '' ) ) ) {
+					$promotion += max( 0, -self::to_cents( $fee->total ?? 0 ) );
+				}
 			}
 		}
 		return array(
 			'regular_subtotal'    => (string) $regular,
 			'sale_subtotal'       => (string) $sale,
 			'sale_savings'        => (string) ( $regular - $sale ),
+			'coupon_savings'      => (string) $coupon,
+			'promotion_savings'   => (string) $promotion,
+			'total_savings'       => (string) ( max( 0, $display_regular - $display_sale ) + $coupon + $promotion ),
+			'display_regular_subtotal' => (string) $display_regular,
+			'display_sale_subtotal' => (string) $display_sale,
+			'savings_available'   => $available,
+			'savings_basis'       => $including_tax ? 'native-cart-display-including-tax-excluding-shipping' : 'native-cart-display-excluding-tax-and-shipping',
 			'compare_is_demo'     => $demo,
 			'currency_code'       => get_woocommerce_currency(),
 			'currency_minor_unit' => wc_get_price_decimals(),
 			'tax_display'         => get_option( 'woocommerce_tax_display_cart' ),
-			'note'                => 'Informational only. Coupon discounts are reported separately by WooCommerce (totals.total_discount) and are not included here.',
+			'note'                => 'Informational only. sale_savings is the legacy item-price difference. Display item savings equals display_regular_subtotal minus display_sale_subtotal. total_savings also includes native coupon savings and actually posted promotion savings, on the cart tax-display basis and excluding shipping.',
 		);
 	}
 

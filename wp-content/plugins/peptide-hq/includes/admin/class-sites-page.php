@@ -1,6 +1,6 @@
 <?php
 /**
- * 总后台 → 店铺：每个店铺的状态、分配的服务器、域名、搜索引擎收录和访客追踪开关、销售账号数、最后检查时间；
+ * 总后台 → 店铺：每个店铺的状态、分配的服务器、域名、搜索引擎收录和访客追踪开关、最后检查时间；
  * 一键进店铺后台、马上刷新；“更多”里有平台工具（店铺后台不显示的页面）、系统信息、访客数据保留天数、改名、移除。
  * 店铺是自动接入的（开新店铺时在 wp-config.php 加两行，见 Register），这里显示要加的两行。
  *
@@ -58,7 +58,6 @@ final class Sites_Page {
 								<th scope="col"><?php esc_html_e( 'Domains', 'peptide-hq' ); ?></th>
 								<th scope="col"><?php esc_html_e( 'Search engines', 'peptide-hq' ); ?></th>
 								<th scope="col"><?php esc_html_e( 'Visitor tracking', 'peptide-hq' ); ?></th>
-								<th scope="col" class="num"><?php esc_html_e( 'Salesperson accounts', 'peptide-hq' ); ?></th>
 								<th scope="col"><?php esc_html_e( 'Last check', 'peptide-hq' ); ?></th>
 								<th scope="col"><?php esc_html_e( 'Actions', 'peptide-hq' ); ?></th>
 							</tr>
@@ -159,7 +158,6 @@ final class Sites_Page {
 					</span>
 				<?php endif; ?>
 			</td>
-			<td class="num" data-label="<?php esc_attr_e( 'Salesperson accounts', 'peptide-hq' ); ?>"><a href="<?php echo esc_url( admin_url( 'admin.php?page=' . Accounts_Page::SLUG . '&site=' . $s['id'] ) ); ?>"><?php echo esc_html( number_format_i18n( (int) ( $info['staff'] ?? 0 ) ) ); ?></a></td>
 			<td data-label="<?php esc_attr_e( 'Last check', 'peptide-hq' ); ?>"><?php echo esc_html( Menu::ago( $s['last_check'] ) ); ?></td>
 			<td data-label="<?php esc_attr_e( 'Actions', 'peptide-hq' ); ?>" class="pchq-actions">
 				<a class="button button-small button-primary" target="_blank" rel="noopener" href="<?php echo esc_url( Menu::action_url( 'pchq_login', array( 'site' => $s['id'] ) ) ); ?>"><?php esc_html_e( 'Open store admin', 'peptide-hq' ); ?></a>
