@@ -400,7 +400,7 @@ final class Store_Design {
 					<td><?php echo esc_html( get_the_title( $template_id ) ); ?></td>
 					<td>
 						<?php if ( $manage ) : ?>
-							<a class="button-link-delete" href="<?php echo esc_url( self::action_url( 'pc_design_domain_remove', array( 'domain' => $host ) ) ); ?>" onclick="return confirm(<?php echo esc_attr( wp_json_encode( __( 'Remove this domain assignment? The domain will use the store default template.', 'peptide-core' ) ) ); ?>);"><?php esc_html_e( 'Remove', 'peptide-core' ); ?></a>
+							<a class="button-link-delete" href="<?php echo esc_url( self::action_url( 'pc_design_domain_remove', array( 'domain' => $host ) ) ); ?>" data-pc-confirm-json="<?php echo esc_attr( wp_json_encode( __( 'Remove this domain assignment? The domain will use the store default template.', 'peptide-core' ) ) ); ?>"><?php esc_html_e( 'Remove', 'peptide-core' ); ?></a>
 						<?php endif; ?>
 					</td>
 				</tr>
@@ -477,7 +477,7 @@ final class Store_Design {
 								<summary class="button" aria-label="<?php esc_attr_e( 'More actions', 'peptide-core' ); ?>"><span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span></summary>
 								<div class="pc-sd-menu__list">
 									<?php if ( $manage && $default !== $id ) : ?>
-										<a href="<?php echo esc_url( self::action_url( 'pc_design_default', array( 'template' => $id ) ) ); ?>" onclick="return confirm(<?php echo esc_attr( wp_json_encode( __( 'Use this template as the store default? Customers will see it on all domains without their own template.', 'peptide-core' ) ) ); ?>);"><?php esc_html_e( 'Set as store default', 'peptide-core' ); ?></a>
+										<a href="<?php echo esc_url( self::action_url( 'pc_design_default', array( 'template' => $id ) ) ); ?>" data-pc-confirm-json="<?php echo esc_attr( wp_json_encode( __( 'Use this template as the store default? Customers will see it on all domains without their own template.', 'peptide-core' ) ) ); ?>"><?php esc_html_e( 'Set as store default', 'peptide-core' ); ?></a>
 									<?php endif; ?>
 									<a href="<?php echo esc_url( self::action_url( 'pc_design_duplicate', array( 'template' => $id ) ) ); ?>"><?php esc_html_e( 'Duplicate', 'peptide-core' ); ?></a>
 									<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="pc-sd-form">
@@ -489,7 +489,7 @@ final class Store_Design {
 										<button type="submit" class="button"><?php esc_html_e( 'Save details', 'peptide-core' ); ?></button>
 									</form>
 									<?php if ( $manage && $default !== $id && ! $hosts ) : ?>
-										<a class="pc-sd-menu__danger" href="<?php echo esc_url( self::action_url( 'pc_design_trash', array( 'template' => $id ) ) ); ?>" onclick="return confirm(<?php echo esc_attr( wp_json_encode( __( 'Move this template to the trash? Its designs are removed with it.', 'peptide-core' ) ) ); ?>);"><?php esc_html_e( 'Delete', 'peptide-core' ); ?></a>
+										<a class="pc-sd-menu__danger" href="<?php echo esc_url( self::action_url( 'pc_design_trash', array( 'template' => $id ) ) ); ?>" data-pc-confirm-json="<?php echo esc_attr( wp_json_encode( __( 'Move this template to the trash? Its designs are removed with it.', 'peptide-core' ) ) ); ?>"><?php esc_html_e( 'Delete', 'peptide-core' ); ?></a>
 									<?php endif; ?>
 								</div>
 							</details>

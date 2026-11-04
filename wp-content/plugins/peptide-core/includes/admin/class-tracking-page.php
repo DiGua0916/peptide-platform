@@ -283,7 +283,7 @@ final class Tracking_Page {
 					<p class="description"><?php esc_html_e( 'Never recorded: staff accounts and browsers that opened the opt-out link (?pc_px_optout=1). A customer’s visits are included when personal data is exported or erased.', 'peptide-core' ); ?></p>
 					<?php $test_left = current_user_can( 'manage_options' ) ? Schema::test_visitors() : 0; ?>
 					<?php if ( $test_left ) : ?>
-						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="pc-trk-purge" onsubmit="return confirm(<?php echo esc_attr( wp_json_encode( __( 'Delete the data from the test version? This cannot be undone.', 'peptide-core' ) ) ); ?>);">
+						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="pc-trk-purge" data-pc-confirm-json="<?php echo esc_attr( wp_json_encode( __( 'Delete the data from the test version? This cannot be undone.', 'peptide-core' ) ) ); ?>">
 							<input type="hidden" name="action" value="pc_tracking_purge">
 							<?php wp_nonce_field( 'pc_tracking_purge' ); ?>
 							<?php /* translators: %d: number of visitors */ ?>

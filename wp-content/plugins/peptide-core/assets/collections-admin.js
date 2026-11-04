@@ -43,7 +43,7 @@
     function safeUrl( value ) { try { var url = new URL( String( value || '' ), window.location.href ); return [ 'http:', 'https:' ].indexOf( url.protocol ) !== -1 ? url.href : '#'; } catch ( e ) { return '#'; } }
     function route( id, hash ) { var url = new URL( window.location.href ); url.search = ''; url.searchParams.set( 'page', 'pc-collections' ); if ( id !== null && id !== undefined && id !== 'list' ) { url.searchParams.set( 'collection', String( id ) ); } url.hash = hash || ''; return url.href; }
     function link( label, url, name, extra ) { return el( 'a', Object.assign( { href: safeUrl( url ), class: 'button pc-col-button' }, extra || {} ), [ name ? icon( name ) : null, label ] ); }
-    function navigate( id, hash ) { if ( state.dirty && ! window.confirm( '当前专辑有尚未保存的修改，确定离开吗？' ) ) { return; } state.dirty = false; window.location.assign( route( id, hash ) ); }
+    async function navigate( id, hash ) { if ( state.dirty && ! await window.VialCoveDialogs.confirm( '当前专辑有尚未保存的修改，确定离开吗？' ) ) { return; } state.dirty = false; window.location.assign( route( id, hash ) ); }
     function cleanText( value ) { var text = document.createElement( 'textarea' ); text.innerHTML = String( value || '' ); return text.value; }
     function number( value ) { return Math.max( 0, Number.parseInt( value, 10 ) || 0 ); }
     function modifiedTime( value ) { if ( ! value ) { return '尚无修改记录'; } var raw = String( value ), date = new Date( /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test( raw ) ? raw.replace( ' ', 'T' ) + 'Z' : raw ); return Number.isNaN( date.getTime() ) ? raw : date.toLocaleString( 'zh-CN', { hour12: false } ); }
@@ -144,8 +144,8 @@
             state.selected.clear(); renderList();
         } catch ( error ) { notice( error.message, true ); }
     }
-    function deleteCollections( rows ) {
-        if ( ! window.confirm( '删除这 ' + rows.length + ' 个专辑？专辑中的商品不会被删除，但它们与这些专辑的关联将移除。此操作无法撤销。' ) ) { return; }
+    async function deleteCollections( rows ) {
+        if ( ! await window.VialCoveDialogs.confirm( '删除这 ' + rows.length + ' 个专辑？专辑中的商品不会被删除，但它们与这些专辑的关联将移除。此操作无法撤销。' ) ) { return; }
         action( async function () { var completed = 0; try { for ( var row of rows ) { await request( 'delete', { id: row.id, revision: row.revision, confirmed: true } ); completed++; } } catch ( error ) { await loadList(); throw new Error( '已删除 ' + completed + ' 个专辑，后续专辑未继续处理。' + error.message ); } await loadList(); notice( '已删除 ' + completed + ' 个专辑，商品保留。' ); } );
     }
     async function exportCollections() {
@@ -237,7 +237,7 @@
         if ( payload.type === 'automatic' ) {
             var preview = await previewRules( payload.rules ), count = number( preview.count !== undefined ? preview.count : preview.total );
             if ( saveVersion !== state.editVersion ) { throw new Error( '预览期间专辑设置有变化，请重新预览并保存。' ); }
-            if ( ! window.confirm( '保存自动专辑后，将根据当前规则保留 ' + count + ' 个匹配商品，并移出不再匹配的商品。商品本身不会被删除。确认保存？' ) ) { return; }
+            if ( ! await window.VialCoveDialogs.confirm( '保存自动专辑后，将根据当前规则保留 ' + count + ' 个匹配商品，并移出不再匹配的商品。商品本身不会被删除。确认保存？' ) ) { return; }
             payload.confirm_rule_replace = true;
         }
         var result = await request( 'save', payload ), saved = normalizeCollection( result.collection || result );

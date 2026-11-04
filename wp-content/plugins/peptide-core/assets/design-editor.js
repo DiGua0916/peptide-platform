@@ -295,10 +295,10 @@
 			updateModule( m.attrs.moduleId, { enabled: m.attrs.enabled === false } );
 		}
 
-		function remove( index ) {
+		async function remove( index ) {
 			// 后台已用页面内对话框替换原生确认框（admin-dialogs.js）。
 			// eslint-disable-next-line no-alert
-			if ( ! window.confirm( S.confirmDelete ) ) {
+			if ( ! await window.VialCoveDialogs.confirm( S.confirmDelete ) ) {
 				return;
 			}
 			var list = modules.slice();
@@ -356,14 +356,14 @@
 		}
 
 		// 发布：有未保存的修改时先保存，再发布。
-		function publish() {
+		async function publish() {
 			menuState[ 1 ]( false );
 			if ( ! cfg.canPublish ) {
 				setNotice( { type: 'warning', text: S.publishDenied } );
 				return;
 			}
 			// eslint-disable-next-line no-alert -- 后台已用页面内对话框替换原生确认框。
-			if ( ! window.confirm( S.publishConfirm ) ) {
+			if ( ! await window.VialCoveDialogs.confirm( S.publishConfirm ) ) {
 				return;
 			}
 			busyState[ 1 ]( true );
@@ -382,9 +382,9 @@
 				} );
 		}
 
-		function unpublish() {
+		async function unpublish() {
 			// eslint-disable-next-line no-alert
-			if ( ! window.confirm( S.unpublishConfirm ) ) {
+			if ( ! await window.VialCoveDialogs.confirm( S.unpublishConfirm ) ) {
 				return;
 			}
 			menuState[ 1 ]( false );
@@ -401,9 +401,9 @@
 				} );
 		}
 
-		function discard() {
+		async function discard() {
 			// eslint-disable-next-line no-alert
-			if ( ! window.confirm( S.discardConfirm ) ) {
+			if ( ! await window.VialCoveDialogs.confirm( S.discardConfirm ) ) {
 				return;
 			}
 			menuState[ 1 ]( false );

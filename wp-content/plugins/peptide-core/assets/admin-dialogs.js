@@ -1,174 +1,70 @@
-/**
- * 后台确认框与提示框：用页面内对话框代替浏览器原生的 confirm / alert。
- *
- * 原生 confirm 是同步的，页面内对话框是异步的，因此采用“先拦截、确认后重放点击”的方式：
- * 1. 点击发生时（捕获阶段，早于 WordPress / WooCommerce 的处理函数），临时把 window.confirm
- *    换成“记录提示文字并返回 false”的函数，原有操作因此被取消；
- * 2. 本次点击处理完后（setTimeout 0）恢复原生 confirm；如果期间请求过确认，就弹出页面内对话框；
- * 3. 用户点“确定”后，在“放行”状态下重新点击同一个元素，此时 confirm 返回 true，原有操作照常执行。
- * 不是由点击触发的 confirm（极少见）仍使用浏览器原生对话框。
- *
- * 安全细节（2026-10-15 安全检查后补充）：
- * - 重放时只自动同意用户确认过的那一条提示，且只同意一次；其他确认仍走原生对话框。
- * - 对话框打开后 400 ms 内不接受“确定”，按住回车（repeat）不算确认；确认框默认聚焦“取消”。
- * - 只处理真实的用户点击（isTrusted），脚本触发的点击不拦截。
- * - 已知限制：第一次被拦截时 confirm 返回 false，如果某个处理函数在“取消”分支里有副作用，那个分支会先执行一次。
- *   WordPress / WooCommerce 后台的写法基本都是“不确认就直接 return”，不受影响。
- */
-( function () {
-	'use strict';
-
-	var i18n = window.pcAdminDialogs || {};
-	var nativeConfirm = window.confirm;
-	var bypass = false;
-	var open = false;
-
-	function buildDialog( message, withCancel, onOk ) {
-		open = true;
-		var previousFocus = document.activeElement;
-
-		var overlay = document.createElement( 'div' );
-		overlay.className = 'pc-dialog-overlay';
-
-		var box = document.createElement( 'div' );
-		box.className = 'pc-dialog';
-		box.setAttribute( 'role', withCancel ? 'alertdialog' : 'dialog' );
-		box.setAttribute( 'aria-modal', 'true' );
-		box.setAttribute( 'aria-labelledby', 'pc-dialog-title' );
-		box.setAttribute( 'aria-describedby', 'pc-dialog-message' );
-
-		var title = document.createElement( 'h2' );
-		title.id = 'pc-dialog-title';
-		title.className = 'pc-dialog__title';
-		title.textContent = withCancel ? ( i18n.confirmTitle || 'Please confirm' ) : ( i18n.alertTitle || 'Notice' );
-
-		var text = document.createElement( 'p' );
-		text.id = 'pc-dialog-message';
-		text.className = 'pc-dialog__message';
-		text.textContent = String( message == null ? '' : message );
-
-		var actions = document.createElement( 'div' );
-		actions.className = 'pc-dialog__actions';
-
-		var cancelBtn = null;
-		if ( withCancel ) {
-			cancelBtn = document.createElement( 'button' );
-			cancelBtn.type = 'button';
-			cancelBtn.className = 'button';
-			cancelBtn.textContent = i18n.cancel || 'Cancel';
-			actions.appendChild( cancelBtn );
-		}
-		var okBtn = document.createElement( 'button' );
-		okBtn.type = 'button';
-		okBtn.className = 'button button-primary';
-		okBtn.textContent = i18n.ok || 'OK';
-		actions.appendChild( okBtn );
-
-		box.appendChild( title );
-		box.appendChild( text );
-		box.appendChild( actions );
-		overlay.appendChild( box );
-		document.body.appendChild( overlay );
-
-		// 对话框刚出现的一小段时间内不接受“确定”，防止双击或连按回车时误确认（例如误点退款）。
-		var openedAt = Date.now();
-		var GUARD_MS = 400;
-
-		function close( confirmed ) {
-			document.removeEventListener( 'keydown', onKey, true );
-			overlay.remove();
-			open = false;
-			if ( previousFocus && previousFocus.focus ) {
-				previousFocus.focus();
-			}
-			if ( confirmed && onOk ) {
-				onOk();
-			}
-		}
-		function onKey( e ) {
-			if ( 'Escape' === e.key ) {
-				e.preventDefault();
-				close( false );
-			} else if ( 'Enter' === e.key && ( e.repeat || Date.now() - openedAt < GUARD_MS ) ) {
-				e.preventDefault(); // 按住不放或打开瞬间的回车不算确认。
-			} else if ( 'Tab' === e.key ) {
-				// 焦点限制在对话框内。
-				var items = cancelBtn ? [ cancelBtn, okBtn ] : [ okBtn ];
-				var idx = items.indexOf( document.activeElement );
-				e.preventDefault();
-				items[ ( idx + ( e.shiftKey ? items.length - 1 : 1 ) ) % items.length ].focus();
-			}
-		}
-
-		okBtn.addEventListener( 'click', function () {
-			if ( Date.now() - openedAt < GUARD_MS ) {
-				return;
-			}
-			close( true );
-		} );
-		if ( cancelBtn ) {
-			cancelBtn.addEventListener( 'click', function () {
-				close( false );
-			} );
-		}
-		overlay.addEventListener( 'mousedown', function ( e ) {
-			if ( e.target === overlay && withCancel ) {
-				close( false );
-			}
-		} );
-		document.addEventListener( 'keydown', onKey, true );
-		// 确认框默认聚焦“取消”（更安全）；提示框只有一个“确定”。
-		( cancelBtn || okBtn ).focus();
-	}
-
-	// 1–3：拦截点击期间的 confirm。
-	window.addEventListener(
-		'click',
-		function ( e ) {
-			if ( bypass || open || ! e.isTrusted ) {
-				return;
-			}
-			var target = e.target;
-			var requested = null;
-			window.confirm = function ( message ) {
-				if ( null === requested ) {
-					requested = message;
-				}
-				return false;
-			};
-			setTimeout( function () {
-				window.confirm = nativeConfirm;
-				if ( null === requested ) {
-					return;
-				}
-				buildDialog( requested, true, function () {
-					bypass = true;
-					// 重放时只自动同意用户刚刚确认过的那一条提示，而且只同意一次；
-					// 同一次点击里如果又弹出别的确认，交给浏览器原生对话框让用户自己决定。
-					var approved = false;
-					window.confirm = function ( message ) {
-						if ( ! approved && message === requested ) {
-							approved = true;
-							return true;
-						}
-						return nativeConfirm.call( window, message );
-					};
-					try {
-						if ( target && target.isConnected ) {
-							target.click();
-						}
-					} finally {
-						window.confirm = nativeConfirm;
-						bypass = false;
-					}
-				} );
-			}, 0 );
-		},
-		true
-	);
-
-	// alert 不需要返回值，直接换成页面内提示框。
-	window.alert = function ( message ) {
-		buildDialog( message, false, null );
-	};
-} )();
+/** Explicit asynchronous admin dialogs. Never patch browser confirm or replay clicks. */
+(function () {
+  'use strict';
+  if (window.VialCoveDialogs) return;
+  let queue = Promise.resolve();
+  function ask(kind, message, initial) {
+    const run = () => new Promise(resolve => {
+      const prior = document.activeElement;
+      const selection = window.getSelection && window.getSelection();
+      const range = selection && selection.rangeCount ? selection.getRangeAt(0).cloneRange() : null;
+      const d = document.createElement('dialog'); d.className = 'vc-admin-dialog';
+      d.setAttribute('aria-labelledby','vc-admin-dialog-title'); d.setAttribute('aria-describedby','vc-admin-dialog-message');
+      const title = document.createElement('h2'); title.id='vc-admin-dialog-title'; title.textContent=kind==='alert'?'提示':kind==='prompt'?'请输入':'请确认操作';
+      const text = document.createElement('p'); text.id='vc-admin-dialog-message'; text.textContent=String(message || '是否继续此操作？');
+      const input = document.createElement('input'); input.type='text'; input.value=initial || ''; input.setAttribute('aria-label',String(message || '输入内容'));
+      const actions=document.createElement('div'); actions.className='vc-admin-dialog__actions';
+      const cancel=document.createElement('button'); cancel.type='button'; cancel.textContent='取消';
+      const ok=document.createElement('button'); ok.type='button'; ok.className='vc-admin-dialog__primary'; ok.textContent=kind==='alert'?'知道了':'确认';
+      d.append(title,text); if(kind==='prompt')d.append(input); if(kind!=='alert')actions.append(cancel); actions.append(ok); d.append(actions);
+      let settled=false;
+      function finish(approved) {
+        if(settled)return; settled=true;
+        const result=kind==='prompt'?(approved?input.value:null):approved;
+        d.removeEventListener('keydown',keys,true); if(d.open)d.close(); d.remove();
+        if(prior && prior.isConnected)prior.focus({preventScroll:true});
+        if(range && range.commonAncestorContainer.isConnected && selection){selection.removeAllRanges();selection.addRange(range);}
+        resolve(result);
+      }
+      function keys(e){if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();finish(false);} else if(e.key==='Enter' && e.target===input){e.preventDefault();finish(true);}}
+      d.addEventListener('keydown',keys,true); d.addEventListener('cancel',e=>{e.preventDefault();e.stopPropagation();finish(false);});
+      d.addEventListener('close',()=>finish(false)); cancel.addEventListener('click',()=>finish(false)); ok.addEventListener('click',()=>finish(true));
+      document.body.append(d);
+      try { d.showModal(); (kind==='prompt'?input:kind==='alert'?ok:cancel).focus(); }
+      catch (_) { finish(false); }
+    });
+    const result=queue.then(run,run); queue=result.then(()=>{},()=>{}); return result;
+  }
+  const approvals=new WeakMap(), waiting=new WeakSet();
+  async function confirmSubmit(form, submitter, message) {
+    if(waiting.has(form))return;
+    waiting.add(form);
+    const snapshot=new FormData(form), action=form.action, method=form.method;
+    const stamp=data=>JSON.stringify(Array.from(data.entries()).map(([k,v])=>[k,typeof v==='string'?v:[v.name,v.size,v.lastModified]]));
+    const before=stamp(snapshot);
+    try {
+      if(!await ask('confirm',message))return;
+      if(!form.isConnected || form.action!==action || form.method!==method || before!==stamp(new FormData(form)) || submitter && (!submitter.isConnected || submitter.form!==form))return;
+      approvals.set(form,submitter || null);
+      try { form.requestSubmit(submitter || undefined); } finally { approvals.delete(form); }
+    } finally {waiting.delete(form);}
+  }
+  function approved(form,submitter){return approvals.has(form) && approvals.get(form)===(submitter || null);}
+  function messageFor(el){if(el.hasAttribute('data-pc-confirm-json')){try{return JSON.parse(el.getAttribute('data-pc-confirm-json'));}catch(_){return '请确认是否继续此操作？';}} return el.getAttribute('data-pc-confirm');}
+  document.addEventListener('submit',event=>{
+    const form=event.target;
+    if(!form.matches('form[data-pc-confirm],form[data-pc-confirm-json]') || approved(form,event.submitter))return;
+    const field=form.getAttribute('data-pc-confirm-field');
+    if(field && (!form.elements.namedItem(field) || form.elements.namedItem(field).value!==form.getAttribute('data-pc-confirm-value')))return;
+    const required=form.getAttribute('data-pc-confirm-selected');
+    if(required && !form.querySelector(required)){event.preventDefault();return;}
+    event.preventDefault(); event.stopImmediatePropagation(); confirmSubmit(form,event.submitter,messageFor(form));
+  },true);
+  async function confirmLink(link,message){const href=link.href;if(await ask('confirm',message) && link.isConnected && link.href===href)window.location.assign(href);}
+  document.addEventListener('click',event=>{
+    const link=event.target.closest && event.target.closest('a[data-pc-confirm],a[data-pc-confirm-json]');
+    if(!link)return;
+    event.preventDefault();event.stopImmediatePropagation();confirmLink(link,messageFor(link));
+  },true);
+  window.VialCoveDialogs={confirm:message=>ask('confirm',message),alert:message=>ask('alert',message),prompt:(message,initial)=>ask('prompt',message,initial),confirmSubmit,approved,confirmLink};
+}());

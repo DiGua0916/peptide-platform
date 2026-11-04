@@ -24,6 +24,7 @@ final class Menu {
 	private const ACTIONS = array( 'pchq_site_refresh', 'pchq_site_rename', 'pchq_site_delete', 'pchq_site_retire', 'pchq_site_server', 'pchq_site_config', 'pchq_secret_regenerate', 'pchq_server_save', 'pchq_server_delete', 'pchq_login', 'pchq_account_save', 'pchq_account_delete', 'pchq_account_toggle', 'pchq_alert_close' );
 
 	public static function register_hooks(): void {
+		add_action( 'admin_enqueue_scripts', array( self::class, 'dialogs' ), 1 );
 		add_action( 'admin_menu', array( self::class, 'menu' ) );
 		add_action( 'admin_menu', array( self::class, 'clean_menu' ), 999 );
 		add_action( 'admin_init', array( self::class, 'redirect_dashboard' ) );
@@ -78,6 +79,12 @@ final class Menu {
 			wp_safe_redirect( admin_url( 'admin.php?page=' . Dashboard_Page::SLUG ) );
 			exit;
 		}
+	}
+
+	public static function dialogs(): void {
+		$version = PEPTIDE_HQ_VERSION . '.' . (int) filemtime( PEPTIDE_HQ_DIR . '/assets/admin-dialogs.js' );
+		wp_enqueue_style( 'peptide-hq-dialogs', plugins_url( 'assets/admin-dialogs.css', PEPTIDE_HQ_FILE ), array(), $version );
+		wp_enqueue_script( 'peptide-hq-dialogs', plugins_url( 'assets/admin-dialogs.js', PEPTIDE_HQ_FILE ), array(), $version, false );
 	}
 
 	public static function enqueue( string $hook ): void {
