@@ -2,6 +2,7 @@
 (function () {
   'use strict';
   if (!document.body.classList.contains('pc-admin-workspace')) return;
+  if (document.getElementById('pc-workspace-shell')) return;
   const menu = document.getElementById('adminmenu');
   if (!menu) return;
   const indicator = document.createElement('div');
