@@ -1216,3 +1216,7 @@ HTTP聚合探针已证 catalogSupported=true、quoteHooksSupported=false、unsup
 ### 2026-11-05 · Codex：商品弹窗优惠跟随
 
 用户要求Order savings满减档位随下滑持续可见。新增product-dialog-offer-follow.js监听既有selection/presented，把同一原生活动节点移至原sticky toolbar第二行；close归还heading、双事件去重、切商品释放与BFCache清理。未动peer experience.js/后台规则/金额；原导航动态测完整toolbar高度避让Details/COA。实际offer72px/toolbar132.67px；390和360两宽无横溢，Details/COA下滑仍offer top54，关闭重开仅1份。17 Node、JS/PHP语法/diff通过。新交接[frontend-product-offer-follow-2026-11-05.md](frontend-product-offer-follow-2026-11-05.md)，截图在D:/Codex/Tasks/2026-11-05/product-offer-follow/outputs。仅本机主题/Git，无DB/业务数据/公网部署。
+
+### 2026-11-05 · Codex：中美仓配送时效对照
+
+用户补充实际政策：中国仓5–8天/48小时内创建订单，美国仓2–5天/24小时内创建订单，FedEx，WhatsApp24小时支持。home685只更新原delivery-details模块富文本与3项；新demo-delivery.php按该唯一module id呈现两仓并排和支持入口，仍native编辑，号码动态取原配置。未把订单创建改成dispatch，未添加business days/即时回复/checkout仓库规则。原FAQ和其余10块、7其它装修/全部设置hash不变。手机两仓数字同一高度，360内容345无横溢，CTA45.33px，原FAQ和收球规则保留。PHP lint/diff及native readback通过；截图/回执D:/Codex/Tasks/2026-11-05/delivery-warehouse-layout/outputs，详见[frontend-delivery-warehouses-2026-11-05.md](frontend-delivery-warehouses-2026-11-05.md)。未公网部署或改车/订单/支付/发送WA；未碰peer experience.js。

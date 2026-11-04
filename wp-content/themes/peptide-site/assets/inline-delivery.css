@@ -1,117 +1,122 @@
-/* Delivery uses the existing editable FAQ module, independently of the FAQ above. */
-#vc-delivery-details .vc-demo-faq {
+/* The existing editable delivery module: two warehouses, one carrier, support. */
+#vc-delivery-details .vc-delivery-section {
     padding-block: 24px;
     background: #fff;
-    color: #17343f;
-    font-family: Geist, sans-serif;
+    color: #17343e;
+    font-family: Geist, Arial, sans-serif;
 }
 
-#vc-delivery-details .vc-demo-faq-grid {
+#vc-delivery-details .vc-delivery-section * { box-sizing: border-box; }
+#vc-delivery-details .vc-delivery-section > .vc-demo-wrap {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 24px;
     min-width: 0;
 }
 
-#vc-delivery-details .vc-demo-faq-grid > header {
+#vc-delivery-details .vc-delivery-header {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 96px);
+    grid-template-columns: minmax(0, 1fr) 96px;
     align-items: center;
     gap: 8px 16px;
     min-width: 0;
 }
-
-#vc-delivery-details .vc-demo-faq-grid > header > :not(.vc-demo-faq-image) {
-    grid-column: 1;
-    min-width: 0;
-}
-
-#vc-delivery-details .vc-demo-faq h2 {
+#vc-delivery-details .vc-delivery-header > :not(.vc-delivery-image) { grid-column: 1; min-width: 0; }
+#vc-delivery-details .vc-delivery-header h2 {
     margin: 0;
-    color: #17343f;
-    font: 600 30px/36px Geist, sans-serif;
+    color: #17343e;
+    font: 600 30px/36px Geist, Arial, sans-serif;
     letter-spacing: -.025em;
     overflow-wrap: anywhere;
     text-wrap: balance;
 }
-
-#vc-delivery-details .vc-demo-faq-description {
-    margin: 0;
-    color: #42616c;
-    font: 400 16px/24px Geist, sans-serif;
-    overflow-wrap: anywhere;
-    text-wrap: pretty;
-}
-
-#vc-delivery-details .vc-demo-faq-description p { margin: 0; }
-#vc-delivery-details .vc-demo-faq-description p + p { margin-top: 8px; }
-#vc-delivery-details .vc-demo-kicker { margin: 0; }
-
-#vc-delivery-details .vc-demo-faq-grid > header > .vc-demo-faq-image {
-    display: block;
+#vc-delivery-details .vc-delivery-intro { color: #42616c; font: 400 16px/24px Geist, Arial, sans-serif; overflow-wrap: anywhere; text-wrap: pretty; }
+#vc-delivery-details .vc-delivery-intro p { margin: 0; color: inherit; }
+#vc-delivery-details .vc-delivery-intro p + p { margin-top: 8px; }
+#vc-delivery-details .vc-delivery-image {
     grid-column: 2;
     grid-row: 1 / span 2;
-    justify-self: end;
     align-self: center;
-    width: 100%;
-    max-width: 96px;
+    justify-self: end;
+    width: 96px;
     min-width: 0;
     margin: 0;
 }
+#vc-delivery-details .vc-delivery-image img { display: block; width: 100%; max-width: 100%; height: auto; object-fit: contain; }
 
-#vc-delivery-details .vc-demo-faq-image img {
+#vc-delivery-details .vc-delivery-warehouses {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-width: 0;
+    background: #f2f7f8;
+    border-block: 1px solid #d8e5e8;
+}
+#vc-delivery-details .vc-delivery-warehouse { min-width: 0; padding: 16px 12px; }
+#vc-delivery-details .vc-delivery-warehouse + .vc-delivery-warehouse { border-inline-start: 1px solid #d8e5e8; }
+#vc-delivery-details .vc-delivery-warehouse h3 {
+    margin: 0 0 16px;
+    min-height: 48px;
+    color: #17343e;
+    font: 600 16px/24px Geist, Arial, sans-serif;
+    letter-spacing: -.01em;
+    overflow-wrap: anywhere;
+}
+#vc-delivery-details .vc-delivery-timing { min-width: 0; }
+#vc-delivery-details .vc-delivery-timing p { margin: 0; color: inherit; }
+#vc-delivery-details .vc-delivery-timing p + p { margin-top: 16px; padding-top: 12px; border-top: 1px solid #d8e5e8; }
+#vc-delivery-details .vc-delivery-timing p:first-child strong {
     display: block;
-    width: 100%;
-    max-width: 100%;
-    height: auto;
-    object-fit: contain;
+    color: #11657d;
+    font: 650 clamp(24px, 6.3vw, 30px)/1.2 Geist, Arial, sans-serif;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.025em;
+    overflow-wrap: anywhere;
 }
-
-#vc-delivery-details .vc-demo-faq-list { min-width: 0; border-color: #d8e5e8; }
-#vc-delivery-details .vc-demo-faq-list details { border-color: #d8e5e8; }
-#vc-delivery-details .vc-demo-faq-list summary {
-    min-height: 44px;
-    padding-block: 16px;
-    gap: 16px;
-    color: #17343f;
-    font: 500 16px/24px Geist, sans-serif;
+#vc-delivery-details .vc-delivery-timing span { display: block; color: #42616c; font: 400 14px/20px Geist, Arial, sans-serif; overflow-wrap: anywhere; }
+#vc-delivery-details .vc-delivery-timing p:first-child span { margin-top: 4px; }
+#vc-delivery-details .vc-delivery-timing p + p strong {
+    display: block;
+    margin-top: 4px;
+    color: #17343e;
+    font: 600 16px/24px Geist, Arial, sans-serif;
+    font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
 }
 
-#vc-delivery-details .vc-demo-faq-answer {
-    max-width: 70ch;
-    padding: 0 0 16px;
-    color: #42616c;
-    font: 400 16px/24px Geist, sans-serif;
-    overflow-wrap: anywhere;
-    text-wrap: pretty;
-}
-
-#vc-delivery-details .vc-demo-faq-answer p { color: inherit; }
-#vc-delivery-details .vc-demo-faq-answer :where(ul, ol) { padding-inline-start: 24px; }
-#vc-delivery-details .vc-demo-faq-answer li + li { margin-top: 8px; }
-#vc-delivery-details .vc-demo-faq-answer a { color: #11657d; text-underline-offset: 4px; }
-#vc-delivery-details .vc-demo-faq-answer :is(a[href^="mailto:"], a[href^="tel:"], a[href*="wa.me/"]) {
+#vc-delivery-details .vc-delivery-support { min-width: 0; padding-top: 0; }
+#vc-delivery-details .vc-delivery-support h3 { margin: 0 0 8px; color: #17343e; font: 600 20px/28px Geist, Arial, sans-serif; letter-spacing: -.015em; }
+#vc-delivery-details .vc-delivery-support-copy { color: #42616c; font: 400 16px/24px Geist, Arial, sans-serif; overflow-wrap: anywhere; text-wrap: pretty; }
+#vc-delivery-details .vc-delivery-support-copy p { margin: 0; color: inherit; }
+#vc-delivery-details .vc-delivery-support-copy p + p { margin-top: 8px; }
+#vc-delivery-details .vc-delivery-contact {
     display: inline-flex;
     align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     min-height: 44px;
     max-width: 100%;
-    padding-block: 8px;
+    margin-top: 12px;
+    padding: 10px 16px;
+    border: 1px solid #11657d;
+    border-radius: 8px;
+    background: #11657d;
+    color: #fff;
+    font: 600 16px/24px Geist, Arial, sans-serif;
+    text-decoration: none;
     overflow-wrap: anywhere;
 }
-
-#vc-delivery-details :is(summary, a):focus-visible {
-    outline: 2px solid #11657d;
-    outline-offset: 4px;
-}
+#vc-delivery-details .vc-delivery-contact:hover { background: #0e5367; border-color: #0e5367; color: #fff; }
+#vc-delivery-details .vc-delivery-contact:focus-visible { outline: 2px solid #11657d; outline-offset: 4px; }
 
 @media (max-width: 359px) {
-    #vc-delivery-details .vc-demo-faq-grid > header { grid-template-columns: minmax(0, 1fr) minmax(0, 80px); }
-    #vc-delivery-details .vc-demo-faq-grid > header > .vc-demo-faq-image { max-width: 80px; }
+    #vc-delivery-details .vc-delivery-header { grid-template-columns: minmax(0, 1fr) 80px; gap-inline: 12px; }
+    #vc-delivery-details .vc-delivery-image { width: 80px; }
+    #vc-delivery-details .vc-delivery-warehouse { padding-inline: 10px; }
 }
-
 @media (min-width: 768px) {
-    #vc-delivery-details .vc-demo-faq-grid { grid-template-columns: minmax(0, .85fr) minmax(0, 1.4fr); gap: 48px; }
-    #vc-delivery-details .vc-demo-faq-grid > header { grid-template-columns: minmax(0, 1fr) minmax(0, 112px); align-self: start; }
-    #vc-delivery-details .vc-demo-faq-grid > header > .vc-demo-faq-image { max-width: 112px; }
+    #vc-delivery-details .vc-delivery-section > .vc-demo-wrap { grid-template-columns: minmax(0, .85fr) minmax(0, 1.4fr); gap: 24px 48px; }
+    #vc-delivery-details .vc-delivery-header { grid-column: 1; grid-row: 1 / span 2; align-self: start; grid-template-columns: minmax(0, 1fr) 112px; }
+    #vc-delivery-details .vc-delivery-image { width: 112px; }
+    #vc-delivery-details .vc-delivery-warehouses, #vc-delivery-details .vc-delivery-support { grid-column: 2; }
+    #vc-delivery-details .vc-delivery-warehouse { padding: 24px; }
 }
