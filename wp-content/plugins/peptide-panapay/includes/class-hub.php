@@ -167,11 +167,37 @@ final class Hub {
 		$result = array( 'state' => $row['state'], 'account_id' => $account );
 		if ( 'created' === $row['state'] ) {
 			$url = Crypto::decrypt( $row['checkout_box'], 'hub-checkout' );
-			if ( Configuration::payment_url( $url, self::checkout_trust( $row ) ) && ! ( $row['test_mode'] && 'production' === wp_get_environment_type() ) ) {
+			$trust = self::checkout_trust( $row );
+			if ( Configuration::payment_url( $url, $trust ) && ! ( $row['test_mode'] && 'production' === wp_get_environment_type() ) ) {
 				$result['type'] = $row['type']; $result['url'] = $url;
+				// Publish the same immutable policy that authorized this session, never
+				// today's account settings or a host inferred from the returned URL.
+				if ( is_string( $row['hosts_box'] ?? null ) && '' !== $row['hosts_box'] ) {
+					$result['checkout_policy'] = self::session_policy( $row, $trust );
+				}
 			} else { $result['state'] = 'unknown'; }
 		}
 		return $result;
+	}
+	private static function session_policy( array $row, array $trust ): array {
+		$reference = $row['local_reference'] ?? null;
+		if ( ! is_string( $reference ) ) { throw new \RuntimeException( 'hub_checkout_trust_unavailable' ); }
+		Session_Service::parse_reference( $reference );
+		$hosts = $trust['payment_hosts'];
+		if ( ! array_is_list( $hosts ) || count( $hosts ) !== count( array_unique( $hosts, SORT_REGULAR ) ) ) {
+			throw new \RuntimeException( 'hub_checkout_trust_unavailable' );
+		}
+		$gateway_host = wp_parse_url( $trust['gateway'], PHP_URL_HOST );
+		if ( ! is_string( $gateway_host ) || '' === $gateway_host ) { throw new \RuntimeException( 'hub_checkout_trust_unavailable' ); }
+		if ( ! in_array( $gateway_host, $hosts, true ) ) { $hosts[] = $gateway_host; }
+		if ( ! $hosts || count( $hosts ) > 32 ) { throw new \RuntimeException( 'hub_checkout_trust_unavailable' ); }
+		foreach ( $hosts as $host ) {
+			if ( ! is_string( $host ) || strlen( $host ) > 253 || false !== filter_var( $host, FILTER_VALIDATE_IP )
+				|| 1 !== preg_match( '/\A(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?\z/', $host ) ) {
+				throw new \RuntimeException( 'hub_checkout_trust_unavailable' );
+			}
+		}
+		return array( 'version' => 1, 'reference' => $reference, 'payment_hosts' => $hosts );
 	}
 	private static function checkout_trust( array $row ): array {
 		if ( is_string( $row['hosts_box'] ?? null ) && '' !== $row['hosts_box'] ) {
