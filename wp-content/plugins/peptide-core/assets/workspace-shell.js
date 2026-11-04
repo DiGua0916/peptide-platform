@@ -126,6 +126,9 @@
           if (active) active.remove(); // Cancels old document timers, requests and listeners.
           active = frame; pending = null;
           frame.classList.remove('pc-shell-preparing'); frame.removeAttribute('aria-hidden'); status.hidden = true; host.classList.remove('is-loading');
+          if (typeof frame.animate === 'function' && !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+            frame.animate([{opacity:.88,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:200,easing:'cubic-bezier(.22,1,.36,1)'});
+          }
           activeURL = final.href;
           watch(frame); sync(final,doc);
           if (push) history.pushState({pcShell:true},'',final.href);

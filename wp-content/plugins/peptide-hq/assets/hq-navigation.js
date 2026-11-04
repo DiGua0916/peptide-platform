@@ -193,6 +193,9 @@
 				if (env.screenMeta && env.screenMeta.toggles && typeof env.screenMeta.toggles.off === 'function') env.screenMeta.toggles.off('click', env.screenMeta.toggleEvent);
 				doc.dispatchEvent(new env.CustomEvent('pchq:before-swap'));
 				content.replaceWith(replacement); content = replacement;
+				if (typeof content.animate === 'function' && !(env.matchMedia && env.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+					content.animate([{ opacity: .88, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 200, easing: 'cubic-bezier(.22,1,.36,1)' });
+				}
 				location.replaceChildren.apply(location, Array.from(next.location.childNodes).map(function (node) { return doc.importNode(node, true); }));
 				doc.body.classList.remove(meta.screen); doc.body.classList.add(next.meta.screen);
 				meta = next.meta; doc.title = parsed.title;
