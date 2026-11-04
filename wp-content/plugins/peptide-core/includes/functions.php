@@ -224,3 +224,14 @@ function peptide_core_recently_viewed_config(): array {
 function peptide_core_recently_viewed_url(): string {
 	return rest_url( 'peptide/v1/recently-viewed' );
 }
+
+/** Equivalent per-vial catalog display price; null for an unselected variation or unknown package. */
+function peptide_core_get_unit_pricing( $product ): ?array {
+	$product = $product instanceof WC_Product ? $product : wc_get_product( (int) $product );
+	return \PeptideCore\Unit_Pricing::for_product( $product );
+}
+
+/** Resolve the explicit header settings against its selected live campaign, without copying rules. */
+function peptide_core_get_campaign_announcement( array $header_settings, bool $is_home ): array {
+	return \PeptideCore\Campaign_Announcement::for_header( $header_settings, $is_home );
+}

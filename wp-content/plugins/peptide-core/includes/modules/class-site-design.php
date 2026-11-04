@@ -38,7 +38,9 @@ final class Site_Design {
 				$f( 'toggle', 'sticky', 'Keep header visible while scrolling', false ),
 				$f( 'toggle', 'announcement', 'Show announcement', false ),
 				$f( 'toggle', 'announcementHomeOnly', 'Show announcement only on homepage', false ),
-				$f( 'html', 'announcementText', 'Announcement text', '' ),
+				$f( 'select', 'announcementSource', '公告来源', 'manual', array( 'options' => array( 'manual' => '手动文案', 'promotion' => '关联现有满减活动' ), 'show_if' => array( 'announcement' => true ) ) ),
+				$f( 'record', 'announcementPromotion', '关联公告活动', null, array( 'resource' => 'promotion', 'show_if' => array( 'announcement' => true, 'announcementSource' => 'promotion' ), 'help' => '与购物车活动监听选择同一个活动。名称、档位和期间读取活动实际设置；停用、不公开或结束后自动隐藏，不复制优惠规则。' ) ),
+				$f( 'html', 'announcementText', 'Announcement text', '', array( 'show_if' => array( 'announcementSource' => 'manual' ) ) ),
 				$f( 'color', 'headerBackground', 'Header background', '#ffffff', $group ),
 				$f( 'color', 'headerText', 'Header text', '#101516', $group ),
 				$f( 'color', 'announcementBackground', 'Announcement background', '#101516', $group ),
@@ -298,8 +300,9 @@ final class Site_Design {
 			$width = $s['logoWidth']['desktop'] ?? 180;
 			$mobile_width = $s['logoWidth']['mobile'] ?? $width;
 			$out = '';
-			if ( $s['announcement'] && ( ! $s['announcementHomeOnly'] || is_front_page() ) ) {
-				$out .= '<div class="pc-design-announcement" style="background:' . esc_attr( $s['announcementBackground'] ) . ';color:' . esc_attr( $s['announcementColor'] ) . '">' . wp_kses_post( $s['announcementText'] ) . '</div>';
+			$announcement = \PeptideCore\Campaign_Announcement::for_header( $s, is_front_page() );
+			if ( $announcement['visible'] ) {
+				$out .= '<div class="pc-design-announcement"' . ( $announcement['promotionId'] ? ' data-pc-promotion-id="' . (int) $announcement['promotionId'] . '" data-pc-promotion-status="' . esc_attr( $announcement['status'] ) . '"' : '' ) . ' style="background:' . esc_attr( $s['announcementBackground'] ) . ';color:' . esc_attr( $s['announcementColor'] ) . '">' . $announcement['html'] . '</div>';
 			}
 			$out .= '<header class="site-header pc-design-header' . ( $s['sticky'] ? ' is-sticky' : '' ) . '" style="--pc-logo-width:' . (int) $width . 'px;--pc-logo-mobile:' . (int) $mobile_width . 'px;background:' . esc_attr( $s['headerBackground'] ) . ';color:' . esc_attr( $s['headerText'] ) . '"><div class="container header-inner">';
 			$out .= '<a class="brand" href="' . esc_url( home_url( '/' ) ) . '" aria-label="' . esc_attr( $s['brandName'] ) . '">' . self::logo( $s['logo'], $s['brandName'] ) . '</a>';

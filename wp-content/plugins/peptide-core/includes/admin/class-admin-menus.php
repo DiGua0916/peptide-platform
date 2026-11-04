@@ -280,6 +280,15 @@ final class Admin_Menus {
 		if ( false !== $customers && false !== $analytics ) {
 			list( $items[ $customers ], $items[ $analytics ] ) = array( $items[ $analytics ], $items[ $customers ] );
 		}
+		// 2026-11-04: Data replaces the former Analytics entry; retain its reports
+		// and permissions, and leave WooCommerce's underlying reporting data intact.
+		$data = array_search( Data_Pages::SLUG, array_column( $items, 2 ), true );
+		$analytics = array_search( self::ANALYTICS, array_column( $items, 2 ), true );
+		if ( false !== $data && false !== $analytics ) {
+			$items[ $analytics ] = $items[ $data ];
+			unset( $items[ $data ] );
+		}
+		$items = array_values( array_filter( $items, static fn( $item ) => self::ANALYTICS !== ( $item[2] ?? '' ) ) );
 		$menu = array(); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		foreach ( $items as $i => $item ) {
 			$menu[ ( $i + 1 ) * 5 ] = $item; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
