@@ -106,5 +106,30 @@ namespace {
     $defs=array('promotion_card'=>array('settings'=>array(),'panels'=>array()),'rich_text'=>array('sentinel'=>'unchanged'));
     $extended=$schema($defs);
     check( 'standard' === $extended['promotion_card']['settings'][0]['default'] && isset($extended['promotion_card']['settings'][0]['options']['campaign_bubble']) && $extended['rich_text']===$defs['rich_text'], 'Editable style is opt-in while other definitions remain unchanged.' );
+    check( isset($extended['promotion_card']['settings'][0]['options']['campaign_announcement']), 'The small announcement is a separate opt-in without removing the existing bubble.' );
+
+    $announcement=module(array('presentation'=>'campaign_announcement'));
+    $rail='<div class="pc-campaign__rail" data-pc-campaign-rail data-mobile-layout="grid"><div class="pc-campaign__tiers" id="native-offers">'.$tiers.'</div><div class="pc-campaign__rail-controls"><button data-pc-campaign-next>Next</button></div></div>';
+    $native='<article class="pc-campaign" data-pc-campaign data-activity-id="10980"><header class="pc-campaign__head"><h2 class="pc-campaign__title">黑色星期五</h2><div class="pc-campaign__description"><p>Merchant-authored conditions remain visible.</p></div></header>'.$rail.'<div class="pc-campaign__notes"><p>Native qualifying-customer and coupon terms.</p></div><a href="/offer/10980/">Native offer detail</a></article>';
+    reset_campaign(array(),$native);
+    $rendered=vc_campaign_bubble_html(null,$announcement,'public','mobile');
+    check( str_contains($rendered,'class="vc-campaign-strip" data-vc-campaign-strip') && !str_contains($rendered,'class="vc-campaign-bubble"'), 'Announcement uses its own normal-flow presentation wrapper.' );
+    check( 1===\PeptideCore\Modules\Commerce_Blocks::$calls && array(null,$announcement,'public','mobile')===\PeptideCore\Modules\Commerce_Blocks::$arguments, 'Announcement calls the same eligible native renderer once with the original module.' );
+    check( str_contains($rendered,'id="native-offers" tabindex="0" aria-label="Promotion offers"') && str_contains($rendered,'data-pc-campaign-next') && str_contains($rendered,'data-mobile-layout="grid"'), 'Native rail identity and controls remain; its scroll surface is keyboard reachable and labelled.' );
+    check( substr_count($rendered,'class="pc-campaign__tier"')===3 && str_contains($rendered,'$25.00<small>off</small>') && str_contains($rendered,'Spend $1,000.00</div>'), 'Announcement retains each exact native tier without claiming cumulative rewards.' );
+    check( str_contains($rendered,'Merchant-authored conditions remain visible.') && str_contains($rendered,'Native qualifying-customer and coupon terms.') && str_contains($rendered,'href="/offer/10980/"'), 'Announcement keeps the merchant description, native terms and offer link.' );
+    reset_campaign(array('status'=>'upcoming'),$native);
+    check( str_contains(vc_campaign_bubble_html(null,$announcement,'public','mobile'),'Coming soon'), 'Upcoming announcement never presents the offer as already active.' );
+    foreach(array(array('visible'=>false),array('status'=>'expired'),array('promotionId'=>10981)) as $change){
+        reset_campaign($change,$native);
+        check( ''===vc_campaign_bubble_html(null,$announcement,'public','mobile') && 0===\PeptideCore\Modules\Commerce_Blocks::$calls, 'Disabled, expired or mismatched announcement hides before native rendering.' );
+    }
+    reset_campaign(array(),str_replace('id="native-offers"','id="native-offers" tabindex="0" aria-label="Existing native label"',$native));
+    $rendered=vc_campaign_bubble_html(null,$announcement,'public','mobile');
+    check( 1===substr_count($rendered,'tabindex=') && str_contains($rendered,'aria-label="Existing native label"'), 'Existing native accessibility attributes are not duplicated or overwritten.' );
+    reset_campaign(array(),$native);
+    $custom=$announcement; $custom['settings']['conditionTemplateHtml']='Spend {{condition}}, get'; $custom['settings']['discountTemplateHtml']='{{discount}} OFF';
+    $rendered=vc_campaign_bubble_html(null,$custom,'public','mobile');
+    check( str_contains($rendered,'Spend $300.00, get</div>') && str_contains($rendered,'$25.00 OFF</div>'), 'Announcement also respects both merchant-authored wording templates.' );
     echo "$passed campaign bubble presentation guards passed\n";
 }
