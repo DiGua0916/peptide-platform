@@ -430,9 +430,9 @@
 			);
 		}
 
-		function remove( path ) {
+		async function remove( path ) {
 			// eslint-disable-next-line no-alert
-			if ( ! window.confirm( S.confirmDelete ) ) {
+			if ( ! await window.VialCoveDialogs.confirm( S.confirmDelete ) ) {
 				return;
 			}
 			if ( path.length === 1 ) {

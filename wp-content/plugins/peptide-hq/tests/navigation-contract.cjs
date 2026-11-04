@@ -40,7 +40,7 @@ function fixture(start = 'pchq') {
   const window = dom.window, requests = [], native = [], scrolls = [], histories = [], confirms = [];
   window.AbortController = globalThis.AbortController;
   window.fetch = (url, options) => { const work = deferred(); requests.push({ url: String(url), options, ...work }); return work.promise; };
-  window.confirm = message => { confirms.push(message); return fixture.confirmDecision; };
+  window.VialCoveDialogs = {confirm: async message => { confirms.push(message); return fixture.confirmDecision; }};
   window.scrollTo = (x, y) => { if (typeof x === 'object') { y = x.top ?? x.y ?? 0; x = x.left ?? x.x ?? 0; } scrolls.push({ x, y }); Object.defineProperty(window, 'scrollX', { configurable: true, value: x }); Object.defineProperty(window, 'scrollY', { configurable: true, value: y }); };
   for (const name of ['pushState', 'replaceState']) { const original = window.history[name].bind(window.history); window.history[name] = (state, title, url) => { histories.push({ method: name, state: structuredClone(state), url: url && String(url) }); return original(state, title, url); }; }
   const controller = nav.mount(window, { navigate: (url, replace) => native.push({ url: String(url), replace }) });
@@ -201,7 +201,7 @@ test('actual popstate handler refetches prior URL and scroll without adding hist
 test('bfcache return resets prior native-navigation approval for future unsaved edits', async () => {
   const f = fixture(); try {
     const input = f.document.querySelector('input[name=title]'); input.value = 'Unsaved before native';
-    const work = f.controller.navigate(route('pchq-alerts')); f.requests[0].resolve(response('pchq-alerts', 'Denied', { status: 401, ok: false })); await work;
+    const work = f.controller.navigate(route('pchq-alerts')); await flush(); f.requests[0].resolve(response('pchq-alerts', 'Denied', { status: 401, ok: false })); await work;
     assert.equal(f.native.length, 1); f.window.dispatchEvent(new f.window.PageTransitionEvent('pagehide', { persisted: true })); f.window.dispatchEvent(new f.window.PageTransitionEvent('pageshow', { persisted: true }));
     input.value = 'New unsaved after back'; const event = new f.window.Event('beforeunload', { cancelable: true }); f.window.dispatchEvent(event); assert.equal(event.defaultPrevented, true);
   } finally { f.close(); }

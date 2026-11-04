@@ -202,7 +202,7 @@ function vc_card_price_html( $product ): string {
     return vc_public_price_html( vc_card_display_product( $product ) );
 }
 
-function vc_product_card( $product, bool $report_preview = true, ?array $card_image = null, string $card_sizes = '100vw', bool $compact = false ): void {
+function vc_product_card( $product, bool $report_preview = true, ?array $card_image = null, string $card_sizes = '100vw', bool $compact = false, bool $quick_add = false ): void {
     $display_product = vc_card_display_product( $product );
     $is_variation = $display_product->is_type( 'variation' );
     // A parent/artwork fallback may show a different dosage. An image-less
@@ -221,6 +221,9 @@ function vc_product_card( $product, bool $report_preview = true, ?array $card_im
     $observation_product = $product instanceof WC_Product ? ( $observation_parent > 0 ? $observation_parent : (int) $product->get_id() ) : 0;
     $observation_variation = $observation_parent > 0 ? (int) $display_product->get_id() : 0;
     $observation_valid = $observation_product > 0 && $observation_product <= 9007199254740991 && $observation_variation >= 0 && $observation_variation <= 9007199254740991;
+    $quick_add_price = $quick_add && $compact && function_exists( 'vc_home_quick_view_card_money' ) ? vc_home_quick_view_card_money( wc_get_price_to_display( $display_product ) ) : null;
+    $quick_add_ready = $quick_add_price && $observation_valid && ( $is_variation || $display_product->is_type( 'simple' ) ) && function_exists( 'vc_live_cart_available' ) && vc_live_cart_available()
+        && function_exists( 'vc_home_quick_view_card_can_add_one' ) && vc_home_quick_view_card_can_add_one( $product, $display_product );
     ?>
     <article class="product-card<?php echo $sale_percent ? ' product-card--offer' : ''; ?>"<?php if ( $observation_valid ) { echo ' data-vc-observe-product="' . esc_attr( (string) $observation_product ) . '" data-vc-observe-variation="' . esc_attr( (string) $observation_variation ) . '"'; } ?>>
         <a class="product-visual<?php echo $report_preview ? ' product-visual--report' : ''; ?><?php echo '' !== $card_image_html || $display_image_id ? ' product-visual--photo' : ''; ?>" href="<?php echo esc_url( $card_url ); ?>"<?php echo $dialog_attributes; /* Already escaped by vc_live_product_link_attributes. */ ?> aria-label="<?php echo esc_attr( 'View ' . $product->get_name() ); ?>">
@@ -233,7 +236,11 @@ function vc_product_card( $product, bool $report_preview = true, ?array $card_im
         <?php if ( ! $compact ) : ?><div class="product-meta"><span><?php echo esc_html( $product->get_sku() ?: 'PEPTIDE COLLECTION' ); ?></span><span><?php echo esc_html( vc_report_label( $extra['report_state'] ?? '' ) ); ?></span></div><?php endif; ?>
         <div class="product-heading"><h3><a href="<?php echo esc_url( $card_url ); ?>"<?php echo $dialog_attributes; /* Already escaped by vc_live_product_link_attributes. */ ?>><?php echo esc_html( $product->get_name() ); ?></a></h3><span class="product-price"><?php echo wp_kses_post( vc_card_price_html( $display_product ) ); ?></span></div>
         <?php if ( $compact && $is_variation ) : ?><p class="vc-card-specification"><?php echo esc_html( wc_get_formatted_variation( $display_product, true, false, false ) ); ?></p><?php endif; ?>
-        <div class="product-card-bottom"><?php if ( ! $compact ) : ?><span><?php echo isset( $extra['batch_count'] ) ? esc_html( sprintf( _n( '%d published batch', '%d published batches', $extra['batch_count'], 'vialcove' ), $extra['batch_count'] ) ) : 'Batch data unavailable'; ?></span><?php endif; ?><a href="<?php echo esc_url( $card_url ); ?>"<?php echo $dialog_attributes; /* Already escaped by vc_live_product_link_attributes. */ ?>><?php echo $compact && $is_variation ? 'Choose options' : 'View details'; ?> <?php echo vc_icon(); ?></a></div>
+        <div class="product-card-bottom"><?php if ( ! $compact ) : ?><span><?php echo isset( $extra['batch_count'] ) ? esc_html( sprintf( _n( '%d published batch', '%d published batches', $extra['batch_count'], 'vialcove' ), $extra['batch_count'] ) ) : 'Batch data unavailable'; ?></span><?php endif; ?>
+            <?php if ( $quick_add_ready ) : ?><button type="button" class="vc-catalog-quick-add" data-vc-catalog-add data-product-id="<?php echo esc_attr( (string) $observation_product ); ?>" data-purchase-id="<?php echo esc_attr( (string) $display_product->get_id() ); ?>" data-variation-id="<?php echo esc_attr( (string) $observation_variation ); ?>" data-price-minor="<?php echo esc_attr( $quick_add_price['minor'] ); ?>" data-currency="<?php echo esc_attr( $quick_add_price['currency_code'] ); ?>" data-precision="<?php echo (int) $quick_add_price['currency_minor_unit']; ?>" aria-label="<?php echo esc_attr( 'Add 1 box of ' . $product->get_name() . ( $is_variation ? ' ' . wc_get_formatted_variation( $display_product, true, false, false ) : '' ) ); ?>" hidden>Add 1 box <span aria-hidden="true">+</span></button><?php endif; ?>
+            <a<?php echo $quick_add_ready ? ' data-vc-catalog-add-fallback' : ''; ?> href="<?php echo esc_url( $card_url ); ?>"<?php echo $dialog_attributes; /* Already escaped by vc_live_product_link_attributes. */ ?>><?php echo $quick_add ? 'Select & add' : ( $compact && $is_variation ? 'Choose options' : 'View details' ); ?> <?php echo vc_icon(); ?></a>
+            <?php if ( $quick_add_ready ) : ?><p class="vc-catalog-quick-status" data-vc-catalog-add-status role="status" aria-live="polite" hidden></p><?php endif; ?>
+        </div>
         <?php do_action( 'peptide_core_product_card_extras', $product ); ?>
     </article>
     <?php

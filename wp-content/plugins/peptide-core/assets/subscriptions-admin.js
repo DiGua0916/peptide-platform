@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!form) return;
   form.querySelector('[data-pc-subs-all]')?.addEventListener('change', event => form.querySelectorAll('[name="ids[]"]').forEach(box => { box.checked = event.target.checked; }));
   form.addEventListener('submit', event => {
-    if (!form.querySelector('[name="ids[]"]:checked') || !confirm(form.dataset.confirm)) event.preventDefault();
+    if (!form.querySelector('[name="ids[]"]:checked')) { event.preventDefault(); return; }
+    if (!window.VialCoveDialogs.approved(form,event.submitter)) { event.preventDefault(); window.VialCoveDialogs.confirmSubmit(form,event.submitter,form.dataset.confirm); }
   });
 });

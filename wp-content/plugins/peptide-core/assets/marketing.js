@@ -77,9 +77,10 @@
 		var $form = $( this );
 		if ( ! $form.find( 'input[name="ids[]"]:checked' ).length ) {
 			e.preventDefault();
-			window.alert( S.pickFirst );
-		} else if ( 'delete' === $form.find( 'select[name="bulk"]' ).val() && ! window.confirm( S.confirmDel ) ) {
+			window.VialCoveDialogs.alert( S.pickFirst );
+		} else if ( 'delete' === $form.find( 'select[name="bulk"]' ).val() && !window.VialCoveDialogs.approved(this, e.originalEvent && e.originalEvent.submitter) ) {
 			e.preventDefault();
+			window.VialCoveDialogs.confirmSubmit(this, e.originalEvent && e.originalEvent.submitter, S.confirmDel);
 		}
 	} );
 	$( document ).on( 'change', '.pc-mk-autosubmit', function () {

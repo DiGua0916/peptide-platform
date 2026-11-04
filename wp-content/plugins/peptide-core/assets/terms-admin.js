@@ -96,8 +96,8 @@
 		$plans.append( planBox( { pages: [ 'checkout' ], terms: [] } ) );
 		renumber();
 	} );
-	$form.on( 'click', '.pc-tm-plan-del', function () {
-		if ( window.confirm( S.confirmDel ) ) {
+	$form.on( 'click', '.pc-tm-plan-del', async function () {
+		if ( await window.VialCoveDialogs.confirm( S.confirmDel ) ) {
 			$( this ).closest( '.pc-tm-plan' ).remove();
 			renumber();
 		}
@@ -121,11 +121,11 @@
 	$form.on( 'mousedown', '.pc-tm-tools button', function ( e ) {
 		e.preventDefault(); // 保留编辑区里的选区。
 	} );
-	$form.on( 'click', '.pc-tm-tools button', function () {
+	$form.on( 'click', '.pc-tm-tools button', async function () {
 		var cmd = $( this ).data( 'cmd' );
 		$( this ).closest( '.pc-tm-editor-wrap' ).find( '.pc-tm-editor' ).trigger( 'focus' );
 		if ( 'link' === cmd ) {
-			var url = window.prompt( S.linkPrompt, 'https://' );
+			var url = await window.VialCoveDialogs.prompt( S.linkPrompt, 'https://' );
 			if ( url && /^https?:\/\//i.test( url ) ) {
 				document.execCommand( 'createLink', false, url );
 			}
@@ -156,9 +156,8 @@
 		$( this ).closest( 'dialog' )[ 0 ].close();
 	} );
 	$( document ).on( 'click', '.pc-tm-reset', function ( e ) {
-		if ( ! window.confirm( this.textContent.trim() + '?' ) ) {
-			e.preventDefault();
-		}
+		e.preventDefault();
+		window.VialCoveDialogs.confirmLink( this, this.textContent.trim() + '?' );
 	} );
 
 	$form.on( 'submit', function ( e ) {
@@ -188,7 +187,7 @@
 		} );
 		if ( problem ) {
 			e.preventDefault();
-			window.alert( problem );
+			window.VialCoveDialogs.alert( problem );
 			return;
 		}
 		$form.find( 'input[name="data"]' ).val( JSON.stringify( { enabled: $form.find( '.pc-tm-enabled' ).is( ':checked' ), title: String( $form.find( '.pc-tm-title' ).val() || '' ), plans: plans } ) );

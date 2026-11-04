@@ -102,8 +102,11 @@
         visit(url, true);
       });
     }
-    function visit(url, push) {
-      if (dirty() && !window.confirm('当前页面有未保存的内容，确定离开吗？')) return false;
+    let visitIntent = 0;
+    async function visit(url, push) {
+      const intent = ++visitIntent;
+      if (dirty() && !await window.VialCoveDialogs.confirm('当前页面有未保存的内容，确定离开吗？')) return false;
+      if (intent !== visitIntent) return false;
       clearPending();
       if (active) active.inert = true;
       const id = ++generation;
@@ -153,10 +156,10 @@
       visit(url,true);
     });
     // Parent history stores canonical routes only. No HTML or account data is cached.
-    window.addEventListener('popstate', () => {
+    window.addEventListener('popstate', async () => {
       const url = canonical(location.href,base);
       if (!url) { location.assign(location.href); return; }
-      if (!visit(url,false)) history.pushState({pcShell:true},'',activeURL);
+      if (!await visit(url,false)) history.pushState({pcShell:true},'',activeURL);
     });
     const initial = canonical(location.href,base);
     if (initial) visit(initial,false);

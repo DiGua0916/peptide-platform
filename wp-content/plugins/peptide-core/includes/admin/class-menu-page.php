@@ -288,7 +288,7 @@ final class Menu_Page {
 							<td class="pc-sd-actions">
 								<a class="button button-small" href="<?php echo esc_url( self::url( array( 'menu' => $row['id'] ) ) ); ?>"><?php esc_html_e( 'Edit', 'peptide-core' ); ?></a>
 								<?php if ( ! $row['fixed'] ) : ?>
-									<a class="button button-small button-link-delete" href="<?php echo esc_url( self::action_url( 'pc_menu_delete', array( 'menu' => $row['id'] ) ) ); ?>" onclick="return confirm(<?php echo esc_attr( wp_json_encode( __( 'Delete this menu?', 'peptide-core' ) ) ); ?>);"><?php esc_html_e( 'Delete', 'peptide-core' ); ?></a>
+									<a class="button button-small button-link-delete" href="<?php echo esc_url( self::action_url( 'pc_menu_delete', array( 'menu' => $row['id'] ) ) ); ?>" data-pc-confirm-json="<?php echo esc_attr( wp_json_encode( __( 'Delete this menu?', 'peptide-core' ) ) ); ?>"><?php esc_html_e( 'Delete', 'peptide-core' ); ?></a>
 								<?php endif; ?>
 							</td>
 							<td>

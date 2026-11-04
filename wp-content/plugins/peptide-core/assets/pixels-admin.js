@@ -52,7 +52,7 @@
 		dlg.querySelector( '[data-d="id"]' ).focus();
 	}
 
-	form.addEventListener( 'click', function ( e ) {
+	form.addEventListener( 'click', async function ( e ) {
 		var t = e.target.closest( 'button' );
 		if ( ! t ) {
 			return;
@@ -63,7 +63,7 @@
 		} else if ( t.classList.contains( 'pc-px-edit' ) ) {
 			openDialog( card, t.closest( 'tr' ) );
 		} else if ( t.classList.contains( 'pc-px-del' ) ) {
-			if ( window.confirm( S.confirmDel ) ) {
+			if ( await window.VialCoveDialogs.confirm( S.confirmDel ) ) {
 				t.closest( 'tr' ).remove();
 				renumber( card );
 			}

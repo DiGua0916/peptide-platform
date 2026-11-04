@@ -54,7 +54,7 @@ final class Servers_Page {
 									<td data-label="<?php esc_attr_e( 'Actions', 'peptide-hq' ); ?>">
 										<a href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::SLUG . '&edit=' . $v['id'] ) ); ?>"><?php esc_html_e( 'Edit', 'peptide-hq' ); ?></a>
 										<?php if ( ! $on ) : ?>
-											| <a class="pchq-delete" href="<?php echo esc_url( Menu::action_url( 'pchq_server_delete', array( 'server' => $v['id'] ) ) ); ?>" onclick="return confirm(<?php echo esc_attr( wp_json_encode( __( 'Delete this server from the list?', 'peptide-hq' ) ) ); ?>);"><?php esc_html_e( 'Delete', 'peptide-hq' ); ?></a>
+											| <a class="pchq-delete" href="<?php echo esc_url( Menu::action_url( 'pchq_server_delete', array( 'server' => $v['id'] ) ) ); ?>" data-pc-confirm-json="<?php echo esc_attr( wp_json_encode( __( 'Delete this server from the list?', 'peptide-hq' ) ) ); ?>"><?php esc_html_e( 'Delete', 'peptide-hq' ); ?></a>
 										<?php endif; ?>
 									</td>
 								</tr>

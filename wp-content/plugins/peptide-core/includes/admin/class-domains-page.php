@@ -359,7 +359,7 @@ final class Domains_Page {
 			<?php endif; ?>
 		</form>
 
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return 'delete' !== this.op.value || confirm(<?php echo esc_attr( wp_json_encode( __( 'Delete the selected domains? Visitors on them will no longer stay on that domain.', 'peptide-core' ) ) ); ?>);">
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" data-pc-confirm-field="op" data-pc-confirm-value="delete" data-pc-confirm-json="<?php echo esc_attr( wp_json_encode( __( 'Delete the selected domains? Visitors on them will no longer stay on that domain.', 'peptide-core' ) ) ); ?>">
 			<input type="hidden" name="action" value="pc_domain_bulk">
 			<?php wp_nonce_field( 'pc_domain_bulk' ); ?>
 			<?php if ( $manage ) : ?>
@@ -427,7 +427,7 @@ final class Domains_Page {
 					<a href="<?php echo esc_url( self::action_url( 'pc_domain_check', array( 'domain' => $host ) ) ); ?>" title="<?php esc_attr_e( 'Check now', 'peptide-core' ); ?>"><span class="dashicons dashicons-update" aria-hidden="true"></span><span class="screen-reader-text"><?php echo esc_html( sprintf( /* translators: %s: domain */ __( 'Check %s now', 'peptide-core' ), $host ) ); ?></span></a>
 					<?php if ( ! $is_primary ) : ?>
 						<a href="<?php echo esc_url( self::url( array( 'redirect' => $host ) ) . '#pc-dm-redirect' ); ?>" title="<?php esc_attr_e( 'Domain redirect', 'peptide-core' ); ?>"><span class="dashicons dashicons-randomize" aria-hidden="true"></span><span class="screen-reader-text"><?php echo esc_html( sprintf( /* translators: %s: domain */ __( 'Set the redirect for %s', 'peptide-core' ), $host ) ); ?></span></a>
-						<a class="pc-dm-delete" href="<?php echo esc_url( self::action_url( 'pc_domain_delete', array( 'domain' => $host ) ) ); ?>" title="<?php esc_attr_e( 'Delete', 'peptide-core' ); ?>" onclick="return confirm(<?php echo esc_attr( wp_json_encode( sprintf( /* translators: %s: domain */ __( 'Delete %s? Visitors on it will no longer stay on that domain.', 'peptide-core' ), $host ) ) ); ?>);"><span class="dashicons dashicons-trash" aria-hidden="true"></span><span class="screen-reader-text"><?php echo esc_html( sprintf( /* translators: %s: domain */ __( 'Delete %s', 'peptide-core' ), $host ) ); ?></span></a>
+						<a class="pc-dm-delete" href="<?php echo esc_url( self::action_url( 'pc_domain_delete', array( 'domain' => $host ) ) ); ?>" title="<?php esc_attr_e( 'Delete', 'peptide-core' ); ?>" data-pc-confirm-json="<?php echo esc_attr( wp_json_encode( sprintf( /* translators: %s: domain */ __( 'Delete %s? Visitors on it will no longer stay on that domain.', 'peptide-core' ), $host ) ) ); ?>"><span class="dashicons dashicons-trash" aria-hidden="true"></span><span class="screen-reader-text"><?php echo esc_html( sprintf( /* translators: %s: domain */ __( 'Delete %s', 'peptide-core' ), $host ) ); ?></span></a>
 					<?php endif; ?>
 				<?php else : ?>
 					—
@@ -475,7 +475,7 @@ final class Domains_Page {
 		/* translators: %s: domain */
 		$confirm = sprintf( __( 'Make %s the primary domain? The site address changes to this domain, so links in the store, in emails and in the admin use it. Other bound domains keep working.', 'peptide-core' ), $host );
 		printf(
-			'<a class="pc-dm-switch" href="%1$s" onclick="return confirm(%2$s);" aria-label="%3$s"></a>',
+			'<a class="pc-dm-switch" href="%1$s" data-pc-confirm-json="%2$s" aria-label="%3$s"></a>',
 			esc_url( self::action_url( 'pc_domain_primary', array( 'domain' => $host ) ) ),
 			esc_attr( wp_json_encode( $confirm ) ),
 			/* translators: %s: domain */

@@ -320,7 +320,7 @@ final class Media_Page {
 							<input type="text" id="pc-media-group-rename" name="name" maxlength="60" value="<?php echo esc_attr( $groups[ $group ]['name'] ); ?>" required>
 							<button type="submit" class="button"><?php esc_html_e( 'Rename', 'peptide-core' ); ?></button>
 						</form>
-						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return confirm(<?php echo esc_attr( wp_json_encode( __( 'Delete this group? Its media files are kept and become ungrouped.', 'peptide-core' ) ) ); ?>);">
+						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" data-pc-confirm-json="<?php echo esc_attr( wp_json_encode( __( 'Delete this group? Its media files are kept and become ungrouped.', 'peptide-core' ) ) ); ?>">
 							<input type="hidden" name="action" value="pc_media_group_delete">
 							<input type="hidden" name="id" value="<?php echo (int) $group; ?>">
 							<?php wp_nonce_field( 'pc_media_group_delete' ); ?>
