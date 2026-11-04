@@ -13,6 +13,30 @@
             return new Intl.NumberFormat('en-US', { style: 'currency', currency: metadata.currency_code, minimumFractionDigits: precision, maximumFractionDigits: precision }).formatToParts(amount < 0n ? -1n : 1n).map(part => part.type === 'integer' ? whole : part.type === 'fraction' ? fraction : part.value).join('');
         } catch (_) { return '—'; }
     }
+    /** Native SKU markdowns and order discounts are separate amounts. */
+    function cartItemPricing(item) {
+        const prices = item?.prices, totals = item?.totals;
+        const result = { unit: money(prices?.price, prices), regularUnit: '', total: money(totals?.line_total, totals), regularTotal: '', savingsLabel: '', savingsDescription: '', orderDiscount: '' };
+        const unsigned = value => isMinor(value) && BigInt(value) >= 0n;
+        const metadata = value => value && /^[A-Z]{3}$/.test(value.currency_code || '') && validPrecision(value.currency_minor_unit);
+        if (metadata(totals) && unsigned(totals.line_subtotal) && unsigned(totals.line_total) && BigInt(totals.line_subtotal) > BigInt(totals.line_total)) {
+            result.orderDiscount = 'Order discount −' + money(String(BigInt(totals.line_subtotal) - BigInt(totals.line_total)), totals);
+        }
+        if (!metadata(prices) || !unsigned(prices.price) || !unsigned(prices.regular_price) || BigInt(prices.regular_price) <= BigInt(prices.price)) return result;
+        result.regularUnit = money(prices.regular_price, prices);
+        if (!metadata(totals) || prices.currency_code !== totals.currency_code || prices.currency_minor_unit !== totals.currency_minor_unit
+            || !Number.isSafeInteger(item.quantity) || item.quantity < 1 || !unsigned(totals.line_subtotal) || !unsigned(totals.line_total)) return result;
+        const quantity = BigInt(item.quantity), regular = BigInt(prices.regular_price), active = BigInt(prices.price), regularLine = regular * quantity, activeLine = active * quantity;
+        // Store API line totals exclude tax. A tax-inclusive display price or a
+        // different line-price basis cannot safely become its crossed-out total.
+        if (activeLine !== BigInt(totals.line_subtotal) || BigInt(totals.line_total) > activeLine || !isMinor(String(regularLine))) return result;
+        const savings = (regular - active) * quantity, percentage = ((regular - active) * 100n + regular / 2n) / regular;
+        result.regularTotal = money(String(regularLine), totals);
+        const percent = percentage === 0n ? '<1%' : percentage === 100n && active > 0n ? '>99%' : String(percentage) + '%';
+        result.savingsLabel = 'Save ' + percent + ' (' + money(String(savings), totals) + ')';
+        result.savingsDescription = 'Product savings before order discounts: ' + money(String(savings), totals) + ' (' + percent + ').';
+        return result;
+    }
     // The native Store API does not identify an applied coupon's origin across
     // GETs. A neutral name hides internal codes without guessing an activity.
     function couponPresentation(coupon) {
@@ -75,17 +99,27 @@
         if (Number.isSafeInteger(item.variationId) && item.variationId > 0) url.searchParams.set('variation', String(item.variationId));
         return url.href;
     }
+    function recentProductSaving(card) {
+        const price = card?.price, regular = card?.regularPrice;
+        if (!price || !regular || typeof regular.text !== 'string' || !regular.text.trim()
+            || price.currency_code !== regular.currency_code || price.currency_minor_unit !== regular.currency_minor_unit) return null;
+        const display = cartItemPricing({ quantity: 1,
+            prices: { ...price, price: price.minor, regular_price: regular.minor },
+            totals: { ...price, line_subtotal: price.minor, line_total: price.minor } });
+        if (!display.savingsLabel) return null;
+        return { regularText: regular.text, label: display.savingsLabel, description: display.savingsDescription };
+    }
     function recentPresentation(item, response) {
         const card = response?.card, id = item.productId;
         // A history parent carries a minimum price, not a selected specification.
         // A failed read keeps an options action; never combine that minimum with a guessed label.
-        const fallback = { ...item, variationLabel: item.variationLabel || 'Choose a specification', price: item.variationLabel ? item.price : null, canAddOne: false };
+        const fallback = { ...item, variationLabel: item.variationLabel || 'Choose a specification', price: item.variationLabel ? item.price : null, canAddOne: false, productSaving: null };
         if (response?.id !== id || card?.productId !== id || !Number.isSafeInteger(card.purchaseId) || card.purchaseId < 1 || !Number.isSafeInteger(card.variationId) || card.variationId < 0
             || (card.variationId === 0 ? card.purchaseId !== id : card.purchaseId !== card.variationId)
             || (item.variationId > 0 && card.variationId !== item.variationId)
             || typeof card.price?.text !== 'string' || !card.price.text.trim()
             || (card.variationId > 0 && (typeof card.variationLabel !== 'string' || !card.variationLabel.trim()))) return fallback;
-        return { ...item, ...card, priceIsFrom: false, variationLabel: card.variationLabel || 'Single specification', canAddOne: card.canAddOne === true };
+        return { ...item, ...card, priceIsFrom: false, variationLabel: card.variationLabel || 'Single specification', canAddOne: card.canAddOne === true, productSaving: recentProductSaving(card) };
     }
     function recentAddPayload(item) {
         if (item?.canAddOne !== true || !Number.isSafeInteger(item.productId) || item.productId < 1 || !Number.isSafeInteger(item.purchaseId) || item.purchaseId < 1 || !Number.isSafeInteger(item.variationId) || item.variationId < 0
@@ -303,7 +337,7 @@
         }
         return { snapshot, refresh, request, write, externalStart, externalUpdate, destroy() { destroyed = true; invalidate(); clearTimeout(externalTimer); } };
     }
-    if (typeof module === 'object' && module.exports) module.exports = { validCart, money, couponPresentation, confirmedCartAdd, totals, createClient, activityAllowed, activityPresentation, reconcileRows, statusPresentation, createDrawerController, createNativeCheckoutBridge, recentPresentationUrl, recentPresentation, recentAddPayload };
+    if (typeof module === 'object' && module.exports) module.exports = { validCart, money, cartItemPricing, couponPresentation, confirmedCartAdd, totals, createClient, activityAllowed, activityPresentation, reconcileRows, statusPresentation, createDrawerController, createNativeCheckoutBridge, recentPresentationUrl, recentPresentation, recentAddPayload };
     if (!global?.document || !global.VialCoveLiveCartConfig) return;
     const document = global.document, config = global.VialCoveLiveCartConfig, settings = config.settings || {}, roots = [...document.querySelectorAll('[data-vc-live-cart]')];
     if (!roots.length) return;
@@ -351,7 +385,9 @@
         const row = el('article', 'vc-live-cart__line'); row.dataset.cartKey = item.key;
         const imageLink = productLink({ ...item, name: '' }, 'vc-live-cart__image');
         const image = el('img'); image.width = 72; image.height = 80; imageLink.append(image);
-        const info = el('div', 'vc-live-cart__info'), name = productLink(item), pack = el('p', 'vc-live-cart__pack'), unit = el('p', 'vc-live-cart__unit'); info.append(name, pack, unit);
+        const info = el('div', 'vc-live-cart__info'), name = productLink(item), pack = el('p', 'vc-live-cart__pack'), unit = el('p', 'vc-live-cart__unit');
+        const regularUnit = el('del', 'vc-live-cart__unit-regular'), currentUnit = el('span', 'vc-live-cart__unit-current'), unitLabel = el('span', 'vc-live-cart__unit-label', '/ box');
+        unit.append(regularUnit, currentUnit, unitLabel); info.append(name, pack, unit);
         const controls = el('div', 'vc-live-cart__controls'), qty = el('div', 'vc-live-cart__quantity');
         let current = item, targets = {};
         const count = el('span'), buttons = {};
@@ -362,8 +398,9 @@
         }
         const remove = el('button', 'vc-live-cart__remove', 'Remove'); remove.type = 'button'; remove.dataset.cartAction = 'remove';
         remove.addEventListener('click', () => client.write('remove-item', { key: current.key }).catch(() => {})); controls.append(qty, remove);
-        const total = el('strong', 'vc-live-cart__line-total'), purchase = el('div', 'vc-live-cart__line-actions');
-        purchase.append(total, controls); row.append(imageLink, info, purchase);
+        const total = el('strong', 'vc-live-cart__line-total'), regularTotal = el('del', 'vc-live-cart__line-regular'), totalPrice = el('div', 'vc-live-cart__line-price'), purchase = el('div', 'vc-live-cart__line-actions');
+        const saving = el('span', 'vc-live-cart__sale-tag'), orderDiscount = el('span', 'vc-live-cart__order-discount');
+        totalPrice.append(regularTotal, total); purchase.append(totalPrice, orderDiscount, controls); row.append(imageLink, info, purchase, saving);
         return { node: row, update(next, nextState) {
             current = next;
             const title = clean(next.name), src = safeUrl(next.images?.[0]?.thumbnail || next.images?.[0]?.src) || '';
@@ -371,8 +408,17 @@
             image.alt = title; name.textContent = title;
             for (const link of [name, imageLink]) { link.href = safeUrl(next.permalink) || config.shopUrl; const parent = parentIds.get(next.id); if (parent) { link.dataset.vcHomeProduct = String(parent); link.dataset.vcQuickOpen = String(parent); } }
             pack.textContent = (next.variation || []).map(v => clean(v.value)).filter(Boolean).join(' · '); pack.hidden = !pack.textContent;
-            unit.textContent = money(next.prices?.price, next.prices) + ' / box';
-            total.textContent = money(next.totals?.line_total, next.totals);
+            const pricing = cartItemPricing(next);
+            regularUnit.textContent = pricing.regularUnit; regularUnit.hidden = !pricing.regularUnit;
+            regularUnit.setAttribute('aria-label', 'Regular price per box ' + pricing.regularUnit);
+            currentUnit.textContent = pricing.unit; currentUnit.setAttribute('aria-label', 'Current price per box ' + pricing.unit);
+            total.textContent = pricing.total; total.setAttribute('aria-label', 'Line total ' + pricing.total);
+            regularTotal.textContent = pricing.regularTotal; regularTotal.hidden = !pricing.regularTotal;
+            regularTotal.setAttribute('aria-label', 'Regular total for ' + next.quantity + (next.quantity === 1 ? ' box ' : ' boxes ') + pricing.regularTotal);
+            saving.textContent = pricing.savingsLabel; saving.hidden = !pricing.savingsLabel; saving.title = pricing.savingsDescription;
+            saving.setAttribute('aria-label', pricing.savingsDescription);
+            orderDiscount.textContent = pricing.orderDiscount; orderDiscount.hidden = !pricing.orderDiscount;
+            row.classList.toggle('has-product-saving', !!pricing.savingsLabel);
             count.textContent = String(next.quantity); count.setAttribute('aria-label', next.quantity + (next.quantity === 1 ? ' box' : ' boxes'));
             const limits = next.quantity_limits || {}, step = Number.isSafeInteger(limits.multiple_of) && limits.multiple_of > 0 ? limits.multiple_of : 1, min = Number.isSafeInteger(limits.minimum) ? Math.max(1, limits.minimum) : 1, max = Number.isSafeInteger(limits.maximum) ? limits.maximum : 9999;
             targets = { minus: next.quantity - step, plus: next.quantity + step };
@@ -401,7 +447,6 @@
             status.classList.toggle('is-announcement', statusState.announceOnly);
             if (status.textContent !== clean(statusState.text)) status.textContent = clean(statusState.text);
             root.querySelector('[data-cart-retry]').hidden = !error || pending;
-            root.querySelector('[data-cart-count]').textContent = cart ? cart.items_count + (cart.items_count === 1 ? ' box' : ' boxes') : '';
             const presentation = activityPresentation(state, settings, appliedActivity), activity = presentation.activity;
             // Pending writes pause the visual but preserve its baseline for the confirmed next DTO.
             const progressMount = root.querySelector('[data-cart-progress]');
@@ -452,8 +497,16 @@
             const src = safeUrl(item.image?.url);
             if (src) { image.src = src; image.alt = item.image?.alt || item.name; image.width = 120; image.height = 120; imageLink.append(image); }
             else imageLink.append(el('span', 'vc-live-cart__recent-no-image', 'Image unavailable'));
+            if (item.productSaving) {
+                const saving = el('span', 'vc-live-cart__recent-sale', clean(item.productSaving.label));
+                saving.setAttribute('aria-label', clean(item.productSaving.description)); saving.title = clean(item.productSaving.description); imageLink.append(saving);
+            }
             card.append(imageLink, link, el('p', 'vc-live-cart__recent-pack', clean(item.variationLabel)));
-            if (item.price?.text) card.append(el('strong', 'vc-live-cart__recent-price', clean(item.price.text) + ' / box'));
+            if (item.price?.text) {
+                const prices = el('div', 'vc-live-cart__recent-pricing');
+                if (item.productSaving) prices.append(el('del', 'vc-live-cart__recent-regular', clean(item.productSaving.regularText)));
+                prices.append(el('strong', 'vc-live-cart__recent-price', clean(item.price.text)), el('span', 'vc-live-cart__recent-unit', '/ box')); card.append(prices);
+            }
             if (!item.canAddOne) {
                 const options = link.cloneNode(false); options.className = 'vc-live-cart__recent-action'; options.textContent = 'Select & add'; options.setAttribute('aria-label', 'Choose specification and add ' + clean(item.name)); card.append(options);
                 return card;

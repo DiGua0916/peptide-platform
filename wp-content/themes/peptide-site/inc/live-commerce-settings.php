@@ -37,7 +37,7 @@ add_filter( 'peptide_core_layout_definitions', function ( array $definitions ): 
             $field::f( 'toggle', 'cart_progress_enabled', __( '显示活动进度', 'peptide-site' ), true, array( 'help' => '只展示活动监听插件返回的实际优惠，不在此设置门槛。' ) ),
             $field::f( 'toggle', 'cart_recommendations_enabled', __( '显示接近下一档时的已浏览商品', 'peptide-site' ), true, array( 'help' => '活动插件同时开启推荐且返回有效报价时才展示；不自动加入商品。' ) ),
             $field::f( 'toggle', 'cart_recent_enabled', __( '显示最近浏览', 'peptide-site' ), true, array( 'help' => '引用最近浏览插件的实际记录；没有记录时整块隐藏。' ) ),
-            $field::f( 'text', 'cart_title', __( '购物车标题', 'peptide-site' ), 'Your bag.' ),
+            $field::f( 'text', 'cart_title', __( '购物车标题', 'peptide-site' ), 'Shopping cart' ),
             $field::f( 'text', 'cart_continue_label', __( '继续浏览文字', 'peptide-site' ), 'Continue exploring' ),
         ) );
     }
@@ -103,7 +103,7 @@ function vc_live_cart_settings(): array {
     $out = array(
         'enabled' => false, 'cart_experience_enabled' => false,
         'cart_progress_enabled' => true, 'cart_recommendations_enabled' => true, 'cart_recent_enabled' => true,
-        'cart_title' => 'Your bag.', 'cart_continue_label' => 'Continue exploring',
+        'cart_title' => 'Shopping cart', 'cart_continue_label' => 'Continue exploring',
         'document' => '', 'visibility' => array( 'desktop' => true, 'mobile' => true ),
     );
     $module = vc_live_commerce_published_module( array( 'cart' ), 'context_content' );

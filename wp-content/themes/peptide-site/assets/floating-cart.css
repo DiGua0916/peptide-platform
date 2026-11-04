@@ -1,0 +1,54 @@
+/* Relocate the existing homepage cart link; no duplicate cart entry or session. */
+.vc-demo-header .vc-demo-header-actions .vc-demo-cart-orb.cart-link {
+    position: fixed;
+    right: max(16px, env(safe-area-inset-right));
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + var(--vc-cart-nav-offset, 0px));
+    z-index: 45;
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    min-height: 56px;
+    inline-size: 56px;
+    min-inline-size: 56px;
+    block-size: 56px;
+    min-block-size: 56px;
+    padding: 4px;
+    border: 1px solid #e1e9ec;
+    border-radius: 50% !important;
+    background: #fff;
+    color: #17343e;
+    box-shadow: 0 4px 16px #17343e26;
+    transition: transform 160ms ease, box-shadow 160ms ease;
+}
+body:has(.vc-help-float) .vc-demo-header .vc-demo-header-actions .vc-demo-cart-orb {
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 68px + var(--vc-cart-nav-offset, 0px));
+}
+.vc-demo-header .vc-demo-cart-orb img { display: block; width: 46px; height: 46px; object-fit: contain; }
+.vc-demo-header .vc-demo-cart-orb .vc-cart-count {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    display: grid;
+    place-items: center;
+    min-width: 21px;
+    width: auto;
+    height: 21px;
+    padding: 0 5px;
+    border: 2px solid #fff;
+    border-radius: 12px;
+    background: #be293c;
+    color: #fff;
+    font: 700 11px/16px Geist, Arial, sans-serif;
+    font-variant-numeric: tabular-nums;
+}
+.vc-demo-header .vc-demo-header-actions .vc-demo-cart-orb:focus-visible { outline: 3px solid #127e98; outline-offset: 4px; }
+body:has(dialog[open]) .vc-demo-header .vc-demo-cart-orb,
+body:has([data-vc-demo-header] details[open]) .vc-demo-header .vc-demo-cart-orb { visibility: hidden; pointer-events: none; }
+@media (hover: hover) {
+    .vc-demo-header .vc-demo-header-actions .vc-demo-cart-orb:hover { background: #fff; transform: translateY(-2px); box-shadow: 0 8px 24px #17343e24; }
+}
+.vc-demo-header .vc-demo-header-actions .vc-demo-cart-orb:active { transform: scale(.96); }
+@media (prefers-reduced-motion: reduce) {
+    .vc-demo-header .vc-demo-header-actions .vc-demo-cart-orb { transition: none; transform: none; }
+}

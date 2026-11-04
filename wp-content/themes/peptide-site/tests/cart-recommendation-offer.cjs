@@ -65,3 +65,14 @@ test('missing or false requested confirmation does not become an Added message',
   assert.doesNotMatch(addedMessage(candidate,result),/box added|offer has been applied/);
  }
 });
+test('optional regular unit price decorates the same native quote without turning order rewards into an item discount',()=>{
+ const {activity,quote}=fixture();
+ assert.equal(quotedRecommendation(quote,activity,'snapshot',now).regularUnitPrice,null);
+ const regular=m(7800),priced=quotedRecommendation({...quote,regularUnitPrice:regular},activity,'snapshot',now);
+ assert.deepEqual(priced.regularUnitPrice,regular);
+ assert.equal(priced.unitPrice.minor,'5500');assert.equal(priced.displaySavings.minor,'3000');
+ for(const invalid of [m(5500),m(5400),m(-1),{minor:'7800.5',text:'$78.00'},{minor:'7800',text:''},{minor:'9007199254740992',text:'$78.00'}]){
+  const safe=quotedRecommendation({...quote,regularUnitPrice:invalid},activity,'snapshot',now);
+  assert.ok(safe);assert.equal(safe.regularUnitPrice,null);
+ }
+});

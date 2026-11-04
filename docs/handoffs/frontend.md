@@ -1220,3 +1220,9 @@ HTTP聚合探针已证 catalogSupported=true、quoteHooksSupported=false、unsup
 ### 2026-11-05 · Codex：中美仓配送时效对照
 
 用户补充实际政策：中国仓5–8天/48小时内创建订单，美国仓2–5天/24小时内创建订单，FedEx，WhatsApp24小时支持。home685只更新原delivery-details模块富文本与3项；新demo-delivery.php按该唯一module id呈现两仓并排和支持入口，仍native编辑，号码动态取原配置。未把订单创建改成dispatch，未添加business days/即时回复/checkout仓库规则。原FAQ和其余10块、7其它装修/全部设置hash不变。手机两仓数字同一高度，360内容345无横溢，CTA45.33px，原FAQ和收球规则保留。PHP lint/diff及native readback通过；截图/回执D:/Codex/Tasks/2026-11-05/delivery-warehouse-layout/outputs，详见[frontend-delivery-warehouses-2026-11-05.md](frontend-delivery-warehouses-2026-11-05.md)。未公网部署或改车/订单/支付/发送WA；未碰peer experience.js。
+
+### 2026-11-05 · Codex：首页浮球/胶囊与购物车优惠检查点、模块分工
+
+首页完成真实cart-link立体浮球（客服上方，native数量/抽屉）、耳机缩至同视觉大小；活动条原生模块胶囊、长度不变/居中/透明外层/随滚动置顶及锚点避让。home685原closing整块已原生删除，其他10块保持。Cart11727只改原生标题Shopping cart、删除可见1box并收紧；商品行真实原价/现价/红斜标、紧凑推荐同行按钮、Recently viewed同SKU原价/现价/红斜标均已实现，已有真实手机读回。详细文件与实际验证见[本轮交接](frontend-cart-savings-orbs-2026-11-05.md)。
+
+当前是开发检查点，**仍在做M05.03进度空白/达标鸭子，M05.04推荐商品原价字段仍缺可信接口，未全轮完成/未公网发布。**用户要其它窗口共同装修，已交付[前端模块工作台](frontend-module-workboard-2026-11-05.md)：10大包、细分子项、全部本次涉及编号、共享文件和状态。根窗口独占M05及本轮共享在途文件；别窗可选M03/M06/M07，先报文件，不覆盖home-quick-view.php的card分支或peer experience.js。94Node+8独立sticky、PHPcard51/活动45/utilities15/entry14等实际检查通过；用户cart金额可自行变化，Codex未做业务写入。最终source/integration/push引用另记，peer旧西语一行保持不stage。

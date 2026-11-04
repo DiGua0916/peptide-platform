@@ -57,6 +57,13 @@
 .vc-campaign-strip .pc-campaign__description p,.vc-campaign-strip .pc-campaign__notes p{margin:0}
 .vc-campaign-strip .pc-campaign__rail-controls{display:none!important}
 .vc-campaign-strip .pc-campaign__tier.vc-campaign-loop-start{padding-left:0;border-left:0}
+/* Pin the native module, not its short inner wrapper, beneath the live header. */
+.vc-m.vc-campaign-pin{position:sticky;top:var(--vc-campaign-sticky-top,0px);z-index:59;padding-block:8px;background:transparent}
+html.vc-campaign-pin-page{scroll-padding-top:var(--vc-campaign-anchor-offset,105px)}
+.vc-campaign-strip[data-vc-campaign-sticky]{width:min(calc(100% - 32px),1440px);margin-inline:auto;border-radius:9999px!important;overflow:hidden}
+.vc-campaign-strip[data-vc-campaign-sticky]>.pc-cb.vc-m__inner{width:calc(100% - 32px)}
+body:has(dialog[open]) .vc-m.vc-campaign-pin,
+body:has([data-vc-demo-header] details[open]) .vc-m.vc-campaign-pin{visibility:hidden;pointer-events:none}
 @media(max-width:767px){
  .vc-campaign-strip>.pc-cb.vc-m__inner{width:calc(100% - 40px)}
  .vc-campaign-strip .pc-campaign{column-gap:12px}
