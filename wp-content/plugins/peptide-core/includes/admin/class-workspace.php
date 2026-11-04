@@ -6,9 +6,13 @@ defined( 'ABSPATH' ) || exit;
 
 final class Workspace {
 
+	private static bool $navigation_pending = false;
+
 	public static function register_hooks(): void {
 		add_filter( 'admin_body_class', array( self::class, 'body_class' ) );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ), 1000 );
+		add_action( 'admin_print_styles', array( self::class, 'navigation_head' ), 0 );
+		add_action( 'admin_footer', array( self::class, 'navigation_ready' ), 0 );
 		add_action( 'adminmenu', array( self::class, 'brand' ), 1000 );
 		add_action( 'in_admin_header', array( self::class, 'header' ) );
 		add_action( 'login_enqueue_scripts', array( self::class, 'login_assets' ) );
@@ -18,6 +22,92 @@ final class Workspace {
 
 	public static function enabled(): bool {
 		return ! ( defined( 'PEPTIDE_ADMIN_UI_DISABLED' ) && PEPTIDE_ADMIN_UI_DISABLED ) && (bool) apply_filters( 'peptide_admin_workspace_enabled', true );
+	}
+
+	/** Keep native document/editor lifecycles; the browser alone owns the transition. */
+	public static function navigation_head(): void {
+		if ( self::$navigation_pending || ! self::enabled() || is_network_admin()
+			|| ( defined( 'IFRAME_REQUEST' ) && IFRAME_REQUEST ) ) { return; }
+		self::$navigation_pending = true;
+		// Critical canvas/opt-in precede ordinary admin styles/scripts. SSR screens
+		// release on content parsing; only Woo's empty root gets a bounded footer gate.
+		echo '<style id="pc-workspace-navigation">html,body{background:#f7f7f7}@view-transition{navigation:auto}@media(prefers-reduced-motion:reduce){@view-transition{navigation:none}}</style>';
+		echo '<link rel="expect" href="#pc-workspace-content-ready" blocking="render">';
+	}
+
+	/** admin_footer follows wpbody-content, before the normal footer script queue. */
+	public static function navigation_ready(): void {
+		if ( ! self::$navigation_pending ) { return; }
+		self::$navigation_pending = false;
+		// Always release an expectation already emitted, even if a filter changes
+		// later in this request. Woo's empty React root may add one bounded blocker;
+		// the ordinary marker still releases when inline JS is disabled by CSP.
+		$page = isset( $_GET['page'] ) && is_string( $_GET['page'] ) ? $_GET['page'] : '';
+		if ( 'wc-admin' === $page && self::enabled() ) {
+			echo wp_get_inline_script_tag( self::react_navigation_readiness(), array( 'id' => 'pc-workspace-react-readiness' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static script; core applies inline-script attributes/CSP nonce filters.
+		}
+		echo '<span id="pc-workspace-content-ready" hidden aria-hidden="true"></span>';
+	}
+
+	/** Wait only for Woo's first layout commit, never report/API/data completion. */
+	private static function react_navigation_readiness(): string {
+		return <<<'JS'
+(function () {
+  'use strict';
+  var body = document.body;
+  if (!body || !body.classList.contains('pc-admin-workspace') || !body.classList.contains('woocommerce-admin-page') || body.classList.contains('woocommerce-embed-page')) return;
+  if (!document.querySelector('link[rel="expect"][href="#pc-workspace-content-ready"]') || document.getElementById('pc-workspace-react-expect') || document.getElementById('pc-workspace-react-ready')) return;
+  var root = document.querySelector('#wpbody-content > .wrap > #root');
+  if (!root || typeof MutationObserver !== 'function' || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+  function ready() {
+    // Woo synchronously adds an empty CES tracking div before React commits.
+    // Mere child nodes therefore do not prove that the application is painted.
+    if (root.querySelector('.woocommerce-global-error-boundary')) return true;
+    // Woo hides the whole work pane until its first mount effect removes this
+    // class. Observe that native change, without changing it or waiting for data.
+    return !body.classList.contains('woocommerce-admin-is-loading') && !!root.querySelector('.woocommerce-layout .woocommerce-layout__main');
+  }
+  if (ready()) return;
+  var gate = document.createElement('link');
+  try { if (!gate.relList || !gate.relList.supports || !gate.relList.supports('expect')) return; }
+  catch (_) { return; }
+  gate.id = 'pc-workspace-react-expect';
+  gate.rel = 'expect';
+  gate.href = '#pc-workspace-react-ready';
+  gate.setAttribute('blocking', 'render');
+  var observer = null;
+  var timer = null;
+  var finished = false;
+  function finish() {
+    if (finished) return;
+    finished = true;
+    if (observer) observer.disconnect();
+    if (timer !== null) window.clearTimeout(timer);
+    window.removeEventListener('pagehide', finish);
+    try {
+      var marker = document.createElement('span');
+      marker.id = 'pc-workspace-react-ready';
+      marker.hidden = true;
+      marker.setAttribute('aria-hidden', 'true');
+      if (document.body) document.body.appendChild(marker);
+    } finally {
+      if (gate.parentNode) gate.parentNode.removeChild(gate);
+    }
+  }
+  function check() { if (!root.isConnected || ready()) finish(); }
+  try {
+    // Install the fallback before adding a render blocker. A CSP-blocked script
+    // never adds this link, so the server-rendered ordinary marker stays enough.
+    timer = window.setTimeout(finish, 700);
+    observer = new MutationObserver(check);
+    window.addEventListener('pagehide', finish, {once: true});
+    document.head.appendChild(gate);
+    observer.observe(root, {childList: true, subtree: true});
+    observer.observe(body, {attributes: true, attributeFilter: ['class']});
+    check();
+  } catch (_) { finish(); }
+}());
+JS;
 	}
 
 	private static function canvas(): bool {
@@ -44,6 +134,7 @@ final class Workspace {
 		}
 		self::trim_optional_assets();
 		wp_enqueue_script( 'pc-admin-workspace', $url . 'admin-workspace.js', array(), $ver( 'admin-workspace.js' ), true );
+		wp_enqueue_script( 'pc-workspace-touch', $url . 'workspace-touch.js', array( 'pc-admin-workspace' ), $ver( 'workspace-touch.js' ), true );
 		$home = \PeptideCore\Staff::is_staff( get_current_user_id() ) ? \PeptideCore\Staff::home_url( get_current_user_id() ) : Overview_Page::url();
 		wp_add_inline_script( 'pc-admin-workspace', 'window.pcWorkspaceHome=' . wp_json_encode( $home ) . ';', 'before' );
 		$screen = get_current_screen();
@@ -77,7 +168,7 @@ final class Workspace {
 
 	public static function brand(): void {
 		if ( ! self::enabled() || self::canvas() || is_network_admin() ) { return; }
-		echo '<li class="pc-workspace-brand-item"><a class="pc-workspace-brand" href="' . esc_url( admin_url( 'admin.php?page=pc-overview' ) ) . '"><span class="pc-workspace-mark" aria-hidden="true">V</span><span class="pc-workspace-brand__name">VialCove<small>客户后台</small></span></a></li>';
+		echo '<li class="pc-workspace-brand-item"><a class="pc-workspace-brand" href="' . esc_url( admin_url( 'admin.php?page=pc-overview' ) ) . '"><span class="pc-workspace-mark" aria-hidden="true"><svg viewBox="0 0 28 24" width="28" height="24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m4 15 8-7 12 8"/><circle cx="4" cy="15" r="2.5" fill="currentColor"/><circle cx="12" cy="8" r="2.5" fill="currentColor"/><circle cx="24" cy="16" r="2.5" fill="currentColor"/></svg></span><span class="pc-workspace-brand__name">VialCove<small>客户后台</small></span></a></li>';
 	}
 
 	public static function header(): void {
@@ -87,7 +178,7 @@ final class Workspace {
 		$screen = get_current_screen();
 		$is_product = $screen && 'product' === $screen->post_type && 'post' === $screen->base;
 		$back_url = admin_url( $is_product ? 'edit.php?post_type=product' : 'admin.php?page=pc-overview' );
-		echo '<header class="pc-workspace-header" aria-label="工作区"><nav class="pc-workspace-header__context" aria-label="当前位置"><a href="' . esc_url( $back_url ) . '">' . ( $is_product ? '商品管理' : '客户后台' ) . '</a><span aria-hidden="true">/</span><strong aria-current="page">' . esc_html( $label ) . '</strong></nav><div class="pc-workspace-header__actions"><span class="pc-workspace-store">' . esc_html( get_bloginfo( 'name' ) ) . '</span><a href="' . esc_url( home_url( '/' ) ) . '" target="_blank" rel="noopener">查看店铺<span class="screen-reader-text">（在新标签页打开）</span></a></div></header>';
+		echo '<header class="pc-workspace-header" aria-label="工作区"><button type="button" class="pc-workspace-nav-toggle" data-vc-nav-toggle aria-label="打开导航" aria-controls="adminmenuwrap" aria-expanded="false" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button><nav class="pc-workspace-header__context" aria-label="当前位置"><a href="' . esc_url( $back_url ) . '">' . ( $is_product ? '商品管理' : '客户后台' ) . '</a><span aria-hidden="true">/</span><strong aria-current="page">' . esc_html( $label ) . '</strong></nav><div class="pc-workspace-header__actions"><span class="pc-workspace-store">' . esc_html( get_bloginfo( 'name' ) ) . '</span><a href="' . esc_url( home_url( '/' ) ) . '" target="_blank" rel="noopener">查看店铺<span class="screen-reader-text">（在新标签页打开）</span></a></div></header>';
 	}
 
 	public static function login_assets(): void {

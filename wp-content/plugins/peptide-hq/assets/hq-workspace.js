@@ -8,7 +8,6 @@
 		var disposed = false;
 		var listeners = [];
 		var observer = null;
-		var menuObserver = null;
 		var content = document.getElementById('wpbody-content') || document;
 		function listen(target, type, listener, options) {
 			target.addEventListener(type, listener, options);
@@ -140,17 +139,7 @@
 				if (child.tagName !== 'SUMMARY') reveal(child, false);
 			});
 		}, true);
-		var wrap = document.getElementById('wpwrap');
-		if (wrap && typeof MutationObserver !== 'undefined') {
-			var wasOpen = wrap.classList.contains('wp-responsive-open');
-			menuObserver = new MutationObserver(function () {
-				if (disposed) return;
-				var open = wrap.classList.contains('wp-responsive-open');
-				if (open && !wasOpen) reveal(document.getElementById('adminmenuwrap'), true);
-				wasOpen = open;
-			});
-			menuObserver.observe(wrap, { attributes: true, attributeFilter: ['class'] });
-		}
+		// The navigation drawer has one CSS transition, owned by workspace-touch.
 		if (typeof reduced.addEventListener === 'function') listen(reduced, 'change', function () {
 			if (reduced.matches) running.forEach(function (animation) { animation.cancel(); });
 		});
@@ -166,7 +155,6 @@
 			});
 			document.body.classList.remove('pchq-site-dialog-open');
 			if (observer) observer.disconnect();
-			if (menuObserver) menuObserver.disconnect();
 			running.forEach(function (animation) { animation.cancel(); });
 			running.clear();
 		};

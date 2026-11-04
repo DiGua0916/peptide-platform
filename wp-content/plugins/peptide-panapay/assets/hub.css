@@ -1,45 +1,46 @@
-.pc-pay-hub { --pay-ink: #171717; --pay-muted: #666; --pay-line: #e6e6e6; --pay-soft: #f5f5f5; color: var(--pay-ink); }
+.pc-pay-hub { --pay-ink: var(--vc-ink, #171717); --pay-muted: var(--vc-muted, #5f6368); --pay-line: var(--vc-line, #e5e5e5); --pay-soft: #f6f6f6; color: var(--pay-ink); }
 .pc-pay-hub *, .pc-pay-hub *::before, .pc-pay-hub *::after { box-sizing: border-box; }
 .pc-pay-hub ::selection { color: #fff; background: #171717; }
 .pc-pay-hub :focus-visible { outline: 2px solid #737373; outline-offset: 2px; }
 .pc-pay-hub h1, .pc-pay-hub h2, .pc-pay-hub h3, .pc-pay-hub p { text-wrap: pretty; }
-.pc-pay-hub h1 { margin: 0; }
-.pc-pay-hub h2 { margin: 0; font-size: 18px; line-height: 28px; font-weight: 650; }
+.pc-pay-hub h1 { margin: 0; padding: 0; font-size: 24px; line-height: 32px; font-weight: 650; letter-spacing: -.02em; }
+.pc-pay-hub h2 { margin: 0; font-size: 16px; line-height: 24px; font-weight: 600; }
 .pc-pay-hub h3 { margin: 0 0 8px; font-size: 16px; line-height: 24px; }
 .pc-pay-hub p { margin: 8px 0; }
-.pc-pay-muted { color: var(--pay-muted); font-size: 12px; line-height: 16px; }
+.pc-pay-muted { color: var(--pay-muted); font-size: 12px; line-height: 18px; }
 .pc-pay-heading, .pc-pay-section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
-.pc-pay-heading { margin: 0 0 16px; }
-.pc-pay-heading p { margin-bottom: 0; font-size: 14px; line-height: 20px; }
-.pc-pay-state { display: inline-flex; align-items: center; padding: 4px 8px; color: #404040; background: #f1f1f1; border-radius: 4px; font-size: 12px; line-height: 16px; font-weight: 600; }
-.pc-pay-jump { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px; }
-.pc-pay-jump a { color: var(--pay-ink); text-decoration-thickness: 1px; text-underline-offset: 4px; }
-.pc-pay-section { margin: 0 0 16px; padding: 16px; min-width: 0; background: #fff; border: 1px solid var(--pay-line); border-radius: 12px; scroll-margin-top: 80px; }
+.pc-pay-heading { margin: 0 0 24px; }
+.pc-pay-heading > div { min-width: 0; }
+.pc-pay-heading p { margin-bottom: 0; font-size: 14px; line-height: 22px; }
+.pc-pay-state { display: inline-flex; align-items: center; padding: 3px 7px; flex: none; white-space: nowrap; color: #404040; background: #f1f1f1; border-radius: 4px; font-size: 12px; line-height: 18px; font-weight: 600; }
+.pc-pay-jump { display: flex; gap: 24px; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; margin-bottom: 24px; border-bottom: 1px solid var(--pay-line); }
+.pc-pay-jump a { flex: none; display: flex; align-items: center; min-height: 40px; padding-bottom: 10px; color: var(--pay-ink); text-decoration-thickness: 1px; text-underline-offset: 4px; }
+.pc-pay-section { margin: 0 0 24px; padding: 20px; min-width: 0; background: #fff; border: 1px solid var(--pay-line); border-radius: 8px; scroll-margin-top: 80px; }
 .pc-pay-section-head form { margin: 0; }
-.pc-pay-hub .button { min-height: 32px; padding: 4px 12px; font-size: 14px; line-height: 20px; transition: background-color 200ms cubic-bezier(.22, 1, .36, 1), color 200ms cubic-bezier(.22, 1, .36, 1); }
-.pc-pay-hub .button:active { transform: translateY(1px); }
-.pc-pay-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin: 16px 0; padding: 12px 16px; background: var(--pay-soft); border-radius: 8px; font-size: 14px; line-height: 20px; }
+.pc-pay-hub .button { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 7px 12px; font-size: 14px; line-height: 22px; transition: background-color 160ms, border-color 160ms, color 160ms; }
+.pc-pay-hub .button:active { filter: brightness(.96); }
+.pc-pay-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin: 16px 0; padding: 12px 16px; background: var(--pay-soft); border-radius: 8px; font-size: 14px; line-height: 22px; }
 .pc-pay-summary > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px 24px; }
 .pc-pay-summary p, .pc-pay-summary p span { display: inline-flex; gap: 8px; align-items: baseline; margin: 0; }
 .pc-pay-summary p { gap: 16px; }
 .pc-pay-amount { font-variant-numeric: tabular-nums; }
 .pc-pay-amount small { color: var(--pay-muted); margin-left: 8px; font-size: 12px; }
 .pc-pay-filters { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
-.pc-pay-filters label { display: grid; gap: 4px; min-width: 160px; font-size: 12px; line-height: 16px; font-weight: 600; }
-.pc-pay-hub select, .pc-pay-hub input[type=text], .pc-pay-hub input[type=password], .pc-pay-hub input[type=number], .pc-pay-hub textarea { width: 100%; max-width: 100%; min-height: 36px; margin: 0; padding: 8px 12px; color: var(--pay-ink); background: #fff; border: 1px solid #d5d5d5; border-radius: 6px; font: inherit; font-size: 14px; line-height: 20px; caret-color: var(--pay-ink); }
+.pc-pay-filters label { display: grid; gap: 8px; flex: 0 1 220px; min-width: 160px; font-size: 12px; line-height: 18px; font-weight: 600; }
+.pc-pay-hub select, .pc-pay-hub input[type=text], .pc-pay-hub input[type=password], .pc-pay-hub input[type=number], .pc-pay-hub textarea { width: 100%; max-width: 100%; min-height: 36px; margin: 0; padding: 8px 12px; color: var(--pay-ink); background: #fff; border: 1px solid var(--vc-control, #c9c9c9); border-radius: 6px; font: inherit; font-size: 14px; line-height: 22px; caret-color: var(--pay-ink); }
 .pc-pay-hub select { padding-right: 32px; }
 .pc-pay-hub input::placeholder, .pc-pay-hub textarea::placeholder { color: #737373; opacity: 1; }
 .pc-pay-hub input:disabled { color: #666; background: #f5f5f5; cursor: not-allowed; }
-.pc-pay-table-scroll { overflow-x: auto; max-width: 100%; scrollbar-color: #b5b5b5 #f5f5f5; scrollbar-width: thin; }
-.pc-pay-table { min-width: 760px; border-collapse: collapse; border: 0; font-size: 14px; line-height: 20px; }
-.pc-pay-table thead th { background: #fafafa; color: #666; font-size: 12px; line-height: 16px; font-weight: 600; white-space: nowrap; }
-.pc-pay-table th, .pc-pay-table td { padding: 12px; border-bottom: 1px solid var(--pay-line); vertical-align: top; }
+.pc-pay-table-scroll { overflow-x: auto; overscroll-behavior-x: contain; width: 100%; min-width: 0; max-width: 100%; scrollbar-color: #b5b5b5 #f5f5f5; scrollbar-width: thin; }
+.pc-pay-table { width: 100%; min-width: 760px; border-collapse: collapse; border: 0; font-size: 14px; line-height: 22px; }
+.pc-pay-table thead th { background: #fff; color: #666; font-size: 12px; line-height: 18px; font-weight: 500; white-space: nowrap; }
+.pc-pay-table th, .pc-pay-table td { padding: 12px 16px; border-bottom: 1px solid var(--pay-line); vertical-align: middle; }
 .pc-pay-table tr:last-child td { border-bottom: 0; }
 .pc-pay-table tbody tr:hover { background: #fafafa; }
-.pc-pay-table td > span { display: block; color: var(--pay-muted); font-size: 12px; line-height: 16px; margin-top: 4px; }
+.pc-pay-table td > span { display: block; color: var(--pay-muted); font-size: 12px; line-height: 18px; margin-top: 4px; }
 .pc-pay-table .pc-pay-number { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .pc-pay-reference { max-width: 224px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
-.pc-pay-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; font-size: 12px; line-height: 16px; color: var(--pay-muted); }
+.pc-pay-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; font-size: 12px; line-height: 18px; color: var(--pay-muted); }
 .pc-pay-pagination > div { display: flex; flex-wrap: wrap; gap: 8px; }
 .pc-pay-empty { padding: 32px 16px; text-align: center; }
 .pc-pay-empty p { color: var(--pay-muted); }
@@ -47,12 +48,12 @@
 .pc-pay-settings[open] > summary { margin-bottom: 16px; }
 .pc-pay-setting-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr); gap: 24px; align-items: start; }
 .pc-pay-switches { margin: 0 0 24px; padding: 0; }
-.pc-pay-switches label { display: flex; align-items: center; gap: 8px; min-height: 32px; font-size: 14px; line-height: 20px; font-weight: 600; }
+.pc-pay-switches label { display: flex; align-items: center; gap: 8px; min-height: 36px; font-size: 14px; line-height: 22px; font-weight: 600; }
 .pc-pay-switches p { margin: 0 0 12px 24px; }
 .pc-pay-hub input[type=checkbox] { flex: 0 0 auto; margin: 0; accent-color: #171717; }
 .pc-pay-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .pc-pay-field { min-width: 0; }
-.pc-pay-field label { display: block; margin-bottom: 8px; font-size: 14px; line-height: 20px; font-weight: 600; }
+.pc-pay-field label { display: block; margin-bottom: 8px; font-size: 14px; line-height: 22px; font-weight: 600; }
 .pc-pay-field p { margin: 8px 0 0; }
 .pc-pay-field-wide { grid-column: 1 / -1; }
 .pc-pay-store-access { min-width: 0; margin: 0; padding: 0; }
@@ -61,11 +62,10 @@
 .pc-pay-store-option { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; cursor: pointer; }
 .pc-pay-store-option input { margin-top: 4px !important; }
 .pc-pay-store-option span { min-width: 0; }
-.pc-pay-store-option strong { display: block; font-size: 14px; line-height: 20px; font-weight: 600; }
-.pc-pay-store-option small { display: block; margin-top: 4px; overflow-wrap: anywhere; color: var(--pay-muted); font-size: 12px; line-height: 16px; }
+.pc-pay-store-option strong { display: block; font-size: 14px; line-height: 22px; font-weight: 600; }
+.pc-pay-store-option small { display: block; margin-top: 4px; overflow-wrap: anywhere; color: var(--pay-muted); font-size: 12px; line-height: 18px; }
 .pc-pay-form-footer { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; margin-top: 24px; }
 @media (max-width: 1000px) { .pc-pay-setting-grid { grid-template-columns: minmax(0, 1fr); } .pc-pay-store-access { max-height: 320px; overflow-y: auto; scrollbar-color: #b5b5b5 #f5f5f5; } }
-@media (max-width: 600px) { .pc-pay-section { padding: 12px; } .pc-pay-fields { grid-template-columns: minmax(0, 1fr); } .pc-pay-filters label { flex: 1 1 100%; min-width: 0; } .pc-pay-summary { align-items: flex-start; padding: 12px; } .pc-pay-summary > div { align-items: flex-start; flex-direction: column; gap: 8px; } .pc-pay-form-footer { align-items: stretch; flex-direction: column; } .pc-pay-form-footer .button { width: 100%; } }
 @media (prefers-reduced-motion: reduce) { .pc-pay-hub .button { transition: none; } .pc-pay-hub .button:active { transform: none; } }
 
 /* Compact accounts list. Payment brands remain optional checkout presentation only. */
@@ -88,13 +88,13 @@
 .pc-pay-account-dialog > .pc-pay-config { display: flex; flex-direction: column; min-height: 0; margin: 0; max-height: inherit; }
 .pc-pay-onboarding > h2 { margin-bottom: 16px; }
 .pc-pay-account-row { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; padding-bottom: 24px; border-bottom: 1px solid var(--pay-line); }
-.pc-pay-account-mark { display: grid; place-items: center; flex: 0 0 56px; width: 56px; height: 56px; color: #171717; background: #f2f2f2; border-radius: 12px; }
+.pc-pay-account-mark { display: grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; color: #171717; background: transparent; }
 .pc-pay-account-copy { flex: 1 1 240px; min-width: 0; }
 .pc-pay-account-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .pc-pay-hub .pc-pay-account-title h3 { margin: 0; font-size: 16px; line-height: 24px; font-weight: 650; overflow-wrap: anywhere; }
 .pc-pay-account-copy > p { margin: 4px 0 8px; }
 .pc-pay-methods { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0; margin: 0; list-style: none; }
-.pc-pay-methods li { display: inline-flex; align-items: center; min-height: 32px; margin: 0; font-size: 12px; line-height: 16px; }
+.pc-pay-methods li { display: inline-flex; align-items: center; min-height: 32px; margin: 0; font-size: 12px; line-height: 18px; }
 .pc-pay-methods img { display: block; width: 54px; height: 32px; object-fit: contain; }
 .pc-pay-access-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 24px; padding-top: 24px; }
 .pc-pay-access-layout .pc-pay-switches { margin-bottom: 0; }
@@ -105,45 +105,95 @@
 .pc-pay-config[aria-busy="true"] [data-pc-pay-open], .pc-pay-config[aria-busy="true"] [data-pc-pay-cancel], .pc-pay-config [aria-disabled="true"] { pointer-events: none; opacity: .65; }
 
 /* The server and enhanced editor share one centered presentation, even before JS. */
-.pc-pay-account-dialog { padding: 0; color: var(--pay-ink); background: #fff; border-radius: 12px; font: inherit; }
+.pc-pay-account-dialog { padding: 0; color: var(--pay-ink); background: #fff; border-radius: 8px; font: inherit; }
 .pc-pay-account-dialog:not([open]) { display: none; }
 .pc-pay-account-dialog[open] { display: flex; flex-direction: column; }
-.pc-pay-account-dialog[open] { position: fixed; z-index: 100100; inset: 0; width: min(860px, calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); margin: auto; border: 0; overflow: hidden; box-shadow: 0 16px 48px #0003; animation: pc-pay-account-enter 160ms cubic-bezier(.22, 1, .36, 1); }
+.pc-pay-account-dialog[open] { position: fixed; z-index: 100100; inset: 0; width: min(860px, calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); margin: auto; border: 0; overflow: hidden; box-shadow: 0 16px 48px #0003; animation: pc-pay-account-enter 180ms cubic-bezier(.22, 1, .36, 1); }
 .pc-pay-account-dialog[open]:not(:modal) { box-shadow: 0 16px 48px #0003, 0 0 0 100vmax #0006; }
 .pc-pay-account-dialog::backdrop { background: #0006; }
 html.pc-pay-modal-open, html:has(.pc-pay-account-dialog[open]) { overflow: hidden; }
 .pc-pay-dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex: 0 0 auto; padding: 24px; border-bottom: 1px solid var(--pay-line); }
-.pc-pay-hub .pc-pay-dialog-header h2 { margin: 0; font-size: 20px; line-height: 28px; font-weight: 650; }
-.pc-pay-hub .pc-pay-dialog-header p { margin: 4px 0 0; color: var(--pay-muted); font-size: 12px; line-height: 16px; }
-.pc-pay-dialog-close { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 36px; width: 36px; height: 36px; margin: -4px -4px 0 0; padding: 8px; color: #555; background: transparent; border: 0; border-radius: 6px; cursor: pointer; }
+.pc-pay-hub .pc-pay-dialog-header h2 { margin: 0; font-size: 18px; line-height: 26px; font-weight: 600; }
+.pc-pay-hub .pc-pay-dialog-header p { margin: 4px 0 0; color: var(--pay-muted); font-size: 12px; line-height: 18px; }
+.pc-pay-dialog-close { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 44px; width: 44px; height: 44px; margin: -4px -4px 0 0; padding: 8px; color: #555; background: transparent; border: 0; border-radius: 6px; cursor: pointer; }
 .is-enhanced .pc-pay-dialog-close { display: inline-flex; }
 .pc-pay-dialog-close:hover { color: #171717; background: #f2f2f2; }
-.pc-pay-dialog-close:active { transform: translateY(1px); }
-.pc-pay-dialog-scroll { min-height: 0; padding: 24px; overflow-y: auto; scrollbar-color: #b5b5b5 #f5f5f5; scrollbar-width: thin; }
+.pc-pay-dialog-close:active { background: #e9e9e9; }
+.pc-pay-dialog-scroll { min-height: 0; overscroll-behavior: contain; padding: 24px; overflow-y: auto; scrollbar-color: #b5b5b5 #f5f5f5; scrollbar-width: thin; }
 .pc-pay-account-fields { min-width: 0; margin: 0 0 24px; padding: 0; }
 .pc-pay-account-fields > legend { padding: 0; margin-bottom: 16px; font-size: 16px; line-height: 24px; font-weight: 650; }
 .pc-pay-account-dialog .pc-pay-fields { gap: 16px 24px; }
 .pc-pay-number-unit { display: flex; align-items: center; gap: 8px; }
 .pc-pay-number-unit input { flex: 1 1 auto; min-width: 0; font-variant-numeric: tabular-nums; }
-.pc-pay-number-unit > span { flex: 0 0 auto; color: var(--pay-muted); font-size: 12px; line-height: 16px; }
+.pc-pay-number-unit > span { flex: 0 0 auto; color: var(--pay-muted); font-size: 12px; line-height: 18px; }
 .pc-pay-icon-field { padding: 0; margin: 0; }
-.pc-pay-icon-field > legend { padding: 0; margin-bottom: 8px; font-size: 14px; line-height: 20px; font-weight: 600; }
+.pc-pay-icon-field > legend { padding: 0; margin-bottom: 8px; font-size: 14px; line-height: 22px; font-weight: 600; }
 .pc-pay-icon-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.pc-pay-icon-options .pc-pay-icon-option { display: flex; align-items: center; gap: 8px; min-height: 56px; margin: 0; padding: 8px; background: #fafafa; border: 1px solid #e6e6e6; border-radius: 6px; cursor: pointer; font-size: 12px; line-height: 16px; font-weight: 400; }
+.pc-pay-icon-options .pc-pay-icon-option { display: flex; align-items: center; gap: 8px; min-height: 56px; margin: 0; padding: 8px; background: #fafafa; border: 1px solid #e6e6e6; border-radius: 6px; cursor: pointer; font-size: 12px; line-height: 18px; font-weight: 400; }
 .pc-pay-icon-option:has(input:checked) { border-color: #737373; background: #f5f5f5; }
 .pc-pay-icon-option:hover { border-color: #999; }
 .pc-pay-icon-option img { display: block; flex: 0 0 54px; width: 54px; height: 32px; object-fit: contain; }
 .pc-pay-icon-option span { min-width: 0; overflow-wrap: anywhere; }
 .pc-pay-advanced { margin: 0; }
-.pc-pay-advanced > summary { cursor: pointer; font-size: 14px; line-height: 20px; font-weight: 600; }
+.pc-pay-advanced > summary { cursor: pointer; font-size: 14px; line-height: 22px; font-weight: 600; }
 .pc-pay-advanced[open] > summary { margin-bottom: 16px; }
 .pc-pay-field .pc-pay-inline-check { display: flex; align-items: center; gap: 8px; margin-bottom: 0; }
 .pc-pay-dialog-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; flex: 0 0 auto; margin: 0; padding: 16px 24px; border-top: 1px solid var(--pay-line); }
-.pc-pay-hub .pc-pay-dialog-footer p { max-width: 50ch; margin: 0; color: var(--pay-muted); font-size: 12px; line-height: 16px; }
+.pc-pay-hub .pc-pay-dialog-footer p { max-width: 50ch; margin: 0; color: var(--pay-muted); font-size: 12px; line-height: 18px; }
 .pc-pay-dialog-footer > div { display: flex; gap: 8px; flex: 0 0 auto; }
-.pc-pay-dialog-error { margin: 0 0 24px !important; padding: 12px; color: #933a32; background: #fff6f5; border-radius: 6px; font-size: 14px; line-height: 20px; }
+.pc-pay-dialog-error { margin: 0 0 24px !important; padding: 12px; color: #933a32; background: #fff6f5; border-radius: 6px; font-size: 14px; line-height: 22px; }
 @keyframes pc-pay-account-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 800px) { .pc-pay-access-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
-@media (max-width: 600px) { .pc-pay-account-mark { flex-basis: 44px; width: 44px; height: 44px; } .pc-pay-account-row { gap: 12px; } .pc-pay-account-row > .button { margin-left: 56px; } .pc-pay-account-copy { flex-basis: calc(100% - 56px); } .pc-pay-store-options { grid-template-columns: minmax(0, 1fr); } .pc-pay-account-dialog[open] { width: calc(100vw - 24px); max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); } .pc-pay-dialog-header, .pc-pay-dialog-scroll { padding: 16px; } .pc-pay-dialog-footer { padding: 12px 16px; align-items: stretch; } .pc-pay-dialog-footer p { flex-basis: 100%; } .pc-pay-dialog-footer > div { flex: 1 1 auto; justify-content: flex-end; } .pc-pay-icon-options { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pc-pay-icon-options .pc-pay-icon-option { flex-wrap: wrap; } }
 @media (prefers-reduced-motion: reduce) { .pc-pay-account-dialog[open] { animation: none; } .pc-pay-dialog-close:active { transform: none; } }
-@media (max-width: 600px) { .pc-pay-method-heading > .button { width: 100%; text-align: center; } .pc-pay-method-actions { width: 100%; } .pc-pay-archive > form { right: auto; left: 0; width: min(240px, calc(100vw - 64px)); } }
+
+/* A narrow ledger becomes a labelled record, without discarding any payment field. */
+@media(max-width:640px){
+ .pc-pay-heading{gap:12px;margin-bottom:20px}
+ .pc-pay-heading .pc-pay-state{max-width:100%;white-space:normal}
+ .pc-pay-jump{gap:20px;margin-bottom:20px}
+ .pc-pay-jump a{min-height:44px;padding-bottom:8px}
+ .pc-pay-section{padding:16px;margin-bottom:20px;scroll-margin-top:72px}
+ .pc-pay-section-head{align-items:flex-start;gap:12px}
+ .pc-pay-section-head form{max-width:100%}
+ .pc-pay-hub .button{min-height:44px;font-size:14px;line-height:22px;padding:10px 14px}
+ .pc-pay-hub select,.pc-pay-hub input[type=text],.pc-pay-hub input[type=password],.pc-pay-hub input[type=number],.pc-pay-hub input[type=email],.pc-pay-hub input[type=url],.pc-pay-hub textarea{min-height:44px;font-size:16px;line-height:24px;padding:9px 12px}
+ .pc-pay-hub select{padding-right:36px}
+ .pc-pay-fields{grid-template-columns:minmax(0,1fr)}
+ .pc-pay-filters{gap:12px;margin:20px 0}
+ .pc-pay-filters label{flex:1 1 100%;min-width:0}
+ .pc-pay-summary{align-items:flex-start;padding:12px;gap:12px}
+ .pc-pay-summary>div{align-items:flex-start;gap:8px}
+ .pc-pay-summary p{flex-wrap:wrap;gap:8px 16px}
+ .pc-pay-form-footer{align-items:stretch;gap:8px}
+ .pc-pay-form-footer .button{flex:1 1 auto}
+ .pc-pay-switches label,.pc-pay-site-picker>summary,.pc-pay-advanced>summary,.pc-pay-archive>summary{min-height:44px;display:flex;align-items:center}
+ .pc-pay-table:has(td[data-label]),.pc-pay-table:has(td[data-label]) tbody{display:block;width:100%;min-width:0}
+ .pc-pay-table:has(td[data-label]) thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+ .pc-pay-table:has(td[data-label]) tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px;padding:16px 0;border-bottom:1px solid var(--pay-line)}
+ .pc-pay-table:has(td[data-label]) tr:last-child{border-bottom:0}
+ .pc-pay-table:has(td[data-label]) td{display:flex;flex-direction:column;align-items:flex-start;min-width:0;max-width:none;gap:4px;padding:0;border:0;text-align:left;white-space:normal;overflow-wrap:anywhere;font-size:14px;line-height:22px}
+ .pc-pay-table:has(td[data-label]) td:first-child{grid-column:1 / -1}
+ .pc-pay-table:has(td[data-label]) td[data-label]::before{content:attr(data-label);color:var(--pay-muted);font-size:12px;line-height:18px;font-weight:500}
+ .pc-pay-table td>span{margin-top:0}
+ .pc-pay-pagination{align-items:flex-start;gap:12px}
+ .pc-pay-pagination>div{width:100%;gap:8px}
+ .pc-pay-method-heading{gap:12px}
+ .pc-pay-method-actions{width:100%;gap:8px}
+ .pc-pay-method-actions>.button{flex:1 1 auto}
+ .pc-pay-method-row{gap:12px;padding:16px 0}
+ .pc-pay-account-copy{flex-basis:100%}
+ .pc-pay-account-row{gap:12px;padding-bottom:20px}
+ .pc-pay-account-row>.button{margin-left:0}
+ .pc-pay-store-options{grid-template-columns:minmax(0,1fr)}
+ .pc-pay-archive>form{right:auto;left:0;width:min(260px,calc(100vw - 64px));box-shadow:0 12px 32px #0000001a}
+ .pc-pay-account-dialog[open]{width:calc(100vw - 16px);max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);max-height:calc(100dvh - 16px)}
+ .pc-pay-dialog-header{padding:max(12px,env(safe-area-inset-top)) 16px 12px;align-items:center;gap:8px}
+ .pc-pay-dialog-header>div{min-width:0}
+ .pc-pay-dialog-scroll{padding:16px}
+ .pc-pay-dialog-footer{padding:12px 16px max(12px,env(safe-area-inset-bottom));align-items:stretch;gap:12px}
+ .pc-pay-dialog-footer p{flex-basis:100%}
+ .pc-pay-dialog-footer>div{display:flex;flex-wrap:wrap;flex:1 1 auto;justify-content:flex-end;gap:8px}
+ .pc-pay-dialog-footer>div .button{flex:1 1 auto}
+ .pc-pay-icon-options{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .pc-pay-icon-options .pc-pay-icon-option{flex-wrap:wrap}
+}

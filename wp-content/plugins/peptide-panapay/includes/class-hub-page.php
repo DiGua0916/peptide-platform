@@ -198,9 +198,9 @@ final class Hub_Page {
 		if ( 'FAILED' === ( $row['event_status'] ?? '' ) ) { $provider = '已确认失败'; }
 		$delivery = array( 'pending' => '等待回写', 'delivered' => '已回写', 'review' => '需要核对', 'blocked' => '连接待核对', '' => '尚无付款结果' )[ $row['delivery_state'] ?? '' ] ?? '状态待核对';
 		$disposition = array( 'paid' => '订单已付款', 'failed' => '订单未付款', 'review' => '订单需核对' )[ $row['disposition'] ?? '' ] ?? '';
-		echo '<tr><td><strong>' . esc_html( $name ) . '</strong><span>订单 #' . esc_html( (string) (int) ( $row['order_id'] ?? 0 ) ) . '</span></td><td>' . esc_html( $account_label ) . '</td><td class="pc-pay-reference">' . esc_html( (string) ( $row['ref'] ?? '' ) ) . '</td><td class="pc-pay-number">' . esc_html( (string) ( $row['currency'] ?? '' ) ) . ' ' . esc_html( (string) ( $row['amount'] ?? '' ) ) . '</td><td>' . esc_html( $provider ) . '</td><td>' . esc_html( $delivery );
+		echo '<tr><td data-label="店铺 / 订单"><strong>' . esc_html( $name ) . '</strong><span>订单 #' . esc_html( (string) (int) ( $row['order_id'] ?? 0 ) ) . '</span></td><td data-label="付款方式">' . esc_html( $account_label ) . '</td><td data-label="支付引用" class="pc-pay-reference">' . esc_html( (string) ( $row['ref'] ?? '' ) ) . '</td><td data-label="金额" class="pc-pay-number">' . esc_html( (string) ( $row['currency'] ?? '' ) ) . ' ' . esc_html( (string) ( $row['amount'] ?? '' ) ) . '</td><td data-label="支付方确认">' . esc_html( $provider ) . '</td><td data-label="店铺回写">' . esc_html( $delivery );
 		if ( '' !== $disposition ) { echo '<span>' . esc_html( $disposition ) . '</span>'; }
-		echo '</td><td>' . esc_html( ! empty( $row['updated_at'] ) ? wp_date( 'Y-m-d H:i', (int) $row['updated_at'] ) : '—' ) . '</td></tr>';
+		echo '</td><td data-label="更新时间">' . esc_html( ! empty( $row['updated_at'] ) ? wp_date( 'Y-m-d H:i', (int) $row['updated_at'] ) : '—' ) . '</td></tr>';
 	}
 
 	private static function pagination( array $ledger, int $page, int $site_id, string $state ): void {

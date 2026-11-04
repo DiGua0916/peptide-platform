@@ -142,8 +142,9 @@
 			previewRetryState[ 1 ]( function ( count ) { return count + 1; } );
 		}, [] );
 		var paneState = useState( 'preview' );
+		var paneFocusRef = useRef( null );
 		var workspaceRef = useRef( null );
-		var narrowState = useState( false );
+		var narrowState = useState( function () { return !! window.matchMedia && window.matchMedia( '(max-width: 1059px)' ).matches; } );
 		var libraryQueryState = useState( '' );
 		var libraryQuery = libraryQueryState[ 0 ];
 		var dragState = useState( { from: null, over: null } );
@@ -162,6 +163,23 @@
 		var commitDragRef = useRef( function () {} );
 		var firstRef = useRef( true );
 		var historyTick = useState( 0 );
+
+		// Workspace choices only change presentation; the document and both preview frames stay mounted.
+		function switchPane( next, focusContent ) {
+			paneFocusRef.current = focusContent ? 'pc-de-block-settings' : null;
+			paneState[ 1 ]( next );
+		}
+		useEffect( function () {
+			if ( ! narrowState[ 0 ] ) { paneFocusRef.current = null; return undefined; }
+			if ( ! paneFocusRef.current ) { return undefined; }
+			var id = paneFocusRef.current;
+			paneFocusRef.current = null;
+			var timer = setTimeout( function () {
+				var region = document.getElementById( id );
+				if ( region ) { region.focus( { preventScroll: true } ); }
+			}, 0 );
+			return function () { clearTimeout( timer ); };
+		}, [ paneState[ 0 ], selected, narrowState[ 0 ] ] );
 
 		// Back uses a page-level choice; closing/reloading still uses beforeunload.
 		function resetLeave() {
@@ -260,7 +278,7 @@
 			list.splice( at === -1 ? list.length : at + 1, 0, m );
 			setModules( list );
 			setSelected( m.attrs.moduleId );
-			paneState[ 1 ]( 'settings' );
+			switchPane( 'settings', true );
 		}
 
 		function duplicate( index ) {
@@ -752,7 +770,7 @@
 						pendingItemRef.current = item && m.contains( item ) ? item.getAttribute( 'data-module-item' ) : null;
 						tabState[ 1 ]( 'modules' );
 						setSelected( m.id.replace( /^vc-/, '' ) );
-						paneState[ 1 ]( 'settings' );
+						switchPane( 'settings', true );
 						// 点同一个积木里不属于任何条目的地方：取消锁定条目，回到整个积木。
 						openItemState[ 1 ]( pendingItemRef.current );
 						return;
@@ -1076,7 +1094,7 @@
 		var list = el(
 			'div',
 			{
-				className: 'pc-de-list',
+				id: 'pc-de-block-list', className: 'pc-de-list',
 				role: 'list',
 				'aria-label': S.tabModules,
 				// 点积木列表下方的空白：取消选中。
@@ -1138,7 +1156,7 @@
 							onClick: function () {
 								tabState[ 1 ]( 'modules' );
 								setSelected( id );
-								paneState[ 1 ]( 'settings' );
+								switchPane( 'settings', true );
 							},
 						},
 						el( Icon, { block: m.block, size: 15 } ),
@@ -1163,7 +1181,7 @@
 					className: 'pc-de-row pc-de-row--add' + ( selected === 'library' ? ' is-selected' : '' ),
 					onClick: function () {
 						setSelected( 'library' );
-						paneState[ 1 ]( 'settings' );
+						switchPane( 'settings', true );
 					},
 				},
 				el( Icon, { name: 'plus-alt2' } ),
@@ -1188,7 +1206,7 @@
 					el( 'label', { className: 'pc-de-search' },
 						el( Icon, { name: 'search', size: 16 } ),
 						el( 'span', { className: 'screen-reader-text' }, S.searchBlocks || '搜索积木' ),
-						el( 'input', { type: 'search', value: libraryQuery, placeholder: S.searchBlocks || '搜索积木', onChange: function ( event ) { libraryQueryState[ 1 ]( event.target.value ); } } )
+						el( 'input', { type: 'search', value: libraryQuery, 'aria-label': S.searchBlocks || '搜索积木', autoComplete: 'off', placeholder: S.searchBlocks || '搜索积木', onChange: function ( event ) { libraryQueryState[ 1 ]( event.target.value ); } } )
 					)
 				),
 				cfg.library.some( function ( group ) {
@@ -1336,14 +1354,14 @@
 
 		var side = el(
 			'aside',
-			{ id: 'pc-de-inspector', className: 'pc-de-side', 'aria-label': S.editorSettings || '装修设置' },
+			{ id: 'pc-de-inspector', className: 'pc-de-side', 'aria-label': S.editorSettings || '装修设置', 'aria-hidden': narrowState[ 0 ] && paneState[ 0 ] === 'preview' },
 			el(
 				'div',
 				{ className: 'pc-de-tabs', role: 'tablist' },
 				el( 'button', { type: 'button', role: 'tab', 'aria-selected': tab === 'modules', className: tab === 'modules' ? 'is-active' : '', onClick: function () { tabState[ 1 ]( 'modules' ); } }, S.tabModules ),
 					el( 'button', { type: 'button', role: 'tab', 'aria-selected': cfg.document.document === 'global', className: cfg.document.document === 'global' ? 'is-active' : '', onClick: function () { openDocument( 'global' ); } }, S.tabGlobal )
 			),
-			el( 'div', { className: 'pc-de-cols' }, tab === 'modules' ? list : null, el( 'div', { className: 'pc-de-settings', role: 'region', 'aria-label': S.blockSettings || '积木属性' }, panel ) )
+			el( 'div', { className: 'pc-de-cols' }, tab === 'modules' ? list : null, el( 'div', { id: 'pc-de-block-settings', className: 'pc-de-settings', role: 'region', tabIndex: -1, 'aria-label': S.blockSettings || '积木属性' }, panel ) )
 		);
 
 		var previewFeedback = previewError ? el( 'div', { className: 'pc-de-preview__error', role: 'alert' },
@@ -1357,6 +1375,7 @@
 			{
 				id: 'pc-de-canvas',
 				className: 'pc-de-preview',
+				'aria-hidden': device !== 'full' && narrowState[ 0 ] && paneState[ 0 ] !== 'preview',
 				'aria-label': S.livePreview || '真实页面预览',
 				// 点预览四周的灰色空白（不是预览页面本身）：取消选中。
 				onClick: function ( e ) {
@@ -1396,11 +1415,8 @@
 		return el(
 			'div',
 			{ ref: workspaceRef, className: 'pc-de__app pane-' + paneState[ 0 ] + ( narrowState[ 0 ] ? ' is-narrow' : '' ) + ( device === 'full' ? ' is-full' : '' ) },
+			el( 'h1', { className: 'screen-reader-text' }, S.editorTitle || '店铺装修' ),
 			top,
-			device !== 'full' ? el( 'nav', { className: 'pc-de-pane-switch', 'aria-label': S.workspaceView || '工作区视图' },
-				el( 'button', { type: 'button', 'aria-pressed': paneState[ 0 ] === 'preview', 'aria-controls': 'pc-de-canvas', onClick: function () { paneState[ 1 ]( 'preview' ); } }, el( Icon, { name: 'visibility', size: 16 } ), S.livePreview || '真实预览' ),
-				el( 'button', { type: 'button', 'aria-pressed': paneState[ 0 ] === 'settings', 'aria-controls': 'pc-de-inspector', onClick: function () { paneState[ 1 ]( 'settings' ); } }, el( Icon, { name: 'settings', size: 16 } ), S.editorSettings || '装修设置' )
-			) : null,
 			notice
 				? el(
 					C.Notice,
@@ -1435,7 +1451,12 @@
 				)
 			) : null,
 			previewFeedback,
-			el( 'div', { className: 'pc-de-body' }, preview, device === 'full' ? null : side )
+			el( 'div', { className: 'pc-de-body' }, preview, device === 'full' ? null : side ),
+			device !== 'full' ? el( 'nav', { className: 'pc-de-pane-switch', 'aria-label': S.workspaceView || '工作区视图' },
+				el( 'button', { type: 'button', 'aria-pressed': paneState[ 0 ] === 'preview', 'aria-controls': 'pc-de-canvas', onClick: function () { switchPane( 'preview', false ); } }, el( Icon, { name: 'visibility', size: 18 } ), S.previewWorkspace || '预览' ),
+				el( 'button', { type: 'button', 'aria-pressed': paneState[ 0 ] === 'blocks', 'aria-controls': 'pc-de-block-list', onClick: function () { tabState[ 1 ]( 'modules' ); switchPane( 'blocks', false ); } }, el( Icon, { name: 'menu', size: 18 } ), S.blocksWorkspace || '积木' ),
+				el( 'button', { type: 'button', 'aria-pressed': paneState[ 0 ] === 'settings', 'aria-controls': 'pc-de-block-settings', onClick: function () { switchPane( 'settings', false ); } }, el( Icon, { name: 'settings', size: 18 } ), selected === 'library' ? ( S.library || '积木库' ) : ( S.propertiesWorkspace || '属性' ) )
+			) : null
 		);
 	}
 

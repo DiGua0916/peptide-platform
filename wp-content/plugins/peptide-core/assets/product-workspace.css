@@ -4,9 +4,9 @@
  */
 body.pc-admin-product {
   --pc-product-accent: var(--pc-ui-accent, #171717);
-  --pc-product-ink: var(--pc-ui-text, var(--pc-ui-text, #171717));
-  --pc-product-muted: var(--pc-ui-muted, var(--pc-ui-muted, #666));
-  --pc-product-line: var(--pc-ui-line, var(--pc-ui-line, #e6e6e6));
+  --pc-product-ink: var(--pc-ui-text, #171717);
+  --pc-product-muted: var(--pc-ui-muted, #5f6368);
+  --pc-product-line: var(--pc-ui-line, #e5e5e5);
   --pc-product-surface: var(--pc-ui-surface, #fff);
 }
 
@@ -65,7 +65,7 @@ body.pc-admin-product #postdivrich {
   min-width: 0;
   margin: 0 0 24px;
   border: 1px solid var(--pc-product-line);
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--pc-product-surface);
   box-shadow: none;
 }
@@ -103,7 +103,7 @@ body.pc-admin-product #poststuff .postbox .postbox-header {
   padding: 3px 8px 3px 16px;
   border: 0;
   background: #fff;
-  border-radius: 12px 12px 0 0;
+  border-radius: 8px 8px 0 0;
   border-bottom: 1px solid var(--pc-product-line);
 }
 
@@ -172,7 +172,7 @@ body.pc-admin-product #edit-slug-box {
   padding: 0;
   color: var(--pc-product-muted);
   font-size: 12px;
-  line-height: 16px;
+  line-height: 18px;
   overflow-wrap: anywhere;
 }
 
@@ -272,7 +272,7 @@ body.pc-admin-product #post-status-info {
   background: transparent;
   color: var(--pc-product-muted);
   font-size: 12px;
-  line-height: 16px;
+  line-height: 18px;
 }
 
 body.pc-admin-product #post-status-info td {
@@ -442,7 +442,7 @@ body.pc-admin-product #woocommerce-product-data .woocommerce_options_panel .desc
   color: var(--pc-product-muted);
   font-size: 12px;
   font-style: normal;
-  line-height: 16px;
+  line-height: 18px;
 }
 
 body.pc-admin-product #woocommerce-product-data .woocommerce_options_panel .woocommerce-help-tip {
@@ -507,7 +507,7 @@ body.pc-admin-product #woocommerce-product-data .woocommerce_variation .form-row
   color: var(--pc-product-ink);
   font-size: 12px;
   font-weight: 600;
-  line-height: 16px;
+  line-height: 18px;
 }
 
 body.pc-admin-product #woocommerce-product-data .woocommerce_variation .form-row input,
@@ -611,7 +611,7 @@ body.pc-admin-product #woocommerce-product-images .inside > p {
   margin: 12px 0 0;
   color: var(--pc-product-muted);
   font-size: 12px;
-  line-height: 16px;
+  line-height: 18px;
 }
 
 body.pc-admin-product #postimagediv .inside > p:first-child {
@@ -721,32 +721,30 @@ body.pc-admin-product #woocommerce-product-data .woocommerce_options_panel .down
 }
 
 @media (max-width: 782px) {
-  /* The native Woo tools share the heading band instead of adding a third header. */
+  /* Keep native Woo tools in normal flow; absolute positioning overlaps wrapped titles. */
   body.pc-admin-product .woocommerce-layout {
     position: relative;
-    height: 0;
+    height: auto;
     min-height: 0;
     overflow: visible;
   }
 
   body.pc-admin-product .woocommerce-layout__header {
-    position: absolute;
-    top: 36px;
-    right: 16px;
-    left: auto;
-    width: auto;
-    min-height: 32px;
+    position: relative;
+    inset: auto;
+    width: 100%;
+    min-height: 44px;
     z-index: 20;
   }
 
   body.pc-admin-product .woocommerce-layout__header-wrapper {
-    min-height: 32px;
+    min-height: 44px;
     padding: 0;
   }
 
   body.pc-admin-product #wpbody-content > .wrap > h1 {
     box-sizing: border-box;
-    max-width: calc(100% - 128px);
+    max-width: 100%;
     margin-bottom: 12px;
   }
 
@@ -780,6 +778,41 @@ body.pc-admin-product #woocommerce-product-data .woocommerce_options_panel .down
     width: 100%;
   }
 
+  body.pc-admin-product #woocommerce-product-data .woocommerce_options_panel p.form-field input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+  body.pc-admin-product #woocommerce-product-data .woocommerce_options_panel p.form-field > select,
+  body.pc-admin-product #woocommerce-product-data .woocommerce_options_panel p.form-field textarea,
+  body.pc-admin-product #woocommerce-product-data #product-type {
+    min-height: 44px;
+    font-size: 16px;
+    line-height: 22px;
+  }
+
+  body.pc-admin-product #woocommerce-product-data ul.product_data_tabs {
+    flex-wrap: nowrap;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-inline: 12px;
+  }
+
+  body.pc-admin-product #woocommerce-product-data ul.product_data_tabs li {
+    flex: 0 0 auto;
+  }
+
+  body.pc-admin-product #woocommerce-product-data ul.product_data_tabs li a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    box-sizing: border-box;
+    padding: 10px 12px;
+  }
+
+  body.pc-admin-product #submitdiv #publish,
+  body.pc-admin-product .woocommerce-layout__header .components-button,
+  body.pc-admin-product #woocommerce-product-data .wc-metaboxes-wrapper .wc-metabox .handlediv {
+    min-height: 44px;
+  }
+
   body.pc-admin-product #woocommerce-product-data ul.product_data_tabs li a::before {
     display: none;
   }
@@ -801,9 +834,9 @@ body.pc-admin-product #woocommerce-product-data .woocommerce_options_panel .down
 
   body.pc-admin-product .pc-product-sections a {
     box-sizing: border-box;
-    min-height: 36px;
-    padding: 4px 8px;
-    font-size: 12px;
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 13px;
     line-height: 20px;
   }
 }
@@ -830,14 +863,13 @@ body.pc-admin-product #woocommerce-product-data .woocommerce_options_panel .down
 
 /* Only direct actions move; fields and document geometry stay still. */
 body.pc-admin-product :is(.pc-product-sections a, #woocommerce-product-data ul.product_data_tabs li a) {
-  transition: transform 180ms cubic-bezier(.16, 1, .3, 1), opacity 180ms cubic-bezier(.16, 1, .3, 1);
+  transition: background-color 160ms cubic-bezier(.22,1,.36,1), transform 160ms cubic-bezier(.22,1,.36,1);
 }
 body.pc-admin-product :is(.pc-product-sections a, #woocommerce-product-data ul.product_data_tabs li a):hover {
   transform: none;
 }
 body.pc-admin-product :is(.pc-product-sections a, #woocommerce-product-data ul.product_data_tabs li a):active {
   transform: translateY(1px);
-  opacity: .78;
 }
 @media (prefers-reduced-motion: reduce) {
   body.pc-admin-product :is(.pc-product-sections a, #woocommerce-product-data ul.product_data_tabs li a) {

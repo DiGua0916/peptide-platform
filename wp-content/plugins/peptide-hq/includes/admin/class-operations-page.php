@@ -18,9 +18,13 @@ final class Operations_Page {
 	}
 	public static function assets(): void {
 		if ( self::SLUG !== ( $_GET['page'] ?? '' ) ) { return; }
-		wp_enqueue_style( 'pchq-operations', plugins_url( 'assets/hq-operations.css', PEPTIDE_HQ_FILE ), array( 'peptide-hq-workspace' ), PEPTIDE_HQ_VERSION );
-		wp_enqueue_script( 'pchq-operations', plugins_url( 'assets/hq-operations.js', PEPTIDE_HQ_FILE ), array(), PEPTIDE_HQ_VERSION, true );
-		wp_localize_script( 'pchq-operations', 'pchqOps', array( 'ajax' => admin_url( 'admin-ajax.php' ), 'nonce' => wp_create_nonce( 'pchq_ops_status' ) ) );
+		self::workspace_assets();
+	}
+	/** Shared workspace loads controllers once; each response supplies its own nonce in the DOM. */
+	public static function workspace_assets(): void {
+		$style_version = PEPTIDE_HQ_VERSION . '.' . (string) filemtime( dirname( PEPTIDE_HQ_FILE ) . '/assets/hq-operations.css' );
+		wp_enqueue_style( 'pchq-operations', plugins_url( 'assets/hq-operations.css', PEPTIDE_HQ_FILE ), array( 'peptide-hq-workspace' ), $style_version );
+		wp_enqueue_script( 'pchq-operations', plugins_url( 'assets/hq-operations.js', PEPTIDE_HQ_FILE ), array(), (string) filemtime( dirname( PEPTIDE_HQ_FILE ) . '/assets/hq-operations.js' ), true );
 	}
 	public static function url( string $tab = 'tasks', int $site = 0 ): string { return add_query_arg( array( 'page' => self::SLUG, 'tab' => $tab, 'site' => $site ), admin_url( 'admin.php' ) ); }
 	private static function form( string $operation, int $site = 0, string $tab = '' ): void {
@@ -34,7 +38,7 @@ final class Operations_Page {
 		$tab = sanitize_key( $_GET['tab'] ?? 'tasks' ); if ( ! isset( self::TABS[$tab] ) ) { $tab = 'tasks'; }
 		$sites = Sites::all(); $site = (int) ( $_GET['site'] ?? 0 );
 		if ( ! $site && in_array( $tab, array( 'backups', 'releases' ), true ) && $sites ) { $site = (int) array_key_first( $sites ); }
-		echo '<div class="wrap pchq ops" data-tab="' . esc_attr( $tab ) . '" data-site="' . esc_attr( $site ) . '"><div class="ops-title"><div><h1>站点运维</h1><p>集中管理版本、新店与恢复点。</p></div><a class="button" href="' . esc_url( admin_url( 'admin.php?page=pchq-sites' ) ) . '">返回店铺</a></div>';
+		echo '<div class="wrap pchq ops" data-pchq-operations data-ajax="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '" data-nonce="' . esc_attr( wp_create_nonce( 'pchq_ops_status' ) ) . '" data-tab="' . esc_attr( $tab ) . '" data-site="' . esc_attr( $site ) . '"><div class="ops-title"><div><h1>站点运维</h1><p>集中管理版本、新店与恢复点。</p></div><a class="button" href="' . esc_url( admin_url( 'admin.php?page=pchq-sites' ) ) . '">返回店铺</a></div>';
 		Menu::notices();
 		if ( ! Operations::ready() ) { echo '<div class="notice notice-error"><p>运维执行器未配置，任务不会执行。请完成服务器部署配置。</p></div></div>'; return; }
 		echo '<nav class="ops-tabs" aria-label="运维功能">'; foreach ( self::TABS as $key => $label ) { echo '<a ' . ( $tab === $key ? 'aria-current="page" ' : '' ) . 'href="' . esc_url( self::url( $key, $site ) ) . '">' . esc_html( $label ) . '</a>'; } echo '</nav><p class="ops-live" role="status" aria-live="polite"></p>';
