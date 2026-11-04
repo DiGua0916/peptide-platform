@@ -28,14 +28,14 @@
   if(candidate.automaticCoupon===undefined)return base;
   // The operation receipt exists only on this add response, not on a later GET.
   const receipt=result?.rawCart?.extensions?.peptide_core?.activity_recommendation;
-  if(receipt?.added!==true)return 'Your bag was updated. Review your bag to confirm the item and current offer.';
-  if(candidate.automaticCoupon.enabled&&receipt.couponApplied!==true)return base+' The automatic offer could not be applied. Review your bag before continuing.';
+  if(receipt?.requested!==true||receipt.added!==true)return 'Your bag was updated. Review your bag to confirm the item and current offer.';
+  if(candidate.automaticCoupon.enabled&&(receipt.couponRequested!==true||receipt.couponApplied!==true))return base+' The automatic offer could not be applied. Review your bag before continuing.';
   return candidate.automaticCoupon.enabled?base+' Your automatic offer has been applied.':base;
  }
  function offerUnconfirmed(candidate,result){
   if(candidate.automaticCoupon===undefined)return false;
   const receipt=result?.rawCart?.extensions?.peptide_core?.activity_recommendation;
-  return receipt?.added!==true||(candidate.automaticCoupon.enabled&&receipt.couponApplied!==true);
+  return receipt?.requested!==true||receipt.added!==true||(candidate.automaticCoupon.enabled&&(receipt.couponRequested!==true||receipt.couponApplied!==true));
  }
  function safeImage(value){
   if(!text(value))return '';
