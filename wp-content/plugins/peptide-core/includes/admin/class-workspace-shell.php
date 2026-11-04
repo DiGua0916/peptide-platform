@@ -12,8 +12,12 @@ final class Workspace_Shell {
     }
 
     public static function embedded(): bool {
-        return ( isset( $_GET['pc_embed'] ) && '1' === $_GET['pc_embed'] )
-            || ( isset( $_SERVER['HTTP_SEC_FETCH_DEST'] ) && 'iframe' === $_SERVER['HTTP_SEC_FETCH_DEST'] );
+        // A native POST redirect may retain its embedded referer. A top-level
+        // document must regain normal chrome rather than hiding its navigation.
+        if ( isset( $_SERVER['HTTP_SEC_FETCH_DEST'] ) ) {
+            return 'iframe' === $_SERVER['HTTP_SEC_FETCH_DEST'];
+        }
+        return isset( $_GET['pc_embed'] ) && '1' === $_GET['pc_embed'];
     }
 
     public static function screen( $screen ): void {
