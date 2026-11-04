@@ -137,15 +137,46 @@
     };
     const ready = () => {
         const switcher = document.querySelector('[data-pc-language-switcher]');
-        const select = switcher?.querySelector('[data-pc-language-select]');
+        const menu = switcher?.querySelector('[data-pc-language-menu]');
+        const trigger = switcher?.querySelector('[data-pc-language-trigger]');
+        const choices = Array.from(switcher?.querySelectorAll('[data-pc-language-option]') || []);
         const destination = document.querySelector('.header-actions,.vc-demo-header-actions');
         if (switcher && destination) { destination.prepend(switcher); switcher.classList.add('pc-language-switcher--header'); }
-        select?.addEventListener('change', () => {
-            const next = languageUrl(window.location.href, select.value);
-            if (!next || select.value === config.language) { select.value = config.language; return; }
-            if (dirty && !window.confirm(config.language === 'es' ? 'Cambiar el idioma recargará la página. Es posible que los campos sin guardar no se conserven. ¿Continuar?' : 'Changing language reloads this page. Unsaved fields may not be kept. Continue?')) { select.value = config.language; return; }
-            window.location.assign(next);
+        const closeLanguage = (restoreFocus = false) => {
+            if (!menu?.open) return;
+            menu.open = false;
+            if (restoreFocus) trigger?.focus();
+        };
+        choices.forEach(link => {
+            const language = link.getAttribute('data-pc-language-option');
+            const next = languageUrl(window.location.href, language);
+            if (next) link.setAttribute('href', next);
+            link.addEventListener('click', event => {
+                const href = languageUrl(window.location.href, language);
+                if (!href || event.defaultPrevented) return;
+                link.setAttribute('href', href);
+                // Native modified clicks keep new-tab/window navigation and real links.
+                if (event.button > 0 || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+                event.preventDefault();
+                if (language === config.language) { closeLanguage(true); return; }
+                if (dirty && !window.confirm(config.language === 'es' ? 'Cambiar el idioma recargará la página. Es posible que los campos sin guardar no se conserven. ¿Continuar?' : 'Changing language reloads this page. Unsaved fields may not be kept. Continue?')) return;
+                closeLanguage();
+                window.location.assign(href);
+            });
         });
+        menu?.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && menu.open) {
+                event.preventDefault(); event.stopPropagation(); closeLanguage(true); return;
+            }
+            if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key) || !choices.length) return;
+            event.preventDefault();
+            const index = choices.indexOf(event.target);
+            menu.open = true;
+            const next = event.key === 'Home' ? 0 : event.key === 'End' ? choices.length - 1 : event.key === 'ArrowDown' ? (index + 1) % choices.length : index < 0 ? choices.length - 1 : (index + choices.length - 1) % choices.length;
+            choices[next].focus();
+        });
+        document.addEventListener('pointerdown', event => { if (menu?.open && !switcher.contains(event.target)) closeLanguage(); });
+        document.addEventListener('focusin', event => { if (menu?.open && !switcher.contains(event.target)) closeLanguage(); });
         document.addEventListener('input', event => { if ((event.target?.matches('input,textarea,select') || event.target?.closest('[contenteditable]')) && !event.target.closest('[data-pc-language-switcher]')) dirty = true; }, {passive:true});
         if (config.language === 'es') {
             // Woo's React checkout uses its official locale JSON; do not rewrite its managed DOM.

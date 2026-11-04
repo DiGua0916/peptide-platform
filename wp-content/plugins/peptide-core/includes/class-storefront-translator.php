@@ -184,10 +184,14 @@ final class Storefront_Translator {
 	public static function switcher(): void {
 		if ( ! Storefront_Translation::enabled() || ! Storefront_Translation::public_document_request() ) { return; }
 		$code = Storefront_Translation::code();
-		echo '<nav class="pc-language-switcher" data-pc-language-switcher translate="no" aria-label="' . esc_attr( 'es' === $code ? 'Idioma' : 'Language' ) . '">';
-		echo '<label class="screen-reader-text" for="pc-language-select">' . esc_html( 'es' === $code ? 'Idioma' : 'Language' ) . '</label><select id="pc-language-select" data-pc-language-select aria-label="' . esc_attr( 'es' === $code ? 'Idioma' : 'Language' ) . '">';
-		echo '<option value="en"' . selected( 'en', $code, false ) . '>EN</option><option value="es"' . selected( 'es', $code, false ) . '>ES</option></select>';
-		echo '<noscript><a href="' . esc_url( self::language_url( 'en' ) ) . '" lang="en">English</a> · <a href="' . esc_url( self::language_url( 'es' ) ) . '" lang="es">Español</a></noscript></nav>';
+		echo '<nav class="pc-language-switcher" data-pc-language-switcher translate="no" aria-label="Language"><details data-pc-language-menu>';
+		echo '<summary data-pc-language-trigger aria-controls="pc-language-options"><span>Language</span><svg class="pc-language-chevron" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>';
+		echo '<div class="pc-language-options" id="pc-language-options">';
+		foreach ( array( 'en' => 'English', 'es' => 'Español' ) as $language => $label ) {
+			echo '<a href="' . esc_url( self::language_url( $language ) ) . '" data-pc-language-option="' . esc_attr( $language ) . '" lang="' . esc_attr( $language ) . '" hreflang="' . esc_attr( $language ) . '"' . ( $language === $code ? ' aria-current="true"' : '' ) . '><span>' . esc_html( $label ) . '</span>';
+			echo '<svg class="pc-language-check" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="m3 8 3 3 7-7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>';
+		}
+		echo '</div></details></nav>';
 		if ( defined( 'PC_DATA_GEOIP_ATTRIBUTION' ) && 'db-ip' === PC_DATA_GEOIP_ATTRIBUTION && 'geoip' === ( Storefront_Translation::selected()['source'] ?? '' ) ) {
 			echo '<small class="pc-language-attribution" translate="no"><a href="https://db-ip.com" rel="noopener noreferrer">IP Geolocation by DB-IP</a></small>';
 		}
