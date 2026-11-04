@@ -8,6 +8,7 @@ class Node {
   setAttribute(n,v){this.attrs[n]=v;} removeAttribute(n){delete this.attrs[n];}
   append(n){this.children.push(n);} remove(){this.removed=true; this.isConnected=false;}
   focus(){} querySelector(){return null;} querySelectorAll(){return [];}
+  animate(frames,options){this.animation={frames,options};}
 }
 const status=new Node(),host=new Node();host.querySelector=()=>status;
 const document=new Node();document.getElementById=id=>id==='pc-workspace-shell'?host:null;
@@ -22,9 +23,11 @@ function load(frame, title='Page') {
   frame.contentDocument=doc;frame.contentWindow={location:new URL(frame.src)};frame.fire('load');return doc;
 }
 let checks=0;function check(value){assert.ok(value);checks++;}
-const initial=frames[0];check(!!initial);load(initial,'Dashboard');check(!status.hidden===false);check(!initial.removed);
+const initial=frames[0];check(!!initial);load(initial,'Dashboard');check(!status.hidden===false);check(!initial.removed);check(initial.animation.options.duration===200);
 function click(url){const a={href:new URL(url,location.href).href,target:'',hasAttribute:()=>false,closest:()=>null};const e={target:{closest:()=>a},button:0,preventDefault(){this.defaultPrevented=true;}};document.fire('click',e);return e;}
-click('admin.php?page=pc-data');const data=frames.at(-1);check(initial.inert===true);check(!initial.removed);load(data,'Data');check(initial.removed);check(document.title==='Data');check(history.entries.length===1);check(location.href.endsWith('page=pc-data'));check(!data.classes.has('pc-shell-preparing'));
+window.matchMedia=()=>({matches:true});
+click('admin.php?page=pc-data');const data=frames.at(-1);check(initial.inert===true);check(!initial.removed);load(data,'Data');check(initial.removed);check(document.title==='Data');check(history.entries.length===1);check(location.href.endsWith('page=pc-data'));check(!data.classes.has('pc-shell-preparing'));check(!data.animation);
+window.matchMedia=()=>({matches:false});
 click('edit.php?post_type=product');const stale=frames.at(-1);click('admin.php?page=pc-overview');const fresh=frames.at(-1);check(stale.removed);load(stale,'Stale');check(document.title==='Data');load(fresh,'Dashboard');check(document.title==='Dashboard');check(data.removed);
 const form={method:'post',isConnected:true,elements:[{name:'label',type:'text',value:'old'}]};fresh.contentDocument.querySelectorAll=sel=>sel==='form'?[form]:[];
 // A newly rendered page captures its real form baseline on load.
