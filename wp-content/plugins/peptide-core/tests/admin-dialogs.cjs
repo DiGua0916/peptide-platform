@@ -26,6 +26,20 @@ let count=0;const check=(v)=>{assert.ok(v);count++;};
  form.requestSubmit(submitter);await flush();form.action='/different';d.querySelector('.vc-admin-dialog__primary').click();await flush();check(requests===1);
  // Duplicate submits while awaiting confirmation do not queue duplicate actions.
  form.requestSubmit(submitter);form.requestSubmit(submitter);await flush();check(d.querySelectorAll('.vc-admin-dialog').length===1);d.querySelector('.vc-admin-dialog__primary').click();await flush();check(requests===2);check(!d.querySelector('.vc-admin-dialog'));
+ // Legacy vendor default guards cancel synchronously and submit once after approval.
+ form.removeAttribute('data-pc-confirm');
+ submitter.addEventListener('click',event=>api.confirmDefault(event,'Vendor confirmation'));
+ submitter.click();await flush();check(requests===2);d.querySelector('.vc-admin-dialog button').click();await flush();check(requests===2);
+ submitter.click();await flush();d.querySelector('.vc-admin-dialog__primary').click();await flush();check(requests===3);
+ // Core inline literal guard is decoded as text, without evaluating JavaScript.
+ const legacy=d.createElement('a');legacy.href='/delete';legacy.textContent='Delete';
+ legacy.setAttribute('onclick',"return confirm('删除\\'数据\\'\\n继续？');");d.body.append(legacy);
+ legacy.click();await flush();box=d.querySelector('.vc-admin-dialog');
+ check(box.querySelector('h2').textContent==='请确认操作');check(box.querySelector('p').textContent==="删除'数据'\n继续？");
+ box.querySelector('button').click();await flush();check(!legacy.hasAttribute('onclick'));
+ const shortlink=d.createElement('input');shortlink.id='shortlink';shortlink.value='https://admin.invalid/?p=123';d.body.append(shortlink);
+ const getLink=d.createElement('button');getLink.setAttribute('onclick',"prompt('URL:', jQuery('#shortlink').val());");d.body.append(getLink);
+ getLink.click();await flush();box=d.querySelector('.vc-admin-dialog');check(box.querySelector('input').value===shortlink.value);box.querySelector('button').click();await flush();
  // No HTML is interpreted in a supplied message.
  answer=api.alert('<img src=x onerror=alert(1)>');await flush();check(!d.querySelector('.vc-admin-dialog img'));d.querySelector('.vc-admin-dialog__primary').click();await answer;
  console.log(JSON.stringify({checks:count,passed:true,syntheticDOM:true}));dom.window.close();

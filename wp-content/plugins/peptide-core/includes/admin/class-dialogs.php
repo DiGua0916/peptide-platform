@@ -16,7 +16,9 @@ final class Dialogs {
 
 	public static function register_hooks(): void {
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
+		add_filter( 'script_loader_src', array( self::class, 'wordpress_dialogs' ), 18 );
 		add_filter( 'script_loader_src', array( self::class, 'asset_version' ), 20 );
+		add_filter( 'script_loader_src', array( self::class, 'vendor_dialogs' ), 19 );
 	}
 
 	public static function asset_version( string $src ): string {
@@ -29,7 +31,53 @@ final class Dialogs {
 		return is_file( $file ) ? add_query_arg( 'vc', (string) filemtime( $file ), $src ) : $src;
 	}
 
+	/** Keep WooCommerce files untouched; serve reviewed, hash-matched dialog adapters. */
+	public static function vendor_dialogs( string $src ): string {
+		if ( ! is_admin() || ! defined( 'WC_PLUGIN_FILE' ) || ! defined( 'WC_VERSION' ) ) {
+			return $src;
+		}
+		$prefix = plugins_url( 'assets/js/admin/', WC_PLUGIN_FILE );
+		if ( ! str_starts_with( $src, $prefix ) ) {
+			return $src;
+		}
+		$name = str_replace( '.min.js', '.js', basename( (string) wp_parse_url( $src, PHP_URL_PATH ) ) );
+		static $manifest = null;
+		if ( null === $manifest ) {
+			$manifest = json_decode( (string) file_get_contents( PEPTIDE_CORE_DIR . '/assets/woocommerce-dialogs/manifest.json' ), true );
+		}
+		if ( ! is_array( $manifest ) || $manifest['version'] !== WC_VERSION || ! isset( $manifest['files'][ $name ] ) ) {
+			return $src;
+		}
+		$file = dirname( WC_PLUGIN_FILE ) . '/assets/js/admin/' . $name;
+		$hash = is_file( $file ) ? hash_file( 'sha256', $file ) : '';
+		$record = $manifest['files'][ $name ];
+		if ( $hash !== $record['upstream'] ) {
+			return $src;
+		}
+		return plugins_url( 'assets/woocommerce-dialogs/' . $name, PEPTIDE_CORE_FILE ) . '?ver=' . substr( $record['adapted'], 0, 16 );
+	}
+
+	/** Hash-matched WordPress adapters keep core files and beforeunload guards intact. */
+	public static function wordpress_dialogs( string $src ): string {
+		global $wp_version;
+		if ( ! is_admin() ) { return $src; }
+		$name = str_replace( '.min.js', '.js', basename( (string) wp_parse_url( $src, PHP_URL_PATH ) ) );
+		$relative = null;
+		if ( str_starts_with( $src, admin_url( 'js/' ) ) || str_starts_with( '/' . ltrim( $src, '/' ), '/wp-admin/js/' ) ) { $relative = 'wp-admin/js/' . $name; }
+		elseif ( str_starts_with( $src, includes_url( 'js/' ) ) || str_starts_with( '/' . ltrim( $src, '/' ), '/' . WPINC . '/js/' ) ) { $relative = WPINC . '/js/' . $name; }
+		if ( null === $relative ) { return $src; }
+		static $manifest = null;
+		if ( null === $manifest ) { $manifest = json_decode( (string) file_get_contents( PEPTIDE_CORE_DIR . '/assets/wordpress-dialogs/manifest.json' ), true ); }
+		if ( ! is_array( $manifest ) || $manifest['version'] !== $wp_version || ! isset( $manifest['files'][ $relative ] ) ) { return $src; }
+		$file = ABSPATH . $relative;
+		$record = $manifest['files'][ $relative ];
+		if ( ! is_file( $file ) || hash_file( 'sha256', $file ) !== $record['upstream'] ) { return $src; }
+		return plugins_url( 'assets/wordpress-dialogs/' . $name, PEPTIDE_CORE_FILE ) . '?ver=' . substr( $record['adapted'], 0, 16 );
+	}
+
 	public static function enqueue(): void {
+		// Keep adapted core dependencies in their normal order rather than load-scripts.php concatenation.
+		$GLOBALS['concatenate_scripts'] = false;
 		$url = plugins_url( 'assets/', PEPTIDE_CORE_FILE );
 		$ver = PEPTIDE_CORE_VERSION . '.' . (int) filemtime( PEPTIDE_CORE_DIR . '/assets/admin-dialogs.js' );
 

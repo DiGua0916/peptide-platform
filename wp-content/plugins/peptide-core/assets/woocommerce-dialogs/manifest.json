@@ -1,0 +1,57 @@
+{
+  "version": "11.2.1",
+  "files": {
+    "meta-boxes-order.js": {
+      "upstream": "b47749c2cac64790b5dad19d1685818b33c3634beebfc0aca37750bcf1470115",
+      "adapted": "898df9252d9d5a18c97e919c2427d6ff1e861ce7a0ee1dd37f5f010f061f7a5e"
+    },
+    "meta-boxes-product-variation.js": {
+      "upstream": "dfbf637e88d7283ec172a277d45a13dee543bc39413b656de2cbc75efc28770d",
+      "adapted": "90e0773ace7507a5e1f116b85f4012f1d9d098a05584c25936488493210eed5f"
+    },
+    "meta-boxes-product.js": {
+      "upstream": "bf945b9899096151da8f20943b8d69660ff3fc2c8879af092bc18ab878ebf9f5",
+      "adapted": "572a1645ae60330564f4b1d393241725d47ecaf5df17572776bc57165ff7a9bb"
+    },
+    "quick-edit.js": {
+      "upstream": "d7590c8b70aa76d1ad10d0a3b5b1b40ee19a76bd9d99d35e9bfb559cff56e1a7",
+      "adapted": "a55aa1c059e4d7db3b6dce44671816ee3b49d8d41bc7e16c4d787687c567de42"
+    },
+    "settings-views-html-settings-tax.js": {
+      "upstream": "c11a638c02b0070c68f30052da2257b11ede39a9de4695f4b97a43546b2493b6",
+      "adapted": "a9946981524eea4c210ae8f7ab3f926eb48531185d1230e7f13870cdafd371b0"
+    },
+    "settings.js": {
+      "upstream": "74c911129d2ef3edb68ea1552c3e53eda8af77117d4b7d5a7cb4f22578c9aff5",
+      "adapted": "a7846cada6d7d2668f44b9becdb3fbfbf6428728c6fc9dc97a4ad899f483f67c"
+    },
+    "system-status.js": {
+      "upstream": "bdfa67b7fa801e7ae70e8da0c3ea85c8a49ff441517bf018361174e705aead7e",
+      "adapted": "c8a50d9b9e62fc3567b7e0e9914384c4def6d9528a49b82ae509d8803552f2ee"
+    },
+    "wc-customer-stock-notifications.js": {
+      "upstream": "4d4ca07daf6535d8049f964718a079d10ee6b33a5428f77b3ba80cac3a1e85fa",
+      "adapted": "417392ea8f9b06755270e75aaa98419efaf68ec6442af910f401da3c67c60dc4"
+    },
+    "wc-shipping-classes.js": {
+      "upstream": "8788af6659b55a4cb698f1744cab3af770b4162e6bbd16e0e6d4174bd4da4e94",
+      "adapted": "27c6fa6c61ca1b22bb381b741f15114c7496508bb7f3af7026c13ecfbafee5d7"
+    },
+    "wc-shipping-providers.js": {
+      "upstream": "b6ddd8ff1b2114aec85e1448a6df5125defd64f356441c8fe47dd197d5435b04",
+      "adapted": "263bf2d8cae801b1532d0e36618a1978cd62f5d449b1e161ff74dba4cd9c6b28"
+    },
+    "wc-shipping-zone-methods.js": {
+      "upstream": "9aede13a47e696f44a9c5c8364ea83c9837b704170b32e7312ebb7f72ec619fd",
+      "adapted": "595cc8ab909c3cbc59e854ea24ef040cffc7ec71c9cb7dc503c0898cd2152076"
+    },
+    "wc-shipping-zones.js": {
+      "upstream": "defadb88535b17c3ec97cb4ec4859970afaf442af2d0c06a8098d4adbf171d8d",
+      "adapted": "c74ad976964077c95593f5661364cbb2fdf225c318f1b713a2e9a8ff2731c5f6"
+    },
+    "woocommerce_admin.js": {
+      "upstream": "8c8bc85755a57c5d08a9bf1c64486ecab5d66482e620bc295a88726e7cd3baee",
+      "adapted": "5f831e84f626a58dd235370d63cdba2653be532271ba6086d98d43baf4e11625"
+    }
+  }
+}

@@ -25,6 +25,7 @@ final class Menu {
 
 	public static function register_hooks(): void {
 		add_action( 'admin_enqueue_scripts', array( self::class, 'dialogs' ), 1 );
+		add_filter( 'script_loader_src', array( self::class, 'wordpress_dialogs' ), 18 );
 		add_action( 'admin_menu', array( self::class, 'menu' ) );
 		add_action( 'admin_menu', array( self::class, 'clean_menu' ), 999 );
 		add_action( 'admin_init', array( self::class, 'redirect_dashboard' ) );
@@ -81,7 +82,27 @@ final class Menu {
 		}
 	}
 
+	/** Hash-matched WordPress adapters keep core files and beforeunload guards intact. */
+	public static function wordpress_dialogs( string $src ): string {
+		global $wp_version;
+		if ( ! is_admin() ) { return $src; }
+		$name = str_replace( '.min.js', '.js', basename( (string) wp_parse_url( $src, PHP_URL_PATH ) ) );
+		$relative = null;
+		if ( str_starts_with( $src, admin_url( 'js/' ) ) || str_starts_with( '/' . ltrim( $src, '/' ), '/wp-admin/js/' ) ) { $relative = 'wp-admin/js/' . $name; }
+		elseif ( str_starts_with( $src, includes_url( 'js/' ) ) || str_starts_with( '/' . ltrim( $src, '/' ), '/' . WPINC . '/js/' ) ) { $relative = WPINC . '/js/' . $name; }
+		if ( null === $relative ) { return $src; }
+		static $manifest = null;
+		if ( null === $manifest ) { $manifest = json_decode( (string) file_get_contents( PEPTIDE_HQ_DIR . '/assets/wordpress-dialogs/manifest.json' ), true ); }
+		if ( ! is_array( $manifest ) || $manifest['version'] !== $wp_version || ! isset( $manifest['files'][ $relative ] ) ) { return $src; }
+		$file = ABSPATH . $relative;
+		$record = $manifest['files'][ $relative ];
+		if ( ! is_file( $file ) || hash_file( 'sha256', $file ) !== $record['upstream'] ) { return $src; }
+		return plugins_url( 'assets/wordpress-dialogs/' . $name, PEPTIDE_HQ_FILE ) . '?ver=' . substr( $record['adapted'], 0, 16 );
+	}
+
 	public static function dialogs(): void {
+		// Keep adapted core dependencies in their normal order rather than load-scripts.php concatenation.
+		$GLOBALS['concatenate_scripts'] = false;
 		$version = PEPTIDE_HQ_VERSION . '.' . (int) filemtime( PEPTIDE_HQ_DIR . '/assets/admin-dialogs.js' );
 		wp_enqueue_style( 'peptide-hq-dialogs', plugins_url( 'assets/admin-dialogs.css', PEPTIDE_HQ_FILE ), array(), $version );
 		wp_enqueue_script( 'peptide-hq-dialogs', plugins_url( 'assets/admin-dialogs.js', PEPTIDE_HQ_FILE ), array(), $version, false );
