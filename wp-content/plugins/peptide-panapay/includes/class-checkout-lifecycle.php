@@ -15,6 +15,27 @@ final class Checkout_Lifecycle {
 		if ( self::$registered ) { return; }
 		self::$registered = true;
 		add_action( 'template_redirect', array( self::class, 'on_checkout_navigation' ), 5 );
+		if ( function_exists( 'add_filter' ) && class_exists( '\\Automattic\\WooCommerce\\StoreApi\\Routes\\V1\\Checkout' ) ) {
+			add_filter( 'rest_endpoints', array( self::class, 'checkout_routes' ) );
+			add_action( 'woocommerce_store_api_checkout_order_created', array( Checkout_Handoff::class, 'created' ), 1 );
+		}
+	}
+
+	/** Decorate only the exact native checkout, retaining all native route arguments and permission checks. */
+	public static function checkout_routes( array $routes ): array {
+		$native = '\\Automattic\\WooCommerce\\StoreApi\\Routes\\V1\\Checkout';
+		foreach ( array( '/wc/store/checkout', '/wc/store/v1/checkout' ) as $path ) {
+			if ( ! isset( $routes[ $path ] ) || ! is_array( $routes[ $path ] ) ) { continue; }
+			foreach ( $routes[ $path ] as &$handler ) {
+				$callback = is_array( $handler ) ? ( $handler['callback'] ?? null ) : null;
+				if ( ! is_array( $callback ) || 2 !== count( $callback ) || ! is_object( $callback[0] )
+					|| get_class( $callback[0] ) !== ltrim( $native, '\\' ) || 'get_response' !== $callback[1] ) { continue; }
+				$original = $callback[0];
+				$handler['callback'] = static fn( \WP_REST_Request $request ) => Checkout_Route::dispatch( $request, $original );
+			}
+			unset( $handler );
+		}
+		return $routes;
 	}
 
 	/** Explicit new-order link; each generated intent is nonce-bound to this Woo session. */
@@ -80,6 +101,7 @@ final class Checkout_Lifecycle {
 				}
 			}
 		}
+		if ( class_exists( Checkout_Handoff::class ) ) { Checkout_Handoff::clear_navigation(); }
 	}
 
 	private static function session(): ?object {
@@ -104,7 +126,7 @@ final class Checkout_Lifecycle {
 		if ( ! $order instanceof \WC_Order || ! $order->has_status( array( 'pending', 'failed' ) ) ) { return false; }
 		$owner = (int) $order->get_customer_id();
 		if ( $owner !== get_current_user_id() ) { return false; }
-		// The ID was read only from this same Woo session; bound_gateway checks persisted identity.
-		return null !== Session_Service::bound_gateway( $order );
+		// The ID came only from this Woo session; frozen_gateway verifies the persisted attempt identity.
+		return null !== Session_Service::frozen_gateway( $order );
 	}
 }

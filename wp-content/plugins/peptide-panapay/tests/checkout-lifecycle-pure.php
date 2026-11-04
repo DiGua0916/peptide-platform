@@ -40,7 +40,7 @@ namespace {
 }
 namespace VialCove\Panapay {
 	final class Session_Service {
-		public static function bound_gateway( \WC_Order $order ): ?string { return $order->bound ? 'pc_panapay' : null; }
+		public static function frozen_gateway( \WC_Order $order ): ?string { return $order->bound ? 'pc_panapay' : null; }
 	}
 }
 namespace {

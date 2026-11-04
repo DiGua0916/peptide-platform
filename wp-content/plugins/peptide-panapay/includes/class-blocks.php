@@ -73,6 +73,8 @@ final class Blocks extends AbstractPaymentMethodType {
 			'test_mode'   => $this->gateway->is_test_mode(),
 			'supports'    => $this->get_supported_features(),
 			'payment_icons' => Payment_Icons::data( $this->gateway->payment_icons() ),
+			// Local Woo-session action only; contains no order reference or provider credentials.
+			'new_checkout_url' => Checkout_Lifecycle::new_checkout_url(),
 		);
 	}
 

@@ -173,8 +173,28 @@ final class Gateway extends \WC_Payment_Gateway {
 			return array( 'result' => 'success', 'redirect' => 'redirect' === $session['type'] ? $session['url'] : $order->get_checkout_payment_url( true ) );
 		} catch ( \Throwable $error ) {
 			$message = $error instanceof Customer_Error ? $error->getMessage() : __( 'Payment could not be started. Please try again later or contact the store before paying again.', 'peptide-panapay' );
-			wc_add_notice( $message, 'error' );
+			wc_add_notice( $this->checkout_failure_notice( $message, $order ?? null ), 'error' );
 			return array( 'result' => 'failure' );
+		}
+	}
+
+	/** A failed saved payment must not leave the customer without a new-order path. */
+	private function checkout_failure_notice( string $message, $order ): string {
+		try {
+			// Session_Service saves through its own fresh native object before returning an error.
+			if ( $order instanceof \WC_Order && $order->get_id() > 0 ) { $order = new \WC_Order( $order->get_id() ); }
+			if ( ! $order instanceof \WC_Order || ! $order->has_status( array( 'pending', 'failed' ) )
+				|| $order->is_paid() || (int) $order->get_customer_id() !== get_current_user_id()
+				|| is_admin() || is_wc_endpoint_url( 'order-pay' )
+				|| null === Session_Service::frozen_gateway( $order ) ) { return $message; }
+			$url = Checkout_Lifecycle::new_checkout_url();
+			if ( '' === $url ) { return $message; }
+			// This only links to native checkout navigation. It never starts another payment.
+			return esc_html( $message ) . ' ' . esc_html__( 'Your order has been kept.', 'peptide-panapay' )
+				. ' <a class="pc-panapay-new-checkout" href="' . esc_url( $url ) . '">'
+				. esc_html__( 'Start a new order', 'peptide-panapay' ) . '</a>';
+		} catch ( \Throwable $ignored ) {
+			return $message;
 		}
 	}
 
