@@ -126,6 +126,13 @@
             || (item.variationId ? item.purchaseId !== item.variationId : item.purchaseId !== item.productId)) throw new Error('Choose a specification before adding this product.');
         return { id: item.purchaseId, quantity: 1 };
     }
+    async function addOne(client, item, signal) {
+        const payload = recentAddPayload(item);
+        if (signal?.aborted) throw new Error('The add request was cancelled.');
+        await client.refresh();
+        if (signal?.aborted) throw new Error('The add request was cancelled.');
+        return client.write('add-item', payload);
+    }
     function totals(cart) {
         if (!validCart(cart)) return [];
         const t = cart.totals, rows = [], unsigned = value => isMinor(value) && BigInt(value) >= 0n;
@@ -242,6 +249,65 @@
         if (seen.size !== selected.size || original !== BigInt(trace.original_shipping) || discount !== BigInt(trace.shipping_discount) || payable !== BigInt(trace.payable_shipping)
             || original - discount !== payable || ![original, discount, payable].every(value => isMinor(String(value)))) return null;
         return { original: String(original), discount: String(discount), payable: String(payable), discounts: [...discounts.values()] };
+    }
+    /** Refresh quotes without blanking a still-valid quote for the same native cart. */
+    function createRecommendationEnrichment(options) {
+        let generation = 0, timer = 0, workingKey = '', quote = null, disposed = false;
+        const key = state => {
+            const activity = state?.cart?.extensions?.peptide_core?.activity_listener;
+            return JSON.stringify([activity?.stateKey, activity?.cartSnapshotKey, activity?.revision, activity?.promotionRevision]);
+        };
+        const emit = pending => options.onChange({ recommendation: quote, pending });
+        function current(ticket, fingerprint) {
+            const state = options.getState();
+            return !disposed && generation === ticket && state.valid && !state.pending && key(state) === fingerprint;
+        }
+        function validQuote(activity) { return quote && options.allowed(activity) && options.validQuote(quote, activity); }
+        function cancel() { generation++; clearTimeout(timer); timer = 0; workingKey = ''; }
+        function clear() { cancel(); quote = null; emit(false); }
+        function schedule(state, force = false) {
+            if (disposed) return;
+            const activity = state?.cart?.extensions?.peptide_core?.activity_listener, fingerprint = key(state);
+            if (!state.valid || state.pending) { clear(); return; }
+            if (!validQuote(activity)) quote = null;
+            if (!options.canRead()) { cancel(); emit(false); return; }
+            // Repeated native notifications must not cancel an identical read.
+            if (!force && workingKey === fingerprint) { emit(true); return; }
+            cancel(); const ticket = generation; workingKey = fingerprint; emit(true);
+            timer = setTimeout(async () => {
+                timer = 0;
+                const isCurrent = () => current(ticket, fingerprint);
+                const finish = () => { if (!isCurrent()) return; workingKey = ''; if (!validQuote(activity)) quote = null; emit(false); };
+                let history;
+                try { history = await options.readHistory(); }
+                catch (_) { finish(); return; }
+                if (!isCurrent()) return;
+                // Card artwork/compare-price reads are presentation only. They
+                // cannot delay the native quote, or turn their failure into a
+                // missing recommendation.
+                try { Promise.resolve(options.onHistory(history, isCurrent)).catch(() => {}); } catch (_) {}
+                if (!options.allowed(activity) || !activity?.next || !Array.isArray(history?.candidates) || !history.candidates.length) {
+                    quote = null; finish(); return;
+                }
+                try {
+                    const response = await options.requestQuote(activity, history.candidates);
+                    if (!isCurrent()) return;
+                    if (!options.allowed(activity)) { quote = null; finish(); return; }
+                    const candidate = response?.recommendation;
+                    // Explicit native hidden results supersede the old quote.
+                    // Malformed/failed responses cannot revive a stale offer.
+                    if (candidate?.visible === false) quote = null;
+                    else if (options.validQuote(candidate, activity)) quote = candidate;
+                    finish();
+                    const baseQuote = quote;
+                    if (!baseQuote || typeof options.decorateQuote !== 'function') return;
+                    const decorationCurrent = () => isCurrent() && quote === baseQuote && options.allowed(activity) && options.validQuote(baseQuote, activity);
+                    const decorated = await options.decorateQuote(baseQuote, activity, decorationCurrent);
+                    if (decorated && decorated !== baseQuote && decorationCurrent() && options.validQuote(decorated, activity)) { quote = decorated; emit(false); }
+                } catch (_) { finish(); }
+            }, 250);
+        }
+        return { schedule, clear, destroy() { if (disposed) return; disposed = true; cancel(); quote = null; } };
     }
     /** One native dialog on every enabled device; keep its parent product open. */
     function createDrawerController({ dialog, document, window: win, enabled = () => true, refresh = () => {} }) {
@@ -444,7 +510,7 @@
         }
         return { snapshot, refresh, request, write, externalStart, externalUpdate, destroy() { destroyed = true; invalidate(); clearTimeout(externalTimer); } };
     }
-    if (typeof module === 'object' && module.exports) module.exports = { validCart, money, cartItemPricing, couponPresentation, confirmedCartAdd, totals, createClient, activityAllowed, activityPresentation, reconcileRows, statusPresentation, createDrawerController, createNativeCheckoutBridge, recentPresentationUrl, recentPresentation, recentAddPayload };
+    if (typeof module === 'object' && module.exports) module.exports = { validCart, money, cartItemPricing, couponPresentation, confirmedCartAdd, totals, createClient, addOne, activityAllowed, activityPresentation, reconcileRows, statusPresentation, createDrawerController, createNativeCheckoutBridge, recentPresentationUrl, recentPresentation, recentAddPayload, createRecommendationEnrichment };
     if (!global?.document || !global.VialCoveLiveCartConfig) return;
     const document = global.document, config = global.VialCoveLiveCartConfig, settings = config.settings || {}, roots = [...document.querySelectorAll('[data-vc-live-cart]')];
     if (!roots.length) return;
@@ -453,7 +519,7 @@
     const el = (tag, cls, text) => { const node = document.createElement(tag); node.className = cls || ''; if (text !== undefined) node.textContent = text; return node; };
     const clean = value => { const node = document.createElement('textarea'); node.innerHTML = String(value || ''); return node.value; };
     const safeUrl = value => { try { const url = new URL(value, location.href); return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password ? url.href : ''; } catch (_) { return ''; } };
-    let recent = null, recommendation = null, enrichmentPending = false, enrichment = 0, enrichmentTimer = 0, quickOpener = null, disposed = false;
+    let recent = null, recommendation = null, enrichmentPending = false, quickOpener = null, disposed = false;
     let appliedActivity = global.vcLiveCommerce?.activity?.config || null, activityRead = null;
     const views = roots.map(root => ({ root, rows: new Map(), recentSignature: '', totalsSignature: '', couponsSignature: '', progress: global.createCartProgress?.({ mount: root.querySelector('[data-cart-progress]') }), progressSignature: '', recommendation: global.createCartRecommendation?.({ mount: root.querySelector('[data-cart-recommendation]'), onChoose: candidate => choose(candidate.productId), onAdd: candidate => client.write('add-item', global.vcRecommendationContract.addPayload(candidate)), onRefresh: () => { refreshActivityConfig(); client.refresh(); } }) }));
     const client = createClient(config, { canWrite: () => !nativeCheckout.busy(), notify(type, detail) {
@@ -462,6 +528,34 @@
     } });
     const deviceEnabled = () => (settings.visibility || {})[isDesktop.matches ? 'desktop' : 'mobile'] !== false;
     const canRead = () => deviceEnabled() && !document.hidden && roots.some(root => !root.closest('dialog') || root.closest('dialog').open);
+    const recommendationEnrichment = createRecommendationEnrichment({
+        getState: () => client.snapshot(), canRead,
+        allowed: activity => !disposed && !nativeCheckout.busy() && settings.cart_recommendations_enabled !== false
+            && activityAllowed(activity, appliedActivity) && activity?.enabled === true && activity?.visible === true,
+        validQuote: (quote, activity) => !!global.vcRecommendationContract?.quotedRecommendation?.(quote, activity, activity?.cartSnapshotKey),
+        readHistory: () => client.request(config.recentItemsUrl),
+        requestQuote: (activity, candidates) => client.request(config.recommendationsUrl, global.vcRecommendationContract.quoteRequest(activity, activity.cartSnapshotKey, candidates, appliedActivity)),
+        decorateQuote: (quote, activity, isCurrent) => typeof global.vcRecommendationContract?.enrichPresentation === 'function'
+            ? global.vcRecommendationContract.enrichPresentation(quote, activity, activity.cartSnapshotKey, { isCurrent, read: candidate => client.request(recentPresentationUrl(config.recentProductApiUrl, candidate, location.origin)) }) : quote,
+        onChange: result => { if (disposed) return; recommendation = result.recommendation; enrichmentPending = result.pending; render(client.snapshot()); },
+        async onHistory(history, isCurrent) {
+            if (!isCurrent()) return;
+            // Keep the previous verified card presentation until exact-SKU
+            // decoration completes, avoiding an Add/Select button flip.
+            if (!history?.visible || !Array.isArray(history.items)) { recent = history; render(client.snapshot()); }
+            const requests = client.snapshot().cart.items.filter(item => !parentIds.has(item.id)).map(async item => {
+                try { const product = await client.request(config.productsApiUrl + item.id); if (isCurrent() && Number.isSafeInteger(product.id)) parentIds.set(item.id, product.parent > 0 ? product.parent : product.id); } catch (_) {}
+            });
+            if (history?.visible && Array.isArray(history.items)) {
+                requests.push(Promise.all(history.items.slice(0, 2).map(async item => {
+                    try { return recentPresentation(item, await client.request(recentPresentationUrl(config.recentProductApiUrl, item, location.origin))); }
+                    catch (_) { return recentPresentation(item, null); }
+                })).then(items => { if (isCurrent()) { recent = { ...history, items }; render(client.snapshot()); } }));
+            }
+            await Promise.all(requests);
+            if (isCurrent()) render(client.snapshot());
+        },
+    });
     function refreshActivityConfig() {
         if (disposed || !config.activityConfigUrl || !canRead()) return Promise.resolve();
         if (activityRead) return activityRead;
@@ -471,7 +565,8 @@
             appliedActivity = value;
             if (!changed) return;
             // Disable offer UI without cancelling the independent recent-items read.
-            if (!activityAllowed(client.snapshot().cart?.extensions?.peptide_core?.activity_listener, appliedActivity)) { enrichmentPending = false; recommendation = null; }
+            if (!activityAllowed(client.snapshot().cart?.extensions?.peptide_core?.activity_listener, appliedActivity)) recommendationEnrichment.clear();
+            else scheduleEnrichment(client.snapshot(), true);
             render(client.snapshot());
         }).catch(() => { /* Keep the latest confirmed native DTO/config, never enable a failed read. */ }).finally(() => { activityRead = null; });
         return activityRead;
@@ -645,51 +740,7 @@
             return card;
         }));
     }
-    function scheduleEnrichment(state) {
-        clearTimeout(enrichmentTimer); const generation = ++enrichment;
-        recommendation = null; enrichmentPending = false;
-        if (!state.valid || state.pending || !canRead()) return;
-        enrichmentPending = true;
-        enrichmentTimer = setTimeout(async () => {
-            const activity = state.cart?.extensions?.peptide_core?.activity_listener;
-            const requests = state.cart.items.filter(item => !parentIds.has(item.id)).map(async item => { try { const product = await client.request(config.productsApiUrl + item.id); if (Number.isSafeInteger(product.id)) parentIds.set(item.id, product.parent > 0 ? product.parent : product.id); } catch (_) {} });
-            let history = null;
-            try { history = await client.request(config.recentItemsUrl); } catch (_) { /* Private history unavailable: no invented recent list or ranking. */ }
-            if (history?.visible && Array.isArray(history.items)) {
-                history = { ...history, items: await Promise.all(history.items.slice(0, 2).map(async item => {
-                    try { return recentPresentation(item, await client.request(recentPresentationUrl(config.recentProductApiUrl, item, location.origin))); }
-                    catch (_) { return recentPresentation(item, null); }
-                })) };
-            }
-            await Promise.all(requests);
-            if (disposed || generation !== enrichment) return;
-            recent = history; recommendation = null;
-            if (settings.cart_recommendations_enabled === false || !activityAllowed(activity, appliedActivity) || activity?.enabled !== true || activity?.visible !== true || !activity?.next || !history?.candidates?.length) { enrichmentPending = false; render(client.snapshot()); return; }
-            render(client.snapshot());
-            try {
-                const body = global.vcRecommendationContract.quoteRequest(activity, activity.cartSnapshotKey, history.candidates, appliedActivity);
-                const result = await client.request(config.recommendationsUrl, body);
-                if (disposed || generation !== enrichment) return;
-                recommendation = activityAllowed(activity, appliedActivity) ? result.recommendation : null; enrichmentPending = false; render(client.snapshot());
-                const baseQuote = recommendation;
-                const isCurrent = () => {
-                    const current = client.snapshot(), live = current.cart?.extensions?.peptide_core?.activity_listener;
-                    return !disposed && generation === enrichment && recommendation === baseQuote && current.valid && !current.pending && !nativeCheckout.busy()
-                        && settings.cart_recommendations_enabled !== false && activityAllowed(live, appliedActivity)
-                        && live?.stateKey === activity.stateKey && live?.cartSnapshotKey === activity.cartSnapshotKey
-                        && live?.revision === activity.revision && live?.promotionRevision === activity.promotionRevision;
-                };
-                // Read this exact SKU only for optional compare-price presentation.
-                // Native quote eligibility, totals, token and add payload stay unchanged.
-                if (baseQuote && typeof global.vcRecommendationContract.enrichPresentation === 'function') {
-                    const decorated = await global.vcRecommendationContract.enrichPresentation(baseQuote, activity, activity.cartSnapshotKey, {
-                        isCurrent, read: candidate => client.request(recentPresentationUrl(config.recentProductApiUrl, candidate, location.origin)),
-                    });
-                    if (decorated && decorated !== baseQuote && isCurrent()) { recommendation = decorated; render(client.snapshot()); }
-                }
-            } catch (_) { if (generation === enrichment) { recommendation = null; enrichmentPending = false; render(client.snapshot()); } }
-        }, 250);
-    }
+    function scheduleEnrichment(state, force = false) { recommendationEnrichment.schedule(state, force); }
     const drawerController = createDrawerController({ dialog: drawer, document, window: global, enabled: () => deviceEnabled() && nativeCheckout.ready() && !nativeCheckout.processing(), refresh: () => { refreshActivityConfig(); client.refresh(); } });
     const openDrawer = trigger => {
         // A product opened from an already visible bag returns to that bag.
@@ -715,7 +766,7 @@
     const started = event => { if (event.detail?.owner !== 'live-cart') client.externalStart(); };
     const updated = event => { if (event.detail?.owner !== 'live-cart') client.externalUpdate(event.detail); };
     document.addEventListener('vc:cart-mutation-start', started); document.addEventListener('vc:cart-updated', updated);
-    document.addEventListener('vc:recently-viewed-updated', () => { if (!disposed && canRead()) scheduleEnrichment(client.snapshot()); });
+    document.addEventListener('vc:recently-viewed-updated', () => { if (!disposed && canRead()) scheduleEnrichment(client.snapshot(), true); });
     const refreshVisible = () => { if (canRead()) { refreshActivityConfig(); client.refresh(); } };
     document.addEventListener('visibilitychange', refreshVisible); global.addEventListener('focus', refreshVisible); global.addEventListener('pageshow', refreshVisible);
     const polling = setInterval(refreshVisible, 30000);
@@ -726,7 +777,7 @@
         if (wasNativeBusy && !busy && drawer?.open) { clearTimeout(nativeRefreshTimer); nativeRefreshTimer = setTimeout(refreshVisible, 0); }
         wasNativeBusy = busy;
     });
-    global.VialCoveLiveCart = { canOpen: drawerController.available, open: trigger => openDrawer(trigger) || location.assign(config.cartUrl), close: closeDrawer, refresh: () => client.refresh(), snapshot: () => client.snapshot() };
-    global.addEventListener('pagehide', event => { if (event.persisted) return; disposed = true; stopNativeSubscription(); clearTimeout(nativeRefreshTimer); drawerController.destroy(); quickOpener?.remove(); clearInterval(polling); clearTimeout(enrichmentTimer); client.destroy(); views.forEach(view => { view.progress?.destroy(); view.recommendation?.destroy(); clearTimeout(view.recentResetTimer); for (const feedback of view.recentFeedbacks || []) feedback.destroy(); }); });
+    global.VialCoveLiveCart = { canOpen: drawerController.available, open: trigger => openDrawer(trigger) || location.assign(config.cartUrl), close: closeDrawer, refresh: () => client.refresh(), snapshot: () => client.snapshot(), addOne: (item, { signal } = {}) => addOne(client, item, signal), applyCoupon: code => client.write('apply-coupon', { code }) };
+    global.addEventListener('pagehide', event => { if (event.persisted) return; disposed = true; recommendationEnrichment.destroy(); stopNativeSubscription(); clearTimeout(nativeRefreshTimer); drawerController.destroy(); quickOpener?.remove(); clearInterval(polling); client.destroy(); views.forEach(view => { view.progress?.destroy(); view.recommendation?.destroy(); clearTimeout(view.recentResetTimer); for (const feedback of view.recentFeedbacks || []) feedback.destroy(); }); });
     if (deviceEnabled() && roots.some(root => root.dataset.drawer === '0')) refreshVisible();
 })(typeof window === 'undefined' ? null : window);
