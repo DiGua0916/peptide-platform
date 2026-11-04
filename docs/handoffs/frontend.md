@@ -1246,3 +1246,7 @@ HTTP聚合探针已证 catalogSupported=true、quoteHooksSupported=false、unsup
 已修三处确定FE问题：同车刷新先清空推荐、纯图片/比较价请求阻塞报价、活动配置晚到不立即重报价。新调度保留同快照未过期有效quote，与近期装饰解耦，正确代次/过期/停用/后端hidden清理。正常库存/候选/差额/券冲突仍可能合法隐藏，截图会话具体reason未实测。详见[本次交接](frontend-catalog-quick-add-recommendation-2026-11-05.md)。22专项/98联合Node、PHPcard51/template23、语法/diff通过；公共首页HTML读回82真实快捷按钮/脚本。用户Esc停止Computer Use后未再操控窗口，没有实际加购或最新UI截图验收；两peer dirty文件保持未动未stage，未公网部署。最终Git引用另记。
 
 本阶段追加完成：44px圆形SVG关闭入口修复拉伸；首页快捷加购成功下方不再留box added句，失败提示保留。M06结算小计划线原价/红优惠及M01.05页脚圆形联系入口为用户随后追加，独立处理中。保护新增peer storefront/checkout在途文件，functions.php仅本窗口card三个hunk入暂存。最新98联合Node与PHP关闭模板lint通过；实际UI未因Esc停止后重新操作。
+
+### 2026-11-05 · Codex：结算小计原价及原生页脚配置
+
+用户连续追加已完成：Subtotal旁保留原生现价、补同税口径原价与红Save；新checkout-subtotal-savings独立React呈现且不混活动/券。页脚新增原生可编辑分组和圆形官方联系图标，10空URL栏由用户自行配置，当前仅自动真实WhatsApp；错误首页Terms不再输出，版权动态。只正常LayoutAPI发布footer687，其它所有布局/店铺设置hash保持。16金额/17入口/39footer检查及lint/diff通过；实际公共SSR四分组/WA/2026/82quick按钮/圆X和静态资产字节一致。详情[本次交接](frontend-footer-checkout-subtotal-2026-11-05.md)。Esc后未再Computer Use，无最终视觉或真实Add验收，不代表公网部署。peer checkout/storefront在途均未提交。

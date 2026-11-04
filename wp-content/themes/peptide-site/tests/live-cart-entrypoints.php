@@ -20,6 +20,7 @@ function vc_home_quick_view_assets() { $GLOBALS['quick_view_count']++; }
 function get_template_directory() { return dirname( __DIR__ ); }
 function get_template_directory_uri() { return 'https://store.example/theme'; }
 function wp_enqueue_script( $handle, $url, $dependencies = array(), ...$rest ) { $GLOBALS['scripts'][ $handle ] = $dependencies; }
+function wp_script_is( $handle, $state = 'enqueued' ) { return 'vialcove-cart-pricing' === $handle || isset( $GLOBALS['scripts'][ $handle ] ); }
 function wp_enqueue_style( ...$unused ) {}
 function wp_dequeue_script( ...$unused ) {}
 function wp_dequeue_style( ...$unused ) {}
@@ -53,6 +54,7 @@ $route['checkout'] = true;
 check( 'plain native checkout also has a drawer', vc_live_cart_available() );
 enqueue();
 check( 'checkout loads the real Woo cart data store before its bridge', in_array( 'wc-blocks-data-store', $scripts['vc-live-cart-experience'], true ) && in_array( 'wp-data', $scripts['vc-live-cart-experience'], true ) );
+check( 'checkout subtotal annotation waits for native pricing and store data', in_array( 'vialcove-cart-pricing', $scripts['vc-checkout-subtotal-savings'], true ) && in_array( 'wc-blocks-data-store', $scripts['vc-checkout-subtotal-savings'], true ) );
 check( 'checkout bridge is explicitly marked in the public UI config', true === $configs['VialCoveLiveCartConfig']['nativeCheckout'] );
 check( 'checkout drawer product links can use the approved product quick view', 1 === $quick_view_count && in_array( 'vc-home-quick-view', $scripts['vc-live-commerce-navigation'], true ) );
 check( 'history navigation waits for the one real cart controller', in_array( 'vc-live-cart-experience', $scripts['vc-live-commerce-navigation'], true ) );
@@ -64,6 +66,7 @@ $route['endpoint'] = true;
 check( 'order-pay and order-received endpoint routes remain outside this adapter', ! vc_live_cart_available() );
 enqueue();
 check( 'payment/order endpoint does not load either overlay controller', ! isset( $scripts['vc-live-cart-experience'] ) && ! isset( $scripts['vc-live-commerce-navigation'] ) && 0 === $quick_view_count );
+check( 'payment/order endpoint never loads subtotal annotations', ! isset( $scripts['vc-checkout-subtotal-savings'] ) );
 $route['endpoint'] = false; $product_enabled = false;
 enqueue();
 check( 'a disabled product experience does not load product scripts on checkout', 0 === $quick_view_count && array( 'vc-live-cart-experience' ) === $scripts['vc-live-commerce-navigation'] );
@@ -73,6 +76,7 @@ check( 'disabled cart presentation leaves checkout completely native', ! isset( 
 $route['checkout'] = false; $cart_enabled = true; $product_enabled = true;
 enqueue();
 check( 'ordinary storefront does not require Checkout Blocks data', ! in_array( 'wc-blocks-data-store', $scripts['vc-live-cart-experience'], true ) && false === $configs['VialCoveLiveCartConfig']['nativeCheckout'] );
+check( 'ordinary storefront does not load checkout subtotal annotations', ! isset( $scripts['vc-checkout-subtotal-savings'] ) );
 $_GET['vc_native_cart'] = '1';
 check( 'explicit native cart fallback still bypasses the custom controller', ! vc_live_cart_available() );
 unset( $_GET['vc_native_cart'] ); $route['admin'] = true;
