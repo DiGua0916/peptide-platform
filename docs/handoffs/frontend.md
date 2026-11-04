@@ -1236,3 +1236,5 @@ HTTP聚合探针已证 catalogSupported=true、quoteHooksSupported=false、unsup
 随后新增M05.06/M05.07：英文Black Friday offer、商品降价/逐券/逐活动分列、保留原生应付金额并在底部列You save。使用最终原生fee而不重复计预测/activity汇总，产品比较严格对账且总省税口径明确。当前无公开折前运费，已准备可选shipping_savings严格消费者和[后端增量契约](frontend-cart-summary-shipping-2026-11-05.md)，缺失不伪造优惠。只做前端，不改后端插件或真实业务数据。
 
 本轮最新124项Node顶层通过、JS语法/diff通过，3个HTTP静态资产200且匹配源码；新增14项摘要边界检查。模块工作台及D盘用户副本包含本轮全部涉及模块和追加项。最新浏览器连接连续超时（旧tab、重置、新开均失败），因此新摘要/鸭子最终实际画面尚未复验；前一轮截图不是这两项最新证据。原peer experience.js哈希未变且不stage，未公网部署。源码提交/正常Git整合及远端结果另记。
+
+本轮网络已恢复，代码source52e3020/main198d163正常合并、atomic push成功，独立ls-remote两head确认；此前待推送offer-follow/配送/浮球/原生UI源码历史一并送达。主checkout clean，FE只留原peer experience.js未提交；不将Git同步说成公网部署。最新实际画面待CUA连接恢复，原生DB修改不随Git迁移。
