@@ -63,6 +63,12 @@
 .vc-live-cart .vc-live-cart__heading{justify-content:space-between;gap:12px}
 .vc-live-cart .vc-live-cart__heading h2,.vc-live-cart-drawer .vc-live-cart__heading h2{font-size:22px;line-height:28px;font-weight:650;letter-spacing:-.025em}
 .vc-live-cart-drawer .vc-live-cart__heading{padding-block:8px;margin-bottom:16px}
+/* Keep the close target square even inside global button/layout styles. */
+.vc-live-cart .vc-live-cart__heading>button.vc-live-cart__close{display:grid!important;place-items:center;flex:0 0 44px!important;align-self:center;box-sizing:border-box;inline-size:44px!important;block-size:44px!important;min-inline-size:44px!important;max-inline-size:44px!important;min-block-size:44px!important;max-block-size:44px!important;margin:0;padding:0!important;border:1px solid var(--line);border-radius:50%!important;background:#f3f7f8;color:var(--ink);box-shadow:none;line-height:1;appearance:none;transition:background-color 160ms ease,transform 120ms ease}
+.vc-live-cart .vc-live-cart__close svg{display:block;width:20px;height:20px;flex:none;pointer-events:none}
+@media(hover:hover){.vc-live-cart .vc-live-cart__heading>button.vc-live-cart__close:hover{background:#e7eff1}}
+.vc-live-cart .vc-live-cart__heading>button.vc-live-cart__close:focus-visible{outline:2px solid var(--teal);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.vc-live-cart .vc-live-cart__heading>button.vc-live-cart__close{transition:none}}
 /* Trace each native reduction once, with payable and total savings distinct. */
 .vc-live-cart__summary h2{font-size:20px;line-height:28px;margin-bottom:16px;font-weight:650}
 .vc-live-cart__summary .vc-live-cart__total-row{align-items:baseline;gap:12px;margin-block:10px;font-size:14px;line-height:20px}
