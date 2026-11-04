@@ -46,4 +46,16 @@ The task-restored QA MySQL and its owned launcher were normally shut down after 
 
 Remaining integration dependency: explicit supplier confirmation that `bestgoodsforyou.top` is their assigned PayPal sandbox outer cashier. Only the store-domain assignment has been confirmed in the screenshot. No host was added and no saved unknown session was cleared/recreated. Actual PayPal sandbox purchase, return and automatic notification completion remain unverified.
 
+## Owner-authorized exact-host configuration, 2026-11-04
+
+The owner subsequently explicitly instructed "allow it first and try". This supersedes waiting for supplier confirmation before changing this one account's trusted host list; it is not independent proof of the supplier's domain ownership.
+
+At 21:56 CST the existing HQ native `Hub_Accounts::save()` added only `bestgoodsforyou.top` to the existing PayPal account, retaining `sandbox.paypal.com`. Its native revision/CAS advanced the settings book from revision 10 to 11. The complete before/after account projection confirmed that all other accounts, credentials, flags, presentation values and store authorizations were preserved. A root-private checkpoint containing the already-encrypted account settings was saved outside the web root before the operation. No application source, deployment pointer, wildcard host rule or TLS check changed.
+
+In memory, the actual previously returned cashier URL passed `Configuration::payment_url()` against the new account configuration. Its existing attempt row and frozen trust snapshot were preserved exactly; that old unknown session was not reset, modified or recreated. The setting applies to new checkout/payment attempts. The owner should re-enter normal checkout rather than resubmit the old failed payment session.
+
+At 21:57 CST the buyer server refreshed only its exact METHODS policy transient, made one signed HQ METHODS request, verified the response and obtained `sandbox.paypal.com`, `bestgoodsforyou.top` and the existing gateway host. Validation still rejects HTTP and an unlisted host. No CREATE/STATUS/EVENT request, order save, callback or provider payment request was invoked. Normal native WordPress boot and internal configuration authentication metadata remain outside a blanket zero-side-effects claim.
+
+Receipts: `outputs/paypal-host-inspect-20261104T135534Z.json`, `outputs/paypal-host-apply-20261104T135651Z.json` and `outputs/paypal-host-store-verify-20261104T135740Z.json` under this task. This verifies the configuration and actual saved-URL trust validation, not an opened cashier page or a completed PayPal sandbox purchase. The latter purchase, return and order notification still require the user's checkout test.
+
 Current evidence and local scripts: `D:/Codex/Tasks/2026-11-04/payment-sandbox-continuity`. Initial production reads used SQL-only projections. The subsequent authorized native getters/Crypto checks disabled WP Cron and output only status, fingerprint booleans and the cashier host, without creating payments, running callbacks, saving orders, exposing URL query strings or changing configuration. Native WP boot can still execute ordinary plugin hooks; it is not a guarantee of zero server-wide incidental effects.
