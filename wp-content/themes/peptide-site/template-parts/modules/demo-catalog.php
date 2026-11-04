@@ -14,7 +14,7 @@ foreach ( $products as $p ) {
 }
 $uid = 'vc-catalog-' . $m['id'];
 ?>
-<div class="vc-demo-catalog vc-demo-wrap" data-vc-catalog data-page-size="<?php echo (int) $s['demoPageSize']; ?>">
+<div class="vc-demo-catalog vc-demo-wrap<?php echo 'product_first' === ( $s['catalogLayout'] ?? '' ) ? ' vc-demo-catalog--product-first' : ''; ?>" data-vc-catalog data-page-size="<?php echo (int) $s['demoPageSize']; ?>">
  <header class="vc-demo-catalog__heading"><div><?php if ( $s['eyebrow'] ) : ?><p class="vc-demo-kicker"><?php echo esc_html( $s['eyebrow'] ); ?></p><?php endif; ?><h2><?php echo esc_html( $s['title'] ); ?></h2><?php if ( $s['description'] ) : ?><p><?php echo esc_html( $s['description'] ); ?></p><?php endif; ?></div><?php echo vc_module_button( $s['link'], 'vc-demo-catalog__all' ); ?></header>
  <div class="vc-demo-catalog__toolbar" hidden data-vc-catalog-tools>
   <div class="vc-demo-catalog__filters" role="group" aria-label="Filter products"><button type="button" data-vc-category="all" aria-pressed="true">All peptides</button><?php foreach ( $terms as $t ) : ?><button type="button" data-vc-category="<?php echo (int) $t->term_id; ?>" aria-pressed="false"><?php echo esc_html( $t->name ); ?></button><?php endforeach; ?></div>

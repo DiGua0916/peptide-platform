@@ -21,7 +21,8 @@ add_filter( 'peptide_core_layout_definitions', function ( array $defs ): array {
     $def['settings'][] = $f::f( 'text', 'demoSearchLabel', '搜索提示', 'Find a peptide' );
     $def['settings'][] = $f::f( 'text', 'demoMoreLabel', '展开商品按钮', 'View the full collection' );
     $def['settings'][] = $f::f( 'text', 'demoPriceNote', '价格说明', 'Every price follows the specification shown.' );
-    if ( isset( $def['panels'] ) ) { $def['panels'][] = array( 'id' => 'demo-catalog', 'label' => 'Demo 首页选购', 'fields' => array( 'cardPresentation','demoFullCatalog','demoPageSize','demoSearchLabel','demoMoreLabel','demoPriceNote' ) ); }
+    $def['settings'][] = $f::f( 'select', 'catalogLayout', '选购区布局', 'standard', array( 'options' => array( 'standard' => '原目录排版', 'product_first' => '商品优先（紧凑首屏）' ), 'group' => 'layout' ) );
+    if ( isset( $def['panels'] ) ) { $def['panels'][] = array( 'id' => 'demo-catalog', 'label' => 'Demo 首页选购', 'fields' => array( 'cardPresentation','catalogLayout','demoFullCatalog','demoPageSize','demoSearchLabel','demoMoreLabel','demoPriceNote' ) ); }
     return $defs;
 }, 140 );
 

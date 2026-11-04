@@ -30,6 +30,10 @@ add_filter( 'peptide_core_layout_definitions', function ( array $defs ): array {
         if ( ! $found ) { vc_demo_home_fields( $defs[ $type ], array( $f( 'select', $key, '首页呈现', 'standard', array( 'group' => 'layout', 'options' => array( 'standard' => '原排版', 'demo' => 'VialCove 精简首页' ) ) ) ) ); }
         elseif ( isset( $defs[ $type ]['panels'] ) ) { $defs[ $type ]['panels'][] = array( 'id' => 'vialcove-presentation', 'label' => '首页呈现', 'fields' => array( $key ) ); }
     }
+    foreach ( $defs['hero_h1']['settings'] as &$field ) {
+        if ( 'presentation' === $field['key'] ) { $field['options']['product_first'] = '商品优先（紧凑首屏）'; }
+    }
+    unset( $field );
     vc_demo_home_fields( $defs['hero_h1'], array(
         $f( 'text', 'eyebrow', '主标题上方短句', '' ),
         $f( 'product', 'featuredProduct', '主视觉关联商品', null, array( 'help' => '选择后主图跟随后台排序的第一个可见规格；点击打开商品弹窗，商品详情链接保留。' ) ),
@@ -114,7 +118,8 @@ function vc_demo_home_image( ?array $image, string $class = '', string $sizes = 
 /** Rendering remains inside the plugin's device-aware, editable outer section. */
 add_filter( 'peptide_core_module_html', function ( $html, array $module, string $context, string $device ) {
     $key = 'info_list' === $module['type'] ? 'visualPresentation' : 'presentation';
-    if ( null !== $html || 'demo' !== ( $module['settings'][ $key ] ?? '' ) ) { return $html; }
+    $presentation = $module['settings'][ $key ] ?? '';
+    if ( null !== $html || ( 'demo' !== $presentation && ! ( 'hero_h1' === $module['type'] && 'product_first' === $presentation ) ) ) { return $html; }
     if ( ! in_array( $module['type'], array( 'hero_h1', 'info_list', 'report_feature', 'counter', 'card_list', 'faq', 'cta', 'rich_text' ), true ) ) { return $html; }
     ob_start();
     get_template_part( 'template-parts/modules/demo-' . str_replace( '_', '-', $module['type'] ), null, array( 'module' => $module, 'context' => $context, 'device' => $device ) );
