@@ -37,3 +37,11 @@
 - `php wp-content/plugins/peptide-core/tests/first-order-offer-pure.php`：59/59，使用真实新增 offer/admin 类及既有 `Coupon_Rules`，WP/Woo 依赖为内存 fixture；含保存权限/nonce、首单邮箱/账户、叠加保护、显式创建规则、数据库隔离锁/异常释放及双语键覆盖。不是实际支付或原生数据库全流程证明。
 - 测试/源码 SHA 和 lint 收据由任务目录 `D:/Codex/Tasks/2026-11-05/storefront-six-module-refresh/work/first-order/` 保存。
 - 后续 root 在先备份后配置既有或受控新券、安装/接线，在隔离实际 Woo 环境验收优惠金额与桌面/手机效果；真实新老客户结账仍遵循原生校验。本交付没有修改这些运行数据。
+
+## 2026-11-05 用户复审：紧凑卡片与单一领取
+
+- 新决定取代上面的双按钮展示：主卡仅保留标题、WELCOME5 和一个 Claim / Obtener（领取）按钮，删除长说明和单独复制按钮；资格短说明保留在领取结果中。英文/西语标题精简，手机主卡约133px高。
+- 同一个按钮绑定现有 `createController.apply()`，先刷新原生购物车：空车只复制并显示 Code copied. Add an item to use it.；有商品才通过共享队列申请真实券；已应用、忙碌、失败、超时及不移除旧券的规则不变。无需复制按钮 DOM 才能挂载，避免合并按钮后失效。
+- 已备份并 CAS 安装本机 PHP/JS/CSS 三个文件；没有修改券、活动配置、购物车或订单数据。服务器尚未发布本次收紧。
+- 实际 IAB 360px/390px 单按钮、无横向溢出、100×44px触摸区；截图 `D:/Codex/Tasks/2026-11-05/first-order-offer-compact/outputs/compact-offer-mobile.png`。只点击静态优惠码以滚动查看，未在用户车上申请优惠。
+- 更新回归：22/22 Node、63/63 PHP；新增实际浏览器 IIFE 的无复制节点挂载、fresh空车复制/有货应用、重复与连续领取、西语、X/15秒关闭。原队列和金额测试保留。不是实卡支付验证。收据 `D:/Codex/Tasks/2026-11-05/first-order-offer-compact/outputs/verification.json`。
