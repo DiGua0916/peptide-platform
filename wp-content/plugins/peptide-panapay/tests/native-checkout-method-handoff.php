@@ -190,6 +190,8 @@ try {
  $count = pc_handoff_native_order_count(); $bad = pc_handoff_native_response( 'PATCH', $payload, false );
  pc_handoff_native_check( 403 === $bad->get_status(), 'native_bad_nonce_rejected_before_handoff' );
  pc_handoff_native_check( $before === pc_handoff_native_snapshot( new WC_Order( $old->get_id() ) ) && $old->get_id() === WC()->session->get( 'store_api_draft_order' ) && array() === pc_handoff_native_slots( $old->get_id() ) && $count === pc_handoff_native_order_count(), 'bad_nonce_preserves_old_native_rows_pointers_and_no_slots_or_orders' );
+ $bad_post = pc_handoff_native_response( 'POST', $payload, false );
+ pc_handoff_native_check( 403 === $bad_post->get_status() && $before === pc_handoff_native_snapshot( new WC_Order( $old->get_id() ) ) && $old->get_id() === WC()->session->get( 'store_api_draft_order' ) && array() === pc_handoff_native_slots( $old->get_id() ) && $count === pc_handoff_native_order_count() && 1 === $pc_handoff_native['provider_calls'], 'native_bad_nonce_post_cannot_mutate_old_order_or_create_handoff_or_payment' );
  $patch = pc_handoff_native_response( 'PATCH', $payload );
  pc_handoff_native_check( 200 === $patch->get_status(), 'native_same_page_patch_switches_method_and_address' );
  pc_handoff_native_check( $before === pc_handoff_native_snapshot( new WC_Order( $old->get_id() ) ), 'same_page_patch_preserves_old_native_rows_and_payment_fence' );
@@ -240,6 +242,10 @@ try {
  $pc_handoff_native['owned_orders'][] = $unknown_id;
  $unknown_body = wp_json_encode( $unknown_response->get_data() );
  pc_handoff_native_check( str_contains( $unknown_body, 'Start a new order' ) && 3 === $pc_handoff_native['provider_calls'], 'native_new_payment_unknown_keeps_original_gateway_error_and_action_text' );
+ wc_clear_notices();
+ $unknown_book = serialize( ( new WC_Order( $unknown_id ) )->get_meta( '_pc_panapay_sessions', true ) ); $unknown_count = pc_handoff_native_order_count();
+ $unknown_retry = pc_handoff_native_response( 'POST', $unknown_payload );
+ pc_handoff_native_check( $unknown_retry->get_status() >= 400 && 3 === $pc_handoff_native['provider_calls'] && $unknown_count === pc_handoff_native_order_count() && $unknown_id === WC()->session->get( 'store_api_draft_order' ) && $unknown_book === serialize( ( new WC_Order( $unknown_id ) )->get_meta( '_pc_panapay_sessions', true ) ), 'unchanged_same_method_unknown_retry_keeps_one_order_one_book_and_no_new_payment' );
  wc_clear_notices();
  $same_payload = $payload; $same_payload['payment_method'] = $paypal; $same_payload['billing_address']['address_1'] = '789 Synthetic Direct POST Street'; $same_payload['shipping_address']['address_1'] = '789 Synthetic Direct POST Street';
  pc_handoff_native_restore_old_pointer( $old->get_id() ); WC()->session->__unset( 'pc_panapay_checkout_handoff' );
