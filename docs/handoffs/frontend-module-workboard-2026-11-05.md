@@ -8,9 +8,9 @@
 
 上述代码与专项检查已完成：22专项、98联合Node；PHPcard51/template23；公共首页SSR读回82快捷按钮与脚本。推荐严格保留同快照未过期报价，失效/停用/后台hidden仍清理，不强行生成推荐。用户Esc停止Computer Use后已停止窗口操作，最新浏览器点击/画面验收未完成，没有实际改车。详细记录见frontend-catalog-quick-add-recommendation-2026-11-05.md。其它窗口暂避这些共享文件；旧任务状态保留如下。
 
-## 最新追加：关闭入口 / 小计优惠 / 页脚
+## 最新追加完成：关闭入口 / 小计优惠 / 页脚
 
-M05.01购物车关闭按钮已改44px圆形SVG入口，M02.04快捷加购成功下方冗余句已清除，失败文案保留。M06小计原价/现价/红省钱由独立checkout-subtotal-savings资产增量接入，不覆盖peer checkout-polish/cart-pricing在途文件；M01.05页脚完善与圆形联系图标接着做，目前只读核对原生字段与真实配置。仍不做真实购物车或支付写入；用户Esc停止后不再操作Computer Use。
+M05.01购物车关闭按钮已改44px圆形SVG入口，M02.04快捷加购成功下方冗余句已清除，失败文案保留。M06小计原价/现价/红省钱已由独立checkout-subtotal-savings资产接入；M01.05页脚分组和圆形联系图标已完成，原footer687正常API发布并预留10空账号字段。16金额/17入口/39页脚检查通过，SSR已读回四组/WA/2026，全部其它布局与店铺设置hash不变。不覆盖peer checkout-polish/cart-pricing在途文件。仍不做真实购物车或支付写入；用户Esc停止后不再操作Computer Use。
 
 ## 本次任务实际涉及的全部模块（其他窗口先据此避让）
 
