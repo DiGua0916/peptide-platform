@@ -3,6 +3,8 @@ const assert = require('node:assert/strict');
 const { recentPresentation, recentPresentationUrl, recentAddPayload, createClient } = require('../assets/live-cart-experience.js');
 const parent = { productId: 30, variationId: 0, variationLabel: '', priceIsFrom: true, price: { text: '$10.00' }, image: { url: '/parent.jpg' } };
 const exact = { id: 30, card: { productId: 30, purchaseId: 42, variationId: 42, variationLabel: '20 mg × 10 vials', price: { text: '$55.00' }, image: { url: '/20mg.jpg' }, canAddOne: true } };
+const nativeMoney = (minor, text, extra = {}) => ({ minor, text, currency_code: 'USD', currency_minor_unit: 2, ...extra });
+const onSale = { ...exact, card: { ...exact.card, price: nativeMoney('5500', '$55.00'), regularPrice: nativeMoney('7800', '$78.00') } };
 let passed = 0;
 function check(name, fn) { fn(); passed++; console.log('ok', name); }
 check('parent minimum is replaced together with exact image and specification', () => {
@@ -22,6 +24,42 @@ check('mismatched purchase ID does not expose direct add', () => { assert.equal(
 check('nonboolean eligibility is not treated as eligible', () => { assert.equal(recentPresentation(parent, { ...exact, card: { ...exact.card, canAddOne: 'true' } }).canAddOne, false); });
 check('simple product uses its own exact price without invented package label', () => {
     const card = recentPresentation(parent, { id: 30, card: { ...exact.card, purchaseId: 30, variationId: 0, variationLabel: '', canAddOne: false } }); assert.equal(card.purchaseId, 30); assert.equal(card.variationLabel, 'Single specification'); assert.equal(card.canAddOne, false);
+});
+check('exact native SKU sale carries a genuine regular price and per-box markdown', () => {
+    const card = recentPresentation(parent, onSale);
+    assert.equal(card.productSaving.regularText, '$78.00'); assert.equal(card.productSaving.label, 'Save 29% ($23.00)');
+    assert.equal(card.variationLabel, '20 mg × 10 vials'); assert.equal(card.canAddOne, true);
+    assert.deepEqual(recentAddPayload(card), { id: 42, quantity: 1 });
+});
+check('legacy response never inherits a stale sale claim from private history', () => {
+    assert.equal(recentPresentation({ ...parent, productSaving: { label: 'stale' } }, exact).productSaving, null);
+    assert.equal(recentPresentation({ ...parent, productSaving: { label: 'stale' } }, null).productSaving, null);
+});
+check('sale comparison never escapes an exact historical variation mismatch', () => {
+    const card = recentPresentation({ ...parent, variationId: 43, variationLabel: '30mg', productSaving: { label: 'stale' } }, onSale);
+    assert.equal(card.productSaving, null); assert.equal(card.canAddOne, false); assert.equal(card.variationLabel, '30mg');
+});
+check('malformed or mismatched comparison metadata fails closed without blocking the native options action', () => {
+    const candidates = [
+        { ...onSale.card, regularPrice: nativeMoney('7800', '$78.00', { currency_code: 'EUR' }) },
+        { ...onSale.card, regularPrice: nativeMoney('7800', '$78.00', { currency_minor_unit: 3 }) },
+        { ...onSale.card, regularPrice: nativeMoney('7800', '$78.00', { currency_minor_unit: '2' }) },
+        { ...onSale.card, regularPrice: nativeMoney('-7800', '$78.00') },
+        { ...onSale.card, regularPrice: nativeMoney('7800.00', '$78.00') },
+        { ...onSale.card, regularPrice: nativeMoney('5500', '$55.00') },
+        { ...onSale.card, regularPrice: nativeMoney('9999999999999999', '$99.00') },
+        { ...onSale.card, price: { text: '$55.00' } },
+        { ...onSale.card, regularPrice: { text: '$78.00' } }
+    ];
+    for (const card of candidates) {
+        const result = recentPresentation(parent, { id: 30, card });
+        assert.equal(result.productSaving, null); assert.equal(result.canAddOne, true);
+    }
+});
+check('sale display never escalates a server-disabled direct add', () => {
+    const card = recentPresentation(parent, { ...onSale, card: { ...onSale.card, canAddOne: false } });
+    assert.equal(card.productSaving.label, 'Save 29% ($23.00)'); assert.equal(card.canAddOne, false);
+    assert.throws(() => recentAddPayload(card));
 });
 check('pretty route retains public origin and explicit native variation', () => {
     const url = new URL(recentPresentationUrl('https://shop.test/wp-json/vialcove/v1/home-product/', { ...parent, variationId: 42 }, 'https://shop.test'));

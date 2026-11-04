@@ -29,8 +29,8 @@ namespace Automattic\WooCommerce\StoreApi\Utilities {
 namespace {
     define( 'ABSPATH', __DIR__ );
     class WC_Product {
-        public string $type = 'simple', $status = 'publish', $password = '', $price = '55.00', $name = 'Product';
-        public bool $public = true, $visible = true, $purchasable = true, $stock = true, $active = true, $manage = false, $backorders = false;
+        public string $type = 'simple', $status = 'publish', $password = '', $price = '55.00', $regular = '55.00', $name = 'Product';
+        public bool $public = true, $visible = true, $purchasable = true, $stock = true, $active = true, $manage = false, $backorders = false, $sale = false;
         public int $parent = 0, $image = 0;
         public ?int $stockQuantity = 10;
         public array $attributes = array();
@@ -48,6 +48,8 @@ namespace {
         public function is_in_stock() { return $this->stock; }
         public function get_variation_attributes() { return $this->attributes; }
         public function get_price() { return $this->price; }
+        public function get_regular_price() { return $this->regular; }
+        public function is_on_sale() { return $this->sale; }
         public function get_price_html() { return '<span>Native price</span>'; }
         public function get_image_id( $context = 'view' ) { $GLOBALS['image_contexts'][] = array( $this->id, $context ); return 'edit' === $context || $this->image ? $this->image : ( $GLOBALS['products'][ $this->parent ]->image ?? 0 ); }
         public function get_name() { return $this->name; }
@@ -105,8 +107,11 @@ namespace {
     function get_post_field( $field, $id, $context ) { return $GLOBALS['raw_password'][ $id ] ?? ( wc_get_product( $id )->password ?? '' ); }
     function wc_variation_attribute_name( $name ) { return 'attribute_' . $name; }
     function wc_get_formatted_variation( $sku, ...$flags ) { $GLOBALS['formatted_args'] = array( $sku->id, $flags ); return ( $flags[1] ? 'Specification: ' : '' ) . implode( ' / ', $sku->attributes ); }
-    function wc_get_price_to_display( $sku ) { $GLOBALS['priced_id'] = $sku->id; return $sku->price; }
-    function wc_price( $price ) { return '<span>$' . number_format( (float) $price, 2 ) . '</span>'; }
+    function wc_get_price_to_display( $sku, $args = array() ) { $GLOBALS['priced_id'] = $sku->id; return (float) ( $args['price'] ?? $sku->price ) * $GLOBALS['display_multiplier']; }
+    function wc_get_price_decimals() { return $GLOBALS['price_decimals']; }
+    function get_woocommerce_currency() { return $GLOBALS['currency']; }
+    function wc_format_decimal( $price, $decimals ) { return number_format( (float) $price, $decimals, '.', '' ); }
+    function wc_price( $price ) { return '<span>' . ( 'JPY' === $GLOBALS['currency'] ? '¥' : '$' ) . number_format( (float) $price, $GLOBALS['price_decimals'] ) . '</span>'; }
     function wp_strip_all_tags( $value ) { return strip_tags( $value ); }
     function wp_get_attachment_image_src( $id, $size ) { return $id ? array( 'https://store.example/images/' . $id . '.png', 600, 600 ) : false; }
     function wp_get_attachment_image_srcset( ...$unused ) { return ''; }
@@ -133,6 +138,7 @@ namespace {
         $GLOBALS['products'] = array( 10 => $parent, 12 => $first, 13 => $second ); $GLOBALS['first'] = array( 10 => $first );
         $GLOBALS['limits'] = array( 'minimum' => 1, 'maximum' => 20, 'multiple_of' => 1 ); $GLOBALS['quantity_throws'] = false;
         $GLOBALS['raw_password'] = $GLOBALS['image_contexts'] = array(); $GLOBALS['woocommerce'] = new NativeSessionPreparation();
+        $GLOBALS['price_decimals'] = 2; $GLOBALS['currency'] = 'USD'; $GLOBALS['display_multiplier'] = 1;
         \Automattic\WooCommerce\StoreApi\Utilities\QuantityLimits::$calls = 0;
     }
     reset_fixture();
@@ -142,14 +148,31 @@ namespace {
     check( 'boolean' === $args['card']['type'] && false === $args['card']['default'] && 1 === $args['variation']['minimum'], 'The optional card mode and positive variation ID are declared in REST validation.' );
     $result = response(); $card = $result->data['card'];
     check( array( 'id', 'card' ) === array_keys( $result->data ) && 0 === \PeptideCore\Modules\Showcase_Quick_View::$templates, 'Card mode never renders or initializes the native form.' );
-    check( array( 'productId', 'purchaseId', 'variationId', 'variationLabel', 'price', 'image', 'canAddOne' ) === array_keys( $card ), 'The lightweight card has only its explicit public contract fields.' );
+    check( array( 'productId', 'purchaseId', 'variationId', 'variationLabel', 'price', 'regularPrice', 'image', 'canAddOne' ) === array_keys( $card ), 'The lightweight card has only its explicit public contract fields.' );
     check( 10 === $card['productId'] && 12 === $card['purchaseId'] && 12 === $card['variationId'] && '20mg' === $card['variationLabel'], 'The merchant first configured variation is shown, not the cheaper second choice.' );
     check( '$55.00' === $card['price']['text'] && 12 === $priced_id && str_ends_with( $card['image']['url'], '/120.png' ), 'Price, image and label come from that same SKU.' );
+    check( '5500' === $card['price']['minor'] && 'USD' === $card['price']['currency_code'] && 2 === $card['price']['currency_minor_unit'] && null === $card['regularPrice'], 'Current exact-SKU money metadata is native; a nonsale has no comparison.' );
     check( array( 12, array( true, false, false ) ) === $formatted_args, 'Native variation label formatting preserves all values without legacy attribute-name prefixes.' );
     check( true === $card['canAddOne'] && 1 === \Automattic\WooCommerce\StoreApi\Utilities\QuantityLimits::$calls, 'A complete available SKU calls the native quantity-limit API once.' );
     check( 'private, no-store' === $result->headers['Cache-Control'], 'SKU display responses are never publicly cached.' );
     $card = response( array( 'variation' => 13 ) )->data['card'];
     check( 13 === $card['purchaseId'] && '$40.00' === $card['price']['text'] && str_ends_with( $card['image']['url'], '/130.png' ), 'An explicit available variation keeps its own exact price and image.' );
+    $products[12]->regular = '78'; $products[12]->sale = true; $products[10]->regular = '999';
+    $card = response()->data['card'];
+    check( '7800' === $card['regularPrice']['minor'] && '$78.00' === $card['regularPrice']['text'] && '5500' === $card['price']['minor'], 'Comparison is the same configured SKU, not a parent regular price.' );
+    $card = response( array( 'variation' => 13 ) )->data['card'];
+    check( null === $card['regularPrice'] && '4000' === $card['price']['minor'], 'Another specification never inherits the first specification sale.' );
+    $display_multiplier = 1.1; $card = response()->data['card'];
+    check( '6050' === $card['price']['minor'] && '8580' === $card['regularPrice']['minor'], 'Current and comparison use the same native tax/display conversion.' );
+    $display_multiplier = 1; $currency = 'JPY'; $price_decimals = 0; $card = response()->data['card'];
+    check( '55' === $card['price']['minor'] && '78' === $card['regularPrice']['minor'] && 0 === $card['price']['currency_minor_unit'], 'Zero-decimal currency does not assume cents.' );
+    $currency = 'USD'; $price_decimals = 8; $products[12]->price = '0.75000001'; $products[12]->regular = '1.00000001'; $card = response()->data['card'];
+    check( '75000001' === $card['price']['minor'] && '100000001' === $card['regularPrice']['minor'], 'High-precision display values retain the native fractional precision.' );
+    foreach ( array( '-1', 'not-a-price', '0.50', '999999999999999' ) as $invalid_regular ) {
+        $products[12]->regular = $invalid_regular;
+        check( null === response()->data['card']['regularPrice'], 'Invalid, non-discounted or unsafe regular prices never become sale claims.' );
+    }
+    reset_fixture();
     $products[13]->parent = 999;
     check( response( array( 'variation' => 13 ) ) instanceof WP_Error, 'An explicit foreign variation cannot fall back to another SKU.' );
     reset_fixture();

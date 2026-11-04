@@ -28,6 +28,7 @@
   if (!trigger || !contact) return null;
   const faq = document.querySelector('#vc-questions'), navigation = document.querySelector('.pc-mobile-fixed');
   const header = document.querySelector('[data-vc-demo-header]');
+  const announcement = document.querySelector('[data-vc-campaign-sticky]');
   let expanded = false, inside = false, dismissed = false, near = true, disposed = false, frame = 0;
   const renderExpanded = value => {
    expanded = value;
@@ -47,6 +48,11 @@
     const box = node.getBoundingClientRect();
     if (box.width > 0 && box.bottom > 0 && box.top < height) headerBottom = box.bottom;
     break;
+   }
+   const pinned = announcement?.closest('.vc-campaign-pin');
+   if (pinned && window.getComputedStyle(pinned).visibility !== 'hidden') {
+    const box = pinned.getBoundingClientRect();
+    if (box.width > 0 && box.top >= 0 && box.top < height) headerBottom = Math.max(headerBottom, box.bottom);
    }
    return faqInReadingZone(faq.getBoundingClientRect(), height, headerBottom);
   };

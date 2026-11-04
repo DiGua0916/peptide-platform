@@ -46,7 +46,8 @@ function vc_campaign_bubble_html( $html, array $module, string $context, string 
             if ( ! preg_match( '~\baria-label\s*=~i', $attributes ) ) { $attributes .= ' aria-label="Promotion offers"'; }
             return '<div class="pc-campaign__tiers"' . $attributes . '>';
         }, $native );
-        return '<div class="vc-campaign-strip" data-vc-campaign-strip>' . $native . '</div>';
+        $sticky = is_front_page() && 'editor' !== $context ? ' data-vc-campaign-sticky' : '';
+        return '<div class="vc-campaign-strip" data-vc-campaign-strip' . $sticky . '>' . $native . '</div>';
     }
     return '<div class="vc-campaign-bubble" data-vc-campaign-bubble>' . $native . '</div>';
 }
@@ -58,6 +59,9 @@ function vc_campaign_bubble_assets(): void {
     wp_enqueue_style( 'vc-campaign-bubble', get_template_directory_uri() . '/assets/campaign-bubble.css', array(), (string) filemtime( $dir . 'campaign-bubble.css' ) );
     if ( ! is_admin() ) {
         wp_enqueue_script( 'vc-campaign-announcement', get_template_directory_uri() . '/assets/campaign-announcement.js', array( 'pc-commerce-blocks' ), (string) filemtime( $dir . 'campaign-announcement.js' ), true );
+        if ( is_front_page() ) {
+            wp_enqueue_script( 'vc-campaign-strip-sticky', get_template_directory_uri() . '/assets/campaign-strip-sticky.js', array(), (string) filemtime( $dir . 'campaign-strip-sticky.js' ), true );
+        }
     }
 }
 add_action( 'wp_enqueue_scripts', 'vc_campaign_bubble_assets', 96 );
