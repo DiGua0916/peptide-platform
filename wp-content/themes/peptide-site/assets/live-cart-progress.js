@@ -25,6 +25,14 @@
         const qualified = current.nodes.filter(node => node.reached && node.celebrationEligible);
         return { baseline: false, celebrate: qualified.length ? qualified[qualified.length - 1].key : null };
     }
+    // A still marker describes the confirmed current tier; it is not a new
+    // threshold-crossing event and must not announce or fire confetti on load.
+    function mascotTier(state) {
+        if (!state || !Array.isArray(state.nodes) || !state.discountApplied || !minor(state.actualDiscount?.minor) || Number(state.actualDiscount.minor) <= 0
+            || state.celebration?.enabled !== true || state.celebration.smileEnabled !== true) return null;
+        const eligible = state.nodes.filter(node => node.reached === true && node.celebrationEligible === true);
+        return eligible.length ? eligible[eligible.length - 1].key : null;
+    }
     function labelLanes(rectangles, gap = 8) {
         const ends = [];
         return rectangles.map(rect => { let lane = ends.findIndex(end => end + gap <= rect.left); if (lane < 0) lane = ends.length; ends[lane] = rect.right; return lane; });
@@ -41,7 +49,7 @@
         if (state.completed && state.discountApplied && Number(state.actualDiscount.minor) > 0) return 'Highest tier unlocked. ' + state.actualDiscount.text + ' off your order.';
         return 'No offer savings applied.';
     }
-    if (typeof module === 'object' && module.exports) module.exports = { normalize, decision, labelLanes, progressMessage };
+    if (typeof module === 'object' && module.exports) module.exports = { normalize, decision, mascotTier, labelLanes, progressMessage };
     if (typeof window === 'undefined' || typeof document === 'undefined') return;
     window.cartProgressMessage = progressMessage;
     const prefix = 'pc-activity-listener__';
@@ -64,13 +72,13 @@
         const image = new Image(); image.src = imageUrl.href; image.decoding = 'async';
         let ctx = null; try { ctx = canvas.getContext('2d'); } catch (_) {}
         const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-        let last = null, nodeViews = new Map(), nodeSignature = '', token = 0, frame = 0, hideTimer = 0, animationNode = null;
+        let last = null, displayState = null, nodeViews = new Map(), nodeSignature = '', token = 0, frame = 0, hideTimer = 0, animationNode = null;
         let destroyed = false;
         function visible() { const r = root.getBoundingClientRect(); return !root.hidden && !document.hidden && r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth; }
         const smooth = value => { value = Math.max(0, Math.min(1, value)); return value * value * (3 - 2 * value); };
-        function stop() { token++; cancelAnimationFrame(frame); clearTimeout(hideTimer); confetti.replaceChildren(); mascot.hidden = true; animationNode = null; root.dataset.celebrating = 'false'; if (ctx) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, 256, 128); } }
+        function stop() { token++; cancelAnimationFrame(frame); clearTimeout(hideTimer); confetti.replaceChildren(); mascot.hidden = true; animationNode = null; root.classList.remove('has-mascot'); root.dataset.celebrating = 'false'; if (ctx) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, 256, 128); } }
         function direction(view) {
-            const node = last && last.nodes.find(item => nodeViews.get(item.key) === view), box = milestones.getBoundingClientRect(), edge = panel.getBoundingClientRect();
+            const node = displayState && displayState.nodes.find(item => nodeViews.get(item.key) === view), box = milestones.getBoundingClientRect(), edge = panel.getBoundingClientRect();
             const x = Math.max(24, Math.min(box.width, node ? box.width * node.positionPercent / 100 : view.getBoundingClientRect().left - box.left));
             mascot.style.setProperty('--pc-node-position', x + 'px'); mascot.dataset.side = edge.right - box.left - x < 112 ? 'left' : 'right';
         }
@@ -87,6 +95,15 @@
             if (length > .1) ctx.drawImage(image, 760, 342, 950, 75, 44.08, 27.836, length, 4.35);
             ctx.drawImage(image, 1710, 225, 210, 205, 44.08 + length, 21.05, 12.18, 11.89); ctx.restore();
         }
+        function still() {
+            if (destroyed || !visible() || root.dataset.celebrating === 'true') return;
+            const key = mascotTier(displayState), view = key && nodeViews.get(key);
+            if (!view || !ctx || !image.complete || !image.naturalWidth) { if (!mascot.hidden) stop(); return; }
+            animationNode = view; mascot.hidden = false; root.classList.add('has-mascot'); direction(view); paint(0, true);
+        }
+        function settle() { stop(); still(); }
+        image.onload = still;
+        image.onerror = stop;
         function burst(atTip, view) {
             const layer = confetti.getBoundingClientRect(), box = mascot.getBoundingClientRect(), dot = view.getBoundingClientRect();
             const x = atTip ? box.left + (mascot.dataset.side === 'left' ? 23 : 105) : dot.left;
@@ -106,9 +123,9 @@
             mascot.style.setProperty('--pc-node-position', node.positionPercent + '%'); animationNode = view; direction(view);
             const start = () => {
                 if (generation !== token || destroyed || !visible()) return;
-                if (showBean && image.naturalWidth) mascot.hidden = false;
+                if (showBean && image.naturalWidth) { mascot.hidden = false; root.classList.add('has-mascot'); }
                 root.dataset.celebrating = 'true'; root.dataset.celebratedTier = key;
-                if (reduced.matches) { if (showBean && image.naturalWidth) paint(0, true); hideTimer = setTimeout(stop, 2000); return; }
+                if (reduced.matches) { if (showBean && image.naturalWidth) paint(0, true); hideTimer = setTimeout(settle, 2000); return; }
                 let began = null, fired = false;
                 const tick = now => {
                     if (generation !== token) return;
@@ -117,7 +134,7 @@
                     const progress = Math.min(1, (now - began) / 2800);
                     if (!mascot.hidden) paint(progress, false);
                     if (progress >= .24 && !fired) { fired = true; burst(!mascot.hidden, view); }
-                    if (progress < 1) frame = requestAnimationFrame(tick); else stop();
+                    if (progress < 1) frame = requestAnimationFrame(tick); else settle();
                 };
                 frame = requestAnimationFrame(tick);
             };
@@ -125,7 +142,7 @@
             else if (typeof image.decode === 'function') image.decode().then(start).catch(() => { if (generation === token) start(); });
             else start();
         }
-        function hide() { stop(); root.hidden = true; root.removeAttribute('aria-busy'); last = null; live.textContent = ''; }
+        function hide() { stop(); root.hidden = true; root.removeAttribute('aria-busy'); last = null; displayState = null; live.textContent = ''; }
         function update(raw, config) {
             if (destroyed) return;
             if (safeText(config?.title) && config.title) title = config.title;
@@ -133,7 +150,8 @@
             const state = normalize(raw);
             if (!state) { hide(); return; }
             const action = decision(last, state);
-            if (action.baseline || last && (Number(state.measure) < Number(last.measure) || last.discountApplied && !state.discountApplied || state.celebration.enabled !== true || state.celebration.smileEnabled !== last.celebration.smileEnabled)) stop();
+            if (action.baseline || Number(state.actualDiscount.minor) <= 0 || animationNode && !state.nodes.some(node => nodeViews.get(node.key) === animationNode && node.reached && node.celebrationEligible)
+                || last && (Number(state.measure) < Number(last.measure) || last.discountApplied && !state.discountApplied || state.celebration.enabled !== true || state.celebration.smileEnabled !== last.celebration.smileEnabled)) stop();
             const signature = JSON.stringify(state.nodes.map(node => [node.key, node.positionPercent, node.thresholdText, node.rewardText]));
             if (signature !== nodeSignature) {
                 stop(); nodeViews.forEach(view => view.remove()); nodeViews = new Map(); nodeSignature = signature;
@@ -150,8 +168,8 @@
             state.nodes.forEach(node => { const view = nodeViews.get(node.key); view.classList.toggle('is-reached', node.reached && state.discountApplied && Number(state.actualDiscount?.minor) > 0); view.setAttribute('aria-label', node.thresholdText + '. ' + node.rewardText + (node.reached && state.discountApplied ? '. Reached.' : '')); view.querySelector('.' + prefix + 'reward').textContent = compactCaption(node.rewardText); });
             message.textContent = progressMessage(state);
             track.setAttribute('aria-valuenow', String(state.progressPercent)); track.setAttribute('aria-valuetext', message.textContent);
-            fill.style.width = state.progressPercent + '%'; root.hidden = false; root.removeAttribute('aria-busy'); last = state; layoutLabels();
-            if (action.celebrate) celebrate(action.celebrate, state);
+            fill.style.width = state.progressPercent + '%'; root.hidden = false; root.removeAttribute('aria-busy'); last = state; displayState = state; layoutLabels();
+            if (action.celebrate) celebrate(action.celebrate, state); else still();
         }
         function layoutLabels() {
             if (root.hidden || destroyed) return;
@@ -163,19 +181,19 @@
             if (milestones.style.paddingBottom !== padding) milestones.style.paddingBottom = padding;
         }
         function resize() { layoutLabels(); if (animationNode && !mascot.hidden) direction(animationNode); confetti.replaceChildren(); }
-        function visibility() { stop(); last = null; if (!document.hidden) layoutLabels(); }
-        function cartChanging() { stop(); }
-        const observer = typeof IntersectionObserver === 'function' ? new IntersectionObserver(entries => { last = null; if (!entries[0].isIntersecting) stop(); else layoutLabels(); }) : null;
+        function visibility() { stop(); last = null; if (!document.hidden) { layoutLabels(); still(); } }
+        function cartChanging() { settle(); }
+        const observer = typeof IntersectionObserver === 'function' ? new IntersectionObserver(entries => { if (!entries[0].isIntersecting) { stop(); last = null; } else { layoutLabels(); still(); } }) : null;
         if (observer) observer.observe(root);
         const sizeObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(resize) : null;
         if (sizeObserver) sizeObserver.observe(panel);
-        document.addEventListener('visibilitychange', visibility); window.addEventListener('resize', resize); window.addEventListener('pagehide', stop); reduced.addEventListener('change', stop); document.addEventListener('vc:cart-mutation-start', cartChanging);
+        document.addEventListener('visibilitychange', visibility); window.addEventListener('resize', resize); window.addEventListener('pagehide', stop); window.addEventListener('pageshow', still); reduced.addEventListener('change', settle); document.addEventListener('vc:cart-mutation-start', cartChanging);
         function destroy() {
             if (destroyed) return;
             destroyed = true; stop(); if (observer) observer.disconnect(); if (sizeObserver) sizeObserver.disconnect();
-            document.removeEventListener('visibilitychange', visibility); window.removeEventListener('resize', resize); window.removeEventListener('pagehide', stop); reduced.removeEventListener('change', stop); document.removeEventListener('vc:cart-mutation-start', cartChanging);
-            root.replaceChildren(); root.hidden = true; last = null;
+            document.removeEventListener('visibilitychange', visibility); window.removeEventListener('resize', resize); window.removeEventListener('pagehide', stop); window.removeEventListener('pageshow', still); reduced.removeEventListener('change', settle); document.removeEventListener('vc:cart-mutation-start', cartChanging);
+            image.onload = null; image.onerror = null; root.replaceChildren(); root.hidden = true; last = null; displayState = null;
         }
-        return { update, pause: stop, clear: hide, destroy };
+        return { update, pause: settle, clear: hide, destroy };
     };
 }());

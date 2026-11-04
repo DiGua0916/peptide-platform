@@ -558,6 +558,22 @@
                 const result = await client.request(config.recommendationsUrl, body);
                 if (disposed || generation !== enrichment) return;
                 recommendation = activityAllowed(activity, appliedActivity) ? result.recommendation : null; enrichmentPending = false; render(client.snapshot());
+                const baseQuote = recommendation;
+                const isCurrent = () => {
+                    const current = client.snapshot(), live = current.cart?.extensions?.peptide_core?.activity_listener;
+                    return !disposed && generation === enrichment && recommendation === baseQuote && current.valid && !current.pending && !nativeCheckout.busy()
+                        && settings.cart_recommendations_enabled !== false && activityAllowed(live, appliedActivity)
+                        && live?.stateKey === activity.stateKey && live?.cartSnapshotKey === activity.cartSnapshotKey
+                        && live?.revision === activity.revision && live?.promotionRevision === activity.promotionRevision;
+                };
+                // Read this exact SKU only for optional compare-price presentation.
+                // Native quote eligibility, totals, token and add payload stay unchanged.
+                if (baseQuote && typeof global.vcRecommendationContract.enrichPresentation === 'function') {
+                    const decorated = await global.vcRecommendationContract.enrichPresentation(baseQuote, activity, activity.cartSnapshotKey, {
+                        isCurrent, read: candidate => client.request(recentPresentationUrl(config.recentProductApiUrl, candidate, location.origin)),
+                    });
+                    if (decorated && decorated !== baseQuote && isCurrent()) { recommendation = decorated; render(client.snapshot()); }
+                }
             } catch (_) { if (generation === enrichment) { recommendation = null; enrichmentPending = false; render(client.snapshot()); } }
         }, 250);
     }
