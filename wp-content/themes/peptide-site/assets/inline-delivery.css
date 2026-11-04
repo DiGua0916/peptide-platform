@@ -1,0 +1,117 @@
+/* Delivery uses the existing editable FAQ module, independently of the FAQ above. */
+#vc-delivery-details .vc-demo-faq {
+    padding-block: 24px;
+    background: #fff;
+    color: #17343f;
+    font-family: Geist, sans-serif;
+}
+
+#vc-delivery-details .vc-demo-faq-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+    min-width: 0;
+}
+
+#vc-delivery-details .vc-demo-faq-grid > header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 96px);
+    align-items: center;
+    gap: 8px 16px;
+    min-width: 0;
+}
+
+#vc-delivery-details .vc-demo-faq-grid > header > :not(.vc-demo-faq-image) {
+    grid-column: 1;
+    min-width: 0;
+}
+
+#vc-delivery-details .vc-demo-faq h2 {
+    margin: 0;
+    color: #17343f;
+    font: 600 30px/36px Geist, sans-serif;
+    letter-spacing: -.025em;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+}
+
+#vc-delivery-details .vc-demo-faq-description {
+    margin: 0;
+    color: #42616c;
+    font: 400 16px/24px Geist, sans-serif;
+    overflow-wrap: anywhere;
+    text-wrap: pretty;
+}
+
+#vc-delivery-details .vc-demo-faq-description p { margin: 0; }
+#vc-delivery-details .vc-demo-faq-description p + p { margin-top: 8px; }
+#vc-delivery-details .vc-demo-kicker { margin: 0; }
+
+#vc-delivery-details .vc-demo-faq-grid > header > .vc-demo-faq-image {
+    display: block;
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    justify-self: end;
+    align-self: center;
+    width: 100%;
+    max-width: 96px;
+    min-width: 0;
+    margin: 0;
+}
+
+#vc-delivery-details .vc-demo-faq-image img {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+#vc-delivery-details .vc-demo-faq-list { min-width: 0; border-color: #d8e5e8; }
+#vc-delivery-details .vc-demo-faq-list details { border-color: #d8e5e8; }
+#vc-delivery-details .vc-demo-faq-list summary {
+    min-height: 44px;
+    padding-block: 16px;
+    gap: 16px;
+    color: #17343f;
+    font: 500 16px/24px Geist, sans-serif;
+    overflow-wrap: anywhere;
+}
+
+#vc-delivery-details .vc-demo-faq-answer {
+    max-width: 70ch;
+    padding: 0 0 16px;
+    color: #42616c;
+    font: 400 16px/24px Geist, sans-serif;
+    overflow-wrap: anywhere;
+    text-wrap: pretty;
+}
+
+#vc-delivery-details .vc-demo-faq-answer p { color: inherit; }
+#vc-delivery-details .vc-demo-faq-answer :where(ul, ol) { padding-inline-start: 24px; }
+#vc-delivery-details .vc-demo-faq-answer li + li { margin-top: 8px; }
+#vc-delivery-details .vc-demo-faq-answer a { color: #11657d; text-underline-offset: 4px; }
+#vc-delivery-details .vc-demo-faq-answer :is(a[href^="mailto:"], a[href^="tel:"], a[href*="wa.me/"]) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    max-width: 100%;
+    padding-block: 8px;
+    overflow-wrap: anywhere;
+}
+
+#vc-delivery-details :is(summary, a):focus-visible {
+    outline: 2px solid #11657d;
+    outline-offset: 4px;
+}
+
+@media (max-width: 359px) {
+    #vc-delivery-details .vc-demo-faq-grid > header { grid-template-columns: minmax(0, 1fr) minmax(0, 80px); }
+    #vc-delivery-details .vc-demo-faq-grid > header > .vc-demo-faq-image { max-width: 80px; }
+}
+
+@media (min-width: 768px) {
+    #vc-delivery-details .vc-demo-faq-grid { grid-template-columns: minmax(0, .85fr) minmax(0, 1.4fr); gap: 48px; }
+    #vc-delivery-details .vc-demo-faq-grid > header { grid-template-columns: minmax(0, 1fr) minmax(0, 112px); align-self: start; }
+    #vc-delivery-details .vc-demo-faq-grid > header > .vc-demo-faq-image { max-width: 112px; }
+}
