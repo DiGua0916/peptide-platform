@@ -106,6 +106,8 @@ function harness({ language = 'es', enabled = true, autoEnabled = false, cookie 
             return tokens(selector).some(token => {
                 if (token[0] === '.') return String(this.attributes.class || '').split(/\s+/).includes(token.slice(1));
                 if (token[0] === '#') return this.attributes.id === token.slice(1);
+                const compound = /^([a-z][a-z0-9-]*)(\[.+\])$/i.exec(token);
+                if (compound) return this.tagName.toLowerCase() === compound[1].toLowerCase() && this.matches(compound[2]);
                 const attr = /^\[([^=*\]]+)(\*=|=)?(?:"([^"]*)"|'([^']*)'|([^\]]*))?\]$/.exec(token);
                 if (attr) { const key = attr[1], expected = attr[3] ?? attr[4] ?? attr[5] ?? ''; return this.hasAttribute(key) && (!attr[2] || (attr[2] === '*=' ? String(this.attributes[key]).includes(expected) : String(this.attributes[key]) === expected)); }
                 return this.tagName.toLowerCase() === token.toLowerCase();
@@ -113,16 +115,25 @@ function harness({ language = 'es', enabled = true, autoEnabled = false, cookie 
         }
         closest(selector) { for (let node = this; node; node = node.parentElement) if (node.matches(selector)) return node; return null; }
         querySelector(selector) { for (const node of this.children) { if (node.nodeType !== 1) continue; if (node.matches(selector)) return node; const found = node.querySelector(selector); if (found) return found; } return null; }
+        querySelectorAll(selector) { const found=[]; for(const node of this.children) { if(node.nodeType!==1)continue; if(node.matches(selector))found.push(node); found.push(...node.querySelectorAll(selector)); } return found; }
+        contains(candidate) { for(let node=candidate;node;node=node.parentElement)if(node===this)return true;return false; }
         hasAttribute(name) { return Object.hasOwn(this.attributes, name); }
         getAttribute(name) { return this.hasAttribute(name) ? this.attributes[name] : null; }
         setAttribute(name, value) { this.attributes[name] = value; writes++; if (activeObserver) records.push({ type: 'attributes', target: this, attributeName: name }); }
-        addEventListener(name, callback) { this.listeners[name] = callback; }
+        removeAttribute(name) { if(!this.hasAttribute(name))return; delete this.attributes[name];writes++;if(activeObserver)records.push({type:'attributes',target:this,attributeName:name}); }
+        get open() { return this.hasAttribute('open'); }
+        set open(value) { if(value)this.setAttribute('open','');else this.removeAttribute('open'); }
+        get href() { return this.getAttribute('href') || ''; }
+        set href(value) { this.setAttribute('href',value); }
+        focus() { document.activeElement=this; }
+        addEventListener(name, callback) { const previous=this.listeners[name]; this.listeners[name]=previous ? event=>{previous(event);callback(event);} : callback; }
     }
     const body = new Element('body');
     const document = {
-        body, documentElement: { lang: 'en' }, readyState: 'loading', cookie,
+        body, documentElement: { lang: 'en' }, readyState: 'loading', cookie,activeElement:null,
         querySelector: selector => body.querySelector(selector),
-        addEventListener: (name, callback) => events.set('document:' + name, callback),
+        querySelectorAll: selector => body.querySelectorAll(selector),
+        addEventListener: (name, callback) => {const key='document:'+name,previous=events.get(key);events.set(key,previous ? event=>{previous(event);callback(event);} : callback);},
         createTreeWalker(root, mask, filter) {
             const found = [];
             const walk = parent => { for (const node of parent.children || []) { const result = filter.acceptNode(node); if (result !== 2) { if (result === 1) found.push(node); if (node.nodeType === 1) walk(node); } } };
@@ -145,7 +156,13 @@ function harness({ language = 'es', enabled = true, autoEnabled = false, cookie 
     vm.runInNewContext(source, { window, document, NodeFilter: { SHOW_ELEMENT: 1, SHOW_TEXT: 4, FILTER_ACCEPT: 1, FILTER_REJECT: 2 }, MutationObserver: Observer, URL, AbortController, setTimeout, clearTimeout, fetch: async (url, options) => { requests.push({ url, options }); return { ok: true, json: async () => resolver }; } }, { filename: file });
     const e = (tag, attrs, children) => new Element(tag, attrs, children);
     const tick = () => { if (records.length && activeObserver) activeObserver.callback(records.splice(0)); while (frames.length) frames.shift()(); };
-    return { body, document, window, e, text: value => new Text(value), start: () => events.get('document:DOMContentLoaded')?.(), tick, records, observers, events, assigns, replaces, requests, writes: () => writes };
+    const dispatch=(type,target,options={})=>{
+        const event={type,target,button:0,ctrlKey:false,metaKey:false,shiftKey:false,altKey:false,defaultPrevented:false,propagationStopped:false,...options,
+            preventDefault(){this.defaultPrevented=true;},stopPropagation(){this.propagationStopped=true;}};
+        for(let node=target;node;node=node.parentElement){event.currentTarget=node;node.listeners?.[type]?.(event);if(event.propagationStopped)return event;}
+        event.currentTarget=document;events.get('document:'+type)?.(event);if(!event.propagationStopped){event.currentTarget=window;events.get('window:'+type)?.(event);}return event;
+    };
+    return { body, document, window, e, dispatch,text: value => new Text(value), start: () => events.get('document:DOMContentLoaded')?.(), tick, records, observers, events, assigns, replaces, requests, writes: () => writes };
 }
 test('Spanish active document translates exact UI while preserving all protected surfaces and typed values', () => {
     const h = harness(); const normal = h.e('button', { 'aria-label': 'Search reports', 'data-id': 'Search reports' }, ['Search reports']); h.body.append(normal);
@@ -180,11 +197,97 @@ test('pagehide disconnects observer; BFCache pageshow restores translation once'
     h.events.get('window:pagehide')(); element.children[0].nodeValue='Search reports'; h.tick(); assert.equal(element.children[0].nodeValue,'Search reports');
     h.events.get('window:pageshow')({ persisted:true }); assert.equal(element.children[0].nodeValue,'Buscar informes');
 });
-test('language selector uses only user change and preserves unsaved form on declined confirmation', () => {
-    const h=harness({language:'en'}); const select=h.e('select',{'data-pc-language-select':'',value:'en'},[]); const switcher=h.e('nav',{'data-pc-language-switcher':'',translate:'no'},[select]); const header=h.e('div',{class:'header-actions'},[]); h.body.append(header); h.body.append(switcher); h.start();
-    assert.equal(header.children[0],switcher); assert.equal(h.assigns.length,0);
-    h.events.get('document:input')({target:h.e('input',{value:'typing'},[])}); select.value='es'; select.listeners.change(); assert.equal(h.assigns.length,0); assert.equal(select.value,'en');
-    h.window.confirm=()=>true; select.value='es'; select.listeners.change(); assert.equal(h.assigns.length,1); assert.equal(new URL(h.assigns[0]).searchParams.get('pc_lang'),'es');
+function languageMenu(h,language='en') {
+    const trigger=h.e('summary',{'data-pc-language-trigger':''},['Language',h.e('svg',{'aria-hidden':'true'},[])]);
+    const en=h.e('a',{'data-pc-language-option':'en',href:languageUrl(h.window.location.href,'en'),...(language==='en'?{'aria-current':'true'}:{})},['English']);
+    const es=h.e('a',{'data-pc-language-option':'es',href:languageUrl(h.window.location.href,'es'),...(language==='es'?{'aria-current':'true'}:{})},['Español']);
+    const options=h.e('div',{class:'pc-language-options'},[en,es]);
+    const menu=h.e('details',{'data-pc-language-menu':''},[trigger,options]);
+    const switcher=h.e('nav',{'data-pc-language-switcher':'',translate:'no'},[menu]);
+    const header=h.e('div',{class:'header-actions'},[]);h.body.append(header);h.body.append(switcher);
+    return {trigger,en,es,options,menu,switcher,header};
+}
+
+test('language details moves into header, preserves fixed label and self-language names, and marks current option',()=>{
+    for(const language of ['en','es']){
+        const h=harness({language});const ui=languageMenu(h,language);h.start();
+        assert.equal(ui.header.children[0],ui.switcher);assert.equal(h.assigns.length,0);assert.equal(ui.trigger.children[0].nodeValue,'Language');
+        assert.equal(ui.en.children[0].nodeValue,'English');assert.equal(ui.es.children[0].nodeValue,'Español');
+        assert.equal(ui[language].getAttribute('aria-current'),'true');assert.equal(ui[language==='en'?'es':'en'].getAttribute('aria-current'),null);
+        assert.equal(ui.menu.hasAttribute('role'),false);assert.equal(ui.trigger.hasAttribute('role'),false);assert.equal(ui.options.hasAttribute('role'),false);
+    }
+});
+
+test('language anchors preserve path query hash and plain selection only changes the language parameter',()=>{
+    const h=harness({language:'en',href:'https://shop.example/cart/?coupon=KEEP&pc_lang=en&pc_lang=en#totals'});const ui=languageMenu(h);h.start();
+    const event=h.dispatch('click',ui.es);
+    assert.equal(event.defaultPrevented,true);assert.equal(h.assigns.length,1);
+    const next=new URL(h.assigns[0]);assert.equal(next.pathname,'/cart/');assert.equal(next.searchParams.get('coupon'),'KEEP');assert.deepEqual(next.searchParams.getAll('pc_lang'),['es']);assert.equal(next.hash,'#totals');
+    assert.equal(ui.es.href,languageUrl(h.window.location.href,'es'));
+});
+
+test('clicking current language closes details without navigation or dirty-form confirmation',()=>{
+    const h=harness({language:'es'});const ui=languageMenu(h,'es');h.start();let confirmations=0;h.window.confirm=()=>{confirmations++;return false;};
+    h.dispatch('input',h.e('input',{value:'unsaved'},[]));ui.menu.open=true;
+    const event=h.dispatch('click',ui.es);
+    assert.equal(event.defaultPrevented,true);assert.equal(ui.menu.open,false);assert.equal(h.assigns.length,0);assert.equal(confirmations,0);
+});
+
+test('Escape closes the language details and restores focus to its native summary',()=>{
+    const h=harness({language:'en'});const ui=languageMenu(h);h.start();ui.menu.open=true;ui.es.focus();
+    const event=h.dispatch('keydown',ui.es,{key:'Escape'});
+    assert.equal(ui.menu.open,false);assert.equal(h.document.activeElement,ui.trigger);assert.equal(event.defaultPrevented,true);assert.equal(h.assigns.length,0);
+});
+
+test('outside pointer/click closes language details without stealing focus or navigating',()=>{
+    const h=harness({language:'en'});const ui=languageMenu(h);const outside=h.e('button',{},['Outside']);h.body.append(outside);h.start();
+    ui.menu.open=true;outside.focus();h.dispatch('pointerdown',outside);const event=h.dispatch('click',outside);
+    assert.equal(ui.menu.open,false);assert.equal(h.document.activeElement,outside);assert.equal(event.defaultPrevented,false);assert.equal(h.assigns.length,0);
+});
+
+test('moving keyboard focus outside closes details while retaining focus on the outside target',()=>{
+    const h=harness({language:'en'});const ui=languageMenu(h);const outside=h.e('button',{},['Outside']);h.body.append(outside);h.start();
+    ui.menu.open=true;outside.focus();h.dispatch('focusin',outside);assert.equal(ui.menu.open,false);assert.equal(h.document.activeElement,outside);assert.equal(h.assigns.length,0);
+});
+
+test('arrow keys move keyboard focus among native language links while Tab remains native',()=>{
+    const h=harness({language:'en'});const ui=languageMenu(h);h.start();ui.trigger.focus();
+    h.dispatch('keydown',ui.trigger,{key:'ArrowDown'});assert.equal(ui.menu.open,true);assert.equal(h.document.activeElement,ui.en);
+    h.dispatch('keydown',ui.en,{key:'ArrowDown'});assert.equal(h.document.activeElement,ui.es);
+    h.dispatch('keydown',ui.es,{key:'ArrowUp'});assert.equal(h.document.activeElement,ui.en);
+    const tab=h.dispatch('keydown',ui.en,{key:'Tab'});assert.equal(tab.defaultPrevented,false);assert.equal(h.assigns.length,0);
+});
+
+test('native language keyboard navigation wraps and supports Home and End without page navigation',()=>{
+    const h=harness({language:'en'});const ui=languageMenu(h);h.start();
+    h.dispatch('keydown',ui.trigger,{key:'ArrowUp'});assert.equal(h.document.activeElement,ui.es);
+    h.dispatch('keydown',ui.es,{key:'ArrowDown'});assert.equal(h.document.activeElement,ui.en);
+    h.dispatch('keydown',ui.en,{key:'End'});assert.equal(h.document.activeElement,ui.es);
+    h.dispatch('keydown',ui.es,{key:'Home'});assert.equal(h.document.activeElement,ui.en);assert.equal(h.assigns.length,0);
+});
+
+test('language anchors handle child text/icon targets and honor an earlier prevented click',()=>{
+    const h=harness({language:'en'});const ui=languageMenu(h);const label=h.e('span',{},['Español']);const icon=h.e('svg',{'aria-hidden':'true'},[]);ui.es.append(label);ui.es.append(icon);h.start();
+    let confirmations=0;h.window.confirm=()=>{confirmations++;return true;};h.dispatch('input',h.e('input',{value:'dirty'},[]));
+    h.dispatch('click',label,{defaultPrevented:true});assert.equal(h.assigns.length,0);assert.equal(confirmations,0);
+    h.dispatch('click',icon);assert.equal(h.assigns.length,1);assert.equal(confirmations,1);assert.equal(new URL(h.assigns[0]).searchParams.get('pc_lang'),'es');
+});
+
+test('Escape while the language details is already closed does not hijack focus or prevent other handlers',()=>{
+    const h=harness({language:'en'});const ui=languageMenu(h);h.start();ui.es.focus();
+    const event=h.dispatch('keydown',ui.es,{key:'Escape'});assert.equal(ui.menu.open,false);assert.equal(h.document.activeElement,ui.es);assert.equal(event.defaultPrevented,false);assert.equal(h.assigns.length,0);
+});
+
+test('declined dirty-form language selection keeps the current page and entered value; confirmed selection navigates',()=>{
+    const h=harness({language:'en'});const ui=languageMenu(h);const input=h.e('input',{value:'typing'},[]);h.body.append(input);h.start();
+    let confirmations=0;h.window.confirm=()=>{confirmations++;return false;};h.dispatch('input',input);ui.menu.open=true;
+    const declined=h.dispatch('click',ui.es);assert.equal(declined.defaultPrevented,true);assert.equal(h.assigns.length,0);assert.equal(input.value,'typing');assert.equal(confirmations,1);
+    h.window.confirm=()=>{confirmations++;return true;};h.dispatch('click',ui.es);assert.equal(h.assigns.length,1);assert.equal(new URL(h.assigns[0]).searchParams.get('pc_lang'),'es');assert.equal(confirmations,2);assert.equal(input.value,'typing');
+});
+
+for(const options of [{ctrlKey:true},{metaKey:true},{button:1},{shiftKey:true},{altKey:true}]) test('modified language anchor uses native navigation without confirm/interception: '+JSON.stringify(options),()=>{
+    const h=harness({language:'en'});const ui=languageMenu(h);h.start();let confirmations=0;h.window.confirm=()=>{confirmations++;return false;};h.dispatch('input',h.e('input',{value:'dirty'},[]));ui.menu.open=true;
+    const event=h.dispatch('click',ui.es,options);assert.equal(event.defaultPrevented,false);assert.equal(h.assigns.length,0);assert.equal(confirmations,0);assert.equal(ui.es.href,languageUrl(h.window.location.href,'es'));
 });
 const settle=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
 test('anonymous automatic selection calls same-origin resolver once and only honors geoip enabled response', async()=>{

@@ -25,6 +25,20 @@ namespace {
     function apply_filters( $name, $value, ...$args ) { return $value; }
     function __( $text, $domain = '' ) { return $text; }
     function absint( $value ) { return abs( (int) $value ); }
+    function esc_attr( $value ) { return htmlspecialchars( (string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' ); }
+    function esc_html( $value ) { return htmlspecialchars( (string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' ); }
+    function esc_url( $value ) { return esc_attr( $value ); }
+    function wp_unslash( $value ) { return stripslashes( $value ); }
+    // Only the URL dependencies of switcher() are process-local fixtures. Real output
+    // is inspected below with the actual native WordPress HTML lexical processor.
+    function home_url( $path = '' ) { return 'https://shop.example' . $path; }
+    function language_url_query_fixture( string $key, $value, string $url ): string {
+        $parts = parse_url( $url ); $query = array(); parse_str( $parts['query'] ?? '', $query );
+        if ( null === $value ) { unset( $query[$key] ); } else { $query[$key] = $value; }
+        return ( $parts['scheme'] ?? 'https' ) . '://' . ( $parts['host'] ?? 'shop.example' ) . ( $parts['path'] ?? '/' ) . ( $query ? '?' . http_build_query( $query, '', '&', PHP_QUERY_RFC3986 ) : '' ) . ( isset( $parts['fragment'] ) ? '#' . $parts['fragment'] : '' );
+    }
+    function add_query_arg( $key, $value, $url ) { return language_url_query_fixture( $key, $value, $url ); }
+    function remove_query_arg( $key, $url ) { return language_url_query_fixture( $key, null, $url ); }
     function _doing_it_wrong( $function, $message, $version ) { throw new \RuntimeException( $function . ': ' . $message ); }
     function get_option( ...$args ) { throw new \RuntimeException( 'No WordPress option/database access is allowed in this offline test.' ); }
     require_once ABSPATH . 'wp-includes/utf8.php';
@@ -92,6 +106,46 @@ namespace {
     check( translate( '<div translate="no"><p>Offers</p></div><p>Offers</p>' ) === '<div translate="no"><p>Offers</p></div><p>Ofertas</p>', 'skip scope ends at corresponding closing tag' );
     $translator = \PeptideCore\Storefront_Translator::class;
     $state = \PeptideCore\Storefront_Translation::class;
+    $previous_uri = $_SERVER['REQUEST_URI'] ?? null;
+    $_SERVER['REQUEST_URI'] = '/cart/?coupon=KEEP&pc_lang_auto=1&pc_lang=en&pc_lang=en#totals';
+    foreach ( array( 'en', 'es' ) as $selected_language ) {
+        $state::$language = $selected_language; $state::$active = true; $state::$public = true;
+        ob_start(); $translator::switcher(); $markup = ob_get_clean();
+        check( ! str_contains( $markup, '<select' ) && ! str_contains( $markup, '<option' ), 'native details switcher replaces the clipped select: ' . $selected_language );
+        check( str_contains( $markup, '<span>Language</span>' ) && str_contains( $markup, '>English</span>' ) && str_contains( $markup, '>Español</span>' ), 'fixed Language trigger and self-language labels are emitted in both document languages: ' . $selected_language );
+        $processor = new \WP_HTML_Tag_Processor( $markup );
+        $details = 0; $summaries = 0; $links = array(); $controls = null; $panel = null; $native = true; $no_translate = false;
+        while ( $processor->next_tag() ) {
+            $tag = $processor->get_tag();
+            if ( 'NAV' === $tag ) { $no_translate = 'no' === $processor->get_attribute( 'translate' ); }
+            if ( 'DETAILS' === $tag && null !== $processor->get_attribute( 'data-pc-language-menu' ) ) { ++$details; }
+            if ( 'SUMMARY' === $tag && null !== $processor->get_attribute( 'data-pc-language-trigger' ) ) { ++$summaries; $controls = $processor->get_attribute( 'aria-controls' ); }
+            if ( 'DIV' === $tag && 'pc-language-options' === $processor->get_attribute( 'class' ) ) { $panel = $processor->get_attribute( 'id' ); }
+            if ( in_array( $tag, array( 'DETAILS', 'SUMMARY', 'DIV', 'A' ), true ) && null !== $processor->get_attribute( 'role' ) ) { $native = false; }
+            if ( 'A' === $tag && null !== $processor->get_attribute( 'data-pc-language-option' ) ) {
+                $language = $processor->get_attribute( 'data-pc-language-option' );
+                $links[$language] = array( 'href' => $processor->get_attribute( 'href' ), 'current' => $processor->get_attribute( 'aria-current' ), 'lang' => $processor->get_attribute( 'lang' ), 'hreflang' => $processor->get_attribute( 'hreflang' ) );
+            }
+        }
+        check( $details === 1 && $summaries === 1 && $native && $no_translate && $controls && $controls === $panel, 'actual native HTML parser finds one translated-off details/summary and matching controlled panel, no menu role: ' . $selected_language );
+        check( array_keys( $links ) === array( 'en', 'es' ), 'exactly two functional language anchors exist without JavaScript: ' . $selected_language );
+        foreach ( $links as $language => $props ) {
+            $url = parse_url( $props['href'] ); $query = array(); parse_str( $url['query'] ?? '', $query );
+            check( 'https' === ( $url['scheme'] ?? '' ) && 'shop.example' === ( $url['host'] ?? '' ) && '/cart/' === ( $url['path'] ?? '' ) && 'totals' === ( $url['fragment'] ?? '' ) && $query === array( 'coupon' => 'KEEP', 'pc_lang' => $language ), 'language link retains path/unrelated query/available fragment and replaces only explicit preference: ' . $selected_language . '/' . $language );
+            check( $props['current'] === ( $language === $selected_language ? 'true' : null ) && $props['lang'] === $language && $props['hreflang'] === $language, 'only actual current language has aria-current and each label has language metadata: ' . $selected_language . '/' . $language );
+        }
+        check( translate( $markup, array( 'Language' => 'Idioma', 'English' => 'Inglés', 'Español' => 'Spanish' ) ) === $markup, 'translation never rewrites fixed trigger/self-language names or functional hrefs: ' . $selected_language );
+    }
+    foreach ( array( false, true ) as $enabled ) {
+        $state::$enabled = $enabled; $state::$public = false;
+        ob_start(); $translator::switcher(); $markup = ob_get_clean();
+        check( '' === $markup, 'language switcher is absent on excluded management/payment/nonpublic requests, enabled=' . (int) $enabled );
+    }
+    $state::$enabled = false; $state::$public = true;
+    ob_start(); $translator::switcher(); $markup = ob_get_clean();
+    check( '' === $markup, 'disabled translation does not emit a language switcher' );
+    $state::$enabled = true; $state::$public = true;
+    if ( null === $previous_uri ) { unset( $_SERVER['REQUEST_URI'] ); } else { $_SERVER['REQUEST_URI'] = $previous_uri; }
     foreach ( array( array( 'en', true, true ), array( 'es', false, true ), array( 'es', true, false ) ) as [$language,$active,$public] ) {
         $state::$language = $language; $state::$active = $active; $state::$public = $public;
         ob_start(); $before = ob_get_level(); $translator::start_buffer(); $after = ob_get_level(); ob_end_clean();

@@ -1,0 +1,9 @@
+# Language dropdown correction
+
+2026-11-05 · Codex. The user reported clipped EN/ES text and explicitly requested a fixed `Language` trigger with selectable languages below it.
+
+Only the existing language presentation component changes: plugin `class-storefront-translator.php`, `storefront-language.js` and `storefront-language.css`. The native disclosure contains real English/Español links, current-language indication, Escape/outside/focus dismissal, keyboard navigation and dirty-form protection. Normal modified links retain native new-tab behavior. The trigger remains `Language` in either locale as requested. No business DTO, payment flow, language preference priority, translation dictionary, automatic country mapping, setting or customer/cart/order value is changed.
+
+The existing storefront visual identity stays intact. Mobile spacing is scoped to headers containing this language control; the text stays complete and touch targets remain reachable. Local/browser checks and exact selective production publication are recorded below after completion. Work/evidence: `D:/Codex/Tasks/2026-11-05/language-dropdown-fix`.
+
+Local checks: 38 JavaScript interaction/privacy regressions and 85 actual WordPress lexical HTML/REST checks pass; PHP lint and diff checks pass. Actual IAB mobile preview opened Language and displayed real English/Español links. At the 360 device setting the actual header working width and scroll width were both 305px, with an 84.22px-wide Language trigger, a 168px menu fully inside the viewport, and 44px trigger/search/cart/menu hit targets. Existing local cart count remained three; no cart or checkout action was performed. Impeccable context/detector ran once; its radius advisory was fixed to the existing 6px control value, while the pre-existing 11px attribution text is retained. DESIGN.md governs admin surfaces and explicitly excludes the public storefront; no unrelated design-system drift was repaired.
