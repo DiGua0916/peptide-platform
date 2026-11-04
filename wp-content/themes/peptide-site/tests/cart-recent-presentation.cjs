@@ -42,7 +42,7 @@ check('a parent cannot be sent in place of its displayed variation', () => { ass
     const calls = []; let resolveWrite;
     const client = createClient({ cartApiUrl: 'https://shop.test/wp-json/wc/store/v1/cart' }, { fetch: async (url, options) => {
         calls.push({ url, options }); if (options.method === 'POST') await new Promise(resolve => { resolveWrite = resolve; });
-        return { ok: true, headers: { get: name => name === 'Nonce' ? 'synthetic-test-nonce' : null }, json: async () => options.method === 'POST' ? after : before };
+        return { ok: true, status: options.method === 'POST' ? 201 : 200, headers: { get: name => name === 'Nonce' ? 'synthetic-test-nonce' : null }, json: async () => options.method === 'POST' ? after : before };
     } });
     await client.refresh();
     const first = client.write('add-item', recentAddPayload(recentPresentation(parent, exact)));

@@ -13,6 +13,32 @@
             return new Intl.NumberFormat('en-US', { style: 'currency', currency: metadata.currency_code, minimumFractionDigits: precision, maximumFractionDigits: precision }).formatToParts(amount < 0n ? -1n : 1n).map(part => part.type === 'integer' ? whole : part.type === 'fraction' ? fraction : part.value).join('');
         } catch (_) { return '—'; }
     }
+    // The native Store API does not identify an applied coupon's origin across
+    // GETs. A neutral name hides internal codes without guessing an activity.
+    function couponPresentation(coupon) {
+        const amount = coupon?.totals?.total_discount;
+        const formatted = isMinor(amount) && BigInt(amount) >= 0n ? money(amount, coupon.totals) : '—';
+        const label = 'Order discount' + (formatted !== '—' ? ' · ' + formatted : '');
+        return { label, removeLabel: 'Remove ' + label, code: typeof coupon?.code === 'string' ? coupon.code : '' };
+    }
+    function confirmedCartAdd(before, after, addition, status) {
+        if (status !== 201 || !validCart(before) || !validCart(after) || !Number.isSafeInteger(addition?.id) || addition.id < 1 || !Number.isSafeInteger(addition.quantity) || addition.quantity < 1) return false;
+        const quantity = cart => {
+            let total = 0;
+            for (const item of cart.items) if (item.id === addition.id) {
+                if (item.quantity < 0 || !Number.isSafeInteger(total + item.quantity)) return null;
+                total += item.quantity;
+            }
+            return total;
+        };
+        const previous = quantity(before), current = quantity(after);
+        if (previous === null || current === null || !Number.isSafeInteger(previous + addition.quantity) || current !== previous + addition.quantity) return false;
+        if (addition.receipt) {
+            const receipt = after.extensions?.peptide_core?.activity_recommendation;
+            if (receipt?.requested !== true || receipt.added !== true) return false;
+        }
+        return true;
+    }
     function activityAllowed(latest, applied) {
         if (!latest || latest.enabled === false || latest.visible === false) return false;
         // A newly applied setting invalidates an older cart's presentation. A
@@ -208,7 +234,7 @@
         let cart = null, nonce = '', valid = false, pending = false, error = '', errorOperation = '', epoch = 0, readPromise = null, readController = null, externalTimer = null, destroyed = false;
         const snapshot = () => ({ cart, valid, pending, error, errorOperation });
         const change = () => notify('state', snapshot());
-        async function request(url, body, signal) {
+        async function requestResult(url, body, signal) {
             const controller = new AbortController(), timer = setTimeout(() => controller.abort(), environment.timeoutMs || 20000);
             const abort = () => controller.abort(); signal?.addEventListener('abort', abort, { once: true });
             try {
@@ -219,12 +245,14 @@
                 const fresh = response.headers?.get('Nonce'); if (fresh) nonce = fresh;
                 const data = await response.json();
                 if (!response.ok) throw new Error(typeof data?.message === 'string' ? data.message : 'Could not update your bag.');
-                return data;
+                return { data, status: response.status };
             } catch (failure) {
                 if (failure?.name === 'AbortError') throw new Error('The request timed out. Please check your bag before trying again.');
                 throw failure;
             } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
         }
+        // Public reads and detached quote requests retain their original DTO API.
+        async function request(url, body, signal) { return (await requestResult(url, body, signal)).data; }
         async function refresh() {
             if (destroyed || pending) return snapshot();
             if (readPromise) return readPromise;
@@ -247,10 +275,12 @@
         function invalidate() { epoch++; readController?.abort(); readPromise = null; readController = null; valid = false; }
         async function write(action, body) {
             if (destroyed || pending || !valid || !nonce || (environment.canWrite && !environment.canWrite())) throw new Error('Your bag is updating. Please try again when it is ready.');
+            const before = cart;
+            const addition = action === 'add-item' ? { id: body?.id, quantity: body?.quantity, receipt: body?.extensions?.peptide_core?.activityRecommendation !== undefined } : null;
             invalidate(); const generation = epoch; pending = true; error = ''; errorOperation = ''; change(); notify('start', { source: 'drawer', owner: 'live-cart' });
             try {
-                const result = await request(config.cartApiUrl + '/' + action, body);
-                if (destroyed || generation !== epoch || !validCart(result)) throw new Error('The cart update could not be confirmed. Review your bag before trying again.');
+                const response = await requestResult(config.cartApiUrl + '/' + action, body), result = response.data;
+                if (destroyed || generation !== epoch || !validCart(result) || (addition && !confirmedCartAdd(before, result, addition, response.status))) throw new Error('The cart update could not be confirmed. Review your bag before trying again.');
                 cart = result; valid = true; pending = false; change(); notify('updated', { cart, source: 'drawer', owner: 'live-cart', mutation: action, stale: false });
                 return { confirmed: true, cartCount: cart.items_count, rawCart: cart };
             } catch (failure) {
@@ -273,7 +303,7 @@
         }
         return { snapshot, refresh, request, write, externalStart, externalUpdate, destroy() { destroyed = true; invalidate(); clearTimeout(externalTimer); } };
     }
-    if (typeof module === 'object' && module.exports) module.exports = { validCart, money, totals, createClient, activityAllowed, activityPresentation, reconcileRows, statusPresentation, createDrawerController, createNativeCheckoutBridge, recentPresentationUrl, recentPresentation, recentAddPayload };
+    if (typeof module === 'object' && module.exports) module.exports = { validCart, money, couponPresentation, confirmedCartAdd, totals, createClient, activityAllowed, activityPresentation, reconcileRows, statusPresentation, createDrawerController, createNativeCheckoutBridge, recentPresentationUrl, recentPresentation, recentAddPayload };
     if (!global?.document || !global.VialCoveLiveCartConfig) return;
     const document = global.document, config = global.VialCoveLiveCartConfig, settings = config.settings || {}, roots = [...document.querySelectorAll('[data-vc-live-cart]')];
     if (!roots.length) return;
@@ -400,8 +430,8 @@
             if (view.totalsSignature !== totalsSignature) { view.totalsSignature = totalsSignature; root.querySelector('[data-cart-totals]').replaceChildren(...totalRows.map(total => { const row = el('div', 'vc-live-cart__total-row' + (total.total ? ' is-total' : '') + (total.savings ? ' is-saving' : '')); row.append(el('span', '', clean(total.label)), el('strong', '', total.unknown ? 'At checkout' : money(total.minor, cart.totals))); return row; })); }
             const checkout = root.querySelector('[data-cart-checkout]'); checkout.setAttribute('aria-disabled', String(!valid || pending || !cart?.items.length));
             root.querySelectorAll('[data-cart-coupon] input,[data-cart-coupon] button').forEach(node => { node.disabled = !valid || pending; });
-            const coupons = root.querySelector('[data-cart-coupons]'), couponsSignature = JSON.stringify((cart?.coupons || []).map(coupon => coupon.code));
-            if (view.couponsSignature !== couponsSignature) { view.couponsSignature = couponsSignature; coupons.replaceChildren(...(cart?.coupons || []).map(coupon => { const button = el('button', '', clean(coupon.code) + ' ×'); button.type = 'button'; button.setAttribute('aria-label', 'Remove coupon ' + clean(coupon.code)); button.addEventListener('click', () => client.write('remove-coupon', { code: coupon.code }).catch(() => {})); return button; })); }
+            const coupons = root.querySelector('[data-cart-coupons]'), couponsSignature = JSON.stringify((cart?.coupons || []).map(coupon => { const display = couponPresentation(coupon); return [display.code, display.label, display.removeLabel]; }));
+            if (view.couponsSignature !== couponsSignature) { view.couponsSignature = couponsSignature; coupons.replaceChildren(...(cart?.coupons || []).map(coupon => { const display = couponPresentation(coupon), button = el('button', '', display.label + ' ×'); button.type = 'button'; button.setAttribute('aria-label', display.removeLabel); button.addEventListener('click', () => client.write('remove-coupon', { code: display.code }).catch(() => {})); return button; })); }
             coupons.querySelectorAll('button').forEach(button => { button.disabled = !valid || pending; });
             renderRecent(view, state);
             if (anchor?.isConnected && scrollHost && !root.hidden) { const delta = anchor.getBoundingClientRect().top - anchorTop; if (Number.isFinite(delta) && Math.abs(delta) > 1) scrollHost.scrollTop += delta; }
