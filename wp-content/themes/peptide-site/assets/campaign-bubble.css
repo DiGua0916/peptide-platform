@@ -32,3 +32,36 @@
  .vc-campaign-bubble .pc-campaign__condition{font-size:11px;line-height:16px;letter-spacing:-.01em}
  .vc-campaign-bubble .pc-campaign__discount{font-size:clamp(19px,5.6vw,24px);line-height:24px;letter-spacing:-.04em}
 }
+
+/* Optional small in-page announcement: one native set of alternatives, manually scrollable. */
+.vc-campaign-strip{position:static;width:100%;max-width:100%;margin:0;padding:0;background:#17343e;color:#fff;font-family:Geist,Arial,sans-serif}
+.vc-campaign-strip>.pc-cb.vc-m__inner{display:block;width:min(calc(100% - 96px),1440px);max-width:none;margin:0 auto;padding:0}
+.vc-campaign-strip .pc-campaign{display:grid;grid-template-columns:max-content minmax(0,1fr);align-items:center;column-gap:16px;row-gap:0;min-width:0;padding:8px 0;border:0;border-radius:0;background:transparent;color:inherit;box-shadow:none}
+.vc-campaign-strip .pc-campaign::after{content:none}
+.vc-campaign-strip .pc-campaign__head{display:contents;margin:0;padding:0;text-align:left}
+.vc-campaign-strip .pc-campaign .pc-campaign__title{grid-column:1;grid-row:1;max-width:12ch;margin:0;color:#fff;font:650 14px/20px Geist,Arial,sans-serif;letter-spacing:-.01em;text-align:left;text-wrap:balance;overflow-wrap:anywhere}
+.vc-campaign-strip .pc-campaign__rail{grid-column:2;grid-row:1;min-width:0;margin:0;padding:0}
+.vc-campaign-strip .pc-campaign__tiers{display:flex!important;grid-template-columns:none!important;grid-auto-columns:auto!important;grid-auto-flow:row!important;align-items:center;gap:0;min-width:0;margin:0;padding:0;overflow-x:auto;overflow-y:hidden;scroll-snap-type:none;scrollbar-width:none;overscroll-behavior-inline:contain;scroll-behavior:auto}
+.vc-campaign-strip .pc-campaign__tiers::-webkit-scrollbar{display:none}
+.vc-campaign-strip .pc-campaign__tiers:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.vc-campaign-strip .pc-campaign__tier{display:flex;flex:0 0 auto;align-items:center;justify-content:flex-start;gap:6px;min-width:0;padding:0 16px;border:0;border-radius:0;background:transparent;color:inherit;white-space:nowrap;overflow:visible}
+.vc-campaign-strip .pc-campaign__tier:first-child{padding-left:0}
+.vc-campaign-strip .pc-campaign__tier+.pc-campaign__tier{border-left:1px solid #557079}
+.vc-campaign-strip .pc-campaign__condition,.vc-campaign-strip .pc-campaign__discount{display:inline;min-height:0;margin:0;padding:0;border:0;border-radius:0;background:transparent;font-size:13px;line-height:20px;letter-spacing:0;white-space:nowrap;overflow-wrap:normal;text-align:left}
+.vc-campaign-strip .pc-campaign__condition{order:1;color:#fff;font-weight:400}
+.vc-campaign-strip .pc-campaign__discount{order:0;color:#ffb4bd;font-weight:700;font-variant-numeric:tabular-nums}
+.vc-campaign-strip .pc-campaign__discount small{display:inline;margin-left:4px;font:inherit}
+.vc-campaign-strip .pc-campaign__discount::before,.vc-campaign-strip .pc-campaign__discount::after{display:none}
+.vc-campaign-strip .pc-campaign__tier-detail{order:2;margin:0;color:#fff;font-size:12px;line-height:20px;white-space:normal}
+.vc-campaign-strip .pc-campaign__description,.vc-campaign-strip .pc-campaign__notes,.vc-campaign-strip .vc-campaign-bubble__status,.vc-campaign-strip .pc-campaign__countdown,.vc-campaign-strip .pc-campaign__action{grid-column:1/-1;max-width:none;margin:8px 0 0;color:#fff;font-size:12px;line-height:16px;overflow-wrap:anywhere;text-align:left}
+.vc-campaign-strip .pc-campaign__description p,.vc-campaign-strip .pc-campaign__notes p{margin:0}
+.vc-campaign-strip .pc-campaign__rail-controls{display:none!important}
+.vc-campaign-strip .pc-campaign__tier.vc-campaign-loop-start{padding-left:0;border-left:0}
+@media(max-width:767px){
+ .vc-campaign-strip>.pc-cb.vc-m__inner{width:calc(100% - 40px)}
+ .vc-campaign-strip .pc-campaign{column-gap:12px}
+ .vc-campaign-strip .pc-campaign .pc-campaign__title{font-size:13px;line-height:20px}
+ .vc-campaign-strip .pc-campaign__condition,.vc-campaign-strip .pc-campaign__discount{font-size:12px;line-height:20px}
+ .vc-campaign-strip .pc-campaign__tier{padding-inline:12px}
+ .vc-campaign-strip .pc-campaign__tier:first-child{padding-left:0}
+}

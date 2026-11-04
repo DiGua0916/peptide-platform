@@ -1181,3 +1181,11 @@ HTTP聚合探针已证 catalogSupported=true、quoteHooksSupported=false、unsup
 用户批准“短介绍→紧凑真实活动券→分类/搜索商品→服务”方案，替代上一条活动先于大hero的顺序。home685仍保留10个原积木身份，仅前4项重排为hero/campaign-bubble/collection/service-benefits，其余COA、统计、三理由、About、FAQ、结尾内容不动。Hero新增已注册presentation=product_first，title为Research peptides. Clear choices.，description为Choose your specification. Order by the box.，按钮Shop peptides保留原href/target；原眉标、数量行、次CTA、大媒体只在紧凑模式不输出，原设置与素材仍保存可恢复。活动四个外padding为0，规则/绑定未改；collection新增catalogLayout=product_first，空eyebrow、title Shop peptides、空link，原cardPresentation/source/products/order/filter/价格不变。详见 [frontend-home-product-first-2026-11-04.md](frontend-home-product-first-2026-11-04.md)。
 
 根代理已正常layout API save/publish home685，draft/published同步，另7份文档revision/原文哈希保护均未变。名义390实际内容375px：hero188px、券99.33px、商品区top402、首行价格bottom803；名义375/430实际360/415无横向溢出，三档完整。Retatrutide搜索真实筛2件、清空回8件；真实Tirzepatide弹窗20mg*10vials原生Add启用，未实际Add/订单/付款。23新hero/catalog、33活动、41卡片、8Node及PHP lint/diff检查通过；桌面1280×720实检文档宽1265无横溢，hero136px、活动97.33px、商品区top354，四列商品正常。任务备份/候选/回执在D:/Codex/Tasks/2026-11-04/home-product-first/work，不入Git。当前本机已发布、源码待本轮正常Git交付最终ref；未公网部署，不改后端dirtytree/活动规则或商品价。
+
+### 2026-11-04 · Codex：首页恢复原版，上方保留小横条公告（最新）
+
+用户否决上一商品优先版，要求恢复首页并在上方放小横条公告；本条取代上一条已生效布局。已按原快照恢复home685 hero的demo呈现、`Research peptides. A clearer choice.`及原描述/Explore peptides按钮/媒体；collection恢复原眉标、标题、入口与catalogLayout standard。顺序恢复campaign/hero/service/collection/其余6块，活动使用campaign_announcement，四padding0、原生10980不变。旧product_first源码仍为未启用opt-in，不回滚整批源码或删除素材。根已正常API发布685，7份其他文档精确保护均未变。详见 [frontend-home-restoration-2026-11-04.md](frontend-home-restoration-2026-11-04.md)。
+
+实际390/375名义预览内容375/360均无横溢，原hero与媒体恢复、紧凑模式节点0；新vc-campaign-strip横条高36px，避免旧announcement类padding碰撞。点击原生Explore后collectionY104.67/headerY0/公告bottom−944，公告随正文滚走。未实际Add/订单/付款，未公网部署。用户追加“左活动标题固定＋右优惠自动循环”正在另一前端代理增强，动效完成/实测结论待根补充，不把本次静态横条验收写成循环已完成。任务原文/候选/回执在D:/Codex/Tasks/2026-11-04/home-restore-announcement；不改后端dirtytree、活动规则或商品价。
+
+首页恢复后续｜2026-11-04｜Codex：已完成用户追加左主题固定、右优惠顺序循环。新theme campaign-announcement.js 26px/s、小数进度、overflow才滚动；hover/focus/touch/wheel暂停，离屏/隐藏/BFCache及reduced-motion处理，装饰copies inert/aria-hidden去ID/链接/事件。实际手机标题X20及strip36不变而scrollLeft274→122.67循环，原3+副本3，无重复ID链接；16生产JS+45PHP、语法/diff通过。完整原首页仍生效，仅LocalWP及正常Git交付，未公网发布。详见frontend-home-restoration-2026-11-04.md。
