@@ -40,6 +40,32 @@
     function statusPresentation(state) {
         return { text: state.error || (state.pending ? 'Updating your bag…' : state.valid ? '' : 'Loading your bag…'), announceOnly: !!state.cart && !state.error };
     }
+    function recentPresentationUrl(base, item, origin) {
+        const url = new URL(base, origin), id = item?.productId;
+        if (url.origin !== new URL(origin).origin || !/^https?:$/.test(url.protocol) || !Number.isSafeInteger(id) || id < 1) throw new Error('Unavailable product');
+        if (url.searchParams.has('rest_route')) url.searchParams.set('rest_route', url.searchParams.get('rest_route').replace(/\/?$/, '/') + id);
+        else url.pathname = url.pathname.replace(/\/?$/, '/') + id;
+        url.searchParams.set('card', 'true');
+        if (Number.isSafeInteger(item.variationId) && item.variationId > 0) url.searchParams.set('variation', String(item.variationId));
+        return url.href;
+    }
+    function recentPresentation(item, response) {
+        const card = response?.card, id = item.productId;
+        // A history parent carries a minimum price, not a selected specification.
+        // A failed read keeps an options action; never combine that minimum with a guessed label.
+        const fallback = { ...item, variationLabel: item.variationLabel || 'Choose a specification', price: item.variationLabel ? item.price : null, canAddOne: false };
+        if (response?.id !== id || card?.productId !== id || !Number.isSafeInteger(card.purchaseId) || card.purchaseId < 1 || !Number.isSafeInteger(card.variationId) || card.variationId < 0
+            || (card.variationId === 0 ? card.purchaseId !== id : card.purchaseId !== card.variationId)
+            || (item.variationId > 0 && card.variationId !== item.variationId)
+            || typeof card.price?.text !== 'string' || !card.price.text.trim()
+            || (card.variationId > 0 && (typeof card.variationLabel !== 'string' || !card.variationLabel.trim()))) return fallback;
+        return { ...item, ...card, priceIsFrom: false, variationLabel: card.variationLabel || 'Single specification', canAddOne: card.canAddOne === true };
+    }
+    function recentAddPayload(item) {
+        if (item?.canAddOne !== true || !Number.isSafeInteger(item.productId) || item.productId < 1 || !Number.isSafeInteger(item.purchaseId) || item.purchaseId < 1 || !Number.isSafeInteger(item.variationId) || item.variationId < 0
+            || (item.variationId ? item.purchaseId !== item.variationId : item.purchaseId !== item.productId)) throw new Error('Choose a specification before adding this product.');
+        return { id: item.purchaseId, quantity: 1 };
+    }
     function totals(cart) {
         if (!validCart(cart)) return [];
         const t = cart.totals, rows = [{ label: 'Product subtotal', minor: t.total_items }];
@@ -247,7 +273,7 @@
         }
         return { snapshot, refresh, request, write, externalStart, externalUpdate, destroy() { destroyed = true; invalidate(); clearTimeout(externalTimer); } };
     }
-    if (typeof module === 'object' && module.exports) module.exports = { validCart, money, totals, createClient, activityAllowed, activityPresentation, reconcileRows, statusPresentation, createDrawerController, createNativeCheckoutBridge };
+    if (typeof module === 'object' && module.exports) module.exports = { validCart, money, totals, createClient, activityAllowed, activityPresentation, reconcileRows, statusPresentation, createDrawerController, createNativeCheckoutBridge, recentPresentationUrl, recentPresentation, recentAddPayload };
     if (!global?.document || !global.VialCoveLiveCartConfig) return;
     const document = global.document, config = global.VialCoveLiveCartConfig, settings = config.settings || {}, roots = [...document.querySelectorAll('[data-vc-live-cart]')];
     if (!roots.length) return;
@@ -384,10 +410,44 @@
     function renderRecent(view, state) {
         const root = view.root, section = root.querySelector('[data-cart-recent]'); section.hidden = settings.cart_recent_enabled === false || !recent?.visible || !recent.items?.length;
         section.inert = !state.valid || state.pending; section.setAttribute('aria-busy', String(state.pending));
+        if (view.recentOperation) { section.hidden = false; return; }
         if (section.hidden) return;
         const signature = JSON.stringify([recent.title, recent.items.slice(0, 2)]); if (view.recentSignature === signature) return; view.recentSignature = signature;
+        for (const feedback of view.recentFeedbacks || []) feedback.destroy(); view.recentFeedbacks = [];
         const heading = section.querySelector('h2'); heading.textContent = recent.title || 'Recently viewed';
-        root.querySelector('[data-cart-recent-items]').replaceChildren(...recent.items.slice(0, 2).map(item => { const card = el('article', 'vc-live-cart__recent-card'), link = productLink({ id: item.productId, name: item.name, permalink: item.permalink }); link.dataset.vcHomeProduct = String(item.productId); link.dataset.vcQuickOpen = String(item.productId); const image = el('img'); image.src = safeUrl(item.image?.url); image.alt = item.image?.alt || item.name; image.width = 60; image.height = 68; const imageLink = link.cloneNode(false); imageLink.append(image); card.append(imageLink, link, el('p', '', item.variationLabel || ''), el('strong', '', (item.priceIsFrom ? 'From ' : '') + (item.price?.text || ''))); return card; }));
+        root.querySelector('[data-cart-recent-items]').replaceChildren(...recent.items.slice(0, 2).map(item => {
+            const card = el('article', 'vc-live-cart__recent-card'), link = productLink({ id: item.productId, name: item.name, permalink: item.permalink });
+            link.dataset.vcHomeProduct = String(item.productId); link.dataset.vcQuickOpen = String(item.productId);
+            const imageLink = link.cloneNode(false), image = el('img');
+            const src = safeUrl(item.image?.url);
+            if (src) { image.src = src; image.alt = item.image?.alt || item.name; image.width = 120; image.height = 120; imageLink.append(image); }
+            else imageLink.append(el('span', 'vc-live-cart__recent-no-image', 'Image unavailable'));
+            card.append(imageLink, link, el('p', 'vc-live-cart__recent-pack', clean(item.variationLabel)));
+            if (item.price?.text) card.append(el('strong', 'vc-live-cart__recent-price', clean(item.price.text) + ' / box'));
+            if (!item.canAddOne) {
+                const options = link.cloneNode(false); options.className = 'vc-live-cart__recent-action'; options.textContent = 'Select & add'; options.setAttribute('aria-label', 'Choose specification and add ' + clean(item.name)); card.append(options);
+                return card;
+            }
+            const button = el('button', 'vc-live-cart__recent-action', 'Add 1 box +'), notice = el('p', 'vc-live-cart__recent-status'); button.type = 'button';
+            button.setAttribute('aria-label', 'Add 1 box of ' + clean(item.name) + ' ' + clean(item.variationLabel));
+            notice.setAttribute('role', 'status'); notice.setAttribute('aria-live', 'polite'); card.append(button, notice);
+            const feedbackConfig = global.vcLiveCommerce?.cartFeedback?.config || {}, successMs = feedbackConfig.enabled === false ? 0 : (feedbackConfig.successDurationMs || 1200);
+            const feedback = global.createLiveCartFeedback?.({ buttons: [button], announce: notice, bagCountElements: [...document.querySelectorAll('.vc-cart-count')], timeoutMs: 25000, successMs, burstEnabled: feedbackConfig.enabled !== false && feedbackConfig.burstEnabled !== false, bagPulseEnabled: feedbackConfig.enabled !== false && feedbackConfig.bagPulseEnabled !== false, burstDurationMs: feedbackConfig.burstDurationMs });
+            if (feedback) view.recentFeedbacks.push(feedback);
+            button.addEventListener('click', async () => {
+                const latest = client.snapshot(); if (view.recentOperation || button.disabled || !latest.valid || latest.pending) return;
+                view.recentOperation = true;
+                const submit = () => client.write('add-item', recentAddPayload(item));
+                let ok = false;
+                try {
+                    if (feedback) ok = (await feedback.run({ submit, quantity: 1, productName: clean(item.name), triggerButton: button })).ok === true;
+                    else { button.disabled = true; await submit(); ok = true; notice.textContent = '1 box added to your bag.'; }
+                } catch (_) { notice.textContent = 'Could not confirm the update. Check your bag before trying again.'; }
+                if (disposed) return;
+                view.recentResetTimer = setTimeout(() => { view.recentOperation = false; view.recentSignature = ''; render(client.snapshot()); }, ok ? successMs : 0);
+            });
+            return card;
+        }));
     }
     function scheduleEnrichment(state) {
         clearTimeout(enrichmentTimer); const generation = ++enrichment;
@@ -399,6 +459,12 @@
             const requests = state.cart.items.filter(item => !parentIds.has(item.id)).map(async item => { try { const product = await client.request(config.productsApiUrl + item.id); if (Number.isSafeInteger(product.id)) parentIds.set(item.id, product.parent > 0 ? product.parent : product.id); } catch (_) {} });
             let history = null;
             try { history = await client.request(config.recentItemsUrl); } catch (_) { /* Private history unavailable: no invented recent list or ranking. */ }
+            if (history?.visible && Array.isArray(history.items)) {
+                history = { ...history, items: await Promise.all(history.items.slice(0, 2).map(async item => {
+                    try { return recentPresentation(item, await client.request(recentPresentationUrl(config.recentProductApiUrl, item, location.origin))); }
+                    catch (_) { return recentPresentation(item, null); }
+                })) };
+            }
             await Promise.all(requests);
             if (disposed || generation !== enrichment) return;
             recent = history; recommendation = null;
@@ -449,6 +515,6 @@
         wasNativeBusy = busy;
     });
     global.VialCoveLiveCart = { canOpen: drawerController.available, open: trigger => openDrawer(trigger) || location.assign(config.cartUrl), close: closeDrawer, refresh: () => client.refresh(), snapshot: () => client.snapshot() };
-    global.addEventListener('pagehide', event => { if (event.persisted) return; disposed = true; stopNativeSubscription(); clearTimeout(nativeRefreshTimer); drawerController.destroy(); quickOpener?.remove(); clearInterval(polling); clearTimeout(enrichmentTimer); client.destroy(); views.forEach(view => { view.progress?.destroy(); view.recommendation?.destroy(); }); });
+    global.addEventListener('pagehide', event => { if (event.persisted) return; disposed = true; stopNativeSubscription(); clearTimeout(nativeRefreshTimer); drawerController.destroy(); quickOpener?.remove(); clearInterval(polling); clearTimeout(enrichmentTimer); client.destroy(); views.forEach(view => { view.progress?.destroy(); view.recommendation?.destroy(); clearTimeout(view.recentResetTimer); for (const feedback of view.recentFeedbacks || []) feedback.destroy(); }); });
     if (deviceEnabled() && roots.some(root => root.dataset.drawer === '0')) refreshVisible();
 })(typeof window === 'undefined' ? null : window);

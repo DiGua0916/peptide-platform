@@ -17,6 +17,7 @@ require_once __DIR__ . '/inc/live-commerce-settings.php';
 require_once __DIR__ . '/inc/live-cart-experience.php';
 require_once __DIR__ . '/inc/live-commerce-navigation.php';
 require_once __DIR__ . '/inc/storefront-utilities.php';
+require_once __DIR__ . '/inc/campaign-bubble.php';
 
 add_action( 'after_setup_theme', function () {
     add_theme_support( 'title-tag' );
