@@ -1,7 +1,8 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const source=fs.readFileSync(path.join(__dirname,'../assets/product-dialog-meta.js'),'utf8');
-function fixture(variable=true){
+const unitSource=fs.readFileSync(path.join(__dirname,'../assets/product-unit-pricing.js'),'utf8');
+function fixture(variable=true,{unitPricing=null,cache=false}={}){
   let writes=0;
   class Element{
     constructor(tag='div',classes=''){this.tagName=tag;this.children=[];this.parentNode=null;this._classes=classes;this._text='';this._hidden=false;this.handlers=[];this.classList={contains:key=>this._classes.split(' ').includes(key),add:key=>{if(!this.classList.contains(key))this._classes+=(this._classes?' ':'')+key;},remove:key=>{this._classes=this._classes.split(' ').filter(item=>item!==key).join(' ');}};}
@@ -15,17 +16,26 @@ function fixture(variable=true){
     before(node){const parent=this.parentNode;if(!parent)return;node.remove();parent.children.splice(parent.children.indexOf(this),0,node);node.parentNode=parent;}
     replaceWith(node){const parent=this.parentNode;if(!parent)return;const index=parent.children.indexOf(this);node.remove();parent.children.splice(index,1,node);node.parentNode=parent;this.parentNode=null;}
     remove(){if(this.parentNode){this.parentNode.children.splice(this.parentNode.children.indexOf(this),1);this.parentNode=null;}}
-    matches(selector){if(selector==='[name="variation_id"]')return this.name==='variation_id';return selector.startsWith('.')&&this.classList.contains(selector.slice(1));}
+    matches(selector){if(selector==='[name="variation_id"]')return this.name==='variation_id';if(selector==='.variations select')return this.tagName==='select'&&this.parentNode?.classList.contains('variations');return selector.startsWith('.')&&this.classList.contains(selector.slice(1));}
     querySelector(selector){if(selector===':scope > .stock')return this.children.find(node=>node.classList.contains('stock'))||null;if(selector==='.single_variation .stock')return this.querySelector('.single_variation')?.querySelector('.stock')||null;for(const child of this.children){if(child.matches(selector))return child;const match=child.querySelector(selector);if(match)return match;}return null;}
+    querySelectorAll(selector){const values=[];for(const child of this.children){if(child.matches(selector))values.push(child);values.push(...child.querySelectorAll(selector));}return values;}
     addEventListener(type,fn){this.handlers.push({type,fn});}click(){for(const item of this.handlers)if(item.type==='click')item.fn();}
+    removeEventListener(type,fn){this.handlers=this.handlers.filter(item=>item.type!==type||item.fn!==fn);}
   }
   const root=new Element('article'),summary=new Element('div','summary'),form=new Element('form','cart'),variations=new Element('table','variations'),single=new Element('div','single_variation'),stock=new Element('p','stock in-stock'),reset=new Element('a','reset_variations'),sku=new Element('p','vc-home-quick__sku'),details=new Element('a','vc-showcase-quick__details'),id=new Element('input');
   id.name='variation_id';id.value='71';stock.textContent='In stock';sku.textContent='SKU TR20';details.textContent='Explore product details';let resets=0,explores=0;reset.addEventListener('click',()=>resets++);details.addEventListener('click',()=>explores++);
   root.append(summary);summary.append(form,sku,details);if(variable){form.append(variations,single,id);variations.append(reset);single.append(stock);}else{summary.prepend(stock);form.append(reset);}
-  const window={};vm.runInNewContext(source,{window,document:{createElement:tag=>new Element(tag),createComment:()=>new Element('#comment')}});
+  const select=new Element('select');select.name='attribute_pack';select.value='20mg*10vials';if(variable)variations.append(select);
+  root.dataset={vcHomeInitial:JSON.stringify({attributes:{attribute_pack:'20mg*10vials'}})};
+  let native=[];
+  const window={jQuery:()=>({data:key=>key==='product_variations'?cache:undefined,on:(events,fn)=>events.split(' ').forEach(event=>native.push({event,fn})),off:namespace=>{native=native.filter(item=>!item.event.endsWith(namespace));}})};
+  vm.runInNewContext(unitSource,{window});vm.runInNewContext(source,{window,document:{createElement:tag=>new Element(tag),createComment:()=>new Element('#comment')}});
   const controller=new AbortController();let label=variable?'20mg × 10 vials':'';
-  const options={root,summary,form,signal:controller.signal,selectedLabel:()=>label};
-  return {root,summary,form,variations,single,stock,reset,sku,details,id,controller,options,create:window.createVcProductMetaStrip,Element,setLabel(value){label=value;},get writes(){return writes;},get clicks(){return [resets,explores];}};
+  const options={root,summary,form,signal:controller.signal,selectedLabel:()=>label,productId:7,unitPricing};
+  return {root,summary,form,variations,single,stock,reset,sku,details,id,select,controller,options,create:window.createVcProductMetaStrip,Element,
+    nativeEvent(type,value){for(const item of [...native])if(item.event.split('.')[0]===type)item.fn({},value);},
+    selectionChange(value){select.value=value;for(const item of form.handlers)if(item.type==='change')item.fn({target:select});},
+    get nativeHandlers(){return native.length;},setLabel(value){label=value;},get writes(){return writes;},get clicks(){return [resets,explores];}};
 }
 test('moves real Clear/SKU/Explore before variations while retaining native form/summary selectors and handlers',()=>{
   const f=fixture(),beforeForm=[...f.form.children],beforeSummary=[...f.summary.children],meta=f.create(f.options);
@@ -48,4 +58,27 @@ test('simple products copy only real direct stock; missing metadata stays empty 
 });
 test('invalid/aborted/duplicate mount performs no duplicate metadata or native movement',()=>{
   const f=fixture();assert.equal(f.create({...f.options,form:null}),null);const meta=f.create(f.options);assert.equal(f.create(f.options),null);meta.destroy();f.controller.abort();assert.equal(f.create(f.options),null);
+});
+function pricing(id=71,price='$5.50'){
+  return {version:1,productId:7,variationId:id,purchasableId:id,vialsPerSalesUnit:10,countSource:'stored_pack',salesUnitPrice:{minor:'5500',text:'$55.00'},perVialPrice:{minor:'550',text:price},approximate:false,currency:'USD',currencyMinorUnit:2,taxDisplay:'excl',basis:'catalog_display_price',includesCoupons:false,isPurchasableAsSingleVial:false};
+}
+test('selected-SKU equivalent price hides immediately on change and Clear, then consumes only native matching DTO',()=>{
+  const f=fixture(true,{unitPricing:pricing()}),meta=f.create(f.options),unit=meta.element.querySelector('.vc-product-meta__unit');
+  assert.equal(unit.textContent,'$5.50 / vial');assert.equal(unit.hidden,false);
+  f.selectionChange('10mg*10vials');assert.equal(f.id.value,'71');assert.equal(unit.hidden,true,'hide before native Woo replaces the old id');
+  f.id.value='72';f.nativeEvent('found_variation',{variation_id:72,attributes:{attribute_pack:'10mg*10vials'},pc_unit_pricing:pricing(72,'$4.00')});
+  assert.equal(unit.textContent,'$4.00 / vial');assert.equal(unit.hidden,false);
+  f.nativeEvent('reset_data');assert.equal(unit.hidden,true,'reset hides even while old native id is mounted');
+  f.selectionChange('');f.id.value='';meta.update();assert.equal(unit.hidden,true);
+  f.selectionChange('20mg*10vials');f.id.value='71';f.nativeEvent('found_variation',{variation_id:71,attributes:{attribute_pack:'20mg*10vials'},pc_unit_pricing:null});
+  assert.equal(unit.hidden,true,'no fallback to initial price after server returns null');
+  assert.equal(f.nativeHandlers,3);meta.destroy();assert.equal(f.nativeHandlers,0);assert.equal(f.form.handlers.length,0);
+});
+test('pre-mount native variation cache initializes current SKU and exact attributes block stale AJAX response',()=>{
+  const row={variation_id:71,attributes:{attribute_pack:'20mg*10vials'},pc_unit_pricing:pricing()};
+  const f=fixture(true,{cache:[row]}),meta=f.create(f.options),unit=meta.element.querySelector('.vc-product-meta__unit');
+  assert.equal(unit.textContent,'$5.50 / vial');
+  f.selectionChange('10mg*10vials');f.nativeEvent('found_variation',row);assert.equal(unit.hidden,true);
+  f.id.value='72';f.nativeEvent('found_variation',{variation_id:72,attributes:{attribute_pack:'10mg*10vials'},pc_unit_pricing:pricing(71)});
+  assert.equal(unit.hidden,true,'mislabeled DTO cannot use the prior variation id');
 });

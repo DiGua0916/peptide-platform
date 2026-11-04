@@ -155,3 +155,197 @@
         line-height: 28px;
     }
 }
+
+/* Checkout's native form and responsive summaries share one presentation.
+   The amount in the seal is Woo's total, never a copied or computed price. */
+.vc-checkout-page {
+    padding-top: 24px;
+    padding-bottom: 40px;
+}
+
+.vc-checkout-page .vc-back-link { margin-bottom: 16px; }
+.vc-checkout-page .vc-commerce-heading { gap: 16px; margin-bottom: 24px; }
+.vc-checkout-page .vc-commerce-heading h1 {
+    margin: 0;
+    font-size: 48px;
+    font-weight: 650;
+    line-height: 1;
+    letter-spacing: -.045em;
+}
+.vc-checkout-page .vc-order-steps { gap: 16px; }
+.vc-checkout-page .vc-order-steps li { gap: 8px; }
+.vc-checkout-page .vc-order-steps li > span { width: 24px; height: 24px; }
+
+.vc-checkout-page .vc-commerce-content .wc-block-components-sidebar-layout { gap: 24px; }
+.vc-checkout-page .vc-commerce-content .wc-block-components-sidebar {
+    border-radius: 16px;
+    background: #fff;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-checkout-step {
+    padding: 24px;
+    margin-bottom: 16px;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-checkout-step__heading { margin-bottom: 16px; }
+.vc-checkout-page .vc-commerce-content .wc-block-components-checkout-step__title {
+    font-size: 20px;
+    line-height: 28px;
+}
+
+/* These two native blocks exist at both Woo responsive locations. */
+.vc-checkout-page .vc-commerce-content .wc-block-components-checkout-order-summary__title,
+.vc-checkout-page .vc-commerce-content .wc-block-components-totals-title {
+    padding: 16px !important;
+    font-size: 18px !important;
+    font-weight: 650 !important;
+    line-height: 24px;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-checkout-order-summary__title-text { margin: 0; }
+.vc-checkout-page .vc-commerce-content .wc-block-components-order-summary { padding: 0 16px; }
+.vc-checkout-page .vc-commerce-content .wc-block-components-order-summary-item {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    column-gap: 12px;
+    row-gap: 8px;
+    padding-block: 16px;
+    align-items: start;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-order-summary-item__image {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    width: 48px;
+    padding: 0;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-order-summary-item__image img {
+    width: 48px;
+    max-width: 100%;
+    height: auto;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-order-summary-item__description {
+    grid-column: 2;
+    min-width: 0;
+    padding: 0;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-order-summary-item .wc-block-components-product-name {
+    margin: 0 0 4px;
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 650;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-order-summary-item .wc-block-components-product-metadata {
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 16px;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-order-summary-item__total-price {
+    grid-column: 2;
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    font-size: 16px;
+    line-height: 24px;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-cart-item__total-price-and-sale-badge-wrapper {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    min-width: 0;
+    text-align: start;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-totals-item,
+.vc-checkout-page .vc-commerce-content .wc-block-components-totals-coupon { padding-inline: 16px; }
+.vc-checkout-page .vc-commerce-content .wc-block-components-totals-wrapper { padding-block: 0; }
+.vc-checkout-page .vc-commerce-content .wc-block-components-totals-item {
+    min-width: 0;
+    padding-block: 12px;
+    font-size: 14px;
+    line-height: 20px;
+    gap: 8px 16px;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-totals-item__value {
+    min-width: 0;
+    font-variant-numeric: tabular-nums;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-shipping-placeholder__value {
+    display: inline-block;
+    max-width: 180px;
+    text-align: end;
+    white-space: normal;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-totals-coupon .wc-block-components-panel__button {
+    min-height: 48px;
+    padding-block: 12px;
+    font-size: 14px;
+    line-height: 20px;
+}
+
+/* A flat red seal occupies its own grid cell, below shipping and discounts.
+   Its label, tax description and amount retain their native reading order. */
+.vc-checkout-page .vc-commerce-content .wc-block-components-totals-footer-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(120px, auto);
+    align-items: center;
+    padding: 16px;
+    gap: 12px 16px;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-totals-footer-item > .wc-block-components-totals-item__label {
+    font-size: 20px;
+    font-weight: 650;
+    line-height: 28px;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-totals-footer-item > .wc-block-components-totals-item__value {
+    display: grid;
+    place-items: center;
+    justify-self: end;
+    box-sizing: border-box;
+    inline-size: clamp(120px, 30vw, 160px);
+    min-width: 0;
+    max-width: 100%;
+    min-height: 0;
+    aspect-ratio: 1;
+    padding: 20px 12px;
+    border: 5px solid #c62e43;
+    border-radius: 50%;
+    background: #b32035;
+    color: #fff;
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 50%);
+    text-align: center;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 32px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-totals-footer-item .wc-block-components-formatted-money-amount {
+    color: inherit;
+    font: inherit;
+    white-space: normal;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-totals-footer-item > .wc-block-components-totals-item__description {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 16px;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-totals-footer-item > .wc-block-components-totals-item__description:empty { display: none; }
+.vc-checkout-page .vc-commerce-content .wc-block-components-checkout__terms { margin-bottom: 0; }
+.vc-checkout-page .vc-commerce-content .wc-block-checkout__actions { padding-top: 16px; }
+
+@media (max-width: 767px) {
+    .vc-checkout-page { padding-top: 16px; padding-bottom: 32px; }
+    .vc-checkout-page .vc-back-link { margin-bottom: 12px; }
+    .vc-checkout-page .vc-commerce-heading { gap: 16px; margin-bottom: 16px; }
+    .vc-checkout-page .vc-commerce-heading h1 { font-size: 36px; line-height: 40px; }
+    .vc-checkout-page .vc-commerce-content .wc-block-components-sidebar-layout { gap: 16px; }
+    .vc-checkout-page .vc-commerce-content .wc-block-components-checkout-step { padding: 16px; }
+    .vc-checkout-page .vc-commerce-content .wc-block-components-checkout-step__heading { margin-bottom: 16px; }
+    .vc-checkout-page .vc-commerce-content .wc-block-components-totals-footer-item > .wc-block-components-totals-item__value {
+        padding: 12px 4px;
+        font-size: 24px;
+        line-height: 32px;
+    }
+}

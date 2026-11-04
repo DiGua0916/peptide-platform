@@ -1165,3 +1165,9 @@ PHP lint、git diff --check通过。Impeccable detect仅3项advisory（24/20字�
 HTTP聚合探针已证 catalogSupported=true、quoteHooksSupported=false、unsupportedHook=woocommerce_currency。WooPayments对非wc/store REST自动注册3个原生保持店铺币种/不转换价格回调；peptide-core class-quote-cart.php:130 将任何 wcpay_multi_currency_* filter 一概拒绝，导致Catalog_Read::product全部null→候选为空。两个peptide REST端点都受影响，修复需由Claude在共享后端兼容性guard中精确适配原生REST路径，继续拒绝未知/外币override；不能用前端展示数据、最低规格或不受保护的产品加载绕过。
 
 详见[frontend-cart-recommendation-diagnosis-2026-11-04.md](frontend-cart-recommendation-diagnosis-2026-11-04.md)，含准确源码位置及真正HTTP候选→有效服务端报价→前端显示、拒绝路径与只读保护的回归要求。聚合证据仅留D:/Codex/Tasks/2026-11-03/cart-recommendation-diagnosis/outputs，不入Git。临时主题诊断已按确切hash还原，运行文件clean，未改插件/DB/客户车/配置。本次仅诊断与交接，后端修复、修复后HTTP/浏览器验收及公网发布均未完成。
+
+### 2026-11-04 · Codex：前端14项 UI 需求实施（本机）
+
+已按用户前端UI需求完成主题与后台积木接线：首页紧凑卡片/独立报告说明隐藏/80+与180+概括统计/三理由/About全文层级/footer2025；右侧数量、单盒推荐与自动用券同201回执；同SKU每瓶参考价；native checkout紧凑、红优惠、圆形总价、移除文档导流；动态活动公告及可选真实WhatsApp。详见 [frontend-ui-refresh-2026-11-04.md](frontend-ui-refresh-2026-11-04.md)。LocalWP通过正常修订API发布home685/footer687，随后header686绑定同一活动10980；不改活动金额日期/券/客服开关或客户数据。首save的0.0→0类型差异已独立核哈希/语义后恢复发布，无内容丢失。
+
+联合Node53顶层、PHP15 guard与9实际模板渲染检查通过；实际375/390/430/1280布局与native summary验证，真实手机bag已显示一盒55的推荐；没有真实加购/用券/填地址/付款。新BE提交80b8894及473dd8f在任务中到达，最新本机协议已运行，早先“尚未安装”的临时审计是旧快照。后台客服/推荐券当前关闭，正确不造空入口或已用券声明。部分规格unitPricing:null（legacy Specificatio/Size未供可靠包装瓶数），前端隐藏，需BE/商家配count，不能猜10。未授权/执行公网发布；Git最终引用另记。

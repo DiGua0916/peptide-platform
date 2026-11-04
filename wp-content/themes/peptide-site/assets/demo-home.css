@@ -39,3 +39,29 @@
   .vc-demo-report-stack .vc-demo-report-paper.is-touch-peeking{box-shadow:0 24px 40px #071e2b55;transform:translateY(-8px) rotate(0)}
 }
 .vc-demo-report-intro + .vc-demo-report-actions{margin-top:24px}
+/* Optional editorial layouts keep their source content in the layout document. */
+.vc-demo-why .vc-demo-section-heading{margin-bottom:32px}
+.vc-demo-why .vc-demo-steps h3{font-size:24px;line-height:32px;font-weight:650;letter-spacing:-.6px;max-width:none}
+.vc-demo-why .vc-demo-steps article>p{max-width:36ch;margin:12px 0 0}
+.vc-demo-why .vc-demo-steps article>.vc-demo-reason-emphasis{font-weight:600;color:var(--vc-demo-ink);margin-top:16px}
+.vc-demo-about{font-family:Geist,sans-serif}
+.vc-demo-about .vc-content-rich h2{font-family:inherit;font-size:48px;line-height:1.08;letter-spacing:-1.8px;font-weight:650;margin:0 0 32px;color:#17343e}
+.vc-demo-about .vc-content-rich-body{font-size:16px;line-height:1.6;overflow-wrap:break-word}
+.vc-demo-about .vc-content-rich-body>p{margin:0 0 20px}
+.vc-demo-about .vc-content-rich-body>p:first-child{font-size:20px;line-height:1.5;font-weight:550;color:#17343e;margin-bottom:32px}
+.vc-demo-about .vc-content-rich-body h3{font:650 20px/28px Geist,sans-serif;letter-spacing:-.3px;color:#17343e;margin:32px 0 12px;padding-top:24px;border-top:1px solid #d8e5e8}
+.vc-demo-about .vc-content-rich-body strong{font-weight:650;color:#17343e}
+.vc-demo-about .vc-content-rich-body>:last-child{margin-bottom:0}
+@media(max-width:767px){
+  .vc-demo-why{padding-block:40px}
+  .vc-demo-why .vc-demo-section-heading{margin-bottom:24px}
+  .vc-demo-why .vc-demo-steps{gap:24px}
+  .vc-demo-why .vc-demo-steps article{padding-top:20px}
+  .vc-demo-why .vc-demo-steps h3{font-size:24px;line-height:28px}
+  .vc-demo-why .vc-demo-steps article>p{font-size:16px;line-height:24px;max-width:none;margin-top:8px}
+  .vc-demo-why .vc-demo-steps article>.vc-demo-reason-emphasis{margin-top:12px}
+  .vc-demo-about .vc-content-rich h2{font-size:36px;line-height:40px;letter-spacing:-1px;margin-bottom:24px}
+  .vc-demo-about .vc-content-rich-body{font-size:16px;line-height:24px}
+  .vc-demo-about .vc-content-rich-body>p:first-child{font-size:18px;line-height:28px;margin-bottom:24px}
+  .vc-demo-about .vc-content-rich-body h3{font-size:18px;line-height:24px;margin-top:24px;padding-top:20px}
+}

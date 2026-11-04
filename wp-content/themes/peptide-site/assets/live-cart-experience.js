@@ -258,7 +258,7 @@
     const safeUrl = value => { try { const url = new URL(value, location.href); return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password ? url.href : ''; } catch (_) { return ''; } };
     let recent = null, recommendation = null, enrichmentPending = false, enrichment = 0, enrichmentTimer = 0, quickOpener = null, disposed = false;
     let appliedActivity = global.vcLiveCommerce?.activity?.config || null, activityRead = null;
-    const views = roots.map(root => ({ root, rows: new Map(), recentSignature: '', totalsSignature: '', couponsSignature: '', progress: global.createCartProgress?.({ mount: root.querySelector('[data-cart-progress]') }), progressSignature: '', recommendation: global.createCartRecommendation?.({ mount: root.querySelector('[data-cart-recommendation]'), onChoose: candidate => choose(candidate.productId), onAdd: candidate => client.write('add-item', { id: candidate.purchasableId, quantity: candidate.quantity }) }) }));
+    const views = roots.map(root => ({ root, rows: new Map(), recentSignature: '', totalsSignature: '', couponsSignature: '', progress: global.createCartProgress?.({ mount: root.querySelector('[data-cart-progress]') }), progressSignature: '', recommendation: global.createCartRecommendation?.({ mount: root.querySelector('[data-cart-recommendation]'), onChoose: candidate => choose(candidate.productId), onAdd: candidate => client.write('add-item', global.vcRecommendationContract.addPayload(candidate)), onRefresh: () => { refreshActivityConfig(); client.refresh(); } }) }));
     const client = createClient(config, { canWrite: () => !nativeCheckout.busy(), notify(type, detail) {
         if (type === 'state') { if (detail.valid && !detail.pending) nativeCheckout.receive(detail.cart); scheduleEnrichment(detail); render(detail); if (detail.pending) refreshActivityConfig(); }
         else document.dispatchEvent(new CustomEvent(type === 'start' ? 'vc:cart-mutation-start' : 'vc:cart-updated', { detail }));
@@ -305,8 +305,9 @@
             buttons[action] = button; qty.append(button); if (action === 'minus') qty.append(count);
         }
         const remove = el('button', 'vc-live-cart__remove', 'Remove'); remove.type = 'button'; remove.dataset.cartAction = 'remove';
-        remove.addEventListener('click', () => client.write('remove-item', { key: current.key }).catch(() => {})); controls.append(qty, remove); info.append(controls);
-        const total = el('strong', 'vc-live-cart__line-total'); row.append(imageLink, info, total);
+        remove.addEventListener('click', () => client.write('remove-item', { key: current.key }).catch(() => {})); controls.append(qty, remove);
+        const total = el('strong', 'vc-live-cart__line-total'), purchase = el('div', 'vc-live-cart__line-actions');
+        purchase.append(total, controls); row.append(imageLink, info, purchase);
         return { node: row, update(next, nextState) {
             current = next;
             const title = clean(next.name), src = safeUrl(next.images?.[0]?.thumbnail || next.images?.[0]?.src) || '';
@@ -404,7 +405,8 @@
             if (settings.cart_recommendations_enabled === false || !activityAllowed(activity, appliedActivity) || activity?.enabled !== true || activity?.visible !== true || !activity?.next || !history?.candidates?.length) { enrichmentPending = false; render(client.snapshot()); return; }
             render(client.snapshot());
             try {
-                const result = await client.request(config.recommendationsUrl, { cartStateKey: activity.stateKey, cartSnapshotKey: activity.cartSnapshotKey, promotionRevision: activity.promotionRevision, configRevision: activity.revision, candidates: history.candidates.slice(0, 20) });
+                const body = global.vcRecommendationContract.quoteRequest(activity, activity.cartSnapshotKey, history.candidates, appliedActivity);
+                const result = await client.request(config.recommendationsUrl, body);
                 if (disposed || generation !== enrichment) return;
                 recommendation = activityAllowed(activity, appliedActivity) ? result.recommendation : null; enrichmentPending = false; render(client.snapshot());
             } catch (_) { if (generation === enrichment) { recommendation = null; enrichmentPending = false; render(client.snapshot()); } }

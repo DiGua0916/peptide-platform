@@ -95,3 +95,81 @@
     .wc-block-checkout section.vc-cart-savings { padding: 14px; }
     .vc-cart-savings__comparison { gap: 4px 10px; }
 }
+
+/* Checkout only: real item-price savings from the Store API extension.
+   Coupon/cart discounts remain separate rows in Woo's native summary. */
+.vc-checkout-page .vc-checkout-pricing section.vc-cart-savings {
+    margin-bottom: 16px;
+    padding: 16px 24px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px 24px;
+    border-radius: 12px;
+    background: #fff5f5;
+    color: var(--ink);
+}
+.vc-checkout-page .vc-checkout-pricing .vc-cart-savings__comparison {
+    justify-content: flex-start;
+    gap: 4px 16px;
+    color: #52666e;
+    font-size: 12px;
+    line-height: 20px;
+}
+.vc-checkout-page .vc-checkout-pricing .vc-cart-savings__amounts {
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    white-space: normal;
+}
+.vc-checkout-page .vc-checkout-pricing .vc-cart-savings__total {
+    justify-content: flex-end;
+    align-items: baseline;
+    gap: 4px 12px;
+    color: #a51c30;
+    font-size: 16px;
+    font-weight: 650;
+    line-height: 24px;
+}
+.vc-checkout-page .vc-checkout-pricing .vc-cart-savings__total strong {
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 40px;
+    letter-spacing: -.035em;
+}
+.vc-checkout-page .vc-checkout-pricing .vc-cart-savings__note,
+.vc-checkout-page .vc-checkout-pricing .vc-cart-savings__demo {
+    grid-column: 1 / -1;
+    color: #52666e;
+    font-size: 12px;
+    line-height: 16px;
+}
+.vc-checkout-page .wc-block-components-order-summary-item .wc-block-components-sale-badge {
+    flex: 0 1 auto;
+    max-width: 100%;
+    margin-block: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: #b32035;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 20px;
+    text-align: center;
+    transform: rotate(-3deg);
+    transform-origin: center;
+}
+@media (max-width: 700px) {
+    .vc-checkout-page .vc-checkout-pricing section.vc-cart-savings {
+        padding: 16px;
+        gap: 8px 16px;
+    }
+    .vc-checkout-page .vc-checkout-pricing .vc-cart-savings__comparison,
+    .vc-checkout-page .vc-checkout-pricing .vc-cart-savings__total {
+        flex-direction: column;
+    }
+    .vc-checkout-page .vc-checkout-pricing .vc-cart-savings__total { align-items: flex-end; }
+    .vc-checkout-page .vc-checkout-pricing .vc-cart-savings__total strong {
+        max-width: 100%;
+        font-size: 30px;
+        line-height: 36px;
+        overflow-wrap: anywhere;
+    }
+}

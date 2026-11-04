@@ -15,8 +15,9 @@ function vc_home_quick_view_assets(): void {
     wp_enqueue_style( 'vc-home-quick-view', $base . 'home-quick-view.css', array( 'vialcove-product-options' ), (string) filemtime( $path . 'home-quick-view.css' ) );
     wp_enqueue_style( 'vc-live-cart-feedback', $base . 'live-cart-feedback.css', array(), (string) filemtime( $path . 'live-cart-feedback.css' ) );
     wp_enqueue_script( 'vc-live-cart-feedback', $base . 'live-cart-feedback.js', array(), (string) filemtime( $path . 'live-cart-feedback.js' ), true );
-    foreach ( array( 'product-purchase-dock', 'product-purchase-return', 'product-dialog-meta' ) as $name ) {
-        wp_enqueue_script( 'vc-' . $name, $base . $name . '.js', array(), (string) filemtime( $path . $name . '.js' ), true );
+    foreach ( array( 'product-purchase-dock', 'product-purchase-return', 'product-unit-pricing', 'product-dialog-meta' ) as $name ) {
+        $dependencies = 'product-dialog-meta' === $name ? array( 'vc-product-unit-pricing', 'jquery' ) : array();
+        wp_enqueue_script( 'vc-' . $name, $base . $name . '.js', $dependencies, (string) filemtime( $path . $name . '.js' ), true );
     }
     foreach ( array( 'ticker-model', 'ticker', 'report-viewer', 'feedback', 'experience', 'recent' ) as $part ) {
         $name = 'product-dialog-' . $part;
@@ -121,6 +122,7 @@ function vc_home_quick_view_template( $product ): string {
     $initial = array(
         'image' => vc_home_quick_view_image( $first ), 'sku' => $first->get_sku(), 'attributes' => $attributes,
         'variationId' => $first->is_type( 'variation' ) ? $first->get_id() : 0,
+        'unitPricing' => function_exists( 'peptide_core_get_unit_pricing' ) ? peptide_core_get_unit_pricing( $first ) : null,
         'ratingHtml' => $product->get_rating_count() > 0 ? wp_kses_post( wc_get_rating_html( (float) $product->get_average_rating(), $product->get_rating_count() ) ) : '',
         'ratingCount' => $product->get_rating_count(),
         'promotions' => vc_home_quick_view_promotions( $first ),

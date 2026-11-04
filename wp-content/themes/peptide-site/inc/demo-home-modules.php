@@ -19,7 +19,7 @@ function vc_demo_home_fields( array &$definition, array $fields, bool $items = f
 add_filter( 'peptide_core_layout_definitions', function ( array $defs ): array {
     if ( ! class_exists( '\PeptideCore\Modules\Fields' ) ) { return $defs; }
     $f = array( '\PeptideCore\Modules\Fields', 'f' );
-    foreach ( array( 'hero_h1', 'info_list', 'report_feature', 'counter', 'card_list', 'faq', 'cta' ) as $type ) {
+    foreach ( array( 'hero_h1', 'info_list', 'report_feature', 'counter', 'card_list', 'faq', 'cta', 'rich_text' ) as $type ) {
         if ( ! isset( $defs[ $type ] ) ) { continue; }
         $key = 'info_list' === $type ? 'visualPresentation' : 'presentation';
         $found = false;
@@ -43,6 +43,7 @@ add_filter( 'peptide_core_layout_definitions', function ( array $defs ): array {
         $f( 'link', 'secondaryLink', '次要入口', null ),
         $f( 'textarea', 'points', '报告内容标签', '', array( 'help' => '一行一个标签。' ) ),
         $f( 'text', 'previewCaption', '证书预览提示', '' ),
+        $f( 'toggle', 'showContext', '显示报告归属独立说明', true, array( 'help' => '仅控制首页独立说明块；打开报告时仍保留原文件与归属状态。' ) ),
     ) );
     vc_demo_home_fields( $defs['report_feature'], array(
         $f( 'number', 'reportId', '公开 COA 资料编号', 0, array( 'min' => 0, 'max' => 2147483647, 'help' => '公开资料库报告 ID；取消公开后这里也停止展示。' ) ),
@@ -51,12 +52,17 @@ add_filter( 'peptide_core_layout_definitions', function ( array $defs ): array {
     ), true );
     vc_demo_home_fields( $defs['counter'], array(
         $f( 'select', 'valueSource', '数字来源', 'manual', array( 'options' => array( 'manual' => '手工数字', 'products' => '实时可见商品数量', 'specifications' => '实时可见规格数量' ), 'help' => '实时数量来自 WooCommerce 当前公开目录，不使用预览快照。' ) ),
+        $f( 'number', 'displayCap', '概括显示阈值', 0, array( 'min' => 0, 'max' => 999999, 'help' => '0显示实际数字；超过阈值时显示阈值与加号，不改变真实统计。' ) ),
     ), true );
     foreach ( $defs['counter']['settings'] as &$field ) {
         if ( 'numberSizePx' === $field['key'] ) { $field['uiMax'] = 120; }
     }
     unset( $field );
-    vc_demo_home_fields( $defs['card_list'], array( $f( 'text', 'eyebrow', '小标题', '' ) ) );
+    vc_demo_home_fields( $defs['card_list'], array(
+        $f( 'text', 'eyebrow', '小标题', '' ),
+        $f( 'select', 'demoCardStyle', '信息排版', 'steps', array( 'options' => array( 'steps' => '步骤', 'reasons' => '选择理由' ) ) ),
+    ) );
+    vc_demo_home_fields( $defs['card_list'], array( $f( 'text', 'emphasis', '重点短句', '' ) ), true );
     vc_demo_home_fields( $defs['faq'], array( $f( 'image', 'supportImage', '标题旁插画', null ) ) );
     return $defs;
 }, 120 );
@@ -109,7 +115,7 @@ function vc_demo_home_image( ?array $image, string $class = '', string $sizes = 
 add_filter( 'peptide_core_module_html', function ( $html, array $module, string $context, string $device ) {
     $key = 'info_list' === $module['type'] ? 'visualPresentation' : 'presentation';
     if ( null !== $html || 'demo' !== ( $module['settings'][ $key ] ?? '' ) ) { return $html; }
-    if ( ! in_array( $module['type'], array( 'hero_h1', 'info_list', 'report_feature', 'counter', 'card_list', 'faq', 'cta' ), true ) ) { return $html; }
+    if ( ! in_array( $module['type'], array( 'hero_h1', 'info_list', 'report_feature', 'counter', 'card_list', 'faq', 'cta', 'rich_text' ), true ) ) { return $html; }
     ob_start();
     get_template_part( 'template-parts/modules/demo-' . str_replace( '_', '-', $module['type'] ), null, array( 'module' => $module, 'context' => $context, 'device' => $device ) );
     return ob_get_clean();

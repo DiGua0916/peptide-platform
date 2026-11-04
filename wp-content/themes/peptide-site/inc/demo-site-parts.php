@@ -136,10 +136,7 @@ function vc_demo_site_header( array $s ): string {
     if ( ! empty( $s['secondaryMenuId'] ) && class_exists( '\PeptideCore\Menus' ) ) { $secondary = \PeptideCore\Menus::public_menu( (int) $s['secondaryMenuId'] ) ?? array(); }
     $id = wp_unique_id( 'vc-demo-header-' );
     $styles = vc_demo_site_part_widths( $s ) . '--vc-demo-part-bg:' . vc_demo_site_part_color( $s['headerBackground'] ?? '', '#ffffff' ) . ';--vc-demo-part-ink:' . vc_demo_site_part_color( $s['headerText'] ?? '', '#17343e' ) . ';';
-    $out = '';
-    if ( ! empty( $s['announcement'] ) && ( empty( $s['announcementHomeOnly'] ) || is_front_page() ) ) {
-        $out .= '<div class="vc-demo-announcement" style="background:' . esc_attr( vc_demo_site_part_color( $s['announcementBackground'] ?? '', '#17343e' ) ) . ';color:' . esc_attr( vc_demo_site_part_color( $s['announcementColor'] ?? '', '#ffffff' ) ) . '">' . wp_kses_post( $s['announcementText'] ?? '' ) . '</div>';
-    }
+    $out = function_exists( 'vc_storefront_announcement_html' ) ? vc_storefront_announcement_html( $s ) : '';
     $out .= '<header class="vc-demo-header' . ( ! empty( $s['sticky'] ) ? ' vc-demo-header--sticky' : '' ) . '" style="' . esc_attr( $styles ) . '" data-vc-demo-header><div class="vc-demo-part-wrap vc-demo-header-inner">';
     $out .= '<a class="vc-demo-brand" href="' . esc_url( $home ) . '" aria-label="' . esc_attr( ( $s['brandName'] ?? 'VialCove' ) . ' home' ) . '">' . vc_demo_site_part_logo( $s ) . '</a>';
     $out .= '<nav class="vc-demo-desktop-nav" aria-label="Main navigation">' . vc_demo_site_part_nav( $menu ) . '</nav><div class="vc-demo-header-actions">';
@@ -184,7 +181,9 @@ function vc_demo_site_footer( array $module, string $context ): string {
         $social .= '<a rel="noopener noreferrer" href="' . esc_url( $link['url'] ) . '">' . vc_demo_site_part_icon( $link['icon'] ?? '' ) . esc_html( $link['label'] ?? '' ) . '</a>';
     }
     if ( $social ) { $out .= '<nav class="vc-demo-social" aria-label="Social links">' . $social . '</nav>'; }
-    $out .= '<div class="vc-demo-footer-bottom"><p>' . esc_html( $s['demoNotice'] ?? '' ) . '</p><p>' . esc_html( strtr( $s['copyright'] ?? '', array( '{year}' => wp_date( 'Y' ), '{store_name}' => $s['brandName'] ?? get_bloginfo( 'name' ) ) ) ) . '</p></div></div></footer>';
+    $out .= '<div class="vc-demo-footer-bottom">';
+    if ( '' !== trim( $s['demoNotice'] ?? '' ) ) { $out .= '<p>' . esc_html( $s['demoNotice'] ) . '</p>'; }
+    $out .= '<p>' . esc_html( strtr( $s['copyright'] ?? '', array( '{year}' => wp_date( 'Y' ), '{store_name}' => $s['brandName'] ?? get_bloginfo( 'name' ) ) ) ) . '</p></div></div></footer>';
     // Keep the native optional fixed navigation and its editable sizing contract.
     if ( ! empty( $s['mobileNav'] ) && ! empty( $s['mobileLinks'] ) ) {
         $out .= '<nav class="pc-mobile-fixed' . ( 'tablet' === ( $s['mobileNavSize'] ?? 'phone' ) ? ' includes-tablet' : '' ) . '" style="--pc-mobile-nav-height:' . (int) ( $s['mobileNavHeight'] ?? 0 ) . 'px;--pc-mobile-nav-icon:' . (int) ( $s['mobileNavIconSize'] ?? 20 ) . 'px;--pc-mobile-nav-font:' . (int) ( $s['mobileNavFontSize'] ?? 14 ) . 'px" aria-label="Mobile navigation">';

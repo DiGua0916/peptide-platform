@@ -31,7 +31,7 @@ foreach ( $items as $item ) {
             <?php if ( '' !== $s['description'] ) : ?><p class="vc-demo-report-intro"><?php echo nl2br( esc_html( $s['description'] ) ); ?></p><?php endif; ?>
             <?php $points = array_filter( array_map( 'trim', explode( "\n", $s['points'] ?? '' ) ) ); if ( $points ) : ?><div class="vc-demo-report-points"><?php foreach ( $points as $point ) : ?><span><?php echo esc_html( $point ); ?></span><?php endforeach; ?></div><?php endif; ?>
             <div class="vc-demo-report-actions"><?php echo vc_module_button( $s['button'], 'vc-demo-button vc-demo-button--white' ); ?><?php echo vc_module_button( $s['secondaryLink'] ?? null, 'vc-demo-quiet-link' ); ?></div>
-            <?php if ( '' !== $s['cardEyebrow'] || '' !== $s['cardNote'] ) : ?><p class="vc-demo-report-context"><?php if ( '' !== $s['cardEyebrow'] ) : ?><strong><?php echo esc_html( $s['cardEyebrow'] ); ?></strong><?php endif; ?><?php echo nl2br( esc_html( $s['cardNote'] ) ); ?></p><?php endif; ?>
+            <?php if ( ( $s['showContext'] ?? true ) && ( '' !== $s['cardEyebrow'] || '' !== $s['cardNote'] ) ) : ?><p class="vc-demo-report-context"><?php if ( '' !== $s['cardEyebrow'] ) : ?><strong><?php echo esc_html( $s['cardEyebrow'] ); ?></strong><?php endif; ?><?php echo nl2br( esc_html( $s['cardNote'] ) ); ?></p><?php endif; ?>
         </div>
     </div>
 </div>

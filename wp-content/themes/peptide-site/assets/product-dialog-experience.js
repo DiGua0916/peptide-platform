@@ -187,7 +187,7 @@
     const selectedLabel = () => [...root.querySelectorAll('.variations select')].map(select => select.value ? select.selectedOptions[0]?.textContent || '' : '').filter(Boolean).join(' / ');
     const publicPriceText = () => summary.querySelector('.vc-price-current .woocommerce-Price-amount')?.textContent || summary.querySelector('.price .woocommerce-Price-amount')?.textContent || '';
     const context = () => ({ product: productName, specification: selectedLabel(), price: publicPriceText(), sku: root.vcHomeSku ?? defaults.sku ?? '' });
-    const metaStrip = window.createVcProductMetaStrip?.({root,summary,form,signal,selectedLabel});
+    const metaStrip = window.createVcProductMetaStrip?.({root,summary,form,signal,selectedLabel,productId,unitPricing:defaults.unitPricing});
     root.querySelector('.vc-dialog-sticky')?.remove();
     const mainBuy = root.querySelector('[data-vc-quick-buy]');
     const purchaseDock = window.createVcProductPurchaseDock?.({root,dialog,form,mainAdd,mainBuy,selectedLabel,priceNode:summary.querySelector(':scope > .price'),enabled:settings.stickyPurchaseEnabled,signal});

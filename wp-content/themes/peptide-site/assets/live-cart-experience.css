@@ -17,3 +17,16 @@
 @media(max-width:359px){.vc-live-cart{padding:20px 12px 36px}.vc-live-cart__summary{padding:16px}.vc-live-cart__line{gap:10px;grid-template-columns:52px minmax(0,1fr)}.vc-live-cart__image img{width:52px;height:64px}.vc-live-cart__quantity button{width:36px}}
 @media(max-width:767px){.vc-live-cart-drawer{top:8px;bottom:8px;width:calc(100vw - 12px);height:calc(100dvh - 16px);max-height:calc(100dvh - 16px);border-radius:16px 0 0 16px}.vc-live-cart-drawer .vc-live-cart{padding:20px 16px max(24px,env(safe-area-inset-bottom))}.vc-live-cart-drawer .vc-live-cart__heading{top:-20px;gap:12px;padding:16px 0;margin-top:-16px}.vc-live-cart-drawer .vc-live-cart__heading h2{font-size:28px;line-height:36px}.vc-live-cart-drawer .vc-live-cart__summary{padding:20px 16px}}
 @media(prefers-reduced-motion:reduce){.vc-live-cart-drawer,.vc-live-cart-drawer::backdrop,.vc-live-cart button,.vc-live-cart__checkout{transition:none}.vc-live-cart button:not(:disabled):active,.vc-live-cart__checkout:not([aria-disabled=true]):active{transform:none}}
+
+/* The quantity and line total form one quiet control group at the right. */
+.vc-live-cart .vc-live-cart__line{grid-template-columns:64px minmax(0,1fr) auto;gap:16px;align-items:start;padding:24px 0}
+.vc-live-cart .vc-live-cart__image img{width:64px;height:72px}
+.vc-live-cart .vc-live-cart__line-actions{display:grid;justify-items:end;gap:8px;min-width:108px}
+.vc-live-cart .vc-live-cart__line-total{grid-column:auto;justify-self:end;margin:0;font-size:20px;line-height:28px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.vc-live-cart .vc-live-cart__controls{display:grid;justify-items:end;gap:0;margin:0}
+.vc-live-cart .vc-live-cart__quantity{display:grid;grid-template-columns:36px 28px 36px;align-items:center;height:44px;border-radius:8px}
+.vc-live-cart .vc-live-cart__quantity button{width:36px;height:44px;min-height:44px;padding:0;line-height:24px}
+.vc-live-cart .vc-live-cart__quantity span{min-width:0;text-align:center;font-size:14px;line-height:20px;font-variant-numeric:tabular-nums}
+.vc-live-cart .vc-live-cart__remove{min-height:44px;padding:8px 0;font-size:12px;line-height:16px}
+.vc-live-cart .vc-live-cart__pack,.vc-live-cart .vc-live-cart__unit{margin:4px 0 0;font-size:14px;line-height:20px}
+@media(max-width:767px){.vc-live-cart .vc-live-cart__line{grid-template-columns:48px minmax(0,1fr) auto;gap:8px;padding:16px 0}.vc-live-cart .vc-live-cart__image img{width:48px;height:64px}.vc-live-cart .vc-live-cart__line-actions{min-width:100px}.vc-live-cart .vc-live-cart__line-total{font-size:18px;line-height:28px}.vc-live-cart .vc-live-cart__product{font-size:16px;line-height:24px;overflow-wrap:anywhere}.vc-live-cart .vc-live-cart__pack,.vc-live-cart .vc-live-cart__unit{font-size:12px;line-height:16px}}

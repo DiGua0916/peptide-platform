@@ -1,0 +1,14 @@
+/* One configured campaign, one optional support link. No duplicate offer rules. */
+.vc-campaign-announcement{padding:12px 0;background:#ae213a;color:#fff;text-align:center;font-size:14px;line-height:20px}
+.vc-campaign-announcement .vc-demo-part-wrap{display:flex;align-items:center;justify-content:center;gap:4px 16px;flex-wrap:wrap}
+.vc-campaign-announcement strong{font-weight:700}
+.vc-campaign-announcement span{font-weight:500}
+.vc-campaign-announcement[data-campaign-status="upcoming"]{background:#17343e}
+.vc-help-float{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:calc(max(16px,env(safe-area-inset-bottom)) + var(--vc-help-nav-offset,0px));z-index:45;display:grid;place-items:center;width:56px;height:56px;border:1px solid #d1e0e2;border-radius:50%;background:#fff;box-shadow:0 4px 16px #17343e18;transition:transform 160ms ease,box-shadow 160ms ease}
+.vc-help-float img{display:block;width:48px;height:48px;object-fit:contain}
+.vc-help-float:focus-visible{outline:3px solid #127e98;outline-offset:4px}
+.vc-help-float:active{transform:scale(.96)}
+body:has(dialog[open]) .vc-help-float,body:has([data-vc-demo-header] details[open]) .vc-help-float{visibility:hidden;pointer-events:none}
+@media(hover:hover){.vc-help-float:hover{transform:translateY(-2px);box-shadow:0 8px 24px #17343e24}}
+@media(max-width:767px){.vc-campaign-announcement{font-size:12px;line-height:16px}.vc-campaign-announcement .vc-demo-part-wrap{gap:4px 8px}}
+@media(prefers-reduced-motion:reduce){.vc-help-float{transition:none;transform:none!important}}
