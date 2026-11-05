@@ -14,6 +14,9 @@ source_path = brand / manifest['source']
 source_hash = hashlib.sha256(source_path.read_bytes()).hexdigest()
 assert source_hash == manifest['sourceSha256']
 css = (brand.parent / 'brand.css').read_text(encoding='utf-8')
+functions = (brand.parents[1] / 'functions.php').read_text(encoding='utf-8')
+regular = next(row['file'] for row in manifest['fonts'] if row['weight'] == 400)
+assert regular in functions and 'Inter-Variable.ttf' not in functions, 'Preload must request the face CSS actually uses'
 rows = []
 def cmap(font):
     return {(table.platformID, table.platEncID, table.format, table.language): table.cmap for table in font['cmap'].tables}

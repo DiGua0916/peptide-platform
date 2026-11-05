@@ -44,7 +44,7 @@ add_action( 'wp_head', function () {
     echo '<link rel="icon" type="image/svg+xml" href="' . esc_url( $brand . 'favicon.svg' ) . '">';
     echo '<link rel="icon" type="image/png" sizes="32x32" href="' . esc_url( $brand . 'favicon-32.png' ) . '">';
     echo '<meta name="theme-color" content="#177E9B">';
-    echo '<link rel="preload" href="' . esc_url( $brand . 'Inter-Variable.ttf' ) . '" as="font" type="font/ttf" crossorigin>';
+    echo '<link rel="preload" href="' . esc_url( $brand . 'VialCoveInter-400-bcbeebd42959.woff2' ) . '" as="font" type="font/woff2" crossorigin>';
 }, 2 );
 
 add_action( 'wp_enqueue_scripts', function () {
