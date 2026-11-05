@@ -15,3 +15,13 @@ Same sandbox anonymous loopback HTTPS curl samples (uncompressed body, same reso
 Storefront HTML remains en-US; sandbox administrator user locale zh_CN. Server locale receipt is under private sandbox state. Credentials are not committed or copied to handoffs.
 
 Front-end, Core and COA owners have received the actual deployment receipt and are validating the live sandbox only. Pending: real mobile interactions/fit/back/fonts/discount switching; canonical file Range/conditional response/caching; native helper and service data contracts. Nginx private/no-store supplementation is still a distinct verification concern. No real payment, external mail delivery, production test writes or rejected new admin redesign are authorized by this checkpoint. Do not claim completion until those checks return and are reviewed.
+
+## Sandbox Nginx acceptance follow-up
+
+COA owner independently recorded the actual new-candidate HTTP baseline: 19 requests / 25 protocol checks, including 206/304/HEAD/416/412, exact range bytes and private/unknown rejection. Two configuration issues were measured separately: duplicate private/no-store on canonical successful report responses, and four ES modules served as application/octet-stream despite correct bytes/SHA.
+
+Sandbox-only Nginx now omits its supplemental Cache-Control only for exact canonical public report file/thumbnail GET/HEAD responses with status 200/206/304 and optional download=0|1. PHP private/no-cache/max-age=0/must-revalidate/no-transform remains authoritative. Actual unknown404, archive JSON, normal homepage and plain rest_route retain no-store. It does not enable shared/public CDN caching. Backup /var/lib/vialcove-sandbox/backups/nginx-before-1793896270.conf. Actual 206/304/HEAD each now has only the PHP revalidation header; receipt outputs/sandbox-nginx-cache-verification.json.
+
+A sandbox-only .mjs static location supplies application/javascript without replacing the MIME table for CSS/fonts/other types. nginx -t passed. The immediate post-reload first request still observed the old MIME; with no further configuration changes, fresh checks returned JavaScript type for all four modules. Receipt outputs/sandbox-mjs-verification.json. Source files/PDF bytes were not changed. Independent COA full-GET/hash and protocol/cache reacceptance is ongoing; do not equate HEAD MIME with iOS rendering acceptance.
+
+Actual mobile UI is currently blocked at the browser's Basic authentication entry (ERR_INVALID_AUTH_CREDENTIALS followed by policy stop). The frontend owner did not bypass it. User has been asked to complete normal sandbox access authentication; until then, mobile UI/LCP/INP/CLS remain unverified. No alternate hidden browser automation or removal of sandbox access protection is used.
