@@ -504,7 +504,11 @@
     function refresh() {
       if (destroyed) return;
       renderProduct(); syncSticky(); renderOffers(); navigation?.refresh(); const selection = selectedLabel();
-      if (selection !== lastSelection) { track.scrollLeft=0; lastSelection=selection; renderReport(); }
+      if (selection !== lastSelection) { track.scrollLeft=0; lastSelection=selection; }
+      // Pending and accepted variation events can share the same label. Restore
+      // its report when acceptance changes; renderReport's signature avoids
+      // rebuilding unchanged document DOM on ordinary refreshes.
+      renderReport();
       if (!report && !root.vcHomeSelectionPending && selection && !reportRequest && reportCursor.page > 0 && reportCursor.page < reportCursor.pages) reportReadPromise=readReports({resume:true});
       ticker?.updateContext(context());
       if (support && settings.whatsappEnabled) {

@@ -137,6 +137,15 @@ test('pageshow and focus reconcile a missed media-query change without rebuildin
  f.query.matches=false;f.window.fire('focus');const resumed=f.root.querySelector('.vc-dialog-gallery');assert.ok(resumed);assert.notEqual(resumed,initial);assert.equal(f.root.querySelectorAll('form.cart').length,1);f.window.fire('pageshow',{persisted:true});f.window.fire('focus');assert.equal(f.root.querySelector('.vc-dialog-gallery'),resumed);assert.equal(f.disposed.length,1);assert.equal(f.requests.length,0);
  f.api.destroy();assert.equal(f.window.listeners.get('pageshow').length,0);assert.equal(f.window.listeners.get('focus').length,0);f.query.matches=true;f.window.fire('pageshow',{persisted:true});f.window.fire('focus');assert.equal(f.disposed.length,2);
 });
+test('accepted variation restores its cached report after pending selection used the same label',async()=>{
+ const f=fixture({devices:{desktop:base,mobile:{...base,reportGalleryEnabled:true}}});f.window.vcHomeQuickView.reportApi='/reports';f.resize(true);
+ f.requests[0].resolve({ok:true,json:async()=>({items:[{id:1,product:{id:7},specification:'20mg',issued_on:'2026-11-05',file:{mime:'application/pdf'},view_url:'/report.pdf',thumbnail_url:'/report.webp'}],total_pages:1,page:1,total:1})});await settle();
+ const documents=f.root.querySelector('.vc-dialog-documents');assert.equal(documents.hidden,false);
+ const select=f.root.querySelector('.variations select');select.value='15mg';select.selectedOptions=[{textContent:'15mg × 10 vials'}];f.root.vcHomeSelectionPending=true;f.api.update();f.root.vcHomeSelectionPending=false;f.api.update();assert.equal(documents.hidden,true);
+ select.value='20mg';select.selectedOptions=[{textContent:'20mg × 10 vials'}];f.root.vcHomeSelectionPending=true;f.api.update();assert.equal(documents.hidden,true);
+ f.root.vcHomeSelectionPending=false;f.api.update();assert.equal(documents.hidden,false);assert.ok(f.root.querySelector('.vc-dialog-document-art'));assert.equal(f.requests.length,1,'cached report restored without another archive read');f.api.destroy();
+});
+
 test('an already opened report is disposed when its device disables the gallery, while unchanged updates preserve its DOM',async()=>{
  const f=fixture({devices:{desktop:base,mobile:{...base,reportGalleryEnabled:true}}});let viewers=0,closed=0;f.window.createProductReportViewer=()=>({open(){viewers++;},dispose(){closed++;}});f.window.vcHomeQuickView.reportApi='/reports';f.resize(true);
  f.requests[0].resolve({ok:true,json:async()=>({items:[{id:1,product:{id:7},specification:'20mg',issued_on:'2026-11-05',file:{mime:'application/pdf'},view_url:'/report.pdf',thumbnail_url:'/report.webp'}],total_pages:1,page:1,total:1})});await settle();
