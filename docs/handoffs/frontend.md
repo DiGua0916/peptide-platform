@@ -1277,7 +1277,7 @@ COA 商品/资料库共用按宽度阅读器，视口附近单并发绘制/离�
 
 ### 2026-11-05 · Codex：首页实际渲染性能第二阶段
 
-与 Core owner 对齐公开 `peptide_core_get_store_product_data($selectedSku):?array`；主题只在函数缺失时走旧 REST，存在但 null/异常闭合为空 extras，不绕回更宽路径。保留 exact first-SKU、所有82张 SSR 卡、搜索/分类/顺序/原生链接及当前用户报告状态；统计对子规格批量原生 raw-cache prime；SSR快捷加购仅给候选，点击仍fresh exact GET和原生quantity/held-stock/POST。hero一份预备表单改同一按需loader，主图eager/high不改；目录原生图lazy/async。
+与 Core owner 对齐公开 `peptide_core_get_store_product_data($selectedSku):?array`；主题只在函数缺失时走旧 REST，存在但 null/异常闭合为空 extras，不绕回更宽路径。保留 exact first-SKU、所有82张 SSR 卡、搜索/分类/顺序/原生链接及当前用户报告状态；统计对子规格批量原生 raw-cache prime；SSR快捷加购仅给候选，点击仍fresh exact GET和原生quantity/held-stock/POST。hero一份预备表单改同一按需loader，主图eager/high不改；目录原生图实际读回lazy，源码另传的async/priority/sizes在当前安装HTML未保留，不当作已生效。
 
 同一417 Core源清单和同一正式helper片段，任务目录off/on主题只差4个runtime文件，六次交错匿名实际首页HTTP200、零拒写/外发：SQL1918→820（各三次固定），计数547→4，完整schema91→0，SSR QuantityLimits173/ReserveStock166→0；HTML558370→427451 B，82卡/快捷描述及可见内容保持。Xdebug/SAVEQUERIES本机首字节中位6239→3602ms，仅此实验，不宣称公网/真机百分比。四SKU/parent全部6字段、两fresh-card全DTO一致，实际fresh stock检查仍2/2。额外一轮过期Panapay transient3DELETE尝试均被guard拦，单列排除计时，未放开写入。严格批准span/原生ID引用映射后的全页425546 B及SHA相同，无粗略删全文空白。
 

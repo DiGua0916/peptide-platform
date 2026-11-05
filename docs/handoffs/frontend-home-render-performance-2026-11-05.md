@@ -15,7 +15,7 @@ The candidate changes four runtime files:
 | `wp-content/themes/peptide-site/inc/home-quick-view.php` | Separate an SSR attempt candidate from the existing fresh quantity/held-stock authorization. |
 | `wp-content/themes/peptide-site/template-parts/modules/demo-hero-h1.php` | Use the existing shared on-demand native template loader instead of preloading one hidden hero form and its reset snapshot. |
 
-The catalogue source, promotion/order settings, all-SKU search text, category data, first displayed SKU, real links, prices, image sources, 82 quick-add entries and no-JavaScript catalogue coverage remain. The current hero retains its eager/high-priority image; compact catalogue images use native `loading=lazy`, `decoding=async`, `fetchpriority=auto` and the existing responsive card sizes. This is not a measured browser request-count or mobile LCP claim.
+The catalogue source, promotion/order settings, all-SKU search text, category data, first displayed SKU, real links, prices, image sources, 82 quick-add entries and no-JavaScript catalogue coverage remain. The current hero retains its eager/high-priority image. The compact-card call requests native `loading=lazy`, `decoding=async`, `fetchpriority=auto` and the existing responsive sizes, but actual installed HTML retains only `loading=lazy` from those hints. Only that observed image change is claimed; there is no measured browser request-count or mobile LCP result.
 
 ## Core contract and deployment order
 
@@ -73,7 +73,7 @@ A separate clean native comparison matched all six extension fields for four exa
 
 One earlier extra DTO/bootstrap diagnostic encountered three expired Panapay policy-transient DELETE attempts, all rejected by the guard. That run is explicitly excluded from the six timing samples and is not described as zero attempted writes. No transient was changed or guard relaxed to obtain a clean result; subsequent separately recorded semantic/DTO samples had zero rejected writes/outbound attempts. All probe servers were stopped.
 
-Full experiment, source hashes, scoped canonicalization and limitations: `D:/Codex/Tasks/2026-11-05/home-render-performance/outputs/ab-report.md` and its JSON receipts. Source-availability and measured-overlay results do not mean that the new Core helper is already installed in the shared LocalWP runtime or deployed server.
+Full experiment, source hashes, scoped canonicalization and limitations: `D:/Codex/Tasks/2026-11-05/home-render-performance/outputs/ab-report.md` and `outputs/home-render-ab-summary.json`, plus the linked raw receipts. Source-availability and measured-overlay results do not mean that the new Core helper is already installed in the shared LocalWP runtime or deployed server.
 
 ## Configuration and remaining acceptance
 
