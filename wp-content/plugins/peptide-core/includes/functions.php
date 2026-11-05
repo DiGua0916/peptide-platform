@@ -18,6 +18,53 @@ function peptide_core_get_site_config(): array {
 }
 
 /**
+ * Read the existing Store API peptide_core extension for one public Woo object.
+ *
+ * Pass the exact displayed variation for selected-SKU data. A variable parent
+ * retains Store_Api::data()'s existing aggregate/card semantics, not a selection.
+ * This is display data, never add-to-cart authority or a stock reservation.
+ * Null is unavailable/rejected data: fail closed, without a second REST lookup.
+ * Legacy REST fallback is only for callers where this helper does not exist.
+ *
+ * @param WC_Product $selectedSku An existing Woo object; IDs/arrays are not resolved.
+ * @return array<string,mixed>|null
+ */
+function peptide_core_get_store_product_data( $selectedSku ): ?array {
+	try {
+		if ( ! $selectedSku instanceof WC_Product || $selectedSku->get_id() < 1
+			|| ( \PeptideCore\Store_Config::get( 'force_login' ) && ! is_user_logged_in() ) ) {
+			return null;
+		}
+		$id = $selectedSku->get_id();
+		if ( 'publish' !== $selectedSku->get_status() || 'publish' !== get_post_field( 'post_status', $id, 'raw' )
+			|| '' !== $selectedSku->get_post_password() || '' !== (string) get_post_field( 'post_password', $id, 'raw' ) ) {
+			return null;
+		}
+		if ( $selectedSku->is_type( 'variation' ) ) {
+			$parent_id = $selectedSku->get_parent_id();
+			// Native variation reads do not hydrate post_password; check raw post
+			// identity/password as well as the Woo object and visibility filters.
+			if ( ! $selectedSku instanceof WC_Product_Variation || 'product_variation' !== get_post_type( $id )
+				|| $parent_id < 1 || $parent_id !== (int) get_post_field( 'post_parent', $id, 'raw' )
+				|| ! $selectedSku->variation_is_active() || ! $selectedSku->variation_is_visible() ) {
+				return null;
+			}
+			$parent = wc_get_product( $parent_id );
+			if ( ! $parent instanceof WC_Product || $parent->get_id() !== $parent_id || ! $parent->is_type( 'variable' )
+				|| ! \PeptideCore\Modules\Products::public_catalog_product( $parent )
+				|| 'publish' !== get_post_field( 'post_status', $parent_id, 'raw' ) || '' !== (string) get_post_field( 'post_password', $parent_id, 'raw' ) ) {
+				return null;
+			}
+		} elseif ( $selectedSku instanceof WC_Product_Variation || ! \PeptideCore\Modules\Products::public_catalog_product( $selectedSku ) ) {
+			return null;
+		}
+		return \PeptideCore\Api\Store_Api::data( $selectedSku );
+	} catch ( Throwable $error ) {
+		return null;
+	}
+}
+
+/**
  * 商品的公开批次与报告，等同 GET /peptide/v1/products/{slug}/batches。
  *
  * @return array<string,mixed>|WP_Error
