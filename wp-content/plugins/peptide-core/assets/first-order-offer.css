@@ -18,6 +18,9 @@
     isolation:isolate;
 }
 .pc-first-offer *, .pc-first-offer-result * { box-sizing:border-box; }
+/* Tighten only the actual coupon-to-catalog boundary, retaining other section spacing. */
+.vc-m--first-order-offer:has(> .pc-first-offer):has(+ .vc-m--product-collection .vc-demo-catalog) > .pc-first-offer { margin-block-end:12px; }
+.vc-m--first-order-offer:has(> .pc-first-offer) + .vc-m--product-collection .vc-demo-catalog { padding-block-start:12px; }
 .pc-first-offer__seal {
     display:grid;
     place-items:center;
