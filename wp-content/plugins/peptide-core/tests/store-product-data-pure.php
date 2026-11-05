@@ -59,7 +59,23 @@ function get_option( $key, $default = false ) {
 	if ( 'peptide_core_store_config' === $key ) { return array( 'force_login' => $GLOBALS['force_login'] ); }
 	return str_starts_with( $key, 'woocommerce_tax_display_' ) ? $GLOBALS['tax'] : $default;
 }
-function get_posts( $args ) { ++$GLOBALS['report_reads']; if ( ! empty( $GLOBALS['throw_catalog'] ) ) { throw new RuntimeException( 'Synthetic catalog failure' ); } return array(); }
+function get_posts( $args ) {
+	++$GLOBALS['report_reads'];
+	if ( ! empty( $GLOBALS['throw_catalog'] ) ) { throw new RuntimeException( 'Synthetic catalog failure' ); }
+	if ( ! empty( $GLOBALS['permission_fixture'] ) ) {
+		if ( 'pc_batch' === ( $args['post_type'] ?? '' ) && 100 === ( $args['meta_query'][0]['value'] ?? null ) ) { return array( 501 ); }
+		if ( 'pc_report' === ( $args['post_type'] ?? '' ) && 501 === ( $args['meta_query'][0]['value'] ?? null ) ) { return array( 601 ); }
+	}
+	return array();
+}
+function get_post_meta( $id, $key, $single = false ) { return $GLOBALS['report_meta'][ $id ][ $key ] ?? ''; }
+function get_user_meta( ...$args ) { return ''; }
+function user_can( ...$args ) { return false; }
+function apply_filters( $tag, $value, ...$args ) { return $value; }
+function get_the_title( $id ) { return 'Synthetic registered report'; }
+function rest_url( $path ) { return 'https://fixture.invalid/wp-json/' . $path; }
+function wp_create_nonce( $action ) { return 'fixture-only'; }
+function add_query_arg( $key, $value, $url ) { return $url . '?' . $key . '=' . rawurlencode( $value ); }
 function wc_get_price_decimals() { return $GLOBALS['decimals']; }
 function get_woocommerce_currency() { return $GLOBALS['currency']; }
 function wc_format_decimal( $value, $dp = false ) { return false === $dp ? (string) (float) $value : number_format( (float) $value, $dp, '.', '' ); }
@@ -74,7 +90,7 @@ function wp_remote_get( ...$args ) { forbidden_io( 'http-fallback' ); }
 function wp_remote_post( ...$args ) { forbidden_io( 'http-write' ); }
 
 $includes = dirname( __DIR__ ) . '/includes/';
-foreach ( array( 'class-meta.php', 'class-post-types.php', 'class-store-config.php', 'modules/class-products.php', 'class-pricing.php', 'class-unit-pricing.php', 'admin/class-product-panel.php', 'class-catalog.php', 'api/class-store-api.php', 'functions.php' ) as $file ) { require $includes . $file; }
+foreach ( array( 'class-meta.php', 'class-post-types.php', 'class-store-config.php', 'modules/class-products.php', 'class-pricing.php', 'class-unit-pricing.php', 'admin/class-product-panel.php', 'class-reports.php', 'class-access.php', 'class-catalog.php', 'api/class-store-api.php', 'functions.php' ) as $file ) { require $includes . $file; }
 
 $checks = array();
 $check = static function ( string $name, bool $pass ) use ( &$checks ): void { $checks[] = compact( 'name', 'pass' ); };
@@ -184,6 +200,21 @@ $check( 'dynamic getter read is not cached by helper', $data === PeptideCore\Api
 $check( 'subsequent read restores live price', peptide_core_get_store_product_data( $tr15 )['price_pair']['price'] === '5000' );
 $simple->throws = 'status'; $reject( $simple, 'qualification exception fails closed' ); $simple->throws = '';
 $GLOBALS['throw_catalog'] = true; $check( 'actual service exception returns null without REST fallback', null === $read( $simple, 'service exception' ) ); unset( $GLOBALS['throw_catalog'] );
+
+// Real Catalog/Reports/Access logic must use the current user on every read.
+$GLOBALS['permission_fixture'] = true;
+$GLOBALS['report_meta'] = array(
+	501 => array( PeptideCore\Meta::BATCH_PRODUCT_ID => 100, PeptideCore\Meta::BATCH_VARIATION_IDS => array(), PeptideCore\Meta::BATCH_STATUS => 'active' ),
+	601 => array( PeptideCore\Meta::REPORT_STATUS => 'published', PeptideCore\Meta::REPORT_ACCESS => 'registered', PeptideCore\Meta::REPORT_BATCH_ID => 501,
+		PeptideCore\Meta::REPORT_FILE => array( 'stored' => 'fixture-only.pdf', 'mime' => 'application/pdf', 'size' => 1 ) ),
+);
+$user_id = 0; $anonymous = $read( $simple, 'registered report guest' );
+$check( 'guest sees restricted from actual report-access service', $anonymous['report_state'] === 'restricted' && $anonymous === PeptideCore\Api\Store_Api::data( $simple ) );
+$user_id = 7; $member = $read( $simple, 'registered report member' );
+$check( 'member sees available without cached guest state', $member['report_state'] === 'available' && $member === PeptideCore\Api\Store_Api::data( $simple ) );
+$user_id = 0; $returned_guest = $read( $simple, 'registered report returned guest' );
+$check( 'guest cannot inherit prior member availability', $returned_guest['report_state'] === 'restricted' && $returned_guest === $anonymous );
+unset( $GLOBALS['permission_fixture'], $GLOBALS['report_meta'] );
 $check( 'no stock service/session/cart/HTTP/cache-write/product-write was attempted', array() === $forbidden );
 
 $passed = count( array_filter( $checks, static fn ( $row ) => $row['pass'] ) );

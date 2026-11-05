@@ -43,7 +43,7 @@ For the separate stock optimization, SSR may describe a candidate shortcut witho
 
 ## Validation and deployment boundary
 
-Root reran **181/181 pure checks**, both PHP lints and whitespace validation. The tests execute the actual helper and owned Store API/Pricing/Unit_Pricing/Catalog/Products services with finite fixtures. They include raw-post visibility/password/parent mismatch, null refusal, variable aggregate versus selected SKU, changing tax/currency/dynamic getters, display of legitimate nonpurchasable items, and no explicit cart/stock/write calls.
+Root reran **187/187 pure checks**, both PHP lints and whitespace validation. The tests execute the actual helper and owned Store API/Pricing/Unit_Pricing/Catalog/Products services with finite fixtures. They include raw-post visibility/password/parent mismatch, null refusal, variable aggregate versus selected SKU, changing tax/currency/dynamic getters, display of legitimate nonpurchasable items, and no explicit cart/stock/write calls. The final six checks add a synthetic registered-report fixture through the actual Catalog/Reports/Access services: guest restricted → member available → guest restricted, without helper-cached authorization state. This is not a real authenticated-customer HTTP/report-download test.
 
 Native guest WordPress/Woo reads compare TR20/11307, TR15/11309, parent aggregate11306 and public parent11408 against the original same-SKU Store API extension: all fields match. The installed catalog has no eligible public simple-product sample; that branch is fixture-tested, not claimed as native-tested or created for testing.
 
