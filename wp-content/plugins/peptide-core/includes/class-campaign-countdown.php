@@ -60,15 +60,17 @@ final class Campaign_Countdown {
 		$rows = array(); $now = time();
 		foreach ( $ids as $id ) {
 			$source = self::source( (int) $id, $now );
-			if ( $source ) { $source['hasDeadline'] = null !== $source['ends']; $rows[] = $source; }
+			if ( $source ) {
+				// Administrative selection keeps the merchant's stored name.
+				$source['title'] = html_entity_decode( wp_strip_all_tags( get_the_title( (int) $id ) ), ENT_QUOTES, 'UTF-8' );
+				$source['hasDeadline'] = null !== $source['ends']; $rows[] = $source;
+			}
 		}
 		return $rows;
 	}
 	/** Customer label only: keep stored and admin candidate titles exactly as supplied. */
 	private static function customer_title( string $title ): string {
-		if ( ! in_array( trim( $title ), array( '黑色星期五', '黑五' ), true ) ) { return $title; }
-		$language = class_exists( Storefront_Translation::class ) ? Storefront_Translation::code() : 'en';
-		return 'es' === $language ? 'Viernes Negro' : 'Black Friday';
+		return Promotions::customer_title( $title );
 	}
 	public static function for_position( string $position, ?array $settings = null, ?int $now = null ): array {
 		$now = $now ?? time();

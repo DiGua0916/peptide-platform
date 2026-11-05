@@ -51,6 +51,7 @@ final class Plugin {
 		Storefront_Translation::register_hooks();
 		Storefront_Translator::register_hooks();
 		Checkout_Ack::register_hooks();
+		Checkout_Phone::register_hooks();
 		Shipping_Tracking::register_hooks();
 		Templates::register_hooks();
 		Modules\Blocks::register_hooks();

@@ -394,6 +394,17 @@ final class Promotions {
 
 	// ---------- 文字 ----------
 
+	/**
+	 * Customer-facing labels share the storefront's request-scoped language.
+	 * Only the two established legacy Black Friday names are aliases; custom
+	 * promotion titles and the stored/admin name are never rewritten.
+	 */
+	public static function customer_title( string $title ): string {
+		if ( ! in_array( trim( $title ), array( '黑色星期五', '黑五' ), true ) ) { return $title; }
+		$language = class_exists( Storefront_Translation::class ) ? Storefront_Translation::code() : 'en';
+		return 'es' === $language ? 'Viernes Negro' : 'Black Friday';
+	}
+
 	private static function money( float $amount ): string {
 		return html_entity_decode( wp_strip_all_tags( wc_price( $amount ) ) );
 	}
@@ -651,7 +662,7 @@ final class Promotions {
 			if ( $e['discount'] > 0 ) {
 				$applied[] = array(
 					'id'            => $e['id'],
-					'title'         => html_entity_decode( get_the_title( $e['id'] ) ),
+					'title'         => self::customer_title( html_entity_decode( get_the_title( $e['id'] ) ) ),
 					'tier'          => self::tier_text( $e['config'], $e['reached'] ),
 					'discount'      => $e['discount'],
 					'discount_text' => self::money( $e['discount'] ),
@@ -703,7 +714,7 @@ final class Promotions {
 				: self::money( (float) $remaining );
 			$out['next'] = array(
 				'id'             => $next['e']['id'],
-				'title'          => html_entity_decode( get_the_title( $next['e']['id'] ) ),
+				'title'          => self::customer_title( html_entity_decode( get_the_title( $next['e']['id'] ) ) ),
 				'basis'          => $c['basis'],
 				'remaining'      => $remaining,
 				'remaining_text' => $rtext,
@@ -748,7 +759,7 @@ final class Promotions {
 
 	// ---------- 公开信息 ----------
 
-	public static function view( int $id ): array {
+	public static function view( int $id, bool $customer = false ): array {
 		$c     = self::config( $id );
 		$names = static function ( array $ids, string $kind ): array {
 			$out = array();
@@ -771,7 +782,7 @@ final class Promotions {
 		$date = static fn( int $ts ) => $ts ? wp_date( (string) get_option( 'date_format' ) . ' ' . (string) get_option( 'time_format' ), $ts ) : '';
 		return array(
 			'id'           => $id,
-			'title'        => html_entity_decode( get_the_title( $id ) ),
+			'title'        => $customer ? self::customer_title( html_entity_decode( get_the_title( $id ) ) ) : html_entity_decode( get_the_title( $id ) ),
 			'text'         => $c['text'],
 			'status'       => self::status( $id ),
 			'type'         => $c['type'],
@@ -809,7 +820,7 @@ final class Promotions {
 		$out = array();
 		foreach ( $ids as $id ) {
 			if ( self::config( (int) $id )['public'] && in_array( self::status( (int) $id ), array( 'active', 'upcoming' ), true ) ) {
-				$out[] = self::view( (int) $id );
+				$out[] = self::view( (int) $id, true );
 			}
 		}
 		return $out;
@@ -820,13 +831,13 @@ final class Promotions {
 		if ( self::CPT !== get_post_type( $id ) || ! self::config( $id )['public'] || 'off' === self::status( $id ) ) {
 			return null;
 		}
-		return self::view( $id );
+		return self::view( $id, true );
 	}
 
 	/** 商品参加的进行中、公开的活动（按优先级只有一个）。 */
 	public static function for_product( \WC_Product $product ): array {
 		$owner = self::owner( $product, self::active_ids() );
-		return $owner && self::config( $owner )['public'] ? array( self::view( $owner ) ) : array();
+		return $owner && self::config( $owner )['public'] ? array( self::view( $owner, true ) ) : array();
 	}
 
 	// ---------- 页面 ----------
