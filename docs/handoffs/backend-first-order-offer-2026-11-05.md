@@ -45,3 +45,7 @@
 - 已备份并 CAS 安装本机 PHP/JS/CSS 三个文件；没有修改券、活动配置、购物车或订单数据。服务器尚未发布本次收紧。
 - 实际 IAB 360px/390px 单按钮、无横向溢出、100×44px触摸区；截图 `D:/Codex/Tasks/2026-11-05/first-order-offer-compact/outputs/compact-offer-mobile.png`。只点击静态优惠码以滚动查看，未在用户车上申请优惠。
 - 更新回归：22/22 Node、63/63 PHP；新增实际浏览器 IIFE 的无复制节点挂载、fresh空车复制/有货应用、重复与连续领取、西语、X/15秒关闭。原队列和金额测试保留。不是实卡支付验证。收据 `D:/Codex/Tasks/2026-11-05/first-order-offer-compact/outputs/verification.json`。
+
+### 2026-11-05 相邻商品区留白
+
+用户要求缩小券底部到商品区的间隔。实际手机computed为40px券margin+40px目录padding=80px，现使用原生两个相邻模块且实际包含券的`:has`限定，分别12px，总计24px；只改first-order-offer.css，不改同事目录样式及其他无券页面。实际IAB回读24px、无溢出，截图 `D:/Codex/Tasks/2026-11-05/offer-catalog-spacing/outputs/spacing-after.png`。本机CSS已备份CAS安装，无JS/优惠/数据库变化；低影响样式修订仅做diff与实际视觉核对，未新增业务测试。服务器未发布。
