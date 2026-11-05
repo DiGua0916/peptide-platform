@@ -61,7 +61,8 @@
         live.setAttribute('aria-live', 'polite'); live.setAttribute('aria-atomic', 'true');
         const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 128; mascot.append(canvas);
         track.append(fill); milestones.append(track, confetti, mascot); panel.append(milestones, message, live); root.replaceChildren(panel); root.hidden = true;
-        const image = new Image(); image.src = imageUrl.href; image.decoding = 'async';
+        const image = new Image(); image.decoding = 'async';
+        let imageRequested = false;
         let ctx = null; try { ctx = canvas.getContext('2d'); } catch (_) {}
         const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
         let last = null, nodeViews = new Map(), nodeSignature = '', token = 0, frame = 0, hideTimer = 0, animationNode = null;
@@ -103,6 +104,9 @@
             if (!view || !node || !visible() || destroyed) return;
             live.textContent = node.thresholdText + ': ' + node.rewardText;
             const generation = token, showBean = state.celebration.smileEnabled === true && !!ctx;
+            // This sprite is only used by a visible, qualifying celebration.
+            // Keep it out of the initial storefront's competing downloads.
+            if (showBean && !imageRequested) { imageRequested = true; image.src = imageUrl.href; }
             mascot.style.setProperty('--pc-node-position', node.positionPercent + '%'); animationNode = view; direction(view);
             const start = () => {
                 if (generation !== token || destroyed || !visible()) return;

@@ -47,7 +47,9 @@ function harness({ reduced = false, deferredImage = false, context = true } = {}
     }
     const document = { hidden: false, createElement: tag => new Element(tag), createElementNS: (_, tag) => new Element(tag), createTextNode: text => { const node = new Element('#text'); node.textContent = text; return node; }, addEventListener: (name, fn) => docListeners.set(name, fn), removeEventListener: name => docListeners.delete(name) };
     const media = { matches: reduced, addEventListener: (name, fn) => listeners.set('media:' + name, fn), removeEventListener: name => listeners.delete('media:' + name) };
+    const imageRequests = [];
     class Image {
+        set src(value) { imageRequests.push(value); }
         constructor() { this.complete = !deferredImage; this.naturalWidth = deferredImage ? 0 : 1920; }
         decode() { return new Promise(resolve => { resolveImage = () => { this.complete = true; this.naturalWidth = 1920; this.onload?.(); resolve(); }; }); }
     }
@@ -57,7 +59,7 @@ function harness({ reduced = false, deferredImage = false, context = true } = {}
         requestAnimationFrame: fn => { raf.set(++serial, fn); return serial; }, cancelAnimationFrame: id => raf.delete(id), setTimeout: fn => { timers.set(++serial, fn); return serial; }, clearTimeout: id => timers.delete(id),
         IntersectionObserver: class { constructor(fn) { observed = fn; } observe() {} disconnect() { observed = null; } }, ResizeObserver: class { observe() {} disconnect() {} } });
     const ui = window.createCartProgress({ mount: root });
-    return { ui, root, media, raf, timers, canvasOps, listeners, docListeners, document,
+    return { ui, root, media, raf, timers, canvasOps, listeners, docListeners, document, imageRequests,
         select: name => root.querySelector('.pc-activity-listener__' + name),
         step: time => { const callbacks = [...raf.values()]; raf.clear(); callbacks.forEach(fn => fn(time)); },
         intersect: value => observed([{ isIntersecting: value }]),
@@ -79,6 +81,18 @@ test('initial attained $500 tier stays silent without displaying or reserving a 
     assert.equal(decision(null, dto).celebrate, null); assert.equal(h.select('mascot').hidden, true); assert.equal(h.root.classList.contains('has-mascot'), false);
     assert.equal(h.select('live').textContent, ''); assert.equal(h.raf.size, 0); assert.equal(h.timers.size, 0);
     assert.equal(h.select('confetti').children.length, 0); assert.equal(h.canvasOps.length, 0);
+    assert.equal(h.imageRequests.length, 0, 'initialization and baseline must not download celebration art');
+});
+
+test('celebration art is requested once on eligible feedback and never for disabled or offscreen feedback', () => {
+    for (const mode of ['disabled', 'offscreen']) {
+        const h = harness(); h.ui.update(state(29900));
+        if (mode === 'offscreen') h.offscreen();
+        h.ui.update(state(50160, mode === 'disabled' ? { celebration: { enabled: true, smileEnabled: false } } : {}));
+        assert.equal(h.imageRequests.length, 0); h.ui.destroy();
+    }
+    const h = harness(); h.ui.update(state(29900)); h.ui.update(state(50160)); h.ui.update(state(55000));
+    assert.equal(h.imageRequests.length, 1); h.ui.destroy();
 });
 
 test('below-tier, disabled, unavailable canvas or not-yet-loaded mascot has no reserved duck space', () => {
