@@ -331,7 +331,7 @@ final class Query {
 	 * 一次访问的时间线：按发生时间排列，游标分页（默认每页 200 条）。心跳默认在数据库里就过滤掉，
 	 * 隐藏心跳后仍然能翻到末尾的业务事件。
 	 */
-	public static function timeline( int $visit_id, ?string $cursor = null, int $limit = 200, bool $heartbeats = false ): ?array {
+	public static function timeline( int $visit_id, ?string $cursor = null, int $limit = 200, bool $heartbeats = false, bool $newest = false ): ?array {
 		global $wpdb;
 		$visit = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . Schema::table( 'visits' ) . ' WHERE id = %d', $visit_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
 		if ( ! $visit ) {
@@ -344,9 +344,11 @@ final class Query {
 		}
 		$c = self::cursor( $cursor );
 		if ( $c ) {
-			$where .= $wpdb->prepare( ' AND ( occurred_ms > %d OR ( occurred_ms = %d AND id > %d ) )', $c[0], $c[0], $c[1] );
+			$compare = $newest ? '<' : '>';
+			$where .= $wpdb->prepare( " AND ( occurred_ms {$compare} %d OR ( occurred_ms = %d AND id {$compare} %d ) )", $c[0], $c[0], $c[1] );
 		}
-		$rows   = $wpdb->get_results( 'SELECT * FROM ' . Schema::table( 'events' ) . " WHERE {$where} ORDER BY occurred_ms ASC, id ASC LIMIT " . ( $limit + 1 ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+		$order = $newest ? 'DESC' : 'ASC';
+		$rows   = $wpdb->get_results( 'SELECT * FROM ' . Schema::table( 'events' ) . " WHERE {$where} ORDER BY occurred_ms {$order}, id {$order} LIMIT " . ( $limit + 1 ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
 		$more   = count( $rows ) > $limit;
 		$rows   = array_slice( $rows, 0, $limit );
 		$events = array();

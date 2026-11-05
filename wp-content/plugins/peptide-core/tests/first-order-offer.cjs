@@ -1,6 +1,8 @@
 'use strict';
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
 const {validCart,couponResult,formatMinor,existingCouponsRetained,createController,popupTimer}=require('../assets/first-order-offer.js');
 const {createClient}=require('../../../themes/peptide-site/assets/live-cart-experience.js');
 const strings={empty:'empty',copied:'copied',copyFailed:'copyFailed',notReady:'notReady',already:'already',uncertain:'uncertain',success:'success'};
@@ -23,3 +25,63 @@ test('Spanish failure branch translates known native errors and never leaks unkn
 test('result closes after 15000ms; restart clears prior timer and X cancel stops it',()=>{const pending=new Map(),cleared=[];let id=0,closed=0;const timer=popupTimer(()=>closed++,{setTimeout:(fn,ms)=>{assert.equal(ms,15000);pending.set(++id,fn);return id;},clearTimeout:key=>{cleared.push(key);pending.delete(key);}});timer.start();timer.start();assert.deepEqual(cleared,[1]);assert.equal(pending.size,1);pending.get(2)();assert.equal(closed,1);timer.start();timer.cancel();assert.equal(pending.has(3),false);assert.equal(closed,1);});
 test('actual shared client uses nonce protected native apply-coupon once and confirms raw receipt',async()=>{const requests=[],notices=[];const response=(body,nonce='native-nonce')=>({ok:true,status:200,headers:{get:key=>key==='Nonce'?nonce:null},json:async()=>body});const client=createClient({cartApiUrl:'https://example.invalid/wp-json/wc/store/v1/cart'},{fetch:async(url,init)=>{requests.push({url,init});return response(init.method==='POST'?cart(['welcome5'],'8761'):cart([],'9011'));}});const bridge={refresh:client.refresh,snapshot:client.snapshot,applyCoupon:code=>client.write('apply-coupon',{code})};const c=createController({code:'welcome5',strings,client:()=>bridge,copy:async()=>true,show:x=>notices.push(x)});assert.equal((await c.apply()).state,'applied');assert.equal(requests.length,2);assert.equal(requests[1].url,'https://example.invalid/wp-json/wc/store/v1/cart/apply-coupon');assert.equal(requests[1].init.headers.Nonce,'native-nonce');assert.equal(requests[1].init.credentials,'same-origin');assert.equal(requests[1].init.cache,'no-store');assert.deepEqual(JSON.parse(requests[1].init.body),{code:'welcome5'});assert.equal(notices[0].result.totalMinor,'8761');client.destroy();});
 test('actual shared timeout reconciles with GET once; offer never retries the uncertain POST',async()=>{const requests=[],notices=[];const response=body=>({ok:true,status:200,headers:{get:()=> 'nonce'},json:async()=>body});const client=createClient({cartApiUrl:'https://example.invalid/wp-json/wc/store/v1/cart'},{fetch:async(url,init)=>{requests.push(init.method);if(init.method==='POST'){const e=Error('network timeout');e.name='AbortError';throw e;}return response(cart(requests.length>1?['welcome5']:[]));}});const c=createController({code:'welcome5',strings,client:()=>({refresh:client.refresh,snapshot:client.snapshot,applyCoupon:code=>client.write('apply-coupon',{code})}),copy:async()=>true,show:x=>notices.push(x)});assert.equal((await c.apply()).state,'error');assert.deepEqual(requests,['GET','POST','GET']);assert.equal(notices[0].kind,'error');assert.match(notices[0].message,/timed out/);assert.equal((await c.apply()).state,'already');assert.deepEqual(requests,['GET','POST','GET','GET']);client.destroy();});
+
+// Execute the unmodified browser IIFE, including mount(), with no copy-button node.
+// The fixture only supplies DOM primitives; all branching, binding, modal/timer and writer calls are production code.
+function mountedOffer({language='en',initialCart=cart(),afterRefresh,reply,refreshGate,clipboardFails=false,preview=false}={}) {
+    class Element {
+        constructor(tag='div') { this.tagName=tag.toUpperCase();this.dataset={};this.attributes=new Map();this.children=[];this.handlers=new Map();this.disabled=false;this.open=false;this.textContent='';this.hidden=false;this.id=''; }
+        setAttribute(key,value) { this.attributes.set(key,String(value)); }
+        getAttribute(key) { return this.attributes.get(key)??null; }
+        removeAttribute(key) { this.attributes.delete(key); }
+        append(...nodes) { this.children.push(...nodes); }
+        replaceChildren(...nodes) { this.children=[...nodes]; }
+        addEventListener(name,fn) { this.handlers.set(name,[...(this.handlers.get(name)||[]),fn]); }
+        async dispatch(name,event={}) { await Promise.all((this.handlers.get(name)||[]).map(fn=>fn({preventDefault(){},...event}))); }
+        focus() { document.activeElement=this; }
+        showModal() { this.open=true; }
+        close() { this.open=false;for(const fn of this.handlers.get('close')||[])fn({}); }
+    }
+    const en={...strings,apply:'Claim',working:'Applying…',close:'Close result',pending:'First-order eligibility is checked at checkout.',timer:'This message closes automatically in 15 seconds.',viewCart:'View bag',discount:'Coupon discount before tax',orderTotal:'Current order total',failed:'Could not apply.'};
+    const es={...en,apply:'Obtener',working:'Aplicando…',close:'Cerrar resultado',pending:'La elegibilidad se verifica al finalizar la compra.',timer:'Este mensaje se cierra automáticamente en 15 segundos.',viewCart:'Ver carrito',discount:'Descuento del cupón antes de impuestos',orderTotal:'Total actual del pedido',empty:'Código copiado. Añada un producto para usarlo.',copied:'Código copiado',success:'Su código está aplicado.',already:'Este código ya está aplicado.',failed:'No se pudo aplicar el código.',errors:{}};
+    const localized=language==='es'?es:en,root=new Element('section'),claim=new Element('button'),status=new Element('p'),code=new Element('code'),body=new Element('body');
+    root.id='fixture-offer';code.textContent='WELCOME5';claim.textContent=localized.apply;
+    root.dataset.offerConfig=JSON.stringify({code:'welcome5',strings:localized,cartUrl:'/cart/',preview});
+    const selectors=[];
+    root.querySelector=selector=>{selectors.push(selector);if(selector==='[data-offer-claim],[data-offer-apply]'||selector==='[data-offer-claim]'||selector==='[data-offer-apply]')return claim;if(selector==='[data-offer-status]')return status;if(selector==='[data-offer-code]')return code;return null;};
+    const document={readyState:'complete',body,documentElement:{lang:language},activeElement:claim,createElement:tag=>new Element(tag),querySelectorAll:selector=>selector==='[data-pc-first-order-offer]'?[root]:[],addEventListener(){}};
+    let state={valid:true,pending:false,cart:initialCart},timerId=0,readCount=0;const calls=[],timers=new Map(),listeners=new Map();
+    const bridge={refresh:async()=>{calls.push('GET');if(refreshGate)await refreshGate;if(afterRefresh&&readCount===0)state={valid:true,pending:false,cart:afterRefresh};readCount++;},snapshot:()=>state,applyCoupon:async value=>{calls.push('POST:'+value);const result=reply||{confirmed:true,rawCart:cart([...state.cart.coupons.map(c=>c.code),value])};state={valid:true,pending:false,cart:result.rawCart};return result;}};
+    const window={document,location:{href:'https://example.invalid/',origin:'https://example.invalid'},VialCoveLiveCart:bridge,isSecureContext:true,navigator:{clipboard:{writeText:async value=>{calls.push('COPY:'+value);if(clipboardFails)throw Error('clipboard denied');}}},addEventListener:(name,fn)=>listeners.set(name,fn)};
+    const context={window,URL,setTimeout:(fn,delay)=>{assert.equal(delay,15000);timers.set(++timerId,fn);return timerId;},clearTimeout:id=>timers.delete(id)};
+    vm.runInNewContext(fs.readFileSync(require.resolve('../assets/first-order-offer.js'),'utf8'),context,{filename:'actual-first-order-offer.js'});
+    assert.equal(body.children.length,1,'mount must work without any copy-button node');
+    assert.equal(root.dataset.pcFirstMounted,'1');
+    const dialog=body.children[0];
+    return{root,claim,status,dialog,calls,timers,selectors,localized,bridge,click:()=>claim.dispatch('click'),close:()=>dialog.children[0].dispatch('click'),dispose:()=>listeners.get('pagehide')?.()};
+}
+
+test('actual single-claim mount needs no copy button and branches on the freshly read empty cart',async()=>{
+    const f=mountedOffer({initialCart:cart(),afterRefresh:cart([],'0',0)});
+    assert.equal(f.claim.textContent,'Claim');assert.equal(f.claim.handlers.get('click').length,1);
+    await f.click();assert.deepEqual(f.calls,['GET','COPY:welcome5']);assert.equal(f.status.textContent,'empty');assert.equal(f.dialog.dataset.kind,'copy');assert.equal(f.dialog.open,true);assert.equal(f.claim.textContent,'Claim');assert.equal(f.claim.disabled,false);assert.equal(f.root.getAttribute('aria-busy'),null);assert.equal(f.timers.size,1);f.dispose();
+});
+test('actual single claim applies to a fresh nonempty cart and preserves previous coupon with native amount',async()=>{
+    const f=mountedOffer({initialCart:cart([],'0',0),afterRefresh:cart(['other'],'10000')});
+    await f.click();assert.deepEqual(f.calls,['GET','POST:welcome5']);assert.deepEqual(f.bridge.snapshot().cart.coupons.map(c=>c.code),['other','welcome5']);assert.equal(f.dialog.dataset.kind,'success');assert.equal(f.dialog.children[3].children[1].textContent,'$2.50');assert.equal(f.dialog.children[3].children[0].textContent,'Coupon discount before tax');assert.equal(f.claim.textContent,'Claim');
+    await f.close();assert.equal(f.dialog.open,false);assert.equal(f.timers.size,0);assert.equal(f.claim.disabled,false);
+    await f.click();assert.deepEqual(f.calls,['GET','POST:welcome5','GET']);assert.equal(f.dialog.dataset.kind,'already');assert.equal(f.timers.size,1);f.dispose();
+});
+test('actual mounted single button remains busy during refresh and double click cannot duplicate apply',async()=>{
+    let release;const gate=new Promise(resolve=>release=resolve),f=mountedOffer({refreshGate:gate});
+    const first=f.click();assert.equal(f.claim.disabled,true);assert.equal(f.claim.textContent,'Applying…');assert.equal(f.root.getAttribute('aria-busy'),'true');
+    await f.click();assert.deepEqual(f.calls,['GET']);release();await first;assert.deepEqual(f.calls,['GET','POST:welcome5']);assert.equal(f.claim.disabled,false);assert.equal(f.claim.textContent,'Claim');f.dispose();
+});
+test('actual Spanish single claim copies empty bag and popup X or 15 seconds closes without coupon removal',async()=>{
+    const empty=mountedOffer({language:'es',initialCart:cart([],'0',0)});assert.equal(empty.claim.textContent,'Obtener');await empty.click();assert.deepEqual(empty.calls,['GET','COPY:welcome5']);assert.equal(empty.status.textContent,'Código copiado. Añada un producto para usarlo.');assert.equal(empty.dialog.children[0].getAttribute('aria-label'),'Cerrar resultado');await empty.close();assert.equal(empty.dialog.open,false);assert.equal(empty.timers.size,0);empty.dispose();
+    const applied=mountedOffer({language:'es'});await applied.click();assert.equal(applied.dialog.dataset.kind,'success');assert.equal(applied.status.textContent,'Su código está aplicado.');assert.equal(applied.dialog.children[4].textContent,'La elegibilidad se verifica al finalizar la compra.');const [[timerId,close]]=applied.timers;applied.timers.delete(timerId);close();assert.equal(applied.dialog.open,false);assert.equal(applied.claim.textContent,'Obtener');assert.deepEqual(applied.calls,['GET','POST:welcome5']);await applied.click();assert.deepEqual(applied.calls,['GET','POST:welcome5','GET']);assert.equal(applied.dialog.dataset.kind,'already');applied.dispose();
+});
+test('mounted compact preview and clipboard refusal never write cart or falsely claim a copy',async()=>{
+    const preview=mountedOffer({preview:true});await preview.click();assert.deepEqual(preview.calls,[]);assert.equal(preview.dialog.open,false);preview.dispose();
+    const blocked=mountedOffer({initialCart:cart([],'0',0),clipboardFails:true});await blocked.click();assert.deepEqual(blocked.calls,['GET','COPY:welcome5']);assert.equal(blocked.status.textContent,'copyFailed');assert.equal(blocked.dialog.dataset.kind,'error');assert.equal(blocked.claim.disabled,false);blocked.dispose();
+});

@@ -79,8 +79,8 @@
         try { config = JSON.parse(root.dataset.offerConfig); } catch (_) { return; }
         if (!config || typeof config.code !== 'string' || !config.code.trim() || config.code.length > 255 || typeof config.strings !== 'object' || !config.strings) return;
         root.dataset.pcFirstMounted = '1';
-        const strings = config.strings, applyButton = root.querySelector('[data-offer-apply]'), copyButton = root.querySelector('[data-offer-copy]'), status = root.querySelector('[data-offer-status]');
-        if (!applyButton || !copyButton || !status) return;
+        const strings = config.strings, applyButton = root.querySelector('[data-offer-claim],[data-offer-apply]'), status = root.querySelector('[data-offer-status]');
+        if (!applyButton || !status) return;
         const dialog = document.createElement('dialog'); dialog.className = 'pc-first-offer-result'; dialog.setAttribute('aria-labelledby', (root.id || root.querySelector('h2')?.id || 'pc-offer') + '-result');
         const closeButton = document.createElement('button'); closeButton.type = 'button'; closeButton.className = 'pc-first-offer-result__close'; closeButton.setAttribute('aria-label',strings.close);
         closeButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>';
@@ -119,7 +119,6 @@
             try { return typeof document.execCommand === 'function' && document.execCommand('copy') === true; } catch (_) { return false; }
         };
         const controller = createController({code:config.code,client:()=>global.VialCoveLiveCart,copy,show,strings,preview:config.preview===true});
-        copyButton.addEventListener('click',()=>{if(!controller.busy())controller.copy();});
         applyButton.addEventListener('click',async()=>{
             if (controller.busy() || config.preview === true) return;
             applyButton.disabled=true;applyButton.textContent=strings.working;root.setAttribute('aria-busy','true');

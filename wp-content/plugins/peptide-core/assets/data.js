@@ -31,6 +31,7 @@
 	var renderers = {};
 	var state = cfg.range;
 	var busy = false;
+	var started = false;
 	var rangeListeners = [];
 	var els = {};
 
@@ -62,7 +63,10 @@
 	// 先把 PcData 挂出去，再画页面：后面加载的报表脚本要用它注册。
 	window.PcData = {
 		register: function ( key, fn ) {
+			if ( typeof fn !== 'function' || Object.prototype.hasOwnProperty.call( renderers, key ) ) { return; }
 			renderers[ key ] = fn;
+			// Footer/deferred scripts may register after DOMContentLoaded.
+			if ( started && ! busy && key === cfg.page ) { renderBody(); }
 		},
 		onRangeState: function ( listener ) {
 			var listeners = rangeListeners;
@@ -280,7 +284,9 @@
 	}
 
 	function start() {
+		if ( started ) { return; }
 		frame();
+		started = true;
 		sync();
 		// 没有工具栏的页面不读地址栏里的时间段（也没有地方显示它）。
 		var wanted = showRange ? paramsFromUrl() : null;
