@@ -1262,3 +1262,7 @@ HTTP聚合探针已证 catalogSupported=true、quoteHooksSupported=false、unsup
 ### 2026-11-05 · Codex：接后端联调补齐手机独立设置
 
 后端窗口转来真实复现：原生mobile variant为false，但商品/购物车getter仍发送全局true。现完整接devices.desktop/mobile发布配置，全部商品展示/WA字段、购物车展示/文案分端解析；主开关/visibility作为外层，未覆盖继承、false/空串保留。asset加载聚合只为覆盖跨尺寸，server入口按当前端决定redirect。商品用可逆唯一owner归还原节点后换呈现，polish/offer-follow接dispose清理；车保留单client/rows/writeowner，只换配置和失效旧history/quote。catalogQuickAdd/checkout已有手机逻辑保持，不造推荐/交易接口。50PHP/73route/233actual native设备检查、相关联合178Node（最后产品BFCache补点后19项设备测试另过）、语法/diff/HTTP通过；7份layout/meta哈希不变。新手机视觉仍未验，按用户local-first本机保存检查点，不push/deploy；后端三个shipping trace增量未改。详细字段、文件和测试边界见[设备配置交接](frontend-native-mobile-controls-2026-11-05.md)。
+
+### 2026-11-05 · Codex：结账可读性及付款返回后的购物车权威刷新
+
+按站点窗口本轮授权，仅本地修主题。保留Inter及原UI，结账元数据/原价/优惠标签提高至14px并明确500/600/700角色，修复嵌套规格仍被旧12px压小。闭drawer时旧canRead跳过BFCache/visibility/focus刷新，现合并事件后只读Woo no-store GET；退休离开前GET，保留pending POST，未知支付不清车，权威仍6则保留6。联合71顶层Node、语法/diff和源色对比检查通过；CUA结账tab超时/原生窗口最小化，新手机视觉及真实支付返回未验。手机号由后端原生schema/服务端校验负责，主题未伪改optional或复制字段。无DB/积木迁移；交由站点窗口合并后端与支付改动统一验收/发布，未自行push或部署。详见[本轮前端交接](frontend-checkout-readability-return-sync-2026-11-05.md)。

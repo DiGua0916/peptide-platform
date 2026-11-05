@@ -163,6 +163,13 @@
     padding-bottom: 40px;
 }
 
+/* Checkout is a reading/task surface. Give native summary text explicit roles
+   instead of inheriting the storefront's lighter supporting-copy treatment. */
+.vc-checkout-page .wp-block-woocommerce-checkout {
+    color: var(--ink);
+    font-weight: 500;
+}
+
 .vc-checkout-page .vc-back-link { margin-bottom: 16px; }
 .vc-checkout-page .vc-commerce-heading { gap: 16px; margin-bottom: 24px; }
 .vc-checkout-page .vc-commerce-heading h1 {
@@ -233,7 +240,42 @@
 }
 .vc-checkout-page .vc-commerce-content .wc-block-components-order-summary-item .wc-block-components-product-metadata {
     margin-top: 4px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    overflow-wrap: anywhere;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-order-summary-item :is(
+    .wc-block-components-product-details,
+    .wc-block-components-product-details__name,
+    .wc-block-components-product-details__value
+) {
+    color: inherit;
+    font-size: inherit;
+    font-weight: 500;
+    line-height: inherit;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-order-summary-item .wc-block-components-product-price {
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 24px;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-order-summary-item .wc-block-components-product-price__regular {
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 1;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-order-summary-item .wc-block-components-product-price__value {
+    color: var(--ink);
+    font-weight: 600;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-order-summary-item__quantity {
+    color: #fff;
     font-size: 12px;
+    font-weight: 600;
     line-height: 16px;
 }
 .vc-checkout-page .vc-commerce-content .wc-block-components-order-summary-item__total-price {
@@ -241,8 +283,17 @@
     width: 100%;
     min-width: 0;
     padding: 0;
+    color: var(--ink);
     font-size: 16px;
+    font-weight: 600;
     line-height: 24px;
+}
+.vc-checkout-page .vc-commerce-content :is(
+    .wc-block-components-order-summary-item,
+    .wc-block-components-totals-item
+) .wc-block-components-formatted-money-amount {
+    color: inherit;
+    font-weight: inherit;
 }
 .vc-checkout-page .vc-commerce-content .wc-block-cart-item__total-price-and-sale-badge-wrapper {
     display: flex;
@@ -253,6 +304,12 @@
     gap: 8px 12px;
     min-width: 0;
     text-align: start;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-order-summary-item .wc-block-components-sale-badge {
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 20px;
 }
 .vc-checkout-page .vc-commerce-content .wc-block-components-totals-item,
 .vc-checkout-page .vc-commerce-content .wc-block-components-totals-coupon { padding-inline: 16px; }
@@ -266,7 +323,17 @@
 }
 .vc-checkout-page .vc-commerce-content .wc-block-components-totals-item__value {
     min-width: 0;
+    color: var(--ink);
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-totals-item__label {
+    color: var(--ink);
+    font-weight: 500;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-totals-item__description {
+    color: var(--muted);
+    font-weight: 500;
 }
 .vc-checkout-page .vc-commerce-content .wc-block-components-shipping-placeholder__value {
     display: inline-block;
@@ -277,7 +344,15 @@
 .vc-checkout-page .vc-commerce-content .wc-block-components-totals-coupon .wc-block-components-panel__button {
     min-height: 48px;
     padding-block: 12px;
+    color: var(--ink);
     font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+}
+.vc-checkout-page .vc-commerce-content .wc-block-components-totals-discount .wc-block-components-chip {
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 500;
     line-height: 20px;
 }
 

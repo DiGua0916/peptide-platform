@@ -24,8 +24,8 @@
     align-items:center; column-gap:12px; row-gap:2px; cursor:default; background:#fff;
 }
 .vc-checkout-page .vc-order-summary-permanent .wc-block-components-checkout-order-summary__title-text { grid-column:1; grid-row:1 / 3; font-size:18px; }
-.vc-checkout-page .vc-order-summary-permanent .vc-order-total-caption { grid-column:2; grid-row:1; text-align:end; color:#526b74; font-size:12px; line-height:18px; font-weight:500; }
-.vc-checkout-page .vc-order-summary-permanent .wc-block-components-checkout-order-summary__title-price { display:block !important; grid-column:2; grid-row:2; font-size:21px; font-weight:700; line-height:27px; }
+.vc-checkout-page .vc-order-summary-permanent .vc-order-total-caption { grid-column:2; grid-row:1; text-align:end; color:var(--muted); font-size:14px; line-height:20px; font-weight:500; }
+.vc-checkout-page .vc-order-summary-permanent .wc-block-components-checkout-order-summary__title-price { display:block !important; grid-column:2; grid-row:2; color:var(--ink); font-size:24px; font-weight:700; line-height:32px; }
 .vc-checkout-page .vc-order-summary-permanent .wc-block-components-checkout-order-summary__title-icon { display:none !important; }
 .vc-checkout-page .vc-order-summary-permanent .wc-block-components-totals-footer-item { display:block; padding:0 16px; min-height:0; }
 .vc-checkout-page.vc-checkout-summary-ready .vc-order-summary-permanent .wc-block-components-totals-footer-item > .wc-block-components-totals-item__label,

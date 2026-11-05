@@ -461,6 +461,36 @@
         }
         return { enabled, ready, busy, processing, receive, subscribe };
     }
+    /** Returning pages must refresh badges even while their cart drawer is closed. */
+    function createCartReturnSync({ document, window: win, refresh, retireRead, now = Date.now }) {
+        let disposed = false, suspended = false, timer = 0, lastRefresh = -Infinity;
+        const cancel = () => { if (timer) win.clearTimeout(timer); timer = 0; };
+        const pause = () => {
+            if (disposed) return;
+            cancel();
+            // Retire a pre-navigation GET without cancelling or replaying a POST.
+            if (!suspended) retireRead();
+            suspended = true; lastRefresh = -Infinity;
+        };
+        const resume = () => {
+            if (disposed || document.hidden || timer || now() - lastRefresh < 1000) return;
+            timer = win.setTimeout(() => {
+                timer = 0;
+                if (disposed || document.hidden) return;
+                suspended = false; lastRefresh = now(); refresh();
+            }, 50);
+        };
+        const visibility = () => document.hidden ? pause() : resume();
+        document.addEventListener('visibilitychange', visibility);
+        win.addEventListener('blur', pause); win.addEventListener('pagehide', pause);
+        win.addEventListener('focus', resume); win.addEventListener('pageshow', resume);
+        return { destroy() {
+            if (disposed) return; disposed = true; cancel();
+            document.removeEventListener('visibilitychange', visibility);
+            win.removeEventListener('blur', pause); win.removeEventListener('pagehide', pause);
+            win.removeEventListener('focus', resume); win.removeEventListener('pageshow', resume);
+        } };
+    }
     function createClient(config, environment = {}) {
         const fetcher = environment.fetch || global.fetch.bind(global), notify = environment.notify || (() => {});
         let cart = null, nonce = '', valid = false, pending = false, error = '', errorOperation = '', epoch = 0, readPromise = null, readController = null, externalTimer = null, destroyed = false;
@@ -533,9 +563,11 @@
             if (detail?.stale !== true && validCart(detail?.cart)) { cart = detail.cart; valid = true; error = ''; errorOperation = ''; change(); }
             else { change(); refresh(); }
         }
-        return { snapshot, refresh, request, write, externalStart, externalUpdate, destroy() { destroyed = true; invalidate(); clearTimeout(externalTimer); } };
+        return { snapshot, refresh, request, write, externalStart, externalUpdate,
+            retireRead() { if (!destroyed && !pending) invalidate(); },
+            destroy() { destroyed = true; invalidate(); clearTimeout(externalTimer); } };
     }
-    if (typeof module === 'object' && module.exports) module.exports = { validCart, money, cartItemPricing, couponPresentation, confirmedCartAdd, totals, createClient, addOne, activityAllowed, activityPresentation, cartSettingsForDevice, createCartDeviceSettings, reconcileRows, statusPresentation, createDrawerController, createNativeCheckoutBridge, recentPresentationUrl, recentPresentation, recentAddPayload, createRecommendationEnrichment };
+    if (typeof module === 'object' && module.exports) module.exports = { validCart, money, cartItemPricing, couponPresentation, confirmedCartAdd, totals, createClient, addOne, activityAllowed, activityPresentation, cartSettingsForDevice, createCartDeviceSettings, reconcileRows, statusPresentation, createDrawerController, createNativeCheckoutBridge, createCartReturnSync, recentPresentationUrl, recentPresentation, recentAddPayload, createRecommendationEnrichment };
     if (!global?.document || !global.VialCoveLiveCartConfig) return;
     const document = global.document, config = global.VialCoveLiveCartConfig, roots = [...document.querySelectorAll('[data-vc-live-cart]')];
     if (!roots.length) return;
@@ -836,7 +868,10 @@
     document.addEventListener('vc:cart-mutation-start', started); document.addEventListener('vc:cart-updated', updated);
     document.addEventListener('vc:recently-viewed-updated', () => { if (!disposed && canRead()) scheduleEnrichment(client.snapshot(), true); });
     const refreshVisible = () => { deviceSettings.refresh(); if (canRead()) { refreshActivityConfig(); client.refresh(); } };
-    document.addEventListener('visibilitychange', refreshVisible); global.addEventListener('focus', refreshVisible); global.addEventListener('pageshow', refreshVisible);
+    const returnSync = createCartReturnSync({ document, window: global, retireRead: () => client.retireRead(), refresh: () => {
+        deviceSettings.refresh();
+        if (deviceEnabled()) { refreshActivityConfig(); client.refresh(); }
+    } });
     const polling = setInterval(refreshVisible, 30000);
     let wasNativeBusy = nativeCheckout.busy(), nativeRefreshTimer = 0;
     const stopNativeSubscription = nativeCheckout.subscribe(() => {
@@ -846,6 +881,6 @@
         wasNativeBusy = busy;
     });
     global.VialCoveLiveCart = { canOpen: drawerController.available, open: trigger => openDrawer(trigger) || location.assign(config.cartUrl), close: closeDrawer, refresh: () => client.refresh(), snapshot: () => client.snapshot(), addOne: (item, { signal } = {}) => addOne(client, item, signal), applyCoupon: code => client.write('apply-coupon', { code }) };
-    global.addEventListener('pagehide', event => { if (event.persisted) return; disposed = true; deviceSettings.destroy(); recommendationEnrichment.destroy(); stopNativeSubscription(); clearTimeout(nativeRefreshTimer); drawerController.destroy(); quickOpener?.remove(); clearInterval(polling); client.destroy(); views.forEach(view => { view.progress?.destroy(); view.recommendation?.destroy(); clearTimeout(view.recentResetTimer); for (const feedback of view.recentFeedbacks || []) feedback.destroy(); }); });
+    global.addEventListener('pagehide', event => { if (event.persisted) return; disposed = true; returnSync.destroy(); deviceSettings.destroy(); recommendationEnrichment.destroy(); stopNativeSubscription(); clearTimeout(nativeRefreshTimer); drawerController.destroy(); quickOpener?.remove(); clearInterval(polling); client.destroy(); views.forEach(view => { view.progress?.destroy(); view.recommendation?.destroy(); clearTimeout(view.recentResetTimer); for (const feedback of view.recentFeedbacks || []) feedback.destroy(); }); });
     if (deviceEnabled() && roots.some(root => root.dataset.drawer === '0')) refreshVisible();
 })(typeof window === 'undefined' ? null : window);

@@ -79,7 +79,8 @@ function fixture({ desktop = true, drawer = false, nativeCheckout = false, nativ
     if (dialog) { root.dialog = dialog; dialog.id = 'vc-live-cart-drawer'; dialog.open = false; dialog.showModal = () => { dialog.open = true; }; dialog.close = () => { dialog.open = false; dialog.emit('close'); }; dialog.lookups.set('[data-cart-close]', new Node('button')); }
     document.documentElement = page; document.body = new Node('body'); document.scrollingElement = new Node(); document.hidden = false; document.activeElement = document.body;
     document.createElement = tag => new Node(tag); document.getElementById = () => dialog;
-    document.querySelectorAll = selector => selector === '[data-vc-live-cart]' ? [root] : [];
+    const badge = new Node('span'); badge.textContent = '6';
+    document.querySelectorAll = selector => selector === '[data-vc-live-cart]' ? [root] : selector === '.vc-cart-count' ? [badge] : [];
     document.dispatchEvent = event => { document.emit(event.type, event); return true; };
     window.document = document; window.innerWidth = 390; window.innerHeight = 800;
     window.matchMedia = query => query.includes('min-width') ? media : motion;
@@ -116,9 +117,10 @@ function fixture({ desktop = true, drawer = false, nativeCheckout = false, nativ
     const location = { href: 'https://shop.test/', origin: 'https://shop.test', assign() {} }; window.location = location;
     vm.runInNewContext(source, { window, location, URL, AbortController, CustomEvent: window.CustomEvent, setTimeout: window.setTimeout, clearTimeout: window.clearTimeout, setInterval: window.setInterval, clearInterval: window.clearInterval });
     const history = (name = 'Product') => ({ visible: true, title: 'Recently viewed', items: [{ productId: 12, variationId: 14, variationLabel: '20 mg × 10 vials', name, permalink: '/product/', price: { minor: '5500', text: '$55.00' } }], candidates: [{ productId: 12, variationId: 14 }] });
-    return { root, heading, emptyLink, continueLink, media, document, window, dialog, fallback, histories, quotes, progress, recommendations, history, timers, reads,
+    return { root, badge, heading, emptyLink, continueLink, media, document, window, dialog, fallback, histories, quotes, progress, recommendations, history, timers, reads,
         factories: () => [progressFactories, recommendationFactories], writes: () => postCount, cartReads: () => cartReads,
         async tick() { const tasks = [...timers.entries()].filter(([, task]) => task.ms === 250); tasks.forEach(([id]) => timers.delete(id)); tasks.forEach(([, task]) => task.fn()); await flush(); },
+        async returnTick() { const tasks = [...timers.entries()].filter(([, task]) => task.ms === 50); tasks.forEach(([id]) => timers.delete(id)); tasks.forEach(([, task]) => task.fn()); await flush(); },
         async change(desktop) { media.matches = desktop; media.emit('change'); await flush(); },
         setBusy(value) { busy = value; nativeSubscriptions.forEach(fn => fn()); }, setProcessing(value) { processing = value; },
         dispose() { window.emit('pagehide', { persisted: false }); },
@@ -177,9 +179,29 @@ test('a late desktop quote is retired even when the native cart identity is unch
 test('BFCache pageshow rechecks the same media query even if its change event was suspended', async () => {
     const f = fixture(); await flush();
     f.window.emit('pagehide', { persisted: true });
-    f.media.matches = false; f.window.emit('pageshow', { persisted: true }); await flush();
+    f.media.matches = false; f.window.emit('pageshow', { persisted: true }); await f.returnTick();
     assert.equal(f.heading.textContent, 'Mobile cart');
     assert.equal(f.media.listeners.get('change').size, 1); assert.deepEqual(f.factories(), [1, 1]); assert.equal(f.writes(), 0); f.dispose();
+});
+
+test('a BFCache return refreshes the real header badge while the drawer stays closed', async () => {
+    const f = fixture({ drawer: true }); await flush();
+    assert.equal(f.cartReads(), 0); assert.equal(f.badge.textContent, '6');
+    f.window.emit('pagehide', { persisted: true });
+    f.window.emit('pageshow', { persisted: true }); f.window.emit('focus');
+    await f.returnTick();
+    assert.equal(f.cartReads(), 1); assert.equal(f.badge.textContent, '0');
+    assert.equal(f.dialog.open, false); assert.equal(f.writes(), 0); f.dispose();
+});
+
+test('visibility return refreshes a closed drawer badge and disposal cancels later lifecycle work', async () => {
+    const f = fixture({ drawer: true }); await flush();
+    f.document.hidden = true; f.document.emit('visibilitychange');
+    assert.equal(f.cartReads(), 0);
+    f.document.hidden = false; f.document.emit('visibilitychange'); await f.returnTick();
+    assert.equal(f.cartReads(), 1); assert.equal(f.badge.textContent, '0'); assert.equal(f.dialog.open, false);
+    f.window.emit('blur'); f.window.emit('focus'); f.dispose(); await f.returnTick();
+    assert.equal(f.cartReads(), 1); assert.equal(f.writes(), 0);
 });
 
 test('device presentation cannot enable a disabled native activity application', async () => {
