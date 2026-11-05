@@ -23,7 +23,9 @@ namespace {
 	function wp_remote_get( ...$args ) { ++$GLOBALS['http_calls']; throw new \RuntimeException( 'Forbidden HTTP' ); }
 	function wp_redirect( string $url, int $status, string $by ): void {
 		++$GLOBALS['redirects'];
-		if ( ! $GLOBALS['success_mode'] ) { throw new \RuntimeException( 'Unexpected redirect in negative case' ); }
+		// A thrown interceptor would be caught by Hub and could make an unsafe
+		// redirect look like a safe failure. Fail the test process instead.
+		if ( ! $GLOBALS['success_mode'] ) { fwrite( STDERR, "Unexpected redirect in negative case\n" ); exit( 1 ); }
 		$parts = parse_url( $url ); $fields = array(); parse_str( $parts['query'] ?? '', $fields );
 		check( 'redirect only after provider signature validation', in_array( 'hub-provider', $GLOBALS['decrypt_purposes'], true ) );
 		check( 'redirect keeps frozen host/path', 'www.merchant.example.com' === $parts['host'] && '/wc-api/pc_panapay_return/' === $parts['path'] );
@@ -50,7 +52,7 @@ namespace VialCove\Panapay {
 	final class Crypto {
 		public static function decrypt( string $box, string $purpose ): string {
 			$GLOBALS['decrypt_purposes'][] = $purpose;
-			if ( $GLOBALS['decrypt_fails'] ) { throw new \RuntimeException( 'Synthetic private exception message' ); }
+			if ( $GLOBALS['decrypt_fails'] || ( 'hub-link' === $purpose && $GLOBALS['link_key_fails'] ) ) { throw new \RuntimeException( 'Synthetic private exception message' ); }
 			return match ( $purpose ) { 'hub-provider' => 'synthetic-provider-key', 'hub-link' => 'synthetic-link-key', 'hub-return' => $GLOBALS['frozen_target'], default => throw new \RuntimeException( 'Unexpected purpose' ) };
 		}
 	}
@@ -64,7 +66,7 @@ namespace VialCove\Panapay {
 	final class Database { public static function open(): object { ++$GLOBALS['financial_calls']; throw new \RuntimeException( 'Forbidden business database access' ); } }
 }
 namespace {
-	foreach ( array( 'protocol-error', 'signature', 'hub-protocol', 'session-service', 'hub-urls', 'payment-return-view', 'hub' ) as $file ) { require dirname( __DIR__ ) . '/includes/class-' . $file . '.php'; }
+	foreach ( array( 'protocol-error', 'signature', 'hub-protocol', 'session-service', 'hub-urls', 'payment-return-view', 'return-context', 'hub' ) as $file ) { require dirname( __DIR__ ) . '/includes/class-' . $file . '.php'; }
 	require dirname( __DIR__, 2 ) . '/peptide-hq/includes/class-site-urls.php';
 	use VialCove\Panapay\{Hub, Signature};
 	$checks = 0; $clock = 2000000000; $provider_ref = 'PH' . str_repeat( 'c', 32 );
@@ -80,7 +82,7 @@ namespace {
 		$GLOBALS['fixture_row'] = array( 'ref' => $GLOBALS['provider_ref'], 'site_id' => 2, 'site_uuid' => $GLOBALS['fixture_site']['uuid'],
 			'order_id' => 11737, 'created_at' => $GLOBALS['clock'] - 60, 'local_reference' => $GLOBALS['local_ref'], 'return_token_hash' => hash( 'sha256', 'synthetic-browser-token' ),
 			'secret_box' => 'synthetic-provider-box', 'link_key_box' => 'synthetic-link-box', 'return_box' => 'synthetic-target-box', 'test_mode' => 0 );
-		$GLOBALS['site_active'] = true; $GLOBALS['decrypt_fails'] = false; $GLOBALS['decrypt_purposes'] = array();
+		$GLOBALS['site_active'] = true; $GLOBALS['decrypt_fails'] = $GLOBALS['link_key_fails'] = false; $GLOBALS['decrypt_purposes'] = array();
 		$GLOBALS['frozen_target'] = 'https://www.merchant.example.com/wc-api/pc_panapay_return/?reference=' . $GLOBALS['local_ref'] . '&token=' . str_repeat( 'b', 48 );
 	}
 	function query( array $override = array() ): array {
@@ -119,17 +121,11 @@ namespace {
 	reset_case(); $fixture_row['site_uuid'] = 'other-site-identity'; failure( 'changed registered UUID', query(), null );
 	reset_case(); $site_active = false; failure( 'retained site', query(), null );
 	reset_case(); $fixture_site['public_url'] = 'https://user:private@attacker.example.com/'; failure( 'invalid registered home', query(), null );
-	foreach ( array( 'status', 'transaction_id', 'sign' ) as $field ) {
-		reset_case(); $p = query(); unset( $p[ $field ] ); failure( 'missing provider field ' . $field, $p, 'https://www.merchant.example.com/' );
-		reset_case(); $p = query(); $p[ $field ] = str_repeat( 'x', 513 ); failure( 'oversized provider field ' . $field, $p, 'https://www.merchant.example.com/' );
-	}
-	reset_case(); failure( 'invalid status', query( array( 'status' => 'UNKNOWN' ) ), 'https://www.merchant.example.com/' );
-	reset_case(); failure( 'success missing transaction', query( array( 'transaction_id' => '' ) ), 'https://www.merchant.example.com/' );
-	reset_case(); failure( 'control character in transaction', query( array( 'transaction_id' => "private\ntransaction" ) ), 'https://www.merchant.example.com/' );
-	reset_case(); $p = query(); $p['sign'] = str_repeat( '0', 32 ); failure( 'bad provider signature', $p, 'https://www.merchant.example.com/' );
-	check( 'bad signature never reads link key or frozen target', array( 'hub-provider' ) === $decrypt_purposes );
-	reset_case(); $p = query( array( 'store_home' => 'https://attacker.example.com/', 'return_url' => 'https://attacker.example.com/', 'redirect' => 'https://attacker.example.com/' ) ); $p['sign'] = str_repeat( '0', 32 ); failure( 'forged home parameter', $p, 'https://www.merchant.example.com/' );
-	reset_case(); $decrypt_fails = true; failure( 'unavailable frozen key', query(), 'https://www.merchant.example.com/' );
+	// Missing or invalid provider hints with a valid browser binding now take the
+	// separately signed, read-only check path. Its positive redirects are covered
+	// by hub-return-status-check-pure.php, not forced into this failure fixture.
+	reset_case(); $decrypt_fails = true; failure( 'unavailable frozen keys', query(), 'https://www.merchant.example.com/' );
+	reset_case(); $link_key_fails = true; failure( 'unavailable frozen link key', query(), 'https://www.merchant.example.com/' );
 	reset_case(); $frozen_target = 'https://attacker.example.com/wc-api/pc_panapay_return/?reference=wrong&token=' . str_repeat( 'b', 48 ); failure( 'invalid frozen local reference', query(), 'https://www.merchant.example.com/' );
 	check( 'GET failures never receive financial notification or HTTP', 0 === $financial_calls && 0 === $http_calls );
 	check( 'negative suite never redirects', 0 === $redirects );

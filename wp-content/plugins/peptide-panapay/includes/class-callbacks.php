@@ -61,32 +61,46 @@ final class Callbacks {
 		self::no_cache();
 		try {
 			if ( 'GET' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) { throw new Protocol_Error( 'method_not_allowed', 405 ); }
-			$data = self::fields( $_GET, array( 'reference', 'token', 'status', 'transaction_id', 'sign' ) );
+			if ( array_key_exists( 'check', $_GET ) ) {
+				// This is an HQ-authenticated read, not an additional provider result.
+				// Do not extend fields(): the notification route still accepts only
+				// the documented, provider-signed success/failure result.
+				if ( array_key_exists( 'status', $_GET ) || array_key_exists( 'transaction_id', $_GET ) ) { throw new Protocol_Error( 'invalid_return' ); }
+				$data = array();
+				foreach ( array( 'reference', 'token', 'check', 'sign' ) as $key ) {
+					if ( ! is_string( $_GET[ $key ] ?? null ) || strlen( $_GET[ $key ] ) > 512 ) { throw new Protocol_Error( 'invalid_return' ); }
+					$data[ $key ] = wp_unslash( $_GET[ $key ] );
+				}
+			} else {
+				$data = self::fields( $_GET, array( 'reference', 'token', 'status', 'transaction_id', 'sign' ) );
+			}
 			$order = Session_Service::returned_order( $data );
-			if ( $order->is_paid() && Persistence::is_paid( $order->get_id(), (string) $order->get_transaction_id() ) ) {
-				wp_safe_redirect( $order->get_checkout_order_received_url() );
+			$state = Session_Service::return_status( $order, $data['reference'] );
+			if ( 'paid' === $state ) {
+				self::clear_verified_return_cart( $order, $data['reference'] );
+				// Woo's order-received shortcode can empty a later, unrelated cart.
+				// Keep this authenticated result here; never route through that effect.
+				self::status_page( __( 'Payment confirmed', 'peptide-panapay' ),
+					__( 'Your payment has been confirmed and your order has been received.', 'peptide-panapay' ),
+					home_url( '/' ), __( 'Continue shopping', 'peptide-panapay' ), $order );
 				exit;
 			}
-			if ( $order->has_status( array( 'cancelled', 'refunded' ) ) ) {
-				self::status_page( __( 'Please contact the store', 'peptide-panapay' ), __( 'This order is no longer awaiting payment. The store can help you reconcile the payment status.', 'peptide-panapay' ), $order->get_checkout_payment_url( false ), __( 'View order', 'peptide-panapay' ) );
-				exit;
-			}
-			if ( $order->has_status( 'failed' ) ) {
+			if ( 'failed' === $state ) {
 				self::status_page( __( 'Payment was not completed', 'peptide-panapay' ),
-					__( 'This order is currently unpaid. You can return to your order to try again or contact the store for help.', 'peptide-panapay' ),
-					$order->get_checkout_payment_url( false ), __( 'Return to payment', 'peptide-panapay' ) );
+					__( 'The payment provider confirmed that this payment was not completed. Your order is kept. You can return to checkout to place a new order or contact the store.', 'peptide-panapay' ),
+					wc_get_checkout_url(), __( 'Return to checkout', 'peptide-panapay' ), $order );
 				exit;
 			}
-			if ( $order->has_status( 'on-hold' ) ) {
+			if ( 'review' === $state ) {
 				self::status_page( __( 'Payment needs review', 'peptide-panapay' ),
 					__( 'The store is checking this order. Please contact the store before making another payment.', 'peptide-panapay' ),
-					home_url( '/' ), __( 'Return to store', 'peptide-panapay' ) );
+					home_url( '/' ), __( 'Return to store', 'peptide-panapay' ), $order );
 				exit;
 			}
-			$url = add_query_arg( $data, WC()->api_request_url( 'pc_panapay_return' ) );
+			$url = Order_Payload::customer_url( add_query_arg( $data, WC()->api_request_url( 'pc_panapay_return' ) ) );
 			self::status_page( __( 'Confirming your payment', 'peptide-panapay' ),
 				__( 'We are waiting for confirmation from the payment provider. Please check the status before making another payment. Your order is updated only after the store verifies the server notification.', 'peptide-panapay' ),
-				$url, __( 'Check payment status', 'peptide-panapay' ) );
+				$url, __( 'Check payment status', 'peptide-panapay' ), $order );
 		} catch ( \Throwable $error ) {
 			status_header( 400 );
 			self::status_page( __( 'Unable to verify this return', 'peptide-panapay' ), __( 'Please open your order from the store or contact the store to check the payment. Do not pay again until the status is confirmed.', 'peptide-panapay' ), home_url( '/' ), __( 'Return to store', 'peptide-panapay' ) );
@@ -94,9 +108,16 @@ final class Callbacks {
 		exit;
 	}
 
-	private static function status_page( string $title, string $message, string $url, string $label ): void {
+	/** No session creation, no guessed ownership and no clearing a later cart. */
+	public static function clear_verified_return_cart( \WC_Order $order, string $reference ): bool {
+		return Return_Cart::clear( $order, $reference );
+	}
+
+	private static function status_page( string $title, string $message, string $url, string $label, ?\WC_Order $order = null ): void {
 		header( 'Content-Type: text/html; charset=UTF-8' );
-		echo '<!doctype html><html lang="' . esc_attr( get_bloginfo( 'language' ) ) . '"><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta charset="utf-8"><title>' . esc_html( $title ) . '</title></head><body><main style="max-width:40rem;margin:12vh auto;padding:24px;font:16px/1.6 system-ui,sans-serif;color:#171717"><h1 style="font-size:28px;line-height:1.25">' . esc_html( $title ) . '</h1><p>' . esc_html( $message ) . '</p><p><a style="color:inherit;text-underline-offset:4px" href="' . esc_url( $url ) . '">' . esc_html( $label ) . '</a></p></main></body></html>';
+		echo '<!doctype html><html lang="' . esc_attr( get_bloginfo( 'language' ) ) . '"><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta charset="utf-8"><meta name="robots" content="noindex,nofollow,noarchive"><title>' . esc_html( $title ) . '</title></head><body><main style="max-width:40rem;margin:12vh auto;padding:24px;font:16px/1.6 system-ui,sans-serif;color:#171717"><h1 style="font-size:28px;line-height:1.25">' . esc_html( $title ) . '</h1><p>' . esc_html( $message ) . '</p>';
+		if ( $order ) { echo '<p>' . esc_html__( 'Order number:', 'peptide-panapay' ) . ' <strong>' . esc_html( $order->get_order_number() ) . '</strong></p>'; }
+		echo '<p><a style="color:inherit;text-underline-offset:4px" href="' . esc_url( $url ) . '" rel="noreferrer">' . esc_html( $label ) . '</a></p></main></body></html>';
 	}
 
 	public static function receipt( $order_id ): void {
@@ -113,7 +134,18 @@ final class Callbacks {
 			return;
 		}
 		if ( $order->is_paid() ) {
-			echo '<p><a href="' . esc_url( $order->get_checkout_order_received_url() ) . '">' . esc_html__( 'View order', 'peptide-panapay' ) . '</a></p>';
+			$confirmed = false;
+			try {
+				$book = $order->get_meta( '_pc_panapay_sessions', true );
+				$reference = is_array( $book ) && is_string( $book['active'] ?? null )
+					? ( $book['attempts'][ $book['active'] ]['reference'] ?? null ) : null;
+				$confirmed = is_string( $reference ) && 'paid' === Session_Service::return_status( $order, $reference );
+				if ( $confirmed ) { self::clear_verified_return_cart( $order, $reference ); }
+			} catch ( \Throwable $ignored ) { /* A paid status alone does not confirm this attempt. */ }
+			echo '<p>' . ( $confirmed
+				? esc_html__( 'Your payment has been confirmed and your order has been received.', 'peptide-panapay' )
+				: esc_html__( 'The store is checking this order. Please contact the store before making another payment.', 'peptide-panapay' ) ) . '</p>';
+			echo '<p><a href="' . esc_url( home_url( '/' ) ) . '" rel="noreferrer">' . esc_html__( 'Continue shopping', 'peptide-panapay' ) . '</a></p>';
 			return;
 		}
 		if ( ! $order->has_status( array( 'pending', 'failed' ) ) || ! $order->needs_payment() ) {

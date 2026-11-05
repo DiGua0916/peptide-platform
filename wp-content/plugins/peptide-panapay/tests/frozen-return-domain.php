@@ -9,7 +9,12 @@ namespace {
 		public function __construct( private array $query ) {}
 		public function get_query_params(): array { return $this->query; }
 	}
-	final class Redirect_Observed extends \RuntimeException {}
+	final class WP_REST_Response {
+		public function __construct( private $data = null, private int $status = 200, private array $headers = array() ) {}
+		public function get_data() { return $this->data; }
+		public function get_status(): int { return $this->status; }
+		public function get_headers(): array { return $this->headers; }
+	}
 	function wp_parse_url( string $url, int $part = -1 ) { return parse_url( $url, $part ); }
 	function trailingslashit( string $s ): string { return rtrim( $s, '/' ) . '/'; }
 	function wp_get_environment_type(): string { return 'local'; }
@@ -22,8 +27,8 @@ namespace {
 	}
 	function wp_redirect( string $url, int $status = 302, string $by = '' ): void {
 		$GLOBALS['redirects'][] = array( 'url' => $url, 'status' => $status );
-		// Prevent Hub::returned's exit while observing the real validated redirect boundary.
-		throw new Redirect_Observed();
+		// This runs in its own child process: let the real handler exit normally.
+		// Throwing here would enter its new status-check fallback a second time.
 	}
 	function wp_safe_remote_post( ...$args ) { ++$GLOBALS['external_calls']; throw new \RuntimeException( 'Forbidden transport.' ); }
 	function wp_mail( ...$args ) { ++$GLOBALS['mail_calls']; throw new \RuntimeException( 'Forbidden mail.' ); }
@@ -41,11 +46,26 @@ namespace VialCove\Panapay {
 }
 namespace {
 	require dirname( __DIR__, 2 ) . '/peptide-hq/includes/class-site-urls.php';
-	foreach ( array( 'protocol-error', 'hub-protocol', 'session-service', 'signature', 'crypto', 'hub-urls', 'hub' ) as $file ) { require dirname( __DIR__ ) . '/includes/class-' . $file . '.php'; }
+	foreach ( array( 'protocol-error', 'hub-protocol', 'session-service', 'signature', 'crypto', 'hub-urls', 'payment-return-view', 'return-context', 'hub' ) as $file ) { require dirname( __DIR__ ) . '/includes/class-' . $file . '.php'; }
 	use VialCove\Panapay\{Crypto, Hub, Hub_Urls, Signature};
 	$checks = 0; $GLOBALS['external_calls'] = $GLOBALS['mail_calls'] = $GLOBALS['financial_writes'] = 0;
 	function check( string $label, bool $ok ): void { ++$GLOBALS['checks']; if ( ! $ok ) { throw new \RuntimeException( 'FAIL ' . $label ); } }
 	function rejects( callable $fn ): bool { try { $fn(); return false; } catch ( \Throwable $e ) { return true; } }
+	if ( in_array( '--return-case', $argv ?? array(), true ) ) {
+		$input = json_decode( stream_get_contents( STDIN, 32769 ), true, 16, JSON_THROW_ON_ERROR );
+		if ( ! is_array( $input ) || count( $input ) !== 3 ) { throw new \RuntimeException( 'Invalid child fixture' ); }
+		$GLOBALS['row'] = $input['row']; $GLOBALS['current_site'] = $input['site']; $GLOBALS['redirects'] = array();
+		$snapshot = serialize( array( $GLOBALS['row'], $GLOBALS['current_site'] ) );
+		register_shutdown_function( static function () use ( $snapshot ): void {
+			if ( error_get_last() && in_array( error_get_last()['type'], array( E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR ), true ) ) { return; }
+			if ( $snapshot !== serialize( array( $GLOBALS['row'], $GLOBALS['current_site'] ) ) || $GLOBALS['financial_writes'] || $GLOBALS['external_calls'] || $GLOBALS['mail_calls'] ) {
+				fwrite( STDERR, 'Frozen return mutated fixture or used transport' ); exit( 1 );
+			}
+			echo json_encode( array( 'redirects' => $GLOBALS['redirects'], 'unchanged' => true, 'http' => 0, 'financial_writes' => 0 ), JSON_THROW_ON_ERROR );
+		} );
+		Hub::returned( new WP_REST_Request( $input['query'] ) );
+		exit;
+	}
 	$uuid = '11111111-1111-4111-8111-111111111111';
 	$site = array( 'id' => 2, 'uuid' => $uuid, 'url' => 'https://s0001.manager.local/', 'management_url' => 'https://s0001.manager.local/', 'public_url' => 'https://www.shop.local/', 'dual_domain' => true );
 	$reference = 'PP1234abcd-42-' . str_repeat( 'b', 32 );
@@ -136,22 +156,17 @@ namespace {
 	$baseline_row = $row; $baseline_site = $site; $baseline_query = $query;
 	$baseline_snapshot = serialize( array( $baseline_row, $baseline_site, $baseline_query ) );
 	function call_return( array $r, array $s, array $q ): array {
-		$saved = array();
-		foreach ( array( 'row', 'current_site', 'redirects' ) as $key ) {
-			$saved[ $key ] = array( 'exists' => array_key_exists( $key, $GLOBALS ), 'value' => $GLOBALS[ $key ] ?? null );
-		}
-		try {
-			$GLOBALS['row'] = $r; $GLOBALS['current_site'] = $s; $GLOBALS['redirects'] = array();
-			$before = serialize( array( $GLOBALS['row'], $GLOBALS['current_site'] ) );
-			Hub::returned( new WP_REST_Request( $q ) );
-			check( 'return handler leaves persisted memory rows unchanged ' . $GLOBALS['checks'], $before === serialize( array( $GLOBALS['row'], $GLOBALS['current_site'] ) ) );
-			return $GLOBALS['redirects'];
-		} finally {
-			foreach ( $saved as $key => $entry ) {
-				if ( $entry['exists'] ) { $GLOBALS[ $key ] = $entry['value']; }
-				else { unset( $GLOBALS[ $key ] ); }
-			}
-		}
+		$command = array( PHP_BINARY );
+		if ( 'Windows' === PHP_OS_FAMILY && extension_loaded( 'openssl' ) ) { array_push( $command, '-d', 'extension_dir=' . ini_get( 'extension_dir' ), '-d', 'extension=openssl' ); }
+		array_push( $command, __FILE__, '--return-case' );
+		$process = proc_open( $command, array( 0 => array( 'pipe', 'r' ), 1 => array( 'pipe', 'w' ), 2 => array( 'pipe', 'w' ) ), $pipes );
+		if ( ! is_resource( $process ) ) { throw new \RuntimeException( 'Unable to run frozen return child' ); }
+		fwrite( $pipes[0], json_encode( array( 'row' => $r, 'site' => $s, 'query' => $q ), JSON_THROW_ON_ERROR ) ); fclose( $pipes[0] );
+		$stdout = stream_get_contents( $pipes[1] ); fclose( $pipes[1] ); $stderr = stream_get_contents( $pipes[2] ); fclose( $pipes[2] ); $exit = proc_close( $process );
+		if ( 0 !== $exit ) { throw new \RuntimeException( 'Frozen return child failed: ' . $stdout . $stderr ); }
+		$result = json_decode( $stdout, true, 16, JSON_THROW_ON_ERROR );
+		check( 'return handler leaves persisted rows unchanged without transport ' . $GLOBALS['checks'], true === $result['unchanged'] && 0 === $result['http'] && 0 === $result['financial_writes'] );
+		return $result['redirects'];
 	}
 	$redirects = call_return( $baseline_row, $baseline_site, $baseline_query );
 	check( 'real return handler reaches original frozen hostname', count( $redirects ) === 1 && str_starts_with( $redirects[0]['url'], $plain . '&status=SUCCEEDED&' ) && $redirects[0]['status'] === 302 );
@@ -166,10 +181,15 @@ namespace {
 	}
 	foreach ( array(
 		array( 'token' => str_repeat( 'a', 48 ) ), array( 'token' => '' ), array( 'token' => array() ),
-		array( 'reference' => 'PH' . str_repeat( 'f', 32 ) ), array( 'status' => 'REFUNDED' ),
-		array( 'transaction_id' => 'different-transaction' ), array( 'sign' => str_repeat( '0', 64 ) ),
+		array( 'reference' => 'PH' . str_repeat( 'f', 32 ) ),
 	) as $change ) {
 		check( 'invalid browser authentication rejected ' . $checks, call_return( $baseline_row, $baseline_site, array_replace( $baseline_query, $change ) ) === array() );
+	}
+	foreach ( array( array( 'status' => 'REFUNDED' ), array( 'transaction_id' => 'different-transaction' ), array( 'sign' => str_repeat( '0', 64 ) ) ) as $change ) {
+		$redirects = call_return( $baseline_row, $baseline_site, array_replace( $baseline_query, $change ) );
+		check( 'invalid provider hint retains one order-bound status check ' . $checks, count( $redirects ) === 1 && str_starts_with( $redirects[0]['url'], $plain . '&check=1&' ) );
+		$fields = array(); parse_str( parse_url( $redirects[0]['url'], PHP_URL_QUERY ), $fields ); unset( $fields['wc-api'] );
+		check( 'fallback validates separate frozen-link proof without provider hints ' . $checks, ! isset( $fields['status'] ) && ! isset( $fields['transaction_id'] ) && \VialCove\Panapay\Return_Context::verify_check( $fields, str_repeat( 'l', 64 ) ) );
 	}
 	foreach ( array(
 		array( 'created_at' => time() - 7 * DAY_IN_SECONDS - 1 ), array( 'site_id' => 3 ), array( 'site_id' => '02' ),

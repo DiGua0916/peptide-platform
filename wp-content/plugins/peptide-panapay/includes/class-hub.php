@@ -267,6 +267,7 @@ final class Hub {
 	}
 	public static function returned( \WP_REST_Request $request ) {
 		$validated_store_home = null;
+		$row = null; $site = null;
 		try {
 			$p = $request->get_query_params();
 			foreach ( array( 'reference', 'token' ) as $key ) { if ( ! is_string( $p[ $key ] ?? null ) || strlen( $p[ $key ] ) > 512 ) { throw new Protocol_Error( 'invalid_return', 400 ); } }
@@ -287,6 +288,19 @@ final class Hub {
 			// Retain the exact original store return binding; never accept a browser-supplied target.
 			nocache_headers(); header( 'Referrer-Policy: no-referrer' ); header( 'X-Robots-Tag: noindex, nofollow' );
 			wp_redirect( add_query_arg( $fields, $url ), 302, 'VialCove payment center' ); exit;
-		} catch ( \Throwable $e ) { return Payment_Return_View::failure( $validated_store_home ); }
+		} catch ( \Throwable $e ) {
+			// A provider result is not the authority for reading this order's status.
+			// Only the already authenticated browser binding may reach this fallback.
+			// Its separate, order-bound proof never claims a payment result.
+			if ( null !== $validated_store_home && is_array( $row ) && is_array( $site ) ) {
+				try {
+					$url = Hub_Urls::attempt_return_url( $row, $site );
+					$url = Return_Context::check_url( $url, Crypto::decrypt( $row['link_key_box'], 'hub-link' ) );
+					nocache_headers(); header( 'Referrer-Policy: no-referrer' ); header( 'X-Robots-Tag: noindex, nofollow' );
+					wp_redirect( $url, 302, 'VialCove payment status' ); exit;
+				} catch ( \Throwable $ignored ) { /* No unvalidated target or weakened provider signature. */ }
+			}
+			return Payment_Return_View::failure( $validated_store_home );
+		}
 	}
 }

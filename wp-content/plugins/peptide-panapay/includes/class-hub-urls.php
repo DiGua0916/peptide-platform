@@ -21,8 +21,9 @@ final class Hub_Urls {
 
 	/**
 	 * An existing attempt retains its authenticated, original buyer target after a
-	 * hostname change. The caller must first verify the browser token and provider
-	 * signature. No request-supplied target or newly registered alias is accepted.
+	 * hostname change. The caller must first verify the browser token and site.
+	 * A signed provider hint and an HQ-authenticated read-only status check share
+	 * this target; neither grants payment authority. Browser targets are rejected.
 	 */
 	public static function attempt_return_url( array $row, array $site ): string {
 		$site_id = self::positive_id( $site['id'] ?? null );

@@ -499,15 +499,62 @@ final class Session_Service {
 
 	/** Return signatures do not bind an order; a separate opaque browser token binds read access. */
 	public static function returned_order( array $data ): \WC_Order {
+		$check = array_key_exists( 'check', $data );
+		$keys = $check ? array( 'reference', 'token', 'check', 'sign' ) : array( 'reference', 'token', 'status', 'transaction_id', 'sign' );
+		if ( count( $data ) !== count( $keys ) || array_diff( array_keys( $data ), $keys ) ) { throw new Protocol_Error( 'invalid_return' ); }
+		foreach ( $keys as $key ) {
+			if ( ! is_string( $data[ $key ] ?? null ) || strlen( $data[ $key ] ) > 512 ) { throw new Protocol_Error( 'invalid_return' ); }
+		}
+		if ( ! $check && ( ! in_array( $data['status'], array( 'SUCCEEDED', 'FAILED' ), true )
+			|| ! preg_match( '/\A[\x21-\x7e]{0,512}\z/D', $data['transaction_id'] )
+			|| ( 'SUCCEEDED' === $data['status'] && '' === $data['transaction_id'] ) ) ) { throw new Protocol_Error( 'invalid_return' ); }
 		$parsed = self::parse_reference( $data['reference'] );
-		$order = wc_get_order( $parsed['order_id'] );
-		if ( ! $order instanceof \WC_Order ) { throw new Protocol_Error( 'invalid_return' ); }
+		// Do not reuse Woo's factory object: earlier hooks may have loaded an older
+		// in-request snapshot before a server notification committed this payment.
+		$order = new \WC_Order( $parsed['order_id'] );
+		if ( 'shop_order' !== $order->get_type() ) { throw new Protocol_Error( 'invalid_return' ); }
+		$book = self::book( $order );
+		Persistence::assert_book( $order, $book );
 		$attempt = self::attempt( $order, $data['reference'] );
-		if ( ! preg_match( '/^[a-f0-9]{48}$/D', $data['token'] ) || ! hash_equals( $attempt['return_token_hash'], hash( 'sha256', $data['token'] ) )
-			|| time() - $attempt['created_at'] > 7 * DAY_IN_SECONDS
-			|| ! Signature::verify( array( 'transaction_id' => $data['transaction_id'], 'status' => $data['status'] ), $data['sign'], Crypto::decrypt( $attempt['secret_box'] ) ) ) {
+		$gateway = self::attempt_gateway( $attempt );
+		if ( $order->get_id() !== $parsed['order_id'] || ! is_string( $attempt['return_token_hash'] ?? null )
+			|| ! preg_match( '/\A[a-f0-9]{48}\z/D', $data['token'] ) || ! hash_equals( $attempt['return_token_hash'], hash( 'sha256', $data['token'] ) )
+			|| ! is_int( $attempt['created_at'] ?? null ) || $attempt['created_at'] <= 0 || time() - $attempt['created_at'] > 7 * DAY_IN_SECONDS
+			|| $gateway !== $order->get_payment_method() || ! Persistence::has_gateway( $order->get_id(), $gateway )
+			|| ! self::payment_fingerprint_matches( $attempt, $order ) || ( $check && empty( $attempt['central'] ) ) ) {
 			throw new Protocol_Error( 'invalid_return' );
 		}
+		$key = Crypto::decrypt( $attempt['secret_box'] );
+		$verified = $check ? Return_Context::verify_check( $data, $key )
+			: Signature::verify( array( 'transaction_id' => $data['transaction_id'], 'status' => $data['status'] ), $data['sign'], $key );
+		if ( ! $verified ) { throw new Protocol_Error( 'invalid_return' ); }
 		return $order;
+	}
+
+	/** After returned_order authenticates read access, inspect this exact attempt without any mutation. */
+	public static function return_status( \WC_Order $order, string $reference ): string {
+		$parsed = self::parse_reference( $reference );
+		if ( $parsed['order_id'] !== $order->get_id() ) { throw new Protocol_Error( 'invalid_return' ); }
+		$book = self::book( $order );
+		Persistence::assert_book( $order, $book );
+		$attempt = self::attempt( $order, $reference );
+		$gateway = self::attempt_gateway( $attempt );
+		if ( $gateway !== $order->get_payment_method() || ! Persistence::has_gateway( $order->get_id(), $gateway )
+			|| ! self::payment_fingerprint_matches( $attempt, $order ) ) { return 'review'; }
+		if ( 'paid' === ( $attempt['state'] ?? null ) && $order->is_paid() && is_string( $attempt['provider_transaction_box'] ?? null ) ) {
+			$transaction = Crypto::decrypt( $attempt['provider_transaction_box'], 'provider-transaction' );
+			$native = self::native_transaction_id( $transaction );
+			if ( '' === $transaction || ! hash_equals( $native, (string) $order->get_transaction_id() ) || ! Persistence::is_paid( $order->get_id(), $native ) ) { return 'review'; }
+			foreach ( Store::admin_transactions( $order->get_id() ) as $row ) {
+				if ( $row['attempt_id'] === $parsed['attempt_id'] && 'applied' === $row['state'] && hash_equals( $transaction, $row['transaction'] ) ) { return 'paid'; }
+			}
+			return 'review';
+		}
+		if ( $book['active'] === $parsed['attempt_id'] && 'failed' === ( $attempt['state'] ?? null )
+			&& $order->has_status( 'failed' ) && Persistence::has_status( $order->get_id(), array( 'failed' ) ) ) { return 'failed'; }
+		if ( ! $order->is_paid() && $order->has_status( array( 'pending', 'failed' ) )
+			&& Persistence::has_status( $order->get_id(), array( 'pending', 'failed' ) )
+			&& in_array( $attempt['state'] ?? null, array( 'creating', 'created', 'unknown' ), true ) ) { return 'unknown'; }
+		return 'review';
 	}
 }
