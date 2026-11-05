@@ -1266,3 +1266,11 @@ HTTP聚合探针已证 catalogSupported=true、quoteHooksSupported=false、unsup
 ### 2026-11-05 · Codex：结账可读性及付款返回后的购物车权威刷新
 
 按站点窗口本轮授权，仅本地修主题。保留Inter及原UI，结账元数据/原价/优惠标签提高至14px并明确500/600/700角色，修复嵌套规格仍被旧12px压小。闭drawer时旧canRead跳过BFCache/visibility/focus刷新，现合并事件后只读Woo no-store GET；退休离开前GET，保留pending POST，未知支付不清车，权威仍6则保留6。联合71顶层Node、语法/diff和源色对比检查通过；CUA结账tab超时/原生窗口最小化，新手机视觉及真实支付返回未验。手机号由后端原生schema/服务端校验负责，主题未伪改optional或复制字段。无DB/积木迁移；交由站点窗口合并后端与支付改动统一验收/发布，未自行push或部署。详见[本轮前端交接](frontend-checkout-readability-return-sync-2026-11-05.md)。
+
+### 2026-11-05 · Codex：手机店面状态、活动、字体和 COA 稳定性
+
+按站点窗口授权完成本地主题实现，保留当前 UI/品牌及原生积木配置。TR20→TR15 清除过期优惠，盒装规格/每盒价格及唯一购买区域；隐藏冗余 SKU/Clear/Explore；画廊 6.5 秒播放并按可见性/操作/减少动态暂停。活动透明胶囊固定标题+自动轨道改 compositor，取消/旧恢复不会留下 Loading cancelled 卡片。触摸关闭去方框/圆盘、键盘焦点保留；字体由原 Inter 生成完整静态 WOFF2，预加载与 CSS 一致；页脚固定 2025，Geo 最后主题署名保留。
+
+COA 商品/资料库共用按宽度阅读器，视口附近单并发绘制/离屏释放，双 realm shim、完整首屏/分阶段超时、Back/Forward 恢复。512KiB Range 原件+未改 worker 隔离实验 7→4 请求，非真机。实际 LocalWP 每请求原生装修查找各少172次，SQL仍1918，无稳定速度提升结论；仅一次请求原始 published 行 memo，不缓存最终价格/库存/设备结果。
+
+代码提交依序 3a9a06f / ebc9bf3 / eb450f3 / 3c08fb7 / 75ffbae / e4d6366；本窗口未 push/部署/改 Core、业务数据或装修数据库。联合 Node 55+28 顶层及独立历史10，PHP39/14/50/7，字体全字形与确定性验证、本地18资产/资料库单份脚本 HTTP 检查通过。IAB预览40秒及绑定15秒超时，没有新真实手机视觉/Canvas验收；字体截图原因为何仍不能仅凭源码断定。详见[完整交接与证据边界](frontend-mobile-storefront-stability-2026-11-05.md)，由站点窗口统一集成和发布。
