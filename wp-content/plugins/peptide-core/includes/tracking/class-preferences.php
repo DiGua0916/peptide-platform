@@ -22,7 +22,7 @@ final class Preferences {
  }
  public static function response( \WP_REST_Request $request ) {
   $period = $request['period'] ?? 'day'; $date = $request['date'] ?? wp_date( 'Y-m-d' ); $visitor = $request['visitor_id'] ?? '0';
-  if ( ! in_array( $period, array( 'day', 'week', 'month' ), true ) || ! is_string( $date ) || ! preg_match( '/\A\d{4}-\d{2}-\d{2}\z/', $date ) || ! is_scalar( $visitor ) || ! preg_match( '/\A(?:0|[1-9][0-9]{0,9})\z/', (string) $visitor ) ) {
+  if ( ! in_array( $period, array( 'all', 'day', 'week', 'month' ), true ) || ! is_string( $date ) || ! preg_match( '/\A\d{4}-\d{2}-\d{2}\z/', $date ) || ! is_scalar( $visitor ) || ! preg_match( '/\A(?:0|[1-9][0-9]{0,9})\z/', (string) $visitor ) ) {
    return new \WP_Error( 'pc_invalid_param', '请选择有效的日期和统计周期。', array( 'status' => 400 ) );
   }
   $day = \DateTimeImmutable::createFromFormat( '!Y-m-d', $date, wp_timezone() );
@@ -31,10 +31,15 @@ final class Preferences {
   $end = $start->modify( $period === 'week' ? '+1 week' : ( $period === 'month' ? '+1 month' : '+1 day' ) );
   $from = $start->getTimestamp() * 1000; $to = min( $end->getTimestamp() * 1000, Tracker::now_ms() );
   $ready = Schema::installed();
+  $visit = $request['visit_id'] ?? '0';
+  if ( ! is_scalar( $visit ) || ! preg_match( '/\A(?:0|[1-9][0-9]{0,9})\z/', (string) $visit ) || ( $period === 'all' && ! (int) $visitor ) || ( (int) $visit && ! (int) $visitor ) ) { return new \WP_Error( 'pc_invalid_param', '请选择有效的客户和访问记录。', array( 'status' => 400 ) ); }
+  if ( $period === 'all' ) { $from = 0; $to = Tracker::now_ms(); $end = ( new \DateTimeImmutable( 'today', wp_timezone() ) )->modify( '+1 day' ); }
+
   global $wpdb;
   $table = Schema::table( 'events' );
   $where = $wpdb->prepare( 'occurred_ms >= %d AND occurred_ms < %d AND is_test = 0', $from, $to );
   if ( (int) $visitor ) { $where .= $wpdb->prepare( ' AND visitor_id = %d', (int) $visitor ); }
+  if ( (int) $visit ) { $where .= $wpdb->prepare( ' AND visit_id = %d', (int) $visit ); }
   $where .= ' AND visitor_id > 0 AND visit_id > 0';
   $types = "'page_view','heartbeat','visibility_change','page_exit','product_view','product_intent','module_click','product_click','add_to_cart'";
   $wpdb->last_error = '';
@@ -45,11 +50,13 @@ final class Preferences {
   }
   $partial = count( $rows ) > self::LIMIT; if ( $partial ) { array_pop( $rows ); }
   $data = self::summarize( $rows, $from, $to );
+  if ( $period === 'all' && $rows ) { $start = ( new \DateTimeImmutable( '@' . (int) ( $rows[0]['occurred_ms'] / 1000 ) ) )->setTimezone( wp_timezone() ); }
+
   $data['schema_version'] = 1;
   if ( ! $ready ) { $data['summary'] = array_fill_keys( array_keys( $data['summary'] ), null ); }
   $data['scope'] = (int) $visitor ? 'visitor' : 'site';
   $data['subject'] = (int) $visitor ? substr( hash_hmac( 'sha256', 'visitor:' . $visitor, wp_salt( 'auth' ) ), 0, 24 ) : 'site';
-  $data['period'] = array( 'kind' => $period, 'date' => $date, 'from' => $start->format( 'Y-m-d' ), 'to' => $end->modify( '-1 day' )->format( 'Y-m-d' ), 'timezone' => wp_timezone_string() );
+  $data['period'] = array( 'kind' => $period, 'visit_id' => (int) $visit, 'retained_history' => $period === 'all', 'date' => $date, 'from' => $start->format( 'Y-m-d' ), 'to' => $end->modify( '-1 day' )->format( 'Y-m-d' ), 'timezone' => wp_timezone_string() );
   $data['coverage'] = array( 'schema_ready' => $ready, 'partial' => $partial, 'event_limit' => self::LIMIT, 'tracking_enabled' => Tracker::enabled(), 'retention_days' => (int) Tracker::settings()['retention_days'], 'dwell' => 'observed_active_intervals_max_30s', 'module_clicks' => 'available_after_instrumentation_only', 'ranking_limit' => 50, 'ranking_truncated' => max( $data['ranking_counts'] ) > 50, 'identity' => 'browser_visitor_not_verified_person' );
   if ( ! (int) $visitor ) { $native = \PeptideCore\Data\Operations::period( (int) ( $from / 1000 ), (int) ( $to / 1000 ) ); $data['business_kpis'] = $native['kpis']; }
   $data['ai'] = array( 'status' => 'not_connected', 'cadences' => array( 'day', 'week', 'month' ), 'automatic_analysis' => false, 'profile_id' => (int) $visitor ? 'visitor_analysis' : 'site_analysis', 'persona_status' => 'not_configured', 'separate_personas' => true );

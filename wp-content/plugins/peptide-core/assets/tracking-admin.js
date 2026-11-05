@@ -91,7 +91,7 @@
 		html += '<table class="widefat striped pc-trk-table"><thead><tr><th>' + esc( S.visitor ) + '</th><th>' + esc( S.tabs ) + '</th><th>' + esc( S.stage ) + '</th><th>' + esc( S.cart ) + '</th><th>' + esc( S.visitStart ) + '</th><th>' + esc( S.lastSignal ) + '</th></tr></thead><tbody>';
 		list.forEach( function ( v ) {
 			var who = v.visitor;
-			html += '<tr><td><div>' + dot( v.status ) + '</div><a href="' + esc( cfg.liveUrl + '&visitor=' + who.id ) + '"><strong>' + esc( who.label ) + '</strong></a>' + '<div class="pc-trk-sub">' + esc( ( S[ who.device ] || who.device ) + ' · ' + who.browser + ' · ' + S.visits + ' ' + who.visits ) + '</div></td><td>';
+			html += '<tr><td><div>' + dot( v.status ) + '</div><a class="pc-visitor-detail-link" style="text-decoration:underline;text-underline-offset:3px" aria-label="查看客户完整访问记录" href="' + esc( cfg.liveUrl + '&visitor=' + who.id ) + '"><strong>' + esc( who.label ) + '</strong></a>' + '<div class="pc-trk-sub">' + esc( ( S[ who.device ] || who.device ) + ' · ' + who.browser + ' · ' + S.visits + ' ' + who.visits ) + '</div></td><td>';
 			html += '<details class="pc-trk-tab-list"><summary>' + esc( '查看 ' + v.tabs.length + ' 个页面状态' ) + '</summary>';
 			v.tabs.forEach( function ( t ) {
 				html += '<div class="pc-trk-tab"><span class="pc-trk-tabid">' + esc( t.tab ) + '</span> ' + dot( t.status ) + ' ' + pageText( t ) + videoText( t.video ) + '</div>';
@@ -292,7 +292,7 @@
 					return '<a href="' + esc( cfg.liveUrl + '&visitor=' + o.id ) + '">' + esc( '#' + o.id + ' ' + ( S[ o.device ] || o.device ) + ' · ' + o.browser ) + '</a>';
 				} ).join( ', ' ) + '</p>';
 			}
-			html += '<div class="pc-trk-split"><div><h2>' + esc( S.visits ) + '</h2><table class="widefat pc-trk-table pc-trk-visits"><thead><tr><th>' + esc( S.visitStart ) + '</th><th>' + esc( S.duration ) + '</th><th>' + esc( S.pageviews ) + '</th><th>' + esc( S.stage ) + '</th></tr></thead><tbody>' + res.visits.map( visitRow ).join( '' ) + '</tbody></table><p class="pc-trk-more"></p></div><div id="pc-trk-timeline"><p>' + esc( S.chooseVisit ) + '</p></div></div>';
+			html += '<h2>客户生命周期 · 历次访问</h2><p>点击一次访问，查看该次页面停留统计及下方行为时间线。可加载更早访问和更多事件；仅展示保留期内实际采集的记录。</p><div class="pc-trk-split"><div><h2>' + esc( S.visits ) + '</h2><table class="widefat pc-trk-table pc-trk-visits"><thead><tr><th>' + esc( S.visitStart ) + '</th><th>' + esc( S.duration ) + '</th><th>' + esc( S.pageviews ) + '</th><th>' + esc( S.stage ) + '</th></tr></thead><tbody>' + res.visits.map( visitRow ).join( '' ) + '</tbody></table><p class="pc-trk-more"></p></div><div id="pc-trk-timeline"><p>' + esc( S.chooseVisit ) + '</p></div></div>';
 			root.innerHTML = html;
 			var insights = document.getElementById( 'pc-trk-insights' );
 			if ( insights ) root.querySelector( '.pc-trk-cards' ).insertAdjacentElement( 'afterend', insights );
@@ -303,6 +303,7 @@
 					tr.classList.toggle( 'is-selected', tr.getAttribute( 'data-visit' ) === String( id ) );
 				} );
 				openTimeline( box, id );
+                document.dispatchEvent( new CustomEvent( 'pc:visit-selected', { detail: Number( id ) } ) );
 			};
 			// 点访问行（含“加载更多”追加的行）打开它的时间线。
 			list.addEventListener( 'click', function ( ev ) {
@@ -339,7 +340,8 @@
 			} );
 			var first = cfg.visit || ( res.visits[ 0 ] && res.visits[ 0 ].id );
 			if ( first ) {
-				open( first );
+				list.querySelectorAll( 'tr' ).forEach( function ( tr ) { tr.classList.toggle( 'is-selected', tr.getAttribute( 'data-visit' ) === String( first ) ); } );
+                openTimeline( box, first );
 			}
 		} ).catch( fail );
 	}
