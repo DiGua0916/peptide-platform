@@ -35,7 +35,7 @@
     const retry = element.querySelector('.pdf-retry'), zoom = element.querySelector('.pdf-zoom-value');
     const zoomOut = element.querySelector('[data-pdf-zoom="out"]'), zoomIn = element.querySelector('[data-pdf-zoom="in"]');
     let generation = 0, loadingTask = null, renderTask = null, workingCanvas = null, pdfDocument = null, current = null;
-    let scale = 100, fitWidth = 0, revision = 0, painting = false, timer = 0, frame = 0, observing = false, firstPainted = false;
+    let scale = 100, fitWidth = 0, revision = 0, painting = false, timer = 0, hardTimer = 0, frame = 0, observing = false, firstPainted = false;
     const figures = [], wanted = new Set([1]), visiblePages = new Set(), observedPages = new Set(), stages = new Map();
     function evict(figure) {
       const canvas = figure.querySelector('canvas'); if (canvas) { canvas.remove(); releaseCanvas(canvas); }
@@ -56,10 +56,11 @@
       if (!firstPainted && visiblePages.size && !visiblePages.has(1) && wanted.delete(1)) { if (figures[0]) evict(figures[0]); changed = true; }
       if (changed) requestPaint();
     },{root:element.closest('dialog'),rootMargin:'100% 0px'}) : null;
-    function clearTimer() { clearTimeout(timer); timer = 0; }
+    function clearTimer() { clearTimeout(timer); clearTimeout(hardTimer); timer = hardTimer = 0; }
     function stopStages() { for (const [id,reject] of stages) { clearTimeout(id); reject(new Error('Document stage cancelled.')); } stages.clear(); }
-    function terminate(run) {
+    function terminate(run, deadline = '') {
       if (run !== generation) return;
+      if (deadline) window.console?.warn?.('Reference PDF deadline exceeded:', deadline);
       generation++; revision++; clearTimer(); stopStages(); cancelRender(); pdfDocument = null;
       const task = loadingTask; loadingTask = null; fail();
       if (task) Promise.resolve(task.destroy()).catch(() => {});
@@ -67,7 +68,7 @@
     function stage(promise,run) {
       let id;
       return new Promise((resolve,reject) => {
-        id = setTimeout(() => { stages.delete(id); terminate(run); reject(new Error('Document stage timed out.')); },30000);
+        id = setTimeout(() => { stages.delete(id); terminate(run,'page processing'); reject(new Error('Document stage timed out.')); },30000);
         stages.set(id,reject); Promise.resolve(promise).then(resolve,reject);
       }).finally(() => { clearTimeout(id); stages.delete(id); });
     }
@@ -88,7 +89,11 @@
     }
     function measure() {
       const css = getComputedStyle(pages);
-      return Math.max(0, Math.floor(pages.clientWidth - (parseFloat(css.paddingLeft) || 0) - (parseFloat(css.paddingRight) || 0)));
+      // clientWidth rounds CSS pixels to an integer. The smaller real rectangle
+      // prevents subpixel outward rounding from creating a scrollbar at fit.
+      const rectWidth = pages.getBoundingClientRect?.().width;
+      const width = Number.isFinite(rectWidth) && rectWidth > 0 ? Math.min(pages.clientWidth, rectWidth) : pages.clientWidth;
+      return Math.max(0, Math.floor(width - (parseFloat(css.paddingLeft) || 0) - (parseFloat(css.paddingRight) || 0)));
     }
     async function paint() {
       if (painting || !pdfDocument || !fitWidth) return;
@@ -129,7 +134,14 @@
               if (pageObserver && observedPages.has(number) && !visiblePages.has(number)) { wanted.delete(number); evict(figure); }
             } catch (error) {
               releaseCanvas(canvas);
-              if (run === generation && target === revision) { terminate(run); return; }
+              if (run === generation && target === revision) {
+                // Preserve a bounded diagnostic at the actual failing boundary;
+                // URLs and document text are not needed to investigate rendering.
+                const name = String(error?.name || 'Error').slice(0,80);
+                const message = String(error?.message || 'Unknown rendering failure').replace(/https?:\/\/\S+/gi,'[resource]').slice(0,240);
+                window.console?.warn?.('Reference PDF rendering failed:', name, message);
+                terminate(run); return;
+              }
             } finally { page?.cleanup(); }
           }
           if (run === generation && target === revision) {
@@ -199,12 +211,27 @@
     async function open(payload) {
       reset(); current = payload; const run = generation; observe(); fitWidth = measure(); setZoom(100);
       element.dataset.state = 'loading'; element.setAttribute('aria-busy','true'); status.textContent = 'Loading document…'; retry.hidden = true;
-      timer = setTimeout(() => terminate(run),30000);
+      timer = setTimeout(() => terminate(run,'initial rendering'),30000);
+      // A cold large PDF may still be receiving real bytes at thirty seconds.
+      // Renew only that inactivity deadline; the absolute ceiling never moves.
+      hardTimer = setTimeout(() => terminate(run,'initial hard limit'),120000);
       try {
         const url = sourceURL(payload.pdf), pdfjs = await library(); if (run !== generation) return;
         const base = new URL('product-dialog-pdf/', settings().assetBase).href;
         const task = pdfjs.getDocument({url:url.href,withCredentials:true,isEvalSupported:false,enableXfa:false,rangeChunkSize:524288,disableAutoFetch:true,disableStream:true,httpHeaders:headers(url),cMapUrl:base+'cmaps/',cMapPacked:true,standardFontDataUrl:base+'standard_fonts/',wasmUrl:base+'wasm/'});
-        loadingTask = task; const pdf = await task.promise; if (run !== generation) return;
+        loadingTask = task;
+        let received = 0;
+        task.onProgress = progress => {
+          if (run !== generation || loadingTask !== task || firstPainted) return;
+          const loaded = Number(progress?.loaded), total = Number(progress?.total);
+          if (!Number.isSafeInteger(loaded) || loaded <= received) return;
+          received = loaded; clearTimeout(timer);
+          timer = setTimeout(() => terminate(run,'initial inactivity'),30000);
+          status.textContent = Number.isSafeInteger(total) && total > 0 && loaded <= total
+            ? 'Loading document… ' + Math.floor(loaded * 100 / total) + '% received'
+            : 'Loading document… ' + loaded + ' bytes received';
+        };
+        const pdf = await task.promise; if (run !== generation) return;
         pdfDocument = pdf; element.dataset.pageCount = String(pdf.numPages); await prepare(pdf,run);
       } catch (error) { if (run === generation) terminate(run); }
     }

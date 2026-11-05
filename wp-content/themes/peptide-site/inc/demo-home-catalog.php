@@ -29,7 +29,13 @@ add_filter( 'peptide_core_layout_definitions', function ( array $defs ): array {
 function vc_demo_catalog_products( array $module ): array {
     if ( ! function_exists( 'wc_get_products' ) ) { return array(); }
     $s = $module['settings'];
-    if ( empty( $s['demoFullCatalog'] ) || 'manual' === $s['source'] ) { return \PeptideCore\Modules\Products::for_module( $module ); }
+    if ( empty( $s['demoFullCatalog'] ) || 'manual' === $s['source'] ) {
+        $products = \PeptideCore\Modules\Products::for_module( $module );
+        $ids = array_map( static fn( $product ) => $product->get_id(), $products );
+        if ( function_exists( 'vc_prime_catalog_product_data' ) ) { vc_prime_catalog_product_data( $ids ); }
+        if ( function_exists( 'vc_live_commerce_prime_product_documents' ) ) { vc_live_commerce_prime_product_documents( $ids ); }
+        return $products;
+    }
     $args = array( 'status' => 'publish', 'visibility' => 'visible', 'limit' => 200, 'has_password' => false, 'orderby' => array( 'menu_order' => 'ASC', 'title' => 'ASC', 'ID' => 'ASC' ), 'order' => 'ASC' );
     if ( 'category' === $s['source'] ) {
         $term = get_term( (int) $s['category'], 'product_cat' );
@@ -40,7 +46,11 @@ function vc_demo_catalog_products( array $module ): array {
     elseif ( 'title' === $s['sort'] ) { $args['orderby'] = 'title'; }
     elseif ( in_array( $s['sort'], array( 'price_asc','price_desc' ), true ) ) { $args['orderby'] = 'price'; $args['order'] = 'price_desc' === $s['sort'] ? 'DESC' : 'ASC'; }
     if ( isset( $term ) && $term instanceof WP_Term && class_exists( '\PeptideCore\Collections' ) ) { $args = \PeptideCore\Collections::product_query_args( $term->term_id, $args ); }
-    $products = array_values( array_filter( wc_get_products( $args ), array( '\PeptideCore\Modules\Products', 'public_catalog_product' ) ) );
+    $args['return'] = 'ids';
+    $ids = wc_get_products( $args );
+    if ( function_exists( 'vc_prime_catalog_product_data' ) ) { vc_prime_catalog_product_data( $ids ); }
+    if ( function_exists( 'vc_live_commerce_prime_product_documents' ) ) { vc_live_commerce_prime_product_documents( $ids ); }
+    $products = array_values( array_filter( array_map( 'wc_get_product', $ids ), array( '\PeptideCore\Modules\Products', 'public_catalog_product' ) ) );
     // Promotion belongs to this block, not global WooCommerce product menu_order.
     // Only query-eligible products can be promoted, preserving category boundaries.
     $remaining = array();

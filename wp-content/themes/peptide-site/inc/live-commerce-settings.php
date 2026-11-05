@@ -59,6 +59,22 @@ add_filter( 'peptide_core_module_wrapper', function ( string $html, array $modul
 }, 125, 3 );
 
 /** Reuse immutable published rows within one public render, never a persistent/business cache. */
+function vc_live_commerce_prime_product_documents( array $ids ): void {
+    if ( ! is_callable( array( '\PeptideCore\Templates', 'prime_document_ids' ) ) || is_admin()
+        || ! in_array( $_SERVER['REQUEST_METHOD'] ?? '', array( 'GET', 'HEAD' ), true )
+        || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || ( defined( 'WP_CLI' ) && WP_CLI )
+        || wp_doing_ajax() || wp_doing_cron() || \PeptideCore\Templates::previewing_id() ) { return; }
+    $template = \PeptideCore\Templates::current_id();
+    if ( ! $template ) { return; }
+    $documents = array( 'product' );
+    foreach ( $ids as $id ) { if ( (int) $id > 0 ) { $documents[] = 'product_' . (int) $id; } }
+    // Honor integrations that require context-sensitive fresh document reads.
+    foreach ( $documents as $document ) {
+        if ( ! apply_filters( 'vialcove_live_commerce_request_memo', true, $document, $template ) ) { return; }
+    }
+    \PeptideCore\Templates::prime_document_ids( $template, $documents );
+}
+
 function vc_live_commerce_published_rows( string $document, int $template, bool $reset = false ): array {
     static $rows = array();
     if ( $reset ) { $rows = array(); return array(); }

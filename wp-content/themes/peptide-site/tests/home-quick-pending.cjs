@@ -16,7 +16,7 @@ function fixture() {
   const calls = [], navigations = [], announcements = [], requests = new Map(), ready = new Set();
   const status = {textContent: ''};
   vm.runInNewContext(helpers + capture + legacy + cancellation, {
-    document, window, openIntent: 0, loadingStatus: status, pendingOpeners: new Map(), requests,
+    document, window, openIntent: 0, loadingStatus: status, pendingOpeners: new Map(), requests, stagedRestore: null, stageRestore() {},
     homeProduct: '.vc-home-quick-product', canOpen: () => true, templateFor: id => ready.has(id), present() {},
     announce(message) { status.textContent = message; announcements.push(message); },
     location: {assign(url) { navigations.push(url); }},

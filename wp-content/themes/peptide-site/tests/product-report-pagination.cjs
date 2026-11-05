@@ -2,6 +2,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const source=fs.readFileSync(path.join(__dirname,'../assets/product-dialog-experience.js'),'utf8');
 const reader=source.slice(source.indexOf('    async function readReports('),source.indexOf('    function openImage('));
+const refresher=source.slice(source.lastIndexOf('    function refresh()'),source.indexOf('    let pointer = null'));
 const settle=async()=>{for(let i=0;i<8;i++)await Promise.resolve();};
 function fixture(){
   const requests=[],renders=[],timers=new Map();let sequence=0,selected='20mg';
@@ -31,6 +32,16 @@ test('hidden, pending, completed or destroyed work cannot fetch/render or leak t
   const f=fixture();f.context.document.hidden=true;await f.read();assert.equal(f.requests.length,0);f.context.document.hidden=false;f.context.root.vcHomeSelectionPending=true;await f.read();assert.equal(f.requests.length,0);
   f.context.root.vcHomeSelectionPending=false;const read=f.read();f.context.destroyed=true;f.requests[0].resolve(page(1,Array.from({length:24},(_,i)=>item(49-i))));await read;assert.deepEqual(f.renders,[]);assert.equal(f.timers.size,0);
   f.context.destroyed=false;f.context.reportCursor={page:3,pages:3,total:49};await f.read({resume:true});assert.equal(f.requests.length,1);
+});
+test('history restored pending selection starts the previously skipped first report read on native acceptance',async()=>{
+ const f=fixture();f.select('15mg');
+ Object.assign(f.context,{report:null,reportReadPromise:null,lastSelection:'',track:{scrollLeft:0},renderProduct(){},syncSticky(){},renderOffers(){},navigation:null,ticker:null,support:null,context:()=>({}),CustomEvent:class{},document:{hidden:false,dispatchEvent(){}},root:{vcHomeSelectionPending:true,querySelector(){return {value:'15'};}}});
+ vm.runInContext(refresher,f.context);
+ await f.read();f.context.refresh();assert.equal(f.requests.length,0,'pending initial SKU must not read or expose a report');
+ f.context.root.vcHomeSelectionPending=false;f.context.refresh();assert.equal(f.requests.length,1,'accepted restored SKU starts page1 without waiting for visibility or another SKU');
+ f.context.refresh();assert.equal(f.requests.length,1,'inflight first-page read deduplicates repeated refresh');
+ f.requests[0].resolve({page:1,total_pages:1,total:1,items:[item(11617,'15mg')]});await f.context.reportReadPromise;
+ assert.equal(f.context.reports[0].id,11617);assert.deepEqual(f.renders,[0,0,0,1]);f.context.refresh();assert.equal(f.requests.length,1,'completed cursor does not reload on every refresh');
 });
 test('only exact known public report collection omits stale nonce, including configured and plain REST bases',async()=>{
   for(const [api,configured,publicCollection]of [

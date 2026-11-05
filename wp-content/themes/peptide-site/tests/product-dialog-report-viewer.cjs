@@ -32,7 +32,8 @@ class Element extends Events {
 async function fixture({numPages=1,dimensions=[[612,792]],deferLoad=false,deferRender=false,deferImport=false,deferPage=false,missingResolvers=false,lazy=false}={}){
   const window=new Events(),document={createElement:tag=>new Element(tag)},element=new Element(),pages=new Element('div','pdf-pages');element.connected=true;
   const status=new Element('p','pdf-status'),retry=new Element('button','pdf-retry'),zoom=new Element('span','pdf-zoom-value'),out=new Element('button'),inside=new Element('button');out.attrs['data-pdf-zoom']='out';inside.attrs['data-pdf-zoom']='in';element.append(pages,status,retry,zoom,out,inside);
-  const timers=new Map(),frames=new Map(),requests=[],renders=[],canvases=[],observers=[],pageObservers=[];let next=0,imports=0,active=0,maxActive=0;
+  const timers=new Map(),timerDelays=new Map(),frames=new Map(),requests=[],renders=[],canvases=[],observers=[],pageObservers=[],warnings=[];let next=0,imports=0,active=0,maxActive=0;
+  window.console={warn(...values){warnings.push(values);}};
   window.vcProductReports={assetBase:'https://shop.test/theme/assets/',wpNonce:'STALE_TEST_NONCE'};window.devicePixelRatio=2;
   const importWait=deferred(),pageWait=deferred(),pageReads=[];
   const pdfjs={GlobalWorkerOptions:{},getDocument(options){
@@ -48,7 +49,7 @@ async function fixture({numPages=1,dimensions=[[612,792]],deferLoad=false,deferR
   class PageObserver {constructor(fn){this.fn=fn;this.items=[];pageObservers.push(this);}observe(item){this.items.push(item);}disconnect(){this.items=[];}}
   if(lazy)window.IntersectionObserver=PageObserver;
   const globals={window,document,URL,location:{origin:'https://shop.test',href:'https://shop.test/coa-library/?coa_q=sample'},ResizeObserver:Observer,IntersectionObserver:PageObserver,getComputedStyle:()=>({paddingLeft:'12px',paddingRight:'12px'}),console,
-    setTimeout:fn=>{const id=++next;timers.set(id,fn);return id;},clearTimeout:id=>timers.delete(id),requestAnimationFrame:fn=>{const id=++next;frames.set(id,fn);return id;},cancelAnimationFrame:id=>frames.delete(id)};
+    setTimeout:(fn,delay)=>{const id=++next;timers.set(id,fn);timerDelays.set(id,delay);return id;},clearTimeout:id=>{timers.delete(id);timerDelays.delete(id);},requestAnimationFrame:fn=>{const id=++next;frames.set(id,fn);return id;},cancelAnimationFrame:id=>frames.delete(id)};
   const context=vm.createContext(globals);if(missingResolvers)vm.runInContext('Promise.withResolvers = undefined',context);
   const script=new vm.Script(source,{filename:'product-dialog-report-viewer.js',importModuleDynamically:async specifier=>{
     if(specifier.endsWith('product-report-pdf-compat.mjs')){const m=new vm.SourceTextModule(fs.readFileSync(path.join(directory,'product-report-pdf-compat.mjs'),'utf8'),{context});await m.link(()=>{});await m.evaluate();return m;}
@@ -56,13 +57,17 @@ async function fixture({numPages=1,dimensions=[[612,792]],deferLoad=false,deferR
     const m=new vm.SyntheticModule(['GlobalWorkerOptions','getDocument'],function(){this.setExport('GlobalWorkerOptions',pdfjs.GlobalWorkerOptions);this.setExport('getDocument',pdfjs.getDocument);},{context});await m.link(()=>{});await m.evaluate();return m;
   }});script.runInContext(context);
   const api=window.createProductReportViewer({element});
-  return {window,element,pages,status,retry,zoom,out,inside,timers,frames,requests,renders,canvases,observers,pageObservers,pdfjs,api,context,importWait,pageWait,pageReads,get imports(){return imports;},get maxActive(){return maxActive;},async frame(){const list=[...frames.values()];frames.clear();list.forEach(fn=>fn());await settle();},resize(width){pages.clientWidth=width;observers[0].fn();},async start(pdf='/wp-json/peptide/v1/report-library/7/file?download=0'){await api.open({pdf,title:'Actual boundary title'});await this.frame();}};
+  return {window,element,pages,status,retry,zoom,out,inside,timers,timerDelays,frames,requests,renders,canvases,observers,pageObservers,warnings,pdfjs,api,context,importWait,pageWait,pageReads,get imports(){return imports;},get maxActive(){return maxActive;},async frame(){const list=[...frames.values()];frames.clear();list.forEach(fn=>fn());await settle();},resize(width){pages.clientWidth=width;observers[0].fn();},async start(pdf='/wp-json/peptide/v1/report-library/7/file?download=0'){await api.open({pdf,title:'Actual boundary title'});await this.frame();}};
 }
 test('fit width subtracts actual pane padding, preserves each page ratio and uses DPR independently',async()=>{
   const f=await fixture({numPages:2,dimensions:[[612,792],[792,612]]});await f.start();
   assert.equal(f.pages.children.length,2);assert.equal(f.pages.children[0].style.width,'319px');assert.equal(f.renders[0].viewport.width,638);assert.equal(f.renders[1].viewport.width,638);
   assert.ok(Math.abs(f.renders[0].viewport.height/638-792/612)<1e-9);assert.ok(Math.abs(f.renders[1].viewport.height/638-612/792)<1e-9);assert.equal(f.maxActive,1);f.api.dispose();
   assert.equal(f.requests[0].options.rangeChunkSize,524288);assert.equal(f.requests[0].options.disableAutoFetch,true);assert.equal(f.requests[0].options.disableStream,true);
+});
+test('fractional pane geometry never rounds fit width outward; zoom still permits deliberate horizontal growth',async()=>{
+ const f=await fixture();f.pages.getBoundingClientRect=()=>({width:342.666687});await f.start();assert.equal(f.pages.children[0].style.width,'318px');assert.equal(f.renders[0].viewport.width,636);
+ f.inside.fire('click');await f.frame();assert.equal(f.pages.children[0].style.width,'477px');f.out.fire('click');await f.frame();assert.equal(f.pages.children[0].style.width,'318px');f.api.dispose();
 });
 test('resize and zoom repaint an existing PDF without another document request; fit clears horizontal pan',async()=>{
   const f=await fixture();await f.start();const first=f.canvases[0];f.resize(414);await f.frame();assert.equal(f.requests.length,1);assert.equal(f.pages.children[0].style.width,'390px');assert.equal(first.width,0);
@@ -83,6 +88,17 @@ test('close during module loading cancels its timer and cannot start a late requ
 test('slow load timeout retires its generation, aborts once and Retry starts a clean request',async()=>{
   const f=await fixture({deferLoad:true});const pending=f.api.open({pdf:'/wp-json/peptide/v1/report-library/7/file'});await settle();assert.equal(f.requests.length,1);[...f.timers.values()][0]();await pending;assert.equal(f.requests[0].destroyed,1);assert.equal(f.element.dataset.state,'error');assert.equal(f.retry.hidden,false);assert.equal(f.timers.size,0);
   f.retry.fire('click');await settle();assert.equal(f.requests.length,2);f.requests[1].load.resolve(f.requests[1].pdf);await settle();await f.frame();assert.equal(f.element.dataset.state,'ready');f.api.dispose();assert.equal(f.timers.size,0);
+});
+test('strictly advancing real download bytes renew inactivity only; repeated bytes cannot delay failure',async()=>{
+ const f=await fixture({deferLoad:true});const pending=f.api.open({pdf:'/wp-json/peptide/v1/report-library/7/file'});await settle();
+ const idle=()=>[...f.timerDelays].find(([,delay])=>delay===30000)?.[0];const first=idle();f.requests[0].onProgress({loaded:100,total:1000});assert.equal(f.timers.has(first),false);assert.match(f.status.textContent,/10%/);
+ const renewed=idle();f.requests[0].onProgress({loaded:100,total:1000});f.requests[0].onProgress({loaded:50,total:1000});assert.equal(idle(),renewed);
+ f.requests[0].onProgress({loaded:200});assert.doesNotMatch(f.status.textContent,/%/);assert.match(f.status.textContent,/200 bytes/);const stalled=idle();f.timers.get(stalled)();await pending;assert.equal(f.requests[0].destroyed,1);assert.equal(f.retry.hidden,false);assert.equal(f.timers.size,0);
+});
+test('continuous download progress cannot extend hard120s ceiling; disposal clears both deadlines and retires progress',async()=>{
+ const f=await fixture({deferLoad:true});const pending=f.api.open({pdf:'/wp-json/peptide/v1/report-library/7/file'});await settle();const hard=[...f.timerDelays].find(([,delay])=>delay===120000)?.[0];assert.ok(hard);
+ for(let loaded=100;loaded<1000;loaded+=100)f.requests[0].onProgress({loaded,total:1000});assert.equal(f.timerDelays.get(hard),120000);f.timers.get(hard)();await pending;assert.equal(f.element.dataset.state,'error');assert.equal(f.timers.size,0);
+ const g=await fixture({deferLoad:true});const waiting=g.api.open({pdf:'/wp-json/peptide/v1/report-library/7/file'});await settle();const progress=g.requests[0].onProgress;g.api.dispose();await waiting;const status=g.status.textContent;progress({loaded:1000,total:1000});assert.equal(g.timers.size,0);assert.equal(g.status.textContent,status);
 });
 test('slow module import is covered by the deadline and its late completion cannot issue a document request',async()=>{
   const f=await fixture({deferImport:true});const pending=f.api.open({pdf:'/wp-json/peptide/v1/report-library/7/file'});await settle();[...f.timers.values()][0]();f.importWait.resolve();await pending;assert.equal(f.requests.length,0);assert.equal(f.element.dataset.state,'error');assert.equal(f.retry.hidden,false);assert.equal(f.timers.size,0);f.api.dispose();
@@ -112,6 +128,11 @@ test('large synthetic document fallback has sequential rendering and bounded ret
 });
 test('render failure retains completed pages and offers explicit retry without a blank ready state',async()=>{
   const f=await fixture({numPages:2,deferRender:true});await f.api.open({pdf:'/wp-json/peptide/v1/report-library/7/file'});await f.frame();f.renders[0].finish();await settle();f.renders[1].finish(new Error('render failure'));await settle();assert.equal(f.element.dataset.state,'error');assert.equal(f.pages.querySelectorAll('canvas').length,1);assert.equal(f.retry.hidden,false);f.api.dispose();
+});
+test('only current genuine render failure emits bounded URL-redacted diagnostic',async()=>{
+ const f=await fixture({deferRender:true});await f.start();f.renders[0].finish(new TypeError('Decoder failed https://private.test/report?nonce=secret '+ 'x'.repeat(400)));await settle();
+ assert.equal(f.warnings.length,1);assert.equal(f.warnings[0][1],'TypeError');assert.ok(f.warnings[0][2].length<=240);assert.doesNotMatch(f.warnings[0][2],/private|nonce|secret/);assert.match(f.warnings[0][2],/\[resource\]/);assert.equal(f.retry.hidden,false);
+ const g=await fixture({deferRender:true});await g.start();g.api.dispose();await settle();assert.equal(g.warnings.length,0,'expected disposal cancellation must remain quiet');
 });
 test('viewport observer renders one initial page of 100, evicts offscreen canvas and renders only the newly visible page',async t=>{
   const f=await fixture({numPages:100,dimensions:[[2000,6000]],lazy:true});f.pages.clientWidth=2000;await f.start();assert.equal(f.pages.children.length,100);assert.equal(f.renders.length,1);assert.equal(f.pages.querySelectorAll('canvas').length,1);

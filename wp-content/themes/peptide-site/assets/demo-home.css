@@ -82,3 +82,20 @@
  .vc-demo-hero--product-first .vc-demo-hero-actions{grid-column:1;grid-row:auto;margin:0}
  .vc-demo-module .vc-demo-shop-link{font-size:14px;line-height:20px;min-height:44px}
 }
+
+/* Keep the homepage copy and product artwork alongside one another on phones.
+   Product-dialog and desktop compositions retain their own layout rules. */
+@media(max-width:767px){
+ body.home .vc-demo-hero:not(.vc-demo-hero--no-media):not(.vc-demo-hero--product-first){grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);align-items:center;gap:12px}
+ body.home .vc-demo-hero:not(.vc-demo-hero--product-first) .vc-demo-hero-copy{min-width:0;overflow-wrap:anywhere}
+ body.home .vc-demo-hero:not(.vc-demo-hero--product-first) h1{font-size:clamp(24px,6.4vw,36px);line-height:1.08;letter-spacing:-.03em}
+ body.home .vc-demo-hero:not(.vc-demo-hero--product-first) .vc-demo-hero-description{font-size:14px;line-height:21px;margin-top:16px}
+ body.home .vc-demo-hero:not(.vc-demo-hero--product-first) .vc-demo-hero-intro{font-size:12px;line-height:18px;margin-bottom:12px}
+ body.home .vc-demo-hero:not(.vc-demo-hero--product-first) .vc-demo-hero-actions{gap:8px;margin-top:16px}
+ body.home .vc-demo-hero:not(.vc-demo-hero--product-first) .vc-demo-hero-actions .vc-demo-button{max-width:100%;min-width:0;min-height:44px;padding:10px 12px;font-size:14px;line-height:20px;white-space:normal}
+ body.home .vc-demo-hero:not(.vc-demo-hero--product-first) .vc-demo-hero-media{min-width:0;max-width:100%;margin:0;order:0}
+ body.home .vc-demo-hero:not(.vc-demo-hero--product-first) .vc-demo-hero-media>a{padding:8px}
+ body.home .vc-demo-hero:not(.vc-demo-hero--product-first) .vc-demo-hero-media :is(img,picture){width:100%;max-width:100%;height:auto;object-fit:contain}
+ body.home .vc-demo-hero:not(.vc-demo-hero--product-first) .vc-demo-hero-media figcaption{flex-wrap:wrap;gap:4px;font-size:12px;line-height:18px;overflow-wrap:anywhere}
+ body.home .vc-demo-hero.vc-demo-hero--m-left .vc-demo-hero-media{order:-1}
+}

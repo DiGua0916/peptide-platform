@@ -1,0 +1,38 @@
+# Mobile repair and acceptance — 2026-11-06
+
+Scope: sandbox shop/admin and the development branch only. Production/main are unchanged. This replaces the earlier assumption that a seven-category performance run established acceptance of the user's fourteen mobile issues.
+
+## Changes and evidence
+
+| Original issue | Repair / verification |
+| --- | --- |
+| 1. General lag | Actual FPM profiling isolated catalogue template N+1 work. Bulk native product/variation/attachment cache priming and request-local document/public-batch lookup reduced homepage queries from 789 to 214. Template samples changed from 0.635–0.689s to 0.529–0.546s. Ordinary final origin TTFB remained 0.682–0.744s; sandbox has a 0.75 CPU quota. This is measured reduction, not instant navigation or field Core Web Vitals. |
+| 2. Discount survives a different SKU | Clear accepted commerce state before native matching and reject stale variation results. Keep the previous decoded artwork during a complete pending selection instead of removing its source. Browser TR20 sale → TR15 showed matching image/report, $50 per box and no old 29% discount. |
+| 3 / 9. Framed close controls | Transparent, borderless close styling for product, image, PDF and both cart implementations. Browser computed product/PDF/cart controls had transparent background, no border or shadow; keyboard focus remains visible. |
+| 4. Packaging and redundant row | Suppress SKU/Clear/details row; selected packaging is explicit per vial and ten vials per box, price per box. No package quantity, price, inventory or business record changed. Actual 15mg display and checkout were checked. |
+| 5. Mobile left/right layout | Homepage hero retains two columns below 768px. Screenshots inspected at 320 and 390 pixels; 430px document width did not overflow. Product dialog retains its own readable mobile layout. |
+| 6. Refresh wrong initial specification | Stage validated native select defaults/quantity before Woo initializes, retire superseded history intents and listeners. Browser refresh restored TR15, $50/no sale and matching COA. First-paint timing on physical iOS has not been measured. |
+| 7. Cancelled loading card | Existing cancellation path silently retires obsolete intent; genuine failures retain recovery. Native production-module cancellation, Escape, lifecycle and out-of-order tests passed. Do not hide all network errors. |
+| 8. Pale checkout text | Opaque secondary colors and 500/600 weights. Actual phone checkout label color rgb(32,59,69), weight500; individual price weight600. Screenshot inspected. No payment submitted. |
+| 10. Gallery autoplay | Existing 6.5s playback remains, with visibility, interaction and reduced-motion pauses. Actual gallery advanced from product artwork to its report; production playback tests cover lifecycle behavior. |
+| 11. First visit | Earlier gzip, pixel-equal WebP and deferred celebration image remain. Product images now have private five-minute browser caching; only native variation images warm at idle, low priority, max12 images / concurrency2 / bounded96 successful keys, skipping SaveData/2g. HTML/APIs/PDFs remain no-store; authentication redirects remain no-store. Mixed-connection samples are not causal speed percentages. |
+| 12. COA failure / size / pan | Repaired page0 read after history acceptance, request ownership, lazy page raster and fractional fit width. Browser opened product TR15 four-page PDF and archive TB500 one-page PDF. At 100%, fractional342.666px pane uses318px page, rather than319px. Four-page3.7MB original needs nearly all bytes for first-page rendering. Initial loading uses30s real-progress inactivity plus an independent120s hard ceiling; repeated bytes do not renew. At128KiB/s +200ms simulated latency, observed ready with4 canvases and no Retry. Network override was reset. No PDF bytes changed. |
+| 13. Pale COA list | Actual metadata/date color rgb(65,94,104), weight500; action color rgb(17,101,125), weight500. Existing thumbnails decoded640px. Hidden fallback text must not be mistaken for a visible image error. |
+| 14. COA route, credits and year | Archive open/close returned to the exact filtered library URL. Fallback and module footer use2025; actual checkout/library/homefooter checked. GeoIP runtime configuration acceptance is recorded separately below. Original report issue dates remain unchanged. |
+
+## Verification and operational safeguards
+
+- Independent final code review:69 Node tests and132 PHP checks passed; root also reran selection/history/pagination/warmup and PDF-reader suites. Latest PDF suite24 tests includes progress, hard deadline and fractional geometry regressions.
+- Actual unprimed/primed full native DTO/price/stock/image aggregate hashes matched for83 parent products and266 parent/SKU rows. Homepage retained83 cards,83 prices and6 report links. No persistent price/stock cache introduced.
+- Temporary localhost/token-gated profiling files were removed in finally and independently checked absent. No SQL text, customer identities or raw logs were included in the report.
+- Source CAS deployment backs up every old file, lints PHP, verifies SHA256 and waits for sandbox PHP readiness. Latest code backup: `/var/lib/vialcove-sandbox/backups/fourteen-candidate-1793917210` (19 files per shop/admin,38 file checks). Original image-cache config backup: `image-cache-before-1793913695.conf`.
+- Only sandbox PHP restarted. No real order/payment/mail was generated. One sandbox cart item used for checkout was removed afterward.
+- Detailed private runtime receipts and screenshots: `D:/Codex/Tasks/2026-11-06/fourteen-point-repair/outputs`. Raw network tracing, PDFs and database resources are not committed.
+
+## Limits / remaining verification
+
+Desktop Chrome at responsive phone widths is not a physical iPhone. No field p75 or global-network guarantee is claimed. The first-page PDF dependency size is intrinsic to that unchanged document; progress-aware waiting prevents false timeout but does not reduce its transfer size. Remaining native variation-attribute queries are retained instead of duplicating Woo's matching rules.
+
+GeoIP: the fresh sandbox initially had automatic language/translation disabled and no configured database. Therefore an empty footer was not proof of successful geolocation. This was corrected in sandbox shop/admin with the existing licensed November2026 DB-IP resource (SHA256145ce5dfb812d8de28547e6289bb5c5f8b3df2f1dea21d324d5b575e0431311f), in a private directory outside webroots and inside sandbox open_basedir. Default English/US English/PR Spanish mappings are preserved. Local provider lookup of a public DNS fixture returnedUS; loopback remained unknown. No client address was forged or sent externally. Actual shop HTTP output contained one attribution element and no legacy credit; admin's existing302 was followed only to the validated sandbox-shop destination. Receipt `sandbox-automatic-geoip-enable.json`; configuration/options backup `automatic-geoip-before-1793918149`. Production settings were not changed.
+
+Final feature-enabled FPM measurements are separate from the earlier same-configuration comparison:213 queries in each of three requests, template0.832/0.613/0.602s, TTFB1.040/0.775/0.773s, zero WP HTTP calls. HTML347835bytes now includes the enabled language interface rather than the earlier318793byte fixture. Temporary diagnostic removal was verified again. Browser final proof: en-US, exactly one `.pc-geoip-attribution`, no legacy attribution, ©2025, cart0. Browser network emulation and viewport overrides were reset. The unchanged original report dates are2026 and were not falsified to match the copyright year.

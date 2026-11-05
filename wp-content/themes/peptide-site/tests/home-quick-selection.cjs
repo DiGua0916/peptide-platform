@@ -10,9 +10,9 @@ function fixture(){
   const select={name:'attribute_pack',value:'20mg*10vials',selectedOptions:[{textContent:'20mg × 10 vials'}]};
   const price={innerHTML:'',set textContent(value){this.innerHTML=value;},setAttribute(){}},sku={hidden:false},link={hidden:false},spec={textContent:'',hidden:false};
   const summary={querySelector(selector){return selector===':scope > .price'?price:selector==='.vc-home-quick__sku'?sku:selector==='.vc-showcase-quick__details'?link:selector==='.vc-home-quick__specification'?spec:null;},querySelectorAll(){return [select];}};
-  const root={querySelector(selector){return selector==='.summary'?summary:selector==='.summary > .price'?price:null;},vcExperience:{updateMedia(value){updates.push(value);},update(){}}};
+  const root={dataset:{vcProductId:'11306'},querySelector(selector){return selector==='.summary'?summary:selector==='.summary > .price'?price:null;},vcExperience:{updateMedia(value){updates.push(value);},update(){}}};
   const form={closest(){return root;},querySelectorAll(){return [select];}};
-  return {handlers,native,root,form,select,price,sku,link,updates,found(variation){handlers.get('found_variation').call(form,{},variation);},pending(){handlers.get('woocommerce_variation_select_change').call(form);}};
+  return {api:window.VialCoveHomeQuickView,handlers,native,root,form,select,price,sku,link,updates,found(variation){handlers.get('found_variation').call(form,{},variation);},pending(){handlers.get('woocommerce_variation_select_change').call(form);}};
 }
 const variation=(id,dose,sale=false)=>({variation_id:id,attributes:{attribute_pack:dose+'mg*10vials'},sku:'TR'+dose,price_html:'<span class="vc-price-current">$'+dose+'</span>'+(sale?'<span class="vc-price-compare">$28</span><span class="vc-sale-badge">29% off</span>':''),vc_home_image:{src:'/tr'+dose+'.webp'},vc_home_promotions:[]});
 test('TR20 sale → TR15 without sale clears all accepted state before lookup and rejects late TR20',()=>{
@@ -33,4 +33,28 @@ test('each product form keeps isolated accepted state and transport remains shar
   const a=fixture(),b=fixture();a.found(variation(20,20,true));b.select.value='15mg*10vials';b.found(variation(15,15));
   a.pending();assert.equal(b.root.vcHomeSku,'TR15');assert.equal(b.root.vcHomeSelectionPending,false);assert.doesNotMatch(b.price.innerHTML,/29%/);
   assert.doesNotMatch(source,/method\s*:\s*['"]POST['"]/);
+});
+
+test('complete pending selection clears commerce state without blanking the accepted artwork',()=>{
+  const f=fixture();f.found(variation(20,20,true));const shown=f.updates.at(-1),count=f.updates.length;
+  f.select.value='15mg*10vials';f.pending();f.pending();
+  assert.equal(f.root.vcHomeImage,null,'pending metadata must not become accepted variation data');
+  assert.equal(f.updates.length,count,'pending native events must not erase/reassign the displayed image');
+  assert.equal(f.updates.at(-1),shown);assert.doesNotMatch(f.price.innerHTML,/29%|compare|\$20/);
+  f.select.value='';f.pending();assert.equal(f.updates.at(-1),null,'an empty selection still clears unavailable artwork');
+});
+test('history stages selection and native reset defaults before Woo initializes, without presenting stale artwork or sale',()=>{
+ const f=fixture();f.found(variation(20,20,true));
+ f.select.options=[{value:'20mg*10vials',defaultSelected:true},{value:'15mg*10vials',defaultSelected:false}];const qty={value:'1',defaultValue:'1'};f.form.querySelector=()=>qty;
+ f.api.stageRestore({productId:11306,attributes:{attribute_pack:'15mg*10vials'},quantity:'4'});
+ f.native.get('reset')({target:f.form});
+ // Simulate the browser reset default action, which runs after capture listeners.
+ f.select.value=f.select.options.find(option=>option.defaultSelected).value;qty.value=qty.defaultValue;
+ assert.equal(f.select.value,'15mg*10vials');assert.equal(qty.value,'4');assert.equal(f.root.vcHomeSelectionPending,true);assert.equal(f.updates.at(-1),null);assert.doesNotMatch(f.price.innerHTML,/29%|compare|\$20/);
+ f.found(variation(20,20,true));assert.equal(f.root.vcHomeSelectionPending,true);f.found(variation(15,15));assert.equal(f.root.vcHomeSku,'TR15');
+});
+test('retired history intent never changes a normal reset and invalid options/quantity retain native defaults',()=>{
+ const f=fixture();f.select.options=[{value:'20mg*10vials',defaultSelected:true},{value:'15mg*10vials',defaultSelected:false}];const qty={value:'1',defaultValue:'1'};f.form.querySelector=()=>qty;
+ const retire=f.api.stageRestore({productId:11306,attributes:{attribute_pack:'15mg*10vials'},quantity:'4'});retire();f.native.get('reset')({target:f.form});assert.equal(f.select.value,'20mg*10vials');assert.equal(qty.value,'1');assert.equal(f.updates.length,0);
+ f.api.stageRestore({productId:11306,attributes:{attribute_pack:'unavailable'},quantity:'NaN'});f.native.get('reset')({target:f.form});assert.equal(f.select.value,'20mg*10vials');assert.equal(f.select.options[0].defaultSelected,true);assert.equal(qty.defaultValue,'1');
 });

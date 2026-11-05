@@ -424,3 +424,9 @@
         line-height: 32px;
     }
 }
+
+/* Readable checkout text uses the same geometry on mobile and desktop. */
+.vc-checkout-page{--muted:#415e68;--vc-muted-readable:#415e68}
+.vc-checkout-page .wp-block-woocommerce-checkout :is(.wc-block-components-checkout-step__description,.wc-block-components-totals-item__description,.wc-block-components-order-summary-item__description,.wc-block-components-product-metadata,.wc-block-components-checkbox__label,.wc-block-components-radio-control__description,.wc-block-components-checkout__terms){color:#415e68;font-weight:500;opacity:1}
+.vc-checkout-page .wp-block-woocommerce-checkout :is(.wc-block-components-totals-item__label,.wc-block-components-totals-item__value,.wc-block-components-product-name){color:var(--ink);font-weight:600;opacity:1}
+.vc-checkout-page .wp-block-woocommerce-checkout input::placeholder{color:#415e68;opacity:1}

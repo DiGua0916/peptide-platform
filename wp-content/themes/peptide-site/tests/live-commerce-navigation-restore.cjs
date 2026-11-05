@@ -42,7 +42,7 @@ function fixture({ jquery = true, value = '10mg', quantity = '3', deferPresent =
         root.dataset.vcProductId = String(id); product.open = open;
         document.dispatchEvent({ type: 'vc:product-presented', detail: { root, productId: id, dialog: product } });
     };
-    const opener = { dataset: { vcHomeProduct: '11306', vcQuickOpen: '11306' }, click() { if (!deferPresent) signalPresented(); } };
+    const opener = { dataset: { vcHomeProduct: '11306', vcQuickOpen: '11306' }, click() { calls.stagedBeforeClick=!!calls.stagedRestore; if (!deferPresent) signalPresented(); } };
     document.body = { append() {} };
     document.querySelectorAll = selector => selector.startsWith('dialog') ? dialogs : [];
     document.querySelector = selector => selector === 'dialog.vc-showcase-quick' ? product : selector.includes('[data-vc-home-product="11306"]') ? opener : null;
@@ -50,6 +50,7 @@ function fixture({ jquery = true, value = '10mg', quantity = '3', deferPresent =
     const history = { state: null, replaceState(value) { this.state = value; calls.replace++; }, pushState(value) { this.state = value; calls.push++; }, go(delta) { calls.go.push(delta); } };
     const schedule = (map, fn) => { const id = ++nextId; map.set(id, fn); return id; };
     Object.assign(window, { history, MutationObserver: class { constructor(fn) { mutation=fn; } observe() {} }, VialCoveLiveCart: { close() { cart.close(); }, open() { cart.open = true; } } });
+    window.VialCoveHomeQuickView={stageRestore(item){calls.stagedRestore=item;return()=>{calls.stagedRestore=null;calls.restoreReleased=(calls.restoreReleased||0)+1;};}};
     if (jquery) window.jQuery = el => ({ trigger(type) { if (type === 'change') { el.jqueryChanges++; changed(); } } });
     const globals = { window, document, history, location, MutationObserver: window.MutationObserver, URL,
         Event: class { constructor(type, options) { this.type = type; Object.assign(this, options); } },
@@ -89,6 +90,7 @@ async function check(name, fn) { await fn(); passed++; console.log('ok', name); 
         view.pop([view.entry()]); await settle(); view.frame();
         assert.equal(view.select.value, '10mg'); assert.equal(view.qty.value, '3');
         assert.equal(view.select.assignments, 1); assert.equal(view.qty.assignments, 1);
+        assert.equal(view.calls.stagedBeforeClick,true); assert.equal(view.calls.stagedRestore,null); assert.equal(view.calls.restoreReleased,1);
         assert.equal(view.select.jqueryChanges, Number(jquery)); assert.equal(view.select.nativeChanges, Number(!jquery)); assert.equal(view.qty.nativeChanges, 1);
         assert.equal(view.product.scrollTop, 3694); assert.equal(view.product.open, true);
     });
@@ -106,7 +108,11 @@ async function check(name, fn) { await fn(); passed++; console.log('ok', name); 
     });
     await check('stale async product completion cannot assign selection or schedule a scroll after a newer Back', async () => {
         const view = fixture({ value: '20mg', quantity: '1', deferPresent: true });
-        view.pop([view.entry()]); view.pop([]); view.signalPresented(11306, false); await settle();
+        view.pop([view.entry()]); view.pop([]); await settle();
+        assert.equal(view.timers.size, 0, 'superseded presentation deadline must be retired immediately');
+        assert.equal(view.document.handlers.get('vc:product-presented')?.size || 0, 0, 'superseded presentation listener must be retired immediately');
+        assert.equal(view.calls.stagedRestore,null); assert.equal(view.calls.restoreReleased,1);
+        view.signalPresented(11306, false); await settle();
         assert.equal(view.select.assignments + view.qty.assignments, 0); assert.equal(view.frames.size, 0); assert.equal(view.product.open, false);
         assert.equal(view.calls.cancel, 2); assert.deepEqual(view.calls.go, []);
     });
@@ -115,6 +121,11 @@ async function check(name, fn) { await fn(); passed++; console.log('ok', name); 
         view.pop([view.entry()]); await settle(); assert.equal(view.frames.size, 1);
         view.pop([]); await settle(); view.product.open = true; view.product.scrollTop = 17; view.frame();
         assert.equal(view.product.scrollTop, 17); assert.equal(view.select.assignments + view.qty.assignments, 0);
+    });
+    await check('a genuine missing-presenter deadline retires staged fields before a later ordinary open',async()=>{
+        const view=fixture({deferPresent:true});view.pop([view.entry()]);assert.equal(view.calls.stagedBeforeClick,true);
+        for(const fn of [...view.timers.values()])fn();await settle();
+        assert.equal(view.calls.stagedRestore,null);assert.equal(view.calls.restoreReleased,1);assert.equal(view.document.handlers.get('vc:product-presented')?.size||0,0);assert.equal(view.select.assignments+view.qty.assignments,0);
     });
     await check('library report adds one layer and Back closes it without opening a product or changing caller state',async()=>{
         const view=fixture();const url='http://vialcove.test/wp-json/peptide/v1/report-library/7/file?download=0';const report=view.libraryReport(url);report.open=true;view.mutate(report);

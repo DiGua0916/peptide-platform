@@ -7,9 +7,9 @@
 }
 .vc-home-quick::backdrop { background:#102c3a80; backdrop-filter:blur(4px); }
 body:has(.vc-home-quick[open]) { overflow:hidden; }
-.vc-home-quick .vc-showcase-quick__close { position:absolute; z-index:5; top:16px; right:16px; width:44px; height:44px; margin:0; padding:0; border:0; border-radius:8px; background:#fff; color:var(--vc-home-ink); font-size:0; }
+.vc-home-quick .vc-showcase-quick__close { position:absolute; z-index:5; top:16px; right:16px; width:44px; height:44px; margin:0; padding:0; border:0; border-radius:0; background:transparent; color:var(--vc-home-ink); font-size:0; }
 .vc-home-quick .vc-showcase-quick__close::after { content:'×'; font:400 36px/1 'Geist',sans-serif; }
-.vc-home-quick .vc-showcase-quick__close:hover { background:#edf4f5; }
+.vc-home-quick .vc-showcase-quick__close:hover { background:transparent; }
 .vc-home-quick .vc-showcase-quick-product { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:0; margin:0; }
 .vc-home-quick .vc-showcase-quick__media { min-width:0; display:flex; align-items:center; justify-content:center; padding:40px; background:#eef5f5; }
 .vc-home-quick .vc-showcase-quick__media img { display:block; width:100%; max-height:none; height:auto; object-fit:contain; mix-blend-mode:multiply; }
@@ -211,7 +211,7 @@ body:has(.vc-home-quick[open]) { overflow:hidden; }
 .vc-product-child-dialog{--ink:#193b45;--teal:#0c7c94;--muted:#526b74;--line:#d9e4e7;font:16px/24px 'Geist',sans-serif;color:var(--ink);width:min(800px,calc(100vw - 40px));max-width:calc(100vw - 40px);max-height:calc(100dvh - 40px);padding:24px;border:0;border-radius:16px;background:white;overflow:auto;overscroll-behavior:contain;box-sizing:border-box}
 .vc-product-child-dialog::backdrop{background:#17343c99}
 .vc-product-child-dialog [hidden]{display:none!important}
-.vc-product-child-close{position:sticky;top:0;float:right;z-index:3;display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:50%;background:#fff;color:var(--ink);font:400 32px/1 'Geist',sans-serif;cursor:pointer}
+.vc-product-child-close{position:sticky;top:0;float:right;z-index:3;display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:0;background:transparent;color:var(--ink);font:400 32px/1 'Geist',sans-serif;cursor:pointer}
 .vc-product-child-dialog h2{font:700 28px/1.2 'Geist',sans-serif;letter-spacing:-.02em;padding-right:48px;margin:12px 0}
 .vc-product-child-dialog .vc-dialog-reference-note{font-size:13px;line-height:20px;color:var(--muted)}
 .vc-product-image-dialog{height:calc(100dvh - 40px);background:#f0f5f6;overflow:hidden}

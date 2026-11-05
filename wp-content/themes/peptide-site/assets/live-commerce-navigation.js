@@ -6,6 +6,7 @@
   const selector = 'dialog.vc-showcase-quick,dialog.vc-product-child-dialog,dialog#vc-live-cart-drawer';
   let current = [], applying = false, pending = false, navigating = false, timer = 0, syncTimer = 0, serial = 0;
   const cached = new Map();
+  let cancelProductWait = null;
   const openedOrder = new WeakMap(); let openedSerial = 0;
   const copy = value => JSON.parse(JSON.stringify(value));
   const read = state => state?.[key]?.version === 1 && state[key].scope === scope && Array.isArray(state[key].layers) ? state[key] : null;
@@ -70,30 +71,37 @@
     if (dialog.id === 'vc-live-cart-drawer') window.VialCoveLiveCart?.close(true);
     else dialog.close();
   }
-  function waitProduct(id) {
+  function waitProduct(id, item) {
     return new Promise(resolve=> {
       if (productDialog()?.open && Number(root()?.dataset.vcProductId)===id) {resolve(root());return;}
-      const finish = r=> {clearTimeout(timeout);document.removeEventListener('vc:product-presented',onPresent);resolve(r);};
+      let releaseRestore = null;
+      const finish = r=> {releaseRestore?.();clearTimeout(timeout);document.removeEventListener('vc:product-presented',onPresent);if(cancelProductWait===cancel)cancelProductWait=null;resolve(r);};
+      const cancel = ()=>finish(null);
       const onPresent = e=> {if(Number(e.detail?.productId)===id) finish(e.detail.root);};
       const timeout = setTimeout(()=>finish(null),14000);
+      cancelProductWait = cancel;
       document.addEventListener('vc:product-presented',onPresent);
       let opener = document.querySelector('[data-vc-home-product="'+id+'"][data-vc-quick-open]');
       if (!opener) {
         opener = document.createElement('button'); opener.type='button'; opener.hidden=true;
         opener.dataset.vcHomeProduct=String(id); opener.dataset.vcQuickOpen=String(id); document.body.append(opener);
       }
+      releaseRestore = window.VialCoveHomeQuickView?.stageRestore?.(item, opener);
       opener.click();
     });
   }
   async function apply(layers) {
     applying = true; pending = false; const ticket=++serial;
+    // A new history intent owns presentation. Retire the previous waiter now,
+    // rather than letting a closed/superseded product hold its deadline/listener.
+    cancelProductWait?.();
     try {
       const wanted=layers.map(signature);
       [...document.querySelectorAll(selector)].reverse().forEach(d=> {if(d.open && !wanted.includes(signature(identify(d)))) close(d);});
       for (const item of layers) {
         if (ticket!==serial) return;
         if (item.kind==='product') {
-          const r=await waitProduct(item.productId); if(!r || ticket!==serial) return;
+          const r=await waitProduct(item.productId,item); if(!r || ticket!==serial) return;
           for (const el of r.querySelectorAll('.variations select')) {
             const value=item.attributes?.[el.name];
             // Returning from a child layer must not rebuild an unchanged Woo

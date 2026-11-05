@@ -80,3 +80,9 @@ dialog.vc-product-dialog.vc-product-purchase-docked[open]{animation-name:vc-laye
  .vc-product-dialog.woocommerce div.product form.cart .vc-purchase-dock :is(.single_add_to_cart_button,.vc-showcase-quick__buy){width:100%;min-width:0;min-height:48px;padding:12px}
 }
 @media(prefers-reduced-motion:reduce){.vc-product-dialog.vc-product-purchase-docked[open]{animation:none}.vc-product-dialog .vc-purchase-dock :is(button,input){transition:none}}
+
+/* The selected strength/package line replaces the legacy SKU/Clear/details row. */
+.vc-home-quick :is(.vc-home-quick__sku,.reset_variations,.vc-showcase-quick__details){display:none!important}
+.vc-product-dialog.woocommerce div.product form.cart .vc-product-meta{grid-template-columns:minmax(0,1fr) auto}
+.vc-product-dialog .vc-product-meta__selection{grid-column:1;align-items:start;flex-direction:column}
+.vc-product-dialog .vc-product-meta__stock{grid-column:2;white-space:normal}

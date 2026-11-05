@@ -34,6 +34,30 @@ final class Templates {
 
 	/** 只有删除整个模板时，才允许把它的文档移到回收站。 */
 	private static bool $trashing_template = false;
+	private static array $primed_documents = array();
+
+	/** Bulk read only document IDs; negative entries live in this PHP request. */
+	public static function prime_document_ids( int $template_id, array $documents ): void {
+		if ( ! self::exists( $template_id ) ) { return; }
+		$blog = function_exists( 'get_current_blog_id' ) ? get_current_blog_id() : 0;
+		$documents = array_values( array_unique( array_filter( $documents, 'is_string' ) ) );
+		$pending = array();
+		foreach ( $documents as $doc ) {
+			$key = $blog . ':' . $template_id . ':' . $doc;
+			if ( ! array_key_exists( $key, self::$primed_documents ) ) { $pending[] = $doc; }
+		}
+		if ( ! $pending ) { return; }
+		$posts = get_posts( array( 'post_type' => self::LAYOUT, 'post_status' => 'any', 'post_parent' => $template_id, 'posts_per_page' => -1, 'meta_query' => array( array( 'key' => self::DOC_META, 'value' => $pending, 'compare' => 'IN' ) ), 'no_found_rows' => true ) );
+		foreach ( $pending as $doc ) { self::$primed_documents[ $blog . ':' . $template_id . ':' . $doc ] = 0; }
+		foreach ( $posts as $post ) {
+			$doc = (string) get_post_meta( $post->ID, self::DOC_META, true );
+			$key = $blog . ':' . $template_id . ':' . $doc;
+			// Preserve get_posts' default newest-first choice for duplicate documents.
+			if ( in_array( $doc, $pending, true ) && ! self::$primed_documents[ $key ] ) { self::$primed_documents[ $key ] = (int) $post->ID; }
+		}
+	}
+
+	public static function clear_primed_document_ids(): void { self::$primed_documents = array(); }
 
 	public const PREVIEW_PARAM = 'pc_template_preview';
 	public const NONCE_PARAM   = 'pc_preview_nonce';
@@ -54,6 +78,11 @@ final class Templates {
 	}
 
 	public static function register_hooks(): void {
+		add_action( 'save_post_' . self::LAYOUT, array( self::class, 'clear_primed_document_ids' ) );
+		add_action( 'deleted_post', array( self::class, 'clear_primed_document_ids' ) );
+		add_action( 'added_post_meta', array( self::class, 'clear_primed_document_ids' ) );
+		add_action( 'updated_post_meta', array( self::class, 'clear_primed_document_ids' ) );
+		add_action( 'deleted_post_meta', array( self::class, 'clear_primed_document_ids' ) );
 		add_action( 'init', array( self::class, 'register' ) );
 		add_action( 'send_headers', array( self::class, 'preview_headers' ) );
 		add_filter( 'show_admin_bar', array( self::class, 'hide_admin_bar_in_frame' ) );
@@ -167,6 +196,10 @@ final class Templates {
 		if ( ! self::exists( $template_id ) || ! is_string( $label ) || '' === $label ) {
 			return 0;
 		}
+		$key = ( function_exists( 'get_current_blog_id' ) ? get_current_blog_id() : 0 ) . ':' . $template_id . ':' . $doc;
+		// Creation paths always consult current storage; a prior miss cannot block
+		// creation. Save/meta hooks retire entries if a document changes in-request.
+		if ( ! $create && array_key_exists( $key, self::$primed_documents ) ) { return self::$primed_documents[ $key ]; }
 		$found = get_posts(
 			array(
 				'post_type'      => self::LAYOUT,

@@ -367,7 +367,8 @@
     const priceNode = summary.querySelector(':scope > .price'); if (priceNode) formObserver.observe(priceNode, {subtree: true, childList: true, characterData: true});
     function renderProduct() {
       const url = safeURL(productImage?.src); productImg.hidden = !url; emptyImage.hidden = !!url;
-      productSlide.disabled = !url;
+      productSlide.disabled = !url || root.vcHomeSelectionPending === true;
+      productSlide.setAttribute('aria-busy', root.vcHomeSelectionPending ? 'true' : 'false');
       // Preserve the responsive candidates and intrinsic size supplied by WordPress.
       // Compare before writing: repeated native variation refreshes must not restart selection.
       const attributes = {sizes:productImage?.sizes,srcset:productImage?.srcset,width:productImage?.width,height:productImage?.height};
@@ -381,7 +382,7 @@
       // single_variation template mounted elsewhere inside the same summary.
       const text = !root.vcHomeSelectionPending ? summary.querySelector(':scope > .price .vc-sale-badge')?.textContent || '' : '';
       ribbon.textContent = text.toUpperCase(); ribbon.hidden = !/^\s*\d+(?:[.,]\d+)?%\s*(?:off|dto\.)\s*$/i.test(text);
-      caption.textContent = window.vcProductSpecification?.format(selectedLabel()) || selectedLabel(); caption.hidden = !caption.textContent;
+      caption.textContent = root.vcHomeSelectionPending ? 'Updating specification…' : window.vcProductSpecification?.format(selectedLabel()) || selectedLabel(); caption.hidden = !caption.textContent;
       gallery.refresh();
     }
     function renderReport() {
@@ -509,7 +510,10 @@
       // its report when acceptance changes; renderReport's signature avoids
       // rebuilding unchanged document DOM on ordinary refreshes.
       renderReport();
-      if (!report && !root.vcHomeSelectionPending && selection && !reportRequest && reportCursor.page > 0 && reportCursor.page < reportCursor.pages) reportReadPromise=readReports({resume:true});
+      // A restored form can be pending when the experience mounts, so its
+      // initial guarded read never started. Acceptance must start page one as
+      // well as resume a partially read collection.
+      if (!report && !root.vcHomeSelectionPending && selection && !reportRequest && reportCursor.page < reportCursor.pages) reportReadPromise=readReports({resume:reportCursor.page>0});
       ticker?.updateContext(context());
       if (support && settings.whatsappEnabled) {
         const values=context();
@@ -543,7 +547,7 @@
       updateMedia(image) { productImage=image; renderProduct(); },
       destroy(reason = 'destroy') { if(destroyed)return; destroyed=true; document.dispatchEvent(new CustomEvent('vc:product-experience-disposed',{detail:{root,dialog,reason}})); clearInterval(tickerPoll); gallery.destroy(); reportOpenIntent++; pendingFeedback=null; purchaseReturn?.destroy(); nativeFeedback?.destroy(); window.jQuery?.(document.body).off(feedbackNamespace); lifecycle.abort(); navigation?.destroy(); reportRequest?.abort(); formObserver.disconnect(); cancelAnimationFrame(frame); metaStrip?.destroy(); purchaseDock?.destroy(); ticker?.destroy(); children.destroy(); restore.destroy(); }
     };
-    refresh(); reportReadPromise=readReports(); readTicker(); return api;
+    refresh(); if (!reportRequest) reportReadPromise=readReports(); readTicker(); return api;
   }
   const deviceOwners = new WeakMap();
   window.vcProductDeviceSettings = Object.freeze({resolve:deviceSettings});

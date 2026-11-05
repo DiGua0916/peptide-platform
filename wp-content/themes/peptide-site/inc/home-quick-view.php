@@ -24,7 +24,8 @@ function vc_home_quick_view_assets(): void {
         $dependencies = 'experience' === $part ? array( 'vc-product-purchase-dock', 'vc-product-purchase-return', 'vc-product-dialog-meta' ) : array();
         wp_enqueue_script( 'vc-' . $name, $base . $name . '.js', $dependencies, (string) filemtime( $path . $name . '.js' ), true );
     }
-    wp_enqueue_script( 'vc-home-quick-view', $base . 'home-quick-view.js', array( 'jquery', 'peptide-showcase-quick-view', 'vc-live-cart-feedback', 'vc-product-dialog-ticker-model', 'vc-product-dialog-ticker', 'vc-product-dialog-report-viewer', 'vc-product-dialog-feedback', 'vc-product-dialog-experience', 'vc-product-dialog-offer-follow', 'vc-product-dialog-recent' ), (string) filemtime( $path . 'home-quick-view.js' ), true );
+    wp_enqueue_script( 'vc-product-image-warmup', $base . 'product-image-warmup.js', array(), (string) filemtime( $path . 'product-image-warmup.js' ), true );
+    wp_enqueue_script( 'vc-home-quick-view', $base . 'home-quick-view.js', array( 'jquery', 'peptide-showcase-quick-view', 'vc-product-image-warmup', 'vc-live-cart-feedback', 'vc-product-dialog-ticker-model', 'vc-product-dialog-ticker', 'vc-product-dialog-report-viewer', 'vc-product-dialog-feedback', 'vc-product-dialog-experience', 'vc-product-dialog-offer-follow', 'vc-product-dialog-recent' ), (string) filemtime( $path . 'home-quick-view.js' ), true );
     wp_localize_script( 'vc-home-quick-view', 'vcHomeQuickView', array(
         'productApi' => rest_url( 'vialcove/v1/home-product/' ),
         'wpNonce' => is_user_logged_in() ? wp_create_nonce( 'wp_rest' ) : '',

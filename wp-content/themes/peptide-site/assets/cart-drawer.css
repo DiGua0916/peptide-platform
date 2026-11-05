@@ -24,8 +24,8 @@
 .vc-cart-heading h2 { font-size: 30px; font-weight: 500; letter-spacing: -.04em; display: flex; align-items: center; gap: 12px; }
 .vc-drawer-count { font-size: 12px; font-weight: 400; letter-spacing: 0; color: var(--vc-muted-readable); }
 .vc-cart-heading p { font-size: 12px; margin-top: 6px; }
-.vc-cart-close { display: grid; place-items: center; flex-shrink: 0; width: 42px; height: 42px; border: 1px solid var(--vc-line); border-radius: 50%; background: white; transition: background 180ms ease, transform 180ms ease; }
-.vc-cart-close:hover { background: var(--vc-paper); transform: rotate(90deg); }
+.vc-cart-close { display: grid; place-items: center; flex-shrink: 0; width: 42px; height: 42px; border: 0; border-radius: 0; background: transparent; transition: transform 180ms ease; }
+.vc-cart-close:hover { background: transparent; transform: rotate(90deg); }
 .vc-cart-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #c4d9df transparent; }
 .vc-cart-items { padding: 0 32px; }
 .vc-cart-item { display: grid; grid-template-columns: 98px minmax(0,1fr); column-gap: 22px; padding: 26px 0; border-bottom: 1px solid var(--vc-line); }

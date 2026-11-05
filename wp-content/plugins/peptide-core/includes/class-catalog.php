@@ -11,6 +11,31 @@ namespace PeptideCore;
 defined( 'ABSPATH' ) || exit;
 
 final class Catalog {
+	private static array $primed_public_batches = array();
+	private static bool $prime_hooks = false;
+
+	public static function clear_primed_public_batches(): void { self::$primed_public_batches = array(); }
+
+	/** Native public batch predicate, shared across one catalogue render only. */
+	public static function prime_public_batch_ids( array $product_ids ): void {
+		if ( ! self::$prime_hooks ) {
+			foreach ( array( 'save_post_' . Post_Types::BATCH, 'deleted_post', 'transition_post_status', 'added_post_meta', 'updated_post_meta', 'deleted_post_meta' ) as $hook ) {
+				add_action( $hook, array( self::class, 'clear_primed_public_batches' ) );
+			}
+			self::$prime_hooks = true;
+		}
+		$blog = get_current_blog_id();
+		$ids = array_values( array_unique( array_filter( array_map( 'absint', $product_ids ) ) ) );
+		$ids = array_values( array_filter( $ids, static fn( $id ) => ! array_key_exists( $blog . ':' . $id, self::$primed_public_batches ) ) );
+		if ( ! $ids ) { return; }
+		$posts = get_posts( array( 'post_type' => Post_Types::BATCH, 'post_status' => 'publish', 'posts_per_page' => -1, 'orderby' => 'date', 'order' => 'DESC', 'no_found_rows' => true,
+			'meta_query' => array( array( 'key' => Meta::BATCH_PRODUCT_ID, 'value' => $ids, 'compare' => 'IN', 'type' => 'NUMERIC' ), array( 'key' => Meta::BATCH_VISIBILITY, 'value' => 'public' ) ) ) );
+		foreach ( $ids as $id ) { self::$primed_public_batches[ $blog . ':' . $id ] = array(); }
+		foreach ( $posts as $post ) {
+			$id = (int) get_post_meta( $post->ID, Meta::BATCH_PRODUCT_ID, true );
+			if ( in_array( $id, $ids, true ) ) { self::$primed_public_batches[ $blog . ':' . $id ][] = (int) $post->ID; }
+		}
+	}
 
 	private const STATE_RANK = array(
 		'none'       => 0,
@@ -49,6 +74,8 @@ final class Catalog {
 	 * @return int[]
 	 */
 	public static function public_batch_ids( int $product_id ): array {
+		$key = ( function_exists( 'get_current_blog_id' ) ? get_current_blog_id() : 0 ) . ':' . $product_id;
+		if ( array_key_exists( $key, self::$primed_public_batches ) ) { return self::$primed_public_batches[ $key ]; }
 		return array_map(
 			'intval',
 			get_posts(
