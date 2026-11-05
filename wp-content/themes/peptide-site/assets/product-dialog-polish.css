@@ -1,0 +1,13 @@
+/* Local dialog presentation; native close, content, reports and purchase controls stay intact. */
+/* Remove the duplicate promotion copy without changing native eligibility or its clock. */
+dialog.vc-product-dialog .vc-dialog-offers{display:none!important}
+dialog.vc-product-dialog.vc-dialog-polished>.vc-home-quick__toolbar{position:sticky;top:0;z-index:20;display:block;height:0;min-height:0;margin:0;padding:0;border:0;background:transparent;overflow:visible;pointer-events:none}
+dialog.vc-product-dialog.vc-dialog-polished>.vc-home-quick__toolbar>.vc-showcase-quick__close{position:absolute;inset:12px 12px auto auto;min-width:44px;min-height:44px;pointer-events:auto}
+dialog.vc-product-dialog.vc-dialog-polished .vc-dialog-heading>.vc-showcase-quick__title{padding-inline-end:52px;box-sizing:border-box}
+.vc-dialog-heading>.pc-campaign-countdown--product{margin-block:10px 0}
+.vc-entry-recovery{box-sizing:border-box;margin:16px 0;padding:16px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#171717;font-size:14px;line-height:1.5}
+.vc-entry-recovery p{margin:0 0 10px;overflow-wrap:anywhere}
+.vc-entry-recovery button{min-height:44px;padding:8px 16px;border:1px solid #a3a3a3;border-radius:6px;background:#fff;color:#171717;font:inherit;cursor:pointer}
+.vc-entry-recovery button:focus-visible{outline:2px solid #171717;outline-offset:3px}
+.vc-entry-recovery button:disabled{cursor:wait;opacity:.6}
+@media(prefers-reduced-motion:reduce){.vc-entry-recovery,.vc-dialog-polished .pc-campaign-countdown{animation:none;transition:none}}

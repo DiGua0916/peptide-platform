@@ -16,7 +16,7 @@
 <body>
   <header>
     <h1>VialCove · 手机预览</h1>
-    <nav aria-label="预览页面"><button data-page="/">首页</button><button data-page="/shop/">全部产品</button><button data-page="/product/tirzepatide/">产品详情</button><button data-page="/cart/">购物车</button></nav>
+    <nav aria-label="预览页面"><button data-page="/">首页</button><button data-page="/#vc-collection">全部产品</button><button data-page="/product/tirzepatide/">产品窗口</button><button data-page="/cart/">购物车</button><button data-page="/checkout/">结账</button><button data-page="/coa-library/">COA 报告库</button></nav>
     <div class="settings"><label for="size">屏幕</label><select id="size"><option value="390,844">390 × 844</option><option value="375,812">375 × 812</option><option value="430,932">430 × 932</option><option value="360,800">360 × 800</option></select><select id="zoom" aria-label="预览缩放"><option value="fit">适合窗口</option><option value="1">原大 100%</option></select><button id="reload">刷新</button></div>
   </header>
   <main>
@@ -34,7 +34,10 @@
       const phone = document.querySelector('.phone');
       const address = document.getElementById('address');
       const status = document.getElementById('status');
-      let current = new URL('/', location.origin).href;
+      const requested = new URL(location.href).searchParams.get('page');
+      const allowed = ['/', '/#vc-collection', '/product/tirzepatide/', '/cart/', '/checkout/', '/coa-library/'];
+      let current = new URL(allowed.includes(requested) ? requested : '/', location.origin).href;
+      if (requested && allowed.includes(requested)) frame.src = current;
       function fit() {
         const [width, height] = size.value.split(',').map(Number);
         frame.style.width = width + 'px'; frame.style.height = height + 'px';
