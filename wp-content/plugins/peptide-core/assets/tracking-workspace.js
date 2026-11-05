@@ -31,6 +31,11 @@
             });
           });
         });
+        headers.forEach(function (heading,index) {
+          var numeric = /^(浏览量|浏览次数|访问次数|商品浏览|商品点击|点击次数|成功加购|Pageviews|Page views|Visits)$/i.test(heading.textContent.trim());
+          heading.classList.toggle('pc-cell-numeric',numeric);
+          Array.from(table.tBodies).forEach(function(body){Array.from(body.rows).forEach(function(row){if(row.cells[index] && row.cells[index].colSpan===1)row.cells[index].classList.toggle('pc-cell-numeric',numeric);});});
+        });
         var width = table.parentElement.getBoundingClientRect().width;
         var lifecycle = table.closest('.pc-lifecycle');
         if (lifecycle && !table.parentElement.classList.contains('pc-lifecycle-scroll')) {

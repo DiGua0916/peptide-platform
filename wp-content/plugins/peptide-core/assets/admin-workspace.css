@@ -398,3 +398,15 @@ body.pc-admin-workspace.folded #adminmenu li.menu-top>.wp-submenu>li>a{padding-l
 .pc-admin-workspace #adminmenu a.pc-navigation-pending{background:#e7e7e7;color:#181818}
 @keyframes pc-navigation-progress{from{transform:translateX(-100%)}to{transform:translateX(390%)}}
 @media(prefers-reduced-motion:reduce){.pc-admin-workspace *,.pc-admin-workspace *::before,.pc-admin-workspace *::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
+/* Consistency fixes: pointer focus, aligned native rail, targeted SMTP setup notice. */
+body.pc-admin-workspace .notice:has(a[href*="page=fluent-mail"]){display:none}
+body.pc-admin-workspace :is(a,button,summary,[tabindex]):focus:not(:focus-visible){outline:none!important;box-shadow:none!important}
+body.pc-admin-workspace :is(a,button,summary,[tabindex]):focus-visible{outline:2px solid #737373;outline-offset:2px}
+body.pc-admin-workspace:not(.folded) #adminmenu a.menu-top{display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 12px;box-sizing:border-box}
+body.pc-admin-workspace:not(.folded) #adminmenu a.menu-top .wp-menu-image{float:none;display:flex;align-items:center;justify-content:center;flex:0 0 20px;width:20px;height:20px;margin:0}
+body.pc-admin-workspace:not(.folded) #adminmenu a.menu-top .wp-menu-image::before{padding:0;width:20px;height:20px;line-height:20px;font-size:17px}
+body.pc-admin-workspace:not(.folded) #adminmenu a.menu-top .wp-menu-name{padding:0;min-width:0;line-height:20px;flex:1}
+body.pc-admin-workspace #wpbody-content :is(h1,h2,h3){overflow-wrap:anywhere}
+body.pc-admin-workspace #wpbody-content .button{box-sizing:border-box;white-space:normal;max-width:100%}
+body.pc-admin-workspace #wpbody-content :is(.description,.howto){color:#525252}

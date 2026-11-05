@@ -66,3 +66,12 @@ body.pc-admin-workspace .pc-trk :is(.pc-lifecycle-tabs button,.pc-lifecycle-scro
 body.pc-admin-workspace .pc-trk .pc-timeline-order{font-size:12px;line-height:20px;color:#666;margin:0 0 8px}
 body.pc-admin-workspace .pc-trk .pc-lifecycle-mobile-hint{display:none;color:#666;font-size:12px;line-height:20px;margin:0 0 8px}
 @media(max-width:900px){body.pc-admin-workspace .pc-trk .pc-lifecycle-mobile-hint{display:block}}
+
+body.pc-admin-workspace .pc-trk :is(th,td).pc-cell-numeric{text-align:center!important;font-variant-numeric:tabular-nums}
+body.pc-admin-workspace .pc-trk table th{color:#404040;font-weight:600}
+body.pc-admin-workspace .pc-trk table td{color:#262626}
+body.pc-admin-workspace .pc-trk .pc-trk-sub{color:#525252}
+body.pc-admin-workspace .pc-trk .pc-trk-timezone{font-size:12px;line-height:20px;color:#525252;margin:8px 0 16px}
+body.pc-admin-workspace .pc-trk .pc-trk-backlinks{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0}
+body.pc-admin-workspace .pc-trk .pc-trk-backlinks a{display:inline-flex;align-items:center;min-height:36px;padding:4px 12px;border:1px solid #dedede;border-radius:6px;background:#fff;text-decoration:none;font-size:13px}
+body.pc-admin-workspace .pc-trk .pc-trk-backlinks a:hover{background:#f1f1f1}

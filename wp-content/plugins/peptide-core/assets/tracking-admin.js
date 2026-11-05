@@ -73,7 +73,11 @@
 		root.innerHTML = '<div class="notice notice-error inline"><p>' + esc( fmt( S.error, ( err && err.message ) || err ) ) + '</p></div>';
 	}
 
-	// ---------- 实时访客 ----------
+	var timezoneNote = document.createElement('p'); timezoneNote.className = 'pc-trk-timezone';
+    timezoneNote.textContent = '时间显示：' + (zoned ? cfg.timezone + '（店铺时区）' : '浏览器本地时区');
+    if (root.insertAdjacentElement) root.insertAdjacentElement('beforebegin',timezoneNote);
+
+    // ---------- 实时访客 ----------
 
 	function renderLive( res ) {
 		var list = res.visitors || [];
@@ -285,7 +289,7 @@
 	function visitor() {
 		load( '/peptide/v1/track/admin/visitors/' + cfg.visitor ).then( function ( res ) {
 			var v = res.visitor;
-			var html = '<p><a href="' + esc( cfg.liveUrl ) + '">' + esc( S.back ) + '</a> · <a href="' + esc( cfg.archiveUrl ) + '">' + esc( S.archive ) + '</a></p>';
+			var html = '<p class="pc-trk-backlinks"><a href="' + esc( cfg.liveUrl ) + '">' + esc( S.back ) + '</a><a href="' + esc( cfg.archiveUrl ) + '">' + esc( S.archive ) + '</a></p>';
 			html += '<div class="pc-trk-cards"><div class="pc-trk-card"><span>' + esc( S.visitor ) + '</span><b>' + esc( v.label ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.status ) + '</span><b>' + dot( res.presence ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.account ) + '</span><b>' + esc( v.user_id ? v.email : S.guest ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.device ) + '</span><b>' + esc( ( S[ v.device ] || v.device ) + ' · ' + v.browser ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.firstSeen ) + '</span><b>' + esc( clock( v.first_ms, true ) ).replace( ' ', '<br>' ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.visits ) + '</span><b>' + esc( v.visits ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.cart ) + '</span><b>' + cartCell( v, res.cart ) + '</b></div></div>';
 			if ( res.others.length ) {
 				html += '<p>' + esc( S.otherDevices ) + ': ' + res.others.map( function ( o ) {

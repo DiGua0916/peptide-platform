@@ -1,0 +1,9 @@
+# Admin consistency fixes and controlled design boundary
+
+User order: fix locally then publish fixes; optimize live update next and publish validated optimization; redesign both HQ and merchant locally only for user review. Preserve other window shipping discounts/store API files and installed traces, never copy whole plugins. Own six-file changes are separate from those business changes.
+
+Fixes: targeted FluentSMTP setup notice hidden via its configuration-link selector (not all notices, mail config unchanged); native icon/name rail flex alignment; pointer-only focus outline removed, keyboard focus retained; tracked numeric headers/cells centered together; readable primary/secondary text; explicit actual store clock timezone; back links styled as controls. Local JS syntax, insight21, live8, timeline24 pass. Timeline test mock gains createElement for real DOM note, old event oracle retained. No timezone configuration changed.
+
+Applied store admin release admin-consistency-fixes-final-1793844035 to all three backend roots and seed. Buyer release admin-consistency-fixes-final-1793847266 to all three buyer roots and seed; public resource hashes and HTTP200/TLS0 pass. Earlier whole-context CSS patch mismatch stopped before activation; final additive CSS deltas preserve per-store variants. HQ CSS-only CAS atomic overlay backup /var/lib/vialcove-ui-deploy/hq-consistency-1793844061; public hash verified, no database change. Existing HQ release metadata was not regenerated for this CSS overlay.
+
+Actual primary archive DOM confirms setup notice display none, timezone America/Los_Angeles, numeric th/td center, menu flex/align-center and no document overflow. Screenshot D:/Codex/Tasks/2026-11-05/admin-consistency-fixes/outputs/fixes-archive.png. Source/shared shell fixes apply across routes, but this is not proof that every modal/editor state has been visually certified. Realtime optimization and redesign are separate subsequent phases.
