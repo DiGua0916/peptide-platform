@@ -34,10 +34,10 @@ async function fixture({numPages=1,dimensions=[[612,792]],deferLoad=false,deferR
   const status=new Element('p','pdf-status'),retry=new Element('button','pdf-retry'),zoom=new Element('span','pdf-zoom-value'),out=new Element('button'),inside=new Element('button');out.attrs['data-pdf-zoom']='out';inside.attrs['data-pdf-zoom']='in';element.append(pages,status,retry,zoom,out,inside);
   const timers=new Map(),frames=new Map(),requests=[],renders=[],canvases=[],observers=[],pageObservers=[];let next=0,imports=0,active=0,maxActive=0;
   window.vcProductReports={assetBase:'https://shop.test/theme/assets/',wpNonce:'STALE_TEST_NONCE'};window.devicePixelRatio=2;
-  const importWait=deferred(),pageWait=deferred();
+  const importWait=deferred(),pageWait=deferred(),pageReads=[];
   const pdfjs={GlobalWorkerOptions:{},getDocument(options){
     const load=deferred(),request={options,load,destroyed:0,promise:load.promise,destroy(){this.destroyed++;load.reject(new Error('destroyed'));return Promise.resolve();}};requests.push(request);
-    const pdf={numPages,async getPage(number){if(deferPage===true||deferPage===number)await pageWait.promise;const [width,height]=dimensions[(number-1)%dimensions.length];return {getViewport:({scale})=>({width:width*scale,height:height*scale}),cleanup(){},render({canvasContext,viewport}){
+    const pdf={numPages,async getPage(number){pageReads.push(number);if(deferPage===true||deferPage===number)await pageWait.promise;const [width,height]=dimensions[(number-1)%dimensions.length];return {getViewport:({scale})=>({width:width*scale,height:height*scale}),cleanup(){},render({canvasContext,viewport}){
       const pending=deferred();active++;maxActive=Math.max(maxActive,active);canvases.push(canvasContext.canvas);
       let finished=false;const finish=(error)=>{if(finished)return;finished=true;active--;error?pending.reject(error):pending.resolve();};
       const render={number,viewport,canvas:canvasContext.canvas,promise:pending.promise,cancelled:0,cancel(){this.cancelled++;finish(new Error('cancelled'));},finish};renders.push(render);if(!deferRender)finish();return render;
@@ -56,7 +56,7 @@ async function fixture({numPages=1,dimensions=[[612,792]],deferLoad=false,deferR
     const m=new vm.SyntheticModule(['GlobalWorkerOptions','getDocument'],function(){this.setExport('GlobalWorkerOptions',pdfjs.GlobalWorkerOptions);this.setExport('getDocument',pdfjs.getDocument);},{context});await m.link(()=>{});await m.evaluate();return m;
   }});script.runInContext(context);
   const api=window.createProductReportViewer({element});
-  return {window,element,pages,status,retry,zoom,out,inside,timers,frames,requests,renders,canvases,observers,pageObservers,pdfjs,api,context,importWait,pageWait,get imports(){return imports;},get maxActive(){return maxActive;},async frame(){const list=[...frames.values()];frames.clear();list.forEach(fn=>fn());await settle();},resize(width){pages.clientWidth=width;observers[0].fn();},async start(pdf='/wp-json/peptide/v1/report-library/7/file?download=0'){await api.open({pdf,title:'Actual boundary title'});await this.frame();}};
+  return {window,element,pages,status,retry,zoom,out,inside,timers,frames,requests,renders,canvases,observers,pageObservers,pdfjs,api,context,importWait,pageWait,pageReads,get imports(){return imports;},get maxActive(){return maxActive;},async frame(){const list=[...frames.values()];frames.clear();list.forEach(fn=>fn());await settle();},resize(width){pages.clientWidth=width;observers[0].fn();},async start(pdf='/wp-json/peptide/v1/report-library/7/file?download=0'){await api.open({pdf,title:'Actual boundary title'});await this.frame();}};
 }
 test('fit width subtracts actual pane padding, preserves each page ratio and uses DPR independently',async()=>{
   const f=await fixture({numPages:2,dimensions:[[612,792],[792,612]]});await f.start();
@@ -115,12 +115,22 @@ test('render failure retains completed pages and offers explicit retry without a
 });
 test('viewport observer renders one initial page of 100, evicts offscreen canvas and renders only the newly visible page',async t=>{
   const f=await fixture({numPages:100,dimensions:[[2000,6000]],lazy:true});f.pages.clientWidth=2000;await f.start();assert.equal(f.pages.children.length,100);assert.equal(f.renders.length,1);assert.equal(f.pages.querySelectorAll('canvas').length,1);
+  assert.deepEqual([...new Set(f.pageReads)],[1], 'unseen pages do not request PDF geometry during open');
   const first=f.canvases[0];f.pageObservers[0].fn([{target:f.pages.children[0],isIntersecting:false},{target:f.pages.children[74],isIntersecting:true}]);await f.frame();assert.equal(first.width,0);assert.equal(f.renders.length,2);assert.equal(f.renders[1].number,75);assert.equal(f.pages.querySelectorAll('canvas').length,1);assert.equal(f.requests.length,1);assert.equal(f.maxActive,1);
   t.diagnostic(JSON.stringify({synthetic:true,pages:100,initialRenderCount:1,afterScrollRenderCount:2,documentRequests:1,maxConcurrentRender:1,retainedCanvasCount:1,retainedPixels:f.canvases.reduce((sum,c)=>sum+c.width*c.height,0)}));f.api.dispose();assert.equal(f.pageObservers[0].items.length,0);
 });
 test('scrolling beyond a pending page cancels its raster and paints only the new viewport page',async()=>{
   const f=await fixture({numPages:3,lazy:true,deferRender:true});await f.api.open({pdf:'/wp-json/peptide/v1/report-library/7/file'});await f.frame();const first=f.renders[0];f.pageObservers[0].fn([{target:f.pages.children[0],isIntersecting:false},{target:f.pages.children[2],isIntersecting:true}]);await f.frame();assert.equal(first.cancelled,1);assert.equal(first.canvas.width,0);assert.equal(f.renders.length,2);assert.equal(f.renders[1].number,3);f.renders[1].finish();await settle();assert.equal(f.pages.querySelectorAll('canvas').length,1);assert.equal(f.maxActive,1);f.api.dispose();
 });
+test('unseen landscape geometry is deferred until scrolling and retains its actual fit ratio',async()=>{
+  const f=await fixture({numPages:2,dimensions:[[612,792],[792,612]],lazy:true,deferPage:2});await f.start();
+  assert.equal(f.element.dataset.state,'ready');assert.deepEqual([...new Set(f.pageReads)],[1]);
+  f.pageObservers[0].fn([{target:f.pages.children[0],isIntersecting:false},{target:f.pages.children[1],isIntersecting:true}]);await f.frame();
+  assert.equal(f.renders.length,1);f.pageWait.resolve();await settle();
+  assert.equal(f.renders.at(-1).number,2);assert.equal(f.pages.children[1].querySelector('.pdf-page-placeholder').style.aspectRatio,'792 / 612');
+  assert.ok(Math.abs(f.renders.at(-1).viewport.height/f.renders.at(-1).viewport.width-612/792)<1e-9);f.api.dispose();
+});
+
 test('queued old observer entries cannot evict a reopened document or schedule work after dispose',async()=>{
   const f=await fixture({lazy:true});await f.start();const old=f.pages.children[0];await f.start('/wp-json/peptide/v1/report-library/8/file');f.pageObservers[0].fn([{target:old,isIntersecting:false}]);await f.frame();assert.equal(f.pages.querySelectorAll('canvas').length,1);f.api.dispose();f.resize(600);assert.equal(f.frames.size,0);
 });

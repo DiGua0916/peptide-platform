@@ -108,6 +108,7 @@
               page = await stage(pdf.getPage(number),run);
               if (run !== generation || target !== revision) break;
               const natural = page.getViewport({scale:1});
+              figure.querySelector('.pdf-page-placeholder').style.aspectRatio = natural.width + ' / ' + natural.height;
               // Visible pages receive their own 4MP budget. Browsers without
               // IntersectionObserver retain a bounded 12MP document fallback.
               // Keep DPR <= 2 and either raster edge <= 8192px.
@@ -149,20 +150,23 @@
       }
     }
     async function prepare(pdf,run) {
-      // Query page geometry without painting every page. Each placeholder has
-      // its own original ratio, including landscape pages in a mixed document.
-      for (let number = 1; number <= pdf.numPages; number++) {
-        const page = await stage(pdf.getPage(number),run);
-        try {
-          if (run !== generation) return;
-          const natural = page.getViewport({scale:1}), figure = document.createElement('figure');
+      // Only resolve the first page here. Reading every page's geometry can
+      // trigger remote PDF ranges before the reader ever scrolls to them.
+      // Other placeholders start with the first ratio; paint resolves their
+      // actual portrait/landscape ratio when they enter the viewport budget.
+      const page = await stage(pdf.getPage(1),run);
+      try {
+        if (run !== generation) return;
+        const natural = page.getViewport({scale:1});
+        for (let number = 1; number <= pdf.numPages; number++) {
+          const figure = document.createElement('figure');
           figure.className = 'pdf-page'; figure.dataset.page = String(number); figure.style.width = fitWidth * scale / 100 + 'px';
           const placeholder = document.createElement('div'); placeholder.className = 'pdf-page-placeholder'; placeholder.style.aspectRatio = natural.width + ' / ' + natural.height; placeholder.textContent = 'Page ' + number;
           const caption = document.createElement('figcaption'); caption.textContent = 'Page ' + number + ' of ' + pdf.numPages;
           figure.append(placeholder,caption); figures[number-1] = figure; pages.append(figure); pageObserver?.observe(figure);
-          if (!pageObserver || wanted.has(number)) requestPaint();
-        } finally { page.cleanup(); }
-      }
+        }
+        requestPaint();
+      } finally { page.cleanup(); }
     }
     function requestPaint() {
       revision++; cancelRender();
