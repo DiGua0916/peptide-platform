@@ -32,3 +32,18 @@ test('hidden, pending, completed or destroyed work cannot fetch/render or leak t
   f.context.root.vcHomeSelectionPending=false;const read=f.read();f.context.destroyed=true;f.requests[0].resolve(page(1,Array.from({length:24},(_,i)=>item(49-i))));await read;assert.deepEqual(f.renders,[]);assert.equal(f.timers.size,0);
   f.context.destroyed=false;f.context.reportCursor={page:3,pages:3,total:49};await f.read({resume:true});assert.equal(f.requests.length,1);
 });
+test('only exact known public report collection omits stale nonce, including configured and plain REST bases',async()=>{
+  for(const [api,configured,publicCollection]of [
+    ['https://shop.test/wp-json/peptide/v1/report-library/',null,true],
+    ['https://shop.test/?rest_route=%2Fpeptide%2Fv1%2Freport-library',null,true],
+    ['https://shop.test/store/custom-rest/peptide/v1/report-library','https://shop.test/store/custom-rest/peptide/v1/report-library/',true],
+    ['https://shop.test/wp-json/peptide/v1/reports/7/file',null,false],
+    ['https://shop.test/wp-json/peptide/v1/report-library/7/file',null,false],
+    ['https://shop.test/private/peptide/v1/report-library',null,false]
+  ]){
+    const f=fixture();f.context.window.vcHomeQuickView={reportApi:api,wpNonce:'STALE_FIXTURE_NONCE'};
+    if(configured)f.context.window.vcProductReports={reportLibraryBase:configured};
+    const read=f.read();assert.equal(f.requests[0].options.headers['X-WP-Nonce'],publicCollection?undefined:'STALE_FIXTURE_NONCE',api);
+    f.requests[0].resolve({page:1,total_pages:1,total:0,items:[]});await read;
+  }
+});

@@ -414,13 +414,18 @@
       if (!settings.reportGalleryEnabled || destroyed || reportRequest || document.hidden || !dialog.open || root.vcHomeSelectionPending) return;
       if (resume && reportCursor.page >= reportCursor.pages) return;
       const base = safeURL(window.vcHomeQuickView?.reportApi); if (!base) return;
+      const route = value => { const url = new URL(value); return (url.searchParams.get('rest_route') || url.pathname).replace(/\/$/,''); };
+      const configured = safeURL(window.vcProductReports?.reportLibraryBase);
+      const publicCollection = /^\/(?:wp-json\/)?peptide\/v1\/report-library$/.test(route(base)) || !!configured && route(base) === route(configured);
       const abort = new AbortController(); reportRequest = abort;
       const timer = setTimeout(() => abort.abort(), 15000);
       try {
         const items = resume ? [...reports] : []; let pages = resume ? reportCursor.pages : 1, total = resume ? reportCursor.total : null;
         for (let page = resume ? reportCursor.page + 1 : 1; page <= pages; page++) {
           const url = new URL(base); Object.entries({product_id: productId, sort: 'newest', per_page: 24, page}).forEach(([key,value]) => url.searchParams.set(key,String(value)));
-          const response = await fetch(url.href, {credentials:'same-origin',cache:'no-store',signal:abort.signal,headers: window.vcHomeQuickView.wpNonce ? {'X-WP-Nonce':window.vcHomeQuickView.wpNonce} : {}});
+          // WordPress rejects stale nonces before a public REST callback runs.
+          // Only the exact public collection omits it; other resources retain it.
+          const response = await fetch(url.href, {credentials:'same-origin',cache:'no-store',signal:abort.signal,headers: !publicCollection && window.vcHomeQuickView.wpNonce ? {'X-WP-Nonce':window.vcHomeQuickView.wpNonce} : {}});
           if (!response.ok) throw new Error('Report unavailable'); const data = await response.json();
           if (!Array.isArray(data.items) || data.items.length > 24 || !Number.isSafeInteger(data.total) || data.total < 0 || !Number.isSafeInteger(data.total_pages) || data.total_pages < 0 || data.total_pages > 100 || data.page !== page || (total !== null && total !== data.total)) throw new Error('Invalid report response');
           pages = Math.max(1, data.total_pages); total = data.total; items.push(...data.items);
