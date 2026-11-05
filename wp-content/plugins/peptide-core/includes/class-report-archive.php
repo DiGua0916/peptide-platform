@@ -79,21 +79,29 @@ final class Report_Archive {
 		if ( is_wp_error( $args ) ) { return $args; }
 		$items = array();
 		$products = array();
-		$ids = get_posts( array(
+		$posts = get_posts( array(
 			'post_type' => Post_Types::REPORT,
 			'post_status' => array( 'draft', 'publish' ),
 			'has_password' => false,
-			'fields' => 'ids',
 			'posts_per_page' => -1,
 			'orderby' => 'ID',
 			'order' => 'ASC',
 			'no_found_rows' => true,
+			'update_post_meta_cache' => true,
+			'update_post_term_cache' => false,
 			'meta_key' => self::PUBLIC_META, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 			'meta_value' => '1', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 		) );
+		// Returning posts primes the native post cache as well as metadata. An IDs
+		// query followed by eligible()/get_post() otherwise reloads every report.
+		$ids = array_map( static fn( \WP_Post $post ): int => (int) $post->ID, $posts );
 		if ( $ids ) { update_meta_cache( 'post', array_map( 'intval', $ids ) ); }
+		self::prime_associations( $ids );
 		foreach ( $ids as $id ) {
-			$item = self::get_public( (int) $id );
+			// Source files still pass the same complete eligibility/MIME/content
+			// checks before contributing to counts. Cover images cannot influence
+			// filtering or ordering, so inspect only the selected page's covers.
+			$item = self::get_public( (int) $id, false );
 			if ( ! $item ) { continue; }
 			if ( $item['product'] ) {
 				$product = $item['product'];
@@ -117,8 +125,14 @@ final class Report_Archive {
 		$products = array_values( $products );
 		usort( $products, static fn( array $a, array $b ): int => strnatcasecmp( $a['name'], $b['name'] ) ?: ( $a['id'] <=> $b['id'] ) );
 		$total = count( $items );
+		$page = array_slice( $items, ( $args['page'] - 1 ) * $args['per_page'], $args['per_page'] );
+		foreach ( $page as &$item ) {
+			$item['thumbnail_url'] = self::thumbnail_file( $item['id'] )
+				? rest_url( self::NAMESPACE . self::ROUTE . '/' . $item['id'] . '/thumbnail' ) : null;
+		}
+		unset( $item );
 		return array(
-			'items' => array_slice( $items, ( $args['page'] - 1 ) * $args['per_page'], $args['per_page'] ),
+			'items' => $page,
 			'total' => $total,
 			'page' => $args['page'],
 			'per_page' => $args['per_page'],
@@ -129,7 +143,7 @@ final class Report_Archive {
 	}
 
 	/** Public allowlist only: never return provenance notes, clients, hashes or storage names. */
-	public static function get_public( int $report_id ): ?array {
+	public static function get_public( int $report_id, bool $with_thumbnail = true ): ?array {
 		if ( ! self::eligible( $report_id ) ) { return null; }
 		$file = self::validated_file( get_post_meta( $report_id, Meta::REPORT_FILE, true ) );
 		if ( ! $file ) { return null; }
@@ -140,7 +154,7 @@ final class Report_Archive {
 			$product = array( 'id' => $product_id, 'name' => self::text( get_the_title( $product_id ) ), 'url' => (string) get_permalink( $product_id ) );
 		}
 		$date = self::text( get_post_meta( $report_id, Meta::REPORT_ISSUED_ON, true ) );
-		$thumbnail = self::thumbnail_file( $report_id );
+		$thumbnail = $with_thumbnail ? self::thumbnail_file( $report_id ) : null;
 		$url = rest_url( self::NAMESPACE . self::ROUTE . '/' . $report_id . '/file' );
 		return array(
 			'id' => $report_id,
@@ -159,9 +173,42 @@ final class Report_Archive {
 		);
 	}
 
+	/** Prime only native association records; no cross-request validity cache. */
+	private static function prime_associations( array $report_ids ): void {
+		$related = array();
+		foreach ( $report_ids as $id ) {
+			$batch = (int) get_post_meta( $id, Meta::REPORT_BATCH_ID, true );
+			$product = (int) get_post_meta( $id, Meta::REPORT_PRODUCT_ID, true );
+			if ( $batch > 0 ) { $related[ $batch ] = true; }
+			if ( $product > 0 ) { $related[ $product ] = true; }
+		}
+		if ( ! $related ) { return; }
+		$posts = get_posts( array(
+			'post_type' => array( Post_Types::BATCH, 'product', 'product_variation' ),
+			'post_status' => 'any', 'post__in' => array_keys( $related ),
+			'posts_per_page' => count( $related ), 'no_found_rows' => true,
+			'update_post_meta_cache' => true, 'update_post_term_cache' => true,
+		) );
+		$products = array();
+		foreach ( $posts as $post ) {
+			if ( Post_Types::BATCH !== $post->post_type ) { continue; }
+			$id = (int) get_post_meta( $post->ID, Meta::BATCH_PRODUCT_ID, true );
+			if ( $id > 0 && ! isset( $related[ $id ] ) ) { $products[ $id ] = true; }
+		}
+		if ( $products ) {
+			get_posts( array(
+				'post_type' => array( 'product', 'product_variation' ), 'post_status' => 'any',
+				'post__in' => array_keys( $products ), 'posts_per_page' => count( $products ),
+				'no_found_rows' => true, 'update_post_meta_cache' => true, 'update_post_term_cache' => true,
+			) );
+		}
+	}
+
 	public static function rest_file( \WP_REST_Request $request ) {
 		nocache_headers();
-		$limited = self::rate_limit( 'file', 120 );
+		// PDF.js can need more than 120 bounded ranges for one large PDF. Full
+		// responses retain the original budget; all attempts also have a ceiling.
+		$limited = self::rate_limit( 'file_request', 960 );
 		if ( $limited ) { return $limited; }
 		$download = $request->get_param( 'download' ) ?? '0';
 		if ( ! ( is_string( $download ) || is_int( $download ) ) || ! in_array( (string) $download, array( '0', '1' ), true ) ) {
@@ -171,7 +218,13 @@ final class Report_Archive {
 		if ( ! self::eligible( $id ) ) { return self::not_found(); }
 		$file = self::validated_file( get_post_meta( $id, Meta::REPORT_FILE, true ) );
 		if ( ! $file ) { return self::not_found(); }
-		self::stream( $file, '1' === (string) $download, 'HEAD' === $request->get_method(), $id );
+		$small_range = 'GET' === $request->get_method() && null === $request->get_header( 'if-range' )
+			&& Report_File_Response::small_range_request( $file['size'], (string) $request->get_header( 'range' ) );
+		if ( ! $small_range ) {
+			$limited = self::rate_limit( 'file', 120 );
+			if ( $limited ) { return $limited; }
+		}
+		return self::stream( $file, '1' === (string) $download, 'HEAD' === $request->get_method(), $id, $request->get_headers() );
 	}
 
 	public static function rest_thumbnail( \WP_REST_Request $request ) {
@@ -182,7 +235,7 @@ final class Report_Archive {
 		if ( ! self::eligible( $id ) || ! self::validated_file( get_post_meta( $id, Meta::REPORT_FILE, true ) ) ) { return self::not_found(); }
 		$file = self::thumbnail_file( $id );
 		if ( ! $file ) { return self::not_found(); }
-		self::stream( $file, false, 'HEAD' === $request->get_method(), $id );
+		return self::stream( $file, false, 'HEAD' === $request->get_method(), $id, $request->get_headers() );
 	}
 
 	/** Archive visibility is independent of batch publication/access. It must be explicitly granted. */
@@ -234,21 +287,13 @@ final class Report_Archive {
 		return array( 'path' => $real, 'mime' => $mime, 'size' => $size, 'ext' => $ext, 'original' => isset( $file['original'] ) && is_string( $file['original'] ) ? $file['original'] : '' );
 	}
 
-	/** @return never */
-	private static function stream( array $file, bool $download, bool $head, int $id ): void {
-		while ( ob_get_level() > 0 ) { ob_end_clean(); }
-		nocache_headers();
-		header( 'Cache-Control: no-store, max-age=0' );
-		header( 'X-Content-Type-Options: nosniff' );
-		header( 'Content-Type: ' . $file['mime'] );
-		header( 'Content-Length: ' . $file['size'] );
-		$name = sanitize_file_name( wp_basename( $file['original'] ) );
-		$name = pathinfo( $name, PATHINFO_FILENAME ) . '.' . $file['ext'];
-		if ( '.' . $file['ext'] === $name ) { $name = 'report-' . $id . '.' . $file['ext']; }
-		$ascii = preg_replace( '/[^A-Za-z0-9._-]/', '_', remove_accents( $name ) );
-		header( 'Content-Disposition: ' . ( $download ? 'attachment' : 'inline' ) . '; filename="' . $ascii . '"; filename*=UTF-8\'\'' . rawurlencode( $name ) );
-		if ( ! $head ) { readfile( $file['path'] ); } // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
-		exit;
+	/** Public eligibility is checked before even a 304/206 response can be sent. */
+	private static function stream( array $file, bool $download, bool $head, int $id, array $headers ) {
+		try {
+			Report_File_Response::send( $file, $download, $head, $id, $headers );
+		} catch ( \RuntimeException $error ) {
+			return self::not_found();
+		}
 	}
 
 	private static function matches( array $item, string $q ): bool {
