@@ -25,13 +25,16 @@
   [...toolbar.children].forEach(node => { if (node !== close && node !== offers && (node.matches('button,.vc-dialog-bag,.vc-home-quick__toolbar-name'))) node.remove(); });
   if (focusRemoved) close.focus({preventScroll:true});
   dialog.classList.add('vc-dialog-polished');
-  let dto = config.campaign, disposed = false, timer = null, controller = null, clock = null, clockDto = null, clockEligible = null, sourceAnchor = pageCampaignAnchor, sourceServerNow=Number(dto?.serverNow||0), lastRead = 0;
+  let dto = config.campaign, disposed = false, timer = null, expiry = null, controller = null, clock = null, clockDto = null, clockEligible = null, sourceAnchor = pageCampaignAnchor, sourceServerNow=Number(dto?.serverNow||0), lastRead = 0;
   const host = document.createElement('div'); host.className = 'pc-campaign-countdown pc-campaign-countdown--product'; host.dataset.pcCampaignCountdown = 'product'; host.hidden = true;
   (heading.querySelector('[data-vc-product-broadcast]') || heading.lastElementChild)?.after(host); if (!host.isConnected) heading.append(host);
   const observer = new MutationObserver(() => sync());
   function sync(requestStarted=null) {
    if (disposed) return;
-   const eligible = campaignEligible(root, dto, sourceServerNow + (global.performance.now()-sourceAnchor)/1000);
+   const currentTime = sourceServerNow + (global.performance.now()-sourceAnchor)/1000;
+   const eligible = campaignEligible(root, dto, currentTime);
+   clearTimeout(expiry); expiry = null;
+   if (eligible && Number.isSafeInteger(dto.ends)) expiry = setTimeout(sync, Math.min(2147483647, Math.max(0, (dto.ends-currentTime)*1000)+1));
    const title = eligible && typeof dto.title === 'string' ? dto.title : '';
    const tiers = eligible ? dto.tiers.filter(tier => typeof tier.text === 'string').map(tier => tier.text) : [];
    const expected = title + tiers.join('');
@@ -62,17 +65,17 @@
    finally { clearTimeout(timeout); if (controller === active) controller = null; }
   }
   function resume(){if(!document.hidden){sync();refresh();}}
-  function destroy() { if (disposed) return; disposed = true; observer.disconnect(); controller?.abort(); clearInterval(timer); clock?.destroy(); host.remove(); dialog.classList.remove('vc-dialog-polished'); dialog.removeEventListener('close',destroy);document.removeEventListener('visibilitychange',resume); owners.delete(dialog); }
-  const owner = {root,offers,sync,destroy}; owners.set(dialog,owner); dialog.addEventListener('close',destroy,{once:true});document.addEventListener('visibilitychange',resume);sync();refresh();timer=setInterval(()=>{if(dto?.ends && sourceServerNow+(global.performance.now()-sourceAnchor)/1000>=dto.ends)sync();if(global.performance.now()-lastRead>=60000)refresh();},1000);return owner;
+  function destroy() { if (disposed) return; disposed = true; observer.disconnect(); controller?.abort(); clearInterval(timer); clearTimeout(expiry); clock?.destroy(); host.remove(); dialog.classList.remove('vc-dialog-polished'); dialog.removeEventListener('close',destroy);document.removeEventListener('visibilitychange',resume); owners.delete(dialog); }
+  const owner = {root,offers,sync,destroy}; owners.set(dialog,owner); dialog.addEventListener('close',destroy,{once:true});document.addEventListener('visibilitychange',resume);sync();refresh();timer=setInterval(()=>{if(!document.hidden){sync();if(global.performance.now()-lastRead>=60000)refresh();}},60000);return owner;
  }
- document.addEventListener('vc:product-presented', event => { bindDialog(event.detail?.root,event.detail?.dialog); });
+ document.addEventListener('vc:product-presented', event => { bindDialog(event.detail?.root,event.detail?.dialog);if(entryState==='loading'&&Number(event.detail?.productId)!==requestedProductId)cancel(); });
  document.addEventListener('vc:product-dialog-selection', event => { bindDialog(event.detail?.root,event.detail?.dialog); });
  document.addEventListener('vc:product-experience-disposed', event => {
   const previous = owners.get(event.detail?.dialog);
   if (previous && previous.root === event.detail?.root) previous.destroy();
  });
 
- let intent = 0, request = null, recovery = null, requestedProductId=idValue(config.productId);
+ let intent = 0, request = null, recovery = null, waiting = null, entryState = '', presenting = false, requestedProductId=idValue(config.productId);
  function panel() {
   if (recovery?.isConnected) return recovery;
   recovery = document.createElement('section'); recovery.className = 'vc-entry-recovery';
@@ -80,13 +83,31 @@
   const button = document.createElement('button'); button.type='button'; button.textContent=text('retry'); button.addEventListener('click',()=>{if(button.dataset.entryAction==='reload'||button.dataset.vcQuickOpen)return;openProduct(requestedProductId);}); recovery.append(message,button);
   (document.querySelector('[data-vc-catalog]') || document.querySelector('main') || document.body).prepend(recovery); return recovery;
  }
- function status(key, pending=false) { const box=panel(); box.querySelector('p').textContent=text(key); const button=box.querySelector('button');if(key!=='updated'){delete button.dataset.entryAction;button.onclick=null;}if(key!=='ready'){delete button.dataset.vcQuickOpen;delete button.dataset.vcHomeProduct;}button.disabled=pending;button.hidden=key==='catalog';button.textContent=text(key==='ready'?'open':'retry'); return button; }
- function cancel(show=true) { ++intent; request?.abort();request=null;if(show&&recovery?.isConnected&&recovery.querySelector('button')?.disabled)status('cancelled'); }
+ function status(key, pending=false) { entryState=key;const box=panel();box.dataset.entryState=key;box.hidden=false;box.querySelector('p').textContent=text(key); const button=box.querySelector('button');if(key!=='updated'){delete button.dataset.entryAction;button.onclick=null;}if(key!=='ready'){delete button.dataset.vcQuickOpen;delete button.dataset.vcHomeProduct;}button.disabled=pending;button.hidden=key==='catalog';button.textContent=text(key==='ready'?'open':'retry'); return button; }
+ function clearRecovery() { recovery?.remove(); recovery=null; entryState=''; }
+ function retireWait() { const previous=waiting;waiting=null;previous?.(); }
+ function cancel() {
+  ++intent; request?.abort();request=null;retireWait();
+  // Back, a newer product and page lifecycle exits are user intent, not a
+  // failed service. Retire their transient UI instead of leaving a retry card.
+  if(entryState==='loading'||entryState==='ready')clearRecovery();
+ }
+ function waitPresented(id, milliseconds, trigger) {
+  retireWait();
+  return new Promise(resolve=>{
+   let done=false;
+   const finish=root=>{if(done)return;done=true;clearTimeout(timeout);document.removeEventListener('vc:product-presented',onShow);if(waiting===cleanup)waiting=null;resolve(root);};
+   const cleanup=()=>finish(null),onShow=event=>{if(Number(event.detail?.productId)===id)finish(event.detail.root);};
+   const timeout=setTimeout(()=>finish(null),milliseconds);waiting=cleanup;
+   document.addEventListener('vc:product-presented',onShow);trigger?.();
+  });
+ }
  async function openProduct(raw) {
-  const id=idValue(raw); if(!id)return false;requestedProductId=id;cancel(false);const ticket=intent;
+  const id=idValue(raw); if(!id)return false;requestedProductId=id;cancel();const ticket=intent;
   const button=status('loading',true);
   try {
    let template=document.querySelector('template[data-vc-quick-product="'+id+'"]');
+   if(!template&&global.VialCoveHomeQuickView?.loadTemplate){await global.VialCoveHomeQuickView.loadTemplate(String(id));template=document.querySelector('template[data-vc-quick-product="'+id+'"]');if(!template)throw new Error('Template unavailable');}
    if(!template){
     const url=localURL(global.vcHomeQuickView?.productApi); if(!url)throw new Error('Unavailable service');
     if(url.searchParams.has('rest_route'))url.searchParams.set('rest_route',url.searchParams.get('rest_route').replace(/\/?$/,'/')+id);else url.pathname=url.pathname.replace(/\/?$/,'/')+id;
@@ -100,21 +121,27 @@
      if(ticket!==intent)return false;document.body.append(template);
     }finally{clearTimeout(timeout);if(request===active)request=null;}
    }
-   if(ticket!==intent||document.hidden)return false;
+   if(ticket!==intent)return false;
+   if(document.hidden){cancel();return false;}
    status('ready'); button.dataset.vcHomeProduct=String(id);button.dataset.vcQuickOpen=String(id);
-   const presented=await new Promise(resolve=>{
-    const onShow=event=>{if(Number(event.detail?.productId)===id){clearTimeout(timeout);document.removeEventListener('vc:product-presented',onShow);resolve(event.detail.root);}};
-    const timeout=setTimeout(()=>{document.removeEventListener('vc:product-presented',onShow);resolve(null);},1800);
-    document.addEventListener('vc:product-presented',onShow);button.click();
-   });
-   if(!presented||ticket!==intent)throw new Error('Presenter unavailable');
+   if(recovery)recovery.hidden=true;
+   const opener=[...(document.querySelectorAll?.('[data-vc-home-product="'+id+'"][data-vc-quick-open]')||[])].find(node=>node!==button&&node.getClientRects().length&&!node.closest('[inert]'))||button;
+   const presented=await waitPresented(id,1800,()=>{presenting=true;try{opener.click();}finally{presenting=false;}});
+   if(ticket!==intent)return false;
+   if(!presented)throw new Error('Presenter unavailable');
+   // Prefer the visible native product trigger for close focus. The synthetic
+   // deep-link opener never reserves a second card in the catalogue.
+   if(recovery)recovery.hidden=true;
    const params=new URL(global.location.href).searchParams;
    presented.querySelectorAll('.variations select').forEach(select=>{const value=params.get(select.name);if(value!==null&&[...select.options].some(option=>option.value===value)){select.value=value;global.jQuery?global.jQuery(select).trigger('change'):select.dispatchEvent(new Event('change',{bubbles:true}));}});
    return true;
   }catch(_){if(ticket===intent){const retry=status('failed');delete retry.dataset.vcQuickOpen;delete retry.dataset.vcHomeProduct;}return false;}
  }
  // Entry recovery button must use only one native presentation attempt, not recurse through its own listener.
- document.addEventListener('vc:product-restore-cancel',()=>cancel());global.addEventListener('pagehide',()=>cancel());
+ document.addEventListener('vc:product-restore-cancel',cancel);global.addEventListener('pagehide',cancel);
+ document.addEventListener('visibilitychange',()=>{if(document.hidden&&(entryState==='loading'||waiting))cancel();});
+ document.addEventListener('keydown',event=>{if(event.key==='Escape'&&(entryState==='loading'||waiting))cancel();});
+ document.addEventListener('click',event=>{const opener=event.target.closest?.('[data-vc-home-product][data-vc-quick-open]');if(!presenting&&opener&&!recovery?.contains(opener)&&(entryState==='loading'||waiting))cancel();},true);
  function restoreCatalog() {
   const selection=config.catalog||{};if(!selection.query&&!selection.requestedCategory)return;
   const root=document.querySelector('[data-vc-catalog]');if(!root)return;
@@ -127,15 +154,19 @@
   const restored=document.querySelector('dialog.vc-showcase-quick[open] .vc-home-quick-product');
   if(restored)bindDialog(restored,restored.closest('dialog'));
   restoreCatalog();
-  if(global.location.hash==='#vc-products')document.querySelector('[data-vc-catalog]')?.scrollIntoView({block:'start',behavior:'instant'});
-  if(config.productId){if(config.productAvailable===false){status('unavailable');return;}
-   const layers=global.history.state?.__vcCommerceLayers?.layers;
+  const layers=global.history.state?.__vcCommerceLayers?.layers;
+  if(global.location.hash==='#vc-products'&&!config.productId&&!layers?.length)document.querySelector('[data-vc-catalog]')?.scrollIntoView({block:'start',behavior:'instant'});
+  if(config.productId){
+   // A refreshed history layer may intentionally be a different product or
+   // only the bag. The old deep-link query does not own that newer selection.
+   if(Array.isArray(layers)&&layers.length&&!layers.some(layer=>layer.kind==='product'&&Number(layer.productId)===idValue(config.productId)))return;
+   if(config.productAvailable===false){status('unavailable');return;}
    if(Array.isArray(layers)&&layers.length){
-    // Existing history controller owns opening/restoring selections. Supply visible recovery only.
-    const id=idValue(config.productId),ticket=intent,ready=()=>{const button=status('ready');button.dataset.vcHomeProduct=String(id);button.dataset.vcQuickOpen=String(id);};
-    const existing=document.querySelector('dialog.vc-showcase-quick[open] .vc-home-quick-product');if(Number(existing?.dataset.vcProductId)===id){ready();return;}
-    status('loading',true);const onShow=event=>{if(Number(event.detail?.productId)===id){clearTimeout(timeout);document.removeEventListener('vc:product-presented',onShow);if(ticket===intent)ready();}};
-    const timeout=setTimeout(()=>{document.removeEventListener('vc:product-presented',onShow);if(ticket===intent)status('failed');},14500);document.addEventListener('vc:product-presented',onShow);return;
+    // Existing history controller owns presentation. Only a genuine failure
+    // needs an in-flow recovery action; pending restoration is announced.
+    const id=idValue(config.productId),ticket=intent;
+    const existing=document.querySelector('dialog.vc-showcase-quick[open] .vc-home-quick-product');if(Number(existing?.dataset.vcProductId)===id)return;
+    status('loading',true);waitPresented(id,14500).then(root=>{if(ticket===intent){if(root)clearRecovery();else status('failed');}});return;
    }
    openProduct(config.productId);
   }

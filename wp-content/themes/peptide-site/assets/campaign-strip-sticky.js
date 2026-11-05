@@ -16,7 +16,11 @@
       frame = 0;
       if (disposed) return;
       if (!root.isConnected || !wrapper.contains(root)) { destroy(); return; }
-      const next = doc.querySelector('[data-vc-demo-header].vc-demo-header--sticky')?.closest('.vc-m--site-header') || null;
+      const next = [...doc.querySelectorAll('[data-vc-demo-header].vc-demo-header--sticky')].map(node => node.closest('.vc-m--site-header')).find(node => {
+        if (!node) return false;
+        const style = win.getComputedStyle(node), rect = node.getBoundingClientRect();
+        return ['sticky', 'fixed'].includes(style.position) && style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+      }) || null;
       if (next !== header) { if (header) resize?.unobserve(header); header = next; if (header) resize?.observe(header); }
       let offset = 0;
       if (header) {
@@ -26,9 +30,11 @@
           offset = Math.max(0, Number.isFinite(top) ? top : 0) + rect.height;
         }
       }
-      wrapper.style.setProperty(property, Math.max(0, offset).toFixed(2) + 'px');
+      const topValue = Math.max(0, offset).toFixed(2) + 'px';
+      if (wrapper.style.getPropertyValue(property) !== topValue) wrapper.style.setProperty(property, topValue);
       const height = wrapper.getBoundingClientRect().height;
-      page.style.setProperty(anchorProperty, (Math.max(0, offset) + Math.max(0, Number.isFinite(height) ? height : 0) + 12).toFixed(2) + 'px');
+      const anchorValue = (Math.max(0, offset) + Math.max(0, Number.isFinite(height) ? height : 0) + 12).toFixed(2) + 'px';
+      if (page.style.getPropertyValue(anchorProperty) !== anchorValue) page.style.setProperty(anchorProperty, anchorValue);
     }
     function queue() { if (!disposed && !frame) frame = win.requestAnimationFrame(measure); }
     function destroy() {
@@ -45,7 +51,9 @@
     root.vcCampaignSticky = controller;
     wrapper.classList.add('vc-campaign-pin');
     page.classList.add('vc-campaign-pin-page');
-    resize?.observe(page); resize?.observe(wrapper);
+    // Unrelated images changing document height do not change either sticky
+    // region. Observe their actual boxes instead of the entire page.
+    resize?.observe(wrapper);
     const adminBar = doc.getElementById('wpadminbar'); if (adminBar) resize?.observe(adminBar);
     on(win, 'resize', queue, { passive: true }); on(win.visualViewport, 'resize', queue, { passive: true });
     on(win, 'pageshow', queue); on(win, 'pagehide', event => { if (!event.persisted) destroy(); });

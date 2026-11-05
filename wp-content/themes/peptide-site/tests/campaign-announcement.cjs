@@ -17,8 +17,9 @@ class Element extends Events {
   }
   get attributes() { return [...this.attrs].map(([name, value]) => ({ name, value })); }
   get isConnected() { return this.parentNode ? this.parentNode.isConnected : !!this.connected; }
-  get offsetLeft() { if (!this.parentNode) return 0; const siblings = this.parentNode.children; return siblings.slice(0, siblings.indexOf(this)).reduce((sum, node) => sum + node.width, 0); }
-  get scrollWidth() { return this.children.reduce((sum, node) => sum + node.width, 0); }
+  get layoutWidth() { return this.className === 'vc-campaign-track' ? this.children.reduce((sum, node) => sum + node.layoutWidth, 0) : this.width; }
+  get offsetLeft() { if (!this.parentNode) return 0; const siblings = this.parentNode.children; return siblings.slice(0, siblings.indexOf(this)).reduce((sum, node) => sum + node.layoutWidth, 0); }
+  get scrollWidth() { return this.children.reduce((sum, node) => sum + node.layoutWidth, 0); }
   get textContent() { return this.text + this.children.map(node => node.textContent).join(''); }
   setAttribute(key, value) { this.attrs.set(key, String(value)); }
   removeAttribute(key) { this.attrs.delete(key); }
@@ -30,9 +31,9 @@ class Element extends Events {
   querySelectorAll(selector) { return this.children.flatMap(child => [ ...(selector === '*' || child.matches(selector) ? [child] : []), ...child.querySelectorAll(selector) ]); }
   querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
   cloneNode(deep) { const copy = new Element(this.tagName, Object.fromEntries(this.attrs), this.text, this.width); if (deep) copy.append(...this.children.map(child => child.cloneNode(true))); return copy; }
-  getBoundingClientRect() { return { top: this.top ?? 0, bottom: (this.top ?? 0) + 36 }; }
+  getBoundingClientRect() { return { top: this.top ?? 0, bottom: (this.top ?? 0) + 36, width:this.layoutWidth }; }
 }
-function fixture({ reduced = false, width = 200, intersection = true, legacyMotion = false } = {}) {
+function fixture({ reduced = false, width = 200, intersection = true, legacyMotion = false, compositor = false, implementation = create } = {}) {
   const root = new Element('section', { 'data-vc-campaign-strip': '' }); root.connected = true;
   const title = new Element('h2', {}, 'Black Friday'), rail = new Element('div', { class: 'pc-campaign__tiers', tabindex: '0', 'aria-label': 'Promotion offers' }); rail.clientWidth = width;
   const originals = ['$25.00 off · Spend $300.00', '$55.00 off · Spend $500.00', '$120.00 off · Spend $1,000.00'].map((text, index) => {
@@ -41,7 +42,8 @@ function fixture({ reduced = false, width = 200, intersection = true, legacyMoti
   });
   rail.append(...originals); root.append(title, rail);
   const document = Object.assign(new Events(), { hidden: false, activeElement: null, readyState: 'complete', querySelectorAll: () => [root] });
-  const frames = new Map(), timers = new Map(), durations = new Map(), intersections = [], resizes = [];
+  const frames = new Map(), timers = new Map(), durations = new Map(), intersections = [], resizes = [], animations = [];
+  if(compositor) document.createElement=tag=>{const element=new Element(tag);element.animate=(keyframes,options)=>{const animation={keyframes,options,currentTime:0,playState:'running',pause(){this.playState='paused';},play(){this.playState='running';},cancel(){this.playState='idle';}};animations.push(animation);return animation;};return element;};
   let serial = 0;
   const motion = Object.assign(new Events(), { matches: reduced });
   if (legacyMotion) { motion.addListener = callback => Events.prototype.addEventListener.call(motion, 'change', callback); motion.removeListener = callback => Events.prototype.removeEventListener.call(motion, 'change', callback); motion.addEventListener = motion.removeEventListener = undefined; }
@@ -51,9 +53,10 @@ function fixture({ reduced = false, width = 200, intersection = true, legacyMoti
     ResizeObserver: class { constructor(callback) { this.callback = callback; this.nodes = []; resizes.push(this); } observe(node) { this.nodes.push(node); } disconnect() { this.disconnected = true; } },
   });
   if (intersection) window.IntersectionObserver = class { constructor(callback) { this.callback = callback; intersections.push(this); } observe(node) { this.node = node; } disconnect() { this.disconnected = true; } };
-  const controller = create(root, window);
+  const controller = implementation(root, window);
   return { root, title, rail, originals, document, window, motion, frames, timers, durations, controller, intersections, resizes,
-    copies: () => rail.children.filter(node => node.hasAttribute('data-vc-campaign-copy')),
+    animations,advance(milliseconds){animations.forEach(animation=>{if(animation.playState==='running')animation.currentTime+=milliseconds;});},
+    copies: () => (rail.children[0]?.className==='vc-campaign-track'?rail.children[0].children:rail.children).filter(node => node.hasAttribute('data-vc-campaign-copy')),
     visible(value) { intersections.forEach(observer => observer.callback([{ target: root, isIntersecting: value }])); },
     step(time = 0) { const pending = [...frames.values()]; frames.clear(); pending.forEach(callback => callback(time)); },
     finish() { const pending = [...timers.values()]; timers.clear(); durations.clear(); pending.forEach(callback => callback()); },
@@ -159,4 +162,47 @@ test('the full production bootstrap can run twice without duplicate loops or obs
   const source = fs.readFileSync(require.resolve('../assets/campaign-announcement.js'), 'utf8');
   const context = vm.createContext({ window: f.window }); vm.runInContext(source, context); vm.runInContext(source, context);
   assert.equal(f.intersections.length, before + 1); assert.equal(f.copies().length, 3); f.root.vcCampaignMotion.destroy();
+});
+test('compositor loop preserves the native tier nodes and performs no steady animation-frame or native-scroll writes',()=>{
+ const f=fixture({compositor:true});let writes=0,left=f.rail.scrollLeft;
+ Object.defineProperty(f.rail,'scrollLeft',{get:()=>left,set:value=>{writes++;left=value;}});
+ f.visible(true);const baseline=writes;f.advance(60000);
+ assert.equal(f.frames.size,0);assert.equal(writes,baseline);assert.equal(f.animations.length,1);
+ assert.deepEqual(f.rail.children[0].children.slice(0,3),f.originals);assert.equal(f.copies().length,3);
+ assert.equal(f.animations[0].options.duration,450/.026);assert.equal(f.animations[0].keyframes[1].transform,'translateX(-450px)');
+ const copies=f.copies();for(let i=0;i<10;i++){f.controller.refresh();f.resize();f.step();}
+ assert.deepEqual(f.copies(),copies);assert.equal(f.animations.length,1,'unchanged width/font notifications retain phase and copies');
+ f.controller.destroy();assert.deepEqual(f.rail.children,f.originals);assert.equal(f.animations[0].playState,'idle');
+});
+test('compositor phase passes exactly to touch scrolling and resumes from the manual position',()=>{
+ const f=fixture({compositor:true});f.visible(true);f.advance(1000);f.rail.fire('touchstart');
+ assert.equal(f.rail.scrollLeft,26);assert.equal(f.animations[0].playState,'idle');
+ f.rail.scrollLeft=100;f.rail.fire('touchend');f.finish();
+ assert.equal(f.animations.length,2);assert.equal(f.animations[1].currentTime,100/.026);assert.equal(f.rail.scrollLeft,0);
+ f.advance(1000);f.document.activeElement=f.rail;f.root.fire('focusin');assert.ok(Math.abs(f.rail.scrollLeft-126)<.00001);
+ f.controller.destroy();
+});
+if(process.env.VC_CAMPAIGN_BENCHMARK){
+ const {execFileSync}=require('node:child_process');
+ const baselineSource=execFileSync('git',['show','94f11c1:wp-content/themes/peptide-site/assets/campaign-announcement.js'],{encoding:'utf8'}),baselineModule={exports:{}};
+ vm.runInNewContext(baselineSource,{module:baselineModule});
+ const sample=implementation=>{
+  const f=fixture({implementation,compositor:true});let scrollWrites=0,frames=0,copyRebuilds=0,left=f.rail.scrollLeft;
+  Object.defineProperty(f.rail,'scrollLeft',{get:()=>left,set:value=>{scrollWrites++;left=value;}});
+  for(const original of f.originals){const clone=original.cloneNode.bind(original);original.cloneNode=deep=>{copyRebuilds++;return clone(deep);};}
+  f.visible(true);f.step(0);scrollWrites=0;
+  for(let step=1;step<=3600;step++){frames+=f.frames.size;f.step(step*1000/60);f.advance(1000/60);}
+  const steady={durationSeconds:60,simulatedFrames:3600,mainThreadAnimationCallbacks:frames,nativeScrollLeftWrites:scrollWrites};
+  scrollWrites=0;copyRebuilds=0;for(let i=0;i<10;i++)f.controller.refresh();
+  const unchangedRefresh={calls:10,decorativeNodesRebuilt:copyRebuilds,nativeScrollLeftWrites:scrollWrites,copiesRemaining:f.copies().length};
+  f.controller.destroy();return{steady,unchangedRefresh,afterDispose:{frames:f.frames.size,timers:f.timers.size,copies:f.copies().length}};
+ };
+ console.log('VC_CAMPAIGN_BENCHMARK '+JSON.stringify({scope:'Isolated real JS module with model DOM and mocked Web Animations; operation counts only, not browser timing, long tasks or mobile FPS',baselineCommit:'94f11c1',before:sample(baselineModule.exports.create),after:sample(create)}));
+}
+test('compositor background pause retains phase and reduced motion leaves only native manual tiers',()=>{
+ const f=fixture({compositor:true});f.visible(true);f.advance(1000);const animation=f.animations[0];
+ f.document.hidden=true;f.document.fire('visibilitychange');f.advance(900000);assert.equal(animation.currentTime,1000);
+ f.document.hidden=false;f.document.fire('visibilitychange');assert.equal(f.animations[0],animation);assert.equal(animation.currentTime,1000);
+ f.motion.matches=true;f.motion.fire('change');assert.equal(f.copies().length,0);assert.equal(animation.playState,'idle');assert.equal(f.rail.scrollLeft,26);assert.equal(f.frames.size,0);
+ f.controller.destroy();assert.deepEqual(f.rail.children,f.originals);
 });

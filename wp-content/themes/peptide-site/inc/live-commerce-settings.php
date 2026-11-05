@@ -58,6 +58,26 @@ add_filter( 'peptide_core_module_wrapper', function ( string $html, array $modul
     return ! $editor && 'product_experience' === ( $module['type'] ?? '' ) ? '' : $html;
 }, 125, 3 );
 
+/** Reuse immutable published rows within one public render, never a persistent/business cache. */
+function vc_live_commerce_published_rows( string $document, int $template, bool $reset = false ): array {
+    static $rows = array();
+    if ( $reset ) { $rows = array(); return array(); }
+    $memo = function_exists( 'is_admin' ) && ! is_admin()
+        && in_array( $_SERVER['REQUEST_METHOD'] ?? '', array( 'GET', 'HEAD' ), true )
+        && ! ( defined( 'REST_REQUEST' ) && REST_REQUEST ) && ! ( defined( 'WP_CLI' ) && WP_CLI )
+        && ! ( function_exists( 'wp_doing_ajax' ) && wp_doing_ajax() ) && ! ( function_exists( 'wp_doing_cron' ) && wp_doing_cron() )
+        && ! ( method_exists( '\PeptideCore\Templates', 'previewing_id' ) && \PeptideCore\Templates::previewing_id() );
+    // Integrations with context-sensitive document filters can retain a fresh
+    // lookup. Normalization still runs per call, including device overrides.
+    if ( $memo && function_exists( 'apply_filters' ) ) { $memo = (bool) apply_filters( 'vialcove_live_commerce_request_memo', true, $document, $template ); }
+    if ( ! $memo ) { return \PeptideCore\Modules\Layout::published_modules( $document, $template ); }
+    $blog = function_exists( 'get_current_blog_id' ) ? get_current_blog_id() : 0;
+    $key = $blog . ':' . $template . ':' . $document;
+    if ( ! array_key_exists( $key, $rows ) ) { $rows[ $key ] = \PeptideCore\Modules\Layout::published_modules( $document, $template ); }
+    return $rows[ $key ];
+}
+add_action( 'peptide_core_layout_published', static function (): void { vc_live_commerce_published_rows( '', 0, true ); } );
+
 /** Find a settings row in published snapshots only. Disabled rows deliberately override fallback. */
 function vc_live_commerce_published_module( array $documents, string $type ): ?array {
     if ( ! class_exists( '\PeptideCore\Templates' ) || ! class_exists( '\PeptideCore\Modules\Layout' )
@@ -65,7 +85,7 @@ function vc_live_commerce_published_module( array $documents, string $type ): ?a
     $template = \PeptideCore\Templates::current_id();
     if ( ! $template ) { return null; }
     foreach ( $documents as $document ) {
-        foreach ( \PeptideCore\Modules\Layout::published_modules( $document, $template ) as $row ) {
+        foreach ( vc_live_commerce_published_rows( $document, $template ) as $row ) {
             if ( 'vialcove/' . str_replace( '_', '-', $type ) !== ( $row['block'] ?? '' ) ) { continue; }
             $module = \PeptideCore\Modules\Renderer::normalize( $type, (array) ( $row['attrs'] ?? array() ) );
             if ( $module ) { $module['document'] = $document; return $module; }
