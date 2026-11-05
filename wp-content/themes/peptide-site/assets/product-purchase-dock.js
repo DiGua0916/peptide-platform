@@ -46,10 +46,12 @@
       // Copy the selected server-rendered price pair, never calculate a sale or parse money.
       const amount = priceNode?.querySelector('.vc-price-current .woocommerce-Price-amount') || priceNode?.querySelector('.vc-price-current') || priceNode?.querySelector('.woocommerce-Price-amount');
       const previous = priceNode?.querySelector('.vc-price-compare .woocommerce-Price-amount') || priceNode?.querySelector('.vc-price-compare');
-      text(current,(amount?.textContent || '').trim());
+      const amountText = (amount?.textContent || '').trim();
+      text(current,amountText ? amountText + ' / box' : '');
       text(compare,(previous?.textContent || '').trim());
       text(discount,(priceNode?.querySelector('.vc-sale-badge')?.textContent || '').trim());
-      text(specification,String(selectedLabel?.() || (!amount ? priceNode?.textContent || '' : '')).trim()); schedule();
+      const label = String(selectedLabel?.() || (!amount ? priceNode?.textContent || '' : '')).trim();
+      text(specification,window.vcProductSpecification?.format(label) || label); schedule();
     }
     function destroy() {
       if (disposed) return; disposed = true;

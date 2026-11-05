@@ -9,7 +9,7 @@ function fixture(){
   document.createElement=element;document.body=element('body');
   const window=target(),reduced={matches:false};
   const context=vm.createContext({window,document,URL,location:{href:'https://shop.test/',origin:'https://shop.test'},matchMedia:()=>reduced,requestAnimationFrame(fn){const id=++sequence;frames.set(id,fn);return id;},cancelAnimationFrame(id){frames.delete(id);},console});
-  const hooked=source.replace('  window.vcProductReportMatch =','  window.testHooks = {safeURL,createChildDialogs,createSectionNavigation,reportPresentationKey};\n  window.vcProductReportMatch =');
+  const hooked=source.replace('  window.vcProductReportMatch =','  window.testHooks = {safeURL,createChildDialogs,createSectionNavigation,createGalleryPlayback,reportPresentationKey};\n  window.vcProductReportMatch =');
   vm.runInContext(hooked,context);
   return {context,document,window,element,reduced,frames,closes,hooks:window.testHooks,flush(){for(const [id,fn]of [...frames]){frames.delete(id);fn();}}};
 }
@@ -51,7 +51,7 @@ test('section navigation coalesces scroll work, skips hidden COA and cancels on 
 function loadLocalFunction(f,name,next){vm.runInContext(source.slice(source.indexOf('    function '+name+'('),source.indexOf(next,source.indexOf('    function '+name+'('))),f.context);}
 test('identical selected image keeps its src while a changed specification replaces it once',()=>{
   const f=fixture(),img=f.element('img');let writes=0;Object.defineProperty(img,'src',{set(value){writes++;this.attrs.src=value;}});
-  Object.assign(f.context,{safeURL:value=>value||'',productImage:{src:'https://shop.test/tr20.webp',alt:'20mg'},productImg:img,emptyImage:f.element(),productSlide:f.element(),knownImages:new Map(),productName:'Tirzepatide',summary:{querySelector(){return null;}},ribbon:f.element(),caption:f.element(),selectedLabel:()=> '20mg'});
+  Object.assign(f.context,{root:{},gallery:{refresh(){}},safeURL:value=>value||'',productImage:{src:'https://shop.test/tr20.webp',alt:'20mg'},productImg:img,emptyImage:f.element(),productSlide:f.element(),knownImages:new Map(),productName:'Tirzepatide',summary:{querySelector(){return null;}},ribbon:f.element(),caption:f.element(),selectedLabel:()=> '20mg'});
   loadLocalFunction(f,'renderProduct','    function renderReport(');
   vm.runInContext('renderProduct();renderProduct();',f.context);assert.equal(writes,1);
   f.context.productImage={src:'https://shop.test/tr10.webp',alt:'10mg'};vm.runInContext('renderProduct();renderProduct();',f.context);assert.equal(writes,2);assert.equal(img.alt,'10mg');
@@ -60,16 +60,21 @@ test('authoritative responsive image attributes precede src, avoid duplicate wri
   const f=fixture(),img=f.element('img'),writes=[];
   img.setAttribute=(key,value)=>{writes.push(key);img.attrs[key]=String(value);};img.removeAttribute=key=>{writes.push('remove:'+key);delete img.attrs[key];};
   Object.defineProperty(img,'src',{set(value){writes.push('src');img.attrs.src=value;}});
-  Object.assign(f.context,{safeURL:value=>value||'',productImage:{src:'https://shop.test/tr20.webp',srcset:'https://shop.test/tr20-small.webp 400w, https://shop.test/tr20.webp 1000w',sizes:'(max-width: 767px) calc(100vw - 64px), 500px',width:1000,height:1200},productImg:img,emptyImage:f.element(),productSlide:f.element(),knownImages:new Map(),productName:'Tirzepatide',summary:{querySelector(){return null;}},ribbon:f.element(),caption:f.element(),selectedLabel:()=> '20mg'});
+  Object.assign(f.context,{root:{},gallery:{refresh(){}},safeURL:value=>value||'',productImage:{src:'https://shop.test/tr20.webp',srcset:'https://shop.test/tr20-small.webp 400w, https://shop.test/tr20.webp 1000w',sizes:'(max-width: 767px) calc(100vw - 64px), 500px',width:1000,height:1200},productImg:img,emptyImage:f.element(),productSlide:f.element(),knownImages:new Map(),productName:'Tirzepatide',summary:{querySelector(){return null;}},ribbon:f.element(),caption:f.element(),selectedLabel:()=> '20mg'});
   loadLocalFunction(f,'renderProduct','    function renderReport(');
   vm.runInContext('renderProduct();renderProduct();',f.context);assert.equal(writes.join(','),'sizes,srcset,width,height,src');assert.equal(img.getAttribute('width'),'1000');assert.equal(img.getAttribute('height'),'1200');
   f.context.productImage={src:'https://shop.test/tr10.webp',width:0,height:null};vm.runInContext('renderProduct();renderProduct();',f.context);
   assert.equal(writes.slice(5).join(','),'remove:sizes,remove:srcset,remove:width,remove:height,src');assert.equal(img.hasAttribute('srcset'),false);assert.equal(img.hasAttribute('sizes'),false);assert.equal(img.hasAttribute('width'),false);assert.equal(img.hasAttribute('height'),false);
 });
+test('new non-sale price cannot inherit the preceding native single_variation sale badge',()=>{
+  const f=fixture(),img=f.element('img'),ribbon=f.element();
+  Object.assign(f.context,{root:{},gallery:{refresh(){}},safeURL:value=>value||'',productImage:{src:'/tr15.webp'},productImg:img,emptyImage:f.element(),productSlide:f.element(),knownImages:new Map(),productName:'Tirzepatide',summary:{querySelector(selector){return selector==='.vc-sale-badge'?{textContent:'29% off'}:null;}},ribbon,caption:f.element(),selectedLabel:()=> '15mg'});
+  loadLocalFunction(f,'renderProduct','    function renderReport(');vm.runInContext('renderProduct()',f.context);assert.equal(ribbon.hidden,true);assert.equal(ribbon.textContent,'');
+});
 test('unchanged report preserves focused COA DOM; new date/file/variation still refreshes latest report',()=>{
   const f=fixture();let selection='20mg',variation='20',latest={id:1,product:{id:7},specification:'20mg',issued_on:'2026-10-01',view_url:'/1.pdf',download_url:'/1.pdf?download=1',thumbnail_url:'/1.webp',file:{mime:'application/pdf',size_bytes:100}};
   const reportTab=f.element(),documents=f.element(),reportSlide=f.element();let refreshes=0;
-  Object.assign(f.context,{settings:{reportGalleryEnabled:true},report:null,reports:[],productId:7,productName:'Tirzepatide',reportSignature:'',latestReport:()=>latest,reportPresentationKey:f.hooks.reportPresentationKey,selectedLabel:()=>selection,root:{querySelector(){return {value:variation};}},reportTab,documents,reportSlide,navigation:{refresh(){refreshes++;}},safeURL:value=>value||'',date:value=>value||'',node:f.document.createElement,button:(cls,label,action)=>{const n=f.element('button');n.className=cls;n.textContent=label;n.addEventListener('click',action);return n;},track:f.element(),openReport(){}});
+  Object.assign(f.context,{gallery:{refresh(){}},settings:{reportGalleryEnabled:true},report:null,reports:[],productId:7,productName:'Tirzepatide',reportSignature:'',latestReport:()=>latest,reportPresentationKey:f.hooks.reportPresentationKey,selectedLabel:()=>selection,root:{querySelector(){return {value:variation};}},reportTab,documents,reportSlide,navigation:{refresh(){refreshes++;}},safeURL:value=>value||'',date:value=>value||'',node:f.document.createElement,button:(cls,label,action)=>{const n=f.element('button');n.className=cls;n.textContent=label;n.addEventListener('click',action);return n;},track:f.element(),openReport(){}});
   loadLocalFunction(f,'renderReport','    async function readReports(');
   vm.runInContext('renderReport()',f.context);const art=documents.children[0],copy=documents.children[1],opener=copy.children[copy.children.length-1];opener.focus();
   latest={...latest};vm.runInContext('renderReport()',f.context);assert.equal(documents.rebuilds,1);assert.equal(documents.children[0],art);assert.equal(documents.children[1],copy);assert.equal(f.document.activeElement,opener);assert.equal(f.context.report,latest);

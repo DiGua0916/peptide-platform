@@ -37,9 +37,10 @@ function fixture(variable=true,{unitPricing=null,cache=false}={}){
     selectionChange(value){select.value=value;for(const item of form.handlers)if(item.type==='change')item.fn({target:select});},
     get nativeHandlers(){return native.length;},setLabel(value){label=value;},get writes(){return writes;},get clicks(){return [resets,explores];}};
 }
-test('moves real Clear/SKU/Explore before variations while retaining native form/summary selectors and handlers',()=>{
+test('removes redundant Clear/SKU/Explore from presentation while retaining native ancestry and handlers',()=>{
   const f=fixture(),beforeForm=[...f.form.children],beforeSummary=[...f.summary.children],meta=f.create(f.options);
   assert.equal(f.form.children[0],meta.element);assert.equal(f.form.querySelector('.reset_variations'),f.reset);assert.equal(f.summary.querySelector('.vc-home-quick__sku'),f.sku);assert.equal(f.summary.querySelector('.vc-showcase-quick__details'),f.details);assert.equal(f.single.querySelector('.stock'),f.stock);
+  assert.equal(f.reset.hidden,true);assert.equal(f.sku.hidden,true);assert.equal(f.details.hidden,true);assert.equal(f.reset.parentNode,f.variations);assert.equal(f.sku.parentNode,f.summary);
   f.reset.click();f.details.click();assert.deepEqual(f.clicks,[1,1]);meta.destroy();assert.deepEqual(f.form.children,beforeForm);assert.deepEqual(f.summary.children,beforeSummary);assert.equal(f.reset.parentNode,f.variations);assert.equal(f.root.classList.contains('vc-product-meta-ready'),false);
 });
 test('copies actual stock and classes, hides pending/stale variation stock, updates when Woo replaces it',()=>{
@@ -50,7 +51,7 @@ test('copies actual stock and classes, hides pending/stale variation stock, upda
 });
 test('unchanged update makes no DOM writes; home SKU updater still reaches the moved real line',()=>{
   const f=fixture(),meta=f.create(f.options),count=f.writes;meta.update();meta.update();assert.equal(f.writes,count);
-  f.summary.querySelector('.vc-home-quick__sku').textContent='SKU TR10';f.setLabel('10mg × 10 vials');meta.update();assert.equal(f.sku.textContent,'SKU TR10');assert.equal(meta.element.querySelector('.vc-product-meta__spec').textContent,'10mg × 10 vials');
+  f.summary.querySelector('.vc-home-quick__sku').textContent='SKU TR10';f.setLabel('10mg × 10 vials');meta.update();assert.equal(f.sku.textContent,'SKU TR10');assert.equal(meta.element.querySelector('.vc-product-meta__spec').textContent,'10 mg per vial · 10 vials per box');assert.equal(f.sku.hidden,true);
 });
 test('simple products copy only real direct stock; missing metadata stays empty and abort restores native nodes',()=>{
   const f=fixture(false);f.reset.hidden=true;f.details.hidden=true;const meta=f.create(f.options),copy=meta.element.querySelector('.vc-product-meta__stock');assert.equal(copy.textContent,'In stock');assert.equal(meta.element.querySelector('.vc-product-meta__spec').hidden,true);
@@ -59,26 +60,11 @@ test('simple products copy only real direct stock; missing metadata stays empty 
 test('invalid/aborted/duplicate mount performs no duplicate metadata or native movement',()=>{
   const f=fixture();assert.equal(f.create({...f.options,form:null}),null);const meta=f.create(f.options);assert.equal(f.create(f.options),null);meta.destroy();f.controller.abort();assert.equal(f.create(f.options),null);
 });
-function pricing(id=71,price='$5.50'){
-  return {version:1,productId:7,variationId:id,purchasableId:id,vialsPerSalesUnit:10,countSource:'stored_pack',salesUnitPrice:{minor:'5500',text:'$55.00'},perVialPrice:{minor:'550',text:price},approximate:false,currency:'USD',currencyMinorUnit:2,taxDisplay:'excl',basis:'catalog_display_price',includesCoupons:false,isPurchasableAsSingleVial:false};
-}
-test('selected-SKU equivalent price hides immediately on change and Clear, then consumes only native matching DTO',()=>{
-  const f=fixture(true,{unitPricing:pricing()}),meta=f.create(f.options),unit=meta.element.querySelector('.vc-product-meta__unit');
-  assert.equal(unit.textContent,'$5.50 / vial');assert.equal(unit.hidden,false);
-  f.selectionChange('10mg*10vials');assert.equal(f.id.value,'71');assert.equal(unit.hidden,true,'hide before native Woo replaces the old id');
-  f.id.value='72';f.nativeEvent('found_variation',{variation_id:72,attributes:{attribute_pack:'10mg*10vials'},pc_unit_pricing:pricing(72,'$4.00')});
-  assert.equal(unit.textContent,'$4.00 / vial');assert.equal(unit.hidden,false);
-  f.nativeEvent('reset_data');assert.equal(unit.hidden,true,'reset hides even while old native id is mounted');
-  f.selectionChange('');f.id.value='';meta.update();assert.equal(unit.hidden,true);
-  f.selectionChange('20mg*10vials');f.id.value='71';f.nativeEvent('found_variation',{variation_id:71,attributes:{attribute_pack:'20mg*10vials'},pc_unit_pricing:null});
-  assert.equal(unit.hidden,true,'no fallback to initial price after server returns null');
-  assert.equal(f.nativeHandlers,3);meta.destroy();assert.equal(f.nativeHandlers,0);assert.equal(f.form.handlers.length,0);
-});
-test('pre-mount native variation cache initializes current SKU and exact attributes block stale AJAX response',()=>{
-  const row={variation_id:71,attributes:{attribute_pack:'20mg*10vials'},pc_unit_pricing:pricing()};
-  const f=fixture(true,{cache:[row]}),meta=f.create(f.options),unit=meta.element.querySelector('.vc-product-meta__unit');
-  assert.equal(unit.textContent,'$5.50 / vial');
-  f.selectionChange('10mg*10vials');f.nativeEvent('found_variation',row);assert.equal(unit.hidden,true);
-  f.id.value='72';f.nativeEvent('found_variation',{variation_id:72,attributes:{attribute_pack:'10mg*10vials'},pc_unit_pricing:pricing(71)});
-  assert.equal(unit.hidden,true,'mislabeled DTO cannot use the prior variation id');
+test('box specification follows exact dosage and explicit vial count without showing per-vial prices',()=>{
+  const f=fixture(true,{unitPricing:{perVialPrice:{text:'$5.50'}}}),meta=f.create(f.options),spec=meta.element.querySelector('.vc-product-meta__spec');
+  assert.equal(spec.textContent,'20 mg per vial · 10 vials per box');assert.equal(meta.element.querySelector('.vc-product-meta__unit'),null);
+  f.setLabel('15mg*10vials');meta.update();assert.equal(spec.textContent,'15 mg per vial · 10 vials per box');
+  f.setLabel('500mcg × 5 vials');meta.update();assert.equal(spec.textContent,'500 mcg per vial · 5 vials per box');
+  f.setLabel('Unspecified pack');meta.update();assert.equal(spec.textContent,'Unspecified pack','unrecognized labels never manufacture dosage or count');
+  f.root.vcHomeSelectionPending=true;meta.update();assert.equal(meta.element.querySelector('.vc-product-meta__stock').hidden,true,'pending selection cannot inherit stock');
 });

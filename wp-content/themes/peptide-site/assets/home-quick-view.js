@@ -91,20 +91,39 @@
   function details(root, sku) {
     const summary = root.querySelector('.summary'); if (!summary) return;
     let skuLine = summary.querySelector('.vc-home-quick__sku');
-    if (!skuLine) { skuLine = document.createElement('p'); skuLine.className = 'vc-home-quick__sku'; summary.querySelector('.vc-showcase-quick__details')?.before(skuLine); }
-    skuLine.textContent = sku ? 'SKU ' + sku : ''; skuLine.hidden = !sku;
+    if (skuLine) skuLine.hidden = true;
+    const detailsLink = summary.querySelector('.vc-showcase-quick__details'); if (detailsLink) detailsLink.hidden = true;
     let selected = summary.querySelector('.vc-home-quick__specification');
     if (!selected) { selected = document.createElement('p'); selected.className = 'vc-home-quick__specification'; summary.querySelector(':scope > .price')?.after(selected); }
-    selected.textContent = [...summary.querySelectorAll('.variations select')].map(select => select.value ? select.selectedOptions[0]?.textContent : '').filter(Boolean).join(' / ');
+    const label = [...summary.querySelectorAll('.variations select')].map(select => select.value ? select.selectedOptions[0]?.textContent : '').filter(Boolean).join(' / ');
+    selected.textContent = window.vcProductSpecification?.format(label) || label;
     selected.hidden = !selected.textContent;
   }
   function price(root, markup) {
     const target = root.querySelector('.summary > .price'); if (!target) return;
     // Only server-formatted native variation HTML is accepted here. No client
     // arithmetic, parent range, compare price, or discount is manufactured.
-    if (typeof markup === 'string' && markup) target.innerHTML = markup;
+    if (typeof markup === 'string' && markup) {
+      const html = markup + '<span class="vc-price-sales-unit"> / box</span>';
+      if (target.innerHTML !== html) target.innerHTML = html;
+    }
     else target.textContent = 'Choose a specification to see its price.';
     target.setAttribute('aria-live', 'polite'); target.setAttribute('aria-atomic', 'true');
+  }
+  const selectedAttributes = form => Object.fromEntries([...form.querySelectorAll('.variations select')].map(select => [select.name, select.value]));
+  function matchesSelection(form, variation) {
+    const selected = selectedAttributes(form), expected = variation?.attributes;
+    const keys = Object.keys(selected);
+    // Native lookup may finish after the customer has chosen another dosage.
+    // A response is presentation data only for its complete current selection.
+    return Number.isSafeInteger(Number(variation?.variation_id)) && Number(variation.variation_id) > 0 && expected && keys.length > 0
+      && keys.length === Object.keys(expected).length && keys.every(key => selected[key] !== '' && expected[key] === selected[key]);
+  }
+  function clearSelection(form) {
+    const root = form.closest(homeProduct); if (!root) return;
+    root.vcHomeSelectionPending = true; root.vcHomeImage = null; root.vcHomeSku = '';
+    root.vcHomePromotions = []; root.vcHomePrice = '';
+    price(root, ''); media(root, null); details(root, ''); root.vcExperience?.update();
   }
   function quantity(root) {
     const input = root.querySelector('form.cart input.qty');
@@ -152,9 +171,11 @@
     const toolbarName = toolbar.querySelector('strong');
     if (toolbarName) toolbarName.textContent = root.dataset.vcProductName || 'Product details';
     const link = summary.querySelector('.vc-showcase-quick__details');
+    if (link) link.hidden = true;
     if (link?.tagName === 'A') {
       const button = document.createElement('button'); button.type = 'button'; button.className = link.className;
       button.textContent = 'Explore product details ↓';
+      button.hidden = true;
       button.addEventListener('click', () => moveTo(dialog, content)); link.replaceWith(button);
     }
     if (!content.querySelector(':scope > .vc-product-dialog-heading')) {
@@ -212,6 +233,12 @@
   }
   $(document).on('found_variation.vcHomeQuick', homeProduct + ' .variations_form', function (_, variation) {
     const root = this.closest(homeProduct); if (!root || !variation) return;
+    if (!matchesSelection(this, variation)) {
+      // A direct native listener may already have mirrored the stale response.
+      // Reassert our accepted price instead of allowing the old discount to win.
+      price(root, root.vcHomePrice || ''); root.vcExperience?.update(); return;
+    }
+    root.vcHomeSelectionPending = false;
     root.vcHomeImage = Object.prototype.hasOwnProperty.call(variation, 'vc_home_image') ? variation.vc_home_image : variation.image;
     root.vcHomeSku = variation.sku || '';
     root.vcHomePromotions = variation.vc_home_promotions || [];
@@ -220,14 +247,14 @@
     media(root, root.vcHomeImage); details(root, root.vcHomeSku);
     root.vcExperience?.update();
   });
+  $(document).on('woocommerce_variation_select_change.vcHomeQuick', homeProduct + ' .variations_form', function () { clearSelection(this); });
   $(document).on('reset_data.vcHomeQuick hide_variation.vcHomeQuick', homeProduct + ' .variations_form', function () {
-    const root = this.closest(homeProduct); const defaults = initial(root);
-    root.vcHomeImage = defaults.image; root.vcHomeSku = defaults.sku;
-    root.vcHomePromotions = [];
-    root.vcHomePrice = ''; price(root, '');
-    media(root, defaults.image); details(root, defaults.sku);
-    root.vcExperience?.update();
+    clearSelection(this);
   });
+  document.addEventListener('change', event => {
+    const select = event.target.closest?.(homeProduct + ' .variations select');
+    if (select) clearSelection(select.closest('form'));
+  }, true);
   // The page contains lightweight cards. Fetch one native template when needed,
   // then replay the click so the existing plugin owns opening and every write.
   document.addEventListener('click', event => {
@@ -291,4 +318,7 @@
   document.addEventListener('keydown', event => { if (event.key === 'Escape') cancelPending(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) cancelPending(); });
   window.addEventListener('pagehide', cancelPending);
+  // History restoration shares the same read and validated template cache.
+  // Consumers cancel their own intent without aborting another consumer's read.
+  window.VialCoveHomeQuickView = Object.freeze({loadTemplate});
 })(window.jQuery);

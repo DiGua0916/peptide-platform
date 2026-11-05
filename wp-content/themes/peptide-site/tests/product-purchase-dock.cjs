@@ -22,6 +22,7 @@ function fixture(variable=true){
   }
   const document=Object.assign(new Target(),{hidden:false,createElement:tag=>new Element(tag),createComment:()=>new Element('#comment')});
   const window=new Target();
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../assets/product-dialog-meta.js'),'utf8'),{window});
   class ResizeObserver{constructor(callback){this.callback=callback;this.disconnected=false;observers.push(this);}observe(node){this.node=node;}disconnect(){this.disconnected=true;}}
   vm.runInNewContext(source,{window,document,ResizeObserver,requestAnimationFrame(fn){const id=++nextFrame;frames.set(id,fn);return id;},cancelAnimationFrame(id){frames.delete(id);}});
   const root=new Element('article'),summary=new Element('div'),form=new Element('form'),variation=new Element('div'),native=new Element('div'),qty=new Element('div'),input=new Element('input'),add=new Element('button'),buy=new Element('button'),hidden=new Element('input'),dialog=new Element('dialog');dialog.open=true;
@@ -49,9 +50,9 @@ test('simple product uses one in-form dock and destroy restores nodes, original 
 });
 test('price/spec are actual server text; unchanged updates write no text/hidden state and expired sales clear',()=>{
   const f=fixture(),dock=f.create(f.options),current=f.native.querySelector('.vc-purchase-dock__current'),compare=f.native.querySelector('.vc-purchase-dock__compare'),discount=f.native.querySelector('.vc-purchase-dock__discount');
-  assert.equal(current.textContent,'$55.00');assert.equal(compare.textContent,'$78.00');assert.equal(discount.textContent,'29% off');assert.equal(f.native.querySelector('.vc-purchase-dock__spec').textContent,'20mg × 10 vials');
+  assert.equal(current.textContent,'$55.00 / box');assert.equal(compare.textContent,'$78.00');assert.equal(discount.textContent,'29% off');assert.equal(f.native.querySelector('.vc-purchase-dock__spec').textContent,'20 mg per vial · 10 vials per box');
   const written=f.mutations;dock.update();dock.update();assert.equal(f.mutations,written);
-  delete f.priceFields['.vc-price-compare .woocommerce-Price-amount'];delete f.priceFields['.vc-sale-badge'];f.priceFields['.vc-price-current .woocommerce-Price-amount'].textContent='€61,50';dock.update();assert.equal(current.textContent,'€61,50');assert.equal(compare.hidden,true);assert.equal(discount.hidden,true);assert.equal(discount.textContent,'');
+  delete f.priceFields['.vc-price-compare .woocommerce-Price-amount'];delete f.priceFields['.vc-sale-badge'];f.priceFields['.vc-price-current .woocommerce-Price-amount'].textContent='€61,50';dock.update();assert.equal(current.textContent,'€61,50 / box');assert.equal(compare.hidden,true);assert.equal(discount.hidden,true);assert.equal(discount.textContent,'');
   delete f.priceFields['.vc-price-current .woocommerce-Price-amount'];dock.destroy();
   const cleared=f.create({...f.options,selectedLabel:()=>''});assert.equal(cleared.element.querySelector('.vc-purchase-dock__current').hidden,true);assert.equal(cleared.element.querySelector('.vc-purchase-dock__spec').textContent,'Choose a specification');
 });

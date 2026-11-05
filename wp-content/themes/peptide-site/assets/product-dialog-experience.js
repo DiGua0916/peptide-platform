@@ -84,6 +84,52 @@
       destroy() { disposed = true; cancelAnimationFrame(frame); frame = 0; }
     };
   }
+  function createGalleryPlayback({track,slides,dialog,media,signal,isActive = () => true}) {
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)'), holds = new Set();
+    let timer = 0, disposed = false, inView = typeof IntersectionObserver !== 'function';
+    const available = () => slides.filter(slide => !slide.hidden && !slide.disabled);
+    function stop() { if (timer) clearTimeout(timer); timer = 0; }
+    function canPlay() { return !disposed && !holds.size && inView && !reduced.matches && !document.hidden && dialog.open && isActive() && available().length > 1; }
+    function refresh() {
+      if (disposed) return;
+      if (!canPlay()) { stop(); return; }
+      if (!timer) timer = setTimeout(() => { timer = 0; if (canPlay()) { step(1,false); refresh(); } },6500);
+    }
+    function step(direction, manual = true) {
+      if (disposed || !dialog.open) return;
+      const items = available(); if (items.length < 2) return;
+      const left = track.getBoundingClientRect().left;
+      const current = items.reduce((best,item,index) => Math.abs(item.getBoundingClientRect().left-left) < Math.abs(items[best].getBoundingClientRect().left-left) ? index : best,0);
+      const target = items[(current + direction + items.length) % items.length];
+      track.scrollTo({left:target.getBoundingClientRect().left-left+track.scrollLeft,behavior:reduced.matches?'instant':'smooth'});
+      if (manual) { stop(); refresh(); }
+    }
+    const hold = key => { holds.add(key); refresh(); };
+    const release = key => { holds.delete(key); refresh(); };
+    track.addEventListener('pointerdown',() => hold('pointer'),{passive:true,signal});
+    window.addEventListener('pointerup',() => release('pointer'),{passive:true,signal});
+    window.addEventListener('pointercancel',() => release('pointer'),{passive:true,signal});
+    media.addEventListener('pointerenter',event => { if(event.pointerType !== 'touch')hold('hover'); },{signal});
+    media.addEventListener('pointerleave',() => release('hover'),{signal});
+    media.addEventListener('focusin',() => hold('focus'),{signal});
+    media.addEventListener('focusout',event => { if (!media.contains(event.relatedTarget))release('focus'); },{signal});
+    track.addEventListener('wheel',() => { stop(); refresh(); },{passive:true,signal});
+    track.addEventListener('keydown',() => { stop(); refresh(); },{signal});
+    document.addEventListener('visibilitychange',() => { if(document.hidden)holds.delete('pointer'); refresh(); },{signal});
+    document.addEventListener('close',refresh,{capture:true,signal});
+    window.addEventListener('pagehide',() => hold('page'),{signal});
+    window.addEventListener('pageshow',() => release('page'),{signal});
+    const changed = () => refresh();
+    if (reduced.addEventListener) reduced.addEventListener('change',changed); else reduced.addListener?.(changed);
+    const observer = typeof IntersectionObserver === 'function' ? new IntersectionObserver(entries => { const entry=entries[entries.length-1]; inView = !!entry?.isIntersecting && entry.intersectionRatio >= 0.25; refresh(); },{root:dialog,threshold:0.25}) : null;
+    observer?.observe(track);
+    function destroy() {
+      if (disposed) return; disposed=true; stop(); observer?.disconnect(); signal?.removeEventListener('abort',destroy);
+      if (reduced.removeEventListener) reduced.removeEventListener('change',changed); else reduced.removeListener?.(changed);
+    }
+    signal?.addEventListener('abort',destroy,{once:true}); refresh();
+    return {refresh,destroy};
+  }
   function reportPresentationKey(item, selection, variationId) {
     return JSON.stringify([selection, variationId, item ? [item.id, item.product?.id, item.source_product, item.specification, item.issued_on, item.issuer_name, item.title, item.report_number, item.source_lot, item.file?.mime, item.file?.size_bytes, item.view_url, item.download_url, item.thumbnail_url] : null]);
   }
@@ -157,6 +203,7 @@
     let reports = [], report = null, ticker = null, tickerRevision = null, reportSignature = '';
     const children = createChildDialogs(productId);
     let reportRequest = null, reportReadPromise = null, lastReportRead = 0, lastSelection = '', frame = 0;
+    let reportCursor = {page:0,pages:1,total:null};
     let reportOpenIntent = 0;
     const knownImages = root.vcDialogImages instanceof Map ? root.vcDialogImages : new Map(); root.vcDialogImages=knownImages;
     root.classList.add('vc-product-experience'); dialog.classList.add('vc-product-dialog');
@@ -186,6 +233,7 @@
     productSlide.append(productImg, emptyImage, ribbon, zoom); productSlide.setAttribute('aria-label', 'Enlarge product image');
     track.append(productSlide, reportSlide); media.append(track);
     const caption = node('p', 'vc-dialog-media-caption'); media.append(caption);
+    const gallery = createGalleryPlayback({track,slides:[productSlide,reportSlide],dialog,media,signal,isActive:() => !root.vcHomeSelectionPending && ![...document.querySelectorAll('dialog[open]')].some(layer => layer !== dialog)});
     restore.move(root.querySelector('.vc-dialog-documents'),null);
     const documents = restore.own(node('section', 'vc-dialog-documents')); documents.hidden = true;
     root.append(documents);
@@ -329,12 +377,15 @@
         else if (productImg.hasAttribute(key)) productImg.removeAttribute(key);
       }
       if (url) { knownImages.set(url,{src:url,alt:productImage.alt || productName}); productImg.decoding = 'async'; productImg.alt = productImage.alt || productName; if (productImg.getAttribute('src') !== url) productImg.src = url; }
-      const text = summary.querySelector('.vc-sale-badge')?.textContent || '';
+      // Only the accepted price owns this ribbon. Woo may still have the old
+      // single_variation template mounted elsewhere inside the same summary.
+      const text = !root.vcHomeSelectionPending ? summary.querySelector(':scope > .price .vc-sale-badge')?.textContent || '' : '';
       ribbon.textContent = text.toUpperCase(); ribbon.hidden = !/^\s*\d+(?:[.,]\d+)?%\s*(?:off|dto\.)\s*$/i.test(text);
-      caption.textContent = selectedLabel(); caption.hidden = !caption.textContent;
+      caption.textContent = window.vcProductSpecification?.format(selectedLabel()) || selectedLabel(); caption.hidden = !caption.textContent;
+      gallery.refresh();
     }
     function renderReport() {
-      report = settings.reportGalleryEnabled ? latestReport(reports, productId, selectedLabel()) : null;
+      report = settings.reportGalleryEnabled && !root.vcHomeSelectionPending ? latestReport(reports, productId, selectedLabel()) : null;
       const signature = reportPresentationKey(report, selectedLabel(), root.querySelector('input.variation_id')?.value || '');
       if (signature === reportSignature) return;
       reportSignature = signature;
@@ -342,12 +393,13 @@
       reportSlide.replaceChildren(); reportSlide.hidden = !report || !safeURL(report.thumbnail_url);
       documents.replaceChildren();
       navigation?.refresh();
+      gallery.refresh();
       if (!report) return;
       const name = report.source_product || productName;
       const titleText = name + (report.specification ? ' · ' + report.specification : '');
       if (!reportSlide.hidden) {
         const img = node('img', ''); img.src = safeURL(report.thumbnail_url); img.alt = titleText + ' · Reference COA'; img.loading = 'lazy';
-        img.addEventListener('error',()=>{reportSlide.hidden=true;track.scrollLeft=0;},{once:true});
+        img.addEventListener('error',()=>{reportSlide.hidden=true;track.scrollLeft=0;gallery.refresh();},{once:true});
         reportSlide.append(img, node('span', 'vc-dialog-report-label', 'REFERENCE DOCUMENT'));
         reportSlide.setAttribute('aria-label', 'Open ' + titleText + ' reference report');
       }
@@ -358,22 +410,29 @@
       copy.append(button('vc-dialog-report-open', 'View reference COA ↗', openReport)); documents.append(copy);
       if (safeURL(report.thumbnail_url)) { const art = button('vc-dialog-document-art', '', openReport); const img = node('img', ''); img.src = safeURL(report.thumbnail_url); img.alt = titleText; img.loading = 'lazy'; img.addEventListener('error',()=>art.remove(),{once:true}); art.append(img); documents.prepend(art); }
     }
-    async function readReports() {
-      if (!settings.reportGalleryEnabled || destroyed || reportRequest || document.hidden || !dialog.open) return;
+    async function readReports({resume = false, requested = ''} = {}) {
+      if (!settings.reportGalleryEnabled || destroyed || reportRequest || document.hidden || !dialog.open || root.vcHomeSelectionPending) return;
+      if (resume && reportCursor.page >= reportCursor.pages) return;
       const base = safeURL(window.vcHomeQuickView?.reportApi); if (!base) return;
       const abort = new AbortController(); reportRequest = abort;
       const timer = setTimeout(() => abort.abort(), 15000);
       try {
-        const items = []; let pages = 1, total = null;
-        for (let page = 1; page <= pages; page++) {
+        const items = resume ? [...reports] : []; let pages = resume ? reportCursor.pages : 1, total = resume ? reportCursor.total : null;
+        for (let page = resume ? reportCursor.page + 1 : 1; page <= pages; page++) {
           const url = new URL(base); Object.entries({product_id: productId, sort: 'newest', per_page: 24, page}).forEach(([key,value]) => url.searchParams.set(key,String(value)));
           const response = await fetch(url.href, {credentials:'same-origin',cache:'no-store',signal:abort.signal,headers: window.vcHomeQuickView.wpNonce ? {'X-WP-Nonce':window.vcHomeQuickView.wpNonce} : {}});
           if (!response.ok) throw new Error('Report unavailable'); const data = await response.json();
-          if (!Array.isArray(data.items) || !Number.isSafeInteger(data.total_pages) || data.total_pages > 100 || data.page !== page || (total !== null && total !== data.total)) throw new Error('Invalid report response');
+          if (!Array.isArray(data.items) || data.items.length > 24 || !Number.isSafeInteger(data.total) || data.total < 0 || !Number.isSafeInteger(data.total_pages) || data.total_pages < 0 || data.total_pages > 100 || data.page !== page || (total !== null && total !== data.total)) throw new Error('Invalid report response');
           pages = Math.max(1, data.total_pages); total = data.total; items.push(...data.items);
+          if (items.length > total || (page === pages && items.length !== total)) throw new Error('Invalid report count');
+          if (destroyed || abort.signal.aborted) return;
+          // Publish the newest page immediately. The global newest/date/id order
+          // makes its first matching specification authoritative; older history
+          // is only read if a different selection or a restored URL needs it.
+          reports = [...items]; reportCursor = {page,pages,total}; lastReportRead = Date.now(); renderReport();
+          const enough = requested ? reports.some(item => safeURL(item.view_url) === requested) : latestReport(reports,productId,selectedLabel());
+          if (enough || !selectedLabel() || root.vcHomeSelectionPending || document.hidden || !dialog.open) break;
         }
-        if (items.length !== total || destroyed) return;
-        reports = items; lastReportRead = Date.now(); renderReport();
       } catch (_) { /* A transient read failure cannot manufacture a report or block buying. */ }
       finally {
         clearTimeout(timer); if (reportRequest === abort) reportRequest = null;
@@ -384,7 +443,7 @@
       const url = typeof requestedURL === 'string' && requestedURL ? safeURL(requestedURL) : safeURL(productImage?.src);
       const image = knownImages.get(url); if (!image) return false;
       const box = children.create('vc-product-image-dialog', 'Product image'); const img = node('img', ''); img.src = url; img.alt = image.alt || productName;
-      box.append(img); box.dataset.vcHistoryImageUrl = url; box.showModal();
+      box.append(img); box.dataset.vcHistoryImageUrl = url; box.showModal(); gallery.refresh();
       return true;
     }
     async function openReport(requestedURL) {
@@ -393,7 +452,8 @@
       const requested = typeof requestedURL === 'string' && requestedURL ? safeURL(requestedURL) : '';
       if (typeof requestedURL === 'string' && requestedURL && !requested) return false;
       if (!report || (requested && !reports.some(item=>safeURL(item.view_url)===requested))) {
-        if (!reportRequest) reportReadPromise=readReports();
+        if (reportRequest) await reportReadPromise;
+        if (!reportRequest && (!report || (requested && !reports.some(item=>safeURL(item.view_url)===requested)))) reportReadPromise=readReports({resume:reportCursor.page>0,requested});
         await reportReadPromise;
       }
       if (intent !== reportOpenIntent || destroyed || !dialog.open) return false;
@@ -409,7 +469,7 @@
       box.append(pdf);
       const link = node('a', 'vc-dialog-pdf-download', 'Download reference PDF ↓'); link.href = safeURL(opened.download_url) || safeURL(opened.view_url); box.append(link);
       box.dataset.vcHistoryReportUrl = safeURL(opened.view_url);
-      box.showModal(); const viewer = window.createProductReportViewer({element: pdf}); children.attach(box, viewer); viewer.open({pdf:safeURL(opened.view_url),title:titleText});
+      box.showModal(); gallery.refresh(); const viewer = window.createProductReportViewer({element: pdf}); children.attach(box, viewer); viewer.open({pdf:safeURL(opened.view_url),title:titleText});
       document.dispatchEvent(new CustomEvent('vc:product-report-opened',{detail:{dialog:box,url:safeURL(opened.view_url),productId}}));
       return true;
     }
@@ -440,6 +500,7 @@
       if (destroyed) return;
       renderProduct(); syncSticky(); renderOffers(); navigation?.refresh(); const selection = selectedLabel();
       if (selection !== lastSelection) { track.scrollLeft=0; lastSelection=selection; renderReport(); }
+      if (!report && !root.vcHomeSelectionPending && selection && !reportRequest && reportCursor.page > 0 && reportCursor.page < reportCursor.pages) reportReadPromise=readReports({resume:true});
       ticker?.updateContext(context());
       if (support && settings.whatsappEnabled) {
         const values=context();
@@ -471,7 +532,7 @@
       openReport,
       openImage,
       updateMedia(image) { productImage=image; renderProduct(); },
-      destroy(reason = 'destroy') { if(destroyed)return; destroyed=true; document.dispatchEvent(new CustomEvent('vc:product-experience-disposed',{detail:{root,dialog,reason}})); clearInterval(tickerPoll); reportOpenIntent++; pendingFeedback=null; purchaseReturn?.destroy(); nativeFeedback?.destroy(); window.jQuery?.(document.body).off(feedbackNamespace); lifecycle.abort(); navigation?.destroy(); reportRequest?.abort(); formObserver.disconnect(); cancelAnimationFrame(frame); metaStrip?.destroy(); purchaseDock?.destroy(); ticker?.destroy(); children.destroy(); restore.destroy(); }
+      destroy(reason = 'destroy') { if(destroyed)return; destroyed=true; document.dispatchEvent(new CustomEvent('vc:product-experience-disposed',{detail:{root,dialog,reason}})); clearInterval(tickerPoll); gallery.destroy(); reportOpenIntent++; pendingFeedback=null; purchaseReturn?.destroy(); nativeFeedback?.destroy(); window.jQuery?.(document.body).off(feedbackNamespace); lifecycle.abort(); navigation?.destroy(); reportRequest?.abort(); formObserver.disconnect(); cancelAnimationFrame(frame); metaStrip?.destroy(); purchaseDock?.destroy(); ticker?.destroy(); children.destroy(); restore.destroy(); }
     };
     refresh(); reportReadPromise=readReports(); readTicker(); return api;
   }
