@@ -410,3 +410,9 @@ body.pc-admin-workspace:not(.folded) #adminmenu a.menu-top .wp-menu-name{padding
 body.pc-admin-workspace #wpbody-content :is(h1,h2,h3){overflow-wrap:anywhere}
 body.pc-admin-workspace #wpbody-content .button{box-sizing:border-box;white-space:normal;max-width:100%}
 body.pc-admin-workspace #wpbody-content :is(.description,.howto){color:#525252}
+
+/* Expanded desktop navigation stays inline; inactive sections never fly out on hover. */
+@media (min-width:783px){
+ body.pc-admin-workspace:not(.folded) #adminmenu>li.menu-top:not(.wp-has-current-submenu)>.wp-submenu{display:none!important}
+ body.pc-admin-workspace:not(.folded) #adminmenu>li.wp-has-current-submenu>.wp-submenu{position:static!important;left:auto!important;top:auto!important;display:block;width:100%}
+}
