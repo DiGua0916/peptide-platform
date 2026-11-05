@@ -16,6 +16,13 @@ if ( ($argv[1] ?? '') === '--case' ) {
 	function add_action( $name,$callback,...$args ){$GLOBALS['hooks057'][$name][]=$callback;}
 	function get_option( $key,$default=false ){return $default;}
 	function wp_upload_dir( ...$args ){return array('basedir'=>__DIR__,'error'=>false);}
+	function home_url( $path='' ){return 'https://shop.example'.$path;}
+	function remove_query_arg( $key,$url ){return $url;}
+	function add_query_arg( $key,$value,$url ){return $url.'?'.rawurlencode($key).'='.rawurlencode($value);}
+	// Drive the former duplicate's GeoIP branch through the actual switcher, without
+	// booting WordPress or looking up a visitor. The footer uses the actual provider.
+	eval('namespace PeptideCore; final class Storefront_Translation { public static string $language="en"; public static function enabled(): bool { return true; } public static function public_document_request(): bool { return true; } public static function code(): string { return self::$language; } public static function selected(): array { return array("source"=>"geoip","language"=>self::$language); } }');
+	require $root057.'/wp-content/plugins/peptide-core/includes/class-storefront-translator.php';
 	if($case057!=='no_provider'){
 		if($case057!=='absent'&&$case057!=='custom_maxmind')define('PC_DATA_GEOIP_ATTRIBUTION',match($case057){'wrong_enum'=>'DB-IP','malicious_enum'=>'<script>bad</script>',default=>'db-ip'});
 		if($case057==='custom_maxmind')define('PC_DATA_GEOIP_ATTRIBUTION','maxmind');
@@ -25,12 +32,17 @@ if ( ($argv[1] ?? '') === '--case' ) {
 		ob_start();PeptideCore\Tracking\Country_Provider::render_attribution();$direct057=ob_get_clean();
 		$legacy057=PeptideCore\Tracking\Country_Provider::lookup('127.0.0.1');
 	}else{$credit057=null;$direct057='';$legacy057=null;}
+	$switchers057=array();
+	foreach(array('en','es') as $language057){
+		PeptideCore\Storefront_Translation::$language=$language057;
+		ob_start();PeptideCore\Storefront_Translator::switcher();$switchers057[$language057]=ob_get_clean();
+	}
 	$_GET['page']='pc-data-products';
 	require $root057.'/wp-content/plugins/peptide-core/includes/admin/class-data-pages.php';
 	ob_start();PeptideCore\Admin\Data_Pages::render();$admin057=ob_get_clean();
 	require $root057.'/wp-content/themes/peptide-site/inc/visitor-tracking.php';
 	ob_start();foreach($hooks057['wp_footer']??array() as $callback057){$callback057();}$footer057=ob_get_clean();
-	echo json_encode(array('credit'=>$credit057,'direct'=>$direct057,'admin'=>$admin057,'footer'=>$footer057,'escape'=>$escape057,'legacy'=>$legacy057,'path_leaked'=>str_contains($direct057,__FILE__)||str_contains($admin057,__FILE__)||str_contains($footer057,__FILE__)),JSON_THROW_ON_ERROR);exit;
+	echo json_encode(array('credit'=>$credit057,'direct'=>$direct057,'admin'=>$admin057,'footer'=>$footer057,'switchers'=>$switchers057,'escape'=>$escape057,'legacy'=>$legacy057,'path_leaked'=>str_contains($direct057,__FILE__)||str_contains($admin057,__FILE__)||str_contains($footer057,__FILE__)),JSON_THROW_ON_ERROR);exit;
 }
 $passed057=0;
 $check057=static function(string $label,bool $ok)use(&$passed057):void{if(!$ok)throw new RuntimeException($label);++$passed057;};
@@ -45,6 +57,10 @@ foreach(array('absent','wrong_enum','empty_database','missing_file','active','ma
 	$check057($case057.' actual Data render adds credit after wrapper',$active057?(str_contains($r057['admin'],'pc-data-wrap')&&str_ends_with($r057['admin'],$r057['direct'])):!str_contains($r057['admin'],'IP Geolocation by DB-IP'));
 	$check057($case057.' no configured path or injected markup leaks',!$r057['path_leaked']&&!str_contains($r057['direct'],'<script>'));
 	$check057($case057.' native loopback lookup unchanged',$case057==='no_provider'||$r057['legacy']===array('status'=>'unknown'));
+	foreach($r057['switchers'] as $language057=>$switcher057){
+		$check057($case057.' '.$language057.' actual switcher preserves functional language choices',str_contains($switcher057,'data-pc-language-switcher')&&substr_count($switcher057,'data-pc-language-option=')===2&&str_contains($switcher057,'>English</span>')&&str_contains($switcher057,'>Español</span>'));
+		$check057($case057.' '.$language057.' actual switcher does not add a second attribution',!str_contains($switcher057,'https://db-ip.com')&&!str_contains($switcher057,'pc-language-attribution')&&substr_count($switcher057.$r057['footer'],'href="https://db-ip.com"')===($active057?1:0));
+	}
 	if($active057)$check057('native escaping called for fixed link and label',$r057['escape']['html']>0&&$r057['escape']['url']>0);
 }
 echo json_encode(array('suite'=>'country-resource-attribution-pure','passed'=>$passed057,'failed'=>0,'wordpress_bootstrap'=>false,'network'=>false),JSON_THROW_ON_ERROR)."\n";

@@ -109,7 +109,13 @@ final class Pricing {
 			return '' === $product->get_price() ? null : self::pair( $product );
 		}
 		$best = null;
-		foreach ( $product->get_visible_children() as $child_id ) {
+		$children = $product->get_visible_children();
+		// Prime raw posts/meta together, without caching Woo product objects or prices.
+		// Each child still passes the current native visibility/purchasability checks.
+		if ( $children && function_exists( '_prime_post_caches' ) ) {
+			_prime_post_caches( $children, false, true );
+		}
+		foreach ( $children as $child_id ) {
 			$child = wc_get_product( $child_id );
 			if ( ! $child || '' === $child->get_price() || ! $child->is_purchasable() ) {
 				continue;
