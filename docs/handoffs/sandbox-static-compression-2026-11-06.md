@@ -1,0 +1,11 @@
+# Sandbox static transfer optimization
+
+The live sandbox homepage references 96 distinct same-origin script/style/font URLs. Before this change, static CSS/JS responses ignored `Accept-Encoding: gzip` and transferred uncompressed. Evidence: `D:/Codex/Tasks/2026-11-06/skills-performance-rollout/outputs/static-audit.json`.
+
+Only `/etc/nginx/sites-available/vialcove-sandbox` changed: existing MJS and new CSS/JS/SVG static locations enable gzip, vary, minimum 1024 bytes, level 5 and authenticated-proxy compression. Existing authentication and private/no-store remain. No public/shared caching or production vhost edits. Backup: `/var/lib/vialcove-sandbox/backups/nginx-compression-before-1793898074.conf`. `nginx -t` passed before reload; the script restores the old config on deployment failure.
+
+Verification fetched each of 94 non-font URLs twice (plain and gzip), decompressed and compared complete bytes: all equal. Plain total 1514895 bytes, compressed transfer 386387 bytes, 94 gzip responses. This is about 74% less static transfer, not a page-speed/LCP improvement claim. Fonts were excluded because WOFF2 is already compressed. Homepage HTML already uses gzip independently; the initial verifier's assumption that all dynamic routes should have no encoding was incorrect and corrected to record actual headers, not change the dynamic configuration. Archive JSON retains no-store and original PDF remains uncompressed with private revalidation and Range support.
+
+Post-change checks: external unauthenticated homepage 401, authenticated homepage 200, TLS verification zero; canonical report 206/304/HEAD/cache/unknown/plain route checks passed again. Receipt `outputs/image-protocol-audit.json`. Static HTML image inspection does not include CSS backgrounds, lazy JavaScript insertions or browser-selected source sets and is not a total page-weight measurement.
+
+The remaining completion gate is actual mobile first-load/interaction and PDF rendering evidence. CUA still fails reading the authenticated Chrome sandbox tab at its timeout-options boundary. The user has already logged in; do not request repeated login or bypass browser protections. No production release and no claim of full smoothness acceptance.
