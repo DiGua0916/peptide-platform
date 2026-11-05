@@ -1,9 +1,39 @@
-/* VialCovePeptides VI 2.0 final. Original SVG artwork remains untouched. */
+/* VialCovePeptides VI 2.0. Static faces retain Inter's original glyphs and
+   remove variable-axis selection from checkout/report text on older WebKit.
+   URLs are content addressed; source + OFL + reproducible build stay bundled. */
 @font-face {
   font-family: VialCoveInter;
-  src: url('brand/Inter-Variable.ttf') format('truetype');
+  src: url('brand/VialCoveInter-400-bcbeebd42959.woff2') format('woff2');
   font-style: normal;
-  font-weight: 100 900;
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: VialCoveInter;
+  src: url('brand/VialCoveInter-500-12c34c2ef765.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: VialCoveInter;
+  src: url('brand/VialCoveInter-600-6ae68ea7873e.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: VialCoveInter;
+  src: url('brand/VialCoveInter-700-0249119afdda.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: VialCoveInter;
+  src: url('brand/VialCoveInter-800-3ca8ec5c1f0d.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 800;
   font-display: swap;
 }
 :root {

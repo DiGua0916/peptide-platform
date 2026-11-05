@@ -11,7 +11,7 @@
 .vc-product-dialog .vc-dialog-sticky{padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
 .vc-product-dialog .vc-dialog-gallery :focus-visible{outline-offset:-3px}
 :is(.vc-demo-catalog__filters button,.vc-demo-catalog__bottom button,.vc-dialog-sticky-add,.vc-product-child-close,.vc-dialog-slide,.vc-dialog-report-open){transition:background-color 160ms var(--vc-motion-out),color 160ms var(--vc-motion-out),border-color 160ms var(--vc-motion-out)}
-@media(hover:hover) and (pointer:fine){.vc-product-child-close:hover,.vc-product-pdf .pdf-zoom button:hover{background:#e6f0f2}}
+@media(hover:hover) and (pointer:fine){.vc-product-pdf .pdf-zoom button:hover{background:#e6f0f2}}
 @media(pointer:coarse){.vc-product-pdf .pdf-zoom button{width:44px;height:44px}.vc-home-quick__toolbar button{min-height:44px}}
 dialog.vc-showcase-quick[open],dialog.vc-product-child-dialog[open]{animation:vc-product-arrive 360ms var(--vc-motion-out) backwards}
 dialog.vc-showcase-quick[open]::backdrop,dialog.vc-product-child-dialog[open]::backdrop{animation:vc-layer-shade 300ms var(--vc-motion-out) backwards}
@@ -26,3 +26,15 @@ dialog.vc-showcase-quick[open]::backdrop,dialog.vc-product-child-dialog[open]::b
  dialog.vc-showcase-quick[open],dialog.vc-product-child-dialog[open],dialog.vc-showcase-quick[open]::backdrop,dialog.vc-product-child-dialog[open]::backdrop,:is(.vc-demo-faq-list,.vc-product-dialog-content,.vc-product-dialog-questions) details[open]>:not(summary){animation:none}
  :is(.vc-demo-button,.vc-demo-icon-button,.vc-variation-option,.single_add_to_cart_button,.vc-showcase-quick__buy,.vc-home-quick__quantity-button,.vc-live-cart__quantity button,.vc-live-cart__checkout,.vc-home-quick__toolbar button):active{transform:none}
 }
+
+/* Close remains a real 44px button, without a decorative square or disc.
+   One high-specificity group also covers the native cart's former circle. */
+body.vialcove-site :is(.vc-live-cart .vc-live-cart__heading>button.vc-live-cart__close,.vc-home-quick .vc-showcase-quick__close,.vc-product-child-close,.vc-demo-report-close,.vc-cart-close,[data-vc-demo-close]){
+ background:transparent!important;border:0!important;box-shadow:none!important;border-radius:0!important;
+ min-width:44px;min-height:44px;-webkit-tap-highlight-color:transparent;
+}
+html[data-vc-input=pointer] body.vialcove-site :is(.vc-live-cart__close,.vc-showcase-quick__close,.vc-product-child-close,.vc-demo-report-close,.vc-cart-close,[data-vc-demo-close]):focus{outline:none!important}
+body.vialcove-site :is(.vc-live-cart__close,.vc-showcase-quick__close,.vc-product-child-close,.vc-demo-report-close,.vc-cart-close,[data-vc-demo-close]):focus-visible{outline:2px solid var(--vc-primary-hover,#11657d);outline-offset:2px}
+html[data-vc-input=keyboard] body.vialcove-site :is(.vc-live-cart__close,.vc-showcase-quick__close,.vc-product-child-close,.vc-demo-report-close,.vc-cart-close,[data-vc-demo-close]):focus{outline:2px solid var(--vc-primary-hover,#11657d)!important;outline-offset:2px}
+.vc-home-quick .reset_variations[hidden],.vc-home-quick .vc-showcase-quick__details[hidden],.vc-home-quick .vc-home-quick__sku[hidden]{display:none!important}
+.vc-price-sales-unit{font-size:.5em;font-weight:500;letter-spacing:0;white-space:nowrap}

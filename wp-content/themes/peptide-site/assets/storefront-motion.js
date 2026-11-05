@@ -2,6 +2,15 @@
 (() => {
   'use strict';
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+  // WebKit can retain focus after touch/programmatic restoration. Close icons
+  // get no pointer ring; Tab/keyboard navigation restores a visible focus ring.
+  const pointerMode = () => { document.documentElement.dataset.vcInput = 'pointer'; };
+  document.addEventListener('pointerdown', pointerMode, { capture: true, passive: true });
+  document.addEventListener('touchstart', pointerMode, { capture: true, passive: true });
+  document.addEventListener('mousedown', pointerMode, { capture: true, passive: true });
+  document.addEventListener('keydown', event => {
+    if (!['Shift', 'Control', 'Alt', 'Meta'].includes(event.key)) document.documentElement.dataset.vcInput = 'keyboard';
+  }, true);
   const painted = new WeakMap(), running = new Map();
   function cancel(image) {
     const animation = running.get(image);

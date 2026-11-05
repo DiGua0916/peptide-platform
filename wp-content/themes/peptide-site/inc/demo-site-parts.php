@@ -188,7 +188,7 @@ function vc_demo_site_footer( array $module, string $context ): string {
     if ( $social ) { $out .= '<nav class="vc-demo-social" aria-label="Social links">' . $social . '</nav>'; }
     $out .= '<div class="vc-demo-footer-bottom">';
     if ( '' !== trim( $s['demoNotice'] ?? '' ) ) { $out .= '<p>' . esc_html( $s['demoNotice'] ) . '</p>'; }
-    $out .= '<p>' . esc_html( strtr( $s['copyright'] ?? '', array( '{year}' => wp_date( 'Y' ), '{store_name}' => $s['brandName'] ?? get_bloginfo( 'name' ) ) ) ) . '</p></div></div></footer>';
+    $out .= '<p>' . esc_html( strtr( $s['copyright'] ?? '', array( '{year}' => '2025', '{store_name}' => $s['brandName'] ?? get_bloginfo( 'name' ) ) ) ) . '</p></div></div></footer>';
     // Keep the native optional fixed navigation and its editable sizing contract.
     if ( ! empty( $s['mobileNav'] ) && ! empty( $s['mobileLinks'] ) ) {
         $out .= '<nav class="pc-mobile-fixed' . ( 'tablet' === ( $s['mobileNavSize'] ?? 'phone' ) ? ' includes-tablet' : '' ) . '" style="--pc-mobile-nav-height:' . (int) ( $s['mobileNavHeight'] ?? 0 ) . 'px;--pc-mobile-nav-icon:' . (int) ( $s['mobileNavIconSize'] ?? 20 ) . 'px;--pc-mobile-nav-font:' . (int) ( $s['mobileNavFontSize'] ?? 14 ) . 'px" aria-label="Mobile navigation">';

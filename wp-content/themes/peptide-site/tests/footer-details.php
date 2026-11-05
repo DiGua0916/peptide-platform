@@ -58,7 +58,7 @@ check( str_contains( $html, 'vc-footer-details__columns' ) && str_contains( $htm
 check( ! str_contains( $html, '>Hidden<' ) && ! str_contains( $html, 'Invisible FB' ) && ! str_contains( $html, 'Not configured' ), 'disabled and empty social/navigation links stay hidden' );
 check( 1 === substr_count( $html, 'data-platform="whatsapp"' ) && 1 === substr_count( $html, 'data-platform="instagram"' ), 'only actual accounts render' );
 check( ! str_contains( $html, '>Terms<' ) && ! str_contains( $html, '>Privacy policy<' ), 'unconfigured policies have no fallback home link' );
-check( str_contains( $html, '© 2026 VialCove' ) && str_contains( $html, 'Existing notice' ), 'native copyright placeholders and notice preserved' );
+check( str_contains( $html, '© 2025 VialCove' ) && ! str_contains( $html, '© 2026' ) && str_contains( $html, 'Existing notice' ), 'user-selected fixed copyright year and native notice preserved' );
 $module['items'][] = $row( 'My WA', 'https://wa.me/15551234567' );
 $html = vc_footer_details_render( $module, 'footer' );
 check( 1 === substr_count( $html, 'data-platform="whatsapp"' ) && str_contains( $html, 'My WA' ), 'manual contact wins and deduplicates support message query' );

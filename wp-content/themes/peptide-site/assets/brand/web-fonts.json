@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "family": "VialCoveInter",
+  "source": "Inter-Variable.ttf",
+  "sourceSha256": "29160a80ff49ddcab2c97711247e08b1fab27a484a329ce8b813d820dc559031",
+  "opticalSize": 14,
+  "license": "Inter_OFL.txt",
+  "fonts": [
+    {
+      "weight": 400,
+      "file": "VialCoveInter-400-bcbeebd42959.woff2",
+      "bytes": 113476,
+      "sha256": "bcbeebd42959db2525e77e128008ecd36ea2bdf7f53b3324a7d9fac4dac31fe9"
+    },
+    {
+      "weight": 500,
+      "file": "VialCoveInter-500-12c34c2ef765.woff2",
+      "bytes": 116860,
+      "sha256": "12c34c2ef7655774c8110bef9ff5999766a1e17bfe811fe21598ebc416c13bc2"
+    },
+    {
+      "weight": 600,
+      "file": "VialCoveInter-600-6ae68ea7873e.woff2",
+      "bytes": 116956,
+      "sha256": "6ae68ea7873e9aaa2e25e88b20125b2b591325ef18ffef30813aba0faee0b6b6"
+    },
+    {
+      "weight": 700,
+      "file": "VialCoveInter-700-0249119afdda.woff2",
+      "bytes": 117276,
+      "sha256": "0249119afdda7714751decadfd194a62093d0baa48343f1ff8204f6f40a60cba"
+    },
+    {
+      "weight": 800,
+      "file": "VialCoveInter-800-3ca8ec5c1f0d.woff2",
+      "bytes": 117452,
+      "sha256": "3ca8ec5c1f0d7a76eff9c319b8bae6c70ae36ab873ed9d000fb80d5fe7ed59dd"
+    }
+  ]
+}
