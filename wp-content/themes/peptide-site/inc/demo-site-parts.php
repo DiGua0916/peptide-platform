@@ -1,6 +1,7 @@
 <?php
 /** Optional presentation for the approved homepage, using the existing site-part documents. */
 defined( 'ABSPATH' ) || exit;
+require_once __DIR__ . '/footer-details.php';
 
 add_filter( 'peptide_core_layout_definitions', 'vc_demo_site_parts_definitions', 40 );
 add_filter( 'peptide_core_module_html', 'vc_demo_site_parts_render', 30, 4 );
@@ -36,6 +37,7 @@ function vc_demo_site_parts_assets(): void {
         $deps[] = 'peptide-site-fonts';
     }
     wp_enqueue_style( 'vialcove-demo-site-parts', $url . 'demo-site-parts.css', $deps, (string) filemtime( $path . 'demo-site-parts.css' ) );
+    wp_enqueue_style( 'vc-footer-details', $url . 'footer-details.css', array( 'vialcove-demo-site-parts' ), (string) filemtime( $path . 'footer-details.css' ) );
     wp_enqueue_script( 'vialcove-demo-site-parts', $url . 'demo-site-parts.js', array(), (string) filemtime( $path . 'demo-site-parts.js' ), true );
 }
 
@@ -162,6 +164,7 @@ function vc_demo_site_header( array $s ): string {
 
 function vc_demo_site_footer( array $module, string $context ): string {
     $s = $module['settings'];
+    if ( ! empty( $s['footerExpanded'] ) ) { return vc_footer_details_render( $module, $context ); }
     $styles = vc_demo_site_part_widths( $s ) . '--vc-demo-part-bg:' . vc_demo_site_part_color( $s['footerBackground'] ?? '', '#f7f9f9' ) . ';--vc-demo-part-ink:' . vc_demo_site_part_color( $s['footerText'] ?? '', '#17343e' ) . ';';
     $out = '<footer class="vc-demo-footer" style="' . esc_attr( $styles ) . '"><div class="vc-demo-part-wrap"><div class="vc-demo-footer-top"><a class="vc-demo-brand" href="' . esc_url( home_url( '/' ) ) . '" aria-label="' . esc_attr( ( $s['brandName'] ?? 'VialCove' ) . ' home' ) . '">' . vc_demo_site_part_logo( $s ) . '</a><div class="vc-demo-footer-description">' . wp_kses_post( $s['description'] ?? '' ) . '</div><nav class="vc-demo-footer-nav" aria-label="Footer navigation">' . vc_demo_site_part_nav( vc_demo_site_part_menu( $s, 'footer' ) );
     if ( ! empty( $s['showPolicies'] ) ) {

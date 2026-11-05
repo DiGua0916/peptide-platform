@@ -111,3 +111,16 @@ test('BFCache retains the binding; final pagehide releases nodes and all its lis
  f.window.dispatch('pagehide', {persisted:false}); assert.equal(f.offers.parentNode, f.heading); assert.equal(f.document.count(), 0); assert.equal(f.window.count(), 0); assert.equal(f.dialog.count(), 0);
  f.emit('vc:product-presented'); assert.equal(f.offers.parentNode, f.heading); binding.destroy();
 });
+
+test('device disposal releases only its own offer and disabled devices cannot rebind', () => {
+ const f=fixture(),binding=bindOfferFollow(f.document,f.window);f.emit('vc:product-presented');
+ const other=f.product();f.emit('vc:product-experience-disposed',other.root);
+ assert.equal(f.offers.parentNode,f.toolbar);assert.equal(f.dialog.count('close'),1);
+ f.emit('vc:product-experience-disposed');f.emit('vc:product-experience-disposed');
+ assert.equal(f.offers.parentNode,f.heading);assert.equal(f.dialog.count('close'),0);
+ f.root.classList.remove('vc-product-experience');f.emit('vc:product-presented');
+ assert.equal(f.offers.parentNode,f.heading);assert.equal(f.dialog.count('close'),0);
+ f.root.classList.add('vc-product-experience');f.emit('vc:product-dialog-selection');f.emit('vc:product-presented');
+ assert.equal(f.offers.parentNode,f.toolbar);assert.equal(f.dialog.count('close'),1);
+ binding.destroy();assert.equal(f.document.count(),0);assert.equal(f.offers.parentNode,f.heading);
+});

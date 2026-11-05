@@ -1246,3 +1246,19 @@ HTTP聚合探针已证 catalogSupported=true、quoteHooksSupported=false、unsup
 已修三处确定FE问题：同车刷新先清空推荐、纯图片/比较价请求阻塞报价、活动配置晚到不立即重报价。新调度保留同快照未过期有效quote，与近期装饰解耦，正确代次/过期/停用/后端hidden清理。正常库存/候选/差额/券冲突仍可能合法隐藏，截图会话具体reason未实测。详见[本次交接](frontend-catalog-quick-add-recommendation-2026-11-05.md)。22专项/98联合Node、PHPcard51/template23、语法/diff通过；公共首页HTML读回82真实快捷按钮/脚本。用户Esc停止Computer Use后未再操控窗口，没有实际加购或最新UI截图验收；两peer dirty文件保持未动未stage，未公网部署。最终Git引用另记。
 
 本阶段追加完成：44px圆形SVG关闭入口修复拉伸；首页快捷加购成功下方不再留box added句，失败提示保留。M06结算小计划线原价/红优惠及M01.05页脚圆形联系入口为用户随后追加，独立处理中。保护新增peer storefront/checkout在途文件，functions.php仅本窗口card三个hunk入暂存。最新98联合Node与PHP关闭模板lint通过；实际UI未因Esc停止后重新操作。
+
+### 2026-11-05 · Codex：结算小计原价及原生页脚配置
+
+用户连续追加已完成：Subtotal旁保留原生现价、补同税口径原价与红Save；新checkout-subtotal-savings独立React呈现且不混活动/券。页脚新增原生可编辑分组和圆形官方联系图标，10空URL栏由用户自行配置，当前仅自动真实WhatsApp；错误首页Terms不再输出，版权动态。只正常LayoutAPI发布footer687，其它所有布局/店铺设置hash保持。16金额/17入口/39footer检查及lint/diff通过；实际公共SSR四分组/WA/2026/82quick按钮/圆X和静态资产字节一致。详情[本次交接](frontend-footer-checkout-subtotal-2026-11-05.md)。Esc后未再Computer Use，无最终视觉或真实Add验收，不代表公网部署。peer checkout/storefront在途均未提交。
+
+### 2026-11-05 · Codex：本地整合与原生积木编辑覆盖
+
+用户要求先本地检查后上传，且所有新展示必须配合原生积木，配置依YY层级。12个peer主题文件先逐字节核对既有远端提交、备份并checkpoint799cb03，再正常合入最新main到FE运行目录50e77ad；9f页脚/Subtotal保持，最新去掉商品顶部重复活动保持。新增ui-presentation-settings整理页脚/商品/购物车分组，补商品卡快捷加购与结账小计开关；home685只补一个显式字段，新建checkout展示文档11752，其他布局/店铺设置/原Woo结账页内容不变。129schema/18入口/17小计/39页脚/100Node顶层/6原生开关场景、lint/diff及9HTTP资产逐字一致通过。浏览器绑定仍超时，无新手机截图或实际加购验收；backend实际访客工作台旧runtime已交接owner，未写其目录。本轮GitHub按用户local-first要求暂缓，未公网部署。完整记录与下一步见[本地积木整合交接](frontend-local-native-block-integration-2026-11-05.md)。
+
+### 2026-11-05 · Codex：恢复后修复结账积木预览映射
+
+用户说明连续数字为猫误触，要求继续。只读复核澄清旧backend工作台/对话框不影响当前原生字段/面板/保存发布；实际相关PHP相同，后端新shipping trace在途保持不动。修复新checkout展示文档误指首页：theme admin配置桥和窄REST preview响应适配均指向原生checkout，保留Management Host/nonce/token/权限及草稿owner。小计展示getter仅在合法员工预览读草稿；公开请求仍读发布版本，不替换Woo原生表单或路由。35PHP/17Node新检查、19实际WP只读native场景、6发布开关及原17小计/18入口/129schema/39footer、语法/diff/9HTTP资产通过。原生文档、metadata/lock、Woo Checkout内容hash不变，无真实加购/订单/付款写入。浏览器工具因Windows网址识别失败停止，未绕过，新的手机视觉验收仍pending；遵从local-first继续暂缓GitHub，不公网部署。细节和本机配置入口见本地整合交接及D盘用户说明。
+
+### 2026-11-05 · Codex：接后端联调补齐手机独立设置
+
+后端窗口转来真实复现：原生mobile variant为false，但商品/购物车getter仍发送全局true。现完整接devices.desktop/mobile发布配置，全部商品展示/WA字段、购物车展示/文案分端解析；主开关/visibility作为外层，未覆盖继承、false/空串保留。asset加载聚合只为覆盖跨尺寸，server入口按当前端决定redirect。商品用可逆唯一owner归还原节点后换呈现，polish/offer-follow接dispose清理；车保留单client/rows/writeowner，只换配置和失效旧history/quote。catalogQuickAdd/checkout已有手机逻辑保持，不造推荐/交易接口。50PHP/73route/233actual native设备检查、相关联合178Node（最后产品BFCache补点后19项设备测试另过）、语法/diff/HTTP通过；7份layout/meta哈希不变。新手机视觉仍未验，按用户local-first本机保存检查点，不push/deploy；后端三个shipping trace增量未改。详细字段、文件和测试边界见[设备配置交接](frontend-native-mobile-controls-2026-11-05.md)。

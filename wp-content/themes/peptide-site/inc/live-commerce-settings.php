@@ -5,6 +5,7 @@ defined( 'ABSPATH' ) || exit;
 // A builder settings document, not a replacement for WooCommerce's cart route.
 add_filter( 'peptide_core_template_documents', function ( array $documents ): array {
     if ( ! isset( $documents['cart'] ) ) { $documents['cart'] = __( 'Shopping cart', 'peptide-site' ); }
+    if ( ! isset( $documents['checkout'] ) ) { $documents['checkout'] = __( '结账展示设置', 'peptide-site' ); }
     return $documents;
 }, 125 );
 
@@ -75,52 +76,93 @@ function vc_live_commerce_published_module( array $documents, string $type ): ?a
 
 /** No published settings block means no automatic migration of an existing storefront. */
 function vc_live_product_settings( int $product_id = 0 ): array {
-    $out = array(
-        'enabled' => false, 'mobileDialog' => false, 'reportGalleryEnabled' => true,
+    $defaults = array(
+        'mobileDialog' => false, 'reportGalleryEnabled' => true,
         'stickyPurchaseEnabled' => true, 'broadcastEnabled' => true, 'whatsappEnabled' => false,
         'whatsappNumber' => '', 'whatsappMessage' => '', 'whatsappLabel' => 'A little help',
-        'document' => '', 'visibility' => array( 'desktop' => true, 'mobile' => true ),
     );
+    $out = $defaults + array( 'enabled' => false, 'document' => '', 'visibility' => array( 'desktop' => true, 'mobile' => true ) );
     $documents = $product_id > 0 ? array( 'product_' . $product_id, 'product' ) : array( 'product' );
     $module = vc_live_commerce_published_module( $documents, 'product_experience' );
-    if ( ! $module ) { return $out; }
-    foreach ( array( 'mobileDialog', 'reportGalleryEnabled', 'stickyPurchaseEnabled', 'broadcastEnabled', 'whatsappEnabled' ) as $key ) {
-        $out[ $key ] = (bool) ( $module['settings'][ $key ] ?? $out[ $key ] );
+    $desktop = array_replace( $defaults, (array) ( $module['settings'] ?? array() ) );
+    // Native mobile.settings stores only overrides. Explicit false and an empty
+    // contact field are valid values, not requests to inherit the desktop value.
+    $mobile = array_replace( $desktop, (array) ( $module['mobile']['settings'] ?? array() ) );
+    foreach ( array( 'desktop' => $desktop, 'mobile' => $mobile ) as $device => $settings ) {
+        $resolved = $defaults;
+        foreach ( array( 'mobileDialog', 'reportGalleryEnabled', 'stickyPurchaseEnabled', 'broadcastEnabled', 'whatsappEnabled' ) as $key ) {
+            $resolved[ $key ] = (bool) $settings[ $key ];
+        }
+        foreach ( array( 'whatsappNumber', 'whatsappMessage', 'whatsappLabel' ) as $key ) {
+            $value = $settings[ $key ];
+            $resolved[ $key ] = sanitize_text_field( is_scalar( $value ) ? (string) $value : $defaults[ $key ] );
+        }
+        $number = (string) preg_replace( '/[\s()+.\-]/', '', $resolved['whatsappNumber'] );
+        $resolved['whatsappNumber'] = preg_match( '/^[1-9][0-9]{6,14}$/D', $number ) ? $number : '';
+        $resolved['whatsappEnabled'] = $resolved['whatsappEnabled'] && '' !== $resolved['whatsappNumber'];
+        $resolved['enabled'] = ! empty( $module['enabled'] ) && false !== ( $module['visibility'][ $device ] ?? true ) && $resolved['mobileDialog'];
+        $out['devices'][ $device ] = $resolved;
     }
-    foreach ( array( 'whatsappNumber', 'whatsappMessage', 'whatsappLabel' ) as $key ) {
-        $out[ $key ] = sanitize_text_field( (string) ( $module['settings'][ $key ] ?? $out[ $key ] ) );
-    }
-    $number = (string) preg_replace( '/[\s()+.\-]/', '', $out['whatsappNumber'] );
-    $out['whatsappNumber'] = preg_match( '/^[1-9][0-9]{6,14}$/D', $number ) ? $number : '';
-    $out['whatsappEnabled'] = $out['whatsappEnabled'] && '' !== $out['whatsappNumber'];
-    $out['visibility'] = $module['visibility'];
-    $out['enabled'] = $module['enabled'] && $out['mobileDialog'] && ( $module['visibility']['desktop'] || $module['visibility']['mobile'] );
-    $out['document'] = $module['document'];
+    // Existing top-level fields remain compatible desktop values. Only the
+    // loader gates aggregate both devices so a mobile-only layout can be loaded.
+    $out = array_replace( $out, $out['devices']['desktop'] );
+    $out['enabled'] = $out['devices']['desktop']['enabled'] || $out['devices']['mobile']['enabled'];
+    $out['mobileDialog'] = $out['enabled'];
+    $out['visibility'] = $module['visibility'] ?? $out['visibility'];
+    $out['document'] = $module['document'] ?? '';
     return $out;
 }
 
 function vc_live_cart_settings(): array {
-    $out = array(
-        'enabled' => false, 'cart_experience_enabled' => false,
+    $defaults = array(
+        'cart_experience_enabled' => false,
         'cart_progress_enabled' => true, 'cart_recommendations_enabled' => true, 'cart_recent_enabled' => true,
         'cart_title' => 'Shopping cart', 'cart_continue_label' => 'Continue exploring',
-        'document' => '', 'visibility' => array( 'desktop' => true, 'mobile' => true ),
     );
+    $out = $defaults + array( 'enabled' => false, 'document' => '', 'visibility' => array( 'desktop' => true, 'mobile' => true ) );
     $module = vc_live_commerce_published_module( array( 'cart' ), 'context_content' );
-    if ( ! $module ) { return $out; }
-    foreach ( array( 'cart_experience_enabled', 'cart_progress_enabled', 'cart_recommendations_enabled', 'cart_recent_enabled' ) as $key ) {
-        $out[ $key ] = (bool) ( $module['settings'][ $key ] ?? $out[ $key ] );
+    $desktop = array_replace( $defaults, (array) ( $module['settings'] ?? array() ) );
+    $mobile = array_replace( $desktop, (array) ( $module['mobile']['settings'] ?? array() ) );
+    foreach ( array( 'desktop' => $desktop, 'mobile' => $mobile ) as $device => $settings ) {
+        $resolved = $defaults;
+        foreach ( array( 'cart_experience_enabled', 'cart_progress_enabled', 'cart_recommendations_enabled', 'cart_recent_enabled' ) as $key ) {
+            $resolved[ $key ] = (bool) $settings[ $key ];
+        }
+        foreach ( array( 'cart_title', 'cart_continue_label' ) as $key ) {
+            $value = $settings[ $key ];
+            $resolved[ $key ] = sanitize_text_field( is_scalar( $value ) ? (string) $value : $defaults[ $key ] );
+        }
+        $resolved['enabled'] = ! empty( $module['enabled'] ) && false !== ( $module['visibility'][ $device ] ?? true ) && $resolved['cart_experience_enabled'];
+        $out['devices'][ $device ] = $resolved;
     }
-    foreach ( array( 'cart_title', 'cart_continue_label' ) as $key ) {
-        $out[ $key ] = sanitize_text_field( (string) ( $module['settings'][ $key ] ?? $out[ $key ] ) );
-    }
-    $out['visibility'] = $module['visibility'];
-    $out['enabled'] = $module['enabled'] && $out['cart_experience_enabled'] && ( $module['visibility']['desktop'] || $module['visibility']['mobile'] );
-    $out['document'] = $module['document'];
+    $out = array_replace( $out, $out['devices']['desktop'] );
+    $out['enabled'] = $out['devices']['desktop']['enabled'] || $out['devices']['mobile']['enabled'];
+    $out['cart_experience_enabled'] = $out['enabled'];
+    $out['visibility'] = $module['visibility'] ?? $out['visibility'];
+    $out['document'] = $module['document'] ?? '';
     return $out;
 }
 
 function vc_live_cart_active(): bool { return vc_live_cart_settings()['enabled']; }
+
+/** Presentation only: published settings, or this editor's authorized checkout preview. */
+function vc_checkout_subtotal_settings(): array {
+    $out = array( 'enabled' => true, 'visibility' => array( 'desktop' => true, 'mobile' => true ) );
+    $module = function_exists( 'vc_checkout_preview_module' )
+        ? vc_checkout_preview_module()
+        : vc_live_commerce_published_module( array( 'checkout' ), 'context_content' );
+    // Existing checkouts keep their approved appearance until configured.
+    if ( ! $module ) { return $out; }
+    $desktop = (bool) ( $module['settings']['checkout_subtotal_savings_enabled'] ?? true );
+    $mobile = (bool) ( $module['mobile']['settings']['checkout_subtotal_savings_enabled'] ?? $desktop );
+    $out['visibility'] = array(
+        'desktop' => (bool) ( $module['visibility']['desktop'] ?? true ) && $desktop,
+        'mobile' => (bool) ( $module['visibility']['mobile'] ?? true ) && $mobile,
+    );
+    $out['enabled'] = ! empty( $module['enabled'] )
+        && ( $out['visibility']['desktop'] || $out['visibility']['mobile'] );
+    return $out;
+}
 
 /** Public applied plugin snapshots only. Never include history tokens, private history or drafts. */
 function vc_live_commerce_public_config(): array {

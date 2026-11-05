@@ -16,10 +16,26 @@ function vc_storefront_entry_public_request(): bool {
     return ! ( class_exists( '\PeptideCore\Templates' ) && \PeptideCore\Templates::previewing_id() );
 }
 
-function vc_storefront_entry_enabled( int $product_id = 0 ): bool {
+function vc_storefront_entry_enabled( int $product_id = 0, bool $any_device = false ): bool {
     if ( ! function_exists( 'vc_live_product_settings' ) ) { return false; }
     $settings = vc_live_product_settings( $product_id );
     $device = function_exists( 'wp_is_mobile' ) && wp_is_mobile() ? 'mobile' : 'desktop';
+    // The aggregate flags only decide which assets to load, never this route's device.
+    if ( isset( $settings['devices'] ) && is_array( $settings['devices'] ) ) {
+        if ( $any_device ) {
+            foreach ( array( 'desktop', 'mobile' ) as $candidate ) {
+                $current = $settings['devices'][ $candidate ] ?? null;
+                if ( is_array( $current ) && ! empty( $current['enabled'] ) && ! empty( $current['mobileDialog'] ) ) { return true; }
+            }
+            return false;
+        }
+        $current = $settings['devices'][ $device ] ?? null;
+        return is_array( $current ) && ! empty( $current['enabled'] ) && ! empty( $current['mobileDialog'] );
+    }
+    if ( $any_device ) {
+        return ! empty( $settings['enabled'] ) && ! empty( $settings['mobileDialog'] )
+            && ( false !== ( $settings['visibility']['desktop'] ?? true ) || false !== ( $settings['visibility']['mobile'] ?? true ) );
+    }
     return ! empty( $settings['enabled'] ) && ! empty( $settings['mobileDialog'] ) && false !== ( $settings['visibility'][ $device ] ?? true );
 }
 
@@ -90,7 +106,7 @@ add_action( 'wp_enqueue_scripts', static function (): void {
     if ( ! vc_storefront_entry_public_request() ) { return; }
     $entry = $_GET['vc_product'] ?? '';
     $id = is_string( $entry ) && preg_match( '/\A[1-9][0-9]{0,9}\z/D', $entry ) && (int) $entry <= 2147483647 ? (int) $entry : 0;
-    if ( ! vc_storefront_entry_enabled( $id ) ) { return; }
+    if ( ! vc_storefront_entry_enabled( $id, true ) ) { return; }
     vc_home_quick_view_assets();
     $dependencies = array( 'vc-home-quick-view', 'vc-product-dialog-experience', 'vc-product-dialog-offer-follow' );
     if ( wp_script_is( 'vc-live-commerce-navigation', 'enqueued' ) ) { $dependencies[] = 'vc-live-commerce-navigation'; }

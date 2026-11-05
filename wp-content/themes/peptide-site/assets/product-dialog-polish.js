@@ -62,11 +62,15 @@
    finally { clearTimeout(timeout); if (controller === active) controller = null; }
   }
   function resume(){if(!document.hidden){sync();refresh();}}
-  function destroy() { if (disposed) return; disposed = true; observer.disconnect(); controller?.abort(); clearInterval(timer); clock?.destroy(); host.remove(); dialog.removeEventListener('close',destroy);document.removeEventListener('visibilitychange',resume); owners.delete(dialog); }
+  function destroy() { if (disposed) return; disposed = true; observer.disconnect(); controller?.abort(); clearInterval(timer); clock?.destroy(); host.remove(); dialog.classList.remove('vc-dialog-polished'); dialog.removeEventListener('close',destroy);document.removeEventListener('visibilitychange',resume); owners.delete(dialog); }
   const owner = {root,offers,sync,destroy}; owners.set(dialog,owner); dialog.addEventListener('close',destroy,{once:true});document.addEventListener('visibilitychange',resume);sync();refresh();timer=setInterval(()=>{if(dto?.ends && sourceServerNow+(global.performance.now()-sourceAnchor)/1000>=dto.ends)sync();if(global.performance.now()-lastRead>=60000)refresh();},1000);return owner;
  }
  document.addEventListener('vc:product-presented', event => { bindDialog(event.detail?.root,event.detail?.dialog); });
  document.addEventListener('vc:product-dialog-selection', event => { bindDialog(event.detail?.root,event.detail?.dialog); });
+ document.addEventListener('vc:product-experience-disposed', event => {
+  const previous = owners.get(event.detail?.dialog);
+  if (previous && previous.root === event.detail?.root) previous.destroy();
+ });
 
  let intent = 0, request = null, recovery = null, requestedProductId=idValue(config.productId);
  function panel() {

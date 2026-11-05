@@ -2,15 +2,27 @@
 
 2026-11-05 · 作者 Codex。以当前真实 WordPress/WooCommerce 主题为准，手机优先。此表是装修任务边界，不是要求后端重造一套积木或业务系统。
 
+## 最新整合状态：先本地、积木联动、验证后再上传
+
+用户最新明确：每次同步同时核对原生积木；已有字段沿用，缺少则补建。新配置遵循YY式区域/内容/图片/排版/移动端分层，并保留原生草稿、发布、条目增删排序、手机单独覆盖。不能只改前台、把后台留成不可调整的外壳。
+
+本轮M10已将后端已提交的12个主题在途等价文件保护后正常整合到实际FE运行目录，保留新页脚与Subtotal；M02补catalogQuickAdd字段，M06补checkout_subtotal_savings_enabled与原生checkout展示文档11752，M01/M03/M05的已有设置整理为分组。129schema/18入口/17小计/39页脚/100Node顶层及6个原生设置场景通过；HTTP实际资源与源码一致。详细边界与配置映射见[本地积木整合交接](frontend-local-native-block-integration-2026-11-05.md)。
+
+追加M10.07：修复新结账展示积木的初始预览和实时草稿都误回首页的问题，主题桥继续使用原生结账；有权限的编辑者可预览草稿/手机覆盖，客户只读发布设置。35PHP/17Node/19真实原生只读检查通过；模块保存内容、发布快照和原Woo结账页未改。原生模块字段/面板/发布文件已确认与整合源码相同，旧访客工作台不构成当前前端积木的依赖；后端新增运费追溯在途文件保留owner处理。
+
+追加M10.08/M03/M05设备联动：后端已复现手机原生字段保存但getter/controller忽略；现使用同一发布模块的devices.desktop/mobile完整配置。全部商品开关/WhatsApp、购物车开关/文案分别生效；跨端保留原form/client并销毁旧呈现，旧报告/播报/quote不复活。50PHP/73路由、233实际原生设备场景及相关Node通过；7份布局meta保护不变。细项见[手机独立设置交接](frontend-native-mobile-controls-2026-11-05.md)，其它窗口暂避该交接中的getter、两个controller及polish/offer-follow生命周期文件。
+
+剩余：浏览器连接失败后，Computer Use又因无法可靠识别Windows当前网址而停止，本轮不再操作浏览器，无新的手机视觉验收。最新一轮GitHub上传按用户要求暂缓，不把旧阶段的已推记录当成本轮已推。未公网部署。
+
 ## 最新一轮追加：M02.04快捷加购 / M05.04推荐稳定性
 
 本窗口本轮新增占用：functions.php的vc_product_card可选快捷入口、demo-catalog模板/CSS、demo-home-catalog资源注册、新catalog-quick-add.js、live-cart-experience.js原client的addOne薄包装与推荐调度、live-cart-recommendation.js公开原验证器。用户要求卡片直接加当前图示规格一盒，图片/名称仍能换规格；推荐不能因同车刷新/图片等待而忽有忽无。
 
 上述代码与专项检查已完成：22专项、98联合Node；PHPcard51/template23；公共首页SSR读回82快捷按钮与脚本。推荐严格保留同快照未过期报价，失效/停用/后台hidden仍清理，不强行生成推荐。用户Esc停止Computer Use后已停止窗口操作，最新浏览器点击/画面验收未完成，没有实际改车。详细记录见frontend-catalog-quick-add-recommendation-2026-11-05.md。其它窗口暂避这些共享文件；旧任务状态保留如下。
 
-## 最新追加：关闭入口 / 小计优惠 / 页脚
+## 最新追加完成：关闭入口 / 小计优惠 / 页脚
 
-M05.01购物车关闭按钮已改44px圆形SVG入口，M02.04快捷加购成功下方冗余句已清除，失败文案保留。M06小计原价/现价/红省钱由独立checkout-subtotal-savings资产增量接入，不覆盖peer checkout-polish/cart-pricing在途文件；M01.05页脚完善与圆形联系图标接着做，目前只读核对原生字段与真实配置。仍不做真实购物车或支付写入；用户Esc停止后不再操作Computer Use。
+M05.01购物车关闭按钮已改44px圆形SVG入口，M02.04快捷加购成功下方冗余句已清除，失败文案保留。M06小计原价/现价/红省钱已由独立checkout-subtotal-savings资产接入；M01.05页脚分组和圆形联系图标已完成，原footer687正常API发布并预留10空账号字段。16金额/17入口/39页脚检查通过，SSR已读回四组/WA/2026，全部其它布局与店铺设置hash不变。不覆盖peer checkout-polish/cart-pricing在途文件。仍不做真实购物车或支付写入；用户Esc停止后不再操作Computer Use。
 
 ## 本次任务实际涉及的全部模块（其他窗口先据此避让）
 
@@ -199,6 +211,8 @@ M05.01购物车关闭按钮已改44px圆形SVG入口，M02.04快捷加购成功�
 
 - M10.01 原生模块字段/组件挂载；M10.02草稿/发布与已有模块保护；M10.03同一SKU/活动/图片/报价数据源一致。
 - M10.04公共CSS/JS enqueue依赖、只在目标页面载入；M10.05本机截图、提交、GitHub正常整合；M10.06授权后独立公网发布与数据库装修数据迁移。
+- M10.07设置文档预览与前台映射：checkout展示文档初始地址、实时草稿响应与查看店铺均定位原生结账；预览仅员工/当前文档/原生令牌有效时读草稿。对应`inc/checkout-layout-preview.php`、`assets/checkout-layout-preview.js`及`vc_checkout_subtotal_settings()`接线，本轮已修并通过原生接口只读核对；没有接管交易路由或修改后台插件。
+- M10.08发布模块的设备配置与组件更新：商品/购物车读取同一模块的手机覆盖，缺值继承，false和空串保留；主开关/设备可见性生效，跨断点更新而不复制表单/客户端，不把asset聚合开关当当前端权限。已与原生Renderer逐字段核对。
 
 主要入口：`inc/layout-modules.php`、`inc/demo-home-modules.php`、`inc/live-commerce-settings.php`、`functions.php`。主题UI可新增积木外观，业务设置/导入/存储由后端实现。没有用户授权不直接发布公网。
 

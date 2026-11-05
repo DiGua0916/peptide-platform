@@ -5,7 +5,7 @@ let checks=0,now=1000,mounted=0,clockUpdates=0,destroyed=0,nativeOpens=0,request
 const intervals=new Map(),timeouts=new Map(),observers=[];
 class Target {constructor(){this.events=new Map();}addEventListener(k,cb){if(!this.events.has(k))this.events.set(k,new Set());this.events.get(k).add(cb);}removeEventListener(k,cb){this.events.get(k)?.delete(cb);}dispatchEvent(event){event.target??=this;for(const cb of [...this.events.get(event.type)||[]])cb(event);return true;}}
 class Element extends Target{
- constructor(tag='div'){super();this.tagName=tag.toUpperCase();this.children=[];this.dataset={};this.attributes={};this.parentElement=null;this.hidden=false;this.disabled=false;this.map={};this.classes=new Set();this.classList={contains:x=>this.classes.has(x),add:(...xs)=>xs.forEach(x=>this.classes.add(x))};this._text='';}
+ constructor(tag='div'){super();this.tagName=tag.toUpperCase();this.children=[];this.dataset={};this.attributes={};this.parentElement=null;this.hidden=false;this.disabled=false;this.map={};this.classes=new Set();this.classList={contains:x=>this.classes.has(x),add:(...xs)=>xs.forEach(x=>this.classes.add(x)),remove:(...xs)=>xs.forEach(x=>this.classes.delete(x))};this._text='';}
  set className(s){this.classes=new Set(s.split(/\s+/));}get className(){return [...this.classes].join(' ');}get isConnected(){return true;}
  set textContent(s){this._text=String(s);this.children=[];}get textContent(){return this._text+this.children.map(x=>x.textContent).join('');}
  append(...nodes){for(const node of nodes){node.remove();node.parentElement=this;this.children.push(node);}}prepend(node){node.remove();node.parentElement=this;this.children.unshift(node);}replaceChildren(...nodes){this.children.forEach(x=>x.parentElement=null);this.children=[];this._text='';this.append(...nodes);}
@@ -64,5 +64,17 @@ const api=window.VialCoveStorefrontEntry;function check(name,okay){assert.ok(oka
  fetchReply={ok:true,json:async()=>({version:1,release:'b'.repeat(64)})};await [...window.events.get('pageshow')][0]({persisted:true});check('confirmed release mismatch reloads clean public page once',reloads===1);
  const input={closest:()=>form};document.dispatchEvent({type:'input',isTrusted:true,target:input});await [...window.events.get('pageshow')][0]({persisted:true});check('unsaved form is never automatically reloaded',reloads===1&&recovery.querySelector('p').textContent.includes('newer store'));
  window.location.pathname='/checkout/';await [...window.events.get('pageshow')][0]({persisted:true});check('checkout never reloads from this adapter',reloads===1);
+ document.dispatchEvent({type:'vc:product-experience-disposed',detail:{root:{},dialog,reason:'device'}});
+ check('stale other-product disposal cannot release the current polish owner',dialog.classList.contains('vc-dialog-polished'));
+ const beforeDisposal=destroyed;
+ document.dispatchEvent({type:'vc:product-experience-disposed',detail:{root,dialog,reason:'device'}});
+ check('disabled device releases campaign clock timer and polished class',destroyed===beforeDisposal+1&&intervals.size===0&&!dialog.classList.contains('vc-dialog-polished'));
+ document.dispatchEvent({type:'vc:product-experience-disposed',detail:{root,dialog,reason:'device'}});
+ check('repeated disposal is idempotent',destroyed===beforeDisposal+1);
+ root.classList.remove('vc-product-experience');document.dispatchEvent({type:'vc:product-presented',detail:{root,dialog}});
+ check('native disabled-device presenter cannot revive campaign polish',intervals.size===0&&!dialog.classList.contains('vc-dialog-polished'));
+ root.classList.add('vc-product-experience');document.dispatchEvent({type:'vc:product-dialog-selection',detail:{root,dialog}});
+ check('returning to enabled device has exactly one new campaign owner',intervals.size===1&&dialog.classList.contains('vc-dialog-polished'));
+ document.dispatchEvent({type:'vc:product-experience-disposed',detail:{root,dialog,reason:'destroy'}});
  console.log(JSON.stringify({passed:checks,actualBusinessRequests:0,scope:'actual module with isolated DOM/fetch; no browser/native cart'},null,2));
 })().catch(error=>{console.error(error);process.exitCode=1;});

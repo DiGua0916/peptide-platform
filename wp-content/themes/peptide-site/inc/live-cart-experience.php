@@ -82,3 +82,16 @@ add_action( 'wp_enqueue_scripts', function () {
         'settings' => vc_live_cart_settings(),
     ) );
 }, 90 );
+
+/** Annotate native checkout subtotal without taking over its calculation. */
+add_action( 'wp_enqueue_scripts', static function (): void {
+    if ( ! function_exists( 'is_checkout' ) || ! is_checkout() || is_wc_endpoint_url()
+        || ! wp_script_is( 'vialcove-cart-pricing', 'enqueued' ) ) { return; }
+    $ui = function_exists( 'vc_checkout_subtotal_settings' ) ? vc_checkout_subtotal_settings() : array( 'enabled' => true, 'visibility' => array( 'desktop' => true, 'mobile' => true ) );
+    if ( ! $ui['enabled'] ) { return; }
+    $uri = get_template_directory_uri() . '/assets/';
+    $dir = get_template_directory() . '/assets/';
+    wp_enqueue_style( 'vc-checkout-subtotal-savings', $uri . 'checkout-subtotal-savings.css', array( 'vialcove-cart-pricing', 'vialcove-checkout' ), (string) filemtime( $dir . 'checkout-subtotal-savings.css' ) );
+    wp_enqueue_script( 'vc-checkout-subtotal-savings', $uri . 'checkout-subtotal-savings.js', array( 'vialcove-cart-pricing', 'wp-data', 'wp-element', 'wc-blocks-data-store' ), (string) filemtime( $dir . 'checkout-subtotal-savings.js' ), true );
+    wp_localize_script( 'vc-checkout-subtotal-savings', 'VialCoveCheckoutSubtotalConfig', array( 'visibility' => $ui['visibility'] ) );
+}, 95 );

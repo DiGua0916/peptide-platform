@@ -25,7 +25,7 @@ $uid = 'vc-catalog-' . $m['id'];
  <?php foreach ( $rows as [ $p, $ids, $search ] ) : ?>
   <div class="vc-demo-catalog__item" data-vc-catalog-item data-categories="<?php echo esc_attr( implode( ',', $ids ) ); ?>" data-search="<?php echo esc_attr( $search ); ?>">
    <?php
-   ob_start(); vc_product_card( $p, false, null, '(max-width:767px) 46vw, 24vw', true, true ); $card = ob_get_clean();
+   ob_start(); vc_product_card( $p, false, null, '(max-width:767px) 46vw, 24vw', true, (bool) ( $s['catalogQuickAdd'] ?? true ) ); $card = ob_get_clean();
    $tags = new WP_HTML_Tag_Processor( $card );
    while ( $tags->next_tag( 'A' ) ) {
        if ( ! $tags->get_attribute( 'href' ) ) { continue; }

@@ -15,7 +15,7 @@ namespace {
  function is_front_page(){return $GLOBALS['entry']['front'];}function is_shop(){return $GLOBALS['entry']['shop'];}function is_product(){return $GLOBALS['entry']['product'];}function is_product_category(){return $GLOBALS['entry']['category'];}function is_search(){return $GLOBALS['entry']['search'];}
  function is_cart(){return $GLOBALS['entry']['cart'];}function is_checkout(){return $GLOBALS['entry']['checkout'];}function is_feed(){return $GLOBALS['entry']['feed'];}function is_embed(){return $GLOBALS['entry']['embed'];}function is_trackback(){return $GLOBALS['entry']['trackback'];}function is_preview(){return $GLOBALS['entry']['preview'];}
  function wp_is_mobile(){return $GLOBALS['entry']['mobile'];}function get_query_var($key){return $GLOBALS['entry'][$key]??'';}function get_queried_object_id(){return $GLOBALS['entry']['id'];}function get_search_query($escaped=true){return $GLOBALS['entry']['query'];}
- function vc_live_product_settings($id=0){return array_intersect_key($GLOBALS['entry'],array_flip(['enabled','mobileDialog','visibility']));}function wc_get_product($id){return $id===37?new WC_Product($GLOBALS['entry']['public'],$GLOBALS['entry']['supported']):null;}
+ function vc_live_product_settings($id=0){return array_intersect_key($GLOBALS['entry'],array_flip(['enabled','mobileDialog','visibility','devices']));}function wc_get_product($id){return $id===37?new WC_Product($GLOBALS['entry']['public'],$GLOBALS['entry']['supported']):null;}
  function wp_parse_url($url,$part){return parse_url($url,$part);}function home_url($path){return 'https://store.test'.$path;}function add_query_arg($args,$url){return $url.'?'.http_build_query($args);}function wp_unslash($value){return stripslashes($value);}if(!function_exists('mb_substr')){function mb_substr($s,$a,$b){return substr($s,$a,$b);}}
  function add_action($hook,$callback,$priority=10){$GLOBALS['hooks'][$hook][$priority]=$callback;}function get_template_directory(){return dirname(__DIR__);}function update_option(...$args){$GLOBALS['writes']++;throw new \RuntimeException('Forbidden write');}
  require dirname(__DIR__).'/inc/storefront-entry.php';
@@ -33,6 +33,15 @@ namespace {
  foreach(['rest_route','wc-ajax','wc-api','add-to-cart','remove_item','undo_item','quantity','action','key','order_key','_wpnonce','_ajax_nonce','csrfToken','signature','pc_payment_return','pc_panapay_return','payment-return','preview','pc_template_preview','customize_theme','redirect_to']as$key){reset_entry(['product'=>true]);$_GET=[$key=>'test'];check_entry('signed/action query exclusion '.$key,vc_storefront_entry_destination()==='');}
  foreach([['public'=>false],['supported'=>false],['enabled'=>false],['mobileDialog'=>false],['visibility'=>['desktop'=>false,'mobile'=>true]],['id'=>99]]as$change){reset_entry(array_replace(['product'=>true],$change));check_entry('disabled/private/unavailable product stays native',vc_storefront_entry_destination()==='');}
  reset_entry(['product'=>true,'mobile'=>true,'visibility'=>['desktop'=>true,'mobile'=>false]]);check_entry('disabled current mobile dialog stays native',vc_storefront_entry_destination()==='');
+ $devices=['desktop'=>['enabled'=>false,'mobileDialog'=>false],'mobile'=>['enabled'=>true,'mobileDialog'=>true]];
+ reset_entry(['product'=>true,'devices'=>$devices]);check_entry('aggregate enabled does not redirect disabled desktop',vc_storefront_entry_destination()==='');
+ check_entry('mobile-only settings still load cross-device presentation assets',vc_storefront_entry_enabled(37,true));
+ reset_entry(['product'=>true,'mobile'=>true,'devices'=>$devices]);check_entry('mobile-only native dialog can redirect on mobile',vc_storefront_entry_destination()!=='');
+ $devices=['desktop'=>['enabled'=>true,'mobileDialog'=>true],'mobile'=>['enabled'=>false,'mobileDialog'=>true]];
+ reset_entry(['product'=>true,'mobile'=>true,'devices'=>$devices]);check_entry('device visibility wins over aggregate loader flags',vc_storefront_entry_destination()==='');
+ reset_entry(['product'=>true,'devices'=>$devices]);check_entry('desktop device remains available',vc_storefront_entry_destination()!=='');
+ reset_entry(['product'=>true,'devices'=>[]]);check_entry('incomplete device contract cannot borrow aggregate permissions',vc_storefront_entry_destination()==='');
+ check_entry('incomplete device contract does not load experience assets',!vc_storefront_entry_enabled(37,true));
  reset_entry(['shop'=>true]);$_GET=['pc_lang'=>['es'],'pc_lang_auto'=>'invalid'];$url=vc_storefront_entry_destination();check_entry('invalid language is not coerced',!str_contains($url,'pc_lang'));
  check_entry('source release is stable public digest',preg_match('/\A[a-f0-9]{64}\z/',vc_storefront_entry_release())===1&&vc_storefront_entry_release()===vc_storefront_entry_release());
  check_entry('no actual business writes',0===$GLOBALS['writes']);

@@ -2,7 +2,7 @@
 (function (global) {
  'use strict';
  function mountOfferFollow(root, dialog) {
-  if (!root || !dialog || !dialog.contains(root)) return null;
+  if (!root || !dialog || !dialog.contains(root) || !root.classList.contains('vc-product-experience')) return null;
   const heading = root.querySelector('.vc-dialog-heading');
   const offers = root.querySelector('.vc-dialog-offers');
   const toolbar = dialog.querySelector(':scope > .vc-home-quick__toolbar');
@@ -41,17 +41,23 @@
    owner.release = release; owners.set(dialog,owner); active.add(owner);
    dialog.addEventListener('close',release,{once:true});
   };
+  const onExperienceDisposed = event => {
+   const owner = owners.get(event.detail?.dialog);
+   if (owner && owner.root === event.detail?.root) owner.release();
+  };
   const destroy = () => {
    if (disposed) return;
    disposed = true;
    document.removeEventListener('vc:product-dialog-selection',onPresented);
    document.removeEventListener('vc:product-presented',onPresented);
+   document.removeEventListener('vc:product-experience-disposed',onExperienceDisposed);
    window.removeEventListener('pagehide',onHide);
    [...active].forEach(owner => owner.release());
   };
   const onHide = event => { if (!event.persisted) destroy(); };
   document.addEventListener('vc:product-dialog-selection',onPresented);
   document.addEventListener('vc:product-presented',onPresented);
+  document.addEventListener('vc:product-experience-disposed',onExperienceDisposed);
   window.addEventListener('pagehide',onHide);
   return {destroy};
  }
