@@ -73,9 +73,19 @@
 		root.innerHTML = '<div class="notice notice-error inline"><p>' + esc( fmt( S.error, ( err && err.message ) || err ) ) + '</p></div>';
 	}
 
-	// ---------- 实时访客 ----------
+	var timezoneNote = document.createElement('p'); timezoneNote.className = 'pc-trk-timezone';
+    timezoneNote.textContent = '时间显示：' + (zoned ? cfg.timezone + '（店铺时区）' : '浏览器本地时区');
+    if (root.insertAdjacentElement) root.insertAdjacentElement('beforebegin',timezoneNote);
 
-	function renderLive( res ) {
+    // ---------- 实时访客 ----------
+
+	function applyLiveHTML( html ) {
+        var opened=[];
+        root.querySelectorAll('tr[data-live-visitor]').forEach(function(row){row.querySelectorAll('details').forEach(function(detail,index){if(detail.open)opened.push([row.dataset.liveVisitor,index]);});});
+        root.innerHTML=html;
+        opened.forEach(function(item){var row=root.querySelector('tr[data-live-visitor="'+item[0]+'"]');var detail=row && row.querySelectorAll('details')[item[1]];if(detail)detail.open=true;});
+    }
+    function renderLive( res ) {
 		var list = res.visitors || [];
 		var count = { active: 0, idle: 0, away: 0 };
 		list.forEach( function ( v ) {
@@ -85,13 +95,13 @@
 			return '<div class="pc-trk-card"><span>' + dot( k ) + '</span><b>' + count[ k ] + '</b></div>';
 		} ).join( '' ) + '</div>';
 		if ( ! list.length ) {
-			root.innerHTML = html + '<p class="pc-trk-empty">' + esc( S.noVisitors ) + '</p>';
+			applyLiveHTML( html + '<p class="pc-trk-empty">' + esc( S.noVisitors ) + '</p>' );
 			return;
 		}
 		html += '<table class="widefat striped pc-trk-table"><thead><tr><th>' + esc( S.visitor ) + '</th><th>' + esc( S.tabs ) + '</th><th>' + esc( S.stage ) + '</th><th>' + esc( S.cart ) + '</th><th>' + esc( S.visitStart ) + '</th><th>' + esc( S.lastSignal ) + '</th></tr></thead><tbody>';
 		list.forEach( function ( v ) {
 			var who = v.visitor;
-			html += '<tr><td><div>' + dot( v.status ) + '</div><a class="pc-visitor-detail-link" style="text-decoration:underline;text-underline-offset:3px" aria-label="查看客户完整访问记录" href="' + esc( cfg.liveUrl + '&visitor=' + who.id ) + '"><strong>' + esc( who.label ) + '</strong></a>' + '<div class="pc-trk-sub">' + esc( ( S[ who.device ] || who.device ) + ' · ' + who.browser + ' · ' + S.visits + ' ' + who.visits ) + '</div></td><td>';
+			html += '<tr data-live-visitor="' + esc( who.id ) + '"><td><div>' + dot( v.status ) + '</div><a class="pc-visitor-detail-link" style="text-decoration:underline;text-underline-offset:3px" aria-label="查看客户完整访问记录" href="' + esc( cfg.liveUrl + '&visitor=' + who.id ) + '"><strong>' + esc( who.label ) + '</strong></a>' + '<div class="pc-trk-sub">' + esc( ( S[ who.device ] || who.device ) + ' · ' + who.browser + ' · ' + S.visits + ' ' + who.visits ) + '</div></td><td>';
 			html += '<details class="pc-trk-tab-list"><summary>' + esc( '查看 ' + v.tabs.length + ' 个页面状态' ) + '</summary>';
 			v.tabs.forEach( function ( t ) {
 				html += '<div class="pc-trk-tab"><span class="pc-trk-tabid">' + esc( t.tab ) + '</span> ' + dot( t.status ) + ' ' + pageText( t ) + videoText( t.video ) + '</div>';
@@ -230,16 +240,25 @@
 
 	// 时间线分页：心跳在服务器端过滤，“加载更多”接着往后翻，不会漏掉末尾的事件。
 	var timelineToken = 0;
-	function openTimeline( box, id ) {
-		var token = ++timelineToken;
+	function openTimeline( box, id, quiet ) {
+		if ( quiet && box.dataset.loading === 'true' ) return;
+        var token = quiet ? timelineToken : ++timelineToken;
+        box.dataset.visitId = String(id); box.dataset.loading = 'true';
 		var path = function ( cursor ) {
 			return '/peptide/v1/track/admin/visits/' + id + '?limit=50&order=desc&heartbeats=' + ( hideHeartbeats ? '0' : '1' ) + ( cursor ? '&cursor=' + encodeURIComponent( cursor ) : '' );
 		};
-		box.innerHTML = '<p>' + esc( S.loading ) + '</p>';
+		if ( ! quiet ) box.innerHTML = '<p>' + esc( S.loading ) + '</p>';
 		load( path( null ) ).then( function ( t ) {
 			if ( token !== timelineToken ) {
 				return;
 			}
+			if ( quiet ) {
+                var region=box.querySelector('.pc-lifecycle-scroll');
+                if ((region && region.scrollTop>7) || box.dataset.loadedOlder==='true' || box.querySelector('details[open]') || box.contains(document.activeElement)) {
+                    document.dispatchEvent(new CustomEvent('pc:timeline-pending'));return;
+                }
+            }
+            box.dataset.visitId = String( id ); box.dataset.latestId = String( ( t.events[0] || {} ).id || 0 ); box.dataset.loadedOlder = 'false'; box.dataset.heartbeats = hideHeartbeats ? '0' : '1';
 			box.innerHTML = '<h2>' + esc( S.timeline ) + ' · ' + esc( clock( t.visit.start_ms, true ) ) + '</h2>' +
 				'<p class="pc-timeline-order">最新动作在上 · 继续加载更早记录</p><p class="pc-lifecycle-mobile-hint">左右滑动查看页面及行为详情</p><label class="pc-trk-hb"><input type="checkbox"' + ( hideHeartbeats ? ' checked' : '' ) + '> ' + esc( S.hideHeartbeats ) + '</label>' +
 				'<table class="widefat striped pc-trk-table pc-trk-timeline"><thead><tr><th>' + esc( S.time ) + '</th><th>' + esc( S.tab ) + '</th><th>' + esc( S.event ) + '</th><th>' + esc( S.page ) + '</th><th>' + esc( S.details ) + '</th></tr></thead><tbody>' + t.events.map( eventRow ).join( '' ) + '</tbody></table>' +
@@ -255,11 +274,13 @@
 				if ( ! b || ! cursor ) {
 					return;
 				}
-				b.disabled = true;
+				box.dataset.loadedOlder = 'true';
+                b.disabled = true;
 				load( path( cursor ) ).then( function ( next ) {
 					if ( token !== timelineToken ) {
 						return;
 					}
+					box.dataset.loadedOlder = 'true';
 					box.querySelector( '.pc-trk-timeline tbody' ).insertAdjacentHTML( 'beforeend', next.events.map( eventRow ).join( '' ) );
 					cursor = next.next_cursor;
 					button();
@@ -272,10 +293,10 @@
 				openTimeline( box, id );
 			} );
 		} ).catch( function ( err ) {
-			if ( token === timelineToken ) {
+			if ( token === timelineToken && !quiet ) {
 				box.innerHTML = '<p>' + esc( fmt( S.error, ( err && err.message ) || err ) ) + '</p>';
 			}
-		} );
+		} ).finally(function(){if(token===timelineToken && box.dataset.visitId===String(id))box.dataset.loading='false';});
 	}
 
 	function visitRow( s ) {
@@ -285,7 +306,7 @@
 	function visitor() {
 		load( '/peptide/v1/track/admin/visitors/' + cfg.visitor ).then( function ( res ) {
 			var v = res.visitor;
-			var html = '<p><a href="' + esc( cfg.liveUrl ) + '">' + esc( S.back ) + '</a> · <a href="' + esc( cfg.archiveUrl ) + '">' + esc( S.archive ) + '</a></p>';
+			var html = '<p class="pc-trk-backlinks"><a href="' + esc( cfg.liveUrl ) + '">' + esc( S.back ) + '</a><a href="' + esc( cfg.archiveUrl ) + '">' + esc( S.archive ) + '</a></p>';
 			html += '<div class="pc-trk-cards"><div class="pc-trk-card"><span>' + esc( S.visitor ) + '</span><b>' + esc( v.label ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.status ) + '</span><b>' + dot( res.presence ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.account ) + '</span><b>' + esc( v.user_id ? v.email : S.guest ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.device ) + '</span><b>' + esc( ( S[ v.device ] || v.device ) + ' · ' + v.browser ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.firstSeen ) + '</span><b>' + esc( clock( v.first_ms, true ) ).replace( ' ', '<br>' ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.visits ) + '</span><b>' + esc( v.visits ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.cart ) + '</span><b>' + cartCell( v, res.cart ) + '</b></div></div>';
 			if ( res.others.length ) {
 				html += '<p>' + esc( S.otherDevices ) + ': ' + res.others.map( function ( o ) {
@@ -306,6 +327,22 @@
             } );
 			var box = document.getElementById( 'pc-trk-timeline' );
 			var list = root.querySelector( '.pc-trk-visits' );
+            if (document.addEventListener) {
+                document.addEventListener('pc:timeline-refresh',function(event){if(box.dataset.visitId)openTimeline(box,Number(box.dataset.visitId),!(event.detail && event.detail.force));});
+                document.addEventListener('pc:visitor-snapshot',function(event){
+                    var data=event.detail;if(!data||!Array.isArray(data.visits))return;
+                    data.visits.slice().reverse().forEach(function(visit){
+                        var old=list.querySelector('tr[data-visit="'+Number(visit.id)+'"]');
+                        if(old && old.contains(document.activeElement))return;
+                        var holder=document.createElement('tbody');holder.innerHTML=visitRow(visit);var row=holder.firstElementChild;
+                        if(old){row.classList.toggle('is-selected',old.classList.contains('is-selected'));if(old.innerHTML!==row.innerHTML)old.replaceWith(row);}
+                        else list.querySelector('tbody').prepend(row);
+                    });
+                    var cards=root.querySelectorAll('.pc-trk-card b');
+                    if(cards[1])cards[1].innerHTML=dot(data.presence);
+                    if(cards[5])cards[5].textContent=data.visitor.visits;
+                });
+            }
 			var open = function ( id ) {
 				list.querySelectorAll( 'tr' ).forEach( function ( tr ) {
 					tr.classList.toggle( 'is-selected', tr.getAttribute( 'data-visit' ) === String( id ) );

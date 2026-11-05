@@ -62,6 +62,7 @@ final class Tracking_Page {
 		wp_enqueue_style( 'peptide-core-tracking-insights', $url . 'tracking-insights.css', array( 'peptide-core-tracking-admin' ), $ver( 'tracking-insights.css' ) );
 		wp_enqueue_script( 'peptide-core-tracking-insights', $url . 'tracking-insights.js', array( 'wp-api-fetch', 'peptide-core-tracking-admin' ), $ver( 'tracking-insights.js' ), true );
 		wp_enqueue_script( 'peptide-core-tracking-admin', $url . 'tracking-admin.js', array( 'wp-api-fetch', 'peptide-core-visitor-cart-adapter' ), $ver( 'tracking-admin.js' ), array( 'in_footer' => true ) );
+		wp_enqueue_script( 'peptide-core-tracking-refresh', $url . 'tracking-refresh.js', array( 'peptide-core-tracking-admin' ), $ver( 'tracking-refresh.js' ), true );
 		wp_add_inline_script(
 			'peptide-core-tracking-admin',
 			'window.pcTrackingAdmin = ' . wp_json_encode(

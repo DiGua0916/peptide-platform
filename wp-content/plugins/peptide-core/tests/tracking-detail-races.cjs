@@ -1,0 +1,24 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const {JSDOM}=require(path.join(process.env.HQ_NAV_MODEL_DEPS||'D:/Codex/Tasks/2026-11-03/hq-navigation/work/model-deps','node_modules/jsdom'));
+const source=fs.readFileSync(path.join(__dirname,'../assets/tracking-admin.js'),'utf8');const flush=()=>new Promise(r=>setImmediate(r));let passed=0;const check=(n,v)=>{assert.ok(v,n);passed++;};
+(async()=>{
+ const d=new JSDOM('<div id="pc-trk-app"></div>',{runScripts:'outside-only',pretendToBeVisual:true}),w=d.window,calls=[];
+ const strings=new Proxy({types:{page_view:'Viewed'},pageTypes:{home:'Home'},stages:{0:'Visited'}},{get:(o,k)=>o[k]||String(k)});
+ w.pcTrackingAdmin={strings,view:'visitor',visitor:1,visit:1,liveUrl:'/live',archiveUrl:'/archive'};
+ w.wp={apiFetch:({path})=>new Promise((resolve,reject)=>calls.push({path,resolve,reject}))};w.eval(source);
+ const visits=[1,2].map(id=>({id,start_ms:id*10000,last_ms:30000,pageviews:1,stage:0,landing:'/'}));
+ calls[0].resolve({visitor:{label:'Fixture',first_ms:10000,device:'desktop',browser:'Other',visits:2},presence:'active',others:[],visits,cart:null,next_cursor:null});await flush();
+ const event=id=>({id,at_ms:10000,type:'page_view',source:'client',path:'/',page_type:'home',data:{}}),reply=(id,next=null)=>({visit:{start_ms:10000},events:[event(id)],next_cursor:next});
+ calls[1].resolve(reply(1));await flush();const box=w.document.getElementById('pc-trk-timeline');let notices=0;w.document.addEventListener('pc:timeline-pending',()=>notices++);
+ w.document.dispatchEvent(new w.CustomEvent('pc:timeline-refresh'));check('quiet fetch marks loading',box.dataset.loading==='true');
+ const reading=w.document.createElement('details');reading.open=true;reading.textContent='reading';box.append(reading);calls[2].resolve(reply(2));await flush();
+ check('interaction during fetch preserves detail DOM',reading.isConnected);check('interaction queues update notice',notices===1&&box.dataset.latestId==='1');reading.remove();
+ w.document.querySelector('tr[data-visit="2"]').click();check('selection registers target before response',box.dataset.visitId==='2'&&box.dataset.loading==='true');
+ w.document.dispatchEvent(new w.CustomEvent('pc:timeline-refresh'));check('quiet request cannot steal loading selection',calls.length===4);
+ calls[3].resolve(reply(3,'100:3'));await flush();check('selected response accepted',box.dataset.visitId==='2'&&box.dataset.latestId==='3');
+ w.document.dispatchEvent(new w.CustomEvent('pc:timeline-refresh'));box.querySelector('.pc-trk-more button').click();check('pagination marks reading immediately',box.dataset.loadedOlder==='true');
+ calls[4].resolve(reply(4));await flush();check('quiet response does not overwrite pending older page',box.dataset.latestId==='3');
+ calls[5].resolve({events:[event(2)],next_cursor:null});await flush();check('older page remains accepted during quiet request',box.querySelectorAll('tbody tr').length===2);
+ w.document.dispatchEvent(new w.CustomEvent('pc:timeline-refresh',{detail:{force:true}}));check('explicit update resets protected old-page state',box.textContent.includes('loading'));calls[6].resolve(reply(5));await flush();check('explicit update reaches newest page',box.dataset.latestId==='5'&&box.dataset.loadedOlder==='false');
+ d.window.close();console.log(JSON.stringify({passed,failed:0}));
+})().catch(e=>{console.error(e);process.exitCode=1;});
