@@ -453,6 +453,22 @@
       const data = cleanData(type, event.detail?.data);
       if (data) emit(type, data);
     });
+    // Stable module/product references only: no labels, destinations, input or form values.
+    listen(document, 'click', event => {
+      if (!event.isTrusted || event.button !== 0 || window.navigator?.globalPrivacyControl === true) return;
+      const control = event.target.closest?.('a,button,summary,[role="button"]');
+      if (!control || control.disabled || control.getAttribute('aria-disabled') === 'true') return;
+      const module = control.closest('[data-module]');
+      if (module && /^[a-zA-Z0-9_-]{1,60}$/.test(module.id) && /^[a-zA-Z0-9_-]{1,40}$/.test(module.dataset.module || '')) {
+        emit('module_click', {module_id:module.id,module_type:module.dataset.module});
+      } else {
+        const fixed = control.closest('[data-pc-first-order-offer]') ? 'first-order-offer' : control.closest('header') ? 'header' : control.closest('footer') ? 'footer' : null;
+        if (fixed) emit('module_click', {module_id:fixed,module_type:fixed});
+      }
+      const card = control.closest('[data-vc-home-product],[data-vc-quick-open],[data-product_id],[data-product-id],[data-vc-product-id]');
+      const product = integer(card?.dataset.vcHomeProduct || card?.dataset.vcQuickOpen || card?.dataset.product_id || card?.dataset.productId || card?.dataset.vcProductId);
+      if (product) emit('product_click', {product_id:product});
+    }, {capture:true});
     const attempts = new WeakMap();
     const addAttempt = (form, button) => {
       const target = form || button;

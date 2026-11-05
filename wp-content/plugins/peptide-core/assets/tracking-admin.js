@@ -92,9 +92,11 @@
 		list.forEach( function ( v ) {
 			var who = v.visitor;
 			html += '<tr><td><div>' + dot( v.status ) + '</div><a href="' + esc( cfg.liveUrl + '&visitor=' + who.id ) + '"><strong>' + esc( who.label ) + '</strong></a>' + '<div class="pc-trk-sub">' + esc( ( S[ who.device ] || who.device ) + ' · ' + who.browser + ' · ' + S.visits + ' ' + who.visits ) + '</div></td><td>';
+			html += '<details class="pc-trk-tab-list"><summary>' + esc( '查看 ' + v.tabs.length + ' 个页面状态' ) + '</summary>';
 			v.tabs.forEach( function ( t ) {
 				html += '<div class="pc-trk-tab"><span class="pc-trk-tabid">' + esc( t.tab ) + '</span> ' + dot( t.status ) + ' ' + pageText( t ) + videoText( t.video ) + '</div>';
 			} );
+			html += '</details>';
 			var visit = v.visit;
 			html += '</td><td>' + ( visit ? esc( S.stages[ visit.stage ] ) + ( visit.order_url ? ' <a href="' + esc( visit.order_url ) + '">#' + esc( visit.order_id ) + '</a>' : '' ) : '—' ) + '</td>';
 			html += '<td>' + cartCell( who, v.cart ) + '</td>';
@@ -129,21 +131,38 @@
 	}
 
 	function live() {
-		var tick = function () {
-			load( '/peptide/v1/track/admin/live' ).then( renderLive ).catch( fail );
-		};
-		tick();
-		// 页面在后台时暂停自动刷新，切回来时立刻刷新一次。
-		setInterval( function () {
-			if ( ! document.hidden ) {
-				tick();
-			}
-		}, cfg.refreshMs || 5000 );
-		document.addEventListener( 'visibilitychange', function () {
-			if ( ! document.hidden ) {
-				tick();
-			}
-		} );
+        var controls = document.createElement('div'); controls.className = 'pc-trk-live-tools';
+        controls.innerHTML = '<label>查找客户<input type="search" name="visitor_search" placeholder="访客编号、设备或页面…" autocomplete="off"></label><label>在线状态<select name="visitor_status"><option value="">全部状态</option><option value="active">活跃</option><option value="idle">空闲</option><option value="away">暂离</option></select></label><button class="button" type="button" aria-pressed="false">暂停刷新</button><span role="status" aria-live="polite"></span>';
+        root.insertAdjacentElement('beforebegin',controls);
+        var search = controls.querySelector('input'), filter = controls.querySelector('select'), pause = controls.querySelector('button'), status = controls.querySelector('[role="status"]');
+        var cached = null, paused = false, pending = false, controller = null, stopped = false;
+        function paint() {
+            if (!cached) return;
+            var q = search.value.trim().toLowerCase();
+            var rows = cached.visitors.filter(function(item) {
+                if (filter.value && item.status !== filter.value) return false;
+                var text = [item.visitor.id,item.visitor.label,item.visitor.device,item.visitor.browser].concat(item.tabs.map(function(tab){return tab.path;})).join(' ').toLowerCase();
+                return !q || text.indexOf(q) !== -1;
+            });
+            renderLive(Object.assign({},cached,{visitors:rows}));
+            status.textContent = (paused ? '已暂停 · ' : '') + '显示 ' + rows.length + ' 位访客';
+        }
+        function tick() {
+            if (pending || paused || stopped || document.hidden) return;
+            pending = true; controller = new AbortController(); var current = controller;
+            var timeout = setTimeout(function(){current.abort();},15000);
+            wp.apiFetch({path:'/peptide/v1/track/admin/live',signal:current.signal}).then(function(data){
+                if (stopped || paused) return;
+                cached = data; paint();
+            }).catch(function(){if (!stopped && !paused) status.textContent='更新失败，当前列表已保留，下次自动重试。';}).finally(function(){clearTimeout(timeout);pending=false;});
+        }
+        search.addEventListener('input',paint); filter.addEventListener('change',paint);
+        pause.addEventListener('click',function(){paused=!paused;pause.textContent=paused?'继续刷新':'暂停刷新';pause.setAttribute('aria-pressed',String(paused));if(paused){controller?.abort();paint();}else tick();});
+        var timer=setInterval(tick,cfg.refreshMs||5000);
+        document.addEventListener('visibilitychange',function(){if(!document.hidden)tick();});
+        window.addEventListener('pagehide',function(){stopped=true;controller?.abort();clearInterval(timer);});
+        window.addEventListener('pageshow',function(event){if(event.persisted){stopped=false;timer=setInterval(tick,cfg.refreshMs||5000);tick();}});
+        tick();
 	}
 
 	// ---------- 访客详情 ----------
@@ -267,7 +286,7 @@
 		load( '/peptide/v1/track/admin/visitors/' + cfg.visitor ).then( function ( res ) {
 			var v = res.visitor;
 			var html = '<p><a href="' + esc( cfg.liveUrl ) + '">' + esc( S.back ) + '</a> · <a href="' + esc( cfg.archiveUrl ) + '">' + esc( S.archive ) + '</a></p>';
-			html += '<div class="pc-trk-cards"><div class="pc-trk-card"><span>' + esc( S.visitor ) + '</span><b>' + esc( v.label ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.status ) + '</span><b>' + dot( res.presence ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.account ) + '</span><b>' + esc( v.user_id ? v.email : S.guest ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.device ) + '</span><b>' + esc( ( S[ v.device ] || v.device ) + ' · ' + v.browser ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.firstSeen ) + '</span><b>' + esc( clock( v.first_ms, true ) ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.visits ) + '</span><b>' + esc( v.visits ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.cart ) + '</span><b>' + cartCell( v, res.cart ) + '</b></div></div>';
+			html += '<div class="pc-trk-cards"><div class="pc-trk-card"><span>' + esc( S.visitor ) + '</span><b>' + esc( v.label ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.status ) + '</span><b>' + dot( res.presence ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.account ) + '</span><b>' + esc( v.user_id ? v.email : S.guest ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.device ) + '</span><b>' + esc( ( S[ v.device ] || v.device ) + ' · ' + v.browser ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.firstSeen ) + '</span><b>' + esc( clock( v.first_ms, true ) ).replace( ' ', '<br>' ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.visits ) + '</span><b>' + esc( v.visits ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.cart ) + '</span><b>' + cartCell( v, res.cart ) + '</b></div></div>';
 			if ( res.others.length ) {
 				html += '<p>' + esc( S.otherDevices ) + ': ' + res.others.map( function ( o ) {
 					return '<a href="' + esc( cfg.liveUrl + '&visitor=' + o.id ) + '">' + esc( '#' + o.id + ' ' + ( S[ o.device ] || o.device ) + ' · ' + o.browser ) + '</a>';
@@ -275,6 +294,8 @@
 			}
 			html += '<div class="pc-trk-split"><div><h2>' + esc( S.visits ) + '</h2><table class="widefat pc-trk-table pc-trk-visits"><thead><tr><th>' + esc( S.visitStart ) + '</th><th>' + esc( S.duration ) + '</th><th>' + esc( S.pageviews ) + '</th><th>' + esc( S.stage ) + '</th></tr></thead><tbody>' + res.visits.map( visitRow ).join( '' ) + '</tbody></table><p class="pc-trk-more"></p></div><div id="pc-trk-timeline"><p>' + esc( S.chooseVisit ) + '</p></div></div>';
 			root.innerHTML = html;
+			var insights = document.getElementById( 'pc-trk-insights' );
+			if ( insights ) root.querySelector( '.pc-trk-cards' ).insertAdjacentElement( 'afterend', insights );
 			var box = document.getElementById( 'pc-trk-timeline' );
 			var list = root.querySelector( '.pc-trk-visits' );
 			var open = function ( id ) {

@@ -91,6 +91,7 @@ final class Plugin {
 		Emails\Registry::register_hooks();
 		Terms::register_hooks();
 		Tracking\Tracker::register_hooks();
+		Tracking\Preferences::register_hooks();
 		Tracking\Checkout_Steps::register_hooks();
 		Payments\Local_Payments::register_hooks();
 		Api\Tracking_Controller::register_hooks();

@@ -10,6 +10,13 @@
 
     function enhance() {
       pending = false;
+      root.querySelectorAll('.pc-trk-timeline tbody tr td:last-child').forEach(function (cell) {
+        if (cell.querySelector('.pc-event-details') || cell.textContent.trim().length < 80) return;
+        var details = document.createElement('details'), summary = document.createElement('summary'), body = document.createElement('div');
+        details.className = 'pc-event-details'; summary.textContent = '查看行为细节';
+        Array.from(cell.childNodes).forEach(function (node) { body.appendChild(node); });
+        details.append(summary, body); cell.appendChild(details);
+      });
       root.querySelectorAll('table.pc-trk-table').forEach(function (table) {
         var headers = Array.from(table.querySelectorAll('thead tr:first-child th'));
         if (!headers.length) return;

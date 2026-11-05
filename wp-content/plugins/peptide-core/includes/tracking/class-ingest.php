@@ -58,6 +58,8 @@ final class Ingest {
 	public static function types(): array {
 		$cart = array( 'source' => 'str:40', 'action' => 'str:40', 'item_id' => 'int', 'quantity' => 'num' );
 		return array(
+			'module_click' => array( 'module_id' => 'str:60', 'module_type' => 'str:40' ),
+			'product_click' => array( 'product_id' => 'int' ),
 			'page_view'               => array_merge( array( 'cause' => 'str:20' ), self::STATE ),
 			'product_view'            => array( 'product_id' => 'int' ),
 			'product_impression'      => array(),
