@@ -45,3 +45,11 @@
 前端已在 9815f07 修复完整 devices.desktop/mobile DTO 与客户端设备选择/生命周期；详见 frontend-native-mobile-controls-2026-11-05.md。独立复核未发现新 P1/P2：Node28 顶层、PHP设备50/入口73通过，polish内部46断言另记不双算；6个关键源与实际运行副本一致。Root 的真实已发布 getter / Renderer 内存探针 9/9 通过（两字段覆盖双向覆写和继承、发布值不变、probe本身无SQL写尝试；引导阶段单列，不泛称任意WP引导无维护写）。新证据 mobile-fix-verification.json。此前P2的代码遗漏已修复，尚未由此推断手机真实视觉/滚动/触控验收完成。
 
 本轮最后再次读取 IAB 手机预览 tab14 仍超时；没有绕过浏览器工具或改用其他自动化提取Cookie。已向用户询问其是否已亲自看过本地手机版并认可，遵守“未验收不上传”的最新要求。代码、Git历史和回归可先在本地准备，未获该验收条件前不推送；服务器部署仍不在本轮范围。
+
+## GitHub 上传前本地整合结果
+
+已先备份本轮五个源码/交接文件及原分支指针，正常本地提交运费追溯 ddad2b2；随后顺序合入前端 9815f07、同事远端 43bed8f，整合提交 0839b86，无冲突、无 force/reset/clean，未提交 backend 运行目录的大量补丁。源范围独审未见数据库、凭据、备份、已否决的对比提案或本地后台新设计稿混入。
+
+整合后 47 项 lint/syntax/隔离测试命令全部通过，联合 Node 回归 123/123；原生 shipping 内存/schema 13/13、当前前端消费 6项、匿名公开 GET/markup 11项再次通过。手机设备 native getter 9/9通过，前端独审仍无新P1/P2。证据为任务 outputs/integrated-checks.json / native-shipping.json / native-shipping-client.json / public-linkage.json / mobile-fix-verification.json。
+
+前端窗口已明确由本窗口统一整合推送，并保持其源码不动。本节记录的是本地准备状态，尚未执行 push；最终是否上传仍依用户对本地手机画面的认可。GitHub同步与生产部署分开，本轮没有服务器部署动作。
