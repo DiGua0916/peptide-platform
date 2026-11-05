@@ -3,6 +3,8 @@
 define( 'ABSPATH', __DIR__ . '/' );
 $route = array( 'checkout' => false, 'cart' => false, 'endpoint' => false, 'admin' => false );
 $cart_enabled = true;
+$subtotal_enabled = true;
+function vc_checkout_subtotal_settings() { return array( 'enabled' => $GLOBALS['subtotal_enabled'], 'visibility' => array( 'desktop' => true, 'mobile' => true ) ); }
 $product_enabled = true;
 $actions = $scripts = $configs = array();
 $quick_view_count = 0;
@@ -56,6 +58,9 @@ enqueue();
 check( 'checkout loads the real Woo cart data store before its bridge', in_array( 'wc-blocks-data-store', $scripts['vc-live-cart-experience'], true ) && in_array( 'wp-data', $scripts['vc-live-cart-experience'], true ) );
 check( 'checkout subtotal annotation waits for native pricing and store data', in_array( 'vialcove-cart-pricing', $scripts['vc-checkout-subtotal-savings'], true ) && in_array( 'wc-blocks-data-store', $scripts['vc-checkout-subtotal-savings'], true ) );
 check( 'checkout bridge is explicitly marked in the public UI config', true === $configs['VialCoveLiveCartConfig']['nativeCheckout'] );
+$subtotal_enabled = false; enqueue();
+check( 'published checkout annotation switch disables only its own adapter', ! isset( $scripts['vc-checkout-subtotal-savings'] ) && isset( $scripts['vc-live-cart-experience'] ) );
+$subtotal_enabled = true; enqueue();
 check( 'checkout drawer product links can use the approved product quick view', 1 === $quick_view_count && in_array( 'vc-home-quick-view', $scripts['vc-live-commerce-navigation'], true ) );
 check( 'history navigation waits for the one real cart controller', in_array( 'vc-live-cart-experience', $scripts['vc-live-commerce-navigation'], true ) );
 $footer = $actions['wp_footer']; ksort( $footer ); ob_start();

@@ -15,6 +15,7 @@ require_once __DIR__ . '/inc/demo-home-modules.php';
 require_once __DIR__ . '/inc/demo-site-parts.php';
 require_once __DIR__ . '/inc/visitor-tracking.php';
 require_once __DIR__ . '/inc/live-commerce-settings.php';
+require_once __DIR__ . '/inc/ui-presentation-settings.php';
 require_once __DIR__ . '/inc/live-cart-experience.php';
 require_once __DIR__ . '/inc/live-commerce-navigation.php';
 require_once __DIR__ . '/inc/storefront-utilities.php';

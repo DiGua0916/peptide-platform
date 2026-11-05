@@ -2,6 +2,14 @@
 
 2026-11-05 · 作者 Codex。以当前真实 WordPress/WooCommerce 主题为准，手机优先。此表是装修任务边界，不是要求后端重造一套积木或业务系统。
 
+## 最新整合状态：先本地、积木联动、验证后再上传
+
+用户最新明确：每次同步同时核对原生积木；已有字段沿用，缺少则补建。新配置遵循YY式区域/内容/图片/排版/移动端分层，并保留原生草稿、发布、条目增删排序、手机单独覆盖。不能只改前台、把后台留成不可调整的外壳。
+
+本轮M10已将后端已提交的12个主题在途等价文件保护后正常整合到实际FE运行目录，保留新页脚与Subtotal；M02补catalogQuickAdd字段，M06补checkout_subtotal_savings_enabled与原生checkout展示文档11752，M01/M03/M05的已有设置整理为分组。129schema/18入口/17小计/39页脚/100Node顶层及6个原生设置场景通过；HTTP实际资源与源码一致。详细边界与配置映射见[本地积木整合交接](frontend-local-native-block-integration-2026-11-05.md)。
+
+剩余：真实手机浏览器连接持续超时；backend实际运行目录的旧访客工作台已交接owner同步。最新一轮GitHub上传按用户要求暂缓，不把旧阶段的已推记录当成本轮已推。未公网部署。
+
 ## 最新一轮追加：M02.04快捷加购 / M05.04推荐稳定性
 
 本窗口本轮新增占用：functions.php的vc_product_card可选快捷入口、demo-catalog模板/CSS、demo-home-catalog资源注册、新catalog-quick-add.js、live-cart-experience.js原client的addOne薄包装与推荐调度、live-cart-recommendation.js公开原验证器。用户要求卡片直接加当前图示规格一盒，图片/名称仍能换规格；推荐不能因同车刷新/图片等待而忽有忽无。

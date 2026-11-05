@@ -1,6 +1,6 @@
 'use strict';
 const assert = require('node:assert/strict');
-const { compute, money } = require('../assets/checkout-subtotal-savings.js');
+const { compute, money, enabledForDevice } = require('../assets/checkout-subtotal-savings.js');
 
 // Store API payload fixture: actual variation lines are already aggregated by
 // the server in cart tax-display context. These tests prevent using coupon or
@@ -94,5 +94,12 @@ test('localized display retains exact pennies, including the largest safe intege
     assert.equal(money(39000, 'USD', 2, 'es-ES').replace(/\s/g, ''), '390,00US$');
     assert.equal(money(Number.MAX_SAFE_INTEGER, 'USD', 2, 'en-US'), '$90,071,992,547,409.91');
     assert.equal(money(-1, 'USD', 2, 'en-US'), null);
+});
+test('published device visibility independently enables mobile and desktop annotations', () => {
+    assert.equal(enabledForDevice(undefined, true), true);
+    assert.equal(enabledForDevice({visibility:{desktop:true,mobile:false}}, true), false);
+    assert.equal(enabledForDevice({visibility:{desktop:true,mobile:false}}, false), true);
+    assert.equal(enabledForDevice({visibility:{desktop:false,mobile:true}}, true), true);
+    assert.equal(enabledForDevice({visibility:{desktop:false,mobile:true}}, false), false);
 });
 process.stdout.write(checks + ' subtotal-savings checks passed.\n');

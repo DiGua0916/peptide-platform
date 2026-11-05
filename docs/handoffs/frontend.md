@@ -1250,3 +1250,7 @@ HTTP聚合探针已证 catalogSupported=true、quoteHooksSupported=false、unsup
 ### 2026-11-05 · Codex：结算小计原价及原生页脚配置
 
 用户连续追加已完成：Subtotal旁保留原生现价、补同税口径原价与红Save；新checkout-subtotal-savings独立React呈现且不混活动/券。页脚新增原生可编辑分组和圆形官方联系图标，10空URL栏由用户自行配置，当前仅自动真实WhatsApp；错误首页Terms不再输出，版权动态。只正常LayoutAPI发布footer687，其它所有布局/店铺设置hash保持。16金额/17入口/39footer检查及lint/diff通过；实际公共SSR四分组/WA/2026/82quick按钮/圆X和静态资产字节一致。详情[本次交接](frontend-footer-checkout-subtotal-2026-11-05.md)。Esc后未再Computer Use，无最终视觉或真实Add验收，不代表公网部署。peer checkout/storefront在途均未提交。
+
+### 2026-11-05 · Codex：本地整合与原生积木编辑覆盖
+
+用户要求先本地检查后上传，且所有新展示必须配合原生积木，配置依YY层级。12个peer主题文件先逐字节核对既有远端提交、备份并checkpoint799cb03，再正常合入最新main到FE运行目录50e77ad；9f页脚/Subtotal保持，最新去掉商品顶部重复活动保持。新增ui-presentation-settings整理页脚/商品/购物车分组，补商品卡快捷加购与结账小计开关；home685只补一个显式字段，新建checkout展示文档11752，其他布局/店铺设置/原Woo结账页内容不变。129schema/18入口/17小计/39页脚/100Node顶层/6原生开关场景、lint/diff及9HTTP资产逐字一致通过。浏览器绑定仍超时，无新手机截图或实际加购验收；backend实际访客工作台旧runtime已交接owner，未写其目录。本轮GitHub按用户local-first要求暂缓，未公网部署。完整记录与下一步见[本地积木整合交接](frontend-local-native-block-integration-2026-11-05.md)。

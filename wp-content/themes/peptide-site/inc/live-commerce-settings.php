@@ -5,6 +5,7 @@ defined( 'ABSPATH' ) || exit;
 // A builder settings document, not a replacement for WooCommerce's cart route.
 add_filter( 'peptide_core_template_documents', function ( array $documents ): array {
     if ( ! isset( $documents['cart'] ) ) { $documents['cart'] = __( 'Shopping cart', 'peptide-site' ); }
+    if ( ! isset( $documents['checkout'] ) ) { $documents['checkout'] = __( '结账展示设置', 'peptide-site' ); }
     return $documents;
 }, 125 );
 
@@ -121,6 +122,23 @@ function vc_live_cart_settings(): array {
 }
 
 function vc_live_cart_active(): bool { return vc_live_cart_settings()['enabled']; }
+
+/** Presentation only: the published checkout document controls its annotation. */
+function vc_checkout_subtotal_settings(): array {
+    $out = array( 'enabled' => true, 'visibility' => array( 'desktop' => true, 'mobile' => true ) );
+    $module = vc_live_commerce_published_module( array( 'checkout' ), 'context_content' );
+    // Existing checkouts keep their approved appearance until configured.
+    if ( ! $module ) { return $out; }
+    $desktop = (bool) ( $module['settings']['checkout_subtotal_savings_enabled'] ?? true );
+    $mobile = (bool) ( $module['mobile']['settings']['checkout_subtotal_savings_enabled'] ?? $desktop );
+    $out['visibility'] = array(
+        'desktop' => (bool) ( $module['visibility']['desktop'] ?? true ) && $desktop,
+        'mobile' => (bool) ( $module['visibility']['mobile'] ?? true ) && $mobile,
+    );
+    $out['enabled'] = ! empty( $module['enabled'] )
+        && ( $out['visibility']['desktop'] || $out['visibility']['mobile'] );
+    return $out;
+}
 
 /** Public applied plugin snapshots only. Never include history tokens, private history or drafts. */
 function vc_live_commerce_public_config(): array {

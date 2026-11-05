@@ -63,6 +63,11 @@
         } catch (error) { return null; }
     }
 
+    function enabledForDevice(config, mobile) {
+        var visibility = config && config.visibility;
+        return !visibility || visibility[mobile ? 'mobile' : 'desktop'] !== false;
+    }
+
     function start(win) {
         var page = win.document.querySelector('.vc-checkout-page');
         var wp = win.wp;
@@ -115,11 +120,13 @@
         function reconcile() {
             frame = 0;
             if (suspended) return;
+            var allowed = enabledForDevice(win.VialCoveCheckoutSubtotalConfig, win.matchMedia('(max-width: 767px)').matches);
             mounted.forEach(function (entry, node) {
-                if (!visible(node) || entry.host.parentElement !== node || !entry.price.isConnected || entry.price.parentElement !== node) {
+                if (!allowed || !visible(node) || entry.host.parentElement !== node || !entry.price.isConnected || entry.price.parentElement !== node) {
                     remove(node, entry);
                 }
             });
+            if (!allowed) return;
             page.querySelectorAll(selector).forEach(function (node) {
                 var entry = mounted.get(node);
                 if (entry) {
@@ -168,5 +175,5 @@
         schedule();
     }
 
-    return { compute: compute, money: money, start: start };
+    return { compute: compute, money: money, enabledForDevice: enabledForDevice, start: start };
 }));
