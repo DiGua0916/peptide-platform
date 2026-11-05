@@ -123,10 +123,12 @@ function vc_live_cart_settings(): array {
 
 function vc_live_cart_active(): bool { return vc_live_cart_settings()['enabled']; }
 
-/** Presentation only: the published checkout document controls its annotation. */
+/** Presentation only: published settings, or this editor's authorized checkout preview. */
 function vc_checkout_subtotal_settings(): array {
     $out = array( 'enabled' => true, 'visibility' => array( 'desktop' => true, 'mobile' => true ) );
-    $module = vc_live_commerce_published_module( array( 'checkout' ), 'context_content' );
+    $module = function_exists( 'vc_checkout_preview_module' )
+        ? vc_checkout_preview_module()
+        : vc_live_commerce_published_module( array( 'checkout' ), 'context_content' );
     // Existing checkouts keep their approved appearance until configured.
     if ( ! $module ) { return $out; }
     $desktop = (bool) ( $module['settings']['checkout_subtotal_savings_enabled'] ?? true );

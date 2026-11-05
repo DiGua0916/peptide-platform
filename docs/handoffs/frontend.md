@@ -1254,3 +1254,7 @@ HTTP聚合探针已证 catalogSupported=true、quoteHooksSupported=false、unsup
 ### 2026-11-05 · Codex：本地整合与原生积木编辑覆盖
 
 用户要求先本地检查后上传，且所有新展示必须配合原生积木，配置依YY层级。12个peer主题文件先逐字节核对既有远端提交、备份并checkpoint799cb03，再正常合入最新main到FE运行目录50e77ad；9f页脚/Subtotal保持，最新去掉商品顶部重复活动保持。新增ui-presentation-settings整理页脚/商品/购物车分组，补商品卡快捷加购与结账小计开关；home685只补一个显式字段，新建checkout展示文档11752，其他布局/店铺设置/原Woo结账页内容不变。129schema/18入口/17小计/39页脚/100Node顶层/6原生开关场景、lint/diff及9HTTP资产逐字一致通过。浏览器绑定仍超时，无新手机截图或实际加购验收；backend实际访客工作台旧runtime已交接owner，未写其目录。本轮GitHub按用户local-first要求暂缓，未公网部署。完整记录与下一步见[本地积木整合交接](frontend-local-native-block-integration-2026-11-05.md)。
+
+### 2026-11-05 · Codex：恢复后修复结账积木预览映射
+
+用户说明连续数字为猫误触，要求继续。只读复核澄清旧backend工作台/对话框不影响当前原生字段/面板/保存发布；实际相关PHP相同，后端新shipping trace在途保持不动。修复新checkout展示文档误指首页：theme admin配置桥和窄REST preview响应适配均指向原生checkout，保留Management Host/nonce/token/权限及草稿owner。小计展示getter仅在合法员工预览读草稿；公开请求仍读发布版本，不替换Woo原生表单或路由。35PHP/17Node新检查、19实际WP只读native场景、6发布开关及原17小计/18入口/129schema/39footer、语法/diff/9HTTP资产通过。原生文档、metadata/lock、Woo Checkout内容hash不变，无真实加购/订单/付款写入。浏览器工具因Windows网址识别失败停止，未绕过，新的手机视觉验收仍pending；遵从local-first继续暂缓GitHub，不公网部署。细节和本机配置入口见本地整合交接及D盘用户说明。
