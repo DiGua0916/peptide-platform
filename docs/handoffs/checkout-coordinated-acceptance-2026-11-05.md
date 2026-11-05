@@ -10,3 +10,15 @@ Critical behavior: exact authenticated stored payment facts determine views; ret
 Actual clocks: merchant America/Los_Angeles and HQ UTC; no time-zone change. Merchant midnight day boundary; visible dashboard60s/widget10s; visitor tracking5s; HQ monitor10min WP cron (not guaranteed clock-exact execution).
 
 Release plan: scoped source delta over deployed base, backed-up/CAS candidates; merchant and buyer first, HQ fallback last; tenant roots and separately pinned seeds included. Public hashes/TLS/login health checked before completion. No local DB copy, no source plugin whole overwrite.
+
+## Production rollout result
+Source07581d8 pushed atomically to main and codex/checkout-acceptance-20261105. Production staged delta publication completed in order:
+- merchant backend release checkout-return-fixes-1793879470;
+- buyer release checkout-return-fixes-1793879522;
+- HQ release checkout-return-fixes-1793879606.
+Both tenant runtime pairs and both separately pinned provisioning sources included. Runtime changes confined to16 allowlisted Core/Panapay/theme files per store and7 Panapay files in HQ. CAS/source manifests, backups, PHP lint and public versioned CSS/JS hashes verified; primary HTTPS health200/TLSverify0. HQ first attempt failed before activation because release root contains public/; corrected path then staged and activated successfully. No financial configuration or DB migration.
+Read-only production WP bootstrap confirmed Return_Context/Return_Cart autoload in HQ/merchant, merchant phone effective required, merchant LosAngeles/HQ UTC unchanged. The initial version probe used a nonexistent constant and returned unknown, so this is not cited as plugin-version proof; published source/manifest is authoritative.
+
+Local checkout4 Core files installed with three-way preservation; frontend already available via its local junction. Separate local payment copies are older than integration base (missing class-hub-urls.php); attempted scoped merge stopped before any writes. Payment owner tasked with safe local upgrade dependency audit; local payment UI is not claimed up to date. This does not affect verified production rollout.
+
+Remaining: user real mobile/sandbox acceptance; legacy paid sessions without snapshot retain contents intentionally; full OS session atomicity/HPOS not certified. Browser verification after local menu change timed out, frontend later reported policy stop, no automation workaround. No fresh production screenshot claimed.
