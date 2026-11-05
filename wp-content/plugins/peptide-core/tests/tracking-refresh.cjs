@@ -1,0 +1,22 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{JSDOM}=require(path.join(process.env.HQ_NAV_MODEL_DEPS||'D:/Codex/Tasks/2026-11-03/hq-navigation/work/model-deps','node_modules/jsdom'));
+const source=fs.readFileSync(path.join(__dirname,'../assets/tracking-refresh.js'),'utf8');
+const flush=()=>new Promise(r=>setImmediate(r));let passed=0;
+const check=(name,value)=>{assert.ok(value,name);passed++;};
+(async()=>{
+ const d=new JSDOM('<div id="pc-trk-app"><div id="pc-trk-timeline" data-visit-id="10" data-latest-id="1" data-heartbeats="0"><div class="pc-lifecycle-scroll"></div></div></div>',{runScripts:'outside-only',pretendToBeVisual:true}),w=d.window,calls=[];let interval,refreshes=0,forced=false;
+ w.setInterval=fn=>(interval=fn,1);w.clearInterval=()=>{};
+ w.pcTrackingAdmin={view:'visitor',visitor:1};w.wp={apiFetch:options=>new Promise((resolve,reject)=>calls.push({options,resolve,reject}))};
+ w.document.addEventListener('pc:timeline-refresh',event=>{refreshes++;forced=event.detail?.force===true;});w.eval(source);
+ check('starts bounded detail refresh',calls.length===1);interval();check('single flight',calls.length===1);
+ calls[0].resolve({visitor:{visits:1},visits:[]});await flush();check('checks newest event only',calls[1].options.path.includes('limit=1&order=desc&heartbeats=0'));
+ calls[1].resolve({events:[{id:2}]});await flush();check('new event refreshes at top',refreshes===1);
+ check('freshness is visible',w.document.querySelector('[role=status]').textContent.includes('自动更新中'));
+ const box=w.document.getElementById('pc-trk-timeline');box.innerHTML+='<details open><summary>Reading</summary></details>';
+ interval();calls[2].resolve({visitor:{visits:1},visits:[]});await flush();calls[3].resolve({events:[{id:3}]});await flush();
+ check('reading details is not interrupted',refreshes===1);check('new action notice instead',!w.document.querySelector('[data-refresh-new]').hidden);
+ w.document.querySelector('[data-refresh-new]').click();check('explicit update applies notification',refreshes===2);check('explicit update bypasses automatic read protection',forced);
+ w.document.querySelector('[data-refresh-pause]').click();interval();check('pause stops requests',calls.length===4);
+ w.document.querySelector('[data-refresh-pause]').click();interval();calls[4].reject(Error('offline'));await flush();check('failure retains content and retries later',!!box.querySelector('details')&&w.document.querySelector('[role=status]').textContent.includes('自动重试'));
+ w.dispatchEvent(new w.PageTransitionEvent('pagehide'));interval();check('leaving stops work',calls.length===5);d.window.close();
+ console.log(JSON.stringify({passed,failed:0}));
+})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -4,7 +4,7 @@ const source=fs.readFileSync(path.join(__dirname,'../assets/tracking-admin.js'),
 const original=fs.readFileSync(path.join(__dirname,'../../../../tests/fixtures/data-observations/028/tracking-admin.js'),'utf8');
 let passed=0;const check=(name,ok)=>{assert.ok(ok,name);++passed;};const flush=()=>new Promise(r=>setImmediate(r));
 async function render(script,events){
- const calls=[];class Element{constructor(){this.innerHTML='';this.children={};}querySelector(key){return this.children[key]||(this.children[key]=new Element());}querySelectorAll(){return [];}addEventListener(){} }
+ const calls=[];class Element{constructor(){this.dataset={};this.innerHTML='';this.children={};}querySelector(key){return this.children[key]||(this.children[key]=new Element());}querySelectorAll(){return [];}addEventListener(){} }
  const root=new Element(),box=new Element(),document={createElement:()=>new Element(),getElementById:id=>id==='pc-trk-app'?root:id==='pc-trk-timeline'?box:null};
  const strings=new Proxy({types:{page_view:'Page viewed',heartbeat:'Heartbeat'},pageTypes:{shop:'Shop'},stages:{0:'Visited'},pageKind:'Page kind',collectionId:'Collection ID',countryObservation:'Country observation',sourceReported:'Source reported',entryHost:'Entry host',notObservedKey:'Key absent',observedEmpty:'Observed empty',referrerHost:'Referrer host',unavailable:'Unavailable'},{get:(o,k)=>o[k]||String(k)});
  const window={pcTrackingAdmin:{strings,view:'visitor',visitor:1,visit:1,liveUrl:'/live',archiveUrl:'/archive'},wp:{apiFetch:({path})=>new Promise((resolve,reject)=>calls.push({path,resolve,reject}))}};
