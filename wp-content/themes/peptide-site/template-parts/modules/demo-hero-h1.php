@@ -37,4 +37,4 @@ foreach ( array( 'titleColor' => '--vc-demo-title', 'textColor' => '--vc-demo-mu
     </figure>
     <?php endif; ?>
 </div>
-<?php if ( $product && function_exists( 'vc_home_quick_view_template' ) ) { echo vc_home_quick_view_template( $product ); } ?>
+<?php // The real product link uses the shared on-demand native quick-view loader. ?>

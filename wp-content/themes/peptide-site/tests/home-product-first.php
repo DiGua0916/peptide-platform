@@ -108,7 +108,7 @@ namespace {
     $legacy = $hero; $legacy['settings']['presentation'] = 'demo';
     $markup = $hero_dispatch( null, $legacy, 'public', 'mobile' );
     check( ! str_contains( $markup, 'vc-demo-hero--product-first' ) && str_contains( $markup, 'Hidden eyebrow' ) && str_contains( $markup, 'Hidden count 1' ) && str_contains( $markup, 'Hidden secondary COA link' ), 'Legacy demo mode retains its existing eyebrow, live count and secondary action.' );
-    check( str_contains( $markup, 'vc-demo-hero-media' ) && str_contains( $markup, 'data-fixture-native-form' ) && 1 === $product_reads && 1 === $native_forms && 1 === $count_reads, 'Legacy demo mode retains the real featured media and native form path.' );
+    check( str_contains( $markup, 'vc-demo-hero-media' ) && ! str_contains( $markup, 'data-fixture-native-form' ) && 1 === $product_reads && 0 === $native_forms && 1 === $count_reads, 'Legacy demo mode retains real featured media and defers the native form to the shared loader.' );
 
     $catalog = array( 'id' => 'collection', 'type' => 'product_collection', 'settings' => array(
         'cardPresentation' => 'demo', 'catalogLayout' => 'product_first', 'demoFullCatalog' => false, 'source' => 'manual',

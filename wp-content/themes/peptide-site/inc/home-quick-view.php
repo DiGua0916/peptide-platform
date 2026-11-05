@@ -72,8 +72,8 @@ function vc_home_quick_view_response( WP_REST_Request $request ) {
     return $response;
 }
 
-/** A display SKU never grants purchase authority; the native add route checks it again. */
-function vc_home_quick_view_card_can_add_one( $product, $sku ): bool {
+/** SSR may offer an attempt; no session or quantity-one permission is read here. */
+function vc_home_quick_view_card_add_candidate( $product, $sku ): bool {
     if ( ! $product->is_purchasable() || ! $product->is_in_stock() || ! $sku->is_purchasable() || ! $sku->is_in_stock() ) { return false; }
     if ( $sku->is_type( 'variation' ) ) {
         $attributes = $sku->get_variation_attributes(); $required = $product->get_variation_attributes();
@@ -84,6 +84,12 @@ function vc_home_quick_view_card_can_add_one( $product, $sku ): bool {
         }
         foreach ( $attributes as $value ) { if ( ! is_string( $value ) || '' === trim( $value ) ) { return false; } }
     }
+    return true;
+}
+
+/** The fresh card read retains native quantity/held-stock checks before any add. */
+function vc_home_quick_view_card_can_add_one( $product, $sku ): bool {
+    if ( ! vc_home_quick_view_card_add_candidate( $product, $sku ) ) { return false; }
     $limits_class = '\\Automattic\\WooCommerce\\StoreApi\\Utilities\\QuantityLimits';
     if ( ! class_exists( $limits_class ) ) { return false; }
     try {

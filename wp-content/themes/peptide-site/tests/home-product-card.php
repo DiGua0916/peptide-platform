@@ -146,6 +146,16 @@ namespace {
     check( 1 === count( $routes ) && 'vialcove/v1' === $routes[0][0] && '/home-product/(?P<id>[1-9][0-9]*)' === $routes[0][1], 'The existing GET route is reused.' );
     $args = $routes[0][2]['args'];
     check( 'boolean' === $args['card']['type'] && false === $args['card']['default'] && 1 === $args['variation']['minimum'], 'The optional card mode and positive variation ID are declared in REST validation.' );
+    $products[12]->manage = true; $limits['minimum'] = 2;
+    check( true === vc_home_quick_view_card_add_candidate( $products[10], $products[12] ) && 0 === \Automattic\WooCommerce\StoreApi\Utilities\QuantityLimits::$calls && 0 === $woocommerce->initializations && null === $woocommerce->session && 0 === $woocommerce->cartCalls, 'SSR candidate exposes only an attempt without native quantity, session, held-stock or cart reads.' );
+    check( false === response()->data['card']['canAddOne'] && 1 === \Automattic\WooCommerce\StoreApi\Utilities\QuantityLimits::$calls && 1 === $woocommerce->initializations, 'A statically eligible attempt still fails the fresh native quantity-one check.' );
+    reset_fixture(); $products[12]->attributes['attribute_pack'] = '';
+    check( false === vc_home_quick_view_card_add_candidate( $products[10], $products[12] ) && 0 === \Automattic\WooCommerce\StoreApi\Utilities\QuantityLimits::$calls, 'SSR does not offer an ambiguous any-attribute SKU.' );
+    reset_fixture(); $products[12]->stock = false;
+    check( false === vc_home_quick_view_card_add_candidate( $products[10], $products[12] ), 'SSR keeps native static stock eligibility.' );
+    reset_fixture(); $products[10]->purchasable = false;
+    check( false === vc_home_quick_view_card_add_candidate( $products[10], $products[12] ), 'SSR keeps parent purchase restrictions.' );
+    reset_fixture();
     $result = response(); $card = $result->data['card'];
     check( array( 'id', 'card' ) === array_keys( $result->data ) && 0 === \PeptideCore\Modules\Showcase_Quick_View::$templates, 'Card mode never renders or initializes the native form.' );
     check( array( 'productId', 'purchaseId', 'variationId', 'variationLabel', 'price', 'regularPrice', 'image', 'canAddOne' ) === array_keys( $card ), 'The lightweight card has only its explicit public contract fields.' );

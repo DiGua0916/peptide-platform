@@ -1274,3 +1274,11 @@ HTTP聚合探针已证 catalogSupported=true、quoteHooksSupported=false、unsup
 COA 商品/资料库共用按宽度阅读器，视口附近单并发绘制/离屏释放，双 realm shim、完整首屏/分阶段超时、Back/Forward 恢复。512KiB Range 原件+未改 worker 隔离实验 7→4 请求，非真机。实际 LocalWP 每请求原生装修查找各少172次，SQL仍1918，无稳定速度提升结论；仅一次请求原始 published 行 memo，不缓存最终价格/库存/设备结果。
 
 代码提交依序 3a9a06f / ebc9bf3 / eb450f3 / 3c08fb7 / 75ffbae / e4d6366；本窗口未 push/部署/改 Core、业务数据或装修数据库。联合 Node 55+28 顶层及独立历史10，PHP39/14/50/7，字体全字形与确定性验证、本地18资产/资料库单份脚本 HTTP 检查通过。IAB预览40秒及绑定15秒超时，没有新真实手机视觉/Canvas验收；字体截图原因为何仍不能仅凭源码断定。详见[完整交接与证据边界](frontend-mobile-storefront-stability-2026-11-05.md)，由站点窗口统一集成和发布。
+
+### 2026-11-05 · Codex：首页实际渲染性能第二阶段
+
+与 Core owner 对齐公开 `peptide_core_get_store_product_data($selectedSku):?array`；主题只在函数缺失时走旧 REST，存在但 null/异常闭合为空 extras，不绕回更宽路径。保留 exact first-SKU、所有82张 SSR 卡、搜索/分类/顺序/原生链接及当前用户报告状态；统计对子规格批量原生 raw-cache prime；SSR快捷加购仅给候选，点击仍fresh exact GET和原生quantity/held-stock/POST。hero一份预备表单改同一按需loader，主图eager/high不改；目录原生图lazy/async。
+
+同一417 Core源清单和同一正式helper片段，任务目录off/on主题只差4个runtime文件，六次交错匿名实际首页HTTP200、零拒写/外发：SQL1918→820（各三次固定），计数547→4，完整schema91→0，SSR QuantityLimits173/ReserveStock166→0；HTML558370→427451 B，82卡/快捷描述及可见内容保持。Xdebug/SAVEQUERIES本机首字节中位6239→3602ms，仅此实验，不宣称公网/真机百分比。四SKU/parent全部6字段、两fresh-card全DTO一致，实际fresh stock检查仍2/2。额外一轮过期Panapay transient3DELETE尝试均被guard拦，单列排除计时，未放开写入。严格批准span/原生ID引用映射后的全页425546 B及SHA相同，无粗略删全文空白。
+
+Root实际PHP9/5/5/56/23/11、相关5个Node套件38顶层、9PHP lint/diff通过；独审真实helper/服务/reader186检查另列，无具体P1/P2。四个runtime文件加6个测试及本交接，无DB/积木配置迁移，不改Core/payment/runtime或真实业务数据，不重复建首单5%券。详细文件与限制见[本阶段交接](frontend-home-render-performance-2026-11-05.md)。统一站点窗口负责精确Core+theme整合、手机实际验收和发布；本窗口未push/deploy。83KB初始广播冗余仅给后续独立建议，未混入已测候选。

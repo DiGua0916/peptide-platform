@@ -148,11 +148,21 @@ add_action( 'woocommerce_order_item_meta_end', function ( $item_id, $item, $orde
     echo '<div class="pc-order-batch pc-order-batch--pending"><small>' . esc_html( $message ) . '</small></div>';
 }, 20, 4 );
 
-/** Use the documented Store API extension; never depend on plugin meta keys. */
+/** Read the same public Core DTO without hydrating unused Store API fields. */
 function vc_product_data( $product ): array {
     static $cache = array();
     $id = $product->get_id();
     if ( ! isset( $cache[ $id ] ) ) {
+        if ( function_exists( 'peptide_core_get_store_product_data' ) ) {
+            // A present service can deliberately deny this exact SKU. Never
+            // route around a null/error through the older, wider REST path.
+            try { $extra = peptide_core_get_store_product_data( $product ); }
+            catch ( Throwable $error ) { $extra = null; }
+            $normalized = is_array( $extra ) ? json_decode( wp_json_encode( $extra ), true ) : null;
+            $cache[ $id ] = is_array( $normalized ) ? $normalized : array();
+            return $cache[ $id ];
+        }
+        // Compatibility with older Core releases lacking the public service.
         $result = rest_do_request( new WP_REST_Request( 'GET', '/wc/store/v1/products/' . $id ) );
         // Store API can return stdClass for extensions before JSON serialization.
         $data = json_decode( wp_json_encode( $result->get_data() ), true );
@@ -225,12 +235,12 @@ function vc_product_card( $product, bool $report_preview = true, ?array $card_im
     $observation_variation = $observation_parent > 0 ? (int) $display_product->get_id() : 0;
     $observation_valid = $observation_product > 0 && $observation_product <= 9007199254740991 && $observation_variation >= 0 && $observation_variation <= 9007199254740991;
     $quick_add_price = $quick_add && $compact && function_exists( 'vc_home_quick_view_card_money' ) ? vc_home_quick_view_card_money( wc_get_price_to_display( $display_product ) ) : null;
-    $quick_add_ready = $quick_add_price && $observation_valid && ( $is_variation || $display_product->is_type( 'simple' ) ) && function_exists( 'vc_live_cart_available' ) && vc_live_cart_available()
-        && function_exists( 'vc_home_quick_view_card_can_add_one' ) && vc_home_quick_view_card_can_add_one( $product, $display_product );
+    $quick_add_ready = $extra && $quick_add_price && $observation_valid && ( $is_variation || $display_product->is_type( 'simple' ) ) && function_exists( 'vc_live_cart_available' ) && vc_live_cart_available()
+        && function_exists( 'vc_home_quick_view_card_add_candidate' ) && vc_home_quick_view_card_add_candidate( $product, $display_product );
     ?>
     <article class="product-card<?php echo $sale_percent ? ' product-card--offer' : ''; ?>"<?php if ( $observation_valid ) { echo ' data-vc-observe-product="' . esc_attr( (string) $observation_product ) . '" data-vc-observe-variation="' . esc_attr( (string) $observation_variation ) . '"'; } ?>>
         <a class="product-visual<?php echo $report_preview ? ' product-visual--report' : ''; ?><?php echo '' !== $card_image_html || $display_image_id ? ' product-visual--photo' : ''; ?>" href="<?php echo esc_url( $card_url ); ?>"<?php echo $dialog_attributes; /* Already escaped by vc_live_product_link_attributes. */ ?> aria-label="<?php echo esc_attr( 'View ' . $product->get_name() ); ?>">
-            <?php if ( '' !== $card_image_html ) { echo $card_image_html; /* Escaped by vc_module_card_image. */ } elseif ( $display_image_id ) { echo wp_kses_post( $display_product->get_image( 'woocommerce_single' ) ); } else { vc_vial( $display_product->get_name(), $display_product->get_sku() ); } ?>
+            <?php if ( '' !== $card_image_html ) { echo $card_image_html; /* Escaped by vc_module_card_image. */ } elseif ( $display_image_id ) { echo wp_kses_post( $display_product->get_image( 'woocommerce_single', $compact ? array( 'loading' => 'lazy', 'decoding' => 'async', 'fetchpriority' => 'auto', 'sizes' => $card_sizes ) : array() ) ); } else { vc_vial( $display_product->get_name(), $display_product->get_sku() ); } ?>
             <?php if ( $report_preview ) { get_template_part( 'template-parts/product-hover', null, array( 'name' => $product->get_name(), 'hover' => $hover ) ); } ?>
             <?php if ( $sale_percent ) : ?><span class="vc-sale-ribbon" aria-hidden="true"><span><?php echo esc_html( (string) $sale_percent ); ?>% OFF</span></span><?php endif; ?>
             <?php if ( ! empty( $extra['is_demo'] ) ) : ?><span class="demo-badge">Demo product</span><?php endif; ?>

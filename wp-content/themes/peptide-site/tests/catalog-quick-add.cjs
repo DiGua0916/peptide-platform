@@ -3,6 +3,7 @@
 // No WordPress, browser session, or customer cart is contacted by this suite.
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const { verifiedCard, cardUrl } = require('../assets/catalog-quick-add.js');
 const { createClient, addOne } = require('../assets/live-cart-experience.js');
 
@@ -152,4 +153,45 @@ test('failed cart priming and native checkout write lock prevent quick-add submi
         fetch: async (_, options) => { if (options.method === 'POST') writes++; return response(cart()); } });
     try { await assert.rejects(addOne(client, fresh().card)); assert.equal(writes, 0); }
     finally { client.destroy(); }
+});
+
+function clickFixture(nativeAdd) {
+    const listeners = new Map(), calls = [], errors = [];
+    let resolveCard;
+    const read = new Promise(resolve => { resolveCard = resolve; });
+    const fallback = { hidden: false }, notice = { hidden: true, textContent: '' };
+    const host = { querySelector: selector => selector === '[data-vc-catalog-add-fallback]' ? fallback : selector === '[data-vc-catalog-add-status]' ? notice : null };
+    const button = { dataset: { productId: '8', purchaseId: '42', variationId: '42', priceMinor: '5500', currency: 'USD', precision: '2' }, hidden: true, disabled: false, isConnected: true,
+        closest: selector => selector === '.product-card-bottom' ? host : { querySelector: () => ({ textContent: 'Synthetic product' }) },
+        addEventListener: (type, fn) => listeners.set(type, fn), removeEventListener: type => listeners.delete(type) };
+    const document = { readyState: 'complete', documentElement: {}, querySelectorAll: selector => selector === '[data-vc-catalog] [data-vc-catalog-add]' ? [button] : [], removeEventListener() {} };
+    const browser = { document, location: { href: 'https://shop.test/' }, VialCoveLiveCartConfig: { recentProductApiUrl: '/wp-json/vialcove/v1/home-product/' },
+        VialCoveLiveCart: { addOne: nativeAdd }, addEventListener() {},
+        fetch(url, options) { calls.push({ url, options }); return read; },
+        createLiveCartFeedback() { return { state: 'idle', destroy() {}, async run({ submit }) { try { return await submit({ signal: new AbortController().signal }); } catch (error) { errors.push(error); } } }; } };
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../assets/catalog-quick-add.js'), 'utf8'), { window: browser, URL, AbortController, setTimeout, clearTimeout, MutationObserver: class { observe() {} } });
+    return { button, calls, errors, resolve(data, status = 200) { resolveCard(response(data, status)); }, click() { return listeners.get('click')(); } };
+}
+
+test('real SSR-button click waits for fresh exact card GET before native cart priming and POST', async () => {
+    const native = transport(), f = clickFixture(card => addOne(native.client, card));
+    try {
+        assert.equal(f.button.hidden, false); assert.equal(Object.hasOwn(f.button.dataset, 'canAddOne'), false, 'SSR descriptor has no granted quantity-one permission');
+        const operation = f.click();
+        assert.equal(f.calls.length, 1); assert.match(f.calls[0].url, /card=true/); assert.match(f.calls[0].url, /variation=42/);
+        assert.equal(native.calls.length, 0, 'an unverified visible attempt cannot even prime the cart');
+        f.resolve(fresh()); await operation;
+        assert.deepEqual(native.calls.map(call => call.options.method), ['GET', 'POST']); assert.equal(native.posts().length, 1); assert.equal(f.errors.length, 0);
+    } finally { native.client.destroy(); }
+});
+
+test('real SSR-button handshake refuses native POST when fresh quantity permission is absent, false or price changed', async () => {
+    for (const result of [ { id: 8, card: { ...expected() } }, { id: 8, card: { ...expected(), canAddOne: false } },
+        { id: 8, card: { ...expected(), canAddOne: true, price: { ...expected().price, minor: '5600' } } } ]) {
+        const native = transport(), f = clickFixture(card => addOne(native.client, card));
+        try {
+            const operation = f.click(); f.resolve(result); await operation;
+            assert.equal(native.calls.length, 0); assert.equal(native.posts().length, 0); assert.equal(f.errors.length, 1);
+        } finally { native.client.destroy(); }
+    }
 });

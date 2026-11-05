@@ -77,11 +77,20 @@ function vc_demo_home_catalog_counts(): array {
     if ( null !== $counts ) { return $counts; }
     $counts = array( 'products' => 0, 'specifications' => 0 );
     if ( ! function_exists( 'wc_get_products' ) ) { return $counts; }
+    $catalogue = array(); $children = array();
     foreach ( wc_get_products( array( 'status' => 'publish', 'limit' => -1, 'return' => 'objects' ) ) as $product ) {
         if ( ! \PeptideCore\Modules\Products::public_catalog_product( $product ) ) { continue; }
+        $ids = $product->is_type( 'variable' ) ? $product->get_visible_children() : array();
+        $catalogue[] = array( $product, $ids );
+        foreach ( $ids as $id ) { $children[ (int) $id ] = (int) $id; }
+    }
+    // Prime WordPress raw object/meta/term caches once across the catalogue.
+    // The native WC object, visibility and exact price checks below still run.
+    if ( $children && function_exists( '_prime_post_caches' ) ) { _prime_post_caches( array_values( $children ), true, true ); }
+    foreach ( $catalogue as [ $product, $ids ] ) {
         $specs = 0;
         if ( $product->is_type( 'variable' ) ) {
-            foreach ( $product->get_visible_children() as $id ) {
+            foreach ( $ids as $id ) {
                 $variation = wc_get_product( $id );
                 if ( $variation instanceof WC_Product_Variation && $variation->get_parent_id() === $product->get_id() && $variation->variation_is_visible() && '' !== $variation->get_price() ) { ++$specs; }
             }
