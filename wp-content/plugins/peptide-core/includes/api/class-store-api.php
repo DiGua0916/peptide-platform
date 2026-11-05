@@ -70,6 +70,7 @@ final class Store_Api {
 				'namespace'       => self::EXT_NAMESPACE,
 				'data_callback'   => static fn() => array(
 					'sale_savings' => \PeptideCore\Pricing::cart_summary( function_exists( 'WC' ) && WC()->cart ? WC()->cart : null ),
+					'shipping_savings' => \PeptideCore\Shipping\Savings_Trace::for_cart( function_exists( 'WC' ) ? WC()->cart : null ),
 					// 满减（PROMO-01）：已用上的活动和下一档提示，结构同 peptide_core_get_promotion_progress()。
 					'promotion'    => \PeptideCore\Promotions::progress(),
 					'activity_listener' => \PeptideCore\Activity\Progress::for_cart(),
@@ -86,6 +87,12 @@ final class Store_Api {
 					'promotion'    => array(
 						'description' => __( 'Spend-and-save promotion applied to the cart, and the next tier the customer can reach.', 'peptide-core' ),
 						'type'        => 'object',
+						'context'     => array( 'view', 'edit' ),
+						'readonly'    => true,
+					),
+					'shipping_savings' => array(
+						'description' => __( 'Reconciled pre-tax savings on all selected shipping rates (minor units). Null when not proven.', 'peptide-core' ),
+						'type'        => array( 'object', 'null' ),
 						'context'     => array( 'view', 'edit' ),
 						'readonly'    => true,
 					),

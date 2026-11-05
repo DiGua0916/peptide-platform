@@ -27,6 +27,8 @@ final class Discounts {
 	public const NAME_MAX   = 50;
 	public const META_NAME  = '_pc_ship_discount';
 	public const META_COST  = '_pc_ship_original_cost';
+	public const META_ID    = '_pc_ship_discount_id';
+	public const META_PAYABLE = '_pc_ship_discounted_cost';
 
 	public static function register_hooks(): void {
 		add_filter( 'woocommerce_package_rates', array( self::class, 'apply' ), 120, 2 );
@@ -328,6 +330,9 @@ final class Discounts {
 			$rate->set_taxes( $taxes );
 			$rate->add_meta_data( self::META_NAME, $by['name'] );
 			$rate->add_meta_data( self::META_COST, wc_format_decimal( $cost, wc_get_price_decimals() ) );
+			// Keep a bounded public trace separate from all private rate metadata.
+			$rate->add_meta_data( self::META_ID, (int) $by['id'] );
+			$rate->add_meta_data( self::META_PAYABLE, wc_format_decimal( $best, wc_get_price_decimals() ) );
 		}
 		return $rates;
 	}
@@ -343,7 +348,8 @@ final class Discounts {
 		}
 		foreach ( $packages as $k => $p ) {
 			if ( is_array( $p ) ) {
-				$packages[ $k ]['pc_ship_discounts'] = implode( ',', $sig );
+				// Old cached rates do not carry the discount ID/payable evidence.
+				$packages[ $k ]['pc_ship_discounts'] = 'trace-v1:' . implode( ',', $sig );
 			}
 		}
 		return $packages;
