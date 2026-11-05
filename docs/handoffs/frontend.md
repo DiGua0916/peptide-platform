@@ -1258,3 +1258,7 @@ HTTP聚合探针已证 catalogSupported=true、quoteHooksSupported=false、unsup
 ### 2026-11-05 · Codex：恢复后修复结账积木预览映射
 
 用户说明连续数字为猫误触，要求继续。只读复核澄清旧backend工作台/对话框不影响当前原生字段/面板/保存发布；实际相关PHP相同，后端新shipping trace在途保持不动。修复新checkout展示文档误指首页：theme admin配置桥和窄REST preview响应适配均指向原生checkout，保留Management Host/nonce/token/权限及草稿owner。小计展示getter仅在合法员工预览读草稿；公开请求仍读发布版本，不替换Woo原生表单或路由。35PHP/17Node新检查、19实际WP只读native场景、6发布开关及原17小计/18入口/129schema/39footer、语法/diff/9HTTP资产通过。原生文档、metadata/lock、Woo Checkout内容hash不变，无真实加购/订单/付款写入。浏览器工具因Windows网址识别失败停止，未绕过，新的手机视觉验收仍pending；遵从local-first继续暂缓GitHub，不公网部署。细节和本机配置入口见本地整合交接及D盘用户说明。
+
+### 2026-11-05 · Codex：接后端联调补齐手机独立设置
+
+后端窗口转来真实复现：原生mobile variant为false，但商品/购物车getter仍发送全局true。现完整接devices.desktop/mobile发布配置，全部商品展示/WA字段、购物车展示/文案分端解析；主开关/visibility作为外层，未覆盖继承、false/空串保留。asset加载聚合只为覆盖跨尺寸，server入口按当前端决定redirect。商品用可逆唯一owner归还原节点后换呈现，polish/offer-follow接dispose清理；车保留单client/rows/writeowner，只换配置和失效旧history/quote。catalogQuickAdd/checkout已有手机逻辑保持，不造推荐/交易接口。50PHP/73route/233actual native设备检查、相关联合178Node（最后产品BFCache补点后19项设备测试另过）、语法/diff/HTTP通过；7份layout/meta哈希不变。新手机视觉仍未验，按用户local-first本机保存检查点，不push/deploy；后端三个shipping trace增量未改。详细字段、文件和测试边界见[设备配置交接](frontend-native-mobile-controls-2026-11-05.md)。

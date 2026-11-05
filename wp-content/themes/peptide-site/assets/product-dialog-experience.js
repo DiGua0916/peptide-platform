@@ -87,14 +87,70 @@
   function reportPresentationKey(item, selection, variationId) {
     return JSON.stringify([selection, variationId, item ? [item.id, item.product?.id, item.source_product, item.specification, item.issued_on, item.issuer_name, item.title, item.report_number, item.source_lot, item.file?.mime, item.file?.size_bytes, item.view_url, item.download_url, item.thumbnail_url] : null]);
   }
+  // The aggregate DTO only decides whether assets are needed. It never grants
+  // this viewport an experience that its own published device row disabled.
+  function deviceSettings(config, mobile) {
+    const key = mobile ? 'mobile' : 'desktop';
+    const devices = config?.devices;
+    const row = devices && typeof devices === 'object' ? devices[key] : config;
+    if (!row || typeof row !== 'object') return {enabled:false,mobileDialog:false};
+    return {...row, enabled:!!row.enabled && !!row.mobileDialog && row.visibility?.[key] !== false};
+  }
+  // Move and restore the real native nodes, including their handlers/state.
+  // No form, quantity, Add or Buy control is cloned when changing viewport.
+  function presentationRestore(root, dialog, media, toolbar) {
+    const mediaNodes = [...media.childNodes], toolbarNodes = toolbar ? [...toolbar.childNodes] : [];
+    const moved = [], states = [], owned = new Set();
+    const hadRoot = root.classList.contains('vc-product-experience'), hadDialog = dialog.classList.contains('vc-product-dialog');
+    let disposed = false;
+    return {
+      own(value) { owned.add(value); return value; },
+      preserve(value) {
+        if (!value) return;
+        states.push({value,children:[...value.childNodes],attributes:value.getAttributeNames().map(key=>[key,value.getAttribute(key)]),hidden:value.hidden});
+      },
+      move(value, parent) {
+        if (!value) return;
+        const marker = document.createComment('native product presentation'); value.before(marker);
+        moved.push({value,marker}); if (parent) parent.append(value); else value.remove();
+      },
+      destroy() {
+        if (disposed) return; disposed = true;
+        for (const {value,marker} of moved.reverse()) { if (marker.parentNode) marker.replaceWith(value); }
+        media.replaceChildren(...mediaNodes);
+        if (toolbar) toolbar.replaceChildren(...toolbarNodes);
+        for (const value of owned) value.remove();
+        for (const {value,children,attributes,hidden} of states) {
+          value.replaceChildren(...children); for (const key of value.getAttributeNames()) value.removeAttribute(key);
+          for (const [key,content] of attributes) value.setAttribute(key,content); value.hidden=hidden;
+        }
+        if (!hadRoot) root.classList.remove('vc-product-experience');
+        if (!hadDialog) dialog.classList.remove('vc-product-dialog');
+      }
+    };
+  }
+  function nativeMedia(root, image) {
+    const area = root.querySelector(':scope > .vc-showcase-quick__media'); if (!area) return;
+    const source = safeURL(image?.src);
+    if (!source) { area.replaceChildren(node('p','vc-home-quick__missing','Image not available for this specification.')); return; }
+    let img = area.querySelector('img'); if (!img) { img = node('img',''); area.replaceChildren(img); }
+    for (const key of ['sizes','srcset','width','height']) {
+      const raw = image?.[key], value = key === 'width' || key === 'height' ? (Number.isSafeInteger(Number(raw)) && Number(raw) > 0 ? String(Number(raw)) : '') : (typeof raw === 'string' ? raw : '');
+      if (value) img.setAttribute(key,value); else img.removeAttribute(key);
+    }
+    img.alt = String(image?.alt || root.dataset.vcProductName || ''); img.loading = 'eager'; img.decoding = 'async';
+    if (img.getAttribute('src') !== source) img.src = source;
+  }
   window.vcProductReportMatch = Object.freeze({ specification: spec, latest: latestReport });
 
-  window.createVcProductExperience = function (root, dialog) {
-    const settings = json(root.dataset.vcExperience), defaults = json(root.dataset.vcHomeInitial);
+  function createExperience(root, dialog, settings) {
+    const defaults = json(root.dataset.vcHomeInitial);
     if (!settings.enabled || !settings.mobileDialog) return null;
-    if (settings.visibility?.[matchMedia('(max-width: 820px)').matches ? 'mobile' : 'desktop'] === false) return null;
     const summary = root.querySelector('.summary'), media = root.querySelector(':scope > .vc-showcase-quick__media');
     const form = root.querySelector('form.cart'), mainAdd = form?.querySelector('.single_add_to_cart_button');
+    if (!summary || !media || !form || !mainAdd) return null;
+    const originalToolbar = dialog.querySelector('.vc-home-quick__toolbar');
+    const restore = presentationRestore(root,dialog,media,originalToolbar);
     const productId = Number(root.dataset.vcProductId), productName = root.dataset.vcProductName || '';
     const lifecycle = new AbortController(), signal = lifecycle.signal;
     let destroyed = false, productImage = root.vcHomeImage === undefined ? defaults.image : root.vcHomeImage;
@@ -104,18 +160,19 @@
     let reportOpenIntent = 0;
     const knownImages = root.vcDialogImages instanceof Map ? root.vcDialogImages : new Map(); root.vcDialogImages=knownImages;
     root.classList.add('vc-product-experience'); dialog.classList.add('vc-product-dialog');
-    const heading = root.querySelector('.vc-dialog-heading') || node('header', 'vc-dialog-heading');
+    const heading = root.querySelector('.vc-dialog-heading') || restore.own(node('header', 'vc-dialog-heading'));
     if (!heading.isConnected) root.prepend(heading);
-    const eyebrow = summary.querySelector('.vc-home-quick__eyebrow'); if (eyebrow) heading.append(eyebrow);
-    const title = summary.querySelector('.vc-showcase-quick__title'); if (title) heading.append(title);
+    const eyebrow = summary.querySelector('.vc-home-quick__eyebrow'); if (eyebrow) restore.move(eyebrow,heading);
+    const title = summary.querySelector('.vc-showcase-quick__title'); if (title) restore.move(title,heading);
     let rating = heading.querySelector('.vc-dialog-rating');
     if (!rating && defaults.ratingHtml && defaults.ratingCount > 0) {
-      rating = node('div', 'vc-dialog-rating'); rating.innerHTML = defaults.ratingHtml;
+      rating = restore.own(node('div', 'vc-dialog-rating')); rating.innerHTML = defaults.ratingHtml;
       rating.append(node('span', '', defaults.ratingCount + (defaults.ratingCount === 1 ? ' review' : ' reviews'))); heading.append(rating);
     }
     let broadcast = heading.querySelector('[data-vc-product-broadcast]');
+    restore.preserve(broadcast);
     if (!broadcast) {
-      broadcast = button('announcement', '', () => {}); broadcast.hidden = true; broadcast.dataset.vcProductBroadcast = '';
+      broadcast = restore.own(button('announcement', '', () => {})); broadcast.hidden = true; broadcast.dataset.vcProductBroadcast = '';
       broadcast.innerHTML = '<span class="announcement-line"><svg class="announcement-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg><span class="announcement-copy"></span></span>';
       heading.append(broadcast);
     }
@@ -129,16 +186,16 @@
     productSlide.append(productImg, emptyImage, ribbon, zoom); productSlide.setAttribute('aria-label', 'Enlarge product image');
     track.append(productSlide, reportSlide); media.append(track);
     const caption = node('p', 'vc-dialog-media-caption'); media.append(caption);
-    root.querySelector('.vc-dialog-documents')?.remove();
-    const documents = node('section', 'vc-dialog-documents'); documents.hidden = true;
+    restore.move(root.querySelector('.vc-dialog-documents'),null);
+    const documents = restore.own(node('section', 'vc-dialog-documents')); documents.hidden = true;
     root.append(documents);
     const content = root.querySelector('.vc-product-dialog-content');
     if (content) content.querySelector('details[data-vc-dialog-tab="description"]')?.setAttribute('open', '');
     // Keep the current product's real questions after its report, outside the
     // description accordion. Empty products do not acquire another product's FAQ.
     const questions = content?.querySelector('.vc-product-dialog-questions');
-    if (questions) root.append(questions);
-    content?.querySelectorAll('[data-vc-product-common-questions]').forEach(section => root.append(section));
+    if (questions) restore.move(questions,root);
+    content?.querySelectorAll('[data-vc-product-common-questions]').forEach(section => restore.move(section,root));
     const toolbar = dialog.querySelector('.vc-home-quick__toolbar');
     const toolbarClose = toolbar?.querySelector('.vc-showcase-quick__close') || dialog.querySelector('.vc-showcase-quick__close');
     let navigation = null;
@@ -154,14 +211,16 @@
       if (restoreCloseFocus) toolbarClose.focus({preventScroll:true});
     }
     let support = summary.querySelector('.vc-dialog-support');
+    restore.preserve(support);
     if (!support && settings.whatsappEnabled && /^\d{7,15}$/.test(String(settings.whatsappNumber || '').replace(/\D/g, ''))) {
-      support = node('a', 'vc-dialog-support', settings.whatsappLabel || 'A little help');
+      support = restore.own(node('a', 'vc-dialog-support', settings.whatsappLabel || 'A little help'));
       const message = String(settings.whatsappMessage || '').replace(/\{product\}/g, productName);
       support.href = 'https://wa.me/' + String(settings.whatsappNumber).replace(/\D/g, '') + (message ? '?text=' + encodeURIComponent(message) : '');
       support.target = '_blank'; support.rel = 'noopener noreferrer'; summary.append(support);
     }
-    root.querySelector('.vc-dialog-offers')?.remove();
-    const offers = node('section', 'vc-dialog-offers'); offers.hidden = true; heading.prepend(offers);
+    if (support) { support.hidden = !settings.whatsappEnabled || !/^\d{7,15}$/.test(String(settings.whatsappNumber || '').replace(/\D/g, '')); support.textContent=settings.whatsappLabel || 'A little help'; }
+    restore.move(root.querySelector('.vc-dialog-offers'),null);
+    const offers = restore.own(node('section', 'vc-dialog-offers')); offers.hidden = true; heading.prepend(offers);
     let offerSignature = '';
     function renderOffers() {
       const candidates = root.vcHomePromotions === undefined ? defaults.promotions : root.vcHomePromotions;
@@ -188,7 +247,7 @@
     const publicPriceText = () => summary.querySelector('.vc-price-current .woocommerce-Price-amount')?.textContent || summary.querySelector('.price .woocommerce-Price-amount')?.textContent || '';
     const context = () => ({ product: productName, specification: selectedLabel(), price: publicPriceText(), sku: root.vcHomeSku ?? defaults.sku ?? '' });
     const metaStrip = window.createVcProductMetaStrip?.({root,summary,form,signal,selectedLabel,productId,unitPricing:defaults.unitPricing});
-    root.querySelector('.vc-dialog-sticky')?.remove();
+    restore.move(root.querySelector('.vc-dialog-sticky'),null);
     const mainBuy = root.querySelector('[data-vc-quick-buy]');
     const purchaseDock = window.createVcProductPurchaseDock?.({root,dialog,form,mainAdd,mainBuy,selectedLabel,priceNode:summary.querySelector(':scope > .price'),enabled:settings.stickyPurchaseEnabled,signal});
     const purchaseReturn = window.createVcConfirmedPurchaseReturn?.({dialog,signal,
@@ -407,14 +466,58 @@
     },{signal});
     document.addEventListener('visibilitychange',()=>{if(!document.hidden && !reportRequest && Date.now()-lastReportRead>60000)reportReadPromise=readReports();},{signal});
     document.addEventListener('vc:product-restore-cancel',()=>{reportOpenIntent++;},{signal});
-    dialog.addEventListener('close',()=>api.destroy(),{once:true,signal});
     const api = {
       update: refresh,
       openReport,
       openImage,
       updateMedia(image) { productImage=image; renderProduct(); },
-      destroy() { if(destroyed)return; destroyed=true; clearInterval(tickerPoll); reportOpenIntent++; pendingFeedback=null; purchaseReturn?.destroy(); nativeFeedback?.destroy(); window.jQuery?.(document.body).off(feedbackNamespace); lifecycle.abort(); navigation?.destroy(); reportRequest?.abort(); formObserver.disconnect(); cancelAnimationFrame(frame); metaStrip?.destroy(); purchaseDock?.destroy(); ticker?.destroy(); children.destroy(); root.vcExperience=null; }
+      destroy(reason = 'destroy') { if(destroyed)return; destroyed=true; document.dispatchEvent(new CustomEvent('vc:product-experience-disposed',{detail:{root,dialog,reason}})); clearInterval(tickerPoll); reportOpenIntent++; pendingFeedback=null; purchaseReturn?.destroy(); nativeFeedback?.destroy(); window.jQuery?.(document.body).off(feedbackNamespace); lifecycle.abort(); navigation?.destroy(); reportRequest?.abort(); formObserver.disconnect(); cancelAnimationFrame(frame); metaStrip?.destroy(); purchaseDock?.destroy(); ticker?.destroy(); children.destroy(); restore.destroy(); }
     };
     refresh(); reportReadPromise=readReports(); readTicker(); return api;
+  }
+  const deviceOwners = new WeakMap();
+  window.vcProductDeviceSettings = Object.freeze({resolve:deviceSettings});
+  window.createVcProductExperience = function (root, dialog) {
+    if (!root || !dialog || !dialog.contains(root)) return null;
+    if (deviceOwners.has(root)) return deviceOwners.get(root);
+    const config = json(root.dataset.vcExperience), defaults = json(root.dataset.vcHomeInitial);
+    const query = matchMedia('(max-width: 820px)');
+    let current = null, signature = '', destroyed = false;
+    let image = root.vcHomeImage === undefined ? defaults.image : root.vcHomeImage;
+    function reconcile() {
+      if (destroyed) return false;
+      const settings = deviceSettings(config,query.matches), next = JSON.stringify(settings);
+      if (signature === next) return false;
+      const focus = document.activeElement, hadFocus = dialog.contains(focus);
+      current?.destroy('device'); current = null; signature = next;
+      nativeMedia(root,image);
+      if (settings.enabled) current = createExperience(root,dialog,settings);
+      if (hadFocus && dialog.open) {
+        const target = focus?.isConnected ? focus : dialog.querySelector('.vc-showcase-quick__close');
+        target?.focus({preventScroll:true});
+      }
+      return true;
+    }
+    const changed = () => reconcile();
+    if (query.addEventListener) query.addEventListener('change',changed); else query.addListener?.(changed);
+    // A frozen document may miss its media-query change. Recheck the actual
+    // viewport on return; an identical device signature preserves the owner.
+    window.addEventListener('pageshow',changed);
+    window.addEventListener('focus',changed);
+    const api = {
+      update() { if (!reconcile()) current?.update(); },
+      openReport(...args) { return current?.openReport(...args) ?? false; },
+      openImage(...args) { return current?.openImage(...args) ?? false; },
+      updateMedia(next) { image=next; if (current) current.updateMedia(next); else nativeMedia(root,next); },
+      destroy() {
+        if (destroyed) return; destroyed=true;
+        if (query.removeEventListener) query.removeEventListener('change',changed); else query.removeListener?.(changed);
+        window.removeEventListener('pageshow',changed); window.removeEventListener('focus',changed);
+        dialog.removeEventListener('close',closed); current?.destroy('destroy'); current=null;
+        nativeMedia(root,image); deviceOwners.delete(root); if (root.vcExperience === api) root.vcExperience=null;
+      }
+    };
+    const closed = () => api.destroy(); dialog.addEventListener('close',closed,{once:true});
+    deviceOwners.set(root,api); reconcile(); return api;
   };
 })();

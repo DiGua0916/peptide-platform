@@ -75,6 +75,31 @@
         const activity = state.valid && !state.pending && activityAllowed(latest, applied) ? latest : null;
         return { activity, progress: settings.cart_progress_enabled === false ? null : activity, recommendation: settings.cart_recommendations_enabled === false ? null : activity };
     }
+    /** A device payload is already derived from the same published native module. */
+    function cartSettingsForDevice(config = {}, device = 'desktop') {
+        const record = value => value && typeof value === 'object' && !Array.isArray(value);
+        const devices = record(config.devices) ? config.devices : null;
+        const selected = devices ? (record(devices[device]) ? devices[device] : {}) : config;
+        // With devices, top-level enabled means "load on at least one device".
+        // It must not override this device's explicit false or empty copy.
+        const enabled = devices ? selected.enabled === true && selected.cart_experience_enabled !== false
+            : selected.enabled !== false && selected.cart_experience_enabled !== false;
+        return { ...selected, enabled: enabled && selected.visibility?.[device] !== false };
+    }
+    function createCartDeviceSettings({ settings, media, onChange }) {
+        let disposed = false, device = media.matches ? 'desktop' : 'mobile';
+        let current = cartSettingsForDevice(settings, device);
+        const change = () => {
+            const nextDevice = media.matches ? 'desktop' : 'mobile';
+            if (disposed || nextDevice === device) return;
+            device = nextDevice; current = cartSettingsForDevice(settings, device); onChange(current, device);
+        };
+        if (media.addEventListener) media.addEventListener('change', change); else media.addListener?.(change);
+        return { current: () => current, refresh: change, destroy() {
+            if (disposed) return; disposed = true;
+            if (media.removeEventListener) media.removeEventListener('change', change); else media.removeListener?.(change);
+        } };
+    }
     // Reconcile only changed keys. Replacing the entire list loses image state,
     // keyboard focus and the browser's scroll anchor during each native request.
     function reconcileRows(list, records, items, make, state) {
@@ -510,27 +535,32 @@
         }
         return { snapshot, refresh, request, write, externalStart, externalUpdate, destroy() { destroyed = true; invalidate(); clearTimeout(externalTimer); } };
     }
-    if (typeof module === 'object' && module.exports) module.exports = { validCart, money, cartItemPricing, couponPresentation, confirmedCartAdd, totals, createClient, addOne, activityAllowed, activityPresentation, reconcileRows, statusPresentation, createDrawerController, createNativeCheckoutBridge, recentPresentationUrl, recentPresentation, recentAddPayload, createRecommendationEnrichment };
+    if (typeof module === 'object' && module.exports) module.exports = { validCart, money, cartItemPricing, couponPresentation, confirmedCartAdd, totals, createClient, addOne, activityAllowed, activityPresentation, cartSettingsForDevice, createCartDeviceSettings, reconcileRows, statusPresentation, createDrawerController, createNativeCheckoutBridge, recentPresentationUrl, recentPresentation, recentAddPayload, createRecommendationEnrichment };
     if (!global?.document || !global.VialCoveLiveCartConfig) return;
-    const document = global.document, config = global.VialCoveLiveCartConfig, settings = config.settings || {}, roots = [...document.querySelectorAll('[data-vc-live-cart]')];
+    const document = global.document, config = global.VialCoveLiveCartConfig, roots = [...document.querySelectorAll('[data-vc-live-cart]')];
     if (!roots.length) return;
     const drawer = document.getElementById('vc-live-cart-drawer'), isDesktop = global.matchMedia('(min-width: 768px)'), parentIds = new Map();
+    let settings = cartSettingsForDevice(config.settings || {}, isDesktop.matches ? 'desktop' : 'mobile');
     const nativeCheckout = createNativeCheckoutBridge(global, config.nativeCheckout === true);
     const el = (tag, cls, text) => { const node = document.createElement(tag); node.className = cls || ''; if (text !== undefined) node.textContent = text; return node; };
     const clean = value => { const node = document.createElement('textarea'); node.innerHTML = String(value || ''); return node.value; };
     const safeUrl = value => { try { const url = new URL(value, location.href); return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password ? url.href : ''; } catch (_) { return ''; } };
     let recent = null, recommendation = null, enrichmentPending = false, quickOpener = null, disposed = false;
     let appliedActivity = global.vcLiveCommerce?.activity?.config || null, activityRead = null;
-    const views = roots.map(root => ({ root, rows: new Map(), recentSignature: '', totalsSignature: '', couponsSignature: '', progress: global.createCartProgress?.({ mount: root.querySelector('[data-cart-progress]') }), progressSignature: '', recommendation: global.createCartRecommendation?.({ mount: root.querySelector('[data-cart-recommendation]'), onChoose: candidate => choose(candidate.productId), onAdd: candidate => client.write('add-item', global.vcRecommendationContract.addPayload(candidate)), onRefresh: () => { refreshActivityConfig(); client.refresh(); } }) }));
+    const views = roots.map(root => ({ root, rows: new Map(), recentSignature: '', totalsSignature: '', couponsSignature: '', progress: global.createCartProgress?.({ mount: root.querySelector('[data-cart-progress]') }), progressSignature: '', recommendation: global.createCartRecommendation?.({ mount: root.querySelector('[data-cart-recommendation]'), onChoose: candidate => choose(candidate.productId), onAdd: candidate => {
+        if (!deviceEnabled() || settings.cart_recommendations_enabled === false) return Promise.reject(new Error('This offer is not available in this view.'));
+        return client.write('add-item', global.vcRecommendationContract.addPayload(candidate));
+    }, onRefresh: () => { refreshActivityConfig(); client.refresh(); } }) }));
     const client = createClient(config, { canWrite: () => !nativeCheckout.busy(), notify(type, detail) {
         if (type === 'state') { if (detail.valid && !detail.pending) nativeCheckout.receive(detail.cart); scheduleEnrichment(detail); render(detail); if (detail.pending) refreshActivityConfig(); }
         else document.dispatchEvent(new CustomEvent(type === 'start' ? 'vc:cart-mutation-start' : 'vc:cart-updated', { detail }));
     } });
-    const deviceEnabled = () => (settings.visibility || {})[isDesktop.matches ? 'desktop' : 'mobile'] !== false;
+    const deviceEnabled = () => settings.enabled;
     const canRead = () => deviceEnabled() && !document.hidden && roots.some(root => !root.closest('dialog') || root.closest('dialog').open);
+    const canEnrich = () => canRead() && (settings.cart_recent_enabled !== false || settings.cart_recommendations_enabled !== false);
     const recommendationEnrichment = createRecommendationEnrichment({
-        getState: () => client.snapshot(), canRead,
-        allowed: activity => !disposed && !nativeCheckout.busy() && settings.cart_recommendations_enabled !== false
+        getState: () => client.snapshot(), canRead: canEnrich,
+        allowed: activity => !disposed && deviceEnabled() && !nativeCheckout.busy() && settings.cart_recommendations_enabled !== false
             && activityAllowed(activity, appliedActivity) && activity?.enabled === true && activity?.visible === true,
         validQuote: (quote, activity) => !!global.vcRecommendationContract?.quotedRecommendation?.(quote, activity, activity?.cartSnapshotKey),
         readHistory: () => client.request(config.recentItemsUrl),
@@ -635,8 +665,23 @@
         if (valid) document.querySelectorAll('.vc-cart-count').forEach(node => { node.textContent = String(cart.items_count); });
         for (const view of views) {
             const root = view.root, firstReady = root.hidden && valid && deviceEnabled();
-            if (!deviceEnabled()) { root.hidden = true; const fallback = root.nextElementSibling; if (fallback?.matches('[data-vc-native-cart-fallback]')) fallback.hidden = false; continue; }
+            if (!deviceEnabled()) {
+                root.hidden = true;
+                const fallback = root.nextElementSibling; if (fallback?.matches('[data-vc-native-cart-fallback]')) fallback.hidden = false;
+                continue;
+            }
             if (firstReady) { root.hidden = false; const fallback = root.nextElementSibling; if (fallback?.matches('[data-vc-native-cart-fallback]')) fallback.hidden = true; }
+            const heading = root.querySelector('.vc-live-cart__heading h1,.vc-live-cart__heading h2');
+            if (heading && typeof settings.cart_title === 'string' && heading.textContent !== settings.cart_title) heading.textContent = settings.cart_title;
+            if (typeof settings.cart_continue_label === 'string') {
+                const label = settings.cart_continue_label;
+                const emptyLink = root.querySelector('[data-cart-empty] a');
+                if (emptyLink && emptyLink.textContent !== label + (label ? ' →' : '')) emptyLink.textContent = label + (label ? ' →' : '');
+                // The drawer's "View full bag" points to the cart route; it is
+                // not the merchant's continue-shopping action on the cart page.
+                const continueLink = root.dataset.drawer === '0' ? root.querySelector('.vc-live-cart__continue') : null;
+                if (continueLink && continueLink.textContent !== label) continueLink.textContent = label;
+            }
             const active = document.activeElement, activeRow = root.contains(active) ? active?.closest('[data-cart-key]') : null, list = root.querySelector('[data-cart-items]');
             // Keep a visible product in place when genuine totals/offer content above
             // it changes. Native scroll anchoring may already have corrected it.
@@ -663,6 +708,10 @@
             quoteMount.classList.toggle('is-refreshing', reserveQuote && !!quoteMount.style.getPropertyValue('--vc-cart-quote-height'));
             if (!reserveQuote) quoteMount.style.removeProperty('--vc-cart-quote-height');
             view.recommendation?.update({ activity: presentation.recommendation ? quoteActivity : null, snapshotKey: activity?.cartSnapshotKey || '', valid, pending });
+            // A view switch never cancels an already submitted native write.
+            // Hide its old presentation while its sole operation owner settles.
+            quoteMount.inert = !presentation.recommendation;
+            if (settings.cart_recommendations_enabled === false) quoteMount.hidden = true;
             list.setAttribute('aria-busy', String(pending));
             if (cart) reconcileRows(list, view.rows, cart.items, cartRow, state);
             if (view.restoreFocus && !pending) {
@@ -691,9 +740,10 @@
         }
     }
     function renderRecent(view, state) {
-        const root = view.root, section = root.querySelector('[data-cart-recent]'); section.hidden = settings.cart_recent_enabled === false || !recent?.visible || !recent.items?.length;
+        const root = view.root, section = root.querySelector('[data-cart-recent]'), enabled = settings.cart_recent_enabled !== false;
+        section.hidden = !enabled || !recent?.visible || !recent.items?.length;
         section.inert = !state.valid || state.pending; section.setAttribute('aria-busy', String(state.pending));
-        if (view.recentOperation) { section.hidden = false; return; }
+        if (view.recentOperation) { if (enabled) section.hidden = false; return; }
         if (section.hidden) return;
         const signature = JSON.stringify([recent.title, recent.items.slice(0, 2)]); if (view.recentSignature === signature) return; view.recentSignature = signature;
         for (const feedback of view.recentFeedbacks || []) feedback.destroy(); view.recentFeedbacks = [];
@@ -728,7 +778,10 @@
             button.addEventListener('click', async () => {
                 const latest = client.snapshot(); if (view.recentOperation || button.disabled || !latest.valid || latest.pending) return;
                 view.recentOperation = true;
-                const submit = () => client.write('add-item', recentAddPayload(item));
+                const submit = () => {
+                    if (!deviceEnabled() || settings.cart_recent_enabled === false) throw new Error('This action is not available in this view.');
+                    return client.write('add-item', recentAddPayload(item));
+                };
                 let ok = false;
                 try {
                     if (feedback) ok = (await feedback.run({ submit, quantity: 1, productName: clean(item.name), triggerButton: button })).ok === true;
@@ -758,7 +811,22 @@
     });
     drawer?.addEventListener('click', event => { if (event.target === drawer) closeDrawer(); });
     drawer?.addEventListener('cancel', event => { event.preventDefault(); closeDrawer(); });
-    isDesktop.addEventListener('change', () => { if (!deviceEnabled() && drawer?.open) closeDrawer(true); render(client.snapshot()); if (canRead()) client.refresh(); });
+    const deviceSettings = createCartDeviceSettings({ settings: config.settings || {}, media: isDesktop, onChange(next) {
+        if (disposed) return;
+        settings = next;
+        // Retire history/quote/decorations before any new device can paint.
+        // Keep the native cart client, rows, checkout bridge and write owner.
+        recent = null;
+        recommendationEnrichment.clear();
+        for (const view of views) {
+            view.progressSignature = ''; view.progress?.update(null);
+            const quoteMount = view.root.querySelector('[data-cart-recommendation]');
+            quoteMount.classList.remove('is-refreshing'); quoteMount.style.removeProperty('--vc-cart-quote-height');
+        }
+        if (!deviceEnabled() && drawer?.open) closeDrawer(true);
+        render(client.snapshot());
+        if (canRead()) { refreshActivityConfig(); scheduleEnrichment(client.snapshot(), true); client.refresh(); }
+    } });
     for (const root of roots) {
         root.querySelector('[data-cart-retry]').addEventListener('click', () => client.refresh());
         root.querySelector('[data-cart-coupon]').addEventListener('submit', event => { event.preventDefault(); const input = event.currentTarget.elements.coupon, code = input.value.trim(); if (code) client.write('apply-coupon', { code }).then(() => { input.value = ''; }).catch(() => {}); });
@@ -767,7 +835,7 @@
     const updated = event => { if (event.detail?.owner !== 'live-cart') client.externalUpdate(event.detail); };
     document.addEventListener('vc:cart-mutation-start', started); document.addEventListener('vc:cart-updated', updated);
     document.addEventListener('vc:recently-viewed-updated', () => { if (!disposed && canRead()) scheduleEnrichment(client.snapshot(), true); });
-    const refreshVisible = () => { if (canRead()) { refreshActivityConfig(); client.refresh(); } };
+    const refreshVisible = () => { deviceSettings.refresh(); if (canRead()) { refreshActivityConfig(); client.refresh(); } };
     document.addEventListener('visibilitychange', refreshVisible); global.addEventListener('focus', refreshVisible); global.addEventListener('pageshow', refreshVisible);
     const polling = setInterval(refreshVisible, 30000);
     let wasNativeBusy = nativeCheckout.busy(), nativeRefreshTimer = 0;
@@ -778,6 +846,6 @@
         wasNativeBusy = busy;
     });
     global.VialCoveLiveCart = { canOpen: drawerController.available, open: trigger => openDrawer(trigger) || location.assign(config.cartUrl), close: closeDrawer, refresh: () => client.refresh(), snapshot: () => client.snapshot(), addOne: (item, { signal } = {}) => addOne(client, item, signal), applyCoupon: code => client.write('apply-coupon', { code }) };
-    global.addEventListener('pagehide', event => { if (event.persisted) return; disposed = true; recommendationEnrichment.destroy(); stopNativeSubscription(); clearTimeout(nativeRefreshTimer); drawerController.destroy(); quickOpener?.remove(); clearInterval(polling); client.destroy(); views.forEach(view => { view.progress?.destroy(); view.recommendation?.destroy(); clearTimeout(view.recentResetTimer); for (const feedback of view.recentFeedbacks || []) feedback.destroy(); }); });
+    global.addEventListener('pagehide', event => { if (event.persisted) return; disposed = true; deviceSettings.destroy(); recommendationEnrichment.destroy(); stopNativeSubscription(); clearTimeout(nativeRefreshTimer); drawerController.destroy(); quickOpener?.remove(); clearInterval(polling); client.destroy(); views.forEach(view => { view.progress?.destroy(); view.recommendation?.destroy(); clearTimeout(view.recentResetTimer); for (const feedback of view.recentFeedbacks || []) feedback.destroy(); }); });
     if (deviceEnabled() && roots.some(root => root.dataset.drawer === '0')) refreshVisible();
 })(typeof window === 'undefined' ? null : window);
