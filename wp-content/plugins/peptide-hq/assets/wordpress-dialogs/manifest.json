@@ -1,0 +1,61 @@
+{
+  "version": "7.1.4",
+  "files": {
+    "wp-admin/js/application-passwords.js": {
+      "upstream": "e535345c324730f86140388a6900ac334478d9e7d54e2074e1c6a2ba3a923d83",
+      "adapted": "6ba98458a836e8c3e9d038784a11152e1ed45140a0e5cdfe6cc7e86c480218c4"
+    },
+    "wp-includes/js/colorpicker.js": {
+      "upstream": "ec35cdd800091a8b653a918ee41a801529ccbd43d28b7c32114396512b3fd93e",
+      "adapted": "dae7971ecd7d77814cc8435883eb4217235e3173ce566963062c4dd47b0ccf0c"
+    },
+    "wp-admin/js/common.js": {
+      "upstream": "b513570e6123bd0143d3f5c0f392b0754e04ea915402766243a4d7a2af38babe",
+      "adapted": "9b063fad5ebc14b8e4dca37a8fe452a5440c75ef7a09be89d5c94a6ae9423431"
+    },
+    "wp-admin/js/customize-controls.js": {
+      "upstream": "92c3175906997770a680386e2b79b77a100491b849ce844923c14394c0d41da2",
+      "adapted": "67ffa9bb6e12ec0514834300ff705c0198a5eee227e42ac91ede6b4f41ae0a53"
+    },
+    "wp-admin/js/edit-comments.js": {
+      "upstream": "24d11804da0c3518c4cb4eac2e7e9fe19809fc3588d68d2471c9154aeeddcbc0",
+      "adapted": "e5b444ff21b213b30fd4b7f45ba8c721e0aaa9940c12f4d45e43454b29d128fd"
+    },
+    "wp-admin/js/image-edit.js": {
+      "upstream": "ff59de5eaf42d1260fb63a051d8e5b890dc4016b5bdd92d235cafaf93bce0168",
+      "adapted": "913cf7907b1b5fac0ec3815541aacf207896771bcbbbf897258f6db8eb4a8fe2"
+    },
+    "wp-includes/js/media-editor.js": {
+      "upstream": "e27ab4d380e7936a1fa8fdc2d681cbe914d352691a51f0ca9883cbf885cf177b",
+      "adapted": "ee2974eeba318d7540ef32d9b916cfa7921c061c5847afdbffbed29b81c0c0ac"
+    },
+    "wp-includes/js/media-views.js": {
+      "upstream": "6b05b9c02a60a783137b3f58dba60418789c43f3e5dfd2dca597ba71ede3a365",
+      "adapted": "4a4d9c3393fb3416801cee80b34dde9d57a53cb557cc4ab5f60f12bc626707e5"
+    },
+    "wp-admin/js/nav-menu.js": {
+      "upstream": "22a82cd753b04e837aa06db170d76236a316b15bbdadd6cc1f39baeb17c76424",
+      "adapted": "928a6481a34a6ad8fba30b2e6fc48032f330e25b4aaf673f0d1b6cf3ca64b825"
+    },
+    "wp-admin/js/post.js": {
+      "upstream": "5282c8b01e010d004c269a08c7a8ca4626f8343bd2a9d7f105610f1e613704ac",
+      "adapted": "d51d91d4fb4a147070d50c3da7cd22553360a1ff35d4d7919ecd737a7abad04d"
+    },
+    "wp-includes/js/quicktags.js": {
+      "upstream": "d2afa53fe0cf6eaa25ab5f4f303b773ed868c54bce47aeb5b1474db40d736539",
+      "adapted": "8e0dc87dd603f4e04143c4ddd537734fd36c1ffa7f7a1fde80a88a86696dc32b"
+    },
+    "wp-admin/js/set-post-thumbnail.js": {
+      "upstream": "45ed6c0473f932521499fa2f8481ad2664820d4d8683729b47d571846751f480",
+      "adapted": "8128580c885430ae132376c98994b90e77e669052f4e946964224398a7ca12c4"
+    },
+    "wp-admin/js/theme.js": {
+      "upstream": "b0d4430007906a12365f4f99e774562be03b932e19d0764592d6a699c603bbab",
+      "adapted": "4ee0f0cf2b649f09cc3a3622a857b47f2fc29c6334d5a1165cc473bc858f604e"
+    },
+    "wp-admin/js/updates.js": {
+      "upstream": "c908a8ea6f2bce6f8bd405aff9cdfcda4e60f0f689cbbd9c0a494aa931d8949c",
+      "adapted": "10d126a63091c32f9964cdf215251e82dcf56db0151d3881bd39e4d5caac862e"
+    }
+  }
+}

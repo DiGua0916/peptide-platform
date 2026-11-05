@@ -124,7 +124,7 @@
 		}
 		function approve(previous) {
 			var stamp = dirtyStamp();
-			if (stamp && stamp !== previous && !env.confirm('有尚未保存的修改，离开会丢失这些修改。仍要切换页面吗？')) return null;
+			if (stamp && stamp !== previous) return env.VialCoveDialogs.confirm('有尚未保存的修改，离开会丢失这些修改。仍要切换页面吗？').then(ok => ok ? stamp : null);
 			return stamp;
 		}
 		function historyRecord(url, scroll, index) { return { pchqNavigation: { url: url, scroll: scroll, position: index } }; }
@@ -147,17 +147,21 @@
 			if (delta) { restoringPop = true; env.history.go(delta); }
 			else env.history.replaceState(historyRecord(currentURL, { x: env.scrollX || 0, y: env.scrollY || 0 }, position), '', currentURL);
 		}
-		function hardLoad(url, config, previous) {
-			if (approve(previous) === null) { status.hidden = true; recoverPop(config); return false; }
+		async function hardLoad(url, config, previous) {
+			if (await approve(previous) === null) { status.hidden = true; recoverPop(config); return false; }
 			discardApproved = true;
 			nativeNavigate(url, !!config.pop);
 			return false;
 		}
+		var navigationIntent = 0;
 		async function navigate(href, config) {
+			var intent = ++navigationIntent;
 			config = config || {};
 			var url = safeURL(href, meta.base, meta.policy);
 			if (!url || destroyed) return false;
 			var approved = approve();
+			if (approved && typeof approved.then === 'function') approved = await approved;
+			if (intent !== navigationIntent || destroyed) return false;
 			if (approved === null) { recoverPop(config); return false; }
 			if (!config.pop && !saveScroll()) return hardLoad(url.href, config, approved);
 			var id = ++sequence;
@@ -181,7 +185,8 @@
 				var base = parsed.createElement('base'); base.href = response.url; parsed.head.prepend(base);
 				var next = compatibleDocument(parsed, meta, existingAssets, url.href);
 				if (!next) return hardLoad(url.href, config, approved);
-				if (approve(approved) === null) { status.hidden = true; recoverPop(config); return false; }
+				if (await approve(approved) === null) { status.hidden = true; recoverPop(config); return false; }
+				if (id !== sequence || destroyed) return false;
 				var replacement = doc.importNode(next.content, true), location = doc.querySelector('.pchq-workspace-location');
 				if (!location) return hardLoad(url.href, config, approved);
 				var scroll = config.scroll || { x: 0, y: 0 }, nextPosition = position;
@@ -193,6 +198,9 @@
 				if (env.screenMeta && env.screenMeta.toggles && typeof env.screenMeta.toggles.off === 'function') env.screenMeta.toggles.off('click', env.screenMeta.toggleEvent);
 				doc.dispatchEvent(new env.CustomEvent('pchq:before-swap'));
 				content.replaceWith(replacement); content = replacement;
+				if (typeof content.animate === 'function' && !(env.matchMedia && env.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+					content.animate([{ opacity: .88, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 200, easing: 'cubic-bezier(.22,1,.36,1)' });
+				}
 				location.replaceChildren.apply(location, Array.from(next.location.childNodes).map(function (node) { return doc.importNode(node, true); }));
 				doc.body.classList.remove(meta.screen); doc.body.classList.add(next.meta.screen);
 				meta = next.meta; doc.title = parsed.title;

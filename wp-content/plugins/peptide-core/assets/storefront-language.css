@@ -1,0 +1,83 @@
+/* Compact language disclosure; the current theme keeps its own header and icon system. */
+.pc-language-switcher{
+    position:fixed;inset-inline-start:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:80;
+    display:inline-flex;flex:0 0 auto;align-items:center;box-sizing:border-box;
+    max-inline-size:calc(100vw - 32px);margin:0;padding:0;border:0;border-radius:6px;
+    background:#fff;color:#171717;font-family:inherit;font-size:13px;line-height:20px;
+}
+.pc-language-switcher--header{
+    position:relative;inset:auto;z-index:5;max-inline-size:none;background:transparent;box-shadow:none;
+}
+.pc-language-switcher [data-pc-language-menu]{position:relative;margin:0;padding:0;border:0}
+.pc-language-switcher [data-pc-language-trigger]{
+    display:flex;align-items:center;justify-content:center;gap:5px;min-block-size:44px;box-sizing:border-box;
+    margin:0;padding:6px 8px;border:0;border-radius:6px;background:transparent;color:inherit;
+    list-style:none;font:inherit;font-weight:500;letter-spacing:0;text-transform:none;
+    white-space:nowrap;word-break:normal;overflow:visible;cursor:pointer;touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;transition:background-color 140ms ease-out;
+}
+.pc-language-switcher [data-pc-language-trigger]::-webkit-details-marker{display:none}
+.pc-language-switcher [data-pc-language-trigger]::marker{content:""}
+.pc-language-switcher [data-pc-language-trigger] svg{
+    display:block;flex:0 0 12px;inline-size:12px;block-size:12px;margin:0;
+    transition:transform 160ms cubic-bezier(.22,1,.36,1);
+}
+.pc-language-switcher [data-pc-language-menu][open]>[data-pc-language-trigger]{background:#f2f2f2}
+.pc-language-switcher [data-pc-language-menu][open]>[data-pc-language-trigger] svg{transform:rotate(180deg)}
+.pc-language-switcher .pc-language-options{
+    position:absolute;inset-inline-end:0;inset-block-start:calc(100% + 6px);z-index:1;
+    display:flex;flex-direction:column;gap:2px;inline-size:168px;max-inline-size:calc(100vw - 32px);
+    max-block-size:min(320px,60dvh);overflow-y:auto;overscroll-behavior:contain;
+    box-sizing:border-box;margin:0;padding:6px;border:0;border-radius:12px;
+    background:#fff;color:#171717;box-shadow:0 8px 28px #00000024;
+    scrollbar-width:thin;scrollbar-color:#999 #f4f4f4;
+}
+.pc-language-switcher [data-pc-language-menu]:not([open])>.pc-language-options{display:none}
+.pc-language-switcher [data-pc-language-menu][open]>.pc-language-options{animation:pc-language-open 160ms cubic-bezier(.22,1,.36,1)}
+.pc-language-switcher .pc-language-options [data-pc-language-option]{
+    display:flex;align-items:center;justify-content:space-between;gap:18px;min-block-size:44px;
+    box-sizing:border-box;margin:0;padding:10px 12px;border:0;border-radius:6px;
+    color:#171717;background:transparent;font:inherit;font-size:14px;line-height:20px;font-weight:400;
+    text-align:start;text-decoration:none;white-space:nowrap;word-break:normal;cursor:pointer;touch-action:manipulation;
+    transition:background-color 140ms ease-out;
+}
+.pc-language-switcher .pc-language-options [data-pc-language-option][aria-current]:not([aria-current="false"]){background:#f4f4f4;font-weight:600}
+.pc-language-switcher .pc-language-check{display:block;visibility:hidden;flex:0 0 16px;inline-size:16px;block-size:16px;margin:0}
+.pc-language-switcher .pc-language-options [data-pc-language-option][aria-current]:not([aria-current="false"]) .pc-language-check{visibility:visible}
+.pc-language-switcher :is([data-pc-language-trigger],[data-pc-language-option]):focus-visible{
+    outline:2px solid #171717;outline-offset:2px;
+}
+/* If the page has no theme header, the existing footer fallback opens into the viewport. */
+.pc-language-switcher:not(.pc-language-switcher--header) .pc-language-options{inset-inline-start:0;inset-inline-end:auto;inset-block-start:auto;inset-block-end:calc(100% + 6px)}
+.pc-language-switcher noscript{padding:8px;font-size:13px}
+.pc-language-attribution{display:block;padding:8px 16px;font-size:11px;line-height:1.5;text-align:center}
+@media(hover:hover){
+    .pc-language-switcher [data-pc-language-trigger]:hover,
+    .pc-language-switcher .pc-language-options [data-pc-language-option]:hover{background:#f2f2f2;color:#171717}
+}
+@media(max-width:767px){
+    .pc-language-switcher [data-pc-language-trigger]{padding-inline:4px}
+    /* Only a header containing this control shares its finite mobile row. */
+    .vc-demo-header-inner:has(.pc-language-switcher--header){gap:8px}
+    .vc-demo-header-inner:has(.pc-language-switcher--header)>.vc-demo-brand{
+        flex:0 1 var(--vc-demo-logo-mobile,156px);min-inline-size:0;max-inline-size:var(--vc-demo-logo-mobile,156px);
+    }
+    .vc-demo-header-inner:has(.pc-language-switcher--header)>.vc-demo-brand :is(picture,img){inline-size:100%;max-inline-size:100%;min-inline-size:0}
+    .vc-demo-header-actions:has(>.pc-language-switcher--header){gap:2px;flex-shrink:0}
+    .vc-demo-header-actions:has(>.pc-language-switcher--header)>.vc-demo-icon-button{
+        inline-size:44px;min-inline-size:44px;block-size:44px;min-block-size:44px;padding-inline:0;
+    }
+    .vc-demo-header-actions:has(>.pc-language-switcher--header)>.vc-demo-bag{gap:4px}
+}
+@media(max-width:600px){
+    .header-inner:has(.pc-language-switcher--header){gap:8px}
+    .header-inner:has(.pc-language-switcher--header)>.brand--primary{flex:0 1 180px;min-inline-size:0;max-inline-size:180px}
+    .header-inner:has(.pc-language-switcher--header)>.brand--primary :is(.brand-logo,.brand-logo-compact){inline-size:100%;max-inline-size:100%;min-inline-size:0}
+    .header-actions:has(>.pc-language-switcher--header){gap:4px;flex-shrink:0}
+    .header-actions:has(>.pc-language-switcher--header)>:is(.cart-link,.menu-toggle){min-inline-size:44px;min-block-size:44px}
+    .header-actions:has(>.pc-language-switcher--header)>.cart-link{justify-content:center;gap:4px}
+}
+@keyframes pc-language-open{from{transform:translateY(-3px);opacity:.96}to{transform:translateY(0);opacity:1}}
+@media(prefers-reduced-motion:reduce){
+    .pc-language-switcher *{scroll-behavior:auto!important;transition:none!important;animation:none!important}
+}

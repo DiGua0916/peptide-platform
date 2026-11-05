@@ -59,4 +59,22 @@ check_language_admin( 'saved mapping', Language::get() === array( 'enabled' => t
 check_language_admin( 'unrelated site settings preserved', array( 'preserved' => true ) === $store['unrelated'] && ! isset( $store['WPLANG'], $store['support'] ) );
 $disabled = $valid; unset( $disabled['enabled'] );
 check_language_admin( 'unchecked switch saves', str_ends_with( submit_language_admin( $disabled ), 'language_notice=saved' ) && false === Language::get()['enabled'] );
+eval( 'namespace PeptideCore; final class Storefront_Translation { public const OPTION = "pc_storefront_translation_enabled"; public static bool $ready = false; public static function packages_ready(): bool { return self::$ready; } }' );
+use PeptideCore\Storefront_Translation as Translation;
+$before = $store; $writes = array();
+$bilingual = $valid + array( 'translation_settings_present' => '1', 'translation_enabled' => '1' );
+check_language_admin( 'missing packs prevent translation enable', str_ends_with( submit_language_admin( $bilingual ), 'language_notice=resources' ) );
+check_language_admin( 'resource validation precedes any writes', $before === $store && array() === $writes );
+Translation::$ready = true;
+check_language_admin( 'ready packs allow bilingual save', str_ends_with( submit_language_admin( $bilingual ), 'language_notice=saved' ) && true === $store[ Translation::OPTION ] );
+check_language_admin( 'only both owned options written', array( array( Language::OPTION, false ), array( Translation::OPTION, false ) ) === $writes );
+foreach ( array( array( 'translation_enabled' => array( '1' ) ), array( 'translation_enabled' => 'yes' ), array( 'translation_settings_present' => array( '1' ) ) ) as $bad ) {
+	$writes = array(); $before = $store;
+	check_language_admin( 'invalid translation shape rejected', str_ends_with( submit_language_admin( array_replace( $bilingual, $bad ) ), 'language_notice=invalid' ) );
+	check_language_admin( 'invalid translation cannot partially save rules', array() === $writes && $before === $store );
+}
+$writes = array();
+check_language_admin( 'stale old form preserves enabled translation', str_ends_with( submit_language_admin( $valid ), 'language_notice=saved' ) && true === $store[ Translation::OPTION ] && array( array( Language::OPTION, false ) ) === $writes );
+unset( $bilingual['translation_enabled'] );
+check_language_admin( 'new unchecked translation switch disables only translation', str_ends_with( submit_language_admin( $bilingual ), 'language_notice=saved' ) && false === $store[ Translation::OPTION ] && true === Language::get()['enabled'] );
 echo "PASS {$checks} storefront language admin checks; no WordPress, network, orders or customer data used.\n";

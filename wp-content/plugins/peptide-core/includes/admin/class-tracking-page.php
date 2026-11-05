@@ -59,6 +59,8 @@ final class Tracking_Page {
 		wp_enqueue_style( 'peptide-core-visitor-cart', $url . 'visitor-cart.css', array(), $ver( 'visitor-cart.css' ) );
 		wp_register_script( 'peptide-core-visitor-cart', $url . 'visitor-cart.js', array(), $ver( 'visitor-cart.js' ), array( 'in_footer' => true ) );
 		wp_register_script( 'peptide-core-visitor-cart-adapter', $url . 'visitor-cart-adapter.js', array( 'peptide-core-visitor-cart' ), $ver( 'visitor-cart-adapter.js' ), array( 'in_footer' => true ) );
+		wp_enqueue_style( 'peptide-core-tracking-insights', $url . 'tracking-insights.css', array( 'peptide-core-tracking-admin' ), $ver( 'tracking-insights.css' ) );
+		wp_enqueue_script( 'peptide-core-tracking-insights', $url . 'tracking-insights.js', array( 'wp-api-fetch', 'peptide-core-tracking-admin' ), $ver( 'tracking-insights.js' ), true );
 		wp_enqueue_script( 'peptide-core-tracking-admin', $url . 'tracking-admin.js', array( 'wp-api-fetch', 'peptide-core-visitor-cart-adapter' ), $ver( 'tracking-admin.js' ), array( 'in_footer' => true ) );
 		wp_add_inline_script(
 			'peptide-core-tracking-admin',
@@ -183,6 +185,7 @@ final class Tracking_Page {
 				'content'        => __( 'Page', 'peptide-core' ),
 			),
 			'types'       => array(
+				'module_click' => '模块点击', 'product_click' => '商品点击',
 				'product_impression'      => __( 'Product exposure observed', 'peptide-core' ),
 				'page_view'               => __( 'Opened page', 'peptide-core' ),
 				'product_view'            => __( 'Viewed product', 'peptide-core' ),
@@ -283,7 +286,7 @@ final class Tracking_Page {
 					<p class="description"><?php esc_html_e( 'Never recorded: staff accounts and browsers that opened the opt-out link (?pc_px_optout=1). A customer’s visits are included when personal data is exported or erased.', 'peptide-core' ); ?></p>
 					<?php $test_left = current_user_can( 'manage_options' ) ? Schema::test_visitors() : 0; ?>
 					<?php if ( $test_left ) : ?>
-						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="pc-trk-purge" onsubmit="return confirm(<?php echo esc_attr( wp_json_encode( __( 'Delete the data from the test version? This cannot be undone.', 'peptide-core' ) ) ); ?>);">
+						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="pc-trk-purge" data-pc-confirm-json="<?php echo esc_attr( wp_json_encode( __( 'Delete the data from the test version? This cannot be undone.', 'peptide-core' ) ) ); ?>">
 							<input type="hidden" name="action" value="pc_tracking_purge">
 							<?php wp_nonce_field( 'pc_tracking_purge' ); ?>
 							<?php /* translators: %d: number of visitors */ ?>
@@ -294,6 +297,7 @@ final class Tracking_Page {
 				</div>
 			<?php endif; ?>
 			<div id="pc-trk-app" class="pc-trk-app"><p><?php esc_html_e( 'Loading…', 'peptide-core' ); ?></p></div>
+			<div id="pc-trk-insights"></div>
 		</div>
 		<?php
 	}

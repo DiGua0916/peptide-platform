@@ -48,6 +48,8 @@ final class Plugin {
 		Pricing::register_hooks();
 		Unit_Pricing::register_hooks();
 		Api\Storefront_Language_Controller::register_hooks();
+		Storefront_Translation::register_hooks();
+		Storefront_Translator::register_hooks();
 		Checkout_Ack::register_hooks();
 		Shipping_Tracking::register_hooks();
 		Templates::register_hooks();
@@ -59,6 +61,9 @@ final class Plugin {
 		Custom_Pages::register_hooks();
 		Coupons::register_hooks();
 		Coupon_Rules::register_hooks();
+		Campaign_Countdown::register_hooks();
+		First_Order_Offer::register_hooks();
+		Postal_Assist::register_hooks();
 		Exit_Intent::register_hooks();
 		Modules\Product_Broadcast::register_hooks();
 		Api\Product_Broadcast_Controller::register_hooks();
@@ -86,6 +91,7 @@ final class Plugin {
 		Emails\Registry::register_hooks();
 		Terms::register_hooks();
 		Tracking\Tracker::register_hooks();
+		Tracking\Preferences::register_hooks();
 		Tracking\Checkout_Steps::register_hooks();
 		Payments\Local_Payments::register_hooks();
 		Api\Tracking_Controller::register_hooks();
@@ -138,6 +144,7 @@ final class Plugin {
 			Admin\Coupons_Page::register_hooks();
 			Admin\Shipping_Discounts_Page::register_hooks();
 			Admin\Apps_Page::register_hooks();
+			Admin\Campaign_Countdown_Page::register_hooks();
 			Admin\Product_Broadcast_Page::register_hooks();
 			Admin\Activity_Listener_Page::register_hooks();
 			Admin\Cart_Feedback_Page::register_hooks();

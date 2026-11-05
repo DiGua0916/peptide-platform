@@ -38,10 +38,8 @@
 		};
 		op.addEventListener( 'change', sync );
 		sync();
-		list.addEventListener( 'submit', function ( e ) {
-			if ( 'delete' === op.value && ! window.confirm( cfg.confirm ) ) {
-				e.preventDefault();
-			}
-		} );
+		list.setAttribute('data-pc-confirm', cfg.confirm);
+		list.setAttribute('data-pc-confirm-field', 'op');
+		list.setAttribute('data-pc-confirm-value', 'delete');
 	}
 }() );

@@ -2805,12 +2805,12 @@
 			props.onChange( list );
 			setOpen( copy.id );
 		}
-		function remove( index ) {
+		async function remove( index ) {
 			if ( items.length <= props.min ) {
 				return;
 			}
 			// eslint-disable-next-line no-alert -- 后台已用页面内对话框替换原生确认框。
-			if ( ! window.confirm( S.confirmDel ) ) {
+			if ( ! await window.VialCoveDialogs.confirm( S.confirmDel ) ) {
 				return;
 			}
 			var list = items.slice();

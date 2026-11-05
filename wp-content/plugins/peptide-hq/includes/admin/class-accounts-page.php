@@ -120,14 +120,14 @@ final class Accounts_Page {
 							</td>
 							<td data-label="<?php esc_attr_e( 'Menus they can use', 'peptide-hq' ); ?>" class="pchq-perms"><?php echo esc_html( $a['modules'] ? self::labels( (array) $a['modules'] ) : __( 'None', 'peptide-hq' ) ); ?></td>
 							<td data-label="<?php esc_attr_e( 'Status', 'peptide-hq' ); ?>">
-								<a class="pchq-switch<?php echo $off ? '' : ' is-on'; ?>" role="switch" aria-checked="<?php echo $off ? 'false' : 'true'; ?>" href="<?php echo esc_url( Menu::action_url( 'pchq_account_toggle', array( 'site' => $site, 'user' => (int) $a['id'] ) ) ); ?>" aria-label="<?php echo esc_attr( (string) $a['login'] ); ?>" onclick="return confirm(<?php echo esc_attr( wp_json_encode( $off ? __( 'Enable this account?', 'peptide-hq' ) : __( 'Disable this account? The salesperson is logged out at once and cannot log in until enabled again.', 'peptide-hq' ) ) ); ?>);"></a>
+								<a class="pchq-switch<?php echo $off ? '' : ' is-on'; ?>" role="switch" aria-checked="<?php echo $off ? 'false' : 'true'; ?>" href="<?php echo esc_url( Menu::action_url( 'pchq_account_toggle', array( 'site' => $site, 'user' => (int) $a['id'] ) ) ); ?>" aria-label="<?php echo esc_attr( (string) $a['login'] ); ?>" data-pc-confirm-json="<?php echo esc_attr( wp_json_encode( $off ? __( 'Enable this account?', 'peptide-hq' ) : __( 'Disable this account? The salesperson is logged out at once and cannot log in until enabled again.', 'peptide-hq' ) ) ); ?>"></a>
 								<span class="pchq-muted"><?php echo esc_html( $off ? __( 'Disabled', 'peptide-hq' ) : __( 'Enabled', 'peptide-hq' ) ); ?></span>
 							</td>
 							<td data-label="<?php esc_attr_e( 'Last login', 'peptide-hq' ); ?>"><?php echo esc_html( Menu::ago( (int) $a['last_login'] ) ); ?></td>
 							<td data-label="<?php esc_attr_e( 'Actions', 'peptide-hq' ); ?>">
 								<a href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::SLUG . '&site=' . $site . '&edit=' . (int) $a['id'] ) ); ?>"><?php esc_html_e( 'Edit', 'peptide-hq' ); ?></a>
 								|
-								<a class="pchq-delete" href="<?php echo esc_url( Menu::action_url( 'pchq_account_delete', array( 'site' => $site, 'user' => (int) $a['id'] ) ) ); ?>" onclick="return confirm(<?php echo esc_attr( wp_json_encode( __( 'Delete this salesperson account from the store? Its posts and products are kept and moved to the store administrator.', 'peptide-hq' ) ) ); ?>);"><?php esc_html_e( 'Delete', 'peptide-hq' ); ?></a>
+								<a class="pchq-delete" href="<?php echo esc_url( Menu::action_url( 'pchq_account_delete', array( 'site' => $site, 'user' => (int) $a['id'] ) ) ); ?>" data-pc-confirm-json="<?php echo esc_attr( wp_json_encode( __( 'Delete this salesperson account from the store? Its posts and products are kept and moved to the store administrator.', 'peptide-hq' ) ) ); ?>"><?php esc_html_e( 'Delete', 'peptide-hq' ); ?></a>
 							</td>
 						</tr>
 					<?php endforeach; ?>

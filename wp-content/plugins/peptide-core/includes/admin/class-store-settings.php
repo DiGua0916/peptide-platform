@@ -67,7 +67,7 @@ final class Store_Settings {
 			),
 			'languages' => array(
 				'icon' => 'dashicons-translation',
-				'title' => __( '访客语言识别', 'peptide-core' ),
+				'title' => __( '店铺语言', 'peptide-core' ),
 				'desc' => __( '设置美国、波多黎各与其他地区的建议语言，客户手动选择优先。', 'peptide-core' ),
 				'placeholder' => false,
 				'render' => array( Storefront_Language_Page::class, 'render' ),

@@ -42,9 +42,8 @@
 		open( $( '.pc-pl-rules' )[ 0 ] );
 	} );
 	$( document ).on( 'click', '.pc-pl-delete', function ( e ) {
-		if ( ! window.confirm( S.confirmDel ) ) {
-			e.preventDefault();
-		}
+		e.preventDefault();
+		window.VialCoveDialogs.confirmLink( this, S.confirmDel );
 	} );
 
 	var $form = $( '.pc-pl-form' );
@@ -96,8 +95,8 @@
 	$form.on( 'input change', '.pc-pl-region-rate', function () {
 		regions[ Number( $( this ).data( 'i' ) ) ].rate = this.value;
 	} );
-	$form.on( 'click', '.pc-pl-regions-clear', function () {
-		if ( regions.length && window.confirm( S.confirmClear ) ) {
+	$form.on( 'click', '.pc-pl-regions-clear', async function () {
+		if ( regions.length && await window.VialCoveDialogs.confirm( S.confirmClear ) ) {
 			regions = [];
 			renderRegions();
 		}
@@ -368,7 +367,7 @@
 			} );
 			if ( bad ) {
 				e.preventDefault();
-				window.alert( S.rateBad );
+				window.VialCoveDialogs.alert( S.rateBad );
 				return;
 			}
 		}

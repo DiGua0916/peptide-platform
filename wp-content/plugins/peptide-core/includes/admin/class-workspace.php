@@ -9,6 +9,8 @@ final class Workspace {
 	private static bool $navigation_pending = false;
 
 	public static function register_hooks(): void {
+		require_once __DIR__ . '/class-workspace-shell.php';
+		Workspace_Shell::register_hooks();
 		add_filter( 'admin_body_class', array( self::class, 'body_class' ) );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ), 1000 );
 		add_action( 'admin_print_styles', array( self::class, 'navigation_head' ), 0 );

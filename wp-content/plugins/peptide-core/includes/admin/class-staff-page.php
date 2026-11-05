@@ -258,7 +258,7 @@ final class Staff_Page {
 							<td data-label="<?php esc_attr_e( 'Permissions', 'peptide-core' ); ?>" class="pc-staff-perms"><?php echo esc_html( $is_staff ? ( $mods ? self::labels( $mods ) : __( 'None', 'peptide-core' ) ) : __( 'All permissions', 'peptide-core' ) ); ?></td>
 							<td data-label="<?php esc_attr_e( 'Status', 'peptide-core' ); ?>">
 								<?php if ( $is_staff ) : ?>
-									<a class="pc-dm-switch<?php echo $off ? '' : ' is-on'; ?>" role="switch" aria-checked="<?php echo $off ? 'false' : 'true'; ?>" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=pc_staff_toggle&user=' . $u->ID ), 'pc_staff_toggle' ) ); ?>" aria-label="<?php echo esc_attr( sprintf( $off ? /* translators: %s: account */ __( 'Enable %s', 'peptide-core' ) : /* translators: %s: account */ __( 'Disable %s', 'peptide-core' ), $u->user_login ) ); ?>" onclick="return confirm(<?php echo esc_attr( wp_json_encode( $off ? __( 'Enable this staff account?', 'peptide-core' ) : __( 'Disable this staff account? It is logged out at once and cannot log in until enabled again.', 'peptide-core' ) ) ); ?>);"></a>
+									<a class="pc-dm-switch<?php echo $off ? '' : ' is-on'; ?>" role="switch" aria-checked="<?php echo $off ? 'false' : 'true'; ?>" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=pc_staff_toggle&user=' . $u->ID ), 'pc_staff_toggle' ) ); ?>" aria-label="<?php echo esc_attr( sprintf( $off ? /* translators: %s: account */ __( 'Enable %s', 'peptide-core' ) : /* translators: %s: account */ __( 'Disable %s', 'peptide-core' ), $u->user_login ) ); ?>" data-pc-confirm-json="<?php echo esc_attr( wp_json_encode( $off ? __( 'Enable this staff account?', 'peptide-core' ) : __( 'Disable this staff account? It is logged out at once and cannot log in until enabled again.', 'peptide-core' ) ) ); ?>"></a>
 									<span class="pc-staff-state"><?php echo esc_html( $off ? __( 'Disabled', 'peptide-core' ) : __( 'Enabled', 'peptide-core' ) ); ?></span>
 								<?php else : ?>
 									—
@@ -270,7 +270,7 @@ final class Staff_Page {
 								<?php if ( $is_staff ) : ?>
 									<a href="<?php echo esc_url( self::url( array( 'edit' => $u->ID ) ) ); ?>"><?php esc_html_e( 'Edit', 'peptide-core' ); ?></a>
 									|
-									<a class="pc-dm-delete" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=pc_staff_delete&user=' . $u->ID ), 'pc_staff_delete' ) ); ?>" onclick="return confirm(<?php echo esc_attr( wp_json_encode( __( 'Delete this staff account? Its posts and products are kept and moved to you.', 'peptide-core' ) ) ); ?>);"><?php esc_html_e( 'Delete', 'peptide-core' ); ?></a>
+									<a class="pc-dm-delete" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=pc_staff_delete&user=' . $u->ID ), 'pc_staff_delete' ) ); ?>" data-pc-confirm-json="<?php echo esc_attr( wp_json_encode( __( 'Delete this staff account? Its posts and products are kept and moved to you.', 'peptide-core' ) ) ); ?>"><?php esc_html_e( 'Delete', 'peptide-core' ); ?></a>
 								<?php else : ?>
 									—
 								<?php endif; ?>

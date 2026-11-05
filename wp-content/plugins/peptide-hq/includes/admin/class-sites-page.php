@@ -1,6 +1,6 @@
 <?php
 /**
- * 总后台 → 店铺：每个店铺的状态、分配的服务器、域名、搜索引擎收录和访客追踪开关、销售账号数、最后检查时间；
+ * 总后台 → 店铺：每个店铺的状态、分配的服务器、域名、搜索引擎收录和访客追踪开关、最后检查时间；
  * 一键进店铺后台、马上刷新；“更多”里有平台工具（店铺后台不显示的页面）、系统信息、访客数据保留天数、改名、移除。
  * 店铺是自动接入的（开新店铺时在 wp-config.php 加两行，见 Register），这里显示要加的两行。
  *
@@ -43,7 +43,7 @@ final class Sites_Page {
 				</p>
 				<p class="pchq-muted"><?php esc_html_e( 'The secret only lets a store join; each store makes its own key for everything else. Keep the lines private.', 'peptide-hq' ); ?></p>
 				<p>
-					<a class="pchq-delete" href="<?php echo esc_url( Menu::action_url( 'pchq_secret_regenerate' ) ); ?>" onclick="return confirm(<?php echo esc_attr( wp_json_encode( __( 'Create a new registration secret? Stores already connected keep working. Stores opened later need the new lines.', 'peptide-hq' ) ) ); ?>);"><?php esc_html_e( 'Create a new secret (if the old one leaked)', 'peptide-hq' ); ?></a>
+					<a class="pchq-delete" href="<?php echo esc_url( Menu::action_url( 'pchq_secret_regenerate' ) ); ?>" data-pc-confirm-json="<?php echo esc_attr( wp_json_encode( __( 'Create a new registration secret? Stores already connected keep working. Stores opened later need the new lines.', 'peptide-hq' ) ) ); ?>"><?php esc_html_e( 'Create a new secret (if the old one leaked)', 'peptide-hq' ); ?></a>
 				</p>
 			</details>
 
@@ -58,7 +58,6 @@ final class Sites_Page {
 								<th scope="col"><?php esc_html_e( 'Domains', 'peptide-hq' ); ?></th>
 								<th scope="col"><?php esc_html_e( 'Search engines', 'peptide-hq' ); ?></th>
 								<th scope="col"><?php esc_html_e( 'Visitor tracking', 'peptide-hq' ); ?></th>
-								<th scope="col" class="num"><?php esc_html_e( 'Salesperson accounts', 'peptide-hq' ); ?></th>
 								<th scope="col"><?php esc_html_e( 'Last check', 'peptide-hq' ); ?></th>
 								<th scope="col"><?php esc_html_e( 'Actions', 'peptide-hq' ); ?></th>
 							</tr>
@@ -82,7 +81,7 @@ final class Sites_Page {
 	/** 开关（点一下下发到店铺）。 */
 	private static function render_switch( array $s, string $key, bool $on, string $ask_on, string $ask_off ): void {
 		printf(
-			'<a class="pchq-switch%1$s" role="switch" aria-checked="%2$s" aria-label="%3$s" href="%4$s" onclick="return confirm(%5$s);"></a> <span class="pchq-muted">%6$s</span>',
+			'<a class="pchq-switch%1$s" role="switch" aria-checked="%2$s" aria-label="%3$s" href="%4$s" data-pc-confirm-json="%5$s"></a> <span class="pchq-muted">%6$s</span>',
 			$on ? ' is-on' : '',
 			$on ? 'true' : 'false',
 			esc_attr( $s['name'] ),
@@ -159,7 +158,6 @@ final class Sites_Page {
 					</span>
 				<?php endif; ?>
 			</td>
-			<td class="num" data-label="<?php esc_attr_e( 'Salesperson accounts', 'peptide-hq' ); ?>"><a href="<?php echo esc_url( admin_url( 'admin.php?page=' . Accounts_Page::SLUG . '&site=' . $s['id'] ) ); ?>"><?php echo esc_html( number_format_i18n( (int) ( $info['staff'] ?? 0 ) ) ); ?></a></td>
 			<td data-label="<?php esc_attr_e( 'Last check', 'peptide-hq' ); ?>"><?php echo esc_html( Menu::ago( $s['last_check'] ) ); ?></td>
 			<td data-label="<?php esc_attr_e( 'Actions', 'peptide-hq' ); ?>" class="pchq-actions">
 				<a class="button button-small button-primary" target="_blank" rel="noopener" href="<?php echo esc_url( Menu::action_url( 'pchq_login', array( 'site' => $s['id'] ) ) ); ?>"><?php esc_html_e( 'Open store admin', 'peptide-hq' ); ?></a>
@@ -277,7 +275,7 @@ final class Sites_Page {
 						<input type="text" id="pchq-rename-<?php echo (int) $s['id']; ?>" name="name" value="<?php echo esc_attr( $s['name'] ); ?>" maxlength="190" required>
 						<button type="submit" class="button button-small"><?php esc_html_e( 'Save name', 'peptide-hq' ); ?></button>
 					</form>
-				<form class="pchq-site-dialog__retire" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return confirm('停止此店铺访问并移入回收站？数据保留72小时，期间可恢复，期满永久清理。');">
+				<form class="pchq-site-dialog__retire" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" data-pc-confirm="停止此店铺访问并移入回收站？数据保留72小时，期间可恢复，期满永久清理。">
 					<input type="hidden" name="action" value="pchq_site_retire">
 					<input type="hidden" name="site" value="<?php echo (int) $s['id']; ?>">
 					<?php wp_nonce_field( 'pchq_site_retire' ); ?>
