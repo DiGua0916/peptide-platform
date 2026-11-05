@@ -19,6 +19,7 @@ require_once __DIR__ . '/inc/checkout-layout-preview.php';
 require_once __DIR__ . '/inc/ui-presentation-settings.php';
 require_once __DIR__ . '/inc/live-cart-experience.php';
 require_once __DIR__ . '/inc/live-commerce-navigation.php';
+require_once __DIR__ . '/inc/product-report-viewer.php';
 require_once __DIR__ . '/inc/storefront-utilities.php';
 require_once __DIR__ . '/inc/campaign-bubble.php';
 

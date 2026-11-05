@@ -15,6 +15,7 @@
   function identify(dialog) {
     if (dialog.matches('.vc-showcase-quick')) return {kind:'product', productId:Number(root()?.dataset.vcProductId || 0)};
     if (dialog.id === 'vc-live-cart-drawer') return {kind:'cart'};
+    if (dialog.matches('.vc-product-report-dialog') && dialog.dataset.vcHistoryReportOrigin === 'library') return {kind:'library-report',url:dialog.dataset.vcHistoryReportUrl || ''};
     return {kind:dialog.matches('.vc-product-report-dialog') ? 'report' : 'image', productId:Number(dialog.dataset.vcProductParent || root()?.dataset.vcProductId || 0), url:dialog.dataset.vcHistoryReportUrl || dialog.dataset.vcHistoryImageUrl || ''};
   }
   const signature = entry => JSON.stringify([entry.kind,entry.productId || 0,entry.url || '']);
@@ -105,6 +106,9 @@
           if(qty && /^\d+$/.test(item.quantity || '') && qty.value!==String(item.quantity)) {qty.value=item.quantity;qty.dispatchEvent(new Event('change',{bubbles:true}));}
           requestAnimationFrame(()=> {if(ticket===serial && productDialog()?.open) productDialog().scrollTop=Number(item.scroll)||0;});
         } else if (item.kind==='cart') window.VialCoveLiveCart?.open();
+        else if (item.kind==='library-report') {
+          window.VialCoveReportLibraryViewer?.open(item.url,undefined,Number(item.scroll)||0);
+        }
         else {
           const r=root(); if(!r?.vcExperience) continue;
           if(item.kind==='report') await r.vcExperience.openReport(item.url); else r.vcExperience.openImage(item.url);
