@@ -180,7 +180,8 @@ final class Tracking_Controller {
 			(int) $request['id'],
 			is_string( $request['cursor'] ) ? $request['cursor'] : null,
 			is_numeric( $request['limit'] ) ? (int) $request['limit'] : 200,
-			in_array( (string) $request['heartbeats'], array( '1', 'true' ), true )
+			in_array( (string) $request['heartbeats'], array( '1', 'true' ), true ),
+			$request['order'] === 'desc'
 		);
 		return $data ? self::respond( $data ) : new \WP_Error( 'pc_track_not_found', __( 'Visit not found.', 'peptide-core' ), array( 'status' => 404 ) );
 	}

@@ -233,7 +233,7 @@
 	function openTimeline( box, id ) {
 		var token = ++timelineToken;
 		var path = function ( cursor ) {
-			return '/peptide/v1/track/admin/visits/' + id + '?limit=200&heartbeats=' + ( hideHeartbeats ? '0' : '1' ) + ( cursor ? '&cursor=' + encodeURIComponent( cursor ) : '' );
+			return '/peptide/v1/track/admin/visits/' + id + '?limit=50&order=desc&heartbeats=' + ( hideHeartbeats ? '0' : '1' ) + ( cursor ? '&cursor=' + encodeURIComponent( cursor ) : '' );
 		};
 		box.innerHTML = '<p>' + esc( S.loading ) + '</p>';
 		load( path( null ) ).then( function ( t ) {
@@ -241,13 +241,13 @@
 				return;
 			}
 			box.innerHTML = '<h2>' + esc( S.timeline ) + ' · ' + esc( clock( t.visit.start_ms, true ) ) + '</h2>' +
-				'<label class="pc-trk-hb"><input type="checkbox"' + ( hideHeartbeats ? ' checked' : '' ) + '> ' + esc( S.hideHeartbeats ) + '</label>' +
+				'<p class="pc-timeline-order">最新动作在上 · 继续加载更早记录</p><p class="pc-lifecycle-mobile-hint">左右滑动查看页面及行为详情</p><label class="pc-trk-hb"><input type="checkbox"' + ( hideHeartbeats ? ' checked' : '' ) + '> ' + esc( S.hideHeartbeats ) + '</label>' +
 				'<table class="widefat striped pc-trk-table pc-trk-timeline"><thead><tr><th>' + esc( S.time ) + '</th><th>' + esc( S.tab ) + '</th><th>' + esc( S.event ) + '</th><th>' + esc( S.page ) + '</th><th>' + esc( S.details ) + '</th></tr></thead><tbody>' + t.events.map( eventRow ).join( '' ) + '</tbody></table>' +
 				'<p class="pc-trk-more"></p>';
 			var more = box.querySelector( '.pc-trk-more' );
 			var cursor = t.next_cursor;
 			var button = function () {
-				more.innerHTML = cursor ? '<button type="button" class="button">' + esc( S.loadMore ) + '</button>' : '';
+				more.innerHTML = cursor ? '<button type="button" class="button">加载更早记录</button>' : '';
 			};
 			button();
 			more.addEventListener( 'click', function ( ev ) {
@@ -292,10 +292,18 @@
 					return '<a href="' + esc( cfg.liveUrl + '&visitor=' + o.id ) + '">' + esc( '#' + o.id + ' ' + ( S[ o.device ] || o.device ) + ' · ' + o.browser ) + '</a>';
 				} ).join( ', ' ) + '</p>';
 			}
-			html += '<h2>客户生命周期 · 历次访问</h2><p>点击一次访问，查看该次页面停留统计及下方行为时间线。可加载更早访问和更多事件；仅展示保留期内实际采集的记录。</p><div class="pc-trk-split"><div><h2>' + esc( S.visits ) + '</h2><table class="widefat pc-trk-table pc-trk-visits"><thead><tr><th>' + esc( S.visitStart ) + '</th><th>' + esc( S.duration ) + '</th><th>' + esc( S.pageviews ) + '</th><th>' + esc( S.stage ) + '</th></tr></thead><tbody>' + res.visits.map( visitRow ).join( '' ) + '</tbody></table><p class="pc-trk-more"></p></div><div id="pc-trk-timeline"><p>' + esc( S.chooseVisit ) + '</p></div></div>';
+			html += '<div class="pc-lifecycle-tabs" role="tablist" aria-label="客户详情"><button type="button" role="tab" id="pc-life-tab" aria-controls="pc-life-panel" aria-selected="true" tabindex="0">访问历程</button><button type="button" role="tab" id="pc-interest-tab" aria-controls="pc-interest-panel" aria-selected="false" tabindex="-1">页面停留与兴趣</button></div><section id="pc-life-panel" class="pc-lifecycle" role="tabpanel" aria-labelledby="pc-life-tab"><h2>客户生命周期 · 历次访问</h2><p>点击一次访问，查看该次页面停留统计及下方行为时间线。可加载更早访问和更多事件；仅展示保留期内实际采集的记录。</p><div class="pc-trk-split"><div><h2>' + esc( S.visits ) + '</h2><table class="widefat pc-trk-table pc-trk-visits"><thead><tr><th>' + esc( S.visitStart ) + '</th><th>' + esc( S.duration ) + '</th><th>' + esc( S.pageviews ) + '</th><th>' + esc( S.stage ) + '</th></tr></thead><tbody>' + res.visits.map( visitRow ).join( '' ) + '</tbody></table><p class="pc-trk-more"></p></div><div id="pc-trk-timeline"><p>' + esc( S.chooseVisit ) + '</p></div></div></section><section id="pc-interest-panel" role="tabpanel" aria-labelledby="pc-interest-tab" hidden></section>';
 			root.innerHTML = html;
 			var insights = document.getElementById( 'pc-trk-insights' );
-			if ( insights ) root.querySelector( '.pc-trk-cards' ).insertAdjacentElement( 'afterend', insights );
+			if ( insights ) root.querySelector( '#pc-interest-panel' ).appendChild( insights );
+            var tabs = root.querySelectorAll( '.pc-lifecycle-tabs [role=tab]' );
+            function activateTab( tab ) {
+                tabs.forEach( function ( item ) { var selected = item === tab; item.setAttribute( 'aria-selected', String( selected ) ); item.tabIndex = selected ? 0 : -1; root.querySelector( '#' + item.getAttribute( 'aria-controls' ) ).hidden = ! selected; } );
+            }
+            tabs.forEach( function ( tab, index ) {
+                tab.addEventListener( 'click', function () { activateTab( tab ); } );
+                tab.addEventListener( 'keydown', function ( event ) { var next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : event.key === 'ArrowRight' ? ( index + 1 ) % tabs.length : event.key === 'ArrowLeft' ? ( index + tabs.length - 1 ) % tabs.length : -1; if ( next < 0 ) return; event.preventDefault(); activateTab( tabs[next] ); tabs[next].focus(); } );
+            } );
 			var box = document.getElementById( 'pc-trk-timeline' );
 			var list = root.querySelector( '.pc-trk-visits' );
 			var open = function ( id ) {

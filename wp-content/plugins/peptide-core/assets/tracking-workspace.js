@@ -11,7 +11,7 @@
     function enhance() {
       pending = false;
       root.querySelectorAll('.pc-trk-timeline tbody tr td:last-child').forEach(function (cell) {
-        if (cell.querySelector('.pc-event-details') || cell.textContent.trim().length < 80) return;
+        if (cell.querySelector('.pc-event-details') || !cell.textContent.trim()) return;
         var details = document.createElement('details'), summary = document.createElement('summary'), body = document.createElement('div');
         details.className = 'pc-event-details'; summary.textContent = '查看行为细节';
         Array.from(cell.childNodes).forEach(function (node) { body.appendChild(node); });
@@ -32,7 +32,13 @@
           });
         });
         var width = table.parentElement.getBoundingClientRect().width;
-        var dense = headers.length >= 5 || table.classList.contains('pc-trk-visits');
+        var lifecycle = table.closest('.pc-lifecycle');
+        if (lifecycle && !table.parentElement.classList.contains('pc-lifecycle-scroll')) {
+          var scroll = document.createElement('div'); scroll.className = 'pc-lifecycle-scroll'; scroll.tabIndex = 0;
+          scroll.setAttribute('role','region'); scroll.setAttribute('aria-label',table.classList.contains('pc-trk-visits') ? '历次访问列表，可滚动' : '访问行为明细，可滚动');
+          table.parentNode.insertBefore(scroll,table); scroll.appendChild(table);
+        }
+        var dense = !lifecycle && (headers.length >= 5 || table.classList.contains('pc-trk-visits'));
         table.classList.add('pc-trk-workspace-table');
         table.classList.toggle('pc-trk-workspace-cards', dense && width < 1040);
         table.classList.toggle('pc-trk-workspace-narrow', dense && width < 520);

@@ -4,13 +4,13 @@ Mode: Operate. Audience: store operator. The user confirmed a compact monochrome
 
 ## Direction contract
 
-THESIS: make customer interest readable before raw event diagnostics; collapse technical tab state rather than spread it across a dense table.
+THESIS: make retained customer history readable in a bounded work pane; separate event reading from interest reporting and keep technical details expandable.
 
 OWN-WORLD: inherit DESIGN.md's white working surface, neutral gray rail, Manrope/system Chinese text, 6px controls and 12px outer panel. Flat tables, tabular numerals and space between sections carry hierarchy.
 
 STORY: find a customer, open their detail, choose a day/week/month, compare page attention, module clicks and product interactions, then inspect the original timeline. Statistics are observations, never a claim of inferred personal attributes.
 
-FIRST VIEWPORT: compact identity strip above one analysis work surface. Title/date/export row; short cycle control row; one horizontal definition list; page attention and module click tables beside each other on desktop and stacked on mobile. Product interest follows with the dedicated customer AI state, then original visit timeline. Live list uses search, status filter and pause rather than constant uninterruptible refresh.
+FIRST VIEWPORT (updated by user 2026-11-05): compact identity strip, two keyboard tabs. Default history has a left visit list and right newest-first event table, each in a bounded scroll region; no per-event cards. On narrow panes these stack, with a short visit rail and explicit horizontal-table guidance. Interest report lives in the second tab. This is a scoped exception to the incumbent tracking-card description. Previous report composition retained in that tab: Title/date/export row; short cycle control row; one horizontal definition list; page attention and module click tables beside each other on desktop and stacked on mobile. Product interest follows with the dedicated customer AI state, then original visit timeline. Live list uses search, status filter and pause rather than constant uninterruptible refresh.
 
 FORM: code-led existing-world extension, reading desk with real report tables. seed: none (unavailable). Signature interaction: switching report period cancels stale requests and disables export until a matching complete response is accepted.
 
