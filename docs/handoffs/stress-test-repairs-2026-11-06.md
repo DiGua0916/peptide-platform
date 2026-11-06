@@ -10,7 +10,7 @@ Scope: branch `codex/checkout-acceptance-20261105` only, on top of `1a7bb95`. No
 | 2 | Homepage has no full-page cache (sandbox p50 ≈3.9 s at 10 concurrency; production ≈1.8–2.0 s) | Not implemented; design below needs a decision |
 | 3 | Purchasable "测试" product id 11738 on production | No code change; commands below for the owner |
 | 4 | Mobile checkout summary: no quantity, no "10 vials per box", label "Specificatio" | Fixed |
-| 5 | HQ new payment account defaults: enabled, live, all stores | Not changed: conflicts with the 2026-11-03 user decision (`ed7d260`); needs a decision |
+| 5 | HQ new payment account defaults: enabled, live, all stores | Fixed after owner decision "default off" (follow-up commit) |
 | 6 | Payment on a cancelled order only adds a note | Fixed; real-DB contract test updated but not run |
 | 7 | `tests/visitor-intents.cjs` and `tests/visitor-products-config.php` fail on 1a7bb95 | Fixed (test drift) |
 
@@ -53,10 +53,6 @@ PHP 8.3.32 CLI (static-php-cli build) and Node 26.13.0 (checksum-verified), down
 
 ## Decisions needed
 
-- **5:** `ed7d260` / `backend-payment-default-2026-11-03.md` records that the user asked for new methods to default **on**. The stress test lists that as a risk. Not changed until the user chooses. Options:
-  - keep on;
-  - default off + test mode + no stores (fail-closed), matching PAY-HQ-01 "新注册默认不开放收款";
-  - a middle option, such as on but no stores selected.
 - **2:** All storefront documents are currently `private, no-store, Vary: Cookie` (`Storefront_Translation::private_header_values`). Language is per visitor (preference cookie, or local GeoIP on `REMOTE_ADDR`). A full-page cache must therefore:
   - only serve anonymous GET `/` without query string;
   - bypass `wordpress_logged_in_*`, `wp_woocommerce_session_*` and `woocommerce_items_in_cart` cookies;
@@ -76,3 +72,13 @@ wp post list --post_type=product --post_status=publish --fields=ID,post_title --
 ```
 
 Draft removes it from the catalogue and makes it unpurchasable; delete only after checking it has no orders.
+
+## Follow-up — item 5 (owner decision 2026-11-06: "Default off")
+
+Supersedes the 2026-11-03 default-on change (`ed7d260`, `backend-payment-default-2026-11-03.md`) and the CONTRACT PAY-HQ-03 "新32hex身份默认all_sites" default (CONTRACT annotated).
+- `peptide-panapay/includes/class-hub-accounts.php`: `new_account_defaults()` is now enabled=no, test_mode=yes, all_sites=no, sites=[]. Stored/legacy fallback `defaults()` is unchanged, and existing accounts keep their saved values. No migration was run.
+- `class-hub-page.php`: the add-form help text now says new methods start off, in test mode, with no stores, and that going live means checking parameters, selecting stores and unticking "支付方测试账号". The form posts its pre-filled values, so an untouched add form saves a closed method.
+- Going live keeps the existing server checks: complete credentials, at least one store, no test mode in production, HTTPS.
+- Test `peptide-panapay/tests/hub-new-account-defaults-pure.php` 11/11 runs the real `Hub_Accounts::save/policy` and `Configuration` with an in-memory options row and an offline host cache. It covers the defaults, omitted switches, the untouched form, store-less enable rejected, production test-mode rejected, and an explicit one-store live enable. It fails on the previous code ("new account default is off").
+- Full plugin suite rerun: 178 pass; the same 54 environment-dependent failures as baseline.
+- Not verified in a real HQ admin page.

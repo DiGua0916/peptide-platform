@@ -160,11 +160,16 @@ final class Hub_Accounts {
 			'all_sites' => 'yes', 'sites' => array(), 'archived' => 'no', 'deleted' => 'no' );
 	}
 
-	/** New accounts start selected for collection; stored/legacy defaults remain fail-closed. */
+	/**
+	 * New accounts start fail-closed: off, provider test mode, no stores (owner decision
+	 * 2026-11-06, superseding the 2026-11-03 default-on change). Going live is an explicit
+	 * choice of switch, stores and live mode; existing accounts keep their saved values.
+	 */
 	public static function new_account_defaults( string $id = '' ): array {
 		$defaults = self::defaults( $id );
-		$defaults['enabled'] = 'yes';
-		$defaults['test_mode'] = 'no';
+		$defaults['enabled'] = 'no';
+		$defaults['test_mode'] = 'yes';
+		$defaults['all_sites'] = 'no';
 		return $defaults;
 	}
 

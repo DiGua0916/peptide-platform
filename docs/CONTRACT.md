@@ -10,7 +10,7 @@ Bridge严格核对账号、原引用、精确三字段、版本、去重域名�
 
 ## PAY-HQ-03：多付款方式（0.4，后续用户决定）
 
-用户明确要求简单“添加支付→填写参数→下发店铺→继续添加”，不做官方服务商目录。`pc_panapay_hub_accounts` 是带revision/CAS的账号集合，默认单例导入为`default`保留开关和原店铺授权；新32hex身份默认all_sites，可独立编辑、开启、停用及归档，最多20个保留身份。秘密只HQ；当前适配当前文档的网关协议，PayPal等名称不等于另一套官方接口。
+用户明确要求简单“添加支付→填写参数→下发店铺→继续添加”，不做官方服务商目录。`pc_panapay_hub_accounts` 是带revision/CAS的账号集合，默认单例导入为`default`保留开关和原店铺授权；新32hex身份默认all_sites，可独立编辑、开启、停用及归档，最多20个保留身份。（2026-11-06 用户决定取代此默认及 2026-11-03 的“新增默认开启”：新增身份默认关闭、支付方测试账号、不授权任何店铺；已保存身份保持原值。详见 docs/handoffs/stress-test-repairs-2026-11-06.md。）秘密只HQ；当前适配当前文档的网关协议，PayPal等名称不等于另一套官方接口。
 
 新POST `/pc-panapay/v1/hub/methods` 返回 `{version:1,methods:[...]}`，每项精确`account_id,enabled,title,description,test_mode,payment_hosts,payment_icons,iframe_height`。关闭/归档身份以disabledDTO保留旧订单注册；坏账号仅关闭自身，无授权身份拒绝。旧CONFIG精确7字段仅default并保留关闭时可信域名，异常仍走旧失败/旧客户端冻结域名回退。0.3升级0.4必须先HQ后店铺；新Bridge策略失败不回退其他账号。
 
