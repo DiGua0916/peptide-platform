@@ -244,3 +244,53 @@ Fix for next time: package with `COPYFILE_DISABLE=1` or `--no-mac-metadata`, and
 - Returning visitors and ad landings (query strings) still take the full-render path (about 4 s at 10-concurrency). Speeding those up needs render work (queries/templates) or more CPU.
 - No real-browser check through the gate yet (needs the owner to sign in to `/_sandbox/login`).
 - Campaign start/end inside a TTL window relies on the countdown's own refresh; the cache is not flushed at those moments.
+
+## Returning visitors and ad landings (A + B, owner approved "Both A and B", "Deploy and measure") — 2026-11-06
+
+**Diagnosis (sandbox, read-only CLI profile).**
+- A full homepage render took about 0.60 s with 251 queries, of which only 0.10 s was SQL.
+- `demo-catalog` (about 83 cards) took 344 ms, `navigation-products` 101 ms, `demo-hero-h1` 79 ms; everything else about 35 ms.
+- WordPress + Woo boot is about 0.13 s.
+
+**Production cron (read-only check).**
+- s0001–s0003 have `DISABLE_WP_CRON` and 0 overdue WP-cron hooks / Action Scheduler jobs, so their schedules are being run.
+- HQ runs every minute via `vialcove-hq-cron`.
+- The sandbox has no runner: 20 overdue hooks, oldest 27.6 h. A sandbox timer is not added yet (needs owner approval).
+
+**A — `PeptideCore\Fragment_Cache` (`8db186f`).**
+- `remember()` wraps the catalogue grid (`inc/demo-home-catalog.php`) and the header product menu (`template-parts/navigation.php`), through `vc_cached_fragment()` in `inc/storefront-utilities.php`.
+- It uses the same `PEPTIDE_CORE_PAGE_CACHE` switch.
+- **Skipped** for logged-in visitors, a known checkout email, previews, and any active promotion with `customer_rule.customers != all`.
+- **Key**: caller inputs (module and its settings, context, device / menu item); language, locale, country, currency, device, host; the active promotion IDs; `pc_page_cache_generation`; and the `wp_unique_id` position.
+- **Replays** enqueued script/style handles and advances `wp_unique_id` by the same count.
+- **Refuses to store** a section that registers or changes an asset, adds inline data, or dequeues anything.
+- Shares the exit-guarded atomic storage now exposed as `Page_Cache::read_entry()/write_entry()`. TTL = page cache TTL.
+
+**B — ad landings (`8db186f`).**
+- `Page_Cache::tracking_only()` allows queries made solely of `utm_*` and `gclid`/`gbraid`/`wbraid`/`gad_source`/`gad_campaignid`/`fbclid`/`ttclid`/`msclkid`/`twclid`/`li_fat_id`. Anything else renders normally (coupon links are redirected by their own feature first).
+- Ad landings are only **served** stored copies; copies are only taken from plain `/`.
+- Click-ID cookies (`_fbc`, `pc_ttclid`) are set at `init` and still apply. A HIT's pixel config/CAPI uses the visitor's real landing URL.
+
+**Verification.**
+- Unit tests: `fragment-cache-pure.php` 17/17 (store/reuse, identical auto IDs and next ID, asset replay, a different ID position gets its own copy, settings/device/generation/promotion-set key changes, three skip reasons, three not-storable cases); `page-cache-pure.php` 81/81 (adds the query allow/deny matrix, a utm+fbclid HIT, a coupon link not served, ad landings never captured).
+- Suites: theme 387/387; plugins 180 standalone with the same 54 environment-dependent failures; `smoke-pixels.php` under real WordPress 42/42.
+- Local WordPress: stored vs reused homepage byte-identical apart from per-view pixel IDs/times; utm/fbclid/ttclid → HIT with cookies set and the landing URL in pixel events; `pc_lang` / returning visitors → BYPASS.
+- **Sandbox deploy**:
+  - 5 files copied individually (no tar), sha256 and lint checked, baselines matched on shop+admin;
+  - 2 created + 8 replaced; backup `/home/ubuntu/vialcove-deploy-backups/fragment-20261106T190636Z/`;
+  - USR2 reload; 0 stray files; health 200/302/200; no new FPM log lines.
+- Sandbox CLI renders: run 1 `miss:stored` for both sections (614 ms); runs 2–3 `hit` for both (223/243 ms); full HTML **identical** across runs (only `serverNow` masked).
+
+**Timing (sandbox, 10 concurrent × 50, TTFB on the server).**
+
+| | before | now |
+| --- | --- | --- |
+| Returning visitor (cookie → page BYPASS, sections reused) | 4.01 s | **2.01 s** (p90 2.23) |
+| Ad landing `?utm_source&fbclid` | full render (~4 s) | **0.78 s** (HIT) |
+| First-time visitor | 0.81 s | 0.79 s |
+
+The production HQ answered 302 in 0.20 s during the run.
+
+**Remaining.**
+- A returning visitor still costs about 0.2 s of CPU per request (boot + hero + rest); at 1.5 CPUs and 10 concurrent requests that queues to about 2 s. Further gains need more CPU or work on the hero/boot.
+- Not yet on production.
