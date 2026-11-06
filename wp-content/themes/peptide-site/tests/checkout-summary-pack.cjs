@@ -57,6 +57,18 @@ test('rows are annotated only when order and decoded name both match', () => {
   annotateItems(content, [item('Demo Peptide D', 1, 10), item('BPC &amp; TB &#8211; 10mg', 4, 10)], false);
   assert.deepEqual(lines(content), [], 'mismatched order removes stale lines instead of mislabelling');
   const partial = summary(['A', 'B']);
-  annotateItems(partial, [item('A', 1, 10)], false);
+  assert.equal(annotateItems(partial, [item('A', 1, 10)], false), false, 'count mismatch reports not settled');
   assert.deepEqual(lines(partial), [], 'different row/item counts are not guessed');
+});
+
+test('rows still loading (empty names) are reported unsettled, then labelled once names render', () => {
+  const { annotateItems } = load();
+  const content = summary(['', '']);
+  const cart = [item('Demo Peptide E', 2, 10), item('Demo Peptide C', 1, 10)];
+  assert.equal(annotateItems(content, cart, false), false, 'native skeleton rows: look again');
+  assert.deepEqual(lines(content), []);
+  content.querySelectorAll('.wc-block-components-product-name').forEach((node, i) => { node.textContent = ['Demo Peptide E', 'Demo Peptide C'][i]; });
+  assert.equal(annotateItems(content, cart, false), true, 'settled once names are present');
+  assert.deepEqual(lines(content), ['Qty: 2 boxes · 10 vials per box', 'Qty: 1 box · 10 vials per box']);
+  assert.equal(annotateItems(summary([]), [], false), false, 'empty cart is never "settled" (bounded retries in caller)');
 });

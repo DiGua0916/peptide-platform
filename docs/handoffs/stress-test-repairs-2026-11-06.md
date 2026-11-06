@@ -99,7 +99,6 @@ define( 'PEPTIDE_CORE_PAGE_CACHE_TTL', 300 ); // optional, 30–3600 s
 **Never stored when:**
 - the status is not 200, or the response is not `text/html`, or the HTML is incomplete (< 512 B, > 4 MiB, or no `</html>`);
 - `DONOTCACHEPAGE` is defined (already set by the personalised commerce/shipping blocks);
-- **`peptide-core-pixels` was enqueued**, because each render creates unique page-event IDs and a server-side send;
 - any `Set-Cookie` other than `pc_vid` was sent.
 
 **Invalidation.** Expiry after the TTL. A generation bump on post/product/variation/stock/term/menu/customizer/theme/plugin changes, and on writes to storefront options (`pc_*`, `peptide*`, `vc_*`, `theme_mods_*`, `woocommerce_*`, widgets, front-page settings). Transient, cron, lock, queue and session writes do not bump it.
@@ -107,7 +106,7 @@ define( 'PEPTIDE_CORE_PAGE_CACHE_TTL', 300 ); // optional, 30–3600 s
 **Storage.** `wp-content/cache/peptide-core-pages/<hmac>.php`, written atomically (temp file + rename), each file starting with a PHP `exit` guard so a direct web request cannot return it. Corrupt or expired files are ignored. Guest Store API nonces on a cookie-less page belong to user 0, so they are shared and stay valid well beyond the TTL.
 
 **Important limits.**
-- If ad pixels are enabled on a site, the cache stores nothing there. Check `X-PC-Page-Cache` after enabling.
+- Ad pixels: superseded, see "Follow-up — pixels + cache" below. Pixel pages are now cached with per-view events.
 - Returning visitors and ad landings with click IDs are not accelerated. A hit still loads WordPress and plugins, so expect roughly "TTFB minus template time", not static-file speed.
 
 **Tests.** `peptide-core/tests/page-cache-pure.php` 46/46 with the real class. It covers:
@@ -129,3 +128,48 @@ Full plugin rerun: 179 pass, same 54 environment-dependent failures; theme 386/3
 - (d) check Spanish (PR) and mobile variants;
 - (e) repeat the 10-concurrency p50 measurement;
 - (f) confirm add-to-cart from a cached page works (Store API nonce).
+
+## Follow-up — pixels + cache, and local WordPress verification (2026-11-06)
+
+The owner will run the Facebook pixel and the Conversions API together. The first cache version stored nothing when pixels were on, so it was reworked.
+
+**Pixel-compatible cache.**
+- `Pixels::enqueue()` is split into `page_config()` (permission check, page events with fresh IDs, the Conversions API/TikTok server send, browser config) and `localized_statement()`, which reproduces `WP_Scripts::localize()` exactly. A normal render behaves as before.
+- `Page_Cache` stores a pixel page with its single `var pcPixels = …;` line (inside `#peptide-core-pixels-js-extra`) replaced by `/*pc-page-cache:pixels-config*/`. Each hit calls `Pixels::page_config()` again and fills the slot. So every cached view has its own event IDs and sends its own server page events, exactly once.
+- The page is not stored when that block is missing, appears twice, or the placeholder already exists.
+- `Pixels::allowed()` is part of the key. Entry format v2, so old copies are ignored.
+
+**Checkout line timing bug, found only on the real checkout.**
+- WooCommerce first renders summary rows with empty product names. The line was skipped then, and whether it appeared later depended on timing; it was missing on 2 of 3 early loads.
+- `annotateItems()` now reports whether the rows have settled, and `reconcile()` retries every 250 ms, at most 40 times, until they have.
+
+**Local site.** Built per `vialcove-local-setup/README.md`, outside the repo:
+- WordPress 7.1.4 (GitHub tag), SQLite Database Integration 3.1.3, WooCommerce 11.2.1 (sha256 matches the README), WP-CLI 2.12.0 (sha512 verified), PHP 8.3 static CLI;
+- the project plugins and theme symlinked from this checkout;
+- `wp peptide demo commerce` / `demo seed`, `seed-local.php`, plus a synthetic product whose attribute is literally `Specificatio`;
+- a must-use plugin blocks all non-loopback HTTP, so no request reached Meta;
+- fake pixel ID and fake token only.
+
+**Verified there:**
+- `peptide-core/tests/smoke-pixels.php` via `wp eval-file`: 42/42 with the refactor, settings restored afterwards.
+- `localized_statement()` is byte-identical to `WP_Scripts::localize()` for real configs, including quotes, `&`, `<>`, accents and slashes.
+- HTTP with `PEPTIDE_CORE_PAGE_CACHE`:
+  - MISS → HIT → HIT;
+  - `pc_vid` cookie → BYPASS;
+  - `?utm_source` → BYPASS;
+  - iPhone UA → separate MISS → HIT.
+- Every request, cached or not, queued exactly one Conversions API job.
+- HIT HTML is byte-identical to the MISS render apart from page-event IDs and timestamps; each view has distinct IDs and no placeholder leaks.
+- A product price change and a tagline change → MISS; transient/cron writes → still HIT.
+- Real Store API: the `Specificatio` product reports "Specification" (raw key `attribute_specificatio` unchanged) and `vialsPerSalesUnit` 10.
+- Real block checkout:
+  - at 390 px: quantity badges visible, "Specification: 10mg*10vials" and "Qty: 2 boxes · 10 vials per box";
+  - 6 of 6 fresh loads labelled (about 1.8 s after load);
+  - no visible element wider than the viewport at 390 or 320 px.
+
+  Screenshot in the session folder: `repro/real-checkout-390.jpg`.
+- Tests: `page-cache-pure.php` 59/59 (adds placeholder/ambiguity rules and a two-visitor end-to-end with one send each); `checkout-summary-pack.cjs` 3/3; theme 387/387; plugin standalone 179 pass with the same 54 environment-dependent failures.
+
+**Not verified here.**
+- MySQL (`GET_LOCK` concurrency), Nginx, real GeoIP/Spanish, a real Meta Events Manager deduplication check, and any timing that represents the sandbox. Local SQLite times (MISS ≈0.30 s, HIT ≈0.25 s on a 5-product catalogue) are not a performance result.
+- Background Conversions API jobs need a real per-minute system cron in production, as already required for payment write-backs.

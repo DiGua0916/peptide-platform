@@ -17,31 +17,41 @@
         return new DOMParser().parseFromString(value, 'text/html').body.textContent.replace(/\s+/g, ' ').trim();
     }
     // Native rows render in cart order; a name check prevents labelling a row with another item's data.
+    // Returns false while native rows are still loading (count mismatch or a name not yet rendered),
+    // so the caller can look again; a settled mismatch simply leaves the row without a line.
     function annotateItems(content, items, spanish) {
         const rows = content.querySelectorAll('.wc-block-components-order-summary-item');
+        let settled = items.length > 0 && rows.length === items.length;
         rows.forEach((row, index) => {
             const description = row.querySelector('.wc-block-components-order-summary-item__description');
-            if (!description) return;
+            if (!description) { settled = false; return; }
             let node = description.querySelector(':scope > .vc-summary-pack');
             const item = rows.length === items.length ? items[index] : null;
             const shown = row.querySelector('.wc-block-components-product-name')?.textContent.replace(/\s+/g, ' ').trim() || '';
+            if (!shown) settled = false;
             const text = item && shown && decodeName(item.name) === shown ? packLine(item, spanish) : '';
             if (!text) { node?.remove(); return; }
             if (!node) { node = document.createElement('p'); node.className = 'vc-summary-pack'; description.append(node); }
             if (node.textContent !== text) node.textContent = text;
         });
+        return settled;
     }
     window.VialCoveCheckoutPack = { packLine, annotateItems };
     const page = document.querySelector('.vc-checkout-page');
     if (!page || !window.wp?.element || !window.VialCoveSavings) return;
     const mounted = new Map();
-    let frame = 0;
+    let frame = 0, packRetry = 0, packRetries = 0;
     function reconcile() {
         frame = 0;
         for (const [node, root] of mounted) if (!node.isConnected) { root.unmount(); mounted.delete(node); }
         const summaryContent = page.querySelector('.wc-block-checkout__sidebar .wc-block-components-checkout-order-summary__content');
         const cart = window.wp?.data?.select?.('wc/store/cart')?.getCartData?.();
-        if (summaryContent && Array.isArray(cart?.items)) annotateItems(summaryContent, cart.items, /^es(?:-|$)/i.test(document.documentElement.lang || ''));
+        const settled = summaryContent && Array.isArray(cart?.items) ? annotateItems(summaryContent, cart.items, /^es(?:-|$)/i.test(document.documentElement.lang || '')) : false;
+        // Native rows first render with empty names; look again shortly (bounded) instead of
+        // depending on a later DOM mutation reaching this observer.
+        clearTimeout(packRetry);
+        if (settled) packRetries = 0;
+        else if (packRetries < 40) { packRetries++; packRetry = setTimeout(schedule, 250); }
         const summary = page.querySelector('.wc-block-checkout__sidebar .wp-block-woocommerce-checkout-order-summary-block');
         const title = summary?.querySelector('.wc-block-components-checkout-order-summary__title');
         const content = summary?.querySelector('.wc-block-components-checkout-order-summary__content');

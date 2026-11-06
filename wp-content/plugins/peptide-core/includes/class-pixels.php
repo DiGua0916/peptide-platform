@@ -728,9 +728,25 @@ final class Pixels {
 		if ( is_admin() ) {
 			return;
 		}
+		$config = self::page_config();
+		if ( null === $config ) {
+			return;
+		}
+		$ver = PEPTIDE_CORE_VERSION . '.' . (int) @filemtime( PEPTIDE_CORE_DIR . '/assets/pixels.js' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		wp_enqueue_script( 'peptide-core-pixels', plugins_url( 'assets/pixels.js', PEPTIDE_CORE_FILE ), array(), $ver, true );
+		wp_localize_script( 'peptide-core-pixels', 'pcPixels', $config );
+	}
+
+	/**
+	 * This page view's browser configuration, with fresh event IDs; also sends the
+	 * page's server-side (Conversions API) events. Null when this visitor is not tracked.
+	 * Called once per page view: by enqueue() on a normal render, or by Page_Cache when
+	 * a cached homepage is served, so every visitor still gets their own events.
+	 */
+	public static function page_config(): ?array {
 		$s = self::settings();
 		if ( ! self::allowed( $s ) ) {
-			return;
+			return null;
 		}
 		$events = array_merge( self::page_events(), self::pop_queue() );
 		// 页面事件的服务端回传（加购等在发生时已经发过；购买由订单状态触发）。
@@ -738,8 +754,16 @@ final class Pixels {
 		if ( $server ) {
 			Pixels\Server::send( $server, self::user_data() );
 		}
-		$ver = PEPTIDE_CORE_VERSION . '.' . (int) @filemtime( PEPTIDE_CORE_DIR . '/assets/pixels.js' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
-		wp_enqueue_script( 'peptide-core-pixels', plugins_url( 'assets/pixels.js', PEPTIDE_CORE_FILE ), array(), $ver, true );
-		wp_localize_script( 'peptide-core-pixels', 'pcPixels', self::browser_config( $s, $events ) );
+		return self::browser_config( $s, $events );
+	}
+
+	/** The exact statement wp_localize_script() prints for this config (WP_Scripts::localize). */
+	public static function localized_statement( array $config ): string {
+		foreach ( $config as $key => $value ) {
+			if ( is_scalar( $value ) ) {
+				$config[ $key ] = html_entity_decode( (string) $value, ENT_QUOTES, 'UTF-8' );
+			}
+		}
+		return 'var pcPixels = ' . wp_json_encode( $config, JSON_HEX_TAG | JSON_UNESCAPED_SLASHES ) . ';';
 	}
 }

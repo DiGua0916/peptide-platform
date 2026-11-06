@@ -12,8 +12,10 @@
  * tracking or opt-out cookie, renders normally.
  *
  * A copy is never stored when the response is not a complete 200 HTML page,
- * DONOTCACHEPAGE is defined, ad pixels were enqueued (per-render event IDs),
- * or any cookie other than the visitor ID was set. Copies expire after the
+ * DONOTCACHEPAGE is defined, or any cookie other than the visitor ID was set.
+ * Pages with ad pixels are stored with their per-view pcPixels configuration
+ * replaced by a placeholder; each hit calls Pixels::page_config() again, so every
+ * visitor gets fresh event IDs and their own Conversions API page events. Copies expire after the
  * TTL (default 300 s, max 3600 s, well under the nonce lifetime) and are
  * invalidated when posts, products, stock or storefront options change.
  *
@@ -26,7 +28,8 @@ defined( 'ABSPATH' ) || exit;
 
 final class Page_Cache {
 	public const GENERATION = 'pc_page_cache_generation';
-	private const VERSION = 1;
+	private const VERSION = 2;
+	public const PIXELS_SLOT = '/*pc-page-cache:pixels-config*/';
 	private const MAX_BYTES = 4194304;
 	private const SKIP_HEADERS = array( 'set-cookie', 'content-length', 'date', 'x-powered-by', 'transfer-encoding', 'x-pc-page-cache', 'age' );
 
@@ -104,6 +107,7 @@ final class Page_Cache {
 			'customer_country' => $customer ? (string) $customer->get_billing_country() . '|' . (string) $customer->get_shipping_country() : '',
 			'device' => function_exists( 'wp_is_mobile' ) && wp_is_mobile() ? 'mobile' : 'desktop',
 			'declined' => class_exists( Tracking\Tracker::class ) && Tracking\Tracker::declined(),
+			'pixels' => class_exists( Pixels::class ) && Pixels::allowed(),
 			'generation' => (string) get_option( self::GENERATION, '0' ),
 		);
 	}
@@ -137,6 +141,12 @@ final class Page_Cache {
 		}
 		self::$key = self::key( self::variant() );
 		$entry = self::read( self::$key );
+		if ( null !== $entry && $entry['pixels'] ) {
+			// Fresh per-view pixel events and Conversions API send, exactly as enqueue() would.
+			$config = class_exists( Pixels::class ) ? Pixels::page_config() : null;
+			if ( null === $config ) { return; } // Render normally; never serve a page without its events.
+			$entry['body'] = str_replace( self::PIXELS_SLOT, Pixels::localized_statement( $config ), $entry['body'] );
+		}
 		if ( null !== $entry && ! headers_sent() ) {
 			foreach ( $entry['headers'] as [ $name, $value ] ) { header( $name . ': ' . $value, 'vary' !== strtolower( $name ) ); }
 			header( 'X-PC-Page-Cache: HIT' );
@@ -157,7 +167,9 @@ final class Page_Cache {
 		try {
 			[ $raw, $status ] = self::$response_for_tests ?? array( headers_list(), http_response_code() );
 			$headers = self::storable_headers( $raw, $status, $html );
-			if ( null !== $headers ) { self::write( self::$key, array( 'created' => time(), 'headers' => $headers, 'body' => $html ) ); }
+			$pixels = function_exists( 'wp_script_is' ) && wp_script_is( 'peptide-core-pixels', 'enqueued' );
+			$body = $pixels ? self::punch_pixels( $html ) : $html;
+			if ( null !== $headers && null !== $body ) { self::write( self::$key, array( 'created' => time(), 'headers' => $headers, 'body' => $body, 'pixels' => $pixels ) ); }
 		} catch ( \Throwable $ignored ) { /* Never affect the visitor's response. */ }
 		return $html;
 	}
@@ -169,7 +181,6 @@ final class Page_Cache {
 	 */
 	public static function storable_headers( array $raw, $status, string $html ): ?array {
 		if ( 200 !== (int) $status || ( defined( 'DONOTCACHEPAGE' ) && DONOTCACHEPAGE ) ) { return null; }
-		if ( function_exists( 'wp_script_is' ) && wp_script_is( 'peptide-core-pixels', 'enqueued' ) ) { return null; }
 		$size = strlen( $html );
 		if ( $size < 512 || $size > self::MAX_BYTES || false === stripos( $html, '</html>' ) ) { return null; }
 		$allowed_cookies = self::issued_this_request();
@@ -190,6 +201,20 @@ final class Page_Cache {
 		return $html_type ? $out : null;
 	}
 
+	/**
+	 * Replace this view's one-line pcPixels statement (printed by wp_localize_script inside
+	 * <script id="peptide-core-pixels-js-extra">) with a placeholder. Null when it is not
+	 * found exactly once, or the page already contains the placeholder: then nothing is stored.
+	 */
+	public static function punch_pixels( string $html ): ?string {
+		if ( str_contains( $html, self::PIXELS_SLOT ) ) { return null; }
+		if ( 1 !== preg_match_all( '/<script\b[^>]*\bid=(["\'])peptide-core-pixels-js-extra\1[^>]*>.*?<\/script>/is', $html, $blocks, PREG_OFFSET_CAPTURE ) ) { return null; }
+		[ $block, $offset ] = $blocks[0][0];
+		$punched = preg_replace( '/^var pcPixels = \{.*\};$/m', self::PIXELS_SLOT, $block, -1, $count );
+		if ( 1 !== $count || ! is_string( $punched ) ) { return null; }
+		return substr_replace( $html, $punched, $offset, strlen( $block ) );
+	}
+
 	/** Cookies this code path may legitimately set on a first visit: the anonymous visitor ID. */
 	private static function issued_this_request(): array {
 		return class_exists( Tracking\Tracker::class ) ? array( Tracking\Tracker::COOKIE ) : array();
@@ -202,7 +227,7 @@ final class Page_Cache {
 		$prefix = "<?php exit; ?>\n";
 		if ( ! is_string( $raw ) || ! str_starts_with( $raw, $prefix ) ) { return null; }
 		$entry = @unserialize( substr( $raw, strlen( $prefix ) ), array( 'allowed_classes' => false ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
-		if ( ! is_array( $entry ) || ! is_int( $entry['created'] ?? null ) || ! is_array( $entry['headers'] ?? null ) || ! is_string( $entry['body'] ?? null ) ) { return null; }
+		if ( ! is_array( $entry ) || ! is_int( $entry['created'] ?? null ) || ! is_array( $entry['headers'] ?? null ) || ! is_string( $entry['body'] ?? null ) || ! is_bool( $entry['pixels'] ?? null ) ) { return null; }
 		if ( time() - $entry['created'] >= self::ttl() || $entry['created'] > time() + 5 ) { return null; }
 		return $entry;
 	}

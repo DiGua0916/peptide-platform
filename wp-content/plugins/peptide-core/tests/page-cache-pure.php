@@ -28,6 +28,18 @@ namespace PeptideCore {
 	final class Storefront_Language { public const PREFERENCE_COOKIE = 'pc_storefront_language'; }
 	final class Storefront_Translation { public static function selected(): array { return $GLOBALS['lang']; } public static function active(): bool { return $GLOBALS['lang']['active']; } public static function code(): string { return $GLOBALS['lang']['language']; } }
 }
+namespace PeptideCore {
+	// Pixels boundary: each page_config() call is one page view with a fresh event ID and one server send.
+	final class Pixels {
+		public static function allowed(): bool { return $GLOBALS['px_allowed'] ?? true; }
+		public static function page_config(): ?array {
+			if ( ! self::allowed() ) { return null; }
+			$GLOBALS['px_sends'] = ( $GLOBALS['px_sends'] ?? 0 ) + 1;
+			return array( 'events' => array( array( 'name' => 'page_view', 'id' => 'pag_' . ( $GLOBALS['px_id'] ?? 'x' ) ) ), 'note' => 'a;b' );
+		}
+		public static function localized_statement( array $config ): string { return 'var pcPixels = ' . json_encode( $config, JSON_HEX_TAG | JSON_UNESCAPED_SLASHES ) . ';'; }
+	}
+}
 namespace PeptideCore\Tracking { final class Tracker { public const COOKIE = 'pc_vid'; public static function declined(): bool { return ! empty( $GLOBALS['gpc'] ); } } }
 namespace {
 	require dirname( __DIR__ ) . '/includes/class-page-cache.php';
@@ -39,6 +51,8 @@ namespace {
 	if ( 'serve' === $mode ) {
 		// A cookie-less first visit: Tracker (template_redirect 1) has already issued pc_vid into $_COOKIE.
 		$_COOKIE = array( 'pc_vid' => 'issued-this-request' );
+		$GLOBALS['px_id'] = getenv( 'PX_ID' ) ?: 'child'; if ( getenv( 'PX_OFF' ) ) { $GLOBALS['px_allowed'] = false; }
+		register_shutdown_function( static function () { fwrite( STDERR, 'SENDS=' . ( $GLOBALS['px_sends'] ?? 0 ) ); } );
 		Cache::reset_for_tests( array() );
 		Cache::serve_or_capture();
 		echo "NO-HIT\n"; exit( 0 );
@@ -66,7 +80,18 @@ namespace {
 	check( 'non-200 not stored', null === Cache::storable_headers( $ok_headers, 404, $page ) );
 	check( 'non-HTML not stored', null === Cache::storable_headers( array( 'Content-Type: application/json' ), 200, $page ) );
 	check( 'truncated HTML not stored', null === Cache::storable_headers( $ok_headers, 200, substr( $page, 0, -10 ) ) );
-	$GLOBALS['pixels'] = true; check( 'ad pixels enqueued → not stored (per-render event IDs)', null === Cache::storable_headers( $ok_headers, 200, $page ) ); $GLOBALS['pixels'] = false;
+	// Pixel pages: the one per-view pcPixels line becomes a placeholder; anything ambiguous is not stored.
+	$px_block = static fn( string $id ) => "<script id=\"peptide-core-pixels-js-extra\">\n/* <![CDATA[ */\nvar pcPixels = {\"events\":[{\"name\":\"page_view\",\"id\":\"pag_$id\"}],\"note\":\"a;b\"};\n//# sourceURL=peptide-core-pixels-js-extra\n/* ]]> */\n</script>\n<script src=\"/pixels.js\" id=\"peptide-core-pixels-js\"></script>";
+	$px_page = str_replace( '</body>', $px_block( 'captured' ) . '</body>', $page );
+	$punched = Cache::punch_pixels( $px_page );
+	check( 'pixel config replaced by placeholder', is_string( $punched ) && str_contains( $punched, Cache::PIXELS_SLOT ) && ! str_contains( $punched, 'pag_captured' ) );
+	check( 'rest of the page, including the pixel script tag, unchanged', str_replace( Cache::PIXELS_SLOT, 'var pcPixels = {"events":[{"name":"page_view","id":"pag_captured"}],"note":"a;b"};', $punched ) === $px_page );
+	check( 'no pixel block → not storable as a pixel page', null === Cache::punch_pixels( $page ) );
+	check( 'two pixel blocks → ambiguous, not stored', null === Cache::punch_pixels( str_replace( '</body>', $px_block( 'a' ) . $px_block( 'b' ) . '</body>', $page ) ) );
+	check( 'page already containing the placeholder → not stored', null === Cache::punch_pixels( str_replace( '</body>', Cache::PIXELS_SLOT . $px_block( 'a' ) . '</body>', $page ) ) );
+	check( 'block without a one-line pcPixels statement → not stored', null === Cache::punch_pixels( str_replace( '</body>', '<script id="peptide-core-pixels-js-extra">var other = 1;</script></body>', $page ) ) );
+	$GLOBALS['px_allowed'] = false; $k_off = Cache::key( Cache::variant() ); $GLOBALS['px_allowed'] = true;
+	check( 'pixel permission is part of the key', $k_off !== Cache::key( Cache::variant() ) );
 
 	$v = Cache::variant(); $k = Cache::key( $v );
 	check( 'key is deterministic', $k === Cache::key( Cache::variant() ) && 64 === strlen( $k ) );
@@ -104,7 +129,7 @@ namespace {
 		$out = stream_get_contents( $pipes[1] ); $err = stream_get_contents( $pipes[2] ); proc_close( $p ); return array( $out, $err );
 	};
 	[ $out, $err ] = $run();
-	check( 'next cookie-less visit is served the stored page and stops rendering', $page === $out && '' === $err );
+	check( 'next cookie-less visit is served the stored page and stops rendering', $page === $out && 'SENDS=0' === $err );
 
 	// Expired copies are ignored.
 	$raw = file_get_contents( $stored ); $entry = unserialize( substr( $raw, strlen( "<?php exit; ?>\n" ) ) ); $entry['created'] = time() - 301;
@@ -118,6 +143,24 @@ namespace {
 	Cache::reset_for_tests( array(), array( array_merge( $ok_headers, array( 'Set-Cookie: pc_recent_history_v1=x' ) ), 200 ) );
 	Cache::serve_or_capture(); echo $page; $returned = ob_get_clean(); Cache::capture( $returned, PHP_OUTPUT_HANDLER_FINAL );
 	check( 'personalised response not stored', array() === array_filter( glob( $dir . '/cache/peptide-core-pages/*.php' ), fn( $f ) => ! str_ends_with( $f, 'index.php' ) ) );
+
+	// Pixel page: captured once, then every cached view gets its own event ID and server send.
+	array_map( 'unlink', array_filter( glob( $dir . '/cache/peptide-core-pages/*.php' ), fn( $f ) => ! str_ends_with( $f, 'index.php' ) ) );
+	$GLOBALS['pixels'] = true;
+	Cache::reset_for_tests( array(), array( $ok_headers, 200 ) );
+	Cache::serve_or_capture(); echo $px_page; $returned = ob_get_clean();
+	check( 'pixel page returned to the capturing visitor unchanged', $px_page === Cache::capture( $returned, PHP_OUTPUT_HANDLER_FINAL ) );
+	$GLOBALS['pixels'] = false;
+	$stored = array_values( array_filter( glob( $dir . '/cache/peptide-core-pages/*.php' ), fn( $f ) => ! str_ends_with( $f, 'index.php' ) ) );
+	check( 'pixel page stored', 1 === count( $stored ) && ! str_contains( file_get_contents( $stored[0] ), 'pag_captured' ) );
+	[ $out1, $err1 ] = $run( array( 'PX_ID' => 'visitor1' ) );
+	[ $out2, $err2 ] = $run( array( 'PX_ID' => 'visitor2' ) );
+	check( 'visitor 1 gets a fresh event ID', str_contains( $out1, '"id":"pag_visitor1"' ) && ! str_contains( $out1, 'pag_captured' ) && ! str_contains( $out1, Cache::PIXELS_SLOT ) );
+	check( 'visitor 2 gets a different fresh event ID', str_contains( $out2, '"id":"pag_visitor2"' ) && ! str_contains( $out2, 'pag_visitor1' ) );
+	check( 'each cached view sends its own server (CAPI) page event once', 'SENDS=1' === $err1 && 'SENDS=1' === $err2 );
+	check( 'cached pixel page otherwise identical to the original', str_replace( 'pag_visitor1', 'pag_captured', $out1 ) === $px_page );
+	[ $out3 ] = $run( array( 'PX_OFF' => '1' ) );
+	check( 'visitor not tracked by pixels uses a different key (renders normally)', "NO-HIT\n" === $out3 );
 
 	// A returning visitor (browser sent pc_vid) never opens a capture.
 	Cache::reset_for_tests( array( 'pc_vid' ), array( $ok_headers, 200 ) ); $level = ob_get_level(); Cache::serve_or_capture();
