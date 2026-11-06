@@ -4,12 +4,14 @@
  *
  * Off unless wp-config.php defines PEPTIDE_CORE_PAGE_CACHE true. When on, a
  * cookie-less (or language-preference-only) anonymous GET/HEAD of exactly "/"
- * with no query string is answered from a stored copy of the same visitor
+ * with no query string, or only ad-tracking parameters (utm_*, click IDs; see
+ * tracking_only()), is answered from a stored copy of the same visitor
  * variant, skipping theme rendering. WordPress, plugins, bot blocking,
  * language/GeoIP resolution and the visitor-ID cookie still run as before;
  * browsers still receive the original private/no-store headers. Every other
  * request, including any visitor with a session, login, cart, history,
- * tracking or opt-out cookie, renders normally.
+ * tracking or opt-out cookie, renders normally. Copies are only ever
+ * taken from a plain "/" request.
  *
  * A copy is never stored when the response is not a complete 200 HTML page,
  * DONOTCACHEPAGE is defined, or any cookie other than the visitor ID was set.
@@ -82,12 +84,29 @@ final class Page_Cache {
 	 */
 	public static function eligible( array $r ): bool {
 		if ( ! in_array( $r['method'] ?? '', array( 'GET', 'HEAD' ), true ) ) { return false; }
-		if ( '' !== (string) ( $r['query'] ?? '' ) ) { return false; }
+		if ( '' !== (string) ( $r['query'] ?? '' ) && ! self::tracking_only( (string) $r['query'] ) ) { return false; }
 		if ( ( $r['path'] ?? null ) !== ( $r['home_path'] ?? '/' ) ) { return false; }
 		if ( empty( $r['front'] ) || ! empty( $r['paged'] ) || ! empty( $r['logged_in'] ) || ! empty( $r['admin'] ) || ! empty( $r['preview'] ) || ! empty( $r['donotcache'] ) ) { return false; }
 		$allowed = array( Storefront_Language::PREFERENCE_COOKIE );
 		foreach ( (array) ( $r['cookies'] ?? array() ) as $name ) {
 			if ( ! in_array( (string) $name, $allowed, true ) ) { return false; }
+		}
+		return true;
+	}
+
+	/**
+	 * True when every query parameter is an ad/analytics tag that no server code renders:
+	 * utm_*, Google/Microsoft/Meta/TikTok/X/LinkedIn click IDs. Click-ID cookies (_fbc,
+	 * pc_ttclid) are set at init, before this cache, so they still apply on a cached view.
+	 * Anything else (coupons, language, previews, filters) renders normally.
+	 */
+	public static function tracking_only( string $query ): bool {
+		if ( '' === $query || strlen( $query ) > 2048 ) { return false; }
+		$allowed = array( 'gclid', 'gbraid', 'wbraid', 'gad_source', 'gad_campaignid', 'fbclid', 'ttclid', 'msclkid', 'twclid', 'li_fat_id' );
+		foreach ( explode( '&', $query ) as $pair ) {
+			if ( '' === $pair ) { continue; }
+			$name = strtolower( urldecode( explode( '=', $pair, 2 )[0] ) );
+			if ( ! preg_match( '/\Autm_[a-z_]{1,32}\z/', $name ) && ! in_array( $name, $allowed, true ) ) { return false; }
 		}
 		return true;
 	}
@@ -157,6 +176,8 @@ final class Page_Cache {
 			exit;
 		}
 		if ( headers_sent() ) { return; }
+		// Ad landings may be served a stored copy, but a copy is only ever taken from a plain "/".
+		if ( '' !== $request['query'] ) { header( 'X-PC-Page-Cache: BYPASS' ); return; }
 		header( 'X-PC-Page-Cache: MISS' );
 		self::$capturing = true;
 		ob_start( array( self::class, 'capture' ) );
@@ -249,25 +270,35 @@ final class Page_Cache {
 	}
 
 	private static function read( string $key ): ?array {
-		$file = self::file( $key );
+		$entry = self::read_entry( self::file( $key ), self::ttl() );
+		if ( null === $entry || ! is_array( $entry['headers'] ?? null ) || ! is_string( $entry['body'] ?? null ) || ! is_bool( $entry['pixels'] ?? null ) ) { return null; }
+		return $entry;
+	}
+
+	private static function write( string $key, array $entry ): void {
+		self::write_entry( self::directory(), self::file( $key ), $entry );
+	}
+
+	/** A stored array with an int 'created' not older than $ttl seconds, or null. Shared with Fragment_Cache. */
+	public static function read_entry( string $file, int $ttl ): ?array {
 		if ( ! is_readable( $file ) ) { return null; }
 		$raw = @file_get_contents( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 		$prefix = "<?php exit; ?>\n";
 		if ( ! is_string( $raw ) || ! str_starts_with( $raw, $prefix ) ) { return null; }
 		$entry = @unserialize( substr( $raw, strlen( $prefix ) ), array( 'allowed_classes' => false ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
-		if ( ! is_array( $entry ) || ! is_int( $entry['created'] ?? null ) || ! is_array( $entry['headers'] ?? null ) || ! is_string( $entry['body'] ?? null ) || ! is_bool( $entry['pixels'] ?? null ) ) { return null; }
-		if ( time() - $entry['created'] >= self::ttl() || $entry['created'] > time() + 5 ) { return null; }
+		if ( ! is_array( $entry ) || ! is_int( $entry['created'] ?? null ) ) { return null; }
+		if ( time() - $entry['created'] >= $ttl || $entry['created'] > time() + 5 ) { return null; }
 		return $entry;
 	}
 
-	private static function write( string $key, array $entry ): void {
-		$dir = self::directory();
+	/** Atomic write (temp file + rename) behind a PHP exit guard. Shared with Fragment_Cache. */
+	public static function write_entry( string $dir, string $file, array $entry ): void {
 		if ( ! is_dir( $dir ) && ! wp_mkdir_p( $dir ) ) { return; }
 		if ( ! file_exists( $dir . '/index.php' ) ) { @file_put_contents( $dir . '/index.php', "<?php // Silence.\n" ); } // phpcs:ignore WordPress.PHP.NoSilencedErrors
-		$tmp = $dir . '/.' . $key . '.' . bin2hex( random_bytes( 4 ) ) . '.tmp';
+		$tmp = $dir . '/.' . basename( $file ) . '.' . bin2hex( random_bytes( 4 ) ) . '.tmp';
 		// The PHP exit prefix keeps a direct web request from returning the stored copy.
 		if ( false === @file_put_contents( $tmp, "<?php exit; ?>\n" . serialize( $entry ), LOCK_EX ) ) { return; } // phpcs:ignore WordPress.PHP.NoSilencedErrors
-		if ( ! @rename( $tmp, self::file( $key ) ) ) { @unlink( $tmp ); } // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		if ( ! @rename( $tmp, $file ) ) { @unlink( $tmp ); } // phpcs:ignore WordPress.PHP.NoSilencedErrors
 	}
 
 	/** Test-only state reset. */

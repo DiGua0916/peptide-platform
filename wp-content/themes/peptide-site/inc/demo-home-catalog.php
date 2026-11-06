@@ -82,7 +82,8 @@ add_filter( 'body_class', function ( array $classes ): array { if ( vc_demo_home
 
 add_filter( 'peptide_core_module_html', function ( $html, array $module, string $context, string $device ) {
     if ( 'product_collection' !== $module['type'] || 'demo' !== ( $module['settings']['cardPresentation'] ?? '' ) ) { return $html; }
-    ob_start(); get_template_part( 'template-parts/modules/demo-catalog', null, array( 'module' => $module, 'context' => $context ) ); return ob_get_clean();
+    $render = static function () use ( $module, $context ): string { ob_start(); get_template_part( 'template-parts/modules/demo-catalog', null, array( 'module' => $module, 'context' => $context ) ); return (string) ob_get_clean(); };
+    return function_exists( 'vc_cached_fragment' ) ? vc_cached_fragment( 'demo-catalog', array( $module, $context, $device ), $render ) : $render();
 }, 15, 4 );
 
 add_action( 'wp_enqueue_scripts', function () {

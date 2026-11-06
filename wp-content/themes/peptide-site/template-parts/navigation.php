@@ -12,7 +12,7 @@ if ( ! $vc_menu ) { return; }
         <details class="nav-group<?php echo $vc_shop ? ' nav-group--products' : ''; ?><?php echo $vc_current ? ' vc-menu-current' : ''; ?>">
             <summary<?php echo vc_menu_attributes( $vc_item ); ?>><?php echo vc_menu_label( $vc_item ); ?><span class="nav-chevron" aria-hidden="true"></span></summary>
             <?php if ( $vc_shop ) : ?>
-                <?php get_template_part( 'template-parts/navigation-products', null, [ 'item' => $vc_item ] ); ?>
+                <?php echo vc_cached_fragment( 'navigation-products', [ $vc_item ], static function () use ( $vc_item ): string { ob_start(); get_template_part( 'template-parts/navigation-products', null, [ 'item' => $vc_item ] ); return (string) ob_get_clean(); } ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- template output. ?>
             <?php else : ?>
                 <div class="nav-panel nav-panel--small">
                     <?php if ( 'none' !== ( $vc_item['type'] ?? '' ) && ! empty( $vc_item['url'] ) ) { echo vc_menu_link( $vc_item, 'vc-menu-parent' ); } ?>

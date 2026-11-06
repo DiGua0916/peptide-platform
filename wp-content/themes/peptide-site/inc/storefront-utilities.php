@@ -2,6 +2,14 @@
 /** Small public utilities, driven by the plugin's published store configuration. */
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Expensive, visitor-independent section HTML (catalogue grid, product menu) through the
+ * plugin's section cache when it is enabled; otherwise, or for personalised visitors, render.
+ */
+function vc_cached_fragment( string $name, array $inputs, callable $render ): string {
+    return class_exists( '\PeptideCore\Fragment_Cache' ) ? \PeptideCore\Fragment_Cache::remember( $name, $inputs, $render ) : (string) $render();
+}
+
 /** Editorial header presentation; the plugin remains the promotion authority. */
 function vc_storefront_announcement_html( array $settings ): string {
     if ( empty( $settings['announcement'] ) || ( ! empty( $settings['announcementHomeOnly'] ) && ! is_front_page() ) ) { return ''; }

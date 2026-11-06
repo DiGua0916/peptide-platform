@@ -50,6 +50,7 @@ namespace {
 
 	if ( 'serve' === $mode ) {
 		// A cookie-less first visit: Tracker (template_redirect 1) has already issued pc_vid into $_COOKIE.
+		if ( getenv( 'QS' ) ) { $_SERVER['QUERY_STRING'] = getenv( 'QS' ); $_SERVER['REQUEST_URI'] = '/?' . getenv( 'QS' ); }
 		$_COOKIE = array( 'pc_vid' => 'issued-this-request' );
 		$GLOBALS['px_id'] = getenv( 'PX_ID' ) ?: 'child'; if ( getenv( 'PX_OFF' ) ) { $GLOBALS['px_allowed'] = false; }
 		register_shutdown_function( static function () { fwrite( STDERR, 'SENDS=' . ( $GLOBALS['px_sends'] ?? 0 ) ); } );
@@ -62,8 +63,10 @@ namespace {
 	check( 'cookie-less anonymous GET / eligible', Cache::eligible( $base ) );
 	check( 'HEAD eligible', Cache::eligible( array( 'method' => 'HEAD' ) + $base ) );
 	check( 'language preference cookie alone eligible', Cache::eligible( array( 'cookies' => array( 'pc_storefront_language' ) ) + $base ) );
+	foreach ( array( 'utm_source=facebook&utm_campaign=Spring%20Sale', 'gclid=abc', 'fbclid=IwAR0x', 'ttclid=E.C', 'msclkid=1', 'gbraid=x&gad_source=1', 'UTM_Medium=cpc' ) as $q ) { check( "ad tracking query eligible: $q", Cache::eligible( array( 'query' => $q ) + $base ) ); }
+	foreach ( array( 'pc_coupon=SAVE', 'utm_source=x&p=1', 'add-to-cart=12', 's=bpc', 'utm_=x', str_repeat( 'utm_source=x&', 300 ) ) as $q ) { check( 'other query bypasses: ' . substr( $q, 0, 30 ), ! Cache::eligible( array( 'query' => $q ) + $base ) ); }
 	foreach ( array(
-		'POST' => array( 'method' => 'POST' ), 'query string (utm/gclid/pc_lang)' => array( 'query' => 'gclid=x' ), 'other path' => array( 'path' => '/shop/' ),
+		'POST' => array( 'method' => 'POST' ), 'non-tracking query (pc_lang)' => array( 'query' => 'pc_lang=es' ), 'coupon query' => array( 'query' => 'utm_source=fb&pc_coupon=SAVE' ), 'other path' => array( 'path' => '/shop/' ),
 		'not front page' => array( 'front' => false ), 'paged' => array( 'paged' => true ), 'logged in' => array( 'logged_in' => true ), 'preview' => array( 'preview' => true ),
 		'DONOTCACHEPAGE' => array( 'donotcache' => true ), 'returning visitor id' => array( 'cookies' => array( 'pc_vid' ) ),
 		'woo session' => array( 'cookies' => array( 'wp_woocommerce_session_abc' ) ), 'cart' => array( 'cookies' => array( 'woocommerce_items_in_cart' ) ),
@@ -130,6 +133,10 @@ namespace {
 	};
 	[ $out, $err ] = $run();
 	check( 'next cookie-less visit is served the stored page and stops rendering', $page === $out && 'SENDS=0' === $err );
+	[ $out ] = $run( array( 'QS' => 'utm_source=facebook&fbclid=IwAR0x' ) );
+	check( 'ad landing with only tracking parameters is served the stored page', $page === $out );
+	[ $out ] = $run( array( 'QS' => 'utm_source=x&pc_coupon=SAVE' ) );
+	check( 'a coupon link still renders normally', "NO-HIT\n" === $out );
 
 	// Expired copies are ignored.
 	$raw = file_get_contents( $stored ); $entry = unserialize( substr( $raw, strlen( "<?php exit; ?>\n" ) ) ); $entry['created'] = time() - 301;
@@ -183,6 +190,11 @@ namespace {
 	check( 'cached pixel page otherwise identical to the original', str_replace( 'pag_visitor1', 'pag_captured', $out1 ) === $px_page );
 	[ $out3 ] = $run( array( 'PX_OFF' => '1' ) );
 	check( 'visitor not tracked by pixels uses a different key (renders normally)', "NO-HIT\n" === $out3 );
+
+	// An ad landing with no stored copy renders normally and never becomes the stored copy.
+	array_map( 'unlink', array_filter( glob( $dir . '/cache/peptide-core-pages/*.php' ) ?: array(), fn( $f ) => ! str_ends_with( $f, 'index.php' ) ) );
+	$_SERVER['QUERY_STRING'] = 'utm_source=x'; Cache::reset_for_tests( array(), array( $ok_headers, 200 ) ); $level = ob_get_level(); Cache::serve_or_capture();
+	check( 'ad landing never captured', ob_get_level() === $level ); $_SERVER['QUERY_STRING'] = '';
 
 	// A returning visitor (browser sent pc_vid) never opens a capture.
 	Cache::reset_for_tests( array( 'pc_vid' ), array( $ok_headers, 200 ) ); $level = ob_get_level(); Cache::serve_or_capture();
