@@ -7,7 +7,7 @@ Scope: branch `codex/checkout-acceptance-20261105` only, on top of `1a7bb95`. No
 | # | Finding | Status |
 | --- | --- | --- |
 | 1 | Concurrent add-to-cart loses quantity | Fixed in code; MySQL concurrency not yet verified |
-| 2 | Homepage has no full-page cache (sandbox p50 ≈3.9 s at 10 concurrency; production ≈1.8–2.0 s) | Not implemented; design below needs a decision |
+| 2 | Homepage has no full-page cache (sandbox p50 ≈3.9 s at 10 concurrency; production ≈1.8–2.0 s) | Opt-in cache built after owner approval (off until enabled); not measured |
 | 3 | Purchasable "测试" product id 11738 on production | No code change; commands below for the owner |
 | 4 | Mobile checkout summary: no quantity, no "10 vials per box", label "Specificatio" | Fixed |
 | 5 | HQ new payment account defaults: enabled, live, all stores | Fixed after owner decision "default off" (follow-up commit) |
@@ -51,17 +51,6 @@ PHP 8.3.32 CLI (static-php-cli build) and Node 26.13.0 (checksum-verified), down
   - (c) `wp eval-file …/peptide-panapay/tests/native-contract.php` in a disposable `panapay_qa_*` DB.
 - The Spanish checkout line is generated client-side; Spanish checkout strings are otherwise untranslated, as before.
 
-## Decisions needed
-
-- **2:** All storefront documents are currently `private, no-store, Vary: Cookie` (`Storefront_Translation::private_header_values`). Language is per visitor (preference cookie, or local GeoIP on `REMOTE_ADDR`). A full-page cache must therefore:
-  - only serve anonymous GET `/` without query string;
-  - bypass `wordpress_logged_in_*`, `wp_woocommerce_session_*` and `woocommerce_items_in_cart` cookies;
-  - key on the *resolved* language (cookie value, else GeoIP country → language), so Nginx alone cannot key it without the same GeoIP data;
-  - keep TTL well under the 12–24 h nonce lifetime (guest Store API nonces without a session cookie are shared, so a short TTL is safe);
-  - exclude cart, checkout, account, REST and report routes (CONTRACT "不得被公共整页缓存").
-
-  The practical option is an opt-in application-level cache in peptide-core: resolve language early, then serve stored HTML for that key with `Cache-Control: private` to browsers. It skips the theme render (~0.6–0.8 s measured). It needs explicit approval, because it reverses the deliberate no-store policy, and it must be measured on the sandbox.
-
 ## For the owner — item 3 (production, not run by Claude)
 
 ```
@@ -82,3 +71,61 @@ Supersedes the 2026-11-03 default-on change (`ed7d260`, `backend-payment-default
 - Test `peptide-panapay/tests/hub-new-account-defaults-pure.php` 11/11 runs the real `Hub_Accounts::save/policy` and `Configuration` with an in-memory options row and an offline host cache. It covers the defaults, omitted switches, the untouched form, store-less enable rejected, production test-mode rejected, and an explicit one-store live enable. It fails on the previous code ("new account default is off").
 - Full plugin suite rerun: 178 pass; the same 54 environment-dependent failures as baseline.
 - Not verified in a real HQ admin page.
+
+## Follow-up — item 2 (owner approved "Build it")
+
+`peptide-core/includes/class-page-cache.php` (`Page_Cache`, registered in `class-plugin.php`). It is **off** until `wp-config.php` defines:
+
+```php
+define( 'PEPTIDE_CORE_PAGE_CACHE', true );
+define( 'PEPTIDE_CORE_PAGE_CACHE_TTL', 300 ); // optional, 30–3600 s
+```
+
+**What it caches.** Only an anonymous GET/HEAD of exactly the home path `/`, with **no query string**, from a browser that sent **no cookies** except `pc_storefront_language`. That means first-time visitors and load tests. Any other cookie bypasses the cache and the page renders exactly as today: Woo session or cart, login, `pc_vid` (returning visitor; customer-segment rules can match visitor IDs), recent products/history, pixel opt-out, click IDs, analytics. Any query string also bypasses, which covers utm/gclid/fbclid (`Pixels::remember_click_ids` must still run) and `pc_lang`.
+
+**How it works.**
+- It runs at `template_redirect` priority 100, after every existing hook (max 99). Bot blocking (`init`), redirects, language/GeoIP resolution, the visitor-ID cookie (priority 1) and the Spanish translation buffer (priority 90) all still run.
+- A hit skips only theme rendering. It replays the stored headers (still `private, no-store`, so browsers and CDNs do not cache) plus `X-PC-Page-Cache: HIT` and `Age`.
+- A miss sends `X-PC-Page-Cache: MISS` and captures the page. Front-page bypasses send `BYPASS`.
+
+**Cache key.** An HMAC (keyed by `AUTH_SALT`) over:
+- host and scheme;
+- resolved storefront language, locale and GeoIP country;
+- Woo's already-located guest billing/shipping country (no extra geolocation call);
+- `wp_is_mobile()` device class (the theme renders per device);
+- tracking declined (GPC);
+- a content generation counter.
+
+**Never stored when:**
+- the status is not 200, or the response is not `text/html`, or the HTML is incomplete (< 512 B, > 4 MiB, or no `</html>`);
+- `DONOTCACHEPAGE` is defined (already set by the personalised commerce/shipping blocks);
+- **`peptide-core-pixels` was enqueued**, because each render creates unique page-event IDs and a server-side send;
+- any `Set-Cookie` other than `pc_vid` was sent.
+
+**Invalidation.** Expiry after the TTL. A generation bump on post/product/variation/stock/term/menu/customizer/theme/plugin changes, and on writes to storefront options (`pc_*`, `peptide*`, `vc_*`, `theme_mods_*`, `woocommerce_*`, widgets, front-page settings). Transient, cron, lock, queue and session writes do not bump it.
+
+**Storage.** `wp-content/cache/peptide-core-pages/<hmac>.php`, written atomically (temp file + rename), each file starting with a PHP `exit` guard so a direct web request cannot return it. Corrupt or expired files are ignored. Guest Store API nonces on a cookie-less page belong to user 0, so they are shared and stay valid well beyond the TTL.
+
+**Important limits.**
+- If ad pixels are enabled on a site, the cache stores nothing there. Check `X-PC-Page-Cache` after enabling.
+- Returning visitors and ad landings with click IDs are not accelerated. A hit still loads WordPress and plugins, so expect roughly "TTFB minus template time", not static-file speed.
+
+**Tests.** `peptide-core/tests/page-cache-pure.php` 46/46 with the real class. It covers:
+- the eligibility and bypass matrix;
+- the stored-header rules;
+- key variance (device, language/country, GPC, host, generation);
+- the option-flush filter and hook priorities;
+- a real miss → capture → file → child-process hit;
+- expired and corrupt copies are not served;
+- a personalised Set-Cookie response is not stored;
+- a returning visitor gets no capture.
+
+Full plugin rerun: 179 pass, same 54 environment-dependent failures; theme 386/386.
+
+**Not verified.** No real WordPress or Nginx ran here. Before enabling in production, on the sandbox:
+- (a) enable the constant;
+- (b) `curl -sI https://<sandbox>/` twice, expecting MISS then HIT, and with a `Cookie: pc_vid=…` header expecting BYPASS;
+- (c) compare the HTML of HIT and a fresh render;
+- (d) check Spanish (PR) and mobile variants;
+- (e) repeat the 10-concurrency p50 measurement;
+- (f) confirm add-to-cart from a cached page works (Store API nonce).

@@ -138,7 +138,7 @@ items 按 WooCommerce 商品订单行迭代顺序返回，不按商品 ID 合并
 | 410 | pc_report_withdrawn，已撤回 |
 | 429 | pc_rate_limited，读取 retry_after 提示重试 |
 
-浏览器 Cookie REST 需 X-WP-Nonce；下载 URL 的 _wpnonce 由后端生成，登录 Cookie 仍需存在。Woo Store API 写请求另需其 Nonce 或 Cart-Token，由原生 Blocks 处理。账户、购物车、结账及带用户权限的报告不得被公共整页缓存。PHP 公共函数：`peptide_core_get_site_config()`、`peptide_core_get_product_batches($slug,$include_history=false)`、`peptide_core_lookup_batch($batch_no,$include_history=false)`；PHP lookup 不带 HTTP 限流。当前无公共订单 helper，主题用内部 REST 并保留权限检查。
+浏览器 Cookie REST 需 X-WP-Nonce；下载 URL 的 _wpnonce 由后端生成，登录 Cookie 仍需存在。Woo Store API 写请求另需其 Nonce 或 Cart-Token，由原生 Blocks 处理。账户、购物车、结账及带用户权限的报告不得被公共整页缓存。（2026-11-06：peptide-core 可选首页缓存 Page_Cache 默认关闭，仅服务无 Cookie 的匿名首页请求，浏览器仍收到 private, no-store；见 docs/handoffs/stress-test-repairs-2026-11-06.md。）PHP 公共函数：`peptide_core_get_site_config()`、`peptide_core_get_product_batches($slug,$include_history=false)`、`peptide_core_lookup_batch($batch_no,$include_history=false)`；PHP lookup 不带 HTTP 限流。当前无公共订单 helper，主题用内部 REST 并保留权限检查。
 
 ## 菜单、结账条款与公开优惠码
 
