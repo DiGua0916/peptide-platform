@@ -72,7 +72,7 @@ final class Tracking_Page {
 					'visit'      => isset( $_GET['visit'] ) ? absint( $_GET['visit'] ) : 0, // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 					'liveUrl'    => admin_url( 'admin.php?page=' . self::SLUG ),
 					'archiveUrl' => admin_url( 'admin.php?page=' . self::ARCHIVE_SLUG ),
-					'refreshMs'  => 5000,
+					'refreshMs'  => 15000, // Was 5 s; each poll is a full WordPress request (code review 2026-11-06).
 					// 后台时间都按店铺时区显示（IANA 名称时用浏览器的 Intl 换算；只有偏移量时按浏览器本地时间）。
 					'timezone'   => wp_timezone_string(),
 					'today'      => wp_date( 'Y-m-d' ),

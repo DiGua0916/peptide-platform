@@ -106,7 +106,7 @@ final class Query {
 	private static function recent_tabs( int $now_ms ): array {
 		global $wpdb;
 		$tabs = Schema::table( 'tabs' );
-		$ids  = $wpdb->get_col( $wpdb->prepare( "SELECT visitor_id FROM {$tabs} GROUP BY visitor_id HAVING MAX(last_signal_ms) >= %d ORDER BY MAX(last_signal_ms) DESC LIMIT 500", $now_ms - Tracker::VISIT_GAP_MS ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		$ids  = $wpdb->get_col( $wpdb->prepare( "SELECT visitor_id FROM {$tabs} WHERE last_signal_ms >= %d GROUP BY visitor_id ORDER BY MAX(last_signal_ms) DESC LIMIT 500", $now_ms - Tracker::VISIT_GAP_MS ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		if ( ! $ids ) {
 			return array();
 		}

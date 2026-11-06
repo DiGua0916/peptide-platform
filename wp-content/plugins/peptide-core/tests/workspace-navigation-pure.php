@@ -47,7 +47,7 @@ $head = $capture( 'navigation_head' );
 $check( str_contains( $head, 'html,body{background:#f7f7f7}' ), 'Early canvas matches customer workspace' );
 $check( str_contains( $head, '@view-transition{navigation:auto}' ), 'Native same-origin MPA opt-in' );
 $check( str_contains( $head, '@media(prefers-reduced-motion:reduce){@view-transition{navigation:none}}' ), 'Reduced motion opts out without a simulated animation' );
-$check( str_contains( $head, '<link rel="expect" href="#pc-workspace-content-ready" blocking="render">' ), 'Only a same-document parsed-content expectation' );
+$check( ! str_contains( $head, 'blocking="render"' ), 'No render-blocking expectation (screens paint progressively)' );
 $check( ! str_contains( $head, '<script' ) && ! preg_match( '/https?:|prefetch|prerender|iframe|localStorage|sessionStorage|eval\(/i', $head ), 'No executable navigation, storage, prefetch or remote resource' );
 $check( '' === $capture( 'navigation_head' ), 'Duplicate head callbacks cannot duplicate expectations' );
 $ready = $capture( 'navigation_ready' );

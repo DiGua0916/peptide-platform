@@ -43,12 +43,16 @@ final class Overview_Page {
 					array(
 						'methods'             => \WP_REST_Server::READABLE,
 						'callback'            => static function ( \WP_REST_Request $request ) {
-							$res = new \WP_REST_Response(
-								array(
-									'summary' => Overview::summary(),
-									'range'   => Overview::range_data( is_string( $request['range'] ) ? sanitize_key( $request['range'] ) : 'today' ),
-								)
-							);
+							$range = is_string( $request['range'] ) ? sanitize_key( $request['range'] ) : 'today';
+							// Several open dashboards each re-ran the full statistics every minute
+							// (code review 2026-11-06). Share one result per range and store day for 30 s.
+							$cache = 'pc_overview_' . md5( $range . '|' . wp_date( 'Y-m-d' ) . '|' . get_locale() );
+							$data = get_transient( $cache );
+							if ( ! is_array( $data ) ) {
+								$data = array( 'summary' => Overview::summary(), 'range' => Overview::range_data( $range ) );
+								set_transient( $cache, $data, 30 );
+							}
+							$res = new \WP_REST_Response( $data );
 							$res->header( 'Cache-Control', 'no-store' );
 							return $res;
 						},

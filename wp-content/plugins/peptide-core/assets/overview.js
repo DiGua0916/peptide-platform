@@ -389,7 +389,7 @@
 		if ( ! document.hidden ) {
 			refreshVisitors();
 		}
-	}, 10000 );
+	}, 30000 );
 	document.addEventListener( 'visibilitychange', function () {
 		if ( ! document.hidden ) {
 			load( range.range ).catch( schedule );

@@ -72,7 +72,7 @@ $_GET = array(); $GLOBALS['screen'] = new Synthetic_Screen( 'users' );
 ob_start(); Menu::navigation_continuity(); $continuity = ob_get_clean();
 check( 'native WP head uses the existing canvas before external styles', str_contains( $continuity, 'html,body{background:#f5f5f5}' ) );
 check( 'native WP head opts in and respects reduced motion', str_contains( $continuity, '@view-transition{navigation:auto}' ) && str_contains( $continuity, '@media(prefers-reduced-motion:reduce){@view-transition{navigation:none}}' ) );
-check( 'native WP head waits for parsed content only', str_contains( $continuity, '<link rel="expect" href="#pchq-document-ready" blocking="render">' ) );
+check( 'native WP head does not block rendering', ! str_contains( $continuity, 'blocking="render"' ) );
 ob_start(); Menu::navigation_continuity(); check( 'duplicate head callbacks do not emit another expectation', '' === ob_get_clean() );
 ob_start(); Menu::navigation_ready(); $ready = ob_get_clean();
 check( 'native WP footer emits the matching hidden ready marker', '<span id="pchq-document-ready" hidden aria-hidden="true"></span>' === $ready );

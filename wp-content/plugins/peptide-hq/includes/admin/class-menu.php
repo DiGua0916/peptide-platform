@@ -160,7 +160,7 @@ final class Menu {
 			|| ( defined( 'IFRAME_REQUEST' ) && IFRAME_REQUEST ) ) { return; }
 		self::$navigation_pending = true;
 		echo '<style id="pchq-workspace-navigation">html,body{background:#f5f5f5}@view-transition{navigation:auto}@media(prefers-reduced-motion:reduce){@view-transition{navigation:none}}</style>';
-		echo '<link rel="expect" href="#pchq-document-ready" blocking="render">';
+		// No render-blocking <link rel="expect"> (code review 2026-11-06): screens paint progressively.
 	}
 	public static function navigation_ready(): void {
 		if ( ! self::$navigation_pending ) { return; }

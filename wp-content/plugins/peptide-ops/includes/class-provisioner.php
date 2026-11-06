@@ -105,6 +105,10 @@ final class Provisioner {
 			$result += array( 'management_url' => $state['management_url'] ?? $state['url'], 'public_url' => $state['public_url'] ?? $state['url'], 'dual_domain' => ! empty( $state['dual_domain'] ) );
 			$state['result'] = $result; $state['phase'] = 'complete'; $state['completed'] = time();
 			Storage::write_json( $rel . '/state.json', $state );
+			// The generated admin/database passwords are only needed up to "configured"; the database
+			// password now lives in the store's wp-config.php. Do not keep plain-text copies (code review 2026-11-06).
+			$credentials_file = Storage::path( $rel . '/credentials.json' );
+			if ( is_file( $credentials_file ) ) { @unlink( $credentials_file ); } // phpcs:ignore WordPress.PHP.NoSilencedErrors
 			$progress( 100, 'complete', '新店已运行并接入管理后台，可通过管理后台登录。' );
 			return $result;
 		} catch ( \Throwable $e ) {

@@ -25,7 +25,10 @@ final class Store_Settings {
 
 	public static function enqueue(): void {
 		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( ! self::SYSTEM_SLUG === $page ) {
+		// The old test `! SYSTEM_SLUG === $page` was always false, so this loaded on every admin
+		// screen. Its .pc-ss-/.pc-bc- styles are shared by many store pages (tax, shipping
+		// discounts, language, pixels, apps…), so scope to store pages instead of pc-system only.
+		if ( ! str_starts_with( $page, 'pc-' ) ) {
 			return;
 		}
 		$file = PEPTIDE_CORE_DIR . '/assets/store-settings.css';

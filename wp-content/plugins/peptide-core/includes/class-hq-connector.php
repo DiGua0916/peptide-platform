@@ -143,6 +143,13 @@ final class Hq_Connector {
 			return;
 		}
 		set_transient( 'pc_hq_reg_wait', 1, 10 * MINUTE_IN_SECONDS );
+		// Never make an admin screen wait for HQ (up to 15 s when HQ is slow; code review
+		// 2026-11-06): register after the page has been sent. Independent of WP-Cron.
+		add_action( 'shutdown', array( self::class, 'register_after_response' ), PHP_INT_MAX );
+	}
+
+	public static function register_after_response(): void {
+		if ( function_exists( 'fastcgi_finish_request' ) ) { fastcgi_finish_request(); }
 		self::register();
 	}
 

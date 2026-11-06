@@ -162,3 +162,28 @@
 - 第 1 节的耗时是在沙盒命令行下测的，没有代码缓存，所以绝对值偏大；浏览器里的实际感受建议登录沙盒后再测一次。
 - 关于自托管视频：这台服务器（54.144.250.46）上没有任何视频文件，视频应该在另一台服务器（"独立站"密钥对应的那台）上，这次没有检查。
 - 没有标 ✅ 的条目来自审查代理的读代码结论，有具体文件和行号，但没有逐一复核。修之前会再核实一遍。
+
+---
+
+## 7. 第一批修复（已完成，本地验证；尚未部署沙盒）
+
+| 条目 | 改动 | 验证 |
+|---|---|---|
+| 1-1 多余的命令面板脚本 | `Workspace::trims_optional_assets()`：从原来 3 个页面扩展到所有 `pc-*` 页面，可视化编辑器 `pc-design-editor` 除外。和原来一样只出队根脚本，其他功能依赖的共享包仍会加载。 | 本地真实 WordPress：主题装修、检测报告页的 WordPress JS 从 53 个文件 3.46 MB 降到 8 个文件 122 KB；WooCommerce 自己的页面不变。 |
+| 1-2 渲染阻塞 | 去掉 core 和 HQ 里的 `<link rel="expect" blocking="render">`，保留跨页过渡动画样式和就绪标记。 | `workspace-navigation-pure.php` 27/27。HQ 的 `navigation-meta.php` 在改动前就失败（"nine dedicated pages only"），与本次无关。 |
+| 1-3 每请求 8 条 SHOW 语句 | `Schema::installed()`：严格检查 `ready()` 通过一次后，把结果写进自动加载的选项 `peptide_core_tracking_db_verified`（按版本、数据库名、表名生成指纹）。`install()` 会清除它；版本变化后它自然失效。 | 本地连续 3 个独立请求，SHOW 语句都是 0（原来每个请求 8 条）。单元测试覆盖：失效标记会强制重新检查；旧版本永远不算已安装。 |
+| 1-6 轮询 | 仪表盘实时访客从 10 秒改为 30 秒；访客页从 5 秒改为 15 秒；`/overview` 接口在服务端按"日期范围 + 当天日期 + 语言"缓存 30 秒（权限检查在缓存之前；数据是全店统计，不区分用户）。 | 代码检查 |
+| 1-7 实时访客查询 | 改成 `WHERE last_signal_ms >= ? GROUP BY …`，不再用 `HAVING MAX(…)`，可以走 `last_signal` 索引。 | 本地 310 行合成数据、5 个时间窗口：新旧查询结果和顺序完全一致，合成数据已删除。`cart_key` 索引需要升级表结构，放到第二批。 |
+| 1-10 判断写错 | `store-settings.css` 改为在所有 `pc-*` 页面加载。这份样式被税费、运费折扣、语言、像素、应用等多个店铺页共用，所以不能只限 `pc-system`。 | 本地确认：商品列表等 WooCommerce 页面不再加载这份样式，店铺页仍然加载。 |
+| 1-11 同步远程注册 | `maybe_register()` 不再同步调用，改为在 `shutdown` 时先 `fastcgi_finish_request()`（页面先发给浏览器）再注册。不依赖 WP-Cron，因为沙盒没有 cron 执行器。 | 相关的 smoke 测试已改成新的约定（需要连接真实总后台才能跑）。 |
+| 2-A "仅已审核客户可见" | `Store_Config::approve()`（单个和批量都走这里）同时写入 `pc_buyer_approved`。`Access::is_approved()` 增加一种情况：开启账号审核（force login）时，已注册且不在待审核状态的账号也算已审核。未开启审核时行为不变。 | 单元测试覆盖 6 种情况。本地 `smoke-read-api` 18/18、`smoke-security` 23/23。 |
+| 2-C 明文密码文件 | 建店进入 `complete` 后删除 `credentials.json`。 | 代码检查。之前已经建好的店，旧文件还在，需要在服务器上单独清理，要你确认后再做。 |
+
+**这次没有做：2-H `/hq/staff` 路由。** 核实时发现它背后是一个真实的功能："从总后台创建和管理销售账号"，`smoke-hq-connector.php` 和 HQ 的 `smoke-client-nonce.php` 都在测它。总后台的入口页目前被隐藏了，但删掉这个接口属于产品决定，需要先确认这个功能是否还要。
+
+**测试汇总**
+- 新增 `tests/admin-batch1-pure.php` 29/29。
+- 插件独立测试 181 个通过，仍是原来那 54 个依赖环境的失败。
+- 主题 387/387。
+- 本地真实 WordPress：`smoke-read-api` 18/18、`smoke-security` 23/23、`smoke-pixels` 42/42。
+- 另有两个失败在改动前就存在，和改动无关：`smoke-order-batches` 17/18（"my-account shows batch and report link"）、`smoke-tracking` 16/17（本地 SQLite 的限制）。

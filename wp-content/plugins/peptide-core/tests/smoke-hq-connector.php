@@ -58,6 +58,7 @@ if ( Hq_Connector::configured() ) {
 	Hq_Connector::maybe_register();
 	wp_cache_delete( Hq_Connector::OPTION, 'options' );
 	$ok( 'opening the admin does not register again while nothing changed', Hq_Connector::settings()['registered'] === $before );
+	$ok( 'and schedules nothing for after the response', false === has_action( 'shutdown', array( Hq_Connector::class, 'register_after_response' ) ) );
 } else {
 	echo "SKIP PEPTIDE_HQ_URL / PEPTIDE_HQ_SECRET not set, registration not tested\n";
 }
@@ -159,6 +160,9 @@ $ok( 'after the key changes, the old key is refused', 401 === $c && Hq_Connector
 if ( Hq_Connector::configured() ) {
 	delete_transient( 'pc_hq_reg_wait' );
 	Hq_Connector::maybe_register();
+	$ok( 'opening the admin defers registration until after the page is sent', false !== has_action( 'shutdown', array( Hq_Connector::class, 'register_after_response' ) ) );
+	remove_action( 'shutdown', array( Hq_Connector::class, 'register_after_response' ), PHP_INT_MAX );
+	Hq_Connector::register_after_response();
 	wp_cache_delete( Hq_Connector::OPTION, 'options' );
 	$ok( 'with a new key the store registers again by itself', Hq_Connector::settings()['reg_key'] === hash( 'sha256', Hq_Connector::key() ) );
 }

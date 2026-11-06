@@ -34,7 +34,9 @@ final class Workspace {
 		// Critical canvas/opt-in precede ordinary admin styles/scripts. SSR screens
 		// release on content parsing; only Woo's empty root gets a bounded footer gate.
 		echo '<style id="pc-workspace-navigation">html,body{background:#f7f7f7}@view-transition{navigation:auto}@media(prefers-reduced-motion:reduce){@view-transition{navigation:none}}</style>';
-		echo '<link rel="expect" href="#pc-workspace-content-ready" blocking="render">';
+		// No render-blocking <link rel="expect">: it kept every admin screen blank until its
+		// footer was generated (code review 2026-11-06). Pages now paint progressively while the
+		// cross-document view transition is kept. The ready marker stays for existing listeners.
 	}
 
 	/** admin_footer follows wpbody-content, before the normal footer script queue. */
@@ -154,11 +156,19 @@ JS;
 		}
 	}
 
-	/** These server-rendered pages do not use the global command, entity or abilities clients. */
+	/**
+	 * Store pages (pc-*) do not use the global command palette, entity or abilities clients;
+	 * on WordPress 7.1 / Woo 11.2 those roots pull ~3.5 MB of editor packages into every screen.
+	 * Previously limited to three pages (code review 2026-11-06). The visual editor is excluded.
+	 */
+	public static function trims_optional_assets( string $page ): bool {
+		return 1 === preg_match( '/\Apc-[a-z0-9-]{1,60}\z/', $page ) && 'pc-design-editor' !== $page;
+	}
+
 	private static function trim_optional_assets(): void {
 		$screen = get_current_screen();
 		$page = isset( $_GET['page'] ) && is_string( $_GET['page'] ) ? $_GET['page'] : '';
-		if ( ! $screen || ! in_array( $page, array( 'pc-overview', 'pc-store-design-domains', 'pc-data' ), true )
+		if ( ! $screen || ! self::trims_optional_assets( $page )
 			|| ! str_ends_with( $screen->id, '_page_' . $page )
 			|| ( defined( 'IFRAME_REQUEST' ) && IFRAME_REQUEST )
 			|| $screen->is_block_editor() ) { return; }

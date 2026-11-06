@@ -32,18 +32,35 @@ final class Schema {
 		return $wpdb->prefix . 'pc_track_' . $name;
 	}
 
+	/**
+	 * Persisted proof that ready() passed for this schema version, database and table names.
+	 * Without it every request (front end, admin, REST polling) ran 8 SHOW statements
+	 * (code review 2026-11-06). install() clears it; a version change makes it stale.
+	 */
+	public const VERIFIED_OPTION = 'peptide_core_tracking_db_verified';
+
+	private static function verification_key(): string {
+		return hash( 'sha256', self::DB_VERSION . '|' . ( defined( 'DB_NAME' ) ? DB_NAME : '' ) . '|' . implode( '|', array_map( array( self::class, 'table' ), array( 'visitors', 'visits', 'events', 'tabs' ) ) ) );
+	}
+
 	public static function installed(): bool {
 		global $wpdb;
 		if ( self::DB_VERSION !== get_option( self::OPTION ) ) { self::$ready_cache = array(); return false; }
 		$key = spl_object_id( $wpdb ) . '|' . ( defined( 'DB_NAME' ) ? DB_NAME : '' ) . '|' . self::DB_VERSION . '|' . implode( '|', array_map( array( self::class, 'table' ), array( 'visitors', 'visits', 'events', 'tabs' ) ) );
 		if ( isset( self::$ready_cache[ $key ] ) ) { return true; }
+		if ( hash_equals( self::verification_key(), (string) get_option( self::VERIFIED_OPTION, '' ) ) ) {
+			self::$ready_cache[ $key ] = true;
+			return true;
+		}
 		if ( ! self::ready() ) { return false; }
 		self::$ready_cache[ $key ] = true;
+		update_option( self::VERIFIED_OPTION, self::verification_key(), true );
 		return true;
 	}
 
 	public static function install(): void {
 		self::$ready_cache = array();
+		delete_option( self::VERIFIED_OPTION );
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( self::definition() );
 		// Never publish a version just because dbDelta returned: verify actual storage.

@@ -620,6 +620,8 @@ final class Store_Config {
 
 	public static function approve( int $user_id ): void {
 		delete_user_meta( $user_id, self::APPROVAL_META );
+		// One approval concept: approved accounts also satisfy "approved" report access.
+		update_user_meta( $user_id, Access::APPROVED_META, '1' );
 	}
 
 	/** 生成验证链接（3 天有效）并交给“注册邮箱验证”邮件发送，返回链接。 */

@@ -22,8 +22,17 @@ final class Access {
 		return $user_id > 0 && user_can( $user_id, 'edit_pc_reports' );
 	}
 
+	/**
+	 * Approved buyer for "approved" report access. Previously only the APPROVED_META flag was read and
+	 * nothing ever wrote it, so such reports were staff-only (code review 2026-11-06). Approving an
+	 * account now writes it (Store_Config::approve); while the account-approval flow (force login) is
+	 * on, a registered account that is no longer waiting for approval also counts.
+	 */
 	public static function is_approved( int $user_id ): bool {
-		return $user_id > 0 && Meta::bool( get_user_meta( $user_id, self::APPROVED_META, true ) );
+		if ( $user_id <= 0 ) { return false; }
+		if ( Meta::bool( get_user_meta( $user_id, self::APPROVED_META, true ) ) ) { return true; }
+		return class_exists( Store_Config::class ) && (bool) Store_Config::get( 'force_login' )
+			&& false !== get_userdata( $user_id ) && ! Store_Config::is_pending_approval( $user_id );
 	}
 
 	/**
