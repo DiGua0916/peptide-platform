@@ -257,7 +257,7 @@ final class Report_Archive_Page {
 		$issued = isset( $item['issued_on'] ) && is_string( $item['issued_on'] ) && self::valid_date( $item['issued_on'] ) ? $item['issued_on'] : '';
 		$title = '' !== $product_name ? $product_name : (string) $item['title'];
 		?>
-		<article class="pc-coa-library__report" data-report-id="<?php echo esc_attr( (string) $item['id'] ); ?>">
+		<article class="pc-coa-library__report" data-report-id="<?php echo esc_attr( (string) $item['id'] ); ?>"<?php if ( is_int( $item['file']['size_bytes'] ?? null ) && $item['file']['size_bytes'] > 0 ) { echo ' data-vc-report-size-bytes="' . esc_attr( (string) $item['file']['size_bytes'] ) . '"'; } ?>>
 			<div class="pc-coa-library__preview" data-pc-coa-preview>
 				<?php if ( '' !== $view_url ) : ?><a href="<?php echo esc_url( $view_url ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php echo esc_attr( __( 'View PDF', 'peptide-core' ) . ': ' . (string) $item['title'] . ' ' . __( '(opens in a new tab)', 'peptide-core' ) ); ?>"><?php endif; ?>
 				<?php if ( '' !== $thumbnail ) : ?>

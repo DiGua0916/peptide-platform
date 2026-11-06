@@ -475,7 +475,7 @@
       box.append(pdf);
       const link = node('a', 'vc-dialog-pdf-download', 'Download reference PDF ↓'); link.href = safeURL(opened.download_url) || safeURL(opened.view_url); box.append(link);
       box.dataset.vcHistoryReportUrl = safeURL(opened.view_url);
-      box.showModal(); gallery.refresh(); const viewer = window.createProductReportViewer({element: pdf}); children.attach(box, viewer); viewer.open({pdf:safeURL(opened.view_url),title:titleText});
+      box.showModal(); gallery.refresh(); const viewer = window.createProductReportViewer({element: pdf}); children.attach(box, viewer); viewer.open({pdf:safeURL(opened.view_url),title:titleText,sizeBytes:opened.file?.size_bytes});
       document.dispatchEvent(new CustomEvent('vc:product-report-opened',{detail:{dialog:box,url:safeURL(opened.view_url),productId}}));
       return true;
     }

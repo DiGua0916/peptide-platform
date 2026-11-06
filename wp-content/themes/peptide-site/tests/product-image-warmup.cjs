@@ -11,6 +11,18 @@ function fixture(rows, connection={}, idle=true){
  return {window,document,dialog,form,images,timers,api:window.VialCoveProductImageWarmup,start(){return this.api.start(form,dialog);},idle(){const tasks=[...idles.values()];idles.clear();tasks.forEach(fn=>fn());},fallback(){for(const [id,task]of [...timers])if(task.delay===400){timers.delete(id);task.fn();}}};
 }
 const row=n=>({price:999,stock_status:'irrelevant',vc_home_image:{src:`/image-${n}.webp`,srcset:`/image-${n}.webp 500w, /image-${n}-large.webp 1000w`}});
+test('speculative images wait for the visible product image instead of competing on a cold open',()=>{
+ const f=fixture([row(1),row(2)]), visible=new Events(); visible.complete=false;
+ f.dialog.querySelector=()=>visible; f.start(); f.idle(); assert.equal(f.images.length,0);
+ visible.complete=true; visible.fire('load'); f.idle(); assert.equal(f.images.length,2);
+});
+test('waiting for a visible image retires on close; failed visible image releases only optional warmup',()=>{
+ const f=fixture([row(1)]),visible=new Events(); visible.complete=false;
+ f.dialog.querySelector=()=>visible;f.start();f.idle();f.dialog.open=false;f.dialog.fire('close');
+ visible.complete=true;visible.fire('load');f.idle();assert.equal(f.images.length,0);assert.equal(f.timers.size,0);
+ const g=fixture([row(2)]),broken=new Events();broken.complete=false;g.dialog.querySelector=()=>broken;
+ g.start();g.idle();broken.complete=true;broken.fire('error');g.idle();assert.equal(g.images.length,1);
+});
 test('native images defer, load at low priority in exact responsive source order, concurrency2 and cap12',()=>{
  const f=fixture(Array.from({length:20},(_,n)=>row(n)));f.start();assert.equal(f.images.length,0);f.idle();assert.equal(f.images.length,2);
  assert.deepEqual(f.images[0].order.map(x=>x[0]),['fetchPriority','sizes','srcset','src']);assert.equal(f.images[0].order[0][1],'low');assert.equal(f.images[0].order[1][1],'(max-width: 767px) calc(100vw - 64px), 500px');

@@ -2,10 +2,11 @@
 /** Isolated enqueue boundary; no WordPress bootstrap or database. */
 define( 'ABSPATH', __DIR__ );
 class WP_Post { public string $post_content = ''; }
-$callback = null; $admin = false; $page = null; $enqueued = array(); $styles = array(); $localized = array();
+$callback = null; $admin = false; $home = false; $page = null; $enqueued = array(); $styles = array(); $localized = array();
 $scripts = (object) array( 'registered' => array() );
 function add_action( $hook, $fn, $priority ) { global $callback; if ( 'wp_enqueue_scripts' !== $hook || 112 !== $priority ) { throw new Exception( 'Unexpected hook' ); } $callback = $fn; }
 function is_admin() { global $admin; return $admin; }
+function is_front_page() { global $home; return $home; }
 function get_queried_object() { global $page; return $page; }
 function has_shortcode( $content, $shortcode ) { return str_contains( $content, '[' . $shortcode . ']' ); }
 function wp_script_is( $handle, $kind ) { global $enqueued; return isset( $enqueued[ $handle ] ); }
@@ -29,4 +30,7 @@ $scripts->registered['vc-live-commerce-navigation']->deps = array( 'vc-home-quic
 check( $scripts->registered['vc-live-commerce-navigation']->deps === array( 'vc-home-quick-view', 'vc-live-cart-experience', 'vc-product-report-library-viewer' ), 'existing cart/product dependencies preserved without duplicates' );
 $page = null; $enqueued = array( 'vc-product-dialog-report-viewer' => true ); $callback();
 check( isset( $styles['vc-product-report-viewer'] ) && ! isset( $enqueued['vc-product-report-library-viewer'] ), 'product viewer gains style without archive bridge' );
+$home = true; $enqueued = array(); $callback();
+check( isset( $enqueued['vc-product-dialog-report-viewer'], $enqueued['vc-product-report-library-viewer'], $enqueued['vc-live-commerce-navigation'] ), 'homepage reports get the shared reader and history independent of quick-product switches' );
+$home = false;
 $admin = true; $enqueued = array(); $callback(); check( ! $enqueued, 'no admin assets' );

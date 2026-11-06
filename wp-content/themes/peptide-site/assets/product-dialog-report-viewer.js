@@ -21,14 +21,17 @@
   }
   // Public archive reads must not inherit a stale REST nonce. Protected batch
   // files retain their caller's nonce and the original, complete resource URL.
-  function headers(url) {
+  function publicFileURL(url) {
     const route = url.searchParams.get('rest_route') || url.pathname;
     let publicFile = /^\/(?:wp-json\/)?peptide\/v1\/report-library\/[1-9]\d*\/file\/?$/.test(route);
     if (settings().reportLibraryBase) {
       const base = sourceURL(settings().reportLibraryBase), prefix = (base.searchParams.get('rest_route') || base.pathname).replace(/\/?$/,'/');
       publicFile = route.startsWith(prefix) && /^[1-9]\d*\/file\/?$/.test(route.slice(prefix.length));
     }
-    return !publicFile && settings().wpNonce ? {'X-WP-Nonce':settings().wpNonce} : {};
+    return publicFile;
+  }
+  function headers(url) {
+    return !publicFileURL(url) && settings().wpNonce ? {'X-WP-Nonce':settings().wpNonce} : {};
   }
   window.createProductReportViewer = function ({element}) {
     const pages = element.querySelector('.pdf-pages'), status = element.querySelector('.pdf-status');
@@ -218,7 +221,11 @@
       try {
         const url = sourceURL(payload.pdf), pdfjs = await library(); if (run !== generation) return;
         const base = new URL('product-dialog-pdf/', settings().assetBase).href;
-        const task = pdfjs.getDocument({url:url.href,withCredentials:true,isEvalSupported:false,enableXfa:false,rangeChunkSize:524288,disableAutoFetch:true,disableStream:true,httpHeaders:headers(url),cMapUrl:base+'cmaps/',cMapPacked:true,standardFontDataUrl:base+'standard_fonts/',wasmUrl:base+'wasm/'});
+        // Validated public DTOs supply actual on-disk bytes. Small originals
+        // avoid the initial aborted GET and serial ranges; unknown/large and
+        // protected documents keep the existing bounded range transport.
+        const streamSmall = publicFileURL(url) && Number.isSafeInteger(payload.sizeBytes) && payload.sizeBytes > 0 && payload.sizeBytes <= 4194304;
+        const task = pdfjs.getDocument({url:url.href,withCredentials:true,isEvalSupported:false,enableXfa:false,rangeChunkSize:524288,disableAutoFetch:true,disableRange:streamSmall,disableStream:!streamSmall,httpHeaders:headers(url),cMapUrl:base+'cmaps/',cMapPacked:true,standardFontDataUrl:base+'standard_fonts/',wasmUrl:base+'wasm/'});
         loadingTask = task;
         let received = 0;
         task.onProgress = progress => {

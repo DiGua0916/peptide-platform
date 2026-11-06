@@ -1,7 +1,7 @@
-/* Enhance only genuine public archive View links; native links are fallbacks. */
+/* Enhance only known public archive/home report links; native links are fallbacks. */
 (function () {
   'use strict';
-  const selector = '.pc-coa-library__view,.pc-coa-library__preview a[href]';
+  const selector = '.pc-coa-library__view,.pc-coa-library__preview a[href],[data-vc-demo-report]';
   let box = null, viewer = null, opener = null;
   const supported = () => !!(window.HTMLDialogElement?.prototype.showModal && window.createProductReportViewer);
   function address(value) {
@@ -20,7 +20,9 @@
   function close() { if (box?.open) box.close(); }
   function open(value,trigger,restoreScroll) {
     if (!supported()) return false;
-    const url = address(value), link = url ? find(url) : null, card = link?.closest('.pc-coa-library__report');
+    const url = address(value), link = url ? find(url) : null;
+    const home = link?.dataset.vcDemoReport !== undefined;
+    const card = home ? link : link?.closest('.pc-coa-library__report');
     // History cannot introduce an arbitrary resource or a now absent report.
     if (!card) return false;
     if (box?.open && box.dataset.vcHistoryReportUrl === url) { if (typeof restoreScroll === 'number') box.scrollTop = restoreScroll; return true; }
@@ -28,13 +30,18 @@
     box = node('dialog','vc-product-report-dialog vc-product-child-dialog');
     box.dataset.vcHistoryReportOrigin = 'library'; box.dataset.vcHistoryReportUrl = url;
     box.setAttribute('aria-label','Reference COA');
-    const title = card.querySelector('.pc-coa-library__details dd')?.textContent?.trim() || card.querySelector('.pc-coa-library__title')?.textContent?.trim() || 'Reference COA';
+    const title = (home ? link.dataset.vcReportTitle?.trim() : card.querySelector('.pc-coa-library__details dd')?.textContent?.trim() || card.querySelector('.pc-coa-library__title')?.textContent?.trim()) || 'Reference COA';
     const dismiss = node('button','vc-product-child-close'); dismiss.type = 'button'; dismiss.setAttribute('aria-label','Close reference COA');
     dismiss.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
     dismiss.addEventListener('click',close);
     const pdf = node('div','vc-product-pdf');
     pdf.innerHTML = '<div class="pdf-toolbar"><p class="pdf-status" role="status" aria-live="polite"></p><div class="pdf-zoom"><button type="button" data-pdf-zoom="out" aria-label="Zoom out">−</button><span class="pdf-zoom-value">100%</span><button type="button" data-pdf-zoom="in" aria-label="Zoom in">+</button></div></div><div class="pdf-pages"></div><button class="pdf-retry" type="button" hidden>Retry</button>';
     box.append(dismiss,node('h2','',title),node('p','vc-dialog-reference-note','Results apply to the sample named in the report. Not a verified VialCove stock batch certificate.'),pdf);
+    if (home) {
+      for (const value of [link.dataset.vcReportMeta,link.dataset.vcReportContext]) if (value?.trim()) box.append(node('p','vc-dialog-reference-note',value.trim()));
+      const original = node('a','vc-dialog-pdf-original','Open the original report ↗'); original.href = url; original.target = '_blank'; original.rel = 'noopener noreferrer'; box.append(original);
+      const action = node('a','vc-dialog-pdf-download','Download reference PDF'), downloadURL = new URL(url); downloadURL.searchParams.set('download','1'); action.href = downloadURL.href; box.append(action);
+    }
     const download = card.querySelector('.pc-coa-library__download');
     if (download) { const action = node('a','vc-dialog-pdf-download','Download reference PDF'); action.href = download.href; box.append(action); }
     const own = box, ownOpener = opener;
@@ -44,7 +51,9 @@
     document.body.append(own);
     try { own.showModal(); } catch (_) { own.remove(); box = null; return false; }
     owner = window.createProductReportViewer({element:pdf}); viewer = owner;
-    Promise.resolve(owner.open({pdf:url,title})).then(() => {
+    const rawSize = card.dataset.vcReportSizeBytes;
+    const sizeBytes = typeof rawSize === 'string' && /^[1-9]\d*$/.test(rawSize) && Number.isSafeInteger(Number(rawSize)) ? Number(rawSize) : undefined;
+    Promise.resolve(owner.open({pdf:url,title,sizeBytes})).then(() => {
       // Geometry must exist before assigning scroll; assigning it at the first
       // frame would clamp it to zero while a slow PDF is still loading.
       if (own === box && own.open && typeof restoreScroll === 'number') own.scrollTop = restoreScroll;

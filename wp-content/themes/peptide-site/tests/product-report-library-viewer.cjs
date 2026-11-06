@@ -9,7 +9,7 @@ function fixture({supported=true,deferOpen=false}={}){
   constructor(tag='div',className=''){super();this.tagName=tag;this.className=className;this.parentNode=null;this.children=[];this.dataset={};this.attrs={};this.open=false;this._text='';this.scrollTop=0;}
   get isConnected(){return this===document.body||!!this.parentNode?.isConnected;}set textContent(v){this._text=v;}get textContent(){return this._text+this.children.map(x=>x.textContent).join('');}
   setAttribute(k,v){this.attrs[k]=v;}append(...items){for(const el of items){el.remove();el.parentNode=this;this.children.push(el);}}remove(){if(this.parentNode){this.parentNode.children=this.parentNode.children.filter(x=>x!==this);this.parentNode=null;}}
-  closest(selector){if(selector==='.pc-coa-library__report')return this.card||null;return this.className==='pc-coa-library__view'?this:null;}
+  closest(selector){if(selector==='.pc-coa-library__report')return this.card||null;return this.className==='pc-coa-library__view'||this.dataset.vcDemoReport!==undefined&&selector.includes('[data-vc-demo-report]')?this:null;}
   querySelector(selector){return this.fields?.[selector]||null;}
   showModal(){this.open=true;}close(){if(this.open){this.open=false;closeEvents.push(()=>this.fire('close'));}}focus(options){document.focused={el:this,options};}
  }
@@ -20,8 +20,14 @@ function fixture({supported=true,deferOpen=false}={}){
  const window=new Events();if(supported)window.HTMLDialogElement=function(){};if(supported)window.HTMLDialogElement.prototype.showModal=()=>{};
  window.createProductReportViewer=({element})=>{const owner={element,disposed:0,open(payload){this.payload=payload;if(deferOpen)return new Promise(resolve=>{this.resolve=resolve;});},dispose(){this.disposed++;}};owners.push(owner);return owner;};
  vm.runInNewContext(source,{window,document,URL,location:{href:'https://shop.test/coa-library/?coa_q=report&coa_page=2#results',origin:'https://shop.test'}});
- return {window,document,links,urls,owners,api:window.VialCoveReportLibraryViewer,dialogs:()=>document.body.children.filter(x=>x.tagName==='dialog'),flush(){while(closeEvents.length)closeEvents.shift()();},click(link,extra={}){const event={target:link,button:0,defaultPrevented:false,preventDefault(){this.defaultPrevented=true;},...extra};document.fire('click',event);return event;}};
+ return {window,document,links,urls,owners,api:window.VialCoveReportLibraryViewer,home(url='/wp-json/peptide/v1/report-library/9/file?download=0'){const link=new El('a','home-paper');link.href=new URL(url,'https://shop.test').href;Object.assign(link.dataset,{vcDemoReport:'',vcReportTitle:'Homepage known COA <safe text>',vcReportMeta:'Original lab · 2026',vcReportContext:'Reference only context'});links.push(link);document.body.append(link);return link;},dialogs:()=>document.body.children.filter(x=>x.tagName==='dialog'),flush(){while(closeEvents.length)closeEvents.shift()();},click(link,extra={}){const event={target:link,button:0,defaultPrevented:false,preventDefault(){this.defaultPrevented=true;},...extra};document.fire('click',event);return event;}};
 }
+test('known homepage and archive DTO size attribute reaches the reader only as a valid safe integer',()=>{
+ const f=fixture();const home=f.home();home.dataset.vcReportSizeBytes='3713351';f.click(home);assert.equal(f.owners.at(-1).payload.sizeBytes,3713351);
+ f.links[0].card.dataset.vcReportSizeBytes='4194305';f.click(f.links[0]);assert.equal(f.owners.at(-1).payload.sizeBytes,4194305);
+ for(const value of ['','0','-1','1.5','1e6','9007199254740992','3713351 bytes']){home.dataset.vcReportSizeBytes=value;f.click(f.links[0]);f.click(home);assert.equal(f.owners.at(-1).payload.sizeBytes,undefined);}
+});
+
 test('genuine pretty and plain-route View links open the same reader and preserve original PDF/download URLs',()=>{
  const f=fixture();for(let n=0;n<2;n++){const event=f.click(f.links[n]);assert.equal(event.defaultPrevented,true);assert.equal(f.owners[n].payload.pdf,f.urls[n]);assert.match(f.owners[n].payload.title,/Genuine public DTO title/);assert.equal(f.dialogs()[0].dataset.vcHistoryReportOrigin,'library');assert.equal(f.dialogs()[0].children.at(-1).href,f.urls[n].replace('download=0','download=1'));}f.flush();
 });
@@ -43,4 +49,12 @@ test('Forward scroll waits for genuine page geometry readiness and stale PDF com
  const settle=async()=>{for(let n=0;n<6;n++)await Promise.resolve();};
  const f=fixture({deferOpen:true});f.api.open(f.urls[0],undefined,1440);assert.equal(f.dialogs()[0].scrollTop,0);f.owners[0].resolve();await settle();assert.equal(f.dialogs()[0].scrollTop,1440);
  f.api.open(f.urls[1],undefined,2000);f.api.open(f.urls[0]);f.owners[1].resolve();await settle();assert.equal(f.dialogs()[0].scrollTop,0);f.owners[2].resolve();await settle();assert.equal(f.dialogs()[0].scrollTop,0);
+});
+test('known homepage report uses shared reader/history metadata, preserves context and original/download resource, never iframe',()=>{
+ const f=fixture(),link=f.home();assert.equal(f.click(link).defaultPrevented,true);assert.equal(f.owners[0].payload.pdf,link.href);assert.equal(f.owners[0].payload.title,'Homepage known COA <safe text>');const box=f.dialogs()[0];assert.equal(box.dataset.vcHistoryReportOrigin,'library');assert.equal(box.dataset.vcHistoryReportUrl,link.href);assert.match(box.textContent,/Original lab · 2026/);assert.match(box.textContent,/Reference only context/);assert.equal(box.children.at(-2).href,link.href);assert.equal(box.children.at(-1).href,link.href.replace('download=0','download=1'));f.api.close();f.flush();assert.equal(f.document.focused.el,link);assert.equal(f.api.open(link.href,undefined,321),true);
+ const demo=fs.readFileSync(path.resolve(__dirname,'../assets/demo-home.js'),'utf8');assert.doesNotMatch(demo,/<iframe|createReportDialog|vc-demo-report-dialog/,'homepage has one shared reader owner');
+});
+test('homepage unknown/history arbitrary report, foreign, nonce and modifier links retain genuine native navigation',()=>{
+ const f=fixture();assert.equal(f.api.open('/wp-json/peptide/v1/report-library/9/file?download=0'),false);for(const url of ['https://evil.test/wp-json/peptide/v1/report-library/9/file','/private/report-library/9/file','/wp-json/peptide/v1/report-library/9/file?_wpnonce=bad']){const link=f.home(url);assert.equal(f.click(link).defaultPrevented,false);}const link=f.home();assert.equal(f.click(link,{ctrlKey:true}).defaultPrevented,false);assert.equal(f.owners.length,0);
+ const off=fixture({supported:false}),home=off.home();assert.equal(off.click(home).defaultPrevented,false);assert.equal(off.owners.length,0);assert.match(home.href,/report-library\/9\/file\?download=0$/);
 });

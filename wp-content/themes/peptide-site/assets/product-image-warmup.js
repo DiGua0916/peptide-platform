@@ -36,10 +36,22 @@
       seen.add(dto.key); if (!cached.has(dto.key)) queue.push(dto);
       if (seen.size >= 12) break;
     }
-    let stopped = false, idle = null, fallback = null;
+    let stopped = false, idle = null, fallback = null, waitingImage = null;
     const active = new Map();
+    function detachVisible() {
+      waitingImage?.removeEventListener('load', visibleReady);
+      waitingImage?.removeEventListener('error', visibleReady);
+      waitingImage = null;
+    }
+    function visibleReady() { detachVisible(); schedule(); }
+    function schedule() {
+      if (stopped) return;
+      if (global.requestIdleCallback) idle = global.requestIdleCallback(pump, {timeout:1200});
+      else fallback = global.setTimeout(pump, 400);
+    }
     function stop() {
       if (stopped) return; stopped = true; queue.length = 0;
+      detachVisible();
       if (idle !== null) global.cancelIdleCallback?.(idle);
       global.clearTimeout(fallback);
       for (const [img, task] of active) { global.clearTimeout(task.timer); img.onload = img.onerror = null; img.removeAttribute('srcset'); img.removeAttribute('src'); }
@@ -50,6 +62,18 @@
     function pump() {
       if (stopped) return;
       if (!dialog.open || global.document.hidden) { stop(); return; }
+      // CPU idle is not network idle. A cold selected image must get the link
+      // before two speculative SKU downloads, especially on mobile connections.
+      const visible = dialog.querySelector?.('.vc-dialog-product-image, .vc-showcase-quick__media img');
+      if (visible && !visible.complete) {
+        if (waitingImage !== visible) {
+          detachVisible(); waitingImage = visible;
+          visible.addEventListener('load', visibleReady);
+          visible.addEventListener('error', visibleReady);
+        }
+        return;
+      }
+      detachVisible();
       while (active.size < 2 && queue.length) {
         const dto = queue.shift(); if (cached.has(dto.key)) continue;
         const img = new global.Image();
@@ -70,8 +94,7 @@
     current = {form, dialog, stop};
     dialog.addEventListener('close', stop); global.addEventListener('pagehide', stop); global.document.addEventListener('visibilitychange', visibility);
     // The visible selected image is assigned by the presenter before this idle work.
-    if (global.requestIdleCallback) idle = global.requestIdleCallback(pump, {timeout:1200});
-    else fallback = global.setTimeout(pump, 400);
+    schedule();
     return stop;
   }
   global.VialCoveProductImageWarmup = Object.freeze({start});

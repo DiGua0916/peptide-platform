@@ -26,7 +26,7 @@
       clearPeek();
     }
     function allowed() {
-      return !disposed && stack.isConnected && inView && touchReports.matches && !motion.matches && !document.hidden && !reportDialog?.open;
+      return !disposed && stack.isConnected && inView && touchReports.matches && !motion.matches && !document.hidden && !document.querySelector('dialog.vc-product-report-dialog[open]');
     }
     function peek() {
       timer = null;
@@ -148,44 +148,14 @@
     motion.addEventListener?.('change', motionChanged);
   }
 
-  let reportDialog;
-  let reportTrigger;
-  function createReportDialog() {
-    const dialog = document.createElement('dialog');
-    dialog.className = 'vc-demo-report-dialog';
-    dialog.setAttribute('aria-labelledby', 'vc-demo-report-reader-title');
-    dialog.innerHTML = '<div class="vc-demo-report-dialog-head"><div><h2 id="vc-demo-report-reader-title"></h2><p data-report-meta></p></div><button type="button" class="vc-demo-report-close" aria-label="Close report">×</button></div><div class="vc-demo-report-dialog-body"><a target="_blank" rel="noopener noreferrer">Open the original report ↗</a><p data-report-context></p><iframe title="Certificate of analysis PDF" referrerpolicy="no-referrer"></iframe></div>';
-    dialog.querySelector('button').addEventListener('click', () => dialog.close());
-    dialog.addEventListener('click', event => {
-      const rect = dialog.getBoundingClientRect();
-      if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) dialog.close();
-    });
-    dialog.addEventListener('close', () => {
-      dialog.querySelector('iframe').removeAttribute('src');
-      reportTrigger?.focus({ preventScroll: true });
-      updateReportMotion();
-    });
-    document.body.append(dialog);
-    return dialog;
-  }
+  // Report links are owned by the shared validated PDF/history bridge.
+  // Keep homepage paper motion synchronized without a second iframe reader.
   document.addEventListener('click', event => {
-    const link = event.target.closest?.('[data-vc-demo-report]');
-    if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || !window.HTMLDialogElement) return;
-    // Keep non-library references as ordinary links; do not embed arbitrary destinations.
-    const url = new URL(link.href, location.href);
-    const route = url.searchParams.get('rest_route') || url.pathname;
-    if (url.origin !== location.origin || !/\/report-library\/\d+\/file\/?$/.test(route)) return;
-    event.preventDefault();
-    reportDialog ||= createReportDialog();
-    reportTrigger = link;
-    reportDialog.querySelector('h2').textContent = link.dataset.vcReportTitle || 'Certificate of analysis';
-    reportDialog.querySelector('[data-report-meta]').textContent = link.dataset.vcReportMeta || '';
-    reportDialog.querySelector('[data-report-context]').textContent = link.dataset.vcReportContext || '';
-    reportDialog.querySelector('.vc-demo-report-dialog-body>a').href = link.href;
-    reportDialog.querySelector('iframe').src = link.href;
-    reportDialog.showModal();
-    updateReportMotion();
+    if (event.target.closest?.('[data-vc-demo-report]')) window.setTimeout(updateReportMotion, 0);
   });
+  document.addEventListener('close', event => {
+    if (event.target.matches?.('dialog.vc-product-report-dialog')) updateReportMotion();
+  }, true);
 
   function boot(root = document) {
     if (root.matches?.('[data-vc-demo-counters]')) initCounters(root);

@@ -59,6 +59,22 @@ async function fixture({numPages=1,dimensions=[[612,792]],deferLoad=false,deferR
   const api=window.createProductReportViewer({element});
   return {window,element,pages,status,retry,zoom,out,inside,timers,timerDelays,frames,requests,renders,canvases,observers,pageObservers,warnings,pdfjs,api,context,importWait,pageWait,pageReads,get imports(){return imports;},get maxActive(){return maxActive;},async frame(){const list=[...frames.values()];frames.clear();list.forEach(fn=>fn());await settle();},resize(width){pages.clientWidth=width;observers[0].fn();},async start(pdf='/wp-json/peptide/v1/report-library/7/file?download=0'){await api.open({pdf,title:'Actual boundary title'});await this.frame();}};
 }
+test('authoritative small public PDF streams once; large unknown invalid sizes and protected URLs retain ranges',async()=>{
+ const f=await fixture();
+ for(const [sizeBytes,publicURL,stream] of [[3713351,true,true],[4194304,true,true],[4194305,true,false],[undefined,true,false],[0,true,false],[-1,true,false],[1.5,true,false],['3713351',true,false],[NaN,true,false],[3713351,false,false]]){
+  const pdf=publicURL?'/wp-json/peptide/v1/report-library/7/file?download=0':'/wp-json/peptide/v1/reports/7/file?_wpnonce=ORIGINAL';
+  await f.api.open({pdf,title:'Sized native report',sizeBytes});await f.frame();
+  const o=f.requests.at(-1).options;assert.equal(o.disableRange,stream);assert.equal(o.disableStream,!stream);assert.equal(o.disableAutoFetch,true);assert.equal(o.rangeChunkSize,524288);assert.equal(o.withCredentials,true);assert.equal(o.httpHeaders['X-WP-Nonce'],publicURL?undefined:'STALE_TEST_NONCE');
+ }
+ f.api.dispose();
+});
+
+test('small public streaming close cancels the native task once and clears both load deadlines',async()=>{
+ const f=await fixture({deferLoad:true});const pending=f.api.open({pdf:'/wp-json/peptide/v1/report-library/7/file?download=0',title:'Small original',sizeBytes:3713351});await settle();
+ assert.equal(f.requests[0].options.disableRange,true);assert.ok([...f.timerDelays.values()].includes(30000));assert.ok([...f.timerDelays.values()].includes(120000));
+ f.api.dispose();await pending;assert.equal(f.requests[0].destroyed,1);assert.equal(f.timers.size,0);assert.equal(f.pages.children.length,0);assert.equal(f.element.dataset.state,'idle');
+});
+
 test('fit width subtracts actual pane padding, preserves each page ratio and uses DPR independently',async()=>{
   const f=await fixture({numPages:2,dimensions:[[612,792],[792,612]]});await f.start();
   assert.equal(f.pages.children.length,2);assert.equal(f.pages.children[0].style.width,'319px');assert.equal(f.renders[0].viewport.width,638);assert.equal(f.renders[1].viewport.width,638);
