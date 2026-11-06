@@ -51,6 +51,11 @@ final class Storefront_Translator {
 		$key = preg_replace( '/\s+/u', ' ', $parts[2] );
 		if ( ! is_string( $key ) ) { return $source; }
 		if ( isset( $dictionary[ $key ] ) ) { return $parts[1] . $dictionary[ $key ] . $parts[3]; }
+		// The storefront now shows the corrected "Specification" label for imported
+		// "Specificatio" attributes; reuse the reviewed translation of the original text.
+		if ( str_starts_with( $key, 'Specification: ' ) && isset( $dictionary[ 'Specificatio: ' . substr( $key, 15 ) ] ) ) {
+			return $parts[1] . $dictionary[ 'Specificatio: ' . substr( $key, 15 ) ] . $parts[3];
+		}
 		$target = self::dynamic_text( $key );
 		return null === $target ? $source : $parts[1] . $target . $parts[3];
 	}

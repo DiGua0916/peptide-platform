@@ -144,7 +144,7 @@ test('real home capture can stop its first lazy click without hiding that truste
   env.opener.setAttribute('data-vc-home-product','101');
   const nativeQuery=env.document.querySelector;
   env.document.querySelector=selector=>selector.startsWith('dialog.vc-showcase-quick[open]')?(env.dialog.open?env.product:null):nativeQuery(selector);
-  vm.runInNewContext(pendingSupport+capture,{document:env.document,window:env.window,openIntent:0,pendingOpeners:new Map(),loadingStatus:null,homeProduct:'.vc-home-quick-product',canOpen:()=>true,templateFor:()=>ready?{}:null,announce(){},loadTemplate:()=>request,present(root,opener){root.vcHomeOpener=opener;env.document.dispatchEvent({type:'vc:product-presented',detail:{root,dialog:env.dialog,productId:101}});}});
+  vm.runInNewContext(pendingSupport+capture,{document:env.document,window:env.window,openIntent:0,stagedRestore:null,pendingOpeners:new Map(),loadingStatus:null,homeProduct:'.vc-home-quick-product',canOpen:()=>true,templateFor:()=>ready?{}:null,announce(){},loadTemplate:()=>request,present(root,opener){root.vcHomeOpener=opener;env.document.dispatchEvent({type:'vc:product-presented',detail:{root,dialog:env.dialog,productId:101}});}});
   // This document listener exists before the later visitor observer, matching
   // the production enqueue order. The native lazy capture must suppress it.
   env.document.addEventListener('click',()=>lateDocumentClicks++,true);

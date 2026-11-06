@@ -131,7 +131,12 @@ try {
 	$qa_mode = 'redirect'; $cancelled = panapay_qa_order(); $gateway->process_payment( $cancelled->get_id() );
 	$cancel_request = panapay_qa_request( $cancelled->get_id() ); $cancelled = new WC_Order( $cancelled->get_id() ); $cancelled->update_status( 'cancelled' );
 	Session_Service::apply_notification( panapay_qa_notification( $cancel_request, 'SUCCEEDED', 'qa-cancelled-' . $qa_run ) );
-	panapay_qa_assert( ( new WC_Order( $cancelled->get_id() ) )->has_status( 'cancelled' ), 'late_success_does_not_reopen_cancelled_order' );
+	// Stress test 2026-11-06: a note alone was missed. Surface it as on-hold for the admin; never mark it paid.
+	$late = new WC_Order( $cancelled->get_id() );
+	panapay_qa_assert( $late->has_status( 'on-hold' ) && ! $late->is_paid(), 'late_success_on_cancelled_order_is_held_not_paid' );
+	Session_Service::apply_notification( panapay_qa_notification( $cancel_request, 'SUCCEEDED', 'qa-cancelled-' . $qa_run ) );
+	$late = new WC_Order( $cancelled->get_id() );
+	panapay_qa_assert( $late->has_status( 'on-hold' ) && ! $late->is_paid(), 'late_success_duplicate_notification_is_idempotent' );
 
 	$changed = panapay_qa_order(); $gateway->process_payment( $changed->get_id() ); $changed_request = panapay_qa_request( $changed->get_id() );
 	$changed = new WC_Order( $changed->get_id() ); $changed->set_total( '23.90' ); $changed->save();

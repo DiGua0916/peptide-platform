@@ -102,6 +102,7 @@ final class Plugin {
 		add_action( 'init', array( Installer::class, 'maybe_upgrade' ), 5 );
 		Api\Rest_Controller::register_hooks();
 		Api\Store_Api::register_hooks();
+		Cart_Write_Lock::register_hooks();
 
 		if ( is_admin() ) {
 			Admin\Reviews_Page::register_hooks();

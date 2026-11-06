@@ -16,6 +16,16 @@ add_action( 'wp_enqueue_scripts', function () {
 }, 20 );
 add_action( 'peptide_core_showcase_quick_view_assets', 'vc_enqueue_product_options' );
 
+/**
+ * Imported catalogue attributes are named "Specificatio" (truncated at import).
+ * Correct only that exact display label; attribute keys, variations and stored
+ * order item meta are unchanged, so matching and unit pricing are unaffected.
+ */
+function vc_attribute_display_label( $label ) {
+    return is_string( $label ) && 0 === strcasecmp( trim( $label ), 'Specificatio' ) ? 'Specification' : $label;
+}
+add_filter( 'woocommerce_attribute_label', 'vc_attribute_display_label', 20 );
+
 // Specifications are the image selector on variable product pages. Keep the
 // primary gallery image for WooCommerce's native variation image updates.
 add_action( 'wp', function () {

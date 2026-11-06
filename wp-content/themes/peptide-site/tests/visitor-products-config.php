@@ -37,7 +37,7 @@ namespace {
     $text = $inline['vialcove-visitor-adapter']; $transport = json_decode( substr( $text, strpos( $text, '= ' ) + 2, -1 ), true ); $full = 'full' === $mode;
     $check( 'strict complete receiver capability only', $full ? 1 === $transport['product_impression_protocol'] : ! array_key_exists( 'product_impression_protocol', $transport ) );
     $check( 'optional module enqueued only when receiver supports full protocol', isset( $scripts['vialcove-visitor-products'] ) === $full );
-    $check( 'collector dependencies retain video and optionally visibility', $scripts['vialcove-visitor-observer']['dependencies'] === ( $full ? array( 'vialcove-visitor-video', 'vialcove-visitor-products' ) : array( 'vialcove-visitor-video' ) ) );
+    $check( 'collector dependencies retain video and optionally visibility', $scripts['vialcove-visitor-observer']['dependencies'] === ( $full ? array( 'vialcove-visitor-video', 'vialcove-visitor-surfaces', 'vialcove-visitor-products' ) : array( 'vialcove-visitor-video', 'vialcove-visitor-surfaces' ) ) );
     $check( 'trusted context available for impression-only capability; legacy config unchanged', $full ? 'home' === $transport['page_observation']['context']['kind'] : ! isset( $transport['page_observation'] ) );
     $scripts = array(); $staff = true; $hooks['wp_enqueue_scripts'](); $check( 'staff gate prevents all producers', array() === $scripts );
     $staff = false; $enabled = false; $hooks['wp_enqueue_scripts'](); $check( 'disabled backend prevents all producers', array() === $scripts );
@@ -53,8 +53,8 @@ namespace {
         if ( '{' === $token ) { ++$level; $found = true; } elseif ( '}' === $token && 0 === --$level && $found ) { break; }
     }
     if ( ! $found ) { throw new RuntimeException( 'Native renderer function missing' ); } eval( $body );
-    class WC_Product { public function __construct( private int $id, private int $parent = 0 ) {} public function get_id() { return $this->id; } public function get_parent_id() { return $this->parent; } public function get_name() { return 'Synthetic'; } public function get_sku() { return ''; } public function get_image_id() { return 0; } public function get_permalink() { return '/product/'; } }
-    function vc_product_data( $product ) { return array(); } function vc_vial( ...$args ) { echo '<svg></svg>'; } function vc_icon() { return ''; } function vc_card_price_html( $product ) { return '10'; } function vc_report_label( $value ) { return ''; }
+    class WC_Product { public function __construct( private int $id, private int $parent = 0 ) {} public function get_id() { return $this->id; } public function get_parent_id() { return $this->parent; } public function get_name() { return 'Synthetic'; } public function get_sku() { return ''; } public function get_image_id() { return 0; } public function get_permalink() { return '/product/'; } public function is_type( $type ) { return 'variation' === $type ? $this->parent > 0 : 'simple' === $type; } }
+    function vc_card_display_product( $product ) { return $product; } function vc_sale_percent( array $pair ) { return 0; } function vc_product_data( $product ) { return array(); } function vc_vial( ...$args ) { echo '<svg></svg>'; } function vc_icon() { return ''; } function vc_card_price_html( $product ) { return '10'; } function vc_report_label( $value ) { return ''; }
     function esc_attr( $value ) { return htmlspecialchars( $value, ENT_QUOTES ); } function esc_html( $value ) { return htmlspecialchars( $value, ENT_QUOTES ); } function esc_url( $value ) { return htmlspecialchars( $value, ENT_QUOTES ); } function wp_kses_post( $value ) { return $value; } function do_action( ...$args ) {}
     $render = static function ( $product ): string { ob_start(); vc_product_card( $product, false ); return ob_get_clean(); };
     $parent = $render( new WC_Product( 17 ) ); $variation = $render( new WC_Product( 101, 17 ) ); $invalid = $render( new WC_Product( 9007199254740992 ) );

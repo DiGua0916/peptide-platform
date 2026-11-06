@@ -419,6 +419,11 @@ final class Session_Service {
 					$order->add_order_note( __( 'A verified Panapay notification requires manual reconciliation. No additional payment completion or fulfilment was triggered.', 'peptide-panapay' ) );
 					if ( ! $eligible && ! $persisted_paid && $expected_gateway === $order->get_payment_method() && $order->has_status( array( 'pending', 'failed' ) ) ) {
 						$order->update_status( 'on-hold', __( 'Payment details differ from the saved payment attempt; please reconcile with the provider.', 'peptide-panapay' ) );
+					} elseif ( ! $persisted_paid && $same_gateway && $order->has_status( 'cancelled' ) ) {
+						// Money arrived for an order the store already cancelled. A note alone is easy to miss:
+						// move it to on-hold so it is visible in the order queue and WooCommerce notifies the admin.
+						// It is still not marked paid and nothing ships automatically.
+						$order->update_status( 'on-hold', __( 'A verified payment was received after this order was cancelled. Refund the customer with the provider, or confirm payment and fulfil the order. WooCommerce has reserved the stock again; the order is not marked paid.', 'peptide-panapay' ) );
 					}
 				}
 				return;

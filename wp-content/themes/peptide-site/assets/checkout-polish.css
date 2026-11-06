@@ -42,3 +42,6 @@
     .vc-checkout-page .vc-order-summary-permanent .wc-block-components-checkout-order-summary__title-text { font-size:17px; }
 }
 @media (prefers-reduced-motion:reduce) { .vc-stamp-dust { display:none; } }
+/* Order summary: native quantity badge was white text on Woo's white badge; show it, plus an explicit text line. */
+.vc-checkout-page .vc-commerce-content .wc-block-components-order-summary-item__quantity { background:var(--ink); border-color:var(--ink); color:#fff; box-shadow:0 0 0 2px #fff; }
+.vc-checkout-page .vc-commerce-content .wc-block-components-order-summary-item .vc-summary-pack { margin:4px 0 0; color:#415e68; font-size:14px; font-weight:500; line-height:20px; overflow-wrap:anywhere; }
