@@ -173,3 +173,35 @@ The owner will run the Facebook pixel and the Conversions API together. The firs
 **Not verified here.**
 - MySQL (`GET_LOCK` concurrency), Nginx, real GeoIP/Spanish, a real Meta Events Manager deduplication check, and any timing that represents the sandbox. Local SQLite times (MISS ≈0.30 s, HIT ≈0.25 s on a 5-product catalogue) are not a performance result.
 - Background Conversions API jobs need a real per-minute system cron in production, as already required for payment write-backs.
+
+## Sandbox deployment — 20261106T182942Z (owner approved "Deploy to sandbox")
+
+**Scope.** Host 54.144.250.46. It also runs the production HQ `vialcoveresearch.com` and stores s0001–s0003, sharing Nginx and MySQL with the sandbox. Only `/srv/vialcove-sandbox/{shop,admin,hq}` and the `vialcove-sandbox-php` service were touched. Nginx, MySQL and production PHP/files were not touched. Main and production are unchanged.
+
+**Pre-check (read-only).** All 23 target files on the three sandbox sites were byte-identical to `1a7bb95`, and the two new files were absent, so no unknown edits were overwritten.
+
+**What ran.**
+- Packaged the 12 runtime files from commit `083b962` with `git archive`, uploaded them, and verified sha256 12/12 and server `php -l`.
+- Backed up every replaced file to `/home/ubuntu/vialcove-deploy-backups/20261106T182942Z/` (with `installed.txt` listing replace/create per site).
+- Installed atomically as `vcsandbox`:
+  - shop/admin: 10 replaced + 2 created each;
+  - hq: 3 panapay files replaced.
+- Verified the installed bytes, then sent a graceful `USR2` reload to the sandbox PHP-FPM master only. The unit has no ExecReload.
+
+**Incident, fixed.** The macOS `tar` added AppleDouble `._*` companion entries. 36 such files (no PHP code; binary metadata) were briefly installed next to the real files. They were found from `installed.txt` within about a minute and only those created `._*` files were deleted; 0 `._*` files remain under sandbox plugins/themes. No bootstrap globs these folders (autoload by class name only), so they were never loaded.
+
+Fix for next time: package with `COPYFILE_DISABLE=1` or `--no-mac-metadata`, and install from `manifest.sha256` only.
+
+**Results on the sandbox.**
+- Status matches the baseline: shop 200, admin 302 (login), HQ 200. The sandbox FPM log since deployment shows only reload notices, no PHP errors.
+- **Cart lock on MySQL**: one guest cart, 1 box, then 10 simultaneous add-item calls gave 10×201 (0.24–0.93 s, serialized) and a **final quantity of 11 (expected 11)**. The test cart was emptied (0 items).
+- **Specificatio**: the raw catalogue has 30 variable products named `Specificatio` (plus 31 `Specifications`, 20 `Specification`); displayed labels are now 50 "Specification". A real cart line carries `vialsPerSalesUnit` 10.
+- **HQ defaults** (read-only WP-CLI as `vcsandbox`): new methods are `enabled=no, test_mode=yes, all_sites=no, sites=0`; the 1 existing account is unchanged.
+
+**Not done or not verified yet.**
+- Visual phone checkout on the sandbox: needs someone signed in to the `/_sandbox/login` gate.
+- The page cache is **not enabled** on the sandbox (needs a `wp-config.php` constant; awaiting approval), so there are no cached timings yet.
+- `native-contract.php` still needs a disposable `panapay_qa_*` instance.
+- Real Meta deduplication check.
+
+**Rollback.** Copy `/home/ubuntu/vialcove-deploy-backups/20261106T182942Z/<site>/...` back over the same paths (owner `vcsandbox`), delete the 2 created files on shop/admin (`class-cart-write-lock.php`, `class-page-cache.php`; also revert `class-plugin.php` from the backup), then `sudo systemctl kill --kill-whom=main -s USR2 vialcove-sandbox-php`.
