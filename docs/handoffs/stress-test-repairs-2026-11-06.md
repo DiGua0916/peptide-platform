@@ -205,3 +205,42 @@ Fix for next time: package with `COPYFILE_DISABLE=1` or `--no-mac-metadata`, and
 - Real Meta deduplication check.
 
 **Rollback.** Copy `/home/ubuntu/vialcove-deploy-backups/20261106T182942Z/<site>/...` back over the same paths (owner `vcsandbox`), delete the 2 created files on shop/admin (`class-cart-write-lock.php`, `class-page-cache.php`; also revert `class-plugin.php` from the backup), then `sudo systemctl kill --kill-whom=main -s USR2 vialcove-sandbox-php`.
+
+## Sandbox page cache trial — 2026-11-06 (owner approved "Enable sandbox cache")
+
+**Scope.** Sandbox **shop only**.
+- One line was added above `require_once … wp-settings.php` in `/srv/vialcove-sandbox/shop/public/wp-config.php`: `define( 'PEPTIDE_CORE_PAGE_CACHE', true );`, with a comment.
+- Owner and mode are unchanged (`vcsandbox`, 640). Backup in `/home/ubuntu/vialcove-deploy-backups/pagecache-20261106T183455Z/` (owner-only, 600).
+- Graceful USR2 reload of the sandbox PHP-FPM only. To disable: delete that line and reload.
+- Sandbox admin/HQ are not enabled. Production is not touched.
+
+**Sandbox state.** No ad pixels are configured, so the pixel + cache path was not exercised here (it was verified on the local site). No pixel or token was added, to avoid real Meta calls. Tracking is off, language/GeoIP is on, environment `staging`, no object cache.
+
+**Found on the sandbox and fixed (`9b90303`, deployed).**
+- `vcStorefrontEntry.campaign.serverNow` (Unix seconds) is the campaign countdown's clock anchor (`campaign-countdown.js`, `product-dialog-polish.js`). A cached copy would have shifted countdowns by up to the TTL. Hits now add the copy's age to every JSON `"serverNow"`.
+- Header replay now reproduces the captured list exactly; HIT `Vary` had duplicated `Cookie` tokens.
+- `class-page-cache.php` was copied directly (sha256-checked, linted, backed up to `…/servernow-20261106T183730Z/`) to sandbox shop and admin; 0 stray files.
+
+**Verified (from the server, through the sandbox gate).**
+- Cookie-less → MISS then HIT.
+- `pc_vid` cookie → BYPASS; `?utm_source` → BYPASS.
+- iPhone UA → its own MISS → HIT.
+- HIT body is byte-identical to the MISS render. `Cache-Control: private, no-store, max-age=0` is preserved, and HIT `Vary` equals a fresh render's.
+- A HIT copy 177 s old served `serverNow` equal to the current server time.
+- 3 stored variants.
+
+**Timing.** 10 concurrent, 50 requests each, measured on the server (time to first byte; network excluded):
+
+| | p50 | p90 | max |
+| --- | --- | --- | --- |
+| Uncached (returning-visitor cookie → full render) | 4.01 s | 4.37 s | 4.39 s |
+| Cached (cookie-less first visit) | 0.81 s | 0.86 s | 0.97 s |
+
+- A single sequential HIT is about 0.14 s versus about 0.64 s uncached.
+- Cached p50 at 10-concurrency remains about 0.8 s because each hit still boots WordPress and plugins within the sandbox's 1.5-CPU quota.
+- The production HQ answered normally during the run (302, 0.21 s); load average peaked at 0.76.
+
+**Not covered.**
+- Returning visitors and ad landings (query strings) still take the full-render path (about 4 s at 10-concurrency). Speeding those up needs render work (queries/templates) or more CPU.
+- No real-browser check through the gate yet (needs the owner to sign in to `/_sandbox/login`).
+- Campaign start/end inside a TTL window relies on the countdown's own refresh; the cache is not flushed at those moments.
