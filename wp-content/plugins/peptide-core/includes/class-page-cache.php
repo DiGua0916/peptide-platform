@@ -148,10 +148,12 @@ final class Page_Cache {
 			$entry['body'] = str_replace( self::PIXELS_SLOT, Pixels::localized_statement( $config ), $entry['body'] );
 		}
 		if ( null !== $entry && ! headers_sent() ) {
-			foreach ( $entry['headers'] as [ $name, $value ] ) { header( $name . ': ' . $value, 'vary' !== strtolower( $name ) ); }
+			$age = max( 0, time() - $entry['created'] );
+			foreach ( self::replay_headers( $entry['headers'] ) as [ $line, $replace ] ) { header( $line, $replace ); }
 			header( 'X-PC-Page-Cache: HIT' );
-			header( 'Age: ' . max( 0, time() - $entry['created'] ) );
-			if ( 'HEAD' !== $request['method'] ) { echo $entry['body']; } // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- stored complete page.
+			header( 'Age: ' . $age );
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- stored complete page.
+			if ( 'HEAD' !== $request['method'] ) { echo self::refresh_server_time( $entry['body'], $age ); }
 			exit;
 		}
 		if ( headers_sent() ) { return; }
@@ -199,6 +201,32 @@ final class Page_Cache {
 			$out[] = array( $name, $value );
 		}
 		return $html_type ? $out : null;
+	}
+
+	/**
+	 * Reproduce the captured header list exactly: the first header of each name replaces
+	 * what WordPress already queued this request, later ones with the same name append.
+	 *
+	 * @return array<int, array{0:string,1:bool}>
+	 */
+	public static function replay_headers( array $headers ): array {
+		$seen = array(); $out = array();
+		foreach ( $headers as [ $name, $value ] ) {
+			$lower = strtolower( $name );
+			$out[] = array( $name . ': ' . $value, ! isset( $seen[ $lower ] ) );
+			$seen[ $lower ] = true;
+		}
+		return $out;
+	}
+
+	/**
+	 * Server clocks printed into the page ("serverNow": Unix seconds, used by the campaign
+	 * countdown) were exact at capture; advance them by the copy's age so they are exact now.
+	 */
+	public static function refresh_server_time( string $html, int $age ): string {
+		if ( $age <= 0 ) { return $html; }
+		$out = preg_replace_callback( '/"serverNow":(\d{9,11})(?=[,}])/', static fn( $m ) => '"serverNow":' . ( (int) $m[1] + $age ), $html );
+		return is_string( $out ) ? $out : $html;
 	}
 
 	/**

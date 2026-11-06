@@ -144,6 +144,28 @@ namespace {
 	Cache::serve_or_capture(); echo $page; $returned = ob_get_clean(); Cache::capture( $returned, PHP_OUTPUT_HANDLER_FINAL );
 	check( 'personalised response not stored', array() === array_filter( glob( $dir . '/cache/peptide-core-pages/*.php' ), fn( $f ) => ! str_ends_with( $f, 'index.php' ) ) );
 
+	// Header replay reproduces the captured list exactly (first of a name replaces, repeats append).
+	$plan = Cache::replay_headers( array( array( 'Vary', 'Cookie' ), array( 'Cache-Control', 'private' ), array( 'Vary', 'Cookie' ), array( 'Link', '<a>' ), array( 'link', '<b>' ) ) );
+	check( 'first header of each name replaces, repeats append', array( array( 'Vary: Cookie', true ), array( 'Cache-Control: private', true ), array( 'Vary: Cookie', false ), array( 'Link: <a>', true ), array( 'link: <b>', false ) ) === $plan );
+
+	// Server clocks advance by the copy's age; nothing else changes.
+	$clock = '<script>var vcStorefrontEntry = {"campaign":{"target":null,"serverNow":1793990148},"x":"serverNow":1}; var c={"serverNow":1793990148,"n":2};</script><p>"serverNow":12</p>';
+	$fresh = Cache::refresh_server_time( $clock, 120 );
+	check( 'serverNow advanced by age in every JSON occurrence', 2 === substr_count( $fresh, '"serverNow":1793990268' ) && ! str_contains( $fresh, '1793990148' ) );
+	check( 'short or non-clock numbers untouched', str_contains( $fresh, '"serverNow":1}' ) && str_contains( $fresh, '"serverNow":12<' ) );
+	check( 'age 0 leaves the page unchanged', $clock === Cache::refresh_server_time( $clock, 0 ) );
+
+	// End to end: a two-minute-old copy is served with serverNow advanced by 120 s.
+	array_map( 'unlink', array_filter( glob( $dir . '/cache/peptide-core-pages/*.php' ) ?: array(), fn( $f ) => ! str_ends_with( $f, 'index.php' ) ) );
+	$clock_page = str_replace( '</body>', '<script>var vcStorefrontEntry = {"campaign":{"serverNow":1793990148}};</script></body>', $page );
+	Cache::reset_for_tests( array(), array( $ok_headers, 200 ) );
+	Cache::serve_or_capture(); echo $clock_page; $returned = ob_get_clean(); Cache::capture( $returned, PHP_OUTPUT_HANDLER_FINAL );
+	$stored = array_values( array_filter( glob( $dir . '/cache/peptide-core-pages/*.php' ), fn( $f ) => ! str_ends_with( $f, 'index.php' ) ) )[0];
+	$entry = unserialize( substr( file_get_contents( $stored ), strlen( "<?php exit; ?>\n" ) ) ); $entry['created'] = time() - 120;
+	file_put_contents( $stored, "<?php exit; ?>\n" . serialize( $entry ) );
+	[ $out ] = $run();
+	check( 'served copy carries the current server time', str_contains( $out, '"serverNow":' . ( 1793990148 + 120 ) ) || str_contains( $out, '"serverNow":' . ( 1793990148 + 121 ) ) );
+
 	// Pixel page: captured once, then every cached view gets its own event ID and server send.
 	array_map( 'unlink', array_filter( glob( $dir . '/cache/peptide-core-pages/*.php' ), fn( $f ) => ! str_ends_with( $f, 'index.php' ) ) );
 	$GLOBALS['pixels'] = true;
