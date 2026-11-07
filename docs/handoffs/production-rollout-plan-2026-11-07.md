@@ -293,3 +293,11 @@
   - s0001、s0002、s0003 的推广人页面都能正常输出（以各自的 PHP 用户运行）；
   - 前台 www、s0002、s0003 首页和购物车返回 200，三个后台登录页返回 200。
 - 回滚：主店把 `current` 指回 `0532574-*`；其余 6 处用上面的备份覆盖回去，再删掉 `assets/referrals.css`。
+## 2026-11-07 20:15 UTC — new-store template and s0002/s0003 brought to live code (0532574)
+
+- Scope (same as the 11-05 overall sync, plus language packs): `plugins/peptide-core`, `peptide-panapay`, `peptide-ops`, `themes/peptide-site`, `wp-content/languages`, copied from live `0532574-s0001` / `0532574-web01`. WordPress/WooCommerce/SMTP, mu-plugins (incl. the new-store mail gate), wp-config, uploads and databases untouched.
+- New templates: `/srv/vialcove-provision-template/yy-sync-0532574-1794082452-admin/source` (admin host) and `…-web/source` (web host); `/etc/vialcove-provision/config.json` changed only `source_admin_root` / `source_web_root` (previous values `checkout-return-fixes-1793879470` / `-1793879522`; backups `/var/lib/vialcove-ui-deploy/config.json.before-yy-sync-{admin,web}`).
+- s0002/s0003 admin and web public roots swapped to the updated copy; previous roots kept as `<root>.pre-yy-sync-0532574-1794082452-{admin,web}`. DB dumps before the change: web host `/var/lib/vialcove-ui-deploy/yy-sync-20261107T201404Z-db/`.
+- Checks: scope diff vs live = 0 for both templates and all four roots; s0002/s0003 boot via wp-cli (overview.js 6df763f083ac, Referrals present); HTTPS 200 for s0002/s0003 management login and storefront, s0001 login, www storefront; provisioning worker run after the change finished normally. No new store created.
+- Still different for a newly created store (by design of `worker.py` bootstrap, not changed here): en_US site language, UTC time zone, mail gate on, visitor tracking off, no payment gateway, no products; design bundle is the 2026-11-03 snapshot.
+- From now on a production deploy must also update the template roots and s0002/s0003, not only s0001.
