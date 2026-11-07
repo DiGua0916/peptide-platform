@@ -34,50 +34,89 @@
 		return '<a href="' + esc( href ) + '">' + esc( text ) + ' ›</a>';
 	}
 
-	// ---------- 顶部 ----------
-
-	// 时间条右边：浏览器本地时间，写法同参考后台“(GMT+08:00) 2026-11-07 10:53:11”。
-	function localNow() {
-		var d = new Date();
-		var two = function ( n ) {
-			return ( n < 10 ? '0' : '' ) + n;
-		};
-		var off = -d.getTimezoneOffset();
+	var Y = S.yy;
+	// 金额：整数不带小数，否则两位小数（参考后台“0”“1,060.10”）。
+	function amt( n ) {
+		n = Number( n || 0 );
+		return n === Math.round( n ) ? n.toLocaleString() : money( n );
+	}
+	// 百分比去掉多余的 0：48%、41.67%。
+	function pc( v ) {
+		return null === v || undefined === v ? '0%' : Math.round( Number( v ) * 100 ) / 100 + '%';
+	}
+	function more( href, text ) {
+		return '<a class="pc-ov-more" href="' + esc( href ) + '">' + esc( text ) + ' &gt;</a>';
+	}
+	function two( n ) {
+		return ( n < 10 ? '0' : '' ) + n;
+	}
+	function gmt( off ) {
 		var sign = off < 0 ? '-' : '+';
 		off = Math.abs( off );
-		return '(GMT' + sign + two( Math.floor( off / 60 ) ) + ':' + two( off % 60 ) + ') ' + d.getFullYear() + '-' + two( d.getMonth() + 1 ) + '-' + two( d.getDate() ) + ' ' + two( d.getHours() ) + ':' + two( d.getMinutes() ) + ':' + two( d.getSeconds() );
+		return '(GMT' + sign + two( Math.floor( off / 60 ) ) + ':' + two( off % 60 ) + ')';
 	}
+	function stamp( d ) {
+		return d.getUTCFullYear() + '-' + two( d.getUTCMonth() + 1 ) + '-' + two( d.getUTCDate() ) + ' ' + two( d.getUTCHours() ) + ':' + two( d.getUTCMinutes() ) + ':' + two( d.getUTCSeconds() );
+	}
+	// 店铺时区的偏移（分钟），取自 tz_label 里的 “UTC-08:00”。
+	function storeOffset() {
+		var m = /UTC([+-])(\d\d):(\d\d)/.exec( summary.tz_label || '' );
+		return m ? ( '-' === m[ 1 ] ? -1 : 1 ) * ( Number( m[ 2 ] ) * 60 + Number( m[ 3 ] ) ) : 0;
+	}
+	// 时间条：左边店铺时区，右边浏览器所在时区，每秒走一次（参考后台写法“(GMT+08:00) 2026-11-07 10:53:11”）。
+	function clocks() {
+		var now = Date.now();
+		var so = storeOffset();
+		var lo = -new Date().getTimezoneOffset();
+		return [ gmt( so ) + ' ' + stamp( new Date( now + so * 60000 ) ), gmt( lo ) + ' ' + stamp( new Date( now + lo * 60000 ) ) ];
+	}
+	function tick() {
+		var c = clocks();
+		var a = root.querySelector( '.pc-ov-hero__store' );
+		var b = root.querySelector( '.pc-ov-hero__local' );
+		if ( a ) {
+			a.textContent = c[ 0 ];
+		}
+		if ( b ) {
+			b.textContent = c[ 1 ];
+		}
+	}
+
+	// ---------- 顶部横幅 ----------
 
 	function hero() {
 		var cur = summary.currency.code;
 		var t = todayData;
+		var c = clocks();
 		var kpis = [
-			[ S.sales + ' (' + cur + ')', money( t.sales ) ],
-			[ S.visitors, t.visitors ],
+			[ S.sales + ' (' + cur + ')', amt( t.sales ) ],
+			[ Y.visitingUsers, t.visitors ],
 			[ S.registered, t.registered ],
-			[ S.orders, t.orders ],
-			[ S.conversion, null === t.conversion ? '—' : t.conversion + '%' ],
-			[ S.aov + ' (' + cur + ')', money( t.aov ) ],
+			[ Y.orderCount, t.orders ],
+			[ S.conversion, null === t.conversion ? '0%' : pc( t.conversion ) ],
+			[ S.aov + ' (' + cur + ')', amt( t.aov ) ],
 			[ S.returning, t.returning ],
 		];
 		return '<section class="pc-ov-hero"><p class="pc-ov-hero__hello">' + esc( fmt( S[ summary.greeting ], summary.store ) ) + '</p>' +
-			'<div class="pc-ov-hero__panel"><div class="pc-ov-hero__time"><span>' + esc( S.storeTime + ': ' + summary.tz_label + ' ' + summary.now ) + '</span><span class="pc-ov-hero__local">' + esc( localNow() ) + '</span></div>' +
+			'<div class="pc-ov-hero__panel"><div class="pc-ov-hero__time"><span>' + esc( S.storeTime ) + ': <span class="pc-ov-hero__store">' + esc( c[ 0 ] ) + '</span></span><span class="pc-ov-hero__local">' + esc( c[ 1 ] ) + '</span></div>' +
 			'<div class="pc-ov-kpis">' + kpis.map( function ( k ) {
 				return '<div class="pc-ov-kpi"><span>' + esc( k[ 0 ] ) + '</span><b>' + esc( k[ 1 ] ) + '</b></div>';
 			} ).join( '' ) + '</div></div></section>';
 	}
 
+	// ---------- 右栏 ----------
+
 	function side() {
-		var h = summary.holidays.slice( 0, 1 ).map( function ( d ) {
-			return '<li><span>' + esc( S.holidayNames[ d.key ] || d.key ) + '</span><span class="pc-ov-muted">' + esc( d.date ) + '</span><span class="pc-ov-muted">' + esc( d.days ? fmt( S.inDays, d.days ) : S.todayTag ) + '</span></li>';
-		} ).join( '' );
-		return '<section class="pc-ov-card"><div class="pc-ov-card__head"><h2>' + esc( S.currency ) + '</h2><span><b>' + esc( summary.currency.code + ' (' + summary.currency.symbol + ')' ) + '</b><span class="pc-ov-tag">' + esc( S.default ) + '</span></span></div>' +
-			'<div class="pc-ov-card__head pc-ov-card__head--sub"><h2>' + esc( S.holidays ) + '</h2></div><ul class="pc-ov-holidays">' + h + '</ul></section>';
+		var c = summary.currency;
+		var name = ( c.name || c.code ) + '(' + c.code + ')';
+		var d = summary.holidays[ 0 ];
+		var h = d ? '<div class="pc-ov-line3"><span>' + esc( S.holidayNames[ d.key ] || d.key ) + '</span><span class="pc-ov-muted">' + esc( d.date ) + '</span><span class="pc-ov-muted">' + esc( d.days ? fmt( Y.startsIn, d.days ) : S.todayTag ) + '</span></div>' : '<p class="pc-ov-muted">' + esc( Y.noData ) + '</p>';
+		return '<section class="pc-ov-card pc-ov-cur"><div class="pc-ov-card__head"><h2>' + esc( name ) + ' <span class="pc-ov-tag">' + esc( Y.defaultCur ) + '</span></h2>' + more( L.currency, Y.details ) + '</div>' +
+			'<div class="pc-ov-line2"><span class="pc-ov-muted">' + esc( name ) + '</span><span class="pc-ov-muted">' + esc( fmt( Y.rate, '1' ) ) + '</span></div>' +
+			'<div class="pc-ov-card__head pc-ov-card__head--sub"><h2>' + esc( Y.holidays ) + '</h2>' + more( L.promotions, Y.details ) + '</div>' + h + '</section>';
 	}
 
-	// ---------- 第二行 ----------
-
-	// 数字格：固定列数，标签在上、数字在下；有链接的整格可点；warn 为真且数字不为 0 时标橙色。
+	// 数字格：标签在上、数字在下；有链接的整格可点。
 	function num( label, n, href, warn ) {
 		var tag = href ? 'a' : 'div';
 		return '<' + tag + ' class="pc-ov-num"' + ( href ? ' href="' + esc( href ) + '"' : '' ) + '><span title="' + esc( label ) + '">' + esc( label ) + '</span><b class="' + ( warn && Number( n ) ? 'is-warn' : '' ) + '">' + esc( n ) + '</b></' + tag + '>';
@@ -85,48 +124,129 @@
 	function nums( cells ) {
 		return '<div class="pc-ov-nums" style="--pc-ov-cols:' + cells.length + '">' + cells.join( '' ) + '</div>';
 	}
-
-	function todo() {
-		var t = summary.todo;
-		return '<section class="pc-ov-card"><div class="pc-ov-card__head"><h2>' + esc( S.todo ) + '</h2></div>' +
-			nums( [ num( S.toShip, t.to_ship, L.orders, true ), num( S.onHold, t.on_hold, L.onHold, true ), num( S.missingBatch, t.missing_batch, L.orders, true ), num( S.noReport, t.batches_no_report, L.batches, true ) ] ) + '</section>';
+	function periodSelect( cls, value, label ) {
+		return '<select class="' + cls + '" aria-label="' + esc( label ) + '">' + [ 'today', 'yesterday', '7d', '30d' ].map( function ( r ) {
+			return '<option value="' + r + '"' + ( r === value ? ' selected' : '' ) + '>' + esc( S[ r ] ) + '</option>';
+		} ).join( '' ) + '</select>';
 	}
 
-	function unfinished() {
-		var t = summary.todo;
-		return '<section class="pc-ov-card"><div class="pc-ov-card__head"><h2>' + esc( S.unfinished ) + '</h2>' + link( L.recovery, S.recoveryLink ) + '</div>' +
-			nums( [ num( S.unpaid, t.unpaid_7d, L.unpaid ), num( S.failed, t.failed_7d, L.failed ) ] ) +
-			'<p class="pc-ov-muted pc-ov-foot">' + esc( ! cfg.recovery ? S.recoveryOff : 'address' === cfg.blocked ? S.noAddress : 'sender' === cfg.blocked ? S.noSender : S.recoveryOn ) + '</p></section>';
+	// ---------- 第二行：在线支付订单 | 弃单激活 ----------
+
+	function paidOrders() {
+		return '<section class="pc-ov-card pc-ov-paid"><div class="pc-ov-card__head"><h2>' + esc( Y.paidOrders ) + '</h2></div>' +
+			nums( [ num( Y.toShip, summary.todo.to_ship, L.orders, true ) ] ) + '</section>';
+	}
+
+	var recRange = '7d';
+	function reactivationBody() {
+		var r = ( summary.recovery || {} )[ recRange ] || { emailed: 0, recovered: 0, rate: 0, amount: 0 };
+		return nums( [ num( Y.emailed, r.emailed, L.recovery ), num( Y.recovered, r.recovered ), num( Y.recRate, pc( r.rate ) ), num( fmt( Y.recAmount, summary.currency.code ), amt( r.amount ) ) ] );
+	}
+	function reactivation() {
+		return '<section class="pc-ov-card pc-ov-react"><div class="pc-ov-card__head"><h2>' + esc( Y.reactivation ) + '</h2>' + periodSelect( 'pc-ov-sel pc-ov-react-range', recRange, Y.reactivation ) + '</div><div class="pc-ov-react-body">' + reactivationBody() + '</div></section>';
 	}
 
 	function live( today ) {
-		return '<section class="pc-ov-card"><div class="pc-ov-card__head"><h2>' + esc( S.live ) + '</h2>' + link( L.visitors, S.more ) + '</div>' +
-			nums( [ num( S.online, summary.online ), num( S.todayOrders, today.orders ), num( S.todaySales, summary.currency.symbol + money( today.sales ) ) ] ) + '</section>';
+		return '<section class="pc-ov-card"><div class="pc-ov-card__head"><h2>' + esc( Y.live ) + ' <span class="pc-ov-help" tabindex="0" title="' + esc( Y.liveHelp ) + '" aria-label="' + esc( Y.liveHelp ) + '">?</span></h2>' + more( L.realtime, Y.liveMore ) + '</div>' +
+			nums( [ num( Y.liveVisitors, summary.online ), num( Y.orderCount, today.orders ), num( fmt( Y.salesCur, summary.currency.code ), amt( today.sales ) ) ] ) + '</section>';
 	}
 
-	// ---------- 第三行 ----------
+	// ---------- 时间段卡：阶梯漏斗 ----------
 
-	// 阶梯漏斗（参考后台概览页）：每层一条灰条，越往下越窄；右侧折线从本层右端连到下一层右端，旁边写“占上一层”的比例。
+	// 八层阶梯（参考后台概览页）：每层一条灰条，越往下越窄；右边折线连到下一层，写“占上一层”的比例。
 	function funnel() {
-		var f = range.funnel || [];
+		var f = range.steps || [];
 		if ( ! f.length ) {
-			return '<p class="pc-ov-muted">' + esc( S.noData ) + '</p>';
+			return '<p class="pc-ov-empty is-box">' + esc( Y.noData ) + '</p>';
 		}
-		var base = f[ 0 ].count;
 		var frac = function ( i ) {
 			return Math.round( ( 1 - ( i * 0.36 ) / Math.max( 1, f.length - 1 ) ) * 10000 ) / 10000;
 		};
 		return '<div class="pc-ov-funnel pc-ov-stairs">' + f.map( function ( s, i ) {
 			var next = '';
 			if ( i < f.length - 1 ) {
-				next = '<i class="pc-ov-stair__next" style="--d:' + Math.round( ( frac( i ) - frac( i + 1 ) ) * 10000 ) / 10000 + '" title="' + esc( S.stepRate ) + '"><span>' + esc( pct( f[ i + 1 ].count, s.count ) ) + '</span></i>';
+				next = '<i class="pc-ov-stair__next" style="--d:' + Math.round( ( frac( i ) - frac( i + 1 ) ) * 10000 ) / 10000 + '" title="' + esc( S.stepRate ) + '"><span>' + esc( pc( f[ i + 1 ].step_rate ) ) + '</span></i>';
 			}
-			return '<div class="pc-ov-step pc-ov-stair" style="--f:' + frac( i ) + '"><div class="pc-ov-stair__bar"><b>' + esc( S.stages[ s.stage ] ) + ': ' + esc( s.count ) + '</b>' + ( i ? '<span>' + esc( fmt( S.ofVisitors, pct( s.count, base ) ) ) + '</span>' : '' ) + '</div>' + next + '</div>';
-		} ).join( '' ) + '</div>';
+			return '<div class="pc-ov-step pc-ov-stair" style="--f:' + frac( i ) + '"><div class="pc-ov-stair__bar"><b>' + esc( ( Y.steps[ s.key ] || s.key ) + '：' ) + esc( s.count ) + '</b>' + ( i ? '<span>' + esc( fmt( Y.ofVisitors, pc( s.visitor_rate ) ) ) + '</span>' : '' ) + '</div>' + next + '</div>';
+		} ).join( '' ) + '</div>' +
+			'<p class="pc-ov-hint">' + esc( Y.tip ).replace( '%s', '<a href="' + esc( L.convDetails ) + '">' + esc( Y.convDetails ) + '</a>' ) + '</p>';
+	}
+
+	// ---------- 流量排名 / 商品排名（各自的指标和时间段下拉） ----------
+
+	var ranks = {
+		traffic: { metric: 'conversion', range: 'today', rows: null },
+		products: { metric: 'products_units', range: 'today', rows: null },
+	};
+	function rankValue( kind, row ) {
+		var m = ranks[ kind ].metric;
+		if ( 'traffic' === kind ) {
+			return 'conversion' === m ? pc( row.conversion ) : 'sales' === m ? amt( row.sales ) : String( row[ m ] || 0 );
+		}
+		return 'products_sales' === m ? amt( row.current ) : String( row.current || 0 );
+	}
+	function rankList( kind ) {
+		var st = ranks[ kind ];
+		if ( null === st.rows ) {
+			return '<p class="pc-ov-empty">…</p>';
+		}
+		if ( ! st.rows.length ) {
+			return '<p class="pc-ov-empty is-box">' + esc( Y.noData ) + '</p>';
+		}
+		return '<ol class="pc-ov-products pc-ov-rank">' + st.rows.map( function ( p ) {
+			var img = 'products' === kind ? ( p.image ? '<img src="' + esc( p.image ) + '" alt="">' : '<span class="pc-ov-noimg"></span>' ) : '';
+			return '<li>' + img + '<span class="pc-ov-rank__name">' + esc( p.label ) + '</span><span>' + esc( rankValue( kind, p ) ) + '</span></li>';
+		} ).join( '' ) + '</ol>';
+	}
+	function rankCard( kind ) {
+		var st = ranks[ kind ];
+		var opts = 'traffic' === kind ? Y.trafficMetrics : Y.productMetrics;
+		var metric = '<select class="pc-ov-sel pc-ov-rank-metric" data-kind="' + kind + '" aria-label="' + esc( 'traffic' === kind ? Y.traffic : Y.productRank ) + '">' + Object.keys( opts ).map( function ( k ) {
+			return '<option value="' + k + '"' + ( k === st.metric ? ' selected' : '' ) + '>' + esc( opts[ k ] ) + '</option>';
+		} ).join( '' ) + '</select>';
+		return '<section class="pc-ov-card pc-ov-rankcard" data-kind="' + kind + '"><div class="pc-ov-card__head"><h2>' + esc( 'traffic' === kind ? Y.traffic : Y.productRank ) + '</h2>' + more( 'traffic' === kind ? L.convDetails : L.productData, Y.details ) + '</div>' +
+			'<div class="pc-ov-rank-ctl">' + metric + periodSelect( 'pc-ov-sel pc-ov-rank-range', st.range, S.metricPick ) + '</div><div class="pc-ov-rank-body">' + rankList( kind ) + '</div></section>';
+	}
+	function fetchRank( kind ) {
+		var st = ranks[ kind ];
+		var path = 'traffic' === kind ?
+			'/peptide/v1/data/conversion?group=channel&range=' + encodeURIComponent( st.range ) :
+			'/peptide/v1/data/rankings/table?per_page=10&table=' + encodeURIComponent( st.metric ) + '&range=' + encodeURIComponent( st.range );
+		var want = st.metric + '|' + st.range;
+		return wp.apiFetch( { path: path } ).then( function ( res ) {
+			if ( want !== st.metric + '|' + st.range ) {
+				return;
+			}
+			var rows = res.rows || [];
+			if ( 'traffic' === kind ) {
+				rows = rows.filter( function ( r ) {
+					return Number( r[ st.metric ] || 0 ) > 0 || ( 'conversion' === st.metric && Number( r.visitors ) > 0 );
+				} ).sort( function ( a, b ) {
+					return Number( b[ st.metric ] || 0 ) - Number( a[ st.metric ] || 0 );
+				} ).slice( 0, 10 );
+			}
+			st.rows = rows;
+			var body = root.querySelector( '.pc-ov-rankcard[data-kind="' + kind + '"] .pc-ov-rank-body' );
+			if ( body ) {
+				body.innerHTML = rankList( kind );
+			}
+		} ).catch( function () {
+			st.rows = [];
+			var body = root.querySelector( '.pc-ov-rankcard[data-kind="' + kind + '"] .pc-ov-rank-body' );
+			if ( body ) {
+				body.innerHTML = rankList( kind );
+			}
+		} );
+	}
+
+	// 页面底部一行三张卡（参考后台的公告 / 推荐位），没有内容时显示“暂无数据”。
+	function ads() {
+		var empty = '<section class="pc-ov-card pc-ov-ad"><p class="pc-ov-empty is-box">' + esc( Y.noData ) + '</p></section>';
+		return '<div class="pc-ov-ads">' + empty + empty + empty + '</div>';
 	}
 
 	// 趋势图：下拉选择指标，鼠标移上去显示竖线、圆点和提示框（时间 + 数值）。
-	var METRICS = [ 'visitors', 'page_views', 'orders', 'sales', 'conversion' ];
+	var METRICS = [ 'visitors', 'orders', 'sales' ];
 	var metric = 'visitors';
 	try {
 		metric = METRICS.indexOf( window.localStorage.getItem( 'pcOvMetric' ) ) > -1 ? window.localStorage.getItem( 'pcOvMetric' ) : metric;
@@ -147,20 +267,6 @@
 			return p && ! p.visitors ? '—' : v + '%';
 		}
 		return String( v );
-	}
-	function metricTotal() {
-		switch ( metric ) {
-			case 'visitors':
-				return fmt( S.totalVisitors, range.visitors );
-			case 'page_views':
-				return S.metrics.page_views + ': ' + ( range.page_views || 0 );
-			case 'orders':
-				return S.metrics.orders + ': ' + range.orders;
-			case 'sales':
-				return S.metrics.sales + ': ' + summary.currency.symbol + money( range.sales );
-			default:
-				return S.metrics.conversion + ': ' + ( null === range.conversion ? '—' : range.conversion + '%' );
-		}
 	}
 	// 纵轴最多 5 格，刻度取 1 / 2 / 5 × 10ⁿ，次数类指标刻度至少为 1。
 	function niceStep( max ) {
@@ -191,7 +297,7 @@
 	function chart() {
 		var pts = range.series || [];
 		var w = trendWidth();
-		var h = 240;
+		var h = 300;
 		var pad = { l: 40, r: 12, t: 12, b: 28 };
 		var vals = pts.map( metricValue );
 		var peak = Math.max.apply( null, [ 0 ].concat( vals ) );
@@ -205,7 +311,7 @@
 			return h - pad.b - ( v / max ) * ( h - pad.t - pad.b );
 		};
 		geo = { pts: pts, vals: vals, w: w, h: h, pad: pad, x: x, y: y };
-		var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" class="pc-ov-chart" role="img" aria-label="' + esc( S.metrics[ metric ] ) + '">';
+		var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" class="pc-ov-chart" role="img" aria-label="' + esc( Y.chartMetrics[ metric ] ) + '">';
 		for ( var g = 0; g <= ticks; g++ ) {
 			var gy = y( g * step );
 			svg += '<line x1="' + pad.l + '" x2="' + ( w - pad.r ) + '" y1="' + gy + '" y2="' + gy + '" class="pc-ov-grid' + ( g ? ' is-dash' : '' ) + '"/><text x="' + ( pad.l - 6 ) + '" y="' + ( gy + 4 ) + '" text-anchor="end">' + esc( axisText( g * step ) ) + '</text>';
@@ -225,9 +331,9 @@
 		}
 		svg += '<line class="pc-ov-cross" y1="' + pad.t + '" y2="' + ( h - pad.b ) + '" x1="0" x2="0"/><circle class="pc-ov-dot-pt" r="4" cx="0" cy="0"/></svg>';
 		var options = METRICS.map( function ( m ) {
-			return '<option value="' + m + '"' + ( m === metric ? ' selected' : '' ) + '>' + esc( S.metrics[ m ] ) + '</option>';
+			return '<option value="' + m + '"' + ( m === metric ? ' selected' : '' ) + '>' + esc( Y.chartMetrics[ m ] ) + '</option>';
 		} ).join( '' );
-		return '<div class="pc-ov-chart-head"><h3>' + esc( metricTotal() ) + '</h3><select class="pc-ov-metric" aria-label="' + esc( S.metricPick ) + '">' + options + '</select></div>' +
+		return '<div class="pc-ov-chart-head"><h3>' + esc( fmt( Y.totalUsers, range.visitors ) ) + '</h3><select class="pc-ov-metric" aria-label="' + esc( S.metricPick ) + '">' + options + '</select></div>' +
 			'<div class="pc-ov-chart-wrap">' + svg + '<div class="pc-ov-tip" hidden></div></div>';
 	}
 
@@ -276,7 +382,7 @@
 			dot.setAttribute( 'cx', px );
 			dot.setAttribute( 'cy', py );
 			wrap.classList.add( 'is-hover' );
-			tip.innerHTML = '<span>' + esc( geo.pts[ i ].start ) + '</span><span>' + esc( S.metrics[ metric ] ) + ': <b>' + esc( metricText( geo.vals[ i ], geo.pts[ i ] ) ) + '</b></span>';
+			tip.innerHTML = '<span>' + esc( geo.pts[ i ].start ) + '</span><span>' + esc( Y.chartMetrics[ metric ] ) + ': <b>' + esc( metricText( geo.vals[ i ], geo.pts[ i ] ) ) + '</b></span>';
 			tip.hidden = false;
 			// 提示框放在点的右下方，靠右边缘时翻到左边。
 			var left = px * scale + 14;
@@ -287,58 +393,6 @@
 			tip.style.top = Math.max( 0, Math.min( r.height - tip.offsetHeight, py * scale + 12 ) ) + 'px';
 		} );
 		wrap.addEventListener( 'pointerleave', hide );
-	}
-
-	function products() {
-		var list = range.products || [];
-		var body = list.length ? '<ol class="pc-ov-products">' + list.map( function ( p ) {
-			return '<li>' + ( p.image ? '<img src="' + esc( p.image ) + '" alt="">' : '<span class="pc-ov-noimg"></span>' ) + '<a href="' + esc( p.url ) + '">' + esc( p.name ) + '</a><span>' + esc( fmt( S.sold, p.quantity ) ) + '</span></li>';
-		} ).join( '' ) + '</ol>' : '<p class="pc-ov-empty">' + esc( S.noData ) + '</p>';
-		return '<section class="pc-ov-card"><div class="pc-ov-card__head"><h2>' + esc( S.topProducts ) + '</h2>' + link( L.products, S.more ) + '</div>' + body + '</section>';
-	}
-
-	// ---------- 客户追踪（最近 30 分钟的访客，每 10 秒刷新） ----------
-
-	var liveData = null;
-
-	function ago( ms ) {
-		var s = Math.max( 0, Math.round( ms / 1000 ) );
-		return fmt( S.ago, s < 60 ? s + 's' : s < 3600 ? Math.floor( s / 60 ) + 'm' : Math.floor( s / 3600 ) + 'h' );
-	}
-
-	function visitorsCard() {
-		var head = '<div class="pc-ov-card__head"><h2>' + esc( S.liveVisitors ) + '</h2>' + link( L.visitors, S.viewAll ) + '</div>';
-		if ( ! summary.tracking ) {
-			return head + '<p class="pc-ov-empty">' + esc( S.liveOff ) + '</p>';
-		}
-		if ( ! liveData ) {
-			return head + '<p class="pc-ov-empty">…</p>';
-		}
-		var list = liveData.visitors || [];
-		if ( ! list.length ) {
-			return head + '<p class="pc-ov-empty">' + esc( S.liveEmpty ) + '</p>';
-		}
-		return head + '<ul class="pc-ov-visitors">' + list.slice( 0, 20 ).map( function ( v ) {
-			var tab = v.tabs[ 0 ] || {};
-			var page = ( S.pageTypes[ tab.page_type ] || tab.page_type || '' ) + ( tab.product_name ? ' · ' + tab.product_name : '' );
-			var more = v.tabs.length > 1 ? ' · ' + fmt( S.tabsOpen, v.tabs.length ) : '';
-			return '<li><a href="' + esc( L.visitor + v.visitor.id ) + '"><span class="pc-ov-dot is-' + esc( v.status ) + '" title="' + esc( S[ v.status ] ) + '"></span>' +
-				'<span class="pc-ov-visitor__who"><b>' + esc( v.visitor.label ) + '</b><small>' + esc( page + more ) + '</small></span>' +
-				'<span class="pc-ov-visitor__when">' + esc( S[ v.status ] ) + '<small>' + esc( ago( liveData.now_ms - v.last_signal_ms ) ) + '</small></span></a></li>';
-		} ).join( '' ) + '</ul>';
-	}
-
-	function refreshVisitors() {
-		if ( ! summary.tracking ) {
-			return;
-		}
-		wp.apiFetch( { path: '/peptide/v1/track/admin/live' } ).then( function ( res ) {
-			liveData = res;
-			var box = document.getElementById( 'pc-ov-visitors' );
-			if ( box ) {
-				box.innerHTML = visitorsCard();
-			}
-		} ).catch( function () {} );
 	}
 
 	function tabs() {
@@ -356,13 +410,13 @@
 		root.innerHTML =
 			note +
 			'<div class="pc-ov-grid">' +
-			'<div class="pc-ov-main">' + hero() + '<div class="pc-ov-row">' + todo() + unfinished() + '</div>' +
-			'<section class="pc-ov-card"><div class="pc-ov-card__head"><div class="pc-ov-tabs">' + tabs() + '</div>' + link( L.conversion, S.more ) + '</div>' +
-			'<p class="pc-ov-headline">' + esc( S.conversion ) + ': <b>' + esc( null === range.conversion ? '—' : range.conversion + '%' ) + '</b> · ' + esc( S.sales ) + ': <b>' + esc( money( range.sales ) + ' ' + summary.currency.code ) + '</b> <span class="pc-ov-muted">' + esc( range.from + ' – ' + range.to ) + '</span></p>' +
-			'<div class="pc-ov-split"><div><h3>' + esc( S.funnel ) + '</h3>' + funnel() + '</div><div id="pc-ov-trend">' + chart() + '</div></div></section>' +
+			'<div class="pc-ov-main">' + hero() + '<div class="pc-ov-row">' + paidOrders() + reactivation() + '</div>' +
+			'<section class="pc-ov-card pc-ov-period"><div class="pc-ov-card__head"><div class="pc-ov-tabs">' + tabs() + '</div>' + more( L.storeData, Y.storeData ) + '</div>' +
+			'<p class="pc-ov-headline">' + esc( Y.visitorConv ) + '：<b>' + esc( null === range.conversion ? '0%' : pc( range.conversion ) ) + '</b><span class="pc-ov-headline__gap"></span>' + esc( Y.salesLabel ) + '：<b>' + esc( amt( range.sales ) ) + '</b>' + esc( summary.currency.code ) + '</p>' +
+			'<div class="pc-ov-split"><div>' + funnel() + '</div><div id="pc-ov-trend">' + chart() + '</div></div></section>' +
 			'</div>' +
-			'<div class="pc-ov-side">' + side() + live( todayData ) + products() + '<section class="pc-ov-card" id="pc-ov-visitors">' + visitorsCard() + '</section></div>' +
-			'</div>';
+			'<div class="pc-ov-side">' + side() + live( todayData ) + rankCard( 'traffic' ) + rankCard( 'products' ) + '</div>' +
+			'</div>' + ads();
 		bindChart();
 		root.querySelectorAll( '.pc-ov-tab' ).forEach( function ( b ) {
 			b.addEventListener( 'click', function () {
@@ -371,6 +425,26 @@
 					b.classList.remove( 'is-loading' );
 				} );
 			} );
+		} );
+		var rr = root.querySelector( '.pc-ov-react-range' );
+		if ( rr ) {
+			rr.addEventListener( 'change', function () {
+				recRange = rr.value;
+				root.querySelector( '.pc-ov-react-body' ).innerHTML = reactivationBody();
+			} );
+		}
+		root.querySelectorAll( '.pc-ov-rankcard' ).forEach( function ( card ) {
+			var kind = card.getAttribute( 'data-kind' );
+			var change = function () {
+				ranks[ kind ].metric = card.querySelector( '.pc-ov-rank-metric' ).value;
+				ranks[ kind ].range = card.querySelector( '.pc-ov-rank-range' ).value;
+				// 流量排名换指标只是重新排序，也重新取一次，数字保持最新。
+				ranks[ kind ].rows = null;
+				card.querySelector( '.pc-ov-rank-body' ).innerHTML = rankList( kind );
+				fetchRank( kind );
+			};
+			card.querySelector( '.pc-ov-rank-metric' ).addEventListener( 'change', change );
+			card.querySelector( '.pc-ov-rank-range' ).addEventListener( 'change', change );
 		} );
 	}
 
@@ -389,6 +463,8 @@
 			range = res[ 0 ].range;
 			todayData = 'today' === r ? res[ 0 ].range : res[ 1 ].range;
 			render();
+			fetchRank( 'traffic' );
+			fetchRank( 'products' );
 			schedule();
 		} );
 	}
@@ -420,13 +496,10 @@
 	} );
 
 	render();
+	fetchRank( 'traffic' );
+	fetchRank( 'products' );
 	schedule();
-	refreshVisitors();
-	setInterval( function () {
-		if ( ! document.hidden ) {
-			refreshVisitors();
-		}
-	}, 30000 );
+	setInterval( tick, 1000 );
 	document.addEventListener( 'visibilitychange', function () {
 		if ( ! document.hidden ) {
 			load( range.range ).catch( schedule );

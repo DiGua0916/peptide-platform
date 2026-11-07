@@ -236,6 +236,9 @@ final class Overview {
 			'registered' => (int) $registered->get_total(),
 			'conversion' => $v['visitors'] ? round( $count / $v['visitors'] * 100, 2 ) : null,
 			'funnel'     => $funnel,
+			// 八层访客漏斗（参考后台概览页：访问用户 → 查看商品 → 加购 → 发起结账 → 添加地址 → 添加物流 → 添加支付 → 支付成功），
+			// 和转化率详情页同一个口径（Data\Visitor_Funnel，按不同访客计）。
+			'steps'      => Schema::installed() ? ( new Data\Visitor_Funnel() )->period( $from * 1000, $to * 1000 )['overall']['layers'] : array(),
 			'page_views' => array_sum( array_column( $v['series'], 'page_views' ) ),
 			'series'     => array_map(
 				static fn( $s ) => array(
@@ -278,7 +281,7 @@ final class Overview {
 			'tz_label'  => wp_timezone_string() . ' (' . wp_date( 'T', $now ) . ', UTC' . wp_date( 'P', $now ) . ')',
 			// 店铺时区的下一个 0 点（毫秒），页面在这个时间自动刷新“今天”。
 			'next_midnight_ms' => $tomorrow * 1000,
-			'currency'  => array( 'code' => $currency, 'symbol' => html_entity_decode( get_woocommerce_currency_symbol( $currency ) ) ),
+			'currency'  => array( 'code' => $currency, 'symbol' => html_entity_decode( get_woocommerce_currency_symbol( $currency ) ), 'name' => self::currency_name( $currency ) ),
 			'tracking'  => Tracker::enabled(),
 			'todo'      => array(
 				'to_ship'           => null !== $ship ? (int) $ship['count'] : self::count_orders( array( 'processing' ) ),
@@ -290,10 +293,40 @@ final class Overview {
 			),
 			'online'    => $online,
 			'holidays'  => self::holidays( $now ),
+			// 弃单激活（参考后台概览页）：四个时间段各一份，页面下拉切换时不用再请求。
+			'recovery'  => self::recovery( $now ),
 		);
 	}
 
 	/** 第 n 个星期几（n=-1 表示最后一个）。 */
+	/**
+	 * 弃单激活的四个数字：触发邮件（发过提醒的弃单）、成功激活、激活率 = 成功激活 / 触发邮件、激活订单金额。
+	 * 按弃单创建时间落在 今天 / 昨天 / 过去 7 天 / 过去 30 天（店铺时区，同 window()）。
+	 */
+	/** 货币名称：中文后台用中文名（参考后台“美元(USD)”），其他语言用 WooCommerce 的名称。 */
+	private static function currency_name( string $code ): string {
+		$zh = array( 'USD' => '美元', 'EUR' => '欧元', 'GBP' => '英镑', 'CAD' => '加元', 'AUD' => '澳元', 'JPY' => '日元', 'CNY' => '人民币', 'HKD' => '港币', 'NZD' => '新西兰元', 'SGD' => '新加坡元', 'CHF' => '瑞士法郎' );
+		if ( str_starts_with( determine_locale(), 'zh' ) && isset( $zh[ $code ] ) ) {
+			return $zh[ $code ];
+		}
+		return html_entity_decode( (string) ( get_woocommerce_currencies()[ $code ] ?? $code ) );
+	}
+
+	private static function recovery( int $now ): array {
+		$out = array();
+		foreach ( array( 'today', 'yesterday', '7d', '30d' ) as $r ) {
+			list( $from, $to ) = self::window( $r, $now );
+			$st        = Recovery::stats( $from * 1000, $to * 1000 );
+			$out[ $r ] = array(
+				'emailed'   => (int) $st['emailed'],
+				'recovered' => (int) $st['recovered'],
+				'rate'      => $st['emailed'] ? round( $st['recovered'] / $st['emailed'] * 100, 2 ) : 0,
+				'amount'    => round( (float) $st['recovered_total'], 2 ),
+			);
+		}
+		return $out;
+	}
+
 	private static function nth_weekday( int $year, int $month, int $weekday, int $n ): \DateTimeImmutable {
 		$tz = wp_timezone();
 		if ( $n < 0 ) {

@@ -116,6 +116,11 @@ final class Overview_Page {
 						'products'    => admin_url( 'edit.php?post_type=product' ),
 						'promotions'  => admin_url( 'admin.php?page=' . Promotions_Page::SLUG ),
 						'recovery'    => admin_url( 'admin.php?page=' . Recovery_Page::SLUG ),
+						'storeData'   => admin_url( 'admin.php?page=pc-data-operations' ),
+						'realtime'    => admin_url( 'admin.php?page=pc-data' ),
+						'convDetails' => admin_url( 'admin.php?page=pc-data-conversion' ),
+						'productData' => admin_url( 'admin.php?page=pc-data-products' ),
+						'currency'    => admin_url( 'admin.php?page=wc-settings&tab=general' ),
 					),
 					'strings'  => self::strings(),
 				)
@@ -217,6 +222,72 @@ final class Overview_Page {
 			),
 			'ofVisitors'   => __( '%s of visitors', 'peptide-core' ),
 			'stepRate'     => __( 'From previous step', 'peptide-core' ),
+			// 2026-11-07 对照参考后台概览页的文字（中文见 languages/customer-overview-zh_CN.php）。
+			'yy'           => array(
+				'visitingUsers' => __( 'Visiting users', 'peptide-core' ),
+				'orderCount'    => __( 'Number of orders', 'peptide-core' ),
+				/* translators: %s: currency code */
+				'salesCur'      => __( 'Sales amount (%s)', 'peptide-core' ),
+				'defaultCur'    => __( 'Default currency', 'peptide-core' ),
+				/* translators: %s: exchange rate */
+				'rate'          => __( 'Live exchange rate: %s', 'peptide-core' ),
+				'holidays'      => __( 'Holiday reminders', 'peptide-core' ),
+				/* translators: %d: days */
+				'startsIn'      => __( 'Starts in: %d days', 'peptide-core' ),
+				'details'       => __( 'View details', 'peptide-core' ),
+				'paidOrders'    => __( 'Online payment orders', 'peptide-core' ),
+				'toShip'        => __( 'Awaiting shipment', 'peptide-core' ),
+				'reactivation'  => __( 'Abandoned order reactivation', 'peptide-core' ),
+				'emailed'       => __( 'Emails triggered', 'peptide-core' ),
+				'recovered'     => __( 'Reactivated', 'peptide-core' ),
+				'recRate'       => __( 'Reactivation rate', 'peptide-core' ),
+				/* translators: %s: currency code */
+				'recAmount'     => __( 'Reactivated order amount (%s)', 'peptide-core' ),
+				'live'          => __( 'Real-time data', 'peptide-core' ),
+				'liveHelp'      => __( 'Visitors online in the last few minutes, plus today’s orders and sales (store time zone).', 'peptide-core' ),
+				'liveMore'      => __( 'More real-time data', 'peptide-core' ),
+				'liveVisitors'  => __( 'Visitor count', 'peptide-core' ),
+				'storeData'     => __( 'More store data', 'peptide-core' ),
+				'visitorConv'   => __( 'Visitor conversion rate', 'peptide-core' ),
+				'salesLabel'    => __( 'Sales amount', 'peptide-core' ),
+				/* translators: %s: rate */
+				'ofVisitors'    => __( 'Visitor conversion: %s', 'peptide-core' ),
+				/* translators: %s: link to the conversion details page */
+				'tip'           => __( 'Tip: to analyse ad performance, go to %s to see traffic broken down.', 'peptide-core' ),
+				'convDetails'   => __( 'Conversion details', 'peptide-core' ),
+				/* translators: %d: number of visiting users */
+				'totalUsers'    => __( 'Total visiting users: %d', 'peptide-core' ),
+				'traffic'       => __( 'Traffic ranking', 'peptide-core' ),
+				'productRank'   => __( 'Product ranking', 'peptide-core' ),
+				'noData'        => __( 'No data yet', 'peptide-core' ),
+				'trafficMetrics' => array(
+					'conversion' => __( 'Conversion rate', 'peptide-core' ),
+					'visitors'   => __( 'UV', 'peptide-core' ),
+					'paid'       => __( 'Number of orders', 'peptide-core' ),
+					'sales'      => __( 'Order amount (ranking)', 'peptide-core' ),
+				),
+				'productMetrics' => array(
+					'products_units'  => __( 'Units sold', 'peptide-core' ),
+					'products_sales'  => __( 'Sales amount', 'peptide-core' ),
+					'products_viewed' => __( 'Views (ranking)', 'peptide-core' ),
+					'products_carted' => __( 'Add-to-carts (ranking)', 'peptide-core' ),
+				),
+				'chartMetrics'  => array(
+					'visitors' => __( 'Visitor count', 'peptide-core' ),
+					'orders'   => __( 'Number of orders', 'peptide-core' ),
+					'sales'    => __( 'Sales amount', 'peptide-core' ),
+				),
+				'steps'         => array(
+					'visitors' => __( 'Visiting users', 'peptide-core' ),
+					'viewed'   => __( 'Viewed products', 'peptide-core' ),
+					'carted'   => __( 'Added products to cart', 'peptide-core' ),
+					'checkout' => __( 'Started checkout', 'peptide-core' ),
+					'address'  => __( 'Added address', 'peptide-core' ),
+					'shipping' => __( 'Added shipping', 'peptide-core' ),
+					'payment'  => __( 'Added payment', 'peptide-core' ),
+					'paid'     => __( 'Payment succeeded', 'peptide-core' ),
+				),
+			),
 			'holidayNames' => array(
 				'new_year'     => __( 'New Year’s Day', 'peptide-core' ),
 				'valentine'    => __( 'Valentine’s Day', 'peptide-core' ),

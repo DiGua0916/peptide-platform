@@ -621,3 +621,72 @@ body.pc-admin-workspace .pc-ov .pc-ov-stair__next span { position: absolute; top
 body.pc-admin-workspace .pc-ov .pc-ov-hero { padding-bottom: 0; }
 body.pc-admin-workspace .pc-ov .pc-ov-hero__panel { border-radius: 6px 6px 0 0; }
 body.pc-admin-workspace .pc-ov .pc-ov-hero { overflow: hidden; }
+
+/* ===== 第二轮（2026-11-07）：按参考后台概览页逐项对齐 =====
+   栅格 24 份：左 17 / 右 7；底部一行 10 / 7 / 7。 */
+@container pc-ov (min-width: 900px) {
+	body.pc-admin-workspace .pc-ov > .pc-ov-grid { grid-template-columns: minmax(0, 17fr) minmax(0, 7fr); }
+	body.pc-admin-workspace .pc-ov > .pc-ov-ads { grid-template-columns: minmax(0, 10fr) minmax(0, 7fr) minmax(0, 7fr); }
+}
+body.pc-admin-workspace .pc-ov .pc-ov-row { grid-template-columns: minmax(0, 5fr) minmax(0, 13fr); }
+body.pc-admin-workspace .pc-ov > .pc-ov-ads { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+body.pc-admin-workspace .pc-ov .pc-ov-ad { display: flex; align-items: center; justify-content: center; min-height: 200px; padding: 16px 20px; border: 1px solid var(--pc-ui-line, #e5e5e5); border-radius: 8px; background: #fff; }
+
+/* 卡片标题右边的“查看详情 >” */
+body.pc-admin-workspace .pc-ov .pc-ov-more { flex: none; color: #171717; font-size: 12px; line-height: 20px; font-weight: 500; text-decoration: none; white-space: nowrap; }
+body.pc-admin-workspace .pc-ov .pc-ov-more:hover { text-decoration: underline; }
+body.pc-admin-workspace .pc-ov .pc-ov-card__head { display: flex; align-items: center; justify-content: space-between; }
+body.pc-admin-workspace .pc-ov .pc-ov-card__head h2 { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+
+/* 货币和节日 */
+body.pc-admin-workspace .pc-ov .pc-ov-cur .pc-ov-card__head { margin-bottom: 8px; }
+body.pc-admin-workspace .pc-ov .pc-ov-cur .pc-ov-card__head h2 { font-size: 13px; font-weight: 500; }
+body.pc-admin-workspace .pc-ov .pc-ov-cur .pc-ov-tag { padding: 0 6px; border: 1px solid #d4d4d4; background: #f5f5f5; color: #404040; font-size: 11px; line-height: 18px; font-weight: 400; }
+body.pc-admin-workspace .pc-ov .pc-ov-line2 { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; line-height: 18px; }
+body.pc-admin-workspace .pc-ov .pc-ov-line3 { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; font-size: 12px; line-height: 18px; }
+body.pc-admin-workspace .pc-ov .pc-ov-cur .pc-ov-card__head--sub { margin-top: 20px; }
+
+/* 下拉：小号 */
+body.pc-admin-workspace .pc-ov select.pc-ov-sel { width: auto; min-width: 72px; height: 28px; min-height: 28px; padding: 0 24px 0 8px; border: 1px solid #dcdcdc; border-radius: 4px; background-color: #fff; color: #404040; font-size: 12px; line-height: 26px; }
+body.pc-admin-workspace .pc-ov .pc-ov-react .pc-ov-card__head { margin-bottom: 12px; }
+
+/* 实时数据标题旁的“?” */
+body.pc-admin-workspace .pc-ov .pc-ov-help { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border: 1px solid #a3a3a3; border-radius: 50%; color: #737373; font-size: 10px; line-height: 1; font-weight: 600; cursor: help; }
+
+/* 数字格：参考后台数字不加粗，标签一行 */
+body.pc-admin-workspace .pc-ov .pc-ov-row .pc-ov-num span,
+body.pc-admin-workspace .pc-ov .pc-ov-side .pc-ov-num span { min-height: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.pc-admin-workspace .pc-ov .pc-ov-side .pc-ov-num b { font-size: 16px; font-weight: 500; }
+body.pc-admin-workspace .pc-ov .pc-ov-paid .pc-ov-num b.is-warn { color: #171717; font-weight: 600; }
+
+/* 时间段卡 */
+body.pc-admin-workspace .pc-ov .pc-ov-headline { margin: 0 0 20px; color: #404040; font-size: 13px; line-height: 20px; }
+body.pc-admin-workspace .pc-ov .pc-ov-headline b { color: #171717; font-weight: 600; }
+body.pc-admin-workspace .pc-ov .pc-ov-headline__gap { display: inline-block; width: 16px; }
+body.pc-admin-workspace .pc-ov .pc-ov-hint { margin: 16px 0 0; color: #525252; font-size: 12px; line-height: 18px; }
+body.pc-admin-workspace .pc-ov .pc-ov-hint a { color: #171717; font-weight: 600; text-decoration: underline; }
+body.pc-admin-workspace .pc-ov .pc-ov-chart-head h3 { font-weight: 500; }
+body.pc-admin-workspace .pc-ov .pc-ov-area { fill: none; }
+
+/* 排名卡 */
+body.pc-admin-workspace .pc-ov .pc-ov-rank-ctl { display: flex; gap: 8px; margin: -4px 0 8px; }
+body.pc-admin-workspace .pc-ov .pc-ov-rank li { grid-template-columns: 20px minmax(0, 1fr) auto; font-size: 12px; line-height: 18px; }
+body.pc-admin-workspace .pc-ov .pc-ov-rankcard[data-kind="products"] .pc-ov-rank li { grid-template-columns: 20px 32px minmax(0, 1fr) auto; }
+body.pc-admin-workspace .pc-ov .pc-ov-rank li::before { background: #171717; }
+body.pc-admin-workspace .pc-ov .pc-ov-rank__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 空状态：灰色盒子图标 + “暂无数据” */
+body.pc-admin-workspace .pc-ov .pc-ov-empty.is-box { margin: 0; padding: 84px 0 16px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='56' viewBox='0 0 64 56' fill='none' stroke='%23c8c8c8' stroke-width='1.5' stroke-linejoin='round'%3E%3Cpath d='M8 20 32 10l24 10v24L32 54 8 44z'/%3E%3Cpath d='M8 20l24 10 24-10M32 30v24'/%3E%3Cpath d='M8 20 2 12l24-10 6 8M56 20l6-8-24-10-6 8' stroke='%23dadada'/%3E%3C/svg%3E") center 16px no-repeat; color: #a3a3a3; font-size: 12px; text-align: center; }
+body.pc-admin-workspace .pc-ov .pc-ov-ad .pc-ov-empty.is-box { width: 100%; }
+
+@media (max-width: 782px) {
+	body.pc-admin-workspace .pc-ov .pc-ov-row { grid-template-columns: minmax(0, 1fr); }
+	body.pc-admin-workspace .pc-ov .pc-ov-react .pc-ov-nums { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container pc-ov (min-width: 900px) {
+	body.pc-admin-workspace .pc-ov > .pc-ov-ads { grid-template-columns: minmax(0, 10fr) minmax(0, 7fr) minmax(0, 7fr); }
+	body.pc-admin-workspace .pc-ov .pc-ov-split { grid-template-columns: minmax(0, 4fr) minmax(0, 3fr); }
+}
+body.pc-admin-workspace .pc-ov .pc-ov-cur .pc-ov-tag { white-space: nowrap; }
+body.pc-admin-workspace .pc-ov .pc-ov-stair__bar { flex-wrap: nowrap; white-space: nowrap; padding: 6px 8px; }
+body.pc-admin-workspace .pc-ov .pc-ov-chart text { font-size: 10px; }
