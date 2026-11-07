@@ -156,7 +156,20 @@ final class Pixels {
 		return substr( (string) preg_replace( '/[^A-Za-z0-9_\-\.\/:]/', '', $v ), 0, 120 );
 	}
 
-	/** 域名：只留主机名（不含 www.），空 = 所有域名。 */
+	/**
+	 * 店铺绑定的域名（首页地址的主机名，不含 www.）。像素的“关联域名”默认就是它（2026-11-07：不再有“所有域名”）。
+	 */
+	public static function store_domain(): string {
+		return self::clean_domain( (string) get_option( 'home' ) );
+	}
+
+	/** 像素实际生效的域名：没填（或旧数据为空）= 店铺绑定的域名。 */
+	public static function pixel_domain( array $px ): string {
+		$d = (string) ( $px['domain'] ?? '' );
+		return '' !== $d ? $d : self::store_domain();
+	}
+
+	/** 域名：只留主机名（不含 www.）。 */
 	public static function clean_domain( $v ): string {
 		$v    = is_scalar( $v ) ? strtolower( trim( (string) $v ) ) : '';
 		$host = wp_parse_url( str_contains( $v, '://' ) ? $v : 'https://' . $v, PHP_URL_HOST );
@@ -219,7 +232,7 @@ final class Pixels {
 				$p['pixels'][] = array(
 					'id'     => $id,
 					'note'   => is_array( $row ) ? substr( sanitize_text_field( (string) ( $row['note'] ?? '' ) ), 0, 100 ) : '',
-					'domain' => is_array( $row ) ? self::clean_domain( $row['domain'] ?? '' ) : '',
+					'domain' => self::pixel_domain( array( 'domain' => is_array( $row ) ? self::clean_domain( $row['domain'] ?? '' ) : '' ) ),
 					'token'  => $token,
 				);
 			}
@@ -739,7 +752,7 @@ final class Pixels {
 			$p   = $s['platforms'][ $key ];
 			$ids = array();
 			foreach ( $p['pixels'] as $px ) {
-				$ids[] = array( 'id' => $px['id'], 'domain' => $px['domain'] );
+				$ids[] = array( 'id' => $px['id'], 'domain' => self::pixel_domain( $px ) );
 			}
 			if ( ! $ids ) {
 				continue;

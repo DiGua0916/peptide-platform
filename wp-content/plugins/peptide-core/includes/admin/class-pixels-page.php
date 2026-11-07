@@ -94,7 +94,7 @@ final class Pixels_Page {
 		if ( $token ) {
 			$html .= '<input type="hidden" data-f="token" name="' . esc_attr( $base ) . '[token]" value=""><input type="hidden" data-f="clear_token" name="' . esc_attr( $base ) . '[clear_token]" value="">';
 		}
-		$html .= '</td><td data-show-f="id">' . esc_html( $px['id'] ) . '</td><td data-show-f="note">' . esc_html( '' !== $px['note'] ? $px['note'] : '—' ) . '</td><td data-show-f="domain">' . esc_html( '' !== $px['domain'] ? $px['domain'] : __( 'All domains', 'peptide-core' ) ) . '</td>';
+		$html .= '</td><td data-show-f="id">' . esc_html( $px['id'] ) . '</td><td data-show-f="note">' . esc_html( '' !== $px['note'] ? $px['note'] : '—' ) . '</td><td data-show-f="domain">' . esc_html( '' !== $px['domain'] ? $px['domain'] : Pixels::store_domain() ) . '</td>';
 		if ( $token ) {
 			$html .= '<td data-show-f="token" data-had="' . ( '' !== $px['token'] ? '1' : '' ) . '"><code>' . esc_html( '' !== $px['token'] ? self::mask( $px['token'] ) : '—' ) . '</code></td>';
 		}
@@ -231,7 +231,7 @@ final class Pixels_Page {
 		echo '<dialog class="pc-pl-dialog pc-px-dialog"><h2 class="pc-px-dialog__title">' . esc_html__( 'Pixel', 'peptide-core' ) . '</h2>';
 		echo '<p><label class="pc-mk-label" for="pc-px-d-id"><span class="pc-bc-req">*</span> ' . esc_html__( 'Pixel ID', 'peptide-core' ) . '</label><input type="text" class="large-text" id="pc-px-d-id" data-d="id" maxlength="120"></p>';
 		echo '<p><label class="pc-mk-label" for="pc-px-d-note">' . esc_html__( 'Note', 'peptide-core' ) . '</label><input type="text" class="large-text" id="pc-px-d-note" data-d="note" maxlength="100"></p>';
-		echo '<p><label class="pc-mk-label" for="pc-px-d-domain">' . esc_html__( 'Linked domain', 'peptide-core' ) . '</label><input type="text" class="large-text" id="pc-px-d-domain" data-d="domain" placeholder="' . esc_attr__( 'Empty = every domain of the store', 'peptide-core' ) . '"></p>';
+		echo '<p><label class="pc-mk-label" for="pc-px-d-domain">' . esc_html__( 'Linked domain', 'peptide-core' ) . '</label><input type="text" class="large-text" id="pc-px-d-domain" data-d="domain" placeholder="' . esc_attr( Pixels::store_domain() ) . '" data-default="' . esc_attr( Pixels::store_domain() ) . '"></p>';
 		echo '<div class="pc-px-dialog__token"><p><label class="pc-mk-label" for="pc-px-d-token">Access token</label> ' . Marketing::help( __( 'Facebook: Events Manager → the pixel → Settings → Conversions API → Generate access token. TikTok: Events Manager → the pixel → Settings → Events API → Generate access token. The token stays on the server and is never shown in the store.', 'peptide-core' ) ) . '<input type="password" class="large-text" id="pc-px-d-token" data-d="token" autocomplete="new-password"></p><p class="pc-bc-note pc-px-dialog__keep" hidden>' . esc_html__( 'A token is saved. Leave empty to keep it.', 'peptide-core' ) . ' <label><input type="checkbox" data-d="clear_token" value="1"> ' . esc_html__( 'Remove the saved token', 'peptide-core' ) . '</label></p></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo '<p class="pc-pl-error" hidden></p><div class="pc-pl-dialog__foot"><button type="button" class="button pc-pl-close">' . esc_html__( 'Cancel', 'peptide-core' ) . '</button> <button type="button" class="button button-primary pc-px-dialog__ok">' . esc_html__( 'OK', 'peptide-core' ) . '</button></div></dialog>';
 

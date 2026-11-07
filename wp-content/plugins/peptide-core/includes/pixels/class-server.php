@@ -84,7 +84,7 @@ final class Server {
 		$out = array();
 		foreach ( array( 'facebook', 'tiktok' ) as $key ) {
 			foreach ( $s['platforms'][ $key ]['pixels'] as $px ) {
-				if ( '' !== $px['token'] && ( '' === $px['domain'] || $px['domain'] === $host ) ) {
+				if ( '' !== $px['token'] && \PeptideCore\Pixels::pixel_domain( $px ) === $host ) {
 					$out[] = array( $key, $px['id'], $px['token'] );
 				}
 			}

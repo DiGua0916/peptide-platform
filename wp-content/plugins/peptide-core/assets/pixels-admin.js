@@ -43,6 +43,9 @@
 		[ 'id', 'note', 'domain' ].forEach( function ( f ) {
 			dlg.querySelector( '[data-d="' + f + '"]' ).value = row ? field( row, f ).value : '';
 		} );
+		// 关联域名默认是店铺绑定的域名（新建时预填；旧数据为空时也显示它）。
+		var dom = dlg.querySelector( '[data-d="domain"]' );
+		if ( ! dom.value ) { dom.value = dom.getAttribute( 'data-default' ) || ''; }
 		dlg.querySelector( '[data-d="token"]' ).value = '';
 		dlg.querySelector( '[data-d="clear_token"]' ).checked = false;
 		var had = row && row.querySelector( '[data-show-f="token"]' ) && '1' === row.querySelector( '[data-show-f="token"]' ).getAttribute( 'data-had' );
@@ -97,7 +100,8 @@
 				editing.card.querySelector( '.pc-px-table tbody' ).insertBefore( row, editing.card.querySelector( '.pc-px-empty' ) );
 			}
 			var note = dlg.querySelector( '[data-d="note"]' ).value.trim();
-			var domain = dlg.querySelector( '[data-d="domain"]' ).value.trim();
+			var domainInput = dlg.querySelector( '[data-d="domain"]' );
+			var domain = domainInput.value.trim() || domainInput.getAttribute( 'data-default' ) || '';
 			field( row, 'id' ).value = id;
 			field( row, 'note' ).value = note;
 			field( row, 'domain' ).value = domain;
