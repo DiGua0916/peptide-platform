@@ -118,7 +118,12 @@
 		// 口径说明默认收起（版式对照参考后台：页面上只留数字和表格）；标题右边的按钮展开 / 收起，选择记在浏览器里。
 		var notesOpen = false;
 		try { notesOpen = '1' === window.localStorage.getItem( 'pcDataNotes' ); } catch ( e ) { /* 存储不可用时默认收起。 */ }
-		root.classList.toggle( 'is-notes', notesOpen );
+		var setNotes = function ( on ) {
+			if ( root.classList && 'function' === typeof root.classList.add ) {
+				if ( on ) { root.classList.add( 'is-notes' ); } else { root.classList.remove( 'is-notes' ); }
+			}
+		};
+		setNotes( notesOpen );
 		root.innerHTML =
 			'<h1 class="pc-data-title">' + esc( cfg.title ) + '</h1>' +
 			( S.notesShow ? '<button type="button" class="pc-data-notes-toggle" aria-pressed="' + ( notesOpen ? 'true' : 'false' ) + '">' + esc( notesOpen ? S.notesHide : S.notesShow ) + '</button>' : '' ) +
@@ -130,8 +135,9 @@
 		var notesButton = root.querySelector( '.pc-data-notes-toggle' );
 		if ( notesButton ) {
 			notesButton.addEventListener( 'click', function () {
-				var open = ! root.classList.contains( 'is-notes' );
-				root.classList.toggle( 'is-notes', open );
+				notesOpen = ! notesOpen;
+				var open = notesOpen;
+				setNotes( open );
 				notesButton.setAttribute( 'aria-pressed', open ? 'true' : 'false' );
 				notesButton.textContent = open ? S.notesHide : S.notesShow;
 				try { window.localStorage.setItem( 'pcDataNotes', open ? '1' : '0' ); } catch ( e ) { /* 记不住也不影响使用。 */ }
