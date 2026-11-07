@@ -142,11 +142,26 @@
 		var link = logUrl ?
 			' <a class="pc-emails-loglink" href="' + esc( logUrl ) + '">' + esc( T.logLink ) + '</a>' :
 			'';
+		// 版式对照参考后台：发送数 / 成功率 / 打开 / 点击六个指标排成一条，下面是每天发送数的大曲线，再下面是邮件表。
+		// 两组指标的小标题保留在页面里（读屏和口径），视觉上收起。“查看发送记录”放到标题旁。
+		if ( logUrl && ctx.setActions ) { ctx.setActions( '<a href="' + esc( logUrl ) + '">' + esc( T.logLink ) + '</a>' ); link = ''; }
+		var series = data.series && data.series.current && data.series.current.length > 0 && ctx.lineChart ? data.series : null;
 		return '<div class="pc-emails-data">' +
-			'<h2>' + esc( T.legacyTitle ) + '</h2><div class="pc-emails-tiles">' + tile( 'sent', data, ctx ) + tile( 'success_rate', data, ctx ) + '</div>' +
+			'<section class="pc-emails-overview"><div class="pc-emails-strip">' +
+				'<div class="pc-emails-group"><h2>' + esc( T.legacyTitle ) + '</h2><div class="pc-emails-tiles">' + tile( 'sent', data, ctx ) + tile( 'success_rate', data, ctx ) + '</div></div>' +
+				'<div class="pc-emails-group"><h2>' + esc( T.observationTitle ) + '</h2><div class="pc-emails-tiles">' + observationTiles( report, ctx ) + '</div></div>' +
+			'</div>' +
+			( series ? '<div class="pc-emails-chart">' + ctx.lineChart( {
+				cur: series.current.map( function ( p ) { return Number( p.sent ) || 0; } ),
+				prev: ( series.previous || [] ).map( function ( p ) { return Number( p.sent ) || 0; } ),
+				labels: series.current.map( function ( p ) { return String( p.day || '' ); } ),
+				w: 1100, h: 300, title: T.sent
+			} ) + '<div class="pc-emails-legend"><span><i></i>' + esc( ( series.current[ 0 ] || {} ).day + ' ~ ' + ( series.current[ series.current.length - 1 ] || {} ).day ) + '</span>' +
+				( series.previous && series.previous.length ? '<span><i class="is-prev"></i>' + esc( series.previous[ 0 ].day + ' ~ ' + series.previous[ series.previous.length - 1 ].day ) + '</span>' : '' ) + '</div></div>' : '' ) +
+			'</section>' +
 			'<p class="pc-data-muted pc-emails-note">' + esc( T.legacyHelp ) + link + '</p>' +
+			'<p class="pc-data-muted">' + esc( T.observationHelp ) + '</p>' +
 			tableHtml( data.rows || [], ctx ) +
-			'<h2>' + esc( T.observationTitle ) + '</h2><div class="pc-emails-tiles">' + observationTiles( report, ctx ) + '</div><p class="pc-data-muted">' + esc( T.observationHelp ) + '</p>' +
 			'<p role="status">' + esc( T[ 'observation_' + report.status ] || T.observation_unavailable ) + '</p>' +
 			observationFilters( report, ctx ) + observationTable( report, ctx ) +
 		'</div>';

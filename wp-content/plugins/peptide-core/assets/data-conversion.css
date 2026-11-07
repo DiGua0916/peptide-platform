@@ -196,3 +196,26 @@
 .pc-conv-channel-table { min-width: 1150px; }
 .pc-conv-checkout small { display: block; color: #646970; font-weight: 400; margin-top: 4px; }
 .pc-conv-local { border-left: 4px solid #dba617; padding: 10px; background: #fff8e5; }
+
+/* ---------- 第二轮（对照参考后台）：指标一行 + 两列阶梯漏斗卡片 ---------- */
+.pc-conv .pc-conv-overall { grid-template-columns: none !important; grid-auto-flow: column; grid-auto-columns: calc(100% / 7); overflow-x: auto; }
+.pc-conv .pc-conv-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+.pc-conv .pc-conv-card { box-sizing: border-box; min-width: 0; padding: 16px 20px; border: 1px solid #ececec; border-radius: 8px; background: #fff; }
+.pc-conv-card__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; }
+.pc-conv .pc-conv-card__title { margin: 0; font-size: 15px; font-weight: 600; }
+.pc-conv .pc-conv-card__sales { margin: 0; color: #525252; font-size: 13px; }
+.pc-conv .pc-conv-card__sales strong { display: inline; color: #171717; }
+.pc-conv .pc-conv-detail-toggle.button-link { margin: 6px 0 0; padding: 0; color: #171717; font-size: 12px; font-weight: 600; text-decoration: underline; }
+.pc-conv .pc-conv-steps { display: flex; flex-direction: column; gap: 22px; margin-top: 14px; padding-right: 64px; }
+.pc-conv .pc-conv-step { position: relative; display: block; width: var(--pc-step-w, 100%); min-width: 200px; max-width: 100%; }
+.pc-conv .pc-conv-bar { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px; box-sizing: border-box; width: auto; height: auto; min-height: 38px; padding: 8px 12px; border-radius: 3px; background: #f0f0f0; font-size: 13px; }
+.pc-conv .pc-conv-bar__fill { display: none; }
+.pc-conv .pc-conv-step__label { flex: none; color: #171717; }
+.pc-conv .pc-conv-step__count { font-weight: 700; }
+.pc-conv .pc-conv-step__rate { min-width: 0; color: #525252; font-size: 12px; font-weight: 600; }
+.pc-conv .pc-conv-step__next { position: absolute; top: 50%; right: -48px; width: 40px; height: calc(100% + 22px); box-sizing: border-box; border: 1px solid #a3a3a3; border-left: 0; }
+.pc-conv .pc-conv-step__next::before { content: attr(aria-label); position: absolute; top: 50%; left: calc(100% + 6px); transform: translateY(-50%); color: #525252; font-size: 12px; white-space: nowrap; }
+.pc-conv .pc-conv-toolbar .pc-conv-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.pc-conv .pc-conv-toolbar select { min-width: 140px; height: 32px; border-color: #dcdcdc; border-radius: 4px; }
+@media (max-width: 1000px) { .pc-conv .pc-conv-cards { grid-template-columns: minmax(0, 1fr); } .pc-conv .pc-conv-overall { grid-auto-columns: calc(100% / 4); } }
+.pc-conv .pc-conv-step__next { font-size: 0; }

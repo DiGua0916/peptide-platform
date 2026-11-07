@@ -162,26 +162,24 @@
 			return { count: layer.count, visitor_rate: layer.visitor_rate, step_rate: previous && previous.count ? Math.round( layer.count / previous.count * 10000 ) / 100 : null };
 		} );
 		var title = fill( T.groupRate, { '%s': row.dimension && typeof row.label === 'string' ? row.label : groupLabel( group, row.key ) } );
+		// 阶梯式漏斗（对照参考后台）：灰条逐层变短，条里“名称：人数  访客转化 x%”，右侧折线标出下一层占本层的比例。
+		var n = keys.length;
 		var steps = keys.map( function ( key, i ) {
 			var layer = funnel[ i ] || { count: 0, visitor_rate: null };
 			var next = funnel[ i + 1 ];
-			var width = isNum( layer.visitor_rate ) ? Math.max( 0, Math.min( 100, Number( layer.visitor_rate ) ) ) : 0;
-			var html = '<div class="pc-conv-step">' +
-				'<span class="pc-conv-step__label">' + esc( T[ detailed && key === 'paid' ? 'paidVisitors' : key ] ) + '</span>' +
-				'<span class="pc-conv-bar"><span class="pc-conv-bar__fill" style="width:' + esc( width ) + '%"></span></span>' +
-				'<span class="pc-conv-step__count">' + esc( ctx.number( layer.count ) ) + '</span>' +
-				'<span class="pc-conv-step__rate">' + esc( fill( T.ofVisitors, { '%s': pct( layer.visitor_rate ) } ) ) + '</span>' +
+			var width = Math.round( 100 - ( n > 1 ? i * 40 / ( n - 1 ) : 0 ) );
+			return '<div class="pc-conv-step" style="--pc-step-w:' + esc( width ) + '%">' +
+				'<span class="pc-conv-bar"><span class="pc-conv-bar__fill"></span>' +
+					'<span class="pc-conv-step__label">' + esc( T[ detailed && key === 'paid' ? 'paidVisitors' : key ] ) + '：<b class="pc-conv-step__count">' + esc( ctx.number( layer.count ) ) + '</b></span>' +
+					( i ? '<span class="pc-conv-step__rate">' + esc( fill( T.ofVisitors, { '%s': pct( layer.visitor_rate ) } ) ) + '</span>' : '' ) +
+				'</span>' +
+				( next ? '<span class="pc-conv-step__next" aria-label="' + esc( pct( next.step_rate ) ) + '"><span aria-hidden="true">↓</span> ' + esc( pct( next.step_rate ) ) + '</span>' : '' ) +
 			'</div>';
-			// 到下一步的转化率（下一层占上一层的 %）画在两步之间。
-			if ( next ) {
-				html += '<div class="pc-conv-between"><span aria-hidden="true">↓</span> ' + esc( pct( next.step_rate ) ) + '</div>';
-			}
-			return html;
 		} );
 		return '<section class="pc-conv-card">' +
-			'<h2 class="pc-conv-card__title">' + esc( title ) + ' <span class="pc-conv-card__rate">' + esc( pct( detailed ? byKey.paid.visitor_rate : row.conversion ) ) + '</span></h2>' +
-			'<p class="pc-conv-card__sales">' + esc( T.groupSales ) + ' <strong>' + esc( ctx.money( row.sales ) + ( code ? ' ' + code : '' ) ) + '</strong></p>' +
-			( detailed ? '<button type="button" class="button pc-conv-detail-toggle" data-conv-toggle="' + esc( token ) + '" aria-expanded="' + ( expanded[ token ] ? 'true' : 'false' ) + '" aria-controls="pc-conv-detail-' + esc( token ) + '">' + esc( expanded[ token ] ? T.hideDetails : T.viewDetails ) + '</button>' : '<p class="pc-conv-note">' + esc( T.detailUnavailable ) + '</p>' ) +
+			'<div class="pc-conv-card__head"><h2 class="pc-conv-card__title">' + esc( title ) + ( /[:：]\s*$/.test( title ) ? ' ' : '：' ) + '<span class="pc-conv-card__rate">' + esc( pct( detailed ? byKey.paid.visitor_rate : row.conversion ) ) + '</span></h2>' +
+			'<p class="pc-conv-card__sales">' + esc( T.groupSales ) + ' <strong>' + esc( ctx.money( row.sales ) + ( code ? ' ' + code : '' ) ) + '</strong></p></div>' +
+			( detailed ? '<button type="button" class="button-link pc-conv-detail-toggle" data-conv-toggle="' + esc( token ) + '" aria-expanded="' + ( expanded[ token ] ? 'true' : 'false' ) + '" aria-controls="pc-conv-detail-' + esc( token ) + '">' + esc( expanded[ token ] ? T.hideDetails : T.viewDetails ) + '</button>' : '<p class="pc-conv-note">' + esc( T.detailUnavailable ) + '</p>' ) +
 			'<div id="pc-conv-detail-' + esc( token ) + '" class="pc-conv-steps">' + steps.join( '' ) + '</div>' +
 		'</section>';
 	}
@@ -196,7 +194,7 @@
 			html += '<p class="pc-conv-note">' + esc( T.trackingOff ) + '</p>';
 		}
 		html += overall( data, ctx );
-		html += checkoutSteps( data.checkout_steps, ctx );
+		var checkoutHtml = checkoutSteps( data.checkout_steps, ctx );
 		if ( data.visitor_status && data.visitor_status !== 'all' ) {
 			html += '<p class="pc-conv-note pc-conv-source-scope">' + esc( T.classifiedScopeHelp ) + '</p>';
 			var classified = data.classification_coverage.current;
@@ -214,7 +212,8 @@
 		} else {
 			html += '<p class="pc-data-empty">' + esc( T.noGroups ) + '</p>';
 		}
-		return html;
+		// 已观察到的结账步骤放在分组卡片后面（参考后台这一页没有这块；保留数据，放到最后）。
+		return html + checkoutHtml;
 	}
 
 	function checkoutSteps( data, ctx ) {

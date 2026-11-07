@@ -455,3 +455,29 @@
 .pc-line__dot { fill: transparent; }
 .pc-line__dot:hover { fill: #fff; stroke: #171717; stroke-width: 2; }
 .pc-apps-legend i { width: 16px; height: 2px; }
+/* 转化率详情：外层不再是卡片；工具行 + 指标条是一张卡，分组漏斗各自成卡（对照参考后台）。 */
+.pc-data-body > .pc-conv { padding: 0; border: 0; background: none; }
+.pc-data-body > .pc-conv > .pc-conv-toolbar { margin: 0; padding: 14px 20px 0; border: 1px solid #ececec; border-bottom: 0; border-radius: 8px 8px 0 0; background: #fff; }
+.pc-data-body > .pc-conv .pc-conv-result > .pc-conv-overall { box-sizing: border-box; border: 16px solid #fff !important; border-top-width: 12px !important; outline: 1px solid #ececec; outline-offset: 0; border-radius: 0 0 8px 8px; }
+.pc-data-body > .pc-conv .pc-conv-result > h2,
+.pc-data-body > .pc-conv .pc-conv-result > .pc-conv-checkout,
+.pc-data-body > .pc-conv .pc-conv-result > div:not(.pc-conv-cards):not(.pc-conv-overall) { margin-top: 16px; }
+
+/* 邮件详情（对照参考后台）：一条六格指标 + 每日发送曲线 + 邮件表。 */
+.pc-data-body > .pc-emails-data { display: flex; flex-direction: column; gap: 16px; padding: 0; border: 0; background: none; }
+.pc-emails-overview { padding: 16px 20px; border: 1px solid #ececec; border-radius: 8px; background: #fff; }
+.pc-emails-strip { display: flex; border-radius: 6px; background: #fafafa; }
+.pc-emails-group { display: flex; flex: 1 1 auto; min-width: 0; }
+.pc-emails-group > h2 { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); margin: 0 !important; }
+.pc-emails-group .pc-emails-tiles { display: flex !important; flex: 1 1 auto; }
+.pc-emails-group .pc-emails-tile { flex: 1 1 0; }
+.pc-emails-chart { margin-top: 16px; }
+.pc-emails-legend { display: flex; justify-content: center; gap: 24px; margin-top: 8px; color: #525252; font-size: 12px; }
+.pc-emails-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.pc-emails-legend i { display: inline-block; width: 16px; height: 2px; background: #171717; }
+.pc-emails-legend i.is-prev { background: #b5b5b5; }
+.pc-emails-data > .pc-data-empty,
+.pc-emails-data > .pc-emails-table-wrap,
+.pc-emails-data > table,
+.pc-emails-data > div:not(.pc-emails-overview) { border: 1px solid #ececec; border-radius: 8px; background: #fff; }
+@media (max-width: 900px) { .pc-emails-strip { flex-wrap: wrap; } .pc-emails-group { flex-basis: 100%; } }

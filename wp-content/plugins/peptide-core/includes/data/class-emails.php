@@ -89,8 +89,45 @@ final class Emails {
 			),
 			'rows'     => $rows,
 			'log_url'  => Email_Center::url( 'log' ),
+			// 每天的发送数（店铺日期），给页面上的大曲线用；本期和对比期按天对齐。
+			'series'   => array(
+				'current'  => $logging ? self::daily( (int) $range['from'], (int) $range['to'], (string) ( $range['dates']['from'] ?? '' ), (string) ( $range['dates']['to'] ?? '' ) ) : array(),
+				'previous' => $logging ? self::daily( (int) $range['compare_from'], (int) $range['compare_to'], (string) ( $range['dates']['compare_from'] ?? '' ), (string) ( $range['dates']['compare_to'] ?? '' ) ) : array(),
+			),
 			'observations' => $observations,
 		);
+	}
+
+	/**
+	 * [from, to)（Unix 秒，from 是店铺某天 0 点）里每天的发送数；按距 from 的整天数分桶（夏令时切换当天可能差一小时，图上可以忽略）。
+	 *
+	 * @return array<int,array{day:string,sent:int}>
+	 */
+	private static function daily( int $from, int $to, string $first_day, string $last_day = '' ): array {
+		global $wpdb;
+		// 天数按店铺日期算（含首尾），不按秒数除以 86400：夏令时切换的那一段不会多出或少一天。
+		$days = max( 1, min( 400, (int) round( ( $to - $from ) / 86400 ) ) );
+		if ( '' !== $first_day && '' !== $last_day ) {
+			$a = strtotime( $first_day . ' 00:00:00 UTC' );
+			$b = strtotime( $last_day . ' 00:00:00 UTC' );
+			if ( false !== $a && false !== $b && $b >= $a ) { $days = min( 400, (int) ( ( $b - $a ) / 86400 ) + 1 ); }
+		}
+		$table = Log::table();
+		$rows  = $wpdb->get_results( $wpdb->prepare( "SELECT FLOOR((sent_ms - %d) / 86400000) AS d, COUNT(*) AS c FROM {$table} WHERE sent_ms >= %d AND sent_ms < %d GROUP BY d", $from * 1000, $from * 1000, $to * 1000 ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		$by = array();
+		foreach ( (array) $rows as $row ) {
+			$by[ (int) $row['d'] ] = (int) $row['c'];
+		}
+		try {
+			$start = new \DateTimeImmutable( ( '' !== $first_day ? $first_day : gmdate( 'Y-m-d', $from ) ) . ' 00:00:00', new \DateTimeZone( 'UTC' ) );
+		} catch ( \Exception $e ) {
+			return array();
+		}
+		$out = array();
+		for ( $i = 0; $i < $days; $i++ ) {
+			$out[] = array( 'day' => $start->modify( '+' . $i . ' day' )->format( 'Y-m-d' ), 'sent' => $by[ $i ] ?? 0 );
+		}
+		return $out;
 	}
 
 	/** 成功率：delivered / sent × 100，保留 2 位；发送数是 0 时没有（null）。 */
