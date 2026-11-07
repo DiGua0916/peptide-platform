@@ -125,7 +125,8 @@ final class Page_Cache {
 	}
 
 	public static function tracking_name( string $name ): bool {
-		return (bool) preg_match( '/\Autm_[a-z_]{1,32}\z/', $name ) || in_array( $name, self::CLICK_IDS, true );
+		// ref = 推广人代号（Referrals 在 init 读取并写 cookie），和广告参数一样不影响页面内容。
+		return (bool) preg_match( '/\Autm_[a-z_]{1,32}\z/', $name ) || in_array( $name, self::CLICK_IDS, true ) || 'ref' === $name; // = Referrals::PARAM，纯函数测试不加载 Referrals。
 	}
 
 	/**
@@ -363,7 +364,7 @@ final class Page_Cache {
 	private static function issued_this_request(): array {
 		// Visitor ID plus the click-ID cookies Pixels::remember_click_ids() sets at init from the
 		// landing link. Set-Cookie is never stored; on a cached view init sets them per visitor again.
-		return array_merge( class_exists( Tracking\Tracker::class ) ? array( Tracking\Tracker::COOKIE ) : array(), array( '_fbc', 'pc_ttclid' ) );
+		return array_merge( class_exists( Tracking\Tracker::class ) ? array( Tracking\Tracker::COOKIE ) : array(), array( '_fbc', 'pc_ttclid', 'pc_ref' ) );
 	}
 
 	private static function read( string $key ): ?array {

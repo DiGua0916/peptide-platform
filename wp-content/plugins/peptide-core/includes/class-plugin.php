@@ -75,6 +75,7 @@ final class Plugin {
 		Recent\History::register_hooks();
 		Api\Recently_Viewed_Controller::register_hooks();
 		Pixels::register_hooks();
+		Referrals::register_hooks();
 		Seo::register_hooks();
 		Domains::register_hooks();
 		Blog::register_hooks();
@@ -134,6 +135,7 @@ final class Plugin {
 			Admin\Tracking_Product_Page::register_hooks();
 			Admin\Overview_Page::register_hooks();
 			Admin\Admin_Menus::register_hooks();
+			Admin\Referrals_Page::register_hooks();
 			Admin\Store_Settings::register_hooks();
 			Admin\YouTube_Settings::register_hooks();
 			Admin\Storefront_Language_Page::register_hooks();
