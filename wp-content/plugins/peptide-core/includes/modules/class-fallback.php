@@ -675,13 +675,77 @@ final class Fallback {
 
 	private static function render_video( array $s ): string {
 		$ratio = str_replace( ':', ' / ', $s['ratio'] );
+		$stage = 'file' === $s['source'] ? self::video_stage( $s ) : '';
 		return sprintf(
-			'<div class="%1$s"><div class="vc-video-block vc-video-block--%2$s"%3$s>%4$s%5$s</div></div>',
+			'<div class="%1$s"><div class="vc-video-block vc-video-block--%2$s%6$s"%3$s>%4$s%5$s</div></div>',
 			esc_attr( self::inner_class( $s ) ),
 			esc_attr( $s['layout'] ),
 			self::style( array( '--vc-ratio' => $ratio ) ),
 			self::heading( $s ),
-			self::video_player( $s )
+			'' !== $stage ? $stage : self::video_player( $s ),
+			'' !== $stage ? ' vc-video-block--stage' : ''
+		);
+	}
+
+	/**
+	 * 上传视频的展示舞台（视频模块专用）：封面 + 播放胶囊（含时长）+ 自定义控件；标题仍在卡片外。
+	 * 视频文件不随页面下载（preload=none、无 src），进入视口且页面加载完后由 modules.js 接上；
+	 * 开启自动播放时静音播放，离开视口或切到后台自动暂停。没有 JS 时退回原生 controls。
+	 */
+	private static function video_stage( array $s ): string {
+		$id  = (int) ( $s['video']['attachmentId'] ?? 0 );
+		$url = $id ? wp_get_attachment_url( $id ) : '';
+		if ( ! $url ) {
+			return self::placeholder( __( 'Choose a video', 'peptide-core' ) );
+		}
+		$poster = Assets::resolve( $s['poster'] );
+		$meta   = wp_get_attachment_metadata( $id );
+		$length = is_array( $meta ) && ! empty( $meta['length'] ) ? (int) $meta['length'] : 0;
+		$time   = $length ? sprintf( '%d:%02d', intdiv( $length, 60 ), $length % 60 ) : '';
+		$title  = trim( (string) ( $s['title'] ?? '' ) );
+		$label  = '' !== $title ? $title : __( 'Video', 'peptide-core' );
+
+		$img = $poster ? sprintf(
+			'<img class="vc-stage__poster" src="%1$s"%2$s alt="" width="%3$d" height="%4$d" decoding="async" fetchpriority="low">',
+			esc_url( $poster['src'] ),
+			'' !== $poster['srcset'] ? ' srcset="' . esc_attr( $poster['srcset'] ) . '" sizes="(max-width: 767px) 100vw, min(1200px, 90vw)"' : '',
+			(int) $poster['width'],
+			(int) $poster['height']
+		) : '';
+		$icon_play  = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.2-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>';
+		$icon_muted = '<svg class="vc-stage__ico-off" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 9v6h4l5 4V5L8 9H4zm12.6 3 2.7-2.7-1.4-1.4-2.7 2.7-2.7-2.7-1.4 1.4 2.7 2.7-2.7 2.7 1.4 1.4 2.7-2.7 2.7 2.7 1.4-1.4z"/></svg>';
+		$icon_sound = '<svg class="vc-stage__ico-on" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 9v6h4l5 4V5L8 9H4zm11.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM13 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>';
+		$icon_full  = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 9V4h5v2H6v3H4zm10-5h6v5h-2V6h-4V4zM6 15v3h3v2H4v-5h2zm12 3v-3h2v5h-5v-2h3z"/></svg>';
+
+		return sprintf(
+			'<div class="vc-video vc-stage" data-vc-stage data-vc-stage-autoplay="%1$s" data-vc-stage-loop="%2$s" data-state="idle">'
+			. '<video data-src="%3$s" preload="none" playsinline muted controls aria-label="%4$s"></video>'
+			. '%5$s<div class="vc-stage__shade" aria-hidden="true"></div>%6$s'
+			. '<button type="button" class="vc-stage__play" aria-label="%7$s">%8$s<span class="vc-stage__label">%16$s</span>%17$s</button>'
+			. '<div class="vc-stage__bar" aria-hidden="true"><span></span></div>'
+			. '<div class="vc-stage__tools">'
+			. '<button type="button" class="vc-stage__sound" aria-pressed="false" aria-label="%9$s" data-on-label="%10$s" data-off-label="%9$s">%11$s%12$s<span>%13$s</span></button>'
+			. '<button type="button" class="vc-stage__full" aria-label="%14$s">%15$s</button>'
+			. '</div>'
+			. '<noscript><a class="vc-video__fallback" href="%3$s">%16$s</a></noscript>'
+			. '</div>',
+			$s['autoplay'] ? '1' : '0',
+			$s['loop'] ? '1' : '0',
+			esc_url( $url ),
+			esc_attr( $label ),
+			$img,
+			'',
+			esc_attr__( 'Play video', 'peptide-core' ),
+			$icon_play,
+			esc_attr__( 'Turn sound on', 'peptide-core' ),
+			esc_attr__( 'Mute', 'peptide-core' ),
+			$icon_muted,
+			$icon_sound,
+			esc_html__( 'Tap for sound', 'peptide-core' ),
+			esc_attr__( 'Full screen', 'peptide-core' ),
+			$icon_full,
+			esc_html__( 'Watch video', 'peptide-core' ),
+			'' !== $time ? '<span class="vc-stage__time">' . esc_html( $time ) . '</span>' : ''
 		);
 	}
 

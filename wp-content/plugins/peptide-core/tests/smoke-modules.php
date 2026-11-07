@@ -231,6 +231,22 @@ $yt = Renderer::render(
 	'public'
 );
 $ok( 'youtube uses the privacy-friendly domain and mutes autoplay', str_contains( $yt, 'youtube-nocookie.com/embed/dQw4w9WgXcQ' ) && str_contains( $yt, 'mute=1' ) );
+// 上传视频：舞台不随页面下载视频（只有 data-src、preload=none），保留无 JS 的原生控件，标题仍在卡片外。
+$video_ids = get_posts( array( 'post_type' => 'attachment', 'post_mime_type' => 'video', 'post_status' => 'inherit', 'numberposts' => 1, 'fields' => 'ids' ) );
+if ( $video_ids ) {
+	$stage = Renderer::render(
+		'video',
+		array(
+			'moduleId' => 'video-stage-test',
+			'settings' => array( 'source' => 'file', 'video' => array( 'attachmentId' => (int) $video_ids[0] ), 'title' => 'Stage <b>title</b>', 'autoplay' => true, 'layout' => 'below' ),
+		),
+		'public'
+	);
+	$ok( 'file video renders the stage without downloading the file', str_contains( $stage, 'data-vc-stage' ) && str_contains( $stage, 'data-src="' ) && ! preg_match( '~<video[^>]*\ssrc=~', $stage ) && str_contains( $stage, 'preload="none"' ) );
+	$ok( 'stage keeps native controls for no-JS, muted autoplay flag and an escaped outside heading', str_contains( $stage, ' muted controls ' ) && str_contains( $stage, 'data-vc-stage-autoplay="1"' ) && str_contains( $stage, 'vc-m__head' ) && ! str_contains( $stage, '<b>title</b>' ) );
+} else {
+	echo "SKIP stage test: no video in the media library\n";
+}
 Renderer::$document_id = 0;
 $custom = Renderer::render(
 	'custom_html',

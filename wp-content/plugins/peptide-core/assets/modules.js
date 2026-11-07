@@ -851,6 +851,128 @@
 		update();
 	}
 
+	// 视频模块（上传视频）：页面加载完、视频至少一半进入视口才接上文件并静音自动播放；
+	// 离开视口或切到后台暂停，回来时继续。省流量模式和“减少动态效果”不自动播放，只显示封面。
+	function videoStage( root ) {
+		var video = root.querySelector( 'video' ), play = root.querySelector( '.vc-stage__play' );
+		var sound = root.querySelector( '.vc-stage__sound' ), full = root.querySelector( '.vc-stage__full' );
+		var bar = root.querySelector( '.vc-stage__bar span' );
+		if ( ! video || ! play || root.dataset.vcStageReady === '1' ) { return; }
+		root.dataset.vcStageReady = '1';
+		video.controls = false;
+		video.removeAttribute( 'controls' );
+		if ( root.dataset.vcStageLoop === '1' ) { video.loop = true; }
+		var conn = navigator.connection, saveData = !! ( conn && conn.saveData );
+		var auto = root.dataset.vcStageAutoplay === '1';
+		var visible = ! ( 'IntersectionObserver' in window ), loaded = document.readyState === 'complete';
+		var started = false, held = false, observed = false;
+
+		function state( value ) { root.dataset.state = value; }
+		// 观察器还没回报时（部分内嵌浏览器、后台标签）按位置自己算一次：至少一半在视口内。
+		function measure() {
+			var r = root.getBoundingClientRect(), vh = window.innerHeight || document.documentElement.clientHeight;
+			return r.height > 0 && ( Math.min( r.bottom, vh ) - Math.max( r.top, 0 ) ) / r.height >= 0.5;
+		}
+		function attach() {
+			if ( ! video.getAttribute( 'src' ) && video.dataset.src ) { video.preload = 'auto'; video.src = video.dataset.src; }
+		}
+		function start() {
+			attach();
+			var playing = video.play();
+			if ( playing && playing.catch ) { playing.catch( function () { if ( video.paused ) { state( started ? 'paused' : 'idle' ); } } ); }
+		}
+		function syncSound() {
+			if ( ! sound ) { return; }
+			var on = ! video.muted;
+			sound.setAttribute( 'aria-pressed', on ? 'true' : 'false' );
+			sound.setAttribute( 'aria-label', on ? sound.dataset.onLabel : sound.dataset.offLabel );
+		}
+		function sync() {
+			var onScreen = visible && ! document.hidden;
+			if ( ! onScreen ) {
+				if ( ! video.paused ) { held = true; video.pause(); }
+				return;
+			}
+			if ( held ) { held = false; start(); return; }
+			if ( ! started && auto && loaded && ! reduce && ! saveData ) { video.muted = true; syncSound(); start(); }
+		}
+
+		// “Tap for sound”文字只在第一次静音播放时出现 4 秒，之后收成图标，不挡字幕。
+		var hinted = false;
+		video.addEventListener( 'playing', function () {
+			started = true;
+			root.classList.remove( 'is-buffering' );
+			state( 'playing' );
+			if ( ! hinted && video.muted ) {
+				hinted = true;
+				root.classList.add( 'is-hint' );
+				setTimeout( function () { root.classList.remove( 'is-hint' ); }, 4000 );
+			}
+		} );
+		video.addEventListener( 'waiting', function () { root.classList.add( 'is-buffering' ); } );
+		video.addEventListener( 'pause', function () { if ( ! video.ended ) { state( started ? 'paused' : 'idle' ); } } );
+		video.addEventListener( 'ended', function () { held = false; state( 'ended' ); } );
+		video.addEventListener( 'volumechange', syncSound );
+		video.addEventListener( 'timeupdate', function () {
+			if ( bar && video.duration ) { bar.style.transform = 'scaleX(' + Math.min( 1, video.currentTime / video.duration ) + ')'; }
+		} );
+		// 主动点播放＝想听声音：这次是用户手势，可以带声音播放。
+		play.addEventListener( 'click', function () {
+			held = false;
+			video.muted = false;
+			syncSound();
+			if ( video.ended ) { video.currentTime = 0; }
+			start();
+		} );
+		video.addEventListener( 'click', function () {
+			if ( ! video.paused ) { held = false; video.pause(); }
+		} );
+		if ( sound ) {
+			sound.addEventListener( 'click', function () {
+				video.muted = ! video.muted;
+				syncSound();
+				if ( video.paused ) { held = false; start(); }
+			} );
+		}
+		if ( full ) {
+			full.addEventListener( 'click', function () {
+				attach();
+				video.muted = false;
+				if ( root.requestFullscreen ) { root.requestFullscreen().catch( function () {} ); }
+				else if ( video.webkitEnterFullscreen ) { video.webkitEnterFullscreen(); }
+				if ( video.paused ) { start(); }
+			} );
+		}
+		document.addEventListener( 'visibilitychange', sync );
+		if ( ! visible ) {
+			new IntersectionObserver( function ( entries ) {
+				observed = true;
+				visible = entries[ entries.length - 1 ].intersectionRatio >= 0.5;
+				sync();
+			}, { threshold: [ 0, 0.5, 1 ] } ).observe( root );
+		}
+		// 兜底：滚动停下 200ms 后按位置再判断一次（内嵌浏览器里观察器偶尔不回报）。
+		var settle = 0;
+		function recheck() {
+			clearTimeout( settle );
+			settle = setTimeout( function () {
+				var now = measure();
+				if ( now !== visible ) { visible = now; sync(); }
+			}, 200 );
+		}
+		window.addEventListener( 'scroll', recheck, { passive: true } );
+		window.addEventListener( 'resize', recheck );
+		function ready() {
+			loaded = true;
+			if ( ! observed && 'IntersectionObserver' in window ) { visible = measure(); }
+			sync();
+		}
+		syncSound();
+		// 等首屏图片、脚本都下载完再开始拉视频，不和首屏抢带宽。
+		if ( loaded ) { setTimeout( ready, 400 ); }
+		else { window.addEventListener( 'load', function () { setTimeout( ready, 400 ); }, { once: true } ); }
+	}
+
 	function manualVideoText( root ) {
 		if ( root.dataset.vcVideoTextReady === '1' ) { return; }
 		var video = root.querySelector( 'video' ), button = root.querySelector( '.vc-video-text__toggle' );
@@ -1237,6 +1359,7 @@
 		each( '.vc-m .vc-btn', buttonEffect );
 		each( '.vc-m [data-vc-video-src]', embeddedVideo );
 		each( '.vc-m video[data-vc-video-autoplay]', fileVideo );
+		each( '.vc-m [data-vc-stage]', videoStage );
 		each( '.vc-m [data-vc-video-text-manual]', manualVideoText );
 		each( '.vc-m .vc-compare', compare );
 		each( '.vc-m .vc-hotspots', hotspots );
