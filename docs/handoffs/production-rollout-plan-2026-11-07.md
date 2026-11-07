@@ -231,3 +231,10 @@
 - 验证：首页 200、s0001 200、PHP 错误日志无新增；手机视口下首屏前视频 0 字节、封面 768 宽、标题和时长正确、卡片左右 20px；页面加载后静音自动播放 720p 文件；Black Friday 条、购物车、客服按钮正常。
 - 备份：`34.231.148.231:/home/ubuntu/vialcove-deploy-backups/video-stage-20261107T175839Z/`（685 已发布内容、草稿、nginx 配置）。
 - 回滚：两个 `current` 指回 `aea0a64-web01` / `aea0a64-s0001` 后 reload PHP；用备份恢复 685 的 `_pc_published_content` / `post_content` 后清缓存；nginx 用备份配置覆盖后 `nginx -t` + reload。
+
+### 首页视频手机端修正（用户批准 "Deploy to production"，2026-11-07）
+
+- 手机预览发现：站点设计给所有按钮统一圆角（`.pc-design-styled :is(button…)`，8px），盖掉了播放胶囊 / 圆形按钮的圆角；视频开头是黑场，停在开头时显示黑画面。
+- 代码 `4ff94fc`（2 个文件：peptide-core `assets/modules.css`、`assets/modules.js`）：舞台按钮用更高优先级保持 999px；在 0.5 秒内暂停时回到封面。
+- 部署：两边当前 `70a65ac-*`（另一会话的数据页 CSS），两个文件线上哈希与 `e51cb9a` 一致；从 live current 复制出 `4ff94fc-web01` / `4ff94fc-s0001`，恰好 2 处不同，切换并 reload PHP，清页面缓存。首页 / s0001 200，PHP 错误日志无新增；手机视口下自动播放、按钮圆角 999px、停在开头回到封面。
+- 回滚：两个 `current` 指回 `70a65ac-web01` / `70a65ac-s0001` 后 reload PHP。
