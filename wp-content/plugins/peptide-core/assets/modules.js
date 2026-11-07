@@ -910,7 +910,8 @@
 			}
 		} );
 		video.addEventListener( 'waiting', function () { root.classList.add( 'is-buffering' ); } );
-		video.addEventListener( 'pause', function () { if ( ! video.ended ) { state( started ? 'paused' : 'idle' ); } } );
+		// 停在开头（片头是黑场）时回到封面，而不是显示黑画面。
+		video.addEventListener( 'pause', function () { if ( ! video.ended ) { state( started && video.currentTime > 0.5 ? 'paused' : 'idle' ); } } );
 		video.addEventListener( 'ended', function () { held = false; state( 'ended' ); } );
 		video.addEventListener( 'volumechange', syncSound );
 		video.addEventListener( 'timeupdate', function () {
