@@ -190,3 +190,13 @@
 - 用户本人用手机下一单小额测试单（第 1 阶段最后一项验证）。
 - 用户配置像素后，核对 Facebook 测试事件。
 - 后续：WebP；PayPal 通道恢复后补做真实下单测试；广告像素由用户配置后核对 Facebook 测试事件。
+
+### 后台「数据」10 个页面版式对照参考后台（用户批准 "Deploy to production"，2026-11-07 16:01 UTC）
+
+- 内容：提交 `f2384a9`、`c466262`、`1786bba`、`6322d02`（实时数据、运营数据、其余 8 个数据页的版式；商品小图 / 国旗；口径说明默认收起），外加从 main cherry-pick 的 `ee0774f` → `0f77b63`（Codex 的实时面板时区标签，正式站已有，带上避免回退）。共 17 个运行文件，全部在 peptide-core：13 个前端资源、`class-data-pages.php`、`class-rankings.php`、`class-realtime.php`、`customer-data-observations-zh_CN.php`。接口只多了字段：实时商品条目加 `image`、`sku`，排行行加 `image`。
+- 部署前核对：s0001 当前 `02e5e6d-s0001`、web01 当前 `02e5e6d-web01`，17 个文件的线上哈希都和基线一致（其中 `data-realtime-dimensions.js` 的基线是 main 的 `ee0774f`）。
+- 新版本目录：`/srv/vialcove/store-admin/releases/6322d02-s0001`、`/srv/vialcove/releases/6322d02-web01`，都是从当前版本完整复制后覆盖 17 个文件；哈希全部一致、PHP 语法检查通过、和旧目录相比恰好 17 处不同；两边冒烟启动都通过。16:01:10 两边同时切换软链接并平滑 reload PHP。
+- 验证：前台首页 / 购物车 200；s0001 登录页 200；切换后 3 分钟内 PHP 错误日志 0 条；正式后台实时数据、运营数据（近 7 天）用真实数据显示正常，排行表商品小图正常加载。
+- 测试：本机 tools/node 跑 data-*.cjs 共 25 个套件，24 个全部通过；`data-native-search.cjs` 失败 1 项，在改动前的 `3c3c5e3` 上同样失败（原有问题，不是这次引入）。
+- 回滚：把两个 `current` 软链接指回 `02e5e6d-s0001` / `02e5e6d-web01` 再 reload PHP。
+- 附注：s0001 所在主机 reload 时 systemd 提示 php8.3-fpm 的 unit 文件在磁盘上被改过（需要 daemon-reload）；不是这次部署改的，未处理。
