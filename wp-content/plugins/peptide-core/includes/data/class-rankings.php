@@ -458,6 +458,7 @@ final class Rankings {
 				'current'  => $row['current'],
 				'previous' => $row['previous'],
 				'change'   => $row['change'],
+				'image'    => $named['image'] ?? '',
 			);
 		}
 		return array_values( $rows );
@@ -486,6 +487,7 @@ final class Rankings {
 			return array(
 				'label'    => (string) $product->get_name(),
 				'edit_url' => (string) get_edit_post_link( $id, 'raw' ),
+				'image'    => Realtime::product_media( $product )['image'],
 			);
 		}
 

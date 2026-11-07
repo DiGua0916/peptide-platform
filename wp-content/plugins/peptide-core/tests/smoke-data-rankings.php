@@ -245,7 +245,7 @@ foreach ( $tab as $name => $table ) {
 	$totals = $totals && count( $table['rows'] ) === $table['total_rows'] && count( $table['rows'] ) <= Rankings::MAX_ROWS;
 	foreach ( $table['rows'] as $one ) {
 		$strings = $strings && is_string( $one['key'] ) && is_string( $one['label'] ) && is_string( $one['edit_url'] );
-		$fields  = $fields && array( 'key', 'label', 'edit_url', 'current', 'previous', 'change' ) === array_keys( $one );
+		$fields  = $fields && array( 'key', 'label', 'edit_url', 'current', 'previous', 'change', 'image' ) === array_keys( $one ) && is_string( $one['image'] );
 	}
 }
 $ok( 'every row key, label and edit_url is a string, and every row has the six fields in order', $strings && $fields );

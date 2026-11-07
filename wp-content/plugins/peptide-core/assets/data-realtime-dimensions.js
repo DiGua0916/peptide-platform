@@ -11,6 +11,19 @@
 		function hasShare( key ) { return key === 'popular_countries' || key === 'collections'; }
 		function labelKey( key ) { return [ 'viewed', 'carted', 'sold' ].indexOf( key ) >= 0 ? 'productLabel' : ( [ 'map', 'active_countries', 'popular_countries' ].indexOf( key ) >= 0 ? 'countryLabel' : ( key === 'sources' ? 'sourceLabel' : ( key === 'collections' ? 'collectionLabel' : 'pageLabel' ) ) ); }
 		function helpKey( key ) { return key === 'sources' ? 'sourceHelp' : ( key === 'collections' ? 'collectionHelp' : ( [ 'map', 'active_countries', 'popular_countries' ].indexOf( key ) >= 0 ? 'geoHelp' : 'coverageNA' ) ); }
+		// 国家行：名称前的国旗（由两位国家代码拼成的 emoji；代码不合法时不显示）。
+		function flag( code ) {
+			if ( ! /^[A-Z]{2}$/.test( String( code || '' ) ) ) { return ''; }
+			var a = 0x1F1E6 - 65;
+			return '<span class="pc-flag" aria-hidden="true">' + String.fromCodePoint( a + code.charCodeAt( 0 ), a + code.charCodeAt( 1 ) ) + '</span>';
+		}
+		// 商品行：小图 + 名称 + 货号（没有货号时显示商品 ID），和参考后台的商品列表一致。图片地址只接受 http(s)。
+		function productCell( row, label ) {
+			var image = /^https?:\/\//i.test( String( row.image || '' ) ) ? String( row.image ) : '';
+			var code = row.sku ? 'SKU: ' + row.sku : ( row.id ? 'ID: ' + row.id : '' );
+			return '<span class="pc-prod">' + ( image ? '<img class="pc-prod__img" src="' + esc( image ) + '" alt="" loading="lazy" width="36" height="36">' : '<span class="pc-prod__img is-empty" aria-hidden="true"></span>' ) +
+				'<span class="pc-prod__text"><span class="pc-prod__name">' + esc( label ) + '</span>' + ( code ? '<span class="pc-prod__code">' + esc( code ) + '</span>' : '' ) + '</span></span>';
+		}
 		function placeholder( key, message ) { return '<tr><td colspan="' + ( hasShare( key ) ? 3 : 2 ) + '">' + esc( message ) + '</td></tr>'; }
 		function attached() { return ! disposed && document.documentElement.contains( host ); }
 		function current( mine, signature ) { return attached() && mine === generation && ! mainBusy && ! rangeBusy && context && context.signature === signature; }
@@ -86,7 +99,7 @@
 				el.status.textContent = ( stale ? text( 'stale' ) + ' ' : '' ) + ( p.reason ? text( p.reason ) : text( p.state ) );
 				el.total.textContent = p.total_rows === null ? text( 'unavailable' ) : ( key === 'map' ? text( 'allCountries' ) + ': ' + number( p.total_rows ) : fill( text( 'top' ), rows.length, p.total_rows ) );
 				el.coverage.textContent = coverage === null ? text( 'coverageNA' ) : ( coverage.base_count === null ? text( 'coverage' ) + ': ' + text( 'unavailable' ) : text( 'coverage' ) + ' — ' + text( 'base' ) + ' (' + text( coverage.base_unit ) + '): ' + number( coverage.base_count ) + ( coverage.base_visitors === undefined ? '' : '; ' + text( 'visitors' ) + ' (UV): ' + number( coverage.base_visitors ) ) + '; ' + [ 'known', 'unknown', 'unobserved', 'unavailable' ].map( function ( statusKey ) { return text( statusKey ) + ': ' + number( coverage[ statusKey ] ); } ).join( '; ' ) );
-				el.body.innerHTML = rows.length ? rows.map( function ( row ) { var label = row.name || row.label || row.path || ( row.kind === 'valued' ? row.value : text( row.kind ) ); if ( row.code && ( ! mapData || ! mapData.paths || ! mapData.paths[ row.code ] ) ) { label += ' (' + text( 'noOutline' ) + ')'; } return '<tr><th scope="row">' + esc( label ) + '</th><td>' + esc( number( row.count ) ) + '</td>' + ( hasShare( key ) ? '<td>' + ( row.share === null || row.share === undefined ? '—' : esc( String( Math.round( row.share * 100 ) / 100 ) ) + '%' ) + '</td>' : '' ) + '</tr>'; } ).join( '' ) : placeholder( key, text( p.state === 'empty' ? 'empty' : ( p.reason || p.state ) ) );
+				el.body.innerHTML = rows.length ? rows.map( function ( row ) { var label = row.name || row.label || row.path || ( row.kind === 'valued' ? row.value : text( row.kind ) ); if ( row.code && ( ! mapData || ! mapData.paths || ! mapData.paths[ row.code ] ) ) { label += ' (' + text( 'noOutline' ) + ')'; } return '<tr><th scope="row">' + ( [ 'viewed', 'carted', 'sold' ].indexOf( key ) >= 0 ? productCell( row, label ) : ( flag( row.code ) + esc( label ) ) ) + '</th><td>' + esc( number( row.count ) ) + '</td>' + ( hasShare( key ) ? '<td>' + ( row.share === null || row.share === undefined ? '—' : esc( String( Math.round( row.share * 100 ) / 100 ) ) + '%' ) + '</td>' : '' ) + '</tr>'; } ).join( '' ) : placeholder( key, text( p.state === 'empty' ? 'empty' : ( p.reason || p.state ) ) );
 				el.root.setAttribute( 'aria-busy', 'false' ); el.root.setAttribute( 'data-state', rows.length ? p.state : ( p.state === 'unavailable' ? 'unavailable' : 'empty' ) );
 			} ); paintMap( data.panels.map );
 		}

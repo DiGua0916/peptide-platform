@@ -666,6 +666,8 @@ final class Realtime {
 				'name'     => sprintf( '#%d', $id ),
 				'count'    => $count,
 				'edit_url' => '',
+				'image'    => '',
+				'sku'      => '',
 			);
 		}
 		return array(
@@ -673,6 +675,24 @@ final class Realtime {
 			'name'     => $product->get_name(),
 			'count'    => $count,
 			'edit_url' => (string) get_edit_post_link( $id, 'raw' ),
+		) + self::product_media( $product );
+	}
+
+	/**
+	 * 后台表格里商品名前的小图和货号（只给显示用；没有图片 / 货号时是空字符串）。
+	 *
+	 * @return array{image:string,sku:string}
+	 */
+	public static function product_media( \WC_Product $product ): array {
+		$image_id = (int) $product->get_image_id();
+		if ( ! $image_id && $product->get_parent_id() ) {
+			$parent   = wc_get_product( $product->get_parent_id() );
+			$image_id = $parent ? (int) $parent->get_image_id() : 0;
+		}
+		$image = $image_id ? wp_get_attachment_image_url( $image_id, 'thumbnail' ) : '';
+		return array(
+			'image' => is_string( $image ) ? $image : '',
+			'sku'   => (string) $product->get_sku(),
 		);
 	}
 }

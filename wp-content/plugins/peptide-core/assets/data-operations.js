@@ -48,6 +48,10 @@
 	// 每张表默认显示的行数；更多的行（最多 50）点“查看更多”才显示。
 	var RANK_SHOW = 10;
 
+	// 指标条里能切换大图的指标 → 趋势接口里的同名序列（其余指标没有分时序列，只显示数字）。
+	var KPI_TREND = { sales: 'sales', visitors: 'visitors', orders: 'orders', aov: 'aov' };
+	var selectedKpi = 'sales';
+
 	// 请求计数：切换时间段后，旧请求晚到的结果不再画。
 	var requests = 0;
 	var disposePreviousRankings = null;
@@ -115,18 +119,19 @@
 	function kpis( data, ctx ) {
 		var esc = ctx.esc;
 		var code = ctx.currency && ctx.currency.code ? ctx.currency.code : '';
+		// 指标条：每格 = 名称 / 本期 / 对比期（灰）/ 变化（箭头）。有分时序列的格子可以点，点了切换下面的大图。
 		var cards = KPIS.map( function ( key ) {
 			var label = T[ key ] + ( MONEY[ key ] && code ? ' (' + code + ')' : '' );
-			return '<div class="pc-ops-kpi">' +
+			var trend = KPI_TREND[ key ];
+			return '<div class="pc-ops-kpi"' + ( trend ? ' data-kpi="' + esc( key ) + '" role="button" tabindex="0" aria-pressed="' + ( key === selectedKpi ? 'true' : 'false' ) + '"' : '' ) + '>' +
 				'<div class="pc-ops-kpi__label">' + esc( label ) + '</div>' +
 				'<div class="pc-ops-kpi__value">' + esc( value( key, data.current[ key ], ctx ) ) + '</div>' +
-				'<div class="pc-ops-kpi__foot">' +
-					'<span class="pc-ops-kpi__prev">' + esc( ctx.strings.vs + ' ' + value( key, data.previous[ key ], ctx ) ) + '</span> ' +
-					changeHtml( data.change[ key ], ctx, 'pc-ops-kpi__change' ) +
-				'</div>' +
+				'<div class="pc-ops-kpi__prev"><span class="screen-reader-text">' + esc( ctx.strings.vs + ' ' ) + '</span>' + esc( value( key, data.previous[ key ], ctx ) ) + '</div>' +
+				'<div class="pc-ops-kpi__foot">' + changeHtml( data.change[ key ], ctx, 'pc-ops-kpi__change' ) + '</div>' +
 			'</div>';
 		} );
-		return '<div class="pc-ops-kpis">' + cards.join( '' ) + '</div>';
+		return '<section class="pc-ops-overview"><div class="pc-ops-kpis">' + cards.join( '' ) + '</div>' +
+			'<div class="pc-ops-main-chart" aria-live="polite"><p class="pc-data-muted">' + esc( ctx.strings.loading ) + '</p></div></section>';
 	}
 
 	// 层数量加上“（占上一层 %）”。
@@ -141,7 +146,7 @@
 		return text;
 	}
 
-	function funnel( title, block, ctx, id ) {
+	function funnel( title, block, ctx, id, extraHelp ) {
 		var esc = ctx.esc;
 		var detailed = block.unit === 'visitors' && block.current && block.current.length === 8;
 		var keys = detailed && expanded[ id ] ? DETAIL_LAYERS : LAYERS;
@@ -160,14 +165,17 @@
 		var last = cur[ cur.length - 1 ] || {};
 		var prevLast = prev[ prev.length - 1 ] || {};
 
+		// 阶梯式漏斗：每层一条灰色横条，逐层变短；条里写“名称：人数   访客转化 x%”，右侧折线标出占上一层的比例。
+		var n = keys.length;
 		var bars = keys.map( function ( key, i ) {
 			var layer = cur[ i ] || { count: 0, visitor_rate: null };
-			var width = isNum( layer.visitor_rate ) ? Math.max( 0, Math.min( 100, Number( layer.visitor_rate ) ) ) : 0;
-			return '<div class="pc-ops-step">' +
-				'<span class="pc-ops-step__label">' + esc( T[ detailed && key === 'paid' ? 'paidVisitors' : key ] ) + '</span>' +
-				'<span class="pc-ops-bar"><span class="pc-ops-bar__fill" style="width:' + esc( width ) + '%"></span></span>' +
-				'<span class="pc-ops-step__count">' + esc( ctx.number( layer.count ) ) + '</span>' +
-				'<span class="pc-ops-step__rate">' + esc( fill( T.ofVisitors, { '%s': pct( layer.visitor_rate ) } ) ) + '</span>' +
+			var width = Math.round( 100 - ( n > 1 ? i * 40 / ( n - 1 ) : 0 ) );
+			return '<div class="pc-ops-step" style="--pc-step-w:' + esc( width ) + '%">' +
+				'<span class="pc-ops-bar"><span class="pc-ops-bar__fill"></span>' +
+					'<span class="pc-ops-step__label">' + esc( T[ detailed && key === 'paid' ? 'paidVisitors' : key ] ) + '：<b class="pc-ops-step__count">' + esc( ctx.number( layer.count ) ) + '</b></span>' +
+					( i ? '<span class="pc-ops-step__rate">' + esc( fill( T.ofVisitors, { '%s': pct( layer.visitor_rate ) } ) ) + '</span>' : '' ) +
+				'</span>' +
+				( i < n - 1 ? '<span class="pc-ops-step__next" aria-label="' + esc( pct( ( cur[ i + 1 ] || {} ).step_rate ) ) + '">' + esc( pct( ( cur[ i + 1 ] || {} ).step_rate ) ) + '</span>' : '' ) +
 			'</div>';
 		} );
 
@@ -180,14 +188,16 @@
 			'</tr>';
 		} );
 
+		var help = ( detailed ? T.detailHelp : T.detailUnavailable ) + ( extraHelp ? ' ' + extraHelp : '' );
+		var rateChange = isNum( last.visitor_rate ) && isNum( prevLast.visitor_rate ) ? Math.round( ( Number( last.visitor_rate ) - Number( prevLast.visitor_rate ) ) * 100 ) / 100 : null;
 		return '<section class="pc-ops-funnel">' +
-			'<h2 class="pc-ops-funnel__title">' + esc( title ) +
-				' <span class="pc-ops-funnel__rate">' + esc( pct( last.visitor_rate ) ) + '</span>' +
-				' <span class="pc-ops-muted">' + esc( ctx.strings.vs + ' ' + pct( prevLast.visitor_rate ) ) + '</span>' +
-			'</h2>' +
-			'<p class="pc-ops-detail-help">' + esc( detailed ? T.detailHelp : T.detailUnavailable ) + '</p>' +
-			( detailed ? '<button type="button" class="button pc-ops-detail-toggle" data-funnel-toggle="' + esc( id ) + '" aria-expanded="' + ( expanded[ id ] ? 'true' : 'false' ) + '" aria-controls="pc-ops-detail-' + esc( id ) + '">' + esc( expanded[ id ] ? T.hideDetails : T.viewDetails ) + '</button>' : '' ) +
-			'<div id="pc-ops-detail-' + esc( id ) + '"><div class="pc-ops-steps">' + bars.join( '' ) + '</div>' +
+			'<div class="pc-ops-funnel__head">' +
+				'<h2 class="pc-ops-funnel__title">' + esc( title ) + '：<span class="pc-ops-funnel__rate">' + esc( pct( last.visitor_rate ) ) + '</span>' + ( ctx.tip ? ctx.tip( help ) : '' ) + '</h2>' +
+				'<span class="pc-ops-funnel__vs"><span class="pc-ops-muted">' + esc( ctx.strings.vs + ' ' + pct( prevLast.visitor_rate ) ) + '</span> ' + changeHtml( rateChange, ctx, 'pc-ops-change' ) + '</span>' +
+			'</div>' +
+			'<p class="screen-reader-text pc-ops-detail-help">' + esc( help ) + '</p>' +
+			( detailed ? '<button type="button" class="button-link pc-ops-detail-toggle" data-funnel-toggle="' + esc( id ) + '" aria-expanded="' + ( expanded[ id ] ? 'true' : 'false' ) + '" aria-controls="pc-ops-detail-' + esc( id ) + '">' + esc( expanded[ id ] ? T.hideDetails : T.viewDetails ) + '</button>' : '' ) +
+			'<div class="pc-ops-funnel__body" id="pc-ops-detail-' + esc( id ) + '"><div class="pc-ops-steps">' + bars.join( '' ) + '</div>' +
 			'<div class="pc-ops-table-wrap"><table class="pc-ops-table">' +
 				'<thead><tr>' +
 					'<th scope="col">' + esc( T.event ) + '</th>' +
@@ -248,15 +258,38 @@
 		return Math.round( v * 10 ) / 10;
 	}
 
+	// 单调三次样条（Fritsch–Carlson）：曲线平滑，但不会冲过相邻两点的范围（不会画出负数或假峰值）。pts = [[x, y], ...]。
+	function smoothPath( pts ) {
+		var n = pts.length, i, d = [], m = [];
+		var r = function ( v ) { return Math.round( v * 10 ) / 10; };
+		if ( ! n ) { return ''; }
+		if ( n < 3 ) { return 'M' + pts.map( function ( p ) { return r( p[ 0 ] ) + ' ' + r( p[ 1 ] ); } ).join( ' L' ); }
+		for ( i = 0; i < n - 1; i++ ) { d.push( ( pts[ i + 1 ][ 1 ] - pts[ i ][ 1 ] ) / ( ( pts[ i + 1 ][ 0 ] - pts[ i ][ 0 ] ) || 1 ) ); }
+		m.push( d[ 0 ] );
+		for ( i = 1; i < n - 1; i++ ) { m.push( d[ i - 1 ] * d[ i ] <= 0 ? 0 : ( d[ i - 1 ] + d[ i ] ) / 2 ); }
+		m.push( d[ n - 2 ] );
+		for ( i = 0; i < n - 1; i++ ) {
+			if ( 0 === d[ i ] ) { m[ i ] = 0; m[ i + 1 ] = 0; continue; }
+			var a = m[ i ] / d[ i ], b = m[ i + 1 ] / d[ i ], h = a * a + b * b;
+			if ( h > 9 ) { var t = 3 / Math.sqrt( h ); m[ i ] = t * a * d[ i ]; m[ i + 1 ] = t * b * d[ i ]; }
+		}
+		var out = 'M' + r( pts[ 0 ][ 0 ] ) + ' ' + r( pts[ 0 ][ 1 ] );
+		for ( i = 0; i < n - 1; i++ ) {
+			var dx = ( pts[ i + 1 ][ 0 ] - pts[ i ][ 0 ] ) / 3;
+			out += ' C' + r( pts[ i ][ 0 ] + dx ) + ' ' + r( pts[ i ][ 1 ] + m[ i ] * dx ) + ' ' + r( pts[ i + 1 ][ 0 ] - dx ) + ' ' + r( pts[ i + 1 ][ 1 ] - m[ i + 1 ] * dx ) + ' ' + r( pts[ i + 1 ][ 0 ] ) + ' ' + r( pts[ i + 1 ][ 1 ] );
+		}
+		return out;
+	}
+
 	// 一张趋势图：本期实线、对比期虚线（按下标对应）；纵轴取两条线里最大的值，全是 0 时按 1 画，线贴在底线上。
-	function trendChart( t, data, ctx ) {
+	function trendChart( t, data, ctx, size ) {
 		var esc = ctx.esc;
 		var cur = ( data.current && data.current.points ) || [];
 		var prev = ( data.previous && data.previous.points ) || [];
 		var cv = series( cur, t.key );
 		var pv = series( prev, t.key );
-		var w = 560;
-		var h = 200;
+		var w = size && size.w ? size.w : 560;
+		var h = size && size.h ? size.h : 220;
 		var padL = 48;
 		var padR = 20;
 		var padT = 12;
@@ -281,7 +314,13 @@
 		var y = function ( v ) {
 			return h - padB - ( v / max ) * ( h - padT - padB );
 		};
-		// 折线只画前 count 个点（对比期的点数可以和本期不同，只画两边都有的下标）。
+		// 平滑曲线（相邻两点用水平切线的三次贝塞尔连接，不会冲出两点之间的范围）；本期下面加浅色面积。
+		// 只画前 count 个点（对比期的点数可以和本期不同，只画两边都有的下标）。
+		var curve = function ( vals, count ) {
+			var pts = [], i;
+			for ( i = 0; i < count; i++ ) { pts.push( [ x( i ), y( vals[ i ] ) ] ); }
+			return smoothPath( pts );
+		};
 		var line = function ( vals, count, cls ) {
 			if ( count < 1 ) {
 				return '';
@@ -289,12 +328,9 @@
 			if ( count < 2 ) {
 				return '<circle class="pc-ops-dot ' + esc( cls ) + '" cx="' + esc( r1( x( 0 ) ) ) + '" cy="' + esc( r1( y( vals[ 0 ] ) ) ) + '" r="2.5"/>';
 			}
-			var pts = [];
-			var i;
-			for ( i = 0; i < count; i++ ) {
-				pts.push( r1( x( i ) ) + ',' + r1( y( vals[ i ] ) ) );
-			}
-			return '<polyline class="pc-ops-line ' + esc( cls ) + '" points="' + esc( pts.join( ' ' ) ) + '"/>';
+			var d = curve( vals, count );
+			return ( cls ? '' : '<path class="pc-ops-area" d="' + esc( d + ' L' + r1( x( count - 1 ) ) + ' ' + r1( y( 0 ) ) + ' L' + r1( x( 0 ) ) + ' ' + r1( y( 0 ) ) + ' Z' ) + '"/>' ) +
+				'<path class="pc-ops-line ' + esc( cls ) + '" d="' + esc( d ) + '"/>';
 		};
 
 		var svg = '<svg viewBox="0 0 ' + esc( w ) + ' ' + esc( h ) + '" class="pc-ops-chart" role="img" aria-label="' + esc( T[ t.title ] ) + '">';
@@ -304,8 +340,8 @@
 			svg += '<line class="pc-ops-grid' + ( g ? ' is-dash' : '' ) + '" x1="' + esc( padL ) + '" x2="' + esc( w - padR ) + '" y1="' + esc( gy ) + '" y2="' + esc( gy ) + '"/>' +
 				'<text class="pc-ops-axis" x="' + esc( padL - 6 ) + '" y="' + esc( r1( gy + 4 ) ) + '" text-anchor="end">' + esc( axisText( g * step, t.kind ) ) + '</text>';
 		}
-		// 横轴标签取本期的点，最多显示 8 个。
-		var every = Math.max( 1, Math.ceil( n / 8 ) );
+		// 横轴标签取本期的点：小图最多 8 个，大图最多 24 个。
+		var every = Math.max( 1, Math.ceil( n / ( w > 800 ? 24 : 8 ) ) );
 		cur.forEach( function ( p, i ) {
 			if ( 0 === i % every ) {
 				svg += '<text class="pc-ops-axis" x="' + esc( r1( x( i ) ) ) + '" y="' + esc( h - 8 ) + '" text-anchor="middle">' + esc( p.label ) + '</text>';
@@ -331,9 +367,8 @@
 		var change = data.change || {};
 
 		var html = '<div class="pc-ops-trend">' +
-			'<h3 class="pc-ops-trend__title"' + ( help ? ' title="' + esc( help ) + '"' : '' ) + '>' + esc( title ) +
-				( help ? ' <span class="pc-ops-help" tabindex="0" role="img" aria-label="' + esc( help ) + '" title="' + esc( help ) + '">' + esc( 'ⓘ' ) + '</span>' : '' ) +
-			'</h3>' +
+			'<div class="pc-ops-trend__head">' +
+			'<h3 class="pc-ops-trend__title">' + esc( title ) + ( help && ctx.tip ? ctx.tip( help ) : '' ) + '</h3>' +
 			'<div class="pc-ops-trend__total">' + esc( fill( T.totalLine, { '%1$s': name, '%2$s': trendValue( t.key, totals[ t.key ], ctx ) } ) ) + ' ' +
 				changeHtml( change[ t.key ], ctx, 'pc-ops-change' ) + '</div>';
 		if ( 'visitors' === t.key ) {
@@ -341,13 +376,25 @@
 			html += '<div class="pc-ops-trend__total pc-ops-trend__sub">' + esc( fill( T.totalLine, { '%1$s': T.trendPv, '%2$s': ctx.number( totals.pageviews ) } ) ) + ' ' +
 				changeHtml( change.pageviews, ctx, 'pc-ops-change' ) + '</div>';
 		}
-		html += trendChart( t, data, ctx ) +
+		html += '</div>' + trendChart( t, data, ctx ) +
 			'<div class="pc-ops-legend">' +
 				'<span class="pc-ops-legend__item"><span class="pc-ops-swatch"></span>' + esc( T.thisPeriod ) + '</span>' +
 				'<span class="pc-ops-legend__item"><span class="pc-ops-swatch is-prev"></span>' + esc( T.previousPeriod ) + '</span>' +
 			'</div>' +
 		'</div>';
 		return html;
+	}
+
+	// 指标条下面的大图：所选指标的本期 / 对比期分时曲线。
+	function mainChart( data, ctx ) {
+		var key = KPI_TREND[ selectedKpi ] || 'sales';
+		var t = TRENDS.filter( function ( item ) { return item.key === key; } )[ 0 ];
+		if ( ! t ) { return ''; }
+		return trendChart( t, data, ctx, { w: 1100, h: 300 } ) +
+			'<div class="pc-ops-legend">' +
+				'<span class="pc-ops-legend__item"><span class="pc-ops-swatch"></span>' + ctx.esc( T.thisPeriod + ' · ' + T[ t.title ] ) + '</span>' +
+				'<span class="pc-ops-legend__item"><span class="pc-ops-swatch is-prev"></span>' + ctx.esc( T.previousPeriod + ' · ' + T[ t.title ] ) + '</span>' +
+			'</div>';
 	}
 
 	function trendsView( data, ctx ) {
@@ -395,6 +442,11 @@
 		var nameHtml = url ?
 			'<a href="' + esc( url ) + '">' + esc( label ) + '</a>' :
 			'<span>' + esc( label ) + '</span>';
+		if ( /^products_/.test( name ) ) {
+			var image = /^https?:\/\//i.test( String( row.image || '' ) ) ? String( row.image ) : '';
+			nameHtml = '<span class="pc-prod">' + ( image ? '<img class="pc-prod__img" src="' + esc( image ) + '" alt="" loading="lazy" width="36" height="36">' : '<span class="pc-prod__img is-empty" aria-hidden="true"></span>' ) +
+				'<span class="pc-prod__text"><span class="pc-prod__name">' + nameHtml + '</span></span></span>';
+		}
 		return '<tr class="pc-ops-rank__row' + ( index >= RANK_SHOW ? ' is-extra' : '' ) + '">' +
 			'<th scope="row">' + nameHtml + '</th>' +
 			'<td>' + esc( rankValue( name, row.current, ctx ) ) + '</td>' +
@@ -418,7 +470,8 @@
 			'<button type="button" class="button-link pc-ops-rank__toggle" data-rank-toggle="1" aria-expanded="false">' + esc( T.rankMore ) + '</button>' :
 			'';
 		return '<div class="pc-ops-rank" data-rank="' + esc( name ) + '">' +
-			'<h3 class="pc-ops-rank__title">' + esc( title ) + '</h3>' +
+			'<div class="pc-ops-rank__head"><h3 class="pc-ops-rank__title">' + esc( title ) + '</h3>' +
+				'<button type="button" class="button-link pc-ops-rank__open" data-rank-open="' + esc( name ) + '" aria-expanded="false" aria-label="' + esc( fill( T.rankOpenLabel, { '%s': title } ) ) + '">' + esc( T.rankOpen ) + '</button></div>' +
 			( name === 'search_terms' && table && table.coverage ? '<p class="pc-ops-rank__coverage">' + esc( fill( T.rankSearchCoverage || 'Search page views: %n; known: %k; empty: %e; filtered: %f; not observed: %u.', { '%n': ctx.number( table.coverage.current.base_count ), '%k': ctx.number( table.coverage.current.known ), '%e': ctx.number( table.coverage.current.empty ), '%f': ctx.number( table.coverage.current.filtered ), '%u': ctx.number( table.coverage.current.unobserved ) } ) ) + '</p>' : '' ) +
 			( name === 'products_favorited' && table && table.coverage ? '<p class="pc-ops-rank__coverage">' + esc( table.coverage.current.availability === 'not_observed' ? T.rankActionNotObserved : ( table.coverage.current.availability === 'unavailable' ? T.rankActionUnavailable : fill( T.rankActionCoverage, { '%n': ctx.number( table.coverage.current.received_operations ) } ) ) ) + '</p>' : '' ) +
 			( name !== 'search_terms' && name !== 'products_favorited' && table && table.coverage ? '<p class="pc-ops-rank__coverage">' + esc( fill( T.rankDimensionCoverage || 'Saved values: %v / %n %s. Missing, empty and unobserved facts remain separate.', { '%v': ctx.number( table.coverage.current.value ), '%n': ctx.number( table.coverage.current.base_count ), '%s': table.coverage.current.unit === 'orders' ? T.rankOrdersUnit || 'orders' : T.rankVisitsUnit || 'visits' } ) ) + '</p>' : '' ) +
@@ -433,16 +486,15 @@
 			'</table></div>' +
 			'<div class="pc-ops-rank__actions">' + more +
 				'<span class="pc-ops-rank__count" data-rank-visible="' + esc( rows.length ) + '" data-rank-total="' + esc( table ? table.total_rows : 0 ) + '">' + esc( fill( T.rankShowing, { '%1$d': Math.min( RANK_SHOW, rows.length ), '%2$d': table ? table.total_rows : 0 } ) ) + '</span>' +
-				'<button type="button" class="button pc-ops-rank__open" data-rank-open="' + esc( name ) + '" aria-expanded="false" aria-label="' + esc( fill( T.rankOpenLabel, { '%s': title } ) ) + '">' + esc( T.rankOpen ) + '</button>' +
 			'</div>' +
 		'</div>';
 	}
 
 	function rankingsView( data, ctx ) {
 		var tables = ( data && data.tables ) || {};
-		return '<h2 class="pc-ops-rankings__title">' + ctx.esc( T.rankings ) + '</h2>' +
-			'<p class="pc-data-muted">' + ctx.esc( T.rankDimensionHelp || 'Source means saved UTM source; domain means saved entry domain. Visitor groups count distinct visitors per group. Country uses saved observations; favorites are not collected.' ) + '</p>' +
-			'<p class="pc-data-muted">' + ctx.esc( T.rankSearchHelp || 'Search terms count accepted search result page views. Reloads and pagination count again; retries do not. Only bounded observed terms are retained; missing historical terms are not reconstructed.' ) + '</p>' +
+		var rankHelp = ( T.rankDimensionHelp || 'Source means saved UTM source; domain means saved entry domain. Visitor groups count distinct visitors per group. Country uses saved observations; favorites are not collected.' ) + ' ' + ( T.rankSearchHelp || 'Search terms count accepted search result page views. Reloads and pagination count again; retries do not. Only bounded observed terms are retained; missing historical terms are not reconstructed.' );
+		return '<h2 class="pc-ops-rankings__title">' + ctx.esc( T.rankings ) + ( ctx.tip ? ctx.tip( rankHelp ) : '' ) + '</h2>' +
+			'<p class="screen-reader-text">' + ctx.esc( rankHelp ) + '</p>' +
 			RANK_TABLES.map( function ( name ) {
 				return rankCard( name, tables[ name ], ctx );
 			} ).join( '' ) + '<div class="pc-ranks-panel" hidden></div>';
@@ -500,8 +552,7 @@
 			html += '<p class="pc-ops-note">' + esc( fill( T.testOrders, { '%d': Number( data.test_orders ) } ) ) + '</p>';
 		}
 		html += kpis( data, ctx );
-		html += '<p class="pc-ops-detail-help">' + esc( T.orderVsVisitor ) + '</p>';
-		html += '<div data-funnel-slot="visitor">' + funnel( T.visitorFunnel, data.visitor_funnel || data.funnel || {}, ctx, 'visitor' ) + '</div>';
+		html += '<div data-funnel-slot="visitor">' + funnel( T.visitorFunnel, data.visitor_funnel || data.funnel || {}, ctx, 'visitor', T.orderVsVisitor ) + '</div>';
 		html += '<div data-funnel-slot="returning">' + funnel( T.returningFunnel, data.returning_visitor_funnel || data.returning || {}, ctx, 'returning' ) + '</div>';
 		html += '<section class="pc-ops-checkout-slot"></section>';
 		// 趋势图的位置：趋势数据到了再填（见 render）。
@@ -568,7 +619,17 @@
 				rankingsFailed( box );
 			}
 		};
+		var showMainChart = function () {
+			var slot = opsData && trends ? bodyEl.querySelector( '.pc-ops-main-chart' ) : null;
+			if ( ! slot ) { return; }
+			try {
+				slot.innerHTML = trends.error ? '<p class="pc-data-empty">' + ctx.esc( T.trendsError ) + '</p>' : mainChart( trends.data, ctx );
+			} catch ( e ) {
+				slot.innerHTML = '<p class="pc-data-empty">' + ctx.esc( T.trendsError ) + '</p>';
+			}
+		};
 		var showTrends = function () {
+			showMainChart();
 			var box = opsData && trends ? bodyEl.querySelector( '.pc-ops-trends' ) : null;
 			if ( ! box ) {
 				return;
@@ -594,14 +655,26 @@
 					bodyEl.innerHTML = view( data, ctx );
 					opsData = data;
 					var box = bodyEl.querySelector( '.pc-ops' );
+					var pickKpi = function ( event ) {
+						var cell = findAttr( event.target, 'data-kpi', box );
+						if ( ! cell || ! KPI_TREND[ cell.getAttribute( 'data-kpi' ) ] ) { return false; }
+						selectedKpi = cell.getAttribute( 'data-kpi' );
+						Array.prototype.forEach.call( box.querySelectorAll( '[data-kpi]' ), function ( el ) { el.setAttribute( 'aria-pressed', el === cell ? 'true' : 'false' ); } );
+						showMainChart();
+						return true;
+					};
+					box.addEventListener( 'keydown', function ( event ) {
+						if ( ( 'Enter' === event.key || ' ' === event.key ) && findAttr( event.target, 'data-kpi', box ) ) { event.preventDefault(); pickKpi( event ); }
+					} );
 					box.addEventListener( 'click', function ( event ) {
+						if ( pickKpi( event ) ) { return; }
 						var button = findAttr( event.target, 'data-funnel-toggle', box );
 						if ( ! button ) { return; }
 						var id = button.getAttribute( 'data-funnel-toggle' );
 						if ( id !== 'visitor' && id !== 'returning' ) { return; }
 						expanded[ id ] = ! expanded[ id ];
 						var slot = box.querySelector( '[data-funnel-slot="' + id + '"]' );
-						slot.innerHTML = funnel( id === 'visitor' ? T.visitorFunnel : T.returningFunnel, id === 'visitor' ? data.visitor_funnel : data.returning_visitor_funnel, ctx, id );
+						slot.innerHTML = funnel( id === 'visitor' ? T.visitorFunnel : T.returningFunnel, id === 'visitor' ? data.visitor_funnel : data.returning_visitor_funnel, ctx, id, id === 'visitor' ? T.orderVsVisitor : '' );
 						slot.querySelector( '[data-funnel-toggle]' ).focus();
 					} );
 				} catch ( e ) {

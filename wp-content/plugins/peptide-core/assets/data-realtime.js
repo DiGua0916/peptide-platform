@@ -174,6 +174,29 @@
 		return unit * 4;
 	}
 
+	// 单调三次样条（Fritsch–Carlson）：曲线平滑，但不会冲过相邻两点的范围（不会画出负数或假峰值）。pts = [[x, y], ...]。
+	function smoothPath( pts ) {
+		var n = pts.length, i, d = [], m = [];
+		var r = function ( v ) { return Math.round( v * 10 ) / 10; };
+		if ( ! n ) { return ''; }
+		if ( n < 3 ) { return 'M' + pts.map( function ( p ) { return r( p[ 0 ] ) + ' ' + r( p[ 1 ] ); } ).join( ' L' ); }
+		for ( i = 0; i < n - 1; i++ ) { d.push( ( pts[ i + 1 ][ 1 ] - pts[ i ][ 1 ] ) / ( ( pts[ i + 1 ][ 0 ] - pts[ i ][ 0 ] ) || 1 ) ); }
+		m.push( d[ 0 ] );
+		for ( i = 1; i < n - 1; i++ ) { m.push( d[ i - 1 ] * d[ i ] <= 0 ? 0 : ( d[ i - 1 ] + d[ i ] ) / 2 ); }
+		m.push( d[ n - 2 ] );
+		for ( i = 0; i < n - 1; i++ ) {
+			if ( 0 === d[ i ] ) { m[ i ] = 0; m[ i + 1 ] = 0; continue; }
+			var a = m[ i ] / d[ i ], b = m[ i + 1 ] / d[ i ], h = a * a + b * b;
+			if ( h > 9 ) { var t = 3 / Math.sqrt( h ); m[ i ] = t * a * d[ i ]; m[ i + 1 ] = t * b * d[ i ]; }
+		}
+		var out = 'M' + r( pts[ 0 ][ 0 ] ) + ' ' + r( pts[ 0 ][ 1 ] );
+		for ( i = 0; i < n - 1; i++ ) {
+			var dx = ( pts[ i + 1 ][ 0 ] - pts[ i ][ 0 ] ) / 3;
+			out += ' C' + r( pts[ i ][ 0 ] + dx ) + ' ' + r( pts[ i ][ 1 ] + m[ i ] * dx ) + ' ' + r( pts[ i + 1 ][ 0 ] - dx ) + ' ' + r( pts[ i + 1 ][ 1 ] - m[ i + 1 ] * dx ) + ' ' + r( pts[ i + 1 ][ 0 ] ) + ' ' + r( pts[ i + 1 ][ 1 ] );
+		}
+		return out;
+	}
+
 	// 每分钟访客数量（历史模式按时段）：平滑折线 + 浅色面积，最旧的在左。
 	// 宽度按容器实际宽度画（文字不被缩放）；20 / 30 个点时隔几个点写一个标签，“现在”一定有标签。
 	function chart( points ) {
@@ -194,16 +217,11 @@
 			grid += '<line class="pc-rt-line__grid" x1="' + L + '" x2="' + ( W - R ) + '" y1="' + y( gv ) + '" y2="' + y( gv ) + '"></line>' +
 				'<text class="pc-rt-line__tick" x="' + ( L - 6 ) + '" y="' + ( y( gv ) + 4 ) + '" text-anchor="end">' + esc( ctx.number( gv ) ) + '</text>';
 		}
-		var line = '', dots = '', labels = '';
+		var line = '', dots = '', labels = '', pts = [];
 		points.forEach( function ( p, i ) {
 			var v = Number( p.visitors ) || 0;
 			var px = x( i ), py = y( v );
-			if ( 0 === i ) {
-				line = 'M' + px + ' ' + py;
-			} else {
-				var prevX = x( i - 1 ), prevY = y( Number( points[ i - 1 ].visitors ) || 0 ), mid = ( prevX + px ) / 2;
-				line += ' C' + mid + ' ' + prevY + ' ' + mid + ' ' + py + ' ' + px + ' ' + py;
-			}
+			pts.push( [ px, py ] );
 			var ago = Number( p.ago ) || 0;
 			var text = displayedHistory ? p.label : ( 0 === ago ? T.now : fill( T.minutesAgo, { '%d': ago } ) );
 			var show = displayedHistory ? 0 === i % every : 0 === ago % every;
@@ -212,6 +230,7 @@
 				labels += '<text class="pc-rt-line__label" x="' + px + '" y="' + ( H - 10 ) + '" text-anchor="middle">' + esc( text ) + '</text>';
 			}
 		} );
+		line = smoothPath( pts );
 		var area = n ? line + ' L' + x( n - 1 ) + ' ' + y( 0 ) + ' L' + x( 0 ) + ' ' + y( 0 ) + ' Z' : '';
 		return '<svg class="pc-rt-line" viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="' + esc( displayedHistory ? T.historyChart : T.perMinute ) + '">' +
 			grid +
