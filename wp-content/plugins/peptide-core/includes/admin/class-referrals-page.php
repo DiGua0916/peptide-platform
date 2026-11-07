@@ -1,6 +1,6 @@
 <?php
 /**
- * 推广人后台（REF-01）：顾客 → 推广人。名单、专属链接、业绩；订单列表“归属人”列和筛选；
+ * 推广人后台（REF-01）：左侧菜单“推广人”（紧跟“顾客”）。名单、专属链接、业绩；订单列表“归属人”列和筛选；
  * 订单编辑页、用户资料页手动改归属。
  *
  * @package PeptideCore
@@ -19,6 +19,7 @@ final class Referrals_Page {
 
 	public static function register_hooks(): void {
 		add_action( 'admin_menu', array( self::class, 'menu' ), 61 ); // 在 Admin_Menus（60）建好“顾客”菜单之后。
+		add_action( 'admin_menu', array( self::class, 'place_menu' ), 10001 ); // Admin_Menus::order_menu（10000）排好之后，挪到“顾客”后面。
 		add_action( 'admin_post_pc_referrals_save', array( self::class, 'save_owners' ) );
 		add_action( 'admin_post_pc_referrals_assign', array( self::class, 'save_assign' ) );
 
@@ -43,7 +44,24 @@ final class Referrals_Page {
 
 	public static function menu(): void {
 		if ( ! current_user_can( self::CAP ) ) { return; }
-		add_submenu_page( Admin_Menus::CUSTOMERS, '推广人', '推广人', self::CAP, self::SLUG, array( self::class, 'render' ) );
+		// 单独一项、紧跟“顾客”（位置 4）：“顾客”点开的是 WooCommerce 自带页面，那里不展开子菜单，放在子菜单里找不到。
+		add_menu_page( '推广人', '推广人', self::CAP, self::SLUG, array( self::class, 'render' ), 'dashicons-share', '4.5' );
+	}
+
+	/** 把“推广人”放在“顾客”正后面，然后像 order_menu 一样重新编号。 */
+	public static function place_menu(): void {
+		global $menu;
+		if ( empty( $menu ) || ! is_array( $menu ) ) { return; }
+		$items = array_values( $menu );
+		$slugs = array_column( $items, 2 );
+		$from  = array_search( self::SLUG, $slugs, true );
+		if ( false === $from ) { return; }
+		$item = $items[ $from ];
+		array_splice( $items, $from, 1 );
+		$to = array_search( Admin_Menus::CUSTOMERS, array_column( $items, 2 ), true );
+		array_splice( $items, false === $to ? count( $items ) : $to + 1, 0, array( $item ) );
+		$menu = array(); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		foreach ( $items as $i => $entry ) { $menu[ ( $i + 1 ) * 5 ] = $entry; } // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 	}
 
 	public static function url( array $args = array() ): string {
