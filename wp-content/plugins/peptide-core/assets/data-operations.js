@@ -38,6 +38,8 @@
 		{ key: 'repurchase_sales', title: 'trendRepSales', help: '', kind: 'money' },
 		{ key: 'repurchase_aov', title: 'trendRepAov', help: 'helpRepAov', kind: 'money' }
 	];
+	// 趋势图右上角“查看更多 >”的去处（对照参考后台：访客数、订单数、销售额有）。
+	var TREND_MORE = { visitors: 'admin.php?page=pc-data-sources', orders: 'admin.php?page=wc-orders', sales: 'admin.php?page=wc-orders' };
 	var TREND_MONEY = { sales: true, aov: true, repurchase_sales: true, repurchase_aov: true };
 	// 十四张排行表，顺序 = Rankings::TABLES（Shopname 的页面顺序）；标题是 strings 里的 't_' + key。
 	var RANK_TABLES = [ 'products_units', 'products_sales', 'products_viewed', 'products_carted', 'categories_units', 'categories_sales', 'order_countries', 'customer_countries', 'visitor_browsers', 'order_browsers', 'payment_methods', 'payment_success', 'coupons', 'devices', 'visitor_source', 'order_source', 'visitor_domain', 'order_domain', 'visitor_country', 'search_terms', 'products_favorited' ];
@@ -198,6 +200,7 @@
 			'<p class="screen-reader-text pc-ops-detail-help">' + esc( help ) + '</p>' +
 			( detailed ? '<button type="button" class="button-link pc-ops-detail-toggle" data-funnel-toggle="' + esc( id ) + '" aria-expanded="' + ( expanded[ id ] ? 'true' : 'false' ) + '" aria-controls="pc-ops-detail-' + esc( id ) + '">' + esc( expanded[ id ] ? T.hideDetails : T.viewDetails ) + '</button>' : '' ) +
 			'<div class="pc-ops-funnel__body" id="pc-ops-detail-' + esc( id ) + '"><div class="pc-ops-steps">' + bars.join( '' ) + '</div>' +
+			'<div class="pc-ops-funnel__side"><h3 class="pc-ops-funnel__side-title">' + esc( title.replace( /率$/, '' ) ) + '</h3>' +
 			'<div class="pc-ops-table-wrap"><table class="pc-ops-table">' +
 				'<thead><tr>' +
 					'<th scope="col">' + esc( T.event ) + '</th>' +
@@ -206,7 +209,7 @@
 					'<th scope="col">' + esc( T.change ) + '</th>' +
 				'</tr></thead>' +
 				'<tbody>' + rows.join( '' ) + '</tbody>' +
-			'</table></div></div>' +
+			'</table></div></div></div>' +
 		'</section>';
 	}
 
@@ -369,6 +372,7 @@
 		var html = '<div class="pc-ops-trend">' +
 			'<div class="pc-ops-trend__head">' +
 			'<h3 class="pc-ops-trend__title">' + esc( title ) + ( help && ctx.tip ? ctx.tip( help ) : '' ) + '</h3>' +
+			( TREND_MORE[ t.key ] ? '<a class="pc-ops-trend__more" href="' + esc( TREND_MORE[ t.key ] ) + '">' + esc( T.rankMore || '' ) + '</a>' : '' ) +
 			'<div class="pc-ops-trend__total">' + esc( fill( T.totalLine, { '%1$s': name, '%2$s': trendValue( t.key, totals[ t.key ], ctx ) } ) ) + ' ' +
 				changeHtml( change[ t.key ], ctx, 'pc-ops-change' ) + '</div>';
 		if ( 'visitors' === t.key ) {
@@ -455,6 +459,20 @@
 		'</tr>';
 	}
 
+	// 表头（对照参考后台）：名称列按表命名（商品名称 / 国家 / 来源…），数字列是“指标1 / 指标2 / 同比”（1 = 本期，2 = 对比期）。
+	function rankHead( name, ctx ) {
+		var esc = ctx.esc, cols = T.rankCols && T.rankCols[ name ];
+		var code = ctx.currency && ctx.currency.code ? ctx.currency.code : '';
+		if ( ! cols ) {
+			return '<th scope="col">' + esc( T.rankName ) + '</th><th scope="col">' + esc( T.thisPeriod ) + '</th><th scope="col">' + esc( T.previousPeriod ) + '</th><th scope="col">' + esc( T.change ) + '</th>';
+		}
+		var metric = cols[ 1 ];
+		return '<th scope="col">' + esc( cols[ 0 ] ) + '</th>' +
+			'<th scope="col"><span title="' + esc( T.thisPeriod ) + '">' + esc( metric + '1' ) + '</span></th>' +
+			'<th scope="col"><span title="' + esc( T.previousPeriod ) + '">' + esc( metric + '2' ) + '</span></th>' +
+			'<th scope="col">' + esc( T.rankYoY || T.change ) + '</th>';
+	}
+
 	// 一张排行表的卡片：标题（金额表带货币代码）、表格、超过 10 行时的“查看更多”按钮。
 	function rankCard( name, table, ctx ) {
 		var esc = ctx.esc;
@@ -471,23 +489,31 @@
 			'';
 		return '<div class="pc-ops-rank" data-rank="' + esc( name ) + '">' +
 			'<div class="pc-ops-rank__head"><h3 class="pc-ops-rank__title">' + esc( title ) + '</h3>' +
-				'<button type="button" class="button-link pc-ops-rank__open" data-rank-open="' + esc( name ) + '" aria-expanded="false" aria-label="' + esc( fill( T.rankOpenLabel, { '%s': title } ) ) + '">' + esc( T.rankOpen ) + '</button></div>' +
+				'<button type="button" class="button-link pc-ops-rank__open" data-rank-open="' + esc( name ) + '" aria-expanded="false" aria-label="' + esc( fill( T.rankOpenLabel, { '%s': title } ) ) + '">' + esc( T.rankMore || T.rankOpen ) + '</button></div>' +
 			( name === 'search_terms' && table && table.coverage ? '<p class="pc-ops-rank__coverage">' + esc( fill( T.rankSearchCoverage || 'Search page views: %n; known: %k; empty: %e; filtered: %f; not observed: %u.', { '%n': ctx.number( table.coverage.current.base_count ), '%k': ctx.number( table.coverage.current.known ), '%e': ctx.number( table.coverage.current.empty ), '%f': ctx.number( table.coverage.current.filtered ), '%u': ctx.number( table.coverage.current.unobserved ) } ) ) + '</p>' : '' ) +
 			( name === 'products_favorited' && table && table.coverage ? '<p class="pc-ops-rank__coverage">' + esc( table.coverage.current.availability === 'not_observed' ? T.rankActionNotObserved : ( table.coverage.current.availability === 'unavailable' ? T.rankActionUnavailable : fill( T.rankActionCoverage, { '%n': ctx.number( table.coverage.current.received_operations ) } ) ) ) + '</p>' : '' ) +
 			( name !== 'search_terms' && name !== 'products_favorited' && table && table.coverage ? '<p class="pc-ops-rank__coverage">' + esc( fill( T.rankDimensionCoverage || 'Saved values: %v / %n %s. Missing, empty and unobserved facts remain separate.', { '%v': ctx.number( table.coverage.current.value ), '%n': ctx.number( table.coverage.current.base_count ), '%s': table.coverage.current.unit === 'orders' ? T.rankOrdersUnit || 'orders' : T.rankVisitsUnit || 'visits' } ) ) + '</p>' : '' ) +
 			'<div class="pc-ops-table-wrap"><table class="pc-ops-table">' +
-				'<thead><tr>' +
-					'<th scope="col">' + esc( T.rankName ) + '</th>' +
-					'<th scope="col">' + esc( T.thisPeriod ) + '</th>' +
-					'<th scope="col">' + esc( T.previousPeriod ) + '</th>' +
-					'<th scope="col">' + esc( T.change ) + '</th>' +
-				'</tr></thead>' +
+				'<thead><tr>' + rankHead( name, ctx ) + '</tr></thead>' +
 				'<tbody>' + body + '</tbody>' +
 			'</table></div>' +
 			'<div class="pc-ops-rank__actions">' + more +
 				'<span class="pc-ops-rank__count" data-rank-visible="' + esc( rows.length ) + '" data-rank-total="' + esc( table ? table.total_rows : 0 ) + '">' + esc( fill( T.rankShowing, { '%1$d': Math.min( RANK_SHOW, rows.length ), '%2$d': table ? table.total_rows : 0 } ) ) + '</span>' +
 			'</div>' +
 		'</div>';
+	}
+
+	// 流量渠道点击分析（对照参考后台）：按保存的 UTM 来源列出访客数，本期 / 对比期 / 同比；数据来自排行接口的 visitor_source。
+	function channelsView( data, ctx ) {
+		var esc = ctx.esc, table = data && data.tables && data.tables.visitor_source, rows = table && table.rows ? table.rows.slice( 0, 8 ) : [];
+		var cols = T.rankCols && T.rankCols.visitor_source;
+		var metric = cols ? cols[ 1 ] : T.thisPeriod;
+		return '<div class="pc-ops-channels__head"><h2>' + esc( T.channelsTitle || T.t_visitor_source ) + '</h2></div>' +
+			'<div class="pc-ops-table-wrap"><table class="pc-ops-table"><thead><tr><th scope="col">' + esc( T.channelName || T.rankName ) + '</th><th scope="col">' + esc( metric + '1' ) + '</th><th scope="col">' + esc( metric + '2' ) + '</th><th scope="col">' + esc( T.rankYoY || T.change ) + '</th></tr></thead><tbody>' +
+			( rows.length ? rows.map( function ( row ) {
+				return '<tr><th scope="row">' + esc( rankLabel( 'visitor_source', row ) ) + '</th><td>' + esc( rankValue( 'visitor_source', row.current, ctx ) ) + '</td><td>' + esc( rankValue( 'visitor_source', row.previous, ctx ) ) + '</td><td>' + changeHtml( row.change, ctx, 'pc-ops-change' ) + '</td></tr>';
+			} ).join( '' ) : '<tr><td class="pc-ops-rank__empty" colspan="4">' + esc( T.rankEmpty ) + '</td></tr>' ) +
+			'</tbody></table></div>';
 	}
 
 	function rankingsView( data, ctx ) {
@@ -556,7 +582,7 @@
 		html += kpis( data, ctx );
 		html += '<div data-funnel-slot="visitor">' + funnel( T.visitorFunnel, data.visitor_funnel || data.funnel || {}, ctx, 'visitor', T.orderVsVisitor ) + '</div>';
 		html += '<div data-funnel-slot="returning">' + funnel( T.returningFunnel, data.returning_visitor_funnel || data.returning || {}, ctx, 'returning' ) + '</div>';
-		html += '<section class="pc-ops-checkout-slot"></section>';
+		html += '<div class="pc-ops-pair"><section class="pc-ops-checkout-slot"></section><section class="pc-ops-channels" aria-live="polite"></section></div>';
 		// 趋势图的位置：趋势数据到了再填（见 render）。
 		html += '<section class="pc-ops-trends" aria-live="polite"></section>';
 		// 排行表的位置：排行数据到了再填（见 render）。
@@ -612,6 +638,8 @@
 				return;
 			}
 			try {
+				var channels = bodyEl.querySelector( '.pc-ops-channels' );
+				if ( channels ) { channels.innerHTML = channelsView( rankings.data, ctx ); }
 				box.innerHTML = rankingsView( rankings.data, ctx );
 				if ( window.PcDataRankings ) { rankPanel = window.PcDataRankings.mount( box, rankings.data, ctx, { strings: T, rangeBusy: rangeBusy, rankLabel: rankLabel, rankValue: rankValue } ); }
 				box.addEventListener( 'click', function ( e ) {

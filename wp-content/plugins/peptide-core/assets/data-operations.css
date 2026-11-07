@@ -384,3 +384,38 @@
 	.pc-ops-step { min-width: 0; }
 	.pc-ops-dimensions a { width: 100%; }
 }
+
+/* ---------- 第二轮（对照参考后台） ---------- */
+/* 指标条：一行，可横向滚动，一屏约 7 格。 */
+.pc-ops-kpis { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: calc(100% / 7); overflow-x: auto; scrollbar-width: thin; }
+/* 漏斗：左卡（标题 + 阶梯）与右卡（对比表）分开。 */
+.pc-ops-funnel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 16px; padding: 0; border: 0; background: none; }
+.pc-ops-funnel > .pc-ops-funnel__head,
+.pc-ops-funnel > .pc-ops-detail-toggle,
+.pc-ops-funnel > .pc-ops-detail-help { grid-column: 1; }
+.pc-ops-funnel > .pc-ops-funnel__head { padding: 16px 20px 0; border: 1px solid var(--pc-ops-line); border-bottom: 0; border-radius: 8px 8px 0 0; background: #fff; }
+.pc-ops-funnel > .pc-ops-detail-toggle.button-link { margin: 0; padding: 6px 20px 0; border: 1px solid var(--pc-ops-line); border-top: 0; border-bottom: 0; background: #fff; text-align: left; }
+.pc-ops-funnel > .pc-ops-funnel__body { display: contents; }
+.pc-ops-funnel .pc-ops-steps { grid-column: 1; margin: 0; padding: 16px 84px 20px 20px; border: 1px solid var(--pc-ops-line); border-top: 0; border-radius: 0 0 8px 8px; background: #fff; }
+.pc-ops-funnel .pc-ops-funnel__side { grid-column: 2; grid-row: 1 / span 3; padding: 16px 20px; border: 1px solid var(--pc-ops-line); border-radius: 8px; background: #fff; }
+.pc-ops-funnel__side-title { margin: 0 0 12px; font-size: 15px; font-weight: 600; }
+/* 结账分析 | 流量渠道点击分析 并排。 */
+.pc-ops-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.pc-ops-channels { box-sizing: border-box; min-width: 0; padding: 16px 20px; border: 1px solid var(--pc-ops-line); border-radius: 8px; background: #fff; }
+.pc-ops-channels:empty { display: none; }
+.pc-ops-channels__head h2 { margin: 0 0 12px; font-size: 15px; font-weight: 600; }
+.pc-data:not(.is-notes) .pc-ops-checkout :is(.pc-ops-checkout-help, .pc-ops-checkout-local) { display: none; }
+/* 趋势图“查看更多 >”与排行表计数。 */
+.pc-ops-trend__more { margin-left: auto; color: var(--pc-ops-ink); font-size: 12px; font-weight: 600; text-decoration: none; }
+.pc-ops-trend__more::after { content: " \203A"; }
+.pc-ops-trend__more:hover { text-decoration: underline; }
+.pc-ops-trend__head { flex-wrap: wrap; }
+.pc-ops-trend__head .pc-ops-trend__total { flex-basis: 100%; text-align: right; }
+.pc-ops-rank__count { display: none; }
+@media (max-width: 1100px) {
+	.pc-ops-funnel { grid-template-columns: minmax(0, 1fr); }
+	.pc-ops-funnel .pc-ops-funnel__side { grid-column: 1; grid-row: auto; margin-top: 16px; }
+	.pc-ops-pair { grid-template-columns: minmax(0, 1fr); }
+	.pc-ops-kpis { grid-auto-columns: calc(100% / 4); }
+}
+@media (max-width: 600px) { .pc-ops-kpis { grid-auto-columns: calc(100% / 2.2); } }
