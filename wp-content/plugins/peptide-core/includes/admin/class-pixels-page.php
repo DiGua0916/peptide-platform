@@ -21,6 +21,18 @@ final class Pixels_Page {
 	/** 不显示“销售额使用商品金额”的平台（和 Shopname 一样；BIGO 的浏览器像素不带金额）。 */
 	private const NO_ITEMS_VALUE = array( 'gads', 'gtm', 'vk', 'yandex', 'criteo', 'twitter', 'bigo' );
 
+	/**
+	 * 后台只显示这些平台的卡片（2026-11-07：只投 Facebook，其他平台先隐藏）。
+	 * 隐藏的卡片仍然在表单里（hidden），保存时原值照常提交，已填的设置不会丢；要恢复显示，往这里加平台 key，或用过滤器
+	 * peptide_core_pixels_visible_platforms。前台回传逻辑不受影响：只看有没有填像素。
+	 */
+	private const VISIBLE = array( 'facebook' );
+
+	/** @return string[] */
+	public static function visible_platforms(): array {
+		return (array) apply_filters( 'peptide_core_pixels_visible_platforms', self::VISIBLE );
+	}
+
 	public static function register_hooks(): void {
 		add_action( 'admin_post_pc_pixels_save', array( self::class, 'save' ) );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
@@ -88,7 +100,7 @@ final class Pixels_Page {
 
 	private static function card( string $key, array $def, array $p ): void {
 		$token = ! empty( $def['token'] );
-		echo '<section class="pc-px-card" id="pc-px-' . esc_attr( $key ) . '" data-platform="' . esc_attr( $key ) . '"><div class="pc-px-card__head"><h2>' . esc_html( $def['label'] ) . '</h2> <a href="' . esc_url( $def['help'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'How to get it?', 'peptide-core' ) . '</a>';
+		echo '<section class="pc-px-card" id="pc-px-' . esc_attr( $key ) . '" data-platform="' . esc_attr( $key ) . '"' . ( in_array( $key, self::visible_platforms(), true ) ? '' : ' hidden' ) . '><div class="pc-px-card__head"><h2>' . esc_html( $def['label'] ) . '</h2> <a href="' . esc_url( $def['help'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'How to get it?', 'peptide-core' ) . '</a>';
 		if ( 'pixels' === $def['kind'] ) {
 			echo '<button type="button" class="button pc-px-add">' . esc_html__( 'New pixel', 'peptide-core' ) . '</button>';
 		}
