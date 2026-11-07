@@ -169,10 +169,17 @@
 		return v >= 1000 ? Math.round( v / 100 ) / 10 + 'k' : String( v );
 	}
 
+	// Draw the trend at its real pixel width with a fixed height, so it never grows taller
+	// (and its labels never grow larger) on wide screens.
+	function trendWidth() {
+		var box = root.querySelector( '#pc-ov-trend' );
+		return box && box.clientWidth ? Math.max( 280, Math.round( box.clientWidth ) ) : 640;
+	}
+
 	function chart() {
 		var pts = range.series || [];
-		var w = 640;
-		var h = 250;
+		var w = trendWidth();
+		var h = 240;
 		var pad = { l: 40, r: 12, t: 12, b: 28 };
 		var vals = pts.map( metricValue );
 		var peak = Math.max.apply( null, [ 0 ].concat( vals ) );
@@ -212,7 +219,7 @@
 			'<div class="pc-ov-chart-wrap">' + svg + '<div class="pc-ov-tip" hidden></div></div>';
 	}
 
-	function bindChart() {
+	function bindChart( resized ) {
 		var box = root.querySelector( '#pc-ov-trend' );
 		if ( ! box ) {
 			return;
@@ -225,6 +232,12 @@
 			box.innerHTML = chart();
 			bindChart();
 		} );
+		// First render happens before the box exists; redraw once at the measured width.
+		if ( ! resized && Math.abs( trendWidth() - geo.w ) > 2 ) {
+			box.innerHTML = chart();
+			bindChart( true );
+			return;
+		}
 		var wrap = box.querySelector( '.pc-ov-chart-wrap' );
 		var svg = wrap.querySelector( 'svg' );
 		var cross = svg.querySelector( '.pc-ov-cross' );
@@ -381,6 +394,18 @@
 			load( range.range ).catch( schedule );
 		}, Math.max( 1000, Math.min( 60000, untilMidnight ) ) );
 	}
+
+	var resizeTimer = null;
+	window.addEventListener( 'resize', function () {
+		clearTimeout( resizeTimer );
+		resizeTimer = setTimeout( function () {
+			var box = root.querySelector( '#pc-ov-trend' );
+			if ( box && geo && Math.abs( trendWidth() - geo.w ) > 2 ) {
+				box.innerHTML = chart();
+				bindChart( true );
+			}
+		}, 150 );
+	} );
 
 	render();
 	schedule();

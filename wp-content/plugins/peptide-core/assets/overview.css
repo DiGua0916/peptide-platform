@@ -5,9 +5,13 @@
 	--pc-ov-teal: #177e9b;
 	--pc-ov-line: #e5e7eb;
 	--pc-ov-muted: #6b7280;
-	/* 铺满后台内容区，字号随屏幕宽度在一定范围内放大（宽屏不留空白）。 */
-	--pc-ov-text: clamp(12px, 0.72vw, 15px);
-	--pc-ov-big: clamp(18px, 1.35vw, 30px);
+	/* 2026-11-07: fixed type scale. Sizes used to grow with the browser width (up to 30px),
+	   which made the dashboard look oversized on wide screens and at browser zoom. */
+	--pc-ov-text: 13px;
+	--pc-ov-big: 24px;
+	/* Layout follows the dashboard's own width (it sits beside the admin menu inside the
+	   workspace frame), not the browser window. */
+	container: pc-ov / inline-size;
 	width: 100%;
 	margin-top: 8px;
 	color: #1f2937;
@@ -26,7 +30,7 @@
 
 .pc-ov-grid {
 	display: grid;
-	grid-template-columns: minmax(0, 3fr) minmax(300px, 1fr);
+	grid-template-columns: minmax(0, 1fr) 320px;
 	gap: clamp(12px, 1vw, 24px);
 	align-items: start;
 }
@@ -50,6 +54,7 @@
 	display: flex;
 	flex-direction: column;
 	min-width: 0;
+	container-type: inline-size;
 	padding: 16px 20px;
 	background: #fff;
 	border: 1px solid var(--pc-ov-line);
@@ -143,7 +148,8 @@
 
 .pc-ov-kpis {
 	display: grid;
-	grid-template-columns: repeat(7, minmax(0, 1fr));
+	/* Seven figures in one row when there is room; otherwise they wrap instead of squeezing. */
+	grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
 }
 
 .pc-ov-kpi {
@@ -270,7 +276,8 @@ a.pc-ov-num:focus {
 
 .pc-ov-split {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+	/* Funnel and trend sit side by side whenever the card is wide enough (see @container below). */
+	grid-template-columns: minmax(0, 1fr);
 	gap: clamp(20px, 2vw, 40px);
 }
 
@@ -502,49 +509,32 @@ a.pc-ov-num:focus {
 	text-align: center;
 }
 
-@media (max-width: 1200px) {
+/* Responsive rules follow the dashboard width (container queries), not the browser. */
+@container (min-width: 720px) {
+	.pc-ov-split {
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+	}
+}
+
+@container pc-ov (max-width: 1099px) {
 	.pc-ov-grid {
-		grid-template-columns: 1fr;
+		grid-template-columns: minmax(0, 1fr);
 	}
 
-	/* 单列时右侧四张卡片排成两行两列。 */
+	/* Single column: the four side cards form two rows of two. */
 	.pc-ov-side {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
 }
 
-@media (max-width: 782px) {
+@container pc-ov (max-width: 699px) {
 	.pc-ov-row,
-	.pc-ov-split,
 	.pc-ov-side {
-		grid-template-columns: 1fr;
+		grid-template-columns: minmax(0, 1fr);
 	}
 
 	.pc-ov-nums {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
-	}
-
-	.pc-ov-kpis {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-	}
-
-	.pc-ov-kpi:nth-child(n) {
-		border-left: 0;
-		border-top: 0;
-	}
-
-	.pc-ov-kpi:nth-child(2n) {
-		border-left: 1px solid var(--pc-ov-line);
-	}
-
-	.pc-ov-kpi:nth-child(n + 3) {
-		border-top: 1px solid var(--pc-ov-line);
-	}
-
-	/* 7 格时最后一格占满一行，不留空格。 */
-	.pc-ov-kpi:last-child:nth-child(odd) {
-		grid-column: 1 / -1;
-		border-left: 0;
 	}
 
 	.pc-ov-card {
@@ -554,8 +544,11 @@ a.pc-ov-num:focus {
 
 /* 客户追踪 */
 .pc-ov-visitors {
+	max-height: 420px;
 	margin: 0;
 	padding: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
 	list-style: none;
 }
 

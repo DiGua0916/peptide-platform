@@ -173,7 +173,7 @@ body.pchq-workspace .pchq-tile__delta:is(.is-up,.is-down){color:var(--vc-ink)}
   body.pchq-workspace .pchq-tile:nth-child(4){border-right:0}
  }
 }
-body.pchq-workspace .pchq-chart svg{max-width:none}
+body.pchq-workspace .pchq-chart svg{max-width:none;height:auto;max-height:240px}/* 2026-11-07: the chart keeps its proportions but never grows taller than 240px (it reached 638px at 1920px wide) */
 body.pchq-workspace .pchq-chart .pchq-axis{font-family:var(--vc-font);font-size:12px}
 body.pchq-workspace .pchq-chart .pchq-axis--suppressed{display:none}
 body.pchq-workspace .pchq-chart .pchq-col{fill:#171717}
@@ -189,8 +189,8 @@ body.pchq-workspace .pchq-table :is(td,th):first-child{min-width:160px}
 body.pchq-workspace .pchq-table td:first-child>strong{font-weight:600}
 body.pchq-workspace .pchq-table td:first-child a{overflow-wrap:anywhere}
 body.pchq-workspace .pchq-table th{white-space:nowrap}
-body.pchq-workspace .pchq-table td>.pchq-muted{display:inline-block;margin-top:3px;overflow-wrap:anywhere}
-body.pchq-workspace .pchq-table td.pchq-actions{min-width:220px;white-space:normal}
+body.pchq-workspace .pchq-table td>.pchq-muted{display:inline-block;margin-top:3px;white-space:nowrap}
+body.pchq-workspace .pchq-table td.pchq-actions{min-width:220px;white-space:normal}body.pchq-workspace #wpbody-content .pchq-table td:last-child :is(a,button),body.pchq-workspace #wpbody-content .pchq-table td.pchq-actions :is(a,button){white-space:nowrap}
 body.pchq-workspace .pchq-actions>.button{margin:0 4px 6px 0}
 body.pchq-workspace .pchq-actions>.pchq-site-tools-trigger{margin:0 4px 6px 0}
 body.pchq-workspace .pchq-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;flex:none;white-space:nowrap;color:var(--vc-muted);background:#f2f2f2;border-radius:4px;font-size:11px;line-height:17px;font-weight:600}
