@@ -22,3 +22,17 @@
 .pc-rt.is-stale .pc-rt-cards-wrap,.pc-rt.is-stale .pc-rt-steps,.pc-rt.is-stale .pc-rt-chart-wrap{opacity:.65}
 @media(max-width:900px){.pc-rt-filter-grid{grid-template-columns:minmax(0,1fr)}.pc-rt-filters label{grid-template-columns:minmax(0,1fr);white-space:normal}.pc-rt-filter-actions{grid-column:auto}}
 @media(max-width:600px){.pc-rt-filters{padding:10px}}
+/* 第二轮：两个下拉放进标题行，紧凑排布（对照参考后台“请选择域名 / 请选择 utm_source”）。 */
+.pc-rt-head .pc-rt-filters{display:flex;align-items:center;margin:0 0 0 8px;padding:0;border:0;background:none}
+.pc-rt-head .pc-rt-filter-grid{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.pc-rt-head .pc-rt-filters section{position:relative;display:flex;align-items:center;gap:6px}
+.pc-rt-head .pc-rt-filters label{display:block;font-size:0;line-height:0}
+.pc-rt-head .pc-rt-filters select{width:180px;min-height:30px;height:30px;font-size:13px;line-height:28px;color:#404040}
+.pc-rt-head .pc-rt-filter-details>summary{font-size:0;line-height:0;padding:0}
+.pc-rt-head .pc-rt-filter-details>summary::before{content:"\2315";display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:4px;color:#8c8c8c;font-size:15px;line-height:1}
+.pc-rt-head .pc-rt-filter-details>summary:hover::before{background:#f2f2f2;color:#171717}
+.pc-rt-head .pc-rt-filter-details[open]>.pc-rt-filter-extra{position:absolute;top:calc(100% + 6px);left:0;z-index:40;width:300px;padding:10px 12px;border:1px solid #ececec;border-radius:6px;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.1)}
+.pc-rt-head .pc-rt-filter-extra label{font-size:12px;line-height:1.5}
+.pc-rt-head .pc-rt-filter-actions{display:none}
+.pc-rt-head .pc-rt-filter-accepted,.pc-rt-head .pc-rt-filter-missing{display:none!important}
+.pc-rt-head .pc-rt-filter-status:not(:empty){margin:0 0 0 8px;color:#8c8c8c;font-size:12px;line-height:1.4}

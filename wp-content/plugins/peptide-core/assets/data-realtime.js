@@ -313,6 +313,8 @@
 					'<span class="pc-rt-updated"></span>' +
 					'<button type="button" class="pc-rt-refresh">' + esc( T.refresh ) + '</button>' +
 					'<span class="screen-reader-text pc-rt-refresh-note"></span>' +
+					// 入口域名 / UTM 来源两个下拉放在标题这一行（对照参考后台）。
+					'<div class="pc-rt-filters-host"></div>' +
 				'</div>' +
 				'<form class="pc-rt-range" novalidate>' +
 					'<div class="pc-rt-modes" role="group" aria-label="' + esc( T.period ) + '">' +
@@ -328,7 +330,6 @@
 					'<button type="submit" class="button pc-rt-apply">' + esc( T.apply ) + '</button>' +
 				'</form>' +
 			'</div>' +
-			'<div class="pc-rt-filters-host"></div>' +
 			'<p class="pc-rt-period" aria-live="polite"></p>' +
 			'<p class="pc-rt-error" role="alert" hidden></p>' +
 			'<div class="pc-rt-notes"></div>' +

@@ -161,3 +161,8 @@
 	.pc-rt-dim-map { grid-column: auto; }
 	.pc-rt-dim-panel { min-height: 0; padding: 12px 14px; }
 }
+.pc-rt-dim-head .pc-rt-dim-details { margin-left: auto; color: #171717; font-size: 12px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.pc-rt-dim-head .pc-rt-dim-details::after { content: " \203A"; }
+.pc-rt-dim-head .pc-rt-dim-details:hover { text-decoration: underline; }
+.pc-rt-dim-head h2 + .pc-rt-dim-details + select { margin-left: 0; }
+.pc-rt-dim-head { flex-wrap: nowrap; }

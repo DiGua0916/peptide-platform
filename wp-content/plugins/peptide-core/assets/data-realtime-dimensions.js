@@ -10,6 +10,12 @@
 		function text( key ) { return T[ key ] || key; }
 		function hasShare( key ) { return key === 'popular_countries' || key === 'collections'; }
 		function labelKey( key ) { return [ 'viewed', 'carted', 'sold' ].indexOf( key ) >= 0 ? 'productLabel' : ( [ 'map', 'active_countries', 'popular_countries' ].indexOf( key ) >= 0 ? 'countryLabel' : ( key === 'sources' ? 'sourceLabel' : ( key === 'collections' ? 'collectionLabel' : 'pageLabel' ) ) ); }
+		// 标题右侧“查看详情 >”（对照参考后台），指向对应的明细报表。
+		function detailsLink( key ) {
+			var page = { viewed: 'pc-data-products', carted: 'pc-data-products', sold: 'pc-data-products', sources: 'pc-data-sources', pages: 'pc-data-pages', collections: 'pc-data-page-conversion', active_countries: 'pc-data-dimensions&dimension=country', popular_countries: 'pc-data-dimensions&dimension=country' }[ key ];
+			var label = w.pcDataRealtime && w.pcDataRealtime.strings && w.pcDataRealtime.strings.details;
+			return page && label ? '<a class="pc-rt-dim-details" href="admin.php?page=' + page + '">' + esc( label ) + '</a>' : '';
+		}
 		function helpKey( key ) { return key === 'sources' ? 'sourceHelp' : ( key === 'collections' ? 'collectionHelp' : ( [ 'map', 'active_countries', 'popular_countries' ].indexOf( key ) >= 0 ? 'geoHelp' : 'coverageNA' ) ); }
 		// 国家行：名称前的国旗（由两位国家代码拼成的 emoji；代码不合法时不显示）。
 		function flag( code ) {
@@ -42,7 +48,7 @@
 		KEYS.forEach( function ( key ) { windows[ key ] = storage( key ); } );
 		host.className = 'pc-rt-dimensions';
 		host.innerHTML = '<p class="pc-rt-dim-help">' + esc( text( 'rangeHelp' ) ) + '</p><div class="pc-rt-dim-grid">' + KEYS.map( function ( key ) {
-			return '<section class="pc-rt-dim-panel pc-rt-dim-' + key + '" data-panel="' + key + '" aria-labelledby="pc-rt-dim-title-' + id + '-' + key + '"><div class="pc-rt-dim-head"><h2 id="pc-rt-dim-title-' + id + '-' + key + '">' + esc( text( key ) ) + ( ctx.tip ? ctx.tip( text( helpKey( key ) ) ) : '' ) + '</h2><select aria-label="' + esc( text( key ) ) + '">' + [ 10, 20, 30 ].map( function ( n ) { return '<option value="' + n + '"' + ( windows[ key ] === n ? ' selected' : '' ) + '>' + esc( fill( text( 'window' ), n ) ) + '</option>'; } ).join( '' ) + '</select></div><p class="pc-rt-dim-unit"></p><p class="pc-rt-dim-status" aria-live="polite"></p><button type="button" class="button pc-rt-dim-retry">' + esc( text( 'retry' ) ) + '</button><div class="pc-rt-dim-map-box"></div><p class="pc-rt-dim-total"></p><p class="pc-rt-dim-coverage"></p><div class="pc-rt-dim-scroll" tabindex="0" role="region" aria-label="' + esc( text( key ) ) + '"><table><thead><tr><th scope="col">' + esc( text( labelKey( key ) ) ) + '</th><th scope="col">' + esc( text( 'count' ) ) + '</th>' + ( hasShare( key ) ? '<th scope="col">' + esc( text( 'share' ) ) + '</th>' : '' ) + '</tr></thead><tbody></tbody></table></div><p class="pc-rt-dim-local-help">' + esc( text( helpKey( key ) ) ) + '</p></section>';
+			return '<section class="pc-rt-dim-panel pc-rt-dim-' + key + '" data-panel="' + key + '" aria-labelledby="pc-rt-dim-title-' + id + '-' + key + '"><div class="pc-rt-dim-head"><h2 id="pc-rt-dim-title-' + id + '-' + key + '">' + esc( text( key ) ) + ( ctx.tip ? ctx.tip( text( helpKey( key ) ) ) : '' ) + '</h2>' + detailsLink( key ) + '<select aria-label="' + esc( text( key ) ) + '">' + [ 10, 20, 30 ].map( function ( n ) { return '<option value="' + n + '"' + ( windows[ key ] === n ? ' selected' : '' ) + '>' + esc( fill( text( 'window' ), n ) ) + '</option>'; } ).join( '' ) + '</select></div><p class="pc-rt-dim-unit"></p><p class="pc-rt-dim-status" aria-live="polite"></p><button type="button" class="button pc-rt-dim-retry">' + esc( text( 'retry' ) ) + '</button><div class="pc-rt-dim-map-box"></div><p class="pc-rt-dim-total"></p><p class="pc-rt-dim-coverage"></p><div class="pc-rt-dim-scroll" tabindex="0" role="region" aria-label="' + esc( text( key ) ) + '"><table><thead><tr><th scope="col">' + esc( text( labelKey( key ) ) ) + '</th><th scope="col">' + esc( text( 'count' ) ) + '</th>' + ( hasShare( key ) ? '<th scope="col">' + esc( text( 'share' ) ) + '</th>' : '' ) + '</tr></thead><tbody></tbody></table></div><p class="pc-rt-dim-local-help">' + esc( text( helpKey( key ) ) ) + '</p></section>';
 		} ).join( '' ) + '</div>';
 		KEYS.forEach( function ( key ) {
 			var root = host.querySelector( '[data-panel="' + key + '"]' );
