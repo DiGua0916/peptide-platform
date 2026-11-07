@@ -53,6 +53,24 @@
 	// 指标条里能切换大图的指标 → 趋势接口里的同名序列（其余指标没有分时序列，只显示数字）。
 	var KPI_TREND = { sales: 'sales', visitors: 'visitors', orders: 'orders', aov: 'aov' };
 	var selectedKpi = 'sales';
+	// 入口域名筛选（对照参考后台“请选择域名”）：空字符串 = 全部；初值来自地址栏 entry_domain，切换时写回地址栏。
+	var entryDomain = '';
+	try { entryDomain = new window.URLSearchParams( window.location.search ).get( 'entry_domain' ) || ''; } catch ( e ) { entryDomain = ''; }
+	function writeDomainUrl() {
+		try {
+			var u = new window.URL( window.location.href );
+			if ( entryDomain ) { u.searchParams.set( 'entry_domain', entryDomain ); } else { u.searchParams[ 'delete' ]( 'entry_domain' ); }
+			window.history.replaceState( null, '', u.toString() );
+		} catch ( e ) { /* 地址栏写不进去不影响使用。 */ }
+	}
+	function domainSelect( data, ctx ) {
+		var esc = ctx.esc, list = ( data && data.entry_domains ) || [], values = list.map( function ( o ) { return o.value; } );
+		if ( entryDomain && values.indexOf( entryDomain ) < 0 ) { values.unshift( entryDomain ); }
+		return '<label class="pc-ops-domain"><span class="screen-reader-text">' + esc( T.domainLabel || '' ) + '</span><select class="pc-ops-domain__select">' +
+			'<option value="">' + esc( T.domainAll || '' ) + '</option>' +
+			values.map( function ( v ) { return '<option value="' + esc( v ) + '"' + ( v === entryDomain ? ' selected' : '' ) + '>' + esc( v ) + '</option>'; } ).join( '' ) +
+		'</select></label>';
+	}
 
 	// 请求计数：切换时间段后，旧请求晚到的结果不再画。
 	var requests = 0;
@@ -100,6 +118,9 @@
 
 	// 一个指标的显示值。
 	function value( key, v, ctx ) {
+		if ( null === v && 'conversion' !== key ) {
+			return '-';
+		}
 		if ( MONEY[ key ] ) {
 			return ctx.money( v );
 		}
@@ -487,8 +508,9 @@
 		var more = rows.length > RANK_SHOW ?
 			'<button type="button" class="button-link pc-ops-rank__toggle" data-rank-toggle="1" aria-expanded="false">' + esc( T.rankMore ) + '</button>' :
 			'';
+		var unfiltered = currentRankData && currentRankData.entry_domain && ( currentRankData.all_domain_tables || [] ).indexOf( name ) >= 0;
 		return '<div class="pc-ops-rank" data-rank="' + esc( name ) + '">' +
-			'<div class="pc-ops-rank__head"><h3 class="pc-ops-rank__title">' + esc( title ) + '</h3>' +
+			'<div class="pc-ops-rank__head"><h3 class="pc-ops-rank__title">' + esc( title ) + ( unfiltered ? ' <span class="pc-ops-rank__scope">' + esc( T.allDomainsTag || '' ) + '</span>' : '' ) + '</h3>' +
 				'<button type="button" class="button-link pc-ops-rank__open" data-rank-open="' + esc( name ) + '" aria-expanded="false" aria-label="' + esc( fill( T.rankOpenLabel, { '%s': title } ) ) + '">' + esc( T.rankMore || T.rankOpen ) + '</button></div>' +
 			( name === 'search_terms' && table && table.coverage ? '<p class="pc-ops-rank__coverage">' + esc( fill( T.rankSearchCoverage || 'Search page views: %n; known: %k; empty: %e; filtered: %f; not observed: %u.', { '%n': ctx.number( table.coverage.current.base_count ), '%k': ctx.number( table.coverage.current.known ), '%e': ctx.number( table.coverage.current.empty ), '%f': ctx.number( table.coverage.current.filtered ), '%u': ctx.number( table.coverage.current.unobserved ) } ) ) + '</p>' : '' ) +
 			( name === 'products_favorited' && table && table.coverage ? '<p class="pc-ops-rank__coverage">' + esc( table.coverage.current.availability === 'not_observed' ? T.rankActionNotObserved : ( table.coverage.current.availability === 'unavailable' ? T.rankActionUnavailable : fill( T.rankActionCoverage, { '%n': ctx.number( table.coverage.current.received_operations ) } ) ) ) + '</p>' : '' ) +
@@ -508,7 +530,8 @@
 		var esc = ctx.esc, table = data && data.tables && data.tables.visitor_source, rows = table && table.rows ? table.rows.slice( 0, 8 ) : [];
 		var cols = T.rankCols && T.rankCols.visitor_source;
 		var metric = cols ? cols[ 1 ] : T.thisPeriod;
-		return '<div class="pc-ops-channels__head"><h2>' + esc( T.channelsTitle || T.t_visitor_source ) + '</h2></div>' +
+		var unfiltered = data && data.entry_domain && ( data.all_domain_tables || [] ).indexOf( 'visitor_source' ) >= 0;
+		return '<div class="pc-ops-channels__head"><h2>' + esc( T.channelsTitle || T.t_visitor_source ) + ( unfiltered ? ' <span class="pc-ops-rank__scope">' + esc( T.allDomainsTag || '' ) + '</span>' : '' ) + '</h2></div>' +
 			'<div class="pc-ops-table-wrap"><table class="pc-ops-table"><thead><tr><th scope="col">' + esc( T.channelName || T.rankName ) + '</th><th scope="col">' + esc( metric + '1' ) + '</th><th scope="col">' + esc( metric + '2' ) + '</th><th scope="col">' + esc( T.rankYoY || T.change ) + '</th></tr></thead><tbody>' +
 			( rows.length ? rows.map( function ( row ) {
 				return '<tr><th scope="row">' + esc( rankLabel( 'visitor_source', row ) ) + '</th><td>' + esc( rankValue( 'visitor_source', row.current, ctx ) ) + '</td><td>' + esc( rankValue( 'visitor_source', row.previous, ctx ) ) + '</td><td>' + changeHtml( row.change, ctx, 'pc-ops-change' ) + '</td></tr>';
@@ -516,7 +539,9 @@
 			'</tbody></table></div>';
 	}
 
+	var currentRankData = null;
 	function rankingsView( data, ctx ) {
+		currentRankData = data;
 		var tables = ( data && data.tables ) || {};
 		var rankHelp = ( T.rankDimensionHelp || 'Source means saved UTM source; domain means saved entry domain. Visitor groups count distinct visitors per group. Country uses saved observations; favorites are not collected.' ) + ' ' + ( T.rankSearchHelp || 'Search terms count accepted search result page views. Reloads and pagination count again; retries do not. Only bounded observed terms are retained; missing historical terms are not reconstructed.' );
 		return '<h2 class="pc-ops-rankings__title">' + ctx.esc( T.rankings ) + ( ctx.tip ? ctx.tip( rankHelp ) : '' ) + '</h2>' +
@@ -600,6 +625,7 @@
 		var params = range.preset ?
 			{ range: range.preset } :
 			{ from: d.from, to: d.to, compare_from: d.compare_from, compare_to: d.compare_to };
+		if ( entryDomain ) { params.entry_domain = entryDomain; }
 		var failed = function () {
 			if ( rankPanel ) { rankPanel.dispose(); rankPanel = null; }
 			if ( checkoutPanel ) { checkoutPanel.dispose(); checkoutPanel = null; }
@@ -684,6 +710,15 @@
 				try {
 					bodyEl.innerHTML = view( data, ctx );
 					opsData = data;
+					var extra = ctx.setToolbarExtra ? ctx.setToolbarExtra( domainSelect( data, ctx ) ) : null;
+					var picker = extra && extra.querySelector ? extra.querySelector( '.pc-ops-domain__select' ) : null;
+					if ( picker ) {
+						picker.addEventListener( 'change', function () {
+							entryDomain = picker.value;
+							writeDomainUrl();
+							render( bodyEl, range, ctx );
+						} );
+					}
 					var box = bodyEl.querySelector( '.pc-ops' );
 					var pickKpi = function ( event ) {
 						var cell = findAttr( event.target, 'data-kpi', box );

@@ -507,3 +507,16 @@
 .pc-landing-chart__bar { position: absolute; top: 0; left: 0; height: 100%; min-width: 2px; border-radius: 3px; background: #171717; }
 .pc-landing-chart__bar.is-paid { top: 4px; height: 6px; background: #a3a3a3; }
 .pc-landing-chart__num { color: #525252; text-align: right; font-variant-numeric: tabular-nums; }
+.pc-prod-variant { color: #404040; font-size: 12px; line-height: 1.4; }
+.pc-data-actions .pc-prod-mode-link { color: #171717; }
+#wpbody-content .pc-data-body .button[hidden] { display: none !important; }
+/* 工具栏一行放下：时间段 / 对比下拉、日期框和域名下拉都收窄一点（对照参考后台）。 */
+.pc-data > .pc-data-toolbar { gap: 8px 10px; }
+.pc-data .pc-dd__trigger { min-width: 100px; }
+#wpbody-content .pc-data .pc-data-rangebox input.pc-data-date { width: 106px; }
+.pc-data .pc-data-rangebox { padding: 0 8px; }
+.pc-data-time { font-size: 12px; }
+.pc-ops-domain__select { min-width: 150px; max-width: 200px; }
+#wpbody-content .pc-data .pc-data-rangebox input.pc-data-date { width: 116px; }
+#wpbody-content .pc-data .pc-data-toolbar-extra select.pc-ops-domain__select { width: 160px; min-width: 0; max-width: 160px; }
+#wpbody-content .pc-data .pc-data-toolbar-extra select.pc-ops-domain__select { width: 138px; max-width: 138px; }

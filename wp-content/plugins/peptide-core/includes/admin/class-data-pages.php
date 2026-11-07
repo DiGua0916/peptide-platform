@@ -21,6 +21,7 @@ use PeptideCore\Data\Apps;
 use PeptideCore\Data\Conversion;
 use PeptideCore\Data\Checkout_Steps;
 use PeptideCore\Data\Emails;
+use PeptideCore\Data\Entry_Domain;
 use PeptideCore\Data\Landing;
 use PeptideCore\Data\Sources;
 use PeptideCore\Data\Operations;
@@ -212,7 +213,12 @@ final class Data_Pages {
 							if ( is_wp_error( $r ) ) {
 								return $r;
 							}
-							$res = new \WP_REST_Response( Operations::summary( $r ) );
+							// 可选的入口域名筛选（对照参考后台“请选择域名”）；不带参数时结果和原来一样。
+							$domain = Entry_Domain::param( $request->get_params() );
+							if ( is_wp_error( $domain ) ) {
+								return $domain;
+							}
+							$res = new \WP_REST_Response( Operations::summary( $r, $domain ) );
 							$res->header( 'Cache-Control', 'no-store' );
 							return $res;
 						},
@@ -252,7 +258,12 @@ final class Data_Pages {
 							if ( is_wp_error( $r ) ) {
 								return $r;
 							}
-							$res = new \WP_REST_Response( Trends::summary( $r ) );
+							// 可选的入口域名筛选（对照参考后台“请选择域名”）；不带参数时结果和原来一样。
+							$domain = Entry_Domain::param( $request->get_params() );
+							if ( is_wp_error( $domain ) ) {
+								return $domain;
+							}
+							$res = new \WP_REST_Response( Trends::summary( $r, $domain ) );
 							$res->header( 'Cache-Control', 'no-store' );
 							return $res;
 						},
@@ -270,7 +281,12 @@ final class Data_Pages {
 							if ( is_wp_error( $r ) ) {
 								return $r;
 							}
-							$res = new \WP_REST_Response( Rankings::summary( $r ) );
+							// 可选的入口域名筛选（对照参考后台“请选择域名”）；不带参数时结果和原来一样。
+							$domain = Entry_Domain::param( $request->get_params() );
+							if ( is_wp_error( $domain ) ) {
+								return $domain;
+							}
+							$res = new \WP_REST_Response( Rankings::summary( $r, $domain ) );
 							$res->header( 'Cache-Control', 'no-store' );
 							return $res;
 						},
@@ -307,6 +323,28 @@ final class Data_Pages {
 								return $a;
 							}
 							return Report_Exports::response( $request, 'products', $r, $a );
+						},
+						'permission_callback' => $permission,
+					)
+				);
+				// 款式详情数据（对照参考后台）：每个款式一行，参数和商品详情数据相同。
+				register_rest_route(
+					Rest_Controller::ROUTE_NAMESPACE,
+					'/data/products/variations',
+					array(
+						'methods'             => \WP_REST_Server::READABLE,
+						'callback'            => static function ( \WP_REST_Request $request ) {
+							$r = Range::from_params( $request->get_params() );
+							if ( is_wp_error( $r ) ) {
+								return $r;
+							}
+							$a = Products::params( $request->get_params() );
+							if ( is_wp_error( $a ) ) {
+								return $a;
+							}
+							$res = new \WP_REST_Response( Products::variant_table( $r, $a ) );
+							$res->header( 'Cache-Control', 'no-store' );
+							return $res;
 						},
 						'permission_callback' => $permission,
 					)
@@ -875,6 +913,10 @@ final class Data_Pages {
 	private static function operations_strings(): array {
 		return self::visitor_funnel_strings() + self::export_strings() + array(
 			'moreDimensions' => __( 'More dimension data', 'peptide-core' ),
+			'domainAll'      => __( 'All entry domains', 'peptide-core' ),
+			'domainLabel'    => __( 'Entry domain', 'peptide-core' ),
+			'allDomainsTag'  => __( 'All domains (not filtered by entry domain)', 'peptide-core' ),
+			'domainNoValue'  => __( 'No value for the selected entry domain', 'peptide-core' ),
 			'utmSources' => __( 'Sources by UTM', 'peptide-core' ),
 			'checkoutPanel'   => self::operations_checkout_strings(),
 			'sales'           => __( 'Sales', 'peptide-core' ),
@@ -1121,6 +1163,9 @@ final class Data_Pages {
 			'moveDown'    => __( 'Move %s down', 'peptide-core' ),
 			'exportHelp'  => __( 'Export all matching products and their data-bearing variations, including collapsed variations.', 'peptide-core' ),
 			'variations'  => __( 'Variation details', 'peptide-core' ),
+			'variantView' => __( 'Variant details data', 'peptide-core' ),
+			'productView' => __( 'Product details data', 'peptide-core' ),
+			'variantCol'  => __( 'Variant information', 'peptide-core' ),
 			'noData'      => __( 'No product data in this period.', 'peptide-core' ),
 			/* translators: 1: current page number, 2: total number of pages */
 			'page'        => __( 'Page %1$d of %2$d', 'peptide-core' ),

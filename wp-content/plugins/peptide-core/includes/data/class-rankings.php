@@ -64,7 +64,10 @@ final class Rankings {
 	 * @param array $range A successful Range::from_params() result.
 	 * @return array{range:array,tracking:bool,tables:array<string,array{rows:array,total_rows:int}>}
 	 */
-	public static function summary( array $range ): array {
+	/** 选了入口域名时仍按全部域名统计的表（访客分组表、搜索词、收藏没有逐访问的入口口径）。 */
+	public const ALL_DOMAIN_TABLES = array( 'visitor_source', 'visitor_domain', 'visitor_country', 'search_terms', 'products_favorited' );
+
+	public static function summary( array $range, ?string $entry_domain = null ): array {
 		// 两个时间段共用的缓存：商品的分类、分类名、支付方式的最新标题、已取过的商品。
 		$cache = array(
 			'product_terms' => array(),
@@ -73,8 +76,8 @@ final class Rankings {
 			'products'      => array(),
 		);
 
-		$current  = self::period( (int) $range['from'], (int) $range['to'], $cache );
-		$previous = self::period( (int) $range['compare_from'], (int) $range['compare_to'], $cache );
+		$current  = self::period( (int) $range['from'], (int) $range['to'], $cache, $entry_domain );
+		$previous = self::period( (int) $range['compare_from'], (int) $range['compare_to'], $cache, $entry_domain );
 
 		$tables = array();
 		foreach ( self::TABLES as $name ) {
@@ -84,11 +87,16 @@ final class Rankings {
 			if ( 'search_terms' === $name ) { $tables[$name]['coverage'] = array( 'current' => $cache['search_coverage'][0], 'previous' => $cache['search_coverage'][1] ); }
 		}
 
-		return array(
+		$out = array(
 			'range'    => $range,
 			'tracking' => Schema::installed(),
 			'tables'   => $tables,
 		);
+		if ( null !== $entry_domain ) {
+			$out['entry_domain']      = $entry_domain;
+			$out['all_domain_tables'] = self::ALL_DOMAIN_TABLES;
+		}
+		return $out;
 	}
 
 
@@ -104,8 +112,12 @@ final class Rankings {
 		foreach ( array( 'page' => $page, 'per_page' => $per_page ) as $key => $value ) { if ( null === $value || ( array_key_exists( $key, $params ) && null === $params[$key] ) ) { $errors[$key] = 'invalid_format'; } }
 		$format = $params['format'] ?? 'json';
 		if ( array_key_exists( 'format', $params ) && ( ! is_string( $params['format'] ) || ! in_array( $format, array( 'json', 'csv' ), true ) ) ) { $errors['format'] = 'invalid_format'; }
+		$entry_domain = Entry_Domain::param( $params );
+		if ( is_wp_error( $entry_domain ) ) { $errors['entry_domain'] = 'invalid_format'; }
 		if ( $errors ) { return Errors::invalid( $errors ); }
-		return array( 'table' => $table, 'q' => trim( $q ), 'page' => $page, 'per_page' => $per_page, 'format' => $format );
+		$out = array( 'table' => $table, 'q' => trim( $q ), 'page' => $page, 'per_page' => $per_page, 'format' => $format );
+		if ( null !== $entry_domain ) { $out['entry_domain'] = $entry_domain; }
+		return $out;
 	}
 
 	public static function units( string $table ): array {
@@ -134,8 +146,9 @@ final class Rankings {
 
 	private static function selection( array $range, array $args, bool $complete = false ): array {
 		$cache = array( 'product_terms' => array(), 'term_names' => array(), 'methods' => array(), 'products' => array() );
-		$current = self::period( (int) $range['from'], (int) $range['to'], $cache );
-		$previous = self::period( (int) $range['compare_from'], (int) $range['compare_to'], $cache );
+		$domain = $args['entry_domain'] ?? null;
+		$current = self::period( (int) $range['from'], (int) $range['to'], $cache, $domain );
+		$previous = self::period( (int) $range['compare_from'], (int) $range['compare_to'], $cache, $domain );
 		$table = $args['table'];
 		$rows = self::candidates( $table, $current[$table], $previous[$table] );
 		if ( $complete || '' !== $args['q'] ) { self::prime_products( $table, $rows, $cache ); }
@@ -176,7 +189,7 @@ final class Rankings {
 	 * @param array $cache summary() 里的共用缓存。
 	 * @return array<string,array>
 	 */
-	private static function period( int $from, int $to, array &$cache ): array {
+	private static function period( int $from, int $to, array &$cache, ?string $entry_domain = null ): array {
 		$out = array();
 		foreach ( self::TABLES as $name ) {
 			$out[ $name ] = array();
@@ -192,6 +205,10 @@ final class Rankings {
 			)
 		);
 
+		if ( null !== $entry_domain && is_array( $orders ) ) {
+			// 选了入口域名：订单类的表只算归属这个域名的访问里下的订单。
+			$orders = Entry_Domain::orders( array_values( array_filter( $orders, static fn( $o ) => $o instanceof \WC_Order ) ), $entry_domain, $to * 1000 );
+		}
 		$paid_statuses = wc_get_is_paid_statuses();
 		$attempts      = array();
 		$successes     = array();
@@ -287,7 +304,7 @@ final class Rankings {
 
 		// 事件和访问：追踪的表没装时全部为空。
 		if ( Schema::installed() ) {
-			$out = self::tracked( $out, $from, $to );
+			$out = self::tracked( $out, $from, $to, $entry_domain );
 		}
 		foreach ( Dimension_Reports::rankings( $from, $to, $dimension_orders, $cache ) as $name => $rows ) { $out[$name] = $rows; }
 		$search = Search_Observations::period( $from, $to ); $out['search_terms'] = $search['rows']; $cache['search_coverage'][] = $search['coverage'];
@@ -303,30 +320,38 @@ final class Rankings {
 	 * @param array<string,array> $out period() 的结果。
 	 * @return array<string,array>
 	 */
-	private static function tracked( array $out, int $from, int $to ): array {
+	private static function tracked( array $out, int $from, int $to, ?string $entry_domain = null ): array {
 		global $wpdb;
 		$events   = Schema::table( 'events' );
 		$visits   = Schema::table( 'visits' );
 		$visitors = Schema::table( 'visitors' );
 		$fm       = $from * 1000;
 		$tm       = $to * 1000;
+		$dw = $sw = '';
+		$da = $sa = array();
+		if ( null !== $entry_domain ) {
+			list( $dw, $da ) = Entry_Domain::sql( '', $entry_domain, $tm );
+			list( $sw, $sa ) = Entry_Domain::sql( 's.', $entry_domain, $tm );
+		}
 
 		foreach ( array(
 			'product_view' => 'products_viewed',
 			'add_to_cart'  => 'products_carted',
 		) as $type => $name ) {
-			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT product_id, COUNT(*) AS n FROM {$events} WHERE type = %s AND occurred_ms >= %d AND occurred_ms < %d AND product_id > 0 GROUP BY product_id", $type, $fm, $tm ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			$rows = null === $entry_domain ?
+				$wpdb->get_results( $wpdb->prepare( "SELECT product_id, COUNT(*) AS n FROM {$events} WHERE type = %s AND occurred_ms >= %d AND occurred_ms < %d AND product_id > 0 GROUP BY product_id", $type, $fm, $tm ), ARRAY_A ) : // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+				$wpdb->get_results( $wpdb->prepare( "SELECT e.product_id, COUNT(*) AS n FROM {$events} e INNER JOIN {$visits} s ON s.id = e.visit_id WHERE e.type = %s AND e.occurred_ms >= %d AND e.occurred_ms < %d AND e.product_id > 0{$sw} GROUP BY e.product_id", array_merge( array( $type, $fm, $tm ), $sa ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 			foreach ( (array) $rows as $row ) {
 				self::add( $out[ $name ], (int) $row['product_id'], (int) $row['n'] );
 			}
 		}
 
-		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT COALESCE( v.browser, '' ) AS g, COUNT(DISTINCT s.visitor_id) AS n FROM {$visits} s LEFT JOIN {$visitors} v ON v.id = s.visitor_id WHERE s.start_ms >= %d AND s.start_ms < %d GROUP BY COALESCE( v.browser, '' )", $fm, $tm ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT COALESCE( v.browser, '' ) AS g, COUNT(DISTINCT s.visitor_id) AS n FROM {$visits} s LEFT JOIN {$visitors} v ON v.id = s.visitor_id WHERE s.start_ms >= %d AND s.start_ms < %d{$sw} GROUP BY COALESCE( v.browser, '' )", array_merge( array( $fm, $tm ), $sa ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		foreach ( (array) $rows as $row ) {
 			self::add( $out['visitor_browsers'], self::group_key( (string) $row['g'] ), (int) $row['n'] );
 		}
 
-		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT device AS g, COUNT(DISTINCT visitor_id) AS n FROM {$visits} WHERE start_ms >= %d AND start_ms < %d GROUP BY device", $fm, $tm ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT device AS g, COUNT(DISTINCT visitor_id) AS n FROM {$visits} WHERE start_ms >= %d AND start_ms < %d{$dw} GROUP BY device", array_merge( array( $fm, $tm ), $da ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		foreach ( (array) $rows as $row ) {
 			self::add( $out['devices'], self::group_key( (string) $row['g'] ), (int) $row['n'] );
 		}

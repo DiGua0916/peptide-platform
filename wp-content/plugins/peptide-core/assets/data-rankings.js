@@ -14,7 +14,7 @@
 		function each( list, fn ) { Array.prototype.forEach.call( list, fn ); }
 		function fill( text, map ) { var value = String( text ); Object.keys( map ).forEach( function ( key ) { value = value.split( key ).join( String( map[key] ) ); } ); return value; }
 		function attached() { return ! disposed && document.documentElement.contains( panel ); }
-		function params( source ) { return { from: source.from, to: source.to, compare_from: source.compare_from, compare_to: source.compare_to, table: state.table, q: state.q, page: state.page, per_page: state.perPage }; }
+		function params( source ) { var p = { from: source.from, to: source.to, compare_from: source.compare_from, compare_to: source.compare_to, table: state.table, q: state.q, page: state.page, per_page: state.perPage }; if ( accepted && typeof accepted.entry_domain === 'string' && accepted.entry_domain ) { p.entry_domain = accepted.entry_domain; } return p; }
 		function target( node, key ) { while ( node && node !== section ) { if ( node.nodeType === 1 && node.hasAttribute( key ) ) { return node; } node = node.parentNode; } return null; }
 		panel.id = id; panel.hidden = true;
 		panel.innerHTML = '<div class="pc-ranks-head"><h3 class="pc-ranks-title" tabindex="-1" id="' + esc( id + '-title' ) + '"></h3><button type="button" class="button pc-ranks-close">' + esc( T.rankClose ) + '</button></div>' +

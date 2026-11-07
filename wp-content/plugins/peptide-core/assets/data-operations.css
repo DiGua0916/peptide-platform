@@ -419,3 +419,8 @@
 	.pc-ops-kpis { grid-auto-columns: calc(100% / 4); }
 }
 @media (max-width: 600px) { .pc-ops-kpis { grid-auto-columns: calc(100% / 2.2); } }
+/* 入口域名下拉（时间工具栏末尾）与“全部域名”标记。 */
+.pc-data-toolbar-extra:empty { display: none; }
+.pc-ops-domain { margin: 0; }
+.pc-ops-domain__select { min-width: 170px; height: 32px; min-height: 32px; border-color: #dcdcdc; border-radius: 4px; font-size: 13px; color: #404040; }
+.pc-ops-rank__scope { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 3px; background: #f2f2f2; color: #737373; font-size: 11px; font-weight: 500; vertical-align: 2px; }

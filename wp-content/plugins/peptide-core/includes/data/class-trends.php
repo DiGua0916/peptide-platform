@@ -50,10 +50,10 @@ final class Trends {
 	 * @param array $range A successful Range::from_params() result.
 	 * @return array{range:array,tracking:bool,bucket:string,current:array,previous:array,change:array<string,?float>}
 	 */
-	public static function summary( array $range ): array {
+	public static function summary( array $range, ?string $entry_domain = null ): array {
 		$bucket   = 'hour' === ( $range['bucket'] ?? '' ) ? 'hour' : 'day';
-		$current  = self::period( (int) $range['from'], (int) $range['to'], $bucket );
-		$previous = self::period( (int) $range['compare_from'], (int) $range['compare_to'], $bucket );
+		$current  = self::period( (int) $range['from'], (int) $range['to'], $bucket, $entry_domain );
+		$previous = self::period( (int) $range['compare_from'], (int) $range['compare_to'], $bucket, $entry_domain );
 
 		$change = array();
 		foreach ( self::METRICS as $key ) {
@@ -67,7 +67,7 @@ final class Trends {
 			}
 		}
 
-		return array(
+		$out = array(
 			'range'    => $range,
 			'tracking' => Schema::installed(),
 			'bucket'   => $bucket,
@@ -75,6 +75,10 @@ final class Trends {
 			'previous' => $previous,
 			'change'   => $change,
 		);
+		if ( null !== $entry_domain ) {
+			$out['entry_domain'] = $entry_domain;
+		}
+		return $out;
 	}
 
 	/**
@@ -82,7 +86,7 @@ final class Trends {
 	 *
 	 * @return array{totals:array,points:array}
 	 */
-	private static function period( int $from, int $to, string $bucket ): array {
+	private static function period( int $from, int $to, string $bucket, ?string $entry_domain = null ): array {
 		$buckets = self::buckets( $from, $to, $bucket );
 		$starts  = array_column( $buckets, 'start' );
 
@@ -104,6 +108,11 @@ final class Trends {
 				'id'    => (int) $order->get_id(),
 				'order' => $order,
 			);
+		}
+		if ( null !== $entry_domain ) {
+			// 选了入口域名：只留归属这个域名的订单（复购仍按买家的全部历史订单判断“以前买过”）。
+			$kept = array_fill_keys( array_map( static fn( $o ) => (int) $o->get_id(), Entry_Domain::orders( array_column( $rows, 'order' ), $entry_domain, $to * 1000 ) ), true );
+			$rows = array_values( array_filter( $rows, static fn( array $r ): bool => isset( $kept[ $r['id'] ] ) ) );
 		}
 		usort( $rows, static fn( array $a, array $b ): int => array( $a['ts'], $a['id'] ) <=> array( $b['ts'], $b['id'] ) );
 
@@ -155,19 +164,30 @@ final class Trends {
 			$events = Schema::table( 'events' );
 			$fm     = $from * 1000;
 			$tm     = $to * 1000;
+			$dw     = '';
+			$da     = array();
+			$sw     = '';
+			$sa     = array();
+			if ( null !== $entry_domain ) {
+				list( $dw, $da ) = Entry_Domain::sql( '', $entry_domain, $tm );
+				list( $sw, $sa ) = Entry_Domain::sql( 's.', $entry_domain, $tm );
+			}
 
 			// 合计：和指标卡片同一个口径（整个时间段里不同的访客），不是各桶之和。
-			$visitors_total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT( DISTINCT visitor_id ) FROM {$visits} WHERE start_ms >= %d AND start_ms < %d", $fm, $tm ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			$visitors_total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT( DISTINCT visitor_id ) FROM {$visits} WHERE start_ms >= %d AND start_ms < %d{$dw}", array_merge( array( $fm, $tm ), $da ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 
 			// 每个桶：SQL 按距离 from 的真实小时数分组（不受夏令时影响），再在 PHP 里归到桶（一个天桶里有好几个小时）。
-			$rows_v = $wpdb->get_results( $wpdb->prepare( "SELECT DISTINCT visitor_id, FLOOR( ( start_ms - %d ) / 3600000 ) AS h FROM {$visits} WHERE start_ms >= %d AND start_ms < %d", $fm, $fm, $tm ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			$rows_v = $wpdb->get_results( $wpdb->prepare( "SELECT DISTINCT visitor_id, FLOOR( ( start_ms - %d ) / 3600000 ) AS h FROM {$visits} WHERE start_ms >= %d AND start_ms < %d{$dw}", array_merge( array( $fm, $fm, $tm ), $da ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 			foreach ( (array) $rows_v as $r ) {
 				$i = self::index( $starts, $to, $from + (int) $r['h'] * HOUR_IN_SECONDS );
 				if ( null !== $i ) {
 					$acc[ $i ]['visitors'][ (int) $r['visitor_id'] ] = true;
 				}
 			}
-			$rows_p = $wpdb->get_results( $wpdb->prepare( "SELECT FLOOR( ( occurred_ms - %d ) / 3600000 ) AS h, COUNT(*) AS n FROM {$events} WHERE type = 'page_view' AND occurred_ms >= %d AND occurred_ms < %d GROUP BY h", $fm, $fm, $tm ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			$rows_p = null === $entry_domain ?
+				$wpdb->get_results( $wpdb->prepare( "SELECT FLOOR( ( occurred_ms - %d ) / 3600000 ) AS h, COUNT(*) AS n FROM {$events} WHERE type = 'page_view' AND occurred_ms >= %d AND occurred_ms < %d GROUP BY h", $fm, $fm, $tm ), ARRAY_A ) : // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+				// 选了入口域名：浏览量只算这个域名的访问里的页面浏览。
+				$wpdb->get_results( $wpdb->prepare( "SELECT FLOOR( ( e.occurred_ms - %d ) / 3600000 ) AS h, COUNT(*) AS n FROM {$events} e INNER JOIN {$visits} s ON s.id = e.visit_id WHERE e.type = 'page_view' AND e.occurred_ms >= %d AND e.occurred_ms < %d{$sw} GROUP BY h", array_merge( array( $fm, $fm, $tm ), $sa ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 			foreach ( (array) $rows_p as $r ) {
 				$i = self::index( $starts, $to, $from + (int) $r['h'] * HOUR_IN_SECONDS );
 				if ( null !== $i ) {

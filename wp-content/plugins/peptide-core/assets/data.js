@@ -142,6 +142,12 @@
 					'<button type="button" class="pc-pager__go" ' + attr + '="0" hidden tabindex="-1"></button>' : '' ) +
 			'</div>';
 		},
+		// 时间工具栏末尾的报表专属控件（运营数据的“请选择域名”）：整块替换，返回容器。
+		setToolbarExtra: function ( html ) {
+			var slot = root.querySelector ? root.querySelector( '.pc-data-toolbar-extra' ) : null;
+			if ( slot ) { slot.innerHTML = html || ''; }
+			return slot;
+		},
 		// 标题右侧的页面操作（导出、更多维度数据、款式详情数据…，对照参考后台）：报表脚本每次 render 时整块替换，返回容器。
 		setActions: function ( html ) {
 			var slot = root.querySelector ? root.querySelector( '.pc-data-actions' ) : null;
@@ -195,6 +201,7 @@
 						'<div class="pc-data-group pc-data-compare pc-data-rangebox" role="group" aria-label="' + esc( S.compareWith ) + '">' + clock +
 							dateInput( 'pc-data-cfrom', S.compareWith + ': ' + S.startDate ) + '<span class="pc-data-dash">~</span>' + dateInput( 'pc-data-cto', S.compareWith + ': ' + S.endDate ) +
 						'</div>' : '' ) +
+					'<div class="pc-data-toolbar-extra"></div>' +
 					'<button type="button" class="button button-primary pc-data-apply">' + esc( S.apply ) + '</button>' +
 				'</div>';
 		}
@@ -542,7 +549,7 @@
 			var real = null;
 			if ( ! slot || ! els.body.querySelector || ! document.createElement ) { return; }
 			EXPORTS.forEach( function ( sel ) { if ( ! real ) { real = els.body.querySelector( sel ); } } );
-			if ( ! real || ! real.classList ) { return; }
+			if ( ! real || ! real.classList || real.hidden ) { return; }
 			var proxy = document.createElement( 'button' );
 			proxy.type = 'button';
 			proxy.className = 'pc-data-export-proxy';

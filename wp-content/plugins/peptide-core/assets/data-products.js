@@ -14,6 +14,17 @@
 	}
 	var T = cfg.strings;
 	var PATH = '/peptide/v1/data/products';
+	// 款式详情数据（对照参考后台）：同一页面加 view=variants 时，每个款式一行。
+	var VARIANT_PATH = '/peptide/v1/data/products/variations';
+	var VARIANT_MODE = false;
+	try { VARIANT_MODE = 'variants' === new window.URLSearchParams( window.location.search ).get( 'view' ); } catch ( e ) { VARIANT_MODE = false; }
+	function modeUrl( variants ) {
+		try {
+			var u = new window.URL( window.location.href );
+			if ( variants ) { u.searchParams.set( 'view', 'variants' ); } else { u.searchParams[ 'delete' ]( 'view' ); }
+			return u.toString();
+		} catch ( e ) { return variants ? '?page=pc-data-products&view=variants' : '?page=pc-data-products'; }
+	}
 	var STORE_KEY = 'pcDataProductsColumns';
 	var PER_PAGE = 20;
 	var SEARCH_DELAY = 400;
@@ -232,15 +243,28 @@
 		return html;
 	}
 
+	// 款式行：商品小图 + 商品名，下面一行款式名和货号。
+	function variantRow( row, cols, ctx ) {
+		var esc = ctx.esc, p = row.product || {}, v = row.variation || {};
+		var image = safeUrl( p.image ), edit = safeUrl( p.edit_url );
+		var thumb = image ? '<img class="pc-prod-thumb" src="' + esc( image ) + '" alt="" width="40" height="40" loading="lazy">' : '<span class="pc-prod-thumb pc-prod-thumb--empty" aria-hidden="true"></span>';
+		var name = edit ? '<a class="pc-prod-name" href="' + esc( edit ) + '">' + esc( p.name ) + '</a>' : '<span class="pc-prod-name">' + esc( p.name ) + '</span>';
+		var html = '<tr class="pc-prod-row pc-prod-row--variant"><td class="pc-prod-product"><div class="pc-prod-cell">' + thumb +
+			'<div class="pc-prod-info">' + name + '<div class="pc-prod-variant">' + esc( v.name ) + '</div>' + ( v.sku ? '<div class="pc-prod-sku">' + esc( fill( T.sku, { '%s': v.sku } ) ) + '</div>' : '' ) + '</div></div></td>';
+		cols.forEach( function ( key ) { html += 'created_at' === key ? createdCell( v, ctx ) : metricCell( key, row.current, row.previous, row.change, ctx ); } );
+		return html + '</tr>';
+	}
+
 	function tableHtml( data, ctx ) {
 		var esc = ctx.esc;
 		var cols = visibleColumns( data );
-		var head = '<th scope="col" class="pc-prod-th pc-prod-th--product">' + esc( T.product ) + '</th>';
+		var variants = 'variations' === data.mode;
+		var head = '<th scope="col" class="pc-prod-th pc-prod-th--product">' + esc( variants ? ( T.variantCol || T.product ) : T.product ) + '</th>';
 		cols.forEach( function ( key ) {
 			head += headerCell( key, data, ctx );
 		} );
 		var body = ( data.rows || [] ).map( function ( row ) {
-			return productRow( row, cols, ctx );
+			return variants ? variantRow( row, cols, ctx ) : productRow( row, cols, ctx );
 		} ).join( '' );
 		var caption = cols.indexOf( 'created_at' ) === -1 ? '' : '<caption>' + esc( fill( T.createdTimezone || 'Creation times are shown in %s. CSV uses UTC.', { '%s': data.report_timezone || '-' } ) ) + '</caption>';
 		return '<table class="pc-prod-table">' + caption + '<thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table>';
@@ -316,6 +340,15 @@
 		} );
 
 		view.exportButton = bodyEl.querySelector( '.pc-prod-export' );
+		// 标题旁“款式详情数据 / 商品详情数据”切换（对照参考后台）；款式视图里导出只针对商品表，先收起。
+		if ( ctx.setActions ) {
+			ctx.setActions( '<a class="pc-prod-mode-link" href="' + esc( modeUrl( ! VARIANT_MODE ) ) + '"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="5" height="5"/><rect x="9" y="2" width="5" height="5"/><rect x="2" y="9" width="5" height="5"/><rect x="9" y="9" width="5" height="5"/></svg>' + esc( VARIANT_MODE ? ( T.productView || '' ) : ( T.variantView || '' ) ) + '</a>' );
+		}
+		if ( VARIANT_MODE ) {
+			if ( view.exportButton ) { view.exportButton.hidden = true; }
+			var heading = document.querySelector ? document.querySelector( '.pc-data-title' ) : null;
+			if ( heading && T.variantView ) { heading.textContent = T.variantView; }
+		}
 		view.exportStatus = bodyEl.querySelector( '.pc-prod-export-status' );
 		function syncExport() {
 			view.exportButton.disabled = ! view.data || filterDirty || searchDirty || composing || rangeBusy || exporting;
@@ -447,7 +480,7 @@
 
 			view.wrap.innerHTML = '<p class="pc-data-muted">' + esc( ctx.strings.loading ) + '</p>';
 			view.pager.innerHTML = '';
-			ctx.api( PATH, params ).then(
+			ctx.api( VARIANT_MODE ? VARIANT_PATH : PATH, params ).then(
 				function ( data ) {
 					if ( mine !== requests ) {
 						return;

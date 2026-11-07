@@ -51,12 +51,16 @@ final class Operations {
 	 *
 	 * @param array $range A successful Range::from_params() result.
 	 */
-	public static function summary( array $range ): array {
-		$current  = self::period( (int) $range['from'], (int) $range['to'] );
-		$previous = self::period( (int) $range['compare_from'], (int) $range['compare_to'] );
-		$reader = new Visitor_Funnel();
-		$detail = $reader->period( (int) $range['from'] * 1000, (int) $range['to'] * 1000 );
-		$before = $reader->period( (int) $range['compare_from'] * 1000, (int) $range['compare_to'] * 1000 );
+	public static function summary( array $range, ?string $entry_domain = null ): array {
+		$current  = self::period( (int) $range['from'], (int) $range['to'], $entry_domain );
+		$previous = self::period( (int) $range['compare_from'], (int) $range['compare_to'], $entry_domain );
+		// 八层明细漏斗没有入口域名口径：选了域名时不返回，页面退回五层漏斗。
+		$detail = $before = null;
+		if ( null === $entry_domain ) {
+			$reader = new Visitor_Funnel();
+			$detail = $reader->period( (int) $range['from'] * 1000, (int) $range['to'] * 1000 );
+			$before = $reader->period( (int) $range['compare_from'] * 1000, (int) $range['compare_to'] * 1000 );
+		}
 
 		$change = array();
 		foreach ( self::KPIS as $key ) {
@@ -70,7 +74,7 @@ final class Operations {
 			}
 		}
 
-		return array(
+		$out = array(
 			'range'       => $range,
 			'tracking'    => Schema::installed(),
 			'current'     => $current['kpis'],
@@ -79,9 +83,16 @@ final class Operations {
 			'funnel'      => self::compare( $current['funnel'], $previous['funnel'] ),
 			'returning'   => self::compare( $current['returning'], $previous['returning'] ),
 			'test_orders' => $current['test_orders'],
-			'visitor_funnel' => Visitor_Funnel::compare( $detail['overall'], $before['overall'] ),
-			'returning_visitor_funnel' => Visitor_Funnel::compare( $detail['returning'], $before['returning'] ),
+			// 页面“请选择域名”下拉的选项：本期出现过的入口域名。
+			'entry_domains' => Entry_Domain::options( (int) $range['from'], (int) $range['to'] ),
 		);
+		if ( null === $entry_domain ) {
+			$out['visitor_funnel']           = Visitor_Funnel::compare( $detail['overall'], $before['overall'] );
+			$out['returning_visitor_funnel'] = Visitor_Funnel::compare( $detail['returning'], $before['returning'] );
+		} else {
+			$out['entry_domain'] = $entry_domain;
+		}
+		return $out;
 	}
 
 	/**
@@ -89,10 +100,14 @@ final class Operations {
 	 *
 	 * @return array{kpis:array<string,int|float|null>,funnel:array,returning:array,test_orders:int}
 	 */
-	public static function period( int $from, int $to ): array {
+	public static function period( int $from, int $to, ?string $entry_domain = null ): array {
 		// 已付款订单只取一次，销售额、订单数、件数、净销售额、顾客（订单部分）和漏斗的支付成功都从这一份算。
 		$all       = self::paid_orders( $from, $to );
 		$orders    = array_values( array_filter( $all, static fn( $o ) => ! Overview::is_test_order( $o ) ) );
+		if ( null !== $entry_domain ) {
+			// 选了入口域名：只算归属这个域名的访问里下的订单。
+			$orders = Entry_Domain::orders( $orders, $entry_domain, $to * 1000 );
+		}
 		$sales     = 0.0;
 		$items     = 0;
 		$net       = 0.0;
@@ -122,7 +137,7 @@ final class Operations {
 		}
 		$count = count( $orders );
 
-		$v = self::visitor_numbers( $from, $to, $paid_ids );
+		$v = self::visitor_numbers( $from, $to, $paid_ids, $entry_domain );
 		foreach ( $v['users'] as $user_id ) {
 			$customers[ 'u' . $user_id ] = true;
 		}
@@ -131,13 +146,14 @@ final class Operations {
 		$kpis  = array(
 			'sales'          => $sales,
 			'visitors'       => $v['visitors'],
-			'registered'     => self::registered( $from, $to ),
+			// 注册账号没有对应的访问，按入口域名时没有口径（null，页面显示“-”）。
+			'registered'     => null === $entry_domain ? self::registered( $from, $to ) : null,
 			'orders'         => $count,
 			'conversion'     => $v['visitors'] ? round( $count / $v['visitors'] * 100, 2 ) : null,
 			'aov'            => $count ? round( $sales / $count, 2 ) : 0.0,
 			'items'          => $items,
 			'net_item_sales' => round( $net, 2 ),
-			'refunds'        => self::refunds( $from, $to ),
+			'refunds'        => self::refunds( $from, $to, $entry_domain ),
 			'avg_duration'   => $v['avg_duration'],
 			'customers'      => count( $customers ),
 			'mobile'         => $v['mobile'],
@@ -192,7 +208,7 @@ final class Operations {
 	}
 
 	/** 时间段内创建的退款金额之和；原订单不存在或是测试订单的退款不算。 */
-	private static function refunds( int $from, int $to ): float {
+	private static function refunds( int $from, int $to, ?string $entry_domain = null ): float {
 		$refunds = wc_get_orders(
 			array(
 				'type'         => 'shop_order_refund',
@@ -210,6 +226,10 @@ final class Operations {
 			if ( ! $parent instanceof \WC_Order || Overview::is_test_order( $parent ) ) {
 				continue;
 			}
+			// 选了入口域名：只算原订单归属这个域名的退款（原订单的访问在退款所在时间段结束前已保存入口）。
+			if ( null !== $entry_domain && ! Entry_Domain::orders( array( $parent ), $entry_domain, $to * 1000 ) ) {
+				continue;
+			}
 			$total += abs( (float) $refund->get_amount() );
 		}
 		return round( $total, 2 );
@@ -221,7 +241,7 @@ final class Operations {
 	 * @param array<int,true> $paid_ids 本时间段已付款（非测试）订单的 ID => true。
 	 * @return array{visitors:int,mobile:int,avg_duration:int,users:int[],funnel:array<string,int>,returning:array<string,int>,returning_paid:int}
 	 */
-	private static function visitor_numbers( int $from, int $to, array $paid_ids ): array {
+	private static function visitor_numbers( int $from, int $to, array $paid_ids, ?string $entry_domain = null ): array {
 		global $wpdb;
 		$zero = array(
 			'visitors' => 0,
@@ -245,9 +265,18 @@ final class Operations {
 		$visitors = Schema::table( 'visitors' );
 		$fm       = $from * 1000;
 		$tm       = $to * 1000;
+		// 入口域名条件（没选域名时为空，查询和原来完全一样）。
+		$dw = '';
+		$da = array();
+		$sw = '';
+		$sa = array();
+		if ( null !== $entry_domain ) {
+			list( $dw, $da ) = Entry_Domain::sql( '', $entry_domain, $tm );
+			list( $sw, $sa ) = Entry_Domain::sql( 's.', $entry_domain, $tm );
+		}
 
 		// 访问用户、移动端、平均访问时长和漏斗前四层一次查完。时长先转成有符号数再相减（无符号相减出现负数时 MySQL 会报错）。
-		$row = $wpdb->get_row( $wpdb->prepare( "SELECT COUNT(DISTINCT visitor_id) AS visitors, COUNT(DISTINCT CASE WHEN device = 'mobile' THEN visitor_id END) AS mobile, AVG(CAST(last_ms AS SIGNED) - CAST(start_ms AS SIGNED)) AS avg_ms, COUNT(DISTINCT CASE WHEN stage >= 1 THEN visitor_id END) AS viewed, COUNT(DISTINCT CASE WHEN stage >= 2 THEN visitor_id END) AS carted, COUNT(DISTINCT CASE WHEN stage >= 3 THEN visitor_id END) AS checkout FROM {$visits} WHERE start_ms >= %d AND start_ms < %d", $fm, $tm ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT COUNT(DISTINCT visitor_id) AS visitors, COUNT(DISTINCT CASE WHEN device = 'mobile' THEN visitor_id END) AS mobile, AVG(CAST(last_ms AS SIGNED) - CAST(start_ms AS SIGNED)) AS avg_ms, COUNT(DISTINCT CASE WHEN stage >= 1 THEN visitor_id END) AS viewed, COUNT(DISTINCT CASE WHEN stage >= 2 THEN visitor_id END) AS carted, COUNT(DISTINCT CASE WHEN stage >= 3 THEN visitor_id END) AS checkout FROM {$visits} WHERE start_ms >= %d AND start_ms < %d{$dw}", array_merge( array( $fm, $tm ), $da ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		if ( is_array( $row ) ) {
 			$out['visitors']     = (int) $row['visitors'];
 			$out['mobile']       = (int) $row['mobile'];
@@ -261,15 +290,16 @@ final class Operations {
 		}
 
 		// 顾客数里“登录访问”的部分：时间段内关联了账号的访问。
-		$users        = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT user_id FROM {$visits} WHERE start_ms >= %d AND start_ms < %d AND user_id > 0", $fm, $tm ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		$users        = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT user_id FROM {$visits} WHERE start_ms >= %d AND start_ms < %d AND user_id > 0{$dw}", array_merge( array( $fm, $tm ), $da ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		$out['users'] = array_map( 'intval', (array) $users );
 
 		// 回访的访问（和概览页同一个判断）：第一次访问当天结束（店铺时区 23:59:59）之后，再过“回访用户计算时间”（默认 1 天）再来的访问。
 		// 当天结束 = 按店铺时区取整到天的下一个 0 点；时区偏移按现在的值计算（夏令时切换当天最多差 1 小时）。
 		$gap       = max( 1, (int) Store_Config::get( 'returning_hours' ) ) * HOUR_IN_SECONDS * 1000;
 		$off       = wp_timezone()->getOffset( new \DateTimeImmutable() ) * 1000;
-		$returning = "FROM {$visits} s INNER JOIN {$visitors} v ON v.id = s.visitor_id WHERE s.start_ms >= %d AND s.start_ms < %d AND s.start_ms >= ( FLOOR( ( v.first_ms + %d ) / 86400000 ) + 1 ) * 86400000 - %d + %d";
-		$row       = $wpdb->get_row( $wpdb->prepare( "SELECT COUNT(DISTINCT s.visitor_id) AS visitors, COUNT(DISTINCT CASE WHEN s.stage >= 1 THEN s.visitor_id END) AS viewed, COUNT(DISTINCT CASE WHEN s.stage >= 2 THEN s.visitor_id END) AS carted, COUNT(DISTINCT CASE WHEN s.stage >= 3 THEN s.visitor_id END) AS checkout {$returning}", $fm, $tm, $off, $off, $gap ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		$returning = "FROM {$visits} s INNER JOIN {$visitors} v ON v.id = s.visitor_id WHERE s.start_ms >= %d AND s.start_ms < %d AND s.start_ms >= ( FLOOR( ( v.first_ms + %d ) / 86400000 ) + 1 ) * 86400000 - %d + %d{$sw}";
+		$rargs     = array_merge( array( $fm, $tm, $off, $off, $gap ), $sa );
+		$row       = $wpdb->get_row( $wpdb->prepare( "SELECT COUNT(DISTINCT s.visitor_id) AS visitors, COUNT(DISTINCT CASE WHEN s.stage >= 1 THEN s.visitor_id END) AS viewed, COUNT(DISTINCT CASE WHEN s.stage >= 2 THEN s.visitor_id END) AS carted, COUNT(DISTINCT CASE WHEN s.stage >= 3 THEN s.visitor_id END) AS checkout {$returning}", $rargs ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		if ( is_array( $row ) ) {
 			$out['returning'] = array(
 				'visitors' => (int) $row['visitors'],
@@ -280,7 +310,7 @@ final class Operations {
 		}
 
 		// 回访漏斗的支付成功：回访的访问里下的订单，且是本时间段的已付款（非测试）订单，去重。
-		$order_ids = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT s.order_id {$returning} AND s.order_id > 0", $fm, $tm, $off, $off, $gap ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		$order_ids = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT s.order_id {$returning} AND s.order_id > 0", $rargs ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		foreach ( (array) $order_ids as $id ) {
 			if ( isset( $paid_ids[ (int) $id ] ) ) {
 				++$out['returning_paid'];

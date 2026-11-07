@@ -87,6 +87,79 @@ final class Products {
 	}
 
 
+	/**
+	 * 款式详情数据（对照参考后台的“款式详情数据”页）：每个款式一行（款式所属商品 + 款式名称 / 货号），
+	 * 指标和商品详情里展开的款式行完全相同（同一份 period() 结果）；按本期的 sort 指标排序（null 排最后），
+	 * q 同时搜商品名和款式名，分页。没有款式的简单商品不出现。
+	 *
+	 * @param array $range A successful Range::from_params() result.
+	 * @param array $args  Products::params() 的结果（sort, order, page, per_page, q, 可选 filter）。
+	 */
+	public static function variant_table( array $range, array $args ): array {
+		$sort     = in_array( $args['sort'] ?? '', self::METRICS, true ) ? (string) $args['sort'] : 'views';
+		$order    = 'asc' === ( $args['order'] ?? 'desc' ) ? 'asc' : 'desc';
+		$page     = max( 1, (int) ( $args['page'] ?? 1 ) );
+		$per_page = max( 1, min( 100, (int) ( $args['per_page'] ?? 20 ) ) );
+		$q        = (string) ( $args['q'] ?? '' );
+		$current  = self::period( (int) $range['from'], (int) $range['to'], Report_Filter::active( $args, (int) $range['to'] * 1000 ) );
+		$previous = self::period( (int) $range['compare_from'], (int) $range['compare_to'], Report_Filter::active( $args, (int) $range['compare_to'] * 1000 ) );
+
+		$parents = array();
+		foreach ( array( $current['variations'], $previous['variations'] ) as $by_parent ) {
+			foreach ( $by_parent as $pid => $vars ) {
+				$parents[ (int) $pid ] = true;
+			}
+		}
+		$items   = array();
+		$objects = array();
+		foreach ( array_keys( $parents ) as $pid ) {
+			foreach ( self::variation_rows( $pid, $current['variations'][ $pid ] ?? array(), $previous['variations'][ $pid ] ?? array() ) as $row ) {
+				if ( ! array_key_exists( $pid, $objects ) ) {
+					$objects[ $pid ] = wc_get_product( $pid );
+				}
+				$product = $objects[ $pid ];
+				$name    = $product instanceof \WC_Product ? $product->get_name() : sprintf( '#%d', $pid );
+				if ( '' !== $q && false === mb_stripos( $name, $q ) && false === mb_stripos( (string) $row['variation']['name'], $q ) && false === mb_stripos( (string) $row['variation']['sku'], $q ) ) {
+					continue;
+				}
+				$items[] = array( 'product' => self::product_info( $pid, $product ) ) + $row;
+			}
+		}
+		usort(
+			$items,
+			static function ( array $a, array $b ) use ( $sort, $order ): int {
+				$x = $a['current'][ $sort ] ?? null;
+				$y = $b['current'][ $sort ] ?? null;
+				if ( null === $x || null === $y ) {
+					$cmp = (int) ( null === $x ) <=> (int) ( null === $y );
+				} else {
+					$cmp = 'asc' === $order ? $x <=> $y : $y <=> $x;
+				}
+				return 0 !== $cmp ? $cmp : array( $a['product']['id'], $a['variation']['id'] ) <=> array( $b['product']['id'], $b['variation']['id'] );
+			}
+		);
+		$total = count( $items );
+		$rows  = $page > (int) ceil( max( 1, $total ) / $per_page ) ? array() : array_slice( $items, ( $page - 1 ) * $per_page, $per_page );
+		$out   = array(
+			'range'    => $range,
+			'tracking' => Schema::installed(),
+			'mode'     => 'variations',
+			'metrics'  => self::METRICS,
+			'columns'  => self::columns(),
+			'report_timezone' => wp_timezone()->getName(),
+			'defaults' => self::DEFAULTS,
+			'sort'     => $sort,
+			'order'    => $order,
+			'page'     => $page,
+			'per_page' => $per_page,
+			'q'        => $q,
+			'total'    => $total,
+			'rows'     => array_values( $rows ),
+		);
+		if ( isset( $args['filter'] ) ) { $out['filter'] = $args['filter']; }
+		return $out;
+	}
+
 	/** Every matching parent, in table order, with the same variation rows. Pagination alone is omitted. */
 	public static function all_rows( array $range, array $args ): iterable {
 		$selection = self::selection( $range, $args );
