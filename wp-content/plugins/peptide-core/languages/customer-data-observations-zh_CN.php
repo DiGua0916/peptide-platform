@@ -3,6 +3,17 @@
 defined( 'ABSPATH' ) || exit;
 return array(
 	'Show metric notes' => '口径说明',
+	'%d items in total' => '共 %d 条',
+	'Jump to' => '前往',
+	'page (pager)' => '页',
+	'Last 15 days' => '过去 15 天',
+	'This week' => '本周',
+	'This month' => '本月',
+	'Last week' => '上周',
+	'Last month' => '上月',
+	'Custom' => '自定义',
+	'Same period last year' => '去年同期',
+	'Prior period of equal length' => '上一期',
 	'Hide metric notes' => '收起口径说明',
 	'Country / region' => '国家/地区',
 	'Browser / app' => '浏览器/APP',

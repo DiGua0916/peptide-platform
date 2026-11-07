@@ -4,6 +4,7 @@
  * 颜色沿用后台的黑白灰（--pc-ui-*），全部限定在 .pc-rt 下。
  */
 
+.pc-data[data-page="realtime"] > .pc-data-head,
 .pc-data[data-page="realtime"] > .pc-data-title,
 .pc-data[data-page="realtime"] > .pc-data-tz { display: none; }
 

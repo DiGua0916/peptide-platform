@@ -221,9 +221,7 @@
 
 /* 口径说明：默认收起，标题右侧按钮展开。加载提示（报表区的直接子元素）不受影响。 */
 .pc-data-notes-toggle {
-	position: absolute;
-	top: 2px;
-	right: 0;
+	margin-left: auto;
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
@@ -240,8 +238,7 @@
 .pc-data-notes-toggle::before { content: "?"; display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border: 1px solid currentColor; border-radius: 50%; font-size: 10px; line-height: 1; }
 .pc-data-notes-toggle:hover,
 .pc-data-notes-toggle[aria-pressed="true"] { border-color: #171717; color: #171717; }
-.pc-data[data-page="realtime"] > .pc-data-notes-toggle,
-.pc-data[data-page="operations"] > .pc-data-notes-toggle { display: none; }
+.pc-data[data-page="operations"] .pc-data-notes-toggle { display: none; }
 
 .pc-data:not(.is-notes) .pc-data-body > * .pc-data-muted:not(.pc-data-keep),
 .pc-data:not(.is-notes) .pc-data-body :is(.pc-report-filter-help, .pc-report-coverage, .pc-pages-help, .pc-landing-help, .pc-pc-search-note, .pc-conv-note, .pc-conv-export-help, .pc-emails-help, .pc-dim-help, .pc-dim-coverage, .pc-product-action-note) { display: none; }
@@ -353,3 +350,81 @@
 .pc-data-body :is(.pc-emails-tile__foot, .pc-conv-tile__foot) { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .pc-data-body :is(.pc-emails-data, .pc-conv) h2 { margin: 18px 0 10px; font-size: 15px; font-weight: 600; }
 .pc-data-body :is(.pc-emails-data, .pc-conv) > h2:first-child { margin-top: 0; }
+
+/* ---------- 第二轮：页头一行（标题 + 页面操作 + 口径说明）与参考后台式时间工具栏 ---------- */
+.pc-data-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; margin: 0 0 14px; }
+.pc-data-head > .pc-data-title { margin: 0; font-size: 20px; font-weight: 700; }
+.pc-data-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 18px; }
+.pc-data-actions:empty { display: none; }
+.pc-data-actions :is(a, button) { display: inline-flex; align-items: center; gap: 5px; padding: 0; border: 0; background: none; color: #171717; font-size: 13px; font-weight: 600; text-decoration: none; cursor: pointer; }
+.pc-data-actions :is(a, button):hover { text-decoration: underline; }
+.pc-data-actions :is(a, button)[disabled] { opacity: .45; cursor: default; text-decoration: none; }
+.pc-data-actions svg { flex: none; }
+
+.pc-data > .pc-data-toolbar { gap: 10px 12px; align-items: center; }
+.pc-dd { position: relative; }
+.pc-dd__trigger {
+	display: inline-flex; align-items: center; justify-content: space-between; gap: 10px;
+	box-sizing: border-box; min-width: 116px; height: 32px; padding: 0 10px 0 12px;
+	border: 1px solid #dcdcdc; border-radius: 4px; background: #fff; color: #171717; font-size: 13px; cursor: pointer;
+}
+.pc-dd__trigger::after { content: ""; width: 6px; height: 6px; margin-top: -3px; border-right: 1.5px solid #8c8c8c; border-bottom: 1.5px solid #8c8c8c; transform: rotate(45deg); transition: transform .15s; }
+.pc-dd__trigger[aria-expanded="true"] { border-color: #171717; }
+.pc-dd__trigger[aria-expanded="true"]::after { margin-top: 3px; transform: rotate(-135deg); }
+.pc-dd__menu {
+	position: absolute; top: calc(100% + 6px); left: 0; z-index: 60;
+	display: flex; flex-direction: column; min-width: 140px; padding: 6px 0;
+	border: 1px solid #ececec; border-radius: 4px; background: #fff; box-shadow: 0 6px 18px rgba(0, 0, 0, .1);
+}
+.pc-dd__menu[hidden] { display: none; }
+#wpbody-content .pc-data .pc-dd__menu .button.pc-dd__item {
+	justify-content: flex-start; width: 100%; min-height: 32px; margin: 0; padding: 0 16px;
+	border: 0; border-radius: 0; background: #fff; box-shadow: none; color: #404040; font-size: 13px; font-weight: 400; line-height: 32px; text-align: left;
+}
+#wpbody-content .pc-data .pc-dd__menu .button.pc-dd__item:hover { background: #f5f5f5; color: #171717; }
+#wpbody-content .pc-data .pc-dd__menu .button.pc-dd__item.is-active { background: #fff; color: #171717; font-weight: 700; }
+
+.pc-data-rangebox {
+	display: inline-flex; flex-wrap: nowrap; align-items: center; gap: 4px;
+	box-sizing: border-box; height: 32px; padding: 0 10px;
+	border: 1px solid #dcdcdc; border-radius: 4px; background: #fff;
+}
+.pc-data-clock { color: #8c8c8c; margin-right: 2px; }
+.pc-data .pc-data-rangebox .pc-data-date {
+	width: 118px; min-height: 28px; height: 28px; padding: 0 2px; border: 0; background: transparent; box-shadow: none; font-size: 13px;
+}
+.pc-data-time { color: #404040; font-size: 13px; font-variant-numeric: tabular-nums; }
+.pc-data-rangebox .pc-data-dash { margin: 0 4px; color: #8c8c8c; }
+.pc-data-compare:has(.pc-data-date:disabled) { background: #f5f5f5; }
+.pc-data .pc-data-rangebox .pc-data-date:disabled { color: #a3a3a3; }
+.pc-data-vs { margin: 0 2px; color: #171717; font-size: 13px; font-weight: 700; }
+#wpbody-content .pc-data > .pc-data-toolbar .button.pc-data-apply {
+	position: absolute !important; width: 1px; height: 1px; min-height: 0; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); border: 0;
+}
+.pc-data > .pc-data-toolbar { position: relative; }
+@media (max-width: 600px) {
+	.pc-data-rangebox { width: 100%; }
+	.pc-data .pc-data-rangebox .pc-data-date { flex: 1 1 0; width: auto; min-width: 0; }
+	.pc-data-time { display: none; }
+}
+#wpbody-content .pc-data .pc-data-rangebox input.pc-data-date { border: 0 !important; background: transparent !important; box-shadow: none !important; }
+#wpbody-content .pc-data .pc-data-rangebox input.pc-data-date::-webkit-calendar-picker-indicator { opacity: .45; }
+
+/* 分页（对照参考后台）：居中一行 —— 共 N 条 ‹ 1 2 … › 前往 [ ] 页。 */
+.pc-pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; width: 100%; margin: 16px 0 4px; color: #525252; font-size: 13px; }
+.pc-pager__total { margin-right: 6px; }
+.pc-pager__btn,
+.pc-pager__num.is-current { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: 28px; height: 28px; padding: 0 6px; border: 1px solid #dcdcdc; border-radius: 4px; background: #fff; color: #404040; font-size: 13px; line-height: 1; cursor: pointer; font-variant-numeric: tabular-nums; }
+.pc-pager__btn:hover:not([disabled]) { border-color: #171717; color: #171717; }
+.pc-pager__btn[disabled] { color: #c8c8c8; cursor: not-allowed; }
+.pc-pager__num.is-current { border-color: #171717; background: #171717; color: #fff; cursor: default; }
+.pc-pager__gap { padding: 0 2px; color: #a3a3a3; }
+.pc-pager__jump { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 0 10px; }
+.pc-pager__jump input { width: 48px; height: 28px; min-height: 28px; padding: 0 4px; border: 1px solid #dcdcdc; border-radius: 4px; text-align: center; }
+:is(.pc-pages-foot, .pc-landing-foot, .pc-prod-pager) { display: block; }
+.pc-pager__total { order: 0; }
+.pc-pager__prev { order: 1; }
+.pc-pager__num,
+.pc-pager__gap { order: 2; }
+.pc-pager__next { order: 3; }
+.pc-pager__jump { order: 4; }

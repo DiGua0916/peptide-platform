@@ -296,7 +296,7 @@
 			}
 			var pages = Math.max( 1, Math.ceil( Number( data.total ) / Number( data.per_page || state.per_page ) ) );
 			var page = Number( data.page );
-			view.foot.innerHTML = '<span class="pc-pages-total">' + esc( fill( T.total, { '%d': ctx.number( data.total ) } ) ) + '</span>' +
+			view.foot.innerHTML = ctx.pager ? ctx.pager( { total: data.total, page: page, pages: pages } ) : '<span class="pc-pages-total">' + esc( fill( T.total, { '%d': ctx.number( data.total ) } ) ) + '</span>' +
 				'<span class="pc-pages-pager">' +
 					'<span class="pc-pages-page">' + esc( fill( T.page, { '%1$d': page, '%2$d': pages } ) ) + '</span>' +
 					'<button type="button" class="button" data-dir="-1"' + ( page <= 1 ? ' disabled' : '' ) + '>' + esc( T.prev ) + '</button>' +

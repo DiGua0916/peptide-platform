@@ -42,7 +42,7 @@
 				wrap.innerHTML = html + '</tbody></table>';
 			}
 			var pages = Math.max( 1, Math.ceil( data.total / data.per_page ) );
-			foot.innerHTML = '<span>' + esc( data.total ) + ' · ' + esc( data.page ) + '/' + esc( pages ) + '</span> <button type="button" class="button" data-dir="-1"' + ( data.page <= 1 ? ' disabled' : '' ) + '>' + esc( T.prev ) + '</button> <button type="button" class="button" data-dir="1"' + ( data.page >= pages ? ' disabled' : '' ) + '>' + esc( T.next ) + '</button>';
+			foot.innerHTML = ctx.pager ? ctx.pager( { total: data.total, page: data.page, pages: pages } ) : '<span>' + esc( data.total ) + ' · ' + esc( data.page ) + '/' + esc( pages ) + '</span> <button type="button" class="button" data-dir="-1"' + ( data.page <= 1 ? ' disabled' : '' ) + '>' + esc( T.prev ) + '</button> <button type="button" class="button" data-dir="1"' + ( data.page >= pages ? ' disabled' : '' ) + '>' + esc( T.next ) + '</button>';
 			sync();
 		}
 		function failed() { invalidate(); status.textContent = ctx.strings.loadError; wrap.innerHTML = '<button type="button" class="button pc-sources-retry">' + esc( T.retry ) + '</button>'; foot.innerHTML = ''; var retry = wrap.querySelector( '.pc-sources-retry' ); retry.addEventListener( 'click', load ); }

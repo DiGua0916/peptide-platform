@@ -80,7 +80,7 @@
 				results.innerHTML = '<div class="pc-pc-scroll" tabindex="0" role="region" aria-label="' + esc( T.identity ) + '"><table class="widefat pc-pc-table"><thead><tr>' + head + '</tr></thead><tbody>' + html + '</tbody></table></div>';
 			}
 			results.setAttribute( 'aria-busy', 'false' );
-			foot.innerHTML = '<span>' + esc( T.total.split( '%s' ).join( ctx.number( data.total ) ) ) + '</span><button type="button" class="button" data-pc-page="-1"' + ( state.page <= 1 ? ' disabled' : '' ) + '>' + esc( T.prev ) + '</button><span>' + esc( ctx.number( state.page ) + ' / ' + ctx.number( Math.max( 1, Math.ceil( data.total / state.per_page ) ) ) ) + '</span><button type="button" class="button" data-pc-page="1"' + ( state.page * state.per_page >= data.total ? ' disabled' : '' ) + '>' + esc( T.next ) + '</button>';
+			foot.innerHTML = ctx.pager ? ctx.pager( { total: data.total, page: state.page, pages: Math.max( 1, Math.ceil( data.total / state.per_page ) ), attr: 'data-pc-page' } ) : '<span>' + esc( T.total.split( '%s' ).join( ctx.number( data.total ) ) ) + '</span><button type="button" class="button" data-pc-page="-1"' + ( state.page <= 1 ? ' disabled' : '' ) + '>' + esc( T.prev ) + '</button><span>' + esc( ctx.number( state.page ) + ' / ' + ctx.number( Math.max( 1, Math.ceil( data.total / state.per_page ) ) ) ) + '</span><button type="button" class="button" data-pc-page="1"' + ( state.page * state.per_page >= data.total ? ' disabled' : '' ) + '>' + esc( T.next ) + '</button>';
 			controls();
 			if ( backKey !== null && state.group === 'type' ) { var wanted = backKey; backKey = null; each( root.querySelectorAll( '[data-pc-key]' ), function ( button ) { if ( button.getAttribute( 'data-pc-key' ) === wanted && attached() ) { button.focus(); } } ); }
 		}

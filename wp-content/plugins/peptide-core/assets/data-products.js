@@ -406,7 +406,8 @@
 			}
 			var pages = Math.max( 1, Math.ceil( Number( data.total ) / Number( data.per_page || PER_PAGE ) ) );
 			var page = Number( data.page );
-			view.pager.innerHTML = '<span class="pc-prod-page">' + esc( fill( T.page, { '%1$d': page, '%2$d': pages } ) ) + '</span>' +
+			view.pager.innerHTML = ctx.pager ? ctx.pager( { total: data.total, page: page, pages: pages } ) :
+				'<span class="pc-prod-page">' + esc( fill( T.page, { '%1$d': page, '%2$d': pages } ) ) + '</span>' +
 				'<button type="button" class="button" data-dir="-1"' + ( page <= 1 ? ' disabled' : '' ) + '>' + esc( T.prev ) + '</button>' +
 				'<button type="button" class="button" data-dir="1"' + ( page >= pages ? ' disabled' : '' ) + '>' + esc( T.next ) + '</button>';
 		}
