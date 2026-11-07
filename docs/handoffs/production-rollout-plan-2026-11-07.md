@@ -317,3 +317,10 @@
 - 代码 `2ab55b0`（1 个文件：peptide-core `includes/admin/class-pixels-page.php`）：只显示 Facebook 卡片，其余 22 个平台卡片加 `hidden`（仍在表单里提交，已存设置不丢）；恢复显示改 `VISIBLE` 或过滤器 `peptide_core_pixels_visible_platforms`。前台回传逻辑未改。
 - 部署：两边 `554e242-*` 的该文件哈希与上一版一致；复制为 `2ab55b0-web01` / `2ab55b0-s0001`，恰好 1 处不同，语法通过，切换并 reload PHP。前台 / s0001 200；s0001 像素页只见 Facebook，隐藏 22 个，无报错。正式站仍未填任何像素。
 - 回滚：两个 `current` 指回 `554e242-*` 后 reload PHP。
+
+### 像素页同步到其他 6 处 + 隐藏“说明”栏（用户批准，2026-11-07）
+
+- 用户批准 "Yes, update all 6"：`class-pixels-page.php`（`2ab55b0` 版）原地替换到 s0002 / s0003 前台（`/srv/vialcove/tenants/sNNNN/public`）、后台（`/srv/vialcove/tenant-admin/sNNNN/public`）和开店模板 `yy-sync-0532574-1794082452-{web,admin}/source`；替换前核对旧哈希 261f0ae0…，保留属主和权限，原文件备份在两台服务器 `~/vialcove-deploy-backups/pixels-fb-only-20261107T2207*`。
+- 代码 `ca4d33c`（同一文件）：隐藏右侧“说明”栏（`SHOW_NOTES = false`），卡片占满整行。用户批准 "Deploy to production" 后：主店复制为 `ca4d33c-web01` / `ca4d33c-s0001`（恰好 1 处不同，切换并 reload PHP）；其他 6 处同样核对旧哈希 78063f4d… 后原地替换，备份 `~/vialcove-deploy-backups/pixels-notes-hidden-20261107T2229*`。8 处哈希都是 4edd9edc…。
+- 验证：前台、s0001、s0002、s0003 后台登录页 200；s0001 像素页只见 Facebook，说明栏隐藏，卡片宽度 = 网格宽度，无报错。
+- 回滚：主店 `current` 指回 `2ab55b0-*`（或 `554e242-*` 回到全部平台）；其他 6 处用对应备份覆盖后 reload PHP。
