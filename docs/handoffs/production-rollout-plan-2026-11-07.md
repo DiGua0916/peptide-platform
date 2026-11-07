@@ -246,3 +246,11 @@
 - 沙盒：shop/admin 同一文件替换，备份 `/home/ubuntu/vialcove-deploy-backups/entry-product-view-20261107T180127Z`，清页面缓存。120 访客 / 40 单模拟全部指标和预设一致（含 20 位商品链接直达访客）。
 - 正式站：两边当前 `4ff94fc-*`，线上文件哈希等于基线；从 live current 复制出 `eeaefe9-web01` / `eeaefe9-s0001`，恰好 1 处不同，语法通过；18:23:58 UTC 同时切换并 reload PHP，清前台页面缓存。商品链接返回 `page_type: product`，首页仍为 home；首页 / 购物车 / s0001 200，PHP 错误日志无新增。
 - 回滚：两个 `current` 指回 `4ff94fc-web01` / `4ff94fc-s0001` 后 reload PHP。
+
+### 结账「Place Order」点按保护（b5c9f0b，用户批准 "Deploy to production"）
+
+- 问题：刚在输入框打完字就点 Place Order，输入框失焦后 Woo 保存地址并短暂禁用按钮，浏览器把点击丢给父元素，这一下没反应（修复前实测：电脑 0/3、iPhone 1/3）。
+- 修复：主题新增 `assets/checkout-place-order-tap.js`（由 `inc/cart-pricing.php` 只在结账页加载）。按位置判断按在按钮内、却没产生点击的一次点按，等按钮恢复可用后补点一次；每次点按最多一次，Woo 正在下单时不补。`tests/checkout-place-order-tap-browser.py` 20/20。
+- 沙盒：真站点按 48/48、慢网络 18/18、少填 9/9 未提交；真实下单 60 访客 / 24 单（打完字立刻点、不重试，10 位连点两下）24/24，无重单，后台数据全部一致。
+- 正式站：两边当前 `628c72b-*`，`cart-pricing.php` 线上哈希等于基线、新脚本不存在；从 live current 复制出 `b5c9f0b-web01` / `b5c9f0b-s0001`，恰好 2 处不同，语法通过；19:27:54 UTC 切换并 reload PHP，清前台页面缓存。iPhone / 电脑 / 安卓各打开结账页，脚本已加载，打完字立刻点一次即发出下单请求（请求被拦截，未到服务器，未产生订单；GPC 关闭统计；测试购物车已清空）。首页 / 购物车 / s0001 200，PHP 错误日志无新增，近 1 小时正式订单 0。
+- 回滚：两个 `current` 指回 `628c72b-web01` / `628c72b-s0001` 后 reload PHP。
