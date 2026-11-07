@@ -254,3 +254,11 @@
 - 沙盒：真站点按 48/48、慢网络 18/18、少填 9/9 未提交；真实下单 60 访客 / 24 单（打完字立刻点、不重试，10 位连点两下）24/24，无重单，后台数据全部一致。
 - 正式站：两边当前 `628c72b-*`，`cart-pricing.php` 线上哈希等于基线、新脚本不存在；从 live current 复制出 `b5c9f0b-web01` / `b5c9f0b-s0001`，恰好 2 处不同，语法通过；19:27:54 UTC 切换并 reload PHP，清前台页面缓存。iPhone / 电脑 / 安卓各打开结账页，脚本已加载，打完字立刻点一次即发出下单请求（请求被拦截，未到服务器，未产生订单；GPC 关闭统计；测试购物车已清空）。首页 / 购物车 / s0001 200，PHP 错误日志无新增，近 1 小时正式订单 0。
 - 回滚：两个 `current` 指回 `628c72b-web01` / `628c72b-s0001` 后 reload PHP。
+
+### 推广人专属链接（REF-01，用户批准 "Deploy to production"，2026-11-07）
+
+- 内容：`4b8890c`（由 `260c21a` 变基而来），4 个运行文件：peptide-core 新增 `includes/class-referrals.php`、`includes/admin/class-referrals-page.php`；修改 `includes/class-plugin.php`、`includes/class-page-cache.php`。说明见 `docs/handoffs/referrals-2026-11-07.md`。
+- 部署：两边当前 `89fe635-*`（另一会话的仪表盘版本），两个要改的文件线上哈希与 `4b8890c^` 一致、两个新文件不存在。第一次打包时 zsh 没拆开文件列表，生成了空包，两边在切换前就停了，留下的半成品目录与当前版本完全相同，已删掉。改用 bash 重做：`4b8890c-web01` / `4b8890c-s0001` 恰好 4 处不同，哈希、语法通过；切换并 reload PHP。
+- 建表 `wp_pc_referral_touches`（schema 1），清页面缓存。推广人名单为空，所以功能暂不生效，等用户在后台 顾客 → 推广人 填写。
+- 验证：首页 / 购物车 / s0001 200，PHP 错误日志无新增；`/?ref=a`、`/?ref=a&utm_source=fb` 页面缓存 HIT（约 0.4 秒，走 Cloudflare）；s0001 推广人页面正常显示。
+- 回滚：两个 `current` 指回 `89fe635-web01` / `89fe635-s0001` 后 reload PHP（新表和选项留着不影响）。
