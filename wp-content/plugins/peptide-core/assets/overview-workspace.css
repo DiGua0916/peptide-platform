@@ -690,3 +690,14 @@ body.pc-admin-workspace .pc-ov .pc-ov-ad .pc-ov-empty.is-box { width: 100%; }
 body.pc-admin-workspace .pc-ov .pc-ov-cur .pc-ov-tag { white-space: nowrap; }
 body.pc-admin-workspace .pc-ov .pc-ov-stair__bar { flex-wrap: nowrap; white-space: nowrap; padding: 6px 8px; }
 body.pc-admin-workspace .pc-ov .pc-ov-chart text { font-size: 10px; }
+
+/* 阶梯漏斗（按参考后台实测）：每层条 35px 高、间隔 14px；第一层占 80% 宽，往下每层窄 17px。
+   层与层之间是一个 27×16 的小折线：从下一层右端向右、向上折到上一层底边，箭头指回下一层；比例写在折线右边。 */
+body.pc-admin-workspace .pc-ov .pc-ov-stairs { gap: 14px; padding-right: 0; container-type: normal; }
+body.pc-admin-workspace .pc-ov .pc-ov-stair { width: auto; }
+body.pc-admin-workspace .pc-ov .pc-ov-stair__bar { width: calc(80% - var(--i, 0) * 17px); min-width: 0; height: 35px; min-height: 35px; padding: 0 12px; border-radius: 0; font-size: 13px; line-height: 35px; overflow: visible; }
+body.pc-admin-workspace .pc-ov .pc-ov-stair__bar b { font-weight: 600; }
+body.pc-admin-workspace .pc-ov .pc-ov-stair__next { top: auto; bottom: -14px; left: calc(80% - (var(--i, 0) + 1) * 17px); width: 27px; height: 16px; box-sizing: border-box; border: 1px solid #737373; border-left: 0; transform: none; }
+body.pc-admin-workspace .pc-ov .pc-ov-stair__next::after { display: none; }
+body.pc-admin-workspace .pc-ov .pc-ov-stair__next::before { content: ""; position: absolute; left: -1px; bottom: -5px; border-top: 4px solid transparent; border-bottom: 4px solid transparent; border-right: 6px solid #737373; }
+body.pc-admin-workspace .pc-ov .pc-ov-stair__next span { left: calc(100% + 6px); color: #404040; font-size: 13px; }

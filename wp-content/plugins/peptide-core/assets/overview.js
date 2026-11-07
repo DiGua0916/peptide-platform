@@ -159,15 +159,12 @@
 		if ( ! f.length ) {
 			return '<p class="pc-ov-empty is-box">' + esc( Y.noData ) + '</p>';
 		}
-		var frac = function ( i ) {
-			return Math.round( ( 1 - ( i * 0.36 ) / Math.max( 1, f.length - 1 ) ) * 10000 ) / 10000;
-		};
 		return '<div class="pc-ov-funnel pc-ov-stairs">' + f.map( function ( s, i ) {
 			var next = '';
 			if ( i < f.length - 1 ) {
-				next = '<i class="pc-ov-stair__next" style="--d:' + Math.round( ( frac( i ) - frac( i + 1 ) ) * 10000 ) / 10000 + '" title="' + esc( S.stepRate ) + '"><span>' + esc( pc( f[ i + 1 ].step_rate ) ) + '</span></i>';
+				next = '<i class="pc-ov-stair__next" title="' + esc( S.stepRate ) + '"><span>' + esc( pc( f[ i + 1 ].step_rate ) ) + '</span></i>';
 			}
-			return '<div class="pc-ov-step pc-ov-stair" style="--f:' + frac( i ) + '"><div class="pc-ov-stair__bar"><b>' + esc( ( Y.steps[ s.key ] || s.key ) + '：' ) + esc( s.count ) + '</b>' + ( i ? '<span>' + esc( fmt( Y.ofVisitors, pc( s.visitor_rate ) ) ) + '</span>' : '' ) + '</div>' + next + '</div>';
+			return '<div class="pc-ov-step pc-ov-stair" style="--i:' + i + '"><div class="pc-ov-stair__bar"><b>' + esc( ( Y.steps[ s.key ] || s.key ) + '：' ) + esc( s.count ) + '</b>' + ( i ? '<span>' + esc( fmt( Y.ofVisitors, pc( s.visitor_rate ) ) ) + '</span>' : '' ) + '</div>' + next + '</div>';
 		} ).join( '' ) + '</div>' +
 			'<p class="pc-ov-hint">' + esc( Y.tip ).replace( '%s', '<a href="' + esc( L.convDetails ) + '">' + esc( Y.convDetails ) + '</a>' ) + '</p>';
 	}
