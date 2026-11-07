@@ -219,3 +219,15 @@
 - 正式数据只读核对（近 30 天）：全部访客 859、订单 4、销售额 1,119.25；3 个入口域名访客合计 819（另 40 个访客没有保存入口域名），订单 4 / 销售额 1,119.25 全部归属 www.vialcovepeptides.com；同一域名下指标、趋势、排行（销量 12）三处一致；款式 22 个；非法域名 400。
 - 附注：入口域名里出现 `s0001.vialcovepeptides.com`（8 次访问）和 `vialcovepeptidescom.local`（2 次），像是内部 / 本地测试流量。
 - 回滚：两个 `current` 指回 `8832e70-s0001` / `8832e70-web01` 后 reload PHP。
+
+### 首页视频：封面、进入视口静音自动播放、离开暂停、间距（用户批准 "Deploy to production"，2026-11-07 17:58 UTC）
+
+- 测量（改前）：用户上传的视频 `VialCove_v26_原仓储卡片恢复版.mp4`（附件 11760）1920×1080、92 秒、74.8 MB、约 6.5 Mbps；`preload=metadata` 使每次首页访问都对源站发 3 个范围请求；nginx 对 mp4 返回 `no-store`，Cloudflare 不缓存（DYNAMIC）；无封面，显示黑块；手机两侧缩进 40px（站点设计宽度 + 模块 20px 内边距叠加）。
+- 转码：本机 AVFoundation 重新编码为 1280×720 H.264 约 1.77 Mbps + AAC 96 kbps，faststart，21.4 MB（附件 11762）。原文件保留在媒体库。封面取 0:10 的 VialCove Tirzepatide 瓶子画面，裁掉底部字幕、保留右上角水印，1600×900 JPEG（附件 11763，手机实际加载 768 宽约 95 KB）。
+- 代码 `e51cb9a`（3 个运行文件：peptide-core `modules.css`、`modules.js`、`includes/modules/class-fallback.php`）：上传视频模块改为“舞台”——封面 + “▶ Watch video | 1:32”胶囊（不挡商品）、声音 / 全屏按钮、细进度条；视频不随页面下载（`data-src` + `preload=none`），页面 load 后 400ms 且卡片至少一半在视口内才接上并静音自动播放；离开视口或切后台暂停、回来继续；用户自己暂停后不自动恢复；省流量模式 / 减少动态效果只显示封面；“Tap for sound”提示 4 秒后收成图标不挡字幕；无 JS 时保留原生控件。站点设计下去掉重复内边距，卡片 14px（手机）/ 18px 圆角，手机上下 8 / 40px。
+- 部署：两边当前 `aea0a64-*`，3 个文件线上哈希与 `d9b1d3d` 一致；新目录 `e51cb9a-web01` / `e51cb9a-s0001` 恰好 3 处不同（先删掉打包带进去的 macOS `._*` 文件），语法通过；切换软链接并 reload PHP。
+- 内容：首页布局 685 的视频模块（已发布内容和草稿各 1 处精确替换）：视频 11760→11762、封面 11763、autoplay=true、muted=true、标题 “From research to your door.”；随后清页面缓存（generation→8）和对象缓存。
+- nginx：`vialcove-web01-customer-domains.conf` 静态缓存规则加上 `mp4|webm|m4v`（只改这一行），`nginx -t` 通过后 reload。源站现在返回 `public, max-age=604800`，但 Cloudflare 对 mp4 仍是 DYNAMIC（同目录 JPG 正常缓存），是 Cloudflare 侧对视频的设置 / 策略，需要在 Cloudflare 后台加缓存规则或改用 Stream / R2。
+- 验证：首页 200、s0001 200、PHP 错误日志无新增；手机视口下首屏前视频 0 字节、封面 768 宽、标题和时长正确、卡片左右 20px；页面加载后静音自动播放 720p 文件；Black Friday 条、购物车、客服按钮正常。
+- 备份：`34.231.148.231:/home/ubuntu/vialcove-deploy-backups/video-stage-20261107T175839Z/`（685 已发布内容、草稿、nginx 配置）。
+- 回滚：两个 `current` 指回 `aea0a64-web01` / `aea0a64-s0001` 后 reload PHP；用备份恢复 685 的 `_pc_published_content` / `post_content` 后清缓存；nginx 用备份配置覆盖后 `nginx -t` + reload。
