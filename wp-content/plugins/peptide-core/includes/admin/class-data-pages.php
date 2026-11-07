@@ -670,6 +670,8 @@ final class Data_Pages {
 			'custom'      => __( 'Custom range', 'peptide-core' ),
 			'compareWith' => __( 'Compare with', 'peptide-core' ),
 			'vs'          => 'VS',
+			'notesShow'   => __( 'Show metric notes', 'peptide-core' ),
+			'notesHide'   => __( 'Hide metric notes', 'peptide-core' ),
 			'startDate'   => __( 'Start date', 'peptide-core' ),
 			'endDate'     => __( 'End date', 'peptide-core' ),
 			'apply'       => __( 'Apply', 'peptide-core' ),
@@ -1123,6 +1125,7 @@ final class Data_Pages {
 			'bounce_rate'  => __( 'Bounce rate', 'peptide-core' ),
 			'bounceHelp'   => __( 'Bounce rate = users who left after viewing only this page / all users who viewed this page', 'peptide-core' ),
 			'open'         => __( 'Open page', 'peptide-core' ),
+			'actions'      => __( 'Actions', 'peptide-core' ),
 			'search'       => __( 'Search page paths', 'peptide-core' ),
 			'perPage'      => __( 'Per page', 'peptide-core' ),
 			/* translators: %d: number of page paths */
@@ -1225,6 +1228,8 @@ final class Data_Pages {
 			'off'          => __( 'Off', 'peptide-core' ),
 			'settings'     => __( 'Settings', 'peptide-core' ),
 			'noApps'       => __( 'No apps are installed.', 'peptide-core' ),
+			'thisPeriod'   => __( 'This period', 'peptide-core' ),
+			'previousPeriod' => __( 'Previous period', 'peptide-core' ),
 		);
 	}
 
@@ -1251,6 +1256,7 @@ final class Data_Pages {
 			'uvValueHelp'    => __( 'Sales / UV', 'peptide-core' ),
 			'conversionHelp' => __( 'Paid orders / UV × 100%', 'peptide-core' ),
 			'open'           => __( 'Open page', 'peptide-core' ),
+			'actions'        => __( 'Actions', 'peptide-core' ),
 			'search'         => __( 'Search landing pages', 'peptide-core' ),
 			'perPage'        => __( 'Per page', 'peptide-core' ),
 			/* translators: %d: number of landing pages */

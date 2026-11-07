@@ -175,14 +175,14 @@
 }
 
 /* 商品单元格（各数据页共用）：36px 小图 + 名称（最多两行）+ 货号。 */
-.pc-prod { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.pc-prod__img { flex: none; width: 36px; height: 36px; border: 1px solid #ececec; border-radius: 4px; background: #f5f5f5; object-fit: cover; }
-.pc-prod__img.is-empty { display: inline-block; box-sizing: border-box; }
-.pc-prod__text { display: flex; flex-direction: column; min-width: 0; }
-.pc-prod__name { display: -webkit-box; overflow: hidden; color: #171717; font-weight: 500; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-.pc-prod__name a { color: inherit; text-decoration: none; }
-.pc-prod__name a:hover { text-decoration: underline; }
-.pc-prod__code { overflow: hidden; color: #8c8c8c; font-size: 12px; font-weight: 400; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
+.pc-pcell { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.pc-pcell__img { flex: none; width: 36px; height: 36px; border: 1px solid #ececec; border-radius: 4px; background: #f5f5f5; object-fit: cover; }
+.pc-pcell__img.is-empty { display: inline-block; box-sizing: border-box; }
+.pc-pcell__text { display: flex; flex-direction: column; min-width: 0; }
+.pc-pcell__name { display: -webkit-box; overflow: hidden; color: #171717; font-weight: 500; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.pc-pcell__name a { color: inherit; text-decoration: none; }
+.pc-pcell__name a:hover { text-decoration: underline; }
+.pc-pcell__code { overflow: hidden; color: #8c8c8c; font-size: 12px; font-weight: 400; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
 .pc-flag { display: inline-block; margin-right: 8px; font-size: 16px; line-height: 1; vertical-align: -2px; }
 
 /* ---------- 2026-11-07 页头与时间工具栏（对照参考后台）：标题一行，工具栏放在白色卡片里，预设按钮做成分段选择。 ---------- */
@@ -215,3 +215,141 @@
 #wpbody-content .pc-data .button.pc-data-apply { min-height: 32px; border-color: #171717; border-radius: 6px; background: #171717; color: #fff; }
 #wpbody-content .pc-data .button.pc-data-apply:hover { border-color: #000; background: #000; color: #fff; }
 .pc-data > .pc-data-tz { margin: 8px 2px 0; color: #8c8c8c; }
+
+/* ---------- 2026-11-07 报表页通用外观（商品详情、页面访问、页面商品转化、应用、落地页、转化率详情、邮件、A/B、来源、维度）---------- */
+.pc-data { position: relative; }
+
+/* 口径说明：默认收起，标题右侧按钮展开。加载提示（报表区的直接子元素）不受影响。 */
+.pc-data-notes-toggle {
+	position: absolute;
+	top: 2px;
+	right: 0;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-height: 28px;
+	padding: 0 12px;
+	border: 1px solid #dcdcdc;
+	border-radius: 999px;
+	background: #fff;
+	color: #404040;
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+}
+.pc-data-notes-toggle::before { content: "?"; display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border: 1px solid currentColor; border-radius: 50%; font-size: 10px; line-height: 1; }
+.pc-data-notes-toggle:hover,
+.pc-data-notes-toggle[aria-pressed="true"] { border-color: #171717; color: #171717; }
+.pc-data[data-page="realtime"] > .pc-data-notes-toggle,
+.pc-data[data-page="operations"] > .pc-data-notes-toggle { display: none; }
+
+.pc-data:not(.is-notes) .pc-data-body > * .pc-data-muted:not(.pc-data-keep),
+.pc-data:not(.is-notes) .pc-data-body :is(.pc-report-filter-help, .pc-report-coverage, .pc-pages-help, .pc-landing-help, .pc-pc-search-note, .pc-conv-note, .pc-conv-export-help, .pc-emails-help, .pc-dim-help, .pc-dim-coverage, .pc-product-action-note) { display: none; }
+.pc-data.is-notes .pc-data-body > * .pc-data-muted { padding: 8px 12px; border-left: 3px solid #d4d4d4; background: #fafafa; line-height: 1.6; }
+
+/* 报表主体：白色卡片。 */
+.pc-data-body > :is(.pc-prod, .pc-pages, .pc-page-conversion, .pc-landing, .pc-conv, .pc-sources, .pc-dim, .pc-apps, .pc-emails) {
+	box-sizing: border-box;
+	min-width: 0;
+	padding: 16px 20px;
+	border: 1px solid #ececec;
+	border-radius: 8px;
+	background: #fff;
+}
+
+/* 入口域名 / 国家筛选：一行紧凑排布。 */
+.pc-data-body .pc-report-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 0 0 12px; }
+.pc-data-body .pc-report-filters label { display: inline-flex; align-items: center; gap: 6px; margin: 0; color: #525252; font-size: 13px; }
+.pc-data-body .pc-report-filters :is(select, input) { min-height: 32px; border-color: #dcdcdc; border-radius: 6px; font-size: 13px; }
+.pc-data-body .pc-report-filters input[type="text"] { width: 160px; }
+
+/* 表格：表头浅灰底、行分隔线、数字右对齐等宽。 */
+.pc-data .pc-data-body table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.pc-data .pc-data-body table :is(th, td) { padding: 10px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; font-variant-numeric: tabular-nums; }
+.pc-data .pc-data-body table thead th { border-bottom: 0; background: #f5f5f5; color: #525252; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.pc-data .pc-data-body table tbody tr:hover > * { background: #fafafa; }
+.pc-data .pc-data-body table caption { padding: 0 0 8px; color: #525252; font-size: 13px; font-weight: 600; text-align: left; }
+
+/* 本期 / 对比期 / 变化 三行数字（商品详情等）：对比期灰色，变化带箭头，涨绿跌红。 */
+.pc-data-body :is(.pc-prod-cur) { font-weight: 600; }
+.pc-data-body :is(.pc-prod-prev) { color: #8c8c8c; font-size: 12px; }
+.pc-data-body .is-up { color: #0f8a5f; }
+.pc-data-body .is-down { color: #d63638; }
+.pc-data-body :is(.pc-prod-chg).is-up::before { content: "\2191\00a0"; }
+.pc-data-body :is(.pc-prod-chg).is-down::before { content: "\2193\00a0"; }
+
+/* 报表区里的普通按钮：白底细边圆角。 */
+#wpbody-content .pc-data-body .button:not(.button-primary):not(.button-link) { min-height: 32px; border-color: #dcdcdc; border-radius: 6px; background: #fff; color: #404040; font-size: 13px; }
+#wpbody-content .pc-data-body .button:not(.button-primary):not(.button-link):hover { border-color: #171717; color: #171717; }
+.pc-data-body input[type="search"] { min-height: 32px; border-color: #dcdcdc; border-radius: 6px; }
+
+/* 页面访问统计：操作列（眼睛图标）+ 完整地址。 */
+.pc-pages-th--action,
+.pc-pages-action { width: 56px; text-align: center !important; }
+.pc-pages-open { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; color: #8c8c8c; }
+.pc-pages-open:hover,
+.pc-pages-open:focus-visible { background: #f2f2f2; color: #171717; }
+.pc-pages-path-text { color: #8c8c8c; overflow-wrap: anywhere; }
+.pc-prod-metric { text-align: center; }
+
+/* 应用统计（对照参考后台）：每个应用左右两卡。 */
+.pc-apps-data { display: grid; gap: 16px; }
+.pc-apps-pair { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 16px; }
+.pc-apps-pair > section { box-sizing: border-box; min-width: 0; padding: 16px 20px; border: 1px solid #ececec; border-radius: 8px; background: #fff; }
+.pc-apps-card__head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 0 0 14px; }
+.pc-apps-card__name { margin: 0; font-size: 15px; font-weight: 600; }
+.pc-apps-main { padding: 14px 16px; border-radius: 6px; background: #fafafa; }
+.pc-apps-main__top { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #404040; font-size: 13px; }
+.pc-apps-main__nums { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.pc-apps-main__cur { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pc-apps-main__prev { color: #a3a3a3; font-size: 22px; font-variant-numeric: tabular-nums; }
+.pc-apps-rows { margin-top: 10px; }
+.pc-apps-row { display: grid; grid-template-columns: minmax(0, 1fr) 72px 72px 80px; align-items: center; gap: 8px; padding: 9px 4px; border-bottom: 1px solid #f2f2f2; font-size: 13px; font-variant-numeric: tabular-nums; }
+.pc-apps-row:last-child { border-bottom: 0; }
+.pc-apps-row__label { color: #525252; }
+.pc-apps-row__cur { font-weight: 600; text-align: right; }
+.pc-apps-row__prev { color: #a3a3a3; text-align: right; }
+.pc-apps-tile__change { font-size: 12px; text-align: right; white-space: nowrap; }
+.pc-apps-tile__change.is-up { color: #0f8a5f; }
+.pc-apps-tile__change.is-down { color: #d63638; }
+.pc-apps-tile__change.is-up::before { content: "\2191\00a0"; }
+.pc-apps-tile__change.is-down::before { content: "\2193\00a0"; }
+.pc-apps-chart__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
+.pc-apps-chart__head h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.pc-apps-legend { display: inline-flex; align-items: center; gap: 6px; color: #737373; font-size: 12px; }
+.pc-apps-legend i { display: inline-block; width: 14px; height: 6px; margin-left: 10px; border-radius: 2px; background: #171717; }
+.pc-apps-legend i.is-prev { background: #c8c8c8; }
+.pc-apps-bar { display: grid; grid-template-columns: minmax(90px, 160px) minmax(0, 1fr) 72px; align-items: center; gap: 4px 10px; padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: 12px; }
+.pc-apps-bar__label { grid-row: span 2; color: #525252; }
+.pc-apps-bar__track { height: 8px; border-radius: 4px; background: #f2f2f2; overflow: hidden; }
+.pc-apps-bar__fill { display: block; height: 100%; min-width: 2px; border-radius: 4px; background: #171717; }
+.pc-apps-bar__fill.is-prev { background: #c8c8c8; }
+.pc-apps-bar__num { text-align: right; font-variant-numeric: tabular-nums; }
+.pc-apps-bar__num.is-prev { color: #a3a3a3; }
+@media (max-width: 900px) { .pc-apps-pair { grid-template-columns: minmax(0, 1fr); } }
+
+/* 空状态（报表卡片里）：空盒子图标 + 灰字，居中。 */
+.pc-data-body > * .pc-data-empty,
+.pc-data-body > .pc-data-empty {
+	padding: 92px 16px 40px;
+	border: 0;
+	border-radius: 8px;
+	background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='56' viewBox='0 0 64 56' fill='none' stroke='%23c8c8c8' stroke-width='1.5' stroke-linejoin='round'%3E%3Cpath d='M8 20 32 10l24 10v24L32 54 8 44z'/%3E%3Cpath d='M8 20l24 10 24-10M32 30v24'/%3E%3Cpath d='M8 20 2 12l24-10 6 8M56 20l6-8-24-10-6 8' stroke='%23dadada'/%3E%3C/svg%3E") center 28px no-repeat;
+	color: #a3a3a3;
+	font-size: 13px;
+	text-align: center;
+}
+.pc-data-body > .pc-data-empty { border: 1px solid #ececec; }
+
+/* 指标格子（邮件、转化率详情、旧版应用格子）：与运营数据指标条一致 —— 浅灰底条，格子无边框，数字居中，变化带箭头。 */
+.pc-data-body :is(.pc-emails-tiles, .pc-conv-overall, .pc-apps-tiles) { gap: 0 !important; border: 0 !important; border-radius: 6px; background: #fafafa !important; }
+.pc-data-body :is(.pc-emails-tile, .pc-conv-tile, .pc-apps-tile) { padding: 14px 10px !important; background: transparent !important; text-align: center; }
+.pc-data-body :is(.pc-emails-tile, .pc-conv-tile, .pc-apps-tile) [class$="__value"] { font-size: 18px; font-weight: 700; }
+.pc-data-body :is(.pc-emails-tile, .pc-conv-tile, .pc-apps-tile) [class$="__label"] { color: #404040; font-size: 13px; }
+.pc-data-body :is(.pc-emails-tile__prev, .pc-conv-tile__prev, .pc-apps-tile__prev) { color: #8c8c8c; font-size: 12px; }
+.pc-data-body :is(.pc-emails-tile__change, .pc-conv-tile__change) { font-size: 12px; white-space: nowrap; }
+.pc-data-body :is(.pc-emails-tile__change, .pc-conv-tile__change).is-up::before { content: "\2191\00a0"; }
+.pc-data-body :is(.pc-emails-tile__change, .pc-conv-tile__change).is-down::before { content: "\2193\00a0"; }
+.pc-data-body :is(.pc-emails-tile__foot, .pc-conv-tile__foot) { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.pc-data-body :is(.pc-emails-data, .pc-conv) h2 { margin: 18px 0 10px; font-size: 15px; font-weight: 600; }
+.pc-data-body :is(.pc-emails-data, .pc-conv) > h2:first-child { margin-top: 0; }

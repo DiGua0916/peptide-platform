@@ -70,17 +70,36 @@
 		var link = settings ?
 			'<a class="pc-apps-card__settings" href="' + esc( settings ) + '">' + esc( T.settings ) + '</a>' :
 			'';
-		var tiles = ( app.metrics || [] ).map( function ( metric ) {
-			return tile( metric, ctx );
+		// 版式对照参考后台：左卡 = 应用名 + 主指标（大号本期 / 灰色对比期 / 变化）+ 其余指标列表；
+		// 右卡 = 各指标本期与对比期的对照条（应用没有分时序列，不画假的曲线）。
+		var metrics = app.metrics || [];
+		var main = metrics[ 0 ];
+		var code = ctx.currency && ctx.currency.code ? ctx.currency.code : '';
+		var labelOf = function ( m ) { return ( T[ m.key ] || m.key ) + ( 'money' === m.kind && code ? ' (' + code + ')' : '' ); };
+		var rows = metrics.slice( 1 ).map( function ( m ) {
+			return '<div class="pc-apps-row"><span class="pc-apps-row__label">' + esc( labelOf( m ) ) + '</span>' +
+				'<span class="pc-apps-row__cur">' + esc( value( m.kind, m.current, ctx ) ) + '</span>' +
+				'<span class="pc-apps-row__prev"><span class="screen-reader-text">' + esc( ctx.strings.vs + ' ' ) + '</span>' + esc( value( m.kind, m.previous, ctx ) ) + '</span>' +
+				changeHtml( m.change, ctx ) + '</div>';
 		} ).join( '' );
-		return '<section class="pc-apps-card">' +
+		var bars = metrics.filter( function ( m ) { return 'rate' !== m.kind; } ).map( function ( m ) {
+			var cur = Number( m.current ) || 0, prev = Number( m.previous ) || 0, top = Math.max( cur, prev, 1 );
+			return '<div class="pc-apps-bar"><span class="pc-apps-bar__label">' + esc( labelOf( m ) ) + '</span>' +
+				'<span class="pc-apps-bar__track"><span class="pc-apps-bar__fill" style="width:' + esc( Math.round( cur / top * 100 ) ) + '%"></span></span><span class="pc-apps-bar__num">' + esc( value( m.kind, m.current, ctx ) ) + '</span>' +
+				'<span class="pc-apps-bar__track"><span class="pc-apps-bar__fill is-prev" style="width:' + esc( Math.round( prev / top * 100 ) ) + '%"></span></span><span class="pc-apps-bar__num is-prev">' + esc( value( m.kind, m.previous, ctx ) ) + '</span></div>';
+		} ).join( '' );
+		return '<div class="pc-apps-pair"><section class="pc-apps-card">' +
 			'<div class="pc-apps-card__head">' +
 				'<h2 class="pc-apps-card__name">' + esc( app.name ) + '</h2>' +
 				'<span class="pc-apps-badge ' + ( on ? 'is-on' : 'is-off' ) + '">' + esc( on ? T.on : T.off ) + '</span>' +
 				link +
 			'</div>' +
-			'<div class="pc-apps-tiles">' + tiles + '</div>' +
-		'</section>';
+			( main ? '<div class="pc-apps-main"><div class="pc-apps-main__top"><span class="pc-apps-main__label">' + esc( labelOf( main ) ) + '</span>' + changeHtml( main.change, ctx ) + '</div>' +
+				'<div class="pc-apps-main__nums"><span class="pc-apps-main__cur">' + esc( value( main.kind, main.current, ctx ) ) + '</span><span class="pc-apps-main__prev"><span class="screen-reader-text">' + esc( ctx.strings.vs + ' ' ) + '</span>' + esc( value( main.kind, main.previous, ctx ) ) + '</span></div></div>' : '' ) +
+			'<div class="pc-apps-rows">' + rows + '</div>' +
+		'</section>' +
+		'<section class="pc-apps-chart"><div class="pc-apps-chart__head"><h3>' + esc( app.name ) + '</h3>' +
+			'<span class="pc-apps-legend"><i></i>' + esc( T.thisPeriod || '' ) + '<i class="is-prev"></i>' + esc( T.previousPeriod || '' ) + '</span></div>' + bars + '</section></div>';
 	}
 
 	function view( data, ctx ) {

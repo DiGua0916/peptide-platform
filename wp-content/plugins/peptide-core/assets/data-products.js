@@ -167,7 +167,7 @@
 		if ( RATES[ key ] ) { change = isNum( c ) ? ( Number( c ) > 0 ? '+' : '' ) + ( Math.round( Number( c ) * 100 ) / 100 ) + ' ' + ( T.points || 'Percentage points' ) : '-'; }
 		return '<td class="pc-prod-metric">' +
 			'<div class="pc-prod-cur">' + esc( value( key, cur ? cur[ key ] : null, ctx ) ) + '</div>' +
-			'<div class="pc-prod-prev">' + esc( ctx.strings.vs + ' ' + value( key, prev ? prev[ key ] : null, ctx ) ) + '</div>' +
+			'<div class="pc-prod-prev"><span class="screen-reader-text">' + esc( ctx.strings.vs + ' ' ) + '</span>' + esc( value( key, prev ? prev[ key ] : null, ctx ) ) + '</div>' +
 			'<div class="pc-prod-chg' + dir + '">' + esc( change ) + '</div>' +
 		'</td>';
 	}

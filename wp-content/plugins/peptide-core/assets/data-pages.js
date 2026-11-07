@@ -135,11 +135,15 @@
 		var esc = ctx.esc;
 		var url = String( row.url || '' );
 		// 打开页面的链接只接受 http(s)。
-		var open = /^https?:\/\//i.test( url ) ?
-			' <a class="pc-pages-open" href="' + esc( url ) + '" target="_blank" rel="noopener noreferrer">' + esc( T.open ) + '</a>' :
+		var link = /^https?:\/\//i.test( url );
+		// 第一列“操作”：眼睛图标，新标签页打开该页面（对照参考后台）；第二列显示完整地址。
+		var open = link ?
+			'<a class="pc-pages-open" href="' + esc( url ) + '" target="_blank" rel="noopener noreferrer" aria-label="' + esc( T.open + ' ' + row.path ) + '" title="' + esc( T.open ) + '">' +
+				'<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></a>' :
 			'';
 		return '<tr class="pc-pages-row">' +
-			'<td class="pc-pages-path"><span class="pc-pages-path-text" title="' + esc( url ) + '">' + esc( row.path ) + '</span>' + open + '</td>' +
+			'<td class="pc-pages-action">' + open + '</td>' +
+			'<td class="pc-pages-path"><span class="pc-pages-path-text" title="' + esc( row.path ) + '">' + esc( link ? url : row.path ) + '</span></td>' +
 			'<td class="pc-pages-num">' + esc( ctx.number( row.views ) ) + '</td>' +
 			'<td class="pc-pages-num">' + esc( ctx.number( row.visitors ) ) + '</td>' +
 			'<td class="pc-pages-num">' + esc( rate( row.bounce_rate ) ) + '</td>' +
@@ -148,7 +152,7 @@
 
 	function tableHtml( data, ctx ) {
 		var esc = ctx.esc;
-		var head = '<th scope="col" class="pc-pages-th pc-pages-th--path">' + esc( T.path ) + '</th>';
+		var head = '<th scope="col" class="pc-pages-th pc-pages-th--action">' + esc( T.actions || '' ) + '</th><th scope="col" class="pc-pages-th pc-pages-th--path">' + esc( T.path ) + '</th>';
 		SORT_COLUMNS.forEach( function ( key ) {
 			head += headerCell( key, data, ctx );
 		} );

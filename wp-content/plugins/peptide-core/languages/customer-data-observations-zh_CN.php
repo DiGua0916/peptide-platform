@@ -2,6 +2,8 @@
 /** Additional Data report translations; existing catalogue entries remain authoritative. */
 defined( 'ABSPATH' ) || exit;
 return array(
+	'Show metric notes' => '口径说明',
+	'Hide metric notes' => '收起口径说明',
 	'Country / region' => '国家/地区',
 	'Browser / app' => '浏览器/APP',
 	'Domain' => '域名',

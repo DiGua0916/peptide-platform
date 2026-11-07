@@ -21,8 +21,8 @@
 		function productCell( row, label ) {
 			var image = /^https?:\/\//i.test( String( row.image || '' ) ) ? String( row.image ) : '';
 			var code = row.sku ? 'SKU: ' + row.sku : ( row.id ? 'ID: ' + row.id : '' );
-			return '<span class="pc-prod">' + ( image ? '<img class="pc-prod__img" src="' + esc( image ) + '" alt="" loading="lazy" width="36" height="36">' : '<span class="pc-prod__img is-empty" aria-hidden="true"></span>' ) +
-				'<span class="pc-prod__text"><span class="pc-prod__name">' + esc( label ) + '</span>' + ( code ? '<span class="pc-prod__code">' + esc( code ) + '</span>' : '' ) + '</span></span>';
+			return '<span class="pc-pcell">' + ( image ? '<img class="pc-pcell__img" src="' + esc( image ) + '" alt="" loading="lazy" width="36" height="36">' : '<span class="pc-pcell__img is-empty" aria-hidden="true"></span>' ) +
+				'<span class="pc-pcell__text"><span class="pc-pcell__name">' + esc( label ) + '</span>' + ( code ? '<span class="pc-pcell__code">' + esc( code ) + '</span>' : '' ) + '</span></span>';
 		}
 		function placeholder( key, message ) { return '<tr><td colspan="' + ( hasShare( key ) ? 3 : 2 ) + '">' + esc( message ) + '</td></tr>'; }
 		function attached() { return ! disposed && document.documentElement.contains( host ); }

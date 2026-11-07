@@ -164,21 +164,24 @@
 		if ( 'unknown' === row.attribution_status ) { label += ' (' + T.sourceUnknown + ')'; }
 		if ( 'captured' === row.attribution_status && row.host ) { label += ' — ' + row.host; }
 		// 打开页面的链接只接受 http(s)；路径为空的一行没有链接。
+		// 第一列“操作”：眼睛图标，新标签页打开（对照参考后台）。
 		var open = /^https?:\/\//i.test( url ) ?
-			' <a class="pc-landing-open" href="' + esc( url ) + '" target="_blank" rel="noopener noreferrer">' + esc( T.open ) + '</a>' :
+			'<a class="pc-landing-open pc-pages-open" href="' + esc( url ) + '" target="_blank" rel="noopener noreferrer" aria-label="' + esc( T.open + ' ' + label ) + '" title="' + esc( T.open ) + '">' +
+				'<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></a>' :
 			'';
 		var cells = SORT_COLUMNS.map( function ( key ) {
 			return '<td class="pc-landing-num">' + esc( cellText( key, row, ctx ) ) + '</td>';
 		} ).join( '' );
 		return '<tr class="pc-landing-row">' +
-			'<td class="pc-landing-path"><span class="pc-landing-path-text' + ( unknown ? ' is-unknown' : '' ) + '" title="' + esc( url ) + '">' + esc( label ) + '</span>' + open + '</td>' +
+			'<td class="pc-pages-action">' + open + '</td>' +
+			'<td class="pc-landing-path"><span class="pc-landing-path-text' + ( unknown ? ' is-unknown' : '' ) + '" title="' + esc( url ) + '">' + esc( label ) + '</span></td>' +
 			cells +
 		'</tr>';
 	}
 
 	function tableHtml( data, ctx ) {
 		var esc = ctx.esc;
-		var head = '<th scope="col" class="pc-landing-th pc-landing-th--path">' + esc( T.path ) + '</th>';
+		var head = '<th scope="col" class="pc-landing-th pc-pages-th--action">' + esc( T.actions || '' ) + '</th><th scope="col" class="pc-landing-th pc-landing-th--path">' + esc( T.path ) + '</th>';
 		SORT_COLUMNS.forEach( function ( key ) {
 			head += headerCell( key, data, ctx );
 		} );
@@ -186,7 +189,7 @@
 			return landingRow( row, ctx );
 		} ).join( '' );
 		if ( ! body ) {
-			body = '<tr><td class="pc-landing-empty" colspan="11">' + esc( T.noData ) + '</td></tr>';
+			body = '<tr><td class="pc-landing-empty" colspan="12">' + esc( T.noData ) + '</td></tr>';
 		}
 		return '<table class="pc-landing-table"><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table>';
 	}

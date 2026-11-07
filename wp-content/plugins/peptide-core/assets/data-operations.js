@@ -444,8 +444,8 @@
 			'<span>' + esc( label ) + '</span>';
 		if ( /^products_/.test( name ) ) {
 			var image = /^https?:\/\//i.test( String( row.image || '' ) ) ? String( row.image ) : '';
-			nameHtml = '<span class="pc-prod">' + ( image ? '<img class="pc-prod__img" src="' + esc( image ) + '" alt="" loading="lazy" width="36" height="36">' : '<span class="pc-prod__img is-empty" aria-hidden="true"></span>' ) +
-				'<span class="pc-prod__text"><span class="pc-prod__name">' + nameHtml + '</span></span></span>';
+			nameHtml = '<span class="pc-pcell">' + ( image ? '<img class="pc-pcell__img" src="' + esc( image ) + '" alt="" loading="lazy" width="36" height="36">' : '<span class="pc-pcell__img is-empty" aria-hidden="true"></span>' ) +
+				'<span class="pc-pcell__text"><span class="pc-pcell__name">' + nameHtml + '</span></span></span>';
 		}
 		return '<tr class="pc-ops-rank__row' + ( index >= RANK_SHOW ? ' is-extra' : '' ) + '">' +
 			'<th scope="row">' + nameHtml + '</th>' +
