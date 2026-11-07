@@ -276,3 +276,20 @@
 - 代码 `0532574`（1 个文件：peptide-core `includes/admin/class-referrals-page.php`）：“推广人”改成左侧单独一项，菜单排好后放在“顾客”正后面。
 - 部署：两边当前 `4b8890c-*`，文件哈希与 `4b8890c` 一致；`0532574-web01` / `0532574-s0001` 恰好 1 处不同，切换并 reload PHP。正式后台左侧菜单顺序：……营销活动、顾客、推广人、访客数据……；首页、s0001 均为 200。
 - 回滚：两个 `current` 指回 `4b8890c-web01` / `4b8890c-s0001`。
+
+### 推广人页面重新设计（用户批准 "Deploy to production"，2026-11-07 20:15 UTC）
+
+- 代码 `554e242`（3 个运行文件：peptide-core `includes/admin/class-referrals-page.php`、`includes/class-referrals.php`，新增 `assets/referrals.css`）：
+  - 顶部时间切换和 4 个汇总卡片；
+  - 每个推广人一行，带复制链接按钮、四项数据，以及“订单 · 客户 · 编辑”操作；
+  - 添加、改名、删除表单取代“代号|名字”文本框，删除要先确认；
+  - 改归属和规则说明放在侧栏卡片里；客户列表按推广人筛选；
+  - 手机宽度没有横向滚动。
+- 范围：按另一会话的说明，新开店模板和 s0002 / s0003 也跑同一套代码，所以这次共更新 8 处。
+  - 主店：`554e242-web01` / `554e242-s0001` 从 `0532574-*` 复制，恰好 3 处不同，切换软链接。
+  - 就地更新：`/srv/vialcove/tenants/s000{2,3}/public`、`/srv/vialcove/tenant-admin/s000{2,3}/public`、`/srv/vialcove-provision-template/yy-sync-0532574-1794082452-{web,admin}/source`。每处先核对两个旧文件的哈希与 `0532574` 一致，再备份旧文件（`/home/ubuntu/vialcove-deploy-backups/referral-ui-20261107T2018*`），然后写入 3 个文件（root:root 644）。两台服务器 reload PHP。
+- 验证：
+  - 8 处文件哈希都与 `554e242` 一致，语法检查通过；
+  - s0001、s0002、s0003 的推广人页面都能正常输出（以各自的 PHP 用户运行）；
+  - 前台 www、s0002、s0003 首页和购物车返回 200，三个后台登录页返回 200。
+- 回滚：主店把 `current` 指回 `0532574-*`；其余 6 处用上面的备份覆盖回去，再删掉 `assets/referrals.css`。
