@@ -262,3 +262,10 @@
 - 建表 `wp_pc_referral_touches`（schema 1），清页面缓存。推广人名单为空，所以功能暂不生效，等用户在后台 顾客 → 推广人 填写。
 - 验证：首页 / 购物车 / s0001 200，PHP 错误日志无新增；`/?ref=a`、`/?ref=a&utm_source=fb` 页面缓存 HIT（约 0.4 秒，走 Cloudflare）；s0001 推广人页面正常显示。
 - 回滚：两个 `current` 指回 `89fe635-web01` / `89fe635-s0001` 后 reload PHP（新表和选项留着不影响）。
+
+### 总后台宽屏右侧留白修正（用户批准 "Deploy to production"，2026-11-07）
+
+- 问题：Layout v2 把内容区限制在 1320px 并靠左，1920 宽屏右侧空出约 350px，和通栏顶栏对不齐。
+- 代码 `94c322f`（1 个文件：peptide-hq `assets/hq-workspace.css`）：内容区不再限宽，左右与顶栏同为 32px；表单卡片保持 840px；手机边距 16px。
+- 部署：线上 `3c3c5e3-hq` 的该文件哈希与 `3c3c5e3` 一致；复制为 `94c322f-hq`，恰好 1 处不同，切换并 reload PHP。HQ 登录页 200；1920 宽右边距 32px、无横向滚动；自动开店表单卡 840px；手机左右 16px。
+- 回滚：`/srv/vialcove/hq/current` 指回 `3c3c5e3-hq` 后 reload PHP。
