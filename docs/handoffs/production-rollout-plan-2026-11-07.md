@@ -310,3 +310,10 @@
 - Tests: full provisioning suite 65/65 OK as root on the admin host (locally the 16 chown-dependent tests error the same before and after).
 - s0002/s0003 given the same settings (fluent-smtp activated, mail gate files moved to `/var/lib/vialcove-ui-deploy/new-store-settings/` on each host).
 - Settings comparison s0001 / s0002 / s0003: identical except payment gateway (PanaPay needs each store's own merchant account) and content (products 82/0/0, pages 12/5/5). Store address is empty on all three. No new store created.
+
+### 广告像素后台只显示 Facebook（用户批准 "Deploy to production"，2026-11-07）
+
+- 用户：核心只投 Facebook，其他平台先隐藏。
+- 代码 `2ab55b0`（1 个文件：peptide-core `includes/admin/class-pixels-page.php`）：只显示 Facebook 卡片，其余 22 个平台卡片加 `hidden`（仍在表单里提交，已存设置不丢）；恢复显示改 `VISIBLE` 或过滤器 `peptide_core_pixels_visible_platforms`。前台回传逻辑未改。
+- 部署：两边 `554e242-*` 的该文件哈希与上一版一致；复制为 `2ab55b0-web01` / `2ab55b0-s0001`，恰好 1 处不同，语法通过，切换并 reload PHP。前台 / s0001 200；s0001 像素页只见 Facebook，隐藏 22 个，无报错。正式站仍未填任何像素。
+- 回滚：两个 `current` 指回 `554e242-*` 后 reload PHP。
