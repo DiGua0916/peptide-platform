@@ -36,6 +36,18 @@
 
 	// ---------- 顶部 ----------
 
+	// 时间条右边：浏览器本地时间，写法同参考后台“(GMT+08:00) 2026-11-07 10:53:11”。
+	function localNow() {
+		var d = new Date();
+		var two = function ( n ) {
+			return ( n < 10 ? '0' : '' ) + n;
+		};
+		var off = -d.getTimezoneOffset();
+		var sign = off < 0 ? '-' : '+';
+		off = Math.abs( off );
+		return '(GMT' + sign + two( Math.floor( off / 60 ) ) + ':' + two( off % 60 ) + ') ' + d.getFullYear() + '-' + two( d.getMonth() + 1 ) + '-' + two( d.getDate() ) + ' ' + two( d.getHours() ) + ':' + two( d.getMinutes() ) + ':' + two( d.getSeconds() );
+	}
+
 	function hero() {
 		var cur = summary.currency.code;
 		var t = todayData;
@@ -49,14 +61,14 @@
 			[ S.returning, t.returning ],
 		];
 		return '<section class="pc-ov-hero"><p class="pc-ov-hero__hello">' + esc( fmt( S[ summary.greeting ], summary.store ) ) + '</p>' +
-			'<div class="pc-ov-hero__panel"><div class="pc-ov-hero__time"><span>' + esc( S.storeTime + ': ' + summary.tz_label + ' ' + summary.now ) + '</span></div>' +
+			'<div class="pc-ov-hero__panel"><div class="pc-ov-hero__time"><span>' + esc( S.storeTime + ': ' + summary.tz_label + ' ' + summary.now ) + '</span><span class="pc-ov-hero__local">' + esc( localNow() ) + '</span></div>' +
 			'<div class="pc-ov-kpis">' + kpis.map( function ( k ) {
 				return '<div class="pc-ov-kpi"><span>' + esc( k[ 0 ] ) + '</span><b>' + esc( k[ 1 ] ) + '</b></div>';
 			} ).join( '' ) + '</div></div></section>';
 	}
 
 	function side() {
-		var h = summary.holidays.map( function ( d ) {
+		var h = summary.holidays.slice( 0, 1 ).map( function ( d ) {
 			return '<li><span>' + esc( S.holidayNames[ d.key ] || d.key ) + '</span><span class="pc-ov-muted">' + esc( d.date ) + '</span><span class="pc-ov-muted">' + esc( d.days ? fmt( S.inDays, d.days ) : S.todayTag ) + '</span></li>';
 		} ).join( '' );
 		return '<section class="pc-ov-card"><div class="pc-ov-card__head"><h2>' + esc( S.currency ) + '</h2><span><b>' + esc( summary.currency.code + ' (' + summary.currency.symbol + ')' ) + '</b><span class="pc-ov-tag">' + esc( S.default ) + '</span></span></div>' +
@@ -94,22 +106,22 @@
 
 	// ---------- 第三行 ----------
 
+	// 阶梯漏斗（参考后台概览页）：每层一条灰条，越往下越窄；右侧折线从本层右端连到下一层右端，旁边写“占上一层”的比例。
 	function funnel() {
 		var f = range.funnel || [];
 		if ( ! f.length ) {
 			return '<p class="pc-ov-muted">' + esc( S.noData ) + '</p>';
 		}
 		var base = f[ 0 ].count;
-		// Stage bars taper; the in-flow connector shows the conversion from the previous stage.
 		var frac = function ( i ) {
-			return 1 - ( i * 0.36 ) / Math.max( 1, f.length - 1 );
+			return Math.round( ( 1 - ( i * 0.36 ) / Math.max( 1, f.length - 1 ) ) * 10000 ) / 10000;
 		};
-		return '<div class="pc-ov-funnel">' + f.map( function ( s, i ) {
-			var link = '';
-			if ( i ) {
-				link = '<div class="pc-ov-link" title="' + esc( S.stepRate ) + '"><i aria-hidden="true"></i><span>' + esc( pct( s.count, f[ i - 1 ].count ) ) + '</span></div>';
+		return '<div class="pc-ov-funnel pc-ov-stairs">' + f.map( function ( s, i ) {
+			var next = '';
+			if ( i < f.length - 1 ) {
+				next = '<i class="pc-ov-stair__next" style="--d:' + Math.round( ( frac( i ) - frac( i + 1 ) ) * 10000 ) / 10000 + '" title="' + esc( S.stepRate ) + '"><span>' + esc( pct( f[ i + 1 ].count, s.count ) ) + '</span></i>';
 			}
-			return link + '<div class="pc-ov-step" style="--f:' + frac( i ) + '"><b>' + esc( S.stages[ s.stage ] ) + ': ' + esc( s.count ) + '</b>' + ( i ? '<span>' + esc( fmt( S.ofVisitors, pct( s.count, base ) ) ) + '</span>' : '' ) + '</div>';
+			return '<div class="pc-ov-step pc-ov-stair" style="--f:' + frac( i ) + '"><div class="pc-ov-stair__bar"><b>' + esc( S.stages[ s.stage ] ) + ': ' + esc( s.count ) + '</b>' + ( i ? '<span>' + esc( fmt( S.ofVisitors, pct( s.count, base ) ) ) + '</span>' : '' ) + '</div>' + next + '</div>';
 		} ).join( '' ) + '</div>';
 	}
 
@@ -198,7 +210,7 @@
 			var gy = y( g * step );
 			svg += '<line x1="' + pad.l + '" x2="' + ( w - pad.r ) + '" y1="' + gy + '" y2="' + gy + '" class="pc-ov-grid' + ( g ? ' is-dash' : '' ) + '"/><text x="' + ( pad.l - 6 ) + '" y="' + ( gy + 4 ) + '" text-anchor="end">' + esc( axisText( g * step ) ) + '</text>';
 		}
-		var every = Math.max( 1, Math.ceil( pts.length / 12 ) );
+		var every = Math.max( 1, Math.ceil( pts.length / 8 ) );
 		pts.forEach( function ( p, i ) {
 			if ( 0 === i % every ) {
 				svg += '<text x="' + x( i ) + '" y="' + ( h - 8 ) + '" text-anchor="middle">' + esc( p.label ) + '</text>';
