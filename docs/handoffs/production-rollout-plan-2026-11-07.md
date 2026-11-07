@@ -210,3 +210,12 @@
 - 测试：data-*.cjs 25 个套件 24 个通过，`data-native-search.cjs` 为原有失败。
 - 回滚：两个 `current` 指回 `6322d02-s0001` / `6322d02-web01` 后 reload PHP。
 - 未做（需要新的后端报表，不只是界面）：运营数据按入口域名筛选；独立的“款式详情数据”页。商品详情默认十列是既定约定（测试固定），未改。
+
+### 运营数据入口域名筛选 + 款式详情数据（用户批准 "Deploy to production"，2026-11-07 17:34 UTC）
+
+- 内容：`aea0a64`。13 个运行文件（新增 `includes/data/class-entry-domain.php`）。接口新增可选参数 `entry_domain`（operations / trends / rankings / rankings/table）和新接口 `/data/products/variations`；不带参数时响应与原来一致。
+- 口径：入口域名 = `visits.attribution_host`（attribution_version = 1，且在时间段结束前保存）；订单按 `ORDER_VISIT_META` 归属。注册用户按域名为 null；八层明细漏斗按域名时不返回；访客来源 / 域名 / 国家、搜索词、收藏 5 张排行表仍按全部域名，并在 `all_domain_tables` 标出。
+- 部署：两边当前 `8832e70-*`，12 个已有文件哈希一致、新文件不存在；新目录 `aea0a64-s0001` / `aea0a64-web01` 恰好 13 处不同，哈希、语法、冒烟启动通过；17:34:04 同时切换并 reload PHP。前台首页 / 购物车 200，s0001 200，PHP 错误日志 0。
+- 正式数据只读核对（近 30 天）：全部访客 859、订单 4、销售额 1,119.25；3 个入口域名访客合计 819（另 40 个访客没有保存入口域名），订单 4 / 销售额 1,119.25 全部归属 www.vialcovepeptides.com；同一域名下指标、趋势、排行（销量 12）三处一致；款式 22 个；非法域名 400。
+- 附注：入口域名里出现 `s0001.vialcovepeptides.com`（8 次访问）和 `vialcovepeptidescom.local`（2 次），像是内部 / 本地测试流量。
+- 回滚：两个 `current` 指回 `8832e70-s0001` / `8832e70-web01` 后 reload PHP。
