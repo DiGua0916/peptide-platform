@@ -545,6 +545,8 @@
 	function view( data, ctx ) {
 		var esc = ctx.esc;
 		var html = dimensionsNavigation( data, ctx );
+		// “更多维度数据”放到标题旁（对照参考后台）；没有标题位时留在报表顶部。
+		if ( html && ctx.setActions && ctx.setActions( html ) ) { html = ''; }
 		if ( ! data.tracking ) {
 			html += '<p class="pc-ops-note">' + esc( T.trackingOff ) + '</p>';
 		}

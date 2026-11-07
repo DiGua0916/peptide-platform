@@ -84,6 +84,41 @@
 			return wp.apiFetch( { path: wp.url.addQueryArgs( path, params || {} ) } );
 		},
 		esc: esc,
+		// 平滑折线图（单调三次样条，不冲出相邻两点）：本期实线 + 浅色面积，对比期灰线。返回 SVG 字符串。
+		// o = { cur: [数字], prev: [数字], labels: [横轴文字], w, h, title }
+		lineChart: function ( o ) {
+			var cur = o.cur || [], prev = o.prev || [], labels = o.labels || [];
+			var W = o.w || 640, H = o.h || 240, L = 40, R = 12, T = 12, B = 28, n = Math.max( cur.length, 1 );
+			var max = 0;
+			cur.concat( prev ).forEach( function ( v ) { max = Math.max( max, Number( v ) || 0 ); } );
+			var step = max <= 4 ? 1 : Math.pow( 10, Math.floor( Math.log( max / 4 ) / Math.LN10 ) );
+			step = [ 1, 2, 2.5, 5, 10 ].map( function ( m ) { return m * step; } ).filter( function ( u ) { return u * 4 >= max; } )[ 0 ] || step;
+			var top = step * 4;
+			var x = function ( i ) { return n > 1 ? L + ( W - L - R ) * i / ( n - 1 ) : L + ( W - L - R ) / 2; };
+			var y = function ( v ) { return T + ( H - T - B ) * ( 1 - ( Number( v ) || 0 ) / top ); };
+			var r1 = function ( v ) { return Math.round( v * 10 ) / 10; };
+			var path = function ( vals ) {
+				var pts = vals.map( function ( v, i ) { return [ x( i ), y( v ) ]; } ), m = [], d = [], i;
+				if ( pts.length < 2 ) { return pts.length ? 'M' + r1( pts[ 0 ][ 0 ] ) + ' ' + r1( pts[ 0 ][ 1 ] ) : ''; }
+				for ( i = 0; i < pts.length - 1; i++ ) { d.push( ( pts[ i + 1 ][ 1 ] - pts[ i ][ 1 ] ) / ( pts[ i + 1 ][ 0 ] - pts[ i ][ 0 ] || 1 ) ); }
+				m.push( d[ 0 ] ); for ( i = 1; i < pts.length - 1; i++ ) { m.push( d[ i - 1 ] * d[ i ] <= 0 ? 0 : ( d[ i - 1 ] + d[ i ] ) / 2 ); } m.push( d[ d.length - 1 ] );
+				for ( i = 0; i < d.length; i++ ) { if ( ! d[ i ] ) { m[ i ] = 0; m[ i + 1 ] = 0; continue; } var a = m[ i ] / d[ i ], b = m[ i + 1 ] / d[ i ], hh = a * a + b * b; if ( hh > 9 ) { var t = 3 / Math.sqrt( hh ); m[ i ] = t * a * d[ i ]; m[ i + 1 ] = t * b * d[ i ]; } }
+				var out = 'M' + r1( pts[ 0 ][ 0 ] ) + ' ' + r1( pts[ 0 ][ 1 ] );
+				for ( i = 0; i < pts.length - 1; i++ ) { var dx = ( pts[ i + 1 ][ 0 ] - pts[ i ][ 0 ] ) / 3; out += ' C' + r1( pts[ i ][ 0 ] + dx ) + ' ' + r1( pts[ i ][ 1 ] + m[ i ] * dx ) + ' ' + r1( pts[ i + 1 ][ 0 ] - dx ) + ' ' + r1( pts[ i + 1 ][ 1 ] - m[ i + 1 ] * dx ) + ' ' + r1( pts[ i + 1 ][ 0 ] ) + ' ' + r1( pts[ i + 1 ][ 1 ] ); }
+				return out;
+			};
+			var svg = '<svg class="pc-line" viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="' + esc( o.title || '' ) + '">', g;
+			for ( g = 0; g <= 4; g++ ) {
+				var gy = r1( y( step * g ) );
+				svg += '<line class="pc-line__grid" x1="' + L + '" x2="' + ( W - R ) + '" y1="' + gy + '" y2="' + gy + '"></line><text class="pc-line__tick" x="' + ( L - 6 ) + '" y="' + r1( gy + 4 ) + '" text-anchor="end">' + esc( number( step * g ) ) + '</text>';
+			}
+			var every = Math.max( 1, Math.ceil( n / 8 ) );
+			labels.forEach( function ( text, i ) { if ( 0 === i % every ) { svg += '<text class="pc-line__label" x="' + r1( x( i ) ) + '" y="' + ( H - 8 ) + '" text-anchor="middle">' + esc( text ) + '</text>'; } } );
+			if ( prev.length > 1 ) { svg += '<path class="pc-line__prev" d="' + path( prev.slice( 0, n ) ) + '"></path>'; }
+			if ( cur.length > 1 ) { var c = path( cur ); svg += '<path class="pc-line__area" d="' + c + ' L' + r1( x( cur.length - 1 ) ) + ' ' + r1( y( 0 ) ) + ' L' + r1( x( 0 ) ) + ' ' + r1( y( 0 ) ) + ' Z"></path><path class="pc-line__cur" d="' + c + '"></path>'; }
+			cur.forEach( function ( v, i ) { svg += '<circle class="pc-line__dot" cx="' + r1( x( i ) ) + '" cy="' + r1( y( v ) ) + '" r="3"><title>' + esc( ( labels[ i ] || '' ) + ': ' + number( v ) ) + '</title></circle>'; } );
+			return svg + '</svg>';
+		},
 		// 分页（对照参考后台：共 N 条 ‹ 1 2 … 9 › 前往 [ ] 页）。页码按钮带相对位移（data-dir = 目标页 − 当前页），
 		// 所以各报表原来“当前页 + data-dir”的点击处理不用改；“前往”输入框由外壳换算成同样的相对位移。
 		pager: function ( o ) {
@@ -487,11 +522,40 @@
 			els.body.innerHTML = '<p class="pc-data-empty">' + esc( S.building ) + '</p>';
 			return;
 		}
+		var slot = root.querySelector( '.pc-data-actions' );
+		if ( slot ) { slot.innerHTML = ''; }
 		try {
 			fn( els.body, state, window.PcData );
 		} catch ( e ) {
 			showError( S.loadError );
 		}
+		proxyExport();
+	}
+
+	// 参考后台把“导出”放在标题旁边：报表自己的导出按钮留在原处（逻辑、状态、测试都不变）但在视觉上收起，
+	// 标题旁放一个同名按钮代为点击；原按钮禁用时代理按钮也跟着禁用。
+	var EXPORTS = [ '.pc-prod-export', '.pc-pages-export', '.pc-conv-export', '.pc-exp-export', '.pc-sources-export', '.pc-dim-export', '.pc-landing-export' ];
+	var exportSync = null;
+	function proxyExport() {
+		try {
+			var slot = root.querySelector( '.pc-data-actions' );
+			var real = null;
+			if ( ! slot || ! els.body.querySelector || ! document.createElement ) { return; }
+			EXPORTS.forEach( function ( sel ) { if ( ! real ) { real = els.body.querySelector( sel ); } } );
+			if ( ! real || ! real.classList ) { return; }
+			var proxy = document.createElement( 'button' );
+			proxy.type = 'button';
+			proxy.className = 'pc-data-export-proxy';
+			proxy.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 10.5V2.5M4.8 5.6 8 2.4l3.2 3.2M2.5 10.5v3h11v-3"/></svg>' + esc( S.exportShort || real.textContent );
+			proxy.title = real.title || '';
+			proxy.addEventListener( 'click', function () { if ( ! real.disabled ) { real.click(); } } );
+			slot.appendChild( proxy );
+			real.classList.add( 'pc-data-proxied' );
+			var sync = function () { proxy.disabled = !! real.disabled; };
+			sync();
+			if ( exportSync ) { exportSync.disconnect(); }
+			if ( window.MutationObserver ) { exportSync = new window.MutationObserver( sync ); exportSync.observe( real, { attributes: true, attributeFilter: [ 'disabled' ] } ); }
+		} catch ( e ) { /* 代理按钮只是外观；失败时原导出按钮照常可用。 */ }
 	}
 
 	function start() {

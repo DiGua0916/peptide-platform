@@ -690,6 +690,7 @@ final class Data_Pages {
 			'startDate'   => __( 'Start date', 'peptide-core' ),
 			'endDate'     => __( 'End date', 'peptide-core' ),
 			'apply'       => __( 'Apply', 'peptide-core' ),
+			'exportShort' => __( 'Export', 'peptide-core' ),
 			'storeTime'   => __( 'Store time zone', 'peptide-core' ),
 			'loading'     => __( 'Loading…', 'peptide-core' ),
 			'building'    => __( 'This page is being built. The date range already works; the report will appear here in a later update.', 'peptide-core' ),

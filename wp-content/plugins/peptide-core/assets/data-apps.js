@@ -71,7 +71,7 @@
 			'<a class="pc-apps-card__settings" href="' + esc( settings ) + '">' + esc( T.settings ) + '</a>' :
 			'';
 		// 版式对照参考后台：左卡 = 应用名 + 主指标（大号本期 / 灰色对比期 / 变化）+ 其余指标列表；
-		// 右卡 = 各指标本期与对比期的对照条（应用没有分时序列，不画假的曲线）。
+		// 右卡 = 主指标的逐日曲线（接口 series；旧接口没有 series 时显示本期 / 对比期对照条）。
 		var metrics = app.metrics || [];
 		var main = metrics[ 0 ];
 		var code = ctx.currency && ctx.currency.code ? ctx.currency.code : '';
@@ -88,6 +88,16 @@
 				'<span class="pc-apps-bar__track"><span class="pc-apps-bar__fill" style="width:' + esc( Math.round( cur / top * 100 ) ) + '%"></span></span><span class="pc-apps-bar__num">' + esc( value( m.kind, m.current, ctx ) ) + '</span>' +
 				'<span class="pc-apps-bar__track"><span class="pc-apps-bar__fill is-prev" style="width:' + esc( Math.round( prev / top * 100 ) ) + '%"></span></span><span class="pc-apps-bar__num is-prev">' + esc( value( m.kind, m.previous, ctx ) ) + '</span></div>';
 		} ).join( '' );
+		// 有逐日数据时画参考后台那样的主指标曲线（本期实线、对比期灰线）；没有时退回本期 / 对比期对照条。
+		var series = app.series && app.series.current && app.series.current.length && ctx.lineChart ? app.series : null;
+		var seriesMetric = series ? metrics.filter( function ( m ) { return m.key === series.metric; } )[ 0 ] : null;
+		var chartTitle = seriesMetric ? labelOf( seriesMetric ) : app.name;
+		var chartBody = series ? ctx.lineChart( {
+			cur: series.current.map( function ( p ) { return Number( p.value ) || 0; } ),
+			prev: ( series.previous || [] ).map( function ( p ) { return Number( p.value ) || 0; } ),
+			labels: series.current.map( function ( p ) { return String( p.day || '' ).slice( 5 ); } ),
+			w: 640, h: 260, title: chartTitle
+		} ) : bars;
 		return '<div class="pc-apps-pair"><section class="pc-apps-card">' +
 			'<div class="pc-apps-card__head">' +
 				'<h2 class="pc-apps-card__name">' + esc( app.name ) + '</h2>' +
@@ -98,8 +108,8 @@
 				'<div class="pc-apps-main__nums"><span class="pc-apps-main__cur">' + esc( value( main.kind, main.current, ctx ) ) + '</span><span class="pc-apps-main__prev"><span class="screen-reader-text">' + esc( ctx.strings.vs + ' ' ) + '</span>' + esc( value( main.kind, main.previous, ctx ) ) + '</span></div></div>' : '' ) +
 			'<div class="pc-apps-rows">' + rows + '</div>' +
 		'</section>' +
-		'<section class="pc-apps-chart"><div class="pc-apps-chart__head"><h3>' + esc( app.name ) + '</h3>' +
-			'<span class="pc-apps-legend"><i></i>' + esc( T.thisPeriod || '' ) + '<i class="is-prev"></i>' + esc( T.previousPeriod || '' ) + '</span></div>' + bars + '</section></div>';
+		'<section class="pc-apps-chart"><div class="pc-apps-chart__head"><h3>' + esc( chartTitle ) + '</h3>' +
+			'<span class="pc-apps-legend"><i></i>' + esc( chartTitle ) + '<i class="is-prev"></i>' + esc( chartTitle + ' (' + ( T.previousPeriod || '' ) + ')' ) + '</span></div>' + chartBody + '</section></div>';
 	}
 
 	function view( data, ctx ) {

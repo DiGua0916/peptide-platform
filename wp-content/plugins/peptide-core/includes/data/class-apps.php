@@ -75,6 +75,12 @@ final class Apps {
 				'enabled'      => (bool) $known['exit-intent']['on'],
 				'settings_url' => Apps_Page::url( array( 'app' => 'exit-intent' ) ),
 				'metrics'      => $metrics,
+				// 主指标（弹出次数）的逐日数字，给页面右侧的曲线用；本期和对比期按天对齐。
+				'series'       => array(
+					'metric'   => 'shown',
+					'current'  => self::exit_intent_daily( (string) $dates['from'], (string) $dates['to'] ),
+					'previous' => self::exit_intent_daily( (string) $dates['compare_from'], (string) $dates['compare_to'] ),
+				),
 			);
 		}
 
@@ -82,6 +88,35 @@ final class Apps {
 			'range' => $range,
 			'apps'  => $apps,
 		);
+	}
+
+	/**
+	 * 离开意图在 [from, to]（店铺日期 Y-m-d，都包含）里每天的弹出次数；没有记录的日子是 0。最多 366 天（Range 已限制）。
+	 *
+	 * @return array<int,array{day:string,value:int}>
+	 */
+	private static function exit_intent_daily( string $from, string $to ): array {
+		global $wpdb;
+		$by_day = array();
+		if ( Exit_Intent::installed() ) {
+			$table = Exit_Intent::table();
+			$rows  = $wpdb->get_results( $wpdb->prepare( "SELECT day, SUM(count) AS c FROM {$table} WHERE app = %s AND event = %s AND day >= %s AND day <= %s GROUP BY day", Exit_Intent::APP, 'show', $from, $to ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			foreach ( (array) $rows as $row ) {
+				$by_day[ substr( (string) $row['day'], 0, 10 ) ] = (int) $row['c'];
+			}
+		}
+		$out = array();
+		try {
+			$day  = new \DateTimeImmutable( $from . ' 00:00:00', new \DateTimeZone( 'UTC' ) );
+			$last = new \DateTimeImmutable( $to . ' 00:00:00', new \DateTimeZone( 'UTC' ) );
+		} catch ( \Exception $e ) {
+			return $out;
+		}
+		for ( $i = 0; $day <= $last && $i < 400; $i++, $day = $day->modify( '+1 day' ) ) {
+			$key   = $day->format( 'Y-m-d' );
+			$out[] = array( 'day' => $key, 'value' => $by_day[ $key ] ?? 0 );
+		}
+		return $out;
 	}
 
 	/**
