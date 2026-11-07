@@ -481,3 +481,29 @@
 .pc-emails-data > table,
 .pc-emails-data > div:not(.pc-emails-overview) { border: 1px solid #ececec; border-radius: 8px; background: #fff; }
 @media (max-width: 900px) { .pc-emails-strip { flex-wrap: wrap; } .pc-emails-group { flex-basis: 100%; } }
+.pc-data-actions .pc-data-desc { color: #8c8c8c; font-size: 13px; font-weight: 400; }
+/* 落地页“显示 URL 参数”：标题行右侧的开关样式。 */
+.pc-data-actions .pc-landing-params-switch { display: inline-flex; align-items: center; gap: 8px; margin: 0; color: #404040; font-size: 13px; cursor: pointer; flex-direction: row-reverse; }
+.pc-landing-params-switch input[type="checkbox"] { appearance: none; -webkit-appearance: none; position: relative; width: 34px; height: 18px; margin: 0; border: 0; border-radius: 9px; background: #d4d4d4; cursor: pointer; transition: background .15s; box-shadow: none; }
+.pc-landing-params-switch input[type="checkbox"]::before { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; margin: 0; border-radius: 50%; background: #fff; transition: transform .15s; }
+.pc-landing-params-switch input[type="checkbox"]:checked { background: #171717; }
+.pc-landing-params-switch input[type="checkbox"]:checked::before { content: ""; transform: translateX(16px); }
+.pc-landing-params-switch input[type="checkbox"]:focus-visible { outline: 2px solid #171717; outline-offset: 2px; }
+.pc-data-head .pc-data-actions:has(.pc-landing-params-switch) { margin-left: auto; }
+.pc-data-head .pc-data-actions:has(.pc-landing-params-switch) + .pc-data-notes-toggle { margin-left: 12px; }
+/* 落地页：列表 / 图表切换图标与图表视图。 */
+.pc-landing-views { display: inline-flex; gap: 2px; margin-left: 6px; }
+.pc-data-actions .pc-landing-views button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 4px; color: #8c8c8c; }
+.pc-data-actions .pc-landing-views button[aria-pressed="true"] { background: #f0f0f0; color: #171717; }
+.pc-data-actions .pc-landing-views button:hover { color: #171717; text-decoration: none; }
+.pc-landing-chart { padding: 8px 0; }
+.pc-landing-chart__legend { display: flex; justify-content: flex-end; gap: 18px; margin-bottom: 10px; color: #525252; font-size: 12px; }
+.pc-landing-chart__legend span { display: inline-flex; align-items: center; gap: 6px; }
+.pc-landing-chart__legend i { width: 12px; height: 8px; border-radius: 2px; background: #171717; }
+.pc-landing-chart__legend i.is-paid { background: #a3a3a3; }
+.pc-landing-chart__row { display: grid; grid-template-columns: minmax(160px, 34%) minmax(0, 1fr) 90px; align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px; }
+.pc-landing-chart__label { overflow: hidden; color: #404040; text-overflow: ellipsis; white-space: nowrap; }
+.pc-landing-chart__track { position: relative; height: 14px; border-radius: 3px; background: #f5f5f5; }
+.pc-landing-chart__bar { position: absolute; top: 0; left: 0; height: 100%; min-width: 2px; border-radius: 3px; background: #171717; }
+.pc-landing-chart__bar.is-paid { top: 4px; height: 6px; background: #a3a3a3; }
+.pc-landing-chart__num { color: #525252; text-align: right; font-variant-numeric: tabular-nums; }

@@ -691,6 +691,7 @@ final class Data_Pages {
 			'endDate'     => __( 'End date', 'peptide-core' ),
 			'apply'       => __( 'Apply', 'peptide-core' ),
 			'exportShort' => __( 'Export', 'peptide-core' ),
+			'experimentsIntro' => __( 'An overall analysis of the landing-page A/B tests in this store, to evaluate results and improve them.', 'peptide-core' ),
 			'storeTime'   => __( 'Store time zone', 'peptide-core' ),
 			'loading'     => __( 'Loading…', 'peptide-core' ),
 			'building'    => __( 'This page is being built. The date range already works; the report will appear here in a later update.', 'peptide-core' ),
@@ -1299,6 +1300,8 @@ final class Data_Pages {
 			'conversionHelp' => __( 'Paid orders / UV × 100%', 'peptide-core' ),
 			'open'           => __( 'Open page', 'peptide-core' ),
 			'actions'        => __( 'Actions', 'peptide-core' ),
+			'viewTable'      => __( 'Table view', 'peptide-core' ),
+			'viewChart'      => __( 'Chart view', 'peptide-core' ),
 			'search'         => __( 'Search landing pages', 'peptide-core' ),
 			'perPage'        => __( 'Per page', 'peptide-core' ),
 			/* translators: %d: number of landing pages */

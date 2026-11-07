@@ -19,6 +19,9 @@
 	var PER_PAGE_CHOICES = [ 20, 50, 100 ];
 	var SEARCH_DELAY = 400;
 	// 可以排序的十列，顺序和 Landing::METRICS 一致，也是表格列的顺序。
+	// 列表 / 图表两种视图（对照参考后台右上角的两个图标）；选择记在浏览器里。
+	var layout = 'table';
+	try { layout = 'chart' === window.localStorage.getItem( 'pcDataLandingView' ) ? 'chart' : 'table'; } catch ( e ) { layout = 'table'; }
 	var SORT_COLUMNS = [ 'uv', 'customers', 'viewed_uv', 'carted_uv', 'paid_uv', 'orders', 'conversion', 'sales', 'aov', 'uv_value' ];
 	// 金额列：表头带货币代码；转化率和 UV 价值的表头带说明。
 	var MONEY_COLUMNS = [ 'sales', 'aov', 'uv_value' ];
@@ -179,6 +182,20 @@
 		'</tr>';
 	}
 
+	// 图表视图：本页每个落地页一行横条 —— 黑色 = UV，灰色 = 付款 UV；右侧写数字。
+	function chartHtml( data, ctx ) {
+		var esc = ctx.esc, rows = data.rows || [], max = 1;
+		rows.forEach( function ( row ) { max = Math.max( max, Number( row.uv ) || 0 ); } );
+		if ( ! rows.length ) { return '<p class="pc-data-empty">' + esc( T.noData ) + '</p>'; }
+		return '<div class="pc-landing-chart"><div class="pc-landing-chart__legend"><span><i></i>UV</span><span><i class="is-paid"></i>' + esc( T.paid_uv || 'Paid UV' ) + '</span></div>' + rows.map( function ( row ) {
+			var uv = Number( row.uv ) || 0, paid = Number( row.paid_uv ) || 0;
+			var label = '' === String( row.path || '' ) ? T.unknown : ( row.display_path !== undefined ? row.display_path : row.path );
+			return '<div class="pc-landing-chart__row"><span class="pc-landing-chart__label" title="' + esc( row.url || label ) + '">' + esc( label ) + '</span>' +
+				'<span class="pc-landing-chart__track"><span class="pc-landing-chart__bar" style="width:' + esc( Math.round( uv / max * 1000 ) / 10 ) + '%"></span><span class="pc-landing-chart__bar is-paid" style="width:' + esc( Math.round( paid / max * 1000 ) / 10 ) + '%"></span></span>' +
+				'<span class="pc-landing-chart__num">' + esc( ctx.number( uv ) ) + ' / ' + esc( ctx.number( paid ) ) + '</span></div>';
+		} ).join( '' ) + '</div>';
+	}
+
 	function tableHtml( data, ctx ) {
 		var esc = ctx.esc;
 		var head = '<th scope="col" class="pc-landing-th pc-pages-th--action">' + esc( T.actions || '' ) + '</th><th scope="col" class="pc-landing-th pc-landing-th--path">' + esc( T.path ) + '</th>';
@@ -255,6 +272,27 @@
 		view.wrap = bodyEl.querySelector( '.pc-landing-wrap' );
 		view.foot = bodyEl.querySelector( '.pc-landing-foot' );
 		view.note = bodyEl.querySelector( '.pc-landing-note' );
+		// “显示 URL 参数”开关放到标题行右侧（对照参考后台）；元素和事件都不变，只是挪位置。
+		try {
+			var actions = ctx.setActions ? ctx.setActions( '' ) : null;
+			if ( actions && view.params && view.params.parentNode && actions.appendChild ) { view.params.parentNode.className = 'pc-landing-params-switch'; actions.appendChild( view.params.parentNode ); }
+			if ( actions && document.createElement ) {
+				var views = document.createElement( 'span' );
+				views.className = 'pc-landing-views';
+				views.innerHTML = [ [ 'table', T.viewTable || 'Table', '<path d="M2 4h12M2 8h12M2 12h12"/>' ], [ 'chart', T.viewChart || 'Chart', '<path d="M3 13V8M8 13V3M13 13V6"/>' ] ].map( function ( v ) {
+					return '<button type="button" data-landing-view="' + v[ 0 ] + '" aria-pressed="' + ( layout === v[ 0 ] ? 'true' : 'false' ) + '" title="' + esc( v[ 1 ] ) + '" aria-label="' + esc( v[ 1 ] ) + '"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">' + v[ 2 ] + '</svg></button>';
+				} ).join( '' );
+				views.addEventListener( 'click', function ( e ) {
+					var b = e.target && e.target.closest ? e.target.closest( '[data-landing-view]' ) : null;
+					if ( ! b ) { return; }
+					layout = b.getAttribute( 'data-landing-view' );
+					try { window.localStorage.setItem( 'pcDataLandingView', layout ); } catch ( err ) { /* 可选。 */ }
+					Array.prototype.forEach.call( views.querySelectorAll( 'button' ), function ( x ) { x.setAttribute( 'aria-pressed', x === b ? 'true' : 'false' ); } );
+					if ( view.data ) { view.wrap.innerHTML = 'chart' === layout ? chartHtml( view.data, ctx ) : tableHtml( view.data, ctx ); }
+				} );
+				actions.appendChild( views );
+			}
+		} catch ( e ) { /* 挪不动就留在原处。 */ }
 		view.search.value = state.q;
 
 		var domainState = bodyEl.querySelector( '.pc-report-domain-state' ), domainValue = bodyEl.querySelector( '.pc-report-domain' ), countryState = bodyEl.querySelector( '.pc-report-country-state' ), countryValue = bodyEl.querySelector( '.pc-report-country' ), filterApply = bodyEl.querySelector( '.pc-report-filter-apply' );
@@ -315,7 +353,7 @@
 			if ( ! data ) {
 				return;
 			}
-			view.wrap.innerHTML = tableHtml( data, ctx );
+			view.wrap.innerHTML = 'chart' === layout ? chartHtml( data, ctx ) : tableHtml( data, ctx );
 		}
 
 		// 页脚：共多少个落地页，加上分页（页码按接口返回的 per_page 算）。
