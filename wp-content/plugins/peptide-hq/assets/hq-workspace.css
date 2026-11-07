@@ -452,7 +452,11 @@ body.pchq-workspace #adminmenu li.menu-top>.wp-submenu>li.current>a:is(:hover,:f
 body.pchq-workspace #adminmenu .awaiting-mod,body.pchq-workspace #adminmenu .update-plugins{min-width:18px;height:18px;padding:0 6px;border-radius:9px;background:#171717;color:#fff;font-size:11px;line-height:18px}
 
 /* Canvas: one measure and rhythm for every page. */
-body.pchq-workspace #wpbody-content>.wrap{max-width:1320px;margin:28px 32px 0}
+/* Fill the screen: content edges line up with the 32px header gutters on any width (was capped at 1320px, leaving the right side empty on wide monitors). */
+body.pchq-workspace #wpbody-content>.wrap{max-width:none;margin:28px 32px 0}
+/* A form card keeps a readable width instead of a wide empty white box. */
+body.pchq-workspace .wrap .pchq-card:has(> .form-table){max-width:840px}
+@media(max-width:782px){body.pchq-workspace #wpbody-content>.wrap{margin:20px 16px 0}}
 body.pchq-workspace .wrap>h1{font-size:22px;line-height:30px;margin:0 12px 8px 0}
 body.pchq-workspace .wrap>h1+:is(a,button,form).page-title-action,body.pchq-workspace .wrap>h1+.page-title-action{vertical-align:middle;margin:0 0 8px}
 body.pchq-workspace .wrap>p:not(.submit):not([class*="notice"]),body.pchq-workspace .wrap>.description{max-width:760px;margin:0 0 20px;color:var(--vc-muted);font-size:13px;line-height:20px}
