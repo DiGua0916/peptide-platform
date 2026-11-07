@@ -166,3 +166,8 @@
 .pc-rt-dim-head .pc-rt-dim-details:hover { text-decoration: underline; }
 .pc-rt-dim-head h2 + .pc-rt-dim-details + select { margin-left: 0; }
 .pc-rt-dim-head { flex-wrap: nowrap; }
+/* 面板标题行（对照参考后台）：标题 · 时间窗下拉 …… 查看详情 >；标题不换行。 */
+.pc-rt-dim-head { justify-content: flex-start; gap: 8px; }
+.pc-rt-dim-head h2 { white-space: nowrap; }
+.pc-rt-dim-head select { order: 1; }
+.pc-rt-dim-head .pc-rt-dim-details { order: 2; margin-left: auto; }
