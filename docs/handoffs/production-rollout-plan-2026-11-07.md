@@ -162,9 +162,24 @@
   - PHP 错误 0 字节。
 - 外部经过 Cloudflare（美国），只用广告链接：第一次 MISS 0.91 秒 / 0.58 秒（商品），之后都是 HIT，**0.18–0.30 秒**。
 
+### 第 3 阶段：总后台 HQ（12:07:25 UTC，用户要求"服务器更新到优化后的最新版本"）
+
+- 先重新备份 HQ 数据库：`54.144.250.46:/var/backups/vialcove-rollout/hq-20261107T120656Z/hq.sql.gz`，18/18 张表，导出完整。
+- 新版本目录 `/srv/vialcove/hq/releases/6d8a16a-hq`：从旧版本完整复制后改了 5 个文件，分别是 peptide-hq 的 `admin/class-menu.php`、peptide-ops 的 `class-provisioner.php`、panapay 的 `class-hub-accounts.php`、`class-hub-page.php`、`class-session-service.php`。部署前核对线上这 5 个文件和 `b1c1717` 一致；装好后哈希和语法都通过；和旧目录相比恰好 5 处不同；冒烟测试能正常启动。然后切换软链接，平滑 reload PHP。
+- **回滚**：软链接改回 `checkout-return-fixes-1793879606`。
+- 验证：
+  - HQ、s0001 登录页和独立站首页、购物车都返回 200；3 个店铺都在线；HQ PHP 错误 0 字节；
+  - 总后台新增收款方式的默认值是 `enabled=no, test_mode=yes, all_sites=no`；
+  - 独立站的付款方式没变：Credit card 和 PayPal 都可用。
+- 至此三台都是最新代码：前台和 s0001 是 `6d8a16a`，HQ 是 6d8a16a 时的代码（HQ 没有 peptide-core，所以页面缓存的改动和它无关）。
+
+### 营销设置：正式站和沙盒对比（只读）
+
+- 两边一样：活动监听开着，关联"黑色星期五"（10980），推荐加购开着；都有首单券 WELCOME5。
+- 不一样：沙盒有推荐券 ADDON5（整单减 $5，可叠加）并已开启；正式站没有这张券，推荐券也没开。在正式站建券会影响真实成交价，要用户决定。
+
 ### 待办
 
 - 用户本人用手机下一单小额测试单（第 1 阶段最后一项验证）。
 - 用户配置像素后，核对 Facebook 测试事件。
-- 第 3 阶段（总后台 HQ：5 个文件）不影响今晚上线，另选时间做。
 - 后续：WebP；PayPal 通道恢复后补做真实下单测试；广告像素由用户配置后核对 Facebook 测试事件。
