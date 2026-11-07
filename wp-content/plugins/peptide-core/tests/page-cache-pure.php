@@ -206,10 +206,31 @@ namespace {
 	[ $out3 ] = $run( array( 'PX_OFF' => '1' ) );
 	check( 'visitor not tracked by pixels uses a different key (renders normally)', "NO-HIT\n" === $out3 );
 
-	// An ad landing with no stored copy renders normally and never becomes the stored copy.
+	// Ad landings create the copy too: tracking tags are removed from the request before rendering.
+	check( 'split keeps page parameters, removes tracking tags', array( 'vc_product=7', array( 'fbclid=IwAR_abc', 'utm_source=facebook' ) ) === Cache::split_tracking( 'vc_product=7&fbclid=IwAR_abc&utm_source=facebook' ) );
+	check( 'leak guard: tag in a link is a leak', Cache::leaks( '<a href="/?utm_source=facebook&amp;pc_lang=es">', array( 'utm_source=facebook' ) ) );
+	check( 'leak guard: encoded tag is a leak', Cache::leaks( '<a href="/?utm_campaign=Spring%20Sale">', array( 'utm_campaign=Spring Sale' ) ) );
+	check( 'leak guard: bare click id is a leak', Cache::leaks( '<script>var x="IwAR0abcdefghijk";</script>', array( 'fbclid=IwAR0abcdefghijk' ) ) );
+	check( 'leak guard: an ordinary word is not a leak', ! Cache::leaks( '<a href="https://facebook.com/vialcove">Facebook</a>', array( 'utm_source=facebook' ) ) );
+	check( '_fbc and pc_ttclid set from the landing link do not block storing', is_array( Cache::storable_headers( array_merge( $ok_headers, array( 'Set-Cookie: _fbc=fb.1.1.IwAR; path=/', 'Set-Cookie: pc_ttclid=E.C; path=/; HttpOnly' ) ), 200, $page ) ) );
 	array_map( 'unlink', array_filter( glob( $dir . '/cache/peptide-core-pages/*.php' ) ?: array(), fn( $f ) => ! str_ends_with( $f, 'index.php' ) ) );
-	$_SERVER['QUERY_STRING'] = 'utm_source=x'; Cache::reset_for_tests( array(), array( $ok_headers, 200 ) ); $level = ob_get_level(); Cache::serve_or_capture();
-	check( 'ad landing never captured', ob_get_level() === $level ); $_SERVER['QUERY_STRING'] = '';
+	$_SERVER['QUERY_STRING'] = 'fbclid=IwAR0landingclickid&utm_source=facebook'; $_SERVER['REQUEST_URI'] = '/?fbclid=IwAR0landingclickid&utm_source=facebook';
+	$_GET = array( 'fbclid' => 'IwAR0landingclickid', 'utm_source' => 'facebook' ); $_REQUEST = $_GET;
+	Cache::reset_for_tests( array(), array( $ok_headers, 200 ) ); $level = ob_get_level(); Cache::serve_or_capture();
+	check( 'ad landing opens a capture', ob_get_level() === $level + 1 );
+	check( 'request is rendered without tracking tags', '/' === $_SERVER['REQUEST_URI'] && '' === $_SERVER['QUERY_STRING'] && array() === $_GET && array() === $_REQUEST );
+	echo $page; $returned = ob_get_clean(); Cache::capture( $returned, PHP_OUTPUT_HANDLER_FINAL );
+	[ $out ] = $run( array( 'QS' => 'fbclid=IwAR0othervisitor' ) );
+	check( 'the next ad visitor is served the copy created by an ad landing', $page === $out );
+	[ $out ] = $run();
+	check( 'a plain visit is served the same copy', $page === $out );
+	// Fail closed: if a tracking tag still reaches the HTML, nothing is stored.
+	array_map( 'unlink', array_filter( glob( $dir . '/cache/peptide-core-pages/*.php' ) ?: array(), fn( $f ) => ! str_ends_with( $f, 'index.php' ) ) );
+	$_SERVER['QUERY_STRING'] = 'fbclid=IwAR0leakyclickid9'; $_SERVER['REQUEST_URI'] = '/?fbclid=IwAR0leakyclickid9'; $_GET = array( 'fbclid' => 'IwAR0leakyclickid9' );
+	Cache::reset_for_tests( array(), array( $ok_headers, 200 ) ); Cache::serve_or_capture();
+	echo str_replace( '</body>', '<a href="/?fbclid=IwAR0leakyclickid9&amp;pc_lang=es">ES</a></body>', $page ); $returned = ob_get_clean(); Cache::capture( $returned, PHP_OUTPUT_HANDLER_FINAL );
+	check( 'a page still carrying the visitor\'s click id is not stored', 0 === count( array_filter( glob( $dir . '/cache/peptide-core-pages/*.php' ) ?: array(), fn( $f ) => ! str_ends_with( $f, 'index.php' ) ) ) );
+	$_SERVER['QUERY_STRING'] = ''; $_SERVER['REQUEST_URI'] = '/'; $_GET = array(); $_REQUEST = array();
 
 	// Product landing: a plain /?vc_product=11006 is captured; an ad click for the same product is served it.
 	$entry_page = str_replace( '</body>', '<script>var vcStorefrontEntry = {"productId":11006};</script></body>', $page );
@@ -224,9 +245,13 @@ namespace {
 	[ $out ] = $run( array( 'QS' => 'vc_product=555' ) );
 	check( 'unpublished/non-product id bypasses', "NO-HIT\n" === $out );
 	array_map( 'unlink', array_filter( glob( $dir . '/cache/peptide-core-pages/*.php' ) ?: array(), fn( $f ) => ! str_ends_with( $f, 'index.php' ) ) );
-	$_SERVER['QUERY_STRING'] = 'vc_product=11006&fbclid=x'; Cache::reset_for_tests( array(), array( $ok_headers, 200 ) ); $level = ob_get_level(); Cache::serve_or_capture();
-	check( 'product landing with tracking tags never captured', ob_get_level() === $level );
-	$_SERVER['QUERY_STRING'] = ''; $_SERVER['REQUEST_URI'] = '/';
+	$_SERVER['QUERY_STRING'] = 'vc_product=11006&fbclid=IwAR0productclick'; $_SERVER['REQUEST_URI'] = '/?vc_product=11006&fbclid=IwAR0productclick'; $_GET = array( 'vc_product' => '11006', 'fbclid' => 'IwAR0productclick' );
+	Cache::reset_for_tests( array(), array( $ok_headers, 200 ) ); $level = ob_get_level(); Cache::serve_or_capture();
+	check( 'product ad landing opens a capture and keeps vc_product', ob_get_level() === $level + 1 && '/?vc_product=11006' === $_SERVER['REQUEST_URI'] && array( 'vc_product' => '11006' ) === $_GET );
+	echo $entry_page; $returned = ob_get_clean(); Cache::capture( $returned, PHP_OUTPUT_HANDLER_FINAL );
+	[ $out ] = $run( array( 'QS' => 'vc_product=11006&utm_source=facebook' ) );
+	check( 'the copy made by a product ad landing serves the next visitor of that product', $entry_page === $out );
+	$_SERVER['QUERY_STRING'] = ''; $_SERVER['REQUEST_URI'] = '/'; $_GET = array();
 
 	// A returning visitor (browser sent pc_vid) never opens a capture.
 	Cache::reset_for_tests( array( 'pc_vid' ), array( $ok_headers, 200 ) ); $level = ob_get_level(); Cache::serve_or_capture();

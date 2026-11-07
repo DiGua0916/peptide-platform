@@ -5,7 +5,13 @@
  * Product ad landings: /product/<slug>/ redirects to /?vc_product=<id>#vc-products,
  * which opens that product's dialog over the homepage. Such a landing (vc_product plus
  * optional tracking tags) is cached per product, keyed by the product ID, for published
- * products only; its copy is taken from a plain "/?vc_product=<id>" request.
+ * products only.
+ *
+ * Ad landings also create copies (2026-11-07): before the page renders, the tracking tags are
+ * removed from this request (REQUEST_URI, QUERY_STRING, $_GET), so the stored copy is the same
+ * as a plain render. Click-ID cookies (_fbc, pc_ttclid) are set at init from the original link,
+ * per visitor, and are never stored. As a fail-closed guard, a copy that still contains any of
+ * this visitor's tracking values is not stored.
  *
  * Off unless wp-config.php defines PEPTIDE_CORE_PAGE_CACHE true. When on, a
  * cookie-less (or language-preference-only) anonymous GET/HEAD of exactly "/"
@@ -35,7 +41,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Page_Cache {
 	public const GENERATION = 'pc_page_cache_generation';
-	private const VERSION = 3;
+	private const VERSION = 4;
 	public const PIXELS_SLOT = '/*pc-page-cache:pixels-config*/';
 	private const MAX_BYTES = 4194304;
 	private const SKIP_HEADERS = array( 'set-cookie', 'content-length', 'date', 'x-powered-by', 'transfer-encoding', 'x-pc-page-cache', 'age' );
@@ -46,6 +52,9 @@ final class Page_Cache {
 	/** @var array|null Test-only [headers_list, status]; CLI PHP records neither. */
 	private static ?array $response_for_tests = null;
 	private static ?string $key = null;
+	/** @var string[] Tracking "name=value" pairs removed from this request (leak guard). */
+	private static array $stripped = array();
+	private const CLICK_IDS = array( 'gclid', 'gbraid', 'wbraid', 'gad_source', 'gad_campaignid', 'fbclid', 'ttclid', 'msclkid', 'twclid', 'li_fat_id' );
 
 	public static function enabled(): bool {
 		return defined( 'PEPTIDE_CORE_PAGE_CACHE' ) && true === PEPTIDE_CORE_PAGE_CACHE;
@@ -108,13 +117,59 @@ final class Page_Cache {
 	 */
 	public static function tracking_only( string $query ): bool {
 		if ( '' === $query || strlen( $query ) > 2048 ) { return false; }
-		$allowed = array( 'gclid', 'gbraid', 'wbraid', 'gad_source', 'gad_campaignid', 'fbclid', 'ttclid', 'msclkid', 'twclid', 'li_fat_id' );
 		foreach ( explode( '&', $query ) as $pair ) {
 			if ( '' === $pair ) { continue; }
-			$name = strtolower( urldecode( explode( '=', $pair, 2 )[0] ) );
-			if ( ! preg_match( '/\Autm_[a-z_]{1,32}\z/', $name ) && ! in_array( $name, $allowed, true ) ) { return false; }
+			if ( ! self::tracking_name( strtolower( urldecode( explode( '=', $pair, 2 )[0] ) ) ) ) { return false; }
 		}
 		return true;
+	}
+
+	public static function tracking_name( string $name ): bool {
+		return (bool) preg_match( '/\Autm_[a-z_]{1,32}\z/', $name ) || in_array( $name, self::CLICK_IDS, true );
+	}
+
+	/**
+	 * Split a query into the part that may change the page and the tracking tags.
+	 *
+	 * @return array{0:string,1:string[]} [ query without tracking tags, removed "name=value" pairs (decoded) ]
+	 */
+	public static function split_tracking( string $query ): array {
+		$keep = array(); $removed = array();
+		foreach ( explode( '&', $query ) as $pair ) {
+			if ( '' === $pair ) { continue; }
+			$parts = explode( '=', $pair, 2 );
+			$name = strtolower( urldecode( $parts[0] ) );
+			if ( self::tracking_name( $name ) ) { $removed[] = $name . '=' . urldecode( (string) ( $parts[1] ?? '' ) ); } else { $keep[] = $pair; }
+		}
+		return array( implode( '&', $keep ), $removed );
+	}
+
+	/** True when the page still carries one of the removed tracking tags (in any common encoding). */
+	public static function leaks( string $html, array $removed ): bool {
+		foreach ( $removed as $pair ) {
+			[ $name, $value ] = array_pad( explode( '=', $pair, 2 ), 2, '' );
+			if ( '' === $value ) { continue; }
+			$needles = array( $name . '=' . $value, $name . '=' . rawurlencode( $value ), $name . '=' . urlencode( $value ), $name . '=' . htmlspecialchars( $value, ENT_QUOTES ) );
+			// Click IDs are long random strings: their bare value must not appear anywhere either.
+			if ( in_array( $name, self::CLICK_IDS, true ) && strlen( $value ) >= 12 ) { $needles[] = $value; }
+			foreach ( array_unique( $needles ) as $needle ) {
+				if ( false !== stripos( $html, $needle ) ) { return true; }
+			}
+		}
+		return false;
+	}
+
+	/** Render this request as if it had no tracking tags (they never change the page itself). */
+	private static function strip_tracking_from_request( string $query ): void {
+		[ $clean, $removed ] = self::split_tracking( $query );
+		self::$stripped = $removed;
+		if ( ! $removed ) { return; }
+		$path = (string) wp_parse_url( (string) ( $_SERVER['REQUEST_URI'] ?? '/' ), PHP_URL_PATH );
+		$_SERVER['REQUEST_URI'] = ( '' !== $path ? $path : '/' ) . ( '' !== $clean ? '?' . $clean : '' );
+		$_SERVER['QUERY_STRING'] = $clean;
+		foreach ( array_keys( $_GET ) as $key ) {
+			if ( is_string( $key ) && self::tracking_name( strtolower( $key ) ) ) { unset( $_GET[ $key ], $_REQUEST[ $key ] ); }
+		}
 	}
 
 	/**
@@ -214,9 +269,9 @@ final class Page_Cache {
 			exit;
 		}
 		if ( headers_sent() ) { return; }
-		// Ad landings may be served a stored copy, but a copy is only ever taken from a plain "/"
-		// or a plain "/?vc_product=<id>" (no tracking tags).
-		if ( '' !== $request['query'] && $request['query'] !== 'vc_product=' . $entry_id ) { header( 'X-PC-Page-Cache: BYPASS' ); return; }
+		// Any eligible landing may create the copy; its tracking tags are removed first so the
+		// copy equals a plain "/" (or "/?vc_product=<id>") render.
+		self::strip_tracking_from_request( $request['query'] );
 		header( 'X-PC-Page-Cache: MISS' );
 		self::$capturing = true;
 		ob_start( array( self::class, 'capture' ) );
@@ -231,6 +286,7 @@ final class Page_Cache {
 			$headers = self::storable_headers( $raw, $status, $html );
 			$pixels = function_exists( 'wp_script_is' ) && wp_script_is( 'peptide-core-pixels', 'enqueued' );
 			$body = $pixels ? self::punch_pixels( $html ) : $html;
+			if ( null !== $body && self::$stripped && self::leaks( $body, self::$stripped ) ) { $body = null; } // Fail closed.
 			if ( null !== $headers && null !== $body ) { self::write( self::$key, array( 'created' => time(), 'headers' => $headers, 'body' => $body, 'pixels' => $pixels ) ); }
 		} catch ( \Throwable $ignored ) { /* Never affect the visitor's response. */ }
 		return $html;
@@ -305,7 +361,9 @@ final class Page_Cache {
 
 	/** Cookies this code path may legitimately set on a first visit: the anonymous visitor ID. */
 	private static function issued_this_request(): array {
-		return class_exists( Tracking\Tracker::class ) ? array( Tracking\Tracker::COOKIE ) : array();
+		// Visitor ID plus the click-ID cookies Pixels::remember_click_ids() sets at init from the
+		// landing link. Set-Cookie is never stored; on a cached view init sets them per visitor again.
+		return array_merge( class_exists( Tracking\Tracker::class ) ? array( Tracking\Tracker::COOKIE ) : array(), array( '_fbc', 'pc_ttclid' ) );
 	}
 
 	private static function read( string $key ): ?array {
@@ -341,5 +399,5 @@ final class Page_Cache {
 	}
 
 	/** Test-only state reset. */
-	public static function reset_for_tests( ?array $sent_cookies = null, ?array $response = null ): void { self::$capturing = false; self::$key = null; self::$sent_cookies = $sent_cookies; self::$response_for_tests = $response; }
+	public static function reset_for_tests( ?array $sent_cookies = null, ?array $response = null ): void { self::$capturing = false; self::$key = null; self::$stripped = array(); self::$sent_cookies = $sent_cookies; self::$response_for_tests = $response; }
 }
