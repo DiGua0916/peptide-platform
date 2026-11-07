@@ -324,3 +324,11 @@
 - 代码 `ca4d33c`（同一文件）：隐藏右侧“说明”栏（`SHOW_NOTES = false`），卡片占满整行。用户批准 "Deploy to production" 后：主店复制为 `ca4d33c-web01` / `ca4d33c-s0001`（恰好 1 处不同，切换并 reload PHP）；其他 6 处同样核对旧哈希 78063f4d… 后原地替换，备份 `~/vialcove-deploy-backups/pixels-notes-hidden-20261107T2229*`。8 处哈希都是 4edd9edc…。
 - 验证：前台、s0001、s0002、s0003 后台登录页 200；s0001 像素页只见 Facebook，说明栏隐藏，卡片宽度 = 网格宽度，无报错。
 - 回滚：主店 `current` 指回 `2ab55b0-*`（或 `554e242-*` 回到全部平台）；其他 6 处用对应备份覆盖后 reload PHP。
+
+### 像素关联域名默认 = 店铺绑定域名（用户批准 "Deploy to production"，2026-11-07）
+
+- 用户：关联域名功能保留，但默认是店铺绑定的域名，不要“所有域名”。
+- 代码 `87dbf64`（4 个文件：peptide-core `includes/class-pixels.php`、`includes/pixels/class-server.php`、`includes/admin/class-pixels-page.php`、`assets/pixels-admin.js`）：新增 `Pixels::store_domain()`（首页地址主机名，去 www）和 `pixel_domain()`；新建像素预填店铺域名，空值保存为店铺域名；浏览器加载和 CAPI 回传都把旧的空值当作店铺域名；后台不再显示“所有域名”。
+- 部署：8 处 4 个文件的旧哈希都与 `ca4d33c` 一致；主店复制为 `87dbf64-web01` / `87dbf64-s0001`（恰好 4 处不同，语法通过，切换并 reload PHP）；s0002 / s0003 前后台和两份开店模板原地替换，原文件备份在两台服务器 `~/vialcove-deploy-backups/pixels-store-domain-20261107T2305*`。8 处新哈希一致。
+- 验证：前台、s0001、s0002、s0003 200；s0001 像素页“新建像素”弹窗的关联域名预填 `vialcovepeptides.com`（取消，未保存）。正式站仍未填任何像素。
+- 回滚：主店 `current` 指回 `ca4d33c-*`；其他 6 处用备份覆盖后 reload PHP。
