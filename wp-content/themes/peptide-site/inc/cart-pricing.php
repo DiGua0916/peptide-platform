@@ -16,5 +16,7 @@ add_action( 'wp_enqueue_scripts', function (): void {
 	if ( is_checkout() && ! is_wc_endpoint_url() ) {
 		wp_enqueue_style( 'vc-checkout-polish', $uri . '/assets/checkout-polish.css', array( 'vialcove-cart-pricing', 'vialcove-checkout' ), (string) filemtime( $base . '/assets/checkout-polish.css' ) );
 		wp_enqueue_script( 'vc-checkout-polish', $uri . '/assets/checkout-polish.js', array( 'vialcove-cart-pricing', 'wp-data', 'wc-blocks-data-store' ), (string) filemtime( $base . '/assets/checkout-polish.js' ), true );
+		// Keeps a Place Order tap that Woo drops while it disables the button to save a just-edited field.
+		wp_enqueue_script( 'vc-checkout-place-order-tap', $uri . '/assets/checkout-place-order-tap.js', array(), (string) filemtime( $base . '/assets/checkout-place-order-tap.js' ), true );
 	}
 }, 35 );
