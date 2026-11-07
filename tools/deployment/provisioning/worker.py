@@ -247,7 +247,8 @@ def copy_runtime(source, target):
                 require(p.is_file() and not p.is_symlink(), 'unexpected_mu_directory')
                 p.unlink()
     mu.mkdir(exist_ok=True)
-    write(mu / 'vialcove-mail-gate.php', "<?php\ndefined('ABSPATH')||exit;\nadd_filter('pre_wp_mail','__return_false',PHP_INT_MIN);\nadd_filter('action_scheduler_allow_async_request_runner','__return_false',PHP_INT_MAX);\n", 0o644)
+    # 2026-11-07: new stores send mail like the first store (FluentSMTP is activated in bootstrap);
+    # the former vialcove-mail-gate.php is no longer written, and a copy in the source is removed above.
 
 
 def configuration(t, c, dbuser, password, salts, registration_secret):
@@ -408,7 +409,7 @@ define('WP_INSTALLING',true);define('ABSPATH',rtrim($x['public'],'/').'/');
 require ABSPATH.'wp-load.php';require ABSPATH.'wp-admin/includes/upgrade.php';
 add_filter('pre_wp_mail','__return_false',PHP_INT_MIN);
 if(!is_blog_installed()){wp_install($x['title'],$x['login'],$x['email'],false,'',$x['password'],'en_US');}
-update_option('home',$x['home']);update_option('siteurl',$x['siteurl']);update_option('blog_public','0');
+update_option('home',$x['home']);update_option('siteurl',$x['siteurl']);update_option('blog_public','1');
 $identity=get_option('peptide_core_hq',[]);
 if(empty($identity['uuid'])){update_option('peptide_core_hq',['uuid'=>PEPTIDE_CORE_MANAGEMENT_UUID,'key'=>bin2hex(random_bytes(32)),'created'=>time()],false);}
 elseif($identity['uuid']!==PEPTIDE_CORE_MANAGEMENT_UUID){throw new RuntimeException('store_identity_mismatch');}
@@ -420,10 +421,15 @@ elseif($identity['uuid']!==PEPTIDE_CORE_MANAGEMENT_UUID){throw new RuntimeExcept
         script.unlink(missing_ok=True)
         payload.unlink(missing_ok=True)
     wp = ['/usr/local/bin/wp', '--path=' + str(t['public']), '--url=' + t['management_url']]
-    run([*wp, 'plugin', 'activate', 'woocommerce', 'peptide-core', 'peptide-panapay'], user=t['user'])
+    run([*wp, 'plugin', 'activate', 'woocommerce', 'peptide-core', 'peptide-panapay', 'fluent-smtp'], user=t['user'])
     run([*wp, 'theme', 'activate', 'peptide-site'], user=t['user'])
     setup = t['data'] / 'setup.php'
-    write(setup, "<?php\nWC_Install::create_pages();\nupdate_option('woocommerce_allow_tracking','no');update_option('woocommerce_default_country','US');\n", 0o640, t['user'])
+    # 2026-11-07: same starting settings as the first store (s0001): Chinese admin for the owner,
+    # store time zone Asia/Shanghai, default country US:CA, visitor tracking on.
+    write(setup, "<?php\nWC_Install::create_pages();\nupdate_option('woocommerce_allow_tracking','no');update_option('woocommerce_default_country','US:CA');\n"
+          "update_option('timezone_string','Asia/Shanghai');update_option('gmt_offset','');\n"
+          "foreach(get_users(['role'=>'administrator','fields'=>'ID'])as $id){update_user_meta($id,'locale','zh_CN');}\n"
+          "if(class_exists('PeptideCore\\\\Tracking\\\\Tracker')){PeptideCore\\Tracking\\Tracker::set_enabled(true);}\n", 0o640, t['user'])
     try:
         run([*wp, 'eval-file', str(setup)], user=t['user'])
     finally:

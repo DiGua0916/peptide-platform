@@ -301,3 +301,12 @@
 - Checks: scope diff vs live = 0 for both templates and all four roots; s0002/s0003 boot via wp-cli (overview.js 6df763f083ac, Referrals present); HTTPS 200 for s0002/s0003 management login and storefront, s0001 login, www storefront; provisioning worker run after the change finished normally. No new store created.
 - Still different for a newly created store (by design of `worker.py` bootstrap, not changed here): en_US site language, UTC time zone, mail gate on, visitor tracking off, no payment gateway, no products; design bundle is the 2026-11-03 snapshot.
 - From now on a production deploy must also update the template roots and s0002/s0003, not only s0001.
+
+## 2026-11-07 ~20:25 UTC — new-store starting settings now match s0001
+
+- `tools/deployment/provisioning/worker.py` (installed on both hosts as `/usr/local/lib/vialcove-provision/worker.py`, sha256 74fbc4f2…; previous 0941bc7b… kept at `/var/lib/vialcove-ui-deploy/worker.py.before-new-store-settings`):
+  - `copy_runtime` no longer writes `vialcove-mail-gate.php` (a copy in the source is still removed with the other non-allowlisted mu-plugins);
+  - `bootstrap` activates `fluent-smtp` as well, sets `blog_public=1`, `woocommerce_default_country=US:CA`, `timezone_string=Asia/Shanghai`, owner/admin user locale `zh_CN`, and turns visitor tracking on.
+- Tests: full provisioning suite 65/65 OK as root on the admin host (locally the 16 chown-dependent tests error the same before and after).
+- s0002/s0003 given the same settings (fluent-smtp activated, mail gate files moved to `/var/lib/vialcove-ui-deploy/new-store-settings/` on each host).
+- Settings comparison s0001 / s0002 / s0003: identical except payment gateway (PanaPay needs each store's own merchant account) and content (products 82/0/0, pages 12/5/5). Store address is empty on all three. No new store created.

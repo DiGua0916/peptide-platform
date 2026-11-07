@@ -324,7 +324,7 @@ class Policy(unittest.TestCase):
             self.assertFalse((target/'tests').exists())
             self.assertFalse((target/'wp-content/mu-plugins/vialcove-migration-guard.php').exists())
             self.assertEqual((target/'wp-settings.php').read_text(), 'code')
-            self.assertTrue((target/'wp-content/mu-plugins/vialcove-mail-gate.php').exists())
+            self.assertFalse((target/'wp-content/mu-plugins/vialcove-mail-gate.php').exists())
             with self.assertRaises(ValueError): w.copy_runtime(source,target)
 
     def test_configuration_literal_and_cookie_isolation(self):
