@@ -115,3 +115,61 @@
 		width: 100%;
 	}
 }
+
+/* 标题旁的“?”说明（PcData.tip）：悬停或键盘聚焦时在上方显示气泡。 */
+.pc-tip {
+	position: relative;
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	width: 15px;
+	height: 15px;
+	border: 1px solid #a3a3a3;
+	border-radius: 50%;
+	color: #8c8c8c;
+	font-size: 10px;
+	font-weight: 700;
+	line-height: 1;
+	cursor: help;
+	vertical-align: middle;
+}
+
+.pc-tip:hover,
+.pc-tip:focus-visible {
+	border-color: #171717;
+	color: #171717;
+	outline: none;
+}
+
+.pc-tip::after {
+	content: attr(data-tip);
+	position: absolute;
+	bottom: calc(100% + 8px);
+	left: 50%;
+	z-index: 50;
+	box-sizing: border-box;
+	width: max-content;
+	max-width: 300px;
+	padding: 8px 10px;
+	border-radius: 6px;
+	background: #171717;
+	box-shadow: 0 6px 18px rgba(0, 0, 0, .18);
+	color: #fff;
+	font-size: 12px;
+	font-weight: 400;
+	line-height: 1.55;
+	text-align: left;
+	white-space: normal;
+	opacity: 0;
+	pointer-events: none;
+	transform: translate(-30%, 4px);
+	transition: opacity .12s ease, transform .12s ease;
+}
+
+.pc-tip:hover::after,
+.pc-tip:focus-visible::after {
+	opacity: 1;
+	transform: translate(-30%, 0);
+}

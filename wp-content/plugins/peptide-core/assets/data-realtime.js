@@ -35,6 +35,8 @@
 	var painted = false;
 	var ctx = null;
 	var els = null;
+	var lastPoints = null;
+	var resizeTimer = 0;
 
 	// ---------- 小工具 ----------
 
@@ -97,18 +99,22 @@
 
 	// ---------- 页面各部分的 HTML ----------
 
+	// 标题旁的“?”：说明文字悬停或聚焦时显示（PcData.tip 来自 data.js；读屏软件读 aria-label）。
+	function tip( text ) {
+		return ctx.tip ? ctx.tip( text ) : '';
+	}
+
 	function metric( label, value, today ) {
 		return '<div class="pc-rt-metric">' +
 			'<div class="pc-rt-metric__label">' + esc( label ) + '</div>' +
-			'<div class="pc-rt-metric__value">' + esc( value ) +
-				( displayedHistory ? '' : ' <span class="pc-rt-metric__today">' + esc( fill( T.today, { '%s': today } ) ) + '</span>' ) +
-			'</div>' +
+			'<div class="pc-rt-metric__value">' + esc( value ) + '</div>' +
+			( displayedHistory ? '' : '<div class="pc-rt-metric__today">' + esc( fill( T.today, { '%s': today } ) ) + '</div>' ) +
 		'</div>';
 	}
 
 	function card( title, first, second ) {
 		return '<section class="pc-rt-card">' +
-			'<h2 class="pc-rt-card__title">' + esc( title ) + ' <span class="pc-rt-muted">' + esc( displayedHistory ? T.period : T.windowNote ) + '</span></h2>' +
+			'<h2 class="pc-rt-card__title">' + esc( title ) + tip( displayedHistory ? T.period : T.windowNote ) + '</h2>' +
 			'<div class="pc-rt-card__metrics">' + first + second + '</div>' +
 		'</section>';
 	}
@@ -139,42 +145,79 @@
 		'</div>';
 	}
 
+	// 访客行为：竖向柱状图，一层一根柱子，柱高 = 占访客的比例（0–100%），柱顶写人数，悬停看比例。
 	function steps( layers, detailed ) {
 		var keys = detailed ? LAYERS : [ 'visitors', 'viewed', 'carted', 'checkout', 'paid' ];
-		return '<p class="pc-rt-muted pc-rt-funnel-help">' + esc( detailed ? T.detailHelp : T.detailUnavailable ) + '</p>' + keys.map( function ( key, i ) {
-			var layer = layers[ i ] || { count: 0, visitor_rate: null };
-			var width = isNum( layer.visitor_rate ) ? Math.max( 0, Math.min( 100, Number( layer.visitor_rate ) ) ) : 0;
-			return '<div class="pc-rt-step">' +
-				'<span class="pc-rt-step__label">' + esc( T[ detailed ? LAYER_TEXT[ key ] : ( 'paid' === key ? 'paid' : LAYER_TEXT[ key ] ) ] ) + '</span>' +
-				'<span class="pc-rt-bar"><span class="pc-rt-bar__fill" style="width:' + esc( width ) + '%"></span></span>' +
-				'<span class="pc-rt-step__count">' + esc( ctx.number( layer.count ) ) + '</span>' +
-				'<span class="pc-rt-step__rate">' + esc( fill( T.ofVisitors, { '%s': pct( layer.visitor_rate ) } ) ) + '</span>' +
-			'</div>';
-		} ).join( '' );
+		var axis = '<div class="pc-rt-axis" aria-hidden="true">' + [ 100, 75, 50, 25, 0 ].map( function ( n ) {
+			return '<span>' + n + '%</span>';
+		} ).join( '' ) + '</div>';
+		return '<span class="screen-reader-text pc-rt-funnel-help">' + esc( detailed ? T.detailHelp : T.detailUnavailable ) + '</span>' + axis +
+			'<div class="pc-rt-bars">' + keys.map( function ( key, i ) {
+				var layer = layers[ i ] || { count: 0, visitor_rate: null };
+				var height = isNum( layer.visitor_rate ) ? Math.max( 0, Math.min( 100, Number( layer.visitor_rate ) ) ) : 0;
+				var label = T[ detailed ? LAYER_TEXT[ key ] : ( 'paid' === key ? 'paid' : LAYER_TEXT[ key ] ) ];
+				var rate = fill( T.ofVisitors, { '%s': pct( layer.visitor_rate ) } );
+				return '<div class="pc-rt-step" title="' + esc( label + ' · ' + ctx.number( layer.count ) + ' · ' + rate ) + '">' +
+					'<span class="pc-rt-bar"><span class="pc-rt-step__count">' + esc( ctx.number( layer.count ) ) + '</span>' +
+						'<span class="pc-rt-bar__fill' + ( 0 === height ? ' is-zero' : '' ) + '" style="height:' + esc( height ) + '%"></span></span>' +
+					'<span class="pc-rt-step__label">' + esc( label ) + '</span>' +
+					'<span class="pc-rt-step__rate" aria-label="' + esc( rate ) + '">' + esc( pct( layer.visitor_rate ) ) + '</span>' +
+				'</div>';
+			} ).join( '' ) + '</div>';
 	}
 
-	// 每分钟访客数量：一列一分钟，最旧的在左；柱高相对最大值（最高 80%，上面留给数字），0 显示一条细线。
+	// 纵轴取整：最大值往上取到 1/2/5×10ⁿ 的倍数，分 4 格。
+	function niceMax( max ) {
+		if ( max <= 4 ) { return 4; }
+		var step = Math.pow( 10, Math.floor( Math.log( max / 4 ) / Math.LN10 ) );
+		var unit = [ 1, 2, 2.5, 5, 10 ].map( function ( m ) { return m * step; } ).filter( function ( u ) { return u * 4 >= max; } )[ 0 ];
+		return unit * 4;
+	}
+
+	// 每分钟访客数量（历史模式按时段）：平滑折线 + 浅色面积，最旧的在左。
+	// 宽度按容器实际宽度画（文字不被缩放）；20 / 30 个点时隔几个点写一个标签，“现在”一定有标签。
 	function chart( points ) {
+		var W = Math.max( 320, Math.round( ( els && els.chart && els.chart.clientWidth ) || 560 ) );
+		var H = 240, L = 34, R = 12, TOP = 12, B = 30;
 		var max = 0;
 		points.forEach( function ( p ) {
 			max = Math.max( max, Number( p.visitors ) || 0 );
 		} );
-		var sparse = points.length > WINDOWS[ 0 ];
-		var cols = points.map( function ( p ) {
+		var top = niceMax( max );
+		var n = points.length;
+		var every = Math.max( 1, Math.ceil( n / 10 ) );
+		var x = function ( i ) { return n > 1 ? L + ( W - L - R ) * i / ( n - 1 ) : L + ( W - L - R ) / 2; };
+		var y = function ( v ) { return TOP + ( H - TOP - B ) * ( 1 - v / top ); };
+		var grid = '';
+		for ( var g = 0; g <= 4; g++ ) {
+			var gv = top * g / 4;
+			grid += '<line class="pc-rt-line__grid" x1="' + L + '" x2="' + ( W - R ) + '" y1="' + y( gv ) + '" y2="' + y( gv ) + '"></line>' +
+				'<text class="pc-rt-line__tick" x="' + ( L - 6 ) + '" y="' + ( y( gv ) + 4 ) + '" text-anchor="end">' + esc( ctx.number( gv ) ) + '</text>';
+		}
+		var line = '', dots = '', labels = '';
+		points.forEach( function ( p, i ) {
 			var v = Number( p.visitors ) || 0;
-			var height = max > 0 ? Math.round( v / max * 80 ) : 0;
+			var px = x( i ), py = y( v );
+			if ( 0 === i ) {
+				line = 'M' + px + ' ' + py;
+			} else {
+				var prevX = x( i - 1 ), prevY = y( Number( points[ i - 1 ].visitors ) || 0 ), mid = ( prevX + px ) / 2;
+				line += ' C' + mid + ' ' + prevY + ' ' + mid + ' ' + py + ' ' + px + ' ' + py;
+			}
 			var ago = Number( p.ago ) || 0;
-			// 20 / 30 分钟时只给 ago 是偶数的列写标签，这样“现在”（ago 0）一定有标签。
-			var label = displayedHistory ? p.label : ( ! sparse || 0 === ago % 2 ? ( 0 === ago ? T.now : fill( T.minutesAgo, { '%d': ago } ) ) : '' );
-			return '<div class="pc-rt-col">' +
-				'<div class="pc-rt-col__plot">' +
-					'<span class="pc-rt-col__count">' + esc( ctx.number( v ) ) + '</span>' +
-					'<span class="pc-rt-col__bar' + ( 0 === v ? ' is-zero' : '' ) + '" style="height:' + esc( height ) + '%"></span>' +
-				'</div>' +
-				'<span class="pc-rt-col__label">' + esc( label ) + '</span>' +
-			'</div>';
+			var text = displayedHistory ? p.label : ( 0 === ago ? T.now : fill( T.minutesAgo, { '%d': ago } ) );
+			var show = displayedHistory ? 0 === i % every : 0 === ago % every;
+			dots += '<circle class="pc-rt-line__dot' + ( v ? '' : ' is-zero' ) + '" cx="' + px + '" cy="' + py + '" r="3"><title>' + esc( text + ': ' + ctx.number( v ) ) + '</title></circle>';
+			if ( show ) {
+				labels += '<text class="pc-rt-line__label" x="' + px + '" y="' + ( H - 10 ) + '" text-anchor="middle">' + esc( text ) + '</text>';
+			}
 		} );
-		return '<div class="pc-rt-chart">' + cols.join( '' ) + '</div>';
+		var area = n ? line + ' L' + x( n - 1 ) + ' ' + y( 0 ) + ' L' + x( 0 ) + ' ' + y( 0 ) + ' Z' : '';
+		return '<svg class="pc-rt-line" viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="' + esc( displayedHistory ? T.historyChart : T.perMinute ) + '">' +
+			grid +
+			( n ? '<path class="pc-rt-line__area" d="' + area + '"></path><path class="pc-rt-line__path" d="' + line + '"></path>' : '' ) +
+			dots + labels +
+		'</svg>';
 	}
 
 	function item( entry, kind ) {
@@ -242,40 +285,51 @@
 	}
 
 	function build( bodyEl ) {
+		var pageTitle = ( window.pcData && window.pcData.title ) || '';
 		bodyEl.innerHTML = '<div class="pc-rt">' +
-			'<div class="pc-rt-filters-host"></div><form class="pc-rt-range" novalidate>' +
-				'<div class="pc-rt-modes" role="group" aria-label="' + esc( T.period ) + '">' +
-					'<button type="button" class="button pc-rt-live" aria-pressed="false">' + esc( T.live ) + '</button>' +
-					'<button type="button" class="button pc-rt-today" aria-pressed="false">' + esc( T.todayOption ) + '</button>' +
-					'<button type="button" class="button pc-rt-yesterday" aria-pressed="false">' + esc( T.yesterday ) + '</button>' +
+			// 页头一行：标题 · 最后统计时间 · 刷新 ……（右侧）实时 / 今天 / 昨天 / 日期 / 查询；下面一行是入口筛选。
+			'<div class="pc-rt-top">' +
+				'<div class="pc-rt-head">' +
+					( pageTitle ? '<h2 class="pc-rt-heading">' + esc( pageTitle ) + '</h2>' : '' ) +
+					'<span class="pc-rt-updated"></span>' +
+					'<button type="button" class="pc-rt-refresh">' + esc( T.refresh ) + '</button>' +
+					'<span class="screen-reader-text pc-rt-refresh-note"></span>' +
 				'</div>' +
-				'<label>' + esc( T.from ) + '<input class="pc-rt-from" type="date" required></label>' +
-				'<label>' + esc( T.to ) + '<input class="pc-rt-to" type="date" required></label>' +
-				'<button type="submit" class="button pc-rt-apply">' + esc( T.apply ) + '</button>' +
-			'</form>' +
-			'<p class="pc-rt-period" aria-live="polite"></p>' +
-			'<div class="pc-rt-head">' +
-				'<span class="pc-rt-updated"></span>' +
-				'<button type="button" class="button pc-rt-refresh">' + esc( T.refresh ) + '</button>' +
-				'<span class="pc-rt-muted pc-rt-refresh-note"></span>' +
+				'<form class="pc-rt-range" novalidate>' +
+					'<div class="pc-rt-modes" role="group" aria-label="' + esc( T.period ) + '">' +
+						'<button type="button" class="pc-rt-live" aria-pressed="false">' + esc( T.live ) + '</button>' +
+						'<button type="button" class="pc-rt-today" aria-pressed="false">' + esc( T.todayOption ) + '</button>' +
+						'<button type="button" class="pc-rt-yesterday" aria-pressed="false">' + esc( T.yesterday ) + '</button>' +
+					'</div>' +
+					'<span class="pc-rt-dates">' +
+						'<label><span class="screen-reader-text">' + esc( T.from ) + '</span><input class="pc-rt-from" type="date" required></label>' +
+						'<span class="pc-rt-dash">~</span>' +
+						'<label><span class="screen-reader-text">' + esc( T.to ) + '</span><input class="pc-rt-to" type="date" required></label>' +
+					'</span>' +
+					'<button type="submit" class="button pc-rt-apply">' + esc( T.apply ) + '</button>' +
+				'</form>' +
 			'</div>' +
+			'<div class="pc-rt-filters-host"></div>' +
+			'<p class="pc-rt-period" aria-live="polite"></p>' +
 			'<p class="pc-rt-error" role="alert" hidden></p>' +
 			'<div class="pc-rt-notes"></div>' +
 			'<div class="pc-rt-cards-wrap"><p class="pc-rt-muted">' + esc( ctx.strings.loading ) + '</p></div>' +
-			'<section class="pc-rt-section">' +
-				'<div class="pc-rt-section__head">' +
-					'<h2 class="pc-rt-section__title pc-rt-funnel-title">' + esc( T.behaviour ) + '</h2>' +
-					selectHtml( 'pc-rt-funnel-select', T.behaviour, state.funnel ) +
-				'</div>' +
-				'<div class="pc-rt-steps"></div>' +
-			'</section>' +
-			'<section class="pc-rt-section">' +
-				'<div class="pc-rt-section__head">' +
-					'<h2 class="pc-rt-section__title pc-rt-chart-title">' + esc( T.perMinute ) + '</h2>' +
-					selectHtml( 'pc-rt-minutes-select', T.perMinute, state.minutes ) +
-				'</div>' +
-				'<div class="pc-rt-chart-wrap" tabindex="0" role="region" aria-label="' + esc( T.historyChart ) + '"></div>' +
-			'</section>' +
+			'<div class="pc-rt-charts">' +
+				'<section class="pc-rt-section">' +
+					'<div class="pc-rt-section__head">' +
+						'<h2 class="pc-rt-section__title"><span class="pc-rt-funnel-title">' + esc( T.behaviour ) + '</span><span class="pc-rt-funnel-tip"></span></h2>' +
+						selectHtml( 'pc-rt-funnel-select', T.behaviour, state.funnel ) +
+					'</div>' +
+					'<div class="pc-rt-steps"></div>' +
+				'</section>' +
+				'<section class="pc-rt-section">' +
+					'<div class="pc-rt-section__head">' +
+						'<h2 class="pc-rt-section__title"><span class="pc-rt-chart-title">' + esc( T.perMinute ) + '</span></h2>' +
+						selectHtml( 'pc-rt-minutes-select', T.perMinute, state.minutes ) +
+					'</div>' +
+					'<div class="pc-rt-chart-wrap" tabindex="0" role="region" aria-label="' + esc( T.historyChart ) + '"></div>' +
+				'</section>' +
+			'</div>' +
 			'<div class="pc-rt-lists"></div><div class="pc-rt-dimensions-host"></div>' +
 		'</div>';
 
@@ -292,7 +346,7 @@
 			funnelSelect: bodyEl.querySelector( '.pc-rt-funnel-select' ),
 			minutesSelect: bodyEl.querySelector( '.pc-rt-minutes-select' )
 		};
-		[ 'range', 'from', 'to', 'live', 'today', 'yesterday', 'period', 'refresh-note', 'funnel-title', 'chart-title' ].forEach( function ( name ) {
+		[ 'range', 'from', 'to', 'live', 'today', 'yesterday', 'period', 'refresh-note', 'funnel-title', 'funnel-tip', 'chart-title' ].forEach( function ( name ) {
 			els[ name ] = bodyEl.querySelector( '.pc-rt-' + name );
 		} );
 		painted = false;
@@ -440,8 +494,10 @@
 		els.notes.innerHTML = notes( data );
 		els.cards.innerHTML = cards( data );
 		var detail = data.visitor_funnel && data.visitor_funnel.unit === 'visitors' && data.visitor_funnel.layers && data.visitor_funnel.layers.length === 8;
+		if ( els[ 'funnel-tip' ] ) { els[ 'funnel-tip' ].innerHTML = tip( detail ? T.detailHelp : T.detailUnavailable ); }
 		els.steps.innerHTML = steps( detail ? data.visitor_funnel.layers : ( data.funnel || {} ).layers || [], detail );
-		els.chart.innerHTML = chart( ( ( displayedHistory ? data.series : data.minutes ) || {} ).points || [] );
+		lastPoints = ( ( displayedHistory ? data.series : data.minutes ) || {} ).points || [];
+		els.chart.innerHTML = chart( lastPoints );
 		els.lists.innerHTML = lists( data );
 		painted = true;
 	}
@@ -541,6 +597,14 @@
 			}
 		} );
 		window.addEventListener( 'popstate', function () { if ( attached() ) { select( fromUrl(), '' ); } } );
+		// 折线图按容器宽度画：窗口宽度变了就用上一次的数据重画（不重新取数）。
+		window.addEventListener( 'resize', function () {
+			if ( resizeTimer ) { window.clearTimeout( resizeTimer ); }
+			resizeTimer = window.setTimeout( function () {
+				resizeTimer = 0;
+				if ( attached() && painted && lastPoints ) { els.chart.innerHTML = chart( lastPoints ); }
+			}, 150 );
+		} );
 	}
 
 	function render( bodyEl, range, c ) {

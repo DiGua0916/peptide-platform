@@ -78,6 +78,10 @@
 			return wp.apiFetch( { path: wp.url.addQueryArgs( path, params || {} ) } );
 		},
 		esc: esc,
+		// 标题旁的“?”说明：悬停 / 键盘聚焦时显示气泡（样式在 data.css 的 .pc-tip）。
+		tip: function ( text ) {
+			return text ? '<span class="pc-tip" tabindex="0" role="img" aria-label="' + esc( text ) + '" data-tip="' + esc( text ) + '">?</span>' : '';
+		},
 		money: money,
 		number: number,
 		change: change,

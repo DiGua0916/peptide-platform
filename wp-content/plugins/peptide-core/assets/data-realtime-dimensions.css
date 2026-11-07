@@ -1,19 +1,163 @@
-.pc-rt-dimensions { min-width: 0; max-width: 100%; margin-top: 20px; }
-.pc-rt-dim-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
-.pc-rt-dim-panel { min-width: 0; max-width: 100%; padding: 16px; border: 1px solid #e6e6e6; background: #fff; overflow-wrap: anywhere; }
+/*
+ * 实时数据页下方九块维度面板（2026-11-07 版式）：三列网格；地图占两列两行，右边上下是活跃国家 / 热门国家。
+ * 口径说明、覆盖率、时段等文字收进标题旁的“?”（读屏软件仍能读到）；“重试”只在请求失败时显示。
+ */
+.pc-rt-dimensions { min-width: 0; max-width: 100%; margin-top: 16px; }
+.pc-rt-dim-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+
+.pc-rt-dim-panel {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	box-sizing: border-box;
+	min-width: 0;
+	max-width: 100%;
+	min-height: 300px;
+	padding: 16px 20px;
+	border: 1px solid #ececec;
+	border-radius: 8px;
+	background: #fff;
+	overflow-wrap: anywhere;
+}
+
 .pc-rt-dim-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
-.pc-rt-dim-head h2 { margin: 0; font-size: 14px; color: #171717; }
-.pc-rt-dim-head select { max-width: 100%; }
+.pc-rt-dim-head h2 { display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 0; color: #171717; font-size: 15px; font-weight: 600; line-height: 1.4; }
+
+.pc-rt-dim-head select {
+	max-width: 100%;
+	min-height: 26px;
+	height: 26px;
+	padding: 0 26px 0 10px;
+	border: 1px solid #dcdcdc;
+	border-radius: 6px;
+	background-color: #fff;
+	font-size: 12px;
+	line-height: 24px;
+}
+
 .pc-rt-dim-head select[hidden] { display: none; }
-.pc-rt-dim-unit, .pc-rt-dim-help, .pc-rt-dim-local-help, .pc-rt-dim-coverage { font-size: 12px; color: #5c5c5c; }
-.pc-rt-dim-scroll { max-width: 100%; min-width: 0; overflow-x: auto; margin-top: 12px; }
-.pc-rt-dim-scroll table { border-collapse: collapse; width: 100%; min-width: 320px; font-size: 12px; }
-.pc-rt-dim-scroll th, .pc-rt-dim-scroll td { padding: 7px; border-bottom: 1px solid #e6e6e6; text-align: left; vertical-align: top; }
-.pc-rt-dim-scroll th:first-child { max-width: 300px; overflow-wrap: anywhere; }
-.pc-rt-dim-map { grid-column: span 2; }
-.pc-rt-dim-map-controls { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-.pc-rt-dim-map-box svg { width: 100%; height: auto; display: block; background: #f5f8fa; border: 1px solid #e6e6e6; box-sizing: border-box; }
+
+/* 说明类文字：视觉上收起，读屏软件仍可读。 */
+.pc-rt-dim-help,
+.pc-rt-dim-unit,
+.pc-rt-dim-status,
+.pc-rt-dim-total,
+.pc-rt-dim-coverage,
+.pc-rt-dim-local-help,
+.pc-rt-dim-map-box > p:not(.pc-rt-dim-legend) {
+	position: absolute !important;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+#wpbody-content .pc-rt-dimensions .pc-rt-dim-panel .pc-rt-dim-retry { display: none; align-self: flex-start; min-height: 24px; margin-top: 6px; padding: 0 10px; border-color: #dcdcdc; border-radius: 6px; font-size: 12px; line-height: 22px; }
+#wpbody-content .pc-rt-dimensions .pc-rt-dim-panel[data-error] .pc-rt-dim-retry { display: inline-block; }
+.pc-rt-dim-panel[data-error] .pc-rt-dim-status { order: 0; }
+
+.pc-rt-dim-panel[data-error] .pc-rt-dim-status {
+	position: static !important;
+	width: auto;
+	height: auto;
+	margin: 10px 0 0;
+	clip: auto;
+	color: #d63638;
+	font-size: 12px;
+	white-space: normal;
+}
+
+/* 表格 */
+.pc-rt-dim-scroll { flex: 1 1 auto; max-width: 100%; min-width: 0; margin-top: 12px; overflow-x: auto; }
+.pc-rt-dim-scroll table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.pc-rt-dim-scroll thead th { padding: 8px 10px; border-bottom: 0; background: #fafafa; color: #737373; font-size: 12px; font-weight: 500; text-align: left; white-space: nowrap; }
+.pc-rt-dim-scroll thead th:not(:first-child),
+.pc-rt-dim-scroll tbody td { width: 72px; text-align: right; font-variant-numeric: tabular-nums; }
+.pc-rt-dim-scroll tbody th,
+.pc-rt-dim-scroll tbody td { padding: 9px 10px; border-bottom: 1px solid #f2f2f2; vertical-align: top; }
+.pc-rt-dim-scroll tbody th { max-width: 300px; color: #171717; font-weight: 500; text-align: left; overflow-wrap: anywhere; }
+.pc-rt-dim-scroll tbody tr:hover th,
+.pc-rt-dim-scroll tbody tr:hover td { background: #fafafa; }
+
+/* 空状态：没有数据时只有一行占位，居中显示“暂无数据”和一个空盒子图标。 */
+.pc-rt-dim-panel:is([data-state="empty"], [data-state="unavailable"]) tbody td[colspan] {
+	width: auto;
+	padding: 92px 10px 40px;
+	border-bottom: 0;
+	background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='56' viewBox='0 0 64 56' fill='none' stroke='%23c8c8c8' stroke-width='1.5' stroke-linejoin='round'%3E%3Cpath d='M8 20 32 10l24 10v24L32 54 8 44z'/%3E%3Cpath d='M8 20l24 10 24-10M32 30v24'/%3E%3Cpath d='M8 20 2 12l24-10 6 8M56 20l6-8-24-10-6 8' stroke='%23dadada'/%3E%3C/svg%3E") center 28px no-repeat;
+	color: #a3a3a3;
+	font-size: 13px;
+	text-align: center;
+}
+
+.pc-rt-dim-panel:is([data-state="empty"], [data-state="unavailable"]) tbody tr:hover td { background-color: transparent; }
+
+/* 地图：占两列两行；缩放按钮叠在右下角，图例在上面。 */
+.pc-rt-dim-map { grid-column: span 2; grid-row: span 2; }
+.pc-rt-dim-map .pc-rt-dim-scroll { display: none; }
+.pc-rt-dim-map-box { position: relative; display: flex; flex-direction: column; margin-top: 10px; }
 .pc-rt-dim-map-box:empty { display: none; }
-.pc-rt-dim-status { min-height: 1.4em; }
-@media(max-width:1000px) { .pc-rt-dim-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
-@media(max-width:600px) { .pc-rt-dim-grid { grid-template-columns: minmax(0,1fr); } .pc-rt-dim-map { grid-column: auto; } .pc-rt-dim-panel { padding: 12px; } }
+.pc-rt-dim-map-box svg { display: block; order: 2; width: 100%; height: auto; margin-top: 8px; border: 0; background: #fff; box-sizing: border-box; cursor: grab; }
+.pc-rt-dim-map-box svg:focus-visible { outline: 2px solid #171717; outline-offset: 2px; }
+.pc-rt-dim-legend { order: 1; margin: 0; color: #8c8c8c; font-size: 12px; }
+
+.pc-rt-dim-legend::before {
+	content: "";
+	display: inline-block;
+	width: 96px;
+	height: 8px;
+	margin-right: 8px;
+	border-radius: 2px;
+	background: linear-gradient(90deg, #e3e3e3, #8c8c8c 50%, #171717);
+	vertical-align: -1px;
+}
+
+.pc-rt-dim-map-controls {
+	position: absolute;
+	right: 8px;
+	bottom: 8px;
+	z-index: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+	margin: 0;
+	border: 1px solid #dcdcdc;
+	border-radius: 6px;
+	background: #fff;
+	overflow: hidden;
+}
+
+.pc-rt-dim-map-controls .button {
+	min-width: 30px;
+	min-height: 28px;
+	margin: 0;
+	padding: 0 6px;
+	border: 0;
+	border-radius: 0;
+	background: #fff;
+	color: #404040;
+	font-size: 14px;
+	line-height: 28px;
+}
+
+.pc-rt-dim-map-controls .button + .button { border-top: 1px solid #ececec; }
+.pc-rt-dim-map-controls .button:hover { background: #f5f5f5; color: #171717; }
+
+/* 国家面板在地图右侧，高度跟着两行走。 */
+.pc-rt-dim-active_countries,
+.pc-rt-dim-popular_countries { min-height: 0; }
+
+@media (max-width: 1100px) {
+	.pc-rt-dim-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	.pc-rt-dim-map { grid-row: auto; }
+}
+
+@media (max-width: 600px) {
+	.pc-rt-dim-grid { grid-template-columns: minmax(0, 1fr); }
+	.pc-rt-dim-map { grid-column: auto; }
+	.pc-rt-dim-panel { min-height: 0; padding: 12px 14px; }
+}
