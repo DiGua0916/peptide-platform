@@ -268,7 +268,11 @@ final class Menu {
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=' . Dashboard_Page::SLUG ) ); ?>"><?php echo esc_html( $zh ? '管理后台' : 'Management' ); ?></a>
 				<span aria-hidden="true">/</span><span aria-current="page"><?php echo esc_html( wp_strip_all_tags( (string) $title ) ); ?></span>
 			</nav>
-			<a class="pchq-workspace-account" href="<?php echo esc_url( admin_url( 'profile.php' ) ); ?>"><span class="pchq-workspace-account__mark" aria-hidden="true"><?php echo esc_html( $zh ? '我' : 'Me' ); ?></span><span><?php echo esc_html( $user->display_name ); ?></span></a>
+			<div class="pchq-workspace-user">
+				<a class="pchq-workspace-account" href="<?php echo esc_url( admin_url( 'profile.php' ) ); ?>" title="<?php echo esc_attr( $zh ? '个人资料' : 'Profile' ); ?>"><span class="pchq-workspace-account__mark" aria-hidden="true"><?php echo esc_html( $zh ? '我' : 'Me' ); ?></span><span><?php echo esc_html( $user->display_name ); ?></span></a>
+				<?php // The WordPress toolbar (with its log-out link) is hidden on desktop in Layout v2. ?>
+				<a class="pchq-workspace-logout" href="<?php echo esc_url( wp_logout_url( admin_url() ) ); ?>"><?php echo esc_html( $zh ? '退出登录' : 'Log out' ); ?></a>
+			</div>
 		</header>
 		<?php
 	}

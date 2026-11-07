@@ -420,3 +420,63 @@ body.pchq-workspace:not(.folded) #adminmenu a.menu-top .wp-menu-name{padding:0;m
 body.pchq-workspace #wpbody-content :is(h1,h2,h3){overflow-wrap:anywhere}
 body.pchq-workspace #wpbody-content .button{box-sizing:border-box;white-space:normal;max-width:100%}
 body.pchq-workspace #wpbody-content :is(.description,.howto){color:#525252}
+
+/* ===== Layout v2 (2026-11-07): one top bar, a quiet rail, one page rhythm. =====
+   Desktop only hides the WordPress toolbar; its account actions move into the header
+   (profile + log out). Phones keep the toolbar, which drives the overlay rail. */
+@media (min-width:783px){
+ html.wp-toolbar:has(body.pchq-workspace){padding-top:0}
+ body.pchq-workspace #wpadminbar{display:none}
+ body.pchq-workspace .pchq-workspace-brand,body.pchq-workspace .pchq-workspace-head{top:0}
+ body.pchq-workspace .pchq-workspace-brand,body.pchq-workspace .pchq-workspace-head{height:56px;min-height:56px}
+ body.pchq-workspace #adminmenuwrap{padding-top:56px}
+}
+body.pchq-workspace .pchq-workspace-head{padding-inline:32px}
+.pchq-workspace-user{display:inline-flex;align-items:center;gap:4px;max-width:40%}
+.pchq-workspace-user .pchq-workspace-account{max-width:none;padding:4px 10px 4px 4px;border-radius:999px}
+.pchq-workspace-user .pchq-workspace-account:hover{background:var(--vc-soft)}
+.pchq-workspace-logout{padding:6px 10px;border-radius:6px;color:var(--vc-muted)!important;font-size:12px;line-height:16px;text-decoration:none;white-space:nowrap}
+.pchq-workspace-logout:hover{background:var(--vc-soft);color:var(--vc-ink)!important}
+
+/* Rail: a section group (总后台, 用户) reads as a label; only the current page is selected. */
+body.pchq-workspace #adminmenu{margin-top:16px}
+body.pchq-workspace #adminmenu li.menu-top.wp-has-submenu>a.menu-top,
+body.pchq-workspace #adminmenu li.menu-top.wp-has-submenu:is(.wp-has-current-submenu,.wp-menu-open,.opensub,.current)>a.menu-top{background:transparent;color:#8a8a8a!important;font-size:12px;font-weight:600;letter-spacing:.02em}
+body.pchq-workspace #adminmenu li.menu-top.wp-has-submenu>a.menu-top:hover{background:transparent;color:#171717!important}
+body.pchq-workspace #adminmenu li.menu-top.wp-has-submenu>a.menu-top div.wp-menu-image::before{color:#a3a3a3;font-size:15px}
+body.pchq-workspace #adminmenu li.menu-top+li.menu-top.wp-has-submenu{margin-top:12px}
+body.pchq-workspace #adminmenu li.menu-top>.wp-submenu{padding:0 0 4px}
+body.pchq-workspace #adminmenu li.menu-top>.wp-submenu>li>a{padding:7px 12px 7px 14px;margin:1px 0;color:#404040!important}
+body.pchq-workspace #adminmenu li.menu-top>.wp-submenu>li.current>a,
+body.pchq-workspace #adminmenu li.menu-top>.wp-submenu>li.current>a:is(:hover,:focus,:active){background:#ededed;color:#171717!important;font-weight:600;box-shadow:none}
+body.pchq-workspace #adminmenu .awaiting-mod,body.pchq-workspace #adminmenu .update-plugins{min-width:18px;height:18px;padding:0 6px;border-radius:9px;background:#171717;color:#fff;font-size:11px;line-height:18px}
+
+/* Canvas: one measure and rhythm for every page. */
+body.pchq-workspace #wpbody-content>.wrap{max-width:1320px;margin:28px 32px 0}
+body.pchq-workspace .wrap>h1{font-size:22px;line-height:30px;margin:0 12px 8px 0}
+body.pchq-workspace .wrap>h1+:is(a,button,form).page-title-action,body.pchq-workspace .wrap>h1+.page-title-action{vertical-align:middle;margin:0 0 8px}
+body.pchq-workspace .wrap>p:not(.submit):not([class*="notice"]),body.pchq-workspace .wrap>.description{max-width:760px;margin:0 0 20px;color:var(--vc-muted);font-size:13px;line-height:20px}
+body.pchq-workspace .wrap h2,body.pchq-workspace .wrap .pchq-h2{font-size:15px;line-height:22px;font-weight:650;margin:0 0 12px}
+body.pchq-workspace .wrap>:is(section,.pchq-card,.card,form,.pchq-scroll,table.widefat,.postbox)+:is(section,.pchq-card,.card,form,h2,.pchq-scroll,table.widefat,.postbox){margin-top:24px}
+body.pchq-workspace :is(.pchq-card,.card,.postbox){border:1px solid var(--vc-line);border-radius:10px;box-shadow:none;background:#fff}
+body.pchq-workspace .pchq-card{padding:20px 24px}
+
+/* Tables: quiet header, comfortable rows, hover instead of zebra stripes. */
+body.pchq-workspace .widefat{border:1px solid var(--vc-line);border-radius:10px;overflow:hidden;box-shadow:none}
+body.pchq-workspace .pchq-scroll .widefat{border:0;border-radius:0}
+body.pchq-workspace .widefat thead :is(th,td){background:#fafafa;color:var(--vc-muted);font-size:12px;line-height:16px;font-weight:600;padding:10px 12px;border-bottom:1px solid var(--vc-line)}
+body.pchq-workspace .widefat tbody :is(th,td){padding:12px;vertical-align:middle;font-size:13px;line-height:20px}
+body.pchq-workspace .widefat tfoot :is(th,td){background:#fafafa;font-size:12px}
+body.pchq-workspace .striped>tbody>:nth-child(odd),body.pchq-workspace .widefat tbody tr{background:#fff}
+body.pchq-workspace .widefat tbody tr+tr>:is(th,td){border-top:1px solid #f0f0f0}
+body.pchq-workspace .widefat tbody tr:hover{background:#fafafa}
+
+/* Forms: labels above a readable measure; help text stays next to its field. */
+body.pchq-workspace .wrap .form-table{max-width:760px;margin-top:8px}
+body.pchq-workspace .wrap .form-table th{width:168px;padding:18px 20px 18px 0;font-size:13px;line-height:20px;font-weight:600;color:var(--vc-ink)}
+body.pchq-workspace .wrap .form-table td{padding:14px 0}
+body.pchq-workspace #wpbody-content .wrap .form-table :is(input:not([type]),.regular-text,input[type=text],input[type=email],input[type=password],input[type=url],input[type=number],select,textarea){width:100%;max-width:460px}
+body.pchq-workspace .wrap .form-table .description{max-width:460px;margin-top:6px;color:var(--vc-muted);font-size:12px;line-height:18px}
+
+/* The WordPress credit line adds nothing to an operations console. */
+body.pchq-workspace #wpfooter{display:none}
