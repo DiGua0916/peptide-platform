@@ -238,3 +238,11 @@
 - 代码 `4ff94fc`（2 个文件：peptide-core `assets/modules.css`、`assets/modules.js`）：舞台按钮用更高优先级保持 999px；在 0.5 秒内暂停时回到封面。
 - 部署：两边当前 `70a65ac-*`（另一会话的数据页 CSS），两个文件线上哈希与 `e51cb9a` 一致；从 live current 复制出 `4ff94fc-web01` / `4ff94fc-s0001`，恰好 2 处不同，切换并 reload PHP，清页面缓存。首页 / s0001 200，PHP 错误日志无新增；手机视口下自动播放、按钮圆角 999px、停在开头回到封面。
 - 回滚：两个 `current` 指回 `70a65ac-web01` / `70a65ac-s0001` 后 reload PHP。
+
+### 商品链接落地计入商品查看（eeaefe9，用户批准 "Deploy to production"）
+
+- 问题：商品链接（如 Facebook 广告）先跳转到 `/?vc_product=ID` 自动弹出商品窗口，没有点击，追踪不记 product_view，访问也到不了漏斗"查看商品"。沙盒模拟 30 人中 4 次查看漏记。
+- 修复：主题 `inc/visitor-tracking.php` 在这种落地页把页面上下文报为该商品页（资格和跳转本身相同）；`tests/visitor-config.php` 197 项通过。
+- 沙盒：shop/admin 同一文件替换，备份 `/home/ubuntu/vialcove-deploy-backups/entry-product-view-20261107T180127Z`，清页面缓存。120 访客 / 40 单模拟全部指标和预设一致（含 20 位商品链接直达访客）。
+- 正式站：两边当前 `4ff94fc-*`，线上文件哈希等于基线；从 live current 复制出 `eeaefe9-web01` / `eeaefe9-s0001`，恰好 1 处不同，语法通过；18:23:58 UTC 同时切换并 reload PHP，清前台页面缓存。商品链接返回 `page_type: product`，首页仍为 home；首页 / 购物车 / s0001 200，PHP 错误日志无新增。
+- 回滚：两个 `current` 指回 `4ff94fc-web01` / `4ff94fc-s0001` 后 reload PHP。
