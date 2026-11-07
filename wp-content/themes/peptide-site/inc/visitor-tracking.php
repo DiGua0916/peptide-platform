@@ -24,6 +24,8 @@ function vc_visitor_page_context(): array {
     } elseif ( function_exists( 'is_checkout' ) && is_checkout() ) {
         $context = array( 'page_type' => 'checkout', 'path' => wp_parse_url( wc_get_checkout_url(), PHP_URL_PATH ) ?: '/checkout/' );
     } elseif ( is_front_page() ) {
+        $entry = vc_visitor_entry_product_context();
+        if ( null !== $entry ) { return $entry; }
         $context['page_type'] = 'home';
     } elseif ( function_exists( 'is_shop' ) && ( is_shop() || is_product_taxonomy() ) ) {
         $context = array( 'page_type' => 'shop', 'path' => wp_parse_url( wc_get_page_permalink( 'shop' ), PHP_URL_PATH ) ?: '/shop/' );
@@ -31,6 +33,21 @@ function vc_visitor_page_context(): array {
         $context['path'] = wp_parse_url( get_permalink(), PHP_URL_PATH ) ?: '/';
     }
     return $context;
+}
+
+/**
+ * A product link (/product/x/, e.g. a Facebook ad) is redirected to the home page with
+ * ?vc_product=ID, which opens the product dialog without a click. Report that landing as
+ * the product page so the tracker records its product view (stage "viewed").
+ * Only a product the storefront entry itself would open qualifies.
+ */
+function vc_visitor_entry_product_context(): ?array {
+    $raw = $_GET['vc_product'] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+    if ( ! is_string( $raw ) || ! preg_match( '/\A[1-9]\d{0,15}\z/D', $raw ) || ! function_exists( 'vc_storefront_entry_product' ) ) { return null; }
+    $product = vc_storefront_entry_product( (int) $raw );
+    if ( ! is_object( $product ) || ! method_exists( $product, 'get_id' ) ) { return null; }
+    $path = wp_parse_url( $product->get_permalink(), PHP_URL_PATH );
+    return array( 'page_type' => 'product', 'path' => is_string( $path ) && '' !== $path ? $path : '/', 'product_id' => (int) $product->get_id(), 'product_name' => (string) $product->get_name() );
 }
 
 /** Keep only a native same-origin pathname; never return request/query contents. */

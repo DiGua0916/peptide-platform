@@ -152,5 +152,27 @@ namespace {
         expect_same( $expected, $transport['batch_max'], 'batch limit stays within protocol range' );
     }
 
+    // A product-link landing (/product/x/ -> /?vc_product=ID) is reported as that product page.
+    enqueue_fixture( $base, array(), array( 'vc_product' => '37' ) );
+    expect_same( array( 'page_type' => 'home', 'path' => '/' ), inline_value( 'vialcove-visitor-observer', 'VialCoveVisitorPage' ), 'without the storefront entry the home context is kept' );
+    // Declared conditionally so they only exist from here on (unconditional ones are hoisted).
+    if ( ! function_exists( 'vc_storefront_entry_product' ) ) {
+        final class Entry_Product_Stub {
+            public function get_id(): int { return 37; }
+            public function get_name(): string { return 'Retatrutide'; }
+            public function get_permalink(): string { return 'https://example.test/product/retatrutide/'; }
+        }
+        function wp_parse_url( string $url, int $part = -1 ) { return parse_url( $url, $part ); }
+        function vc_storefront_entry_product( int $id ) { return 37 === $id ? new Entry_Product_Stub() : null; }
+    }
+    enqueue_fixture( $base, array(), array( 'vc_product' => '37', 'utm_source' => 'facebook' ) );
+    expect_same( array( 'page_type' => 'product', 'path' => '/product/retatrutide/', 'product_id' => 37, 'product_name' => 'Retatrutide' ), inline_value( 'vialcove-visitor-observer', 'VialCoveVisitorPage' ), 'entry product landing is the product page' );
+    foreach ( array( '99', '0', '-37', '37abc', ' 37', '' ) as $raw ) {
+        enqueue_fixture( $base, array(), array( 'vc_product' => $raw ) );
+        expect_same( array( 'page_type' => 'home', 'path' => '/' ), inline_value( 'vialcove-visitor-observer', 'VialCoveVisitorPage' ), 'unavailable or malformed entry id stays home: ' . var_export( $raw, true ) );
+    }
+    enqueue_fixture( $base, array(), array( 'vc_product' => array( '37' ) ) );
+    expect_same( array( 'page_type' => 'home', 'path' => '/' ), inline_value( 'vialcove-visitor-observer', 'VialCoveVisitorPage' ), 'array entry id stays home' );
+
     echo "PASS: {$checks} visitor configuration assertions\n";
 }
