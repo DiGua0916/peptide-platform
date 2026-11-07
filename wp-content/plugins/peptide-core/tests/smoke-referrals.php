@@ -26,6 +26,8 @@ try {
 	$ok( 'bad owner line is rejected', is_wp_error( Referrals::save_owners( "A B|x\n" ) ) && is_wp_error( Referrals::save_owners( "a|x\na|y" ) ) && is_wp_error( Referrals::save_owners( 'a|' ) ) );
 	$ok( 'owners saved, code lowercased', true === Referrals::save_owners( "A|测试甲\nb2|测试乙\n" ) && array( 'a' => '测试甲', 'b2' => '测试乙' ) === Referrals::owners() );
 	$ok( 'only listed codes are valid', 'a' === Referrals::valid_code( 'A' ) && null === Referrals::valid_code( 'zz' ) && null === Referrals::valid_code( array( 'a' ) ) && null === Referrals::valid_code( '<a>' ) );
+	$ok( 'add owner validates code, name and duplicates', true === Referrals::add_owner( 'C3', '丙' ) && 'c3' === Referrals::valid_code( 'c3' ) && is_wp_error( Referrals::add_owner( 'c3', '重复' ) ) && is_wp_error( Referrals::add_owner( 'bad code', 'x' ) ) && is_wp_error( Referrals::add_owner( 'd4', ' ' ) ) );
+	$ok( 'rename keeps the code, remove drops it', true === Referrals::rename_owner( 'c3', '丙二' ) && '丙二' === Referrals::name( 'c3' ) && is_wp_error( Referrals::rename_owner( 'zz', 'x' ) ) && true === Referrals::remove_owner( 'c3' ) && null === Referrals::valid_code( 'c3' ) && is_wp_error( Referrals::remove_owner( 'c3' ) ) );
 	$ok( 'link carries ref', str_ends_with( Referrals::link( 'a' ), '?ref=a' ) && str_contains( Referrals::link( 'b2', home_url( '/shop/' ) ), '/shop/?ref=b2' ) );
 
 	// 页面缓存把 ref 当作广告参数。

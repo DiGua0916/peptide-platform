@@ -90,6 +90,39 @@ final class Referrals {
 		return true;
 	}
 
+	/** @return true|\WP_Error 新增一个推广人。 */
+	public static function add_owner( string $code, string $name ) {
+		$code   = strtolower( trim( $code ) );
+		$name   = mb_substr( trim( wp_strip_all_tags( $name ) ), 0, 40 );
+		$owners = self::owners();
+		if ( ! self::code_shape( $code ) ) { return new \WP_Error( 'code', '代号只能用小写英文、数字、- 或 _，以字母或数字开头，最多 20 个字符。' ); }
+		if ( isset( $owners[ $code ] ) ) { return new \WP_Error( 'dup', '代号 ' . $code . ' 已经有人用了，换一个。' ); }
+		if ( '' === $name ) { return new \WP_Error( 'name', '请填写名字。' ); }
+		$owners[ $code ] = $name;
+		update_option( self::OPTION, $owners, true );
+		return true;
+	}
+
+	/** @return true|\WP_Error 改名字；代号不变，已有归属不受影响。 */
+	public static function rename_owner( string $code, string $name ) {
+		$owners = self::owners();
+		$name   = mb_substr( trim( wp_strip_all_tags( $name ) ), 0, 40 );
+		if ( ! isset( $owners[ $code ] ) ) { return new \WP_Error( 'missing', '找不到这个推广人。' ); }
+		if ( '' === $name ) { return new \WP_Error( 'name', '请填写名字。' ); }
+		$owners[ $code ] = $name;
+		update_option( self::OPTION, $owners, true );
+		return true;
+	}
+
+	/** @return true|\WP_Error 从名单删除：不再接收新客户，已有账号和订单的归属保留。 */
+	public static function remove_owner( string $code ) {
+		$owners = self::owners();
+		if ( ! isset( $owners[ $code ] ) ) { return new \WP_Error( 'missing', '找不到这个推广人。' ); }
+		unset( $owners[ $code ] );
+		update_option( self::OPTION, $owners, true );
+		return true;
+	}
+
 	// ---------- cookie ----------
 
 	public static function sign( string $code, int $ts ): string {
