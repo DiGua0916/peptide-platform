@@ -28,6 +28,9 @@ final class Pixels_Page {
 	 */
 	private const VISIBLE = array( 'facebook' );
 
+	/** 右侧“说明”栏（2026-11-07 用户要求隐藏）。改成 true 恢复显示。 */
+	private const SHOW_NOTES = false;
+
 	/** @return string[] */
 	public static function visible_platforms(): array {
 		return (array) apply_filters( 'peptide_core_pixels_visible_platforms', self::VISIBLE );
@@ -187,7 +190,7 @@ final class Pixels_Page {
 		if ( ! Pixels::any( $s ) ) {
 			echo '<div class="notice notice-info inline"><p>' . esc_html__( 'No pixels yet, so nothing is sent. Add the IDs of the platforms you advertise on and save.', 'peptide-core' ) . '</p></div>';
 		}
-		echo '<div class="pc-px-grid"><div class="pc-px-main">';
+		echo '<div class="pc-px-grid"' . ( self::SHOW_NOTES ? '' : ' style="grid-template-columns:minmax(0,1fr)"' ) . '><div class="pc-px-main">';
 		foreach ( Pixels::platforms() as $key => $def ) {
 			self::card( $key, $def, $s['platforms'][ $key ] );
 		}
@@ -206,7 +209,7 @@ final class Pixels_Page {
 		}
 		echo '</section>';
 
-		echo '</div><aside class="pc-px-side"><div class="pc-px-card pc-px-notes"><h2>' . esc_html__( 'Notes', 'peptide-core' ) . '</h2><ol>';
+		echo '</div><aside class="pc-px-side"' . ( self::SHOW_NOTES ? '' : ' hidden' ) . '><div class="pc-px-card pc-px-notes"><h2>' . esc_html__( 'Notes', 'peptide-core' ) . '</h2><ol>';
 		echo '<li>' . esc_html__( 'A pixel is a piece of JavaScript in the page. It sends what visitors do (views, add to cart, orders) to the ad platform’s servers so the platform can count the results of your ads.', 'peptide-core' ) . '</li>';
 		echo '<li>' . esc_html__( 'With the pixel of an ad platform installed you can measure, analyse, retarget and build audiences on that platform. With an access token the server also sends the same events, which fills in what ad blockers and phone privacy settings remove; both carry the same event ID so the platform counts them once.', 'peptide-core' ) . '</li>';
 		echo '<li>' . esc_html__( 'The numbers in the ad platform and on the site can differ somewhat; this is normal.', 'peptide-core' ) . '</li>';
