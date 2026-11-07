@@ -105,11 +105,15 @@
       else { item.animation.pause(); item.animation.currentTime = 0; }
     });
   }
+  if (!effects.length) return; // No effect buttons: no scroll/resize work at all.
   const observer = 'IntersectionObserver' in window ? new IntersectionObserver(update) : null;
   effects.forEach(item=>observer?.observe(item.node));
   reduced.addEventListener('change',update);
-  window.addEventListener('resize',update,{passive:true});
-  window.addEventListener('scroll',update,{passive:true});
+  // update() measures every button; run it at most once per frame while scrolling or resizing.
+  let frame = 0;
+  const scheduleUpdate = () => { if (!frame) frame = requestAnimationFrame(() => { frame = 0; update(); }); };
+  window.addEventListener('resize',scheduleUpdate,{passive:true});
+  window.addEventListener('scroll',scheduleUpdate,{passive:true});
   document.addEventListener('visibilitychange',update);
   window.addEventListener('pagehide',()=>{suspended=true;update();observer?.disconnect();});
   window.addEventListener('pageshow',()=>{suspended=false;effects.forEach(item=>observer?.observe(item.node));update();});

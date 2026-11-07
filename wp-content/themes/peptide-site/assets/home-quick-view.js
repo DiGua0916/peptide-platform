@@ -261,6 +261,8 @@
     const close = dialog.querySelector('.vc-showcase-quick__close');
     if (close) close.setAttribute('aria-label', 'Close product');
     document.dispatchEvent(new CustomEvent('vc:product-presented', {detail: {root, dialog, productId: Number(root.dataset.vcProductId)}}));
+    // Ad pixels: ViewContent (browser + Conversions API, shared event_id) for the product shown.
+    document.dispatchEvent(new CustomEvent('pc:view-item', {detail: {productId: Number(root.dataset.vcProductId)}}));
   }
   $(document).on('found_variation.vcHomeQuick', homeProduct + ' .variations_form', function (_, variation) {
     const root = this.closest(homeProduct); if (!root || !variation) return;

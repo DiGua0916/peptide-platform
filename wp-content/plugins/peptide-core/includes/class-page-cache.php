@@ -2,6 +2,11 @@
 /**
  * Opt-in homepage cache for first-time anonymous visitors (stress test item 2).
  *
+ * Product ad landings: /product/<slug>/ redirects to /?vc_product=<id>#vc-products,
+ * which opens that product's dialog over the homepage. Such a landing (vc_product plus
+ * optional tracking tags) is cached per product, keyed by the product ID, for published
+ * products only; its copy is taken from a plain "/?vc_product=<id>" request.
+ *
  * Off unless wp-config.php defines PEPTIDE_CORE_PAGE_CACHE true. When on, a
  * cookie-less (or language-preference-only) anonymous GET/HEAD of exactly "/"
  * with no query string, or only ad-tracking parameters (utm_*, click IDs; see
@@ -30,7 +35,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Page_Cache {
 	public const GENERATION = 'pc_page_cache_generation';
-	private const VERSION = 2;
+	private const VERSION = 3;
 	public const PIXELS_SLOT = '/*pc-page-cache:pixels-config*/';
 	private const MAX_BYTES = 4194304;
 	private const SKIP_HEADERS = array( 'set-cookie', 'content-length', 'date', 'x-powered-by', 'transfer-encoding', 'x-pc-page-cache', 'age' );
@@ -84,7 +89,8 @@ final class Page_Cache {
 	 */
 	public static function eligible( array $r ): bool {
 		if ( ! in_array( $r['method'] ?? '', array( 'GET', 'HEAD' ), true ) ) { return false; }
-		if ( '' !== (string) ( $r['query'] ?? '' ) && ! self::tracking_only( (string) $r['query'] ) ) { return false; }
+		$query = (string) ( $r['query'] ?? '' );
+		if ( '' !== $query && ! self::tracking_only( $query ) && null === self::entry_product( $query ) ) { return false; }
 		if ( ( $r['path'] ?? null ) !== ( $r['home_path'] ?? '/' ) ) { return false; }
 		if ( empty( $r['front'] ) || ! empty( $r['paged'] ) || ! empty( $r['logged_in'] ) || ! empty( $r['admin'] ) || ! empty( $r['preview'] ) || ! empty( $r['donotcache'] ) ) { return false; }
 		$allowed = array( Storefront_Language::PREFERENCE_COOKIE );
@@ -111,6 +117,32 @@ final class Page_Cache {
 		return true;
 	}
 
+	/**
+	 * Product ad landing: exactly one vc_product=<positive id> and otherwise only tracking
+	 * tags. Returns the product ID, or null for any other query (including none).
+	 */
+	public static function entry_product( string $query ): ?int {
+		if ( '' === $query || strlen( $query ) > 2048 ) { return null; }
+		$id = null; $rest = array();
+		foreach ( explode( '&', $query ) as $pair ) {
+			if ( '' === $pair ) { continue; }
+			$parts = explode( '=', $pair, 2 );
+			if ( 'vc_product' === strtolower( urldecode( $parts[0] ) ) ) {
+				if ( null !== $id || ! preg_match( '/\A[1-9][0-9]{0,9}\z/D', (string) ( $parts[1] ?? '' ) ) || (int) $parts[1] > 2147483647 ) { return null; }
+				$id = (int) $parts[1];
+				continue;
+			}
+			$rest[] = $pair;
+		}
+		if ( null === $id ) { return null; }
+		return ( ! $rest || self::tracking_only( implode( '&', $rest ) ) ) ? $id : null;
+	}
+
+	/** Only published products get their own copy, so random IDs cannot fill the cache. */
+	private static function entry_allowed( int $id ): bool {
+		return function_exists( 'get_post_type' ) && 'product' === get_post_type( $id ) && 'publish' === get_post_status( $id );
+	}
+
 	/** Visitor variant that may change the rendered HTML. */
 	public static function variant(): array {
 		$language = Storefront_Translation::selected();
@@ -128,6 +160,7 @@ final class Page_Cache {
 			'declined' => class_exists( Tracking\Tracker::class ) && Tracking\Tracker::declined(),
 			'pixels' => class_exists( Pixels::class ) && Pixels::allowed(),
 			'generation' => (string) get_option( self::GENERATION, '0' ),
+			'entry' => (int) self::entry_product( (string) ( $_SERVER['QUERY_STRING'] ?? '' ) ),
 		);
 	}
 
@@ -158,6 +191,11 @@ final class Page_Cache {
 			if ( ! headers_sent() && $request['front'] ) { header( 'X-PC-Page-Cache: BYPASS' ); }
 			return;
 		}
+		$entry_id = self::entry_product( $request['query'] );
+		if ( null !== $entry_id && ! self::entry_allowed( $entry_id ) ) {
+			if ( ! headers_sent() ) { header( 'X-PC-Page-Cache: BYPASS' ); }
+			return;
+		}
 		self::$key = self::key( self::variant() );
 		$entry = self::read( self::$key );
 		if ( null !== $entry && $entry['pixels'] ) {
@@ -176,8 +214,9 @@ final class Page_Cache {
 			exit;
 		}
 		if ( headers_sent() ) { return; }
-		// Ad landings may be served a stored copy, but a copy is only ever taken from a plain "/".
-		if ( '' !== $request['query'] ) { header( 'X-PC-Page-Cache: BYPASS' ); return; }
+		// Ad landings may be served a stored copy, but a copy is only ever taken from a plain "/"
+		// or a plain "/?vc_product=<id>" (no tracking tags).
+		if ( '' !== $request['query'] && $request['query'] !== 'vc_product=' . $entry_id ) { header( 'X-PC-Page-Cache: BYPASS' ); return; }
 		header( 'X-PC-Page-Cache: MISS' );
 		self::$capturing = true;
 		ob_start( array( self::class, 'capture' ) );

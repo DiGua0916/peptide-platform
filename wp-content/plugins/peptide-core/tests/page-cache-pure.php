@@ -22,6 +22,7 @@ namespace {
 	function wp_mkdir_p( $d ) { return is_dir( $d ) || mkdir( $d, 0777, true ); }
 	function wp_script_is( $h, $s ) { return 'peptide-core-pixels' === $h && $GLOBALS['pixels']; }
 	function WC() { return (object) array( 'customer' => null ); }
+	function get_post_type( $id ) { return in_array( (int) $id, array( 11006, 12 ), true ) ? 'product' : 'page'; } function get_post_status( $id ) { return 'publish'; }
 	function check( string $label, bool $ok ): void { global $checks; if ( ! $ok ) { fwrite( STDERR, "FAIL: $label\n" ); exit( 1 ); } $checks = ( $checks ?? 0 ) + 1; }
 }
 namespace PeptideCore {
@@ -65,6 +66,20 @@ namespace {
 	check( 'language preference cookie alone eligible', Cache::eligible( array( 'cookies' => array( 'pc_storefront_language' ) ) + $base ) );
 	foreach ( array( 'utm_source=facebook&utm_campaign=Spring%20Sale', 'gclid=abc', 'fbclid=IwAR0x', 'ttclid=E.C', 'msclkid=1', 'gbraid=x&gad_source=1', 'UTM_Medium=cpc' ) as $q ) { check( "ad tracking query eligible: $q", Cache::eligible( array( 'query' => $q ) + $base ) ); }
 	foreach ( array( 'pc_coupon=SAVE', 'utm_source=x&p=1', 'add-to-cart=12', 's=bpc', 'utm_=x', str_repeat( 'utm_source=x&', 300 ) ) as $q ) { check( 'other query bypasses: ' . substr( $q, 0, 30 ), ! Cache::eligible( array( 'query' => $q ) + $base ) ); }
+	// Product ad landings: /product/x/ redirects to /?vc_product=<id>#vc-products.
+	foreach ( array( 'vc_product=11006' => 11006, 'vc_product=7&fbclid=IwAR0x&utm_source=facebook' => 7, 'fbclid=a&vc_product=42' => 42 ) as $q => $id ) {
+		check( "product landing parsed: $q", $id === Cache::entry_product( $q ) );
+		check( "product landing eligible: $q", Cache::eligible( array( 'query' => $q ) + $base ) );
+	}
+	foreach ( array( 'vc_product=0', 'vc_product=abc', 'vc_product=1&vc_product=2', 'vc_product=5&pc_coupon=X', 'vc_product=99999999999', 'vc_product=', 'vc_catalog_q=bpc', 'fbclid=x' ) as $q ) {
+		check( "not a product landing: $q", null === Cache::entry_product( $q ) );
+	}
+	check( 'product landing with coupon bypasses', ! Cache::eligible( array( 'query' => 'vc_product=5&pc_coupon=X' ) + $base ) );
+	$_SERVER['QUERY_STRING'] = 'vc_product=11006'; $k_entry = Cache::key( Cache::variant() );
+	$_SERVER['QUERY_STRING'] = 'vc_product=11006&fbclid=IwAR'; $k_entry_ad = Cache::key( Cache::variant() );
+	$_SERVER['QUERY_STRING'] = 'vc_product=12'; $k_other = Cache::key( Cache::variant() );
+	$_SERVER['QUERY_STRING'] = ''; $k_home = Cache::key( Cache::variant() );
+	check( 'each landing product has its own copy; tracking tags share it', $k_entry === $k_entry_ad && $k_entry !== $k_other && $k_entry !== $k_home );
 	foreach ( array(
 		'POST' => array( 'method' => 'POST' ), 'non-tracking query (pc_lang)' => array( 'query' => 'pc_lang=es' ), 'coupon query' => array( 'query' => 'utm_source=fb&pc_coupon=SAVE' ), 'other path' => array( 'path' => '/shop/' ),
 		'not front page' => array( 'front' => false ), 'paged' => array( 'paged' => true ), 'logged in' => array( 'logged_in' => true ), 'preview' => array( 'preview' => true ),
@@ -195,6 +210,23 @@ namespace {
 	array_map( 'unlink', array_filter( glob( $dir . '/cache/peptide-core-pages/*.php' ) ?: array(), fn( $f ) => ! str_ends_with( $f, 'index.php' ) ) );
 	$_SERVER['QUERY_STRING'] = 'utm_source=x'; Cache::reset_for_tests( array(), array( $ok_headers, 200 ) ); $level = ob_get_level(); Cache::serve_or_capture();
 	check( 'ad landing never captured', ob_get_level() === $level ); $_SERVER['QUERY_STRING'] = '';
+
+	// Product landing: a plain /?vc_product=11006 is captured; an ad click for the same product is served it.
+	$entry_page = str_replace( '</body>', '<script>var vcStorefrontEntry = {"productId":11006};</script></body>', $page );
+	$_SERVER['QUERY_STRING'] = 'vc_product=11006'; $_SERVER['REQUEST_URI'] = '/?vc_product=11006';
+	Cache::reset_for_tests( array(), array( $ok_headers, 200 ) ); $level = ob_get_level(); Cache::serve_or_capture();
+	check( 'plain product landing opens a capture', ob_get_level() === $level + 1 );
+	echo $entry_page; $returned = ob_get_clean(); Cache::capture( $returned, PHP_OUTPUT_HANDLER_FINAL );
+	[ $out ] = $run( array( 'QS' => 'vc_product=11006&fbclid=IwAR0x&utm_source=facebook' ) );
+	check( 'product ad click is served that product\'s copy', $entry_page === $out );
+	[ $out ] = $run( array( 'QS' => 'vc_product=12&fbclid=IwAR0x' ) );
+	check( 'another product never gets this copy', "NO-HIT\n" === $out );
+	[ $out ] = $run( array( 'QS' => 'vc_product=555' ) );
+	check( 'unpublished/non-product id bypasses', "NO-HIT\n" === $out );
+	array_map( 'unlink', array_filter( glob( $dir . '/cache/peptide-core-pages/*.php' ) ?: array(), fn( $f ) => ! str_ends_with( $f, 'index.php' ) ) );
+	$_SERVER['QUERY_STRING'] = 'vc_product=11006&fbclid=x'; Cache::reset_for_tests( array(), array( $ok_headers, 200 ) ); $level = ob_get_level(); Cache::serve_or_capture();
+	check( 'product landing with tracking tags never captured', ob_get_level() === $level );
+	$_SERVER['QUERY_STRING'] = ''; $_SERVER['REQUEST_URI'] = '/';
 
 	// A returning visitor (browser sent pc_vid) never opens a capture.
 	Cache::reset_for_tests( array( 'pc_vid' ), array( $ok_headers, 200 ) ); $level = ob_get_level(); Cache::serve_or_capture();

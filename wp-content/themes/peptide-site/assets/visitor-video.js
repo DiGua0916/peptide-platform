@@ -9,7 +9,12 @@
     const view = doc?.defaultView;
     if (!root?.querySelectorAll || !view?.HTMLVideoElement || typeof emit !== 'function') return {stop() {}};
     const active = new Map(), known = new WeakMap(), pageOrder = new WeakMap();
-    let nextOrdinal = 0, stopped = false, suspended = false;
+    let nextOrdinal = 0, stopped = false, suspended = false, timer = 0;
+    // The 1 s progress clock only runs while at least one video is observed (pages without video do no work).
+    function syncTimer() {
+      if (!timer && active.size && !stopped) timer = view.setInterval(tick, 1000);
+      else if (timer && (!active.size || stopped)) { view.clearInterval(timer); timer = 0; }
+    }
     doc.querySelectorAll('video').forEach(video => pageOrder.set(video, ++nextOrdinal));
     const now = () => view.performance.now();
     const inRoot = video => video.isConnected && (root === video || root.contains(video));
@@ -43,7 +48,7 @@
         known.set(video, record);
       }
       record.playing = false; record.started = false; record.waiting = false; record.seeking = video.seeking;
-      active.set(video, record);
+      active.set(video, record); syncTimer();
       const on = (type, handler) => { video.addEventListener(type, handler); record.listeners.push([type, handler]); };
       const markGesture = event => {
         if (!event.isTrusted || (event.type === 'keydown' && ![' ', 'Enter', 'k', 'K'].includes(event.key))) return;
@@ -94,7 +99,7 @@
     function detach(record) {
       accrue(record, now()); record.baseline = null;
       record.listeners.forEach(([type, handler]) => record.video.removeEventListener(type, handler));
-      record.listeners = []; active.delete(record.video);
+      record.listeners = []; active.delete(record.video); syncTimer();
     }
     function scan(node) { if (node instanceof view.HTMLVideoElement) attach(node); node.querySelectorAll?.('video').forEach(attach); }
     function refreshClocks() { const time = now(); active.forEach(record => { accrue(record, time); resetClock(record, time); }); }
@@ -118,17 +123,17 @@
       changes.forEach(change => change.addedNodes.forEach(scan));
     });
     observer.observe(root, {childList: true, subtree: true}); scan(root);
-    const timer = view.setInterval(() => {
+    function tick() {
       const time = now();
       active.forEach(record => {
         accrue(record, time); resetClock(record, time);
         if (record.baseline === null || time - record.lastProgressAt < PROGRESS_INTERVAL || record.watched <= record.lastProgressWatched) return;
         record.lastProgressAt = time; record.lastProgressWatched = record.watched; publish('video_progress', record);
       });
-    }, 1000);
+    }
     return {flush, stop() {
       if (stopped) return;
-      stopped = true; observer.disconnect(); view.clearInterval(timer);
+      stopped = true; observer.disconnect(); if (timer) { view.clearInterval(timer); timer = 0; }
       doc.removeEventListener('visibilitychange', refreshClocks); view.removeEventListener('pagehide', hidePage); view.removeEventListener('pageshow', showPage);
       active.forEach(detach);
     }};

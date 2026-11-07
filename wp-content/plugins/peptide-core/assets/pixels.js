@@ -954,6 +954,22 @@
 
 	w.PeptidePixels = { track: fire, adapters: A };
 
+	// 商品弹窗打开（主题派发 pc:view-item）：服务端生成 view_item 并回传 Conversions API，
+	// 浏览器用同一个 event_id 发像素。每个商品每次页面浏览只发一次。
+	var viewed = {};
+	d.addEventListener( 'pc:view-item', function ( ev ) {
+		var id = parseInt( ev && ev.detail && ev.detail.productId, 10 );
+		if ( ! cfg.viewItem || ! w.fetch || ! ( id > 0 ) || viewed[ id ] ) {
+			return;
+		}
+		viewed[ id ] = true;
+		w.fetch( cfg.viewItem, { method: 'POST', credentials: 'same-origin', headers: cfg.restNonce ? { 'Content-Type': 'application/json', 'X-WP-Nonce': cfg.restNonce } : { 'Content-Type': 'application/json' }, body: JSON.stringify( { product: id } ) } ).then( function ( r ) {
+			return r.ok ? r.json() : null;
+		} ).then( function ( j ) {
+			( j && j.events || [] ).forEach( fire );
+		}, function () {} );
+	} );
+
 	if ( 'interaction' === cfg.timing ) {
 		var go = function () {
 			[ 'pointerdown', 'keydown', 'scroll', 'touchstart' ].forEach( function ( ev ) {

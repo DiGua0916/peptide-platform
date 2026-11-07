@@ -104,6 +104,7 @@ final class Plugin {
 		Api\Store_Api::register_hooks();
 		Cart_Write_Lock::register_hooks();
 		Page_Cache::register_hooks();
+		Static_Cdn::register_hooks();
 
 		if ( is_admin() ) {
 			Admin\Reviews_Page::register_hooks();

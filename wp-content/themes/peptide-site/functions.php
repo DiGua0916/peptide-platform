@@ -22,6 +22,8 @@ require_once __DIR__ . '/inc/live-commerce-navigation.php';
 require_once __DIR__ . '/inc/product-report-viewer.php';
 require_once __DIR__ . '/inc/storefront-utilities.php';
 require_once __DIR__ . '/inc/campaign-bubble.php';
+require_once __DIR__ . '/inc/lazy-dialog.php';
+require_once __DIR__ . '/inc/offscreen-styles.php';
 
 add_action( 'after_setup_theme', function () {
     add_theme_support( 'title-tag' );
@@ -215,6 +217,17 @@ function vc_card_price_html( $product ): string {
     return vc_public_price_html( vc_card_display_product( $product ) );
 }
 
+/**
+ * wp_kses_post() drops srcset/sizes/decoding/fetchpriority from <img> (WordPress adds them to
+ * post content later), which made every catalogue card download one fixed 600 px image.
+ * Same filtering for an attachment <img>, keeping the responsive attributes (2026-11-07).
+ */
+function vc_kses_image( string $html ): string {
+    $allowed = wp_kses_allowed_html( 'post' );
+    $allowed['img'] = array_merge( (array) ( $allowed['img'] ?? array() ), array( 'srcset' => true, 'sizes' => true, 'decoding' => true, 'fetchpriority' => true, 'loading' => true, 'class' => true, 'alt' => true, 'width' => true, 'height' => true, 'src' => true ) );
+    return wp_kses( $html, $allowed );
+}
+
 function vc_product_card( $product, bool $report_preview = true, ?array $card_image = null, string $card_sizes = '100vw', bool $compact = false, bool $quick_add = false ): void {
     $display_product = vc_card_display_product( $product );
     $is_variation = $display_product->is_type( 'variation' );
@@ -240,7 +253,7 @@ function vc_product_card( $product, bool $report_preview = true, ?array $card_im
     ?>
     <article class="product-card<?php echo $sale_percent ? ' product-card--offer' : ''; ?>"<?php if ( $observation_valid ) { echo ' data-vc-observe-product="' . esc_attr( (string) $observation_product ) . '" data-vc-observe-variation="' . esc_attr( (string) $observation_variation ) . '"'; } ?>>
         <a class="product-visual<?php echo $report_preview ? ' product-visual--report' : ''; ?><?php echo '' !== $card_image_html || $display_image_id ? ' product-visual--photo' : ''; ?>" href="<?php echo esc_url( $card_url ); ?>"<?php echo $dialog_attributes; /* Already escaped by vc_live_product_link_attributes. */ ?> aria-label="<?php echo esc_attr( 'View ' . $product->get_name() ); ?>">
-            <?php if ( '' !== $card_image_html ) { echo $card_image_html; /* Escaped by vc_module_card_image. */ } elseif ( $display_image_id ) { echo wp_kses_post( $display_product->get_image( 'woocommerce_single', $compact ? array( 'loading' => 'lazy', 'decoding' => 'async', 'fetchpriority' => 'auto', 'sizes' => $card_sizes ) : array() ) ); } else { vc_vial( $display_product->get_name(), $display_product->get_sku() ); } ?>
+            <?php if ( '' !== $card_image_html ) { echo $card_image_html; /* Escaped by vc_module_card_image. */ } elseif ( $display_image_id ) { echo vc_kses_image( $display_product->get_image( 'woocommerce_single', $compact ? array( 'loading' => 'lazy', 'decoding' => 'async', 'fetchpriority' => 'auto', 'sizes' => $card_sizes ) : array() ) ); } else { vc_vial( $display_product->get_name(), $display_product->get_sku() ); } ?>
             <?php if ( $report_preview ) { get_template_part( 'template-parts/product-hover', null, array( 'name' => $product->get_name(), 'hover' => $hover ) ); } ?>
             <?php if ( $sale_percent ) : ?><span class="vc-sale-ribbon" aria-hidden="true"><span><?php echo esc_html( (string) $sale_percent ); ?>% OFF</span></span><?php endif; ?>
             <?php if ( ! empty( $extra['is_demo'] ) ) : ?><span class="demo-badge">Demo product</span><?php endif; ?>

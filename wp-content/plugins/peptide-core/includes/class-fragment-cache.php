@@ -26,7 +26,7 @@ namespace PeptideCore;
 defined( 'ABSPATH' ) || exit;
 
 final class Fragment_Cache {
-	private const VERSION = 1;
+	private const VERSION = 2; // 2026-11-07: catalogue cards render hidden pages + responsive images.
 	private const MAX_BYTES = 2097152;
 
 	/** @var array<int, array{0:string,1:string}> name => outcome, for diagnostics and tests. */

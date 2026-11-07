@@ -44,6 +44,7 @@ final class Pixels {
 		add_action( 'wp_login', array( self::class, 'on_login' ), 20, 2 );
 		add_action( 'wc_ajax_pc_px_queue', array( self::class, 'ajax_queue' ) );
 		add_action( 'woocommerce_order_status_changed', array( self::class, 'on_order_status' ), 20, 4 );
+		add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
 		Pixels\Server::register_hooks();
 	}
 
@@ -657,6 +658,59 @@ final class Pixels {
 		}
 	}
 
+	// ---------- 商品弹窗的“查看商品”（ViewContent） ----------
+
+	/**
+	 * 商品详情页会跳到首页并打开商品弹窗（/?vc_product=ID），所以 page_events() 的 view_item
+	 * 在这条路径上不会出现。弹窗打开时浏览器 POST 这个地址：服务端用同一个 event_id 回传
+	 * Conversions API，并把事件交给浏览器像素，两边按 event_id 去重。
+	 */
+	public static function register_routes(): void {
+		register_rest_route( 'peptide/v1', '/pixel-view', array(
+			'methods'             => 'POST',
+			'permission_callback' => '__return_true',
+			'args'                => array( 'product' => array( 'type' => 'integer', 'required' => true, 'minimum' => 1 ) ),
+			'callback'            => array( self::class, 'rest_view_item' ),
+		) );
+	}
+
+	/** 只给公开、已发布、不需要密码的商品生成 view_item。 */
+	public static function view_item_event( $product, string $url = '' ): ?array {
+		if ( ! $product instanceof \WC_Product || 'publish' !== $product->get_status() || '' !== (string) $product->get_post_password() || ! $product->is_visible() ) {
+			return null;
+		}
+		$item = self::item( $product );
+		if ( $product->is_type( 'variable' ) ) {
+			$item['price'] = round( (float) $product->get_variation_price( 'min' ), 2 );
+		}
+		$event = self::make( 'view_item', array( $item ) );
+		if ( '' !== $url ) {
+			$event['url'] = $url;
+		}
+		return $event;
+	}
+
+	/** 来源页面：只接受本站地址，否则用首页。 */
+	private static function referring_url(): string {
+		$ref  = isset( $_SERVER['HTTP_REFERER'] ) ? esc_url_raw( (string) wp_unslash( $_SERVER['HTTP_REFERER'] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$home = (string) wp_parse_url( home_url(), PHP_URL_HOST );
+		return '' !== $ref && strtolower( (string) wp_parse_url( $ref, PHP_URL_HOST ) ) === strtolower( $home ) ? substr( $ref, 0, 2000 ) : home_url( '/' );
+	}
+
+	public static function rest_view_item( \WP_REST_Request $request ): \WP_REST_Response {
+		$events = array();
+		if ( self::allowed() ) {
+			$event = self::view_item_event( wc_get_product( (int) $request['product'] ), self::referring_url() );
+			if ( $event ) {
+				Pixels\Server::send( array( $event ), self::user_data() );
+				$events[] = $event;
+			}
+		}
+		$response = new \WP_REST_Response( array( 'events' => $events ) );
+		$response->header( 'Cache-Control', 'private, no-store, max-age=0' );
+		return $response;
+	}
+
 	/** wc-ajax=pc_px_queue：经典的 AJAX 加购之后，浏览器来取队列。 */
 	public static function ajax_queue(): void {
 		wp_send_json_success( array( 'events' => self::allowed() ? self::pop_queue() : array() ) );
@@ -721,6 +775,9 @@ final class Pixels {
 			'timing'    => $s['timing'],
 			'gpc'       => (bool) $s['gpc'],
 			'queue'     => \WC_AJAX::get_endpoint( 'pc_px_queue' ),
+			'viewItem'  => rest_url( 'peptide/v1/pixel-view' ),
+			// Logged-in browsers authenticate the REST call so staff stay excluded; cached pages are anonymous.
+			'restNonce' => is_user_logged_in() ? wp_create_nonce( 'wp_rest' ) : '',
 		);
 	}
 

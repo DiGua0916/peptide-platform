@@ -132,6 +132,28 @@ $bad = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . Server::table() . ' WH
 $ok( 'a refused send is logged with the HTTP code and message', $bad && 400 === (int) $bad['code'] && str_contains( $bad['message'], 'Invalid OAuth' ) );
 $reply = array( 'response' => array( 'code' => 200, 'message' => 'OK' ), 'body' => '{"code":0}', 'headers' => array(), 'cookies' => array() );
 
+// 4b. 商品弹窗的 ViewContent：/product/ 会跳到首页弹窗，弹窗打开时 POST /peptide/v1/pixel-view。
+$requests = array();
+$_SERVER['HTTP_REFERER'] = home_url( '/?vc_product=' . $simple . '&fbclid=IwAR' );
+$req = new WP_REST_Request( 'POST', '/peptide/v1/pixel-view' );
+$req->set_param( 'product', $simple );
+$res  = Pixels::rest_view_item( $req );
+$vi   = $res->get_data()['events'][0] ?? array();
+$fbvi = array_values( array_filter( $requests, static fn( $r ) => str_contains( $r['url'], 'graph.facebook.com' ) ) )[0]['body']['data'][0] ?? array();
+$ok( 'dialog view: one view_item for the product, returned to the browser', 1 === count( $res->get_data()['events'] ) && 'view_item' === ( $vi['name'] ?? '' ) && 'SPU-PX1' === $vi['items'][0]['spu'] && 25.0 === $vi['value'] && str_contains( (string) $res->get_headers()['Cache-Control'], 'no-store' ) );
+$ok( 'dialog view: Conversions API ViewContent with the same event ID and the landing URL', 'ViewContent' === ( $fbvi['event_name'] ?? '' ) && $vi['id'] === ( $fbvi['event_id'] ?? '' ) && str_contains( (string) ( $fbvi['event_source_url'] ?? '' ), 'vc_product=' . $simple ) );
+$_SERVER['HTTP_REFERER'] = 'https://evil.example/landing';
+$ok( 'dialog view: a foreign referrer is replaced by the home URL', home_url( '/' ) === ( Pixels::rest_view_item( $req )->get_data()['events'][0]['url'] ?? '' ) );
+unset( $_SERVER['HTTP_REFERER'] );
+$draft = new WC_Product_Simple(); $draft->set_name( 'PC px Draft' ); $draft->set_regular_price( '9' ); $draft->set_status( 'draft' ); $made[] = $draft->save();
+$req2 = new WP_REST_Request( 'POST', '/peptide/v1/pixel-view' ); $req2->set_param( 'product', $draft->get_id() );
+$requests = array();
+$ok( 'dialog view: unpublished products send nothing', array() === Pixels::rest_view_item( $req2 )->get_data()['events'] && ! $requests );
+$_COOKIE[ Pixels::OPTOUT ] = '1';
+$ok( 'dialog view: an opted-out browser sends nothing', array() === Pixels::rest_view_item( $req )->get_data()['events'] );
+unset( $_COOKIE[ Pixels::OPTOUT ] );
+$ok( 'browser config carries the dialog view endpoint', str_ends_with( (string) Pixels::browser_config( Pixels::settings(), array() )['viewItem'], 'peptide/v1/pixel-view' ) );
+
 // 5. 订单：付款时服务端回传一次，带下单时记下的顾客信息。
 $order = wc_create_order();
 $order->add_product( wc_get_product( $simple ), 2 );

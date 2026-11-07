@@ -13,6 +13,9 @@ foreach ( $products as $p ) {
     $rows[] = array( $p, $ids, $search );
 }
 $uid = 'vc-catalog-' . $m['id'];
+// Cards after the first page start hidden, exactly as demo-catalog.js renders them, so phones
+// neither lay them out nor start their images before the script runs (2026-11-07).
+$page_size = max( 1, (int) $s['demoPageSize'] ); $index = 0;
 ?>
 <div class="vc-demo-catalog vc-demo-wrap<?php echo 'product_first' === ( $s['catalogLayout'] ?? '' ) ? ' vc-demo-catalog--product-first' : ''; ?>" data-vc-catalog data-page-size="<?php echo (int) $s['demoPageSize']; ?>">
  <header class="vc-demo-catalog__heading"><div><?php if ( $s['eyebrow'] ) : ?><p class="vc-demo-kicker"><?php echo esc_html( $s['eyebrow'] ); ?></p><?php endif; ?><h2><?php echo esc_html( $s['title'] ); ?></h2><?php if ( $s['description'] ) : ?><p><?php echo esc_html( $s['description'] ); ?></p><?php endif; ?></div><?php echo vc_module_button( $s['link'], 'vc-demo-catalog__all' ); ?></header>
@@ -23,7 +26,7 @@ $uid = 'vc-catalog-' . $m['id'];
  <p class="vc-demo-catalog__status" role="status" data-vc-catalog-status hidden></p>
  <div class="vc-demo-catalog__grid" style="<?php echo esc_attr( '--vc-demo-cols:' . (int) $s['columns']['desktop'] . ';--vc-demo-cols-mobile:' . (int) ( $s['columns']['mobile'] ?? 2 ) ); ?>">
  <?php foreach ( $rows as [ $p, $ids, $search ] ) : ?>
-  <div class="vc-demo-catalog__item" data-vc-catalog-item data-categories="<?php echo esc_attr( implode( ',', $ids ) ); ?>" data-search="<?php echo esc_attr( $search ); ?>">
+  <div class="vc-demo-catalog__item" data-vc-catalog-item<?php echo $index++ >= $page_size ? ' hidden' : ''; ?> data-categories="<?php echo esc_attr( implode( ',', $ids ) ); ?>" data-search="<?php echo esc_attr( $search ); ?>">
    <?php
    ob_start(); vc_product_card( $p, false, null, '(max-width:767px) 46vw, 24vw', true, (bool) ( $s['catalogQuickAdd'] ?? true ) ); $card = ob_get_clean();
    $tags = new WP_HTML_Tag_Processor( $card );
