@@ -171,3 +171,7 @@
 .pc-rt-dim-head h2 { white-space: nowrap; }
 .pc-rt-dim-head select { order: 1; }
 .pc-rt-dim-head .pc-rt-dim-details { order: 2; margin-left: auto; }
+/* 后台主题给标题设了 text-wrap（会覆盖 white-space），这里明确不换行；时间窗下拉和间距收窄一点，给最长的标题“最近售出的商品件数”留出位置。 */
+#wpbody-content .pc-rt-dim-head { gap: 6px; }
+#wpbody-content .pc-rt-dim-head h2 { text-wrap: nowrap; white-space: nowrap; }
+#wpbody-content .pc-rt-dim-head select { flex: none; padding: 0 20px 0 8px; background-position: right 4px center; }

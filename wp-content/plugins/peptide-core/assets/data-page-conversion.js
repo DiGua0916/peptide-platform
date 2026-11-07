@@ -25,7 +25,7 @@
 	function rate( key ) { return /_rate$/.test( key ); }
 	function filterToolbar( esc ) {
 		function select( key, states ) { return '<select class="pc-report-' + key + '-state">' + states.map( function ( state ) { return '<option value="' + state + '">' + esc( T[ { all: 'filterAll', unobserved: 'filterUnobserved', unknown: 'filterUnknown', unavailable: 'filterUnavailable', value: 'filterValue' }[ state ] ] ) + '</option>'; } ).join( '' ) + '</select>'; }
-		return '<div class="pc-report-filters"><label>' + esc( T.filterDomain ) + select( 'domain', [ 'all', 'unobserved', 'value' ] ) + '<input type="text" class="pc-report-domain" maxlength="253" aria-label="' + esc( T.filterDomain ) + '"></label><label>' + esc( T.filterCountry ) + select( 'country', [ 'all', 'unobserved', 'unknown', 'unavailable', 'value' ] ) + '<input type="text" class="pc-report-country" maxlength="2" aria-label="' + esc( T.filterCountry ) + '"></label><button type="button" class="button pc-report-filter-apply">' + esc( T.filterApply ) + '</button><p class="pc-data-muted">' + esc( T.filterHelp ) + '</p><p class="pc-report-coverage" role="status"></p></div>';
+		return '<div class="pc-report-filters"><label>' + esc( T.filterDomain ) + select( 'domain', [ 'all', 'unobserved', 'value' ] ) + '<input type="text" class="pc-report-domain" maxlength="253" aria-label="' + esc( T.filterDomain ) + '"></label><label>' + esc( T.filterCountry ) + select( 'country', [ 'all', 'unobserved', 'unknown', 'unavailable', 'value' ] ) + '<input type="text" class="pc-report-country" maxlength="2" aria-label="' + esc( T.filterCountry ) + '"></label><button type="button" class="button pc-report-filter-apply">' + esc( T.filterApply ) + '</button><p class="pc-data-muted pc-report-filter-help">' + esc( T.filterHelp ) + '</p><p class="pc-report-coverage" role="status"></p></div>';
 	}
 	function url( value ) {
 		if ( typeof value !== 'string' || ! /^https?:\/\//i.test( value ) || /[\x00-\x20<>"']/.test( value ) ) { return ''; }
@@ -65,17 +65,27 @@
 		function invalidate() { ++generation; window.clearTimeout( searchTimer ); window.clearTimeout( restoreTimer ); data = null; closeChooser(); foot.innerHTML = ''; controls(); }
 		function value( n, key ) { if ( n === null ) { return '-'; } return rate( key ) ? Number( n ).toLocaleString( undefined, { maximumFractionDigits: 2 } ) + '%' : ctx.number( n ); }
 		function delta( n, key ) { if ( n === null ) { return '-'; } if ( ! rate( key ) ) { return ctx.change( n ); } return ( n > 0 ? '+' : '' ) + Number( n === 0 ? 0 : n ).toLocaleString( undefined, { maximumFractionDigits: 2 } ) + ' ' + T.points; }
-		function metric( row, key ) { return '<td><div><span>' + esc( T.current ) + '</span> ' + esc( value( row.current[ key ], key ) ) + '</div><div class="pc-data-muted"><span>' + esc( T.previous ) + '</span> ' + esc( value( row.previous[ key ], key ) ) + '</div><div class="pc-data-muted"><span>' + esc( T.change ) + '</span> ' + esc( delta( row.change[ key ], key ) ) + '</div></td>'; }
+		// 每个指标三行（对照参考后台）：本期（加粗）、对比期（灰色）、变化（涨绿跌红带箭头）；“本期 / 对比期 / 变化”的字样留给读屏。
+		function metric( row, key ) {
+			var c = row.change[ key ], dir = c !== null && Number( c ) > 0 ? ' is-up' : ( c !== null && Number( c ) < 0 ? ' is-down' : '' );
+			return '<td class="pc-pc-cell"><div class="pc-pc-cur"><span class="screen-reader-text">' + esc( T.current ) + ' </span>' + esc( value( row.current[ key ], key ) ) + '</div>' +
+				'<div class="pc-pc-prev"><span class="screen-reader-text">' + esc( T.previous ) + ' </span>' + esc( value( row.previous[ key ], key ) ) + '</div>' +
+				'<div class="pc-pc-chg' + dir + '"><span class="screen-reader-text">' + esc( T.change ) + ' </span>' + esc( delta( c, key ) ) + '</div></td>';
+		}
 		function draw() {
 			if ( ! attached() || ! data || busy ) { return; }
 			var selected = state.columns;
 			if ( ! data.rows.length ) { results.innerHTML = '<p class="pc-data-empty">' + esc( T.empty ) + '</p>'; }
 			else {
-				var head = '<th scope="col">' + esc( T.identity ) + '</th>';
+				var head = '<th scope="col" class="pc-pc-action-th">' + esc( T.actions || '' ) + '</th><th scope="col">' + esc( T.identity ) + '</th>';
 				selected.forEach( function ( key ) { head += '<th scope="col" aria-sort="' + ( state.sort === key ? ( state.order === 'asc' ? 'ascending' : 'descending' ) : 'none' ) + '"><button type="button" data-pc-sort="' + key + '">' + esc( T.metrics[ key ] ) + '</button></th>'; } );
 				var html = data.rows.map( function ( row ) {
-					var link = url( row.url ), title = row.can_drill ? '<button type="button" data-pc-drill="' + esc( row.kind ) + '" data-pc-key="' + esc( row.key ) + '">' + esc( row.label ) + ' · ' + esc( T.drill ) + '</button>' : ( link ? '<a href="' + esc( link ) + '" target="_blank" rel="noopener noreferrer">' + esc( row.label ) + '</a>' : esc( row.label ) );
-					return '<tr><th scope="row">' + title + ( row.path && row.path !== row.label ? '<div class="pc-data-muted">' + esc( row.path ) + '</div>' : '' ) + '</th>' + selected.map( function ( key ) { return metric( row, key ); } ).join( '' ) + '</tr>';
+					// 第一列“操作”（对照参考后台）：能下钻的页面类型是“展开到具体页面”图标，具体页面是眼睛图标（新标签页打开）。
+					var link = url( row.url );
+					var action = row.can_drill ?
+						'<button type="button" class="pc-pc-act" data-pc-drill="' + esc( row.kind ) + '" data-pc-key="' + esc( row.key ) + '" title="' + esc( T.drill ) + '" aria-label="' + esc( row.label + ' · ' + T.drill ) + '"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5 6h6M5 9h6M5 12h3"/></svg></button>' :
+						( link ? '<a class="pc-pc-act" href="' + esc( link ) + '" target="_blank" rel="noopener noreferrer" aria-label="' + esc( row.label ) + '"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></a>' : '' );
+					return '<tr><td class="pc-pc-action">' + action + '</td><th scope="row"><div class="pc-pc-name">' + esc( row.label ) + '</div>' + ( row.path && row.path !== row.label ? '<div class="pc-pc-path">' + esc( row.path ) + '</div>' : '' ) + '</th>' + selected.map( function ( key ) { return metric( row, key ); } ).join( '' ) + '</tr>';
 				} ).join( '' );
 				results.innerHTML = '<div class="pc-pc-scroll" tabindex="0" role="region" aria-label="' + esc( T.identity ) + '"><table class="widefat pc-pc-table"><thead><tr>' + head + '</tr></thead><tbody>' + html + '</tbody></table></div>';
 			}

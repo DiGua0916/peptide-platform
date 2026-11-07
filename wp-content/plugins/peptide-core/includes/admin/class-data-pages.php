@@ -729,6 +729,7 @@ final class Data_Pages {
 			'endDate'     => __( 'End date', 'peptide-core' ),
 			'apply'       => __( 'Apply', 'peptide-core' ),
 			'exportShort' => __( 'Export', 'peptide-core' ),
+			'moreFilters' => __( 'More filters', 'peptide-core' ),
 			'experimentsIntro' => __( 'An overall analysis of the landing-page A/B tests in this store, to evaluate results and improve them.', 'peptide-core' ),
 			'storeTime'   => __( 'Store time zone', 'peptide-core' ),
 			'loading'     => __( 'Loading…', 'peptide-core' ),
@@ -1081,6 +1082,7 @@ final class Data_Pages {
 	private static function page_conversion_strings(): array {
 		return self::report_filter_strings() + array(
 			'identity' => __( 'Page or page kind', 'peptide-core' ),
+			'actions'  => __( 'Actions', 'peptide-core' ),
 			'search' => __( 'Search page path or name', 'peptide-core' ),
 			'columns' => __( 'Edit columns', 'peptide-core' ),
 			'back' => __( 'Back to page kinds', 'peptide-core' ),

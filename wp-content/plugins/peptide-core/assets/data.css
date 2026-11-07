@@ -240,9 +240,10 @@
 .pc-data-notes-toggle[aria-pressed="true"] { border-color: #171717; color: #171717; }
 .pc-data[data-page="operations"] .pc-data-notes-toggle { display: none; }
 
-.pc-data:not(.is-notes) .pc-data-body > * .pc-data-muted:not(.pc-data-keep),
+/* 只收起报表卡片里直接放的说明段落；表格区里的“加载中 / 请应用筛选”等状态文字和数据行不受影响。 */
+.pc-data:not(.is-notes) .pc-data-body > * > p.pc-data-muted:not(.pc-data-keep),
 .pc-data:not(.is-notes) .pc-data-body :is(.pc-report-filter-help, .pc-report-coverage, .pc-pages-help, .pc-landing-help, .pc-pc-search-note, .pc-conv-note, .pc-conv-export-help, .pc-emails-help, .pc-dim-help, .pc-dim-coverage, .pc-product-action-note) { display: none; }
-.pc-data.is-notes .pc-data-body > * .pc-data-muted { padding: 8px 12px; border-left: 3px solid #d4d4d4; background: #fafafa; line-height: 1.6; }
+.pc-data.is-notes .pc-data-body > * > p.pc-data-muted { padding: 8px 12px; border-left: 3px solid #d4d4d4; background: #fafafa; line-height: 1.6; }
 
 /* 报表主体：白色卡片。 */
 .pc-data-body > :is(.pc-prod, .pc-pages, .pc-page-conversion, .pc-landing, .pc-conv, .pc-sources, .pc-dim, .pc-apps, .pc-emails) {
@@ -520,3 +521,14 @@
 #wpbody-content .pc-data .pc-data-rangebox input.pc-data-date { width: 116px; }
 #wpbody-content .pc-data .pc-data-toolbar-extra select.pc-ops-domain__select { width: 160px; min-width: 0; max-width: 160px; }
 #wpbody-content .pc-data .pc-data-toolbar-extra select.pc-ops-domain__select { width: 138px; max-width: 138px; }
+
+/* A/B 测试分析：一行只留入口域名 + 应用筛选（对照参考后台），国家、搜索、每页条数收进“更多筛选”弹层。 */
+.pc-experiments .pc-sources-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.pc-exp-more { position: relative; }
+.pc-exp-more > summary { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border: 1px solid #dcdcdc; border-radius: 6px; background: #fff; color: #404040; font-size: 13px; cursor: pointer; list-style: none; }
+.pc-exp-more > summary::-webkit-details-marker { display: none; }
+.pc-exp-more > summary::after { content: ""; width: 6px; height: 6px; margin-top: -3px; border-right: 1.5px solid #8c8c8c; border-bottom: 1.5px solid #8c8c8c; transform: rotate(45deg); }
+.pc-exp-more[open] > summary { border-color: #171717; color: #171717; }
+.pc-exp-more__panel { position: absolute; top: calc(100% + 6px); left: 0; z-index: 40; display: grid; gap: 10px; min-width: 300px; padding: 12px 14px; border: 1px solid #ececec; border-radius: 6px; background: #fff; box-shadow: 0 6px 18px rgba(0, 0, 0, .1); }
+.pc-exp-more__panel label { display: flex; align-items: center; gap: 8px; margin: 0; color: #525252; font-size: 13px; }
+.pc-exp-more__panel :is(input, select) { min-height: 30px; border-color: #dcdcdc; border-radius: 6px; }

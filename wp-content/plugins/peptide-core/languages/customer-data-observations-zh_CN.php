@@ -27,6 +27,7 @@ return array(
 	'Show metric notes' => '口径说明',
 	'%d items in total' => '共 %d 条',
 	'Jump to' => '前往',
+	'More filters' => '更多筛选',
 	'Variant details data' => '款式详情数据',
 	'Variant information' => '款式信息',
 	'Entry domain' => '入口域名',

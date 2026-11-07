@@ -25,3 +25,20 @@
  .pc-pc-table th:first-child { min-width: 160px; max-width: 220px; }
 }
 .pc-page-conversion .pc-report-filters{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin:12px 0}.pc-page-conversion .pc-report-filters label{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.pc-page-conversion .pc-report-filters input{max-width:220px;width:100%;min-width:0}.pc-page-conversion .pc-report-filters p{flex-basis:100%;margin:0}@media(max-width:600px){.pc-page-conversion .pc-report-filters label{width:100%}.pc-page-conversion .pc-report-filters input{max-width:100%}}
+/* 2026-11-08 对照参考后台：操作列图标、页面名称两行、每个指标三行居中（本期 / 对比期 / 变化）。 */
+.pc-pc-scroll { border: 0; }
+.pc-pc-table th, .pc-pc-table td { vertical-align: middle; }
+.pc-pc-table .pc-pc-action-th, .pc-pc-table .pc-pc-action { width: 56px; min-width: 56px; text-align: center; }
+.pc-pc-act { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; background: none; color: #737373; cursor: pointer; }
+.pc-pc-act:hover, .pc-pc-act:focus-visible { background: #f2f2f2; color: #171717; }
+.pc-pc-name { color: #171717; font-weight: 500; }
+.pc-pc-path { color: #8c8c8c; font-size: 12px; font-weight: 400; }
+.pc-pc-table td.pc-pc-cell { min-width: 120px; text-align: center; font-variant-numeric: tabular-nums; }
+.pc-pc-cur { font-weight: 600; }
+.pc-pc-prev { color: #8c8c8c; font-size: 12px; }
+.pc-pc-chg { color: #8c8c8c; font-size: 12px; }
+.pc-pc-chg.is-up { color: #0f8a5f; }
+.pc-pc-chg.is-down { color: #d63638; }
+.pc-pc-chg.is-up::before { content: "\2191\00a0"; }
+.pc-pc-chg.is-down::before { content: "\2193\00a0"; }
+.pc-pc-table th[aria-sort] button { padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
