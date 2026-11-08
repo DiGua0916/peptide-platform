@@ -24,8 +24,27 @@ final class Mail {
 	private const SKEW      = 300;
 	private const KEEP      = 3000;
 
+	/** 微软登录回来的地址：个人微软账户不接受带“?”的回调地址，总后台又没有 /wp-json/ 路径，所以给一个干净的地址再转进去。 */
+	public const OUTLOOK_CALLBACK = '/oauth/outlook-callback/';
+
 	public static function register_hooks(): void {
 		add_action( 'rest_api_init', array( self::class, 'routes' ) );
+		add_filter( 'rest_url', array( self::class, 'outlook_callback_url' ), 10, 2 );
+		add_action( 'init', array( self::class, 'outlook_callback_forward' ), 0 );
+	}
+
+	public static function outlook_callback_url( $url, $path ) {
+		return 'fluent-smtp/outlook_callback' === trim( (string) $path, '/' ) ? home_url( self::OUTLOOK_CALLBACK ) : $url;
+	}
+
+	public static function outlook_callback_forward(): void {
+		$path = (string) wp_parse_url( (string) ( $_SERVER['REQUEST_URI'] ?? '' ), PHP_URL_PATH );
+		if ( rtrim( $path, '/' ) . '/' !== self::OUTLOOK_CALLBACK || 'GET' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) {
+			return;
+		}
+		$query = (string) ( $_SERVER['QUERY_STRING'] ?? '' );
+		wp_safe_redirect( home_url( '/index.php?rest_route=/fluent-smtp/outlook_callback' . ( '' !== $query ? '&' . $query : '' ) ) );
+		exit;
 	}
 
 	public static function settings(): array {
