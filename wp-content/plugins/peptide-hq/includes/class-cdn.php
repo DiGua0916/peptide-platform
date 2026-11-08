@@ -362,9 +362,14 @@ final class Cdn {
 		if ( is_wp_error( $r ) ) {
 			return array( '*' => $r->get_error_message() );
 		}
-		foreach ( (array) ( $r['result'] ?? array() ) as $z ) {
+		// api() already unwraps Cloudflare's {result: ...} envelope.
+		$zones = isset( $r['result'] ) && is_array( $r['result'] ) ? $r['result'] : $r;
+		foreach ( (array) $zones as $z ) {
 			if ( ! is_array( $z ) || empty( $z['id'] ) || 'active' !== ( $z['status'] ?? '' ) ) {
 				continue;
+			}
+			foreach ( array( 'browser_check' => 'on' ) as $setting => $value ) {
+				self::api( 'PATCH', '/zones/' . rawurlencode( (string) $z['id'] ) . '/settings/' . $setting, array( 'value' => $value ) );
 			}
 			$ok = self::bot_protect( (string) $z['id'] );
 			$out[ (string) $z['name'] ] = $ok ? true : (string) ( get_option( 'pchq_cdn_bot' )[ $z['id'] ]['message'] ?? '失败' );
