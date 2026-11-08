@@ -224,7 +224,15 @@
 			case 'module_click': return '点击了「' + moduleName( d.module_type, d.module_id ) + '」里的按钮或链接';
 			case 'visibility_change': return d.visibility === 'hidden' ? '切到了别的标签页 / 把浏览器放到后台' : '回到了这个页面';
 			case 'page_exit': return '离开了这个页面';
-			case 'page_view': { var parts = []; if ( d.page_context ) { var c = contextDetails( d.page_context ); if ( c ) { parts.push( c ); } } if ( d.attribution ) { var a = attributionDetails( d.attribution ); if ( a ) { parts.push( a ); } } return parts.length ? parts.join( '；' ) : '打开了这个页面'; }
+			case 'page_view': {
+				var parts = [ '打开了这个页面' ], ctx = d.page_context || {}, att = d.attribution || {}, q = att.landing_query || {};
+				if ( ctx.geo && ctx.geo.status === 'known' && ctx.geo.country_code ) { parts.push( '来自 ' + ctx.geo.country_code ); }
+				if ( att.referrer_host ) { parts.push( '从 ' + att.referrer_host + ' 跳转过来' ); } else if ( att.referrer_host === '' ) { parts.push( '直接输入网址或书签进来' ); }
+				var utm = [ 'utm_source', 'utm_medium', 'utm_campaign' ].filter( function ( k ) { return typeof q[ k ] === 'string' && q[ k ]; } ).map( function ( k ) { return q[ k ]; } );
+				if ( utm.length ) { parts.push( '广告标记：' + utm.join( ' / ' ) ); }
+				if ( q.fbclid || d.fbclid ) { parts.push( '带 Facebook 点击参数' ); }
+				return parts.join( '，' );
+			}
 			case 'heartbeat': return ( d.visibility === 'visible' ? '页面在前台' : '页面在后台' ) + ( d.activity === 'active' ? '，正在操作' : '，无操作' );
 			case 'cart_open': return '打开了购物车抽屉';
 			case 'cart_close': return '关闭了购物车抽屉';
