@@ -21,7 +21,25 @@ final class Design_Push {
 	public const NEW_SITE = 'pchq_design_new_site';
 	private const BUDGET = 240;
 
+	public const WATCH = 'pchq_design_watch';
+
 	public static function register_hooks(): void {
+		add_filter(
+			'cron_schedules',
+			static function ( array $s ): array {
+				$s['pchq_design_5min'] = array( 'interval' => 300, 'display' => 'Every 5 minutes (design)' );
+				return $s;
+			}
+		);
+		add_action(
+			'init',
+			static function (): void {
+				if ( ! wp_next_scheduled( self::WATCH ) ) {
+					wp_schedule_event( time() + 120, 'pchq_design_5min', self::WATCH );
+				}
+			}
+		);
+		add_action( self::WATCH, array( self::class, 'watch' ) );
 		add_action( self::RUN, array( self::class, 'run' ) );
 		add_action( self::NEW_SITE, array( self::class, 'new_site' ), 10, 1 );
 		add_action(
@@ -38,11 +56,81 @@ final class Design_Push {
 	public static function settings(): array {
 		$o = get_option( self::OPTION, array() );
 		$o = is_array( $o ) ? $o : array();
-		return array( 'master' => (int) ( $o['master'] ?? 0 ), 'lock' => ! array_key_exists( 'lock', $o ) || ! empty( $o['lock'] ) );
+		return array(
+			'master' => (int) ( $o['master'] ?? 0 ),
+			'lock'   => ! array_key_exists( 'lock', $o ) || ! empty( $o['lock'] ),
+			'auto'   => ! array_key_exists( 'auto', $o ) || ! empty( $o['auto'] ),
+		);
 	}
 
-	public static function save_settings( int $master, bool $lock ): void {
-		update_option( self::OPTION, array( 'master' => $master, 'lock' => $lock ), false );
+	public static function save_settings( int $master, bool $lock, ?bool $auto = null ): void {
+		$auto = null === $auto ? self::settings()['auto'] : $auto;
+		update_option( self::OPTION, array( 'master' => $master, 'lock' => $lock, 'auto' => $auto ), false );
+	}
+
+	/**
+	 * 自动下发：每 5 分钟看一次母版店装修的修改时间，变了就下发给所有店铺（店铺不用做任何事）。
+	 * 第一次只记录，不下发。
+	 */
+	public static function watch(): void {
+		$s = self::settings();
+		$master = self::master_id();
+		if ( ! $s['auto'] || ! $master || self::job() ) {
+			return;
+		}
+		$status = Client::status( $master );
+		if ( is_wp_error( $status ) || ! is_array( $status['design'] ?? null ) ) {
+			return;
+		}
+		$modified = (string) ( $status['design']['modified'] ?? '' );
+		$seen     = (string) get_option( self::OPTION . '_seen', '' );
+		if ( '' === $modified || $modified === $seen ) {
+			return;
+		}
+		update_option( self::OPTION . '_seen', $modified, false );
+		if ( '' === $seen ) {
+			return; // 第一次只记录基准。
+		}
+		$res = self::start();
+		update_option( self::OPTION . '_auto_last', array( 'at' => time(), 'modified' => $modified, 'ok' => ! is_wp_error( $res ), 'message' => is_wp_error( $res ) ? $res->get_error_message() : '' ), false );
+	}
+
+	/**
+	 * 测试下发（不改动任何店铺）：真实读取母版、真实发给店铺，店铺下载并核对全部媒体后丢弃。
+	 * 最多测 5 家；只有母版店时就测母版店自己（不会写入、不会锁定）。
+	 *
+	 * @return array|\WP_Error 每家店的结果
+	 */
+	public static function test() {
+		$master = self::master_id();
+		if ( ! $master ) {
+			return new \WP_Error( 'pchq_design_master', '还没有母版店。' );
+		}
+		$t0     = microtime( true );
+		$bundle = Client::design_export( $master );
+		if ( is_wp_error( $bundle ) ) {
+			return new \WP_Error( 'pchq_design_export', '从母版店读取装修失败：' . self::friendly( $bundle ) );
+		}
+		$read    = round( microtime( true ) - $t0, 1 );
+		$targets = array();
+		foreach ( self::sites() as $s ) {
+			if ( (int) $s['id'] !== $master && ! self::unreachable( $s ) ) {
+				$targets[] = $s;
+			}
+		}
+		$targets = $targets ? array_slice( $targets, 0, 5 ) : array( Sites::get( $master ) );
+		$out     = array( 'read_seconds' => $read, 'media' => count( (array) $bundle['media'] ), 'stores' => array() );
+		foreach ( $targets as $s ) {
+			if ( microtime( true ) - $t0 > 75 ) {
+				break;
+			}
+			$label = '' !== (string) $s['name'] ? (string) $s['name'] : (string) $s['url'];
+			$res   = Client::design_apply( (int) $s['id'], (array) $bundle, self::settings()['lock'], (string) ( $bundle['source'] ?? '' ), true );
+			$out['stores'][] = is_wp_error( $res )
+				? array( 'name' => $label, 'ok' => false, 'message' => self::friendly( $res ) )
+				: array( 'name' => $label, 'ok' => true, 'downloaded' => (int) ( $res['downloaded'] ?? 0 ), 'bytes' => (int) ( $res['bytes'] ?? 0 ), 'seconds' => (float) ( $res['seconds'] ?? 0 ), 'master' => (int) $s['id'] === $master );
+		}
+		return $out;
 	}
 
 	/** 在管的店铺（不含下线的）。 */

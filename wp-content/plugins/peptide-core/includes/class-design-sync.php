@@ -98,14 +98,63 @@ final class Design_Sync {
 		$bundle            = array( 'version' => 1, 'documents' => $docs, 'media' => $media );
 		$bundle['digest']  = hash( 'sha256', (string) wp_json_encode( array( $docs, wp_list_pluck( $media, 'sha256' ) ) ) );
 		$bundle['source']  = (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST );
+		$bundle['origins'] = self::own_origins();
 		$bundle['modified'] = (string) ( Templates::modified( $template ) ?? '' );
 		return $bundle;
+	}
+
+	/** 本店的网址（顾客地址和后台地址），用于把装修里的绝对链接换成收到装修的店铺自己的地址。 */
+	public static function own_origins(): array {
+		$out = array( untrailingslashit( home_url( '/' ) ) );
+		if ( class_exists( Management_Host::class ) && Management_Host::enabled() ) {
+			$out[] = untrailingslashit( Management_Host::public_url() );
+			$out[] = untrailingslashit( Management_Host::management_url() );
+		}
+		return array_values( array_unique( array_filter( $out ) ) );
+	}
+
+	/** 店铺的顾客地址（链接改写的目标）。 */
+	public static function public_origin(): string {
+		return untrailingslashit( class_exists( Management_Host::class ) && Management_Host::enabled() ? Management_Host::public_url() : home_url( '/' ) );
+	}
+
+	/**
+	 * 把装修里指向母版店的绝对链接（含 www / 不带 www、http / https）换成本店地址。
+	 * 例如页脚 https://www.vialcovepeptides.com/offers/ → https://www.本店域名.com/offers/。
+	 */
+	public static function rewrite_links( $value, array $origins, string $target ) {
+		$hosts = array();
+		foreach ( $origins as $o ) {
+			$h = strtolower( (string) wp_parse_url( (string) $o, PHP_URL_HOST ) );
+			if ( '' !== $h ) {
+				$hosts[ preg_replace( '/^www\./', '', $h ) ] = true;
+			}
+		}
+		if ( ! $hosts || '' === $target ) {
+			return $value;
+		}
+		$pattern = '#https?://(?:www\.)?(?:' . implode( '|', array_map( static fn( $h ) => preg_quote( $h, '#' ), array_keys( $hosts ) ) ) . ')(?=[/?\#"\'\s<)]|$)#i';
+		$walk    = static function ( $v ) use ( &$walk, $pattern, $target ) {
+			if ( is_string( $v ) ) {
+				return preg_replace( $pattern, $target, $v );
+			}
+			if ( is_array( $v ) ) {
+				foreach ( $v as $k => $x ) {
+					$v[ $k ] = $walk( $x );
+				}
+			}
+			return $v;
+		};
+		return $walk( $value );
 	}
 
 	// ---------- 其他店铺：应用 ----------
 
 	/** @return array|\WP_Error 应用后的状态 */
-	public static function apply( array $bundle, bool $lock, string $source_host ) {
+	public static function apply( array $bundle, bool $lock, string $source_host, bool $dry_run = false ) {
+		$started = microtime( true );
+		$fetched = 0;
+		$bytes   = 0;
 		if ( 1 !== ( $bundle['version'] ?? 0 ) || ! is_array( $bundle['documents'] ?? null ) || ! is_array( $bundle['media'] ?? null ) || count( $bundle['media'] ) > 64 ) {
 			return new \WP_Error( 'pc_design_bundle', '下发的装修内容无效。', array( 'status' => 400 ) );
 		}
@@ -145,7 +194,7 @@ final class Design_Sync {
 				return new \WP_Error( 'pc_design_media', '下发的媒体总量太大。', array( 'status' => 400 ) );
 			}
 			$known = $map[ $sid ] ?? null;
-			if ( is_array( $known ) && $sha === ( $known['sha256'] ?? '' ) && 'attachment' === get_post_type( (int) $known['id'] ) ) {
+			if ( ! $dry_run && is_array( $known ) && $sha === ( $known['sha256'] ?? '' ) && 'attachment' === get_post_type( (int) $known['id'] ) ) {
 				$ids[ $sid ] = (int) $known['id'];
 				continue;
 			}
@@ -156,6 +205,13 @@ final class Design_Sync {
 			if ( filesize( $tmp ) !== $size || ! hash_equals( $sha, (string) hash_file( 'sha256', $tmp ) ) ) {
 				wp_delete_file( $tmp );
 				return new \WP_Error( 'pc_design_download', '下载到的媒体和母版店不一致，已停止，店铺装修没有改动。', array( 'status' => 502 ) );
+			}
+			++$fetched;
+			$bytes += $size;
+			if ( $dry_run ) {
+				// 测试下发：只验证能下载、内容一致，不保存。
+				wp_delete_file( $tmp );
+				continue;
 			}
 			$name = sanitize_file_name( 'master-' . $sid . '-' . (string) ( $m['name'] ?? 'media' ) );
 			$id   = media_handle_sideload( array( 'name' => $name, 'tmp_name' => $tmp ), 0, sanitize_text_field( (string) ( $m['title'] ?? '' ) ) );
@@ -168,6 +224,14 @@ final class Design_Sync {
 			$map[ $sid ] = array( 'id' => (int) $id, 'sha256' => $sha );
 			update_option( self::MEDIA_MAP, $map, false );
 			$ids[ $sid ] = (int) $id;
+		}
+
+		if ( $dry_run ) {
+			$counts = array();
+			foreach ( self::DOCS as $doc ) {
+				$counts[ $doc ] = count( Layout::clean_modules( $bundle['documents'][ $doc ] ) );
+			}
+			return array( 'dry_run' => true, 'documents' => $counts, 'media' => count( $bundle['media'] ), 'downloaded' => $fetched, 'bytes' => $bytes, 'seconds' => round( microtime( true ) - $started, 1 ), 'locked' => self::locked() );
 		}
 
 		$remap = static function ( $v ) use ( &$remap, $ids ) {
@@ -190,7 +254,8 @@ final class Design_Sync {
 		}
 		foreach ( self::DOCS as $doc ) {
 			$id      = Templates::document_id( $template, $doc );
-			$modules = Layout::clean_modules( $remap( $bundle['documents'][ $doc ] ) );
+			$origins = array_merge( array( 'https://' . $source_host ), array_map( 'strval', (array) ( $bundle['origins'] ?? array() ) ) );
+			$modules = Layout::clean_modules( self::rewrite_links( $remap( $bundle['documents'][ $doc ] ), $origins, self::public_origin() ) );
 			wp_update_post( array( 'ID' => $id, 'post_content' => wp_slash( Layout::content_from_modules( $modules ) ) ) );
 			$published = Layout::publish( $id );
 			if ( is_wp_error( $published ) ) {

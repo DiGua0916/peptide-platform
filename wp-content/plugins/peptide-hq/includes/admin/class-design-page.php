@@ -24,7 +24,7 @@ final class Design_Page {
 			},
 			19
 		);
-		foreach ( array( 'settings', 'push', 'push_one', 'lock' ) as $do ) {
+		foreach ( array( 'settings', 'push', 'push_one', 'lock', 'auto', 'test' ) as $do ) {
 			add_action( 'admin_post_pchq_design_' . $do, array( self::class, 'handle' ) );
 		}
 		add_action( 'admin_enqueue_scripts', array( self::class, 'assets' ), 1001 );
@@ -53,7 +53,7 @@ final class Design_Page {
 		switch ( $do ) {
 			case 'settings':
 				$master = absint( $_POST['master'] ?? 0 );
-				Design_Push::save_settings( $master ?: $s['master'], $s['lock'] );
+				Design_Push::save_settings( $master ?: $s['master'], $s['lock'], $s['auto'] );
 				self::flash( 'success', '母版店已保存。' );
 				break;
 			case 'push':
@@ -62,9 +62,28 @@ final class Design_Page {
 				$res     = Design_Push::start( $targets );
 				self::flash( is_wp_error( $res ) ? 'error' : 'success', is_wp_error( $res ) ? $res->get_error_message() : '已从母版店读取最新装修，正在下发给 ' . count( $res ) . ' 家店铺（后台逐个处理，页面会自动刷新）。' );
 				break;
+			case 'auto':
+				$auto = '1' === ( $_POST['auto'] ?? '' );
+				Design_Push::save_settings( $s['master'], $s['lock'], $auto );
+				self::flash( 'success', $auto ? '已开启自动下发：母版店发布装修后，5 分钟内所有店铺自动更新。' : '已关闭自动下发：改完需要手动点“立即下发”。' );
+				break;
+			case 'test':
+				$r = Design_Push::test();
+				if ( is_wp_error( $r ) ) {
+					self::flash( 'error', '测试没通过：' . $r->get_error_message() );
+					break;
+				}
+				$lines = array();
+				$bad   = false;
+				foreach ( $r['stores'] as $st ) {
+					$bad     = $bad || ! $st['ok'];
+					$lines[] = $st['ok'] ? $st['name'] . ( ! empty( $st['master'] ) ? '（母版店自测）' : '' ) . '：通，下载并核对 ' . $st['downloaded'] . ' 个文件 ' . size_format( $st['bytes'] ) . '，用时 ' . $st['seconds'] . ' 秒' : $st['name'] . '：' . $st['message'];
+				}
+				self::flash( $bad ? 'error' : 'success', '测试下发（没有改动任何店铺）：读取母版 ' . $r['read_seconds'] . ' 秒、' . $r['media'] . ' 个图片 / 视频；' . implode( '；', $lines ) . '。' );
+				break;
 			case 'lock':
 				$lock = '1' === ( $_POST['lock'] ?? '' );
-				Design_Push::save_settings( $s['master'], $lock );
+				Design_Push::save_settings( $s['master'], $lock, $s['auto'] );
 				$r = Design_Push::lock_all( $lock );
 				self::flash( $r['failed'] ? 'error' : 'success', ( $lock ? '已锁定' : '已解锁' ) . '店铺装修：' . $r['ok'] . ' 家完成' . ( $r['failed'] ? '；没完成：' . implode( '；', array_slice( $r['failed'], 0, 5 ) ) : '' ) . '。' . ( $lock ? '' : '解锁后店铺可以自己改装修，下次下发会覆盖。' ) );
 				break;
@@ -101,7 +120,7 @@ final class Design_Page {
 		$others   = array_values( array_filter( $sites, static fn( array $s ): bool => (int) $s['id'] !== $master ) );
 
 		echo '<div class="wrap pchq pcp">';
-		echo '<header class="pcp-head"><div><h1>统一模板</h1><p>所有店铺使用同一套装修（首页、页眉、页脚、全局样式）。在母版店里编辑并发布，再回到这里点“下发到所有店铺”；店铺自己不能改。新开的店铺开好后会自动收到最新装修。</p></div>';
+		echo '<header class="pcp-head"><div><h1>统一模板</h1><p>所有店铺使用同一套装修（首页、页眉、页脚、全局样式）。点“编辑统一模板”修改并发布后，系统自动下发给所有店铺，店铺直接用最新的，不需要通知、也不能自己改。新开的店铺开好后也会自动收到。</p></div>';
 		echo '<dl class="pcp-stats"><div><dt>店铺</dt><dd>' . count( $sites ) . '</dd></div><div><dt>已是最新</dt><dd>' . count( array_filter( $others, static fn( array $s ): bool => '' !== (string) ( $latest['digest'] ?? '' ) && ( $s['info']['design']['version'] ?? '' ) === $latest['digest'] ) ) . '<small> / ' . count( $others ) . '</small></dd></div></dl></header>';
 		if ( is_array( $flash ) ) {
 			echo '<div class="pcp-flash ' . ( 'error' === $flash[0] ? 'is-bad' : 'is-ok' ) . '" role="status">' . esc_html( (string) $flash[1] ) . '</div>';
@@ -109,21 +128,23 @@ final class Design_Page {
 
 		// 母版店
 		echo '<section class="pcp-card"><div class="pcp-card__head"><h2>母版店</h2>' . ( $msite ? '<span class="pcp-hint">装修最近修改：' . esc_html( (string) ( $msite['info']['design']['modified'] ?? '—' ) ) . '</span>' : '' ) . '</div>';
-		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="pcp-cdn-form pcp-cdn-add">';
+		echo '<div class="pcp-master-row"><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="pcp-master-form">';
 		wp_nonce_field( 'pchq_design_settings' );
 		echo '<input type="hidden" name="action" value="pchq_design_settings"><label class="pcp-field"><span>用哪个店铺的装修作为统一模板</span><select name="master">';
 		foreach ( $sites as $s ) {
 			echo '<option value="' . (int) $s['id'] . '"' . selected( (int) $s['id'], $master, false ) . '>' . esc_html( self::label( $s ) ) . '</option>';
 		}
-		echo '</select></label><p><button type="submit" class="button">保存</button></p></form>';
+		echo '</select></label><button type="submit" class="button">保存</button></form>';
 		if ( $msite ) {
-			echo '<p><a class="button button-primary" target="_blank" rel="noopener" href="' . esc_url( Menu::action_url( 'pchq_login', array( 'site' => $master, 'to' => 'design' ) ) ) . '">去母版店编辑装修</a> <span class="pcp-hint">在“店铺装修 → 主题装修”里编辑并发布后，回来点下发。母版店本身不会被锁定。</span></p>';
+			echo '<a class="button button-primary" target="_blank" rel="noopener" href="' . esc_url( Menu::action_url( 'pchq_login', array( 'site' => $master, 'to' => 'design' ) ) ) . '">编辑统一模板</a>';
 		}
+		echo '</div><p class="pcp-note">在打开的“主题装修”里编辑并发布即可' . ( $settings['auto'] ? '，5 分钟内所有店铺自动更新，不需要通知店铺' : '，然后回来点“立即下发”' ) . '。母版店本身不会被锁定。</p>';
 		echo '</section>';
 
 		// 下发
 		echo '<section class="pcp-card"><div class="pcp-card__head"><h2>下发</h2>' . ( ! empty( $latest['at'] ) ? '<span class="pcp-hint">上次读取母版：' . esc_html( wp_date( 'Y-m-d H:i', (int) $latest['at'] ) ) . ' · 版本 ' . esc_html( substr( (string) $latest['digest'], 0, 8 ) ) . ' · ' . (int) ( $latest['media'] ?? 0 ) . ' 个图片 / 视频</span>' : '' ) . '</div>';
-		echo '<p>' . self::form( 'push', array(), '下发到所有店铺', 'button button-primary', '确定把母版店现在已发布的装修下发给所有店铺？各店铺的首页、页眉、页脚和全局样式会被替换。' ) . ' '; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '<p class="pcp-note">自动下发：<strong>' . ( $settings['auto'] ? '已开启' : '已关闭' ) . '</strong>' . ( $settings['auto'] ? '（每 5 分钟检查母版店，发布后自动更新所有店铺）' : '' ) . ' ' . self::form( 'auto', array( 'auto' => $settings['auto'] ? '0' : '1' ), $settings['auto'] ? '关闭自动下发' : '开启自动下发', 'pcp-link' ) . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '<p class="pcp-actions">' . self::form( 'push', array(), '立即下发到所有店铺', 'button button-primary', '确定把母版店现在已发布的装修下发给所有店铺？各店铺的首页、页眉、页脚和全局样式会被替换。' ) . ' ' . self::form( 'test', array(), '测试下发（不改动）', 'button' ) . ' '; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo self::form( 'lock', array( 'lock' => $settings['lock'] ? '0' : '1' ), $settings['lock'] ? '解锁店铺装修' : '锁定店铺装修', 'button', $settings['lock'] ? '解锁后店铺可以自己改装修（下次下发会覆盖）。确定？' : '' ) . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo '<p class="pcp-note">' . ( $settings['lock'] ? '现在是<strong>锁定</strong>：店铺后台看不到编辑入口，也不能发布装修；首页 SEO、域名、菜单、自定义页面不受影响。' : '现在是<strong>未锁定</strong>：店铺可以自己改装修，下次下发会覆盖。' ) . '</p>';
 		if ( $job ) {

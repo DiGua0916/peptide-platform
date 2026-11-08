@@ -32,7 +32,10 @@ if ( ! $template ) { $template = PeptideCore\Templates::create( '店铺默认母
 if ( ! $template ) { throw new RuntimeException( 'template_create' ); }
 foreach ( array( 'home', 'header', 'footer', 'global' ) as $key ) {
 	$id = PeptideCore\Templates::document_id( $template, $key );
-	$modules = PeptideCore\Modules\Layout::clean_modules( $remap( $data['documents'][ $key ] ?? array() ) );
+	$doc = $remap( $data['documents'][ $key ] ?? array() );
+	// Links to the master store's domain become this store's own address (footer, buttons, menus).
+	if ( ! empty( $data['origins'] ) && class_exists( 'PeptideCore\\Design_Sync' ) ) { $doc = PeptideCore\Design_Sync::rewrite_links( $doc, (array) $data['origins'], PeptideCore\Design_Sync::public_origin() ); }
+	$modules = PeptideCore\Modules\Layout::clean_modules( $doc );
 	wp_update_post( array( 'ID' => $id, 'post_content' => wp_slash( PeptideCore\Modules\Layout::content_from_modules( $modules ) ) ) );
 	$result = PeptideCore\Modules\Layout::publish( $id );
 	if ( is_wp_error( $result ) ) { throw new RuntimeException( 'template_publish' ); }

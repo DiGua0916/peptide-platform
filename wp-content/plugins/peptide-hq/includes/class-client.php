@@ -81,8 +81,8 @@ final class Client {
 		return self::request( $site_id, 'GET', '/peptide/v1/hq/design-export', array(), null, 60 );
 	}
 
-	public static function design_apply( int $site_id, array $bundle, bool $lock, string $source_host ) {
-		return self::request( $site_id, 'POST', '/peptide/v1/hq/design', array(), array( 'bundle' => $bundle, 'lock' => $lock, 'source_host' => $source_host ), 280 );
+	public static function design_apply( int $site_id, array $bundle, bool $lock, string $source_host, bool $dry_run = false ) {
+		return self::request( $site_id, 'POST', '/peptide/v1/hq/design', array(), array( 'bundle' => $bundle, 'lock' => $lock, 'source_host' => $source_host, 'dry_run' => $dry_run ), $dry_run ? 80 : 280 );
 	}
 
 	public static function design_lock( int $site_id, bool $lock ) {

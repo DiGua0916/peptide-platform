@@ -480,3 +480,61 @@
 	}
 }
 
+
+/* 模板库表格：按钮、日期、创建人、预览不再被挤成一列一个字（2026-11-08） */
+.pc-sd-table--library {
+	table-layout: auto;
+	width: 100%;
+}
+.pc-sd-table--library th {
+	white-space: nowrap;
+}
+.pc-sd-table--library td:nth-child(1) {
+	min-width: 220px;
+}
+.pc-sd-table--library td:nth-child(1) strong {
+	display: inline-block;
+	margin-right: 6px;
+	font-size: 14px;
+}
+.pc-sd-table--library td:nth-child(1) .pc-sd-tag {
+	margin: 4px 4px 0 0;
+}
+.pc-sd-table--library td:nth-child(3) {
+	max-width: 200px;
+	overflow-wrap: anywhere;
+	color: #50575e;
+	font-size: 12px;
+}
+.pc-sd-table--library td:nth-child(2),
+.pc-sd-table--library td:nth-child(4),
+.pc-sd-table--library td:nth-child(6),
+.pc-sd-table--library td:nth-child(7),
+.pc-sd-table--library td:nth-child(8) {
+	white-space: nowrap;
+}
+.pc-sd-table--library td:nth-child(5) {
+	min-width: 130px;
+}
+.pc-sd-table--library td:nth-child(5) .pc-sd-tag {
+	white-space: normal;
+	line-height: 1.5;
+}
+.pc-sd-table--library .pc-sd-split {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: nowrap;
+}
+.pc-sd-table--library .pc-sd-split > .button,
+.pc-sd-table--library .pc-sd-menu > summary.button {
+	white-space: nowrap;
+	min-height: 32px;
+	line-height: 30px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+.pc-sd-table--library td:nth-child(8) {
+	text-align: center;
+}

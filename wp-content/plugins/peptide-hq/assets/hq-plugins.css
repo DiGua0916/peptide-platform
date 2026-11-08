@@ -191,3 +191,12 @@ body.pchq-workspace .pcp-cdn-table td small{color:var(--vc-muted);font-size:11px
 body.pchq-workspace .pcp-cdn-table td{width:auto;min-width:0}
 body.pchq-workspace .pcp-cdn-msg{max-width:420px;color:var(--vc-muted);font-size:12px;line-height:18px}
 @media (max-width:782px){body.pchq-workspace .pcp-field input,body.pchq-workspace .pcp-field select{min-width:0;width:100%;min-height:44px}body.pchq-workspace .pcp-cdn-add{flex-direction:column;align-items:stretch}}
+
+/* 统一模板页（2026-11-08）：母版店一行对齐 */
+body.pchq-workspace .pcp-master-row{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}
+body.pchq-workspace .pcp-master-form{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;margin:0}
+body.pchq-workspace .pcp-master-row .button,body.pchq-workspace .pcp-actions .button{min-height:36px;line-height:34px;padding:0 14px;display:inline-flex;align-items:center}
+body.pchq-workspace .pcp-master-row .pcp-field select{min-height:36px}
+body.pchq-workspace .pcp-master-row+.pcp-note{margin:10px 0 0}
+body.pchq-workspace .pcp-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+@media (max-width:782px){body.pchq-workspace .pcp-master-row,body.pchq-workspace .pcp-master-form{flex-direction:column;align-items:stretch}body.pchq-workspace .pcp-master-row .button{justify-content:center;min-height:44px}}

@@ -385,6 +385,10 @@ final class Hq_Connector {
 		if ( ! is_array( $p['bundle'] ?? null ) || ! is_bool( $p['lock'] ?? null ) || ! is_string( $p['source_host'] ?? null ) ) {
 			return new \WP_Error( 'pc_design_request', '请求无效。', array( 'status' => 400 ) );
 		}
+		if ( true === ( $p['dry_run'] ?? false ) ) {
+			// 测试下发：校验内容、下载并核对媒体，不写入、不锁定（母版店也可以安全测试）。
+			return Design_Sync::apply( $p['bundle'], $p['lock'], $p['source_host'], true );
+		}
 		$previous = get_current_user_id();
 		$user     = self::login_user();
 		if ( ! $user ) {

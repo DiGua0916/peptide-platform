@@ -3,6 +3,8 @@
 defined( 'WP_CLI' ) && WP_CLI || exit( 1 );
 $template = PeptideCore\Templates::default_id( false );
 $result = array( 'version' => 1, 'documents' => array(), 'images' => array() );
+// 2026-11-08: record the master's own addresses so each new store can point absolute links at itself.
+if ( class_exists( 'PeptideCore\\Design_Sync' ) ) { $result['origins'] = PeptideCore\Design_Sync::own_origins(); }
 $ids = array();
 $collect = static function ( $value ) use ( &$collect, &$ids ): void {
 	if ( ! is_array( $value ) ) { return; }
