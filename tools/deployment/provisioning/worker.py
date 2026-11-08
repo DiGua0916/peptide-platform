@@ -34,6 +34,19 @@ def lifecycle_module():
     return module
 
 
+def plugins_module():
+    """Third-party plugin broker (HQ 插件管理), root-owned and shipped beside this worker."""
+    path = Path(__file__).resolve().with_name('plugins.py')
+    entry = path.lstat()
+    require(stat.S_ISREG(entry.st_mode) and entry.st_uid == 0 and not entry.st_mode & 0o022
+            and path.parent.stat().st_uid == 0 and not path.parent.stat().st_mode & 0o022,
+            'plugins_module_owner')
+    spec = importlib.util.spec_from_file_location('vialcove_store_plugins', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def lifecycle_active(c, identity):
     """Missing history is active; malformed/retired root history is closed."""
     require(isinstance(identity, str) and str(uuid.UUID(identity)) == identity, 'lifecycle_identity')
@@ -870,9 +883,14 @@ def main():
         return
     require(not sys.argv[1:] or c['role'] == 'web' and sys.argv[1:] in [['create'], ['lifecycle']], 'arguments')
     if c['role'] == 'web':
-        raw = sys.stdin.buffer.read(16385)
-        require(len(raw) <= 16384, 'request_size')
+        # Plugin envelopes carry a base64 package (bounded separately); everything else stays <= 16 KiB.
+        raw = sys.stdin.buffer.read(48 * 1024 * 1024 + 1)
+        require(len(raw) <= 48 * 1024 * 1024, 'request_size')
         payload = json.loads(raw)
+        require(len(raw) <= 16384 or isinstance(payload, dict) and payload.get('phase') == 'plugin', 'request_size')
+        if isinstance(payload, dict) and payload.get('phase') == 'plugin':
+            sys.stdout.write(json.dumps(plugins_module().web_main(c, payload)))
+            return
         # The existing forced-command wrapper deliberately discards SSH command
         # text. Dispatch only a validated, bounded typed envelope, never that text.
         controlled_lifecycle = isinstance(payload, dict) and 'phase' in payload
@@ -880,6 +898,8 @@ def main():
         sys.stdout.write(json.dumps(result))
     elif c['role'] == 'admin':
         process_queue(c)
+        if Path(__file__).resolve().with_name('plugins.py').exists():
+            plugins_module().process_queue(c)
     else:
         raise ValueError('role')
 

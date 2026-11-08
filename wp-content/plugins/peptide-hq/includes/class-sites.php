@@ -106,7 +106,9 @@ final class Sites {
 					'created' => time(),
 				)
 			);
-			return array( (int) $wpdb->insert_id, 'new' );
+			$new_id = (int) $wpdb->insert_id;
+			do_action( 'pchq_site_registered', $new_id ); // 插件管理：新店自动安装。
+			return array( $new_id, 'new' );
 		}
 		$site = self::get( $id );
 		if ( $site && ( $explicit || $site['dual_domain'] ) && '' !== $site['uuid'] && ! hash_equals( $site['uuid'], $uuid ) ) {

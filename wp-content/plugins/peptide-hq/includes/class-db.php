@@ -4,6 +4,7 @@
  * v2：店铺换密钥再注册时，新密钥先放在 key_pending，检查连得上才换。
  * v3：服务器表；店铺记录分配的服务器（server_id）和店铺的固定编号（uuid，换主域名后仍然认得）。
  * v4：固定管理地址与可变顾客地址分开保存；旧 url 继续作为机器连接地址。
+ * v5（2026-11-08）：插件管理——插件库（plugins）和每个店铺装了哪些插件（site_plugins）。
  *
  * @package PeptideHq
  */
@@ -14,7 +15,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Db {
 
-	public const VERSION = '4';
+	public const VERSION = '5';
 	public const OPTION  = 'pchq_db';
 
 	public static function table( string $name ): string {
@@ -36,6 +37,8 @@ final class Db {
 		$d = self::table( 'daily' );
 		$a = self::table( 'alerts' );
 		$v = self::table( 'servers' );
+		$p = self::table( 'plugins' );
+		$sp = self::table( 'site_plugins' );
 		dbDelta(
 			"CREATE TABLE {$s} (
   id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -88,6 +91,33 @@ CREATE TABLE {$v} (
   note varchar(255) NOT NULL DEFAULT '',
   created int(10) unsigned NOT NULL DEFAULT 0,
   PRIMARY KEY  (id)
+) {$c};
+CREATE TABLE {$p} (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  slug varchar(64) NOT NULL DEFAULT '',
+  name varchar(190) NOT NULL DEFAULT '',
+  version varchar(64) NOT NULL DEFAULT '',
+  sha256 char(64) NOT NULL DEFAULT '',
+  size int(10) unsigned NOT NULL DEFAULT 0,
+  auto_new tinyint(1) unsigned NOT NULL DEFAULT 0,
+  uploaded_by bigint(20) unsigned NOT NULL DEFAULT 0,
+  uploaded_at int(10) unsigned NOT NULL DEFAULT 0,
+  PRIMARY KEY  (id),
+  UNIQUE KEY sha256 (sha256),
+  KEY slug (slug)
+) {$c};
+CREATE TABLE {$sp} (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  site_id bigint(20) unsigned NOT NULL,
+  slug varchar(64) NOT NULL DEFAULT '',
+  plugin_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  state varchar(16) NOT NULL DEFAULT '',
+  installed_version varchar(64) NOT NULL DEFAULT '',
+  operation_id varchar(36) NOT NULL DEFAULT '',
+  error varchar(255) NOT NULL DEFAULT '',
+  updated int(10) unsigned NOT NULL DEFAULT 0,
+  PRIMARY KEY  (id),
+  UNIQUE KEY site_slug (site_id,slug)
 ) {$c};"
 		);
 		update_option( self::OPTION, self::VERSION, true );

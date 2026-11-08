@@ -18,6 +18,7 @@ final class Plugin {
 		Monitor::register_hooks();
 		Register::register_hooks();
 		Operations::register_hooks();
+		Store_Plugins::register_hooks();
 		if ( is_callable( array( Admin\Menu::class, 'register_login_hooks' ) ) ) {
 			Admin\Menu::register_login_hooks();
 		}
@@ -26,6 +27,7 @@ final class Plugin {
 			Admin\Operations_Page::hooks();
 			Admin\Provision_Page::hooks();
 			Admin\Lifecycle_Page::hooks();
+			Admin\Plugins_Page::hooks();
 		}
 	}
 }
