@@ -733,3 +733,11 @@
 - 之前让标题 / logo alt 跟随店铺名称，结果子店前台出现投手中文名（李军、阳…）。改为主题函数 `vc_brand_name()`（默认 `VialCovePeptides`，可用 `vc_brand_name` 过滤器改），标题、logo alt、页头/页脚 aria-label、旧页脚版权、hero eyebrow、`og:site_name` 都用它；店铺名称只用于后台和邮件。6 店核实标题均为 “VialCovePeptides — A clearer view of peptides”。
 - 顺带发现 5 家子店的裸域名（vialcovepro.com 等）返回 421 “Unknown store host”（主店靠 Cloudflare 301 到 www）。`Management_Host::guard_request()` 现在对公开地址的裸域名 / www 变体做 301 到公开地址（只限 GET/HEAD），5 个裸域名核实 301 → www，路径保留。
 - 部署：主店 release、s0006–s0010 前台与后台副本、store-admin、两个模板（theme 4 文件 + class-seo + class-management-host）。备份 `brand-name-*`、`bare-redirect-*`（两台）。
+
+### 2026-11-08 子店海外访问慢：静态缓存 + 页面缓存
+- 用户问“US 流畅、其他国家卡”。源站在 AWS us-east-1；主店经 Cloudflare 边缘缓存静态资源（HIT）且开了页面缓存（HTML HIT ~70ms）；5 家子店两样都没有：
+  - 子店 nginx（worker 模板）全局 `Cache-Control: no-store`，没有静态 location → CSS/JS/图片全部 `cf-cache-status: BYPASS`，每个文件都回美国源站。给 5 个 `/etc/nginx/sites-available/vialcove-sNNNN` 加静态 location（`expires 7d; Cache-Control public, max-age=604800`），nginx -t 通过并 reload；核实 5 店 CSS 第二次请求 HIT（55–130ms）。
+  - 子店 wp-config（`/srv/vialcove-data/tenants/sNNNN/wp-config.php`）没有 `PEPTIDE_CORE_PAGE_CACHE`，且 `wp-content/cache` 不存在/不可写 → 首页每次都渲染，TTFB ~1s。加常量 + 建 `wp-content/cache/peptide-core-pages`（vcsNNNN:750）；核实 5 店首页 `X-PC-Page-Cache: HIT`。
+- worker.py 模板同步修改：nginx 静态 location、`PEPTIDE_CORE_PAGE_CACHE=true`、显式创建两级 cache 目录（UMask 0077 下 parents 会变 0700 root）。两台 `/usr/local/lib/vialcove-provision/worker.py` 已更新。
+- Cloudflare（Free 计划）：brotli/http3 已开；本次把 early_hints、0rtt 开到全部 10 个 zone（含同账户的 shiyishop.com）。tiered caching 需付费，未开。
+- 结论：HTML 首字节主要是 WordPress 渲染 + 美国源站往返，海外比美国多 ~150–300ms；静态资源现在 6 店都在边缘命中，海外第二次访问基本无差别。
