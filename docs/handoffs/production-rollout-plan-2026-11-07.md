@@ -752,3 +752,9 @@
 - 核查：6 店 `woocommerce_specific_allowed_countries` 都是 US+PR，配送方案覆盖 PR，Store API 以 PR 地址下单能报价（$42.75）。实际结账页“Country/Region”下拉里有 Puerto Rico（作为国家），但顾客在 United States 下面的“State”里找，WooCommerce 的美国州列表（54 项）没有波多黎各，于是反馈“选不了”。
 - 修复：新增 `PeptideCore\US_Territories`，`woocommerce_states` 过滤器给 US 加 `PR => Puerto Rico`（国家级 Puerto Rico 选项保留，两种选法都能下单）。配送方案按国家+州匹配，US 方案自动覆盖 PR 州；Postal_Assist 用州代码核对，PR 邮编 006/007/009 通过。
 - 部署：主店、s0006–s0010 前台与后台副本、store-admin、两个模板；三店 `get_states('US')` 均 55 项含 PR。浏览器实测 vialcoveplus.com 结账：State 选 Puerto Rico 后运费 UPS•FedEx•USPS $42.75 正常。备份 `pr-state-*`（两台）。
+
+### 2026-11-09 实时访客页中文化 / 具体化（全部 6 店 + 模板）
+- 新增 `Tracking\Labels`：积木类型 → 中文（product_collection 商品区、site_header 页头导航、footer 页脚…，其余取积木注册表标题）；配送费率 `pc_plans:N` → 方案名；支付网关 → 结账页名称；商品编号 → 商品名（规格商品用 get_name，不重复拼规格）。`class-tracking-page.php` 把三张表下发给前端（moduleLabels / shippingLabels / paymentLabels）。
+- 时间线（tracking-admin.js）：详情改成人话（“看到商品「GHK-CU 50mg」，露出 80%，停留 1.2 秒”“配送方式：Fast International Shipping（页面默认选中，不是顾客操作）”“切到了别的标签页”“从 facebook.com 跳转过来”…）；连续 3 秒内的商品曝光合并成一行“一眼看到了 N 个商品：…”；`Query::timeline` 返回 `product_name`。tracking-workspace.js 不再把详情折叠在“查看行为细节”后面。
+- 模块点击（Preferences::summarize + tracking-insights.js）：列改为 点了哪个模块 / 在哪个页面 / 点击次数 / 是哪些访客点的（访客 #N 链接到访客详情，含各自次数）。商品兴趣里只有编号的补商品名。
+- 部署：主店、s0006–s0010 前台与后台副本、store-admin、两个模板（7 个文件）。阳 后台实测：时间线中文详情直接可见、曝光合并、模块表显示 商品区/页头导航/页脚/视频 + 页面 + 访客 #1。备份 `visitor-labels-*`（两台）。
