@@ -141,6 +141,7 @@ final class Plugin {
 			Admin\YouTube_Settings::register_hooks();
 			Admin\Storefront_Language_Page::register_hooks();
 			Admin\Basic_Config_Page::register_hooks();
+			Admin\Contact_Page::register_hooks();
 			Admin\Shipping_Page::register_hooks();
 			Admin\Tax_Page::register_hooks();
 			Admin\Email_Center::register_hooks();

@@ -136,7 +136,7 @@ final class Settings_Page {
 				</table>
 
 				<h2><?php esc_html_e( 'Customer support button', 'peptide-core' ); ?></h2>
-				<p><?php esc_html_e( 'A floating contact button on the storefront. Only the contact methods you fill in are shown. They are public: use business accounts, not personal ones.', 'peptide-core' ); ?></p>
+				<p><?php esc_html_e( 'A floating contact button on the storefront. Only the contact methods you fill in are shown. They are public: use business accounts, not personal ones.', 'peptide-core' ); ?> <a href="<?php echo esc_url( Contact_Page::url() ); ?>"><?php esc_html_e( 'Also editable in Store settings → System settings → Contact details.', 'peptide-core' ); ?></a></p>
 				<table class="form-table" role="presentation">
 					<tr>
 						<th scope="row"><?php esc_html_e( 'Show button', 'peptide-core' ); ?></th>

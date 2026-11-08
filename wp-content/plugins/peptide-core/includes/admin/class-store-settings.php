@@ -52,6 +52,14 @@ final class Store_Settings {
 					__( 'WordPress general settings (site title, language, time zone)', 'peptide-core' ) => admin_url( 'options-general.php' ),
 				),
 			),
+			'contact' => array(
+				'icon'        => 'dashicons-phone',
+				'title'       => __( 'Contact details', 'peptide-core' ),
+				'desc'        => __( 'WhatsApp, Telegram and support email shown to customers: the floating support button, the footer and policy pages.', 'peptide-core' ),
+				'placeholder' => false,
+				'render'      => array( Contact_Page::class, 'render' ),
+				'now'         => array(),
+			),
 			'shopping' => array(
 				'icon' => 'dashicons-admin-users',
 				'title' => __( 'Shopping preferences', 'peptide-core' ),
