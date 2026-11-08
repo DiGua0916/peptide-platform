@@ -117,6 +117,19 @@ def option(db, name):
     return out
 
 
+REVISION_PHP = (
+    "use PeptideCore\\Templates; use PeptideCore\\Design_Sync; $made = 0;"
+    "foreach ( get_posts( array( 'post_type' => 'pc_template', 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids' ) ) as $id ) {"
+    "  $key = (string) get_post_meta( $id, Design_Sync::SYSTEM_META, true ); if ( '' === $key ) continue;"
+    "  if ( get_posts( array( 'post_type' => 'pc_template', 'post_status' => 'any', 'numberposts' => 1, 'fields' => 'ids', 'meta_key' => Design_Sync::REVISION_META, 'meta_value' => $key ) ) ) continue;"
+    "  $rev = Templates::duplicate( (int) $id ); if ( ! $rev ) continue;"
+    "  Templates::update_info( $rev, get_the_title( $id ) . ' · 修订版', '由系统模板复制，店铺可以随意修改；平台下发不会改动它。' );"
+    "  update_post_meta( $rev, Design_Sync::REVISION_META, $key ); $made++; }"
+    "if ( $made ) { $o = get_option( Design_Sync::OPTION, array() ); $o = is_array( $o ) ? $o : array(); $o['revision_created'] = true; update_option( Design_Sync::OPTION, $o, false ); }"
+    "echo 'revisions_created=' . $made;"
+)
+
+
 def wp(s, *args):
     return run(['runuser', '-u', s['user'], '--', '/usr/local/bin/wp', '--path=' + s['wp'], '--skip-themes', *args],
                env={'PATH': '/usr/sbin:/usr/bin:/sbin:/bin', 'HOME': '/nonexistent'}).decode('utf-8', 'replace')
@@ -250,6 +263,10 @@ def clone(source, target, parts_arg='all', dry_run=False):
 
     wp(dst, 'cache', 'flush')
     wp(dst, 'rewrite', 'flush')
+    if 'design' in parts:
+        # Every system template needs the editable "修订版" copy the normal HQ push creates on first receipt;
+        # without it the store only sees locked templates (2026-11-08).
+        wp(dst, 'eval', REVISION_PHP)
     admin = wp(dst, 'user', 'list', '--role=administrator', '--field=ID', '--number=1').strip()
     if admin:
         try:
