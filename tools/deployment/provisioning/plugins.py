@@ -480,11 +480,22 @@ def run_job(c, request, package_path=None):
 
 
 MESSAGES = {
-    'health_check_failed': '启用后店铺首页或购物车打不开，已自动停用这个插件。',
+    'health_check_failed': '启用后店铺首页或购物车打不开，已自动停用这个插件，店铺不受影响。',
     'plugin_package_layout': '压缩包里应只有一个插件文件夹，且文件夹名要和插件标识一致。',
     'plugin_header_missing': '没找到插件主文件（缺少 Plugin Name 说明）。',
     'plugin_name_conflict': '店铺里已有同名插件，不能覆盖。',
-    'store_not_found': '没找到这个店铺的服务器信息。',
+    'plugin_target_unexpected': '店铺里这个插件的位置已被占用，不能覆盖。',
+    'plugin_package_too_large': '插件包超过 32 MB。',
+    'plugin_package_size': '插件包超过 32 MB。',
+    'plugin_package_checksum': '服务器上的插件包和上传时不一致，请重新上传后再装。',
+    'plugin_package_not_zip': '压缩包格式不对，请用插件作者提供的原始 .zip。',
+    'plugin_package_encrypted': '压缩包加了密码，请用插件作者提供的原始 .zip。',
+    'plugin_package_path': '压缩包里有不安全的文件路径，已拒绝。',
+    'plugin_package_special_file': '压缩包里有不安全的文件，已拒绝。',
+    'store_not_found': '没找到这个店铺的服务器信息，插件没有装上。请联系技术人员。',
+    'store_code_root_missing': '服务器上没找到这个店铺的程序目录，插件没有装上。请联系技术人员。',
+    'store_identity_changed': '店铺身份校验不一致，为安全起见没有操作。请联系技术人员。',
+    'remote_plugin_failed': '前台服务器没有完成这一步，插件没有生效。请稍后点“重新安装”再试。',
 }
 
 
@@ -526,7 +537,7 @@ def process_queue(c):
                 except Exception as exc:
                     code = safe_error(exc)
                     value.update(state='failed', error_code=code,
-                                 message=MESSAGES.get(code.removeprefix('web_'), '插件操作没有完成，请查看错误代码。'))
+                                 message=MESSAGES.get(code.removeprefix('web_'), '这次操作没有完成。可以再点一次重试；仍失败请把括号里的错误代码发给技术人员。'))
                 value['finished_at'] = int(time.time())
                 atomic(receipt, canonical(value), mode=0o640, gid=gid)
                 entry.unlink()

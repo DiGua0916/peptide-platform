@@ -334,7 +334,7 @@ final class Store_Plugins {
 			$receipt = self::receipt( $root . '/results/' . $r['operation_id'] . '.json' );
 			if ( ! $receipt || (int) $receipt['site_id'] !== (int) $r['site_id'] || $receipt['plugin'] !== $r['slug'] || $receipt['operation_id'] !== $r['operation_id'] ) {
 				if ( (int) $r['updated'] < time() - 3600 ) {
-					$wpdb->update( $s, array( 'state' => 'failed', 'error' => '超过 1 小时没有结果，请检查后台任务。' ), array( 'id' => (int) $r['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+					$wpdb->update( $s, array( 'state' => 'failed', 'error' => '1 小时内没有收到结果，后台任务可能卡住了，这次操作没有生效。可以再点一次重试；仍失败请联系技术人员。' ), array( 'id' => (int) $r['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 				}
 				continue;
 			}

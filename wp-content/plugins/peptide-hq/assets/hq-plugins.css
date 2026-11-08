@@ -150,3 +150,6 @@ body.pchq-workspace .pcp-switch-form{display:inline-flex;align-items:center;gap:
 body.pchq-workspace .pcp-switch__text{font-size:12px;font-weight:600;color:var(--vc-muted)}
 body.pchq-workspace .pcp-switch[aria-checked=true]+.pcp-switch__text{color:var(--pcp-ok)}
 @media (max-width:782px){body.pchq-workspace .pcp-matrix tbody th{min-width:200px}body.pchq-workspace .pcp-matrix th,body.pchq-workspace .pcp-matrix td{padding:12px}}
+body.pchq-workspace .pcp-matrix thead th .pcp-state{margin-top:4px;font-size:11px}
+body.pchq-workspace .pcp-matrix thead th .pcp-link{font-size:11px}
+body.pchq-workspace .pcp-switch[disabled]:not([aria-busy]){cursor:not-allowed}

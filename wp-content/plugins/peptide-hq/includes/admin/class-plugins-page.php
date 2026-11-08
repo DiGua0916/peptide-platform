@@ -111,6 +111,30 @@ final class Plugins_Page {
 		return self::APP_NAMES[ (string) ( $app['key'] ?? '' ) ] ?? (string) ( $app['name'] ?? '' );
 	}
 
+	/** 把连接类错误翻成看得懂的话；店铺给的业务原因（中文）原样显示。 */
+	private static function friendly( \WP_Error $e ): string {
+		$code = $e->get_error_code();
+		$msg  = $e->get_error_message();
+		if ( 'pchq_offline' === $code || preg_match( '/cURL error|Could not resolve|timed out|Connection refused|HTTP status 5/i', $msg ) ) {
+			return '连不上这个店铺（可能暂时离线或网址有变），这次没有做任何修改。请稍后再试，或到“店铺”页检查连接。';
+		}
+		if ( 'pchq_denied' === $code ) {
+			return '店铺拒绝了总后台的连接密钥，这次没有做任何修改。请到“店铺”页重新连接这个店铺。';
+		}
+		if ( preg_match( '/No route was found|rest_no_route|HTTP status 404/i', $msg ) ) {
+			return '这个店铺的程序版本较旧，还不支持这个操作，这次没有做任何修改。请先更新店铺程序。';
+		}
+		if ( 'pchq_store_retired' === $code ) {
+			return '这个店铺已下线，不能修改。';
+		}
+		return $msg;
+	}
+
+	/** 最近一次连接检查失败的店铺：开关先锁住，避免点了才报错。 */
+	private static function unreachable( array $site ): bool {
+		return 'online' !== (string) ( $site['status'] ?? '' ) || '' !== (string) ( $site['error'] ?? '' );
+	}
+
 	/** 设置某个店铺能不能使用某个应用；店铺确认后把最新状态写回总后台保存的店铺信息。 */
 	public static function app_switch(): void {
 		if ( ! current_user_can( Menu::CAP ) ) {
@@ -128,7 +152,7 @@ final class Plugins_Page {
 		$res   = \PeptideHq\Client::app_access( $site_id, $key, $allowed );
 		$label = '' !== (string) $site['name'] ? (string) $site['name'] : (string) $site['url'];
 		if ( is_wp_error( $res ) ) {
-			self::flash( 'error', $label . '：' . $res->get_error_message() );
+			self::flash( 'error', $label . '：' . self::friendly( $res ) );
 			self::back( array(), 'apps' );
 		}
 		$info = is_array( $site['info'] ?? null ) ? $site['info'] : array();
@@ -172,7 +196,7 @@ final class Plugins_Page {
 		foreach ( $listed as $site ) {
 			$label = '' !== (string) $site['name'] ? (string) $site['name'] : (string) $site['url'];
 			$host  = (string) wp_parse_url( \PeptideHq\Site_Urls::public_url( $site ), PHP_URL_HOST );
-			echo '<th scope="col"><strong>' . esc_html( $label ) . '</strong><small>' . esc_html( $host ) . '</small></th>';
+			echo '<th scope="col"><strong>' . esc_html( $label ) . '</strong><small>' . esc_html( $host ) . '</small>' . ( self::unreachable( $site ) ? '<span class="pcp-state is-bad"><i></i>连接异常</span> <a class="pcp-link" href="' . esc_url( Menu::action_url( 'pchq_site_refresh', array( 'site' => (int) $site['id'] ) ) ) . '">重新检查</a>' : '' ) . '</th>';
 		}
 		echo '</tr></thead><tbody>';
 		foreach ( $catalog as $key => $app ) {
@@ -195,7 +219,8 @@ final class Plugins_Page {
 				echo '<td><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="pcp-inline pcp-switch-form"' . ( $allowed ? ' data-confirm="' . esc_attr( '确定让 ' . $label . ' 停用「' . $name . '」？如果店铺正开着它，会被关掉。' ) . '"' : '' ) . '>';
 				wp_nonce_field( 'pchq_app_switch' );
 				echo '<input type="hidden" name="action" value="pchq_app_switch"><input type="hidden" name="site" value="' . (int) $site['id'] . '"><input type="hidden" name="app" value="' . esc_attr( $key ) . '"><input type="hidden" name="allowed" value="' . ( $allowed ? '0' : '1' ) . '">';
-				echo '<button type="submit" class="pcp-switch" role="switch" aria-checked="' . ( $allowed ? 'true' : 'false' ) . '" aria-label="' . esc_attr( $label . ' 可以使用' . $name ) . '"><span></span></button>';
+				$locked = self::unreachable( $site );
+				echo '<button type="submit" class="pcp-switch" role="switch" aria-checked="' . ( $allowed ? 'true' : 'false' ) . '" aria-label="' . esc_attr( $label . ' 可以使用' . $name ) . '"' . ( $locked ? ' disabled title="店铺连接异常，恢复后才能修改"' : '' ) . '><span></span></button>';
 				echo '<span class="pcp-switch__text">' . ( $allowed ? '可用' : '不可用' ) . '</span></form></td>';
 			}
 			echo '</tr>';
