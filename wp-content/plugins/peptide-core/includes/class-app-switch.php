@@ -1,9 +1,8 @@
 <?php
 /**
- * 总后台“插件管理 → 店铺应用”的开关（2026-11-08）。
+ * 店铺应用的开 / 关（2026-11-08）。总后台停用某个应用时先用它把应用关掉（见 Hq_Connector::apps_route）。
  *
- * 只改应用的开 / 关，复用每个应用自己的校验（例如离开意图没有可用优惠码、首单优惠没选优惠券时不能开）。
- * 详细设置仍在店铺后台的应用中心里改。改完重新读一次应用中心的状态，没生效就如实报错。
+ * 复用每个应用自己的保存和校验；改完重新读一次应用中心的状态，没生效就如实报错。
  *
  * @package PeptideCore
  */
@@ -18,7 +17,7 @@ final class App_Switch {
 
 	/** @return true|\WP_Error */
 	public static function set( string $key, bool $on ) {
-		$apps = Apps_Page::apps();
+		$apps = Apps_Page::catalog();
 		if ( ! isset( $apps[ $key ] ) ) {
 			return new \WP_Error( 'pc_app_unknown', '店铺里没有这个应用。' );
 		}
@@ -29,7 +28,7 @@ final class App_Switch {
 		if ( is_wp_error( $done ) ) {
 			return $done;
 		}
-		$after = Apps_Page::apps();
+		$after = Apps_Page::catalog();
 		if ( (bool) ( $after[ $key ]['on'] ?? ! $on ) !== $on ) {
 			return new \WP_Error( 'pc_app_not_applied', $on ? '没有开启成功：这个应用还缺少必要的设置，请点“设置”在店铺后台补全后再开。' : '没有关闭成功，请到店铺后台的应用中心查看。' );
 		}

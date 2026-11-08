@@ -22,6 +22,7 @@ final class Campaign_Countdown_Page {
 	public static function save(): void {
 		if ( ! Store::can_manage() ) { wp_die( '没有修改应用的权限。', '', array( 'response' => 403 ) ); }
 		check_admin_referer( self::ACTION );
+		Apps_Page::require_allowed( self::APP );
 		$id = $_POST['promotionId'] ?? '0';
 		if ( ! is_string( $id ) || ! preg_match( '/\A(?:0|[1-9][0-9]{0,9})\z/', $id ) || (int) $id > 2147483647 ) { self::redirect( 'invalid' ); }
 		$settings = array( 'version' => 1, 'promotionId' => (int) $id );

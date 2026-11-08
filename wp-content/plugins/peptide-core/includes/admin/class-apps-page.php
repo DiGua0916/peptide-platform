@@ -28,8 +28,38 @@ final class Apps_Page {
 		return add_query_arg( $args, admin_url( 'admin.php?page=' . self::SLUG ) );
 	}
 
-	/** @return array<string,array{name:string,text:string,icon:string,on:bool}> */
+	/** 总后台决定哪些应用这个店铺可以用（2026-11-08）。存的是被停用的应用键；没有记录 = 全部可用，以后新增的应用默认可用。 */
+	public const ACCESS_OPTION = 'pc_app_access';
+
+	public static function allowed( string $key ): bool {
+		$o = get_option( self::ACCESS_OPTION, null );
+		return ! is_array( $o ) || ! in_array( $key, array_map( 'strval', (array) ( $o['blocked'] ?? array() ) ), true );
+	}
+
+	public static function set_allowed( string $key, bool $allowed ): void {
+		$o       = get_option( self::ACCESS_OPTION, null );
+		$blocked = is_array( $o ) ? array_map( 'strval', (array) ( $o['blocked'] ?? array() ) ) : array();
+		$blocked = array_values( array_diff( $blocked, array( $key ) ) );
+		if ( ! $allowed ) {
+			$blocked[] = $key;
+		}
+		update_option( self::ACCESS_OPTION, array( 'blocked' => $blocked, 'updated_at' => time() ), false );
+	}
+
+	/** 设置页 / 保存入口共用：总后台没开通的应用直接拒绝。 */
+	public static function require_allowed( string $key ): void {
+		if ( ! self::allowed( $key ) ) {
+			wp_die( '这个应用暂未开通，请联系平台。', '', array( 'response' => 403 ) );
+		}
+	}
+
+	/** 店铺可以使用的应用（应用中心、应用统计只显示这些）。 */
 	public static function apps(): array {
+		return array_filter( self::catalog(), static fn( $app, $key ): bool => self::allowed( (string) $key ), ARRAY_FILTER_USE_BOTH );
+	}
+
+	/** @return array<string,array{name:string,text:string,icon:string,on:bool}> 全部内置应用（不管是否开通）。 */
+	public static function catalog(): array {
 		return array(
 			'postal-assist' => array(
 				'name' => '邮编辅助',
@@ -115,6 +145,11 @@ final class Apps_Page {
 
 	public static function render(): void {
 		if ( ! current_user_can( self::CAP ) ) {
+			return;
+		}
+		$requested = sanitize_key( (string) ( $_GET['app'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only routing.
+		if ( '' !== $requested && ! self::allowed( $requested ) ) {
+			echo '<div class="wrap pc-pl pc-mk pc-apps"><p><a href="' . esc_url( self::url() ) . '">返回应用中心</a></p><div class="notice notice-warning inline"><p>这个应用暂未开通，请联系平台。</p></div></div>';
 			return;
 		}
 		if ( 'campaign-countdown' === ( $_GET['app'] ?? '' ) ) {
@@ -287,6 +322,7 @@ final class Apps_Page {
 			wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'peptide-core' ), 403 );
 		}
 		check_admin_referer( 'pc_app_exit_save' );
+		self::require_allowed( 'exit-intent' );
 		$raw    = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- 在 Exit_Intent::clean() 里逐项清理。
 		$raw['prizes'] = is_array( $raw['prizes'] ?? null ) ? array_values( $raw['prizes'] ) : array();
 		$errors = Exit_Intent::save( $raw );

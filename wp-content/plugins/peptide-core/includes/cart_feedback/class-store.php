@@ -13,6 +13,7 @@ final class Store {
 
 	public static function can_manage(): bool {
 		if ( ! is_user_logged_in() || ! current_user_can( 'manage_woocommerce' ) ) { return false; }
+		if ( ! \PeptideCore\Admin\Apps_Page::allowed( 'cart-feedback' ) ) { return false; } // 总后台没开通这个应用
 		$id = get_current_user_id();
 		return ! \PeptideCore\Staff::is_staff( $id ) || in_array( 'apps', \PeptideCore\Staff::granted( $id ), true );
 	}

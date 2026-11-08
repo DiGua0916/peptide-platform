@@ -98,9 +98,9 @@ final class Client {
 		return self::request( $site_id, 'POST', '/peptide/v1/hq/config', array(), $config );
 	}
 
-	/** 开关店铺应用中心里的某个应用（2026-11-08）。返回 array( 'apps' => 所有应用现在的开关 ) 或 WP_Error（含店铺给的原因）。 */
-	public static function app_switch( int $site_id, string $key, bool $on ) {
-		return self::request( $site_id, 'POST', '/peptide/v1/hq/apps', array(), array( 'key' => $key, 'on' => $on ) );
+	/** 设置店铺能不能使用某个内置应用（2026-11-08）。返回 array( 'apps' => 全部应用和开通状态 ) 或 WP_Error（含店铺给的原因）。 */
+	public static function app_access( int $site_id, string $key, bool $allowed ) {
+		return self::request( $site_id, 'POST', '/peptide/v1/hq/apps', array(), array( 'key' => $key, 'allowed' => $allowed ) );
 	}
 
 	public static function staff_list( int $site_id ) {

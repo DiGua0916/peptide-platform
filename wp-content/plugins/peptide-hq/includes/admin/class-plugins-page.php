@@ -31,8 +31,8 @@ final class Plugins_Page {
 		add_action( 'admin_enqueue_scripts', array( self::class, 'assets' ), 1001 );
 	}
 
-	private static function back( array $args = array() ): void {
-		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php?page=' . self::SLUG ) ) );
+	private static function back( array $args = array(), string $anchor = '' ): void {
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php?page=' . self::SLUG ) ) . ( '' !== $anchor ? '#' . $anchor : '' ) );
 		exit;
 	}
 
@@ -111,7 +111,7 @@ final class Plugins_Page {
 		return self::APP_NAMES[ (string) ( $app['key'] ?? '' ) ] ?? (string) ( $app['name'] ?? '' );
 	}
 
-	/** 开关某个店铺的某个应用：店铺按应用自己的规则校验，结果写回总后台保存的店铺信息。 */
+	/** 设置某个店铺能不能使用某个应用；店铺确认后把最新状态写回总后台保存的店铺信息。 */
 	public static function app_switch(): void {
 		if ( ! current_user_can( Menu::CAP ) ) {
 			wp_die( '无权管理应用。', '', array( 'response' => 403 ) );
@@ -119,17 +119,17 @@ final class Plugins_Page {
 		check_admin_referer( 'pchq_app_switch' );
 		$site_id = absint( $_POST['site'] ?? 0 );
 		$key     = sanitize_key( wp_unslash( $_POST['app'] ?? '' ) );
-		$on      = '1' === ( $_POST['on'] ?? '' );
+		$allowed = '1' === ( $_POST['allowed'] ?? '' );
 		$site    = Sites::get( $site_id );
 		if ( ! $site || '' === $key ) {
 			self::flash( 'error', '店铺或应用不存在。' );
-			self::back();
+			self::back( array(), 'apps' );
 		}
-		$res = \PeptideHq\Client::app_switch( $site_id, $key, $on );
+		$res   = \PeptideHq\Client::app_access( $site_id, $key, $allowed );
 		$label = '' !== (string) $site['name'] ? (string) $site['name'] : (string) $site['url'];
 		if ( is_wp_error( $res ) ) {
 			self::flash( 'error', $label . '：' . $res->get_error_message() );
-			self::back();
+			self::back( array(), 'apps' );
 		}
 		$info = is_array( $site['info'] ?? null ) ? $site['info'] : array();
 		if ( is_array( $res['apps'] ?? null ) ) {
@@ -137,45 +137,70 @@ final class Plugins_Page {
 			Sites::update( $site_id, array( 'info' => (string) wp_json_encode( $info ) ) );
 		}
 		$name = self::APP_NAMES[ $key ] ?? $key;
-		self::flash( 'success', $label . '：已' . ( $on ? '开启' : '关闭' ) . '「' . $name . '」。' );
-		self::back();
+		self::flash( 'success', $allowed ? $label . ' 现在可以使用「' . $name . '」，开不开由店铺自己决定。' : $label . ' 已停用「' . $name . '」：已关闭，店铺后台看不到也改不了。' );
+		self::back( array(), 'apps' );
 	}
 
+	/** 应用 × 店铺：每格一个开关，决定这个店铺能不能用这个应用。行来自各店铺上报的应用清单，新增应用自动出现。 */
 	private static function render_apps( array $sites ): void {
 		echo '<h2 class="pcp-section" id="apps">店铺应用</h2>';
-		echo '<p class="pcp-note">店铺自带的营销和购物体验应用，新店开好就有。在这里按店铺开关；详细内容（优惠券、文案、活动等）点“设置”进入该店后台修改。开启时会检查设置是否完整，不完整会提示原因。以后新增的应用会自动出现在这里。</p>';
+		echo '<p class="pcp-note">决定每个店铺可以使用哪些内置应用。停用后店铺后台看不到这个应用，已开着的会被关掉；开通后由店铺自己决定开不开。以后新增的应用会自动出现在这里（默认可用）。</p>';
+		$catalog = array();
+		$missing = array();
 		foreach ( $sites as $site ) {
-			$info  = is_array( $site['info'] ?? null ) ? $site['info'] : array();
-			$apps  = is_array( $info['apps'] ?? null ) ? $info['apps'] : null;
-			$label = '' !== (string) $site['name'] ? (string) $site['name'] : (string) $site['url'];
-			$host  = (string) wp_parse_url( \PeptideHq\Site_Urls::public_url( $site ), PHP_URL_HOST );
-			$on    = $apps ? count( array_filter( $apps, static fn( $a ): bool => ! empty( $a['on'] ) ) ) : 0;
-			echo '<section class="pcp-card pcp-apps"><div class="pcp-card__head"><div><h3>' . esc_html( $label ) . '</h3><span class="pcp-hint">' . esc_html( $host . ( $apps ? ' · 已开启 ' . $on . ' / ' . count( $apps ) : '' ) ) . '</span></div>';
-			echo '<a class="pcp-link" target="_blank" rel="noopener" href="' . esc_url( Menu::action_url( 'pchq_login', array( 'site' => (int) $site['id'], 'to' => 'apps_center' ) ) ) . '">打开应用中心</a></div>';
+			$apps = is_array( $site['info']['apps'] ?? null ) ? $site['info']['apps'] : null;
 			if ( null === $apps ) {
-				echo '<p class="pcp-note">还没有收到这个店铺的应用信息（店铺程序更新后会自动同步）。<a class="pcp-link" href="' . esc_url( Menu::action_url( 'pchq_site_refresh', array( 'site' => (int) $site['id'] ) ) ) . '">立即同步</a></p></section>';
+				$missing[] = $site;
 				continue;
 			}
-			echo '<ul class="pcp-app-grid">';
 			foreach ( $apps as $app ) {
 				$key = sanitize_key( (string) ( $app['key'] ?? '' ) );
-				if ( '' === $key ) {
+				if ( '' !== $key && ! isset( $catalog[ $key ] ) ) {
+					$catalog[ $key ] = $app;
+				}
+			}
+		}
+		foreach ( $missing as $site ) {
+			$label = '' !== (string) $site['name'] ? (string) $site['name'] : (string) $site['url'];
+			echo '<div class="pcp-flash is-wait">' . esc_html( $label ) . '：还没有收到应用清单（店铺程序更新后会自动同步）。<a class="pcp-link" href="' . esc_url( Menu::action_url( 'pchq_site_refresh', array( 'site' => (int) $site['id'] ) ) ) . '">立即同步</a></div>';
+		}
+		if ( ! $catalog ) {
+			return;
+		}
+		$listed = array_values( array_filter( $sites, static fn( array $s ): bool => is_array( $s['info']['apps'] ?? null ) ) );
+		echo '<section class="pcp-card pcp-access"><div class="pcp-scroll"><table class="pcp-matrix"><thead><tr><th scope="col">应用</th>';
+		foreach ( $listed as $site ) {
+			$label = '' !== (string) $site['name'] ? (string) $site['name'] : (string) $site['url'];
+			$host  = (string) wp_parse_url( \PeptideHq\Site_Urls::public_url( $site ), PHP_URL_HOST );
+			echo '<th scope="col"><strong>' . esc_html( $label ) . '</strong><small>' . esc_html( $host ) . '</small></th>';
+		}
+		echo '</tr></thead><tbody>';
+		foreach ( $catalog as $key => $app ) {
+			$name = self::app_name( $app );
+			echo '<tr><th scope="row"><span class="pcp-avatar is-sm" aria-hidden="true">' . esc_html( self::initial( $name ) ) . '</span><span><strong>' . esc_html( $name ) . '</strong>' . ( '' !== self::app_text( $app ) ? '<small>' . esc_html( self::app_text( $app ) ) . '</small>' : '' ) . '</span></th>';
+			foreach ( $listed as $site ) {
+				$row = null;
+				foreach ( $site['info']['apps'] as $candidate ) {
+					if ( ( $candidate['key'] ?? '' ) === $key ) {
+						$row = $candidate;
+						break;
+					}
+				}
+				if ( null === $row ) {
+					echo '<td><span class="pcp-hint">店铺版本较旧</span></td>';
 					continue;
 				}
-				$is_on = ! empty( $app['on'] );
-				$name  = self::app_name( $app );
-				echo '<li class="pcp-app' . ( $is_on ? ' is-on' : '' ) . '"><div class="pcp-app__top"><span class="pcp-avatar is-sm" aria-hidden="true">' . esc_html( self::initial( $name ) ) . '</span><strong>' . esc_html( $name ) . '</strong>';
-				echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="pcp-inline pcp-switch-form">';
+				$allowed = ! array_key_exists( 'allowed', $row ) || ! empty( $row['allowed'] );
+				$label   = '' !== (string) $site['name'] ? (string) $site['name'] : (string) $site['url'];
+				echo '<td><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="pcp-inline pcp-switch-form"' . ( $allowed ? ' data-confirm="' . esc_attr( '确定让 ' . $label . ' 停用「' . $name . '」？如果店铺正开着它，会被关掉。' ) . '"' : '' ) . '>';
 				wp_nonce_field( 'pchq_app_switch' );
-				echo '<input type="hidden" name="action" value="pchq_app_switch"><input type="hidden" name="site" value="' . (int) $site['id'] . '"><input type="hidden" name="app" value="' . esc_attr( $key ) . '"><input type="hidden" name="on" value="' . ( $is_on ? '0' : '1' ) . '">';
-				echo '<button type="submit" class="pcp-switch" role="switch" aria-checked="' . ( $is_on ? 'true' : 'false' ) . '" aria-label="' . esc_attr( ( $is_on ? '关闭' : '开启' ) . $name ) . '"><span></span></button></form></div>';
-				if ( '' !== self::app_text( $app ) ) {
-					echo '<p>' . esc_html( self::app_text( $app ) ) . '</p>';
-				}
-				echo '<div class="pcp-app__foot"><span class="pcp-state ' . ( $is_on ? 'is-ok' : 'is-off' ) . '"><i></i>' . ( $is_on ? '已开启' : '未开启' ) . '</span><a class="pcp-link" target="_blank" rel="noopener" href="' . esc_url( Menu::action_url( 'pchq_login', array( 'site' => (int) $site['id'], 'to' => 'app_' . $key ) ) ) . '">设置</a></div></li>';
+				echo '<input type="hidden" name="action" value="pchq_app_switch"><input type="hidden" name="site" value="' . (int) $site['id'] . '"><input type="hidden" name="app" value="' . esc_attr( $key ) . '"><input type="hidden" name="allowed" value="' . ( $allowed ? '0' : '1' ) . '">';
+				echo '<button type="submit" class="pcp-switch" role="switch" aria-checked="' . ( $allowed ? 'true' : 'false' ) . '" aria-label="' . esc_attr( $label . ' 可以使用' . $name ) . '"><span></span></button>';
+				echo '<span class="pcp-switch__text">' . ( $allowed ? '可用' : '不可用' ) . '</span></form></td>';
 			}
-			echo '</ul></section>';
+			echo '</tr>';
 		}
+		echo '</tbody></table></div></section>';
 	}
 
 	public static function assets(): void {
@@ -252,15 +277,14 @@ final class Plugins_Page {
 
 		echo '<div class="wrap pchq pchq-plugins pcp">';
 		echo '<header class="pcp-head"><div><h1>插件管理</h1><p>上传你购买的第三方插件，再选择装到哪些店铺。安装时会同时放到店铺的前台和后台服务器，启用后自动检查首页和购物车，打不开会自动停用。</p></div>';
-		$app_total = 0;
-		$app_on    = 0;
+		$app_keys = array();
 		foreach ( $sites as $site ) {
 			foreach ( (array) ( $site['info']['apps'] ?? array() ) as $app ) {
-				++$app_total;
-				$app_on += ! empty( $app['on'] ) ? 1 : 0;
+				$app_keys[ (string) ( $app['key'] ?? '' ) ] = true;
 			}
 		}
-		echo '<dl class="pcp-stats"><div><dt>应用已开启</dt><dd>' . (int) $app_on . '<small> / ' . (int) $app_total . '</small></dd></div><div><dt>第三方插件</dt><dd>' . count( $library ) . '</dd></div><div><dt>店铺</dt><dd>' . count( $sites ) . '</dd></div></dl></header>';
+		unset( $app_keys[''] );
+		echo '<dl class="pcp-stats"><div><dt>店铺应用</dt><dd>' . count( $app_keys ) . '</dd></div><div><dt>第三方插件</dt><dd>' . count( $library ) . '</dd></div><div><dt>店铺</dt><dd>' . count( $sites ) . '</dd></div></dl></header>';
 		if ( is_array( $flash ) ) {
 			echo '<div class="pcp-flash ' . ( 'error' === $flash[0] ? 'is-bad' : 'is-ok' ) . '" role="status">' . esc_html( (string) $flash[1] ) . '</div>';
 		}

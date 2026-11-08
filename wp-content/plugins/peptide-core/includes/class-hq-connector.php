@@ -339,32 +339,35 @@ final class Hq_Connector {
 	}
 
 	/**
-	 * 总后台“插件管理 → 店铺应用”开关某个应用（2026-11-08）。以店铺管理员身份执行，走应用自己的校验。
+	 * 总后台决定这个店铺能不能使用某个应用（2026-11-08）。停用时先以店铺管理员身份把应用关掉，
+	 * 关掉成功才记为停用；之后店铺后台看不到、也保存不了这个应用。重新开通后应用保持关闭，由店铺自己决定开不开。
 	 *
-	 * @return array|\WP_Error 所有应用现在的开关
+	 * @return array|\WP_Error 全部应用和开通状态
 	 */
 	public static function apps_route( \WP_REST_Request $request ) {
 		$p   = (array) $request->get_json_params();
 		$key = sanitize_key( (string) ( $p['key'] ?? '' ) );
-		if ( '' === $key || ! array_key_exists( 'on', $p ) || ! is_bool( $p['on'] ) ) {
-			return new \WP_Error( 'pc_app_request', '请求无效。', array( 'status' => 400 ) );
+		if ( '' === $key || ! array_key_exists( 'allowed', $p ) || ! is_bool( $p['allowed'] ) || ! isset( Admin\Apps_Page::catalog()[ $key ] ) ) {
+			return new \WP_Error( 'pc_app_request', '请求无效或店铺里没有这个应用。', array( 'status' => 400 ) );
 		}
-		$previous = get_current_user_id();
-		$user     = self::login_user();
-		if ( ! $user ) {
-			return new \WP_Error( 'pc_app_user', '店铺没有可用的管理员账号。', array( 'status' => 409 ) );
+		if ( ! $p['allowed'] && Admin\Apps_Page::allowed( $key ) ) {
+			$previous = get_current_user_id();
+			$user     = self::login_user();
+			if ( ! $user ) {
+				return new \WP_Error( 'pc_app_user', '店铺没有可用的管理员账号。', array( 'status' => 409 ) );
+			}
+			wp_set_current_user( $user );
+			try {
+				$off = App_Switch::set( $key, false );
+			} finally {
+				wp_set_current_user( $previous );
+			}
+			if ( is_wp_error( $off ) ) {
+				return new \WP_Error( 'pc_app_off', '没能先关闭这个应用，未修改：' . $off->get_error_message(), array( 'status' => 409 ) );
+			}
 		}
-		wp_set_current_user( $user );
-		try {
-			$done = App_Switch::set( $key, $p['on'] );
-		} finally {
-			wp_set_current_user( $previous );
-		}
-		if ( is_wp_error( $done ) ) {
-			$done->add_data( array( 'status' => 409 ) );
-			return $done;
-		}
-		Activity_Log::log( 'settings', $p['on'] ? 'app_on' : 'app_off', array( 'type' => 'app', 'id' => 0, 'label' => $key ), array( 'via' => 'HQ' ), $user );
+		Admin\Apps_Page::set_allowed( $key, $p['allowed'] );
+		Activity_Log::log( 'settings', $p['allowed'] ? 'app_allowed' : 'app_blocked', array( 'type' => 'app', 'id' => 0, 'label' => $key ), array( 'via' => 'HQ' ) );
 		return array( 'apps' => self::apps() );
 	}
 
@@ -430,19 +433,19 @@ final class Hq_Connector {
 		return self::config();
 	}
 
-	/** 应用中心里内置应用的开关（总后台“插件管理 → 店铺应用”只读显示）。出错时返回空列表，不影响店铺状态。 */
+	/** 全部内置应用和总后台给这个店铺的开通状态（总后台“插件管理 → 店铺应用”）。出错时返回空列表，不影响店铺状态。 */
 	private static function apps(): array {
 		$out = array();
 		try {
 			if ( ! class_exists( Admin\Apps_Page::class ) ) {
 				return $out;
 			}
-			foreach ( Admin\Apps_Page::apps() as $key => $app ) {
+			foreach ( Admin\Apps_Page::catalog() as $key => $app ) {
 				$out[] = array(
-					'key'  => (string) $key,
-					'name' => (string) $app['name'],
-					'text' => (string) ( $app['text'] ?? '' ),
-					'on'   => (bool) $app['on'],
+					'key'     => (string) $key,
+					'name'    => (string) $app['name'],
+					'text'    => (string) ( $app['text'] ?? '' ),
+					'allowed' => Admin\Apps_Page::allowed( (string) $key ),
 				);
 			}
 		} catch ( \Throwable $e ) {

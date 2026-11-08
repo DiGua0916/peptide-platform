@@ -25,6 +25,7 @@ final class First_Order_Offer_Page {
 		self::access();
 		if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) { wp_die( '只接受 POST。', '', array( 'response'=>405 ) ); }
 		check_admin_referer( self::ACTION );
+		Apps_Page::require_allowed( First_Order_Offer::APP );
 		$mode = is_string( $_POST['mode'] ?? null ) ? $_POST['mode'] : '';
 		if ( 'create' === $mode ) {
 			$id = First_Order_Offer::create_welcome_coupon();

@@ -34,7 +34,13 @@
 		if (message && !window.confirm(message)) { event.preventDefault(); return; }
 		if (f && f.classList && f.classList.contains('pcp-switch-form')) {
 			var sw = f.querySelector('.pcp-switch');
-			if (sw) { sw.setAttribute('aria-checked', sw.getAttribute('aria-checked') === 'true' ? 'false' : 'true'); setTimeout(function () { sw.disabled = true; }, 0); }
+			if (sw) {
+				var next = sw.getAttribute('aria-checked') === 'true' ? 'false' : 'true';
+				sw.setAttribute('aria-checked', next);
+				var t = f.querySelector('.pcp-switch__text');
+				if (t) { t.textContent = '保存中…'; }
+				setTimeout(function () { sw.disabled = true; }, 0);
+			}
 			return;
 		}
 		if (f && f.classList && f.classList.contains('pcp-inline')) {

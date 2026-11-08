@@ -7,7 +7,7 @@ final class Postal_Assist_Page {
 	public static function register_hooks():void{add_action('admin_post_'.self::ACTION,array(self::class,'handle'));}
 	private static function access():void{if(!current_user_can('manage_woocommerce'))wp_die('没有邮编设置权限。','',array('response'=>403));}
 	public static function handle():void{
-		self::access();if('POST'!==($_SERVER['REQUEST_METHOD']??''))wp_die('只接受 POST。','',array('response'=>405));check_admin_referer(self::ACTION);
+		self::access();if('POST'!==($_SERVER['REQUEST_METHOD']??''))wp_die('只接受 POST。','',array('response'=>405));check_admin_referer(self::ACTION);Apps_Page::require_allowed(Postal_Assist::APP);
 		$s=array();foreach(Postal_Assist::defaults()as$key=>$value){$s[$key]=isset($_POST[$key])&&'1'===$_POST[$key];}
 		if($s['enabled']&&$s['google_enabled']&&(!$s['merchant_consent']||!Postal_Assist::google_ready($s)))wp_die('Google 外部查询需要服务端密钥及明确的地址传送披露确认。未保存。','',array('response'=>400));
 		update_option(Postal_Assist::OPTION,Postal_Assist::normalize($s),false);wp_safe_redirect(Apps_Page::url(array('app'=>Postal_Assist::APP,'saved'=>'1')));exit;
