@@ -707,3 +707,15 @@
 - 用户关闭标签页后再清一次，主店 5 个访客 30 秒内又回来了（同一批 page_instance，心跳 seq 10536/6540/4858/4621/794 接着涨）——那些标签页在别的浏览器/电脑上还开着。
 - 修复 `Tracking\Ingest::handle()`：批次里没有 `page_view` 且 `vid` 在访客表里不存在时，不再新建访客；直接 ack（浏览器不重发）但什么都不记。只有真正重新加载页面的 page_view 才会建访客。部署到 6 家店 + 6 个后台副本 + 2 个模板，再次清空 6 家店追踪表；80 秒后全部仍为 0。HQ 每日统计重拉。
 - 之后 s0006 出现 1 个访客：13:15:35 桌面 Chrome 首页，1 次翻页、7 秒后离开，是正常的新访问（时间与用户查看新标题吻合）。
+
+### 2026-11-08 13:18 UTC 爬虫入口复核（vialcoveplus.com 实测）
+| 场景 | 结果 |
+|---|---|
+| 扫描器 UA（CensysInspect）访问首页 | Cloudflare 403 |
+| HeadlessChrome UA 访问首页 | 200，但不发 pc_vid cookie、不输出追踪脚本 |
+| curl / 空 UA 访问首页 | 200，不发 cookie、不追踪 |
+| HeadlessChrome UA 直接 POST 事件 | 403 pc_track_automated |
+| 正常 Chrome UA + cookie，只发心跳（旧标签页场景） | 200 ack，**不建访客** |
+| 正常 Chrome UA + cookie，伪造 page_view 直接打 API | 200，建了 1 个访客（故意针对我们接口的攻击者场景；测试行已删） |
+- 剩余风险：只有"先用真浏览器 UA 拿 cookie、再伪造 page_view 打接口"的定向脚本能混进来，真实爬虫/扫描器不会这么做；真浏览器内核的无头爬虫还要过 Cloudflare Bot Fight Mode + navigator.webdriver 检查 + 6 秒互动门槛。
+- 复核时 6 店访客：主店 0、s0006 1（13:15 真实访问）、其余 0。
