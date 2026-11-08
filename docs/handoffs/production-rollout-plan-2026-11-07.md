@@ -586,3 +586,4 @@
 - Shipping policy 草稿 #11771 中的待确认项已改为 “free”。
 - 新店模板只含装修（`template.json`），不含运费方案；新开店铺的运费设置未核对。
 - 08:30 UTC 更正：用户说明满 $1,000 运费本来就设的是 $15，已改回 $15；Shipping policy 草稿同步改为 $15.00。$999–$1,000 的空档修复保留。待确认：这档在结账页显示的名字是 “Free Shipping”，但实际收 $15。
+- 08:35 UTC：满 $1,000 这档改名为 “Discounted Shipping”（$15）。实测：$1,186 订单显示 “Discounted Shipping”，$361 显示 “UPS • FedEx • USPS”。实测价格比原价低 5%（$14.25 / $42.75），来自运费优惠规则 “5%off”（discount_id 1），是店铺的营销设置，不是错误。
