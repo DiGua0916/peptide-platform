@@ -361,10 +361,14 @@ def unlink_from(root, plugin, base):
 
 def install_local(c, store, plugin, sha, raw):
     base = plugins_base(c)
+    # The admin worker runs with UMask=0077, so set modes explicitly: store PHP users must traverse these.
     base.mkdir(mode=0o755, exist_ok=True)
+    require(base.is_dir() and not base.is_symlink(), 'plugins_base_unexpected')
+    os.chmod(base, 0o755)
     store_dir = base / store['slug']
     store_dir.mkdir(mode=0o755, exist_ok=True)
     no_symlink_components(store_dir)
+    os.chmod(store_dir, 0o755)
     target = store_dir / plugin
     name, version = unpack(raw, sha, plugin, target)
     link_into(store['root'], plugin, target, base)

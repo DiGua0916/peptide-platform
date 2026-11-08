@@ -159,9 +159,16 @@ class Package(unittest.TestCase):
 class EndToEnd(Hosts):
     def test_install_first_store_links_both_hosts_and_activates(self):
         receipt = self.drop(self.request())
-        with patch.object(plugins, 'remote', self.fake_remote), patch.object(plugins, 'wp', self.fake_wp), \
-                patch.object(plugins, 'healthy', return_value=True):
-            self.assertEqual(plugins.process_queue(self.admin_c), 1)
+        old_umask = os.umask(0o077)  # the admin worker's systemd unit sets UMask=0077
+        try:
+            with patch.object(plugins, 'remote', self.fake_remote), patch.object(plugins, 'wp', self.fake_wp), \
+                    patch.object(plugins, 'healthy', return_value=True):
+                self.assertEqual(plugins.process_queue(self.admin_c), 1)
+        finally:
+            os.umask(old_umask)
+        for host in ('admin', 'web'):
+            for d in ('store-plugins', 'store-plugins/s0001', 'store-plugins/s0001/acme-wheel'):
+                self.assertEqual(oct((self.tmp / host / d).stat().st_mode & 0o777), '0o755', (host, d))
         result = json.loads(receipt.read_text())
         self.assertEqual((result['state'], result['name'], result['version']), ('done', 'Acme Wheel', '1.2.3'))
         for host, root in (('admin', 'srv/store-admin/releases/r1'), ('web', 'srv/releases/r9')):
