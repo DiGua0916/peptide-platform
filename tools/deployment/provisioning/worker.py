@@ -88,6 +88,9 @@ def write(path, text, mode=0o600, group=None):
     require(not path.is_symlink(), 'symlink_rejected')
     tmp = path.with_name(path.name + '.next-' + secrets.token_hex(4))
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, mode)
+    # The worker runs with UMask=0077, which would silently drop group/other bits
+    # (HQ could not read 0640 job results). Apply the requested mode explicitly.
+    os.fchmod(fd, mode)
     with os.fdopen(fd, 'w', encoding='utf-8') as f:
         f.write(text)
         f.flush()

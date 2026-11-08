@@ -604,3 +604,11 @@
   - 店铺前台 `2838632-web01`、后台 `2838632-s0001`、两套新店模板。
 - 验证：店铺 `wp_mail` 经签名到达 HQ；HQ 因未连接发信邮箱返回 503（预期）。回调地址 GET 能正确转发。
 - 待完成：用户在微软 Entra 点 Register（回调地址已改为 HQ 地址），之后生成客户端密钥、在 HQ 的 FluentSMTP 连接 Outlook（tenant 选 consumers）并授权，再发测试邮件。
+
+### 2026-11-08 10:00 UTC 新店 s0004（vialcoveglobal.com）开店进度看不到
+
+- 现象：用户提交开店后刷新，进度消失。
+- 原因：开店程序以 `UMask=0077` 运行，`os.open(..., 0o640)` 实际得到 0600，结果文件 HQ 读不到（`Permission denied`）。所以开店页面看不到进度，CDN 也拿不到这个开店任务。旧任务的文件是 640，是在加 UMask 之前写的。
+- 修复：`worker.py` 的 `write()` 在打开文件后显式 `os.fchmod(fd, mode)`。两台服务器都已部署（备份 `/home/ubuntu/vialcove-deploy-backups/worker.py.*`，权限保持 700）。当前结果文件已改为 640，下次写入仍是 640，已验证。
+- 同时修复：HQ 插件管理页在有 2 家以上店铺时报错（`Plugins_Page::host()` 不存在，改名功能删除时误删），HQ `f779e44-hq`。
+- s0004 状态：`waiting_dns`。域名 NS 在 DNSPod，没有 A 记录。CDN 已自动在 Cloudflare 建好区域，等用户把 NS 改成 `magdalena.ns.cloudflare.com`、`marty.ns.cloudflare.com`，生效后会自动加解析并继续开店。
