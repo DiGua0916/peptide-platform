@@ -467,3 +467,12 @@
 - 开店链路核对：worker 写出的开店结果 root:vchq 0640，总后台可读；等待解析时任务持续重试；新店支付跟随支付中心（信用卡“全部已接入店铺”）；开店账号是新店管理员；新店域名白名单由 worker 追加。
 - 代码 `0f4759f`：CDN 页“手动加入已有域名”一行对齐（输入框、下拉、按钮底边一致），说明文字另起一行。总后台 `d0ec9ef-hq` → `0f4759f-hq`，登录 200。
 - 用户批准 "Turn it on"：CDN 设置开启“域名不在 Cloudflare 时自动添加”（`create_zones = true`），自动配置保持开启，令牌不变。
+
+### 清空支付通道测试数据（用户批准 "Yes, delete all"，2026-11-08）
+
+- 用户：清空测试店铺（主店 vialcovepeptides.com）里支付通道测试留下的全部数据和总后台交易记录；用户确认 4 个 PayPal 已付款订单（合计 USD 1,119.25）为测试。
+- 备份：web 机 `/root/vialcove-backups/test-payment-cleanup-20261108T060344Z/store-db-full.sql.gz`（主店数据库全量）；admin 机同名目录 `hq-payment-ledger.sql.gz`（`wp_pc_pay_hub_attempts` / `_events` / `wp_pchq_daily`，第一次导出因 mysqldump 读不到配置为空，重导后完整）。均 root 0600。
+- 店铺：订单 #11731–#11757 共 20 个强制删除（HPOS，含商品行 / 备注 / meta）；`pc_panapay_creations` 20、`pc_panapay_transactions` 5、`pc_recovery` 7、`pc_track_events` 70、`pc_track_visits` 9 条（仅这些订单）删除；4 个已扣库存订单按 WooCommerce 规则加回库存（DSIP 10mg 454→455、Tirzepatide 20mg 986→993、120mg 997→1000）；WELCOME5 使用次数 1→0；清页面缓存。剩余订单 0。
+- 总后台：`wp_pc_pay_hub_attempts` 20、`wp_pc_pay_hub_events` 6 条删除（全部为 site 2），`wp_pchq_daily` site 2 的 103 行删除后重新拉取店铺汇总（31 天，订单 0、销售额 0，访客数保留）。支付中心显示“还没有付款记录”，待回写 0、需核对 0。
+- 验证：主店结账可用网关仍为信用卡（来自总后台、已开启），首页 / 购物车 / 结账 200；信用卡付款方式配置未改动。
+- 恢复方式：用上述备份导回对应表（会覆盖之后的新数据，需要先核对）。
