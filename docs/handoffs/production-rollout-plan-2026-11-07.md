@@ -696,3 +696,9 @@
 - 不做反向同步：总后台标签（地瓜/李军/阳…）和店铺名称含义不同，试过“轮询时跟随店铺名”会把标签覆盖成 vialcovepeptides.com，已回退并恢复 6 个标签。
 - 部署：connector 写到主店 release、s0006–s0010 店铺与后台副本、yy-sync 两个模板；HQ menu/sites-page 写到 current release。备份 `/home/ubuntu/vialcove-deploy-backups/name-sync-*`（两台）。已把 s0006 名称同步为“李军”，og:site_name 核实。
 - 注意：浏览器标签标题（“VialCovePeptides — …”）来自店铺 SEO 标题模板，页头品牌字来自 设置 → Brand name，两者随复制从主店带过来，不跟店铺名称联动。
+
+### 2026-11-08 网页标题 / 品牌字跟随店铺名称
+- 主题里写死的 “VialCovePeptides”（`document_title_parts`、logo alt、页头/页脚 aria-label、旧页脚版权、home-hero eyebrow）全部改为 `get_bloginfo('name')`；首页标题 = “<店铺名称> — A clearer view of peptides”。Logo 图片本身仍是 VialCove 的 SVG。
+- 主店的名称原来就是域名 `vialcovepeptides.com`，改为 “VialCovePeptides”，公开显示和之前一致。
+- 部署：主店 release、s0006–s0010（web + 后台副本）、yy-sync web 模板（admin 模板没有主题文件）；6 家店页面缓存刷新。核实：vialcovepro.com 标题 “李军 — …”，vialcoveultra.com “阳 — …”。备份 `/home/ubuntu/vialcove-deploy-backups/theme-name-*`（两台）。
+- 访客追问（地瓜 6 / 光辉 4，12:40–13:00 UTC）：主店 5 个是用户自己长期开着的店铺标签页（/checkout/、/cart/、首页，心跳 seq 已到 10516，闲置 2 小时+），12:39 清表后下一次心跳又把访客建回来；另 1 个 Edge 访问看了 12 秒视频后离开。光辉 4 个是全新页面加载（桌面 Chrome ×3、手机 Chrome ×1 且拉了购物车），时间正好是用户在看店铺。店铺 server block `access_log off`，没有 IP 可查。内置浏览器只开着总后台和 s0001 后台，不是我。
