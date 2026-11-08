@@ -12,7 +12,7 @@ $vc_slides = array(
     <div class="hero-slides" id="vialcove-hero-slides">
         <article class="hero-slide is-active" role="group" aria-roledescription="slide" aria-label="1 of 4: Collection" data-slide-name="Collection">
             <div class="hero-copy">
-                <div class="eyebrow"><?php echo esc_html( get_bloginfo( 'name' ) ); ?></div>
+                <div class="eyebrow"><?php echo esc_html( vc_brand_name() ); ?></div>
                 <h1>A clearer view<br>of <em>peptides.</em></h1>
                 <p>Discover the collection. Explore the details.<br> Follow every batch back to its documentation.</p>
                 <div class="hero-actions"><a class="button" href="<?php echo esc_url( vc_url( 'shop' ) ); ?>">Explore peptides <?php echo vc_icon(); ?></a><a class="text-link" href="<?php echo esc_url( vc_url( 'reports' ) ); ?>">Find a batch report <?php echo vc_icon( 'file' ); ?></a></div>

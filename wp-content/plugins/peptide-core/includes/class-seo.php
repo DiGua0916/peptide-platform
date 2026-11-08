@@ -254,7 +254,7 @@ final class Seo {
 			echo '<meta name="keywords" content="' . esc_attr( self::vars( implode( ', ', $set['keywords'] ) ) ) . '">' . "\n";
 		}
 		echo '<meta property="og:type" content="' . ( is_front_page() || $collection ? 'website' : 'article' ) . '">' . "\n";
-		echo '<meta property="og:site_name" content="' . esc_attr( get_bloginfo( 'name' ) ) . '">' . "\n";
+		echo '<meta property="og:site_name" content="' . esc_attr( function_exists( 'vc_brand_name' ) ? vc_brand_name() : get_bloginfo( 'name' ) ) . '">' . "\n";
 		echo '<meta property="og:title" content="' . esc_attr( $title ) . '">' . "\n";
 		if ( '' !== $desc ) {
 			echo '<meta property="og:description" content="' . esc_attr( $desc ) . '">' . "\n";
