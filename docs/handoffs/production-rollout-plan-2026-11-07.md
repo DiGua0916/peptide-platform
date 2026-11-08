@@ -340,3 +340,11 @@
 - 部署：8 处旧哈希都是 a3ac8431…；主店复制为 `07451dd-web01` / `07451dd-s0001`（恰好 1 处不同，切换并 reload PHP）；其他 6 处原地替换，备份 `~/vialcove-deploy-backups/pixels-collapsible-20261108T0006*`。8 处新哈希 e5f74175…。
 - 验证：前台、s0001、s0002、s0003 200；s0001 像素页底部显示“其他广告平台（22 个） 点击展开”，展开后 23 个平台卡片，无报错。
 - 回滚：主店 `current` 指回 `87dbf64-*`；其他 6 处用备份覆盖后 reload PHP。
+
+### 总后台插件管理上线（用户批准 "Deploy and test s0003"，2026-11-08）
+
+- 代码 `1932632`（功能）+ `0fe0c12`（root 任务在 `UMask=0077` 下显式设 `/srv/vialcove/store-plugins` 和店铺目录为 0755，否则店铺 PHP 读不到插件；新增测试在 umask 077 下验证）+ `bb4f46e`（总后台对已停用 / 正在下线的店铺拒绝装卸插件，和店铺列表同一规则 `Site_Lifecycle::active`）。
+- root 任务：两台服务器 `/usr/local/lib/vialcove-provision/worker.py` 旧哈希都是 74fbc4f2…（与上一版一致），备份到 `/root/vialcove-backups/plugin-manager-20261108T024546Z/`；新 `worker.py` c65c87bc…、新增 `plugins.py` 87e4c4ee…（root 0700）。下一轮任务成功（Result=success），创建 `/var/lib/vialcove-provision/plugins/{requests,packages}`（root:vchq 0730）、`results`（0750）。
+- 总后台：线上 peptide-hq 与 `f3872fe` 一致（除不发布的 tests）；复制 `94c322f-hq` → `0fe0c12-hq`（恰好 5 个文件不同，语法通过），再 → `bb4f46e-hq`（恰好 1 个文件不同）；切换并 reload PHP，登录页 200，新表 `wp_pchq_plugins` / `wp_pchq_site_plugins` 已建，`ready=true`。nginx 已有 `client_max_body_size 36m`（`snippets/vialcove-hq-app.conf`），PHP 池 32M / 36M，无需修改。
+- 验证：在正式总后台“插件管理”上传无害测试插件 `vc-selftest` 1.0.0（只在页面头部加一个 meta 标签）成功入库。店铺列表只显示主店：s0002（site 10）/ s0003（site 11）的下线操作 11-04 失败（`inventory_site_missing`，“总后台保持停用”），总后台已把它们当停用店，因此不能在 s0003 上测；`request(11, …)` 现在返回“店铺已停用或正在下线”，队列为空。两台机器上的完整安装 → 自检 → 卸载尚未在正式环境跑过。
+- 回滚：总后台 `current` 指回 `94c322f-hq` 后 reload PHP（新表留着无害）；两台服务器把备份的 `worker.py` 复制回去并删除 `plugins.py`。
