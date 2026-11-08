@@ -361,3 +361,10 @@
 - 验证：主店前台 / 购物车、s0001 后台、总后台登录 200；两机 nginx / php-fpm / ssh active；s0001 的 sshfs 挂载正常；monitor、provision worker、两机 `vialcove-tenant-backup` 实跑成功（web 只备份 s0001 库）。旧的 s0002 / s0003 域名不再有店铺响应。
 - 未处理：Cloudflare 上 4 条子域名 DNS 需用户删除；`max_new_stores=4` 仍把两个已完成的老 job 计入名额（新店剩 2 个名额，需要时调大配置）；admin 机 logrotate 自 11-07 失败（`vialcove-hq` 与另一配置重复写了 HQ access log，和本次无关）。
 - 回滚：不可整体恢复（目录 / 账号 / 证书已删）；需要时可用备份的 SQL 和数据目录 + 开店模板手动重建。
+
+### 插件管理页改版 + 显示店铺自带插件（用户要求，2026-11-08）
+
+- 代码 `afa34fd`：`class-plugins-page.php` 重写页面渲染（处理上传 / 安装 / 卸载的代码不变），新增 `assets/hq-plugins.css` / `hq-plugins.js`（只在本页加载）。顶部统计（插件库 / 已安装 / 店铺）；上传区改成可拖拽的选择框，选中后显示文件名和大小，本地先检查 .zip 和 32 MB，未选文件时按钮不可点；第三方插件卡片按店铺一行显示状态点和按钮；新增“店铺自带插件”（读取总后台定时同步的店铺已启用插件 `info.plugins`，只读，标“自带 / 插件库”）。确认弹窗改为 `data-confirm` + 脚本。
+- 部署：复制 `bb4f46e-hq` → `afa34fd-hq`（恰好 3 个文件不同，语法通过），切换并 reload PHP，登录页 200；正式页面加载新样式和脚本，主店显示 4 个自带插件，宽度无溢出。本地临时总后台验证了桌面和 375 px 手机宽度。
+- 回滚：`current` 指回 `bb4f46e-hq` 后 reload PHP。
+- 说明：两个域名在 Cloudflare 用的是通配符记录（`*.vialcovepeptides.com` → web01，`*.vialcoveresearch.com` → HQ），没有 s0002 / s0003 单独记录，无需删除；未知子域名由 nginx 默认站点返回 444。
