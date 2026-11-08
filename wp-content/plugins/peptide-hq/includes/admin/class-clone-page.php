@@ -113,8 +113,8 @@ final class Clone_Page {
 			echo '<label class="pcp-check"><input type="checkbox" name="parts[]" value="' . esc_attr( $key ) . '" checked> ' . esc_html( $label ) . '</label>';
 		}
 		echo '</div></fieldset>';
-		echo '<p><button type="submit" class="button button-primary"' . ( $targets && Store_Clone::ready() ? '' : ' disabled' ) . '>开始复制</button></p></form>';
-		echo '<p class="pcp-note">不复制：订单、顾客账号、访客记录、付款记录、优惠码已用次数。目标店铺保留：域名、店铺名称、后台账号、总后台连接、支付绑定、邮箱。复制前自动备份目标店铺数据库，保存在店铺服务器 /var/backups/vialcove-clone/。</p></section>';
+		echo '<div class="pcp-clone-actions"><button type="submit" class="button button-primary"' . ( $targets && Store_Clone::ready() ? '' : ' disabled' ) . '>开始复制</button><span class="pcp-hint">复制前会自动备份目标店铺</span></div></form>';
+		echo '<div class="pcp-clone-facts"><div><strong>不会复制</strong><ul><li>订单和付款记录</li><li>顾客账号和访客记录</li><li>优惠码已用次数</li></ul></div><div><strong>目标店铺保留自己的</strong><ul><li>域名、店铺名称</li><li>后台账号、总后台连接</li><li>支付绑定、邮箱</li></ul></div></div></section>';
 
 		$jobs = Store_Clone::jobs();
 		echo '<h2 class="pcp-section">复制记录 <span>' . count( $jobs ) . '</span></h2>';
