@@ -10,13 +10,7 @@
 
     function enhance() {
       pending = false;
-      root.querySelectorAll('.pc-trk-timeline tbody tr td:last-child').forEach(function (cell) {
-        if (cell.querySelector('.pc-event-details') || !cell.textContent.trim()) return;
-        var details = document.createElement('details'), summary = document.createElement('summary'), body = document.createElement('div');
-        details.className = 'pc-event-details'; summary.textContent = '查看行为细节';
-        Array.from(cell.childNodes).forEach(function (node) { body.appendChild(node); });
-        details.append(summary, body); cell.appendChild(details);
-      });
+      // 行为详情直接显示（2026-11-09）：以前折叠在“查看行为细节”后面，店主每行都要点开才知道发生了什么。
       root.querySelectorAll('table.pc-trk-table').forEach(function (table) {
         var headers = Array.from(table.querySelectorAll('thead tr:first-child th'));
         if (!headers.length) return;
