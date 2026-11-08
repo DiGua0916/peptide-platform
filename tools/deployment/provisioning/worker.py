@@ -34,6 +34,19 @@ def lifecycle_module():
     return module
 
 
+def clone_module():
+    """Store copy broker (HQ 店铺复制), root-owned and shipped beside this worker."""
+    path = Path(__file__).resolve().with_name('clone.py')
+    entry = path.lstat()
+    require(stat.S_ISREG(entry.st_mode) and entry.st_uid == 0 and not entry.st_mode & 0o022
+            and path.parent.stat().st_uid == 0 and not path.parent.stat().st_mode & 0o022,
+            'clone_module_owner')
+    spec = importlib.util.spec_from_file_location('vialcove_clone', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def plugins_module():
     """Third-party plugin broker (HQ 插件管理), root-owned and shipped beside this worker."""
     path = Path(__file__).resolve().with_name('plugins.py')
@@ -965,6 +978,9 @@ def main():
         if isinstance(payload, dict) and payload.get('phase') == 'plugin':
             sys.stdout.write(json.dumps(plugins_module().web_main(c, payload)))
             return
+        if isinstance(payload, dict) and payload.get('phase') == 'clone':
+            sys.stdout.write(json.dumps(clone_module().web_main(c, payload), ensure_ascii=False))
+            return
         # The existing forced-command wrapper deliberately discards SSH command
         # text. Dispatch only a validated, bounded typed envelope, never that text.
         controlled_lifecycle = isinstance(payload, dict) and 'phase' in payload
@@ -974,6 +990,8 @@ def main():
         process_queue(c)
         if Path(__file__).resolve().with_name('plugins.py').exists():
             plugins_module().process_queue(c)
+        if Path(__file__).resolve().with_name('clone.py').exists():
+            clone_module().process_queue(c)
     else:
         raise ValueError('role')
 

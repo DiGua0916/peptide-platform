@@ -34,6 +34,7 @@ final class Plugin {
 			Admin\Cdn_Page::hooks();
 			Admin\Design_Page::hooks();
 			Admin\Mail_Page::hooks();
+			Admin\Clone_Page::hooks();
 		}
 	}
 }

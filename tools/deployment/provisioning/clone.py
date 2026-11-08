@@ -59,6 +59,9 @@ KEEP_OPTIONS = {'siteurl', 'home', 'blogname', 'admin_email', 'new_admin_email',
                 'woocommerce_stock_email_recipient', 'woocommerce_pos_store_email',
                 'peptide_core_recovery_optout', 'recovery_keys', 'recovery_mode_email_last_sent'}
 KEEP_OPTION_PATTERN = r'(_db|_db_version|_schema|_schema_version|_version)$'
+# Owner 2026-11-08: the third-party "cross-border-suite" plugin is never part of a copy;
+# whatever the target has for it stays as it is.
+IGNORED_PLUGIN_OPTIONS = ['cbs_%', 'cross_border%', 'cross-border%', 'payment_proxy%', 'cloaker%', 'advanced_cloaker%', 'woocommerce_payment_proxy%']
 
 POST_TYPES = {
     'products': ['product', 'product_variation'],
@@ -95,14 +98,15 @@ def sql(query, db=None):
     args = ['mysql', '--batch', '--skip-column-names', '--default-character-set=utf8mb4']
     if db:
         args.append(db)
-    return run(args + ['-e', query]).decode('utf-8', 'replace')
+    # WordPress tables use zero dates as column defaults; strict sql_mode rejects CREATE TABLE ... LIKE.
+    return run(args + ['-e', "SET SESSION sql_mode=''; " + query]).decode('utf-8', 'replace')
 
 
 def store(slug):
-    if slug == 'web01':
+    if slug in ('web01', 's0001'):  # the main store: legacy layout, registered as s0001
         return {'slug': 'web01', 'db': 'vialcove_web01', 'user': 'vialweb01', 'wp': '/srv/vialcove/current',
                 'uploads': '/srv/vialcove-data/sites/web01/uploads', 'reports': '/srv/vialcove-data/sites/web01/private/reports'}
-    if not re.fullmatch(r's[0-9]{4}', slug or '') or slug == 's0001':
+    if not re.fullmatch(r's[0-9]{4}', slug or ''):
         raise ValueError('store_slug')
     return {'slug': slug, 'db': 'vc_' + slug, 'user': 'vc' + slug, 'wp': '/srv/vialcove/tenants/' + slug + '/public',
             'uploads': '/srv/vialcove-data/tenants/' + slug + '/uploads', 'reports': '/srv/vialcove-data/tenants/' + slug + '/reports'}
@@ -123,19 +127,16 @@ def host(url):
     return m.group(1) if m else ''
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument('--source', required=True)
-    ap.add_argument('--target', required=True)
-    ap.add_argument('--parts', default='all')
-    ap.add_argument('--dry-run', action='store_true')
-    a = ap.parse_args()
+def clone(source, target, parts_arg='all', dry_run=False):
     if os.geteuid() != 0:
         raise ValueError('root_required')
-    src, dst = store(a.source), store(a.target)
+    src, dst = store(source), store(target)
     if src['slug'] == dst['slug'] or dst['slug'] == 'web01':
         raise ValueError('target_invalid')
-    parts = set(PARTS) if a.parts == 'all' else set(p for p in a.parts.split(',') if p)
+    if isinstance(parts_arg, (list, tuple, set)):
+        parts = set(parts_arg)
+    else:
+        parts = set(PARTS) if parts_arg == 'all' else set(p for p in str(parts_arg).split(',') if p)
     if not parts or parts - set(PARTS):
         raise ValueError('parts_invalid')
     for s in (src, dst):
@@ -147,9 +148,8 @@ def main():
         raise ValueError('store_urls')
     plan = {'source': src['slug'], 'target': dst['slug'], 'parts': sorted(parts),
             'from': [src_home, src_admin], 'to': [dst_home, dst_admin]}
-    if a.dry_run:
-        print(json.dumps(dict(plan, dry_run=True), ensure_ascii=False))
-        return
+    if dry_run:
+        return dict(plan, dry_run=True)
 
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
     backup = Path('/var/backups/vialcove-clone') / (dst['slug'] + '-' + stamp)
@@ -161,6 +161,7 @@ def main():
     # 1) Remember the target's identity and (for unchosen setting groups) its own values.
     keep_where = ["option_name IN (" + ",".join("'" + k + "'" for k in sorted(KEEP_OPTIONS)) + ")",
                   "option_name REGEXP '" + KEEP_OPTION_PATTERN + "'"]
+    keep_where += ["option_name LIKE '" + p + "'" for p in IGNORED_PLUGIN_OPTIONS]
     for group, patterns in OPTION_GROUPS.items():
         if group not in parts:
             # Page-ID settings always follow the copied pages, even when settings are not chosen.
@@ -256,9 +257,162 @@ def main():
         except subprocess.CalledProcessError:
             pass
     counts = sql("SELECT post_type, COUNT(*) FROM wp_posts WHERE post_status<>'inherit' OR post_type='attachment' GROUP BY post_type", dd)
-    print(json.dumps(dict(plan, ok=True, backup=str(backup), files=copied,
-                          counts=dict(line.split('\t') for line in counts.strip().splitlines() if '\t' in line)),
-                     ensure_ascii=False))
+    return dict(plan, ok=True, backup=str(backup), files=copied,
+                counts=dict(line.split('\t') for line in counts.strip().splitlines() if '\t' in line))
+
+
+# ---------- HQ queue (admin host) and web entry point ----------
+# Request (written by HQ into <state_root>/clone/requests/<operation_id>.json):
+#   {version:1, operation_id, actor_id, source_site_id, source_uuid, target_site_id, target_uuid, parts:'all'|[...]}
+# The admin worker resolves both stores to slugs, asks the web host over the existing forced-command
+# SSH channel with phase 'clone', and writes a receipt into <state_root>/clone/results/.
+
+UUID_RE = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}')
+MESSAGES = {
+    'target_invalid': '不能复制到主店或自己。', 'store_not_found': '没找到这家店铺，请刷新后重试。',
+    'parts_invalid': '请至少选择一项要复制的内容。', 'database_missing': '目标店铺的数据库不存在。',
+    'store_urls': '店铺地址不完整，不能复制。', 'remote_clone_failed': '店铺服务器没有完成复制，没有改动目标店铺。',
+}
+
+
+def helpers():
+    path = Path(__file__).resolve().with_name('plugins.py')
+    st = path.lstat()
+    if not (st.st_uid == 0 and not st.st_mode & 0o022):
+        raise ValueError('plugins_module_owner')
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('vialcove_plugins', path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def validate_request(r):
+    fields = {'version', 'operation_id', 'actor_id', 'source_site_id', 'source_uuid', 'source_slug', 'target_site_id', 'target_uuid', 'target_slug', 'parts'}
+    if not (isinstance(r, dict) and set(r) == fields and r['version'] == 1):
+        raise ValueError('clone_request_shape')
+    for k in ('actor_id', 'source_site_id', 'target_site_id'):
+        if type(r[k]) is not int or r[k] <= 0:
+            raise ValueError(k)
+    for k in ('operation_id', 'source_uuid', 'target_uuid'):
+        if not (isinstance(r[k], str) and UUID_RE.fullmatch(r[k])):
+            raise ValueError(k)
+    for k in ('source_slug', 'target_slug'):
+        if not (isinstance(r[k], str) and re.fullmatch(r's[0-9]{4}', r[k])):
+            raise ValueError(k)
+    if r['source_uuid'] == r['target_uuid'] or r['source_slug'] == r['target_slug']:
+        raise ValueError('target_invalid')
+    parts = r['parts']
+    if parts != 'all' and not (isinstance(parts, list) and parts and all(p in PARTS for p in parts) and len(set(parts)) == len(parts)):
+        raise ValueError('parts_invalid')
+    return r
+
+
+def web_main(c, payload):
+    """Web host: run one copy. Called by worker.py when an envelope has phase 'clone'."""
+    if c.get('role') != 'web' or not isinstance(payload, dict) or set(payload) != {'version', 'phase', 'source', 'target', 'parts'} \
+            or payload['version'] != 1 or payload['phase'] != 'clone':
+        raise ValueError('web_clone_shape')
+    try:
+        result = clone(str(payload['source']), str(payload['target']), payload['parts'])
+        return {'ok': True, 'error_code': '', 'counts': result['counts'], 'files': result['files'], 'backup': result['backup']}
+    except ValueError as e:
+        return {'ok': False, 'error_code': str(e) if re.fullmatch(r'[a-z0-9_]{1,76}', str(e)) else 'clone_failed', 'counts': {}, 'files': {}, 'backup': ''}
+    except subprocess.CalledProcessError:
+        return {'ok': False, 'error_code': 'clone_command_failed', 'counts': {}, 'files': {}, 'backup': ''}
+
+
+def remote(c, h, payload):
+    args = ['/usr/bin/ssh', '-i', c['web_ssh_key'], '-o', 'IdentitiesOnly=yes', '-o', 'BatchMode=yes',
+            '-o', 'StrictHostKeyChecking=yes', '-o', 'UserKnownHostsFile=' + c['web_known_hosts'],
+            '-o', 'GlobalKnownHostsFile=/dev/null', '-o', 'ConnectTimeout=12', c['web_ssh_user'] + '@' + c['web_host'], 'lifecycle']
+    p = subprocess.run(args, input=h.canonical(payload), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                       timeout=1500, env={'PATH': '/usr/sbin:/usr/bin:/sbin:/bin', 'HOME': '/nonexistent'})
+    if p.returncode != 0:
+        raise ValueError('remote_clone_failed')
+    response = json.loads(p.stdout)
+    if not (isinstance(response, dict) and set(response) == {'ok', 'error_code', 'counts', 'files', 'backup'}):
+        raise ValueError('remote_clone_shape')
+    if not response['ok']:
+        code = response['error_code']
+        raise ValueError(code if re.fullmatch(r'[a-z0-9_]{1,76}', str(code)) else 'remote_clone_failed')
+    return response
+
+
+def resolve_slug(c, h, store_uuid, claimed_slug):
+    """Prefer the provisioning records; the main store (s0001) predates them and is accepted by name."""
+    try:
+        slug = h.resolve_admin(c, store_uuid)['slug']
+    except ValueError as e:
+        if str(e) != 'store_not_found' or claimed_slug != 's0001':
+            raise
+        return 's0001'
+    if slug != claimed_slug:
+        raise ValueError('store_identity_changed')
+    return slug
+
+
+def process_queue(c):
+    """Admin host: handle at most one copy per worker run (a copy can take a minute)."""
+    if c.get('role') != 'admin':
+        raise ValueError('admin_role')
+    h = helpers()
+    base = Path(c['state_root']) / 'clone'
+    if not base.exists():
+        base.mkdir(mode=0o711)
+        os.chmod(base, 0o711)
+    if not (base.is_dir() and not base.is_symlink() and base.stat().st_uid == os.geteuid()):
+        raise ValueError('clone_root')
+    try:
+        with h.lock(base / 'worker.lock', nonblocking=True):
+            requests = h.queue_dir(base / 'requests', c['hq_user'], 0o730)
+            results = h.queue_dir(base / 'results', c['hq_user'], 0o750)
+            import grp as _grp, time as _time
+            gid = _grp.getgrnam(c['hq_user']).gr_gid
+            for entry in sorted(requests.glob('*.json'))[:1]:
+                try:
+                    request = validate_request(json.loads(h.read_checked(entry, owners=h.trusted_uids(c), limit=4096)))
+                    if entry.name != request['operation_id'] + '.json':
+                        raise ValueError('request_filename')
+                except Exception:
+                    rejected = h.private_dir(base / 'rejected')
+                    if not entry.is_symlink():
+                        os.replace(entry, rejected / (os.urandom(8).hex() + '.json'))
+                    continue
+                receipt = results / entry.name
+                if receipt.exists():
+                    entry.unlink()
+                    continue
+                value = {'operation_id': request['operation_id'], 'source_site_id': request['source_site_id'],
+                         'target_site_id': request['target_site_id'], 'parts': request['parts'], 'state': 'running',
+                         'error_code': '', 'message': '', 'counts': {}, 'files': {}, 'started_at': int(_time.time()), 'finished_at': 0}
+                h.atomic(receipt, h.canonical(value), mode=0o640, gid=gid)
+                try:
+                    src = resolve_slug(c, h, request['source_uuid'], request['source_slug'])
+                    dst = resolve_slug(c, h, request['target_uuid'], request['target_slug'])
+                    response = remote(c, h, {'version': 1, 'phase': 'clone', 'source': src, 'target': dst, 'parts': request['parts']})
+                    value.update(state='done', counts=response['counts'], files=response['files'])
+                except Exception as exc:
+                    code = h.safe_error(exc)
+                    value.update(state='failed', error_code=code,
+                                 message=MESSAGES.get(code.removeprefix('web_'), '这次复制没有完成，目标店铺没有改动。可以再试一次；仍失败请把括号里的错误代码发给技术人员。'))
+                value['finished_at'] = int(_time.time())
+                h.atomic(receipt, h.canonical(value), mode=0o640, gid=gid)
+                entry.unlink()
+                return 1
+            return 0
+    except BlockingIOError:
+        return 0
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--source', required=True)
+    ap.add_argument('--target', required=True)
+    ap.add_argument('--parts', default='all')
+    ap.add_argument('--dry-run', action='store_true')
+    a = ap.parse_args()
+    print(json.dumps(clone(a.source, a.target, a.parts, a.dry_run), ensure_ascii=False))
 
 
 if __name__ == '__main__':
