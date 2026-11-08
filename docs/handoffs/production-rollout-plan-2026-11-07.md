@@ -771,3 +771,7 @@
 - **订单**：6 家店 48 小时内 wc_orders / shop_order 均为 0，panapay creations/transactions 均为 0，追踪里 24 小时只有 checkout_view / add_to_cart，没有 submit / payment 事件 → 服务器没收到过任何下单请求（“抓不到单”不是漏记，是请求没到；最可能被上面的 2 个 worker 卡住）。注意：当天多次清空追踪表，更早的证据已不在。
 - 其他：每店 systemd cron 每分钟正常；HQ 6 店 online、无 fails；磁盘根 12% / 数据盘 34%；MySQL innodb_buffer_pool 128M（偏小，未动，需重启）；nginx error 只有 assets 目录索引被拒（正常）。
 - **菜单**：店铺后台顶层顺序改为 仪表盘 → 订单 → 数据 → 访客数据 → 商品列表 → 店铺装修 → 营销活动 → 顾客 → 推广人 → 运营套件 → 博客 → 店铺设置 → 后台设置 → 应用中心。在 `menu_order` 过滤器里定（第三方“运营套件”菜单注册得晚，admin_menu 10000 里还没有）。6 店 + 模板部署，阳后台核实。
+
+### 2026-11-09 主店 → 5 子店 复制（含 6 个新商品）
+- 复制工具的“部分复制”会把未勾选的内容类型从目标删掉（整表替换后再删），所以“只复制商品”会丢掉目标的页面/装修。子店本就是主店的完整复刻，改用 完整复制（all）：HQ `Store_Clone::request(2 → 12,13,14,15,16, 'all')`，5 单均 done：product 88 / variation 194 / attachment 407 / pc_template 3（系统模板 + 精简预览 + 自动补的修订版）。
+- 核实 5 店：商品 88、新 6 个均在、修订版 1、店铺名称与客服 WhatsApp 保留；vialcovepro.com 新商品页 200。
