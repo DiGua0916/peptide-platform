@@ -86,7 +86,7 @@ final class Design_Sync {
 			}
 			$media[] = array(
 				'id'     => $id,
-				'url'    => (string) wp_get_attachment_url( $id ),
+				'url'    => self::public_media_url( (string) wp_get_attachment_url( $id ) ),
 				'mime'   => $mime,
 				'size'   => (int) filesize( $real ),
 				'sha256' => (string) hash_file( 'sha256', $real ),
@@ -97,7 +97,7 @@ final class Design_Sync {
 		}
 		$bundle            = array( 'version' => 1, 'documents' => $docs, 'media' => $media );
 		$bundle['digest']  = hash( 'sha256', (string) wp_json_encode( array( $docs, wp_list_pluck( $media, 'sha256' ) ) ) );
-		$bundle['source']  = (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST );
+		$bundle['source']  = (string) wp_parse_url( self::public_origin(), PHP_URL_HOST );
 		$bundle['origins'] = self::own_origins();
 		$bundle['modified'] = (string) ( Templates::modified( $template ) ?? '' );
 		return $bundle;
@@ -111,6 +111,12 @@ final class Design_Sync {
 			$out[] = untrailingslashit( Management_Host::management_url() );
 		}
 		return array_values( array_unique( array_filter( $out ) ) );
+	}
+
+	/** 媒体地址统一用顾客地址（从后台地址请求导出时，WordPress 会给出后台域名）。 */
+	private static function public_media_url( string $url ): string {
+		$path = (string) wp_parse_url( $url, PHP_URL_PATH );
+		return '' === $path ? $url : self::public_origin() . $path;
 	}
 
 	/** 店铺的顾客地址（链接改写的目标）。 */
