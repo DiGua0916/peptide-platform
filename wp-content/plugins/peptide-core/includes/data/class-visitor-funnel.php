@@ -105,6 +105,10 @@ final class Visitor_Funnel {
 		$seen = array();
 		$seen_returning = array();
 		$seen_groups = array();
+		// 结账页一打开就会带默认的配送 / 支付选择（origin=initial），不是顾客的动作。
+		// “添加物流 / 添加支付”只在同一次访问里已经填好地址时才算，所以先记下来，整段事件读完再结算。
+		$address_visits = array();
+		$held = array();
 		$cursor = 0;
 		$time = null === $now ? '' : $wpdb->prepare( ' AND e.occurred_ms <= %d', $now );
 		do {
@@ -126,6 +130,11 @@ final class Visitor_Funnel {
 					$step = 'paid';
 				} else { $step = self::CLIENT_STEPS[ $row['type'] ]; }
 				$visitor = (int) $row['visitor_id'];
+				if ( 'address' === $step ) { $address_visits[ (int) $row['visit_id'] ] = true; }
+				if ( in_array( $step, array( 'shipping', 'payment' ), true ) ) {
+					$held[ (int) $row['visit_id'] ][ $step ][ $visitor ] = array( (bool) $row['returning_visit'], $group ? ( '' === $row['g'] ? 'unknown' : (string) $row['g'] ) : null );
+					continue;
+				}
 				$seen[ $step ][ $visitor ] = true;
 				if ( $row['returning_visit'] ) { $seen_returning[ $step ][ $visitor ] = true; }
 				if ( $group ) {
@@ -138,6 +147,21 @@ final class Visitor_Funnel {
 				}
 			}
 		} while ( count( (array) $rows ) === 500 );
+		foreach ( $held as $visit_id => $steps ) {
+			if ( empty( $address_visits[ $visit_id ] ) ) { continue; } // 没填地址：默认选中的配送 / 支付不算步骤。
+			foreach ( array( 'shipping', 'payment' ) as $step ) {
+				if ( 'payment' === $step && empty( $steps['shipping'] ) ) { break; }
+				foreach ( (array) ( $steps[ $step ] ?? array() ) as $visitor => [ $is_returning, $gkey ] ) {
+					$seen[ $step ][ $visitor ] = true;
+					if ( $is_returning ) { $seen_returning[ $step ][ $visitor ] = true; }
+					if ( null !== $gkey ) { $seen_groups[ $gkey ][ $step ][ $visitor ] = true; }
+					if ( null !== $group_map ) {
+						$entry = $group_map[ $visit_id ] ?? null;
+						if ( $entry && $visitor > 0 && $entry['visitor_id'] === $visitor ) { $seen_groups[ $entry['key'] ][ $step ][ $visitor ] = true; }
+					}
+				}
+			}
+		}
 		foreach ( array_slice( self::KEYS, 4 ) as $step ) {
 			$counts[ $step ] = count( $seen[ $step ] ?? array() );
 			$returning[ $step ] = count( $seen_returning[ $step ] ?? array() );
