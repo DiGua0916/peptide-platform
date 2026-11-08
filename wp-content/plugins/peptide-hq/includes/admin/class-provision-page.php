@@ -63,6 +63,8 @@ final class Provision_Page {
 				if ( strlen( $body ) !== $written ) { wp_die( '提交失败，请联系管理员检查。' ); }
 			}
 		}
+		// CDN 自动配置：开店服务写出解析记录后尽快开始，不用等 5 分钟的定时检查。
+		if ( \PeptideHq\Cdn::settings()['enabled'] ) { wp_schedule_single_event( time() + 60, 'pchq_cdn_tick_now' ); }
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG . '&job=' . rawurlencode( $id ) ) ); exit;
 	}
 	private static function result( string $id ): array {
@@ -121,7 +123,7 @@ final class Provision_Page {
 		<?php wp_nonce_field( 'pchq_create_store' ); ?>
 		<table class="form-table"><tbody>
 		<tr><th><label for="store-title">店铺名称</label></th><td><input id="store-title" name="store_title" class="regular-text" maxlength="100" required></td></tr>
-		<tr><th><label for="customer-domain">客户自有域名</label></th><td><input id="customer-domain" name="customer_domain" class="regular-text" maxlength="253" placeholder="example.com" autocomplete="off" spellcheck="false" required><p class="description">填写根域名，例如 example.com 或 www.example.com（不要填写 https://、路径或端口）。顾客地址将使用 www；下一步会给出 @ 和 www 两条 A 记录及记录值，由你手动解析。</p></td></tr>
+		<tr><th><label for="customer-domain">客户自有域名</label></th><td><input id="customer-domain" name="customer_domain" class="regular-text" maxlength="253" placeholder="example.com" autocomplete="off" spellcheck="false" required><p class="description">填写根域名，例如 example.com 或 www.example.com（不要填写 https://、路径或端口）。顾客地址将使用 www；<?php echo \PeptideHq\Cdn::settings()['enabled'] ? '已开启 CDN 自动配置：系统会自动在 Cloudflare 建好 @ 和 www 两条解析，开店完成后自动开启 CDN（进度见“CDN 加速”）。' : '下一步会给出 @ 和 www 两条 A 记录及记录值，由你手动解析；也可以在“CDN 加速”里开启自动配置。'; ?></p></td></tr>
 		<tr><th><label for="owner-login">后台账号</label></th><td><input id="owner-login" name="owner_login" class="regular-text" pattern="[a-z][a-z0-9_]{2,31}" autocomplete="off" required><p class="description">3至32位，以小写字母开头，可使用数字和下划线。</p></td></tr>
 		<tr><th><label for="owner-email">账号邮箱</label></th><td><input id="owner-email" name="owner_email" class="regular-text" type="email" required></td></tr>
 		<tr><th><label for="owner-password">后台密码</label></th><td><input id="owner-password" name="owner_password" class="regular-text" type="password" minlength="12" maxlength="128" autocomplete="new-password" required><p class="description">至少12位。创建后页面不回显密码，请自行保存。</p></td></tr>

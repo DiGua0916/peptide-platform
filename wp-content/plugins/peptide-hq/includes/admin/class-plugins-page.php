@@ -79,6 +79,13 @@ final class Plugins_Page {
 		return '' !== (string) $site['name'] ? (string) $site['name'] : (string) $site['url'];
 	}
 
+	/** 店铺名称还只是域名 / 网址（还没起专属名称）。 */
+	private static function unnamed( array $site ): bool {
+		$name = strtolower( trim( (string) $site['name'] ) );
+		$host = strtolower( self::host( $site ) );
+		return '' === $name || $name === $host || 'www.' . $name === $host || $name === strtolower( (string) wp_parse_url( (string) $site['url'], PHP_URL_HOST ) ) || str_starts_with( $name, 'http' );
+	}
+
 	private static function host( array $site ): string {
 		return (string) wp_parse_url( \PeptideHq\Site_Urls::public_url( $site ), PHP_URL_HOST );
 	}
@@ -381,7 +388,7 @@ final class Plugins_Page {
 		}
 		echo '<select id="pcp-site" name="site" class="pcp-picker__select">';
 		foreach ( $sites as $site ) {
-			$text = self::label( $site ) . ' — ' . self::host( $site ) . ( self::unreachable( $site ) ? '（连接异常）' : '' );
+			$text = self::label( $site ) . ( self::unnamed( $site ) ? '（未起名）' : ' — ' . self::host( $site ) ) . ( self::unreachable( $site ) ? '（连接异常）' : '' );
 			echo '<option value="' . (int) $site['id'] . '"' . selected( (int) $site['id'], (int) $current['id'], false ) . ' data-search="' . esc_attr( strtolower( self::label( $site ) . ' ' . self::host( $site ) ) ) . '">' . esc_html( $text ) . '</option>';
 		}
 		echo '</select><noscript><button type="submit" class="button">切换</button></noscript></div>';
@@ -390,7 +397,15 @@ final class Plugins_Page {
 			? '<span class="pcp-state is-bad"><i></i>连接异常</span><a class="pcp-link" href="' . esc_url( Menu::action_url( 'pchq_site_refresh', array( 'site' => (int) $current['id'] ) ) ) . '">重新检查</a>'
 			: '<span class="pcp-state is-ok"><i></i>连接正常</span>';
 		echo '<a class="pcp-link" target="_blank" rel="noopener" href="' . esc_url( Menu::action_url( 'pchq_login', array( 'site' => (int) $current['id'] ) ) ) . '">进入店铺后台</a>';
-		echo '</div></form></section>';
+		echo '</div></form>';
+		// 改名：给店铺起专属名称（只改总后台里的名称，不改店铺网站标题）。
+		echo '<details class="pcp-rename"' . ( self::unnamed( $current ) ? ' open' : '' ) . '><summary>' . ( self::unnamed( $current ) ? '这个店铺还没起名，给它起个专属名称' : '改名' ) . '</summary>';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="pcp-rename__form">';
+		wp_nonce_field( 'pchq_site_rename' );
+		echo self::hidden( array( 'action' => 'pchq_site_rename', 'site' => (int) $current['id'], 'return' => 'plugins' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '<label class="screen-reader-text" for="pcp-rename-input">店铺名称</label><input id="pcp-rename-input" type="text" name="name" maxlength="190" required value="' . esc_attr( self::unnamed( $current ) ? '' : (string) $current['name'] ) . '" placeholder="例如：美国站 A · 投手小王"><button type="submit" class="button">保存名称</button>';
+		echo '<span class="pcp-hint">只改总后台里的名称，方便区分；不改店铺网站标题。域名：' . esc_html( self::host( $current ) ) . '</span></form></details>';
+		echo '</section>';
 	}
 
 	/** 店铺应用：当前店铺能不能用每个应用；每个应用显示全部店铺里几家可用，并可批量设置。 */

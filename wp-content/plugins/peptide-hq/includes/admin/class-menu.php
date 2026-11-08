@@ -324,6 +324,11 @@ final class Menu {
 			case 'pchq_site_rename':
 				Sites::rename( $site, $text( 'name' ) );
 				self::flash( 'success', __( 'Name saved.', 'peptide-hq' ) );
+				if ( 'plugins' === $text( 'return' ) ) {
+					// 插件管理页里改名后回到同一个店铺。
+					set_transient( 'pchq_plugins_flash_' . get_current_user_id(), array( 'success', '店铺名称已保存。' ), 120 );
+					$back = add_query_arg( array( 'page' => Plugins_Page::SLUG, 'site' => $site ), admin_url( 'admin.php' ) );
+				}
 				break;
 
 			case 'pchq_secret_regenerate':
