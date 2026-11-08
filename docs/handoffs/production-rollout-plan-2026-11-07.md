@@ -643,3 +643,13 @@
 - 结果：数据盘可用 7.0G → 28G；主盘 275G 可用。
 - 同时：s0006 被 WooCommerce 设成了“即将开业”（`woocommerce_coming_soon=yes`），已改为 no。开店程序 bootstrap 现在显式设 `woocommerce_coming_soon=no`，新店默认开放。
 - 第三方插件核对：HQ 和主店的 FluentSMTP 2.4.1、WooCommerce 11.2.1 用 `wp plugin verify-checksums` 对比 WordPress.org 官方校验值，全部一致，未改动。
+
+### 2026-11-08 11:45 UTC 店铺复制：一键完整复制 / 选择复制
+
+- 用户要求新店是主店的完美复刻。新增 `tools/deployment/provisioning/clone.py`（web 主机，root）：用来源店的内容表整体替换目标店（同 ID，商品/图片/页面/装修之间的关联不变），删除订单、订单备注、优惠码已用次数、修订版、回收站、transient；去掉未勾选的内容；还原目标店自己的身份设置（域名、店名、HQ 连接、支付绑定、邮箱、版本标记、cron、active_plugins）；只按完整网址/主机名替换地址（不碰邮箱）；rsync 媒体和 COA 文件并设 ACL；刷新缓存和 WooCommerce 查询表。复制前自动备份目标库到 `/var/backups/vialcove-clone/<slug>-<时间>/`。
+- 来源是模板工作室时，`_pc_hq_system` 转成目标店的 `_pc_system_template`（key m<id>），之后 HQ 下发会更新而不是重复新增。
+- 第三方插件 cross-border-suite：按用户要求一律忽略，其设置不参与复制（`IGNORED_PLUGIN_OPTIONS`），不做任何处理。
+- 队列：HQ 写 `<queue>/clone/requests/<op>.json`（两店 id、uuid、slug、parts），worker 每 20 秒处理一个，经受控 SSH（phase `clone`）在 web 执行，回执写 `clone/results/`。主店 s0001 早于登记系统，按名接受。
+- HQ 页面“店铺复制”（`pchq-clone`）：来源（默认主店）、目标（不能是主店）、一键完整复制或勾选 8 类内容、页面内确认框、复制记录。
+- 已执行：主店 → s0006（手动）、主店 → s0007（手动，再从 HQ 页面走完整队列路径一次，18 秒完成）。两店前台 200，商品 82、图片 396、页面 17、模板 23，图片都走各自域名。
+- 部署：web/HQ 的 worker.py、clone.py（700）；HQ `e59386c-hq` 及后续样式修正。
