@@ -272,7 +272,8 @@ final class Sites_Page {
 						<input type="hidden" name="action" value="pchq_site_rename">
 						<input type="hidden" name="site" value="<?php echo (int) $s['id']; ?>">
 						<?php wp_nonce_field( 'pchq_site_rename' ); ?>
-						<label for="pchq-rename-<?php echo (int) $s['id']; ?>">店铺名称 <span class="pchq-muted">（和店铺后台的名称保持一致，两边改哪边都行）</span></label>
+						<label for="pchq-rename-<?php echo (int) $s['id']; ?>">店铺名称 <span class="pchq-muted">（保存后同步成店铺自己的名称）</span></label>
+						<?php $own = (string) ( $s['info']['name'] ?? '' ); if ( '' !== $own && $own !== (string) $s['name'] ) : ?><p class="pchq-muted">店铺目前自己显示的名称是“<?php echo esc_html( $own ); ?>”，点“保存名称”即可同步。</p><?php endif; ?>
 						<input type="text" id="pchq-rename-<?php echo (int) $s['id']; ?>" name="name" value="<?php echo esc_attr( $s['name'] ); ?>" maxlength="190" required>
 						<button type="submit" class="button button-small"><?php esc_html_e( 'Save name', 'peptide-hq' ); ?></button>
 					</form>
