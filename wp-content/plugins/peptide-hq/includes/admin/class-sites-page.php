@@ -107,6 +107,7 @@ final class Sites_Page {
 			<td data-label="<?php esc_attr_e( 'Store', 'peptide-hq' ); ?>">
 				<strong><?php echo esc_html( $s['name'] ); ?></strong><br>
 				<a class="pchq-muted" href="<?php echo esc_url( \PeptideHq\Site_Urls::public_url( $s ) ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( \PeptideHq\Site_Urls::public_url( $s ) ); ?></a>
+				<div class="pchq-site-admin" style="margin-top:6px;display:flex;flex-wrap:wrap;align-items:center;gap:8px"><span class="pchq-muted">后台：<?php echo esc_html( (string) wp_parse_url( \PeptideHq\Site_Urls::management( $s ), PHP_URL_HOST ) ); ?></span> <a class="button button-small" target="_blank" rel="noopener" href="<?php echo esc_url( Menu::action_url( 'pchq_login', array( 'site' => (int) $s['id'] ) ) ); ?>">进入后台</a></div>
 			</td>
 			<td data-label="<?php esc_attr_e( 'Status', 'peptide-hq' ); ?>">
 				<?php echo Menu::status_badge( $s ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
