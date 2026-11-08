@@ -619,3 +619,17 @@
 - 详情页新增步骤条：已提交 → 等待域名解析 → 创建店铺 → 开店完成，并显示这个域名的 CDN / 解析阶段。进度变到下一步时页面自动刷新。
 - 开店程序每次更新进度都带上域名；重试时的提示改为“这一步还没完成，开店服务会自动重试，不用重新提交”。两台服务器的 worker 都已更新（700），HQ `49da479-hq`。
 - s0006 仍在等 AWS 解析器的负缓存过期；公网和 web 主机都已正确解析。
+
+### 2026-11-08 10:55 UTC 新店 s0006（vialcovepro.com）、s0007（vialcoveultra.com）开通
+
+一路排除了这些问题（都已修复并部署到两台服务器）：
+1. DNS 负缓存：开店程序改为直接问 1.1.1.1 和 8.8.8.8（两边一致才算），dig 不可用时才用系统解析。
+2. 数据盘不足：web 主机 `/srv/vialcove-data` 是独立的 32GB 盘，只剩 4.7GB（开店要求 >5GB）。把 11-02 的迁移导入包（1.2GB）和手动备份（1.25GB）校验后移到主盘 `/root/vialcove-archive-20261108/`，现在剩 7.0GB。
+3. web 端错误码：报错时附带步骤代码（例如 `disk_capacity`），不再只有 `ValueError`。
+4. 目录权限：UMask=0077 让 admin 端店铺根目录变成 0700，店铺账号读不到注册脚本。`mkdir` 之后显式 chmod（店铺根目录、media 导出、bridge-keys、ACME、mu-plugins），并修正 s0006 的目录。
+5. 重试不幂等：第一次之后 uploads/reports 已是 sshfs 挂载，重试时 chown 报 PermissionError。`app_dir` 遇到挂载点直接跳过。另外非 ValueError 的异常会写 `jobs/<id>/error-trace.txt`（root-only）。
+6. lifecycle 登记被拦：`owned_path` 的共享资源规则把 `/var/lib/vialcove-provision-web/sNNNN.json`（每家店自己的 web 记录）也拦了（`shared_resource`）。放行这种单个店铺记录文件，目录本身仍受保护。
+
+结果：s0006（site 12）、s0007（site 13）都显示“店铺已创建”。前台 www 都返回 200，后台登录页 200，CDN 阶段 done。
+
+风险（待用户决定）：数据盘每晚每类备份保留 7 份（约 23GB）。新店加入后剩余空间很快会低于 5GB，下一家店又会被 `disk_capacity` 拦住。需要扩容这块盘，或把备份目录挪到主盘（281GB 空闲）。

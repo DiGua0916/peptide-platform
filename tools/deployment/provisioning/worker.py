@@ -280,6 +280,10 @@ def app_dir(p, user, mode=0o700):
     p = Path(p)
     require(not p.is_symlink(), 'directory_symlink')
     p.mkdir(parents=True, exist_ok=True, mode=mode)
+    if os.path.ismount(p):
+        # uploads/reports are bridged from the web host after the first attempt; a retry
+        # must not chown/chmod the remote mount (root may not, and the web host owns it).
+        return p
     u = pwd.getpwnam(user)
     os.chown(p, u.pw_uid, u.pw_gid)
     p.chmod(mode)
@@ -931,6 +935,10 @@ def _process_queue_locked(c, root):
             else:
                 status(job.name, state='pending', message='这一步还没完成，开店服务会自动重试，不用重新提交。', slug=state.get('slug', ''), customer_domain=state.get('customer_domain', ''))
             write(job / 'error-code.txt', type(e).__name__ + ':' + code)
+            if not isinstance(e, ValueError):
+                # Root-only diagnostics for unexpected failures (paths and line numbers, no request data).
+                import traceback
+                write(job / 'error-trace.txt', ''.join(traceback.format_exception_only(type(e), e))[-2000:] + ''.join(traceback.format_tb(e.__traceback__))[-6000:])
 
 
 def main():

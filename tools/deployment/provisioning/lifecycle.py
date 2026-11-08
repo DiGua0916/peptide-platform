@@ -195,6 +195,10 @@ def owned_path(path, *, legacy=False):
     if path.startswith(('/etc/nginx/sites-available/', '/etc/nginx/sites-enabled/',
                         '/etc/php/8.3/fpm/pool.d/')):
         require('hq' not in PurePosixPath(path).name, 'shared_resource')
+    # A store's own web ledger record lives inside the shared provisioning directory
+    # (/var/lib/vialcove-provision-web/sNNNN.json); it is tenant-owned, the directory is not.
+    if re.fullmatch(r'/var/lib/vialcove-provision-web/s[0-9]{4}\.json', path):
+        return Path(path)
     require(not re.search(r'/vialcove-(?:provision|storage-guard|tenant-backup|tenant-monitor|hq)(?:[-.]|$)', path),
             'shared_resource')
     return Path(path)
