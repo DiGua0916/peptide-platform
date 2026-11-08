@@ -205,5 +205,6 @@ add_action( 'wp_enqueue_scripts', function (): void {
 
 // License credit for an explicitly configured country observation resource.
 add_action( 'wp_footer', static function () {
+	if ( ! empty( $GLOBALS['vc_geoip_credit_in_footer'] ) ) { return; }
 	if ( is_callable( array( \PeptideCore\Tracking\Country_Provider::class, 'render_attribution' ) ) ) { \PeptideCore\Tracking\Country_Provider::render_attribution(); }
 }, 99 );

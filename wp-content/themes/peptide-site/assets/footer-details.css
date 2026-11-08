@@ -29,3 +29,14 @@
 @media(max-width:767px){.vc-footer-details{padding-block:28px 20px}.vc-footer-details .vc-demo-brand{width:var(--vc-demo-logo-mobile,204px)}.vc-footer-details .vc-footer-details__brand{margin-bottom:24px}.vc-footer-details__columns{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 16px}.vc-footer-details__column h2{margin-bottom:8px}.vc-footer-details__bottom{display:grid;gap:8px;margin-top:24px;padding-top:16px}.vc-footer-details__bottom nav{min-width:0}}
 @media(prefers-reduced-motion:reduce){.vc-footer-details .vc-footer-details__orb{transition:none;transform:none!important}}
 @media(max-width:767px){.vc-footer-details__contacts.has-many-contacts{grid-column:1 / -1}}
+
+/* 页脚紧凑间距（2026-11-08） */
+.vc-footer-details .vc-footer-details__brand{margin-bottom:20px}
+.vc-footer-details .vc-footer-details__column h2{margin-bottom:6px}
+.vc-footer-details .vc-footer-details__column:not(.vc-footer-details__contacts) ul{gap:0}
+.vc-footer-details .vc-footer-details__column:not(.vc-footer-details__contacts) :is(a,.vc-menu-entry,summary){min-height:32px;padding:4px 0}
+.vc-footer-details .vc-footer-details__bottom{margin-top:20px;padding-top:16px}
+.vc-footer-details .vc-footer-details__bottom a{min-height:0}
+.vc-footer-details__credit{font-size:11px;opacity:.7}
+.vc-footer-details__credit a{color:inherit;text-decoration:none}
+@media(max-width:767px){.vc-footer-details .vc-footer-details__column:not(.vc-footer-details__contacts) :is(a,.vc-menu-entry,summary){min-height:36px;padding:6px 0}.vc-footer-details .vc-footer-details__brand{margin-bottom:16px}.vc-footer-details .vc-footer-details__bottom{margin-top:16px}}

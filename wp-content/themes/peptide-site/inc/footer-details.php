@@ -145,7 +145,11 @@ function vc_footer_details_render( array $module, string $context ): string {
     $out .= '<div class="vc-footer-details__bottom">';
     if ( ! empty( $s['showPolicies'] ) ) { $out .= '<nav aria-label="Policies">' . vc_footer_details_policies() . '</nav>'; }
     if ( '' !== trim( $s['demoNotice'] ?? '' ) ) { $out .= '<p class="vc-footer-details__notice">' . esc_html( $s['demoNotice'] ) . '</p>'; }
-    $out .= '<p>' . esc_html( strtr( $s['copyright'] ?? '', array( '{year}' => '2025', '{store_name}' => $brand ) ) ) . '</p></div></div></footer>';
+    $out .= '<p>' . esc_html( strtr( $s['copyright'] ?? '', array( '{year}' => wp_date( 'Y' ), '{store_name}' => $brand ) ) ) . '</p>';
+    // 数据库授权要求的署名放进页脚底栏，不再单独挂在页面最下面（2026-11-08）。
+    $credit = is_callable( array( '\\PeptideCore\\Tracking\\Country_Provider', 'attribution' ) ) ? \PeptideCore\Tracking\Country_Provider::attribution() : null;
+    if ( is_array( $credit ) ) { $GLOBALS['vc_geoip_credit_in_footer'] = true; $out .= '<p class="vc-footer-details__credit"><a href="' . esc_url( $credit['url'] ) . '" rel="noopener">' . esc_html( $credit['label'] ) . '</a></p>'; }
+    $out .= '</div></div></footer>';
     if ( ! empty( $s['mobileNav'] ) && ! empty( $s['mobileLinks'] ) ) {
         $out .= '<nav class="pc-mobile-fixed' . ( 'tablet' === ( $s['mobileNavSize'] ?? 'phone' ) ? ' includes-tablet' : '' ) . '" style="--pc-mobile-nav-height:' . (int) ( $s['mobileNavHeight'] ?? 0 ) . 'px;--pc-mobile-nav-icon:' . (int) ( $s['mobileNavIconSize'] ?? 20 ) . 'px;--pc-mobile-nav-font:' . (int) ( $s['mobileNavFontSize'] ?? 14 ) . 'px" aria-label="Mobile navigation">';
         foreach ( $s['mobileLinks'] as $row ) {
