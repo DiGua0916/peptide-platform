@@ -587,3 +587,20 @@
 - 新店模板只含装修（`template.json`），不含运费方案；新开店铺的运费设置未核对。
 - 08:30 UTC 更正：用户说明满 $1,000 运费本来就设的是 $15，已改回 $15；Shipping policy 草稿同步改为 $15.00。$999–$1,000 的空档修复保留。待确认：这档在结账页显示的名字是 “Free Shipping”，但实际收 $15。
 - 08:35 UTC：满 $1,000 这档改名为 “Discounted Shipping”（$15）。实测：$1,186 订单显示 “Discounted Shipping”，$361 显示 “UPS • FedEx • USPS”。实测价格比原价低 5%（$14.25 / $42.75），来自运费优惠规则 “5%off”（discount_id 1），是店铺的营销设置，不是错误。
+
+### 2026-11-08 09:45 UTC 邮件中心：所有店铺统一由总后台发信
+
+- 用户选择方案一：发信邮箱只在总后台连接一次，所有店铺（含新开的）自动通过总后台发信。
+- HQ（peptide-hq）：
+  - 新增 `Mail`：`POST /peptide-hq/v1/mail`。店铺用连接密钥签名（与 HQ 调店铺同一算法），另加 `X-PC-HQ-Site`；有时间窗和防重放。发件人统一为 FluentSMTP 默认连接的邮箱，显示名用店铺名。只保留 Content-Type/Reply-To/Cc/Bcc 头。附件最多 3 个、每个 ≤1MB。
+  - 每天总量上限 280（个人微软邮箱约 300 封/天），每店每小时 120。
+  - 新表 `wp_pchq_mail_log`：只记主题和结果，不存正文，保留 3000 条。
+  - 新页面“邮件中心”（`pchq-mail`）：连接状态、开关、上限、各店发送量、最近记录、测试发信。
+- 微软回调：个人账户不接受带 `?` 的回调地址，HQ 也没有 `/wp-json/`。新增干净地址 `https://vialcoveresearch.com/oauth/outlook-callback/` 转到 FluentSMTP 的 REST 回调，并用 `rest_url` 过滤让 FluentSMTP 使用这个地址。
+- 店铺（peptide-core）：新增 `Hq_Mail`，挂在 `pre_wp_mail`。店铺自己没有 FluentSMTP 连接时，所有 `wp_mail()` 交给 HQ；HQ 拒收或连不上时算发送失败。
+- 部署：
+  - HQ `2838632-hq` → `10e22e0-hq` → `10e22e0-mail-hq`：最后一步把 mu-plugin `vialcove-production-guard.php` 里一直让邮件返回失败的那行去掉，原文件备份 `/home/ubuntu/vialcove-deploy-backups/hq-production-guard-20261108.php`。
+  - HQ 装并启用 FluentSMTP 2.4.1（从店铺复制）。`WP_ACCESSIBLE_HOSTS` 加 `login.microsoftonline.com,graph.microsoft.com`，wp-config 已备份。
+  - 店铺前台 `2838632-web01`、后台 `2838632-s0001`、两套新店模板。
+- 验证：店铺 `wp_mail` 经签名到达 HQ；HQ 因未连接发信邮箱返回 503（预期）。回调地址 GET 能正确转发。
+- 待完成：用户在微软 Entra 点 Register（回调地址已改为 HQ 地址），之后生成客户端密钥、在 HQ 的 FluentSMTP 连接 Outlook（tenant 选 consumers）并授权，再发测试邮件。
