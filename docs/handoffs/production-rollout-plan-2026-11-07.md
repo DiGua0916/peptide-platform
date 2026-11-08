@@ -667,3 +667,13 @@
 - “店铺复制”的目标改为多选（复选框 + 全选/清空 + 已选计数），一次提交为每家目标店各建一个复制任务；worker 每轮最多处理 3 个，顺序执行。HQ `68a2343-hq`，两台 clone.py 已同步。
 - 新店 s0008 光辉（vialcoveofficial.com）、s0009 老毛（vialcoveprime.com）、s0010 芒果（vialcoveplus.com）由用户开通，DNS 直查公共解析器后几分钟即完成。已从页面批量提交主店 → 三店的完整复制。
 - 访客疑问：s0007 的 13 个“访客”全部是 11-08 10:49–11:22 UTC 落在首页、单页、无来源的访问，即复制后的验证请求（无 Cookie，每次算新访客）和用户自己打开页面；主店清空后的 8 个同理。不是复制带入的数据。
+
+### 2026-11-08 12:45 UTC 访客追踪：过滤爬虫与无头浏览器，清空机器人访问
+
+- 原因：新店 HTTPS 证书签发后几分钟，证书透明日志的爬虫（leakix、certstream、Censys、ForestEngine、各云机房的无头浏览器）访问首页，带 JS 执行的被记成访客（client page_view，单页、无来源）。所有店都有，和复制无关。
+- 修复（peptide-core 0.32 tracking + 主题 visitor-tracking.js，`23cf5a7`）：
+  - `Tracker::is_automated()`：UA 为空、命中爬虫/扫描器/无头/社交预览/监控工具正则、或头 `X-PC-Automated: 1` → 不发访客 cookie、不输出追踪配置、`/track/events` 返回 403。
+  - 客户端 `start()`：`navigator.webdriver === true` 或 UA 含 HeadlessChrome/Puppeteer/Playwright/Lighthouse 时不启动。
+- 部署：web 主店 `23cf5a7-web01`、5 家租户、web 模板；HQ 店铺后台 `23cf5a7-s0001`、5 家租户后台、admin 模板。验证：Censys UA 不下发 cookie 和配置；iPhone Safari UA 正常。
+- 清理：6 家店的 track_events/tabs/visits/visitors 全部清空（主店 8、s0006 8、s0007 13、s0008 5、s0009 3、s0010 6，均为今日机器人/测试），HQ 每日统计删除后重拉，全部 0。
+- 可选加强：Cloudflare Bot Fight Mode 需要令牌加 Zone › Bot Management 权限后才能自动开启。
