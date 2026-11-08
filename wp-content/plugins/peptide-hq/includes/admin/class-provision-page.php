@@ -146,7 +146,7 @@ final class Provision_Page {
 
 	private static function render_jobs(): void {
 		$jobs = self::jobs();
-		echo '<div class="pchq-card"><h2>开店记录</h2>';
+		echo '<div class="pchq-card" id="pchq-jobs"><h2>开店记录</h2>';
 		if ( ! $jobs ) { echo '<p>还没有开店记录。</p></div>'; return; }
 		echo '<table class="widefat striped pchq-jobs"><thead><tr><th>域名</th><th>店铺编号</th><th>当前进度</th><th>更新时间</th><th></th></tr></thead><tbody>';
 		foreach ( $jobs as $j ) {
@@ -165,7 +165,7 @@ final class Provision_Page {
 		wp_send_json_success( self::result( $id ) );
 	}
 	private static function styles(): void {
-		echo '<style>.pchq-steps{display:flex;flex-wrap:wrap;gap:8px 24px;margin:8px 0 4px;padding:0;list-style:none}.pchq-steps li{display:flex;align-items:center;gap:8px;color:#8a8a8a;font-weight:500}.pchq-steps li span{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;border:1px solid #d0d0d0;font-size:12px;background:#fff}.pchq-steps li.is-done{color:#1d6b3a}.pchq-steps li.is-done span{background:#1d6b3a;border-color:#1d6b3a;color:#fff}.pchq-steps li.is-current{color:#111}.pchq-steps li.is-current span{border-color:#111;background:#111;color:#fff}.pchq-step-note{margin:12px 0 0;color:#555}.pchq-badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;background:#f0f0f0;color:#444}.pchq-badge.is-ok{background:#e6f4ea;color:#1d6b3a}.pchq-badge.is-wait{background:#fff4e0;color:#8a5a00}.pchq-badge.is-bad{background:#fdecea;color:#b42318}.pchq-jobs td{vertical-align:middle}.pchq-jobs small{color:#777}</style>';
+		echo '<style>.pchq-steps{display:flex;flex-wrap:wrap;gap:8px 24px;margin:8px 0 4px;padding:0;list-style:none}.pchq-steps li{display:flex;align-items:center;gap:8px;color:#8a8a8a;font-weight:500}.pchq-steps li span{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;border:1px solid #d0d0d0;font-size:12px;background:#fff}.pchq-steps li.is-done{color:#1d6b3a}.pchq-steps li.is-done span{background:#1d6b3a;border-color:#1d6b3a;color:#fff}.pchq-steps li.is-current{color:#111}.pchq-steps li.is-current span{border-color:#111;background:#111;color:#fff}.pchq-step-note{margin:12px 0 0;color:#555}.pchq-badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;background:#f0f0f0;color:#444}.pchq-badge.is-ok{background:#e6f4ea;color:#1d6b3a}.pchq-badge.is-wait{background:#fff4e0;color:#8a5a00}.pchq-badge.is-bad{background:#fdecea;color:#b42318}.pchq-jobs td{vertical-align:middle}.pchq-jobs small{color:#777}.pchq-provision-actions{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}.pchq-provision-actions .button{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px}</style>';
 	}
 
 	public static function render(): void {
@@ -177,7 +177,7 @@ final class Provision_Page {
 		<p>填写客户自有域名，创建独立店铺和后台账号。顾客使用 www 地址；管理地址仍由平台固定分配。商品、订单和顾客数据不会从其他店铺复制；支付默认关闭。</p>
 		<?php self::styles(); ?>
 		<?php if ( $job ) : ?>
-		<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::SLUG ) ); ?>">← 返回开店记录 / 开新店</a></p>
+		<div class="pchq-provision-actions"><a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::SLUG . '#pchq-jobs' ) ); ?>"><span aria-hidden="true">‹</span> 开店记录</a><a class="button button-primary" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::SLUG ) ); ?>">开新店</a></div>
 		<div class="pchq-card"><h2>开店步骤<?php echo isset( $job['customer_domain'] ) ? ' · ' . esc_html( $job['customer_domain'] ) : ''; ?><?php echo isset( $job['slug'] ) ? ' · ' . esc_html( $job['slug'] ) : ''; ?></h2><?php self::render_steps( $job ); ?></div>
 		<div class="pchq-card" data-pchq-provision data-state="<?php echo esc_attr( (string) ( $job['state'] ?? '' ) ); ?>" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-job="<?php echo esc_attr( $id ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'pchq_create_store_status' ) ); ?>"><h2>开店进度</h2><p id="pchq-provision-status" role="status" aria-live="polite"><?php echo esc_html( $job['message'] ?? '' ); ?></p><div id="pchq-provision-dns"></div><div id="pchq-provision-links"></div></div>
 		<?php else : ?>
