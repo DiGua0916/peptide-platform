@@ -11,7 +11,7 @@ $vc_config = vc_site_config(); ?>
 	echo \PeptideCore\Modules\Site_Design::render_part( 'header' );
 else : ?>
 <header class="site-header"><div class="container header-inner">
-    <a class="brand brand--primary" href="<?php echo esc_url( home_url( '/' ) ); ?>" aria-label="VialCovePeptides home"><?php vc_brand_logo( true ); ?></a>
+    <a class="brand brand--primary" href="<?php echo esc_url( home_url( '/' ) ); ?>" aria-label="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?> home"><?php vc_brand_logo( true ); ?></a>
     <?php get_template_part( 'template-parts/navigation' ); ?>
     <div class="header-actions"><a class="icon-link account-link" href="<?php echo esc_url( vc_url( 'account' ) ); ?>" aria-label="My account"><?php echo vc_icon( 'user' ); ?></a><a class="cart-link" href="<?php echo esc_url( vc_url( 'cart' ) ); ?>" aria-label="View cart"><?php echo vc_icon( 'bag' ); ?><span class="vc-cart-count"><?php echo function_exists( 'WC' ) && WC()->cart ? esc_html( (string) WC()->cart->get_cart_contents_count() ) : '0'; ?></span></a><?php if ( vc_site_menu( 'header' ) ) : ?><button class="menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="primary-nav"><span></span><span></span></button><?php endif; ?></div>
 </div></header>

@@ -37,7 +37,8 @@ add_action( 'after_setup_theme', function () {
     remove_action( 'woocommerce_sidebar', 'woocommerce_get_sidebar', 10 );
 } );
 
-add_filter( 'document_title_parts', function ( $parts ) { $parts['site'] = 'VialCovePeptides'; if ( is_front_page() ) { $parts['title'] = 'VialCovePeptides — A clearer view of peptides'; unset( $parts['tagline'], $parts['site'] ); } return $parts; } );
+// 网页标题跟随店铺名称（设置 → 基础设置 / 总后台 店铺名称）。
+add_filter( 'document_title_parts', function ( $parts ) { $name = wp_specialchars_decode( (string) get_bloginfo( 'name' ), ENT_QUOTES ); $parts['site'] = $name; if ( is_front_page() ) { $parts['title'] = $name . ' — A clearer view of peptides'; unset( $parts['tagline'], $parts['site'] ); } return $parts; } );
 
 // Frontend identity only; do not alter the site's saved admin/email settings.
 remove_action( 'wp_head', 'wp_site_icon', 99 );
@@ -98,10 +99,10 @@ add_action( 'wp_enqueue_scripts', function () {
 function vc_brand_logo( bool $compact = false ): void {
     $root = get_template_directory_uri() . '/assets/brand/';
     if ( $compact ) {
-        echo '<img class="brand-logo-compact" src="' . esc_url( $root . 'VialCovePeptides_Logo_Compact.svg' ) . '" width="1196" height="205" alt="VialCovePeptides">';
+        echo '<img class="brand-logo-compact" src="' . esc_url( $root . 'VialCovePeptides_Logo_Compact.svg' ) . '" width="1196" height="205" alt="' . esc_attr( get_bloginfo( 'name' ) ) . '">';
         return;
     }
-    echo '<picture class="brand-logo"><source media="(max-width: 1200px)" srcset="' . esc_url( $root . 'VialCovePeptides_Logo_Compact.svg' ) . '" width="1196" height="205"><img src="' . esc_url( $root . 'VialCovePeptides_Logo_Horizontal.svg' ) . '" width="1196" height="285" alt="VialCovePeptides"></picture>';
+    echo '<picture class="brand-logo"><source media="(max-width: 1200px)" srcset="' . esc_url( $root . 'VialCovePeptides_Logo_Compact.svg' ) . '" width="1196" height="205"><img src="' . esc_url( $root . 'VialCovePeptides_Logo_Horizontal.svg' ) . '" width="1196" height="285" alt="' . esc_attr( get_bloginfo( 'name' ) ) . '"></picture>';
 }
 
 function vc_url( string $page ): string {
