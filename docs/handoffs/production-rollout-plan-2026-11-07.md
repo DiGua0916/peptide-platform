@@ -453,3 +453,10 @@
 - 部署：两台机 `worker.py` 旧哈希一致后替换（备份 `/root/vialcove-backups/store-limit-20261108T0522*`），任务成功。生产只读核对：已计入 0 家，上限 4，空余 4 个名额。上限数值未改，等用户决定。
 - 回滚：两台机用备份恢复 `worker.py`。
 - 用户批准 "Raise to 15"：两台机 `config.json` 的 `max_new_stores` 4 → 15（原配置备份 `/root/vialcove-backups/config.json.before-limit15-*`，属主和权限不变），之后开店任务正常运行。当前已占 0 家，可开 15 家。回滚：用备份恢复 `config.json`。
+
+### CDN 令牌验证失败：总后台外部请求白名单（2026-11-08）
+
+- 现象：CDN 加速页保存令牌报“连不上 Cloudflare（用户已阻止通过 HTTP 请求此 URL）”。原因：总后台 `/srv/vialcove/hq/shared/wp-config.php` 设了 `WP_HTTP_BLOCK_EXTERNAL`，`WP_ACCESSIBLE_HOSTS` 只含店铺后台域名和备份地址，没有 `api.cloudflare.com`。店铺端没有这个限制（模板媒体下载不受影响）。
+- 处理：`WP_ACCESSIBLE_HOSTS` 追加 `api.cloudflare.com`（原文件备份 `/root/vialcove-backups/hq-wp-config.before-cloudflare-20261108T054018Z`，属主 / 权限不变，语法检查通过；开店 worker 只追加新店域名，不会覆盖）。代码 `d0ec9ef`：`Cdn::origin_ready()` 改用 cURL 直连店铺服务器 IP（只 HTTPS、正常证书校验），因为新店域名不在白名单里、`wp_remote_get` 会被拦。总后台 `6bb5242-hq` → `d0ec9ef-hq`，登录 200。
+- 验证：总后台通过 WordPress 请求 Cloudflare API 返回 HTTP 400（无令牌时的正常结果，已不被拦）；证书检查对 www.vialcovepeptides.com @ 34.231.148.231 通过，对错误 IP 失败。令牌由用户自己粘贴保存。
+- 回滚：用备份恢复 `wp-config.php` 并 reload PHP；总后台指回 `6bb5242-hq`。
