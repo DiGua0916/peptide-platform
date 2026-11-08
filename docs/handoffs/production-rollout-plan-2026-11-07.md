@@ -741,3 +741,9 @@
 - worker.py 模板同步修改：nginx 静态 location、`PEPTIDE_CORE_PAGE_CACHE=true`、显式创建两级 cache 目录（UMask 0077 下 parents 会变 0700 root）。两台 `/usr/local/lib/vialcove-provision/worker.py` 已更新。
 - Cloudflare（Free 计划）：brotli/http3 已开；本次把 early_hints、0rtt 开到全部 10 个 zone（含同账户的 shiyishop.com）。tiered caching 需付费，未开。
 - 结论：HTML 首字节主要是 WordPress 渲染 + 美国源站往返，海外比美国多 ~150–300ms；静态资源现在 6 店都在边缘命中，海外第二次访问基本无差别。
+
+### 2026-11-08 芒果仪表盘漏斗“跳过地址”与弃单为空
+- 现象：芒果 今日漏斗 发起结账 1 → 添加地址 0 → 添加物流 1 → 添加支付 1 → 支付成功 0；订单 0；弃单 0。
+- 原因 1（漏斗）：结账页一打开就发 `checkout_shipping_selected` / `checkout_payment_selected`（`origin=initial`，默认选中项），`Visitor_Funnel` 把它们直接算成“添加物流 / 添加支付”。改为：这两步只在同一次访问已有 `checkout_address_completed` 时才算（先暂存，整段读完再结算；支付还要求物流成立）。重算芒果 11-08（店铺时区）：7 → 2 → 1 → 1 → 0 → 0 → 0 → 0。
+- 原因 2（弃单）：弃单定义是“结账页填了邮箱和地址、有购物车、没付款”（来源 woocommerce_sessions.customer）。该访客（手机 Safari，4 件 $205）只打开了结账页没填任何信息、也没下单，所以既没有订单也不构成弃单——没有邮箱本来也无法召回。另外芒果没填店铺实体地址，即使有弃单也不会发提醒（CAN-SPAM）。
+- 部署：主店 release、s0006–s0010 前台与后台副本、store-admin、两个模板（class-visitor-funnel.php）。备份 `funnel-*`（两台）。
