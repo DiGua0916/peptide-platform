@@ -153,6 +153,41 @@ final class Hub_Accounts {
 		self::commit( $snapshot, $accounts );
 	}
 
+	/** 彻底删除后只留名称，交易记录里仍能看出是哪个付款方式（2026-11-08）。 */
+	public const PURGED_OPTION = 'pc_panapay_hub_purged';
+
+	/**
+	 * Permanently remove a method that is already in the deleted list: its configuration and credentials
+	 * leave the book (and the 20-method limit). Existing attempts keep working because every session,
+	 * notification and store relay uses the keys and policy frozen on its own attempt row, not this account.
+	 */
+	public static function purge_deleted( string $id, int $revision ): void {
+		$snapshot = self::snapshot();
+		self::guard_revision( $snapshot['book']['revision'], $revision );
+		$accounts = $snapshot['book']['accounts'];
+		if ( ! self::valid_id( $id ) || ! isset( $accounts[ $id ] ) ) { throw new \InvalidArgumentException( 'Payment account was not found.' ); }
+		if ( 'default' === $id ) { throw new \InvalidArgumentException( 'The original payment account cannot be removed.' ); }
+		if ( ! self::flag( $accounts[ $id ]['deleted'] ) ) { throw new \InvalidArgumentException( 'Payment account is not deleted.' ); }
+		$purged = get_option( self::PURGED_OPTION, array() );
+		$purged = is_array( $purged ) ? $purged : array();
+		$purged[ $id ] = array(
+			'title'        => mb_substr( trim( wp_strip_all_tags( (string) ( $accounts[ $id ]['title'] ?? '' ), true ) ), 0, 120 ),
+			'account_name' => mb_substr( trim( wp_strip_all_tags( (string) ( $accounts[ $id ]['account_name'] ?? '' ), true ) ), 0, 120 ),
+			'purged_at'    => time(),
+		);
+		unset( $accounts[ $id ] );
+		self::commit( $snapshot, $accounts );
+		update_option( self::PURGED_OPTION, array_slice( $purged, -500, null, true ), false );
+	}
+
+	/** 已彻底删除的付款方式名称（只读，用于交易记录显示）。 */
+	public static function purged_label( string $id ): string {
+		$purged = get_option( self::PURGED_OPTION, array() );
+		if ( ! is_array( $purged ) || ! isset( $purged[ $id ] ) ) { return ''; }
+		$name = (string) ( $purged[ $id ]['account_name'] ?? '' );
+		return '' !== $name ? $name : (string) ( $purged[ $id ]['title'] ?? '' );
+	}
+
 	public static function defaults( string $id = '' ): array {
 		return array( 'id' => $id, 'protocol' => 'panapay', 'account_name' => '', 'enabled' => 'no', 'title' => 'Credit card',
 			'description' => 'Continue to the secure payment page to pay for your order.', 'gateway' => '', 'mchid' => '', 'secret' => '',
