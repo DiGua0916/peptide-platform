@@ -775,3 +775,9 @@
 ### 2026-11-09 主店 → 5 子店 复制（含 6 个新商品）
 - 复制工具的“部分复制”会把未勾选的内容类型从目标删掉（整表替换后再删），所以“只复制商品”会丢掉目标的页面/装修。子店本就是主店的完整复刻，改用 完整复制（all）：HQ `Store_Clone::request(2 → 12,13,14,15,16, 'all')`，5 单均 done：product 88 / variation 194 / attachment 407 / pc_template 3（系统模板 + 精简预览 + 自动补的修订版）。
 - 核实 5 店：商品 88、新 6 个均在、修订版 1、店铺名称与客服 WhatsApp 保留；vialcovepro.com 新商品页 200。
+
+### 2026-11-09 卡顿根因：opcache 满 + PHP 进程太少（两台主机）
+- 用 FPM 池内的探针读 `opcache_get_status()`：店铺主机 128M 用满、0 空闲、命中率 **0.2%**（3158 个脚本）；总后台/后台主机同样 128M 满、命中率 23%。6–7 份独立代码副本（每店一份 WP+Woo+插件）共用一块 128M opcache，于是几乎每个请求都重新编译整套 WordPress —— 首页首字节 0.8–1.3s、结账页请求排队、后台慢。
+- 修复：两台主机新增 `/etc/php/8.3/fpm/conf.d/99-vialcove-opcache.ini`（memory 768M、max_accelerated_files 50000、interned_strings 48、revalidate_freq 30），`systemctl restart php8.3-fpm`（约 1 秒），预热 6 店。店铺主机预热后 413MB / 10731 脚本、命中率回升；s0007 首页首字节 0.79s → 0.39s，/wp-json 0.26s，结账 0.12s；主店首页 1.27s → 0.44s。文件留档 `tools/deployment/php/99-vialcove-opcache.ini`。
+- PHP-FPM 池：店铺主机子店 2 → 10、主店 8 → 16；后台主机子店后台 2 → 8；两台都加 slowlog（5s）便于以后定位慢请求。worker.py 模板子店改 6（新店）。
+- 服务器内存：两台各 7.7GB，调整后可用约 5.2GB。MySQL innodb_buffer_pool 128M 未动。
