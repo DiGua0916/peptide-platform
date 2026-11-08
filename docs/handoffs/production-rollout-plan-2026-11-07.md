@@ -684,3 +684,8 @@
 - 修复（主题 visitor-tracking.js，`161d3ad`）：客户端在“可信交互（pointer/touch/key/scroll）或页面可见满 6 秒”之前不发送任何事件，包括 page_exit；未达门槛的事件直接丢弃。单页几秒即走的爬虫不再成为访客。
 - 部署：web 主店当前版本 + 5 租户 + web 模板；HQ 店铺后台 + 5 租户后台 + admin 模板。浏览器实测：脚本加载无报错、真人浏览器 enabled=true。
 - 再次清空 6 家店追踪表（主店 6、s0008 3、s0009 3、s0010 2），HQ 每日统计重拉，全部 0。关闭了内置浏览器里的店铺标签页，避免自己被计入。
+
+### 2026-11-08 Cloudflare 爬虫拦截（Bot Fight Mode）
+- 总后台 Cloudflare 令牌加 Zone · Bot Management · Edit；`Cdn::bot_protect()` 现在一次写 `fight_mode:true, enable_js:true, ai_bots_protection:block`（Cloudflare 要求 JS 检测开着才能开 Fight Mode），`bot_protect_all()` 同时把 Browser Integrity Check 打开；新域名接入时自动执行。
+- 9 个 zone 全部核实 fight_mode=true / enable_js=true / ai=block。验证：CensysInspect UA 访问店铺首页 → 403；普通浏览器 200。
+- 配合店铺端的 UA 过滤 + 6 秒互动门槛，访客统计只记真人。
