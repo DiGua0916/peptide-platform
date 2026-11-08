@@ -724,3 +724,7 @@
 - 现象：子店 装修 → 模板库 只有“VialCove [系统模板]”（锁定）和“VialCove · 首页精简预览 · 20261101”（可编辑），没有可改的“VialCove · 修订版”。原因：clone.py 把主店的下发模板改成子店的系统模板（`_pc_system_template=m684`），但没有像正常下发第一次那样复制一份修订版（`_pc_revision_of`）。
 - 数据修复：s0006–s0010 各用 `Templates::duplicate(684)` 建 #11783 “VialCove · 修订版”，打 `_pc_revision_of=m684`，`revision_created=true`。
 - 工具修复：clone.py 在 design 部分复制完、刷缓存后，用 `wp eval REVISION_PHP` 给每个没有修订版的系统模板补一份；两台主机 `/usr/local/lib/vialcove-provision/clone.py` 已更新（备份 `clone.py.<stamp>`）。
+
+### 2026-11-08 系统设置 → 联系方式
+- 客服联系方式（WhatsApp / Telegram / 邮箱 / 浮动按钮）以前只在 WooCommerce 下的“VialCove 设置”，店铺工作区看不到。新增 `Admin\Contact_Page`（`admin.php?page=pc-system&section=contact`），和原页面读写同一份 `peptide_core_settings['support']`，通过 `Support_Contacts::sanitize()` 校验；原页面加了跳转提示。系统设置卡片顺序：基础设置 → 联系方式 → …
+- 部署：主店 release、s0006–s0010 前台 + 后台副本、store-admin 23cf5a7、yy-sync 两个模板（4 个文件）。第一轮循环先改了主店导致哈希基准变化、子店被跳过，第二轮按旧哈希补齐；两台 `wp eval` 核实 sections 含 contact。备份 `contact-page-*`（两台）。
