@@ -149,6 +149,7 @@ final class Hub {
 				// 付款方式可指定收银台打开方式；结果随这次付款保存，之后改设置不影响它。
 				$display = Hub_Accounts::display( $config['display'] ?? 'auto' );
 				if ( 'created' === ( $response['state'] ?? '' ) && 'auto' !== $display ) { $response['type'] = $display; }
+				if ( 'created' !== ( $response['state'] ?? '' ) ) { Hub_Details::record( $ref, 'create', 'failed' === ( $response['state'] ?? '' ) ? '创建失败' : '创建结果待核对', Provider_Client::$last ); }
 				Hub_Store::finish_create( $record, $response );
 			}
 			$row = Hub_Store::find( $site['id'], $reference );
@@ -233,6 +234,7 @@ final class Hub {
 			if ( ! in_array( $p['status'], array( 'SUCCEEDED', 'FAILED' ), true ) || ! preg_match( '/^[\x21-\x7e]{0,512}$/D', $p['transaction_id'] ) || ( 'SUCCEEDED' === $p['status'] && '' === $p['transaction_id'] ) ) { throw new Protocol_Error( 'invalid_notification', 400 ); }
 			$row = Hub_Store::get( $p['order_number'] );
 			if ( ! $row || ( $row['test_mode'] && 'production' === wp_get_environment_type() ) || ! Signature::verify( array_intersect_key( $p, array_flip( array( 'order_number', 'status', 'transaction_id' ) ) ), $p['sign'], Crypto::decrypt( $row['secret_box'], 'hub-provider' ) ) ) { throw new Protocol_Error( 'invalid_notification', 400 ); }
+			Hub_Details::record( (string) $row['ref'], 'notify', $p['status'], $p );
 			Hub_Store::receive( $row, $p['status'], $p['transaction_id'] );
 			// Cron/system scheduler reads the durable outbox; no outbound call while returning vendor ACK.
 			return new \WP_REST_Response( 'ok', 200 );
@@ -277,6 +279,7 @@ final class Hub {
 			$row = Hub_Store::get( $p['reference'] );
 			if ( ! $row || time() - (int) $row['created_at'] > 7 * DAY_IN_SECONDS || ! hash_equals( $row['return_token_hash'], hash( 'sha256', $p['token'] ) )
 				) { throw new Protocol_Error( 'invalid_return', 400 ); }
+			Hub_Details::record( (string) $row['ref'], 'return', is_string( $p['status'] ?? null ) ? $p['status'] : '', array_diff_key( $p, array( 'token' => true, 'reference' => true, 'rest_route' => true ) ) );
 			$site = \PeptideHq\Sites::get( (int) $row['site_id'] );
 			if ( ! $site || ! hash_equals( $row['site_uuid'], $site['uuid'] ) ) { throw new Protocol_Error( 'store_not_found', 400 ); }
 			if ( class_exists( '\PeptideHq\Site_Lifecycle' ) && ! \PeptideHq\Site_Lifecycle::active( (int) $site['id'] ) ) { throw new Protocol_Error( 'store_retained', 409 ); }

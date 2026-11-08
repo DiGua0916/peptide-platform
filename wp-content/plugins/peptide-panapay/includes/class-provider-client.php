@@ -8,7 +8,11 @@ final class Provider_Client {
 	 * No automatic HTTP retry: a timeout can occur after a session was created.
 	 * Returned payment URLs remain untrusted until the exact host is approved.
 	 */
+	/** 最近一次创建的原始返回（只给总后台“支付中心”查看失败原因用，不参与判断）。 */
+	public static array $last = array();
+
 	public static function create( array $payload, array $config ): array {
+		self::$last = array();
 		$endpoint = Configuration::origin( $config['gateway'] ) . '/index.php/admin/Payments/createPayment';
 		// This local policy decision precedes transport, so no provider session was created.
 		if ( _wp_http_get_object()->block_request( $endpoint ) ) {
@@ -21,8 +25,14 @@ final class Provider_Client {
 			'body' => wp_json_encode( $payload ),
 		) );
 		if ( is_wp_error( $response ) ) {
+			self::$last = array( '连接错误' => substr( $response->get_error_message(), 0, 500 ) );
 			return self::observe( array( 'state' => 'unknown' ), 'transport_error', $config, $response );
 		}
+		$raw_body = wp_remote_retrieve_body( $response );
+		self::$last = array( 'HTTP 状态' => (string) wp_remote_retrieve_response_code( $response ) );
+		$raw_json = is_string( $raw_body ) ? json_decode( $raw_body, true ) : null;
+		if ( is_array( $raw_json ) ) { self::$last = array_merge( self::$last, $raw_json ); }
+		elseif ( is_string( $raw_body ) ) { self::$last['返回内容'] = substr( $raw_body, 0, 2000 ); }
 		if ( 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
 			return self::observe( array( 'state' => 'unknown' ), 'http_status', $config, $response );
 		}

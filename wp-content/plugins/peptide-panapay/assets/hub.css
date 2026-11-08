@@ -203,3 +203,20 @@ html.pc-pay-modal-open, html:has(.pc-pay-account-dialog[open]) { overflow: hidde
 .pc-pay-purge > summary::-webkit-details-marker { display: none; }
 .pc-pay-purge[open] > summary { display: none; }
 .pc-pay-purge form { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0; }
+
+/* 支付方返回参数（2026-11-08） */
+.pc-pay-status-failed { color: #b42318; }
+.pc-pay-detail-toggle { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 0; margin: 0; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.pc-pay-detail-toggle span { color: #2271b1; font-size: 12px; line-height: 18px; text-decoration: underline; }
+.pc-pay-detail-toggle.is-failed { color: #b42318; font-weight: 600; }
+.pc-pay-detail-toggle[aria-expanded="true"] span { text-decoration: none; }
+.pc-pay-detail-toggle:focus-visible { outline: 2px solid #2271b1; outline-offset: 2px; border-radius: 2px; }
+.pc-pay-table tr.pc-pay-detail-row > td { background: #fafafa; padding: 0; }
+.pc-pay-detail { display: grid; gap: 12px; padding: 16px; }
+.pc-pay-detail section { background: #fff; border: 1px solid var(--pay-line, #e6e6e6); border-radius: 6px; padding: 12px 16px; }
+.pc-pay-detail header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+.pc-pay-detail header time { margin-left: auto; color: #666; font-size: 12px; }
+.pc-pay-detail dl { display: grid; grid-template-columns: minmax(120px, max-content) minmax(0, 1fr); gap: 4px 16px; margin: 0; font-size: 13px; line-height: 20px; }
+.pc-pay-detail dt { color: #666; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.pc-pay-detail dd { margin: 0; overflow-wrap: anywhere; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.pc-pay-detail > p { margin: 0; }

@@ -151,3 +151,17 @@
 	}
 	return { mount };
 }));
+
+/* 支付方返回参数：点状态展开/收起（2026-11-08） */
+(function () {
+	if (typeof document === 'undefined') return;
+	document.addEventListener('click', function (event) {
+		var button = event.target && event.target.closest ? event.target.closest('[data-pc-pay-detail]') : null;
+		if (!button) return;
+		var row = document.getElementById(button.getAttribute('aria-controls'));
+		if (!row) return;
+		var open = button.getAttribute('aria-expanded') !== 'true';
+		button.setAttribute('aria-expanded', open ? 'true' : 'false');
+		row.hidden = !open;
+	});
+}());
