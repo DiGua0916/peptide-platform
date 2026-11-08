@@ -146,6 +146,9 @@ final class Hub {
 				$p['mchid'] = $config['mchid']; $p['tag'] = $config['tag']; $p['mode'] = $config['mode']; $p['platform_id'] = 6;
 				$p['sign'] = Signature::generate( array_intersect_key( $p, array_flip( array( 'mchid', 'currency', 'amount', 'site', 'order_id' ) ) ), $config['secret'] );
 				$response = Provider_Client::create( $p, $config );
+				// 付款方式可指定收银台打开方式；结果随这次付款保存，之后改设置不影响它。
+				$display = Hub_Accounts::display( $config['display'] ?? 'auto' );
+				if ( 'created' === ( $response['state'] ?? '' ) && 'auto' !== $display ) { $response['type'] = $display; }
 				Hub_Store::finish_create( $record, $response );
 			}
 			$row = Hub_Store::find( $site['id'], $reference );

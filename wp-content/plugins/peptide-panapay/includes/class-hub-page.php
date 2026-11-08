@@ -109,6 +109,7 @@ final class Hub_Page {
 			'Store authorization changed. Reload and select the stores again.' => '店铺列表已变化，请重新选择并保存。',
 			'Payment display text is invalid.' => '账号名称、付款名称或说明过长，请缩短后重新保存。',
 			'Payment icons are invalid.' => '支付图标无效，请从页面提供的六种图标中选择。',
+			'Payment display mode is invalid.' => '请重新选择收银台打开方式。',
 			'Payment iframe height is invalid.' => '请填写 320 至 1600 之间的整数作为支付窗口高度。',
 			'Payment display icons are invalid.' => '支付图标无效，请从页面提供的六种图标中选择。',
 			'Payment frame height must be an integer from 320 to 1600.' => '请填写 320 至 1600 之间的整数作为支付窗口高度。',
@@ -277,7 +278,8 @@ final class Hub_Page {
 					<div class="pc-pay-field"><label for="pc-pay-secret">签名密钥</label><input type="password" id="pc-pay-secret" name="secret" value="" autocomplete="new-password" maxlength="1024" <?php disabled( 'default' === $id && Hub_Settings::server_override( 'PC_PANAPAY_SECRET' ) ); ?>><p class="pc-pay-muted"><?php echo $has_secret ? '已有密钥，留空保留。密钥不会回显。' : '由支付方提供，仅加密保存在总后台。'; ?></p></div>
 					<?php self::field( 'tag', '渠道标识（tag）', $raw, '', '支付方要求时填写。', 255 ); ?>
 					<div class="pc-pay-field"><label for="pc-pay-mode">请求模式</label><select id="pc-pay-mode" name="mode"><option value="2" <?php selected( $raw['mode'], '2' ); ?>>异步（2）</option><option value="1" <?php selected( $raw['mode'], '1' ); ?>>同步（1）</option></select><p class="pc-pay-muted">按支付方要求选择；浏览器跳转不会标记订单已付款。</p></div>
-					<div class="pc-pay-field"><label for="pc-pay-height">嵌入收银台高度</label><div class="pc-pay-number-unit"><input id="pc-pay-height" type="number" name="iframe_height" min="320" max="1600" step="1" required value="<?php echo esc_attr( (string) $raw['iframe_height'] ); ?>"><span>px</span></div><p class="pc-pay-muted">支付方返回嵌入方式时生效，默认 530。</p></div>
+					<div class="pc-pay-field"><label for="pc-pay-display">收银台打开方式</label><select id="pc-pay-display" name="display"><?php $pc_display = Hub_Accounts::display( $raw['display'] ?? 'auto' ); foreach ( array( 'auto' => '按支付方返回（推荐）', 'iframe' => '嵌入结账页', 'redirect' => '跳转到收银台' ) as $pc_value => $pc_label ) : ?><option value="<?php echo esc_attr( $pc_value ); ?>" <?php selected( $pc_display, $pc_value ); ?>><?php echo esc_html( $pc_label ); ?></option><?php endforeach; ?></select><p class="pc-pay-muted">嵌入：顾客留在店铺页面付款，部分收银台、银行验证或钱包可能打不开，启用前请先用手机测试。钱包类建议选跳转。</p></div>
+					<div class="pc-pay-field"><label for="pc-pay-height">嵌入收银台高度</label><div class="pc-pay-number-unit"><input id="pc-pay-height" type="number" name="iframe_height" min="320" max="1600" step="1" required value="<?php echo esc_attr( (string) $raw['iframe_height'] ); ?>"><span>px</span></div><p class="pc-pay-muted">以嵌入方式打开收银台时生效，默认 530。</p></div>
 					<div class="pc-pay-field pc-pay-field-wide"><label for="pc-pay-description">付款说明</label><textarea id="pc-pay-description" name="description" maxlength="1000" rows="2"><?php echo esc_textarea( $raw['description'] ); ?></textarea></div>
 				</div></fieldset>
 				<fieldset class="pc-pay-account-fields pc-pay-switches"><legend>收款与店铺</legend>

@@ -8,6 +8,10 @@ final class Hub_Accounts {
 
 	public const OPTION = 'pc_panapay_hub_accounts';
 	private const LIMIT = 20;
+	/** 收银台打开方式：auto 按支付方返回；iframe 总是嵌入结账页；redirect 总是跳转（2026-11-08）。 */
+	public const DISPLAYS = array( 'auto', 'iframe', 'redirect' );
+
+	public static function display( $value ): string { return in_array( $value, self::DISPLAYS, true ) ? $value : 'auto'; }
 
 	/** Encrypted raw settings, including archived identities and the current edit revision. */
 	public static function all(): array {
@@ -196,7 +200,7 @@ final class Hub_Accounts {
 		return array( 'id' => $id, 'protocol' => 'panapay', 'account_name' => '', 'enabled' => 'no', 'title' => 'Credit card',
 			'description' => 'Continue to the secure payment page to pay for your order.', 'gateway' => '', 'mchid' => '', 'secret' => '',
 			'mode' => '2', 'tag' => '', 'test_mode' => 'yes', 'payment_hosts' => array(), 'payment_icons' => array(), 'iframe_height' => 530,
-			'all_sites' => 'yes', 'sites' => array(), 'archived' => 'no', 'deleted' => 'no', 'purged' => 'no' );
+			'all_sites' => 'yes', 'sites' => array(), 'archived' => 'no', 'deleted' => 'no', 'purged' => 'no', 'display' => 'auto' );
 	}
 
 	/**
@@ -225,6 +229,7 @@ final class Hub_Accounts {
 		$config['description'] = self::plain( $raw['description'], 1000 );
 		$config['payment_icons'] = self::icons( $raw['payment_icons'] );
 		$config['iframe_height'] = self::height( $raw['iframe_height'] );
+		$config['display'] = self::display( $raw['display'] ?? 'auto' );
 		$config['revision'] = $raw['revision'] ?? 0;
 		return $config;
 	}
@@ -287,6 +292,10 @@ final class Hub_Accounts {
 		if ( array_key_exists( 'payment_icons', $input ) ) { $candidate['payment_icons'] = self::icons( $input['payment_icons'] ); }
 		elseif ( isset( $input['payment_icons_present'] ) ) { $candidate['payment_icons'] = array(); }
 		if ( array_key_exists( 'iframe_height', $input ) ) { $candidate['iframe_height'] = self::height( $input['iframe_height'] ); }
+		if ( array_key_exists( 'display', $input ) ) {
+			if ( ! in_array( $input['display'], self::DISPLAYS, true ) ) { throw new \InvalidArgumentException( 'Payment display mode is invalid.' ); }
+			$candidate['display'] = $input['display'];
+		}
 		if ( array_key_exists( 'secret', $input ) ) {
 			if ( ! is_string( $input['secret'] ) || strlen( $input['secret'] ) > 1024 || preg_match( '/[\x00-\x1f\x7f]/', $input['secret'] ) ) { throw new \InvalidArgumentException( 'Payment signing settings are invalid.' ); }
 			if ( '' !== $input['secret'] && ! ( 'default' === $candidate['id'] && Hub_Settings::server_override( 'PC_PANAPAY_SECRET' ) ) ) { $candidate['secret'] = Crypto::encrypt( $input['secret'], 'secret' ); }
