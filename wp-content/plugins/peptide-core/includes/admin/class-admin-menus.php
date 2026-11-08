@@ -289,6 +289,10 @@ final class Admin_Menus {
 			unset( $items[ $data ] );
 		}
 		$items = array_values( array_filter( $items, static fn( $item ) => self::ANALYTICS !== ( $item[2] ?? '' ) ) );
+		// 用户 2026-11-09：访客数据紧跟在“数据”后面；第三方“运营套件”挪到访客数据原来的位置（推广人之后、博客之前）。
+		$move( 'pc-visitors', Data_Pages::SLUG );
+		$move( 'cbs-dashboard', 'pc-referrals' );
+		$move( 'edit.php', in_array( 'cbs-dashboard', array_column( $items, 2 ), true ) ? 'cbs-dashboard' : 'pc-referrals' );
 		$menu = array(); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		foreach ( $items as $i => $item ) {
 			$menu[ ( $i + 1 ) * 5 ] = $item; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
