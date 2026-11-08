@@ -31,24 +31,53 @@ final class Quote_Cart extends \WC_Cart {
 	public static function copy( \WC_Cart $source, ?\WC_Customer $customer = null ): self {
 		$customer = $customer ?? $source->get_customer();
 		$copy = new self( $source->cart_contents, $customer instanceof \WC_Customer ? $customer : null );
-		if ( $source instanceof self && $source->quote_coupons ) {
-			foreach ( $source->quote_coupons as $coupon ) { $copy->attach_quote_coupon( $coupon ); }
-		} elseif ( $source->get_applied_coupons() ) { throw new \RuntimeException( 'unsupported_existing_coupon' ); }
+		if ( $source instanceof self ) {
+			foreach ( $source->quote_coupons as $coupon ) { $copy->carry_coupon( $coupon ); }
+		} else {
+			// 顾客已用的优惠码（如 WELCOME5）一并带入报价，按 WooCommerce 原生规则计算（2026-11-08）。
+			foreach ( self::existing_coupons( $source ) as $coupon ) { $copy->carry_coupon( $coupon ); }
+		}
 		return $copy;
+	}
+
+	/** 顾客购物车里已用的优惠码；任何一个无法安全计算就整体放弃报价。 @return \WC_Coupon[] */
+	public static function existing_coupons( \WC_Cart $source ): array {
+		$codes = $source->get_applied_coupons();
+		if ( ! $codes ) { return array(); }
+		$loaded = $source->get_coupons();
+		$out = array();
+		foreach ( $codes as $code ) {
+			$coupon = $loaded[ $code ] ?? new \WC_Coupon( $code );
+			if ( ! $coupon instanceof \WC_Coupon || ! Recommendation_Coupon::supported_existing_coupon( $coupon ) ) { throw new \RuntimeException( 'unsupported_existing_coupon' ); }
+			$out[ $code ] = $coupon;
+		}
+		return $out;
+	}
+
+	private function carry_coupon( \WC_Coupon $coupon ): void {
+		$code = $coupon->get_code();
+		if ( isset( $this->quote_coupons[ $code ] ) ) { throw new \RuntimeException( 'duplicate_quote_coupon' ); }
+		$this->quote_coupons[ $code ] = clone $coupon;
+		$this->applied_coupons = array_keys( $this->quote_coupons );
 	}
 
 	/** Called only after native WC_Discounts validation on this detached cart. */
 	public function attach_quote_coupon( \WC_Coupon $coupon ): void {
-		if ( $this->applied_coupons || ! Recommendation_Coupon::supported_coupon( $coupon ) ) { throw new \RuntimeException( 'unsupported_quote_coupon' ); }
-		$this->quote_coupons = array( $coupon->get_code() => clone $coupon );
-		$this->applied_coupons = array( $coupon->get_code() );
+		if ( isset( $this->quote_coupons[ $coupon->get_code() ] ) || ! Recommendation_Coupon::supported_coupon( $coupon ) ) { throw new \RuntimeException( 'unsupported_quote_coupon' ); }
+		// 只能和可叠加的优惠码一起用；任何一方是“单独使用”就不加。
+		if ( $coupon->get_individual_use() && $this->quote_coupons ) { throw new \RuntimeException( 'unsupported_quote_coupon' ); }
+		foreach ( $this->quote_coupons as $existing ) { if ( $existing->get_individual_use() ) { throw new \RuntimeException( 'unsupported_quote_coupon' ); } }
+		$this->carry_coupon( $coupon );
 	}
 	public function get_coupons( $deprecated = null ) { return 'order' === $deprecated ? array() : $this->quote_coupons; }
 
 	/** Fail closed when an omitted native/third-party pricing path could change a quote. */
 	public static function supported( \WC_Cart $source ): bool {
-		if ( ! in_array( get_class( $source ), array( \WC_Cart::class, self::class ), true ) || ( $source->applied_coupons && ( ! $source instanceof self || array_keys( $source->quote_coupons ) !== array_values( $source->applied_coupons ) ) ) || wc_tax_enabled() || wc_prices_include_tax() ) {
+		if ( ! in_array( get_class( $source ), array( \WC_Cart::class, self::class ), true ) || ( $source instanceof self && array_keys( $source->quote_coupons ) !== array_values( $source->applied_coupons ) ) || wc_tax_enabled() || wc_prices_include_tax() ) {
 			return false;
+		}
+		if ( ! $source instanceof self ) {
+			try { self::existing_coupons( $source ); } catch ( \Throwable $error ) { return false; }
 		}
 		if ( ! self::supported_hooks() ) { return false; }
 		foreach ( $source->cart_contents as $item ) {

@@ -47,7 +47,7 @@ final class Recommendations {
 		$out = self::base( $progress );
 		if ( empty( $settings['enabled'] ) || empty( $settings['recommendation']['enabled'] ) ) { return self::hidden( $out, 'disabled' ); }
 		if ( ! empty( $settings['recommendationCoupon']['enabled'] ) && ( true !== ( $input['supportsAutomaticCoupon'] ?? false ) || ! preg_match( '/\A[a-f0-9]{64}\z/', $cart_identity ) ) ) { return self::hidden( $out, 'client_update_required' ); }
-		if ( $source->get_applied_coupons() ) { return self::hidden( $out, 'coupon_conflict' ); }
+		// 顾客已用的优惠码不再挡住推荐（2026-11-08）；无法安全计算的优惠码会在报价时整体放弃。
 		$coupon = Recommendation_Coupon::coupon( $settings );
 		if ( ! empty( $settings['recommendationCoupon']['enabled'] ) && ! $coupon ) { return self::hidden( $out, 'coupon_unavailable' ); }
 		// Unknown price integrations must not be partially simulated or have hooks removed.
@@ -80,7 +80,8 @@ final class Recommendations {
 			foreach ( $input['candidates'] as $candidate ) {
 				$selection = self::selection( $candidate ); if ( ! $selection ) { continue; }
 				[ $parent, $product ] = $selection;
-				if ( $coupon && ! \PeptideCore\Coupon_Rules::covers( $coupon, $product ) ) { continue; }
+				// 加购券不适用这个商品时，仍推荐商品，只是不送券。
+				$offer_coupon = $coupon && \PeptideCore\Coupon_Rules::covers( $coupon, $product ) ? $coupon : null;
 				if ( $id !== Promotions::owner( $product, Promotions::usable_ids( $before ) ) ) { continue; }
 				$existing = 0; $line_key = ''; $matches = 0;
 				foreach ( $before->cart_contents as $key => $line ) { if ( $line['data']->get_id() === $product->get_id() ) { $existing += (int) $line['quantity']; $line_key = (string) $key; $matches++; } }
@@ -90,19 +91,22 @@ final class Recommendations {
 					// A cheap bound only skips amounts that cannot reach the target. The native trial decides savings.
 					if ( ( (float) $product->get_price() * $add * 10 ** wc_get_price_decimals() ) + (float) $progress['eligibleSubtotal']['minor'] + 0.000001 < (float) $next['threshold'] ) { continue; }
 					if ( ! self::quantity_ok( $product, $existing + $add, $add, $before ) ) { continue; }
-					$after = Quote_Cart::copy( $before );
 					$key = $line_key ?: 'pc-quote-' . $product->get_id();
-					$after->cart_contents[ $key ] = array( 'key' => $key, 'product_id' => $parent->get_id(), 'variation_id' => $product->is_type( 'variation' ) ? $product->get_id() : 0, 'variation' => $product->is_type( 'variation' ) ? $product->get_variation_attributes() : array(), 'quantity' => $existing + $add, 'data' => clone $product );
+					$line = array( 'key' => $key, 'product_id' => $parent->get_id(), 'variation_id' => $product->is_type( 'variation' ) ? $product->get_id() : 0, 'variation' => $product->is_type( 'variation' ) ? $product->get_variation_attributes() : array(), 'quantity' => $existing + $add, 'data' => clone $product );
 					if ( ++$trials > self::MAX_TRIALS ) { return self::hidden( $out, 'unsupported_calculation' ); }
-					$after->calculate_quote();
-					if ( $coupon && ! Recommendation_Coupon::attach_to_quote( $after, $coupon ) ) { continue; }
+					$after = Quote_Cart::copy( $before ); $after->cart_contents[ $key ] = $line; $after->calculate_quote();
+					if ( $offer_coupon && ! Recommendation_Coupon::attach_to_quote( $after, $offer_coupon ) ) {
+						// 券叠加不了：重新算一份不带券的报价。
+						$offer_coupon = null;
+						$after = Quote_Cart::copy( $before ); $line['data'] = clone $product; $after->cart_contents[ $key ] = $line; $after->calculate_quote();
+					}
 					$after_progress = Progress::for_cart( $after, $settings );
 					$measure = (float) $after_progress['eligibleSubtotal']['minor'];
 					$before_discount = (float) $progress['actualDiscount']['minor']; $after_discount = (float) $after_progress['actualDiscount']['minor'];
 					if ( $measure < (float) $next['threshold'] || $after_discount <= $before_discount ) { continue; }
 					$dto = self::result( $out, $parent, $product, $add, $before, $after, $progress, $after_progress, $next );
-					$dto['couponDiscount'] = self::money( $coupon ? (float) $after->get_coupon_discount_amount( $coupon->get_code() ) : 0.0 );
-					$dto = Recommendation_Coupon::issue( $dto, $settings, $coupon, $cart_identity );
+					$dto['couponDiscount'] = self::money( $offer_coupon ? (float) $after->get_coupon_discount_amount( $offer_coupon->get_code() ) : 0.0 );
+					$dto = Recommendation_Coupon::issue( $dto, $settings, $offer_coupon, $cart_identity );
 					if ( (float) $dto['afterAdd']['incrementalSavings']['minor'] <= 0 ) { continue; }
 					$results[] = array( 'count' => $candidate['viewCount'], 'seen' => $candidate['lastViewedAt'] ?? '', 'burden' => (float) $dto['linePrice']['minor'], 'dto' => $dto );
 					break;

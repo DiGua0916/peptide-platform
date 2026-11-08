@@ -38,6 +38,16 @@ final class Recommendation_Coupon {
 		return ! is_array( $segment ) || 'all' === ( $segment['customers'] ?? 'all' );
 	}
 
+	/**
+	 * 顾客已经用上的优惠码（2026-11-08）：它们已在真实购物车里通过校验，报价只需按原生规则算出折扣。
+	 * 只接受原生的百分比/固定金额类型；未知的优惠码插件或类型一律放弃报价。
+	 */
+	public static function supported_existing_coupon( \WC_Coupon $coupon ): bool {
+		return self::coupon_hooks_supported() && get_class( $coupon ) === \WC_Coupon::class && $coupon->get_id() > 0 && 'shop_coupon' === get_post_type( $coupon->get_id() )
+			&& in_array( $coupon->get_discount_type(), array( 'percent', 'fixed_product', 'fixed_cart' ), true ) && is_numeric( $coupon->get_amount() ) && is_finite( (float) $coupon->get_amount() )
+			&& (float) $coupon->get_amount() >= 0 && ! ( 'percent' === $coupon->get_discount_type() && (float) $coupon->get_amount() > 100 );
+	}
+
 	/** Known callbacks are read-only; an unknown coupon integration cannot be guessed. */
 	private static function coupon_hooks_supported(): bool {
 		global $wp_filter;
@@ -76,10 +86,10 @@ final class Recommendation_Coupon {
 
 	/** Native validation against the detached after-add cart; no apply_coupon/session calls. */
 	public static function attach_to_quote( Quote_Cart $cart, \WC_Coupon $coupon ): bool {
-		if ( ! self::supported_coupon( $coupon ) || $cart->get_applied_coupons() ) { return false; }
+		if ( ! self::supported_coupon( $coupon ) || in_array( $coupon->get_code(), $cart->get_applied_coupons(), true ) ) { return false; }
 		$valid = ( new \WC_Discounts( $cart ) )->is_coupon_valid( $coupon );
 		if ( is_wp_error( $valid ) || true !== $valid ) { return false; }
-		$cart->attach_quote_coupon( $coupon );
+		try { $cart->attach_quote_coupon( $coupon ); } catch ( \RuntimeException $error ) { return false; }
 		$cart->calculate_quote();
 		return (float) $cart->get_coupon_discount_amount( $coupon->get_code() ) > 0;
 	}
@@ -127,11 +137,14 @@ final class Recommendation_Coupon {
 		$session_id = WC()->session ? WC()->session->get_customer_id() : null;
 		if ( ! is_string( $session_id ) || '' === $session_id || ! hash_equals( $claims['identity'], Cart_Reader::identity( $session_id ) ) ) { self::reject(); }
 		$settings = Store::effective();
-		if ( empty( $settings['enabled'] ) || empty( $settings['recommendation']['enabled'] ) || ( $settings['revision'] ?? -1 ) !== $claims['config'] || $cart->get_applied_coupons() ) { self::reject(); }
+		if ( empty( $settings['enabled'] ) || empty( $settings['recommendation']['enabled'] ) || ( $settings['revision'] ?? -1 ) !== $claims['config'] ) { self::reject(); }
 		$progress = Progress::for_cart( $cart, $settings );
 		if ( ! hash_equals( $claims['snapshot'], (string) $progress['cartSnapshotKey'] ) || ! hash_equals( $claims['activity'], (string) $progress['promotionRevision'] ) ) { self::reject(); }
 		$coupon = self::coupon( $settings );
-		if ( $claims['coupon'] !== ( $coupon ? $coupon->get_id() : 0 ) || ( $coupon && ! hash_equals( $claims['couponHash'], self::fingerprint( $coupon ) ) ) || ( ! empty( $settings['recommendationCoupon']['enabled'] ) && ! $coupon ) ) { self::reject(); }
+		if ( ! empty( $settings['recommendationCoupon']['enabled'] ) && ! $coupon ) { self::reject(); }
+		// 报价时加购券叠加不了（顾客已有不可叠加的码等），票据里券为 0：只加商品，不加券。
+		if ( 0 === $claims['coupon'] ) { $coupon = null; }
+		elseif ( ! $coupon || $claims['coupon'] !== $coupon->get_id() || ! hash_equals( $claims['couponHash'], self::fingerprint( $coupon ) ) ) { self::reject(); }
 		$before = self::product_quantity( $cart, $claims['product'] );
 		// Unique primary-key claim stops the SAME ticket adding twice, including simultaneous POSTs.
 		if ( ! self::claim( $offer['offerToken'], $claims['expires'] ) ) { self::reject(); }
@@ -163,7 +176,7 @@ final class Recommendation_Coupon {
 			if ( $coupon ) {
 				// New cart rows have no line subtotals until Woo calculates them. Do this only AFTER success.
 				$cart->calculate_totals();
-				if ( $cart->get_applied_coupons() ) { $result['reason'] = 'coupon_conflict'; }
+				if ( $cart->has_discount( $coupon->get_code() ) ) { $result['couponApplied'] = (float) $cart->get_coupon_discount_amount( $coupon->get_code() ) > 0; $result['reason'] = $result['couponApplied'] ? 'applied' : 'coupon_not_applied'; }
 				else {
 					$settings = Store::effective(); $current = self::coupon( $settings );
 					if ( ! $current || $settings['revision'] !== $pending['claims']['config'] || ! hash_equals( $pending['claims']['couponHash'], self::fingerprint( $current ) ) ) { $result['reason'] = 'coupon_changed'; }
