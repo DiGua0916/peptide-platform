@@ -337,6 +337,41 @@ final class Cdn {
 	 *
 	 * @return array 这个域名最新的进度
 	 */
+	/**
+	 * 机器人拦截（2026-11-08）：Bot Fight Mode 把已知爬虫、扫描器挡在店铺之外。令牌没有 Bot Management 权限时
+	 * 只记录提示，不影响 CDN 开通。返回 true=已开启，false=没开成（原因写进 pchq_cdn_bot 选项）。
+	 */
+	public static function bot_protect( string $zid ): bool {
+		$r = self::api( 'PUT', '/zones/' . rawurlencode( $zid ) . '/bot_management', array( 'fight_mode' => true ) );
+		$state = get_option( 'pchq_cdn_bot', array() );
+		$state = is_array( $state ) ? $state : array();
+		if ( is_wp_error( $r ) ) {
+			$state[ $zid ] = array( 'ok' => false, 'message' => $r->get_error_message(), 'at' => time() );
+			update_option( 'pchq_cdn_bot', $state, false );
+			return false;
+		}
+		$state[ $zid ] = array( 'ok' => true, 'message' => '', 'at' => time() );
+		update_option( 'pchq_cdn_bot', $state, false );
+		return true;
+	}
+
+	/** 给所有已在 Cloudflare 的域名开机器人拦截。@return array<string,bool|string> 域名 => true 或失败原因 */
+	public static function bot_protect_all(): array {
+		$out = array();
+		$r   = self::api( 'GET', '/zones?per_page=50' );
+		if ( is_wp_error( $r ) ) {
+			return array( '*' => $r->get_error_message() );
+		}
+		foreach ( (array) ( $r['result'] ?? array() ) as $z ) {
+			if ( ! is_array( $z ) || empty( $z['id'] ) || 'active' !== ( $z['status'] ?? '' ) ) {
+				continue;
+			}
+			$ok = self::bot_protect( (string) $z['id'] );
+			$out[ (string) $z['name'] ] = $ok ? true : (string) ( get_option( 'pchq_cdn_bot' )[ $z['id'] ]['message'] ?? '失败' );
+		}
+		return $out;
+	}
+
 	public static function process( string $domain, string $ip, bool $store_ready, array $extra = array() ): array {
 		$domain = Admin\Provision_Page::customer_domain( $domain );
 		if ( '' === $domain || ! filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) ) {
@@ -388,12 +423,13 @@ final class Cdn {
 			self::set_domain( $domain, array_merge( $base, array( 'stage' => 'edge_wait', 'message' => 'Cloudflare 正在为这个域名签发证书，通常 15 分钟内完成。' ) ) );
 			return self::domains()[ $domain ];
 		}
-		foreach ( array( 'ssl' => 'strict' ) as $setting => $value ) {
+		foreach ( array( 'ssl' => 'strict', 'browser_check' => 'on' ) as $setting => $value ) {
 			$r = self::api( 'PATCH', '/zones/' . rawurlencode( $zid ) . '/settings/' . $setting, array( 'value' => $value ) );
 			if ( is_wp_error( $r ) ) {
 				return $fail( $r );
 			}
 		}
+		self::bot_protect( $zid );
 		$r = self::cache_rule( $zid, $domain );
 		if ( is_wp_error( $r ) ) {
 			return $fail( $r );

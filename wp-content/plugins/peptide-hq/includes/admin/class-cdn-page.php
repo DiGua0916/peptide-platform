@@ -138,7 +138,7 @@ final class Cdn_Page {
 		}
 		echo '<details class="pcp-details"><summary>怎么创建令牌</summary><ol class="pcp-steps">';
 		echo '<li>登录 Cloudflare → 右上角头像 → My Profile → API Tokens → Create Token → Create Custom Token。</li>';
-		echo '<li>权限（Permissions）添加：Zone · Zone · Read；Zone · DNS · Edit；Zone · Zone Settings · Edit；Zone · SSL and Certificates · Read；Zone · Cache Rules · Edit。要自动添加新域名，再加 Account · Account Settings · Read 和 Zone · Zone · Edit。</li>';
+		echo '<li>权限（Permissions）添加：Zone · Zone · Read；Zone · DNS · Edit；Zone · Zone Settings · Edit；Zone · Bot Management · Edit（机器人拦截）；Zone · SSL and Certificates · Read；Zone · Cache Rules · Edit。要自动添加新域名，再加 Account · Account Settings · Read 和 Zone · Zone · Edit。</li>';
 		echo '<li>Zone Resources 选 All zones from an account → 选你的账户。不要用 Global API Key。</li>';
 		echo '<li>创建后复制令牌，粘贴到上面，点“保存并验证”。令牌加密保存在总后台服务器上，页面不会再显示。</li></ol></details></section>';
 
