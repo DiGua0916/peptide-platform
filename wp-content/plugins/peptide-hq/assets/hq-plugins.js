@@ -28,6 +28,31 @@
 		form.addEventListener('submit', function () { button.disabled = true; button.textContent = '上传中…'; });
 		show();
 	}
+	// 店铺选择：选了就切换；店铺多时输入名称或域名过滤下拉选项。
+	var picker = document.querySelector('.pcp-picker__form');
+	if (picker) {
+		var select = picker.querySelector('.pcp-picker__select');
+		var search = picker.querySelector('.pcp-picker__search');
+		select.addEventListener('change', function () { picker.submit(); });
+		if (search) {
+			search.addEventListener('input', function () {
+				var q = search.value.trim().toLowerCase();
+				var first = null;
+				Array.prototype.forEach.call(select.options, function (o) {
+					var hit = !q || (o.getAttribute('data-search') || '').indexOf(q) !== -1;
+					o.hidden = !hit;
+					if (hit && !first) { first = o; }
+				});
+				select.size = q ? Math.min(8, Math.max(2, Array.prototype.filter.call(select.options, function (o) { return !o.hidden; }).length)) : 0;
+			});
+			search.addEventListener('keydown', function (e) {
+				if (e.key !== 'Enter') { return; }
+				e.preventDefault();
+				var hit = Array.prototype.find.call(select.options, function (o) { return !o.hidden; });
+				if (hit) { select.value = hit.value; picker.submit(); }
+			});
+		}
+	}
 	document.addEventListener('submit', function (event) {
 		var f = event.target;
 		var message = f && f.getAttribute && f.getAttribute('data-confirm');

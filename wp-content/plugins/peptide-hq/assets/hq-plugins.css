@@ -153,3 +153,23 @@ body.pchq-workspace .pcp-switch[aria-checked=true]+.pcp-switch__text{color:var(-
 body.pchq-workspace .pcp-matrix thead th .pcp-state{margin-top:4px;font-size:11px}
 body.pchq-workspace .pcp-matrix thead th .pcp-link{font-size:11px}
 body.pchq-workspace .pcp-switch[disabled]:not([aria-busy]){cursor:not-allowed}
+
+/* 店铺选择 + 当前店铺视图（2026-11-08，店铺多了也好用） */
+body.pchq-workspace .pcp-picker{padding:16px 20px}
+body.pchq-workspace .pcp-picker__form{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+body.pchq-workspace .pcp-picker__label{font-size:13px;font-weight:700;color:var(--vc-ink)}
+body.pchq-workspace .pcp-picker__fields{display:flex;gap:8px;flex:1;min-width:0;align-items:flex-start}
+body.pchq-workspace .pcp-picker__search,body.pchq-workspace .pcp-picker__select{min-height:36px;border:1px solid var(--vc-control);border-radius:8px;padding:0 10px;font-size:13px;background:#fff}
+body.pchq-workspace .pcp-picker__search{width:220px;flex:none}
+body.pchq-workspace .pcp-picker__select{flex:1;min-width:0;max-width:460px}
+body.pchq-workspace .pcp-picker__select[size]:not([size="0"]){padding:4px;height:auto}
+body.pchq-workspace .pcp-picker__meta{display:flex;align-items:center;gap:14px;flex:none}
+body.pchq-workspace .pcp-app__top .pcp-switch-form{flex-direction:row}
+body.pchq-workspace .pcp-app__foot{gap:8px;flex-wrap:wrap}
+body.pchq-workspace .pcp-bulk{display:inline-flex;gap:10px}
+body.pchq-workspace .pcp-plugin .pcp-stores{margin-top:2px}
+@media (max-width:782px){
+ body.pchq-workspace .pcp-picker__form{align-items:stretch;flex-direction:column;gap:10px}
+ body.pchq-workspace .pcp-picker__fields{flex-direction:column}
+ body.pchq-workspace .pcp-picker__search,body.pchq-workspace .pcp-picker__select{width:100%;max-width:none;min-height:44px}
+}
