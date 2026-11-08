@@ -765,3 +765,9 @@
 - 其余 82 个商品规格与价格全部一致；仅表里 HGH Fragment 176-191 的 “2mg*vials” 为笔误（店里 2mg*10vials 正确）。
 - 第三方“运营套件”插件的代付网关（payment_proxy PayPal / _stripe / _airwallex / _flypay）在主店、s0006、s0007、s0009、s0010 的 WooCommerce 支付设置里全部 enabled=no（s0008 没有这些网关）；6 店结账只剩 Credit card 与 WALLET。未改插件本身。
 - 子店尚未同步这 6 个新商品（需用 总后台 → 店铺复制 → 商品，或等 Lipo-C / Melanotan I 补齐后一起复制）。
+
+### 2026-11-09 全站体检 + 菜单调整
+- **PHP-FPM**：5 家子店池 `pm.max_children = 2`（主店 8），当天 php-fpm 日志 “server reached max_children” 子店各 34–83 次 → 投放时请求排队、结账/AJAX 卡顿。改为子店 6、主店 12（ondemand，空闲不占内存；主机 4 vCPU / 7.7 GB，可用 5.3 GB），reload 生效；开店模板 worker.py 同步改 6。备份 `fpm-pools-*`。
+- **订单**：6 家店 48 小时内 wc_orders / shop_order 均为 0，panapay creations/transactions 均为 0，追踪里 24 小时只有 checkout_view / add_to_cart，没有 submit / payment 事件 → 服务器没收到过任何下单请求（“抓不到单”不是漏记，是请求没到；最可能被上面的 2 个 worker 卡住）。注意：当天多次清空追踪表，更早的证据已不在。
+- 其他：每店 systemd cron 每分钟正常；HQ 6 店 online、无 fails；磁盘根 12% / 数据盘 34%；MySQL innodb_buffer_pool 128M（偏小，未动，需重启）；nginx error 只有 assets 目录索引被拒（正常）。
+- **菜单**：店铺后台顶层顺序改为 仪表盘 → 订单 → 数据 → 访客数据 → 商品列表 → 店铺装修 → 营销活动 → 顾客 → 推广人 → 运营套件 → 博客 → 店铺设置 → 后台设置 → 应用中心。在 `menu_order` 过滤器里定（第三方“运营套件”菜单注册得晚，admin_menu 10000 里还没有）。6 店 + 模板部署，阳后台核实。
