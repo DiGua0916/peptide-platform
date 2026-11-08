@@ -76,6 +76,10 @@ final class Tracking_Page {
 					// 后台时间都按店铺时区显示（IANA 名称时用浏览器的 Intl 换算；只有偏移量时按浏览器本地时间）。
 					'timezone'   => wp_timezone_string(),
 					'today'      => wp_date( 'Y-m-d' ),
+					// 时间线 / 行为概览用的中文名（2026-11-09）。
+					'moduleLabels'   => \PeptideCore\Tracking\Labels::modules(),
+					'shippingLabels' => \PeptideCore\Tracking\Labels::shipping(),
+					'paymentLabels'  => \PeptideCore\Tracking\Labels::payments(),
 					'weekAgo'    => wp_date( 'Y-m-d', time() - 6 * DAY_IN_SECONDS ),
 					'strings'    => self::strings(),
 				)

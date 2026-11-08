@@ -352,9 +352,20 @@ final class Query {
 		$more   = count( $rows ) > $limit;
 		$rows   = array_slice( $rows, 0, $limit );
 		$events = array();
+		// 商品名：时间线里直接显示“看到商品「GHK-Cu 50mg」”而不是编号（2026-11-09）。
+		$ids = array();
+		foreach ( $rows as $r ) {
+			$ids[] = (int) $r['variation_id'] ?: (int) $r['product_id'];
+			$d = json_decode( (string) $r['data'], true );
+			if ( is_array( $d ) && isset( $d['product_id'] ) ) { $ids[] = (int) $d['product_id']; }
+		}
+		$names = Labels::products( $ids );
 		foreach ( $rows as $r ) {
 			$data     = json_decode( (string) $r['data'], true );
+			$pid      = (int) $r['variation_id'] ?: (int) $r['product_id'];
+			if ( ! $pid && is_array( $data ) && isset( $data['product_id'] ) ) { $pid = (int) $data['product_id']; }
 			$events[] = array(
+				'product_name' => $pid ? ( $names[ $pid ] ?? '' ) : '',
 				'id'           => (int) $r['id'],
 				'type'         => (string) $r['type'],
 				'source'       => (string) $r['source'],

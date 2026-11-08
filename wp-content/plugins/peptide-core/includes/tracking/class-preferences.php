@@ -83,7 +83,10 @@ final class Preferences {
     if ( $type === 'add_to_cart' && $row['source'] === 'server' ) { ++$products[$pid]['cart_additions']; }
    }
    if ( $type === 'module_click' && is_string( $d['module_id'] ?? null ) && preg_match( '/\A[a-zA-Z0-9_-]{1,60}\z/', $d['module_id'] ) ) {
-    $key = $d['module_id']; if ( ! isset( $modules[$key] ) ) { $modules[$key] = array( 'module_id' => $key, 'module_type' => preg_match( '/\A[a-zA-Z0-9_-]{1,40}\z/', (string) ( $d['module_type'] ?? '' ) ) ? $d['module_type'] : '', 'clicks' => 0 ); } ++$modules[$key]['clicks'];
+    $key = $d['module_id']; if ( ! isset( $modules[$key] ) ) { $mtype = preg_match( '/\A[a-zA-Z0-9_-]{1,40}\z/', (string) ( $d['module_type'] ?? '' ) ) ? $d['module_type'] : ''; $modules[$key] = array( 'module_id' => $key, 'module_type' => $mtype, 'label' => Labels::module( $mtype, $key ), 'clicks' => 0, 'pages' => array(), 'visitors' => array() ); } ++$modules[$key]['clicks'];
+    // 具体到页面和访客：店主要能看出是谁、在哪个页面点的。
+    $modules[$key]['pages'][$path] = ( $modules[$key]['pages'][$path] ?? 0 ) + 1;
+    $modules[$key]['visitors'][$vid] = ( $modules[$key]['visitors'][$vid] ?? 0 ) + 1;
    }
    // Presence describes an observed state, never an assumption that an open tab is read.
    if ( ! in_array( $type, array( 'page_view', 'heartbeat', 'visibility_change', 'page_exit' ), true ) ) { continue; }
@@ -107,6 +110,16 @@ final class Preferences {
   $active = $union( $intervals );
   foreach ( $page_intervals as $key => $list ) { $pages[$key]['active_seconds'] = $union( $list ); }
   foreach ( $product_intervals as $key => $list ) { $products[$key]['active_seconds'] = $union( $list ); }
+  foreach ( $modules as &$m ) {
+   arsort( $m['pages'] ); arsort( $m['visitors'] );
+   $m['pages'] = array_map( static fn( $p, $c ) => array( 'path' => $p, 'clicks' => $c ), array_keys( $m['pages'] ), $m['pages'] );
+   $m['visitor_count'] = count( $m['visitors'] );
+   $m['visitors'] = array_slice( array_map( static fn( $v, $c ) => array( 'id' => (int) $v, 'clicks' => $c ), array_keys( $m['visitors'] ), $m['visitors'] ), 0, 30 );
+  }
+  unset( $m );
+  // 商品兴趣里只有编号的，补上商品名。
+  $missing = array(); foreach ( $products as $pid => $p ) { if ( $p['name'] === '#' . $pid ) { $missing[] = $pid; } }
+  if ( $missing ) { foreach ( Labels::products( $missing ) as $pid => $name ) { $products[$pid]['name'] = $name; } }
   $rank = static function ( array $items, string $key ): array { $items = array_values( $items ); usort( $items, static fn( $a, $b ) => $b[$key] <=> $a[$key] ?: strcmp( json_encode( $a ), json_encode( $b ) ) ); return array_slice( $items, 0, 50 ); };
   return array( 'ranking_counts' => array( 'pages' => count( $pages ), 'products' => count( $products ), 'modules' => count( $modules ) ), 'summary' => array( 'visitors' => count( $visitors ), 'visits' => count( $visits ), 'pageviews' => $views, 'active_seconds' => $active, 'observed_events' => count( $rows ) ), 'pages' => $rank( $pages, 'active_seconds' ), 'modules' => $rank( $modules, 'clicks' ), 'products' => $rank( $products, 'clicks' ) );
  }
