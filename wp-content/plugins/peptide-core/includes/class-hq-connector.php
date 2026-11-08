@@ -318,6 +318,9 @@ final class Hq_Connector {
 				'permission_callback' => $auth,
 			)
 		);
+		register_rest_route( self::NS, '/hq/design-export', array( 'methods' => 'GET', 'callback' => array( self::class, 'design_export_route' ), 'permission_callback' => $auth ) );
+		register_rest_route( self::NS, '/hq/design', array( 'methods' => 'POST', 'callback' => array( self::class, 'design_route' ), 'permission_callback' => $auth ) );
+		register_rest_route( self::NS, '/hq/design-lock', array( 'methods' => 'POST', 'callback' => array( self::class, 'design_lock_route' ), 'permission_callback' => $auth ) );
 		register_rest_route(
 			self::NS,
 			'/hq/apps',
@@ -371,10 +374,49 @@ final class Hq_Connector {
 		return array( 'apps' => self::apps() );
 	}
 
+	/** 母版店：导出已发布的装修（总后台“统一模板”用）。 */
+	public static function design_export_route(): array {
+		return Design_Sync::export();
+	}
+
+	/** 总后台下发统一装修。以店铺管理员身份写入，避免权限检查挡住发布。@return array|\WP_Error */
+	public static function design_route( \WP_REST_Request $request ) {
+		$p = (array) $request->get_json_params();
+		if ( ! is_array( $p['bundle'] ?? null ) || ! is_bool( $p['lock'] ?? null ) || ! is_string( $p['source_host'] ?? null ) ) {
+			return new \WP_Error( 'pc_design_request', '请求无效。', array( 'status' => 400 ) );
+		}
+		$previous = get_current_user_id();
+		$user     = self::login_user();
+		if ( ! $user ) {
+			return new \WP_Error( 'pc_design_user', '店铺没有可用的管理员账号。', array( 'status' => 409 ) );
+		}
+		wp_set_current_user( $user );
+		try {
+			$res = Design_Sync::apply( $p['bundle'], $p['lock'], $p['source_host'] );
+		} finally {
+			wp_set_current_user( $previous );
+		}
+		if ( ! is_wp_error( $res ) ) {
+			Activity_Log::log( 'settings', 'design_applied', array( 'type' => 'design', 'id' => 0, 'label' => substr( (string) ( $res['version'] ?? '' ), 0, 12 ) ), array( 'via' => 'HQ' ) );
+		}
+		return $res;
+	}
+
+	public static function design_lock_route( \WP_REST_Request $request ) {
+		$p = (array) $request->get_json_params();
+		if ( ! is_bool( $p['lock'] ?? null ) ) {
+			return new \WP_Error( 'pc_design_request', '请求无效。', array( 'status' => 400 ) );
+		}
+		return Design_Sync::set_lock( $p['lock'] );
+	}
+
 	/** 一次性登录可以直接打开某个应用的设置页：app_<应用键>。 */
 	private static function login_target( string $to ): string {
 		if ( isset( self::PLATFORM_PAGES[ $to ] ) ) {
 			return self::PLATFORM_PAGES[ $to ];
+		}
+		if ( 'design' === $to ) {
+			return 'admin.php?page=pc-store-design';
 		}
 		if ( 'apps_center' === $to && class_exists( Admin\Apps_Page::class ) ) {
 			return 'admin.php?page=' . Admin\Apps_Page::SLUG;
@@ -386,7 +428,7 @@ final class Hq_Connector {
 	}
 
 	private static function allowed_target( string $to ): bool {
-		return in_array( $to, self::PLATFORM_PAGES, true ) || 1 === preg_match( '/^admin\.php\?page=pc-apps(?:&app=[a-z0-9-]{1,40})?$/D', $to );
+		return in_array( $to, self::PLATFORM_PAGES, true ) || 'admin.php?page=pc-store-design' === $to || 1 === preg_match( '/^admin\.php\?page=pc-apps(?:&app=[a-z0-9-]{1,40})?$/D', $to );
 	}
 
 	/** 由总后台决定的店铺设置（店铺后台不显示这些开关）。 */
@@ -482,6 +524,7 @@ final class Hq_Connector {
 			'theme'       => $theme->get( 'Name' ) . ' ' . $theme->get( 'Version' ),
 			'plugins'     => $plugins,
 			'apps'        => self::apps(),
+			'design'      => Design_Sync::summary(),
 			'versions'    => array(
 				'plugin' => PEPTIDE_CORE_VERSION,
 				'wp'     => get_bloginfo( 'version' ),

@@ -526,6 +526,23 @@ class Policy(unittest.TestCase):
             self.assertTrue(all('--path='+c['source_web_root'] not in args for args in calls))
             self.assertFalse(any(any(token in {'mysql','mariadb','db','export'} for token in args) for args in calls))
 
+    def test_template_bundle_carries_videos_up_to_64mb_but_images_stay_10mb(self):
+        self.root_stat_model()
+        with tempfile.TemporaryDirectory(dir=TEST_ROOT) as folder:
+            root=Path(folder); t,c,data=self.template_fixture(root)
+            uploads=Path(c['source_uploads']); video=uploads/'story.mp4'; big=uploads/'big.png'
+            with open(video,'wb') as f: f.truncate(11*1024**2)
+            with open(big,'wb') as f: f.truncate(11*1024**2)
+            def write(images):
+                Path(c['template_bundle']).write_text(json.dumps(dict(data,images=images)),encoding='utf-8')
+            mocks=(patch.object(w.pwd,'getpwnam',return_value=types.SimpleNamespace(pw_uid=0,pw_gid=0)),
+                   patch.object(w.grp,'getgrnam',return_value=types.SimpleNamespace(gr_gid=0)),patch.object(w,'run',return_value=b'ok'))
+            with mocks[0],mocks[1],mocks[2]:
+                write([dict(old_id=9,file=str(video),title='Story',alt='')]); w.seed_template(t,c)
+                self.assertTrue((t['data']/'uploads/master/master-9.mp4').is_file())
+                write([dict(old_id=10,file=str(big),title='Big',alt='')])
+                with self.assertRaisesRegex(ValueError,'template_media_size'): w.seed_template(t,c)
+
     def test_template_bundle_rejects_untrusted_owner_links_permissions_and_size(self):
         self.root_stat_model()
         for field,value in [('st_uid',1000),('st_nlink',2),('st_mode',stat.S_IFREG|0o622),('st_size',2*1024**2)]:

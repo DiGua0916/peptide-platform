@@ -152,6 +152,9 @@ final class Store_Design {
 			wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'peptide-core' ), 403 );
 		}
 		check_admin_referer( $action );
+		if ( \PeptideCore\Design_Sync::locked() ) {
+			wp_die( '这个店铺的装修由平台统一下发，不能在店铺后台修改。', '', array( 'response' => 403, 'back_link' => true ) );
+		}
 
 		// phpcs:disable WordPress.Security.NonceVerification -- 上面已用 check_admin_referer 校验。
 		$id     = isset( $_REQUEST['template'] ) ? absint( $_REQUEST['template'] ) : 0;
@@ -228,6 +231,13 @@ final class Store_Design {
 
 	public static function render_theme_design(): void {
 		if ( ! current_user_can( Templates::CAP_EDIT ) ) {
+			return;
+		}
+		if ( \PeptideCore\Design_Sync::locked() ) {
+			$state = \PeptideCore\Design_Sync::state();
+			echo '<div class="wrap pc-sd"><h1>' . esc_html__( 'Theme design', 'peptide-core' ) . '</h1>';
+			echo '<div class="notice notice-info inline"><p><strong>店铺装修由平台统一下发。</strong>首页、页眉、页脚和全局样式和平台母版保持一致，店铺后台不能修改；有需要请联系平台。' . ( ! empty( $state['applied_at'] ) ? '（最近更新：' . esc_html( wp_date( 'Y-m-d H:i', (int) $state['applied_at'] ) ) . '）' : '' ) . '</p></div>';
+			echo '<p><a class="button" target="_blank" rel="noopener" href="' . esc_url( home_url( '/' ) ) . '">查看店铺首页</a></p></div>';
 			return;
 		}
 		$default   = Templates::default_id();

@@ -511,9 +511,10 @@ def seed_template(t, c):
     for image in data['images']:
         p = Path(image['file'])
         require(p.is_file() and not p.is_symlink() and p.resolve().is_relative_to(source_uploads), 'template_source_path')
-        require(p.suffix.lower() in {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif'} and isinstance(image['old_id'], int) and image['old_id'] > 0, 'template_image')
+        video = p.suffix.lower() in {'.mp4', '.webm'}
+        require((video or p.suffix.lower() in {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif'}) and isinstance(image['old_id'], int) and image['old_id'] > 0, 'template_image')
         total += p.stat().st_size
-        require(p.stat().st_size <= 10 * 1024**2 and total <= 128 * 1024**2, 'template_media_size')
+        require(p.stat().st_size <= (64 if video else 10) * 1024**2 and total <= 128 * 1024**2, 'template_media_size')
         target = dest / ('master-' + str(image['old_id']) + p.suffix.lower())
         require(not target.is_symlink(), 'template_target_symlink')
         shutil.copyfile(p, target)

@@ -85,6 +85,9 @@ final class Layout_Controller {
 	 * @return true|\WP_Error
 	 */
 	public static function can_edit( \WP_REST_Request $request ) {
+		if ( \PeptideCore\Design_Sync::locked() ) {
+			return \PeptideCore\Design_Sync::locked_error();
+		}
 		$id = (int) $request['id'];
 		if ( Templates::LAYOUT !== get_post_type( $id ) || 'trash' === get_post_status( $id ) ) {
 			return new \WP_Error( 'pc_layout_not_found', __( 'Design document not found.', 'peptide-core' ), array( 'status' => 404 ) );

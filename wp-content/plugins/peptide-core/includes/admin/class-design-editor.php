@@ -62,7 +62,7 @@ final class Design_Editor {
 	}
 
 	public static function enqueue(): void {
-		if ( ! self::is_page() ) {
+		if ( ! self::is_page() || \PeptideCore\Design_Sync::locked() ) {
 			return;
 		}
 		$doc_id = self::document_id();
@@ -196,6 +196,10 @@ final class Design_Editor {
 	}
 
 	public static function render(): void {
+		if ( \PeptideCore\Design_Sync::locked() ) {
+			echo '<div class="wrap"><div class="notice notice-info inline"><p>这个店铺的装修由平台统一下发，不能在店铺后台修改。</p></div></div>';
+			return;
+		}
 		$doc_id = self::document_id();
 		if ( ! $doc_id ) {
 			echo '<div class="wrap"><h1>' . esc_html__( 'Design editor', 'peptide-core' ) . '</h1><p>' . esc_html__( 'Design document not found.', 'peptide-core' ) . '</p></div>';

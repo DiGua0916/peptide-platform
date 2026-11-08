@@ -404,7 +404,7 @@ final class Menu {
 			case 'pchq_login':
 				$to   = isset( $_REQUEST['to'] ) ? sanitize_key( wp_unslash( $_REQUEST['to'] ) ) : '';
 				// 平台工具页，或某个店铺应用的设置页（app_<应用键>，插件管理页使用）。
-				$res  = Client::login( $site, isset( \PeptideHq\Platform::tools()[ $to ] ) || 1 === preg_match( '/^app(?:s_center|_[a-z0-9-]{1,40})$/D', $to ) ? $to : '' );
+				$res  = Client::login( $site, isset( \PeptideHq\Platform::tools()[ $to ] ) || 1 === preg_match( '/^(?:design|app(?:s_center|_[a-z0-9-]{1,40}))$/D', $to ) ? $to : '' );
 				$info = Sites::get( $site );
 				$url  = is_array( $res ) ? (string) ( $res['url'] ?? '' ) : '';
 				// 只跳到这个店铺自己的地址。

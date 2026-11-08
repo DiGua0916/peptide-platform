@@ -6,6 +6,7 @@ if ( ! $file || ! is_readable( $file ) ) { throw new RuntimeException( 'template
 $data = json_decode( file_get_contents( $file ), true, 64, JSON_THROW_ON_ERROR );
 if ( 1 !== ( $data['version'] ?? 0 ) || ! empty( get_option( 'vialcove_master_imported' ) ) ) { return; }
 require_once ABSPATH . 'wp-admin/includes/image.php';
+require_once ABSPATH . 'wp-admin/includes/media.php'; // video metadata
 wp_set_current_user( (int) get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ID' ) )[0] );
 $map = (array) get_option( 'vialcove_master_image_map', array() );
 foreach ( $data['images'] as $image ) {

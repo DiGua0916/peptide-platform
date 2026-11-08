@@ -20,7 +20,10 @@ $uploads = realpath( wp_upload_dir()['basedir'] );
 foreach ( array_keys( $ids ) as $id ) {
 	$file = get_attached_file( $id );
 	$real = $file ? realpath( $file ) : false;
-	if ( ! $real || ! wp_attachment_is_image( $id ) || ! str_starts_with( $real, $uploads . DIRECTORY_SEPARATOR ) || is_link( $file ) || ! in_array( strtolower( pathinfo( $real, PATHINFO_EXTENSION ) ), array( 'png', 'jpg', 'jpeg', 'gif', 'webp', 'avif' ), true ) || filesize( $real ) > 10 * 1024 * 1024 ) { continue; }
+	// 2026-11-08: videos (mp4/webm, up to 64 MB) travel with the template too, e.g. the homepage video block.
+	$ext   = strtolower( pathinfo( (string) $real, PATHINFO_EXTENSION ) );
+	$video = in_array( $ext, array( 'mp4', 'webm' ), true ) && str_starts_with( (string) get_post_mime_type( $id ), 'video/' );
+	if ( ! $real || ! ( $video || wp_attachment_is_image( $id ) ) || ! str_starts_with( $real, $uploads . DIRECTORY_SEPARATOR ) || is_link( $file ) || ! in_array( $ext, array( 'png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'mp4', 'webm' ), true ) || filesize( $real ) > ( $video ? 64 : 10 ) * 1024 * 1024 ) { continue; }
 	$result['images'][] = array( 'old_id' => $id, 'file' => $real, 'title' => get_the_title( $id ), 'alt' => (string) get_post_meta( $id, '_wp_attachment_image_alt', true ) );
 }
 echo wp_json_encode( $result, JSON_UNESCAPED_UNICODE );

@@ -24,7 +24,7 @@ final class Client {
 	/**
 	 * @return array|\WP_Error 店铺返回的 JSON
 	 */
-	public static function request_raw( string $site_url, string $key, string $method, string $route, array $query = array(), ?array $body = null ) {
+	public static function request_raw( string $site_url, string $key, string $method, string $route, array $query = array(), ?array $body = null, int $timeout = self::TIMEOUT ) {
 		// The store rejects replayed signatures. A seconds-resolution timestamp alone collides when
 		// the same endpoint is called twice quickly, so sign a fresh reserved query value each time.
 		$query['pc_hq_nonce'] = wp_generate_uuid4();
@@ -36,7 +36,7 @@ final class Client {
 			$url,
 			array(
 				'method'      => strtoupper( $method ),
-				'timeout'     => self::TIMEOUT,
+				'timeout'     => max( 5, min( 300, $timeout ) ),
 				'redirection' => 0,
 				'headers'     => array(
 					'X-PC-HQ-Time' => (string) $time,
@@ -65,7 +65,7 @@ final class Client {
 	}
 
 	/** @return array|\WP_Error */
-	public static function request( int $site_id, string $method, string $route, array $query = array(), ?array $body = null ) {
+	public static function request( int $site_id, string $method, string $route, array $query = array(), ?array $body = null, int $timeout = self::TIMEOUT ) {
 		if ( ! Site_Lifecycle::active( $site_id ) ) { return new \WP_Error( 'pchq_store_retired', '店铺已下线，普通管理操作已暂停。' ); }
 		$site = Sites::get( $site_id );
 		if ( ! $site ) {
@@ -73,7 +73,20 @@ final class Client {
 		}
 		$url = Site_Urls::management( $site );
 		if ( '' === $url ) { return new \WP_Error( 'pchq_management_url', 'The registered management address is invalid.' ); }
-		return self::request_raw( $url, Sites::key( $site_id ), $method, $route, $query, $body );
+		return self::request_raw( $url, Sites::key( $site_id ), $method, $route, $query, $body, $timeout );
+	}
+
+	/** 统一装修：从母版店导出 / 下发到店铺（店铺可能要下载视频，给足时间）/ 只改锁定。 */
+	public static function design_export( int $site_id ) {
+		return self::request( $site_id, 'GET', '/peptide/v1/hq/design-export', array(), null, 60 );
+	}
+
+	public static function design_apply( int $site_id, array $bundle, bool $lock, string $source_host ) {
+		return self::request( $site_id, 'POST', '/peptide/v1/hq/design', array(), array( 'bundle' => $bundle, 'lock' => $lock, 'source_host' => $source_host ), 280 );
+	}
+
+	public static function design_lock( int $site_id, bool $lock ) {
+		return self::request( $site_id, 'POST', '/peptide/v1/hq/design-lock', array(), array( 'lock' => $lock ) );
 	}
 
 	public static function status( int $site_id ) {
