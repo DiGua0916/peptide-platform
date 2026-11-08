@@ -113,11 +113,8 @@ final class Labels {
 					self::$products[ $id ] = '#' . $id;
 				}
 				foreach ( wc_get_products( array( 'include' => $chunk, 'limit' => count( $chunk ), 'type' => array( 'simple', 'variable', 'variation', 'grouped', 'external' ), 'status' => 'any' ) ) as $product ) {
+					// 规格商品的 get_name() 已经带规格（“GHK-CU - 50mg*10vials”），不再重复拼接。
 					$name = trim( wp_strip_all_tags( (string) $product->get_name() ) );
-					if ( $product->is_type( 'variation' ) ) {
-						$attrs = array_filter( array_map( 'strval', (array) $product->get_attributes() ) );
-						if ( $attrs ) { $name .= ' · ' . implode( ' / ', $attrs ); }
-					}
 					self::$products[ $product->get_id() ] = '' !== $name ? mb_substr( $name, 0, 120 ) : '#' . $product->get_id();
 				}
 			}
