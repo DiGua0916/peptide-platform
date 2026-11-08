@@ -235,17 +235,32 @@ final class Cdn {
 		if ( null !== $override ) {
 			return (bool) $override;
 		}
-		$force = static function ( $handle ) use ( $domain, $ip ): void {
-			curl_setopt( $handle, CURLOPT_RESOLVE, array( 'www.' . $domain . ':443:' . $ip, $domain . ':443:' . $ip ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt
-		};
-		add_action( 'http_api_curl', $force );
-		$res = wp_remote_get( 'https://www.' . $domain . '/', array( 'timeout' => 15, 'redirection' => 0, 'sslverify' => true ) );
-		remove_action( 'http_api_curl', $force );
-		if ( is_wp_error( $res ) ) {
+		// 直接连店铺服务器 IP 检查 HTTPS 证书。总后台关闭了 WordPress 的外部请求（只允许白名单），
+		// 店铺新域名不在白名单里，所以这里用 cURL 直连：只连这个 IP、只用 HTTPS、按正常证书校验。
+		if ( ! function_exists( 'curl_init' ) ) {
 			return false;
 		}
-		$code = (int) wp_remote_retrieve_response_code( $res );
-		return $code >= 200 && $code < 500;
+		$ch = curl_init( 'https://www.' . $domain . '/' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_init
+		curl_setopt_array( // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt_array
+			$ch,
+			array(
+				CURLOPT_RESOLVE        => array( 'www.' . $domain . ':443:' . $ip ),
+				CURLOPT_PROTOCOLS      => CURLPROTO_HTTPS,
+				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_FOLLOWLOCATION => false,
+				CURLOPT_TIMEOUT        => 15,
+				CURLOPT_CONNECTTIMEOUT => 8,
+				CURLOPT_SSL_VERIFYPEER => true,
+				CURLOPT_SSL_VERIFYHOST => 2,
+				CURLOPT_USERAGENT      => 'VialCove-HQ-CDN-Check/1.0',
+				CURLOPT_RANGE          => '0-1023',
+			)
+		);
+		curl_exec( $ch ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_exec
+		$errno = curl_errno( $ch ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_errno
+		$code  = (int) curl_getinfo( $ch, CURLINFO_RESPONSE_CODE ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_getinfo
+		curl_close( $ch ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_close
+		return 0 === $errno && $code >= 200 && $code < 500;
 	}
 
 	/** 和主店同样的“绕过缓存”规则，只换域名。 */
