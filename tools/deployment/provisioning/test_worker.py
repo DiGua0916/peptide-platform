@@ -526,6 +526,18 @@ class Policy(unittest.TestCase):
             self.assertTrue(all('--path='+c['source_web_root'] not in args for args in calls))
             self.assertFalse(any(any(token in {'mysql','mariadb','db','export'} for token in args) for args in calls))
 
+    def test_purged_stores_release_their_slot(self):
+        with tempfile.TemporaryDirectory(dir=TEST_ROOT) as folder:
+            root=Path(folder); ident='6e2ecb48-91a5-4edb-a986-72a4bf2beec7'
+            row=dict(slug='s0003',uuid=ident,state='complete')
+            self.assertFalse(w.store_purged(root,row))
+            state=root/'lifecycle/tenants'/ident; state.mkdir(parents=True)
+            (state/'current.json').write_text(json.dumps(dict(state='retained',uuid=ident)),encoding='utf-8')
+            self.assertFalse(w.store_purged(root,row))
+            (state/'current.json').write_text(json.dumps(dict(state='purged',uuid=ident)),encoding='utf-8')
+            self.assertTrue(w.store_purged(root,row))
+            self.assertFalse(w.store_purged(root,dict(row,uuid='../../etc')))
+
     def test_template_bundle_carries_videos_up_to_64mb_but_images_stay_10mb(self):
         self.root_stat_model()
         with tempfile.TemporaryDirectory(dir=TEST_ROOT) as folder:

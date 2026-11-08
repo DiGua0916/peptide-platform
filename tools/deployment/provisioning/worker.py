@@ -487,6 +487,20 @@ Match all
     return user
 
 
+def store_purged(root, row):
+    """True when the root lifecycle tombstone says this store was purged (it no longer uses capacity)."""
+    ident = str(row.get('uuid', ''))
+    if not re.fullmatch(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', ident):
+        return False
+    path = Path(root) / 'lifecycle/tenants' / ident / 'current.json'
+    try:
+        if path.is_symlink() or not path.is_file() or path.stat().st_uid != os.geteuid():
+            return False
+        return json.loads(path.read_text(encoding='utf-8')).get('state') == 'purged'
+    except (OSError, ValueError):
+        return False
+
+
 def seed_template(t, c):
     require(Path(c['source_web_root']).resolve() != t['public'].resolve(), 'master_is_target')
     if c.get('template_bundle'):
@@ -825,7 +839,8 @@ def _process_queue_locked(c, root):
                 records = [json.loads(p.read_text(encoding='utf-8')) for p in (root / 'jobs').glob('*/state.json')]
                 allocated = [s for row in records if re.fullmatch(r's[0-9]{4}', s := str(row.get('slug', '')))]
                 # Failed preflight identities are never reused, but own no VM/DB capacity.
-                require(sum(row.get('state') != 'failed' and 'slug' in row for row in records) < c['max_new_stores'], 'store_limit')
+                # Purged stores (lifecycle tombstone) also release their slot; their slug is still never reused.
+                require(sum(row.get('state') != 'failed' and 'slug' in row and not store_purged(root, row) for row in records) < c['max_new_stores'], 'store_limit')
                 number = max([1] + [int(s[1:]) for s in allocated]) + 1
                 state = {'slug': 's' + str(number).zfill(4), 'uuid': str(uuid.uuid4()), 'state': 'pending', 'customer_domain': r['customer_domain']}
                 private_json(statefile, state)
