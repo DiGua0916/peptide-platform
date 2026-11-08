@@ -34,6 +34,15 @@ final class Design_Page {
 			add_action( 'admin_post_pchq_design_' . $do, array( self::class, 'handle' ) );
 		}
 		add_action( 'admin_enqueue_scripts', array( self::class, 'assets' ), 1001 );
+		// 不在菜单里的页面没有标题：补上，浏览器标签和面包屑才不会是空的。
+		add_action(
+			'current_screen',
+			static function (): void {
+				if ( self::EDITOR_SLUG === ( $_GET['page'] ?? '' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+					$GLOBALS['title'] = '装修模板'; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+				}
+			}
+		);
 	}
 
 	public static function assets(): void {
