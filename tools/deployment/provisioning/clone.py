@@ -369,7 +369,8 @@ def process_queue(c):
             results = h.queue_dir(base / 'results', c['hq_user'], 0o750)
             import grp as _grp, time as _time
             gid = _grp.getgrnam(c['hq_user']).gr_gid
-            for entry in sorted(requests.glob('*.json'))[:1]:
+            processed = 0
+            for entry in sorted(requests.glob('*.json'))[:3]:  # batch copies: a few per run, one after another
                 try:
                     request = validate_request(json.loads(h.read_checked(entry, owners=h.trusted_uids(c), limit=4096)))
                     if entry.name != request['operation_id'] + '.json':
@@ -399,8 +400,8 @@ def process_queue(c):
                 value['finished_at'] = int(_time.time())
                 h.atomic(receipt, h.canonical(value), mode=0o640, gid=gid)
                 entry.unlink()
-                return 1
-            return 0
+                processed += 1
+            return processed
     except BlockingIOError:
         return 0
 

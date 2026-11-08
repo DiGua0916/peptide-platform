@@ -35,7 +35,7 @@ final class Clone_Page {
 		$dir = dirname( PEPTIDE_HQ_FILE ) . '/assets/';
 		wp_enqueue_style( 'pchq-plugins', plugins_url( 'assets/hq-plugins.css', PEPTIDE_HQ_FILE ), array( 'peptide-hq-workspace' ), PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $dir . 'hq-plugins.css' ) );
 		wp_enqueue_script( 'pchq-plugins', plugins_url( 'assets/hq-plugins.js', PEPTIDE_HQ_FILE ), array(), PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $dir . 'hq-plugins.js' ), true );
-		wp_add_inline_script( 'pchq-plugins', "document.addEventListener('change',function(e){var f=e.target&&e.target.form;if(!f||!f.classList.contains('pcp-clone-form'))return;var custom=f.querySelector('input[name=mode][value=custom]');var box=f.querySelector('.pcp-clone-parts');if(box)box.hidden=!(custom&&custom.checked);});" );
+		wp_add_inline_script( 'pchq-plugins', "(function(){function sync(f){var custom=f.querySelector('input[name=mode][value=custom]');var box=f.querySelector('.pcp-clone-parts');if(box)box.hidden=!(custom&&custom.checked);var n=f.querySelectorAll('input[name=\"targets[]\"]:checked').length;var c=f.querySelector('[data-pc-clone-count]');if(c)c.textContent='已选 '+n+' 家';var b=f.querySelector('button[type=submit]');if(b)b.disabled=!n;}document.addEventListener('change',function(e){var f=e.target&&e.target.form;if(f&&f.classList.contains('pcp-clone-form'))sync(f);});document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('[data-pc-clone-all],[data-pc-clone-none]');if(!t)return;var f=t.form;f.querySelectorAll('input[name=\"targets[]\"]').forEach(function(i){i.checked=t.hasAttribute('data-pc-clone-all');});sync(f);});document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.pcp-clone-form').forEach(sync);});})();" );
 	}
 
 	private static function flash( string $type, string $message ): void {
@@ -47,15 +47,21 @@ final class Clone_Page {
 			wp_die( '无权复制店铺。', '', array( 'response' => 403 ) );
 		}
 		check_admin_referer( 'pchq_clone_start' );
-		$source = (int) ( $_POST['source'] ?? 0 );
-		$target = (int) ( $_POST['target'] ?? 0 );
-		$mode   = (string) ( $_POST['mode'] ?? 'all' );
-		$parts  = 'custom' === $mode ? array_map( 'sanitize_key', (array) ( $_POST['parts'] ?? array() ) ) : 'all';
-		$res    = Store_Clone::request( $source, $target, $parts );
-		if ( is_wp_error( $res ) ) {
-			self::flash( 'error', $res->get_error_message() );
+		$source  = (int) ( $_POST['source'] ?? 0 );
+		$targets = array_values( array_unique( array_filter( array_map( 'intval', (array) ( $_POST['targets'] ?? array() ) ) ) ) );
+		$mode    = (string) ( $_POST['mode'] ?? 'all' );
+		$parts   = 'custom' === $mode ? array_map( 'sanitize_key', (array) ( $_POST['parts'] ?? array() ) ) : 'all';
+		if ( ! $targets ) {
+			self::flash( 'error', '请至少勾选一家目标店铺。' );
 		} else {
-			self::flash( 'success', '已提交。复制通常 1～2 分钟完成，这个页面会显示进度；目标店铺在复制期间请不要编辑。' );
+			$stores = Store_Clone::stores(); $ok = array(); $bad = array();
+			foreach ( array_slice( $targets, 0, 20 ) as $t ) {
+				$res = Store_Clone::request( $source, $t, $parts );
+				if ( is_wp_error( $res ) ) { $bad[] = self::name( $stores, $t ) . '：' . $res->get_error_message(); } else { $ok[] = self::name( $stores, $t ); }
+			}
+			$msg = $ok ? '已提交 ' . count( $ok ) . ' 家店铺的复制（' . implode( '、', $ok ) . '），会一家接一家进行，每家约 1 分钟，下方记录会显示进度。' : '';
+			if ( $bad ) { $msg .= ( $msg ? ' 未提交：' : '' ) . implode( '；', $bad ); }
+			self::flash( $ok ? 'success' : 'error', $msg );
 		}
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG ) );
 		exit;
@@ -89,7 +95,7 @@ final class Clone_Page {
 		}
 
 		echo '<section class="pcp-card"><div class="pcp-card__head"><h2>开始复制</h2><span class="pcp-hint">目标店铺现有的商品、页面和装修会被替换</span></div>';
-		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="pcp-cdn-form pcp-clone-form" data-confirm="确定复制？目标店铺现有的商品、页面、装修和设置会被来源店铺的内容替换（订单和顾客不受影响）。复制前会自动备份目标店铺。">';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="pcp-cdn-form pcp-clone-form" data-confirm="确定复制？勾选的每家目标店铺现有的商品、页面、装修和设置都会被来源店铺的内容替换（订单和顾客不受影响）。复制前会自动备份每家目标店铺。">';
 		wp_nonce_field( 'pchq_clone_start' );
 		echo '<input type="hidden" name="action" value="pchq_clone_start">';
 		echo '<label class="pcp-field"><span>来源店铺（复制谁）</span><select name="source" required>';
@@ -97,14 +103,17 @@ final class Clone_Page {
 			echo '<option value="' . (int) $id . '"' . selected( (int) $id, $main, false ) . '>' . esc_html( self::name( $stores, (int) $id ) . ( (int) $id === $main ? '（主店）' : '' ) ) . '</option>';
 		}
 		echo '</select></label>';
-		echo '<label class="pcp-field"><span>目标店铺（复制到哪）</span><select name="target" required' . ( $targets ? '' : ' disabled' ) . '>';
+		echo '<fieldset class="pcp-clone-targets"><legend>目标店铺（复制到哪，可多选）</legend>';
 		if ( ! $targets ) {
-			echo '<option value="">还没有其他店铺</option>';
+			echo '<p class="pcp-hint">还没有其他店铺。</p>';
+		} else {
+			echo '<div class="pcp-clone-targets__tools"><button type="button" class="button button-small" data-pc-clone-all>全选</button><button type="button" class="button button-small" data-pc-clone-none>清空</button><span class="pcp-hint" data-pc-clone-count>已选 0 家</span></div><div class="pcp-clone-targets__list">';
+			foreach ( $targets as $id => $s ) {
+				echo '<label class="pcp-check pcp-clone-target"><input type="checkbox" name="targets[]" value="' . (int) $id . '"> <strong>' . esc_html( self::name( $stores, (int) $id ) ) . '</strong><small>' . esc_html( (string) wp_parse_url( (string) $s['url'], PHP_URL_HOST ) ) . '</small></label>';
+			}
+			echo '</div>';
 		}
-		foreach ( $targets as $id => $s ) {
-			echo '<option value="' . (int) $id . '">' . esc_html( self::name( $stores, (int) $id ) . ' · ' . (string) wp_parse_url( (string) $s['url'], PHP_URL_HOST ) ) . '</option>';
-		}
-		echo '</select></label>';
+		echo '</fieldset>';
 		echo '<fieldset class="pcp-clone-mode"><legend class="screen-reader-text">复制方式</legend>';
 		echo '<label class="pcp-check"><input type="radio" name="mode" value="all" checked> <strong>一键完整复制</strong> — 全部内容，一样不少</label>';
 		echo '<label class="pcp-check"><input type="radio" name="mode" value="custom"> 选择要复制的内容</label>';
