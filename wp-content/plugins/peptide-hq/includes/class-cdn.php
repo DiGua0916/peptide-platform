@@ -342,7 +342,8 @@ final class Cdn {
 	 * 只记录提示，不影响 CDN 开通。返回 true=已开启，false=没开成（原因写进 pchq_cdn_bot 选项）。
 	 */
 	public static function bot_protect( string $zid ): bool {
-		$r = self::api( 'PUT', '/zones/' . rawurlencode( $zid ) . '/bot_management', array( 'fight_mode' => true ) );
+		// Cloudflare refuses fight_mode unless its JavaScript detection is on; also block AI scrapers.
+		$r = self::api( 'PUT', '/zones/' . rawurlencode( $zid ) . '/bot_management', array( 'fight_mode' => true, 'enable_js' => true, 'ai_bots_protection' => 'block' ) );
 		$state = get_option( 'pchq_cdn_bot', array() );
 		$state = is_array( $state ) ? $state : array();
 		if ( is_wp_error( $r ) ) {
