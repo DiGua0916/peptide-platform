@@ -22,9 +22,9 @@ final class Pixels_Page {
 	private const NO_ITEMS_VALUE = array( 'gads', 'gtm', 'vk', 'yandex', 'criteo', 'twitter', 'bigo' );
 
 	/**
-	 * 后台只显示这些平台的卡片（2026-11-07：只投 Facebook，其他平台先隐藏）。
-	 * 隐藏的卡片仍然在表单里（hidden），保存时原值照常提交，已填的设置不会丢；要恢复显示，往这里加平台 key，或用过滤器
-	 * peptide_core_pixels_visible_platforms。前台回传逻辑不受影响：只看有没有填像素。
+	 * 直接展开显示的平台（2026-11-07：核心是 Facebook）。其他平台放在页面下方“其他广告平台”折叠区里，点开即可配置；
+	 * 折叠只是显示方式，表单照常提交，已填的设置不会丢。可用过滤器 peptide_core_pixels_visible_platforms 调整。
+	 * 前台回传逻辑不受影响：只看有没有填像素。
 	 */
 	private const VISIBLE = array( 'facebook' );
 
@@ -103,7 +103,7 @@ final class Pixels_Page {
 
 	private static function card( string $key, array $def, array $p ): void {
 		$token = ! empty( $def['token'] );
-		echo '<section class="pc-px-card" id="pc-px-' . esc_attr( $key ) . '" data-platform="' . esc_attr( $key ) . '"' . ( in_array( $key, self::visible_platforms(), true ) ? '' : ' hidden' ) . '><div class="pc-px-card__head"><h2>' . esc_html( $def['label'] ) . '</h2> <a href="' . esc_url( $def['help'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'How to get it?', 'peptide-core' ) . '</a>';
+		echo '<section class="pc-px-card" id="pc-px-' . esc_attr( $key ) . '" data-platform="' . esc_attr( $key ) . '"><div class="pc-px-card__head"><h2>' . esc_html( $def['label'] ) . '</h2> <a href="' . esc_url( $def['help'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'How to get it?', 'peptide-core' ) . '</a>';
 		if ( 'pixels' === $def['kind'] ) {
 			echo '<button type="button" class="button pc-px-add">' . esc_html__( 'New pixel', 'peptide-core' ) . '</button>';
 		}
@@ -191,8 +191,13 @@ final class Pixels_Page {
 			echo '<div class="notice notice-info inline"><p>' . esc_html__( 'No pixels yet, so nothing is sent. Add the IDs of the platforms you advertise on and save.', 'peptide-core' ) . '</p></div>';
 		}
 		echo '<div class="pc-px-grid"' . ( self::SHOW_NOTES ? '' : ' style="grid-template-columns:minmax(0,1fr)"' ) . '><div class="pc-px-main">';
+		$others = array();
 		foreach ( Pixels::platforms() as $key => $def ) {
-			self::card( $key, $def, $s['platforms'][ $key ] );
+			if ( in_array( $key, self::visible_platforms(), true ) ) {
+				self::card( $key, $def, $s['platforms'][ $key ] );
+			} else {
+				$others[ $key ] = $def;
+			}
 		}
 
 		// 服务端回传记录。
@@ -208,6 +213,22 @@ final class Pixels_Page {
 			echo '</tbody></table></div>';
 		}
 		echo '</section>';
+
+		// 其他平台：默认折叠，点开才显示；已填过像素的平台数量写在标题里，有的话默认展开。
+		if ( $others ) {
+			$used = 0;
+			foreach ( array_keys( $others ) as $key ) {
+				$used += $s['platforms'][ $key ]['pixels'] ? 1 : 0;
+			}
+			$zh    = str_starts_with( (string) get_user_locale(), 'zh' );
+			$title = $zh ? sprintf( '其他广告平台（%d 个）', count( $others ) ) : sprintf( 'Other ad platforms (%d)', count( $others ) );
+			$hint  = $used ? ( $zh ? sprintf( '已配置 %d 个', $used ) : sprintf( '%d configured', $used ) ) : ( $zh ? '点击展开' : 'Click to expand' );
+			echo '<details class="pc-px-card pc-px-others"' . ( $used ? ' open' : '' ) . '><summary style="cursor:pointer;font-size:14px;font-weight:600">' . esc_html( $title ) . ' <span class="pc-pl-muted" style="font-weight:400">' . esc_html( $hint ) . '</span></summary><div style="margin-top:14px">';
+			foreach ( $others as $key => $def ) {
+				self::card( $key, $def, $s['platforms'][ $key ] );
+			}
+			echo '</div></details>';
+		}
 
 		echo '</div><aside class="pc-px-side"' . ( self::SHOW_NOTES ? '' : ' hidden' ) . '><div class="pc-px-card pc-px-notes"><h2>' . esc_html__( 'Notes', 'peptide-core' ) . '</h2><ol>';
 		echo '<li>' . esc_html__( 'A pixel is a piece of JavaScript in the page. It sends what visitors do (views, add to cart, orders) to the ad platform’s servers so the platform can count the results of your ads.', 'peptide-core' ) . '</li>';
