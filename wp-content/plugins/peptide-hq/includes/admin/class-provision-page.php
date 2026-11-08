@@ -100,6 +100,63 @@ final class Provision_Page {
 		}
 		return $out;
 	}
+	/** 开店步骤：已提交 → 等待域名解析 → 创建店铺 → 完成（2026-11-08）。 */
+	public const STEPS = array( 1 => '已提交', 2 => '等待域名解析', 3 => '创建店铺', 4 => '开店完成' );
+
+	public static function step( string $state ): int {
+		return array( 'queued' => 1, 'waiting_dns' => 2, 'running' => 3, 'pending' => 3, 'waiting_capacity' => 3, 'complete' => 4 )[ $state ] ?? 0;
+	}
+
+	public static function state_label( string $state ): array {
+		return array(
+			'queued' => array( '等待开店服务接收', 'is-wait' ), 'waiting_dns' => array( '等待域名解析', 'is-wait' ), 'running' => array( '正在创建店铺', 'is-wait' ),
+			'pending' => array( '自动重试中', 'is-wait' ), 'waiting_capacity' => array( '开店名额已满', 'is-bad' ), 'complete' => array( '已完成', 'is-ok' ), 'failed' => array( '已失败 / 已取消', 'is-bad' ),
+		)[ $state ] ?? array( $state, 'is-off' );
+	}
+
+	/** 最近的开店任务（读结果文件，新的在前）。 */
+	public static function jobs( int $limit = 20 ): array {
+		$root = self::root();
+		if ( '' === $root || ! is_dir( $root . '/results' ) ) { return array(); }
+		$rows = array();
+		foreach ( (array) glob( $root . '/results/*.json' ) as $path ) {
+			$id = basename( (string) $path, '.json' );
+			if ( ! self::valid_id( $id ) || is_link( $path ) ) { continue; }
+			$rows[] = array( 'id' => $id, 'at' => (int) @filemtime( $path ) ) + self::result( $id );
+		}
+		usort( $rows, static fn( $a, $b ) => $b['at'] <=> $a['at'] );
+		return array_slice( $rows, 0, $limit );
+	}
+
+	private static function render_steps( array $job ): void {
+		$state = (string) ( $job['state'] ?? '' );
+		$cur   = self::step( $state );
+		echo '<ol class="pchq-steps" aria-label="开店步骤">';
+		foreach ( self::STEPS as $n => $label ) {
+			$cls = 'failed' === $state ? 'is-off' : ( $n < $cur || 4 === $cur ? 'is-done' : ( $n === $cur ? 'is-current' : 'is-todo' ) );
+			echo '<li class="' . esc_attr( $cls ) . '"><span>' . (int) $n . '</span>' . esc_html( $label ) . '</li>';
+		}
+		echo '</ol>';
+		$domain = (string) ( $job['customer_domain'] ?? '' );
+		$cdn    = '' !== $domain ? ( \PeptideHq\Cdn::domains()[ $domain ] ?? null ) : null;
+		if ( is_array( $cdn ) ) {
+			echo '<p class="pchq-step-note">CDN / 域名解析：' . esc_html( ( \PeptideHq\Cdn::STAGES[ $cdn['stage'] ?? '' ] ?? ( $cdn['stage'] ?? '' ) ) . ( '' !== (string) ( $cdn['message'] ?? '' ) ? ' — ' . $cdn['message'] : '' ) ) . '</p>';
+		}
+	}
+
+	private static function render_jobs(): void {
+		$jobs = self::jobs();
+		echo '<div class="pchq-card"><h2>开店记录</h2>';
+		if ( ! $jobs ) { echo '<p>还没有开店记录。</p></div>'; return; }
+		echo '<table class="widefat striped pchq-jobs"><thead><tr><th>域名</th><th>店铺编号</th><th>当前进度</th><th>更新时间</th><th></th></tr></thead><tbody>';
+		foreach ( $jobs as $j ) {
+			[ $label, $cls ] = self::state_label( (string) ( $j['state'] ?? '' ) );
+			$step = self::step( (string) ( $j['state'] ?? '' ) );
+			echo '<tr><td><strong>' . esc_html( (string) ( $j['customer_domain'] ?? '—' ) ) . '</strong></td><td>' . esc_html( (string) ( $j['slug'] ?? '—' ) ) . '</td><td><span class="pchq-badge ' . esc_attr( $cls ) . '">' . esc_html( $label ) . '</span>' . ( $step && 'complete' !== ( $j['state'] ?? '' ) ? ' <small>第 ' . (int) $step . ' / 4 步</small>' : '' ) . '</td><td>' . esc_html( $j['at'] ? wp_date( 'm-d H:i', $j['at'] ) : '—' ) . '</td><td><a class="button button-small" href="' . esc_url( admin_url( 'admin.php?page=' . self::SLUG . '&job=' . rawurlencode( $j['id'] ) ) ) . '">查看进度</a></td></tr>';
+		}
+		echo '</tbody></table></div>';
+	}
+
 	public static function status(): void {
 		if ( ! current_user_can( Menu::CAP ) ) { wp_send_json_error( null, 403 ); }
 		check_ajax_referer( 'pchq_create_store_status', 'nonce' );
@@ -107,6 +164,10 @@ final class Provision_Page {
 		if ( ! self::valid_id( $id ) ) { wp_send_json_error( null, 400 ); }
 		wp_send_json_success( self::result( $id ) );
 	}
+	private static function styles(): void {
+		echo '<style>.pchq-steps{display:flex;flex-wrap:wrap;gap:8px 24px;margin:8px 0 4px;padding:0;list-style:none}.pchq-steps li{display:flex;align-items:center;gap:8px;color:#8a8a8a;font-weight:500}.pchq-steps li span{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;border:1px solid #d0d0d0;font-size:12px;background:#fff}.pchq-steps li.is-done{color:#1d6b3a}.pchq-steps li.is-done span{background:#1d6b3a;border-color:#1d6b3a;color:#fff}.pchq-steps li.is-current{color:#111}.pchq-steps li.is-current span{border-color:#111;background:#111;color:#fff}.pchq-step-note{margin:12px 0 0;color:#555}.pchq-badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;background:#f0f0f0;color:#444}.pchq-badge.is-ok{background:#e6f4ea;color:#1d6b3a}.pchq-badge.is-wait{background:#fff4e0;color:#8a5a00}.pchq-badge.is-bad{background:#fdecea;color:#b42318}.pchq-jobs td{vertical-align:middle}.pchq-jobs small{color:#777}</style>';
+	}
+
 	public static function render(): void {
 		if ( ! current_user_can( Menu::CAP ) ) { return; }
 		$id = (string) wp_unslash( $_GET['job'] ?? '' );
@@ -114,8 +175,11 @@ final class Provision_Page {
 		?>
 		<div class="wrap pchq"><h1>自动开店</h1>
 		<p>填写客户自有域名，创建独立店铺和后台账号。顾客使用 www 地址；管理地址仍由平台固定分配。商品、订单和顾客数据不会从其他店铺复制；支付默认关闭。</p>
+		<?php self::styles(); ?>
 		<?php if ( $job ) : ?>
-		<div class="pchq-card" data-pchq-provision data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-job="<?php echo esc_attr( $id ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'pchq_create_store_status' ) ); ?>"><h2>开店进度</h2><p id="pchq-provision-status" role="status" aria-live="polite"><?php echo esc_html( $job['message'] ?? '' ); ?></p><div id="pchq-provision-dns"></div><div id="pchq-provision-links"></div></div>
+		<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::SLUG ) ); ?>">← 返回开店记录 / 开新店</a></p>
+		<div class="pchq-card"><h2>开店步骤<?php echo isset( $job['customer_domain'] ) ? ' · ' . esc_html( $job['customer_domain'] ) : ''; ?><?php echo isset( $job['slug'] ) ? ' · ' . esc_html( $job['slug'] ) : ''; ?></h2><?php self::render_steps( $job ); ?></div>
+		<div class="pchq-card" data-pchq-provision data-state="<?php echo esc_attr( (string) ( $job['state'] ?? '' ) ); ?>" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-job="<?php echo esc_attr( $id ); ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'pchq_create_store_status' ) ); ?>"><h2>开店进度</h2><p id="pchq-provision-status" role="status" aria-live="polite"><?php echo esc_html( $job['message'] ?? '' ); ?></p><div id="pchq-provision-dns"></div><div id="pchq-provision-links"></div></div>
 		<?php else : ?>
 		<?php if ( '' === self::root() ) : ?><div class="notice notice-warning"><p>部署服务尚未配置，暂时不能创建新店。</p></div><?php endif; ?>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="pchq-card">
@@ -128,6 +192,7 @@ final class Provision_Page {
 		<tr><th><label for="owner-email">账号邮箱</label></th><td><input id="owner-email" name="owner_email" class="regular-text" type="email" required></td></tr>
 		<tr><th><label for="owner-password">后台密码</label></th><td><input id="owner-password" name="owner_password" class="regular-text" type="password" minlength="12" maxlength="128" autocomplete="new-password" required><p class="description">至少12位。创建后页面不回显密码，请自行保存。</p></td></tr>
 		</tbody></table><?php submit_button( '创建店铺', 'primary', 'submit', true, '' === self::root() ? array( 'disabled' => 'disabled' ) : array() ); ?></form>
+		<?php self::render_jobs(); ?>
 		<?php endif; ?></div>
 		<?php
 	}

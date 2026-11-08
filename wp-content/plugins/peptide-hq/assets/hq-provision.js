@@ -38,7 +38,7 @@
 			if (typeof data.customer_domain !== 'string' || !DOMAIN.test(data.customer_domain) || data.customer_domain.length > 249 || !Array.isArray(data.dns_records) || data.dns_records.length !== 2) return;
 			var records = data.dns_records;
 			if (!records.every(function (record, index) { return record && record.name === ['@', 'www'][index] && record.type === 'A' && record.ttl === 600 && typeof record.value === 'string' && /^(?:\d{1,3}\.){3}\d{1,3}$/.test(record.value) && record.value.split('.').every(function (part) { return Number(part) <= 255; }); }) || records[0].value !== records[1].value) return;
-			var p = doc.createElement('p'); p.textContent = '请在域名服务商为 ' + data.customer_domain + ' 手动添加以下两条解析。无需修改管理后台域名。';
+			var p = doc.createElement('p'); p.textContent = data.customer_domain + ' 需要以下两条解析（域名在 Cloudflare 且开启了 CDN 自动配置时，系统会自动添加；否则请到域名服务商手动添加）。';
 			var table = doc.createElement('table'); table.className = 'widefat striped';
 			var head = doc.createElement('tr'), thead = doc.createElement('thead'), body = doc.createElement('tbody');
 			['主机记录', '记录类型', '记录值', 'TTL'].forEach(function (label) { var th = doc.createElement('th'); th.textContent = label; head.append(th); }); thead.append(head);
@@ -58,6 +58,8 @@
 				if (!alive() || controller.signal.aborted) return;
 				var data = json && json.data;
 				if (!json || json.success !== true || !data || Array.isArray(data) || typeof data.state !== 'string' || !/^[a-z][a-z0-9_-]{0,79}$/.test(data.state) || typeof data.message !== 'string' || data.message.length > 1000) throw new Error('status');
+				// Step bar is server-rendered: reload once when the job moves to another step.
+				if (root.dataset.state && data.state !== root.dataset.state) { env.location.reload(); return; }
 				status.textContent = data.message; links.replaceChildren(); showDns(data);
 				if (data.state === 'complete') {
 					[['management_url', '商家后台', '/wp-admin/'], ['public_url', '顾客店铺', '/']].forEach(function (item) {

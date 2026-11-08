@@ -858,7 +858,7 @@ def _process_queue_locked(c, root):
                 status(job.name, state='waiting_dns', message='请为顾客域名添加以下两条 A 记录。解析正确后自动继续；固定管理地址由平台维护。',
                        slug=state['slug'], customer_domain=t['customer_domain'], dns_records=dns_records(t, c))
                 continue
-            status(job.name, state='running', message='正在创建独立数据库、账号、媒体目录与 HTTPS。', slug=state['slug'])
+            status(job.name, state='running', message='正在创建独立数据库、账号、媒体目录与 HTTPS。', slug=state['slug'], customer_domain=state.get('customer_domain', ''))
             # Registration secret is loaded on demand, never written to queue results or process argv.
             code = "echo PeptideHq\\Register::secret();"
             secret = run(['php', '/usr/local/bin/wp', '--allow-root', '--path=' + c['hq_root'], 'eval', code]).decode().strip()
@@ -880,9 +880,9 @@ def _process_queue_locked(c, root):
                 private_json(statefile, state)
                 status(job.name, state='failed', message='域名已被占用、属于平台保留地址，或请求缺少顾客域名。未变更已完成店铺，请核对后提交新任务。')
             elif code == 'store_limit':
-                status(job.name, state='waiting_capacity', message='已达到当前服务器的开店容量上限，请管理员评估负载并调整容量后继续。', slug=state.get('slug', ''))
+                status(job.name, state='waiting_capacity', message='已达到当前服务器的开店容量上限，请管理员评估负载并调整容量后继续。', slug=state.get('slug', ''), customer_domain=state.get('customer_domain', ''))
             else:
-                status(job.name, state='pending', message='部署尚未完成，服务会安全重试；管理员可查看私有部署记录。', slug=state.get('slug', ''))
+                status(job.name, state='pending', message='这一步还没完成，开店服务会自动重试，不用重新提交。', slug=state.get('slug', ''), customer_domain=state.get('customer_domain', ''))
             write(job / 'error-code.txt', type(e).__name__ + ':' + code)
 
 
