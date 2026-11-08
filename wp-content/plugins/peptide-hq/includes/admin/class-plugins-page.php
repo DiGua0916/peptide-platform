@@ -79,6 +79,12 @@ final class Plugins_Page {
 		return '' !== (string) $site['name'] ? (string) $site['name'] : (string) $site['url'];
 	}
 
+	/** 店铺对外域名（选择店铺时显示和搜索用）。 */
+	private static function host( array $site ): string {
+		$url = (string) ( $site['public_url'] ?? '' ) ?: (string) ( $site['url'] ?? '' );
+		return (string) wp_parse_url( $url, PHP_URL_HOST );
+	}
+
 	private static function app_text( array $app ): string {
 		return self::APP_TEXTS[ (string) ( $app['key'] ?? '' ) ] ?? (string) ( $app['text'] ?? '' );
 	}
