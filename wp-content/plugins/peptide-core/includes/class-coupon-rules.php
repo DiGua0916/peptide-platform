@@ -37,6 +37,9 @@ final class Coupon_Rules {
 
 	public static function register_hooks(): void {
 		add_filter( 'woocommerce_coupon_is_valid', array( self::class, 'validate' ), 10, 3 );
+		// 未付款订单不算用过优惠码（2026-11-08）：顾客看不到待付款订单，付款失败后重新下单仍可用 WELCOME5。
+		// 付款成功（处理中/已完成/保留）时才计入；之后取消或失败会退回次数。
+		add_filter( 'woocommerce_update_coupon_usage_invalid_statuses', array( self::class, 'unpaid_usage_statuses' ) );
 	}
 
 	public static function strategy( \WC_Coupon $coupon ): string {
@@ -106,6 +109,11 @@ final class Coupon_Rules {
 	}
 
 	/** 这位顾客（账户或邮箱）以前有没有下过单（待付款、已取消、失败的不算）。 */
+	public static function unpaid_usage_statuses( $statuses ): array {
+		$statuses = is_array( $statuses ) ? $statuses : array();
+		return array_values( array_unique( array_merge( $statuses, array( 'pending' ) ) ) );
+	}
+
 	public static function has_ordered( string $email, int $user_id ): bool {
 		$statuses = array_unique( array_merge( wc_get_is_paid_statuses(), array( 'on-hold', 'refunded' ) ) );
 		if ( $user_id && wc_get_orders( array( 'customer_id' => $user_id, 'status' => $statuses, 'limit' => 1, 'return' => 'ids' ) ) ) {
