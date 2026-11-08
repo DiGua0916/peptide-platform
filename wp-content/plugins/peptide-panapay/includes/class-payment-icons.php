@@ -10,6 +10,7 @@ final class Payment_Icons {
 		return array(
 			'american_express' => 'American Express', 'mastercard' => 'Mastercard',
 			'visa' => 'Visa', 'discover' => 'Discover', 'apple_pay' => 'Apple Pay', 'paypal' => 'PayPal',
+			'amazon_pay' => 'Amazon Pay', 'klarna' => 'Klarna', 'cashapp' => 'Cash App',
 		);
 	}
 

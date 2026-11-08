@@ -8,7 +8,7 @@
 
 	const names = Array.isArray(window.pcPanapayMethodNames) ? window.pcPanapayMethodNames : ['pc_panapay'];
 	const registered = new Set();
-	const allowed = new Set(['american_express', 'mastercard', 'visa', 'discover', 'apple_pay', 'paypal']);
+	const allowed = new Set(['american_express', 'mastercard', 'visa', 'discover', 'apple_pay', 'paypal', 'amazon_pay', 'klarna', 'cashapp']);
 	// Woo strips HTML from server notices. Render this action in the native method
 	// component instead, without consuming its failure event or retrying payment.
 	const newCheckoutUrl = (value) => {

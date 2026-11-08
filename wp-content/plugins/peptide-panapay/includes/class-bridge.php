@@ -93,7 +93,7 @@ final class Bridge {
 			throw new Protocol_Error( 'hub_policy_invalid', 503 );
 		}
 		if ( ! array_key_exists( 'payment_icons', $data ) ) { $data['payment_icons'] = array(); $data['iframe_height'] = 530; }
-		if ( ! is_array( $data['payment_icons'] ) || count( $data['payment_icons'] ) > 6
+		if ( ! is_array( $data['payment_icons'] ) || count( $data['payment_icons'] ) > count( Payment_Icons::catalog() )
 			|| ! is_int( $data['iframe_height'] ) || $data['iframe_height'] < 320 || $data['iframe_height'] > 1600 ) {
 			throw new Protocol_Error( 'hub_policy_invalid', 503 );
 		}

@@ -127,7 +127,7 @@ final class Hub_Settings {
 
 	/** These marks are presentation only; selecting one never enables a provider capability. */
 	private static function icons( $value ): array {
-		if ( ! is_array( $value ) || count( $value ) > 6 ) { throw new \InvalidArgumentException( 'Payment display icons are invalid.' ); }
+		if ( ! is_array( $value ) || count( $value ) > count( Payment_Icons::catalog() ) ) { throw new \InvalidArgumentException( 'Payment display icons are invalid.' ); }
 		$allowed = array_keys( Payment_Icons::catalog() );
 		$out = array();
 		foreach ( $value as $id ) {

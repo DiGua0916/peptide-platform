@@ -369,7 +369,7 @@ final class Hub_Accounts {
 		return trim( wp_strip_all_tags( $value, true ) );
 	}
 	private static function icons( $value ): array {
-		if ( ! is_array( $value ) || count( $value ) > 6 ) { throw new \InvalidArgumentException( 'Payment display icons are invalid.' ); }
+		if ( ! is_array( $value ) || count( $value ) > count( Payment_Icons::catalog() ) ) { throw new \InvalidArgumentException( 'Payment display icons are invalid.' ); }
 		$out = array();
 		foreach ( $value as $id ) {
 			if ( ! is_string( $id ) || ! isset( Payment_Icons::catalog()[ $id ] ) ) { throw new \InvalidArgumentException( 'Payment display icons are invalid.' ); }

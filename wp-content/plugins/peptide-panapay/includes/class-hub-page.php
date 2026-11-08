@@ -302,7 +302,7 @@ final class Hub_Page {
 	}
 
 	private static function icon_catalog(): array {
-		$allowed = array( 'american_express' => 'American Express', 'mastercard' => 'Mastercard', 'visa' => 'Visa', 'discover' => 'Discover', 'apple_pay' => 'Apple Pay', 'paypal' => 'PayPal' );
+		$allowed = array( 'american_express' => 'American Express', 'mastercard' => 'Mastercard', 'visa' => 'Visa', 'discover' => 'Discover', 'apple_pay' => 'Apple Pay', 'paypal' => 'PayPal', 'amazon_pay' => 'Amazon Pay', 'klarna' => 'Klarna', 'cashapp' => 'Cash App' );
 		if ( ! class_exists( Payment_Icons::class ) ) { return $allowed; }
 		$catalog = Payment_Icons::catalog();
 		foreach ( $allowed as $id => $label ) { if ( isset( $catalog[ $id ] ) && is_string( $catalog[ $id ] ) ) { $allowed[ $id ] = $catalog[ $id ]; } }
