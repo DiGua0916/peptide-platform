@@ -677,3 +677,10 @@
 - 部署：web 主店 `23cf5a7-web01`、5 家租户、web 模板；HQ 店铺后台 `23cf5a7-s0001`、5 家租户后台、admin 模板。验证：Censys UA 不下发 cookie 和配置；iPhone Safari UA 正常。
 - 清理：6 家店的 track_events/tabs/visits/visitors 全部清空（主店 8、s0006 8、s0007 13、s0008 5、s0009 3、s0010 6，均为今日机器人/测试），HQ 每日统计删除后重拉，全部 0。
 - 可选加强：Cloudflare Bot Fight Mode 需要令牌加 Zone › Bot Management 权限后才能自动开启。
+
+### 2026-11-08 12:50 UTC 访客追踪：参与门槛（engagement gate）
+
+- 清空后 12:31–12:35 又出现访客：port-80 日志显示 DigitalOcean 的爬虫（161.35.11.136 / 2604:a880:400:d1::）用真实 Chrome 引擎依次加载 vialcoveplus、vialcoveofficial、vialcoveprime 首页并取 favicon，时间与访客行一致；UA 正常、webdriver 被隐藏，UA 过滤拦不住。主店的 6 行则是清表时仍开着的浏览器标签页（我的和用户的）重发心跳后重建的。
+- 修复（主题 visitor-tracking.js，`161d3ad`）：客户端在“可信交互（pointer/touch/key/scroll）或页面可见满 6 秒”之前不发送任何事件，包括 page_exit；未达门槛的事件直接丢弃。单页几秒即走的爬虫不再成为访客。
+- 部署：web 主店当前版本 + 5 租户 + web 模板；HQ 店铺后台 + 5 租户后台 + admin 模板。浏览器实测：脚本加载无报错、真人浏览器 enabled=true。
+- 再次清空 6 家店追踪表（主店 6、s0008 3、s0009 3、s0010 2），HQ 每日统计重拉，全部 0。关闭了内置浏览器里的店铺标签页，避免自己被计入。
