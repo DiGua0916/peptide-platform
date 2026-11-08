@@ -460,3 +460,9 @@
 - 处理：`WP_ACCESSIBLE_HOSTS` 追加 `api.cloudflare.com`（原文件备份 `/root/vialcove-backups/hq-wp-config.before-cloudflare-20261108T054018Z`，属主 / 权限不变，语法检查通过；开店 worker 只追加新店域名，不会覆盖）。代码 `d0ec9ef`：`Cdn::origin_ready()` 改用 cURL 直连店铺服务器 IP（只 HTTPS、正常证书校验），因为新店域名不在白名单里、`wp_remote_get` 会被拦。总后台 `6bb5242-hq` → `d0ec9ef-hq`，登录 200。
 - 验证：总后台通过 WordPress 请求 Cloudflare API 返回 HTTP 400（无令牌时的正常结果，已不被拦）；证书检查对 www.vialcovepeptides.com @ 34.231.148.231 通过，对错误 IP 失败。令牌由用户自己粘贴保存。
 - 回滚：用备份恢复 `wp-config.php` 并 reload PHP；总后台指回 `6bb5242-hq`。
+
+### CDN 配置核对 + 页面对齐（2026-11-08）
+
+- 用户已保存令牌（05:42 验证通过）。只读核对：令牌看得到 vialcovepeptides.com、vialcoveresearch.com 两个 zone（都 active），DNS / SSL 设置 / 证书 / 缓存规则都能读，账户可见 1 个（自动添加新域名可用）。设置：自动配置开启，“域名不在 Cloudflare 时自动添加”关闭——不在 Cloudflare 的新域名会停在“域名还不在 Cloudflare”，开店任务一直等待解析（不会失败）。
+- 开店链路核对：worker 写出的开店结果 root:vchq 0640，总后台可读；等待解析时任务持续重试；新店支付跟随支付中心（信用卡“全部已接入店铺”）；开店账号是新店管理员；新店域名白名单由 worker 追加。
+- 代码 `0f4759f`：CDN 页“手动加入已有域名”一行对齐（输入框、下拉、按钮底边一致），说明文字另起一行。总后台 `d0ec9ef-hq` → `0f4759f-hq`，登录 200。
