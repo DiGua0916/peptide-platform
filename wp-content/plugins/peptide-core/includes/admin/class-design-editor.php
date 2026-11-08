@@ -62,7 +62,7 @@ final class Design_Editor {
 	}
 
 	public static function enqueue(): void {
-		if ( ! self::is_page() || \PeptideCore\Design_Sync::locked() ) {
+		if ( ! self::is_page() || \PeptideCore\Design_Sync::document_locked( self::document_id() ) ) {
 			return;
 		}
 		$doc_id = self::document_id();
@@ -196,8 +196,8 @@ final class Design_Editor {
 	}
 
 	public static function render(): void {
-		if ( \PeptideCore\Design_Sync::locked() ) {
-			echo '<div class="wrap"><div class="notice notice-info inline"><p>这个店铺的装修由平台统一下发，不能在店铺后台修改。</p></div></div>';
+		if ( \PeptideCore\Design_Sync::document_locked( self::document_id() ) ) {
+			echo '<div class="wrap"><div class="notice notice-info inline"><p>这是平台下发的系统模板，不能修改。可以在“修订版”里改，或复制一份再改。</p><p><a class="button" href="' . esc_url( admin_url( 'admin.php?page=' . Store_Design::SLUG ) ) . '">返回主题装修</a></p></div></div>';
 			return;
 		}
 		$doc_id = self::document_id();

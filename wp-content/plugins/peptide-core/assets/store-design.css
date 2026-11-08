@@ -558,3 +558,54 @@
 		display: none;
 	}
 }
+
+/* 模板库（2026-11-08 重做）：一行一个模板，列对齐，系统模板 / 修订版 / 使用中标签 */
+.pc-sd-lib {
+	border: 1px solid var(--pc-sd-border, #dcdcde);
+	border-radius: 8px;
+	background: #fff;
+	overflow: hidden;
+}
+.pc-sd-lib__row {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 170px 130px auto;
+	align-items: center;
+	gap: 16px;
+	padding: 14px 16px;
+	border-top: 1px solid var(--pc-sd-border, #e5e5e5);
+}
+.pc-sd-lib__row:first-child { border-top: 0; }
+.pc-sd-lib__row--head {
+	padding-top: 10px;
+	padding-bottom: 10px;
+	background: #f6f7f7;
+	color: #50575e;
+	font-size: 12px;
+	font-weight: 600;
+}
+.pc-sd-lib__row.is-default { background: #fbfcfd; }
+.pc-sd-lib__name { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.pc-sd-lib__title { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.pc-sd-lib__title strong { font-size: 14px; line-height: 20px; color: #1d2327; overflow-wrap: anywhere; }
+.pc-sd-lib__note, .pc-sd-lib__hosts { color: #646970; font-size: 12px; line-height: 18px; overflow-wrap: anywhere; }
+.pc-sd-lib__time { color: #50575e; font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pc-sd-lib__right { text-align: right; }
+.pc-sd-lib__actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; white-space: nowrap; }
+.pc-sd-lib__actions > .button, .pc-sd-lib__actions .pc-sd-menu > summary.button {
+	min-height: 32px;
+	line-height: 30px;
+	padding: 0 12px;
+	white-space: nowrap !important;
+	word-break: keep-all !important;
+	display: inline-flex;
+	align-items: center;
+}
+.pc-sd-lib__actions .pc-sd-menu > summary.button { padding: 0 8px; }
+.pc-sd-lib .pc-sd-tag { white-space: nowrap; }
+.pc-sd-tag--dark { background: #1d2327; color: #fff; }
+@media (max-width: 960px) {
+	.pc-sd-lib__row { grid-template-columns: minmax(0, 1fr) auto; }
+	.pc-sd-lib__row--head span:nth-child(2), .pc-sd-lib__row--head span:nth-child(3) { display: none; }
+	.pc-sd-lib__row > [role=cell]:nth-child(2), .pc-sd-lib__row > [role=cell]:nth-child(3) { grid-column: 1; }
+	.pc-sd-lib__actions { grid-column: 1 / -1; justify-content: flex-start; flex-wrap: wrap; }
+}

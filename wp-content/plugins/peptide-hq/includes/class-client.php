@@ -77,8 +77,17 @@ final class Client {
 	}
 
 	/** 统一装修：从母版店导出 / 下发到店铺（店铺可能要下载视频，给足时间）/ 只改锁定。 */
-	public static function design_export( int $site_id ) {
-		return self::request( $site_id, 'GET', '/peptide/v1/hq/design-export', array(), null, 60 );
+	public static function design_export( int $site_id, int $template = 0 ) {
+		return self::request( $site_id, 'GET', '/peptide/v1/hq/design-export', $template > 0 ? array( 'template' => (string) $template ) : array(), null, 60 );
+	}
+
+	/** 模板工作室：模板清单 / 新建、改名、设为下发、删除。 */
+	public static function design_templates( int $site_id ) {
+		return self::request( $site_id, 'GET', '/peptide/v1/hq/design-templates' );
+	}
+
+	public static function design_template( int $site_id, array $payload ) {
+		return self::request( $site_id, 'POST', '/peptide/v1/hq/design-template', array(), $payload, 60 );
 	}
 
 	public static function design_apply( int $site_id, array $bundle, bool $lock, string $source_host, bool $dry_run = false ) {

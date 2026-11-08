@@ -152,8 +152,9 @@ final class Store_Design {
 			wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'peptide-core' ), 403 );
 		}
 		check_admin_referer( $action );
-		if ( \PeptideCore\Design_Sync::locked() ) {
-			wp_die( '这个店铺的装修由平台统一下发，不能在店铺后台修改。', '', array( 'response' => 403, 'back_link' => true ) );
+		$target = isset( $_REQUEST['template'] ) ? absint( $_REQUEST['template'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification -- 上面已校验。
+		if ( in_array( $action, array( 'pc_design_edit', 'pc_design_info', 'pc_design_trash' ), true ) && \PeptideCore\Design_Sync::is_system( $target ) ) {
+			wp_die( '这是平台下发的系统模板，不能修改、改名或删除。可以在“修订版”里改，或复制一份再改。', '', array( 'response' => 403, 'back_link' => true ) );
 		}
 
 		// phpcs:disable WordPress.Security.NonceVerification -- 上面已用 check_admin_referer 校验。
@@ -231,13 +232,6 @@ final class Store_Design {
 
 	public static function render_theme_design(): void {
 		if ( ! current_user_can( Templates::CAP_EDIT ) ) {
-			return;
-		}
-		if ( \PeptideCore\Design_Sync::locked() ) {
-			$state = \PeptideCore\Design_Sync::state();
-			echo '<div class="wrap pc-sd"><h1>' . esc_html__( 'Theme design', 'peptide-core' ) . '</h1>';
-			echo '<div class="notice notice-info inline"><p><strong>店铺装修由平台统一下发。</strong>首页、页眉、页脚和全局样式和平台母版保持一致，店铺后台不能修改；有需要请联系平台。' . ( ! empty( $state['applied_at'] ) ? '（最近更新：' . esc_html( wp_date( 'Y-m-d H:i', (int) $state['applied_at'] ) ) . '）' : '' ) . '</p></div>';
-			echo '<p><a class="button" target="_blank" rel="noopener" href="' . esc_url( home_url( '/' ) ) . '">查看店铺首页</a></p></div>';
 			return;
 		}
 		$default   = Templates::default_id();
@@ -439,77 +433,93 @@ final class Store_Design {
 	}
 
 	/**
+	 * 模板库（2026-11-08 重做）：一行一个模板，名称旁标出“系统模板 / 修订版 / 使用中”；
+	 * 系统模板只能查看、复制、选用，不能装修、改名、删除。
+	 *
 	 * @param \WP_Post[]        $templates
 	 * @param array<string,int> $domains
 	 */
 	private static function render_library( array $templates, int $default, array $domains, bool $manage ): void {
+		// 系统模板排最前，其次修订版，再其次店铺自建。
+		usort(
+			$templates,
+			static function ( $a, $b ): int {
+				$rank = static fn( $t ): int => \PeptideCore\Design_Sync::is_system( (int) $t->ID ) ? 0 : ( \PeptideCore\Design_Sync::is_revision( (int) $t->ID ) ? 1 : 2 );
+				return $rank( $a ) <=> $rank( $b );
+			}
+		);
 		?>
-		<table class="widefat pc-sd-table pc-sd-table--library">
-			<thead>
-				<tr>
-					<th><?php esc_html_e( 'Template name', 'peptide-core' ); ?></th>
-					<th><?php esc_html_e( 'Theme', 'peptide-core' ); ?></th>
-					<th><?php esc_html_e( 'Note', 'peptide-core' ); ?></th>
-					<th><?php esc_html_e( 'Created by', 'peptide-core' ); ?></th>
-					<th><?php esc_html_e( 'Homepage', 'peptide-core' ); ?></th>
-					<th><?php esc_html_e( 'Modified', 'peptide-core' ); ?></th>
-					<th><?php esc_html_e( 'Actions', 'peptide-core' ); ?></th>
-					<th><?php esc_html_e( 'Preview', 'peptide-core' ); ?></th>
-				</tr>
-			</thead>
-			<tbody>
+		<div class="pc-sd-lib" role="table" aria-label="<?php esc_attr_e( 'My templates', 'peptide-core' ); ?>">
+			<div class="pc-sd-lib__row pc-sd-lib__row--head" role="row">
+				<span role="columnheader"><?php esc_html_e( 'Template name', 'peptide-core' ); ?></span>
+				<span role="columnheader"><?php esc_html_e( 'Homepage', 'peptide-core' ); ?></span>
+				<span role="columnheader"><?php esc_html_e( 'Modified', 'peptide-core' ); ?></span>
+				<span role="columnheader" class="pc-sd-lib__right"><?php esc_html_e( 'Actions', 'peptide-core' ); ?></span>
+			</div>
 			<?php foreach ( $templates as $t ) : ?>
 				<?php
 				$id       = (int) $t->ID;
 				$hosts    = array_keys( $domains, $id, true );
 				$modified = Templates::modified( $id );
-				$author   = get_userdata( (int) $t->post_author );
+				$system   = \PeptideCore\Design_Sync::is_system( $id );
+				$revision = \PeptideCore\Design_Sync::is_revision( $id );
+				$note     = (string) get_post_meta( $id, Templates::NOTE_META, true );
+				$doc      = Templates::document_id( $id, 'home', false );
+				$status   = $doc ? Layout::status( $doc ) : array( 'published' => false, 'changed' => true, 'at' => null );
+				if ( ! $status['published'] ) {
+					$chip = array( 'pc-sd-tag--muted', __( 'Homepage not published', 'peptide-core' ) );
+				} elseif ( $status['changed'] ) {
+					$chip = array( 'pc-sd-tag--warn', '有未发布的修改' );
+				} else {
+					$chip = array( 'pc-sd-tag--green', '已发布 · ' . ( $status['at'] ? mysql2date( 'm-d H:i', (string) $status['at'] ) : '' ) );
+				}
 				?>
-				<tr>
-					<td>
-						<strong><?php echo esc_html( $t->post_title ); ?></strong>
-						<?php if ( $default === $id ) : ?>
-							<span class="pc-sd-tag pc-sd-tag--blue"><?php esc_html_e( 'In use', 'peptide-core' ); ?></span>
-						<?php endif; ?>
-						<?php foreach ( $hosts as $host ) : ?>
-							<span class="pc-sd-tag"><?php echo esc_html( $host ); ?></span>
-						<?php endforeach; ?>
-					</td>
-					<td><?php self::theme_badge( (string) get_post_meta( $id, Templates::THEME_META, true ) ); ?></td>
-					<td><?php echo esc_html( (string) get_post_meta( $id, Templates::NOTE_META, true ) ?: '-' ); ?></td>
-					<td><?php echo esc_html( $author ? $author->display_name : '-' ); ?></td>
-					<td><?php self::publish_status( $id ); ?></td>
-					<td><?php echo esc_html( $modified ? mysql2date( 'Y-m-d H:i:s', $modified ) : '-' ); ?></td>
-					<td>
-						<div class="pc-sd-split">
+				<div class="pc-sd-lib__row<?php echo $default === $id ? ' is-default' : ''; ?>" role="row">
+					<div class="pc-sd-lib__name" role="cell">
+						<div class="pc-sd-lib__title">
+							<strong><?php echo esc_html( $t->post_title ); ?></strong>
+							<?php if ( $system ) : ?><span class="pc-sd-tag pc-sd-tag--blue" title="平台下发，店铺不能修改">系统模板</span><?php endif; ?>
+							<?php if ( $revision ) : ?><span class="pc-sd-tag pc-sd-tag--teal" title="可以随意修改，平台下发不会改动它">修订版</span><?php endif; ?>
+							<?php if ( $default === $id ) : ?><span class="pc-sd-tag pc-sd-tag--dark"><?php esc_html_e( 'In use', 'peptide-core' ); ?></span><?php endif; ?>
+						</div>
+						<?php if ( '' !== $note ) : ?><small class="pc-sd-lib__note"><?php echo esc_html( $note ); ?></small><?php endif; ?>
+						<?php if ( $hosts ) : ?><small class="pc-sd-lib__hosts"><?php echo esc_html( '绑定域名：' . implode( '、', $hosts ) ); ?></small><?php endif; ?>
+					</div>
+					<div role="cell"><span class="pc-sd-tag <?php echo esc_attr( $chip[0] ); ?>"><?php echo esc_html( $chip[1] ); ?></span></div>
+					<div role="cell" class="pc-sd-lib__time"><?php echo esc_html( $modified ? mysql2date( 'Y-m-d H:i', $modified ) : '-' ); ?></div>
+					<div role="cell" class="pc-sd-lib__actions">
+						<?php if ( $system ) : ?>
+							<a class="button" href="<?php echo esc_url( Templates::preview_url( $id ) ); ?>" target="_blank" rel="noopener">查看</a>
+						<?php else : ?>
 							<a class="button" href="<?php echo esc_url( self::action_url( 'pc_design_edit', array( 'template' => $id ) ) ); ?>"><?php esc_html_e( 'Design', 'peptide-core' ); ?></a>
-							<details class="pc-sd-menu">
-								<summary class="button" aria-label="<?php esc_attr_e( 'More actions', 'peptide-core' ); ?>"><span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span></summary>
-								<div class="pc-sd-menu__list">
-									<?php if ( $manage && $default !== $id ) : ?>
-										<a href="<?php echo esc_url( self::action_url( 'pc_design_default', array( 'template' => $id ) ) ); ?>" data-pc-confirm-json="<?php echo esc_attr( wp_json_encode( __( 'Use this template as the store default? Customers will see it on all domains without their own template.', 'peptide-core' ) ) ); ?>"><?php esc_html_e( 'Set as store default', 'peptide-core' ); ?></a>
-									<?php endif; ?>
-									<a href="<?php echo esc_url( self::action_url( 'pc_design_duplicate', array( 'template' => $id ) ) ); ?>"><?php esc_html_e( 'Duplicate', 'peptide-core' ); ?></a>
+						<?php endif; ?>
+						<?php if ( $manage && $default !== $id ) : ?>
+							<a class="button button-primary" href="<?php echo esc_url( self::action_url( 'pc_design_default', array( 'template' => $id ) ) ); ?>">使用这个模板</a>
+						<?php endif; ?>
+						<details class="pc-sd-menu">
+							<summary class="button" aria-label="<?php esc_attr_e( 'More actions', 'peptide-core' ); ?>"><span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span></summary>
+							<div class="pc-sd-menu__list">
+								<a href="<?php echo esc_url( Templates::preview_url( $id ) ); ?>" target="_blank" rel="noopener">预览</a>
+								<a href="<?php echo esc_url( self::action_url( 'pc_design_duplicate', array( 'template' => $id ) ) ); ?>"><?php esc_html_e( 'Duplicate', 'peptide-core' ); ?></a>
+								<?php if ( ! $system ) : ?>
 									<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="pc-sd-form">
 										<input type="hidden" name="action" value="pc_design_info">
 										<input type="hidden" name="template" value="<?php echo esc_attr( (string) $id ); ?>">
 										<?php wp_nonce_field( 'pc_design_info' ); ?>
 										<label><?php esc_html_e( 'Template name', 'peptide-core' ); ?> <input type="text" name="name" maxlength="80" value="<?php echo esc_attr( $t->post_title ); ?>" required></label>
-										<label><?php esc_html_e( 'Note', 'peptide-core' ); ?> <input type="text" name="note" maxlength="200" value="<?php echo esc_attr( (string) get_post_meta( $id, Templates::NOTE_META, true ) ); ?>"></label>
+										<label><?php esc_html_e( 'Note', 'peptide-core' ); ?> <input type="text" name="note" maxlength="200" value="<?php echo esc_attr( $note ); ?>"></label>
 										<button type="submit" class="button"><?php esc_html_e( 'Save details', 'peptide-core' ); ?></button>
 									</form>
-									<?php if ( $manage && $default !== $id && ! $hosts ) : ?>
-										<a class="pc-sd-menu__danger" href="<?php echo esc_url( self::action_url( 'pc_design_trash', array( 'template' => $id ) ) ); ?>" data-pc-confirm-json="<?php echo esc_attr( wp_json_encode( __( 'Move this template to the trash? Its designs are removed with it.', 'peptide-core' ) ) ); ?>"><?php esc_html_e( 'Delete', 'peptide-core' ); ?></a>
-									<?php endif; ?>
-								</div>
-							</details>
-						</div>
-					</td>
-					<td><a class="pc-sd-eye" href="<?php echo esc_url( Templates::preview_url( $id ) ); ?>" target="_blank" rel="noopener" aria-label="<?php echo esc_attr( sprintf( /* translators: %s: template name */ __( 'Preview %s', 'peptide-core' ), $t->post_title ) ); ?>"><span class="dashicons dashicons-visibility" aria-hidden="true"></span></a></td>
-				</tr>
+								<?php endif; ?>
+								<?php if ( $manage && ! $system && $default !== $id && ! $hosts ) : ?>
+									<a class="pc-sd-menu__danger" href="<?php echo esc_url( self::action_url( 'pc_design_trash', array( 'template' => $id ) ) ); ?>" data-pc-confirm-json="<?php echo esc_attr( wp_json_encode( __( 'Move this template to the trash? Its designs are removed with it.', 'peptide-core' ) ) ); ?>"><?php esc_html_e( 'Delete', 'peptide-core' ); ?></a>
+								<?php endif; ?>
+							</div>
+						</details>
+					</div>
+				</div>
 			<?php endforeach; ?>
-			</tbody>
-		</table>
+		</div>
 		<?php
 	}
 

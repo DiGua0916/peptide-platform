@@ -62,6 +62,7 @@ final class Hq_Connector {
 	public static function register_hooks(): void {
 		add_action( 'rest_api_init', array( self::class, 'routes' ) );
 		add_action( 'init', array( self::class, 'maybe_login' ), 0 );
+		add_action( 'admin_init', array( self::class, 'allow_hq_embed' ), 0 );
 		add_action( 'admin_init', array( self::class, 'maybe_register' ) );
 		add_action( self::CRON, array( self::class, 'daily_register' ) );
 		if ( self::configured() && ! wp_next_scheduled( self::CRON ) ) {
@@ -319,6 +320,8 @@ final class Hq_Connector {
 			)
 		);
 		register_rest_route( self::NS, '/hq/design-export', array( 'methods' => 'GET', 'callback' => array( self::class, 'design_export_route' ), 'permission_callback' => $auth ) );
+		register_rest_route( self::NS, '/hq/design-templates', array( 'methods' => 'GET', 'callback' => array( self::class, 'design_templates_route' ), 'permission_callback' => $auth ) );
+		register_rest_route( self::NS, '/hq/design-template', array( 'methods' => 'POST', 'callback' => array( self::class, 'design_template_route' ), 'permission_callback' => $auth ) );
 		register_rest_route( self::NS, '/hq/design', array( 'methods' => 'POST', 'callback' => array( self::class, 'design_route' ), 'permission_callback' => $auth ) );
 		register_rest_route( self::NS, '/hq/design-lock', array( 'methods' => 'POST', 'callback' => array( self::class, 'design_lock_route' ), 'permission_callback' => $auth ) );
 		register_rest_route(
@@ -374,9 +377,69 @@ final class Hq_Connector {
 		return array( 'apps' => self::apps() );
 	}
 
-	/** 母版店：导出已发布的装修（总后台“统一模板”用）。 */
-	public static function design_export_route(): array {
-		return Design_Sync::export();
+	/** 模板工作室：导出某个模板已发布的装修（不传 template 时导出默认模板）。 */
+	public static function design_export_route( \WP_REST_Request $request ): array {
+		return Design_Sync::export( absint( $request->get_param( 'template' ) ) );
+	}
+
+	/** 模板工作室：模板清单。 */
+	public static function design_templates_route(): array {
+		return array( 'templates' => Design_Sync::studio_list() );
+	}
+
+	/** 模板工作室：新建 / 改名 / 设为下发 / 删除。以店铺管理员身份执行。@return array|\WP_Error */
+	public static function design_template_route( \WP_REST_Request $request ) {
+		$p        = (array) $request->get_json_params();
+		$op       = sanitize_key( (string) ( $p['op'] ?? '' ) );
+		$id       = absint( $p['id'] ?? 0 );
+		$previous = get_current_user_id();
+		$user     = self::login_user();
+		if ( ! $user ) {
+			return new \WP_Error( 'pc_design_user', '店铺没有可用的管理员账号。', array( 'status' => 409 ) );
+		}
+		wp_set_current_user( $user );
+		try {
+			if ( 'create' === $op ) {
+				$res = Design_Sync::studio_create( (string) ( $p['name'] ?? '' ), (string) ( $p['note'] ?? '' ), absint( $p['from'] ?? 0 ) );
+				$res = is_wp_error( $res ) ? $res : array( 'id' => $res );
+			} elseif ( 'update' === $op ) {
+				$fields = array_intersect_key( $p, array_flip( array( 'name', 'note', 'system' ) ) );
+				if ( array_key_exists( 'system', $fields ) ) {
+					$fields['system'] = true === $fields['system'];
+				}
+				$res = Design_Sync::studio_update( $id, $fields );
+			} elseif ( 'trash' === $op ) {
+				$res = Design_Sync::studio_trash( $id );
+			} else {
+				$res = new \WP_Error( 'pc_design_request', '请求无效。', array( 'status' => 400 ) );
+			}
+		} finally {
+			wp_set_current_user( $previous );
+		}
+		if ( is_wp_error( $res ) ) {
+			return $res;
+		}
+		return array( 'ok' => true, 'result' => $res, 'templates' => Design_Sync::studio_list() );
+	}
+
+	/**
+	 * 总后台“模板库”里直接装修：只有从总后台一键进入的会话，才允许被总后台页面嵌入（只允许总后台的地址），
+	 * 其他情况保持 WordPress 默认的禁止嵌入。
+	 */
+	public static function allow_hq_embed(): void {
+		if ( empty( $_COOKIE['pc_hq_embed'] ) ) {
+			return;
+		}
+		$hq     = (string) self::settings()['hq_url'];
+		$scheme = (string) wp_parse_url( $hq, PHP_URL_SCHEME );
+		$host   = (string) wp_parse_url( $hq, PHP_URL_HOST );
+		if ( 'https' !== $scheme || ! preg_match( '/\A[a-z0-9.-]{3,253}\z/i', $host ) ) {
+			return;
+		}
+		remove_action( 'admin_init', 'send_frame_options_header', 10 );
+		if ( ! headers_sent() ) {
+			header( "Content-Security-Policy: frame-ancestors 'self' https://" . strtolower( $host ) );
+		}
 	}
 
 	/** 总后台下发统一装修。以店铺管理员身份写入，避免权限检查挡住发布。@return array|\WP_Error */
@@ -422,6 +485,10 @@ final class Hq_Connector {
 		if ( 'design' === $to ) {
 			return 'admin.php?page=pc-store-design';
 		}
+		if ( preg_match( '/^design_tpl_([0-9]{1,12})$/D', $to, $t ) && Templates::exists( (int) $t[1] ) && ! Design_Sync::is_system( (int) $t[1] ) ) {
+			$doc = Templates::document_id( (int) $t[1], 'home' );
+			return $doc ? 'admin.php?page=pc-design-editor&document=' . $doc : '';
+		}
 		if ( 'apps_center' === $to && class_exists( Admin\Apps_Page::class ) ) {
 			return 'admin.php?page=' . Admin\Apps_Page::SLUG;
 		}
@@ -432,7 +499,7 @@ final class Hq_Connector {
 	}
 
 	private static function allowed_target( string $to ): bool {
-		return in_array( $to, self::PLATFORM_PAGES, true ) || 'admin.php?page=pc-store-design' === $to || 1 === preg_match( '/^admin\.php\?page=pc-apps(?:&app=[a-z0-9-]{1,40})?$/D', $to );
+		return in_array( $to, self::PLATFORM_PAGES, true ) || 'admin.php?page=pc-store-design' === $to || 1 === preg_match( '/^admin\.php\?page=pc-design-editor&document=[0-9]{1,12}$/D', $to ) || 1 === preg_match( '/^admin\.php\?page=pc-apps(?:&app=[a-z0-9-]{1,40})?$/D', $to );
 	}
 
 	/** 由总后台决定的店铺设置（店铺后台不显示这些开关）。 */
@@ -642,6 +709,7 @@ final class Hq_Connector {
 			array_merge( array(
 				'user' => $user,
 				'to'   => self::login_target( $to ),
+				'embed' => 1 === preg_match( '/^design_tpl_[0-9]+$/D', $to ),
 			), Management_Host::enabled() ? array( 'management_url' => Management_Host::management_url(), 'uuid' => self::uuid() ) : array() ),
 			self::LOGIN_TTL
 		);
@@ -671,6 +739,13 @@ final class Hq_Connector {
 		}
 		wp_set_current_user( $user );
 		wp_set_auth_cookie( $user, false, is_ssl() );
+		// 从总后台“模板库”打开装修：这个会话允许被总后台嵌入（见 allow_hq_embed）。
+		if ( ! empty( $data['embed'] ) ) {
+			setcookie( 'pc_hq_embed', '1', array( 'expires' => 0, 'path' => '/', 'secure' => is_ssl(), 'httponly' => true, 'samesite' => 'Lax' ) );
+			$_COOKIE['pc_hq_embed'] = '1';
+		} elseif ( isset( $_COOKIE['pc_hq_embed'] ) ) {
+			setcookie( 'pc_hq_embed', '', array( 'expires' => time() - 3600, 'path' => '/', 'secure' => is_ssl(), 'httponly' => true, 'samesite' => 'Lax' ) );
+		}
 		Activity_Log::log( 'login', 'login', array( 'type' => 'user', 'id' => $user, 'label' => get_userdata( $user )->user_login ), array( 'via' => 'HQ' ), $user );
 		$to = (string) ( $data['to'] ?? '' );
 		wp_safe_redirect( admin_url( self::allowed_target( $to ) ? $to : '' ) );

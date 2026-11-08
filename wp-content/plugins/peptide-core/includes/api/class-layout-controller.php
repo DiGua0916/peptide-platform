@@ -85,7 +85,7 @@ final class Layout_Controller {
 	 * @return true|\WP_Error
 	 */
 	public static function can_edit( \WP_REST_Request $request ) {
-		if ( \PeptideCore\Design_Sync::locked() ) {
+		if ( \PeptideCore\Design_Sync::document_locked( (int) $request['id'] ) ) {
 			return \PeptideCore\Design_Sync::locked_error();
 		}
 		$id = (int) $request['id'];

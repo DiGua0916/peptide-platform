@@ -208,3 +208,32 @@ body.pchq-workspace .pcp-actions{display:flex;gap:8px;flex-wrap:wrap;align-items
 .pcp-confirm__text{margin:0 0 18px;font-size:14px;line-height:22px;color:#171717}
 .pcp-confirm__actions{display:flex;justify-content:flex-end;gap:8px}
 .pcp-confirm__actions .button{min-height:36px;padding:0 16px}
+
+/* 模板库（2026-11-08 第二版） */
+body.pchq-workspace .pcp-tpl__list{border:1px solid var(--vc-line);border-radius:10px;overflow:hidden}
+body.pchq-workspace .pcp-tpl__row{display:grid;grid-template-columns:minmax(0,1fr) 170px 130px 100px auto;align-items:center;gap:14px;padding:12px 14px;border-top:1px solid var(--vc-line)}
+body.pchq-workspace .pcp-tpl__row:first-child{border-top:0}
+body.pchq-workspace .pcp-tpl__row--head{background:#fafafa;color:var(--vc-muted);font-size:12px;font-weight:600;padding-top:9px;padding-bottom:9px}
+body.pchq-workspace .pcp-tpl__name{min-width:0;display:flex;flex-direction:column;gap:2px}
+body.pchq-workspace .pcp-tpl__name strong{font-size:14px;line-height:20px}
+body.pchq-workspace .pcp-tpl__name small{color:var(--vc-muted);font-size:12px;line-height:18px;overflow-wrap:anywhere}
+body.pchq-workspace .pcp-tpl__time{color:var(--vc-muted);font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums}
+body.pchq-workspace .pcp-tpl__right{text-align:right}
+body.pchq-workspace .pcp-tpl__actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;white-space:nowrap}
+body.pchq-workspace .pcp-tpl__actions .button{min-height:32px;line-height:30px;padding:0 12px}
+body.pchq-workspace .pcp-more{position:relative}
+body.pchq-workspace .pcp-more>summary{list-style:none;cursor:pointer;min-height:32px;line-height:30px;padding:0 10px}
+body.pchq-workspace .pcp-more>summary::-webkit-details-marker{display:none}
+body.pchq-workspace .pcp-more__menu{position:absolute;right:0;top:calc(100% + 6px);z-index:20;width:260px;padding:12px;border:1px solid var(--vc-line);border-radius:10px;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.12);display:flex;flex-direction:column;gap:10px;white-space:normal}
+body.pchq-workspace .pcp-more__menu form{display:flex;flex-direction:column;gap:8px;margin:0}
+body.pchq-workspace .pcp-more__menu .pcp-field input{min-width:0;width:100%}
+body.pchq-workspace .pcp-new{position:relative}
+body.pchq-workspace .pcp-new>summary{list-style:none;cursor:pointer}
+body.pchq-workspace .pcp-new>summary::-webkit-details-marker{display:none}
+body.pchq-workspace .pcp-new__form{position:absolute;right:0;top:calc(100% + 8px);z-index:20;width:320px;padding:14px;border:1px solid var(--vc-line);border-radius:10px;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.12);display:flex;flex-direction:column;gap:10px}
+body.pchq-workspace .pcp-new__form .pcp-field input,body.pchq-workspace .pcp-new__form .pcp-field select{min-width:0;width:100%}
+body.pchq-workspace .pcp-studio{max-width:none;margin-right:0}
+body.pchq-workspace .pcp-studio__bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:4px 0 10px}
+body.pchq-workspace .pcp-studio__bar strong{font-size:15px}
+body.pchq-workspace .pcp-studio__frame{display:block;width:100%;height:calc(100vh - 150px);min-height:560px;border:1px solid var(--vc-line);border-radius:10px;background:#fff}
+@media (max-width:960px){body.pchq-workspace .pcp-tpl__row{grid-template-columns:minmax(0,1fr) auto}body.pchq-workspace .pcp-tpl__row--head{display:none}body.pchq-workspace .pcp-tpl__actions{grid-column:1/-1;justify-content:flex-start}}
