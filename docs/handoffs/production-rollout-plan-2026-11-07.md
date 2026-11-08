@@ -747,3 +747,8 @@
 - 原因 1（漏斗）：结账页一打开就发 `checkout_shipping_selected` / `checkout_payment_selected`（`origin=initial`，默认选中项），`Visitor_Funnel` 把它们直接算成“添加物流 / 添加支付”。改为：这两步只在同一次访问已有 `checkout_address_completed` 时才算（先暂存，整段读完再结算；支付还要求物流成立）。重算芒果 11-08（店铺时区）：7 → 2 → 1 → 1 → 0 → 0 → 0 → 0。
 - 原因 2（弃单）：弃单定义是“结账页填了邮箱和地址、有购物车、没付款”（来源 woocommerce_sessions.customer）。该访客（手机 Safari，4 件 $205）只打开了结账页没填任何信息、也没下单，所以既没有订单也不构成弃单——没有邮箱本来也无法召回。另外芒果没填店铺实体地址，即使有弃单也不会发提醒（CAN-SPAM）。
 - 部署：主店 release、s0006–s0010 前台与后台副本、store-admin、两个模板（class-visitor-funnel.php）。备份 `funnel-*`（两台）。
+
+### 2026-11-09 结账选不到波多黎各
+- 核查：6 店 `woocommerce_specific_allowed_countries` 都是 US+PR，配送方案覆盖 PR，Store API 以 PR 地址下单能报价（$42.75）。实际结账页“Country/Region”下拉里有 Puerto Rico（作为国家），但顾客在 United States 下面的“State”里找，WooCommerce 的美国州列表（54 项）没有波多黎各，于是反馈“选不了”。
+- 修复：新增 `PeptideCore\US_Territories`，`woocommerce_states` 过滤器给 US 加 `PR => Puerto Rico`（国家级 Puerto Rico 选项保留，两种选法都能下单）。配送方案按国家+州匹配，US 方案自动覆盖 PR 州；Postal_Assist 用州代码核对，PR 邮编 006/007/009 通过。
+- 部署：主店、s0006–s0010 前台与后台副本、store-admin、两个模板；三店 `get_states('US')` 均 55 项含 PR。浏览器实测 vialcoveplus.com 结账：State 选 Puerto Rico 后运费 UPS•FedEx•USPS $42.75 正常。备份 `pr-state-*`（两台）。
