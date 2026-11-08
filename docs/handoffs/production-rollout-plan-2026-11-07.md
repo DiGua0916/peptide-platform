@@ -689,3 +689,10 @@
 - 总后台 Cloudflare 令牌加 Zone · Bot Management · Edit；`Cdn::bot_protect()` 现在一次写 `fight_mode:true, enable_js:true, ai_bots_protection:block`（Cloudflare 要求 JS 检测开着才能开 Fight Mode），`bot_protect_all()` 同时把 Browser Integrity Check 打开；新域名接入时自动执行。
 - 9 个 zone 全部核实 fight_mode=true / enable_js=true / ai=block。验证：CensysInspect UA 访问店铺首页 → 403；普通浏览器 200。
 - 配合店铺端的 UA 过滤 + 6 秒互动门槛，访客统计只记真人。
+
+### 2026-11-08 店铺名称同步（总后台 → 店铺）
+- 问题：总后台“店铺名称”只在店铺首次接入时写一次；之后在总后台改名（例如 s0006 yang → 李军）不会传到店铺，店铺自己的名称（标题、邮件署名、og:site_name）一直是最初的。
+- 修复：店铺 `POST /peptide/v1/hq/config` 接受 `name`（写 `blogname`）；总后台“保存名称”同时 `Client::config(site, name)` 推到店铺，失败时提示“总后台已记下但没同步”；对话框显示店铺目前自己的名称（不一致时）。
+- 不做反向同步：总后台标签（地瓜/李军/阳…）和店铺名称含义不同，试过“轮询时跟随店铺名”会把标签覆盖成 vialcovepeptides.com，已回退并恢复 6 个标签。
+- 部署：connector 写到主店 release、s0006–s0010 店铺与后台副本、yy-sync 两个模板；HQ menu/sites-page 写到 current release。备份 `/home/ubuntu/vialcove-deploy-backups/name-sync-*`（两台）。已把 s0006 名称同步为“李军”，og:site_name 核实。
+- 注意：浏览器标签标题（“VialCovePeptides — …”）来自店铺 SEO 标题模板，页头品牌字来自 设置 → Brand name，两者随复制从主店带过来，不跟店铺名称联动。
