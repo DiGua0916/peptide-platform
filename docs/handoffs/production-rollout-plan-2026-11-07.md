@@ -633,3 +633,13 @@
 结果：s0006（site 12）、s0007（site 13）都显示“店铺已创建”。前台 www 都返回 200，后台登录页 200，CDN 阶段 done。
 
 风险（待用户决定）：数据盘每晚每类备份保留 7 份（约 23GB）。新店加入后剩余空间很快会低于 5GB，下一家店又会被 `disk_capacity` 拦住。需要扩容这块盘，或把备份目录挪到主盘（281GB 空闲）。
+
+### 2026-11-08 11:05 UTC 备份：每月一次、只留最新一份、挪到主硬盘
+
+- 用户要求：备份每月一次，只保留最新一份，旧的清掉，挪到主硬盘。
+- 保留份数改为 1：`backup.py`（两台）`[7:]` → `[1:]`；`/usr/local/sbin/vialcove-web01-backup`、`vialcove-store-admin-backup` `archives[:-7]` → `[:-1]`；`vialcove-hq-backup` 原来不清理，末尾加了只留最新一份。原脚本备份在 `/home/ubuntu/vialcove-deploy-backups/*.20261108T*`。
+- 计划：5 个备份 timer 都加 drop-in `monthly.conf`，每月 1 号原时间运行，下次是 2026-12-01。
+- web 主机移盘：`/srv/vialcove-data/tenant-backups`、`store-backups` 改为从主盘 `/var/backups/vialcove-web-{tenant,store}-backups` bind 挂载（写入 fstab，带 requires-mounts-for）。路径不变，lifecycle 的锁和保护规则照常。各自最新一份（tenant 20261108T031359931565Z、store 20261107T194143580878Z）sha256 校验后复制，其余各 6 份已删除。旧的 `latest.json`/`backup.lock` 也一起删了，下次备份会重新生成。
+- 结果：数据盘可用 7.0G → 28G；主盘 275G 可用。
+- 同时：s0006 被 WooCommerce 设成了“即将开业”（`woocommerce_coming_soon=yes`），已改为 no。开店程序 bootstrap 现在显式设 `woocommerce_coming_soon=no`，新店默认开放。
+- 第三方插件核对：HQ 和主店的 FluentSMTP 2.4.1、WooCommerce 11.2.1 用 `wp plugin verify-checksums` 对比 WordPress.org 官方校验值，全部一致，未改动。

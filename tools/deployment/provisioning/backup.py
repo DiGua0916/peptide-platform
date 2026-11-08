@@ -205,7 +205,7 @@ def main():
                    'encrypted': True, 'offsite_copy': False,
                    'skipped_purging_or_purged': plan['skipped_purging_or_purged']}
         (base / 'latest.json').write_text(json.dumps(receipt))
-        for old in sorted(base.glob('????????T????????????Z.tar.age'), reverse=True)[7:]:
+        for old in sorted(base.glob('????????T????????????Z.tar.age'), reverse=True)[1:]:  # owner 2026-11-08: keep only the latest
             old.unlink()
         print(json.dumps(receipt))
 

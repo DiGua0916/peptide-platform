@@ -471,7 +471,7 @@ define('WP_INSTALLING',true);define('ABSPATH',rtrim($x['public'],'/').'/');
 require ABSPATH.'wp-load.php';require ABSPATH.'wp-admin/includes/upgrade.php';
 add_filter('pre_wp_mail','__return_false',PHP_INT_MIN);
 if(!is_blog_installed()){wp_install($x['title'],$x['login'],$x['email'],false,'',$x['password'],'en_US');}
-update_option('home',$x['home']);update_option('siteurl',$x['siteurl']);update_option('blog_public','1');
+update_option('home',$x['home']);update_option('siteurl',$x['siteurl']);update_option('blog_public','1');update_option('woocommerce_coming_soon','no');update_option('woocommerce_store_pages_only','yes');
 $identity=get_option('peptide_core_hq',[]);
 if(empty($identity['uuid'])){update_option('peptide_core_hq',['uuid'=>PEPTIDE_CORE_MANAGEMENT_UUID,'key'=>bin2hex(random_bytes(32)),'created'=>time()],false);}
 elseif($identity['uuid']!==PEPTIDE_CORE_MANAGEMENT_UUID){throw new RuntimeException('store_identity_mismatch');}
