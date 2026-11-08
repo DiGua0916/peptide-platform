@@ -490,7 +490,7 @@
 	white-space: nowrap;
 }
 .pc-sd-table--library td:nth-child(1) {
-	min-width: 220px;
+	min-width: 200px;
 }
 .pc-sd-table--library td:nth-child(1) strong {
 	display: inline-block;
@@ -501,24 +501,30 @@
 	margin: 4px 4px 0 0;
 }
 .pc-sd-table--library td:nth-child(3) {
-	max-width: 200px;
-	overflow-wrap: anywhere;
+	min-width: 120px;
+	max-width: 180px;
+	word-break: break-word;
+	overflow-wrap: break-word;
 	color: #50575e;
 	font-size: 12px;
+	line-height: 1.5;
 }
 .pc-sd-table--library td:nth-child(2),
 .pc-sd-table--library td:nth-child(4),
-.pc-sd-table--library td:nth-child(6),
 .pc-sd-table--library td:nth-child(7),
 .pc-sd-table--library td:nth-child(8) {
 	white-space: nowrap;
 }
 .pc-sd-table--library td:nth-child(5) {
-	min-width: 130px;
+	min-width: 120px;
 }
 .pc-sd-table--library td:nth-child(5) .pc-sd-tag {
 	white-space: normal;
 	line-height: 1.5;
+}
+.pc-sd-table--library td:nth-child(6) {
+	min-width: 92px;
+	font-variant-numeric: tabular-nums;
 }
 .pc-sd-table--library .pc-sd-split {
 	display: inline-flex;
@@ -528,13 +534,27 @@
 }
 .pc-sd-table--library .pc-sd-split > .button,
 .pc-sd-table--library .pc-sd-menu > summary.button {
-	white-space: nowrap;
+	white-space: nowrap !important;
+	word-break: keep-all !important;
 	min-height: 32px;
 	line-height: 30px;
+	padding: 0 12px;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 }
+.pc-sd-table--library .pc-sd-menu > summary.button {
+	padding: 0 8px;
+}
 .pc-sd-table--library td:nth-child(8) {
 	text-align: center;
+}
+/* 主题、创建人每行都一样：宽度不够时先收起，让备注、操作、预览完整显示。 */
+@media (max-width: 1400px) {
+	.pc-sd-table--library th:nth-child(2),
+	.pc-sd-table--library td:nth-child(2),
+	.pc-sd-table--library th:nth-child(4),
+	.pc-sd-table--library td:nth-child(4) {
+		display: none;
+	}
 }
