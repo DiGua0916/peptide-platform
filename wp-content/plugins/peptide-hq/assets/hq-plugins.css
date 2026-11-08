@@ -237,3 +237,10 @@ body.pchq-workspace .pcp-studio__bar{display:flex;align-items:center;gap:12px;fl
 body.pchq-workspace .pcp-studio__bar strong{font-size:15px}
 body.pchq-workspace .pcp-studio__frame{display:block;width:100%;height:calc(100vh - 150px);min-height:560px;border:1px solid var(--vc-line);border-radius:10px;background:#fff}
 @media (max-width:960px){body.pchq-workspace .pcp-tpl__row{grid-template-columns:minmax(0,1fr) auto}body.pchq-workspace .pcp-tpl__row--head{display:none}body.pchq-workspace .pcp-tpl__actions{grid-column:1/-1;justify-content:flex-start}}
+
+/* CDN 页：手动加入一行对齐，说明文字另起一行（2026-11-08） */
+body.pchq-workspace .pcp-cdn-add{align-items:flex-end;gap:12px}
+body.pchq-workspace .pcp-cdn-add>p{margin:0}
+body.pchq-workspace .pcp-cdn-add .button{min-height:36px;line-height:34px;padding:0 16px}
+body.pchq-workspace .pcp-cdn-add+.pcp-note{margin:12px 0 0;max-width:none}
+body.pchq-workspace .pcp-cdn-form>p{margin:4px 0 0}
