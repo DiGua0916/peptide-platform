@@ -540,3 +540,32 @@
   - 店铺后台 `a84cf2e-s0001`。
   - 新店模板 web/admin，备份在 `/home/ubuntu/vialcove-deploy-backups/recommend-coupons-20261108/`。
 - 实测（WELCOME5 + 5 盒 Tirzepatide，差 $25 到 $300 档）：推荐 Retatrutide $86.30，承诺多省 $34.31。点“Add 1 box”后，ADDON5 -$5、WELCOME5 -$18.06、满减 $25 都生效，合计与承诺一致。
+
+### 2026-11-08 08:00 UTC 上线前全面检查
+
+已修复：
+- HQ 每晚日志轮转失败：`/etc/logrotate.d/vialcove-hq` 与 nginx 默认规则重复。已移到 `/home/ubuntu/vialcove-deploy-backups/logrotate-20261108/`，`logrotate -d` 无报错。
+- 页脚（主题 `33bbab7-web01`）：链接行高 52px → 32px（手机 36px）；版权年份改为自动；DB-IP 署名移进页脚底栏。所有页脚链接 200 且有内容，3 个锚点都存在。
+
+正常：
+- 两台服务器负载低，磁盘 9%/16%，服务都在运行，今天没有 5xx。
+- 备份和监控上次运行都成功；证书剩 84 天以上，自动续期开启。
+- 线上 PHP 无报错。
+- 页面：首页、商品、购物车、结账、COA、About、FAQ 等都返回 200 且有内容，404 页正常。手机宽度无横向滚动。带 fbclid 的落地页命中页面缓存。
+- 支付：两个付款方式都是开启、正式模式、参数齐全；HQ 回写定时任务在跑。notify/return 收到无效请求都返回 400。
+- 店铺设置：不算税、允许游客结账、82 个商品全部有货、调试关闭、production。
+- 应用：6/8 开启；离开意图增收、邮编辅助未开。
+
+上线前必须处理（需要用户）：
+1. Facebook Pixel/CAPI 从未配置（`peptide_core_pixels` 不存在，`fbq` 未加载）。在店铺后台 系统设置 → 像素 填写。
+2. 邮件发不出：FluentSMTP 已安装但未配置，服务器也没有邮件服务；店铺邮箱、发件地址、HQ 告警邮箱都还是 `@wpengine.local`。
+3. 隐私政策、退款政策未发布（都是 WordPress 默认草稿），没有服务条款和配送政策。
+
+建议：
+- 用真卡付一小笔，验证付款结果通知 → 订单变成已付款；
+- 清理测试订单 #11765–#11768 和支付中心测试记录；
+- 决定是否开启“离开意图增收”。
+
+低优先级：
+- HQ 告警 “s0001.vialcovepeptides.com 连不上” 自 11-03 起未关闭，实测可访问（301）；
+- HQ 上还有 `assaynovalabs.com`、`vialcove-sandbox` 两张证书。
