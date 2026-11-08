@@ -61,6 +61,8 @@ final class Cart_Reader {
 			$cart = new Quote_Cart( $contents, new \WC_Customer( get_current_user_id() ) );
 			$cart->set_totals( $totals );
 			$cart->set_applied_coupons( $coupons );
+			// 把会话里的优惠码载入报价（2026-11-08）；无法安全计算的优惠码会让报价整体放弃。
+			try { $cart->hydrate_applied_coupons(); } catch ( \Throwable $error ) { return self::error( 'unsupported_calculation', 409 ); }
 			foreach ( array( 'coupon_discount_totals', 'coupon_discount_tax_totals' ) as $key ) {
 				$value = self::unpack( $data[ $key ] ?? null );
 				if ( null !== $value ) {

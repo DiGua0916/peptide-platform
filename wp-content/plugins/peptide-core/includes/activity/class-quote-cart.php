@@ -54,6 +54,19 @@ final class Quote_Cart extends \WC_Cart {
 		return $out;
 	}
 
+	/** 由会话重建的报价购物车：按已用的优惠码代码载入优惠码对象。 */
+	public function hydrate_applied_coupons(): void {
+		$codes = $this->applied_coupons;
+		$this->quote_coupons = array();
+		$this->applied_coupons = array();
+		foreach ( $codes as $code ) {
+			$coupon = new \WC_Coupon( (string) $code );
+			if ( ! $coupon->get_id() || ! Recommendation_Coupon::supported_existing_coupon( $coupon ) ) { throw new \RuntimeException( 'unsupported_existing_coupon' ); }
+			$this->carry_coupon( $coupon );
+		}
+		if ( array_keys( $this->quote_coupons ) !== array_values( $codes ) ) { throw new \RuntimeException( 'unsupported_existing_coupon' ); }
+	}
+
 	private function carry_coupon( \WC_Coupon $coupon ): void {
 		$code = $coupon->get_code();
 		if ( isset( $this->quote_coupons[ $code ] ) ) { throw new \RuntimeException( 'duplicate_quote_coupon' ); }
