@@ -302,6 +302,7 @@ def copy_runtime(source, target):
                 require(p.is_file() and not p.is_symlink(), 'unexpected_mu_directory')
                 p.unlink()
     mu.mkdir(exist_ok=True)
+    mu.chmod(0o755)
     # 2026-11-07: new stores send mail like the first store (FluentSMTP is activated in bootstrap);
     # the former vialcove-mail-gate.php is no longer written, and a copy in the source is removed above.
 
@@ -370,6 +371,8 @@ def vhost(t, host, *, tls=False, aliases=()):
         require(not set(hosts).intersection(existing), 'vhost_host_in_use')
     acme = '/var/www/vialcove-tenant-acme'
     Path(acme, '.well-known/acme-challenge').mkdir(parents=True, exist_ok=True)
+    for d in (Path(acme), Path(acme, '.well-known'), Path(acme, '.well-known/acme-challenge')):
+        d.chmod(0o755)  # nginx must read challenges despite UMask=0077
     text = f'''server {{
  listen 80; listen [::]:80; server_name {' '.join(hosts)};
  location ^~ /.well-known/acme-challenge/ {{ root {acme}; default_type text/plain; try_files $uri =404; }}
@@ -496,9 +499,11 @@ def export_media(t, media_key, admin_ip):
     make_user(user)
     jail = Path('/srv/vialcove-media-export', t['slug'])
     jail.mkdir(parents=True, exist_ok=True, mode=0o755)
+    jail.chmod(0o755)
     for name in ['uploads', 'reports']:
         src, dst = t['data'] / name, jail / name
         dst.mkdir(exist_ok=True, mode=0o755)
+        dst.chmod(0o755)
         run(['setfacl', '-R', '-m', f'u:{user}:rwX,u:{t["user"]}:rwX', str(src)])
         for root, dirs, files in os.walk(src):
             run(['setfacl', '-m', f'd:u:{user}:rwx,d:u:{t["user"]}:rwx', root])
@@ -506,6 +511,7 @@ def export_media(t, media_key, admin_ip):
             run(['mount', '--bind', str(src), str(dst)])
     keys = Path('/etc/ssh/vialcove-bridge-keys')
     keys.mkdir(exist_ok=True, mode=0o755)
+    keys.chmod(0o755)
     require(re.fullmatch(r'ssh-ed25519 [A-Za-z0-9+/=]+(?: [^\r\n]*)?', media_key), 'media_key')
     write(keys / user, 'from="' + admin_ip + '",restrict ' + media_key + '\n', 0o644)
     write('/etc/ssh/sshd_config.d/45-vialcove-' + t['slug'] + '.conf', f'''Match User {user}
@@ -662,6 +668,7 @@ def _web_create(p, c):
         require(shutil.disk_usage(c['web_data_root']).free > 5 * 1024**3, 'disk_capacity')
         make_user(t['user'])
         t['public'].parent.mkdir(parents=True, mode=0o755)
+        t['public'].parent.chmod(0o755)  # UMask=0077 would leave 0700: the store account must traverse it.
         for n in ['', 'uploads', 'reports', 'ops', 'tmp', 'sessions']:
             app_dir(t['data'] / n, t['user'], 0o755 if n == 'uploads' else (0o711 if n == '' else 0o700))
         state = {'digest': digest, 'phase': 'reserved', 'customer_domain': t['customer_domain'], 'front_password': secrets.token_hex(32), 'admin_password': secrets.token_hex(32),
@@ -736,6 +743,7 @@ def admin_create(r, state, c, secret):
         require(marker.is_file() and not marker.is_symlink() and json.loads(marker.read_text(encoding='utf-8')) == {'operation_id': r['operation_id'], 'uuid': state['uuid']}, 'local_tenant_ownership')
     else:
         t['public'].parent.mkdir(parents=True, mode=0o755)
+        t['public'].parent.chmod(0o755)  # UMask=0077 would leave 0700: the store account must traverse it.
         private_json(marker, {'operation_id': r['operation_id'], 'uuid': state['uuid']})
     make_user(t['user'])
     for n in ['', 'uploads', 'reports', 'ops', 'tmp', 'sessions']:
@@ -966,5 +974,7 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as e:
-        sys.stderr.write('Provisioning did not complete: ' + type(e).__name__ + '\n')
+        # Bounded step codes (e.g. waiting_dns) carry no request data; anything else stays generic.
+        code = str(e) if isinstance(e, ValueError) and re.fullmatch(r'[a-z0-9_]{1,64}', str(e)) else ''
+        sys.stderr.write('Provisioning did not complete: ' + type(e).__name__ + (':' + code if code else '') + '\n')
         sys.exit(1)
