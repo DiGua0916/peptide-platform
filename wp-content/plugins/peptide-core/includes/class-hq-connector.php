@@ -427,19 +427,25 @@ final class Hq_Connector {
 	 * 其他情况保持 WordPress 默认的禁止嵌入。
 	 */
 	public static function allow_hq_embed(): void {
-		if ( empty( $_COOKIE['pc_hq_embed'] ) ) {
-			return;
-		}
-		$hq     = (string) self::settings()['hq_url'];
-		$scheme = (string) wp_parse_url( $hq, PHP_URL_SCHEME );
-		$host   = (string) wp_parse_url( $hq, PHP_URL_HOST );
-		if ( 'https' !== $scheme || ! preg_match( '/\A[a-z0-9.-]{3,253}\z/i', $host ) ) {
+		$hq = self::embed_ancestor();
+		if ( '' === $hq ) {
 			return;
 		}
 		remove_action( 'admin_init', 'send_frame_options_header', 10 );
 		if ( ! headers_sent() ) {
-			header( "Content-Security-Policy: frame-ancestors 'self' https://" . strtolower( $host ) );
+			header( "Content-Security-Policy: frame-ancestors 'self' " . $hq );
 		}
+	}
+
+	/** 从总后台模板库进入的会话：允许嵌入的总后台地址（https://域名）；其他情况返回空。 */
+	public static function embed_ancestor(): string {
+		if ( empty( $_COOKIE['pc_hq_embed'] ) ) {
+			return '';
+		}
+		$hq     = (string) self::settings()['hq_url'];
+		$scheme = (string) wp_parse_url( $hq, PHP_URL_SCHEME );
+		$host   = strtolower( (string) wp_parse_url( $hq, PHP_URL_HOST ) );
+		return 'https' === $scheme && preg_match( '/\A[a-z0-9.-]{3,253}\z/', $host ) ? 'https://' . $host : '';
 	}
 
 	/** 总后台下发统一装修。以店铺管理员身份写入，避免权限检查挡住发布。@return array|\WP_Error */

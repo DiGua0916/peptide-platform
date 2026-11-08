@@ -808,6 +808,12 @@ final class Store_Config {
 
 	public static function frame_header(): void {
 		if ( ! is_admin() && ! self::get( 'allow_iframe' ) && ! headers_sent() ) {
+			// 总后台模板库里装修时，编辑器的预览外面还套着总后台：只对这个会话额外允许总后台。
+			$hq = class_exists( Hq_Connector::class ) ? Hq_Connector::embed_ancestor() : '';
+			if ( '' !== $hq ) {
+				header( "Content-Security-Policy: frame-ancestors 'self' " . $hq );
+				return;
+			}
 			header( 'X-Frame-Options: SAMEORIGIN' );
 		}
 	}

@@ -25,15 +25,10 @@ final class Design_Page {
 			'admin_menu',
 			static function (): void {
 				add_submenu_page( 'pchq', '模板库', '模板库', Menu::CAP, self::SLUG, array( self::class, 'render' ) );
-				add_submenu_page( 'pchq', '装修模板', '装修模板', Menu::CAP, self::EDITOR_SLUG, array( self::class, 'render_editor' ) );
+				// 不进菜单：只从模板库的“装修”按钮打开。
+				add_submenu_page( '', '装修模板', '装修模板', Menu::CAP, self::EDITOR_SLUG, array( self::class, 'render_editor' ) );
 			},
 			19
-		);
-		add_action(
-			'admin_head',
-			static function (): void {
-				echo '<style>#adminmenu a[href$="page=' . esc_attr( self::EDITOR_SLUG ) . '"]{display:none}</style>';
-			}
 		);
 		foreach ( array( 'settings', 'push', 'push_one', 'auto', 'create', 'update', 'trash' ) as $do ) {
 			add_action( 'admin_post_pchq_design_' . $do, array( self::class, 'handle' ) );
