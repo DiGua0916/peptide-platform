@@ -86,6 +86,24 @@ final class Tracker {
 	}
 
 	/** 这个浏览器表示不要追踪：发出 GPC 信号（设置里默认遵守），或打开过退出链接（和广告像素共用 pc_px_optout）。 */
+	/**
+	 * 自动程序（爬虫、扫描器、无头浏览器）不算访客（2026-11-08）。新域名签发 HTTPS 证书后几分钟内就会被
+	 * 证书透明日志的爬虫访问，它们落在首页、看一页就走，会把访客统计弄脏。
+	 */
+	public static function is_automated( string $ua = '' ): bool {
+		$ua = '' !== $ua ? $ua : self::user_agent();
+		if ( '' === trim( $ua ) ) {
+			return true;
+		}
+		if ( isset( $_SERVER['HTTP_X_PC_AUTOMATED'] ) && '1' === (string) $_SERVER['HTTP_X_PC_AUTOMATED'] ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+			return true;
+		}
+		return 1 === preg_match(
+			'/bot\b|bot\/|crawl|spider|scan|slurp|curl\/|wget|python|httpclient|http_request|go-http|axios|node-fetch|undici|java\/|okhttp|libwww|headless|phantom|puppeteer|playwright|selenium|webdriver|lighthouse|pingdom|uptime|monitor|censys|leakix|certstream|forestengine|shodan|zgrab|nuclei|masscan|netcraft|dataprovider|facebookexternalhit|facebot|meta-externalagent|twitterbot|linkedinbot|whatsapp|telegrambot|slackbot|discordbot|skypeuripreview|bingpreview|googleother|google-|yandex|baidu|duckduck|ahrefs|semrush|mj12|dotbot|petalbot|bytespider|applebot|amazonbot|gptbot|claudebot|ccbot|anthropic|openai|perplexity|cohere|preview|validator|wordpress\/|wp-rocket|site24x7|statuscake|betteruptime|hetrix|gtmetrix|pagespeed|chrome-lighthouse/i',
+			$ua
+		);
+	}
+
 	public static function declined(): bool {
 		if ( self::settings()['gpc'] && isset( $_SERVER['HTTP_SEC_GPC'] ) && '1' === trim( sanitize_text_field( wp_unslash( $_SERVER['HTTP_SEC_GPC'] ) ) ) ) {
 			return true;
@@ -141,7 +159,7 @@ final class Tracker {
 		if ( is_admin() || is_preview() || is_customize_preview() || isset( $_GET['pc_frame'] ) || isset( $_GET['pc_preview_token'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			return;
 		}
-		if ( self::is_staff( self::cookie_user_id() ) || '' !== self::current_vid() || self::declined() ) {
+		if ( self::is_staff( self::cookie_user_id() ) || '' !== self::current_vid() || self::declined() || self::is_automated() ) {
 			return;
 		}
 		self::issue_vid();
@@ -257,7 +275,7 @@ final class Tracker {
 	/** 主题过滤器 vialcove_visitor_observer_config：开启时告诉前端接收地址和计时口径；不要追踪的浏览器保持主题的默认值（关闭）。 */
 	public static function observer_config( $config ): array {
 		$config = is_array( $config ) ? $config : array();
-		if ( self::declined() ) {
+		if ( self::declined() || self::is_automated() ) {
 			return $config;
 		}
 		return array_merge(

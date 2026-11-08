@@ -199,6 +199,9 @@ final class Ingest {
 		if ( Tracker::is_staff( $user_id ) ) {
 			return new \WP_Error( 'pc_track_staff', __( 'Staff accounts are not tracked.', 'peptide-core' ), array( 'status' => 403 ) );
 		}
+		if ( Tracker::is_automated() ) {
+			return new \WP_Error( 'pc_track_automated', __( 'Automated clients are not tracked.', 'peptide-core' ), array( 'status' => 403 ) );
+		}
 		$events = array_values( $body['events'] );
 		$ip     = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 		$wait   = self::rate_limited( 'ip|' . wp_hash( $ip ), self::RATE_IP, count( $events ) );

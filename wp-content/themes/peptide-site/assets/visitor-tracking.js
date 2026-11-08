@@ -170,8 +170,15 @@
     }
     return {eventId: input.event_id, data: Object.freeze(data)};
   }
+  function automatedBrowser() {
+    // Headless / driven browsers (crawlers, scanners, test tools) are not shoppers.
+    try {
+      return navigator.webdriver === true || /HeadlessChrome|PhantomJS|Puppeteer|Playwright|Lighthouse/i.test(navigator.userAgent || '');
+    } catch (error) { return false; }
+  }
   function start(options = {}) {
     if (typeof options.sendBatch !== 'function' || !options.context || !window.crypto?.getRandomValues) return null;
+    if (automatedBrowser()) return null;
     active?.stop();
     const page = pageContext(options.context);
     const heartbeatMs = number(options.heartbeatMs, 15000, 1000, 60000);
