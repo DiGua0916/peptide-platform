@@ -466,3 +466,4 @@
 - 用户已保存令牌（05:42 验证通过）。只读核对：令牌看得到 vialcovepeptides.com、vialcoveresearch.com 两个 zone（都 active），DNS / SSL 设置 / 证书 / 缓存规则都能读，账户可见 1 个（自动添加新域名可用）。设置：自动配置开启，“域名不在 Cloudflare 时自动添加”关闭——不在 Cloudflare 的新域名会停在“域名还不在 Cloudflare”，开店任务一直等待解析（不会失败）。
 - 开店链路核对：worker 写出的开店结果 root:vchq 0640，总后台可读；等待解析时任务持续重试；新店支付跟随支付中心（信用卡“全部已接入店铺”）；开店账号是新店管理员；新店域名白名单由 worker 追加。
 - 代码 `0f4759f`：CDN 页“手动加入已有域名”一行对齐（输入框、下拉、按钮底边一致），说明文字另起一行。总后台 `d0ec9ef-hq` → `0f4759f-hq`，登录 200。
+- 用户批准 "Turn it on"：CDN 设置开启“域名不在 Cloudflare 时自动添加”（`create_zones = true`），自动配置保持开启，令牌不变。
