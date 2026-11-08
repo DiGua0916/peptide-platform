@@ -189,6 +189,11 @@
     const maxQueue = number(options.maxQueue, 100, 10, 200);
     const batchMax = Math.floor(number(options.batchMax, 10, 1, 20));
     let retryAt = 0;
+    // Engagement gate (2026-11-08): nothing is sent until the person interacts (a trusted
+    // pointer/touch/key/scroll) or the page has stayed open for engageMs. Crawlers that
+    // render one page and leave within seconds therefore never become visitors.
+    const engageMs = number(options.engageMs, 6000, 0, 60000);
+    let engaged = engageMs === 0, engageTimer;
     let pageId = id(), seq = 0, lastActivity = Date.now(), stopped = false, suspended = false;
     let sending = false, flushTimer, flushAt = Infinity, requestController, requestTimer, heartbeatTimer;
     let videoObserver, productObserver, intentObserver, surfaceObserver, exitController, exitTimer, checkoutBridge;
@@ -247,8 +252,13 @@
       event_id: id(), page_instance_id: pageId, seq: sequence, type: 'heartbeat', occurred_at: occurredAt,
       page: Object.freeze({...current}), data: Object.freeze(state())
     });
+    function engage() {
+      if (engaged || stopped) return;
+      engaged = true; clearTimeout(engageTimer);
+      if (pending.length) schedule(0);
+    }
     function schedule(delay = flushMs) {
-      if (stopped || suspended || !pending.length) return;
+      if (stopped || suspended || !pending.length || !engaged) return;
       const wait = Math.max(0, delay, retryAt - Date.now());
       const due = Date.now() + wait;
       if (flushTimer && due >= flushAt) return;
@@ -332,6 +342,7 @@
       if (waiting.length) schedule(Math.max(0, Math.min(...waiting.map(entry => entry.readyAt)) - Date.now()));
     }
     async function flush(hint = {}) {
+      if (!engaged) return false;
       if (stopped || (!hint.unload && suspended)) return false;
       if (retryAt > Date.now()) { schedulePending(); return false; }
       if (sending) { if (hint.unload) return flushExit(); return false; }
@@ -387,7 +398,7 @@
     function flushExit() {
       // The normal request may still be pending. Attempt the latest unsent events
       // synchronously during pagehide instead of trapping them behind that request.
-      if (stopped || exitController || retryAt > Date.now()) return false;
+      if (!engaged || stopped || exitController || retryAt > Date.now()) return false;
       const batch = pending.filter(entry => !entry.inFlight && entry.attempts < maxAttempts).slice(-batchMax);
       if (!batch.length) return false;
       const controller = new AbortController(); exitController = controller;
@@ -425,7 +436,9 @@
       if (page.page_type === 'cart') emit('cart_view', {source: 'page'});
       if (page.page_type === 'checkout') emit('checkout_view');
     }
-    const activity = event => { if (event.isTrusted && Date.now() - lastActivity >= 1000) lastActivity = Date.now(); };
+    const activity = event => { if (!event.isTrusted) return; engage(); if (Date.now() - lastActivity >= 1000) lastActivity = Date.now(); };
+    if (!engaged) engageTimer = setTimeout(() => { if (!document.hidden) engage(); else listen(document, 'visibilitychange', () => { if (!document.hidden) engage(); }, {once: true}); }, engageMs);
+    cleanups.push(() => clearTimeout(engageTimer));
     ['pointerdown', 'pointermove', 'keydown', 'scroll', 'touchstart'].forEach(type => listen(document, type, activity, {passive: true}));
     listen(document, 'visibilitychange', () => { videoObserver?.flush(); emit('visibility_change', state()); if (document.hidden) void flush(); });
     listen(window, 'pagehide', event => {
