@@ -758,3 +758,10 @@
 - 时间线（tracking-admin.js）：详情改成人话（“看到商品「GHK-CU 50mg」，露出 80%，停留 1.2 秒”“配送方式：Fast International Shipping（页面默认选中，不是顾客操作）”“切到了别的标签页”“从 facebook.com 跳转过来”…）；连续 3 秒内的商品曝光合并成一行“一眼看到了 N 个商品：…”；`Query::timeline` 返回 `product_name`。tracking-workspace.js 不再把详情折叠在“查看行为细节”后面。
 - 模块点击（Preferences::summarize + tracking-insights.js）：列改为 点了哪个模块 / 在哪个页面 / 点击次数 / 是哪些访客点的（访客 #N 链接到访客详情，含各自次数）。商品兴趣里只有编号的补商品名。
 - 部署：主店、s0006–s0010 前台与后台副本、store-admin、两个模板（7 个文件）。阳 后台实测：时间线中文详情直接可见、曝光合并、模块表显示 商品区/页头导航/页脚/视频 + 页面 + 访客 #1。备份 `visitor-labels-*`（两台）。
+
+### 2026-11-09 产品表对比 + 补 6 个商品；关闭第三方代付通道
+- 用户产品表（products_20261101155916770 (1).xlsx，90 个商品 / 200 规格）vs 主店（82 / 183）：店里缺 8 个。其中 Lipo-C（3 条同名、价格 82/82/86）和 Melanotan I（3 条 10mg、价格 42/60/42）在表里规格名完全相同，等用户说明差异再补。
+- 已用 `tools/catalog/import-missing-from-sheet.php`（wp eval-file，按 `_pc_spu` 幂等）补到主店：Acetic Acid water 0.6% #11783、TR20+RT40 #11786（$188 版，与已有的 Retatrutide 20mg + Tirzepatide 40mg $239 是表里两个不同商品）、HGH 191AA (Somatropin) #11789（6 规格）、Vitamin B-12 #11802、HGH #11805（15iu；变体 SKU H15 与 191AA 重复，留空）、Lipo-C with vitamins B12 #11808。结构同原导入：variable + Specifications 属性、原价/售价、跟踪库存、图片从 cdn.staticsweapps.com 侧载并命名、分类按专辑（新建 Lipo-C 分类）。全部有主图，商品链接 302 → 首页快速查看（与现有商品一致）。
+- 其余 82 个商品规格与价格全部一致；仅表里 HGH Fragment 176-191 的 “2mg*vials” 为笔误（店里 2mg*10vials 正确）。
+- 第三方“运营套件”插件的代付网关（payment_proxy PayPal / _stripe / _airwallex / _flypay）在主店、s0006、s0007、s0009、s0010 的 WooCommerce 支付设置里全部 enabled=no（s0008 没有这些网关）；6 店结账只剩 Credit card 与 WALLET。未改插件本身。
+- 子店尚未同步这 6 个新商品（需用 总后台 → 店铺复制 → 商品，或等 Lipo-C / Melanotan I 补齐后一起复制）。
