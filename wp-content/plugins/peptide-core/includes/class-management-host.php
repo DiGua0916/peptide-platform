@@ -251,7 +251,19 @@ final class Management_Host {
 		if ( defined( 'WP_CLI' ) && WP_CLI ) { return; }
 		$error = self::configuration_error();
 		if ( '' !== $error ) { self::deny( 503, 'Store management configuration is unavailable.' ); }
-		if ( ! in_array( self::request_host(), self::allowed_hosts(), true ) ) { self::deny( 421, 'Unknown store host.' ); }
+		if ( ! in_array( self::request_host(), self::allowed_hosts(), true ) ) {
+			// 裸域名 / www 变体（2026-11-08）：顾客手输 vialcovepro.com 时跳到正式的公开地址，而不是报 421。
+			$public = strtolower( (string) wp_parse_url( self::public_url(), PHP_URL_HOST ) );
+			$bare   = preg_replace( '/^www\./', '', $public );
+			$method = strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) );
+			if ( '' !== $bare && in_array( self::request_host(), array( $bare, 'www.' . $bare ), true ) && in_array( $method, array( 'GET', 'HEAD' ), true ) ) {
+				$path = (string) ( $_SERVER['REQUEST_URI'] ?? '/' );
+				$path = preg_match( '#\A/[^\s]*\z#', $path ) ? $path : '/';
+				wp_redirect( untrailingslashit( self::public_url() ) . $path, 301, 'Store canonical host' ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect
+				exit;
+			}
+			self::deny( 421, 'Unknown store host.' );
+		}
 		if ( ! is_ssl() ) {
 			if ( ! in_array( strtoupper( $_SERVER['REQUEST_METHOD'] ?? 'GET' ), array( 'GET', 'HEAD' ), true ) ) { self::deny( 400, 'HTTPS is required.' ); }
 			wp_safe_redirect( 'https://' . self::request_host() . '/' . ltrim( (string) ( $_SERVER['REQUEST_URI'] ?? '/' ), '/' ), 308, 'Store HTTPS' );
