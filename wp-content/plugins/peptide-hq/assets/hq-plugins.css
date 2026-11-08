@@ -1,0 +1,106 @@
+/* 总后台 → 插件管理（2026-11-08）。沿用 hq-workspace 的黑白灰体系，只在本页加载。 */
+body.pchq-workspace .pcp{--pcp-ok:#1f7a4d;--pcp-ok-bg:#eaf6ef;--pcp-bad:#a33a2f;--pcp-bad-bg:#fbefec;--pcp-wait:#8a6410;--pcp-wait-bg:#fbf4e2;max-width:1120px}
+body.pchq-workspace .pcp h1{margin:0 0 6px;font-size:24px;line-height:32px;font-weight:700}
+body.pchq-workspace .pcp h2,body.pchq-workspace .pcp h3{margin:0;font-weight:700;color:var(--vc-ink)}
+
+/* Header + stats */
+body.pchq-workspace .pcp-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin:4px 0 20px}
+body.pchq-workspace .pcp-head p{margin:0;max-width:62ch;color:var(--vc-muted);font-size:13px;line-height:21px}
+body.pchq-workspace .pcp-stats{display:flex;gap:8px;margin:0;flex:none}
+body.pchq-workspace .pcp-stats>div{min-width:84px;padding:10px 14px;border:1px solid var(--vc-line);border-radius:10px;background:#fff}
+body.pchq-workspace .pcp-stats dt{color:var(--vc-muted);font-size:11px;line-height:16px;font-weight:600}
+body.pchq-workspace .pcp-stats dd{margin:2px 0 0;font-size:20px;line-height:26px;font-weight:700;font-variant-numeric:tabular-nums}
+
+/* Notices */
+body.pchq-workspace .pcp-flash{margin:0 0 16px;padding:11px 14px;border-radius:8px;font-size:13px;line-height:20px;font-weight:600}
+body.pchq-workspace .pcp-flash.is-ok{color:var(--pcp-ok);background:var(--pcp-ok-bg)}
+body.pchq-workspace .pcp-flash.is-bad{color:var(--pcp-bad);background:var(--pcp-bad-bg)}
+body.pchq-workspace .pcp-flash.is-wait{color:var(--pcp-wait);background:var(--pcp-wait-bg)}
+
+/* Cards */
+body.pchq-workspace .pcp-card{margin:0 0 16px;padding:20px 24px;border:1px solid var(--vc-line);border-radius:12px;background:#fff}
+body.pchq-workspace .pcp-card__head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:14px}
+body.pchq-workspace .pcp-card__head h2,body.pchq-workspace .pcp-card__head h3{font-size:15px;line-height:22px}
+body.pchq-workspace .pcp-hint{color:var(--vc-muted);font-size:12px;line-height:18px;margin:0}
+body.pchq-workspace .pcp-note{margin:-4px 0 14px;max-width:75ch;color:var(--vc-muted);font-size:13px;line-height:21px}
+body.pchq-workspace .pcp-section{display:flex;align-items:center;gap:8px;margin:32px 0 12px;font-size:16px;line-height:24px}
+body.pchq-workspace .pcp-section span{padding:1px 8px;border-radius:999px;background:var(--vc-soft);color:var(--vc-muted);font-size:12px;line-height:18px}
+
+/* Drop zone: the native input covers the whole zone, so click / keyboard / drag all use the real control. */
+body.pchq-workspace .pcp-drop{position:relative;display:flex;align-items:center;gap:16px;min-height:96px;padding:20px 22px;border:1.5px dashed var(--vc-control);border-radius:10px;background:#fafafa;cursor:pointer;transition:border-color .15s,background .15s}
+body.pchq-workspace .pcp-drop:hover,body.pchq-workspace .pcp-drop.is-over{border-color:var(--vc-ink);background:#f4f4f4}
+body.pchq-workspace .pcp-drop:focus-within{outline:2px solid var(--vc-ink);outline-offset:2px}
+body.pchq-workspace .pcp-drop input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+body.pchq-workspace .pcp-drop__icon{display:grid;place-items:center;flex:none;width:44px;height:44px;border-radius:10px;background:#fff;border:1px solid var(--vc-line);color:var(--vc-ink)}
+body.pchq-workspace .pcp-drop__text{display:flex;flex-direction:column;gap:3px;min-width:0}
+body.pchq-workspace .pcp-drop__text strong{font-size:14px;line-height:21px;color:var(--vc-ink);overflow-wrap:anywhere}
+body.pchq-workspace .pcp-drop__text small{color:var(--vc-muted);font-size:12px;line-height:18px}
+body.pchq-workspace .pcp-drop.has-file{border-style:solid;border-color:var(--vc-ink);background:#fff}
+body.pchq-workspace .pcp-drop.has-file .pcp-drop__icon{background:var(--vc-ink);color:#fff;border-color:var(--vc-ink)}
+body.pchq-workspace .pcp-drop.is-invalid{border-color:var(--pcp-bad);background:var(--pcp-bad-bg)}
+body.pchq-workspace .pcp-drop.is-invalid small{color:var(--pcp-bad)}
+body.pchq-workspace .pcp-upload__bar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:14px}
+body.pchq-workspace .pcp-upload__btn{flex:none;min-height:36px!important;padding:0 18px!important}
+body.pchq-workspace .pcp-upload__btn[disabled]{opacity:.45;cursor:not-allowed}
+
+/* Plugin card */
+body.pchq-workspace .pcp-plugin__head{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+body.pchq-workspace .pcp-avatar{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:10px;background:var(--vc-ink);color:#fff;font-size:16px;font-weight:700}
+body.pchq-workspace .pcp-avatar.is-sm{width:28px;height:28px;border-radius:7px;font-size:12px;background:var(--vc-soft);color:var(--vc-ink)}
+body.pchq-workspace .pcp-plugin__title{min-width:0;flex:1}
+body.pchq-workspace .pcp-plugin__title h3{font-size:15px;line-height:22px}
+body.pchq-workspace .pcp-plugin__title p{margin:1px 0 0;color:var(--vc-muted);font-size:12px;line-height:18px;overflow-wrap:anywhere}
+body.pchq-workspace .pcp-plugin__tools{display:flex;align-items:center;gap:10px;flex:none}
+body.pchq-workspace .pcp-inline{display:inline;margin:0}
+body.pchq-workspace .pcp-link{padding:0;border:0;background:none;color:var(--vc-muted);font:inherit;font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+body.pchq-workspace .pcp-link:hover{color:var(--vc-ink)}
+body.pchq-workspace .pcp-link.is-danger:hover{color:var(--pcp-bad)}
+body.pchq-workspace .pcp-tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;background:var(--vc-soft);color:var(--vc-ink);font-size:11px;line-height:17px;font-weight:600;font-style:normal;white-space:nowrap}
+body.pchq-workspace .pcp-tag.is-on{background:var(--pcp-ok-bg);color:var(--pcp-ok)}
+body.pchq-workspace .pcp-tag.is-core{color:var(--vc-muted)}
+
+/* Store rows */
+body.pchq-workspace .pcp-stores{margin:0;padding:0;list-style:none;border-top:1px solid var(--vc-line)}
+body.pchq-workspace .pcp-stores li{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;align-items:center;gap:16px;margin:0;padding:12px 0;border-bottom:1px solid var(--vc-line)}
+body.pchq-workspace .pcp-stores li:last-child{border-bottom:0;padding-bottom:0}
+body.pchq-workspace .pcp-store{display:flex;flex-direction:column;min-width:0}
+body.pchq-workspace .pcp-store strong{font-size:13px;line-height:20px;overflow-wrap:anywhere}
+body.pchq-workspace .pcp-store small{color:var(--vc-muted);font-size:12px;line-height:18px;overflow-wrap:anywhere}
+body.pchq-workspace .pcp-store__actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+body.pchq-workspace .pcp-btn-quiet{background:#fff!important}
+body.pchq-workspace .pcp-state{display:inline-flex;align-items:center;gap:7px;font-size:12px;line-height:18px;font-weight:600;color:var(--vc-muted)}
+body.pchq-workspace .pcp-state i{width:8px;height:8px;border-radius:50%;background:var(--vc-control)}
+body.pchq-workspace .pcp-state.is-ok{color:var(--pcp-ok)}
+body.pchq-workspace .pcp-state.is-ok i{background:var(--pcp-ok)}
+body.pchq-workspace .pcp-state.is-bad{color:var(--pcp-bad)}
+body.pchq-workspace .pcp-state.is-bad i{background:var(--pcp-bad)}
+body.pchq-workspace .pcp-state.is-wait{color:var(--pcp-wait)}
+body.pchq-workspace .pcp-state.is-wait i{background:var(--pcp-wait);animation:pcp-pulse 1.2s ease-in-out infinite}
+body.pchq-workspace .pcp-error{display:block;margin-top:3px;color:var(--pcp-bad);font-size:12px;line-height:18px}
+@keyframes pcp-pulse{50%{opacity:.3}}
+
+/* Empty + built-in */
+body.pchq-workspace .pcp-empty{text-align:center;padding:32px 24px}
+body.pchq-workspace .pcp-empty strong{display:block;font-size:14px;line-height:22px}
+body.pchq-workspace .pcp-empty p{margin:4px auto 0;max-width:46ch;color:var(--vc-muted);font-size:13px;line-height:21px}
+body.pchq-workspace .pcp-chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin:0;padding:0;list-style:none}
+body.pchq-workspace .pcp-chips li{display:flex;align-items:center;gap:10px;margin:0;padding:10px 12px;border:1px solid var(--vc-line);border-radius:10px;min-width:0}
+body.pchq-workspace .pcp-chips li>span:nth-child(2){display:flex;flex-direction:column;min-width:0;flex:1}
+body.pchq-workspace .pcp-chips strong{font-size:13px;line-height:19px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.pchq-workspace .pcp-chips small{color:var(--vc-muted);font-size:11px;line-height:16px}
+body.pchq-workspace .pcp-live{margin-top:16px}
+
+@media (prefers-reduced-motion:reduce){body.pchq-workspace .pcp-state.is-wait i{animation:none}body.pchq-workspace .pcp-drop{transition:none}}
+@media (max-width:782px){
+ body.pchq-workspace .pcp-head{flex-direction:column;align-items:stretch;gap:14px}
+ body.pchq-workspace .pcp-stats>div{flex:1;min-width:0}
+ body.pchq-workspace .pcp-card{padding:16px}
+ body.pchq-workspace .pcp-drop{min-height:84px;padding:16px;gap:12px}
+ body.pchq-workspace .pcp-upload__bar{flex-direction:column;align-items:stretch}
+ body.pchq-workspace .pcp-upload__btn{width:100%;min-height:44px!important}
+ body.pchq-workspace .pcp-plugin__head{flex-wrap:wrap}
+ body.pchq-workspace .pcp-plugin__tools{width:100%;padding-left:54px}
+ body.pchq-workspace .pcp-stores li{grid-template-columns:1fr auto;gap:8px 12px}
+ body.pchq-workspace .pcp-store__actions{grid-column:1/-1;justify-content:flex-start}
+ body.pchq-workspace .pcp-store__actions .button{min-height:40px}
+}
