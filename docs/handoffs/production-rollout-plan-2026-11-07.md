@@ -569,3 +569,11 @@
 低优先级：
 - HQ 告警 “s0001.vialcovepeptides.com 连不上” 自 11-03 起未关闭，实测可访问（301）；
 - HQ 上还有 `assaynovalabs.com`、`vialcove-sandbox` 两张证书。
+
+### 2026-11-08 08:15 UTC 政策页面草稿
+
+- 店铺里原来只有两份 WordPress 自带的示例草稿（Privacy Policy #3、Refund and Returns Policy #10），已移到回收站，可恢复。
+- 用店铺自带的“生成常见条款”建了 5 个草稿，并按店铺实际情况填好内容：Shipping policy #11771、Return & refund policy #11772、Terms of service #11773、Privacy policy #11774、Contact us #11775。依据：美国仓 24 小时 / 中国仓 48 小时出单，2–5 天 / 5–8 天送达，UPS/FedEx/USPS，$45；只发美国和 Puerto Rico；仅限研究用途；WhatsApp 24 小时客服；第三方支付；Meta Pixel/CAPI 和退出链接 `?pc_px_optout=1`。
+- `wp_page_for_privacy_policy` → 11774，`woocommerce_refund_returns_page_id` → 11772。服务条款页暂不设为结账条款页，避免结账页链到未发布的草稿；发布后再设。
+- 待用户填写（方括号）：公司法定名称和地址、客服邮箱、适用法律所在地、满 $1,000 运费是免费还是 $15。
+- 发现：满 $1,000 的运费方案名叫 “Free Shipping”，实际收 $15；还有一个“测试”运费方案，挂在已删除的测试商品 11738 上。
