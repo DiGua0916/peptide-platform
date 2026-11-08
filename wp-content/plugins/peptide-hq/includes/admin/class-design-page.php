@@ -24,7 +24,7 @@ final class Design_Page {
 			},
 			19
 		);
-		foreach ( array( 'settings', 'push', 'push_one', 'lock', 'auto', 'test' ) as $do ) {
+		foreach ( array( 'settings', 'push', 'push_one', 'lock', 'auto' ) as $do ) {
 			add_action( 'admin_post_pchq_design_' . $do, array( self::class, 'handle' ) );
 		}
 		add_action( 'admin_enqueue_scripts', array( self::class, 'assets' ), 1001 );
@@ -67,25 +67,13 @@ final class Design_Page {
 				Design_Push::save_settings( $s['master'], $s['lock'], $auto );
 				self::flash( 'success', $auto ? '已开启自动下发：母版店发布装修后，5 分钟内所有店铺自动更新。' : '已关闭自动下发：改完需要手动点“立即下发”。' );
 				break;
-			case 'test':
-				$r = Design_Push::test();
-				if ( is_wp_error( $r ) ) {
-					self::flash( 'error', '测试没通过：' . $r->get_error_message() );
-					break;
-				}
-				$lines = array();
-				$bad   = false;
-				foreach ( $r['stores'] as $st ) {
-					$bad     = $bad || ! $st['ok'];
-					$lines[] = $st['ok'] ? $st['name'] . ( ! empty( $st['master'] ) ? '（母版店自测）' : '' ) . '：通，下载并核对 ' . $st['downloaded'] . ' 个文件 ' . size_format( $st['bytes'] ) . '，用时 ' . $st['seconds'] . ' 秒' : $st['name'] . '：' . $st['message'];
-				}
-				self::flash( $bad ? 'error' : 'success', '测试下发（没有改动任何店铺）：读取母版 ' . $r['read_seconds'] . ' 秒、' . $r['media'] . ' 个图片 / 视频；' . implode( '；', $lines ) . '。' );
-				break;
 			case 'lock':
 				$lock = '1' === ( $_POST['lock'] ?? '' );
 				Design_Push::save_settings( $s['master'], $lock, $s['auto'] );
 				$r = Design_Push::lock_all( $lock );
-				self::flash( $r['failed'] ? 'error' : 'success', ( $lock ? '已锁定' : '已解锁' ) . '店铺装修：' . $r['ok'] . ' 家完成' . ( $r['failed'] ? '；没完成：' . implode( '；', array_slice( $r['failed'], 0, 5 ) ) : '' ) . '。' . ( $lock ? '' : '解锁后店铺可以自己改装修，下次下发会覆盖。' ) );
+				$what = $lock ? '已改为锁定：店铺不能自己改装修。' : '已改为不锁定：店铺可以自己改装修，下次下发会覆盖。';
+				$done = 0 === $r['ok'] && ! $r['failed'] ? '目前除母版店外没有其他店铺，以后新开的店会按这个设置。' : '已通知 ' . $r['ok'] . ' 家店铺' . ( $r['failed'] ? '；没通知到：' . implode( '；', array_slice( $r['failed'], 0, 5 ) ) : '' ) . '。';
+				self::flash( $r['failed'] ? 'error' : 'success', $what . $done );
 				break;
 		}
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::SLUG ) );
@@ -144,7 +132,7 @@ final class Design_Page {
 		// 下发
 		echo '<section class="pcp-card"><div class="pcp-card__head"><h2>下发</h2>' . ( ! empty( $latest['at'] ) ? '<span class="pcp-hint">上次读取母版：' . esc_html( wp_date( 'Y-m-d H:i', (int) $latest['at'] ) ) . ' · 版本 ' . esc_html( substr( (string) $latest['digest'], 0, 8 ) ) . ' · ' . (int) ( $latest['media'] ?? 0 ) . ' 个图片 / 视频</span>' : '' ) . '</div>';
 		echo '<p class="pcp-note">自动下发：<strong>' . ( $settings['auto'] ? '已开启' : '已关闭' ) . '</strong>' . ( $settings['auto'] ? '（每 5 分钟检查母版店，发布后自动更新所有店铺）' : '' ) . ' ' . self::form( 'auto', array( 'auto' => $settings['auto'] ? '0' : '1' ), $settings['auto'] ? '关闭自动下发' : '开启自动下发', 'pcp-link' ) . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-		echo '<p class="pcp-actions">' . self::form( 'push', array(), '立即下发到所有店铺', 'button button-primary', '确定把母版店现在已发布的装修下发给所有店铺？各店铺的首页、页眉、页脚和全局样式会被替换。' ) . ' ' . self::form( 'test', array(), '测试下发（不改动）', 'button' ) . ' '; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '<p class="pcp-actions">' . self::form( 'push', array(), '立即下发到所有店铺', 'button button-primary', '确定把母版店现在已发布的装修下发给所有店铺？各店铺的首页、页眉、页脚和全局样式会被替换。' ) . ' '; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo self::form( 'lock', array( 'lock' => $settings['lock'] ? '0' : '1' ), $settings['lock'] ? '解锁店铺装修' : '锁定店铺装修', 'button', $settings['lock'] ? '解锁后店铺可以自己改装修（下次下发会覆盖）。确定？' : '' ) . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo '<p class="pcp-note">' . ( $settings['lock'] ? '现在是<strong>锁定</strong>：店铺后台看不到编辑入口，也不能发布装修；首页 SEO、域名、菜单、自定义页面不受影响。' : '现在是<strong>未锁定</strong>：店铺可以自己改装修，下次下发会覆盖。' ) . '</p>';
 		if ( $job ) {

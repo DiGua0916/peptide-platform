@@ -197,3 +197,9 @@ html.pc-pay-modal-open, html:has(.pc-pay-account-dialog[open]) { overflow: hidde
  .pc-pay-icon-options{grid-template-columns:repeat(2,minmax(0,1fr))}
  .pc-pay-icon-options .pc-pay-icon-option{flex-wrap:wrap}
 }
+/* 彻底删除：两步确认，不用浏览器弹窗（2026-11-08） */
+.pc-pay-purge { display: inline-flex; align-items: center; gap: 8px; }
+.pc-pay-purge > summary { list-style: none; cursor: pointer; }
+.pc-pay-purge > summary::-webkit-details-marker { display: none; }
+.pc-pay-purge[open] > summary { display: none; }
+.pc-pay-purge form { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0; }

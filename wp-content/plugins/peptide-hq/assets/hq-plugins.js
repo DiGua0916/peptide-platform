@@ -53,10 +53,46 @@
 			});
 		}
 	}
+	// 页面内的确认框（不用浏览器自带弹窗：有些浏览器 / 内置浏览器不显示，点了像没反应）。
+	var dialog = null;
+	var ask = function (message, onYes) {
+		if (!dialog) {
+			dialog = document.createElement('div');
+			dialog.className = 'pcp-confirm';
+			dialog.setAttribute('role', 'dialog');
+			dialog.setAttribute('aria-modal', 'true');
+			dialog.innerHTML = '<div class="pcp-confirm__box"><p class="pcp-confirm__text"></p><div class="pcp-confirm__actions"><button type="button" class="button" data-no>取消</button><button type="button" class="button button-primary" data-yes>确定</button></div></div>';
+			document.body.appendChild(dialog);
+			dialog.addEventListener('click', function (e) { if (e.target === dialog) { dialog.hidden = true; } });
+			document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && dialog && !dialog.hidden) { dialog.hidden = true; } });
+		}
+		dialog.querySelector('.pcp-confirm__text').textContent = message;
+		var yes = dialog.querySelector('[data-yes]');
+		var no = dialog.querySelector('[data-no]');
+		yes.onclick = function () { dialog.hidden = true; onYes(); };
+		no.onclick = function () { dialog.hidden = true; };
+		dialog.hidden = false;
+		yes.focus();
+	};
+	var busy = function (f) {
+		var b = f.querySelector('button[type=submit], button:not([type])');
+		if (b && !b.classList.contains('pcp-switch')) {
+			setTimeout(function () { b.disabled = true; b.setAttribute('aria-busy', 'true'); if (!b.classList.contains('pcp-link')) { b.textContent = '处理中…'; } }, 0);
+		}
+	};
 	document.addEventListener('submit', function (event) {
 		var f = event.target;
 		var message = f && f.getAttribute && f.getAttribute('data-confirm');
-		if (message && !window.confirm(message)) { event.preventDefault(); return; }
+		if (message && f.getAttribute('data-confirmed') !== '1') {
+			event.preventDefault();
+			ask(message, function () {
+				f.setAttribute('data-confirmed', '1');
+				busy(f);
+				if (f.requestSubmit) { f.requestSubmit(); } else { f.submit(); }
+			});
+			return;
+		}
+		if (f && f.classList && !f.classList.contains('pcp-switch-form') && !f.classList.contains('pcp-picker__form')) { busy(f); }
 		if (f && f.classList && f.classList.contains('pcp-switch-form')) {
 			var sw = f.querySelector('.pcp-switch');
 			if (sw) {

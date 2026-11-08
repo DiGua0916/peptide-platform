@@ -200,3 +200,11 @@ body.pchq-workspace .pcp-master-row .pcp-field select{min-height:36px}
 body.pchq-workspace .pcp-master-row+.pcp-note{margin:10px 0 0}
 body.pchq-workspace .pcp-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 @media (max-width:782px){body.pchq-workspace .pcp-master-row,body.pchq-workspace .pcp-master-form{flex-direction:column;align-items:stretch}body.pchq-workspace .pcp-master-row .button{justify-content:center;min-height:44px}}
+
+/* 页面内确认框（2026-11-08） */
+.pcp-confirm{position:fixed;inset:0;z-index:100000;display:grid;place-items:center;padding:16px;background:rgba(17,17,17,.38)}
+.pcp-confirm[hidden]{display:none}
+.pcp-confirm__box{width:min(440px,100%);padding:22px 22px 18px;border-radius:12px;background:#fff;box-shadow:0 20px 50px rgba(0,0,0,.2);font-family:var(--vc-font,inherit)}
+.pcp-confirm__text{margin:0 0 18px;font-size:14px;line-height:22px;color:#171717}
+.pcp-confirm__actions{display:flex;justify-content:flex-end;gap:8px}
+.pcp-confirm__actions .button{min-height:36px;padding:0 16px}
