@@ -350,3 +350,14 @@
 - 回滚：总后台 `current` 指回 `94c322f-hq` 后 reload PHP（新表留着无害）；两台服务器把备份的 `worker.py` 复制回去并删除 `plugins.py`。
 - 主店实测（用户批准 "Test on main store"）：第一次安装安全失败 `web_store_code_root_missing`，没有改动任何东西（web 机清单里主店是先列 `current`（symlink）再列 `releases`，旧代码只看 directory）。修复 `31cbdbc`（按清单顺序尝试 symlink / directory，测试夹具改成和线上一致；旧代码在新夹具下 3 项失败），两台机 `plugins.py` 换成 0077b33c…（上一版备份为 `plugins.py.87e4c4ee`），只读核对：web → `/srv/vialcove/current`，admin → `/srv/vialcove/store-admin/current`。
 - 重试：安装 done（约 25 秒）；两台机 `wp-content/plugins/vc-selftest` → `/srv/vialcove/store-plugins/s0001/vc-selftest`，目录 0755 / 文件 0644，店铺 PHP 用户可读，`wp plugin list` 为 active，正式前台页面头部出现测试 meta，首页 / 购物车 200，总后台显示“已启用 1.0.0”。卸载 done：两台机链接和插件目录删除、`active_plugins` 里没有、前台 meta 消失、首页 / 购物车 200。测试插件已从插件库删除（表和包目录都为空）。剩下空目录 `/srv/vialcove/store-plugins/s0001/`（无害）。
+
+### 清理测试店 s0002 / s0003（用户批准 "s0002/s0003, clean up" + “自动提交，不用问我了”，2026-11-08）
+
+- 背景：两店（总后台 site 10「隔离验收店 B」/ 11「隔离验收店 A」）是生命周期库存建立前的老格式开店（job 无 customer_domain、无域名认领），11-04 的下线因 `inventory_site_missing` 失败，自动工具按设计拒绝猜测归属。0 订单，库各 5 MB 测试数据。改为逐项手动拆除。
+- 备份（两机 `/root/vialcove-backups/retire-s0002-s0003-20261108T0330Z/`，root 0700 / 文件 0600）：web 机两店 `mysqldump`（`sNNNN-db.sql.gz`）+ 数据目录、ledger、nginx / FPM / sshd / 桥接密钥 / 定时任务 / unit（`sNNNN-web.tgz`）；admin 机 owner marker、`shared/wp-config.php`、nginx / FPM / unit（`sNNNN-admin.tgz`）。程序代码与开店模板相同，未备份。
+- admin 机（54.144.250.46）：停用并删除 `vialcove-sNNNN-{uploads,reports}.service`（sshfs 挂载已卸）、nginx 站点、FPM 池（`nginx -t` / `php-fpm -t` 通过后 reload）、系统账号 `vcsNNNN`、目录 `/srv/vialcove/tenant-admin/sNNNN`、证书 `sNNNN.vialcoveresearch.com`。
+- web 机（34.231.148.231）：停用并删除 `vialcove-sNNNN-cron.{timer,service}`、`vialcove-export-sNNNN.service`、`/srv/vialcove-media-export/sNNNN` 绑定挂载；nginx 站点、FPM 池、`45-vialcove-sNNNN.conf` 与 `vcm_sNNNN` 桥接密钥（`sshd -t` 后 reload）；账号 `vcsNNNN` / `vcm_sNNNN`；数据库 `vc_sNNNN` 和 `vcf_` / `vca_` 账号；`/srv/vialcove/tenants/sNNNN`、`/srv/vialcove-data/tenants/sNNNN`；证书 `sNNNN.vialcovepeptides.com`。ledger `sNNNN.json` 移到 `/var/lib/vialcove-provision-web/retired/`（保留记录，不再被备份当成在用店铺）。
+- 墓碑：两机 `lifecycle/tenants/<uuid>/current.json` 写 `purged`（retired_at = 11-04 实际下线请求时间，purge_at = +72 小时）；admin 机覆盖原失败回执 `lifecycle/results/<retirement_id>.json` 为 `purged`。总后台 sync 后两店 `purged`、`summary_cleaned`，告警 37 / 38 和每日统计删除，site 行只剩身份墓碑（店名、密钥、服务器清空）。admin 机 jobs 保留，下一家新店编号为 s0004，不复用。
+- 验证：主店前台 / 购物车、s0001 后台、总后台登录 200；两机 nginx / php-fpm / ssh active；s0001 的 sshfs 挂载正常；monitor、provision worker、两机 `vialcove-tenant-backup` 实跑成功（web 只备份 s0001 库）。旧的 s0002 / s0003 域名不再有店铺响应。
+- 未处理：Cloudflare 上 4 条子域名 DNS 需用户删除；`max_new_stores=4` 仍把两个已完成的老 job 计入名额（新店剩 2 个名额，需要时调大配置）；admin 机 logrotate 自 11-07 失败（`vialcove-hq` 与另一配置重复写了 HQ access log，和本次无关）。
+- 回滚：不可整体恢复（目录 / 账号 / 证书已删）；需要时可用备份的 SQL 和数据目录 + 开店模板手动重建。
