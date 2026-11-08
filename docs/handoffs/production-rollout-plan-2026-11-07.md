@@ -452,3 +452,4 @@
 - 代码 `c579f9d`：`worker.py` 新增 `store_purged()`，admin 机计数时跳过生命周期墓碑为 `purged` 的店（编号仍不复用，下一家是 s0004）；新增测试（Linux root 下 38 项全部通过）。
 - 部署：两台机 `worker.py` 旧哈希一致后替换（备份 `/root/vialcove-backups/store-limit-20261108T0522*`），任务成功。生产只读核对：已计入 0 家，上限 4，空余 4 个名额。上限数值未改，等用户决定。
 - 回滚：两台机用备份恢复 `worker.py`。
+- 用户批准 "Raise to 15"：两台机 `config.json` 的 `max_new_stores` 4 → 15（原配置备份 `/root/vialcove-backups/config.json.before-limit15-*`，属主和权限不变），之后开店任务正常运行。当前已占 0 家，可开 15 家。回滚：用备份恢复 `config.json`。
