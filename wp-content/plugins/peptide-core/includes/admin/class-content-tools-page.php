@@ -13,11 +13,9 @@ final class Content_Tools_Page {
 	private const ACTIONS = array( 'pc_ct_settings', 'pc_ct_indexnow', 'pc_ct_inspect' );
 
 	public static function register_hooks(): void {
-		add_action( 'admin_menu', array( self::class, 'menu' ), 65 );
+		// 2026-11-08 用户要求：店铺后台不需要“搜索引擎工具”，菜单（店铺装修、博客下）和页面操作都不再注册。
+		// 前台的页面标题 / 描述 / 站点验证仍由 Content_Tools 输出，已有设置继续生效。
 		add_action( 'admin_init', array( self::class, 'reject_deferred_ai_request' ), 0 );
-		foreach ( self::ACTIONS as $action ) {
-			add_action( 'admin_post_' . $action, array( self::class, 'handle' ) );
-		}
 	}
 
 	/** Reject legacy URLs before WordPress dispatches an unregistered action. */
