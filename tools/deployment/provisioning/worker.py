@@ -209,7 +209,41 @@ def sync_directory(path):
         os.close(fd)
 
 
+# Ask public resolvers directly (2026-11-08). The cloud VPC resolver caches "no such
+# domain" for the zone's SOA minimum (30 minutes at Cloudflare) when a store is checked
+# before its records exist, which stalled new stores; public resolvers see the records
+# as soon as they are published. Every resolver must agree before a store continues.
+PUBLIC_RESOLVERS = ('1.1.1.1', '8.8.8.8')
+
+
+def public_answers(host, rtype):
+    """Address answers from each public resolver, or None if a lookup could not run."""
+    out = []
+    for resolver in PUBLIC_RESOLVERS:
+        try:
+            p = subprocess.run(['/usr/bin/dig', '+short', '+time=3', '+tries=2', host, rtype, '@' + resolver],
+                               stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=15,
+                               env={'PATH': '/usr/sbin:/usr/bin:/sbin:/bin'})
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        if p.returncode:
+            return None
+        family = socket.AF_INET if rtype == 'A' else socket.AF_INET6
+        found = set()
+        for line in p.stdout.decode(errors='replace').split():
+            try:
+                socket.inet_pton(family, line)
+                found.add(line)
+            except OSError:
+                continue  # CNAME targets and other non-address lines
+        out.append(found)
+    return out
+
+
 def dns_ready(host, expected):
+    answers = public_answers(host, 'A')
+    if answers is not None:
+        return all(found == {expected} for found in answers)
     try:
         return {x[4][0] for x in socket.getaddrinfo(host, 443, socket.AF_INET)} == {expected}
     except socket.gaierror:
@@ -221,6 +255,11 @@ def customer_dns_ready(t, c):
     for host in [t['customer_domain'], 'www.' + t['customer_domain']]:
         if not dns_ready(host, c['public_ip']):
             return False
+        v6 = public_answers(host, 'AAAA')
+        if v6 is not None:
+            if any(v6):
+                return False
+            continue
         try:
             if socket.getaddrinfo(host, 443, socket.AF_INET6):
                 return False
