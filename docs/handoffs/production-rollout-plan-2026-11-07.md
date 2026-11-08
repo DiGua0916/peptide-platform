@@ -500,3 +500,14 @@
 - 新增“收银台打开方式”：按支付方返回（默认）、嵌入结账页、跳转到收银台。HQ 在创建成功后按设置改写类型并随这次付款保存。只改 HQ（`class-hub-accounts.php`、`class-hub.php`、`class-hub-page.php`），店铺不用更新。
 - 部署：HQ `8161aa9-hq`（基于 `0f774c4-hq`），PHP 语法检查通过，登录页 200。两个付款方式（信用卡、WALLET）读取结果都是 `auto`，行为不变。编辑弹窗里新选项显示正常。未保存任何付款方式。
 - WALLET 的可信域名仍为空。之前的记录里，PP 渠道的收银台在 `bestgoodsforyou.top`，信用卡在 `marina-style.com`。需要用 WALLET 实际跳转一次，再从付款记录读出真实域名。
+
+### 2026-11-08 07:05 UTC 优惠码：未付款订单不再占用使用次数
+
+- 问题：WELCOME5 每位顾客限用 1 次，WooCommerce 把“待付款”订单也算一次。顾客看不到待付款订单，第一次付款失败后重新下单，WELCOME5 会被自动移除。
+- 走过的弯路：曾直接把 WELCOME5 的每人限用改成 0，结果首单优惠（弹窗）要求限用 1 次而失效（`First_Order_Offer::coupon()` 返回 null），已立即改回 1，首单优惠恢复正常。
+- 修复：`peptide-core/includes/class-coupon-rules.php` 增加 `woocommerce_update_coupon_usage_invalid_statuses` 过滤，加入 `pending`。付款成功（处理中/已完成/保留）才计次，取消、失败退回。首单规则（只看已付款订单）不变。
+- 部署：
+  - 店铺前台 `637fb55-web01`（基于 `0f774c4-web01`）：首页、购物车 200，过滤生效，首单优惠 ok。
+  - 店铺后台 `637fb55-s0001`：登录页 200。
+  - 新店模板 web/admin：已更新，备份在 `/home/ubuntu/vialcove-deploy-backups/coupon-usage-20261108/`。
+- 测试订单 #11765 在改动前已计入一次，60 分钟未付款自动取消后会退回。
