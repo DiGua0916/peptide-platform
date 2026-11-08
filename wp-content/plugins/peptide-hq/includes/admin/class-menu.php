@@ -323,7 +323,9 @@ final class Menu {
 
 			case 'pchq_site_rename':
 				Sites::rename( $site, $text( 'name' ) );
-				self::flash( 'success', __( 'Name saved.', 'peptide-hq' ) );
+				// 同步到店铺自己的名称；店铺连不上时总后台先记住，店铺下次上线会把它自己的名称报回来。
+				$pushed = Client::config( (int) $site, array( 'name' => $text( 'name' ) ) );
+				self::flash( is_wp_error( $pushed ) ? 'error' : 'success', is_wp_error( $pushed ) ? '总后台已记下新名称，但没能同步到店铺：' . $pushed->get_error_message() : '店铺名称已保存并同步到店铺。' );
 				if ( 'plugins' === $text( 'return' ) ) {
 					// 插件管理页里改名后回到同一个店铺。
 					set_transient( 'pchq_plugins_flash_' . get_current_user_id(), array( 'success', '店铺名称已保存。' ), 120 );

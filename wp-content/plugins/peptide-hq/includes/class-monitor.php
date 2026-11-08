@@ -115,17 +115,20 @@ final class Monitor {
 			return false;
 		}
 
-		Sites::update(
-			$id,
-			array(
-				'status'     => 'online',
-				'fails'      => 0,
-				'error'      => '',
-				'info'       => (string) wp_json_encode( $status ),
-				'last_check' => $now,
-				'last_ok'    => $now,
-			)
+		$fields = array(
+			'status'     => 'online',
+			'fails'      => 0,
+			'error'      => '',
+			'info'       => (string) wp_json_encode( $status ),
+			'last_check' => $now,
+			'last_ok'    => $now,
 		);
+		// 店铺在自己后台改了名称，总后台跟着改（2026-11-08 之前只在首次接入时记一次）。
+		$name = mb_substr( trim( sanitize_text_field( (string) ( $status['name'] ?? '' ) ) ), 0, 190 );
+		if ( '' !== $name && $name !== (string) $site['name'] ) {
+			$fields['name'] = $name;
+		}
+		Sites::update( $id, $fields );
 		Alerts::resolve( $id, 'offline' );
 		Alerts::resolve( $id, 'denied' );
 

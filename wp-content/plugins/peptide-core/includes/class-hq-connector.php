@@ -539,6 +539,10 @@ final class Hq_Connector {
 		if ( array_key_exists( 'blog_public', $p ) ) {
 			update_option( 'blog_public', ! empty( $p['blog_public'] ) ? '1' : '0' );
 		}
+		// 总后台改店铺名称：同步到店铺自己的名称（2026-11-08）。
+		if ( isset( $p['name'] ) && is_string( $p['name'] ) && '' !== trim( sanitize_text_field( $p['name'] ) ) ) {
+			update_option( 'blogname', mb_substr( trim( sanitize_text_field( $p['name'] ) ), 0, 190 ) );
+		}
 		if ( isset( $p['tracking'] ) && is_array( $p['tracking'] ) ) {
 			$t   = $p['tracking'];
 			$now = Tracking\Tracker::settings();
