@@ -719,3 +719,8 @@
 | 正常 Chrome UA + cookie，伪造 page_view 直接打 API | 200，建了 1 个访客（故意针对我们接口的攻击者场景；测试行已删） |
 - 剩余风险：只有"先用真浏览器 UA 拿 cookie、再伪造 page_view 打接口"的定向脚本能混进来，真实爬虫/扫描器不会这么做；真浏览器内核的无头爬虫还要过 Cloudflare Bot Fight Mode + navigator.webdriver 检查 + 6 秒互动门槛。
 - 复核时 6 店访客：主店 0、s0006 1（13:15 真实访问）、其余 0。
+
+### 2026-11-08 店铺复制后缺“修订版”
+- 现象：子店 装修 → 模板库 只有“VialCove [系统模板]”（锁定）和“VialCove · 首页精简预览 · 20261101”（可编辑），没有可改的“VialCove · 修订版”。原因：clone.py 把主店的下发模板改成子店的系统模板（`_pc_system_template=m684`），但没有像正常下发第一次那样复制一份修订版（`_pc_revision_of`）。
+- 数据修复：s0006–s0010 各用 `Templates::duplicate(684)` 建 #11783 “VialCove · 修订版”，打 `_pc_revision_of=m684`，`revision_created=true`。
+- 工具修复：clone.py 在 design 部分复制完、刷缓存后，用 `wp eval REVISION_PHP` 给每个没有修订版的系统模板补一份；两台主机 `/usr/local/lib/vialcove-provision/clone.py` 已更新（备份 `clone.py.<stamp>`）。
