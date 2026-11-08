@@ -317,7 +317,18 @@ final class Ingest {
 			$row = $wpdb->get_row( $wpdb->prepare( 'SELECT id, user_id FROM ' . Schema::table( 'visitors' ) . ' WHERE vid = %s', $vid ), ARRAY_A );
 			$impression_error = (bool) $wpdb->last_error;
 			$visitor = array( 'id' => (int) ( $row['id'] ?? 0 ), 'user_id' => (int) ( $row['user_id'] ?? 0 ) );
-		} else { $visitor = Tracker::visitor( $vid, $now_ms ); }
+		} else {
+			// 清过访客表后，早就开着的旧标签页还会继续发心跳/离开事件：这种没有 page_view 的批次不能凭空建新访客。
+			// 直接确认收下（让浏览器别再重发），但什么都不记。等那个标签页真正重新加载页面（有 page_view）才算访客。
+			if ( ! array_filter( $legacy, static fn( $c ) => 'page_view' === $c['type'] ) ) {
+				$known = $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . Schema::table( 'visitors' ) . ' WHERE vid = %s', $vid ) );
+				if ( ! $known && ! $wpdb->last_error ) {
+					foreach ( $clean as $c ) { $ack[] = $c['event_id']; }
+					return self::result( $ack, $rejected, 0, 0, $attempts, $contexts );
+				}
+			}
+			$visitor = Tracker::visitor( $vid, $now_ms );
+		}
 		if ( $legacy && ! $visitor['id'] ) {
 			foreach ( $clean as $c ) {
 				$rejected[] = array( 'event_id' => $c['event_id'], 'code' => 'server_error', 'retry' => true );
