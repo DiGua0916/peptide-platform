@@ -65,6 +65,7 @@ final class Plugin {
 		Campaign_Countdown::register_hooks();
 		First_Order_Offer::register_hooks();
 		Postal_Assist::register_hooks();
+		US_Territories::register_hooks();
 		Exit_Intent::register_hooks();
 		Modules\Product_Broadcast::register_hooks();
 		Api\Product_Broadcast_Controller::register_hooks();
