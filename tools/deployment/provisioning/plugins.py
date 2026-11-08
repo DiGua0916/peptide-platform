@@ -283,6 +283,17 @@ def code_root(path):
     raise ValueError('store_code_root_missing')
 
 
+def inventory_code_root(paths):
+    """First inventory path (release link or directory, in listed order) that holds a WordPress root."""
+    for entry in paths:
+        if entry.get('kind', 'directory') in ('directory', 'symlink'):
+            try:
+                return code_root(entry['path'])
+            except ValueError:
+                continue
+    raise ValueError('store_code_root_missing')
+
+
 def resolve_admin(c, store_uuid):
     inv_path = Path(c.get('lifecycle_inventory', INVENTORY_PATH))
     if inv_path.exists():
@@ -290,8 +301,7 @@ def resolve_admin(c, store_uuid):
         for site in data.get('sites', []):
             if site.get('uuid') == store_uuid and 'admin' in site:
                 require(STORE_RE.fullmatch(site['slug']), 'store_slug')
-                roots = [p['path'] for p in site['admin']['paths'] if p.get('kind', 'directory') == 'directory']
-                return {'slug': site['slug'], 'root': code_root(roots[0]), 'user': site['admin']['users'][0]}
+                return {'slug': site['slug'], 'root': inventory_code_root(site['admin']['paths']), 'user': site['admin']['users'][0]}
     jobs = Path(c['state_root']) / 'jobs'
     for state_file in sorted(jobs.glob('*/state.json')) if jobs.is_dir() else []:
         try:
@@ -312,8 +322,7 @@ def resolve_web(c, slug, store_uuid):
         for site in data.get('sites', []):
             if site.get('uuid') == store_uuid:
                 require(site.get('slug') == slug and 'web' in site, 'store_identity_changed')
-                roots = [p['path'] for p in site['web']['paths'] if p.get('kind', 'directory') == 'directory']
-                return {'slug': slug, 'root': code_root(roots[0]), 'user': site['web']['users'][0]}
+                return {'slug': slug, 'root': inventory_code_root(site['web']['paths']), 'user': site['web']['users'][0]}
     config = Path(c['web_data_root']) / slug / 'wp-config.php'
     text = read_checked(config, owners=(0, os.geteuid()) + tuple(
         [pwd.getpwnam('vc' + slug).pw_uid] if user_exists('vc' + slug) else []), limit=65536).decode('utf-8', 'replace')

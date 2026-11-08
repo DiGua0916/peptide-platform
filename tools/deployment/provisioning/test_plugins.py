@@ -81,7 +81,11 @@ class Hosts(unittest.TestCase):
         (w / 'ledger').mkdir(parents=True, mode=0o700)
         inv = {'version': 1, 'sites': [{'site_id': 2, 'uuid': FIRST, 'slug': 's0001',
                'admin': {'paths': [{'path': str(a / 'srv/store-admin'), 'kind': 'directory'}], 'users': ['vcs0001']},
-               'web': {'paths': [{'path': str(w / 'srv/current'), 'kind': 'directory'}], 'users': ['vialweb01']}}]}
+               # mirrors production: the release link first (kind symlink), then the releases dir and data dirs
+               'web': {'paths': [{'path': str(w / 'srv/current'), 'kind': 'symlink'},
+                                 {'path': str(w / 'srv/releases'), 'kind': 'directory'},
+                                 {'path': str(w / 'srv/data'), 'kind': 'directory'},
+                                 {'path': str(w / 'srv/export.sh'), 'kind': 'file'}], 'users': ['vialweb01', 'vcm_s0001']}}]}
         self.private(a / 'inventory.json', inv)
         self.private(w / 'inventory.json', inv)
         self.admin_c = {'role': 'admin', 'hq_user': 'vchq', 'state_root': str(state), 'admin_store_root': str(a / 'srv/tenant-admin'),
