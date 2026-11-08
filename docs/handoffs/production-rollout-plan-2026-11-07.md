@@ -728,3 +728,8 @@
 ### 2026-11-08 系统设置 → 联系方式
 - 客服联系方式（WhatsApp / Telegram / 邮箱 / 浮动按钮）以前只在 WooCommerce 下的“VialCove 设置”，店铺工作区看不到。新增 `Admin\Contact_Page`（`admin.php?page=pc-system&section=contact`），和原页面读写同一份 `peptide_core_settings['support']`，通过 `Support_Contacts::sanitize()` 校验；原页面加了跳转提示。系统设置卡片顺序：基础设置 → 联系方式 → …
 - 部署：主店 release、s0006–s0010 前台 + 后台副本、store-admin 23cf5a7、yy-sync 两个模板（4 个文件）。第一轮循环先改了主店导致哈希基准变化、子店被跳过，第二轮按旧哈希补齐；两台 `wp eval` 核实 sections 含 contact。备份 `contact-page-*`（两台）。
+
+### 2026-11-08 前台品牌字改回英文名 + 裸域名 301
+- 之前让标题 / logo alt 跟随店铺名称，结果子店前台出现投手中文名（李军、阳…）。改为主题函数 `vc_brand_name()`（默认 `VialCovePeptides`，可用 `vc_brand_name` 过滤器改），标题、logo alt、页头/页脚 aria-label、旧页脚版权、hero eyebrow、`og:site_name` 都用它；店铺名称只用于后台和邮件。6 店核实标题均为 “VialCovePeptides — A clearer view of peptides”。
+- 顺带发现 5 家子店的裸域名（vialcovepro.com 等）返回 421 “Unknown store host”（主店靠 Cloudflare 301 到 www）。`Management_Host::guard_request()` 现在对公开地址的裸域名 / www 变体做 301 到公开地址（只限 GET/HEAD），5 个裸域名核实 301 → www，路径保留。
+- 部署：主店 release、s0006–s0010 前台与后台副本、store-admin、两个模板（theme 4 文件 + class-seo + class-management-host）。备份 `brand-name-*`、`bare-redirect-*`（两台）。
