@@ -32,6 +32,11 @@
 		var f = event.target;
 		var message = f && f.getAttribute && f.getAttribute('data-confirm');
 		if (message && !window.confirm(message)) { event.preventDefault(); return; }
+		if (f && f.classList && f.classList.contains('pcp-switch-form')) {
+			var sw = f.querySelector('.pcp-switch');
+			if (sw) { sw.setAttribute('aria-checked', sw.getAttribute('aria-checked') === 'true' ? 'false' : 'true'); setTimeout(function () { sw.disabled = true; }, 0); }
+			return;
+		}
 		if (f && f.classList && f.classList.contains('pcp-inline')) {
 			var b = f.querySelector('button');
 			if (b) { setTimeout(function () { b.disabled = true; }, 0); }

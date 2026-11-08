@@ -320,6 +320,15 @@ final class Hq_Connector {
 		);
 		register_rest_route(
 			self::NS,
+			'/hq/apps',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( self::class, 'apps_route' ),
+				'permission_callback' => $auth,
+			)
+		);
+		register_rest_route(
+			self::NS,
 			'/hq/config',
 			array(
 				'methods'             => 'POST',
@@ -327,6 +336,54 @@ final class Hq_Connector {
 				'permission_callback' => $auth,
 			)
 		);
+	}
+
+	/**
+	 * 总后台“插件管理 → 店铺应用”开关某个应用（2026-11-08）。以店铺管理员身份执行，走应用自己的校验。
+	 *
+	 * @return array|\WP_Error 所有应用现在的开关
+	 */
+	public static function apps_route( \WP_REST_Request $request ) {
+		$p   = (array) $request->get_json_params();
+		$key = sanitize_key( (string) ( $p['key'] ?? '' ) );
+		if ( '' === $key || ! array_key_exists( 'on', $p ) || ! is_bool( $p['on'] ) ) {
+			return new \WP_Error( 'pc_app_request', '请求无效。', array( 'status' => 400 ) );
+		}
+		$previous = get_current_user_id();
+		$user     = self::login_user();
+		if ( ! $user ) {
+			return new \WP_Error( 'pc_app_user', '店铺没有可用的管理员账号。', array( 'status' => 409 ) );
+		}
+		wp_set_current_user( $user );
+		try {
+			$done = App_Switch::set( $key, $p['on'] );
+		} finally {
+			wp_set_current_user( $previous );
+		}
+		if ( is_wp_error( $done ) ) {
+			$done->add_data( array( 'status' => 409 ) );
+			return $done;
+		}
+		Activity_Log::log( 'settings', $p['on'] ? 'app_on' : 'app_off', array( 'type' => 'app', 'id' => 0, 'label' => $key ), array( 'via' => 'HQ' ), $user );
+		return array( 'apps' => self::apps() );
+	}
+
+	/** 一次性登录可以直接打开某个应用的设置页：app_<应用键>。 */
+	private static function login_target( string $to ): string {
+		if ( isset( self::PLATFORM_PAGES[ $to ] ) ) {
+			return self::PLATFORM_PAGES[ $to ];
+		}
+		if ( 'apps_center' === $to && class_exists( Admin\Apps_Page::class ) ) {
+			return 'admin.php?page=' . Admin\Apps_Page::SLUG;
+		}
+		if ( preg_match( '/^app_([a-z0-9-]{1,40})$/D', $to, $m ) && class_exists( Admin\Apps_Page::class ) && isset( Admin\Apps_Page::apps()[ $m[1] ] ) ) {
+			return 'admin.php?page=' . Admin\Apps_Page::SLUG . '&app=' . $m[1];
+		}
+		return '';
+	}
+
+	private static function allowed_target( string $to ): bool {
+		return in_array( $to, self::PLATFORM_PAGES, true ) || 1 === preg_match( '/^admin\.php\?page=pc-apps(?:&app=[a-z0-9-]{1,40})?$/D', $to );
 	}
 
 	/** 由总后台决定的店铺设置（店铺后台不显示这些开关）。 */
@@ -373,6 +430,27 @@ final class Hq_Connector {
 		return self::config();
 	}
 
+	/** 应用中心里内置应用的开关（总后台“插件管理 → 店铺应用”只读显示）。出错时返回空列表，不影响店铺状态。 */
+	private static function apps(): array {
+		$out = array();
+		try {
+			if ( ! class_exists( Admin\Apps_Page::class ) ) {
+				return $out;
+			}
+			foreach ( Admin\Apps_Page::apps() as $key => $app ) {
+				$out[] = array(
+					'key'  => (string) $key,
+					'name' => (string) $app['name'],
+					'text' => (string) ( $app['text'] ?? '' ),
+					'on'   => (bool) $app['on'],
+				);
+			}
+		} catch ( \Throwable $e ) {
+			return array();
+		}
+		return $out;
+	}
+
 	/** 店铺状态：名称、地址、版本、域名、待发货订单、最近一笔订单的时间，以及总后台下发的设置。 */
 	public static function status(): array {
 		$last    = function_exists( 'wc_get_orders' ) ? wc_get_orders( array( 'limit' => 1, 'orderby' => 'date', 'order' => 'DESC', 'type' => 'shop_order', 'return' => 'objects' ) ) : array();
@@ -400,6 +478,7 @@ final class Hq_Connector {
 			'config'      => self::config(),
 			'theme'       => $theme->get( 'Name' ) . ' ' . $theme->get( 'Version' ),
 			'plugins'     => $plugins,
+			'apps'        => self::apps(),
 			'versions'    => array(
 				'plugin' => PEPTIDE_CORE_VERSION,
 				'wp'     => get_bloginfo( 'version' ),
@@ -512,7 +591,7 @@ final class Hq_Connector {
 			'pc_hq_login_' . hash( 'sha256', $token ),
 			array_merge( array(
 				'user' => $user,
-				'to'   => self::PLATFORM_PAGES[ $to ] ?? '',
+				'to'   => self::login_target( $to ),
 			), Management_Host::enabled() ? array( 'management_url' => Management_Host::management_url(), 'uuid' => self::uuid() ) : array() ),
 			self::LOGIN_TTL
 		);
@@ -544,7 +623,7 @@ final class Hq_Connector {
 		wp_set_auth_cookie( $user, false, is_ssl() );
 		Activity_Log::log( 'login', 'login', array( 'type' => 'user', 'id' => $user, 'label' => get_userdata( $user )->user_login ), array( 'via' => 'HQ' ), $user );
 		$to = (string) ( $data['to'] ?? '' );
-		wp_safe_redirect( admin_url( in_array( $to, self::PLATFORM_PAGES, true ) ? $to : '' ) );
+		wp_safe_redirect( admin_url( self::allowed_target( $to ) ? $to : '' ) );
 		exit;
 	}
 

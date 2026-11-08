@@ -79,6 +79,16 @@ final class Store {
 		return array_merge( array( 'configId' => self::CONFIG_ID, 'revision' => 0, 'updatedAt' => null ), $disabled );
 	}
 
+	/** 总后台“插件管理”的开关（2026-11-08）：以当前已应用的设置为准，只改 enabled 并立即应用；校验与普通保存相同。 */
+	public static function set_enabled( bool $on ) {
+		$record = self::record();
+		if ( is_wp_error( $record ) ) { return $record; }
+		$config = $record['state']['published']['config'];
+		if ( ! is_array( $config ) ) { return self::unavailable(); }
+		$config['enabled'] = $on;
+		return self::save( $config, (int) $record['state']['revision'], true );
+	}
+
 	/** Save draft, or atomically save and apply. Invalid/stale requests write nothing. */
 	public static function save( $input, int $expected_revision, bool $publish = false ) {
 		if ( ! self::can_manage() ) { return self::forbidden(); }
