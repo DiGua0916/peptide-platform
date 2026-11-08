@@ -261,8 +261,9 @@ final class Store_Plugins {
 		if ( ! $site || ! preg_match( '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/D', (string) $site['uuid'] ) ) {
 			return new \WP_Error( 'pchq_plugin_site', '店铺身份不完整，不能安装插件。' );
 		}
-		if ( 'retired' === ( $site['status'] ?? '' ) ) {
-			return new \WP_Error( 'pchq_plugin_site', '店铺已停用。' );
+		if ( 'retired' === ( $site['status'] ?? '' ) || ! Site_Lifecycle::active( $site_id ) ) {
+			// 和店铺列表同一规则：正在下线 / 已停用的店铺不在总后台显示，也不能装卸插件。
+			return new \WP_Error( 'pchq_plugin_site', '店铺已停用或正在下线，不能安装或卸载插件。' );
 		}
 		$package = self::latest( $slug );
 		if ( ! $package ) {
