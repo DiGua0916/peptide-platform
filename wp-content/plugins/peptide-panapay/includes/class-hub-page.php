@@ -193,6 +193,7 @@ final class Hub_Page {
 		$id = (int) ( $row['site_id'] ?? 0 );
 		$name = isset( $sites[ $id ] ) ? $sites[ $id ]['name'] : '已移除店铺 #' . $id;
 		$account_id = (string) ( $row['account_id'] ?? 'default' );
+		if ( isset( $accounts[ $account_id ] ) && self::is_on( $accounts[ $account_id ]['purged'] ?? 'no' ) ) { unset( $accounts[ $account_id ] ); }
 		$account_label = (string) ( $accounts[ $account_id ]['account_name'] ?? '' );
 		if ( '' === $account_label ) { $account_label = (string) ( $accounts[ $account_id ]['title'] ?? '' ); }
 		if ( '' === $account_label && ! isset( $accounts[ $account_id ] ) ) { $gone = Hub_Accounts::purged_label( $account_id ); $account_label = '' !== $gone ? $gone . '（已彻底删除）' : ''; }
@@ -220,6 +221,7 @@ final class Hub_Page {
 
 	private static function render_settings( array $accounts, array $sites, ?array $notice = null ): void {
 		$revision = $accounts ? (int) reset( $accounts )['revision'] : 0;
+		$accounts = array_filter( $accounts, static fn( array $account ): bool => ! self::is_on( $account['purged'] ?? 'no' ) );
 		$show_deleted = isset( $_GET['deleted'] ) && '1' === $_GET['deleted'];
 		$deleted_count = count( array_filter( $accounts, static fn( array $account ): bool => self::is_on( $account['deleted'] ?? 'no' ) ) );
 		$visible_accounts = array_filter( $accounts, static fn( array $account ): bool => self::is_on( $account['deleted'] ?? 'no' ) === $show_deleted );
@@ -251,7 +253,7 @@ final class Hub_Page {
 				<div class="pc-pay-account-copy"><div class="pc-pay-account-title"><h3><?php echo esc_html( $label ); ?></h3><span class="pc-pay-state"><?php echo esc_html( $deleted ? '已删除' : ( $archived ? '已归档' : ( $enabled ? '已开启' : '已关闭' ) ) ); ?></span><?php if ( self::is_on( $account['test_mode'] ) ) : ?><span class="pc-pay-state">测试模式</span><?php endif; ?></div>
 					<p class="pc-pay-muted"><?php echo esc_html( $account['title'] ); ?> · <?php echo esc_html( self::is_on( $account['all_sites'] ) ? '全部已接入店铺' : '指定 ' . count( $account['sites'] ) . ' 个店铺' ); ?></p>
 				</div>
-				<?php if ( $deleted ) : ?><div class="pc-pay-method-actions"><span class="pc-pay-muted">恢复后仍为已归档</span><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><?php self::action_fields( $account_id, $revision ); ?><button class="button" type="submit" name="operation" value="restore_deleted">恢复到归档</button></form><?php if ( 'default' !== $account_id ) : ?><details class="pc-pay-purge"><summary class="button button-link-delete">彻底删除</summary><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><?php self::action_fields( $account_id, $revision ); ?><span class="pc-pay-muted">参数和密钥会被清除，不能恢复；交易记录保留名称。</span><button class="button button-primary" type="submit" name="operation" value="purge" aria-label="<?php echo esc_attr( '确认彻底删除付款方式 ' . $label ); ?>">确认彻底删除</button></form></details><?php endif; ?></div>
+				<?php if ( $deleted ) : ?><div class="pc-pay-method-actions"><span class="pc-pay-muted">恢复后仍为已归档</span><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><?php self::action_fields( $account_id, $revision ); ?><button class="button" type="submit" name="operation" value="restore_deleted">恢复到归档</button></form><details class="pc-pay-purge"><summary class="button button-link-delete">彻底删除</summary><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><?php self::action_fields( $account_id, $revision ); ?><span class="pc-pay-muted">参数和密钥会被清除，不能恢复；交易记录保留名称。</span><button class="button button-primary" type="submit" name="operation" value="purge" aria-label="<?php echo esc_attr( '确认彻底删除付款方式 ' . $label ); ?>">确认彻底删除</button></form></details></div>
 				<?php elseif ( ! $archived ) : ?><div class="pc-pay-method-actions"><a class="button" href="<?php echo esc_url( self::url( array( 'edit_account' => $account_id ) ) ); ?>" <?php echo $id === $account_id ? 'data-pc-pay-open' : ''; ?>>编辑</a>
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><?php self::action_fields( $account_id, $revision ); ?><button class="button" type="submit" name="operation" value="<?php echo $enabled ? 'disable' : 'enable'; ?>"><?php echo $enabled ? '关闭' : '开启'; ?></button></form>
 					<details class="pc-pay-archive"><summary>更多</summary><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><?php self::action_fields( $account_id, $revision ); ?><p>归档后停止新支付，保留历史记录与在途结果。</p><button class="button" type="submit" name="operation" value="archive">归档付款方式</button></form></details>

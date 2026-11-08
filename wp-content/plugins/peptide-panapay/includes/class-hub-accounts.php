@@ -146,7 +146,7 @@ final class Hub_Accounts {
 		self::guard_revision( $snapshot['book']['revision'], $revision );
 		$accounts = $snapshot['book']['accounts'];
 		if ( ! self::valid_id( $id ) || ! isset( $accounts[ $id ] ) ) { throw new \InvalidArgumentException( 'Payment account was not found.' ); }
-		if ( ! self::flag( $accounts[ $id ]['deleted'] ) ) { throw new \InvalidArgumentException( 'Payment account is not deleted.' ); }
+		if ( ! self::flag( $accounts[ $id ]['deleted'] ) || self::flag( $accounts[ $id ]['purged'] ) ) { throw new \InvalidArgumentException( 'Payment account is not deleted.' ); }
 		$accounts[ $id ]['deleted'] = 'no';
 		$accounts[ $id ]['archived'] = 'yes';
 		$accounts[ $id ]['enabled'] = 'no';
@@ -166,8 +166,7 @@ final class Hub_Accounts {
 		self::guard_revision( $snapshot['book']['revision'], $revision );
 		$accounts = $snapshot['book']['accounts'];
 		if ( ! self::valid_id( $id ) || ! isset( $accounts[ $id ] ) ) { throw new \InvalidArgumentException( 'Payment account was not found.' ); }
-		if ( 'default' === $id ) { throw new \InvalidArgumentException( 'The original payment account cannot be removed.' ); }
-		if ( ! self::flag( $accounts[ $id ]['deleted'] ) ) { throw new \InvalidArgumentException( 'Payment account is not deleted.' ); }
+		if ( ! self::flag( $accounts[ $id ]['deleted'] ) || self::flag( $accounts[ $id ]['purged'] ) ) { throw new \InvalidArgumentException( 'Payment account is not deleted.' ); }
 		$purged = get_option( self::PURGED_OPTION, array() );
 		$purged = is_array( $purged ) ? $purged : array();
 		$purged[ $id ] = array(
@@ -175,7 +174,12 @@ final class Hub_Accounts {
 			'account_name' => mb_substr( trim( wp_strip_all_tags( (string) ( $accounts[ $id ]['account_name'] ?? '' ), true ) ), 0, 120 ),
 			'purged_at'    => time(),
 		);
-		unset( $accounts[ $id ] );
+		if ( 'default' === $id ) {
+			// 旧版接口和店铺迁移仍按 default 读取这一条，所以只清空参数和密钥并隐藏，不移除记录。
+			$accounts[ $id ] = array_merge( self::defaults( 'default' ), array( 'all_sites' => 'no', 'archived' => 'yes', 'deleted' => 'yes', 'purged' => 'yes' ) );
+		} else {
+			unset( $accounts[ $id ] );
+		}
 		self::commit( $snapshot, $accounts );
 		update_option( self::PURGED_OPTION, array_slice( $purged, -500, null, true ), false );
 	}
@@ -192,7 +196,7 @@ final class Hub_Accounts {
 		return array( 'id' => $id, 'protocol' => 'panapay', 'account_name' => '', 'enabled' => 'no', 'title' => 'Credit card',
 			'description' => 'Continue to the secure payment page to pay for your order.', 'gateway' => '', 'mchid' => '', 'secret' => '',
 			'mode' => '2', 'tag' => '', 'test_mode' => 'yes', 'payment_hosts' => array(), 'payment_icons' => array(), 'iframe_height' => 530,
-			'all_sites' => 'yes', 'sites' => array(), 'archived' => 'no', 'deleted' => 'no' );
+			'all_sites' => 'yes', 'sites' => array(), 'archived' => 'no', 'deleted' => 'no', 'purged' => 'no' );
 	}
 
 	/**
