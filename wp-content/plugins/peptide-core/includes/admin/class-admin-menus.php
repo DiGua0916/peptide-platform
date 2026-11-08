@@ -82,6 +82,9 @@ final class Admin_Menus {
 		add_action( 'admin_menu', array( self::class, 'add_menus' ), 60 );
 		add_action( 'admin_menu', array( self::class, 'remove_menus' ), 1000 );
 		add_action( 'admin_menu', array( self::class, 'order_menu' ), 10000 );
+		// 第三方插件可能在更晚的时机才加菜单，所以最终顺序在 menu_order 过滤器里定（WordPress 在所有菜单注册完之后调用）。
+		add_filter( 'custom_menu_order', '__return_true' );
+		add_filter( 'menu_order', array( self::class, 'final_order' ), 10000 );
 		add_filter( 'parent_file', array( self::class, 'parent_file' ), 20 );
 		add_filter( 'submenu_file', array( self::class, 'submenu_file' ), 20 );
 		add_filter( 'woocommerce_settings_tabs_array', array( self::class, 'settings_tabs' ), 999 );
@@ -289,14 +292,30 @@ final class Admin_Menus {
 			unset( $items[ $data ] );
 		}
 		$items = array_values( array_filter( $items, static fn( $item ) => self::ANALYTICS !== ( $item[2] ?? '' ) ) );
-		// 用户 2026-11-09：访客数据紧跟在“数据”后面；第三方“运营套件”挪到访客数据原来的位置（推广人之后、博客之前）。
-		$move( 'pc-visitors', Data_Pages::SLUG );
-		$move( 'cbs-dashboard', 'pc-referrals' );
-		$move( 'edit.php', in_array( 'cbs-dashboard', array_column( $items, 2 ), true ) ? 'cbs-dashboard' : 'pc-referrals' );
 		$menu = array(); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		foreach ( $items as $i => $item ) {
 			$menu[ ( $i + 1 ) * 5 ] = $item; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 		}
+	}
+
+	/**
+	 * 用户 2026-11-09：访客数据紧跟在“数据”后面；第三方“运营套件”（cbs-dashboard）放到访客数据原来的位置（推广人之后、博客之前）。
+	 * 收到的是当前顺序的菜单 slug 列表，返回调整后的列表；没列到的项保持原位。
+	 */
+	public static function final_order( $order ): array {
+		$order = array_values( array_filter( (array) $order, 'is_string' ) );
+		$move  = static function ( string $slug, string $after ) use ( &$order ): void {
+			$from = array_search( $slug, $order, true );
+			if ( false === $from ) { return; }
+			array_splice( $order, $from, 1 );
+			$to = array_search( $after, $order, true );
+			if ( false === $to ) { array_splice( $order, $from, 0, array( $slug ) ); return; }
+			array_splice( $order, $to + 1, 0, array( $slug ) );
+		};
+		$move( 'pc-visitors', Data_Pages::SLUG );
+		$move( 'cbs-dashboard', 'pc-referrals' );
+		$move( 'edit.php', in_array( 'cbs-dashboard', $order, true ) ? 'cbs-dashboard' : 'pc-referrals' );
+		return $order;
 	}
 
 	/** 商品菜单：改名、排序，去掉用不上的子菜单（其他插件加的子菜单放在最后，不去掉）。 */
