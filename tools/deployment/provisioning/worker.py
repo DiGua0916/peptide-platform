@@ -479,6 +479,10 @@ def wrapper(t, config, shared=False):
         for name in ['uploads', 'reports']:
             guard += "if (!str_contains((string)file_get_contents('/proc/self/mountinfo'), '" + str(t['data'] / name) + " ')) {http_response_code(503);exit('Storage temporarily unavailable.');}\n"
     write(t['public'] / 'wp-config.php', '<?php\n' + guard + "require '" + str(config) + "';\nrequire_once ABSPATH . 'wp-settings.php';\n", 0o644)
+    # Page-cache store (PEPTIDE_CORE_PAGE_CACHE): both levels created explicitly so the store user can
+    # traverse them under the worker's UMask (2026-11-08).
+    app_dir(t['public'] / 'wp-content' / 'cache', t['user'], 0o750)
+    app_dir(t['public'] / 'wp-content' / 'cache' / 'peptide-core-pages', t['user'], 0o750)
 
 
 def bootstrap(t, r):
