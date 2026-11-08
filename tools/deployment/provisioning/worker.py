@@ -333,6 +333,8 @@ def configuration(t, c, dbuser, password, salts, registration_secret):
               'COOKIE_DOMAIN': False, 'COOKIEPATH': '/', 'SITECOOKIEPATH': '/', 'ADMIN_COOKIE_PATH': '/wp-admin',
               'PEPTIDE_CORE_MANAGEMENT_URL': t['management_url'], 'PEPTIDE_CORE_MANAGEMENT_UUID': t['uuid'],
               'PEPTIDE_HQ_URL': c['hq_url'], 'PEPTIDE_HQ_SECRET': registration_secret,
+              # Full-page cache for anonymous storefront requests (the main store runs with it; 2026-11-08).
+              'PEPTIDE_CORE_PAGE_CACHE': True,
               'PEPTIDE_CORE_PRIVATE_DIR': str(t['data'] / 'reports'),
               'PEPTIDE_OPS_PRIVATE_DIR': str(t['data'] / 'ops')}
     values.update(salts)
@@ -420,6 +422,12 @@ def vhost(t, host, *, tls=False, aliases=()):
  location ~ (^|/)\. {{ return 404; }}
  location ~* \.(?:sql|bak|log|ini|cnf|pem|key|sh|py)(?:$|/) {{ return 404; }}
  location ~* ^/wp-content/.*\.(?:php[0-9]*|phtml|phar)(?:$|/) {{ return 404; }}
+ location ~* \.(?:css|js|mjs|png|jpe?g|gif|webp|avif|svg|ico|woff2?|ttf|eot|wasm|bcmap|mp4|webm|m4v)$ {{
+  try_files $uri =404; expires 7d;
+  add_header X-Content-Type-Options nosniff always;
+  add_header Referrer-Policy strict-origin-when-cross-origin always;
+  add_header Cache-Control "public, max-age=604800";
+ }}
  location / {{ try_files $uri $uri/ /index.php?$args; }}
  location = /wp-login.php {{
   limit_req zone=vialcove_tenant_login burst=10 nodelay;
