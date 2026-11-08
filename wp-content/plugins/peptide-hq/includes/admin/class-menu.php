@@ -323,9 +323,9 @@ final class Menu {
 
 			case 'pchq_site_rename':
 				Sites::rename( $site, $text( 'name' ) );
-				// 同步到店铺自己的名称；店铺连不上时总后台先记住，店铺下次上线会把它自己的名称报回来。
+				// 总后台的名称就是店铺的名称：同时写到店铺自己的设置（店铺标题、邮件署名）。店铺连不上时总后台先记住，可再保存一次。
 				$pushed = Client::config( (int) $site, array( 'name' => $text( 'name' ) ) );
-				self::flash( is_wp_error( $pushed ) ? 'error' : 'success', is_wp_error( $pushed ) ? '总后台已记下新名称，但没能同步到店铺：' . $pushed->get_error_message() : '店铺名称已保存并同步到店铺。' );
+				self::flash( is_wp_error( $pushed ) ? 'error' : 'success', is_wp_error( $pushed ) ? '总后台已记下新名称，但没能同步到店铺：' . $pushed->get_error_message() : '店铺名称已保存，并同步成店铺自己的名称（店铺标题、邮件署名）。' );
 				if ( 'plugins' === $text( 'return' ) ) {
 					// 插件管理页里改名后回到同一个店铺。
 					set_transient( 'pchq_plugins_flash_' . get_current_user_id(), array( 'success', '店铺名称已保存。' ), 120 );
