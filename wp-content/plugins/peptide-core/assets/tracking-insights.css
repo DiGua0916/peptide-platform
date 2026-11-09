@@ -75,3 +75,65 @@ body.pc-admin-workspace .pc-trk .pc-trk-timezone{font-size:12px;line-height:20px
 body.pc-admin-workspace .pc-trk .pc-trk-backlinks{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0}
 body.pc-admin-workspace .pc-trk .pc-trk-backlinks a{display:inline-flex;align-items:center;min-height:36px;padding:4px 12px;border:1px solid #dedede;border-radius:6px;background:#fff;text-decoration:none;font-size:13px}
 body.pc-admin-workspace .pc-trk .pc-trk-backlinks a:hover{background:#f1f1f1}
+/* 实时访客卡片 + 兴趣热点（2026-11-10：整洁、方块式、按购买意向排序） */
+.pc-lv-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:12px 0 16px}
+.pc-lv-stat{background:#fff;border:1px solid #e6e6e6;border-radius:12px;padding:14px 18px;display:flex;flex-direction:column;gap:6px}
+.pc-lv-stat span{font-size:12px;color:#666;display:flex;align-items:center;gap:6px}
+.pc-lv-stat b{font-size:26px;line-height:30px;font-weight:650;font-variant-numeric:tabular-nums}
+.pc-lv-stat.is-hot{border-color:#f3d2c8;background:#fff8f5}.pc-lv-stat.is-hot b{color:#c2410c}
+.pc-lv-note{margin:0 0 12px;font-size:12px;color:#666}
+.pc-lv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:8px}
+.pc-lv-card{background:#fff;border:1px solid #e6e6e6;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.pc-lv-card.is-high{border-color:#f0b9a5;box-shadow:0 0 0 1px #f0b9a5 inset}
+.pc-lv-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.pc-lv-who{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;min-width:0}
+.pc-lv-who a{color:#171717;text-decoration:underline;text-underline-offset:3px}
+.pc-lv-sub{flex-basis:100%;font-size:12px;color:#666}
+.pc-lv-score{text-align:right;flex:none;line-height:1}
+.pc-lv-score b{display:block;font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}
+.pc-lv-score span{display:block;margin-top:4px;font-size:12px;color:#666}
+.pc-lv-card.is-high .pc-lv-score b,.pc-lv-card.is-high .pc-lv-score span{color:#c2410c}
+.pc-lv-card.is-mid .pc-lv-score b{color:#a16207}
+.pc-lv-bar{height:6px;border-radius:999px;background:#f0f0f0;overflow:hidden}
+.pc-lv-bar i{display:block;height:100%;background:#a3a3a3;border-radius:inherit}
+.pc-lv-card.is-mid .pc-lv-bar i{background:#eab308}.pc-lv-card.is-high .pc-lv-bar i{background:#ea580c}
+.pc-lv-block h4,.pc-lv-facts dt{margin:0 0 6px;font-size:12px;font-weight:500;color:#666}
+.pc-lv-prods{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+.pc-lv-prods li{display:flex;align-items:center;gap:6px;font-size:13px;line-height:20px;min-width:0}
+.pc-lv-prod{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.pc-lv-prods small{margin-left:auto;color:#666;font-size:12px;white-space:nowrap}
+.pc-lv-tag{font-style:normal;font-size:11px;padding:1px 6px;border-radius:999px;background:#f0f0f1;color:#50575e;white-space:nowrap}
+.pc-lv-tag.is-cart{background:#fff1e8;color:#c2410c}
+.pc-lv-muted{color:#888;font-size:13px}
+.pc-lv-facts{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin:0;padding:12px 0 0;border-top:1px solid #f0f0f0}
+.pc-lv-facts dd{margin:0;font-size:13px;line-height:20px;min-width:0;overflow-wrap:anywhere}
+.pc-lv-chips{display:flex;flex-wrap:wrap;gap:6px}
+.pc-lv-chip{font-size:12px;line-height:18px;padding:2px 8px;border-radius:999px;background:#f5f5f5;color:#404040}
+.pc-lv-advice{margin:0;padding:8px 10px;border-radius:8px;background:#fafafa;font-size:12px;line-height:18px;color:#404040}
+.pc-lv-card.is-high .pc-lv-advice{background:#fff8f5;color:#9a3412}
+.pc-lv-foot{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-top:auto;padding-top:10px;border-top:1px solid #f0f0f0;font-size:12px}
+.pc-lv-foot details{min-width:0;color:#404040}.pc-lv-foot summary{cursor:pointer;overflow-wrap:anywhere}
+.pc-lv-foot .pc-trk-tab{margin:8px 0 0}
+.pc-lv-link{flex:none;color:#171717;text-decoration:none;font-weight:600}
+.pc-hot-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding:12px 0 8px}
+.pc-hot-card{border:1px solid #eee;border-radius:12px;padding:16px 18px;min-width:0}
+.pc-trk .pc-hot-card h3{margin:0 0 12px;font-size:14px;line-height:22px}
+.pc-hot-list{margin:0;padding:0;list-style:none;display:grid;gap:12px}
+.pc-hot-list li{display:flex;gap:10px;align-items:flex-start}
+.pc-hot-rank{flex:none;width:20px;height:20px;border-radius:5px;background:#171717;color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.pc-hot-list li:nth-child(n+4) .pc-hot-rank{background:#e5e5e5;color:#404040}
+.pc-hot-main{flex:1;min-width:0}
+.pc-hot-row{display:flex;justify-content:space-between;gap:8px;font-size:13px;line-height:20px}
+.pc-hot-name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.pc-hot-val{flex:none;color:#404040;font-variant-numeric:tabular-nums}
+.pc-hot-bar{height:5px;border-radius:999px;background:#f0f0f0;margin:6px 0 4px;overflow:hidden}
+.pc-hot-bar i{display:block;height:100%;background:#171717;border-radius:inherit}
+.pc-hot-main small{display:block;font-size:12px;color:#666;line-height:18px}
+@media(max-width:1200px){.pc-hot-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+@media(max-width:782px){.pc-lv-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.pc-hot-grid{grid-template-columns:minmax(0,1fr)}.pc-lv-grid{grid-template-columns:minmax(0,1fr)}}
+/* 正在看的真人：高亮（2026-11-10） */
+.pc-lv-card.is-live{border-color:#16a34a;box-shadow:0 0 0 2px #bbf7d0;background:#fbfffc}
+.pc-lv-live{display:flex;align-items:center;gap:8px;margin:-4px 0 0;font-size:12px;font-weight:600;color:#15803d;overflow-wrap:anywhere}
+.pc-lv-live i{flex:none;width:8px;height:8px;border-radius:50%;background:#16a34a;box-shadow:0 0 0 0 rgba(22,163,74,.6);animation:pc-lv-pulse 1.6s infinite}
+@keyframes pc-lv-pulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.55)}70%{box-shadow:0 0 0 8px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
+@media (prefers-reduced-motion:reduce){.pc-lv-live i{animation:none}}

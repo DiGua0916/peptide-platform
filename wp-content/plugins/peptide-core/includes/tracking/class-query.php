@@ -160,16 +160,22 @@ final class Query {
 			}
 			usort( $tabs_out, static fn( $a, $b ) => array( self::RANK[ $a['status'] ], -$a['last_signal_ms'] ) <=> array( self::RANK[ $b['status'] ], -$b['last_signal_ms'] ) );
 			$visit = $visit_id ? $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . Schema::table( 'visits' ) . ' WHERE id = %d', $visit_id ), ARRAY_A ) : null; // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+			$label = self::visitor_label( (array) $visitors[ $vid ] );
+			$cart  = Carts::view( (array) $visitors[ $vid ], false );
 			$out[] = array(
-				'visitor'        => self::visitor_label( (array) $visitors[ $vid ] ),
-				'cart'           => Carts::view( (array) $visitors[ $vid ], false ),
+				'visitor'        => $label,
+				'cart'           => $cart,
 				'status'         => $presence,
 				'last_signal_ms' => $last,
 				'visit'          => $visit ? self::visit_view( $visit ) : null,
+				'source'         => $visit ? trim( (string) $visit['utm_source'] . ' / ' . (string) $visit['utm_medium'], ' /' ) ?: ( (string) $visit['referrer_host'] ?: '直接访问' ) : '',
 				'tabs'           => $tabs_out,
+				// 购买意向（2026-11-10）：谁最可能下单、最关注哪个商品。
+				'intent'         => Intent::analyse( $label, $cart, $presence, $now_ms ),
 			);
 		}
-		usort( $out, static fn( $a, $b ) => array( self::RANK[ $a['status'] ], -$a['last_signal_ms'] ) <=> array( self::RANK[ $b['status'] ], -$b['last_signal_ms'] ) );
+		// 意向分高的排前面；同分按在线状态和最近动作。
+		usort( $out, static fn( $a, $b ) => array( -$a['intent']['score'], self::RANK[ $a['status'] ], -$a['last_signal_ms'] ) <=> array( -$b['intent']['score'], self::RANK[ $b['status'] ], -$b['last_signal_ms'] ) );
 		return $out;
 	}
 

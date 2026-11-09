@@ -80,40 +80,52 @@
     // ---------- 实时访客 ----------
 
 	function applyLiveHTML( html ) {
-        var opened=[];
-        root.querySelectorAll('tr[data-live-visitor]').forEach(function(row){row.querySelectorAll('details').forEach(function(detail,index){if(detail.open)opened.push([row.dataset.liveVisitor,index]);});});
-        root.innerHTML=html;
-        opened.forEach(function(item){var row=root.querySelector('tr[data-live-visitor="'+item[0]+'"]');var detail=row && row.querySelectorAll('details')[item[1]];if(detail)detail.open=true;});
-    }
-    function renderLive( res ) {
+		var opened = [];
+		root.querySelectorAll( '[data-live-visitor] details[open]' ).forEach( function ( d ) { opened.push( d.closest( '[data-live-visitor]' ).dataset.liveVisitor ); } );
+		root.innerHTML = html;
+		opened.forEach( function ( id ) { var d = root.querySelector( '[data-live-visitor="' + id + '"] details' ); if ( d ) { d.open = true; } } );
+	}
+	// 实时访客：卡片式（2026-11-10 店主要求“整洁、方块式、看得出谁最可能下单”）。
+	function liveCard( v, now ) {
+		var who = v.visitor, it = v.intent || { score: 0, level: 'low', level_text: '', reasons: [], products: [], advice: '' };
+		var tab = v.tabs && v.tabs[ 0 ];
+		var visit = v.visit;
+		var stage = visit ? ( S.stages[ visit.stage ] || '' ) + ( visit.order_url ? ' <a href="' + esc( visit.order_url ) + '">#' + esc( visit.order_id ) + '</a>' : '' ) : '—';
+		var prods = it.products && it.products.length ? it.products.map( function ( p ) {
+			return '<li><span class="pc-lv-prod">' + esc( p.name ) + '</span>' + ( p.carted ? '<em class="pc-lv-tag is-cart">已加购</em>' : '' ) + ( p.dwell ? '<small>' + esc( p.dwell ) + '</small>' : '' ) + '</li>';
+		} ).join( '' ) : '<li class="pc-lv-muted">还没看具体商品' + ( it.module ? '，常点「' + esc( it.module ) + '」' : '' ) + '</li>';
+		var reasons = ( it.reasons || [] ).map( function ( r ) { return '<span class="pc-lv-chip">' + esc( r ) + '</span>'; } ).join( '' );
+		var live = 'active' === v.status;
+		return '<article class="pc-lv-card is-' + esc( it.level ) + ( live ? ' is-live' : '' ) + '" data-live-visitor="' + esc( who.id ) + '">' +
+			( live ? '<div class="pc-lv-live"><i></i>正在看 · ' + ( tab ? pageText( tab ) : '' ) + '</div>' : '' ) +
+			'<header class="pc-lv-head"><div class="pc-lv-who">' + dot( v.status ) +
+				'<a href="' + esc( cfg.liveUrl + '&visitor=' + who.id ) + '"><strong>' + esc( who.label ) + '</strong></a>' +
+				'<span class="pc-lv-sub">' + esc( ( S[ who.device ] || who.device ) + ' · ' + who.browser + ( who.visits > 1 ? ' · 第 ' + who.visits + ' 次来' : '' ) ) + '</span></div>' +
+				'<div class="pc-lv-score" title="购买意向分（0–100），按本店记录的行为计算"><b>' + esc( it.score ) + '</b><span>' + esc( it.level_text ) + '</span></div></header>' +
+			'<div class="pc-lv-bar"><i style="width:' + Math.max( 3, Number( it.score ) || 0 ) + '%"></i></div>' +
+			'<section class="pc-lv-block"><h4>最关注</h4><ul class="pc-lv-prods">' + prods + '</ul></section>' +
+			'<dl class="pc-lv-facts"><div><dt>走到哪一步</dt><dd>' + stage + '</dd></div><div><dt>来源</dt><dd>' + esc( v.source || '—' ) + '</dd></div>' +
+				'<div><dt>购物车</dt><dd>' + cartCell( who, v.cart ) + '</dd></div><div><dt>最后动作</dt><dd>' + esc( fmt( S.ago, ago( now - v.last_signal_ms ) ) ) + '</dd></div></dl>' +
+			( reasons ? '<div class="pc-lv-chips">' + reasons + '</div>' : '' ) +
+			( it.advice ? '<p class="pc-lv-advice">' + esc( it.advice ) + '</p>' : '' ) +
+			'<footer class="pc-lv-foot"><details><summary>' + esc( '正在看：' ) + ( tab ? pageText( tab ) : '—' ) + ( v.tabs.length > 1 ? ' <small>（共 ' + v.tabs.length + ' 个页面）</small>' : '' ) + '</summary>' +
+				v.tabs.map( function ( t, i ) { return '<div class="pc-trk-tab"><span class="pc-trk-tabid">' + esc( '页面 ' + ( i + 1 ) ) + '</span> ' + dot( t.status ) + ' ' + pageText( t ) + videoText( t.video ) + '</div>'; } ).join( '' ) +
+			'</details><a class="pc-lv-link" href="' + esc( cfg.liveUrl + '&visitor=' + who.id ) + '">查看轨迹 →</a></footer></article>';
+	}
+	function renderLive( res ) {
 		var list = res.visitors || [];
-		var count = { active: 0, idle: 0, away: 0 };
-		list.forEach( function ( v ) {
-			count[ v.status ]++;
-		} );
-		var html = '<div class="pc-trk-cards">' + [ 'active', 'idle', 'away' ].map( function ( k ) {
-			return '<div class="pc-trk-card"><span>' + dot( k ) + '</span><b>' + count[ k ] + '</b></div>';
-		} ).join( '' ) + '</div>';
+		var count = { active: 0, idle: 0, away: 0 }, hot = 0;
+		( res.all || list ).forEach( function ( v ) { count[ v.status ]++; if ( v.intent && 'high' === v.intent.level ) { hot++; } } );
+		var html = '<div class="pc-lv-stats">' + [ 'active', 'idle', 'away' ].map( function ( k ) {
+			return '<div class="pc-lv-stat"><span>' + dot( k ) + '</span><b>' + count[ k ] + '</b></div>';
+		} ).join( '' ) + '<div class="pc-lv-stat is-hot"><span>很可能下单</span><b>' + hot + '</b></div></div>';
 		if ( ! list.length ) {
-			applyLiveHTML( html + '<p class="pc-trk-empty">' + esc( S.noVisitors ) + '</p>' );
+			applyLiveHTML( html + '<p class="pc-trk-empty">' + esc( res.filtered === 'active' ? '现在没有人正在看店铺页面。后台挂着、刚离开的访客可以在“在线状态”里切换查看。' : S.noVisitors ) + '</p>' );
 			return;
 		}
-		html += '<table class="widefat striped pc-trk-table"><thead><tr><th>' + esc( S.visitor ) + '</th><th>' + esc( S.tabs ) + '</th><th>' + esc( S.stage ) + '</th><th>' + esc( S.cart ) + '</th><th>' + esc( S.visitStart ) + '</th><th>' + esc( S.lastSignal ) + '</th></tr></thead><tbody>';
-		list.forEach( function ( v ) {
-			var who = v.visitor;
-			html += '<tr data-live-visitor="' + esc( who.id ) + '"><td><div>' + dot( v.status ) + '</div><a class="pc-visitor-detail-link" style="text-decoration:underline;text-underline-offset:3px" aria-label="查看客户完整访问记录" href="' + esc( cfg.liveUrl + '&visitor=' + who.id ) + '"><strong>' + esc( who.label ) + '</strong></a>' + '<div class="pc-trk-sub">' + esc( ( S[ who.device ] || who.device ) + ' · ' + who.browser + ' · ' + S.visits + ' ' + who.visits ) + '</div></td><td>';
-			html += '<details class="pc-trk-tab-list"><summary>' + esc( '开着 ' + v.tabs.length + ' 个页面，点开看每个页面在干嘛' ) + '</summary>';
-			v.tabs.forEach( function ( t, i ) {
-				html += '<div class="pc-trk-tab"><span class="pc-trk-tabid">' + esc( '页面 ' + ( i + 1 ) ) + '</span> ' + dot( t.status ) + ' ' + pageText( t ) + videoText( t.video ) + '</div>';
-			} );
-			html += '</details>';
-			var visit = v.visit;
-			html += '</td><td>' + ( visit ? esc( S.stages[ visit.stage ] ) + ( visit.order_url ? ' <a href="' + esc( visit.order_url ) + '">#' + esc( visit.order_id ) + '</a>' : '' ) : '—' ) + '</td>';
-			html += '<td>' + cartCell( who, v.cart ) + '</td>';
-			html += '<td>' + ( visit ? esc( clock( visit.start_ms, true ) ) + '<div class="pc-trk-sub">' + esc( S.pageviews + ' ' + visit.pageviews ) + '</div>' : '—' ) + '</td>';
-			html += '<td>' + esc( fmt( S.ago, ago( res.now_ms - v.last_signal_ms ) ) ) + '</td></tr>';
-		} );
-		root.innerHTML = html + '</tbody></table>';
+		html += '<p class="pc-lv-note">' + ( res.filtered === 'active' ? '只显示正在看店铺的真人（页面在前台、最近有操作）。' : '' ) + '按购买意向从高到低排列。意向分只用本店记录的浏览、加购、结账行为计算，不会发给外部服务。</p>';
+		html += '<div class="pc-lv-grid">' + list.map( function ( v ) { return liveCard( v, res.now_ms ); } ).join( '' ) + '</div>';
+		applyLiveHTML( html );
 	}
 
 	// ---------- 购物车（VISITOR-CART-01） ----------
@@ -142,7 +154,7 @@
 
 	function live() {
         var controls = document.createElement('div'); controls.className = 'pc-trk-live-tools';
-        controls.innerHTML = '<label>查找客户<input type="search" name="visitor_search" placeholder="访客编号、设备或页面…" autocomplete="off"></label><label>在线状态<select name="visitor_status"><option value="">全部状态</option><option value="active">正在浏览</option><option value="idle">停住了</option><option value="away">刚离开</option></select></label><button class="button" type="button" aria-pressed="false">暂停刷新</button><span role="status" aria-live="polite"></span>';
+        controls.innerHTML = '<label>查找客户<input type="search" name="visitor_search" placeholder="访客编号、设备或页面…" autocomplete="off"></label><label>在线状态<select name="visitor_status"><option value="active" selected>只看正在浏览的真人</option><option value="">全部（含后台挂着、刚离开）</option><option value="idle">只看后台挂着的</option><option value="away">只看刚离开的</option></select></label><button class="button" type="button" aria-pressed="false">暂停刷新</button><span role="status" aria-live="polite"></span>';
         root.insertAdjacentElement('beforebegin',controls);
         var search = controls.querySelector('input'), filter = controls.querySelector('select'), pause = controls.querySelector('button'), status = controls.querySelector('[role="status"]');
         var cached = null, paused = false, pending = false, controller = null, stopped = false;
@@ -154,7 +166,8 @@
                 var text = [item.visitor.id,item.visitor.label,item.visitor.device,item.visitor.browser].concat(item.tabs.map(function(tab){return tab.path;})).join(' ').toLowerCase();
                 return !q || text.indexOf(q) !== -1;
             });
-            renderLive(Object.assign({},cached,{visitors:rows}));
+            var counts = Object.assign({},cached,{visitors:rows,filtered:filter.value,all:cached.visitors});
+            renderLive(counts);
             status.textContent = (paused ? '已暂停 · ' : '') + '显示 ' + rows.length + ' 位访客';
         }
         function tick() {
