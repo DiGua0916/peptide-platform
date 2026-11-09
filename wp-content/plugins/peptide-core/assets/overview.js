@@ -172,13 +172,21 @@
 	// ---------- 流量排名 / 商品排名（各自的指标和时间段下拉） ----------
 
 	var ranks = {
-		traffic: { metric: 'conversion', range: 'today', rows: null },
+		traffic: { metric: 'share', range: 'today', rows: null, total: 0 },
 		products: { metric: 'products_units', range: 'today', rows: null },
 	};
 	function rankValue( kind, row ) {
 		var m = ranks[ kind ].metric;
 		if ( 'traffic' === kind ) {
-			return 'conversion' === m ? pc( row.conversion ) : 'sales' === m ? amt( row.sales ) : String( row[ m ] || 0 );
+			if ( 'share' === m ) {
+				// 这个渠道占全部访客的比例，后面带人数。
+				var tot = ranks.traffic.total || 0, v = Number( row.visitors || 0 );
+				return ( tot ? ( Math.round( v / tot * 1000 ) / 10 ) : 0 ) + '% · ' + v + ' 人';
+			}
+			if ( 'conversion' === m ) {
+				return pc( row.conversion ) + ' · ' + Number( row.visitors || 0 ) + ' 人 / ' + Number( row.paid || 0 ) + ' 单';
+			}
+			return 'sales' === m ? amt( row.sales ) : String( row[ m ] || 0 );
 		}
 		return 'products_sales' === m ? amt( row.current ) : String( row.current || 0 );
 	}
@@ -216,10 +224,12 @@
 			}
 			var rows = res.rows || [];
 			if ( 'traffic' === kind ) {
+				st.total = rows.reduce( function ( n, r ) { return n + Number( r.visitors || 0 ); }, 0 );
+				var key = 'share' === st.metric ? 'visitors' : st.metric;
 				rows = rows.filter( function ( r ) {
-					return Number( r[ st.metric ] || 0 ) > 0 || ( 'conversion' === st.metric && Number( r.visitors ) > 0 );
+					return Number( r[ key ] || 0 ) > 0 || ( 'conversion' === st.metric && Number( r.visitors ) > 0 );
 				} ).sort( function ( a, b ) {
-					return Number( b[ st.metric ] || 0 ) - Number( a[ st.metric ] || 0 );
+					return Number( b[ key ] || 0 ) - Number( a[ key ] || 0 );
 				} ).slice( 0, 10 );
 			}
 			st.rows = rows;

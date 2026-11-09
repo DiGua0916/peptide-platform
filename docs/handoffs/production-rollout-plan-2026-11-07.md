@@ -881,3 +881,4 @@
 - 18:08 UTC 订单菜单修正：WooCommerce 订单页（wc-orders）映射到新的顶层“待处理订单”（`Admin_Menus::MOVED`），否则点待处理后菜单收起、弃单看不到。阳站实测子菜单保持展开。
 - 18:12 UTC 没下单的结账详情页补齐成和订单一样：收货 / 账单地址（从购物会话 customer 取）、运费 / 优惠 / 税费（cart_totals）、支付信息 / 物流信息占位、购买人汇总、订单基础信息、订单归因与设备信息（实时访客按 `cart_key` = 会话键匹配，取最近一次访问的 UTM / 落地页 / 来路）。`Recovery_Items::session_data()/visitor_by_session()`；页面抽出 `addresses()`、`attribution_panels()` 两个共用渲染。
 - 18:15 UTC 弃单详情页加「English / 中文」切换按钮（店主要求，只影响这一页）：`?lang=en|zh` 记在当前用户 meta `pc_recovery_lang`；详情页整页输出缓冲后按词表 `en_map()` + WooCommerce 英文国家名表替换（`to_english()`），带数字的句式用正则。列表页和其他页面不受影响。阳站实测切换正常，默认中文。
+- 18:28 UTC 仪表盘「流量排名」默认指标改为「访客占比」（该渠道访客 / 全部访客，后面带人数），原「转化率」保留并改成“x% · n 人 / m 单”，没有订单时不再一排 0%。`assets/overview.js`、`class-overview-page.php`。

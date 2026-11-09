@@ -261,6 +261,7 @@ final class Overview_Page {
 				'productRank'   => __( 'Product ranking', 'peptide-core' ),
 				'noData'        => __( 'No data yet', 'peptide-core' ),
 				'trafficMetrics' => array(
+					'share'      => '访客占比',
 					'conversion' => __( 'Conversion rate', 'peptide-core' ),
 					'visitors'   => __( 'UV', 'peptide-core' ),
 					'paid'       => __( 'Number of orders', 'peptide-core' ),
