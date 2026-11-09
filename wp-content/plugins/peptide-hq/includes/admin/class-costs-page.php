@@ -18,6 +18,7 @@ final class Costs_Page {
 
 	/** AWS 服务名 → 中文。 */
 	private const SERVICES = array(
+		'Amazon Lightsail'                       => '服务器（Lightsail）',
 		'Amazon Elastic Compute Cloud - Compute' => '服务器（EC2 计算）',
 		'EC2 - Other'                            => '服务器附属（硬盘、快照、流量）',
 		'Amazon Virtual Private Cloud'           => '网络（VPC / 公网 IP）',
@@ -171,7 +172,6 @@ final class Costs_Page {
 		}
 		$argo_on = array_values( array_filter( (array) ( $cf['zones'] ?? array() ), static fn( $z ) => 'on' === $z['argo'] ) );
 		echo '<li><span>Cloudflare Argo' . ( $argo_on ? '（' . esc_html( implode( '、', array_column( $argo_on, 'name' ) ) ) . '）' : '' ) . '</span><em>' . ( empty( $cf['error'] ) ? esc_html( self::usd( $cf['argo_estimate'] ?? 0 ) . ' 已产生 · 预计 ' . self::usd( $cf['argo_forecast'] ?? 0 ) ) : '<i class="pcp-costs__warn">' . esc_html( (string) $cf['error'] ) . '</i>' ) . '</em></li>';
-		echo '<li><span>Cloudflare 域名套餐</span><em>$0.00 · 全部免费版</em></li>';
 		echo '</ul>';
 		if ( $partial ) {
 			echo '<p class="pcp-costs__warn">数字还不完整：' . esc_html( implode( ' ', array_filter( array( ! empty( $aws['error'] ) ? 'AWS 两个账号都还没接上。' : '', ! empty( $cf['analytics_error'] ) ? 'Cloudflare 流量数据没权限，Argo 只按固定 $5 算。' : '' ) ) ) ) . ' 展开下面“设置”处理。</p>';
