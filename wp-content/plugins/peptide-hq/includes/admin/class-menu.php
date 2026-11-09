@@ -147,6 +147,7 @@ final class Menu {
 			'pchq-sites' => array( 'site_server' => 'positiveId', 'site_tools' => 'positiveId' ),
 			'pchq-servers' => array( 'edit' => 'positiveId' ),
 			'pchq-alerts' => array(),
+			'pchq-costs' => array(),
 			'pchq-site-recycle' => array( 'restore_requested' => array( '1' ), 'retry_requested' => array( '1' ) ),
 			'pchq-operations' => array( 'tab' => array( 'tasks', 'releases', 'create', 'backups', 'agents' ), 'site' => 'signedId' ),
 			'pchq-create-store' => array( 'job' => 'uuid4' ),

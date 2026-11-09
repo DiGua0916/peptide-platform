@@ -1,0 +1,21 @@
+/* 总后台 → 费用（2026-11-09） */
+body.pchq-workspace .pcp-costs__tools{display:flex;align-items:center;gap:12px;flex:none}
+body.pchq-workspace .pcp-costs__stats{flex-wrap:wrap;margin:0 0 16px}
+body.pchq-workspace .pcp-costs__stats>div.is-bad{border-color:var(--pcp-bad);background:var(--pcp-bad-bg)}
+body.pchq-workspace .pcp-costs__stats>div.is-bad dd{color:var(--pcp-bad)}
+body.pchq-workspace .pcp-costs__stats>div.is-ok dd{color:var(--pcp-ok)}
+body.pchq-workspace .pcp-costs__chart{display:flex;align-items:flex-end;gap:3px;height:120px;padding:8px 0 0;border-bottom:1px solid var(--vc-line)}
+body.pchq-workspace .pcp-costs__bar{flex:1 1 0;min-width:4px;background:#c9d4e3;border-radius:2px 2px 0 0}
+body.pchq-workspace .pcp-costs__bar.is-month{background:#2f5fa7}
+body.pchq-workspace .pcp-costs__axis{display:flex;justify-content:space-between;margin:6px 0 16px;color:var(--vc-muted);font-size:11px;line-height:16px}
+body.pchq-workspace .pcp-costs__table td small{display:block;color:var(--vc-muted);font-size:11px;line-height:14px;font-weight:400}
+body.pchq-workspace .pcp-costs__table tr.is-total td{font-weight:700;border-top:2px solid var(--vc-line)}
+body.pchq-workspace .pcp-costs__table td:nth-child(n+2){font-variant-numeric:tabular-nums;white-space:nowrap}
+body.pchq-workspace .pcp-costs__sub{margin:20px 0 8px;font-size:14px;line-height:20px}
+body.pchq-workspace .pcp-costs__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px 20px}
+body.pchq-workspace .pcp-costs__grid .pcp-field small{display:block;margin-top:4px;color:var(--vc-muted);font-size:11px;line-height:16px}
+body.pchq-workspace .pcp-costs__actions{margin:16px 0 0}
+body.pchq-workspace .pcp-costs__code{margin:8px 0 12px;padding:12px 14px;border:1px solid var(--vc-line);border-radius:8px;background:#f7f8fa;font-size:12px;line-height:18px;overflow:auto}
+@media (max-width:782px){
+ body.pchq-workspace .pcp-costs__chart{height:90px;gap:2px}
+}

@@ -109,6 +109,44 @@ final class Cdn {
 
 	// ---------- Cloudflare 接口 ----------
 
+	/** 给其他模块（费用页）用的只读入口，和 api() 一样返回 result。 */
+	public static function request( string $method, string $path, ?array $body = null ) {
+		return self::api( $method, $path, $body );
+	}
+
+	/**
+	 * GraphQL 分析接口（流量字节数等）。@return array|\WP_Error data 部分。
+	 */
+	public static function graphql( string $query, array $variables ) {
+		$token = self::token();
+		if ( '' === $token ) {
+			return new \WP_Error( 'pchq_cdn_token', '还没有设置 Cloudflare 令牌。' );
+		}
+		$res = wp_remote_post(
+			'https://api.cloudflare.com/client/v4/graphql',
+			array(
+				'timeout' => 25,
+				'headers' => array( 'Authorization' => 'Bearer ' . $token, 'Content-Type' => 'application/json' ),
+				'body'    => wp_json_encode( array( 'query' => $query, 'variables' => $variables ) ),
+			)
+		);
+		if ( is_wp_error( $res ) ) {
+			return new \WP_Error( 'pchq_cdn_network', '连不上 Cloudflare（' . $res->get_error_message() . '）。' );
+		}
+		$data = json_decode( (string) wp_remote_retrieve_body( $res ), true );
+		if ( ! is_array( $data ) ) {
+			return new \WP_Error( 'pchq_cdn_api', 'Cloudflare 分析接口返回了无法解析的内容（HTTP ' . (int) wp_remote_retrieve_response_code( $res ) . '）。' );
+		}
+		if ( ! empty( $data['errors'] ) ) {
+			$msg = (string) ( $data['errors'][0]['message'] ?? 'unknown' );
+			if ( false !== stripos( $msg, 'auth' ) || false !== stripos( $msg, 'permission' ) || false !== stripos( $msg, 'not authorized' ) ) {
+				$msg = '令牌缺少 Zone · Analytics · Read 权限（' . $msg . '）。';
+			}
+			return new \WP_Error( 'pchq_cdn_api', $msg );
+		}
+		return is_array( $data['data'] ?? null ) ? $data['data'] : array();
+	}
+
 	/** @return array|\WP_Error Cloudflare 的 result；分页列表时返回 result 数组。 */
 	private static function api( string $method, string $path, ?array $body = null, string $token = '' ) {
 		$token = '' !== $token ? $token : self::token();

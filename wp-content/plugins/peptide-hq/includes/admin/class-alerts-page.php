@@ -24,7 +24,7 @@ final class Alerts_Page {
 		$types = Alerts::types();
 		$open  = Alerts::list( true );
 		$done  = Alerts::list( false, 50 );
-		$name  = static fn( $id ) => isset( $sites[ (int) $id ] ) ? $sites[ (int) $id ]['name'] : '#' . (int) $id;
+		$name  = static fn( $id ) => isset( $sites[ (int) $id ] ) ? $sites[ (int) $id ]['name'] : ( 0 === (int) $id ? '总后台' : '#' . (int) $id );
 		?>
 		<div class="wrap pchq">
 			<h1><?php esc_html_e( 'Alerts', 'peptide-hq' ); ?></h1>

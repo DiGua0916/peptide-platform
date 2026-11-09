@@ -20,6 +20,7 @@ final class Alerts {
 			'https'     => __( 'HTTPS not working', 'peptide-hq' ),
 			'no_orders' => __( 'No orders for a while', 'peptide-hq' ),
 			'closed'    => __( 'Store not open to the public', 'peptide-hq' ),
+			'cost'      => '费用提醒',
 		);
 	}
 

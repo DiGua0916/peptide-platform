@@ -22,6 +22,7 @@ final class Plugin {
 		Cdn::register_hooks();
 		Design_Push::register_hooks();
 		Mail::register_hooks();
+		Costs::register_hooks();
 		if ( is_callable( array( Admin\Menu::class, 'register_login_hooks' ) ) ) {
 			Admin\Menu::register_login_hooks();
 		}
@@ -35,6 +36,7 @@ final class Plugin {
 			Admin\Design_Page::hooks();
 			Admin\Mail_Page::hooks();
 			Admin\Clone_Page::hooks();
+			Admin\Costs_Page::hooks();
 		}
 	}
 }

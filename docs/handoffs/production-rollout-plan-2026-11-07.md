@@ -790,3 +790,9 @@
 - 验证：三个后台域名外网访问均带 cf-ray；后台静态资源第二次请求 cf-cache-status HIT；错误密码登录 POST 返回 200 未被拦；HQ 对 6 家店 Monitor::poll(full) 全部 OK（约 0.8 s）。
 - 下一步：用户在 Cloudflare 面板给 vialcoveresearch.com 开通 Argo Smart Routing（需绑卡），之后用 API 核对 smart_routing=on 并测海外前后延迟。
 - 附带：仓库新增 exports/（提取的第三方插件 zip），已加入 .gitignore，不入库。
+
+### 2026-11-09 11:25 UTC 总后台新增「费用」页（peptide-hq 0.3.4）+ Argo 已开通
+- 新文件 `includes/class-costs.php`、`includes/admin/class-costs-page.php`、`assets/hq-costs.css`；改 `class-cdn.php`（公开 request()/graphql()）、`class-alerts.php`（类型 cost）、`class-plugin.php`、`admin/class-menu.php`（导航策略加 pchq-costs）、`admin/class-alerts-page.php`（site_id 0 显示“总后台”）、版本 0.3.4。
+- 功能：Cloudflare 各域名当月流量（GraphQL）、Argo 开关与费用预估（$5 含 1 GB，之后 $0.10/GB）、账单历史；AWS Cost Explorer（SigV4 自签，ce:GetCostAndUsage + GetCostForecast，密钥 Crypto 加密存 pchq_costs）本月已花 / 月底预计 / 按服务拆分 / 近 30 天日费用；月预算和预付余额提醒（Alerts type cost + 邮件到设置的邮箱）；每 8 小时 cron 刷新，手动“立即刷新”。
+- 部署：新版本目录 `/srv/vialcove/hq/releases/costs-634d77f-hq`（从 ff5a95c-hq 完整复制后改 9 个文件；部署前核对线上 6 个被改文件与仓库 HEAD 一致；php -l 全过；与旧目录相比恰好 9 处不同），切软链接，reload php8.3-fpm。页面可打开，cron 已排。
+- 现状：Cloudflare 令牌缺 Zone·Analytics·Read 和 Billing·Read，流量和账单两块显示权限提示；AWS 密钥未填。用户已在 Cloudflare 面板开通 vialcoveresearch.com 的 Argo（接口确认 smart_routing=on）。
