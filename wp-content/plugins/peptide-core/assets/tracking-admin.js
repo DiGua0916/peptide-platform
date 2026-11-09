@@ -497,9 +497,13 @@
 		var query = function ( cursor ) {
 			return '/peptide/v1/track/admin/archive?limit=25&from=' + encodeURIComponent( form.from.value ) + '&to=' + encodeURIComponent( form.to.value ) + '&device=' + encodeURIComponent( form.device.value ) + '&q=' + encodeURIComponent( form.q.value ) + ( cursor ? '&cursor=' + encodeURIComponent( cursor ) : '' );
 		};
-		var run = function () {
+		var expanded = false; // 点过“加载更多”后不自动刷新，免得打断往下翻。
+		var run = function ( quiet ) {
 			var mine = ++token;
-			out.innerHTML = '<p>' + esc( S.loading ) + '</p>';
+			if ( ! quiet ) {
+				out.innerHTML = '<p>' + esc( S.loading ) + '</p>';
+				expanded = false;
+			}
 			load( query( null ) ).then( function ( r ) {
 				if ( mine !== token ) {
 					return;
@@ -521,6 +525,7 @@
 						return;
 					}
 					b.disabled = true;
+					expanded = true;
 					load( query( cursor ) ).then( function ( next ) {
 						if ( mine !== token ) {
 							return;
@@ -533,7 +538,7 @@
 					} );
 				} );
 			} ).catch( function ( err ) {
-				if ( mine === token ) {
+				if ( mine === token && ! quiet ) {
 					out.innerHTML = '<p>' + esc( fmt( S.error, ( err && err.message ) || err ) ) + '</p>';
 				}
 			} );
@@ -543,6 +548,12 @@
 			run();
 		} );
 		run();
+		// 2026-11-10：第一页每 20 秒自动更新，新来的访客自动出现在最上面（页面在后台或已往下翻时不刷新）。
+		setInterval( function () {
+			if ( ! document.hidden && ! expanded ) {
+				run( true );
+			}
+		}, 20000 );
 	}
 
 	// ---------- 转化统计 ----------
