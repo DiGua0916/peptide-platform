@@ -263,23 +263,7 @@ final class Recovery_Page {
 		}
 		echo '<dt class="pc-rc-totals__sum">订单总价</dt><dd class="pc-rc-totals__sum">' . self::money( (float) $order->get_total(), $cur ) . '</dd></dl></section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
-		// 地址
-		echo '<section class="pc-rc-panel pc-rc-addresses">';
-		foreach ( array( 'shipping' => '收货地址', 'billing' => '账单地址' ) as $type => $title ) {
-			$a    = $order->get_address( $type );
-			$text = trim( implode( "\n", array_filter( array( trim( ( $a['first_name'] ?? '' ) . ' ' . ( $a['last_name'] ?? '' ) ), $a['company'] ?? '', $a['address_1'] ?? '', $a['address_2'] ?? '', trim( ( $a['city'] ?? '' ) . ' ' . ( $a['state'] ?? '' ) . ' ' . ( $a['postcode'] ?? '' ) ), WC()->countries->countries[ $a['country'] ?? '' ] ?? ( $a['country'] ?? '' ), $a['phone'] ?? '', $a['email'] ?? '' ) ) ) );
-			echo '<div class="pc-rc-address"><header><strong>' . esc_html( $title ) . '</strong><button type="button" class="button-link pc-rc-copy" data-copy="' . esc_attr( $text ) . '">复制</button></header>';
-			$rows = array( '姓名' => trim( ( $a['first_name'] ?? '' ) . ' ' . ( $a['last_name'] ?? '' ) ), '公司' => $a['company'] ?? '', '街道' => $a['address_1'] ?? '', '寓所' => $a['address_2'] ?? '', '省市区' => trim( ( $a['state'] ?? '' ) . ' ' . ( $a['city'] ?? '' ) ), '邮编' => $a['postcode'] ?? '', '国家' => WC()->countries->countries[ $a['country'] ?? '' ] ?? ( $a['country'] ?? '' ), '电话' => $a['phone'] ?? '' );
-			if ( 'billing' === $type ) {
-				$rows['邮箱'] = $a['email'] ?? '';
-			}
-			echo '<dl>';
-			foreach ( $rows as $k => $v ) {
-				echo '<dt>' . esc_html( $k ) . '</dt><dd>' . esc_html( '' !== trim( (string) $v ) ? $v : '-' ) . '</dd>';
-			}
-			echo '</dl></div>';
-		}
-		echo '</section>';
+		self::addresses( $order->get_address( 'shipping' ), $order->get_address( 'billing' ) );
 
 		// 支付信息
 		echo '<section class="pc-rc-panel"><h3>支付信息</h3>';
@@ -376,36 +360,7 @@ final class Recovery_Page {
 		}
 		echo '</section>';
 
-		$att = Recovery_Items::attribution( $order );
-		echo '<section class="pc-rc-panel"><h3>订单归因</h3><dl class="pc-rc-kv">';
-		echo '<dt>来源类型</dt><dd>' . esc_html( $att['source_type'] ?: '-' ) . '</dd>';
-		echo '<dt>渠道</dt><dd>' . esc_html( trim( $att['utm_source'] . ' / ' . $att['utm_medium'], ' /' ) ?: '-' ) . '</dd>';
-		echo '<dt>广告系列</dt><dd class="pc-rc-break">' . esc_html( $att['utm_campaign'] ?: '-' ) . ( $att['utm_content'] ? '<br><span class="pc-pl-muted">' . esc_html( $att['utm_content'] ) . '</span>' : '' ) . '</dd>';
-		echo '<dt>来路</dt><dd class="pc-rc-break">' . esc_html( $att['referrer'] ?: '-' ) . '</dd>';
-		echo '<dt>落地页</dt><dd class="pc-rc-break">' . ( $att['landing'] ? '<a href="' . esc_url( $att['landing'] ) . '" target="_blank" rel="noopener">' . esc_html( $att['landing'] ) . '</a>' : '-' ) . '</dd>';
-		echo '<dt>本次会话</dt><dd>' . esc_html( $att['session_start'] ? $att['session_start'] . '，' . (int) $att['pages'] . ' 页' : '-' ) . ( $att['sessions'] ? '<br><span class="pc-pl-muted">第 ' . (int) $att['sessions'] . ' 次来访</span>' : '' ) . '</dd>';
-		echo '</dl></section>';
-
-		echo '<section class="pc-rc-panel"><h3>设备信息</h3><dl class="pc-rc-kv">';
-		if ( $vis ) {
-			echo '<dt>访客</dt><dd>#' . (int) $vis['id'] . ' <a href="' . esc_url( $vis['url'] ) . '">查看轨迹</a></dd>';
-			echo '<dt>设备来源</dt><dd>' . esc_html( $vis['device'] ?: '-' ) . '</dd>';
-			echo '<dt>浏览器</dt><dd>' . esc_html( $vis['browser'] ?: '-' ) . '</dd>';
-			echo '<dt>来访次数</dt><dd>' . (int) $vis['visits'] . ' 次，本次看了 ' . (int) $vis['pageviews'] . ' 页</dd>';
-			echo '<dt>首次 / 最近</dt><dd>' . esc_html( self::time( $vis['first_ms'] ) ) . '<br>' . esc_html( self::time( $vis['last_ms'] ) ) . '</dd>';
-			if ( $vis['landing'] ) {
-				echo '<dt>进站页面</dt><dd class="pc-rc-break">' . esc_html( $vis['landing'] ) . '</dd>';
-			}
-			if ( $vis['utm'] || $vis['referrer'] ) {
-				echo '<dt>进站来源</dt><dd>' . esc_html( $vis['utm'] ?: $vis['referrer'] ) . '</dd>';
-			}
-		} else {
-			echo '<dt>设备来源</dt><dd>' . esc_html( $att['device'] ? ( array( 'Mobile' => '手机', 'Desktop' => '电脑', 'Tablet' => '平板' )[ $att['device'] ] ?? $att['device'] ) : '-' ) . '</dd>';
-		}
-		if ( $att['user_agent'] ) {
-			echo '<dt>浏览器标识</dt><dd class="pc-rc-break pc-pl-muted">' . esc_html( $att['user_agent'] ) . '</dd>';
-		}
-		echo '</dl></section>';
+		self::attribution_panels( $vis, Recovery_Items::attribution( $order ) );
 		echo '</aside></div></div>';
 	}
 
@@ -445,7 +400,13 @@ final class Recovery_Page {
 			}
 			echo '</div></div></td><td class="pc-rc-right">' . self::money( $sub / $qty, $cur ) . ' × ' . esc_html( (string) wc_stock_amount( $qty ) ) . '</td><td class="pc-rc-right">' . self::money( $sub, $cur ) . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		}
+		$tot = Recovery_Items::session_data( (string) $rec['session_key'] )['totals'];
 		echo '</tbody></table><dl class="pc-rc-totals"><dt>商品价格</dt><dd>' . self::money( (float) $rec['subtotal'], $cur ) . '</dd>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		foreach ( array( 'shipping_total' => '运费' . ( $r['ship_method'] ? '（' . $r['ship_method'] . '）' : '' ), 'discount_total' => '优惠', 'fee_total' => '手续费', 'total_tax' => '税费' ) as $k => $label ) {
+			if ( isset( $tot[ $k ] ) && ( 0.0 !== (float) $tot[ $k ] || 'shipping_total' === $k ) ) {
+				echo '<dt>' . esc_html( $label ) . '</dt><dd>' . self::money( ( 'discount_total' === $k ? -1 : 1 ) * (float) $tot[ $k ], $cur ) . '</dd>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			}
+		}
 		if ( '' !== (string) $rec['total'] ) {
 			echo '<dt class="pc-rc-totals__sum">结账页总价</dt><dd class="pc-rc-totals__sum">' . self::money( (float) $rec['total'], $cur ) . '</dd>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		}
@@ -462,17 +423,94 @@ final class Recovery_Page {
 			}
 			echo '</tbody></table>';
 		}
-		echo '</section></div><aside class="pc-rc-side">';
+		echo '</section>';
+		$sd  = Recovery_Items::session_data( (string) $rec['session_key'] );
+		$vis = Recovery_Items::visitor_by_session( (string) $rec['session_key'] );
+		self::addresses( $sd['shipping'], $sd['billing'] );
+		echo '<section class="pc-rc-panel"><h3>支付信息</h3><dl class="pc-rc-kv"><dt>选的支付方式</dt><dd>' . esc_html( $r['pay_method'] ?: '-' ) . '</dd><dt>流水号</dt><dd>-</dd><dt>支付时间</dt><dd>-</dd></dl><h4>支付记录</h4><p class="pc-pl-muted">暂无支付信息（还没点下单，没有进入支付）</p></section>';
+		echo '<section class="pc-rc-panel"><h3>物流信息</h3><p class="pc-pl-muted">暂无物流信息</p></section>';
+		echo '</div><aside class="pc-rc-side">';
+		$sum = Recovery_Items::customer_summary( $r['email'] );
 		echo '<section class="pc-rc-panel"><h3>购买人信息</h3><p class="pc-rc-person"><strong>' . esc_html( Recovery_Items::display_name( $r['name'] ) ?: '-' ) . '</strong></p><dl class="pc-rc-kv">';
 		echo '<dt>邮箱</dt><dd><a href="mailto:' . esc_attr( $r['email'] ) . '">' . esc_html( $r['email'] ) . '</a></dd><dt>电话</dt><dd>' . esc_html( $r['phone'] ?: '-' ) . '</dd>';
-		echo '<dt>国家</dt><dd>' . esc_html( $r['country'] ? ( WC()->countries->countries[ $r['country'] ] ?? $r['country'] ) : '-' ) . '</dd>';
-		echo '<dt>配送方式</dt><dd>' . esc_html( $r['ship_method'] ?: '-' ) . '</dd><dt>选的支付方式</dt><dd>' . esc_html( $r['pay_method'] ?: '-' ) . '</dd></dl></section>';
+		echo '<dt>首次支付时间</dt><dd>' . esc_html( $sum['first_paid'] ? wp_date( 'Y-m-d H:i:s', $sum['first_paid'] ) : '-' ) . '</dd>';
+		echo '<dt>最后访问时间</dt><dd>' . esc_html( $vis && $vis['last_ms'] ? self::time( $vis['last_ms'] ) : self::time( (int) $rec['changed_ms'] ) ) . '</dd>';
+		echo '<dt>总计付款订单</dt><dd>' . ( $sum['orders'] ? (int) $sum['orders'] . ' 单' : '-' ) . '</dd>';
+		echo '<dt>总计消费金额</dt><dd>' . ( $sum['orders'] ? self::money( $sum['spent'], $cur ) : '-' ) . '</dd>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '<dt>顾客账号</dt><dd>' . ( (int) $rec['user_id'] ? '<a href="' . esc_url( get_edit_user_link( (int) $rec['user_id'] ) ) . '">已注册</a>' : '游客' ) . '</dd></dl></section>';
+		echo '<section class="pc-rc-panel"><h3>订单基础信息</h3><dl class="pc-rc-kv">';
+		echo '<dt>支付方式</dt><dd>' . esc_html( $r['pay_method'] ?: '-' ) . '</dd><dt>配送方式</dt><dd>' . esc_html( $r['ship_method'] ?: '-' ) . '</dd>';
+		echo '<dt>下单类型</dt><dd>购物车结账（未提交）</dd><dt>结账流程</dt><dd>单页结账</dd>';
+		echo '<dt>域名来源</dt><dd>' . esc_html( ( $vis && $vis['host'] ) ? $vis['host'] : (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) ) . '</dd></dl></section>';
 		echo '<section class="pc-rc-panel"><h3>时间线</h3><dl class="pc-rc-kv">';
 		foreach ( array( '记录' => (int) $rec['created_ms'], '最后改购物车' => (int) $rec['changed_ms'], '提醒 1' => (int) $rec['sent1_ms'], '提醒 2' => (int) $rec['sent2_ms'], '提醒 3' => (int) $rec['sent3_ms'], '点了邮件回来' => (int) $rec['clicked_ms'], '付款' => (int) $rec['paid_ms'] ) as $k => $ms ) {
 			if ( $ms ) {
 				echo '<dt>' . esc_html( $k ) . '</dt><dd>' . esc_html( self::time( $ms ) ) . '</dd>';
 			}
 		}
-		echo '</dl></section></aside></div></div>';
+		echo '</dl></section>';
+		self::attribution_panels( $vis, array() );
+		echo '</aside></div></div>';
+	}
+
+	/** 收货 / 账单地址两栏（可复制）。 */
+	private static function addresses( array $ship, array $bill ): void {
+		echo '<section class="pc-rc-panel pc-rc-addresses">';
+		foreach ( array( 'shipping' => array( '收货地址', $ship ), 'billing' => array( '账单地址', $bill ) ) as $type => $pair ) {
+			list( $title, $a ) = $pair;
+			$country = WC()->countries->countries[ $a['country'] ?? '' ] ?? ( $a['country'] ?? '' );
+			$text    = trim( implode( "\n", array_filter( array( trim( ( $a['first_name'] ?? '' ) . ' ' . ( $a['last_name'] ?? '' ) ), $a['company'] ?? '', $a['address_1'] ?? '', $a['address_2'] ?? '', trim( ( $a['city'] ?? '' ) . ' ' . ( $a['state'] ?? '' ) . ' ' . ( $a['postcode'] ?? '' ) ), $country, $a['phone'] ?? '', $a['email'] ?? '' ) ) ) );
+			echo '<div class="pc-rc-address"><header><strong>' . esc_html( $title ) . '</strong><button type="button" class="button-link pc-rc-copy" data-copy="' . esc_attr( $text ) . '">复制</button></header>';
+			$rows = array( '姓名' => trim( ( $a['first_name'] ?? '' ) . ' ' . ( $a['last_name'] ?? '' ) ), '公司' => $a['company'] ?? '', '街道' => $a['address_1'] ?? '', '寓所' => $a['address_2'] ?? '', '省市区' => trim( ( $a['state'] ?? '' ) . ' ' . ( $a['city'] ?? '' ) ), '邮编' => $a['postcode'] ?? '', '国家' => $country, '电话' => $a['phone'] ?? '' );
+			if ( 'billing' === $type ) {
+				$rows['邮箱'] = $a['email'] ?? '';
+			}
+			echo '<dl>';
+			foreach ( $rows as $k => $v ) {
+				echo '<dt>' . esc_html( $k ) . '</dt><dd>' . esc_html( '' !== trim( (string) $v ) ? $v : '-' ) . '</dd>';
+			}
+			echo '</dl></div>';
+		}
+		echo '</section>';
+	}
+
+	/** 右栏：订单归因 + 设备信息（订单用 WC 归因 meta，没下单的只用访客记录）。 */
+	private static function attribution_panels( ?array $vis, array $att ): void {
+		echo '<section class="pc-rc-panel"><h3>订单归因</h3><dl class="pc-rc-kv">';
+		$channel  = trim( ( $att['utm_source'] ?? '' ) . ' / ' . ( $att['utm_medium'] ?? '' ), ' /' ) ?: ( $vis['utm'] ?? '' );
+		$campaign = ( $att['utm_campaign'] ?? '' ) ?: ( $vis['campaign'] ?? '' );
+		$content  = ( $att['utm_content'] ?? '' ) ?: ( $vis['content'] ?? '' );
+		$referrer = ( $att['referrer'] ?? '' ) ?: ( $vis['referrer'] ?? '' );
+		$landing  = ( $att['landing'] ?? '' ) ?: ( $vis && $vis['landing'] ? 'https://' . ( $vis['host'] ?: wp_parse_url( home_url( '/' ), PHP_URL_HOST ) ) . $vis['landing'] : '' );
+		$source   = ( $att['source_type'] ?? '' ) ?: ( $channel ? '广告 / 推广链接' : ( $referrer ? '外部网站' : ( $vis ? '直接访问' : '' ) ) );
+		echo '<dt>来源类型</dt><dd>' . esc_html( $source ?: '-' ) . '</dd>';
+		echo '<dt>渠道</dt><dd>' . esc_html( $channel ?: '-' ) . '</dd>';
+		echo '<dt>广告系列</dt><dd class="pc-rc-break">' . esc_html( $campaign ?: '-' ) . ( $content ? '<br><span class="pc-pl-muted">' . esc_html( $content ) . '</span>' : '' ) . '</dd>';
+		echo '<dt>来路</dt><dd class="pc-rc-break">' . esc_html( $referrer ?: '-' ) . '</dd>';
+		echo '<dt>落地页</dt><dd class="pc-rc-break">' . ( $landing ? '<a href="' . esc_url( $landing ) . '" target="_blank" rel="noopener">' . esc_html( $landing ) . '</a>' : '-' ) . '</dd>';
+		if ( ! empty( $att['session_start'] ) ) {
+			echo '<dt>本次会话</dt><dd>' . esc_html( $att['session_start'] . '，' . (int) ( $att['pages'] ?? 0 ) . ' 页' ) . ( ! empty( $att['sessions'] ) ? '<br><span class="pc-pl-muted">第 ' . (int) $att['sessions'] . ' 次来访</span>' : '' ) . '</dd>';
+		}
+		echo '</dl></section>';
+
+		echo '<section class="pc-rc-panel"><h3>设备信息</h3><dl class="pc-rc-kv">';
+		if ( $vis ) {
+			echo '<dt>访客</dt><dd>#' . (int) $vis['id'] . ' <a href="' . esc_url( $vis['url'] ) . '">查看轨迹</a></dd>';
+			echo '<dt>设备来源</dt><dd>' . esc_html( $vis['device'] ?: '-' ) . '</dd>';
+			echo '<dt>浏览器</dt><dd>' . esc_html( $vis['browser'] ?: '-' ) . '</dd>';
+			echo '<dt>来访次数</dt><dd>' . (int) $vis['visits'] . ' 次，本次看了 ' . (int) $vis['pageviews'] . ' 页</dd>';
+			echo '<dt>首次 / 最近</dt><dd>' . esc_html( self::time( $vis['first_ms'] ) ) . '<br>' . esc_html( self::time( $vis['last_ms'] ) ) . '</dd>';
+			if ( $vis['landing'] ) {
+				echo '<dt>进站页面</dt><dd class="pc-rc-break">' . esc_html( $vis['landing'] ) . '</dd>';
+			}
+		} else {
+			$dev = $att['device'] ?? '';
+			echo '<dt>设备来源</dt><dd>' . esc_html( $dev ? ( array( 'Mobile' => '手机', 'Desktop' => '电脑', 'Tablet' => '平板' )[ $dev ] ?? $dev ) : '-' ) . '</dd>';
+			echo '<dt class="pc-pl-muted">说明</dt><dd class="pc-pl-muted">没有匹配到访客记录</dd>';
+		}
+		if ( ! empty( $att['user_agent'] ) ) {
+			echo '<dt>浏览器标识</dt><dd class="pc-rc-break pc-pl-muted">' . esc_html( $att['user_agent'] ) . '</dd>';
+		}
+		echo '</dl></section>';
 	}
 }

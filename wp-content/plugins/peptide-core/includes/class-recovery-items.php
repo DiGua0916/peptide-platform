@@ -320,6 +320,65 @@ final class Recovery_Items {
 		);
 	}
 
+	/** 购物会话的完整数据：顾客资料、购物车合计、选的配送 / 支付。 */
+	public static function session_data( string $key ): array {
+		global $wpdb;
+		$v = $wpdb->get_var( $wpdb->prepare( "SELECT session_value FROM {$wpdb->prefix}woocommerce_sessions WHERE session_key = %s", $key ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$d = is_string( $v ) ? maybe_unserialize( $v ) : null;
+		$d = is_array( $d ) ? $d : array();
+		$c = maybe_unserialize( $d['customer'] ?? '' );
+		$t = maybe_unserialize( $d['cart_totals'] ?? '' );
+		$c = is_array( $c ) ? $c : array();
+		$billing  = array();
+		$shipping = array();
+		foreach ( array( 'first_name', 'last_name', 'company', 'address_1', 'address_2', 'city', 'state', 'postcode', 'country', 'phone', 'email' ) as $f ) {
+			$billing[ $f ]  = (string) ( $c[ $f ] ?? '' );
+			$shipping[ $f ] = (string) ( $c[ 'shipping_' . $f ] ?? '' );
+		}
+		if ( '' === trim( implode( '', array_diff_key( $shipping, array( 'email' => 1, 'phone' => 1 ) ) ) ) ) {
+			$shipping = $billing; // 没单独填收货地址就是同一个。
+		}
+		return array( 'customer' => $c, 'billing' => $billing, 'shipping' => $shipping, 'totals' => is_array( $t ) ? $t : array() );
+	}
+
+	/** 没下单的结账对应的访客（实时访客里 cart_key = 购物会话键）。 */
+	public static function visitor_by_session( string $key ): ?array {
+		if ( '' === $key || ! class_exists( Tracking\Schema::class ) || ! Tracking\Schema::ready() ) {
+			return null;
+		}
+		global $wpdb;
+		$v = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . Tracking\Schema::table( 'visitors' ) . ' WHERE cart_key = %s ORDER BY last_ms DESC LIMIT 1', $key ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+		if ( ! $v ) {
+			return null;
+		}
+		$visit = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . Tracking\Schema::table( 'visits' ) . ' WHERE visitor_id = %d ORDER BY start_ms DESC LIMIT 1', (int) $v['id'] ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+		return self::visitor_view( $v, $visit );
+	}
+
+	private static function visitor_view( array $v, ?array $visit ): array {
+		$devices = array( 'mobile' => '手机', 'desktop' => '电脑', 'tablet' => '平板' );
+		$query   = array();
+		if ( $visit && ! empty( $visit['attribution_query'] ) ) {
+			parse_str( (string) $visit['attribution_query'], $query );
+		}
+		return array(
+			'id'        => (int) $v['id'],
+			'device'    => $devices[ $v['device'] ] ?? (string) $v['device'],
+			'browser'   => (string) $v['browser'],
+			'visits'    => (int) $v['visits'],
+			'first_ms'  => (int) $v['first_ms'],
+			'last_ms'   => (int) $v['last_ms'],
+			'landing'   => $visit ? (string) $visit['landing_path'] : '',
+			'utm'       => $visit ? trim( (string) $visit['utm_source'] . ' / ' . (string) $visit['utm_medium'], ' /' ) : '',
+			'campaign'  => (string) ( $query['utm_campaign'] ?? '' ),
+			'content'   => (string) ( $query['utm_content'] ?? '' ),
+			'referrer'  => $visit ? (string) $visit['referrer_host'] : '',
+			'host'      => $visit ? (string) $visit['attribution_host'] : '',
+			'pageviews' => $visit ? (int) $visit['pageviews'] : 0,
+			'url'       => admin_url( 'admin.php?page=pc-visitors&visitor=' . (int) $v['id'] ),
+		);
+	}
+
 	private static function session_customer( string $key ): array {
 		global $wpdb;
 		$v = $wpdb->get_var( $wpdb->prepare( "SELECT session_value FROM {$wpdb->prefix}woocommerce_sessions WHERE session_key = %s", $key ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
@@ -483,21 +542,7 @@ final class Recovery_Items {
 		}
 		$visit_id = (int) $order->get_meta( '_pc_track_visit' );
 		$visit    = $visit_id ? $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . Tracking\Schema::table( 'visits' ) . ' WHERE id = %d', $visit_id ), ARRAY_A ) : null; // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
-		$devices  = array( 'mobile' => '手机', 'desktop' => '电脑', 'tablet' => '平板' );
-		return array(
-			'id'        => $vid,
-			'device'    => $devices[ $v['device'] ] ?? (string) $v['device'],
-			'browser'   => (string) $v['browser'],
-			'visits'    => (int) $v['visits'],
-			'first_ms'  => (int) $v['first_ms'],
-			'last_ms'   => (int) $v['last_ms'],
-			'landing'   => $visit ? (string) $visit['landing_path'] : '',
-			'utm'       => $visit ? trim( (string) $visit['utm_source'] . ' / ' . (string) $visit['utm_medium'], ' /' ) : '',
-			'referrer'  => $visit ? (string) $visit['referrer_host'] : '',
-			'host'      => $visit ? (string) $visit['attribution_host'] : '',
-			'pageviews' => $visit ? (int) $visit['pageviews'] : 0,
-			'url'       => admin_url( 'admin.php?page=pc-visitors&visitor=' . $vid ),
-		);
+		return self::visitor_view( $v, $visit );
 	}
 
 	/** 卖家备注（私密订单备注，去掉系统自动写的）。 */

@@ -879,3 +879,4 @@
 - 部署两台主机各 7 份；阳站实测：3 条弃单（Nitza / Abigail 共 6 单 / Carla），全部召回中。
 - 18:05 UTC 弃单列表补上“没点下单的结账”：顾客在结账页填了邮箱和地址就走了，WooCommerce 没有订单，只有购物会话。列表打开时（5 分钟一次）跑 `Recovery::scan()` 把这类会话记进 `pc_cart_recovery`，`Recovery_Items::session_items()` 整理成行（标“未下单”），详情 `&rec=<id>`（商品、购物车合计、购买人、时间线、召回记录、恢复购物车链接 / 写邮件 / 作废）。阳站因此从 3 条变 4 条：第 4 位 Soraya Andujar（dkalhomeschool@gmail.com，$152.75）就是没点下单的。注意：阳站等子店“店铺地址”没填，弃单自动提醒被拦着不发（CAN-SPAM 要求），页面有黄条提示。
 - 18:08 UTC 订单菜单修正：WooCommerce 订单页（wc-orders）映射到新的顶层“待处理订单”（`Admin_Menus::MOVED`），否则点待处理后菜单收起、弃单看不到。阳站实测子菜单保持展开。
+- 18:12 UTC 没下单的结账详情页补齐成和订单一样：收货 / 账单地址（从购物会话 customer 取）、运费 / 优惠 / 税费（cart_totals）、支付信息 / 物流信息占位、购买人汇总、订单基础信息、订单归因与设备信息（实时访客按 `cart_key` = 会话键匹配，取最近一次访问的 UTM / 落地页 / 来路）。`Recovery_Items::session_data()/visitor_by_session()`；页面抽出 `addresses()`、`attribution_panels()` 两个共用渲染。
