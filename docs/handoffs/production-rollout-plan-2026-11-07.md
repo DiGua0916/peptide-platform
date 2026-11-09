@@ -781,3 +781,12 @@
 - 修复：两台主机新增 `/etc/php/8.3/fpm/conf.d/99-vialcove-opcache.ini`（memory 768M、max_accelerated_files 50000、interned_strings 48、revalidate_freq 30），`systemctl restart php8.3-fpm`（约 1 秒），预热 6 店。店铺主机预热后 413MB / 10731 脚本、命中率回升；s0007 首页首字节 0.79s → 0.39s，/wp-json 0.26s，结账 0.12s；主店首页 1.27s → 0.44s。文件留档 `tools/deployment/php/99-vialcove-opcache.ini`。
 - PHP-FPM 池：店铺主机子店 2 → 10、主店 8 → 16；后台主机子店后台 2 → 8；两台都加 slowlog（5s）便于以后定位慢请求。worker.py 模板子店改 6（新店）。
 - 服务器内存：两台各 7.7GB，调整后可用约 5.2GB。MySQL innodb_buffer_pool 128M 未动。
+
+### 2026-11-09 11:05 UTC 总后台/店铺后台域名切 Cloudflare 代理（为 Argo 做准备）
+只动 vialcoveresearch.com（总后台 + s0001/s0006–s0010 店铺后台），顾客访问的前台域名未改。
+- Cloudflare：该区域 5 条 A 记录（根、www、s0001、s0002、通配）由仅 DNS 改为代理；Bot Fight Mode 关闭（保留 AI 爬虫拦截），避免服务器间 API 调用被挑战。SSL 模式本来就是 strict，源站证书为 Let's Encrypt，HTTP-01 续期走 80 端口不受影响。
+- HQ 主机 nginx：s0006–s0010 后台配置把全局 `Cache-Control "no-store"` 换成和主店后台相同的 `$vialcove_store_source_cache_control` map（带 ver 的 CSS/JS public 1 天，HTML/接口仍 no-store）。备份 `/root/vialcove-backups/admin-proxy-20261109-110032/`。Cloudflare 真实 IP 配置（conf.d/vialcove-cloudflare-realip.conf）原已存在。
+- /etc/hosts 固定：HQ 主机把 vialcoveresearch.com 及 6 个后台子域指向 127.0.0.1（总后台轮询/复制店铺走本机，不经 Cloudflare 的 100 秒限制和挑战）；web 主机把 vialcoveresearch.com 指向 54.144.250.46（店铺注册/上报直连）。HQ IP 变更时需同步改。
+- 验证：三个后台域名外网访问均带 cf-ray；后台静态资源第二次请求 cf-cache-status HIT；错误密码登录 POST 返回 200 未被拦；HQ 对 6 家店 Monitor::poll(full) 全部 OK（约 0.8 s）。
+- 下一步：用户在 Cloudflare 面板给 vialcoveresearch.com 开通 Argo Smart Routing（需绑卡），之后用 API 核对 smart_routing=on 并测海外前后延迟。
+- 附带：仓库新增 exports/（提取的第三方插件 zip），已加入 .gitignore，不入库。

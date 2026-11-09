@@ -53,3 +53,4 @@ Desktop.ini
 /docs/chat/.room-*.tmp
 /tools/chatroom/.runtime/
 __pycache__/
+exports/
