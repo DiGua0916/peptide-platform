@@ -869,3 +869,4 @@
 - 17:25 UTC 店主确认后，从各自店铺给 4 位真实顾客各发一封 02 付款帮助信（阳：Nitza #11867、Abigail #11864、Carla #11858；芒果：Luz #11861），订单已留备注，店铺邮件记录 4 条 sent。
 - 店主：“以后自动发”。`Chase_Copy::on_cancelled()`：未付款订单被取消（超时 / 放弃）→ 自动发 02 付款帮助信；同一顾客 24 小时内只发一封（`woocommerce_email_sent` 记 transient `pc_chase_payment_<md5 email>`）；测试单不发。已部署 14 份，主店用测试单验证不触发；今天已手发的 4 人已打 24h 标记。顺带给 5 家租户补建 `pc_email_log` 表。
 - 称呼只取名字第一个词并首字母大写（ABIGAIL → Abigail，“carla figueroa” → Carla）。
+- 17:45 UTC 邮件里的联系方式改为跟店铺后台「客服联系方式」走：`Chase_Copy::whatsapp()/whatsapp_link()/store_email()` 读 `Settings::all()['support']`（没填才用默认号 / orders@域名）；手写邮件默认模板里的号码换成 `{whatsapp}` 变量（TEMPLATES_VERSION 2026-11-09c，自定义模板不动）。6 家店 `woocommerce_email_from_address` 改为各自 orders@域名、from_name 为品牌名（阳站之前还是 VialCovePeptides@outlook.com，WooCommerce 自带的“please contact us at …”行就显示它）。阳站已重新渲染确认。注：6 家店后台的 WhatsApp 目前都还是 +1 303 944 4124，是店主没改，不是邮件写死。

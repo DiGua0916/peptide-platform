@@ -257,7 +257,8 @@ final class Mail_Page {
 		echo '<div class="pc-mail__field"><span>正文</span>';
 		wp_editor( $body, 'pc-mail-body', array( 'textarea_name' => 'body', 'textarea_rows' => 14, 'media_buttons' => false, 'teeny' => false, 'quicktags' => true, 'tinymce' => array( 'toolbar1' => 'bold,italic,underline,link,unlink,bullist,numlist,blockquote,undo,redo', 'toolbar2' => '' ) ) );
 		echo '</div>';
-		echo '<details class="pc-mail__vars"><summary>可以用的占位符</summary><ul><li><code>{customer_name}</code> 顾客名字（按订单或账号自动填）</li><li><code>{order_number}</code> 订单号 <code>{order_total}</code> 订单金额 <code>{pay_url}</code> 付款链接 <code>{tracking}</code> 物流单号（订单里填过才有）</li><li><code>{store_name}</code> 店铺品牌名 <code>{store_url}</code> 店铺地址 <code>{store_email}</code> 这家店的发件邮箱（orders@域名）</li></ul></details>';
+		echo '<details class="pc-mail__vars"><summary>可以用的占位符</summary><ul><li><code>{customer_name}</code> 顾客名字（按订单或账号自动填）</li><li><code>{order_number}</code> 订单号 <code>{order_total}</code> 订单金额 <code>{pay_url}</code> 付款链接 <code>{tracking}</code> 物流单号（订单里填过才有）</li><li><code>{store_name}</code> 店铺品牌名 <code>{store_url}</code> 店铺地址 <code>{store_email}</code> 这家店的发件邮箱（orders@域名）</li>
+				<li><code>{whatsapp}</code> 店铺后台「客服联系方式」里的 WhatsApp 号</li></ul></details>';
 		if ( $order instanceof \WC_Order ) {
 			echo '<div class="pc-mail__order"><strong>订单 #' . esc_html( $order->get_order_number() ) . '</strong> · ' . esc_html( wc_get_order_status_name( $order->get_status() ) ) . ' · ' . wp_kses_post( $order->get_formatted_order_total() ) . ' · ' . esc_html( trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() ) ) . ' <a href="' . esc_url( admin_url( 'admin.php?page=wc-orders&action=edit&id=' . $order->get_id() ) ) . '">打开订单</a></div>';
 		}

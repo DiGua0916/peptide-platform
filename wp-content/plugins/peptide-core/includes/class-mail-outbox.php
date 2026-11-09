@@ -328,7 +328,7 @@ final class Mail_Outbox {
 	// ---------- 模板 ----------
 
 	/** 内置模板版本：升级时把内置的（id 以 vc- 开头）换成新话术，店主自己建的保留。 */
-	public const TEMPLATES_VERSION = '2026-11-09b';
+	public const TEMPLATES_VERSION = '2026-11-09c';
 	private const TEMPLATES_VER_OPTION = 'pc_mail_templates_version';
 
 	/** @return array<int,array{id:string,name:string,subject:string,body:string}> */
@@ -383,7 +383,7 @@ final class Mail_Outbox {
 	 * 发件邮箱换成各店自己的 orders@ 地址（{store_email}），WhatsApp 号与口号照母版。黑五段按母版默认保留，不用时整段删掉。
 	 */
 	private static function default_templates(): array {
-		$wa     = '+1 303 944 4124';
+		$wa     = '{whatsapp}'; // 发送时换成店铺后台「客服联系方式」里的 WhatsApp 号。
 		$wa_btn = '<p style="margin:24px 0"><a href="https://wa.me/13039444124" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:6px">Chat with us on WhatsApp → ' . $wa . '</a></p>';
 		$sign   = '<p>Best regards,<br>VialCove Team<br>WhatsApp: ' . $wa . '<br>Email: {store_email}</p><p style="color:#6b7280;font-size:13px">Peptides are our focus. Your experience is our priority.</p>';
 		$bf     = '<p>We\'re also running a Black Friday promotion, with special pricing on many peptide products. If you\'re still considering an order, we\'d be happy to share the available offers and help you review your selection.</p>';
@@ -475,7 +475,8 @@ final class Mail_Outbox {
 		$vars  = array(
 			'{store_name}'    => $store,
 			'{store_url}'     => home_url( '/' ),
-			'{store_email}'   => 'orders@' . preg_replace( '/^www\./', '', $host ),
+			'{store_email}'   => class_exists( Emails\Chase_Copy::class ) ? Emails\Chase_Copy::store_email() : 'orders@' . preg_replace( '/^www\./', '', $host ),
+			'{whatsapp}'      => class_exists( Emails\Chase_Copy::class ) ? Emails\Chase_Copy::whatsapp() : '',
 			'{customer_name}' => '',
 			'{order_number}'  => '',
 			'{order_total}'   => '',

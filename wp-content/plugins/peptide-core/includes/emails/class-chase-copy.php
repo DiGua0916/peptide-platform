@@ -7,7 +7,7 @@
  *   （顾客没留电话时强调加 WhatsApp，留了就只感谢）；
  * - 弃单提醒三阶段（Cart_Recovery_1/2/3）默认文案按 01「A Quick Follow-Up」改写，第三阶段默认关。
  * 两封 WooCommerce 邮件通过 woocommerce_locate_template 指到本插件 templates/emails/ 下的模板。
- * 店名用 Mail_Outbox::brand()（VialCove / VialCovePlus …），发件邮箱是这家店自己的 orders@域名。
+ * 店名用 Mail_Outbox::brand()（VialCove / VialCovePlus …）；WhatsApp 号和客服邮箱取店铺后台「客服联系方式」，没填才用默认号 / orders@域名。
  *
  * @package PeptideCore
  */
@@ -81,8 +81,33 @@ final class Chase_Copy {
 		return class_exists( Mail_Outbox::class ) ? Mail_Outbox::brand() : 'VialCove';
 	}
 
+	/** 店铺后台「客服联系方式」里的 WhatsApp 渠道（店主自己改了就用改后的）。 */
+	private static function support_channel( string $type ): ?array {
+		if ( ! class_exists( '\\PeptideCore\\Support_Contacts' ) || ! class_exists( '\\PeptideCore\\Settings' ) ) {
+			return null;
+		}
+		$support = \PeptideCore\Settings::all()['support'] ?? array();
+		foreach ( \PeptideCore\Support_Contacts::channels( is_array( $support ) ? $support : array() ) as $c ) {
+			if ( ( $c['type'] ?? '' ) === $type && '' !== (string) ( $c['value'] ?? '' ) ) {
+				return $c;
+			}
+		}
+		return null;
+	}
+
+	/** 显示用的 WhatsApp 号：店铺设置里的，没填才用默认号。 */
 	public static function whatsapp(): string {
-		return (string) apply_filters( 'pc_chase_whatsapp', self::WHATSAPP );
+		$c = self::support_channel( 'whatsapp' );
+		$n = $c ? (string) $c['value'] : self::WHATSAPP;
+		if ( preg_match( '/^\+1(\d{3})(\d{3})(\d{4})$/', $n, $m ) ) {
+			$n = "+1 {$m[1]} {$m[2]} {$m[3]}"; // 美国号按母版写法分组。
+		}
+		return (string) apply_filters( 'pc_chase_whatsapp', $n );
+	}
+
+	public static function whatsapp_link(): string {
+		$c = self::support_channel( 'whatsapp' );
+		return $c ? preg_replace( '/\?.*$/', '', (string) $c['url'] ) : self::WHATSAPP_LINK;
 	}
 
 	public static function team(): string {
@@ -91,6 +116,10 @@ final class Chase_Copy {
 
 	/** 这家店的客服邮箱：orders@自己的域名。 */
 	public static function store_email(): string {
+		$c = self::support_channel( 'email' );
+		if ( $c ) {
+			return (string) $c['value']; // 店铺设置里填了客服邮箱就用它。
+		}
 		$host = strtolower( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
 		return 'orders@' . preg_replace( '/^www\./', '', $host );
 	}
@@ -130,7 +159,7 @@ final class Chase_Copy {
 
 	/** 母版里的 WhatsApp 按钮。 */
 	public static function button_html(): string {
-		return '<p style="margin:24px 0"><a href="' . esc_url( self::WHATSAPP_LINK ) . '" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:6px">Chat with us on WhatsApp → ' . esc_html( self::whatsapp() ) . '</a></p>';
+		return '<p style="margin:24px 0"><a href="' . esc_url( self::whatsapp_link() ) . '" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:6px">Chat with us on WhatsApp → ' . esc_html( self::whatsapp() ) . '</a></p>';
 	}
 
 	/** 母版签名。 */
