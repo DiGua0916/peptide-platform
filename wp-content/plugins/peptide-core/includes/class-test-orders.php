@@ -2,7 +2,7 @@
 /**
  * 测试单规则（2026-11-09，店主要求）：收件人姓、名、地址、城市全部填“1”的就是店主自己在测支付通道。
  *
- * - 邮编也填“1”时放行（WooCommerce 对美国邮编的格式校验只对测试单跳过）；
+ * - 邮编、邮箱也填“1”时放行（格式校验只对测试单跳过）；
  * - 这样的订单不发任何邮件（顾客邮件、后台新订单邮件、注册邀请都不发），也不进弃单追单；
  * - 订单上打标记 `_pc_test_order` 并留一条备注，后台一眼能认出来。
  * 只要收件信息不是全“1”，一切照旧。
@@ -22,6 +22,8 @@ final class Test_Orders {
 
 	public static function register_hooks(): void {
 		add_filter( 'woocommerce_validate_postcode', array( self::class, 'allow_postcode' ), 10, 3 );
+		add_filter( 'is_email', array( self::class, 'allow_email' ), 10, 2 );
+		add_filter( 'sanitize_email', array( self::class, 'keep_email' ), 10, 2 );
 		add_action( 'woocommerce_checkout_create_order', array( self::class, 'mark' ), 5 );
 		add_action( 'woocommerce_store_api_checkout_order_processed', array( self::class, 'mark' ), 5 );
 		add_action( 'woocommerce_checkout_order_processed', array( self::class, 'mark' ), 5 );
@@ -105,6 +107,22 @@ final class Test_Orders {
 			return $valid;
 		}
 		return self::request_is_test() ? true : $valid;
+	}
+
+	/** 邮箱“1”只对测试单放行（反正测试单不发邮件）。 */
+	public static function allow_email( $result, $email ) {
+		if ( false !== $result || self::MARK !== trim( (string) $email ) ) {
+			return $result;
+		}
+		return self::request_is_test() ? (string) $email : $result;
+	}
+
+	/** sanitize_email 会把“1”清成空串，导致结账时提示邮箱必填；测试单保留原样。 */
+	public static function keep_email( $sanitized, $email ) {
+		if ( '' !== (string) $sanitized || self::MARK !== trim( (string) $email ) ) {
+			return $sanitized;
+		}
+		return self::request_is_test() ? self::MARK : $sanitized;
 	}
 
 	/** 下单时打标记、留备注。 */

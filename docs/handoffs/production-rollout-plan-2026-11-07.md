@@ -858,3 +858,4 @@
 - **结账页 / 购物车不再展示 “Your unpaid orders”**（`peptide-panapay/includes/class-pending-orders.php` 去掉 4 个展示钩子，我的账户页保留）。
 - 部署：两台主机各 6 份（主店 + 5 租户）；备份 `~/vialcove-deploy-backups/trk-plain-20261109T1640xx / 1642xx`。
 - **发现并修正**：部署脚本用 `ls -d …/*-web/source` 找新店模板，目录 700 无权限读取，所以本会话此前的所有部署都没写进模板。现改为读 `/etc/vialcove-provision/config.json` 的 `source_web_root` / `source_admin_root`（脚本入库 `tools/deploy-store-plugin-files.sh`）。已把模板里的 peptide-core、peptide-panapay 整目录 rsync 成主店当前版本（web 模板落后 31+49 文件，HQ 模板 25+2），模板备份 `/root/vialcove-backups/template-plugins-20261109-16440x`。
+- 16:52 UTC 补充：测试单邮箱也可填“1”（`is_email` + `sanitize_email` 两个过滤器只对测试请求放行；前端脚本同时清掉 email 报错）。Store API 实测：全 1 地址 + 邮箱 1 + 邮编 1 → 200 且原样保存；正常地址 + 邮编 1 → 400 仍拒绝。两台主机各 7 份（含新店模板）。
