@@ -213,8 +213,10 @@ final class Query {
 
 		// 最近 30 分钟内、全部标签页都已离开的访客：他们最近一次访问也算结束。
 		$left_visits = array();
+		$presence_of = array();
 		foreach ( self::recent_tabs( $now_ms ) as $vid => $list ) {
-			if ( 'left' === self::presence( $list, $now_ms ) ) {
+			$presence_of[ $vid ] = self::presence( $list, $now_ms );
+			if ( 'left' === $presence_of[ $vid ] ) {
 				$latest = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$visits} WHERE visitor_id = %d ORDER BY start_ms DESC, id DESC LIMIT 1", $vid ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 				if ( $latest ) {
 					$left_visits[] = $latest;
@@ -275,6 +277,8 @@ final class Query {
 				'cart'    => Carts::view( $v, false ),
 				// 离站原因：最后一个前端事件是离开页面 → 离页信号；否则超时推定。都不是精确的关站时间。
 				'reason'  => ! (int) $r['is_ended'] ? 'ongoing' : ( 'page_exit' === $tail['last_type'] ? 'exit_signal' : 'timeout' ),
+				// 还没结束的访问用和实时访客同一个在线状态（正在浏览 / 停住了 / 刚离开）。
+				'presence' => ! (int) $r['is_ended'] ? ( $presence_of[ (int) $r['v_id'] ] ?? 'away' ) : '',
 				'left_ms' => (int) $r['last_ms'],
 				'last_page' => $tail['last_page'],
 			);

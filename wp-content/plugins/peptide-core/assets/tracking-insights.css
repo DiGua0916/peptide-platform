@@ -139,3 +139,4 @@ body.pc-admin-workspace .pc-trk .pc-trk-backlinks a:hover{background:#f1f1f1}
 @media (prefers-reduced-motion:reduce){.pc-lv-live i{animation:none}}
 
 .pc-trk-ongoing{display:inline-flex;align-items:center;gap:6px;color:#15803d;font-weight:600}.pc-trk-ongoing::before{content:'';width:7px;height:7px;border-radius:50%;background:#16a34a}
+.pc-trk-ongoing.is-idle{color:#a16207}.pc-trk-ongoing.is-idle::before{background:#eab308}.pc-trk-ongoing.is-away{color:#6b7280}.pc-trk-ongoing.is-away::before{background:#9ca3af}

@@ -480,7 +480,7 @@
 		var page = it.last_page;
 		return '<tr><td><a href="' + esc( cfg.liveUrl + '&visitor=' + who.id + '&visit=' + visit.id ) + '"><strong>' + esc( who.label ) + '</strong></a><div class="pc-trk-sub">' + esc( ( S[ who.device ] || who.device ) + ' · ' + who.browser + ' · ' + S.visits + ' ' + who.visits ) + '</div></td>' +
 			'<td>' + esc( clock( visit.start_ms, true ) ) + '<div class="pc-trk-sub">→ ' + esc( clock( it.left_ms, true ) ) + ' · ' + esc( ago( visit.last_ms - visit.start_ms ) ) + '</div></td>' +
-			( 'ongoing' === it.reason ? '<td><span class="pc-trk-ongoing">正在浏览</span><div class="pc-trk-sub">还没离开</div></td>' : '<td>' + esc( 'exit_signal' === it.reason ? S.reasonExit : S.reasonTimeout ) + '<div class="pc-trk-sub">' + esc( S.leftEstimated ) + '</div></td>' ) +
+			( 'ongoing' === it.reason ? '<td>' + ( 'active' === it.presence ? '<span class="pc-trk-ongoing">正在浏览</span><div class="pc-trk-sub">页面在前台、最近有操作</div>' : 'idle' === it.presence ? '<span class="pc-trk-ongoing is-idle">停住了</span><div class="pc-trk-sub">页面开着但在后台或没操作</div>' : '<span class="pc-trk-ongoing is-away">刚离开</span><div class="pc-trk-sub">没满 30 分钟，还没算结束</div>' ) + '</td>' : '<td>' + esc( 'exit_signal' === it.reason ? S.reasonExit : S.reasonTimeout ) + '<div class="pc-trk-sub">' + esc( S.leftEstimated ) + '</div></td>' ) +
 			'<td>' + ( page ? pageText( page ) : '—' ) + '</td>' +
 			'<td>' + esc( visit.pageviews ) + '</td>' +
 			'<td>' + esc( S.stages[ visit.stage ] ) + ( visit.order_url ? ' <a href="' + esc( visit.order_url ) + '">#' + esc( visit.order_id ) + '</a>' : '' ) + '</td>' +
