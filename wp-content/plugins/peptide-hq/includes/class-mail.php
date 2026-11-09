@@ -186,8 +186,11 @@ final class Mail {
 			$line = trim( str_replace( array( "\r", "\n" ), '', (string) $line ) );
 			if ( preg_match( '/^(content-type|reply-to|cc|bcc)\s*:/i', $line ) && strlen( $line ) < 1000 ) { $headers[] = $line; }
 		}
-		$name = trim( str_replace( array( '"', "\r", "\n", '<', '>' ), '', (string) ( $site['name'] ?? '' ) ) );
-		$headers[] = 'From: ' . ( '' !== $name ? '"' . $name . '" ' : '' ) . '<' . $sender['email'] . '>';
+		// 2026-11-09：每家店用自己域名的发件地址（FluentSMTP 里按发件地址配好的连接），显示名用店铺的英文品牌名；
+		// 没配的店退回总后台默认发信邮箱。
+		$from = self::site_sender( is_array( $site ) ? $site : array() );
+		$name = trim( str_replace( array( '"', "\r", "\n", '<', '>' ), '', $from['name'] ) );
+		$headers[] = 'From: ' . ( '' !== $name ? '"' . $name . '" ' : '' ) . '<' . $from['email'] . '>';
 
 		$files = array();
 		$dir   = trailingslashit( get_temp_dir() ) . 'pchq-mail-' . wp_generate_password( 12, false );
@@ -214,6 +217,42 @@ final class Mail {
 			return new \WP_Error( 'pchq_mail_failed', 'The mail could not be sent.', array( 'status' => 502 ) );
 		}
 		return array( 'sent' => true );
+	}
+
+	/**
+	 * 店铺的发件地址：优先 orders@店铺裸域名（FluentSMTP 里要有对应连接），否则默认发信邮箱。
+	 *
+	 * @return array{email:string,name:string,own_domain:bool}
+	 */
+	public static function site_sender( array $site ): array {
+		$default = self::sender();
+		$host    = '';
+		if ( $site && class_exists( Site_Urls::class ) ) {
+			try { $host = (string) wp_parse_url( Site_Urls::public_url( $site ), PHP_URL_HOST ); } catch ( \Throwable $e ) { $host = ''; }
+		}
+		$bare  = strtolower( preg_replace( '/^www\./', '', $host ) );
+		$brand = self::brand_name( $bare, (string) ( $site['name'] ?? '' ) );
+		if ( '' !== $bare ) {
+			$fm   = get_option( 'fluentmail-settings', array() );
+			$maps = is_array( $fm['mappings'] ?? null ) ? $fm['mappings'] : array();
+			foreach ( array( 'orders@' . $bare, 'noreply@' . $bare, 'hello@' . $bare ) as $cand ) {
+				$key = $maps[ $cand ] ?? '';
+				if ( '' !== $key && isset( $fm['connections'][ $key ] ) ) {
+					$p = (array) ( $fm['connections'][ $key ]['provider_settings'] ?? array() );
+					return array( 'email' => $cand, 'name' => '' !== trim( (string) ( $p['sender_name'] ?? '' ) ) ? (string) $p['sender_name'] : $brand, 'own_domain' => true );
+				}
+			}
+		}
+		return array( 'email' => (string) $default['email'], 'name' => $brand, 'own_domain' => false );
+	}
+
+	/** 顾客看到的发件人名：vialcoveplus.com → VialCovePlus；认不出来就用店铺名。 */
+	public static function brand_name( string $bare_domain, string $fallback ): string {
+		$label = strtolower( (string) strtok( $bare_domain, '.' ) );
+		if ( str_starts_with( $label, 'vialcove' ) ) {
+			return 'VialCove' . ucfirst( substr( $label, 8 ) );
+		}
+		return '' !== $label ? ucfirst( $label ) : $fallback;
 	}
 
 	public static function count_since( int $since, int $site_id = 0 ): int {

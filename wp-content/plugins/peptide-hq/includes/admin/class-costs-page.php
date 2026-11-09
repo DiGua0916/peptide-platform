@@ -170,8 +170,14 @@ final class Costs_Page {
 			$acc = is_array( $aws['accounts'][ $slot ] ?? null ) ? $aws['accounts'][ $slot ] : array( 'error' => '还没有填密钥。' );
 			echo '<li><span>AWS ' . esc_html( $label ) . ( '' !== (string) ( $acc['account'] ?? '' ) ? ' <small>' . esc_html( (string) $acc['account'] ) . '</small>' : '' ) . '</span><em>' . ( empty( $acc['error'] ) ? esc_html( self::usd( $acc['month_to_date'] ) . ' 已花 · 预计 ' . self::usd( $acc['forecast'] ) ) : '<i class="pcp-costs__warn">' . esc_html( (string) $acc['error'] ) . '</i>' ) . '</em></li>';
 		}
+		foreach ( (array) ( $cf['subscriptions'] ?? array() ) as $sub ) {
+			echo '<li><span>Cloudflare ' . esc_html( $sub['name'] ) . '</span><em>' . esc_html( self::usd( $sub['price'] ) . ( 'monthly' === $sub['frequency'] ? ' / 月，固定' : ' / ' . $sub['frequency'] ) ) . '</em></li>';
+		}
 		$argo_on = array_values( array_filter( (array) ( $cf['zones'] ?? array() ), static fn( $z ) => 'on' === $z['argo'] ) );
-		echo '<li><span>Cloudflare Argo' . ( $argo_on ? '（' . esc_html( implode( '、', array_column( $argo_on, 'name' ) ) ) . '）' : '' ) . '</span><em>' . ( empty( $cf['error'] ) ? esc_html( self::usd( $cf['argo_estimate'] ?? 0 ) . ' 已产生 · 预计 ' . self::usd( $cf['argo_forecast'] ?? 0 ) ) : '<i class="pcp-costs__warn">' . esc_html( (string) $cf['error'] ) . '</i>' ) . '</em></li>';
+		echo '<li><span>Cloudflare Argo 流量' . ( $argo_on ? '（' . esc_html( implode( '、', array_column( $argo_on, 'name' ) ) ) . '）' : '' ) . '</span><em>' . ( empty( $cf['error'] ) ? esc_html( ( ! empty( $cf['has_argo_plan'] ) ? '套餐含 1 GB，超出部分 ' : '' ) . self::usd( $cf['argo_estimate'] ?? 0 ) . ' 已产生 · 预计 ' . self::usd( $cf['argo_forecast'] ?? 0 ) ) : '<i class="pcp-costs__warn">' . esc_html( (string) $cf['error'] ) . '</i>' ) . '</em></li>';
+		if ( isset( $cf['mail_sent'] ) ) {
+			echo '<li><span>Cloudflare 邮件发送 <small>本月已发 ' . esc_html( number_format( (int) $cf['mail_sent'] ) ) . ' 封，含 ' . esc_html( number_format( (int) $cf['mail_included'] ) ) . ' 封</small></span><em>' . esc_html( '超出部分 ' . self::usd( $cf['mail_estimate'] ) . ' · 预计月底约 ' . number_format( (int) $cf['mail_sent_forecast'] ) . ' 封、' . self::usd( $cf['mail_forecast'] ) ) . '</em></li>';
+		}
 		echo '</ul>';
 		if ( $partial ) {
 			echo '<p class="pcp-costs__warn">数字还不完整：' . esc_html( implode( ' ', array_filter( array( ! empty( $aws['error'] ) ? 'AWS 两个账号都还没接上。' : '', ! empty( $cf['analytics_error'] ) ? 'Cloudflare 流量数据没权限，Argo 只按固定 $5 算。' : '' ) ) ) ) . ' 展开下面“设置”处理。</p>';

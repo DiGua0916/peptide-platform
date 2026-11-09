@@ -818,3 +818,11 @@
 - 验证：HQ 直接 wp_mail → FluentSMTP 日志 sent（Graph RequestId）；芒果店 wp_mail → 邮件中心 → sent。之前 13 条 refused 为接通前的记录。
 - HQ 语言：站点语言切到 zh_CN（装 core zh_CN、fluent-smtp zh_CN 语言包），管理员用户 locale 改为跟随站点；`WP_ACCESSIBLE_HOSTS` 加 api.wordpress.org、downloads.wordpress.org；建 `wp-content/{upgrade,languages}` 归 vchq。wp-config 备份 /root/vialcove-backups/hq-wp-config-*-lang.php。
 - 提醒：用户把 Entra 客户端密钥值贴进过聊天，建议之后在 Entra 删掉 “HQ mail” 这条密钥重建并在 FluentSMTP 更新。
+
+### 2026-11-09 15:10 UTC Cloudflare 邮件发送：每店自己域名发信
+- 用户购买 Workers Paid（$5/月，含邮件 3,000 封/月，超出 $0.35/千封）。Cloudflare 邮件发送接入 6 个店铺域名（vialcovepeptides/pro/ultra/official/prime/plus.com，DNS 自动：cf-bounce MX/SPF/DKIM、_dmarc p=reject）。观察到的接口：`POST /zones/{zone}/email/sending/subdomains`（preview 同路径 /preview），`GET /accounts/{acc}/email/sending/limits`（新账户 200 封/天）。
+- 账户级 API 令牌 “VialCove mail sending”（Email Sending 读+写）由用户复制粘贴到 HQ FluentSMTP；首次保存遇到“Forbidden!”（重新登录后页面 nonce 过期），刷新页面后成功。
+- FluentSMTP：Cloudflare 连接 6 条（orders@各店裸域名，显示名 VialCovePeptides/Pro/Ultra/Official/Prime/Plus），5 条由脚本复制主店连接（加密 api_key 原样复制，未经聊天），默认连接 = 主店 Cloudflare，备用 = Outlook。旧设置备份选项 `fluentmail-settings-backup-20261109`。
+- peptide-hq：`Mail::site_sender()` 按店铺公开域名选 orders@裸域名（FluentSMTP 有映射才用，否则默认邮箱），显示名 `brand_name()`（vialcoveplus → VialCovePlus）；`Costs` 拉账户订阅（Workers Paid、Argo 区域套餐各 $5 固定），Argo 有套餐时只算 1 GB 以外的流量，邮件按邮件中心本月 sent 数估算超出费用；费用页汇总行加套餐与邮件用量。新版本目录 mail-domains-5145377-hq。
+- 验证：HQ 以 orders@vialcovepeptides.com、orders@vialcoveplus.com 各发 1 封到用户 Gmail → FluentSMTP 日志 sent（via Cloudflare）；芒果店 wp_mail → 邮件中心 → From “VialCovePlus <orders@vialcoveplus.com>” sent。
+- 待办：自动开店时自动接入邮件发送域名 + 建 FluentSMTP 连接（需 HQ CDN 令牌加 Email Sending 权限）；店铺后台「邮件」页。

@@ -28,6 +28,10 @@ final class Costs {
 	public const ARGO_INCLUDED = 1.0;
 	public const ARGO_PER_GB  = 0.10;
 
+	/** Cloudflare 邮件发送（Workers Paid 内含 3,000 封/月，超出 $0.35 / 1,000 封）。 */
+	public const MAIL_INCLUDED = 3000;
+	public const MAIL_PER_1000 = 0.35;
+
 	private const CE_HOST  = 'ce.us-east-1.amazonaws.com';
 	private const STS_HOST = 'sts.amazonaws.com';
 
@@ -180,9 +184,13 @@ final class Costs {
 		$aws_forecast = (float) ( $aws['forecast'] ?? 0 );
 		$argo         = (float) ( $cf['argo_estimate'] ?? 0 );
 		$argo_month   = (float) ( $cf['argo_forecast'] ?? $argo );
+		$fixed        = (float) ( $cf['fixed_monthly'] ?? 0 );
+		$mail         = (float) ( $cf['mail_estimate'] ?? 0 );
+		$mail_month   = (float) ( $cf['mail_forecast'] ?? $mail );
 		return array(
-			'spent'     => round( $aws_mtd + $argo, 2 ),
-			'forecast'  => round( $aws_forecast + $argo_month, 2 ),
+			'spent'     => round( $aws_mtd + $argo + $fixed + $mail, 2 ),
+			'forecast'  => round( $aws_forecast + $argo_month + $fixed + $mail_month, 2 ),
+			'cf_fixed'  => round( $fixed, 2 ),
 			'aws_ok'    => empty( $aws['error'] ),
 			'cf_ok'     => empty( $cf['error'] ),
 		);
@@ -245,6 +253,44 @@ final class Costs {
 			$out['zones'][]      = $row;
 		}
 		usort( $out['zones'], static fn( $a, $b ) => $b['bytes'] <=> $a['bytes'] );
+		// 账户级固定订阅（Workers Paid、Argo 区域套餐等），按月计。
+		$account_id = (string) ( $zones[0]['account']['id'] ?? '' );
+		$out['subscriptions'] = array();
+		$out['fixed_monthly'] = 0.0;
+		$out['has_argo_plan'] = false;
+		if ( '' !== $account_id ) {
+			$subs = Cdn::request( 'GET', '/accounts/' . $account_id . '/subscriptions' );
+			if ( ! is_wp_error( $subs ) ) {
+				foreach ( (array) $subs as $sub ) {
+					$price = (float) ( $sub['price'] ?? 0 );
+					if ( $price <= 0 ) { continue; }
+					$plan_id = (string) ( $sub['rate_plan']['id'] ?? '' );
+					$name    = (string) ( $sub['rate_plan']['public_name'] ?? $plan_id );
+					$zh      = str_contains( $plan_id, 'workers' ) ? 'Workers Paid 套餐（含邮件发送 3,000 封/月）' : ( str_contains( $plan_id, 'argo' ) ? 'Argo 智能路由套餐' : $name );
+					$out['subscriptions'][] = array( 'id' => $plan_id, 'name' => $zh, 'price' => $price, 'frequency' => (string) ( $sub['frequency'] ?? 'monthly' ) );
+					if ( 'monthly' === ( $sub['frequency'] ?? 'monthly' ) ) { $out['fixed_monthly'] += $price; }
+					if ( str_contains( $plan_id, 'argo' ) ) { $out['has_argo_plan'] = true; }
+				}
+			} else {
+				$out['subscriptions_error'] = $subs->get_error_message();
+			}
+		}
+		// Argo 有固定套餐时，底价已在订阅里，只按流量算超出 1 GB 的部分。
+		if ( $out['has_argo_plan'] ) {
+			$out['argo_estimate'] = round( max( 0.0, $out['argo_estimate'] - self::ARGO_BASE * count( array_filter( $out['zones'], static fn( $z ) => 'on' === $z['argo'] ) ) ), 2 );
+			$out['argo_forecast'] = round( max( 0.0, $out['argo_forecast'] - self::ARGO_BASE * count( array_filter( $out['zones'], static fn( $z ) => 'on' === $z['argo'] ) ) ), 2 );
+		}
+		// 邮件发送：本月经邮件中心发出的封数；Workers Paid 含 3,000 封，超出每 1,000 封 $0.35。
+		$month_start = (int) strtotime( gmdate( 'Y-m-01' ) . ' 00:00:00 UTC' );
+		$sent        = class_exists( Mail::class ) ? Mail::count_since( $month_start ) : 0;
+		$day         = max( 1, (int) gmdate( 'j' ) );
+		$days        = (int) gmdate( 't' );
+		$out['mail_sent']       = $sent;
+		$out['mail_included']   = self::MAIL_INCLUDED;
+		$out['mail_estimate']   = round( max( 0, $sent - self::MAIL_INCLUDED ) / 1000 * self::MAIL_PER_1000, 2 );
+		$out['mail_forecast']   = round( max( 0, (int) round( $sent / $day * $days ) - self::MAIL_INCLUDED ) / 1000 * self::MAIL_PER_1000, 2 );
+		$out['mail_sent_forecast'] = (int) round( $sent / $day * $days );
+
 		$bills = Cdn::request( 'GET', '/user/billing/history?page=1&per_page=12&order=occurred_at&direction=desc' );
 		if ( is_wp_error( $bills ) ) {
 			$out['billing_error'] = $bills->get_error_message();
