@@ -46,7 +46,7 @@ final class Admin_Menus {
 
 	/** 移走的 WooCommerce 页面（page 参数）=> 新的顶层菜单。 */
 	private const MOVED = array(
-		'wc-orders'   => 'admin.php?page=wc-orders',
+		'wc-orders'   => self::PENDING, // 订单菜单顶层现在是“待处理订单”
 		'wc-settings' => self::SETTINGS,
 		'wc-status'   => self::SETTINGS,
 		'pc-settings' => self::SETTINGS,
