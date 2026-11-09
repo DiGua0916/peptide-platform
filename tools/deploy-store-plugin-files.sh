@@ -13,7 +13,7 @@ n=0
 for t in $T; do
   P=$t/wp-content/plugins/$PLUGIN; tag=$(echo $t | tr '/' '_')
   for f in $FILES; do
-    if [ -f "$P/$f" ]; then mkdir -p $B/$tag/$(dirname $f); sudo cp -p $P/$f $B/$tag/$f; own=$(sudo stat -c '%U:%G' $P/$f); mode=$(sudo stat -c '%a' $P/$f); else own=$(sudo stat -c '%U:%G' $P/$(dirname $f)); mode=644; echo "新文件 $f → $t"; fi
+    if [ -f "$P/$f" ]; then mkdir -p $B/$tag/$(dirname $f); sudo cp -p $P/$f $B/$tag/$f; own=$(sudo stat -c '%U:%G' $P/$f); mode=$(sudo stat -c '%a' $P/$f); else anc=$(dirname $f); while ! sudo test -d "$P/$anc"; do anc=$(dirname $anc); done; own=$(sudo stat -c '%U:%G' $P/$anc); mode=644; sudo install -d -o ${own%%:*} -g ${own##*:} -m 755 $P/$(dirname $f); echo "新文件 $f → $t"; fi
     sudo install -o ${own%%:*} -g ${own##*:} -m $mode /tmp/trk/$f $P/$f; n=$((n+1))
   done
 done

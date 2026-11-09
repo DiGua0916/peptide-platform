@@ -250,7 +250,7 @@ final class Mail {
 	public static function brand_name( string $bare_domain, string $fallback ): string {
 		$label = strtolower( (string) strtok( $bare_domain, '.' ) );
 		if ( str_starts_with( $label, 'vialcove' ) ) {
-			return 'VialCove' . ucfirst( substr( $label, 8 ) );
+			return 'peptides' === substr( $label, 8 ) ? 'VialCove' : 'VialCove' . ucfirst( substr( $label, 8 ) ); // 主店就叫 VialCove
 		}
 		return '' !== $label ? ucfirst( $label ) : $fallback;
 	}

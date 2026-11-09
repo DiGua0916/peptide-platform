@@ -859,3 +859,10 @@
 - 部署：两台主机各 6 份（主店 + 5 租户）；备份 `~/vialcove-deploy-backups/trk-plain-20261109T1640xx / 1642xx`。
 - **发现并修正**：部署脚本用 `ls -d …/*-web/source` 找新店模板，目录 700 无权限读取，所以本会话此前的所有部署都没写进模板。现改为读 `/etc/vialcove-provision/config.json` 的 `source_web_root` / `source_admin_root`（脚本入库 `tools/deploy-store-plugin-files.sh`）。已把模板里的 peptide-core、peptide-panapay 整目录 rsync 成主店当前版本（web 模板落后 31+49 文件，HQ 模板 25+2），模板备份 `/root/vialcove-backups/template-plugins-20261109-16440x`。
 - 16:52 UTC 补充：测试单邮箱也可填“1”（`is_email` + `sanitize_email` 两个过滤器只对测试请求放行；前端脚本同时清掉 email 报错）。Store API 实测：全 1 地址 + 邮箱 1 + 邮编 1 → 200 且原样保存；正常地址 + 邮编 1 → 400 仍拒绝。两台主机各 7 份（含新店模板）。
+
+### 2026-11-09 17:10 UTC 系统自动邮件换成店主追单母版 + 测试单邮箱占位
+- `peptide-core/includes/emails/class-chase-copy.php`（已注册）：付款失败邮件 → 母版 02「Help Completing Your Payment」；订单处理中（已付款）→「Thanks for Your Order — Add Us on WhatsApp」（顾客留了电话就只感谢）；两封走 `templates/emails/customer-failed-order.php`、`customer-processing-order.php` 覆盖。弃单提醒 1/2/3 默认主题正文按母版 01 改写，第三封默认关；`migrate()` 把各店还存着旧默认文案的设置清掉（店主自己改过的不动）。店名 `Mail_Outbox::brand()`，主店 vialcovepeptides.com 固定为 VialCove（HQ `Mail::brand_name` 同步修正，FluentSMTP 主店连接显示名改 VialCove）。
+- 测试单邮箱填“1”→ 自动换成 `test-order@<店域名>`（`is_email` / `sanitize_email` 过滤器；支付方要求邮箱格式合法，11819 就是因邮箱被清空没到中枢）。
+- 部署：两台主机各 7 份（含新店模板，部署脚本 `tools/deploy-store-plugin-files.sh` 已支持新建目录）；HQ release `brand-main-1794243714-hq`。主店渲染 4 封样例核对（PayPal 段、WhatsApp 按钮、orders@ 签名、店名），并发到 sun18761388693@gmail.com，店铺邮件记录 4 条 sent。
+- 顺带：5 家租户补建 `pc_mail_outbox` 表；HQ CDN 域名状态把 5 个已有发件连接的域名标记 mail_ok。
+- 发现：阳（vialcoveultra）与芒果（vialcoveplus）11-09 有 4 位波多黎各真实顾客共 12 笔单因支付失败被自动取消，当时邮件中心 503，“订单已取消”邮件大多没发出；尚未给他们发追单邮件，等店主确认。

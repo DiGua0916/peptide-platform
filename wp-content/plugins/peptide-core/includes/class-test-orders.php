@@ -109,20 +109,25 @@ final class Test_Orders {
 		return self::request_is_test() ? true : $valid;
 	}
 
-	/** 邮箱“1”只对测试单放行（反正测试单不发邮件）。 */
+	/** 测试单的邮箱：填“1”时换成本店的占位地址（支付方要求邮箱格式合法；反正测试单不发邮件）。 */
+	public static function placeholder_email(): string {
+		$host = strtolower( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
+		return 'test-order@' . ( preg_replace( '/^www\./', '', $host ) ?: 'example.com' );
+	}
+
 	public static function allow_email( $result, $email ) {
 		if ( false !== $result || self::MARK !== trim( (string) $email ) ) {
 			return $result;
 		}
-		return self::request_is_test() ? (string) $email : $result;
+		return self::request_is_test() ? self::placeholder_email() : $result;
 	}
 
-	/** sanitize_email 会把“1”清成空串，导致结账时提示邮箱必填；测试单保留原样。 */
+	/** sanitize_email 会把“1”清成空串，导致结账时提示邮箱必填；测试单换成占位地址。 */
 	public static function keep_email( $sanitized, $email ) {
 		if ( '' !== (string) $sanitized || self::MARK !== trim( (string) $email ) ) {
 			return $sanitized;
 		}
-		return self::request_is_test() ? self::MARK : $sanitized;
+		return self::request_is_test() ? self::placeholder_email() : $sanitized;
 	}
 
 	/** 下单时打标记、留备注。 */

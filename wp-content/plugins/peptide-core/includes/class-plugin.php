@@ -94,6 +94,7 @@ final class Plugin {
 		Shipping\Plans::register_hooks();
 		Shipping\Discounts::register_hooks();
 		Emails\Registry::register_hooks();
+		Emails\Chase_Copy::register_hooks();
 		Terms::register_hooks();
 		Tracking\Tracker::register_hooks();
 		Tracking\Preferences::register_hooks();

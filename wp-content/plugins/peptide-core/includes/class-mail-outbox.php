@@ -54,7 +54,7 @@ final class Mail_Outbox {
 		$host  = strtolower( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
 		$label = (string) strtok( preg_replace( '/^www\./', '', $host ), '.' );
 		if ( str_starts_with( $label, 'vialcove' ) ) {
-			$brand = 'VialCove' . ucfirst( substr( $label, 8 ) );
+			$brand = 'peptides' === substr( $label, 8 ) ? 'VialCove' : 'VialCove' . ucfirst( substr( $label, 8 ) ); // 主店 vialcovepeptides.com 的品牌就叫 VialCove
 		} else {
 			$brand = function_exists( 'vc_brand_name' ) ? vc_brand_name() : wp_specialchars_decode( (string) get_option( 'blogname' ), ENT_QUOTES );
 		}

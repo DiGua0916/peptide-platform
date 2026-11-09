@@ -13,12 +13,17 @@ class Cart_Recovery_3 extends Cart_Recovery {
 
 	public const STAGE = 3;
 
+	public function __construct() {
+		parent::__construct();
+		Chase_Copy::migrate( $this, self::STAGE );
+	}
+
+	/** 第三封默认不开：店主母版只有一封追单信，前两封已够。 */
+	protected function default_enabled(): string {
+		return 'no';
+	}
+
 	protected function defaults(): array {
-		return array(
-			'subject' => 'Your cart is still waiting',
-			'heading' => 'Still interested?',
-			'message' => "We noticed you haven't finished your order. Your cart is still saved, so you can pick up right where you left off.\n\nIf anything went wrong at checkout, just reply to this email.",
-			'delay'   => 86400,
-		);
+		return Chase_Copy::defaults_for( self::STAGE ); // 店主追单母版（2026-11-09）
 	}
 }

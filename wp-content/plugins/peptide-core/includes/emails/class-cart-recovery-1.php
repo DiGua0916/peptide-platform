@@ -13,12 +13,12 @@ class Cart_Recovery_1 extends Cart_Recovery {
 
 	public const STAGE = 1;
 
+	public function __construct() {
+		parent::__construct();
+		Chase_Copy::migrate( $this, self::STAGE );
+	}
+
 	protected function defaults(): array {
-		return array(
-			'subject' => 'Complete your purchase at {site_title}',
-			'heading' => 'Complete your purchase',
-			'message' => "You added items to your shopping cart and haven't completed your purchase.\n\nYou can complete it now while they're still available.",
-			'delay'   => 300,
-		);
+		return Chase_Copy::defaults_for( self::STAGE ); // 店主追单母版（2026-11-09）
 	}
 }
