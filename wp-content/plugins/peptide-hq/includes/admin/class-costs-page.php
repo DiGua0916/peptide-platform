@@ -70,13 +70,16 @@ final class Costs_Page {
 		check_admin_referer( 'pchq_costs_' . $do );
 		switch ( $do ) {
 			case 'save':
-				$res = Costs::update( array(
-					'aws_key_id' => (string) wp_unslash( $_POST['aws_key_id'] ?? '' ),
-					'aws_secret' => (string) wp_unslash( $_POST['aws_secret'] ?? '' ),
-					'budget'     => (string) wp_unslash( $_POST['budget'] ?? '' ),
-					'balance'    => (string) wp_unslash( $_POST['balance'] ?? '' ),
-					'email'      => (string) wp_unslash( $_POST['email'] ?? '' ),
-				) );
+				$in = array(
+					'budget'  => (string) wp_unslash( $_POST['budget'] ?? '' ),
+					'balance' => (string) wp_unslash( $_POST['balance'] ?? '' ),
+					'email'   => (string) wp_unslash( $_POST['email'] ?? '' ),
+				);
+				foreach ( array_keys( Costs::SLOTS ) as $slot ) {
+					$in[ 'aws_key_id_' . $slot ] = (string) wp_unslash( $_POST[ 'aws_key_id_' . $slot ] ?? '' );
+					$in[ 'aws_secret_' . $slot ] = (string) wp_unslash( $_POST[ 'aws_secret_' . $slot ] ?? '' );
+				}
+				$res = Costs::update( $in );
 				if ( is_wp_error( $res ) ) {
 					self::flash( 'error', $res->get_error_message() );
 				} else {
@@ -86,8 +89,10 @@ final class Costs_Page {
 				}
 				break;
 			case 'forget_aws':
-				Costs::forget_aws();
-				self::flash( 'success', '已删除保存的 AWS 密钥。记得到 AWS 控制台把这把密钥也停用。' );
+				$slot = sanitize_key( (string) wp_unslash( $_POST['slot'] ?? '' ) );
+				Costs::forget_aws( $slot );
+				Costs::refresh();
+				self::flash( 'success', '已删除' . ( Costs::SLOTS[ $slot ] ?? '' ) . '保存的密钥。记得到 AWS 控制台把这把密钥也停用。' );
 				break;
 			case 'refresh':
 				$snap = Costs::refresh();
@@ -99,8 +104,12 @@ final class Costs_Page {
 		exit;
 	}
 
-	private static function form( string $do, string $label, string $class = 'button', string $confirm = '' ): string {
-		return '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="pcp-inline"' . ( '' !== $confirm ? ' data-confirm="' . esc_attr( $confirm ) . '"' : '' ) . '>' . wp_nonce_field( 'pchq_costs_' . $do, '_wpnonce', true, false ) . '<input type="hidden" name="action" value="pchq_costs_' . esc_attr( $do ) . '"><button type="submit" class="' . esc_attr( $class ) . '">' . esc_html( $label ) . '</button></form>';
+	private static function form( string $do, string $label, string $class = 'button', string $confirm = '', array $fields = array() ): string {
+		$hidden = '';
+		foreach ( $fields as $k => $v ) {
+			$hidden .= '<input type="hidden" name="' . esc_attr( $k ) . '" value="' . esc_attr( (string) $v ) . '">';
+		}
+		return '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="pcp-inline"' . ( '' !== $confirm ? ' data-confirm="' . esc_attr( $confirm ) . '"' : '' ) . '>' . wp_nonce_field( 'pchq_costs_' . $do, '_wpnonce', true, false ) . '<input type="hidden" name="action" value="pchq_costs_' . esc_attr( $do ) . '">' . $hidden . '<button type="submit" class="' . esc_attr( $class ) . '">' . esc_html( $label ) . '</button></form>';
 	}
 
 	private static function usd( $v ): string {
@@ -156,22 +165,27 @@ final class Costs_Page {
 		}
 		echo '</div>';
 		echo '<ul class="pcp-costs__lines">';
-		echo '<li><span>AWS 两台服务器</span><em>' . ( empty( $aws['error'] ) ? esc_html( self::usd( $aws['month_to_date'] ) . ' 已花 · 预计 ' . self::usd( $aws['forecast'] ) ) : '<i class="pcp-costs__warn">' . esc_html( (string) $aws['error'] ) . '</i>' ) . '</em></li>';
+		foreach ( Costs::SLOTS as $slot => $label ) {
+			$acc = is_array( $aws['accounts'][ $slot ] ?? null ) ? $aws['accounts'][ $slot ] : array( 'error' => '还没有填密钥。' );
+			echo '<li><span>AWS ' . esc_html( $label ) . ( '' !== (string) ( $acc['account'] ?? '' ) ? ' <small>' . esc_html( (string) $acc['account'] ) . '</small>' : '' ) . '</span><em>' . ( empty( $acc['error'] ) ? esc_html( self::usd( $acc['month_to_date'] ) . ' 已花 · 预计 ' . self::usd( $acc['forecast'] ) ) : '<i class="pcp-costs__warn">' . esc_html( (string) $acc['error'] ) . '</i>' ) . '</em></li>';
+		}
 		$argo_on = array_values( array_filter( (array) ( $cf['zones'] ?? array() ), static fn( $z ) => 'on' === $z['argo'] ) );
 		echo '<li><span>Cloudflare Argo' . ( $argo_on ? '（' . esc_html( implode( '、', array_column( $argo_on, 'name' ) ) ) . '）' : '' ) . '</span><em>' . ( empty( $cf['error'] ) ? esc_html( self::usd( $cf['argo_estimate'] ?? 0 ) . ' 已产生 · 预计 ' . self::usd( $cf['argo_forecast'] ?? 0 ) ) : '<i class="pcp-costs__warn">' . esc_html( (string) $cf['error'] ) . '</i>' ) . '</em></li>';
 		echo '<li><span>Cloudflare 域名套餐</span><em>$0.00 · 全部免费版</em></li>';
 		echo '</ul>';
 		if ( $partial ) {
-			echo '<p class="pcp-costs__warn">数字还不完整：' . esc_html( implode( ' ', array_filter( array( ! empty( $aws['error'] ) ? 'AWS 没接上。' : '', ! empty( $cf['analytics_error'] ) ? 'Cloudflare 流量数据没权限，Argo 只按固定 $5 算。' : '' ) ) ) ) . ' 展开下面“设置”处理。</p>';
+			echo '<p class="pcp-costs__warn">数字还不完整：' . esc_html( implode( ' ', array_filter( array( ! empty( $aws['error'] ) ? 'AWS 两个账号都还没接上。' : '', ! empty( $cf['analytics_error'] ) ? 'Cloudflare 流量数据没权限，Argo 只按固定 $5 算。' : '' ) ) ) ) . ' 展开下面“设置”处理。</p>';
+		} elseif ( ! empty( $aws['partial_error'] ) ) {
+			echo '<p class="pcp-costs__warn">有一个 AWS 账号没接上：' . esc_html( (string) $aws['partial_error'] ) . '</p>';
 		} elseif ( ! empty( $cf['analytics_error'] ) ) {
 			echo '<p class="pcp-costs__warn">Cloudflare 流量数据没权限，Argo 只按固定 $5 算。展开下面“设置”处理。</p>';
 		}
 		echo '</section>';
 
 		// 明细：AWS。
-		echo '<details class="pcp-card pcp-costs__detail"><summary><h2>AWS 服务器明细' . ( '' !== $s['aws_account'] ? ' <span class="pcp-tag">账号 ' . esc_html( $s['aws_account'] ) . '</span>' : '' ) . '</h2><span class="pcp-hint">' . ( empty( $aws['error'] ) ? '按项目拆分、近 30 天每日费用，预测' . ( 'aws' === ( $aws['forecast_source'] ?? '' ) ? '来自 AWS' : '按日均推算' ) : '未连接' ) . '</span></summary>';
+		echo '<details class="pcp-card pcp-costs__detail"><summary><h2>AWS 服务器明细</h2><span class="pcp-hint">' . ( empty( $aws['error'] ) ? '按项目拆分、近 30 天每日费用，预测' . ( 'aws' === ( $aws['forecast_source'] ?? '' ) ? '来自 AWS' : '按日均推算' ) : '未连接' ) . '</span></summary>';
 		if ( ! empty( $aws['error'] ) ) {
-			echo '<div class="pcp-flash is-wait">' . esc_html( (string) $aws['error'] ) . ( Costs::has_aws() ? '' : ' 在“设置”里填入只读访问密钥即可。' ) . '</div>';
+			echo '<div class="pcp-flash is-wait">' . esc_html( (string) $aws['error'] ) . ( Costs::has_aws() ? '' : ' 在“设置”里给两个账号各填一把只读访问密钥即可。' ) . '</div>';
 		} else {
 			$daily = (array) ( $aws['daily'] ?? array() );
 			krsort( $daily );
@@ -184,14 +198,24 @@ final class Costs_Page {
 				echo '<span class="pcp-costs__bar' . ( $d >= gmdate( 'Y-m-01' ) ? ' is-month' : '' ) . '" style="height:' . $h . '%" title="' . esc_attr( $d . '  ' . self::usd( $v ) ) . '"></span>';
 			}
 			echo '</div><p class="pcp-costs__axis"><span>' . esc_html( (string) array_key_first( $daily ) ) . '</span><span>日费用，深色 = 本月</span><span>' . esc_html( (string) array_key_last( $daily ) ) . '</span></p>';
-			echo '<div class="pcp-scroll"><table class="pcp-matrix pcp-costs__table"><thead><tr><th scope="col">项目</th><th scope="col">本月（到昨天）</th><th scope="col">上月</th></tr></thead><tbody>';
-			foreach ( (array) ( $aws['services'] ?? array() ) as $svc => $row ) {
-				if ( (float) $row['month'] < 0.005 && (float) $row['prev'] < 0.005 ) {
+			echo '<div class="pcp-scroll"><table class="pcp-matrix pcp-costs__table"><thead><tr><th scope="col">账号</th><th scope="col">项目</th><th scope="col">本月（到昨天）</th><th scope="col">上月</th></tr></thead><tbody>';
+			foreach ( Costs::SLOTS as $slot => $label ) {
+				$acc = is_array( $aws['accounts'][ $slot ] ?? null ) ? $aws['accounts'][ $slot ] : array();
+				if ( ! empty( $acc['error'] ) || empty( $acc['services'] ) ) {
+					echo '<tr><td><strong>' . esc_html( $label ) . '</strong></td><td colspan="3"><i class="pcp-costs__warn">' . esc_html( (string) ( $acc['error'] ?? '没有数据' ) ) . '</i></td></tr>';
 					continue;
 				}
-				echo '<tr><td><strong>' . esc_html( self::service_name( (string) $svc ) ) . '</strong>' . ( isset( self::SERVICES[ $svc ] ) ? '<small>' . esc_html( (string) $svc ) . '</small>' : '' ) . '</td><td>' . esc_html( self::usd( $row['month'] ) ) . '</td><td>' . esc_html( self::usd( $row['prev'] ) ) . '</td></tr>';
+				$first = true;
+				foreach ( (array) $acc['services'] as $svc => $row ) {
+					if ( (float) $row['month'] < 0.005 && (float) $row['prev'] < 0.005 ) {
+						continue;
+					}
+					echo '<tr><td>' . ( $first ? '<strong>' . esc_html( $label ) . '</strong><small>' . esc_html( (string) ( $acc['account'] ?? '' ) ) . '</small>' : '' ) . '</td><td><strong>' . esc_html( self::service_name( (string) $svc ) ) . '</strong>' . ( isset( self::SERVICES[ $svc ] ) ? '<small>' . esc_html( (string) $svc ) . '</small>' : '' ) . '</td><td>' . esc_html( self::usd( $row['month'] ) ) . '</td><td>' . esc_html( self::usd( $row['prev'] ) ) . '</td></tr>';
+					$first = false;
+				}
+				echo '<tr class="is-subtotal"><td></td><td>' . esc_html( $label ) . '小计</td><td>' . esc_html( self::usd( $acc['month_to_date'] ) ) . '</td><td>' . esc_html( self::usd( $acc['previous_month'] ) ) . '</td></tr>';
 			}
-			echo '<tr class="is-total"><td>合计</td><td>' . esc_html( self::usd( $aws['month_to_date'] ) ) . '</td><td>' . esc_html( self::usd( $aws['previous_month'] ) ) . '</td></tr>';
+			echo '<tr class="is-total"><td></td><td>两个账号合计</td><td>' . esc_html( self::usd( $aws['month_to_date'] ) ) . '</td><td>' . esc_html( self::usd( $aws['previous_month'] ) ) . '</td></tr>';
 			echo '</tbody></table></div>';
 			echo '<p class="pcp-note">AWS 是后付费，每月初从绑定的卡扣上个月的费用；以 AWS 账单为准。Cost Explorer 每次查询 AWS 收 $0.01，本页每天自动查 6 次。</p>';
 		}
@@ -242,20 +266,29 @@ final class Costs_Page {
 		echo '</details>';
 
 		// 设置。
-		echo '<details class="pcp-card pcp-costs__detail"' . ( $partial ? ' open' : '' ) . '><summary><h2>设置</h2>' . ( Costs::has_aws() ? '<span class="pcp-state is-ok"><i></i>AWS 已连接' . ( $s['aws_verified'] ? ' · ' . esc_html( wp_date( 'Y-m-d H:i', $s['aws_verified'] ) ) : '' ) . '</span>' : '<span class="pcp-state is-off"><i></i>AWS 未连接</span>' ) . '</summary>';
+		$connected = count( array_filter( $s['accounts'], static fn( $a ) => '' !== $a['secret_enc'] ) );
+		echo '<details class="pcp-card pcp-costs__detail"' . ( $partial ? ' open' : '' ) . '><summary><h2>设置</h2>' . ( $connected ? '<span class="pcp-state is-ok"><i></i>AWS 已连接 ' . $connected . '/' . count( Costs::SLOTS ) . ' 个账号</span>' : '<span class="pcp-state is-off"><i></i>AWS 未连接</span>' ) . '</summary>';
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="pcp-cdn-form pcp-costs__form">';
 		wp_nonce_field( 'pchq_costs_save' );
 		echo '<input type="hidden" name="action" value="pchq_costs_save">';
-		echo '<div class="pcp-costs__grid">';
-		echo '<label class="pcp-field"><span>AWS 访问密钥 ID</span><input type="text" name="aws_key_id" autocomplete="off" spellcheck="false" placeholder="' . esc_attr( '' !== $s['aws_key_id'] ? '已保存 ' . substr( $s['aws_key_id'], 0, 4 ) . '…' . substr( $s['aws_key_id'], -4 ) . '（留空则不更换）' : 'AKIA…' ) . '"></label>';
-		echo '<label class="pcp-field"><span>AWS 私有访问密钥</span><input type="password" name="aws_secret" autocomplete="new-password" spellcheck="false" placeholder="' . esc_attr( Costs::has_aws() ? '已保存（留空则不更换）' : '粘贴 Secret access key' ) . '"></label>';
-		echo '<label class="pcp-field"><span>月预算（美元，0 = 不提醒）</span><input type="text" inputmode="decimal" name="budget" value="' . esc_attr( $s['budget'] > 0 ? number_format( $s['budget'], 2, '.', '' ) : '' ) . '" placeholder="例如 150"></label>';
-		echo '<label class="pcp-field"><span>账户余额（美元，预付费账户才填）</span><input type="text" inputmode="decimal" name="balance" value="' . esc_attr( $s['balance'] > 0 ? number_format( $s['balance'], 2, '.', '' ) : '' ) . '" placeholder="充值后填一次当前余额">' . ( $s['balance_at'] ? '<small>填写于 ' . esc_html( wp_date( 'Y-m-d', $s['balance_at'] ) ) . '，之后每天的 AWS 费用自动从中扣减</small>' : '' ) . '</label>';
+		foreach ( Costs::SLOTS as $slot => $label ) {
+			$a = $s['accounts'][ $slot ];
+			echo '<h3 class="pcp-costs__sub">AWS ' . esc_html( $label ) . ' ' . ( '' !== $a['secret_enc'] ? '<span class="pcp-state is-ok"><i></i>已验证' . ( '' !== $a['account'] ? ' · 账号 ' . esc_html( $a['account'] ) : '' ) . ( $a['verified'] ? ' · ' . esc_html( wp_date( 'm-d H:i', $a['verified'] ) ) : '' ) . '</span>' : '<span class="pcp-state is-off"><i></i>未填</span>' ) . '</h3>';
+			echo '<div class="pcp-costs__grid">';
+			echo '<label class="pcp-field"><span>访问密钥 ID</span><input type="text" name="aws_key_id_' . esc_attr( $slot ) . '" autocomplete="off" spellcheck="false" placeholder="' . esc_attr( '' !== $a['key_id'] ? '已保存 ' . substr( $a['key_id'], 0, 4 ) . '…' . substr( $a['key_id'], -4 ) . '（留空则不更换）' : 'AKIA…' ) . '"></label>';
+			echo '<label class="pcp-field"><span>私有访问密钥</span><input type="password" name="aws_secret_' . esc_attr( $slot ) . '" autocomplete="new-password" spellcheck="false" placeholder="' . esc_attr( '' !== $a['secret_enc'] ? '已保存（留空则不更换）' : '粘贴 Secret access key' ) . '"></label>';
+			echo '</div>';
+		}
+		echo '<h3 class="pcp-costs__sub">预算与提醒</h3><div class="pcp-costs__grid">';
+		echo '<label class="pcp-field"><span>月预算（美元，两个账号加 Cloudflare 合计，0 = 不提醒）</span><input type="text" inputmode="decimal" name="budget" value="' . esc_attr( $s['budget'] > 0 ? number_format( $s['budget'], 2, '.', '' ) : '' ) . '" placeholder="例如 150"></label>';
+		echo '<label class="pcp-field"><span>AWS 预付余额（美元，两个账号的余额加起来填）</span><input type="text" inputmode="decimal" name="balance" value="' . esc_attr( $s['balance'] > 0 ? number_format( $s['balance'], 2, '.', '' ) : '' ) . '" placeholder="充值后填一次当前余额">' . ( $s['balance_at'] ? '<small>填写于 ' . esc_html( wp_date( 'Y-m-d', $s['balance_at'] ) ) . '，之后每天两个账号的 AWS 费用自动从中扣减</small>' : '' ) . '</label>';
 		echo '<label class="pcp-field"><span>提醒邮箱</span><input type="email" name="email" value="' . esc_attr( $s['email'] ) . '" placeholder="超预算 / 余额不足时发到这里"></label>';
 		echo '</div>';
 		echo '<p class="pcp-costs__actions"><button type="submit" class="button button-primary">保存并刷新</button></p></form>';
-		if ( Costs::has_aws() ) {
-			echo self::form( 'forget_aws', '删除保存的 AWS 密钥', 'pcp-link is-danger', '确定删除 AWS 密钥？费用页将不再显示 AWS 数据。' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		foreach ( Costs::SLOTS as $slot => $label ) {
+			if ( '' !== $s['accounts'][ $slot ]['secret_enc'] ) {
+				echo self::form( 'forget_aws', '删除' . $label . '的密钥', 'pcp-link is-danger', '确定删除' . $label . '的 AWS 密钥？这个账号的费用将不再显示。', array( 'slot' => $slot ) ) . ' '; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			}
 		}
 		echo '<details class="pcp-details"><summary>怎么创建 AWS 只读密钥</summary><ol class="pcp-steps">';
 		echo '<li>AWS 控制台 → 右上角账号 → <strong>Billing and Cost Management</strong> → 左侧 Cost Explorer，第一次打开点“启用”，等 24 小时才有数据。</li>';

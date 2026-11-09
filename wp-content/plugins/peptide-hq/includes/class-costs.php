@@ -52,18 +52,32 @@ final class Costs {
 
 	// ---------- 设置 ----------
 
+	/** 两个 AWS 账号的槽位：前台服务器、总后台服务器。 */
+	public const SLOTS = array(
+		'web' => '前台服务器账号',
+		'hq'  => '总后台服务器账号',
+	);
+
 	public static function settings(): array {
 		$o = get_option( self::OPTION, array() );
 		$o = is_array( $o ) ? $o : array();
+		$accounts = array();
+		foreach ( self::SLOTS as $slot => $label ) {
+			$a = is_array( $o['accounts'][ $slot ] ?? null ) ? $o['accounts'][ $slot ] : array();
+			$accounts[ $slot ] = array(
+				'label'      => $label,
+				'key_id'     => (string) ( $a['key_id'] ?? '' ),
+				'secret_enc' => (string) ( $a['secret_enc'] ?? '' ),
+				'account'    => (string) ( $a['account'] ?? '' ),
+				'verified'   => (int) ( $a['verified'] ?? 0 ),
+			);
+		}
 		return array(
-			'aws_key_id'     => (string) ( $o['aws_key_id'] ?? '' ),
-			'aws_secret_enc' => (string) ( $o['aws_secret_enc'] ?? '' ),
-			'aws_account'    => (string) ( $o['aws_account'] ?? '' ),
-			'aws_verified'   => (int) ( $o['aws_verified'] ?? 0 ),
-			'budget'         => (float) ( $o['budget'] ?? 0 ),
-			'balance'        => (float) ( $o['balance'] ?? 0 ),
-			'balance_at'     => (int) ( $o['balance_at'] ?? 0 ),
-			'email'          => (string) ( $o['email'] ?? '' ),
+			'accounts'   => $accounts,
+			'budget'     => (float) ( $o['budget'] ?? 0 ),
+			'balance'    => (float) ( $o['balance'] ?? 0 ),
+			'balance_at' => (int) ( $o['balance_at'] ?? 0 ),
+			'email'      => (string) ( $o['email'] ?? '' ),
 		);
 	}
 
@@ -72,27 +86,30 @@ final class Costs {
 	}
 
 	/**
-	 * 保存设置。AWS 密钥留空 = 不换。@return true|\WP_Error
+	 * 保存设置。每个槽位的 AWS 密钥留空 = 不换。@return true|\WP_Error
 	 */
 	public static function update( array $in ) {
-		$s   = self::settings();
-		$key = trim( (string) ( $in['aws_key_id'] ?? '' ) );
-		$sec = trim( (string) ( $in['aws_secret'] ?? '' ) );
-		if ( '' !== $key || '' !== $sec ) {
+		$s = self::settings();
+		foreach ( self::SLOTS as $slot => $label ) {
+			$key = trim( (string) ( $in[ 'aws_key_id_' . $slot ] ?? '' ) );
+			$sec = trim( (string) ( $in[ 'aws_secret_' . $slot ] ?? '' ) );
+			if ( '' === $key && '' === $sec ) {
+				continue;
+			}
 			if ( ! preg_match( '/^(AKIA|ASIA)[A-Z0-9]{16}$/D', $key ) ) {
-				return new \WP_Error( 'pchq_costs_aws', '访问密钥 ID 格式不对（AKIA 开头的 20 位大写字母数字）。' );
+				return new \WP_Error( 'pchq_costs_aws', $label . '：访问密钥 ID 格式不对（AKIA 开头的 20 位大写字母数字）。' );
 			}
 			if ( strlen( $sec ) < 30 ) {
-				return new \WP_Error( 'pchq_costs_aws', '请同时填写访问密钥 ID 和私有访问密钥。' );
+				return new \WP_Error( 'pchq_costs_aws', $label . '：请同时填写访问密钥 ID 和私有访问密钥。' );
 			}
 			$who = self::sts_identity( $key, $sec );
 			if ( is_wp_error( $who ) ) {
-				return new \WP_Error( 'pchq_costs_aws', 'AWS 密钥验证没通过：' . $who->get_error_message() );
+				return new \WP_Error( 'pchq_costs_aws', $label . '：AWS 密钥验证没通过：' . $who->get_error_message() );
 			}
-			$s['aws_key_id']     = $key;
-			$s['aws_secret_enc'] = Crypto::encrypt( $sec );
-			$s['aws_account']    = (string) $who;
-			$s['aws_verified']   = time();
+			$s['accounts'][ $slot ]['key_id']     = $key;
+			$s['accounts'][ $slot ]['secret_enc'] = Crypto::encrypt( $sec );
+			$s['accounts'][ $slot ]['account']    = (string) $who;
+			$s['accounts'][ $slot ]['verified']   = time();
 		}
 		$s['budget'] = max( 0, round( (float) str_replace( ',', '', (string) ( $in['budget'] ?? '0' ) ), 2 ) );
 		$balance     = max( 0, round( (float) str_replace( ',', '', (string) ( $in['balance'] ?? '0' ) ), 2 ) );
@@ -109,25 +126,30 @@ final class Costs {
 		return true;
 	}
 
-	public static function forget_aws(): void {
-		$s                   = self::settings();
-		$s['aws_key_id']     = '';
-		$s['aws_secret_enc'] = '';
-		$s['aws_account']    = '';
-		$s['aws_verified']   = 0;
+	public static function forget_aws( string $slot ): void {
+		$s = self::settings();
+		if ( ! isset( $s['accounts'][ $slot ] ) ) {
+			return;
+		}
+		$s['accounts'][ $slot ]['key_id']     = '';
+		$s['accounts'][ $slot ]['secret_enc'] = '';
+		$s['accounts'][ $slot ]['account']    = '';
+		$s['accounts'][ $slot ]['verified']   = 0;
 		self::save_settings( $s );
-		$snap        = self::snapshot();
-		$snap['aws'] = array( 'error' => '还没有设置 AWS 访问密钥。' );
-		update_option( self::SNAPSHOT, $snap, false );
 	}
 
+	/** 至少一个账号填了密钥。 */
 	public static function has_aws(): bool {
-		return '' !== self::settings()['aws_secret_enc'];
+		foreach ( self::settings()['accounts'] as $a ) {
+			if ( '' !== $a['secret_enc'] ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
-	private static function aws_secret(): string {
-		$enc = self::settings()['aws_secret_enc'];
-		return '' === $enc ? '' : Crypto::decrypt( $enc );
+	public static function slot_ready( string $slot ): bool {
+		return '' !== (string) ( self::settings()['accounts'][ $slot ]['secret_enc'] ?? '' );
 	}
 
 	// ---------- 快照 ----------
@@ -142,7 +164,7 @@ final class Costs {
 		$snap = array(
 			'at'         => time(),
 			'cloudflare' => self::cloudflare(),
-			'aws'        => self::has_aws() ? self::aws() : array( 'error' => '还没有设置 AWS 访问密钥。' ),
+			'aws'        => self::aws(),
 		);
 		$snap['summary'] = self::summary( $snap );
 		update_option( self::SNAPSHOT, $snap, false );
@@ -150,7 +172,7 @@ final class Costs {
 		return $snap;
 	}
 
-	/** 汇总：本月已花、月底预计、下月预计。 */
+	/** 汇总：本月已花、月底预计。 */
 	private static function summary( array $snap ): array {
 		$cf  = $snap['cloudflare'];
 		$aws = $snap['aws'];
@@ -244,14 +266,62 @@ final class Costs {
 
 	// ---------- AWS ----------
 
+	/** 两个账号各拉一遍，再合计。 */
 	private static function aws(): array {
+		$out = array( 'accounts' => array(), 'month_to_date' => 0.0, 'previous_month' => 0.0, 'forecast' => 0.0, 'daily' => array(), 'services' => array(), 'data_through' => '', 'forecast_source' => 'aws', 'error' => '' );
+		$ok  = 0;
+		$errors = array();
+		foreach ( self::SLOTS as $slot => $label ) {
+			if ( ! self::slot_ready( $slot ) ) {
+				$out['accounts'][ $slot ] = array( 'label' => $label, 'error' => '还没有填密钥。' );
+				continue;
+			}
+			$r = self::aws_account( $slot );
+			$r['label'] = $label;
+			$out['accounts'][ $slot ] = $r;
+			if ( ! empty( $r['error'] ) ) {
+				$errors[] = $label . '：' . $r['error'];
+				continue;
+			}
+			++$ok;
+			$out['month_to_date']  += (float) $r['month_to_date'];
+			$out['previous_month'] += (float) $r['previous_month'];
+			$out['forecast']       += (float) $r['forecast'];
+			foreach ( (array) $r['daily'] as $d => $v ) {
+				$out['daily'][ $d ] = round( (float) ( $out['daily'][ $d ] ?? 0 ) + (float) $v, 4 );
+			}
+			foreach ( (array) $r['services'] as $svc => $row ) {
+				$k = $label . ' · ' . $svc;
+				$out['services'][ $k ] = array( 'month' => (float) $row['month'], 'prev' => (float) $row['prev'], 'service' => $svc, 'slot' => $slot );
+			}
+			if ( (string) $r['data_through'] > $out['data_through'] ) {
+				$out['data_through'] = (string) $r['data_through'];
+			}
+			if ( 'linear' === $r['forecast_source'] ) {
+				$out['forecast_source'] = 'linear';
+			}
+		}
+		ksort( $out['daily'] );
+		uasort( $out['services'], static fn( $a, $b ) => $b['month'] <=> $a['month'] ?: $b['prev'] <=> $a['prev'] );
+		$out['month_to_date']  = round( $out['month_to_date'], 2 );
+		$out['previous_month'] = round( $out['previous_month'], 2 );
+		$out['forecast']       = round( $out['forecast'], 2 );
+		if ( 0 === $ok ) {
+			$out['error'] = $errors ? implode( ' ', $errors ) : '还没有设置 AWS 访问密钥。';
+		} elseif ( $errors ) {
+			$out['partial_error'] = implode( ' ', $errors );
+		}
+		return $out;
+	}
+
+	private static function aws_account( string $slot ): array {
 		$today    = gmdate( 'Y-m-d' );
 		$tomorrow = gmdate( 'Y-m-d', time() + DAY_IN_SECONDS );
 		$prev     = gmdate( 'Y-m-01', strtotime( 'first day of last month' ) );
 		$month    = gmdate( 'Y-m-01' );
 		$next     = gmdate( 'Y-m-01', strtotime( 'first day of next month' ) );
 
-		$usage = self::ce( 'GetCostAndUsage', array(
+		$usage = self::ce( $slot, 'GetCostAndUsage', array(
 			'TimePeriod'  => array( 'Start' => $prev, 'End' => $tomorrow ),
 			'Granularity' => 'DAILY',
 			'Metrics'     => array( 'UnblendedCost' ),
@@ -301,7 +371,7 @@ final class Costs {
 		$forecast        = 0.0;
 		$forecast_source = 'linear';
 		if ( $today < $next ) {
-			$fc = self::ce( 'GetCostForecast', array(
+			$fc = self::ce( $slot, 'GetCostForecast', array(
 				'TimePeriod'  => array( 'Start' => $today, 'End' => $next ),
 				'Metric'      => 'UNBLENDED_COST',
 				'Granularity' => 'MONTHLY',
@@ -316,7 +386,7 @@ final class Costs {
 			$forecast = $mtd / $elapsed * (int) gmdate( 't' );
 		}
 		return array(
-			'account'         => self::settings()['aws_account'],
+			'account'         => (string) ( self::settings()['accounts'][ $slot ]['account'] ?? '' ),
 			'month_to_date'   => round( $mtd, 2 ),
 			'previous_month'  => round( $prev_sum, 2 ),
 			'forecast'        => round( $forecast, 2 ),
@@ -328,9 +398,10 @@ final class Costs {
 	}
 
 	/** Cost Explorer 调用。@return array|\WP_Error */
-	private static function ce( string $action, array $body ) {
-		$s = self::settings();
-		return self::aws_json( self::CE_HOST, 'ce', 'AWSInsightsIndexService.' . $action, $body, $s['aws_key_id'], self::aws_secret() );
+	private static function ce( string $slot, string $action, array $body ) {
+		$a   = self::settings()['accounts'][ $slot ] ?? array();
+		$sec = '' !== (string) ( $a['secret_enc'] ?? '' ) ? Crypto::decrypt( (string) $a['secret_enc'] ) : '';
+		return self::aws_json( self::CE_HOST, 'ce', 'AWSInsightsIndexService.' . $action, $body, (string) ( $a['key_id'] ?? '' ), $sec );
 	}
 
 	/** 验证密钥：STS GetCallerIdentity，返回账号 ID。@return string|\WP_Error */

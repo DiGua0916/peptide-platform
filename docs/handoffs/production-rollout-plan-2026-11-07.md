@@ -798,3 +798,4 @@
 - 现状：Cloudflare 令牌缺 Zone·Analytics·Read 和 Billing·Read，流量和账单两块显示权限提示；AWS 密钥未填。用户已在 Cloudflare 面板开通 vialcoveresearch.com 的 Argo（接口确认 smart_routing=on）。
 - 11:35 UTC 按用户要求改版：顶部只放“本月已花 / 本月预计（/ 余额约剩）”和三行来源汇总，AWS 明细、Cloudflare 明细（默认只列开了 Argo 或有流量的域名，其余折叠）、设置都改成折叠块；设置在数据不完整时默认展开。新版本目录 `/srv/vialcove/hq/releases/costs2-057443c-hq`（2 处不同），已切换。
 - 11:50 UTC 用户授权后在 Cloudflare 面板给“总后台”令牌加了 Zone·Analytics·Read 和 Account·Billing·Read（账单权限在新版令牌编辑器里属于账户策略，不是用户策略）。费用页流量、Argo、账单全部拉通：10 个域名本月流量（主店 5.1 GB 最多），vialcoveresearch.com Argo 已开（153 MB，$5）；账单历史 8 张 $11.17 发票均为 11-08 的域名注册（Cloudflare Registrar），即昨天买了 8 个域名。`class-costs.php` 发票说明改为“发票 IN-xxx（已付）”，新版本目录 costs3-b38fd56-hq。
+- 12:00 UTC 用户说明 AWS 是两个账号（前台一个、后台一个）：费用模块改为两个槽位 `web`/`hq`（`Costs::SLOTS`），各自密钥加密存 `pchq_costs.accounts`，Cost Explorer 分别拉取后合计（日费用相加、服务按“账号 · 服务”分组），页面汇总行每个账号一行，明细表按账号分小计，设置里两组密钥框。新版本目录 costs4-ec95f10-hq（3 处不同），之后 `class-costs.php` 就地修一处（refresh 始终走 aws() 以便无密钥时也有逐账号提示）。
