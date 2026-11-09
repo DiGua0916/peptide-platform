@@ -72,6 +72,11 @@ final class Recovery_Page {
 		self::guard( 'pc_recovery_void' );
 		$id   = absint( $_GET['id'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$undo = ! empty( $_GET['undo'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( ! empty( $_GET['rec'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			Recovery::void( $id );
+			wp_safe_redirect( self::url( array( 'rec' => $id, 'pc_msg' => 'voided' ) ) );
+			exit;
+		}
 		Recovery_Items::set_void( $id, ! $undo );
 		wp_safe_redirect( self::url( array( 'view' => $id, 'pc_msg' => $undo ? 'restored' : 'voided' ) ) );
 		exit;
@@ -96,6 +101,11 @@ final class Recovery_Page {
 		$view = absint( $_GET['view'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if ( $view ) {
 			self::render_detail( $view );
+			return;
+		}
+		$rec = absint( $_GET['rec'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( $rec ) {
+			self::render_record( $rec );
 			return;
 		}
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended
@@ -167,12 +177,12 @@ final class Recovery_Page {
 
 	private static function row( array $r, array $labels ): void {
 		$o    = $r['order'];
-		$view = self::url( array( 'view' => $r['id'] ) );
+		$view = $o ? self::url( array( 'view' => $r['id'] ) ) : self::url( array( 'rec' => (int) $r['rec']['id'] ) );
 		echo '<tr>';
 		echo '<td class="pc-pl-col-act"><a class="pc-rc-icon" href="' . esc_url( $view ) . '" title="查看详情" aria-label="查看详情"><span class="dashicons dashicons-visibility"></span></a>';
-		echo '<a class="pc-rc-icon" href="' . esc_url( Mail_Page::compose_url( array( 'order_id' => $r['id'], 'to' => $r['email'] ) ) ) . '" title="写邮件" aria-label="写邮件"><span class="dashicons dashicons-email"></span></a></td>';
+		echo '<a class="pc-rc-icon" href="' . esc_url( Mail_Page::compose_url( array_filter( array( 'order_id' => $o ? $r['id'] : 0, 'to' => $r['email'] ) ) ) ) . '" title="写邮件" aria-label="写邮件"><span class="dashicons dashicons-email"></span></a></td>';
 		$more = ( $r['attempts'] ?? 1 ) > 1 ? ' <span class="pc-rc-attempts" title="同一顾客反复下单，只算一条弃单，点进去看全部">共 ' . (int) $r['attempts'] . ' 单</span>' : '';
-		echo '<td><a class="pc-rc-num" href="' . esc_url( $view ) . '">' . esc_html( Recovery_Items::display_name( $r['name'] ) ?: '-' ) . '</a>' . $more . '<br><small class="pc-pl-muted">#' . esc_html( $r['number'] ) . ' · ' . esc_html( self::time( (int) $r['created_ms'] ) ) . '</small></td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '<td><a class="pc-rc-num" href="' . esc_url( $view ) . '">' . esc_html( Recovery_Items::display_name( $r['name'] ) ?: '-' ) . '</a>' . $more . '<br><small class="pc-pl-muted">' . esc_html( $o ? '#' . $r['number'] : '未下单' ) . ' · ' . esc_html( self::time( (int) $r['created_ms'] ) ) . '</small></td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo '<td class="pc-rc-phone">' . ( $r['phone'] ? '<a href="tel:' . esc_attr( preg_replace( '/[^0-9+]/', '', $r['phone'] ) ) . '">' . esc_html( $r['phone'] ) . '</a>' : '-' ) . '</td>';
 		echo '<td>' . ( $r['email'] ? '<a href="mailto:' . esc_attr( $r['email'] ) . '">' . esc_html( $r['email'] ) . '</a>' : '-' ) . '</td>';
 		echo '<td>' . esc_html( $r['country'] ?: '-' ) . '</td><td>' . esc_html( $r['ship_method'] ?: '-' ) . '</td>';
@@ -397,5 +407,72 @@ final class Recovery_Page {
 		}
 		echo '</dl></section>';
 		echo '</aside></div></div>';
+	}
+
+	/** 没下单的结账（弃单记录）详情。 */
+	private static function render_record( int $id ): void {
+		$rec = Recovery::get_record( $id );
+		if ( ! $rec ) {
+			echo '<div class="wrap pc-pl pc-rc"><p>找不到这条弃单。</p><p><a href="' . esc_url( self::url() ) . '">返回弃单列表</a></p></div>';
+			return;
+		}
+		$r      = Recovery_Items::record_item( $rec );
+		$labels = Recovery_Items::status_labels();
+		$cur    = $r['currency'];
+		$msg    = sanitize_key( wp_unslash( $_GET['pc_msg'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		echo '<div class="wrap pc-pl pc-rc pc-rc-detail">';
+		if ( 'voided' === $msg ) {
+			echo '<div class="notice notice-success is-dismissible"><p>已作废，不再召回。</p></div>';
+		}
+		echo '<div class="pc-rc-detail__top"><a class="pc-rc-back" href="' . esc_url( self::url() ) . '"><span class="dashicons dashicons-arrow-left-alt"></span> 返回弃单列表</a><div class="pc-rc-detail__actions">';
+		echo '<a class="button" href="' . esc_url( Recovery::recover_url( $rec ) ) . '" target="_blank" rel="noopener">恢复购物车链接</a>';
+		echo '<a class="button button-primary" href="' . esc_url( Mail_Page::compose_url( array( 'to' => $r['email'] ) ) ) . '">写邮件召回</a>';
+		if ( in_array( $rec['status'], Recovery::OPEN, true ) ) {
+			echo '<a class="button pc-rc-danger" href="' . esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=pc_recovery_void&rec=1&id=' . $id ), 'pc_recovery_void' ) ) . '">作废</a>';
+		}
+		echo '</div></div><div class="pc-rc-grid"><div class="pc-rc-main">';
+		echo '<section class="pc-rc-panel"><header class="pc-rc-panel__head"><div class="pc-rc-title"><strong>未下单的结账</strong>' . self::badge( '未完成', 'is-open' ) . self::badge( '未支付', 'is-warn' ) . self::badge( $labels[ $r['status'] ], 'is-' . $r['status'] ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '<div class="pc-rc-meta"><span>记录时间：' . esc_html( self::time( (int) $rec['created_ms'] ) ) . '</span><span>最后改购物车：' . esc_html( self::time( (int) $rec['changed_ms'] ) ) . '</span></div></header>';
+		echo '<table class="pc-rc-lines"><thead><tr><th>商品名称</th><th class="pc-rc-right">单价 × 数量</th><th class="pc-rc-right">总价</th></tr></thead><tbody>';
+		foreach ( (array) json_decode( (string) $rec['cart'], true ) as $i ) {
+			$p   = wc_get_product( ! empty( $i['variation_id'] ) ? (int) $i['variation_id'] : (int) ( $i['product_id'] ?? 0 ) );
+			$qty = max( 1, (float) ( $i['quantity'] ?? 1 ) );
+			$sub = (float) ( $i['line_subtotal'] ?? 0 );
+			$img = $p ? (string) wp_get_attachment_image_url( (int) $p->get_image_id(), 'thumbnail' ) : '';
+			echo '<tr><td><div class="pc-rc-line">' . ( $img ? '<img src="' . esc_url( $img ) . '" alt="">' : '<span class="pc-rc-line__noimg"></span>' ) . '<div><strong>' . esc_html( $p ? $p->get_name() : '#' . (int) ( $i['product_id'] ?? 0 ) ) . '</strong>' . ( $p && $p->get_sku() ? '<div class="pc-pl-muted">SKU: ' . esc_html( $p->get_sku() ) . '</div>' : '' );
+			foreach ( (array) ( $i['variation'] ?? array() ) as $k => $v ) {
+				echo '<div class="pc-pl-muted">' . esc_html( wc_attribute_label( str_replace( 'attribute_', '', (string) $k ) ) . ': ' . $v ) . '</div>';
+			}
+			echo '</div></div></td><td class="pc-rc-right">' . self::money( $sub / $qty, $cur ) . ' × ' . esc_html( (string) wc_stock_amount( $qty ) ) . '</td><td class="pc-rc-right">' . self::money( $sub, $cur ) . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		}
+		echo '</tbody></table><dl class="pc-rc-totals"><dt>商品价格</dt><dd>' . self::money( (float) $rec['subtotal'], $cur ) . '</dd>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		if ( '' !== (string) $rec['total'] ) {
+			echo '<dt class="pc-rc-totals__sum">结账页总价</dt><dd class="pc-rc-totals__sum">' . self::money( (float) $rec['total'], $cur ) . '</dd>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		}
+		echo '</dl><p class="pc-pl-muted">顾客填了邮箱和地址但没有点“下单”，所以 WooCommerce 里没有订单，也没有支付记录。</p></section>';
+		echo '<section class="pc-rc-panel"><h3>召回记录 <span class="pc-pl-muted">（给这位顾客发过的邮件）</span></h3>';
+		if ( ! $r['mails'] ) {
+			$why = Recovery::blocked_reason();
+			echo '<p class="pc-pl-muted">还没发过邮件。' . ( $why ? ' 自动提醒当前被拦着（' . esc_html( 'address' === $why ? '店铺地址没填' : '发件邮箱没设' ) . '），可以先手写一封。' : '' ) . '</p>';
+		} else {
+			echo '<table class="pc-rc-mini"><thead><tr><th>任务</th><th>主题</th><th>类型</th><th>状态</th><th>结果</th><th>时间</th></tr></thead><tbody>';
+			foreach ( $r['mails'] as $m ) {
+				$ok = 'sent' === $m['status'];
+				echo '<tr><td>' . esc_html( Recovery_Items::mail_kind_label( (string) $m['kind'] ) ) . '</td><td>' . esc_html( (string) $m['subject'] ) . '</td><td>邮件</td><td>' . self::badge( $ok ? $labels[ $r['status'] ] : '未召回', $ok ? 'is-' . $r['status'] : 'is-muted' ) . '</td><td>' . esc_html( $ok ? '已发出' : '发送失败' ) . '</td><td>' . esc_html( self::time( (int) $m['created_ms'] ) ) . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			}
+			echo '</tbody></table>';
+		}
+		echo '</section></div><aside class="pc-rc-side">';
+		echo '<section class="pc-rc-panel"><h3>购买人信息</h3><p class="pc-rc-person"><strong>' . esc_html( Recovery_Items::display_name( $r['name'] ) ?: '-' ) . '</strong></p><dl class="pc-rc-kv">';
+		echo '<dt>邮箱</dt><dd><a href="mailto:' . esc_attr( $r['email'] ) . '">' . esc_html( $r['email'] ) . '</a></dd><dt>电话</dt><dd>' . esc_html( $r['phone'] ?: '-' ) . '</dd>';
+		echo '<dt>国家</dt><dd>' . esc_html( $r['country'] ? ( WC()->countries->countries[ $r['country'] ] ?? $r['country'] ) : '-' ) . '</dd>';
+		echo '<dt>配送方式</dt><dd>' . esc_html( $r['ship_method'] ?: '-' ) . '</dd><dt>选的支付方式</dt><dd>' . esc_html( $r['pay_method'] ?: '-' ) . '</dd></dl></section>';
+		echo '<section class="pc-rc-panel"><h3>时间线</h3><dl class="pc-rc-kv">';
+		foreach ( array( '记录' => (int) $rec['created_ms'], '最后改购物车' => (int) $rec['changed_ms'], '提醒 1' => (int) $rec['sent1_ms'], '提醒 2' => (int) $rec['sent2_ms'], '提醒 3' => (int) $rec['sent3_ms'], '点了邮件回来' => (int) $rec['clicked_ms'], '付款' => (int) $rec['paid_ms'] ) as $k => $ms ) {
+			if ( $ms ) {
+				echo '<dt>' . esc_html( $k ) . '</dt><dd>' . esc_html( self::time( $ms ) ) . '</dd>';
+			}
+		}
+		echo '</dl></section></aside></div></div>';
 	}
 }

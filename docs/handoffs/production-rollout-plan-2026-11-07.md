@@ -877,3 +877,4 @@
 - 订单菜单（`class-admin-menus.php`）：去掉“全部订单”，顶层指向“待处理订单”（wc-processing，已付款待发货），子菜单只有 待处理订单 / 弃单；打开任何订单页高亮待处理。
 - 顾客姓名显示规范化（`display_name`：ABIGAIL → Abigail，重复全名去重）。4 位顾客订单备注里被 PHP 变量名吞掉的文字已修正。
 - 部署两台主机各 7 份；阳站实测：3 条弃单（Nitza / Abigail 共 6 单 / Carla），全部召回中。
+- 18:05 UTC 弃单列表补上“没点下单的结账”：顾客在结账页填了邮箱和地址就走了，WooCommerce 没有订单，只有购物会话。列表打开时（5 分钟一次）跑 `Recovery::scan()` 把这类会话记进 `pc_cart_recovery`，`Recovery_Items::session_items()` 整理成行（标“未下单”），详情 `&rec=<id>`（商品、购物车合计、购买人、时间线、召回记录、恢复购物车链接 / 写邮件 / 作废）。阳站因此从 3 条变 4 条：第 4 位 Soraya Andujar（dkalhomeschool@gmail.com，$152.75）就是没点下单的。注意：阳站等子店“店铺地址”没填，弃单自动提醒被拦着不发（CAN-SPAM 要求），页面有黄条提示。

@@ -144,7 +144,7 @@ final class Recovery_Items {
 				$orders[] = $o;
 			}
 		}
-		$items = array();
+		$items = self::session_items( $f );
 		$seen  = array();
 		foreach ( $orders as $o ) {
 			if ( isset( $seen[ $o->get_id() ] ) ) {
@@ -236,6 +236,108 @@ final class Recovery_Items {
 			}
 		}
 		return $out;
+	}
+
+	/**
+	 * 还没点“下单”的结账（店主 Shopname 后台也算弃单）：顾客在结账页填了邮箱和地址就离开了，WooCommerce 里没有订单，
+	 * 只有购物会话。Recovery::scan() 把这些会话记成弃单记录（pc_cart_recovery），这里整理成和订单一样的列表行。
+	 */
+	public static function session_items( array $f ): array {
+		if ( ! Recovery::installed() ) {
+			Recovery::install();
+		}
+		if ( false === get_transient( 'pc_recovery_scanned' ) ) {
+			set_transient( 'pc_recovery_scanned', 1, 5 * MINUTE_IN_SECONDS );
+			try {
+				Recovery::scan();
+			} catch ( \Throwable $e ) { /* 扫描失败不影响看列表 */ }
+		}
+		$filter = array( 'from_ms' => $f['from_ms'] ?? 0, 'to_ms' => $f['to_ms'] ?? 0 );
+		$out    = array();
+		foreach ( Recovery::records( $filter, 1, 300 )['items'] as $r ) {
+			if ( (int) $r['order_id'] || (int) $r['draft_id'] || '' === (string) $r['email'] ) {
+				continue; // 已经变成订单的，按订单那条算。
+			}
+			if ( 'void' === $r['status'] && 'test checkout' === (string) $r['note'] ) {
+				continue;
+			}
+			if ( ! empty( $f['q'] ) ) {
+				$hay = strtolower( $r['email'] . ' ' . $r['name'] );
+				$hit = false;
+				foreach ( preg_split( '/\s+/', strtolower( trim( (string) $f['q'] ) ) ) as $term ) {
+					if ( '' !== $term && str_contains( $hay, ltrim( $term, '#' ) ) ) {
+						$hit = true;
+					}
+				}
+				if ( ! $hit ) {
+					continue;
+				}
+			}
+			$out[] = self::record_item( $r );
+		}
+		return $out;
+	}
+
+	/** 弃单记录（没下单的结账）→ 列表行。 */
+	public static function record_item( array $r ): array {
+		$mails = self::mails_for_email( (string) $r['email'] );
+		$sent  = array_values( array_filter( $mails, static fn( $m ) => 'sent' === $m['status'] ) );
+		$last  = max( (int) $r['last_sent_ms'], $sent ? (int) $sent[0]['created_ms'] : 0 );
+		$map   = array( 'pending' => 'pending', 'recalling' => 'recalling', 'failed' => 'failed', 'success' => 'success', 'void' => 'void' );
+		$status = $map[ $r['status'] ] ?? 'pending';
+		if ( in_array( $status, array( 'pending', 'recalling', 'failed' ), true ) ) {
+			if ( $sent ) {
+				$status = time() - (int) floor( $last / 1000 ) > self::RECALL_DAYS * DAY_IN_SECONDS ? 'failed' : 'recalling';
+			} else {
+				$status = 'pending';
+			}
+		}
+		$cust  = self::session_customer( (string) $r['session_key'] );
+		$items = (array) json_decode( (string) $r['cart'], true );
+		return array(
+			'id'           => 'r' . (int) $r['id'],
+			'rec'          => $r,
+			'order'        => null,
+			'number'       => '未下单',
+			'created_ms'   => (int) $r['created_ms'],
+			'name'         => (string) $r['name'],
+			'email'        => (string) $r['email'],
+			'phone'        => (string) ( $cust['phone'] ?? $cust['shipping_phone'] ?? '' ),
+			'country'      => (string) $r['country'],
+			'items'        => (int) array_sum( array_column( $items, 'quantity' ) ),
+			'ship_method'  => (string) $r['ship_method'],
+			'total'        => '' !== (string) $r['total'] ? (float) $r['total'] : (float) $r['subtotal'],
+			'currency'     => (string) ( $r['currency'] ?: get_woocommerce_currency() ),
+			'pay_method'   => (string) $r['pay_method'],
+			'paid_ms'      => (int) $r['paid_ms'],
+			'tid'          => '',
+			'order_status' => 'checkout-draft',
+			'status'       => $status,
+			'emails'       => max( (int) $r['emails'], count( $sent ) ),
+			'last_sent_ms' => $last,
+			'mails'        => $mails,
+			'paid_later'   => null,
+		);
+	}
+
+	private static function session_customer( string $key ): array {
+		global $wpdb;
+		$v = $wpdb->get_var( $wpdb->prepare( "SELECT session_value FROM {$wpdb->prefix}woocommerce_sessions WHERE session_key = %s", $key ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$d = is_string( $v ) ? maybe_unserialize( $v ) : null;
+		$c = is_array( $d ) ? maybe_unserialize( $d['customer'] ?? '' ) : null;
+		return is_array( $c ) ? $c : array();
+	}
+
+	/** 按邮箱找发给顾客的召回邮件。 */
+	public static function mails_for_email( string $email ): array {
+		$email = strtolower( trim( $email ) );
+		if ( '' === $email || ! Mail_Outbox::installed() ) {
+			return array();
+		}
+		global $wpdb;
+		$t    = Mail_Outbox::table();
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT id, kind, subject, status, error, created_ms FROM {$t} WHERE recipient LIKE %s ORDER BY created_ms DESC LIMIT 50", '%' . $wpdb->esc_like( $email ) . '%' ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		return array_values( array_filter( (array) $rows, static fn( $r ) => self::is_recall_kind( (string) $r['kind'] ) ) );
 	}
 
 	/** 顾客姓名规范显示：首字母大写，去掉顾客把全名重复填进姓和名造成的重复（“carla figueroa carla figueroa” → “Carla Figueroa”）。 */
