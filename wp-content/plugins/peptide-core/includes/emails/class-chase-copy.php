@@ -39,6 +39,42 @@ final class Chase_Copy {
 		add_filter( 'woocommerce_email_heading_customer_failed_order', static fn() => 'Help completing your payment', 20 );
 		add_filter( 'woocommerce_email_subject_customer_processing_order', array( self::class, 'subject_processing' ), 20, 2 );
 		add_filter( 'woocommerce_email_heading_customer_processing_order', static fn() => 'Thanks for your order', 20 );
+		// 2026-11-09 店主：“以后自动发”。未付款被自动取消的订单也发 02 付款帮助信（同一顾客 24 小时内只发一封）。
+		add_action( 'woocommerce_order_status_cancelled', array( self::class, 'on_cancelled' ), 20, 2 );
+		add_action( 'woocommerce_email_sent', array( self::class, 'remember_sent' ), 10, 3 );
+	}
+
+	private static function chase_key( string $email ): string {
+		return 'pc_chase_payment_' . md5( strtolower( trim( $email ) ) );
+	}
+
+	/** 付款帮助信发出后记 24 小时，同一顾客反复下单不重复打扰。 */
+	public static function remember_sent( $ok, $id, $email = null ): void {
+		if ( $ok && 'customer_failed_order' === $id && $email instanceof \WC_Email && $email->object instanceof \WC_Order ) {
+			set_transient( self::chase_key( (string) $email->object->get_billing_email() ), time(), DAY_IN_SECONDS );
+		}
+	}
+
+	/** 未付款订单被取消（超时 / 顾客放弃）→ 自动发 02 付款帮助信。 */
+	public static function on_cancelled( $order_id, $order = null ): void {
+		$order = $order instanceof \WC_Order ? $order : wc_get_order( $order_id );
+		if ( ! $order instanceof \WC_Order || $order->get_date_paid() || '' === (string) $order->get_billing_email() ) {
+			return;
+		}
+		if ( class_exists( '\PeptideCore\Test_Orders' ) && \PeptideCore\Test_Orders::is_test_order( $order ) ) {
+			return;
+		}
+		if ( get_transient( self::chase_key( (string) $order->get_billing_email() ) ) ) {
+			$order->add_order_note( '付款帮助信 24 小时内已发过给这位顾客，本单不再重复发送。' );
+			return;
+		}
+		$emails = WC()->mailer()->get_emails();
+		$mail   = $emails['WC_Email_Customer_Failed_Order'] ?? null;
+		if ( ! $mail instanceof \WC_Email ) {
+			return;
+		}
+		$mail->trigger( $order->get_id(), $order );
+		$order->add_order_note( '未付款取消：已自动发送付款帮助信「' . $mail->get_subject() . '」。' );
 	}
 
 	public static function brand(): string {
@@ -86,6 +122,9 @@ final class Chase_Copy {
 	/** 顾客称呼：母版 01/02 用 Dear，03/04 用 Hi。 */
 	public static function greeting( ?\WC_Order $order, string $word = 'Dear' ): string {
 		$name = $order ? trim( (string) $order->get_billing_first_name() ) : '';
+		// 顾客常把名字全大写或把全名塞进“名”里：只取第一个词，首字母大写。
+		$name = (string) strtok( $name, " \t" );
+		$name = '' !== $name ? mb_convert_case( mb_strtolower( $name ), MB_CASE_TITLE, 'UTF-8' ) : '';
 		return $word . ( '' !== $name ? ' ' . $name : ' there' ) . ',';
 	}
 

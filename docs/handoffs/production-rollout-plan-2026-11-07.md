@@ -866,3 +866,6 @@
 - 部署：两台主机各 7 份（含新店模板，部署脚本 `tools/deploy-store-plugin-files.sh` 已支持新建目录）；HQ release `brand-main-1794243714-hq`。主店渲染 4 封样例核对（PayPal 段、WhatsApp 按钮、orders@ 签名、店名），并发到 sun18761388693@gmail.com，店铺邮件记录 4 条 sent。
 - 顺带：5 家租户补建 `pc_mail_outbox` 表；HQ CDN 域名状态把 5 个已有发件连接的域名标记 mail_ok。
 - 发现：阳（vialcoveultra）与芒果（vialcoveplus）11-09 有 4 位波多黎各真实顾客共 12 笔单因支付失败被自动取消，当时邮件中心 503，“订单已取消”邮件大多没发出；尚未给他们发追单邮件，等店主确认。
+- 17:25 UTC 店主确认后，从各自店铺给 4 位真实顾客各发一封 02 付款帮助信（阳：Nitza #11867、Abigail #11864、Carla #11858；芒果：Luz #11861），订单已留备注，店铺邮件记录 4 条 sent。
+- 店主：“以后自动发”。`Chase_Copy::on_cancelled()`：未付款订单被取消（超时 / 放弃）→ 自动发 02 付款帮助信；同一顾客 24 小时内只发一封（`woocommerce_email_sent` 记 transient `pc_chase_payment_<md5 email>`）；测试单不发。已部署 14 份，主店用测试单验证不触发；今天已手发的 4 人已打 24h 标记。顺带给 5 家租户补建 `pc_email_log` 表。
+- 称呼只取名字第一个词并首字母大写（ABIGAIL → Abigail，“carla figueroa” → Carla）。
