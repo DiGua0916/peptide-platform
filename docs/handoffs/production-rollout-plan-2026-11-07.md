@@ -796,3 +796,4 @@
 - 功能：Cloudflare 各域名当月流量（GraphQL）、Argo 开关与费用预估（$5 含 1 GB，之后 $0.10/GB）、账单历史；AWS Cost Explorer（SigV4 自签，ce:GetCostAndUsage + GetCostForecast，密钥 Crypto 加密存 pchq_costs）本月已花 / 月底预计 / 按服务拆分 / 近 30 天日费用；月预算和预付余额提醒（Alerts type cost + 邮件到设置的邮箱）；每 8 小时 cron 刷新，手动“立即刷新”。
 - 部署：新版本目录 `/srv/vialcove/hq/releases/costs-634d77f-hq`（从 ff5a95c-hq 完整复制后改 9 个文件；部署前核对线上 6 个被改文件与仓库 HEAD 一致；php -l 全过；与旧目录相比恰好 9 处不同），切软链接，reload php8.3-fpm。页面可打开，cron 已排。
 - 现状：Cloudflare 令牌缺 Zone·Analytics·Read 和 Billing·Read，流量和账单两块显示权限提示；AWS 密钥未填。用户已在 Cloudflare 面板开通 vialcoveresearch.com 的 Argo（接口确认 smart_routing=on）。
+- 11:35 UTC 按用户要求改版：顶部只放“本月已花 / 本月预计（/ 余额约剩）”和三行来源汇总，AWS 明细、Cloudflare 明细（默认只列开了 Argo 或有流量的域名，其余折叠）、设置都改成折叠块；设置在数据不完整时默认展开。新版本目录 `/srv/vialcove/hq/releases/costs2-057443c-hq`（2 处不同），已切换。

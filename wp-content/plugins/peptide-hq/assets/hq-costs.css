@@ -19,3 +19,31 @@ body.pchq-workspace .pcp-costs__code{margin:8px 0 12px;padding:12px 14px;border:
 @media (max-width:782px){
  body.pchq-workspace .pcp-costs__chart{height:90px;gap:2px}
 }
+/* 先看两个数，明细折叠 */
+body.pchq-workspace .pcp-costs__hero.is-bad{border-color:var(--pcp-bad)}
+body.pchq-workspace .pcp-costs__big{display:flex;flex-wrap:wrap;gap:16px 40px;margin-bottom:18px}
+body.pchq-workspace .pcp-costs__big>div{display:flex;flex-direction:column;gap:2px;min-width:160px}
+body.pchq-workspace .pcp-costs__big span{color:var(--vc-muted);font-size:12px;line-height:16px;font-weight:600}
+body.pchq-workspace .pcp-costs__big strong{font-size:34px;line-height:40px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+body.pchq-workspace .pcp-costs__big small{color:var(--vc-muted);font-size:12px;line-height:16px}
+body.pchq-workspace .pcp-costs__big small b{color:var(--pcp-bad)}
+body.pchq-workspace .pcp-costs__lines{margin:0;padding:0;list-style:none;border-top:1px solid var(--vc-line)}
+body.pchq-workspace .pcp-costs__lines li{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid var(--vc-line);font-size:13px;line-height:20px}
+body.pchq-workspace .pcp-costs__lines li span{color:var(--vc-ink);font-weight:600}
+body.pchq-workspace .pcp-costs__lines li em{font-style:normal;font-variant-numeric:tabular-nums;text-align:right}
+body.pchq-workspace .pcp-costs__warn{color:var(--pcp-wait);font-style:normal;font-size:12px;line-height:18px}
+body.pchq-workspace p.pcp-costs__warn{margin:12px 0 0}
+body.pchq-workspace details.pcp-costs__detail{padding:0}
+body.pchq-workspace details.pcp-costs__detail>summary{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:16px 24px;cursor:pointer;list-style:none}
+body.pchq-workspace details.pcp-costs__detail>summary::-webkit-details-marker{display:none}
+body.pchq-workspace details.pcp-costs__detail>summary h2{margin:0;font-size:15px;line-height:22px}
+body.pchq-workspace details.pcp-costs__detail>summary h2::before{content:"▸";display:inline-block;margin-right:8px;color:var(--vc-muted);transition:transform .15s}
+body.pchq-workspace details.pcp-costs__detail[open]>summary h2::before{transform:rotate(90deg)}
+body.pchq-workspace details.pcp-costs__detail>summary:hover{background:#fafbfc;border-radius:12px}
+body.pchq-workspace details.pcp-costs__detail>:not(summary){margin-left:24px;margin-right:24px}
+body.pchq-workspace details.pcp-costs__detail[open]{padding-bottom:20px}
+@media (max-width:782px){
+ body.pchq-workspace .pcp-costs__big strong{font-size:28px;line-height:34px}
+ body.pchq-workspace .pcp-costs__lines li{flex-direction:column;gap:2px}
+ body.pchq-workspace .pcp-costs__lines li em{text-align:left}
+}

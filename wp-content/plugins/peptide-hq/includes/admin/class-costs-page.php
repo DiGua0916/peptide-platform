@@ -142,30 +142,36 @@ final class Costs_Page {
 			echo '<div class="pcp-flash ' . ( 'error' === $flash[0] ? 'is-bad' : 'is-ok' ) . '" role="status">' . esc_html( (string) $flash[1] ) . '</div>';
 		}
 
-		// 顶部数字。
-		echo '<dl class="pcp-stats pcp-costs__stats">';
-		echo '<div><dt>AWS 本月已花</dt><dd>' . ( empty( $aws['error'] ) ? esc_html( self::usd( $aws['month_to_date'] ) ) : '—' ) . '</dd></div>';
-		echo '<div><dt>AWS 月底预计</dt><dd>' . ( empty( $aws['error'] ) ? esc_html( self::usd( $aws['forecast'] ) ) : '—' ) . '</dd></div>';
-		echo '<div><dt>Cloudflare Argo 本月</dt><dd>' . ( empty( $cf['error'] ) ? esc_html( self::usd( $cf['argo_estimate'] ?? 0 ) ) : '—' ) . '</dd></div>';
-		echo '<div><dt>本月合计预计</dt><dd>' . ( $sum ? esc_html( self::usd( $sum['forecast'] ?? 0 ) ) : '—' ) . '</dd></div>';
-		if ( $s['budget'] > 0 ) {
-			$over = $sum && (float) ( $sum['forecast'] ?? 0 ) > $s['budget'];
-			echo '<div class="' . ( $over ? 'is-bad' : 'is-ok' ) . '"><dt>月预算</dt><dd>' . esc_html( self::usd( $s['budget'] ) ) . '</dd></div>';
-		}
+		// 先给两个数：本月已花、本月预计。其他都收在“查看明细”里。
+		$spent    = $sum ? (float) ( $sum['spent'] ?? 0 ) : null;
+		$forecast = $sum ? (float) ( $sum['forecast'] ?? 0 ) : null;
+		$partial  = ! empty( $aws['error'] ) || ! empty( $cf['error'] );
+		$over     = $s['budget'] > 0 && null !== $forecast && $forecast > $s['budget'];
+		$low      = null !== $remaining && null !== $forecast && $remaining < $forecast;
+		echo '<section class="pcp-card pcp-costs__hero' . ( $over || $low ? ' is-bad' : '' ) . '">';
+		echo '<div class="pcp-costs__big"><div><span>本月已花</span><strong>' . ( null !== $spent ? esc_html( self::usd( $spent ) ) : '—' ) . '</strong><small>' . esc_html( wp_date( 'n 月 1 日' ) ) . ' 至今' . ( empty( $aws['error'] ) && ! empty( $aws['data_through'] ) ? '，AWS 数据到 ' . esc_html( substr( (string) $aws['data_through'], 5 ) ) : '' ) . '</small></div>';
+		echo '<div><span>本月预计</span><strong>' . ( null !== $forecast ? esc_html( self::usd( $forecast ) ) : '—' ) . '</strong><small>' . ( $s['budget'] > 0 ? '预算 ' . esc_html( self::usd( $s['budget'] ) ) . ( $over ? '，<b>超出</b>' : '，在预算内' ) : '没设预算' ) . '</small></div>';
 		if ( null !== $remaining ) {
-			$low = $sum && $remaining < (float) ( $sum['forecast'] ?? 0 );
-			echo '<div class="' . ( $low ? 'is-bad' : 'is-ok' ) . '"><dt>余额约剩</dt><dd>' . esc_html( self::usd( max( 0, $remaining ) ) ) . '</dd></div>';
-		}
-		echo '</dl>';
-
-		// AWS。
-		echo '<section class="pcp-card"><div class="pcp-card__head"><h2>AWS 服务器' . ( '' !== $s['aws_account'] ? ' <span class="pcp-tag">账号 ' . esc_html( $s['aws_account'] ) . '</span>' : '' ) . '</h2>';
-		if ( empty( $aws['error'] ) ) {
-			echo '<span class="pcp-hint">数据到 ' . esc_html( (string) ( $aws['data_through'] ?: '—' ) ) . '，预测' . ( 'aws' === ( $aws['forecast_source'] ?? '' ) ? '来自 AWS' : '按本月日均推算' ) . '</span>';
+			echo '<div><span>余额约剩</span><strong>' . esc_html( self::usd( max( 0, $remaining ) ) ) . '</strong><small>' . ( $low ? '<b>不够下个月，请充值</b>' : '够下个月' ) . '</small></div>';
 		}
 		echo '</div>';
+		echo '<ul class="pcp-costs__lines">';
+		echo '<li><span>AWS 两台服务器</span><em>' . ( empty( $aws['error'] ) ? esc_html( self::usd( $aws['month_to_date'] ) . ' 已花 · 预计 ' . self::usd( $aws['forecast'] ) ) : '<i class="pcp-costs__warn">' . esc_html( (string) $aws['error'] ) . '</i>' ) . '</em></li>';
+		$argo_on = array_values( array_filter( (array) ( $cf['zones'] ?? array() ), static fn( $z ) => 'on' === $z['argo'] ) );
+		echo '<li><span>Cloudflare Argo' . ( $argo_on ? '（' . esc_html( implode( '、', array_column( $argo_on, 'name' ) ) ) . '）' : '' ) . '</span><em>' . ( empty( $cf['error'] ) ? esc_html( self::usd( $cf['argo_estimate'] ?? 0 ) . ' 已产生 · 预计 ' . self::usd( $cf['argo_forecast'] ?? 0 ) ) : '<i class="pcp-costs__warn">' . esc_html( (string) $cf['error'] ) . '</i>' ) . '</em></li>';
+		echo '<li><span>Cloudflare 域名套餐</span><em>$0.00 · 全部免费版</em></li>';
+		echo '</ul>';
+		if ( $partial ) {
+			echo '<p class="pcp-costs__warn">数字还不完整：' . esc_html( implode( ' ', array_filter( array( ! empty( $aws['error'] ) ? 'AWS 没接上。' : '', ! empty( $cf['analytics_error'] ) ? 'Cloudflare 流量数据没权限，Argo 只按固定 $5 算。' : '' ) ) ) ) . ' 展开下面“设置”处理。</p>';
+		} elseif ( ! empty( $cf['analytics_error'] ) ) {
+			echo '<p class="pcp-costs__warn">Cloudflare 流量数据没权限，Argo 只按固定 $5 算。展开下面“设置”处理。</p>';
+		}
+		echo '</section>';
+
+		// 明细：AWS。
+		echo '<details class="pcp-card pcp-costs__detail"><summary><h2>AWS 服务器明细' . ( '' !== $s['aws_account'] ? ' <span class="pcp-tag">账号 ' . esc_html( $s['aws_account'] ) . '</span>' : '' ) . '</h2><span class="pcp-hint">' . ( empty( $aws['error'] ) ? '按项目拆分、近 30 天每日费用，预测' . ( 'aws' === ( $aws['forecast_source'] ?? '' ) ? '来自 AWS' : '按日均推算' ) : '未连接' ) . '</span></summary>';
 		if ( ! empty( $aws['error'] ) ) {
-			echo '<div class="pcp-flash is-wait">' . esc_html( (string) $aws['error'] ) . ( Costs::has_aws() ? '' : ' 在下面“设置”里填入只读访问密钥即可。' ) . '</div>';
+			echo '<div class="pcp-flash is-wait">' . esc_html( (string) $aws['error'] ) . ( Costs::has_aws() ? '' : ' 在“设置”里填入只读访问密钥即可。' ) . '</div>';
 		} else {
 			$daily = (array) ( $aws['daily'] ?? array() );
 			krsort( $daily );
@@ -187,12 +193,15 @@ final class Costs_Page {
 			}
 			echo '<tr class="is-total"><td>合计</td><td>' . esc_html( self::usd( $aws['month_to_date'] ) ) . '</td><td>' . esc_html( self::usd( $aws['previous_month'] ) ) . '</td></tr>';
 			echo '</tbody></table></div>';
-			echo '<p class="pcp-note">AWS 是后付费，每月初从绑定的卡扣上个月的费用；这里的数字以 AWS 账单为准。Cost Explorer 每次查询 AWS 收 $0.01，本页每天自动查 6 次，手动刷新另算。</p>';
+			echo '<p class="pcp-note">AWS 是后付费，每月初从绑定的卡扣上个月的费用；以 AWS 账单为准。Cost Explorer 每次查询 AWS 收 $0.01，本页每天自动查 6 次。</p>';
 		}
-		echo '</section>';
+		echo '</details>';
 
-		// Cloudflare。
-		echo '<section class="pcp-card"><div class="pcp-card__head"><h2>Cloudflare</h2><span class="pcp-hint">Argo：前 1 GB $5/月，之后每 GB $0.10，按域名流量估算</span></div>';
+		// 明细：Cloudflare。
+		$zones    = (array) ( $cf['zones'] ?? array() );
+		$visible  = array_values( array_filter( $zones, static fn( $z ) => 'on' === $z['argo'] || $z['bytes'] > 0 ) );
+		$hidden_n = count( $zones ) - count( $visible );
+		echo '<details class="pcp-card pcp-costs__detail"><summary><h2>Cloudflare 明细</h2><span class="pcp-hint">Argo：前 1 GB $5/月，之后每 GB $0.10；各域名流量与账单</span></summary>';
 		if ( ! empty( $cf['error'] ) ) {
 			echo '<div class="pcp-flash is-wait">' . esc_html( (string) $cf['error'] ) . '</div>';
 		} else {
@@ -201,13 +210,25 @@ final class Costs_Page {
 					echo '<div class="pcp-flash is-wait">' . esc_html( $label . '：' . $cf[ $k ] ) . '</div>';
 				}
 			}
-			echo '<div class="pcp-scroll"><table class="pcp-matrix pcp-costs__table"><thead><tr><th scope="col">域名</th><th scope="col">套餐</th><th scope="col">本月流量</th><th scope="col">请求数</th><th scope="col">缓存命中</th><th scope="col">Argo</th><th scope="col">Argo 预估</th></tr></thead><tbody>';
-			foreach ( (array) ( $cf['zones'] ?? array() ) as $z ) {
-				$hit = $z['bytes'] > 0 ? round( $z['cached'] / $z['bytes'] * 100 ) . '%' : '—';
-				$argo = array( 'on' => '<span class="pcp-state is-ok"><i></i>已开</span>', 'off' => '<span class="pcp-state is-off"><i></i>未开</span>' )[ $z['argo'] ] ?? '<span class="pcp-state is-off"><i></i>未知</span>';
-				echo '<tr><td><strong>' . esc_html( $z['name'] ) . '</strong></td><td>' . esc_html( str_replace( ' Website', '', $z['plan'] ) ) . '</td><td>' . esc_html( self::bytes( $z['bytes'] ) ) . '</td><td>' . esc_html( number_format( (int) $z['requests'] ) ) . '</td><td>' . esc_html( $hit ) . '</td><td>' . $argo . '</td><td>' . ( isset( $z['argo_estimate'] ) ? esc_html( self::usd( $z['argo_estimate'] ) . '（月底约 ' . self::usd( $z['argo_forecast'] ) . '）' ) : '—' ) . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			$table = static function ( array $rows ): void {
+				echo '<div class="pcp-scroll"><table class="pcp-matrix pcp-costs__table"><thead><tr><th scope="col">域名</th><th scope="col">本月流量</th><th scope="col">请求数</th><th scope="col">缓存命中</th><th scope="col">Argo</th><th scope="col">Argo 费用</th></tr></thead><tbody>';
+				foreach ( $rows as $z ) {
+					$hit  = $z['bytes'] > 0 ? round( $z['cached'] / $z['bytes'] * 100 ) . '%' : '—';
+					$argo = array( 'on' => '<span class="pcp-state is-ok"><i></i>已开</span>', 'off' => '<span class="pcp-state is-off"><i></i>未开</span>' )[ $z['argo'] ] ?? '<span class="pcp-state is-off"><i></i>未知</span>';
+					echo '<tr><td><strong>' . esc_html( $z['name'] ) . '</strong></td><td>' . esc_html( self::bytes( $z['bytes'] ) ) . '</td><td>' . esc_html( number_format( (int) $z['requests'] ) ) . '</td><td>' . esc_html( $hit ) . '</td><td>' . $argo . '</td><td>' . ( isset( $z['argo_estimate'] ) ? esc_html( self::usd( $z['argo_estimate'] ) . '，月底约 ' . self::usd( $z['argo_forecast'] ) ) : '—' ) . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				}
+				echo '</tbody></table></div>';
+			};
+			if ( $visible ) {
+				$table( $visible );
+			} else {
+				echo '<p class="pcp-note">本月还没有域名产生流量数据或开通 Argo。</p>';
 			}
-			echo '</tbody></table></div>';
+			if ( $hidden_n > 0 ) {
+				echo '<details class="pcp-details"><summary>其余 ' . (int) $hidden_n . ' 个域名（免费版、没开 Argo、本月没流量）</summary>';
+				$table( array_values( array_filter( $zones, static fn( $z ) => ! ( 'on' === $z['argo'] || $z['bytes'] > 0 ) ) ) );
+				echo '</details>';
+			}
 			if ( ! empty( $cf['bills'] ) ) {
 				echo '<h3 class="pcp-costs__sub">账单历史</h3><div class="pcp-scroll"><table class="pcp-matrix pcp-costs__table"><thead><tr><th scope="col">日期</th><th scope="col">项目</th><th scope="col">域名</th><th scope="col">金额</th></tr></thead><tbody>';
 				foreach ( $cf['bills'] as $b ) {
@@ -218,10 +239,10 @@ final class Costs_Page {
 				echo '<p class="pcp-note">还没有账单记录。开了 Argo 后，每月账单会出现在这里。</p>';
 			}
 		}
-		echo '</section>';
+		echo '</details>';
 
 		// 设置。
-		echo '<section class="pcp-card"><div class="pcp-card__head"><h2>设置</h2>' . ( Costs::has_aws() ? '<span class="pcp-state is-ok"><i></i>AWS 密钥已验证' . ( $s['aws_verified'] ? ' · ' . esc_html( wp_date( 'Y-m-d H:i', $s['aws_verified'] ) ) : '' ) . '</span>' : '<span class="pcp-state is-off"><i></i>AWS 未连接</span>' ) . '</div>';
+		echo '<details class="pcp-card pcp-costs__detail"' . ( $partial ? ' open' : '' ) . '><summary><h2>设置</h2>' . ( Costs::has_aws() ? '<span class="pcp-state is-ok"><i></i>AWS 已连接' . ( $s['aws_verified'] ? ' · ' . esc_html( wp_date( 'Y-m-d H:i', $s['aws_verified'] ) ) : '' ) . '</span>' : '<span class="pcp-state is-off"><i></i>AWS 未连接</span>' ) . '</summary>';
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="pcp-cdn-form pcp-costs__form">';
 		wp_nonce_field( 'pchq_costs_save' );
 		echo '<input type="hidden" name="action" value="pchq_costs_save">';
@@ -246,7 +267,7 @@ final class Costs_Page {
 		echo '<details class="pcp-details"><summary>Cloudflare 令牌要加的权限</summary><ol class="pcp-steps">';
 		echo '<li>Cloudflare → 右上角头像 → My Profile → API Tokens → 找到总后台在用的令牌 → Edit。</li>';
 		echo '<li>Permissions 加两条：<strong>Zone · Analytics · Read</strong>（流量数据）和 <strong>User · Billing · Read</strong>（账单历史）。保存后回这里点“立即刷新”。</li></ol></details>';
-		echo '</section>';
+		echo '</details>';
 		echo '</div>';
 	}
 }
