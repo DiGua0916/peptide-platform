@@ -234,7 +234,7 @@ final class Costs {
 					'at'          => (string) ( $b['occurred_at'] ?? '' ),
 					'amount'      => (float) ( $b['amount'] ?? 0 ),
 					'currency'    => (string) ( $b['currency'] ?? 'USD' ),
-					'description' => (string) ( $b['description'] ?? ( $b['type'] ?? '' ) ),
+					'description' => '' !== (string) ( $b['description'] ?? '' ) ? (string) $b['description'] : ( ( 'invoice' === ( $b['type'] ?? '' ) ? '发票' : (string) ( $b['type'] ?? '' ) ) . ( '' !== (string) ( $b['receipt_id'] ?? '' ) ? ' ' . $b['receipt_id'] : '' ) . ( 'CLOSED' === ( $b['status'] ?? '' ) ? '（已付）' : ( '' !== (string) ( $b['status'] ?? '' ) ? '（' . $b['status'] . '）' : '' ) ) ),
 					'zone'        => (string) ( $b['zone']['name'] ?? '' ),
 				);
 			}
