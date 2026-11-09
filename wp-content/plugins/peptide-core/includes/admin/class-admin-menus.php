@@ -215,7 +215,9 @@ final class Admin_Menus {
 		}
 		$count = function_exists( 'wc_processing_order_count' ) ? (int) wc_processing_order_count() : 0;
 		$badge = $count ? ' <span class="awaiting-mod update-plugins count-' . $count . '"><span class="processing-count">' . number_format_i18n( $count ) . '</span></span>' : '';
-		add_menu_page( __( 'Orders', 'peptide-core' ), __( 'Orders', 'peptide-core' ) . $badge, 'edit_shop_orders', self::ORDERS, '', 'dashicons-cart', 3 );
+		// 2026-11-09 店主：订单菜单只留“待处理订单”（已付款、待发货）和“弃单”，不要“全部订单”。顶层直接指向待处理。
+		add_menu_page( __( 'Orders', 'peptide-core' ), __( 'Orders', 'peptide-core' ) . $badge, 'edit_shop_orders', self::PENDING, '', 'dashicons-cart', 3 );
+		add_submenu_page( self::PENDING, __( 'Pending orders', 'peptide-core' ), __( 'Pending orders', 'peptide-core' ), 'edit_shop_orders', self::PENDING );
 		add_menu_page( __( 'Customers', 'peptide-core' ), __( 'Customers', 'peptide-core' ), self::CAP, self::CUSTOMERS, '', 'dashicons-groups', 4 );
 		add_submenu_page( self::CUSTOMERS, __( 'Customer list', 'peptide-core' ), __( 'Customer list', 'peptide-core' ), self::CAP, self::CUSTOMERS );
 		add_submenu_page( self::CUSTOMERS, __( 'Customer segments and points', 'peptide-core' ), __( 'Customer segments and points', 'peptide-core' ), self::CAP, Customers_Page::SLUG, array( Customers_Page::class, 'render' ) );
@@ -525,7 +527,7 @@ final class Admin_Menus {
 		if ( 'wc-orders' === $page ) {
 			// 待处理订单 = 处理中的订单列表；打开某一张订单时仍算“全部订单”。
 			$status = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			return 'wc-processing' === $status && ! isset( $_GET['action'] ) ? self::PENDING : self::ORDERS; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			return self::PENDING; // 订单菜单只剩待处理和弃单，打开任何订单页都算在“待处理订单”下。 // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		}
 		// 商品菜单里隐藏的页面：批次算“检测报告”，添加商品、品牌、属性算“商品管理”。
 		global $typenow, $pagenow, $taxonomy;

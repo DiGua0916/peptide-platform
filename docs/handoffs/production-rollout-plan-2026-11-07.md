@@ -870,3 +870,10 @@
 - 店主：“以后自动发”。`Chase_Copy::on_cancelled()`：未付款订单被取消（超时 / 放弃）→ 自动发 02 付款帮助信；同一顾客 24 小时内只发一封（`woocommerce_email_sent` 记 transient `pc_chase_payment_<md5 email>`）；测试单不发。已部署 14 份，主店用测试单验证不触发；今天已手发的 4 人已打 24h 标记。顺带给 5 家租户补建 `pc_email_log` 表。
 - 称呼只取名字第一个词并首字母大写（ABIGAIL → Abigail，“carla figueroa” → Carla）。
 - 17:45 UTC 邮件里的联系方式改为跟店铺后台「客服联系方式」走：`Chase_Copy::whatsapp()/whatsapp_link()/store_email()` 读 `Settings::all()['support']`（没填才用默认号 / orders@域名）；手写邮件默认模板里的号码换成 `{whatsapp}` 变量（TEMPLATES_VERSION 2026-11-09c，自定义模板不动）。6 家店 `woocommerce_email_from_address` 改为各自 orders@域名、from_name 为品牌名（阳站之前还是 VialCovePeptides@outlook.com，WooCommerce 自带的“please contact us at …”行就显示它）。阳站已重新渲染确认。注：6 家店后台的 WhatsApp 目前都还是 +1 303 944 4124，是店主没改，不是邮件写死。
+
+### 2026-11-09 18:00 UTC 弃单页按店主 Shopname 后台重做 + 订单菜单精简
+- 新 `peptide-core/includes/class-recovery-items.php`：弃单 = 未付款订单（结账草稿 / 待付款 / 支付失败 / 未付款取消），不含测试单；同一顾客反复下单只算一条，按金额最高那张展示（其余在详情页“这位顾客的其他未付款订单”）。召回 = 发邮件，次数 / 时间从 `pc_mail_outbox` 按订单号或邮箱汇总（付款帮助信、弃单提醒、手写信）。召回状态：发过信=召回中；3 天内没回来下单，第 4 天起=召回失败；之后付款=召回成功；手动作废 / 测试单=已作废（`_pc_recall_void`）。
+- `admin/class-recovery-page.php` 重写：列表列 操作 / 姓名(+单号) / 电话 / 邮箱 / 国家 / 配送方式 / 订单总价 / 支付方式 / 支付时间 / 流水号 / 订单状态 / 召回状态 / 邮件发送时间 / 召回次数；详情页（`&view=订单ID`）：商品、费用拆分、收货 / 账单地址（可复制）、支付信息 + 中枢支付记录、物流信息、召回记录（状态=召回状态，结果=是否发出）、同顾客其他单；右栏 购买人信息、订单基础信息、订单备注、订单归因（WC 归因 meta）、设备信息（实时访客：设备 / 浏览器 / 来访次数 / 查看轨迹）。按钮：订单页、付款链接、写邮件召回、作废 / 恢复。新 `assets/recovery.css`。
+- 订单菜单（`class-admin-menus.php`）：去掉“全部订单”，顶层指向“待处理订单”（wc-processing，已付款待发货），子菜单只有 待处理订单 / 弃单；打开任何订单页高亮待处理。
+- 顾客姓名显示规范化（`display_name`：ABIGAIL → Abigail，重复全名去重）。4 位顾客订单备注里被 PHP 变量名吞掉的文字已修正。
+- 部署两台主机各 7 份；阳站实测：3 条弃单（Nitza / Abigail 共 6 单 / Carla），全部召回中。
