@@ -852,3 +852,9 @@
 - 代码：`peptide-panapay/includes/class-hub.php` 新增 `host_alert()/host_alert_clear()`；`peptide-hq/includes/class-alerts.php` 新增类型 `payment` 支付通道提醒。
 - 部署：HQ release `/srv/vialcove/hq/releases/pay-host-alert-1794241890-hq`；`class-hub.php` 同步到两台主机各 6 份 peptide-panapay 副本（备份 `~/vialcove-deploy-backups/trk-plain-20261109T16315x`）。已用假域名实测告警开/恢复，测试告警已删除。
 - 检查：6 个站点中枢地址校验全部 OK；历史会话里出现过的收银台域名现在都在名单内。
+
+### 2026-11-09 16:50 UTC 测试单规则 + 结账页去掉“未付款订单”块 + 新店模板补同步
+- **测试单规则**（`peptide-core/includes/class-test-orders.php`，`assets/test-orders.js`）：收件人姓、名、地址、城市全为“1”即测试单。邮编“1”放行（`woocommerce_validate_postcode` 只对测试请求放行，前端脚本清掉结账块对邮编的格式报错）；所有 WooCommerce 邮件（顾客 + 后台）对测试单 `is_enabled()`=false；`Recovery::scan` 不记弃单（已有记录作废 `test checkout`）；`Emails\Registry::on_paid` 跳过；订单打 `_pc_test_order=1` 并留备注。主店实测：11813 判定为测试单、顾客/后台邮件均关闭、邮编 1 放行、abc 仍拒绝、弃单解析 is_test=true。
+- **结账页 / 购物车不再展示 “Your unpaid orders”**（`peptide-panapay/includes/class-pending-orders.php` 去掉 4 个展示钩子，我的账户页保留）。
+- 部署：两台主机各 6 份（主店 + 5 租户）；备份 `~/vialcove-deploy-backups/trk-plain-20261109T1640xx / 1642xx`。
+- **发现并修正**：部署脚本用 `ls -d …/*-web/source` 找新店模板，目录 700 无权限读取，所以本会话此前的所有部署都没写进模板。现改为读 `/etc/vialcove-provision/config.json` 的 `source_web_root` / `source_admin_root`（脚本入库 `tools/deploy-store-plugin-files.sh`）。已把模板里的 peptide-core、peptide-panapay 整目录 rsync 成主店当前版本（web 模板落后 31+49 文件，HQ 模板 25+2），模板备份 `/root/vialcove-backups/template-plugins-20261109-16440x`。

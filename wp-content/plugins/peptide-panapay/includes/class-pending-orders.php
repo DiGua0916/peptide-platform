@@ -19,10 +19,7 @@ final class Pending_Orders {
 		add_action( 'woocommerce_store_api_checkout_order_processed', array( self::class, 'remember' ), 20 );
 		add_action( 'template_redirect', array( self::class, 'protect_page' ), 1 );
 		add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue' ) );
-		add_filter( 'render_block_woocommerce/cart', array( self::class, 'prepend' ), 200 );
-		add_filter( 'render_block_woocommerce/checkout', array( self::class, 'prepend' ), 200 );
-		add_action( 'woocommerce_before_cart', array( self::class, 'classic' ), 5 );
-		add_action( 'woocommerce_before_checkout_form', array( self::class, 'classic' ), 5 );
+		// 2026-11-09 店主要求：购物车 / 结账页不再展示“Your unpaid orders”，只保留“我的账户”里的列表。
 		add_action( 'woocommerce_account_dashboard', array( self::class, 'render' ), 5 );
 	}
 

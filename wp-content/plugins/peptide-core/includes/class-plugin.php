@@ -89,6 +89,7 @@ final class Plugin {
 		Topics::register_hooks();
 		Promotions::register_hooks();
 		Recovery::register_hooks();
+		Test_Orders::register_hooks();
 		Store_Config::register_hooks();
 		Shipping\Plans::register_hooks();
 		Shipping\Discounts::register_hooks();

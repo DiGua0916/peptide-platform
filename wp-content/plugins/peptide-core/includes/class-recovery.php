@@ -247,6 +247,7 @@ final class Recovery {
 		$pkg      = maybe_unserialize( $data['shipping_for_package_0'] ?? '' );
 		return array(
 			'email'       => is_email( $email ) ? strtolower( $email ) : '',
+			'is_test'     => Test_Orders::is_test_customer( $cust ),
 			'user_id'     => $user,
 			'name'        => trim( (string) ( $cust['first_name'] ?? '' ) . ' ' . (string) ( $cust['last_name'] ?? '' ) ),
 			'has_address' => '' !== trim( (string) ( $cust['address_1'] ?? '' ) ) || '' !== trim( (string) ( $cust['shipping_address_1'] ?? '' ) ),
@@ -297,6 +298,14 @@ final class Recovery {
 			}
 			if ( '' === $p['email'] || ! $p['has_address'] || ( $p['user_id'] && ( user_can( $p['user_id'], 'manage_woocommerce' ) || user_can( $p['user_id'], 'manage_options' ) ) ) ) {
 				continue; // 还没填邮箱和地址就不算弃单；员工账号不记录。
+			}
+			if ( $p['is_test'] ) {
+				// 店主的测试单（收件信息全 1）：不记弃单，已有记录作废。
+				if ( $rec ) {
+					self::finish( $rec, 'void', 'test checkout', $now );
+					++$stats['voided'];
+				}
+				continue;
 			}
 			$hash = md5( wp_json_encode( array_map( static fn( $i ) => array( $i['product_id'], $i['variation_id'], $i['variation'], $i['quantity'] ), $p['items'] ) ) );
 			$data = array(

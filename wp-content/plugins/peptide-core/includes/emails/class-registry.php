@@ -115,6 +115,9 @@ final class Registry {
 		if ( ! $order instanceof \WC_Order || $order->get_meta( self::PAID_META ) ) {
 			return;
 		}
+		if ( \PeptideCore\Test_Orders::is_test_order( $order ) ) {
+			return; // 测试单不发注册邀请、不查重复支付。
+		}
 		$order->update_meta_data( self::PAID_META, 1 );
 		$order->save_meta_data();
 		$email = strtolower( (string) $order->get_billing_email() );
