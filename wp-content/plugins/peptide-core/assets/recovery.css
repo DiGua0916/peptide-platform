@@ -28,6 +28,7 @@
 .pc-rc-back { display: inline-flex; align-items: center; gap: 4px; text-decoration: none; font-size: 14px; }
 .pc-rc-back .dashicons { font-size: 18px; width: 18px; height: 18px; }
 .pc-rc-detail__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pc-rc-lang { min-width: 72px; text-align: center; }
 .pc-rc-danger { color: #b32d2e !important; border-color: #b32d2e !important; }
 .pc-rc-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
 .pc-rc-main, .pc-rc-side { display: grid; gap: 20px; min-width: 0; }

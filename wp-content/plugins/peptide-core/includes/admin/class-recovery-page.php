@@ -99,13 +99,21 @@ final class Recovery_Page {
 			return;
 		}
 		$view = absint( $_GET['view'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( $view ) {
-			self::render_detail( $view );
-			return;
-		}
-		$rec = absint( $_GET['rec'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( $rec ) {
-			self::render_record( $rec );
+		$rec  = absint( $_GET['rec'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( $view || $rec ) {
+			// 详情页语言开关（店主要求）：只影响弃单详情页，记在当前用户身上，其他页面不变。
+			if ( isset( $_GET['lang'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				update_user_meta( get_current_user_id(), 'pc_recovery_lang', 'en' === $_GET['lang'] ? 'en' : 'zh' ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			}
+			$en = 'en' === get_user_meta( get_current_user_id(), 'pc_recovery_lang', true );
+			ob_start();
+			if ( $view ) {
+				self::render_detail( $view );
+			} else {
+				self::render_record( $rec );
+			}
+			$html = (string) ob_get_clean();
+			echo $en ? self::to_english( $html ) : $html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 渲染函数内已转义。
 			return;
 		}
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended
@@ -217,6 +225,7 @@ final class Recovery_Page {
 		}
 		echo '<div class="pc-rc-detail__top"><a class="pc-rc-back" href="' . esc_url( self::url() ) . '"><span class="dashicons dashicons-arrow-left-alt"></span> 返回弃单列表</a>';
 		echo '<div class="pc-rc-detail__actions">';
+		echo '<a class="button pc-rc-lang" href="' . esc_url( add_query_arg( 'lang', 'en' === get_user_meta( get_current_user_id(), 'pc_recovery_lang', true ) ? 'zh' : 'en' ) ) . '" title="切换这一页的显示语言">' . ( 'en' === get_user_meta( get_current_user_id(), 'pc_recovery_lang', true ) ? '中文' : 'English' ) . '</a>';
 		echo '<a class="button" href="' . esc_url( $order->get_edit_order_url() ) . '">订单页</a>';
 		if ( ! $paid ) {
 			echo '<a class="button" href="' . esc_url( $order->get_checkout_payment_url() ) . '" target="_blank" rel="noopener">付款链接</a>';
@@ -380,6 +389,7 @@ final class Recovery_Page {
 			echo '<div class="notice notice-success is-dismissible"><p>已作废，不再召回。</p></div>';
 		}
 		echo '<div class="pc-rc-detail__top"><a class="pc-rc-back" href="' . esc_url( self::url() ) . '"><span class="dashicons dashicons-arrow-left-alt"></span> 返回弃单列表</a><div class="pc-rc-detail__actions">';
+		echo '<a class="button pc-rc-lang" href="' . esc_url( add_query_arg( 'lang', 'en' === get_user_meta( get_current_user_id(), 'pc_recovery_lang', true ) ? 'zh' : 'en' ) ) . '" title="切换这一页的显示语言">' . ( 'en' === get_user_meta( get_current_user_id(), 'pc_recovery_lang', true ) ? '中文' : 'English' ) . '</a>';
 		echo '<a class="button" href="' . esc_url( Recovery::recover_url( $rec ) ) . '" target="_blank" rel="noopener">恢复购物车链接</a>';
 		echo '<a class="button button-primary" href="' . esc_url( Mail_Page::compose_url( array( 'to' => $r['email'] ) ) ) . '">写邮件召回</a>';
 		if ( in_array( $rec['status'], Recovery::OPEN, true ) ) {
@@ -512,5 +522,184 @@ final class Recovery_Page {
 			echo '<dt>浏览器标识</dt><dd class="pc-rc-break pc-pl-muted">' . esc_html( $att['user_agent'] ) . '</dd>';
 		}
 		echo '</dl></section>';
+	}
+
+	/** 详情页整页转英文：先处理带数字的句式，再按词表替换；国家名用 WooCommerce 的英文表。 */
+	private static function to_english( string $html ): string {
+		$html = preg_replace( '/共 (\d+) 单/u', '$1 orders', $html );
+		$html = preg_replace( '/(\d+) 次，本次看了 (\d+) 页/u', '$1 visits, $2 pages this time', $html );
+		$html = preg_replace( '/第 (\d+) 次来访/u', 'visit #$1', $html );
+		$html = preg_replace( '/弃单提醒（第 (\d) 封）/u', 'Cart reminder #$1', $html );
+		$html = preg_replace( '/(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})，(\d+) 页/u', '$1, $2 pages', $html );
+		$html = preg_replace( '/(\d+) 单</u', '$1 orders<', $html );
+		$countries = array();
+		$en_list   = file_exists( WC()->plugin_path() . '/i18n/countries.php' ) ? include WC()->plugin_path() . '/i18n/countries.php' : array();
+		foreach ( WC()->countries->countries as $code => $zh ) {
+			if ( isset( $en_list[ $code ] ) && $zh !== $en_list[ $code ] ) {
+				$countries[ $zh ] = $en_list[ $code ];
+			}
+		}
+		return strtr( $html, self::en_map() + $countries );
+	}
+
+	private static function en_map(): array {
+		return array(
+			'这次召回现在算什么（召回中 / 召回成功 / 召回失败）' => 'current recall result',
+			'顾客填了邮箱和地址但没有点“下单”，所以 WooCommerce 里没有订单，也没有支付记录。' => 'The customer entered their email and address but never clicked “Place order”, so there is no order and no payment record.',
+			'暂无支付信息（还没点下单，没有进入支付）' => 'No payment yet (checkout was never submitted)',
+			'（给这位顾客发过的邮件）' => '(emails sent to this customer)',
+			'（反复下单只算一条弃单，召回信只发一封）' => '(repeat attempts count as one abandoned checkout; one recall email only)',
+			'这位顾客的其他未付款订单' => 'Other unpaid orders by this customer',
+			'同一顾客反复下单，只算一条弃单，点进去看全部' => 'Repeat attempts by the same customer, counted once',
+			'自动提醒当前被拦着（店铺地址没填），可以先手写一封。' => 'Automatic reminders are blocked (store address missing); you can write one manually.',
+			'自动提醒当前被拦着（发件邮箱没设），可以先手写一封。' => 'Automatic reminders are blocked (no sender email); you can write one manually.',
+			'付款帮助信（自动）' => 'Payment help (automatic)',
+			'账单 / 付款链接' => 'Invoice / pay link',
+			'广告 / 推广链接' => 'Ads / tracked link',
+			'没有匹配到访客记录' => 'No visitor record matched',
+			'购物车结账（未提交）' => 'Cart checkout (not submitted)',
+			'卖家 / 系统备注' => 'Seller / system notes',
+			'弃单已手动作废，不再召回。' => 'Marked void, no further recall.',
+			'已作废，不再召回。' => 'Voided, no further recall.',
+			'已恢复召回。' => 'Recall restored.',
+			'找不到这条弃单。' => 'Abandoned checkout not found.',
+			'找不到这张订单。' => 'Order not found.',
+			'还没发过邮件。' => 'No emails sent yet.',
+			'创建结果待核对' => 'Result pending review',
+			'支付页已打开' => 'Payment page opened',
+			'首次 / 最近' => 'First / last',
+			'恢复购物车链接' => 'Restore-cart link',
+			'切换这一页的显示语言' => 'Switch this page’s language',
+			'最后访问时间' => 'Last visit',
+			'点了邮件回来' => 'Returned via email',
+			'首次支付时间' => 'First payment',
+			'总计消费金额' => 'Total spent',
+			'总计付款订单' => 'Paid orders',
+			'暂无物流信息' => 'No shipping information',
+			'暂无支付信息' => 'No payment information',
+			'最后改购物车' => 'Cart last changed',
+			'未下单的结账' => 'Checkout not submitted',
+			'返回弃单列表' => 'Back to abandoned checkouts',
+			'直接输入网址' => 'Typed URL',
+			'订单基础信息' => 'Order details',
+			'选的支付方式' => 'Chosen payment method',
+			'购物车结账' => 'Cart checkout',
+			'优惠券优惠' => 'Coupon discount',
+			'浏览器标识' => 'User agent',
+			'购买人信息' => 'Customer',
+			'结账页总价' => 'Checkout total',
+			'写邮件召回' => 'Email customer',
+			'单页结账' => 'One-page checkout',
+			'设备信息' => 'Device',
+			'来访次数' => 'Visits',
+			'订单总价' => 'Order total',
+			'召回失败' => 'Recall failed',
+			'召回成功' => 'Recovered',
+			'收货地址' => 'Shipping address',
+			'账单地址' => 'Billing address',
+			'商品价格' => 'Items',
+			'支付信息' => 'Payment',
+			'支付记录' => 'Payment attempts',
+			'配送方式' => 'Shipping method',
+			'召回记录' => 'Recall history',
+			'作废订单' => 'Void order',
+			'恢复召回' => 'Restore recall',
+			'支付失败' => 'Payment failed',
+			'记录时间' => 'Recorded',
+			'创建时间' => 'Created',
+			'支付时间' => 'Paid at',
+			'域名来源' => 'Store domain',
+			'查看轨迹' => 'View activity',
+			'搜索引擎' => 'Search engine',
+			'付款链接' => 'Pay link',
+			'设备来源' => 'Device type',
+			'正在创建' => 'Creating',
+			'手动发送' => 'Manual email',
+			'物流信息' => 'Shipping',
+			'广告系列' => 'Campaign',
+			'创建失败' => 'Creation failed',
+			'进站页面' => 'Entry page',
+			'外部网站' => 'Referral site',
+			'本次会话' => 'This session',
+			'直接访问' => 'Direct',
+			'结账流程' => 'Checkout flow',
+			'订单备注' => 'Notes',
+			'顾客账号' => 'Account',
+			'发送失败' => 'Send failed',
+			'后台创建' => 'Created in admin',
+			'订单归因' => 'Attribution',
+			'买家备注' => 'Customer note',
+			'商品名称' => 'Product',
+			'来源类型' => 'Source type',
+			'下单类型' => 'Order type',
+			'支付方式' => 'Payment method',
+			'顾客 IP' => 'Customer IP',
+			'落地页' => 'Landing page',
+			'发送中' => 'Sending',
+			'未发货' => 'Not shipped',
+			'已发货' => 'Shipped',
+			'已完成' => 'Completed',
+			'已退款' => 'Refunded',
+			'浏览器' => 'Browser',
+			'已取消' => 'Cancelled',
+			'省市区' => 'State / city',
+			'未完成' => 'Incomplete',
+			'召回中' => 'Recalling',
+			'（当前）' => '(current)',
+			'未召回' => 'Not recalled',
+			'待确认' => 'On hold',
+			'已支付' => 'Paid',
+			'已付款' => 'Paid',
+			'未下单' => 'Not placed',
+			'已发出' => 'Sent',
+			'已注册' => 'Registered',
+			'已作废' => 'Void',
+			'手续费' => 'Fee',
+			'未支付' => 'Unpaid',
+			'订单页' => 'Open order',
+			'待召回' => 'To recall',
+			'流水号' => 'Transaction ID',
+			'时间线' => 'Timeline',
+			'单价 × 数量' => 'Unit × qty',
+			'平板' => 'Tablet',
+			'电脑' => 'Desktop',
+			'手机' => 'Mobile',
+			'总价' => 'Total',
+			'结果' => 'Result',
+			'主题' => 'Subject',
+			'作废' => 'Void',
+			'运费' => 'Shipping',
+			'复制' => 'Copy',
+			'已复制' => 'Copied',
+			'渠道' => 'Channel',
+			'订单' => 'Order',
+			'时间' => 'Time',
+			'查看' => 'View',
+			'任务' => 'Task',
+			'访客' => 'Visitor',
+			'公司' => 'Company',
+			'来路' => 'Referrer',
+			'查询' => 'Track',
+			'邮件' => 'Email',
+			'优惠' => 'Discount',
+			'状态' => 'Status',
+			'邮箱' => 'Email',
+			'类型' => 'Type',
+			'税费' => 'Tax',
+			'寓所' => 'Apt / suite',
+			'电话' => 'Phone',
+			'说明' => 'Note',
+			'邮编' => 'ZIP',
+			'付款' => 'Paid',
+			'游客' => 'Guest',
+			'姓名' => 'Name',
+			'国家' => 'Country',
+			'街道' => 'Street',
+			'金额' => 'Amount',
+			'提醒 1' => 'Reminder 1',
+			'提醒 2' => 'Reminder 2',
+			'提醒 3' => 'Reminder 3',
+			'记录' => 'Recorded',
+		);
 	}
 }
