@@ -313,6 +313,7 @@ final class Admin_Menus {
 			array_splice( $order, $to + 1, 0, array( $slug ) );
 		};
 		$move( 'pc-visitors', Data_Pages::SLUG );
+		$move( Mail_Page::SLUG, self::CUSTOMERS ); // 邮件紧跟在顾客后面（2026-11-09）。
 		$move( 'cbs-dashboard', 'pc-referrals' );
 		$move( 'edit.php', in_array( 'cbs-dashboard', $order, true ) ? 'cbs-dashboard' : 'pc-referrals' );
 		return $order;

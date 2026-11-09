@@ -1,0 +1,69 @@
+/* 店铺后台 → 邮件（2026-11-09） */
+.pc-mail{max-width:1200px}
+.pc-mail__head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin:8px 0 12px}
+.pc-mail__head h1{margin:0 0 4px}
+.pc-mail__head p{margin:0;color:#50575e;max-width:70ch}
+.pc-mail__actions{display:flex;gap:8px;flex:none;flex-wrap:wrap}
+.pc-mail__tabs{margin-bottom:16px}
+.pc-mail__stats{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 16px}
+.pc-mail__stats>div{min-width:140px;padding:12px 16px;border:1px solid #dcdcde;border-radius:10px;background:#fff}
+.pc-mail__stats dt{color:#646970;font-size:12px;font-weight:600}
+.pc-mail__stats dd{margin:4px 0 0;font-size:24px;line-height:28px;font-weight:700;font-variant-numeric:tabular-nums}
+.pc-mail__stats>div.is-bad{border-color:#d63638;background:#fcf0f1}
+.pc-mail__stats>div.is-bad dd{color:#d63638}
+.pc-mail__filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px}
+.pc-mail__filters input[type=search]{min-width:260px}
+.pc-mail__table td{vertical-align:top}
+.pc-mail__table .pc-mail__time{white-space:nowrap;color:#50575e;font-variant-numeric:tabular-nums}
+.pc-mail__table .pc-mail__ops{white-space:nowrap;text-align:right}
+.pc-mail__table .pc-mail__ops .button-link{margin-left:8px}
+.pc-mail__badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#f0f0f1;color:#50575e;font-size:12px;font-weight:600;line-height:18px}
+.pc-mail__badge.is-ok{background:#edfaef;color:#00802b}
+.pc-mail__badge.is-bad{background:#fcf0f1;color:#b32d2e}
+.pc-mail__table small{display:block;margin-top:4px;color:#b32d2e;font-size:12px;line-height:16px;max-width:260px}
+.pc-mail__empty{text-align:center;padding:40px 16px!important;color:#646970}
+.pc-mail__pager{display:flex;gap:6px;margin:12px 0}
+.pc-mail__pager a,.pc-mail__pager span{display:inline-block;min-width:28px;padding:4px 6px;text-align:center;border:1px solid #dcdcde;border-radius:6px;background:#fff;text-decoration:none}
+.pc-mail__pager .is-current{background:#2271b1;border-color:#2271b1;color:#fff;font-weight:600}
+.pc-mail__note{color:#646970;font-size:13px;max-width:80ch}
+/* 写邮件 */
+.pc-mail__compose{max-width:960px;padding:20px 24px;border:1px solid #dcdcde;border-radius:12px;background:#fff}
+.pc-mail__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px 20px}
+.pc-mail__field{display:block;margin:0 0 14px;position:relative}
+.pc-mail__field>span{display:block;margin-bottom:4px;font-weight:600;font-size:13px}
+.pc-mail__field input[type=text],.pc-mail__field input[type=number],.pc-mail__field select,.pc-mail__field textarea{width:100%}
+.pc-mail__field small{display:block;margin-top:4px;color:#646970;font-size:12px;line-height:16px}
+.pc-mail__field input[readonly]{background:#f6f7f7;color:#50575e}
+.pc-mail__field--to{grid-column:1/-1}
+.pc-mail__suggest[hidden]{display:none}
+.pc-mail__suggest{position:absolute;z-index:20;left:0;right:0;top:100%;margin-top:2px;background:#fff;border:1px solid #c3c4c7;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:280px;overflow:auto}
+.pc-mail__suggest button{display:flex;justify-content:space-between;gap:12px;width:100%;padding:8px 12px;border:0;background:#fff;text-align:left;cursor:pointer;font:inherit}
+.pc-mail__suggest button:hover,.pc-mail__suggest button.is-active{background:#f0f6fc}
+.pc-mail__suggest button b{font-weight:600}
+.pc-mail__suggest button span{color:#646970;font-size:12px;white-space:nowrap}
+.pc-mail__vars{margin:8px 0 16px;color:#50575e;font-size:13px}
+.pc-mail__vars summary{cursor:pointer;font-weight:600}
+.pc-mail__vars ul{margin:8px 0 0 18px}
+.pc-mail__vars code{background:#f0f0f1;padding:1px 5px;border-radius:4px}
+.pc-mail__order{margin:0 0 16px;padding:10px 14px;border-radius:8px;background:#f6f7f7;font-size:13px}
+.pc-mail__submit{margin:8px 0 0}
+/* 模板 */
+.pc-mail__templates{display:grid;gap:10px;max-width:960px}
+.pc-mail__tpl{border:1px solid #dcdcde;border-radius:10px;background:#fff;padding:0 16px}
+.pc-mail__tpl summary{display:flex;gap:12px;align-items:baseline;padding:12px 0;cursor:pointer;list-style:none}
+.pc-mail__tpl summary::-webkit-details-marker{display:none}
+.pc-mail__tpl summary span{color:#646970;font-size:13px}
+.pc-mail__tpl form{padding:0 0 12px;max-width:760px}
+.pc-mail__tpl--new{margin-top:14px;max-width:960px}
+/* 查看正文 */
+.pc-mail__viewer[hidden]{display:none}
+.pc-mail__viewer{position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:24px}
+.pc-mail__viewer-box{width:min(760px,100%);height:min(85vh,900px);background:#fff;border-radius:12px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.pc-mail__viewer-box header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:14px 18px;border-bottom:1px solid #dcdcde}
+.pc-mail__viewer-box header strong{display:block;font-size:15px}
+.pc-mail__viewer-box header small{display:block;margin-top:4px;color:#646970;font-size:12px;line-height:16px}
+.pc-mail__viewer-box iframe{flex:1;border:0;width:100%;background:#fff}
+@media (max-width:782px){
+ .pc-mail__head{flex-direction:column;align-items:stretch}
+ .pc-mail__table .pc-mail__ops{text-align:left}
+}

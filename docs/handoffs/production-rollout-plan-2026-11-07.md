@@ -826,3 +826,10 @@
 - peptide-hq：`Mail::site_sender()` 按店铺公开域名选 orders@裸域名（FluentSMTP 有映射才用，否则默认邮箱），显示名 `brand_name()`（vialcoveplus → VialCovePlus）；`Costs` 拉账户订阅（Workers Paid、Argo 区域套餐各 $5 固定），Argo 有套餐时只算 1 GB 以外的流量，邮件按邮件中心本月 sent 数估算超出费用；费用页汇总行加套餐与邮件用量。新版本目录 mail-domains-5145377-hq。
 - 验证：HQ 以 orders@vialcovepeptides.com、orders@vialcoveplus.com 各发 1 封到用户 Gmail → FluentSMTP 日志 sent（via Cloudflare）；芒果店 wp_mail → 邮件中心 → From “VialCovePlus <orders@vialcoveplus.com>” sent。
 - 待办：自动开店时自动接入邮件发送域名 + 建 FluentSMTP 连接（需 HQ CDN 令牌加 Email Sending 权限）；店铺后台「邮件」页。
+
+### 2026-11-09 15:20 UTC 店铺后台「邮件」页（peptide-core，14 份副本就地更新）
+- 新增 `includes/class-mail-outbox.php`：表 `{prefix}pc_mail_outbox` 记录这家店每一封 wp_mail（类型 / 收件人 / 主题 / 正文 / 结果 / 原因 / 订单 / 操作人），靠 `wp_mail` 过滤器建记录、`wp_mail_succeeded`/`wp_mail_failed` 回写结果、`woocommerce_email_sent` 补 WooCommerce 邮件类型；失败原因翻成白话；正文留 90 天、记录 180 天。手动发信 `send_manual()`（占位符 {customer_name}/{order_number}/{order_total}/{pay_url}/{tracking}/{store_name}，套 WooCommerce 邮件头尾，最多 20 收件人）；常用模板（催付、已发货、售后回访、空白，选项 `pc_mail_templates`）；收件人搜索（顾客账号 + 最近订单邮箱）。
+- 品牌：`brand()` 按公开域名推英文名（vialcoveplus.com → VialCovePlus）；`woocommerce_email_format_string`、`woocommerce_email_footer_text` 和邮件头尾渲染期间的 `pre_option_blogname` 都替换成品牌名，顾客邮件里不再出现后台的中文店名（投手名）。
+- 新增 `admin/class-mail-page.php`（菜单「邮件」，紧跟“顾客”；发件箱 / 写邮件 / 常用模板；查看正文弹窗；AJAX 搜索收件人与读正文）、`assets/mail-page.css/js`；`class-plugin.php` 注册，`class-admin-menus.php::final_order` 排位。
+- 验证（芒果 s0010）：手动发信与系统 wp_mail 各 1 封到用户 Gmail，发件箱显示“已发出”，正文可查看；渲染模板里中文店名 0 次、VialCovePlus 3 次。
+- 备份：两台服务器 `~/vialcove-deploy-backups/trk-plain-20261109T15*`。

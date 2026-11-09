@@ -106,6 +106,7 @@ final class Plugin {
 		Api\Rest_Controller::register_hooks();
 		Api\Store_Api::register_hooks();
 		Cart_Write_Lock::register_hooks();
+		Mail_Outbox::register_hooks();
 		Page_Cache::register_hooks();
 		Static_Cdn::register_hooks();
 
@@ -146,6 +147,7 @@ final class Plugin {
 			Admin\Shipping_Page::register_hooks();
 			Admin\Tax_Page::register_hooks();
 			Admin\Email_Center::register_hooks();
+			Admin\Mail_Page::register_hooks();
 			Admin\Terms_Page::register_hooks();
 			Admin\Recovery_Page::register_hooks();
 			Admin\Marketing::register_hooks();
