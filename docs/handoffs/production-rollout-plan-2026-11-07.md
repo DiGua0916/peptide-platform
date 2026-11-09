@@ -837,3 +837,12 @@
 ### 2026-11-09 16:00 UTC 追单模板导入 + 开店自动接入邮件域名
 - `peptide-core/includes/class-mail-outbox.php`：内置模板改为用户 `VialCove-chase-pack-20261109` 的 5 套母版（vc-followup 弃单跟进、vc-payment 支付问题、vc-thanks-whatsapp 成交感谢加 WhatsApp、vc-tracking 物流追踪、vc-whatsapp WhatsApp 联系）+ 空白；WhatsApp +1 303 944 4124、签名 VialCove Team、口号照母版，发件邮箱改为占位符 `{store_email}`（orders@店铺裸域名）；黑五段按母版默认保留。`TEMPLATES_VERSION` 变化时替换内置模板、保留店主自建的。14 份副本已更新；芒果用 01 模板给用户 Gmail 发了 1 封实测。
 - `peptide-hq/includes/class-mail-domains.php`（新）+ `class-cdn.php`：CDN 走到 done 时自动 `Mail_Domains::apply()`：POST /zones/{zone}/email/sending/subdomains {name}，按 GET …/dns 建 MX/TXT，复制主店 Cloudflare 连接生成 orders@ 发件地址；`Cdn::tick()` 末尾 `backfill()` 给漏掉的域名补（失败 6 小时后重试）。新版本目录 mail-domains2-a387866-hq。**总后台令牌还没加 Email Sending 读写权限**（自动模式不允许我点“更新令牌”，用户决定先不加）：现有 6 店不受影响；新开店在令牌补权限前，邮件域名那步需手动在 Cloudflare 接入。
+
+### 2026-11-09 16:30 UTC 运营套件（cross-border-suite）移除支付同步中心 + 产品同步
+
+- 店主要求：只保留「流量斗篷」，彻底删除「支付同步中心」和「产品同步」两个模块，其他不动。
+- 脚本（scratchpad `cbs-strip.py`）处理 `cross-border-suite.php`：`cbs_modules()` 去掉 `payment`/`sync` 两项及其图标/元信息，首页说明改为“已按店主要求移除”，删除 `modules/payment` 与 `modules/product-sync` 目录；再删去控制台底部「产品批量同步入口…」提示行。
+- 范围：web 主机与 HQ 主机各 5 份 `/srv/vialcove/store-plugins/{s0001,s0006,s0007,s0009,s0010}/cross-border-suite`（光辉 s0011 从未装过该套件）。
+- 备份：web `/root/vialcove-backups/cbs-strip-20261109-160952`，HQ `/root/vialcove-backups/cbs-strip-20261109-161042`。
+- 验证：10 份 `php -l` 通过；`array_keys(cbs_modules())` 在主店后台与芒果后台均为 `cloak`；芒果后台控制台页只剩流量斗篷卡片。php-fpm 已 reload。
+- 同日修复主店支付：HQ `/etc/hosts` 里把 `s0001.vialcoveresearch.com` 等指到 127.0.0.1 的条目导致 Panapay hub 校验 “must be a public HTTPS origin” 失败，已删除；6 个站点 URL 校验与轮询恢复正常。子店域名仍需店主在收单方轮询系统登记。
