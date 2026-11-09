@@ -225,7 +225,8 @@ final class Query {
 		if ( $left_visits ) {
 			$ended = '( ' . $ended . ' OR s.id IN (' . implode( ',', array_map( 'intval', $left_visits ) ) . ') )';
 		}
-		$where = array( $ended );
+		// 2026-11-10 店主：按进站时间从新到旧，正在逛的也列出来（标“正在浏览”）。
+		$where = array( '1=1' );
 		if ( ! empty( $args['from_ms'] ) ) {
 			$where[] = $wpdb->prepare( 's.start_ms >= %d', (int) $args['from_ms'] );
 		}
@@ -247,9 +248,10 @@ final class Query {
 		}
 		$cursor = self::cursor( $args['cursor'] ?? null );
 		if ( $cursor ) {
-			$where[] = $wpdb->prepare( '( s.last_ms < %d OR ( s.last_ms = %d AND s.id < %d ) )', $cursor[0], $cursor[0], $cursor[1] );
+			$where[] = $wpdb->prepare( '( s.start_ms < %d OR ( s.start_ms = %d AND s.id < %d ) )', $cursor[0], $cursor[0], $cursor[1] );
 		}
-		$rows = $wpdb->get_results( "SELECT s.*, v.id AS v_id, v.vid, v.user_id AS v_user, v.first_ms, v.last_ms AS v_last_ms, v.visits AS v_visits, v.device AS v_device, v.browser, v.cart, v.cart_ms, v.cart_key FROM {$visits} s INNER JOIN {$visitors} v ON v.id = s.visitor_id WHERE " . implode( ' AND ', $where ) . ' ORDER BY s.last_ms DESC, s.id DESC LIMIT ' . ( $limit + 1 ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+		$ended_sql = $ended;
+		$rows = $wpdb->get_results( "SELECT s.*, ( {$ended_sql} ) AS is_ended, v.id AS v_id, v.vid, v.user_id AS v_user, v.first_ms, v.last_ms AS v_last_ms, v.visits AS v_visits, v.device AS v_device, v.browser, v.cart, v.cart_ms, v.cart_key FROM {$visits} s INNER JOIN {$visitors} v ON v.id = s.visitor_id WHERE " . implode( ' AND ', $where ) . ' ORDER BY s.start_ms DESC, s.id DESC LIMIT ' . ( $limit + 1 ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
 		$more  = count( $rows ) > $limit;
 		$rows  = array_slice( $rows, 0, $limit );
 		$items = array();
@@ -272,7 +274,7 @@ final class Query {
 				'visitor' => self::visitor_label( $v ),
 				'cart'    => Carts::view( $v, false ),
 				// 离站原因：最后一个前端事件是离开页面 → 离页信号；否则超时推定。都不是精确的关站时间。
-				'reason'  => 'page_exit' === $tail['last_type'] ? 'exit_signal' : 'timeout',
+				'reason'  => ! (int) $r['is_ended'] ? 'ongoing' : ( 'page_exit' === $tail['last_type'] ? 'exit_signal' : 'timeout' ),
 				'left_ms' => (int) $r['last_ms'],
 				'last_page' => $tail['last_page'],
 			);
@@ -282,7 +284,7 @@ final class Query {
 			'now_ms'      => $now_ms,
 			'items'       => $items,
 			'has_more'    => $more,
-			'next_cursor' => $more && $last ? (int) $last['last_ms'] . ':' . (int) $last['id'] : null,
+			'next_cursor' => $more && $last ? (int) $last['start_ms'] . ':' . (int) $last['id'] : null,
 		);
 	}
 

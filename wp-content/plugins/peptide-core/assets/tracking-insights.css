@@ -137,3 +137,5 @@ body.pc-admin-workspace .pc-trk .pc-trk-backlinks a:hover{background:#f1f1f1}
 .pc-lv-live i{flex:none;width:8px;height:8px;border-radius:50%;background:#16a34a;box-shadow:0 0 0 0 rgba(22,163,74,.6);animation:pc-lv-pulse 1.6s infinite}
 @keyframes pc-lv-pulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.55)}70%{box-shadow:0 0 0 8px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
 @media (prefers-reduced-motion:reduce){.pc-lv-live i{animation:none}}
+
+.pc-trk-ongoing{display:inline-flex;align-items:center;gap:6px;color:#15803d;font-weight:600}.pc-trk-ongoing::before{content:'';width:7px;height:7px;border-radius:50%;background:#16a34a}
