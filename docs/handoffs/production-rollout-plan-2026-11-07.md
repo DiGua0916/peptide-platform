@@ -811,3 +811,10 @@
   - `admin/class-tracking-page.php`：`strings()` 在中文后台用 `strings_zh()` 覆盖（状态：正在浏览 / 停住了 / 刚离开 / 已离开（超过 30 分钟没动静）；阶段：只是逛了逛 / 看了商品 / 加了购物车 / 进了结账页 / 下了单 / 已付款；页面类型中文；列名“什么时候来的 / 最后一次动作 / 开着的页面”等）；下发 `orderStatuses`、`typeLabelsZh`。
   - `assets/tracking-admin.js`：服务端事件白话（订单已生成：件数 / 金额 / 支付方式 / 待付款；订单状态变化带原因；开始去支付；付款成功/失败；登录/注册），标签页哈希改为“标签页 1/2”，订单号只保留链接不重复，状态筛选项改白话，“开着 N 个页面，点开看每个页面在干嘛”。
   - `assets/tracking-insights.js`：观测活跃时长→实际停留时长、观测事件→记录到的动作数、空路径→（未知页面）、去掉模块 id 小字、各空数据提示改白话。
+
+### 2026-11-09 13:25 UTC 邮件中心接通（Outlook）
+- HQ FluentSMTP 建好 Outlook 连接：发件 VialCovePeptides@outlook.com，Entra 应用 `VialCove Store Mail`（client id da098d68-…，仅个人账户，tenant=consumers，回调 https://vialcoveresearch.com/oauth/outlook-callback/）。密钥由用户自己粘贴。
+- 排障：①“无法验证凭证”= 没先授权就点 Save；②第一次授权报 unauthorized_client 是 Entra 新应用同步延迟；③tenant 留空走 /common/ 被拒；④内置浏览器把 window.open 当同页跳转导致表单丢失，用 stub window.open 让表单留在原地、出现 Access Token 框后再贴授权码。
+- 验证：HQ 直接 wp_mail → FluentSMTP 日志 sent（Graph RequestId）；芒果店 wp_mail → 邮件中心 → sent。之前 13 条 refused 为接通前的记录。
+- HQ 语言：站点语言切到 zh_CN（装 core zh_CN、fluent-smtp zh_CN 语言包），管理员用户 locale 改为跟随站点；`WP_ACCESSIBLE_HOSTS` 加 api.wordpress.org、downloads.wordpress.org；建 `wp-content/{upgrade,languages}` 归 vchq。wp-config 备份 /root/vialcove-backups/hq-wp-config-*-lang.php。
+- 提醒：用户把 Entra 客户端密钥值贴进过聊天，建议之后在 Entra 删掉 “HQ mail” 这条密钥重建并在 FluentSMTP 更新。
