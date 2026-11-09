@@ -327,12 +327,24 @@ final class Mail_Outbox {
 
 	// ---------- 模板 ----------
 
+	/** 内置模板版本：升级时把内置的（id 以 vc- 开头）换成新话术，店主自己建的保留。 */
+	public const TEMPLATES_VERSION = '2026-11-09b';
+	private const TEMPLATES_VER_OPTION = 'pc_mail_templates_version';
+
 	/** @return array<int,array{id:string,name:string,subject:string,body:string}> */
 	public static function templates(): array {
 		$t = get_option( self::TEMPLATES, null );
-		if ( ! is_array( $t ) ) {
-			$t = self::default_templates();
+		if ( ! is_array( $t ) || self::TEMPLATES_VERSION !== get_option( self::TEMPLATES_VER_OPTION ) ) {
+			$custom = array();
+			foreach ( is_array( $t ) ? $t : array() as $row ) {
+				$id = (string) ( $row['id'] ?? '' );
+				if ( '' !== $id && ! str_starts_with( $id, 'vc-' ) && ! in_array( $id, array( 'payment', 'shipped', 'followup', 'blank' ), true ) ) {
+					$custom[] = $row;
+				}
+			}
+			$t = array_merge( self::default_templates(), $custom );
 			update_option( self::TEMPLATES, $t, false );
+			update_option( self::TEMPLATES_VER_OPTION, self::TEMPLATES_VERSION, false );
 		}
 		return array_values( $t );
 	}
@@ -365,12 +377,54 @@ final class Mail_Outbox {
 		update_option( self::TEMPLATES, $list, false );
 	}
 
+	/**
+	 * 内置模板 = 用户 2026-11-09 的追单母版（VialCove-chase-pack）：
+	 * 01 弃单跟进、02 支付问题、成交未留 WhatsApp 感谢、03 物流追踪、04 WhatsApp 联系。
+	 * 发件邮箱换成各店自己的 orders@ 地址（{store_email}），WhatsApp 号与口号照母版。黑五段按母版默认保留，不用时整段删掉。
+	 */
 	private static function default_templates(): array {
+		$wa     = '+1 303 944 4124';
+		$wa_btn = '<p style="margin:24px 0"><a href="https://wa.me/13039444124" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:6px">Chat with us on WhatsApp → ' . $wa . '</a></p>';
+		$sign   = '<p>Best regards,<br>VialCove Team<br>WhatsApp: ' . $wa . '<br>Email: {store_email}</p><p style="color:#6b7280;font-size:13px">Peptides are our focus. Your experience is our priority.</p>';
+		$bf     = '<p>We\'re also running a Black Friday promotion, with special pricing on many peptide products. If you\'re still considering an order, we\'d be happy to share the available offers and help you review your selection.</p>';
+		$care   = '<p>Your experience with VialCove matters to us. If you encountered any difficulties during checkout or have questions about your order, please let us know—we\'re happy to help.</p>';
 		return array(
-			array( 'id' => 'payment', 'name' => '催付款', 'subject' => 'Your order {order_number} is waiting for payment', 'body' => "<p>Hi {customer_name},</p><p>We noticed your order <strong>{order_number}</strong> ({order_total}) hasn't been paid yet. Your items are reserved for a limited time.</p><p><a href=\"{pay_url}\">Complete your payment</a></p><p>If you ran into any issue at checkout, just reply to this email and we'll help right away.</p><p>{store_name}</p>" ),
-			array( 'id' => 'shipped', 'name' => '已发货通知', 'subject' => 'Your order {order_number} has shipped', 'body' => "<p>Hi {customer_name},</p><p>Good news — your order <strong>{order_number}</strong> is on its way.</p><p>Tracking number: <strong>{tracking}</strong></p><p>Delivery usually takes 5–10 business days. Reply to this email if you have any questions.</p><p>{store_name}</p>" ),
-			array( 'id' => 'followup', 'name' => '售后回访', 'subject' => 'How is everything with your order {order_number}?', 'body' => "<p>Hi {customer_name},</p><p>Your order <strong>{order_number}</strong> should have arrived by now. We'd love to hear how everything went.</p><p>If anything is missing or damaged, reply to this email and we'll sort it out.</p><p>{store_name}</p>" ),
-			array( 'id' => 'blank', 'name' => '空白', 'subject' => '', 'body' => "<p>Hi {customer_name},</p><p></p><p>{store_name}</p>" ),
+			array(
+				'id'      => 'vc-followup',
+				'name'    => '01 弃单跟进（未付款 · 已填地址）',
+				'subject' => 'VialCove | A Quick Follow-Up on Your Order',
+				'body'    => '<p>Dear {customer_name},</p><p>We\'re getting in touch to see whether you need any help completing your order.</p><p>We tried reaching you on WhatsApp but haven\'t been able to get in touch, so we\'re following up by email.</p>' . $care . $bf . '<p>Could you please reply to this email or message us on WhatsApp at ' . $wa . '? If your WhatsApp number has changed, please let us know the best number to reach you.</p><p>For your reference, your order {order_number} (order total: {order_total}) is still waiting for you: <a href="{pay_url}">complete your order here</a>.</p>' . $wa_btn . '<p>We look forward to hearing from you and assisting with your order.</p>' . $sign,
+			),
+			array(
+				'id'      => 'vc-payment',
+				'name'    => '02 支付问题（支付失败 · PayPal）',
+				'subject' => 'VialCove | Help Completing Your Payment',
+				'body'    => '<p>Dear {customer_name},</p><p>We\'re following up on your recent order {order_number} to see whether you need any help completing payment.</p><p>Could you let us know whether the lack of a PayPal option at checkout was the reason you did not complete your order?</p><p>If you prefer to pay with PayPal, please contact us on WhatsApp at ' . $wa . ', and we can manually create an order with a PayPal payment option for you.</p><p>We do not currently offer PayPal directly on our website due to past instances of payment misuse. Thank you for your understanding.</p><p>Your experience with VialCove matters to us. If you have any questions about checkout or your order, please let us know—we\'re happy to help.</p>' . $bf . '<p>For your reference, the order total is {order_total}. You can also retry the payment here: <a href="{pay_url}">{pay_url}</a>.</p>' . $wa_btn . '<p>We look forward to hearing from you and helping you complete your order.</p>' . $sign,
+			),
+			array(
+				'id'      => 'vc-thanks-whatsapp',
+				'name'    => '成交感谢 · 请加 WhatsApp（已付款未留号）',
+				'subject' => 'VialCove | Thanks for Your Order — Add Us on WhatsApp',
+				'body'    => '<p>Dear {customer_name},</p><p>Thank you for your order {order_number} (order total: {order_total}). We\'ve received your payment and will process shipment shortly.</p><p>For faster updates on shipping and any questions about your peptides, please add us on WhatsApp at ' . $wa . ' and send a quick hello. That is the easiest way for us to reach you with tracking and support.</p>' . $wa_btn . '<p>We look forward to chatting with you on WhatsApp.</p><p>Best regards,<br>VialCove Team<br>WhatsApp: ' . $wa . '<br>Email: {store_email}</p>',
+			),
+			array(
+				'id'      => 'vc-tracking',
+				'name'    => '03 物流追踪（个人关怀）',
+				'subject' => 'VialCove | A Personal Thank-You for Your Order',
+				'body'    => '<p>Hi {customer_name} 😊</p><p>I saw your order on our website and wanted to reach out personally to thank you for choosing VialCove. I really appreciate your trust and support.</p><p>I\'ll personally keep a close eye on your order until it reaches you. As soon as I have any shipping or tracking updates, I\'ll send them to you right away.</p><p>If you have any questions or need help along the way, please feel free to message me anytime. You can reply to this email or contact me directly on WhatsApp at ' . $wa . '. I\'m here to help and make sure you feel well looked after.</p><p>Your order: {order_number} · Tracking number: {tracking}</p>' . $wa_btn . '<p>Thank you again for placing your trust in VialCove. I\'ll be here to help every step of the way.</p>' . $sign,
+			),
+			array(
+				'id'      => 'vc-whatsapp',
+				'name'    => '04 WhatsApp 联系（下单后联系不上）',
+				'subject' => 'VialCove | Let\'s Stay in Touch About Your Order',
+				'body'    => '<p>Hi {customer_name},</p><p>Thank you for placing your order with VialCove. I truly appreciate your trust and wanted to make sure you have an easy way to reach me.</p><p>I wasn\'t able to reach you on WhatsApp, so I\'m getting in touch by email to share my contact details.</p><p>If WhatsApp is convenient for you, please save our number, ' . $wa . ', and send me a message whenever you\'re ready. If you don\'t currently use WhatsApp, you\'re always welcome to reply to this email—whichever works best for you.</p><p>Your shopping experience matters to us. If you have any questions about your order or need a hand, please let me know. I\'m here to help and make sure you feel well looked after.</p>' . $wa_btn . '<p>Thank you again for choosing VialCove. I look forward to staying in touch.</p>' . $sign,
+			),
+			array(
+				'id'      => 'vc-blank',
+				'name'    => '空白（带签名）',
+				'subject' => '',
+				'body'    => '<p>Dear {customer_name},</p><p></p>' . $sign,
+			),
 		);
 	}
 
@@ -417,9 +471,11 @@ final class Mail_Outbox {
 	/** @return array<string,string> 占位符。 */
 	public static function vars( ?\WC_Order $order, string $to ): array {
 		$store = self::brand();
+		$host  = strtolower( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
 		$vars  = array(
 			'{store_name}'    => $store,
 			'{store_url}'     => home_url( '/' ),
+			'{store_email}'   => 'orders@' . preg_replace( '/^www\./', '', $host ),
 			'{customer_name}' => '',
 			'{order_number}'  => '',
 			'{order_total}'   => '',

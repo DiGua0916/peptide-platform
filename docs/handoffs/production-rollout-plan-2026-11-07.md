@@ -833,3 +833,7 @@
 - 新增 `admin/class-mail-page.php`（菜单「邮件」，紧跟“顾客”；发件箱 / 写邮件 / 常用模板；查看正文弹窗；AJAX 搜索收件人与读正文）、`assets/mail-page.css/js`；`class-plugin.php` 注册，`class-admin-menus.php::final_order` 排位。
 - 验证（芒果 s0010）：手动发信与系统 wp_mail 各 1 封到用户 Gmail，发件箱显示“已发出”，正文可查看；渲染模板里中文店名 0 次、VialCovePlus 3 次。
 - 备份：两台服务器 `~/vialcove-deploy-backups/trk-plain-20261109T15*`。
+
+### 2026-11-09 16:00 UTC 追单模板导入 + 开店自动接入邮件域名
+- `peptide-core/includes/class-mail-outbox.php`：内置模板改为用户 `VialCove-chase-pack-20261109` 的 5 套母版（vc-followup 弃单跟进、vc-payment 支付问题、vc-thanks-whatsapp 成交感谢加 WhatsApp、vc-tracking 物流追踪、vc-whatsapp WhatsApp 联系）+ 空白；WhatsApp +1 303 944 4124、签名 VialCove Team、口号照母版，发件邮箱改为占位符 `{store_email}`（orders@店铺裸域名）；黑五段按母版默认保留。`TEMPLATES_VERSION` 变化时替换内置模板、保留店主自建的。14 份副本已更新；芒果用 01 模板给用户 Gmail 发了 1 封实测。
+- `peptide-hq/includes/class-mail-domains.php`（新）+ `class-cdn.php`：CDN 走到 done 时自动 `Mail_Domains::apply()`：POST /zones/{zone}/email/sending/subdomains {name}，按 GET …/dns 建 MX/TXT，复制主店 Cloudflare 连接生成 orders@ 发件地址；`Cdn::tick()` 末尾 `backfill()` 给漏掉的域名补（失败 6 小时后重试）。新版本目录 mail-domains2-a387866-hq。**总后台令牌还没加 Email Sending 读写权限**（自动模式不允许我点“更新令牌”，用户决定先不加）：现有 6 店不受影响；新开店在令牌补权限前，邮件域名那步需手动在 Cloudflare 接入。

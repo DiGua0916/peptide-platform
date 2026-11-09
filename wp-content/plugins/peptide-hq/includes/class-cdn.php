@@ -485,6 +485,10 @@ final class Cdn {
 			}
 		}
 		self::set_domain( $domain, array_merge( $base, array( 'stage' => 'done', 'message' => '', 'done_at' => time() ) ) );
+		// CDN 开好后顺手把这个域名接进 Cloudflare 邮件发送并建 orders@ 发件地址（失败只记状态，不影响开店）。
+		if ( class_exists( Mail_Domains::class ) ) {
+			Mail_Domains::apply( $domain, $zid );
+		}
 		return self::domains()[ $domain ];
 	}
 
@@ -536,6 +540,9 @@ final class Cdn {
 				continue;
 			}
 			self::process( (string) $domain, (string) ( $row['ip'] ?? '' ), true, array( 'source' => 'manual' ) );
+		}
+		if ( class_exists( Mail_Domains::class ) ) {
+			Mail_Domains::backfill();
 		}
 	}
 }
