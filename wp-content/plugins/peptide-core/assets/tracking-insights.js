@@ -22,12 +22,12 @@
  }
  function paint(data) {
   const s = data.summary;
-  results.innerHTML = '<dl class="pc-interest-summary">' + [['观测活跃时长',seconds(s.active_seconds)],['页面浏览次数',n(s.pageviews)],['访问次数',n(s.visits)],['观测事件',n(s.observed_events)]].map(([label,value]) => '<div><dt>' + label + '</dt><dd>' + value + '</dd></div>').join('') + '</dl><div class="pc-interest-columns">' +
-   table('页面停留',['页面','浏览次数','观测活跃时长'],data.pages.map(x => [esc(x.path),n(x.views),seconds(x.active_seconds)]),'所选周期还没有页面观测。') +
-   table('模块点击',['点了哪个模块','在哪个页面','点击次数','是哪些访客点的'],data.modules.map(x => [esc(x.label || labels[x.module_type] || x.module_type || x.module_id) + '<small>' + esc(x.module_id) + '</small>', (x.pages || []).map(pg => esc(pg.path === '/' ? '首页 /' : pg.path) + ' <small>' + n(pg.clicks) + ' 次</small>').join('<br>') || '—', n(x.clicks), visitorLinks(x)]),'所选周期尚未采集到模块点击，新采集开始后显示。') + '</div>' +
-   table('商品兴趣',['商品','商品浏览','商品点击','观测活跃时长','成功加购'],data.products.map(x => [esc(x.name),n(x.views),n(x.clicks),seconds(x.active_seconds),n(x.cart_additions)]),'所选周期尚未采集到商品行为。');
+  results.innerHTML = '<dl class="pc-interest-summary">' + [['实际停留时长',seconds(s.active_seconds)],['页面浏览次数',n(s.pageviews)],['访问次数',n(s.visits)],['记录到的动作数',n(s.observed_events)]].map(([label,value]) => '<div><dt>' + label + '</dt><dd>' + value + '</dd></div>').join('') + '</dl><div class="pc-interest-columns">' +
+   table('页面停留',['页面','浏览次数','实际停留时长'],data.pages.map(x => [esc(x.path || '（未知页面）'),n(x.views),seconds(x.active_seconds)]),'这段时间还没有页面停留记录。') +
+   table('模块点击',['点了哪个模块','在哪个页面','点击次数','是哪些访客点的'],data.modules.map(x => [esc(x.label || labels[x.module_type] || x.module_type || x.module_id), (x.pages || []).map(pg => esc(pg.path === '/' ? '首页 /' : (pg.path || '（未知页面）')) + ' <small>' + n(pg.clicks) + ' 次</small>').join('<br>') || '—', n(x.clicks), visitorLinks(x)]),'这段时间没有人点过页面模块。') + '</div>' +
+   table('商品兴趣',['商品','商品浏览','商品点击','实际停留时长','成功加购'],data.products.map(x => [esc(x.name),n(x.views),n(x.clicks),seconds(x.active_seconds),n(x.cart_additions)]),'这段时间没有商品浏览记录。');
   root.querySelector('.pc-insights-range').textContent = (data.period.retained_history ? (visit ? '所选访问 · ' : '全部保留记录 · ') : '') + data.period.from + ' 至 ' + data.period.to + ' · ' + data.period.timezone;
-  status.textContent = data.coverage.schema_ready === false ? '此站点尚未初始化追踪，暂时没有可分析的记录。' : (data.coverage.partial || data.coverage.ranking_truncated) ? '事件超过单次读取上限，以下为部分数据，不适合作为完整周期结论。' : !data.coverage.tracking_enabled ? '当前追踪已关闭，以下仅为已有记录。' : '已更新。停留为观测值，缺失信号不补算。';
+  status.textContent = data.coverage.schema_ready === false ? '这家店还没开始记录访客，暂时没有数据。' : (data.coverage.partial || data.coverage.ranking_truncated) ? '记录太多，一次没读完，下面只是一部分，不能当完整结论。' : !data.coverage.tracking_enabled ? '访客记录现在是关闭的，下面只是以前的记录。' : '已更新。停留时长按实际收到的信号算，没信号的时间不算进去。';
  }
  async function refresh() {
   const id = ++generation; controller?.abort(); controller = new AbortController(); accepted = null; exportButton.disabled = true;

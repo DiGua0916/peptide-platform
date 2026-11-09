@@ -802,3 +802,12 @@
 - 12:40 UTC AWS 两个账号接通。用户登录后由我在 AWS 控制台操作：两个账号各开启“IAM 用户访问账单信息”、触发 Cost Explorer 启用、建 IAM 用户 `hq-cost-readonly`（无控制台密码，挂 AWS 托管策略 AWSBillingReadOnlyAccess；自定义 JSON 策略编辑器在自动化下不同步，改用托管只读策略），密钥由用户自己点创建并粘入费用页。HQ `wp-config.php`（/srv/vialcove/hq/shared）的 WP_ACCESSIBLE_HOSTS 追加 `sts.amazonaws.com,ce.us-east-1.amazonaws.com`（之前被 WP_HTTP_BLOCK_EXTERNAL 拦截），备份在 /root/vialcove-backups/hq-wp-config-*.php。
   - 前台账号 099813810634：服务为 Amazon Lightsail（不是 EC2），本月到 11-09 已花 $18.73，线性推算月底约 $70；后台账号 156354531724：Cost Explorer 刚启用，24 小时后有数据。
   - 页面去掉“Cloudflare 域名套餐 $0”一行，服务名映射加 Lightsail。就地更新 class-costs-page.php。
+
+### 2026-11-09 12:30 UTC 实时访客页白话化 + 支付失败根因
+- **支付根因**：Panapay 中枢（HQ）里有史以来 6 次支付创建全部失败（芒果 5 次、阳 1 次），支付商返回 `{"status":"FAILED","message":"轮询系统里没有这个b站域名或者被停用"}`。原因是 5 家子店的域名没有在支付商的「轮询系统」里登记；另外 HQ 的 `pc_panapay_provider_site_bindings` 只有主店（裸域名）的绑定。已为 6 家店 × 2 个收款账户补齐绑定（发给支付商的 site 统一为裸域名，如 vialcoveplus.com），旧值备份在选项 `pc_panapay_provider_site_bindings_backup_20261109`。**仍需用户在轮询系统登记 5 个子店域名**（vialcovepro/ultra/official/prime/plus.com），之后再测一单。
+- 受影响顾客示例：芒果访客 #19（波多黎各，IPv6 2604:b000…），4 次下单 #11858–11861 都停在“开始去支付”，60 分钟后自动取消。
+- **白话化**（peptide-core，14 份副本就地更新，备份 `~/vialcove-deploy-backups/trk-plain-20261109T12*`）：
+  - `tracking/class-labels.php`：`payments()` 用订单表里的支付方式名称兜底（店铺后台副本上多账户网关未注册，之前只显示 `pc_panapay_<hash>`），新增 `order_statuses()`、`type_labels_zh()`；`tracking/class-query.php` 访客标签 `访客 #N`。
+  - `admin/class-tracking-page.php`：`strings()` 在中文后台用 `strings_zh()` 覆盖（状态：正在浏览 / 停住了 / 刚离开 / 已离开（超过 30 分钟没动静）；阶段：只是逛了逛 / 看了商品 / 加了购物车 / 进了结账页 / 下了单 / 已付款；页面类型中文；列名“什么时候来的 / 最后一次动作 / 开着的页面”等）；下发 `orderStatuses`、`typeLabelsZh`。
+  - `assets/tracking-admin.js`：服务端事件白话（订单已生成：件数 / 金额 / 支付方式 / 待付款；订单状态变化带原因；开始去支付；付款成功/失败；登录/注册），标签页哈希改为“标签页 1/2”，订单号只保留链接不重复，状态筛选项改白话，“开着 N 个页面，点开看每个页面在干嘛”。
+  - `assets/tracking-insights.js`：观测活跃时长→实际停留时长、观测事件→记录到的动作数、空路径→（未知页面）、去掉模块 id 小字、各空数据提示改白话。

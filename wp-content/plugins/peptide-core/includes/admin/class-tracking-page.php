@@ -80,6 +80,9 @@ final class Tracking_Page {
 					'moduleLabels'   => \PeptideCore\Tracking\Labels::modules(),
 					'shippingLabels' => \PeptideCore\Tracking\Labels::shipping(),
 					'paymentLabels'  => \PeptideCore\Tracking\Labels::payments(),
+					'orderStatuses'  => \PeptideCore\Tracking\Labels::order_statuses(),
+					// 时间线里用的白话标签，覆盖 types 里的翻译（2026-11-09）。
+					'typeLabelsZh'   => \PeptideCore\Tracking\Labels::type_labels_zh(),
 					'weekAgo'    => wp_date( 'Y-m-d', time() - 6 * DAY_IN_SECONDS ),
 					'strings'    => self::strings(),
 				)
@@ -88,7 +91,61 @@ final class Tracking_Page {
 		);
 	}
 
+	/** 店铺后台是中文时，把统计术语换成白话（2026-11-09，用户要求“看得懂”）。 */
 	private static function strings(): array {
+		$base = self::strings_base();
+		return str_starts_with( (string) determine_locale(), 'zh' ) ? array_replace_recursive( $base, self::strings_zh() ) : $base;
+	}
+
+	private static function strings_zh(): array {
+		return array(
+			'active'      => '正在浏览',
+			'idle'        => '停住了（页面在后台或没操作）',
+			'away'        => '刚离开（30 分钟内没动静）',
+			'left'        => '已离开',
+			'gone'        => '已离开（超过 30 分钟没动静）',
+			'archiveNote' => '这里是已经结束的访问：顾客关掉了全部页面，或者 30 分钟没有任何动静（按超时算）。离开时间取最后一次动作，不是精确关页时间。顾客再来会重新出现在“实时访客”里，记录不会删。',
+			'archiveEmpty' => '没有符合条件的已结束访问。',
+			'visitTime'   => '访问时间（开始 → 最后一次动作）',
+			'leftReason'  => '怎么离开的',
+			'reasonExit'  => '关掉了页面',
+			'reasonTimeout' => '30 分钟没动静',
+			'leftEstimated' => '估算',
+			'lastPage'    => '最后看的页面',
+			'searchVisitor' => '访客编号、姓名或邮箱',
+			'noVisitors'  => '最近 30 分钟没有访客。',
+			'tabs'        => '开着的页面',
+			'stage'       => '走到哪一步',
+			'visitStart'  => '什么时候来的',
+			'lastSignal'  => '最后一次动作',
+			'events'      => '记录到的动作',
+			'duration'    => '停留时长',
+			'landing'     => '从哪个页面进来',
+			'tab'         => '标签页',
+			'event'       => '动作',
+			'details'     => '说明',
+			'server'      => '服务器记录',
+			'otherDevices' => '同一个账号在其他设备或浏览器上',
+			'firstSeen'   => '第一次来',
+			'guest'       => '游客（没登录）',
+			'chooseVisit' => '点一次访问，看它的完整动作。',
+			'hideHeartbeats' => '隐藏“页面还开着”的记录',
+			'stages'      => array( '只是逛了逛', '看了商品', '加了购物车', '进了结账页', '下了单', '已付款' ),
+			'pageTypes'   => array(
+				'home'           => '首页',
+				'shop'           => '商品列表',
+				'product'        => '商品页',
+				'cart'           => '购物车',
+				'checkout'       => '结账页',
+				'account'        => '我的账户',
+				'order_received' => '下单成功页',
+				'order_pay'      => '订单付款页',
+				'content'        => '普通页面',
+			),
+		);
+	}
+
+	private static function strings_base(): array {
 		return array(
 			'pageKind' => __( 'Page kind', 'peptide-core' ),
 			'collectionId' => __( 'Collection ID', 'peptide-core' ),

@@ -32,7 +32,7 @@ final class Query {
 		$user = (int) $v['user_id'] ? get_userdata( (int) $v['user_id'] ) : false;
 		return array(
 			'id'       => (int) $v['id'],
-			'label'    => $user ? $user->display_name : sprintf( 'Visitor #%d', (int) $v['id'] ),
+			'label'    => $user ? $user->display_name : sprintf( '访客 #%d', (int) $v['id'] ),
 			'user_id'  => $user ? (int) $user->ID : 0,
 			'email'    => $user ? $user->user_email : '',
 			'device'   => (string) $v['device'],

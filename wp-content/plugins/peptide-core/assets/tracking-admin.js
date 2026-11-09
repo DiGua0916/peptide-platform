@@ -102,9 +102,9 @@
 		list.forEach( function ( v ) {
 			var who = v.visitor;
 			html += '<tr data-live-visitor="' + esc( who.id ) + '"><td><div>' + dot( v.status ) + '</div><a class="pc-visitor-detail-link" style="text-decoration:underline;text-underline-offset:3px" aria-label="查看客户完整访问记录" href="' + esc( cfg.liveUrl + '&visitor=' + who.id ) + '"><strong>' + esc( who.label ) + '</strong></a>' + '<div class="pc-trk-sub">' + esc( ( S[ who.device ] || who.device ) + ' · ' + who.browser + ' · ' + S.visits + ' ' + who.visits ) + '</div></td><td>';
-			html += '<details class="pc-trk-tab-list"><summary>' + esc( '查看 ' + v.tabs.length + ' 个页面状态' ) + '</summary>';
-			v.tabs.forEach( function ( t ) {
-				html += '<div class="pc-trk-tab"><span class="pc-trk-tabid">' + esc( t.tab ) + '</span> ' + dot( t.status ) + ' ' + pageText( t ) + videoText( t.video ) + '</div>';
+			html += '<details class="pc-trk-tab-list"><summary>' + esc( '开着 ' + v.tabs.length + ' 个页面，点开看每个页面在干嘛' ) + '</summary>';
+			v.tabs.forEach( function ( t, i ) {
+				html += '<div class="pc-trk-tab"><span class="pc-trk-tabid">' + esc( '页面 ' + ( i + 1 ) ) + '</span> ' + dot( t.status ) + ' ' + pageText( t ) + videoText( t.video ) + '</div>';
 			} );
 			html += '</details>';
 			var visit = v.visit;
@@ -142,7 +142,7 @@
 
 	function live() {
         var controls = document.createElement('div'); controls.className = 'pc-trk-live-tools';
-        controls.innerHTML = '<label>查找客户<input type="search" name="visitor_search" placeholder="访客编号、设备或页面…" autocomplete="off"></label><label>在线状态<select name="visitor_status"><option value="">全部状态</option><option value="active">活跃</option><option value="idle">空闲</option><option value="away">暂离</option></select></label><button class="button" type="button" aria-pressed="false">暂停刷新</button><span role="status" aria-live="polite"></span>';
+        controls.innerHTML = '<label>查找客户<input type="search" name="visitor_search" placeholder="访客编号、设备或页面…" autocomplete="off"></label><label>在线状态<select name="visitor_status"><option value="">全部状态</option><option value="active">正在浏览</option><option value="idle">停住了</option><option value="away">刚离开</option></select></label><button class="button" type="button" aria-pressed="false">暂停刷新</button><span role="status" aria-live="polite"></span>';
         root.insertAdjacentElement('beforebegin',controls);
         var search = controls.querySelector('input'), filter = controls.querySelector('select'), pause = controls.querySelector('button'), status = controls.querySelector('[role="status"]');
         var cached = null, paused = false, pending = false, controller = null, stopped = false;
@@ -207,11 +207,18 @@
 	function moduleName( type, id ) { var L = cfg.moduleLabels || {}; return L[ type ] || L[ id ] || type || id || '模块'; }
 	function productName( e ) { var d = e.data || {}; return e.product_name || d.product_name || ( e.product_id ? '#' + e.product_id : '' ); }
 	function rateName( id ) { id = String( id || '' ); var L = cfg.shippingLabels || {}; var key = id.split( '-' )[ 0 ]; return L[ id ] || L[ key ] || id; }
-	function gatewayName( id ) { id = String( id || '' ); var L = cfg.paymentLabels || {}; return L[ id ] || id; }
+	function gatewayName( id ) { id = String( id || '' ); var L = cfg.paymentLabels || {}; if ( L[ id ] ) { return L[ id ]; } return id.indexOf( 'pc_panapay' ) === 0 ? '在线支付' : id; }
+	function statusName( st ) { st = String( st || '' ).replace( /^wc-/, '' ); var L = cfg.orderStatuses || {}; return L[ st ] || st; }
+	function money( v, cur ) { var n = Number( v ); if ( isNaN( n ) ) { return String( v ); } return ( cur === 'USD' || ! cur ? '$' : cur + ' ' ) + n.toFixed( 2 ); }
+	function typeLabel( type ) { var Z = cfg.typeLabelsZh || {}; return Z[ type ] || ( S.types && S.types[ type ] ) || type; }
 	function originText( o ) { return o === 'user' ? '顾客自己选的' : o === 'automatic' ? '系统自动切换' : o === 'initial' ? '页面默认选中，不是顾客操作' : ''; }
+	// 时间线里的标签页编号：同一个标签页哈希固定显示成“标签页 1 / 2 / 3”。
+	var tabIndex = {};
+	function tabLabel( tab ) { if ( ! tab ) { return '—'; } if ( ! ( tab in tabIndex ) ) { tabIndex[ tab ] = '标签页 ' + ( Object.keys( tabIndex ).length + 1 ); } return tabIndex[ tab ]; }
 	function detailText( e ) {
 		var d = e.data || {};
 		var name = productName( e );
+		var oid = e.order_url ? '' : oid;
 		switch ( e.type ) {
 			case 'product_impression':
 				return '看到商品「' + name + '」' + ( typeof d.visible_fraction === 'number' ? '，露出 ' + Math.round( d.visible_fraction * 100 ) + '%' : '' ) + ( d.visible_ms ? '，停留 ' + secondsText( d.visible_ms ) : '' );
@@ -222,7 +229,7 @@
 			case 'add_to_cart_attempt': return '点击了「加入购物车」：' + name;
 			case 'add_to_cart': return '已加入购物车：' + name + ( d.quantity ? ' × ' + d.quantity : '' );
 			case 'module_click': return '点击了「' + moduleName( d.module_type, d.module_id ) + '」里的按钮或链接';
-			case 'visibility_change': return d.visibility === 'hidden' ? '切到了别的标签页 / 把浏览器放到后台' : '回到了这个页面';
+			case 'visibility_change': return d.visibility === 'hidden' ? '切到了别的标签页或把浏览器收起来了（在结账页时多半是跳去了支付页）' : '回到了这个页面';
 			case 'page_exit': return '离开了这个页面';
 			case 'page_view': {
 				var parts = [ '打开了这个页面' ], ctx = d.page_context || {}, att = d.attribution || {}, q = att.landing_query || {};
@@ -238,12 +245,24 @@
 			case 'cart_close': return '关闭了购物车抽屉';
 			case 'cart_view': return '打开了购物车页';
 			case 'checkout_view': return '打开了结账页';
-			case 'checkout_step_applicability': return '这单需要：' + [ d.address_required ? '填写地址' : '', d.shipping_required ? '选择配送' : '' ].filter( Boolean ).join( '、' );
+			case 'checkout_step_applicability': return '这单结账需要：' + ( [ d.address_required ? '填写地址' : '', d.shipping_required ? '选择配送方式' : '' ].filter( Boolean ).join( '、' ) || '直接付款' );
 			case 'checkout_shipping_selected': return '配送方式：' + rateName( d.method ) + ( originText( d.origin ) ? '（' + originText( d.origin ) + '）' : '' );
 			case 'checkout_payment_selected': return '支付方式：' + gatewayName( d.method ) + ( originText( d.origin ) ? '（' + originText( d.origin ) + '）' : '' );
-			case 'checkout_address_completed': return '地址已填写完整';
-			case 'checkout_submit_attempt': return '点击了「下单」';
-			case 'payment_attempt': return '开始支付';
+			case 'checkout_address_completed': return '收货地址已经填完整，可以下单了';
+			case 'checkout_submit_attempt': return '点击了「下单」按钮（接下来如果没有“订单已生成”，说明下单没成功）';
+			case 'payment_attempt': return '点了下单后，系统开始向支付通道申请付款页' + ( oid ? '，订单' + oid : '' );
+			case 'order_placed': return '订单已生成' + oid + '：' + ( d.items ? d.items + ' 件商品，' : '' ) + '合计 ' + money( d.total, d.currency ) + '，支付方式「' + gatewayName( d.method ) + '」，当前状态「' + statusName( d.status ) + '」（还没付款）';
+			case 'order_status': {
+				var to = statusName( d.to ), from = statusName( d.from );
+				var why = d.to === 'cancelled' && d.from === 'pending' ? '——超过付款时限没付款，系统自动取消' : d.to === 'processing' ? '——已付款，等待发货' : d.to === 'completed' ? '——已完成' : d.to === 'failed' ? '——支付通道回报付款失败' : d.to === 'on-hold' ? '——等待确认' : '';
+				return '订单' + oid + '从「' + from + '」变成「' + to + '」' + why;
+			}
+			case 'payment_success': return '付款成功' + ( oid ? '，订单' + oid : '' ) + ( d.total ? '，' + money( d.total, d.currency ) : '' ) + ( d.method ? '，用的「' + gatewayName( d.method ) + '」' : '' );
+			case 'payment_failed': return '付款失败' + ( oid ? '，订单' + oid : '' ) + ( d.method ? '，用的「' + gatewayName( d.method ) + '」' : '' );
+			case 'login': return '登录了账号' + ( d.user_id ? '（用户 #' + d.user_id + '）' : '' );
+			case 'register': return '注册了新账号' + ( d.user_id ? '（用户 #' + d.user_id + '）' : '' );
+			case 'cart_change_attempt': return '修改了购物车' + ( name ? '：' + name : '' ) + ( d.quantity !== undefined ? '，数量改成 ' + d.quantity : '' );
+			case 'cart_change_response': return '购物车已更新' + ( d.item_count !== undefined ? '，现在 ' + d.item_count + ' 件' : '' );
 			case 'video_play': return '开始播放视频' + ( d.position_s !== undefined ? '（从第 ' + Math.round( d.position_s ) + ' 秒）' : '' );
 			case 'video_pause': return '暂停视频' + ( d.position_s !== undefined ? '（第 ' + Math.round( d.position_s ) + ' 秒' + ( d.duration_s ? ' / 共 ' + Math.round( d.duration_s ) + ' 秒' : '' ) + '）' : '' );
 			case 'video_progress': return '视频看到第 ' + Math.round( d.position_s || 0 ) + ' 秒' + ( d.duration_s ? '（共 ' + Math.round( d.duration_s ) + ' 秒）' : '' );
@@ -282,9 +301,9 @@
 	}
 
 	function eventRow( e ) {
-		var typeText = e.group ? '看到商品（' + e.group.length + ' 条）' : ( S.types[ e.type ] || e.type );
+		var typeText = e.group ? '看到商品（' + e.group.length + ' 条）' : typeLabel( e.type );
 		var detail = e.group ? groupText( e.group ) : detailText( e );
-		return '<tr class="' + ( 'server' === e.source ? 'is-server' : '' ) + '"><td>' + esc( clock( e.at_ms ) ) + '</td><td><span class="pc-trk-tabid">' + esc( e.tab || '—' ) + '</span></td><td>' + esc( typeText ) + ( 'server' === e.source ? ' <span class="pc-trk-badge">' + esc( S.server ) + '</span>' : '' ) + '</td><td>' + ( e.path ? pageText( { page_type: e.page_type, path: e.path, product_name: e.product_name || ( e.data || {} ).product_name } ) : '' ) + '</td><td>' + esc( detail ) + ( e.order_url ? ' <a href="' + esc( e.order_url ) + '">#' + esc( e.order_id ) + '</a>' : '' ) + '</td></tr>';
+		return '<tr class="' + ( 'server' === e.source ? 'is-server' : '' ) + '"><td>' + esc( clock( e.at_ms ) ) + '</td><td><span class="pc-trk-tabid">' + esc( tabLabel( e.tab ) ) + '</span></td><td>' + esc( typeText ) + ( 'server' === e.source ? ' <span class="pc-trk-badge">' + esc( cfg.typeLabelsZh ? '服务器记录' : S.server ) + '</span>' : '' ) + '</td><td>' + ( e.path ? pageText( { page_type: e.page_type, path: e.path, product_name: e.product_name || ( e.data || {} ).product_name } ) : '' ) + '</td><td>' + esc( detail ) + ( e.order_url ? ' <a href="' + esc( e.order_url ) + '">#' + esc( e.order_id ) + '</a>' : '' ) + '</td></tr>';
 	}
 
 	// 时间线分页：心跳在服务器端过滤，“加载更多”接着往后翻，不会漏掉末尾的事件。
@@ -296,7 +315,7 @@
 		var path = function ( cursor ) {
 			return '/peptide/v1/track/admin/visits/' + id + '?limit=50&order=desc&heartbeats=' + ( hideHeartbeats ? '0' : '1' ) + ( cursor ? '&cursor=' + encodeURIComponent( cursor ) : '' );
 		};
-		if ( ! quiet ) box.innerHTML = '<p>' + esc( S.loading ) + '</p>';
+		if ( ! quiet ) { box.innerHTML = '<p>' + esc( S.loading ) + '</p>'; tabIndex = {}; }
 		load( path( null ) ).then( function ( t ) {
 			if ( token !== timelineToken ) {
 				return;
