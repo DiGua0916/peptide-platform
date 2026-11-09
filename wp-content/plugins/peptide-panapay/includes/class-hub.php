@@ -179,9 +179,42 @@ final class Hub {
 				if ( is_string( $row['hosts_box'] ?? null ) && '' !== $row['hosts_box'] ) {
 					$result['checkout_policy'] = self::session_policy( $row, $trust );
 				}
-			} else { $result['state'] = 'unknown'; }
+				self::host_alert_clear( $url );
+			} else { $result['state'] = 'unknown'; self::host_alert( $row, $url, $trust ); }
 		}
 		return $result;
+	}
+	/**
+	 * 收单方把付款页放到了名单外的域名（2026-11-09 主店事故）：记进中枢明细，并在总后台开一条「支付通道提醒」，
+	 * 写明是哪个账户、哪个域名、怎么处理。同一域名只开一条，加进名单后自动恢复。
+	 */
+	private static function host_alert( array $row, string $url, array $trust ): void {
+		try {
+			$host = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
+			if ( '' === $host || ! preg_match( '/\A[a-z0-9.-]{1,253}\z/', $host ) ) { return; }
+			$trusted = array_map( 'strtolower', (array) ( $trust['payment_hosts'] ?? array() ) );
+			$gateway = strtolower( (string) wp_parse_url( (string) ( $trust['gateway'] ?? '' ), PHP_URL_HOST ) );
+			if ( in_array( $host, $trusted, true ) || $host === $gateway ) { return; } // 不是域名问题（比如 http、带端口），不在这里提醒。
+			$account = Hub_Accounts::load( self::account_id( $row['account_id'] ?? 'default' ) );
+			$name    = (string) ( $account['account_name'] ?: $account['title'] ?: '支付账户' );
+			Hub_Details::record( (string) $row['ref'], 'create', '收银台域名不在名单', array( 'host' => $host, 'account' => $name, 'order_id' => $row['order_id'] ?? '' ) );
+			if ( class_exists( '\PeptideHq\Alerts' ) ) {
+				\PeptideHq\Alerts::raise( 0, 'payment', 'host:' . $host, sprintf( '收单方把「%1$s」的付款页放到了 %2$s，这个域名不在收银台域名名单里，顾客付款会提示“支付会话未确认”。处理：总后台 → 支付账户 → %1$s → 收银台域名，加上 %2$s 即可，之后的订单自动恢复。', $name, $host ) );
+			}
+		} catch ( \Throwable $ignored ) { /* 提醒失败不能影响支付流程。 */ }
+	}
+	/** 这个域名的付款页已被放行：把它的「支付通道提醒」标记为已恢复。 */
+	private static function host_alert_clear( string $url ): void {
+		try {
+			if ( ! class_exists( '\PeptideHq\Alerts' ) || ! class_exists( '\PeptideHq\Db' ) ) { return; }
+			$host = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
+			if ( '' === $host ) { return; }
+			global $wpdb;
+			$t    = \PeptideHq\Db::table( 'alerts' );
+			$open = (array) $wpdb->get_col( "SELECT ref FROM {$t} WHERE site_id = 0 AND type = 'payment' AND resolved = 0" ); // phpcs:ignore
+			if ( ! in_array( 'host:' . $host, $open, true ) ) { return; }
+			\PeptideHq\Alerts::resolve( 0, 'payment', array_values( array_diff( $open, array( 'host:' . $host ) ) ) );
+		} catch ( \Throwable $ignored ) { /* 同上。 */ }
 	}
 	private static function session_policy( array $row, array $trust ): array {
 		$reference = $row['local_reference'] ?? null;

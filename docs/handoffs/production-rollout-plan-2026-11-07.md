@@ -846,3 +846,9 @@
 - 备份：web `/root/vialcove-backups/cbs-strip-20261109-160952`，HQ `/root/vialcove-backups/cbs-strip-20261109-161042`。
 - 验证：10 份 `php -l` 通过；`array_keys(cbs_modules())` 在主店后台与芒果后台均为 `cloak`；芒果后台控制台页只剩流量斗篷卡片。php-fpm 已 reload。
 - 同日修复主店支付：HQ `/etc/hosts` 里把 `s0001.vialcoveresearch.com` 等指到 127.0.0.1 的条目导致 Panapay hub 校验 “must be a public HTTPS origin” 失败，已删除；6 个站点 URL 校验与轮询恢复正常。子店域名仍需店主在收单方轮询系统登记。
+
+### 2026-11-09 16:35 UTC 主店支付第二次故障：收单方新收银台域名 + 自动提醒
+- 根因与处理见 `docs/handoffs/postmortem-payment-2026-11-09.md`。「信用卡」账户收银台域名加 easygatewayb.top（备份 `pc_panapay_hub_accounts_backup_20261109b`）。
+- 代码：`peptide-panapay/includes/class-hub.php` 新增 `host_alert()/host_alert_clear()`；`peptide-hq/includes/class-alerts.php` 新增类型 `payment` 支付通道提醒。
+- 部署：HQ release `/srv/vialcove/hq/releases/pay-host-alert-1794241890-hq`；`class-hub.php` 同步到两台主机各 6 份 peptide-panapay 副本（备份 `~/vialcove-deploy-backups/trk-plain-20261109T16315x`）。已用假域名实测告警开/恢复，测试告警已删除。
+- 检查：6 个站点中枢地址校验全部 OK；历史会话里出现过的收银台域名现在都在名单内。

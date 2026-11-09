@@ -21,6 +21,7 @@ final class Alerts {
 			'no_orders' => __( 'No orders for a while', 'peptide-hq' ),
 			'closed'    => __( 'Store not open to the public', 'peptide-hq' ),
 			'cost'      => '费用提醒',
+			'payment'   => '支付通道提醒',
 		);
 	}
 
