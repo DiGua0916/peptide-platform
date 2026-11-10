@@ -122,3 +122,10 @@
 ### 2026-11-10 付款链接不带地址
 - 店主：链接只带商品和优惠码，不要带之前测试填的地址。`Cart_Links::clear_customer()`：打开链接时（未登录）清空会话里的邮箱、账单/收货姓名地址电话、已选物流，结账页从空白开始；登录会员不动。
 - 部署 web/hq 全部副本；主店浏览器（之前填过测试地址）打开 `/?pc_cart=11092x1` → 结账页邮箱和地址为空，商品 bac.water 保留。
+
+### 2026-11-10 六个站内容对齐（店主要在主店做真实付款测试单）
+- 对比 主店 / s0006–s0010：peptide-core、peptide-panapay 代码一致；主题 peptide-site 有 3 个文件只在主店（11-08 页脚紧凑间距、年份自动、DB-IP 署名移入页脚：assets/footer-details.css、inc/footer-details.php、inc/visitor-tracking.php），已从主店同步到 5 个子站（trk-deploy2.sh，PLUGIN=../themes/peptide-site，备份 /home/ubuntu/vialcove-deploy-backups/trk-plain-20261110T130000），之后主题 diff 为 0；子站页脚年份由 2025 变为 2026。
+- 商品（名称、描述、分类、排序、规格价格、促销价、库存状态）92 个哈希完全一致；主店多一个店主今天建的测试商品 Happy（$1，ID 11839）。
+- 页面、模板、优惠券、theme_mods、促销/弹窗等 pc_* 设置一致。剩下的差异都是每家店自己的：域名、品牌名、WhatsApp/电话、发件邮箱、Pixel、支付账户和 HQ 密钥、AI 记录。
+- 阳 s0007 单独保存了 require_batch_to_ship=false（后台发货前不强制选批次，其他店默认开启），不影响顾客下单，未改。
+- 只有主店 wp-config 配了 DB-IP 国家库（页脚多一行 DB-IP 署名、访客国家识别来源不同），不影响下单和付款，未改。
