@@ -213,3 +213,9 @@
 - 电话：店主说用站点自己的。阳保留 +14323608942；主店、李军、光辉、老毛、芒果按各自客服 WhatsApp 填 +13039444124（这 5 家的 WhatsApp 都是这个号）。
 - 邮箱：店主要求全部换成站点自己的 orders@本店域名——管理员邮箱（admin_email 直接写，清掉待确认的 new_admin_email/adminhash）、客服邮箱（woocommerce_email_from_address，阳原来是 VialCovePeptides@outlook.com）、新订单 / 取消 / 失败通知收件人。原值备份 `pc_email_backup_20261110`。阳基础配置页核对。
 - 店铺评分：主店 65、李军 60、阳 85、光辉 45、老毛 60、芒果 60。地址填好后弃单提醒邮件不再因缺地址被拦，定时任务会按设置开始发。
+
+### 2026-11-10 订单 → 手动订单
+- 新增后台页 订单 → 手动订单（class-manual-order-page.php + assets/manual-order.js/.css）：搜索商品（含规格）加入；每行改数量、原价、售价（只对这一单）；运费“按店铺运费”或自定义（名称 + 金额）；可加多笔优惠（名称 + 金额，顾客可见）；备注只后台可见；右侧实时算原价合计 / 小计 / 优惠 / 运费 / 合计；“生成付款链接”弹窗显示链接 + 复制 + 打开看看 + 再做一单；右侧“最近生成的链接”（复制、已下的订单）。
+- 引擎 `Manual_Orders`（class-manual-orders.php）：配置存 `pc_manual_links`（token → 配置，30 天有效，最多 300 条）；链接 `/?pc_manual=token` → 清空购物车和优惠券、清顾客资料、按配置加商品（cart item data pc_m_price/pc_m_regular）→ 跳结账。`woocommerce_before_calculate_totals` 9999 设价格（原价 / 售价），`woocommerce_cart_calculate_fees` 99 清掉店铺满减等费用只留自定义优惠，`woocommerce_package_rates` 9999 自定义运费替换所有运费（含运费优惠），`woocommerce_coupon_is_valid` 禁用优惠券；下单时订单加 `_pc_manual_link` 和备注并记到这条链接。
+- `cart-share.js`：手动订单购物车的地址栏改成 `?pc_manual=token`（原来会变成 `?pc_cart=` 普通链接，刷新会变回原价）。
+- 主店测试：2 × 组合装 原价 80 / 售价 50 + bac.water 10，优惠 10 + 5，运费 20 → 结账页 $115.00，原价划线、两笔优惠、运费 $20，无优惠券和满减；刷新仍为 $115.00。测试链接备注 “TEST - Claude 手动订单测试” 留在最近链接里。用链接实际下单后的订单标记未实测。
