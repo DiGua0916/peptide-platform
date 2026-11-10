@@ -143,13 +143,13 @@
   aiShell('人设：' + persona, '<div class="pc-ai-out" aria-live="polite"></div>', '<button type="button" class="button button-primary" data-ai-run title="今天已分析 ' + n(st.used_today) + ' 次">AI 分析</button>');
   // 人设调优（店主 2026-11-10）：总后台的人设只是初稿，每家店在这里把 AI 调成自己喜欢的样子，只影响这家店。
   const notesBox = document.createElement('details'); notesBox.className = 'pc-ai-notes';
-  notesBox.innerHTML = '<summary>人设调优</summary><p class="pc-ai-meta">总后台的人设只是初稿。在这里告诉 AI 你喜欢怎么看分析：先说什么、写多长、要不要表格、重点看什么，也可以写你确认过的事实。只对这家店生效，自动分析也会按这里来。</p><textarea rows="4" maxlength="2000" placeholder="例如：先用一句话说结论；不要表格，用短句；重点告诉我怎么跟进这个客户；支付已测试正常，不要再建议排查支付"></textarea><p class="pc-ai-actions"><button type="button" class="button" data-ai-notes-save>保存调优</button><span class="pc-ai-meta" data-ai-notes-state></span></p>';
+  notesBox.innerHTML = '<summary>人设调优</summary><p class="pc-ai-meta">总后台的人设只是初稿。在这里告诉 AI 你喜欢怎么看分析：先说什么、写多长、要不要表格、重点看什么，也可以写你确认过的事实。只对这家店的' + (subject ? '客户分析' : '全站分析') + '生效，自动分析也会按这里来。</p><textarea rows="4" maxlength="4000" placeholder="例如：先用一句话说结论；不要表格，用短句；重点告诉我怎么跟进这个客户；支付已测试正常，不要再建议排查支付"></textarea><p class="pc-ai-actions"><button type="button" class="button" data-ai-notes-save>保存调优</button><span class="pc-ai-meta" data-ai-notes-state></span></p>';
   aiBox.insertBefore(notesBox, aiBox.querySelector('.pc-ai-out'));
-  window.wp.apiFetch({path:'/peptide/v1/track/admin/ai/notes'}).then(r => { notesBox.querySelector('textarea').value = r.notes || ''; if (r.notes) notesBox.querySelector('summary').textContent = '人设调优（已填写）'; }).catch(() => {});
+  window.wp.apiFetch({path:'/peptide/v1/track/admin/ai/notes?scope=' + (subject ? 'visitor' : 'site')}).then(r => { notesBox.querySelector('textarea').value = r.notes || ''; if (r.notes) notesBox.querySelector('summary').textContent = '人设调优（已填写）'; }).catch(() => {});
   notesBox.querySelector('[data-ai-notes-save]').addEventListener('click', async () => {
    const st = notesBox.querySelector('[data-ai-notes-state]');
    st.textContent = '保存中…';
-   try { await window.wp.apiFetch({path:'/peptide/v1/track/admin/ai/notes', method:'POST', data:{notes: notesBox.querySelector('textarea').value}}); st.textContent = '已保存，下次分析会用上（点“重新分析”立刻生效）'; notesBox.querySelector('summary').textContent = notesBox.querySelector('textarea').value.trim() ? '人设调优（已填写）' : '人设调优'; } catch (e) { st.textContent = '保存失败：' + ((e && e.message) || ''); }
+   try { await window.wp.apiFetch({path:'/peptide/v1/track/admin/ai/notes', method:'POST', data:{scope: subject ? 'visitor' : 'site', notes: notesBox.querySelector('textarea').value}}); st.textContent = '已保存，下次分析会用上（点“重新分析”立刻生效）'; notesBox.querySelector('summary').textContent = notesBox.querySelector('textarea').value.trim() ? '人设调优（已填写）' : '人设调优'; } catch (e) { st.textContent = '保存失败：' + ((e && e.message) || ''); }
   });
   // 已有的分析结果（自动或之前手动）打开页面就显示。
   try {

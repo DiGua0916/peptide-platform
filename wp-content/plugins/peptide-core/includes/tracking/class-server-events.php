@@ -38,6 +38,9 @@ final class Server_Events {
 		add_action( 'woocommerce_store_api_checkout_order_processed', array( self::class, 'on_order_placed' ), 20 );
 		add_action( 'woocommerce_payment_complete', array( self::class, 'on_payment_complete' ), 20 );
 		add_action( 'woocommerce_order_status_changed', array( self::class, 'on_status_changed' ), 20, 4 );
+		// 店主 2026-11-10 主店 $1 测试单：支付中心回调里付款完成没记进访客追踪（所有店 payment_success 都是 0）。
+		// 每 5 分钟补一次：最近 3 天已付款的单，访问还没到“已付款”的，补记付款事件并把访问升到第 5 步（同一单只记一次）。
+		add_action( \PeptideCore\Recovery::CRON, array( self::class, 'reconcile_paid' ), 30 );
 		add_action( 'wp_login', array( self::class, 'on_login' ), 20, 2 );
 		add_action( 'user_register', array( self::class, 'on_register' ), 20 );
 	}
@@ -263,6 +266,17 @@ final class Server_Events {
 		if ( self::record( $visitor_id, $visit_id, 'srv-order-' . $order->get_id() . '-paid', 'payment_success', array( 'order_id' => $order->get_id() ), array( 'method' => (string) $order->get_payment_method(), 'total' => (float) $order->get_total(), 'currency' => $order->get_currency() ) ) && $visit_id ) {
 			Tracker::raise_stage( $visit_id, 5, $order->get_id() );
 		}
+	}
+
+	public static function reconcile_paid(): int {
+		$n = 0;
+		foreach ( wc_get_orders( array( 'status' => wc_get_is_paid_statuses(), 'date_created' => '>' . ( time() - 3 * DAY_IN_SECONDS ), 'limit' => 200, 'return' => 'objects' ) ) as $order ) {
+			if ( $order instanceof \WC_Order && $order->get_meta( self::ORDER_VISITOR_META ) ) {
+				self::paid( $order );
+				++$n;
+			}
+		}
+		return $n;
 	}
 
 	public static function on_payment_complete( $order_id ): void {

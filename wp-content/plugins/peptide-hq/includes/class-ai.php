@@ -209,16 +209,71 @@ final class Ai {
 	}
 
 	/** 某家店：开没开、各用途用哪个人设。新店铺默认开（总开关开着时）。 */
+	// ---------- 每家店自己的人设（店主 2026-11-10） ----------
+	// 总后台的人设是模板：和店铺模板一样，第一次只下发一份给这家店。之后这家店用自己的那份，
+	// 再加上店主在店铺后台写的“人设调优”（只影响这家店）。总后台改模板不影响已下发的店，除非点“重新下发”或换了模板。
+
+	public const SITE_PERSONAS = 'pchq_ai_site_personas';
+
+	public static function site_personas(): array {
+		$v = get_option( self::SITE_PERSONAS, array() );
+		return is_array( $v ) ? $v : array();
+	}
+
+	/** 这家店某种用途的人设副本；还没有（或总后台给它换了模板）就从模板下发一份。 */
+	public static function site_persona( int $site_id, string $use, bool $issue = true ): ?array {
+		$all  = self::site_personas();
+		$copy = $all[ $site_id ][ $use ] ?? null;
+		$s    = self::settings();
+		$row  = $s['sites'][ $site_id ] ?? null;
+		$pick = is_array( $row ) ? (string) ( $row[ $use ] ?? '' ) : '';
+		$tpl  = '' !== $pick ? self::persona( $pick ) : null;
+		$tpl  = $tpl && $tpl['use'] === $use ? $tpl : self::default_persona( $use );
+		$switched = is_array( $copy ) && '' !== $pick && $tpl && $copy['from'] !== $tpl['id'];
+		if ( ( ! is_array( $copy ) || $switched ) && $tpl && $issue ) {
+			$copy = self::issue( $site_id, $use, $tpl );
+		}
+		return is_array( $copy ) ? $copy : null;
+	}
+
+	/** 把模板下发（或重新下发）给这家店；店主写的人设调优保留。 */
+	public static function issue( int $site_id, string $use, ?array $tpl = null ): ?array {
+		$tpl = $tpl ?: self::default_persona( $use );
+		if ( ! $tpl || ! isset( self::USES[ $use ] ) ) {
+			return null;
+		}
+		$all  = self::site_personas();
+		$old  = $all[ $site_id ][ $use ] ?? array();
+		$all[ $site_id ][ $use ] = array( 'from' => $tpl['id'], 'name' => $tpl['name'], 'content' => $tpl['content'], 'issued_at' => time(), 'tuning' => (string) ( $old['tuning'] ?? '' ), 'tuned_at' => (int) ( $old['tuned_at'] ?? 0 ) );
+		update_option( self::SITE_PERSONAS, $all, false );
+		return $all[ $site_id ][ $use ];
+	}
+
+	/** 记下这家店最新的人设调优（店铺每次分析时带过来，总后台只用来展示）。 */
+	private static function note_tuning( int $site_id, string $use, string $tuning ): void {
+		$all = self::site_personas();
+		if ( ! isset( $all[ $site_id ][ $use ] ) || ( $all[ $site_id ][ $use ]['tuning'] ?? '' ) === $tuning ) {
+			return;
+		}
+		$all[ $site_id ][ $use ]['tuning']   = $tuning;
+		$all[ $site_id ][ $use ]['tuned_at'] = time();
+		update_option( self::SITE_PERSONAS, $all, false );
+	}
+
 	public static function site_config( int $site_id ): array {
 		$s    = self::settings();
 		$row  = $s['sites'][ $site_id ] ?? null;
 		$on   = $s['enabled'] && $s['has_key'] && '' !== $s['model'] && ( null === $row || ! empty( $row['enabled'] ) );
 		$out  = array( 'enabled' => $on, 'auto_customer' => $s['auto_customer'], 'auto_site' => $s['auto_site'] );
 		foreach ( array_keys( self::USES ) as $use ) {
-			$id     = is_array( $row ) ? (string) ( $row[ $use ] ?? '' ) : '';
-			$p      = '' !== $id ? self::persona( $id ) : null;
-			$p      = $p && $p['use'] === $use ? $p : self::default_persona( $use );
-			$out[ $use ] = $p ? array( 'id' => $p['id'], 'name' => $p['name'] ) : null;
+			$p = self::site_persona( $site_id, $use, $on );
+			if ( ! $p ) {
+				$id = is_array( $row ) ? (string) ( $row[ $use ] ?? '' ) : '';
+				$t  = '' !== $id ? self::persona( $id ) : null;
+				$t  = $t && $t['use'] === $use ? $t : self::default_persona( $use );
+				$p  = $t ? array( 'from' => $t['id'], 'name' => $t['name'] ) : null;
+			}
+			$out[ $use ] = $p ? array( 'id' => $p['from'], 'name' => $p['name'] ) : null;
 		}
 		return $out;
 	}
@@ -482,7 +537,7 @@ final class Ai {
 		return $out;
 	}
 
-	public static function analyse( int $site_id, string $use, array $facts, array $experience = array() ) {
+	public static function analyse( int $site_id, string $use, array $facts, array $experience = array(), string $tuning = '' ) {
 		if ( ! isset( self::USES[ $use ] ) ) {
 			return new \WP_Error( 'pchq_ai_use', '不支持的分析类型。', array( 'status' => 400 ) );
 		}
@@ -494,9 +549,19 @@ final class Ai {
 			return new \WP_Error( 'pchq_ai_persona', '总后台还没有“' . self::USES[ $use ] . '”的人设，请先导入。', array( 'status' => 409 ) );
 		}
 		$s = self::settings();
-		$persona = self::persona( $cfg[ $use ]['id'] );
+		$persona = self::site_persona( $site_id, $use );
+		if ( ! $persona ) {
+			return new \WP_Error( 'pchq_ai_persona', '总后台还没有“' . self::USES[ $use ] . '”的人设，请先导入。', array( 'status' => 409 ) );
+		}
+		$tuning  = trim( mb_substr( $tuning, 0, 4000 ) );
+		self::note_tuning( $site_id, $use, $tuning );
 		$site    = Sites::get( $site_id );
-		$system  = $persona['content'] . "\n\n---\n回答语言：" . $s['language'] . "。只根据提供的数据分析，数据里没有的不要编造；数据是浏览行为线索，不代表个人身份或购买意愿的确定事实。\n如果数据里有【店主补充说明】，那是店主确认过的事实，优先于你的推断：不要再给出和它矛盾的判断或建议（例如店主说支付已测试正常，就不要再把“支付故障”当原因或建议排查支付），改从其他方向找原因。";
+		$system  = $persona['content'];
+		if ( '' !== $tuning ) {
+			// 店主 2026-11-10：每家店把 AI 调成自己喜欢的样子，只影响这家店。
+			$system .= "\n\n---\n【本店人设调优】（这家店店主自己写的，优先于上面的通用人设）：\n" . $tuning . "\n\n按上面的调优来：店主要求的回答格式、长短、先后顺序、重点、想看的数据，都以调优为准，和通用人设冲突时听调优；店主写明的事实当作确认过的事实，不要再给出和它矛盾的判断或建议（例如店主说支付已测试正常，就不要再把“支付故障”当原因或建议排查支付）。";
+		}
+		$system .= "\n\n---\n回答语言：" . $s['language'] . "。只根据提供的数据分析，数据里没有的不要编造；数据是浏览行为线索，不代表个人身份或购买意愿的确定事实。";
 		$exp     = self::experience( $site_id, $use, $experience );
 		$user    = '店铺：' . ( $site ? $site['name'] : '' ) . "\n分析类型：" . self::USES[ $use ] . "\n以下是店铺记录的行为数据（JSON，已去掉姓名、邮箱、电话）：\n" . wp_json_encode( $facts, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT )
 			. "\n\n【历史经验】（系统按你过去的判断和客户后来是否下单自动统计；“后来下单”= 判断 3 天后核对到已付款）：\n" . wp_json_encode( $exp, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT );
@@ -526,7 +591,7 @@ final class Ai {
 		if ( ! is_array( $p ) || strlen( (string) $request->get_body() ) > 400000 ) {
 			return new \WP_Error( 'pchq_ai_bad', 'Invalid request.', array( 'status' => 400 ) );
 		}
-		$r = self::analyse( (int) $request->get_param( '_pchq_site' ), (string) ( $p['use'] ?? '' ), (array) ( $p['facts'] ?? array() ), (array) ( $p['experience'] ?? array() ) );
+		$r = self::analyse( (int) $request->get_param( '_pchq_site' ), (string) ( $p['use'] ?? '' ), (array) ( $p['facts'] ?? array() ), (array) ( $p['experience'] ?? array() ), (string) ( $p['tuning'] ?? '' ) );
 		return is_wp_error( $r ) ? $r : new \WP_REST_Response( $r );
 	}
 }
