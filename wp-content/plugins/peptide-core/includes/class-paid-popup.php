@@ -25,6 +25,41 @@ final class Paid_Popup {
 		add_filter( 'pc_panapay_paid_redirect', array( self::class, 'redirect_url' ), 10, 2 );
 		add_action( 'wp_footer', array( self::class, 'render' ), 50 );
 		add_action( 'rest_api_init', array( self::class, 'routes' ) );
+		// 店主 2026-11-10：成功下单立刻发关怀邮件。付款完成流程偶尔会中途被打断（#11841 就没发出），每 5 分钟补发一次。
+		add_action( Recovery::CRON, array( self::class, 'care_catchup' ), 40 );
+	}
+
+	/** 已付款但还没发出“付款成功 · 关怀”邮件的订单，补发一次（只看开启这个功能之后付款的单）。 */
+	public static function care_catchup(): void {
+		if ( ! function_exists( 'WC' ) || ! Mail_Outbox::installed() ) {
+			return;
+		}
+		$since = (int) get_option( 'pc_care_since', 0 );
+		if ( ! $since ) {
+			update_option( 'pc_care_since', time(), false );
+			return;
+		}
+		global $wpdb;
+		$t = Mail_Outbox::table();
+		foreach ( wc_get_orders( array( 'status' => array( 'processing', 'completed' ), 'date_paid' => '>' . max( $since, time() - 2 * DAY_IN_SECONDS ), 'limit' => 50, 'return' => 'objects' ) ) as $order ) {
+			if ( ! $order instanceof \WC_Order || '' !== (string) $order->get_meta( '_pc_care_mail' ) || '' === (string) $order->get_billing_email() ) {
+				continue;
+			}
+			if ( class_exists( Test_Orders::class ) && Test_Orders::is_test_order( $order ) ) {
+				continue;
+			}
+			// 用 SQL 查发件记录：这张单的“付款成功”邮件发过没有。
+			$sent = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$t} WHERE order_id = %d AND kind = %s AND status = 'sent'", $order->get_id(), 'wc:customer_processing_order' ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			if ( ! $sent ) {
+				$emails = WC()->mailer()->get_emails();
+				if ( isset( $emails['WC_Email_Customer_Processing_Order'] ) ) {
+					$emails['WC_Email_Customer_Processing_Order']->trigger( $order->get_id(), $order );
+					$order->add_order_note( 'Order confirmation email was not sent at payment time; sent automatically now.' );
+				}
+			}
+			$order->update_meta_data( '_pc_care_mail', (string) time() );
+			$order->save_meta_data();
+		}
 	}
 
 	public static function defaults(): array {
