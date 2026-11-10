@@ -17,6 +17,18 @@ final class Capabilities {
 	public const ADMIN_ONLY = array( 'pc_manage_settings', 'pc_publish_layouts' );
 
 	/**
+	 * 投手（角色 pc_media_buyer，M9）按请求临时拥有的能力，见 Staff_Buyer。
+	 * 角色本身只存 read 和 view_admin_dashboard，这里的能力不写进数据库：
+	 * - orders：打开订单列表和单张订单（只读，写请求在 Staff_Buyer 里拦截）；
+	 * - data：弃单、数据、实时访客页面和它们的数据接口（这些页面共用 manage_woocommerce）。
+	 * 不在允许名单里的页面和接口上，投手没有任何店铺能力。
+	 */
+	public const BUYER_SCOPES = array(
+		'orders' => array( 'manage_woocommerce', 'edit_shop_orders', 'edit_others_shop_orders', 'edit_published_shop_orders', 'edit_private_shop_orders', 'read_private_shop_orders', 'read_shop_order', 'edit_shop_order' ),
+		'data'   => array( 'manage_woocommerce', 'view_woocommerce_reports' ),
+	);
+
+	/**
 	 * register_post_type 的 capability_type 对应的基础能力（配合 map_meta_cap），以及员工共用的能力。
 	 *
 	 * @return string[]
