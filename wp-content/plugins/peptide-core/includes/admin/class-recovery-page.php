@@ -538,7 +538,13 @@ final class Recovery_Page {
 		$html = preg_replace( '/(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})，(\d+) 页/u', '$1, $2 pages', $html );
 		$html = preg_replace( '/(\d+) 单</u', '$1 orders<', $html );
 		$countries = array();
-		$en_list   = file_exists( WC()->plugin_path() . '/i18n/countries.php' ) ? include WC()->plugin_path() . '/i18n/countries.php' : array();
+		// 店主 2026-11-11：国家显示成了“波多黎各”。i18n/countries.php 里是 __()，后台语言是中文时读出来还是中文；
+		// 临时切到英文再读一份英文国家名。
+		$switched = function_exists( 'switch_to_locale' ) ? switch_to_locale( 'en_US' ) : false;
+		$en_list  = ( new \WC_Countries() )->get_countries();
+		if ( $switched ) {
+			restore_previous_locale();
+		}
 		foreach ( WC()->countries->countries as $code => $zh ) {
 			if ( isset( $en_list[ $code ] ) && $zh !== $en_list[ $code ] ) {
 				$countries[ $zh ] = $en_list[ $code ];
