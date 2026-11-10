@@ -129,6 +129,11 @@ final class Ai_Page {
 		wp_nonce_field( 'pchq_ai_save' );
 		echo '<input type="hidden" name="action" value="pchq_ai_save">';
 		echo '<p><label class="pcp-check"><input type="checkbox" name="enabled" value="1"' . checked( $s['enabled'], true, false ) . '> 开启 AI 分析</label></p>';
+		// 自动分析（店主 2026-11-10）：不用点按钮，结果打开页面就能看到。
+		echo '<div class="pcai-auto" style="display:grid;gap:6px;margin:0 0 16px;padding:12px 14px;border:1px solid #e6e6e6;border-radius:8px;background:#fafafa"><strong>自动分析</strong>';
+		echo '<label class="pcp-check"><input type="checkbox" name="auto_customer" value="1"' . checked( $s['auto_customer'], true, false ) . '> 自动分析客户：加购或进了结账但没付款的客户，离开 30 分钟后自动分析（之后又回来会重新分析）</label>';
+		echo '<label class="pcp-check"><input type="checkbox" name="auto_site" value="1"' . checked( $s['auto_site'], true, false ) . '> 自动全站分析：每天凌晨 1 点后分析前一天；每周一另外分析上周</label>';
+		echo '<span class="pcai-muted">自动分析每 5 分钟检查一次，每次分析一位客户（或一份全站报告），每家店每小时最多 12 次；结果在访客详情和实时访客页直接显示。</span></div>';
 		echo '<div class="pcai-grid">';
 		echo '<label><span>服务商</span><select name="provider" data-provider>';
 		foreach ( Ai::providers() as $k => $p ) {

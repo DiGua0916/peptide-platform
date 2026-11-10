@@ -17,6 +17,9 @@ final class Hq_Ai {
 
 	public static function register_hooks(): void {
 		add_action( 'rest_api_init', array( self::class, 'routes' ) );
+		add_filter( 'cron_schedules', array( self::class, 'cron_schedules' ) );
+		add_action( 'init', array( self::class, 'ensure_cron' ) );
+		add_action( self::CRON, array( self::class, 'auto_run' ) );
 	}
 
 	public static function available(): bool {
@@ -74,7 +77,9 @@ final class Hq_Ai {
 				'customer'   => is_array( $r['customer'] ?? null ) ? (string) $r['customer']['name'] : '',
 				'business'   => is_array( $r['business'] ?? null ) ? (string) $r['business']['name'] : '',
 				'used_today' => (int) ( $r['used_today'] ?? 0 ),
-				'daily_cap'  => (int) ( $r['daily_cap'] ?? 0 ),
+				'daily_cap'  => 0,
+				'auto_customer' => ! empty( $r['auto_customer'] ),
+				'auto_site'     => ! empty( $r['auto_site'] ),
 			);
 		set_transient( 'pc_ai_status', $out, is_wp_error( $r ) ? MINUTE_IN_SECONDS : 5 * MINUTE_IN_SECONDS );
 		return $out;
@@ -84,14 +89,23 @@ final class Hq_Ai {
 		$perm = array( Tracking\Preferences::class, 'permission' );
 		register_rest_route( 'peptide/v1', '/track/admin/ai/status', array( 'methods' => 'GET', 'permission_callback' => $perm, 'callback' => static fn() => rest_ensure_response( self::status() ) ) );
 		register_rest_route( 'peptide/v1', '/track/admin/ai/analyse', array( 'methods' => 'POST', 'permission_callback' => $perm, 'callback' => array( self::class, 'rest_analyse' ) ) );
+		register_rest_route( 'peptide/v1', '/track/admin/ai/result', array( 'methods' => 'GET', 'permission_callback' => $perm, 'callback' => static fn( \WP_REST_Request $r ) => rest_ensure_response( array( 'result' => self::latest( 'site' === $r['scope'] ? 'site' : 'visitor', 'site' === $r['scope'] ? 0 : absint( $r['visitor_id'] ) ) ) ) ) );
 	}
 
 	public static function rest_analyse( \WP_REST_Request $request ) {
 		$scope   = 'site' === $request['scope'] ? 'site' : 'visitor';
-		$visitor = absint( $request['visitor_id'] );
-		$visit   = absint( $request['visit_id'] );
 		$period  = in_array( $request['period'], array( 'all', 'day', 'week', 'month' ), true ) ? (string) $request['period'] : ( 'site' === $scope ? 'day' : 'all' );
 		$date    = is_string( $request['date'] ) && preg_match( '/\A\d{4}-\d{2}-\d{2}\z/', $request['date'] ) ? $request['date'] : wp_date( 'Y-m-d' );
+		$r = self::run( $scope, absint( $request['visitor_id'] ), absint( $request['visit_id'] ), $period, $date, ! empty( $request['refresh'] ), 'manual' );
+		return is_wp_error( $r ) ? $r : rest_ensure_response( $r );
+	}
+
+	/**
+	 * 分析一次（手动点按钮和自动分析共用）：整理事实 → 交给总后台 → 保存结果 → 记判断供自学习。
+	 *
+	 * @return array|\WP_Error
+	 */
+	public static function run( string $scope, int $visitor, int $visit, string $period, string $date, bool $refresh, string $source ) {
 		if ( 'visitor' === $scope && ! $visitor ) {
 			return new \WP_Error( 'pc_ai_bad', '请选择客户。', array( 'status' => 400 ) );
 		}
@@ -101,10 +115,10 @@ final class Hq_Ai {
 			$period  = 'all' === $period ? 'day' : $period;
 		}
 		$cache = 'pc_ai_' . md5( implode( '|', array( $scope, $visitor, $visit, $period, $date ) ) );
-		if ( empty( $request['refresh'] ) ) {
+		if ( ! $refresh ) {
 			$hit = get_transient( $cache );
 			if ( is_array( $hit ) ) {
-				return rest_ensure_response( $hit + array( 'cached' => true ) );
+				return $hit + array( 'cached' => true );
 			}
 		}
 		$facts = self::facts( $scope, $visitor, $visit, $period, $date );
@@ -112,7 +126,7 @@ final class Hq_Ai {
 			return $facts;
 		}
 		$use = 'site' === $scope ? 'business' : 'customer';
-		$r   = self::call( '/peptide-hq/v1/ai/analyse', array( 'use' => $use, 'facts' => $facts, 'experience' => self::experience( $use ) ), 100 );
+		$r   = self::call( '/peptide-hq/v1/ai/analyse', array( 'use' => $use, 'facts' => $facts, 'experience' => self::experience( $use ) ), self::$timeout );
 		if ( is_wp_error( $r ) ) {
 			return $r;
 		}
@@ -121,13 +135,161 @@ final class Hq_Ai {
 			'persona'    => (string) ( $r['persona'] ?? '' ),
 			'model'      => (string) ( $r['model'] ?? '' ),
 			'used_today' => (int) ( $r['used_today'] ?? 0 ),
-			'daily_cap'  => (int) ( $r['daily_cap'] ?? 0 ),
+			'daily_cap'  => 0,
 			'at'         => wp_date( 'Y-m-d H:i' ),
+			'source'     => $source,
+			'period'     => $period,
+			'date'       => $date,
 		);
 		set_transient( $cache, $out, 30 * MINUTE_IN_SECONDS );
 		delete_transient( 'pc_ai_status' );
+		self::save_result( $scope, $visitor, $period, $date, $out );
 		self::log_judgment( $use, $visitor, $period, $date, $out['text'], $facts );
-		return rest_ensure_response( $out + array( 'cached' => false ) );
+		return $out + array( 'cached' => false );
+	}
+
+	// ---------- 结果保存（自动分析的结果打开页面就能看到） ----------
+
+	private const RESULTS_VER = '1';
+
+	public static function results_table(): string {
+		global $wpdb;
+		return $wpdb->prefix . 'pc_ai_results';
+	}
+
+	private static function ensure_results(): void {
+		if ( self::RESULTS_VER === get_option( 'pc_ai_results_db' ) ) {
+			return;
+		}
+		global $wpdb;
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+		dbDelta( 'CREATE TABLE ' . self::results_table() . " (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  scope varchar(10) NOT NULL,
+  ref bigint(20) unsigned NOT NULL DEFAULT 0,
+  period varchar(10) NOT NULL DEFAULT '',
+  pdate varchar(10) NOT NULL DEFAULT '',
+  body longtext NOT NULL,
+  persona varchar(80) NOT NULL DEFAULT '',
+  model varchar(80) NOT NULL DEFAULT '',
+  source varchar(10) NOT NULL DEFAULT 'manual',
+  created bigint(20) unsigned NOT NULL DEFAULT 0,
+  PRIMARY KEY  (id),
+  KEY lookup (scope,ref,created)
+) " . $wpdb->get_charset_collate() . ';' );
+		update_option( 'pc_ai_results_db', self::RESULTS_VER, false );
+	}
+
+	private static function save_result( string $scope, int $ref, string $period, string $date, array $out ): void {
+		self::ensure_results();
+		global $wpdb;
+		$wpdb->insert( self::results_table(), array( 'scope' => $scope, 'ref' => $ref, 'period' => $period, 'pdate' => $date, 'body' => $out['text'], 'persona' => mb_substr( $out['persona'], 0, 80 ), 'model' => mb_substr( $out['model'], 0, 80 ), 'source' => $out['source'], 'created' => time() ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// 只留最近 2000 条。
+		$wpdb->query( 'DELETE FROM ' . self::results_table() . ' WHERE id <= ' . (int) $wpdb->get_var( 'SELECT id FROM ' . self::results_table() . ' ORDER BY id DESC LIMIT 1 OFFSET 2000' ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+	}
+
+	/** 最近一次的分析结果（客户：这位客户；全站：最近一次）。 */
+	public static function latest( string $scope, int $ref ): ?array {
+		self::ensure_results();
+		global $wpdb;
+		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::results_table() . ' WHERE scope = %s AND ref = %d ORDER BY created DESC LIMIT 1', $scope, $ref ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+		if ( ! $row ) {
+			return null;
+		}
+		return array( 'text' => (string) $row['body'], 'persona' => (string) $row['persona'], 'model' => (string) $row['model'], 'source' => (string) $row['source'], 'period' => (string) $row['period'], 'date' => (string) $row['pdate'], 'at' => wp_date( 'Y-m-d H:i', (int) $row['created'] ), 'created' => (int) $row['created'] );
+	}
+
+	// ---------- 自动分析（店主 2026-11-10：改成自动） ----------
+
+	public const CRON = 'pc_ai_auto';
+	private static int $timeout = 110; // 手动点按钮最多等 110 秒；自动分析 75 秒。
+
+	public static function cron_schedules( array $s ): array {
+		$s['pc_ai_5min'] = array( 'interval' => 5 * MINUTE_IN_SECONDS, 'display' => 'Every 5 minutes (AI)' );
+		return $s;
+	}
+
+	public static function ensure_cron(): void {
+		$next = wp_get_scheduled_event( self::CRON );
+		if ( $next && 'pc_ai_5min' !== $next->schedule ) {
+			wp_clear_scheduled_hook( self::CRON ); // 旧的 15 分钟计划换成 5 分钟。
+			$next = false;
+		}
+		if ( self::available() && ! $next ) {
+			wp_schedule_event( time() + MINUTE_IN_SECONDS, 'pc_ai_5min', self::CRON );
+		}
+	}
+
+	/**
+	 * 每 5 分钟，每次只做一件事（店铺的定时任务 90 秒就会被系统结束，所以一次只分析一个，调用总后台最多等 75 秒）：
+	 * - 全站：每天凌晨 1 点后分析前一天；每周一另外分析上周。
+	 * - 客户：最近 3 天加购或进了结账但没付款、已经离开 30 分钟以上、还没分析过（或分析后又回来过）的客户，按最近离开排序。
+	 */
+	public static function auto_run(): array {
+		$done = array();
+		if ( get_transient( 'pc_ai_auto_lock' ) ) {
+			return $done;
+		}
+		$st = self::status( true );
+		if ( empty( $st['enabled'] ) ) {
+			return $done;
+		}
+		set_transient( 'pc_ai_auto_lock', 1, 4 * MINUTE_IN_SECONDS );
+		self::$timeout = 75;
+		if ( function_exists( 'set_time_limit' ) ) {
+			@set_time_limit( 600 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		}
+		try {
+			$now = new \DateTimeImmutable( 'now', wp_timezone() );
+			if ( ! empty( $st['auto_site'] ) && '' !== ( $st['business'] ?? '' ) && (int) $now->format( 'G' ) >= 1 ) {
+				$jobs = array( array( 'day', $now->modify( '-1 day' )->format( 'Y-m-d' ) ) );
+				if ( '1' === $now->format( 'N' ) ) {
+					$jobs[] = array( 'week', $now->modify( '-7 days' )->format( 'Y-m-d' ) );
+				}
+				foreach ( $jobs as [ $period, $date ] ) {
+					$key = 'pc_ai_auto_site_' . $period . '_' . $date;
+					if ( get_option( $key ) ) {
+						continue;
+					}
+					$r = self::run( 'site', 0, 0, $period, $date, true, 'auto' );
+					if ( ! is_wp_error( $r ) ) {
+						add_option( $key, time(), '', false );
+					}
+					$done[] = 'site:' . $period . ':' . $date . ( is_wp_error( $r ) ? ':error' : '' );
+					return $done; // 一次只做一件。
+				}
+			}
+			if ( ! empty( $st['auto_customer'] ) && '' !== ( $st['customer'] ?? '' ) && Tracking\Schema::installed() ) {
+				self::ensure_results();
+				global $wpdb;
+				$visits  = Tracking\Schema::table( 'visits' );
+				$results = self::results_table();
+				$now_ms  = Tracking\Tracker::now_ms();
+				$rows    = $wpdb->get_results( $wpdb->prepare( "SELECT s.visitor_id, MAX(s.last_ms) AS last_ms FROM {$visits} s WHERE s.is_test = 0 AND s.last_ms >= %d GROUP BY s.visitor_id HAVING MAX(s.stage) BETWEEN 2 AND 4 AND MAX(s.last_ms) <= %d ORDER BY last_ms DESC LIMIT 40", $now_ms - 3 * DAY_IN_SECONDS * 1000, $now_ms - 30 * MINUTE_IN_SECONDS * 1000 ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+				$n = 0;
+				foreach ( (array) $rows as $row ) {
+					if ( $n >= 1 ) {
+						break;
+					}
+					$vid  = (int) $row['visitor_id'];
+					$last = (int) $wpdb->get_var( $wpdb->prepare( "SELECT MAX(created) FROM {$results} WHERE scope = 'visitor' AND ref = %d", $vid ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+					if ( $last && $last * 1000 >= (int) $row['last_ms'] ) {
+						continue; // 分析过，之后也没再来。
+					}
+					$oid = (int) $wpdb->get_var( $wpdb->prepare( "SELECT MAX(order_id) FROM {$visits} WHERE visitor_id = %d", $vid ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+					$ord = $oid ? wc_get_order( $oid ) : null;
+					if ( $ord && Test_Orders::is_test_order( $ord ) ) {
+						continue; // 测试单（收件信息全 1）不分析。
+					}
+					$r = self::run( 'visitor', $vid, 0, 'all', wp_date( 'Y-m-d' ), true, 'auto' );
+					++$n;
+					$done[] = 'visitor:' . $vid . ( is_wp_error( $r ) ? ':error' : '' );
+				}
+			}
+		} finally {
+			delete_transient( 'pc_ai_auto_lock' );
+		}
+		return $done;
 	}
 
 	/** 交给 AI 的事实：复用“导出分析数据”的口径，再补购买意向和购物车。不含任何个人联系信息。 */

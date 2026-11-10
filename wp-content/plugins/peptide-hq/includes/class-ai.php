@@ -157,6 +157,8 @@ final class Ai {
 			'language'   => isset( self::LANGUAGES[ $s['language'] ?? '' ] ) ? (string) $s['language'] : '中文',
 			'max_tokens' => max( 1000, min( 32000, (int) ( $s['max_tokens'] ?? 8000 ) ) ), // 推理模型先“思考”再回答，思考也占长度，所以默认 8000。
 			'has_key'    => '' !== (string) ( $keys[ $p ] ?? '' ),
+			'auto_customer' => ! array_key_exists( 'auto_customer', $s ) || ! empty( $s['auto_customer'] ), // 自动分析默认开（店主 2026-11-10）
+			'auto_site'     => ! array_key_exists( 'auto_site', $s ) || ! empty( $s['auto_site'] ),
 			'key_set'    => array_keys( array_filter( $keys ) ), // 哪些服务商存了密钥（不含密钥本身）。
 			'sites'      => is_array( $s['sites'] ?? null ) ? $s['sites'] : array(), // site_id => {enabled, customer, business}
 		);
@@ -173,6 +175,8 @@ final class Ai {
 		$raw['model']      = $changed ? '' : substr( preg_replace( '/[^A-Za-z0-9._:\/-]/', '', (string) ( $in['model'] ?? '' ) ), 0, 120 );
 		$raw['language']   = isset( self::LANGUAGES[ $in['language'] ?? '' ] ) ? (string) $in['language'] : '中文';
 		unset( $raw['daily_cap'] ); // 店主 2026-11-10：不限每天次数，只记用量。
+		$raw['auto_customer'] = ! empty( $in['auto_customer'] );
+		$raw['auto_site']     = ! empty( $in['auto_site'] );
 		$raw['max_tokens'] = (int) ( $in['max_tokens'] ?? 8000 );
 		unset( $raw['endpoint'], $raw['key'] );
 		$raw['keys'] = is_array( $raw['keys'] ?? null ) ? $raw['keys'] : array();
@@ -209,7 +213,7 @@ final class Ai {
 		$s    = self::settings();
 		$row  = $s['sites'][ $site_id ] ?? null;
 		$on   = $s['enabled'] && $s['has_key'] && '' !== $s['model'] && ( null === $row || ! empty( $row['enabled'] ) );
-		$out  = array( 'enabled' => $on );
+		$out  = array( 'enabled' => $on, 'auto_customer' => $s['auto_customer'], 'auto_site' => $s['auto_site'] );
 		foreach ( array_keys( self::USES ) as $use ) {
 			$id     = is_array( $row ) ? (string) ( $row[ $use ] ?? '' ) : '';
 			$p      = '' !== $id ? self::persona( $id ) : null;
