@@ -33,6 +33,10 @@
  *
  * 店铺菜单整理只影响能管理商店的人（manage_woocommerce）；营销页面独立按 edit_shop_coupons 注册。
  *
+ * - 投手版（M9）：投手（PeptideCore\Staff_Buyer）的左侧菜单固定 6 项，由 Staff_Buyer::build_menu() 生成，不走这里的整理。
+ *   这里只负责投手的订单页（ST-03）：列表加“来源广告、运单号、退款状态”三列，去掉勾选框、批量操作和行内按钮；
+ *   订单页面隐藏保存、改价、退款、作废、加备注等入口。隐藏只是为了界面干净，写请求本身已经被 Staff_Buyer 拦截。
+ *
  * @package PeptideCore
  */
 
@@ -95,6 +99,135 @@ final class Admin_Menus {
 		add_filter( 'map_meta_cap', array( self::class, 'no_file_editors' ), 10, 2 );
 		add_action( 'admin_bar_menu', array( self::class, 'clean_admin_bar' ), 999 );
 		add_action( 'admin_init', array( self::class, 'no_update_nags' ) );
+		// 投手的订单页只读（ST-03）。
+		add_filter( 'manage_woocommerce_page_wc-orders_columns', array( self::class, 'buyer_order_columns' ), 999 );
+		add_action( 'manage_woocommerce_page_wc-orders_custom_column', array( self::class, 'buyer_order_column' ), 10, 2 );
+		add_filter( 'bulk_actions-woocommerce_page_wc-orders', array( self::class, 'buyer_no_actions' ), 999 );
+		add_filter( 'woocommerce_admin_order_actions', array( self::class, 'buyer_no_actions' ), 999 );
+		add_filter( 'woocommerce_admin_order_preview_actions', array( self::class, 'buyer_no_actions' ), 999 );
+		add_filter( 'woocommerce_order_actions', array( self::class, 'buyer_no_actions' ), 999 );
+		add_action( 'add_meta_boxes', array( self::class, 'buyer_order_boxes' ), 999 );
+		add_action( 'admin_head', array( self::class, 'buyer_order_styles' ) );
+		add_action( 'admin_notices', array( self::class, 'buyer_order_notice' ) );
+	}
+
+	// ---------- 投手的订单页只读（ST-03） ----------
+
+	/** 当前是投手在看订单页。 */
+	private static function buyer_on_orders(): bool {
+		return \PeptideCore\Staff_Buyer::current() && 'wc-orders' === self::current_page();
+	}
+
+	/** 订单列表：去掉勾选框和操作列，金额后面加来源广告、运单号、退款状态。 */
+	public static function buyer_order_columns( $columns ) {
+		if ( ! is_array( $columns ) || ! \PeptideCore\Staff_Buyer::current() ) {
+			return $columns;
+		}
+		unset( $columns['cb'], $columns['wc_actions'] );
+		return array_merge(
+			$columns,
+			array(
+				'pc_source'   => '来源广告',
+				'pc_tracking' => '运单号',
+				'pc_refund'   => '退款状态',
+			)
+		);
+	}
+
+	public static function buyer_order_column( $column, $order ): void {
+		if ( ! $order instanceof \WC_Order || ! in_array( $column, array( 'pc_source', 'pc_tracking', 'pc_refund' ), true ) ) {
+			return;
+		}
+		if ( 'pc_source' === $column ) {
+			echo esc_html( self::order_source( array(
+				'utm_source'   => (string) $order->get_meta( '_wc_order_attribution_utm_source' ),
+				'utm_campaign' => (string) $order->get_meta( '_wc_order_attribution_utm_campaign' ),
+				'utm_content'  => (string) $order->get_meta( '_wc_order_attribution_utm_content' ),
+				'source_type'  => (string) $order->get_meta( '_wc_order_attribution_source_type' ),
+			) ) );
+			return;
+		}
+		if ( 'pc_tracking' === $column ) {
+			$shipment = is_callable( array( '\PeptideCore\Buyer_Status', 'shipment' ) ) ? \PeptideCore\Buyer_Status::shipment( $order ) : array( 'number' => '', 'url' => '', 'shipped' => false );
+			if ( '' === $shipment['number'] ) {
+				echo esc_html( $shipment['shipped'] ? '已发货' : '待发货' );
+			} elseif ( '' !== $shipment['url'] ) {
+				echo '<a href="' . esc_url( $shipment['url'] ) . '" target="_blank" rel="noopener">' . esc_html( $shipment['number'] ) . '</a>';
+			} else {
+				echo esc_html( $shipment['number'] );
+			}
+			return;
+		}
+		echo esc_html( self::refund_label( (string) $order->get_meta( '_pc_refund_state' ), (float) $order->get_total_refunded(), (float) $order->get_total() ) );
+	}
+
+	/**
+	 * 来源广告一栏的文字（不读数据库，测试里直接调用）：广告来源 / 广告系列 / 广告；不是广告带来的写来源类型。
+	 *
+	 * @param array{utm_source?:string,utm_campaign?:string,utm_content?:string,source_type?:string} $a
+	 */
+	public static function order_source( array $a ): string {
+		$parts = array();
+		foreach ( array( 'utm_source', 'utm_campaign', 'utm_content' ) as $key ) {
+			$value = trim( (string) ( $a[ $key ] ?? '' ) );
+			// 没被广告平台替换的动态参数（{{campaign.name}}）和 WooCommerce 的 (none) 不显示。
+			if ( '' !== $value && ! str_contains( $value, '{{' ) && '(none)' !== $value && '(direct)' !== $value ) {
+				$parts[] = $value;
+			}
+		}
+		if ( $parts ) {
+			return implode( ' / ', $parts );
+		}
+		$types = array( 'organic' => '搜索引擎', 'referral' => '外部网站', 'typein' => '直接访问', 'admin' => '后台创建' );
+		return $types[ (string) ( $a['source_type'] ?? '' ) ] ?? '—';
+	}
+
+	/**
+	 * 退款状态一栏的文字（不读数据库）：总后台回写的 _pc_refund_state 优先（OR-03），没有时按订单上的已退金额。
+	 */
+	public static function refund_label( string $state, float $refunded, float $total ): string {
+		if ( 'full' === $state || ( '' === $state && $refunded > 0 && $refunded >= $total ) ) {
+			return '已全额退款';
+		}
+		if ( 'partial' === $state || ( '' === $state && $refunded > 0 ) ) {
+			return '部分退款';
+		}
+		return '无';
+	}
+
+	/** 批量操作、行内按钮、预览里的按钮、订单页的“订单操作”：投手都没有。 */
+	public static function buyer_no_actions( $actions ) {
+		return \PeptideCore\Staff_Buyer::current() ? array() : $actions;
+	}
+
+	/** 订单页面去掉“订单操作”（保存、删除）、自定义字段和下载权限这几个框。 */
+	public static function buyer_order_boxes(): void {
+		if ( ! self::buyer_on_orders() ) {
+			return;
+		}
+		$screen = function_exists( 'wc_get_page_screen_id' ) ? wc_get_page_screen_id( 'shop-order' ) : 'woocommerce_page_wc-orders';
+		foreach ( array( array( 'woocommerce-order-actions', 'side' ), array( 'woocommerce-order-downloads', 'normal' ), array( 'order_custom', 'normal' ), array( 'postcustom', 'normal' ) ) as $box ) {
+			remove_meta_box( $box[0], $screen, $box[1] );
+		}
+	}
+
+	public static function buyer_order_styles(): void {
+		if ( ! self::buyer_on_orders() ) {
+			return;
+		}
+		echo '<style id="pc-buyer-orders-readonly">'
+			. '.page-title-action,.tablenav .bulkactions,#delete-action,#woocommerce-order-items .wc-order-bulk-actions,#woocommerce-order-items .wc-order-edit-line-item,#woocommerce-order-items .wc-order-edit-line-item-actions,'
+			. '#woocommerce-order-items .refund-items,#woocommerce-order-items .add-items,#woocommerce-order-items .button,#woocommerce-order-items .wc-order-data-row-toggle,'
+			. '#order_data a.edit_address,#order_data .load_customer_billing,#order_data .load_customer_shipping,#order_data .billing-same-as-shipping,'
+			. '#woocommerce-order-notes .add_note,#woocommerce-order-notes .delete_note,.wc-order-preview .wc-action-button-group{display:none!important}'
+			. '#order_data select,#order_data input,#order_data textarea,#order_data .select2-container{pointer-events:none}'
+			. '</style>' . "\n";
+	}
+
+	public static function buyer_order_notice(): void {
+		if ( self::buyer_on_orders() ) {
+			echo '<div class="notice notice-info"><p>订单在这里只能查看。改价、退款、作废和发货由总后台处理，有问题请联系平台负责人。</p></div>';
+		}
 	}
 
 	/** Keep Woo's installation profiler out of ordinary store navigation. */

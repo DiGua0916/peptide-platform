@@ -639,3 +639,42 @@ Root installed only three existing Commerce sources for P09 collection products 
 | 日常会话（总后台“销售账号”页面） | 显示“投手版 / 按模块”，提供切换 | 同上 |
 | F1 / 日常会话（开店流程） | 新店写入选项 `pc_media_buyer_default = 1` | 新店账号仍是按模块，需要手动切 |
 | 日常会话（`core/admin/class-recovery-page.php`） | `\PeptideCore\Staff_Buyer::current()` 为真时不输出“立即扫描”“作废”按钮（服务端已拦截 `pc_recovery_scan`、`pc_recovery_void`，只是界面整洁） | 按钮可见，点了返回 403 |
+
+### M9-2 开店向导和广告设置（`Admin\Onboarding`，ST-01、ST-06）
+
+- 页面：`admin.php?page=pc-onboarding`（向导，`&step=password|store|pixel|verify|link`）、`admin.php?page=pc-buyer-ads`（广告设置 = 第 3、4、5 步放在一页）。两个页面都不在原来的菜单里，能力 `pc_view_buyer_admin`（投手和管理员都有）。
+- 5 步：修改密码 → 店铺信息 → 广告像素 → 验证像素 → 生成投放链接（可选）。前 4 步做完才算完成；没完成时投手的每个页面顶部都有红色提示条“还差 N 步就可以投广告”。
+- 状态：
+  - 用户资料 `pc_must_change_password`（值 `1`）：下次登录只能打开向导改密码。切到投手版时带 `--must-change-password`、新建账号、管理员或总后台重置密码时写入；本人改完密码后删除。
+  - 选项 `pc_onboarding`（按店铺，不自动加载）：`store`（店铺信息保存过的时间）、`pixel_test`（`pixel`、`ok`、`at`、`message`）、`link`（生成过投放链接的时间）。开发文档 3.3 写的是用户资料 `pc_onboarding`，这里改成按店铺记：一家店一个投手，管理员替投手做也算，总后台巡检也只需要店铺级的结果。
+  - 其余按真实数据判断：店名和 WhatsApp 非空、第一个 Facebook 像素有 ID 和令牌、测试通过且测的是当前像素（换像素要重新验证）。
+- 给总后台巡检用：`\PeptideCore\Admin\Onboarding::store_status()` 返回 `array{steps:array<string,bool>,remaining:int,complete:bool,current:string}`。
+- 生成投放链接（F5 已实现）：`POST /peptide/v1/admin/ad-link`，参数 `landing`（必须是本店地址）、`campaign`（可空）、`source`（`facebook` / `instagram`），返回 `{ url }`。链接固定带 `utm_source`、`utm_medium=paid`、`utm_campaign`、`utm_term`、`utm_content`；广告系列名不填时用 Facebook 动态参数 `{{campaign.name}}`、`{{adset.name}}`、`{{ad.name}}`。
+
+需要配合：
+
+| 归属 | 内容 | 没做之前 |
+| --- | --- | --- |
+| F4（M7，`core/class-pixels.php` / `core/pixels/class-server.php`） | `POST /peptide/v1/admin/pixel-test`：权限 `manage_woocommerce`，不需要参数；向第一个 Facebook 像素发一条测试事件并判断结果。不论通没通都返回 HTTP 200：`{ "ok": true|false, "pixel": "<像素 ID>", "message": "<未通时给投手看的中文原因>" }`；没填像素或令牌时也返回 `ok:false` 加原因。F5 在 `rest_request_after_callbacks` 里读这个返回并写入 `pc_onboarding.pixel_test`，F4 不需要调用 F5 的任何代码 | 页面提示“验证功能还没上线”，向导停在第 4 步，红条不会消失 |
+| F4（可选） | `Pixels::set_facebook_pixel( string $pixel_id, string $token ): void`：设置主 Facebook 像素（令牌为空 = 沿用原令牌），其余设置不动 | F5 用 `Onboarding::merge_pixel()` 直接改 `peptide_core_pixels` 里 `platforms.facebook.pixels` 的第一项，其他内容原样写回 |
+| F4（M6 归因） | 落地页参数里的 `utm_campaign`、`utm_term`、`utm_content` 需要进归因，数据页才能按广告系列 / 广告组 / 广告拆分（现在访客表只存 `utm_source`、`utm_medium`） | 只能按来源拆分 |
+| F1（`/hq/status`） | 状态里带上 `Onboarding::store_status()`，供总后台巡检“向导是否完成” | 总后台看不到向导进度 |
+
+### M9-3 投手首页（`Admin\Buyer_Home`，ST-02）
+
+- 页面 `admin.php?page=pc-buyer-home`；数据接口 `GET /peptide/v1/admin/buyer-home?range=today|yesterday|7d`（投手或管理员），返回排好格式的 5 个数字、统计时间、未跟进弃单数；每个时间段缓存 60 秒。
+- 待办来源：向导没做完、支付域名没登记、未跟进弃单数。
+
+需要配合：
+
+| 归属 | 内容 | 没做之前 |
+| --- | --- | --- |
+| F4（M6） | `\PeptideCore\Data\Metrics::summary( string $range ): array`，`$range` 为 `today` / `yesterday` / `7d`（店铺时区，含今天），返回 `array{visitors:int,orders:int,sales_cents:int,abandoned:int}`：访客数、已付款订单数、销售额（美分，已减退款）、弃单数，都不含测试单。转化率由首页按 订单 ÷ 访客 计算 | 首页沿用现有口径：`Overview::range_data()` 和 `Recovery_Items::list()` 的统计（真实数据，不是假数据） |
+| 日常会话（M5）/ F1 | 店铺选项 `pc_pay_domain_missing`：总后台发现这家店的收银台域名不在名单里时写 `1`，登记好后删除（也可以用过滤器 `pc_pay_domain_missing` 返回布尔值） | 这一条待办不会出现 |
+| 日常会话（M8） | `Recovery_Items::uncontacted_count(): int`（未标记“已联系”的待召回 / 召回中顾客数），或者在 `Recovery_Items::list()` 的每一项里带 `contacted_ms` | 首页把全部待召回 / 召回中的顾客都算作未跟进 |
+
+### M9-4 订单只读和店铺信息（`Admin\Admin_Menus`、`Admin\Store_Settings`，ST-03、ST-07）
+
+- 投手的订单列表去掉勾选框、批量操作和行内按钮，增加三列：来源广告（订单上的 `_wc_order_attribution_utm_*`）、运单号（见 M11 的 `Buyer_Status::shipment()`）、退款状态（`_pc_refund_state` 优先，没有时按订单已退金额）。订单页面隐藏保存、改价、退款、作废、加备注。
+- 店铺信息页面 `admin.php?page=pc-store-info`：只改 `blogname`（对外英文店名，限 60 个英文字符）和 `peptide_core_settings.support` 里的 `whatsapp`、`email`，其余字段不动；域名只读；修改自己的密码。
+- 订单导出（PRD ST-03 提到）这一版没做。
