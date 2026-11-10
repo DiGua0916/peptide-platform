@@ -51,6 +51,7 @@ final class Tracker {
 		add_filter( 'vialcove_visitor_observer_config', array( self::class, 'observer_config' ), 20 );
 		Server_Events::register_hooks();
 		Carts::register_hooks();
+		Funnel_Guard::register_hooks();
 	}
 
 	/** 设置：开关、保存天数、是否遵守 GPC（默认遵守）。 */
@@ -259,10 +260,21 @@ final class Tracker {
 		return $id;
 	}
 
-	/** 访问的转化阶段只升不降：1 看过商品、2 加购成功、3 进入结账、4 下单、5 支付成功。 */
+	/**
+	 * 访问的转化阶段只升不降：1 看过商品、2 加购成功、3 进入结账、4 下单、5 支付成功。
+	 *
+	 * FE-05：升到 4、5 之前先问 Funnel_Guard —— 同一次访问里没有填地址的记录时只记事件、不推进（订单号仍然挂到访问上）。
+	 * M6 开关关着（默认）时 Funnel_Guard::allow() 直接放行，下面的两条 UPDATE 和以前一模一样。
+	 */
 	public static function raise_stage( int $visit_id, int $stage, int $order_id = 0 ): void {
 		global $wpdb;
 		$visits = Schema::table( 'visits' );
+		if ( $stage >= Funnel_Guard::GATED_STAGE && ! Funnel_Guard::allow( $visit_id, $stage, $order_id ) ) {
+			if ( $order_id ) {
+				$wpdb->query( $wpdb->prepare( "UPDATE {$visits} SET order_id = %d WHERE id = %d", $order_id, $visit_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			}
+			return;
+		}
 		if ( $order_id ) {
 			$wpdb->query( $wpdb->prepare( "UPDATE {$visits} SET stage = GREATEST(stage, %d), order_id = %d WHERE id = %d", $stage, $order_id, $visit_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		} else {
