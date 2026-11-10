@@ -208,6 +208,46 @@ final class Product_Offers {
 			}
 		} finally { self::$busy = false; }
 	}
+	/**
+	 * 价格引擎读取用（M4，只读）：这份购物车里和赠品 / 捆绑有关的事实——每行的活动标记是否有效、原价、
+	 * 商品是否可购买；每个活动是否进行中、版本、赠品的库存；每个捆绑组的库存。不改购物车，也不决定价格。
+	 */
+	public static function pricing_facts( \WC_Cart $cart ): array {
+		$line_facts = static function ( \WC_Product $p ): array {
+			$parent = $p->get_parent_id();
+			return array( 'product_id' => $p->get_id(), 'parent_id' => $parent, 'cats' => wc_get_product_cat_ids( $parent ? $parent : $p->get_id() ), 'on_sale' => $p->is_on_sale() );
+		};
+		$out = array( 'lines' => array(), 'offers' => array(), 'groups' => array() );
+		$groups = array();
+		foreach ( $cart->get_cart() as $key => $item ) {
+			$pid   = (int) ( $item['variation_id'] ?: $item['product_id'] );
+			$has   = isset( $item[ self::CART ] );
+			$valid = $has && self::valid_meta( $item );
+			$fresh = $has ? wc_get_product( $pid ) : null;
+			$out['lines'][ $key ] = array(
+				'has_meta' => $has,
+				'offer'    => $valid ? array( 'offer' => (int) $item[ self::CART ]['offer'], 'kind' => (string) $item[ self::CART ]['kind'], 'group' => (string) $item[ self::CART ]['group'], 'slot' => (string) $item[ self::CART ]['slot'], 'version' => (string) $item[ self::CART ]['version'] ) : null,
+				'native'   => $fresh ? $fresh->get_price() : null,
+				'sellable' => (bool) self::product( $pid ),
+			);
+			if ( $valid ) { $groups[ (string) $item[ self::CART ]['group'] ][] = array( 'product' => $pid, 'qty' => $item['quantity'] ); }
+		}
+		foreach ( self::all() as $id => $offer ) {
+			$offer['active']  = self::active( $offer );
+			$offer['version'] = self::version( array_diff_key( $offer, array( 'active' => 1 ) ) );
+			if ( 'gift' === $offer['kind'] && $offer['active'] ) {
+				$p = self::product( (int) $offer['gift_product'] );
+				$offer['gift_product_ok'] = (bool) $p;
+				$offer['gift_line']       = $p ? $line_facts( $p ) : null;
+				$offer['gift_stock_ok']   = self::stock_ok( array( array( 'product' => $offer['gift_product'], 'qty' => $offer['gift_qty'] ) ), $cart, 'gift-' . $offer['id'] );
+			}
+			$out['offers'][ (int) $id ] = $offer;
+		}
+		foreach ( $groups as $group => $selection ) {
+			$out['groups'][ $group ] = array( 'stock_ok' => 0 === strpos( $group, 'gift-' ) ? true : self::stock_ok( $selection, $cart, $group ) );
+		}
+		return $out;
+	}
 	public static function validate_cart( \WC_Cart $cart ): array {
 		$errors = array(); foreach ( $cart->get_cart() as $item ) { if ( isset( $item[ self::CART ] ) && ! self::valid_meta( $item ) ) { $errors[] = __( 'Invalid offer data. Remove and re-add the affected product.', 'peptide-core' ); } }
 		foreach ( self::groups( $cart ) as $items ) { $state = self::group_state( $items, $cart ); if ( is_wp_error( $state ) ) { $errors[] = $state->get_error_message(); } }
