@@ -546,6 +546,11 @@ final class Recovery {
 	// ---------- 付款 ----------
 
 	/** 这个邮箱在某时间之后有没有已付款订单（返回最早的一张）。 */
+	/** 这条弃单记录的顾客是不是已经付过款（记录前 6 小时起）——列表和发信都用这个判断。 */
+	public static function converted( string $email, int $created_ms ): ?\WC_Order {
+		return '' === trim( $email ) ? null : self::paid_order_since( $email, $created_ms - self::PAID_LOOKBACK_MS );
+	}
+
 	private static function paid_order_since( string $email, int $since_ms ): ?\WC_Order {
 		$orders = wc_get_orders(
 			array(

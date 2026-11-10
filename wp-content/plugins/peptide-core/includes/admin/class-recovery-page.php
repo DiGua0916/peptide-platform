@@ -200,7 +200,7 @@ final class Recovery_Page {
 		echo '<td class="pc-rc-money">' . self::money( $r['total'], $r['currency'] ) . $goods . $range . '</td><td>' . esc_html( $r['pay_method'] ?: '-' ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo '<td>' . esc_html( self::time( (int) $r['paid_ms'] ) ) . '</td><td>' . esc_html( '' !== $r['tid'] ? $r['tid'] : '-' ) . '</td>';
 		echo '<td>' . self::badge( Recovery_Items::order_status_label( $r['order_status'] ), $r['paid_ms'] ? 'is-paid' : 'is-open' ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-		echo '<td>' . self::badge( $labels[ $r['status'] ] ?? $r['status'], 'is-' . $r['status'] ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '<td>' . self::badge( ! empty( $r['status_text'] ) ? $r['status_text'] : ( $labels[ $r['status'] ] ?? $r['status'] ), 'is-' . $r['status'] ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo '<td>' . esc_html( self::time( (int) $r['last_sent_ms'] ) ) . '</td><td>' . (int) $r['emails'] . '</td></tr>';
 	}
 
@@ -247,7 +247,7 @@ final class Recovery_Page {
 		echo self::badge( Recovery_Items::order_status_label( $r['order_status'] ), $paid ? 'is-paid' : 'is-open' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo self::badge( $paid ? '已支付' : '未支付', $paid ? 'is-paid' : 'is-warn' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo self::badge( in_array( $order->get_status(), array( 'completed' ), true ) ? '已发货' : '未发货', 'is-muted' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-		echo self::badge( $labels[ $r['status'] ], 'is-' . $r['status'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo self::badge( ! empty( $r['status_text'] ) ? $r['status_text'] : $labels[ $r['status'] ], 'is-' . $r['status'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo '</div><div class="pc-rc-meta"><span>创建时间：' . esc_html( self::time( (int) $r['created_ms'] ) ) . '</span><span>支付时间：' . esc_html( self::time( (int) $r['paid_ms'] ) ) . '</span></div></header>';
 
 		echo '<table class="pc-rc-lines"><thead><tr><th>商品名称</th><th class="pc-rc-right">单价 × 数量</th><th class="pc-rc-right">总价</th></tr></thead><tbody>';

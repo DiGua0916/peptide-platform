@@ -122,12 +122,14 @@ final class Recovery_Items {
 		}
 		$status  = 'pending';
 		$later   = null;
+		$status_text = '';
 		if ( '1' === (string) $order->get_meta( self::VOID_META ) || Test_Orders::is_test_order( $order ) ) {
 			$status = 'void';
 		} elseif ( $paid ) {
 			// 只有付款前发过召回信才算召回成功（店主 2026-11-10：付款后才收到的提醒不算）。
 			$before = array_filter( $sent, static fn( $m ) => (int) $m['created_ms'] <= $paid * 1000 );
 			$status = $before ? 'success' : 'void';
+			$status_text = $before ? '' : '直接付款（未经召回）';
 		} elseif ( $sent ) {
 			$later  = self::paid_after( $email, (int) floor( $last_ms / 1000 ) - 3600, $order->get_id() );
 			$status = $later ? 'success' : ( time() - (int) floor( $last_ms / 1000 ) > self::RECALL_DAYS * DAY_IN_SECONDS ? 'failed' : 'recalling' );
@@ -151,6 +153,7 @@ final class Recovery_Items {
 			'tid'          => (string) $order->get_transaction_id(),
 			'order_status' => $order->get_status(),
 			'status'       => $status,
+			'status_text'  => $status_text,
 			'emails'       => count( $sent ),
 			'last_sent_ms' => $last_ms,
 			'mails'        => $mails,
@@ -300,7 +303,11 @@ final class Recovery_Items {
 			if ( (int) $r['order_id'] || (int) $r['draft_id'] || '' === (string) $r['email'] ) {
 				continue; // 已经变成订单的，按订单那条算。
 			}
-			if ( 'void' === $r['status'] && 'test checkout' === (string) $r['note'] ) {
+			if ( 'void' === $r['status'] && in_array( (string) $r['note'], array( 'test checkout', 'paid before reminder' ), true ) ) {
+				continue; // 测试结账；或者顾客已经付款（那张已付款订单本身会在列表里显示“直接付款”）。
+			}
+			// 店主 2026-11-11：顾客已经付过款（付完款购物车没清空留下的记录）就不再出现在弃单里。
+			if ( in_array( $r['status'], array( 'pending', 'recalling' ), true ) && Recovery::converted( (string) $r['email'], (int) $r['created_ms'] ) ) {
 				continue;
 			}
 			if ( self::still_here( 0, (string) $r['session_key'], (int) $r['changed_ms'] ) ) {
