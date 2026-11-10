@@ -66,11 +66,11 @@ final class Store_Settings {
 		$support = Settings::all()['support'] ?? array();
 		$support = is_array( $support ) ? $support : array();
 		$wa      = (string) ( $support['whatsapp'] ?? '' );
-		echo '<h2>店铺信息</h2><p class="pc-by-why">页眉页脚、联系按钮和邮件落款都用这些信息，顾客看得到，请填对外使用的内容。</p>';
+		echo '<h2>店铺信息</h2><p class="pc-by-why">联系按钮、页脚的联系方式和邮件落款都用这些信息，顾客看得到，请填对外使用的内容。</p>';
 		echo '<form class="pc-by-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 		echo '<input type="hidden" name="action" value="' . esc_attr( Staff_Buyer::ACTION_STORE ) . '"><input type="hidden" name="from" value="' . esc_attr( $from ) . '">';
 		wp_nonce_field( Staff_Buyer::ACTION_STORE );
-		echo '<p><label for="pc-by-store-name">对外英文店名</label><input type="text" id="pc-by-store-name" name="store_name" maxlength="' . (int) self::NAME_MAX . '" value="' . esc_attr( (string) get_option( 'blogname', '' ) ) . '" placeholder="例如 VialCove Peptides" required><span class="pc-by-hint">用英文。显示在浏览器标题、邮件落款和订单确认里。</span></p>';
+		echo '<p><label for="pc-by-store-name">对外英文店名</label><input type="text" id="pc-by-store-name" name="store_name" maxlength="' . (int) self::NAME_MAX . '" value="' . esc_attr( (string) get_option( 'blogname', '' ) ) . '" placeholder="例如 VialCove Peptides" required><span class="pc-by-hint">用英文。订单邮件和付款成功提示里对顾客显示的店名。</span></p>';
 		echo '<p><label for="pc-by-store-wa">客服 WhatsApp</label><input type="tel" id="pc-by-store-wa" name="whatsapp" value="' . esc_attr( '' !== $wa ? '+' . $wa : '' ) . '" placeholder="例如 +1 555 123 4567" required><span class="pc-by-hint">带国家代码。顾客点“联系我们”会直接打开和这个号码的对话。</span></p>';
 		echo '<p><label for="pc-by-store-email">客服邮箱（可以不填）</label><input type="email" id="pc-by-store-email" name="email" value="' . esc_attr( (string) ( $support['email'] ?? '' ) ) . '" placeholder="例如 support@example.com"></p>';
 		echo '<p class="pc-by-actions"><button type="submit" class="button button-primary">' . esc_html( 'wizard' === $from ? '保存，下一步' : '保存' ) . '</button></p></form>';
