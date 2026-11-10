@@ -151,6 +151,8 @@
 			$('[data-mo-dsum]').innerHTML = sumHtml(totals());
 			try { dlg.showModal(); } catch (e) { dlg.setAttribute('open', ''); }
 			btn.disabled = false; loadRecent();
+			// 这一单的链接生成了，草稿就用完了，自动删掉。
+			if (draftId) { wp.apiFetch({ path: '/peptide/v1/manual-order/drafts/' + draftId, method: 'DELETE' }).then(function () { draftId = ''; loadDrafts(); }).catch(function () {}); }
 		}).catch(function (x) { err.textContent = (x && x.message) || '生成失败，请重试。'; err.hidden = false; btn.disabled = false; });
 	});
 	$('[data-mo-copy]').addEventListener('click', function () {
@@ -182,5 +184,57 @@
 		if (navigator.clipboard) navigator.clipboard.writeText(u).then(ok, function () { window.prompt('复制链接', u); }); else window.prompt('复制链接', u);
 	});
 
-	render(); renderDisc(); loadRecent();
+	// ---- 草稿（店主 2026-11-11） ----
+	var draftId = cfg.draft || '';
+	function state() {
+		return {
+			lines: lines, discounts: discounts, ship_mode: shipMode(),
+			ship_label: $('[data-mo-ship-label]').value, ship_amount: num($('[data-mo-ship-amount]').value),
+			note: $('[data-mo-note]').value, store_promos: swPromo.checked, first_order: swFirst.checked
+		};
+	}
+	function load(st) {
+		if (!st) return;
+		lines = (st.lines || []).map(function (l) { return { id: +l.id, name: l.name, qty: +l.qty || 1, regular: num(l.regular), price: num(l.price) }; });
+		discounts = (st.discounts || []).map(function (d) { return { label: d.label, amount: num(d.amount) }; });
+		var custom = 'custom' === st.ship_mode;
+		root.querySelector('[data-mo-ship][value="' + (custom ? 'custom' : 'store') + '"]').checked = true;
+		$('[data-mo-ship-custom]').hidden = !custom;
+		$('[data-mo-ship-label]').value = st.ship_label || 'Shipping';
+		$('[data-mo-ship-amount]').value = st.ship_amount || 0;
+		$('[data-mo-note]').value = st.note || '';
+		swPromo.checked = !!st.store_promos; swFirst.checked = !!st.first_order;
+		render(); renderDisc();
+	}
+	$('[data-mo-save-draft]').addEventListener('click', function () {
+		var b = this, st = $('[data-mo-draft-state]'); b.disabled = true; st.textContent = '保存中…';
+		wp.apiFetch({ path: '/peptide/v1/manual-order/drafts', method: 'POST', data: { id: draftId, state: state() } }).then(function (r) {
+			draftId = r.id; st.textContent = '草稿已保存（' + r.saved + '），在右边“草稿”里可以随时打开继续做。'; b.disabled = false; loadDrafts();
+		}).catch(function (x) { st.textContent = (x && x.message) || '保存失败'; b.disabled = false; });
+	});
+	function loadDrafts() {
+		wp.apiFetch({ path: '/peptide/v1/manual-order/drafts' }).then(function (r) {
+			var items = r.items || [];
+			$('[data-mo-drafts]').innerHTML = items.length ? '<ul class="pc-mo-recent">' + items.map(function (d) {
+				return '<li' + (d.id === draftId ? ' class="is-current"' : '') + '><div><b>' + esc(d.title) + '</b> <span class="pc-mo-hint">' + esc(d.saved) + '</span></div>' + (d.items ? '<div class="pc-mo-recent__items">' + esc(d.items) + ' · ' + esc(d.sub) + '</div>' : '') +
+					'<div class="pc-mo-recent__act"><button type="button" class="button-link" data-open-draft="' + esc(d.id) + '">' + (d.id === draftId ? '正在编辑' : '打开继续做') + '</button> · <button type="button" class="button-link pc-mo-del" data-del-draft="' + esc(d.id) + '">删除</button></div></li>';
+			}).join('') + '</ul>' : '<p class="pc-mo-hint">还没有草稿。做到一半点“保存草稿”就会出现在这里。</p>';
+		}).catch(function () {});
+	}
+	$('[data-mo-drafts]').addEventListener('click', function (e) {
+		var o = e.target.closest('[data-open-draft]'), d = e.target.closest('[data-del-draft]');
+		if (o) {
+			var id = o.getAttribute('data-open-draft');
+			wp.apiFetch({ path: '/peptide/v1/manual-order/drafts/' + id }).then(function (r) { draftId = r.id; load(r.state); $('[data-mo-draft-state]').textContent = '已打开草稿，改完可以再次保存。'; loadDrafts(); window.scrollTo(0, 0); });
+		} else if (d) {
+			var did = d.getAttribute('data-del-draft');
+			wp.apiFetch({ path: '/peptide/v1/manual-order/drafts/' + did, method: 'DELETE' }).then(function () { if (did === draftId) draftId = ''; loadDrafts(); });
+		}
+	});
+
+	render(); renderDisc(); loadRecent(); loadDrafts();
+	if (cfg.prefill) {
+		load(cfg.prefill);
+		$('[data-mo-draft-state]').textContent = cfg.draft ? '已打开草稿，改完可以再次保存。' : '已按弃单把原来的商品和价格带进来，可以直接改。';
+	}
 })();

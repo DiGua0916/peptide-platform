@@ -51,3 +51,6 @@
 .pc-mo-switch input:checked+i{background:#16a34a}.pc-mo-switch input:checked+i::after{transform:translateX(16px)}
 .pc-mo-switch input:disabled+i{opacity:.4}.pc-mo-switch input:focus-visible+i{outline:2px solid #2271b1;outline-offset:2px}
 .pc-mo-switch span{display:grid;gap:2px}.pc-mo-switch small{color:#6b7280;font-size:12px;line-height:1.5}
+
+.pc-mo-savedraft{width:100%;margin-top:8px!important;justify-content:center;text-align:center}
+.pc-mo-recent li.is-current{background:#f0f7ff;margin:0 -8px;padding:10px 8px;border-radius:8px}

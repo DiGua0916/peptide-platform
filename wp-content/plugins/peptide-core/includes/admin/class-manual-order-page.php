@@ -32,7 +32,27 @@ final class Manual_Order_Page {
 		}
 		$f = PEPTIDE_CORE_DIR . '/assets/manual-order.js';
 		wp_enqueue_script( 'pc-manual-order', plugins_url( 'assets/manual-order.js', PEPTIDE_CORE_FILE ), array( 'wp-api-fetch' ), (string) @filemtime( $f ), true ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
-		wp_add_inline_script( 'pc-manual-order', 'window.pcManual=' . wp_json_encode( array( 'currency' => html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' ), 'decimals' => wc_get_price_decimals() ) ) . ';', 'before' );
+		// 打开时带上的内容：弃单恢复（from_order / from_rec）或草稿（draft）。
+		$prefill = null;
+		$draft   = '';
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended
+		if ( ! empty( $_GET['from_order'] ) ) {
+			$o = wc_get_order( absint( $_GET['from_order'] ) );
+			$prefill = $o instanceof \WC_Order ? \PeptideCore\Manual_Orders::state_from_order( $o ) : null;
+		} elseif ( ! empty( $_GET['from_rec'] ) && class_exists( \PeptideCore\Recovery::class ) ) {
+			global $wpdb;
+			$r = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . \PeptideCore\Recovery::table() . ' WHERE id = %d', absint( $_GET['from_rec'] ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+			$prefill = $r ? \PeptideCore\Manual_Orders::state_from_record( $r ) : null;
+		} elseif ( ! empty( $_GET['draft'] ) ) {
+			$id = sanitize_key( (string) $_GET['draft'] );
+			$d  = \PeptideCore\Manual_Orders::drafts()[ $id ] ?? null;
+			if ( $d ) {
+				$prefill = $d['state'];
+				$draft   = $id;
+			}
+		}
+		// phpcs:enable
+		wp_add_inline_script( 'pc-manual-order', 'window.pcManual=' . wp_json_encode( array( 'currency' => html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' ), 'decimals' => wc_get_price_decimals(), 'prefill' => $prefill, 'draft' => $draft ) ) . ';', 'before' );
 		$c = PEPTIDE_CORE_DIR . '/assets/manual-order.css';
 		wp_enqueue_style( 'pc-manual-order', plugins_url( 'assets/manual-order.css', PEPTIDE_CORE_FILE ), array(), (string) @filemtime( $c ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 	}
@@ -89,7 +109,13 @@ final class Manual_Order_Page {
 				<h2>订单金额</h2>
 				<dl data-mo-sum></dl>
 				<button type="button" class="button button-primary button-hero" data-mo-create disabled>生成付款链接</button>
+				<button type="button" class="button pc-mo-savedraft" data-mo-save-draft>保存草稿</button>
+				<p class="pc-mo-hint" data-mo-draft-state></p>
 				<p class="pc-mo-err" data-mo-err hidden></p>
+			</section>
+			<section class="pc-mo-card">
+				<h2>草稿</h2>
+				<div data-mo-drafts><p class="pc-mo-hint">…</p></div>
 			</section>
 			<section class="pc-mo-card">
 				<h2>最近生成的链接</h2>

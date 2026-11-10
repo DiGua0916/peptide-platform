@@ -260,11 +260,161 @@ final class Manual_Orders {
 		}
 	}
 
+	// ---------- 草稿（店主 2026-11-11：做到一半要出去看别的信息，先存起来） ----------
+
+	public const DRAFTS = 'pc_manual_drafts';
+
+	public static function drafts(): array {
+		$v = get_option( self::DRAFTS, array() );
+		return is_array( $v ) ? $v : array();
+	}
+
+	/** 草稿原样存页面上的状态（商品行带名称、原价、售价），打开时直接还原。 */
+	public static function save_draft( array $in ) {
+		$state = is_array( $in['state'] ?? null ) ? $in['state'] : array();
+		$lines = array();
+		foreach ( array_slice( (array) ( $state['lines'] ?? array() ), 0, 40 ) as $l ) {
+			$id = absint( $l['id'] ?? 0 );
+			if ( $id ) {
+				$lines[] = array( 'id' => $id, 'name' => mb_substr( sanitize_text_field( (string) ( $l['name'] ?? '' ) ), 0, 200 ), 'qty' => max( 1, min( 999, absint( $l['qty'] ?? 1 ) ) ), 'regular' => self::money( (float) ( $l['regular'] ?? 0 ) ), 'price' => self::money( (float) ( $l['price'] ?? 0 ) ) );
+			}
+		}
+		$disc = array();
+		foreach ( array_slice( (array) ( $state['discounts'] ?? array() ), 0, 10 ) as $d ) {
+			$disc[] = array( 'label' => mb_substr( sanitize_text_field( (string) ( $d['label'] ?? '' ) ), 0, 80 ), 'amount' => self::money( (float) ( $d['amount'] ?? 0 ) ) );
+		}
+		$clean = array(
+			'lines'        => $lines,
+			'discounts'    => $disc,
+			'ship_mode'    => 'custom' === ( $state['ship_mode'] ?? '' ) ? 'custom' : 'store',
+			'ship_label'   => mb_substr( sanitize_text_field( (string) ( $state['ship_label'] ?? 'Shipping' ) ), 0, 80 ),
+			'ship_amount'  => self::money( (float) ( $state['ship_amount'] ?? 0 ) ),
+			'note'         => mb_substr( sanitize_text_field( (string) ( $state['note'] ?? '' ) ), 0, 200 ),
+			'store_promos' => ! empty( $state['store_promos'] ),
+			'first_order'  => ! empty( $state['first_order'] ),
+		);
+		if ( ! $lines && '' === $clean['note'] ) {
+			return new \WP_Error( 'pc_manual_draft_empty', '还没有内容，不用保存。', array( 'status' => 400 ) );
+		}
+		$all = self::drafts();
+		$id  = sanitize_key( (string) ( $in['id'] ?? '' ) );
+		$id  = '' !== $id && isset( $all[ $id ] ) ? $id : 'd' . strtolower( wp_generate_password( 10, false, false ) );
+		$all[ $id ] = array( 'id' => $id, 'state' => $clean, 'saved' => time(), 'by' => get_current_user_id() );
+		if ( count( $all ) > 50 ) {
+			uasort( $all, static fn( $a, $b ) => $a['saved'] <=> $b['saved'] );
+			$all = array_slice( $all, -50, null, true );
+		}
+		update_option( self::DRAFTS, $all, false );
+		return $all[ $id ];
+	}
+
+	public static function draft_summary( array $d ): array {
+		$st  = $d['state'];
+		$sub = 0.0;
+		foreach ( $st['lines'] as $l ) {
+			$sub += $l['price'] * $l['qty'];
+		}
+		return array(
+			'id'    => $d['id'],
+			'saved' => wp_date( 'm-d H:i', (int) $d['saved'] ),
+			'title' => '' !== $st['note'] ? $st['note'] : ( $st['lines'] ? $st['lines'][0]['name'] . ( count( $st['lines'] ) > 1 ? ' 等 ' . count( $st['lines'] ) . ' 件商品' : '' ) : '空草稿' ),
+			'items' => implode( ', ', array_map( static fn( $l ) => $l['name'] . ' x' . $l['qty'], $st['lines'] ) ),
+			'sub'   => html_entity_decode( wp_strip_all_tags( wc_price( $sub ) ), ENT_QUOTES, 'UTF-8' ),
+		);
+	}
+
+	// ---------- 按弃单恢复（店主 2026-11-11：弃单里一点，就把原订单的商品和价格带进手动订单） ----------
+
+	private static function line_from( \WC_Product $p, int $qty, float $line_subtotal ): array {
+		$price = $qty ? self::money( $line_subtotal / $qty ) : (float) $p->get_price();
+		$reg   = (float) ( $p->get_regular_price() ?: $p->get_price() );
+		return array( 'id' => $p->get_id(), 'name' => html_entity_decode( wp_strip_all_tags( $p->get_name() ), ENT_QUOTES, 'UTF-8' ), 'qty' => max( 1, $qty ), 'regular' => max( $reg, $price ), 'price' => $price );
+	}
+
+	/** 原订单 → 手动订单页面状态：商品、数量、当时的价格；用过首单券就开首单优惠，有满减就开店铺活动，其他优惠码算一笔优惠。 */
+	public static function state_from_order( \WC_Order $o ): array {
+		$lines = array();
+		foreach ( $o->get_items() as $it ) {
+			$p = $it->get_product();
+			if ( $p instanceof \WC_Product ) {
+				$lines[] = self::line_from( $p, (int) $it->get_quantity(), (float) $it->get_subtotal() );
+			}
+		}
+		$fc    = self::first_order_coupon();
+		$first = false;
+		$disc  = array();
+		foreach ( $o->get_items( 'coupon' ) as $ci ) {
+			$code = wc_format_coupon_code( $ci->get_code() );
+			if ( $fc && wc_format_coupon_code( $fc->get_code() ) === $code ) {
+				$first = true;
+			} elseif ( (float) $ci->get_discount() > 0 ) {
+				$disc[] = array( 'label' => 'Coupon ' . strtoupper( $code ), 'amount' => self::money( (float) $ci->get_discount() ) );
+			}
+		}
+		$promos = false;
+		foreach ( $o->get_fees() as $fee ) {
+			if ( (float) $fee->get_total() < 0 ) {
+				$promos = true;
+			}
+		}
+		$name = trim( $o->get_billing_first_name() . ' ' . $o->get_billing_last_name() );
+		return array( 'lines' => $lines, 'discounts' => $disc, 'ship_mode' => 'store', 'ship_label' => 'Shipping', 'ship_amount' => 0, 'note' => '按弃单 #' . $o->get_order_number() . ( '' !== $name ? ' 恢复 · ' . $name : ' 恢复' ), 'store_promos' => $promos, 'first_order' => $first );
+	}
+
+	/** 没下单的结账（弃单记录里的购物车）→ 手动订单页面状态。 */
+	public static function state_from_record( array $r ): array {
+		$lines = array();
+		foreach ( (array) json_decode( (string) $r['cart'], true ) as $it ) {
+			$p = wc_get_product( absint( $it['variation_id'] ?? 0 ) ?: absint( $it['product_id'] ?? 0 ) );
+			if ( $p instanceof \WC_Product ) {
+				$lines[] = self::line_from( $p, (int) ( $it['quantity'] ?? 1 ), (float) ( $it['line_subtotal'] ?? 0 ) );
+			}
+		}
+		// 当时结账用的优惠码、满减：从顾客的购物会话里读（会话过期了就读不到，只带商品）。
+		$first  = false;
+		$promos = false;
+		$disc   = array();
+		global $wpdb;
+		$raw = (string) $wpdb->get_var( $wpdb->prepare( "SELECT session_value FROM {$wpdb->prefix}woocommerce_sessions WHERE session_key = %s", (string) $r['session_key'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		if ( '' !== $raw ) {
+			$sess = maybe_unserialize( $raw );
+			$fc   = self::first_order_coupon();
+			foreach ( (array) maybe_unserialize( $sess['applied_coupons'] ?? '' ) as $code ) {
+				$code = wc_format_coupon_code( (string) $code );
+				if ( $fc && wc_format_coupon_code( $fc->get_code() ) === $code ) {
+					$first = true;
+				}
+			}
+			$totals = (array) maybe_unserialize( $sess['cart_totals'] ?? '' );
+			$promos = (float) ( $totals['fee_total'] ?? 0 ) < 0;
+		}
+		return array( 'lines' => $lines, 'discounts' => $disc, 'ship_mode' => 'store', 'ship_label' => 'Shipping', 'ship_amount' => 0, 'note' => '按弃单恢复 · ' . trim( (string) $r['name'] ?: (string) $r['email'] ), 'store_promos' => $promos, 'first_order' => $first );
+	}
+
 	// ---------- 后台接口 ----------
 
 	public static function routes(): void {
 		$perm = static fn() => current_user_can( 'manage_woocommerce' );
 		register_rest_route( 'peptide/v1', '/manual-order/search', array( 'methods' => 'GET', 'permission_callback' => $perm, 'callback' => array( self::class, 'rest_search' ) ) );
+		register_rest_route( 'peptide/v1', '/manual-order/drafts', array(
+			array( 'methods' => 'GET', 'permission_callback' => $perm, 'callback' => static fn() => rest_ensure_response( array( 'items' => array_values( array_map( array( self::class, 'draft_summary' ), array_reverse( self::drafts(), true ) ) ) ) ) ),
+			array( 'methods' => 'POST', 'permission_callback' => $perm, 'callback' => static function ( \WP_REST_Request $r ) {
+				$d = self::save_draft( (array) $r->get_json_params() );
+				return is_wp_error( $d ) ? $d : rest_ensure_response( array( 'id' => $d['id'], 'saved' => wp_date( 'H:i', (int) $d['saved'] ) ) );
+			} ),
+		) );
+		register_rest_route( 'peptide/v1', '/manual-order/drafts/(?P<id>[a-z0-9]+)', array(
+			array( 'methods' => 'GET', 'permission_callback' => $perm, 'callback' => static function ( \WP_REST_Request $r ) {
+				$d = self::drafts()[ (string) $r['id'] ] ?? null;
+				return $d ? rest_ensure_response( array( 'id' => $d['id'], 'state' => $d['state'] ) ) : new \WP_Error( 'pc_manual_draft', '草稿不存在。', array( 'status' => 404 ) );
+			} ),
+			array( 'methods' => 'DELETE', 'permission_callback' => $perm, 'callback' => static function ( \WP_REST_Request $r ) {
+				$all = self::drafts();
+				unset( $all[ (string) $r['id'] ] );
+				update_option( self::DRAFTS, $all, false );
+				return rest_ensure_response( array( 'deleted' => true ) );
+			} ),
+		) );
 		register_rest_route( 'peptide/v1', '/manual-order/shipping', array( 'methods' => 'POST', 'permission_callback' => $perm, 'callback' => array( self::class, 'rest_shipping' ) ) );
 		register_rest_route( 'peptide/v1', '/manual-order', array(
 			array( 'methods' => 'POST', 'permission_callback' => $perm, 'callback' => array( self::class, 'rest_create' ) ),

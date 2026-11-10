@@ -188,7 +188,10 @@ final class Recovery_Page {
 		$view = $o ? self::url( array( 'view' => $r['id'] ) ) : self::url( array( 'rec' => (int) $r['rec']['id'] ) );
 		echo '<tr>';
 		echo '<td class="pc-pl-col-act"><a class="pc-rc-icon" href="' . esc_url( $view ) . '" title="查看详情" aria-label="查看详情"><span class="dashicons dashicons-visibility"></span></a>';
-		echo '<a class="pc-rc-icon" href="' . esc_url( Mail_Page::compose_url( array_filter( array( 'order_id' => $o ? $r['id'] : 0, 'to' => $r['email'] ) ) ) ) . '" title="写邮件" aria-label="写邮件"><span class="dashicons dashicons-email"></span></a></td>';
+		echo '<a class="pc-rc-icon" href="' . esc_url( Mail_Page::compose_url( array_filter( array( 'order_id' => $o ? $r['id'] : 0, 'to' => $r['email'] ) ) ) ) . '" title="写邮件" aria-label="写邮件"><span class="dashicons dashicons-email"></span></a>';
+		// 店主 2026-11-11：按这张弃单创建手动订单——原来的商品、数量、价格直接带进手动订单，改好生成付款链接发给顾客。
+		$redo = admin_url( 'admin.php?page=pc-manual-order&' . ( $o ? 'from_order=' . (int) $r['id'] : 'from_rec=' . (int) $r['rec']['id'] ) );
+		echo '<a class="pc-rc-icon" href="' . esc_url( $redo ) . '" title="按这个单创建手动订单" aria-label="按这个单创建手动订单"><span class="dashicons dashicons-cart"></span></a></td>';
 		$more = ( $r['attempts'] ?? 1 ) > 1 ? ' <span class="pc-rc-attempts" title="同一顾客反复下单，只算一条弃单，点进去看全部">共 ' . (int) $r['attempts'] . ' 单</span>' : '';
 		echo '<td><a class="pc-rc-num" href="' . esc_url( $view ) . '">' . esc_html( Recovery_Items::display_name( $r['name'] ) ?: '-' ) . '</a>' . $more . '<br><small class="pc-pl-muted">' . esc_html( $o ? '#' . $r['number'] : '未下单' ) . ' · ' . esc_html( self::time( (int) $r['created_ms'] ) ) . '</small></td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo '<td class="pc-rc-phone">' . ( $r['phone'] ? '<a href="tel:' . esc_attr( preg_replace( '/[^0-9+]/', '', $r['phone'] ) ) . '">' . esc_html( $r['phone'] ) . '</a>' : '-' ) . '</td>';
