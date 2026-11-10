@@ -1,5 +1,6 @@
 <?php
 defined( 'ABSPATH' ) || exit;
+require_once __DIR__ . '/inc/storefront-identity.php';
 require_once __DIR__ . '/inc/navigation.php';
 require_once __DIR__ . '/inc/navigation-menu.php';
 require_once __DIR__ . '/inc/storefront-content.php';
@@ -10,6 +11,7 @@ require_once __DIR__ . '/inc/cart-drawer.php';
 require_once __DIR__ . '/inc/layout-modules.php';
 require_once __DIR__ . '/inc/home-quick-view.php';
 require_once __DIR__ . '/inc/storefront-entry.php';
+require_once __DIR__ . '/inc/entry-address.php';
 require_once __DIR__ . '/inc/demo-home-catalog.php';
 require_once __DIR__ . '/inc/demo-home-modules.php';
 require_once __DIR__ . '/inc/demo-site-parts.php';
@@ -37,8 +39,6 @@ add_action( 'after_setup_theme', function () {
     remove_action( 'woocommerce_sidebar', 'woocommerce_get_sidebar', 10 );
 } );
 
-/** 前台对外的英文品牌名。店铺名称（后台/总后台里的中文名）只用于后台和邮件，不上前台。 */
-function vc_brand_name(): string { return (string) apply_filters( 'vc_brand_name', 'VialCovePeptides' ); }
 add_filter( 'document_title_parts', function ( $parts ) { $name = vc_brand_name(); $parts['site'] = $name; if ( is_front_page() ) { $parts['title'] = $name . ' — A clearer view of peptides'; unset( $parts['tagline'], $parts['site'] ); } return $parts; } );
 
 // Frontend identity only; do not alter the site's saved admin/email settings.
@@ -125,13 +125,6 @@ function vc_site_config(): array {
     return function_exists( 'peptide_core_get_site_config' ) ? peptide_core_get_site_config() : array();
 }
 
-/** The plugin owns this optional statement. Do not invent product-use wording. */
-function vc_use_statement(): void {
-    $config = vc_site_config();
-    $html = wp_kses_post( (string) ( $config['use_statement_html'] ?? '' ) );
-    if ( '' === trim( $html ) ) { return; }
-    echo '<section class="vc-use-statement" aria-label="Product use statement"><span class="eyebrow">Product use statement</span><div>' . $html . '</div></section>';
-}
 
 /** Only supplement missing batch assignments on the signed-in owner's order page. */
 add_action( 'woocommerce_order_item_meta_end', function ( $item_id, $item, $order, $plain_text = false ) {

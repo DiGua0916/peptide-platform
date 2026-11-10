@@ -72,6 +72,15 @@
           query[key] = values[0];
         }
       }
+      // Campaign / ad set / ad names from ad links (M9 "generate ad link"). Optional extras:
+      // a missing, repeated, empty or unusable value is simply left out and never discards
+      // the source above. Names longer than the 120 characters the server keeps are cut, and
+      // an ad-platform macro that was not replaced ({{campaign.name}}) is not a name.
+      for (const key of ['utm_campaign', 'utm_term', 'utm_content']) {
+        const values = params.getAll(key);
+        if (values.length !== 1 || values[0] === '' || /[\x00-\x1f\x7f]/.test(values[0]) || values[0].includes('{{')) continue;
+        query[key] = [...values[0]].slice(0, 120).join('');
+      }
       let referrer = null;
       try { const value = document.referrer; referrer = value === '' ? '' : typeof value === 'string' ? host(new URL(value).hostname) : null; } catch { /* Unavailable referrer remains null. */ }
       return {version: 1, host: domain, landing_query: query, referrer_host: referrer};

@@ -760,6 +760,42 @@
       "node_test": false,
       "status": "module-gate",
       "module": "M11"
+    },
+    {
+      "name": "m14-entry-address-pure",
+      "language": "php",
+      "path": "wp-content/themes/peptide-site/tests/m14-entry-address-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M14"
+    },
+    {
+      "name": "m14-storefront-identity-pure",
+      "language": "php",
+      "path": "wp-content/themes/peptide-site/tests/m14-storefront-identity-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M14"
+    },
+    {
+      "name": "m14-entry-address",
+      "language": "node",
+      "path": "wp-content/themes/peptide-site/tests/m14-entry-address.cjs",
+      "core": true,
+      "node_test": true,
+      "status": "module-gate",
+      "module": "M14"
+    },
+    {
+      "name": "m14-visitor-attribution-ads",
+      "language": "node",
+      "path": "wp-content/themes/peptide-site/tests/m14-visitor-attribution-ads.cjs",
+      "core": true,
+      "node_test": true,
+      "status": "module-gate",
+      "module": "M14"
     }
   ]
 }

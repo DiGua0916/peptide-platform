@@ -57,6 +57,11 @@
         if (typeof value !== 'string' || [...value].length > 120 || /[\x00-\x1f\x7f]/.test(value)) return null;
         landing[name] = value;
       }
+      // Optional ad names: kept when well formed, otherwise left out without rejecting the snapshot.
+      for (const name of ['utm_campaign', 'utm_term', 'utm_content']) if (Object.hasOwn(query, name)) {
+        const value = query[name];
+        if (typeof value === 'string' && value !== '' && [...value].length <= 120 && !/[\x00-\x1f\x7f]/.test(value)) landing[name] = value;
+      }
       return Object.freeze({version: 1, host: domain, landing_query: Object.freeze(landing), referrer_host: ref === null || ref === '' ? ref : host(ref)});
     }
     const kinds = ['home', 'shop', 'product', 'cart', 'checkout', 'account', 'order_received', 'order_pay', 'content', 'collection', 'search', 'unknown'];

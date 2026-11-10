@@ -315,9 +315,12 @@ function vc_product_dialog_content( $product ): string {
         $layout = vc_product_dialog_layout( $product, vc_product_dialog_tabs( $product ) );
         $prefix = wp_unique_id( 'vc-dialog-' . $product->get_id() . '-' ) . '-';
         $html = vc_product_dialog_safe_html( $layout['html'], $prefix );
-        if ( '' === trim( $html ) ) { return ''; }
+        // NF-06: the store's product use statement always closes the dialog content, whatever
+        // blocks the product layout contains. Empty when the store has not set one.
+        $statement = function_exists( 'vc_use_statement_markup' ) ? vc_use_statement_markup() : '';
+        if ( '' === trim( $html ) && '' === $statement ) { return ''; }
         return '<div class="vc-product-dialog-content" data-vc-dialog-document="' . esc_attr( $layout['document'] )
-            . '" data-vc-dialog-omitted="' . esc_attr( wp_json_encode( $layout['omitted'] ) ) . '">' . $html . '</div>';
+            . '" data-vc-dialog-omitted="' . esc_attr( wp_json_encode( $layout['omitted'] ) ) . '">' . $html . $statement . '</div>';
     } finally {
         if ( null !== $renderer_document ) { \PeptideCore\Modules\Renderer::$document_id = $renderer_document; }
         foreach ( $saved as $key => [ $existed, $value ] ) {
