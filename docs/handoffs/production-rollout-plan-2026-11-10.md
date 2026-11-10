@@ -275,3 +275,8 @@
 - 阳订单列表核对。
 - 订单列表追加（2026-11-11）：订单编号列改为自己的 `pc_number`，只显示 “#11892”（不带顾客名、没有预览小眼睛）；左右滚动条自己画（Mac 会藏原生滚动条）：表格上方一条 + 屏幕底部一条（往下翻也能拖），灰色轨道 + 可拖动滑块，和表格同步，写“左右拖动查看更多列”。阳核对拖动正常。
 - yy 订单号规律：237209-933198 = 店铺编号（固定 237209）- 全平台递增流水号（按时间递增、间隔几百，说明是所有 Shopname 店铺共用的计数器）。我们的订单号是 WooCommerce 订单 ID（每家店自己的计数，6 家店之间会重复）；支付平台那边看到的是总后台支付中心的单号 PH…，对账用列表里的“流水号”（支付平台交易号）。
+
+### 2026-11-11 pp 后台订单号 + 波多黎各没有州
+- pp 后台（backupaoy.top 订单表）列：id、商户、网址、支付状态、付款时间、货币、总金额、邮箱、手机号、快递单号、物流方式、州、国家、通道名称。id（如 Sherrie 132460）是 pp 自己的行号：创建付款的返回里只有 status 和 data{type, payment_url}，没有这个 id；payment_url 里的 id 参数就是交易号 2026111105231017943457906559993（= 我们订单列表的“流水号”），但 pp 表格不显示这个号，按它搜索也搜不到（只能按 pp 自己的 id 搜）。所以目前拿不到 pp 的订单号，对账用 邮箱 + 付款时间 + 金额。
+- 州为空：芒果 John（#11886，PR）城市 Ponce、州空。WooCommerce 对国家 Puerto Rico 隐藏“州”、把城市叫 Municipality，所以 pp 收到的州是空的。Shopname（vialcovebio.com 结账页：Country 下拉 + State 下拉，美国 60 项）把波多黎各的市镇放在州里（pp 里显示 Villalba）。
+- 修复 `US_Territories::fill_state()`（woocommerce_checkout_create_order + woocommerce_store_api_checkout_update_order_from_request）：国家是 PR / GU / VI / AS / MP 且州为空时，把城市（市镇）写进账单和收货的州，支付插件按订单地址发给 pp。测试：PR + Ponce → 州 Ponce；US 订单不变。已发出的订单不改。

@@ -24,6 +24,26 @@ final class US_Territories {
 
 	public static function register_hooks(): void {
 		add_filter( 'woocommerce_states', array( self::class, 'states' ), 20 );
+		// 店主 2026-11-11：国家选 Puerto Rico 时 WooCommerce 不要“州”，只把城市叫“Municipality”，
+		// 发到支付平台（pp）的州就是空的。像 Shopname 一样，把市镇（Ponce、Villalba…）写进州。
+		add_action( 'woocommerce_checkout_create_order', array( self::class, 'fill_state' ), 5 );
+		add_action( 'woocommerce_store_api_checkout_update_order_from_request', array( self::class, 'fill_state' ), 5 );
+	}
+
+	/** 没有州列表的属地（PR、GU、VI、AS、MP）：州空着就用城市（市镇）。 */
+	public static function fill_state( $order ): void {
+		if ( ! $order instanceof \WC_Order ) {
+			return;
+		}
+		foreach ( array( 'billing', 'shipping' ) as $type ) {
+			$country = (string) $order->{"get_{$type}_country"}();
+			if ( in_array( $country, array( 'PR', 'GU', 'VI', 'AS', 'MP' ), true ) && '' === trim( (string) $order->{"get_{$type}_state"}() ) ) {
+				$city = trim( (string) $order->{"get_{$type}_city"}() );
+				if ( '' !== $city ) {
+					$order->{"set_{$type}_state"}( $city );
+				}
+			}
+		}
 	}
 
 	/** @param array<string,array<string,string>> $states */
