@@ -286,3 +286,5 @@ body.pc-admin-workspace .pc-trk .pc-lifecycle .pc-trk-split,.pc-lifecycle .pc-tr
 .pc-ai-chip{display:inline-block;padding:1px 8px;border-radius:999px;background:#f0f0f0;color:#555;font-size:12px;line-height:20px}
 .pc-ai-head .button{flex:none;min-height:32px}
 .pc-ai-head+.pc-ai-notes,.pc-ai-head+.pc-ai-out{margin-top:10px}
+
+.pc-ai-done ul{margin:6px 0;padding-left:18px}.pc-ai-done li{margin:4px 0;font-size:13px;color:#333}.pc-ai-done input[type=text]{flex:1;min-width:220px;max-width:520px;min-height:32px}

@@ -36,7 +36,7 @@ final class Ai_Page {
 		}
 		$dir = dirname( PEPTIDE_HQ_FILE ) . '/assets/';
 		wp_enqueue_style( 'pchq-plugins', plugins_url( 'assets/hq-plugins.css', PEPTIDE_HQ_FILE ), array( 'peptide-hq-workspace' ), PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $dir . 'hq-plugins.css' ) );
-		wp_add_inline_style( 'pchq-plugins', '.pcai-table{width:100%;border-collapse:collapse}.pcai-table th,.pcai-table td{text-align:left;padding:10px 12px;border-top:1px solid #eee;vertical-align:middle}.pcai-table th{font-weight:600;color:#555;background:#fafafa}.pcai-persona textarea{width:100%;min-height:260px;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.5}.pcai-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 20px}.pcai-grid label{display:grid;gap:4px}.pcai-grid input,.pcai-grid select{width:100%}.pcai-muted{color:#777;font-size:12px}.pcai-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.pcai-tag{display:inline-block;padding:1px 8px;border-radius:999px;background:#eef4ff;color:#2457c5;font-size:12px}.pcai-tag.is-biz{background:#fff4e5;color:#b45309}.pcai-dialog{width:min(880px,94vw);max-height:88vh;overflow:auto;border:0;border-radius:12px;padding:20px 24px 24px;box-shadow:0 20px 60px rgba(0,0,0,.25)}.pcai-dialog::backdrop{background:rgba(15,23,42,.45)}.pcai-dialog__head{display:flex;justify-content:space-between;align-items:center;margin:0 0 6px}.pcai-dialog__head h3{margin:0;font-size:18px}.pcai-dialog__close{border:0;background:none;font-size:26px;line-height:1;cursor:pointer;color:#666;padding:4px 8px;border-radius:6px}.pcai-dialog__close:hover{background:#f0f0f0;color:#111}.pcai-switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none}.pcai-switch input{position:absolute;opacity:0;width:1px;height:1px}.pcai-switch i{position:relative;width:38px;height:22px;border-radius:999px;background:#c3c4c7;transition:background .15s;flex:none}.pcai-switch i::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s}.pcai-switch input:checked+i{background:#2271b1}.pcai-switch input:checked+i::after{transform:translateX(16px)}.pcai-switch input:focus-visible+i{outline:2px solid #2271b1;outline-offset:2px}.pcai-switch b{font-weight:500}.pcai-grid{align-items:start}.pcai-grid .pcai-switch{display:inline-flex}.pcp-card__head>.pcai-headrow{display:flex!important;flex-direction:row!important;align-items:center;gap:12px;flex-wrap:nowrap}.pcai-sites select{width:auto;max-width:130px;min-width:0}.pcai-sp{min-width:150px}.pcai-sp>span{display:block;margin-bottom:4px}.pcai-sp .pcai-actions{gap:6px}.pcai-tuned{color:#15803d;font-weight:600}.pcai-btnrow{margin-top:16px}.pcai-btnrow form{margin:0}.pcai-pre{white-space:pre-wrap;word-break:break-word;background:#f7f7f8;border:1px solid #eee;border-radius:8px;padding:12px;font-size:12px;line-height:1.6;max-height:50vh;overflow:auto;margin:0}' );
+		wp_add_inline_style( 'pchq-plugins', '.pcai-table{width:100%;border-collapse:collapse}.pcai-table th,.pcai-table td{text-align:left;padding:10px 12px;border-top:1px solid #eee;vertical-align:middle}.pcai-table th{font-weight:600;color:#555;background:#fafafa}.pcai-persona textarea{width:100%;min-height:260px;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.5}.pcai-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 20px}.pcai-grid label{display:grid;gap:4px}.pcai-grid input,.pcai-grid select{width:100%}.pcai-muted{color:#777;font-size:12px}.pcai-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.pcai-tag{display:inline-block;padding:1px 8px;border-radius:999px;background:#eef4ff;color:#2457c5;font-size:12px}.pcai-tag.is-biz{background:#fff4e5;color:#b45309}.pcai-dialog{width:min(880px,94vw);max-height:88vh;overflow:auto;border:0;border-radius:12px;padding:20px 24px 24px;box-shadow:0 20px 60px rgba(0,0,0,.25)}.pcai-dialog::backdrop{background:rgba(15,23,42,.45)}.pcai-dialog__head{display:flex;justify-content:space-between;align-items:center;margin:0 0 6px}.pcai-dialog__head h3{margin:0;font-size:18px}.pcai-dialog__close{border:0;background:none;font-size:26px;line-height:1;cursor:pointer;color:#666;padding:4px 8px;border-radius:6px}.pcai-dialog__close:hover{background:#f0f0f0;color:#111}.pcai-switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none}.pcai-switch input{position:absolute;opacity:0;width:1px;height:1px}.pcai-switch i{position:relative;width:38px;height:22px;border-radius:999px;background:#c3c4c7;transition:background .15s;flex:none}.pcai-switch i::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s}.pcai-switch input:checked+i{background:#2271b1}.pcai-switch input:checked+i::after{transform:translateX(16px)}.pcai-switch input:focus-visible+i{outline:2px solid #2271b1;outline-offset:2px}.pcai-switch b{font-weight:500}.pcai-grid{align-items:start}.pcai-grid .pcai-switch{display:inline-flex}.pcp-card__head>.pcai-headrow{display:flex!important;flex-direction:row!important;align-items:center;gap:12px;flex-wrap:nowrap}.pcai-sites select{width:auto;max-width:130px;min-width:0}.pcai-sites td{vertical-align:middle;white-space:nowrap}.pcai-sp__row{display:inline-flex;align-items:center;gap:10px}.pcai-issue{margin-top:12px}.pcai-tuned{color:#15803d;font-weight:600}.pcai-btnrow{margin-top:16px}.pcai-btnrow form{margin:0}.pcai-pre{white-space:pre-wrap;word-break:break-word;background:#f7f7f8;border:1px solid #eee;border-radius:8px;padding:12px;font-size:12px;line-height:1.6;max-height:50vh;overflow:auto;margin:0}' );
 	}
 
 	private static function flash( string $type, string $message ): void {
@@ -57,11 +57,19 @@ final class Ai_Page {
 		$post = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- 各字段在 Ai 里逐个清理。
 		if ( 'save' === $do && ! empty( $post['reissue'] ) ) {
 			// 店铺表里点“重新下发”：用总后台当前的模板覆盖这家店的人设副本（店主写的调优保留）。
-			[ $sid, $use ] = array_pad( explode( ':', sanitize_text_field( (string) $post['reissue'] ), 2 ), 2, '' );
-			$copy = Ai::site_persona( (int) $sid, sanitize_key( $use ), false );
-			$tpl  = $copy ? Ai::persona( (string) $copy['from'] ) : null;
-			$r    = Ai::issue( (int) $sid, sanitize_key( $use ), $tpl );
-			self::flash( $r ? 'success' : 'error', $r ? '已把「' . $r['name'] . '」重新下发给这家店，店主的人设调优保留。' : '没有可下发的人设。' );
+			// 店主 2026-11-10：统一下发——所有店铺、两种人设都用总后台当前选的模板覆盖，店主的人设调优保留。
+			Ai::save_settings( $post );
+			$n = 0;
+			foreach ( Sites::all() as $site ) {
+				foreach ( array_keys( Ai::USES ) as $use ) {
+					$row  = Ai::settings()['sites'][ (int) $site['id'] ] ?? null;
+					$pick = is_array( $row ) ? (string) ( $row[ $use ] ?? '' ) : '';
+					$tpl  = '' !== $pick ? Ai::persona( $pick ) : null;
+					$n   += Ai::issue( (int) $site['id'], $use, $tpl && $tpl['use'] === $use ? $tpl : null ) ? 1 : 0;
+				}
+			}
+			update_option( 'pchq_ai_last_issue', time(), false );
+			self::flash( 'success', '已统一下发 ' . $n . ' 份人设，各店主的人设调优保留。' );
 			self::back();
 		}
 		if ( 'save' === $do ) {
@@ -176,8 +184,8 @@ final class Ai_Page {
 		}
 
 		// 3. 店铺（同一个表单一起保存）
-		echo '<h3 style="margin-top:24px">各店铺</h3><p class="pcai-muted">新接入的店铺默认开启，用每种用途的第一个人设。人设和店铺模板一样，第一次只下发一份给店铺；之后每家店用自己的那份，店主在店铺后台写“人设调优”把它调成自己喜欢的样子，只影响他自己。总后台改模板不影响已下发的店，要更新就点“重新下发”。</p>';
-		echo '<div style="overflow-x:auto"><table class="pcai-table pcai-sites"><thead><tr><th>店铺</th><th>开启</th><th>客户分析模板</th><th>本店客户分析人设</th><th>全站分析师模板</th><th>本店全站分析人设</th><th>今天已用</th></tr></thead><tbody>';
+		echo '<h3 style="margin-top:24px">各店铺</h3><p class="pcai-muted">新接入的店铺默认开启，用每种用途的第一个人设。人设和店铺模板一样，第一次只下发一份给店铺；之后每家店用自己的那份，店主在店铺后台写“人设调优”把它调成自己喜欢的样子，只影响他自己。总后台改模板不影响已下发的店，要更新就点下面的“统一下发”。</p>';
+		echo '<div style="overflow-x:auto"><table class="pcai-table pcai-sites"><thead><tr><th>店铺</th><th>开启</th><th>客户分析模板</th><th>本店客户分析</th><th>全站分析师模板</th><th>本店全站分析</th><th>今天已用</th></tr></thead><tbody>';
 		$copies  = Ai::site_personas();
 		$dialogs = '';
 		foreach ( Sites::all() as $site ) {
@@ -199,18 +207,27 @@ final class Ai_Page {
 				if ( is_array( $c ) ) {
 					$dlg   = 'pcai-sp-' . $id . '-' . $use;
 					$tuned = '' !== trim( (string) ( $c['tuning'] ?? '' ) );
-					echo '<td class="pcai-sp"><span>' . esc_html( $c['name'] ) . '</span><span class="pcai-muted">' . esc_html( wp_date( 'm-d', (int) $c['issued_at'] ) ) . ' 下发 · ' . ( $tuned ? '<b class="pcai-tuned">已调优</b>' : '未调优' ) . '</span><span class="pcai-actions"><button type="button" class="button button-small" data-dlg="' . esc_attr( $dlg ) . '">查看</button><button type="submit" class="button button-small" name="reissue" value="' . esc_attr( $id . ':' . $use ) . '">重新下发</button></span></td>';
+					echo '<td class="pcai-sp"><span class="pcai-sp__row">' . ( $tuned ? '<b class="pcai-tuned">已调优</b>' : '<span class="pcai-muted">未调优</span>' ) . '<button type="button" class="button button-small" data-dlg="' . esc_attr( $dlg ) . '">查看</button></span></td>';
 					$dialogs .= '<dialog id="' . esc_attr( $dlg ) . '" class="pcai-dialog"><div class="pcai-dialog__head"><h3>' . esc_html( $site['name'] . ' · ' . Ai::USES[ $use ] . '人设' ) . '</h3><button type="button" class="pcai-dialog__close" data-dlg-close aria-label="关闭">×</button></div>'
 						. '<h4 style="margin:12px 0 6px">店主的人设调优' . ( $tuned ? '（' . esc_html( wp_date( 'm-d H:i', (int) $c['tuned_at'] ) ) . '）' : '' ) . '</h4>'
 						. ( $tuned ? '<pre class="pcai-pre">' . esc_html( (string) $c['tuning'] ) . '</pre>' : '<p class="pcai-muted">店主还没写调优，用的是下发的人设原样。</p>' )
 						. '<h4 style="margin:16px 0 6px">下发的人设（' . esc_html( wp_date( 'Y-m-d H:i', (int) $c['issued_at'] ) ) . ' 从模板「' . esc_html( $c['name'] ) . '」下发）</h4><pre class="pcai-pre">' . esc_html( (string) $c['content'] ) . '</pre></dialog>';
 				} else {
-					echo '<td class="pcai-sp"><span class="pcai-muted">第一次分析时下发</span></td>';
+					echo '<td class="pcai-sp"><span class="pcai-muted">未下发</span></td>';
 				}
 			}
 			echo '<td>' . (int) Ai::used_today( $id ) . ' 次</td></tr>';
 		}
 		echo '</tbody></table></div>';
+		$last = (int) get_option( 'pchq_ai_last_issue', 0 );
+		if ( ! $last ) {
+			foreach ( $copies as $per ) {
+				foreach ( (array) $per as $c ) {
+					$last = max( $last, (int) ( $c['issued_at'] ?? 0 ) );
+				}
+			}
+		}
+		echo '<p class="pcai-actions pcai-issue"><button type="submit" class="button" name="reissue" value="all">统一下发</button><span class="pcai-muted">' . ( $last ? '上一次下发：' . esc_html( wp_date( 'Y-m-d H:i', $last ) ) : '还没有下发过' ) . ' · 用上面每家店选的模板覆盖所有店铺的人设，店主写的人设调优保留。</span></p>';
 		echo '</form>';
 		// 店主 2026-11-10：保存、测试连接、拉取模型列表并排放。
 		echo '<div class="pcai-actions pcai-btnrow"><button type="submit" form="pcai-main" class="button button-primary">保存</button>';
@@ -267,7 +284,7 @@ final class Ai_Page {
 			$mine = array_values( array_filter( $personas, static fn( $p ) => $p['use'] === $use ) );
 			$here = $edit && $edit['use'] === $use ? $edit : null;
 			echo '<section class="pcp-card" id="pcai-' . esc_attr( $use ) . '"><div class="pcp-card__head"><h2>' . esc_html( $title ) . '</h2><span class="pcp-hint">' . count( $mine ) . ' 个</span></div>';
-			echo '<p class="pcai-muted">' . esc_html( $desc ) . ' 这里是模板：第一次分析时下发一份给店铺，之后店铺用自己的那份加上自己的人设调优；改这里不影响已下发的店（在上面店铺表里点“重新下发”才更新）。有多个时，各店铺默认用第一个，也可以在上面的店铺表里单独选。</p>';
+			echo '<p class="pcai-muted">' . esc_html( $desc ) . ' 这里是模板：第一次分析时下发一份给店铺，之后店铺用自己的那份加上自己的人设调优；改这里不影响已下发的店（在上面店铺表下点“统一下发”才更新）。有多个时，各店铺默认用第一个，也可以在上面的店铺表里单独选。</p>';
 			if ( $mine ) {
 				echo '<table class="pcai-table"><thead><tr><th>名字</th><th>长度</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
 				foreach ( $mine as $i => $p ) {

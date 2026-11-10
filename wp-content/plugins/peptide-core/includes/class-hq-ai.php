@@ -19,10 +19,17 @@ final class Hq_Ai {
 	public const NOTES = 'pc_ai_notes'; // 旧的“补充说明”，两种分析共用；新的人设调优没填时沿用它。
 	public const TUNE  = 'pc_ai_tune_'; // + customer / business：这家店自己的人设调优（店主 2026-11-10）。
 
-	/** 这家店对某种分析的人设调优。 */
+	public const RESOLVED = 'pc_ai_resolved'; // 店主确认已解决的问题（店主 2026-11-10：例如“支付没问题”），AI 不再当原因或建议。
+
+	/** 这家店对某种分析的人设调优（只放店主自己写的阅读习惯和要求）。 */
 	public static function tune( string $use ): string {
-		$t = get_option( self::TUNE . $use, null );
-		return trim( (string) ( null === $t ? get_option( self::NOTES, '' ) : $t ) );
+		return trim( (string) get_option( self::TUNE . $use, '' ) );
+	}
+
+	/** @return array<int,array{id:string,text:string,at:int}> */
+	public static function resolved(): array {
+		$v = get_option( self::RESOLVED, array() );
+		return is_array( $v ) ? array_values( array_filter( $v, static fn( $r ) => is_array( $r ) && '' !== (string) ( $r['text'] ?? '' ) ) ) : array();
 	}
 
 	public static function register_hooks(): void {
@@ -106,6 +113,25 @@ final class Hq_Ai {
 				$notes = mb_substr( sanitize_textarea_field( (string) $r['notes'] ), 0, 4000 );
 				update_option( self::TUNE . ( 'site' === $r['scope'] ? 'business' : 'customer' ), $notes, false );
 				return rest_ensure_response( array( 'notes' => $notes, 'saved' => true ) );
+			} ),
+		) );
+		register_rest_route( 'peptide/v1', '/track/admin/ai/resolved', array(
+			array( 'methods' => 'GET', 'permission_callback' => $perm, 'callback' => static fn() => rest_ensure_response( array( 'items' => self::resolved() ) ) ),
+			array( 'methods' => 'POST', 'permission_callback' => $perm, 'callback' => static function ( \WP_REST_Request $r ) {
+				$list = self::resolved();
+				$id   = sanitize_key( (string) $r['remove'] );
+				if ( '' !== $id ) {
+					$list = array_values( array_filter( $list, static fn( $i ) => $i['id'] !== $id ) );
+				} else {
+					$text = trim( mb_substr( sanitize_textarea_field( (string) $r['text'] ), 0, 300 ) );
+					if ( '' === $text ) {
+						return new \WP_Error( 'pc_ai_resolved', '请写一下解决了什么问题。', array( 'status' => 400 ) );
+					}
+					$list[] = array( 'id' => substr( md5( $text . microtime() ), 0, 10 ), 'text' => $text, 'at' => time() );
+					$list   = array_slice( $list, -30 );
+				}
+				update_option( self::RESOLVED, $list, false );
+				return rest_ensure_response( array( 'items' => $list ) );
 			} ),
 		) );
 		register_rest_route( 'peptide/v1', '/overview/extras', array( 'methods' => 'GET', 'permission_callback' => static fn() => current_user_can( 'manage_woocommerce' ), 'callback' => array( self::class, 'rest_extras' ) ) );
@@ -503,6 +529,10 @@ final class Hq_Ai {
 		$data['store'] = array( 'currency' => get_woocommerce_currency(), 'timezone' => wp_timezone_string() );
 		$data['【店铺配置】'] = self::store_config();
 		// 人设调优不再混在数据里，单独以 tuning 发给总后台（HQ 把它放进系统提示，优先于通用人设）。
+		$done = array_map( static fn( $i ) => $i['text'], self::resolved() );
+		if ( $done ) {
+			$data['【店主确认已解决的问题】'] = $done;
+		}
 		if ( 'site' === $scope ) {
 			[ $from, $to ] = self::window( $period, $date );
 			$data += self::site_extras( $from, $to );

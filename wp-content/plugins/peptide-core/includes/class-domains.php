@@ -455,6 +455,11 @@ final class Domains {
 		$server = strtolower( (string) wp_remote_retrieve_header( $res, 'server' ) );
 		$cf     = '' !== (string) wp_remote_retrieve_header( $res, 'cf-ray' ) || str_contains( $server, 'cloudflare' );
 		$ok     = 200 === $code && hash_equals( self::token( $host ), trim( (string) wp_remote_retrieve_body( $res ) ) );
+		// 2026-11-10：Cloudflare 的人机验证会拦住服务器发的检查请求（403 + cf-mitigated: challenge），真人访问正常。
+		// 这种情况改为：解析能查到，并且本机按这个域名能返回本店的校验码，就算连上了。
+		if ( ! $ok && $cf && in_array( $code, array( 403, 503 ), true ) && self::origin_serves( $scheme, $host ) ) {
+			return array( 'ok' => true, 'cloudflare' => true, 'error' => '' );
+		}
 		if ( $ok ) {
 			$error = '';
 		} elseif ( 200 === $code ) {
@@ -464,6 +469,42 @@ final class Domains {
 			$error = sprintf( __( 'The domain answered with HTTP status %d.', 'peptide-core' ), $code );
 		}
 		return array( 'ok' => $ok, 'cloudflare' => $cf, 'error' => $error );
+	}
+
+	/** 本机（源站）按这个域名能不能返回本店的校验码；同时要求域名有解析记录。 */
+	private static function origin_serves( string $scheme, string $host ): bool {
+		$dns = self::lookup( $host );
+		if ( ! $dns['a'] && ! $dns['cname'] ) {
+			return false;
+		}
+		// 用域名本身去请求，但把这个域名临时指到本机（curl 的 resolve），这样 SNI 和 Host 都对。
+		$port = 'https' === $scheme ? 443 : 80;
+		$pin  = static function ( $handle ) use ( $host, $port ) {
+			if ( defined( 'CURLOPT_RESOLVE' ) ) {
+				curl_setopt( $handle, CURLOPT_RESOLVE, array( $host . ':' . $port . ':127.0.0.1' ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt
+			}
+		};
+		add_action( 'http_api_curl', $pin, 99 );
+		$res = wp_remote_get(
+			$scheme . '://' . $host . '/?' . self::CHECK_ARG . '=' . wp_generate_password( 8, false ),
+			array(
+				'timeout'     => 6,
+				'redirection' => 0,
+				'sslverify'   => false, // 源站可能用的是 Cloudflare 源站证书，公网不认，但这里只连本机。
+				'user-agent'  => 'PeptideCore-DomainCheck/' . PEPTIDE_CORE_VERSION,
+				'headers'     => array( 'Cache-Control' => 'no-cache' ),
+			)
+		);
+		remove_action( 'http_api_curl', $pin, 99 );
+		// 这个域名在本机是跳转到本店另一个域名（例如 s0001. → www.）：也算连上了。
+		$code = is_wp_error( $res ) ? 0 : (int) wp_remote_retrieve_response_code( $res );
+		if ( $code >= 301 && $code <= 308 ) {
+			$to = strtolower( (string) wp_parse_url( (string) wp_remote_retrieve_header( $res, 'location' ), PHP_URL_HOST ) );
+			if ( '' !== $to && $to !== $host && isset( self::data()['items'][ $to ] ) ) {
+				return true;
+			}
+		}
+		return ! is_wp_error( $res ) && 200 === (int) wp_remote_retrieve_response_code( $res ) && hash_equals( self::token( $host ), trim( (string) wp_remote_retrieve_body( $res ) ) );
 	}
 
 	/**

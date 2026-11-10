@@ -76,8 +76,20 @@ final class Callbacks {
 			}
 			$order = Session_Service::returned_order( $data );
 			$state = Session_Service::return_status( $order, $data['reference'] );
+			// 2026-11-10：付款已经落库（订单已付款、流水号一致），但完成流程里的记账没走完时，状态会是 review。
+			// 顾客的钱已经付了，给顾客看“付款成功”；对账问题留给店铺后台处理。
+			if ( 'review' === $state && $order->is_paid() && '' !== (string) $order->get_transaction_id()
+				&& Persistence::is_paid( $order->get_id(), (string) $order->get_transaction_id() ) ) {
+				$state = 'paid';
+			}
 			if ( 'paid' === $state ) {
 				self::clear_verified_return_cart( $order, $data['reference'] );
+				// 店铺可以接管付款成功后的去处（peptide-core 的付款成功弹窗：回到首页弹出下单成功）。
+				$to = (string) apply_filters( 'pc_panapay_paid_redirect', '', $order );
+				if ( '' !== $to ) {
+					wp_safe_redirect( $to );
+					exit;
+				}
 				// Woo's order-received shortcode can empty a later, unrelated cart.
 				// Keep this authenticated result here; never route through that effect.
 				self::status_page( __( 'Payment confirmed', 'peptide-panapay' ),

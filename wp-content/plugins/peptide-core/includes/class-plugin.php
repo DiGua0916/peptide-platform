@@ -88,6 +88,7 @@ final class Plugin {
 		Hq_Mail::register_hooks();
 		Hq_Ai::register_hooks();
 		Cart_Links::register_hooks();
+		Paid_Popup::register_hooks();
 		Topics::register_hooks();
 		Promotions::register_hooks();
 		Recovery::register_hooks();
@@ -155,6 +156,7 @@ final class Plugin {
 			Admin\Terms_Page::register_hooks();
 			Admin\Recovery_Page::register_hooks();
 			Admin\Checkout_Dropoff_Page::register_hooks();
+			Admin\Paid_Popup_Page::register_hooks();
 			Admin\Marketing::register_hooks();
 			Admin\Promotions_Page::register_hooks();
 			Admin\Coupons_Page::register_hooks();

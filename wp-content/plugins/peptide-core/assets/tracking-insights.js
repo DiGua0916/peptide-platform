@@ -151,6 +151,24 @@
    st.textContent = '保存中…';
    try { await window.wp.apiFetch({path:'/peptide/v1/track/admin/ai/notes', method:'POST', data:{scope: subject ? 'visitor' : 'site', notes: notesBox.querySelector('textarea').value}}); st.textContent = '已保存，下次分析会用上（点“重新分析”立刻生效）'; notesBox.querySelector('summary').textContent = notesBox.querySelector('textarea').value.trim() ? '人设调优（已填写）' : '人设调优'; } catch (e) { st.textContent = '保存失败：' + ((e && e.message) || ''); }
   });
+  // 已解决的问题（店主 2026-11-10）：店主确认已经解决的问题，AI 不会再把它当原因或建议。
+  const doneBox = document.createElement('details'); doneBox.className = 'pc-ai-notes pc-ai-done';
+  doneBox.innerHTML = '<summary>已解决的问题</summary><p class="pc-ai-meta">AI 提的问题你已经确认解决了（例如“支付已测试正常”），在这里记一条，之后的分析（包括自动分析）不会再提它。对这家店的所有分析都生效。</p><ul data-ai-done-list></ul><p class="pc-ai-actions"><input type="text" maxlength="300" placeholder="例如：支付已测试正常，信用卡可以正常付款" data-ai-done-text><button type="button" class="button" data-ai-done-add>问题已解决</button><span class="pc-ai-meta" data-ai-done-state></span></p>';
+  aiBox.insertBefore(doneBox, aiBox.querySelector('.pc-ai-out'));
+  const doneList = items => {
+   const ul = doneBox.querySelector('[data-ai-done-list]');
+   ul.innerHTML = (items || []).map(i => '<li><span>' + esc(i.text) + '</span> <button type="button" class="button-link" data-ai-done-del="' + esc(i.id) + '">删除</button></li>').join('');
+   doneBox.querySelector('summary').textContent = items && items.length ? '已解决的问题（' + items.length + '）' : '已解决的问题';
+  };
+  const doneSave = async data => {
+   const st = doneBox.querySelector('[data-ai-done-state]'); st.textContent = '保存中…';
+   try { const r = await window.wp.apiFetch({path:'/peptide/v1/track/admin/ai/resolved', method:'POST', data:data}); doneList(r.items); st.textContent = '已保存，下次分析会用上'; return true; } catch (e) { st.textContent = '保存失败：' + ((e && e.message) || ''); return false; }
+  };
+  window.wp.apiFetch({path:'/peptide/v1/track/admin/ai/resolved'}).then(r => doneList(r.items)).catch(() => {});
+  doneBox.addEventListener('click', async e => {
+   if (e.target.closest('[data-ai-done-add]')) { const t = doneBox.querySelector('[data-ai-done-text]'); if (t.value.trim() && await doneSave({text: t.value})) t.value = ''; }
+   const del = e.target.closest('[data-ai-done-del]'); if (del) doneSave({remove: del.getAttribute('data-ai-done-del')});
+  });
   // 已有的分析结果（自动或之前手动）打开页面就显示。
   try {
    const saved = await window.wp.apiFetch({path:'/peptide/v1/track/admin/ai/result?scope=' + (subject ? 'visitor&visitor_id=' + subject : 'site')});

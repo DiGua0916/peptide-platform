@@ -162,3 +162,16 @@
 - 人设像店铺模板一样第一次只下发：`pchq_ai_site_personas[site][use]` = {from, name, content, issued_at, tuning, tuned_at}。`Ai::site_persona()` 没有副本或总后台换了模板时下发；`Ai::issue()` 重新下发（保留调优）。分析用店铺自己的副本 + 店铺发来的 `tuning`（系统提示里【本店人设调优】，优先于通用人设，写明的事实当事实）。店铺表每种用途加一列“本店…人设”：下发日期、已调优 / 未调优、查看（弹窗显示调优和副本全文）、重新下发。6 家店已下发。
 - 店铺端：人设调优分客户分析 / 全站分析两份（`pc_ai_tune_customer` / `pc_ai_tune_business`，没填时沿用旧的 `pc_ai_notes`），不再放进数据里的【店主补充说明】，改为单独的 tuning 字段。
 - 备份 /root/class-ai.php.bak-1794317741、/root/class-ai-page.php.bak-1794317741；主店客户分析实测正常。
+
+### 2026-11-10 告警“域名连不上”误报
+- 原因 1：Cloudflare 人机验证拦住服务器发的域名检查（HTTP 403，cf-mitigated: challenge），真人访问正常。`Domains::probe()` 遇到 Cloudflare 403/503 时改走 `origin_serves()`：域名有解析，且用 curl resolve 把域名指到本机能返回本店校验码（或在本机跳转到本店另一个域名，如 s0001. → www.），算连上。
+- 原因 2：5 个子站是从主店复制的，`peptide_core_domains` 里带着主店的 s0001./www./裸域名，所以每家店都报主店域名的告警。已从子站删除这 3 条（原值备份在各店 `peptide_core_domains_backup_20261110`），各店自己的域名检查为 connected/active。主店 3 个域名也变为 connected/active。告警下一轮（10 分钟）自动关闭。
+
+### 2026-11-10 付款后页面 + 付款成功弹窗
+- #11841 付款回来显示 “Payment needs review”：钱已到、订单已付款，但付款完成流程中途被支付插件的保护（Completion_Guard）打断，尝试停在 confirmed、交易记录为 review；同一个中断也让访客追踪的付款事件和顾客付款成功邮件没走到。服务器日志里没有报错，具体哪一步触发保护未查明。
+- peptide-panapay `class-callbacks.php`：review 但订单已付款且流水号一致 → 按已付款显示；已付款时先走过滤器 `pc_panapay_paid_redirect`，有地址就跳过去（7 份副本已部署，HQ 中心那份未动）。
+- peptide-core 新增 `Paid_Popup`（class-paid-popup.php）+ 后台 店铺设置 → 付款成功弹窗（class-paid-popup-page.php，文案可改，恢复默认）：跳到 `/?pc_paid=订单&pc_key=订单密钥`，订单已付款才弹；订单号、客服电话（店铺设置公司电话，未填不显示）、加 WhatsApp 按钮（预填订单号）；“I don't use WhatsApp”→ 留联系方式 → 写订单备注（英文）+ 发邮件到新订单通知邮箱，只收一次。主店 #11841 手机尺寸核对。
+
+### 2026-11-10 已解决的问题（AI）
+- 阳的“人设调优”里那句支付正常是我替店主写的旧补充说明，不是店主的调优：移到新的“已解决的问题”（`pc_ai_resolved`），清空阳的人设调优（店铺端和 HQ 副本），旧 `pc_ai_notes` 删除（备份 `pc_ai_notes_backup_20261110`），`tune()` 不再回退到旧补充说明。
+- AI 框加“已解决的问题”：记一条 / 删除，以【店主确认已解决的问题】发给 HQ；HQ 系统提示：这些问题不再当原因、不再建议排查。
