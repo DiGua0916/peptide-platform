@@ -6,9 +6,11 @@
  * - 税费设置：见 Tax_Page（TAX-PLANS-01）。
  * - 系统设置：卡片列表。用户 2026-10-23 要了“基础配置、邮件通知、交易条款”三张卡片（先做占位页，同日按截图做成完整页面）。
  *   原来菜单里的 WooCommerce 设置、VialCove 设置、系统状态放在页面底部“其他设置”。
- * - 店铺信息（ST-07，投手版后台的第 6 个菜单，也是开店向导的第 2 步）：只开放对外英文店名、客服 WhatsApp、客服邮箱、
- *   修改自己的密码；域名只读。这些值和“基础设置”“联系方式”是同一份数据（blogname、Settings 的 support），
- *   这里只改这三项，联系方式里的 Telegram、问候语、悬浮按钮开关等保持不变。
+ * - 店铺信息（ST-07，投手版后台的第 6 个菜单，也是开店向导的第 2 步）：投手只能改客服 WhatsApp、客服邮箱和自己的密码；
+ *   店名和域名只读。WhatsApp 和邮箱与“联系方式”是同一份数据（Settings 的 support），这里只改这两项，
+ *   Telegram、问候语、悬浮按钮开关等保持不变。
+ *   店名为什么只读：顾客看到的品牌名按域名确定（Mail_Outbox::brand()，主题里是 vc_brand_name()），后台的店铺名称
+ *   （blogname）是总后台管理的内部名称，2026-11-08 已经定了它不上前台、也不从店铺反向同步到总后台。
  *
  * @package PeptideCore
  */
@@ -16,6 +18,7 @@
 namespace PeptideCore\Admin;
 
 use PeptideCore\Domains;
+use PeptideCore\Mail_Outbox;
 use PeptideCore\Settings;
 use PeptideCore\Staff_Buyer;
 use PeptideCore\Support_Contacts;
@@ -27,9 +30,6 @@ final class Store_Settings {
 	public const CAP         = 'manage_woocommerce';
 	public const SYSTEM_SLUG = 'pc-system';
 	public const INFO_SLUG   = Staff_Buyer::PAGE_STORE;
-
-	/** 对外店名最多多少个字符。 */
-	public const NAME_MAX = 60;
 
 	public static function register_hooks(): void {
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
@@ -66,11 +66,12 @@ final class Store_Settings {
 		$support = Settings::all()['support'] ?? array();
 		$support = is_array( $support ) ? $support : array();
 		$wa      = (string) ( $support['whatsapp'] ?? '' );
+		$brand   = class_exists( Mail_Outbox::class ) ? Mail_Outbox::brand() : '';
 		echo '<h2>店铺信息</h2><p class="pc-by-why">联系按钮、页脚的联系方式和邮件落款都用这些信息，顾客看得到，请填对外使用的内容。</p>';
+		echo '<dl class="pc-by-facts"><dt>顾客看到的品牌名</dt><dd>' . esc_html( '' !== $brand ? $brand : '—' ) . '</dd><dt>后台里的店铺名称</dt><dd>' . esc_html( (string) get_option( 'blogname', '' ) ) . '</dd></dl><p class="pc-by-hint">品牌名按域名确定，店铺名称由总后台管理，这里不能改。需要调整请联系平台负责人。</p>';
 		echo '<form class="pc-by-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 		echo '<input type="hidden" name="action" value="' . esc_attr( Staff_Buyer::ACTION_STORE ) . '"><input type="hidden" name="from" value="' . esc_attr( $from ) . '">';
 		wp_nonce_field( Staff_Buyer::ACTION_STORE );
-		echo '<p><label for="pc-by-store-name">对外英文店名</label><input type="text" id="pc-by-store-name" name="store_name" maxlength="' . (int) self::NAME_MAX . '" value="' . esc_attr( (string) get_option( 'blogname', '' ) ) . '" placeholder="例如 VialCove Peptides" required><span class="pc-by-hint">用英文。订单邮件和付款成功提示里对顾客显示的店名。</span></p>';
 		echo '<p><label for="pc-by-store-wa">客服 WhatsApp</label><input type="tel" id="pc-by-store-wa" name="whatsapp" value="' . esc_attr( '' !== $wa ? '+' . $wa : '' ) . '" placeholder="例如 +1 555 123 4567" required><span class="pc-by-hint">带国家代码。顾客点“联系我们”会直接打开和这个号码的对话。</span></p>';
 		echo '<p><label for="pc-by-store-email">客服邮箱（可以不填）</label><input type="email" id="pc-by-store-email" name="email" value="' . esc_attr( (string) ( $support['email'] ?? '' ) ) . '" placeholder="例如 support@example.com"></p>';
 		echo '<p class="pc-by-actions"><button type="submit" class="button button-primary">' . esc_html( 'wizard' === $from ? '保存，下一步' : '保存' ) . '</button></p></form>';
@@ -79,19 +80,11 @@ final class Store_Settings {
 	/**
 	 * 检查店铺信息表单（除邮箱格式外不依赖 WordPress，测试里直接调用）。
 	 *
-	 * @param array<string,mixed> $in store_name / whatsapp / email
-	 * @return array{0:string[],1:array{name:string,whatsapp:string,email:string}} 错误提示和清理后的值。
+	 * @param array<string,mixed> $in whatsapp / email
+	 * @return array{0:string[],1:array{whatsapp:string,email:string}} 错误提示和清理后的值。
 	 */
 	public static function clean_buyer_store( array $in ): array {
 		$errors = array();
-		$name   = trim( (string) preg_replace( '/\s+/', ' ', (string) ( $in['store_name'] ?? '' ) ) );
-		if ( '' === $name ) {
-			$errors[] = '请填写店名。';
-		} elseif ( strlen( $name ) > self::NAME_MAX ) {
-			$errors[] = sprintf( '店名最多 %d 个字符。', self::NAME_MAX );
-		} elseif ( 1 === preg_match( '/[^\x20-\x7E]/', $name ) ) {
-			$errors[] = '对外店名请用英文（字母、数字和常用符号）。';
-		}
 		$wa_raw = trim( (string) ( $in['whatsapp'] ?? '' ) );
 		$wa     = '' !== $wa_raw ? Support_Contacts::clean_whatsapp( $wa_raw ) : null;
 		if ( null === $wa ) {
@@ -102,7 +95,7 @@ final class Store_Settings {
 		if ( null === $email ) {
 			$errors[] = '客服邮箱的格式不对。不需要的话可以留空。';
 		}
-		return array( $errors, array( 'name' => $name, 'whatsapp' => (string) $wa, 'email' => (string) $email ) );
+		return array( $errors, array( 'whatsapp' => (string) $wa, 'email' => (string) $email ) );
 	}
 
 	public static function save_buyer_store(): void {
@@ -112,7 +105,7 @@ final class Store_Settings {
 		check_admin_referer( Staff_Buyer::ACTION_STORE );
 		$from = isset( $_POST['from'] ) && 'wizard' === sanitize_key( wp_unslash( $_POST['from'] ) ) ? 'wizard' : 'store';
 		$in   = array();
-		foreach ( array( 'store_name', 'whatsapp', 'email' ) as $key ) {
+		foreach ( array( 'whatsapp', 'email' ) as $key ) {
 			$in[ $key ] = isset( $_POST[ $key ] ) ? sanitize_text_field( wp_unslash( (string) $_POST[ $key ] ) ) : '';
 		}
 		[ $errors, $clean ] = self::clean_buyer_store( $in );
@@ -121,8 +114,7 @@ final class Store_Settings {
 			wp_safe_redirect( 'wizard' === $from ? Onboarding::url( 'store' ) : Staff_Buyer::page_url( self::INFO_SLUG ) );
 			exit;
 		}
-		update_option( 'blogname', $clean['name'] );
-		// 和“联系方式”页面写同一份设置：只换 WhatsApp 和邮箱，其余字段照旧。
+		// 和“联系方式”页面写同一份设置：只换 WhatsApp 和邮箱，其余字段照旧。店铺名称（blogname）不在这里改。
 		$stored  = get_option( Settings::OPTION, array() );
 		$stored  = is_array( $stored ) ? $stored : array();
 		$support = array_merge( Support_Contacts::defaults(), is_array( $stored['support'] ?? null ) ? $stored['support'] : array() );

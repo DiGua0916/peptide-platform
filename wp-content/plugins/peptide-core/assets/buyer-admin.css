@@ -450,3 +450,26 @@
 		transition: opacity 0.15s ease;
 	}
 }
+
+/* 只读信息：品牌名、店铺名称 */
+.pc-by-facts {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 6px 16px;
+	margin: 0 0 4px;
+}
+
+.pc-by-facts dt {
+	color: var(--by-muted);
+	font-size: 13px;
+}
+
+.pc-by-facts dd {
+	margin: 0;
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+.pc-by-facts + .pc-by-hint {
+	margin-bottom: 16px;
+}

@@ -7,7 +7,7 @@
  *
  * 每一步是否完成，尽量看真实数据，不单独记“点过了”：
  * - 修改密码：账号没有 pc_must_change_password 标记；
- * - 店铺信息：有店名和 WhatsApp，并且在向导或店铺信息页保存过一次（选项 pc_onboarding 的 store）；
+ * - 店铺信息：有客服 WhatsApp，并且在向导或店铺信息页保存过一次（选项 pc_onboarding 的 store）。店名只读，不算在内；
  * - 广告像素：第一个 Facebook 像素有 ID 和访问令牌（读 Pixels 的设置）；
  * - 验证像素：最近一次测试通过，而且测的就是现在这个像素（pc_onboarding 的 pixel_test；换了像素要重新验证）；
  * - 投放链接：生成过一次（pc_onboarding 的 link）。
@@ -128,7 +128,6 @@ final class Onboarding {
 		$pixel   = self::facebook_pixel();
 		return array(
 			'must_change'     => $user_id > 0 ? Staff_Buyer::must_change( $user_id ) : self::any_buyer_must_change(),
-			'store_name'      => trim( (string) get_option( 'blogname', '' ) ),
 			'whatsapp'        => is_array( $support ) ? (string) ( $support['whatsapp'] ?? '' ) : '',
 			'store_confirmed' => ! empty( $state['store'] ),
 			'pixel_id'        => $pixel['id'],
@@ -150,7 +149,7 @@ final class Onboarding {
 		$test     = is_array( $facts['test'] ?? null ) ? $facts['test'] : array();
 		return array(
 			'password' => empty( $facts['must_change'] ),
-			'store'    => '' !== (string) ( $facts['store_name'] ?? '' ) && '' !== (string) ( $facts['whatsapp'] ?? '' ) && ! empty( $facts['store_confirmed'] ),
+			'store'    => '' !== (string) ( $facts['whatsapp'] ?? '' ) && ! empty( $facts['store_confirmed'] ),
 			'pixel'    => $pixel,
 			'verify'   => $pixel && ! empty( $test['ok'] ) && (string) ( $test['pixel'] ?? '' ) === $pixel_id,
 			'link'     => ! empty( $facts['link'] ),

@@ -31,7 +31,6 @@ namespace {
 	// ---------- 向导各步是否完成 ----------
 	$facts = array(
 		'must_change'     => false,
-		'store_name'      => 'VialCove Peptides',
 		'whatsapp'        => '15551234567',
 		'store_confirmed' => true,
 		'pixel_id'        => '1234567890123456',
@@ -47,7 +46,6 @@ namespace {
 	check( 'complete without the optional link', 0 === $left() && 'link' === $now() );
 	check( 'everything done', 'done' === $now( array( 'link' => true ) ) );
 	check( 'password first', 'password' === $now( array( 'must_change' => true ) ) && 1 === $left( array( 'must_change' => true ) ) );
-	check( 'store needs a name', false === $eval( array( 'store_name' => '' ) )['store'] );
 	check( 'store needs WhatsApp', false === $eval( array( 'whatsapp' => '' ) )['store'] );
 	check( 'store needs one save', false === $eval( array( 'store_confirmed' => false ) )['store'] && 'store' === $now( array( 'store_confirmed' => false ) ) );
 	check( 'pixel needs a token', false === $eval( array( 'has_token' => false ) )['pixel'] );
@@ -109,16 +107,14 @@ namespace {
 	check( 'all three in order', array( 'wizard', 'pay_domain', 'abandoned' ) === array_column( $todos( 1, true, 5 ), 'key' ) );
 
 	// ---------- 店铺信息 ----------
-	$store = static fn( string $name, string $wa, string $email = '' ): array => \PeptideCore\Admin\Store_Settings::clean_buyer_store( array( 'store_name' => $name, 'whatsapp' => $wa, 'email' => $email ) );
-	check( 'store info ok', array( array(), array( 'name' => 'VialCove Peptides', 'whatsapp' => '15551234567', 'email' => '' ) ) === $store( ' VialCove   Peptides ', '+1 555 123 4567' ) );
-	check( 'support email kept', 'help@shop.example' === $store( 'Shop', '+15551234567', 'help@shop.example' )[1]['email'] );
-	check( 'empty name', 1 === count( $store( '', '+15551234567' )[0] ) );
-	check( 'name must be English', 1 === count( $store( '多肽商店', '+15551234567' )[0] ) );
-	check( 'name too long', 1 === count( $store( str_repeat( 'a', 61 ), '+15551234567' )[0] ) );
-	check( 'WhatsApp required', 1 === count( $store( 'Shop', '' )[0] ) );
-	check( 'WhatsApp needs country code digits', 1 === count( $store( 'Shop', '12345' )[0] ) );
-	check( 'bad email', 1 === count( $store( 'Shop', '+15551234567', 'not-an-email' )[0] ) );
-	check( 'several problems at once', 3 === count( $store( '', '', 'x' )[0] ) );
+	$store = static fn( string $wa, string $email = '' ): array => \PeptideCore\Admin\Store_Settings::clean_buyer_store( array( 'whatsapp' => $wa, 'email' => $email, 'store_name' => '不应该被采用' ) );
+	check( 'store info ok', array( array(), array( 'whatsapp' => '15551234567', 'email' => '' ) ) === $store( '+1 555 123 4567' ) );
+	check( 'store name is not editable here', ! array_key_exists( 'name', $store( '+15551234567' )[1] ) );
+	check( 'support email kept', 'help@shop.example' === $store( '+15551234567', 'help@shop.example' )[1]['email'] );
+	check( 'WhatsApp required', 1 === count( $store( '' )[0] ) );
+	check( 'WhatsApp needs country code digits', 1 === count( $store( '12345' )[0] ) );
+	check( 'bad email', 1 === count( $store( '+15551234567', 'not-an-email' )[0] ) );
+	check( 'both problems at once', 2 === count( $store( '', 'x' )[0] ) );
 
 	// ---------- 订单列表的两栏 ----------
 	$src = static fn( array $a ): string => \PeptideCore\Admin\Admin_Menus::order_source( $a );
