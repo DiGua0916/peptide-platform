@@ -71,6 +71,6 @@
 
 	// 购物车抽屉（vc-live-cart-drawer）本来就显示运费和应付总额，这里只管商品弹窗。
 
-	var css = '.vc-purchase-dock .pc-shipline{grid-column:1/-1;width:100%;box-sizing:border-box;margin:2px 0 0}.pc-shipline{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;margin:0 0 10px;padding:8px 12px;border-radius:10px;background:#f1f7f8;color:#334155;font-size:13px;line-height:1.4}.pc-shipline b{color:#0f172a;font-weight:700}.pc-shipline[hidden]{display:none}.pc-shiprows[hidden]{display:none}.pc-shiprow--total strong{font-size:1.05em}';
+	var css = '.vc-purchase-dock .pc-shipline{grid-column:1/-1;flex:0 0 100%;order:99;width:100%;max-width:100%;box-sizing:border-box;margin:2px 0 0}.pc-shipline{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;margin:0 0 10px;padding:8px 12px;border-radius:10px;background:#f1f7f8;color:#334155;font-size:13px;line-height:1.4}.pc-shipline b{color:#0f172a;font-weight:700}.pc-shipline[hidden]{display:none}.pc-shiprows[hidden]{display:none}.pc-shiprow--total strong{font-size:1.05em}';
 	var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
 })();
