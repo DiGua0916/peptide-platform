@@ -316,12 +316,34 @@
 		} ).join( '' ) + '</ul>' : '<p class="pc-ov-empty is-box">还没有客户分析。</p>' ) + '</section>';
 		return '<div class="pc-ov-ads">' + ai + todo + recent + '</div>';
 	}
+	// 店铺评分（店主 2026-11-10）：右栏商品排名下面，取 AI 全站分析的健康分、四项评级和上一份的分数。
+	function scoreCard() {
+		var head = '<div class="pc-ov-card__head"><h2>店铺评分</h2>' + ( extras && extras.ai ? more( extras.ai.url, '查看报告' ) : '' ) + '</div>';
+		if ( ! extras ) { return '<section class="pc-ov-card pc-ov-score">' + head + '<p class="pc-ov-empty">…</p></section>'; }
+		var a = extras.ai;
+		if ( ! a || '' === String( a.health || '' ) ) { return '<section class="pc-ov-card pc-ov-score">' + head + '<p class="pc-ov-empty is-box">还没有评分。AI 全站分析生成报告后会在这里显示。</p></section>'; }
+		var n = Math.max( 0, Math.min( 100, parseInt( a.health, 10 ) || 0 ) );
+		var tone = n >= 70 ? 'is-good' : n >= 40 ? 'is-mid' : 'is-bad';
+		var prev = parseInt( a.prev, 10 );
+		var delta = isNaN( prev ) ? '' : ( n - prev > 0 ? '<span class="pc-ov-score__delta is-up">比上次 +' + ( n - prev ) + '</span>' : n - prev < 0 ? '<span class="pc-ov-score__delta is-down">比上次 ' + ( n - prev ) + '</span>' : '<span class="pc-ov-score__delta">和上次持平</span>' );
+		var gradeTone = function ( g ) { return /差|弱|低|告警|严重|异常|无/.test( g ) ? 'is-bad' : /中|一般|关注|偏/.test( g ) ? 'is-mid' : /好|强|健康|高|正常|优/.test( g ) ? 'is-good' : ''; };
+		var rows = ( a.ratings || [] ).map( function ( r ) {
+			return '<li><span class="pc-ov-score__name">' + esc( r.name ) + '</span><span class="pc-ov-score__grade ' + gradeTone( r.grade ) + '">' + esc( r.grade || '—' ) + '</span>' + ( r.reason ? '<small>' + esc( r.reason ) + '</small>' : '' ) + '</li>';
+		} ).join( '' );
+		return '<section class="pc-ov-card pc-ov-score">' + head +
+			'<div class="pc-ov-score__top"><b class="' + tone + '">' + n + '</b><span>/ 100' + ( a.state ? ' · ' + esc( a.state ) : '' ) + '</span>' + delta + '</div>' +
+			'<div class="pc-ov-score__bar"><i class="' + tone + '" style="width:' + n + '%"></i></div>' +
+			( rows ? '<ul class="pc-ov-score__list">' + rows + '</ul>' : '' ) +
+			'<p class="pc-ov-muted pc-ov-score__at">AI 全站分析 · ' + esc( a.period + ' · ' + a.at ) + '</p></section>';
+	}
 	function loadExtras() {
 		if ( ! wp.apiFetch ) { return; }
 		wp.apiFetch( { path: '/peptide/v1/overview/extras' } ).then( function ( res ) {
 			extras = res || { todo: [] };
 			var box = root.querySelector( '.pc-ov-ads' );
 			if ( box ) { box.outerHTML = ads(); }
+			var sc = root.querySelector( '.pc-ov-score' );
+			if ( sc ) { sc.outerHTML = scoreCard(); }
 		} ).catch( function () {} );
 	}
 
@@ -496,7 +518,7 @@
 			'<div class="pc-ov-split"><div>' + funnel() + '</div><div id="pc-ov-trend">' + chart() + '</div></div></section>' +
 			liveCard() +
 			'</div>' +
-			'<div class="pc-ov-side">' + side() + live( todayData ) + rankCard( 'traffic' ) + rankCard( 'products' ) + '</div>' +
+			'<div class="pc-ov-side">' + side() + live( todayData ) + rankCard( 'traffic' ) + rankCard( 'products' ) + scoreCard() + '</div>' +
 			'</div>' + ads();
 		bindChart();
 		root.querySelectorAll( '.pc-ov-tab' ).forEach( function ( b ) {
