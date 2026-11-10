@@ -84,6 +84,17 @@ final class Test_Orders {
 			return true;
 		}
 		// phpcs:enable
+		// 读会话里的顾客资料时（WC()->customer 还没建好）：直接看会话里存的地址。
+		// 否则会话里存着测试邮箱“1”的浏览器，每个页面都会因“Invalid billing email address”报 500（2026-11-10）。
+		if ( function_exists( 'WC' ) && WC()->session && ! ( WC()->customer instanceof \WC_Customer ) ) {
+			$sc = WC()->session->get( 'customer' );
+			if ( is_array( $sc ) && self::is_test_customer( $sc ) ) {
+				$cached = true;
+				return true;
+			}
+			$cached = null; // 顾客对象建好之前不缓存“不是测试单”。
+			return false;
+		}
 		if ( function_exists( 'WC' ) && WC()->customer instanceof \WC_Customer ) {
 			$c = WC()->customer;
 			foreach ( array( 'shipping', 'billing' ) as $type ) {
