@@ -635,6 +635,8 @@ Root installed only three existing Commerce sources for P09 collection products 
 | `Metrics::daily( int $from, int $to ): array` | 按店铺时区自然日，每天 `{date, visitors, paid_visitors, conversion_rate, orders, gross_cents, refund_cents, sales_cents, aov_cents}` |
 | `Metrics::order_fact( \WC_Order $order ): array` | 一张订单的事实，见下 |
 | `Metrics::order_facts( int $from, int $to ): array` | 付款时间在时间段内的已付款订单的事实（含测试单，`test = true`） |
+| `Metrics::paid_orders( int $from, int $to ): array` | 和 `order_facts()` 同一批订单，但返回 `\WC_Order` 对象（含测试单，调用方用 `is_test_order()` 排除） |
+| `Metrics::tail_steps( array $evidence, bool $paid ): array` | 一次访问在漏斗后四层走到了哪几步（纯函数）：`$evidence` 是这次访问里有没有 `address / shipping / payment` 事件，`$paid` 是有没有算数的已付款订单；返回 `address / shipping / payment / paid` 里走到的那几步 |
 | `Metrics::is_test_order( \WC_Order $order ): bool` / `is_paid_order()` / `paid_at()` | 测试单 / 收到过支付成功通知 / 付款时间（秒） |
 | `Metrics::sum_orders( array $facts ): array` | 把事实加总（纯函数），返回同 `orders()` |
 
@@ -666,6 +668,9 @@ currency, visitor, visit, buyer
 - 影子和开的时候，新旧不一致写进选项 `peptide_core_m6_shadow_log`，并触发 `do_action( 'peptide_core_m6_shadow_diff', string $metric, array $diffs, array $context )`（F1 的巡检可以挂）。
 - 功能声明（F1 的 `pc_hq_capabilities`，格式 功能键 => 版本号）：`m6.metrics => '1'`（这家店有 `Data\Metrics`，版本 = `Metrics::VERSION`）、`m7.pixel_acceptance => '1'`（有服务端 AddPaymentInfo、像素验收和 `/admin/pixel-test`）。只说明代码在不在，不说明开关是哪一档。
 - 总后台如果要远程换档：改这个选项即可（需要 F1 在连接器里提供写选项的通道，F4 不改连接器）。
+- 对账日志里的指标名：`overview.totals`、`overview.recovery`、`operations.kpis`、`reports.test_order`、`reports.paid_orders`、`reports.conversion`、`reports.visitor_funnel`（含义见 `docs/metrics.md` 第 5 节的表）。
+- `Data\Metrics_Overlay` 是 F4 的报表类内部用的（按开关在旧算法和 `Metrics` 之间取值），别的模块不要调用它，直接用第 1 小节的 `Metrics`。
+- **开关会影响到的、不归 F4 的调用方**：`core/class-overview.php` 和 `core/class-hq-ai.php` 读 `Data\Visitor_Funnel::period()`、`Data\Operations::period()`。开关开着时它们拿到的是新口径的数字（和概览页、数据页一致），关着时和以前一样；这两个文件不用改。
 - 新增的选项（没有新表）：`peptide_core_m6_mode`、`peptide_core_m6_shadow_log`（只有指标名和数字）、`peptide_core_m6_funnel_anomalies`（按天的计数）、`peptide_core_px_acceptance`（验收码和时间）、`peptide_core_pixels_buyer_platforms`。都不含顾客资料和密钥，脱敏快照里可以原样保留。验收期间浏览器上报的事件记在现有的 `pc_px_log` 里（`platform = browser`，只有事件名和 event_id）。
 
 ### 3. 漏斗推进规则 `PeptideCore\Tracking\Funnel_Guard`（FE-05）
@@ -697,5 +702,5 @@ currency, visitor, visit, buyer
 | --- | --- | --- |
 | F5 | 角色 `pc_media_buyer` 带 `manage_woocommerce`；菜单白名单保留 `pc-data` | 待 F5 |
 | F3 | 订单上报和总后台汇总按 `order_fact()` 的规则；回写 `_pc_refund_cents` | 待 F3 |
-| F1 | 登记功能键 `m6.metrics`、`m7.pixel_acceptance`；测试条目已追加到 `tests/data-observations-suites.json` 末尾（`module: M6 / M7`）；发布前在沙盒把开关切到 `shadow` 观察；有 PHP 的环境到位后 F4 的用例要先跑一遍（这台开发机没有 PHP / Node，全部用例都还没跑过） | 待 F1 |
+| F1 | 登记功能键 `m6.metrics`、`m7.pixel_acceptance`；测试条目已追加到 `tests/data-observations-suites.json` 末尾（`module: M6 / M7`）（现在 10 条）；发布前在沙盒把开关切到 `shadow` 观察。F4 的用例已经在本机跑过（PHP 8.3.36），默认套件 58 通过 / 3 失败，剩下 3 个不归 F4 | 待 F1 |
 | 日常会话 | `core/class-overview.php` 不用改：概览页的数字由 `Admin\Overview_Page` 按开关用 `Metrics` 覆盖。之后再改概览页、数据页、访客页、像素页请先在聊天室找 F4 | 知会 |

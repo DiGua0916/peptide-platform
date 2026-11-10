@@ -1,12 +1,12 @@
 # M6 追踪与指标：交接（F4「数据」会话）
 
-2026-11-10 · 分支 `claude/m6-metrics-db7036`（已推送，没有合进主线，没有发布）· 基线 `82032bd`，已合并主线到 `f0e58d2`。
+2026-11-10 · 分支 `claude/m6-metrics-db7036`（已推送，没有合进主线，没有发布）· 基线 `82032bd`，已合并主线到 `dcaf95e`。
 对应需求：NF-02（口径部分）、FE-05、ST-05。口径见 `docs/metrics.md`，给别的会话的签名见 `docs/CONTRACT.md`「M6 / M7」。
 
 ## 先说最重要的
 
 **纯逻辑测试已经在本机跑过并通过；需要 WordPress / WooCommerce / 数据库 / 浏览器的部分一样都没跑过。**
-平台所有者同意后，我在本会话的临时目录里从 php.net 源码编译了 PHP 8.3.36（方法见文末），跑了新写的 8 个用例和仓库里现有的全部纯逻辑用例，结果见“实际做过的检查”。
+平台所有者同意后，我在本会话的临时目录里从 php.net 源码编译了 PHP 8.3.36（方法见文末），跑了新写的 10 个用例和仓库里现有的全部纯逻辑用例，结果见“实际做过的检查”。
 没有验证过的：任何真实数据库上的查询（`Metrics` 的订单和访客读数、对账报告）、概览页和数据页在浏览器里的样子、`wc_get_orders( date_paid … )` 在真实 WooCommerce 下的行为、追踪事件的真实写入。这些要到沙盒或脱敏快照上才能验证。
 
 开关默认是 `off`。按设计，off 时线上行为和这条分支之前完全一样（见“开关关着时改了什么”一节的逐项说明）。
@@ -20,6 +20,7 @@
 | 3 | FE-05 漏斗推进规则 `Tracking\Funnel_Guard`：没有填地址的记录不推进到下单 / 支付成功，记异常；填地址事件晚到时补推进 | `e0831a7` |
 | 4 | 按店开关 `Data\Metrics_Switch`（关 → 影子 → 开）和对账工具 `Data\Metrics_Reconcile`；概览页、运营数据接入（`Data\Metrics_Overlay`） | `2609dce`、`2cfce80` |
 | 5 | ST-05：数据子页对投手合并成两页（`Data\Audience` + `Admin\Data_Pages`） | `fe085b5` |
+| 6 | 其余报表接入：测试单规则、订单集合、单笔销售额和归属时刻、分组转化率、八层漏斗（见“已经接入的地方”）；每处一个对账用例 | `e7883ce` |
 
 M7 的部分见 `docs/handoffs/m7-pixels.md`。
 
@@ -29,18 +30,23 @@ M7 的部分见 `docs/handoffs/m7-pixels.md`。
 
 - `includes/data/class-metrics.php`、`class-metrics-switch.php`、`class-metrics-reconcile.php`、`class-metrics-overlay.php`、`class-audience.php`
 - `includes/tracking/class-funnel-guard.php`
-- `tests/m6-stubs.php`（共用桩）、`m6-metrics-pure.php`、`m6-metrics-switch-pure.php`、`m6-funnel-guard-pure.php`、`m6-reconcile-orders-pure.php`、`m6-reconcile-overlay-pure.php`、`m6-buyer-data-pages-pure.php`、`m6-reconcile-report-smoke.php`
+- `tests/m6-stubs.php`（共用桩）、`m6-metrics-pure.php`、`m6-metrics-switch-pure.php`、`m6-funnel-guard-pure.php`、`m6-reconcile-orders-pure.php`、`m6-reconcile-overlay-pure.php`、`m6-reconcile-reports-pure.php`、`m6-reconcile-conversion-pure.php`、`m6-buyer-data-pages-pure.php`、`m6-reconcile-report-smoke.php`
+- `tests/fixtures/conversion-db-059.php`（转化报表用例共用的假数据库，从 `data-classified-conversion-pure.php` 里原样搬出来）
 - `docs/metrics.md`、本文件
 
 修改：
 
 - `includes/tracking/class-tracker.php`：`raise_stage()` 先问 `Funnel_Guard`；`register_hooks()` 注册 `Funnel_Guard`。
 - `includes/tracking/class-ingest.php`：新保存了填地址事件后触发 `peptide_core_tracking_address_completed`。
-- `includes/data/class-operations.php`：`period()` 的五个核心指标经 `Metrics_Overlay::operations()`。
+- `includes/data/class-operations.php`：`period()` 的五个核心指标经 `Metrics_Overlay::operations()`；`paid_orders()` 的结尾经 `Metrics_Overlay::paid_orders()`。
+- `includes/data/` 下 18 个报表类和 `includes/tracking/class-checkout-dropoffs.php`：各自末尾加了几个私有的小函数（`is_test()`、`sales()`、`order_ts()`、`conversion()`），
+  原来直接写的 `Overview::is_test_order()`、`订单金额 − 退款`、`创建时间`、`订单数 ÷ 访客` 改成调它们。小函数里先看 `Metrics_Overlay` 在不在：
+  不带自动加载的旧用例里没有这个类，走的就是原来那一行算式。
+- `includes/data/class-visitor-funnel.php`、`class-classified-conversion.php`：开关开着时后四层按 FE-05 的规则结算。
 - `includes/admin/class-overview-page.php`：页面和接口的数据经 `Metrics_Overlay`（新方法 `Overview_Page::data()`）。
 - `includes/admin/class-data-pages.php`：投手的两个合并页。
 - `includes/class-plugin.php`：只追加一行 `Data\Metrics_Switch::register_hooks();`。
-- `tests/data-observations-suites.json`：末尾追加 7 条（`module: M6 / M7`）。
+- `tests/data-observations-suites.json`：末尾追加 10 条（`module: M6 / M7`）。
 - `docs/CONTRACT.md`：末尾追加「M6 / M7」一节。
 
 没有新表、没有改表结构。新增的选项见 CONTRACT 第 2 小节。
@@ -54,6 +60,9 @@ M7 的部分见 `docs/handoffs/m7-pixels.md`。
 | `Tracker::raise_stage()` | 阶段 ≥ 4 时多读一次选项 `peptide_core_m6_mode`，然后执行和以前一样的 UPDATE；不查事件表、不写计数 |
 | `Ingest` | 一批里有新的填地址事件时多触发一个动作，监听方读到 off 立刻返回 |
 | `Operations::period()` | `Metrics_Overlay::operations()` 原样返回传入的数组，`Metrics` 不被调用 |
+| `Operations::paid_orders()` | 查询和以前一样，`Metrics_Overlay::paid_orders()` 原样返回这一批订单，不再查第二次 |
+| 各报表的 `is_test()` / `sales()` / `order_ts()` / `conversion()` | 多读一次开关，然后算出和原来那一行算式相同的值 |
+| `Visitor_Funnel::period()` | 多读一次开关；SQL、循环和结果都不变（每张订单多记一个不会被用到的字段） |
 | 概览页 | `Overview::range_data()` / `summary()` 的结果原样输出；缓存名和以前相同 |
 | 数据页（管理员） | 菜单多注册两个隐藏的合并页（和“来源”页一样在 admin_head 里从菜单拿掉），12 个原有页面的输出不变 |
 | 数据页（投手） | 不受开关控制：只要用户有 `pc_media_buyer` 角色就生效。角色现在还不存在（F5 在做），所以目前对所有人都不生效 |
@@ -83,25 +92,31 @@ wp eval 'print_r( PeptideCore\Data\Metrics_Switch::log() ); print_r( PeptideCore
 
 5. 差异都有解释、漏斗异常数可以接受之后切 `on`；先试点店，再全部店。出问题改回 `off` 即可。
 
-## 还没有接入 `Data\Metrics` 的地方
+## 已经接入的地方
 
-开发文档说“约 35 个报表类逐步改”。这一批只接了全店合计这一层，下面这些还在用各自的旧算法（开关开着时它们和概览页、运营数据的合计会不一致，差异就是 `docs/metrics.md` 第 4 节那几条）：
+开关开着时，下面这些和 `Data\Metrics` 是同一个口径；关着和影子时仍然是旧算法（影子多记一份对账）。
 
-| 位置 | 自己算的东西 | 建议怎么接 |
+| 口径 | 接入点 | 覆盖到的报表 |
 | --- | --- | --- |
-| `Data\Operations::period()` 其余 7 项和五层漏斗的“支付成功” | 件数、商品净销售额、退款、顾客数、时长、移动端 | 订单来源换成 `Metrics::order_facts()` 对应的订单（按付款时间、新的测试单规则） |
-| `Data\Realtime` 的时间窗卡片、分钟曲线 | 最近 N 分钟的订单数、销售额 | `Metrics::orders( 窗口 )` |
-| `Data\Trends` | 每个时间格的订单、销售额、复购 | 复用 `Metrics_Overlay::series()` 的做法 |
-| `Data\Visit_Metrics`（落地页、来源、分维度明细共用） | 每组的订单、销售额、转化率 | `order_fact()` 换成 `Metrics::order_fact()`，转化率换成支付成功访客 ÷ 访客 |
-| `Data\Conversion`、`Data\Classified_Conversion`、`Data\Dimension_Conversion` 的分组 | 每组销售额和转化率 | 同上 |
-| `Data\Products`、`Data\Rankings`、`Data\Page_Conversion`、`Data\Experiments`、`Data\Realtime_Filter`、`Data\Report_Filter` | 商品级销售额；测试单过滤用的是 `Overview::is_test_order()` | 先统一把测试单判断换成 `Metrics::is_test_order()` |
-| `Data\Visitor_Funnel`（带分组、回访的八层漏斗） | 填地址之后几层和“支付成功” | 把 `Metrics::funnel_counts()` 的规则搬进去（分组和回访 `Metrics` 现在没有） |
-| `Tracking\Query::stats()`（六层阶段漏斗，访客页在用） | 按 `stage` 直接数 | 规则开了之后自然满足“不跳步”，口径不用改 |
-| 概览页的商品排名、注册用户 | 旧订单集合 | 低优先级 |
+| 全店合计 | `Metrics_Overlay::overview()` / `recovery()` / `operations()` | 概览页、运营数据的五个核心指标 |
+| 谁是测试单 | 各报表的 `is_test()` → `Metrics_Overlay::is_test_order()` | 运营数据、转化详情（三种）、趋势、实时、实时筛选、报表筛选、商品、来源、落地页、分维度明细、排行、实验、页面转化、结账步骤、八层漏斗、结账流失 |
+| 哪些订单算在时间段里 | `Operations::paid_orders()` → `Metrics_Overlay::paid_orders()` | 运营数据其余几项、转化详情、趋势、实时、实时筛选、商品、来源、落地页、分维度明细、实验 |
+| 一张订单的销售额 | 各报表的 `sales()` → `Metrics_Overlay::order_sales()` | 运营数据、转化详情（三种）、趋势、实时、实验、`Visit_Metrics`（落地页、来源、分维度明细） |
+| 一张订单算在哪个时刻 | 各报表的 `order_ts()` → `Metrics_Overlay::order_time()` | 趋势、实时筛选、实验、只看某类访客的转化详情 |
+| 分组转化率 | `conversion()` → `Metrics_Overlay::conversion()` | 落地页、来源、分维度明细（`Visit_Metrics`）、转化详情按设备 / 浏览器 / 国家等、只看某类访客的转化详情 |
+| 八层漏斗（含分组和回访） | `Visitor_Funnel::period()` 自己看开关；`Classified_Conversion` 用 `Metrics::tail_steps()` | 运营数据、转化详情（三种）、实时数据、概览页、总后台 AI 摘要 |
 
-建议的顺序：先做“测试单判断统一”（改动小、对数字影响最直接），再做 `Visit_Metrics`（一处改三个报表），然后 `Trends`、`Realtime`，最后 `Visitor_Funnel`。每接一个加一个对账用例。
-这些类都有现成的纯逻辑测试，接入必须在能跑测试的环境里做，所以这一批没有动。
+## 还没有接入的地方
 
+| 位置 | 现在怎么算 | 为什么没动 |
+| --- | --- | --- |
+| `Data\Rankings`（排行） | 自己查“时间段内创建”的全部状态订单 | 支付成功率要用到没付款的订单，不能换成“时间段内付款”的那一批；测试单规则已经统一。要改得把“金额类的表”和“支付尝试类的表”拆成两次取数 |
+| 商品级金额：`Products`、`Rankings` 的商品 / 类目销售额、运营数据的“商品净销售额” | 减 WooCommerce 里逐件记的退款 | 总后台标记的退款是整单的，分不到每件商品。系统内不做退款，正常都是 0 |
+| 运营数据的“退款”一项 | WooCommerce 里的退款单 | 这一项本来就是“WooCommerce 里退了多少”，和销售额口径无关。上线后如果要显示总后台标记的退款，换成 `Metrics::orders()['refund_cents']` |
+| `Data\Page_Conversion`（页面转化） | 按访问上挂的订单算件数；已付款 = 已付款状态或有付款时间，货到付款不算 | 是按件数的报表，只统一了测试单规则 |
+| `Tracking\Query::stats()`（访客页的六层阶段漏斗） | 按 `stage` 直接数 | 写入侧的规则开了之后自然满足“不跳步”，不用改；规则打开之前的历史访问仍然可能跳步 |
+| 概览页的商品排名、注册用户 | 旧订单集合 | 在 `core/class-overview.php` 里，不归 F4；低优先级 |
+| 影子模式下的漏斗对账 | 只比后四层的规则差异 | “不算测试版留下的访问”要换 SQL 才能比，影子时没有做；这部分差异在 `operations.kpis` 的访客数里能看到 |
 ## ST-05 的现状
 
 - 投手（角色 `pc_media_buyer`，由 F5 创建）的“数据”菜单只有两页：「漏斗 + 来源」「商品 + 落地页」。每页顶部两个页签，切换的是原来的四个报表（转化率详情、来源、商品详情、落地页转化），脚本和接口没有动。
@@ -120,31 +135,44 @@ wp eval 'print_r( PeptideCore\Data\Metrics_Switch::log() ); print_r( PeptideCore
 
 | 检查 | 结果 |
 | --- | --- |
-| `php -l`：全部新增和修改的 PHP 文件（26 个） | 无语法错误 |
+| `php -l`：全部新增和修改的 PHP 文件 | 无语法错误 |
 | `node --check assets/pixels.js` | 通过 |
-| 新用例 `m6-metrics-pure`（54 条断言）、`m6-metrics-switch-pure`（30）、`m6-funnel-guard-pure`（36）、`m6-reconcile-orders-pure`（23）、`m6-reconcile-overlay-pure`（26）、`m6-buyer-data-pages-pure`（31）、`m7-pixel-acceptance-pure`（32）、`m7-pixels-pure`（31） | 全部通过，`E_ALL` 下没有警告 |
+| 新用例 `m6-metrics-pure`（54 条断言）、`m6-metrics-switch-pure`（30）、`m6-funnel-guard-pure`（36）、`m6-reconcile-orders-pure`（23）、`m6-reconcile-overlay-pure`（26）、`m6-reconcile-reports-pure`（46）、`m6-reconcile-conversion-pure`（26）、`m6-buyer-data-pages-pure`（31）、`m7-pixel-acceptance-pure`（32）、`m7-pixels-pure`（31） | 全部通过，`E_ALL` 下没有警告 |
 | 默认套件 `node tests/run-data-observations.cjs`：主线 `f0e58d2` | 42 通过 / 9 失败 |
-| 同一命令：本分支 | 53 通过 / 6 失败；**没有新增失败**，修好了 3 个原有失败 |
-| 24 个非默认的可选套件，主线和本分支逐个对比 | 结果完全相同（两边都是 12 个失败，都是历史套件） |
-| 插件里全部可以单独运行的测试文件（PHP 和 JS 共 114 个），主线和本分支逐个对比 | 只有变好的：除上面 3 个外，`tracking-native-visit-classifier-pure` 也从失败变为通过 |
+| 同一命令：本分支第一批（`830c2e2`） | 53 通过 / 6 失败；没有新增失败，修好了 3 个原有失败 |
+| 同一命令：本分支第二批（`e7883ce`，已合并主线 `dcaf95e`） | **58 通过 / 3 失败**；又修好 3 个原有失败，剩下 3 个不归 F4 |
+| 24 个非默认的可选套件，主线和本分支逐个对比（第一批时做的） | 结果完全相同（两边都是 12 个失败，都是历史套件） |
+| 插件里全部可以单独运行的测试文件（PHP 和 JS 共 124 个），改动前后逐个对比 | 只有变好的，没有变差的 |
 
-第一次运行时的情况：8 个新用例里 7 个一次通过；`m6-funnel-guard-pure` 有 1 条断言失败，原因是测试桩把“异常数”查询误认成了另一条查询（桩的问题，不是实现的问题），改了桩之后通过。`m7-pixels-pure` 是有了 PHP 之后新写的，加载真正的 `Pixels` / `Server` / `Acceptance`。
+第二批（其余报表接入）是这样保证“关着时不变”的：
 
-修好的原有失败（都是测试桩或期望值没跟上主线的改动，实现没有问题）：
+- 每改一步都把上面这 124 个文件重跑一遍，和改之前逐个比退出码——其中 `data-classified-conversion-pure` 把转化详情七种分组的完整 JSON 和 CSV 同一份冻结的旧输出逐字比对，`data-native-search-pure` 把排行前十九张表同冻结的旧输出逐字比对，都没有变。
+- `m6-reconcile-conversion-pure` 用真正的报表类把转化详情（按设备、按国家、只看正常访客）在同一份数据上跑三遍：关着时是旧数字；影子时三张报表的输出和关着时逐字节相同、差异进日志；开了之后三张报表的漏斗都等于 `Metrics::funnel()`，分组加起来等于合计；换回关又和最开始逐字节相同。
+- `m6-reconcile-reports-pure` 对五个接入点各做一组 关 / 影子 / 开，并用 `Metrics_Reconcile` 确认每一处差异都落在写明的原因里。
+
+第二批第一次运行时的情况：两个新用例各有断言写错的地方（一处把日志里新旧两栏看反了，一处以为影子时会记分组转化率的差异——那份数据里每人只有一单，本来就没有差异），改的都是用例。
+实现上只动了一处：`Metrics::order_facts()` 按订单号补查时，如果环境给回来的是订单对象而不是订单号也能认（测试夹具就是这样）。
+
+第一批第一次运行时的情况：8 个新用例里 7 个一次通过；`m6-funnel-guard-pure` 有 1 条断言失败，原因是测试桩把“异常数”查询误认成了另一条查询（桩的问题，不是实现的问题），改了桩之后通过。`m7-pixels-pure` 是有了 PHP 之后新写的，加载真正的 `Pixels` / `Server` / `Acceptance`。
+
+第一批修好的原有失败（都是测试桩或期望值没跟上主线的改动，实现没有问题）：
 
 - `tracking-product-actions-pure`、`tracking-native-visit-classifier-pure`：桩里的 `Tracker` 缺 `is_automated()`（11-08 加的爬虫过滤）。
 - `tracking-store-api-cart-success-pure`：缺 `Recovery::CRON`（11-10 加的付款事件补记）。
 - `experiment-data-pure`：数据页数量的期望值还是 11，现在是 12。
 
-默认套件里还在失败的 6 个（主线上同样失败，不是这条分支引起的）：
+第二批修好的 3 个（也都是用例没跟上主线的改动）：
+
+- `data-native-search-pure`：排行后来多了“收藏商品”一张表，用例单独运行时没有加载 `Data\Product_Actions`；冻结的期望值是加商品缩略图之前导出的，每一行后来多了一个 `image` 字段。现在数字、名称、顺序仍然逐字比对，`image` 单独检查。
+- `data-product-action-rankings-pure`：同上，另外假商品缺缩略图函数要读的三个方法。
+- `data-product-user-ratios-node`：对比期那一行的“VS”后来改成只给读屏软件念，断言还在找连在一起的文字。
+
+默认套件里还在失败的 3 个（主线上同样失败，不归 F4）：
 
 | 套件 | 原因 | 归属 |
 | --- | --- | --- |
-| `data-native-search-pure`、`data-product-action-rankings-pure` | 共用的 `data-dimensions-pure.php` 是一串“冻结期望值”。我改掉了前两处过期的（11-08 的漏斗规则、新增的 channel 分组），后面还有：排行需要 `Data\Product_Actions` 而用例没加载、“原有十九项 JSON 不变”的期望值也已经过期 | F4，下一批继续 |
-| `data-product-user-ratios-node` | 商品数据页“至少选五列”的界面行为在页面重做后变了，用例没跟上 | F4，下一批 |
 | `mail-source-observations` | 需要一个装好的 WordPress 目录，不是纯逻辑用例 | 日常会话 / F1 |
 | `visitor-intents`、`visitor-product-actions` | 主题的用例 | F5 |
-
 没有做的：需要 WordPress 的 `smoke-*.php` / `*-native.php`、任何数据库上的查询、任何浏览器里的页面检查。
 
 ### 独立静态复查（另一个只读会话，没有运行环境，逐条手工推演）
@@ -163,12 +191,10 @@ wp eval 'print_r( PeptideCore\Data\Metrics_Switch::log() ); print_r( PeptideCore
 
 ## 下一步
 
-1. 沙盒或脱敏快照到了之后：`wp eval-file …/m6-reconcile-report-smoke.php`，把结果补到本文件；在沙盒上把开关切到 `shadow` 观察。
-2. 按“还没有接入”一节的表继续接入其余报表（现在本机能跑测试了）。
-3. 修完上表里归 F4 的 3 个原有失败。
-4. 同屏合并的投手数据页（需要浏览器环境）。
-5. “按广告拆分”：现在主题和 `Tracking\Attribution` 的白名单都只收 `utm_source`、`utm_medium`，广告系列 / 广告组 / 广告三个参数在上报时就被丢掉了（弃单详情、结账流失页读这几个字段一直是空的）。要做：主题两个脚本放开白名单（F5 / 主题归属方），`Attribution` 放开白名单，来源报表加维度。
-
+1. 沙盒或脱敏快照到了之后：`wp eval-file …/m6-reconcile-report-smoke.php`，把结果补到本文件；在沙盒上把开关切到 `shadow` 观察，重点看 `reports.visitor_funnel`（有多少付款没有填地址的记录）和 `reports.paid_orders`（有多少订单不是在创建当天付的款）。
+2. “还没有接入的地方”里的排行（拆成两次取数）；其余几项按表里写的原因暂时不动。
+3. 同屏合并的投手数据页（需要浏览器环境）。
+4. “按广告拆分”：现在主题和 `Tracking\Attribution` 的白名单都只收 `utm_source`、`utm_medium`，广告系列 / 广告组 / 广告三个参数在上报时就被丢掉了（弃单详情、结账流失页读这几个字段一直是空的）。要做：主题两个脚本放开白名单（F5 / 主题归属方），`Attribution` 放开白名单，来源报表加维度。
 ## 在这台机器上跑测试
 
 机器上没有现成的 PHP。这个会话是这样得到的（会话结束临时目录就没了，要重做，约 3 分钟）：

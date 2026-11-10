@@ -55,6 +55,10 @@
 - 付了款的访问一定选过物流和支付方式，所以第 6、7 层对已付款的访问不要求浏览器事件（浏览器事件可能丢）；但**填地址的记录不能少**。
 - 访问关联的订单全是测试单，或者都已经被删掉：这次访问只算到“发起结账”。
 
+后四层的规则写成了一个纯函数 `Metrics::tail_steps( $evidence, $paid )`。带分组和回访的八层漏斗 `Data\Visitor_Funnel`
+（运营数据、转化详情、实时数据、概览页、总后台 AI 摘要都读它）和“只看正常访客”的转化详情在开关开着时用的是同一条规则，
+所以各张报表的漏斗和 `Metrics::funnel()` 在同一份数据上是同一组数字（用例 `m6-reconcile-reports-pure`、`m6-reconcile-conversion-pure`）。
+
 ### 推进规则（写入侧）
 
 访问的 `stage` 只升不降：1 看过商品、2 加购成功、3 进入结账、4 下单（选定支付并提交）、5 支付成功。
@@ -81,6 +85,7 @@
 | 退款金额 | WooCommerce 里记的退款 | 总后台标记的退款 `_pc_refund_cents` | 系统内不做退款（PRD Q16），正常两边都是 0；WooCommerce 里若有历史退款，新口径不减 |
 | 访客 | 不看 `is_test`，访客行被清掉的访问也算 | 只算 `is_test = 0` 且访客行还在的 | 生产店都是 `is_test = 0`，通常没有差别 |
 | 转化率 | 订单数 ÷ 访客 | 支付成功访客 ÷ 访客 | 一人多单只算一人；访问里没有填地址记录的付款不算 |
+| 分组转化率（设备、浏览器、国家、来源、落地页……每一行） | 这一组的订单数 ÷ 这一组的访客 | 这一组访客里付了款的人数 ÷ 这一组的访客 | 同上；订单的访问不在这个时间段里时，订单和销售额照算，但不算进这一行的转化率 |
 | 漏斗“支付成功” | 有付款事件就算，可能比“选支付”多 | 必须先有填地址的记录，且不会超过上一层 | 见第 3 节 |
 | 弃单激活 | 弃单邮件序列表 `pc_recovery`（一次结账一条） | 弃单列表 `Recovery_Items`（一位顾客一条；付款帮助信、手写信也算召回） | 两个数据源，数字会不同，以弃单列表为准 |
 
@@ -105,6 +110,23 @@ wp eval 'print_r( PeptideCore\Data\Metrics_Switch::log() );'
 ```
 
 出问题时把选项改回 `off` 即可，不用回滚代码。历史事件不动；新口径从打开那天起生效，历史报表可以用 `Metrics_Reconcile` 按新口径重算作对照。
+
+### 各张报表在三档下的表现
+
+报表类不直接调 `Metrics`，而是通过 `Data\Metrics_Overlay` 的几个函数取口径（关着时这些函数原样返回旧算法的结果）：
+
+| 取什么 | 函数 | 关 / 影子 | 开 | 影子时记的指标名 |
+| --- | --- | --- | --- | --- |
+| 全店合计（概览页、运营数据） | `overview()` / `recovery()` / `operations()` | 旧算法 | `Metrics::summary()` 那一套 | `overview.totals`、`overview.recovery`、`operations.kpis` |
+| 谁是测试单 | `is_test_order( $order )` | 测试付款方式 / 演示商品 | 多认收件信息全 1 的测试单 | `reports.test_order`（每张订单一条，带订单号） |
+| 哪些订单算在时间段里 | `paid_orders( $legacy, $from, $to )` | 时间段内创建的已付款订单 | 时间段内付款的订单 | `reports.paid_orders`（只在旧 / 只在新的订单号） |
+| 一张订单算多少钱 | `order_sales( $order )` | 订单金额 − WooCommerce 退款 | 订单金额 − 总后台标记的退款 | 不单独记（`Metrics_Reconcile` 的 `refund_basis`） |
+| 一张订单算在哪个时刻 | `order_time( $order )` | 创建时间 | 付款时间 | 不单独记（`paid_outside_range` / `created_outside_range`） |
+| 分组转化率 | `conversion( $orders, $paid_visitors, $visitors, $report )` | 订单数 ÷ 访客 | 付款访客 ÷ 访客 | `reports.conversion`（每张报表一条，只留最新的数值） |
+| 八层漏斗 | `Visitor_Funnel::period()` 自己看开关 | 旧规则 | 第 3 节的规则，且不算测试版留下的访问 | `reports.visitor_funnel`（后四层的人数） |
+
+商品级的金额（商品详情、商品排行、运营数据的“商品净销售额”）减的仍然是 WooCommerce 里逐件记的退款：总后台标记的退款是整单的，
+分不到每件商品上。系统内不做退款（PRD Q16），这两个数正常都是 0。
 
 已经接入开关的页面和还没接入的报表清单见 `docs/handoffs/m6-metrics.md`。
 
