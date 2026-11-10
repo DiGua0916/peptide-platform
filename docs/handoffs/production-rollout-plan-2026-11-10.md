@@ -227,3 +227,8 @@
   - `HQ_AI::visitor_live()` 加现在的 cart；AI 卡片 KPI 改为“购物车（现在）$95.00”，小字“应付 $133.00（含运费）· 分析时 $181.30”（分析后购物车变了才写）。
   - 弃单列表列名“订单总价”改“应付总价（含运费）”，下面加“商品 $95.00”（Recovery_Items item/record_item 加 subtotal）。
 - 阳核对三处一致。
+
+### 2026-11-10 弃单提醒：间隔和文案
+- 问题：地址填好后积压的弃单提醒一次放出，第 1、2 封只隔 10 分钟（只按“弃单后多久”算，没看上一封什么时候发）；第 1 封写 “We tried reaching you on WhatsApp…”（自动邮件没人联系过）、“If your WhatsApp number has changed…”；第 2 封写 “if you'd prefer to pay another way”（现在只收卡）。
+- 修复：`Recovery::STAGE_GAP_MS` = 24 小时，上一封发出 24 小时内不发下一封；`Chase_Copy::defaults_for()` 删掉上面三句，第 1 封结尾改 “Just reply to this email or message us on WhatsApp at …, and we'll take care of it.”，第 2 封改 “If anything went wrong at checkout or you have any questions, just reply…”。各店没有保存自定义正文，默认文案直接生效。手动模板 01（WhatsApp 联系不上后的跟进）不变。
+- 今晚已经 1 小时内收到两封的顾客：主店 1、阳 7、光辉 2、芒果 2（已发出的无法撤回）。

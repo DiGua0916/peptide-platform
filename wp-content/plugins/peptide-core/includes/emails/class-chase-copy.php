@@ -176,10 +176,9 @@ final class Chase_Copy {
 				'subject' => $brand . ' | A Quick Follow-Up on Your Order',
 				'heading' => 'A quick follow-up on your order',
 				'message' => "We're getting in touch to see whether you need any help completing your order.\n\n"
-					. "We tried reaching you on WhatsApp but haven't been able to get in touch, so we're following up by email.\n\n"
 					. "Your experience with {$brand} matters to us. If you encountered any difficulties during checkout or have questions about your order, please let us know—we're happy to help.\n\n"
 					. "We're also running a Black Friday promotion, with special pricing on many peptide products. If you're still considering an order, we'd be happy to share the available offers and help you review your selection.\n\n"
-					. "Could you please reply to this email or message us on WhatsApp at {$wa}? If your WhatsApp number has changed, please let us know the best number to reach you.\n\n"
+					. "Just reply to this email or message us on WhatsApp at {$wa}, and we'll take care of it.\n\n"
 					. 'For your reference, the items you selected are listed below.',
 				'delay'   => 300,
 			);
@@ -189,7 +188,7 @@ final class Chase_Copy {
 				'subject' => $brand . ' | Still Need a Hand With Your Order?',
 				'heading' => 'Still need a hand with your order?',
 				'message' => "We're following up once more in case our earlier note was missed—your order is still saved and waiting for you.\n\n"
-					. "If anything went wrong at checkout, or if you'd prefer to pay another way, just reply to this email or message us on WhatsApp at {$wa} and we'll sort it out right away.\n\n"
+					. "If anything went wrong at checkout or you have any questions, just reply to this email or message us on WhatsApp at {$wa} and we'll sort it out right away.\n\n"
 					. 'Your order details are below.',
 				'delay'   => 1800,
 			);
