@@ -78,7 +78,53 @@
  // ---------- AI 分析（2026-11-10：AI 和人设在总后台；这里只发起请求、显示结果） ----------
  const aiBox = root.querySelector('[data-ai]');
  const aiTitle = subject ? '客户分析 AI' : '全站分析师 AI';
- function aiText(t) { return esc(String(t || '')).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'); }
+ // AI 回答是 Markdown：表格、加粗标题、列表都排好版（店主 2026-11-10：原来表格显示成一串竖线）。
+ function aiInline(t) { return esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/`([^`]+)`/g, '<code>$1</code>'); }
+ function aiText(t) {
+  const lines = String(t || '').replace(/\r/g, '').split('\n'); let html = '', i = 0;
+  const cells = l => l.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+  while (i < lines.length) {
+   const l = lines[i], tr = l.trim();
+   if (!tr) { i++; continue; }
+   if (/^\|/.test(tr)) {
+    const rows = []; while (i < lines.length && /^\|/.test(lines[i].trim())) { rows.push(lines[i].trim()); i++; }
+    const body = rows.filter(r => !/^\|?\s*:?-{2,}/.test(r.replace(/\|/g, '|').replace(/^\|\s*/, '')) || !/^[\s|:\-]+$/.test(r));
+    const data = body.filter(r => !/^[\s|:\-]+$/.test(r));
+    if (data.length) { html += '<div class="pc-ai-tablewrap"><table class="pc-ai-table"><thead><tr>' + cells(data[0]).map(c => '<th>' + aiInline(c) + '</th>').join('') + '</tr></thead><tbody>' + data.slice(1).map(r => '<tr>' + cells(r).map(c => '<td>' + aiInline(c) + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>'; }
+    continue;
+   }
+   if (/^#{1,4}\s/.test(tr) || /^\*\*[^*]+\*\*[：:]?$/.test(tr)) { html += '<h4 class="pc-ai-h">' + aiInline(tr.replace(/^#{1,4}\s*/, '').replace(/^\*\*|\*\*[：:]?$/g, '')) + '</h4>'; i++; continue; }
+   if (/^[-*•]\s/.test(tr)) { let items = ''; while (i < lines.length && /^\s*[-*•]\s/.test(lines[i])) { const sub = /^\s{2,}/.test(lines[i]); items += '<li' + (sub ? ' class="is-sub"' : '') + '>' + aiInline(lines[i].trim().replace(/^[-*•]\s/, '')) + '</li>'; i++; } html += '<ul class="pc-ai-list">' + items + '</ul>'; continue; }
+   if (/^\d+[.、)]\s?/.test(tr)) { let items = ''; while (i < lines.length && /^\s*\d+[.、)]\s?/.test(lines[i])) { items += '<li>' + aiInline(lines[i].trim().replace(/^\d+[.、)]\s?/, '')) + '</li>'; i++; } html += '<ol class="pc-ai-list">' + items + '</ol>'; continue; }
+   if (/^-{3,}$/.test(tr)) { html += '<hr>'; i++; continue; }
+   html += '<p>' + aiInline(tr) + '</p>'; i++;
+  }
+  return html;
+ }
+ // 数据图：KPI、漏斗（本期 / 上期）、渠道、商品、版块。一种蓝色，单系列不用图例；每根条有悬停说明。
+ function aiNum(v, money, pct) { if (v === null || v === undefined || v === '') return '—'; const x = Number(v); if (isNaN(x)) return esc(String(v)); return (money || '') + x.toLocaleString('zh-CN', {maximumFractionDigits: pct ? 2 : 2}) + (pct ? '%' : ''); }
+ function aiBars(title, rows, note) {
+  if (!rows.length) return '';
+  const max = Math.max(1, ...rows.map(r => Number(r.value) || 0));
+  return '<section class="pc-ai-chart"><h5>' + esc(title) + '</h5>' + rows.map(r => '<div class="pc-ai-bar" title="' + esc(r.tip || (r.label + '：' + r.value)) + '"><span class="pc-ai-bar__label">' + esc(r.label) + '</span><span class="pc-ai-bar__track"><i style="width:' + Math.max(2, (Number(r.value) || 0) / max * 100).toFixed(1) + '%"></i></span><span class="pc-ai-bar__val">' + esc(r.text != null ? r.text : String(r.value)) + '</span></div>').join('') + (note ? '<p class="pc-ai-chart__note">' + esc(note) + '</p>' : '') + '</section>';
+ }
+ function aiCharts(c) {
+  if (!c) return '';
+  let html = '';
+  if (c.kind === 'site') {
+   html += '<div class="pc-ai-kpis">' + (c.kpis || []).map(k => { const money = (k.key === 'sales' || k.key === 'aov') ? (c.currency || '') : ''; const pct = k.key === 'conversion'; const d = (k.prev !== null && k.prev !== undefined && k.value !== null) ? Number(k.value) - Number(k.prev) : null; return '<div class="pc-ai-kpi"><span>' + esc(k.label) + '</span><b>' + aiNum(k.value, money, pct) + '</b><em class="' + (d > 0 ? 'is-up' : d < 0 ? 'is-down' : '') + '">' + (d === null ? '上期 —' : '上期 ' + aiNum(k.prev, money, pct) + (d ? (d > 0 ? ' ▲' : ' ▼') : '')) + '</em></div>'; }).join('') + '</div>';
+   const cur = (c.funnel || {})['本期'] || {}, prev = (c.funnel || {})['上期'] || {}; const keys = Object.keys(cur);
+   html += '<div class="pc-ai-charts">' + aiBars('转化漏斗（本期）', keys.map((k, i) => { const v = cur[k], p = i ? cur[keys[i - 1]] : null; const step = p ? Math.round(v / p * 1000) / 10 + '%' : ''; return {label: k, value: v, text: v + (step ? ' · ' + step : '') , tip: k + '：' + v + ' 人' + (step ? '，占上一步 ' + step : '') + '；上期 ' + (prev[k] ?? '—') + ' 人'}; }), '百分比 = 占上一步的比例；悬停看上期人数');
+   html += aiBars('流量来源（访客）', (Array.isArray(c.channels) ? c.channels : []).map(r => ({label: r['渠道'], value: r['访客'], text: r['访客'] + ' 人 · ' + r['付款订单'] + ' 单', tip: r['渠道'] + '：' + r['访客'] + ' 位访客，' + r['付款订单'] + ' 笔付款，转化率 ' + (r['转化率%'] ?? 0) + '%'})));
+   html += aiBars('商品热度（浏览 · 加购）', (c.products || []).map(p => ({label: p.name, value: p.views, text: p.views + ' 浏览 · ' + p.carts + ' 加购', tip: p.name + '：浏览 ' + p.views + ' 次，加购 ' + p.carts + ' 次，停留 ' + p.seconds + ' 秒'})));
+   html += aiBars('版块点击', (c.modules || []).map(m => ({label: m.name, value: m.clicks, text: m.clicks + ' 次'}))) + '</div>';
+  } else {
+   const stages = ['只逛首页', '看了商品', '加了购物车', '进了结账', '下了单', '已付款'];
+   html += '<div class="pc-ai-kpis"><div class="pc-ai-kpi"><span>走到哪一步</span><b>' + esc(stages[c.stage] || '—') + '</b></div><div class="pc-ai-kpi"><span>购买意向分</span><b>' + aiNum(c.intent) + '</b><em>满分 100</em></div><div class="pc-ai-kpi"><span>来访次数</span><b>' + aiNum(c.visits) + '</b></div><div class="pc-ai-kpi"><span>购物车</span><b>' + esc(c.cart || '—') + '</b></div></div>';
+   html += '<div class="pc-ai-charts">' + aiBars('他感兴趣的商品（停留秒数）', (c.products || []).map(p => ({label: p.name, value: p.seconds, text: p.seconds + ' 秒' + (p.carts ? ' · 加购' : ''), tip: p.name + '：停留 ' + p.seconds + ' 秒，浏览 ' + p.views + ' 次' + (p.carts ? '，加购过' : '')}))) + aiBars('他点过的版块', (c.modules || []).map(m => ({label: m.name, value: m.clicks, text: m.clicks + ' 次'}))) + '</div>';
+  }
+  return html;
+ }
  function aiShell(state, body) { aiBox.innerHTML = '<h3>' + aiTitle + '</h3><span>' + esc(state) + '</span>' + body; }
  async function aiStatus() {
   if (!aiBox) return;
@@ -103,7 +149,7 @@
   const out = aiBox.querySelector('.pc-ai-out'); if (!out) return;
   const what = r.source === 'auto' ? '自动分析' : '手动分析';
   const span = !subject && r.period ? ({day:'日',week:'周',month:'月'}[r.period] || r.period) + '报 · ' + (r.date || '') + ' · ' : '';
-  out.innerHTML = '<div class="pc-ai-text">' + aiText(r.text) + '</div><p class="pc-ai-meta">' + esc(span + what + ' · ' + r.at + (r.persona ? ' · 人设：' + r.persona : '') + (r.cached ? ' · 30 分钟内的结果' : '') + (!saved && r.used_today ? ' · 今天已分析 ' + r.used_today + ' 次' : '')) + ' <button type="button" class="button-link" data-ai-again>重新分析</button></p>';
+  out.innerHTML = aiCharts(r.charts) + '<div class="pc-ai-text">' + aiText(r.text) + '</div><p class="pc-ai-meta">' + esc(span + what + ' · ' + r.at + (r.persona ? ' · 人设：' + r.persona : '') + (r.cached ? ' · 30 分钟内的结果' : '') + (!saved && r.used_today ? ' · 今天已分析 ' + r.used_today + ' 次' : '')) + ' <button type="button" class="button-link" data-ai-again>重新分析</button></p>';
   const run = aiBox.querySelector('[data-ai-run]'); if (run) run.textContent = '重新分析';
  }
  async function aiRun(refresh) {

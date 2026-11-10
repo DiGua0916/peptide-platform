@@ -89,7 +89,7 @@ final class Hq_Ai {
 		$perm = array( Tracking\Preferences::class, 'permission' );
 		register_rest_route( 'peptide/v1', '/track/admin/ai/status', array( 'methods' => 'GET', 'permission_callback' => $perm, 'callback' => static fn() => rest_ensure_response( self::status() ) ) );
 		register_rest_route( 'peptide/v1', '/track/admin/ai/analyse', array( 'methods' => 'POST', 'permission_callback' => $perm, 'callback' => array( self::class, 'rest_analyse' ) ) );
-		register_rest_route( 'peptide/v1', '/track/admin/ai/result', array( 'methods' => 'GET', 'permission_callback' => $perm, 'callback' => static fn( \WP_REST_Request $r ) => rest_ensure_response( array( 'result' => self::latest( 'site' === $r['scope'] ? 'site' : 'visitor', 'site' === $r['scope'] ? 0 : absint( $r['visitor_id'] ) ) ) ) ) );
+		register_rest_route( 'peptide/v1', '/track/admin/ai/result', array( 'methods' => 'GET', 'permission_callback' => $perm, 'callback' => array( self::class, 'rest_result' ) ) );
 	}
 
 	public static function rest_analyse( \WP_REST_Request $request ) {
@@ -98,6 +98,17 @@ final class Hq_Ai {
 		$date    = is_string( $request['date'] ) && preg_match( '/\A\d{4}-\d{2}-\d{2}\z/', $request['date'] ) ? $request['date'] : wp_date( 'Y-m-d' );
 		$r = self::run( $scope, absint( $request['visitor_id'] ), absint( $request['visit_id'] ), $period, $date, ! empty( $request['refresh'] ), 'manual' );
 		return is_wp_error( $r ) ? $r : rest_ensure_response( $r );
+	}
+
+	public static function rest_result( \WP_REST_Request $r ) {
+		$scope = 'site' === $r['scope'] ? 'site' : 'visitor';
+		$ref   = 'site' === $scope ? 0 : absint( $r['visitor_id'] );
+		$res   = self::latest( $scope, $ref );
+		if ( $res && empty( $res['charts'] ) ) { // 早期保存的结果没有图表数据：按同一时间段现算。
+			$facts = self::facts( $scope, $ref, 0, $res['period'] ?: ( 'site' === $scope ? 'day' : 'all' ), $res['date'] ?: wp_date( 'Y-m-d' ) );
+			$res['charts'] = is_wp_error( $facts ) ? null : self::charts( $scope, $facts );
+		}
+		return rest_ensure_response( array( 'result' => $res ) );
 	}
 
 	/**
@@ -140,6 +151,7 @@ final class Hq_Ai {
 			'source'     => $source,
 			'period'     => $period,
 			'date'       => $date,
+			'charts'     => self::charts( $scope, $facts ),
 		);
 		set_transient( $cache, $out, 30 * MINUTE_IN_SECONDS );
 		delete_transient( 'pc_ai_status' );
@@ -150,7 +162,7 @@ final class Hq_Ai {
 
 	// ---------- 结果保存（自动分析的结果打开页面就能看到） ----------
 
-	private const RESULTS_VER = '1';
+	private const RESULTS_VER = '2';
 
 	public static function results_table(): string {
 		global $wpdb;
@@ -170,6 +182,7 @@ final class Hq_Ai {
   period varchar(10) NOT NULL DEFAULT '',
   pdate varchar(10) NOT NULL DEFAULT '',
   body longtext NOT NULL,
+  charts longtext NULL,
   persona varchar(80) NOT NULL DEFAULT '',
   model varchar(80) NOT NULL DEFAULT '',
   source varchar(10) NOT NULL DEFAULT 'manual',
@@ -183,7 +196,7 @@ final class Hq_Ai {
 	private static function save_result( string $scope, int $ref, string $period, string $date, array $out ): void {
 		self::ensure_results();
 		global $wpdb;
-		$wpdb->insert( self::results_table(), array( 'scope' => $scope, 'ref' => $ref, 'period' => $period, 'pdate' => $date, 'body' => $out['text'], 'persona' => mb_substr( $out['persona'], 0, 80 ), 'model' => mb_substr( $out['model'], 0, 80 ), 'source' => $out['source'], 'created' => time() ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->insert( self::results_table(), array( 'scope' => $scope, 'ref' => $ref, 'period' => $period, 'pdate' => $date, 'body' => $out['text'], 'charts' => wp_json_encode( $out['charts'], JSON_UNESCAPED_UNICODE ), 'persona' => mb_substr( $out['persona'], 0, 80 ), 'model' => mb_substr( $out['model'], 0, 80 ), 'source' => $out['source'], 'created' => time() ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		// 只留最近 2000 条。
 		$wpdb->query( 'DELETE FROM ' . self::results_table() . ' WHERE id <= ' . (int) $wpdb->get_var( 'SELECT id FROM ' . self::results_table() . ' ORDER BY id DESC LIMIT 1 OFFSET 2000' ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
 	}
@@ -196,7 +209,34 @@ final class Hq_Ai {
 		if ( ! $row ) {
 			return null;
 		}
-		return array( 'text' => (string) $row['body'], 'persona' => (string) $row['persona'], 'model' => (string) $row['model'], 'source' => (string) $row['source'], 'period' => (string) $row['period'], 'date' => (string) $row['pdate'], 'at' => wp_date( 'Y-m-d H:i', (int) $row['created'] ), 'created' => (int) $row['created'] );
+		$charts = json_decode( (string) ( $row['charts'] ?? '' ), true );
+		return array( 'text' => (string) $row['body'], 'charts' => is_array( $charts ) ? $charts : null, 'persona' => (string) $row['persona'], 'model' => (string) $row['model'], 'source' => (string) $row['source'], 'period' => (string) $row['period'], 'date' => (string) $row['pdate'], 'at' => wp_date( 'Y-m-d H:i', (int) $row['created'] ), 'created' => (int) $row['created'] );
+	}
+
+	/** 页面上画图用的数据（就是交给 AI 的那份事实里取出来的，图和文字口径一致）。 */
+	private static function charts( string $scope, array $facts ): array {
+		$products = array_slice( (array) ( $facts['products'] ?? array() ), 0, 8 );
+		$prod     = array_map( static fn( $p ) => array( 'name' => html_entity_decode( (string) ( $p['name'] ?? '' ), ENT_QUOTES, 'UTF-8' ), 'views' => (int) ( $p['views'] ?? 0 ), 'carts' => (int) ( $p['cart_additions'] ?? 0 ), 'seconds' => (int) round( (float) ( $p['active_seconds'] ?? 0 ) ) ), $products );
+		$mods     = array_map( static fn( $m ) => array( 'name' => (string) ( $m['label'] ?? $m['module_type'] ?? '' ), 'clicks' => (int) ( $m['clicks'] ?? 0 ) ), array_slice( (array) ( $facts['modules'] ?? array() ), 0, 6 ) );
+		if ( 'visitor' === $scope ) {
+			$v = (array) ( $facts['visitor'] ?? array() );
+			return array( 'kind' => 'visitor', 'stage' => (int) ( $v['furthest_stage'] ?? 0 ), 'intent' => (int) ( $v['intent_score'] ?? 0 ), 'visits' => (int) ( $v['visits'] ?? 0 ), 'cart' => (string) ( $v['cart']['subtotal'] ?? '' ), 'products' => $prod, 'modules' => $mods );
+		}
+		$k    = (array) ( $facts['business_kpis'] ?? array() );
+		$prev = is_array( $facts['【上期对比】'] ?? null ) ? $facts['【上期对比】'] : array();
+		$kpi  = array();
+		foreach ( array( 'visitors' => '访客', 'orders' => '订单', 'sales' => '销售额', 'conversion' => '转化率', 'aov' => '客单价' ) as $key => $label ) {
+			$kpi[] = array( 'key' => $key, 'label' => $label, 'value' => $k[ $key ] ?? null, 'prev' => $prev[ $key ] ?? null );
+		}
+		return array(
+			'kind'     => 'site',
+			'currency' => get_woocommerce_currency_symbol(),
+			'kpis'     => $kpi,
+			'funnel'   => is_array( $facts['【漏斗】'] ?? null ) ? $facts['【漏斗】'] : array(),
+			'channels' => is_array( $facts['【渠道】'] ?? null ) ? $facts['【渠道】'] : array(),
+			'products' => $prod,
+			'modules'  => $mods,
+		);
 	}
 
 	// ---------- 自动分析（店主 2026-11-10：改成自动） ----------
