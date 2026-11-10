@@ -49,7 +49,7 @@ final class Order_List {
 		}
 		$out = array( 'cb' => $columns['cb'] ?? '<input type="checkbox">' );
 		$out['pc_ops']       = '操作';
-		$out['order_number'] = '订单编号';
+		$out['pc_number']    = '订单编号';
 		$out['pc_items']     = '商品';
 		$out['pc_email']     = '顾客邮箱';
 		$out['pc_country']   = '国家';
@@ -83,6 +83,11 @@ final class Order_List {
 					echo '<a href="' . esc_url( $edit . '#woocommerce-order-fulfillments' ) . '" title="发货" aria-label="发货"><span class="dashicons dashicons-car"></span></a>';
 				}
 				echo '</span>';
+				break;
+			case 'pc_number':
+				// 店主 2026-11-11：订单编号只显示编号，不带顾客名、不带预览小眼睛。
+				// 和支付平台对账用后面的“流水号”（支付平台的交易号）。
+				echo '<a class="pc-ol-num" href="' . esc_url( $order->get_edit_order_url() ) . '">#' . esc_html( $order->get_order_number() ) . '</a>';
 				break;
 			case 'pc_items':
 				$names = array();
@@ -130,10 +135,36 @@ final class Order_List {
 /* 像 Shopname 一样每行不折行，表格太宽就横向滚动 */
 .woocommerce_page_wc-orders table.wp-list-table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;table-layout:auto}
 .woocommerce_page_wc-orders table.wp-list-table td,.woocommerce_page_wc-orders table.wp-list-table th{white-space:nowrap;vertical-align:middle}
-.woocommerce_page_wc-orders table.wp-list-table .column-order_number{min-width:170px}
+.woocommerce_page_wc-orders table.wp-list-table .column-pc_number{min-width:90px}
+.pc-ol-num{font-weight:600;font-variant-numeric:tabular-nums}
+/* 左右滚动条一直显示（Mac 默认会藏起来） */
+.woocommerce_page_wc-orders table.wp-list-table{scrollbar-width:auto;scrollbar-color:#94a3b8 #eef0f3;padding-bottom:2px}
+.woocommerce_page_wc-orders table.wp-list-table::-webkit-scrollbar{height:12px;-webkit-appearance:none}
+.woocommerce_page_wc-orders table.wp-list-table::-webkit-scrollbar-track{background:#eef0f3;border-radius:6px}
+.woocommerce_page_wc-orders table.wp-list-table::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:6px;border:2px solid #eef0f3}
+.woocommerce_page_wc-orders table.wp-list-table::-webkit-scrollbar-thumb:hover{background:#64748b}
+".pc-ol-bar{display:flex;align-items:center;gap:10px;margin:0 0 6px}
+.pc-ol-bar.is-bottom{position:sticky;bottom:0;z-index:5;margin:0;padding:8px 0;background:linear-gradient(to top,#f6f7f9 70%,rgba(246,247,249,0))}
+.pc-ol-bar__track{position:relative;flex:1;height:12px;border-radius:999px;background:#e5e7eb;cursor:pointer}
+.pc-ol-bar__thumb{position:absolute;left:0;top:0;height:12px;border-radius:999px;background:#94a3b8;cursor:grab;touch-action:none}
+.pc-ol-bar__thumb:hover,.pc-ol-bar__thumb:active{background:#64748b}
+.pc-ol-bar__hint{font-size:12px;color:#9ca3af;white-space:nowrap}
 .woocommerce_page_wc-orders table.wp-list-table .column-pc_items{white-space:normal;min-width:170px}
 .woocommerce_page_wc-orders table.wp-list-table .pc-ol-tid{white-space:nowrap;word-break:normal}
 .wp-list-table .column-order_status mark.order-status.status-processing{background:#fff4e5;color:#b45309}
 </style>';
+		// 店主 2026-11-11：左右滚动条要一直看得见（Mac 会藏原生滚动条）。自己画一条：灰色轨道 + 可拖动的滑块，
+		// 放在表格上方，并且一条固定在屏幕底部（往下翻也能拖）；和表格的左右位置同步。
+		echo '<script>document.addEventListener("DOMContentLoaded",function(){var t=document.querySelector(".woocommerce_page_wc-orders table.wp-list-table");if(!t)return;
+function bar(cls){var w=document.createElement("div");w.className="pc-ol-bar "+cls;w.innerHTML="<div class=\\"pc-ol-bar__track\\"><div class=\\"pc-ol-bar__thumb\\"></div></div><span class=\\"pc-ol-bar__hint\\">左右拖动查看更多列</span>";return w;}
+var top=bar("is-top"),bottom=bar("is-bottom");t.parentNode.insertBefore(top,t);t.parentNode.insertBefore(bottom,t.nextSibling);var bars=[top,bottom];
+function max(){return Math.max(0,t.scrollWidth-t.clientWidth);}
+function paint(){var m=max();bars.forEach(function(b){b.style.display=m>2?"":"none";var tr=b.firstChild,th=tr.firstChild,w=tr.clientWidth,tw=Math.max(40,w*t.clientWidth/t.scrollWidth);th.style.width=tw+"px";th.style.transform="translateX("+(m?(w-tw)*t.scrollLeft/m:0)+"px)";});}
+bars.forEach(function(b){var tr=b.firstChild,th=tr.firstChild,drag=null;
+th.addEventListener("pointerdown",function(e){drag={x:e.clientX,s:t.scrollLeft};th.setPointerCapture(e.pointerId);e.preventDefault();});
+th.addEventListener("pointermove",function(e){if(!drag)return;var w=tr.clientWidth-th.offsetWidth;t.scrollLeft=drag.s+(e.clientX-drag.x)*(w?max()/w:0);});
+th.addEventListener("pointerup",function(){drag=null;});
+tr.addEventListener("pointerdown",function(e){if(e.target!==tr)return;var r=tr.getBoundingClientRect();t.scrollLeft=max()*Math.min(1,Math.max(0,(e.clientX-r.left-th.offsetWidth/2)/(r.width-th.offsetWidth)));});});
+t.addEventListener("scroll",paint);window.addEventListener("resize",paint);paint();setTimeout(paint,400);});</script>';
 	}
 }
