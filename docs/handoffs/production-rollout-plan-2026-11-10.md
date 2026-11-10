@@ -182,3 +182,28 @@
 ### 2026-11-10 付款成功弹窗 WhatsApp 预填 + 首页视频
 - WhatsApp 预填改为“我刚刚在平台上下单了什么、一共多少钱”：默认 `Hi! I just placed an order on {store}: {items}. The total is {total} (order #{order}).`，新增变量 {store}/{items}/{total}（后台字段说明同步）。主店 #11841 核对：Hi! I just placed an order on VialCovePeptides: Happy x1. The total is $1.00 (order #11841).
 - 首页视频（vialcove/video stage 模块）：6 家店 pc_layout 正文和已发布副本 `_pc_published_content` 都改为 autoplay=false、muted=false（原值备份 `_pc_video_backup_20261110` / `_pc_published_backup_20261110`），清页面缓存；modules.css 视频区底色由 #0d1417 改为 #e9eff1、封面底部渐变减淡。5 个可访问站核对 data-vc-stage-autoplay="0"；主店手机尺寸：停在明亮封面，点 Watch video 有声播放。
+
+### 2026-11-10 运费提前显示（只开阳）
+- 阳的 AI 全站分析“马上做”：结账前明示运费和预计总价（27 人发起结账，只有 6 人填完地址）。店主：先改一家，每家按自己的分析决定。
+- 新增 `Ship_Preview`（class-ship-preview.php + assets/ship-preview.js + 店铺设置 → 运费提前显示，class-ship-preview-page.php）：代码 6 家一样，开关每家单独、默认关。开启后商品弹窗加购区显示 “Shipping $X · Estimated total $Y”（购物车已有商品时写 “Est. total with your bag”），运费按这家店的运费方案 + 当前运费优惠算，默认按美国估算（接口 /peptide/v1/ship-estimate，关闭时 404）。
+- 发现购物车抽屉（vc-live-cart-drawer）本来就显示运费前后和应付总额（$45 → 5% off $42.75 → $52.75），所以只补商品弹窗；旧的 vc-cart-drawer 不用改。
+- AI：`HQ_AI::store_config()` 加“运费提前显示”：开 / 关和开启时间，AI 可对比开启前后“填完地址 ÷ 发起结账”。
+- 主店手机尺寸测试后关闭；阳 2026-11-10 22:21 开启，其余 4 家关。估算核对：bac.water 1 盒 $10 + 运费 $42.75 = $52.75，与结账页一致。
+- 修正：桌面宽度的首页快速查看弹窗里，加购区是横向 flex，运费行占了宽度把价格挤成一竖列。改为 `flex:0 0 100%; order:99`（手机 grid 仍 `grid-column:1/-1`），运费行单独一行放在按钮下面。阳桌面首页弹窗和商品列表弹窗核对正常。
+
+### 2026-11-10 仪表盘“店铺评分”
+- 右栏商品排名下面的空白放“店铺评分”卡：AI 全站分析最新报告的健康分（0–100，颜色：≥70 绿、40–69 橙、<40 红）、状态、比上一份报告的变化，以及“状态评级”四项（流量质量 / 商品吸引力 / 结账转化 / 付款成功）的评级和一句理由，底部写报告类型和时间，“查看报告”跳全站分析。
+- `HQ_AI::rest_extras()` 的 ai 加 `ratings`（`ratings()` 从报告解析四项）和 `prev`（`previous_health()` 上一份全站报告的健康分）；overview.js `scoreCard()`，overview-workspace.css。6 家店都有（数据各用各的）。阳核对：24 / 100 · 告警，比上次 +2，四项为 需关注 / 健康 / 告警 / 告警。
+
+### 2026-11-10 店铺评分（完善度）+ 运营评分切换
+- 店主：店铺评分要能“涨”，不是数据分析的分。右栏卡改成两个切换：**店铺评分**（默认）= 店铺完善度，**运营评分** = 原来的 AI 全站分析健康分 + 四项评级。切换记在浏览器里。
+- 新增 `Store_Score`（class-store-score.php），实时检查 12 项，满分 100：店铺地址 15、自己的客服 WhatsApp 10（子店还用主店 13039444124 不算）、客服电话 5、Facebook Pixel 15、新订单通知邮箱是真实邮箱 10、域名全部连通 10、第一笔真实付款（> $1，非测试单）10、优惠券 5、付款成功弹窗 5、运费提前显示 5、AI 人设调优 5、第一份 AI 全站分析 5。没完成的按分值排前面，带“+分”和“去设置”链接；已完成的折叠。经 `rest_extras()` 的 `setup` 下发。
+- 当前：主店 35、李军 40、阳 60、光辉 25、老毛 40、芒果 40。所有店都缺：店铺地址、新订单通知邮箱、真实付款订单、AI 人设调优。
+
+### 2026-11-10 店铺评分“一键完善”
+- 店铺评分卡加“一键完善”按钮（有可填项才显示，下方写明会填什么）：`Store_Score::autofill_plan()` / `autofill()`，接口 POST /peptide/v1/store-score/autofill（manage_woocommerce）。只填空着或占位的，已填的不动：
+  - 客服电话 ← 本店客服 WhatsApp 号（子店还在用主店 13039444124 时不填）；
+  - 新订单 / 取消 / 失败通知收件人 ← 本店发件邮箱（woocommerce_email_from_address，占位时用 orders@本店域名），原来是 dev-email@wpengine.local / 11111111111@qq.com。
+- 去掉了“公司名称 ← 店名”（会把“芒果”这类内部名显示给顾客）；主店测试时填的公司名已清空。
+- 店铺地址、Pixel、自己的 WhatsApp、真实付款、AI 调优没有现成资料，不自动填。
+- 主店已执行（测试店）：35 → 50（客服电话 +13039444124，通知邮箱 orders@vialcovepeptides.com）。子店未执行，按钮留给店主点；阳会填 VialCovePeptides@outlook.com，其余 orders@各自域名。orders@域名 能否收信未确认。
