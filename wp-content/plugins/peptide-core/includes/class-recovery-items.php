@@ -90,6 +90,12 @@ final class Recovery_Items {
 		$last_ms = $sent ? (int) $sent[0]['created_ms'] : 0;
 		$paid    = $order->get_date_paid() ? $order->get_date_paid()->getTimestamp() : 0;
 		$email   = strtolower( trim( (string) $order->get_billing_email() ) );
+		if ( ! $paid ) {
+			// 店主 2026-11-10：这张单下之前发的信不算召回过这张单（顾客收到信后又来下了新单没付，新单应是“待召回”）。
+			$born = $order->get_date_created() ? $order->get_date_created()->getTimestamp() * 1000 : 0;
+			$sent = array_values( array_filter( $sent, static fn( $m ) => (int) $m['created_ms'] >= $born ) );
+			$last_ms = $sent ? (int) $sent[0]['created_ms'] : 0;
+		}
 		$status  = 'pending';
 		$later   = null;
 		if ( '1' === (string) $order->get_meta( self::VOID_META ) || Test_Orders::is_test_order( $order ) ) {
@@ -185,7 +191,7 @@ final class Recovery_Items {
 	}
 
 	/**
-	 * 同一顾客反复下单只算一条弃单（店主要求）：按金额最高的那张展示，其余挂在它下面（attempts / siblings）。
+	 * 同一顾客反复下单只算一条弃单（店主要求）：展示最新的那张，其余挂在它下面（attempts / siblings）。
 	 * 已付款的单子不并进去。
 	 */
 	private static function group_by_customer( array $items ): array {
@@ -206,14 +212,17 @@ final class Recovery_Items {
 		$out  = array();
 		foreach ( $order as $key ) {
 			$g = $groups[ $key ];
-			// 代表这位顾客的那张单：金额最高的（店主要求），金额相同取最新。
-			usort( $g, static fn( $a, $b ) => ( $b['total'] <=> $a['total'] ) ?: ( $b['created_ms'] <=> $a['created_ms'] ) );
+			// 代表这位顾客的那张单：最新的一张（店主 2026-11-10：客户今天又到了付款页没付，列表里却显示昨天金额更大的已取消单，看不到新弃单）。
+			usort( $g, static fn( $a, $b ) => $b['created_ms'] <=> $a['created_ms'] );
 			$rep             = array_shift( $g );
 			$rep['attempts'] = 1 + count( $g );
 			$rep['siblings'] = $g;
-			$rep['total_max'] = $rep['total'];
+			$rep['total_max'] = max( array_merge( array( (float) $rep['total'] ), array_map( static fn( $i ) => (float) $i['total'], $g ) ) );
+			$last_sent       = max( array_merge( array( (int) $rep['last_sent_ms'] ), array_map( static fn( $i ) => (int) $i['last_sent_ms'], $g ) ) );
+			// 召回信发出之后又来的新弃单，按“待召回”算，不被旧单的“召回中”盖住。
+			$fresh = 'pending' === $rep['status'] && (int) $rep['created_ms'] > $last_sent;
 			foreach ( $g as $i ) {
-				if ( $rank[ $i['status'] ] < $rank[ $rep['status'] ] ) {
+				if ( ! $fresh && $rank[ $i['status'] ] < $rank[ $rep['status'] ] ) {
 					$rep['status'] = $i['status'];
 				}
 				$rep['emails']       = max( $rep['emails'], $i['emails'] );
