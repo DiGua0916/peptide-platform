@@ -328,7 +328,7 @@ final class Mail_Outbox {
 	// ---------- 模板 ----------
 
 	/** 内置模板版本：升级时把内置的（id 以 vc- 开头）换成新话术，店主自己建的保留。 */
-	public const TEMPLATES_VERSION = '2026-11-10b';
+	public const TEMPLATES_VERSION = '2026-11-10c';
 	private const TEMPLATES_VER_OPTION = 'pc_mail_templates_version';
 
 	/** @return array<int,array{id:string,name:string,subject:string,body:string}> */
@@ -384,7 +384,7 @@ final class Mail_Outbox {
 	 */
 	private static function default_templates(): array {
 		$wa     = '{whatsapp}'; // 发送时换成店铺后台「客服联系方式」里的 WhatsApp 号。
-		$wa_btn = '<p style="margin:24px 0"><a href="https://wa.me/13039444124" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:6px">Chat with us on WhatsApp → ' . $wa . '</a></p>';
+		$wa_btn = '<p style="margin:24px 0"><a href="{whatsapp_link}" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:6px">Chat with us on WhatsApp → ' . $wa . '</a></p>';
 		$sign   = '<p>Best regards,<br>VialCove Team<br>WhatsApp: ' . $wa . '<br>Email: {store_email}</p><p style="color:#6b7280;font-size:13px">Peptides are our focus. Your experience is our priority.</p>';
 		$bf     = '<p>We\'re also running a Black Friday promotion, with special pricing on many peptide products. If you\'re still considering an order, we\'d be happy to share the available offers and help you review your selection.</p>';
 		$care   = '<p>Your experience with VialCove matters to us. If you encountered any difficulties during checkout or have questions about your order, please let us know—we\'re happy to help.</p>';
@@ -452,6 +452,12 @@ final class Mail_Outbox {
 		$vars  = self::vars( $order instanceof \WC_Order ? $order : null, $to[0] );
 		$subject = strtr( $subject, $vars );
 		$body    = strtr( $body, $vars );
+		// 母版里写死的品牌“VialCove”换成本店品牌（子店发信不能顶着主店名字，2026-11-10）；VialCovePeptides@… 这类连着字母的不动。
+		$brand = self::brand();
+		if ( 'VialCove' !== $brand ) {
+			$subject = (string) preg_replace( '/\bVialCove(?![A-Za-z])/', $brand, $subject );
+			$body    = (string) preg_replace( '/\bVialCove(?![A-Za-z])/', $brand, $body );
+		}
 		$html    = self::wrap( $subject, wpautop( $body ) );
 		$headers = array( 'Content-Type: text/html; charset=UTF-8' );
 		$reply   = sanitize_email( (string) get_option( 'woocommerce_email_from_address', get_option( 'admin_email' ) ) );
@@ -477,6 +483,8 @@ final class Mail_Outbox {
 			'{store_url}'     => home_url( '/' ),
 			'{store_email}'   => class_exists( Emails\Chase_Copy::class ) ? Emails\Chase_Copy::store_email() : 'orders@' . preg_replace( '/^www\./', '', $host ),
 			'{whatsapp}'      => class_exists( Emails\Chase_Copy::class ) ? Emails\Chase_Copy::whatsapp() : '',
+			// 按钮链接也按本店号码生成（之前母版里写死了主店号码，子店按钮会打到主店，2026-11-10）。
+			'{whatsapp_link}' => class_exists( Emails\Chase_Copy::class ) ? Emails\Chase_Copy::whatsapp_link() : '',
 			'{customer_name}' => '',
 			'{order_number}'  => '',
 			'{order_total}'   => '',
