@@ -210,6 +210,8 @@ final class Recovery_Items {
 			}
 			$items[] = self::item( $o );
 		}
+		// 店主 2026-11-11：直接付款的订单（付款前没收过召回信）不是弃单，不出现在弃单列表里；只有召回成功的已付款订单才留下。
+		$items = array_values( array_filter( $items, static fn( $i ) => empty( $i['paid_ms'] ) || 'success' === $i['status'] ) );
 		usort( $items, static fn( $a, $b ) => $b['created_ms'] <=> $a['created_ms'] );
 		$items  = self::group_by_customer( $items );
 		$counts = array_fill_keys( self::STATUSES, 0 );
