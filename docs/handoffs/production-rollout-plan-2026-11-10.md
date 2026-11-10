@@ -250,3 +250,8 @@
   - `Recovery` 点链接只记 clicked_ms / note=clicked，不再直接改成功；付款时 close_with_order 仍把点击算作召回。
   - `Chase_Copy::paid_elsewhere()`：付款失败邮件（filter woocommerce_email_enabled_customer_failed_order）和取消订单的付款帮助信，顾客前后 6 小时内有别的已付款订单就不发。
 - 数据：关闭已付款仍开着的记录（主店 1@qq.com/#11841、阳 Sherrie/#11892、芒果 John/#11886 → 作废）；芒果 Jennifer 的“点击即成功”改回召回中。现在召回成功：阳 0、芒果 1（John：帮助信 03:23 在付款 03:28 前）。
+
+### 2026-11-11 手动订单显示店铺运费
+- 选“按店铺运费”时，订单金额里直接显示运费（按美国、按改过的售价算，含当前运费优惠），合计含运费；不再写“合计（不含运费）”。
+- `Ship_Preview::estimate()` 抽成公用（店铺运费方案 + 对所有顾客生效的运费优惠）；新接口 POST /peptide/v1/manual-order/shipping；manual-order.js 改商品 / 数量 / 售价后 300ms 重新算。
+- 主店核对：bac.water $10 → 运费 $42.75、合计 $52.75（和结账页一致）；售价改 $1,200 → 运费 $14.25。阳前台运费行仍 $42.75。

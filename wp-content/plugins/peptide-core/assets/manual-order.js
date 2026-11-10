@@ -85,25 +85,39 @@
 	});
 
 	// ---- 金额 ----
+	// 按店铺运费：问后台这一单按店铺规则（美国）大概多少运费（店主 2026-11-10：直接显示出来）。
+	var storeShip = null, shipT, shipSeq = 0;
+	function loadStoreShip() {
+		clearTimeout(shipT);
+		if ('store' !== shipMode() || !lines.length) { storeShip = null; return; }
+		shipT = setTimeout(function () {
+			var my = ++shipSeq;
+			wp.apiFetch({ path: '/peptide/v1/manual-order/shipping', method: 'POST', data: { items: lines.map(function (l) { return { id: l.id, qty: l.qty, price: l.price }; }) } }).then(function (r) {
+				if (my !== shipSeq) return;
+				storeShip = r && null !== r.shipping && undefined !== r.shipping ? num(r.shipping) : null;
+				paint();
+			}).catch(function () {});
+		}, 300);
+	}
 	function totals() {
 		var reg = 0, sub = 0;
 		lines.forEach(function (l) { reg += Math.max(l.regular, l.price) * l.qty; sub += l.price * l.qty; });
 		var disc = discounts.reduce(function (a, d) { return a + num(d.amount); }, 0);
-		var ship = 'custom' === shipMode() ? num($('[data-mo-ship-amount]').value) : null;
+		var ship = 'custom' === shipMode() ? num($('[data-mo-ship-amount]').value) : storeShip;
 		return { reg: reg, sub: sub, disc: disc, ship: ship, total: Math.max(0, sub - disc) + (ship || 0) };
 	}
 	function sumHtml(x) {
 		return '<dt>原价合计</dt><dd><del>' + money(x.reg) + '</del></dd>' +
 			'<dt>商品小计</dt><dd>' + money(x.sub) + '</dd>' +
 			(x.disc ? '<dt>优惠</dt><dd class="is-off">−' + money(x.disc) + '</dd>' : '') +
-			'<dt>运费</dt><dd>' + (null === x.ship ? '按店铺运费' : money(x.ship)) + '</dd>' +
-			'<dt class="is-total">' + (null === x.ship ? '合计（不含运费）' : '合计') + '</dt><dd class="is-total">' + money(x.total) + '</dd>';
+			'<dt>运费' + ('store' === shipMode() ? '（店铺运费，按美国）' : '') + '</dt><dd>' + (null === x.ship ? ('store' === shipMode() && lines.length ? '计算中…' : '—') : money(x.ship)) + '</dd>' +
+			'<dt class="is-total">合计</dt><dd class="is-total">' + money(x.total) + '</dd>';
 	}
-	function sum() {
-		var x = totals();
-		$('[data-mo-sum]').innerHTML = sumHtml(x);
+	function paint() {
+		$('[data-mo-sum]').innerHTML = sumHtml(totals());
 		$('[data-mo-create]').disabled = !lines.length;
 	}
+	function sum() { paint(); loadStoreShip(); }
 
 	// ---- 生成链接 ----
 	var dlg = $('[data-mo-dialog]');

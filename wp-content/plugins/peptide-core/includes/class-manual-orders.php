@@ -236,10 +236,25 @@ final class Manual_Orders {
 	public static function routes(): void {
 		$perm = static fn() => current_user_can( 'manage_woocommerce' );
 		register_rest_route( 'peptide/v1', '/manual-order/search', array( 'methods' => 'GET', 'permission_callback' => $perm, 'callback' => array( self::class, 'rest_search' ) ) );
+		register_rest_route( 'peptide/v1', '/manual-order/shipping', array( 'methods' => 'POST', 'permission_callback' => $perm, 'callback' => array( self::class, 'rest_shipping' ) ) );
 		register_rest_route( 'peptide/v1', '/manual-order', array(
 			array( 'methods' => 'POST', 'permission_callback' => $perm, 'callback' => array( self::class, 'rest_create' ) ),
 			array( 'methods' => 'GET', 'permission_callback' => $perm, 'callback' => array( self::class, 'rest_list' ) ),
 		) );
+	}
+
+	/** 按店铺运费时，这一单（按改过的售价）大概多少运费：按美国估算，和顾客结账时的算法一样。 */
+	public static function rest_shipping( \WP_REST_Request $r ) {
+		$contents = array();
+		foreach ( array_slice( (array) ( $r->get_json_params()['items'] ?? array() ), 0, 40 ) as $row ) {
+			$p   = wc_get_product( absint( $row['id'] ?? 0 ) );
+			$qty = max( 1, min( 999, absint( $row['qty'] ?? 1 ) ) );
+			if ( $p ) {
+				$contents[] = array( 'data' => $p, 'product_id' => $p->get_parent_id() ?: $p->get_id(), 'quantity' => $qty, 'line_subtotal' => self::money( (float) ( $row['price'] ?? $p->get_price() ) ) * $qty );
+			}
+		}
+		$ship = $contents && class_exists( Ship_Preview::class ) ? Ship_Preview::estimate( $contents, 'US' ) : null;
+		return rest_ensure_response( array( 'shipping' => $ship ) );
 	}
 
 	public static function rest_search( \WP_REST_Request $r ) {
