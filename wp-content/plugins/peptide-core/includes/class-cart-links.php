@@ -90,6 +90,7 @@ final class Cart_Links {
 		}
 		WC()->session->set_customer_session_cookie( true );
 		WC()->cart->empty_cart();
+		self::clear_customer();
 		$added = 0;
 		foreach ( array_slice( explode( ',', $raw ), 0, self::MAX_ITEMS ) as $part ) {
 			if ( ! preg_match( '/^(\d{1,10})(?:x(\d{1,3}))?$/', trim( $part ), $m ) ) {
@@ -124,6 +125,30 @@ final class Cart_Links {
 		nocache_headers();
 		wp_safe_redirect( add_query_arg( array_filter( $keep, 'strlen' ), $to ) );
 		exit;
+	}
+
+	/**
+	 * 店主 2026-11-10：链接只带商品和优惠码。打开链接时清掉这个浏览器里之前填过的邮箱、姓名、地址、电话，
+	 * 让结账页从空白开始（登录的会员不动，用他自己账户里的资料）。
+	 */
+	private static function clear_customer(): void {
+		if ( is_user_logged_in() || ! WC()->customer ) {
+			return;
+		}
+		$c = WC()->customer;
+		foreach ( array( 'billing', 'shipping' ) as $t ) {
+			foreach ( array( 'first_name', 'last_name', 'company', 'address_1', 'address_2', 'city', 'state', 'postcode', 'phone' ) as $f ) {
+				$m = 'set_' . $t . '_' . $f;
+				if ( is_callable( array( $c, $m ) ) ) {
+					$c->$m( '' );
+				}
+			}
+		}
+		$c->set_billing_email( '' );
+		$c->set_email( '' );
+		$c->set_calculated_shipping( false );
+		$c->save();
+		WC()->session->set( 'chosen_shipping_methods', null );
 	}
 
 	/** 开 / 关这个浏览器里的“复制付款链接”按钮。 */
