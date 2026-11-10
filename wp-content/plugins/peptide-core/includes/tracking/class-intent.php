@@ -79,71 +79,73 @@ final class Intent {
 
 		$score   = 0;
 		$reasons = array();
+		$parts   = array(); // 得分构成（2026-11-10 店主：要看清分数差在哪）：名称、得分、满分、说明。
 		$c       = static fn( string $t ): int => (int) ( $has[ $t ] ?? 0 );
 
-		// 1. 结账进度
+		// 1. 结账进度（满分 45）
+		$got = 0; $note = '还没进结账页';
 		if ( $c( 'checkout_submit_attempt' ) || $c( 'payment_attempt' ) ) {
-			$score += 45;
-			$reasons[] = '点过「下单」/ 去支付';
+			$got = 45; $note = '点过「下单」/ 去支付';
 		} elseif ( $c( 'checkout_payment_selected' ) ) {
-			$score += 38;
-			$reasons[] = '结账页选好了支付方式';
+			$got = 38; $note = '选好了支付方式，还没点下单（满分要点下单）';
 		} elseif ( $c( 'checkout_address_completed' ) ) {
-			$score += 32;
-			$reasons[] = '结账页地址填完了';
+			$got = 32; $note = '地址填完了，还没选支付 / 点下单';
 		} elseif ( $c( 'checkout_view' ) ) {
-			$score += 24;
-			$reasons[] = '进了结账页';
+			$got = 24; $note = '进了结账页，地址没填完';
 		}
+		$score += $got;
+		if ( $got ) { $reasons[] = $note; }
+		$parts[] = array( 'name' => '结账进度', 'got' => $got, 'max' => 45, 'note' => $note );
 		if ( $c( 'payment_failed' ) ) {
 			$reasons[] = '付款失败过 ' . $c( 'payment_failed' ) . ' 次';
 		}
-		if ( $c( 'payment_success' ) ) {
-			$score = max( $score, 95 );
-			$reasons[] = '已经付款';
-		}
 
-		// 2. 购物车
+		// 2. 购物车（满分 25：有货 15 + 金额每 $50 加 1，最多 10）
 		$cart_amount = self::amount( (string) ( $cart['subtotal_text'] ?? '' ) );
+		$got = 0; $note = '购物车是空的';
 		if ( 'active' === ( $cart['status'] ?? '' ) && (int) ( $cart['count'] ?? 0 ) > 0 ) {
-			$score += 15 + min( 10, (int) floor( $cart_amount / 50 ) );
+			$bonus = min( 10, (int) floor( $cart_amount / 50 ) );
+			$got   = 15 + $bonus;
+			$note  = '购物车 ' . (int) $cart['count'] . ' 件' . ( $cart['subtotal_text'] ? '（' . $cart['subtotal_text'] . '）' : '' ) . ( $bonus < 10 ? '；金额到 $500 才拿满' : '' );
 			$reasons[] = '购物车 ' . (int) $cart['count'] . ' 件' . ( $cart['subtotal_text'] ? '（' . $cart['subtotal_text'] . '）' : '' );
 		} elseif ( $c( 'add_to_cart' ) ) {
-			$score += 10;
-			$reasons[] = '加购过';
+			$got = 10; $note = '加购过，但购物车现在是空的'; $reasons[] = '加购过';
 		} elseif ( $c( 'add_to_cart_attempt' ) ) {
-			$score += 6;
-			$reasons[] = '点过加入购物车';
+			$got = 6; $note = '点过加入购物车（没成功）'; $reasons[] = '点过加入购物车';
 		}
+		$score += $got;
+		$parts[] = array( 'name' => '购物车', 'got' => $got, 'max' => 25, 'note' => $note );
 
 		// 3. 兴趣深度
 		$viewed = count( array_filter( $products, static fn( $p ) => $p['views'] > 0 ) );
 		$dwell  = (int) array_sum( array_column( $products, 'dwell_ms' ) );
-		if ( $viewed ) {
-			$score += min( 12, $viewed * 3 );
-			$reasons[] = '看了 ' . $viewed . ' 个商品详情';
-		}
-		if ( $dwell >= 60000 ) {
-			$score += min( 10, (int) floor( $dwell / 60000 ) * 3 );
-			$reasons[] = '商品页停留 ' . self::duration( $dwell );
-		}
-		if ( $c( 'variant_select' ) ) {
-			$score += 5;
-			$reasons[] = '选过规格';
-		}
-		if ( $pages >= 5 ) {
-			$score += 3;
-		}
+		$got    = $viewed ? min( 12, $viewed * 3 ) : 0;
+		$score += $got;
+		if ( $viewed ) { $reasons[] = '看了 ' . $viewed . ' 个商品详情'; }
+		$parts[] = array( 'name' => '看商品详情', 'got' => $got, 'max' => 12, 'note' => $viewed ? '看了 ' . $viewed . ' 个（每个 3 分，4 个满分）' : '最近 6 小时没打开商品详情' );
+		$got = $dwell >= 60000 ? min( 10, (int) floor( $dwell / 60000 ) * 3 ) : 0;
+		$score += $got;
+		if ( $got ) { $reasons[] = '商品页停留 ' . self::duration( $dwell ); }
+		$parts[] = array( 'name' => '商品页停留', 'got' => $got, 'max' => 10, 'note' => $dwell ? '共 ' . self::duration( $dwell ) . '（每分钟 3 分，满 4 分钟满分）' : '没有商品页停留' );
+		$got = $c( 'variant_select' ) ? 5 : 0;
+		$score += $got;
+		if ( $got ) { $reasons[] = '选过规格'; }
+		$parts[] = array( 'name' => '选规格', 'got' => $got, 'max' => 5, 'note' => $got ? '选过规格' : '没选过规格' );
+		$got = $pages >= 5 ? 3 : 0;
+		$score += $got;
+		$parts[] = array( 'name' => '浏览页数', 'got' => $got, 'max' => 3, 'note' => '最近 6 小时 ' . $pages . ' 页（5 页以上得分）' );
 
 		// 4. 回头客、在线状态
-		if ( (int) ( $visitor['visits'] ?? 0 ) > 1 ) {
-			$score += 6;
-			$reasons[] = '第 ' . (int) $visitor['visits'] . ' 次来';
-		}
-		if ( 'active' === $presence ) {
-			$score += 4;
-		} elseif ( 'away' === $presence ) {
-			$score -= 3; // 刚离开的，意向打个小折扣（还可能回来）。
+		$got = (int) ( $visitor['visits'] ?? 0 ) > 1 ? 6 : 0;
+		$score += $got;
+		if ( $got ) { $reasons[] = '第 ' . (int) $visitor['visits'] . ' 次来'; }
+		$parts[] = array( 'name' => '回头客', 'got' => $got, 'max' => 6, 'note' => $got ? '第 ' . (int) $visitor['visits'] . ' 次来' : '第一次来' );
+		$got = 'active' === $presence ? 4 : ( 'away' === $presence ? -3 : 0 );
+		$score += $got;
+		$parts[] = array( 'name' => '此刻在线', 'got' => $got, 'max' => 4, 'note' => 'active' === $presence ? '正在浏览' : ( 'away' === $presence ? '已经离开（扣 3 分）' : '页面开着但没操作' ) );
+		if ( $c( 'payment_success' ) ) {
+			$score = max( $score, 95 );
+			$reasons[] = '已经付款';
 		}
 		$score = max( 0, min( 100, $score ) );
 
@@ -163,6 +165,7 @@ final class Intent {
 			'module'       => '' !== $top_module ? ( $module_labels[ $top_module ] ?? $top_module ) : '',
 			'pages'        => $pages,
 			'advice'       => self::advice( $level, $has, $cart, $top_products ),
+			'parts'        => $parts, // 满分合计 110，封顶 100。
 		);
 	}
 

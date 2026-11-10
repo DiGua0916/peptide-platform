@@ -248,3 +248,24 @@ body.pc-admin-workspace .pc-trk .pc-lifecycle .pc-trk-split,.pc-lifecycle .pc-tr
 .pc-lifecycle .pc-trk-visits td .pc-trk-sub{display:inline-block;margin-left:8px}
 .pc-lifecycle .pc-trk-visits tbody{display:table-row-group}
 .pc-lifecycle .pc-trk-split>div:first-child .pc-lifecycle-scroll{max-height:260px;overflow:auto}
+
+/* 客户分析：左边分析、右边当前状态；窄屏上下排（2026-11-10 自适应） */
+.pc-ai-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start;max-width:1320px}
+.pc-ai-main{min-width:0}
+.pc-ai-main .pc-ai-kpis,.pc-ai-main .pc-ai-charts,.pc-ai-main .pc-ai-text{max-width:none}
+.pc-ai-state{position:sticky;top:70px;padding:14px 16px;border:1px solid #e6e6e6;border-radius:10px;background:#fff}
+.pc-ai-state h5{margin:0 0 8px;font-size:13px}
+.pc-ai-state ul{list-style:none;margin:0;padding:0}
+.pc-ai-state li{display:grid;grid-template-columns:86px minmax(0,1fr);gap:8px;padding:8px 0;border-top:1px solid #f0f0f1;font-size:12px}
+.pc-ai-state li:first-child{border-top:0}
+.pc-ai-state li span{color:#646970}
+.pc-ai-state li b{font-weight:600;color:#1d2327;overflow-wrap:anywhere}
+.pc-ai-state li b small{display:block;font-weight:400;color:#8c8f94;margin-top:2px}
+.pc-ai-state li.is-good b{color:#1e7e34}
+.pc-ai-state li.is-muted b{color:#8c8f94;font-weight:500}
+.pc-ai-intent{margin:0 0 12px}
+.pc-ai-gaps{margin:10px 0 0;font-size:12px;color:#3c434a;line-height:1.6;background:#fff8e5;border-radius:6px;padding:8px 10px}
+@media (max-width:1180px){.pc-ai-layout{grid-template-columns:minmax(0,1fr)}.pc-ai-state{position:static}}
+@media (max-width:782px){.pc-ai-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.pc-ai-charts{grid-template-columns:minmax(0,1fr)}.pc-ai-bar{grid-template-columns:minmax(60px,90px) 1fr auto}.pc-interest-ai.is-top{padding:14px}}
+.pc-ai-pfunnel{margin:0 0 12px}
+.pc-ai-rate{display:inline-block;min-width:52px;padding:1px 6px;border-radius:4px;background:linear-gradient(90deg,#d6e6f5 var(--w),transparent var(--w));font-variant-numeric:tabular-nums}

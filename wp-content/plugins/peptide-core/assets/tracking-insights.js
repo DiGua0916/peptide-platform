@@ -117,7 +117,12 @@
    html += '<div class="pc-ai-charts">' + aiBars('转化漏斗（本期）', keys.map((k, i) => { const v = cur[k], p = i ? cur[keys[i - 1]] : null; const step = p ? Math.round(v / p * 1000) / 10 + '%' : ''; return {label: k, value: v, text: v + (step ? ' · ' + step : '') , tip: k + '：' + v + ' 人' + (step ? '，占上一步 ' + step : '') + '；上期 ' + (prev[k] ?? '—') + ' 人'}; }), '百分比 = 占上一步的比例；悬停看上期人数');
    html += aiBars('流量来源（访客）', (Array.isArray(c.channels) ? c.channels : []).map(r => ({label: r['渠道'], value: r['访客'], text: r['访客'] + ' 人 · ' + r['付款订单'] + ' 单', tip: r['渠道'] + '：' + r['访客'] + ' 位访客，' + r['付款订单'] + ' 笔付款，转化率 ' + (r['转化率%'] ?? 0) + '%'})));
    html += aiBars('商品热度（浏览 · 加购）', (c.products || []).map(p => ({label: p.name, value: p.views, text: p.views + ' 浏览 · ' + p.carts + ' 加购', tip: p.name + '：浏览 ' + p.views + ' 次，加购 ' + p.carts + ' 次，停留 ' + p.seconds + ' 秒'})));
-   html += aiBars('版块点击', (c.modules || []).map(m => ({label: m.name, value: m.clicks, text: m.clicks + ' 次'}))) + '</div>';
+   html += aiBars('版块点击', (c.modules || []).map(m => ({label: m.name, value: m.clicks, text: m.clicks + ' 次'})));
+   html += aiBars('在哪离开（没付款就走的访问）', Object.keys(c.exits || {}).map(k => ({label: k, value: c.exits[k], text: c.exits[k] + ' 次'}))) + '</div>';
+   // 商品横向比较：每个商品从“看的人”到付款，在哪一步掉得最多。
+   if ((c.pfunnel || []).length) {
+    html += '<section class="pc-ai-chart pc-ai-pfunnel"><h5>商品漏斗横向对比</h5><div class="pc-ai-tablewrap"><table class="pc-ai-table"><thead><tr><th>商品</th><th>价格</th><th>看的人</th><th>浏览</th><th>加购</th><th>加购率</th><th>下单</th><th>付款</th></tr></thead><tbody>' + c.pfunnel.map(r => { const rate = r['看的人'] ? Math.round(r['加购'] / r['看的人'] * 100) : 0; return '<tr><td>' + esc(r['商品']) + '</td><td>' + esc(r['价格'] || '—') + '</td><td>' + esc(r['看的人']) + '</td><td>' + esc(r['浏览']) + '</td><td>' + esc(r['加购']) + '</td><td><span class="pc-ai-rate" style="--w:' + Math.min(100, rate) + '%">' + rate + '%</span></td><td>' + esc(r['下单（含未付款）']) + '</td><td>' + esc(r['付款订单']) + '</td></tr>'; }).join('') + '</tbody></table></div><p class="pc-ai-chart__note">加购率 = 加购次数 ÷ 看的人；一个人可能加购多次，所以可能超过 100%。</p></section>';
+   }
   } else {
    const stages = ['只逛首页', '看了商品', '加了购物车', '进了结账', '下了单', '已付款'];
    html += '<div class="pc-ai-kpis"><div class="pc-ai-kpi"><span>走到哪一步</span><b>' + esc(stages[c.stage] || '—') + '</b></div><div class="pc-ai-kpi"><span>购买意向分</span><b>' + aiNum(c.intent) + '</b><em>满分 100</em></div><div class="pc-ai-kpi"><span>来访次数</span><b>' + aiNum(c.visits) + '</b></div><div class="pc-ai-kpi"><span>购物车</span><b>' + esc(c.cart || '—') + '</b></div></div>';
@@ -138,18 +143,45 @@
   // 已有的分析结果（自动或之前手动）打开页面就显示。
   try {
    const saved = await window.wp.apiFetch({path:'/peptide/v1/track/admin/ai/result?scope=' + (subject ? 'visitor&visitor_id=' + subject : 'site')});
-   if (saved && saved.result) aiShow(saved.result, true);
+   aiLive = saved && saved.live || null;
+   if (saved && saved.result) aiShow(saved.result, true); else if (aiLive) aiShow(null, true);
   } catch (e) {}
   if (st.auto_customer && subject || st.auto_site && !subject) {
    const note = aiBox.querySelector('.pc-ai-meta');
    if (note) note.textContent += subject ? ' · 已开启自动分析（离开 30 分钟后自动分析）' : ' · 已开启自动分析（每天分析前一天）';
   }
  }
+ let aiLive = null;
+ // 意向分构成：每一项得了几分、满分几分、还差在哪。
+ function aiIntent(iv) {
+  if (!iv || !iv.parts) return '';
+  const gaps = iv.parts.filter(p => p.got < p.max).sort((a, b) => (b.max - b.got) - (a.max - a.got)).slice(0, 3);
+  return '<section class="pc-ai-chart pc-ai-intent"><h5>意向分构成（当前 ' + esc(iv.score) + ' 分 · ' + esc(iv.level) + '）</h5>' + iv.parts.map(p => '<div class="pc-ai-bar" title="' + esc(p.note) + '"><span class="pc-ai-bar__label">' + esc(p.name) + '</span><span class="pc-ai-bar__track"><i style="width:' + Math.max(0, p.got / p.max * 100).toFixed(1) + '%' + (p.got < 0 ? ';background:#b32d2e;width:' + Math.min(100, -p.got / p.max * 100) + '%' : '') + '"></i></span><span class="pc-ai-bar__val">' + esc(p.got + ' / ' + p.max) + '</span></div>').join('') +
+   (gaps.length ? '<p class="pc-ai-gaps"><b>差在：</b>' + gaps.map(p => esc(p.name + ' 少 ' + (p.max - p.got) + ' 分（' + p.note + '）')).join('；') + '</p>' : '') + '<p class="pc-ai-chart__note">各项满分合计 110，总分封顶 100；按最近 6 小时的行为计算。</p></section>';
+ }
+ // 右边：客户当前状态（打开页面时现查）。
+ function aiState(l) {
+  if (!l) return '';
+  const row = (k, v, cls) => '<li class="' + (cls || '') + '"><span>' + esc(k) + '</span><b>' + v + '</b></li>';
+  const c = l.contact || {};
+  return '<aside class="pc-ai-state"><h5>客户当前状态</h5><ul>' +
+   row('现在', l.online ? '正在浏览' : '离开了 · 最后出现 ' + esc(l.last_seen), l.online ? 'is-good' : '') +
+   row('分析后回来过', l.back_after_ai === null ? '—' : (l.back_after_ai ? '回来 ' + l.back_after_ai + ' 次' : '还没回来'), l.back_after_ai ? 'is-good' : '') +
+   row('联系方式', esc([c.email, c.phone].filter(Boolean).join(' · ') || '没有留'), c.email || c.phone ? '' : 'is-muted') +
+   row('弃单召回', esc(l.recall || '不在弃单里')) +
+   row('召回邮件', l.mail_count ? '已发 ' + l.mail_count + ' 封' + (l.mails[0] ? '<small>最近：' + esc(l.mails[0].at + ' ' + l.mails[0].subject) + '</small>' : '') : (c.email ? '还没发' : '没有邮箱，发不了'), l.mail_count ? 'is-good' : 'is-muted') +
+   row('邮件链接', l.clicked ? '点过 · ' + esc(l.clicked) : (l.mail_count ? '没点' : '—'), l.clicked ? 'is-good' : '') +
+   row('邮件后回访', l.back_after_mail === null ? '—' : (l.back_after_mail ? '回来 ' + l.back_after_mail + ' 次' : '没回来'), l.back_after_mail ? 'is-good' : '') +
+   row('回复', '后台看不到<small>顾客回复会进店铺邮箱 / WhatsApp</small>', 'is-muted') +
+   row('订单', l.orders && l.orders.length ? l.orders.map(o => esc('#' + o.number + ' ' + o.status + ' ' + o.total)).join('<br>') : '还没下单', l.orders && l.orders.some(o => o.paid) ? 'is-good' : '') +
+   '</ul></aside>';
+ }
  function aiShow(r, saved) {
   const out = aiBox.querySelector('.pc-ai-out'); if (!out) return;
+  if (!r) { out.innerHTML = '<div class="pc-ai-layout"><div class="pc-ai-main">' + aiIntent(aiLive && aiLive.intent) + '<p class="pc-ai-meta">还没有分析过这位客户。</p></div>' + aiState(aiLive) + '</div>'; return; }
   const what = r.source === 'auto' ? '自动分析' : '手动分析';
   const span = !subject && r.period ? ({day:'日',week:'周',month:'月'}[r.period] || r.period) + '报 · ' + (r.date || '') + ' · ' : '';
-  out.innerHTML = aiCharts(r.charts) + '<div class="pc-ai-text">' + aiText(r.text) + '</div><p class="pc-ai-meta">' + esc(span + what + ' · ' + r.at + (r.persona ? ' · 人设：' + r.persona : '') + (r.cached ? ' · 30 分钟内的结果' : '') + (!saved && r.used_today ? ' · 今天已分析 ' + r.used_today + ' 次' : '')) + ' <button type="button" class="button-link" data-ai-again>重新分析</button></p>';
+  out.innerHTML = '<div class="pc-ai-layout"><div class="pc-ai-main">' + aiCharts(r.charts) + (subject ? aiIntent(aiLive && aiLive.intent) : '') + '<div class="pc-ai-text">' + aiText(r.text) + '</div><p class="pc-ai-meta">' + esc(span + what + ' · ' + r.at + (r.persona ? ' · 人设：' + r.persona : '') + (r.cached ? ' · 30 分钟内的结果' : '') + (!saved && r.used_today ? ' · 今天已分析 ' + r.used_today + ' 次' : '')) + ' <button type="button" class="button-link" data-ai-again>重新分析</button></p></div>' + (subject ? aiState(aiLive) : '') + '</div>';
   const run = aiBox.querySelector('[data-ai-run]'); if (run) run.textContent = '重新分析';
  }
  async function aiRun(refresh) {
@@ -158,6 +190,7 @@
   out.innerHTML = '<p class="pc-ai-wait">AI 正在分析，大约需要 10–40 秒…</p>';
   try {
    const r = await window.wp.apiFetch({path:'/peptide/v1/track/admin/ai/analyse', method:'POST', data:{scope: subject ? 'visitor' : 'site', visitor_id: subject, visit_id: visit, period: period, date: date.value, refresh: refresh ? 1 : 0}});
+   if (subject) { try { const fresh = await window.wp.apiFetch({path:'/peptide/v1/track/admin/ai/result?scope=visitor&visitor_id=' + subject}); aiLive = fresh && fresh.live || aiLive; } catch (e) {} }
    aiShow(r, false);
   } catch (e) {
    out.innerHTML = '<p class="pc-ai-error">' + esc((e && e.message) || '分析失败，请稍后再试。') + '</p>';

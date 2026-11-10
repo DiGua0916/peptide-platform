@@ -108,7 +108,70 @@ final class Hq_Ai {
 			$facts = self::facts( $scope, $ref, 0, $res['period'] ?: ( 'site' === $scope ? 'day' : 'all' ), $res['date'] ?: wp_date( 'Y-m-d' ) );
 			$res['charts'] = is_wp_error( $facts ) ? null : self::charts( $scope, $facts );
 		}
-		return rest_ensure_response( array( 'result' => $res ) );
+		return rest_ensure_response( array( 'result' => $res, 'live' => 'visitor' === $scope && $ref ? self::visitor_live( $ref, $res ? (int) $res['created'] : 0 ) : null ) );
+	}
+
+	/**
+	 * 客户当前状态（店主 2026-11-10：分析右边要看到回访了没、邮件发了没、点了没、下单了没）。打开页面时现查。
+	 */
+	public static function visitor_live( int $vid, int $analysed_at ): ?array {
+		if ( ! Tracking\Schema::installed() ) {
+			return null;
+		}
+		global $wpdb;
+		$vt  = Tracking\Schema::table( 'visitors' );
+		$st  = Tracking\Schema::table( 'visits' );
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$vt} WHERE id = %d", $vid ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		if ( ! $row ) {
+			return null;
+		}
+		$now_ms   = Tracking\Tracker::now_ms();
+		$presence = $now_ms - (int) $row['last_ms'] < 2 * MINUTE_IN_SECONDS * 1000 ? 'active' : 'away';
+		$cart     = Tracking\Carts::view( $row, true );
+		$intent   = Tracking\Intent::analyse( array( 'id' => $vid, 'visits' => (int) $row['visits'] ), $cart, $presence, $now_ms );
+
+		// 联系方式：会话里填的，或者关联订单里的。
+		$email = ''; $phone = '';
+		if ( '' !== (string) $row['cart_key'] ) {
+			$sd    = Recovery_Items::session_data( (string) $row['cart_key'] );
+			$email = (string) ( $sd['billing']['email'] ?? '' );
+			$phone = (string) ( $sd['billing']['phone'] ?? '' );
+		}
+		$orders = array();
+		foreach ( (array) $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT order_id FROM {$st} WHERE visitor_id = %d AND order_id > 0 ORDER BY order_id DESC LIMIT 5", $vid ) ) as $oid ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			$o = wc_get_order( (int) $oid );
+			if ( ! $o ) {
+				continue;
+			}
+			$email    = $email ?: (string) $o->get_billing_email();
+			$phone    = $phone ?: (string) $o->get_billing_phone();
+			$orders[] = array( 'number' => $o->get_order_number(), 'status' => wc_get_order_status_name( $o->get_status() ), 'paid' => (bool) $o->get_date_paid(), 'total' => html_entity_decode( wp_strip_all_tags( $o->get_formatted_order_total() ) ) );
+		}
+		// 召回：弃单记录 + 发过的邮件。
+		$rec = null;
+		if ( Recovery::installed() ) {
+			$t   = Recovery::table();
+			$rec = $wpdb->get_row( $wpdb->prepare( "SELECT status, emails, last_sent_ms, clicked_ms FROM {$t} WHERE ( session_key = %s AND session_key <> '' ) OR ( email = %s AND email <> '' ) ORDER BY id DESC LIMIT 1", (string) $row['cart_key'], strtolower( $email ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		}
+		$mails = $email ? array_values( array_filter( Recovery_Items::mails_for_email( $email ), static fn( $m ) => 'sent' === $m['status'] ) ) : array();
+		$last_mail_ms = $mails ? (int) $mails[0]['created_ms'] : (int) ( $rec['last_sent_ms'] ?? 0 );
+		$visits_after = static fn( int $ms ) => $ms ? (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$st} WHERE visitor_id = %d AND start_ms > %d", $vid, $ms ) ) : 0; // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		$label = array( 'pending' => '待召回', 'recalling' => '召回中', 'failed' => '召回失败', 'success' => '召回成功', 'void' => '已作废' );
+		return array(
+			'online'        => 'active' === $presence,
+			'last_seen'     => wp_date( 'm-d H:i', (int) floor( $row['last_ms'] / 1000 ) ),
+			'visits'        => (int) $row['visits'],
+			'back_after_ai' => $analysed_at ? $visits_after( $analysed_at * 1000 ) : null,
+			'contact'       => array( 'email' => $email, 'phone' => $phone ),
+			// 和弃单列表同一规则：发过召回邮件就是“召回中”，3 天没下单算“召回失败”。
+			'recall'        => $rec ? ( in_array( $rec['status'], array( 'pending', 'recalling' ), true ) && $last_mail_ms ? ( time() - (int) floor( $last_mail_ms / 1000 ) > Recovery_Items::RECALL_DAYS * DAY_IN_SECONDS ? '召回失败' : '召回中' ) : ( $label[ $rec['status'] ] ?? $rec['status'] ) ) : ( $mails ? '召回中' : '' ),
+			'mails'         => array_map( static fn( $m ) => array( 'subject' => (string) $m['subject'], 'at' => wp_date( 'm-d H:i', (int) floor( $m['created_ms'] / 1000 ) ) ), array_slice( $mails, 0, 3 ) ),
+			'mail_count'    => count( $mails ),
+			'clicked'       => ! empty( $rec['clicked_ms'] ) ? wp_date( 'm-d H:i', (int) floor( $rec['clicked_ms'] / 1000 ) ) : '',
+			'back_after_mail' => $last_mail_ms ? $visits_after( $last_mail_ms ) : null,
+			'orders'        => $orders,
+			'intent'        => array( 'score' => $intent['score'], 'level' => $intent['level_text'], 'parts' => $intent['parts'] ),
+		);
 	}
 
 	/**
@@ -236,6 +299,8 @@ final class Hq_Ai {
 			'channels' => is_array( $facts['【渠道】'] ?? null ) ? $facts['【渠道】'] : array(),
 			'products' => $prod,
 			'modules'  => $mods,
+			'exits'    => is_array( $facts['【离开页面】']['按页面类型（没付款就离开的访问数）'] ?? null ) ? $facts['【离开页面】']['按页面类型（没付款就离开的访问数）'] : array(),
+			'pfunnel'  => array_slice( (array) ( $facts['【商品漏斗】'] ?? array() ), 0, 10 ),
 		);
 	}
 
@@ -374,6 +439,7 @@ final class Hq_Ai {
 				'intent_score'   => $intent['score'],
 				'intent_level'   => $intent['level_text'],
 				'intent_reasons' => $intent['reasons'],
+				'intent_parts'   => $intent['parts'], // 意向分每一项：得分 / 满分 / 说明
 				'top_products'   => $intent['products'],
 				'cart'           => array(
 					'status'   => $cart['status'],
@@ -494,6 +560,8 @@ final class Hq_Ai {
 		} catch ( \Throwable $e ) {
 			$out['【渠道】'] = '暂时读不到';
 		}
+		$out += self::product_funnel( $from, $to );
+		$out['【离开页面】'] = self::exit_pages( $from, $to );
 		$counts = Recovery_Items::list( array( 'from_ms' => $from * 1000, 'to_ms' => $to * 1000 ), 1, 1 )['counts'] ?? array();
 		$out['【弃单】'] = array( '待召回' => (int) ( $counts['pending'] ?? 0 ), '召回中' => (int) ( $counts['recalling'] ?? 0 ), '召回失败' => (int) ( $counts['failed'] ?? 0 ), '召回成功' => (int) ( $counts['success'] ?? 0 ) );
 		try {
@@ -503,6 +571,73 @@ final class Hq_Ai {
 			$out['【上期对比】'] = '暂时读不到';
 		}
 		return $out;
+	}
+
+	/**
+	 * 商品漏斗（店主 2026-11-10：全站分析要看每个商品在哪一步失败、横向比较）：
+	 * 浏览 / 点击 / 加购 / 停留来自访客行为；下单（含没付款）/ 付款来自这段时间创建的订单（不含测试单）。
+	 */
+	private static function product_funnel( int $from, int $to ): array {
+		$rows = array();
+		if ( Tracking\Schema::installed() ) {
+			global $wpdb;
+			$ev = Tracking\Schema::table( 'events' );
+			foreach ( (array) $wpdb->get_results( $wpdb->prepare( "SELECT product_id, SUM(type='product_view') AS views, SUM(type='product_click') AS clicks, SUM(type='add_to_cart') AS carts, COUNT(DISTINCT CASE WHEN type IN ('product_view','product_click') THEN visitor_id END) AS people FROM {$ev} WHERE occurred_ms >= %d AND occurred_ms < %d AND is_test = 0 AND product_id > 0 GROUP BY product_id ORDER BY views DESC, clicks DESC LIMIT 30", $from * 1000, $to * 1000 ), ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+				$pid          = (int) $r['product_id'];
+				$p            = wc_get_product( $pid );
+				$pid          = $p && $p->get_parent_id() ? $p->get_parent_id() : $pid;
+				$rows[ $pid ] = array( '商品' => html_entity_decode( (string) get_the_title( $pid ), ENT_QUOTES, 'UTF-8' ), '价格' => $p ? html_entity_decode( wp_strip_all_tags( wc_price( (float) $p->get_price() ) ) ) : '', '看的人' => (int) $r['people'], '浏览' => (int) $r['views'], '点击' => (int) $r['clicks'], '加购' => (int) $r['carts'], '下单（含未付款）' => 0, '付款订单' => 0 );
+			}
+		}
+		foreach ( wc_get_orders( array( 'date_created' => $from . '...' . $to, 'limit' => 500, 'type' => 'shop_order', 'status' => array_keys( wc_get_order_statuses() ) ) ) as $o ) {
+			if ( Test_Orders::is_test_order( $o ) ) {
+				continue;
+			}
+			$seen = array();
+			foreach ( $o->get_items() as $item ) {
+				$pid = (int) $item->get_product_id();
+				if ( isset( $seen[ $pid ] ) ) {
+					continue;
+				}
+				$seen[ $pid ] = true;
+				if ( ! isset( $rows[ $pid ] ) ) {
+					$rows[ $pid ] = array( '商品' => html_entity_decode( (string) get_the_title( $pid ), ENT_QUOTES, 'UTF-8' ), '价格' => '', '看的人' => 0, '浏览' => 0, '点击' => 0, '加购' => 0, '下单（含未付款）' => 0, '付款订单' => 0 );
+				}
+				++$rows[ $pid ]['下单（含未付款）'];
+				if ( $o->get_date_paid() ) {
+					++$rows[ $pid ]['付款订单'];
+				}
+			}
+		}
+		return array( '【商品漏斗】' => array_values( array_slice( $rows, 0, 25 ) ) );
+	}
+
+	/** 访客最后停在哪个页面离开（每次访问的最后一个页面），按页面类型和商品统计。 */
+	private static function exit_pages( int $from, int $to ): array {
+		if ( ! Tracking\Schema::installed() ) {
+			return array();
+		}
+		global $wpdb;
+		$ev   = Tracking\Schema::table( 'events' );
+		$vs   = Tracking\Schema::table( 'visits' );
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT e.page_type, e.product_id, e.path, s.stage FROM {$ev} e INNER JOIN ( SELECT x.visit_id, MAX(x.occurred_ms) AS m FROM {$ev} x INNER JOIN {$vs} v ON v.id = x.visit_id WHERE v.start_ms >= %d AND v.start_ms < %d AND v.is_test = 0 AND x.type = 'page_view' GROUP BY x.visit_id LIMIT 5000 ) last ON last.visit_id = e.visit_id AND last.m = e.occurred_ms AND e.type = 'page_view' INNER JOIN {$vs} s ON s.id = e.visit_id", $from * 1000, $to * 1000 ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		$types = array( 'home' => '首页', 'product' => '商品页', 'cart' => '购物车', 'checkout' => '结账页', 'order_pay' => '付款页', 'order_received' => '下单成功页', 'shop' => '商品列表', 'category' => '分类页', 'search' => '搜索页', 'account' => '我的账户', 'page' => '普通页面', 'post' => '博客', 'content' => '内容页' );
+		$by_type = array();
+		$by_product = array();
+		foreach ( (array) $rows as $r ) {
+			if ( (int) $r['stage'] >= 5 ) {
+				continue; // 付了款的不算“流失”。
+			}
+			$t             = $types[ $r['page_type'] ] ?? ( $r['page_type'] ?: '其他' );
+			$by_type[ $t ] = ( $by_type[ $t ] ?? 0 ) + 1;
+			if ( 'product' === $r['page_type'] && (int) $r['product_id'] ) {
+				$n                = html_entity_decode( (string) get_the_title( (int) $r['product_id'] ), ENT_QUOTES, 'UTF-8' );
+				$by_product[ $n ] = ( $by_product[ $n ] ?? 0 ) + 1;
+			}
+		}
+		arsort( $by_type );
+		arsort( $by_product );
+		return array( '按页面类型（没付款就离开的访问数）' => $by_type, '离开最多的商品页' => array_slice( $by_product, 0, 10, true ) );
 	}
 
 	// ---------- 自学习（2026-11-10）：记下每次判断，过几天核对客户有没有下单，汇总成经验交给 AI ----------
