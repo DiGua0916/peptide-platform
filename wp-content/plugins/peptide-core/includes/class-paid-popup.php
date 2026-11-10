@@ -33,7 +33,7 @@ final class Paid_Popup {
 			'title'       => 'Thank you! Your order is confirmed',
 			'message'     => "Order #{order} has been placed successfully. We truly value your shopping experience.\nAdd our order specialist on WhatsApp to track your shipment in real time, ask any questions, or share your suggestions with us.",
 			'wa_label'    => 'Add us on WhatsApp',
-			'wa_text'     => 'Hi! My order number is #{order}.',
+			'wa_text'     => 'Hi! I just placed an order on {store}: {items}. The total is {total} (order #{order}).',
 			'phone_label' => 'Customer service: {phone}',
 			'no_wa_label' => "I don't use WhatsApp",
 			'form_intro'  => 'No problem. Tell us the best way to reach you (phone, email, Telegram, Signal...) and our team will contact you.',
@@ -87,7 +87,13 @@ final class Paid_Popup {
 	}
 
 	private static function fill( string $text, \WC_Order $order ): string {
-		return strtr( $text, array( '{order}' => $order->get_order_number(), '{phone}' => self::phone() ) );
+		// 店主 2026-11-10：WhatsApp 预填“我刚刚在平台上下单了什么什么，一共多少钱”。
+		$items = array();
+		foreach ( $order->get_items( 'line_item' ) as $item ) {
+			$items[] = wp_strip_all_tags( $item->get_name() ) . ' x' . (int) $item->get_quantity();
+		}
+		$total = html_entity_decode( wp_strip_all_tags( wc_price( (float) $order->get_total(), array( 'currency' => $order->get_currency() ) ) ), ENT_QUOTES, 'UTF-8' );
+		return strtr( $text, array( '{order}' => $order->get_order_number(), '{phone}' => self::phone(), '{items}' => implode( ', ', $items ), '{total}' => $total, '{store}' => wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ) ) );
 	}
 
 	private static function phone(): string {
