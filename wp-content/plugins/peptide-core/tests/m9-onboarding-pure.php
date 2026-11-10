@@ -109,6 +109,9 @@ namespace {
 	check( 'abandoned to-do', '有 3 个弃单还没跟进' === $todos( 0, false, 3 )[0]['text'] && 'pc-recovery' === $todos( 0, false, 3 )[0]['page'] );
 	check( 'abandoned count still loading keeps a row', array( 'abandoned' ) === array_column( $todos( 0, false, null ), 'key' ) );
 	check( 'all three in order', array( 'wizard', 'pay_domain', 'abandoned' ) === array_column( $todos( 1, true, 5 ), 'key' ) );
+	$rows = \PeptideCore\Admin\Buyer_Home::campaign_rows( array( array( 'kind' => 'promotion', 'id' => 3, 'name' => ' Spend $50 save $15 ', 'rule' => 'Orders over $50', 'ends' => 1800000000, 'source' => 'series' ), array( 'name' => '' ), 'junk', array( 'name' => 'Free shipping', 'ends' => -5 ) ) );
+	check( 'running campaigns are listed read-only', array( array( 'name' => 'Spend $50 save $15', 'rule' => 'Orders over $50', 'ends' => 1800000000 ), array( 'name' => 'Free shipping', 'rule' => '', 'ends' => 0 ) ) === $rows );
+	check( 'no campaigns', array() === \PeptideCore\Admin\Buyer_Home::campaign_rows( null ) && array() === \PeptideCore\Admin\Buyer_Home::campaign_rows( array() ) );
 
 	// ---------- 店铺信息 ----------
 	$store = static fn( string $wa, string $email = '', string $brand = '' ): array => \PeptideCore\Admin\Store_Settings::clean_buyer_store( array( 'whatsapp' => $wa, 'email' => $email, 'brand' => $brand, 'store_name' => '不应该被采用' ) );

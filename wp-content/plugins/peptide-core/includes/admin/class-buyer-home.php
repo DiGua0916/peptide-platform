@@ -5,7 +5,9 @@
  * 页面只有三块：
  * - 5 个核心数字：访客、订单、销售额、转化率、弃单数，可切换今天 / 昨天 / 近 7 天，每个数字都能点开看解释；
  * - 待办：开店向导没做完、支付域名没登记、还有弃单没跟进；
- * - 向导进度。
+ * - 向导进度；
+ * - 当前在跑的活动（只读）：营销活动由总后台统一设置，投手只需要知道现在有什么活动。F2 的
+ *   Pricing\Campaigns::running() 合进来之前这一块不显示。
  *
  * 数字不在这里算：
  * - 这家店的指标开关（M6，peptide_core_m6_mode）是 on 时，用 F4 的统一入口 PeptideCore\Data\Metrics::preset()；
@@ -232,6 +234,52 @@ final class Buyer_Home {
 		return $out;
 	}
 
+	// ---------- 当前在跑的活动（只读） ----------
+
+	/**
+	 * 把 F2 的 Campaigns::running() 整理成要显示的行（不读数据库，测试里直接调用）。
+	 * 每条活动：kind、name、rule、ends（UTC 秒，0 = 长期）。没有名字的条目不显示，最多 20 条。
+	 *
+	 * @param mixed $running
+	 * @return array<int,array{name:string,rule:string,ends:int}>
+	 */
+	public static function campaign_rows( $running ): array {
+		$rows = array();
+		foreach ( is_array( $running ) ? $running : array() as $item ) {
+			$name = is_array( $item ) ? trim( (string) ( $item['name'] ?? '' ) ) : '';
+			if ( '' === $name ) {
+				continue;
+			}
+			$rows[] = array(
+				'name' => $name,
+				'rule' => trim( (string) ( $item['rule'] ?? '' ) ),
+				'ends' => max( 0, (int) ( $item['ends'] ?? 0 ) ),
+			);
+			if ( count( $rows ) >= 20 ) {
+				break;
+			}
+		}
+		return $rows;
+	}
+
+	private static function render_campaigns(): void {
+		$campaigns = '\PeptideCore\Pricing\Campaigns';
+		if ( ! is_callable( array( $campaigns, 'running' ) ) ) {
+			return; // F2 的营销引擎还没合进来。
+		}
+		$rows = self::campaign_rows( call_user_func( array( $campaigns, 'running' ) ) );
+		echo '<section class="pc-by-card" aria-labelledby="pc-by-campaigns"><h2 id="pc-by-campaigns">当前在跑的活动</h2><p class="pc-by-why">活动由总后台统一设置，这里只能查看。</p>';
+		if ( ! $rows ) {
+			echo '<p class="pc-by-hint">现在没有在跑的活动。</p></section>';
+			return;
+		}
+		echo '<ul class="pc-by-campaigns">';
+		foreach ( $rows as $row ) {
+			echo '<li><strong>' . esc_html( $row['name'] ) . '</strong>' . ( '' !== $row['rule'] ? '<span>' . esc_html( $row['rule'] ) . '</span>' : '' ) . '<em>' . esc_html( $row['ends'] > 0 ? '到 ' . wp_date( 'Y-m-d H:i', $row['ends'] ) . ' 结束' : '长期有效' ) . '</em></li>';
+		}
+		echo '</ul></section>';
+	}
+
 	// ---------- 页面 ----------
 
 	public static function render(): void {
@@ -279,6 +327,8 @@ final class Buyer_Home {
 			$done = ! empty( $status['steps'][ $key ] );
 			echo '<li class="' . ( $done ? 'is-done' : '' ) . '"><span aria-hidden="true">' . ( $done ? '✓' : '○' ) . '</span> ' . esc_html( $labels[ $key ] ) . ( 'link' === $key ? '（可选）' : '' ) . '<span class="screen-reader-text">' . ( $done ? '已完成' : '未完成' ) . '</span></li>';
 		}
-		echo '</ul><p class="pc-by-actions"><a class="button" href="' . esc_url( Onboarding::url() ) . '">' . esc_html( $status['complete'] ? '查看向导' : '继续设置' ) . '</a></p></section></div>';
+		echo '</ul><p class="pc-by-actions"><a class="button" href="' . esc_url( Onboarding::url() ) . '">' . esc_html( $status['complete'] ? '查看向导' : '继续设置' ) . '</a></p></section>';
+		self::render_campaigns();
+		echo '</div>';
 	}
 }

@@ -473,3 +473,34 @@
 .pc-by-facts + .pc-by-hint {
 	margin-bottom: 16px;
 }
+
+/* 首页：当前在跑的活动（只读） */
+.pc-by-campaigns {
+	display: grid;
+	gap: 8px;
+	margin: 12px 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+.pc-by-campaigns li {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 4px 12px;
+	margin: 0;
+	padding: 10px 14px;
+	border: 1px solid var(--by-line);
+	border-radius: 8px;
+}
+
+.pc-by-campaigns span {
+	color: var(--by-muted);
+}
+
+.pc-by-campaigns em {
+	margin-left: auto;
+	color: var(--by-muted);
+	font-size: 12px;
+	font-style: normal;
+}
