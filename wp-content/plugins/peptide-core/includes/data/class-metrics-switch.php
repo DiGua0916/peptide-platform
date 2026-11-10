@@ -41,6 +41,9 @@ final class Metrics_Switch {
 	}
 
 	public static function mode(): string {
+		if ( ! function_exists( 'get_option' ) || ! function_exists( 'apply_filters' ) ) {
+			return 'off'; // 没有 WordPress 的环境（现有的纯逻辑测试）：一律当作关着。
+		}
 		$mode = get_option( self::OPTION, 'off' );
 		$mode = is_string( $mode ) && in_array( $mode, self::MODES, true ) ? $mode : 'off';
 		$mode = apply_filters( 'peptide_core_m6_mode', $mode );

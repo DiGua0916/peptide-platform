@@ -158,6 +158,11 @@ final class Operations {
 			'customers'      => count( $customers ),
 			'mobile'         => $v['mobile'],
 		);
+		// M6（NF-02）：访客、订单、销售额、客单价、转化率按开关改用 Data\Metrics。开关关着时 Metrics_Overlay 原样返回；
+		// 选了入口域名时没有统一口径，保持旧算法。class_exists：不带自动加载的纯逻辑测试里没有这个类，直接跳过。
+		if ( null === $entry_domain && class_exists( Metrics_Overlay::class ) ) {
+			$kpis = Metrics_Overlay::operations( $kpis, $from, $to );
+		}
 
 		$funnel            = $v['funnel'];
 		$funnel['paid']    = $count;
