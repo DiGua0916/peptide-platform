@@ -54,6 +54,7 @@ final class Staff_Buyer {
 		'closed-postboxes'                  => '',
 		'hidden-columns'                    => '',
 		'meta-box-order'                    => '',
+		'rest-nonce'                        => '', // 页面开久了以后刷新接口用的 nonce。
 		'woocommerce_get_order_details'     => 'orders', // 订单列表里的预览。
 		'woocommerce_json_search_customers' => 'orders', // 订单列表按顾客筛选。
 	);
@@ -85,6 +86,7 @@ final class Staff_Buyer {
 		add_action( 'admin_bar_menu', array( self::class, 'admin_bar' ), 9999 );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
 		add_filter( 'pc_hq_capabilities', array( self::class, 'capabilities' ) );
+		add_filter( 'editable_roles', array( self::class, 'hide_role' ) );
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			\WP_CLI::add_command( 'peptide buyer', Staff_Buyer_Cli::class );
 		}
@@ -121,6 +123,17 @@ final class Staff_Buyer {
 		return 'User role' === $context && 'Media buyer' === $text && 'default' === $domain ? '投手' : $translation;
 	}
 
+	/**
+	 * WordPress 自带的角色下拉框里不出现“投手”：只带这个角色、没有 pc_staff 的账号不在员工管理和总后台里，
+	 * 也不受专属登录入口和停用开关管。投手版只能通过 set() 开关。
+	 */
+	public static function hide_role( $roles ) {
+		if ( is_array( $roles ) ) {
+			unset( $roles[ self::ROLE ] );
+		}
+		return $roles;
+	}
+
 	/** 是不是投手版账号。管理员永远不算。 */
 	public static function is_buyer( $user ): bool {
 		$user = $user instanceof \WP_User ? $user : get_userdata( (int) $user );
@@ -136,6 +149,11 @@ final class Staff_Buyer {
 	/** 能不能打开投手版页面：投手本人，或者管理员（排查问题用）。 */
 	public static function can_view(): bool {
 		return self::current() || current_user_can( 'manage_options' );
+	}
+
+	/** 能不能用投手版的数据和接口：管理员，或者已经改过密码的投手（没改密码之前只能打开向导）。 */
+	public static function can_use(): bool {
+		return current_user_can( 'manage_options' ) || ( self::current() && ! self::must_change( get_current_user_id() ) );
 	}
 
 	/**
@@ -172,7 +190,8 @@ final class Staff_Buyer {
 		}
 		Staff::flush_cache();
 		if ( $was !== $on ) {
-			Activity_Log::log( 'staff', 'permissions', array( 'type' => 'user', 'id' => $user_id, 'label' => (string) $user->user_login ), array( 'from' => $was ? '投手版' : '按模块', 'to' => $on ? '投手版' : '按模块' ) );
+			// 用“状态”这个事件：同一次保存里如果还改了勾选的模块（事件 permissions），10 秒内同类事件只记一条，两条都要留下。
+			Activity_Log::log( 'staff', 'status', array( 'type' => 'user', 'id' => $user_id, 'label' => (string) $user->user_login ), array( 'from' => $was ? '投手版' : '按模块', 'to' => $on ? '投手版' : '按模块' ) );
 		}
 		return true;
 	}
@@ -252,7 +271,8 @@ final class Staff_Buyer {
 	// ---------- 这次请求能做什么 ----------
 
 	/**
-	 * 这次请求的要素：doing（front / page / ajax / post）、file（后台脚本名）、method、page、action、action2。
+	 * 这次请求的要素：doing（front / page / ajax / post）、file（后台脚本名）、method、page、action、action2、
+	 * writes（带了会直接执行写操作的参数时为 '1'）。
 	 *
 	 * @return array<string,string>
 	 */
@@ -277,6 +297,8 @@ final class Staff_Buyer {
 			'page'    => $text( $_GET['page'] ?? '' ),
 			'action'  => $text( $_REQUEST['action'] ?? '' ),
 			'action2' => $text( $_REQUEST['action2'] ?? '' ),
+			// 订单页上不靠 action 也会执行写操作的参数：清空回收站（delete_all）、接管编辑锁（claim-lock）。
+			'writes'  => ( ! empty( $_REQUEST['delete_all'] ) || ! empty( $_REQUEST['claim-lock'] ) ) ? '1' : '',
 		);
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 		return self::$request;
@@ -338,9 +360,11 @@ final class Staff_Buyer {
 			return $redirect( self::PAGE_HOME ); // 后台里“回到首页”的链接都指向数据大盘，投手的首页是另一个页面。
 		}
 		if ( 'wc-orders' === $page ) {
-			// 只读：列表（筛选、搜索、翻页）和打开一张订单。批量操作、新建、删除等都带别的 action。
+			// 只读：列表（筛选、搜索、翻页）和打开一张订单。批量操作、新建、删除等都带别的 action；
+			// “清空回收站”和“接管编辑”不带 action，靠单独的参数触发（WooCommerce 的 ListTable::current_action()、
+			// PageController::handle_edit_lock()），一样拒绝。
 			$none = array( '', '-1' );
-			$idle = in_array( (string) ( $r['action2'] ?? '' ), $none, true );
+			$idle = in_array( (string) ( $r['action2'] ?? '' ), $none, true ) && empty( $r['writes'] );
 			return ( $idle && ( in_array( $action, $none, true ) || 'edit' === $action ) ) ? $allow( 'orders' ) : $deny;
 		}
 		// 弃单、数据（含实时访客）和它们带同样前缀的子页面。
@@ -434,6 +458,10 @@ final class Staff_Buyer {
 		$r = self::request();
 		if ( 'ajax' !== $r['doing'] && 'post' !== $r['doing'] ) {
 			return;
+		}
+		// 投手看订单是只读的：心跳里不续订单的编辑锁，免得管理员看到“某某正在编辑”。
+		if ( 'heartbeat' === $r['action'] && isset( $_POST['data'] ) && is_array( $_POST['data'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+			unset( $_POST['data']['wc-refresh-order-lock'], $_REQUEST['data']['wc-refresh-order-lock'] );
 		}
 		// 对未登录访客也开放的动作（前台的加载更多、订阅等）照常可用。
 		$r['nopriv'] = '' !== $r['action'] && false !== has_action( ( 'ajax' === $r['doing'] ? 'wp_ajax_nopriv_' : 'admin_post_nopriv_' ) . $r['action'] );

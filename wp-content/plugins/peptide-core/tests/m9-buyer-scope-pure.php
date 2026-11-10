@@ -57,6 +57,10 @@ namespace {
 	check( 'trash order denied', $is( $page( 'wc-orders', array( 'action' => 'trash' ) ), 'deny' ) );
 	check( 'bulk action denied', $is( $page( 'wc-orders', array( 'action' => 'mark_completed' ) ), 'deny' ) );
 	check( 'bottom bulk action denied', $is( $page( 'wc-orders', array( 'action' => '-1', 'action2' => 'trash' ) ), 'deny' ) );
+	// “清空回收站”（delete_all）和“接管编辑”（claim-lock）不带 action，request() 把它们记在 writes 里。
+	check( 'empty trash denied', $is( $page( 'wc-orders', array( 'writes' => '1' ) ), 'deny' ) );
+	check( 'empty trash with a filter submit denied', $is( $page( 'wc-orders', array( 'action' => '-1', 'action2' => '-1', 'writes' => '1' ) ), 'deny' ) );
+	check( 'claiming an edit lock denied', $is( $page( 'wc-orders', array( 'action' => 'edit', 'writes' => '1' ) ), 'deny' ) );
 
 	// 弃单、数据、实时访客。
 	check( 'abandoned checkouts', $is( $page( 'pc-recovery' ), 'allow', 'data' ) );
@@ -81,6 +85,8 @@ namespace {
 
 	// admin-ajax：白名单 + 本来就公开的动作。
 	check( 'heartbeat', $is( $ajax( 'heartbeat' ), 'allow' ) );
+	check( 'REST nonce refresh', $is( $ajax( 'rest-nonce' ), 'allow' ) );
+	check( 'role is not offered in role dropdowns', array( 'pc_staff' => array() ) === \PeptideCore\Staff_Buyer::hide_role( array( 'pc_staff' => array(), 'pc_media_buyer' => array() ) ) );
 	check( 'order preview', $is( $ajax( 'woocommerce_get_order_details' ), 'allow', 'orders' ) );
 	foreach ( array( 'woocommerce_refund_line_items', 'woocommerce_add_order_item', 'woocommerce_save_order_items', 'woocommerce_mark_order_status', 'woocommerce_add_order_note', 'woocommerce_delete_refund', 'pc_mail_body', 'pc_collections_request', 'pc_offer_products', '' ) as $write ) {
 		check( "ajax $write denied", $is( $ajax( $write ), 'deny' ) );

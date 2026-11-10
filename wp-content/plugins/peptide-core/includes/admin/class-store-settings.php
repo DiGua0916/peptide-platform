@@ -6,11 +6,13 @@
  * - 税费设置：见 Tax_Page（TAX-PLANS-01）。
  * - 系统设置：卡片列表。用户 2026-10-23 要了“基础配置、邮件通知、交易条款”三张卡片（先做占位页，同日按截图做成完整页面）。
  *   原来菜单里的 WooCommerce 设置、VialCove 设置、系统状态放在页面底部“其他设置”。
- * - 店铺信息（ST-07，投手版后台的第 6 个菜单，也是开店向导的第 2 步）：投手只能改客服 WhatsApp、客服邮箱和自己的密码；
- *   店名和域名只读。WhatsApp 和邮箱与“联系方式”是同一份数据（Settings 的 support），这里只改这两项，
- *   Telegram、问候语、悬浮按钮开关等保持不变。
- *   店名为什么只读：顾客看到的品牌名按域名确定（Mail_Outbox::brand()，主题里是 vc_brand_name()），后台的店铺名称
- *   （blogname）是总后台管理的内部名称，2026-11-08 已经定了它不上前台、也不从店铺反向同步到总后台。
+ * - 店铺信息（ST-07，投手版后台的第 6 个菜单，也是开店向导的第 2 步）：投手能改对外英文品牌名、客服 WhatsApp、
+ *   客服邮箱和自己的密码；后台店铺名称和域名只读。WhatsApp 和邮箱与“联系方式”是同一份数据（Settings 的 support），
+ *   这里只改这两项，Telegram、问候语、悬浮按钮开关等保持不变。
+ *   两个“店名”不是一回事：后台的店铺名称（blogname）是总后台管理的内部名称，2026-11-08 已经定了它不上前台、
+ *   也不从店铺反向同步到总后台，这里不改。对外英文品牌名（平台所有者 2026-11-10 确认投手可以改）存在选项
+ *   pc_public_brand：主题的 vc_brand_name() 读它（网页标题、Logo 的替代文字、页脚版权）；不填时和以前一样用默认值。
+ *   邮件落款目前按域名确定（Mail_Outbox::brand()），要跟着这个选项走需要日常会话配合，见 docs/CONTRACT.md。
  *
  * @package PeptideCore
  */
@@ -30,6 +32,10 @@ final class Store_Settings {
 	public const CAP         = 'manage_woocommerce';
 	public const SYSTEM_SLUG = 'pc-system';
 	public const INFO_SLUG   = Staff_Buyer::PAGE_STORE;
+
+	/** 对外英文品牌名（投手可以改；空 = 用默认值）。前台每个页面都要读，所以自动加载。 */
+	public const BRAND_OPTION = 'pc_public_brand';
+	public const BRAND_MAX    = 40;
 
 	public static function register_hooks(): void {
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
@@ -61,30 +67,58 @@ final class Store_Settings {
 		echo '</section></div>';
 	}
 
+	/** 这家店自己填的对外英文品牌名；没填时为空（主题和邮件用各自的默认值）。前台也会调用。 */
+	public static function public_brand(): string {
+		$brand = get_option( self::BRAND_OPTION, '' );
+		return is_string( $brand ) ? trim( $brand ) : '';
+	}
+
+	/**
+	 * 检查对外品牌名（不读数据库，测试里直接调用）。留空 = 用默认值。
+	 * 只接受英文字母、数字、空格和 & ' . + -，以字母或数字开头，2–40 个字符。
+	 *
+	 * @return array{0:string,1:string} 错误提示（空 = 没问题）和清理后的名字。
+	 */
+	public static function clean_brand( string $raw ): array {
+		$brand = trim( (string) preg_replace( '/\s+/', ' ', $raw ) );
+		if ( '' === $brand ) {
+			return array( '', '' );
+		}
+		if ( 1 !== preg_match( '/^[A-Za-z0-9][A-Za-z0-9 &\'.+\-]{1,' . ( self::BRAND_MAX - 1 ) . '}$/D', $brand ) ) {
+			return array( sprintf( '对外品牌名请用英文字母、数字和空格，2–%d 个字符。不需要的话可以留空。', self::BRAND_MAX ), '' );
+		}
+		return array( '', $brand );
+	}
+
 	/** 店铺信息表单。$from：wizard（开店向导第 2 步）或 store（店铺信息页）。 */
 	public static function buyer_store_form( string $from ): void {
 		$support = Settings::all()['support'] ?? array();
 		$support = is_array( $support ) ? $support : array();
 		$wa      = (string) ( $support['whatsapp'] ?? '' );
-		$brand   = class_exists( Mail_Outbox::class ) ? Mail_Outbox::brand() : '';
-		echo '<h2>店铺信息</h2><p class="pc-by-why">联系按钮、页脚的联系方式和邮件落款都用这些信息，顾客看得到，请填对外使用的内容。</p>';
-		echo '<dl class="pc-by-facts"><dt>顾客看到的品牌名</dt><dd>' . esc_html( '' !== $brand ? $brand : '—' ) . '</dd><dt>后台里的店铺名称</dt><dd>' . esc_html( (string) get_option( 'blogname', '' ) ) . '</dd></dl><p class="pc-by-hint">品牌名按域名确定，店铺名称由总后台管理，这里不能改。需要调整请联系平台负责人。</p>';
+		$mail    = class_exists( Mail_Outbox::class ) ? Mail_Outbox::brand() : '';
+		echo '<h2>店铺信息</h2><p class="pc-by-why">联系按钮、页脚的联系方式和网页标题都用这些信息，顾客看得到，请填对外使用的内容。</p>';
 		echo '<form class="pc-by-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 		echo '<input type="hidden" name="action" value="' . esc_attr( Staff_Buyer::ACTION_STORE ) . '"><input type="hidden" name="from" value="' . esc_attr( $from ) . '">';
 		wp_nonce_field( Staff_Buyer::ACTION_STORE );
+		echo '<p><label for="pc-by-store-brand">对外英文品牌名（可以不填）</label><input type="text" id="pc-by-store-brand" name="brand" maxlength="' . (int) self::BRAND_MAX . '" value="' . esc_attr( self::public_brand() ) . '"' . ( '' !== $mail ? ' placeholder="例如 ' . esc_attr( $mail ) . '"' : '' ) . '><span class="pc-by-hint">用英文。填了以后显示在网页标题和页脚版权里；页眉的 Logo 图片不会变。不填就沿用默认的品牌名。</span></p>';
 		echo '<p><label for="pc-by-store-wa">客服 WhatsApp</label><input type="tel" id="pc-by-store-wa" name="whatsapp" value="' . esc_attr( '' !== $wa ? '+' . $wa : '' ) . '" placeholder="例如 +1 555 123 4567" required><span class="pc-by-hint">带国家代码。顾客点“联系我们”会直接打开和这个号码的对话。</span></p>';
 		echo '<p><label for="pc-by-store-email">客服邮箱（可以不填）</label><input type="email" id="pc-by-store-email" name="email" value="' . esc_attr( (string) ( $support['email'] ?? '' ) ) . '" placeholder="例如 support@example.com"></p>';
 		echo '<p class="pc-by-actions"><button type="submit" class="button button-primary">' . esc_html( 'wizard' === $from ? '保存，下一步' : '保存' ) . '</button></p></form>';
+		echo '<p class="pc-by-hint">后台里的店铺名称“' . esc_html( (string) get_option( 'blogname', '' ) ) . '”由总后台管理，这里不能改。</p>';
 	}
 
 	/**
 	 * 检查店铺信息表单（除邮箱格式外不依赖 WordPress，测试里直接调用）。
 	 *
-	 * @param array<string,mixed> $in whatsapp / email
-	 * @return array{0:string[],1:array{whatsapp:string,email:string}} 错误提示和清理后的值。
+	 * @param array<string,mixed> $in brand / whatsapp / email
+	 * @return array{0:string[],1:array{brand:string,whatsapp:string,email:string}} 错误提示和清理后的值。
 	 */
 	public static function clean_buyer_store( array $in ): array {
 		$errors = array();
+		[ $brand_error, $brand ] = self::clean_brand( (string) ( $in['brand'] ?? '' ) );
+		if ( '' !== $brand_error ) {
+			$errors[] = $brand_error;
+		}
 		$wa_raw = trim( (string) ( $in['whatsapp'] ?? '' ) );
 		$wa     = '' !== $wa_raw ? Support_Contacts::clean_whatsapp( $wa_raw ) : null;
 		if ( null === $wa ) {
@@ -95,7 +129,7 @@ final class Store_Settings {
 		if ( null === $email ) {
 			$errors[] = '客服邮箱的格式不对。不需要的话可以留空。';
 		}
-		return array( $errors, array( 'whatsapp' => (string) $wa, 'email' => (string) $email ) );
+		return array( $errors, array( 'brand' => $brand, 'whatsapp' => (string) $wa, 'email' => (string) $email ) );
 	}
 
 	public static function save_buyer_store(): void {
@@ -105,7 +139,7 @@ final class Store_Settings {
 		check_admin_referer( Staff_Buyer::ACTION_STORE );
 		$from = isset( $_POST['from'] ) && 'wizard' === sanitize_key( wp_unslash( $_POST['from'] ) ) ? 'wizard' : 'store';
 		$in   = array();
-		foreach ( array( 'whatsapp', 'email' ) as $key ) {
+		foreach ( array( 'brand', 'whatsapp', 'email' ) as $key ) {
 			$in[ $key ] = isset( $_POST[ $key ] ) ? sanitize_text_field( wp_unslash( (string) $_POST[ $key ] ) ) : '';
 		}
 		[ $errors, $clean ] = self::clean_buyer_store( $in );
@@ -114,9 +148,16 @@ final class Store_Settings {
 			wp_safe_redirect( 'wizard' === $from ? Onboarding::url( 'store' ) : Staff_Buyer::page_url( self::INFO_SLUG ) );
 			exit;
 		}
+		// 对外品牌名：留空就删掉选项，回到默认值。选项名以 pc_ 开头，首页缓存会跟着失效。
+		if ( '' === $clean['brand'] ) {
+			delete_option( self::BRAND_OPTION );
+		} else {
+			update_option( self::BRAND_OPTION, $clean['brand'], true );
+		}
 		// 和“联系方式”页面写同一份设置：只换 WhatsApp 和邮箱，其余字段照旧。店铺名称（blogname）不在这里改。
-		$stored  = get_option( Settings::OPTION, array() );
-		$stored  = is_array( $stored ) ? $stored : array();
+		// 从“默认值 + 已保存的值”出发，不是只拿已保存的那几项：这份设置保存时没带的开关会被当成“没勾”，
+		// 新店第一次保存时会把演示模式、发货前必须指定批次这些默认开着的开关关掉。
+		$stored  = Settings::all();
 		$support = array_merge( Support_Contacts::defaults(), is_array( $stored['support'] ?? null ) ? $stored['support'] : array() );
 		$form    = Support_Contacts::to_form( $support );
 		$form['support_whatsapp'] = $clean['whatsapp'];

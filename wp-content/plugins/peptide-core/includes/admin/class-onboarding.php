@@ -395,10 +395,17 @@ final class Onboarding {
 		return in_array( $from, array( 'wizard', 'store', 'ads' ), true ) ? $from : 'ads';
 	}
 
-	/** 新密码的检查（不读数据库）。返回错误提示，空 = 可以用。 */
+	/**
+	 * 新密码的检查（不读数据库）。返回错误提示，空 = 可以用。
+	 * 传进来的是表单提交上来的原样（WordPress 给引号加了反斜杠、已去掉首尾空格），所以长度和反斜杠按去掉转义后的内容判断。
+	 */
 	public static function password_error( string $new, string $again ): string {
-		if ( strlen( $new ) < self::MIN_PASSWORD ) {
+		$plain = stripslashes( $new );
+		if ( strlen( $plain ) < self::MIN_PASSWORD ) {
 			return sprintf( '新密码至少要 %d 位。', self::MIN_PASSWORD );
+		}
+		if ( str_contains( $plain, '\\' ) ) {
+			return '密码里不能有反斜杠（\\）。';
 		}
 		if ( $new !== $again ) {
 			return '两次输入的新密码不一样。';
@@ -415,10 +422,12 @@ final class Onboarding {
 		$user   = get_userdata( $id );
 		$from   = self::from();
 		$forced = Staff_Buyer::must_change( $id );
-		// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- 密码原样交给 WordPress 加密。
-		$now   = isset( $_POST['current_password'] ) ? (string) wp_unslash( $_POST['current_password'] ) : '';
-		$new   = isset( $_POST['new_password'] ) ? (string) wp_unslash( $_POST['new_password'] ) : '';
-		$again = isset( $_POST['new_password_again'] ) ? (string) wp_unslash( $_POST['new_password_again'] ) : '';
+		// 和 WordPress 自己的做法保持一致（wp-admin/includes/user.php 的 edit_user()、wp_signon()）：密码按提交上来的原样
+		// 加密和比对，只去掉首尾空格，不做 wp_unslash。否则带引号的密码保存成功却永远登录不上。
+		// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.ValidatedSanitizedInput.MissingUnslash
+		$now   = isset( $_POST['current_password'] ) && is_string( $_POST['current_password'] ) ? trim( $_POST['current_password'] ) : '';
+		$new   = isset( $_POST['new_password'] ) && is_string( $_POST['new_password'] ) ? trim( $_POST['new_password'] ) : '';
+		$again = isset( $_POST['new_password_again'] ) && is_string( $_POST['new_password_again'] ) ? trim( $_POST['new_password_again'] ) : '';
 		// phpcs:enable
 		$error = self::password_error( $new, $again );
 		if ( '' === $error && ! $forced && ! wp_check_password( $now, $user->user_pass, $id ) ) {
@@ -605,7 +614,7 @@ final class Onboarding {
 			'/admin/ad-link',
 			array(
 				'methods'             => 'POST',
-				'permission_callback' => static fn() => Staff_Buyer::can_view() ? true : new \WP_Error( 'pc_forbidden', '没有权限。', array( 'status' => rest_authorization_required_code() ) ),
+				'permission_callback' => static fn() => Staff_Buyer::can_use() ? true : new \WP_Error( 'pc_forbidden', '没有权限。', array( 'status' => rest_authorization_required_code() ) ),
 				'callback'            => array( self::class, 'ad_link_route' ),
 			)
 		);
@@ -619,7 +628,9 @@ final class Onboarding {
 			return new \WP_Error( 'pc_ad_link_landing', '落地页必须是本店的页面。', array( 'status' => 400 ) );
 		}
 		$campaign = mb_substr( sanitize_text_field( (string) $request['campaign'] ), 0, 80 );
-		self::remember( array( 'link' => time() ) );
+		if ( empty( self::state()['link'] ) ) {
+			self::remember( array( 'link' => time() ) ); // 只记第一次：这个选项每写一次，首页缓存都会跟着失效。
+		}
 		return rest_ensure_response( array( 'url' => self::ad_link( $landing, $campaign, sanitize_key( (string) $request['source'] ) ) ) );
 	}
 }

@@ -11,8 +11,9 @@
  *   签名用本店的密钥，改不了、伪造不了；cookie 里没有任何顾客资料。
  * - 什么时候写：顾客带着订单密钥回到店铺、订单已付款时（付款成功弹窗的落地页 /?pc_paid=…&pc_key=…，
  *   和 WooCommerce 的“订单已收到”页面）；以及“查订单”核对成功时（Order_Lookup）。测试单不写。
- * - 静默弹窗：过滤器 pc_popups_muted 返回 true（F2 的营销弹窗和日常会话的倒计时、公告读这个过滤器，约定见
- *   docs/CONTRACT.md）。带着 cookie 的访客本来就不走首页缓存，所以在服务端判断即可，新访客没有任何额外请求。
+ * - 静默弹窗：F2 的过滤器 pc_marketing_popups_suppressed 返回 true（首单券条、离开挽回、转盘、活动倒计时都读它，
+ *   约定见 docs/CONTRACT.md 的 M4 一节）。带着 cookie 的访客本来就不走首页缓存，所以在服务端判断即可，
+ *   新访客没有任何额外请求。页头另外输出 window.pcBuyer 并让 F2 的前台开关重新读一次。
  * - 物流卡片：GET peptide/v1/buyer/status 只看 cookie 和最近一张订单；前台脚本等 800 毫秒，没等到就当新客。
  * - 运单号：先读订单上的 _pc_shipment（发货对接预留，OR-01），没有再读 WooCommerce 订单履约；都没有时显示“待发货”。
  *
@@ -27,7 +28,8 @@ final class Buyer_Status {
 
 	public const OPTION      = 'pc_buyer_recognition';
 	public const COOKIE      = 'pc_buyer';
-	public const MUTE_FILTER = 'pc_popups_muted';
+	/** F2（M4）提供的营销弹窗静默过滤器，读取用 \PeptideCore\Pricing\Popups::suppressed()。 */
+	public const MUTE_FILTER = 'pc_marketing_popups_suppressed';
 	public const SHIP_META   = '_pc_shipment';
 	public const MAX_ORDERS  = 10;
 	public const LIFETIME    = 31536000; // 1 年。
@@ -180,7 +182,7 @@ final class Buyer_Status {
 
 	// ---------- 静默营销弹窗 ----------
 
-	/** 过滤器 pc_popups_muted：已购顾客在前台不弹营销弹窗。别的代码已经要求静默时保持静默。 */
+	/** 过滤器 pc_marketing_popups_suppressed：已购顾客在前台不弹营销弹窗。别的代码已经要求静默时保持静默。 */
 	public static function mute( $muted ) {
 		return $muted || ( ! is_admin() && self::known() );
 	}
@@ -336,10 +338,10 @@ final class Buyer_Status {
 			return;
 		}
 		self::register_assets();
-		// 营销脚本可以同步读这个标记（服务端已经通过 pc_popups_muted 静默，这里留给前端自己判断时用）。
+		// 营销脚本可以同步读这个标记（服务端已经通过过滤器静默）。F2 的前台开关如果先运行了，让它重新读一次。
 		wp_register_script( 'peptide-core-buyer-flag', false, array(), PEPTIDE_CORE_VERSION, false );
 		wp_enqueue_script( 'peptide-core-buyer-flag' );
-		wp_add_inline_script( 'peptide-core-buyer-flag', 'window.pcBuyer={known:true,suppressPopups:true};' );
+		wp_add_inline_script( 'peptide-core-buyer-flag', 'window.pcBuyer={known:true,suppressPopups:true};if(window.pcMarketingQuiet&&window.pcMarketingQuiet.refresh){window.pcMarketingQuiet.refresh();}' );
 		$busy = ( function_exists( 'is_checkout' ) && is_checkout() ) || ( function_exists( 'is_cart' ) && is_cart() ) || isset( $_GET['pc_paid'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if ( $busy ) {
 			return;

@@ -94,6 +94,12 @@ final class Staff_Page {
 			/* translators: %d: minimum length */
 			return new \WP_Error( 'pc_staff_password', sprintf( __( 'The password needs at least %d characters.', 'peptide-core' ), self::MIN_PASSWORD ) );
 		}
+		if ( str_contains( $pass, '\\' ) ) {
+			return new \WP_Error( 'pc_staff_password', '密码里不能有反斜杠（\\）。' );
+		}
+		// 登录时 WordPress 拿“给引号加了反斜杠”的密码去比对（wp_signon() 直接用 $_POST['pwd']），它自己的用户编辑页也是
+		// 按这个形式加密的。这里保持一致，否则带引号的密码保存成功却登录不上。$pass 进来时已经去掉转义（表单和总后台两条路都是）。
+		$hash_input = wp_slash( trim( $pass ) );
 		$user = array(
 			'user_email'   => $email,
 			'display_name' => '' !== $name ? $name : $email,
@@ -105,7 +111,7 @@ final class Staff_Page {
 			}
 			$user['ID'] = $id;
 			if ( '' !== $pass ) {
-				$user['user_pass'] = $pass;
+				$user['user_pass'] = $hash_input;
 			}
 			$result = wp_update_user( $user );
 		} else {
@@ -114,7 +120,7 @@ final class Staff_Page {
 				return new \WP_Error( 'pc_staff_login', __( 'Enter an account name (letters, numbers, - _ . @).', 'peptide-core' ) );
 			}
 			$user['user_login'] = $login;
-			$user['user_pass']  = $pass;
+			$user['user_pass']  = $hash_input;
 			$user['role']       = Staff::ROLE;
 			$result             = wp_insert_user( $user );
 		}

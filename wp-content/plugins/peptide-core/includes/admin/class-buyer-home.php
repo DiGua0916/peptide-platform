@@ -132,7 +132,7 @@ final class Buyer_Home {
 			return (int) Recovery_Items::uncontacted_count();
 		}
 		$open = 0;
-		foreach ( Recovery_Items::list( array(), 1, 400 )['items'] as $item ) {
+		foreach ( Recovery_Items::list( array( 'from_ms' => ( time() - 7 * DAY_IN_SECONDS ) * 1000 ), 1, 400 )['items'] as $item ) {
 			if ( in_array( $item['status'] ?? '', array( 'pending', 'recalling' ), true ) && empty( $item['contacted_ms'] ) ) {
 				++$open;
 			}
@@ -177,7 +177,7 @@ final class Buyer_Home {
 			'/admin/buyer-home',
 			array(
 				'methods'             => 'GET',
-				'permission_callback' => static fn() => Staff_Buyer::can_view() ? true : new \WP_Error( 'pc_forbidden', '没有权限。', array( 'status' => rest_authorization_required_code() ) ),
+				'permission_callback' => static fn() => Staff_Buyer::can_use() ? true : new \WP_Error( 'pc_forbidden', '没有权限。', array( 'status' => rest_authorization_required_code() ) ),
 				'callback'            => static function ( \WP_REST_Request $request ) {
 					$response = new \WP_REST_Response( self::payload( sanitize_key( (string) $request['range'] ) ) );
 					$response->header( 'Cache-Control', 'no-store' );

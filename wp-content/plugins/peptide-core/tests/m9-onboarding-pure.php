@@ -60,6 +60,10 @@ namespace {
 	check( 'short password', '' !== \PeptideCore\Admin\Onboarding::password_error( 'abc1234', 'abc1234' ) );
 	check( 'passwords differ', '' !== \PeptideCore\Admin\Onboarding::password_error( 'abcd12345', 'abcd12346' ) );
 	check( 'password ok', '' === \PeptideCore\Admin\Onboarding::password_error( 'abcd12345', 'abcd12345' ) );
+	// 表单提交上来的密码带着 WordPress 加的反斜杠：it's-1234 是 it\'s-1234，一个反斜杠是两个。
+	check( 'quote in password is fine', '' === \PeptideCore\Admin\Onboarding::password_error( "it\\'s-1234", "it\\'s-1234" ) );
+	check( 'length counts the real characters', '' !== \PeptideCore\Admin\Onboarding::password_error( "it\\'s-12", "it\\'s-12" ) );
+	check( 'backslash in password refused', '' !== \PeptideCore\Admin\Onboarding::password_error( 'ab\\\\cd1234', 'ab\\\\cd1234' ) );
 	$token = str_repeat( 'EAAB', 12 );
 	check( 'pixel id must be digits', '' !== \PeptideCore\Admin\Onboarding::pixel_error( 'G-ABC123', $token, false ) );
 	check( 'pixel id too short', '' !== \PeptideCore\Admin\Onboarding::pixel_error( '1234', $token, false ) );
@@ -107,14 +111,23 @@ namespace {
 	check( 'all three in order', array( 'wizard', 'pay_domain', 'abandoned' ) === array_column( $todos( 1, true, 5 ), 'key' ) );
 
 	// ---------- 店铺信息 ----------
-	$store = static fn( string $wa, string $email = '' ): array => \PeptideCore\Admin\Store_Settings::clean_buyer_store( array( 'whatsapp' => $wa, 'email' => $email, 'store_name' => '不应该被采用' ) );
-	check( 'store info ok', array( array(), array( 'whatsapp' => '15551234567', 'email' => '' ) ) === $store( '+1 555 123 4567' ) );
-	check( 'store name is not editable here', ! array_key_exists( 'name', $store( '+15551234567' )[1] ) );
+	$store = static fn( string $wa, string $email = '', string $brand = '' ): array => \PeptideCore\Admin\Store_Settings::clean_buyer_store( array( 'whatsapp' => $wa, 'email' => $email, 'brand' => $brand, 'store_name' => '不应该被采用' ) );
+	check( 'store info ok', array( array(), array( 'brand' => '', 'whatsapp' => '15551234567', 'email' => '' ) ) === $store( '+1 555 123 4567' ) );
+	check( 'internal store name is not editable here', ! array_key_exists( 'name', $store( '+15551234567' )[1] ) && ! array_key_exists( 'store_name', $store( '+15551234567' )[1] ) );
 	check( 'support email kept', 'help@shop.example' === $store( '+15551234567', 'help@shop.example' )[1]['email'] );
 	check( 'WhatsApp required', 1 === count( $store( '' )[0] ) );
 	check( 'WhatsApp needs country code digits', 1 === count( $store( '12345' )[0] ) );
 	check( 'bad email', 1 === count( $store( '+15551234567', 'not-an-email' )[0] ) );
 	check( 'both problems at once', 2 === count( $store( '', 'x' )[0] ) );
+	check( 'public brand kept', 'VialCove Plus' === $store( '+15551234567', '', '  VialCove   Plus ' )[1]['brand'] );
+	check( 'bad brand reported with the other problems', 3 === count( $store( '', 'x', '多肽商店' )[0] ) );
+	$brand = static fn( string $raw ): array => \PeptideCore\Admin\Store_Settings::clean_brand( $raw );
+	check( 'empty brand means default', array( '', '' ) === $brand( '' ) && array( '', '' ) === $brand( '   ' ) );
+	check( 'brand with allowed punctuation', array( '', "O'Neil & Co. Peptides+" ) === $brand( "O'Neil & Co. Peptides+" ) );
+	foreach ( array( '多肽商店', 'A', str_repeat( 'a', 41 ), '<b>Shop</b>', '-Shop', 'Shop™', "Shop\nTwo<" ) as $bad ) {
+		check( 'bad brand rejected', '' !== $brand( $bad )[0] && '' === $brand( $bad )[1] );
+	}
+	check( 'longest brand', array( '', str_repeat( 'a', 40 ) ) === $brand( str_repeat( 'a', 40 ) ) );
 
 	// ---------- 订单列表的两栏 ----------
 	$src = static fn( array $a ): string => \PeptideCore\Admin\Admin_Menus::order_source( $a );
@@ -129,6 +142,9 @@ namespace {
 	check( 'order fully refunded', '已全额退款' === $refund( '', 100.0, 100.0 ) );
 	check( 'order partly refunded', '部分退款' === $refund( '', 30.0, 100.0 ) );
 	check( 'no refund', '无' === $refund( '', 0.0, 100.0 ) );
+	$own = static fn( string $lock, int $user ): bool => \PeptideCore\Admin\Admin_Menus::own_lock( $lock, $user );
+	check( 'own edit lock', $own( '1800000000:7', 7 ) );
+	check( 'someone else\'s edit lock stays', ! $own( '1800000000:8', 7 ) && ! $own( '', 7 ) && ! $own( '1800000000:7x', 7 ) && ! $own( '1800000000:7', 0 ) );
 
 	echo "PASS {$checks} onboarding / home / store-info checks\n";
 }
