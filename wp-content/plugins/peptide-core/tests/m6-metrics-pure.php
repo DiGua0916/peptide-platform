@@ -111,6 +111,12 @@ m6_check( 'FE-05: paid with an address record fills shipping and payment', array
 m6_check( 'payment selected without shipping is not counted', array( 1, 1, 1, 1, 1, 0, 0, 0 ) === array_values( Metrics::funnel_counts( array( 1 => array( 'visitor' => 1, 'stage' => 3, 'order' => 0 ) ), array( 1 => array( 'address' => true, 'payment' => true ) ), array() ) ) );
 m6_check( 'address recorded below the checkout stage is not counted', array( 1, 1, 1, 0, 0, 0, 0, 0 ) === array_values( Metrics::funnel_counts( array( 1 => array( 'visitor' => 1, 'stage' => 2, 'order' => 0 ) ), array( 1 => array( 'address' => true ) ), array() ) ) );
 m6_check( 'visits without a visitor are ignored', 0 === array_sum( Metrics::funnel_counts( array( 1 => array( 'visitor' => 0, 'stage' => 5, 'order' => 0 ) ), array(), array() ) ) );
+// 同一次访问里先付了一单（50），又下了一张没付的（51）：访问上只留 51，付款事件里有 50。
+$two = array( 50 => array( 'test' => false, 'counted' => true, 'visitor' => 1, 'visit' => 1 ), 51 => array( 'test' => false, 'counted' => false, 'visitor' => 1, 'visit' => 1 ) );
+m6_check( 'a later unpaid order on the same visit does not hide the paid one', array( 1, 1, 1, 1, 1, 1, 1, 1 ) === array_values( Metrics::funnel_counts( array( 1 => array( 'visitor' => 1, 'stage' => 5, 'order' => 51, 'orders' => array( 50 ) ) ), array( 1 => array( 'address' => true ) ), $two ) ) );
+m6_check( 'without the payment-event order the visit is not paid', array( 1, 1, 1, 1, 1, 0, 0, 0 ) === array_values( Metrics::funnel_counts( array( 1 => array( 'visitor' => 1, 'stage' => 5, 'order' => 51 ) ), array( 1 => array( 'address' => true ) ), $two ) ) );
+$tests_only = array( 52 => array( 'test' => true, 'counted' => false, 'visitor' => 1, 'visit' => 1 ) );
+m6_check( 'a visit whose orders are all test or deleted stops at checkout', array( 1, 1, 1, 1, 0, 0, 0, 0 ) === array_values( Metrics::funnel_counts( array( 1 => array( 'visitor' => 1, 'stage' => 5, 'order' => 52, 'orders' => array( 52, 999 ) ) ), array( 1 => array( 'address' => true, 'shipping' => true, 'payment' => true ) ), $tests_only ) ) );
 
 // 每一步不大于上一步：500 组随机数据（固定种子）。
 mt_srand( 20261110 );
@@ -188,5 +194,16 @@ m6_check( 'daily orders and sales land on the paid day', array( 1, 1 ) === array
 m6_check( 'daily visitors', array( 1, 2 ) === array_column( $rows, 'visitors' ) && array( 0.0, 0.0 ) === array_column( $rows, 'conversion_rate' ) );
 m6_check( 'daily rows add up to the period total', array_sum( array_column( $rows, 'sales_cents' ) ) === Metrics::orders( $day, 3 * $day )['sales_cents'] );
 m6_check( 'reversed daily period is empty', array() === Metrics::daily( 5, 5 ) );
+
+// ---------- 先付款、后又下了一张没付的单（从数据库读） ----------
+$GLOBALS['m6_orders'] = array();
+$wpdb                 = new M6_DB();
+Metrics::flush();
+m6_order( 40, 'processing', 20.0, 150, 150, 18, 30 );
+m6_order( 41, 'pending', 9.0, null, 160, 18, 30 );
+$wpdb->visit( 30, 18, 5, 41 );                                 // 访问上最后挂的是没付的 41。
+$wpdb->event( 30, 'checkout_address_completed' );
+$wpdb->event( 30, 'payment_success', 'server', 40 );
+m6_check( 'the paid order is found through the payment event, not the last linked order', 1 === Metrics::paid_visitors( 100, 200 ) && 100.0 === Metrics::conversion_rate( 100, 200 ) );
 
 echo 'PASS ', $GLOBALS['m6_passed'], " Data\\Metrics assertions\n";

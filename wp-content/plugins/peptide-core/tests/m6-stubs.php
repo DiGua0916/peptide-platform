@@ -222,13 +222,25 @@ namespace {
 				usort( $rows, static fn( $a, $b ) => $a['id'] <=> $b['id'] );
 				return array_slice( $rows, 0, 1000 );
 			}
-			if ( str_contains( $sql, 'SELECT DISTINCT e.visit_id, e.type' ) ) {
+			// 只认 Metrics 的“三种步骤事件”查询。Funnel_Guard::anomalies() 的查询开头也是 SELECT DISTINCT e.visit_id, e.type，
+			// 但带 NOT EXISTS，由下面的分支处理（第一次运行时它被这里误认，返回了没有 order_id 的行）。
+			if ( str_contains( $sql, 'SELECT DISTINCT e.visit_id, e.type FROM' ) && ! str_contains( $sql, 'NOT EXISTS' ) ) {
 				$cohort = $this->cohort( $sql, false );
 				$rows   = array();
 				foreach ( $this->events as $e ) {
 					$v = $cohort[ $e['visit_id'] ] ?? null;
 					if ( ! $v || $v['stage'] < 3 || ! in_array( $e['type'], array( 'checkout_address_completed', 'checkout_shipping_selected', 'checkout_payment_selected' ), true ) ) { continue; }
 					$rows[ $e['visit_id'] . '|' . $e['type'] ] = array( 'visit_id' => $e['visit_id'], 'type' => $e['type'] );
+				}
+				return array_values( $rows );
+			}
+			if ( str_contains( $sql, 'SELECT DISTINCT e.visit_id, e.order_id FROM' ) ) { // Metrics：走到已付款的访问，付款事件里的订单号。
+				$cohort = $this->cohort( $sql, false );
+				$rows   = array();
+				foreach ( $this->events as $e ) {
+					$v = $cohort[ $e['visit_id'] ] ?? null;
+					if ( ! $v || $v['stage'] < 5 || 'server' !== $e['source'] || 'payment_success' !== $e['type'] || $e['order_id'] <= 0 ) { continue; }
+					$rows[ $e['visit_id'] . '|' . $e['order_id'] ] = array( 'visit_id' => $e['visit_id'], 'order_id' => $e['order_id'] );
 				}
 				return array_values( $rows );
 			}

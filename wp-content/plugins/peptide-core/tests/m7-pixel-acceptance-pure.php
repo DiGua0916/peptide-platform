@@ -43,6 +43,7 @@ namespace {
 	/** 假 $wpdb：只认验收用的两条查询。 */
 	final class Px_DB {
 		public function prepare( string $sql, ...$args ): string {
+			if ( 1 === count( $args ) && is_array( $args[0] ) ) { $args = $args[0]; } // 和 WordPress 一样：参数可以整个放在一个数组里。
 			foreach ( $args as $arg ) { $sql = preg_replace( '/%[ds]/', is_int( $arg ) ? (string) $arg : "'" . $arg . "'", $sql, 1 ); }
 			return $sql;
 		}
@@ -53,8 +54,19 @@ namespace {
 			throw new RuntimeException( 'Unexpected get_var: ' . $sql );
 		}
 		public function get_results( string $sql, $mode = null ) {
-			if ( preg_match( '/sent_ms >= (\d+)/', $sql, $m ) ) {
-				return array_values( array_filter( \PeptideCore\Pixels\Server::$rows, static fn( array $r ): bool => $r['sent_ms'] >= (int) $m[1] ) );
+			if ( ! preg_match( '/sent_ms >= (\d+)/', $sql, $m ) ) {
+				throw new RuntimeException( 'Unexpected get_results: ' . $sql );
+			}
+			$rows = array_values( array_filter( \PeptideCore\Pixels\Server::$rows, static fn( array $r ): bool => $r['sent_ms'] >= (int) $m[1] ) );
+			if ( preg_match( "/platform = 'browser' AND pixel = '([a-z0-9]+)'/", $sql, $b ) ) { // 验收浏览器发出的事件。
+				return array_values( array_filter( $rows, static fn( array $r ): bool => 'browser' === $r['platform'] && $b[1] === $r['pixel'] ) );
+			}
+			if ( preg_match( "/platform = 'facebook' AND event_id IN \(([^)]*)\)/", $sql, $in ) ) { // 服务端对这些 event_id 的发送记录。
+				$ids = array_map( static fn( string $id ): string => trim( $id, " '" ), explode( ',', $in[1] ) );
+				return array_values( array_filter( $rows, static fn( array $r ): bool => 'facebook' === $r['platform'] && in_array( $r['event_id'], $ids, true ) ) );
+			}
+			if ( preg_match( "/platform = 'facebook' ORDER BY id DESC LIMIT (\d+)/", $sql, $limit ) ) { // 最近的服务端记录（任何访客的）。
+				return array_slice( array_reverse( array_values( array_filter( $rows, static fn( array $r ): bool => 'facebook' === $r['platform'] ) ) ), 0, (int) $limit[1] );
 			}
 			throw new RuntimeException( 'Unexpected get_results: ' . $sql );
 		}
@@ -111,6 +123,27 @@ namespace {
 	m6_check( 'no rows at all: nothing passes', ! Acceptance::evaluate( array(), 'code1' )['pass'] && array( 'server_missing' ) === array_values( array_unique( $status( Acceptance::evaluate( array(), 'code1' ) ) ) ) );
 	m6_check( 'passing events need no hint', '' === Acceptance::hint( 'Purchase', 'ok' ) && '' !== Acceptance::hint( 'ViewContent', 'server_missing' ) && '' !== Acceptance::hint( 'ViewContent', 'browser_missing' ) );
 
+	// ---------- 一家店两个像素：每个都要通 ----------
+	$two = array( '111', '222' );
+	$both = array_merge( $full(), array_map( static fn( string $event ) => $row( 'facebook', $event, $ids[ $event ], 1, '222' ), array_keys( $ids ) ) );
+	m6_check( 'two pixels that both accept the same ids pass', Acceptance::evaluate( $both, 'code1', $two )['pass'] );
+	$r = Acceptance::evaluate( $full(), 'code1', $two );
+	m6_check( 'a configured pixel with no record at all fails every event', ! $r['pass'] && array( 'server_missing' ) === array_values( array_unique( $status( $r ) ) ) && 0 === $r['events']['Purchase']['server_ok'] );
+	$rows   = array_merge( $full(), array_map( static fn( string $event ) => $row( 'facebook', $event, $ids[ $event ], 1, '222' ), array( 'PageView', 'ViewContent', 'AddToCart', 'InitiateCheckout', 'AddPaymentInfo' ) ) );
+	$rows[] = $row( 'facebook', 'Purchase', 'order_88', 0, '222', 400, 'Invalid OAuth access token' );
+	$r      = Acceptance::evaluate( $rows, 'code1', $two );
+	m6_check( 'one pixel accepting does not hide another pixel rejecting the same event', ! $r['pass'] && 'server_failed' === $r['events']['Purchase']['status'] && array( 'HTTP 400 Invalid OAuth access token' ) === $r['events']['Purchase']['errors'] && 'ok' === $r['events']['PageView']['status'] );
+	$rows[] = $row( 'facebook', 'Purchase', 'order_88', 1, '222' );
+	m6_check( 'a failure that a retry on the same pixel fixed is not a failure', Acceptance::evaluate( $rows, 'code1', $two )['pass'] );
+
+	// ---------- 店里还有别的访客 ----------
+	$busy   = $full();
+	$busy[] = $row( 'facebook', 'PageView', 'pag_other1' );
+	$busy[] = $row( 'facebook', 'Purchase', 'order_901' );
+	$busy[] = $row( 'facebook', 'AddToCart', 'add_other', 0, '111', 500, 'temporary' );
+	$r      = Acceptance::evaluate( $busy, 'code1' );
+	m6_check( "other visitors' events and their failures do not change the tester's result", $r['pass'] && 1 === $r['events']['AddToCart']['server_failed'] && 1 === $r['events']['PageView']['matched'] );
+
 	// ---------- 验收码 ----------
 	m6_check( 'no acceptance running by default', null === Acceptance::state() && '' === Acceptance::browser_code() );
 	$started = Acceptance::start( 30 );
@@ -144,6 +177,10 @@ namespace {
 	$check            = Acceptance::check();
 	m6_check( 'full pass: six events on both sides, same ids, config clean', $check['pass'] && $check['config']['ok'] && str_contains( Acceptance::report( $check ), '结果：通过' ) );
 	m6_check( 'report lists every event', 6 === substr_count( Acceptance::report( $check ), '服务端成功' ) );
+	// 生产店验收：之后又来了 2500 条别的访客的服务端记录，超过“最近 2000 条”的范围，验收人的记录仍然找得到。
+	for ( $i = 0; $i < 2500; $i++ ) { Server::log( 'facebook', '111', 'PageView', 'pag_busy_' . $i, true, 200, '' ); }
+	$check = Acceptance::check();
+	m6_check( "a busy store does not push the tester's records out of the check", $check['pass'] && 1 === $check['events']['ViewContent']['matched'] && array( '111' ) === $check['config']['expected'] );
 
 	// 过期：浏览器之后的上报被拒绝，但已经记下的仍然能核对。
 	$GLOBALS['m6_options'][ Acceptance::OPTION ]['until'] = time() - 1;

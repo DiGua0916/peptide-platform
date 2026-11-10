@@ -183,8 +183,22 @@ final class Server {
 			self::log( 'facebook', $pixel, 'PageView', (string) $event['id'], $ok, $code, $message );
 			$results[] = array( 'pixel' => $pixel, 'ok' => $ok, 'code' => $code, 'message' => $message );
 		}
+		$failed = array_values( array_filter( $results, static fn( array $r ): bool => ! $r['ok'] ) );
+		$ok     = $results && ! $failed;
+		if ( ! $results ) {
+			$message = '还没有保存 Facebook 像素。';
+		} elseif ( ! $failed ) {
+			$message = '';
+		} elseif ( 'no_token' === $failed[0]['message'] ) {
+			$message = '像素 ' . $failed[0]['pixel'] . ' 没有填 CAPI 令牌。';
+		} else {
+			$message = '像素 ' . $failed[0]['pixel'] . ' 未通（HTTP ' . $failed[0]['code'] . '）：' . $failed[0]['message'];
+		}
 		return array(
-			'ok'        => $results && ! array_filter( $results, static fn( array $r ): bool => ! $r['ok'] ),
+			'ok'        => (bool) $ok,
+			// pixel / message：给开店向导（F5）直接显示用 —— 第一个没通的像素（都通时是第一个像素）和一句原因。
+			'pixel'     => (string) ( $failed[0]['pixel'] ?? ( $results[0]['pixel'] ?? '' ) ),
+			'message'   => $message,
 			'reason'    => $results ? '' : 'no_pixel',
 			'test_code' => '' !== (string) $s['test_code'],
 			'results'   => $results,

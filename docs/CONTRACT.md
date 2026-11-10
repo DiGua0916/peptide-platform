@@ -670,8 +670,8 @@ currency, visitor, visit, buyer
 
 ### 3. 漏斗推进规则 `PeptideCore\Tracking\Funnel_Guard`（FE-05）
 
-- `Tracker::raise_stage( $visit_id, $stage, $order_id = 0 )` 的签名不变。开关是 `on` 时，升到 4（下单）或 5（支付成功）之前要求同一次访问里已经有 `checkout_address_completed`，否则不推进（订单号仍然挂到访问上）。
-- 新动作：`do_action( 'peptide_core_tracking_address_completed', int $visitor_id, int $visit_id )`，在 `POST /track/events` 新保存了一条填地址事件之后触发。
+- `Tracker::raise_stage( $visit_id, $stage, $order_id = 0 )` 的签名不变。开关是 `on` 时，升到 4（下单）或 5（支付成功）之前要求同一次访问里已经有 `checkout_address_completed`，否则不推进到 4、5：最多记到 3（进入结账），订单号仍然挂到访问上。
+- 新动作：`do_action( 'peptide_core_tracking_address_completed', int $visitor_id, int $visit_id, int $new )`，在 `POST /track/events` 新保存了填地址事件之后触发，每批一次；`$new` 是这一批里新保存了几条。
 - `Funnel_Guard::counters( int $days = 7 ): array`（按店铺日期的异常计数）、`Funnel_Guard::anomalies( int $from, int $to ): array`（准确数和访问编号）。
 - 前端协议没有变化，主题不用改。
 
@@ -688,7 +688,7 @@ currency, visitor, visit, buyer
 - 触发时机：结账页顾客选了支付方式，或点了下单（先到的那个），每个页面一次。
 - 像素页对投手只显示 Facebook；其他平台的卡片不显示也不提交（已保存的设置原样保留）。总后台要给某家店打开其他平台：选项 `peptide_core_pixels_buyer_platforms`（平台 key 的数组，默认 `[ 'facebook' ]`）。
 - 验收：`wp eval-file wp-content/plugins/peptide-core/tests/m7-pixel-acceptance-smoke.php start|check|stop|test`（`PeptideCore\Pixels\Acceptance`），核对 `pc_px_log` 里六类事件。验收期间带验收码的浏览器把发出的事件报到 `POST /peptide/v1/pixel-check`（公开，验收码过期即拒绝）。操作清单见 `docs/guides/m7-pixel-acceptance-checklist.md`。
-- **给 F5 的向导第 4 步**：`POST /wp-json/peptide/v1/admin/pixel-test`（需要 `manage_woocommerce` 和 REST nonce），或 PHP 里直接 `\PeptideCore\Pixels\Server::test_event()`。返回 `{ ok: bool, reason: '' | 'no_pixel', test_code: bool, results: [ { pixel, ok, code, message } ] }`；`ok = true` 就是“已通”。向导状态由 F5 自己写，这个接口不写任何向导数据。
+- **给 F5 的向导第 4 步**：`POST /wp-json/peptide/v1/admin/pixel-test`（需要 `manage_woocommerce` 和 REST nonce），或 PHP 里直接 `\PeptideCore\Pixels\Server::test_event()`。无参数，HTTP 200，返回 `{ ok: bool, pixel: string, message: string, reason: '' | 'no_pixel', test_code: bool, results: [ { pixel, ok, code, message } ] }`；`ok = true` 就是“已通”。`pixel` / `message` 是给向导直接显示的：第一个没通的像素（都通时是第一个像素）和一句中文原因（通了是空字符串）；`results` 是每个像素的明细。向导状态由 F5 自己写，这个接口不写任何向导数据。
 - `assets/pixels*.js` 不在第 13.2 节的清单里，但只属于像素模块，由 F4 维护。
 
 ### 6. 需要别的会话配合的事

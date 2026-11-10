@@ -126,7 +126,8 @@ final class Metrics {
 	 * 没有填地址的记录时，后面四层都不算（结账页一打开就有默认的物流和支付，不是顾客的动作）。
 	 * 访问关联的订单是测试单或已经不存在时，这次访问只算到“发起结账”。
 	 *
-	 * @param array<int,array{visitor:int,stage:int,order:int}> $visits   访问编号 => 访客、阶段、关联订单。
+	 * @param array<int,array<string,mixed>>                    $visits   访问编号 => visitor、stage、order（访问上最后挂的订单号）、
+	 *                                                                    orders（可选：这次访问的付款事件里出现过的订单号）。
 	 * @param array<int,array<string,bool>>                     $evidence 访问编号 => [ address / shipping / payment => true ]。
 	 * @param array<int,array<string,mixed>>                    $orders   订单号 => [ test, counted, visitor, visit ]。
 	 * @return array<string,int>
@@ -151,10 +152,26 @@ final class Metrics {
 			}
 			$sets['checkout'][ $visitor ] = true;
 
-			$order_id = (int) ( $visit['order'] ?? 0 );
-			$order    = $order_id > 0 ? ( $orders[ $order_id ] ?? null ) : null;
-			if ( $order_id > 0 && ( null === $order || ! empty( $order['test'] ) ) ) {
-				continue; // 测试单，或订单已经不存在：只算到“发起结账”。
+			// 这次访问关联过的订单：付款事件里的订单 + 访问上最后挂的那张（同一次访问里先付了一单、又下了一张没付的，
+			// 访问上只留后一张的订单号，所以不能只看它）。
+			$order_ids = isset( $visit['orders'] ) ? array_map( 'intval', (array) $visit['orders'] ) : array();
+			if ( (int) ( $visit['order'] ?? 0 ) > 0 ) {
+				$order_ids[] = (int) $visit['order'];
+			}
+			$real = false; // 有没有一张不是测试单、也还存在的订单。
+			$paid = false; // 有没有一张算数的已付款订单，而且订单上记的访客 / 访问就是这一次。
+			foreach ( array_unique( $order_ids ) as $order_id ) {
+				$order = $orders[ $order_id ] ?? null;
+				if ( null === $order || ! empty( $order['test'] ) ) {
+					continue;
+				}
+				$real = true;
+				if ( $stage >= self::STAGE_PAID && ! empty( $order['counted'] ) && (int) ( $order['visit'] ?? 0 ) === (int) $visit_id && (int) ( $order['visitor'] ?? 0 ) === $visitor ) {
+					$paid = true;
+				}
+			}
+			if ( $order_ids && ! $real ) {
+				continue; // 关联的订单全是测试单，或都已经不存在：只算到“发起结账”。
 			}
 			$steps = $evidence[ (int) $visit_id ] ?? array();
 			if ( empty( $steps['address'] ) ) {
@@ -162,8 +179,6 @@ final class Metrics {
 			}
 			$sets['address'][ $visitor ] = true;
 
-			$paid = $stage >= self::STAGE_PAID && null !== $order && ! empty( $order['counted'] )
-				&& (int) ( $order['visit'] ?? 0 ) === (int) $visit_id && (int) ( $order['visitor'] ?? 0 ) === $visitor;
 			if ( ! $paid && empty( $steps['shipping'] ) ) {
 				continue;
 			}
@@ -417,21 +432,33 @@ final class Metrics {
 		return self::rate( (int) $counts['paid'], (int) $counts['visitors'] );
 	}
 
-	/** @return array<int,array{visitor:int,stage:int,order:int}> */
+	/** @return array<int,array{visitor:int,stage:int,order:int,orders:int[]}> */
 	private static function read_visits( int $from_ms, int $to_ms ): array {
 		global $wpdb;
 		$visits   = Schema::table( 'visits' );
 		$visitors = Schema::table( 'visitors' );
+		$events   = Schema::table( 'events' );
 		$out      = array();
 		$cursor   = 0;
+		$any_paid = false;
 		do {
 			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT s.id, s.visitor_id, s.stage, s.order_id FROM {$visits} s INNER JOIN {$visitors} v ON v.id = s.visitor_id WHERE s.start_ms >= %d AND s.start_ms < %d AND s.is_test = 0 AND v.is_test = 0 AND s.id > %d ORDER BY s.id LIMIT 1000", $from_ms, $to_ms, $cursor ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 			$rows = is_array( $rows ) ? $rows : array();
 			foreach ( $rows as $row ) {
 				$cursor         = (int) $row['id'];
-				$out[ $cursor ] = array( 'visitor' => (int) $row['visitor_id'], 'stage' => (int) $row['stage'], 'order' => (int) $row['order_id'] );
+				$out[ $cursor ] = array( 'visitor' => (int) $row['visitor_id'], 'stage' => (int) $row['stage'], 'order' => (int) $row['order_id'], 'orders' => array() );
+				$any_paid       = $any_paid || (int) $row['stage'] >= self::STAGE_PAID;
 			}
 		} while ( 1000 === count( $rows ) );
+		if ( $any_paid ) {
+			// 走到已付款的访问：付款事件里的订单号。访问上的 order_id 只留最后挂的那一张，先付款、后又下了一张没付的单时会指向后一张。
+			$paid = $wpdb->get_results( $wpdb->prepare( "SELECT DISTINCT e.visit_id, e.order_id FROM {$events} e INNER JOIN {$visits} s ON s.id = e.visit_id WHERE s.start_ms >= %d AND s.start_ms < %d AND s.stage >= %d AND e.source = 'server' AND e.type = 'payment_success' AND e.order_id > 0", $from_ms, $to_ms, self::STAGE_PAID ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			foreach ( is_array( $paid ) ? $paid : array() as $row ) {
+				if ( isset( $out[ (int) $row['visit_id'] ] ) ) {
+					$out[ (int) $row['visit_id'] ]['orders'][] = (int) $row['order_id'];
+				}
+			}
+		}
 		return $out;
 	}
 
@@ -455,8 +482,13 @@ final class Metrics {
 	private static function visit_orders( array $visits ): array {
 		$need = array();
 		foreach ( $visits as $visit ) {
-			if ( $visit['order'] > 0 && $visit['stage'] >= self::STAGE_CHECKOUT ) {
-				$need[ $visit['order'] ] = $visit['order'];
+			if ( $visit['stage'] < self::STAGE_CHECKOUT ) {
+				continue;
+			}
+			foreach ( array_merge( array( (int) $visit['order'] ), (array) ( $visit['orders'] ?? array() ) ) as $order_id ) {
+				if ( $order_id > 0 ) {
+					$need[ (int) $order_id ] = (int) $order_id;
+				}
 			}
 		}
 		$out = array();

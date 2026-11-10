@@ -140,13 +140,42 @@ Tracker::raise_stage( 9, 4 );
 m6_check( 'a failing guard lets the stage advance (tracking never loses data to the rule)', 4 === $broken->visits[9]['stage'] );
 $wpdb = $real;
 
+// ---------- 浏览器的结账事件一条都没到 ----------
+$wpdb->visit( 10, 10, 1 ); // 只记到“看过商品”，没有进入结账的事件。
+m6_order( 94, 'processing', 20.0, 150, 150, 10, 10 );
+$wpdb->event( 10, 'order_placed', 'server', 94 );
+Tracker::raise_stage( 10, 4, 94 );
+m6_check( 'on: an order without any client checkout event still counts as reaching checkout, not beyond', 3 === $stage( 10 ) && 94 === $order( 10 ) );
+
+// ---------- 一批里有两条填地址事件（顾客改来改去） ----------
+$wpdb->visit( 11, 11, 3 );
+m6_order( 95, 'processing', 20.0, 150, 150, 11, 11 );
+$wpdb->event( 11, 'order_placed', 'server', 95 );
+Tracker::raise_stage( 11, 4, 95 );
+$wpdb->event( 11, 'payment_success', 'server', 95 );
+Tracker::raise_stage( 11, 5, 95 );
+$settled = Guard::counters()[ $today ]['settled'];
+$wpdb->event( 11, 'checkout_address_completed' );
+$wpdb->event( 11, 'checkout_address_completed' );
+do_action( Guard::ACTION, 11, 11, 2 );
+m6_check( 'late address: two address events in one batch still settle, counted once', 5 === $stage( 11 ) && $settled + 1 === Guard::counters()[ $today ]['settled'] );
+// 两批同时到、谁都不是“第一批”时也要补上，只是不再多记一次“已补上”。
+$wpdb->visit( 12, 12, 3 );
+m6_order( 96, 'processing', 20.0, 150, 150, 12, 12 );
+$wpdb->event( 12, 'payment_success', 'server', 96 );
+Tracker::raise_stage( 12, 5, 96 );
+$wpdb->event( 12, 'checkout_address_completed' );
+$wpdb->event( 12, 'checkout_address_completed' );
+do_action( Guard::ACTION, 12, 12, 1 );
+m6_check( 'late address: a batch that is not the first still advances the visit', 5 === $stage( 12 ) && $settled + 1 === Guard::counters()[ $today ]['settled'] );
+
 // ---------- 漏斗每一步不大于上一步 ----------
 Metrics::flush();
 $counts = array_values( Metrics::funnel( 100, 200 )['counts'] );
 $sorted = $counts;
 rsort( $sorted );
 m6_check( 'funnel after the rule: no step exceeds the previous one', $counts === $sorted );
-// 访客 1（关着时推进到 5，订单不存在）、2（跳步）、5（测试单）停在发起结账；4、7、8 只到填地址；3、6 付款成功。
-m6_check( 'funnel after the rule: skipped visits stop at checkout, real ones are paid', array( 8, 8, 8, 8, 5, 2, 2, 2 ) === $counts );
+// 访客 1（关着时推进到 5，订单不存在）、2 和 10（跳步）、5（测试单）停在发起结账；4、7、8 只到填地址；3、6、11、12 付款成功。
+m6_check( 'funnel after the rule: skipped visits stop at checkout, real ones are paid', array( 11, 11, 11, 11, 7, 4, 4, 4 ) === $counts );
 
 echo 'PASS ', $GLOBALS['m6_passed'], " funnel guard (FE-05) assertions\n";

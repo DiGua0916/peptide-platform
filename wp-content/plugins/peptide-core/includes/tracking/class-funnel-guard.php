@@ -9,7 +9,7 @@
  * 受 M6 开关控制（Data\Metrics_Switch）：
  * - off    什么都不做，Tracker::raise_stage() 和以前一样（GREATEST 推进），不查库、不写任何东西；
  * - shadow 照旧推进，只在异常计数里记下“如果拦会拦掉多少”；
- * - on     没有填地址的记录就不推进（订单号仍然挂到访问上）。
+ * - on     没有填地址的记录就不推进到 4、5：最多记到 3（下了单说明到过结账页），订单号仍然挂到访问上。
  *
  * 其他规则：
  * - 低于 4 的阶段（看商品、加购、进入结账）不受限制；
@@ -35,14 +35,14 @@ final class Funnel_Guard {
 	/** 从这个阶段起要求有填地址的记录：4 = 下单（选定支付方式并提交）。 */
 	public const GATED_STAGE = 4;
 
-	/** 填地址事件新保存之后触发的动作：( int $visitor_id, int $visit_id )。 */
+	/** 填地址事件新保存之后触发的动作：( int $visitor_id, int $visit_id, int $new )，$new = 这一批里新保存了几条。 */
 	public const ACTION = 'peptide_core_tracking_address_completed';
 
 	public const OPTION    = 'peptide_core_m6_funnel_anomalies';
 	public const KEEP_DAYS = 35;
 
 	public static function register_hooks(): void {
-		add_action( self::ACTION, array( self::class, 'settle' ), 10, 2 );
+		add_action( self::ACTION, array( self::class, 'settle' ), 10, 3 );
 	}
 
 	/**
@@ -104,8 +104,12 @@ final class Funnel_Guard {
 	/**
 	 * 填地址的事件到了（动作 peptide_core_tracking_address_completed）：如果这次访问里早就有下单 / 付款的服务端事件，
 	 * 说明当时因为事件还没到被拦过（或者影子模式下记过一次异常），现在补上。
+	 *
+	 * @param int $visitor_id 访客编号（没有用到，动作的第一个参数）。
+	 * @param int $visit_id   访问编号。
+	 * @param int $new        这一批里新保存的填地址事件有几条（顾客改来改去时，一批里可能不止一条）。
 	 */
-	public static function settle( $visitor_id, $visit_id ): void {
+	public static function settle( $visitor_id, $visit_id, $new = 1 ): void {
 		global $wpdb;
 		$visit_id = (int) $visit_id;
 		if ( $visit_id <= 0 ) {
@@ -117,11 +121,13 @@ final class Funnel_Guard {
 		}
 		try {
 			$events = Schema::table( 'events' );
-			// 只在这次访问的第一条填地址事件上补。之后再来的填地址事件，说明下单时已经有记录，或者已经补过了。
+			// “已补上”只记一次：这次访问的填地址事件全都是这一批才到的（之前一条都没有）。
+			// 之前就有的话，下单时已经过了规则，或者已经补过。
 			$count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$events} WHERE visit_id = %d AND type = 'checkout_address_completed'", $visit_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
-			if ( 1 !== $count ) {
+			if ( $count < 1 ) {
 				return;
 			}
+			$first    = $count <= max( 1, (int) $new );
 			$rows     = $wpdb->get_results( $wpdb->prepare( "SELECT type, order_id FROM {$events} WHERE visit_id = %d AND source = 'server' AND type IN ('order_placed','payment_success')", $visit_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 			$stage    = 0;
 			$order_id = 0;
@@ -134,8 +140,12 @@ final class Funnel_Guard {
 			if ( ! $stage || self::is_test( $order_id ) ) {
 				return;
 			}
-			self::note( 'settled' );
+			if ( $first ) {
+				self::note( 'settled' );
+			}
 			if ( 'on' === $mode ) {
+				// 可以重复执行：阶段只升不降，这时已经有填地址的记录，allow() 会放行。
+				// 两批事件同时到、各自都以为自己不是第一批时，靠这一步仍然能补上。
 				Tracker::raise_stage( $visit_id, $stage, $order_id );
 			}
 		} catch ( \Throwable $e ) {

@@ -5,9 +5,9 @@
 
 ## 先说最重要的
 
-**这一批代码一行都没有运行过。** 这台开发机没有 PHP、Node、Docker、Homebrew，现有的和新写的测试都跑不了。
-做过的检查只有三样：逐条手工推演自己写的用例；用脚本检查括号配平；请另一个会话做了一遍只读的静态复查并按结果修改（见文末“实际做过的检查”）。
-所以**上沙盒之前必须先在有 PHP 8.1+ 的环境里跑一遍** `m6-*-pure.php` 和现有的数据 / 追踪用例，再谈发布。
+**纯逻辑测试已经在本机跑过并通过；需要 WordPress / WooCommerce / 数据库 / 浏览器的部分一样都没跑过。**
+平台所有者同意后，我在本会话的临时目录里从 php.net 源码编译了 PHP 8.3.36（方法见文末），跑了新写的 8 个用例和仓库里现有的全部纯逻辑用例，结果见“实际做过的检查”。
+没有验证过的：任何真实数据库上的查询（`Metrics` 的订单和访客读数、对账报告）、概览页和数据页在浏览器里的样子、`wc_get_orders( date_paid … )` 在真实 WooCommerce 下的行为、追踪事件的真实写入。这些要到沙盒或脱敏快照上才能验证。
 
 开关默认是 `off`。按设计，off 时线上行为和这条分支之前完全一样（见“开关关着时改了什么”一节的逐项说明）。
 
@@ -114,17 +114,79 @@ wp eval 'print_r( PeptideCore\Data\Metrics_Switch::log() ); print_r( PeptideCore
 2. 订单按付款时间归属是我按“收到支付成功通知的订单”和总后台 `pchq_orders.paid_at` 推出来的，PRD 没有明说按哪个时间。和现在的“按创建时间”相比，晚付款的订单会挪到付款那天。请确认。
 3. 弃单数的定义我取的是“待召回 + 召回中 + 召回失败 + 召回成功”（期间内弃过的都算，包括后来召回成功的）。如果投手首页想要的是“现在还没付的”，用 `abandoned_open`（待召回 + 召回中）或者 `abandoned − recall_recovered`。
 
-## 实际做过的检查
+## 实际做过的检查（2026-11-10，本机 PHP 8.3.36 + Node 26.13）
 
-- 运行过的自动化测试：**无**（没有 PHP / Node）。
-- 手工推演：`m6-*-pure.php` 每条断言都对着实现和桩推过一遍，推演中改掉了 2 处用例期望值算错的地方。
-- `python3` 脚本检查了所有新增和修改的 PHP / JS 文件的括号配平（只能发现漏括号，不是语法检查）。
-- 独立静态复查：结果和处理见提交记录里 “静态复查” 那一次提交的说明。
-- 没有做：`php -l`、现有 75 组数据用例的回归、任何浏览器里的页面检查、任何数据库上的查询。
+环境：PHP 是从 php.net 的 `php-8.3.36.tar.xz`（校验值和官方公布的一致）在本会话临时目录里编译的最小命令行版（带 mbstring、bcmath、ctype、tokenizer、filter）；Node 用机器上已有的 `~/.local/opt/node-v26.13.0-darwin-arm64`。
+
+| 检查 | 结果 |
+| --- | --- |
+| `php -l`：全部新增和修改的 PHP 文件（26 个） | 无语法错误 |
+| `node --check assets/pixels.js` | 通过 |
+| 新用例 `m6-metrics-pure`（54 条断言）、`m6-metrics-switch-pure`（30）、`m6-funnel-guard-pure`（36）、`m6-reconcile-orders-pure`（23）、`m6-reconcile-overlay-pure`（26）、`m6-buyer-data-pages-pure`（31）、`m7-pixel-acceptance-pure`（32）、`m7-pixels-pure`（31） | 全部通过，`E_ALL` 下没有警告 |
+| 默认套件 `node tests/run-data-observations.cjs`：主线 `f0e58d2` | 42 通过 / 9 失败 |
+| 同一命令：本分支 | 53 通过 / 6 失败；**没有新增失败**，修好了 3 个原有失败 |
+| 24 个非默认的可选套件，主线和本分支逐个对比 | 结果完全相同（两边都是 12 个失败，都是历史套件） |
+| 插件里全部可以单独运行的测试文件（PHP 和 JS 共 114 个），主线和本分支逐个对比 | 只有变好的：除上面 3 个外，`tracking-native-visit-classifier-pure` 也从失败变为通过 |
+
+第一次运行时的情况：8 个新用例里 7 个一次通过；`m6-funnel-guard-pure` 有 1 条断言失败，原因是测试桩把“异常数”查询误认成了另一条查询（桩的问题，不是实现的问题），改了桩之后通过。`m7-pixels-pure` 是有了 PHP 之后新写的，加载真正的 `Pixels` / `Server` / `Acceptance`。
+
+修好的原有失败（都是测试桩或期望值没跟上主线的改动，实现没有问题）：
+
+- `tracking-product-actions-pure`、`tracking-native-visit-classifier-pure`：桩里的 `Tracker` 缺 `is_automated()`（11-08 加的爬虫过滤）。
+- `tracking-store-api-cart-success-pure`：缺 `Recovery::CRON`（11-10 加的付款事件补记）。
+- `experiment-data-pure`：数据页数量的期望值还是 11，现在是 12。
+
+默认套件里还在失败的 6 个（主线上同样失败，不是这条分支引起的）：
+
+| 套件 | 原因 | 归属 |
+| --- | --- | --- |
+| `data-native-search-pure`、`data-product-action-rankings-pure` | 共用的 `data-dimensions-pure.php` 是一串“冻结期望值”。我改掉了前两处过期的（11-08 的漏斗规则、新增的 channel 分组），后面还有：排行需要 `Data\Product_Actions` 而用例没加载、“原有十九项 JSON 不变”的期望值也已经过期 | F4，下一批继续 |
+| `data-product-user-ratios-node` | 商品数据页“至少选五列”的界面行为在页面重做后变了，用例没跟上 | F4，下一批 |
+| `mail-source-observations` | 需要一个装好的 WordPress 目录，不是纯逻辑用例 | 日常会话 / F1 |
+| `visitor-intents`、`visitor-product-actions` | 主题的用例 | F5 |
+
+没有做的：需要 WordPress 的 `smoke-*.php` / `*-native.php`、任何数据库上的查询、任何浏览器里的页面检查。
+
+### 独立静态复查（另一个只读会话，没有运行环境，逐条手工推演）
+
+它确定的 1 处和实际运行发现的是同一处（测试桩认错查询）。另外提出 5 处实现上的疑点，都核对过，处理如下：
+
+| 疑点 | 处理 |
+| --- | --- |
+| 一批事件里有两条填地址事件时，晚到补推进被跳过，访问永远停在第 3 步 | 属实，已改：`Ingest` 把这一批新保存了几条传给 `Funnel_Guard::settle()`；开关开着时补推进可以重复执行。加了两条用例 |
+| 像素验收：两个像素里一个收下、一个拒收同一个事件，结果仍然显示通过 | 属实，已改：按“每个应该回传的像素都要收下”判断；同一个像素重发成功的不算失败。加了四条用例 |
+| 同一次访问里先付了一单、又下了一张没付的单，访问上只留后一张的订单号，支付成功访客被漏掉 | 属实，已改：`Metrics` 同时读付款事件里的订单号。加了四条用例 |
+| 开关开着时，被拦下的访问阶段完全不动；浏览器的结账事件一条都没到的订单会从“发起结账”里掉出去 | 采纳：被拦下时最多记到 3（下了单说明到过结账页）。加了一条用例 |
+| 像素验收只读“开始以来的前 5000 条发送记录”，生产店流量大时验收人的记录可能被挤掉 | 属实，已改：先取验收浏览器上报的 event_id，再按这些 id 查服务端记录。加了一条 2500 条外部记录的用例 |
+
+复查同时确认：开关关着或没有这个选项时，`Tracker::raise_stage()`、`Operations::period()`、概览页数据、管理员的数据页输出四条路径和改动前没有行为差别。它列出的三处不受开关控制的变化（概览页先算时间段再算汇总、管理员多两个隐藏的合并页、M7 的改动）都已经写在本文件和 `m7-pixels.md` 里。
 
 ## 下一步
 
-1. 有 PHP 之后：跑 `m6-*`、`m7-*` 和现有 `data-*` / `tracking-*` 用例，修到全绿。
-2. 脱敏快照到了之后：跑对账报告，把结果补到本文件。
-3. 按上表继续接入其余报表。
+1. 沙盒或脱敏快照到了之后：`wp eval-file …/m6-reconcile-report-smoke.php`，把结果补到本文件；在沙盒上把开关切到 `shadow` 观察。
+2. 按“还没有接入”一节的表继续接入其余报表（现在本机能跑测试了）。
+3. 修完上表里归 F4 的 3 个原有失败。
 4. 同屏合并的投手数据页（需要浏览器环境）。
+5. “按广告拆分”：现在主题和 `Tracking\Attribution` 的白名单都只收 `utm_source`、`utm_medium`，广告系列 / 广告组 / 广告三个参数在上报时就被丢掉了（弃单详情、结账流失页读这几个字段一直是空的）。要做：主题两个脚本放开白名单（F5 / 主题归属方），`Attribution` 放开白名单，来源报表加维度。
+
+## 在这台机器上跑测试
+
+机器上没有现成的 PHP。这个会话是这样得到的（会话结束临时目录就没了，要重做，约 3 分钟）：
+
+```bash
+export SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
+export PATH="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:$PATH"
+export CC=clang CPP="clang -E"
+./configure --prefix="<临时目录>/php" --disable-all --enable-cli --disable-cgi --disable-phpdbg --disable-fpm --enable-mbstring --disable-mbregex --enable-ctype --enable-tokenizer --enable-filter --enable-bcmath --without-pear
+make -j8 && make install
+```
+
+要点：沙盒里 `/usr/bin/cc`、`/usr/bin/make` 这层外壳每次调用都报“写不了缓存”，报错会混进 configure 的检测结果导致编译失败；把 Xcode 工具链目录放到 `PATH` 最前面、设好 `SDKROOT` 就没有这个问题。
+
+```bash
+<临时目录>/php/bin/php -n wp-content/plugins/peptide-core/tests/m6-metrics-pure.php
+```
+
+```bash
+~/.local/opt/node-v26.13.0-darwin-arm64/bin/node tests/run-data-observations.cjs --php <临时目录>/php/bin/php
+```

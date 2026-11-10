@@ -384,7 +384,7 @@ final class Ingest {
 		$new          = 0;
 		$views        = 0;
 		$stage        = 0;
-		$address_completed = false; // FE-05：这一批里有没有新保存的填地址事件。
+		$address_completed = 0; // FE-05：这一批里新保存的填地址事件有几条。
 		$impression_visit = $legacy && ! $only_replays ? $visit : 0;
 		$impression_visit_attempted = (bool) $impression_visit;
 		$impression_visit_checked = false; $impression_visit_ready = false; $impression_visit_error = false;
@@ -487,7 +487,7 @@ final class Ingest {
 			} elseif ( 'checkout_view' === $c['type'] ) {
 				$stage = max( $stage, 3 );
 			} elseif ( 'checkout_address_completed' === $c['type'] ) {
-				$address_completed = true;
+				++$address_completed;
 			}
 			self::update_tab( $visitor['id'], $visit, $c, $now_ms );
 		}
@@ -519,7 +519,7 @@ final class Ingest {
 		if ( $address_completed ) {
 			// FE-05：填地址的事件可能比下单晚到（浏览器攒批上报）。Funnel_Guard 听这个动作，把当时没推进的阶段补上。
 			// M6 开关关着时 Funnel_Guard::settle() 立刻返回，这一行什么都不改。
-			try { do_action( 'peptide_core_tracking_address_completed', (int) $visitor['id'], (int) $visit ); }
+			try { do_action( 'peptide_core_tracking_address_completed', (int) $visitor['id'], (int) $visit, $address_completed ); }
 			catch ( \Throwable $optional_failure ) { /* A guard failure must not change tracking ACK. */ }
 		}
 		// Optional Data verdicts follow genuine new persistence, never retries/rejections.

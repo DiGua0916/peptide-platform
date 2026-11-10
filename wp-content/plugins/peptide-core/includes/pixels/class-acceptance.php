@@ -130,40 +130,75 @@ final class Acceptance {
 	/**
 	 * 纯判断：按事件核对服务端和浏览器的记录。
 	 *
-	 * @param array<int,array<string,mixed>> $rows pc_px_log 的行（platform, pixel, event, event_id, ok, code, message）。
-	 * @param string                         $code 验收码（浏览器行的 pixel 列）。
+	 * 以验收浏览器发出的 event_id 为准：这些 id 要被每一个应该回传的像素都收下。
+	 * - 别的访客的事件不影响结果（生产店验收时店里还有真实流量）；
+	 * - 一个像素收了、另一个像素拒了同一个事件，算失败（一家店可以配多个像素，每个都要通）；
+	 * - 同一个像素先失败、重发后成功的，不算失败。
+	 *
+	 * @param array<int,array<string,mixed>> $rows   pc_px_log 的行（platform, pixel, event, event_id, ok, code, message）。
+	 * @param string                         $code   验收码（浏览器行的 pixel 列）。
+	 * @param string[]                       $pixels 应该回传的 Facebook 像素 ID（填了令牌、关联域名是本店的）。空数组 = 以记录里出现过的像素为准。
 	 * @return array{pass:bool,events:array<string,array<string,mixed>>}
 	 */
-	public static function evaluate( array $rows, string $code ): array {
+	public static function evaluate( array $rows, string $code, array $pixels = array() ): array {
 		$out = array( 'pass' => true, 'events' => array() );
 		foreach ( array_keys( self::EVENTS ) as $event ) {
-			$server  = array();
-			$failed  = array();
-			$browser = array();
+			$ok      = array(); // 像素 => [ event_id => true ]：Facebook 收下的。
+			$bad     = array(); // 像素 => [ event_id => 原因 ]：Facebook 拒收的。
+			$browser = array(); // event_id => true：验收浏览器发出的。
 			foreach ( $rows as $row ) {
 				if ( $event !== (string) ( $row['event'] ?? '' ) ) {
 					continue;
 				}
-				$id = (string) ( $row['event_id'] ?? '' );
+				$id    = (string) ( $row['event_id'] ?? '' );
+				$pixel = (string) ( $row['pixel'] ?? '' );
 				if ( 'facebook' === ( $row['platform'] ?? '' ) ) {
 					if ( (int) ( $row['ok'] ?? 0 ) ) {
-						$server[ $id ] = true;
+						$ok[ $pixel ][ $id ] = true;
 					} else {
-						$failed[ $id ] = 'HTTP ' . (int) ( $row['code'] ?? 0 ) . ' ' . (string) ( $row['message'] ?? '' );
+						$bad[ $pixel ][ $id ] = 'HTTP ' . (int) ( $row['code'] ?? 0 ) . ' ' . (string) ( $row['message'] ?? '' );
 					}
-				} elseif ( 'browser' === ( $row['platform'] ?? '' ) && $code === (string) ( $row['pixel'] ?? '' ) ) {
+				} elseif ( 'browser' === ( $row['platform'] ?? '' ) && $code === $pixel ) {
 					$browser[ $id ] = true;
 				}
 			}
+			// 没有被同一个像素的重发补上的失败；其中属于验收浏览器的单独算。
+			$errors = array();
+			$mine   = 0;
+			foreach ( $bad as $pixel => $ids ) {
+				foreach ( $ids as $id => $message ) {
+					if ( isset( $ok[ $pixel ][ $id ] ) ) {
+						continue;
+					}
+					$errors[] = $message;
+					$mine    += isset( $browser[ (string) $id ] ) ? 1 : 0;
+				}
+			}
+			// 每一个应该回传的像素都收下的 event_id。
+			$expected = $pixels ? array_map( 'strval', $pixels ) : array_map( 'strval', array_keys( $ok + $bad ) );
+			$server   = null;
+			foreach ( $expected as $pixel ) {
+				$server = null === $server ? ( $ok[ $pixel ] ?? array() ) : array_intersect_key( $server, $ok[ $pixel ] ?? array() );
+			}
+			$server  = null === $server ? array() : $server;
 			$matched = array_intersect_key( $server, $browser );
-			if ( ! $server ) {
-				$status = $failed ? 'server_failed' : 'server_missing';
-			} elseif ( ! $browser ) {
-				$status = 'browser_missing';
-			} elseif ( ! $matched ) {
-				$status = 'id_mismatch';
-			} else {
+			// 只被一部分像素收下的、验收浏览器发出的事件。
+			$partial = false;
+			foreach ( $ok as $ids ) {
+				$partial = $partial || (bool) array_intersect_key( $ids, $browser );
+			}
+			if ( $mine > 0 ) {
+				$status = 'server_failed';
+			} elseif ( $matched ) {
 				$status = 'ok';
+			} elseif ( ! $browser ) {
+				$status = $ok ? 'browser_missing' : ( $errors ? 'server_failed' : 'server_missing' );
+			} elseif ( $partial ) {
+				$status = 'server_missing'; // 有的像素收到了，有的像素没有这条记录。
+			} elseif ( $errors ) {
+				$status = 'server_failed';
+			} else {
+				$status = $ok ? 'id_mismatch' : 'server_missing';
 			}
 			if ( 'ok' === $status && 'Purchase' === $event && ! array_filter( array_keys( $matched ), static fn( $id ): bool => 1 === preg_match( '/^order_\d+$/', (string) $id ) ) ) {
 				$status = 'id_mismatch'; // 购买事件的 event_id 必须是 order_<订单号>，补发和晚付款才能去重。
@@ -171,10 +206,10 @@ final class Acceptance {
 			$out['events'][ $event ] = array(
 				'status'        => $status,
 				'server_ok'     => count( $server ),
-				'server_failed' => count( $failed ),
+				'server_failed' => count( $errors ),
 				'browser'       => count( $browser ),
 				'matched'       => count( $matched ),
-				'errors'        => array_slice( array_values( array_unique( $failed ) ), 0, 3 ),
+				'errors'        => array_slice( array_values( array_unique( $errors ) ), 0, 3 ),
 				'hint'          => self::hint( $event, $status ),
 			);
 			if ( 'ok' !== $status ) {
@@ -195,7 +230,7 @@ final class Acceptance {
 		if ( 'id_mismatch' === $status ) {
 			return 'Purchase' === $event
 				? '两边都发了，但 event_id 对不上（购买事件应该是 order_<订单号>）：事件管理器会算成两次购买，先不要投放，把这次的订单号发给开发。'
-				: '两边都发了，但 event_id 对不上：事件管理器会重复计数，把这次验收的时间发给开发。';
+				: '验收浏览器发了这个事件，服务端也在发这类事件，但没有一条和验收浏览器的 event_id 相同：要么服务端没有给这位访客发（比如刚装的后台任务还没跑完，等一分钟再核对），要么两边 event_id 不一致（事件管理器会重复计数）。重做一遍还是这样就把验收时间发给开发。';
 		}
 		$server = array(
 			'PageView'         => '服务端没发 PageView：广告像素 → 统计设置里勾上“服务端也回传 PageView”，保存后重新打开店铺。',
@@ -211,7 +246,7 @@ final class Acceptance {
 		if ( 'browser_missing' === $status ) {
 			return $browser[ $event ] ?? '浏览器没发 ' . $event . '：确认是用带验收码的链接打开的店铺，没有开广告拦截，也没有用员工账号登录。';
 		}
-		return ( $server[ $event ] ?? '服务端没发 ' . $event . '。' ) . ' 六类事件都没有服务端记录时，先确认 Facebook 像素填了 CAPI 令牌、关联域名就是本店域名，后台任务（Action Scheduler）在跑。';
+		return ( $server[ $event ] ?? '服务端没发 ' . $event . '。' ) . ' 配了多个像素时，每个像素都要有这条记录才算。六类事件都没有服务端记录时，先确认 Facebook 像素填了 CAPI 令牌、关联域名就是本店域名，后台任务（Action Scheduler）在跑。';
 	}
 
 	/**
@@ -228,21 +263,36 @@ final class Acceptance {
 		$rows = array();
 		if ( Server::installed() ) {
 			$table = Server::table();
-			$rows  = (array) $wpdb->get_results( $wpdb->prepare( "SELECT platform, pixel, event, event_id, ok, code, message FROM {$table} WHERE sent_ms >= %d ORDER BY id ASC LIMIT 5000", $state['started_ms'] ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+			// 1. 验收浏览器发出的事件。
+			$browser = (array) $wpdb->get_results( $wpdb->prepare( "SELECT platform, pixel, event, event_id, ok, code, message FROM {$table} WHERE sent_ms >= %d AND platform = 'browser' AND pixel = %s ORDER BY id ASC LIMIT %d", $state['started_ms'], $state['code'], self::MAX_BROWSER ), ARRAY_A );
+			// 2. 服务端对这些 event_id 的发送记录（店里再忙也不会被别的访客的记录挤掉）。
+			$mine = array();
+			$ids  = array_values( array_unique( array_map( 'strval', array_column( $browser, 'event_id' ) ) ) );
+			foreach ( array_chunk( $ids, 100 ) as $chunk ) {
+				$marks = implode( ',', array_fill( 0, count( $chunk ), '%s' ) );
+				$found = (array) $wpdb->get_results( $wpdb->prepare( "SELECT platform, pixel, event, event_id, ok, code, message FROM {$table} WHERE sent_ms >= %d AND platform = 'facebook' AND event_id IN ({$marks})", array_merge( array( $state['started_ms'] ), $chunk ) ), ARRAY_A );
+				$mine  = array_merge( $mine, $found );
+			}
+			// 3. 最近的服务端记录（任何访客的）：用来区分“服务端根本没发这类事件”和“发了但 event_id 对不上”。
+			$recent = (array) $wpdb->get_results( $wpdb->prepare( "SELECT platform, pixel, event, event_id, ok, code, message FROM {$table} WHERE sent_ms >= %d AND platform = 'facebook' ORDER BY id DESC LIMIT 2000", $state['started_ms'] ), ARRAY_A );
+			// phpcs:enable
+			$rows = array_merge( $browser, $mine, $recent );
 		}
-		$result             = self::evaluate( $rows, $state['code'] );
+		$config             = self::config();
+		$result             = self::evaluate( $rows, $state['code'], $config['expected'] );
 		$result['code']     = $state['code'];
 		$result['started']  = wp_date( 'Y-m-d H:i:s', (int) floor( $state['started_ms'] / 1000 ) );
 		$result['expired']  = $state['until'] < time();
-		$result['config']   = self::config();
-		$result['pass']     = $result['pass'] && $result['config']['ok'];
+		$result['config']   = $config;
+		$result['pass']     = $result['pass'] && $config['ok'];
 		return $result;
 	}
 
 	/**
 	 * 配置检查：有没有带令牌的 Facebook 像素、关联域名是不是本店域名、服务端 PageView 开没开、测试事件代码清没清。
 	 *
-	 * @return array{ok:bool,pixels:int,with_token:int,domain:string,wrong_domain:string[],server_pv:bool,test_code:bool,problems:string[]}
+	 * @return array{ok:bool,pixels:int,with_token:int,expected:string[],domain:string,wrong_domain:string[],server_pv:bool,test_code:bool,problems:string[]}
 	 */
 	public static function config(): array {
 		$s        = Pixels::settings();
@@ -250,11 +300,15 @@ final class Acceptance {
 		$pixels   = (array) $s['platforms']['facebook']['pixels'];
 		$tokens   = 0;
 		$wrong    = array();
+		$expected = array(); // 服务端应该回传的像素：填了令牌、关联域名是本店域名。
 		$problems = array();
 		foreach ( $pixels as $px ) {
-			$tokens += '' !== (string) ( $px['token'] ?? '' ) ? 1 : 0;
+			$has_token = '' !== (string) ( $px['token'] ?? '' );
+			$tokens   += $has_token ? 1 : 0;
 			if ( Pixels::pixel_domain( $px ) !== $domain ) {
 				$wrong[] = (string) ( $px['id'] ?? '' );
+			} elseif ( $has_token ) {
+				$expected[] = (string) ( $px['id'] ?? '' );
 			}
 		}
 		if ( ! $pixels ) {
@@ -272,6 +326,7 @@ final class Acceptance {
 			'ok'           => ! $problems,
 			'pixels'       => count( $pixels ),
 			'with_token'   => $tokens,
+			'expected'     => $expected,
 			'domain'       => $domain,
 			'wrong_domain' => $wrong,
 			'server_pv'    => (bool) $s['server_pv'],
