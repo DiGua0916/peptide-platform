@@ -98,7 +98,7 @@ final class Checkout_Dropoff_Page {
 
 		echo '<div class="wrap pc-pl pc-rc pc-cd">';
 		echo '<div class="pc-rc-detail__top"><a class="pc-rc-back" href="' . esc_url( admin_url( 'admin.php?page=' . Overview_Page::SLUG ) ) . '"><span class="dashicons dashicons-arrow-left-alt"></span> 返回仪表盘</a></div>';
-		echo '<div class="pc-pl-head pc-rc-head"><div><h1>访客数据 · 发起结账的客户</h1><p class="pc-rc-sub">仪表盘漏斗里“发起结账”的人，一人一行，和漏斗的数字同一个口径（这段时间开始的访问，按不同访客算）。每行写了走到哪一步、在结账页停了多久、之后去了哪，以及没下单最可能的原因。<strong>点前面的小眼睛或任意一行</strong>进入这位客户的“客户生命周期”，直接打开走到结账的那次访问和完整行为时间线。</p></div></div>';
+		echo '<div class="pc-pl-head pc-rc-head"><div><h1>访客数据 · 发起结账的客户</h1><p class="pc-rc-sub">仪表盘漏斗里“发起结账”的人，一人一行，和漏斗的数字同一个口径（这段时间开始的访问，按不同访客算）。每行写了走到哪一步、在结账页停了多久。<strong>点前面的小眼睛或任意一行</strong>进入这位客户的“客户生命周期”，直接打开走到结账的那次访问和完整行为时间线。</p></div></div>';
 
 		// 时间段
 		echo '<div class="pc-pl-card"><nav class="pc-pl-tabs">';
@@ -157,7 +157,7 @@ final class Checkout_Dropoff_Page {
 		}
 
 		echo '<div class="pc-rc-scroll"><table class="pc-pl-table pc-rc-table pc-cd-table"><thead><tr>';
-		foreach ( array( '查看', '进结账时间', '姓名', '邮箱', '电话', '国家 / 地区', '来源', '购物车', '运费 / 合计', '走到哪一步', '结账页停留', '为什么没下单', '操作' ) as $h ) {
+		foreach ( array( '查看', '进结账时间', '姓名', '邮箱', '电话', '国家 / 地区', '来源', '购物车', '运费 / 合计', '走到哪一步', '结账页停留', '操作' ) as $h ) {
 			echo '<th>' . esc_html( $h ) . '</th>';
 		}
 		echo '</tr></thead><tbody>';
@@ -234,11 +234,10 @@ final class Checkout_Dropoff_Page {
 		$cls = array( 'checkout' => 'is-muted', 'address' => 'is-warn', 'submit' => 'is-warn', 'order' => 'is-warn', 'failed' => 'is-bad', 'paid' => 'is-ok' )[ $x['step'] ];
 		echo '<td><span class="pc-rc-badge ' . esc_attr( $cls ) . '">' . esc_html( $x['step_text'] ) . '</span></td>';
 		echo '<td class="pc-cd-dwell">' . esc_html( Checkout_Dropoffs::duration( (int) $x['dwell_ms'] ) ) . '</td>';
-		echo '<td class="pc-cd-reason">' . esc_html( $x['reason'] ) . '</td>';
 
 		echo '<td class="pc-pl-col-act">';
 		if ( $x['order_url'] ) {
-			echo '<a class="button button-small" href="' . esc_url( $x['order_url'] ) . '">弃单 #' . esc_html( $x['order_no'] ) . '</a>';
+			echo '<a class="button button-small" href="' . esc_url( $x['order_url'] ) . '" title="订单 #' . esc_attr( $x['order_no'] ) . '">弃单</a>';
 		} elseif ( $c['email'] && 'paid' !== $x['step'] ) {
 			echo '<a class="button button-small" href="' . esc_url( Mail_Page::compose_url( array( 'to' => $c['email'] ) ) ) . '">写邮件</a>';
 		} else {

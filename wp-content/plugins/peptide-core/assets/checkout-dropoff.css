@@ -36,3 +36,8 @@
 .pc-cd-email { word-break: break-all; min-width: 150px; }
 .pc-cd-phone, .pc-cd-country { white-space: nowrap; }
 .pc-cd-table td, .pc-cd-table th { vertical-align: middle; }
+/* 去掉“为什么没下单”后收紧：一屏放下全部列（2026-11-10） */
+.pc-cd-table th, .pc-cd-table td { padding-left: 10px !important; padding-right: 10px !important; }
+.pc-cd-src { min-width: 0; }
+.pc-cd-email { min-width: 0; max-width: 200px; }
+.pc-cd-table .pc-pl-col-act .button { white-space: nowrap; }
