@@ -26,6 +26,12 @@ final class Ai {
 		'openai'    => array( 'label' => 'OpenAI', 'format' => 'openai', 'endpoint' => 'https://api.openai.com/v1/chat/completions', 'models' => 'https://api.openai.com/v1/models' ),
 	);
 	public const FORMATS   = array( 'openai' => 'OpenAI 兼容（/chat/completions）', 'anthropic' => 'Anthropic 兼容（/messages）' );
+	/** 不兼容 OpenAI / Anthropic 格式的服务商用原生接口（店主 2026-11-10：兼容接口要能关掉）。 */
+	public const NATIVE    = array( 'gemini' => 'Google Gemini 原生接口' );
+
+	public static function format_label( string $format ): string {
+		return self::FORMATS[ $format ] ?? self::NATIVE[ $format ] ?? $format;
+	}
 	public const LANGUAGES = array( '中文' => '中文', 'English' => 'English' );
 	public const CUSTOM    = 'pchq_ai_providers';
 	private const MAX_PERSONA = 60000;
@@ -48,7 +54,7 @@ final class Ai {
 				$out[ (string) $p['id'] ] = array(
 					'id'       => (string) $p['id'],
 					'label'    => (string) $p['label'],
-					'format'   => isset( self::FORMATS[ $p['format'] ?? '' ] ) ? (string) $p['format'] : 'openai',
+					'format'   => isset( self::FORMATS[ $p['format'] ?? '' ] ) || isset( self::NATIVE[ $p['format'] ?? '' ] ) ? (string) $p['format'] : 'openai',
 					'endpoint' => (string) $p['endpoint'],
 					'models'   => (string) ( $p['models'] ?? '' ),
 					'builtin'  => false,
@@ -66,7 +72,10 @@ final class Ai {
 	/** 店主自己加的服务商：名字、接口类型、对话接口地址、模型列表地址（可空，按接口地址推）。 */
 	public static function add_provider( array $in ): array|\WP_Error {
 		$label    = mb_substr( sanitize_text_field( (string) ( $in['label'] ?? '' ) ), 0, 40 );
-		$format   = isset( self::FORMATS[ $in['format'] ?? '' ] ) ? (string) $in['format'] : 'openai';
+		// 兼容接口开：OpenAI / Anthropic 格式二选一；关：用原生接口。
+		$format   = ! empty( $in['compat'] )
+			? ( isset( self::FORMATS[ $in['format'] ?? '' ] ) ? (string) $in['format'] : 'openai' )
+			: ( isset( self::NATIVE[ $in['native'] ?? '' ] ) ? (string) $in['native'] : 'gemini' );
 		$endpoint = self::https( (string) ( $in['endpoint'] ?? '' ) );
 		$models   = self::https( (string) ( $in['models'] ?? '' ) );
 		if ( '' === $label || '' === $endpoint ) {
@@ -196,7 +205,10 @@ final class Ai {
 		if ( '' === $key ) {
 			return new \WP_Error( 'pchq_ai_key', '先填' . $pv['label'] . '的 API 密钥并保存，才能拉取模型列表。' );
 		}
-		if ( 'anthropic' === $s['format'] ) {
+		if ( 'gemini' === $s['format'] ) {
+			$url     = add_query_arg( 'pageSize', 1000, '' !== $pv['models'] ? $pv['models'] : untrailingslashit( preg_replace( '#/models/.*$#', '', $pv['endpoint'] ) ) . '/models' );
+			$headers = array( 'x-goog-api-key' => $key );
+		} elseif ( 'anthropic' === $s['format'] ) {
 			$url     = add_query_arg( 'limit', 1000, '' !== $pv['models'] ? $pv['models'] : preg_replace( '#/messages/?$#', '/models', $pv['endpoint'] ) );
 			$headers = array( 'x-api-key' => $key, 'anthropic-version' => '2023-06-01' );
 		} else {
@@ -215,7 +227,10 @@ final class Ai {
 		}
 		$list = array();
 		foreach ( (array) ( $json['data'] ?? $json['models'] ?? array() ) as $m ) {
-			$id = is_array( $m ) ? (string) ( $m['id'] ?? $m['name'] ?? '' ) : '';
+			if ( 'gemini' === $s['format'] && is_array( $m ) && ! in_array( 'generateContent', (array) ( $m['supportedGenerationMethods'] ?? array() ), true ) ) {
+				continue; // Gemini 只留能生成文字的模型。
+			}
+			$id = is_array( $m ) ? (string) ( $m['id'] ?? preg_replace( '#^models/#', '', (string) ( $m['name'] ?? '' ) ) ) : '';
 			if ( '' === $id || ! preg_match( '/^[A-Za-z0-9._:\/-]{1,120}$/', $id ) ) {
 				continue;
 			}
@@ -223,7 +238,7 @@ final class Ai {
 			if ( 'openai' === $s['format'] && preg_match( '/embedding|whisper|tts|dall-e|image|audio|moderation|transcribe|realtime|search|babbage|davinci/i', $id ) ) {
 				continue;
 			}
-			$list[] = array( 'id' => $id, 'name' => (string) ( $m['display_name'] ?? $id ) );
+			$list[] = array( 'id' => $id, 'name' => (string) ( $m['display_name'] ?? $m['displayName'] ?? $id ) );
 		}
 		if ( ! $list ) {
 			return new \WP_Error( 'pchq_ai_models', '接口没有返回可用的模型。' );
@@ -235,7 +250,7 @@ final class Ai {
 		$ids = array_column( $list, 'id' );
 		if ( ! in_array( $s['model'], $ids, true ) ) {
 			$pick = $ids[0];
-			foreach ( array( '/sonnet/i', '/gpt-5(?!.*(nano|mini))/i', '/gpt-4o(?!-mini)/i' ) as $re ) {
+			foreach ( array( '/sonnet/i', '/gpt-5(?!.*(nano|mini))/i', '/gpt-4o(?!-mini)/i', '/gemini-.*pro/i' ) as $re ) {
 				$hit = preg_grep( $re, $ids );
 				if ( $hit ) {
 					$pick = reset( $hit );
@@ -337,14 +352,20 @@ final class Ai {
 		if ( '' === $s['model'] ) {
 			return new \WP_Error( 'pchq_ai_model', '总后台还没有填模型名称。' );
 		}
-		if ( 'anthropic' === $s['format'] ) {
+		$url = $s['endpoint'];
+		if ( 'gemini' === $s['format'] ) {
+			// Gemini 原生：地址填到 …/v1beta，模型拼在路径里。
+			$url     = untrailingslashit( preg_replace( '#/models/.*$#', '', $s['endpoint'] ) ) . '/models/' . rawurlencode( $s['model'] ) . ':generateContent';
+			$headers = array( 'Content-Type' => 'application/json', 'x-goog-api-key' => $key );
+			$body    = array( 'systemInstruction' => array( 'parts' => array( array( 'text' => $system ) ) ), 'contents' => array( array( 'role' => 'user', 'parts' => array( array( 'text' => $user ) ) ) ), 'generationConfig' => array( 'maxOutputTokens' => $s['max_tokens'] ) );
+		} elseif ( 'anthropic' === $s['format'] ) {
 			$headers = array( 'Content-Type' => 'application/json', 'x-api-key' => $key, 'anthropic-version' => '2023-06-01' );
 			$body    = array( 'model' => $s['model'], 'max_tokens' => $s['max_tokens'], 'system' => $system, 'messages' => array( array( 'role' => 'user', 'content' => $user ) ) );
 		} else {
 			$headers = array( 'Content-Type' => 'application/json', 'Authorization' => 'Bearer ' . $key );
 			$body    = array( 'model' => $s['model'], 'max_tokens' => $s['max_tokens'], 'messages' => array( array( 'role' => 'system', 'content' => $system ), array( 'role' => 'user', 'content' => $user ) ) );
 		}
-		$res = wp_safe_remote_post( $s['endpoint'], array( 'timeout' => 90, 'redirection' => 0, 'headers' => $headers, 'body' => wp_json_encode( $body ), 'limit_response_size' => 1048576 ) );
+		$res = wp_safe_remote_post( $url, array( 'timeout' => 90, 'redirection' => 0, 'headers' => $headers, 'body' => wp_json_encode( $body ), 'limit_response_size' => 1048576 ) );
 		if ( is_wp_error( $res ) ) {
 			return new \WP_Error( 'pchq_ai_http', '连不上 AI 服务：' . $res->get_error_message() );
 		}
@@ -355,7 +376,11 @@ final class Ai {
 			return new \WP_Error( 'pchq_ai_http', 'AI 服务返回错误（HTTP ' . $code . '）' . ( '' !== $msg ? '：' . mb_substr( $msg, 0, 300 ) : '' ) );
 		}
 		$text = '';
-		if ( 'anthropic' === $s['format'] ) {
+		if ( 'gemini' === $s['format'] ) {
+			foreach ( (array) ( $json['candidates'][0]['content']['parts'] ?? array() ) as $part ) {
+				$text .= (string) ( $part['text'] ?? '' );
+			}
+		} elseif ( 'anthropic' === $s['format'] ) {
 			foreach ( (array) ( $json['content'] ?? array() ) as $part ) {
 				if ( 'text' === ( $part['type'] ?? '' ) ) {
 					$text .= (string) $part['text'];

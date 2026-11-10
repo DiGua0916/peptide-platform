@@ -36,7 +36,7 @@ final class Ai_Page {
 		}
 		$dir = dirname( PEPTIDE_HQ_FILE ) . '/assets/';
 		wp_enqueue_style( 'pchq-plugins', plugins_url( 'assets/hq-plugins.css', PEPTIDE_HQ_FILE ), array( 'peptide-hq-workspace' ), PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $dir . 'hq-plugins.css' ) );
-		wp_add_inline_style( 'pchq-plugins', '.pcai-table{width:100%;border-collapse:collapse}.pcai-table th,.pcai-table td{text-align:left;padding:10px 12px;border-top:1px solid #eee;vertical-align:middle}.pcai-table th{font-weight:600;color:#555;background:#fafafa}.pcai-persona textarea{width:100%;min-height:260px;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.5}.pcai-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 20px}.pcai-grid label{display:grid;gap:4px}.pcai-grid input,.pcai-grid select{width:100%}.pcai-muted{color:#777;font-size:12px}.pcai-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.pcai-tag{display:inline-block;padding:1px 8px;border-radius:999px;background:#eef4ff;color:#2457c5;font-size:12px}.pcai-tag.is-biz{background:#fff4e5;color:#b45309}' );
+		wp_add_inline_style( 'pchq-plugins', '.pcai-table{width:100%;border-collapse:collapse}.pcai-table th,.pcai-table td{text-align:left;padding:10px 12px;border-top:1px solid #eee;vertical-align:middle}.pcai-table th{font-weight:600;color:#555;background:#fafafa}.pcai-persona textarea{width:100%;min-height:260px;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.5}.pcai-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 20px}.pcai-grid label{display:grid;gap:4px}.pcai-grid input,.pcai-grid select{width:100%}.pcai-muted{color:#777;font-size:12px}.pcai-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.pcai-tag{display:inline-block;padding:1px 8px;border-radius:999px;background:#eef4ff;color:#2457c5;font-size:12px}.pcai-tag.is-biz{background:#fff4e5;color:#b45309}.pcai-dialog{width:min(880px,94vw);max-height:88vh;overflow:auto;border:0;border-radius:12px;padding:20px 24px 24px;box-shadow:0 20px 60px rgba(0,0,0,.25)}.pcai-dialog::backdrop{background:rgba(15,23,42,.45)}.pcai-dialog__head{display:flex;justify-content:space-between;align-items:center;margin:0 0 6px}.pcai-dialog__head h3{margin:0;font-size:18px}.pcai-dialog__close{border:0;background:none;font-size:26px;line-height:1;cursor:pointer;color:#666;padding:4px 8px;border-radius:6px}.pcai-dialog__close:hover{background:#f0f0f0;color:#111}.pcai-switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none}.pcai-switch input{position:absolute;opacity:0;width:1px;height:1px}.pcai-switch i{position:relative;width:38px;height:22px;border-radius:999px;background:#c3c4c7;transition:background .15s;flex:none}.pcai-switch i::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s}.pcai-switch input:checked+i{background:#2271b1}.pcai-switch input:checked+i::after{transform:translateX(16px)}.pcai-switch input:focus-visible+i{outline:2px solid #2271b1;outline-offset:2px}.pcai-switch b{font-weight:500}.pcai-grid{align-items:start}.pcai-grid .pcai-switch{display:inline-flex}.pcp-card__head>.pcai-headrow{display:flex!important;flex-direction:row!important;align-items:center;gap:12px;flex-wrap:nowrap}' );
 	}
 
 	private static function flash( string $type, string $message ): void {
@@ -124,7 +124,7 @@ final class Ai_Page {
 
 		// 1. 连接
 		$ok = $s['enabled'] && $s['has_key'] && '' !== $s['model'];
-		echo '<section class="pcp-card"><div class="pcp-card__head"><h2>AI 服务</h2>' . ( $ok ? '<span class="pcp-state is-ok"><i></i>已开启</span>' : '<span class="pcp-state is-bad"><i></i>未开启</span>' ) . '</div>';
+		echo '<section class="pcp-card"><div class="pcp-card__head"><div class="pcai-headrow"><h2 style="margin:0;width:auto;flex:none;padding:0">AI 服务</h2><button type="button" class="button button-small" data-providers-toggle><span class="dashicons dashicons-admin-generic" style="font-size:16px;width:16px;height:16px;vertical-align:-3px"></span> 服务商设置</button></div>' . ( $ok ? '<span class="pcp-state is-ok"><i></i>已开启</span>' : '<span class="pcp-state is-bad"><i></i>未开启</span>' ) . '</div>';
 		echo '<form method="post" action="' . $post . '">'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		wp_nonce_field( 'pchq_ai_save' );
 		echo '<input type="hidden" name="action" value="pchq_ai_save">';
@@ -134,7 +134,7 @@ final class Ai_Page {
 		foreach ( Ai::providers() as $k => $p ) {
 			echo '<option value="' . esc_attr( $k ) . '" data-endpoint="' . esc_attr( $p['endpoint'] ) . '" data-key="' . ( in_array( $k, $s['key_set'], true ) ? '1' : '0' ) . '"' . selected( $s['provider'], $k, false ) . '>' . esc_html( $p['label'] ) . '</option>';
 		}
-		echo '</select><button type="button" class="button button-small" data-providers-toggle style="justify-self:start;margin-top:6px"><span class="dashicons dashicons-admin-generic" style="font-size:16px;width:16px;height:16px;vertical-align:-3px"></span> 服务商设置</button></label>';
+		echo '</select></label>';
 		// 模型：从服务商接口拉取，不用手填。
 		$models = Ai::models();
 		echo '<label><span>模型' . ( $models['fetched'] ? ' <em class="pcai-muted">（' . count( $models['list'] ) . ' 个，' . esc_html( wp_date( 'm-d H:i', (int) $models['fetched'] ) ) . ' 从接口拉取）</em>' : '' ) . '</span><select name="model" data-model' . disabled( ! $models['list'], true, false ) . '>';
@@ -189,13 +189,13 @@ final class Ai_Page {
 		wp_nonce_field( 'pchq_ai_models' );
 		echo '<input type="hidden" name="action" value="pchq_ai_models"><button type="submit" class="button"' . disabled( $s['has_key'], false, false ) . '>拉取模型列表</button><span class="pcai-muted">服务商新出了模型时点一下。</span></form>';
 		// 换服务商：接口地址换成那家的默认地址，模型清空（保存后自动拉取那家的模型）。
-		echo '<script>(function(){var p=document.querySelector("[data-provider]"),e=document.querySelector("[data-endpoint-input]"),m=document.querySelector("[data-model]"),k=document.querySelector("[data-key-input]"),t=document.querySelector("[data-providers-toggle]");if(t){t.addEventListener("click",function(ev){ev.preventDefault();var box=document.getElementById("pcai-providers");if(!box)return;box.hidden=!box.hidden;if(!box.hidden)box.scrollIntoView({behavior:"smooth",block:"start"});});}if(!p||!e||!m)return;var start=p.value,html=m.innerHTML,dis=m.disabled;p.addEventListener("change",function(){var o=p.options[p.selectedIndex];e.value=o.getAttribute("data-endpoint")||"";if(k)k.placeholder=o.getAttribute("data-key")==="1"?"已保存 ••••••（留空不改）":"粘贴 API 密钥";if(p.value!==start){m.innerHTML="<option value=\\"\\">保存后自动拉取这家服务商的模型</option>";m.disabled=true;}else{m.innerHTML=html;m.disabled=dis;}});})();</script>';
+		echo '<script>(function(){var p=document.querySelector("[data-provider]"),e=document.querySelector("[data-endpoint-input]"),m=document.querySelector("[data-model]"),k=document.querySelector("[data-key-input]"),t=document.querySelector("[data-providers-toggle]");function dlg(){return document.getElementById("pcai-providers");}function openDlg(){var d=dlg();if(d&&!d.open){try{d.showModal();}catch(_){d.setAttribute("open","");}}}if(t){t.addEventListener("click",function(ev){ev.preventDefault();openDlg();});}document.addEventListener("click",function(ev){if(ev.target.closest("[data-providers-close]")){var d=dlg();if(d)d.close();}else if(ev.target.id==="pcai-providers"){ev.target.close();}});document.addEventListener("DOMContentLoaded",function(){var d=dlg();if(d&&d.getAttribute("data-open"))openDlg();var c=document.querySelector("[data-compat]");if(c){var sync=function(){document.querySelector("[data-compat-on]").hidden=!c.checked;document.querySelector("[data-compat-off]").hidden=c.checked;document.querySelector("[data-compat-label]").textContent=c.checked?"兼容接口":"原生接口（不兼容）";var h=document.querySelector("[data-endpoint-hint]");if(h)h.placeholder=c.checked?"https://api.deepseek.com/chat/completions":"https://generativelanguage.googleapis.com/v1beta";};c.addEventListener("change",sync);sync();}});if(!p||!e||!m)return;var start=p.value,html=m.innerHTML,dis=m.disabled;p.addEventListener("change",function(){var o=p.options[p.selectedIndex];e.value=o.getAttribute("data-endpoint")||"";if(k)k.placeholder=o.getAttribute("data-key")==="1"?"已保存 ••••••（留空不改）":"粘贴 API 密钥";if(p.value!==start){m.innerHTML="<option value=\\"\\">保存后自动拉取这家服务商的模型</option>";m.disabled=true;}else{m.innerHTML=html;m.disabled=dis;}});})();</script>';
 		// 服务商设置：Claude、OpenAI 内置；其他的店主自己加（名字、接口类型、对话接口地址、模型列表地址）。
 		$open = ! empty( $_GET['providers'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		echo '<div id="pcai-providers"' . ( $open ? '' : ' hidden' ) . ' style="margin-top:20px;padding-top:16px;border-top:1px solid #eee"><h3 style="margin:0 0 6px">服务商设置</h3><p class="pcai-muted">Claude 和 OpenAI 已经配好，不用改。要用其他服务商（例如 DeepSeek、通义千问、Gemini 的 OpenAI 兼容接口等），在这里添加。</p>';
+		echo '<dialog id="pcai-providers" class="pcai-dialog" aria-labelledby="pcai-providers-title"' . ( $open ? ' data-open="1"' : '' ) . '><div class="pcai-dialog__head"><h3 id="pcai-providers-title">服务商设置</h3><button type="button" class="pcai-dialog__close" data-providers-close aria-label="关闭">×</button></div><p class="pcai-muted">Claude 和 OpenAI 已经配好，不用改。要用其他服务商在这里添加：支持 OpenAI / Anthropic 格式的（例如 DeepSeek、通义千问）打开“兼容接口”；不兼容的关掉它，用原生接口（目前支持 Google Gemini）。</p>';
 		echo '<table class="pcai-table"><thead><tr><th>服务商</th><th>接口类型</th><th>对话接口地址</th><th>密钥</th><th></th></tr></thead><tbody>';
 		foreach ( Ai::providers() as $k => $p ) {
-			echo '<tr><td><strong>' . esc_html( $p['label'] ) . '</strong>' . ( $p['builtin'] ? ' <span class="pcai-tag">内置</span>' : '' ) . '</td><td>' . esc_html( Ai::FORMATS[ $p['format'] ] ) . '</td><td style="word-break:break-all">' . esc_html( $p['endpoint'] ) . '</td><td>' . ( in_array( $k, $s['key_set'], true ) ? '已保存' : '<span class="pcai-muted">未填</span>' ) . '</td><td>';
+			echo '<tr><td><strong>' . esc_html( $p['label'] ) . '</strong>' . ( $p['builtin'] ? ' <span class="pcai-tag">内置</span>' : '' ) . '</td><td>' . esc_html( Ai::format_label( $p['format'] ) ) . '</td><td style="word-break:break-all">' . esc_html( $p['endpoint'] ) . '</td><td>' . ( in_array( $k, $s['key_set'], true ) ? '已保存' : '<span class="pcai-muted">未填</span>' ) . '</td><td>';
 			if ( ! $p['builtin'] ) {
 				echo '<form method="post" action="' . $post . '">'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				wp_nonce_field( 'pchq_ai_provider_delete' );
@@ -208,14 +208,20 @@ final class Ai_Page {
 		wp_nonce_field( 'pchq_ai_provider_add' );
 		echo '<input type="hidden" name="action" value="pchq_ai_provider_add"><div class="pcai-grid">';
 		echo '<label><span>名字</span><input type="text" name="label" maxlength="40" placeholder="例如 DeepSeek"></label>';
-		echo '<label><span>接口类型</span><select name="format">';
+		// 接口类型：开关。开 = 兼容接口（OpenAI / Anthropic 格式二选一）；关 = 原生接口（不兼容的服务商）。
+		echo '<div style="display:grid;gap:6px"><span>接口类型</span><label class="pcai-switch"><input type="checkbox" name="compat" value="1" checked data-compat><i></i><b data-compat-label>兼容接口</b></label>';
+		echo '<select name="format" data-compat-on>';
 		foreach ( Ai::FORMATS as $k => $label ) {
 			echo '<option value="' . esc_attr( $k ) . '">' . esc_html( $label ) . '</option>';
 		}
-		echo '</select></label>';
-		echo '<label><span>对话接口地址</span><input type="url" name="endpoint" placeholder="https://api.deepseek.com/chat/completions"></label>';
+		echo '</select><select name="native" data-compat-off hidden>';
+		foreach ( Ai::NATIVE as $k => $label ) {
+			echo '<option value="' . esc_attr( $k ) . '">' . esc_html( $label ) . '</option>';
+		}
+		echo '</select></div>';
+		echo '<label><span>对话接口地址</span><input type="url" name="endpoint" placeholder="https://api.deepseek.com/chat/completions" data-endpoint-hint></label>';
 		echo '<label><span>模型列表地址（可不填）</span><input type="url" name="models" placeholder="不填就按对话地址推算"></label>';
-		echo '</div><p><button type="submit" class="button">添加</button></p></form></div>';
+		echo '</div><p class="pcai-actions"><button type="submit" class="button button-primary">添加</button><button type="button" class="button" data-providers-close>关闭</button></p></form></dialog>';
 		echo '</section>';
 
 		// 2. 人设：分两块，客户分析（专门分析单个客户）和全站分析师（站在全盘视角分析全站），各自导入、各自管理。
