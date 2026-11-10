@@ -610,3 +610,89 @@ P07/P08 are now locally installed as four existing files (Commerce PHP/CSS/JS an
 P07/P08 necessary actual WP three domains and exact DB/MU/token cleanup complete, production/QA99 hashes and protected media/data/Original matched. True native mobile parent copy/child Host selection, actual30s/pause/reduced/focus resize/noJS, true links/routes and C18/C19 passed. ComingSoon category-body and untested31/document.hidden limits remain explicit. Ten closed task profiles are retained; no retry of earlier policy-blocked deletion.
 
 Root installed only three existing Commerce sources for P09 collection products and P10 product carousel after independent c645/eac4 review. Formal collection-products-carousel-integration/work/freeze-pin.json2c7c9648..., 47primary+53readonly=100 unique, five LF hunks/exact inverse/fresh dependencies/backups/PHP1JS1 passed. Original Registry/theme/Controls/P05/P07/P08 behavior and precise C20/C21 scope preserved; new theme-template dependency is readonly. P09 had no reference full-width setting, so none invented; P10 keeps its confirmed control. Actual WP validation remains pending with sole QA; reference48/70 currentP13, later tabs remain task-only. Whole70 batch Git and deferred external-service policy remain.
+
+
+## M6 / M7：指标入口、漏斗规则与像素（2026-11-10，F4「数据」会话）
+
+本节只由 F4 修改。口径见 `docs/metrics.md`；进度和未接入的报表见 `docs/handoffs/m6-metrics.md`、`docs/handoffs/m7-pixels.md`。
+状态：代码已提交在分支 `claude/m6-metrics-db7036`，还没有合进主线、没有发布。F3、F5 先按下面的签名用假数据开发。
+
+### 1. `PeptideCore\Data\Metrics`（只读，店铺端）
+
+约定：时间段 `[from, to)`，Unix 秒；金额是美分整数；比率是百分数（2 位小数），分母为 0 时是 `null`。不看开关，随时可以调用。
+
+| 函数 | 返回 |
+| --- | --- |
+| `Metrics::window( string $preset, ?int $now = null ): array` | `today / yesterday / 7d / 30d`（店铺时区）→ `{from, to, bucket}` |
+| `Metrics::summary( int $from, int $to ): array` | 一个时间段的全部指标，见下 |
+| `Metrics::preset( string $preset, ?int $now = null ): array` | `summary( window( $preset ) )`，多一个 `preset` |
+| `Metrics::orders( int $from, int $to ): array` | `{orders, gross_cents, refund_cents, sales_cents, aov_cents, test_orders}` |
+| `Metrics::visitors( int $from, int $to ): int` | 访客数 |
+| `Metrics::paid_visitors( int $from, int $to ): int` | 支付成功访客数 |
+| `Metrics::conversion_rate( int $from, int $to ): ?float` | 支付成功访客 ÷ 访客 |
+| `Metrics::funnel( int $from, int $to ): array` | `{unit:'visitors', counts:{visitors,viewed,carted,checkout,address,shipping,payment,paid}, layers:[{key,count,step_rate,visitor_rate}×8]}`，每层不大于上一层 |
+| `Metrics::abandoned( int $from, int $to ): array` | `{count, open, failed, emailed, recovered, recovered_cents, rate}`，结果缓存 5 分钟 |
+| `Metrics::daily( int $from, int $to ): array` | 按店铺时区自然日，每天 `{date, visitors, paid_visitors, conversion_rate, orders, gross_cents, refund_cents, sales_cents, aov_cents}` |
+| `Metrics::order_fact( \WC_Order $order ): array` | 一张订单的事实，见下 |
+| `Metrics::order_facts( int $from, int $to ): array` | 付款时间在时间段内的已付款订单的事实（含测试单，`test = true`） |
+| `Metrics::is_test_order( \WC_Order $order ): bool` / `is_paid_order()` / `paid_at()` | 测试单 / 收到过支付成功通知 / 付款时间（秒） |
+| `Metrics::sum_orders( array $facts ): array` | 把事实加总（纯函数），返回同 `orders()` |
+
+`summary()` 的 key（保证存在，后续只会增加）：
+
+```
+version, from, to, currency,
+visitors, paid_visitors, conversion_rate,
+orders, gross_cents, refund_cents, sales_cents, aov_cents, test_orders,
+abandoned, abandoned_open, recall_emailed, recall_recovered, recall_rate, recovered_cents,
+funnel
+```
+
+`order_fact()` 的 key：
+
+```
+id, status, paid, test, counted (= paid && !test), paid_at, created_at,
+gross_cents, refund_cents (= _pc_refund_cents，不超过 gross), net_cents, wc_refund_cents (只用于对账),
+currency, visitor, visit, buyer
+```
+
+- **F5 投手首页**：五个核心数字用 `Metrics::preset( 'today' | 'yesterday' | '7d' )` 的 `visitors / orders / sales_cents / conversion_rate / abandoned`；待办里的“未跟进弃单数”用 `abandoned_open`。
+- **F3 订单上报和报表**：每张订单上报 `order_fact()` 里的 `counted / paid_at / gross_cents / refund_cents`，总后台按同样的规则汇总（`counted` 的才算订单；销售额 = `gross_cents − refund_cents`；归属日 = `paid_at` 的店铺时区日期）。总后台回写 `_pc_refund_cents` 之后店铺端的销售额自动跟着变，不需要通知 F4。每日汇总可以直接取 `Metrics::daily()`。
+
+### 2. 开关 `PeptideCore\Data\Metrics_Switch`
+
+- 每家店一个选项 `peptide_core_m6_mode`：`off`（默认）/ `shadow` / `on`；过滤器 `peptide_core_m6_mode` 可以覆盖。
+- `Metrics_Switch::mode()`、`off()`、`shadow()`、`on()`、`set( $mode )`、`pick( $metric, $legacy, callable $modern, array $context = [], float $tolerance = 0 )`、`log()`、`reset_log()`。
+- 影子和开的时候，新旧不一致写进选项 `peptide_core_m6_shadow_log`，并触发 `do_action( 'peptide_core_m6_shadow_diff', string $metric, array $diffs, array $context )`（F1 的巡检可以挂）。
+- 通过 F1 的 `pc_hq_capabilities` 过滤器声明 `m6_metrics => { version, mode }`。
+- 总后台如果要远程换档：改这个选项即可（需要 F1 在连接器里提供写选项的通道，F4 不改连接器）。
+
+### 3. 漏斗推进规则 `PeptideCore\Tracking\Funnel_Guard`（FE-05）
+
+- `Tracker::raise_stage( $visit_id, $stage, $order_id = 0 )` 的签名不变。开关是 `on` 时，升到 4（下单）或 5（支付成功）之前要求同一次访问里已经有 `checkout_address_completed`，否则不推进（订单号仍然挂到访问上）。
+- 新动作：`do_action( 'peptide_core_tracking_address_completed', int $visitor_id, int $visit_id )`，在 `POST /track/events` 新保存了一条填地址事件之后触发。
+- `Funnel_Guard::counters( int $days = 7 ): array`（按店铺日期的异常计数）、`Funnel_Guard::anomalies( int $from, int $to ): array`（准确数和访问编号）。
+- 前端协议没有变化，主题不用改。
+
+### 4. 数据页对投手（ST-05）
+
+- 判断投手：`PeptideCore\Data\Audience::is_media_buyer( ?int $user_id = null )` = 用户有角色 `pc_media_buyer` 且没有 `manage_options`；过滤器 `peptide_core_is_media_buyer`（参数：结果、用户编号）可以改写。**需要 F5**：创建角色 `pc_media_buyer`，并给它 `manage_woocommerce`（数据页、概览页、像素页的权限检查都是这一项）。
+- 顶层菜单 slug 仍然是 `pc-data`。投手只有两个子页：`pc-data-funnel-sources`（漏斗 + 来源）、`pc-data-products-landing`（商品 + 落地页）；其余数据子页对投手不注册，直接访问会被拒绝。管理员（含总后台一键登录）仍然看到全部 12 个子页，另外也能打开这两个合并页。
+- F5 的菜单白名单里“数据”保留 `pc-data` 即可。
+
+### 5. 像素与 CAPI（FE-09，M7）
+
+- 新接口 `POST /wp-json/peptide/v1/pixel-event`，JSON `{ "name": "add_payment_info" }`，公开（和 `/pixel-view` 一样，受 `Pixels::allowed()` 约束）。返回 `{ events: [ … ] }`：服务端生成事件并用同一个 `event_id` 发 Conversions API，浏览器拿到后用这个 `event_id` 发像素。接口失败时浏览器退回原来只发浏览器事件的做法。
+- 触发时机：结账页顾客选了支付方式，或点了下单（先到的那个），每个页面一次。
+- 像素页对投手只显示 Facebook；其他平台的卡片不显示也不提交（已保存的设置原样保留）。总后台要给某家店打开其他平台：选项 `peptide_core_pixels_buyer_platforms`（平台 key 的数组，默认 `[ 'facebook' ]`）。
+- 验收：`wp eval-file wp-content/plugins/peptide-core/tests/m7-pixel-acceptance-smoke.php`（`PeptideCore\Pixels\Acceptance::check()`），核对 `pc_px_log` 里六类事件。操作清单见 `docs/guides/m7-pixel-acceptance-checklist.md`。
+- `assets/pixels*.js` 不在第 13.2 节的清单里，但只属于像素模块，由 F4 维护。
+
+### 6. 需要别的会话配合的事
+
+| 谁 | 事情 | 状态 |
+| --- | --- | --- |
+| F5 | 角色 `pc_media_buyer` 带 `manage_woocommerce`；菜单白名单保留 `pc-data` | 待 F5 |
+| F3 | 订单上报和总后台汇总按 `order_fact()` 的规则；回写 `_pc_refund_cents` | 待 F3 |
+| F1 | `pc_hq_capabilities` 钩子；发布前在沙盒把开关切到 `shadow` 观察；本地环境（这台开发机没有 PHP / Node，F4 的用例还没跑过） | 待 F1 |
+| 日常会话 | `core/class-overview.php` 不用改：概览页的数字由 `Admin\Overview_Page` 按开关用 `Metrics` 覆盖。之后再改概览页、数据页、访客页、像素页请先在聊天室找 F4 | 知会 |

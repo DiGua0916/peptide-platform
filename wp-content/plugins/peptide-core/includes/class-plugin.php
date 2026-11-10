@@ -106,6 +106,7 @@ final class Plugin {
 		Api\Tracking_Controller::register_hooks();
 		Admin\Overview_Page::register_rest();
 		Admin\Data_Pages::register_rest();
+		Data\Metrics_Switch::register_hooks();
 		Api\Menu_Controller::register_hooks();
 		add_action( 'init', array( Installer::class, 'maybe_upgrade' ), 5 );
 		Api\Rest_Controller::register_hooks();
