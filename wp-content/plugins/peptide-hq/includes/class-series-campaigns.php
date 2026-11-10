@@ -93,6 +93,19 @@ final class Series_Campaigns {
 			}
 			$clean[ $id ] = $c;
 		}
+		// 内容没变（或者本来就没有活动、这次也是空的）不加版本号，避免各店白白重新同步。
+		$series  = Series::get( $series_id );
+		$current = array();
+		foreach ( self::items( $series_id ) as $it ) {
+			unset( $it['ver'] );
+			$current[ $it['kind'] . '/' . $it['key'] ] = $it;
+		}
+		ksort( $current );
+		$wanted = $clean;
+		ksort( $wanted );
+		if ( (string) wp_json_encode( $current ) === (string) wp_json_encode( $wanted ) ) {
+			return (int) $series['campaign_ver'];
+		}
 		$ver = Series::bump( $series_id, 'campaign' );
 		if ( $ver < 1 ) {
 			return new \WP_Error( 'pchq_series_save', '活动版本号没能更新，请重试。' );

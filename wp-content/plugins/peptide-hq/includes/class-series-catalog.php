@@ -220,13 +220,12 @@ final class Series_Catalog {
 				'ver'           => $next,
 				'updated_at'    => time(),
 			);
-			if ( $old ) {
-				$wpdb->update( $t, $row, array( 'id' => $old['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-				++$out['updated'];
-			} else {
-				$wpdb->insert( $t, $row ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-				++$out['added'];
+			$ok = $old ? $wpdb->update( $t, $row, array( 'id' => $old['id'] ) ) : $wpdb->insert( $t, $row ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			if ( false === $ok ) {
+				// 有一行没写进去就停下，不加版本号：各店继续用上一版，重新导入一次即可。
+				return new \WP_Error( 'pchq_catalog_save', sprintf( '商品 %s 没能保存，导入已中止，各店不受影响。请重试。', (string) $sku ) );
 			}
+			++$out[ $old ? 'updated' : 'added' ];
 		}
 		foreach ( $existing as $sku => $old ) {
 			if ( ! isset( $clean[ $sku ] ) && 'active' === $old['status'] ) {
@@ -259,9 +258,9 @@ final class Series_Catalog {
 		if ( ! $series || ! isset( Series::sites_of( $series_id )[ $site_id ] ) ) {
 			return new \WP_Error( 'pchq_catalog_master', '母版店必须是这个系列里的店铺。' );
 		}
-		$res = Client::request( $site_id, 'GET', self::EXPORT, array(), null, 280 );
+		$res = Client::request( $site_id, 'GET', self::EXPORT, array(), null, 80 );
 		if ( is_wp_error( $res ) ) {
-			return Series_Push::is_unsupported( $res ) ? new \WP_Error( 'pchq_series_old', '母版店的程序还不支持系列导出，请先更新店铺程序。' ) : new \WP_Error( $res->get_error_code(), '读取母版店失败：' . Design_Push::friendly( $res ) );
+			return Series_Push::is_unsupported( $res ) ? new \WP_Error( 'pchq_series_old', '母版店的程序还不支持系列导出，请先更新店铺程序。' ) : new \WP_Error( $res->get_error_code(), '读取母版店失败：' . $res->get_error_message() . '。第一次导出要给所有图片算校验码，可能超时；再点一次通常就能成功。' );
 		}
 		if ( 1 !== (int) ( $res['version'] ?? 0 ) || ! is_array( $res['products'] ?? null ) ) {
 			return new \WP_Error( 'pchq_catalog_reply', '母版店返回的内容无效。' );
@@ -427,6 +426,15 @@ final class Series_Catalog {
 		update_option( self::CONFIRMED, $all, false );
 		Series::set_sync( $site_id, true );
 		return true;
+	}
+
+	/** 店铺换系列时：清掉它所有的确认记录（回到原系列也要重新确认）。 */
+	public static function forget_site( int $site_id ): void {
+		$all  = self::confirmations();
+		$keep = array_filter( $all, static fn( string $key ): bool => ! str_ends_with( $key, ':' . $site_id ), ARRAY_FILTER_USE_KEY );
+		if ( count( $keep ) !== count( $all ) ) {
+			update_option( self::CONFIRMED, $keep, false );
+		}
 	}
 
 	/** 撤回确认并关闭这家店的系列同步（已经同步过去的内容不动）。 */

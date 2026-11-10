@@ -28,14 +28,16 @@ final class Refunds {
 		add_action( Monitor::CRON, array( self::class, 'apply_daily' ), 20, 0 );
 		add_action( Monitor::POLL_ONE, array( self::class, 'apply_daily' ), 20, 1 );
 		add_action( Monitor::CRON, array( self::class, 'retry_pending' ), 40, 0 );
-		// 店铺页“立即刷新”也会覆盖 pchq_daily；它处理完直接退出，所以挂在 shutdown 上再算一遍。
-		add_action(
-			'admin_post_pchq_site_refresh',
-			static function (): void {
-				add_action( 'shutdown', array( self::class, 'apply_daily' ), 10, 0 );
-			},
-			1
-		);
+		// 店铺页的“立即刷新”、改服务器、改设置也会轮询并覆盖 pchq_daily；它们处理完直接退出，所以挂在 shutdown 上再算一遍。
+		foreach ( array( 'pchq_site_refresh', 'pchq_site_server', 'pchq_site_config' ) as $action ) {
+			add_action(
+				'admin_post_' . $action,
+				static function (): void {
+					add_action( 'shutdown', array( self::class, 'apply_daily' ), 10, 0 );
+				},
+				1
+			);
+		}
 	}
 
 	public static function table(): string {
@@ -262,14 +264,23 @@ final class Refunds {
 			Orders::table(),
 			array(
 				'refund_sync'  => $ok ? 0 : 1,
-				'refund_error' => $ok ? '' : mb_substr( is_wp_error( $res ) ? Design_Push::friendly( $res ) : '店铺返回的退款金额和总后台不一致。', 0, 190 ),
+				'refund_error' => $ok ? '' : mb_substr( is_wp_error( $res ) ? self::reason( $res ) : '店铺返回的退款金额和总后台不一致。', 0, 190 ),
+				'updated_at'   => time(), // 重试按它从旧到新轮流，失败的排到后面去。
 			),
 			array( 'id' => $order['id'] )
 		);
 		if ( $ok ) {
 			return true;
 		}
-		return is_wp_error( $res ) ? new \WP_Error( $res->get_error_code(), '已在总后台标记，但还没写回店铺（' . Design_Push::friendly( $res ) . '），系统会自动重试。' ) : new \WP_Error( 'pchq_refund_reply', '已在总后台标记，但店铺返回的退款金额不一致，系统会自动重试。' );
+		return is_wp_error( $res ) ? new \WP_Error( $res->get_error_code(), '已在总后台标记，但还没写回店铺（' . self::reason( $res ) . '），系统会自动重试。' ) : new \WP_Error( 'pchq_refund_reply', '已在总后台标记，但店铺返回的退款金额不一致，系统会自动重试。' );
+	}
+
+	/** 回写失败的原因，说给平台所有者听。 */
+	private static function reason( \WP_Error $e ): string {
+		if ( preg_match( '/No route was found|rest_no_route|HTTP status 404/i', $e->get_error_message() ) ) {
+			return '店铺程序还不支持退款标记，更新店铺程序后会自动写回';
+		}
+		return 'pchq_offline' === $e->get_error_code() ? '店铺暂时连不上' : $e->get_error_message();
 	}
 
 	/** 重试没回写成功的订单，一次最多 20 个。 */
@@ -282,6 +293,9 @@ final class Refunds {
 		foreach ( (array) $wpdb->get_results( "SELECT site_id, store_order_id FROM {$o} WHERE refund_sync = 1 ORDER BY updated_at ASC LIMIT 20", ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 			if ( Site_Lifecycle::active( (int) $r['site_id'] ) ) {
 				self::push( (int) $r['site_id'], (int) $r['store_order_id'] );
+			} else {
+				// 店铺已下线：不再重试，留下原因。
+				$wpdb->update( $o, array( 'refund_sync' => 0, 'refund_error' => '店铺已下线，退款标记只记在总后台。' ), array( 'site_id' => (int) $r['site_id'], 'store_order_id' => (int) $r['store_order_id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			}
 		}
 	}

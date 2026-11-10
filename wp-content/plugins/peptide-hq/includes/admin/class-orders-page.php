@@ -44,6 +44,7 @@ final class Orders_Page {
 		}
 		$dir = dirname( PEPTIDE_HQ_FILE ) . '/assets/';
 		wp_enqueue_style( 'pchq-plugins', plugins_url( 'assets/hq-plugins.css', PEPTIDE_HQ_FILE ), array( 'peptide-hq-workspace' ), PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $dir . 'hq-plugins.css' ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		wp_enqueue_script( 'pchq-plugins', plugins_url( 'assets/hq-plugins.js', PEPTIDE_HQ_FILE ), array(), PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $dir . 'hq-plugins.js' ), true ); // phpcs:ignore WordPress.PHP.NoSilencedErrors -- 表单上的 data-confirm 确认框由它处理。
 		wp_add_inline_style( 'pchq-plugins', self::css() );
 	}
 
@@ -143,7 +144,7 @@ final class Orders_Page {
 				$res     = Orders::verify_site( $site_id );
 				$name    = self::site_name( $sites, $site_id );
 				if ( is_wp_error( $res ) ) {
-					self::flash( 'error', $name . '：核对失败，' . \PeptideHq\Design_Push::friendly( $res ) );
+					self::flash( 'error', $name . '：核对失败，' . ( \PeptideHq\Series_Push::is_unsupported( $res ) ? '这家店的程序还不支持订单核对，请先更新店铺程序。' : $res->get_error_message() ) );
 				} elseif ( $res['match'] ) {
 					self::flash( 'success', sprintf( '%1$s：一致。已付款订单 %2$d 笔，金额 %3$s，已标记退款 %4$s。', $name, $res['hq']['count'], Orders::money( $res['hq']['total_cents'] ), Orders::money( $res['hq']['refunded_cents'] ) ) );
 				} else {

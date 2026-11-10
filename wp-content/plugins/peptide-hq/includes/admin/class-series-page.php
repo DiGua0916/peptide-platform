@@ -64,6 +64,7 @@ final class Series_Page {
 		}
 		$dir = dirname( PEPTIDE_HQ_FILE ) . '/assets/';
 		wp_enqueue_style( 'pchq-plugins', plugins_url( 'assets/hq-plugins.css', PEPTIDE_HQ_FILE ), array( 'peptide-hq-workspace' ), PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $dir . 'hq-plugins.css' ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		wp_enqueue_script( 'pchq-plugins', plugins_url( 'assets/hq-plugins.js', PEPTIDE_HQ_FILE ), array(), PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $dir . 'hq-plugins.js' ), true ); // phpcs:ignore WordPress.PHP.NoSilencedErrors -- 表单上的 data-confirm 确认框由它处理。
 		wp_add_inline_style(
 			'pchq-plugins',
 			'.pchq-s-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}.pchq-s-form{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin:0 0 12px}.pchq-s-form label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#555}.pchq-s-form input[type=text],.pchq-s-form select{min-height:34px}'
@@ -182,7 +183,7 @@ final class Series_Page {
 					$said[] = '运费已导入（第 ' . (int) $res['shipping'] . ' 版）';
 				}
 				if ( null !== $res['campaigns'] ) {
-					$said[] = '活动已导入（第 ' . (int) $res['campaigns'] . ' 版）';
+					$said[] = $res['campaigns'] > 0 ? '活动已导入（第 ' . (int) $res['campaigns'] . ' 版）' : '母版店没有可导入的活动（店铺程序里还没有导出活动的模块，或者没有在跑的活动）';
 				}
 				self::flash( 'success', '已从母版店导入。' . implode( '；', $said ) . '。已经开启系列同步的店铺会在几分钟内更新；还没开启的店铺请先生成差异报告。' );
 				break;
@@ -197,14 +198,17 @@ final class Series_Page {
 				foreach ( $keys as $i => $key ) {
 					$p = self::cents( is_string( $price[ $i ] ?? null ) ? sanitize_text_field( wp_unslash( $price[ $i ] ) ) : '' );
 					$c = self::cents( is_string( $comp[ $i ] ?? null ) ? sanitize_text_field( wp_unslash( $comp[ $i ] ) ) : '' );
-					if ( $p <= 0 || $c < 0 ) {
+					if ( $p < 0 || $c < 0 ) {
 						$bad = true;
 						break;
+					}
+					if ( 0 === $p ) {
+						continue; // 成交价留空或填 0 的款式不改（例如停用的款式本来就没有价格）。
 					}
 					$prices[ $key ] = array( 'price_cents' => $p, 'compare_cents' => $c );
 				}
 				if ( $bad || ! $prices ) {
-					self::flash( 'error', '价格没有保存：成交价必须是大于 0 的金额（例如 49.99），划线价可以留空。' );
+					self::flash( 'error', '价格没有保存：请填有效的金额（例如 49.99）。成交价留空或填 0 的款式不会改，划线价可以留空。' );
 					break;
 				}
 				$before = $series ? $series['catalog_ver'] : 0;
@@ -226,11 +230,12 @@ final class Series_Page {
 				$threshold = self::cents( self::post_text( 'threshold' ) );
 				$below     = self::cents( self::post_text( 'below' ) );
 				$above     = self::cents( self::post_text( 'above' ) );
-				if ( ! $series || $threshold <= 0 || $below < 0 || $above < 0 ) {
-					self::flash( 'error', '运费没有保存：门槛必须大于 0，两档运费必须是不小于 0 的金额。' );
+				$dollars   = (int) round( $threshold / 100 );
+				if ( ! $series || $dollars < 1 || $below < 0 || $above < 0 ) {
+					self::flash( 'error', '运费没有保存：门槛必须是不小于 1 美元的整数金额，两档运费必须是不小于 0 的金额。' );
 					break;
 				}
-				$ver = Series::save_shipping( $series_id, Series::default_shipping( (int) round( $threshold / 100 ), $below, $above ) );
+				$ver = Series::save_shipping( $series_id, Series::default_shipping( $dollars, $below, $above ) );
 				if ( is_wp_error( $ver ) ) {
 					self::flash( 'error', $ver->get_error_message() );
 				} else {
@@ -261,9 +266,9 @@ final class Series_Page {
 
 			case 'pchq_series_push':
 				if ( $site_id ) {
-					Series_Push::run( $site_id, 0, 0 );
-					$st = Series_Push::site_state( $site_id );
-					self::flash( $st['ok'] ? 'success' : 'error', $st['ok'] ? $name . ' 已同步' . ( '' !== $st['message'] ? '（' . $st['message'] . '）' : '。' ) : $name . '：同步失败，' . $st['message'] );
+					// 同步可能要几分钟（首次要下载图片），浏览器请求里只排队，由后台任务执行。
+					Series_Push::queue_now( $site_id );
+					self::flash( 'success', $name . ' 已排队同步，一两分钟内开始；结果显示在这一行的“已同步到”里。' );
 				} elseif ( $series ) {
 					$n = Series_Push::queue_series( $series_id );
 					self::flash( 'success', '已给 ' . $n . ' 家店铺排队同步，几分钟内完成。' );
@@ -434,7 +439,7 @@ final class Series_Page {
 			if ( $series['catalog_ver'] > 0 ) {
 				self::button_form( 'pchq_series_diff', $ids, $diff ? '重新生成报告' : '生成差异报告' );
 			}
-			if ( ! $master && $diff && (int) $diff['ver'] === (int) $series['catalog_ver'] && ! $conf ) {
+			if ( ! $master && $diff && (int) $diff['ver'] === (int) $series['catalog_ver'] && ( ! $conf || empty( $s['series_sync'] ) ) ) {
 				self::button_form( 'pchq_series_confirm', $ids, '确认并开启同步', '确定开启？这家店的商品和价格会变成和系列主商品库一致：有差异的商品会被改掉，系列里没有的商品会下架（不删除）。同步前自动存快照，可以恢复。', true );
 			}
 			if ( ! $master && ( $conf || ! empty( $s['series_sync'] ) ) ) {

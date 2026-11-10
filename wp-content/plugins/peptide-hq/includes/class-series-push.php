@@ -280,6 +280,11 @@ final class Series_Push {
 		if ( $errors ) {
 			$message = mb_substr( sprintf( '有 %1$d 个商品或图片没同步成功：%2$s', count( $errors ), $errors[0] ), 0, 250 );
 		}
+		// 活动发过去了但店铺里还没有营销模块接手：不用每 10 分钟重发，6 小时后再试。
+		$unhandled = 'unhandled' === ( $res['applied']['campaigns'] ?? null );
+		if ( $unhandled && '' === $message ) {
+			$message = '活动还没同步：这家店的程序里还没有接收系列活动的模块。';
+		}
 		self::save_state(
 			$site_id,
 			array(
@@ -287,7 +292,7 @@ final class Series_Push {
 				'ok'        => true,
 				'message'   => $message,
 				'supported' => true,
-				'next'      => 0,
+				'next'      => $unhandled ? $now + self::UNSUPPORTED_WAIT : 0,
 				'synced'    => $res['synced'],
 			)
 		);
@@ -301,6 +306,12 @@ final class Series_Push {
 		if ( $site_id > 0 ) {
 			wp_schedule_single_event( time() + max( 0, $delay ), self::HOOK, array( $site_id, 0, 0 ) );
 		}
+	}
+
+	/** 马上排一次同步，并清掉“下次再试”的等待时间（页面上点“立即同步”时用）。 */
+	public static function queue_now( int $site_id ): void {
+		self::save_state( $site_id, array( 'next' => 0 ) );
+		self::queue_site( $site_id );
 	}
 
 	/** 系列内容改了：给系列里每家店排一次同步，错开几秒。返回排了几家。 */
@@ -344,7 +355,10 @@ final class Series_Push {
 	public static function reconcile(): void {
 		$now = time();
 		$n   = 0;
-		foreach ( array_keys( self::lagging() ) as $site_id ) {
+		// 最久没同步过的排在前面，免得总是同几家店占着名额。
+		$ids = array_keys( self::lagging() );
+		usort( $ids, static fn( int $a, int $b ): int => self::site_state( $a )['at'] <=> self::site_state( $b )['at'] );
+		foreach ( $ids as $site_id ) {
 			if ( $n >= 10 ) {
 				break;
 			}
@@ -377,9 +391,9 @@ final class Series_Push {
 		}
 		$master = self::is_master( $series, $site + array( 'site_id' => $site_id ) );
 		$plan   = array( 'catalog' => true, 'campaigns' => false, 'shipping' => $series['shipping_ver'] > 0 );
-		$res    = Client::request( $site_id, 'POST', self::ROUTE, array(), self::body( $series, $plan, true, $master ), 120 );
+		$res    = Client::request( $site_id, 'POST', self::ROUTE, array(), self::body( $series, $plan, true, $master ), 80 );
 		if ( is_wp_error( $res ) ) {
-			return self::is_unsupported( $res ) ? new \WP_Error( 'pchq_series_old', '这家店的程序还不支持系列同步，请先更新店铺程序。' ) : new \WP_Error( $res->get_error_code(), Design_Push::friendly( $res ) );
+			return self::is_unsupported( $res ) ? new \WP_Error( 'pchq_series_old', '这家店的程序还不支持系列同步，请先更新店铺程序。' ) : new \WP_Error( $res->get_error_code(), $res->get_error_message() . '（只是比较，店铺里没有改动；可以再试一次。）' );
 		}
 		if ( ! is_array( $res['diff'] ?? null ) ) {
 			return new \WP_Error( 'pchq_series_reply', '店铺没有返回差异报告，可能需要先更新店铺程序。' );
@@ -396,11 +410,16 @@ final class Series_Push {
 		if ( false === self::supported( $site_id ) ) {
 			return new \WP_Error( 'pchq_series_old', '这家店的程序还不支持系列同步，没有可恢复的快照。' );
 		}
-		$res = Client::request( $site_id, 'POST', self::RESTORE, array(), array( 'ver' => $ver ), 280 );
-		if ( is_wp_error( $res ) ) {
-			return self::is_unsupported( $res ) ? new \WP_Error( 'pchq_series_old', '这家店的程序还不支持系列同步，没有可恢复的快照。' ) : new \WP_Error( $res->get_error_code(), Design_Push::friendly( $res ) );
-		}
+		// 先关掉这家店的系列同步：即使店铺已经恢复、但回应在路上丢了，也不会被下一次推送再覆盖。
 		Series::set_sync( $site_id, false );
+		$res = Client::request( $site_id, 'POST', self::RESTORE, array(), array( 'ver' => $ver ), 80 );
+		if ( is_wp_error( $res ) ) {
+			self::forget( $site_id );
+			if ( self::is_unsupported( $res ) ) {
+				return new \WP_Error( 'pchq_series_old', '这家店的程序还不支持系列同步，没有可恢复的快照。' );
+			}
+			return new \WP_Error( $res->get_error_code(), '没有收到店铺的确认（' . $res->get_error_message() . '）。店铺可能还在恢复，也可能没有恢复；这家店的系列同步已经关闭，请稍后到店铺里核对商品。' );
+		}
 		self::save_state(
 			$site_id,
 			array(

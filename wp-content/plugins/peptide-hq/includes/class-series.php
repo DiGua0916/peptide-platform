@@ -423,6 +423,9 @@ final class Series {
 				self::update( $now['series_id'], array( 'master_site_id' => 0 ) );
 			}
 		}
+		if ( class_exists( Series_Catalog::class ) ) {
+			Series_Catalog::forget_site( $site_id );
+		}
 		Series_Push::forget( $site_id );
 		Series_Push::queue_site( $site_id );
 		return true;
