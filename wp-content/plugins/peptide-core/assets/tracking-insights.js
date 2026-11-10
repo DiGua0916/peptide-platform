@@ -121,7 +121,7 @@
   } else {
    const stages = ['只逛首页', '看了商品', '加了购物车', '进了结账', '下了单', '已付款'];
    html += '<div class="pc-ai-kpis"><div class="pc-ai-kpi"><span>走到哪一步</span><b>' + esc(stages[c.stage] || '—') + '</b></div><div class="pc-ai-kpi"><span>购买意向分</span><b>' + aiNum(c.intent) + '</b><em>满分 100</em></div><div class="pc-ai-kpi"><span>来访次数</span><b>' + aiNum(c.visits) + '</b></div><div class="pc-ai-kpi"><span>购物车</span><b>' + esc(c.cart || '—') + '</b></div></div>';
-   html += '<div class="pc-ai-charts">' + aiBars('他感兴趣的商品（停留秒数）', (c.products || []).map(p => ({label: p.name, value: p.seconds, text: p.seconds + ' 秒' + (p.carts ? ' · 加购' : ''), tip: p.name + '：停留 ' + p.seconds + ' 秒，浏览 ' + p.views + ' 次' + (p.carts ? '，加购过' : '')}))) + aiBars('他点过的版块', (c.modules || []).map(m => ({label: m.name, value: m.clicks, text: m.clicks + ' 次'}))) + '</div>';
+   html += '<div class="pc-ai-charts">' + aiBars('他感兴趣的商品（停留秒数）', (c.products || []).slice().sort((a, b) => (b.seconds || 0) - (a.seconds || 0)).map(p => ({label: p.name, value: p.seconds, text: p.seconds + ' 秒' + (p.carts ? ' · 加购' : ''), tip: p.name + '：停留 ' + p.seconds + ' 秒，浏览 ' + p.views + ' 次' + (p.carts ? '，加购过' : '')}))) + aiBars('他点过的版块', (c.modules || []).map(m => ({label: m.name, value: m.clicks, text: m.clicks + ' 次'}))) + '</div>';
   }
   return html;
  }
@@ -163,6 +163,12 @@
    out.innerHTML = '<p class="pc-ai-error">' + esc((e && e.message) || '分析失败，请稍后再试。') + '</p>';
   }
   btns.forEach(b => { b.disabled = false; });
+ }
+ // 客户分析放到访客详情页最上面（店主 2026-11-10：原来藏在“页面停留与兴趣”标签里找不到）。
+ if (aiBox && subject) {
+  aiBox.classList.add('is-top');
+  let tries = 0;
+  (function place() { const tabs = document.querySelector('.pc-lifecycle-tabs'); if (tabs) { tabs.parentNode.insertBefore(aiBox, tabs); } else if (tries++ < 40) { setTimeout(place, 250); } })();
  }
  if (aiBox) {
   aiBox.addEventListener('click', e => { if (e.target.closest('[data-ai-run]')) aiRun(false); else if (e.target.closest('[data-ai-again]')) aiRun(true); });
