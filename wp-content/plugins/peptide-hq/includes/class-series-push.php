@@ -32,17 +32,64 @@ final class Series_Push {
 	/** 一次同步没做完（例如图片太多）时最多接着跑几轮。 */
 	private const MAX_ROUNDS = 20;
 
+	/** 店铺声明支持系列同步用的功能键（钩子 pc_hq_capabilities）。 */
+	public const CAPABILITY = 'series.sync';
+
 	public static function register_hooks(): void {
 		add_action( self::HOOK, array( self::class, 'run' ), 10, 3 );
 		add_action( Monitor::CRON, array( self::class, 'reconcile' ), 30 );
+		add_filter( 'pchq_monitor_checks', array( self::class, 'monitor_check' ), 10, 4 );
+		add_filter( 'pchq_alert_types', array( self::class, 'alert_types' ) );
+	}
+
+	/**
+	 * 店铺是否声明了支持系列同步。总后台还没有功能声明（Client::supports 不存在）时返回 null：照常尝试，
+	 * 靠“没有这个接口”的回应来判断。
+	 */
+	public static function supported( int $site_id ): ?bool {
+		return is_callable( array( Client::class, 'supports' ) ) ? (bool) Client::supports( $site_id, self::CAPABILITY ) : null;
+	}
+
+	public static function alert_types( $types ): array {
+		return ( is_array( $types ) ? $types : array() ) + array( 'series_out_of_sync' => '系列内容未同步' );
+	}
+
+	/**
+	 * 巡检项 series_out_of_sync：同步失败，或者落后超过 30 分钟还没补上。
+	 * 店铺不支持系列同步、没有归入系列、或者还没尝试过同步时不报（不适用）。
+	 */
+	public static function monitor_check( $checks, $site_id, $status = array(), $now = 0 ): array {
+		$checks  = is_array( $checks ) ? $checks : array();
+		$site_id = (int) $site_id;
+		$now     = (int) $now > 0 ? (int) $now : time();
+		if ( ! Series::ready() || true !== self::supported( $site_id ) ) {
+			return $checks;
+		}
+		$site   = Series::site( $site_id ) + array( 'site_id' => $site_id );
+		$series = Series::get( $site['series_id'] );
+		$state  = self::site_state( $site_id );
+		if ( ! $series || $state['at'] < 1 ) {
+			return $checks;
+		}
+		$need   = array_keys( array_filter( self::plan( $series, $site, $state['synced'], self::confirmed( $series['id'], $site_id ) ) ) );
+		$late   = $need && ( ! $state['ok'] || $now - $state['at'] > 1800 );
+		$labels = array( 'header' => '系列信息', 'catalog' => '商品和价格', 'campaigns' => '营销活动', 'shipping' => '运费' );
+		$parts  = implode( '、', array_map( static fn( string $k ): string => $labels[ $k ] ?? $k, $need ) );
+		$checks[] = array(
+			'type'    => 'series_out_of_sync',
+			'ok'      => ! $late,
+			'message' => $late ? mb_substr( sprintf( '系列“%1$s”的内容还没同步到这家店（%2$s）。%3$s', $series['name'], $parts, '' !== $state['message'] ? '原因：' . $state['message'] : '系统会继续自动重试。' ), 0, 255 ) : '系列内容已同步。',
+		);
+		return $checks;
 	}
 
 	// ---------- 每家店的同步状态 ----------
 
-	/** @return array{series_id:int,catalog_ver:int,template_ver:int,campaign_ver:int,shipping_ver:int} */
+	/** @return array{series_id:int,master:bool,catalog_ver:int,template_ver:int,campaign_ver:int,shipping_ver:int} */
 	public static function versions( array $v ): array {
 		return array(
 			'series_id'    => max( 0, (int) ( $v['series_id'] ?? 0 ) ),
+			'master'       => ! empty( $v['master'] ),
 			'catalog_ver'  => max( 0, (int) ( $v['catalog_ver'] ?? 0 ) ),
 			'template_ver' => max( 0, (int) ( $v['template_ver'] ?? 0 ) ),
 			'campaign_ver' => max( 0, (int) ( $v['campaign_ver'] ?? 0 ) ),
@@ -86,11 +133,20 @@ final class Series_Push {
 
 	// ---------- 决定发什么 ----------
 
+	/** 这家店是不是这个系列的母版店（纯函数）。$site 里要有 site_id。 */
+	public static function is_master( array $series, array $site ): bool {
+		$site_id = (int) ( $site['site_id'] ?? 0 );
+		return $site_id > 0 && $site_id === (int) ( $series['master_site_id'] ?? 0 );
+	}
+
 	/**
 	 * 这次该给这家店发哪些部分（纯函数）。
 	 *
+	 * - 普通店铺：商品要“接受系列同步”并且差异报告已确认；活动、运费要“接受系列同步”。
+	 * - 母版店：商品内容在母版店编辑，所以只把价格发回去（店铺端只改价格），不需要确认；不发活动（活动就是从它导入的）。
+	 *
 	 * @param array $series    系列（Series::get）
-	 * @param array $site      店铺归属（Series::site），用到 series_sync
+	 * @param array $site      店铺归属（Series::site）加 site_id，用到 series_sync
 	 * @param array $synced    店铺已同步到的版本（versions()）
 	 * @param bool  $confirmed 这家店的商品差异报告是否已确认
 	 * @return array{header:bool,catalog:bool,campaigns:bool,shipping:bool}
@@ -98,10 +154,11 @@ final class Series_Push {
 	public static function plan( array $series, array $site, array $synced, bool $confirmed ): array {
 		$accept = ! empty( $site['series_sync'] );
 		$moved  = (int) $synced['series_id'] !== (int) $series['id'];
+		$master = self::is_master( $series, $site );
 		return array(
-			'header'    => $moved || (int) $synced['template_ver'] < (int) $series['template_ver'],
-			'catalog'   => $accept && $confirmed && (int) $series['catalog_ver'] > 0 && ( $moved || (int) $synced['catalog_ver'] < (int) $series['catalog_ver'] ),
-			'campaigns' => $accept && (int) $series['campaign_ver'] > 0 && ( $moved || (int) $synced['campaign_ver'] < (int) $series['campaign_ver'] ),
+			'header'    => $moved || (int) $synced['template_ver'] < (int) $series['template_ver'] || $master !== ! empty( $synced['master'] ),
+			'catalog'   => ( $master || ( $accept && $confirmed ) ) && (int) $series['catalog_ver'] > 0 && ( $moved || (int) $synced['catalog_ver'] < (int) $series['catalog_ver'] ),
+			'campaigns' => ! $master && $accept && (int) $series['campaign_ver'] > 0 && ( $moved || (int) $synced['campaign_ver'] < (int) $series['campaign_ver'] ),
 			'shipping'  => $accept && (int) $series['shipping_ver'] > 0 && ( $moved || (int) $synced['shipping_ver'] < (int) $series['shipping_ver'] ),
 		);
 	}
@@ -111,12 +168,13 @@ final class Series_Push {
 	}
 
 	/** 请求体（格式见 docs/CONTRACT.md “M3 系列与商品目录”）。 */
-	public static function body( array $series, array $plan, bool $dry_run = false ): array {
+	public static function body( array $series, array $plan, bool $dry_run = false, bool $master = false ): array {
 		$body = array(
 			'series_id'    => (int) $series['id'],
 			'slug'         => (string) $series['slug'],
 			'name'         => (string) $series['name'],
 			'template_ver' => (int) $series['template_ver'],
+			'master'       => $master,
 			'dry_run'      => $dry_run,
 		);
 		if ( ! empty( $plan['catalog'] ) && class_exists( Series_Catalog::class ) ) {
@@ -143,14 +201,14 @@ final class Series_Push {
 	 * @return array{synced:array,complete:bool,applied:array}|\WP_Error
 	 */
 	public static function push( int $site_id ) {
-		$site   = Series::site( $site_id );
+		$site   = Series::site( $site_id ) + array( 'site_id' => $site_id );
 		$series = Series::get( $site['series_id'] );
 		if ( ! $series ) {
 			return new \WP_Error( 'pchq_series_none', '这家店还没有归入系列。' );
 		}
 		$known = self::site_state( $site_id );
 		$plan  = self::plan( $series, $site, $known['synced'], self::confirmed( $series['id'], $site_id ) );
-		$res   = Client::request( $site_id, 'POST', self::ROUTE, array(), self::body( $series, $plan ), 280 );
+		$res   = Client::request( $site_id, 'POST', self::ROUTE, array(), self::body( $series, $plan, false, self::is_master( $series, $site ) ), 280 );
 		if ( is_wp_error( $res ) ) {
 			return $res;
 		}
@@ -182,8 +240,22 @@ final class Series_Push {
 			self::forget( $site_id );
 			return;
 		}
-		$res = self::push( $site_id );
 		$now = time();
+		if ( false === self::supported( $site_id ) ) {
+			// 店铺还没声明支持：不发请求，等店铺程序更新后的下一次巡检再试。
+			self::save_state(
+				$site_id,
+				array(
+					'at'        => $now,
+					'ok'        => false,
+					'message'   => '这家店的程序还不支持系列同步，请先更新店铺程序。',
+					'supported' => false,
+					'next'      => $now + 600,
+				)
+			);
+			return;
+		}
+		$res = self::push( $site_id );
 		if ( is_wp_error( $res ) ) {
 			$unsupported = self::is_unsupported( $res );
 			$delay       = $unsupported ? null : ( self::RETRY[ $attempt ] ?? null );
@@ -202,12 +274,18 @@ final class Series_Push {
 			}
 			return;
 		}
+		// 店铺报告的个别商品或图片没成功：同步算完成，但把原因显示出来（下一个版本同步时会再试）。
+		$errors  = array_values( array_filter( (array) ( $res['applied']['catalog']['errors'] ?? array() ), 'is_string' ) );
+		$message = $res['complete'] ? '' : '内容较多，正在分批同步…';
+		if ( $errors ) {
+			$message = mb_substr( sprintf( '有 %1$d 个商品或图片没同步成功：%2$s', count( $errors ), $errors[0] ), 0, 250 );
+		}
 		self::save_state(
 			$site_id,
 			array(
 				'at'        => $now,
 				'ok'        => true,
-				'message'   => $res['complete'] ? '' : '内容较多，正在分批同步…',
+				'message'   => $message,
 				'supported' => true,
 				'next'      => 0,
 				'synced'    => $res['synced'],
@@ -253,7 +331,7 @@ final class Series_Push {
 			if ( ! $s || ! Site_Lifecycle::active( (int) $site_id ) ) {
 				continue;
 			}
-			$plan = self::plan( $s, $site, self::site_state( (int) $site_id )['synced'], self::confirmed( $s['id'], (int) $site_id ) );
+			$plan = self::plan( $s, $site + array( 'site_id' => (int) $site_id ), self::site_state( (int) $site_id )['synced'], self::confirmed( $s['id'], (int) $site_id ) );
 			$need = array_keys( array_filter( $plan ) );
 			if ( $need ) {
 				$out[ (int) $site_id ] = $need;
@@ -294,8 +372,12 @@ final class Series_Push {
 		if ( $series['catalog_ver'] < 1 || ! class_exists( Series_Catalog::class ) ) {
 			return new \WP_Error( 'pchq_series_catalog', '这个系列还没有主商品库，请先从主店导入。' );
 		}
-		$plan = array( 'catalog' => true, 'campaigns' => false, 'shipping' => $series['shipping_ver'] > 0 );
-		$res  = Client::request( $site_id, 'POST', self::ROUTE, array(), self::body( $series, $plan, true ), 120 );
+		if ( false === self::supported( $site_id ) ) {
+			return new \WP_Error( 'pchq_series_old', '这家店的程序还不支持系列同步，请先更新店铺程序。' );
+		}
+		$master = self::is_master( $series, $site + array( 'site_id' => $site_id ) );
+		$plan   = array( 'catalog' => true, 'campaigns' => false, 'shipping' => $series['shipping_ver'] > 0 );
+		$res    = Client::request( $site_id, 'POST', self::ROUTE, array(), self::body( $series, $plan, true, $master ), 120 );
 		if ( is_wp_error( $res ) ) {
 			return self::is_unsupported( $res ) ? new \WP_Error( 'pchq_series_old', '这家店的程序还不支持系列同步，请先更新店铺程序。' ) : new \WP_Error( $res->get_error_code(), Design_Push::friendly( $res ) );
 		}
@@ -311,6 +393,9 @@ final class Series_Push {
 	 * @return array|\WP_Error 店铺的恢复结果
 	 */
 	public static function restore( int $site_id, int $ver = 0 ) {
+		if ( false === self::supported( $site_id ) ) {
+			return new \WP_Error( 'pchq_series_old', '这家店的程序还不支持系列同步，没有可恢复的快照。' );
+		}
 		$res = Client::request( $site_id, 'POST', self::RESTORE, array(), array( 'ver' => $ver ), 280 );
 		if ( is_wp_error( $res ) ) {
 			return self::is_unsupported( $res ) ? new \WP_Error( 'pchq_series_old', '这家店的程序还不支持系列同步，没有可恢复的快照。' ) : new \WP_Error( $res->get_error_code(), Design_Push::friendly( $res ) );

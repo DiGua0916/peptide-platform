@@ -65,14 +65,13 @@ final class Order_Report {
 		}
 	}
 
+	/** 向总后台声明本店支持订单上报和退款标记（功能键 => 版本号）。 */
 	public static function capabilities( $caps ): array {
 		$caps = is_array( $caps ) ? $caps : array();
-		foreach ( array( 'order_report', 'order_refund' ) as $cap ) {
-			if ( ! in_array( $cap, $caps, true ) ) {
-				$caps[] = $cap;
-			}
-		}
-		return $caps;
+		return $caps + array(
+			'orders.report' => '1',
+			'orders.refund' => '1',
+		);
 	}
 
 	// ---------- 纯函数 ----------
@@ -148,18 +147,19 @@ final class Order_Report {
 	// ---------- 订单摘要 ----------
 
 	/**
-	 * 订单的口径数据。指标模块的 Data\Metrics::order_facts 可用时以它为准，否则用同口径的本地实现。
+	 * 订单的口径数据。指标模块的 Data\Metrics::order_fact 可用时以它为准（paid = 收到过支付成功通知，
+	 * test = 测试单，gross_cents = 订单金额），否则用同口径的本地实现。
 	 *
 	 * @return array{paid:bool,is_test:bool,total_cents:int,paid_at:int}
 	 */
 	public static function facts( \WC_Order $order ): array {
-		if ( is_callable( array( '\PeptideCore\Data\Metrics', 'order_facts' ) ) ) {
-			$f = \PeptideCore\Data\Metrics::order_facts( $order );
-			if ( is_array( $f ) && isset( $f['paid'], $f['is_test'], $f['total_cents'], $f['paid_at'] ) ) {
+		if ( is_callable( array( '\PeptideCore\Data\Metrics', 'order_fact' ) ) ) {
+			$f = \PeptideCore\Data\Metrics::order_fact( $order );
+			if ( is_array( $f ) && isset( $f['paid'], $f['test'], $f['gross_cents'], $f['paid_at'] ) ) {
 				return array(
 					'paid'        => (bool) $f['paid'],
-					'is_test'     => (bool) $f['is_test'],
-					'total_cents' => (int) $f['total_cents'],
+					'is_test'     => (bool) $f['test'],
+					'total_cents' => (int) $f['gross_cents'],
 					'paid_at'     => (int) $f['paid_at'],
 				);
 			}

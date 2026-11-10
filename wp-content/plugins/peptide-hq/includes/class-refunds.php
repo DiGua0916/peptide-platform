@@ -240,6 +240,11 @@ final class Refunds {
 		if ( ! $order ) {
 			return new \WP_Error( 'pchq_refund_order', '订单不存在。' );
 		}
+		if ( is_callable( array( Client::class, 'supports' ) ) && ! Client::supports( $site_id, 'orders.refund' ) ) {
+			// 店铺还没声明支持退款标记：先记为待回写，店铺程序更新后的巡检会自动写回。
+			$wpdb->update( Orders::table(), array( 'refund_sync' => 1, 'refund_error' => '店铺程序还不支持退款标记，更新店铺程序后会自动写回。' ), array( 'id' => $order['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			return new \WP_Error( 'pchq_refund_old', '已在总后台标记；这家店的程序还不支持退款标记，更新店铺程序后会自动写回店铺。' );
+		}
 		$res = Client::request(
 			$site_id,
 			'POST',

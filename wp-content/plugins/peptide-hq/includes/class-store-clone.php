@@ -6,6 +6,8 @@
  * - root 开店任务（每 20 秒一次）读取请求，通过已有的受控 SSH 通道让店铺服务器执行复制，回执写到 clone/results/。
  * - 一键完整复制 = 全部内容；也可以勾选要复制的内容。订单、顾客、访客记录和付款记录永远不复制；
  *   目标店铺自己的域名、后台连接、支付绑定、邮箱都保留。
+ * - 系列（HQ-05，2026-11-10）：只能在同一个系列的店铺之间复制，避免把另一个系列的商品、活动和运费带过去。
+ *   复制会把来源店的系列状态（含“母版店”标记）一起带过去，所以复制提交后总后台会重新把系列信息发给目标店铺。
  *
  * @package PeptideHq
  */
@@ -86,6 +88,9 @@ final class Store_Clone {
 		if ( '' === self::slug( $source ) || '' === self::slug( $target ) ) {
 			return new \WP_Error( 'pchq_clone_site', '店铺的管理地址不是平台分配的固定地址，不能复制。' );
 		}
+		if ( self::series_ready() && Series::site( $source_id )['series_id'] !== Series::site( $target_id )['series_id'] ) {
+			return new \WP_Error( 'pchq_clone_series', '来源和目标不在同一个系列，不能复制。请先在“系列管理”里把目标店铺归到来源店铺的系列。' );
+		}
 		if ( 'all' !== $parts ) {
 			$parts = array_values( array_unique( array_filter( (array) $parts, static fn( $p ): bool => isset( self::PARTS[ $p ] ) ) ) );
 			if ( ! $parts ) {
@@ -126,7 +131,17 @@ final class Store_Clone {
 		$jobs = is_array( $jobs ) ? $jobs : array();
 		$jobs[ $op ] = array( 'source_site_id' => $source_id, 'target_site_id' => $target_id, 'parts' => $parts, 'at' => time() );
 		update_option( self::OPTION, array_slice( $jobs, -50, null, true ), false );
+		// 复制完成后目标店里的系列状态是来源店的：忘掉总后台记的旧状态，过几分钟重新把系列信息发过去。
+		if ( self::series_ready() ) {
+			Series_Push::forget( $target_id );
+			Series_Push::queue_site( $target_id, 3 * MINUTE_IN_SECONDS );
+			Series_Push::queue_site( $target_id, 20 * MINUTE_IN_SECONDS );
+		}
 		return true;
+	}
+
+	private static function series_ready(): bool {
+		return class_exists( Series::class ) && class_exists( Series_Push::class ) && Series::ready();
 	}
 
 	/** 最近的复制任务（新的在前），合并总后台记录和 root 回执。 */

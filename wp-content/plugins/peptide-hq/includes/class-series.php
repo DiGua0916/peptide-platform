@@ -292,14 +292,20 @@ final class Series {
 				if ( '' === $name ) {
 					continue;
 				}
-				$max     = $r['max'] ?? null;
-				$rates[] = array(
+				$max  = $r['max'] ?? null;
+				$rate = array(
 					'name'      => mb_substr( $name, 0, 80 ),
 					'rule'      => in_array( $r['rule'] ?? '', array( 'subtotal', 'quantity', 'weight' ), true ) ? $r['rule'] : 'subtotal',
 					'min'       => max( 0.0, round( (float) ( $r['min'] ?? 0 ), 2 ) ),
 					'max'       => null === $max || '' === $max ? null : max( 0.0, round( (float) $max, 2 ) ),
 					'fee_cents' => max( 0, (int) ( $r['fee_cents'] ?? 0 ) ),
 				);
+				// 邮编范围（可选）：只在这些邮编内收这档运费。
+				$postcodes = mb_substr( trim( wp_strip_all_tags( (string) ( $r['postcodes'] ?? '' ) ) ), 0, 2000 );
+				if ( '' !== $postcodes ) {
+					$rate['postcodes'] = $postcodes;
+				}
+				$rates[] = $rate;
 			}
 			$name = trim( wp_strip_all_tags( (string) ( $p['name'] ?? '' ) ) );
 			if ( '' === $name || ! $regions || ! $rates ) {

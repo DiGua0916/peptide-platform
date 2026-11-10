@@ -27,6 +27,8 @@ final class Orders {
 	public static function register_hooks(): void {
 		self::maybe_upgrade();
 		add_action( 'rest_api_init', array( self::class, 'routes' ) );
+		add_filter( 'pchq_monitor_checks', array( self::class, 'monitor_check' ), 10, 4 );
+		add_filter( 'pchq_alert_types', array( self::class, 'alert_types' ) );
 		Refunds::register_hooks();
 		if ( is_admin() ) {
 			foreach ( array( Admin\Orders_Page::class, Admin\Report_Page::class ) as $page ) {
@@ -377,6 +379,69 @@ CREATE TABLE {$spend} (
 		$hq   = array( 'count' => $mine['orders'], 'total_cents' => $mine['gross_cents'], 'refunded_cents' => $mine['refunded_cents'] );
 		$shop = array( 'count' => (int) ( $store['count'] ?? -1 ), 'total_cents' => (int) ( $store['total_cents'] ?? -1 ), 'refunded_cents' => (int) ( $store['refunded_cents'] ?? -1 ) );
 		return array( 'match' => $hq === $shop, 'hq' => $hq, 'store' => $shop );
+	}
+
+	// ---------- 巡检：订单上报是否落后 ----------
+
+	public static function alert_types( $types ): array {
+		return ( is_array( $types ) ? $types : array() ) + array( 'order_report_lag' => '订单上报落后' );
+	}
+
+	/** 近两天（店铺日期）里，店铺每日汇总的已付款订单数比已经报上来的多几笔。 */
+	public static function missing_reports( int $site_id ): int {
+		global $wpdb;
+		$d       = Db::table( 'daily' );
+		$o       = self::table();
+		$missing = 0;
+		foreach ( (array) $wpdb->get_results( $wpdb->prepare( "SELECT day, orders FROM {$d} WHERE site_id = %d ORDER BY day DESC LIMIT 2", $site_id ), ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			$have     = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$o} WHERE site_id = %d AND order_day = %s AND paid = 1", $site_id, (string) $r['day'] ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			$missing += max( 0, (int) $r['orders'] - $have );
+		}
+		return $missing;
+	}
+
+	/**
+	 * 落后多久了（纯函数）。$since 是第一次发现落后的时间（0 = 之前不落后）。
+	 *
+	 * @return array{since:int,late:bool} 新的起始时间，以及是否已经超过 2 小时
+	 */
+	public static function lag_state( int $missing, int $since, int $now ): array {
+		if ( $missing <= 0 ) {
+			return array( 'since' => 0, 'late' => false );
+		}
+		$since = $since > 0 ? $since : $now;
+		return array( 'since' => $since, 'late' => $now - $since > 7200 );
+	}
+
+	/**
+	 * 巡检项 order_report_lag：店铺有已付款订单超过 2 小时还没报到总后台。
+	 * 只检查声明了 orders.report 的店；不适用时不报。巡检里不向店铺发请求。
+	 */
+	public static function monitor_check( $checks, $site_id, $status = array(), $now = 0 ): array {
+		$checks  = is_array( $checks ) ? $checks : array();
+		$site_id = (int) $site_id;
+		$now     = (int) $now > 0 ? (int) $now : time();
+		if ( ! self::ready() || ! is_callable( array( Client::class, 'supports' ) ) || ! Client::supports( $site_id, 'orders.report' ) ) {
+			return $checks;
+		}
+		$missing = self::missing_reports( $site_id );
+		$all     = get_option( 'pchq_order_lag_since', array() );
+		$all     = is_array( $all ) ? $all : array();
+		$state   = self::lag_state( $missing, (int) ( $all[ $site_id ] ?? 0 ), $now );
+		if ( $state['since'] !== (int) ( $all[ $site_id ] ?? 0 ) ) {
+			if ( $state['since'] > 0 ) {
+				$all[ $site_id ] = $state['since'];
+			} else {
+				unset( $all[ $site_id ] );
+			}
+			update_option( 'pchq_order_lag_since', $all, false );
+		}
+		$checks[] = array(
+			'type'    => 'order_report_lag',
+			'ok'      => ! $state['late'],
+			'message' => $state['late'] ? sprintf( '这家店有 %d 笔已付款订单超过 2 小时还没报到总后台，跨店报表会偏低。可以在店铺运行 wp peptide orders backfill 补报。', $missing ) : '订单上报正常。',
+		);
+		return $checks;
 	}
 
 	// ---------- 广告花费（先手填） ----------
