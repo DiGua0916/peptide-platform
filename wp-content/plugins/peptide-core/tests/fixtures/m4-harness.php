@@ -165,6 +165,7 @@ namespace {
 		if ( 'user_meta' === $GLOBALS['m4']['throw'] ) { throw new RuntimeException( '测试：模拟引擎读取顾客资料时出错' ); }
 		return $GLOBALS['m4']['users'][ (int) $id ]['meta'][ $key ] ?? '';
 	}
+	function dbDelta( $sql ) { $GLOBALS['m4']['dbdelta'][] = (string) $sql; return array(); } // phpcs:ignore WordPress.NamingConventions.ValidFunctionName
 	function get_transient( $k ) { return $GLOBALS['m4']['transients'][ $k ] ?? false; }
 	function set_transient( $k, $v, $ttl = 0 ) { $GLOBALS['m4']['transients'][ $k ] = $v; return true; }
 	function user_can( $user, $cap ) { return false; }

@@ -37,7 +37,9 @@ final class Shadow {
 	/** 建表（可重复执行）。只加表，不动别的表。 */
 	public static function install(): void {
 		global $wpdb;
-		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+		if ( ! function_exists( 'dbDelta' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+		}
 		$charset = $wpdb->get_charset_collate();
 		$stats   = self::table( 'stats' );
 		$log     = self::table( 'log' );

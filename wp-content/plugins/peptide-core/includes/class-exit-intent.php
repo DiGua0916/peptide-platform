@@ -296,6 +296,10 @@ final class Exit_Intent {
 			if ( ! in_array( self::page_kind(), $s['pages'], true ) || ! self::audience_ok( $s ) ) {
 				return;
 			}
+			// 营销弹窗静默（M4，已购回访等）：不加载弹窗和转盘；优惠码本身照常可用。
+			if ( Pricing\Popups::suppressed() ) {
+				return;
+			}
 		}
 		self::enqueue_assets();
 		wp_localize_script( 'peptide-core-exit-intent', 'pcExitIntent', self::public_config( $s, $preview ) );

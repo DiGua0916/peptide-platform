@@ -303,9 +303,14 @@
 	var armed = false;
 	var dialog = null;
 
-	/** 弹出；不能弹时（已经弹过、还没到停留时间、已有别的弹窗）返回 false。 */
+	/** 营销弹窗静默（已购回访等，见 marketing-quiet.js）：不弹窗、不拦返回键。后台预览不受影响。 */
+	function quiet() {
+		return ! cfg.preview && !! ( window.pcMarketingQuiet && window.pcMarketingQuiet.suppressed() );
+	}
+
+	/** 弹出；不能弹时（已经弹过、还没到停留时间、已有别的弹窗、静默中）返回 false。 */
 	function open() {
-		if ( fired || ( ! cfg.preview && ( ! armed || recently() ) ) || document.querySelector( 'dialog[open]' ) ) {
+		if ( fired || quiet() || ( ! cfg.preview && ( ! armed || recently() ) ) || document.querySelector( 'dialog[open]' ) ) {
 			return false;
 		}
 		fired = true;
@@ -387,7 +392,7 @@
 			events.forEach( function ( ev ) {
 				window.removeEventListener( ev, push, true );
 			} );
-			if ( pushed || fired ) {
+			if ( pushed || fired || quiet() ) {
 				return;
 			}
 			try {

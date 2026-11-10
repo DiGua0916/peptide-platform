@@ -34,6 +34,7 @@ final class Runtime {
 	public static function register_hooks(): void {
 		add_action( 'rest_api_init', array( self::class, 'routes' ) );
 		add_filter( 'pc_hq_capabilities', array( self::class, 'capabilities' ) );
+		Popups::register_hooks(); // 营销弹窗静默开关和价格无关，借这里注册，入口文件不用再加一行。
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			\WP_CLI::add_command( 'peptide price-engine', Cli::class );
 		}
@@ -46,6 +47,7 @@ final class Runtime {
 	public static function capabilities( $list ) {
 		$list   = is_array( $list ) ? $list : array();
 		$list[] = 'pricing_engine';
+		$list[] = 'marketing_quiet';
 		return array_values( array_unique( $list ) );
 	}
 
