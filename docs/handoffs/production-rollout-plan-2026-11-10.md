@@ -27,3 +27,4 @@
 - 新文件：`includes/tracking/class-checkout-dropoffs.php`、`includes/admin/class-checkout-dropoff-page.php`、`assets/checkout-dropoff.css`；改：`assets/overview.js`、`assets/overview-workspace.css`、`includes/admin/class-overview-page.php`（links.dropoff）、`includes/class-plugin.php`。web + HQ 各 7 份已部署（备份 ~/vialcove-deploy-backups/trk-plain-*）。
 - 核对：阳 今天 13 人、7 天 26 人，填完地址 6，与仪表盘漏斗一致；主店 s0001 渲染正常。
 - 发现：6 家店运费方案都是商品金额 < $1000 一律 $45（会员 5% 后 $42.75），阳 今天 13 个发起结账里 7 人运费超过商品金额 40%，11 人没填完地址就走。是否调整运费由店主决定（未改）。
+- 跟进（店主）：页面挂到“访客数据”菜单下（高亮访客归档）；每行最前面小眼睛 / 点姓名 / 点整行 → `pc-visitors&visitor=<id>&visit=<走到结账那次访问>`，直接打开“客户生命周期”并选中该次访问的时间线。列拆成 查看 / 进结账时间 / 姓名 / 邮箱 / 电话 / 国家（城市小字）/ 来源 / 购物车（缩成“N 件 · 金额”，悬停看明细）/ 运费合计 / 步骤 / 停留 / 原因 / 操作；去掉设备行。阳 s0007 已点验。

@@ -185,7 +185,8 @@ final class Checkout_Dropoffs {
 		$devices = array( 'mobile' => '手机', 'desktop' => '电脑', 'tablet' => '平板' );
 		$row     = array(
 			'visitor_id'  => (int) $v['id'],
-			'visitor_url' => admin_url( 'admin.php?page=pc-visitors&visitor=' . (int) $v['id'] ),
+			// 访客数据 → 客户生命周期，直接打开走到结账的那次访问。
+			'visitor_url' => admin_url( 'admin.php?page=pc-visitors&visitor=' . (int) $v['id'] . ( ! empty( $visit['id'] ) ? '&visit=' . (int) $visit['id'] : '' ) ),
 			'device'      => $devices[ $v['device'] ] ?? (string) $v['device'],
 			'browser'     => (string) $v['browser'],
 			'visits'      => (int) $v['visits'],

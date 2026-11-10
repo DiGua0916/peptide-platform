@@ -17,10 +17,8 @@
 .pc-cd-steps a.is-active { background: #2271b1; color: #fff; }
 .pc-cd-table td { vertical-align: top; }
 .pc-cd-time, .pc-cd-dwell { white-space: nowrap; font-variant-numeric: tabular-nums; }
-.pc-cd-who { min-width: 170px; }
-.pc-cd-who a { text-decoration: none; }
 .pc-cd-src { min-width: 110px; }
-.pc-cd-cart { min-width: 200px; }
+.pc-cd-cart { white-space: nowrap; }
 .pc-cd-cart ul { margin: 0 0 4px; padding: 0; list-style: none; }
 .pc-cd-cart li { margin: 0 0 2px; line-height: 1.45; }
 .pc-cd-reason { min-width: 240px; max-width: 360px; line-height: 1.55; }
@@ -29,3 +27,12 @@
 .pc-rc-badge.is-ok { background: #e6f4ea; color: #1e7e34; }
 .pc-cd-empty { padding: 24px 20px; color: #646970; }
 .pc-cd-foot { padding: 12px 20px 16px; margin: 0; color: #646970; font-size: 12px; }
+.pc-cd-row { cursor: pointer; }
+.pc-cd-row:hover td { background: #f0f6fc; }
+.pc-cd-name { color: #2271b1; text-decoration: none; }
+.pc-cd-name:hover strong { text-decoration: underline; }
+.pc-cd-name { font-weight: 600; white-space: nowrap; }
+.pc-cd-email a, .pc-cd-phone a { text-decoration: none; }
+.pc-cd-email { word-break: break-all; min-width: 150px; }
+.pc-cd-phone, .pc-cd-country { white-space: nowrap; }
+.pc-cd-table td, .pc-cd-table th { vertical-align: middle; }

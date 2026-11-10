@@ -53,12 +53,13 @@ final class Checkout_Dropoff_Page {
 		return isset( $_GET['page'] ) && self::SLUG === $_GET['page']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 	}
 
+	// 放在“访客数据”下面（店主 2026-11-10：从漏斗进来后要能跳到访客数据里的客户生命周期）。
 	public static function parent_file( $file ) {
-		return self::here() ? Overview_Page::SLUG : $file;
+		return self::here() ? Tracking_Page::SLUG : $file;
 	}
 
 	public static function submenu_file( $file ) {
-		return self::here() ? Overview_Page::SLUG : $file;
+		return self::here() ? Tracking_Page::ARCHIVE_SLUG : $file;
 	}
 
 	public static function enqueue( string $hook ): void {
@@ -69,6 +70,7 @@ final class Checkout_Dropoff_Page {
 		wp_enqueue_style( 'peptide-core-store-settings', plugins_url( 'assets/store-settings.css', PEPTIDE_CORE_FILE ), array(), $ver( 'store-settings.css' ) );
 		wp_enqueue_style( 'peptide-core-plans', plugins_url( 'assets/plans.css', PEPTIDE_CORE_FILE ), array( 'peptide-core-store-settings' ), $ver( 'plans.css' ) );
 		wp_enqueue_style( 'peptide-core-recovery', plugins_url( 'assets/recovery.css', PEPTIDE_CORE_FILE ), array( 'peptide-core-plans' ), $ver( 'recovery.css' ) );
+		wp_add_inline_script( 'common', "document.addEventListener('click',function(e){var r=e.target.closest('.pc-cd-row');if(!r||e.target.closest('a,button,input,select,label'))return;if(window.getSelection&&String(window.getSelection()).length)return;var u=r.getAttribute('data-href');if(u){if(e.metaKey||e.ctrlKey){window.open(u,'_blank');}else{location.href=u;}}});" );
 		wp_enqueue_style( 'peptide-core-checkout-dropoff', plugins_url( 'assets/checkout-dropoff.css', PEPTIDE_CORE_FILE ), array( 'peptide-core-recovery' ), $ver( 'checkout-dropoff.css' ) );
 	}
 
@@ -96,7 +98,7 @@ final class Checkout_Dropoff_Page {
 
 		echo '<div class="wrap pc-pl pc-rc pc-cd">';
 		echo '<div class="pc-rc-detail__top"><a class="pc-rc-back" href="' . esc_url( admin_url( 'admin.php?page=' . Overview_Page::SLUG ) ) . '"><span class="dashicons dashicons-arrow-left-alt"></span> 返回仪表盘</a></div>';
-		echo '<div class="pc-pl-head pc-rc-head"><div><h1>发起结账的客户</h1><p class="pc-rc-sub">仪表盘漏斗里“发起结账”的人，一人一行，和漏斗的数字同一个口径（这段时间开始的访问，按不同访客算）。每行写了他走到哪一步、在结账页停了多久、之后去了哪，以及没下单最可能的原因。点“行为记录”能看他每一步的完整时间线。</p></div></div>';
+		echo '<div class="pc-pl-head pc-rc-head"><div><h1>访客数据 · 发起结账的客户</h1><p class="pc-rc-sub">仪表盘漏斗里“发起结账”的人，一人一行，和漏斗的数字同一个口径（这段时间开始的访问，按不同访客算）。每行写了走到哪一步、在结账页停了多久、之后去了哪，以及没下单最可能的原因。<strong>点前面的小眼睛或任意一行</strong>进入这位客户的“客户生命周期”，直接打开走到结账的那次访问和完整行为时间线。</p></div></div>';
 
 		// 时间段
 		echo '<div class="pc-pl-card"><nav class="pc-pl-tabs">';
@@ -155,7 +157,7 @@ final class Checkout_Dropoff_Page {
 		}
 
 		echo '<div class="pc-rc-scroll"><table class="pc-pl-table pc-rc-table pc-cd-table"><thead><tr>';
-		foreach ( array( '进结账时间', '客户', '来源', '购物车', '运费 / 合计', '走到哪一步', '结账页停留', '为什么没下单', '操作' ) as $h ) {
+		foreach ( array( '查看', '进结账时间', '姓名', '邮箱', '电话', '国家 / 地区', '来源', '购物车', '运费 / 合计', '走到哪一步', '结账页停留', '为什么没下单', '操作' ) as $h ) {
 			echo '<th>' . esc_html( $h ) . '</th>';
 		}
 		echo '</tr></thead><tbody>';
@@ -163,7 +165,7 @@ final class Checkout_Dropoff_Page {
 			self::row( $x );
 		}
 		echo '</tbody></table></div>';
-		echo '<p class="pc-cd-foot">说明：结账页不记录顾客在哪个输入框停下，所以“地址没填完”分不出是卡在哪一项。填过的姓名、邮箱、电话来自顾客的购物会话，顾客没填就是空的。</p>';
+		echo '<p class="pc-cd-foot">说明：点一行进入客户生命周期。结账页不记录顾客在哪个输入框停下，所以“地址没填完”分不出是卡在哪一项。填过的姓名、邮箱、电话来自顾客的购物会话，顾客没填就是空的。</p>';
 		echo '</div></div>';
 	}
 
@@ -196,50 +198,34 @@ final class Checkout_Dropoff_Page {
 	private static function row( array $x ): void {
 		$cur = (string) $x['currency'];
 		$c   = $x['contact'];
-		echo '<tr>';
+		$url = $x['visitor_url'];
+		echo '<tr class="pc-cd-row" data-href="' . esc_url( $url ) . '">';
+		// 小眼睛：直接进访客数据里的客户生命周期（走到结账的那次访问）。
+		echo '<td class="pc-pl-col-act"><a class="pc-rc-icon" href="' . esc_url( $url ) . '" title="查看客户生命周期" aria-label="查看客户生命周期"><span class="dashicons dashicons-visibility"></span></a></td>';
 		echo '<td class="pc-cd-time">' . esc_html( wp_date( 'm-d H:i', (int) floor( $x['checkout_ms'] / 1000 ) ) ) . '</td>';
-
-		// 客户
-		$who = array_filter( array( $c['name'], $c['email'], $c['phone'], trim( $c['city'] . ( $c['city'] && $c['country'] ? ', ' : '' ) . $c['country'] ) ) );
-		echo '<td class="pc-cd-who">';
-		if ( $who ) {
-			echo '<strong>' . esc_html( $c['name'] ?: ( $c['email'] ?: '访客 #' . $x['visitor_id'] ) ) . '</strong>';
-			if ( $c['email'] ) {
-				echo '<br><a href="mailto:' . esc_attr( $c['email'] ) . '">' . esc_html( $c['email'] ) . '</a>';
-			}
-			if ( $c['phone'] ) {
-				echo '<br><a href="tel:' . esc_attr( preg_replace( '/[^0-9+]/', '', $c['phone'] ) ) . '">' . esc_html( $c['phone'] ) . '</a>';
-			}
-			$place = trim( $c['city'] . ( $c['city'] && $c['country'] ? ', ' : '' ) . $c['country'] );
-			if ( $place ) {
-				echo '<br><small class="pc-pl-muted">' . esc_html( $place ) . '</small>';
-			}
-		} else {
-			echo '<strong>访客 #' . (int) $x['visitor_id'] . '</strong><br><small class="pc-pl-muted">没留联系方式</small>';
-		}
-		echo '<br><small class="pc-pl-muted">' . esc_html( $x['device'] . ( $x['browser'] ? ' · ' . $x['browser'] : '' ) . ( $x['visits'] > 1 ? ' · 第 ' . $x['visits'] . ' 次来' : ' · 第一次来' ) ) . '</small></td>';
+		echo '<td class="pc-cd-name-col"><a class="pc-cd-name" href="' . esc_url( $url ) . '">' . esc_html( $c['name'] ?: '访客 #' . $x['visitor_id'] ) . '</a></td>';
+		echo '<td class="pc-cd-email">' . ( $c['email'] ? '<a href="mailto:' . esc_attr( $c['email'] ) . '">' . esc_html( $c['email'] ) . '</a>' : '-' ) . '</td>';
+		echo '<td class="pc-cd-phone">' . ( $c['phone'] ? '<a href="tel:' . esc_attr( preg_replace( '/[^0-9+]/', '', $c['phone'] ) ) . '">' . esc_html( $c['phone'] ) . '</a>' : '-' ) . '</td>';
+		echo '<td class="pc-cd-country">' . esc_html( $c['country'] ?: '-' ) . ( $c['city'] ? '<br><small class="pc-pl-muted">' . esc_html( $c['city'] ) . '</small>' : '' ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		echo '<td class="pc-cd-src">' . esc_html( $x['source'] ) . ( $x['campaign'] ? '<br><small class="pc-pl-muted">' . esc_html( $x['campaign'] ) . '</small>' : '' ) . '</td>';
 
-		// 购物车
+		// 购物车：缩成一行“N 件 · 金额”，鼠标放上去看明细。
 		$items = (array) ( $x['cart']['items'] ?? array() );
 		echo '<td class="pc-cd-cart">';
 		if ( $items ) {
-			echo '<ul>';
-			foreach ( array_slice( $items, 0, 4 ) as $i ) {
+			$lines = array();
+			foreach ( $items as $i ) {
 				$spec = $i['variation'] ? (string) preg_replace( '/^[^:]+:\s*/', '', $i['variation'] ) : '';
 				$name = (string) $i['name'];
 				if ( '' !== $spec && false === stripos( str_replace( ' ', '', $name ), str_replace( ' ', '', $spec ) ) ) {
-					$name .= '（' . $spec . '）'; // 名字里已经带规格的不重复写。
+					$name .= '（' . $spec . '）';
 				}
-				echo '<li>' . esc_html( $name ) . ' × ' . esc_html( (string) (float) $i['quantity'] ) . '</li>';
+				$lines[] = $name . ' × ' . (float) $i['quantity'];
 			}
-			if ( count( $items ) > 4 ) {
-				echo '<li class="pc-pl-muted">还有 ' . ( count( $items ) - 4 ) . ' 种</li>';
-			}
-			echo '</ul><small class="pc-pl-muted">商品 ' . esc_html( $x['cart']['subtotal_text'] ) . '</small>';
+			echo '<span class="pc-rc-items" title="' . esc_attr( implode( "\n", $lines ) ) . '">' . (int) $x['cart']['count'] . ' 件 · ' . esc_html( $x['cart']['subtotal_text'] ) . '</span>';
 		} else {
-			echo '<span class="pc-pl-muted">' . ( $x['order_id'] ? '见订单' : '购物车已清空' ) . '</span>';
+			echo '<span class="pc-pl-muted">' . ( $x['order_id'] ? '见订单' : '已清空' ) . '</span>';
 		}
 		echo '</td>';
 
@@ -250,11 +236,13 @@ final class Checkout_Dropoff_Page {
 		echo '<td class="pc-cd-dwell">' . esc_html( Checkout_Dropoffs::duration( (int) $x['dwell_ms'] ) ) . '</td>';
 		echo '<td class="pc-cd-reason">' . esc_html( $x['reason'] ) . '</td>';
 
-		echo '<td class="pc-pl-col-act"><a class="button button-small" href="' . esc_url( $x['visitor_url'] ) . '">行为记录</a>';
+		echo '<td class="pc-pl-col-act">';
 		if ( $x['order_url'] ) {
-			echo ' <a class="button button-small" href="' . esc_url( $x['order_url'] ) . '">弃单 #' . esc_html( $x['order_no'] ) . '</a>';
+			echo '<a class="button button-small" href="' . esc_url( $x['order_url'] ) . '">弃单 #' . esc_html( $x['order_no'] ) . '</a>';
 		} elseif ( $c['email'] && 'paid' !== $x['step'] ) {
-			echo ' <a class="button button-small" href="' . esc_url( Mail_Page::compose_url( array( 'to' => $c['email'] ) ) ) . '">写邮件</a>';
+			echo '<a class="button button-small" href="' . esc_url( Mail_Page::compose_url( array( 'to' => $c['email'] ) ) ) . '">写邮件</a>';
+		} else {
+			echo '<span class="pc-pl-muted">-</span>';
 		}
 		echo '</td></tr>';
 	}
