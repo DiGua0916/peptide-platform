@@ -49,7 +49,7 @@ final class Paid_Popup_Page {
 			'message'     => array( '正文（可以分段，{order} = 订单号）', 4 ),
 			'phone_label' => array( '客服电话那一行（{phone} = 店铺设置里的公司电话，没填电话就不显示）', 1 ),
 			'wa_label'    => array( 'WhatsApp 按钮', 1 ),
-			'wa_text'     => array( '点按钮后 WhatsApp 里预先填好的话', 1 ),
+			'wa_text'     => array( '点按钮后 WhatsApp 里预先填好的话（{store} = 店名，{items} = 买了什么和数量，{total} = 总金额，{order} = 订单号）', 2 ),
 			'no_wa_label' => array( '“没有 WhatsApp”链接', 1 ),
 			'form_intro'  => array( '没有 WhatsApp 时的说明', 2 ),
 			'form_button' => array( '提交按钮', 1 ),

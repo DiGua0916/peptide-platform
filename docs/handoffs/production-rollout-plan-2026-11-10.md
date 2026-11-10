@@ -178,3 +178,7 @@
 
 ### 2026-11-10 模板库加 05 下单成功感谢
 - 店主确认后加入：`vc-order-thanks`「05 下单成功感谢（关心体验 · 加专员 WhatsApp）」，主题 VialCove | Thank You for Your Order；感谢下单、重视购物体验、加专员 WhatsApp（实时物流 / 问题 / 建议）+ WhatsApp 按钮、没有 WhatsApp 就回信留联系方式。TEMPLATES_VERSION → 2026-11-10d（店主自建模板保留）。6 家店模板库都已出现。
+
+### 2026-11-10 付款成功弹窗 WhatsApp 预填 + 首页视频
+- WhatsApp 预填改为“我刚刚在平台上下单了什么、一共多少钱”：默认 `Hi! I just placed an order on {store}: {items}. The total is {total} (order #{order}).`，新增变量 {store}/{items}/{total}（后台字段说明同步）。主店 #11841 核对：Hi! I just placed an order on VialCovePeptides: Happy x1. The total is $1.00 (order #11841).
+- 首页视频（vialcove/video stage 模块）：6 家店 pc_layout 正文和已发布副本 `_pc_published_content` 都改为 autoplay=false、muted=false（原值备份 `_pc_video_backup_20261110` / `_pc_published_backup_20261110`），清页面缓存；modules.css 视频区底色由 #0d1417 改为 #e9eff1、封面底部渐变减淡。5 个可访问站核对 data-vc-stage-autoplay="0"；主店手机尺寸：停在明亮封面，点 Watch video 有声播放。
