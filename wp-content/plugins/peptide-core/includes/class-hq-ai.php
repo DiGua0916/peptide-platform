@@ -652,6 +652,7 @@ final class Hq_Ai {
 		return array(
 			'运费'       => $ship,
 			'运费优惠'   => $ship_discounts,
+			'运费提前显示' => class_exists( Ship_Preview::class ) ? Ship_Preview::ai_note() : '关闭',
 			'满减活动'   => $promos,
 			'首单优惠'   => $first_txt,
 			'支付方式'   => $pays,

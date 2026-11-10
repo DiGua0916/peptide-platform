@@ -182,3 +182,10 @@
 ### 2026-11-10 付款成功弹窗 WhatsApp 预填 + 首页视频
 - WhatsApp 预填改为“我刚刚在平台上下单了什么、一共多少钱”：默认 `Hi! I just placed an order on {store}: {items}. The total is {total} (order #{order}).`，新增变量 {store}/{items}/{total}（后台字段说明同步）。主店 #11841 核对：Hi! I just placed an order on VialCovePeptides: Happy x1. The total is $1.00 (order #11841).
 - 首页视频（vialcove/video stage 模块）：6 家店 pc_layout 正文和已发布副本 `_pc_published_content` 都改为 autoplay=false、muted=false（原值备份 `_pc_video_backup_20261110` / `_pc_published_backup_20261110`），清页面缓存；modules.css 视频区底色由 #0d1417 改为 #e9eff1、封面底部渐变减淡。5 个可访问站核对 data-vc-stage-autoplay="0"；主店手机尺寸：停在明亮封面，点 Watch video 有声播放。
+
+### 2026-11-10 运费提前显示（只开阳）
+- 阳的 AI 全站分析“马上做”：结账前明示运费和预计总价（27 人发起结账，只有 6 人填完地址）。店主：先改一家，每家按自己的分析决定。
+- 新增 `Ship_Preview`（class-ship-preview.php + assets/ship-preview.js + 店铺设置 → 运费提前显示，class-ship-preview-page.php）：代码 6 家一样，开关每家单独、默认关。开启后商品弹窗加购区显示 “Shipping $X · Estimated total $Y”（购物车已有商品时写 “Est. total with your bag”），运费按这家店的运费方案 + 当前运费优惠算，默认按美国估算（接口 /peptide/v1/ship-estimate，关闭时 404）。
+- 发现购物车抽屉（vc-live-cart-drawer）本来就显示运费前后和应付总额（$45 → 5% off $42.75 → $52.75），所以只补商品弹窗；旧的 vc-cart-drawer 不用改。
+- AI：`HQ_AI::store_config()` 加“运费提前显示”：开 / 关和开启时间，AI 可对比开启前后“填完地址 ÷ 发起结账”。
+- 主店手机尺寸测试后关闭；阳 2026-11-10 22:21 开启，其余 4 家关。估算核对：bac.water 1 盒 $10 + 运费 $42.75 = $52.75，与结账页一致。
