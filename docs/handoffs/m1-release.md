@@ -65,3 +65,14 @@
 - 第一次查出 `wp_usermeta` 的 `_wc_email_verified_*` 里有邮箱；已加规则（usermeta 里键名含 email 的，除 `billing_email` 外一律删除），泄漏报告改为按键名分组。复跑两库均干净，`vcsnap_*` 临时库无残留。
 - 服务器上留下的唯一东西：空目录 `/root/vialcove-snapshots`（0700）。
 - 还没做：对真实店铺库和总后台库导出（需要再次确认）；沙盒数据少，脱敏对真实数据的覆盖面要到那时核对。
+
+## 2026-11-10 补充：第一次正式导出脱敏快照（平台所有者已同意）
+
+- 先 `--report-only`，再正式导出。子店 s0010（`vc_s0010`，72 张表）和总后台（`vialcove_hq`，23 张表）。
+- 真实数据查出并补上的遗漏：选项 `auto_core_update_notified`（管理员邮箱）、`pc_email_backup_*`（改为名字带 backup 的选项一律不带）；另外主动去掉 `pc_product_broadcast_v1`（商品播报姓名池，分不清有没有真实顾客名）和 `pc_ai_auto_* / pc_ai_tune_* / pc_ai_notes* / pc_ai_resolved`（AI 分析和店主备注）。
+- 导出文件（留在各自服务器上，root 0600，**没有下载到开发机**）：
+  - 前台机 `/root/vialcove-snapshots/vc_s0010-sanitized-20261110T150844Z.sql.gz`（730 KB，sha256 `d4aafe2d422e614c…`）
+  - 后台机 `/root/vialcove-snapshots/vialcove_hq-sanitized-20261110T150749Z.sql.gz`（26 KB，sha256 `cdac2b6e19b03f6f…`）
+- 导出后在服务器上核对：文件里的邮箱只有 `@example.test` 和店铺自己的 `@vialcoveplus.com`；已知的 7 个真实顾客姓名 0 次命中；电话只剩店铺公开的 WhatsApp；地址、账号抽样为假数据且保留了国家（PR）；支付、邮件、AI、像素、连接密钥相关选项不在文件里；临时库无残留。生产库只被读。
+- 局限：姓名和地址没有通用的自动检查（只能靠表清单和抽查）。其他店导出前仍要先跑 `--report-only`。
+- 下一步：M1-2 把 s0010 快照导入沙盒（会改沙盒库，做之前再确认）。

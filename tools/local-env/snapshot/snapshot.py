@@ -72,7 +72,9 @@ HQ_TABLES = {
 # 整条删除的选项：支付、邮件、AI、像素、第三方接口的密钥和连接信息；以及一次性数据。
 OPTION_DELETE_EXACT = [
     "peptide_core_hq", "peptide_core_pixels", "peptide_core_content_tools", "peptide_core_youtube_metadata", "peptide_core_local_payments",
-    "peptide_core_site_tools", "pc_ai_log", "jetpack_options", "jetpack_secrets", "recovery_keys", "woocommerce_share_key",
+    "peptide_core_site_tools", "pc_ai_log", "pc_ai_resolved", "auto_core_update_notified",
+    # 商品播报的姓名池是店主手填、前台公开显示的，但分不清里面有没有真实顾客名，一并不带。
+    "pc_product_broadcast_v1", "jetpack_options", "jetpack_secrets", "recovery_keys", "woocommerce_share_key",
     "woocommerce_maxmind_geolocation_settings", "mailserver_url", "mailserver_login", "mailserver_pass", "auth_key", "auth_salt",
     "logged_in_key", "logged_in_salt", "nonce_key", "nonce_salt", "secure_auth_key", "secure_auth_salt", "secret_key",
     # 总后台
@@ -83,7 +85,7 @@ OPTION_DELETE_LIKE = [
     r"\_transient\_%", r"\_site\_transient\_%", r"\_pc\_pay\_nonce\_%", r"pc\_panapay\_handoff\_%", r"pc\_panapay\_hub\_accounts%",
     r"pc\_panapay\_provider\_site\_bindings%", r"fluentmail-settings%", r"\_fluentsmtp%", r"wcpay\_%", r"woopay\_%",
     r"woocommerce\_%payment%\_settings", r"woocommerce\_paypal\_settings", r"woocommerce\_pc\_panapay\_settings",
-    r"woocommerce\_woocommerce\_payments%", r"pc\_mail\_templates\_backup\_%", r"pchq\_backup\_%",
+    r"woocommerce\_woocommerce\_payments%", r"pc\_mail\_templates\_backup\_%", r"pchq\_backup\_%", r"%backup%", r"pc\_ai\_auto\_%", r"pc\_ai\_tune\_%", r"pc\_ai\_notes%",
 ]
 # 名字里带这些词的选项也删（兜底；宁可本地少一个设置，也不带出一个密钥）。
 OPTION_DELETE_REGEX = "secret|token|api_?key|passw|license|private_?key|credential|access_?key"
