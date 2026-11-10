@@ -1,0 +1,7 @@
+{
+  "_说明": "复制到仓库之外（例如 ~/.vialcove/hosts.json）再填写；不要把真实文件提交进 Git。",
+  "hosts": [
+    {"role": "web", "host": "<前台机 IP>", "user": "ubuntu", "identity": "<前台机私钥的绝对路径>"},
+    {"role": "admin", "host": "<后台机 IP>", "user": "ubuntu", "identity": "<后台机私钥的绝对路径>"}
+  ]
+}
