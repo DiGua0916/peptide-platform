@@ -207,3 +207,9 @@
 - 去掉了“公司名称 ← 店名”（会把“芒果”这类内部名显示给顾客）；主店测试时填的公司名已清空。
 - 店铺地址、Pixel、自己的 WhatsApp、真实付款、AI 调优没有现成资料，不自动填。
 - 主店已执行（测试店）：35 → 50（客服电话 +13039444124，通知邮箱 orders@vialcovepeptides.com）。子店未执行，按钮留给店主点；阳会填 VialCovePeptides@outlook.com，其余 orders@各自域名。orders@域名 能否收信未确认。
+
+### 2026-11-10 六家店公司资料 + 各自邮箱
+- 店主提供公司资料，写入 6 家店：公司名称 VialCove；地址 904 22nd St, San Francisco, CA 94107, US（woocommerce_store_address / _city / _postcode，default_country US:CA，address_2 清空）。原值备份 `pc_company_backup_20261110`。
+- 电话：店主说用站点自己的。阳保留 +14323608942；主店、李军、光辉、老毛、芒果按各自客服 WhatsApp 填 +13039444124（这 5 家的 WhatsApp 都是这个号）。
+- 邮箱：店主要求全部换成站点自己的 orders@本店域名——管理员邮箱（admin_email 直接写，清掉待确认的 new_admin_email/adminhash）、客服邮箱（woocommerce_email_from_address，阳原来是 VialCovePeptides@outlook.com）、新订单 / 取消 / 失败通知收件人。原值备份 `pc_email_backup_20261110`。阳基础配置页核对。
+- 店铺评分：主店 65、李军 60、阳 85、光辉 45、老毛 60、芒果 60。地址填好后弃单提醒邮件不再因缺地址被拦，定时任务会按设置开始发。
