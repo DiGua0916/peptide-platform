@@ -12,4 +12,10 @@
 - 04:40 按报价表补两个缺的规格（6 家店都加，数据库直接写，无代码改动）：Acetic Acid water 0.6% + AA3 3ml×10vials $7；bac.water + WA3 3ml×10vials $6。暂用 10ml 规格的图，库存 200、管理库存，排在 10ml 前面；只设售价不设划线原价（报价表没有原价）。变体带 meta `_pc_note`。前台 Store API 6 家店均显示 3ml / 10ml 两个规格。核对结论：报价表 202 个规格其余全部在店，售价全部一致；店里 92 商品 200 规格图片齐全、文件都在。
 - 05:00 店主改主意：3ml 规格不要了。6 家店的 AA3 / WA3 已删除（先按订单行项目 `_variation_id` 核对，没有订单用过），属性选项去掉 3ml，只留 10ml。
 - 一致性核对：两个水的图（2400×2400 主图、规格图）、价格（$10，划线 $15，和报价表一致）和其他商品一致；文案不一致——Acetic Acid water 0.6% 描述为空（来源表也为空）；bac.water 描述写的是“无菌注射用水 SWFI”，还写“不是 BAC Water”，和商品本身（抑菌水）矛盾，末尾留着内部草稿“Short Version (For Product Listing / Customer Message)”。按其他商品的版式（📦 规格框 / 🔬 概述 / 💡 用途 / 使用方法 / 储存 / FAQ）重写两段英文描述，只写研究用途，不含功效宣称；6 家店都已更新，旧描述存在商品 meta `_pc_desc_backup_20261110`。脚本入库 `tools/catalog-water-descriptions-20261110.php`。前台 6 家店核对：各只有 10ml 一个规格、$10/$15、1 张图、新文案。
-- 顺带发现：TR20+RT40 的描述也是空的（未处理）。
+- 顺带发现：TR20+RT40 的描述也是空的 → 已补写（见下）。
+
+### TR20+RT40 描述补写（6 店）
+- 商品 #11786（SKU 692425308128935943，Tirzepatide 20 mg + Retatrutide 40 mg，60mg×10 vials）原描述为空，导入表中也为空。
+- 按两种水的版式补写英文描述：规格框、概述、两种成分（CAS/分子量/受体）、研究用途、配制示例（3 mL → 共 20 mg/mL）、储存、FAQ。只写研究用途，无剂量和功效宣称。
+- 脚本 `tools/catalog-tr20rt40-description-20261110.php`；s0001 + s0006–s0010 已更新，旧值（空）存 `_pc_desc_backup_20261110`；6 个域名 Store API 核对通过。
+- 顺带发现：主店仍有 10 个商品描述里带内部草稿段落 “Short Version (For Product Page / Customer Direct Message)”：Melanotan I、Tesa10+IP5、Matrixyl、Cardiogen、EPO、bronchogen、AHK-CU、Cartalax、Gonadorelin、P021（未处理）。
