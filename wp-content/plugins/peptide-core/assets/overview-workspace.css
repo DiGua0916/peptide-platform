@@ -729,3 +729,16 @@ body.pc-admin-workspace .pc-ov .pc-ov-ad{display:flex;flex-direction:column;gap:
 .pc-ov-recent__main{flex:1;min-width:0;display:grid}
 .pc-ov-recent__main small{color:#737373;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pc-ov-rank-note{margin:0 0 6px;font-size:12px;color:#b45309}
+
+/* 排名卡（2026-11-10 店主：做成滚动、排版整理）：列表区固定高度可滚动，行更紧凑，名次标两位数也放得下，前三名深色 */
+body.pc-admin-workspace .pc-ov .pc-ov-rankcard .pc-ov-rank-body{max-height:312px;overflow-y:auto;overscroll-behavior:contain;margin:0 -8px 0 0;padding:0 8px 0 0;scrollbar-width:thin;scrollbar-color:#d4d4d4 transparent;mask-image:linear-gradient(#000 calc(100% - 18px),transparent);-webkit-mask-image:linear-gradient(#000 calc(100% - 18px),transparent)}
+body.pc-admin-workspace .pc-ov .pc-ov-rankcard .pc-ov-rank-body::-webkit-scrollbar{width:6px}
+body.pc-admin-workspace .pc-ov .pc-ov-rankcard .pc-ov-rank-body::-webkit-scrollbar-thumb{background:#d4d4d4;border-radius:3px}
+body.pc-admin-workspace .pc-ov .pc-ov-rank li{grid-template-columns:24px minmax(0,1fr) auto;gap:10px;padding:8px 2px;min-height:0;border-bottom:1px solid #f3f3f3}
+body.pc-admin-workspace .pc-ov .pc-ov-rank li:last-child{border-bottom:0;margin-bottom:12px}
+body.pc-admin-workspace .pc-ov .pc-ov-rankcard[data-kind="products"] .pc-ov-rank li{grid-template-columns:24px 30px minmax(0,1fr) auto}
+body.pc-admin-workspace .pc-ov .pc-ov-rank li::before{width:auto;min-width:22px;height:20px;padding:0 4px;box-sizing:border-box;border-radius:4px;font-size:11px;line-height:20px;font-variant-numeric:tabular-nums;background:#171717;color:#fff}
+body.pc-admin-workspace .pc-ov .pc-ov-rank li:nth-child(n+4)::before{background:#ececec;color:#525252}
+body.pc-admin-workspace .pc-ov .pc-ov-rank img,body.pc-admin-workspace .pc-ov .pc-ov-rank .pc-ov-noimg{width:30px;height:30px;border-radius:6px;border:1px solid #eeeeee;object-fit:cover;background:#f5f5f5}
+body.pc-admin-workspace .pc-ov .pc-ov-rank__name{font-size:13px;color:#262626}
+body.pc-admin-workspace .pc-ov .pc-ov-rank li>span:last-child{font-weight:600;font-variant-numeric:tabular-nums;color:#171717;text-align:right}
