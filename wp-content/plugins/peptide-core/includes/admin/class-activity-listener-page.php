@@ -38,7 +38,7 @@ final class Activity_Listener_Page {
 		?>
 		<div class="wrap pc-activity-admin">
 			<div class="pc-ala-head">
-				<div><a href="<?php echo esc_url( Apps_Page::url() ); ?>"><?php esc_html_e( '返回应用中心', 'peptide-core' ); ?></a><h1><?php esc_html_e( '活动监听', 'peptide-core' ); ?></h1></div>
+				<div><a href="<?php echo esc_url( Apps_Page::url() ); ?>"><?php esc_html_e( '返回插件', 'peptide-core' ); ?></a><h1><?php esc_html_e( '活动监听', 'peptide-core' ); ?></h1></div>
 				<p><?php esc_html_e( '选择已有优惠活动，在购物车展示真实档位进度。保存草稿不会改变客户配置，保存并应用后才更新。', 'peptide-core' ); ?></p>
 			</div>
 			<div id="pc-activity-listener" aria-busy="true"><p role="status"><?php esc_html_e( '正在读取活动监听配置…', 'peptide-core' ); ?></p></div>

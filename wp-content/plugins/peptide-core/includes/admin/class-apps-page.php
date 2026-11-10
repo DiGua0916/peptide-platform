@@ -1,6 +1,6 @@
 <?php
 /**
- * 应用中心（APP-CENTER-01），对照 Shopname 的“应用中心”：列出本站的应用，每个应用有自己的设置页。
+ * 插件（APP-CENTER-01），对照 Shopname 的“插件”：列出本站的应用，每个应用有自己的设置页。
  * 第一个应用：离开意图增收（PeptideCore\Exit_Intent）。设置页地址 admin.php?page=pc-apps&app=exit-intent。
  *
  * @package PeptideCore
@@ -53,7 +53,7 @@ final class Apps_Page {
 		}
 	}
 
-	/** 店铺可以使用的应用（应用中心、应用统计只显示这些）。 */
+	/** 店铺可以使用的应用（插件、应用统计只显示这些）。 */
 	public static function apps(): array {
 		return array_filter( self::catalog(), static fn( $app, $key ): bool => self::allowed( (string) $key ), ARRAY_FILTER_USE_BOTH );
 	}
@@ -149,7 +149,7 @@ final class Apps_Page {
 		}
 		$requested = sanitize_key( (string) ( $_GET['app'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only routing.
 		if ( '' !== $requested && ! self::allowed( $requested ) ) {
-			echo '<div class="wrap pc-pl pc-mk pc-apps"><p><a href="' . esc_url( self::url() ) . '">返回应用中心</a></p><div class="notice notice-warning inline"><p>这个应用暂未开通，请联系平台。</p></div></div>';
+			echo '<div class="wrap pc-pl pc-mk pc-apps"><p><a href="' . esc_url( self::url() ) . '">返回插件</a></p><div class="notice notice-warning inline"><p>这个应用暂未开通，请联系平台。</p></div></div>';
 			return;
 		}
 		if ( 'campaign-countdown' === ( $_GET['app'] ?? '' ) ) {
@@ -186,7 +186,7 @@ final class Apps_Page {
 		}
 		echo '<div class="wrap pc-pl pc-mk pc-apps">';
 		Marketing::notices();
-		echo '<div class="pc-pl-head pc-mk-head"><h1>' . esc_html__( 'App center', 'peptide-core' ) . '</h1></div>';
+		echo '<div class="pc-pl-head pc-mk-head"><h1>' . '插件' . '</h1></div>';
 		echo '<div class="pc-apps__grid">';
 		foreach ( self::apps() as $key => $app ) {
 			echo '<a class="pc-apps__card" href="' . esc_url( self::url( array( 'app' => $key ) ) ) . '"><span class="pc-apps__icon dashicons ' . esc_attr( $app['icon'] ) . '" aria-hidden="true"></span><span class="pc-apps__main"><strong>' . esc_html( $app['name'] ) . '</strong> <span class="pc-mk-badge ' . ( $app['on'] ? 'is-active' : 'is-off' ) . '">' . esc_html( $app['on'] ? __( 'On', 'peptide-core' ) : __( 'Off', 'peptide-core' ) ) . '</span><small>' . esc_html( $app['text'] ) . '</small></span><span class="button">' . esc_html__( 'Settings', 'peptide-core' ) . '</span></a>';

@@ -22,7 +22,7 @@ final class Cart_Feedback_Page {
 		self::require_access();
 		?>
 		<div class="wrap pc-cart-feedback-admin">
-			<div class="pc-cfa-head"><div><a href="<?php echo esc_url( Apps_Page::url() ); ?>"><?php esc_html_e( '返回应用中心', 'peptide-core' ); ?></a><h1><?php esc_html_e( '加购反馈', 'peptide-core' ); ?></h1></div>
+			<div class="pc-cfa-head"><div><a href="<?php echo esc_url( Apps_Page::url() ); ?>"><?php esc_html_e( '返回插件', 'peptide-core' ); ?></a><h1><?php esc_html_e( '加购反馈', 'peptide-core' ); ?></h1></div>
 			<p><?php esc_html_e( '配置原位加购反馈。只有 WooCommerce 确认本次加购成功后才显示成功提示；此页不发送加购请求。', 'peptide-core' ); ?></p></div>
 			<div id="pc-cart-feedback" aria-busy="true"><p role="status"><?php esc_html_e( '正在读取加购反馈配置…', 'peptide-core' ); ?></p></div>
 			<noscript><p><?php esc_html_e( '请启用 JavaScript 后配置加购反馈。', 'peptide-core' ); ?></p></noscript>

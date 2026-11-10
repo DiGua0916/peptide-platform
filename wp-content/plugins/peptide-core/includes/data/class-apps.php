@@ -8,7 +8,7 @@
  * 离开意图的七个数字（顺序见 EXIT_METRICS）：
  * - shown 弹出次数：show 事件的次数；
  * - claims 领取 / 抽奖：claim 和 spin 两种事件的次数之和；
- * - claim_rate 领取率：claims / shown × 100，保留 2 位；弹出次数是 0 时为 null。领取是不经过弹出也会记的，所以可能大于 100%，这里和应用中心一样不封顶；
+ * - claim_rate 领取率：claims / shown × 100，保留 2 位；弹出次数是 0 时为 null。领取是不经过弹出也会记的，所以可能大于 100%，这里和插件一样不封顶；
  * - wins 中奖次数：win 事件的次数；
  * - closed 关闭次数：close 事件的次数；
  * - orders 订单数：order 事件的次数（用了弹窗优惠码的订单，下单时记一次）；

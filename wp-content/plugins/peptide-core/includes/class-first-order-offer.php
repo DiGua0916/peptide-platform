@@ -102,7 +102,7 @@ final class First_Order_Offer {
 	public static function definitions( array $definitions ): array {
 		$definitions[ self::MODULE ] = array(
 			'title' => '首单 5% 优惠券', 'category' => 'operation', 'icon' => 'tickets-alt', 'singleRender' => true,
-			'description' => '引用应用中心的首单 5% 优惠配置；复制优惠码或申请原生购物车优惠。',
+			'description' => '引用插件的首单 5% 优惠配置；复制优惠码或申请原生购物车优惠。',
 			'settings' => array(), 'items' => null,
 		);
 		return $definitions;
@@ -157,7 +157,7 @@ final class First_Order_Offer {
 	/** Public static offer only: no customer/email/order information is embedded in HTML. */
 	public static function render( bool $preview = false ): string {
 		$c = self::coupon();
-		if ( ! $c ) { return $preview ? '<p class="pc-first-offer-empty">请在应用中心绑定并启用符合规则的首单 5% 优惠券。</p>' : ''; }
+		if ( ! $c ) { return $preview ? '<p class="pc-first-offer-empty">请在插件绑定并启用符合规则的首单 5% 优惠券。</p>' : ''; }
 		$s = self::strings();
 		$config = array( 'code' => $c->get_code(), 'strings' => $s, 'cartUrl' => wc_get_cart_url(), 'closeMs' => 15000, 'preview' => $preview );
 		$json = wp_json_encode( $config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT );

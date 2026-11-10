@@ -45,7 +45,7 @@ final class Campaign_Countdown_Page {
 		$notice = $_GET['countdown_notice'] ?? '';
 		$messages = array( 'saved' => '设置已保存。', 'invalid' => '设置无效，请重新选择。', 'selection' => '请选择公开、已启用或即将开始的有效活动。', 'failed' => '保存未完成，请重试。' );
 		if ( is_string( $notice ) && isset( $messages[ $notice ] ) ) { echo '<div class="notice ' . ( 'saved' === $notice ? 'notice-success' : 'notice-error' ) . '"><p>' . esc_html( $messages[ $notice ] ) . '</p></div>'; }
-		echo '<div class="wrap pc-countdown-settings"><p><a href="' . esc_url( Apps_Page::url() ) . '">返回应用中心</a></p><h1>活动倒计时</h1><p>结账页和商品弹窗共用同一个活动与真实截止时间。刷新页面不会重置倒计时。</p>';
+		echo '<div class="wrap pc-countdown-settings"><p><a href="' . esc_url( Apps_Page::url() ) . '">返回插件</a></p><h1>活动倒计时</h1><p>结账页和商品弹窗共用同一个活动与真实截止时间。刷新页面不会重置倒计时。</p>';
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="' . esc_attr( self::ACTION ) . '">';
 		wp_nonce_field( self::ACTION );
 		echo '<section class="pc-ss-panel"><h2>关联活动</h2><p><label><input type="checkbox" name="enabled" value="1"' . checked( $c['enabled'], true, false ) . '> 启用活动倒计时</label></p><p><label for="pc-countdown-promotion">优惠活动</label></p><select id="pc-countdown-promotion" name="promotionId"><option value="0">请选择已有活动</option>';

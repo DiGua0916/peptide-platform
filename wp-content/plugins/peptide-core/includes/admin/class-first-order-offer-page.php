@@ -48,7 +48,7 @@ final class First_Order_Offer_Page {
 	}
 	public static function render(): void {
 		self::access(); $s = First_Order_Offer::settings();
-		echo '<div class="wrap pc-mk pc-first-offer-admin"><a href="' . esc_url( Apps_Page::url() ) . '">返回应用中心</a><h1>首单 5% 优惠</h1>';
+		echo '<div class="wrap pc-mk pc-first-offer-admin"><a href="' . esc_url( Apps_Page::url() ) . '">返回插件</a><h1>首单 5% 优惠</h1>';
 		echo '<p>绑定一张原生 Woo 优惠券，供首页首单优惠积木使用。优惠券使用次数、首单校验和实际减免仍由 Woo 管理。</p>';
 		if ( '1' === ( $_GET['saved'] ?? '' ) ) { echo '<div class="notice notice-success"><p>配置已保存。创建券后仍需自行开启。</p></div>'; }
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';

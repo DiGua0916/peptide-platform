@@ -123,7 +123,7 @@ final class Staff {
 				'home'  => 'admin.php?page=pc-media',
 			),
 			'apps'      => array(
-				'label' => __( 'App center', 'peptide-core' ),
+				'label' => '插件',
 				'caps'  => array( 'manage_woocommerce' ),
 				'home'  => 'admin.php?page=pc-apps',
 			),

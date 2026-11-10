@@ -416,3 +416,16 @@ body.pc-admin-workspace #wpbody-content :is(.description,.howto){color:#525252}
  body.pc-admin-workspace:not(.folded) #adminmenu>li.menu-top:not(.wp-has-current-submenu)>.wp-submenu{display:none!important}
  body.pc-admin-workspace:not(.folded) #adminmenu>li.wp-has-current-submenu>.wp-submenu{position:static!important;left:auto!important;top:auto!important;display:block;width:100%}
 }
+
+/* 手机菜单（2026-11-10 店主截图：图标压在文字上）：WordPress 窄屏会把图标改成 absolute，这里放回同一行。 */
+@media (max-width:782px){
+ body.pc-admin-workspace #adminmenu a.menu-top{display:flex!important;align-items:center;gap:10px;min-height:44px;padding:8px 12px!important;box-sizing:border-box}
+ body.pc-admin-workspace #adminmenu a.menu-top .wp-menu-image{position:static!important;float:none;display:flex;align-items:center;justify-content:center;flex:0 0 20px;width:20px!important;height:20px;margin:0!important}
+ body.pc-admin-workspace #adminmenu a.menu-top .wp-menu-image::before{padding:0!important;width:20px;height:20px;line-height:20px;font-size:17px}
+ body.pc-admin-workspace #adminmenu a.menu-top .wp-menu-name{position:static!important;padding:0!important;margin:0!important;min-width:0;line-height:20px;flex:1}
+ body.pc-admin-workspace #adminmenu .wp-submenu a{padding:10px 12px 10px 42px!important}
+ /* 顶部 WordPress 工具条自带一个 ☰，和下面页头里的 ☰ 重复，只留页头那个。 */
+ body.pc-admin-workspace #wpadminbar #wp-admin-bar-menu-toggle{display:none!important}
+}
+/* 窄屏兜底：隐藏的提示框等看不见的元素不把整页撑出横向滚动（clip 不影响 sticky）。 */
+@media (max-width:782px){ html,body.pc-admin-workspace{overflow-x:clip} }

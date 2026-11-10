@@ -2,7 +2,7 @@
 /**
  * 店铺应用的开 / 关（2026-11-08）。总后台停用某个应用时先用它把应用关掉（见 Hq_Connector::apps_route）。
  *
- * 复用每个应用自己的保存和校验；改完重新读一次应用中心的状态，没生效就如实报错。
+ * 复用每个应用自己的保存和校验；改完重新读一次插件的状态，没生效就如实报错。
  *
  * @package PeptideCore
  */
@@ -30,7 +30,7 @@ final class App_Switch {
 		}
 		$after = Apps_Page::catalog();
 		if ( (bool) ( $after[ $key ]['on'] ?? ! $on ) !== $on ) {
-			return new \WP_Error( 'pc_app_not_applied', $on ? '没有开启成功：这个应用还缺少必要的设置，请点“设置”在店铺后台补全后再开。' : '没有关闭成功，请到店铺后台的应用中心查看。' );
+			return new \WP_Error( 'pc_app_not_applied', $on ? '没有开启成功：这个应用还缺少必要的设置，请点“设置”在店铺后台补全后再开。' : '没有关闭成功，请到店铺后台的插件查看。' );
 		}
 		return true;
 	}

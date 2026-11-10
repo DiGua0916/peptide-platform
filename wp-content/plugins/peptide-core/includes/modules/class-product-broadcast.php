@@ -38,14 +38,14 @@ final class Product_Broadcast {
 	public static function definitions( array $definitions ): array {
 		$definitions[ self::TYPE ] = array(
 			'title' => __( '商品播报', 'peptide-core' ),
-			'description' => __( '引用应用中心已应用的店铺播报。文案仅在应用中心维护，商品变量由当前商品提供。', 'peptide-core' ),
+			'description' => __( '引用插件已应用的店铺播报。文案仅在插件维护，商品变量由当前商品提供。', 'peptide-core' ),
 			'category' => 'operation', 'icon' => 'visibility', 'version' => 1, 'singleRender' => true,
 			'editorDefaults' => array( 'paddingTopPx' => array( 'desktop' => 0, 'mobile' => 0 ), 'paddingBottomPx' => array( 'desktop' => 0, 'mobile' => 0 ) ),
 			'settings' => array(
 				Fields::f( 'select', 'configId', __( '播报配置', 'peptide-core' ), self::CONFIG_ID, array(
 					'group' => 'general',
 					'options' => array( self::CONFIG_ID => __( '当前店铺共用配置', 'peptide-core' ) ),
-					'help' => __( '在应用中心 → 商品播报编辑和应用文案；本积木只保存引用。关闭积木不影响其他引用。', 'peptide-core' ),
+					'help' => __( '在插件 → 商品播报编辑和应用文案；本积木只保存引用。关闭积木不影响其他引用。', 'peptide-core' ),
 				) ),
 			),
 		);
@@ -78,7 +78,7 @@ final class Product_Broadcast {
 		if ( self::TYPE !== ( $module['type'] ?? '' ) ) { return $html; }
 		if ( 'editor' === $context ) {
 			return '<div class="vc-m__notice"><strong>' . esc_html__( '商品播报', 'peptide-core' ) . '</strong><p>'
-				. esc_html__( '引用店铺已应用配置。文案模板、参数表和播放时间在应用中心维护；未应用草稿不会显示给客户。', 'peptide-core' )
+				. esc_html__( '引用店铺已应用配置。文案模板、参数表和播放时间在插件维护；未应用草稿不会显示给客户。', 'peptide-core' )
 				. '</p><a href="' . esc_url( admin_url( 'admin.php?page=pc-apps&app=product-broadcast' ) ) . '" target="_blank" rel="noopener">'
 				. esc_html__( '打开商品播报设置', 'peptide-core' ) . '</a></div>';
 		}

@@ -82,6 +82,7 @@ final class Admin_Menus {
 		add_action( 'admin_menu', array( self::class, 'add_menus' ), 60 );
 		add_action( 'admin_menu', array( self::class, 'remove_menus' ), 1000 );
 		add_action( 'admin_menu', array( self::class, 'order_menu' ), 10000 );
+		add_action( 'admin_menu', array( self::class, 'hide_menus' ), 10010 ); // 在推广人（10001）挪位置之后。
 		// 第三方插件可能在更晚的时机才加菜单，所以最终顺序在 menu_order 过滤器里定（WordPress 在所有菜单注册完之后调用）。
 		add_filter( 'custom_menu_order', '__return_true' );
 		add_filter( 'menu_order', array( self::class, 'final_order' ), 10000 );
@@ -230,8 +231,47 @@ final class Admin_Menus {
 		// WordPress 会自动把顶层菜单本身加成第一个子菜单，去掉它。
 		remove_submenu_page( self::SETTINGS, self::SETTINGS );
 
-		// 应用中心（APP-CENTER-01）：在店铺设置下面。
-		add_menu_page( __( 'App center', 'peptide-core' ), __( 'App center', 'peptide-core' ), Apps_Page::CAP, Apps_Page::SLUG, array( Apps_Page::class, 'render' ), 'dashicons-screenoptions', 59 );
+		// 插件（APP-CENTER-01）：在店铺设置下面。
+		add_menu_page( '插件', '插件', Apps_Page::CAP, Apps_Page::SLUG, array( Apps_Page::class, 'render' ), 'dashicons-screenoptions', 59 );
+	}
+
+	/**
+	 * 店主 2026-11-10：博客、推广人先隐藏（页面地址还在，直接打开仍能用）。
+	 */
+	public static function hide_menus(): void {
+		if ( ! self::applies() ) {
+			return;
+		}
+		foreach ( array( 'edit.php', 'pc-referrals' ) as $slug ) {
+			while ( false !== remove_menu_page( $slug ) ) {
+				continue;
+			}
+		}
+		// 运营套件原来排在推广人后面；推广人隐藏后它会跑到最上面，放回“店铺设置”前面。
+		global $menu;
+		$items = array_values( (array) $menu );
+		$pick  = null;
+		foreach ( $items as $i => $item ) {
+			if ( 'cbs-dashboard' === ( $item[2] ?? '' ) ) {
+				$pick = $item;
+				unset( $items[ $i ] );
+			}
+		}
+		if ( $pick ) {
+			$items = array_values( $items );
+			$at    = count( $items );
+			foreach ( $items as $i => $item ) {
+				if ( self::SETTINGS === ( $item[2] ?? '' ) ) {
+					$at = $i;
+					break;
+				}
+			}
+			array_splice( $items, $at, 0, array( $pick ) );
+			$menu = array();
+			foreach ( $items as $i => $item ) {
+				$menu[ ( $i + 1 ) * 10 ] = $item;
+			}
+		}
 	}
 
 	public static function remove_menus(): void {
@@ -257,7 +297,7 @@ final class Admin_Menus {
 	}
 
 	/**
-	 * 顶层菜单按 YY 的顺序：……访客数据、博客、……店铺设置、后台设置、应用中心。
+	 * 顶层菜单按 YY 的顺序：……访客数据、博客、……店铺设置、后台设置、插件。
 	 * WordPress 按位置的文字排序（58.12345 排在 58.5 后面），小数位置靠不住，所以排好后重新编号。
 	 */
 	public static function order_menu(): void {

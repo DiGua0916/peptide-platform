@@ -1,5 +1,5 @@
 /**
- * 应用中心 → 离开意图增收（APP-EXIT-01）：右侧实时预览（用前台同一个 PeptideExitIntent.render，不发请求）、
+ * 插件 → 离开意图增收（APP-EXIT-01）：右侧实时预览（用前台同一个 PeptideExitIntent.render，不发请求）、
  * 奖品行的增删和概率、图片选择。字数统计和按类型显示 / 隐藏由 marketing.js 处理。
  */
 ( function ( $, cfg ) {

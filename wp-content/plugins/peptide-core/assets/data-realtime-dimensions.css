@@ -175,3 +175,6 @@
 #wpbody-content .pc-rt-dim-head { gap: 6px; }
 #wpbody-content .pc-rt-dim-head h2 { text-wrap: nowrap; white-space: nowrap; }
 #wpbody-content .pc-rt-dim-head select { flex: none; padding: 0 20px 0 8px; background-position: right 4px center; }
+
+/* 窄屏：标题、下拉、查看详情放不下时换行（2026-11-10 自适应） */
+@media (max-width: 600px) { #wpbody-content .pc-rt-dim-head { flex-wrap: wrap; } }

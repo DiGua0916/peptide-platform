@@ -38,7 +38,7 @@ final class Recently_Viewed_Page {
 		?>
 		<div class="wrap pc-recent-admin">
 			<div class="pc-rva-head">
-				<div><a href="<?php echo esc_url( Apps_Page::url() ); ?>"><?php esc_html_e( '返回应用中心', 'peptide-core' ); ?></a><h1><?php esc_html_e( '最近浏览', 'peptide-core' ); ?></h1></div>
+				<div><a href="<?php echo esc_url( Apps_Page::url() ); ?>"><?php esc_html_e( '返回插件', 'peptide-core' ); ?></a><h1><?php esc_html_e( '最近浏览', 'peptide-core' ); ?></h1></div>
 				<p><?php esc_html_e( '管理当前浏览器的最近浏览商品。保存草稿不会改变客户配置，保存并应用后才更新。', 'peptide-core' ); ?></p>
 			</div>
 			<div id="pc-recently-viewed" aria-busy="true"><p role="status"><?php esc_html_e( '正在读取最近浏览配置…', 'peptide-core' ); ?></p></div>

@@ -70,3 +70,16 @@
 .pc-rc-notes .pc-pl-muted { margin-right: 4px; font-variant-numeric: tabular-nums; }
 @media (max-width: 1100px) { .pc-rc-grid { grid-template-columns: 1fr; } }
 @media (max-width: 782px) { .pc-rc-panel { padding: 16px; } .pc-rc-head { flex-direction: column; } }
+
+/* 弃单详情窄屏：右栏放到下面，面板留白收窄（2026-11-10 自适应） */
+@media (max-width: 1100px) { .pc-rc-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 782px) {
+	.pc-rc-panel { padding: 14px 16px; }
+	.pc-rc-addresses { grid-template-columns: minmax(0, 1fr); }
+	.pc-rc-totals dd { min-width: 0; }
+	.pc-rc-line img, .pc-rc-line__noimg { width: 44px; height: 44px; }
+	.pc-rc-lines { display: block; overflow-x: auto; }
+}
+/* 主栏 / 侧栏本身是 grid：列宽锁在容器宽度内，宽表格在面板里横向滚动，不把整页撑宽。 */
+.pc-rc-main, .pc-rc-side { grid-template-columns: minmax(0, 1fr); }
+.pc-rc-panel { min-width: 0; }
