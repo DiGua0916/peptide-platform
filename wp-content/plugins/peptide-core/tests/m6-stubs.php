@@ -5,6 +5,7 @@
  * - 选项、瞬态、钩子都存在 $GLOBALS 里，测试可以直接读写；
  * - WC_Order 是一个只带测试要用的字段的假订单，wc_get_orders() 按付款时间 / 创建时间 / 状态 / 订单号筛 $GLOBALS['m6_orders']；
  * - M6_DB 是假的 $wpdb：按 SQL 里的关键片段认出是哪一条查询，从内存里的访问 / 访客 / 事件算结果，认不出的查询直接抛异常。
+ *   认得 Data\Metrics、Funnel_Guard 和 Data\Visitor_Funnel（八层漏斗，含按设备分组）的查询。
  */
 
 namespace PeptideCore\Tracking {
@@ -40,6 +41,9 @@ namespace PeptideCore {
 			if ( self::$fail ) { throw new \RuntimeException( 'synthetic recovery failure' ); }
 			return array( 'items' => self::$items, 'total' => count( self::$items ), 'counts' => array() );
 		}
+	}
+	final class Store_Config {
+		public static function get( string $key ) { return 'returning_hours' === $key ? 24 : null; }
 	}
 	final class Recovery {
 		public static array $stats = array( 'emailed' => 0, 'recovered' => 0 );
@@ -125,6 +129,7 @@ namespace {
 		public function get_id() { return $this->id; }
 		public function get_status() { return $this->status; }
 		public function has_status( $status ) { return in_array( $this->status, (array) $status, true ); }
+		public function is_paid() { return in_array( $this->status, wc_get_is_paid_statuses(), true ); }
 		public function get_total() { return $this->total; }
 		public function get_total_refunded() { return $this->wc_refund; }
 		public function get_date_paid() { return null === $this->paid ? null : new DateTimeImmutable( '@' . $this->paid ); }
@@ -155,6 +160,7 @@ namespace {
 		public array $visitors    = array();
 		public array $events      = array();
 		public array $queries     = array();
+		public array $devices     = array(); // 访问编号 => 设备（Visitor_Funnel 按设备分组时用；没填就是空字符串）。
 
 		public function visit( int $id, int $visitor, int $stage = 0, int $order = 0, int $start_ms = 150000, int $is_test = 0 ): void {
 			$this->visits[ $id ] = array( 'visitor_id' => $visitor, 'stage' => $stage, 'order_id' => $order, 'start_ms' => $start_ms, 'is_test' => $is_test );
@@ -211,8 +217,47 @@ namespace {
 			}
 			throw new RuntimeException( 'Unexpected get_var: ' . $sql );
 		}
+		/** Visitor_Funnel 的时间段：带 s.is_test = 0 时只要正式访问，否则和旧报表一样全算。 */
+		private function funnel_cohort( string $sql ): array {
+			return $this->cohort( $sql, str_contains( $sql, 'AND s.is_test = 0' ) );
+		}
+		/** 前四层：stage ≥ 0 / 1 / 2 / 3 的不同访客数；回访一律当作 0。 */
+		private function stage_row( array $visits ): array {
+			$row = array();
+			foreach ( array( 'visitors' => 0, 'viewed' => 1, 'carted' => 2, 'checkout' => 3 ) as $key => $stage ) {
+				$row[ $key ]        = count( $this->ids( array_filter( $visits, static fn( array $v ): bool => $v['stage'] >= $stage ) ) );
+				$row[ 'r_' . $key ] = 0;
+			}
+			return $row;
+		}
+		public function get_row( string $sql, $mode = null ) {
+			$this->queries[] = $sql;
+			if ( str_contains( $sql, 'COUNT(DISTINCT CASE WHEN s.stage >= 0 THEN s.visitor_id END) AS visitors' ) ) { // Visitor_Funnel：前四层。
+				return $this->stage_row( $this->funnel_cohort( $sql ) );
+			}
+			throw new RuntimeException( 'Unexpected get_row: ' . $sql );
+		}
 		public function get_results( string $sql, $mode = null ) {
 			$this->queries[] = $sql;
+			if ( str_contains( $sql, 'GROUP BY s.device' ) ) { // Visitor_Funnel：前四层按设备分组。
+				$groups = array();
+				foreach ( $this->funnel_cohort( $sql ) as $id => $v ) { $groups[ $this->devices[ $id ] ?? '' ][ $id ] = $v; }
+				$rows = array();
+				foreach ( $groups as $device => $visits ) { $rows[] = array( 'g' => (string) $device ) + $this->stage_row( $visits ); }
+				return $rows;
+			}
+			if ( str_contains( $sql, 'SELECT e.id,e.type,e.source,e.visit_id,e.visitor_id,e.order_id,s.order_id AS linked_order' ) ) { // Visitor_Funnel：后四层的事件，每页 500 条。
+				$cohort = $this->funnel_cohort( $sql );
+				$cursor = preg_match( '/e\.id > (\d+)/', $sql, $m ) ? (int) $m[1] : 0;
+				$rows   = array();
+				foreach ( $this->events as $index => $e ) {
+					$v    = $cohort[ $e['visit_id'] ] ?? null;
+					$step = 'client' === $e['source'] ? in_array( $e['type'], array( 'checkout_address_completed', 'checkout_shipping_selected', 'checkout_payment_selected' ), true ) : ( 'server' === $e['source'] && 'payment_success' === $e['type'] );
+					if ( ! $v || ! $step || $index + 1 <= $cursor || ! isset( $this->visitors[ $v['visitor_id'] ] ) ) { continue; }
+					$rows[] = array( 'id' => $index + 1, 'type' => $e['type'], 'source' => $e['source'], 'visit_id' => $e['visit_id'], 'visitor_id' => $v['visitor_id'], 'order_id' => $e['order_id'], 'linked_order' => $v['order_id'], 'g' => (string) ( $this->devices[ $e['visit_id'] ] ?? '' ), 'returning_visit' => 0 );
+				}
+				return array_slice( $rows, 0, 500 );
+			}
 			if ( str_contains( $sql, 'SELECT s.id, s.visitor_id, s.stage, s.order_id' ) ) {
 				$cursor = preg_match( '/s\.id > (\d+)/', $sql, $m ) ? (int) $m[1] : 0;
 				$rows   = array();

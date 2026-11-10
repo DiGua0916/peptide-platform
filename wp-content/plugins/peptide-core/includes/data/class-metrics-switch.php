@@ -96,6 +96,18 @@ final class Metrics_Switch {
 		return 'on' === $mode ? $value : $legacy;
 	}
 
+	/**
+	 * 直接记一条不一致（不经过 pick 的比较）。用在“逐张订单判断”这类地方：只有结论不同的那几张才记，每张一条。
+	 * 开关关着时什么都不做。
+	 *
+	 * @param array<int,array{path:string,legacy:mixed,metrics:mixed}> $diffs
+	 */
+	public static function report( string $metric, array $diffs, array $context = array() ): void {
+		if ( $diffs && 'off' !== self::mode() ) {
+			self::record( $metric, $diffs, $context );
+		}
+	}
+
 	// ---------- 纯比较 ----------
 
 	/** 两个值算不算一致：数字按容差比，其余要完全相等；null 只和 null 一致。 */

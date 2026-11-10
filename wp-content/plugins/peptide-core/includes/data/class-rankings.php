@@ -216,7 +216,7 @@ final class Rankings {
 		$visitor_ids   = array();
 		$dimension_orders = array();
 		foreach ( is_array( $orders ) ? $orders : array() as $order ) {
-			if ( ! $order instanceof \WC_Order || Overview::is_test_order( $order ) ) {
+			if ( ! $order instanceof \WC_Order || self::is_test( $order ) ) {
 				continue;
 			}
 			$status = (string) $order->get_status();
@@ -533,5 +533,10 @@ final class Rankings {
 			'label'    => $label,
 			'edit_url' => '',
 		);
+	}
+
+	/** M6（NF-02）：测试单规则按开关走 Metrics_Overlay::is_test_order()（关着时就是 Overview 的旧规则）；不带自动加载的纯逻辑测试里没有这个类，直接用旧规则。 */
+	private static function is_test( $order ): bool {
+		return class_exists( Metrics_Overlay::class ) ? Metrics_Overlay::is_test_order( $order ) : \PeptideCore\Overview::is_test_order( $order );
 	}
 }

@@ -173,25 +173,41 @@ final class Metrics {
 			if ( $order_ids && ! $real ) {
 				continue; // 关联的订单全是测试单，或都已经不存在：只算到“发起结账”。
 			}
-			$steps = $evidence[ (int) $visit_id ] ?? array();
-			if ( empty( $steps['address'] ) ) {
-				continue; // 没有填地址的记录：后面几步都不算。
-			}
-			$sets['address'][ $visitor ] = true;
-
-			if ( ! $paid && empty( $steps['shipping'] ) ) {
-				continue;
-			}
-			$sets['shipping'][ $visitor ] = true;
-			if ( ! $paid && empty( $steps['payment'] ) ) {
-				continue;
-			}
-			$sets['payment'][ $visitor ] = true;
-			if ( $paid ) {
-				$sets['paid'][ $visitor ] = true;
+			foreach ( self::tail_steps( $evidence[ (int) $visit_id ] ?? array(), $paid ) as $step ) {
+				$sets[ $step ][ $visitor ] = true;
 			}
 		}
 		return array_map( 'count', $sets );
+	}
+
+	/**
+	 * 一次访问在漏斗后四层走到了哪几步（FE-05：每一步都要有上一步）。带分组的漏斗报表（Visitor_Funnel 之外自己数事件的那几张）
+	 * 开关开着时用同一条规则。
+	 *
+	 * - 没有填地址的记录：一步都不算（哪怕付了款）。
+	 * - 填了地址：算“填地址”；有选物流事件或这次访问付了款：算“选物流”；在此基础上有选支付事件或付了款：算“选支付”；付了款：算“支付成功”。
+	 *
+	 * @param array<string,bool> $evidence 这次访问里有没有 address / shipping / payment 事件。
+	 * @param bool               $paid     这次访问有没有算数的已付款订单。
+	 * @return string[] address / shipping / payment / paid 里走到的那几步，按顺序。
+	 */
+	public static function tail_steps( array $evidence, bool $paid ): array {
+		if ( empty( $evidence['address'] ) ) {
+			return array();
+		}
+		$out = array( 'address' );
+		if ( ! $paid && empty( $evidence['shipping'] ) ) {
+			return $out;
+		}
+		$out[] = 'shipping';
+		if ( ! $paid && empty( $evidence['payment'] ) ) {
+			return $out;
+		}
+		$out[] = 'payment';
+		if ( $paid ) {
+			$out[] = 'paid';
+		}
+		return $out;
 	}
 
 	/**
@@ -327,7 +343,8 @@ final class Metrics {
 		if ( isset( self::$cache[ $key ] ) ) {
 			return self::$cache[ $key ];
 		}
-		$facts = array();
+		$facts   = array();
+		$objects = array();
 		if ( $to > $from && function_exists( 'wc_get_orders' ) ) {
 			$statuses = array_map( static fn( $s ) => 'wc-' . $s, array_values( array_unique( array_merge( wc_get_is_paid_statuses(), array( 'refunded' ) ) ) ) );
 			$seen     = array();
@@ -347,7 +364,8 @@ final class Metrics {
 				$seen[ $order->get_id() ] = true;
 				$fact                     = self::order_fact( $order );
 				if ( $fact['paid'] && $fact['paid_at'] >= $from && $fact['paid_at'] < $to ) {
-					$facts[] = $fact;
+					$facts[]   = $fact;
+					$objects[] = $order;
 				}
 			}
 			// 状态是已付款但没有付款时间的订单（导入的、手工改状态的）：按创建时间归属。
@@ -361,7 +379,7 @@ final class Metrics {
 				)
 			);
 			foreach ( is_array( $ids ) ? $ids : array() as $id ) {
-				$id = (int) $id;
+				$id = $id instanceof \WC_Order ? (int) $id->get_id() : (int) $id; // 有的环境不认 return => ids，给回来的是订单对象。
 				if ( isset( $seen[ $id ] ) ) {
 					continue;
 				}
@@ -371,12 +389,25 @@ final class Metrics {
 				}
 				$fact = self::order_fact( $order );
 				if ( $fact['paid'] ) {
-					$facts[] = $fact;
+					$facts[]   = $fact;
+					$objects[] = $order;
 				}
 			}
 		}
-		self::$cache[ $key ] = $facts;
+		self::$cache[ $key ]                               = $facts;
+		self::$cache[ 'objects|' . $from . '|' . $to ] = $objects;
 		return $facts;
+	}
+
+	/**
+	 * 和 order_facts() 同一批订单，但返回订单对象（含测试单，由调用方排除）。还在按订单对象算的旧报表在开关开着时用这一份，
+	 * 这样它们和上面的合计是同一批订单（按付款时间归属）。
+	 *
+	 * @return \WC_Order[]
+	 */
+	public static function paid_orders( int $from, int $to ): array {
+		self::order_facts( $from, $to );
+		return self::$cache[ 'objects|' . $from . '|' . $to ] ?? array();
 	}
 
 	/**

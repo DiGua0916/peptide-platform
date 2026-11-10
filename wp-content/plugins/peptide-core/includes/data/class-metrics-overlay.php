@@ -223,4 +223,113 @@ final class Metrics_Overlay {
 		$kpis['conversion'] = $modern['conversion'];
 		return $kpis;
 	}
+
+	// ---------- 逐张订单的口径（各报表共用） ----------
+	//
+	// 还在自己按订单对象累加的报表（商品、落地页、来源、分维度、趋势、实时、排行、实验、漏斗分组……）通过下面几个函数取口径：
+	// 谁是测试单、哪些订单算在这个时间段、一张订单算多少钱、一张订单算在哪个时刻。开关关着和影子时都返回旧口径，
+	// 开了才换成 Data\Metrics 的口径，所以这些报表和概览页、运营数据的合计是同一批订单、同一个金额。
+
+	/** 同一个请求里一张订单只判断一次。 */
+	private static array $test_memo = array();
+
+	/**
+	 * 这张订单是不是测试单。旧规则：测试付款方式 / 演示商品。新规则多认收件信息全 1 的测试单（_pc_test_order）。
+	 * 影子：仍按旧规则，两条规则结论不同的订单记进对账日志（reports.test_order，每张订单一条）。
+	 */
+	public static function is_test_order( \WC_Order $order ): bool {
+		$legacy = Overview::is_test_order( $order );
+		$mode   = Metrics_Switch::mode();
+		if ( 'off' === $mode || $legacy ) {
+			return $legacy; // 旧规则认定的测试单，新规则也一定认。
+		}
+		$id = (int) $order->get_id();
+		if ( ! isset( self::$test_memo[ $id ] ) ) {
+			self::$test_memo[ $id ] = Metrics::is_test_order( $order );
+			if ( self::$test_memo[ $id ] ) {
+				Metrics_Switch::report( 'reports.test_order', array( array( 'path' => 'test', 'legacy' => false, 'metrics' => true ) ), array( 'order' => $id ) );
+			}
+		}
+		return 'on' === $mode ? self::$test_memo[ $id ] : $legacy;
+	}
+
+	/**
+	 * 报表用的“时间段内的已付款订单”（含测试单，由调用方排除）。
+	 * 旧：时间段内创建、已付款状态（Operations::paid_orders() 原来的结果，原样传进来）。新：时间段内付款（Metrics::paid_orders()）。
+	 * 影子：返回旧的那一批，两批订单号不一样时记进对账日志（reports.paid_orders）。
+	 *
+	 * @param \WC_Order[] $legacy Operations::paid_orders() 按旧口径查出来的订单。
+	 * @return \WC_Order[]
+	 */
+	public static function paid_orders( array $legacy, int $from, int $to ): array {
+		if ( Metrics_Switch::off() ) {
+			return $legacy;
+		}
+		$modern = null;
+		Metrics_Switch::pick(
+			'reports.paid_orders',
+			array( 'only_legacy' => '', 'only_metrics' => '' ),
+			static function () use ( $legacy, $from, $to, &$modern ) {
+				$orders = Metrics::paid_orders( $from, $to );
+				$ids    = static fn( array $list ): array => array_map( static fn( $o ) => (int) $o->get_id(), array_filter( $list, static fn( $o ) => $o instanceof \WC_Order ) );
+				$old    = $ids( $legacy );
+				$new    = $ids( $orders );
+				$modern = $orders;
+				return array(
+					'only_legacy'  => implode( ',', array_slice( array_values( array_diff( $old, $new ) ), 0, 20 ) ),
+					'only_metrics' => implode( ',', array_slice( array_values( array_diff( $new, $old ) ), 0, 20 ) ),
+				);
+			},
+			array( 'from' => wp_date( 'Y-m-d H:i', $from ), 'to' => wp_date( 'Y-m-d H:i', $to - 1 ) )
+		);
+		return Metrics_Switch::on() && null !== $modern ? $modern : $legacy;
+	}
+
+	/** 一张订单的销售额（元）。旧：订单金额 − WooCommerce 退款；新：订单金额 − 总后台标记的退款。 */
+	public static function order_sales( \WC_Order $order ): float {
+		if ( Metrics_Switch::on() ) {
+			return Metrics::money( (int) Metrics::order_fact( $order )['net_cents'] );
+		}
+		return (float) $order->get_total() - (float) $order->get_total_refunded();
+	}
+
+	/** 一张订单算在哪个时刻（Unix 秒）。旧：创建时间；新：付款时间。都没有时返回 null。 */
+	public static function order_time( \WC_Order $order ): ?int {
+		if ( Metrics_Switch::on() ) {
+			$paid = Metrics::paid_at( $order );
+			return $paid > 0 ? $paid : null;
+		}
+		$created = $order->get_date_created();
+		return $created ? (int) $created->getTimestamp() : null;
+	}
+
+	/**
+	 * 分组报表的转化率（百分数，2 位）。旧：订单数 ÷ 访客；新：付了款的访客 ÷ 访客（一个人买两单只算一次，和 Metrics::conversion_rate() 同一个定义）。
+	 * 访客为 0 时是 null。影子：仍返回旧值；两个值不一样、并且传了报表名时记进对账日志（reports.conversion，每张报表一条，只留最新的数值）。
+	 *
+	 * @param int    $orders        这一组的已付款订单数（旧口径的分子）。
+	 * @param int    $paid_visitors 这一组访客里付了款的人数（新口径的分子，调用方保证这些人都在 $visitors 里）。
+	 * @param int    $visitors      这一组的访客数。
+	 * @param string $report        报表名，只用于对账日志；留空就不记。
+	 */
+	public static function conversion( int $orders, int $paid_visitors, int $visitors, string $report = '' ): ?float {
+		if ( $visitors <= 0 ) {
+			return null;
+		}
+		$legacy = round( $orders / $visitors * 100, 2 );
+		$mode   = Metrics_Switch::mode();
+		if ( 'off' === $mode ) {
+			return $legacy;
+		}
+		$modern = Metrics::rate( $paid_visitors, $visitors );
+		if ( '' !== $report && ! Metrics_Switch::same( $legacy, $modern ) ) {
+			Metrics_Switch::report( 'reports.conversion', array( array( 'path' => 'conversion', 'legacy' => $legacy, 'metrics' => $modern ) ), array( 'report' => $report ) );
+		}
+		return 'on' === $mode ? $modern : $legacy;
+	}
+
+	/** 测试用：清掉请求内的记忆。 */
+	public static function flush(): void {
+		self::$test_memo = array();
+	}
 }
