@@ -702,5 +702,5 @@ currency, visitor, visit, buyer
 | --- | --- | --- |
 | F5 | 角色 `pc_media_buyer` 带 `manage_woocommerce`；菜单白名单保留 `pc-data` | 待 F5 |
 | F3 | 订单上报和总后台汇总按 `order_fact()` 的规则；回写 `_pc_refund_cents` | 待 F3 |
-| F1 | 登记功能键 `m6.metrics`、`m7.pixel_acceptance`；测试条目已追加到 `tests/data-observations-suites.json` 末尾（`module: M6 / M7`）（现在 10 条）；发布前在沙盒把开关切到 `shadow` 观察。F4 的用例已经在本机跑过（PHP 8.3.36），默认套件 58 通过 / 3 失败，剩下 3 个不归 F4 | 待 F1 |
+| F1 | 登记功能键 `m6.metrics`、`m7.pixel_acceptance`；测试条目已追加到 `tests/data-observations-suites.json` 末尾（`module: M6 / M7`）（现在 11 条）；发布前在沙盒把开关切到 `shadow` 观察。F4 的用例已经在本机跑过（PHP 8.3.36），默认套件 59 通过 / 3 失败，剩下 3 个不归 F4 | 待 F1 |
 | 日常会话 | `core/class-overview.php` 不用改：概览页的数字由 `Admin\Overview_Page` 按开关用 `Metrics` 覆盖。之后再改概览页、数据页、访客页、像素页请先在聊天室找 F4 | 知会 |

@@ -124,6 +124,8 @@ wp eval 'print_r( PeptideCore\Data\Metrics_Switch::log() );'
 | 一张订单算在哪个时刻 | `order_time( $order )` | 创建时间 | 付款时间 | 不单独记（`paid_outside_range` / `created_outside_range`） |
 | 分组转化率 | `conversion( $orders, $paid_visitors, $visitors, $report )` | 订单数 ÷ 访客 | 付款访客 ÷ 访客 | `reports.conversion`（每张报表一条，只留最新的数值） |
 | 八层漏斗 | `Visitor_Funnel::period()` 自己看开关 | 旧规则 | 第 3 节的规则，且不算测试版留下的访问 | `reports.visitor_funnel`（后四层的人数） |
+| 排行里“已付款订单”的几张表 | `Rankings::period()` 自己看开关 | 时间段内创建的已付款订单 | 时间段内付款的订单（和上面“哪些订单算在时间段里”是同一批） | `reports.paid_orders` |
+| 排行的支付成功率 | 同上 | 时间段内下的单里，已付款或已退款的 ÷ 全部 | 时间段内下的单里，`Metrics::is_paid_order()` 的 ÷ 全部（没付过款就被改成已退款的不再算成功） | 不单独记 |
 
 商品级的金额（商品详情、商品排行、运营数据的“商品净销售额”）减的仍然是 WooCommerce 里逐件记的退款：总后台标记的退款是整单的，
 分不到每件商品上。系统内不做退款（PRD Q16），这两个数正常都是 0。
