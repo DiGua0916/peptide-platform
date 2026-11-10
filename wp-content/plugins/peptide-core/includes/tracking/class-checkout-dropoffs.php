@@ -214,6 +214,14 @@ final class Checkout_Dropoffs {
 			'fail_msg'    => $fail_msg,
 		);
 		[ $row['reason_key'], $row['reason'] ] = self::reason( $row );
+		// 测试单（收件信息全 1）：和仪表盘漏斗一样，只算在“发起结账”里，后面几层不算（2026-11-10）。
+		$row['is_test'] = ( $order && \PeptideCore\Overview::is_test_order( $order ) )
+			|| ( class_exists( \PeptideCore\Test_Orders::class ) && \PeptideCore\Test_Orders::is_test_customer( (array) ( $session['customer'] ?? array() ) ) );
+		if ( $row['is_test'] ) {
+			$row['step_rank']  = 1;
+			$row['reason_key'] = 'test';
+			$row['reason']     = '测试单';
+		}
 		return $row;
 	}
 
@@ -254,6 +262,7 @@ final class Checkout_Dropoffs {
 		'order'   => '下了单没付款',
 		'failed'  => '付款失败',
 		'paid'    => '已付款',
+		'test'    => '测试单',
 	);
 
 	private static function summary( array $rows ): array {
@@ -261,7 +270,7 @@ final class Checkout_Dropoffs {
 		$dw  = array();
 		foreach ( $rows as $r ) {
 			++$out[ $r['reason_key'] ];
-			if ( 'paid' !== $r['step'] ) {
+			if ( 'paid' !== $r['step'] && empty( $r['is_test'] ) ) {
 				$dw[] = (int) $r['dwell_ms'];
 			}
 		}

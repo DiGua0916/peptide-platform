@@ -116,10 +116,11 @@ final class Checkout_Dropoff_Page {
 		}
 		$r       = $r + array( 'paid' => 0 );
 		$r_all   = $sum['reasons'] ?? array();
-		$lost    = (int) ( $sum['total'] ?? 0 ) - (int) ( $r_all['paid'] ?? 0 );
+		$tests   = (int) ( $r_all['test'] ?? 0 );
+		$lost    = (int) ( $sum['total'] ?? 0 ) - (int) ( $r_all['paid'] ?? 0 ) - $tests;
 		$no_addr = (int) ( $r_all['bounce'] ?? 0 ) + (int) ( $r_all['browse'] ?? 0 );
 		echo '<div class="pc-cd-stats">';
-		self::stat( '发起结账', (int) ( $sum['total'] ?? 0 ) . ' 人' );
+		self::stat( '发起结账' . ( $tests ? '（含 ' . $tests . ' 个测试单）' : '' ), (int) ( $sum['total'] ?? 0 ) . ' 人' );
 		self::stat( '没下单', $lost . ' 人' );
 		self::stat( '地址没填完就走了', $no_addr . ' 人' );
 		self::stat( '结账页停留（中位数）', Checkout_Dropoffs::duration( (int) ( $sum['median_dwell'] ?? 0 ) ) );
@@ -179,7 +180,7 @@ final class Checkout_Dropoff_Page {
 		$fees = array();
 		$n    = 0;
 		foreach ( $rows as $r ) {
-			if ( 'paid' === $r['step'] || null === $r['shipping'] || empty( $r['cart']['subtotal'] ) ) {
+			if ( 'paid' === $r['step'] || ! empty( $r['is_test'] ) || null === $r['shipping'] || empty( $r['cart']['subtotal'] ) ) {
 				continue;
 			}
 			++$n;
@@ -232,7 +233,7 @@ final class Checkout_Dropoff_Page {
 		echo '<td class="pc-rc-money">运费 ' . self::money( $x['shipping'], $cur ) . '<br><strong>' . self::money( $x['total'], $cur ) . '</strong></td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		$cls = array( 'checkout' => 'is-muted', 'address' => 'is-warn', 'submit' => 'is-warn', 'order' => 'is-warn', 'failed' => 'is-bad', 'paid' => 'is-ok' )[ $x['step'] ];
-		echo '<td><span class="pc-rc-badge ' . esc_attr( $cls ) . '">' . esc_html( $x['step_text'] ) . '</span></td>';
+		echo '<td><span class="pc-rc-badge ' . esc_attr( $cls ) . '">' . esc_html( $x['step_text'] ) . '</span>' . ( ! empty( $x['is_test'] ) ? '<span class="pc-rc-badge is-muted">测试单</span>' : '' ) . '</td>';
 		echo '<td class="pc-cd-dwell">' . esc_html( Checkout_Dropoffs::duration( (int) $x['dwell_ms'] ) ) . '</td>';
 
 		echo '<td class="pc-pl-col-act">';
