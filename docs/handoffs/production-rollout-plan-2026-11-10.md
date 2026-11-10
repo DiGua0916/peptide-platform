@@ -108,3 +108,9 @@
   - 仪表盘右栏改竖向排列，商品排名卡撑满剩余高度（列表在卡内滚动），左右栏和下方对齐（阳 核对 main / side / 商品卡底部都在同一线）。
   - AI 全站分析卡：结论不再截断，加“顾客卡在哪”（最多 3 条）和“马上做”（最多 3 条），从报告里按段落提取（`Hq_Ai::section_items`）。
   - 给 AI 的补充说明：店铺选项 `pc_ai_notes`（≤2000 字），接口 GET/POST /peptide/v1/track/admin/ai/notes；实时访客页“全站分析师 AI”框里可编辑；每次分析带【店主补充说明】，HQ 系统提示要求当作确认过的事实、不得给出矛盾的判断或建议（HQ release `ai-notes-*`）。阳 已按店主口述写入“支付已测试正常…不要再建议排查支付”，重跑本周分析后结论明确“支付已由店主确认可正常使用”，马上做改为运费 / 总价提前展示和简化地址填写。
+
+### 2026-11-10 付款链接补结账页 + 全站 AI 分析居中
+- 光辉反馈从购物车抽屉直接去结账时地址栏没有 `?pc_cart=`：`Cart_Links::enqueue()` 改为购物车页和结账页都加载 `cart-share.js`（排除下单成功页和付款页），后台“付款链接”说明同步改为“购物车页或结账页”。
+- 部署 web/hq 全部副本；验证 主店、阳、老毛(prime)、光辉(official)、芒果(plus) 新会话打开链接 302 到结账、购物车与结账页都带脚本；光辉浏览器结账页显示 `?pc_cart=11092x1`。
+- 李军 s0006（vialcovepro.com）：所有访问被 302 到 https://shiyishop.com（`x-redirect-by: WordPress`），`acloak_options` 已开启（offer_url=shiyishop.com、ASN/UA 拦截），插件列表显示 advanced-cloak 未启用，来源未确认；s0007–s0010 也存在同样的 acloak_options。未做任何改动，等店主决定。
+- 实时访客页全站分析：右侧没有状态栏时 `.pc-ai-layout` 加 `pc-ai-solo`，单列占满居中，去掉右侧空白（tracking-insights.js/.css，已部署全部副本，阳后台核对）。

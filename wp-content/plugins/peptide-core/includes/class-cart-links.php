@@ -145,8 +145,10 @@ final class Cart_Links {
 	}
 
 	public static function enqueue(): void {
-		if ( is_admin() || ! self::settings()['enabled'] || ! function_exists( 'is_cart' ) || ! is_cart() ) {
-			return; // 只在购物车页：地址栏就是付款链接，页面上不显示任何东西。
+		// 购物车页和结账页（店主 2026-11-10：从购物车抽屉直接去结账时不经过购物车页）：地址栏就是付款链接，页面上不显示任何东西。
+		$on = function_exists( 'is_cart' ) && ( is_cart() || ( is_checkout() && ! is_order_received_page() && ! is_checkout_pay_page() ) );
+		if ( is_admin() || ! self::settings()['enabled'] || ! $on ) {
+			return;
 		}
 		$file = PEPTIDE_CORE_DIR . '/assets/cart-share.js';
 		if ( ! is_readable( $file ) ) {

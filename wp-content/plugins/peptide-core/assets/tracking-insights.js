@@ -191,7 +191,7 @@
   if (!r) { out.innerHTML = '<div class="pc-ai-layout"><div class="pc-ai-main">' + aiIntent(aiLive && aiLive.intent) + '<p class="pc-ai-meta">还没有分析过这位客户。</p></div>' + aiState(aiLive) + '</div>'; return; }
   const what = r.source === 'auto' ? '自动分析' : '手动分析';
   const span = !subject && r.period ? ({day:'日',week:'周',month:'月'}[r.period] || r.period) + '报 · ' + (r.date || '') + ' · ' : '';
-  out.innerHTML = '<div class="pc-ai-layout"><div class="pc-ai-main">' + aiCharts(r.charts) + (subject ? aiIntent(aiLive && aiLive.intent) : '') + '<div class="pc-ai-text">' + aiText(r.text) + '</div><p class="pc-ai-meta">' + esc(span + what + ' · ' + r.at + (r.persona ? ' · 人设：' + r.persona : '') + (r.cached ? ' · 30 分钟内的结果' : '') + (!saved && r.used_today ? ' · 今天已分析 ' + r.used_today + ' 次' : '')) + ' <button type="button" class="button-link" data-ai-again>重新分析</button></p></div>' + (subject ? aiState(aiLive) : '') + '</div>';
+  out.innerHTML = '<div class="pc-ai-layout' + (subject ? '' : ' pc-ai-solo') + '"><div class="pc-ai-main">' + aiCharts(r.charts) + (subject ? aiIntent(aiLive && aiLive.intent) : '') + '<div class="pc-ai-text">' + aiText(r.text) + '</div><p class="pc-ai-meta">' + esc(span + what + ' · ' + r.at + (r.persona ? ' · 人设：' + r.persona : '') + (r.cached ? ' · 30 分钟内的结果' : '') + (!saved && r.used_today ? ' · 今天已分析 ' + r.used_today + ' 次' : '')) + ' <button type="button" class="button-link" data-ai-again>重新分析</button></p></div>' + (subject ? aiState(aiLive) : '') + '</div>';
   const run = aiBox.querySelector('[data-ai-run]'); if (run) run.textContent = '重新分析';
  }
  async function aiRun(refresh) {
