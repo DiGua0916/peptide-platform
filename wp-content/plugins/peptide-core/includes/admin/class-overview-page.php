@@ -119,6 +119,7 @@ final class Overview_Page {
 						'storeData'   => admin_url( 'admin.php?page=pc-data-operations' ),
 						'realtime'    => admin_url( 'admin.php?page=pc-data' ),
 						'convDetails' => admin_url( 'admin.php?page=pc-data-conversion' ),
+						'dropoff'     => admin_url( 'admin.php?page=' . Checkout_Dropoff_Page::SLUG ),
 						'productData' => admin_url( 'admin.php?page=pc-data-products' ),
 						'currency'    => admin_url( 'admin.php?page=wc-settings&tab=general' ),
 					),

@@ -152,6 +152,7 @@ final class Plugin {
 			Admin\Mail_Page::register_hooks();
 			Admin\Terms_Page::register_hooks();
 			Admin\Recovery_Page::register_hooks();
+			Admin\Checkout_Dropoff_Page::register_hooks();
 			Admin\Marketing::register_hooks();
 			Admin\Promotions_Page::register_hooks();
 			Admin\Coupons_Page::register_hooks();

@@ -19,3 +19,11 @@
 - 按两种水的版式补写英文描述：规格框、概述、两种成分（CAS/分子量/受体）、研究用途、配制示例（3 mL → 共 20 mg/mL）、储存、FAQ。只写研究用途，无剂量和功效宣称。
 - 脚本 `tools/catalog-tr20rt40-description-20261110.php`；s0001 + s0006–s0010 已更新，旧值（空）存 `_pc_desc_backup_20261110`；6 个域名 Store API 核对通过。
 - 顺带发现：主店仍有 10 个商品描述里带内部草稿段落 “Short Version (For Product Page / Customer Direct Message)”：Melanotan I、Tesa10+IP5、Matrixyl、Cardiogen、EPO、bronchogen、AHK-CU、Cartalax、Gonadorelin、P021（未处理）。
+
+### 仪表盘漏斗可点 → “发起结账的客户”页（全部店铺）
+- 仪表盘漏斗的 发起结账 / 添加地址 / 添加物流 / 添加支付 / 支付成功（人数 > 0 时）可点，打开隐藏页 `admin.php?page=pc-checkout-dropoff&range=…&step=…`，菜单高亮“仪表盘”。
+- 口径同漏斗（Data\Visitor_Funnel）：时间段内开始的访问里 stage ≥ 3 的不同访客，一人一行。每行：进结账时间、客户（会话 / 订单里填过的姓名、邮箱、电话、城市国家，设备、第几次来）、来源和广告系列、购物车明细、运费 / 合计、走到哪一步、结账页停留、为什么没下单（规则判断）、操作（行为记录、弃单、写邮件）。
+- 顶部：发起结账 / 没下单 / 地址没填完就走 / 结账页停留中位数；按原因筛选；按步骤筛选；运费占商品金额 ≥ 40% 的人过半时给出运费提示。只读。
+- 新文件：`includes/tracking/class-checkout-dropoffs.php`、`includes/admin/class-checkout-dropoff-page.php`、`assets/checkout-dropoff.css`；改：`assets/overview.js`、`assets/overview-workspace.css`、`includes/admin/class-overview-page.php`（links.dropoff）、`includes/class-plugin.php`。web + HQ 各 7 份已部署（备份 ~/vialcove-deploy-backups/trk-plain-*）。
+- 核对：阳 今天 13 人、7 天 26 人，填完地址 6，与仪表盘漏斗一致；主店 s0001 渲染正常。
+- 发现：6 家店运费方案都是商品金额 < $1000 一律 $45（会员 5% 后 $42.75），阳 今天 13 个发起结账里 7 人运费超过商品金额 40%，11 人没填完地址就走。是否调整运费由店主决定（未改）。

@@ -164,7 +164,10 @@
 			if ( i < f.length - 1 ) {
 				next = '<i class="pc-ov-stair__next" title="' + esc( S.stepRate ) + '"><span>' + esc( pc( f[ i + 1 ].step_rate ) ) + '</span></i>';
 			}
-			return '<div class="pc-ov-step pc-ov-stair" style="--i:' + i + '"><div class="pc-ov-stair__bar"><b>' + esc( ( Y.steps[ s.key ] || s.key ) + '：' ) + esc( s.count ) + '</b>' + ( i ? '<span>' + esc( fmt( Y.ofVisitors, pc( s.visitor_rate ) ) ) + '</span>' : '' ) + '</div>' + next + '</div>';
+			// 发起结账及之后的层能点：打开“发起结账的客户”，看是谁、走到哪一步、为什么没下单。
+			var link = L.dropoff && Number( s.count ) > 0 && [ 'checkout', 'address', 'shipping', 'payment', 'paid' ].indexOf( s.key ) !== -1;
+			var tag = link ? 'a href="' + esc( L.dropoff + '&range=' + encodeURIComponent( range.range ) + '&step=' + encodeURIComponent( s.key ) ) + '" title="点击查看这些客户"' : 'div';
+			return '<div class="pc-ov-step pc-ov-stair" style="--i:' + i + '"><' + tag + ' class="pc-ov-stair__bar"><b>' + esc( ( Y.steps[ s.key ] || s.key ) + '：' ) + esc( s.count ) + '</b>' + ( i ? '<span>' + esc( fmt( Y.ofVisitors, pc( s.visitor_rate ) ) ) + '</span>' : '' ) + '</' + ( link ? 'a' : 'div' ) + '>' + next + '</div>';
 		} ).join( '' ) + '</div>' +
 			'<p class="pc-ov-hint">' + esc( Y.tip ).replace( '%s', '<a href="' + esc( L.convDetails ) + '">' + esc( Y.convDetails ) + '</a>' ) + '</p>';
 	}

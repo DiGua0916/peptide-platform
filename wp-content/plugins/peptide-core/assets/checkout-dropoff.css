@@ -1,0 +1,31 @@
+/* 仪表盘漏斗 → 发起结账的客户（2026-11-10） */
+.pc-cd-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; padding: 18px 20px 6px; }
+.pc-cd-stat { background: #f6f7f7; border-radius: 8px; padding: 12px 14px; display: grid; gap: 4px; }
+.pc-cd-stat span { color: #646970; font-size: 12px; }
+.pc-cd-stat b { font-size: 20px; font-variant-numeric: tabular-nums; }
+.pc-cd-why { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 20px 4px; }
+.pc-cd-why__label { color: #50575e; font-weight: 600; }
+.pc-cd-chip { display: inline-flex; gap: 6px; align-items: center; padding: 4px 12px; border-radius: 999px; border: 1px solid #dcdcde; background: #fff; color: #1d2327; text-decoration: none; font-size: 12px; }
+.pc-cd-chip b { font-variant-numeric: tabular-nums; }
+.pc-cd-chip:hover { border-color: #2271b1; color: #2271b1; }
+.pc-cd-chip.is-active { background: #1d2327; border-color: #1d2327; color: #fff; }
+.pc-cd-insight { display: flex; gap: 10px; margin: 12px 20px 4px; padding: 12px 14px; border-radius: 8px; background: #fff8e5; border: 1px solid #f0d68a; line-height: 1.6; }
+.pc-cd-insight .dashicons { color: #b45309; flex: none; }
+.pc-cd-steps { display: flex; flex-wrap: wrap; gap: 6px; padding: 14px 20px; border-bottom: 1px solid #dcdcde; }
+.pc-cd-steps a { padding: 6px 12px; border-radius: 6px; color: #50575e; text-decoration: none; background: #f6f7f7; }
+.pc-cd-steps a span { margin-left: 4px; font-weight: 600; }
+.pc-cd-steps a.is-active { background: #2271b1; color: #fff; }
+.pc-cd-table td { vertical-align: top; }
+.pc-cd-time, .pc-cd-dwell { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pc-cd-who { min-width: 170px; }
+.pc-cd-who a { text-decoration: none; }
+.pc-cd-src { min-width: 110px; }
+.pc-cd-cart { min-width: 200px; }
+.pc-cd-cart ul { margin: 0 0 4px; padding: 0; list-style: none; }
+.pc-cd-cart li { margin: 0 0 2px; line-height: 1.45; }
+.pc-cd-reason { min-width: 240px; max-width: 360px; line-height: 1.55; }
+.pc-cd-table .pc-pl-col-act .button { margin: 0 0 4px; }
+.pc-rc-badge.is-bad { background: #fde8e8; color: #b32d2e; }
+.pc-rc-badge.is-ok { background: #e6f4ea; color: #1e7e34; }
+.pc-cd-empty { padding: 24px 20px; color: #646970; }
+.pc-cd-foot { padding: 12px 20px 16px; margin: 0; color: #646970; font-size: 12px; }
