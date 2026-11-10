@@ -83,6 +83,7 @@ final class Staff_Buyer {
 		add_filter( 'parent_file', array( self::class, 'parent_file' ), 9999 );
 		add_filter( 'submenu_file', array( self::class, 'submenu_file' ), 9999 );
 		add_action( 'admin_bar_menu', array( self::class, 'admin_bar' ), 9999 );
+		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			\WP_CLI::add_command( 'peptide buyer', Staff_Buyer_Cli::class );
 		}
@@ -200,6 +201,46 @@ final class Staff_Buyer {
 
 	public static function login_redirect( $redirect, $requested, $user ) {
 		return $user instanceof \WP_User && self::is_buyer( $user ) ? self::home_url() : $redirect;
+	}
+
+	// ---------- 投手版页面共用 ----------
+
+	/** 这次打开的是不是投手版自己的页面（首页、广告设置、店铺信息、向导）。 */
+	public static function on_own_page(): bool {
+		$r = self::request();
+		return 'page' === $r['doing'] && 'admin.php' === $r['file'] && in_array( $r['page'], array( self::PAGE_HOME, self::PAGE_ADS, self::PAGE_STORE, self::PAGE_WIZARD ), true );
+	}
+
+	/** 投手版页面的样式和脚本（一份，四个页面共用）。 */
+	public static function enqueue(): void {
+		if ( ! self::on_own_page() ) {
+			return;
+		}
+		$ver = static fn( string $file ): string => PEPTIDE_CORE_VERSION . '.' . (int) @filemtime( PEPTIDE_CORE_DIR . '/assets/' . $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		wp_enqueue_style( 'peptide-core-buyer-admin', plugins_url( 'assets/buyer-admin.css', PEPTIDE_CORE_FILE ), array(), $ver( 'buyer-admin.css' ) );
+		wp_enqueue_script( 'peptide-core-buyer-admin', plugins_url( 'assets/buyer-admin.js', PEPTIDE_CORE_FILE ), array(), $ver( 'buyer-admin.js' ), true );
+		wp_localize_script(
+			'peptide-core-buyer-admin',
+			'pcBuyerAdmin',
+			array(
+				'rest'  => esc_url_raw( rest_url( 'peptide/v1/' ) ),
+				'nonce' => wp_create_nonce( 'wp_rest' ),
+			)
+		);
+	}
+
+	/** 表单提交后的一次性提示（成功 / 失败），下一个页面显示。 */
+	public static function flash( string $type, string $text ): void {
+		set_transient( 'pc_buyer_flash_' . get_current_user_id(), array( 'error' === $type ? 'error' : 'success', $text ), 120 );
+	}
+
+	public static function render_flash(): void {
+		$key = 'pc_buyer_flash_' . get_current_user_id();
+		$msg = get_transient( $key );
+		if ( is_array( $msg ) && 2 === count( $msg ) ) {
+			delete_transient( $key );
+			echo '<div class="pc-by-flash is-' . esc_attr( (string) $msg[0] ) . '" role="' . ( 'error' === $msg[0] ? 'alert' : 'status' ) . '">' . esc_html( (string) $msg[1] ) . '</div>';
+		}
 	}
 
 	// ---------- 这次请求能做什么 ----------
