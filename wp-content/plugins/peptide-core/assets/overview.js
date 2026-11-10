@@ -316,12 +316,79 @@
 		} ).join( '' ) + '</ul>' : '<p class="pc-ov-empty is-box">还没有客户分析。</p>' ) + '</section>';
 		return '<div class="pc-ov-ads">' + ai + todo + recent + '</div>';
 	}
+	// 右栏评分卡（店主 2026-11-10）：两个切换——店铺评分（店铺完善度，做完设置就涨）/ 运营评分（AI 全站分析的健康分）。
+	var scoreTab = 'setup';
+	try { scoreTab = window.localStorage.getItem( 'pcOvScoreTab' ) || 'setup'; } catch ( e ) {}
+	function scoreCard() {
+		var tabs = '<div class="pc-ov-score__tabs" role="tablist"><button type="button" role="tab" data-score-tab="setup" aria-selected="' + ( 'setup' === scoreTab ) + '">店铺评分</button><button type="button" role="tab" data-score-tab="ops" aria-selected="' + ( 'ops' === scoreTab ) + '">运营评分</button></div>';
+		var link = 'ops' === scoreTab && extras && extras.ai ? more( extras.ai.url, '查看报告' ) : '';
+		var head = '<div class="pc-ov-card__head">' + tabs + link + '</div>';
+		if ( ! extras ) { return '<section class="pc-ov-card pc-ov-score">' + head + '<p class="pc-ov-empty">…</p></section>'; }
+		var tone = function ( n ) { return n >= 70 ? 'is-good' : n >= 40 ? 'is-mid' : 'is-bad'; };
+		var body = '';
+		if ( 'setup' === scoreTab ) {
+			var s = extras.setup;
+			if ( ! s ) { body = '<p class="pc-ov-empty is-box">暂时取不到店铺评分。</p>'; }
+			else {
+				var todo = s.items.filter( function ( i ) { return ! i.done; } );
+				var done = s.items.filter( function ( i ) { return i.done; } );
+				var af = s.autofill || [];
+				var afBtn = af.length ? '<button type="button" class="pc-ov-score__auto" data-score-autofill title="' + esc( af.map( function ( x ) { return x.label + '：' + x.value; } ).join( '\n' ) ) + '">一键完善</button>' : '';
+				body = '<div class="pc-ov-score__top"><b class="' + tone( s.score ) + '">' + esc( s.score ) + '</b><span>/ 100 · 已完成 ' + esc( s.done ) + ' / ' + esc( s.count ) + ' 项</span>' + afBtn + '</div>' +
+					( af.length ? '<p class="pc-ov-score__afnote">一键完善会用店里已有的资料填：' + af.map( function ( x ) { return esc( x.label ) + ' → ' + esc( x.value ); } ).join( '；' ) + '</p>' : '' ) +
+					'<div class="pc-ov-score__bar"><i class="' + tone( s.score ) + '" style="width:' + Math.max( 0, Math.min( 100, s.score ) ) + '%"></i></div>' +
+					( todo.length ? '<p class="pc-ov-score__sub">做完下面这些，分数会涨</p><ul class="pc-ov-score__tasks">' + todo.map( function ( i ) {
+						return '<li><a href="' + esc( i.url ) + '"><span class="pc-ov-score__plus">+' + esc( i.points ) + '</span><span class="pc-ov-score__task"><b>' + esc( i.label ) + '</b><small>' + esc( i.hint ) + '</small></span><span class="pc-ov-score__go">去设置 ›</span></a></li>';
+					} ).join( '' ) + '</ul>' : '<p class="pc-ov-score__sub is-good">全部完成，店铺设置已经很完善了。</p>' ) +
+					( done.length ? '<details class="pc-ov-score__done"><summary>已完成 ' + done.length + ' 项</summary><ul>' + done.map( function ( i ) { return '<li>✓ ' + esc( i.label ) + ' <span>+' + esc( i.points ) + '</span></li>'; } ).join( '' ) + '</ul></details>' : '' );
+			}
+		} else {
+			var a = extras.ai;
+			if ( ! a || '' === String( a.health || '' ) ) { body = '<p class="pc-ov-empty is-box">还没有运营评分。AI 全站分析生成报告后会在这里显示。</p>'; }
+			else {
+				var n = Math.max( 0, Math.min( 100, parseInt( a.health, 10 ) || 0 ) );
+				var prev = parseInt( a.prev, 10 );
+				var delta = isNaN( prev ) ? '' : ( n - prev > 0 ? '<span class="pc-ov-score__delta is-up">比上次 +' + ( n - prev ) + '</span>' : n - prev < 0 ? '<span class="pc-ov-score__delta is-down">比上次 ' + ( n - prev ) + '</span>' : '<span class="pc-ov-score__delta">和上次持平</span>' );
+				var gradeTone = function ( g ) { return /差|弱|低|告警|严重|异常|无/.test( g ) ? 'is-bad' : /中|一般|关注|偏/.test( g ) ? 'is-mid' : /好|强|健康|高|正常|优/.test( g ) ? 'is-good' : ''; };
+				var rows = ( a.ratings || [] ).map( function ( r ) {
+					return '<li><span class="pc-ov-score__name">' + esc( r.name ) + '</span><span class="pc-ov-score__grade ' + gradeTone( r.grade ) + '">' + esc( r.grade || '—' ) + '</span>' + ( r.reason ? '<small>' + esc( r.reason ) + '</small>' : '' ) + '</li>';
+				} ).join( '' );
+				body = '<div class="pc-ov-score__top"><b class="' + tone( n ) + '">' + n + '</b><span>/ 100' + ( a.state ? ' · ' + esc( a.state ) : '' ) + '</span>' + delta + '</div>' +
+					'<div class="pc-ov-score__bar"><i class="' + tone( n ) + '" style="width:' + n + '%"></i></div>' +
+					( rows ? '<ul class="pc-ov-score__list">' + rows + '</ul>' : '' ) +
+					'<p class="pc-ov-muted pc-ov-score__at">AI 全站分析 · ' + esc( a.period + ' · ' + a.at ) + '</p>';
+			}
+		}
+		return '<section class="pc-ov-card pc-ov-score">' + head + body + '</section>';
+	}
+	root.addEventListener( 'click', function ( e ) {
+		var af = e.target.closest && e.target.closest( '[data-score-autofill]' );
+		if ( af ) {
+			af.disabled = true; af.textContent = '完善中…';
+			wp.apiFetch( { path: '/peptide/v1/store-score/autofill', method: 'POST' } ).then( function ( r ) {
+				if ( extras ) { extras.setup = r.setup; }
+				var sc = root.querySelector( '.pc-ov-score' );
+				if ( sc ) { sc.outerHTML = scoreCard(); }
+				var n2 = root.querySelector( '.pc-ov-score__sub' );
+				if ( n2 && r.filled && r.filled.length ) { n2.insertAdjacentHTML( 'beforebegin', '<p class="pc-ov-score__ok">已填好：' + r.filled.map( function ( x ) { return esc( x.label ); } ).join( '、' ) + '</p>' ); }
+			} ).catch( function ( x ) { af.disabled = false; af.textContent = '一键完善'; window.alert( ( x && x.message ) || '完善失败，请稍后再试' ); } );
+			return;
+		}
+		var t = e.target.closest && e.target.closest( '[data-score-tab]' );
+		if ( ! t ) { return; }
+		scoreTab = t.getAttribute( 'data-score-tab' );
+		try { window.localStorage.setItem( 'pcOvScoreTab', scoreTab ); } catch ( x ) {}
+		var sc = root.querySelector( '.pc-ov-score' );
+		if ( sc ) { sc.outerHTML = scoreCard(); }
+	} );
 	function loadExtras() {
 		if ( ! wp.apiFetch ) { return; }
 		wp.apiFetch( { path: '/peptide/v1/overview/extras' } ).then( function ( res ) {
 			extras = res || { todo: [] };
 			var box = root.querySelector( '.pc-ov-ads' );
 			if ( box ) { box.outerHTML = ads(); }
+			var sc = root.querySelector( '.pc-ov-score' );
+			if ( sc ) { sc.outerHTML = scoreCard(); }
 		} ).catch( function () {} );
 	}
 
@@ -496,7 +563,7 @@
 			'<div class="pc-ov-split"><div>' + funnel() + '</div><div id="pc-ov-trend">' + chart() + '</div></div></section>' +
 			liveCard() +
 			'</div>' +
-			'<div class="pc-ov-side">' + side() + live( todayData ) + rankCard( 'traffic' ) + rankCard( 'products' ) + '</div>' +
+			'<div class="pc-ov-side">' + side() + live( todayData ) + rankCard( 'traffic' ) + rankCard( 'products' ) + scoreCard() + '</div>' +
 			'</div>' + ads();
 		bindChart();
 		root.querySelectorAll( '.pc-ov-tab' ).forEach( function ( b ) {
