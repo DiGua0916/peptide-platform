@@ -114,3 +114,7 @@
 - 部署 web/hq 全部副本；验证 主店、阳、老毛(prime)、光辉(official)、芒果(plus) 新会话打开链接 302 到结账、购物车与结账页都带脚本；光辉浏览器结账页显示 `?pc_cart=11092x1`。
 - 李军 s0006（vialcovepro.com）：所有访问被 302 到 https://shiyishop.com（`x-redirect-by: WordPress`），`acloak_options` 已开启（offer_url=shiyishop.com、ASN/UA 拦截），插件列表显示 advanced-cloak 未启用，来源未确认；s0007–s0010 也存在同样的 acloak_options。未做任何改动，等店主决定。
 - 实时访客页全站分析：右侧没有状态栏时 `.pc-ai-layout` 加 `pc-ai-solo`，单列占满居中，去掉右侧空白（tracking-insights.js/.css，已部署全部副本，阳后台核对）。
+
+### 2026-11-10 付款链接去掉一切提示
+- 店主：不要任何提示。去掉后台“店铺设置 → 付款链接”页（不再注册 `Cart_Links_Page`），功能一直开启；打开链接时清掉加购 / 优惠码产生的提示（`wc_clear_notices()`），删除“商品已不可用”的错误提示。
+- 部署 web/hq 全部副本；5 个站新会话打开 `/?pc_cart=11092x1` → 302 结账页，结账页提示数 0。

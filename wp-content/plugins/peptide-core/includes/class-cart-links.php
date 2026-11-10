@@ -31,7 +31,7 @@ final class Cart_Links {
 		$s = get_option( self::OPTION, array() );
 		$s = is_array( $s ) ? $s : array();
 		return array(
-			'enabled' => ! array_key_exists( 'enabled', $s ) || ! empty( $s['enabled'] ),
+			'enabled' => true, // 店主 2026-11-10：去掉后台设置页，一直开启。
 			'target'  => 'cart' === ( $s['target'] ?? '' ) ? 'cart' : 'checkout',
 		);
 	}
@@ -115,13 +115,12 @@ final class Cart_Links {
 			}
 		}
 		WC()->cart->calculate_totals();
+		// 店主 2026-11-10：不要任何提示。加购、优惠码产生的提示全部清掉，客户打开就是选好的商品。
+		wc_clear_notices();
 		// 其他参数（广告标记、fbclid 等）原样带过去，付款链接自己的参数去掉。
 		$keep = array_diff_key( wp_unslash( $_GET ), array_flip( array( 'pc_cart', 'pc_coupon' ) ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended,WordPress.Security.ValidatedSanitizedInput
 		$keep = array_map( static fn( $v ) => is_scalar( $v ) ? sanitize_text_field( (string) $v ) : '', $keep );
 		$to   = $added ? ( 'cart' === self::settings()['target'] ? wc_get_cart_url() : wc_get_checkout_url() ) : wc_get_cart_url();
-		if ( ! $added ) {
-			wc_add_notice( 'This link’s products are no longer available. Please contact us for help.', 'error' );
-		}
 		nocache_headers();
 		wp_safe_redirect( add_query_arg( array_filter( $keep, 'strlen' ), $to ) );
 		exit;
