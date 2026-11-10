@@ -106,6 +106,40 @@ final class Ai {
 		}
 	}
 
+	/**
+	 * 请求 AI 服务商（2026-11-10）。总后台开着 WP_HTTP_BLOCK_EXTERNAL，白名单那一行由开店脚本维护，不能改格式；
+	 * 所以 AI 请求不走 WordPress 的白名单，而是在这里自己把关：只许 https、只许已配置服务商（内置 + 服务商设置里加的）
+	 * 的主机、且地址必须解析到公网（wp_http_validate_url），不跟随跳转、限制返回大小。其他出站请求仍受白名单限制。
+	 *
+	 * @return array{code:int,body:string}|\WP_Error
+	 */
+	private static function provider_http( string $method, string $url, array $headers, ?string $body, int $timeout ) {
+		$host    = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
+		$allowed = array();
+		foreach ( self::providers() as $p ) {
+			foreach ( array( $p['endpoint'], $p['models'] ) as $u ) {
+				if ( '' !== $u ) {
+					$allowed[] = strtolower( (string) wp_parse_url( $u, PHP_URL_HOST ) );
+				}
+			}
+		}
+		if ( 'https' !== wp_parse_url( $url, PHP_URL_SCHEME ) || '' === $host || ! in_array( $host, $allowed, true ) || ! wp_http_validate_url( $url ) ) {
+			return new \WP_Error( 'pchq_ai_host', '不是已配置的 AI 服务商地址：' . $host );
+		}
+		try {
+			$r = \WpOrg\Requests\Requests::request(
+				$url,
+				$headers + array( 'User-Agent' => 'VialCove-HQ/1.0' ),
+				null === $body ? array() : $body,
+				'POST' === $method ? \WpOrg\Requests\Requests::POST : \WpOrg\Requests\Requests::GET,
+				array( 'timeout' => $timeout, 'connect_timeout' => 10, 'follow_redirects' => false, 'verify' => ABSPATH . WPINC . '/certificates/ca-bundle.crt', 'max_bytes' => 2097152 )
+			);
+		} catch ( \Throwable $e ) {
+			return new \WP_Error( 'pchq_ai_http', $e->getMessage() );
+		}
+		return array( 'code' => (int) $r->status_code, 'body' => (string) $r->body );
+	}
+
 	// ---------- 设置 ----------
 
 	public static function settings(): array {
@@ -215,12 +249,12 @@ final class Ai {
 			$url     = '' !== $pv['models'] ? $pv['models'] : preg_replace( '#/chat/completions/?$#', '/models', $pv['endpoint'] );
 			$headers = array( 'Authorization' => 'Bearer ' . $key );
 		}
-		$res = wp_safe_remote_get( $url, array( 'timeout' => 20, 'redirection' => 0, 'headers' => $headers, 'limit_response_size' => 2097152 ) );
+		$res = self::provider_http( 'GET', $url, $headers, null, 20 );
 		if ( is_wp_error( $res ) ) {
 			return new \WP_Error( 'pchq_ai_http', '连不上 AI 服务：' . $res->get_error_message() );
 		}
-		$code = (int) wp_remote_retrieve_response_code( $res );
-		$json = json_decode( (string) wp_remote_retrieve_body( $res ), true );
+		$code = (int) $res['code'];
+		$json = json_decode( (string) $res['body'], true );
 		if ( 200 !== $code || ! is_array( $json ) ) {
 			$msg = is_array( $json ) ? (string) ( $json['error']['message'] ?? $json['message'] ?? '' ) : '';
 			return new \WP_Error( 'pchq_ai_http', '拉取模型失败（HTTP ' . $code . '）' . ( '' !== $msg ? '：' . mb_substr( $msg, 0, 300 ) : '' ) );
@@ -363,14 +397,23 @@ final class Ai {
 			$body    = array( 'model' => $s['model'], 'max_tokens' => $s['max_tokens'], 'system' => $system, 'messages' => array( array( 'role' => 'user', 'content' => $user ) ) );
 		} else {
 			$headers = array( 'Content-Type' => 'application/json', 'Authorization' => 'Bearer ' . $key );
-			$body    = array( 'model' => $s['model'], 'max_tokens' => $s['max_tokens'], 'messages' => array( array( 'role' => 'system', 'content' => $system ), array( 'role' => 'user', 'content' => $user ) ) );
+			// OpenAI 官方新模型只认 max_completion_tokens；其他 OpenAI 兼容服务商一般还是 max_tokens。
+			$limit   = 'api.openai.com' === wp_parse_url( $url, PHP_URL_HOST ) ? 'max_completion_tokens' : 'max_tokens';
+			$body    = array( 'model' => $s['model'], $limit => $s['max_tokens'], 'messages' => array( array( 'role' => 'system', 'content' => $system ), array( 'role' => 'user', 'content' => $user ) ) );
 		}
-		$res = wp_safe_remote_post( $url, array( 'timeout' => 90, 'redirection' => 0, 'headers' => $headers, 'body' => wp_json_encode( $body ), 'limit_response_size' => 1048576 ) );
+		$res = self::provider_http( 'POST', $url, $headers, (string) wp_json_encode( $body ), 90 );
+		// 服务商不认这个长度参数名时，换另一个名字重试一次。
+		if ( ! is_wp_error( $res ) && 400 === $res['code'] && 'openai' === $s['format'] && preg_match( '/max_(completion_)?tokens/', (string) $res['body'] ) ) {
+			$swap = isset( $body['max_tokens'] ) ? 'max_completion_tokens' : 'max_tokens';
+			unset( $body['max_tokens'], $body['max_completion_tokens'] );
+			$body[ $swap ] = $s['max_tokens'];
+			$res = self::provider_http( 'POST', $url, $headers, (string) wp_json_encode( $body ), 90 );
+		}
 		if ( is_wp_error( $res ) ) {
 			return new \WP_Error( 'pchq_ai_http', '连不上 AI 服务：' . $res->get_error_message() );
 		}
-		$code = (int) wp_remote_retrieve_response_code( $res );
-		$json = json_decode( (string) wp_remote_retrieve_body( $res ), true );
+		$code = (int) $res['code'];
+		$json = json_decode( (string) $res['body'], true );
 		if ( 200 !== $code || ! is_array( $json ) ) {
 			$msg = is_array( $json ) ? (string) ( $json['error']['message'] ?? $json['message'] ?? '' ) : '';
 			return new \WP_Error( 'pchq_ai_http', 'AI 服务返回错误（HTTP ' . $code . '）' . ( '' !== $msg ? '：' . mb_substr( $msg, 0, 300 ) : '' ) );
