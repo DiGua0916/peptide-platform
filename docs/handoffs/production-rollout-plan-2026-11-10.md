@@ -65,3 +65,10 @@
 - 跟进（店主）：“服务商设置”改成弹窗（原生 dialog，可点 × / 关闭 / 背景关闭），按钮挪到“AI 服务”标题旁边。添加服务商的“接口类型”改成开关：开 = 兼容接口（OpenAI / Anthropic 格式二选一）；关 = 原生接口（不兼容的服务商），目前支持 Google Gemini 原生（generateContent，x-goog-api-key，模型列表只留支持 generateContent 的）。HQ release `ai-native-1794305879-hq`（之后的样式小改直接替换该 release 的 class-ai-page.php，备份 /root/class-ai-page.php.bak-*）。添加 / 删除兼容与原生服务商已在服务器上测过，测试项已删。
 - 修：保存 OpenAI 密钥后报“用户已阻止通过 HTTP 请求此 URL”——HQ 开着 WP_HTTP_BLOCK_EXTERNAL，白名单那行由开店脚本（/usr/local/lib/vialcove-provision/worker.py，按固定正则改）维护，不改 wp-config。改为 AI 请求在 `Ai::provider_http()` 里直连（WpOrg\Requests）：只许 https、只许已配置服务商主机（内置 + 服务商设置里加的）、wp_http_validate_url 公网校验、不跟随跳转、限 2MB；其他出站仍走白名单。OpenAI 官方新模型要 max_completion_tokens（其他兼容服务商用 max_tokens，400 时自动换名重试一次）。
 - 验证：OpenAI 拉到 48 个对话模型，自动选 gpt-5.6-luna；测试消息回复“连接成功”。HQ release `ai-http-1794306236-hq`（max_tokens 修复直接替换该 release 的 class-ai.php，备份 /root/class-ai.php.bak-*）。人设库仍为空，待店主导入。
+
+### 人设导入 + 店铺数据 + 自学习（店主 2026-11-10“导入并补上”）
+- 人设：`docs/ai-personas/客户分析师.md`、`全站分析师.md` 已导入 HQ（客户分析 / 全站分析师 各一个，6 店默认使用）。
+- 店铺数据（peptide-core `Hq_Ai`）：每次分析都带【店铺配置】：运费规则（通用方案各档）、运费优惠、进行中的满减活动、首单优惠、支付方式、在售商品价格区间、首页 / 商品页 / 购物车 / 结账页版块。客户分析另带全部访问的最远阶段、结账相关动作次数。全站分析另带【漏斗】（本期 / 上期）、【渠道】、【弃单】、【上期对比】。
+- 自学习：店铺把每次回答末尾“判断记录”解析后存 `pc_ai_log`（最多 600 条，同客户同周期只留最新）；客户分析判断满 3 天后按访问 stage ≥ 5（已付款）核对是否下单，按意向 / 主要卡点 / 心理类型统计判断数和后来下单数，加上待验证新规律，作为“本店”经验发给 HQ；HQ 存 `pchq_ai_learn`，把所有店的统计相加成“全平台”经验，一起放进提示词的【历史经验】。全站分析的经验 = 最近 3 次判断 + 当时数据 / 漏斗。
+- 修：推理模型（gpt-6-luna）思考也占长度，1500 tokens 时回答为空。“单次回答最长”默认改 8000（范围 1000–32000），已把 HQ 设置改为 8000；被截断时提示调大。
+- 验证（主店 s0001）：全站分析 37.9 秒、客户分析 17.2 秒，均按人设格式输出并记录判断；访客 14 是我们的测试浏览器，测试判断已从主店 `pc_ai_log` 清掉。HQ release `ai-learn-1794307351-hq`（max_tokens 修复直接替换该 release 文件，备份 /root/class-ai.php.bak-*）。

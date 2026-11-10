@@ -154,7 +154,7 @@ final class Ai_Page {
 		}
 		echo '</select></label>';
 		echo '<label><span>每家店每天最多分析几次</span><input type="number" name="daily_cap" min="1" max="5000" value="' . (int) $s['daily_cap'] . '"></label>';
-		echo '<label><span>单次回答最长（tokens）</span><input type="number" name="max_tokens" min="200" max="8000" value="' . (int) $s['max_tokens'] . '"></label>';
+		echo '<label><span>单次回答最长（tokens）</span><input type="number" name="max_tokens" min="1000" max="32000" value="' . (int) $s['max_tokens'] . '"></label>';
 		echo '</div>';
 		if ( $s['has_key'] ) {
 			echo '<p><label class="pcp-check"><input type="checkbox" name="clear_key" value="1"> 删除已保存的密钥</label></p>';

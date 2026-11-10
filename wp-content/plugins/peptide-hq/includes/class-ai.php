@@ -156,7 +156,7 @@ final class Ai {
 			'model'      => (string) ( $s['model'] ?? '' ),
 			'language'   => isset( self::LANGUAGES[ $s['language'] ?? '' ] ) ? (string) $s['language'] : '中文',
 			'daily_cap'  => max( 1, min( 5000, (int) ( $s['daily_cap'] ?? 100 ) ) ),
-			'max_tokens' => max( 200, min( 8000, (int) ( $s['max_tokens'] ?? 1500 ) ) ),
+			'max_tokens' => max( 1000, min( 32000, (int) ( $s['max_tokens'] ?? 8000 ) ) ), // 推理模型先“思考”再回答，思考也占长度，所以默认 8000。
 			'has_key'    => '' !== (string) ( $keys[ $p ] ?? '' ),
 			'key_set'    => array_keys( array_filter( $keys ) ), // 哪些服务商存了密钥（不含密钥本身）。
 			'sites'      => is_array( $s['sites'] ?? null ) ? $s['sites'] : array(), // site_id => {enabled, customer, business}
@@ -174,7 +174,7 @@ final class Ai {
 		$raw['model']      = $changed ? '' : substr( preg_replace( '/[^A-Za-z0-9._:\/-]/', '', (string) ( $in['model'] ?? '' ) ), 0, 120 );
 		$raw['language']   = isset( self::LANGUAGES[ $in['language'] ?? '' ] ) ? (string) $in['language'] : '中文';
 		$raw['daily_cap']  = (int) ( $in['daily_cap'] ?? 100 );
-		$raw['max_tokens'] = (int) ( $in['max_tokens'] ?? 1500 );
+		$raw['max_tokens'] = (int) ( $in['max_tokens'] ?? 8000 );
 		unset( $raw['endpoint'], $raw['key'] );
 		$raw['keys'] = is_array( $raw['keys'] ?? null ) ? $raw['keys'] : array();
 		$key         = trim( (string) ( $in['key'] ?? '' ) );
@@ -433,11 +433,53 @@ final class Ai {
 			$text = (string) ( $json['choices'][0]['message']['content'] ?? '' );
 		}
 		$text = trim( $text );
+		$cut  = in_array( (string) ( $json['choices'][0]['finish_reason'] ?? $json['stop_reason'] ?? $json['candidates'][0]['finishReason'] ?? '' ), array( 'length', 'max_tokens', 'MAX_TOKENS' ), true );
+		if ( '' === $text && $cut ) {
+			return new \WP_Error( 'pchq_ai_cut', 'AI 还没写完就到了长度上限（推理模型会先思考，思考也占长度）。请在总后台 AI 设置里把“单次回答最长”调大（建议 8000 以上）。' );
+		}
 		return '' === $text ? new \WP_Error( 'pchq_ai_empty', 'AI 没有返回内容。' ) : array( 'text' => $text, 'model' => (string) ( $json['model'] ?? $s['model'] ) );
 	}
 
 	/** 给店铺用：按用途套人设，把事实交给 AI。 */
-	public static function analyse( int $site_id, string $use, array $facts ) {
+	public const LEARN = 'pchq_ai_learn';
+
+	/** 记下这家店最新的经验，合成全平台经验（客户分析：各店判断数 / 后来下单数相加）。 */
+	private static function experience( int $site_id, string $use, array $mine ): array {
+		$all = get_option( self::LEARN, array() );
+		$all = is_array( $all ) ? $all : array();
+		$all[ $site_id ][ $use ] = $mine;
+		update_option( self::LEARN, $all, false );
+		$out = array( '本店' => $mine );
+		if ( 'customer' !== $use ) {
+			return $out;
+		}
+		$sum   = array( '店铺数' => 0, '已核对' => 0, '按意向' => array(), '按主要卡点' => array(), '按心理类型' => array() );
+		foreach ( $all as $exp ) {
+			$e = $exp['customer'] ?? null;
+			if ( ! is_array( $e ) || empty( $e['已核对'] ) ) {
+				continue;
+			}
+			++$sum['店铺数'];
+			$sum['已核对'] += (int) $e['已核对'];
+			foreach ( array( '按意向', '按主要卡点', '按心理类型' ) as $k ) {
+				foreach ( (array) ( $e[ $k ] ?? array() ) as $bucket => $v ) {
+					$sum[ $k ][ $bucket ]['判断数']   = ( $sum[ $k ][ $bucket ]['判断数'] ?? 0 ) + (int) ( $v['判断数'] ?? 0 );
+					$sum[ $k ][ $bucket ]['后来下单'] = ( $sum[ $k ][ $bucket ]['后来下单'] ?? 0 ) + (int) ( $v['后来下单'] ?? 0 );
+				}
+			}
+		}
+		foreach ( array( '按意向', '按主要卡点', '按心理类型' ) as $k ) {
+			foreach ( $sum[ $k ] as $bucket => $v ) {
+				$sum[ $k ][ $bucket ]['下单率'] = $v['判断数'] ? round( $v['后来下单'] / $v['判断数'] * 100 ) . '%' : '-';
+			}
+			uasort( $sum[ $k ], static fn( $a, $b ) => $b['判断数'] <=> $a['判断数'] );
+			$sum[ $k ] = array_slice( $sum[ $k ], 0, 10, true );
+		}
+		$out['全平台'] = $sum;
+		return $out;
+	}
+
+	public static function analyse( int $site_id, string $use, array $facts, array $experience = array() ) {
 		if ( ! isset( self::USES[ $use ] ) ) {
 			return new \WP_Error( 'pchq_ai_use', '不支持的分析类型。', array( 'status' => 400 ) );
 		}
@@ -455,7 +497,9 @@ final class Ai {
 		$persona = self::persona( $cfg[ $use ]['id'] );
 		$site    = Sites::get( $site_id );
 		$system  = $persona['content'] . "\n\n---\n回答语言：" . $s['language'] . "。只根据提供的数据分析，数据里没有的不要编造；数据是浏览行为线索，不代表个人身份或购买意愿的确定事实。";
-		$user    = '店铺：' . ( $site ? $site['name'] : '' ) . "\n分析类型：" . self::USES[ $use ] . "\n以下是店铺记录的行为数据（JSON，已去掉姓名、邮箱、电话）：\n" . wp_json_encode( $facts, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT );
+		$exp     = self::experience( $site_id, $use, $experience );
+		$user    = '店铺：' . ( $site ? $site['name'] : '' ) . "\n分析类型：" . self::USES[ $use ] . "\n以下是店铺记录的行为数据（JSON，已去掉姓名、邮箱、电话）：\n" . wp_json_encode( $facts, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT )
+			. "\n\n【历史经验】（系统按你过去的判断和客户后来是否下单自动统计；“后来下单”= 判断 3 天后核对到已付款）：\n" . wp_json_encode( $exp, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT );
 		$r = self::complete( $system, mb_substr( $user, 0, 120000 ) );
 		if ( is_wp_error( $r ) ) {
 			return $r;
@@ -482,7 +526,7 @@ final class Ai {
 		if ( ! is_array( $p ) || strlen( (string) $request->get_body() ) > 400000 ) {
 			return new \WP_Error( 'pchq_ai_bad', 'Invalid request.', array( 'status' => 400 ) );
 		}
-		$r = self::analyse( (int) $request->get_param( '_pchq_site' ), (string) ( $p['use'] ?? '' ), (array) ( $p['facts'] ?? array() ) );
+		$r = self::analyse( (int) $request->get_param( '_pchq_site' ), (string) ( $p['use'] ?? '' ), (array) ( $p['facts'] ?? array() ), (array) ( $p['experience'] ?? array() ) );
 		return is_wp_error( $r ) ? $r : new \WP_REST_Response( $r );
 	}
 }
