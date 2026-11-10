@@ -34,6 +34,7 @@ final class Recovery {
 	public const DB_VERSION = '2';
 	public const CRON       = 'peptide_core_recovery_scan';
 	public const STAGE_GAP_MS = 24 * 60 * 60 * 1000;
+	public const PAID_LOOKBACK_MS = 6 * 60 * 60 * 1000;
 
 	public const STATUSES = array( 'pending', 'recalling', 'success', 'failed', 'void' );
 	public const OPEN     = array( 'pending', 'recalling' );
@@ -357,6 +358,11 @@ final class Recovery {
 				if ( Recovery_Items::still_here( 0, (string) $r['session_key'], (int) $r['changed_ms'] ) ) {
 					continue; // 店主 2026-11-10：顾客彻底离开 5 分钟才算弃单。
 				}
+				$paid_a = self::paid_order_since( (string) $r['email'], (int) $r['created_ms'] - self::PAID_LOOKBACK_MS );
+				if ( $paid_a ) {
+					self::close_with_order( $r, $paid_a, $now );
+					continue;
+				}
 				$admin->trigger( $r );
 				$wpdb->update( $t, array( 'admin_ms' => $now ), array( 'id' => (int) $r['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 				++$stats['admin'];
@@ -403,7 +409,9 @@ final class Recovery {
 				continue;
 			}
 			// 发提醒前再确认：这个邮箱在记录之后有没有付款（例如用别的设备下了单）。
-			$paid = self::paid_order_since( (string) $r['email'], (int) $r['created_ms'] );
+			// 店主 2026-11-10：付完款购物车没清空，扫描又把它记成弃单，付款 13 分钟后收到提醒（阳 #11892）。
+			// 记录前 6 小时内这个邮箱付过款的，都算已经下单，不发。
+			$paid = self::paid_order_since( (string) $r['email'], (int) $r['created_ms'] - self::PAID_LOOKBACK_MS );
 			if ( $paid ) {
 				self::close_with_order( $r, $paid, $now );
 				continue;
@@ -529,10 +537,8 @@ final class Recovery {
 		if ( '' !== $code && ! WC()->cart->has_discount( $code ) ) {
 			Coupons::remember( $code );
 		}
-		$set = array( 'clicked_ms' => self::now_ms(), 'updated_ms' => self::now_ms() );
-		if ( in_array( $r['status'], array( 'pending', 'recalling', 'failed' ), true ) ) {
-			$set += array( 'status' => 'success', 'note' => 'clicked' );
-		}
+		// 店主 2026-11-10：点了链接只记“点过”，付了款才算召回成功（close_with_order 会看 clicked_ms）。
+		$set = array( 'clicked_ms' => self::now_ms(), 'updated_ms' => self::now_ms(), 'note' => 'clicked' );
 		$wpdb->update( self::table(), $set, array( 'id' => (int) $r['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		return $added;
 	}

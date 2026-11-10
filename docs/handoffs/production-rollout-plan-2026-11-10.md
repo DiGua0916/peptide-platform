@@ -239,3 +239,14 @@
 - `Recovery_Items::RECALL_DAYS` 3 → 4：两封之间最长隔 4 天，不然第 3 天就会显示“召回失败”。
 - 付款成功邮件（customer_processing_order，templates/emails/customer-processing-order.php）改成模板库「05 下单成功感谢」文案，主题统一 “{店名} | Thank You for Your Order”（不再按有没有电话分两种）。
 - `Paid_Popup::care_catchup()` 挂在每 5 分钟的扫描上：`pc_care_since` 之后付款、不是测试单、发件记录里没有这张单的 customer_processing_order 已发送 → 补发并加订单备注；每单只检查一次（`_pc_care_mail`）。旧订单不补。
+
+### 2026-11-11 召回成功判断错误 + 付款后还收到提醒
+- 阳 Sherrie Powers：05:23 下单 #11892，05:26 用首单码 welcome5 刷卡付款 $186.49，05:29 收到付款成功关怀信，05:39 又收到弃单提醒 1。她没有被召回，也没有第二单：付款后购物车没清空，扫描把同一购物车又记成弃单（列表里同价的那条），并发了提醒；列表又因为“这个邮箱有召回信”就把已付款订单标成召回成功（没看信是不是在付款前）。
+- 芒果 John Esteves Flores：卡失败 #11884 → 03:23 付款帮助信 → WALLET #11885 → 03:28 卡付款 #11886 成功；之后 03:45 收到弃单提醒、04:25 又收到 #11885 取消的付款帮助信。芒果 Jennifer Gonzalez 只点了邮件链接没下单，却显示召回成功（点链接就改成 success）。
+- 修复：
+  - `Recovery::PAID_LOOKBACK_MS` 6 小时：发提醒 / 管理员弃单通知前，这个邮箱在记录前 6 小时内付过款就关掉记录（作废“paid before reminder”）。
+  - `Paid_Popup::clear_cart()`：付款成功回到店铺（?pc_paid）时清空购物车。
+  - `Recovery_Items::item()`：已付款订单只有付款前发过召回信才算召回成功。
+  - `Recovery` 点链接只记 clicked_ms / note=clicked，不再直接改成功；付款时 close_with_order 仍把点击算作召回。
+  - `Chase_Copy::paid_elsewhere()`：付款失败邮件（filter woocommerce_email_enabled_customer_failed_order）和取消订单的付款帮助信，顾客前后 6 小时内有别的已付款订单就不发。
+- 数据：关闭已付款仍开着的记录（主店 1@qq.com/#11841、阳 Sherrie/#11892、芒果 John/#11886 → 作废）；芒果 Jennifer 的“点击即成功”改回召回中。现在召回成功：阳 0、芒果 1（John：帮助信 03:23 在付款 03:28 前）。

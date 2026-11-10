@@ -125,7 +125,9 @@ final class Recovery_Items {
 		if ( '1' === (string) $order->get_meta( self::VOID_META ) || Test_Orders::is_test_order( $order ) ) {
 			$status = 'void';
 		} elseif ( $paid ) {
-			$status = $sent ? 'success' : 'void';
+			// 只有付款前发过召回信才算召回成功（店主 2026-11-10：付款后才收到的提醒不算）。
+			$before = array_filter( $sent, static fn( $m ) => (int) $m['created_ms'] <= $paid * 1000 );
+			$status = $before ? 'success' : 'void';
 		} elseif ( $sent ) {
 			$later  = self::paid_after( $email, (int) floor( $last_ms / 1000 ) - 3600, $order->get_id() );
 			$status = $later ? 'success' : ( time() - (int) floor( $last_ms / 1000 ) > self::RECALL_DAYS * DAY_IN_SECONDS ? 'failed' : 'recalling' );

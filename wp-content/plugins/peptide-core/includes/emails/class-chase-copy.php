@@ -42,6 +42,27 @@ final class Chase_Copy {
 		// 2026-11-09 店主：“以后自动发”。未付款被自动取消的订单也发 02 付款帮助信（同一顾客 24 小时内只发一封）。
 		add_action( 'woocommerce_order_status_cancelled', array( self::class, 'on_cancelled' ), 20, 2 );
 		add_action( 'woocommerce_email_sent', array( self::class, 'remember_sent' ), 10, 3 );
+		add_filter( 'woocommerce_email_enabled_customer_failed_order', array( self::class, 'skip_if_paid' ), 50, 2 );
+	}
+
+	/** 这位顾客在这张单前后 6 小时内有没有别的已付款订单（店主 2026-11-10：芒果顾客付完款还收到付款帮助信）。 */
+	public static function paid_elsewhere( \WC_Order $order ): ?\WC_Order {
+		$email = (string) $order->get_billing_email();
+		if ( '' === $email ) {
+			return null;
+		}
+		$from = $order->get_date_created() ? $order->get_date_created()->getTimestamp() - 6 * HOUR_IN_SECONDS : time() - DAY_IN_SECONDS;
+		foreach ( wc_get_orders( array( 'billing_email' => $email, 'status' => wc_get_is_paid_statuses(), 'date_created' => '>=' . $from, 'limit' => 5 ) ) as $o ) {
+			if ( $o instanceof \WC_Order && $o->get_id() !== $order->get_id() ) {
+				return $o;
+			}
+		}
+		return null;
+	}
+
+	/** 付款失败邮件：顾客已经用别的订单付过款就不发。 */
+	public static function skip_if_paid( $enabled, $order = null ) {
+		return $enabled && $order instanceof \WC_Order && self::paid_elsewhere( $order ) ? false : $enabled;
 	}
 
 	private static function chase_key( string $email ): string {
@@ -62,6 +83,11 @@ final class Chase_Copy {
 			return;
 		}
 		if ( class_exists( '\PeptideCore\Test_Orders' ) && \PeptideCore\Test_Orders::is_test_order( $order ) ) {
+			return;
+		}
+		$paid = self::paid_elsewhere( $order );
+		if ( $paid ) {
+			$order->add_order_note( '顾客已经用订单 #' . $paid->get_order_number() . ' 付款，本单取消不再发付款帮助信。' );
 			return;
 		}
 		if ( get_transient( self::chase_key( (string) $order->get_billing_email() ) ) ) {

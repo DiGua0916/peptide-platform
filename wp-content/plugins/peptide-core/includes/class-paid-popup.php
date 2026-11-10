@@ -24,6 +24,7 @@ final class Paid_Popup {
 	public static function register_hooks(): void {
 		add_filter( 'pc_panapay_paid_redirect', array( self::class, 'redirect_url' ), 10, 2 );
 		add_action( 'wp_footer', array( self::class, 'render' ), 50 );
+		add_action( 'template_redirect', array( self::class, 'clear_cart' ), 5 );
 		add_action( 'rest_api_init', array( self::class, 'routes' ) );
 		// 店主 2026-11-10：成功下单立刻发关怀邮件。付款完成流程偶尔会中途被打断（#11841 就没发出），每 5 分钟补发一次。
 		add_action( Recovery::CRON, array( self::class, 'care_catchup' ), 40 );
@@ -104,6 +105,20 @@ final class Paid_Popup {
 			return $url;
 		}
 		return add_query_arg( array( 'pc_paid' => $order->get_id(), 'pc_key' => $order->get_order_key() ), home_url( '/' ) );
+	}
+
+	/** 付款成功回来：清空这个浏览器的购物车（不然会被当成新的弃单，付完款还收到提醒）。 */
+	public static function clear_cart(): void {
+		$order = self::order_from_request();
+		if ( ! $order || ! function_exists( 'WC' ) ) {
+			return;
+		}
+		if ( null === WC()->cart ) {
+			wc_load_cart();
+		}
+		if ( WC()->cart && ! WC()->cart->is_empty() ) {
+			WC()->cart->empty_cart();
+		}
 	}
 
 	/** 当前请求带的、已付款且密钥正确的订单。 */
