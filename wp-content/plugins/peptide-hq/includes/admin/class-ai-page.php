@@ -153,7 +153,6 @@ final class Ai_Page {
 			echo '<option value="' . esc_attr( $k ) . '"' . selected( $s['language'], $k, false ) . '>' . esc_html( $label ) . '</option>';
 		}
 		echo '</select></label>';
-		echo '<label><span>每家店每天最多分析几次</span><input type="number" name="daily_cap" min="1" max="5000" value="' . (int) $s['daily_cap'] . '"></label>';
 		echo '<label><span>单次回答最长（tokens）</span><input type="number" name="max_tokens" min="1000" max="32000" value="' . (int) $s['max_tokens'] . '"></label>';
 		echo '</div>';
 		if ( $s['has_key'] ) {
@@ -178,7 +177,7 @@ final class Ai_Page {
 				}
 				echo '</select></td>';
 			}
-			echo '<td>' . (int) Ai::used_today( $id ) . ' / ' . (int) $s['daily_cap'] . '</td></tr>';
+			echo '<td>' . (int) Ai::used_today( $id ) . ' 次</td></tr>';
 		}
 		echo '</tbody></table></div>';
 		echo '<p class="pcai-actions"><button type="submit" class="button button-primary">保存</button></p></form>';

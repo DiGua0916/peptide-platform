@@ -88,7 +88,7 @@
   const persona = subject ? st.customer : st.business;
   if (!st.enabled) { aiShell('未开启', '<p>' + esc(st.error ? '暂时连不上总后台：' + st.error : '总后台“AI 设置”里还没有开启这家店的 AI 分析。') + '</p>'); return; }
   if (!persona) { aiShell('缺少人设', '<p>总后台“AI 设置”里还没有导入“' + (subject ? '客户分析' : '全站分析师') + '”的人设。</p>'); return; }
-  aiShell('人设：' + persona, '<p>' + (subject ? '根据这位客户的浏览、加购和结账行为，分析他在看什么、有多大可能下单、该怎么跟进。' : '根据所选时间段全站访客的行为和经营数据，分析大家对什么感兴趣、问题出在哪、该怎么做。') + '</p><p class="pc-ai-actions"><button type="button" class="button button-primary" data-ai-run>AI 分析</button><span class="pc-ai-meta">今天已用 ' + n(st.used_today) + ' / ' + n(st.daily_cap) + ' 次</span></p><div class="pc-ai-out" aria-live="polite"></div>');
+  aiShell('人设：' + persona, '<p>' + (subject ? '根据这位客户的浏览、加购和结账行为，分析他在看什么、有多大可能下单、该怎么跟进。' : '根据所选时间段全站访客的行为和经营数据，分析大家对什么感兴趣、问题出在哪、该怎么做。') + '</p><p class="pc-ai-actions"><button type="button" class="button button-primary" data-ai-run>AI 分析</button><span class="pc-ai-meta">今天已分析 ' + n(st.used_today) + ' 次</span></p><div class="pc-ai-out" aria-live="polite"></div>');
  }
  async function aiRun(refresh) {
   const out = aiBox.querySelector('.pc-ai-out'), btns = aiBox.querySelectorAll('[data-ai-run],[data-ai-again]');
@@ -96,7 +96,7 @@
   out.innerHTML = '<p class="pc-ai-wait">AI 正在分析，大约需要 10–40 秒…</p>';
   try {
    const r = await window.wp.apiFetch({path:'/peptide/v1/track/admin/ai/analyse', method:'POST', data:{scope: subject ? 'visitor' : 'site', visitor_id: subject, visit_id: visit, period: period, date: date.value, refresh: refresh ? 1 : 0}});
-   out.innerHTML = '<div class="pc-ai-text">' + aiText(r.text) + '</div><p class="pc-ai-meta">' + esc((r.persona ? '人设：' + r.persona + ' · ' : '') + (r.cached ? '30 分钟内的结果 · ' : '') + r.at + (r.daily_cap ? ' · 今天已用 ' + r.used_today + ' / ' + r.daily_cap + ' 次' : '')) + ' <button type="button" class="button-link" data-ai-again>重新分析</button></p>';
+   out.innerHTML = '<div class="pc-ai-text">' + aiText(r.text) + '</div><p class="pc-ai-meta">' + esc((r.persona ? '人设：' + r.persona + ' · ' : '') + (r.cached ? '30 分钟内的结果 · ' : '') + r.at + ' · 今天已分析 ' + r.used_today + ' 次') + ' <button type="button" class="button-link" data-ai-again>重新分析</button></p>';
   } catch (e) {
    out.innerHTML = '<p class="pc-ai-error">' + esc((e && e.message) || '分析失败，请稍后再试。') + '</p>';
   }

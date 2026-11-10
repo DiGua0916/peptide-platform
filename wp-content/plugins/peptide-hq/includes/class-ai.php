@@ -6,7 +6,7 @@
  * - 人设库：每个人设 = 名字 + 用途（customer 客户分析 / business 全站分析师）+ 人设正文（作为系统提示词）。
  *   可以粘贴或上传 .txt / .md 导入；每家店按用途选人设，不选就用该用途的第一个。
  * - 店铺用连接密钥签名后请求 /peptide-hq/v1/ai/analyse（验签同邮件中心），只发行为事实，不发姓名邮箱电话。
- * - 每家店每天有次数上限；超了当天不再分析。
+ * - 不限每天次数（店主 2026-11-10），只按店记每天用量。
  *
  * @package PeptideHq
  */
@@ -155,7 +155,6 @@ final class Ai {
 			'endpoint'   => $all[ $p ]['endpoint'], // 跟着服务商自动走，不用手填。
 			'model'      => (string) ( $s['model'] ?? '' ),
 			'language'   => isset( self::LANGUAGES[ $s['language'] ?? '' ] ) ? (string) $s['language'] : '中文',
-			'daily_cap'  => max( 1, min( 5000, (int) ( $s['daily_cap'] ?? 100 ) ) ),
 			'max_tokens' => max( 1000, min( 32000, (int) ( $s['max_tokens'] ?? 8000 ) ) ), // 推理模型先“思考”再回答，思考也占长度，所以默认 8000。
 			'has_key'    => '' !== (string) ( $keys[ $p ] ?? '' ),
 			'key_set'    => array_keys( array_filter( $keys ) ), // 哪些服务商存了密钥（不含密钥本身）。
@@ -173,7 +172,7 @@ final class Ai {
 		$raw['provider']   = $p;
 		$raw['model']      = $changed ? '' : substr( preg_replace( '/[^A-Za-z0-9._:\/-]/', '', (string) ( $in['model'] ?? '' ) ), 0, 120 );
 		$raw['language']   = isset( self::LANGUAGES[ $in['language'] ?? '' ] ) ? (string) $in['language'] : '中文';
-		$raw['daily_cap']  = (int) ( $in['daily_cap'] ?? 100 );
+		unset( $raw['daily_cap'] ); // 店主 2026-11-10：不限每天次数，只记用量。
 		$raw['max_tokens'] = (int) ( $in['max_tokens'] ?? 8000 );
 		unset( $raw['endpoint'], $raw['key'] );
 		$raw['keys'] = is_array( $raw['keys'] ?? null ) ? $raw['keys'] : array();
@@ -491,9 +490,6 @@ final class Ai {
 			return new \WP_Error( 'pchq_ai_persona', '总后台还没有“' . self::USES[ $use ] . '”的人设，请先导入。', array( 'status' => 409 ) );
 		}
 		$s = self::settings();
-		if ( self::used_today( $site_id ) >= $s['daily_cap'] ) {
-			return new \WP_Error( 'pchq_ai_cap', '今天这家店的 AI 分析次数已用完（每天 ' . $s['daily_cap'] . ' 次），明天自动恢复。', array( 'status' => 429 ) );
-		}
 		$persona = self::persona( $cfg[ $use ]['id'] );
 		$site    = Sites::get( $site_id );
 		$system  = $persona['content'] . "\n\n---\n回答语言：" . $s['language'] . "。只根据提供的数据分析，数据里没有的不要编造；数据是浏览行为线索，不代表个人身份或购买意愿的确定事实。";
@@ -505,7 +501,7 @@ final class Ai {
 			return $r;
 		}
 		self::count_use( $site_id );
-		return $r + array( 'persona' => $persona['name'], 'used_today' => self::used_today( $site_id ), 'daily_cap' => $s['daily_cap'] );
+		return $r + array( 'persona' => $persona['name'], 'used_today' => self::used_today( $site_id ), 'daily_cap' => 0 );
 	}
 
 	// ---------- 店铺接口 ----------
@@ -518,7 +514,7 @@ final class Ai {
 	public static function rest_status( \WP_REST_Request $request ) {
 		$site_id = (int) $request->get_param( '_pchq_site' );
 		$cfg     = self::site_config( $site_id );
-		return new \WP_REST_Response( $cfg + array( 'used_today' => self::used_today( $site_id ), 'daily_cap' => self::settings()['daily_cap'] ) );
+		return new \WP_REST_Response( $cfg + array( 'used_today' => self::used_today( $site_id ), 'daily_cap' => 0 ) );
 	}
 
 	public static function rest_analyse( \WP_REST_Request $request ) {
