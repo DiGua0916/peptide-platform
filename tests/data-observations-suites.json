@@ -738,17 +738,28 @@
       "name": "m9-buyer-scope-pure",
       "language": "php",
       "path": "wp-content/plugins/peptide-core/tests/m9-buyer-scope-pure.php",
-      "core": false,
+      "core": true,
       "node_test": false,
-      "status": "F5 M9: written on a machine without PHP, not yet run; set core true after the first green run"
+      "status": "module-gate",
+      "module": "M9"
     },
     {
       "name": "m9-onboarding-pure",
       "language": "php",
       "path": "wp-content/plugins/peptide-core/tests/m9-onboarding-pure.php",
-      "core": false,
+      "core": true,
       "node_test": false,
-      "status": "F5 M9: written on a machine without PHP, not yet run; set core true after the first green run"
+      "status": "module-gate",
+      "module": "M9"
+    },
+    {
+      "name": "m11-buyer-status-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m11-buyer-status-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M11"
     }
   ]
 }

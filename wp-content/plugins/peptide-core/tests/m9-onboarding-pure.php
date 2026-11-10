@@ -95,6 +95,10 @@ namespace {
 	check( 'conversion', 0.025 === \PeptideCore\Admin\Buyer_Home::conversion( 5, 200 ) );
 	check( 'conversion without visitors', null === \PeptideCore\Admin\Buyer_Home::conversion( 1, 0 ) );
 	check( 'five metrics', array( 'visitors', 'orders', 'sales', 'conversion', 'abandoned' ) === array_keys( \PeptideCore\Admin\Buyer_Home::metrics() ) );
+	$m = \PeptideCore\Admin\Buyer_Home::from_metrics( array( 'visitors' => 200, 'orders' => 6, 'sales_cents' => 123456, 'abandoned' => 7, 'abandoned_open' => 3, 'conversion_rate' => 2.5, 'funnel' => array() ) );
+	check( 'numbers from the metrics entry point', array( 'visitors' => 200, 'orders' => 6, 'sales_cents' => 123456, 'abandoned' => 7, 'conversion' => 0.025, 'source' => 'metrics' ) === $m );
+	check( 'metrics without visitors has no conversion', null === \PeptideCore\Admin\Buyer_Home::from_metrics( array( 'visitors' => 0, 'conversion_rate' => null ) )['conversion'] );
+	check( 'legacy numbers until the metrics switch is on', false === \PeptideCore\Admin\Buyer_Home::modern() );
 	check( 'three ranges', array( 'today', 'yesterday', '7d' ) === array_keys( \PeptideCore\Admin\Buyer_Home::RANGES ) );
 	$todos = static fn( int $wizard, bool $pay, ?int $open ): array => \PeptideCore\Admin\Buyer_Home::todos( array( 'wizard_remaining' => $wizard, 'wizard_next' => '广告像素', 'pay_domain_missing' => $pay, 'abandoned_open' => $open ) );
 	check( 'no to-dos', array() === $todos( 0, false, 0 ) );

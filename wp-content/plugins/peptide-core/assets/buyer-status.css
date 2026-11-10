@@ -1,0 +1,348 @@
+/* 已购顾客回访（M11）：物流卡片（.pc-ob）和查订单表单（.pc-ol）。手机优先。 */
+.pc-ob {
+	--ob-ink: #171717;
+	--ob-muted: #5f6368;
+	--ob-line: #e6e6e6;
+	--ob-surface: #ffffff;
+	box-sizing: border-box;
+	color: var(--ob-ink);
+	font-size: 15px;
+	line-height: 1.45;
+	text-align: left;
+}
+
+.pc-ob *,
+.pc-ob *::before,
+.pc-ob *::after {
+	box-sizing: border-box;
+}
+
+/* 进店时浮在页面下方 */
+.pc-ob--floating {
+	position: fixed;
+	right: 12px;
+	bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+	left: 12px;
+	z-index: 9990;
+	max-height: calc(100vh - 96px);
+	max-height: calc(100dvh - 96px);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding: 20px;
+	border: 1px solid var(--ob-line);
+	border-radius: 14px;
+	background: var(--ob-surface);
+	box-shadow: 0 12px 40px rgba(23, 23, 23, 0.18);
+	opacity: 0;
+	transform: translateY(16px);
+}
+
+.pc-ob--floating.is-open {
+	opacity: 1;
+	transform: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.pc-ob--floating {
+		transition: opacity 0.2s ease, transform 0.2s ease;
+	}
+}
+
+@media (min-width: 600px) {
+	.pc-ob--floating {
+		right: 24px;
+		bottom: 24px;
+		left: auto;
+		width: 380px;
+	}
+}
+
+/* 查订单页面里的结果 */
+.pc-ob--inline {
+	margin-top: 20px;
+	padding: 20px;
+	border: 1px solid var(--ob-line);
+	border-radius: 12px;
+	background: var(--ob-surface);
+}
+
+.pc-ob--inline:focus {
+	outline: 2px solid var(--ob-ink);
+	outline-offset: 2px;
+}
+
+.pc-ob__close {
+	position: absolute;
+	top: 6px;
+	right: 6px;
+	display: grid;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: transparent;
+	color: var(--ob-muted);
+	font-size: 24px;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.pc-ob__close:hover,
+.pc-ob__close:focus-visible {
+	background: #f5f5f5;
+	color: var(--ob-ink);
+}
+
+.pc-ob__eyebrow {
+	margin: 0 0 2px;
+	color: var(--ob-muted);
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+
+.pc-ob__title {
+	margin: 0 44px 8px 0;
+	padding: 0;
+	color: var(--ob-ink);
+	font-size: 20px;
+	font-weight: 700;
+	line-height: 1.25;
+}
+
+.pc-ob__meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 12px;
+	margin: 0 0 14px;
+}
+
+.pc-ob__status {
+	display: inline-block;
+	padding: 4px 10px;
+	border-radius: 999px;
+	background: #f1f1f1;
+	color: #404040;
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.pc-ob__status.is-awaiting_shipment {
+	background: #fff4d6;
+	color: #6b4e00;
+}
+
+.pc-ob__status.is-shipped {
+	background: #e3f4e8;
+	color: #1b5e33;
+}
+
+.pc-ob__placed {
+	color: var(--ob-muted);
+	font-size: 13px;
+}
+
+.pc-ob__items {
+	margin: 0 0 14px;
+	padding: 12px 0 0;
+	border-top: 1px solid var(--ob-line);
+	list-style: none;
+}
+
+.pc-ob__items li {
+	display: flex;
+	justify-content: space-between;
+	gap: 12px;
+	margin: 0 0 8px;
+}
+
+.pc-ob__item {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.pc-ob__qty {
+	flex: none;
+	color: var(--ob-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+.pc-ob__more {
+	color: var(--ob-muted);
+	font-size: 13px;
+}
+
+.pc-ob__ship {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 6px 12px;
+	margin: 0 0 14px;
+	padding: 12px 0 0;
+	border-top: 1px solid var(--ob-line);
+}
+
+.pc-ob__ship dt {
+	color: var(--ob-muted);
+	font-size: 13px;
+}
+
+.pc-ob__ship dd {
+	margin: 0;
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+.pc-ob__tracking {
+	font-variant-numeric: tabular-nums;
+	user-select: all;
+}
+
+.pc-ob__note {
+	margin: 0 0 14px;
+	color: var(--ob-muted);
+	font-size: 14px;
+}
+
+.pc-ob__foot {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 16px;
+	margin-top: 4px;
+}
+
+.pc-ob__button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 44px;
+	padding: 0 18px;
+	border: 1px solid var(--ob-ink);
+	border-radius: 8px;
+	background: var(--ob-ink);
+	color: #ffffff;
+	font: inherit;
+	font-size: 15px;
+	font-weight: 600;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.pc-ob__button:hover,
+.pc-ob__button:focus-visible {
+	background: #333333;
+	color: #ffffff;
+}
+
+.pc-ob__button--quiet {
+	background: var(--ob-surface);
+	color: var(--ob-ink);
+}
+
+.pc-ob__button--quiet:hover,
+.pc-ob__button--quiet:focus-visible {
+	background: #f5f5f5;
+	color: var(--ob-ink);
+}
+
+.pc-ob__link {
+	display: inline-flex;
+	align-items: center;
+	min-height: 44px;
+	color: var(--ob-muted);
+	font-size: 14px;
+	text-decoration: underline;
+}
+
+.pc-ob__body > .pc-ob__button {
+	width: 100%;
+	margin-bottom: 14px;
+}
+
+/* 查订单表单 */
+.pc-ol {
+	max-width: 480px;
+	margin: 0 auto;
+	text-align: left;
+}
+
+.pc-ol__intro {
+	margin: 0 0 20px;
+	color: #5f6368;
+}
+
+.pc-ol__field {
+	margin: 0 0 16px;
+}
+
+.pc-ol__field label {
+	display: block;
+	margin-bottom: 6px;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.pc-ol__field input {
+	box-sizing: border-box;
+	width: 100%;
+	min-height: 48px;
+	padding: 0 14px;
+	border: 1px solid #c9c9c9;
+	border-radius: 8px;
+	background: #ffffff;
+	color: #171717;
+	font: inherit;
+	font-size: 16px; /* 小于 16px 时 iOS 会放大页面。 */
+}
+
+.pc-ol__field input:focus-visible {
+	border-color: #171717;
+	outline: 2px solid #171717;
+	outline-offset: 1px;
+}
+
+.pc-ol__actions {
+	margin: 0;
+}
+
+.pc-ol__submit {
+	width: 100%;
+	min-height: 48px;
+	padding: 0 20px;
+	border: 1px solid #171717;
+	border-radius: 8px;
+	background: #171717;
+	color: #ffffff;
+	font: inherit;
+	font-size: 16px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.pc-ol__submit:hover,
+.pc-ol__submit:focus-visible {
+	background: #333333;
+}
+
+.pc-ol__submit[disabled] {
+	opacity: 0.6;
+	cursor: default;
+}
+
+.pc-ol__message {
+	margin: 14px 0 0;
+	padding: 12px 14px;
+	border: 1px solid #e5bfba;
+	border-radius: 8px;
+	background: #fff6f5;
+	color: #933a32;
+	font-size: 14px;
+}
+
+.pc-ol__message[hidden] {
+	display: none;
+}

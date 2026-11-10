@@ -8,8 +8,9 @@
  * - 向导进度。
  *
  * 数字不在这里算：
- * - F4 的统一指标入口 PeptideCore\Data\Metrics::summary( $range ) 到位后用它（约定见 docs/CONTRACT.md）；
- * - 没到之前沿用现有“数据大盘”的口径（Overview::range_data()）和弃单列表的统计（Recovery_Items::list()），都是真实数据。
+ * - 这家店的指标开关（M6，peptide_core_m6_mode）是 on 时，用 F4 的统一入口 PeptideCore\Data\Metrics::preset()；
+ * - 开关是 off / shadow，或者 F4 的代码还没合进来时，沿用现有“数据大盘”的口径（Overview::range_data()）和弃单列表的
+ *   统计（Recovery_Items::list()）。这样投手在首页和数据页看到的数字任何时候都是同一个口径，而且都是真实数据。
  * 页面先出框架，数字由 GET peptide/v1/admin/buyer-home 取回（每个时间段缓存 60 秒），不拖慢页面打开。
  *
  * @package PeptideCore
@@ -59,7 +60,7 @@ final class Buyer_Home {
 			'visitors'   => array( 'label' => '访客', 'help' => '这段时间里打开过店铺的人数。同一个人来多次只算一个。' ),
 			'orders'     => array( 'label' => '订单', 'help' => '已经付款成功的订单数，不包括测试单。' ),
 			'sales'      => array( 'label' => '销售额', 'help' => '已付款订单的金额合计，已经减去退款。' ),
-			'conversion' => array( 'label' => '转化率', 'help' => '订单数 ÷ 访客数：每 100 个访客里有几个人付款。' ),
+			'conversion' => array( 'label' => '转化率', 'help' => '每 100 个访客里有几个人付款。' ),
 			'abandoned'  => array( 'label' => '弃单', 'help' => '开始结账但没有付款的顾客数。可以到“弃单”里联系他们。' ),
 		);
 	}
@@ -71,39 +72,62 @@ final class Buyer_Home {
 		return $visitors > 0 ? $orders / $visitors : null;
 	}
 
+	/** 用不用 F4 的统一指标入口：代码已经在，而且这家店的指标开关是 on。 */
+	public static function modern(): bool {
+		$metrics = '\PeptideCore\Data\Metrics';
+		$switch  = '\PeptideCore\Data\Metrics_Switch';
+		return is_callable( array( $metrics, 'preset' ) ) && is_callable( array( $switch, 'mode' ) ) && 'on' === call_user_func( array( $switch, 'mode' ) );
+	}
+
 	/**
-	 * 某个时间段的原始数字：visitors、orders、sales_cents、abandoned、source（数字来自哪里）。
+	 * 把 Metrics::preset() 的结果整理成首页用的数字（不读数据库，测试里直接调用）。
+	 * Metrics 的转化率是百分数（支付成功访客 ÷ 访客，没有访客时为 null），这里换成 0–1。
 	 *
-	 * @return array{visitors:int,orders:int,sales_cents:int,abandoned:int,source:string}
+	 * @param array<string,mixed> $raw
+	 * @return array{visitors:int,orders:int,sales_cents:int,abandoned:int,conversion:?float,source:string}
+	 */
+	public static function from_metrics( array $raw ): array {
+		return array(
+			'visitors'    => (int) ( $raw['visitors'] ?? 0 ),
+			'orders'      => (int) ( $raw['orders'] ?? 0 ),
+			'sales_cents' => (int) ( $raw['sales_cents'] ?? 0 ),
+			'abandoned'   => (int) ( $raw['abandoned'] ?? 0 ),
+			'conversion'  => isset( $raw['conversion_rate'] ) ? (float) $raw['conversion_rate'] / 100 : null,
+			'source'      => 'metrics',
+		);
+	}
+
+	/**
+	 * 某个时间段的原始数字：visitors、orders、sales_cents、abandoned、conversion（0–1 或 null）、source（数字来自哪里）。
+	 *
+	 * @return array{visitors:int,orders:int,sales_cents:int,abandoned:int,conversion:?float,source:string}
 	 */
 	public static function numbers( string $range ): array {
-		$range   = isset( self::RANGES[ $range ] ) ? $range : 'today';
-		$metrics = '\PeptideCore\Data\Metrics';
-		if ( is_callable( array( $metrics, 'summary' ) ) ) {
-			$raw = (array) call_user_func( array( $metrics, 'summary' ), $range );
-			return array(
-				'visitors'    => (int) ( $raw['visitors'] ?? 0 ),
-				'orders'      => (int) ( $raw['orders'] ?? 0 ),
-				'sales_cents' => (int) ( $raw['sales_cents'] ?? 0 ),
-				'abandoned'   => (int) ( $raw['abandoned'] ?? 0 ),
-				'source'      => 'metrics',
-			);
+		$range = isset( self::RANGES[ $range ] ) ? $range : 'today';
+		if ( self::modern() ) {
+			return self::from_metrics( (array) call_user_func( array( '\PeptideCore\Data\Metrics', 'preset' ), $range ) );
 		}
-		// F4 的指标入口还没到：沿用数据大盘和弃单列表现在的口径。
-		$data            = Overview::range_data( $range );
-		[ $from, $to ]   = Overview::window( $range );
-		$counts          = Recovery_Items::list( array( 'from_ms' => $from * 1000, 'to_ms' => $to * 1000 ), 1, 1 )['counts'];
+		// 指标开关没开：沿用数据大盘和弃单列表现在的口径。
+		$data          = Overview::range_data( $range );
+		[ $from, $to ] = Overview::window( $range );
+		$counts        = Recovery_Items::list( array( 'from_ms' => $from * 1000, 'to_ms' => $to * 1000 ), 1, 1 )['counts'];
+		$visitors      = (int) ( $data['visitors'] ?? 0 );
+		$orders        = (int) ( $data['orders'] ?? 0 );
 		return array(
-			'visitors'    => (int) ( $data['visitors'] ?? 0 ),
-			'orders'      => (int) ( $data['orders'] ?? 0 ),
+			'visitors'    => $visitors,
+			'orders'      => $orders,
 			'sales_cents' => (int) round( (float) ( $data['sales'] ?? 0 ) * 100 ),
 			'abandoned'   => (int) ( $counts['pending'] ?? 0 ) + (int) ( $counts['recalling'] ?? 0 ) + (int) ( $counts['failed'] ?? 0 ),
+			'conversion'  => self::conversion( $orders, $visitors ),
 			'source'      => 'overview',
 		);
 	}
 
-	/** 还没跟进的弃单数：待召回和召回中的顾客；日常会话加上“已联系”标记后，标记过的不算。 */
+	/** 还没跟进的弃单数：近 7 天待召回和召回中的顾客；日常会话加上“已联系”标记后，标记过的不算。 */
 	public static function abandoned_open(): int {
+		if ( self::modern() ) {
+			return (int) ( call_user_func( array( '\PeptideCore\Data\Metrics', 'preset' ), '7d' )['abandoned_open'] ?? 0 );
+		}
 		if ( is_callable( array( Recovery_Items::class, 'uncontacted_count' ) ) ) {
 			return (int) Recovery_Items::uncontacted_count();
 		}
@@ -126,10 +150,10 @@ final class Buyer_Home {
 		$key   = 'pc_buyer_home_' . md5( $range . '|' . wp_date( 'Y-m-d' ) );
 		$data  = get_transient( $key );
 		if ( ! is_array( $data ) ) {
-			$n              = self::numbers( $range );
-			$rate           = self::conversion( $n['orders'], $n['visitors'] );
-			[ $from, $to ]  = Overview::window( $range );
-			$data           = array(
+			$n             = self::numbers( $range );
+			$rate          = $n['conversion'];
+			[ $from, $to ] = Overview::window( $range );
+			$data          = array(
 				'range'          => $range,
 				'metrics'        => array(
 					'visitors'   => number_format_i18n( $n['visitors'] ),

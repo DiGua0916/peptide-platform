@@ -630,6 +630,8 @@ Root installed only three existing Commerce sources for P09 collection products 
   - 只读（GET）：`/peptide/v1/data/*`、`/peptide/v1/overview*`；
   - 读写：`/peptide/v1/track/admin/*`（实时访客和 AI 分析）、`/peptide/v1/admin/pixel-test`、`/peptide/v1/admin/ad-link`、`/peptide/v1/admin/recovery/*`、`/peptide/v1/admin/buyer-home`。
 - **给投手用的新页面或新接口**：请告诉 F5 加进名单（`Staff_Buyer::classify()`、`REST_READ` / `REST_ANY`），否则投手打不开。权限检查继续用 `manage_woocommerce` 即可。
+- 对 F4「数据页对投手」一条的答复：角色已经有了，但 `manage_woocommerce` **不是常驻能力**，只在上面名单里的页面和接口上有。F4 的 `Audience::is_media_buyer()`（看角色）可以照常用；投手的两个数据子页 `pc-data-funnel-sources`、`pc-data-products-landing` 都在 `pc-data*` 之内，不用改名单。F4 做的“像素页投手模式”目前投手进不去（`pc-system` 不在名单里），投手用的是 F5 的“广告设置”页（只管第一个 Facebook 像素）；要让投手管理多个像素时再把 `pc-system&section=pixels` 和 `pc_pixels_save` 加进名单。
+- 功能声明（F1 的 `pc_hq_capabilities`）：`m9.media_buyer => 1`（投手角色和开关）、`m9.onboarding => 1`（向导和 `Onboarding::store_status()`）。
 
 需要配合：
 
@@ -669,7 +671,7 @@ Root installed only three existing Commerce sources for P09 collection products 
 
 | 归属 | 内容 | 没做之前 |
 | --- | --- | --- |
-| F4（M6） | `\PeptideCore\Data\Metrics::summary( string $range ): array`，`$range` 为 `today` / `yesterday` / `7d`（店铺时区，含今天），返回 `array{visitors:int,orders:int,sales_cents:int,abandoned:int}`：访客数、已付款订单数、销售额（美分，已减退款）、弃单数，都不含测试单。转化率由首页按 订单 ÷ 访客 计算 | 首页沿用现有口径：`Overview::range_data()` 和 `Recovery_Items::list()` 的统计（真实数据，不是假数据） |
+| F4（M6，已按 F4 的约定接好） | 首页用 `\PeptideCore\Data\Metrics::preset( 'today' \| 'yesterday' \| '7d' )` 的 `visitors`、`orders`、`sales_cents`、`conversion_rate`、`abandoned`，待办用 `preset( '7d' )` 的 `abandoned_open`。**只在这家店的指标开关 `Metrics_Switch::mode()` 是 `on` 时才用**，这样首页和数据页任何时候都是同一个口径 | 开关是 `off` / `shadow`，或 F4 的代码还没合进来：沿用 `Overview::range_data()` 和 `Recovery_Items::list()` 的统计（真实数据，不是假数据） |
 | 日常会话（M5）/ F1 | 店铺选项 `pc_pay_domain_missing`：总后台发现这家店的收银台域名不在名单里时写 `1`，登记好后删除（也可以用过滤器 `pc_pay_domain_missing` 返回布尔值） | 这一条待办不会出现 |
 | 日常会话（M8） | `Recovery_Items::uncontacted_count(): int`（未标记“已联系”的待召回 / 召回中顾客数），或者在 `Recovery_Items::list()` 的每一项里带 `contacted_ms` | 首页把全部待召回 / 召回中的顾客都算作未跟进 |
 
@@ -678,3 +680,26 @@ Root installed only three existing Commerce sources for P09 collection products 
 - 投手的订单列表去掉勾选框、批量操作和行内按钮，增加三列：来源广告（订单上的 `_wc_order_attribution_utm_*`）、运单号（见 M11 的 `Buyer_Status::shipment()`）、退款状态（`_pc_refund_state` 优先，没有时按订单已退金额）。订单页面隐藏保存、改价、退款、作废、加备注。
 - 店铺信息页面 `admin.php?page=pc-store-info`：只改 `blogname`（对外英文店名，限 60 个英文字符）和 `peptide_core_settings.support` 里的 `whatsapp`、`email`，其余字段不动；域名只读；修改自己的密码。
 - 订单导出（PRD ST-03 提到）这一版没做。
+
+### M11 已购回访和查订单（`PeptideCore\Buyer_Status`、`PeptideCore\Order_Lookup`，FE-10、FE-11）
+
+- **按店开关，默认关**：选项 `pc_buyer_recognition`，值 `on` 才生效（过滤器 `pc_buyer_recognition_enabled` 可以覆盖）。关着时不写 cookie、不静默弹窗、不加载前台脚本，两个接口都按“不是已购 / 没找到”回答。第一次改成 `on` 时自动建一个 `/track-order` 页面（内容是短代码 `[pc_track_order]`，页面 ID 记在选项 `pc_track_order_page`；已有同名页面就用它）。
+- cookie `pc_buyer`：`v1.<订单号-订单号…>.<签发时间>.<HMAC-SHA256>`，最多 10 张订单，1 年，HttpOnly，SameSite=Lax，HTTPS 下带 Secure。密钥是 `wp_salt( 'pc_buyer' )`。里面没有顾客资料。
+- 什么时候写：顾客带着订单密钥回到店铺而且订单已付款（`/?pc_paid=<订单>&pc_key=<密钥>`，或 WooCommerce“订单已收到”页面带 `key`）；查订单核对成功且订单付过款。测试单（`Test_Orders::is_test_order()`）不写。
+- 接口（都是公开的，返回 `Cache-Control: no-store, private`）：
+  - `GET /peptide/v1/buyer/status` → `{ "buyer": false }`，或 `{ "buyer": true, "order": { "number", "placed", "status", "status_label", "items": [ { "name", "quantity" } ], "more_items", "shipment": { "carrier", "number", "url" } } }`。只看 cookie 里最近的一张订单；`status` 取 `awaiting_shipment` / `shipped` / `refunded` / `cancelled` / `unpaid`。不返回姓名、邮箱、电话、地址。前台等 800 毫秒，没等到就当新客。
+  - `POST /peptide/v1/order-lookup`，JSON `{ "email", "order" }` → `{ "found": true, "order": {…同上} }`，或 `{ "found": false, "message" }`（HTTP 200；订单不存在、邮箱不符、测试单都是同一句提示）。每个 IP 每分钟 5 次（成功失败都算），超过返回 429。IP 的取法同 `Api\Rest_Controller::client_ip()`。
+- 运单：`Buyer_Status::shipment( \WC_Order $order )` 返回 `array{carrier,number,url,shipped,shipped_at}`。先读订单元数据 `_pc_shipment`（`carrier`、`number`、`url`、`shipped_at`，发货对接 OR-01 写入），没有再读 WooCommerce 订单履约（`Shipping_Tracking::customer_view()`）；都没有而订单是 `completed` 时算已发货但没有运单号。投手的订单列表也用这个函数。
+- 静默营销弹窗：过滤器 **`pc_popups_muted`**（布尔）。已购顾客在前台时 `Buyer_Status` 让它返回 `true`；带 cookie 的访客本来就不走首页缓存，所以在服务端判断，新访客没有任何额外请求。同时在页面 `<head>` 里输出 `window.pcBuyer = { known: true, suppressPopups: true }`，前端脚本要自己判断时读它（新访客没有这个变量）。
+- 功能声明：`m11.buyer_status => 1`。
+- 没有新数据表。新选项：`pc_buyer_recognition`、`pc_track_order_page`。
+
+需要配合：
+
+| 归属 | 内容 | 没做之前 |
+| --- | --- | --- |
+| F2（离开挽回、首单券条、转盘等营销弹窗） | 输出弹窗、弹窗脚本和配置之前判断 `apply_filters( 'pc_popups_muted', false )`，为真就不输出。只管弹出来打扰顾客的东西；满减、优惠码、首单优惠的**价格计算**不要跟着关。如果 F2 想换过滤器名字，在 F2 那节写明，F5 改 `Buyer_Status::MUTE_FILTER` 一处 | 已购顾客仍然会看到这些弹窗；物流卡片和查订单不受影响 |
+| 日常会话（`Campaign_Countdown`、`Campaign_Announcement`、`Modules\Product_Broadcast` 等不属于 F2 的弹出内容） | 同上，读 `pc_popups_muted`。付款成功弹窗（`Paid_Popup`）不属于营销弹窗，不用改 | 同上 |
+| F3 / 发货对接（OR-01，暂缓） | 发货后把 `carrier`、`number`、`url`、`shipped_at` 写进订单元数据 `_pc_shipment`；退款标记写 `_pc_refund_state`（`full` 时卡片显示 Refunded） | 物流卡片显示“Awaiting shipment”，或显示 WooCommerce 订单履约里的运单 |
+| M14 主题（F5 自己，等主题归属确认）/ 总后台菜单下发 | 在页脚或“联系我们”放“Track your order”入口，指向 `Order_Lookup::page_url()`；发货邮件里的链接可以带 `?email=…&order=…` 预填 | 顾客只能从物流卡片上的“Look up another order”或直接打开 `/track-order` 进入 |
+| F1（开关） | 试点店打开：`wp option update pc_buyer_recognition on`（或总后台远程写选项）。回退：改回 `off` | — |

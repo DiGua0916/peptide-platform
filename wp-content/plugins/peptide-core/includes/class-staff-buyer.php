@@ -84,6 +84,7 @@ final class Staff_Buyer {
 		add_filter( 'submenu_file', array( self::class, 'submenu_file' ), 9999 );
 		add_action( 'admin_bar_menu', array( self::class, 'admin_bar' ), 9999 );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
+		add_filter( 'pc_hq_capabilities', array( self::class, 'capabilities' ) );
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			\WP_CLI::add_command( 'peptide buyer', Staff_Buyer_Cli::class );
 		}
@@ -93,6 +94,11 @@ final class Staff_Buyer {
 				$page::register_hooks();
 			}
 		}
+	}
+
+	/** 向总后台声明这家店的代码支持投手版后台和开店向导（新旧版本混跑时用，约定见 F1 的 pc_hq_capabilities）。 */
+	public static function capabilities( $caps ) {
+		return is_array( $caps ) ? $caps + array( 'm9.media_buyer' => '1', 'm9.onboarding' => '1' ) : $caps;
 	}
 
 	// ---------- 角色和开关 ----------
