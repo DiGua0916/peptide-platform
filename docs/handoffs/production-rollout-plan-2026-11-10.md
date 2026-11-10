@@ -178,3 +178,19 @@
 
 ### 2026-11-10 模板库加 05 下单成功感谢
 - 店主确认后加入：`vc-order-thanks`「05 下单成功感谢（关心体验 · 加专员 WhatsApp）」，主题 VialCove | Thank You for Your Order；感谢下单、重视购物体验、加专员 WhatsApp（实时物流 / 问题 / 建议）+ WhatsApp 按钮、没有 WhatsApp 就回信留联系方式。TEMPLATES_VERSION → 2026-11-10d（店主自建模板保留）。6 家店模板库都已出现。
+
+### 2026-11-10 付款成功弹窗 WhatsApp 预填 + 首页视频
+- WhatsApp 预填改为“我刚刚在平台上下单了什么、一共多少钱”：默认 `Hi! I just placed an order on {store}: {items}. The total is {total} (order #{order}).`，新增变量 {store}/{items}/{total}（后台字段说明同步）。主店 #11841 核对：Hi! I just placed an order on VialCovePeptides: Happy x1. The total is $1.00 (order #11841).
+- 首页视频（vialcove/video stage 模块）：6 家店 pc_layout 正文和已发布副本 `_pc_published_content` 都改为 autoplay=false、muted=false（原值备份 `_pc_video_backup_20261110` / `_pc_published_backup_20261110`），清页面缓存；modules.css 视频区底色由 #0d1417 改为 #e9eff1、封面底部渐变减淡。5 个可访问站核对 data-vc-stage-autoplay="0"；主店手机尺寸：停在明亮封面，点 Watch video 有声播放。
+
+### 2026-11-10 运费提前显示（只开阳）
+- 阳的 AI 全站分析“马上做”：结账前明示运费和预计总价（27 人发起结账，只有 6 人填完地址）。店主：先改一家，每家按自己的分析决定。
+- 新增 `Ship_Preview`（class-ship-preview.php + assets/ship-preview.js + 店铺设置 → 运费提前显示，class-ship-preview-page.php）：代码 6 家一样，开关每家单独、默认关。开启后商品弹窗加购区显示 “Shipping $X · Estimated total $Y”（购物车已有商品时写 “Est. total with your bag”），运费按这家店的运费方案 + 当前运费优惠算，默认按美国估算（接口 /peptide/v1/ship-estimate，关闭时 404）。
+- 发现购物车抽屉（vc-live-cart-drawer）本来就显示运费前后和应付总额（$45 → 5% off $42.75 → $52.75），所以只补商品弹窗；旧的 vc-cart-drawer 不用改。
+- AI：`HQ_AI::store_config()` 加“运费提前显示”：开 / 关和开启时间，AI 可对比开启前后“填完地址 ÷ 发起结账”。
+- 主店手机尺寸测试后关闭；阳 2026-11-10 22:21 开启，其余 4 家关。估算核对：bac.water 1 盒 $10 + 运费 $42.75 = $52.75，与结账页一致。
+- 修正：桌面宽度的首页快速查看弹窗里，加购区是横向 flex，运费行占了宽度把价格挤成一竖列。改为 `flex:0 0 100%; order:99`（手机 grid 仍 `grid-column:1/-1`），运费行单独一行放在按钮下面。阳桌面首页弹窗和商品列表弹窗核对正常。
+
+### 2026-11-10 仪表盘“店铺评分”
+- 右栏商品排名下面的空白放“店铺评分”卡：AI 全站分析最新报告的健康分（0–100，颜色：≥70 绿、40–69 橙、<40 红）、状态、比上一份报告的变化，以及“状态评级”四项（流量质量 / 商品吸引力 / 结账转化 / 付款成功）的评级和一句理由，底部写报告类型和时间，“查看报告”跳全站分析。
+- `HQ_AI::rest_extras()` 的 ai 加 `ratings`（`ratings()` 从报告解析四项）和 `prev`（`previous_health()` 上一份全站报告的健康分）；overview.js `scoreCard()`，overview-workspace.css。6 家店都有（数据各用各的）。阳核对：24 / 100 · 告警，比上次 +2，四项为 需关注 / 健康 / 告警 / 告警。

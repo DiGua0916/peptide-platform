@@ -247,6 +247,9 @@ final class Hq_Ai {
 				'at'      => $site['at'],
 				'period'  => array( 'day' => '日报', 'week' => '周报', 'month' => '月报' )[ $site['period'] ] ?? $site['period'],
 				'url'     => admin_url( 'admin.php?page=pc-visitors' ),
+				// 店主 2026-11-10：仪表盘“店铺评分”——四项评级和上一份报告的健康分。
+				'ratings' => self::ratings( $site['text'] ),
+				'prev'    => self::previous_health( (int) $site['created'] ),
 			);
 		}
 		$recent = array();
@@ -262,6 +265,27 @@ final class Hq_Ai {
 		$res = rest_ensure_response( array( 'todo' => $todo, 'ai' => $ai, 'recent' => array_values( $recent ) ) );
 		$res->header( 'Cache-Control', 'no-store' );
 		return $res;
+	}
+
+	/** 报告“状态评级”里的四项：流量质量 / 商品吸引力 / 结账转化 / 付款成功 → {name, grade, reason}。 */
+	private static function ratings( string $text ): array {
+		$out = array();
+		foreach ( array( '流量质量', '商品吸引力', '结账转化', '付款成功' ) as $name ) {
+			if ( preg_match( '/' . $name . '[\*\s]*[:：][\*\s]*([^\n]+)/u', $text, $m ) ) {
+				$line  = trim( str_replace( '**', '', $m[1] ) );
+				$parts = preg_split( '/\s*(?:——|—|--|－－)\s*/u', $line, 2 );
+				$grade = trim( (string) ( $parts[0] ?? '' ), ' ，,；;。' );
+				$out[] = array( 'name' => $name, 'grade' => mb_substr( $grade, 0, 12 ), 'reason' => mb_substr( trim( (string) ( $parts[1] ?? '' ) ), 0, 80 ) );
+			}
+		}
+		return $out;
+	}
+
+	/** 这一份全站报告之前的那一份的健康分（没有就空）。 */
+	private static function previous_health( int $before ): string {
+		global $wpdb;
+		$body = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT body FROM ' . self::results_table() . " WHERE scope = 'site' AND created < %d ORDER BY created DESC LIMIT 1", $before ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+		return '' === $body ? '' : (string) ( self::parse_record( $body )['健康分'] ?? '' );
 	}
 
 	/** 从报告里取某一段的条目（去掉编号和加粗，每条截 140 字，最多 3 条）。 */
@@ -652,6 +676,7 @@ final class Hq_Ai {
 		return array(
 			'运费'       => $ship,
 			'运费优惠'   => $ship_discounts,
+			'运费提前显示' => class_exists( Ship_Preview::class ) ? Ship_Preview::ai_note() : '关闭',
 			'满减活动'   => $promos,
 			'首单优惠'   => $first_txt,
 			'支付方式'   => $pays,
