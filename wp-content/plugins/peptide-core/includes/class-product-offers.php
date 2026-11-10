@@ -206,6 +206,8 @@ final class Product_Offers {
 				foreach ( array_keys( $fractions ) as $key ) { if ( $remainder <= 0 ) { break; } ++$allocated[ $key ]; --$remainder; }
 				foreach ( $items as $key => $item ) { $cart->cart_contents[ $key ]['data']->set_price( $allocated[ $key ] / $scale / $item['quantity'] ); }
 			}
+			// 价格引擎“开”档（M4）：购物车整理完之后，赠品 / 捆绑行的单价改用引擎算的；引擎出错时保持上面的结果。
+			if ( Pricing\Runtime::on() ) { Pricing\Runtime::offer_prices( $cart ); }
 		} finally { self::$busy = false; }
 	}
 	/**

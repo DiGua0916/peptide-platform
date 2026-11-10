@@ -29,6 +29,7 @@ namespace {
 	define( 'WC_DISCOUNT_ROUNDING_MODE', 2 );
 	define( 'DAY_IN_SECONDS', 86400 );
 	define( 'ARRAY_A', 'ARRAY_A' );
+	define( 'HOUR_IN_SECONDS', 3600 );
 
 	function m4_reset(): void {
 		$GLOBALS['m4'] = array(
@@ -49,7 +50,16 @@ namespace {
 			'billing'  => '',
 			'activity' => array(),
 			'uuid'     => 0,
+			'transients' => array(),
+			'dbdelta'  => array(),
+			'throw'    => '',
 		);
+		if ( isset( $GLOBALS['wpdb'] ) ) {
+			$GLOBALS['wpdb']->writes    = array();
+			$GLOBALS['wpdb']->insert_id = 0;
+		}
+		\PeptideCore\Pricing\Runtime::reset();
+		\PeptideCore\Pricing\Shadow::reset();
 		// 线上的钩子和优先级（见各类的 register_hooks）。
 		add_filter( 'woocommerce_add_cart_item_data', array( \PeptideCore\Product_Offers::class, 'cart_data' ), 1000, 4 );
 		add_action( 'woocommerce_before_calculate_totals', array( \PeptideCore\Product_Offers::class, 'sync_cart' ), 100 );
@@ -151,13 +161,25 @@ namespace {
 	function is_user_logged_in() { return get_current_user_id() > 0; }
 	function get_userdata( $id ) { return isset( $GLOBALS['m4']['users'][ (int) $id ] ) ? (object) ( $GLOBALS['m4']['users'][ (int) $id ] + array( 'ID' => (int) $id, 'roles' => array( 'customer' ) ) ) : false; }
 	function wp_get_current_user() { $u = get_userdata( get_current_user_id() ); return $u ? $u : (object) array( 'ID' => 0, 'user_email' => '', 'roles' => array() ); }
-	function get_user_meta( $id, $key, $single = false ) { return $GLOBALS['m4']['users'][ (int) $id ]['meta'][ $key ] ?? ''; }
+	function get_user_meta( $id, $key, $single = false ) {
+		if ( 'user_meta' === $GLOBALS['m4']['throw'] ) { throw new RuntimeException( '测试：模拟引擎读取顾客资料时出错' ); }
+		return $GLOBALS['m4']['users'][ (int) $id ]['meta'][ $key ] ?? '';
+	}
+	function get_transient( $k ) { return $GLOBALS['m4']['transients'][ $k ] ?? false; }
+	function set_transient( $k, $v, $ttl = 0 ) { $GLOBALS['m4']['transients'][ $k ] = $v; return true; }
 	function user_can( $user, $cap ) { return false; }
 	final class M4_Wpdb {
 		public string $prefix = 'wp_';
 		public function prepare( $query, ...$args ) { return array( $query, $args ); }
 		public function get_row( $prepared, $output = null ) { return $GLOBALS['m4']['ledger'][ (string) ( $prepared[1][0] ?? '' ) ] ?? null; }
 		public function get_var( $prepared ) { return null; }
+		// 核对日志（Shadow）写进来的内容记在内存里，测试直接查看。
+		public array $writes  = array();
+		public int $insert_id = 0;
+		public function query( $q ) { $this->writes[] = array( 'query', $q ); return 1; }
+		public function insert( $table, $data ) { $this->writes[] = array( 'insert', $table, $data ); ++$this->insert_id; return 1; }
+		public function get_results( $q, $output = null ) { return array(); }
+		public function get_charset_collate() { return ''; }
 	}
 	$GLOBALS['wpdb'] = new M4_Wpdb();
 

@@ -63,48 +63,16 @@ final class Cart_Reader {
 
 		// ---- 商品行 ----
 		$facts = Product_Offers::pricing_facts( $cart );
-		$lines = array();
-		foreach ( $cart->get_cart() as $key => $item ) {
-			$product = $item['data'] ?? null;
-			if ( ! $product instanceof \WC_Product ) {
-				$unsupported[] = 'line';
-				continue;
-			}
-			$fact          = $facts['lines'][ $key ] ?? array( 'has_meta' => false, 'offer' => null, 'native' => null, 'sellable' => false );
-			$parent        = $product->get_parent_id();
-			$lines[ $key ] = array(
-				'product_id' => $product->get_id(),
-				'parent_id'  => $parent,
-				'cats'       => wc_get_product_cat_ids( $parent ? $parent : $product->get_id() ),
-				'on_sale'    => $product->is_on_sale(),
-				'qty'        => $item['quantity'],
-				// 有赠品 / 捆绑标记的行，旧逻辑每次都从商品的原价重新算起。
-				'price'      => (float) ( $fact['has_meta'] && null !== $fact['native'] ? $fact['native'] : $product->get_price() ),
-				'sellable'   => $fact['sellable'],
-				'offer'      => $fact['offer'],
-			);
+		$lines = self::lines( $cart, $facts );
+		if ( count( $lines ) !== count( $cart->get_cart() ) ) {
+			$unsupported[] = 'line';
 		}
 
 		// ---- 顾客 ----
-		$user_id  = get_current_user_id();
 		$wc       = function_exists( 'WC' ) ? WC() : null;
-		$billing  = $wc && $wc->customer ? (string) $wc->customer->get_billing_email() : '';
-		$account  = $user_id ? (string) wp_get_current_user()->user_email : '';
-		$email    = strtolower( trim( '' !== $billing ? $billing : $account ) );
-		$profile  = $user_id ? Customer_Segments::profile( $user_id ) : array( 'tags' => array(), 'level' => '' );
-		$clean    = static fn( string $v ): string => strtolower( function_exists( 'sanitize_email' ) ? (string) sanitize_email( $v ) : $v );
-		$cart_c   = $cart->get_customer();
-		$customer = array(
-			'user_id'       => $user_id,
-			'email'         => $email,
-			'segment_email' => Customer_Segments::current_email(),
-			'account_email' => $clean( $account ),
-			'billing_email' => $clean( $cart_c ? (string) $cart_c->get_billing_email() : $billing ),
-			'has_ordered'   => false,
-			'tags'          => $profile['tags'],
-			'level'         => $profile['level'],
-			'visitor_id'    => 0,
-		);
+		$customer = self::customer( $cart );
+		$user_id  = (int) $customer['user_id'];
+		$email    = (string) $customer['email'];
 
 		// ---- 优惠码 ----
 		$coupons    = array();
@@ -183,12 +151,9 @@ final class Cart_Reader {
 		}
 
 		// ---- 满减活动 ----
-		$promotions = array();
-		foreach ( Promotions::active_ids( $now ) as $id ) {
-			$c                 = Promotions::config( $id );
-			$c['title']        = Promotions::customer_title( html_entity_decode( get_the_title( $id ) ) );
-			$promotions[ $id ] = $c;
-			$rules[]           = (array) ( $c['customer_rule'] ?? array() );
+		$promotions = self::promotions( $now );
+		foreach ( $promotions as $c ) {
+			$rules[] = (array) ( $c['customer_rule'] ?? array() );
 		}
 
 		// ---- 运费 ----
@@ -206,12 +171,7 @@ final class Cart_Reader {
 			}
 		}
 
-		foreach ( $rules as $rule ) {
-			if ( 'visitor' === ( $rule['customers'] ?? 'all' ) ) {
-				$customer['visitor_id'] = Customer_Segments::current_visitor_id();
-				break;
-			}
-		}
+		$customer['visitor_id'] = self::visitor_id( $rules );
 
 		return array(
 			'now'               => $now,
@@ -228,6 +188,89 @@ final class Cart_Reader {
 			'offer_groups'      => $facts['groups'],
 			'shipping'          => array( 'rates' => $rates, 'discounts' => $discounts, 'weekday' => (int) wp_date( 'N', $now ) ),
 		);
+	}
+
+	/**
+	 * 商品行。$facts 是 Product_Offers::pricing_facts() 的结果。
+	 *
+	 * @return array<string,array>
+	 */
+	public static function lines( \WC_Cart $cart, array $facts ): array {
+		$lines = array();
+		foreach ( $cart->get_cart() as $key => $item ) {
+			$product = $item['data'] ?? null;
+			if ( ! $product instanceof \WC_Product ) {
+				continue;
+			}
+			$fact          = $facts['lines'][ $key ] ?? array( 'has_meta' => false, 'offer' => null, 'native' => null, 'sellable' => false );
+			$parent        = $product->get_parent_id();
+			$lines[ $key ] = array(
+				'product_id' => $product->get_id(),
+				'parent_id'  => $parent,
+				'cats'       => wc_get_product_cat_ids( $parent ? $parent : $product->get_id() ),
+				'on_sale'    => $product->is_on_sale(),
+				'qty'        => $item['quantity'],
+				// 有赠品 / 捆绑标记的行，旧逻辑每次都从商品的原价重新算起。
+				'price'      => (float) ( $fact['has_meta'] && null !== $fact['native'] ? $fact['native'] : $product->get_price() ),
+				'sellable'   => $fact['sellable'],
+				'offer'      => $fact['offer'],
+				'has_meta'   => $fact['has_meta'],
+			);
+		}
+		return $lines;
+	}
+
+	/** 当前顾客（不含“有没有下过单”“访客编号”，这两项要查库，用到时再查）。 */
+	public static function customer( ?\WC_Cart $cart ): array {
+		$user_id = get_current_user_id();
+		$wc      = function_exists( 'WC' ) ? WC() : null;
+		$billing = $wc && $wc->customer ? (string) $wc->customer->get_billing_email() : '';
+		$account = $user_id ? (string) wp_get_current_user()->user_email : '';
+		$profile = $user_id ? Customer_Segments::profile( $user_id ) : array( 'tags' => array(), 'level' => '' );
+		$clean   = static fn( string $v ): string => strtolower( function_exists( 'sanitize_email' ) ? (string) sanitize_email( $v ) : $v );
+		$cart_c  = $cart ? $cart->get_customer() : null;
+		return array(
+			'user_id'       => $user_id,
+			'email'         => strtolower( trim( '' !== $billing ? $billing : $account ) ),
+			'segment_email' => Customer_Segments::current_email(),
+			'account_email' => $clean( $account ),
+			'billing_email' => $clean( $cart_c ? (string) $cart_c->get_billing_email() : $billing ),
+			'has_ordered'   => false,
+			'tags'          => $profile['tags'],
+			'level'         => $profile['level'],
+			'visitor_id'    => 0,
+		);
+	}
+
+	/** 有规则按“指定访客”匹配时才去查访客编号。 */
+	public static function visitor_id( array $rules ): int {
+		foreach ( $rules as $rule ) {
+			if ( 'visitor' === ( $rule['customers'] ?? 'all' ) ) {
+				return Customer_Segments::current_visitor_id();
+			}
+		}
+		return 0;
+	}
+
+	/** 进行中的满减活动：ID => 设置（带给顾客看的标题），创建时间最近的在前。 */
+	public static function promotions( ?int $now = null ): array {
+		$out = array();
+		foreach ( Promotions::active_ids( $now ) as $id ) {
+			$c            = Promotions::config( $id );
+			$c['title']   = Promotions::customer_title( html_entity_decode( get_the_title( $id ) ) );
+			$out[ $id ]   = $c;
+		}
+		return $out;
+	}
+
+	/** 只要“挂了哪些码、各自的叠加策略”时用（满减的归属和可用性只看这两样）。 */
+	public static function coupon_strategies( \WC_Cart $cart ): array {
+		$out = array();
+		foreach ( $cart->get_applied_coupons() as $code ) {
+			$code  = wc_format_coupon_code( $code );
+			$out[] = array( 'code' => $code, 'strategy' => Coupon_Rules::strategy( new \WC_Coupon( $code ) ) );
+		}
+		return $out;
 	}
 
 	/** 加购推荐配置里的优惠码 ID（没开时为 0）。 */
