@@ -733,6 +733,46 @@
       "core": true,
       "node_test": false,
       "status": "final-source-gate"
+    },
+    {
+      "name": "m4-price-engine-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m4-price-engine-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "m4-pricing"
+    },
+    {
+      "name": "m4-engine-mode-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m4-engine-mode-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "m4-pricing"
+    },
+    {
+      "name": "m4-marketing-quiet-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m4-marketing-quiet-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "m4-pricing"
+    },
+    {
+      "name": "m4-campaigns-readonly-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m4-campaigns-readonly-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "m4-pricing"
+    },
+    {
+      "name": "m4-marketing-quiet",
+      "language": "node",
+      "path": "wp-content/plugins/peptide-core/tests/m4-marketing-quiet.cjs",
+      "core": true,
+      "node_test": false,
+      "status": "m4-pricing"
     }
   ]
 }
