@@ -319,6 +319,56 @@
 		return '<tr class="' + ( 'server' === e.source ? 'is-server' : '' ) + '"><td>' + esc( clock( e.at_ms ) ) + '</td><td><span class="pc-trk-tabid">' + esc( tabLabel( e.tab ) ) + '</span></td><td>' + esc( typeText ) + ( 'server' === e.source ? ' <span class="pc-trk-badge">' + esc( cfg.typeLabelsZh ? '服务器记录' : S.server ) + '</span>' : '' ) + '</td><td>' + ( e.path ? pageText( { page_type: e.page_type, path: e.path, product_name: e.product_name || ( e.data || {} ).product_name } ) : '' ) + '</td><td>' + esc( detail ) + ( e.order_url ? ' <a href="' + esc( e.order_url ) + '">#' + esc( e.order_id ) + '</a>' : '' ) + '</td></tr>';
 	}
 
+	// ---------- 时间线（2026-11-10 店主：表格看不清 → 竖向时间线，按页面分段） ----------
+	// 每个页面一段：页面名 + 时间段 + 停留；段内每个动作一行：时间、彩色圆点（按动作类别）、动作名、说明。
+	// 同一时刻（150 毫秒内）同一页面的多个动作合成一行；只有一个标签页时不显示“标签页 1”。
+	var TL_CAT = { product_click: 'interest', product_view: 'interest', product_intent: 'interest', variant_select: 'interest', product_impression: 'browse', page_view: 'browse', add_to_cart_attempt: 'cart', add_to_cart: 'cart', cart_open: 'cart', cart_close: 'cart', cart_view: 'cart', cart_change_attempt: 'cart', cart_change_response: 'cart', checkout_view: 'checkout', checkout_step_applicability: 'checkout', checkout_shipping_selected: 'checkout', checkout_payment_selected: 'checkout', checkout_address_completed: 'checkout', checkout_submit_attempt: 'checkout', payment_attempt: 'checkout', order_placed: 'order', order_status: 'order', payment_success: 'paid', payment_failed: 'fail', page_exit: 'leave', visibility_change: 'leave', module_click: 'module', video_play: 'module', video_pause: 'module', video_progress: 'module', video_seek: 'module', video_end: 'module' };
+	var TL_NAME = { interest: '看商品', browse: '浏览', cart: '购物车', checkout: '结账', order: '订单', paid: '付款成功', fail: '付款失败', leave: '离开 / 切走', module: '点击版块', other: '其他' };
+	var TL_RANK = [ 'other', 'leave', 'browse', 'module', 'interest', 'cart', 'checkout', 'order', 'fail', 'paid' ];
+	function tlItems( events ) {
+		var items = [];
+		groupEvents( events ).forEach( function ( e ) {
+			var last = items[ items.length - 1 ];
+			var part = { text: e.group ? groupText( e.group ) : detailText( e ), cat: e.group ? 'browse' : ( TL_CAT[ e.type ] || 'other' ), label: e.group ? '看到商品（' + e.group.length + ' 个）' : typeLabel( e.type ) };
+			if ( last && last.page === e.page && Math.abs( last.at_ms - e.at_ms ) <= 150 ) {
+				if ( ! last.parts.some( function ( p ) { return p.text === part.text; } ) ) { last.parts.push( part ); }
+				if ( e.order_url ) { last.order_url = e.order_url; last.order_id = e.order_id; }
+				if ( 'server' === e.source ) { last.server = true; }
+				return;
+			}
+			items.push( { page: e.page, tab: e.tab, path: e.path, page_type: e.page_type, product_name: e.product_name || ( e.data || {} ).product_name, at_ms: e.at_ms, parts: [ part ], order_url: e.order_url, order_id: e.order_id, server: 'server' === e.source } );
+		} );
+		// 每行的主动作 = 类别最重要的那个（付款 > 失败 > 订单 > 结账 > 购物车 > 看商品 …）。
+		items.forEach( function ( x ) {
+			x.parts.sort( function ( a, b ) { return TL_RANK.indexOf( b.cat ) - TL_RANK.indexOf( a.cat ); } );
+			x.cat = x.parts[ 0 ].cat;
+		} );
+		return items;
+	}
+	function tlTime( ms ) { return clock( ms ).replace( /\.\d+$/, '' ); }
+	function tlHtml( events ) {
+		var items = tlItems( events ), html = '', i = 0;
+		var tabs = {}; items.forEach( function ( x ) { if ( x.tab ) { tabs[ x.tab ] = 1; } } );
+		var multiTab = Object.keys( tabs ).length > 1;
+		while ( i < items.length ) {
+			var first = items[ i ], block = [];
+			while ( i < items.length && items[ i ].page === first.page && items[ i ].path === first.path ) { block.push( items[ i ] ); i++; }
+			var newest = block[ 0 ].at_ms, oldest = block[ block.length - 1 ].at_ms;
+			var type = S.pageTypes[ first.page_type ] || first.page_type || ( first.path ? '页面' : '系统记录' );
+			var title = type + ( first.product_name && 'product' === first.page_type ? ' · ' + first.product_name : '' );
+			html += '<li class="pc-tl-block' + ( first.path ? '' : ' is-system' ) + '"><div class="pc-tl-page"><strong>' + esc( title ) + '</strong>' + ( first.path && '/' !== first.path ? '<code>' + esc( first.path ) + '</code>' : '' ) + '<span class="pc-tl-span">' + esc( tlTime( oldest ) ) + ( newest - oldest >= 1000 ? ' – ' + esc( tlTime( newest ) ) + ' · 停留 ' + esc( secondsText( newest - oldest ) ) : '' ) + '</span>' + ( multiTab && first.tab ? '<span class="pc-trk-tabid">' + esc( tabLabel( first.tab ) ) + '</span>' : '' ) + '</div><ol class="pc-tl-items">' +
+				block.map( function ( x ) {
+					var main = x.parts[ 0 ], more = x.parts.slice( 1 );
+					return '<li class="pc-tl-item is-' + x.cat + '"><time>' + esc( tlTime( x.at_ms ) ) + '</time><i class="pc-tl-dot" aria-hidden="true"></i><div class="pc-tl-body"><span class="pc-tl-label">' + esc( main.label ) + ( x.server ? ' <span class="pc-trk-badge">服务器记录</span>' : '' ) + '</span><span class="pc-tl-text">' + esc( main.text ) + ( x.order_url ? ' <a href="' + esc( x.order_url ) + '">#' + esc( x.order_id ) + '</a>' : '' ) + '</span>' +
+						( more.length ? '<ul class="pc-tl-more">' + more.map( function ( p ) { return '<li><b>' + esc( p.label ) + '</b>' + esc( p.text ) + '</li>'; } ).join( '' ) + '</ul>' : '' ) + '</div></li>';
+				} ).join( '' ) + '</ol></li>';
+		}
+		return html;
+	}
+	function tlLegend() {
+		return '<div class="pc-tl-legend">' + [ 'interest', 'cart', 'checkout', 'paid', 'fail', 'module', 'browse', 'leave' ].map( function ( c ) { return '<span class="is-' + c + '"><i class="pc-tl-dot"></i>' + esc( TL_NAME[ c ] ) + '</span>'; } ).join( '' ) + '</div>';
+	}
+
 	// 时间线分页：心跳在服务器端过滤，“加载更多”接着往后翻，不会漏掉末尾的事件。
 	var timelineToken = 0;
 	function openTimeline( box, id, quiet ) {
@@ -341,8 +391,8 @@
             }
             box.dataset.visitId = String( id ); box.dataset.latestId = String( ( t.events[0] || {} ).id || 0 ); box.dataset.loadedOlder = 'false'; box.dataset.heartbeats = hideHeartbeats ? '0' : '1';
 			box.innerHTML = '<h2>' + esc( S.timeline ) + ' · ' + esc( clock( t.visit.start_ms, true ) ) + '</h2>' +
-				'<p class="pc-timeline-order">最新动作在上 · 继续加载更早记录</p><p class="pc-lifecycle-mobile-hint">左右滑动查看页面及行为详情</p><label class="pc-trk-hb"><input type="checkbox"' + ( hideHeartbeats ? ' checked' : '' ) + '> ' + esc( S.hideHeartbeats ) + '</label>' +
-				'<table class="widefat striped pc-trk-table pc-trk-timeline"><thead><tr><th>' + esc( S.time ) + '</th><th>' + esc( S.tab ) + '</th><th>' + esc( S.event ) + '</th><th>' + esc( S.page ) + '</th><th>' + esc( S.details ) + '</th></tr></thead><tbody>' + groupEvents( t.events ).map( eventRow ).join( '' ) + '</tbody></table>' +
+				'<p class="pc-timeline-order">最新动作在上，按页面分段；同一时刻的动作合成一行</p><label class="pc-trk-hb"><input type="checkbox"' + ( hideHeartbeats ? ' checked' : '' ) + '> ' + esc( S.hideHeartbeats ) + '</label>' +
+				tlLegend() + '<div class="pc-lifecycle-scroll pc-tl-scroll" tabindex="0"><ol class="pc-tl pc-trk-timeline">' + tlHtml( t.events ) + '</ol></div>' +
 				'<p class="pc-trk-more"></p>';
 			var more = box.querySelector( '.pc-trk-more' );
 			var cursor = t.next_cursor;
@@ -362,7 +412,7 @@
 						return;
 					}
 					box.dataset.loadedOlder = 'true';
-					box.querySelector( '.pc-trk-timeline tbody' ).insertAdjacentHTML( 'beforeend', groupEvents( next.events ).map( eventRow ).join( '' ) );
+					box.querySelector( '.pc-trk-timeline' ).insertAdjacentHTML( 'beforeend', tlHtml( next.events ) );
 					cursor = next.next_cursor;
 					button();
 				} ).catch( function () {
