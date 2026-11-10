@@ -70,6 +70,73 @@ final class Store_Score {
 		return $out;
 	}
 
+	// ---------- 一键完善（店主 2026-11-10）：用店里已有的资料把能填的都填上 ----------
+
+	private static function placeholder_email( string $to ): bool {
+		return '' === trim( $to ) || (bool) preg_match( '/\.local\b|^1{6,}@|example\.com/i', $to );
+	}
+
+	/** 店铺自己的收发信邮箱（发件地址，顾客回信就到这里）。 */
+	private static function own_email(): string {
+		$from = trim( (string) get_option( 'woocommerce_email_from_address', '' ) );
+		if ( '' === $from || self::placeholder_email( $from ) ) {
+			$from = class_exists( Emails\Chase_Copy::class ) ? Emails\Chase_Copy::store_email() : '';
+		}
+		return is_email( $from ) ? $from : '';
+	}
+
+	/** @return array<int,array{label:string,value:string}> 将要填的内容（不改任何东西）。 */
+	public static function autofill_plan(): array {
+		$plan = array();
+		$cfg  = get_option( 'peptide_core_store_config', array() );
+		$cfg  = is_array( $cfg ) ? $cfg : array();
+		$wa   = preg_replace( '/\D+/', '', (string) ( get_option( 'peptide_core_settings', array() )['support']['whatsapp'] ?? '' ) );
+		// 子店还在用主店的 WhatsApp（13039444124）时不能拿来当自己的电话。
+		$main_wa = '13039444124' === $wa && 's0001' !== self::store_code();
+		if ( '' === trim( (string) ( $cfg['company_phone'] ?? '' ) ) && strlen( $wa ) >= 8 && ! $main_wa ) {
+			$plan[] = array( 'key' => 'phone', 'label' => '客服电话', 'value' => '+' . $wa );
+		}
+		$email = self::own_email();
+		if ( '' !== $email && function_exists( 'WC' ) ) {
+			$emails = WC()->mailer()->get_emails();
+			$cur    = isset( $emails['WC_Email_New_Order'] ) ? (string) $emails['WC_Email_New_Order']->get_recipient() : '';
+			if ( self::placeholder_email( $cur ) ) {
+				$plan[] = array( 'key' => 'notify', 'label' => '新订单 / 取消 / 失败通知邮箱', 'value' => $email );
+			}
+		}
+		return $plan;
+	}
+
+	/** 执行一键完善：只填空着的或占位的，已经填好的不动。 */
+	public static function autofill(): array {
+		$plan = self::autofill_plan();
+		$cfg  = get_option( 'peptide_core_store_config', array() );
+		$cfg  = is_array( $cfg ) ? $cfg : array();
+		$cfg_changed = false;
+		foreach ( $plan as $p ) {
+			if ( 'phone' === $p['key'] ) {
+				$cfg['company_phone'] = $p['value'];
+				$cfg_changed          = true;
+			} elseif ( 'name' === $p['key'] ) {
+				$cfg['company_name'] = $p['value'];
+				$cfg_changed         = true;
+			} elseif ( 'notify' === $p['key'] ) {
+				foreach ( array( 'woocommerce_new_order_settings', 'woocommerce_cancelled_order_settings', 'woocommerce_failed_order_settings' ) as $opt ) {
+					$o = get_option( $opt, array() );
+					$o = is_array( $o ) ? $o : array();
+					if ( self::placeholder_email( (string) ( $o['recipient'] ?? '' ) ) ) {
+						$o['recipient'] = $p['value'];
+						update_option( $opt, $o );
+					}
+				}
+			}
+		}
+		if ( $cfg_changed ) {
+			update_option( 'peptide_core_store_config', $cfg );
+		}
+		return $plan;
+	}
+
 	private static function store_code(): string {
 		return (string) wp_parse_url( home_url(), PHP_URL_HOST ) === 'www.vialcovepeptides.com' ? 's0001' : '';
 	}

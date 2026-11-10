@@ -332,7 +332,10 @@
 			else {
 				var todo = s.items.filter( function ( i ) { return ! i.done; } );
 				var done = s.items.filter( function ( i ) { return i.done; } );
-				body = '<div class="pc-ov-score__top"><b class="' + tone( s.score ) + '">' + esc( s.score ) + '</b><span>/ 100 · 已完成 ' + esc( s.done ) + ' / ' + esc( s.count ) + ' 项</span></div>' +
+				var af = s.autofill || [];
+				var afBtn = af.length ? '<button type="button" class="pc-ov-score__auto" data-score-autofill title="' + esc( af.map( function ( x ) { return x.label + '：' + x.value; } ).join( '\n' ) ) + '">一键完善</button>' : '';
+				body = '<div class="pc-ov-score__top"><b class="' + tone( s.score ) + '">' + esc( s.score ) + '</b><span>/ 100 · 已完成 ' + esc( s.done ) + ' / ' + esc( s.count ) + ' 项</span>' + afBtn + '</div>' +
+					( af.length ? '<p class="pc-ov-score__afnote">一键完善会用店里已有的资料填：' + af.map( function ( x ) { return esc( x.label ) + ' → ' + esc( x.value ); } ).join( '；' ) + '</p>' : '' ) +
 					'<div class="pc-ov-score__bar"><i class="' + tone( s.score ) + '" style="width:' + Math.max( 0, Math.min( 100, s.score ) ) + '%"></i></div>' +
 					( todo.length ? '<p class="pc-ov-score__sub">做完下面这些，分数会涨</p><ul class="pc-ov-score__tasks">' + todo.map( function ( i ) {
 						return '<li><a href="' + esc( i.url ) + '"><span class="pc-ov-score__plus">+' + esc( i.points ) + '</span><span class="pc-ov-score__task"><b>' + esc( i.label ) + '</b><small>' + esc( i.hint ) + '</small></span><span class="pc-ov-score__go">去设置 ›</span></a></li>';
@@ -359,6 +362,18 @@
 		return '<section class="pc-ov-card pc-ov-score">' + head + body + '</section>';
 	}
 	root.addEventListener( 'click', function ( e ) {
+		var af = e.target.closest && e.target.closest( '[data-score-autofill]' );
+		if ( af ) {
+			af.disabled = true; af.textContent = '完善中…';
+			wp.apiFetch( { path: '/peptide/v1/store-score/autofill', method: 'POST' } ).then( function ( r ) {
+				if ( extras ) { extras.setup = r.setup; }
+				var sc = root.querySelector( '.pc-ov-score' );
+				if ( sc ) { sc.outerHTML = scoreCard(); }
+				var n2 = root.querySelector( '.pc-ov-score__sub' );
+				if ( n2 && r.filled && r.filled.length ) { n2.insertAdjacentHTML( 'beforebegin', '<p class="pc-ov-score__ok">已填好：' + r.filled.map( function ( x ) { return esc( x.label ); } ).join( '、' ) + '</p>' ); }
+			} ).catch( function ( x ) { af.disabled = false; af.textContent = '一键完善'; window.alert( ( x && x.message ) || '完善失败，请稍后再试' ); } );
+			return;
+		}
 		var t = e.target.closest && e.target.closest( '[data-score-tab]' );
 		if ( ! t ) { return; }
 		scoreTab = t.getAttribute( 'data-score-tab' );

@@ -134,6 +134,11 @@ final class Hq_Ai {
 				return rest_ensure_response( array( 'items' => $list ) );
 			} ),
 		) );
+		register_rest_route( 'peptide/v1', '/store-score/autofill', array(
+			'methods'             => 'POST',
+			'permission_callback' => static fn() => current_user_can( 'manage_woocommerce' ),
+			'callback'            => static fn() => rest_ensure_response( array( 'filled' => Store_Score::autofill(), 'setup' => Store_Score::summary() ) ),
+		) );
 		register_rest_route( 'peptide/v1', '/overview/extras', array( 'methods' => 'GET', 'permission_callback' => static fn() => current_user_can( 'manage_woocommerce' ), 'callback' => array( self::class, 'rest_extras' ) ) );
 	}
 
@@ -262,7 +267,7 @@ final class Hq_Ai {
 			$rec = self::parse_record( (string) $r['body'] );
 			$recent[ (int) $r['ref'] ] = array( 'visitor' => (int) $r['ref'], 'level' => (string) ( $rec['意向'] ?? '' ), 'blocker' => (string) ( $rec['主要卡点'] ?? '' ), 'type' => (string) ( $rec['心理类型'] ?? '' ), 'at' => wp_date( 'm-d H:i', (int) $r['created'] ), 'url' => admin_url( 'admin.php?page=pc-visitors&visitor=' . (int) $r['ref'] ) );
 		}
-		$setup = class_exists( Store_Score::class ) ? Store_Score::summary() : null;
+		$setup = class_exists( Store_Score::class ) ? Store_Score::summary() + array( 'autofill' => Store_Score::autofill_plan() ) : null;
 		$res = rest_ensure_response( array( 'todo' => $todo, 'ai' => $ai, 'recent' => array_values( $recent ), 'setup' => $setup ) );
 		$res->header( 'Cache-Control', 'no-store' );
 		return $res;
