@@ -146,7 +146,7 @@ def scrub_statements(kind, prefix, present, salt):
     if has("usermeta"):
         m = t("usermeta")
         sql += [
-            f"DELETE FROM {m} WHERE meta_key IN ('session_tokens', '_application_passwords', 'community-events-location', '_woocommerce_tracks_anon_id', 'jetpack_tracks_anon_id') OR meta_key LIKE '\\_woocommerce\\_persistent\\_cart%'",
+            f"DELETE FROM {m} WHERE meta_key IN ('session_tokens', '_application_passwords', 'community-events-location', '_woocommerce_tracks_anon_id', 'jetpack_tracks_anon_id') OR meta_key LIKE '\\_woocommerce\\_persistent\\_cart%' OR (meta_key LIKE '%email%' AND meta_key <> 'billing_email')",
             f"UPDATE {m} SET meta_value = 'Test' WHERE meta_key IN ('first_name', 'billing_first_name', 'shipping_first_name')",
             f"UPDATE {m} SET meta_value = CONCAT('Customer', user_id) WHERE meta_key IN ('last_name', 'billing_last_name', 'shipping_last_name')",
             f"UPDATE {m} SET meta_value = CONCAT('user', user_id) WHERE meta_key = 'nickname'",
@@ -248,10 +248,20 @@ def sql_regex(pattern):
 def leak_queries(columns, allow_domains=(), allow_emails=()):
     """对每个文本列数“去掉允许的地址之后，还像邮箱的行”。columns: [(table, column, data_type)]"""
     allowed = sql_regex(allowed_regex(allow_domains, allow_emails))
+    names = {}
+    for table, column, _ in columns:
+        names.setdefault(table, set()).add(column)
     out = []
     for table, column, data_type in columns:
-        if data_type.lower() in TEXT_TYPES:
-            out.append(f"SELECT {q(table + '.' + column)}, COUNT(*) FROM `{table}` WHERE `{column}` LIKE '%@%' AND REGEXP_REPLACE(LOWER(`{column}`), {allowed}, '') REGEXP {sql_regex(EMAIL_RE)} HAVING COUNT(*) > 0")
+        if data_type.lower() not in TEXT_TYPES:
+            continue
+        where = f"`{column}` LIKE '%@%' AND REGEXP_REPLACE(LOWER(`{column}`), {allowed}, '') REGEXP {sql_regex(EMAIL_RE)}"
+        # meta / options 表按键名分组报告（只报键名，不报内容），不然不知道该补哪条规则。
+        key = next((k for k in ("meta_key", "option_name") if k in names[table] and k != column), None)
+        if key:
+            out.append(f"SELECT CONCAT({q(table + '.' + column + ' [')}, `{key}`, ']'), COUNT(*) FROM `{table}` WHERE {where} GROUP BY `{key}`")
+        else:
+            out.append(f"SELECT {q(table + '.' + column)}, COUNT(*) FROM `{table}` WHERE {where} HAVING COUNT(*) > 0")
     return out
 
 

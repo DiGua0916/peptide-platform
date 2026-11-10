@@ -68,7 +68,8 @@ sudo python3 snapshot.py export --db vialcove_hq --kind hq --out /root/vialcove-
 ### 验证状态（如实）
 
 - `python3 tools/local-env/snapshot/test_snapshot.py`：11 项通过。覆盖：2026-11-10 生产库的全部表（店铺 74 张、总后台 23 张，只取了表名）都已登记；未登记的表会拒绝；语句只碰存在且非“保留”的表；泄漏检查规则。
-- **脱敏 SQL 还没有在真实 MySQL 上执行过**（会在生产数据库服务器上建临时库，属于要先同意的操作）。第一次执行建议先用 `--report-only` 对沙盒库 `vc_sandbox_store` 跑，再对一家子店跑。
+- 2026-11-10 经平台所有者同意，在后台机对沙盒库 `vc_sandbox_store`（66 张表）和 `vc_sandbox_hq` 用 `--report-only` 试跑：全部脱敏语句在 MySQL 8.0.46 上执行成功，临时库用完已删除，没有出文件。第一次试跑查出 1 处遗漏（`wp_usermeta` 里的 `_wc_email_verified_*`），已补规则，复跑两库都干净。
+- 沙盒里几乎没有真实顾客资料，所以“干净”只说明 SQL 能跑、检查能查出问题；**对真实店铺库的效果要等第一次正式导出时再核对**（建议先 `--report-only`）。
 
 ## 升级和回填脚本怎么验（开发文档 12.2）
 

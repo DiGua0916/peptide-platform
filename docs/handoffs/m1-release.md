@@ -58,3 +58,10 @@
 - 功能声明和巡检的用法见 `docs/CONTRACT.md`“M1 / M2 基础”一节。新功能键、新巡检类型、新数据表（脱敏怎么处理）写在各自那节，F1 汇总。
 - 测试条目追加到 `tests/data-observations-suites.json` 末尾，文件名带模块前缀。
 - 日常会话请注意：`35c15c7` 那次“回退”只回退了服务器，仓库没回退。以后在服务器上回退文件，仓库要同步回退。
+
+## 2026-11-10 补充：脱敏快照沙盒试跑（平台所有者已同意）
+
+- 在后台机对 `vc_sandbox_store`、`vc_sandbox_hq` 以 `--report-only` 运行 `snapshot.py export`：复制到临时库 → 脱敏 → 泄漏检查 → 删除临时库，不出文件。SQL 在 MySQL 8.0.46 上全部执行成功。
+- 第一次查出 `wp_usermeta` 的 `_wc_email_verified_*` 里有邮箱；已加规则（usermeta 里键名含 email 的，除 `billing_email` 外一律删除），泄漏报告改为按键名分组。复跑两库均干净，`vcsnap_*` 临时库无残留。
+- 服务器上留下的唯一东西：空目录 `/root/vialcove-snapshots`（0700）。
+- 还没做：对真实店铺库和总后台库导出（需要再次确认）；沙盒数据少，脱敏对真实数据的覆盖面要到那时核对。
