@@ -3,7 +3,7 @@
  * 总后台 AI（2026-11-10，店主：AI 统一在总后台设置，并且要有人设）。
  *
  * - 服务商、模型、API 密钥只存在总后台（密钥用 Crypto 加密），店铺和浏览器都拿不到密钥。
- * - 人设库：每个人设 = 名字 + 用途（customer 客户分析 / business 全站经营分析）+ 人设正文（作为系统提示词）。
+ * - 人设库：每个人设 = 名字 + 用途（customer 客户分析 / business 全站分析师）+ 人设正文（作为系统提示词）。
  *   可以粘贴或上传 .txt / .md 导入；每家店按用途选人设，不选就用该用途的第一个。
  * - 店铺用连接密钥签名后请求 /peptide-hq/v1/ai/analyse（验签同邮件中心），只发行为事实，不发姓名邮箱电话。
  * - 每家店每天有次数上限；超了当天不再分析。
@@ -20,61 +20,125 @@ final class Ai {
 	public const OPTION   = 'pchq_ai';
 	public const PERSONAS = 'pchq_ai_personas';
 	public const USES     = array( 'customer' => '客户分析', 'business' => '全站分析师' );
-	public const PROVIDERS = array(
-		'anthropic' => array( 'label' => 'Claude（Anthropic）', 'endpoint' => 'https://api.anthropic.com/v1/messages', 'models' => 'https://api.anthropic.com/v1/models' ),
-		'openai'    => array( 'label' => 'OpenAI / 兼容接口', 'endpoint' => 'https://api.openai.com/v1/chat/completions', 'models' => '' ),
+	/** 内置服务商（店主 2026-11-10：Claude、OpenAI 由我们配好；其他的店主在“服务商设置”里自己加）。 */
+	public const BUILTIN = array(
+		'anthropic' => array( 'label' => 'Claude（Anthropic）', 'format' => 'anthropic', 'endpoint' => 'https://api.anthropic.com/v1/messages', 'models' => 'https://api.anthropic.com/v1/models' ),
+		'openai'    => array( 'label' => 'OpenAI', 'format' => 'openai', 'endpoint' => 'https://api.openai.com/v1/chat/completions', 'models' => 'https://api.openai.com/v1/models' ),
 	);
+	public const FORMATS   = array( 'openai' => 'OpenAI 兼容（/chat/completions）', 'anthropic' => 'Anthropic 兼容（/messages）' );
+	public const LANGUAGES = array( '中文' => '中文', 'English' => 'English' );
+	public const CUSTOM    = 'pchq_ai_providers';
 	private const MAX_PERSONA = 60000;
 
 	public static function register_hooks(): void {
 		add_action( 'rest_api_init', array( self::class, 'routes' ) );
 	}
 
+	// ---------- 服务商 ----------
+
+	/** @return array<string,array{id:string,label:string,format:string,endpoint:string,models:string,builtin:bool}> */
+	public static function providers(): array {
+		$out = array();
+		foreach ( self::BUILTIN as $id => $p ) {
+			$out[ $id ] = array( 'id' => $id, 'builtin' => true ) + $p;
+		}
+		$custom = get_option( self::CUSTOM, array() );
+		foreach ( is_array( $custom ) ? $custom : array() as $p ) {
+			if ( is_array( $p ) && ! empty( $p['id'] ) && ! isset( $out[ $p['id'] ] ) ) {
+				$out[ (string) $p['id'] ] = array(
+					'id'       => (string) $p['id'],
+					'label'    => (string) $p['label'],
+					'format'   => isset( self::FORMATS[ $p['format'] ?? '' ] ) ? (string) $p['format'] : 'openai',
+					'endpoint' => (string) $p['endpoint'],
+					'models'   => (string) ( $p['models'] ?? '' ),
+					'builtin'  => false,
+				);
+			}
+		}
+		return $out;
+	}
+
+	private static function https( string $url ): string {
+		$url = esc_url_raw( trim( $url ) );
+		return '' !== $url && 'https' === wp_parse_url( $url, PHP_URL_SCHEME ) ? $url : '';
+	}
+
+	/** 店主自己加的服务商：名字、接口类型、对话接口地址、模型列表地址（可空，按接口地址推）。 */
+	public static function add_provider( array $in ): array|\WP_Error {
+		$label    = mb_substr( sanitize_text_field( (string) ( $in['label'] ?? '' ) ), 0, 40 );
+		$format   = isset( self::FORMATS[ $in['format'] ?? '' ] ) ? (string) $in['format'] : 'openai';
+		$endpoint = self::https( (string) ( $in['endpoint'] ?? '' ) );
+		$models   = self::https( (string) ( $in['models'] ?? '' ) );
+		if ( '' === $label || '' === $endpoint ) {
+			return new \WP_Error( 'pchq_ai_provider', '名字和接口地址都要填，接口地址必须是 https 开头。' );
+		}
+		$custom   = get_option( self::CUSTOM, array() );
+		$custom   = is_array( $custom ) ? array_values( $custom ) : array();
+		$row      = array( 'id' => 'c' . substr( md5( uniqid( '', true ) ), 0, 8 ), 'label' => $label, 'format' => $format, 'endpoint' => $endpoint, 'models' => $models );
+		$custom[] = $row;
+		update_option( self::CUSTOM, $custom, false );
+		return $row;
+	}
+
+	public static function delete_provider( string $id ): void {
+		if ( isset( self::BUILTIN[ $id ] ) ) {
+			return;
+		}
+		$custom = get_option( self::CUSTOM, array() );
+		update_option( self::CUSTOM, array_values( array_filter( is_array( $custom ) ? $custom : array(), static fn( $p ) => ( $p['id'] ?? '' ) !== $id ) ), false );
+		$raw = get_option( self::OPTION, array() );
+		if ( is_array( $raw ) ) {
+			unset( $raw['keys'][ $id ] );
+			if ( ( $raw['provider'] ?? '' ) === $id ) {
+				$raw['provider'] = 'anthropic';
+				$raw['model']    = '';
+			}
+			update_option( self::OPTION, $raw, false );
+		}
+	}
+
 	// ---------- 设置 ----------
 
 	public static function settings(): array {
-		$s = get_option( self::OPTION, array() );
-		$s = is_array( $s ) ? $s : array();
-		$p = isset( self::PROVIDERS[ $s['provider'] ?? '' ] ) ? $s['provider'] : 'anthropic';
+		$s    = get_option( self::OPTION, array() );
+		$s    = is_array( $s ) ? $s : array();
+		$all  = self::providers();
+		$p    = isset( $all[ $s['provider'] ?? '' ] ) ? (string) $s['provider'] : 'anthropic';
+		$keys = is_array( $s['keys'] ?? null ) ? $s['keys'] : array();
 		return array(
-			'enabled'   => ! empty( $s['enabled'] ),
-			'provider'  => $p,
-			'endpoint'  => (string) ( $s['endpoint'] ?? '' ) ?: self::PROVIDERS[ $p ]['endpoint'],
-			'model'     => (string) ( $s['model'] ?? '' ),
-			'language'  => (string) ( $s['language'] ?? '' ) ?: '中文',
-			'daily_cap' => max( 1, min( 5000, (int) ( $s['daily_cap'] ?? 100 ) ) ),
+			'enabled'    => ! empty( $s['enabled'] ),
+			'provider'   => $p,
+			'format'     => $all[ $p ]['format'],
+			'endpoint'   => $all[ $p ]['endpoint'], // 跟着服务商自动走，不用手填。
+			'model'      => (string) ( $s['model'] ?? '' ),
+			'language'   => isset( self::LANGUAGES[ $s['language'] ?? '' ] ) ? (string) $s['language'] : '中文',
+			'daily_cap'  => max( 1, min( 5000, (int) ( $s['daily_cap'] ?? 100 ) ) ),
 			'max_tokens' => max( 200, min( 8000, (int) ( $s['max_tokens'] ?? 1500 ) ) ),
-			'has_key'   => '' !== (string) ( $s['key'] ?? '' ),
-			'sites'     => is_array( $s['sites'] ?? null ) ? $s['sites'] : array(), // site_id => {enabled, customer, business}
+			'has_key'    => '' !== (string) ( $keys[ $p ] ?? '' ),
+			'key_set'    => array_keys( array_filter( $keys ) ), // 哪些服务商存了密钥（不含密钥本身）。
+			'sites'      => is_array( $s['sites'] ?? null ) ? $s['sites'] : array(), // site_id => {enabled, customer, business}
 		);
 	}
 
 	public static function save_settings( array $in ): void {
 		$raw = get_option( self::OPTION, array() );
 		$raw = is_array( $raw ) ? $raw : array();
-		$p   = isset( self::PROVIDERS[ $in['provider'] ?? '' ] ) ? (string) $in['provider'] : 'anthropic';
-		$ep  = esc_url_raw( trim( (string) ( $in['endpoint'] ?? '' ) ) );
-		if ( '' !== $ep && 'https' !== wp_parse_url( $ep, PHP_URL_SCHEME ) ) {
-			$ep = '';
-		}
-		// 换服务商时，接口地址如果是另一家的默认地址（或没填），换成这家的默认地址。
-		$defaults = array_column( self::PROVIDERS, 'endpoint' );
-		if ( '' === $ep || ( $ep !== self::PROVIDERS[ $p ]['endpoint'] && in_array( $ep, $defaults, true ) ) ) {
-			$ep = '';
-		}
+		$all = self::providers();
+		$p   = isset( $all[ $in['provider'] ?? '' ] ) ? (string) $in['provider'] : 'anthropic';
 		$changed           = ( $raw['provider'] ?? 'anthropic' ) !== $p;
 		$raw['enabled']    = ! empty( $in['enabled'] );
 		$raw['provider']   = $p;
-		$raw['endpoint']   = $ep;
 		$raw['model']      = $changed ? '' : substr( preg_replace( '/[^A-Za-z0-9._:\/-]/', '', (string) ( $in['model'] ?? '' ) ), 0, 120 );
-		$raw['language']   = mb_substr( sanitize_text_field( (string) ( $in['language'] ?? '中文' ) ), 0, 20 );
+		$raw['language']   = isset( self::LANGUAGES[ $in['language'] ?? '' ] ) ? (string) $in['language'] : '中文';
 		$raw['daily_cap']  = (int) ( $in['daily_cap'] ?? 100 );
 		$raw['max_tokens'] = (int) ( $in['max_tokens'] ?? 1500 );
-		$key = trim( (string) ( $in['key'] ?? '' ) );
+		unset( $raw['endpoint'], $raw['key'] );
+		$raw['keys'] = is_array( $raw['keys'] ?? null ) ? $raw['keys'] : array();
+		$key         = trim( (string) ( $in['key'] ?? '' ) );
 		if ( ! empty( $in['clear_key'] ) ) {
-			$raw['key'] = '';
+			unset( $raw['keys'][ $p ] );
 		} elseif ( '' !== $key ) {
-			$raw['key'] = Crypto::encrypt( $key ); // 空白 = 保留原来的密钥。
+			$raw['keys'][ $p ] = Crypto::encrypt( $key ); // 密钥按服务商分开存；空白 = 保留原来的。
 		}
 		if ( isset( $in['sites'] ) && is_array( $in['sites'] ) ) {
 			$ids   = array_column( self::personas(), 'id' );
@@ -94,14 +158,15 @@ final class Ai {
 
 	private static function key(): string {
 		$raw = get_option( self::OPTION, array() );
-		return is_array( $raw ) && '' !== (string) ( $raw['key'] ?? '' ) ? Crypto::decrypt( (string) $raw['key'] ) : '';
+		$p   = self::settings()['provider'];
+		return is_array( $raw ) && '' !== (string) ( $raw['keys'][ $p ] ?? '' ) ? Crypto::decrypt( (string) $raw['keys'][ $p ] ) : '';
 	}
 
 	/** 某家店：开没开、各用途用哪个人设。新店铺默认开（总开关开着时）。 */
 	public static function site_config( int $site_id ): array {
 		$s    = self::settings();
 		$row  = $s['sites'][ $site_id ] ?? null;
-		$on   = $s['enabled'] && $s['has_key'] && ( null === $row || ! empty( $row['enabled'] ) );
+		$on   = $s['enabled'] && $s['has_key'] && '' !== $s['model'] && ( null === $row || ! empty( $row['enabled'] ) );
 		$out  = array( 'enabled' => $on );
 		foreach ( array_keys( self::USES ) as $use ) {
 			$id     = is_array( $row ) ? (string) ( $row[ $use ] ?? '' ) : '';
@@ -116,26 +181,26 @@ final class Ai {
 
 	public const MODELS = 'pchq_ai_models';
 
-	/** 上次拉到的模型：{provider, fetched, list:[{id,name}]} */
+	/** 当前服务商上次拉到的模型：{provider, fetched, list:[{id,name}]} */
 	public static function models(): array {
 		$m = get_option( self::MODELS, array() );
-		$s = self::settings();
-		return is_array( $m ) && ( $m['provider'] ?? '' ) === $s['provider'] && ( $m['endpoint'] ?? '' ) === $s['endpoint'] ? $m : array( 'provider' => $s['provider'], 'fetched' => 0, 'list' => array() );
+		$p = self::settings()['provider'];
+		return is_array( $m ) && is_array( $m[ $p ] ?? null ) ? $m[ $p ] : array( 'fetched' => 0, 'list' => array() );
 	}
 
 	/** 用保存的密钥拉模型列表；当前模型不在列表里时自动选一个推荐的。 */
 	public static function refresh_models(): array|\WP_Error {
 		$s   = self::settings();
+		$pv  = self::providers()[ $s['provider'] ];
 		$key = self::key();
 		if ( '' === $key ) {
-			return new \WP_Error( 'pchq_ai_key', '先填 API 密钥并保存，才能拉取模型列表。' );
+			return new \WP_Error( 'pchq_ai_key', '先填' . $pv['label'] . '的 API 密钥并保存，才能拉取模型列表。' );
 		}
-		if ( 'anthropic' === $s['provider'] ) {
-			$url     = self::PROVIDERS['anthropic']['endpoint'] === $s['endpoint'] ? self::PROVIDERS['anthropic']['models'] : preg_replace( '#/messages/?$#', '/models', $s['endpoint'] );
-			$url     = add_query_arg( 'limit', 1000, $url );
+		if ( 'anthropic' === $s['format'] ) {
+			$url     = add_query_arg( 'limit', 1000, '' !== $pv['models'] ? $pv['models'] : preg_replace( '#/messages/?$#', '/models', $pv['endpoint'] ) );
 			$headers = array( 'x-api-key' => $key, 'anthropic-version' => '2023-06-01' );
 		} else {
-			$url     = preg_replace( '#/chat/completions/?$#', '/models', $s['endpoint'] );
+			$url     = '' !== $pv['models'] ? $pv['models'] : preg_replace( '#/chat/completions/?$#', '/models', $pv['endpoint'] );
 			$headers = array( 'Authorization' => 'Bearer ' . $key );
 		}
 		$res = wp_safe_remote_get( $url, array( 'timeout' => 20, 'redirection' => 0, 'headers' => $headers, 'limit_response_size' => 2097152 ) );
@@ -149,13 +214,13 @@ final class Ai {
 			return new \WP_Error( 'pchq_ai_http', '拉取模型失败（HTTP ' . $code . '）' . ( '' !== $msg ? '：' . mb_substr( $msg, 0, 300 ) : '' ) );
 		}
 		$list = array();
-		foreach ( (array) ( $json['data'] ?? array() ) as $m ) {
-			$id = is_array( $m ) ? (string) ( $m['id'] ?? '' ) : '';
+		foreach ( (array) ( $json['data'] ?? $json['models'] ?? array() ) as $m ) {
+			$id = is_array( $m ) ? (string) ( $m['id'] ?? $m['name'] ?? '' ) : '';
 			if ( '' === $id || ! preg_match( '/^[A-Za-z0-9._:\/-]{1,120}$/', $id ) ) {
 				continue;
 			}
-			// OpenAI 的列表里有向量、语音、画图等模型，只留能对话的。
-			if ( 'openai' === $s['provider'] && preg_match( '/embedding|whisper|tts|dall-e|image|audio|moderation|transcribe|realtime|search|babbage|davinci/i', $id ) ) {
+			// OpenAI 兼容的列表里常有向量、语音、画图等模型，只留能对话的。
+			if ( 'openai' === $s['format'] && preg_match( '/embedding|whisper|tts|dall-e|image|audio|moderation|transcribe|realtime|search|babbage|davinci/i', $id ) ) {
 				continue;
 			}
 			$list[] = array( 'id' => $id, 'name' => (string) ( $m['display_name'] ?? $id ) );
@@ -163,7 +228,10 @@ final class Ai {
 		if ( ! $list ) {
 			return new \WP_Error( 'pchq_ai_models', '接口没有返回可用的模型。' );
 		}
-		update_option( self::MODELS, array( 'provider' => $s['provider'], 'endpoint' => $s['endpoint'], 'fetched' => time(), 'list' => $list ), false );
+		$all = get_option( self::MODELS, array() );
+		$all = is_array( $all ) && ! isset( $all['list'] ) ? $all : array();
+		$all[ $s['provider'] ] = array( 'fetched' => time(), 'list' => $list );
+		update_option( self::MODELS, $all, false );
 		$ids = array_column( $list, 'id' );
 		if ( ! in_array( $s['model'], $ids, true ) ) {
 			$pick = $ids[0];
@@ -269,7 +337,7 @@ final class Ai {
 		if ( '' === $s['model'] ) {
 			return new \WP_Error( 'pchq_ai_model', '总后台还没有填模型名称。' );
 		}
-		if ( 'anthropic' === $s['provider'] ) {
+		if ( 'anthropic' === $s['format'] ) {
 			$headers = array( 'Content-Type' => 'application/json', 'x-api-key' => $key, 'anthropic-version' => '2023-06-01' );
 			$body    = array( 'model' => $s['model'], 'max_tokens' => $s['max_tokens'], 'system' => $system, 'messages' => array( array( 'role' => 'user', 'content' => $user ) ) );
 		} else {
@@ -287,7 +355,7 @@ final class Ai {
 			return new \WP_Error( 'pchq_ai_http', 'AI 服务返回错误（HTTP ' . $code . '）' . ( '' !== $msg ? '：' . mb_substr( $msg, 0, 300 ) : '' ) );
 		}
 		$text = '';
-		if ( 'anthropic' === $s['provider'] ) {
+		if ( 'anthropic' === $s['format'] ) {
 			foreach ( (array) ( $json['content'] ?? array() ) as $part ) {
 				if ( 'text' === ( $part['type'] ?? '' ) ) {
 					$text .= (string) $part['text'];

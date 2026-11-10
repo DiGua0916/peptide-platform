@@ -24,7 +24,7 @@ final class Ai_Page {
 			},
 			23
 		);
-		foreach ( array( 'save', 'test', 'persona', 'delete', 'models' ) as $do ) {
+		foreach ( array( 'save', 'test', 'persona', 'delete', 'models', 'provider_add', 'provider_delete' ) as $do ) {
 			add_action( 'admin_post_pchq_ai_' . $do, array( self::class, 'handle' ) );
 		}
 		add_action( 'admin_enqueue_scripts', array( self::class, 'assets' ), 1001 );
@@ -67,6 +67,14 @@ final class Ai_Page {
 				}
 			}
 			self::flash( 'success', $msg );
+		} elseif ( 'provider_add' === $do ) {
+			$r = Ai::add_provider( $post );
+			self::flash( is_wp_error( $r ) ? 'error' : 'success', is_wp_error( $r ) ? $r->get_error_message() : '已添加服务商「' . $r['label'] . '」。在上面的服务商里选它，填密钥保存即可。' );
+			self::back( array( 'providers' => 1 ) );
+		} elseif ( 'provider_delete' === $do ) {
+			Ai::delete_provider( sanitize_key( (string) ( $post['id'] ?? '' ) ) );
+			self::flash( 'success', '服务商已删除。' );
+			self::back( array( 'providers' => 1 ) );
 		} elseif ( 'models' === $do ) {
 			$m = Ai::refresh_models();
 			self::flash( is_wp_error( $m ) ? 'error' : 'success', is_wp_error( $m ) ? $m->get_error_message() : '已拉取 ' . count( $m ) . ' 个模型。' );
@@ -123,10 +131,10 @@ final class Ai_Page {
 		echo '<p><label class="pcp-check"><input type="checkbox" name="enabled" value="1"' . checked( $s['enabled'], true, false ) . '> 开启 AI 分析</label></p>';
 		echo '<div class="pcai-grid">';
 		echo '<label><span>服务商</span><select name="provider" data-provider>';
-		foreach ( Ai::PROVIDERS as $k => $p ) {
-			echo '<option value="' . esc_attr( $k ) . '" data-endpoint="' . esc_attr( $p['endpoint'] ) . '"' . selected( $s['provider'], $k, false ) . '>' . esc_html( $p['label'] ) . '</option>';
+		foreach ( Ai::providers() as $k => $p ) {
+			echo '<option value="' . esc_attr( $k ) . '" data-endpoint="' . esc_attr( $p['endpoint'] ) . '" data-key="' . ( in_array( $k, $s['key_set'], true ) ? '1' : '0' ) . '"' . selected( $s['provider'], $k, false ) . '>' . esc_html( $p['label'] ) . '</option>';
 		}
-		echo '</select></label>';
+		echo '</select><button type="button" class="button button-small" data-providers-toggle style="justify-self:start;margin-top:6px"><span class="dashicons dashicons-admin-generic" style="font-size:16px;width:16px;height:16px;vertical-align:-3px"></span> 服务商设置</button></label>';
 		// 模型：从服务商接口拉取，不用手填。
 		$models = Ai::models();
 		echo '<label><span>模型' . ( $models['fetched'] ? ' <em class="pcai-muted">（' . count( $models['list'] ) . ' 个，' . esc_html( wp_date( 'm-d H:i', (int) $models['fetched'] ) ) . ' 从接口拉取）</em>' : '' ) . '</span><select name="model" data-model' . disabled( ! $models['list'], true, false ) . '>';
@@ -137,9 +145,14 @@ final class Ai_Page {
 			echo '<option value="' . esc_attr( $m['id'] ) . '"' . selected( $s['model'], $m['id'], false ) . '>' . esc_html( $m['name'] . ( $m['name'] !== $m['id'] ? ' · ' . $m['id'] : '' ) ) . '</option>';
 		}
 		echo '</select></label>';
-		echo '<label><span>API 密钥</span><input type="password" name="key" value="" autocomplete="new-password" placeholder="' . ( $s['has_key'] ? '已保存 ••••••（留空不改）' : '粘贴 API 密钥' ) . '"></label>';
-		echo '<label><span>接口地址（一般不用改）</span><input type="url" name="endpoint" value="' . esc_attr( $s['endpoint'] ) . '" data-endpoint-input></label>';
-		echo '<label><span>回答语言</span><input type="text" name="language" value="' . esc_attr( $s['language'] ) . '"></label>';
+		echo '<label><span>API 密钥</span><input type="password" name="key" value="" autocomplete="new-password" data-key-input placeholder="' . ( $s['has_key'] ? '已保存 ••••••（留空不改）' : '粘贴 API 密钥' ) . '"></label>';
+		// 接口地址跟着服务商自动切换，只显示不让改；自定义服务商的地址在“服务商设置”里配。
+		echo '<label><span>接口地址（随服务商自动切换）</span><input type="text" value="' . esc_attr( $s['endpoint'] ) . '" readonly data-endpoint-input style="background:#f6f7f7;color:#555"></label>';
+		echo '<label><span>回答语言</span><select name="language">';
+		foreach ( Ai::LANGUAGES as $k => $label ) {
+			echo '<option value="' . esc_attr( $k ) . '"' . selected( $s['language'], $k, false ) . '>' . esc_html( $label ) . '</option>';
+		}
+		echo '</select></label>';
 		echo '<label><span>每家店每天最多分析几次</span><input type="number" name="daily_cap" min="1" max="5000" value="' . (int) $s['daily_cap'] . '"></label>';
 		echo '<label><span>单次回答最长（tokens）</span><input type="number" name="max_tokens" min="200" max="8000" value="' . (int) $s['max_tokens'] . '"></label>';
 		echo '</div>';
@@ -176,7 +189,33 @@ final class Ai_Page {
 		wp_nonce_field( 'pchq_ai_models' );
 		echo '<input type="hidden" name="action" value="pchq_ai_models"><button type="submit" class="button"' . disabled( $s['has_key'], false, false ) . '>拉取模型列表</button><span class="pcai-muted">服务商新出了模型时点一下。</span></form>';
 		// 换服务商：接口地址换成那家的默认地址，模型清空（保存后自动拉取那家的模型）。
-		echo '<script>(function(){var p=document.querySelector("[data-provider]"),e=document.querySelector("[data-endpoint-input]"),m=document.querySelector("[data-model]");if(!p||!e||!m)return;var start=p.value;p.addEventListener("change",function(){var o=p.options[p.selectedIndex];e.value=o.getAttribute("data-endpoint")||"";if(p.value!==start){m.innerHTML="<option value=\\"\\">保存后自动拉取这家服务商的模型</option>";m.disabled=true;}else{location.reload();}});})();</script>';
+		echo '<script>(function(){var p=document.querySelector("[data-provider]"),e=document.querySelector("[data-endpoint-input]"),m=document.querySelector("[data-model]"),k=document.querySelector("[data-key-input]"),t=document.querySelector("[data-providers-toggle]");if(t){t.addEventListener("click",function(ev){ev.preventDefault();var box=document.getElementById("pcai-providers");if(!box)return;box.hidden=!box.hidden;if(!box.hidden)box.scrollIntoView({behavior:"smooth",block:"start"});});}if(!p||!e||!m)return;var start=p.value,html=m.innerHTML,dis=m.disabled;p.addEventListener("change",function(){var o=p.options[p.selectedIndex];e.value=o.getAttribute("data-endpoint")||"";if(k)k.placeholder=o.getAttribute("data-key")==="1"?"已保存 ••••••（留空不改）":"粘贴 API 密钥";if(p.value!==start){m.innerHTML="<option value=\\"\\">保存后自动拉取这家服务商的模型</option>";m.disabled=true;}else{m.innerHTML=html;m.disabled=dis;}});})();</script>';
+		// 服务商设置：Claude、OpenAI 内置；其他的店主自己加（名字、接口类型、对话接口地址、模型列表地址）。
+		$open = ! empty( $_GET['providers'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		echo '<div id="pcai-providers"' . ( $open ? '' : ' hidden' ) . ' style="margin-top:20px;padding-top:16px;border-top:1px solid #eee"><h3 style="margin:0 0 6px">服务商设置</h3><p class="pcai-muted">Claude 和 OpenAI 已经配好，不用改。要用其他服务商（例如 DeepSeek、通义千问、Gemini 的 OpenAI 兼容接口等），在这里添加。</p>';
+		echo '<table class="pcai-table"><thead><tr><th>服务商</th><th>接口类型</th><th>对话接口地址</th><th>密钥</th><th></th></tr></thead><tbody>';
+		foreach ( Ai::providers() as $k => $p ) {
+			echo '<tr><td><strong>' . esc_html( $p['label'] ) . '</strong>' . ( $p['builtin'] ? ' <span class="pcai-tag">内置</span>' : '' ) . '</td><td>' . esc_html( Ai::FORMATS[ $p['format'] ] ) . '</td><td style="word-break:break-all">' . esc_html( $p['endpoint'] ) . '</td><td>' . ( in_array( $k, $s['key_set'], true ) ? '已保存' : '<span class="pcai-muted">未填</span>' ) . '</td><td>';
+			if ( ! $p['builtin'] ) {
+				echo '<form method="post" action="' . $post . '">'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				wp_nonce_field( 'pchq_ai_provider_delete' );
+				echo '<input type="hidden" name="action" value="pchq_ai_provider_delete"><input type="hidden" name="id" value="' . esc_attr( $k ) . '"><button type="submit" class="button button-small">删除</button></form>';
+			}
+			echo '</td></tr>';
+		}
+		echo '</tbody></table>';
+		echo '<h4 style="margin:18px 0 8px">添加服务商</h4><form method="post" action="' . $post . '">'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		wp_nonce_field( 'pchq_ai_provider_add' );
+		echo '<input type="hidden" name="action" value="pchq_ai_provider_add"><div class="pcai-grid">';
+		echo '<label><span>名字</span><input type="text" name="label" maxlength="40" placeholder="例如 DeepSeek"></label>';
+		echo '<label><span>接口类型</span><select name="format">';
+		foreach ( Ai::FORMATS as $k => $label ) {
+			echo '<option value="' . esc_attr( $k ) . '">' . esc_html( $label ) . '</option>';
+		}
+		echo '</select></label>';
+		echo '<label><span>对话接口地址</span><input type="url" name="endpoint" placeholder="https://api.deepseek.com/chat/completions"></label>';
+		echo '<label><span>模型列表地址（可不填）</span><input type="url" name="models" placeholder="不填就按对话地址推算"></label>';
+		echo '</div><p><button type="submit" class="button">添加</button></p></form></div>';
 		echo '</section>';
 
 		// 2. 人设：分两块，客户分析（专门分析单个客户）和全站分析师（站在全盘视角分析全站），各自导入、各自管理。
