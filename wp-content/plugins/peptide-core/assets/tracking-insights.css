@@ -278,3 +278,11 @@ body.pc-admin-workspace .pc-trk .pc-lifecycle .pc-trk-split,.pc-lifecycle .pc-tr
 .pc-ai-notes{margin:8px 0 12px;max-width:1000px}
 .pc-ai-notes summary{cursor:pointer;font-size:13px;font-weight:600;color:#2271b1}
 .pc-ai-notes textarea{width:100%;max-width:720px;margin-top:6px;font-size:13px;line-height:1.6;padding:8px 10px;border:1px solid #dcdcde;border-radius:8px}
+
+/* 店主 2026-11-10：标题行 = 标题 + 人设标签（左）+ 重新分析（右），去掉说明文字。 */
+.pc-ai-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.pc-ai-head-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.pc-interest-ai .pc-ai-head h3{display:block;margin:0}
+.pc-ai-chip{display:inline-block;padding:1px 8px;border-radius:999px;background:#f0f0f0;color:#555;font-size:12px;line-height:20px}
+.pc-ai-head .button{flex:none;min-height:32px}
+.pc-ai-head+.pc-ai-notes,.pc-ai-head+.pc-ai-out{margin-top:10px}

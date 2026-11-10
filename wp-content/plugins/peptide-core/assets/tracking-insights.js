@@ -130,7 +130,7 @@
   }
   return html;
  }
- function aiShell(state, body) { aiBox.innerHTML = '<h3>' + aiTitle + '</h3><span>' + esc(state) + '</span>' + body; }
+ function aiShell(state, body, act) { aiBox.innerHTML = '<div class="pc-ai-head"><div class="pc-ai-head-title"><h3>' + aiTitle + '</h3><span class="pc-ai-chip">' + esc(state) + '</span></div>' + (act || '') + '</div>' + body; }
  async function aiStatus() {
   if (!aiBox) return;
   aiShell('正在检查…', '');
@@ -139,16 +139,17 @@
   const persona = subject ? st.customer : st.business;
   if (!st.enabled) { aiShell('未开启', '<p>' + esc(st.error ? '暂时连不上总后台：' + st.error : '总后台“AI 设置”里还没有开启这家店的 AI 分析。') + '</p>'); return; }
   if (!persona) { aiShell('缺少人设', '<p>总后台“AI 设置”里还没有导入“' + (subject ? '客户分析' : '全站分析师') + '”的人设。</p>'); return; }
-  aiShell('人设：' + persona, '<p>' + (subject ? '根据这位客户的浏览、加购和结账行为，分析他在看什么、有多大可能下单、该怎么跟进。' : '根据所选时间段全站访客的行为和经营数据，分析大家对什么感兴趣、问题出在哪、该怎么做。') + '</p><p class="pc-ai-actions"><button type="button" class="button button-primary" data-ai-run>AI 分析</button><span class="pc-ai-meta">今天已分析 ' + n(st.used_today) + ' 次</span></p><div class="pc-ai-out" aria-live="polite"></div>');
-  // 给 AI 的补充说明（店主确认过的事实，所有分析都会带上）。
+  // 店主 2026-11-10：去掉说明文字，“重新分析”放在标题旁边；次数和自动分析放到按钮的提示里。
+  aiShell('人设：' + persona, '<div class="pc-ai-out" aria-live="polite"></div>', '<button type="button" class="button button-primary" data-ai-run title="今天已分析 ' + n(st.used_today) + ' 次">AI 分析</button>');
+  // 人设调优（店主 2026-11-10）：总后台的人设只是初稿，每家店在这里把 AI 调成自己喜欢的样子，只影响这家店。
   const notesBox = document.createElement('details'); notesBox.className = 'pc-ai-notes';
-  notesBox.innerHTML = '<summary>给 AI 的补充说明</summary><p class="pc-ai-meta">写下你确认过的事实，之后的分析（包括自动分析）都会当作事实，不会再给出相反的建议。例如：“支付已测试正常，可以正常跳转到付款页”。</p><textarea rows="3" maxlength="2000" placeholder="例如：支付已测试正常，可以正常跳转到付款页"></textarea><p class="pc-ai-actions"><button type="button" class="button" data-ai-notes-save>保存说明</button><span class="pc-ai-meta" data-ai-notes-state></span></p>';
+  notesBox.innerHTML = '<summary>人设调优</summary><p class="pc-ai-meta">总后台的人设只是初稿。在这里告诉 AI 你喜欢怎么看分析：先说什么、写多长、要不要表格、重点看什么，也可以写你确认过的事实。只对这家店生效，自动分析也会按这里来。</p><textarea rows="4" maxlength="2000" placeholder="例如：先用一句话说结论；不要表格，用短句；重点告诉我怎么跟进这个客户；支付已测试正常，不要再建议排查支付"></textarea><p class="pc-ai-actions"><button type="button" class="button" data-ai-notes-save>保存调优</button><span class="pc-ai-meta" data-ai-notes-state></span></p>';
   aiBox.insertBefore(notesBox, aiBox.querySelector('.pc-ai-out'));
-  window.wp.apiFetch({path:'/peptide/v1/track/admin/ai/notes'}).then(r => { notesBox.querySelector('textarea').value = r.notes || ''; if (r.notes) notesBox.querySelector('summary').textContent = '给 AI 的补充说明（已填写）'; }).catch(() => {});
+  window.wp.apiFetch({path:'/peptide/v1/track/admin/ai/notes'}).then(r => { notesBox.querySelector('textarea').value = r.notes || ''; if (r.notes) notesBox.querySelector('summary').textContent = '人设调优（已填写）'; }).catch(() => {});
   notesBox.querySelector('[data-ai-notes-save]').addEventListener('click', async () => {
    const st = notesBox.querySelector('[data-ai-notes-state]');
    st.textContent = '保存中…';
-   try { await window.wp.apiFetch({path:'/peptide/v1/track/admin/ai/notes', method:'POST', data:{notes: notesBox.querySelector('textarea').value}}); st.textContent = '已保存，下次分析会用上（点“重新分析”立刻生效）'; } catch (e) { st.textContent = '保存失败：' + ((e && e.message) || ''); }
+   try { await window.wp.apiFetch({path:'/peptide/v1/track/admin/ai/notes', method:'POST', data:{notes: notesBox.querySelector('textarea').value}}); st.textContent = '已保存，下次分析会用上（点“重新分析”立刻生效）'; notesBox.querySelector('summary').textContent = notesBox.querySelector('textarea').value.trim() ? '人设调优（已填写）' : '人设调优'; } catch (e) { st.textContent = '保存失败：' + ((e && e.message) || ''); }
   });
   // 已有的分析结果（自动或之前手动）打开页面就显示。
   try {
@@ -157,8 +158,8 @@
    if (saved && saved.result) aiShow(saved.result, true); else if (aiLive) aiShow(null, true);
   } catch (e) {}
   if (st.auto_customer && subject || st.auto_site && !subject) {
-   const note = aiBox.querySelector('.pc-ai-meta');
-   if (note) note.textContent += subject ? ' · 已开启自动分析（离开 30 分钟后自动分析）' : ' · 已开启自动分析（每天分析前一天）';
+   const btn = aiBox.querySelector('[data-ai-run]');
+   if (btn) btn.title += subject ? ' · 已开启自动分析（离开 30 分钟后自动分析）' : ' · 已开启自动分析（每天分析前一天）';
   }
  }
  let aiLive = null;
