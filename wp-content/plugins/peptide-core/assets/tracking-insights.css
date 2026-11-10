@@ -219,3 +219,21 @@ body.pc-admin-workspace .pc-trk .pc-tl-scroll,.pc-tl-scroll{max-height:72vh;over
 .pc-tl-more li{font-size:12px;color:#646970;line-height:1.5;padding-left:10px;border-left:2px solid #eef0f2}
 .pc-tl-more b{font-weight:600;color:#3c434a;margin-right:6px}
 .pc-tl-block.is-system .pc-tl-page strong{color:#8c8f94;font-weight:500}
+
+/* 一条连续的时间线（2026-11-10 店主：分块后看不出是时间线）：竖线贯穿全部记录，页面是线上的大节点 */
+.pc-tl{position:relative;padding:10px 16px}
+.pc-tl::before{content:"";position:absolute;top:18px;bottom:18px;left:94px;width:2px;background:#dcdfe3;border-radius:2px}
+.pc-tl-block{padding:0;border:0;margin:0 0 6px}
+.pc-tl-block:last-child{margin:0}
+.pc-tl-item::before{display:none}
+.pc-tl-page{display:grid;grid-template-columns:62px 14px minmax(0,1fr);gap:10px;align-items:center;margin:10px 0 2px;font-size:13px}
+.pc-tl-block:first-child .pc-tl-page{margin-top:0}
+.pc-tl-page time{font-size:12px;color:#646970;font-variant-numeric:tabular-nums;font-weight:600}
+.pc-tl-node{position:relative;z-index:1;display:block;width:14px;height:14px;border-radius:4px;background:#1d2327;box-shadow:0 0 0 3px #fff}
+.pc-tl-block.is-system .pc-tl-node{background:#a7aaad}
+.pc-tl-pagebody{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;padding:6px 10px;border-radius:8px;background:#f6f7f7}
+.pc-tl-pagebody strong{color:#1d2327}
+.pc-tl-items{padding:0}
+.pc-tl-item{padding:5px 0}
+.pc-tl-dot{margin:4px 0 0 2px}
+.pc-tl::before{left:93.5px;width:3px;background:#b9bec5}
