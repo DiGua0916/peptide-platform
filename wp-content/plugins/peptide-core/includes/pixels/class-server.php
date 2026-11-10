@@ -152,6 +152,45 @@ final class Server {
 		}
 	}
 
+	/**
+	 * 发一条测试 PageView 到 Facebook（ST-01 第 4 步、ST-06“发送测试事件”）。同步发送，马上知道每个像素的 ID 和令牌通不通，
+	 * 结果也写进发送记录（pc_px_log）。统计设置里填了“测试事件代码”时带上它，事件只出现在事件管理器的“测试事件”里；
+	 * 没填时就是一条普通的服务端 PageView。只发 Facebook，只用已经保存的设置。
+	 *
+	 * @return array{ok:bool,reason:string,test_code:bool,results:array<int,array{pixel:string,ok:bool,code:int,message:string}>}
+	 *         ok = 至少有一个像素，并且每个像素都通；reason：'' / no_pixel（一个 Facebook 像素都没填）。
+	 */
+	public static function test_event(): array {
+		$s       = Pixels::settings();
+		$results = array();
+		foreach ( (array) $s['platforms']['facebook']['pixels'] as $px ) {
+			$pixel = (string) ( $px['id'] ?? '' );
+			$token = (string) ( $px['token'] ?? '' );
+			if ( '' === $token ) {
+				$results[] = array( 'pixel' => $pixel, 'ok' => false, 'code' => 0, 'message' => 'no_token' );
+				continue;
+			}
+			$event   = Pixels::make( 'page_view', array(), 0.0, array( 'id' => Pixels::event_id( 'test' ), 'url' => home_url( '/' ) ) );
+			$body    = self::facebook_body( array( $event ), array(), self::context(), $s );
+			$res     = wp_remote_post(
+				'https://graph.facebook.com/' . self::GRAPH . '/' . rawurlencode( $pixel ) . '/events?access_token=' . rawurlencode( $token ),
+				array( 'headers' => array( 'Content-Type' => 'application/json' ), 'body' => wp_json_encode( $body ), 'timeout' => 10 )
+			);
+			$code    = is_wp_error( $res ) ? 0 : (int) wp_remote_retrieve_response_code( $res );
+			$text    = is_wp_error( $res ) ? $res->get_error_message() : (string) wp_remote_retrieve_body( $res );
+			$ok      = 200 === $code;
+			$message = $ok ? '' : substr( wp_strip_all_tags( $text ), 0, 300 );
+			self::log( 'facebook', $pixel, 'PageView', (string) $event['id'], $ok, $code, $message );
+			$results[] = array( 'pixel' => $pixel, 'ok' => $ok, 'code' => $code, 'message' => $message );
+		}
+		return array(
+			'ok'        => $results && ! array_filter( $results, static fn( array $r ): bool => ! $r['ok'] ),
+			'reason'    => $results ? '' : 'no_pixel',
+			'test_code' => '' !== (string) $s['test_code'],
+			'results'   => $results,
+		);
+	}
+
 	/** 事件时间：Meta 拒收 7 天以前的事件（整批都不收），晚付款的订单用付款时的时间。 */
 	private static function event_time( array $e ): int {
 		return max( (int) $e['time'], time() - 6 * DAY_IN_SECONDS );
