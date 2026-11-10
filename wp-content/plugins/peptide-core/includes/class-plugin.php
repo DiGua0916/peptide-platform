@@ -88,6 +88,7 @@ final class Plugin {
 		Hq_Mail::register_hooks();
 		Hq_Ai::register_hooks();
 		Series_Sync::register_hooks(); // M3 系列同步（店铺端）。
+		Order_Report::register_hooks(); // M10 订单上报与退款标记（店铺端）。
 		Cart_Links::register_hooks();
 		Paid_Popup::register_hooks();
 		Topics::register_hooks();
