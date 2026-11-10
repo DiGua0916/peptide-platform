@@ -140,6 +140,16 @@
   if (!st.enabled) { aiShell('未开启', '<p>' + esc(st.error ? '暂时连不上总后台：' + st.error : '总后台“AI 设置”里还没有开启这家店的 AI 分析。') + '</p>'); return; }
   if (!persona) { aiShell('缺少人设', '<p>总后台“AI 设置”里还没有导入“' + (subject ? '客户分析' : '全站分析师') + '”的人设。</p>'); return; }
   aiShell('人设：' + persona, '<p>' + (subject ? '根据这位客户的浏览、加购和结账行为，分析他在看什么、有多大可能下单、该怎么跟进。' : '根据所选时间段全站访客的行为和经营数据，分析大家对什么感兴趣、问题出在哪、该怎么做。') + '</p><p class="pc-ai-actions"><button type="button" class="button button-primary" data-ai-run>AI 分析</button><span class="pc-ai-meta">今天已分析 ' + n(st.used_today) + ' 次</span></p><div class="pc-ai-out" aria-live="polite"></div>');
+  // 给 AI 的补充说明（店主确认过的事实，所有分析都会带上）。
+  const notesBox = document.createElement('details'); notesBox.className = 'pc-ai-notes';
+  notesBox.innerHTML = '<summary>给 AI 的补充说明</summary><p class="pc-ai-meta">写下你确认过的事实，之后的分析（包括自动分析）都会当作事实，不会再给出相反的建议。例如：“支付已测试正常，可以正常跳转到付款页”。</p><textarea rows="3" maxlength="2000" placeholder="例如：支付已测试正常，可以正常跳转到付款页"></textarea><p class="pc-ai-actions"><button type="button" class="button" data-ai-notes-save>保存说明</button><span class="pc-ai-meta" data-ai-notes-state></span></p>';
+  aiBox.insertBefore(notesBox, aiBox.querySelector('.pc-ai-out'));
+  window.wp.apiFetch({path:'/peptide/v1/track/admin/ai/notes'}).then(r => { notesBox.querySelector('textarea').value = r.notes || ''; if (r.notes) notesBox.querySelector('summary').textContent = '给 AI 的补充说明（已填写）'; }).catch(() => {});
+  notesBox.querySelector('[data-ai-notes-save]').addEventListener('click', async () => {
+   const st = notesBox.querySelector('[data-ai-notes-state]');
+   st.textContent = '保存中…';
+   try { await window.wp.apiFetch({path:'/peptide/v1/track/admin/ai/notes', method:'POST', data:{notes: notesBox.querySelector('textarea').value}}); st.textContent = '已保存，下次分析会用上（点“重新分析”立刻生效）'; } catch (e) { st.textContent = '保存失败：' + ((e && e.message) || ''); }
+  });
   // 已有的分析结果（自动或之前手动）打开页面就显示。
   try {
    const saved = await window.wp.apiFetch({path:'/peptide/v1/track/admin/ai/result?scope=' + (subject ? 'visitor&visitor_id=' + subject : 'site')});

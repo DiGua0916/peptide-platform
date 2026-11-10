@@ -305,7 +305,9 @@
 		} ).join( '' ) + '</ul></section>';
 		var a = extras.ai;
 		var ai = '<section class="pc-ov-card pc-ov-ad pc-ov-aisum"><div class="pc-ov-card__head"><h2>AI 全站分析</h2>' + ( a ? more( a.url, '查看完整报告' ) : '' ) + '</div>' + ( a ?
-			'<div class="pc-ov-aisum__score"><b>' + esc( a.health || '—' ) + '</b><span>健康分' + ( a.state ? ' · ' + esc( a.state ) : '' ) + '</span></div><p class="pc-ov-aisum__text">' + esc( a.summary ) + '</p>' + ( a.first ? '<p class="pc-ov-aisum__first"><b>首要建议：</b>' + esc( a.first ) + '</p>' : '' ) + '<p class="pc-ov-muted pc-ov-aisum__at">' + esc( a.period + ' · ' + a.at ) + '</p>' :
+			'<div class="pc-ov-aisum__score"><b>' + esc( a.health || '—' ) + '</b><span>健康分' + ( a.state ? ' · ' + esc( a.state ) : '' ) + '</span></div><p class="pc-ov-aisum__text">' + esc( a.summary ) + '</p>' +
+			( ( a.stuck || [] ).length ? '<h3>顾客卡在哪</h3><ul class="pc-ov-aisum__list">' + a.stuck.map( function ( x ) { return '<li>' + esc( x ) + '</li>'; } ).join( '' ) + '</ul>' : '' ) +
+			( ( a.now || [] ).length ? '<h3>马上做</h3><ul class="pc-ov-aisum__list">' + a.now.map( function ( x ) { return '<li>' + esc( x ) + '</li>'; } ).join( '' ) + '</ul>' : ( a.first ? '<p class="pc-ov-aisum__first"><b>首要建议：</b>' + esc( a.first ) + '</p>' : '' ) ) + '<p class="pc-ov-muted pc-ov-aisum__at">' + esc( a.period + ' · ' + a.at ) + '</p>' :
 			'<p class="pc-ov-empty is-box">还没有全站分析。开启 AI 自动分析后，每天凌晨会自动生成前一天的报告。</p>' ) + '</section>';
 		var rc = extras.recent || [];
 		var recent = '<section class="pc-ov-card pc-ov-ad pc-ov-recent"><div class="pc-ov-card__head"><h2>最近的客户分析</h2></div>' + ( rc.length ? '<ul class="pc-ov-recent__list">' + rc.map( function ( r ) {

@@ -15,6 +15,9 @@ defined( 'ABSPATH' ) || exit;
 
 final class Hq_Ai {
 
+	/** 店主给 AI 的补充说明（2026-11-10：例如“支付已测试正常”），每次分析都带上，AI 当作确认过的事实。 */
+	public const NOTES = 'pc_ai_notes';
+
 	public static function register_hooks(): void {
 		add_action( 'rest_api_init', array( self::class, 'routes' ) );
 		add_filter( 'cron_schedules', array( self::class, 'cron_schedules' ) );
@@ -90,6 +93,14 @@ final class Hq_Ai {
 		register_rest_route( 'peptide/v1', '/track/admin/ai/status', array( 'methods' => 'GET', 'permission_callback' => $perm, 'callback' => static fn() => rest_ensure_response( self::status() ) ) );
 		register_rest_route( 'peptide/v1', '/track/admin/ai/analyse', array( 'methods' => 'POST', 'permission_callback' => $perm, 'callback' => array( self::class, 'rest_analyse' ) ) );
 		register_rest_route( 'peptide/v1', '/track/admin/ai/result', array( 'methods' => 'GET', 'permission_callback' => $perm, 'callback' => array( self::class, 'rest_result' ) ) );
+		register_rest_route( 'peptide/v1', '/track/admin/ai/notes', array(
+			array( 'methods' => 'GET', 'permission_callback' => $perm, 'callback' => static fn() => rest_ensure_response( array( 'notes' => (string) get_option( self::NOTES, '' ) ) ) ),
+			array( 'methods' => 'POST', 'permission_callback' => $perm, 'callback' => static function ( \WP_REST_Request $r ) {
+				$notes = mb_substr( sanitize_textarea_field( (string) $r['notes'] ), 0, 2000 );
+				update_option( self::NOTES, $notes, false );
+				return rest_ensure_response( array( 'notes' => $notes, 'saved' => true ) );
+			} ),
+		) );
 		register_rest_route( 'peptide/v1', '/overview/extras', array( 'methods' => 'GET', 'permission_callback' => static fn() => current_user_can( 'manage_woocommerce' ), 'callback' => array( self::class, 'rest_extras' ) ) );
 	}
 
@@ -198,6 +209,8 @@ final class Hq_Ai {
 				'health'  => (string) ( $rec['健康分'] ?? '' ),
 				'state'   => (string) ( $rec['状态'] ?? '' ),
 				'first'   => (string) ( $rec['首要建议'] ?? '' ),
+				'now'     => self::section_items( $site['text'], '马上做', array( '本周做', '持续观察', '**下期' ) ),
+				'stuck'   => self::section_items( $site['text'], '顾客在哪里卡住', array( '**商品横向', '**最大的问题', '**商品和版块', '**店铺优化' ) ),
 				'at'      => $site['at'],
 				'period'  => array( 'day' => '日报', 'week' => '周报', 'month' => '月报' )[ $site['period'] ] ?? $site['period'],
 				'url'     => admin_url( 'admin.php?page=pc-visitors' ),
@@ -216,6 +229,35 @@ final class Hq_Ai {
 		$res = rest_ensure_response( array( 'todo' => $todo, 'ai' => $ai, 'recent' => array_values( $recent ) ) );
 		$res->header( 'Cache-Control', 'no-store' );
 		return $res;
+	}
+
+	/** 从报告里取某一段的条目（去掉编号和加粗，每条截 140 字，最多 3 条）。 */
+	private static function section_items( string $text, string $start, array $ends ): array {
+		$pos = mb_strpos( $text, $start );
+		if ( false === $pos ) {
+			return array();
+		}
+		$rest = mb_substr( $text, $pos + mb_strlen( $start ) );
+		$end  = mb_strlen( $rest );
+		foreach ( $ends as $e ) {
+			$p = mb_strpos( $rest, $e );
+			if ( false !== $p && $p < $end ) {
+				$end = $p;
+			}
+		}
+		$out = array();
+		foreach ( preg_split( '/\n/u', mb_substr( $rest, 0, $end ) ) as $line ) {
+			$line = trim( preg_replace( '/^[\s\-\*•]*(\d+[\.、)]\s*)?/u', '', str_replace( '**', '', $line ) ) );
+			$line = ltrim( $line, '：: ' );
+			if ( mb_strlen( $line ) < 6 || preg_match( '/^(现象|原因|证据|把握)/u', $line ) ) {
+				continue;
+			}
+			$out[] = mb_strlen( $line ) > 140 ? mb_substr( $line, 0, 140 ) . '…' : $line;
+			if ( count( $out ) >= 3 ) {
+				break;
+			}
+		}
+		return $out;
 	}
 
 	/**
@@ -453,6 +495,10 @@ final class Hq_Ai {
 		unset( $data['ai'], $data['subject'] );
 		$data['store'] = array( 'currency' => get_woocommerce_currency(), 'timezone' => wp_timezone_string() );
 		$data['【店铺配置】'] = self::store_config();
+		$notes = trim( (string) get_option( self::NOTES, '' ) );
+		if ( '' !== $notes ) {
+			$data['【店主补充说明】'] = $notes;
+		}
 		if ( 'site' === $scope ) {
 			[ $from, $to ] = self::window( $period, $date );
 			$data += self::site_extras( $from, $to );

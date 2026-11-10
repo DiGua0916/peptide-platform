@@ -496,7 +496,7 @@ final class Ai {
 		$s = self::settings();
 		$persona = self::persona( $cfg[ $use ]['id'] );
 		$site    = Sites::get( $site_id );
-		$system  = $persona['content'] . "\n\n---\n回答语言：" . $s['language'] . "。只根据提供的数据分析，数据里没有的不要编造；数据是浏览行为线索，不代表个人身份或购买意愿的确定事实。";
+		$system  = $persona['content'] . "\n\n---\n回答语言：" . $s['language'] . "。只根据提供的数据分析，数据里没有的不要编造；数据是浏览行为线索，不代表个人身份或购买意愿的确定事实。\n如果数据里有【店主补充说明】，那是店主确认过的事实，优先于你的推断：不要再给出和它矛盾的判断或建议（例如店主说支付已测试正常，就不要再把“支付故障”当原因或建议排查支付），改从其他方向找原因。";
 		$exp     = self::experience( $site_id, $use, $experience );
 		$user    = '店铺：' . ( $site ? $site['name'] : '' ) . "\n分析类型：" . self::USES[ $use ] . "\n以下是店铺记录的行为数据（JSON，已去掉姓名、邮箱、电话）：\n" . wp_json_encode( $facts, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT )
 			. "\n\n【历史经验】（系统按你过去的判断和客户后来是否下单自动统计；“后来下单”= 判断 3 天后核对到已付款）：\n" . wp_json_encode( $exp, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT );

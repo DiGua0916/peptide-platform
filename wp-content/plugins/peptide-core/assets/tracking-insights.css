@@ -269,3 +269,7 @@ body.pc-admin-workspace .pc-trk .pc-lifecycle .pc-trk-split,.pc-lifecycle .pc-tr
 @media (max-width:782px){.pc-ai-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.pc-ai-charts{grid-template-columns:minmax(0,1fr)}.pc-ai-bar{grid-template-columns:minmax(60px,90px) 1fr auto}.pc-interest-ai.is-top{padding:14px}}
 .pc-ai-pfunnel{margin:0 0 12px}
 .pc-ai-rate{display:inline-block;min-width:52px;padding:1px 6px;border-radius:4px;background:linear-gradient(90deg,#d6e6f5 var(--w),transparent var(--w));font-variant-numeric:tabular-nums}
+
+.pc-ai-notes{margin:8px 0 12px;max-width:1000px}
+.pc-ai-notes summary{cursor:pointer;font-size:13px;font-weight:600;color:#2271b1}
+.pc-ai-notes textarea{width:100%;max-width:720px;margin-top:6px;font-size:13px;line-height:1.6;padding:8px 10px;border:1px solid #dcdcde;border-radius:8px}
