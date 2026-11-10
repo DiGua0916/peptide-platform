@@ -664,8 +664,9 @@ currency, visitor, visit, buyer
 - 每家店一个选项 `peptide_core_m6_mode`：`off`（默认）/ `shadow` / `on`；过滤器 `peptide_core_m6_mode` 可以覆盖。
 - `Metrics_Switch::mode()`、`off()`、`shadow()`、`on()`、`set( $mode )`、`pick( $metric, $legacy, callable $modern, array $context = [], float $tolerance = 0 )`、`log()`、`reset_log()`。
 - 影子和开的时候，新旧不一致写进选项 `peptide_core_m6_shadow_log`，并触发 `do_action( 'peptide_core_m6_shadow_diff', string $metric, array $diffs, array $context )`（F1 的巡检可以挂）。
-- 通过 F1 的 `pc_hq_capabilities` 过滤器声明 `m6_metrics => { version, mode }`。
+- 功能声明（F1 的 `pc_hq_capabilities`，格式 功能键 => 版本号）：`m6.metrics => '1'`（这家店有 `Data\Metrics`，版本 = `Metrics::VERSION`）、`m7.pixel_acceptance => '1'`（有服务端 AddPaymentInfo、像素验收和 `/admin/pixel-test`）。只说明代码在不在，不说明开关是哪一档。
 - 总后台如果要远程换档：改这个选项即可（需要 F1 在连接器里提供写选项的通道，F4 不改连接器）。
+- 新增的选项（没有新表）：`peptide_core_m6_mode`、`peptide_core_m6_shadow_log`（只有指标名和数字）、`peptide_core_m6_funnel_anomalies`（按天的计数）、`peptide_core_px_acceptance`（验收码和时间）、`peptide_core_pixels_buyer_platforms`。都不含顾客资料和密钥，脱敏快照里可以原样保留。验收期间浏览器上报的事件记在现有的 `pc_px_log` 里（`platform = browser`，只有事件名和 event_id）。
 
 ### 3. 漏斗推进规则 `PeptideCore\Tracking\Funnel_Guard`（FE-05）
 
@@ -677,15 +678,17 @@ currency, visitor, visit, buyer
 ### 4. 数据页对投手（ST-05）
 
 - 判断投手：`PeptideCore\Data\Audience::is_media_buyer( ?int $user_id = null )` = 用户有角色 `pc_media_buyer` 且没有 `manage_options`；过滤器 `peptide_core_is_media_buyer`（参数：结果、用户编号）可以改写。**需要 F5**：创建角色 `pc_media_buyer`，并给它 `manage_woocommerce`（数据页、概览页、像素页的权限检查都是这一项）。
-- 顶层菜单 slug 仍然是 `pc-data`。投手只有两个子页：`pc-data-funnel-sources`（漏斗 + 来源）、`pc-data-products-landing`（商品 + 落地页）；其余数据子页对投手不注册，直接访问会被拒绝。管理员（含总后台一键登录）仍然看到全部 12 个子页，另外也能打开这两个合并页。
-- F5 的菜单白名单里“数据”保留 `pc-data` 即可。
+- 顶层菜单 slug 仍然是 `pc-data`。投手只有两个子页：`pc-data-funnel-sources`（漏斗 + 来源）、`pc-data-products-landing`（商品 + 落地页），每页用页签（地址栏 `tab=funnel|sources`、`tab=products|landing`）切换原来的两个报表；其余数据子页对投手不注册，直接访问会被拒绝。管理员（含总后台一键登录）仍然看到全部 12 个子页，另外也能打开这两个合并页（不显示在菜单里）。
+- F5 的菜单白名单里“数据”保留 `pc-data` 即可；投手点“数据”会进 `pc-data-funnel-sources`。投手如果直接打开 `admin.php?page=pc-data`，页面只显示两个合并页的入口（`Workspace_Shell` 只在 `pc-overview` / `pc-data` 两个地址启动，投手的入口不是这两个地址之一时不受影响）。
+- 这一版是“两页、每页两个页签”，不是同屏合并（同屏要改 `assets/data.js` 的挂载方式，等有浏览器环境再做）。
 
 ### 5. 像素与 CAPI（FE-09，M7）
 
 - 新接口 `POST /wp-json/peptide/v1/pixel-event`，JSON `{ "name": "add_payment_info" }`，公开（和 `/pixel-view` 一样，受 `Pixels::allowed()` 约束）。返回 `{ events: [ … ] }`：服务端生成事件并用同一个 `event_id` 发 Conversions API，浏览器拿到后用这个 `event_id` 发像素。接口失败时浏览器退回原来只发浏览器事件的做法。
 - 触发时机：结账页顾客选了支付方式，或点了下单（先到的那个），每个页面一次。
 - 像素页对投手只显示 Facebook；其他平台的卡片不显示也不提交（已保存的设置原样保留）。总后台要给某家店打开其他平台：选项 `peptide_core_pixels_buyer_platforms`（平台 key 的数组，默认 `[ 'facebook' ]`）。
-- 验收：`wp eval-file wp-content/plugins/peptide-core/tests/m7-pixel-acceptance-smoke.php`（`PeptideCore\Pixels\Acceptance::check()`），核对 `pc_px_log` 里六类事件。操作清单见 `docs/guides/m7-pixel-acceptance-checklist.md`。
+- 验收：`wp eval-file wp-content/plugins/peptide-core/tests/m7-pixel-acceptance-smoke.php start|check|stop|test`（`PeptideCore\Pixels\Acceptance`），核对 `pc_px_log` 里六类事件。验收期间带验收码的浏览器把发出的事件报到 `POST /peptide/v1/pixel-check`（公开，验收码过期即拒绝）。操作清单见 `docs/guides/m7-pixel-acceptance-checklist.md`。
+- **给 F5 的向导第 4 步**：`POST /wp-json/peptide/v1/admin/pixel-test`（需要 `manage_woocommerce` 和 REST nonce），或 PHP 里直接 `\PeptideCore\Pixels\Server::test_event()`。返回 `{ ok: bool, reason: '' | 'no_pixel', test_code: bool, results: [ { pixel, ok, code, message } ] }`；`ok = true` 就是“已通”。向导状态由 F5 自己写，这个接口不写任何向导数据。
 - `assets/pixels*.js` 不在第 13.2 节的清单里，但只属于像素模块，由 F4 维护。
 
 ### 6. 需要别的会话配合的事
@@ -694,5 +697,5 @@ currency, visitor, visit, buyer
 | --- | --- | --- |
 | F5 | 角色 `pc_media_buyer` 带 `manage_woocommerce`；菜单白名单保留 `pc-data` | 待 F5 |
 | F3 | 订单上报和总后台汇总按 `order_fact()` 的规则；回写 `_pc_refund_cents` | 待 F3 |
-| F1 | `pc_hq_capabilities` 钩子；发布前在沙盒把开关切到 `shadow` 观察；本地环境（这台开发机没有 PHP / Node，F4 的用例还没跑过） | 待 F1 |
+| F1 | 登记功能键 `m6.metrics`、`m7.pixel_acceptance`；测试条目已追加到 `tests/data-observations-suites.json` 末尾（`module: M6 / M7`）；发布前在沙盒把开关切到 `shadow` 观察；有 PHP 的环境到位后 F4 的用例要先跑一遍（这台开发机没有 PHP / Node，全部用例都还没跑过） | 待 F1 |
 | 日常会话 | `core/class-overview.php` 不用改：概览页的数字由 `Admin\Overview_Page` 按开关用 `Metrics` 覆盖。之后再改概览页、数据页、访客页、像素页请先在聊天室找 F4 | 知会 |

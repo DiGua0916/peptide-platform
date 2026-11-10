@@ -733,6 +733,13 @@
       "core": true,
       "node_test": false,
       "status": "final-source-gate"
-    }
+    },
+    {"name": "m6-metrics-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-metrics-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
+    {"name": "m6-metrics-switch-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-metrics-switch-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
+    {"name": "m6-funnel-guard-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-funnel-guard-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
+    {"name": "m6-reconcile-orders-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-reconcile-orders-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
+    {"name": "m6-reconcile-overlay-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-reconcile-overlay-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
+    {"name": "m6-buyer-data-pages-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-buyer-data-pages-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
+    {"name": "m7-pixel-acceptance-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m7-pixel-acceptance-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M7"}
   ]
 }

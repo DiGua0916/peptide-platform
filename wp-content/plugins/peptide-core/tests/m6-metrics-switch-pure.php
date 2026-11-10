@@ -79,7 +79,7 @@ Sw::reset_log();
 m6_check( 'reset clears the log', array() === Sw::log()['entries'] && array() === Sw::log()['compared'] );
 Sw::register_hooks();
 $caps = apply_filters( 'pc_hq_capabilities', array( 'other' => true ) );
-m6_check( 'store declares its M6 mode to the head office', true === $caps['other'] && array( 'version' => Metrics::VERSION, 'mode' => 'shadow' ) === $caps['m6_metrics'] );
-m6_check( 'capability filter tolerates a non-array', isset( apply_filters( 'pc_hq_capabilities', null )['m6_metrics'] ) );
+m6_check( 'store declares Data\\Metrics to the head office as key => version string', true === $caps['other'] && (string) Metrics::VERSION === $caps['m6.metrics'] );
+m6_check( 'capability filter tolerates a non-array', isset( apply_filters( 'pc_hq_capabilities', null )['m6.metrics'] ) );
 
 echo 'PASS ', $GLOBALS['m6_passed'], " Metrics_Switch assertions\n";

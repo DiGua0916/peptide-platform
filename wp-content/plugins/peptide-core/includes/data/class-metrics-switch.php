@@ -34,9 +34,10 @@ final class Metrics_Switch {
 		add_filter( 'pc_hq_capabilities', array( self::class, 'capabilities' ) );
 	}
 
+	/** F1 的格式：功能键 => 版本号字符串。只说明这家店有 Data\Metrics，不说明开关是哪一档。 */
 	public static function capabilities( $capabilities ) {
 		$capabilities               = is_array( $capabilities ) ? $capabilities : array();
-		$capabilities['m6_metrics'] = array( 'version' => Metrics::VERSION, 'mode' => self::mode() );
+		$capabilities['m6.metrics'] = (string) Metrics::VERSION;
 		return $capabilities;
 	}
 

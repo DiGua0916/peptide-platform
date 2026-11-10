@@ -44,6 +44,8 @@ final class Acceptance {
 
 	public static function register_hooks(): void {
 		add_action( 'init', array( self::class, 'remember' ) );
+		// F1 的功能声明（功能键 => 版本号）：这家店有服务端 AddPaymentInfo、像素验收和 /admin/pixel-test。
+		add_filter( 'pc_hq_capabilities', static fn( $capabilities ) => ( is_array( $capabilities ) ? $capabilities : array() ) + array( 'm7.pixel_acceptance' => '1' ) );
 	}
 
 	// ---------- 验收码 ----------
