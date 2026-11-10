@@ -353,6 +353,9 @@ final class Recovery {
 		$admin = self::admin_email();
 		if ( $admin && $admin->is_enabled() ) {
 			foreach ( $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} WHERE {$open} AND admin_ms = 0 AND changed_ms <= %d LIMIT 100", $now - $admin->delay() * 1000 ), ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+				if ( Recovery_Items::still_here( 0, (string) $r['session_key'], (int) $r['changed_ms'] ) ) {
+					continue; // 店主 2026-11-10：顾客彻底离开 5 分钟才算弃单。
+				}
 				$admin->trigger( $r );
 				$wpdb->update( $t, array( 'admin_ms' => $now ), array( 'id' => (int) $r['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 				++$stats['admin'];
@@ -385,6 +388,9 @@ final class Recovery {
 			}
 			if ( (int) $r['changed_ms'] + $stages[ $next ]->delay() * 1000 > $now ) {
 				continue;
+			}
+			if ( Recovery_Items::still_here( 0, (string) $r['session_key'], (int) $r['changed_ms'] ) ) {
+				continue; // 顾客还在店里（离开不到 5 分钟），不发提醒。
 			}
 			if ( self::opted_out( (string) $r['email'] ) ) {
 				self::finish( $r, 'void', 'unsubscribed', $now );

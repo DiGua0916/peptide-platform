@@ -25,6 +25,30 @@ final class Recovery_Items {
 	public const RECALL_DAYS = 3; // 店主规则：发信后 3 天内没回来下单，第 4 天起算召回失败。
 	private const UNPAID    = array( 'wc-checkout-draft', 'wc-pending', 'wc-failed', 'wc-cancelled', 'wc-on-hold' );
 
+	/** 店主 2026-11-10：顾客彻底离开 5 分钟（最后一次在店里有动作之后 5 分钟没再出现）才算弃单。 */
+	public const AWAY_MS = 5 * 60 * 1000;
+
+	/** 这位访客最后一次在店里的时间（毫秒）；没有追踪记录时用 $fallback_ms。 */
+	private static function last_seen_ms( int $visitor_id, string $cart_key, int $fallback_ms ): int {
+		$last = 0;
+		if ( class_exists( Tracking\Schema::class ) && Tracking\Schema::ready() ) {
+			global $wpdb;
+			$t = Tracking\Schema::table( 'visitors' );
+			if ( $visitor_id ) {
+				$last = (int) $wpdb->get_var( $wpdb->prepare( "SELECT last_ms FROM {$t} WHERE id = %d", $visitor_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			}
+			if ( ! $last && '' !== $cart_key ) {
+				$last = (int) $wpdb->get_var( $wpdb->prepare( "SELECT MAX(last_ms) FROM {$t} WHERE cart_key = %s", $cart_key ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			}
+		}
+		return max( $last, $fallback_ms );
+	}
+
+	/** 顾客还在店里（离开不到 5 分钟）就先不算弃单。 */
+	public static function still_here( int $visitor_id, string $cart_key, int $fallback_ms ): bool {
+		return (int) floor( microtime( true ) * 1000 ) - self::last_seen_ms( $visitor_id, $cart_key, $fallback_ms ) < self::AWAY_MS;
+	}
+
 	public static function status_labels(): array {
 		return array( 'pending' => '待召回', 'recalling' => '召回中', 'failed' => '召回失败', 'success' => '召回成功', 'void' => '已作废' );
 	}
@@ -163,6 +187,9 @@ final class Recovery_Items {
 			if ( Test_Orders::is_test_order( $o ) ) {
 				continue; // 测试单（收件信息全 1）不进弃单列表，和没下单的测试结账一样（2026-11-10）。
 			}
+			if ( ! $o->get_date_paid() && self::still_here( (int) $o->get_meta( '_pc_track_visitor' ), '', $o->get_date_created() ? $o->get_date_created()->getTimestamp() * 1000 : 0 ) ) {
+				continue; // 还在店里（离开不到 5 分钟），先不算弃单。
+			}
 			if ( ! empty( $f['q'] ) ) {
 				$hit = false;
 				foreach ( preg_split( '/\s+/', trim( (string) $f['q'] ) ) as $term ) {
@@ -272,6 +299,9 @@ final class Recovery_Items {
 			}
 			if ( 'void' === $r['status'] && 'test checkout' === (string) $r['note'] ) {
 				continue;
+			}
+			if ( self::still_here( 0, (string) $r['session_key'], (int) $r['changed_ms'] ) ) {
+				continue; // 还在店里（离开不到 5 分钟），先不算弃单。
 			}
 			if ( ! empty( $f['q'] ) ) {
 				$hay = strtolower( $r['email'] . ' ' . $r['name'] );
