@@ -17,6 +17,7 @@ defined( 'ABSPATH' ) || exit;
 final class Manual_Orders {
 
 	public const OPTION   = 'pc_manual_links';
+	private static string $allow_code = '';
 	public const ARG      = 'pc_manual';
 	public const META     = '_pc_manual_link';
 	private const TTL     = 30 * DAY_IN_SECONDS;
@@ -87,6 +88,9 @@ final class Manual_Orders {
 			'shipping'  => $shipping,
 			'discounts' => $discounts,
 			'note'      => mb_substr( sanitize_text_field( (string) ( $in['note'] ?? '' ) ), 0, 200 ),
+			// 店主 2026-11-11：店铺满减活动、首单优惠可以选开，开了链接就自动带上，顾客直接付款。
+			'store_promos' => ! empty( $in['store_promos'] ),
+			'first_order'  => ! empty( $in['first_order'] ),
 			'created'   => time(),
 			'by'        => get_current_user_id(),
 			'orders'    => array(),
@@ -155,6 +159,11 @@ final class Manual_Orders {
 				}
 			} catch ( \Throwable $e ) { /* 下架或缺货的跳过 */ }
 		}
+		if ( ! empty( $c['first_order'] ) && ( $fc = self::first_order_coupon() ) ) {
+			self::$allow_code = wc_format_coupon_code( $fc->get_code() );
+			WC()->cart->apply_coupon( $fc->get_code() );
+			self::$allow_code = '';
+		}
 		WC()->cart->calculate_totals();
 		wc_clear_notices();
 		$keep = array_diff_key( wp_unslash( $_GET ), array( self::ARG => 1 ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended,WordPress.Security.ValidatedSanitizedInput
@@ -197,8 +206,16 @@ final class Manual_Orders {
 		if ( ! $c || ! $cart instanceof \WC_Cart ) {
 			return;
 		}
-		// 不叠加店铺活动：去掉别的优惠费用行，只留店主配的。
-		$cart->fees_api()->set_fees( array() );
+		// 不叠加店铺活动：去掉别的优惠费用行，只留店主配的；店主在这一单开了“店铺满减活动”就保留活动的优惠。
+		$keep = array();
+		if ( ! empty( $c['store_promos'] ) ) {
+			foreach ( $cart->fees_api()->get_fees() as $id => $fee ) {
+				if ( str_starts_with( (string) $id, 'pc-promo-' ) ) {
+					$keep[ $id ] = $fee;
+				}
+			}
+		}
+		$cart->fees_api()->set_fees( $keep );
 		foreach ( $c['discounts'] as $n => $d ) {
 			$cart->fees_api()->add_fee( array( 'id' => 'pc-manual-' . $n, 'name' => $d['label'], 'amount' => -1 * (float) $d['amount'], 'taxable' => false ) );
 		}
@@ -214,7 +231,19 @@ final class Manual_Orders {
 	}
 
 	public static function block_coupons( $valid, $coupon = null ) {
-		return self::active_cart() ? false : $valid;
+		$c = self::active_cart();
+		if ( ! $c && '' === self::$allow_code ) {
+			return $valid;
+		}
+		$code = $coupon instanceof \WC_Coupon ? wc_format_coupon_code( $coupon->get_code() ) : '';
+		$fc   = self::first_order_coupon();
+		$first_ok = $fc && $code === wc_format_coupon_code( $fc->get_code() ) && ( '' !== self::$allow_code || ! empty( $c['first_order'] ) );
+		return $first_ok ? $valid : false;
+	}
+
+	/** 店铺当前生效的首单优惠券（首单优惠功能开着才有）。 */
+	public static function first_order_coupon(): ?\WC_Coupon {
+		return class_exists( First_Order_Offer::class ) ? First_Order_Offer::coupon() : null;
 	}
 
 	public static function tag_order( $order ): void {
@@ -254,7 +283,46 @@ final class Manual_Orders {
 			}
 		}
 		$ship = $contents && class_exists( Ship_Preview::class ) ? Ship_Preview::estimate( $contents, 'US' ) : null;
-		return rest_ensure_response( array( 'shipping' => $ship ) );
+		// 店铺满减活动：按这一单（改过的价格）算能减多少；首单优惠：券的比例。
+		$promos = array();
+		if ( $contents && class_exists( Promotions::class ) && class_exists( '\WC_Cart' ) ) {
+			try {
+				// 只用来算活动的空购物车：不跑 WC_Cart 的构造（不挂会话、不在请求结束时保存购物车）。
+				$cart = new class() extends \WC_Cart {
+					public function __construct() {} // phpcs:ignore Generic.CodeAnalysis.UselessOverridingMethod
+					public function get_cart() {
+						return array_filter( (array) $this->cart_contents );
+					}
+				};
+				$rows = array();
+				foreach ( $contents as $n => $row ) {
+					$row['data']        = clone $row['data'];
+					$row['data']->set_price( (string) ( $row['line_subtotal'] / max( 1, $row['quantity'] ) ) );
+					$row['line_total']  = $row['line_subtotal'];
+					$rows[ 'pc' . $n ]  = $row;
+				}
+				$cart->set_cart_contents( $rows );
+				// 活动有“顾客规则”：在后台算的时候当前用户是店主，要按普通顾客（没登录）来算。
+				$admin_id = get_current_user_id();
+				wp_set_current_user( 0 );
+				try {
+					foreach ( (array) ( Promotions::discounts( $cart )['applied'] ?? array() ) as $a ) {
+						$promos[] = array( 'title' => (string) $a['title'], 'discount' => (float) $a['discount'] );
+					}
+				} finally {
+					wp_set_current_user( $admin_id );
+				}
+			} catch ( \Throwable $e ) { /* 预览算不出来不影响生成链接 */ }
+		}
+		$active = array();
+		if ( class_exists( Promotions::class ) ) {
+			foreach ( Promotions::active_ids() as $pid ) {
+				$active[] = Promotions::customer_title( html_entity_decode( get_the_title( $pid ) ) );
+			}
+		}
+		$fc    = self::first_order_coupon();
+		$first = $fc ? array( 'code' => strtoupper( $fc->get_code() ), 'percent' => (float) $fc->get_amount() ) : null;
+		return rest_ensure_response( array( 'shipping' => $ship, 'promos' => $promos, 'active_promos' => $active, 'first' => $first ) );
 	}
 
 	public static function rest_search( \WP_REST_Request $r ) {

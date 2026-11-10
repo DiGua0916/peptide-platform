@@ -86,16 +86,27 @@
 
 	// ---- 金额 ----
 	// 按店铺运费：问后台这一单按店铺规则（美国）大概多少运费（店主 2026-11-10：直接显示出来）。
-	var storeShip = null, shipT, shipSeq = 0;
+	var storeShip = null, shipT, shipSeq = 0, promoInfo = { promos: [], active_promos: [], first: null };
+	var swPromo = $('[data-mo-promos]'), swFirst = $('[data-mo-first]');
+	function promoTexts() {
+		var p = promoInfo, act = p.active_promos || [];
+		var got = (p.promos || []).reduce(function (a, x) { return a + num(x.discount); }, 0);
+		$('[data-mo-promos-text]').textContent = act.length ? (act.join('、') + (lines.length ? (got ? ' · 这一单可减 ' + money(got) : ' · 这一单还没达到门槛') : '')) : '店铺现在没有进行中的满减活动';
+		swPromo.disabled = !act.length;
+		$('[data-mo-first-text]').textContent = p.first ? (p.first.code + ' · 商品打 ' + (100 - p.first.percent) / 10 + ' 折（' + p.first.percent + '% off），结账时会核对是不是这位顾客的第一单') : '店铺没有开启首单优惠';
+		swFirst.disabled = !p.first;
+	}
+	swPromo.addEventListener('change', paint); swFirst.addEventListener('change', paint);
 	function loadStoreShip() {
 		clearTimeout(shipT);
-		if ('store' !== shipMode() || !lines.length) { storeShip = null; return; }
+		if (!lines.length) { storeShip = null; promoInfo.promos = []; }
 		shipT = setTimeout(function () {
 			var my = ++shipSeq;
 			wp.apiFetch({ path: '/peptide/v1/manual-order/shipping', method: 'POST', data: { items: lines.map(function (l) { return { id: l.id, qty: l.qty, price: l.price }; }) } }).then(function (r) {
 				if (my !== shipSeq) return;
 				storeShip = r && null !== r.shipping && undefined !== r.shipping ? num(r.shipping) : null;
-				paint();
+				promoInfo = { promos: r.promos || [], active_promos: r.active_promos || [], first: r.first || null };
+				promoTexts(); paint();
 			}).catch(function () {});
 		}, 300);
 	}
@@ -104,12 +115,15 @@
 		lines.forEach(function (l) { reg += Math.max(l.regular, l.price) * l.qty; sub += l.price * l.qty; });
 		var disc = discounts.reduce(function (a, d) { return a + num(d.amount); }, 0);
 		var ship = 'custom' === shipMode() ? num($('[data-mo-ship-amount]').value) : storeShip;
+		var promo = swPromo.checked ? (promoInfo.promos || []).reduce(function (a, x) { return a + num(x.discount); }, 0) : 0;
+		var first = swFirst.checked && promoInfo.first ? Math.round(sub * promoInfo.first.percent) / 100 : 0;
+		disc += promo + first;
 		return { reg: reg, sub: sub, disc: disc, ship: ship, total: Math.max(0, sub - disc) + (ship || 0) };
 	}
 	function sumHtml(x) {
 		return '<dt>原价合计</dt><dd><del>' + money(x.reg) + '</del></dd>' +
 			'<dt>商品小计</dt><dd>' + money(x.sub) + '</dd>' +
-			(x.disc ? '<dt>优惠</dt><dd class="is-off">−' + money(x.disc) + '</dd>' : '') +
+			(x.disc ? '<dt>优惠' + (swPromo.checked || swFirst.checked ? '（含店铺活动）' : '') + '</dt><dd class="is-off">−' + money(x.disc) + '</dd>' : '') +
 			'<dt>运费' + ('store' === shipMode() ? '（店铺运费，按美国）' : '') + '</dt><dd>' + (null === x.ship ? ('store' === shipMode() && lines.length ? '计算中…' : '—') : money(x.ship)) + '</dd>' +
 			'<dt class="is-total">合计</dt><dd class="is-total">' + money(x.total) + '</dd>';
 	}
@@ -127,7 +141,9 @@
 			items: lines.map(function (l) { return { id: l.id, qty: l.qty, regular: l.regular, price: l.price }; }),
 			shipping: 'custom' === shipMode() ? { label: $('[data-mo-ship-label]').value, amount: num($('[data-mo-ship-amount]').value) } : null,
 			discounts: discounts.filter(function (d) { return num(d.amount) > 0; }),
-			note: $('[data-mo-note]').value
+			note: $('[data-mo-note]').value,
+			store_promos: swPromo.checked,
+			first_order: swFirst.checked
 		};
 		wp.apiFetch({ path: '/peptide/v1/manual-order', method: 'POST', data: body }).then(function (r) {
 			$('[data-mo-link]').value = r.url;
@@ -145,7 +161,7 @@
 	});
 	$('[data-mo-close]').addEventListener('click', function () { dlg.close(); });
 	$('[data-mo-new]').addEventListener('click', function () {
-		lines = []; discounts = []; $('[data-mo-note]').value = ''; root.querySelector('[data-mo-ship][value="store"]').checked = true; $('[data-mo-ship-custom]').hidden = true;
+		lines = []; discounts = []; $('[data-mo-note]').value = ''; swPromo.checked = false; swFirst.checked = false; root.querySelector('[data-mo-ship][value="store"]').checked = true; $('[data-mo-ship-custom]').hidden = true;
 		render(); renderDisc(); dlg.close();
 	});
 

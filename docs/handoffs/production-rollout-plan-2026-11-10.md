@@ -280,3 +280,10 @@
 - pp 后台（backupaoy.top 订单表）列：id、商户、网址、支付状态、付款时间、货币、总金额、邮箱、手机号、快递单号、物流方式、州、国家、通道名称。id（如 Sherrie 132460）是 pp 自己的行号：创建付款的返回里只有 status 和 data{type, payment_url}，没有这个 id；payment_url 里的 id 参数就是交易号 2026111105231017943457906559993（= 我们订单列表的“流水号”），但 pp 表格不显示这个号，按它搜索也搜不到（只能按 pp 自己的 id 搜）。所以目前拿不到 pp 的订单号，对账用 邮箱 + 付款时间 + 金额。
 - 州为空：芒果 John（#11886，PR）城市 Ponce、州空。WooCommerce 对国家 Puerto Rico 隐藏“州”、把城市叫 Municipality，所以 pp 收到的州是空的。Shopname（vialcovebio.com 结账页：Country 下拉 + State 下拉，美国 60 项）把波多黎各的市镇放在州里（pp 里显示 Villalba）。
 - 修复 `US_Territories::fill_state()`（woocommerce_checkout_create_order + woocommerce_store_api_checkout_update_order_from_request）：国家是 PR / GU / VI / AS / MP 且州为空时，把城市（市镇）写进账单和收货的州，支付插件按订单地址发给 pp。测试：PR + Ponce → 州 Ponce；US 订单不变。已发出的订单不改。
+
+### 2026-11-11 手动订单：店铺活动开关
+- 店主：手动订单里载入店铺活动和首单优惠，开关选了就启用，链接里自动带上，顾客直接付款。
+- 手动订单页加“店铺活动”卡：两个开关（默认关）——店铺满减活动（显示进行中的活动名和这一单能减多少）、首单优惠（显示券码和折扣，说明结账时核对是否首单）。订单金额实时含活动优惠。
+- `Manual_Orders`：配置加 store_promos / first_order。开了满减就保留 Promotions 的 pc-promo-* 费用（不开仍全部清掉）；开了首单就在打开链接时自动套用 First_Order_Offer::coupon()（block_coupons 只放行这张券；是否首单仍由券规则在结账核对）。
+- 预览 /manual-order/shipping 返回 promos / active_promos / first：用不跑构造、自己返回商品的 WC_Cart 子类算活动（真 WC_Cart 在接口请求里会去读会话报错），并临时按未登录顾客算（活动有顾客规则）。
+- 主店测试：Tirzepatide 20mg × 6 @ $55，两个开关都开 → 后台预览 $330 − $25（Black Friday）− $16.50（WELCOME5）+ $42.75 = $331.25；顾客打开链接结账页同样 $331.25，无报错。测试链接备注 “TEST - Claude 店铺活动测试”。

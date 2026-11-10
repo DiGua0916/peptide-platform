@@ -74,6 +74,12 @@ final class Manual_Order_Page {
 				<button type="button" class="button" data-mo-add-discount>+ 添加一笔优惠</button>
 			</section>
 			<section class="pc-mo-card">
+				<h2>店铺活动</h2>
+				<p class="pc-mo-hint">开了的会自动带进这一单，顾客打开链接直接付款，不用自己填优惠码。不开就只按上面你填的价格和优惠。</p>
+				<label class="pc-mo-switch"><input type="checkbox" data-mo-promos><i></i><span><b>店铺满减活动</b><small data-mo-promos-text>正在读取…</small></span></label>
+				<label class="pc-mo-switch"><input type="checkbox" data-mo-first><i></i><span><b>首单优惠</b><small data-mo-first-text>正在读取…</small></span></label>
+			</section>
+			<section class="pc-mo-card">
 				<h2>备注（只有你看得到）</h2>
 				<input type="text" class="pc-mo-note" maxlength="200" placeholder="例如：给 Luz 的老客价" data-mo-note>
 			</section>
