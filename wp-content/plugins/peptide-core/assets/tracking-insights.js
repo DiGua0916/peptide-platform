@@ -125,10 +125,19 @@
    }
   } else {
    const stages = ['只逛首页', '看了商品', '加了购物车', '进了结账', '下了单', '已付款'];
-   html += '<div class="pc-ai-kpis"><div class="pc-ai-kpi"><span>走到哪一步</span><b>' + esc(stages[c.stage] || '—') + '</b></div><div class="pc-ai-kpi"><span>购买意向分</span><b>' + aiNum(c.intent) + '</b><em>满分 100</em></div><div class="pc-ai-kpi"><span>来访次数</span><b>' + aiNum(c.visits) + '</b></div><div class="pc-ai-kpi"><span>购物车</span><b>' + esc(c.cart || '—') + '</b></div></div>';
+   html += '<div class="pc-ai-kpis"><div class="pc-ai-kpi"><span>走到哪一步</span><b>' + esc(stages[c.stage] || '—') + '</b></div><div class="pc-ai-kpi"><span>购买意向分</span><b>' + aiNum(c.intent) + '</b><em>满分 100</em></div><div class="pc-ai-kpi"><span>来访次数</span><b>' + aiNum(c.visits) + '</b></div><div class="pc-ai-kpi"><span>购物车（现在）</span>' + aiCartKpi(c.cart) + '</div></div>';
    html += '<div class="pc-ai-charts">' + aiBars('他感兴趣的商品（停留秒数）', (c.products || []).slice().sort((a, b) => (b.seconds || 0) - (a.seconds || 0)).map(p => ({label: p.name, value: p.seconds, text: p.seconds + ' 秒' + (p.carts ? ' · 加购' : ''), tip: p.name + '：停留 ' + p.seconds + ' 秒，浏览 ' + p.views + ' 次' + (p.carts ? '，加购过' : '')}))) + aiBars('他点过的版块', (c.modules || []).map(m => ({label: m.name, value: m.clicks, text: m.clicks + ' 次'}))) + '</div>';
   }
   return html;
+ }
+ // 店主 2026-11-10：购物车用现在的（和实时访客、弃单一致）；分析时不一样就小字注明。
+ function aiCartKpi(snap) {
+  var lc = aiLive && aiLive.cart;
+  if (!lc || 'active' !== lc.status || !lc.subtotal) return '<b>' + esc(snap || (lc && 'empty' === lc.status ? '空' : '—')) + '</b>' + (lc && 'empty' === lc.status && snap ? '<em>分析时 ' + esc(snap) + '，现在已清空</em>' : '');
+  var notes = [];
+  if (lc.payable) notes.push('应付 ' + lc.payable + '（含运费）');
+  if (snap && snap !== lc.subtotal) notes.push('分析时 ' + snap);
+  return '<b>' + esc(lc.subtotal) + '</b>' + (notes.length ? '<em>' + esc(notes.join(' · ')) + '</em>' : '');
  }
  function aiShell(state, body, act) { aiBox.innerHTML = '<div class="pc-ai-head"><div class="pc-ai-head-title"><h3>' + aiTitle + '</h3><span class="pc-ai-chip">' + esc(state) + '</span></div>' + (act || '') + '</div>' + body; }
  async function aiStatus() {

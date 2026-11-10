@@ -213,3 +213,29 @@
 - 电话：店主说用站点自己的。阳保留 +14323608942；主店、李军、光辉、老毛、芒果按各自客服 WhatsApp 填 +13039444124（这 5 家的 WhatsApp 都是这个号）。
 - 邮箱：店主要求全部换成站点自己的 orders@本店域名——管理员邮箱（admin_email 直接写，清掉待确认的 new_admin_email/adminhash）、客服邮箱（woocommerce_email_from_address，阳原来是 VialCovePeptides@outlook.com）、新订单 / 取消 / 失败通知收件人。原值备份 `pc_email_backup_20261110`。阳基础配置页核对。
 - 店铺评分：主店 65、李军 60、阳 85、光辉 45、老毛 60、芒果 60。地址填好后弃单提醒邮件不再因缺地址被拦，定时任务会按设置开始发。
+
+### 2026-11-10 订单 → 手动订单
+- 新增后台页 订单 → 手动订单（class-manual-order-page.php + assets/manual-order.js/.css）：搜索商品（含规格）加入；每行改数量、原价、售价（只对这一单）；运费“按店铺运费”或自定义（名称 + 金额）；可加多笔优惠（名称 + 金额，顾客可见）；备注只后台可见；右侧实时算原价合计 / 小计 / 优惠 / 运费 / 合计；“生成付款链接”弹窗显示链接 + 复制 + 打开看看 + 再做一单；右侧“最近生成的链接”（复制、已下的订单）。
+- 引擎 `Manual_Orders`（class-manual-orders.php）：配置存 `pc_manual_links`（token → 配置，30 天有效，最多 300 条）；链接 `/?pc_manual=token` → 清空购物车和优惠券、清顾客资料、按配置加商品（cart item data pc_m_price/pc_m_regular）→ 跳结账。`woocommerce_before_calculate_totals` 9999 设价格（原价 / 售价），`woocommerce_cart_calculate_fees` 99 清掉店铺满减等费用只留自定义优惠，`woocommerce_package_rates` 9999 自定义运费替换所有运费（含运费优惠），`woocommerce_coupon_is_valid` 禁用优惠券；下单时订单加 `_pc_manual_link` 和备注并记到这条链接。
+- `cart-share.js`：手动订单购物车的地址栏改成 `?pc_manual=token`（原来会变成 `?pc_cart=` 普通链接，刷新会变回原价）。
+- 主店测试：2 × 组合装 原价 80 / 售价 50 + bac.water 10，优惠 10 + 5，运费 20 → 结账页 $115.00，原价划线、两笔优惠、运费 $20，无优惠券和满减；刷新仍为 $115.00。测试链接备注 “TEST - Claude 手动订单测试” 留在最近链接里。用链接实际下单后的订单标记未实测。
+
+### 2026-11-10 同一顾客三个金额对不上
+- 阳访客 #119（Wanda Feliciano）：弃单 $133.00 = 结账页应付（商品 95 + 运费 42.75 − 优惠 4.75）；实时访客 $95.00 = 现在购物车商品金额；AI 卡片 $181.30 = 22:10 分析时的购物车快照（当时还有 Retatrutide $86.30，后来删了）。口径和时间都不同。
+- 统一：“购物车”一律指现在购物车的商品金额（Carts::view，仪表盘最可能下单、实时访客、意向分、AI 数据都是这一个来源）；含运费和优惠的另标“应付”。
+  - `Carts::view()` 加 `payable_text`（会话 cart_totals.total，算过运费时才有）；实时访客购物车下面显示“$95.00 · 应付 $133.00”。
+  - `HQ_AI::visitor_live()` 加现在的 cart；AI 卡片 KPI 改为“购物车（现在）$95.00”，小字“应付 $133.00（含运费）· 分析时 $181.30”（分析后购物车变了才写）。
+  - 弃单列表列名“订单总价”改“应付总价（含运费）”，下面加“商品 $95.00”（Recovery_Items item/record_item 加 subtotal）。
+- 阳核对三处一致。
+
+### 2026-11-10 弃单提醒：间隔和文案
+- 问题：地址填好后积压的弃单提醒一次放出，第 1、2 封只隔 10 分钟（只按“弃单后多久”算，没看上一封什么时候发）；第 1 封写 “We tried reaching you on WhatsApp…”（自动邮件没人联系过）、“If your WhatsApp number has changed…”；第 2 封写 “if you'd prefer to pay another way”（现在只收卡）。
+- 修复：`Recovery::STAGE_GAP_MS` = 24 小时，上一封发出 24 小时内不发下一封；`Chase_Copy::defaults_for()` 删掉上面三句，第 1 封结尾改 “Just reply to this email or message us on WhatsApp at …, and we'll take care of it.”，第 2 封改 “If anything went wrong at checkout or you have any questions, just reply…”。各店没有保存自定义正文，默认文案直接生效。手动模板 01（WhatsApp 联系不上后的跟进）不变。
+- 今晚已经 1 小时内收到两封的顾客：主店 1、阳 7、光辉 2、芒果 2（已发出的无法撤回）。
+
+### 2026-11-10 弃单提醒节奏 + 下单关怀邮件
+- 店主：弃单确定后 5 分钟内发第一封，第 3 天、第 7 天再各一封；成功下单立刻发关怀邮件。
+- `Chase_Copy::defaults_for()` 延时：第 1 封 60 秒（弃单本身要“离开 5 分钟”才成立，定时任务每 5 分钟跑，所以确定后 5 分钟内发出），第 2 封 3 天，第 3 封 7 天（都从最后改购物车算）；两封之间仍至少 24 小时。6 家店都没有保存自定义延时，直接生效（60/259200/604800）。
+- `Recovery_Items::RECALL_DAYS` 3 → 4：两封之间最长隔 4 天，不然第 3 天就会显示“召回失败”。
+- 付款成功邮件（customer_processing_order，templates/emails/customer-processing-order.php）改成模板库「05 下单成功感谢」文案，主题统一 “{店名} | Thank You for Your Order”（不再按有没有电话分两种）。
+- `Paid_Popup::care_catchup()` 挂在每 5 分钟的扫描上：`pc_care_since` 之后付款、不是测试单、发件记录里没有这张单的 customer_processing_order 已发送 → 补发并加订单备注；每单只检查一次（`_pc_care_mail`）。旧订单不补。

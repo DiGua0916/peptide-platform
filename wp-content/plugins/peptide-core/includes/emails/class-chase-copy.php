@@ -140,7 +140,7 @@ final class Chase_Copy {
 	}
 
 	public static function subject_processing( $subject, $order ) {
-		return self::brand() . ' | Thanks for Your Order' . ( self::needs_whatsapp( $order ) ? ' — Add Us on WhatsApp' : '' );
+		return self::brand() . ' | Thank You for Your Order';
 	}
 
 	/** 顾客没留电话 → 要强调加 WhatsApp。 */
@@ -176,12 +176,12 @@ final class Chase_Copy {
 				'subject' => $brand . ' | A Quick Follow-Up on Your Order',
 				'heading' => 'A quick follow-up on your order',
 				'message' => "We're getting in touch to see whether you need any help completing your order.\n\n"
-					. "We tried reaching you on WhatsApp but haven't been able to get in touch, so we're following up by email.\n\n"
 					. "Your experience with {$brand} matters to us. If you encountered any difficulties during checkout or have questions about your order, please let us know—we're happy to help.\n\n"
 					. "We're also running a Black Friday promotion, with special pricing on many peptide products. If you're still considering an order, we'd be happy to share the available offers and help you review your selection.\n\n"
-					. "Could you please reply to this email or message us on WhatsApp at {$wa}? If your WhatsApp number has changed, please let us know the best number to reach you.\n\n"
+					. "Just reply to this email or message us on WhatsApp at {$wa}, and we'll take care of it.\n\n"
 					. 'For your reference, the items you selected are listed below.',
-				'delay'   => 300,
+				// 店主 2026-11-10：确定弃单（离开 5 分钟）后 5 分钟内发第一封；第 3 天、第 7 天再各发一封。
+				'delay'   => 60,
 			);
 		}
 		if ( 2 === $stage ) {
@@ -189,9 +189,9 @@ final class Chase_Copy {
 				'subject' => $brand . ' | Still Need a Hand With Your Order?',
 				'heading' => 'Still need a hand with your order?',
 				'message' => "We're following up once more in case our earlier note was missed—your order is still saved and waiting for you.\n\n"
-					. "If anything went wrong at checkout, or if you'd prefer to pay another way, just reply to this email or message us on WhatsApp at {$wa} and we'll sort it out right away.\n\n"
+					. "If anything went wrong at checkout or you have any questions, just reply to this email or message us on WhatsApp at {$wa} and we'll sort it out right away.\n\n"
 					. 'Your order details are below.',
-				'delay'   => 1800,
+				'delay'   => 3 * 86400,
 			);
 		}
 		return array(
@@ -199,7 +199,7 @@ final class Chase_Copy {
 			'heading' => 'Last reminder about your order',
 			'message' => "This is our last reminder about the order you started with {$brand}. Your cart is still saved for now.\n\n"
 				. "If you've decided not to go ahead, no action is needed. If we can help with anything, reply to this email or reach us on WhatsApp at {$wa}.",
-			'delay'   => 86400,
+			'delay'   => 7 * 86400,
 		);
 	}
 

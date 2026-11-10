@@ -33,6 +33,7 @@ final class Recovery {
 	public const DB_OPTION  = 'peptide_core_recovery_db';
 	public const DB_VERSION = '2';
 	public const CRON       = 'peptide_core_recovery_scan';
+	public const STAGE_GAP_MS = 24 * 60 * 60 * 1000;
 
 	public const STATUSES = array( 'pending', 'recalling', 'success', 'failed', 'void' );
 	public const OPEN     = array( 'pending', 'recalling' );
@@ -387,6 +388,10 @@ final class Recovery {
 				continue;
 			}
 			if ( (int) $r['changed_ms'] + $stages[ $next ]->delay() * 1000 > $now ) {
+				continue;
+			}
+			// 店主 2026-11-10：两封提醒之间至少隔 24 小时（之前积压的会在一次扫描里连着发，10 分钟收到两封）。
+			if ( (int) $r['last_sent_ms'] && $now - (int) $r['last_sent_ms'] < self::STAGE_GAP_MS ) {
 				continue;
 			}
 			if ( Recovery_Items::still_here( 0, (string) $r['session_key'], (int) $r['changed_ms'] ) ) {

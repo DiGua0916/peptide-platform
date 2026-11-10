@@ -22,7 +22,7 @@ final class Recovery_Items {
 
 	public const STATUSES   = array( 'pending', 'recalling', 'failed', 'success', 'void' );
 	public const VOID_META  = '_pc_recall_void';
-	public const RECALL_DAYS = 3; // 店主规则：发信后 3 天内没回来下单，第 4 天起算召回失败。
+	public const RECALL_DAYS = 4; // 店主规则：发信后没回来下单算召回失败。2026-11-10 提醒改为第 0 / 3 / 7 天，间隔最长 4 天，所以 4 天后才算失败。
 	private const UNPAID    = array( 'wc-checkout-draft', 'wc-pending', 'wc-failed', 'wc-cancelled', 'wc-on-hold' );
 
 	/** 店主 2026-11-10：顾客彻底离开 5 分钟（最后一次在店里有动作之后 5 分钟没再出现）才算弃单。 */
@@ -142,6 +142,7 @@ final class Recovery_Items {
 			'items'        => count( $order->get_items( 'line_item' ) ),
 			'ship_method'  => (string) $order->get_shipping_method(),
 			'total'        => (float) $order->get_total(),
+			'subtotal'     => (float) $order->get_subtotal(),
 			'currency'     => $order->get_currency(),
 			'pay_method'   => (string) $order->get_payment_method_title(),
 			'paid_ms'      => $paid * 1000,
@@ -349,6 +350,7 @@ final class Recovery_Items {
 			'items'        => (int) array_sum( array_column( $items, 'quantity' ) ),
 			'ship_method'  => (string) $r['ship_method'],
 			'total'        => '' !== (string) $r['total'] ? (float) $r['total'] : (float) $r['subtotal'],
+			'subtotal'     => (float) $r['subtotal'],
 			'currency'     => (string) ( $r['currency'] ?: get_woocommerce_currency() ),
 			'pay_method'   => (string) $r['pay_method'],
 			'paid_ms'      => (int) $r['paid_ms'],
