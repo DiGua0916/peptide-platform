@@ -154,6 +154,9 @@ final class Recovery_Items {
 			if ( '' === trim( (string) $o->get_billing_email() ) && '' === trim( (string) $o->get_billing_first_name() ) ) {
 				continue; // 还没填任何信息的空草稿不算弃单。
 			}
+			if ( Test_Orders::is_test_order( $o ) ) {
+				continue; // 测试单（收件信息全 1）不进弃单列表，和没下单的测试结账一样（2026-11-10）。
+			}
 			if ( ! empty( $f['q'] ) ) {
 				$hit = false;
 				foreach ( preg_split( '/\s+/', trim( (string) $f['q'] ) ) as $term ) {
