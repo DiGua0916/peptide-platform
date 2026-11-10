@@ -796,6 +796,15 @@
       "node_test": true,
       "status": "module-gate",
       "module": "M14"
+    },
+    {
+      "name": "m14-visitor-engagement",
+      "language": "node",
+      "path": "wp-content/themes/peptide-site/tests/m14-visitor-engagement.cjs",
+      "core": true,
+      "node_test": true,
+      "status": "module-gate",
+      "module": "M14"
     }
   ]
 }

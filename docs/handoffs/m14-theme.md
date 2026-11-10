@@ -1,6 +1,6 @@
 # M14 前台主题 交接（F5，2026-11-10）
 
-分支 `claude/m9-buyer-admin-940389`，提交 `9b93b55`（和 M9、M11 在同一个分支上）。没有合并 main，没有发布。
+分支 `claude/m9-buyer-admin-940389`，提交 `9b93b55`（第一批）和之后修主题用例的提交（和 M9、M11 在同一个分支上）。没有合并 main，没有发布。
 
 平台所有者 2026-11-10 的决定：
 
@@ -20,19 +20,23 @@
 - **品牌名**：`vc_brand_name()` 读店铺填的对外英文品牌名，没填沿用默认值。
 - **广告名称进归因**（F4 提的配合项）：`utm_campaign`、`utm_term`、`utm_content` 随来源一起上报。
 - 品牌名、使用声明、查订单入口移到 `inc/storefront-identity.php`。
+- **修好了主题里原本失败的 11 个追踪用例**（主线上就失败，其中 `visitor-intents`、`visitor-product-actions` 在默认套件里）：
+  - 10 个的原因相同：11-08 加了“有互动才上报”（`assets/visitor-tracking.js` 的 `engageMs`，默认 6 秒），用例还在等“页面一打开就上报”。现在 4 个基础夹具（`visitor-transport`、`visitor-product-actions`、`visitor-metadata-push`、`visitor-products`）在启动观察器时带上它自己的选项 `engageMs: 0`，其余用例复用这些夹具，跟着恢复；`visitor-quick-view-pair` 直接传 `engageMs: 0`。追踪脚本本身没有改。
+  - `visitor-client-environment` 另有一个原因：同一天加的爬虫 / 无头浏览器过滤每次启动会读一次 `navigator.userAgent`，用例把它算成了“读取环境信息”。现在用例只统计环境采集才会读的两项（`userAgentData`、`platform`）。
+  - 因为这些用例现在都从“已互动”开始，另加了 `tests/m14-visitor-engagement.cjs` 专门测这道门本身：没互动不上报、真实互动立刻上报、脚本触发的事件不算、停留 6 秒算、隐藏的页面等到显示、无头浏览器不上报。
 
 ## 改动文件
 
-- 新增：`inc/entry-address.php`、`inc/storefront-identity.php`、`assets/entry-address.js`、`tests/m14-entry-address-pure.php`、`tests/m14-storefront-identity-pure.php`、`tests/m14-entry-address.cjs`、`tests/m14-visitor-attribution-ads.cjs`。
-- 修改：`functions.php`（两行 require，三个函数移走）、`footer.php`、`inc/product-dialog-content.php`、`assets/site.css`、`assets/visitor-adapter.js`、`assets/visitor-tracking.js`、`tests/footer-details.php`。
+- 新增：`inc/entry-address.php`、`inc/storefront-identity.php`、`assets/entry-address.js`、`tests/m14-entry-address-pure.php`、`tests/m14-storefront-identity-pure.php`、`tests/m14-entry-address.cjs`、`tests/m14-visitor-attribution-ads.cjs`、`tests/m14-visitor-engagement.cjs`。
+- 修改：`functions.php`（两行 require，三个函数移走）、`footer.php`、`inc/product-dialog-content.php`、`assets/site.css`、`assets/visitor-adapter.js`、`assets/visitor-tracking.js`（只加了三个广告参数）、`tests/footer-details.php`、`tests/visitor-transport.cjs`、`tests/visitor-product-actions.cjs`、`tests/visitor-metadata-push.cjs`、`tests/visitor-products.cjs`、`tests/visitor-quick-view-pair.cjs`、`tests/visitor-client-environment.cjs`。
 - 新选项：`pc_entry_address`。
 
 ## 实际做过的检查
 
 - `php -l`、`node --check` 通过。
-- 主题的 PHP 用例 31 个全部通过（其中 `footer-details.php` 在主线上原本失败，版权年份的断言没跟上 11-08 的改动，已更新）。
-- 新用例：`m14-entry-address-pure`（22 项）、`m14-storefront-identity-pure`（15 项）、`m14-entry-address.cjs`（9 个）、`m14-visitor-attribution-ads.cjs`（4 个，用真实的两个追踪脚本跑）通过。
-- 主题的 `.cjs` 用例：43 通过、11 失败。**这 11 个在没有改动的主线上同样失败**，这次没有修（见下）。
+- 主题的 PHP 用例 30 个全部通过（其中 `footer-details.php` 在主线上原本失败，版权年份的断言没跟上 11-08 的改动，已更新）。
+- 主题的 `.cjs` 用例 55 个全部通过（主线上是 41 过、11 败）。
+- 新用例：`m14-entry-address-pure`（22 项）、`m14-storefront-identity-pure`（15 项）、`m14-entry-address.cjs`（9 个）、`m14-visitor-attribution-ads.cjs`（4 个）、`m14-visitor-engagement.cjs`（7 个），后两个用真实的追踪脚本跑。
 - **没有在浏览器里看过任何页面**：地址栏的变化、弹窗里声明的样式、页脚链接的位置都没有实际看过。
 
 ## 上沙盒后的验收清单
@@ -50,7 +54,7 @@
 
 ## 没做的和已知问题
 
-- **11 个 `visitor-*.cjs` 用例在主线上失败**（其中 `visitor-intents`、`visitor-product-actions` 在默认套件里）。原因：11-08 的“有互动才上报”（`assets/visitor-tracking.js` 的 `engageMs`，默认 6 秒）加上之后，用例还在等“页面一打开就上报”。修法已经验证过可行：在用例的假浏览器里先派发一个 `isTrusted: true` 的 `pointerdown`（`m14-visitor-attribution-ads.cjs` 就是这么做的）。11 个文件的夹具各不相同，需要逐个改，这次没有做。
+- 插件目录下的 `peptide-core/tests/customer-checkout-observer.cjs` 也加载主题的追踪脚本，在主线上失败，把互动等待设成 0 也一样失败，原因不是这道门。它不在默认套件里，也不是主题的用例，这次没有动，已告诉 F4。
 - 分享出去的商品地址被社交平台抓取预览时，拿到的仍是首页的标题和图片。
 - 政策页定稿内容：等平台所有者提供。
 - FE-03（商品页转化元素）、NF-07（手机端性能）没有开始。
