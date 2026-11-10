@@ -253,9 +253,12 @@ final class Recovery_Page {
 		echo self::badge( ! empty( $r['status_text'] ) ? $r['status_text'] : $labels[ $r['status'] ], 'is-' . $r['status'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo '</div><div class="pc-rc-meta"><span>创建时间：' . esc_html( self::time( (int) $r['created_ms'] ) ) . '</span><span>支付时间：' . esc_html( self::time( (int) $r['paid_ms'] ) ) . '</span></div></header>';
 
-		echo '<table class="pc-rc-lines"><thead><tr><th>商品名称</th><th class="pc-rc-right">单价 × 数量</th><th class="pc-rc-right">总价</th></tr></thead><tbody>';
-		foreach ( Recovery_Items::lines( $order ) as $l ) {
-			echo '<tr><td><div class="pc-rc-line">';
+		// 店主 2026-11-11：商品多的单子（超过 4 件）只先显示前 3 件、行更紧凑，点“展开全部”再看其余。
+		$all_lines = Recovery_Items::lines( $order );
+		$many      = count( $all_lines ) > 4;
+		echo '<table class="pc-rc-lines' . ( $many ? ' is-many' : '' ) . '"><thead><tr><th>商品名称</th><th class="pc-rc-right">单价 × 数量</th><th class="pc-rc-right">总价</th></tr></thead><tbody>';
+		foreach ( $all_lines as $li => $l ) {
+			echo '<tr' . ( $many && $li >= 3 ? ' class="pc-rc-more" hidden' : '' ) . '><td><div class="pc-rc-line">';
 			echo $l['image'] ? '<img src="' . esc_url( $l['image'] ) . '" alt="">' : '<span class="pc-rc-line__noimg"></span>';
 			echo '<div><strong>' . esc_html( $l['name'] ) . '</strong>';
 			if ( '' !== $l['sku'] ) {
@@ -267,7 +270,14 @@ final class Recovery_Page {
 			echo '</div></div></td>';
 			echo '<td class="pc-rc-right">' . self::money( $l['unit'], $cur ) . ' × ' . (int) $l['qty'] . '</td><td class="pc-rc-right">' . self::money( $l['total'], $cur ) . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		}
+		if ( $many ) {
+			echo '<tr class="pc-rc-moretoggle"><td colspan="3"><button type="button" class="button-link" onclick="var t=this.closest(\'table\');var open=t.classList.toggle(\'is-open\');t.querySelectorAll(\'.pc-rc-more\').forEach(function(r){r.hidden=!open;});this.textContent=open?this.dataset.less:this.dataset.more;" data-more="展开全部 ' . count( $all_lines ) . ' 件商品" data-less="收起">展开全部 ' . count( $all_lines ) . ' 件商品</button></td></tr>';
+		}
 		echo '</tbody></table>';
+		// 店主 2026-11-11：订单时间放在金额左边，一行小字。
+		$created = $order->get_date_created();
+		$paid_at = $order->get_date_paid();
+		echo '<div class="pc-rc-totalrow"><p class="pc-rc-ordered">' . ( $created ? '下单时间 ' . esc_html( wp_date( 'Y-m-d H:i:s', $created->getTimestamp() ) ) : '' ) . ( $paid_at ? '<br>付款时间 ' . esc_html( wp_date( 'Y-m-d H:i:s', $paid_at->getTimestamp() ) ) : '' ) . '</p>';
 		echo '<dl class="pc-rc-totals">';
 		foreach ( Recovery_Items::totals( $order ) as $row ) {
 			if ( 0.0 === (float) $row[1] && ! str_starts_with( $row[0], '商品' ) && ! str_starts_with( $row[0], '运费' ) ) {
@@ -275,7 +285,7 @@ final class Recovery_Page {
 			}
 			echo '<dt>' . esc_html( $row[0] ) . '</dt><dd>' . self::money( (float) $row[1], $cur ) . '</dd>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		}
-		echo '<dt class="pc-rc-totals__sum">订单总价</dt><dd class="pc-rc-totals__sum">' . self::money( (float) $order->get_total(), $cur ) . '</dd></dl></section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '<dt class="pc-rc-totals__sum">订单总价</dt><dd class="pc-rc-totals__sum">' . self::money( (float) $order->get_total(), $cur ) . '</dd></dl></div></section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		self::addresses( $order->get_address( 'shipping' ), $order->get_address( 'billing' ) );
 
@@ -711,6 +721,11 @@ final class Recovery_Page {
 			'提醒 2' => 'Reminder 2',
 			'提醒 3' => 'Reminder 3',
 			'记录' => 'Recorded',
+			'下单时间' => 'Ordered',
+			'件商品' => ' items',
+			'展开全部 ' => 'Show all ',
+			'收起' => 'Show less',
+			'付款时间' => 'Paid',
 		);
 	}
 }

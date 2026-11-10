@@ -87,11 +87,11 @@ final class Chase_Copy {
 		}
 		$paid = self::paid_elsewhere( $order );
 		if ( $paid ) {
-			$order->add_order_note( '顾客已经用订单 #' . $paid->get_order_number() . ' 付款，本单取消不再发付款帮助信。' );
+			$order->add_order_note( 'Customer already paid with order #' . $paid->get_order_number() . '; payment-help email not sent for this cancelled order.' );
 			return;
 		}
 		if ( get_transient( self::chase_key( (string) $order->get_billing_email() ) ) ) {
-			$order->add_order_note( '付款帮助信 24 小时内已发过给这位顾客，本单不再重复发送。' );
+			$order->add_order_note( 'Payment-help email was already sent to this customer in the last 24 hours; not sent again for this order.' );
 			return;
 		}
 		$emails = WC()->mailer()->get_emails();
@@ -100,7 +100,7 @@ final class Chase_Copy {
 			return;
 		}
 		$mail->trigger( $order->get_id(), $order );
-		$order->add_order_note( '未付款取消：已自动发送付款帮助信「' . $mail->get_subject() . '」。' );
+		$order->add_order_note( 'Unpaid order cancelled: payment-help email "' . $mail->get_subject() . '" sent automatically.' );
 	}
 
 	public static function brand(): string {
