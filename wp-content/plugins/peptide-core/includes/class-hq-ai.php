@@ -90,6 +90,7 @@ final class Hq_Ai {
 		register_rest_route( 'peptide/v1', '/track/admin/ai/status', array( 'methods' => 'GET', 'permission_callback' => $perm, 'callback' => static fn() => rest_ensure_response( self::status() ) ) );
 		register_rest_route( 'peptide/v1', '/track/admin/ai/analyse', array( 'methods' => 'POST', 'permission_callback' => $perm, 'callback' => array( self::class, 'rest_analyse' ) ) );
 		register_rest_route( 'peptide/v1', '/track/admin/ai/result', array( 'methods' => 'GET', 'permission_callback' => $perm, 'callback' => array( self::class, 'rest_result' ) ) );
+		register_rest_route( 'peptide/v1', '/overview/extras', array( 'methods' => 'GET', 'permission_callback' => static fn() => current_user_can( 'manage_woocommerce' ), 'callback' => array( self::class, 'rest_extras' ) ) );
 	}
 
 	public static function rest_analyse( \WP_REST_Request $request ) {
@@ -172,6 +173,49 @@ final class Hq_Ai {
 			'orders'        => $orders,
 			'intent'        => array( 'score' => $intent['score'], 'level' => $intent['level_text'], 'parts' => $intent['parts'] ),
 		);
+	}
+
+	/**
+	 * 仪表盘底部三张卡（店主 2026-11-10：原来是空的“暂无数据”）：待处理、AI 全站分析、最近的客户分析。
+	 */
+	public static function rest_extras() {
+		$counts = Recovery_Items::list( array(), 1, 1 )['counts'] ?? array();
+		$wc     = static fn( string $st ) => (int) wc_orders_count( $st );
+		$todo   = array(
+			array( 'label' => '待发货订单', 'n' => $wc( 'processing' ), 'url' => admin_url( 'admin.php?page=wc-orders&status=wc-processing' ) ),
+			array( 'label' => '弃单待召回', 'n' => (int) ( $counts['pending'] ?? 0 ), 'url' => admin_url( 'admin.php?page=pc-recovery&status=pending' ) ),
+			array( 'label' => '弃单召回中', 'n' => (int) ( $counts['recalling'] ?? 0 ), 'url' => admin_url( 'admin.php?page=pc-recovery&status=recalling' ) ),
+			array( 'label' => '召回失败', 'n' => (int) ( $counts['failed'] ?? 0 ), 'url' => admin_url( 'admin.php?page=pc-recovery&status=failed' ) ),
+			array( 'label' => '付款失败订单', 'n' => $wc( 'failed' ), 'url' => admin_url( 'admin.php?page=wc-orders&status=wc-failed' ) ),
+		);
+		$site = self::latest( 'site', 0 );
+		$ai   = null;
+		if ( $site ) {
+			preg_match( '/本期结论[\*\s]*[:：][\*\s]*(.+)/u', $site['text'], $m );
+			$rec = self::parse_record( $site['text'] );
+			$ai  = array(
+				'summary' => trim( str_replace( '**', '', (string) ( $m[1] ?? mb_substr( $site['text'], 0, 160 ) ) ) ),
+				'health'  => (string) ( $rec['健康分'] ?? '' ),
+				'state'   => (string) ( $rec['状态'] ?? '' ),
+				'first'   => (string) ( $rec['首要建议'] ?? '' ),
+				'at'      => $site['at'],
+				'period'  => array( 'day' => '日报', 'week' => '周报', 'month' => '月报' )[ $site['period'] ] ?? $site['period'],
+				'url'     => admin_url( 'admin.php?page=pc-visitors' ),
+			);
+		}
+		$recent = array();
+		self::ensure_results();
+		global $wpdb;
+		foreach ( (array) $wpdb->get_results( 'SELECT ref, body, created FROM ' . self::results_table() . " WHERE scope = 'visitor' ORDER BY created DESC LIMIT 20", ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+			if ( isset( $recent[ (int) $r['ref'] ] ) || count( $recent ) >= 5 ) {
+				continue;
+			}
+			$rec = self::parse_record( (string) $r['body'] );
+			$recent[ (int) $r['ref'] ] = array( 'visitor' => (int) $r['ref'], 'level' => (string) ( $rec['意向'] ?? '' ), 'blocker' => (string) ( $rec['主要卡点'] ?? '' ), 'type' => (string) ( $rec['心理类型'] ?? '' ), 'at' => wp_date( 'm-d H:i', (int) $r['created'] ), 'url' => admin_url( 'admin.php?page=pc-visitors&visitor=' . (int) $r['ref'] ) );
+		}
+		$res = rest_ensure_response( array( 'todo' => $todo, 'ai' => $ai, 'recent' => array_values( $recent ) ) );
+		$res->header( 'Cache-Control', 'no-store' );
+		return $res;
 	}
 
 	/**

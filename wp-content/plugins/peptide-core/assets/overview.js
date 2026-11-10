@@ -201,7 +201,7 @@
 		if ( ! st.rows.length ) {
 			return '<p class="pc-ov-empty is-box">' + esc( Y.noData ) + '</p>';
 		}
-		return '<ol class="pc-ov-products pc-ov-rank">' + st.rows.map( function ( p ) {
+		return ( st.note ? '<p class="pc-ov-rank-note">' + esc( st.note ) + '</p>' : '' ) + '<ol class="pc-ov-products pc-ov-rank">' + st.rows.map( function ( p ) {
 			var img = 'products' === kind ? ( p.image ? '<img src="' + esc( p.image ) + '" alt="">' : '<span class="pc-ov-noimg"></span>' ) : '';
 			return '<li>' + img + '<span class="pc-ov-rank__name">' + esc( p.label ) + '</span><span>' + esc( rankValue( kind, p ) ) + '</span></li>';
 		} ).join( '' ) + '</ol>';
@@ -235,7 +235,18 @@
 					return Number( b[ key ] || 0 ) - Number( a[ key ] || 0 );
 				} ).slice( 0, 10 );
 			}
+			// 商品排名：选的是销量 / 销售额但这段时间还没卖出，就自动改看加购，再没有就看浏览（店主 2026-11-10：别空着）。
+			if ( 'products' === kind && ! rows.length && ! st.fallback && ( 'products_units' === st.metric || 'products_sales' === st.metric || 'products_carted' === st.metric ) ) {
+				st.fallback = 'products_carted' === st.metric ? 'products_viewed' : 'products_carted';
+				st.picked = st.picked || st.metric;
+				st.metric = st.fallback;
+				var sel = root.querySelector( '.pc-ov-rankcard[data-kind="products"] .pc-ov-rank-metric' );
+				if ( sel ) { sel.value = st.metric; }
+				return fetchRank( kind ).then( function () { st.fallback = null; } );
+			}
 			st.rows = rows;
+			st.note = st.picked && st.picked !== st.metric ? '这段时间还没有' + ( 'products_sales' === st.picked ? '销售额' : 'products_carted' === st.picked ? '加购' : '销量' ) + '，先按' + ( 'products_viewed' === st.metric ? '浏览' : '加购' ) + '排名' : '';
+			st.picked = null;
 			var body = root.querySelector( '.pc-ov-rankcard[data-kind="' + kind + '"] .pc-ov-rank-body' );
 			if ( body ) {
 				body.innerHTML = rankList( kind );
@@ -250,9 +261,34 @@
 	}
 
 	// 页面底部一行三张卡（参考后台的公告 / 推荐位），没有内容时显示“暂无数据”。
+	// 2026-11-10 店主：三张卡填上真实内容——待处理、AI 全站分析、最近的客户分析（数据来自 /peptide/v1/overview/extras）。
+	var extras = null;
 	function ads() {
-		var empty = '<section class="pc-ov-card pc-ov-ad"><p class="pc-ov-empty is-box">' + esc( Y.noData ) + '</p></section>';
-		return '<div class="pc-ov-ads">' + empty + empty + empty + '</div>';
+		var loading = '<p class="pc-ov-empty">…</p>';
+		if ( ! extras ) {
+			return '<div class="pc-ov-ads"><section class="pc-ov-card pc-ov-ad">' + loading + '</section><section class="pc-ov-card pc-ov-ad">' + loading + '</section><section class="pc-ov-card pc-ov-ad">' + loading + '</section></div>';
+		}
+		var todo = '<section class="pc-ov-card pc-ov-ad pc-ov-todo"><div class="pc-ov-card__head"><h2>待处理</h2></div><ul class="pc-ov-todo__list">' + ( extras.todo || [] ).map( function ( t ) {
+			return '<li><a href="' + esc( t.url ) + '"><span>' + esc( t.label ) + '</span><b class="' + ( t.n ? 'is-hot' : '' ) + '">' + esc( t.n ) + '</b></a></li>';
+		} ).join( '' ) + '</ul></section>';
+		var a = extras.ai;
+		var ai = '<section class="pc-ov-card pc-ov-ad pc-ov-aisum"><div class="pc-ov-card__head"><h2>AI 全站分析</h2>' + ( a ? more( a.url, '查看完整报告' ) : '' ) + '</div>' + ( a ?
+			'<div class="pc-ov-aisum__score"><b>' + esc( a.health || '—' ) + '</b><span>健康分' + ( a.state ? ' · ' + esc( a.state ) : '' ) + '</span></div><p class="pc-ov-aisum__text">' + esc( a.summary ) + '</p>' + ( a.first ? '<p class="pc-ov-aisum__first"><b>首要建议：</b>' + esc( a.first ) + '</p>' : '' ) + '<p class="pc-ov-muted pc-ov-aisum__at">' + esc( a.period + ' · ' + a.at ) + '</p>' :
+			'<p class="pc-ov-empty is-box">还没有全站分析。开启 AI 自动分析后，每天凌晨会自动生成前一天的报告。</p>' ) + '</section>';
+		var rc = extras.recent || [];
+		var recent = '<section class="pc-ov-card pc-ov-ad pc-ov-recent"><div class="pc-ov-card__head"><h2>最近的客户分析</h2></div>' + ( rc.length ? '<ul class="pc-ov-recent__list">' + rc.map( function ( r ) {
+			var lv = /高/.test( r.level ) ? 'is-high' : /中/.test( r.level ) ? 'is-mid' : 'is-low';
+			return '<li><a href="' + esc( r.url ) + '"><span class="pc-ov-lv ' + lv + '">' + esc( r.level || '—' ) + '</span><span class="pc-ov-recent__main"><b>访客 #' + esc( r.visitor ) + '</b><small>' + esc( r.blocker || r.type || '' ) + '</small></span><span class="pc-ov-muted">' + esc( r.at ) + '</span></a></li>';
+		} ).join( '' ) + '</ul>' : '<p class="pc-ov-empty is-box">还没有客户分析。</p>' ) + '</section>';
+		return '<div class="pc-ov-ads">' + todo + ai + recent + '</div>';
+	}
+	function loadExtras() {
+		if ( ! wp.apiFetch ) { return; }
+		wp.apiFetch( { path: '/peptide/v1/overview/extras' } ).then( function ( res ) {
+			extras = res || { todo: [] };
+			var box = root.querySelector( '.pc-ov-ads' );
+			if ( box ) { box.outerHTML = ads(); }
+		} ).catch( function () {} );
 	}
 
 	// 趋势图：下拉选择指标，鼠标移上去显示竖线、圆点和提示框（时间 + 数值）。
@@ -508,6 +544,7 @@
 	render();
 	fetchRank( 'traffic' );
 	fetchRank( 'products' );
+	loadExtras();
 	schedule();
 	setInterval( tick, 1000 );
 	document.addEventListener( 'visibilitychange', function () {
