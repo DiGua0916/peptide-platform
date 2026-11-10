@@ -572,7 +572,8 @@ final class Recovery {
 		$at       = $paid ? $paid->getTimestamp() * 1000 : $now;
 		$reminded = ( (int) $r['sent1_ms'] || (int) $r['sent2_ms'] || (int) $r['sent3_ms'] || (int) $r['clicked_ms'] );
 		$first    = min( array_filter( array( (int) $r['sent1_ms'], (int) $r['sent2_ms'], (int) $r['sent3_ms'], (int) $r['clicked_ms'], PHP_INT_MAX ) ) );
-		$success  = 'success' === $r['status'] || ( $reminded && $at >= $first );
+		// 召回成功要顾客真的被召回来：点过链接，或者付款那次访问在第一封提醒之后才开始（店主 2026-11-11）。
+		$success  = 'success' === $r['status'] || ( $reminded && $at >= $first && Recovery_Items::came_back_after( $order, $first, $at ) );
 		$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			self::table(),
 			array(
