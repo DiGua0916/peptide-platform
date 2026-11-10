@@ -207,3 +207,23 @@
 - 去掉了“公司名称 ← 店名”（会把“芒果”这类内部名显示给顾客）；主店测试时填的公司名已清空。
 - 店铺地址、Pixel、自己的 WhatsApp、真实付款、AI 调优没有现成资料，不自动填。
 - 主店已执行（测试店）：35 → 50（客服电话 +13039444124，通知邮箱 orders@vialcovepeptides.com）。子店未执行，按钮留给店主点；阳会填 VialCovePeptides@outlook.com，其余 orders@各自域名。orders@域名 能否收信未确认。
+
+### 2026-11-10 六家店公司资料 + 各自邮箱
+- 店主提供公司资料，写入 6 家店：公司名称 VialCove；地址 904 22nd St, San Francisco, CA 94107, US（woocommerce_store_address / _city / _postcode，default_country US:CA，address_2 清空）。原值备份 `pc_company_backup_20261110`。
+- 电话：店主说用站点自己的。阳保留 +14323608942；主店、李军、光辉、老毛、芒果按各自客服 WhatsApp 填 +13039444124（这 5 家的 WhatsApp 都是这个号）。
+- 邮箱：店主要求全部换成站点自己的 orders@本店域名——管理员邮箱（admin_email 直接写，清掉待确认的 new_admin_email/adminhash）、客服邮箱（woocommerce_email_from_address，阳原来是 VialCovePeptides@outlook.com）、新订单 / 取消 / 失败通知收件人。原值备份 `pc_email_backup_20261110`。阳基础配置页核对。
+- 店铺评分：主店 65、李军 60、阳 85、光辉 45、老毛 60、芒果 60。地址填好后弃单提醒邮件不再因缺地址被拦，定时任务会按设置开始发。
+
+### 2026-11-10 订单 → 手动订单
+- 新增后台页 订单 → 手动订单（class-manual-order-page.php + assets/manual-order.js/.css）：搜索商品（含规格）加入；每行改数量、原价、售价（只对这一单）；运费“按店铺运费”或自定义（名称 + 金额）；可加多笔优惠（名称 + 金额，顾客可见）；备注只后台可见；右侧实时算原价合计 / 小计 / 优惠 / 运费 / 合计；“生成付款链接”弹窗显示链接 + 复制 + 打开看看 + 再做一单；右侧“最近生成的链接”（复制、已下的订单）。
+- 引擎 `Manual_Orders`（class-manual-orders.php）：配置存 `pc_manual_links`（token → 配置，30 天有效，最多 300 条）；链接 `/?pc_manual=token` → 清空购物车和优惠券、清顾客资料、按配置加商品（cart item data pc_m_price/pc_m_regular）→ 跳结账。`woocommerce_before_calculate_totals` 9999 设价格（原价 / 售价），`woocommerce_cart_calculate_fees` 99 清掉店铺满减等费用只留自定义优惠，`woocommerce_package_rates` 9999 自定义运费替换所有运费（含运费优惠），`woocommerce_coupon_is_valid` 禁用优惠券；下单时订单加 `_pc_manual_link` 和备注并记到这条链接。
+- `cart-share.js`：手动订单购物车的地址栏改成 `?pc_manual=token`（原来会变成 `?pc_cart=` 普通链接，刷新会变回原价）。
+- 主店测试：2 × 组合装 原价 80 / 售价 50 + bac.water 10，优惠 10 + 5，运费 20 → 结账页 $115.00，原价划线、两笔优惠、运费 $20，无优惠券和满减；刷新仍为 $115.00。测试链接备注 “TEST - Claude 手动订单测试” 留在最近链接里。用链接实际下单后的订单标记未实测。
+
+### 2026-11-10 同一顾客三个金额对不上
+- 阳访客 #119（Wanda Feliciano）：弃单 $133.00 = 结账页应付（商品 95 + 运费 42.75 − 优惠 4.75）；实时访客 $95.00 = 现在购物车商品金额；AI 卡片 $181.30 = 22:10 分析时的购物车快照（当时还有 Retatrutide $86.30，后来删了）。口径和时间都不同。
+- 统一：“购物车”一律指现在购物车的商品金额（Carts::view，仪表盘最可能下单、实时访客、意向分、AI 数据都是这一个来源）；含运费和优惠的另标“应付”。
+  - `Carts::view()` 加 `payable_text`（会话 cart_totals.total，算过运费时才有）；实时访客购物车下面显示“$95.00 · 应付 $133.00”。
+  - `HQ_AI::visitor_live()` 加现在的 cart；AI 卡片 KPI 改为“购物车（现在）$95.00”，小字“应付 $133.00（含运费）· 分析时 $181.30”（分析后购物车变了才写）。
+  - 弃单列表列名“订单总价”改“应付总价（含运费）”，下面加“商品 $95.00”（Recovery_Items item/record_item 加 subtotal）。
+- 阳核对三处一致。
