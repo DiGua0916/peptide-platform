@@ -50,3 +50,12 @@
 - 修：手动发信时母版里写死的“VialCove”换成本店品牌（`send_manual`）；母版 WhatsApp 按钮原来写死主店号码 wa.me/13039444124，改成占位符 {whatsapp_link} 按本店号码生成（模板版本 2026-11-10c，6 店已刷新、核对）。
 - 已发出的阳 2 封（Marangelly、Soraya）正文里写的是阳的号码 +1 432 360 8942，但绿色按钮链接到主店号码；未重发。
 - 观察：除阳外 5 店的 WhatsApp 都是主店号码 +1 303 944 4124（店铺后台客服联系方式未单独设置或相同）。
+
+### 总后台 AI 设置 + 人设库（店主 2026-11-10）
+- HQ 新增“总后台 → AI 设置”（`peptide-hq/includes/class-ai.php`、`admin/class-ai-page.php`）：服务商（Claude / OpenAI 兼容）、模型（默认 claude-sonnet-5-5）、API 密钥（Crypto 加密存 HQ，留空不改，可删除）、接口地址、回答语言、每店每天次数上限（默认 100）、单次最长 tokens；“测试连接”。
+- 人设库：名字 + 用途（客户分析 / 全站经营分析）+ 正文（作系统提示词），可粘贴或上传 .txt/.md（≤200KB）导入、编辑、删除。各店铺：开关、每种用途选人设（默认用该用途第一个）、今日用量。新店默认开（总开关开着时）。
+- HQ 接口：POST /peptide-hq/v1/ai/status、/ai/analyse，验签复用邮件中心（店铺连接密钥 HMAC + 防重放）。
+- 店铺（peptide-core `class-hq-ai.php`）：GET /peptide/v1/track/admin/ai/status、POST /track/admin/ai/analyse；事实复用“导出分析数据”口径 + 购买意向 + 购物车，不含姓名 / 邮箱 / 电话 / 地址（阳 访客 199 核对无个人信息）；同条件 30 分钟缓存，“重新分析”强制重来。
+- 页面：访客详情“客户分析 AI”、实时访客页“全站经营分析 AI”框：未开启 / 缺人设时说明原因，开启后“AI 分析”按钮显示结果和人设、今日用量。
+- 部署：store 文件 web + HQ 各 7 份；HQ 新 release `ai-settings-1794304902-hq`（上一版记在 /root/hq-prev-release-ai.txt）。验证：店铺→HQ 签名连通（未开启时返回“没有开启”）、HQ 页面正常、人设保存 / 匹配 / 删除正常（测试人设已删）。
+- 待店主：在 AI 设置里填 API 密钥并开启、导入两个人设母版。

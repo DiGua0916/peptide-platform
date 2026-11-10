@@ -86,6 +86,7 @@ final class Plugin {
 		Staff_Entry::register_hooks();
 		Hq_Connector::register_hooks();
 		Hq_Mail::register_hooks();
+		Hq_Ai::register_hooks();
 		Topics::register_hooks();
 		Promotions::register_hooks();
 		Recovery::register_hooks();
