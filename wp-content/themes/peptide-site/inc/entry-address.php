@@ -17,6 +17,9 @@ function vc_entry_address_enabled(): bool {
     return (bool) apply_filters( 'vc_entry_address_enabled', 'on' === (string) get_option( 'pc_entry_address', 'off' ) );
 }
 
+/** Tell the master admin that this store's theme supports the switch (F1's pc_hq_capabilities). */
+add_filter( 'pc_hq_capabilities', static fn( $caps ) => is_array( $caps ) ? $caps + array( 'm14.entry_address' => '1' ) : $caps );
+
 /** Path of a same-site URL (no query, no fragment); '' for other hosts and unusable values. */
 function vc_entry_address_path( $url, string $home ): string {
     if ( ! is_string( $url ) || '' === $url ) { return ''; }

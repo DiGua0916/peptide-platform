@@ -10,6 +10,7 @@ function check( bool $ok, string $label ): void { global $checks; if ( ! $ok ) {
 function get_option( $name, $default = false ) { return $GLOBALS['options'][ $name ] ?? $default; }
 function apply_filters( $tag, $value ) { return $value; }
 function add_action( $tag, $callback, $priority = 10 ) { $GLOBALS['actions'][ $tag ][] = array( $callback, $priority ); }
+function add_filter( $tag, $callback, $priority = 10 ) { $GLOBALS['filters'][ $tag ][] = $callback; }
 function wp_parse_url( $url, $component = -1 ) { return parse_url( $url, $component ); }
 function home_url( $path = '' ) { return 'https://shop.example' . $path; }
 function is_wp_error( $value ) { return false; }
@@ -45,5 +46,8 @@ foreach ( array( '0', '-1', '4 2', '42abc', array( '42' ) ) as $bad ) {
 $_GET = array();
 check( '' === vc_entry_address_category(), 'no collection entry' );
 check( 1 === count( $GLOBALS['actions']['wp_enqueue_scripts'] ?? array() ) && 120 === $GLOBALS['actions']['wp_enqueue_scripts'][0][1], 'enqueue hook runs after the dialog layer script (95)' );
+
+$declare = $GLOBALS['filters']['pc_hq_capabilities'][0];
+check( array( 'hq.capabilities' => '1', 'm14.entry_address' => '1' ) === $declare( array( 'hq.capabilities' => '1' ) ) && 'x' === $declare( 'x' ), 'declares the feature to the master admin' );
 
 echo "PASS {$checks} entry address checks\n";
