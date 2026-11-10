@@ -232,3 +232,10 @@
 - 问题：地址填好后积压的弃单提醒一次放出，第 1、2 封只隔 10 分钟（只按“弃单后多久”算，没看上一封什么时候发）；第 1 封写 “We tried reaching you on WhatsApp…”（自动邮件没人联系过）、“If your WhatsApp number has changed…”；第 2 封写 “if you'd prefer to pay another way”（现在只收卡）。
 - 修复：`Recovery::STAGE_GAP_MS` = 24 小时，上一封发出 24 小时内不发下一封；`Chase_Copy::defaults_for()` 删掉上面三句，第 1 封结尾改 “Just reply to this email or message us on WhatsApp at …, and we'll take care of it.”，第 2 封改 “If anything went wrong at checkout or you have any questions, just reply…”。各店没有保存自定义正文，默认文案直接生效。手动模板 01（WhatsApp 联系不上后的跟进）不变。
 - 今晚已经 1 小时内收到两封的顾客：主店 1、阳 7、光辉 2、芒果 2（已发出的无法撤回）。
+
+### 2026-11-10 弃单提醒节奏 + 下单关怀邮件
+- 店主：弃单确定后 5 分钟内发第一封，第 3 天、第 7 天再各一封；成功下单立刻发关怀邮件。
+- `Chase_Copy::defaults_for()` 延时：第 1 封 60 秒（弃单本身要“离开 5 分钟”才成立，定时任务每 5 分钟跑，所以确定后 5 分钟内发出），第 2 封 3 天，第 3 封 7 天（都从最后改购物车算）；两封之间仍至少 24 小时。6 家店都没有保存自定义延时，直接生效（60/259200/604800）。
+- `Recovery_Items::RECALL_DAYS` 3 → 4：两封之间最长隔 4 天，不然第 3 天就会显示“召回失败”。
+- 付款成功邮件（customer_processing_order，templates/emails/customer-processing-order.php）改成模板库「05 下单成功感谢」文案，主题统一 “{店名} | Thank You for Your Order”（不再按有没有电话分两种）。
+- `Paid_Popup::care_catchup()` 挂在每 5 分钟的扫描上：`pc_care_since` 之后付款、不是测试单、发件记录里没有这张单的 customer_processing_order 已发送 → 补发并加订单备注；每单只检查一次（`_pc_care_mail`）。旧订单不补。

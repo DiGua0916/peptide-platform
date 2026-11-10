@@ -140,7 +140,7 @@ final class Chase_Copy {
 	}
 
 	public static function subject_processing( $subject, $order ) {
-		return self::brand() . ' | Thanks for Your Order' . ( self::needs_whatsapp( $order ) ? ' — Add Us on WhatsApp' : '' );
+		return self::brand() . ' | Thank You for Your Order';
 	}
 
 	/** 顾客没留电话 → 要强调加 WhatsApp。 */
@@ -180,7 +180,8 @@ final class Chase_Copy {
 					. "We're also running a Black Friday promotion, with special pricing on many peptide products. If you're still considering an order, we'd be happy to share the available offers and help you review your selection.\n\n"
 					. "Just reply to this email or message us on WhatsApp at {$wa}, and we'll take care of it.\n\n"
 					. 'For your reference, the items you selected are listed below.',
-				'delay'   => 300,
+				// 店主 2026-11-10：确定弃单（离开 5 分钟）后 5 分钟内发第一封；第 3 天、第 7 天再各发一封。
+				'delay'   => 60,
 			);
 		}
 		if ( 2 === $stage ) {
@@ -190,7 +191,7 @@ final class Chase_Copy {
 				'message' => "We're following up once more in case our earlier note was missed—your order is still saved and waiting for you.\n\n"
 					. "If anything went wrong at checkout or you have any questions, just reply to this email or message us on WhatsApp at {$wa} and we'll sort it out right away.\n\n"
 					. 'Your order details are below.',
-				'delay'   => 1800,
+				'delay'   => 3 * 86400,
 			);
 		}
 		return array(
@@ -198,7 +199,7 @@ final class Chase_Copy {
 			'heading' => 'Last reminder about your order',
 			'message' => "This is our last reminder about the order you started with {$brand}. Your cart is still saved for now.\n\n"
 				. "If you've decided not to go ahead, no action is needed. If we can help with anything, reply to this email or reach us on WhatsApp at {$wa}.",
-			'delay'   => 86400,
+			'delay'   => 7 * 86400,
 		);
 	}
 
