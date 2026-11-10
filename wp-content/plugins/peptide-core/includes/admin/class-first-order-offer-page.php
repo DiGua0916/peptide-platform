@@ -14,7 +14,8 @@ final class First_Order_Offer_Page {
 		add_action( 'admin_enqueue_scripts', array( self::class, 'assets' ) );
 	}
 	private static function access(): void {
-		if ( ! current_user_can( 'manage_woocommerce' ) || ! current_user_can( 'edit_shop_coupons' ) ) { wp_die( '没有首单优惠配置权限。', '', array( 'response'=>403 ) ); }
+		// HQ-07：投手不能配置首单优惠（Marketing::can_manage 对投手角色为假）。
+		if ( ! current_user_can( 'manage_woocommerce' ) || ! current_user_can( 'edit_shop_coupons' ) || ! Marketing::can_manage() ) { wp_die( '没有首单优惠配置权限。', '', array( 'response'=>403 ) ); }
 	}
 	public static function assets(): void {
 		if ( 'pc-apps' !== ( $_GET['page'] ?? '' ) || First_Order_Offer::APP !== ( $_GET['app'] ?? '' ) ) { return; }

@@ -38,7 +38,11 @@ final class Coupons_Page {
 	// ---------- 列表 ----------
 
 	public static function render(): void {
-		if ( ! current_user_can( Marketing::CAP ) ) {
+		if ( ! Marketing::can_view() ) {
+			return;
+		}
+		// HQ-07：投手只读——新建 / 编辑地址 403，列表显示“当前在跑的活动”。
+		if ( Marketing::read_only_gate() ) {
 			return;
 		}
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended

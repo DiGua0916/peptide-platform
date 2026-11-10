@@ -53,7 +53,8 @@ final class Product_Offers {
 		return $out;
 	}
 	public static function store( int $id, array $raw ) {
-		if ( ! current_user_can( self::CAP ) ) { return self::error( 'pc_offer_forbidden', __( 'You cannot manage product offers.', 'peptide-core' ) ); }
+		// HQ-07：投手不能新建或修改赠品 / 捆绑。
+		if ( ! current_user_can( self::CAP ) || ! Admin\Marketing::can_manage() ) { return self::error( 'pc_offer_forbidden', __( 'You cannot manage product offers.', 'peptide-core' ) ); }
 		if ( $id && ! self::get( $id ) ) { return self::error( 'pc_offer_missing', __( 'Product offer not found.', 'peptide-core' ) ); }
 		$c = self::defaults(); $title = mb_substr( sanitize_text_field( $raw['title'] ?? '' ), 0, 160 );
 		$c['kind'] = in_array( $raw['kind'] ?? '', array( 'gift', 'bundle' ), true ) ? $raw['kind'] : 'gift';

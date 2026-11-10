@@ -21,6 +21,10 @@ defined( 'ABSPATH' ) || exit;
 final class Marketing {
 
 	public const CAP      = 'edit_shop_coupons';
+	/** 只读查看“当前在跑的活动”的权限（HQ-07）：给投手角色，不要给 edit_shop_coupons。 */
+	public const VIEW_CAP = 'pc_view_campaigns';
+	/** 投手角色（由 M9 创建）。即使被误授了 edit_shop_coupons，也不能新建或修改营销活动。 */
+	public const BUYER_ROLE = 'pc_media_buyer';
 	public const PER_PAGE = array( 10, 20, 50, 100 );
 	public const TABS     = array( 'all', 'upcoming', 'active', 'ended' );
 
@@ -34,6 +38,55 @@ final class Marketing {
 
 	public static function pages(): array {
 		return array( Promotions_Page::SLUG, Coupons_Page::SLUG, Shipping_Discounts_Page::SLUG );
+	}
+
+	// ---------- 谁能改、谁只能看（HQ-07） ----------
+
+	/** 能不能新建、编辑、启停、删除营销活动。投手不能；管理员（含总后台一键登录）和原有的营销员工照旧。 */
+	public static function can_manage(): bool {
+		$can = current_user_can( self::CAP ) && ! in_array( self::BUYER_ROLE, (array) ( wp_get_current_user()->roles ?? array() ), true );
+		return (bool) apply_filters( 'pc_marketing_can_manage', $can );
+	}
+
+	/** 能不能打开营销活动页面（能改的人，或只读的投手）。 */
+	public static function can_view(): bool {
+		return current_user_can( self::CAP ) || current_user_can( self::VIEW_CAP );
+	}
+
+	/** 菜单用的权限名：能改的人用 CAP，只读的人用 VIEW_CAP（供 Admin_Menus 注册菜单时调用）。 */
+	public static function menu_cap(): string {
+		return current_user_can( self::CAP ) ? self::CAP : self::VIEW_CAP;
+	}
+
+	/**
+	 * 三个营销页面的入口都先过这里。只读的人：打开新建 / 编辑地址直接 403，列表改为只读的“当前在跑的活动”。
+	 * 返回 true 表示页面已经输出完，调用方直接 return。
+	 */
+	public static function read_only_gate(): bool {
+		if ( self::can_manage() ) {
+			return false;
+		}
+		if ( isset( $_GET['edit'] ) || isset( $_GET['new'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			wp_die( '营销活动由总后台统一创建和调整，这个账号只能查看当前在跑的活动。', '', array( 'response' => 403 ) );
+		}
+		self::render_running();
+		return true;
+	}
+
+	/** 只读页面：当前在跑的活动。没有新建、编辑、启停、删除的入口。 */
+	public static function render_running(): void {
+		$rows = \PeptideCore\Pricing\Campaigns::running();
+		echo '<div class="wrap pc-mk pc-mk-running"><h1>当前在跑的活动</h1>';
+		echo '<p class="pc-pl-muted">营销活动由总后台按系列统一创建和调整，这里只读。需要新增或修改活动，请联系平台管理员。</p>';
+		if ( ! $rows ) {
+			echo '<p>现在没有进行中的活动。</p></div>';
+			return;
+		}
+		echo '<table class="widefat striped"><thead><tr><th>类型</th><th>名称</th><th>规则</th><th>结束时间（' . esc_html( self::tz_label() ) . '）</th><th>来源</th></tr></thead><tbody>';
+		foreach ( $rows as $row ) {
+			echo '<tr><td>' . esc_html( \PeptideCore\Pricing\Campaigns::KINDS[ $row['kind'] ] ?? $row['kind'] ) . '</td><td>' . esc_html( $row['name'] ) . '</td><td>' . esc_html( $row['rule'] ) . '</td><td>' . esc_html( $row['ends'] ? self::date_text( $row['ends'] ) : '长期' ) . '</td><td>' . ( 'series' === $row['source'] ? '系列统一下发' : '本店' ) . '</td></tr>';
+		}
+		echo '</tbody></table></div>';
 	}
 
 	/** 旧地址转到新页面：WooCommerce 的营销概览、优惠券列表 / 编辑页，满减活动的文章列表 / 编辑页。 */
@@ -489,7 +542,7 @@ final class Marketing {
 	}
 
 	public static function guard( string $action ): void {
-		if ( ! current_user_can( self::CAP ) ) {
+		if ( ! self::can_manage() ) {
 			wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'peptide-core' ), 403 );
 		}
 		check_admin_referer( $action );
