@@ -75,7 +75,7 @@ namespace {
 	check( 'profile goes to store info', $is( $file( 'profile.php' ), 'redirect', '', 'pc-store-info' ) );
 
 	// 其余菜单：直接打开地址也拒绝。
-	foreach ( array( 'pc-promotions', 'pc-coupons', 'pc-shipping', 'pc-tax', 'pc-system', 'pc-staff', 'pc-apps', 'pc-mail', 'pc-store-design', 'pc-design-editor', 'pc-customers', 'pc-media', 'pc-activity', 'pc-site-tools', 'pc-datax', 'wc-settings', 'wc-admin', 'wc-status', 'cbs-dashboard' ) as $hidden ) {
+	foreach ( array( 'pc-promotions', 'pc-coupons', 'pc-shipping', 'pc-tax', 'pc-system', 'pc-staff', 'pc-apps', 'pc-mail', 'pc-store-design', 'pc-design-editor', 'pc-customers', 'pc-media', 'pc-activity', 'pc-site-tools', 'pc-manual-order', 'pc-ship-preview', 'pc-datax', 'wc-settings', 'wc-admin', 'wc-status', 'cbs-dashboard' ) as $hidden ) {
 		check( "hidden page $hidden", $is( $page( $hidden ), 'deny' ) );
 	}
 	foreach ( array( 'edit.php', 'post.php', 'post-new.php', 'upload.php', 'users.php', 'user-new.php', 'plugins.php', 'themes.php', 'options-general.php', 'tools.php', 'edit-tags.php', 'customize.php', 'site-health.php', 'export.php', 'about.php' ) as $core ) {
