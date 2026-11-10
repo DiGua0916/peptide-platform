@@ -8,7 +8,7 @@ FROM="${2:?缺少原站地址}"
 ROOT="${VIALCOVE_LOCAL:-$HOME/vialcove-local}"; ROLE="${ROLE:-store}"; WP="$ROOT/wp-$ROLE"
 [ -x "$WP" ] || { echo "先运行 setup.sh（DB_ENGINE=mysql）。" >&2; exit 1; }
 [ -f "$ROOT/site-$ROLE/wp-content/db.php" ] && { echo "这个本地站用的是 SQLite，导不进 MySQL 快照。用 DB_ENGINE=mysql 重建。" >&2; exit 1; }
-gzip -dc "$FILE" | grep -q "pc_sanitized_snapshot" || { echo "拒绝：文件里没有脱敏标记 pc_sanitized_snapshot，不是 snapshot.py 导出的快照。" >&2; exit 1; }
+[ "$(gzip -dc "$FILE" | grep -c "pc_sanitized_snapshot")" -ge 1 ] || { echo "拒绝：文件里没有脱敏标记 pc_sanitized_snapshot，不是 snapshot.py 导出的快照。" >&2; exit 1; }
 TO="$("$WP" option get siteurl)"
 PASS="$(cat "$ROOT/.admin-password-$ROLE")"
 gzip -dc "$FILE" | "$WP" db import -

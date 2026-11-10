@@ -76,3 +76,27 @@
 - 导出后在服务器上核对：文件里的邮箱只有 `@example.test` 和店铺自己的 `@vialcoveplus.com`；已知的 7 个真实顾客姓名 0 次命中；电话只剩店铺公开的 WhatsApp；地址、账号抽样为假数据且保留了国家（PR）；支付、邮件、AI、像素、连接密钥相关选项不在文件里；临时库无残留。生产库只被读。
 - 局限：姓名和地址没有通用的自动检查（只能靠表清单和抽查）。其他店导出前仍要先跑 `--report-only`。
 - 下一步：M1-2 把 s0010 快照导入沙盒（会改沙盒库，做之前再确认）。
+
+## 2026-11-10 M1-2 沙盒刷新（平台所有者已同意）
+
+- 新脚本 `tools/sandbox/refresh.sh`（后台机 root 运行，只碰 `/srv/vialcove-sandbox` 和 `vc_sandbox_store`）：`code <发布包>` 整目录替换三个站的组件，`data <快照> <原前台地址> <原后台地址>` 导入脱敏快照并恢复沙盒自己的地址、管理员、总后台连接和测试付款，`check` 做 8 项健康检查。两步都先备份，健康检查不过自动换回。
+- 代码：`prepare_release.py` 从提交 `d0f24cf`（主线 `1fcfea5` + 本分支 M1 改动）打包，1103 个文件，包 sha256 `71cc2272…`。沙盒三个站替换后：peptide-core 0.32.0、peptide-panapay 0.4.7（原 0.4.6）、peptide-hq 0.3.4（原 0.3.3）、peptide-ops 0.2.0、主题同步。旧代码在 `/var/lib/vialcove-sandbox/backups/refresh-20261110T152512Z/code`。
+- 数据：导入 s0010 脱敏快照。沙盒现在有 5 张订单、92 个已发布商品、s0010 的优惠 / 运费 / 装修设置；账号只剩沙盒管理员。导入前的沙盒库在 `/var/lib/vialcove-sandbox/backups/refresh-20261110T152550Z/vc_sandbox_store.sql.gz`。
+- 图片：快照引用的 413 个媒体文件里沙盒缺 20 个（s0010 自己上传的商品图和视频，公开内容），已从前台机 s0010 的 uploads 复制进沙盒，现在缺 0 个。
+- 实际验证（都在后台机本机执行）：
+  - 8 项健康检查替换前、替换后、导入后全部正常；`/product/<slug>/` 302 到 `/?vc_product=…`，与生产 s0010 的行为一致。
+  - 沙盒保险还在：可用付款方式只有 `cod`；响应头 `x-vialcove-environment: sandbox`；页脚 SANDBOX 标记；MU 守卫文件没动（邮件拦截、外网拦截）。
+  - **两个公共钩子第一次在真实 WordPress 里跑通**：沙盒店铺 `/hq/status` 返回 `capabilities: {"hq.capabilities":"1"}`；沙盒总后台 `Monitor::poll(1)` 成功，`Client::supports(1,'hq.capabilities')` 为真，未处理告警 0 条；总后台里的店铺名称仍是 “VialCove SANDBOX”，没有被店铺名覆盖。
+  - FPM 日志无 fatal / error。
+- 没验证的：没有用浏览器登录沙盒后台（这台机器上没有沙盒的 Basic 认证和管理员密码）；没有走下单流程（M1-4 的事）；沙盒总后台库没有导入 HQ 快照（保留它自己的一家沙盒店，导入生产 HQ 数据会把 6 家真实店铺登记进沙盒总后台，没有必要）。
+- 遗留：沙盒里 4 个 WooCommerce 邮件设置还写着 `@vialcoveplus.com` 的收件地址和 “VialCovePlus” 发件名（邮件被守卫拦截，不会发出）。
+- 顺带修了一个脚本错误：`gzip -dc … | grep -q` 在 `pipefail` 下会误判（`import-snapshot.sh` 同样修了）。
+- 在生产机上留下 / 清理的东西：后台机 `/root/vialcove-snapshots/` 里多了一份 s0010 快照的副本（root 0600）；前台机临时脚本 `/tmp/m1-pack.sh` 用完已删；后台机 `~/m1-sandbox` 用完已删。
+
+### 沙盒以后怎么刷新
+
+```bash
+python3 tools/deployment/prepare_release.py --output <仓库外的目录> --ref <提交>
+scp <发布包.zip> tools/sandbox/refresh.sh ubuntu@<后台机>:m1-sandbox/
+ssh ubuntu@<后台机> 'sudo bash ~/m1-sandbox/refresh.sh code ~/m1-sandbox/<发布包.zip>'
+```
