@@ -20,7 +20,13 @@ final class Manual_Orders {
 	private static string $allow_code = '';
 	public const ARG      = 'pc_manual';
 	public const META     = '_pc_manual_link';
-	private const TTL     = 30 * DAY_IN_SECONDS;
+	private const TTL     = 30 * DAY_IN_SECONDS; // 默认有效期；店主可以按单选（DAYS）。
+	public const DAYS     = array( 1, 3, 7, 14, 30, 60, 90, 180, 365 );
+
+	/** 这条链接什么时候过期（旧链接没有 expires 就按创建 + 30 天）。 */
+	public static function expires_at( array $c ): int {
+		return (int) ( $c['expires'] ?? ( (int) $c['created'] + self::TTL ) );
+	}
 	private const MAX     = 300;
 
 	public static function register_hooks(): void {
@@ -44,7 +50,7 @@ final class Manual_Orders {
 	public static function get( string $token ): ?array {
 		$all = self::all();
 		$c   = $all[ $token ] ?? null;
-		return is_array( $c ) && (int) $c['created'] + self::TTL > time() ? $c : null;
+		return is_array( $c ) && self::expires_at( $c ) > time() ? $c : null;
 	}
 
 	private static function money( float $v ): float {
@@ -81,7 +87,9 @@ final class Manual_Orders {
 		$token = strtolower( wp_generate_password( 16, false, false ) );
 		$all   = self::all();
 		// 过期的清掉，最多留 MAX 条。
-		$all = array_filter( $all, static fn( $c ) => is_array( $c ) && (int) $c['created'] + self::TTL > time() );
+		$all = array_filter( $all, static fn( $c ) => is_array( $c ) && self::expires_at( $c ) > time() );
+		$days = in_array( (int) ( $in['days'] ?? 30 ), self::DAYS, true ) ? (int) $in['days'] : 30;
+		$promo_ids = array_values( array_unique( array_filter( array_map( 'absint', (array) ( $in['promo_ids'] ?? array() ) ) ) ) );
 		$all[ $token ] = array(
 			'token'     => $token,
 			'items'     => $items,
@@ -89,9 +97,12 @@ final class Manual_Orders {
 			'discounts' => $discounts,
 			'note'      => mb_substr( sanitize_text_field( (string) ( $in['note'] ?? '' ) ), 0, 200 ),
 			// 店主 2026-11-11：店铺满减活动、首单优惠可以选开，开了链接就自动带上，顾客直接付款。
-			'store_promos' => ! empty( $in['store_promos'] ),
+			'promo_ids'    => $promo_ids, // 店主 2026-11-11：店铺可能有多个活动，按单选用哪些。
+			'store_promos' => (bool) $promo_ids,
 			'first_order'  => ! empty( $in['first_order'] ),
 			'created'   => time(),
+			'expires'   => time() + $days * DAY_IN_SECONDS,
+			'days'      => $days,
 			'by'        => get_current_user_id(),
 			'orders'    => array(),
 		);
@@ -209,8 +220,10 @@ final class Manual_Orders {
 		// 不叠加店铺活动：去掉别的优惠费用行，只留店主配的；店主在这一单开了“店铺满减活动”就保留活动的优惠。
 		$keep = array();
 		if ( ! empty( $c['store_promos'] ) ) {
+			$want = array_map( 'intval', (array) ( $c['promo_ids'] ?? array() ) );
 			foreach ( $cart->fees_api()->get_fees() as $id => $fee ) {
-				if ( str_starts_with( (string) $id, 'pc-promo-' ) ) {
+				// 只留店主在这一单选了的活动（旧链接没选具体活动的，全部保留）。
+				if ( preg_match( '/^pc-promo-(\d+)$/', (string) $id, $m ) && ( ! $want || in_array( (int) $m[1], $want, true ) ) ) {
 					$keep[ $id ] = $fee;
 				}
 			}
@@ -290,14 +303,16 @@ final class Manual_Orders {
 			'ship_label'   => mb_substr( sanitize_text_field( (string) ( $state['ship_label'] ?? 'Shipping' ) ), 0, 80 ),
 			'ship_amount'  => self::money( (float) ( $state['ship_amount'] ?? 0 ) ),
 			'note'         => mb_substr( sanitize_text_field( (string) ( $state['note'] ?? '' ) ), 0, 200 ),
-			'store_promos' => ! empty( $state['store_promos'] ),
+			'promo_ids'    => array_values( array_filter( array_map( 'absint', (array) ( $state['promo_ids'] ?? array() ) ) ) ),
+			'days'         => in_array( (int) ( $state['days'] ?? 30 ), self::DAYS, true ) ? (int) $state['days'] : 30,
+			'store_promos' => ! empty( $state['promo_ids'] ),
 			'first_order'  => ! empty( $state['first_order'] ),
 		);
 		if ( ! $lines && '' === $clean['note'] ) {
 			return new \WP_Error( 'pc_manual_draft_empty', '还没有内容，不用保存。', array( 'status' => 400 ) );
 		}
 		$all = self::drafts();
-		$id  = sanitize_key( (string) ( $in['id'] ?? '' ) );
+		$id  = ! empty( $in['as_new'] ) ? '' : sanitize_key( (string) ( $in['id'] ?? '' ) );
 		$id  = '' !== $id && isset( $all[ $id ] ) ? $id : 'd' . strtolower( wp_generate_password( 10, false, false ) );
 		$all[ $id ] = array( 'id' => $id, 'state' => $clean, 'saved' => time(), 'by' => get_current_user_id() );
 		if ( count( $all ) > 50 ) {
@@ -351,14 +366,22 @@ final class Manual_Orders {
 				$disc[] = array( 'label' => 'Coupon ' . strtoupper( $code ), 'amount' => self::money( (float) $ci->get_discount() ) );
 			}
 		}
-		$promos = false;
+		$promos    = false;
+		$promo_ids = array();
 		foreach ( $o->get_fees() as $fee ) {
 			if ( (float) $fee->get_total() < 0 ) {
 				$promos = true;
+				$pid    = class_exists( Promotions::class ) ? (int) $fee->get_meta( Promotions::FEE_META ) : 0;
+				if ( $pid ) {
+					$promo_ids[] = $pid;
+				}
 			}
 		}
+		if ( $promos && ! $promo_ids && class_exists( Promotions::class ) ) {
+			$promo_ids = array_map( 'intval', Promotions::active_ids() );
+		}
 		$name = trim( $o->get_billing_first_name() . ' ' . $o->get_billing_last_name() );
-		return array( 'lines' => $lines, 'discounts' => $disc, 'ship_mode' => 'store', 'ship_label' => 'Shipping', 'ship_amount' => 0, 'note' => '按弃单 #' . $o->get_order_number() . ( '' !== $name ? ' 恢复 · ' . $name : ' 恢复' ), 'store_promos' => $promos, 'first_order' => $first );
+		return array( 'lines' => $lines, 'discounts' => $disc, 'ship_mode' => 'store', 'ship_label' => 'Shipping', 'ship_amount' => 0, 'note' => '按弃单 #' . $o->get_order_number() . ( '' !== $name ? ' 恢复 · ' . $name : ' 恢复' ), 'store_promos' => $promos, 'promo_ids' => array_values( array_unique( $promo_ids ) ), 'first_order' => $first );
 	}
 
 	/** 没下单的结账（弃单记录里的购物车）→ 手动订单页面状态。 */
@@ -388,7 +411,7 @@ final class Manual_Orders {
 			$totals = (array) maybe_unserialize( $sess['cart_totals'] ?? '' );
 			$promos = (float) ( $totals['fee_total'] ?? 0 ) < 0;
 		}
-		return array( 'lines' => $lines, 'discounts' => $disc, 'ship_mode' => 'store', 'ship_label' => 'Shipping', 'ship_amount' => 0, 'note' => '按弃单恢复 · ' . trim( (string) $r['name'] ?: (string) $r['email'] ), 'store_promos' => $promos, 'first_order' => $first );
+		return array( 'lines' => $lines, 'discounts' => $disc, 'ship_mode' => 'store', 'ship_label' => 'Shipping', 'ship_amount' => 0, 'note' => '按弃单恢复 · ' . trim( (string) $r['name'] ?: (string) $r['email'] ), 'store_promos' => $promos, 'promo_ids' => $promos && class_exists( Promotions::class ) ? array_map( 'intval', Promotions::active_ids() ) : array(), 'first_order' => $first );
 	}
 
 	// ---------- 后台接口 ----------
@@ -457,7 +480,7 @@ final class Manual_Orders {
 				wp_set_current_user( 0 );
 				try {
 					foreach ( (array) ( Promotions::discounts( $cart )['applied'] ?? array() ) as $a ) {
-						$promos[] = array( 'title' => (string) $a['title'], 'discount' => (float) $a['discount'] );
+						$promos[] = array( 'id' => (int) $a['id'], 'title' => (string) $a['title'], 'discount' => (float) $a['discount'] );
 					}
 				} finally {
 					wp_set_current_user( $admin_id );
@@ -467,7 +490,8 @@ final class Manual_Orders {
 		$active = array();
 		if ( class_exists( Promotions::class ) ) {
 			foreach ( Promotions::active_ids() as $pid ) {
-				$active[] = Promotions::customer_title( html_entity_decode( get_the_title( $pid ) ) );
+				$rules    = Promotions::rules_text( Promotions::config( (int) $pid ) );
+				$active[] = array( 'id' => (int) $pid, 'title' => Promotions::customer_title( html_entity_decode( get_the_title( $pid ) ) ), 'rules' => implode( '；', array_slice( (array) $rules, 0, 3 ) ) );
 			}
 		}
 		$fc    = self::first_order_coupon();
@@ -512,13 +536,13 @@ final class Manual_Orders {
 		if ( is_wp_error( $c ) ) {
 			return $c;
 		}
-		return rest_ensure_response( array( 'token' => $c['token'], 'url' => self::url( $c['token'] ), 'totals' => self::totals( $c ) ) );
+		return rest_ensure_response( array( 'token' => $c['token'], 'url' => self::url( $c['token'] ), 'totals' => self::totals( $c ), 'expires' => wp_date( 'Y-m-d H:i', self::expires_at( $c ) ) ) );
 	}
 
 	public static function rest_list() {
 		$out = array();
 		foreach ( array_reverse( self::all(), true ) as $c ) {
-			if ( ! is_array( $c ) || (int) $c['created'] + self::TTL <= time() ) {
+			if ( ! is_array( $c ) || self::expires_at( $c ) <= time() ) {
 				continue;
 			}
 			$t     = self::totals( $c );
@@ -528,6 +552,7 @@ final class Manual_Orders {
 				'items'   => implode( ', ', array_map( static fn( $i ) => $i['name'] . ' x' . $i['qty'], $c['items'] ) ),
 				'total'   => html_entity_decode( wp_strip_all_tags( wc_price( $t['total'] ) ), ENT_QUOTES, 'UTF-8' ),
 				'note'    => $c['note'],
+				'expires' => wp_date( 'm-d', self::expires_at( $c ) ),
 				'orders'  => array_map( static fn( $id ) => array( 'id' => $id, 'url' => admin_url( 'admin.php?page=wc-orders&action=edit&id=' . (int) $id ) ), (array) $c['orders'] ),
 			);
 			if ( count( $out ) >= 20 ) {

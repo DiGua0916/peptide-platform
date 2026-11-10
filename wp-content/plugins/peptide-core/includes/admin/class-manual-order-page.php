@@ -96,20 +96,27 @@ final class Manual_Order_Page {
 			<section class="pc-mo-card">
 				<h2>店铺活动</h2>
 				<p class="pc-mo-hint">开了的会自动带进这一单，顾客打开链接直接付款，不用自己填优惠码。不开就只按上面你填的价格和优惠。</p>
-				<label class="pc-mo-switch"><input type="checkbox" data-mo-promos><i></i><span><b>店铺满减活动</b><small data-mo-promos-text>正在读取…</small></span></label>
+				<div class="pc-mo-pick" data-mo-pick>
+					<span class="pc-mo-pick__label">满减活动</span>
+					<button type="button" class="pc-mo-pick__btn" data-mo-pick-btn aria-haspopup="true" aria-expanded="false"><span data-mo-pick-text>不使用</span><span class="dashicons dashicons-arrow-down-alt2"></span></button>
+					<div class="pc-mo-pop" data-mo-pop hidden><div data-mo-pop-list></div><p class="pc-mo-pop__foot"><button type="button" class="button-link" data-mo-pick-none>都不用</button><button type="button" class="button button-small" data-mo-pick-done>好了</button></p></div>
+				</div>
 				<label class="pc-mo-switch"><input type="checkbox" data-mo-first><i></i><span><b>首单优惠</b><small data-mo-first-text>正在读取…</small></span></label>
 			</section>
-			<section class="pc-mo-card">
-				<h2>备注（只有你看得到）</h2>
-				<input type="text" class="pc-mo-note" maxlength="200" placeholder="例如：给 Luz 的老客价" data-mo-note>
-			</section>
+
 		</div>
 		<aside class="pc-mo-side">
 			<section class="pc-mo-card pc-mo-sum">
 				<h2>订单金额</h2>
 				<dl data-mo-sum></dl>
+				<label class="pc-mo-days">链接有效期
+					<select data-mo-days>
+						<option value="1">1 天</option><option value="3">3 天</option><option value="7">7 天</option><option value="14">14 天</option>
+						<option value="30" selected>30 天（默认）</option><option value="60">60 天</option><option value="90">90 天</option><option value="180">180 天</option><option value="365">1 年</option>
+					</select>
+				</label>
 				<button type="button" class="button button-primary button-hero" data-mo-create disabled>生成付款链接</button>
-				<button type="button" class="button pc-mo-savedraft" data-mo-save-draft>保存草稿</button>
+				<div class="pc-mo-draftbtns"><button type="button" class="button" data-mo-save-draft>保存草稿</button><button type="button" class="button" data-mo-save-new hidden>另存为新草稿</button></div>
 				<p class="pc-mo-hint" data-mo-draft-state></p>
 				<p class="pc-mo-err" data-mo-err hidden></p>
 			</section>
@@ -125,7 +132,7 @@ final class Manual_Order_Page {
 	</div>
 	<dialog class="pc-mo-dialog" data-mo-dialog>
 		<h2>付款链接已生成</h2>
-		<p>发给顾客，打开就是这一单的商品和价格，直接结账付款。30 天内有效。</p>
+		<p>发给顾客，打开就是这一单的商品和价格，直接结账付款。<span data-mo-valid></span></p>
 		<div class="pc-mo-link"><input type="text" readonly data-mo-link><button type="button" class="button button-primary" data-mo-copy>复制链接</button></div>
 		<dl data-mo-dsum></dl>
 		<p class="pc-mo-actions"><a class="button" target="_blank" rel="noopener" data-mo-open>打开看看</a><button type="button" class="button" data-mo-new>再做一单</button><button type="button" class="button" data-mo-close>关闭</button></p>
