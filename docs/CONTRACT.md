@@ -655,7 +655,8 @@ Root installed only three existing Commerce sources for P09 collection products 
 - `series_id`、`slug`（小写字母、数字、连字符）每次必带；店铺据此写 `peptide_core_series`。店铺换了系列时，本地三个内容版本号归零。`template_ver` 只做记录（模板内容仍由 `/hq/design` 下发）。
 - `catalog`、`campaigns`、`shipping` 三部分都可以不带；不带 = 不动。带了但 `ver` 不大于店铺本地版本 = 跳过。所以同一个请求重复发送，结果不变。
 - `master: true`（这家店是系列的母版店）：商品部分只改价格，不新建、不下架、不锁定；总后台不给母版店发活动。
-- `dry_run: true`：店铺什么都不写，返回差异报告（见“返回”）。试运行只是比较，带了哪部分就比哪部分，不看版本号。
+- `dry_run: true`：店铺不改商品、运费、活动和系列状态，返回差异报告（见“返回”）。试运行只是比较，带了哪部分就比哪部分，不看版本号。（唯一会写的是图片校验码的缓存 `_pc_series_sha256`。）
+- 一个请求里后面的部分出错（比如运费方案在这家店无效）时，前面已经同步好的部分和系列基本信息照样记下来，然后返回错误。
 - 两边都忽略看不懂的字段。同一时间只处理一个同步请求，冲突时返回 409 `pc_series_busy`，总后台稍后重试。
 
 **商品对象**（`catalog.products[]`，也是 `GET /hq/catalog-export` 导出的格式）：
@@ -690,7 +691,9 @@ Root installed only three existing Commerce sources for P09 collection products 
 - `sku` 是系列内的商品键：取主店商品的 `_pc_spu`，没有则商品 SKU，再没有则 `slug:<别名>`。店铺按 `_pc_series_sku` → `_pc_spu` → SKU → 别名的顺序找本地商品，找不到就新建。
 - `price_cents` 是成交价，`compare_cents` 是划线价（0 = 没有）。`type: simple` 时用商品自己的价格字段；`variable` 时价格在 `variations[]` 里，款式键 `key` = 款式 SKU，没有 SKU 时是 `a:<属性的哈希>`。
 - `wc_sku` 是商品在 WooCommerce 里真正的 SKU（可以为空）；`sku` 只用来配对。
-- 同步后商品带 `_pc_series_managed = 1`，店铺后台不能修改或删除（同步、恢复和命令行脚本除外）。系列里没有的商品（包括本店自己加的）改为草稿，不删除；系列里没有的款式停用，不删除。
+- 同步后商品带 `_pc_series_managed = 1`，店铺后台不能修改或删除（同步、恢复和命令行脚本除外）。做法是拦住“改商品”的入口（商品编辑页的保存和删除、快速编辑、批量编辑、款式的增删改、WooCommerce REST 的改和删），**不改权限**，所以评价、专辑、批次 COA 等别的功能照常。别的模块如果有自己改商品的入口，请先问 `PeptideCore\Series_Sync::is_locked( $product_id )`。系列里没有的商品（包括本店自己加的）改为草稿，不删除；系列里没有的款式停用，不删除。
+- `manage_stock`（可选，商品和款式上都有）：导出时表示这个商品在本店按数量跟踪库存。店铺接收时不采用它；自己按数量跟踪库存的商品不比较、也不改库存状态。
+- 促销价只有正在生效时才算成交价；设了开始时间还没到的促销不会带到别的店。同步写入的价格不带促销时间。
 - 随商品同步的元：`_pc_spu`、`_pc_product_subtitle`、`_pc_specs`、`_pc_vials_per_sales_unit`、`_pc_pricing`、`_pc_is_demo`（款式只有后两项里的 `_pc_vials_per_sales_unit`、`_pc_pricing`）。其他商品元留在店铺本地。
 - 图片按 `sha256` 去重，只允许从 `source_host`（https）下载，单张最大 15 MB。描述里指向母版店的绝对链接换成本店地址。
 - 属性一律按“自定义属性”同步（全局属性会被导出成自定义属性）。库存只同步有货 / 无货状态，不同步数量。COA 批次和报告暂不随系列同步（仍用“店铺复制”）。
@@ -730,9 +733,9 @@ Root installed only three existing Commerce sources for P09 collection products 
 | --- | --- | --- |
 | `/peptide/v1/hq/series/state` | GET | `{ series: <peptide_core_series>, snapshots: [ { id, at, from, to } ] }` |
 | `/peptide/v1/hq/catalog-export` | GET | 母版店导出：`{ version: 1, source_host, exported_at, products: [], shipping: { plans, rules }, campaigns: [] }`，只导出已发布的商品和“通用”运费方案 |
-| `/peptide/v1/hq/series/restore` | POST `{ ver }` | 恢复到某次同步前的快照（`ver` 为 0 用最近一份；否则先按“同步到的商品版本”找，再按快照编号找）。返回 `{ snapshot, series, counts: { restored, unpublished, missing, failed } }` |
+| `/peptide/v1/hq/series/restore` | POST `{ ver }` | 恢复到某次同步前的快照（`ver` 为 0 用最近一份；否则先找“把商品升到这个版本的那次同步”之前存的快照，再按快照编号找）。店铺属于哪个系列不回退，只回退商品、运费、活动和它们的版本号。返回 `{ snapshot, series, counts: { restored, unpublished, missing, failed } }` |
 
-店铺命令行：`wp peptide series status`（系列状态和快照）、`wp peptide series restore [<版本>] [--yes]`、`wp peptide series export --file=<路径>`、`wp peptide series diff --file=<目录文件> [--out=<路径>]`（只比较，不改）。
+店铺命令行：`wp peptide series status`（系列状态和快照）、`wp peptide series restore [<ver>] [--yes]`、`wp peptide series export --file=<路径>`、`wp peptide series diff --file=<目录文件> [--out=<路径>]`（只比较，不改）。
 
 **快照**：每次真正改动前自动存一份（商品、运费、系列状态；活动由 M4 经 `pc_series_snapshot` 放进来），存在选项 `pc_series_snapshot_<编号>`，清单在 `pc_series_snapshots`，保留最近 3 份。快照存不进去时这次同步不做任何改动。
 

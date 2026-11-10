@@ -119,6 +119,12 @@ namespace {
 	check( 'many differences are all listed', ! array_diff( array( 'name', 'description', 'categories', 'attributes', 'images', 'variation' ), $names ) && 2 === count( array_keys( $names, 'variation', true ) ) );
 	check( 'variation without sku still matches by attributes', ! in_array( 'price', $names, true ) );
 	check( 'whitespace-only description change is ignored', array() === S::compare_product( $local( $prod( 'VC-TB500', 'TB-500', array( $var( 'VC-TB500-5', '5mg', 3999 ) ), array( 'description' => "<p>Research   use\nonly.</p>" ) ), 12 ), $in[1] ) );
+	$tracked = $local( $prod( 'VC-TB500', 'TB-500', array( $var( 'VC-TB500-5', '5mg', 3999, 0, array( 'stock_status' => 'outofstock', 'manage_stock' => true ) ) ) ), 12 );
+	check( 'stock is not compared when the store tracks its own quantity', array() === S::compare_product( $tracked, $in[1] ) );
+	$untracked = $local( $prod( 'VC-TB500', 'TB-500', array( $var( 'VC-TB500-5', '5mg', 3999, 0, array( 'stock_status' => 'outofstock' ) ) ) ), 12 );
+	check( 'stock status is compared otherwise', array( 'stock' ) === array_column( S::compare_product( $untracked, $in[1] ), 'field' ) );
+	check( 'sort order is compared', array( 'menu_order' ) === array_column( S::compare_product( $local( $prod( 'VC-TB500', 'TB-500', array( $var( 'VC-TB500-5', '5mg', 3999 ) ), array( 'menu_order' => 7 ) ), 12 ), $in[1] ), 'field' ) );
+	check( 'empty meta values are dropped like the export does', array() === S::clean_product( $prod( 'X', 'X', array( $var( 'X-1', '5mg', 1 ) ), array( 'meta' => array( '_pc_product_subtitle' => '', '_pc_specs' => array() ) ) ) )['meta'] );
 	check( 'price filter keeps only price fields', array( 'price' ) === array_column( S::price_fields( array( array( 'field' => 'name' ), array( 'field' => 'price' ), array( 'field' => 'stock' ) ) ), 'field' ) );
 
 	// ---- 配对：_pc_series_sku → _pc_spu → SKU → 别名；一个本地商品只配一次 ----
@@ -163,6 +169,8 @@ namespace {
 	// ---- 快照选择 ----
 	$list = array( array( 'id' => 4, 'to' => array( 'catalog_ver' => 3 ) ), array( 'id' => 3, 'to' => array( 'catalog_ver' => 4 ) ) );
 	check( 'latest snapshot by default', 4 === S::pick_snapshot( $list, 0 ) );
+	$later = array( array( 'id' => 2, 'from' => array( 'catalog_ver' => 5 ), 'to' => array( 'catalog_ver' => 5 ) ), array( 'id' => 1, 'from' => array( 'catalog_ver' => 4 ), 'to' => array( 'catalog_ver' => 5 ) ) );
+	check( 'a later shipping-only snapshot does not stand in for the catalog one', 1 === S::pick_snapshot( $later, 5 ) && 2 === S::pick_snapshot( $later, 0 ) );
 	check( 'pick by synced catalog version first, then by id', 4 === S::pick_snapshot( $list, 3 ) && 3 === S::pick_snapshot( $list, 4 ) && 0 === S::pick_snapshot( $list, 9 ) && 0 === S::pick_snapshot( array(), 0 ) );
 
 	echo 'PASS ', $checks, " store-side M3 series sync checks; no WordPress, database, or network.\n";

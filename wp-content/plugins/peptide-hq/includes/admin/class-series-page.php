@@ -562,7 +562,7 @@ final class Series_Page {
 		$stale   = (int) $report['ver'] !== (int) $series['catalog_ver'];
 		$conf    = Series_Catalog::confirmation( $series['id'], $site_id );
 		$master  = $site_id === $series['master_site_id'];
-		$fields  = array( 'name' => '名称', 'status' => '上架状态', 'type' => '商品类型', 'description' => '描述', 'short_description' => '简短描述', 'categories' => '专辑', 'attributes' => '规格', 'default_attributes' => '默认规格', 'images' => '图片', 'meta' => '附加信息', 'price' => '成交价', 'compare_price' => '划线价', 'stock' => '库存状态', 'enabled' => '款式启用', 'variation' => '款式', 'variation_attributes' => '款式规格', 'image' => '款式图片' );
+		$fields  = array( 'name' => '名称', 'status' => '上架状态', 'type' => '商品类型', 'description' => '描述', 'short_description' => '简短描述', 'categories' => '专辑', 'menu_order' => '排序', 'attributes' => '规格', 'default_attributes' => '默认规格', 'images' => '图片', 'meta' => '附加信息', 'price' => '成交价', 'compare_price' => '划线价', 'stock' => '库存状态', 'enabled' => '款式启用', 'variation' => '款式', 'variation_attributes' => '款式规格', 'image' => '款式图片' );
 		echo '<section class="pcp-card"><div class="pcp-card__head"><h2>' . esc_html( self::site_name( $site ) ) . ' 和系列主商品库的差异</h2><span class="pcp-hint">针对商品第 ' . (int) $report['ver'] . ' 版 · ' . esc_html( wp_date( 'Y-m-d H:i', (int) $report['at'] ) ) . '</span></div>';
 		echo '<dl class="pcp-stats"><div><dt>一样</dt><dd>' . (int) $sum['same'] . '</dd></div><div><dt>有差异，同步后改成系列的</dt><dd>' . (int) $sum['changed'] . '</dd></div><div><dt>本店没有，同步后新建</dt><dd>' . (int) $sum['create'] . '</dd></div><div><dt>系列里没有，同步后下架</dt><dd>' . (int) $sum['unpublish'] . '</dd></div></dl>';
 		if ( ! empty( $report['prices_only'] ) ) {

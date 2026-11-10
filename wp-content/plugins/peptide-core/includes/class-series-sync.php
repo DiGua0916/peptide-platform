@@ -12,7 +12,7 @@
  * - 运费：用系列的方案替换“通用”运费方案，按商品单独设置的方案不动。
  * - 活动：内容由营销模块处理，这里只把 campaigns 交给过滤器 pc_series_apply_campaigns。
  * - 每次真正改动前自动存一份快照（商品、运费、系列状态，活动由营销模块经 pc_series_snapshot 放进来），保留最近 3 份；
- *   恢复：POST /peptide/v1/hq/series/restore 或 wp peptide series restore [<版本>]。
+ *   恢复：POST /peptide/v1/hq/series/restore 或 wp peptide series restore [<ver>]。
  * - GET /peptide/v1/hq/catalog-export：母版店导出商品、运费、活动，给总后台生成系列主商品库。
  *
  * 请求和返回的格式见 docs/CONTRACT.md “M3 系列与商品目录”。
@@ -58,7 +58,8 @@ final class Series_Sync {
 		add_action( 'rest_api_init', array( self::class, 'routes' ) );
 		add_action( 'woocommerce_before_order_object_save', array( self::class, 'stamp_order' ), 5, 1 );
 		add_filter( 'pc_hq_capabilities', array( self::class, 'capabilities' ) );
-		add_filter( 'map_meta_cap', array( self::class, 'lock_managed' ), 10, 4 );
+		add_action( 'admin_init', array( self::class, 'guard_admin' ), 1 );
+		add_filter( 'woocommerce_rest_check_permissions', array( self::class, 'guard_rest' ), 20, 3 );
 		add_action( 'admin_notices', array( self::class, 'managed_notice' ) );
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			\WP_CLI::add_command( 'peptide series status', array( self::class, 'cli_status' ) );
@@ -281,7 +282,7 @@ final class Series_Sync {
 		if ( $due['shipping'] ) {
 			$result = self::apply_shipping( (array) $p['shipping'], $dry );
 			if ( is_wp_error( $result ) ) {
-				return $result;
+				return self::fail( $result, $state, $dry );
 			}
 			if ( $dry ) {
 				$diff['shipping'] = $result;
@@ -297,7 +298,7 @@ final class Series_Sync {
 			$ver    = (int) $p['campaigns']['ver'];
 			$result = apply_filters( 'pc_series_apply_campaigns', null, $items, $ver, $dry );
 			if ( is_wp_error( $result ) ) {
-				return $result;
+				return self::fail( $result, $state, $dry );
 			}
 			if ( null === $result ) {
 				$applied['campaigns'] = 'unhandled';
@@ -324,6 +325,15 @@ final class Series_Sync {
 			'applied'  => $applied,
 			'complete' => $complete,
 		);
+	}
+
+	/** 后面的部分出错时，前面已经同步好的部分（和系列基本信息）照样记下来，然后把错误报给总后台。 */
+	private static function fail( \WP_Error $error, array $state, bool $dry ): \WP_Error {
+		if ( ! $dry ) {
+			$state['synced_at'] = time();
+			update_option( self::OPTION, $state, false );
+		}
+		return $error;
 	}
 
 	// ---------- 商品对象（纯函数） ----------
@@ -410,7 +420,7 @@ final class Series_Sync {
 	private static function clean_meta( $meta, array $allowed ): array {
 		$out = array();
 		foreach ( is_array( $meta ) ? $meta : array() as $k => $v ) {
-			if ( in_array( $k, $allowed, true ) && ( is_scalar( $v ) || is_array( $v ) ) ) {
+			if ( in_array( $k, $allowed, true ) && ( is_scalar( $v ) || is_array( $v ) ) && '' !== $v && array() !== $v ) {
 				$out[ $k ] = $v;
 			}
 		}
@@ -438,6 +448,7 @@ final class Series_Sync {
 			'price_cents'   => $price,
 			'compare_cents' => max( 0, (int) ( $v['compare_cents'] ?? 0 ) ),
 			'stock_status'  => in_array( $v['stock_status'] ?? '', array( 'instock', 'outofstock', 'onbackorder' ), true ) ? $v['stock_status'] : 'instock',
+			'manage_stock'  => ! empty( $v['manage_stock'] ),
 			'enabled'       => ! array_key_exists( 'enabled', $v ) || ! empty( $v['enabled'] ),
 			'image'         => self::clean_image( $v['image'] ?? null ),
 			'meta'          => self::clean_meta( $v['meta'] ?? array(), self::VARIATION_META ),
@@ -512,6 +523,7 @@ final class Series_Sync {
 			'price_cents'        => max( 0, (int) ( $p['price_cents'] ?? 0 ) ),
 			'compare_cents'      => max( 0, (int) ( $p['compare_cents'] ?? 0 ) ),
 			'stock_status'       => in_array( $p['stock_status'] ?? '', array( 'instock', 'outofstock', 'onbackorder' ), true ) ? $p['stock_status'] : 'instock',
+			'manage_stock'       => ! empty( $p['manage_stock'] ),
 			'variations'         => $vars,
 		);
 	}
@@ -553,6 +565,9 @@ final class Series_Sync {
 				$add( $k, self::text_note( $local[ $k ] ), self::text_note( $in[ $k ] ) );
 			}
 		}
+		if ( $local['menu_order'] !== $in['menu_order'] ) {
+			$add( 'menu_order', $local['menu_order'], $in['menu_order'] );
+		}
 		$lc = $local['categories'];
 		$ic = $in['categories'];
 		sort( $lc );
@@ -590,21 +605,26 @@ final class Series_Sync {
 			if ( $local['compare_cents'] !== $in['compare_cents'] ) {
 				$add( 'compare_price', self::dollars( $local['compare_cents'] ), self::dollars( $in['compare_cents'] ) );
 			}
-			if ( $local['stock_status'] !== $in['stock_status'] ) {
+			if ( empty( $local['manage_stock'] ) && $local['stock_status'] !== $in['stock_status'] ) {
 				$add( 'stock', $local['stock_status'], $in['stock_status'] );
 			}
 			return $fields;
 		}
+		// 和写入时找款式的顺序一致：键 → SKU → 属性。
 		$by_key  = array();
+		$by_sku  = array();
 		$by_attr = array();
 		foreach ( $local['variations'] as $i => $v ) {
 			$by_key[ $v['key'] ] = $i;
+			if ( '' !== $v['sku'] ) {
+				$by_sku[ $v['sku'] ] = $i;
+			}
 			$by_attr[ self::attr_key( $v['attributes'] ) ] = $i;
 		}
 		$used = array();
 		foreach ( $in['variations'] as $v ) {
 			$label = self::variation_label( $v );
-			$i     = $by_key[ $v['key'] ] ?? ( '' !== $v['sku'] && isset( $by_key[ $v['sku'] ] ) ? $by_key[ $v['sku'] ] : ( $by_attr[ self::attr_key( $v['attributes'] ) ] ?? null ) );
+			$i     = $by_key[ $v['key'] ] ?? ( '' !== $v['sku'] && isset( $by_sku[ $v['sku'] ] ) ? $by_sku[ $v['sku'] ] : ( $by_attr[ self::attr_key( $v['attributes'] ) ] ?? null ) );
 			if ( null === $i || isset( $used[ $i ] ) ) {
 				$add( 'variation', '（没有）', '新增', $label );
 				continue;
@@ -617,7 +637,7 @@ final class Series_Sync {
 			if ( $l['compare_cents'] !== $v['compare_cents'] ) {
 				$add( 'compare_price', self::dollars( $l['compare_cents'] ), self::dollars( $v['compare_cents'] ), $label );
 			}
-			if ( $l['stock_status'] !== $v['stock_status'] ) {
+			if ( empty( $l['manage_stock'] ) && $l['stock_status'] !== $v['stock_status'] ) {
 				$add( 'stock', $l['stock_status'], $v['stock_status'], $label );
 			}
 			if ( $l['enabled'] !== $v['enabled'] ) {
@@ -930,6 +950,37 @@ final class Series_Sync {
 		);
 	}
 
+	/** 现在正在生效的促销价；设了促销时间但还没开始或已经结束的不算（否则各店会提前降价）。 */
+	private static function active_sale( \WC_Product $product ): string {
+		$sale = (string) $product->get_sale_price( 'edit' );
+		$from = $product->get_date_on_sale_from( 'edit' );
+		$to   = $product->get_date_on_sale_to( 'edit' );
+		$now  = time();
+		if ( '' === $sale || ( $from && $from->getTimestamp() > $now ) || ( $to && $to->getTimestamp() < $now ) ) {
+			return '';
+		}
+		return $sale;
+	}
+
+	/**
+	 * 款式属性和默认属性：全局属性（pa_xxx => 词条别名）换成和自定义属性一样的写法（属性名的别名 => 词条名称），
+	 * 这样和导出的商品属性对得上。自定义属性原样返回。
+	 */
+	private static function plain_attr_map( array $map ): array {
+		$out = array();
+		foreach ( $map as $key => $value ) {
+			$key   = (string) $key;
+			$value = (string) $value;
+			if ( str_starts_with( $key, 'pa_' ) && taxonomy_exists( $key ) ) {
+				$term  = '' !== $value ? get_term_by( 'slug', $value, $key ) : null;
+				$value = $term && ! is_wp_error( $term ) ? (string) $term->name : $value;
+				$key   = sanitize_title( (string) wc_attribute_label( $key ) );
+			}
+			$out[ $key ] = $value;
+		}
+		return self::clean_attr_map( $out );
+	}
+
 	/** @return int[] 款式 ID（含停用的） */
 	private static function variation_ids( int $parent_id ): array {
 		return array_map(
@@ -949,11 +1000,11 @@ final class Series_Sync {
 	}
 
 	private static function export_variation( \WC_Product_Variation $v ): array {
-		$attrs = self::clean_attr_map( $v->get_attributes( 'edit' ) );
+		$attrs = self::plain_attr_map( (array) $v->get_attributes( 'edit' ) );
 		$sku   = trim( (string) $v->get_sku( 'edit' ) );
 		$saved = trim( (string) $v->get_meta( self::PRODUCT_SKU ) );
 		$image = (int) $v->get_image_id( 'edit' );
-		[ $price, $compare ] = self::series_prices( $v->get_regular_price( 'edit' ), $v->get_sale_price( 'edit' ) );
+		[ $price, $compare ] = self::series_prices( $v->get_regular_price( 'edit' ), self::active_sale( $v ) );
 		return array(
 			'key'           => '' !== $saved ? $saved : ( '' !== $sku ? $sku : self::attr_key( $attrs ) ),
 			'sku'           => $sku,
@@ -961,6 +1012,7 @@ final class Series_Sync {
 			'price_cents'   => $price,
 			'compare_cents' => $compare,
 			'stock_status'  => (string) $v->get_stock_status( 'edit' ),
+			'manage_stock'  => true === $v->get_manage_stock( 'edit' ),
 			'enabled'       => 'publish' === $v->get_status( 'edit' ),
 			'image'         => $image ? self::export_image( $image ) : null,
 			'meta'          => self::export_meta( $v, self::VARIATION_META ),
@@ -1010,12 +1062,13 @@ final class Series_Sync {
 			'categories'         => $cats,
 			'menu_order'         => (int) $product->get_menu_order( 'edit' ),
 			'attributes'         => $attrs,
-			'default_attributes' => self::clean_attr_map( $product->get_default_attributes( 'edit' ) ),
+			'default_attributes' => self::plain_attr_map( (array) $product->get_default_attributes( 'edit' ) ),
 			'images'             => $images,
 			'meta'               => self::export_meta( $product, self::PRODUCT_META ),
 			'price_cents'        => 0,
 			'compare_cents'      => 0,
 			'stock_status'       => (string) $product->get_stock_status( 'edit' ),
+			'manage_stock'       => true === $product->get_manage_stock( 'edit' ),
 			'variations'         => array(),
 		);
 		if ( $variable ) {
@@ -1026,7 +1079,7 @@ final class Series_Sync {
 				}
 			}
 		} else {
-			[ $out['price_cents'], $out['compare_cents'] ] = self::series_prices( $product->get_regular_price( 'edit' ), $product->get_sale_price( 'edit' ) );
+			[ $out['price_cents'], $out['compare_cents'] ] = self::series_prices( $product->get_regular_price( 'edit' ), self::active_sale( $product ) );
 		}
 		return $out;
 	}
@@ -1069,8 +1122,9 @@ final class Series_Sync {
 	public static function export_catalog(): array {
 		$products = array();
 		foreach ( self::export_local() as $p ) {
-			if ( 'publish' === $p['status'] ) {
-				unset( $p['id'], $p['series_sku'], $p['managed'] );
+			unset( $p['id'], $p['series_sku'], $p['managed'] );
+			// 只导出已发布、而且各店能接收的商品（没有款式的可变商品会让整个目录被拒收，这里先跳过）。
+			if ( 'publish' === $p['status'] && null !== self::clean_product( $p ) ) {
 				$products[] = $p;
 			}
 		}
@@ -1127,8 +1181,8 @@ final class Series_Sync {
 		$complete = true;
 		$match    = self::match_products( $incoming, $locals );
 		$used     = array();
-		self::$notes   = array();
-		self::$writing = true;
+		self::$notes = array();
+		$kses        = self::begin_write();
 		try {
 			foreach ( $incoming as $n => $p ) {
 				if ( microtime( true ) > $deadline ) {
@@ -1187,11 +1241,34 @@ final class Series_Sync {
 				}
 			}
 		} finally {
-			self::$writing = false;
+			self::end_write( $kses );
 		}
 		$counts['errors'] = array_slice( array_merge( $counts['errors'], self::$notes ), 0, 10 );
 		self::flush_caches();
 		return array( 'counts' => $counts, 'complete' => $complete );
+	}
+
+	/**
+	 * 开始写商品：放行只读保护，并暂时关掉内容过滤。
+	 * 总后台的请求没有登录用户，WordPress 会把名称里的 & 转义、把描述里的 iframe 和样式去掉，
+	 * 结果和母版店不一样，每次同步都被当成“有差异”。系列内容来自母版店并经总后台签名，按原样写入。
+	 *
+	 * @return bool 结束时要不要把内容过滤恢复
+	 */
+	private static function begin_write(): bool {
+		self::$writing = true;
+		$kses          = function_exists( 'kses_remove_filters' ) && false !== has_filter( 'content_save_pre', 'wp_filter_post_kses' );
+		if ( $kses ) {
+			kses_remove_filters();
+		}
+		return $kses;
+	}
+
+	private static function end_write( bool $kses ): void {
+		self::$writing = false;
+		if ( $kses ) {
+			kses_init_filters();
+		}
 	}
 
 	private static function flush_caches(): void {
@@ -1456,10 +1533,10 @@ final class Series_Sync {
 	/** 母版店：只写价格（商品和款式），别的都不动。 */
 	private static function write_prices( int $id, array $p ): void {
 		$product = wc_get_product( $id );
-		if ( ! $product ) {
-			return;
+		if ( ! $product || ( 'variable' === $p['type'] ) !== $product->is_type( 'variable' ) ) {
+			return; // 母版店里商品类型和系列里的不一样（比如改成了单一规格）：不动价格，等重新导入。
 		}
-		if ( 'variable' !== $p['type'] || ! $product->is_type( 'variable' ) ) {
+		if ( 'variable' !== $p['type'] ) {
 			self::set_prices( $product, $p['price_cents'], $p['compare_cents'] );
 			$product->save();
 		} else {
@@ -1490,20 +1567,70 @@ final class Series_Sync {
 
 	// ---------- 系列管理的商品在店铺后台只读 ----------
 
-	/** 系列管理的商品（和它的款式）不允许在店铺后台修改或删除；同步、恢复和命令行脚本不受限制。 */
-	public static function lock_managed( $caps, $cap, $user_id, $args ) {
-		if ( self::$writing || ( defined( 'WP_CLI' ) && WP_CLI ) || empty( $args[0] ) || ! in_array( $cap, array( 'edit_post', 'delete_post', 'edit_product', 'delete_product' ), true ) ) {
-			return $caps;
+	/**
+	 * 这个商品（或款式所属的商品）是不是由系列管理、现在不允许在店铺后台改。
+	 * 同步、恢复和命令行脚本不受限制；母版店不受限制。
+	 */
+	public static function is_locked( int $post_id ): bool {
+		if ( self::$writing || ( defined( 'WP_CLI' ) && WP_CLI ) || $post_id < 1 || ! self::manages( 'catalog' ) ) {
+			return false;
 		}
-		$post = get_post( (int) $args[0] );
+		$post = get_post( $post_id );
 		if ( ! $post || ! in_array( $post->post_type, array( 'product', 'product_variation' ), true ) ) {
-			return $caps;
+			return false;
 		}
 		$product_id = 'product_variation' === $post->post_type ? (int) $post->post_parent : (int) $post->ID;
-		if ( $product_id > 0 && '1' === (string) get_post_meta( $product_id, self::PRODUCT_MANAGED, true ) && self::manages( 'catalog' ) ) {
-			$caps[] = 'do_not_allow';
+		return $product_id > 0 && '1' === (string) get_post_meta( $product_id, self::PRODUCT_MANAGED, true );
+	}
+
+	/** 店铺后台里会改商品的 admin-ajax 动作。 */
+	private const LOCKED_AJAX = array( 'inline-save', 'woocommerce_save_variations', 'woocommerce_add_variation', 'woocommerce_remove_variations', 'woocommerce_remove_variation', 'woocommerce_bulk_edit_variations', 'woocommerce_link_all_variations', 'woocommerce_save_attributes', 'woocommerce_add_attribute', 'woocommerce_add_new_attribute' );
+
+	/**
+	 * 系列管理的商品在店铺后台只读：拦住商品编辑页的保存、删除、快速编辑、批量编辑和款式的增删改。
+	 * 只拦“改商品”的入口，不动权限，所以评价管理、专辑、批次 COA 等别的功能照常使用。
+	 */
+	public static function guard_admin(): void {
+		if ( ! is_admin() || ! self::manages( 'catalog' ) ) {
+			return;
 		}
-		return $caps;
+		global $pagenow;
+		// phpcs:disable WordPress.Security.NonceVerification -- 只读取要操作的商品编号来决定是否拦截，不执行任何操作。
+		$action = isset( $_REQUEST['action'] ) && is_string( $_REQUEST['action'] ) ? sanitize_key( wp_unslash( $_REQUEST['action'] ) ) : '';
+		if ( ( '' === $action || '-1' === $action ) && isset( $_REQUEST['action2'] ) && is_string( $_REQUEST['action2'] ) ) {
+			$action = sanitize_key( wp_unslash( $_REQUEST['action2'] ) );
+		}
+		$ids = array();
+		if ( wp_doing_ajax() ) {
+			if ( in_array( str_replace( '-', '_', $action ), array_map( static fn( string $a ): string => str_replace( '-', '_', $a ), self::LOCKED_AJAX ), true ) ) {
+				foreach ( array( 'post_ID', 'post_id', 'product_id' ) as $key ) {
+					$ids[] = absint( $_REQUEST[ $key ] ?? 0 );
+				}
+				foreach ( (array) ( $_REQUEST['variation_ids'] ?? array() ) as $id ) {
+					$ids[] = absint( $id );
+				}
+			}
+		} elseif ( 'post.php' === $pagenow && in_array( $action, array( 'editpost', 'trash', 'delete', 'untrash' ), true ) ) {
+			$ids[] = absint( $_REQUEST['post'] ?? ( $_REQUEST['post_ID'] ?? 0 ) );
+		} elseif ( 'edit.php' === $pagenow && 'product' === ( $_REQUEST['post_type'] ?? '' ) && ( in_array( $action, array( 'trash', 'delete', 'untrash' ), true ) || ( 'edit' === $action && isset( $_REQUEST['bulk_edit'] ) ) ) ) {
+			foreach ( (array) ( $_REQUEST['post'] ?? array() ) as $id ) {
+				$ids[] = absint( $id );
+			}
+		}
+		// phpcs:enable
+		foreach ( array_filter( $ids ) as $id ) {
+			if ( self::is_locked( (int) $id ) ) {
+				wp_die( esc_html( sprintf( '这个商品由系列“%s”统一管理，在店铺后台不能修改或删除。需要调整时请在总后台的“系列管理”里改。', self::state()['name'] ) ), '', array( 'response' => 403, 'back_link' => true ) );
+			}
+		}
+	}
+
+	/** WooCommerce REST 接口同样不能改、删系列管理的商品。 */
+	public static function guard_rest( $permission, $context = 'read', $object_id = 0 ) {
+		if ( $permission && in_array( $context, array( 'edit', 'delete' ), true ) && self::is_locked( (int) $object_id ) ) {
+			return false;
+		}
+		return $permission;
 	}
 
 	public static function managed_notice(): void {
@@ -1533,7 +1660,8 @@ final class Series_Sync {
 			return (int) max( array_column( $list, 'id' ) );
 		}
 		foreach ( $list as $s ) {
-			if ( (int) ( $s['to']['catalog_ver'] ?? 0 ) === $ver ) {
+			// 只认“这次同步把商品升到这个版本”的那份；之后只同步运费或活动时存的快照不算。
+			if ( (int) ( $s['to']['catalog_ver'] ?? 0 ) === $ver && (int) ( $s['from']['catalog_ver'] ?? -1 ) !== $ver ) {
 				return (int) $s['id'];
 			}
 		}
@@ -1620,7 +1748,7 @@ final class Series_Sync {
 		$deadline = microtime( true ) + self::TIME_BUDGET;
 		$own_host = strtolower( (string) wp_parse_url( class_exists( Design_Sync::class ) ? Design_Sync::public_origin() : home_url( '/' ), PHP_URL_HOST ) );
 		$known    = array();
-		self::$writing = true;
+		$kses     = self::begin_write();
 		try {
 			foreach ( $snapshot['catalog'] as $p ) {
 				$pid           = (int) ( $p['id'] ?? 0 );
@@ -1656,14 +1784,20 @@ final class Series_Sync {
 				}
 			}
 		} finally {
-			self::$writing = false;
+			self::end_write( $kses );
 		}
 		if ( is_array( $snapshot['shipping'] ?? null ) && class_exists( Shipping\Plans::class ) ) {
 			update_option( Shipping\Plans::OPTION, $snapshot['shipping']['plans'], false );
 			Shipping\Plans::save_rules( (array) $snapshot['shipping']['rules'] );
 		}
 		do_action( 'pc_series_restore', $snapshot );
-		$state              = self::normalize_state( $snapshot['state'] ?? array() );
+		// 店铺属于哪个系列不回退（否则新订单就不带系列了），只把内容的版本号退回快照时的样子。
+		$old   = self::normalize_state( $snapshot['state'] ?? array() );
+		$state = self::state();
+		$same  = $old['series_id'] === $state['series_id'];
+		foreach ( array( 'catalog_ver', 'campaign_ver', 'shipping_ver' ) as $k ) {
+			$state[ $k ] = $same ? $old[ $k ] : 0;
+		}
 		$state['synced_at'] = time();
 		update_option( self::OPTION, $state, false );
 		self::flush_caches();
@@ -1697,7 +1831,7 @@ final class Series_Sync {
 	 *
 	 * ## OPTIONS
 	 *
-	 * [<版本>]
+	 * [<ver>]
 	 * : 同步到的商品版本号（恢复到它之前），或快照编号。不填用最近一份快照。
 	 *
 	 * [--yes]

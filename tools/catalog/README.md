@@ -22,7 +22,7 @@
    python3 tools/catalog/series_diff_report.py /tmp/diff-*.json > series-diff-report.md
    ```
 
-同步之后要回退：`wp peptide series status` 看有哪些快照，`wp peptide series restore [<版本>]` 恢复（或在总后台系列管理里点“恢复到同步前”）。
+同步之后要回退：`wp peptide series status` 看有哪些快照，`wp peptide series restore [<ver>]`（`ver` 是同步到的商品版本号或快照编号，不填用最近一份） 恢复（或在总后台系列管理里点“恢复到同步前”）。
 
 ## 一次性脚本（历史）
 

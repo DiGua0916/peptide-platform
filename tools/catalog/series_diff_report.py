@@ -23,6 +23,7 @@ FIELD_NAMES = {
     "description": "描述",
     "short_description": "简短描述",
     "categories": "专辑",
+    "menu_order": "排序",
     "attributes": "规格",
     "default_attributes": "默认规格",
     "images": "图片",
