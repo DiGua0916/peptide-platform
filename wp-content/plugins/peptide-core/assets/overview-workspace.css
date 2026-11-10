@@ -742,3 +742,29 @@ body.pc-admin-workspace .pc-ov .pc-ov-rank li:nth-child(n+4)::before{background:
 body.pc-admin-workspace .pc-ov .pc-ov-rank img,body.pc-admin-workspace .pc-ov .pc-ov-rank .pc-ov-noimg{width:30px;height:30px;border-radius:6px;border:1px solid #eeeeee;object-fit:cover;background:#f5f5f5}
 body.pc-admin-workspace .pc-ov .pc-ov-rank__name{font-size:13px;color:#262626}
 body.pc-admin-workspace .pc-ov .pc-ov-rank li>span:last-child{font-weight:600;font-variant-numeric:tabular-nums;color:#171717;text-align:right}
+
+/* 左栏补齐卡（2026-11-10）：撑满左栏剩余高度，内容多了在卡内滚动；整体排版不动 */
+body.pc-admin-workspace .pc-ov > .pc-ov-grid{align-items:stretch}
+body.pc-admin-workspace .pc-ov .pc-ov-main{display:flex;flex-direction:column;gap:24px}
+body.pc-admin-workspace .pc-ov .pc-ov-main>.pc-ov-hot{flex:1 1 0}
+body.pc-admin-workspace .pc-ov .pc-ov-hot{display:flex;flex-direction:column;min-height:220px}
+body.pc-admin-workspace .pc-ov .pc-ov-hot__body{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:thin}
+.pc-ov-hot__list{list-style:none;margin:0;padding:0}
+.pc-ov-hot__list li a{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 4px;border-top:1px solid #f0f0f0;color:#171717;text-decoration:none}
+.pc-ov-hot__list li:first-child a{border-top:0}
+.pc-ov-hot__list li a:hover{background:#fafafa}
+.pc-ov-hot__score{display:grid;justify-items:center;padding:6px 0;border-radius:8px;background:#f3f3f3}
+.pc-ov-hot__score b{font-size:18px;line-height:1.1;font-variant-numeric:tabular-nums}
+.pc-ov-hot__score small{font-size:11px;color:#737373}
+.pc-ov-hot__score.is-high{background:#e6f4ea}.pc-ov-hot__score.is-high b{color:#1e7e34}
+.pc-ov-hot__score.is-mid{background:#fff4e5}.pc-ov-hot__score.is-mid b{color:#b45309}
+.pc-ov-hot__main{display:grid;gap:2px;min-width:0}
+.pc-ov-hot__main b{font-size:13px}
+.pc-ov-hot__main em{font-style:normal;font-weight:500;font-size:11px;margin-left:6px;padding:1px 6px;border-radius:999px;background:#f0f0f0;color:#737373}
+.pc-ov-hot__main em.is-active{background:#e6f4ea;color:#1e7e34}
+.pc-ov-hot__main small{font-size:12px;color:#737373;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-ov-hot__prod{color:#404040!important}
+.pc-ov-hot__cart{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pc-ov-hot__cart i{font-style:normal;font-weight:400;color:#a3a3a3}
+body.pc-admin-workspace .pc-ov .pc-ov-hot>.pc-ov-card__head{flex:none}
+body.pc-admin-workspace .pc-ov .pc-ov-hot>.pc-ov-card__head{min-height:52px;align-items:center;box-sizing:border-box}

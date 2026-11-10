@@ -261,6 +261,38 @@
 	}
 
 	// 页面底部一行三张卡（参考后台的公告 / 推荐位），没有内容时显示“暂无数据”。
+	// 左栏补齐（2026-11-10 店主：左边下面空着）：现在最可能下单的访客——正在店里或半小时内来过，按购买意向排序；卡片撑满左栏剩余高度。
+	var liveRows = null;
+	function liveCard() {
+		var body;
+		if ( null === liveRows ) {
+			body = '<p class="pc-ov-empty">…</p>';
+		} else if ( ! liveRows.length ) {
+			body = '<p class="pc-ov-empty is-box">这会儿店里没有访客。有人进店后，这里会按购买意向排出最可能下单的人。</p>';
+		} else {
+			var st = { active: '正在看', idle: '停住了', away: '刚离开' };
+			body = '<ul class="pc-ov-hot__list">' + liveRows.map( function ( r ) {
+				var it = r.intent || {}, v = r.visitor || {}, c = r.cart || {};
+				var lv = 'high' === it.level ? 'is-high' : 'mid' === it.level ? 'is-mid' : 'is-low';
+				var prod = ( it.products || [] )[0];
+				return '<li><a href="' + esc( ( L.visitors || '' ) + '&visitor=' + v.id ) + '"><span class="pc-ov-hot__score ' + lv + '"><b>' + esc( it.score || 0 ) + '</b><small>' + esc( it.level_text || '' ) + '</small></span>' +
+					'<span class="pc-ov-hot__main"><b>' + esc( v.label || '' ) + ' <em class="is-' + esc( r.status ) + '">' + esc( st[ r.status ] || '' ) + '</em></b><small>' + esc( [ r.source, ( it.reasons || [] ).slice( 0, 2 ).join( '，' ) ].filter( Boolean ).join( ' · ' ) ) + '</small>' + ( prod ? '<small class="pc-ov-hot__prod">在看：' + esc( prod.name ) + '</small>' : '' ) + '</span>' +
+					'<span class="pc-ov-hot__cart">' + ( 'active' === c.status && c.count ? esc( c.count + ' 件 · ' + c.subtotal_text ) : '<i>购物车空</i>' ) + '</span></a></li>';
+			} ).join( '' ) + '</ul>';
+		}
+		return '<section class="pc-ov-card pc-ov-hot"><div class="pc-ov-card__head"><h2>现在最可能下单的访客</h2>' + more( L.visitors, '实时访客' ) + '</div><div class="pc-ov-hot__body">' + body + '</div></section>';
+	}
+	function loadLive() {
+		if ( ! wp.apiFetch || ! summary.tracking ) { liveRows = []; var b0 = root.querySelector( '.pc-ov-hot' ); if ( b0 ) { b0.outerHTML = liveCard(); } return; }
+		wp.apiFetch( { path: '/peptide/v1/track/admin/live' } ).then( function ( res ) {
+			var now = Number( res.now_ms ) || Date.now();
+			liveRows = ( res.visitors || [] ).filter( function ( r ) { return now - Number( r.last_signal_ms || 0 ) < 30 * 60 * 1000; } )
+				.sort( function ( a, b ) { return Number( ( b.intent || {} ).score || 0 ) - Number( ( a.intent || {} ).score || 0 ); } ).slice( 0, 8 );
+			var box = root.querySelector( '.pc-ov-hot' );
+			if ( box ) { box.outerHTML = liveCard(); }
+		} ).catch( function () { liveRows = []; } );
+	}
+
 	// 2026-11-10 店主：三张卡填上真实内容——待处理、AI 全站分析、最近的客户分析（数据来自 /peptide/v1/overview/extras）。
 	var extras = null;
 	function ads() {
@@ -280,7 +312,7 @@
 			var lv = /高/.test( r.level ) ? 'is-high' : /中/.test( r.level ) ? 'is-mid' : 'is-low';
 			return '<li><a href="' + esc( r.url ) + '"><span class="pc-ov-lv ' + lv + '">' + esc( r.level || '—' ) + '</span><span class="pc-ov-recent__main"><b>访客 #' + esc( r.visitor ) + '</b><small>' + esc( r.blocker || r.type || '' ) + '</small></span><span class="pc-ov-muted">' + esc( r.at ) + '</span></a></li>';
 		} ).join( '' ) + '</ul>' : '<p class="pc-ov-empty is-box">还没有客户分析。</p>' ) + '</section>';
-		return '<div class="pc-ov-ads">' + todo + ai + recent + '</div>';
+		return '<div class="pc-ov-ads">' + ai + todo + recent + '</div>';
 	}
 	function loadExtras() {
 		if ( ! wp.apiFetch ) { return; }
@@ -460,6 +492,7 @@
 			'<section class="pc-ov-card pc-ov-period"><div class="pc-ov-card__head"><div class="pc-ov-tabs">' + tabs() + '</div>' + more( L.storeData, Y.storeData ) + '</div>' +
 			'<p class="pc-ov-headline">' + esc( Y.visitorConv ) + '：<b>' + esc( null === range.conversion ? '0%' : pc( range.conversion ) ) + '</b><span class="pc-ov-headline__gap"></span>' + esc( Y.salesLabel ) + '：<b>' + esc( amt( range.sales ) ) + '</b>' + esc( summary.currency.code ) + '</p>' +
 			'<div class="pc-ov-split"><div>' + funnel() + '</div><div id="pc-ov-trend">' + chart() + '</div></div></section>' +
+			liveCard() +
 			'</div>' +
 			'<div class="pc-ov-side">' + side() + live( todayData ) + rankCard( 'traffic' ) + rankCard( 'products' ) + '</div>' +
 			'</div>' + ads();
@@ -545,6 +578,8 @@
 	fetchRank( 'traffic' );
 	fetchRank( 'products' );
 	loadExtras();
+	loadLive();
+	setInterval( function () { if ( ! document.hidden ) { loadLive(); } }, 30000 );
 	schedule();
 	setInterval( tick, 1000 );
 	document.addEventListener( 'visibilitychange', function () {
