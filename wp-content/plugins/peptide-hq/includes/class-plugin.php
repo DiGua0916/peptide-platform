@@ -24,6 +24,7 @@ final class Plugin {
 		Mail::register_hooks();
 		Costs::register_hooks();
 		Ai::register_hooks();
+		Series::register_hooks(); // M3 系列与商品目录（系列、推送、系列管理页都从这里启动）。
 		if ( is_callable( array( Admin\Menu::class, 'register_login_hooks' ) ) ) {
 			Admin\Menu::register_login_hooks();
 		}
