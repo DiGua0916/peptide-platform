@@ -328,7 +328,7 @@ final class Mail_Outbox {
 	// ---------- 模板 ----------
 
 	/** 内置模板版本：升级时把内置的（id 以 vc- 开头）换成新话术，店主自己建的保留。 */
-	public const TEMPLATES_VERSION = '2026-11-10c';
+	public const TEMPLATES_VERSION = '2026-11-10d';
 	private const TEMPLATES_VER_OPTION = 'pc_mail_templates_version';
 
 	/** @return array<int,array{id:string,name:string,subject:string,body:string}> */
@@ -406,6 +406,13 @@ final class Mail_Outbox {
 				'name'    => '成交感谢 · 请加 WhatsApp（已付款未留号）',
 				'subject' => 'VialCove | Thanks for Your Order — Add Us on WhatsApp',
 				'body'    => '<p>Dear {customer_name},</p><p>Thank you for your order {order_number} (order total: {order_total}). We\'ve received your payment and will process shipment shortly.</p><p>For faster updates on shipping and any questions about your peptides, please add us on WhatsApp at ' . $wa . ' and send a quick hello. That is the easiest way for us to reach you with tracking and support.</p>' . $wa_btn . '<p>We look forward to chatting with you on WhatsApp.</p><p>Best regards,<br>VialCove Team<br>WhatsApp: ' . $wa . '<br>Email: {store_email}</p>',
+			),
+			array(
+				// 店主 2026-11-10 确认：下单成功感谢，重视购物体验，请加专员 WhatsApp（实时物流、问题、建议）；没有 WhatsApp 就回信留联系方式。
+				'id'      => 'vc-order-thanks',
+				'name'    => '05 下单成功感谢（关心体验 · 加专员 WhatsApp）',
+				'subject' => 'VialCove | Thank You for Your Order',
+				'body'    => '<p>Dear {customer_name},</p><p>Thank you for your order {order_number} (order total: {order_total}). We\'ve received your payment and our team is preparing your shipment.</p><p>Your shopping experience truly matters to us. We\'d love for you to add our order specialist on WhatsApp — it\'s the easiest way to:</p><ul><li>Track your shipment in real time</li><li>Ask any questions about your order or products</li><li>Share your feedback and suggestions to help us improve</li></ul>' . $wa_btn . '<p>Don\'t use WhatsApp? Simply reply to this email with the best way to reach you (phone, Telegram, Signal…), and our team will contact you directly.</p><p>Thank you again for choosing VialCove. We look forward to hearing from you.</p><p>Best regards,<br>VialCove Team<br>WhatsApp: ' . $wa . ' · Email: {store_email}</p>',
 			),
 			array(
 				'id'      => 'vc-tracking',
