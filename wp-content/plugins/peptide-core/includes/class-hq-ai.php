@@ -262,7 +262,8 @@ final class Hq_Ai {
 			$rec = self::parse_record( (string) $r['body'] );
 			$recent[ (int) $r['ref'] ] = array( 'visitor' => (int) $r['ref'], 'level' => (string) ( $rec['意向'] ?? '' ), 'blocker' => (string) ( $rec['主要卡点'] ?? '' ), 'type' => (string) ( $rec['心理类型'] ?? '' ), 'at' => wp_date( 'm-d H:i', (int) $r['created'] ), 'url' => admin_url( 'admin.php?page=pc-visitors&visitor=' . (int) $r['ref'] ) );
 		}
-		$res = rest_ensure_response( array( 'todo' => $todo, 'ai' => $ai, 'recent' => array_values( $recent ) ) );
+		$setup = class_exists( Store_Score::class ) ? Store_Score::summary() : null;
+		$res = rest_ensure_response( array( 'todo' => $todo, 'ai' => $ai, 'recent' => array_values( $recent ), 'setup' => $setup ) );
 		$res->header( 'Cache-Control', 'no-store' );
 		return $res;
 	}
