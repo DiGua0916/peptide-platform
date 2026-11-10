@@ -254,6 +254,9 @@ body.pc-admin-workspace .pc-trk .pc-lifecycle .pc-trk-split,.pc-lifecycle .pc-tr
 .pc-ai-main{min-width:0}
 /* 2026-11-10 店主：右边没有状态栏（全站分析）时，分析内容占满并居中，不留右侧空白。 */
 .pc-ai-layout.pc-ai-solo{grid-template-columns:minmax(0,1fr);margin-left:auto;margin-right:auto}
+/* 店主 2026-11-10：全站分析整块固定宽度居中，放大缩小窗口都不飘。 */
+.pc-interest-ai:has(.pc-ai-solo){max-width:1100px;margin-left:auto;margin-right:auto}
+.pc-interest-ai:has(.pc-ai-solo) .pc-ai-notes{max-width:none}
 .pc-ai-main .pc-ai-kpis,.pc-ai-main .pc-ai-charts,.pc-ai-main .pc-ai-text{max-width:none}
 .pc-ai-state{position:sticky;top:70px;padding:14px 16px;border:1px solid #e6e6e6;border-radius:10px;background:#fff}
 .pc-ai-state h5{margin:0 0 8px;font-size:13px}
