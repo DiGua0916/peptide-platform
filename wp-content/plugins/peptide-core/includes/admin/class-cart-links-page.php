@@ -46,11 +46,8 @@ final class Cart_Links_Page {
 			echo '<div class="notice notice-success is-dismissible"><p>已保存。</p></div>';
 		}
 		echo '<div class="pc-pl-card"><div class="pc-pl-pad">';
-		echo '<p style="max-width:72ch;line-height:1.7">在店铺里把要给客户的商品加进购物车，点左下角的 <b>“🔗 复制付款链接”</b>，把链接发给客户。客户打开后，就是你选好的商品（数量、规格、优惠码都一样），直接进入结账付款。链接不依赖你的电脑或浏览器，谁打开都一样；价格和库存以客户打开时为准。</p>';
-		echo '<h2 style="margin-top:20px">第一步：在你的浏览器里开启分享按钮</h2>';
-		echo '<p class="description">“复制付款链接”按钮只在开启了的浏览器里出现，客户看不到。开启一次 30 天有效；换了浏览器或手机，要在那边再点一次。</p>';
-		echo '<p style="display:flex;gap:8px;flex-wrap:wrap"><a class="button button-primary" target="_blank" rel="noopener" href="' . esc_url( Cart_Links::share_mode_url() ) . '">在这个浏览器开启分享按钮（打开店铺）</a>';
-		echo '<a class="button" target="_blank" rel="noopener" href="' . esc_url( Cart_Links::share_mode_url( false ) ) . '">在这个浏览器关闭</a></p>';
+		echo '<p style="max-width:72ch;line-height:1.7">在店铺里把要给客户的商品加进购物车，打开<b>购物车页</b>，<b>直接复制浏览器地址栏的网址</b>发给客户就行。购物车页的网址会自动带上购物车里的商品、数量和优惠码（改数量、删商品会跟着变）。客户打开后就是你选好的商品，直接进入结账付款；谁打开都一样，价格和库存以打开时为准。页面上不会出现任何按钮，客户看不到。</p>';
+		echo '<p class="description">例子：<code>' . esc_html( \PeptideCore\Management_Host::public_url() ) . '/cart/?pc_cart=11092x2,11456x1</code>（11092 买 2 件，11456 买 1 件）。</p>';
 		echo '<h2 style="margin-top:20px">设置</h2>';
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 		wp_nonce_field( 'pc_cart_links_save' );

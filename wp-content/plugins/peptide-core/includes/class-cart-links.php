@@ -5,8 +5,8 @@
  * - 链接把购物车写在网址里：/?pc_cart=商品或规格ID x 数量,…&pc_coupon=优惠码。谁打开都会得到同样的购物车，
  *   不依赖原来那台电脑的会话。打开时先清空对方原来的购物车，再按链接加入，然后直接到结账页（或购物车页，可设置）。
  * - 价格、库存、能不能买都以店里当时为准；链接里只有 ID 和数量。
- * - 店铺前台的“复制付款链接”按钮只在店主的浏览器里出现：在后台“付款链接”页点“在这个浏览器开启”，
- *   会打开一个带签名的店铺网址，给这个浏览器记一个 cookie。顾客看不到按钮。
+ * - 店主 2026-11-10：不要按钮。购物车页的地址栏自动变成付款链接（assets/cart-share.js），直接复制地址栏发给客户。
+ *   （旧的“分享模式”开关仍兼容，但前台不再显示任何按钮。）
  * - 带参数的网址不会进页面缓存（Page_Cache 只缓存不带参数的首页）。
  *
  * @package PeptideCore
@@ -145,8 +145,8 @@ final class Cart_Links {
 	}
 
 	public static function enqueue(): void {
-		if ( is_admin() || ! self::settings()['enabled'] ) {
-			return;
+		if ( is_admin() || ! self::settings()['enabled'] || ! function_exists( 'is_cart' ) || ! is_cart() ) {
+			return; // 只在购物车页：地址栏就是付款链接，页面上不显示任何东西。
 		}
 		$file = PEPTIDE_CORE_DIR . '/assets/cart-share.js';
 		if ( ! is_readable( $file ) ) {
