@@ -163,7 +163,7 @@ final class Recovery_Page {
 		echo '<input type="search" name="q" value="' . esc_attr( $q ) . '" placeholder="订单编号、邮箱或姓名（多个用空格隔开）"><button class="button">筛选</button></form>';
 
 		echo '<div class="pc-rc-scroll"><table class="pc-pl-table pc-rc-table"><thead><tr>';
-		foreach ( array( '操作', '姓名', '电话', '邮箱', '国家', '配送方式', '订单总价', '支付方式', '支付时间', '流水号', '订单状态', '召回状态', '邮件发送时间', '召回次数' ) as $h ) {
+		foreach ( array( '操作', '姓名', '电话', '邮箱', '国家', '配送方式', '应付总价（含运费）', '支付方式', '支付时间', '流水号', '订单状态', '召回状态', '邮件发送时间', '召回次数' ) as $h ) {
 			echo '<th>' . esc_html( $h ) . '</th>';
 		}
 		echo '</tr></thead><tbody>';
@@ -195,7 +195,9 @@ final class Recovery_Page {
 		echo '<td>' . ( $r['email'] ? '<a href="mailto:' . esc_attr( $r['email'] ) . '">' . esc_html( $r['email'] ) . '</a>' : '-' ) . '</td>';
 		echo '<td>' . esc_html( $r['country'] ?: '-' ) . '</td><td>' . esc_html( $r['ship_method'] ?: '-' ) . '</td>';
 		$range = ( $r['attempts'] ?? 1 ) > 1 && (float) $r['total_max'] !== (float) $r['total'] ? '<br><small class="pc-pl-muted">最高 ' . wp_strip_all_tags( wc_price( (float) $r['total_max'], array( 'currency' => $r['currency'] ) ) ) . '</small>' : '';
-		echo '<td class="pc-rc-money">' . self::money( $r['total'], $r['currency'] ) . $range . '</td><td>' . esc_html( $r['pay_method'] ?: '-' ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		// 店主 2026-11-10：总价含运费和优惠；下面再写商品金额，和实时访客、AI 分析里的“购物车”对得上。
+		$goods = isset( $r['subtotal'] ) && (float) $r['subtotal'] > 0 && abs( (float) $r['subtotal'] - (float) $r['total'] ) > 0.009 ? '<br><small class="pc-pl-muted">商品 ' . wp_strip_all_tags( wc_price( (float) $r['subtotal'], array( 'currency' => $r['currency'] ) ) ) . '</small>' : '';
+		echo '<td class="pc-rc-money">' . self::money( $r['total'], $r['currency'] ) . $goods . $range . '</td><td>' . esc_html( $r['pay_method'] ?: '-' ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo '<td>' . esc_html( self::time( (int) $r['paid_ms'] ) ) . '</td><td>' . esc_html( '' !== $r['tid'] ? $r['tid'] : '-' ) . '</td>';
 		echo '<td>' . self::badge( Recovery_Items::order_status_label( $r['order_status'] ), $r['paid_ms'] ? 'is-paid' : 'is-open' ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo '<td>' . self::badge( $labels[ $r['status'] ] ?? $r['status'], 'is-' . $r['status'] ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped

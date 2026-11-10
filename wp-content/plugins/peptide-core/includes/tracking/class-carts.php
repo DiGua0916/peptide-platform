@@ -241,6 +241,8 @@ final class Carts {
 			'count'         => (int) $cart['count'],
 			'subtotal_text' => (string) $cart['subtotal_text'],
 			'updated_ms'    => $ms,
+			// 店主 2026-11-10：购物车金额 = 商品金额；含运费和优惠的“应付”另外给，和弃单列表的订单总价一致。
+			'payable_text'  => '' !== $key ? self::payable_text( $key ) : '',
 		);
 		if ( $with_items ) {
 			$out += array(
@@ -252,6 +254,18 @@ final class Carts {
 			);
 		}
 		return $out;
+	}
+
+	/** 会话里 WooCommerce 算好的应付总额（含运费、优惠）；还没算过运费时为空。 */
+	private static function payable_text( string $key ): string {
+		if ( ! class_exists( \PeptideCore\Recovery_Items::class ) ) {
+			return '';
+		}
+		$t = (array) ( \PeptideCore\Recovery_Items::session_data( $key )['totals'] ?? array() );
+		if ( ! isset( $t['total'] ) || (float) $t['total'] <= 0 || (float) ( $t['shipping_total'] ?? 0 ) <= 0 ) {
+			return '';
+		}
+		return html_entity_decode( wp_strip_all_tags( wc_price( (float) $t['total'] ) ), ENT_QUOTES, 'UTF-8' );
 	}
 
 	/** 后台弹窗：一位访客的购物车明细；访客不存在时返回 null。 */

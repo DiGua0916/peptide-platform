@@ -219,3 +219,11 @@
 - 引擎 `Manual_Orders`（class-manual-orders.php）：配置存 `pc_manual_links`（token → 配置，30 天有效，最多 300 条）；链接 `/?pc_manual=token` → 清空购物车和优惠券、清顾客资料、按配置加商品（cart item data pc_m_price/pc_m_regular）→ 跳结账。`woocommerce_before_calculate_totals` 9999 设价格（原价 / 售价），`woocommerce_cart_calculate_fees` 99 清掉店铺满减等费用只留自定义优惠，`woocommerce_package_rates` 9999 自定义运费替换所有运费（含运费优惠），`woocommerce_coupon_is_valid` 禁用优惠券；下单时订单加 `_pc_manual_link` 和备注并记到这条链接。
 - `cart-share.js`：手动订单购物车的地址栏改成 `?pc_manual=token`（原来会变成 `?pc_cart=` 普通链接，刷新会变回原价）。
 - 主店测试：2 × 组合装 原价 80 / 售价 50 + bac.water 10，优惠 10 + 5，运费 20 → 结账页 $115.00，原价划线、两笔优惠、运费 $20，无优惠券和满减；刷新仍为 $115.00。测试链接备注 “TEST - Claude 手动订单测试” 留在最近链接里。用链接实际下单后的订单标记未实测。
+
+### 2026-11-10 同一顾客三个金额对不上
+- 阳访客 #119（Wanda Feliciano）：弃单 $133.00 = 结账页应付（商品 95 + 运费 42.75 − 优惠 4.75）；实时访客 $95.00 = 现在购物车商品金额；AI 卡片 $181.30 = 22:10 分析时的购物车快照（当时还有 Retatrutide $86.30，后来删了）。口径和时间都不同。
+- 统一：“购物车”一律指现在购物车的商品金额（Carts::view，仪表盘最可能下单、实时访客、意向分、AI 数据都是这一个来源）；含运费和优惠的另标“应付”。
+  - `Carts::view()` 加 `payable_text`（会话 cart_totals.total，算过运费时才有）；实时访客购物车下面显示“$95.00 · 应付 $133.00”。
+  - `HQ_AI::visitor_live()` 加现在的 cart；AI 卡片 KPI 改为“购物车（现在）$95.00”，小字“应付 $133.00（含运费）· 分析时 $181.30”（分析后购物车变了才写）。
+  - 弃单列表列名“订单总价”改“应付总价（含运费）”，下面加“商品 $95.00”（Recovery_Items item/record_item 加 subtotal）。
+- 阳核对三处一致。
