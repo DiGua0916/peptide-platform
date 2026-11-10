@@ -577,6 +577,52 @@ final class Hq_Connector {
 		return $out;
 	}
 
+	/**
+	 * 本店支持的功能和版本号，随 /hq/status 上报；总后台只对声明了的店调用新接口（新旧版本混跑时用）。
+	 *
+	 * 各模块用过滤器声明自己的功能，不改本类：
+	 *   add_filter( 'pc_hq_capabilities', static fn( array $caps ): array => $caps + array( 'series.sync' => '1' ) );
+	 * 键：小写字母、数字、点、下划线、连字符，最长 64；值：版本号字符串，最长 32。格式不对的条目丢弃。
+	 *
+	 * @return array<string,string>
+	 */
+	public static function capabilities(): array {
+		$base = array( 'hq.capabilities' => '1' );
+		try {
+			$declared = apply_filters( 'pc_hq_capabilities', $base );
+		} catch ( \Throwable $e ) {
+			// 某个模块的声明出错不能让轮询失败（店铺会被误报“连不上”）。
+			$declared = $base;
+		}
+		return self::clean_capabilities( $declared ) + $base;
+	}
+
+	/**
+	 * @param mixed $declared
+	 * @return array<string,string>
+	 */
+	public static function clean_capabilities( $declared ): array {
+		$out = array();
+		foreach ( is_array( $declared ) ? $declared : array() as $key => $version ) {
+			if ( ! is_string( $key ) || ! preg_match( '/^[a-z0-9][a-z0-9._-]{0,63}$/D', $key ) ) {
+				continue;
+			}
+			if ( true === $version ) {
+				$version = '1';
+			}
+			if ( ! is_string( $version ) && ! is_int( $version ) && ! is_float( $version ) ) {
+				continue;
+			}
+			$version = (string) $version;
+			if ( '' === $version || ! preg_match( '/^[A-Za-z0-9][A-Za-z0-9._+-]{0,31}$/D', $version ) ) {
+				continue;
+			}
+			$out[ $key ] = $version;
+		}
+		ksort( $out, SORT_STRING );
+		return array_slice( $out, 0, 200, true );
+	}
+
 	/** 店铺状态：名称、地址、版本、域名、待发货订单、最近一笔订单的时间，以及总后台下发的设置。 */
 	public static function status(): array {
 		$last    = function_exists( 'wc_get_orders' ) ? wc_get_orders( array( 'limit' => 1, 'orderby' => 'date', 'order' => 'DESC', 'type' => 'shop_order', 'return' => 'objects' ) ) : array();
@@ -605,6 +651,7 @@ final class Hq_Connector {
 			'theme'       => $theme->get( 'Name' ) . ' ' . $theme->get( 'Version' ),
 			'plugins'     => $plugins,
 			'apps'        => self::apps(),
+			'capabilities' => self::capabilities(),
 			'design'      => Design_Sync::summary(),
 			'versions'    => array(
 				'plugin' => PEPTIDE_CORE_VERSION,

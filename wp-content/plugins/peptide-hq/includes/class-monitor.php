@@ -115,20 +115,20 @@ final class Monitor {
 			return false;
 		}
 
-		$fields = array(
-			'status'     => 'online',
-			'fails'      => 0,
-			'error'      => '',
-			'info'       => (string) wp_json_encode( $status ),
-			'last_check' => $now,
-			'last_ok'    => $now,
+		// 不跟随店铺自己的名称：总后台的店铺名称是给平台所有者看的标签（投手名），和店铺的 blogname 含义不同。
+		// 2026-11-08 试过“轮询时跟着店铺改名”，把 6 个标签全部覆盖成了域名，当天在服务器上回退，但仓库里没删；
+		// 2026-11-10 版本盘点发现后删除（测试 m1-monitor-name-pure.php）。改名只走 总后台 → 店铺（Client::config）。
+		Sites::update(
+			$id,
+			array(
+				'status'     => 'online',
+				'fails'      => 0,
+				'error'      => '',
+				'info'       => (string) wp_json_encode( $status ),
+				'last_check' => $now,
+				'last_ok'    => $now,
+			)
 		);
-		// 店铺在自己后台改了名称，总后台跟着改（2026-11-08 之前只在首次接入时记一次）。
-		$name = mb_substr( trim( sanitize_text_field( (string) ( $status['name'] ?? '' ) ) ), 0, 190 );
-		if ( '' !== $name && $name !== (string) $site['name'] ) {
-			$fields['name'] = $name;
-		}
-		Sites::update( $id, $fields );
 		Alerts::resolve( $id, 'offline' );
 		Alerts::resolve( $id, 'denied' );
 
@@ -141,6 +141,7 @@ final class Monitor {
 			}
 		}
 		self::check_rules( $id, $status, $now );
+		self::module_checks( $id, $status, $now );
 		self::sync_server( $id, $status );
 		return true;
 	}
@@ -197,6 +198,62 @@ final class Monitor {
 		} else {
 			Alerts::resolve( $id, 'closed' );
 		}
+	}
+
+	/** 本类自己管的告警类型；模块巡检不能用这些名字（否则会把核心告警误关掉）。 */
+	public const RESERVED_TYPES = array( 'offline', 'denied', 'domain', 'https', 'no_orders', 'closed', 'cost', 'payment' );
+
+	/**
+	 * 各模块挂的巡检项。每次轮询成功后调用一次：
+	 *   add_filter( 'pchq_monitor_checks', static function ( array $checks, int $site_id, array $status, int $now ): array {
+	 *       $checks[] = array( 'type' => 'code_drift', 'ok' => false, 'ref' => 'peptide-core', 'message' => '……' );
+	 *       return $checks;
+	 *   }, 10, 4 );
+	 * ok = false 开告警（同店同类型同对象只开一条）；ok = true 关掉这类告警。同一类型里既有 true 又有 false 时，
+	 * 只关掉不在 false 列表里的对象。这次没报的类型不动。告警显示名用过滤器 pchq_alert_types 登记。
+	 */
+	public static function module_checks( int $id, array $status, int $now ): void {
+		try {
+			$checks = apply_filters( 'pchq_monitor_checks', array(), $id, $status, $now );
+		} catch ( \Throwable $e ) {
+			// 一个模块的巡检出错不能拖垮整轮轮询。
+			if ( function_exists( 'error_log' ) ) {
+				error_log( 'pchq_monitor_checks: ' . $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			}
+			return;
+		}
+		self::apply_checks( $id, is_array( $checks ) ? $checks : array() );
+	}
+
+	/**
+	 * @param array<int,mixed> $checks
+	 * @return array{raised:int,resolved:string[],skipped:int}
+	 */
+	public static function apply_checks( int $id, array $checks ): array {
+		$failing = array();
+		$seen    = array();
+		$result  = array( 'raised' => 0, 'resolved' => array(), 'skipped' => 0 );
+		foreach ( array_slice( $checks, 0, 100 ) as $check ) {
+			$type = is_array( $check ) ? (string) ( $check['type'] ?? '' ) : '';
+			if ( ! preg_match( '/^[a-z][a-z0-9_]{1,31}$/D', $type ) || in_array( $type, self::RESERVED_TYPES, true ) || ! array_key_exists( 'ok', $check ) ) {
+				++$result['skipped'];
+				continue;
+			}
+			$seen[ $type ] = true;
+			if ( ! empty( $check['ok'] ) ) {
+				continue;
+			}
+			$ref     = mb_substr( (string) ( $check['ref'] ?? '' ), 0, 190 );
+			$message = trim( (string) ( $check['message'] ?? '' ) );
+			Alerts::raise( $id, $type, $ref, '' !== $message ? $message : $type );
+			$failing[ $type ][] = $ref;
+			++$result['raised'];
+		}
+		foreach ( array_keys( $seen ) as $type ) {
+			Alerts::resolve( $id, $type, $failing[ $type ] ?? array() );
+			$result['resolved'][] = $type;
+		}
+		return $result;
 	}
 
 	private static function is_local( string $host ): bool {

@@ -733,6 +733,9 @@
       "core": true,
       "node_test": false,
       "status": "final-source-gate"
-    }
+    },
+    {"name": "m1-hq-capabilities-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m1-hq-capabilities-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M1"},
+    {"name": "m1-monitor-checks-pure", "language": "php", "path": "wp-content/plugins/peptide-hq/tests/m1-monitor-checks-pure.php", "core": true, "extensions": ["mbstring"], "node_test": false, "status": "module-gate", "module": "M1"},
+    {"name": "m1-monitor-name-pure", "language": "php", "path": "wp-content/plugins/peptide-hq/tests/m1-monitor-name-pure.php", "core": true, "extensions": ["mbstring"], "node_test": false, "status": "module-gate", "module": "M1"}
   ]
 }
