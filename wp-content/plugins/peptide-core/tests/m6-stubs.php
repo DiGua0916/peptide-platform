@@ -101,7 +101,7 @@ namespace {
 		$ids      = isset( $args['post__in'] ) ? array_map( 'intval', (array) $args['post__in'] ) : null;
 		$out      = array();
 		foreach ( $GLOBALS['m6_orders'] as $order ) {
-			if ( null !== $statuses && ! in_array( $order->status, $statuses, true ) ) { continue; }
+			if ( null !== $statuses && ! in_array( 'any', $statuses, true ) && ! in_array( $order->status, $statuses, true ) ) { continue; }
 			if ( null !== $ids && ! in_array( $order->id, $ids, true ) ) { continue; }
 			if ( isset( $args['date_paid'] ) ) {
 				[ $a, $b ] = $range( $args['date_paid'] );
@@ -125,6 +125,12 @@ namespace {
 		public int $customer     = 0;
 		public array $meta       = array();
 		public array $notes      = array();
+		// 排行（Data\Rankings）要读的：支付方式、账单国家、优惠券、订单行。
+		public string $method       = 'card';
+		public string $method_title = 'Card';
+		public string $country      = 'US';
+		public array $coupons       = array();
+		public array $items         = array();
 		public function __construct( public int $id, public string $status = 'processing', public float $total = 20.0, public ?int $paid = 150, public int $created = 150 ) {}
 		public function get_id() { return $this->id; }
 		public function get_status() { return $this->status; }
@@ -141,6 +147,22 @@ namespace {
 		public function get_billing_email() { return $this->email; }
 		public function get_currency() { return 'USD'; }
 		public function get_order_number() { return (string) $this->id; }
+		public function get_payment_method() { return $this->method; }
+		public function get_payment_method_title() { return $this->method_title; }
+		public function get_billing_country() { return $this->country; }
+		public function get_coupon_codes() { return $this->coupons; }
+		public function get_items() { return $this->items; }
+		public function get_qty_refunded_for_item( $item_id ) { return 0; }
+		public function get_total_refunded_for_item( $item_id ) { return 0.0; }
+	}
+
+	/** 假订单行：商品、数量、小计。 */
+	final class WC_Order_Item_Product {
+		public function __construct( public int $id, public int $product, public int $quantity, public float $subtotal ) {}
+		public function get_id() { return $this->id; }
+		public function get_product_id() { return $this->product; }
+		public function get_quantity() { return $this->quantity; }
+		public function get_subtotal() { return $this->subtotal; }
 	}
 
 	/** 给订单挂上访客 / 访问（下单时 Server_Events 写的两条元数据）。 */
