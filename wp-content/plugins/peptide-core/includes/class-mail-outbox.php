@@ -328,7 +328,7 @@ final class Mail_Outbox {
 	// ---------- 模板 ----------
 
 	/** 内置模板版本：升级时把内置的（id 以 vc- 开头）换成新话术，店主自己建的保留。 */
-	public const TEMPLATES_VERSION = '2026-11-10a';
+	public const TEMPLATES_VERSION = '2026-11-10b';
 	private const TEMPLATES_VER_OPTION = 'pc_mail_templates_version';
 
 	/** @return array<int,array{id:string,name:string,subject:string,body:string}> */
@@ -397,10 +397,10 @@ final class Mail_Outbox {
 			),
 			array(
 				'id'      => 'vc-payment',
-				'name'    => '02 支付问题（支付失败 · 换卡 / 银行确认）',
+				'name'    => '02 支付问题（支付失败 · 关心询问）',
 				'subject' => 'VialCove | Help Completing Your Payment',
-				'body'    => '<p>Dear {customer_name},</p><p>We\'re following up on your recent order {order_number} to see whether you need any help completing payment.</p><p>If your payment didn\'t go through, it\'s usually something simple: your bank may have declined an online or international transaction, a verification step (such as a code sent to your phone) may not have been completed, or a card detail may have been entered incorrectly.</p><p>Here\'s what usually helps:</p><ul><li>Try the payment again using the link below.</li><li>Use a different card.</li><li>Contact your bank and ask them to approve the transaction, then try again.</li></ul><p>If it still doesn\'t work, message us on WhatsApp at ' . $wa . ' and we\'ll help you complete your order quickly.</p><p>Your experience with VialCove matters to us. If you have any questions about checkout or your order, please let us know—we\'re happy to help.</p>' . $bf . '<p>For your reference, the order total is {order_total}. You can also retry the payment here: <a href="{pay_url}">{pay_url}</a>.</p>' . $wa_btn . '<p>We look forward to hearing from you and helping you complete your order.</p>' . $sign,
-			),
+				'body'    => '<p>Dear {customer_name},</p><p>We noticed that your order {order_number} wasn\'t completed, and we just wanted to check in with you. Did you run into any trouble with the payment?</p><p>If so, we\'re sorry for the inconvenience. Our team is happy to help you personally. Just tap below to message us on WhatsApp:</p>' . $wa_btn . '<p>Your shopping experience truly matters to us. If anything didn\'t go smoothly, or if you have any questions at all about checkout or your order, our customer support team is always here for you. Simply reply to this email or reach us on WhatsApp at ' . $wa . ', and we\'ll take care of you.</p>' . $bf . '<p>For your reference, the order total is {order_total}. Whenever you\'re ready, you can return to your order here: <a href="{pay_url}">{pay_url}</a>.</p><p>We look forward to hearing from you.</p>' . $sign,
+),
 			array(
 				'id'      => 'vc-thanks-whatsapp',
 				'name'    => '成交感谢 · 请加 WhatsApp（已付款未留号）',
