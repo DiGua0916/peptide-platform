@@ -19,10 +19,10 @@ final class Ai {
 
 	public const OPTION   = 'pchq_ai';
 	public const PERSONAS = 'pchq_ai_personas';
-	public const USES     = array( 'customer' => '客户分析', 'business' => '全站经营分析' );
+	public const USES     = array( 'customer' => '客户分析', 'business' => '全站分析师' );
 	public const PROVIDERS = array(
-		'anthropic' => array( 'label' => 'Claude（Anthropic）', 'endpoint' => 'https://api.anthropic.com/v1/messages', 'model' => 'claude-sonnet-5-5' ),
-		'openai'    => array( 'label' => 'OpenAI / 兼容接口', 'endpoint' => 'https://api.openai.com/v1/chat/completions', 'model' => '' ),
+		'anthropic' => array( 'label' => 'Claude（Anthropic）', 'endpoint' => 'https://api.anthropic.com/v1/messages', 'models' => 'https://api.anthropic.com/v1/models' ),
+		'openai'    => array( 'label' => 'OpenAI / 兼容接口', 'endpoint' => 'https://api.openai.com/v1/chat/completions', 'models' => '' ),
 	);
 	private const MAX_PERSONA = 60000;
 
@@ -40,7 +40,7 @@ final class Ai {
 			'enabled'   => ! empty( $s['enabled'] ),
 			'provider'  => $p,
 			'endpoint'  => (string) ( $s['endpoint'] ?? '' ) ?: self::PROVIDERS[ $p ]['endpoint'],
-			'model'     => (string) ( $s['model'] ?? '' ) ?: self::PROVIDERS[ $p ]['model'],
+			'model'     => (string) ( $s['model'] ?? '' ),
 			'language'  => (string) ( $s['language'] ?? '' ) ?: '中文',
 			'daily_cap' => max( 1, min( 5000, (int) ( $s['daily_cap'] ?? 100 ) ) ),
 			'max_tokens' => max( 200, min( 8000, (int) ( $s['max_tokens'] ?? 1500 ) ) ),
@@ -57,10 +57,16 @@ final class Ai {
 		if ( '' !== $ep && 'https' !== wp_parse_url( $ep, PHP_URL_SCHEME ) ) {
 			$ep = '';
 		}
+		// 换服务商时，接口地址如果是另一家的默认地址（或没填），换成这家的默认地址。
+		$defaults = array_column( self::PROVIDERS, 'endpoint' );
+		if ( '' === $ep || ( $ep !== self::PROVIDERS[ $p ]['endpoint'] && in_array( $ep, $defaults, true ) ) ) {
+			$ep = '';
+		}
+		$changed           = ( $raw['provider'] ?? 'anthropic' ) !== $p;
 		$raw['enabled']    = ! empty( $in['enabled'] );
 		$raw['provider']   = $p;
 		$raw['endpoint']   = $ep;
-		$raw['model']      = substr( preg_replace( '/[^A-Za-z0-9._:\/-]/', '', (string) ( $in['model'] ?? '' ) ), 0, 120 );
+		$raw['model']      = $changed ? '' : substr( preg_replace( '/[^A-Za-z0-9._:\/-]/', '', (string) ( $in['model'] ?? '' ) ), 0, 120 );
 		$raw['language']   = mb_substr( sanitize_text_field( (string) ( $in['language'] ?? '中文' ) ), 0, 20 );
 		$raw['daily_cap']  = (int) ( $in['daily_cap'] ?? 100 );
 		$raw['max_tokens'] = (int) ( $in['max_tokens'] ?? 1500 );
@@ -104,6 +110,76 @@ final class Ai {
 			$out[ $use ] = $p ? array( 'id' => $p['id'], 'name' => $p['name'] ) : null;
 		}
 		return $out;
+	}
+
+	// ---------- 模型列表（从服务商接口拉取，2026-11-10 店主：不要手填） ----------
+
+	public const MODELS = 'pchq_ai_models';
+
+	/** 上次拉到的模型：{provider, fetched, list:[{id,name}]} */
+	public static function models(): array {
+		$m = get_option( self::MODELS, array() );
+		$s = self::settings();
+		return is_array( $m ) && ( $m['provider'] ?? '' ) === $s['provider'] && ( $m['endpoint'] ?? '' ) === $s['endpoint'] ? $m : array( 'provider' => $s['provider'], 'fetched' => 0, 'list' => array() );
+	}
+
+	/** 用保存的密钥拉模型列表；当前模型不在列表里时自动选一个推荐的。 */
+	public static function refresh_models(): array|\WP_Error {
+		$s   = self::settings();
+		$key = self::key();
+		if ( '' === $key ) {
+			return new \WP_Error( 'pchq_ai_key', '先填 API 密钥并保存，才能拉取模型列表。' );
+		}
+		if ( 'anthropic' === $s['provider'] ) {
+			$url     = self::PROVIDERS['anthropic']['endpoint'] === $s['endpoint'] ? self::PROVIDERS['anthropic']['models'] : preg_replace( '#/messages/?$#', '/models', $s['endpoint'] );
+			$url     = add_query_arg( 'limit', 1000, $url );
+			$headers = array( 'x-api-key' => $key, 'anthropic-version' => '2023-06-01' );
+		} else {
+			$url     = preg_replace( '#/chat/completions/?$#', '/models', $s['endpoint'] );
+			$headers = array( 'Authorization' => 'Bearer ' . $key );
+		}
+		$res = wp_safe_remote_get( $url, array( 'timeout' => 20, 'redirection' => 0, 'headers' => $headers, 'limit_response_size' => 2097152 ) );
+		if ( is_wp_error( $res ) ) {
+			return new \WP_Error( 'pchq_ai_http', '连不上 AI 服务：' . $res->get_error_message() );
+		}
+		$code = (int) wp_remote_retrieve_response_code( $res );
+		$json = json_decode( (string) wp_remote_retrieve_body( $res ), true );
+		if ( 200 !== $code || ! is_array( $json ) ) {
+			$msg = is_array( $json ) ? (string) ( $json['error']['message'] ?? $json['message'] ?? '' ) : '';
+			return new \WP_Error( 'pchq_ai_http', '拉取模型失败（HTTP ' . $code . '）' . ( '' !== $msg ? '：' . mb_substr( $msg, 0, 300 ) : '' ) );
+		}
+		$list = array();
+		foreach ( (array) ( $json['data'] ?? array() ) as $m ) {
+			$id = is_array( $m ) ? (string) ( $m['id'] ?? '' ) : '';
+			if ( '' === $id || ! preg_match( '/^[A-Za-z0-9._:\/-]{1,120}$/', $id ) ) {
+				continue;
+			}
+			// OpenAI 的列表里有向量、语音、画图等模型，只留能对话的。
+			if ( 'openai' === $s['provider'] && preg_match( '/embedding|whisper|tts|dall-e|image|audio|moderation|transcribe|realtime|search|babbage|davinci/i', $id ) ) {
+				continue;
+			}
+			$list[] = array( 'id' => $id, 'name' => (string) ( $m['display_name'] ?? $id ) );
+		}
+		if ( ! $list ) {
+			return new \WP_Error( 'pchq_ai_models', '接口没有返回可用的模型。' );
+		}
+		update_option( self::MODELS, array( 'provider' => $s['provider'], 'endpoint' => $s['endpoint'], 'fetched' => time(), 'list' => $list ), false );
+		$ids = array_column( $list, 'id' );
+		if ( ! in_array( $s['model'], $ids, true ) ) {
+			$pick = $ids[0];
+			foreach ( array( '/sonnet/i', '/gpt-5(?!.*(nano|mini))/i', '/gpt-4o(?!-mini)/i' ) as $re ) {
+				$hit = preg_grep( $re, $ids );
+				if ( $hit ) {
+					$pick = reset( $hit );
+					break;
+				}
+			}
+			$raw          = get_option( self::OPTION, array() );
+			$raw          = is_array( $raw ) ? $raw : array();
+			$raw['model'] = $pick;
+			update_option( self::OPTION, $raw, false );
+		}
+		return $list;
 	}
 
 	// ---------- 人设 ----------

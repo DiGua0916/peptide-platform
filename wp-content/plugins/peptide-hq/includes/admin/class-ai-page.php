@@ -24,7 +24,7 @@ final class Ai_Page {
 			},
 			23
 		);
-		foreach ( array( 'save', 'test', 'persona', 'delete' ) as $do ) {
+		foreach ( array( 'save', 'test', 'persona', 'delete', 'models' ) as $do ) {
 			add_action( 'admin_post_pchq_ai_' . $do, array( self::class, 'handle' ) );
 		}
 		add_action( 'admin_enqueue_scripts', array( self::class, 'assets' ), 1001 );
@@ -57,7 +57,19 @@ final class Ai_Page {
 		$post = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- 各字段在 Ai 里逐个清理。
 		if ( 'save' === $do ) {
 			Ai::save_settings( $post );
-			self::flash( 'success', '已保存。' );
+			$msg = '已保存。';
+			if ( Ai::settings()['has_key'] ) { // 有密钥就顺便拉一次模型列表。
+				$m   = Ai::refresh_models();
+				$msg = is_wp_error( $m ) ? '已保存，但' . $m->get_error_message() : '已保存，已从接口拉取 ' . count( $m ) . ' 个模型，当前使用：' . Ai::settings()['model'] . '。';
+				if ( is_wp_error( $m ) ) {
+					self::flash( 'error', $msg );
+					self::back();
+				}
+			}
+			self::flash( 'success', $msg );
+		} elseif ( 'models' === $do ) {
+			$m = Ai::refresh_models();
+			self::flash( is_wp_error( $m ) ? 'error' : 'success', is_wp_error( $m ) ? $m->get_error_message() : '已拉取 ' . count( $m ) . ' 个模型。' );
 		} elseif ( 'test' === $do ) {
 			$r = Ai::complete( '你是连接测试助手。', '请只回复：连接成功' );
 			self::flash( is_wp_error( $r ) ? 'error' : 'success', is_wp_error( $r ) ? '测试失败：' . $r->get_error_message() : 'AI 已连通（' . $r['model'] . '）：' . mb_substr( $r['text'], 0, 80 ) );
@@ -110,14 +122,23 @@ final class Ai_Page {
 		echo '<input type="hidden" name="action" value="pchq_ai_save">';
 		echo '<p><label class="pcp-check"><input type="checkbox" name="enabled" value="1"' . checked( $s['enabled'], true, false ) . '> 开启 AI 分析</label></p>';
 		echo '<div class="pcai-grid">';
-		echo '<label><span>服务商</span><select name="provider">';
+		echo '<label><span>服务商</span><select name="provider" data-provider>';
 		foreach ( Ai::PROVIDERS as $k => $p ) {
-			echo '<option value="' . esc_attr( $k ) . '"' . selected( $s['provider'], $k, false ) . '>' . esc_html( $p['label'] ) . '</option>';
+			echo '<option value="' . esc_attr( $k ) . '" data-endpoint="' . esc_attr( $p['endpoint'] ) . '"' . selected( $s['provider'], $k, false ) . '>' . esc_html( $p['label'] ) . '</option>';
 		}
 		echo '</select></label>';
-		echo '<label><span>模型</span><input type="text" name="model" value="' . esc_attr( $s['model'] ) . '" placeholder="例如 claude-sonnet-5-5"></label>';
+		// 模型：从服务商接口拉取，不用手填。
+		$models = Ai::models();
+		echo '<label><span>模型' . ( $models['fetched'] ? ' <em class="pcai-muted">（' . count( $models['list'] ) . ' 个，' . esc_html( wp_date( 'm-d H:i', (int) $models['fetched'] ) ) . ' 从接口拉取）</em>' : '' ) . '</span><select name="model" data-model' . disabled( ! $models['list'], true, false ) . '>';
+		if ( ! $models['list'] ) {
+			echo '<option value="">' . esc_html( $s['has_key'] ? '点“拉取模型列表”' : '填好 API 密钥并保存后自动拉取' ) . '</option>';
+		}
+		foreach ( $models['list'] as $m ) {
+			echo '<option value="' . esc_attr( $m['id'] ) . '"' . selected( $s['model'], $m['id'], false ) . '>' . esc_html( $m['name'] . ( $m['name'] !== $m['id'] ? ' · ' . $m['id'] : '' ) ) . '</option>';
+		}
+		echo '</select></label>';
 		echo '<label><span>API 密钥</span><input type="password" name="key" value="" autocomplete="new-password" placeholder="' . ( $s['has_key'] ? '已保存 ••••••（留空不改）' : '粘贴 API 密钥' ) . '"></label>';
-		echo '<label><span>接口地址（一般不用改）</span><input type="url" name="endpoint" value="' . esc_attr( $s['endpoint'] ) . '"></label>';
+		echo '<label><span>接口地址（一般不用改）</span><input type="url" name="endpoint" value="' . esc_attr( $s['endpoint'] ) . '" data-endpoint-input></label>';
 		echo '<label><span>回答语言</span><input type="text" name="language" value="' . esc_attr( $s['language'] ) . '"></label>';
 		echo '<label><span>每家店每天最多分析几次</span><input type="number" name="daily_cap" min="1" max="5000" value="' . (int) $s['daily_cap'] . '"></label>';
 		echo '<label><span>单次回答最长（tokens）</span><input type="number" name="max_tokens" min="200" max="8000" value="' . (int) $s['max_tokens'] . '"></label>';
@@ -128,7 +149,7 @@ final class Ai_Page {
 
 		// 3. 店铺（同一个表单一起保存）
 		echo '<h3 style="margin-top:24px">各店铺</h3><p class="pcai-muted">新接入的店铺默认开启，用每种用途的第一个人设。</p>';
-		echo '<div style="overflow-x:auto"><table class="pcai-table"><thead><tr><th>店铺</th><th>开启</th><th>客户分析人设</th><th>全站经营分析人设</th><th>今天已用</th></tr></thead><tbody>';
+		echo '<div style="overflow-x:auto"><table class="pcai-table"><thead><tr><th>店铺</th><th>开启</th><th>客户分析人设</th><th>全站分析师人设</th><th>今天已用</th></tr></thead><tbody>';
 		foreach ( Sites::all() as $site ) {
 			$id  = (int) $site['id'];
 			$row = $s['sites'][ $id ] ?? null;
@@ -150,38 +171,46 @@ final class Ai_Page {
 		echo '<p class="pcai-actions"><button type="submit" class="button button-primary">保存</button></p></form>';
 		echo '<form method="post" action="' . $post . '" class="pcai-actions">'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		wp_nonce_field( 'pchq_ai_test' );
-		echo '<input type="hidden" name="action" value="pchq_ai_test"><button type="submit" class="button"' . disabled( $s['has_key'], false, false ) . '>测试连接</button><span class="pcai-muted">会用保存的密钥发一条很短的测试消息。</span></form></section>';
+		echo '<input type="hidden" name="action" value="pchq_ai_test"><button type="submit" class="button"' . disabled( $s['has_key'], false, false ) . '>测试连接</button><span class="pcai-muted">会用保存的密钥发一条很短的测试消息。</span></form>';
+		echo '<form method="post" action="' . $post . '" class="pcai-actions" style="margin-top:8px">'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		wp_nonce_field( 'pchq_ai_models' );
+		echo '<input type="hidden" name="action" value="pchq_ai_models"><button type="submit" class="button"' . disabled( $s['has_key'], false, false ) . '>拉取模型列表</button><span class="pcai-muted">服务商新出了模型时点一下。</span></form>';
+		// 换服务商：接口地址换成那家的默认地址，模型清空（保存后自动拉取那家的模型）。
+		echo '<script>(function(){var p=document.querySelector("[data-provider]"),e=document.querySelector("[data-endpoint-input]"),m=document.querySelector("[data-model]");if(!p||!e||!m)return;var start=p.value;p.addEventListener("change",function(){var o=p.options[p.selectedIndex];e.value=o.getAttribute("data-endpoint")||"";if(p.value!==start){m.innerHTML="<option value=\\"\\">保存后自动拉取这家服务商的模型</option>";m.disabled=true;}else{location.reload();}});})();</script>';
+		echo '</section>';
 
-		// 2. 人设库
-		echo '<section class="pcp-card"><div class="pcp-card__head"><h2>人设库</h2><span class="pcp-hint">' . count( $personas ) . ' 个人设</span></div>';
-		echo '<p class="pcai-muted">人设正文就是 AI 的系统提示词。“客户分析”用在访客详情页分析单个客户；“全站经营分析”用在实时访客页分析整体情况。</p>';
-		if ( $personas ) {
-			echo '<table class="pcai-table"><thead><tr><th>名字</th><th>用途</th><th>长度</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
-			foreach ( $personas as $p ) {
-				echo '<tr><td><strong>' . esc_html( $p['name'] ) . '</strong></td><td><span class="pcai-tag' . ( 'business' === $p['use'] ? ' is-biz' : '' ) . '">' . esc_html( Ai::USES[ $p['use'] ] ?? $p['use'] ) . '</span></td><td>' . (int) mb_strlen( $p['content'] ) . ' 字</td><td>' . esc_html( wp_date( 'Y-m-d H:i', (int) $p['updated'] ) ) . '</td><td class="pcai-actions">';
-				echo '<a class="button button-small" href="' . esc_url( add_query_arg( 'edit', $p['id'], admin_url( 'admin.php?page=' . self::SLUG ) ) ) . '#pcai-persona">编辑</a>';
-				echo '<form method="post" action="' . $post . '">'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-				wp_nonce_field( 'pchq_ai_delete' );
-				echo '<input type="hidden" name="action" value="pchq_ai_delete"><input type="hidden" name="id" value="' . esc_attr( $p['id'] ) . '"><button type="submit" class="button button-small">删除</button></form></td></tr>';
+		// 2. 人设：分两块，客户分析（专门分析单个客户）和全站分析师（站在全盘视角分析全站），各自导入、各自管理。
+		$intro = array(
+			'customer' => array( '客户分析人设', '专门分析“人”：在访客详情页，根据一位客户的浏览、加购、结账行为，判断他在看什么、有多大可能下单、该怎么跟进。', '例如：客户分析师' ),
+			'business' => array( '全站分析师人设', '站在全盘视角分析全站：在实时访客页，根据所选时间段全站的流量、转化、商品和版块数据，找出问题和机会、给出经营建议。', '例如：全站分析师' ),
+		);
+		foreach ( $intro as $use => [ $title, $desc, $placeholder ] ) {
+			$mine = array_values( array_filter( $personas, static fn( $p ) => $p['use'] === $use ) );
+			$here = $edit && $edit['use'] === $use ? $edit : null;
+			echo '<section class="pcp-card" id="pcai-' . esc_attr( $use ) . '"><div class="pcp-card__head"><h2>' . esc_html( $title ) . '</h2><span class="pcp-hint">' . count( $mine ) . ' 个</span></div>';
+			echo '<p class="pcai-muted">' . esc_html( $desc ) . ' 人设正文就是 AI 的系统提示词；有多个时，各店铺默认用第一个，也可以在上面的店铺表里单独选。</p>';
+			if ( $mine ) {
+				echo '<table class="pcai-table"><thead><tr><th>名字</th><th>长度</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
+				foreach ( $mine as $i => $p ) {
+					echo '<tr><td><strong>' . esc_html( $p['name'] ) . '</strong>' . ( 0 === $i ? ' <span class="pcai-tag' . ( 'business' === $use ? ' is-biz' : '' ) . '">默认</span>' : '' ) . '</td><td>' . (int) mb_strlen( $p['content'] ) . ' 字</td><td>' . esc_html( wp_date( 'Y-m-d H:i', (int) $p['updated'] ) ) . '</td><td class="pcai-actions">';
+					echo '<a class="button button-small" href="' . esc_url( add_query_arg( 'edit', $p['id'], admin_url( 'admin.php?page=' . self::SLUG ) ) ) . '#pcai-' . esc_attr( $use ) . '">编辑</a>';
+					echo '<form method="post" action="' . $post . '">'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+					wp_nonce_field( 'pchq_ai_delete' );
+					echo '<input type="hidden" name="action" value="pchq_ai_delete"><input type="hidden" name="id" value="' . esc_attr( $p['id'] ) . '"><button type="submit" class="button button-small">删除</button></form></td></tr>';
+				}
+				echo '</tbody></table>';
+			} else {
+				echo '<p>还没有' . esc_html( $title ) . '。用下面的表单导入：可以直接粘贴正文，也可以上传 .txt / .md 文件。</p>';
 			}
-			echo '</tbody></table>';
-		} else {
-			echo '<p>还没有人设。用下面的表单导入你的人设母版：可以直接粘贴正文，也可以上传 .txt / .md 文件。</p>';
+			echo '<h3 style="margin-top:20px">' . ( $here ? '编辑：' . esc_html( $here['name'] ) : '导入' . esc_html( $title ) ) . '</h3>';
+			echo '<form method="post" action="' . $post . '" enctype="multipart/form-data" class="pcai-persona">'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			wp_nonce_field( 'pchq_ai_persona' );
+			echo '<input type="hidden" name="action" value="pchq_ai_persona"><input type="hidden" name="use" value="' . esc_attr( $use ) . '"><input type="hidden" name="id" value="' . esc_attr( $here['id'] ?? '' ) . '">';
+			echo '<div class="pcai-grid"><label><span>名字</span><input type="text" name="name" maxlength="60" value="' . esc_attr( $here['name'] ?? '' ) . '" placeholder="' . esc_attr( $placeholder ) . '"></label>';
+			echo '<label><span>从文件导入（.txt / .md，可选）</span><input type="file" name="file" accept=".txt,.md,.markdown,text/plain,text/markdown"></label></div>';
+			echo '<p><label><span>人设正文</span><textarea name="content" placeholder="把人设母版粘贴到这里；上传了文件就以文件内容为准。">' . esc_textarea( $here['content'] ?? '' ) . '</textarea></label></p>';
+			echo '<p class="pcai-actions"><button type="submit" class="button button-primary">' . ( $here ? '保存修改' : '导入' ) . '</button>' . ( $here ? '<a class="button" href="' . esc_url( admin_url( 'admin.php?page=' . self::SLUG ) . '#pcai-' . $use ) . '">取消</a>' : '' ) . '</p></form></section>';
 		}
-
-		echo '<h3 id="pcai-persona" style="margin-top:24px">' . ( $edit ? '编辑人设：' . esc_html( $edit['name'] ) : '导入 / 新建人设' ) . '</h3>';
-		echo '<form method="post" action="' . $post . '" enctype="multipart/form-data" class="pcai-persona">'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-		wp_nonce_field( 'pchq_ai_persona' );
-		echo '<input type="hidden" name="action" value="pchq_ai_persona"><input type="hidden" name="id" value="' . esc_attr( $edit['id'] ?? '' ) . '">';
-		echo '<div class="pcai-grid"><label><span>名字</span><input type="text" name="name" maxlength="60" value="' . esc_attr( $edit['name'] ?? '' ) . '" placeholder="例如：客户分析师"></label>';
-		echo '<label><span>用途</span><select name="use">';
-		foreach ( Ai::USES as $k => $label ) {
-			echo '<option value="' . esc_attr( $k ) . '"' . selected( $edit['use'] ?? 'customer', $k, false ) . '>' . esc_html( $label ) . '</option>';
-		}
-		echo '</select></label>';
-		echo '<label><span>从文件导入（.txt / .md，可选）</span><input type="file" name="file" accept=".txt,.md,.markdown,text/plain,text/markdown"></label></div>';
-		echo '<p><label><span>人设正文</span><textarea name="content" placeholder="把人设母版粘贴到这里；上传了文件就以文件内容为准。">' . esc_textarea( $edit['content'] ?? '' ) . '</textarea></label></p>';
-		echo '<p class="pcai-actions"><button type="submit" class="button button-primary">' . ( $edit ? '保存修改' : '导入人设' ) . '</button>' . ( $edit ? '<a class="button" href="' . esc_url( admin_url( 'admin.php?page=' . self::SLUG ) ) . '">取消</a>' : '' ) . '</p></form></section>';
 		echo '</div>';
 	}
 }

@@ -8,7 +8,7 @@
  const n = value => value === null ? '—' : Number(value || 0).toLocaleString('zh-CN');
  let generation = 0, controller = null, accepted = null, destroyed = false;
  let subject = Number(cfg.visitor) || 0, period = subject ? 'all' : 'day', visit = 0;
- root.innerHTML = '<section class="pc-insights"><header class="pc-insights-head"><div><h2>' + (subject ? '客户完整访问记录' : '大家对什么感兴趣') + '</h2><p>' + (subject ? '查看保留期内的页面停留与行为明细' : '访客最关注的商品和最常点的版块，按热度排序') + '</p></div><div class="pc-insights-actions"><label>统计日期<input type="date" name="insight_date" max="' + esc(cfg.today) + '" value="' + esc(cfg.today) + '"></label><button type="button" class="button" data-insight-export disabled>导出分析数据</button></div></header><div class="pc-insights-toolbar"><div class="pc-insights-period" role="group" aria-label="统计周期">' + (subject ? [['all','全部记录'],['day','每日'],['week','每周'],['month','每月']] : [['day','每日'],['week','每周'],['month','每月']]).map(([key,label]) => '<button type="button" data-insight-period="' + key + '" aria-pressed="' + (key === period) + '">' + label + '</button>').join('') + '</div><span class="pc-insights-range"></span><button type="button" class="button" data-insight-retry>刷新数据</button></div><div class="pc-insights-status" role="status" aria-live="polite"></div><div class="pc-insights-results"></div>' + '<section class="pc-interest-ai" data-ai></section>' + '<details class="pc-insights-method"><summary>统计口径与 AI 分析</summary><p>停留为页面可见且活跃时，相邻信号间隔不超过 30 秒的观测时长；总时长去除同一访客多标签页重叠。没有信号的时间不补算，页面和商品时长不能直接相加。全部记录仅包括当前保留期内已采集的数据；已清理的历史无法恢复。点击下方访问记录可查看该次访问的页面统计和时间线，点击“全部记录”返回客户全程汇总。</p><p>一个访客编号对应一个浏览器，不能据此认定同一自然人。浏览和点击是兴趣线索，不代表购买意愿或个人属性。</p><p>AI 分析只在点“AI 分析”时进行：把上面这些行为数据（不含姓名、邮箱、电话）交给总后台的 AI，按总后台“AI 设置”里的人设分析，不会自动发送。客户分析和全站经营分析各用各的人设。</p></details></section>';
+ root.innerHTML = '<section class="pc-insights"><header class="pc-insights-head"><div><h2>' + (subject ? '客户完整访问记录' : '大家对什么感兴趣') + '</h2><p>' + (subject ? '查看保留期内的页面停留与行为明细' : '访客最关注的商品和最常点的版块，按热度排序') + '</p></div><div class="pc-insights-actions"><label>统计日期<input type="date" name="insight_date" max="' + esc(cfg.today) + '" value="' + esc(cfg.today) + '"></label><button type="button" class="button" data-insight-export disabled>导出分析数据</button></div></header><div class="pc-insights-toolbar"><div class="pc-insights-period" role="group" aria-label="统计周期">' + (subject ? [['all','全部记录'],['day','每日'],['week','每周'],['month','每月']] : [['day','每日'],['week','每周'],['month','每月']]).map(([key,label]) => '<button type="button" data-insight-period="' + key + '" aria-pressed="' + (key === period) + '">' + label + '</button>').join('') + '</div><span class="pc-insights-range"></span><button type="button" class="button" data-insight-retry>刷新数据</button></div><div class="pc-insights-status" role="status" aria-live="polite"></div><div class="pc-insights-results"></div>' + '<section class="pc-interest-ai" data-ai></section>' + '<details class="pc-insights-method"><summary>统计口径与 AI 分析</summary><p>停留为页面可见且活跃时，相邻信号间隔不超过 30 秒的观测时长；总时长去除同一访客多标签页重叠。没有信号的时间不补算，页面和商品时长不能直接相加。全部记录仅包括当前保留期内已采集的数据；已清理的历史无法恢复。点击下方访问记录可查看该次访问的页面统计和时间线，点击“全部记录”返回客户全程汇总。</p><p>一个访客编号对应一个浏览器，不能据此认定同一自然人。浏览和点击是兴趣线索，不代表购买意愿或个人属性。</p><p>AI 分析只在点“AI 分析”时进行：把上面这些行为数据（不含姓名、邮箱、电话）交给总后台的 AI，按总后台“AI 设置”里的人设分析，不会自动发送。客户分析和全站分析师各用各的人设。</p></details></section>';
  const results = root.querySelector('.pc-insights-results'), status = root.querySelector('.pc-insights-status'), date = root.querySelector('input'), exportButton = root.querySelector('[data-insight-export]');
  const labels = {'demo-catalog':'商品目录','carousel':'轮播','faq':'常见问题','media-text':'图文介绍','report-feature':'检测报告','product-grid':'商品区','footer':'页脚','header':'导航'};
  function visitorLinks(x) {
@@ -77,7 +77,7 @@
  });
  // ---------- AI 分析（2026-11-10：AI 和人设在总后台；这里只发起请求、显示结果） ----------
  const aiBox = root.querySelector('[data-ai]');
- const aiTitle = subject ? '客户分析 AI' : '全站经营分析 AI';
+ const aiTitle = subject ? '客户分析 AI' : '全站分析师 AI';
  function aiText(t) { return esc(String(t || '')).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'); }
  function aiShell(state, body) { aiBox.innerHTML = '<h3>' + aiTitle + '</h3><span>' + esc(state) + '</span>' + body; }
  async function aiStatus() {
@@ -87,7 +87,7 @@
   try { st = await window.wp.apiFetch({path:'/peptide/v1/track/admin/ai/status'}); } catch (e) { st = {enabled:false, error:(e && e.message) || ''}; }
   const persona = subject ? st.customer : st.business;
   if (!st.enabled) { aiShell('未开启', '<p>' + esc(st.error ? '暂时连不上总后台：' + st.error : '总后台“AI 设置”里还没有开启这家店的 AI 分析。') + '</p>'); return; }
-  if (!persona) { aiShell('缺少人设', '<p>总后台“AI 设置”里还没有导入“' + (subject ? '客户分析' : '全站经营分析') + '”的人设。</p>'); return; }
+  if (!persona) { aiShell('缺少人设', '<p>总后台“AI 设置”里还没有导入“' + (subject ? '客户分析' : '全站分析师') + '”的人设。</p>'); return; }
   aiShell('人设：' + persona, '<p>' + (subject ? '根据这位客户的浏览、加购和结账行为，分析他在看什么、有多大可能下单、该怎么跟进。' : '根据所选时间段全站访客的行为和经营数据，分析大家对什么感兴趣、问题出在哪、该怎么做。') + '</p><p class="pc-ai-actions"><button type="button" class="button button-primary" data-ai-run>AI 分析</button><span class="pc-ai-meta">今天已用 ' + n(st.used_today) + ' / ' + n(st.daily_cap) + ' 次</span></p><div class="pc-ai-out" aria-live="polite"></div>');
  }
  async function aiRun(refresh) {
