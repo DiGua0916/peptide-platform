@@ -2,7 +2,7 @@
 /**
  * 库存保持在范围内（店主 2026-11-11）。
  *
- * - 普通商品每个规格 90–120，热销品 5–10（热销品由店主指定，存选项 hot_ids：商品 ID = 整个商品，规格 ID = 只这个规格）。
+ * - 普通商品每个规格 90–120，热销品 20–30（店主 2026-11-11 从 5–10 改；热销品由店主指定，存选项 hot_ids：商品 ID = 整个商品，规格 ID = 只这个规格）。
  * - 每天刷新一次：所有开了库存管理的规格换成范围内的新随机数。
  * - 卖出后掉到下限以下（或被改到范围外）时，马上补回范围内的随机数。
  * - 只动开了库存管理的规格；没开的不碰。草稿 / 下架商品不动。
@@ -39,7 +39,7 @@ final class Stock_Range {
 	}
 
 	public static function defaults(): array {
-		return array( 'enabled' => false, 'min' => 90, 'max' => 120, 'hot_min' => 5, 'hot_max' => 10, 'hot_ids' => array() );
+		return array( 'enabled' => false, 'min' => 90, 'max' => 120, 'hot_min' => 20, 'hot_max' => 30, 'hot_ids' => array() );
 	}
 
 	public static function settings(): array {
