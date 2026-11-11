@@ -110,7 +110,7 @@ namespace {
 		public array $log     = array();
 		public function insert( $table, array $row ) { $this->log[] = $row; return 1; }
 		public function prepare( string $sql, ...$args ): string { foreach ( $args as $arg ) { $sql = preg_replace( '/%[ds]/', is_int( $arg ) ? (string) $arg : "'" . $arg . "'", $sql, 1 ); } return $sql; }
-		public function get_var( string $sql ) { return 0; }
+		public function get_var( string $sql ) { return str_starts_with( $sql, "SHOW TABLES LIKE " ) ? trim( substr( $sql, 17 ), "'" ) : 0; } // 发送记录表当作存在（集成线 2026-11-11 起每次请求确认表在不在）。
 	}
 
 	require dirname( __DIR__ ) . '/includes/class-pixels.php';
