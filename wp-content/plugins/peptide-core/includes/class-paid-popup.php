@@ -69,7 +69,7 @@ final class Paid_Popup {
 			'title'       => 'Thank you! Your order is confirmed',
 			'message'     => "Order #{order} has been placed successfully. We truly value your shopping experience.\nAdd our order specialist on WhatsApp to track your shipment in real time, ask any questions, or share your suggestions with us.",
 			'wa_label'    => 'Add us on WhatsApp',
-			'wa_text'     => 'Hi! I just placed an order on {store}: {items}. The total is {total} (order #{order}).',
+			'wa_text'     => 'Hi! I just placed an order on your site: {items}. The total is {total}.', // 店主 2026-11-11：不带店名。
 			'phone_label' => 'Customer service: {phone}',
 			'no_wa_label' => "I don't use WhatsApp",
 			'form_intro'  => 'No problem. Tell us the best way to reach you (phone, email, Telegram, Signal...) and our team will contact you.',
@@ -178,6 +178,7 @@ final class Paid_Popup {
 		<div class="pc-paid__check" aria-hidden="true">&#10003;</div>
 		<h2 id="pc-paid-title"><?php echo esc_html( self::fill( $s['title'], $order ) ); ?></h2>
 		<div class="pc-paid__msg"><?php echo $msg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 上面逐段转义。 ?></div>
+		<?php echo class_exists( Accounts::class ) ? Accounts::popup_block( $order ) : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 内部已转义。 ?>
 		<?php if ( '' !== $phone ) : ?>
 			<p class="pc-paid__phone"><?php echo esc_html( self::fill( $s['phone_label'], $order ) ); ?></p>
 		<?php endif; ?>
@@ -215,6 +216,14 @@ final class Paid_Popup {
 .pc-paid__form input{width:100%;box-sizing:border-box;padding:12px;border:1px solid #d4d4d4;border-radius:8px;font-size:16px}
 .pc-paid__form button{width:100%;margin-top:8px;padding:12px;border:0;border-radius:8px;background:#171717;color:#fff;font-weight:600;font-size:15px;cursor:pointer;min-height:44px}
 .pc-paid__err{color:#b91c1c;font-size:13px;margin-top:6px}
+.pc-paid__acct{margin:12px 0 4px;padding:14px;border-radius:12px;background:#f5f5f4;text-align:left}
+.pc-paid__acct-title{margin:0 0 2px;font-weight:700;color:#171717}
+.pc-paid__acct-sub{margin:0 0 8px;color:#525252;font-size:14px}
+.pc-paid__acct dl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:0 0 6px;font-size:14px}
+.pc-paid__acct dt{color:#737373}
+.pc-paid__acct dd{margin:0;font-weight:600;word-break:break-all;color:#171717}
+.pc-paid__acct-note{margin:0 0 10px;color:#737373;font-size:12.5px}
+.pc-paid__acct-btn{display:block;text-align:center;padding:12px;border-radius:9px;background:#171717;color:#fff!important;font-weight:600;text-decoration:none;min-height:44px;box-sizing:border-box}
 .pc-paid__thanks{margin:10px 0 0;color:#15803d;font-weight:600}
 </style>
 <script>

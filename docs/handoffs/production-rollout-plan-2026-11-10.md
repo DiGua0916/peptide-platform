@@ -334,3 +334,15 @@
   - `peptide-core/includes/data/class-operations.php`：平均访问时长中每次访问最多按 30 分钟算。web + hq 各 7 份已部署。主店现为今日 307 秒、7 天 487 秒。
 - 待店主决定：$1 测试单 #11841（11-10）被算成真实销售（7 天多 1 单 $1，今日对昨日销售额 +21551%，也占一个待发货）；店主/我们自己的设备没有排除（访客 14 等）。
 - 店主确认：主店 $1 订单 #11841 标记为测试单（`_pc_test_order`=1，加英文备注），状态未改。`peptide-core/includes/class-overview.php`：数据统计的测试单判断同时认 Test_Orders 的标记/测试地址（部署前核对 6 店已付款订单，没有其他订单被判为测试单）。web + hq 各 7 份已部署。主店现为昨日 0 单 $0、7 天 1 单 $216.51。
+
+### 2026-11-11 11:42 UTC 注册系统 + WhatsApp 预填话术去店名
+- 付款成功弹窗的 WhatsApp 预填话术改成 “Hi! I just placed an order on your site: {items}. The total is {total}.”（不带店名、不带订单号）；6 店都没有自定义过这条，直接生效。
+- 新模块 `PeptideCore\Accounts`（includes/class-accounts.php、admin/class-accounts-page.php、assets/account-gate.js/.css），后台“店铺设置 → 注册与年龄确认”可分别关闭：
+  - 进站 18+ 确认（年龄 + Terms of Use + Privacy Policy，条款在弹窗里展开；30 天内不再问；选“under 18”跳 google）；
+  - 同意后弹注册（邮箱 / 密码 / 确认密码，可切换登录，可 Skip，跳过后 7 天不弹）；接口 POST /peptide/v1/account/register、/login，按真实 IP 每 10 分钟 10 次；
+  - 付款后游客订单自动建账户（账号 = 密码 = 邮箱，资料从订单带入），已有账户的邮箱直接把订单归过去；只处理 `pc_accounts_since`（各店本次上线时间）之后创建的订单，已有订单不动；付款成功弹窗显示账号密码和 “Track my order”；
+  - “我的账户”首页显示最近 5 单的状态和物流（承运商、单号、Track package），密码仍是邮箱时提示改密码；订单列表有追踪链接的加 “Track package”；未登录的账户页加 “New here? Create an account”。
+  - 只用 localStorage 记录，不写 cookie，首页静态缓存不受影响；用原生 dialog，离开意图弹窗不会叠在上面。
+- 验证：主店 s0001 手机尺寸实测年龄确认 → 注册弹窗 → 切换登录 → Skip → 刷新不再弹；服务端用临时测试邮箱测了注册校验、重复邮箱、登录、自动建账户、已有账户归单、弹窗账户块、账户首页，测试订单和用户已删除。
+- 部署：web + hq 各 7 份（备份 /home/ubuntu/vialcove-deploy-backups/trk-plain-20261111T114140 / T114144，主店另有 /root/acc-backup-20261111113949），6 店清了首页缓存；5 个可访问域名都已出现年龄确认（vialcoveprime.com 源站仍 302 到 shiyishop.com，旧问题）。
+- 顺带：hang- 订单号已被 pp 接受（hang-161188301，光辉 #11883，iframe 创建成功）。
