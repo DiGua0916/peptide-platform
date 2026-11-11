@@ -319,3 +319,10 @@
 - `class-hub-details.php`：返回明细同时接受 PH… 和 hang-…。
 - `class-hub-page.php`：支付中心“更新时间”和返回明细时间按北京时间显示（HQ 站点时区是 UTC，未改站点设置），表头写明“（北京）”。
 - HQ 本体已安装（备份 /root/panapay-*.bak-20261111085340 及之后），web + hq 店铺副本各 7 份同步。HQ 上用反射测了编号生成；部署后 9 分钟内没有真实付款发起，pp 是否接受新格式待第一笔付款确认。
+
+### 2026-11-11 实时数据：开着不动的标签页不再算在线访客
+- 现象：主店实时数据 10 分钟内一直有 2 个访客、访问量 0。原因是两个开了好几天的桌面标签页（访问 4、26）每 15–30 秒发心跳（hidden / idle，最后操作已是 35 小时前），心跳会续访问的 last_ms，被算成“最近 10 分钟有动静的访客”。
+- `peptide-core/includes/tracking/class-ingest.php`：只有非心跳事件或“前台且正在操作”的心跳才续 visits/visitors 的 last_ms。
+- `peptide-core/includes/data/class-realtime.php`：每分钟访客数不再计入后台/无操作的心跳。
+- `peptide-site/assets/visitor-tracking.js`：页面 30 分钟没人操作就不再发心跳（有操作自动恢复）。
+- web + hq 各 7 份已部署。部署后每分钟访客图立刻归 0；卡片/漏斗在 10 分钟窗口过后归 0。主题 tests/visitor-transport.cjs、visitor-surfaces.cjs 改动前就是失败的，与本次无关。

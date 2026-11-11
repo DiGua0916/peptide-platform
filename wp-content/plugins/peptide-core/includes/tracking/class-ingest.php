@@ -383,6 +383,7 @@ final class Ingest {
 		$classifier_new = array();
 		$new          = 0;
 		$views        = 0;
+		$alive        = 0;
 		$stage        = 0;
 		$impression_visit = $legacy && ! $only_replays ? $visit : 0;
 		$impression_visit_attempted = (bool) $impression_visit;
@@ -477,6 +478,10 @@ final class Ingest {
 				continue; // 重复事件：确认收到，但不再更新状态。
 			}
 			++$new;
+			// 店主 2026-11-11：开着不动的标签页的心跳（后台或无操作）不算“还在店里”，不续访问的最后活动时间。
+			if ( 'heartbeat' !== $c['type'] || ( 'active' === ( $c['data']['activity'] ?? '' ) && 'visible' === ( $c['data']['visibility'] ?? '' ) ) ) {
+				++$alive;
+			}
 			$classifier_new[$visit][] = $c['event_id'];
 			if ( 'page_view' === $c['type'] ) {
 				++$views;
@@ -507,8 +512,8 @@ final class Ingest {
 			if ( ! $legacy && $user_id && $user_id !== $visitor['user_id'] ) { Tracker::link_user( $visitor['id'], $user_id, $impression_visit ); }
 		}
 		if ( $new ) {
-			$wpdb->query( $wpdb->prepare( 'UPDATE ' . Schema::table( 'visits' ) . ' SET events = events + %d, pageviews = pageviews + %d, last_ms = GREATEST(last_ms, %d) WHERE id = %d', $new, $views, $now_ms, $visit ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
-			$wpdb->query( $wpdb->prepare( 'UPDATE ' . Schema::table( 'visitors' ) . ' SET last_ms = GREATEST(last_ms, %d) WHERE id = %d', $now_ms, $visitor['id'] ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+			$wpdb->query( $wpdb->prepare( 'UPDATE ' . Schema::table( 'visits' ) . ' SET events = events + %d, pageviews = pageviews + %d, last_ms = IF(%d > 0, GREATEST(last_ms, %d), last_ms) WHERE id = %d', $new, $views, $alive, $now_ms, $visit ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+			$wpdb->query( $wpdb->prepare( 'UPDATE ' . Schema::table( 'visitors' ) . ' SET last_ms = IF(%d > 0, GREATEST(last_ms, %d), last_ms) WHERE id = %d', $alive, $now_ms, $visitor['id'] ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
 			if ( $stage ) {
 				Tracker::raise_stage( $visit, $stage );
 			}
