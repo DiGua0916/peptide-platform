@@ -881,6 +881,8 @@
     {"name": "cr-hq-contract-pure", "language": "php", "path": "wp-content/plugins/peptide-hq/tests/cr-hq-contract-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"},
     {"name": "cr-capture-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-capture-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"},
     {"name": "cr-visitor-attribution", "language": "node", "path": "wp-content/themes/peptide-site/tests/cr-visitor-attribution.cjs", "core": true, "node_test": true, "status": "module-gate", "module": "CR"},
-    {"name": "tracking-attribution-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/tracking-attribution-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"}
+    {"name": "tracking-attribution-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/tracking-attribution-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"},
+    {"name": "cr-library-spend-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-library-spend-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR", "extensions": ["mbstring"]},
+    {"name": "cr-library-spend-db-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-library-spend-db-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR", "extensions": ["pdo_sqlite"]}
   ]
 }
