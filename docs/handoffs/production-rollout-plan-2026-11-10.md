@@ -346,3 +346,9 @@
 - 验证：主店 s0001 手机尺寸实测年龄确认 → 注册弹窗 → 切换登录 → Skip → 刷新不再弹；服务端用临时测试邮箱测了注册校验、重复邮箱、登录、自动建账户、已有账户归单、弹窗账户块、账户首页，测试订单和用户已删除。
 - 部署：web + hq 各 7 份（备份 /home/ubuntu/vialcove-deploy-backups/trk-plain-20261111T114140 / T114144，主店另有 /root/acc-backup-20261111113949），6 店清了首页缓存；5 个可访问域名都已出现年龄确认（vialcoveprime.com 源站仍 302 到 shiyishop.com，旧问题）。
 - 顺带：hang- 订单号已被 pp 接受（hang-161188301，光辉 #11883，iframe 创建成功）。
+
+### 2026-11-11 12:20 UTC 右下角物流追踪球 + FedEx 官方追踪接口
+- 新增 `PeptideCore\Track_Widget`（includes/class-track-widget.php、assets/track-widget.js/.css）：右下角货车图标球，自动叠在客服球 / 购物车球上面（结账页不显示）。点开：登录顾客看最近 10 单；这台设备付过款的直接显示（付款成功弹窗把订单号 + 密钥记在 localStorage `pcTrackOrders`，最多 5 张）；其他人用订单号 + 下单邮箱查（按 IP 10 分钟 20 次）。显示进度条（下单 / 付款 / 发货 / 送达）、承运商、单号（点了复制）、FedEx 扫描记录、预计送达、“Track on FedEx website”。不返回地址。接口 GET /peptide/v1/track/mine、POST /peptide/v1/track/lookup。
+- 新增 `PeptideCore\Fedex_Track`（includes/class-fedex-track.php）：FedEx Track API（OAuth client_credentials → /track/v1/trackingnumbers），token 缓存到过期前 1 分钟，每个单号结果缓存 30 分钟（出错 5 分钟）。后台“店铺设置 → 物流追踪”（admin/class-fedex-page.php）：物流球开关、API Key / Secret Key（不回显）、正式 / 测试环境、测试查询、拿密钥的步骤。承运商选 FedEx，或没选但单号是 12/15/20/22 位数字时按 FedEx 查。
+- 验证：主店手机尺寸实测球的位置、打开查询表单、错误单号 / 邮箱提示；用浏览器里的样例数据（不落库）看了“已发货 + FedEx 记录”的样子，修了预计送达日期被换算时区差一天的问题；服务端只读看了真实订单 #11843 的输出。FedEx 接口还没有密钥，未实测。
+- 部署：web + hq 各 7 份（备份 /home/ubuntu/vialcove-deploy-backups/trk-plain-20261111T122000 / T122005，主店另有 /root/trk-backup-20261111121857），6 店清了首页缓存，5 个可访问域名都出现物流球。

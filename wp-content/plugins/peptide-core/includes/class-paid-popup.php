@@ -229,6 +229,8 @@ final class Paid_Popup {
 <script>
 (function(){
 	var box=document.querySelector('[data-pc-paid]'); if(!box) return;
+	// 物流追踪球用：这台设备上付过款的订单（订单号 + 密钥），最多记 5 张。
+	try{ var k='pcTrackOrders', a=JSON.parse(localStorage.getItem(k)||'[]'), o=<?php echo (int) $order->get_id(); ?>; if(!Array.isArray(a)) a=[]; a=a.filter(function(x){return x&&x.o!==o;}); a.push({o:o,k:<?php echo wp_json_encode( $order->get_order_key() ); ?>}); localStorage.setItem(k,JSON.stringify(a.slice(-5))); }catch(e){}
 	function close(){ box.hidden=true; try{ var u=new URL(location.href); u.searchParams.delete('pc_paid'); u.searchParams.delete('pc_key'); history.replaceState(null,'',u.toString()); }catch(e){} }
 	box.addEventListener('click',function(e){ if(e.target===box||e.target.closest('[data-pc-paid-close]')) close(); });
 	document.addEventListener('keydown',function(e){ if(e.key==='Escape') close(); });
