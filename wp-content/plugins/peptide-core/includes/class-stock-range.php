@@ -28,6 +28,10 @@ final class Stock_Range {
 		add_action( 'woocommerce_variation_set_stock', array( self::class, 'queue' ), 20 );
 		add_action( 'shutdown', array( self::class, 'flush_queue' ), 5 );
 		add_action( self::CRON, array( self::class, 'refresh_all' ) );
+		// 店主 2026-11-11：热销品低调的“小火苗”提示——商品卡片“Selling fast”，商品弹窗库存行“Only N left”。只限热销品。
+		add_filter( 'woocommerce_get_availability_text', array( self::class, 'availability_text' ), 20, 2 );
+		add_filter( 'woocommerce_get_availability_class', array( self::class, 'availability_class' ), 20, 2 );
+		add_action( 'wp_enqueue_scripts', array( self::class, 'styles' ), 40 );
 		add_action(
 			'init',
 			static function (): void {
@@ -72,6 +76,62 @@ final class Stock_Range {
 		// 热销品可以是整个商品（填商品 ID），也可以只是某个规格（填规格 ID，例如 TR20 = Tirzepatide 20mg）。
 		$hot = in_array( (int) $parent_id, $s['hot_ids'], true ) || in_array( (int) $p->get_id(), $s['hot_ids'], true );
 		return $hot ? array( $s['hot_min'], $s['hot_max'] ) : array( $s['min'], $s['max'] );
+	}
+
+	/** 这个规格（或简单商品）是不是热销品。 */
+	public static function is_hot( \WC_Product $p ): bool {
+		$s = self::settings();
+		if ( ! $s['enabled'] || ! $s['hot_ids'] ) {
+			return false;
+		}
+		$parent = (int) ( $p->get_parent_id() ?: $p->get_id() );
+		return in_array( $parent, $s['hot_ids'], true ) || in_array( (int) $p->get_id(), $s['hot_ids'], true );
+	}
+
+	/** 商品（含任意一个规格）里有没有热销品——商品卡片用。 */
+	public static function product_has_hot( int $product_id ): bool {
+		$s = self::settings();
+		if ( ! $s['enabled'] || ! $s['hot_ids'] ) {
+			return false;
+		}
+		if ( in_array( $product_id, $s['hot_ids'], true ) ) {
+			return true;
+		}
+		$p = wc_get_product( $product_id );
+		return $p instanceof \WC_Product && (bool) array_intersect( array_map( 'intval', $p->get_children() ), $s['hot_ids'] );
+	}
+
+	public static function flame(): string {
+		return '<svg class="pc-hot-flame" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false"><path fill="#f76707" d="M12.6 2.2c.6 3.3-2.1 4.9-2.1 7.7 0 1.5 1.1 2.6 2.5 2.6s2.6-1.1 2.6-2.6c0-.8-.3-1.6-.8-2.2 2.4 1.3 3.9 3.8 3.9 6.5 0 4-3.1 7.1-6.9 7.1S5 18.2 5 14.3c0-5.5 4.8-7.6 7.6-12.1z"/><path fill="#ffd43b" d="M12.1 13.6c1.5 1 2.5 2.4 2.5 3.9 0 1.6-1.2 2.8-2.6 2.8s-2.6-1.2-2.6-2.8c0-1.6 1.2-2.6 2.7-3.9z"/></svg>';
+	}
+
+	public static function availability_text( $text, $product ) {
+		if ( $product instanceof \WC_Product && $product->managing_stock() && $product->is_in_stock() && (int) $product->get_stock_quantity() > 0 && self::is_hot( $product ) ) {
+			return sprintf( 'Only %d left', (int) $product->get_stock_quantity() );
+		}
+		return $text;
+	}
+
+	public static function availability_class( $class, $product ) {
+		if ( $product instanceof \WC_Product && $product->managing_stock() && $product->is_in_stock() && self::is_hot( $product ) ) {
+			return trim( $class . ' pc-hot-stock' );
+		}
+		return $class;
+	}
+
+	public static function styles(): void {
+		if ( is_admin() || ! self::settings()['enabled'] ) {
+			return;
+		}
+		$flame = rawurlencode( '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#f76707" d="M12.6 2.2c.6 3.3-2.1 4.9-2.1 7.7 0 1.5 1.1 2.6 2.5 2.6s2.6-1.1 2.6-2.6c0-.8-.3-1.6-.8-2.2 2.4 1.3 3.9 3.8 3.9 6.5 0 4-3.1 7.1-6.9 7.1S5 18.2 5 14.3c0-5.5 4.8-7.6 7.6-12.1z"/><path fill="#ffd43b" d="M12.1 13.6c1.5 1 2.5 2.4 2.5 3.9 0 1.6-1.2 2.8-2.6 2.8s-2.6-1.2-2.6-2.8c0-1.6 1.2-2.6 2.7-3.9z"/></svg>' );
+		wp_register_style( 'pc-hot-stock', false, array(), PEPTIDE_CORE_VERSION );
+		wp_enqueue_style( 'pc-hot-stock' );
+		wp_add_inline_style( 'pc-hot-stock', '.vc-card-hot{display:inline-flex;align-items:center;gap:4px;margin:4px 0 0;font-size:12px;line-height:16px;font-weight:600;color:#c2410c}'
+			. '.pc-hot-flame{flex:0 0 auto;transform-origin:50% 90%;animation:pc-flicker 2.4s ease-in-out infinite}'
+			. '.pc-hot-stock{color:#b4233a!important;font-weight:600}'
+			. '.pc-hot-stock::before{content:"";display:inline-block;width:13px;height:13px;margin-right:4px;vertical-align:-2px;background:url("data:image/svg+xml,' . $flame . '") center/contain no-repeat;transform-origin:50% 90%;animation:pc-flicker 2.4s ease-in-out infinite}'
+			. '@keyframes pc-flicker{0%,100%{transform:scale(1) rotate(0)}30%{transform:scale(1.06,1.12) rotate(-4deg)}60%{transform:scale(.96,1.02) rotate(3deg)}}'
+			. '@media (prefers-reduced-motion:reduce){.pc-hot-flame,.pc-hot-stock::before{animation:none}}' );
 	}
 
 	/** 设成范围内的随机数。$force = false 时只在超出范围才改。返回是否改了。 */

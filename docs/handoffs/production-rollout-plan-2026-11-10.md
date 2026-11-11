@@ -471,3 +471,9 @@
 - 店主：热销品 20–30，并且每日刷新。Stock_Range 默认值改为 hot 20–30；6 店 pc_stock_range 的 hot_min/hot_max 改为 20/30，并把超出范围的热销规格（每店 10 个）重新设到 20–30，全部规格都在范围内。
 - 每日刷新：6 店都已排程（pc_stock_range_daily，首次约 17:25–17:28 UTC），由各店每分钟一次的 systemd cron 定时器执行（vialcove-web01-cron、vialcove-s0006…s0010-cron），不依赖访客访问。
 - 已记入长期记忆：库存规则和每日刷新。
+
+### 2026-11-11 17:40 UTC 热销品“小火苗”提示
+- 店主：要让顾客在外面就感受到热销品库存不多，但要朴素（小火苗的感觉），只限热销品。
+- `Stock_Range`：is_hot()（规格或整个商品在 hot_ids）、product_has_hot()（卡片用：商品任一规格是热销）、flame()（小火苗 SVG）；过滤 woocommerce_get_availability_text → 热销规格显示“Only N left”，woocommerce_get_availability_class 加 pc-hot-stock；内联样式：卡片“Selling fast”橙色小字 + 轻微摇曳的小火苗，库存行红色 + 小火苗（减少动效时不动）。
+- 主题 functions.php：商品卡片在热销商品上加一行 `<p class="vc-card-hot">🔥 Selling fast</p>`（卡片不写数字：同一商品只有部分规格是热销，例如只有 Tirzepatide 20mg）。
+- 验证（主店手机尺寸）：93 张卡片里正好 7 张显示（Tirzepatide、Retatrutide、Tesamorelin、MOTS-C、KLOW、Lipo-C B12、Vitamin B-12）；Tirzepatide 弹窗 20mg 显示红色“🔥 Only 28 left”，切到 10mg 恢复“119 in stock”。部署 web + hq 各 7 份（插件 + 主题），6 店清缓存，5 个可访问域名首页都有 7 张热销卡片。
