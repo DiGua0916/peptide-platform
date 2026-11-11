@@ -1,5 +1,6 @@
 /* 右下角物流追踪球（Track_Widget）。和客服球、购物车球同样大小和样式。 */
-.pc-trk-ball { position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: 152px; z-index: 45; display: grid; place-items: center; width: 56px; height: 56px; padding: 0; border: 1px solid #e1e9ec; border-radius: 50%; background: #fff; color: #17343e; box-shadow: 0 4px 16px #17343e26; cursor: pointer; transition: transform 160ms ease, box-shadow 160ms ease; -webkit-tap-highlight-color: transparent; }
+.pc-trk-ball { position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: 152px; z-index: 45; display: grid; place-items: center; width: 56px; height: 56px; min-width: 56px; min-height: 56px; padding: 4px; box-sizing: border-box; border: 1px solid #e1e9ec; border-radius: 50% !important; overflow: hidden; background: #fff; color: #17343e; box-shadow: 0 4px 16px #17343e26; cursor: pointer; transition: transform 160ms ease, box-shadow 160ms ease; -webkit-tap-highlight-color: transparent; }
+.pc-trk-ball img { display: block; width: 44px; height: 44px; object-fit: contain; }
 .pc-trk-ball:active { transform: scale(.96); }
 .pc-trk-ball:focus-visible { outline: 3px solid #127e98; outline-offset: 4px; }
 @media (hover: hover) { .pc-trk-ball:hover { transform: translateY(-2px); box-shadow: 0 8px 24px #17343e24; } }

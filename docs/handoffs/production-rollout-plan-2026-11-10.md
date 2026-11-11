@@ -418,3 +418,6 @@
   - Pixels::purchase_catchup：挂 Recovery::CRON（每 5 分钟），最近 6 天付款、没回传过的订单用订单上记下的顾客信息补发 CAPI 购买（测试单、退订的不发），写订单备注。
   - Pixels\Server::installed() 确认表真的存在；5 个子店已建表。
 - 已补发：阳 #11892、芒果 #11886 Purchase，Meta 返回 200。主店验证付款弹窗页事件：第一次 page_view,place_order,purchase（带顾客信息），刷新后只有 page_view；测试标记已清掉。部署 web + hq 各 7 份。
+
+### 2026-11-11 15:45 UTC 物流球换成货车图片、改圆形
+- 店主：物流球图标换成首页“Delivery details”那辆车，球要圆的。把主店那张图（vialcove-home-delivery-vw-id-buzz-150x150.png，26 KB）打包进插件 assets/track-ball-van.png（子店不一定有这张上传图）；球 border-radius: 50% !important（主题给按钮加了 8px 圆角），4px 内边距，图片 44px。部署 web + hq 各 7 份，6 店清首页缓存；主店确认圆形、图片已加载。

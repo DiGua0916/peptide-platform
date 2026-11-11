@@ -61,7 +61,7 @@ final class Track_Widget {
 		}
 		?>
 <button type="button" class="pc-trk-ball" data-pc-trk-ball aria-label="Track your order" title="Track your order">
-	<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6.5h11v9.5h-11z"/><path d="M13.5 9.5h4l3 3.2v3.3h-7"/><circle cx="6.5" cy="17.5" r="1.9"/><circle cx="17" cy="17.5" r="1.9"/></svg>
+	<img src="<?php echo esc_url( plugins_url( 'assets/track-ball-van.png', PEPTIDE_CORE_FILE ) . '?v=' . (int) @filemtime( PEPTIDE_CORE_DIR . '/assets/track-ball-van.png' ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors ?>" width="44" height="44" alt="" decoding="async" loading="lazy">
 </button>
 <dialog class="pc-trk" data-pc-trk aria-labelledby="pc-trk-title">
 	<div class="pc-trk__box">
