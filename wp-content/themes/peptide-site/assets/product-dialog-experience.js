@@ -270,13 +270,37 @@
     restore.move(root.querySelector('.vc-dialog-offers'),null);
     const offers = restore.own(node('section', 'vc-dialog-offers')); offers.hidden = true; heading.prepend(offers);
     let offerSignature = '';
+    // 2026-11-11 店主：商品详情里直接列出满减档位（参考“Buy $200 and get $20”样式），放在活动倒计时下面。
+    // 旧的 .vc-dialog-offers 被 polish 样式整个隐藏、并且会被搬进顶部工具栏；这里用单独的节点，不受影响。
+    restore.move(root.querySelector('.vc-offer-tiers'),null);
+    const tierBox = restore.own(node('section', 'vc-offer-tiers')); tierBox.hidden = true;
+    tierBox.setAttribute('aria-label', 'Order savings');
+    const placeTierBox = () => {
+      const countdown = heading.querySelector('.pc-campaign-countdown--product');
+      if (countdown) { if (countdown.nextElementSibling !== tierBox) countdown.after(tierBox); }
+      else if (tierBox.parentElement !== heading) heading.append(tierBox);
+    };
     function renderOffers() {
       const candidates = root.vcHomePromotions === undefined ? defaults.promotions : root.vcHomePromotions;
       const active = Array.isArray(candidates) ? candidates.find(item => item.status === 'active' && Array.isArray(item.tiers) && item.tiers.length
         && (!item.ends || Date.parse(item.ends) > Date.now()) && (!item.starts || Date.parse(item.starts) <= Date.now())) : null;
       const signature = JSON.stringify(active || null); if (signature === offerSignature) return;
       offerSignature = signature; offers.replaceChildren(); offers.hidden = !active;
+      tierBox.replaceChildren(); tierBox.hidden = !active;
       if (!active) return;
+      placeTierBox();
+      const money = text => String(text || '').replace(/\.00(?=\s|$)/g, '');
+      const icon = node('span', 'vc-offer-tiers__icon'); icon.setAttribute('aria-hidden', 'true');
+      icon.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8.5" width="17" height="4" rx="1"/><path d="M5 12.5v7.5h14v-7.5M12 8.5V20M12 8.5c-1.5-3.5-5.5-4-5.5-1.5S10 8.5 12 8.5zm0 0c1.5-3.5 5.5-4 5.5-1.5S14 8.5 12 8.5z"/></svg>';
+      const lines = node('ul', 'vc-offer-tiers__list');
+      active.tiers.forEach(tier => {
+        const li = node('li', '');
+        if (active.type === 'spend_amount' && !active.unlimited) {
+          li.append(document.createTextNode('Buy '), node('b', '', money(tier.thresholdText)), document.createTextNode(' and get '), node('b', '', money(tier.rewardText)));
+        } else li.append(node('b', '', tier.text));
+        lines.append(li);
+      });
+      tierBox.append(icon, lines);
       const title = node('h2', '', 'Order savings');
       offers.append(title);
       const list = node('ul', 'vc-dialog-offer-tiers' + (active.type === 'spend_amount' && !active.unlimited ? ' vc-dialog-offer-tiers--thresholds' : ''));

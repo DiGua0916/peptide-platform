@@ -430,3 +430,9 @@
 - PHP-FPM 平滑重载：两台服务器原来 process_control_timeout = 0（每次部署 reload 会直接杀掉正在处理的请求，包括正在完成的付款）。改为 30s。
   - 第一次改错：把这行追加在 php-fpm.conf 末尾（include 池配置之后，被当成池配置），配置检测失败、reload 后 php-fpm 起不来，两台机器所有站点 502 约 21 秒（15:30:36–15:30:57 UTC）。立即用备份 /root/php-fpm.conf.bak-20261111153036 恢复并重启，6 店和总后台恢复 200/302。该时段没有新订单、没有付款尝试、没有未投递的支付通知。
   - 第二次正确修改：把 [global] 段里注释掉的 `;process_control_timeout = 0` 改成 `process_control_timeout = 30s`，先 `php-fpm8.3 -t` 检测通过才替换并 reload（备份 /root/php-fpm.conf.bak-before-pct），两台都 active，站点正常。
+
+### 2026-11-11 15:52 UTC 商品详情显示满减档位（Buy $X and get $Y off）
+- 店主参考别家：商品详情里列出所有满减档位。结论：做成内置功能，不做装修积木（商品详情是首页 JS 弹窗；/product/ 链接也会跳回首页打开同一个弹窗；数据随商品数据一起到，不加请求；积木要每店手动摆、进不了弹窗）。
+- 发现：弹窗原本就有“Order savings”档位（.vc-dialog-offers），但 product-dialog-polish.css 把它 display:none!important，还会被搬进顶部工具栏，顾客一直看不到。
+- 改动（主题）：product-dialog-experience.js 在活动倒计时下面插入单独的 .vc-offer-tiers（礼盒图标 + “Buy $300 and get $25 off” 每档一行，金额去掉 .00），用当前生效的满减活动数据（和原来同一来源，按开始 / 结束时间过滤），切换商品 / 规格只有一个块；product-dialog-polish.css 加样式。旧的 .vc-dialog-offers 保持原样。
+- 验证：主店手机尺寸：Tirzepatide、Retatrutide 弹窗都显示 3 档（$300→$25、$500→$55、$1,000→$120），切换规格不重复，没有新增网络请求、没有脚本错误。部署 web + hq 各 7 份，6 店清首页缓存，5 个域名 200。
