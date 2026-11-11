@@ -483,7 +483,7 @@ final class Recovery_Page {
 		echo '<section class="pc-rc-panel pc-rc-addresses">';
 		foreach ( array( 'shipping' => array( '收货地址', $ship ), 'billing' => array( '账单地址', $bill ) ) as $type => $pair ) {
 			list( $title, $a ) = $pair;
-			$country = WC()->countries->countries[ $a['country'] ?? '' ] ?? ( $a['country'] ?? '' );
+			$country = Order_Detail_Page::en_country( (string) ( $a['country'] ?? '' ) );
 			$text    = trim( implode( "\n", array_filter( array( trim( ( $a['first_name'] ?? '' ) . ' ' . ( $a['last_name'] ?? '' ) ), $a['company'] ?? '', $a['address_1'] ?? '', $a['address_2'] ?? '', trim( ( $a['city'] ?? '' ) . ' ' . ( $a['state'] ?? '' ) . ' ' . ( $a['postcode'] ?? '' ) ), $country, $a['phone'] ?? '', $a['email'] ?? '' ) ) ) );
 			echo '<div class="pc-rc-address"><header><strong>' . esc_html( $title ) . '</strong><button type="button" class="button-link pc-rc-copy" data-copy="' . esc_attr( $text ) . '">复制</button></header>';
 			$rows = array( '姓名' => trim( ( $a['first_name'] ?? '' ) . ' ' . ( $a['last_name'] ?? '' ) ), '公司' => $a['company'] ?? '', '街道' => $a['address_1'] ?? '', '寓所' => $a['address_2'] ?? '', '省市区' => trim( ( $a['state'] ?? '' ) . ' ' . ( $a['city'] ?? '' ) ), '邮编' => $a['postcode'] ?? '', '国家' => $country, '电话' => $a['phone'] ?? '' );

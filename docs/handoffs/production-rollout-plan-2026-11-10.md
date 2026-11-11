@@ -503,3 +503,7 @@
 - 店主反馈“什么都没改”：他是从其他入口打开的订单，落在 WooCommerce 原生“编辑订单”页（admin.php?page=wc-orders&action=edit&id=…），上一版只改了订单列表的链接。
 - Order_Detail_Page::maybe_redirect：在 load-woocommerce_page_wc-orders / load-post.php 上，GET 打开 shop_order 的原生编辑页一律转到 pc-order 新详情页；新详情页里需要原生页的按钮（退款、发货、编辑地址 / 配送方式、查看明细）带 pc_native=1，不转。订单列表的发货图标也带 pc_native=1。
 - 验证：主店打开原生地址 #11843 → 落在新详情页；退款按钮指向带 pc_native=1 的原生页。部署 web + hq 各 7 份。
+
+### 2026-11-11 订单详情：国家 / 州名一律英文
+- 后台语言是中文，WooCommerce 国家表会翻成中文（例如“波多黎各”）。新增 `Order_Detail_Page::en_country()` / `en_state()`：读 WooCommerce 自带的 i18n 表，并临时关掉翻译。订单详情的收货和账单地址、IP 国家 / 州，以及弃单页的地址都改用它们。
+- 部署：class-order-detail-page.php 8b05968bbd03、class-recovery-page.php 3d1a063c2f57，两台主机各 7 份（有备份），php-fpm 已重载。s0010 订单 #11886 实测显示 “Puerto Rico”。

@@ -208,10 +208,31 @@ final class Order_Detail_Page {
 		return array( 'count' => count( $ids ), 'sum' => $sum, 'first' => $first );
 	}
 
+	/** @var array{0:array,1:array}|null 英文国家 / 州名（后台是中文，地址一律显示英文，店主 2026-11-11）。 */
+	private static ?array $en = null;
+
+	private static function en_lists(): array {
+		if ( null === self::$en ) {
+			$keep = static fn( $t, $text ) => $text;
+			add_filter( 'gettext_woocommerce', $keep, 999, 2 );
+			$dir      = WC()->plugin_path() . '/i18n/';
+			self::$en = array( (array) include $dir . 'countries.php', (array) include $dir . 'states.php' );
+			remove_filter( 'gettext_woocommerce', $keep, 999 );
+		}
+		return self::$en;
+	}
+
+	public static function en_country( string $cc ): string {
+		return '' === $cc ? '' : html_entity_decode( (string) ( self::en_lists()[0][ $cc ] ?? $cc ), ENT_QUOTES );
+	}
+
+	public static function en_state( string $cc, string $st ): string {
+		return '' === $st ? '' : html_entity_decode( (string) ( self::en_lists()[1][ $cc ][ $st ] ?? $st ), ENT_QUOTES );
+	}
+
 	private static function address( \WC_Order $o, string $type ): array {
 		$g      = static fn( string $k ): string => (string) $o->{"get_{$type}_{$k}"}();
-		$states = WC()->countries->get_states( $g( 'country' ) );
-		$state  = $states[ $g( 'state' ) ] ?? $g( 'state' );
+		$state  = self::en_state( $g( 'country' ), $g( 'state' ) );
 		$phone  = 'billing' === $type ? $o->get_billing_phone() : ( $o->get_shipping_phone() ?: $o->get_billing_phone() );
 		return array(
 			'姓名'  => trim( $g( 'first_name' ) . ' ' . $g( 'last_name' ) ),
@@ -220,7 +241,7 @@ final class Order_Detail_Page {
 			'寓所'  => $g( 'address_2' ),
 			'省市区' => trim( $state . ' ' . $g( 'city' ) ),
 			'邮编'  => $g( 'postcode' ),
-			'国家'  => WC()->countries->countries[ $g( 'country' ) ] ?? $g( 'country' ),
+			'国家'  => self::en_country( $g( 'country' ) ),
 			'电话'  => (string) $phone,
 		);
 	}
@@ -462,8 +483,8 @@ final class Order_Detail_Page {
 		}
 		$gcc = $geo['country'] ?: $v['country'];
 		echo '<section class="pc-od-card"><h2>IP信息</h2><dl class="pc-od-kv">';
-		echo '<dt>IP国家：</dt><dd>' . self::v( $gcc ? ( WC()->countries->countries[ $gcc ] ?? $gcc ) : '' ) . '</dd>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-		$gst = $gcc && $geo['state'] ? ( WC()->countries->get_states( $gcc )[ $geo['state'] ] ?? $geo['state'] ) : '';
+		echo '<dt>IP国家：</dt><dd>' . self::v( self::en_country( $gcc ) ) . '</dd>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		$gst = $gcc && $geo['state'] ? self::en_state( $gcc, $geo['state'] ) : '';
 		echo '<dt>IP州/省份：</dt><dd>' . self::v( $gst ) . '</dd><dt>IP城市：</dt><dd>-</dd><dt>经纬度：</dt><dd>-</dd><dt>ISP：</dt><dd>-</dd><dt>用户类型：</dt><dd>-</dd></dl></section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		echo '</aside></div></div>';
