@@ -368,3 +368,7 @@
 
 ### 2026-11-11 13:32 UTC 总后台菜单：隐藏“站点运维”
 - 店主：站点运维先隐藏。peptide-hq admin/class-operations-page.php 加一段后台 CSS，把菜单里的“站点运维”隐藏；页面本身保留，直接打开 admin.php?page=pchq-operations 仍可用。备份 /root/hq-ops-page.bak-20261111133216。新标签页确认：菜单里有“物流追踪（FedEx）”，“站点运维”不显示。
+
+### 2026-11-11 13:41 UTC 总后台放行 FedEx 接口地址
+- 总后台测试查询报“用户已阻止通过 HTTP 请求此 URL”：HQ wp-config 开着 WP_HTTP_BLOCK_EXTERNAL。WP_ACCESSIBLE_HOSTS 末尾加 apis.fedex.com、apis-sandbox.fedex.com（备份 /root/hq-wp-config.php.bak-20261111134056）。
+- 再测：已能连到 FedEx，但 FedEx 回“Sandbox credentials not allowed in this environment”，店主填的是 Test Key，正式环境要换 Production key。
