@@ -84,6 +84,8 @@ final class Plugin {
 		Activity_Log::register_hooks();
 		Staff::register_hooks();
 		Staff_Entry::register_hooks();
+		Staff_Buyer::register_hooks();
+		Buyer_Status::register_hooks();
 		Hq_Connector::register_hooks();
 		Hq_Mail::register_hooks();
 		Hq_Ai::register_hooks();

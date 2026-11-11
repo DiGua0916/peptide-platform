@@ -9,6 +9,9 @@
  *   因为很多店铺页面共用 manage_woocommerce，菜单和页面按模块控制；数据接口按能力控制。
  * - 停用的员工不能登录，已登录的会被退出。
  * - 管理员（administrator）不受影响，始终有全部权限。
+ * - 投手版（M9）：销售账号另外带上 pc_media_buyer 角色时，菜单、页面和能力改由 Staff_Buyer 管（固定 6 个菜单），
+ *   这里按模块给能力、过滤菜单和拦截页面的逻辑对它不生效；granted() 对它固定返回 订单 + 数据，供其他类判断模块时使用。
+ *   去掉那个角色就恢复这里按勾选模块的规则，勾选记录一直保留。
  *
  * @package PeptideCore
  */
@@ -145,7 +148,13 @@ final class Staff {
 			return self::$cache[ $user_id ];
 		}
 		$raw = get_user_meta( $user_id, self::META_MODULES, true );
-		$out = self::disabled( $user_id ) ? array() : array_values( array_intersect( array_keys( self::modules() ), is_array( $raw ) ? $raw : array() ) );
+		if ( self::disabled( $user_id ) ) {
+			$out = array();
+		} elseif ( Staff_Buyer::is_buyer( $user_id ) ) {
+			$out = Staff_Buyer::MODULES; // 投手版：固定相当于订单 + 数据，和勾选无关。
+		} else {
+			$out = array_values( array_intersect( array_keys( self::modules() ), is_array( $raw ) ? $raw : array() ) );
+		}
 		return self::$cache[ $user_id ] = $out;
 	}
 
@@ -182,8 +191,8 @@ final class Staff {
 	// ---------- 能力 ----------
 
 	public static function grant( $allcaps, $caps, $args, $user ) {
-		if ( ! $user instanceof \WP_User || ! self::is_staff( $user ) ) {
-			return $allcaps;
+		if ( ! $user instanceof \WP_User || ! self::is_staff( $user ) || Staff_Buyer::is_buyer( $user ) ) {
+			return $allcaps; // 投手版的能力按请求给，见 Staff_Buyer::scoped_caps()。
 		}
 		$modules = self::modules();
 		foreach ( self::granted( $user->ID ) as $key ) {
@@ -255,6 +264,9 @@ final class Staff {
 
 	/** 员工第一个能用的页面；什么都没勾时是个人资料。 */
 	public static function home_url( int $user_id ): string {
+		if ( Staff_Buyer::is_buyer( $user_id ) ) {
+			return Staff_Buyer::home_url();
+		}
 		$modules = self::modules();
 		foreach ( self::granted( $user_id ) as $key ) {
 			return admin_url( $modules[ $key ]['home'] );
@@ -436,8 +448,8 @@ final class Staff {
 	/** 打开后台页面时检查：员工没勾这个模块就拒绝。 */
 	public static function gate( $screen ): void {
 		$id = get_current_user_id();
-		if ( ! $id || ! self::is_staff( $id ) || ! $screen instanceof \WP_Screen ) {
-			return;
+		if ( ! $id || ! self::is_staff( $id ) || Staff_Buyer::is_buyer( $id ) || ! $screen instanceof \WP_Screen ) {
+			return; // 投手版的页面由 Staff_Buyer::gate_page() 拦截。
 		}
 		global $pagenow, $plugin_page;
 		$page   = (string) ( $plugin_page ?? '' );
@@ -465,8 +477,8 @@ final class Staff {
 	/** 员工的左侧菜单：只留勾选的模块（和个人资料）。 */
 	public static function filter_menu(): void {
 		$id = get_current_user_id();
-		if ( ! $id || ! self::is_staff( $id ) ) {
-			return;
+		if ( ! $id || ! self::is_staff( $id ) || Staff_Buyer::is_buyer( $id ) ) {
+			return; // 投手版的菜单由 Staff_Buyer::build_menu() 换成固定 6 项。
 		}
 		global $menu, $submenu;
 		foreach ( (array) $submenu as $parent => $items ) {
