@@ -878,6 +878,8 @@
       "module": "M14"
     },
     {"name": "cr-contract-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-contract-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"},
-    {"name": "cr-hq-contract-pure", "language": "php", "path": "wp-content/plugins/peptide-hq/tests/cr-hq-contract-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"}
+    {"name": "cr-hq-contract-pure", "language": "php", "path": "wp-content/plugins/peptide-hq/tests/cr-hq-contract-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"},
+    {"name": "cr-library-spend-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-library-spend-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR", "extensions": ["mbstring"]},
+    {"name": "cr-library-spend-db-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-library-spend-db-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR", "extensions": ["pdo_sqlite"]}
   ]
 }
