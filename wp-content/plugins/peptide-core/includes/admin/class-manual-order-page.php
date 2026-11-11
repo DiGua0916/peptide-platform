@@ -70,7 +70,7 @@ final class Manual_Order_Page {
 			<section class="pc-mo-card">
 				<h2>商品</h2>
 				<div class="pc-mo-search">
-					<input type="search" placeholder="搜索商品名称或 SKU" data-mo-q autocomplete="off">
+					<input type="search" placeholder="搜商品：简称或价格表代号都行，如 TR10、tirz 10、reta、bpc" data-mo-q autocomplete="off">
 					<div class="pc-mo-results" data-mo-results hidden></div>
 				</div>
 				<table class="pc-mo-table">

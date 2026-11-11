@@ -308,3 +308,8 @@
 - 金额区左边加一行小字“Ordered 2026-11-11 04:09:11”（已付款再加一行 Paid …）。
 - 商品超过 4 件的订单：先显示前 3 件、行更紧凑（36px 缩略图、小字），底部“Show all 10 items / Show less”切换。阳 #11891（10 件）核对。
 - 订单备注全英文（店主规则：订单 / 邮件全英文）：Chase_Copy 的三条付款帮助信备注、Test_Orders 的测试单备注改英文；6 家店已有的中文订单备注全部改成英文（追单邮件“已发送追单邮件「…」（店主确认）”、WooCommerce 在后台定时任务里写成中文的“未付款订单 - 已逾期自动取消”等），现在各店中文订单备注为 0。各店前台语言都是 en_US。
+
+### 2026-11-11 手动订单：商品搜索支持简称和价格表代号
+- `includes/class-manual-orders.php`：`rest_search` 改为全部规格建索引（10 分钟缓存，商品改动时清空），按价格表代号（规格 SKU：TR10、SM5、BPC-10、CU50）、代号+规格（tr 10、bpc10）、简称（reta、tirz、sema、ghk、kpv）、名称片段匹配并排序；单独的数字必须等于规格。SKU 是长数字的（Retatrutide）用别名 RT 生成显示代号 RT10。
+- `includes/admin/class-manual-order-page.php`：搜索框提示改为“简称或价格表代号都行”。
+- 已部署 web + hq 各 7 份（含模板），php-fpm 已重载；主店 s0001 页面实测 “tirz 10” → Tirzepatide 10mg (TR10)，阳/芒果测 “tr 10”“reta 10” 结果一致。

@@ -31,6 +31,9 @@ final class Manual_Orders {
 
 	public static function register_hooks(): void {
 		add_action( 'rest_api_init', array( self::class, 'routes' ) );
+		foreach ( array( 'woocommerce_update_product', 'woocommerce_new_product', 'woocommerce_update_product_variation', 'woocommerce_new_product_variation', 'trashed_post' ) as $h ) {
+			add_action( $h, static fn() => delete_transient( 'pc_mo_search_idx' ) );
+		}
 		add_action( 'template_redirect', array( self::class, 'handle' ), 1 );
 		add_action( 'woocommerce_before_calculate_totals', array( self::class, 'apply_prices' ), 9999 );
 		add_action( 'woocommerce_cart_calculate_fees', array( self::class, 'apply_fees' ), 99 );
@@ -499,34 +502,148 @@ final class Manual_Orders {
 		return rest_ensure_response( array( 'shipping' => $ship, 'promos' => $promos, 'active_promos' => $active, 'first' => $first ) );
 	}
 
-	public static function rest_search( \WP_REST_Request $r ) {
-		$q    = sanitize_text_field( (string) $r['q'] );
-		$args = array( 'status' => 'publish', 'limit' => 20, 'type' => array( 'simple', 'variable' ), 'orderby' => 'title', 'order' => 'ASC' );
-		if ( '' !== $q ) {
-			$args['s'] = $q;
+	/** 商品简称：SKU 是纯数字的（主商品 ID 那种）给一个价格表常用的字母代号。 */
+	const ALIASES = array(
+		'retatrutide' => array( 'RT', 'reta' ),
+		'tirzepatide' => array( 'tirz' ),
+		'semaglutide' => array( 'sema' ),
+		'cagri'       => array( 'cagri' ),
+		'hgh'         => array( 'GH' ),
+		'happy'       => array(),
+		'll37'        => array( 'LL' ),
+		'slupp'       => array( 'SLU' ),
+	);
+
+	private static function norm( string $s ): string {
+		return preg_replace( '/[^a-z0-9]+/', '', strtolower( remove_accents( $s ) ) );
+	}
+
+	/** 全部可买的规格（含价格表代号），缓存 10 分钟。 */
+	private static function search_index(): array {
+		$cached = get_transient( 'pc_mo_search_idx' );
+		if ( is_array( $cached ) ) {
+			return $cached;
 		}
-		$out = array();
-		foreach ( wc_get_products( $args ) as $p ) {
-			$img  = (string) wp_get_attachment_image_url( $p->get_image_id(), 'thumbnail' );
-			$list = $p->is_type( 'variable' ) ? array_filter( array_map( 'wc_get_product', $p->get_children() ) ) : array( $p );
+		$idx = array();
+		foreach ( wc_get_products( array( 'status' => 'publish', 'limit' => -1, 'type' => array( 'simple', 'variable' ), 'orderby' => 'title', 'order' => 'ASC' ) ) as $p ) {
+			$pname = html_entity_decode( $p->get_name(), ENT_QUOTES, 'UTF-8' );
+			$pn    = self::norm( $pname );
+			$img   = (string) wp_get_attachment_image_url( $p->get_image_id(), 'thumbnail' );
+			$list  = $p->is_type( 'variable' ) ? array_filter( array_map( 'wc_get_product', $p->get_children() ) ) : array( $p );
+			// 这个商品的字母代号：别名 + 各规格 SKU 的字母前缀（TR10 → TR）。
+			$prefixes = array();
+			foreach ( self::ALIASES as $k => $as ) {
+				if ( str_contains( $pn, $k ) ) {
+					foreach ( $as as $a ) {
+						$prefixes[] = self::norm( $a );
+					}
+				}
+			}
+			foreach ( $list as $v ) {
+				if ( preg_match( '/^([a-z]+)\d/i', (string) $v->get_sku(), $m ) ) {
+					$prefixes[] = strtolower( $m[1] );
+				}
+			}
+			$prefixes = array_values( array_unique( $prefixes ) );
 			foreach ( $list as $v ) {
 				if ( ! $v->is_purchasable() ) {
 					continue;
 				}
 				$attrs = $v->is_type( 'variation' ) ? implode( ' / ', array_filter( array_values( $v->get_variation_attributes() ) ) ) : '';
-				$out[] = array(
+				$sku   = (string) $v->get_sku();
+				$mg    = preg_match( '/(\d+(?:\.\d+)?)/', $attrs, $m ) ? $m[1] : '';
+				// SKU 是长数字（没录价格表代号）的，用“代号+规格数字”当显示代号，如 RT10。
+				$code = ( '' !== $sku && ! preg_match( '/^\d{8,}/', $sku ) ) ? $sku : ( $prefixes && '' !== $mg ? strtoupper( $prefixes[0] ) . $mg : '' );
+				$idx[] = array(
 					'id'      => $v->get_id(),
-					'name'    => html_entity_decode( $p->get_name(), ENT_QUOTES, 'UTF-8' ) . ( '' !== $attrs ? ' – ' . $attrs : '' ),
-					'sku'     => (string) $v->get_sku(),
+					'name'    => $pname . ( '' !== $attrs ? ' – ' . $attrs : '' ),
+					'sku'     => $code,
 					'regular' => (float) ( $v->get_regular_price() ?: $v->get_price() ),
 					'price'   => (float) $v->get_price(),
 					'stock'   => $v->is_in_stock(),
 					'image'   => $img,
+					'_n'      => $pn,
+					'_a'      => self::norm( $attrs ),
+					'_c'      => self::norm( $code ),
+					'_s'      => self::norm( $sku ),
+					'_p'      => $prefixes,
+					'_mg'     => $mg,
 				);
-				if ( count( $out ) >= 60 ) {
-					break 2;
-				}
 			}
+		}
+		set_transient( 'pc_mo_search_idx', $idx, 10 * MINUTE_IN_SECONDS );
+		return $idx;
+	}
+
+	/** 一个词的匹配分数，0 = 不匹配。支持价格表代号（TR10 / tr 10 / bpc10）、简称（reta、tirz、sema）、名称片段。 */
+	private static function score_token( array $i, string $t ): int {
+		if ( '' === $t ) {
+			return 1;
+		}
+		if ( $t === $i['_c'] || $t === $i['_s'] ) {
+			return 100;
+		}
+		$best = 0;
+		if ( preg_match( '/^([a-z]+)(\d+(?:\.\d+)?)$/', $t, $m ) ) {
+			// 字母 + 数字：代号前缀或名称开头 + 规格数字（reta10 → Retatrutide 10mg）。
+			$hit = in_array( $m[1], $i['_p'], true ) || str_starts_with( $i['_n'], $m[1] );
+			if ( $hit && $m[2] === $i['_mg'] ) {
+				// 代号和名称开头都对上的排最前（sema5 → Semaglutide 5mg，而不是 Semax / 复方）。
+				$best = in_array( $m[1], $i['_p'], true ) && str_starts_with( $i['_n'], $m[1] ) ? 93 : 90;
+			}
+		}
+		if ( '' !== $i['_c'] && str_starts_with( $i['_c'], $t ) ) {
+			$best = max( $best, 80 );
+		}
+		if ( in_array( $t, $i['_p'], true ) ) {
+			$best = max( $best, 75 );
+		}
+		if ( str_starts_with( $i['_n'], $t ) ) {
+			$best = max( $best, 70 );
+		} elseif ( strlen( $t ) >= 3 && str_contains( $i['_n'], $t ) ) {
+			$best = max( $best, 50 );
+		}
+		if ( ctype_digit( str_replace( '.', '', $t ) ) && $t === $i['_mg'] ) {
+			$best = max( $best, 40 ); // 单独的数字 = 规格（tirz 10）
+		}
+		if ( strlen( $t ) >= 3 && '' !== $i['_s'] && str_contains( $i['_s'], $t ) ) {
+			$best = max( $best, 30 );
+		}
+		return $best;
+	}
+
+	public static function rest_search( \WP_REST_Request $r ) {
+		$q      = sanitize_text_field( (string) $r['q'] );
+		$tokens = array_values( array_filter( array_map( array( self::class, 'norm' ), preg_split( '/[\s,，+]+/u', $q ) ) ) );
+		// “tr 10”“bpc 10”：字母词后紧跟数字词时，也按合起来的代号试一次。
+		$hits = array();
+		foreach ( self::search_index() as $n => $i ) {
+			$score = 0;
+			$ok    = true;
+			for ( $k = 0, $c = count( $tokens ); $k < $c; $k++ ) {
+				$s = self::score_token( $i, $tokens[ $k ] );
+				if ( isset( $tokens[ $k + 1 ] ) && ctype_alpha( $tokens[ $k ] ) && ctype_digit( $tokens[ $k + 1 ] ) ) {
+					$joint = self::score_token( $i, $tokens[ $k ] . $tokens[ $k + 1 ] );
+					if ( $joint >= 90 ) {
+						$score += $joint;
+						++$k;
+						continue;
+					}
+				}
+				if ( ! $s ) {
+					$ok = false;
+					break;
+				}
+				$score += $s;
+			}
+			if ( $ok ) {
+				$hits[] = array( $score, $n, $i );
+			}
+		}
+		usort( $hits, static fn( $a, $b ) => $b[0] <=> $a[0] ?: (float) $a[2]['_mg'] <=> (float) $b[2]['_mg'] ?: $a[1] <=> $b[1] );
+		$out = array();
+		foreach ( array_slice( $hits, 0, 60 ) as $h ) {
+			$out[] = array_filter( $h[2], static fn( $k ) => '_' !== $k[0], ARRAY_FILTER_USE_KEY );
 		}
 		return rest_ensure_response( array( 'items' => $out ) );
 	}
