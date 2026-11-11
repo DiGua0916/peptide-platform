@@ -436,3 +436,6 @@
 - 发现：弹窗原本就有“Order savings”档位（.vc-dialog-offers），但 product-dialog-polish.css 把它 display:none!important，还会被搬进顶部工具栏，顾客一直看不到。
 - 改动（主题）：product-dialog-experience.js 在活动倒计时下面插入单独的 .vc-offer-tiers（礼盒图标 + “Buy $300 and get $25 off” 每档一行，金额去掉 .00），用当前生效的满减活动数据（和原来同一来源，按开始 / 结束时间过滤），切换商品 / 规格只有一个块；product-dialog-polish.css 加样式。旧的 .vc-dialog-offers 保持原样。
 - 验证：主店手机尺寸：Tirzepatide、Retatrutide 弹窗都显示 3 档（$300→$25、$500→$55、$1,000→$120），切换规格不重复，没有新增网络请求、没有脚本错误。部署 web + hq 各 7 份，6 店清首页缓存，5 个域名 200。
+
+### 2026-11-11 16:00 UTC 满减档位位置调整
+- 店主：图标垂直居中，档位往下放。.vc-offer-tiers 改插在商品图下面（summary 里规格说明 .vc-home-quick__specification 前面，找不到时放在商品图后），礼盒图标和文字垂直居中。主店手机尺寸确认位置和居中，部署 web + hq 各 7 份，6 店清首页缓存。

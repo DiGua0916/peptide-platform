@@ -270,14 +270,16 @@
     restore.move(root.querySelector('.vc-dialog-offers'),null);
     const offers = restore.own(node('section', 'vc-dialog-offers')); offers.hidden = true; heading.prepend(offers);
     let offerSignature = '';
-    // 2026-11-11 店主：商品详情里直接列出满减档位（参考“Buy $200 and get $20”样式），放在活动倒计时下面。
+    // 2026-11-11 店主：商品详情里直接列出满减档位（参考“Buy $200 and get $20”样式），放在商品图下面（规格说明前）。
     // 旧的 .vc-dialog-offers 被 polish 样式整个隐藏、并且会被搬进顶部工具栏；这里用单独的节点，不受影响。
     restore.move(root.querySelector('.vc-offer-tiers'),null);
     const tierBox = restore.own(node('section', 'vc-offer-tiers')); tierBox.hidden = true;
     tierBox.setAttribute('aria-label', 'Order savings');
     const placeTierBox = () => {
-      const countdown = heading.querySelector('.pc-campaign-countdown--product');
-      if (countdown) { if (countdown.nextElementSibling !== tierBox) countdown.after(tierBox); }
+      const spec = summary.querySelector(':scope > .vc-home-quick__specification');
+      const media = root.querySelector(':scope > .vc-showcase-quick__media');
+      if (spec) { if (spec.previousElementSibling !== tierBox) spec.before(tierBox); }
+      else if (media) { if (media.nextElementSibling !== tierBox) media.after(tierBox); }
       else if (tierBox.parentElement !== heading) heading.append(tierBox);
     };
     function renderOffers() {
