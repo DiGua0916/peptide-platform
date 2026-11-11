@@ -365,3 +365,6 @@
 - peptide-core `Fedex_Track` 改为签名请求总后台，不再保存密钥；店铺再缓存 30 分钟，总后台未配置时 10 分钟内不再问（后台手动测试不受影响）。店铺“店铺设置 → 物流追踪”去掉密钥栏，只留物流球开关、说明和测试查询。6 店的旧选项 pc_fedex 已删（本来就没填过）。
 - 验证：主店调用走通签名链路，总后台回复“还没有设置密钥”。真实 FedEx 查询等店主在总后台填好密钥后测。
 - 部署：总后台 peptide-hq（备份 /root/hq-fedex-backup-20261111124912）；peptide-core web + hq 各 7 份（备份 /home/ubuntu/vialcove-deploy-backups/trk-plain-20261111T124923 / T124925 等）。
+
+### 2026-11-11 13:32 UTC 总后台菜单：隐藏“站点运维”
+- 店主：站点运维先隐藏。peptide-hq admin/class-operations-page.php 加一段后台 CSS，把菜单里的“站点运维”隐藏；页面本身保留，直接打开 admin.php?page=pchq-operations 仍可用。备份 /root/hq-ops-page.bak-20261111133216。新标签页确认：菜单里有“物流追踪（FedEx）”，“站点运维”不显示。
