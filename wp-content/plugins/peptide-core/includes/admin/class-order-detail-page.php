@@ -230,20 +230,42 @@ final class Order_Detail_Page {
 		return '' === $st ? '' : html_entity_decode( (string) ( self::en_lists()[1][ $cc ][ $st ] ?? $st ), ENT_QUOTES );
 	}
 
+	/** 美国属地：WooCommerce 当作国家，地址里按美国写（州 = 属地，国家 = United States），和快递面单一致。 */
+	private const US_TERRITORIES = array( 'PR', 'GU', 'VI', 'AS', 'MP', 'UM' );
+
+	/**
+	 * 地址表格的行（店主 2026-11-11：项目 / 信息 两列，国家州名一律英文）。
+	 *
+	 * @return array<string,string>
+	 */
 	private static function address( \WC_Order $o, string $type ): array {
-		$g      = static fn( string $k ): string => (string) $o->{"get_{$type}_{$k}"}();
-		$state  = self::en_state( $g( 'country' ), $g( 'state' ) );
-		$phone  = 'billing' === $type ? $o->get_billing_phone() : ( $o->get_shipping_phone() ?: $o->get_billing_phone() );
-		return array(
-			'姓名'  => trim( $g( 'first_name' ) . ' ' . $g( 'last_name' ) ),
-			'公司'  => $g( 'company' ),
-			'街道'  => $g( 'address_1' ),
-			'寓所'  => $g( 'address_2' ),
-			'省市区' => trim( $state . ' ' . $g( 'city' ) ),
-			'邮编'  => $g( 'postcode' ),
-			'国家'  => self::en_country( $g( 'country' ) ),
-			'电话'  => (string) $phone,
+		$g     = static fn( string $k ): string => trim( (string) $o->{"get_{$type}_{$k}"}() );
+		$cc    = strtoupper( $g( 'country' ) );
+		$st    = $g( 'state' );
+		$state = '' !== $st ? self::en_state( $cc, $st ) . ( strtoupper( $st ) !== strtoupper( self::en_state( $cc, $st ) ) ? '（' . strtoupper( $st ) . '）' : '' ) : '';
+		$ctry  = self::en_country( $cc );
+		if ( in_array( $cc, self::US_TERRITORIES, true ) ) {
+			$state = '' !== $state ? $state : $ctry . '（' . $cc . '）';
+			$ctry  = 'United States';
+		}
+		$phone = 'billing' === $type ? $o->get_billing_phone() : ( $o->get_shipping_phone() ?: $o->get_billing_phone() );
+		$rows  = array(
+			'姓名'             => trim( $g( 'first_name' ) . ' ' . $g( 'last_name' ) ),
+			'名（First Name）' => $g( 'first_name' ),
+			'姓（Last Name）'  => $g( 'last_name' ),
+			'公司'             => $g( 'company' ),
+			'街道地址'         => $g( 'address_1' ),
+			'小区／社区'       => $g( 'address_2' ),
+			'城市'             => $g( 'city' ),
+			'州／地区'         => $state,
+			'邮编'             => $g( 'postcode' ),
+			'国家'             => $ctry,
+			'电话'             => (string) $phone,
 		);
+		if ( '' === $rows['公司'] ) {
+			unset( $rows['公司'] );
+		}
+		return $rows;
 	}
 
 	public static function render(): void {
@@ -337,21 +359,21 @@ final class Order_Detail_Page {
 		echo '<div class="pc-od-two">';
 		foreach ( array( 'shipping' => '收货地址', 'billing' => '账单地址' ) as $type => $label ) {
 			$a    = self::address( $o, $type );
-			$copy = implode( "\n", array_filter( array( $a['姓名'], $a['公司'], $a['街道'], $a['寓所'], $a['省市区'], $a['邮编'], $a['国家'], $a['电话'] ) ) );
+			$copy = implode( "\n", array_filter( array( $a['姓名'], $a['公司'] ?? '', $a['街道地址'], $a['小区／社区'], trim( $a['城市'] . ', ' . $a['州／地区'] . ' ' . $a['邮编'], ', ' ), $a['国家'], $a['电话'] ) ) );
 			echo '<section class="pc-od-card"><div class="pc-od-ct"><h2>' . esc_html( $label ) . '</h2><span><button type="button" class="pc-od-link" data-pc-copy="' . esc_attr( $copy ) . '">' . $copy_ic . '复制</button>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			if ( 'shipping' === $type ) {
 				echo '<a class="pc-od-link" href="' . esc_url( $edit . '#order_data' ) . '"><span class="dashicons dashicons-edit"></span>编辑</a>';
 			}
-			echo '</span></div><dl class="pc-od-dl">';
+			echo '</span></div><table class="pc-od-addr"><thead><tr><th>项目</th><th>信息</th></tr></thead><tbody>';
 			foreach ( $a as $k => $val ) {
 				if ( '电话' === $k && '' !== $val ) {
 					$digits = preg_replace( '/\D/', '', $val );
-					echo '<dt>' . esc_html( $k ) . ':</dt><dd>' . esc_html( $val ) . ( $digits ? ' <a class="pc-od-wa" href="' . esc_url( 'https://wa.me/' . $digits ) . '" target="_blank" rel="noopener" title="WhatsApp">WhatsApp</a>' : '' ) . '</dd>';
+					echo '<tr><td>' . esc_html( $k ) . '</td><td>' . esc_html( $val ) . ( $digits ? ' <a class="pc-od-wa" href="' . esc_url( 'https://wa.me/' . $digits ) . '" target="_blank" rel="noopener" title="WhatsApp">WhatsApp</a>' : '' ) . '</td></tr>';
 				} else {
-					echo '<dt>' . esc_html( $k ) . ':</dt><dd>' . self::v( $val ) . '</dd>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+					echo '<tr><td>' . esc_html( $k ) . '</td><td>' . self::v( $val ) . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				}
 			}
-			echo '</dl></section>';
+			echo '</tbody></table></section>';
 		}
 		echo '</div>';
 
@@ -505,7 +527,14 @@ final class Order_Detail_Page {
 .pc-od-link{display:inline-flex;align-items:center;gap:3px;border:0;background:none;padding:0;color:#ed8a3a;text-decoration:none;font-size:13px;cursor:pointer}
 .pc-od-link .dashicons{font-size:16px;width:16px;height:16px}
 .pc-od-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start}
-.pc-od-main,.pc-od-side{display:grid;gap:20px;min-width:0}
+.pc-od-main,.pc-od-side{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;min-width:0}
+.pc-od-main>*,.pc-od-side>*{min-width:0}
+.pc-od-card--flush{overflow-x:auto}
+.pc-od-addr{width:100%;border-collapse:collapse;font-size:13px}
+.pc-od-addr th{text-align:left;font-weight:600;color:#303133;padding:0 12px 8px 0;border-bottom:1px solid #dcdfe6}
+.pc-od-addr td{padding:11px 12px 11px 0;border-bottom:1px solid #f0f2f5;vertical-align:top;word-break:break-word}
+.pc-od-addr td:first-child,.pc-od-addr th:first-child{width:1%;white-space:nowrap;padding-right:28px}.pc-od-addr td:first-child{color:#606266}
+.pc-od-addr tr:last-child td{border-bottom:0}
 .pc-od-card{background:#fff;border-radius:4px;padding:20px 24px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
 .pc-od-card--flush{padding:0}
 .pc-od-card h2{margin:0 0 16px;font-size:15px;font-weight:500}.pc-od-card h3{margin:18px 0 10px;font-size:14px;font-weight:500}
@@ -513,7 +542,7 @@ final class Order_Detail_Page {
 .pc-od-ohead{padding:22px 32px 18px}.pc-od-ohead__row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .pc-od-num{font-size:18px;margin-right:6px}.pc-od-sep{width:1px;height:22px;background:#dcdfe6;margin:0 2px}
 .pc-od-ohead__links{margin-left:auto;display:flex;gap:30px}
-.pc-od-times{display:flex;gap:60px;margin-top:14px;color:#606266}
+.pc-od-times{display:flex;flex-wrap:wrap;gap:6px 60px;margin-top:14px;color:#606266}
 .pc-od-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:2px;color:#fff;font-size:13px;line-height:20px}
 .pc-od-badge .dashicons{font-size:15px;width:15px;height:15px}
 .pc-od-badge.is-blue{background:#3a8ee6}.pc-od-badge.is-teal{background:#17a2b8}.pc-od-badge.is-orange{background:#f0a020}.pc-od-badge.is-green{background:#3fb06b}.pc-od-badge.is-red{background:#e5484d}.pc-od-badge.is-gray{background:#a0a4ab}

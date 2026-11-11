@@ -507,3 +507,9 @@
 ### 2026-11-11 订单详情：国家 / 州名一律英文
 - 后台语言是中文，WooCommerce 国家表会翻成中文（例如“波多黎各”）。新增 `Order_Detail_Page::en_country()` / `en_state()`：读 WooCommerce 自带的 i18n 表，并临时关掉翻译。订单详情的收货和账单地址、IP 国家 / 州，以及弃单页的地址都改用它们。
 - 部署：class-order-detail-page.php 8b05968bbd03、class-recovery-page.php 3d1a063c2f57，两台主机各 7 份（有备份），php-fpm 已重载。s0010 订单 #11886 实测显示 “Puerto Rico”。
+
+### 2026-11-11 订单详情：修排版重叠 + 地址改成“项目 / 信息”表格
+- 排版：窄屏（约 1180 宽）时第一张卡片被内容撑宽，压到右侧栏下面。主栏和侧栏改成 `minmax(0,1fr)`，子元素加 `min-width:0`，商品卡可以横向滚动，时间行可以换行。
+- 收货和账单地址都改成两列表格（项目 / 信息）：姓名、名（First Name）、姓（Last Name）、公司（有才显示）、街道地址、小区／社区、城市、州／地区（英文名加代码）、邮编、国家（英文）、电话（带 WhatsApp）。
+- 美国属地（PR/GU/VI/AS/MP/UM）按快递面单写：州 = “Puerto Rico（PR）”，国家 = United States。只改显示，订单数据不动。
+- 部署：class-order-detail-page.php bda6301d4b21，两台主机各 7 份，php-fpm 已重载。s0010 订单 #11886 在 1180 宽下已检查。
