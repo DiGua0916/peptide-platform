@@ -384,3 +384,7 @@
 - peptide-hq `Track17`：每小时（cron pchq_track17_quota）查一次额度（getquota，结果缓存 1 小时，注册新单号后清缓存）；剩余 < 20 时开“费用”类告警（ref 17track）并用 `Costs::mail` 发邮件，充值后自动恢复。新增 `Alerts::resolve_ref`；`Costs::check_alerts` 不再误关 17TRACK 告警；`Costs::mail` 改 public。
 - 费用页总览卡片加一行“17TRACK 物流追踪额度”（剩余 / 已用 / 总数；不足 20 时标红并让卡片变红；没填密钥时提示去“物流追踪”填）。
 - 部署 HQ（备份 /root/hq-17quota-backup-20261111142831、/root/hq-17cost-backup-20261111142918）；新标签页确认费用页已显示这一行（目前“还没填密钥”）。
+
+### 2026-11-11 14:46 UTC 17TRACK 实测通过
+- 店主在总后台填了 17TRACK Security Key。额度 200/200；查 384521937358、879398956880 时各注册一次（剩 198）。约 1 分钟后：879398956880 Delivered（2026-11-04 13:46 Fort Collins, CO），11 条记录；384521937358 Label created（Shipment information sent to FedEx）。
+- 主店通过总后台查同两个单号结果一致（店铺 → 总后台 → 17TRACK 链路通）；6 店清掉旧的“总后台未配置”10 分钟标记。
