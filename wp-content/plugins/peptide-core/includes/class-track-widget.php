@@ -111,6 +111,10 @@ final class Track_Widget {
 		// 设备上记住的订单（订单号 + 密钥）：最多 5 张。
 		$pairs = $r['orders'];
 		if ( is_array( $pairs ) && $pairs ) {
+			if ( $n >= 40 ) { // 审查 2026-11-11：记住的订单这条路也限频。
+				return new \WP_Error( 'pc_trk_rate', 'Too many attempts. Please try again in a few minutes.', array( 'status' => 429 ) );
+			}
+			set_transient( $rl, $n + 1, 10 * MINUTE_IN_SECONDS );
 			foreach ( array_slice( $pairs, 0, 5 ) as $p ) {
 				$o = wc_get_order( absint( $p['o'] ?? 0 ) );
 				if ( $o instanceof \WC_Order && 'shop_order' === $o->get_type() && hash_equals( $o->get_order_key(), (string) ( $p['k'] ?? '' ) ) ) {
@@ -162,7 +166,7 @@ final class Track_Widget {
 					$row['carrier'] = 'FedEx';
 				}
 				if ( '' === $url ) {
-					$row['url'] = 'https://www.fedex.com/fedextrack/?trknbr=' . rawurlencode( $num );
+					$row['url'] = 'https://www.fedex.com/wtrk/track/?trknbr=' . rawurlencode( $num ); // FedEx 2026 年的新查询地址（旧的 /fedextrack/ 会跳转）。
 				}
 				if ( Fedex_Track::configured() ) {
 					$t = Fedex_Track::track( $num );

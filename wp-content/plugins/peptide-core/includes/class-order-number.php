@@ -55,7 +55,7 @@ final class Order_Number {
 			return null;
 		}
 		$o = wc_get_order( (int) $input );
-		// 已经换成 hang- 号的新订单，不再接受原来的数字号。
-		return $o instanceof \WC_Order && '' === self::ref( $o ) ? $o : null;
+		// 数字号也接受（顾客付款前看到的是数字号；查询还要对上下单邮箱）。
+		return $o instanceof \WC_Order ? $o : null;
 	}
 }

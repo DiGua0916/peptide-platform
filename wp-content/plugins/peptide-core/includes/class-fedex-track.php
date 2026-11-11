@@ -23,7 +23,8 @@ final class Fedex_Track {
 			return true;
 		}
 		$n = preg_replace( '/\s+/', '', (string) $number );
-		return '' === (string) $provider && 1 === preg_match( '/\A(?:\d{12}|\d{15}|\d{20}|\d{22})\z/', $n );
+		// 审查 2026-11-11：20 / 22 位数字也可能是 USPS，不再自动当 FedEx（免得白扣 17TRACK 额度）。
+		return '' === (string) $provider && 1 === preg_match( '/\A(?:\d{12}|\d{15})\z/', $n );
 	}
 
 	/** 能不能去总后台查（接入了总后台，且总后台最近没说“还没填密钥”）。 */
@@ -59,7 +60,7 @@ final class Fedex_Track {
 		$res  = wp_remote_post(
 			add_query_arg( 'rest_route', rawurlencode( self::ROUTE ), trailingslashit( (string) PEPTIDE_HQ_URL ) ),
 			array(
-				'timeout' => 20,
+				'timeout' => 8,
 				'headers' => array(
 					'Content-Type' => 'application/json',
 					'X-PC-HQ-Site' => $s['uuid'],
@@ -70,10 +71,12 @@ final class Fedex_Track {
 			)
 		);
 		if ( is_wp_error( $res ) ) {
+			set_transient( self::OFF, 1, 2 * MINUTE_IN_SECONDS ); // 审查 2026-11-11：总后台连不上时 2 分钟内不再等，物流球不被拖慢。
 			return new \WP_Error( 'pc_fedex_hq', '连不上总后台：' . $res->get_error_message() );
 		}
 		$j = json_decode( (string) wp_remote_retrieve_body( $res ), true );
 		if ( 200 !== (int) wp_remote_retrieve_response_code( $res ) || ! is_array( $j ) ) {
+			set_transient( self::OFF, 1, 2 * MINUTE_IN_SECONDS );
 			return new \WP_Error( 'pc_fedex_hq', '总后台返回：' . ( is_array( $j ) && is_string( $j['message'] ?? null ) ? $j['message'] : 'HTTP ' . wp_remote_retrieve_response_code( $res ) ) );
 		}
 		if ( empty( $j['configured'] ) ) {

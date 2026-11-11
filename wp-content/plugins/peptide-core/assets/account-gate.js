@@ -190,13 +190,14 @@
 					}
 					return j;
 				} );
-			} ).then( function () {
+			} ).then( function ( j ) {
 				set( SEEN_KEY, String( Date.now() ) );
-				if ( 'signup' === mode && 'function' === typeof window.fbq ) {
-					try {
-						window.fbq( 'track', 'CompleteRegistration' );
-					} catch ( x ) {}
+				if ( j && j.held ) {
+					btn.disabled = false;
+					showErr( j.message || 'Please check your email.' );
+					return;
 				}
+				// 注册事件由服务端 Pixels::on_sign_up 统一发（浏览器 + CAPI，去重），这里不再自己发。
 				btn.textContent = 'signup' === mode ? 'Account created' : 'Signed in';
 				window.setTimeout( function () {
 					window.location.reload();

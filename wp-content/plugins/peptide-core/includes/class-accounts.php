@@ -26,14 +26,14 @@ final class Accounts {
 	public static function register_hooks(): void {
 		// 付款完成（Panapay 的完成保护在 PHP_INT_MIN）之后、注册邀请邮件（40）之前建账户，这样不会再发“邀请注册”。
 		add_action( 'woocommerce_payment_complete', array( self::class, 'ensure_for_order' ), 5 );
-		add_action( 'woocommerce_order_status_processing', array( self::class, 'ensure_for_order' ), 5 );
-		add_action( 'woocommerce_order_status_completed', array( self::class, 'ensure_for_order' ), 5 );
 		add_action( 'rest_api_init', array( self::class, 'routes' ) );
 		add_action( 'wp_enqueue_scripts', array( self::class, 'assets' ), 160 );
 		add_action( 'wp_footer', array( self::class, 'render' ), 45 );
 		add_action( 'woocommerce_login_form_end', array( self::class, 'login_form_signup' ) );
 		add_action( 'woocommerce_account_dashboard', array( self::class, 'dashboard_orders' ), 5 );
 		add_filter( 'woocommerce_my_account_my_orders_actions', array( self::class, 'order_actions' ), 10, 2 );
+		// 审查 2026-11-11：改账户邮箱必须输入当前密码（初始密码就是邮箱，防止别人登录后改邮箱把账户占走）。
+		add_action( 'woocommerce_save_account_details_errors', array( self::class, 'guard_email_change' ), 10, 2 );
 	}
 
 	public static function defaults(): array {
@@ -128,6 +128,9 @@ final class Accounts {
 		if ( ! $order instanceof \WC_Order || 'shop_order' !== $order->get_type() || $order->get_customer_id() || '' !== (string) $order->get_meta( self::META ) || ! $order->is_paid() ) {
 			return;
 		}
+		if ( class_exists( Test_Orders::class ) && Test_Orders::is_test_order( $order ) ) {
+			return;
+		}
 		// 只处理功能上线之后创建的订单（店主：已经产生的订单不要改）。
 		$since = (int) get_option( 'pc_accounts_since', 0 );
 		if ( ! $since ) {
@@ -143,6 +146,13 @@ final class Accounts {
 			return;
 		}
 		$user = get_user_by( 'email', $email );
+		if ( $user && ! self::trusted_owner( $user ) ) {
+			// 审查 2026-11-11：自己注册的账户没验证过邮箱，别人可能拿顾客的邮箱先注册。不自动归单，免得把别人的订单和地址给他看。
+			$order->update_meta_data( self::META, 'unverified' );
+			$order->add_order_note( 'An account with this email exists but was not verified; the order was not added to it automatically.' );
+			$order->save();
+			return;
+		}
 		if ( $user ) {
 			$order->set_customer_id( (int) $user->ID );
 			$order->update_meta_data( self::META, 'linked' );
@@ -152,6 +162,13 @@ final class Accounts {
 		}
 		$uid = self::create_user( $email, $email, $order );
 		if ( is_wp_error( $uid ) ) {
+			$again = get_user_by( 'email', $email ); // 付款回调和付款成功页同时到达：另一个已经建好了。
+			if ( $again && 'auto_checkout' === get_user_meta( $again->ID, '_pc_account_source', true ) ) {
+				$order->set_customer_id( (int) $again->ID );
+				$order->update_meta_data( self::META, 'created' );
+				$order->save();
+				return;
+			}
 			$order->update_meta_data( self::META, 'failed' );
 			$order->add_order_note( 'Automatic customer account could not be created: ' . $uid->get_error_message() );
 			$order->save();
@@ -161,6 +178,33 @@ final class Accounts {
 		$order->update_meta_data( self::META, 'created' );
 		$order->add_order_note( 'Customer account created automatically. Login: ' . $email . ' (the initial password is the same email address).' );
 		$order->save();
+	}
+
+	/**
+	 * 可以把游客订单自动归过去的账户：付款时自动建的（证明过这个邮箱能下单付款），
+	 * 或者已经有过付款订单的老顾客、店铺员工。弹窗里自己注册、从没下过单的不算。
+	 */
+	private static function trusted_owner( \WP_User $user ): bool {
+		if ( 'signup' !== get_user_meta( $user->ID, '_pc_account_source', true ) ) {
+			return true;
+		}
+		$paid = wc_get_orders( array( 'customer_id' => $user->ID, 'status' => wc_get_is_paid_statuses(), 'limit' => 1, 'return' => 'ids' ) );
+		return ! empty( $paid );
+	}
+
+	/** 改账户邮箱必须填当前密码。 */
+	public static function guard_email_change( $errors, $user ): void {
+		if ( ! is_object( $user ) || empty( $user->ID ) || ! isset( $user->user_email ) ) {
+			return;
+		}
+		$old = get_userdata( (int) $user->ID );
+		if ( ! $old || strtolower( (string) $old->user_email ) === strtolower( (string) $user->user_email ) ) {
+			return;
+		}
+		$current = isset( $_POST['password_current'] ) ? (string) wp_unslash( $_POST['password_current'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing,WordPress.Security.ValidatedSanitizedInput -- WooCommerce 已校验表单 nonce；密码原样比对。
+		if ( '' === $current || ! wp_check_password( $current, $old->user_pass, $old->ID ) ) {
+			$errors->add( 'pc_email_password', 'Please enter your current password to change your email address.' );
+		}
 	}
 
 	/** 付款成功弹窗里显示的账户信息（Paid_Popup 调用）。 */
@@ -205,6 +249,18 @@ final class Accounts {
 		}
 	}
 
+	/** 审查 2026-11-11：只接受本站页面发来的登录 / 注册（防止别的网站偷偷把访客登录到别人的账户）。 */
+	private static function same_origin( \WP_REST_Request $r ): bool {
+		$src = (string) ( $r->get_header( 'origin' ) ?: $r->get_header( 'referer' ) );
+		if ( '' === $src ) {
+			return false;
+		}
+		$host = strtolower( (string) wp_parse_url( $src, PHP_URL_HOST ) );
+		$mine = strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) );
+		$bare = static fn( string $h ): string => preg_replace( '/^www\./', '', $h );
+		return '' !== $host && $bare( $host ) === $bare( $mine );
+	}
+
 	private static function limited( string $what ): bool {
 		$ip  = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 		$key = 'pc_acct_' . $what . '_' . md5( $ip );
@@ -219,6 +275,9 @@ final class Accounts {
 	public static function rest_register( \WP_REST_Request $r ) {
 		if ( ! self::settings()['signup'] ) {
 			return new \WP_Error( 'pc_acct_off', 'Registration is currently closed.', array( 'status' => 403 ) );
+		}
+		if ( ! self::same_origin( $r ) ) {
+			return new \WP_Error( 'pc_acct_origin', 'Please register on our website.', array( 'status' => 403 ) );
 		}
 		if ( is_user_logged_in() ) {
 			return rest_ensure_response( array( 'ok' => true ) );
@@ -245,12 +304,21 @@ final class Accounts {
 		if ( is_wp_error( $uid ) ) {
 			return new \WP_Error( 'pc_acct_fail', 'We could not create your account. Please try again.', array( 'status' => 500 ) );
 		}
+		// 和 WooCommerce 正常注册一样：广告的注册事件（Pixel / CAPI）、浏览提醒邮件、欢迎邮件都靠这个动作。
+		do_action( 'woocommerce_created_customer', $uid, array( 'user_login' => $email, 'user_email' => $email ), false );
+		// 店铺开了“注册验证邮箱 / 店主审核”时，照样先不登录（Store_Config::hold_new_customer）。
+		if ( ! apply_filters( 'woocommerce_registration_auth_new_customer', true, $uid ) ) {
+			return rest_ensure_response( array( 'ok' => true, 'held' => true, 'message' => 'Your account was created. Please check your email to verify it before signing in.' ) );
+		}
 		wp_set_current_user( $uid );
 		wp_set_auth_cookie( $uid, true, is_ssl() );
 		return rest_ensure_response( array( 'ok' => true ) );
 	}
 
 	public static function rest_login( \WP_REST_Request $r ) {
+		if ( ! self::same_origin( $r ) ) {
+			return new \WP_Error( 'pc_acct_origin', 'Please sign in on our website.', array( 'status' => 403 ) );
+		}
 		if ( is_user_logged_in() ) {
 			return rest_ensure_response( array( 'ok' => true ) );
 		}
@@ -267,7 +335,9 @@ final class Accounts {
 			is_ssl()
 		);
 		if ( is_wp_error( $user ) ) {
-			return new \WP_Error( 'pc_acct_login', 'The email or password is incorrect.', array( 'status' => 403 ) );
+			// 待验证 / 待审核的账户把原因告诉顾客，其他一律“邮箱或密码不对”。
+			$msg = in_array( $user->get_error_code(), array( 'pc_unverified', 'pc_pending' ), true ) ? $user->get_error_message() : 'The email or password is incorrect.';
+			return new \WP_Error( 'pc_acct_login', $msg, array( 'status' => 403 ) );
 		}
 		return rest_ensure_response( array( 'ok' => true ) );
 	}
@@ -299,7 +369,8 @@ final class Accounts {
 			'window.pcAccounts=' . wp_json_encode(
 				array(
 					'gate'     => $s['gate'],
-					'signup'   => $s['signup'],
+					// 审查 2026-11-11：购物车、结账、付款页不弹注册（广告进来直接到结账的顾客不被打断）；年龄确认照常。
+					'signup'   => $s['signup'] && ! ( function_exists( 'is_checkout' ) && ( is_checkout() || is_cart() ) ),
 					'register' => rest_url( 'peptide/v1/account/register' ),
 					'login'    => rest_url( 'peptide/v1/account/login' ),
 					'account'  => function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : '',

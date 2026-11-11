@@ -230,7 +230,7 @@ final class Recovery_Items {
 				$hit = false;
 				foreach ( preg_split( '/\s+/', trim( (string) $f['q'] ) ) as $term ) {
 					$term = ltrim( strtolower( $term ), '#' );
-					if ( '' !== $term && ( str_contains( strtolower( $o->get_order_number() ), $term ) || str_contains( strtolower( (string) $o->get_billing_email() ), $term ) || str_contains( strtolower( $o->get_billing_first_name() . ' ' . $o->get_billing_last_name() ), $term ) ) ) {
+					if ( '' !== $term && ( str_contains( strtolower( $o->get_order_number() ), $term ) || (string) $o->get_id() === $term || str_contains( strtolower( (string) $o->get_billing_email() ), $term ) || str_contains( strtolower( $o->get_billing_first_name() . ' ' . $o->get_billing_last_name() ), $term ) ) ) {
 						$hit = true;
 					}
 				}
