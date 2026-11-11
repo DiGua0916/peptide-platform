@@ -482,3 +482,8 @@
 - 店主：发到 sun18761388693@gmail.com 的预览邮件（“Thank You for Your Order”、“Your VialCove account has been created!”）整体偏右。用主店临时订单 / 临时账户（发完即删，订单号 #11851 起被占用）发的预览；测试单标记会让系统不发邮件，所以临时订单不打标记、保持待付款。
 - 原因：WooCommerce 11 邮件外层是“空列 + 600 宽列 + 空列”，部分客户端（Gmail）分配不均。
 - 修复：peptide-core 新增 templates/emails/email-header.php、email-footer.php（复制 WC 11.2.1 原模板，只把外层改成经典居中：一个 align=center 的铺满单元格，里面 max-width 600、margin 0 auto、align=center 的表格），`Chase_Copy::TEMPLATES` 加这两个模板，所有 WooCommerce 邮件生效。主店重发两封预览，发件记录确认用的是新结构。部署 web + hq 各 7 份。
+
+### 2026-11-11 18:51 UTC 订单列表操作列和弃单页一致；去掉上方滚动条和提示文字
+- 店主：待处理订单的操作列排版要和弃单页一样；上面的滚动条和“左右拖动查看更多列”删掉，下面的只删文字。
+- includes/admin/class-order-list.php：操作图标改成弃单页同款（28px 蓝色小方块、悬停浅蓝底、18px 图标），新增“写邮件”（带订单号和顾客邮箱打开写邮件）；列宽 104px。自绘滚动条只保留表格下方那条，去掉上方那条和两处提示文字。
+- 注意：店铺后台域名（sNNNN.vialcoveresearch.com）由总后台服务器上的副本提供，只改店铺服务器的主店副本看不到效果；用部署脚本 web + hq 各 7 份后，主店后台确认：只剩下方一条滚动条、没有提示文字、操作列为“查看订单 / 发货 / 写邮件”蓝色图标。
