@@ -439,3 +439,8 @@
 
 ### 2026-11-11 16:00 UTC 满减档位位置调整
 - 店主：图标垂直居中，档位往下放。.vc-offer-tiers 改插在商品图下面（summary 里规格说明 .vc-home-quick__specification 前面，找不到时放在商品图后），礼盒图标和文字垂直居中。主店手机尺寸确认位置和居中，部署 web + hq 各 7 份，6 店清首页缓存。
+
+### 2026-11-11 16:05 UTC 满减档位改成“优惠券 + 进度”样式
+- 店主选 D（优惠券票据）+ C（进度条）结合：每张券本身就是进度条。左边“$25 OFF”，右边“Orders over $300”；按顾客购物车金额从左往右填色；已达到的整张填满、实线边、显示“Unlocked ✓”；正在凑的下一档高亮并显示“Add $X more”。
+- 数据：进度用服务端已经算好的购物车数据（Store API cart → extensions.peptide_core.activity_listener：measure、nodes[].threshold / reached、next.remainingText），浏览器不自己算折扣；只在打开商品弹窗时读一次购物车，之后靠 vc:cart-updated 事件（弹窗加购、购物车抽屉都会发，带新购物车）更新，事件里没带购物车时再读一次。监听和请求都绑在弹窗的 AbortController 上，关掉就清理。
+- 验证（主店手机尺寸）：空购物车三张都是 0%，第一张高亮；加一件 $86.30 后：$25 OFF 填 29%、显示“Add $213.70 more”，$55 OFF 17%，$120 OFF 9%；测试商品已从购物车删掉。部署 web + hq 各 7 份，6 店清首页缓存，5 个域名 200。

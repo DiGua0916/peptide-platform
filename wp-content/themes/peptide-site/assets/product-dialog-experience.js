@@ -282,6 +282,53 @@
       else if (media) { if (media.nextElementSibling !== tierBox) media.after(tierBox); }
       else if (tierBox.parentElement !== heading) heading.append(tierBox);
     };
+    // 2026-11-11 店主：优惠券样式（D）里直接显示进度（C）：每张券按购物车金额从左往右填满。
+    // 进度用服务端算好的购物车数据（Store API cart → extensions.peptide_core.activity_listener），浏览器不自己算折扣。
+    let tierPromo = null, tierActivity = null, tierCartAsked = false;
+    const tierMoney = text => String(text || '').replace(/\.00(?=\s|$)/g, '');
+    const takeTierCart = cart => {
+      const a = cart?.extensions?.peptide_core?.activity_listener;
+      tierActivity = a && a.enabled !== false && a.visible !== false && Array.isArray(a.nodes) ? a : null;
+      paintTiers();
+    };
+    const readTierCart = () => {
+      fetch(location.origin + '/wp-json/wc/store/v1/cart', {credentials: 'same-origin', headers: {Accept: 'application/json'}, signal})
+        .then(r => r.ok ? r.json() : null).then(c => { if (c) takeTierCart(c); }).catch(() => {});
+    };
+    document.addEventListener('vc:cart-updated', e => {
+      if (!tierPromo) return;
+      if (e.detail?.cart && !e.detail.stale) takeTierCart(e.detail.cart); else readTierCart();
+    }, {signal});
+    function paintTiers() {
+      const active = tierPromo;
+      tierBox.replaceChildren(); tierBox.hidden = !active;
+      if (!active) return;
+      const spend = active.type === 'spend_amount' && !active.unlimited;
+      const act = tierActivity && (!tierActivity.promotion || !active.id || Number(tierActivity.promotion.id) === Number(active.id)) ? tierActivity : null;
+      const measure = act ? Number(act.measure) : 0;
+      const nextKey = act?.next?.key || null;
+      let nextShown = false;
+      active.tiers.forEach((tier, i) => {
+        const node = act ? act.nodes[i] : null;
+        const threshold = node ? Number(node.threshold) : 0;
+        const reached = !!node?.reached;
+        const pct = reached ? 100 : (threshold > 0 ? Math.max(0, Math.min(99, Math.round(measure / threshold * 100))) : 0);
+        const isNext = !reached && !nextShown && (!act || !nextKey || node?.key === nextKey);
+        if (isNext) nextShown = true;
+        const row = node_('div', 'vc-offer-ticket' + (reached ? ' is-reached' : isNext ? ' is-next' : ''));
+        const fill = node_('span', 'vc-offer-ticket__fill'); fill.style.width = pct + '%'; fill.setAttribute('aria-hidden', 'true');
+        const reward = node_('span', 'vc-offer-ticket__reward', spend ? tierMoney(tier.rewardText).toUpperCase() : tier.text);
+        const info = node_('span', 'vc-offer-ticket__info');
+        const cond = spend ? 'Orders over ' + tierMoney(tier.thresholdText) : '';
+        if (reached) { info.append(node_('b', '', 'Unlocked \u2713')); if (cond) info.append(node_('small', '', cond)); }
+        else if (isNext && act?.next?.remainingText && node?.key === nextKey) { info.append(node_('b', '', 'Add ' + tierMoney(act.next.remainingText) + ' more')); if (cond) info.append(node_('small', '', cond)); }
+        else info.append(node_('span', '', cond || tier.text));
+        row.append(fill, reward, info);
+        row.setAttribute('aria-label', (spend ? tierMoney(tier.rewardText) + ' on orders over ' + tierMoney(tier.thresholdText) : tier.text) + (reached ? ', unlocked' : ''));
+        tierBox.append(row);
+      });
+    }
+    function node_(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; }
     function renderOffers() {
       const candidates = root.vcHomePromotions === undefined ? defaults.promotions : root.vcHomePromotions;
       const active = Array.isArray(candidates) ? candidates.find(item => item.status === 'active' && Array.isArray(item.tiers) && item.tiers.length
@@ -291,18 +338,9 @@
       tierBox.replaceChildren(); tierBox.hidden = !active;
       if (!active) return;
       placeTierBox();
-      const money = text => String(text || '').replace(/\.00(?=\s|$)/g, '');
-      const icon = node('span', 'vc-offer-tiers__icon'); icon.setAttribute('aria-hidden', 'true');
-      icon.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8.5" width="17" height="4" rx="1"/><path d="M5 12.5v7.5h14v-7.5M12 8.5V20M12 8.5c-1.5-3.5-5.5-4-5.5-1.5S10 8.5 12 8.5zm0 0c1.5-3.5 5.5-4 5.5-1.5S14 8.5 12 8.5z"/></svg>';
-      const lines = node('ul', 'vc-offer-tiers__list');
-      active.tiers.forEach(tier => {
-        const li = node('li', '');
-        if (active.type === 'spend_amount' && !active.unlimited) {
-          li.append(document.createTextNode('Buy '), node('b', '', money(tier.thresholdText)), document.createTextNode(' and get '), node('b', '', money(tier.rewardText)));
-        } else li.append(node('b', '', tier.text));
-        lines.append(li);
-      });
-      tierBox.append(icon, lines);
+      tierPromo = active;
+      paintTiers();
+      if (!tierCartAsked) { tierCartAsked = true; readTierCart(); }
       const title = node('h2', '', 'Order savings');
       offers.append(title);
       const list = node('ul', 'vc-dialog-offer-tiers' + (active.type === 'spend_amount' && !active.unlimited ? ' vc-dialog-offer-tiers--thresholds' : ''));

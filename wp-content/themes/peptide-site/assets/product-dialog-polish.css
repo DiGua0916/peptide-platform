@@ -15,9 +15,16 @@ dialog.vc-product-dialog.vc-dialog-polished .vc-dialog-heading>.vc-showcase-quic
 .vc-entry-recovery button:disabled{cursor:wait;opacity:.6}
 @media(prefers-reduced-motion:reduce){.vc-entry-recovery,.vc-dialog-polished .pc-campaign-countdown{animation:none;transition:none}}
 
-/* 2026-11-11 店主：商品详情的满减档位列表（倒计时下面） */
-dialog.vc-product-dialog .vc-offer-tiers{display:flex;gap:12px;align-items:center;margin:4px 0 14px;padding:10px 12px;border-radius:10px;background:#fff6f4;color:#3b2a2c}
+/* 2026-11-11 店主：满减档位 = 优惠券样式 + 进度（每张券按购物车金额填满） */
+dialog.vc-product-dialog .vc-offer-tiers{display:grid;gap:6px;margin:4px 0 14px}
 dialog.vc-product-dialog .vc-offer-tiers[hidden]{display:none}
-dialog.vc-product-dialog .vc-offer-tiers__icon{flex:0 0 auto;color:#b4233a;line-height:0}
-dialog.vc-product-dialog .vc-offer-tiers__list{list-style:none;margin:0;padding:0;display:grid;gap:3px;font:500 14px/20px 'Geist',sans-serif}
-dialog.vc-product-dialog .vc-offer-tiers__list b{font-weight:700;color:#b4233a}
+dialog.vc-product-dialog .vc-offer-ticket{position:relative;display:flex;align-items:stretch;min-height:44px;border:1px dashed #e3a3ab;border-radius:9px;background:#fff;overflow:hidden;font:500 13px/18px 'Geist',sans-serif;color:#5b4447}
+dialog.vc-product-dialog .vc-offer-ticket__fill{position:absolute;inset:0 auto 0 0;width:0;background:#fde6e8;transition:width .6s ease}
+dialog.vc-product-dialog .vc-offer-ticket__reward{position:relative;flex:0 0 92px;display:flex;align-items:center;justify-content:center;padding:0 8px;border-right:1px dashed #e3a3ab;font:700 15px/1 'Geist',sans-serif;color:#b4233a;letter-spacing:.01em}
+dialog.vc-product-dialog .vc-offer-ticket__info{position:relative;display:flex;flex-direction:column;justify-content:center;padding:4px 12px;min-width:0}
+dialog.vc-product-dialog .vc-offer-ticket__info b{font-weight:700;color:#b4233a}
+dialog.vc-product-dialog .vc-offer-ticket__info small{font-size:12px;color:#8a6e71}
+dialog.vc-product-dialog .vc-offer-ticket.is-reached{border-style:solid;border-color:#b4233a}
+dialog.vc-product-dialog .vc-offer-ticket.is-reached .vc-offer-ticket__fill{background:#fbd3d8}
+dialog.vc-product-dialog .vc-offer-ticket.is-next{border-color:#b4233a}
+@media (prefers-reduced-motion:reduce){dialog.vc-product-dialog .vc-offer-ticket__fill{transition:none}}
