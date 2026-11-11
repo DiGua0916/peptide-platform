@@ -57,3 +57,5 @@ html.pc-trk-lock, html.pc-trk-lock body { overflow: hidden; }
 	.pc-trk { margin: auto; width: min(480px, calc(100vw - 32px)); }
 	.pc-trk__box { border-radius: 18px; max-height: 84dvh; }
 }
+.pc-trk__new{display:grid;gap:8px;margin-top:6px;padding-top:14px;border-top:1px solid #edf1f3}
+.pc-trk__btn--text{display:block;width:auto;margin:0 auto;min-height:40px;padding:8px 12px;background:none;border:0;color:#126f86;font-weight:600;text-align:center}

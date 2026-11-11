@@ -113,6 +113,13 @@
 		document.documentElement.classList.remove( 'pc-trk-lock' );
 	}
 	ball.addEventListener( 'click', open );
+	// 在物流面板里登录后刷新页面，自动再打开面板显示订单。
+	try {
+		if ( cfg.nonce && '1' === window.sessionStorage.getItem( 'pcTrkOpen' ) ) {
+			window.sessionStorage.removeItem( 'pcTrkOpen' );
+			window.setTimeout( open, 300 );
+		}
+	} catch ( x ) {}
 	// 付款成功弹窗里的“Track my order”：关掉那个弹窗，打开物流面板。
 	document.addEventListener( 'click', function ( e ) {
 		var t = e.target.closest && e.target.closest( '[data-pc-open-track]' );
@@ -165,53 +172,137 @@
 		} else if ( saved().length ) {
 			p = request( cfg.lookup, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( { orders: saved() } ) } );
 		} else {
-			showForm();
+			showSignIn();
 			return;
 		}
 		p.then( function ( j ) {
 			showOrders( j.orders || [] );
 		} ).catch( function () {
-			showForm( 'We could not load your orders. Please try again.' );
+			if ( cfg.nonce ) {
+				body.textContent = '';
+				body.appendChild( el( 'p', 'pc-trk__err', 'We could not load your orders. Please try again.' ) );
+			} else {
+				showSignIn( 'We could not load your orders. Please sign in.' );
+			}
 		} );
 	}
 
-	function showForm( msg ) {
+	function field( label, name, type, autocomplete ) {
+		var l = el( 'label', '', label );
+		var i = el( 'input' );
+		i.name = name;
+		i.type = type;
+		i.autocomplete = autocomplete;
+		if ( 'email' === type ) {
+			i.inputMode = 'email';
+		}
+		l.appendChild( i );
+		return l;
+	}
+
+	/* 店主 2026-11-11：没登录时，物流面板 = 登录看自己的订单；没有账户的引导注册。按订单号查询只作为没有账户的老订单的备用入口。 */
+	function showSignIn( msg ) {
+		body.textContent = '';
+		body.appendChild( el( 'p', 'pc-trk__lead', 'Sign in to see your orders and shipment tracking.' ) );
+		var f = el( 'form', 'pc-trk__form' );
+		f.noValidate = true;
+		f.appendChild( field( 'Email', 'email', 'email', 'email' ) );
+		f.appendChild( field( 'Password', 'password', 'password', 'current-password' ) );
+		var err = el( 'p', 'pc-trk__err', msg || '' );
+		err.hidden = ! msg;
+		err.setAttribute( 'role', 'alert' );
+		var btn = el( 'button', 'pc-trk__btn pc-trk__btn--primary', 'Sign in' );
+		btn.type = 'submit';
+		f.appendChild( err );
+		f.appendChild( btn );
+		f.addEventListener( 'submit', function ( e ) {
+			e.preventDefault();
+			if ( ! /@/.test( f.email.value ) || ! f.password.value ) {
+				err.textContent = 'Please enter your email and password.';
+				err.hidden = false;
+				return;
+			}
+			btn.disabled = true;
+			err.hidden = true;
+			window.fetch( cfg.login, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( { email: f.email.value.trim(), password: f.password.value } ) } )
+				.then( function ( r ) {
+					return r.json().then( function ( j ) {
+						if ( ! r.ok ) {
+							throw new Error( j && j.message ? j.message : 'Please try again.' );
+						}
+						return j;
+					} );
+				} )
+				.then( function () {
+					// 登录后刷新页面拿到登录状态，再自动打开物流面板。
+					try {
+						window.sessionStorage.setItem( 'pcTrkOpen', '1' );
+					} catch ( x ) {}
+					btn.textContent = 'Signed in';
+					window.location.reload();
+				} )
+				.catch( function ( x ) {
+					btn.disabled = false;
+					err.textContent = x.message;
+					err.hidden = false;
+				} );
+		} );
+		body.appendChild( f );
+		if ( cfg.lost ) {
+			var lost = el( 'a', 'pc-trk__btn pc-trk__btn--text', 'Forgot password?' );
+			lost.href = cfg.lost;
+			body.appendChild( lost );
+		}
+		if ( cfg.signup ) {
+			var box = el( 'div', 'pc-trk__new' );
+			box.appendChild( el( 'p', 'pc-trk__muted', 'New here? Create an account to track everything you buy in one place.' ) );
+			var create = el( 'button', 'pc-trk__btn pc-trk__btn--ghost', 'Create an account' );
+			create.type = 'button';
+			create.addEventListener( 'click', function () {
+				close();
+				if ( 'function' === typeof window.pcAccountsOpen ) {
+					window.pcAccountsOpen( 'signup' );
+				} else if ( cfg.account ) {
+					window.location.href = cfg.account;
+				}
+			} );
+			box.appendChild( create );
+			body.appendChild( box );
+		}
+		var guest = el( 'button', 'pc-trk__btn pc-trk__btn--text', 'Track an order without an account' );
+		guest.type = 'button';
+		guest.addEventListener( 'click', function () {
+			showLookup();
+		} );
+		body.appendChild( guest );
+	}
+
+	/* 备用：订单号 + 下单邮箱（账户系统上线前的老订单）。 */
+	function showLookup( msg ) {
 		body.textContent = '';
 		body.appendChild( el( 'p', 'pc-trk__lead', 'Enter your order number and the email you used at checkout.' ) );
 		var f = el( 'form', 'pc-trk__form' );
 		f.noValidate = true;
-		var l1 = el( 'label', '', 'Order number' );
-		var i1 = el( 'input' );
-		i1.name = 'order';
-				i1.placeholder = 'e.g. hang-161188301';
-		i1.autocomplete = 'off';
-		l1.appendChild( i1 );
-		var l2 = el( 'label', '', 'Email' );
-		var i2 = el( 'input' );
-		i2.name = 'email';
-		i2.type = 'email';
-		i2.autocomplete = 'email';
-		i2.inputMode = 'email';
-		l2.appendChild( i2 );
+		var l1 = field( 'Order number', 'order', 'text', 'off' );
+		f.appendChild( l1 );
+		f.appendChild( field( 'Email', 'email', 'email', 'email' ) );
 		var err = el( 'p', 'pc-trk__err', msg || '' );
 		err.hidden = ! msg;
 		err.setAttribute( 'role', 'alert' );
 		var btn = el( 'button', 'pc-trk__btn pc-trk__btn--primary', 'Track order' );
 		btn.type = 'submit';
-		f.appendChild( l1 );
-		f.appendChild( l2 );
 		f.appendChild( err );
 		f.appendChild( btn );
 		f.addEventListener( 'submit', function ( e ) {
 			e.preventDefault();
-			if ( ! /\d/.test( i1.value ) || ! /@/.test( i2.value ) ) {
+			if ( ! /\d/.test( f.order.value ) || ! /@/.test( f.email.value ) ) {
 				err.textContent = 'Please enter your order number and email.';
 				err.hidden = false;
 				return;
 			}
 			btn.disabled = true;
 			err.hidden = true;
-			request( cfg.lookup, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( { order: i1.value, email: i2.value } ) } ).then( function ( j ) {
+			request( cfg.lookup, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( { order: f.order.value, email: f.email.value } ) } ).then( function ( j ) {
 				showOrders( j.orders || [], true );
 			} ).catch( function ( x ) {
 				btn.disabled = false;
@@ -220,17 +311,12 @@
 			} );
 		} );
 		body.appendChild( f );
-		var sign = el( 'button', 'pc-trk__btn pc-trk__btn--ghost', 'Sign in to see all your orders' );
-		sign.type = 'button';
-		sign.addEventListener( 'click', function () {
-			close();
-			if ( 'function' === typeof window.pcAccountsOpen ) {
-				window.pcAccountsOpen( 'login' );
-			} else if ( cfg.account ) {
-				window.location.href = cfg.account;
-			}
+		var back = el( 'button', 'pc-trk__btn pc-trk__btn--ghost', 'Back to sign in' );
+		back.type = 'button';
+		back.addEventListener( 'click', function () {
+			showSignIn();
 		} );
-		body.appendChild( sign );
+		body.appendChild( back );
 	}
 
 	var STAGES = [ [ 'placed', 'Order placed' ], [ 'paid', 'Payment received' ], [ 'shipped', 'Shipped' ], [ 'delivered', 'Delivered' ] ];
@@ -243,14 +329,16 @@
 	function showOrders( list, lookedUp ) {
 		body.textContent = '';
 		if ( ! list.length ) {
-			body.appendChild( el( 'p', 'pc-trk__muted', 'You have no orders yet.' ) );
-			if ( ! cfg.nonce ) {
-				var again = el( 'button', 'pc-trk__btn pc-trk__btn--ghost', 'Look up another order' );
-				again.type = 'button';
-				again.addEventListener( 'click', function () {
-					showForm();
-				} );
-				body.appendChild( again );
+			if ( cfg.nonce ) {
+				body.appendChild( el( 'p', 'pc-trk__lead', 'No orders yet.' ) );
+				body.appendChild( el( 'p', 'pc-trk__muted', 'Your orders and shipment tracking will show here after you place an order.' ) );
+				if ( cfg.shop ) {
+					var shopBtn = el( 'a', 'pc-trk__btn pc-trk__btn--primary', 'Start shopping' );
+					shopBtn.href = cfg.shop;
+					body.appendChild( shopBtn );
+				}
+			} else {
+				showSignIn( lookedUp ? '' : 'We could not find that order. Sign in to see your orders.' );
 			}
 			return;
 		}
@@ -348,10 +436,10 @@
 			body.appendChild( card );
 		} );
 		if ( ! cfg.nonce ) {
-			var other = el( 'button', 'pc-trk__btn pc-trk__btn--ghost', lookedUp ? 'Look up another order' : 'Track a different order' );
+			var other = el( 'button', 'pc-trk__btn pc-trk__btn--ghost', 'Sign in to see all your orders' );
 			other.type = 'button';
 			other.addEventListener( 'click', function () {
-				showForm();
+				showSignIn();
 			} );
 			body.appendChild( other );
 		}

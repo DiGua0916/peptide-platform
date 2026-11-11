@@ -49,6 +49,10 @@ final class Track_Widget {
 					// 已登录的页面不进静态缓存，这里的 nonce 不会被别人拿到。
 					'nonce'   => is_user_logged_in() ? wp_create_nonce( 'wp_rest' ) : '',
 					'account' => function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : '',
+					'login'   => rest_url( 'peptide/v1/account/login' ),
+					'lost'    => function_exists( 'wc_lostpassword_url' ) ? wc_lostpassword_url() : wp_lostpassword_url(),
+					'shop'    => function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'shop' ) : home_url( '/' ),
+					'signup'  => class_exists( Accounts::class ) && Accounts::settings()['signup'] && ! is_user_logged_in(),
 				)
 			) . ';',
 			'before'
