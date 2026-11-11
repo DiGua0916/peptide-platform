@@ -406,3 +406,15 @@
 - 店主同意：付款后自动建的账户，密码改为随机（wp_generate_password 24 位），并直接触发 WooCommerce 自带的“账户已创建”邮件（WC_Email_Customer_New_Account::trigger($uid, '', true)，带“Click here to set your new password”链接；不触发注册广告事件）。6 店这封邮件都已开启、英文标题。之前没有用“密码=邮箱”建过的账户（auto_checkout 计数 0），无需重置。
 - 付款成功弹窗账户块改为：账号（邮箱）+ “We sent a link to this email to set your password. Check your inbox (and spam folder).”；“Track my order”带 data-pc-open-track，物流球脚本接管：关掉付款弹窗、直接打开物流面板（这台设备已记住订单，不用登录）。订单备注改为说明已发设密码邮件。后台“注册与年龄确认”说明同步更新。
 - 验证：主店服务端测试（拦截邮件不实际发送、不进发件记录）：账户已建、密码不是邮箱、给顾客发了带设密码链接的邮件、弹窗和备注文字正确，测试数据已删。浏览器里用 #11843 的付款弹窗点 “Track my order”：弹窗关闭、物流面板打开并显示该订单（之后清掉了本机记住的订单）。部署 web + hq 各 7 份，6 店清首页缓存。
+
+### 2026-11-11 15:30 UTC Meta 像素没抓到购买：原因与修复
+- 投手反馈最近几单 Meta 没收到购买。排查 6 店最近 20 天付款订单：
+  1. 浏览器端 Purchase 只在 WooCommerce“订单已收到”页触发；11-10 起付款成功后跳回首页 ?pc_paid= 弹窗，不经过那个页面 → 浏览器端从此不发。
+  2. 服务端 CAPI 在 woocommerce_order_status_changed 发；但 4 张付款单里 3 张（主店 #11841 测试单、阳 #11892、芒果 #11886）付款完成时被 peptide-panapay 的 Completion_Guard 拦下（用独立数据库连接确认“已付款”没确认到，抛 payment_persistence_unconfirmed），后面的钩子全没跑：确认邮件（已由 care_catchup 补发）、CAPI 购买、注册邀请等。订单本身是已付款。根因还要查（没有日志、没有事务，复现需要真实付款）。
+  3. 5 个子店的 CAPI 发送记录表 wp_pc_px_log 不存在（复制店铺带了 peptide_core_px_log_db=1 选项但没有表），发送结果一直没记下来。
+  4. 配置：光辉 s0008、主店没有 Meta 像素；李军 s0006 的像素没填 CAPI token（只有浏览器端）。
+- 修复（peptide-core）：
+  - Pixels::page_events：付款成功弹窗页（?pc_paid= 且订单密钥正确）发浏览器端 place_order + purchase（每单一次，event_id order_<id> 与服务端去重；测试单不发）。Paid_Popup::order_from_request 改 public。
+  - Pixels::purchase_catchup：挂 Recovery::CRON（每 5 分钟），最近 6 天付款、没回传过的订单用订单上记下的顾客信息补发 CAPI 购买（测试单、退订的不发），写订单备注。
+  - Pixels\Server::installed() 确认表真的存在；5 个子店已建表。
+- 已补发：阳 #11892、芒果 #11886 Purchase，Meta 返回 200。主店验证付款弹窗页事件：第一次 page_view,place_order,purchase（带顾客信息），刷新后只有 page_view；测试标记已清掉。部署 web + hq 各 7 份。

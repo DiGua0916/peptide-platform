@@ -122,7 +122,7 @@ final class Paid_Popup {
 	}
 
 	/** 当前请求带的、已付款且密钥正确的订单。 */
-	private static function order_from_request(): ?\WC_Order {
+	public static function order_from_request(): ?\WC_Order {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended
 		if ( empty( $_GET['pc_paid'] ) || empty( $_GET['pc_key'] ) || ! function_exists( 'wc_get_order' ) ) {
 			return null;

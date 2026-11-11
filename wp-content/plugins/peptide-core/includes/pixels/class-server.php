@@ -269,7 +269,16 @@ final class Server {
 	}
 
 	public static function installed(): bool {
-		return self::DB_VERSION === get_option( self::DB_OPTION );
+		static $exists = null;
+		if ( self::DB_VERSION !== get_option( self::DB_OPTION ) ) {
+			return false;
+		}
+		// 2026-11-11：复制出来的店铺带着这个选项，但没有表，发送记录一直写不进去。每次请求确认一次表在不在。
+		if ( null === $exists ) {
+			global $wpdb;
+			$exists = self::table() === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', self::table() ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		}
+		return $exists;
 	}
 
 	public static function install(): void {
