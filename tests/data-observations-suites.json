@@ -733,6 +733,66 @@
       "core": true,
       "node_test": false,
       "status": "final-source-gate"
+    },
+    {
+      "name": "m3-series-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-hq/tests/m3-series-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M3",
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "m3-series-catalog-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-hq/tests/m3-series-catalog-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M3",
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "m3-series-sync-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m3-series-sync-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M3",
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "m10-or03-refund-mark-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-hq/tests/m10-or03-refund-mark-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M10",
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "m10-order-report-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m10-order-report-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M10",
+      "extensions": [
+        "mbstring"
+      ]
     }
   ]
 }

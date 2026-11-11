@@ -610,3 +610,224 @@ P07/P08 are now locally installed as four existing files (Commerce PHP/CSS/JS an
 P07/P08 necessary actual WP three domains and exact DB/MU/token cleanup complete, production/QA99 hashes and protected media/data/Original matched. True native mobile parent copy/child Host selection, actual30s/pause/reduced/focus resize/noJS, true links/routes and C18/C19 passed. ComingSoon category-body and untested31/document.hidden limits remain explicit. Ten closed task profiles are retained; no retry of earlier policy-blocked deletion.
 
 Root installed only three existing Commerce sources for P09 collection products and P10 product carousel after independent c645/eac4 review. Formal collection-products-carousel-integration/work/freeze-pin.json2c7c9648..., 47primary+53readonly=100 unique, five LF hunks/exact inverse/fresh dependencies/backups/PHP1JS1 passed. Original Registry/theme/Controls/P05/P07/P08 behavior and precise C20/C21 scope preserved; new theme-template dependency is readonly. P09 had no reference full-width setting, so none invented; P10 keeps its confirmed control. Actual WP validation remains pending with sole QA; reference48/70 currentP13, later tabs remain task-only. Whole70 batch Git and deferred external-service policy remain.
+
+
+## M3 系列与商品目录（2026-11-10，F3，HQ-05 / HQ-06 / FE-07 / NF-12）
+
+这一节由 F3 维护。系列 = 一套商品和价格 + 一套模板 + 一套营销活动 + 一套运费。系列定义存在总后台，店铺只记自己属于哪个系列和已同步到的版本号。金额一律用美分整数；时间是 UTC 秒（和总后台现有表一致）。
+
+### 数据
+
+- 总后台表 `pchq_series`：`id, slug UNIQUE, name, status(active|archived), master_site_id, catalog_ver, template_ver, campaign_ver, shipping_ver, shipping(JSON), created_at, updated_at`。升级类 `PeptideHq\Series_Db`，版本选项 `pchq_m3_db`，可重复执行。
+- `pchq_sites` 新增列：`series_id`（索引）、`buyer_name`（投手）、`onboarding_state`、`series_sync`（这家店是否接受系列同步，现有店默认 0，新注册的店默认 1）。升级时建“系列 1”（slug `series-1`），把没有系列的店全部归入。
+- `pchq_series_products`：`series_id, sku, name, payload(JSON，就是下面的商品对象), price_cents, compare_cents, status(active|removed), position, ver`；`UNIQUE(series_id, sku)`。
+- `pchq_series_campaigns`：`series_id, kind, item_key, config(JSON), active, ver`；`UNIQUE(series_id, kind, item_key)`。
+- 店铺选项 `peptide_core_series`：`{series_id, slug, name, master, catalog_ver, template_ver, campaign_ver, shipping_ver, synced_at}`。读取用 `PeptideCore\Series_Sync::state()` / `::series_id()` / `::is_master()`。`master = true` 表示本店是系列的母版店：商品内容在这家店编辑，再由总后台导入，所以母版店的商品不锁定，同步时只接收价格。
+- 店铺商品元 `_pc_series_sku`（系列内的商品键）、`_pc_series_managed`（`1` = 由系列管理，店铺后台只读）；订单元 `_pc_series_id`（下单时店铺所属的系列，新订单第一次保存前写入）。
+
+### 总后台 PHP 接口（别的模块可以调用）
+
+- `PeptideHq\Series::all()`、`::get($id)`、`::choices()`（开店表单下拉：ID => 名称）、`::default_id()`。
+- `PeptideHq\Series::site_map()` / `::site($site_id)`：`{series_id, buyer_name, onboarding_state, series_sync}`；`::sites_of($series_id)`。
+- `PeptideHq\Series::assign($site_id, $series_id)`、`::set_buyer($site_id, $name)`、`::set_onboarding($site_id, $state)`（M9 向导进度）、`::set_sync($site_id, $on)`。
+- `PeptideHq\Series::reserve($host, $series_id, $buyer_name = '')`：**请日常会话在开店页面（`hq/admin/class-provision-page.php`）加一个必选的“系列”下拉（选项来自 `Series::choices()`）和可选的“投手”输入，提交开店任务时调用它**，参数是新店的管理地址主机名（`sNNNN.…`）或顾客域名。店铺注册进来时按预留归入系列；没有预留的归入默认系列。
+- `PeptideHq\Series_Campaigns::replace($series_id, $items)`（整体替换并把 `campaign_ver` 加一）、`::items($series_id)`。
+- `PeptideHq\Series_Push::queue_series($series_id)`（给系列里每家店排一次同步）、`::lagging()`（店铺 ID => 落后的部分，可用于巡检钩子 `pchq_monitor_checks` 和告警 `series_out_of_sync`）。
+
+### 总后台 → 店铺：`POST /peptide/v1/hq/series/sync`
+
+签名校验沿用 `Hq_Connector::verify`。请求体：
+
+```json
+{
+  "series_id": 1,
+  "slug": "series-1",
+  "name": "系列 1",
+  "template_ver": 2,
+  "master": false,
+  "dry_run": false,
+  "catalog":   { "ver": 3, "source_host": "vialcovepeptides.com", "products": [ /* 商品对象 */ ] },
+  "campaigns": { "ver": 1, "items": [ { "kind": "coupon", "key": "welcome10", "active": true, "config": { } } ] },
+  "shipping":  { "ver": 1, "plans": [ /* 运费方案 */ ], "rules": { "combine": "sum", "sort": "price" } }
+}
+```
+
+- `series_id`、`slug`（小写字母、数字、连字符）每次必带；店铺据此写 `peptide_core_series`。店铺换了系列时，本地三个内容版本号归零。`template_ver` 只做记录（模板内容仍由 `/hq/design` 下发）。
+- `catalog`、`campaigns`、`shipping` 三部分都可以不带；不带 = 不动。带了但 `ver` 不大于店铺本地版本 = 跳过。所以同一个请求重复发送，结果不变。
+- `master: true`（这家店是系列的母版店）：商品部分只改价格，不新建、不下架、不锁定；总后台不给母版店发活动。
+- `dry_run: true`：店铺不改商品、运费、活动和系列状态，返回差异报告（见“返回”）。试运行只是比较，带了哪部分就比哪部分，不看版本号。（唯一会写的是图片校验码的缓存 `_pc_series_sha256`。）
+- 一个请求里后面的部分出错（比如运费方案在这家店无效）时，前面已经同步好的部分和系列基本信息照样记下来，然后返回错误。
+- 两边都忽略看不懂的字段。同一时间只处理一个同步请求，冲突时返回 409 `pc_series_busy`，总后台稍后重试。
+
+**商品对象**（`catalog.products[]`，也是 `GET /hq/catalog-export` 导出的格式）：
+
+```json
+{
+  "sku": "VC-BPC157",
+  "wc_sku": "VC-BPC157",
+  "type": "variable",
+  "name": "BPC-157",
+  "slug": "bpc-157",
+  "status": "publish",
+  "description": "<p>…</p>",
+  "short_description": "",
+  "categories": ["Peptides"],
+  "menu_order": 0,
+  "attributes": [ { "name": "Specifications", "options": ["5mg", "10mg"], "visible": true, "variation": true } ],
+  "default_attributes": { "specifications": "5mg" },
+  "images": [ { "url": "https://…/a.webp", "sha256": "…", "name": "a.webp", "alt": "" } ],
+  "meta": { "_pc_spu": "VC-BPC157", "_pc_product_subtitle": "…" },
+  "price_cents": 0,
+  "compare_cents": 0,
+  "stock_status": "instock",
+  "variations": [
+    { "key": "VC-BPC157-5MG", "sku": "VC-BPC157-5MG", "attributes": { "specifications": "5mg" },
+      "price_cents": 4999, "compare_cents": 5999, "stock_status": "instock", "enabled": true,
+      "image": null, "meta": { "_pc_vials_per_sales_unit": "10" } }
+  ]
+}
+```
+
+- `sku` 是系列内的商品键：取主店商品的 `_pc_spu`，没有则商品 SKU，再没有则 `slug:<别名>`。店铺按 `_pc_series_sku` → `_pc_spu` → SKU → 别名的顺序找本地商品，找不到就新建。
+- `price_cents` 是成交价，`compare_cents` 是划线价（0 = 没有）。`type: simple` 时用商品自己的价格字段；`variable` 时价格在 `variations[]` 里，款式键 `key` = 款式 SKU，没有 SKU 时是 `a:<属性的哈希>`。
+- `wc_sku` 是商品在 WooCommerce 里真正的 SKU（可以为空）；`sku` 只用来配对。
+- 同步后商品带 `_pc_series_managed = 1`，店铺后台不能修改或删除（同步、恢复和命令行脚本除外）。做法是拦住“改商品”的入口（商品编辑页的保存和删除、快速编辑、批量编辑、款式的增删改、WooCommerce REST 的改和删），**不改权限**，所以评价、专辑、批次 COA 等别的功能照常。别的模块如果有自己改商品的入口，请先问 `PeptideCore\Series_Sync::is_locked( $product_id )`。系列里没有的商品（包括本店自己加的）改为草稿，不删除；系列里没有的款式停用，不删除。
+- `manage_stock`（可选，商品和款式上都有）：导出时表示这个商品在本店按数量跟踪库存。店铺接收时不采用它；自己按数量跟踪库存的商品不比较、也不改库存状态。
+- 促销价只有正在生效时才算成交价；设了开始时间还没到的促销不会带到别的店。同步写入的价格不带促销时间。
+- 随商品同步的元：`_pc_spu`、`_pc_product_subtitle`、`_pc_specs`、`_pc_vials_per_sales_unit`、`_pc_pricing`、`_pc_is_demo`（款式只有后两项里的 `_pc_vials_per_sales_unit`、`_pc_pricing`）。其他商品元留在店铺本地。
+- 图片按 `sha256` 去重，只允许从 `source_host`（https）下载，单张最大 15 MB。描述里指向母版店的绝对链接换成本店地址。
+- 属性一律按“自定义属性”同步（全局属性会被导出成自定义属性）。库存只同步有货 / 无货状态，不同步数量。COA 批次和报告暂不随系列同步（仍用“店铺复制”）。
+- 一次请求最多处理约 200 秒；没做完（主要是首次下载图片）时返回 `complete: false`，不记版本号，总后台 30 秒后再发同一个请求接着做。全部商品处理完之后才下架多余的商品。
+
+**运费方案**（`shipping.plans[]`）：`{ name, regions: [ { country: "US", states: [] } ], rates: [ { name, rule: "subtotal"|"quantity"|"weight", min, max|null, fee_cents } ] }`，`min` 含、`max` 不含。店铺用它替换“通用”运费方案，按商品单独设置的方案不动。默认两档（FE-07）：不满 $1000 收 $45，满 $1000 收 $15；门槛和金额在系列页可改，**初始值待平台所有者确认**。
+
+**活动**（`campaigns.items[]`）：外形固定为 `{ kind, key, active, config }`；`kind` 取 `promotion / coupon / ship_discount / first_order / exit_intent / wheel / upsell / progress_bar`，`key` 是同类型内不重复的小写代号，`config` 的内容由 M4 定义（F3 原样保存和转发）。**请 F2 在自己的类里接这四个钩子**：
+
+| 钩子 | 签名 | 说明 |
+| --- | --- | --- |
+| `pc_series_apply_campaigns`（过滤器） | `( $result, array $items, int $ver, bool $dry_run )` | 用 `$items` 整体替换本店的系列活动。成功返回 `true` 或摘要数组；`$dry_run` 时不写入，返回差异数组；失败返回 `WP_Error`。保持返回 `null` = 没有模块接手，店铺不记 `campaign_ver`，总后台下次还会再发 |
+| `pc_series_export_campaigns`（过滤器） | `( array $items )` | 在母版店导出当前活动，返回上面外形的数组。总后台“从母版店导入活动”时调用 |
+| `pc_series_snapshot`（过滤器） | `( array $snapshot )` | 同步前存快照：把恢复活动需要的内容放进 `$snapshot['campaigns']` |
+| `pc_series_restore`（动作） | `( array $snapshot )` | 恢复快照时把 `$snapshot['campaigns']` 写回去 |
+
+`PeptideCore\Series_Sync::manages( 'campaign' )` 为 true 时活动已由系列接管，店铺后台不应再给创建入口（`'catalog'`、`'shipping'` 同理）。
+
+**返回**：
+
+```json
+{
+  "series":   { "series_id": 1, "slug": "series-1", "name": "系列 1", "catalog_ver": 3, "template_ver": 2, "campaign_ver": 1, "shipping_ver": 1, "synced_at": 1794300000 },
+  "applied":  { "catalog": { "created": 1, "updated": 5, "unpublished": 2, "same": 40 }, "campaigns": "applied", "shipping": "applied" },
+  "complete": true,
+  "diff":     { }
+}
+```
+
+- `applied` 每部分：没带 = `null`；版本不新 = `"skipped"`；活动没有模块接手 = `"unhandled"`。`applied.catalog` 另有 `errors`（最多 10 条，某个商品写入失败的原因）。
+- `complete: false` 表示内容太多没做完（主要是图片），总后台 30 秒后接着同一个请求再发。
+- `diff` 只在 `dry_run` 时返回：`{ catalog_ver, summary: { same, changed, create, unpublish }, create: [ { sku, name } ], unpublish: [ { id, sku, name } ], changed: [ { sku, name, id, fields: [ { field, variation?, store, series } ] } ], shipping: { changed }, campaigns: <M4 的差异> }`。
+
+### 其他店铺接口
+
+| 接口 | 方法 | 说明 |
+| --- | --- | --- |
+| `/peptide/v1/hq/series/state` | GET | `{ series: <peptide_core_series>, snapshots: [ { id, at, from, to } ] }` |
+| `/peptide/v1/hq/catalog-export` | GET | 母版店导出：`{ version: 1, source_host, exported_at, products: [], shipping: { plans, rules }, campaigns: [] }`，只导出已发布的商品和“通用”运费方案 |
+| `/peptide/v1/hq/series/restore` | POST `{ ver }` | 恢复到某次同步前的快照（`ver` 为 0 用最近一份；否则先找“把商品升到这个版本的那次同步”之前存的快照，再按快照编号找）。店铺属于哪个系列不回退，只回退商品、运费、活动和它们的版本号。返回 `{ snapshot, series, counts: { restored, unpublished, missing, failed } }` |
+
+店铺命令行：`wp peptide series status`（系列状态和快照）、`wp peptide series restore [<ver>] [--yes]`、`wp peptide series export --file=<路径>`、`wp peptide series diff --file=<目录文件> [--out=<路径>]`（只比较，不改）。
+
+**快照**：每次真正改动前自动存一份（商品、运费、系列状态；活动由 M4 经 `pc_series_snapshot` 放进来），存在选项 `pc_series_snapshot_<编号>`，清单在 `pc_series_snapshots`，保留最近 3 份。快照存不进去时这次同步不做任何改动。
+
+### 上线顺序与开关
+
+- 先发店铺端（接口就位），再开总后台。店铺没有这个接口时总后台记“程序太旧”，6 小时后再试，不报错。
+- 功能键（`pc_hq_capabilities`，请 F1 汇总进功能键表）：`series.sync => 1`（支持 `/hq/series/sync`、`/hq/series/state`、`/hq/series/restore`、`/hq/catalog-export`）、`series.catalog => 1`（能接收商品）、`series.shipping => 1`（能接收运费）。总后台有 `Client::supports()` 时只对声明了 `series.sync` 的店调用；还没有时靠“没有这个接口”的回应判断。
+- 巡检类型（`pchq_monitor_checks`，请 F1 登记）：`series_out_of_sync`（系列内容未同步：上一次同步失败，或者落后超过 30 分钟）。只对声明了 `series.sync`、已归入系列、而且至少尝试同步过一次的店报告。
+- 现有店默认不接受系列同步。首次同步商品前，总后台对每家店做一次 `dry_run` 差异报告，平台所有者逐店确认后才打开开关并下发；之后的版本自动下发。报告必须是针对当前商品版本的，过期的要重新生成才能确认。店铺换系列后要重新确认。
+
+### 模板按系列下发（HQ-06）和店铺复制
+
+- `PeptideHq\Design_Push` 的每个方法多了一个可选的系列参数（`settings / save_settings / sites / master_id / job / latest / templates / studio / start`），不传时用“当前选中的系列”（`Design_Push::current_series()`，在系列管理里点“去模板库”切换，按管理员记）。**日常会话的模板库页面不用改**：只有一个系列时行为和以前完全一样。
+- 默认系列沿用原来的选项名（`pchq_design`、`pchq_design_job`、`pchq_design_latest` …），其他系列是 `pchq_design_s<编号>…`、`pchq_design_job_s<编号>`。自动下发、新店下发、后台逐店下发对每个系列分别处理；整套下发一次，系列的 `template_ver` 加一。
+- `PeptideHq\Store_Clone::request()` 只允许在同一个系列的店铺之间复制（错误码 `pchq_clone_series`）；复制提交后总后台会重新把系列信息发给目标店铺。
+
+### 数据表登记（给 F1 的脱敏快照）
+
+| 表 / 选项 | 有没有顾客资料或密钥 | 建议 |
+| --- | --- | --- |
+| `pchq_series`、`pchq_series_products`、`pchq_series_campaigns` | 没有（商品、价格、运费、活动配置） | keep |
+| `pchq_sites` 新增列 `series_id`、`onboarding_state`、`series_sync` | 没有 | keep |
+| `pchq_sites.buyer_name` | 投手姓名（内部人员） | scrub：改成“投手 1 / 2 …” |
+| 总后台选项 `pchq_series_push_state`、`pchq_series_reserved`、`pchq_series_sources`、`pchq_series_confirmed`、`pchq_series_diff_<系列>_<店铺>`、`pchq_design_s*` | 没有（`pchq_series_reserved` 里有投手姓名和域名） | keep；`pchq_series_reserved` 清空 |
+| 店铺选项 `peptide_core_series`、`pc_series_snapshots`、`pc_series_snapshot_<编号>`、`pc_series_media` | 没有（快照里是商品和运费） | keep |
+| 店铺商品元 `_pc_series_sku`、`_pc_series_managed`，附件元 `_pc_series_sha256`，订单元 `_pc_series_id` | 没有 | keep |
+
+
+## M10 订单汇总、报表与退款（2026-11-10，F3，HQ-13 / OR-03）
+
+这一节由 F3 维护。
+
+### 数据
+
+- 总后台表（升级写在 `PeptideHq\Orders`，版本选项 `pchq_m10_db`）：
+  - `pchq_orders`：`site_id, store_order_id, order_number, series_id, status, paid, is_test, currency, total_cents, refunded_cents, refund_state(none|partial|full), refund_sync, refund_error, created_at, paid_at, order_day, email_hash, utm_source, ad_id, reported_at, updated_at`；`UNIQUE(site_id, store_order_id)`。
+  - `pchq_refunds`：`id, site_id, store_order_id, amount_cents, refunded_on, note, created_by, created_at, voided_at, voided_by`。每次标记一行；撤销只写 `voided_*`，不删行。
+  - `pchq_ad_spend`：`site_id, day, spend_cents, source(manual|api), updated_at, updated_by`；`PRIMARY KEY(site_id, day)`。
+  - `pchq_daily` 新增列 `gross_cents`、`refunded_cents`；有已标记退款的日期，`revenue` 改为净额。
+- 店铺订单元：`_pc_hq_reported`（最近一次上报成功的内容指纹和时间）、`_pc_refund_cents`（已标记的退款总额，美分）、`_pc_refund_state`（`none / partial / full`）。**投手订单页（F5）请用这两个元显示“已退款 / 部分退款”；店铺侧销售额（F4 的 `Data\Metrics`）请减去 `_pc_refund_cents`。**
+
+### 店铺 → 总后台：`POST /peptide-hq/v1/orders/report`
+
+签名同 `/mail`（店铺密钥 + `X-PC-HQ-Site`）。每批最多 50 条；按 `(site_id, store_order_id)` 覆盖写入，重复上报结果不变。
+
+```json
+{ "orders": [ {
+  "store_order_id": 1234, "order_number": "1234", "status": "processing", "paid": true, "is_test": false,
+  "currency": "USD", "total_cents": 14999, "created_at": 1794300000, "paid_at": 1794300100, "order_day": "2026-11-10",
+  "series_id": 1, "email_hash": "<sha256(小写邮箱)>", "utm_source": "facebook", "ad_id": "1202…"
+} ] }
+```
+
+- 返回 `{ "accepted": [1234], "rejected": [ { "store_order_id": 0, "code": "invalid" } ] }`。
+- `paid` = 订单处于 WooCommerce 的已付款状态；`is_test` = 测试单（收件信息全填 1、测试付款方式或含演示商品）。报表只算 `paid = 1 且 is_test = 0`。
+- 不上报姓名、邮箱明文、电话、地址。`refunded_cents` 由总后台自己按 `pchq_refunds` 计算，不采用店铺上报的值。
+- 店铺端：付款和状态变化时异步上报（钩子 `pc_hq_order_report`）；每小时补报近 48 小时内容有变化但没报成功的订单（`pc_hq_order_reconcile`）。没付过款、也从没上报过的订单不上报。
+- 请求体里另有一个 `nonce`（随机值，只为了让每次请求的签名不同），总后台忽略它。
+- `ad_id` 取下单那次访问落地时查询串里的 `ad_id`，没有就取 `utm_content`。
+- **和 F4 的约定：** `PeptideCore\Data\Metrics::order_fact( \WC_Order )`（F4 那节的签名）存在时，上报的 `paid / is_test / total_cents / paid_at` 取它的 `paid / test / gross_cents / paid_at`；它还没合进来时 F3 用同口径的本地实现（WooCommerce 已付款状态 + `Test_Orders` / `Overview::is_test_order`）。
+- 功能键（请 F1 汇总）：`orders.report => 1`（店铺会上报订单）、`orders.refund => 1`（支持 `/hq/order-refund` 和 `/hq/orders/digest`）。
+- 巡检类型（请 F1 登记）：`order_report_lag`（订单上报落后：近两天店铺每日汇总的已付款订单数比已上报的多，而且持续超过 2 小时）。只对声明了 `orders.report` 的店报告；巡检里不向店铺发请求。
+
+### 总后台 → 店铺
+
+| 接口 | 方法 | 请求 | 行为 |
+| --- | --- | --- | --- |
+| `/peptide/v1/hq/order-refund` | POST | `{ order_id, refunded_cents, state, note }` | 只写 `_pc_refund_cents`、`_pc_refund_state` 和一条订单备注；**不创建 WooCommerce 退款对象**，不改订单状态。内容没变时不重复加备注 |
+| `/peptide/v1/hq/orders/digest` | GET `from`、`to`（UTC 秒，按付款时间，可不带） | — | `{ count, total_cents, refunded_cents, test_count, currency }`，用来核对“总后台订单合计 = 各店合计” |
+
+### 历史订单回填
+
+店铺命令 `wp peptide orders backfill [--dry-run] [--since=YYYY-MM-DD]`：先试运行（只出报告：订单数、金额、按月分布、测试单数、缺 `_pc_series_id` 的订单数），确认后正式运行（补 `_pc_series_id` 并分批上报）。可重复执行。
+
+### 退款标记（只有总后台管理员）
+
+- `PeptideHq\Refunds::mark( $site_id, $store_order_id, $amount_cents, $refunded_on, $note, $user_id )`、`::void( $refund_id, $user_id )`。金额必须大于 0，且不超过订单金额减已标记的退款。
+- 每次标记或撤销后：重算 `pchq_orders.refunded_cents / refund_state` → 重算 `pchq_daily` 净额 → 回写店铺；店铺连不上时记为待回写，每 10 分钟重试。
+- 已回传给广告平台的购买事件不撤回。
+
+### 报表口径（HQ-13）
+
+订单数 = `paid = 1 且 is_test = 0` 的订单；销售额（净额）= `total_cents − refunded_cents`；ROAS = 净销售额 ÷ 广告花费（`pchq_ad_spend`，先手填）；时间按付款时间，日期边界用总后台时区。三级（系列 → 投手 → 店铺）都由同一批店铺行往上加，合计相等。访客数用 `pchq_daily.visitors`（店铺时区的日期），只作参考。弃单率还没有：总后台没有弃单数据，要等店铺把 F4 的 `Metrics::abandoned()` 放进每日汇总（`/hq/summary` 归 F1）之后再加一列。
+
+`pchq_daily` 的净额：轮询每次用店铺的每日汇总覆盖 `pchq_daily`（那时 `gross_cents`、`refunded_cents` 回到 0，`revenue` 是毛额），F3 在轮询之后（`pchq_poll` / `pchq_poll_one` 优先级 20，以及店铺页“立即刷新”之后）按下单日把已标记的退款扣掉。所以概览页的销售额也是净额，不用改概览页。
+
+### 数据表登记（给 F1 的脱敏快照）
+
+| 表 / 选项 | 有没有顾客资料或密钥 | 建议 |
+| --- | --- | --- |
+| `pchq_orders` | 没有姓名、邮箱、电话、地址；`email_hash` 是邮箱的 SHA-256，`ad_id`、`utm_source` 是广告来源 | scrub：`email_hash` 置空（或重新加盐哈希） |
+| `pchq_refunds` | `note` 是平台所有者手写的备注，可能提到顾客 | scrub：`note` 置空 |
+| `pchq_ad_spend`、`pchq_daily` 新增列 `gross_cents`、`refunded_cents` | 没有 | keep |
+| 总后台选项 `pchq_order_lag_since` | 没有 | keep |
+| 店铺订单元 `_pc_hq_reported`、`_pc_refund_cents`、`_pc_refund_state` | 没有 | keep |
