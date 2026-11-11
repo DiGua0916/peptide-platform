@@ -168,6 +168,7 @@ final class Plugin {
 			Admin\Ship_Preview_Page::register_hooks();
 			Admin\Manual_Order_Page::register_hooks();
 			Admin\Order_List::register_hooks();
+			Admin\Order_Detail_Page::register_hooks();
 			Admin\Marketing::register_hooks();
 			Admin\Promotions_Page::register_hooks();
 			Admin\Coupons_Page::register_hooks();

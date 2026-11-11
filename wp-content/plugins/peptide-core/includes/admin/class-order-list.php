@@ -79,7 +79,7 @@ final class Order_List {
 			case 'pc_ops':
 				$edit = $order->get_edit_order_url();
 				// 店主 2026-11-11：操作按钮和“弃单”页一样（蓝色小方块图标 + 写邮件）。
-				echo '<span class="pc-ol-ops"><a href="' . esc_url( $edit ) . '" title="查看订单" aria-label="查看订单"><span class="dashicons dashicons-visibility"></span></a>';
+				echo '<span class="pc-ol-ops"><a href="' . esc_url( Order_Detail_Page::url( $order->get_id() ) ) . '" title="查看订单" aria-label="查看订单"><span class="dashicons dashicons-visibility"></span></a>';
 				if ( $order->is_paid() && ! $order->has_status( array( 'completed', 'refunded', 'cancelled' ) ) ) {
 					echo '<a href="' . esc_url( $edit . '#woocommerce-order-fulfillments' ) . '" title="发货" aria-label="发货"><span class="dashicons dashicons-car"></span></a>';
 				}
@@ -91,7 +91,7 @@ final class Order_List {
 			case 'pc_number':
 				// 店主 2026-11-11：订单编号只显示编号，不带顾客名、不带预览小眼睛。
 				// 和支付平台对账用后面的“流水号”（支付平台的交易号）。
-				echo '<a class="pc-ol-num" href="' . esc_url( $order->get_edit_order_url() ) . '">#' . esc_html( $order->get_order_number() ) . '</a>';
+				echo '<a class="pc-ol-num" href="' . esc_url( Order_Detail_Page::url( $order->get_id() ) ) . '">#' . esc_html( $order->get_order_number() ) . '</a>';
 				break;
 			case 'pc_items':
 				$names = array();
