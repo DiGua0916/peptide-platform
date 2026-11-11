@@ -81,7 +81,7 @@ final class Order_List {
 				// 店主 2026-11-11：操作按钮和“弃单”页一样（蓝色小方块图标 + 写邮件）。
 				echo '<span class="pc-ol-ops"><a href="' . esc_url( Order_Detail_Page::url( $order->get_id() ) ) . '" title="查看订单" aria-label="查看订单"><span class="dashicons dashicons-visibility"></span></a>';
 				if ( $order->is_paid() && ! $order->has_status( array( 'completed', 'refunded', 'cancelled' ) ) ) {
-					echo '<a href="' . esc_url( $edit . '#woocommerce-order-fulfillments' ) . '" title="发货" aria-label="发货"><span class="dashicons dashicons-car"></span></a>';
+					echo '<a href="' . esc_url( add_query_arg( 'pc_native', '1', $edit ) . '#woocommerce-order-fulfillments' ) . '" title="发货" aria-label="发货"><span class="dashicons dashicons-car"></span></a>';
 				}
 				if ( '' !== (string) $order->get_billing_email() && class_exists( Mail_Page::class ) ) {
 					echo '<a href="' . esc_url( Mail_Page::compose_url( array( 'order_id' => $order->get_id(), 'to' => $order->get_billing_email() ) ) ) . '" title="写邮件" aria-label="写邮件"><span class="dashicons dashicons-email"></span></a>';

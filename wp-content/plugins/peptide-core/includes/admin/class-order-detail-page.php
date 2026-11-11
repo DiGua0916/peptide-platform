@@ -27,12 +27,43 @@ final class Order_Detail_Page {
 	public static function register_hooks(): void {
 		add_action( 'admin_menu', array( self::class, 'menu' ), 90 );
 		add_action( 'admin_post_pc_order_detail', array( self::class, 'handle' ) );
+		// 店主 2026-11-11：所有入口打开订单都用新详情页——WooCommerce 原生订单编辑页（action=edit）一律转到这里；
+		// 退款、发货、改地址等需要原生页的按钮带 pc_native=1，不转。
+		add_action( 'load-woocommerce_page_wc-orders', array( self::class, 'maybe_redirect' ) );
+		add_action( 'load-post.php', array( self::class, 'maybe_redirect' ) );
 		// 隐藏页面没有菜单标题：浏览器标签和面包屑显示“订单详情”。
 		add_action( 'load-admin_page_' . self::SLUG, static function (): void { $GLOBALS['title'] = '订单详情'; } );
 	}
 
 	public static function menu(): void {
 		add_submenu_page( '', '订单详情', '订单详情', self::CAP, self::SLUG, array( self::class, 'render' ) );
+	}
+
+	public static function maybe_redirect(): void {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended
+		if ( 'GET' !== ( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) || ! empty( $_GET['pc_native'] ) || ! current_user_can( self::CAP ) ) {
+			return;
+		}
+		$id = 0;
+		if ( isset( $_GET['page'] ) && 'wc-orders' === $_GET['page'] && 'edit' === ( $_GET['action'] ?? '' ) ) {
+			$id = absint( $_GET['id'] ?? 0 );
+		} elseif ( isset( $_GET['post'] ) && 'edit' === ( $_GET['action'] ?? '' ) ) {
+			$id = absint( $_GET['post'] );
+		}
+		// phpcs:enable
+		if ( ! $id ) {
+			return;
+		}
+		$o = wc_get_order( $id );
+		if ( $o instanceof \WC_Order && 'shop_order' === $o->get_type() ) {
+			wp_safe_redirect( self::url( $id ) );
+			exit;
+		}
+	}
+
+	/** 原生订单编辑页（不被转走），退款 / 发货 / 改地址用。 */
+	public static function native_url( \WC_Order $o, string $anchor = '' ): string {
+		return add_query_arg( 'pc_native', '1', $o->get_edit_order_url() ) . $anchor;
 	}
 
 	public static function url( int $id ): string {
@@ -204,7 +235,7 @@ final class Order_Detail_Page {
 			echo '<div class="wrap"><h1>订单详情</h1><p>订单不存在。</p></div>';
 			return;
 		}
-		$edit   = $o->get_edit_order_url();
+		$edit   = add_query_arg( 'pc_native', '1', $o->get_edit_order_url() );
 		$nonce  = wp_create_nonce( 'pc_order_detail_' . $id );
 		$form   = static function ( string $do, string $inner, string $cls = '' ) use ( $id, $nonce ): string {
 			return '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="' . esc_attr( $cls ) . '"><input type="hidden" name="action" value="pc_order_detail"><input type="hidden" name="id" value="' . (int) $id . '"><input type="hidden" name="_wpnonce" value="' . esc_attr( $nonce ) . '"><input type="hidden" name="do" value="' . esc_attr( $do ) . '">' . $inner . '</form>';
