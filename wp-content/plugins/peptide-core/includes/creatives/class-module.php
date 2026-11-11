@@ -40,6 +40,30 @@ final class Module {
 				$page::register_hooks();
 			}
 		}
+		// 联调：素材归位、花费导入（线 2）之后，让每日上报（线 4）重报受影响的日期。
+		add_action( 'pc_creatives_spend_imported', array( self::class, 'rereport_days' ), 10, 1 );
+		add_action( 'pc_creatives_relinked', array( self::class, 'rereport_ad' ), 10, 1 );
+	}
+
+	/** 花费导入之后：重报导入涉及的日期。 */
+	public static function rereport_days( $days ): void {
+		Daily_Report::rereport( array_values( array_filter( (array) $days, 'is_string' ) ) );
+	}
+
+	/** 一条广告归到某个素材之后：重报这条广告带来访客的那些日期。 */
+	public static function rereport_ad( $ad_id ): void {
+		global $wpdb;
+		if ( ! is_string( $ad_id ) || ! Contract::valid_meta_id( $ad_id ) || ! \PeptideCore\Tracking\Schema::installed() ) {
+			return;
+		}
+		$since = ( time() - Daily_Report::MAX_DAYS * 86400 ) * 1000;
+		$ms    = (array) $wpdb->get_col( $wpdb->prepare( 'SELECT start_ms FROM ' . \PeptideCore\Tracking\Schema::table( 'visits' ) . ' WHERE utm_content = %s AND start_ms >= %d', $ad_id, $since ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+		$tz    = Board::timezone();
+		$days  = array();
+		foreach ( $ms as $m ) {
+			$days[ Board::day( (int) $m, $tz ) ] = true;
+		}
+		Daily_Report::rereport( array_keys( $days ) );
 	}
 
 	/**

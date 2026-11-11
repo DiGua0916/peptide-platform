@@ -1092,7 +1092,7 @@ currency, visitor, visit, buyer
             "intent":{"high":3,"mid":9,"low":23,"invalid":5},"visitors":40,"valid_visitors":35,"add_to_cart":4,"checkout":2,
             "cashier":2,"orders":1,"sales_cents":15900,"spend_cents":2350,"impressions":3100,"link_clicks":52}]}
   ```
-  店铺端用 `Contract::report_payload()` 生成，总后台用 `Creatives::clean_report()` 校验，两边按 `tests/fixtures/creatives/report-sample.json` 测。最多 500 行；同一天同一编号只留最后一行；计数非负整数，缺的补 0；`thumb` 只收 https。回应 `{day, stored, rejected}`。**打地基阶段 `store_rows()` 返回 501，由线 3 实现写入。**
+  店铺端用 `Contract::report_payload()` 生成，总后台用 `Creatives::clean_report()` 校验，两边按 `tests/fixtures/creatives/report-sample.json` 测。最多 500 行；同一天同一编号只留最后一行；计数非负整数，缺的补 0；`thumb` 只收 https。回应 `{day, stored, rejected}`。写入（线 3）：同一家店同一天整天覆盖；写失败返回 500，原有数据不动。
 - `POST /peptide-hq/v1/creatives/spend`：`{"nonce":"…","days":[{"day":"2026-11-11","spend_cents":12345}]}`，1–62 天，写进 `pchq_ad_spend`（`source = csv`）；0 = 当天没花费（删掉那一行）。回应 `{saved: [日期…]}`。已实现。
 - `GET /peptide-hq/v1/creatives/vocab`：`{"ver":1,"items":[{"attr":"hook","value":"lab","label":"检测报告","required":true,"position":0}]}`。店铺发现 ver 变大时整体覆盖本地词表。已实现。
 
@@ -1101,3 +1101,15 @@ currency, visitor, visit, buyer
 - `pchq_creative_daily(site_id + day + code PK, attrs, custom, thumb, visitors, valid_visitors, intent_high/mid/low/invalid, add_to_cart, checkout, cashier, orders, sales_cents, spend_cents, impressions, link_clicks, reported_at)`
 - `pchq_attribute_vocab(attr + value PK, label, required, active, position, updated_at)`，版本号选项 `pchq_attribute_vocab_ver`（改词表加一）。
 - `pchq_ad_spend.source` 新增取值 `csv`（`Orders::set_spend()`）。
+
+### 联调后补充（2026-11-11）
+
+- **每日上报口径**（线 4，`Creatives\Daily_Report`）：店铺时区的前一天，按“当天最近来源”归到素材；有效访客 = 进站访客去掉意向分层为“无效”的；加购 / 进结账 / 进收银页 / 订单按访问的 `stage` ≥ 2 / 3 / 4 / 5。总后台对比页的比率都用有效访客做分母。每小时检查一次，失败按退避重试，501 / 网络错误重试，400 丢弃并记日志。
+- **重报**：`Daily_Report::rereport( $days )`。素材归位后（`do_action( 'pc_creatives_relinked', $ad_id, $code )`）重报这条广告带来访客的日期；花费导入后（`do_action( 'pc_creatives_spend_imported', $days, $import_id )`）重报导入涉及的日期。由 `Creatives\Module` 接起来。
+- **补登记**会把 `pc_track_visits.creative_code` 一起改成新编号（`WHERE utm_content = ad_id`）；`pc_ad_ads` 由采集（线 1）和花费导入（线 2）两处补，都只在没有这条广告时插入。
+- **页面缓存**：`placement`、`ad_name` 和 `utm_*` 一样算追踪参数，带模板参数的广告链接也能用首页缓存。
+- **店铺端选项 / 定时任务**：`peptide_core_creatives_spend_pending`（待推送的花费日期）、`peptide_core_creatives_vocab_sync`（词表同步状态）、`pc_creatives_site_versions`（站点版本号）、`pc_creatives_board`（看板阈值）；定时任务 `pc_creatives_vocab_sync`、`pc_creatives_spend_push` 和每日上报的小时任务。
+- **总后台选项**：`pchq_creatives_checkpoint`、`pchq_creatives_exports`（检查点导出）；词表版本 `pchq_attribute_vocab_ver` 只在有改动时加一。
+- **IP 地理库**：生产需要把 GeoLite2-City / GeoLite2-ASN（或 DB-IP lite）放进 `uploads/peptide-geoip/` 或用常量指定；没有库时地理网络列为空，不报错。DB-IP lite 需要署名。
+- **已知缺口**（不影响上线，后续补）：`ip_type` 目前只判断 `vpn / hosting / mobile / residential`，意向分层里“企业 / 高校 IP”一条暂时用不上；前端没有滚动事件，“没有滚动”这条无效规则按“看不出”处理；访问表没有国家列，看板从 `page_view` 事件取国家；个人数据导出还没包含 IP 等新列（合规层面用户决定后期再做）。
+
