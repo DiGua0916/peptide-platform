@@ -477,3 +477,8 @@
 - `Stock_Range`：is_hot()（规格或整个商品在 hot_ids）、product_has_hot()（卡片用：商品任一规格是热销）、flame()（小火苗 SVG）；过滤 woocommerce_get_availability_text → 热销规格显示“Only N left”，woocommerce_get_availability_class 加 pc-hot-stock；内联样式：卡片“Selling fast”橙色小字 + 轻微摇曳的小火苗，库存行红色 + 小火苗（减少动效时不动）。
 - 主题 functions.php：商品卡片在热销商品上加一行 `<p class="vc-card-hot">🔥 Selling fast</p>`（卡片不写数字：同一商品只有部分规格是热销，例如只有 Tirzepatide 20mg）。
 - 验证（主店手机尺寸）：93 张卡片里正好 7 张显示（Tirzepatide、Retatrutide、Tesamorelin、MOTS-C、KLOW、Lipo-C B12、Vitamin B-12）；Tirzepatide 弹窗 20mg 显示红色“🔥 Only 28 left”，切到 10mg 恢复“119 in stock”。部署 web + hq 各 7 份（插件 + 主题），6 店清缓存，5 个可访问域名首页都有 7 张热销卡片。
+
+### 2026-11-11 18:27 UTC 顾客邮件居中
+- 店主：发到 sun18761388693@gmail.com 的预览邮件（“Thank You for Your Order”、“Your VialCove account has been created!”）整体偏右。用主店临时订单 / 临时账户（发完即删，订单号 #11851 起被占用）发的预览；测试单标记会让系统不发邮件，所以临时订单不打标记、保持待付款。
+- 原因：WooCommerce 11 邮件外层是“空列 + 600 宽列 + 空列”，部分客户端（Gmail）分配不均。
+- 修复：peptide-core 新增 templates/emails/email-header.php、email-footer.php（复制 WC 11.2.1 原模板，只把外层改成经典居中：一个 align=center 的铺满单元格，里面 max-width 600、margin 0 auto、align=center 的表格），`Chase_Copy::TEMPLATES` 加这两个模板，所有 WooCommerce 邮件生效。主店重发两封预览，发件记录确认用的是新结构。部署 web + hq 各 7 份。

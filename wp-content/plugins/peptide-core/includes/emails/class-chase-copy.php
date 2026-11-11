@@ -24,7 +24,7 @@ final class Chase_Copy {
 	public const WHATSAPP_LINK = 'https://wa.me/13039444124';
 	public const TAGLINE       = 'Peptides are our focus. Your experience is our priority.';
 
-	private const TEMPLATES = array( 'emails/customer-failed-order.php', 'emails/customer-processing-order.php' );
+	private const TEMPLATES = array( 'emails/customer-failed-order.php', 'emails/customer-processing-order.php', 'emails/email-header.php', 'emails/email-footer.php' ); // 2026-11-11：邮件居中（页眉页脚用插件版本）。
 
 	/** 换母版前的旧默认值：顾客后台里还存着这些旧默认的，视为“没改过”，直接换成新母版。 */
 	private const OLD_DEFAULTS = array(
