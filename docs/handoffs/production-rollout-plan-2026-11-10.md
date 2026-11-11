@@ -359,3 +359,9 @@
 - peptide-core 新增 `Order_Number`：有 `_pc_pp_ref`（hang-…）的订单，`woocommerce_order_number` 显示 hang- 号（顾客邮件、付款成功弹窗、物流球、后台列表都跟着变），后台订单搜索能搜 hang-；老订单不写、不变。物流球查询支持输入 hang- 号，新订单不再接受原数字号。同一单重新付款会换成最新的 hang- 号，付款成功那次就是最终订单号。
 - 验证：HQ 对 hang-161188501 的回复带 pp_ref；主店反射测试 Bridge 透传 / 拒绝异常值 / 兼容旧回复、内存订单显示 hang-、老订单 #11843 仍显示 11843。panapay 自带测试中失败的 6 个改动前后结果一致（原本就失败），checkout-session-policy 通过。
 - 部署：HQ panapay 备份 /root/panapay-class-hub.php.bak-20261111122601；店铺 panapay 和 peptide-core web + hq 各 7 份（备份 /home/ubuntu/vialcove-deploy-backups/trk-plain-20261111T122613 / T122618 等）。
+
+### 2026-11-11 12:50 UTC FedEx 密钥改到总后台统一设置
+- 店主：FedEx 密钥应该放总后台。新增 peptide-hq `Fedex`（includes/class-fedex.php）+ 页面“总后台 → 物流追踪（FedEx）”（admin/class-fedex-page.php）：API Key / Secret Key（Secret 用总后台 Crypto 加密保存、不回显）、正式 / 测试环境、测试查询。接口 POST /peptide-hq/v1/fedex/track（店铺签名，Mail::verify），一次最多 10 个单号；token 和单号结果在总后台缓存（30 分钟 / 出错 5 分钟）。
+- peptide-core `Fedex_Track` 改为签名请求总后台，不再保存密钥；店铺再缓存 30 分钟，总后台未配置时 10 分钟内不再问（后台手动测试不受影响）。店铺“店铺设置 → 物流追踪”去掉密钥栏，只留物流球开关、说明和测试查询。6 店的旧选项 pc_fedex 已删（本来就没填过）。
+- 验证：主店调用走通签名链路，总后台回复“还没有设置密钥”。真实 FedEx 查询等店主在总后台填好密钥后测。
+- 部署：总后台 peptide-hq（备份 /root/hq-fedex-backup-20261111124912）；peptide-core web + hq 各 7 份（备份 /home/ubuntu/vialcove-deploy-backups/trk-plain-20261111T124923 / T124925 等）。

@@ -1,11 +1,9 @@
 <?php
 /**
- * FedEx 官方追踪接口（Track API，店主 2026-11-11）。
+ * FedEx 物流记录（店主 2026-11-11：密钥统一放在总后台“物流追踪（FedEx）”）。
  *
- * 店主在 developer.fedex.com 建项目、选 Track API，拿到 API Key / Secret Key 填到后台“店铺设置 → 物流追踪”。
- * 先用 OAuth（client_credentials）换 token（缓存到过期前 1 分钟），再查单号的扫描记录。
- * 每个单号的结果缓存 30 分钟（出错缓存 5 分钟），顾客反复打开不会刷爆 FedEx 的额度。
- * 密钥只在服务端使用，不会发到浏览器，后台也不回显。
+ * 店铺不保存 FedEx 密钥：查单号时签名请求总后台 /peptide-hq/v1/fedex/track，总后台去问 FedEx。
+ * 店铺这边每个单号再缓存 30 分钟（出错 5 分钟）；总后台说还没填密钥时，10 分钟内不再问。
  *
  * @package PeptideCore
  */
@@ -16,44 +14,8 @@ defined( 'ABSPATH' ) || exit;
 
 final class Fedex_Track {
 
-	public const OPTION = 'pc_fedex';
-
-	private const HOSTS = array(
-		'production' => 'https://apis.fedex.com',
-		'sandbox'    => 'https://apis-sandbox.fedex.com',
-	);
-
-	public static function settings(): array {
-		$s = get_option( self::OPTION, array() );
-		$s = is_array( $s ) ? $s : array();
-		return array(
-			'client_id'     => (string) ( $s['client_id'] ?? '' ),
-			'client_secret' => (string) ( $s['client_secret'] ?? '' ),
-			'env'           => 'sandbox' === ( $s['env'] ?? '' ) ? 'sandbox' : 'production',
-		);
-	}
-
-	public static function configured(): bool {
-		$s = self::settings();
-		return '' !== $s['client_id'] && '' !== $s['client_secret'];
-	}
-
-	/** 保存；密钥留空表示不改。 */
-	public static function save( array $in ): void {
-		$old = self::settings();
-		$id  = trim( sanitize_text_field( (string) ( $in['client_id'] ?? '' ) ) );
-		$sec = trim( sanitize_text_field( (string) ( $in['client_secret'] ?? '' ) ) );
-		$new = array(
-			'client_id'     => $id,
-			'client_secret' => '' !== $sec ? $sec : ( $id === $old['client_id'] ? $old['client_secret'] : '' ),
-			'env'           => 'sandbox' === ( $in['env'] ?? '' ) ? 'sandbox' : 'production',
-		);
-		if ( ! empty( $in['clear'] ) ) {
-			$new = array( 'client_id' => '', 'client_secret' => '', 'env' => 'production' );
-		}
-		update_option( self::OPTION, $new, false );
-		delete_transient( 'pc_fedex_token' );
-	}
+	private const ROUTE = '/peptide-hq/v1/fedex/track';
+	private const OFF   = 'pc_fedex_hq_off';
 
 	/** 这个包裹是不是 FedEx 的：承运商选的 FedEx，或者没选承运商但单号是 FedEx 的格式（12 / 15 / 20 / 22 位数字）。 */
 	public static function is_fedex( ?string $provider, ?string $number ): bool {
@@ -64,124 +26,74 @@ final class Fedex_Track {
 		return '' === (string) $provider && 1 === preg_match( '/\A(?:\d{12}|\d{15}|\d{20}|\d{22})\z/', $n );
 	}
 
-	private static function token() {
-		$t = get_transient( 'pc_fedex_token' );
-		if ( is_string( $t ) && '' !== $t ) {
-			return $t;
+	/** 能不能去总后台查（接入了总后台，且总后台最近没说“还没填密钥”）。 */
+	public static function configured(): bool {
+		if ( ! class_exists( Hq_Connector::class ) || ! Hq_Connector::configured() ) {
+			return false;
 		}
-		$s   = self::settings();
-		$res = wp_remote_post(
-			self::HOSTS[ $s['env'] ] . '/oauth/token',
-			array(
-				'timeout' => 12,
-				'headers' => array( 'Content-Type' => 'application/x-www-form-urlencoded' ),
-				'body'    => array(
-					'grant_type'    => 'client_credentials',
-					'client_id'     => $s['client_id'],
-					'client_secret' => $s['client_secret'],
-				),
-			)
-		);
-		if ( is_wp_error( $res ) ) {
-			return new \WP_Error( 'pc_fedex_net', 'FedEx 连接失败：' . $res->get_error_message() );
-		}
-		$j = json_decode( (string) wp_remote_retrieve_body( $res ), true );
-		if ( 200 !== (int) wp_remote_retrieve_response_code( $res ) || empty( $j['access_token'] ) ) {
-			$msg = $j['errors'][0]['message'] ?? ( 'HTTP ' . wp_remote_retrieve_response_code( $res ) );
-			return new \WP_Error( 'pc_fedex_auth', 'FedEx 密钥验证失败：' . $msg );
-		}
-		set_transient( 'pc_fedex_token', (string) $j['access_token'], max( 60, (int) ( $j['expires_in'] ?? 3600 ) - 60 ) );
-		return (string) $j['access_token'];
+		$s = Hq_Connector::settings();
+		return 64 === strlen( (string) $s['key'] ) && '' !== (string) $s['uuid'] && ! get_transient( self::OFF );
 	}
 
 	/**
-	 * 查一个单号。返回 status / code / delivered / eta / events（新的在前），或 WP_Error。
-	 *
 	 * @return array<string,mixed>|\WP_Error
 	 */
 	public static function track( string $number, bool $fresh = false ) {
 		$number = preg_replace( '/\s+/', '', $number );
-		if ( '' === $number || ! self::configured() ) {
-			return new \WP_Error( 'pc_fedex_off', 'FedEx 追踪还没有设置密钥。' );
+		if ( $fresh ) {
+			delete_transient( self::OFF ); // 后台手动测试：不管上次总后台怎么说，重新问。
 		}
-		$key = 'pc_fedex_t_' . md5( self::settings()['env'] . $number );
+		if ( '' === $number || ! self::configured() ) {
+			return new \WP_Error( 'pc_fedex_off', 'FedEx 追踪还没有在总后台设置密钥，或这家店没有接入总后台。' );
+		}
+		$key = 'pc_fedex_t_' . md5( $number );
 		if ( ! $fresh ) {
 			$hit = get_transient( $key );
 			if ( is_array( $hit ) ) {
 				return isset( $hit['error'] ) ? new \WP_Error( 'pc_fedex_cached', (string) $hit['error'] ) : $hit;
 			}
 		}
-		$token = self::token();
-		if ( is_wp_error( $token ) ) {
-			return $token;
-		}
-		$res = wp_remote_post(
-			self::HOSTS[ self::settings()['env'] ] . '/track/v1/trackingnumbers',
+		$s    = Hq_Connector::settings();
+		$time = time();
+		$body = (string) wp_json_encode( array( 'numbers' => array( $number ) ), JSON_UNESCAPED_SLASHES );
+		$res  = wp_remote_post(
+			add_query_arg( 'rest_route', rawurlencode( self::ROUTE ), trailingslashit( (string) PEPTIDE_HQ_URL ) ),
 			array(
-				'timeout' => 15,
+				'timeout' => 20,
 				'headers' => array(
-					'Content-Type'  => 'application/json',
-					'Authorization' => 'Bearer ' . $token,
-					'X-locale'      => 'en_US',
+					'Content-Type' => 'application/json',
+					'X-PC-HQ-Site' => $s['uuid'],
+					'X-PC-HQ-Time' => (string) $time,
+					'X-PC-HQ-Sign' => Hq_Connector::sign( $s['key'], 'POST', self::ROUTE, '', $time, $body ),
 				),
-				'body'    => wp_json_encode(
-					array(
-						'includeDetailedScans' => true,
-						'trackingInfo'         => array( array( 'trackingNumberInfo' => array( 'trackingNumber' => $number ) ) ),
-					)
-				),
+				'body'    => $body,
 			)
 		);
 		if ( is_wp_error( $res ) ) {
-			return new \WP_Error( 'pc_fedex_net', 'FedEx 连接失败：' . $res->get_error_message() );
+			return new \WP_Error( 'pc_fedex_hq', '连不上总后台：' . $res->get_error_message() );
 		}
-		$code = (int) wp_remote_retrieve_response_code( $res );
-		$j    = json_decode( (string) wp_remote_retrieve_body( $res ), true );
-		if ( 401 === $code ) {
-			delete_transient( 'pc_fedex_token' );
+		$j = json_decode( (string) wp_remote_retrieve_body( $res ), true );
+		if ( 200 !== (int) wp_remote_retrieve_response_code( $res ) || ! is_array( $j ) ) {
+			return new \WP_Error( 'pc_fedex_hq', '总后台返回：' . ( is_array( $j ) && is_string( $j['message'] ?? null ) ? $j['message'] : 'HTTP ' . wp_remote_retrieve_response_code( $res ) ) );
 		}
-		$r = $j['output']['completeTrackResults'][0]['trackResults'][0] ?? null;
-		if ( 200 !== $code || ! is_array( $r ) ) {
-			$msg = $j['errors'][0]['message'] ?? ( 'HTTP ' . $code );
+		if ( empty( $j['configured'] ) ) {
+			set_transient( self::OFF, 1, 10 * MINUTE_IN_SECONDS );
+			return new \WP_Error( 'pc_fedex_off', 'FedEx 追踪还没有在总后台设置密钥。' );
+		}
+		$r = $j['results'][ $number ] ?? null;
+		if ( ! is_array( $r ) || isset( $r['error'] ) ) {
+			$msg = is_array( $r ) ? (string) $r['error'] : 'No result.';
 			set_transient( $key, array( 'error' => $msg ), 5 * MINUTE_IN_SECONDS );
-			return new \WP_Error( 'pc_fedex_http', $msg );
+			return new \WP_Error( 'pc_fedex_err', $msg );
 		}
-		if ( ! empty( $r['error'] ) ) {
-			$msg = (string) ( $r['error']['message'] ?? 'Tracking number not found.' );
-			set_transient( $key, array( 'error' => $msg ), 5 * MINUTE_IN_SECONDS );
-			return new \WP_Error( 'pc_fedex_notfound', $msg );
-		}
-		$out = self::parse( $r );
+		$out = array(
+			'status'    => (string) ( $r['status'] ?? '' ),
+			'code'      => (string) ( $r['code'] ?? '' ),
+			'delivered' => isset( $r['delivered'] ) ? (string) $r['delivered'] : null,
+			'eta'       => isset( $r['eta'] ) ? (string) $r['eta'] : null,
+			'events'    => array_values( array_map( static fn( $e ) => array( 'time' => (string) ( $e['time'] ?? '' ), 'text' => (string) ( $e['text'] ?? '' ), 'place' => (string) ( $e['place'] ?? '' ) ), array_slice( (array) ( $r['events'] ?? array() ), 0, 40 ) ) ),
+		);
 		set_transient( $key, $out, 30 * MINUTE_IN_SECONDS );
 		return $out;
-	}
-
-	/** 把 FedEx 的结果整理成前台要的样子（公开函数，方便测试）。 */
-	public static function parse( array $r ): array {
-		$dates = array();
-		foreach ( (array) ( $r['dateAndTimes'] ?? array() ) as $d ) {
-			if ( ! empty( $d['type'] ) && ! empty( $d['dateTime'] ) ) {
-				$dates[ (string) $d['type'] ] = (string) $d['dateTime'];
-			}
-		}
-		$eta = $r['estimatedDeliveryTimeWindow']['window']['ends'] ?? ( $dates['ESTIMATED_DELIVERY'] ?? null );
-		$events = array();
-		foreach ( (array) ( $r['scanEvents'] ?? array() ) as $e ) {
-			$loc   = (array) ( $e['scanLocation'] ?? array() );
-			$place = implode( ', ', array_filter( array( $loc['city'] ?? '', $loc['stateOrProvinceCode'] ?? '', $loc['countryCode'] ?? '' ) ) );
-			$events[] = array(
-				'time'  => (string) ( $e['date'] ?? '' ),
-				'text'  => (string) ( $e['eventDescription'] ?? ( $e['derivedStatus'] ?? '' ) ),
-				'place' => $place,
-			);
-		}
-		usort( $events, static fn( $a, $b ) => (int) strtotime( $b['time'] ) <=> (int) strtotime( $a['time'] ) );
-		return array(
-			'status'    => (string) ( $r['latestStatusDetail']['description'] ?? ( $r['latestStatusDetail']['statusByLocale'] ?? '' ) ),
-			'code'      => (string) ( $r['latestStatusDetail']['code'] ?? '' ),
-			'delivered' => $dates['ACTUAL_DELIVERY'] ?? null,
-			'eta'       => $eta ? (string) $eta : null,
-			'events'    => array_slice( $events, 0, 40 ),
-		);
 	}
 }
