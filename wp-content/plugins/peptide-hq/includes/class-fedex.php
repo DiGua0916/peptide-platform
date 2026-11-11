@@ -213,9 +213,10 @@ final class Fedex {
 	public static function rest_track( \WP_REST_Request $r ) {
 		$p    = $r->get_json_params();
 		$nums = is_array( $p['numbers'] ?? null ) ? array_slice( array_values( array_unique( array_map( 'strval', $p['numbers'] ) ) ), 0, 10 ) : array();
-		$out  = array( 'configured' => self::configured(), 'results' => array() );
+		$use17 = Track17::configured();
+		$out   = array( 'configured' => $use17 || self::configured(), 'results' => array() );
 		foreach ( $nums as $n ) {
-			$t                       = self::track( $n );
+			$t                       = $use17 ? Track17::track( $n ) : self::track( $n );
 			$out['results'][ $n ] = is_wp_error( $t ) ? array( 'error' => $t->get_error_message() ) : $t;
 		}
 		return rest_ensure_response( $out );

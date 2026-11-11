@@ -372,3 +372,9 @@
 ### 2026-11-11 13:41 UTC 总后台放行 FedEx 接口地址
 - 总后台测试查询报“用户已阻止通过 HTTP 请求此 URL”：HQ wp-config 开着 WP_HTTP_BLOCK_EXTERNAL。WP_ACCESSIBLE_HOSTS 末尾加 apis.fedex.com、apis-sandbox.fedex.com（备份 /root/hq-wp-config.php.bak-20261111134056）。
 - 再测：已能连到 FedEx，但 FedEx 回“Sandbox credentials not allowed in this environment”，店主填的是 Test Key，正式环境要换 Production key。
+
+### 2026-11-11 13:58 UTC 物流追踪改用 17TRACK（FedEx 官方接口作备用）
+- FedEx 正式密钥必须关联自己的 9 位 FedEx 发货账号，店主没有，改用 17TRACK（只要单号）。
+- 新增 peptide-hq `Track17`（includes/class-track17.php）：API v2.4，头 17token；FedEx 承运商编号 100003。先 gettrackinfo，返回“未注册”(-18019902) 时才 register（新账号一次性 200 个额度，每个单号注册扣 1 个），所以只有被查过的单号才扣额度。结果缓存 30 分钟，刚注册 3 分钟，暂无记录 10 分钟，出错 5 分钟。密钥用 Crypto 加密保存。
+- `Fedex::rest_track` 填了 17TRACK 就走 17TRACK，否则走 FedEx 官方接口；返回格式不变，店铺端不用改。总后台页面改名“物流追踪”：上面 17TRACK（Security Key、剩余额度），下面 FedEx 备用；测试查询走当前在用的那个。
+- HQ wp-config WP_ACCESSIBLE_HOSTS 加 api.17track.net（备份 /root/hq-wp-config.php.bak-20261111135746），HQ 实测能连到 17TRACK（无密钥返回 401）。代码备份 /root/hq-17track-backup-20261111135746。等店主填 Security Key 后实测。
