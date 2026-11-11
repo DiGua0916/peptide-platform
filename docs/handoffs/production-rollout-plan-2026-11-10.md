@@ -313,3 +313,9 @@
 - `includes/class-manual-orders.php`：`rest_search` 改为全部规格建索引（10 分钟缓存，商品改动时清空），按价格表代号（规格 SKU：TR10、SM5、BPC-10、CU50）、代号+规格（tr 10、bpc10）、简称（reta、tirz、sema、ghk、kpv）、名称片段匹配并排序；单独的数字必须等于规格。SKU 是长数字的（Retatrutide）用别名 RT 生成显示代号 RT10。
 - `includes/admin/class-manual-order-page.php`：搜索框提示改为“简称或价格表代号都行”。
 - 已部署 web + hq 各 7 份（含模板），php-fpm 已重载；主店 s0001 页面实测 “tirz 10” → Tirzepatide 10mg (TR10)，阳/芒果测 “tr 10”“reta 10” 结果一致。
+
+### 2026-11-11 支付方订单号改为 hang-数字；支付中心时间改北京时间
+- `peptide-panapay/includes/class-hub.php`：新发起的付款，发给 pp 的订单号（pp 后台“订单id”，物流导入用）由 `PH`+32 位改为 `hang-` + 店铺编号两位 + 店铺订单号 + 第几次发起两位（如阳 #11892 → hang-131189202），总长 ≤18；超长或冲突时用 hang-+13 位随机数字。已产生的 PH… 订单号不改。
+- `class-hub-details.php`：返回明细同时接受 PH… 和 hang-…。
+- `class-hub-page.php`：支付中心“更新时间”和返回明细时间按北京时间显示（HQ 站点时区是 UTC，未改站点设置），表头写明“（北京）”。
+- HQ 本体已安装（备份 /root/panapay-*.bak-20261111085340 及之后），web + hq 店铺副本各 7 份同步。HQ 上用反射测了编号生成；部署后 9 分钟内没有真实付款发起，pp 是否接受新格式待第一笔付款确认。

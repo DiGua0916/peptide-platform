@@ -130,7 +130,7 @@ final class Hub {
 			// A completed central order can never acquire a new provider session.
 			$summary = self::has_success( $site['id'], $site['uuid'], $parsed['order_id'] );
 			if ( $summary ) { throw new Protocol_Error( 'order_already_confirmed', 409 ); }
-			$ref = 'PH' . bin2hex( random_bytes( 16 ) ); $token = bin2hex( random_bytes( 24 ) );
+			$ref = self::new_ref( (int) $site['id'], (int) $parsed['order_id'] ); $token = bin2hex( random_bytes( 24 ) );
 			$record = array( 'ref' => $ref, 'site_id' => $site['id'], 'site_uuid' => $site['uuid'], 'order_id' => $parsed['order_id'], 'local_reference' => $reference, 'account_id' => $account,
 				'request_hash' => $hash, 'state' => 'creating', 'owner_token' => bin2hex( random_bytes( 16 ) ), 'amount' => $p['amount'], 'currency' => $p['currency'],
 				'secret_box' => Crypto::encrypt( $config['secret'], 'hub-provider' ), 'link_key_box' => Crypto::encrypt( Hub_Protocol::event_key( $a['key'] ), 'hub-link' ),
@@ -246,6 +246,26 @@ final class Hub {
 		if ( 'default' !== self::account_id( $row['account_id'] ?? 'default' ) ) { throw new \RuntimeException( 'hub_checkout_trust_unavailable' ); }
 		// Only singleton attempts created before schema 3 may lack a host snapshot.
 		return Hub_Accounts::load( 'default' );
+	}
+	/**
+	 * 发给支付方的订单号（店主 2026-11-11）：hang-数字，总长不超过 18 位。
+	 * 数字 = 店铺编号（两位）+ 店铺订单号 + 第几次发起付款（两位），如阳 #11892 第一次 → hang-131189201。
+	 * 以前的 PH… 订单号保持不变。
+	 */
+	private static function new_ref( int $site_id, int $order_id ): string {
+		global $wpdb;
+		$t     = Hub_Store::table( 'attempts' );
+		$tries = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$t} WHERE site_id=%d AND order_id=%d", $site_id, $order_id ) );
+		for ( $n = $tries + 1; $n < $tries + 50; $n++ ) {
+			$ref = 'hang-' . str_pad( (string) $site_id, 2, '0', STR_PAD_LEFT ) . $order_id . str_pad( (string) $n, 2, '0', STR_PAD_LEFT );
+			if ( strlen( $ref ) <= 18 && ! Hub_Store::get( $ref ) ) {
+				return $ref;
+			}
+		}
+		do {
+			$ref = 'hang-' . random_int( 1, 9 ) . str_pad( (string) random_int( 0, 999999999999 ), 12, '0', STR_PAD_LEFT );
+		} while ( Hub_Store::get( $ref ) );
+		return $ref;
 	}
 	public static function status( \WP_REST_Request $request ) {
 		try {
