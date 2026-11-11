@@ -421,3 +421,12 @@
 
 ### 2026-11-11 15:45 UTC 物流球换成货车图片、改圆形
 - 店主：物流球图标换成首页“Delivery details”那辆车，球要圆的。把主店那张图（vialcove-home-delivery-vw-id-buzz-150x150.png，26 KB）打包进插件 assets/track-ball-van.png（子店不一定有这张上传图）；球 border-radius: 50% !important（主题给按钮加了 8px 圆角），4px 内边距，图片 44px。部署 web + hq 各 7 份，6 店清首页缓存；主店确认圆形、图片已加载。
+
+### 2026-11-11 15:32 UTC 付款完成流程被中断：排查结果、记录原因、平滑重载（含一次 21 秒宕机）
+- 排查（只读）：同样的“已付款”检查现在对 #11841/#11886/#11892 都通过，不是连不上数据库。规律：成功的 #11843 是 redirect 收银台（WALLET），浏览器回跳比通知晚 11 秒；失败的 3 单都是内嵌 iframe 刷卡，通知和浏览器回跳同一秒到达；HQ 记录第一次投递失败、5 分钟后第二次投递时订单已付款 → review。订单备注显示扣完库存后、发邮件之前就停了。店铺通知入口把完成流程里的任何异常都吞成 503（`catch ( \Throwable )`），WooCommerce 日志和 PHP 错误日志里都没有记录，所以确切原因查不到；返回页只读不写。
+- 处理（不改付款逻辑）：
+  - peptide-panapay `Session_Service`：完成流程被中断时，把异常类型、信息、文件行号、调用栈（不含顾客信息）写进 WooCommerce 日志（来源 peptide-panapay），并加订单备注；`Completion_Guard` 记录拦截原因（gateway_mismatch / not_paid_in_db / read_error + 当时的钩子）。下次再发生就能看到原因。部署 web + hq 各 7 份；panapay 自带测试 checkout-session-policy、checkout-lifecycle 通过。
+  - 邮件（care_catchup）和 Meta 购买（purchase_catchup）都已有每 5 分钟补发兜底。
+- PHP-FPM 平滑重载：两台服务器原来 process_control_timeout = 0（每次部署 reload 会直接杀掉正在处理的请求，包括正在完成的付款）。改为 30s。
+  - 第一次改错：把这行追加在 php-fpm.conf 末尾（include 池配置之后，被当成池配置），配置检测失败、reload 后 php-fpm 起不来，两台机器所有站点 502 约 21 秒（15:30:36–15:30:57 UTC）。立即用备份 /root/php-fpm.conf.bak-20261111153036 恢复并重启，6 店和总后台恢复 200/302。该时段没有新订单、没有付款尝试、没有未投递的支付通知。
+  - 第二次正确修改：把 [global] 段里注释掉的 `;process_control_timeout = 0` 改成 `process_control_timeout = 30s`，先 `php-fpm8.3 -t` 检测通过才替换并 reload（备份 /root/php-fpm.conf.bak-before-pct），两台都 active，站点正常。
