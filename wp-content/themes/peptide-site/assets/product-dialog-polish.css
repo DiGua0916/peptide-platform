@@ -15,16 +15,24 @@ dialog.vc-product-dialog.vc-dialog-polished .vc-dialog-heading>.vc-showcase-quic
 .vc-entry-recovery button:disabled{cursor:wait;opacity:.6}
 @media(prefers-reduced-motion:reduce){.vc-entry-recovery,.vc-dialog-polished .pc-campaign-countdown{animation:none;transition:none}}
 
-/* 2026-11-11 店主：满减档位 = 优惠券样式 + 进度（每张券按购物车金额填满） */
-dialog.vc-product-dialog .vc-offer-tiers{display:grid;gap:6px;margin:4px 0 14px}
+/* 2026-11-11 店主：满减档位 = 版式 2 真优惠券（锁在票根）：解锁实心红券，未解锁虚线券 + 进度条 */
+dialog.vc-product-dialog .vc-offer-tiers{display:grid;gap:8px;margin:4px 0 14px}
 dialog.vc-product-dialog .vc-offer-tiers[hidden]{display:none}
-dialog.vc-product-dialog .vc-offer-ticket{position:relative;display:flex;align-items:stretch;min-height:44px;border:1px dashed #e3a3ab;border-radius:9px;background:#fff;overflow:hidden;font:500 13px/18px 'Geist',sans-serif;color:#5b4447}
-dialog.vc-product-dialog .vc-offer-ticket__fill{position:absolute;inset:0 auto 0 0;width:0;background:#fde6e8;transition:width .6s ease}
-dialog.vc-product-dialog .vc-offer-ticket__reward{position:relative;flex:0 0 92px;display:flex;align-items:center;justify-content:center;padding:0 8px;border-right:1px dashed #e3a3ab;font:700 15px/1 'Geist',sans-serif;color:#b4233a;letter-spacing:.01em}
-dialog.vc-product-dialog .vc-offer-ticket__info{position:relative;display:flex;flex-direction:column;justify-content:center;padding:4px 12px;min-width:0}
-dialog.vc-product-dialog .vc-offer-ticket__info b{font-weight:700;color:#b4233a}
-dialog.vc-product-dialog .vc-offer-ticket__info small{font-size:12px;color:#8a6e71}
-dialog.vc-product-dialog .vc-offer-ticket.is-reached{border-style:solid;border-color:#b4233a}
-dialog.vc-product-dialog .vc-offer-ticket.is-reached .vc-offer-ticket__fill{background:#fbd3d8}
-dialog.vc-product-dialog .vc-offer-ticket.is-next{border-color:#b4233a}
+dialog.vc-product-dialog .vc-offer-ticket{--tk:#b4233a;position:relative;display:flex;align-items:stretch;min-height:56px;border:1px dashed #e3a3ab;border-radius:10px;background:#fff;color:#5b4447;font:500 12px/16px 'Geist',sans-serif}
+dialog.vc-product-dialog .vc-offer-ticket__main{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:8px 14px}
+dialog.vc-product-dialog .vc-offer-ticket__reward{font:700 17px/20px 'Geist',sans-serif;color:var(--tk);letter-spacing:.01em}
+dialog.vc-product-dialog .vc-offer-ticket__cond{font-size:12px;color:#8a6e71}
+dialog.vc-product-dialog .vc-offer-ticket__bar{display:block;height:4px;margin-top:4px;border-radius:2px;background:#f1dfe1;overflow:hidden}
+dialog.vc-product-dialog .vc-offer-ticket__fill{display:block;height:100%;width:0;border-radius:2px;background:var(--tk);transition:width .6s ease}
+dialog.vc-product-dialog .vc-offer-ticket__stub{position:relative;flex:0 0 68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-left:1px dashed #e3a3ab;color:#a8999b;font-size:11px;line-height:13px}
+dialog.vc-product-dialog .vc-offer-ticket__stub::before,dialog.vc-product-dialog .vc-offer-ticket__stub::after{content:"";position:absolute;left:-7px;width:13px;height:13px;border-radius:50%;background:#fff}
+dialog.vc-product-dialog .vc-offer-ticket__stub::before{top:-8px}
+dialog.vc-product-dialog .vc-offer-ticket__stub::after{bottom:-8px}
+dialog.vc-product-dialog .vc-offer-ticket__lock{line-height:0}
+dialog.vc-product-dialog .vc-offer-ticket.is-next{border-color:var(--tk)}
+dialog.vc-product-dialog .vc-offer-ticket.is-next .vc-offer-ticket__cond{color:var(--tk);font-weight:600}
+dialog.vc-product-dialog .vc-offer-ticket.is-reached{background:var(--tk);border:1px solid var(--tk);color:#fff}
+dialog.vc-product-dialog .vc-offer-ticket.is-reached .vc-offer-ticket__reward,dialog.vc-product-dialog .vc-offer-ticket.is-reached .vc-offer-ticket__cond,dialog.vc-product-dialog .vc-offer-ticket.is-reached .vc-offer-ticket__stub{color:#fff}
+dialog.vc-product-dialog .vc-offer-ticket.is-reached .vc-offer-ticket__cond{opacity:.88}
+dialog.vc-product-dialog .vc-offer-ticket.is-reached .vc-offer-ticket__stub{border-left-color:rgba(255,255,255,.55);font-weight:600}
 @media (prefers-reduced-motion:reduce){dialog.vc-product-dialog .vc-offer-ticket__fill{transition:none}}

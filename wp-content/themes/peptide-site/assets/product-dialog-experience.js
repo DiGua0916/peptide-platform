@@ -315,16 +315,27 @@
         const pct = reached ? 100 : (threshold > 0 ? Math.max(0, Math.min(99, Math.round(measure / threshold * 100))) : 0);
         const isNext = !reached && !nextShown && (!act || !nextKey || node?.key === nextKey);
         if (isNext) nextShown = true;
+        // 版式 2（店主 2026-11-11 选）：真优惠券，右边票根放锁；解锁 = 实心红券，未解锁 = 虚线券 + 小进度条。
         const row = node_('div', 'vc-offer-ticket' + (reached ? ' is-reached' : isNext ? ' is-next' : ''));
-        const fill = node_('span', 'vc-offer-ticket__fill'); fill.style.width = pct + '%'; fill.setAttribute('aria-hidden', 'true');
-        const reward = node_('span', 'vc-offer-ticket__reward', spend ? tierMoney(tier.rewardText).toUpperCase() : tier.text);
-        const info = node_('span', 'vc-offer-ticket__info');
+        const main = node_('span', 'vc-offer-ticket__main');
+        main.append(node_('span', 'vc-offer-ticket__reward', spend ? tierMoney(tier.rewardText).toUpperCase() : tier.text));
         const cond = spend ? 'Orders over ' + tierMoney(tier.thresholdText) : '';
-        if (reached) { info.append(node_('b', '', 'Unlocked \u2713')); if (cond) info.append(node_('small', '', cond)); }
-        else if (isNext && act?.next?.remainingText && node?.key === nextKey) { info.append(node_('b', '', 'Add ' + tierMoney(act.next.remainingText) + ' more')); if (cond) info.append(node_('small', '', cond)); }
-        else info.append(node_('span', '', cond || tier.text));
-        row.append(fill, reward, info);
-        row.setAttribute('aria-label', (spend ? tierMoney(tier.rewardText) + ' on orders over ' + tierMoney(tier.thresholdText) : tier.text) + (reached ? ', unlocked' : ''));
+        let line = cond;
+        if (!reached && isNext && act?.next?.remainingText && node?.key === nextKey) line = 'Add ' + tierMoney(act.next.remainingText) + ' more' + (spend ? ' \u00b7 over ' + tierMoney(tier.thresholdText) : '');
+        if (line) main.append(node_('span', 'vc-offer-ticket__cond', line));
+        if (!reached) {
+          const bar = node_('span', 'vc-offer-ticket__bar'); bar.setAttribute('aria-hidden', 'true');
+          const fill = node_('span', 'vc-offer-ticket__fill'); fill.style.width = pct + '%';
+          bar.append(fill); main.append(bar);
+        }
+        const stub = node_('span', 'vc-offer-ticket__stub');
+        const lock = node_('span', 'vc-offer-ticket__lock'); lock.setAttribute('aria-hidden', 'true');
+        lock.innerHTML = reached
+          ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9.5" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 7.6-1.7"/><circle cx="12" cy="15.7" r="1.2"/></svg>'
+          : '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9.5" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/><circle cx="12" cy="15.7" r="1.2"/></svg>';
+        stub.append(lock, node_('span', 'vc-offer-ticket__state', reached ? 'Unlocked' : 'Locked'));
+        row.append(main, stub);
+        row.setAttribute('aria-label', (spend ? tierMoney(tier.rewardText) + ' on orders over ' + tierMoney(tier.thresholdText) : tier.text) + (reached ? ', unlocked' : ', locked'));
         tierBox.append(row);
       });
     }
