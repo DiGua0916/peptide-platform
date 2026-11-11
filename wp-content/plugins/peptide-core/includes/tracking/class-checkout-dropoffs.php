@@ -215,7 +215,7 @@ final class Checkout_Dropoffs {
 		);
 		[ $row['reason_key'], $row['reason'] ] = self::reason( $row );
 		// 测试单（收件信息全 1）：和仪表盘漏斗一样，只算在“发起结账”里，后面几层不算（2026-11-10）。
-		$row['is_test'] = ( $order && \PeptideCore\Overview::is_test_order( $order ) )
+		$row['is_test'] = ( $order && self::is_test( $order ) )
 			|| ( class_exists( \PeptideCore\Test_Orders::class ) && \PeptideCore\Test_Orders::is_test_customer( (array) ( $session['customer'] ?? array() ) ) );
 		if ( $row['is_test'] ) {
 			$row['step_rank']  = 1;
@@ -303,5 +303,10 @@ final class Checkout_Dropoffs {
 			return floor( $s / 3600 ) . ' 小时 ' . floor( ( $s % 3600 ) / 60 ) . ' 分';
 		}
 		return $s >= 60 ? floor( $s / 60 ) . ' 分 ' . ( $s % 60 ) . ' 秒' : $s . ' 秒';
+	}
+
+	/** M6（NF-02）：测试单规则按开关走 Metrics_Overlay::is_test_order()（关着时就是 Overview 的旧规则）；不带自动加载的纯逻辑测试里没有这个类，直接用旧规则。 */
+	private static function is_test( $order ): bool {
+		return class_exists( \PeptideCore\Data\Metrics_Overlay::class ) ? \PeptideCore\Data\Metrics_Overlay::is_test_order( $order ) : \PeptideCore\Overview::is_test_order( $order );
 	}
 }

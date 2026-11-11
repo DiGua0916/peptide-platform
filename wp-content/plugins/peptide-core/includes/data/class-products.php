@@ -351,7 +351,7 @@ final class Products {
 		$native_orders = Operations::paid_orders( $from, $to );
 		if ( $filter ) { $native_orders = $filter->orders( $native_orders ); }
 		foreach ( $native_orders as $order ) {
-			if ( Overview::is_test_order( $order ) ) {
+			if ( self::is_test( $order ) ) {
 				continue;
 			}
 			$order_id = (int) $order->get_id();
@@ -551,5 +551,10 @@ final class Products {
 		if ( ! $date instanceof \DateTimeInterface ) { return array( 'created_at' => null, 'created_at_label' => null ); }
 		$epoch = $date->getTimestamp();
 		return array( 'created_at' => gmdate( 'Y-m-d\TH:i:s\Z', $epoch ), 'created_at_label' => wp_date( 'Y-m-d H:i:s', $epoch, wp_timezone() ) );
+	}
+
+	/** M6（NF-02）：测试单规则按开关走 Metrics_Overlay::is_test_order()（关着时就是 Overview 的旧规则）；不带自动加载的纯逻辑测试里没有这个类，直接用旧规则。 */
+	private static function is_test( $order ): bool {
+		return class_exists( Metrics_Overlay::class ) ? Metrics_Overlay::is_test_order( $order ) : \PeptideCore\Overview::is_test_order( $order );
 	}
 }

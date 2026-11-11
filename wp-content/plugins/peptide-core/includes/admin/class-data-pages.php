@@ -17,6 +17,7 @@
 namespace PeptideCore\Admin;
 
 use PeptideCore\Api\Rest_Controller;
+use PeptideCore\Data\Audience;
 use PeptideCore\Data\Apps;
 use PeptideCore\Data\Conversion;
 use PeptideCore\Data\Checkout_Steps;
@@ -62,6 +63,16 @@ final class Data_Pages {
 		'conversion'      => 'pc-data-conversion',
 		'emails'          => 'pc-data-emails',
 		'experiments'     => 'pc-data-experiments',
+	);
+
+	/**
+	 * ST-05：投手看到的两个合并页。slug => [ 页签 => 上面 PAGES 里的页面 key ]，第一个页签是默认的。
+	 * 每个页签就是原来的一个报表（同一套脚本和接口），只是收在一页里用页签切换；其余数据子页对投手不注册。
+	 * 管理员（含总后台一键登录）仍然看到全部子页，这两个合并页也能打开，但不显示在菜单里。
+	 */
+	public const BUYER_PAGES = array(
+		'pc-data-funnel-sources'   => array( 'funnel' => 'conversion', 'sources' => 'sources' ),
+		'pc-data-products-landing' => array( 'products' => 'products', 'landing' => 'landing' ),
 	);
 
 	public static function register_hooks(): void {
@@ -469,21 +480,99 @@ final class Data_Pages {
 	 */
 	public static function add_menu(): void {
 		add_menu_page( __( 'Data', 'peptide-core' ), __( 'Data', 'peptide-core' ), self::CAP, self::SLUG, array( self::class, 'render' ), 'dashicons-chart-area', '56.999995' );
+		$labels = self::buyer_labels();
+		if ( self::buyer_view() ) {
+			// ST-05：投手只有两个合并页。给顶层菜单加第一个子页面时，WordPress 会自动补一个指向顶层自己的子菜单项，
+			// 在 admin_head 里把它拿掉（和下面隐藏“来源”页同一个办法），顶层“数据”就指向第一个合并页。
+			foreach ( array_keys( self::BUYER_PAGES ) as $slug ) {
+				add_submenu_page( self::SLUG, $labels[ $slug ], $labels[ $slug ], self::CAP, $slug, array( self::class, 'render' ) );
+			}
+			// “访问分类”（Native_Visit_Classifier，优先级 61 才加进来）是管理员的工具，对投手也不显示。
+			add_action( 'admin_head', static function (): void { remove_submenu_page( self::SLUG, self::SLUG ); remove_submenu_page( self::SLUG, 'pc-data-visit-classifier' ); } );
+			return;
+		}
 		$titles = self::titles();
 		foreach ( self::PAGES as $key => $slug ) {
 			// 第一个页面和顶层菜单同一个 slug，WordPress 就把它显示成第一个子菜单，而不是多出一个“数据”。
 			add_submenu_page( self::SLUG, $titles[ $key ], $titles[ $key ], self::CAP, $slug, array( self::class, 'render' ) );
 		}
-		add_action( 'admin_head', static function (): void { remove_submenu_page( self::SLUG, self::PAGES['sources'] ); remove_submenu_page( self::SLUG, self::PAGES['dimension_details'] ); } );
+		// 管理员也能打开投手的两个合并页（核对投手看到的样子），但不显示在菜单里。
+		foreach ( array_keys( self::BUYER_PAGES ) as $slug ) {
+			add_submenu_page( self::SLUG, $labels[ $slug ], $labels[ $slug ], self::CAP, $slug, array( self::class, 'render' ) );
+		}
+		add_action( 'admin_head', static function (): void { remove_submenu_page( self::SLUG, self::PAGES['sources'] ); remove_submenu_page( self::SLUG, self::PAGES['dimension_details'] ); foreach ( array_keys( self::BUYER_PAGES ) as $slug ) { remove_submenu_page( self::SLUG, $slug ); } } );
 	}
 
-	public static function submenu_file( $file ) { return in_array( self::current_key(), array( 'sources', 'dimension_details' ), true ) ? self::PAGES['operations'] : $file; }
+	public static function submenu_file( $file ) {
+		if ( isset( self::BUYER_PAGES[ self::current_page() ] ) ) { return $file; }
+		return in_array( self::current_key(), array( 'sources', 'dimension_details' ), true ) ? self::PAGES['operations'] : $file;
+	}
 
-	/** 当前打开的是哪个数据页面（PAGES 的 key），不是数据页面时为 null。 */
+	/** 地址栏里的 page 参数。 */
+	private static function current_page(): string {
+		return isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	}
+
+	/** 当前打开的是哪个数据页面（PAGES 的 key），不是数据页面时为 null。投手的合并页按当前页签对应到原来的页面。 */
 	public static function current_key(): ?string {
-		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$page = self::current_page();
+		if ( isset( self::BUYER_PAGES[ $page ] ) ) {
+			return self::BUYER_PAGES[ $page ][ self::buyer_tab( $page ) ];
+		}
 		$key  = array_search( $page, self::PAGES, true );
 		return false === $key ? null : (string) $key;
+	}
+
+	// ---------- ST-05：投手的两个合并页 ----------
+
+	/** 当前用户是不是投手。Audience 不在时（不带自动加载的纯逻辑测试）一律不是。 */
+	private static function buyer_view(): bool {
+		return class_exists( Audience::class ) && Audience::is_media_buyer();
+	}
+
+	/** 合并页当前的页签：地址栏的 tab，没有或不认识时是第一个。 */
+	private static function buyer_tab( string $page ): string {
+		$tabs = self::BUYER_PAGES[ $page ];
+		$tab  = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		return isset( $tabs[ $tab ] ) ? $tab : (string) array_key_first( $tabs );
+	}
+
+	/** 合并页和页签的名字。投手后台是中文，其他语言用英文。 */
+	private static function buyer_labels(): array {
+		$zh = function_exists( 'get_user_locale' ) && str_starts_with( (string) get_user_locale(), 'zh' );
+		return array(
+			'pc-data-funnel-sources'   => $zh ? '漏斗 + 来源' : 'Funnel + sources',
+			'pc-data-products-landing' => $zh ? '商品 + 落地页' : 'Products + landing pages',
+			'funnel'                   => $zh ? '漏斗' : 'Funnel',
+			'sources'                  => $zh ? '来源（按广告）' : 'Sources (by ad)',
+			'products'                 => $zh ? '商品' : 'Products',
+			'landing'                  => $zh ? '落地页' : 'Landing pages',
+		);
+	}
+
+	public static function buyer_url( string $page, string $tab = '' ): string {
+		return add_query_arg( array_filter( array( 'page' => $page, 'tab' => $tab ) ), admin_url( 'admin.php' ) );
+	}
+
+	/** 合并页顶部的页签。 */
+	private static function buyer_tabs( string $page ): string {
+		$labels = self::buyer_labels();
+		$active = self::buyer_tab( $page );
+		$html   = '<h2 class="nav-tab-wrapper pc-data-buyer-tabs">';
+		foreach ( array_keys( self::BUYER_PAGES[ $page ] ) as $tab ) {
+			$html .= '<a class="nav-tab' . ( $tab === $active ? ' nav-tab-active' : '' ) . '"' . ( $tab === $active ? ' aria-current="page"' : '' ) . ' href="' . esc_url( self::buyer_url( $page, $tab ) ) . '">' . esc_html( $labels[ $tab ] ) . '</a>';
+		}
+		return $html . '</h2>';
+	}
+
+	/** 投手直接打开了别的数据页时显示的入口。 */
+	private static function buyer_links(): string {
+		$labels = self::buyer_labels();
+		$html   = '<p>';
+		foreach ( array_keys( self::BUYER_PAGES ) as $slug ) {
+			$html .= '<a class="button button-primary" href="' . esc_url( self::buyer_url( $slug ) ) . '">' . esc_html( $labels[ $slug ] ) . '</a> ';
+		}
+		return $html . '</p>';
 	}
 
 	/** 不比较 $hook：子菜单的 hook 名带有翻译后的菜单标题，换语言就变，所以用页面参数判断。 */
@@ -491,6 +580,10 @@ final class Data_Pages {
 		$key = self::current_key();
 		if ( null === $key || ! current_user_can( self::CAP ) ) {
 			return;
+		}
+		$buyer_page = isset( self::BUYER_PAGES[ self::current_page() ] ) ? self::current_page() : '';
+		if ( '' === $buyer_page && self::buyer_view() ) {
+			return; // ST-05：投手直接打开了别的数据页，render() 只给合并页的入口，不加载报表。
 		}
 		$url = plugins_url( 'assets/', PEPTIDE_CORE_FILE );
 		$ver = static fn( string $file ): string => PEPTIDE_CORE_VERSION . '.' . (int) @filemtime( PEPTIDE_CORE_DIR . '/assets/' . $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
@@ -552,7 +645,7 @@ final class Data_Pages {
 		if ( 'sources' === $key ) {
 			wp_enqueue_script( 'peptide-core-data-export', $url . 'data-export.js', array( self::SCRIPT, 'wp-api-fetch', 'wp-url' ), $ver( 'data-export.js' ), array( 'in_footer' => true ) );
 			wp_enqueue_script( 'peptide-core-data-sources', $url . 'data-sources.js', array( self::SCRIPT, 'peptide-core-data-export' ), $ver( 'data-sources.js' ), array( 'in_footer' => true ) );
-			wp_add_inline_script( 'peptide-core-data-sources', 'window.pcDataSources = ' . wp_json_encode( array( 'strings' => self::sources_strings(), 'operationsUrl' => admin_url( 'admin.php?page=' . self::PAGES['operations'] ) ) ) . ';', 'before' );
+			wp_add_inline_script( 'peptide-core-data-sources', 'window.pcDataSources = ' . wp_json_encode( array( 'strings' => self::sources_strings(), 'operationsUrl' => '' !== $buyer_page ? self::buyer_url( $buyer_page ) : admin_url( 'admin.php?page=' . self::PAGES['operations'] ) ) ) . ';', 'before' );
 		}
 		if ( 'dimension_details' === $key ) {
 			$dimension = self::dimension_page();
@@ -1380,7 +1473,14 @@ final class Data_Pages {
 		if ( ! current_user_can( self::CAP ) || null === $key ) {
 			return;
 		}
-		echo '<div class="wrap pc-data-wrap"><h1 class="screen-reader-text">' . esc_html( self::titles()[ $key ] ) . '</h1><div id="pc-data" class="pc-data" data-page="' . esc_attr( $key ) . '"><p>' . esc_html__( 'Loading…', 'peptide-core' ) . '</p></div></div>';
+		$buyer_page = isset( self::BUYER_PAGES[ self::current_page() ] ) ? self::current_page() : '';
+		if ( '' === $buyer_page && self::buyer_view() ) {
+			// ST-05：投手直接打开了别的数据页（例如顶层的 pc-data）：只给两个合并页的入口，不显示报表。
+			echo '<div class="wrap pc-data-wrap"><h1>' . esc_html__( 'Data', 'peptide-core' ) . '</h1>' . self::buyer_links() . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- buyer_links() 里已经转义。
+			return;
+		}
+		// 合并页：报表上面多一行页签；其余页面的输出和以前一个字节都不差。
+		echo '<div class="wrap pc-data-wrap">' . ( '' !== $buyer_page ? self::buyer_tabs( $buyer_page ) : '' ) . '<h1 class="screen-reader-text">' . esc_html( self::titles()[ $key ] ) . '</h1><div id="pc-data" class="pc-data" data-page="' . esc_attr( $key ) . '"><p>' . esc_html__( 'Loading…', 'peptide-core' ) . '</p></div></div>';
 		if ( is_callable( array( \PeptideCore\Tracking\Country_Provider::class, 'render_attribution' ) ) ) { \PeptideCore\Tracking\Country_Provider::render_attribution(); }
 	}
 }

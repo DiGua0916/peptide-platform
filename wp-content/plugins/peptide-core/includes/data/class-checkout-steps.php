@@ -73,7 +73,7 @@ final class Checkout_Steps {
 				// post__in is supported by CPT and mapped to id by installed HPOS OrdersTableQuery.
 				foreach ( wc_get_orders( array( 'post__in' => array_values( $need ), 'limit' => count( $need ), 'type' => 'shop_order', 'status' => array_keys( wc_get_order_statuses() ) ) ) as $order ) {
 					if ( ! isset( $need[$order->get_id()] ) ) { continue; }
-					$orders[$order->get_id()] = array( 'test' => Overview::is_test_order( $order ), 'paid' => $order->is_paid() || null !== $order->get_date_paid(), 'failed' => $order->has_status( 'failed' ), 'method' => self::method( $order->get_payment_method() ) );
+					$orders[$order->get_id()] = array( 'test' => self::is_test( $order ), 'paid' => $order->is_paid() || null !== $order->get_date_paid(), 'failed' => $order->has_status( 'failed' ), 'method' => self::method( $order->get_payment_method() ) );
 				}
 			}
 			foreach ( (array) $rows as $row ) {
@@ -115,5 +115,10 @@ final class Checkout_Steps {
 
 	private static function method( $value ): string {
 		return is_string( $value ) && preg_match( '/^[A-Za-z0-9_:-]{1,80}$/D', $value ) ? $value : 'unknown';
+	}
+
+	/** M6（NF-02）：测试单规则按开关走 Metrics_Overlay::is_test_order()（关着时就是 Overview 的旧规则）；不带自动加载的纯逻辑测试里没有这个类，直接用旧规则。 */
+	private static function is_test( $order ): bool {
+		return class_exists( Metrics_Overlay::class ) ? Metrics_Overlay::is_test_order( $order ) : \PeptideCore\Overview::is_test_order( $order );
 	}
 }

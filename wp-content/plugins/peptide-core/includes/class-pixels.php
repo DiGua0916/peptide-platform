@@ -48,6 +48,7 @@ final class Pixels {
 		add_action( Recovery::CRON, array( self::class, 'purchase_catchup' ), 45 );
 		add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
 		Pixels\Server::register_hooks();
+		Pixels\Acceptance::register_hooks();
 	}
 
 	// ---------- 平台 ----------
@@ -311,8 +312,20 @@ final class Pixels {
 		return array( $s, array_values( array_unique( $errors ) ) );
 	}
 
-	public static function save( array $raw ): array {
-		[ $s, $errors ] = self::clean( $raw );
+	/**
+	 * 保存后台提交的设置。$keep：这些平台不在提交的表单里（像素页对投手只显示 Facebook，ST-06），原样保留已保存的设置，
+	 * 否则没提交的平台会被清空。默认是空数组，和以前一样全部按表单重建。
+	 *
+	 * @param string[] $keep 平台 key。
+	 */
+	public static function save( array $raw, array $keep = array() ): array {
+		$old            = self::settings();
+		[ $s, $errors ] = self::clean( $raw, $old );
+		foreach ( $keep as $key ) {
+			if ( isset( $old['platforms'][ $key ] ) ) {
+				$s['platforms'][ $key ] = $old['platforms'][ $key ];
+			}
+		}
 		update_option( self::OPTION, $s, false );
 		return $errors;
 	}
@@ -722,6 +735,76 @@ final class Pixels {
 			'args'                => array( 'product' => array( 'type' => 'integer', 'required' => true, 'minimum' => 1 ) ),
 			'callback'            => array( self::class, 'rest_view_item' ),
 		) );
+		// FE-09：结账页“选支付”（AddPaymentInfo）。以前只有浏览器发，事件管理器里只有“浏览器”一路；现在服务端也发，同一个 event_id。
+		register_rest_route( 'peptide/v1', '/pixel-event', array(
+			'methods'             => 'POST',
+			'permission_callback' => '__return_true',
+			'args'                => array( 'name' => array( 'type' => 'string', 'required' => true, 'enum' => array( 'add_payment_info' ) ) ),
+			'callback'            => array( self::class, 'rest_event' ),
+		) );
+		// FE-09 验收：验收期间，带着验收码的浏览器把自己发出的事件报上来，和服务端发送记录核对 event_id（Pixels\Acceptance）。
+		register_rest_route( 'peptide/v1', '/pixel-check', array(
+			'methods'             => 'POST',
+			'permission_callback' => '__return_true',
+			'args'                => array(
+				'code' => array( 'type' => 'string', 'required' => true ),
+				'name' => array( 'type' => 'string', 'required' => true ),
+				'id'   => array( 'type' => 'string', 'required' => true ),
+			),
+			'callback'            => static function ( \WP_REST_Request $request ): \WP_REST_Response {
+				$response = new \WP_REST_Response( array( 'saved' => Pixels\Acceptance::record( (string) $request['code'], (string) $request['name'], (string) $request['id'] ) ) );
+				$response->header( 'Cache-Control', 'private, no-store, max-age=0' );
+				return $response;
+			},
+		) );
+		// ST-01 第 4 步 / ST-06“发送测试事件”：发一条测试 PageView，立刻知道像素 ID 和令牌通不通。向导状态由调用方（F5）自己写。
+		register_rest_route( 'peptide/v1', '/admin/pixel-test', array(
+			'methods'             => 'POST',
+			'permission_callback' => static fn() => current_user_can( 'manage_woocommerce' ) ? true : new \WP_Error( 'pc_forbidden', __( 'Sorry, you are not allowed to do that.', 'peptide-core' ), array( 'status' => rest_authorization_required_code() ) ),
+			'callback'            => static function (): \WP_REST_Response {
+				$response = new \WP_REST_Response( Pixels\Server::test_event() );
+				$response->header( 'Cache-Control', 'private, no-store, max-age=0' );
+				return $response;
+			},
+		) );
+	}
+
+	/**
+	 * 购物车 → add_payment_info 事件（金额和商品同 begin_checkout）。购物车是空的时返回 null。
+	 * REST 请求里 WooCommerce 默认不加载购物车，所以先 wc_load_cart()；只读，不往购物会话里写任何东西。
+	 */
+	public static function payment_info_event(): ?array {
+		if ( ! function_exists( 'WC' ) ) {
+			return null;
+		}
+		if ( null === WC()->cart && function_exists( 'wc_load_cart' ) ) {
+			wc_load_cart();
+		}
+		if ( ! WC()->cart || WC()->cart->is_empty() ) {
+			return null;
+		}
+		return self::make( 'add_payment_info', self::cart_items(), (float) WC()->cart->get_total( 'edit' ), array( 'url' => self::referring_url() ) );
+	}
+
+	/**
+	 * POST /pixel-event { name: add_payment_info }：服务端生成事件、回传 Conversions API，并把同一个事件交给浏览器发像素。
+	 * 同一个购物会话 60 秒内只生成一次（刷新结账页、反复点下单不会重复回传）；不生成时返回空列表，浏览器照旧只发浏览器事件。
+	 */
+	public static function rest_event( \WP_REST_Request $request ): \WP_REST_Response {
+		$events = array();
+		if ( 'add_payment_info' === (string) $request['name'] && self::allowed() ) {
+			$event = self::payment_info_event();
+			$who   = function_exists( 'WC' ) && WC()->session ? (string) WC()->session->get_customer_id() : '';
+			$lock  = 'pc_px_pay_' . md5( $who );
+			if ( $event && '' !== $who && false === get_transient( $lock ) ) {
+				set_transient( $lock, 1, MINUTE_IN_SECONDS );
+				Pixels\Server::send( array( $event ), self::user_data() );
+				$events[] = $event;
+			}
+		}
+		$response = new \WP_REST_Response( array( 'events' => $events ) );
+		$response->header( 'Cache-Control', 'private, no-store, max-age=0' );
+		return $response;
 	}
 
 	/** 只给公开、已发布、不需要密码的商品生成 view_item。 */
@@ -816,7 +899,7 @@ final class Pixels {
 			}
 			$platforms[ $key ] = $c;
 		}
-		return array(
+		$config = array(
 			'platforms' => $platforms,
 			'events'    => $events,
 			'user'      => $s['match'] ? self::user_data() : (object) array(),
@@ -826,9 +909,18 @@ final class Pixels {
 			'gpc'       => (bool) $s['gpc'],
 			'queue'     => \WC_AJAX::get_endpoint( 'pc_px_queue' ),
 			'viewItem'  => rest_url( 'peptide/v1/pixel-view' ),
+			// FE-09：结账页“选支付”由服务端生成并回传，浏览器用同一个 event_id 发像素。
+			'pixelEvent' => rest_url( 'peptide/v1/pixel-event' ),
 			// Logged-in browsers authenticate the REST call so staff stay excluded; cached pages are anonymous.
 			'restNonce' => is_user_logged_in() ? wp_create_nonce( 'wp_rest' ) : '',
 		);
+		// FE-09 验收：只有带着当前验收码的浏览器才会拿到这两项，普通访客的配置里没有。
+		$check = Pixels\Acceptance::browser_code();
+		if ( '' !== $check ) {
+			$config['check']     = rest_url( 'peptide/v1/pixel-check' );
+			$config['checkCode'] = $check;
+		}
+		return $config;
 	}
 
 	public static function enqueue(): void {

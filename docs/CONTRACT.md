@@ -831,3 +831,95 @@ Root installed only three existing Commerce sources for P09 collection products 
 | `pchq_ad_spend`、`pchq_daily` 新增列 `gross_cents`、`refunded_cents` | 没有 | keep |
 | 总后台选项 `pchq_order_lag_since` | 没有 | keep |
 | 店铺订单元 `_pc_hq_reported`、`_pc_refund_cents`、`_pc_refund_state` | 没有 | keep |
+## M6 / M7：指标入口、漏斗规则与像素（2026-11-10，F4「数据」会话）
+
+本节只由 F4 修改。口径见 `docs/metrics.md`；进度和未接入的报表见 `docs/handoffs/m6-metrics.md`、`docs/handoffs/m7-pixels.md`。
+状态：代码已提交在分支 `claude/m6-metrics-db7036`，还没有合进主线、没有发布。F3、F5 先按下面的签名用假数据开发。
+
+### 1. `PeptideCore\Data\Metrics`（只读，店铺端）
+
+约定：时间段 `[from, to)`，Unix 秒；金额是美分整数；比率是百分数（2 位小数），分母为 0 时是 `null`。不看开关，随时可以调用。
+
+| 函数 | 返回 |
+| --- | --- |
+| `Metrics::window( string $preset, ?int $now = null ): array` | `today / yesterday / 7d / 30d`（店铺时区）→ `{from, to, bucket}` |
+| `Metrics::summary( int $from, int $to ): array` | 一个时间段的全部指标，见下 |
+| `Metrics::preset( string $preset, ?int $now = null ): array` | `summary( window( $preset ) )`，多一个 `preset` |
+| `Metrics::orders( int $from, int $to ): array` | `{orders, gross_cents, refund_cents, sales_cents, aov_cents, test_orders}` |
+| `Metrics::visitors( int $from, int $to ): int` | 访客数 |
+| `Metrics::paid_visitors( int $from, int $to ): int` | 支付成功访客数 |
+| `Metrics::conversion_rate( int $from, int $to ): ?float` | 支付成功访客 ÷ 访客 |
+| `Metrics::funnel( int $from, int $to ): array` | `{unit:'visitors', counts:{visitors,viewed,carted,checkout,address,shipping,payment,paid}, layers:[{key,count,step_rate,visitor_rate}×8]}`，每层不大于上一层 |
+| `Metrics::abandoned( int $from, int $to ): array` | `{count, open, failed, emailed, recovered, recovered_cents, rate}`，结果缓存 5 分钟 |
+| `Metrics::daily( int $from, int $to ): array` | 按店铺时区自然日，每天 `{date, visitors, paid_visitors, conversion_rate, orders, gross_cents, refund_cents, sales_cents, aov_cents}` |
+| `Metrics::order_fact( \WC_Order $order ): array` | 一张订单的事实，见下 |
+| `Metrics::order_facts( int $from, int $to ): array` | 付款时间在时间段内的已付款订单的事实（含测试单，`test = true`） |
+| `Metrics::paid_orders( int $from, int $to ): array` | 和 `order_facts()` 同一批订单，但返回 `\WC_Order` 对象（含测试单，调用方用 `is_test_order()` 排除） |
+| `Metrics::tail_steps( array $evidence, bool $paid ): array` | 一次访问在漏斗后四层走到了哪几步（纯函数）：`$evidence` 是这次访问里有没有 `address / shipping / payment` 事件，`$paid` 是有没有算数的已付款订单；返回 `address / shipping / payment / paid` 里走到的那几步 |
+| `Metrics::is_test_order( \WC_Order $order ): bool` / `is_paid_order()` / `paid_at()` | 测试单 / 收到过支付成功通知 / 付款时间（秒） |
+| `Metrics::sum_orders( array $facts ): array` | 把事实加总（纯函数），返回同 `orders()` |
+
+`summary()` 的 key（保证存在，后续只会增加）：
+
+```
+version, from, to, currency,
+visitors, paid_visitors, conversion_rate,
+orders, gross_cents, refund_cents, sales_cents, aov_cents, test_orders,
+abandoned, abandoned_open, recall_emailed, recall_recovered, recall_rate, recovered_cents,
+funnel
+```
+
+`order_fact()` 的 key：
+
+```
+id, status, paid, test, counted (= paid && !test), paid_at, created_at,
+gross_cents, refund_cents (= _pc_refund_cents，不超过 gross), net_cents, wc_refund_cents (只用于对账),
+currency, visitor, visit, buyer
+```
+
+- **F5 投手首页**：五个核心数字用 `Metrics::preset( 'today' | 'yesterday' | '7d' )` 的 `visitors / orders / sales_cents / conversion_rate / abandoned`；待办里的“未跟进弃单数”用 `abandoned_open`。
+- **F3 订单上报和报表**：每张订单上报 `order_fact()` 里的 `counted / paid_at / gross_cents / refund_cents`，总后台按同样的规则汇总（`counted` 的才算订单；销售额 = `gross_cents − refund_cents`；归属日 = `paid_at` 的店铺时区日期）。总后台回写 `_pc_refund_cents` 之后店铺端的销售额自动跟着变，不需要通知 F4。每日汇总可以直接取 `Metrics::daily()`。
+
+### 2. 开关 `PeptideCore\Data\Metrics_Switch`
+
+- 每家店一个选项 `peptide_core_m6_mode`：`off`（默认）/ `shadow` / `on`；过滤器 `peptide_core_m6_mode` 可以覆盖。
+- `Metrics_Switch::mode()`、`off()`、`shadow()`、`on()`、`set( $mode )`、`pick( $metric, $legacy, callable $modern, array $context = [], float $tolerance = 0 )`、`log()`、`reset_log()`。
+- 影子和开的时候，新旧不一致写进选项 `peptide_core_m6_shadow_log`，并触发 `do_action( 'peptide_core_m6_shadow_diff', string $metric, array $diffs, array $context )`（F1 的巡检可以挂）。
+- 功能声明（F1 的 `pc_hq_capabilities`，格式 功能键 => 版本号）：`m6.metrics => '1'`（这家店有 `Data\Metrics`，版本 = `Metrics::VERSION`）、`m7.pixel_acceptance => '1'`（有服务端 AddPaymentInfo、像素验收和 `/admin/pixel-test`）。只说明代码在不在，不说明开关是哪一档。
+- 总后台如果要远程换档：改这个选项即可（需要 F1 在连接器里提供写选项的通道，F4 不改连接器）。
+- 对账日志里的指标名：`overview.totals`、`overview.recovery`、`operations.kpis`、`reports.test_order`、`reports.paid_orders`、`reports.conversion`、`reports.visitor_funnel`（含义见 `docs/metrics.md` 第 5 节的表）。
+- `Data\Metrics_Overlay` 是 F4 的报表类内部用的（按开关在旧算法和 `Metrics` 之间取值），别的模块不要调用它，直接用第 1 小节的 `Metrics`。
+- **开关会影响到的、不归 F4 的调用方**：`core/class-overview.php` 和 `core/class-hq-ai.php` 读 `Data\Visitor_Funnel::period()`、`Data\Operations::period()`。开关开着时它们拿到的是新口径的数字（和概览页、数据页一致），关着时和以前一样；这两个文件不用改。
+- 新增的选项（没有新表）：`peptide_core_m6_mode`、`peptide_core_m6_shadow_log`（只有指标名和数字）、`peptide_core_m6_funnel_anomalies`（按天的计数）、`peptide_core_px_acceptance`（验收码和时间）、`peptide_core_pixels_buyer_platforms`。都不含顾客资料和密钥，脱敏快照里可以原样保留。验收期间浏览器上报的事件记在现有的 `pc_px_log` 里（`platform = browser`，只有事件名和 event_id）。
+
+### 3. 漏斗推进规则 `PeptideCore\Tracking\Funnel_Guard`（FE-05）
+
+- `Tracker::raise_stage( $visit_id, $stage, $order_id = 0 )` 的签名不变。开关是 `on` 时，升到 4（下单）或 5（支付成功）之前要求同一次访问里已经有 `checkout_address_completed`，否则不推进到 4、5：最多记到 3（进入结账），订单号仍然挂到访问上。
+- 新动作：`do_action( 'peptide_core_tracking_address_completed', int $visitor_id, int $visit_id, int $new )`，在 `POST /track/events` 新保存了填地址事件之后触发，每批一次；`$new` 是这一批里新保存了几条。
+- `Funnel_Guard::counters( int $days = 7 ): array`（按店铺日期的异常计数）、`Funnel_Guard::anomalies( int $from, int $to ): array`（准确数和访问编号）。
+- 前端协议没有变化，主题不用改。
+
+### 4. 数据页对投手（ST-05）
+
+- 判断投手：`PeptideCore\Data\Audience::is_media_buyer( ?int $user_id = null )` = 用户有角色 `pc_media_buyer` 且没有 `manage_options`；过滤器 `peptide_core_is_media_buyer`（参数：结果、用户编号）可以改写。**需要 F5**：创建角色 `pc_media_buyer`，并给它 `manage_woocommerce`（数据页、概览页、像素页的权限检查都是这一项）。
+- 顶层菜单 slug 仍然是 `pc-data`。投手只有两个子页：`pc-data-funnel-sources`（漏斗 + 来源）、`pc-data-products-landing`（商品 + 落地页），每页用页签（地址栏 `tab=funnel|sources`、`tab=products|landing`）切换原来的两个报表；其余数据子页对投手不注册，直接访问会被拒绝。管理员（含总后台一键登录）仍然看到全部 12 个子页，另外也能打开这两个合并页（不显示在菜单里）。
+- F5 的菜单白名单里“数据”保留 `pc-data` 即可；投手点“数据”会进 `pc-data-funnel-sources`。投手如果直接打开 `admin.php?page=pc-data`，页面只显示两个合并页的入口（`Workspace_Shell` 只在 `pc-overview` / `pc-data` 两个地址启动，投手的入口不是这两个地址之一时不受影响）。
+- 这一版是“两页、每页两个页签”，不是同屏合并（同屏要改 `assets/data.js` 的挂载方式，等有浏览器环境再做）。
+
+### 5. 像素与 CAPI（FE-09，M7）
+
+- 新接口 `POST /wp-json/peptide/v1/pixel-event`，JSON `{ "name": "add_payment_info" }`，公开（和 `/pixel-view` 一样，受 `Pixels::allowed()` 约束）。返回 `{ events: [ … ] }`：服务端生成事件并用同一个 `event_id` 发 Conversions API，浏览器拿到后用这个 `event_id` 发像素。接口失败时浏览器退回原来只发浏览器事件的做法。
+- 触发时机：结账页顾客选了支付方式，或点了下单（先到的那个），每个页面一次。
+- 像素页对投手只显示 Facebook；其他平台的卡片不显示也不提交（已保存的设置原样保留）。总后台要给某家店打开其他平台：选项 `peptide_core_pixels_buyer_platforms`（平台 key 的数组，默认 `[ 'facebook' ]`）。
+- 验收：`wp eval-file wp-content/plugins/peptide-core/tests/m7-pixel-acceptance-smoke.php start|check|stop|test`（`PeptideCore\Pixels\Acceptance`），核对 `pc_px_log` 里六类事件。验收期间带验收码的浏览器把发出的事件报到 `POST /peptide/v1/pixel-check`（公开，验收码过期即拒绝）。操作清单见 `docs/guides/m7-pixel-acceptance-checklist.md`。
+- **给 F5 的向导第 4 步**：`POST /wp-json/peptide/v1/admin/pixel-test`（需要 `manage_woocommerce` 和 REST nonce），或 PHP 里直接 `\PeptideCore\Pixels\Server::test_event()`。无参数，HTTP 200，返回 `{ ok: bool, pixel: string, message: string, reason: '' | 'no_pixel', test_code: bool, results: [ { pixel, ok, code, message } ] }`；`ok = true` 就是“已通”。`pixel` / `message` 是给向导直接显示的：第一个没通的像素（都通时是第一个像素）和一句中文原因（通了是空字符串）；`results` 是每个像素的明细。向导状态由 F5 自己写，这个接口不写任何向导数据。
+- `assets/pixels*.js` 不在第 13.2 节的清单里，但只属于像素模块，由 F4 维护。
+
+### 6. 需要别的会话配合的事
+
+| 谁 | 事情 | 状态 |
+| --- | --- | --- |
+| F5 | 角色 `pc_media_buyer` 带 `manage_woocommerce`；菜单白名单保留 `pc-data` | 待 F5 |
+| F3 | 订单上报和总后台汇总按 `order_fact()` 的规则；回写 `_pc_refund_cents` | 待 F3 |
+| F1 | 登记功能键 `m6.metrics`、`m7.pixel_acceptance`；测试条目已追加到 `tests/data-observations-suites.json` 末尾（`module: M6 / M7`）（现在 11 条）；发布前在沙盒把开关切到 `shadow` 观察。F4 的用例已经在本机跑过（PHP 8.3.36），默认套件 59 通过 / 3 失败，剩下 3 个不归 F4 | 待 F1 |
+| 日常会话 | `core/class-overview.php` 不用改：概览页的数字由 `Admin\Overview_Page` 按开关用 `Metrics` 覆盖。之后再改概览页、数据页、访客页、像素页请先在聊天室找 F4 | 知会 |
