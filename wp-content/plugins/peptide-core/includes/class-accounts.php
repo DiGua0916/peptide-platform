@@ -4,7 +4,8 @@
  *
  * 1. 进站先确认 18+（年龄确认 + 使用条款 + 隐私政策，条款内容直接在弹窗里展开看）；同意后弹注册（邮箱 / 密码 / 确认密码），
  *    顾客可以“Skip for now”不注册，也可以切换成登录。
- * 2. 没注册就下单的顾客，付款成功时自动建账户：账号 = 邮箱，密码 = 邮箱；付款成功弹窗里告诉他。
+ * 2. 没注册就下单的顾客，付款成功时自动建账户：账号 = 邮箱，密码随机（店主 2026-11-11 改：原来密码 = 邮箱，知道邮箱就能登录），
+ *    WooCommerce 发“账户已创建”邮件，顾客点里面的链接自己设密码；付款成功弹窗里告诉他去邮箱看。
  *    这个邮箱已经有账户的，订单直接归到那个账户。只处理功能上线之后付款的新订单，已有订单不动。
  * 3. 顾客登录后在“我的账户”首页看到自己的订单和物流（承运商、单号、追踪链接，来自后台订单里添加的发货记录）。
  *
@@ -160,7 +161,7 @@ final class Accounts {
 			$order->save();
 			return;
 		}
-		$uid = self::create_user( $email, $email, $order );
+		$uid = self::create_user( $email, wp_generate_password( 24, true, true ), $order );
 		if ( is_wp_error( $uid ) ) {
 			$again = get_user_by( 'email', $email ); // 付款回调和付款成功页同时到达：另一个已经建好了。
 			if ( $again && 'auto_checkout' === get_user_meta( $again->ID, '_pc_account_source', true ) ) {
@@ -176,8 +177,9 @@ final class Accounts {
 		}
 		$order->set_customer_id( $uid );
 		$order->update_meta_data( self::META, 'created' );
-		$order->add_order_note( 'Customer account created automatically. Login: ' . $email . ' (the initial password is the same email address).' );
+		$order->add_order_note( 'Customer account created automatically for ' . $email . '. A “set your password” email was sent to the customer.' );
 		$order->save();
+		self::send_set_password( $uid );
 	}
 
 	/**
@@ -207,6 +209,21 @@ final class Accounts {
 		}
 	}
 
+	/** WooCommerce 自带的“账户已创建”邮件，带“设置密码”链接（不触发注册广告事件：买家不算新注册转化）。 */
+	private static function send_set_password( int $uid ): void {
+		if ( ! function_exists( 'WC' ) ) {
+			return;
+		}
+		$emails = WC()->mailer()->get_emails();
+		if ( isset( $emails['WC_Email_Customer_New_Account'] ) ) {
+			try {
+				$emails['WC_Email_Customer_New_Account']->trigger( $uid, '', true );
+			} catch ( \Throwable $e ) {
+				// 邮件失败不影响账户和订单；顾客也可以在登录页点 Lost your password 自己设。
+			}
+		}
+	}
+
 	/** 付款成功弹窗里显示的账户信息（Paid_Popup 调用）。 */
 	public static function popup_block( \WC_Order $order ): string {
 		if ( ! self::settings()['auto'] ) {
@@ -222,14 +239,14 @@ final class Accounts {
 		$out   = '<div class="pc-paid__acct">';
 		if ( 'created' === $state ) {
 			$out .= '<p class="pc-paid__acct-title">We created an account for you</p>';
-			$out .= '<p class="pc-paid__acct-sub">Sign in to track your order and shipment.</p>';
-			$out .= '<dl><dt>Account</dt><dd>' . esc_html( $email ) . '</dd><dt>Password</dt><dd>' . esc_html( $email ) . '</dd></dl>';
-			$out .= '<p class="pc-paid__acct-note">Your password is your email address. You can change it in your account.</p>';
+			$out .= '<dl><dt>Account</dt><dd>' . esc_html( $email ) . '</dd></dl>';
+			$out .= '<p class="pc-paid__acct-sub">We sent a link to this email to set your password. Check your inbox (and spam folder).</p>';
 		} else {
 			$out .= '<p class="pc-paid__acct-title">This order is saved to your account</p>';
-			$out .= '<p class="pc-paid__acct-sub">Sign in with ' . esc_html( $email ) . ' to track your order and shipment.</p>';
+			$out .= '<p class="pc-paid__acct-sub">Sign in with ' . esc_html( $email ) . ' to see all your orders.</p>';
 		}
-		$out .= '<a class="pc-paid__acct-btn" href="' . esc_url( $url ) . '">Track my order</a></div>';
+		// “Track my order”直接打开右下角物流球（这台设备已记住这张订单，不用登录）；物流球没开时去账户页。
+		$out .= '<a class="pc-paid__acct-btn" href="' . esc_url( $url ) . '" data-pc-open-track>Track my order</a></div>';
 		return $out;
 	}
 

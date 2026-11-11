@@ -113,6 +113,19 @@
 		document.documentElement.classList.remove( 'pc-trk-lock' );
 	}
 	ball.addEventListener( 'click', open );
+	// 付款成功弹窗里的“Track my order”：关掉那个弹窗，打开物流面板。
+	document.addEventListener( 'click', function ( e ) {
+		var t = e.target.closest && e.target.closest( '[data-pc-open-track]' );
+		if ( ! t ) {
+			return;
+		}
+		e.preventDefault();
+		var x = document.querySelector( '[data-pc-paid-close]' );
+		if ( x ) {
+			x.click();
+		}
+		open();
+	} );
 	dlg.querySelector( '[data-pc-trk-close]' ).addEventListener( 'click', close );
 	dlg.addEventListener( 'close', function () {
 		document.documentElement.classList.remove( 'pc-trk-lock' );

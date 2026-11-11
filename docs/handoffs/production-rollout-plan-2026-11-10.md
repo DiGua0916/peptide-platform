@@ -401,3 +401,8 @@
   - 物流：店铺请求总后台超时 20s→8s，连不上 / 出错时 2 分钟内不再等；“记住的订单”查询也限频；没选承运商时 20/22 位数字不再当 FedEx（可能是 USPS，免得白扣 17TRACK 额度）；FedEx 链接改新地址 /wtrk/track/；顾客查询也接受数字订单号；弃单搜索可按订单 ID 搜。17TRACK 注释更正（出错不会自动改查 FedEx）。
 - 未改（需店主决定）：自动建账户的初始密码是邮箱本身（店主要求），知道顾客邮箱的人就能登录看到地址和订单。
 - 验证：主店服务端测试（Origin 拦截、未验证账户不归单、测试单不建账户、改邮箱需密码、数字单号查询、22 位数字不当 FedEx），测试数据已删；结账 / 购物车页 pcAccounts.signup=false，商店页 true。部署 web + hq 各 7 份 + HQ track17，6 店清首页缓存。
+
+### 2026-11-11 15:12 UTC 自动建账户改为随机密码 + 邮件设密码
+- 店主同意：付款后自动建的账户，密码改为随机（wp_generate_password 24 位），并直接触发 WooCommerce 自带的“账户已创建”邮件（WC_Email_Customer_New_Account::trigger($uid, '', true)，带“Click here to set your new password”链接；不触发注册广告事件）。6 店这封邮件都已开启、英文标题。之前没有用“密码=邮箱”建过的账户（auto_checkout 计数 0），无需重置。
+- 付款成功弹窗账户块改为：账号（邮箱）+ “We sent a link to this email to set your password. Check your inbox (and spam folder).”；“Track my order”带 data-pc-open-track，物流球脚本接管：关掉付款弹窗、直接打开物流面板（这台设备已记住订单，不用登录）。订单备注改为说明已发设密码邮件。后台“注册与年龄确认”说明同步更新。
+- 验证：主店服务端测试（拦截邮件不实际发送、不进发件记录）：账户已建、密码不是邮箱、给顾客发了带设密码链接的邮件、弹窗和备注文字正确，测试数据已删。浏览器里用 #11843 的付款弹窗点 “Track my order”：弹窗关闭、物流面板打开并显示该订单（之后清掉了本机记住的订单）。部署 web + hq 各 7 份，6 店清首页缓存。
