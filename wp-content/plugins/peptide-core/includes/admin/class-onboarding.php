@@ -588,23 +588,23 @@ final class Onboarding {
 
 	/**
 	 * 投放链接 = 落地页地址 + 追踪参数（不读数据库，测试里直接调用）。
-	 * 广告系列名不填时用 Facebook 的动态参数（{{campaign.name}} 等），投放时由 Facebook 换成真实名称，所以不能转义。
+	 * CR 素材归因（2026-11-11）：参数固定用 Contract::URL_TEMPLATE —— 广告系列 / 广告组 / 广告都用 ID（{{campaign.id}} 等），
+	 * 平台用 {{site_source_name}}，另带 placement 和 ad_name。动态参数由 Meta 投放时替换，所以不能转义。
+	 * $campaign、$source 是旧版（用名称）的参数，保留签名兼容旧调用，不再使用。
 	 */
-	public static function ad_link( string $landing, string $campaign = '', string $source = 'facebook' ): string {
+	public static function ad_link( string $landing, string $campaign = '', string $source = '' ): string {
+		unset( $campaign, $source );
 		$landing = (string) preg_replace( '/#.*$/', '', trim( $landing ) );
 		$parts   = explode( '?', $landing, 2 );
 		$query   = array();
+		$ours    = array_merge( \PeptideCore\Creatives\Contract::PARAMS, array( 'fbclid' ) );
 		foreach ( isset( $parts[1] ) ? explode( '&', $parts[1] ) : array() as $pair ) {
-			if ( '' !== $pair && 1 !== preg_match( '/^utm_[a-z_]+(=|$)/i', $pair ) ) {
-				$query[] = $pair; // 落地页原有的参数保留，旧的 utm_ 参数去掉。
+			$name = strtolower( rawurldecode( explode( '=', $pair, 2 )[0] ) );
+			if ( '' !== $pair && 1 !== preg_match( '/^utm_[a-z_]+$/', $name ) && ! in_array( $name, $ours, true ) ) {
+				$query[] = $pair; // 落地页原有的参数保留，旧的 utm_ 和模板里的参数去掉。
 			}
 		}
-		$campaign = trim( $campaign );
-		$query[]  = 'utm_source=' . ( 'instagram' === $source ? 'instagram' : 'facebook' );
-		$query[]  = 'utm_medium=paid';
-		$query[]  = 'utm_campaign=' . ( '' !== $campaign ? rawurlencode( $campaign ) : '{{campaign.name}}' );
-		$query[]  = 'utm_term={{adset.name}}';
-		$query[]  = 'utm_content={{ad.name}}';
+		$query[] = \PeptideCore\Creatives\Contract::URL_TEMPLATE;
 		return $parts[0] . '?' . implode( '&', $query );
 	}
 

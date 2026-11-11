@@ -1,6 +1,8 @@
 <?php
 /** Standalone pure wire tests; no WordPress bootstrap, database, network or mocks. */
 define( 'ABSPATH', __DIR__ . '/' );
+require_once dirname( __DIR__ ) . '/includes/creatives/class-contract.php';
+require_once dirname( __DIR__ ) . '/includes/tracking/class-client-environment.php';
 require_once dirname( __DIR__ ) . '/includes/tracking/class-attribution.php';
 use PeptideCore\Tracking\Attribution;
 $pass = 0;
