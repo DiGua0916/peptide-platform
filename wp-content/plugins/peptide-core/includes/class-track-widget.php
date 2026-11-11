@@ -127,9 +127,8 @@ final class Track_Widget {
 			return new \WP_Error( 'pc_trk_rate', 'Too many attempts. Please try again in a few minutes.', array( 'status' => 429 ) );
 		}
 		set_transient( $rl, $n + 1, 10 * MINUTE_IN_SECONDS );
-		$num   = absint( preg_replace( '/\D/', '', (string) $r['order'] ) );
 		$email = strtolower( trim( (string) $r['email'] ) );
-		$o     = $num ? wc_get_order( $num ) : null;
+		$o     = Order_Number::find( (string) $r['order'] );
 		if ( ! $o instanceof \WC_Order || 'shop_order' !== $o->get_type() || '' === $email || ! hash_equals( strtolower( (string) $o->get_billing_email() ), $email ) ) {
 			return new \WP_Error( 'pc_trk_nf', 'We could not find an order with that number and email.', array( 'status' => 404 ) );
 		}

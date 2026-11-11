@@ -352,3 +352,10 @@
 - 新增 `PeptideCore\Fedex_Track`（includes/class-fedex-track.php）：FedEx Track API（OAuth client_credentials → /track/v1/trackingnumbers），token 缓存到过期前 1 分钟，每个单号结果缓存 30 分钟（出错 5 分钟）。后台“店铺设置 → 物流追踪”（admin/class-fedex-page.php）：物流球开关、API Key / Secret Key（不回显）、正式 / 测试环境、测试查询、拿密钥的步骤。承运商选 FedEx，或没选但单号是 12/15/20/22 位数字时按 FedEx 查。
 - 验证：主店手机尺寸实测球的位置、打开查询表单、错误单号 / 邮箱提示；用浏览器里的样例数据（不落库）看了“已发货 + FedEx 记录”的样子，修了预计送达日期被换算时区差一天的问题；服务端只读看了真实订单 #11843 的输出。FedEx 接口还没有密钥，未实测。
 - 部署：web + hq 各 7 份（备份 /home/ubuntu/vialcove-deploy-backups/trk-plain-20261111T122000 / T122005，主店另有 /root/trk-backup-20261111121857），6 店清了首页缓存，5 个可访问域名都出现物流球。
+
+### 2026-11-11 12:27 UTC 新订单的订单号显示成 hang-（pp 订单 id）
+- 更正：hang- 三次付款（光辉 #11883：hang-161188301 / 401 / 501）都没成功。前两次 pp 已建交易、回调 FAILED（msg 为空，像是卡被拒），第三次 pp 回“Payment attempts are too frequent”。格式本身 pp 接受，还没有成功的 hang- 付款。
+- HQ `Hub::session()` 回复里加 `pp_ref`（HQ 自身 + 两台机器的店铺副本）；店铺 `Bridge::session()` 校验格式后透传（旧 HQ 没有这个字段时不受影响），`Session_Service` 把它记到付款记录，并且只对 `pc_order_number_since`（各店 1794399995，本次切换时间）之后创建的订单写 meta `_pc_pp_ref`。
+- peptide-core 新增 `Order_Number`：有 `_pc_pp_ref`（hang-…）的订单，`woocommerce_order_number` 显示 hang- 号（顾客邮件、付款成功弹窗、物流球、后台列表都跟着变），后台订单搜索能搜 hang-；老订单不写、不变。物流球查询支持输入 hang- 号，新订单不再接受原数字号。同一单重新付款会换成最新的 hang- 号，付款成功那次就是最终订单号。
+- 验证：HQ 对 hang-161188501 的回复带 pp_ref；主店反射测试 Bridge 透传 / 拒绝异常值 / 兼容旧回复、内存订单显示 hang-、老订单 #11843 仍显示 11843。panapay 自带测试中失败的 6 个改动前后结果一致（原本就失败），checkout-session-policy 通过。
+- 部署：HQ panapay 备份 /root/panapay-class-hub.php.bak-20261111122601；店铺 panapay 和 peptide-core web + hq 各 7 份（备份 /home/ubuntu/vialcove-deploy-backups/trk-plain-20261111T122613 / T122618 等）。

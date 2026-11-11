@@ -170,8 +170,7 @@
 		var l1 = el( 'label', '', 'Order number' );
 		var i1 = el( 'input' );
 		i1.name = 'order';
-		i1.inputMode = 'numeric';
-		i1.placeholder = 'e.g. 11843';
+				i1.placeholder = 'e.g. hang-161188301';
 		i1.autocomplete = 'off';
 		l1.appendChild( i1 );
 		var l2 = el( 'label', '', 'Email' );

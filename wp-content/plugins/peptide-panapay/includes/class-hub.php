@@ -169,6 +169,8 @@ final class Hub {
 		$account = self::account_id( $row['account_id'] ?? 'default' );
 		if ( self::has_success( (int) $row['site_id'], $row['site_uuid'], (int) $row['order_id'] ) ) { return array( 'state' => 'unknown', 'account_id' => $account ); }
 		$result = array( 'state' => $row['state'], 'account_id' => $account );
+		// 店主 2026-11-11：店铺订单号显示成 pp 的订单 id（hang-…），随回复带给店铺。
+		if ( is_string( $row['ref'] ?? null ) && preg_match( '/\A(?:PH[a-f0-9]{32}|hang-[0-9]{1,13})\z/D', $row['ref'] ) ) { $result['pp_ref'] = $row['ref']; }
 		if ( 'created' === $row['state'] ) {
 			$url = Crypto::decrypt( $row['checkout_box'], 'hub-checkout' );
 			$trust = self::checkout_trust( $row );

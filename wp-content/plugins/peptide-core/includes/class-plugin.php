@@ -91,6 +91,7 @@ final class Plugin {
 		Paid_Popup::register_hooks();
 		Accounts::register_hooks();
 		Track_Widget::register_hooks();
+		Order_Number::register_hooks();
 		Ship_Preview::register_hooks();
 		Manual_Orders::register_hooks();
 		Topics::register_hooks();

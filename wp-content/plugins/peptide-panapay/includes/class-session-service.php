@@ -275,6 +275,15 @@ final class Session_Service {
 			$attempt = self::bind_checkout_policy( $attempt, $response );
 			if ( ! empty( $attempt['central'] ) ) { $config = self::attempt_config( $attempt ); }
 			$attempt['state'] = $response['state'];
+			if ( ! empty( $response['pp_ref'] ) ) {
+				$attempt['pp_ref'] = $response['pp_ref'];
+				// 订单号显示成 hang-：只给切换之后创建的新订单（店主：老订单显示老单号）。下面 save() 一起保存。
+				$since   = (int) get_option( 'pc_order_number_since', 0 );
+				$created = $order->get_date_created();
+				if ( $since > 0 && $created && $created->getTimestamp() >= $since ) {
+					$order->update_meta_data( '_pc_pp_ref', $response['pp_ref'] );
+				}
+			}
 			if ( 'created' === $response['state'] ) {
 				$attempt['type'] = $response['type'];
 				$attempt['url_box'] = Crypto::encrypt( $response['url'], 'checkout-url' );
