@@ -878,6 +878,7 @@
       "module": "M14"
     },
     {"name": "cr-contract-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-contract-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"},
-    {"name": "cr-hq-contract-pure", "language": "php", "path": "wp-content/plugins/peptide-hq/tests/cr-hq-contract-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"}
+    {"name": "cr-hq-contract-pure", "language": "php", "path": "wp-content/plugins/peptide-hq/tests/cr-hq-contract-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"},
+    {"name": "cr-hq-compare-pure", "language": "php", "path": "wp-content/plugins/peptide-hq/tests/cr-hq-compare-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR", "extensions": ["mbstring"]}
   ]
 }
