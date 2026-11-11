@@ -24,11 +24,19 @@ dialog.vc-product-dialog .vc-offer-ticket__reward{font:700 17px/20px 'Geist',san
 dialog.vc-product-dialog .vc-offer-ticket__cond{font-size:12px;color:#8a6e71}
 dialog.vc-product-dialog .vc-offer-ticket__bar{display:block;height:4px;margin-top:4px;border-radius:2px;background:#f1dfe1;overflow:hidden}
 dialog.vc-product-dialog .vc-offer-ticket__fill{display:block;height:100%;width:0;border-radius:2px;background:var(--tk);transition:width .6s ease}
-dialog.vc-product-dialog .vc-offer-ticket__stub{position:relative;flex:0 0 68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-left:1px dashed #e3a3ab;color:#a8999b;font-size:11px;line-height:13px}
+dialog.vc-product-dialog .vc-offer-ticket__stub{position:relative;flex:0 0 74px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-left:1px dashed #e3a3ab;color:#a8999b;font-size:11px;line-height:13px}
 dialog.vc-product-dialog .vc-offer-ticket__stub::before,dialog.vc-product-dialog .vc-offer-ticket__stub::after{content:"";position:absolute;left:-7px;width:13px;height:13px;border-radius:50%;background:#fff}
 dialog.vc-product-dialog .vc-offer-ticket__stub::before{top:-8px}
 dialog.vc-product-dialog .vc-offer-ticket__stub::after{bottom:-8px}
-dialog.vc-product-dialog .vc-offer-ticket__lock{line-height:0}
+dialog.vc-product-dialog .vc-offer-ticket__lock{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:#f3eeef;color:#9b8a8d;line-height:0}
+dialog.vc-product-dialog .vc-offer-ticket.is-next .vc-offer-ticket__lock{background:#fde6e8;color:var(--tk)}
+dialog.vc-product-dialog .vc-offer-ticket.is-reached .vc-offer-ticket__lock{background:#fff;color:var(--tk);box-shadow:0 0 0 3px rgba(255,255,255,.28)}
+dialog.vc-product-dialog .vc-offer-ticket__state{font-weight:600}
+dialog.vc-product-dialog .vc-offer-ticket.is-unlocking{animation:vc-offer-pop .5s cubic-bezier(.2,1.6,.4,1)}
+dialog.vc-product-dialog .vc-offer-ticket.is-unlocking .vc-offer-ticket__lock{animation:vc-offer-lock .8s ease}
+@keyframes vc-offer-pop{0%{transform:scale(.96)}60%{transform:scale(1.03)}100%{transform:scale(1)}}
+@keyframes vc-offer-lock{0%{transform:rotate(0) scale(1)}25%{transform:rotate(-14deg) scale(1.25)}50%{transform:rotate(10deg) scale(1.2)}75%{transform:rotate(-4deg) scale(1.08)}100%{transform:rotate(0) scale(1)}}
+@media (prefers-reduced-motion:reduce){dialog.vc-product-dialog .vc-offer-ticket.is-unlocking,dialog.vc-product-dialog .vc-offer-ticket.is-unlocking .vc-offer-ticket__lock{animation:none}}
 dialog.vc-product-dialog .vc-offer-ticket.is-next{border-color:var(--tk)}
 dialog.vc-product-dialog .vc-offer-ticket.is-next .vc-offer-ticket__cond{color:var(--tk);font-weight:600}
 dialog.vc-product-dialog .vc-offer-ticket.is-reached{background:var(--tk);border:1px solid var(--tk);color:#fff}

@@ -92,6 +92,7 @@ final class Plugin {
 		Accounts::register_hooks();
 		Track_Widget::register_hooks();
 		Order_Number::register_hooks();
+		Stock_Range::register_hooks();
 		Ship_Preview::register_hooks();
 		Manual_Orders::register_hooks();
 		Topics::register_hooks();

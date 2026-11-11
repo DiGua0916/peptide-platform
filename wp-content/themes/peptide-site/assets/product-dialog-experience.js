@@ -284,7 +284,35 @@
     };
     // 2026-11-11 店主：优惠券样式（D）里直接显示进度（C）：每张券按购物车金额从左往右填满。
     // 进度用服务端算好的购物车数据（Store API cart → extensions.peptide_core.activity_listener），浏览器不自己算折扣。
-    let tierPromo = null, tierActivity = null, tierCartAsked = false;
+    let tierPromo = null, tierActivity = null, tierCartAsked = false, tierSeen = null;
+    // 店主 2026-11-11：达标解锁时放加购同款烟花（复用 .add-feedback-burst 粒子样式），锁“弹开”。只在这次打开弹窗后新解锁的档位放，打开时已解锁的不放。
+    const tierBurst = (anchor, delay, spread) => {
+      window.setTimeout(() => {
+        if (!anchor.isConnected || document.hidden || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+        const host = anchor.closest('dialog[open]') || document.body;
+        const rect = anchor.getBoundingClientRect(), size = 104;
+        const layer = document.createElement('span');
+        layer.className = 'add-feedback-burst vc-offer-burst'; layer.setAttribute('aria-hidden', 'true');
+        layer.style.left = Math.max(0, Math.min(window.innerWidth - size, rect.left + rect.width / 2 - size / 2)) + 'px';
+        layer.style.top = Math.max(0, Math.min(window.innerHeight - size, rect.top + rect.height / 2 - size / 2)) + 'px';
+        layer.style.setProperty('--add-burst-duration', '900ms');
+        for (let i = 0; i < 12; i++) {
+          const p = document.createElement('i'), angle = i * Math.PI * 2 / 12 - Math.PI / 2, d = (i % 2 ? 30 : 42) * spread;
+          p.style.setProperty('--burst-x', (Math.cos(angle) * d).toFixed(2) + 'px');
+          p.style.setProperty('--burst-y', (Math.sin(angle) * d).toFixed(2) + 'px');
+          p.style.setProperty('--burst-angle', (i * 30) + 'deg');
+          layer.append(p);
+        }
+        host.append(layer);
+        window.setTimeout(() => layer.remove(), 1000);
+      }, delay);
+    };
+    const celebrateTier = row => {
+      const lock = row.querySelector('.vc-offer-ticket__lock') || row;
+      row.classList.add('is-unlocking');
+      window.setTimeout(() => row.classList.remove('is-unlocking'), 900);
+      tierBurst(lock, 0, 1); tierBurst(lock, 180, 1.25); tierBurst(row.querySelector('.vc-offer-ticket__reward') || row, 320, 1);
+    };
     const tierMoney = text => String(text || '').replace(/\.00(?=\s|$)/g, '');
     const takeTierCart = cart => {
       const a = cart?.extensions?.peptide_core?.activity_listener;
@@ -308,6 +336,7 @@
       const measure = act ? Number(act.measure) : 0;
       const nextKey = act?.next?.key || null;
       let nextShown = false;
+      const reachedNow = new Set(), fresh = [];
       active.tiers.forEach((tier, i) => {
         const node = act ? act.nodes[i] : null;
         const threshold = node ? Number(node.threshold) : 0;
@@ -331,13 +360,16 @@
         const stub = node_('span', 'vc-offer-ticket__stub');
         const lock = node_('span', 'vc-offer-ticket__lock'); lock.setAttribute('aria-hidden', 'true');
         lock.innerHTML = reached
-          ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9.5" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 7.6-1.7"/><circle cx="12" cy="15.7" r="1.2"/></svg>'
-          : '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9.5" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/><circle cx="12" cy="15.7" r="1.2"/></svg>';
+          ? '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9.5" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 7.6-1.7"/><circle cx="12" cy="15.7" r="1.2"/></svg>'
+          : '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9.5" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/><circle cx="12" cy="15.7" r="1.2"/></svg>';
         stub.append(lock, node_('span', 'vc-offer-ticket__state', reached ? 'Unlocked' : 'Locked'));
         row.append(main, stub);
         row.setAttribute('aria-label', (spend ? tierMoney(tier.rewardText) + ' on orders over ' + tierMoney(tier.thresholdText) : tier.text) + (reached ? ', unlocked' : ', locked'));
         tierBox.append(row);
+        if (reached) { const k = node?.key || String(i); reachedNow.add(k); if (tierSeen && !tierSeen.has(k)) fresh.push(row); }
       });
+      if (act) { tierSeen = reachedNow; }
+      if (fresh.length) window.requestAnimationFrame(() => fresh.forEach(celebrateTier));
     }
     function node_(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; }
     function renderOffers() {
