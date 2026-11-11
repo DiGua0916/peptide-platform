@@ -91,6 +91,7 @@ final class Plugin {
 		Hq_Ai::register_hooks();
 		Series_Sync::register_hooks(); // M3 系列同步（店铺端）。
 		Order_Report::register_hooks(); // M10 订单上报与退款标记（店铺端）。
+		Creatives\Module::register_hooks(); // CR 素材归因：素材库、花费导入、素材看板（店铺端）。
 		Cart_Links::register_hooks();
 		Paid_Popup::register_hooks();
 		Accounts::register_hooks();

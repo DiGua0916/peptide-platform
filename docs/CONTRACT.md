@@ -1050,3 +1050,54 @@ currency, visitor, visit, buyer
 | F4（`Tracking\Attribution`、来源报表） | 服务端白名单放开 `utm_campaign`、`utm_term`、`utm_content` 并入库，来源报表加这三个维度 | 这三项被服务端丢弃，数据仍只能按来源拆 |
 | F4（M7 像素） | 开关打开后地址栏会变。脚本用的是原生 `History.prototype.replaceState`，正常不会触发 Facebook 像素“地址变化自动发 PageView”；请在沙盒用事件管理工具确认打开商品弹窗时没有多出 PageView | — |
 | F1（开关） | 试点店打开：`wp option update pc_entry_address on`；回退：改回 `off` | — |
+
+## CR 素材归因（2026-11-11 起，打地基 + 线 1–4）
+
+需求见《素材库与广告归因模块 需求文档》（claude.ai 文档，2026-11-11）。所有广告的“网址”填首页域名，只靠网址参数区分素材；拿不到 Meta API，素材由投手登记、花费由投手导入 CSV。打地基已建好表、页面入口、接口和校验函数；各线只在自己的文件里写，见 `docs/handoffs/cr-foundation.md`。
+
+### 网址参数和广告名
+
+- Meta“网址参数”固定模板（`PeptideCore\Creatives\Contract::URL_TEMPLATE`）：
+  `utm_source={{site_source_name}}&utm_medium=paid&utm_campaign={{campaign.id}}&utm_term={{adset.id}}&utm_content={{ad.id}}&placement={{placement}}&ad_name={{ad.name}}`
+- 访问上保存的参数白名单：`Contract::PARAMS`。有效 = 平台是 fb/ig/msg/an、medium 是 paid、三个 ID 都是 6–25 位数字（`params_valid()`）；广告预览带来的 `{{ad.id}}` 原文算无效。
+- 来源分类 `source_class`：`paid`（参数有效）/ `fb_untagged`（没有 utm，但带 fbclid、来源页是 facebook.com / instagram.com、或在 FB / IG 内置浏览器）/ `other`。
+- 素材编号：`C` + 至少 4 位数字，每家店独立计数（`code_for(n)`）；没登记的素材统计时用 `UNREG`。
+- 广告名：`C0012_hook-lab_fmt-vid_angle-purity_lang-en_v1`。编号在最前；`属性-取值` 小写字母数字；`v数字` 是版本；看不懂的属性放 custom。拆分 / 生成：`Contract::parse_ad_name()` / `build_ad_name()`。**素材的属性以素材库登记为准**，名字里的属性只是方便人看。
+- 必填属性 `hook`、`fmt`、`angle`，可选 `lang`。词表初版 `Contract::DEFAULT_VOCAB` = 总后台 `Creatives::DEFAULT_VOCAB`（测试保证一致）。
+
+### 店铺端数据
+
+- 访客追踪表升到 v5（`Tracking\Schema::DB_VERSION = '5'`，列已加好，写入归线 1）：
+  - `pc_track_visits` 新列：`utm_campaign, utm_term, utm_content(=ad_id), placement, ad_name, creative_code, has_fbclid, source_class, params_valid, ip, geo_region, geo_city, geo_lat, geo_lon, isp, asn, ip_type, timezone, language, in_app`；索引 `ad_time(utm_content,start_ms)`、`creative_time(creative_code,start_ms)`。
+  - `pc_track_visitors` 新列：`first_visit_id`（只在为 0 时写）、`last_paid_visit_id`（每次 `source_class = paid` 的新访问更新）。
+  - 带着和当前访问不同的广告 ID 进站时开新访问（线 1）。
+- 素材表（`Creatives\Schema`，版本选项 `peptide_core_creatives_db`，后台打开时自动建表）：
+  - `pc_ad_creatives(code UNIQUE, attachment_id, attrs JSON, custom JSON, lang, note, status active|archived, created_by, created_at, updated_at)`
+  - `pc_ad_ads(ad_id PK, code, ad_name, adset_id, campaign_id, first_seen_ms, last_seen_ms)`：某个 ad_id 第一次出现时写入，编号来自广告名。
+  - `pc_ad_daily_spend(ad_id + day PK, spend_cents, impressions, link_clicks, ad_name, import_id)`：CSV 导入按 (ad_id, day) 覆盖。
+  - `pc_ad_spend_imports(id, filename, user_id, created_at, day_from, day_to, rows_total, rows_saved, errors)`
+  - `pc_ad_attribute_vocab(attr + value PK, label, required, active, position, ver)`：总后台下发后整体覆盖；ver = 0 是初版。
+- 后台页面（能力 `Staff_Buyer::CAP_VIEW`）：`pc-creatives`（素材库，线 2）、`pc-creatives-spend`（花费导入，线 2）、`pc-creatives-board`（素材看板，线 4）。投手菜单“素材”在“数据”和“广告设置”之间；管理员在“营销活动 → 广告素材”。
+- 投手可提交的 admin-post 动作：`pc_creative_save`、`pc_creative_spend_import`、`pc_creative_export`（`Creatives\Module::ACTION_*`，已加入 `Staff_Buyer::POST`）。
+- REST 前缀预留：`peptide/v1/creatives/...`，权限用 `CAP_VIEW`，不需要店铺能力。
+
+### 店铺 → 总后台
+
+签名同订单上报（`X-PC-HQ-Site / Time / Sign`，总后台 `Mail::verify`）。请求体都带 `nonce`。
+
+- `POST /peptide-hq/v1/creatives/report`：一天一次（店铺时区的前一天），补登记或补导入后重报受影响的日期（整天覆盖）。
+  ```json
+  {"nonce":"…","day":"2026-11-11","tz":"America/New_York","untagged":{"visitors":7},
+   "rows":[{"code":"C0012","attrs":{"angle":"purity","fmt":"vid","hook":"lab","lang":"en"},"custom":{},"thumb":"https://…",
+            "intent":{"high":3,"mid":9,"low":23,"invalid":5},"visitors":40,"valid_visitors":35,"add_to_cart":4,"checkout":2,
+            "cashier":2,"orders":1,"sales_cents":15900,"spend_cents":2350,"impressions":3100,"link_clicks":52}]}
+  ```
+  店铺端用 `Contract::report_payload()` 生成，总后台用 `Creatives::clean_report()` 校验，两边按 `tests/fixtures/creatives/report-sample.json` 测。最多 500 行；同一天同一编号只留最后一行；计数非负整数，缺的补 0；`thumb` 只收 https。回应 `{day, stored, rejected}`。**打地基阶段 `store_rows()` 返回 501，由线 3 实现写入。**
+- `POST /peptide-hq/v1/creatives/spend`：`{"nonce":"…","days":[{"day":"2026-11-11","spend_cents":12345}]}`，1–62 天，写进 `pchq_ad_spend`（`source = csv`）；0 = 当天没花费（删掉那一行）。回应 `{saved: [日期…]}`。已实现。
+- `GET /peptide-hq/v1/creatives/vocab`：`{"ver":1,"items":[{"attr":"hook","value":"lab","label":"检测报告","required":true,"position":0}]}`。店铺发现 ver 变大时整体覆盖本地词表。已实现。
+
+### 总后台数据
+
+- `pchq_creative_daily(site_id + day + code PK, attrs, custom, thumb, visitors, valid_visitors, intent_high/mid/low/invalid, add_to_cart, checkout, cashier, orders, sales_cents, spend_cents, impressions, link_clicks, reported_at)`
+- `pchq_attribute_vocab(attr + value PK, label, required, active, position, updated_at)`，版本号选项 `pchq_attribute_vocab_ver`（改词表加一）。
+- `pchq_ad_spend.source` 新增取值 `csv`（`Orders::set_spend()`）。

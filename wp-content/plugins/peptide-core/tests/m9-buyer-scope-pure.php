@@ -27,10 +27,12 @@ namespace {
 		return $v === array( 'verdict' => $verdict, 'scope' => $scope, 'to' => $to );
 	};
 
-	// 六个菜单，顺序固定。
+	// 七个菜单，顺序固定（2026-11-11 加“素材”，在“数据”和“广告设置”之间）。
 	$menu = \PeptideCore\Staff_Buyer::menu_items();
-	check( 'exactly six menus in order', array( 'home', 'orders', 'recovery', 'data', 'ads', 'store' ) === array_keys( $menu ) );
-	check( 'menu labels', array( '首页', '订单', '弃单', '数据', '广告设置', '店铺信息' ) === array_column( $menu, 'label' ) );
+	check( 'exactly seven menus in order', array( 'home', 'orders', 'recovery', 'data', 'creatives', 'ads', 'store' ) === array_keys( $menu ) );
+	check( 'menu labels', array( '首页', '订单', '弃单', '数据', '素材', '广告设置', '店铺信息' ) === array_column( $menu, 'label' ) );
+	check( 'creative sub-pages belong to creatives', 'creatives' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-creatives-spend' ) && 'creatives' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-creatives-board' ) );
+	check( 'look-alike creatives slug is not a creatives page', '' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-creativesx' ) );
 	check( 'orders menu opens paid orders', 'admin.php?page=wc-orders&status=wc-processing' === $menu['orders']['slug'] );
 	check( 'data sub-page belongs to data', 'data' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-data-landing' ) );
 	check( 'visitors belong to data', 'data' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-visitors-archive' ) );
@@ -45,6 +47,16 @@ namespace {
 	foreach ( array( 'pc-buyer-home', 'pc-buyer-ads', 'pc-store-info', 'pc-onboarding' ) as $own ) {
 		check( "own page $own", $is( $page( $own ), 'allow' ) );
 		check( "own page $own rejects POST", $is( $page( $own, array( 'method' => 'POST' ) ), 'deny' ) );
+	}
+
+	// 素材的三个页面：只读打开，不给店铺能力；写操作走 admin-post 的三个动作。
+	foreach ( array( 'pc-creatives', 'pc-creatives-spend', 'pc-creatives-board' ) as $own ) {
+		check( "creatives page $own", $is( $page( $own ), 'allow' ) );
+		check( "creatives page $own rejects POST", $is( $page( $own, array( 'method' => 'POST' ) ), 'deny' ) );
+	}
+	foreach ( array( 'pc_creative_save', 'pc_creative_spend_import', 'pc_creative_export' ) as $action ) {
+		check( "creatives action $action allowed", $is( $post( $action ), 'allow' ) );
+		check( "creatives action $action blocked before password change", ! $is( $post( $action ), 'allow', '', '', true ) );
 	}
 
 	// 订单只读。

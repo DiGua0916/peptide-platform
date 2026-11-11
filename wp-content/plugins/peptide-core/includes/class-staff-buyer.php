@@ -2,7 +2,8 @@
 /**
  * 投手版后台（M9，PRD 6.2）：角色 pc_media_buyer。“投手”= 负责投广告的内部员工，不是顾客。
  *
- * 投手只用 6 个菜单：首页、订单（只读）、弃单、数据、广告设置、店铺信息。其余菜单不显示，直接打开地址返回 403。
+ * 投手只用 7 个菜单：首页、订单（只读）、弃单、数据、素材、广告设置、店铺信息。其余菜单不显示，直接打开地址返回 403。
+ * “素材”（素材库、花费导入、素材看板）由 Creatives\Module 提供，2026-11-11 加入。
  * 管理员（包括从总后台一键登录）不受影响，仍然看到全部菜单。
  *
  * 做法：
@@ -45,8 +46,8 @@ final class Staff_Buyer {
 	public const ACTION_STORE    = 'pc_buyer_store_save';
 	public const ACTION_ADS      = 'pc_buyer_ads_save';
 
-	/** admin-post.php 里投手能提交的表单（都是投手版页面自己的）。 */
-	private const POST = array( self::ACTION_PASSWORD, self::ACTION_STORE, self::ACTION_ADS );
+	/** admin-post.php 里投手能提交的表单（都是投手版页面自己的，含素材登记、花费导入、看板导出）。 */
+	private const POST = array( self::ACTION_PASSWORD, self::ACTION_STORE, self::ACTION_ADS, 'pc_creative_save', 'pc_creative_spend_import', 'pc_creative_export' ); // 和 Creatives\Module::ACTION_* 一致。
 
 	/** admin-ajax.php 里投手能用的动作 => 需要的能力范围（空 = 不需要店铺能力）。 */
 	private const AJAX = array(
@@ -356,6 +357,10 @@ final class Staff_Buyer {
 		if ( in_array( $page, array( self::PAGE_HOME, self::PAGE_ADS, self::PAGE_STORE, self::PAGE_WIZARD ), true ) ) {
 			return $allow();
 		}
+		// 素材的三个页面只用 CAP_VIEW，不需要店铺能力。
+		if ( 'creatives' === self::menu_for_page( $page ) ) {
+			return $allow();
+		}
 		if ( 'pc-overview' === $page ) {
 			return $redirect( self::PAGE_HOME ); // 后台里“回到首页”的链接都指向数据大盘，投手的首页是另一个页面。
 		}
@@ -491,7 +496,7 @@ final class Staff_Buyer {
 	// ---------- 菜单 ----------
 
 	/**
-	 * 投手的 6 个菜单，按显示顺序。slug 是菜单链接，pages 是算在这个菜单下的页面（带同样前缀的子页面也算）。
+	 * 投手的 7 个菜单，按显示顺序。slug 是菜单链接，pages 是算在这个菜单下的页面（带同样前缀的子页面也算）。
 	 *
 	 * @return array<string,array{label:string,slug:string,icon:string,pages:string[]}>
 	 */
@@ -502,6 +507,7 @@ final class Staff_Buyer {
 			'orders'   => array( 'label' => '订单', 'slug' => 'admin.php?page=wc-orders&status=wc-processing', 'icon' => 'dashicons-cart', 'pages' => array( 'wc-orders' ) ),
 			'recovery' => array( 'label' => '弃单', 'slug' => $url( 'pc-recovery' ), 'icon' => 'dashicons-backup', 'pages' => array( 'pc-recovery' ) ),
 			'data'     => array( 'label' => '数据', 'slug' => $url( 'pc-data' ), 'icon' => 'dashicons-chart-area', 'pages' => array( 'pc-data', 'pc-visitors' ) ),
+			'creatives' => array( 'label' => '素材', 'slug' => $url( 'pc-creatives' ), 'icon' => 'dashicons-format-gallery', 'pages' => array( 'pc-creatives' ) ), // Creatives\Module::PAGE_*
 			'ads'      => array( 'label' => '广告设置', 'slug' => $url( self::PAGE_ADS ), 'icon' => 'dashicons-megaphone', 'pages' => array( self::PAGE_ADS ) ),
 			'store'    => array( 'label' => '店铺信息', 'slug' => $url( self::PAGE_STORE ), 'icon' => 'dashicons-store', 'pages' => array( self::PAGE_STORE ) ),
 		);
@@ -523,7 +529,7 @@ final class Staff_Buyer {
 	}
 
 	/**
-	 * 左侧菜单换成投手的 6 项。
+	 * 左侧菜单换成投手的 7 项。
 	 *
 	 * 在 admin_head 才换：页面能不能打开，WordPress 是按各页面原来登记的菜单判断的（admin_menu 之后立刻检查），
 	 * 那时不能动；到这里只剩显示。“数据”下面保留数据页面自己登记的子页面和实时访客。
