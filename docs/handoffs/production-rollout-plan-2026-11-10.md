@@ -378,3 +378,9 @@
 - 新增 peptide-hq `Track17`（includes/class-track17.php）：API v2.4，头 17token；FedEx 承运商编号 100003。先 gettrackinfo，返回“未注册”(-18019902) 时才 register（新账号一次性 200 个额度，每个单号注册扣 1 个），所以只有被查过的单号才扣额度。结果缓存 30 分钟，刚注册 3 分钟，暂无记录 10 分钟，出错 5 分钟。密钥用 Crypto 加密保存。
 - `Fedex::rest_track` 填了 17TRACK 就走 17TRACK，否则走 FedEx 官方接口；返回格式不变，店铺端不用改。总后台页面改名“物流追踪”：上面 17TRACK（Security Key、剩余额度），下面 FedEx 备用；测试查询走当前在用的那个。
 - HQ wp-config WP_ACCESSIBLE_HOSTS 加 api.17track.net（备份 /root/hq-wp-config.php.bak-20261111135746），HQ 实测能连到 17TRACK（无密钥返回 401）。代码备份 /root/hq-17track-backup-20261111135746。等店主填 Security Key 后实测。
+
+### 2026-11-11 14:30 UTC 17TRACK 额度预警（放在“费用”里）
+- 店主：先接入 17TRACK 用免费 200 额度，后续再充值；在费用里加预警。
+- peptide-hq `Track17`：每小时（cron pchq_track17_quota）查一次额度（getquota，结果缓存 1 小时，注册新单号后清缓存）；剩余 < 20 时开“费用”类告警（ref 17track）并用 `Costs::mail` 发邮件，充值后自动恢复。新增 `Alerts::resolve_ref`；`Costs::check_alerts` 不再误关 17TRACK 告警；`Costs::mail` 改 public。
+- 费用页总览卡片加一行“17TRACK 物流追踪额度”（剩余 / 已用 / 总数；不足 20 时标红并让卡片变红；没填密钥时提示去“物流追踪”填）。
+- 部署 HQ（备份 /root/hq-17quota-backup-20261111142831、/root/hq-17cost-backup-20261111142918）；新标签页确认费用页已显示这一行（目前“还没填密钥”）。

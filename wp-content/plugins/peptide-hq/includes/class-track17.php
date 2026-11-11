@@ -32,6 +32,43 @@ final class Track17 {
 		'Exception'          => 'Delivery exception',
 	);
 
+	public const CRON = 'pchq_track17_quota';
+	public const LOW  = 20; // 剩余额度低于这个数就在总后台告警（店主 2026-11-11：先用免费额度，快用完再充值）。
+	public const ALERT_REF = '17track'; // 告警归在“费用”类（店主 2026-11-11：在费用里加预警）。
+
+	public static function register_hooks(): void {
+		add_action( self::CRON, array( self::class, 'check_quota' ) );
+		add_action(
+			'init',
+			static function (): void {
+				if ( ! wp_next_scheduled( self::CRON ) ) {
+					wp_schedule_event( time() + 120, 'hourly', self::CRON );
+				}
+			}
+		);
+	}
+
+	/** 每小时看一次剩余额度：不够了在“费用”开告警并发邮件，充值后自动恢复。 */
+	public static function check_quota(): void {
+		if ( ! self::configured() ) {
+			Alerts::resolve_ref( 0, 'cost', self::ALERT_REF );
+			return;
+		}
+		$q = self::quota( true );
+		if ( is_wp_error( $q ) ) {
+			return; // 连不上或密钥问题不在这里告警，费用页和测试查询会直接显示。
+		}
+		$remain = (int) ( $q['quota_remain'] ?? 0 );
+		if ( $remain < self::LOW ) {
+			$msg = sprintf( '17TRACK 物流追踪额度只剩 %d 个单号。用完后新发货的单号查不到物流记录，请到 17TRACK 后台充值（最小套餐 $119 / 5,000 个，有效期 12 个月）。', $remain );
+			if ( Alerts::raise( 0, 'cost', self::ALERT_REF, $msg ) ) {
+				Costs::mail( '17TRACK 物流追踪额度快用完了', $msg );
+			}
+		} else {
+			Alerts::resolve_ref( 0, 'cost', self::ALERT_REF );
+		}
+	}
+
 	public static function key(): string {
 		$s = get_option( self::OPTION, array() );
 		if ( ! is_array( $s ) || '' === (string) ( $s['key_box'] ?? '' ) ) {
@@ -128,6 +165,7 @@ final class Track17 {
 				set_transient( $ck, array( 'error' => $msg ), 5 * MINUTE_IN_SECONDS );
 				return new \WP_Error( 'pchq_17_reg', $msg );
 			}
+			delete_transient( 'pchq_17_quota' );
 			$msg = 'Tracking has just started. Updates will appear here within a few minutes.';
 			set_transient( $ck, array( 'error' => $msg ), 3 * MINUTE_IN_SECONDS );
 			return new \WP_Error( 'pchq_17_pending', $msg );
@@ -184,9 +222,20 @@ final class Track17 {
 		);
 	}
 
-	/** 剩余额度（后台显示）。 */
-	public static function quota() {
+	/** 剩余额度（费用页、物流追踪页显示）；缓存 1 小时，每小时的检查会刷新。 */
+	public static function quota( bool $fresh = false ) {
+		if ( ! $fresh ) {
+			$hit = get_transient( 'pchq_17_quota' );
+			if ( is_array( $hit ) ) {
+				return $hit;
+			}
+		}
 		$j = self::call( 'getquota', array() );
-		return is_wp_error( $j ) ? $j : (array) ( $j['data'] ?? array() );
+		if ( is_wp_error( $j ) ) {
+			return $j;
+		}
+		$q = (array) ( $j['data'] ?? array() );
+		set_transient( 'pchq_17_quota', $q, HOUR_IN_SECONDS );
+		return $q;
 	}
 }
