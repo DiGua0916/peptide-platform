@@ -242,11 +242,15 @@ final class Order_Detail_Page {
 		$g     = static fn( string $k ): string => trim( (string) $o->{"get_{$type}_{$k}"}() );
 		$cc    = strtoupper( $g( 'country' ) );
 		$st    = $g( 'state' );
-		$state = '' !== $st ? self::en_state( $cc, $st ) . ( strtoupper( $st ) !== strtoupper( self::en_state( $cc, $st ) ) ? '（' . strtoupper( $st ) . '）' : '' ) : '';
+		$state = '' !== $st ? self::en_state( $cc, $st ) : '';
+		$code  = '' !== $st && strtoupper( $st ) !== strtoupper( $state ) ? strtoupper( $st ) : ( preg_match( '/^[A-Za-z]{2,3}$/', $st ) ? strtoupper( $st ) : '' );
 		$ctry  = self::en_country( $cc );
 		if ( in_array( $cc, self::US_TERRITORIES, true ) ) {
-			$state = '' !== $state ? $state : $ctry . '（' . $cc . '）';
-			$ctry  = 'United States';
+			if ( '' === $state ) {
+				$state = $ctry;
+				$code  = $cc;
+			}
+			$ctry = 'United States';
 		}
 		$phone = 'billing' === $type ? $o->get_billing_phone() : ( $o->get_shipping_phone() ?: $o->get_billing_phone() );
 		$rows  = array(
@@ -258,6 +262,7 @@ final class Order_Detail_Page {
 			'小区／社区'       => $g( 'address_2' ),
 			'城市'             => $g( 'city' ),
 			'州／地区'         => $state,
+			'州简称'           => $code,
 			'邮编'             => $g( 'postcode' ),
 			'国家'             => $ctry,
 			'电话'             => (string) $phone,
@@ -359,19 +364,15 @@ final class Order_Detail_Page {
 		echo '<div class="pc-od-two">';
 		foreach ( array( 'shipping' => '收货地址', 'billing' => '账单地址' ) as $type => $label ) {
 			$a    = self::address( $o, $type );
-			$copy = implode( "\n", array_filter( array( $a['姓名'], $a['公司'] ?? '', $a['街道地址'], $a['小区／社区'], trim( $a['城市'] . ', ' . $a['州／地区'] . ' ' . $a['邮编'], ', ' ), $a['国家'], $a['电话'] ) ) );
+			$copy = implode( "\n", array_filter( array( $a['姓名'], $a['公司'] ?? '', $a['街道地址'], $a['小区／社区'], trim( $a['城市'] . ', ' . ( $a['州简称'] ?: $a['州／地区'] ) . ' ' . $a['邮编'], ', ' ), $a['国家'], $a['电话'] ) ) );
 			echo '<section class="pc-od-card"><div class="pc-od-ct"><h2>' . esc_html( $label ) . '</h2><span><button type="button" class="pc-od-link" data-pc-copy="' . esc_attr( $copy ) . '">' . $copy_ic . '复制</button>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			if ( 'shipping' === $type ) {
 				echo '<a class="pc-od-link" href="' . esc_url( $edit . '#order_data' ) . '"><span class="dashicons dashicons-edit"></span>编辑</a>';
 			}
 			echo '</span></div><table class="pc-od-addr"><thead><tr><th>项目</th><th>信息</th></tr></thead><tbody>';
 			foreach ( $a as $k => $val ) {
-				if ( '电话' === $k && '' !== $val ) {
-					$digits = preg_replace( '/\D/', '', $val );
-					echo '<tr><td>' . esc_html( $k ) . '</td><td>' . esc_html( $val ) . ( $digits ? ' <a class="pc-od-wa" href="' . esc_url( 'https://wa.me/' . $digits ) . '" target="_blank" rel="noopener" title="WhatsApp">WhatsApp</a>' : '' ) . '</td></tr>';
-				} else {
-					echo '<tr><td>' . esc_html( $k ) . '</td><td>' . self::v( $val ) . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-				}
+				// 店主 2026-11-11：点一下就复制；电话只留号码。
+				echo '<tr><td>' . esc_html( $k ) . '</td><td>' . ( '' !== $val ? '<button type="button" class="pc-od-cp" data-pc-copy="' . esc_attr( $val ) . '" title="点击复制">' . esc_html( $val ) . '</button>' : '-' ) . '</td></tr>';
 			}
 			echo '</tbody></table></section>';
 		}
@@ -535,6 +536,7 @@ final class Order_Detail_Page {
 .pc-od-addr td{padding:11px 12px 11px 0;border-bottom:1px solid #f0f2f5;vertical-align:top;word-break:break-word}
 .pc-od-addr td:first-child,.pc-od-addr th:first-child{width:1%;white-space:nowrap;padding-right:28px}.pc-od-addr td:first-child{color:#606266}
 .pc-od-addr tr:last-child td{border-bottom:0}
+.pc-od-cp{border:0;background:none;padding:0;margin:0;font:inherit;color:#303133;text-align:left;cursor:copy;word-break:break-word}.pc-od-cp:hover{color:#ed8a3a}
 .pc-od-card{background:#fff;border-radius:4px;padding:20px 24px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
 .pc-od-card--flush{padding:0}
 .pc-od-card h2{margin:0 0 16px;font-size:15px;font-weight:500}.pc-od-card h3{margin:18px 0 10px;font-size:14px;font-weight:500}
@@ -581,7 +583,7 @@ final class Order_Detail_Page {
 <script>
 document.addEventListener('click',function(e){
 	var c=e.target.closest('[data-pc-copy]');
-	if(c){ e.preventDefault(); var t=c.getAttribute('data-pc-copy'); var done=function(){ var o=c.innerHTML; c.innerHTML='已复制'; setTimeout(function(){c.innerHTML=o;},1200); }; if(navigator.clipboard){navigator.clipboard.writeText(t).then(done,function(){});} return; }
+	if(c){ e.preventDefault(); var t=c.getAttribute('data-pc-copy'); var done=function(){ var o=c.innerHTML; c.innerHTML='已复制'; setTimeout(function(){c.innerHTML=o;},1200); }; var legacy=function(){ var a=document.createElement('textarea'); a.value=t; a.setAttribute('readonly',''); a.style.cssText='position:fixed;top:0;left:0;opacity:0'; document.body.appendChild(a); a.select(); var ok=false; try{ok=document.execCommand('copy');}catch(x){} a.remove(); if(ok){done();} }; if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(t).then(done,legacy);}else{legacy();} return; }
 	var g=e.target.closest('[data-pc-toggle]');
 	if(g){ var el=document.getElementById(g.getAttribute('data-pc-toggle')); if(el){ el.hidden=!el.hidden; } }
 });

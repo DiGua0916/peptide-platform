@@ -513,3 +513,9 @@
 - 收货和账单地址都改成两列表格（项目 / 信息）：姓名、名（First Name）、姓（Last Name）、公司（有才显示）、街道地址、小区／社区、城市、州／地区（英文名加代码）、邮编、国家（英文）、电话（带 WhatsApp）。
 - 美国属地（PR/GU/VI/AS/MP/UM）按快递面单写：州 = “Puerto Rico（PR）”，国家 = United States。只改显示，订单数据不动。
 - 部署：class-order-detail-page.php bda6301d4b21，两台主机各 7 份，php-fpm 已重载。s0010 订单 #11886 在 1180 宽下已检查。
+
+### 2026-11-11 订单详情地址：州简称单独一行、点击复制、电话去掉 WhatsApp
+- “州／地区”只放英文全名（Puerto Rico），新增“州简称”一行（PR）。地址顶部的“复制”生成 “City, PR 00728” 的格式。
+- 每个值都是按钮，点一下就复制，按钮文字临时变成“已复制”。浏览器不让用剪贴板 API 时，改用 execCommand 复制。
+- 电话只显示号码，不再带 WhatsApp 链接。
+- 部署：class-order-detail-page.php 1220624fd36a，两台主机各 7 份，php-fpm 已重载。s0010 订单 #11886 实际点击后剪贴板已写入。
