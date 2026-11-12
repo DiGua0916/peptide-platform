@@ -119,6 +119,15 @@ namespace {
 	}
 	check( 'public form post allowed', $is( $post( 'pc_subscribe', true ), 'allow' ) );
 
+	// 主线 2026-11-12 在总后台加的“物流填单”（peptide-hq 的 pchq-logistics）：它不在店铺后台，
+	// 即使同一个站点上两个插件都开着，投手也打不开页面、下载不了表、动不了腾讯文档的设置。
+	foreach ( array( 'pchq', 'pchq-logistics' ) as $hq_page ) {
+		check( "HQ page $hq_page denied", $is( $page( $hq_page ), 'deny' ) && $is( $page( $hq_page, array( 'method' => 'POST' ) ), 'deny' ) );
+	}
+	foreach ( array( 'pchq_logistics_xlsx', 'pchq_logistics_save', 'pchq_logistics_track', 'pchq_tdocs_save', 'pchq_tdocs_auth', 'pchq_tdocs_callback', 'pchq_tdocs_sync' ) as $hq_action ) {
+		check( "HQ logistics action $hq_action denied (POST and GET)", $is( $post( $hq_action ), 'deny' ) && $is( array_merge( $post( $hq_action ), array( 'method' => 'GET' ) ), 'deny' ) );
+	}
+
 	// 还没改密码：只能打开向导、提交改密码。
 	check( 'locked: wizard', $is( $page( 'pc-onboarding' ), 'allow', '', '', true ) );
 	check( 'locked: home goes to wizard', $is( $page( 'pc-buyer-home' ), 'redirect', '', 'pc-onboarding', true ) );

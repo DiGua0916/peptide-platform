@@ -134,8 +134,14 @@ $ok( 'other order lists also sit under pending orders (the only orders entry)', 
 // 店铺设置子菜单高亮（STORE-SETTINGS-01）。
 $_GET['page'] = 'wc-settings';
 $_GET['tab'] = 'checkout';
-$ok( 'payment settings open under the WooCommerce payments menu', 'admin.php?page=wc-settings&tab=checkout&from=PAYMENTS_MENU_ITEM' === apply_filters( 'parent_file', 'x' ) );
-foreach ( array( 'shipping' => 'pc-shipping', 'tax' => 'pc-tax', 'checkout' => 'admin.php?page=wc-settings&tab=checkout&from=PAYMENTS_MENU_ITEM', 'general' => 'pc-system', 'email' => 'pc-system' ) as $tab => $sub ) {
+// 支付设置归总后台管的店（peptide-panapay 的 Bridge::enabled()，沙盒和生产的店都是）：Store_Admin::hide_menus() 会把
+// WooCommerce 的“支付”菜单去掉，支付设置页也打不开（guard_settings() 转回概览）。这时没有“支付”菜单可展开，
+// 这个标签页和其他标签页一样算“店铺设置 → 系统设置”。两种店各有一组预期，不是哪种结果都算过。
+$pay_slug  = 'admin.php?page=wc-settings&tab=checkout&from=PAYMENTS_MENU_ITEM';
+$pay_moved = class_exists( '\VialCove\Panapay\Bridge' ) && \VialCove\Panapay\Bridge::enabled();
+$ok( $pay_moved ? 'payment settings moved to HQ: the WooCommerce payments menu is gone' : 'the WooCommerce payments menu is kept while payment settings stay on the store', ( $pay_moved ? '' : $pay_slug ) === \PeptideCore\Admin\Admin_Menus::payments_menu() && $pay_moved !== in_array( $pay_slug, array_column( $menu, 2 ), true ) );
+$ok( $pay_moved ? 'payment settings moved to HQ: the payments tab falls back to store settings' : 'payment settings open under the WooCommerce payments menu', ( $pay_moved ? 'admin.php?page=wc-settings' : $pay_slug ) === apply_filters( 'parent_file', 'x' ) );
+foreach ( array( 'shipping' => 'pc-shipping', 'tax' => 'pc-tax', 'checkout' => $pay_moved ? 'pc-system' : $pay_slug, 'general' => 'pc-system', 'email' => 'pc-system' ) as $tab => $sub ) {
 	$_GET['tab'] = $tab;
 	$ok( "wc-settings tab $tab highlights $sub", $sub === apply_filters( 'submenu_file', null ) );
 }
