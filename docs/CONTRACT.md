@@ -764,6 +764,15 @@ Root installed only three existing Commerce sources for P09 collection products 
   - 商品不存在或未发布：404。指标开关关着、表没建好或算不出来：404，或者两个数给 `0`，前台都不显示。响应里不要有任何访客资料。
   - **接口注册时请加一行** `add_filter( 'pc_product_activity_available', '__return_true' );`。主题只有在这个过滤器返回 `true`（并且开关打开）时才加载脚本；没有它时不发任何请求。
   - 前台对返回值的检查：`product_id` 要和请求的一致；数字必须是 0–1000000 的整数；不符合就整行不显示。数字原样显示，不取整、不加基数。
+  - **2026-11-12 和 F4 对齐**：F4 已实现（`claude/m6-metrics-db7036` 的 `9ed88cb`、`d75eb2b`，说明在本文件 F4 一节第 8 条）。两个分支在本机副本里合起来用浏览器实跑过（结果在 `docs/handoffs/m14-theme.md` 第五轮）。地址、六个字段的名字和类型、窗口如实返回（10 分钟 / 24 小时）、`Cache-Control: public, max-age=60`、响应里没有访客资料，这些和上面写的一致。下面几处上面的写法和实现不一样，**以 F4 的实现为准，由 F5 改这里的文字，主题和接口的代码都不用改**：
+    - 下限：接口也读 `pc_product_activity_min`，低于下限的数直接给 `0`（上面“前台低于下限不显示”仍然成立，主题会再判一次，结果一样）。改下限最多约 2 分钟后前台生效。
+    - 开关：接口也看选项 `pc_product_activity`，关着一律 404。**打开这个功能请改选项**；只用主题的过滤器 `vc_product_activity_enabled` 打开时接口还是 404，前台不显示（要同时挂 F4 的 `peptide_core_product_activity_enabled`）。
+    - `pc_product_activity_available`：不是无条件 `true`，追踪表在并且访客追踪开着才是 `true`（上面“接口注册时请加一行 `__return_true`”作废）。
+    - 缓存：全店的数字一次算好缓存 60 秒，不是每件商品各缓存一份；加上浏览器或 CDN 的 60 秒，页面上的数字最多滞后约 2 分钟。
+    - 规格：加购某个规格记在父商品上（用浏览器真的加购一个规格确认过）；拿规格自己的 ID 来问是 404。主题传的一直是父商品 ID。
+    - 测试单：窗口内下过测试单的访客，两个数都不算。
+    - `product_id` 不是十进制正整数：400。前台对任何非 200 都不显示。
+    - “看过”只算真的操作过或停留满 6 秒的访客（上报那一侧 11-08 起的规则），打开就关的不算。
 - **NF-07 首页提速**（`inc/front-speed.php`，2026-11-12）：按店开关 `pc_front_speed`（值 `on` 才生效，**默认关**，过滤器 `vc_front_speed_enabled`），功能声明 `m14.front_speed => 1`。打开后：① 首页（且不是商品 / 专辑落地、不是预览，条件同 `vc_lazy_dialog_enabled()`）上 11 个样式不再挡首屏——`woocommerce-general`、`woocommerce-layout`、`woocommerce-smallscreen`、`vc-live-cart-experience`、`vc-live-cart-progress`、`vc-live-cart-recommendation`、`vc-live-cart-feedback`、`vialcove-product-options`、`vialcove-product-preview`、`vialcove-product-images`、`vc-product-report-viewer`；标签留在原位，`media="print"` 加载完换回 `data-vc-media` 里记的原值。② 前台不输出 emoji 检测脚本和样式。**如果以后让首页的可见内容用到这 11 个样式里的规则**（例如在首页放 WooCommerce 自带的商品列表区块），请把对应的句柄从 `vc_front_speed_style_handles()` 里拿掉，否则那块内容会先无样式闪一下。脚本一个没动。
 - **NF-06 使用声明**：文字只来自店铺设置 `use_statement_html`（`vc_use_statement_markup()`），主题不自带任何措辞。输出位置：每个页面页脚上方（购物车、结账页除外，原有），以及**商品弹窗内容末尾**（新增）。店铺没配置时两处都不输出，`Launch_Check` 会提示。
 - **品牌名**：`vc_brand_name()` 先读 `Store_Settings::public_brand()`，没填用默认的 `VialCovePeptides`。
