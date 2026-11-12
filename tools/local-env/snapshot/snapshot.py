@@ -76,6 +76,9 @@ HQ_TABLES = {
     "pchq_orders": SCRUB, "pchq_refunds": SCRUB,
     # 主线 11-12：跨店客户编号（由邮箱算出，能被撞库）、打码邮箱、设备摘要；F3 的每日弃单汇总没有顾客资料
     "pchq_customer_links": SCRUB, "pchq_abandoned": KEEP,
+    # 主线 11-12 物流填单：data 里是整行发货表（收件人姓名、电话、地址）和运单号，没法只改一部分，整表清空；
+    # 腾讯文档的同步位置也清空（快照导入后不能再往真实的在线表格里写）
+    "pchq_logistics": TRUNCATE, "pchq_tdocs_rows": TRUNCATE,
 }
 
 # 整条删除的选项：支付、邮件、AI、像素、第三方接口的密钥和连接信息；以及一次性数据。
@@ -90,7 +93,7 @@ OPTION_DELETE_EXACT = [
     "logged_in_key", "logged_in_salt", "nonce_key", "nonce_salt", "secure_auth_key", "secure_auth_salt", "secret_key",
     # 总后台
     "pchq_ai", "pchq_ai_providers", "pchq_ai_models", "pchq_register_secret", "pchq_cdn", "pchq_cdn_bot", "pchq_costs", "pchq_costs_snapshot",
-    "pchq_mail", "pchq_ops_agents", "pchq_track17", "pchq_fedex", "pchq_series_reserved", "pchq_fedex_token", "pchq_17_quota", "pchq_clone_jobs", "pc_panapay_hub_settings", "pc_panapay_hub_purged",
+    "pchq_mail", "pchq_ops_agents", "pchq_track17", "pchq_fedex", "pchq_series_reserved", "pchq_tdocs", "pchq_fedex_token", "pchq_17_quota", "pchq_clone_jobs", "pc_panapay_hub_settings", "pc_panapay_hub_purged",
 ]
 OPTION_DELETE_LIKE = [
     r"\_transient\_%", r"\_site\_transient\_%", r"\_pc\_pay\_nonce\_%", r"pc\_panapay\_handoff\_%", r"pc\_panapay\_hub\_accounts%",

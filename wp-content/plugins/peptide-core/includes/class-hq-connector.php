@@ -65,6 +65,7 @@ final class Hq_Connector {
 		add_action( 'admin_init', array( self::class, 'allow_hq_embed' ), 0 );
 		add_action( 'admin_init', array( self::class, 'maybe_register' ) );
 		add_action( self::CRON, array( self::class, 'daily_register' ) );
+		add_action( 'shutdown', array( self::class, 'record_code_copy' ), 99 );
 		if ( self::configured() && ! wp_next_scheduled( self::CRON ) ) {
 			wp_schedule_event( time() + 10 * MINUTE_IN_SECONDS, 'daily', self::CRON );
 		}
@@ -653,6 +654,7 @@ final class Hq_Connector {
 			'apps'        => self::apps(),
 			'capabilities' => self::capabilities(),
 			'modules'     => self::module_status(),
+			'code'        => self::code_report(),
 			'design'      => Design_Sync::summary(),
 			'versions'    => array(
 				'plugin' => PEPTIDE_CORE_VERSION,
@@ -811,6 +813,174 @@ final class Hq_Connector {
 			}
 		}
 		return $out;
+	}
+
+	// ---------- 代码版本（M1-6）----------
+
+	/** 一家店的前台和后台是两份代码副本、共用一个库：每份副本把自己的组件哈希记在这个选项里，总后台一次轮询就能看到全部副本。 */
+	public const CODE_OPTION = 'pc_code_copies';
+
+	/** 和 tools/deployment/prepare_release.py 一致：这些目录不进发布包，不参与哈希。 */
+	private const CODE_SKIP_DIRS = array( 'tests', 'node_modules', 'vendor', 'uploads', 'cache', 'backups', 'private', '__pycache__' );
+
+	/**
+	 * 一个组件目录的文件清单哈希。算法（发布脚本用同一个，改了要两边一起改）：
+	 * 目录下除 CODE_SKIP_DIRS 以外的全部文件，按相对路径排序，逐个拼 “相对路径 \0 文件的 sha256 \n”，再整体取 sha256。
+	 *
+	 * @return array{files:int,hash:string}
+	 */
+	public static function manifest_hash( string $dir ): array {
+		$dir = rtrim( $dir, '/\\' );
+		if ( '' === $dir || ! is_dir( $dir ) ) {
+			return array( 'files' => 0, 'hash' => '' );
+		}
+		$files = array();
+		$walk  = static function ( string $path, string $rel ) use ( &$walk, &$files ): void {
+			foreach ( (array) scandir( $path ) as $name ) {
+				if ( '.' === $name || '..' === $name ) {
+					continue;
+				}
+				$full = $path . '/' . $name;
+				if ( is_dir( $full ) ) {
+					if ( ! is_link( $full ) && ! in_array( strtolower( $name ), self::CODE_SKIP_DIRS, true ) ) {
+						$walk( $full, $rel . $name . '/' );
+					}
+				} elseif ( is_file( $full ) ) {
+					$files[ $rel . $name ] = $full;
+				}
+			}
+		};
+		$walk( $dir, '' );
+		ksort( $files, SORT_STRING );
+		$text = '';
+		foreach ( $files as $rel => $full ) {
+			$text .= $rel . "\0" . hash_file( 'sha256', $full ) . "\n";
+		}
+		return array( 'files' => count( $files ), 'hash' => hash( 'sha256', $text ) );
+	}
+
+	/** 便宜的变化标记：文件数、总大小、最新修改时间。没变就不用重新读一遍全部文件。 */
+	private static function dir_signature( string $dir ): string {
+		$count = 0;
+		$size  = 0;
+		$mtime = 0;
+		$walk  = static function ( string $path ) use ( &$walk, &$count, &$size, &$mtime ): void {
+			foreach ( (array) @scandir( $path ) as $name ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+				if ( '.' === $name || '..' === $name ) {
+					continue;
+				}
+				$full = $path . '/' . $name;
+				if ( is_dir( $full ) ) {
+					if ( ! is_link( $full ) && ! in_array( strtolower( $name ), self::CODE_SKIP_DIRS, true ) ) {
+						$walk( $full );
+					}
+				} else {
+					++$count;
+					$size += (int) @filesize( $full ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+					$mtime = max( $mtime, (int) @filemtime( $full ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+				}
+			}
+		};
+		$walk( $dir );
+		return $count . '|' . $size . '|' . $mtime;
+	}
+
+	/**
+	 * 这份副本上各组件的版本号和清单哈希。
+	 *
+	 * @return array<string,array{version:string,files:int,hash:string}>
+	 */
+	public static function code_components(): array {
+		$plugins = defined( 'WP_PLUGIN_DIR' ) ? WP_PLUGIN_DIR : '';
+		$dirs    = array(
+			'peptide-core'    => array( $plugins . '/peptide-core', $plugins . '/peptide-core/peptide-core.php' ),
+			'peptide-panapay' => array( $plugins . '/peptide-panapay', $plugins . '/peptide-panapay/peptide-panapay.php' ),
+			'peptide-ops'     => array( $plugins . '/peptide-ops', $plugins . '/peptide-ops/peptide-ops.php' ),
+			'peptide-site'    => array( get_theme_root() . '/peptide-site', get_theme_root() . '/peptide-site/style.css' ),
+		);
+		$out = array();
+		foreach ( $dirs as $name => $pair ) {
+			list( $dir, $main ) = $pair;
+			if ( ! is_dir( $dir ) ) {
+				continue;
+			}
+			$sig    = self::dir_signature( $dir );
+			$key    = 'pc_code_m_' . md5( $dir );
+			$cached = get_transient( $key );
+			if ( ! is_array( $cached ) || ( $cached['sig'] ?? '' ) !== $sig ) {
+				$cached = self::manifest_hash( $dir ) + array( 'sig' => $sig );
+				set_transient( $key, $cached, DAY_IN_SECONDS );
+			}
+			$header       = is_readable( $main ) ? get_file_data( $main, array( 'version' => 'Version' ) ) : array();
+			$out[ $name ] = array(
+				'version' => (string) ( $header['version'] ?? '' ),
+				'files'   => (int) $cached['files'],
+				'hash'    => (string) $cached['hash'],
+			);
+		}
+		return $out;
+	}
+
+	private static function code_copy_id(): string {
+		return substr( md5( ABSPATH ), 0, 12 );
+	}
+
+	/** 每份副本大约每 10 分钟把自己的组件哈希写进共用的选项（内容没变时一小时写一次，只为刷新时间）。 */
+	public static function record_code_copy(): void {
+		if ( ( defined( 'WP_CLI' ) && WP_CLI ) || ( defined( 'WP_INSTALLING' ) && WP_INSTALLING ) ) {
+			return;
+		}
+		$id = self::code_copy_id();
+		if ( get_transient( 'pc_code_copy_' . $id ) ) {
+			return;
+		}
+		set_transient( 'pc_code_copy_' . $id, 1, 10 * MINUTE_IN_SECONDS );
+		try {
+			$now    = time();
+			$copies = get_option( self::CODE_OPTION, array() );
+			$copies = is_array( $copies ) ? $copies : array();
+			$mine   = array(
+				'path'       => untrailingslashit( ABSPATH ),
+				'host'       => isset( $_SERVER['HTTP_HOST'] ) ? strtolower( sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) ) ) : '',
+				'components' => self::code_components(),
+				'at'         => $now,
+			);
+			$old    = is_array( $copies[ $id ] ?? null ) ? $copies[ $id ] : array();
+			if ( ( $old['components'] ?? null ) === $mine['components'] && $now - (int) ( $old['at'] ?? 0 ) < HOUR_IN_SECONDS ) {
+				return;
+			}
+			$copies[ $id ] = $mine;
+			foreach ( $copies as $key => $copy ) {
+				if ( ! is_array( $copy ) || $now - (int) ( $copy['at'] ?? 0 ) > 3 * DAY_IN_SECONDS ) {
+					unset( $copies[ $key ] ); // 三天没有请求的副本（旧的发布目录）不再上报。
+				}
+			}
+			update_option( self::CODE_OPTION, $copies, false );
+		} catch ( \Throwable $e ) {
+			return;
+		}
+	}
+
+	/**
+	 * 给总后台的代码版本报告：回答这次请求的这份副本（现算），加上各副本自己登记的（可能有几分钟延迟）。
+	 *
+	 * @return array{this:string,copies:array<string,array>}
+	 */
+	public static function code_report(): array {
+		try {
+			$copies = get_option( self::CODE_OPTION, array() );
+			$copies = is_array( $copies ) ? $copies : array();
+			$id     = self::code_copy_id();
+			$copies[ $id ] = array(
+				'path'       => untrailingslashit( ABSPATH ),
+				'host'       => (string) ( $copies[ $id ]['host'] ?? '' ),
+				'components' => self::code_components(),
+				'at'         => time(),
+			);
+			return array( 'this' => $id, 'copies' => $copies );
+		} catch ( \Throwable $e ) {
+			return array( 'this' => '', 'copies' => array() );
+		}
 	}
 
 	// ---------- 一键登录 ----------

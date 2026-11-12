@@ -91,6 +91,12 @@ class NewModuleTablesTest(unittest.TestCase):
         store = "\n".join(snapshot.plan("store", "wp_", tables("store"), "salt"))
         self.assertEqual(2, store.count("meta_key = '_pc_customer_id'"))
 
+    def test_logistics_and_tencent_docs(self):
+        hq = "\n".join(snapshot.plan("hq", "wp_", tables("hq") + ["wp_pchq_logistics", "wp_pchq_tdocs_rows"], "salt"))
+        self.assertIn("TRUNCATE TABLE `wp_pchq_logistics`", hq)
+        self.assertIn("TRUNCATE TABLE `wp_pchq_tdocs_rows`", hq)
+        self.assertIn("'pchq_tdocs'", hq)
+
     def test_module_switches_reset_to_off(self):
         sql = "\n".join(snapshot.plan("store", "wp_", ["wp_options"], "salt"))
         self.assertIn("'pc_pricing_engine_mode', 'peptide_core_m6_mode'", sql)

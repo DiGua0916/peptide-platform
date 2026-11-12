@@ -321,6 +321,8 @@ def area_admin(ctx):
     _, body, _ = http(HQ + "/wp-admin/admin.php?page=pchq", headers={"Cookie": hq_cookie})
     hq_pages = sorted(set("admin.php?page=" + p for p in re.findall(r"admin\.php\?page=(pchq[a-z0-9_-]*)", body)))
     check(a, "总后台导航读得出来（至少 5 个页面）", len(hq_pages) >= 5, f"{len(hq_pages)} 个")
+    for slug, label in (("pchq-logistics", "物流填单"),):  # 主线新页面：导航里没有它说明没注册上
+        check(a, f"总后台导航里有“{label}”", "admin.php?page=" + slug in hq_pages)
     open_pages(a, HQ, hq_cookie, hq_pages, "总后台主菜单")
 
 

@@ -806,6 +806,27 @@
       "node_test": false,
       "status": "module-gate",
       "module": "M1"
+    },
+    {
+      "name": "m1-code-manifest-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m1-code-manifest-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M1"
+    },
+    {
+      "name": "m1-releases-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-hq/tests/m1-releases-pure.php",
+      "core": true,
+      "extensions": [
+        "mbstring"
+      ],
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M1"
     }
   ]
 }

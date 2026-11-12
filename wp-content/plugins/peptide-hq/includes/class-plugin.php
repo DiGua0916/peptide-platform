@@ -29,6 +29,7 @@ final class Plugin {
 		Customers::register_hooks();
 		Logistics::register_hooks();
 		Tencent_Docs::register_hooks();
+		Releases::register_hooks(); // M1（F1）：发布记录、发布锁、code_drift 巡检
 		if ( is_callable( array( Admin\Menu::class, 'register_login_hooks' ) ) ) {
 			Admin\Menu::register_login_hooks();
 		}
