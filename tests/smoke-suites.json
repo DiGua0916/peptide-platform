@@ -319,7 +319,8 @@
       "status": "skipped",
       "checks": "7/26",
       "owner": "F1",
-      "skip_reason": "FAIL a signed request gets the store status (name, versions, domains, open orders) FAIL the store remembers which master admin connected and when "
+      "skip_reason": "用例是单域名时代写的：向前台域名发签名请求、总后台地址用 http、不带防重放参数，双域名和签名规则收紧后必然被拒（不是连接器坏了）。连接本身由 critical-path 的“总后台连接”9 项覆盖。M2 改注册和密钥时重写这个用例",
+      "root_cause_checked": "2026-11-12"
     },
     {
       "name": "smoke-import",
@@ -589,7 +590,8 @@
       "status": "skipped",
       "checks": "13/0",
       "owner": "F1",
-      "skip_reason": "PHP Fatal error: Uncaught LogicException: Use Site_Lifecycle::request to retire a store safely. in /srv/vialcove-sandbox/hq/public/wp-content/plugins/"
+      "skip_reason": "前 13 项通过；清理时直接调 Sites::delete()，11-03 起删店必须走 Site_Lifecycle::request，抛 LogicException。用例没跟上，不是功能问题。M2 时重写",
+      "root_cause_checked": "2026-11-12"
     }
   ]
 }
