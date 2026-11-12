@@ -97,11 +97,26 @@ foreach ( $tabs as [ $page, $tab, $key ] ) {
 	m6_check( "buyer: {$page} tab '{$tab}' shows the {$key} report", $key === Data_Pages::current_key() );
 }
 
+// 默认是同屏布局；下面几条看的是页签布局（退路），所以先把选项设成 tabs。
+$GLOBALS['m6_options'][ Data_Pages::BUYER_LAYOUT_OPTION ] = 'tabs';
 $html = $render( array( 'page' => 'pc-data-funnel-sources' ) );
 m6_check( 'buyer: merged page renders the existing report container', str_contains( $html, '<div id="pc-data" class="pc-data" data-page="conversion">' ) );
 m6_check( 'buyer: merged page has both tabs, the first one active', str_contains( $html, '<a class="nav-tab nav-tab-active" aria-current="page" href="https://store.test/wp-admin/admin.php?page=pc-data-funnel-sources&tab=funnel">漏斗</a>' ) && str_contains( $html, '<a class="nav-tab" href="https://store.test/wp-admin/admin.php?page=pc-data-funnel-sources&tab=sources">来源（按广告）</a>' ) );
 $html = $render( array( 'page' => 'pc-data-products-landing', 'tab' => 'landing' ) );
 m6_check( 'buyer: second merged page switches report by tab', str_contains( $html, 'data-page="landing"' ) && str_contains( $html, 'nav-tab-active" aria-current="page" href="https://store.test/wp-admin/admin.php?page=pc-data-products-landing&tab=landing">落地页</a>' ) && str_contains( $html, '>商品</a>' ) );
+
+// 同屏布局（选项 peptide_core_buyer_data_layout = stacked）：不出页签，容器不变；tab 仍然决定“当前是哪个报表”（外壳脚本用它滚到那一段）。
+$GLOBALS['m6_options'][ Data_Pages::BUYER_LAYOUT_OPTION ] = 'stacked';
+$html = $render( array( 'page' => 'pc-data-funnel-sources', 'tab' => 'sources' ) );
+m6_check( 'buyer stacked: no tabs, same container', ! str_contains( $html, 'nav-tab' ) && str_contains( $html, '<div id="pc-data" class="pc-data" data-page="sources">' ) );
+m6_check( 'buyer stacked: the tab still names the report to focus', 'sources' === Data_Pages::current_key() );
+$GLOBALS['m6_options'][ Data_Pages::BUYER_LAYOUT_OPTION ] = 'something-else';
+m6_check( 'an unknown layout value means the default (stacked)', ! str_contains( $render( array( 'page' => 'pc-data-funnel-sources' ) ), 'nav-tab' ) );
+unset( $GLOBALS['m6_options'][ Data_Pages::BUYER_LAYOUT_OPTION ] );
+m6_check( 'without the option the layout is stacked', ! str_contains( $render( array( 'page' => 'pc-data-funnel-sources' ) ), 'nav-tab' ) && str_contains( $render( array( 'page' => 'pc-data-funnel-sources' ) ), 'id="pc-data"' ) );
+$GLOBALS['m6_options'][ Data_Pages::BUYER_LAYOUT_OPTION ] = 'tabs';
+m6_check( 'the tabs layout is still available as a fallback', str_contains( $render( array( 'page' => 'pc-data-funnel-sources' ) ), 'nav-tab-active' ) );
+unset( $GLOBALS['m6_options'][ Data_Pages::BUYER_LAYOUT_OPTION ] );
 
 $html = $render( array( 'page' => 'pc-data' ) );
 m6_check( 'buyer: other data pages show no report, only the two entries', ! str_contains( $html, 'id="pc-data"' ) && str_contains( $html, 'admin.php?page=pc-data-funnel-sources">漏斗 + 来源</a>' ) && str_contains( $html, 'admin.php?page=pc-data-products-landing">商品 + 落地页</a>' ) );

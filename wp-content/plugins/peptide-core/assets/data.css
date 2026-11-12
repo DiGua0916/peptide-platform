@@ -532,3 +532,7 @@
 .pc-exp-more__panel { position: absolute; top: calc(100% + 6px); left: 0; z-index: 40; display: grid; gap: 10px; min-width: 300px; padding: 12px 14px; border: 1px solid #ececec; border-radius: 6px; background: #fff; box-shadow: 0 6px 18px rgba(0, 0, 0, .1); }
 .pc-exp-more__panel label { display: flex; align-items: center; gap: 8px; margin: 0; color: #525252; font-size: 13px; }
 .pc-exp-more__panel :is(input, select) { min-height: 30px; border-color: #dcdcdc; border-radius: 6px; }
+
+/* ST-05 同屏布局：一页上下两个报表，每个报表一段。 */
+.pc-data-section + .pc-data-section { margin-top: 32px; padding-top: 24px; border-top: 1px solid #ececec; }
+.pc-data-section-title { margin: 0 0 14px; font-size: 18px; font-weight: 600; line-height: 1.4; }

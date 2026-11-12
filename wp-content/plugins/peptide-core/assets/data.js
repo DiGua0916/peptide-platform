@@ -34,6 +34,8 @@
 	var RANGE_PATH = '/peptide/v1/data/range';
 	var URL_KEYS = [ 'range', 'from', 'to', 'compare_from', 'compare_to' ];
 
+	// ST-05 同屏布局：cfg.pages 里有两个以上报表时，上下各画一段（投手的合并页）。别的页面没有这一项，走原来的路。
+	var STACK = cfg.pages && cfg.pages.length > 1 ? cfg.pages : null;
 	var renderers = {};
 	var state = cfg.range;
 	var busy = false;
@@ -72,7 +74,7 @@
 			if ( typeof fn !== 'function' || Object.prototype.hasOwnProperty.call( renderers, key ) ) { return; }
 			renderers[ key ] = fn;
 			// Footer/deferred scripts may register after DOMContentLoaded.
-			if ( started && ! busy && key === cfg.page ) { renderBody(); }
+			if ( started && ! busy && ( key === cfg.page || ( STACK && STACK.indexOf( key ) >= 0 ) ) ) { renderBody(); }
 		},
 		onRangeState: function ( listener ) {
 			var listeners = rangeListeners;
@@ -523,6 +525,7 @@
 
 	function renderBody() {
 		rangeListeners = [];
+		if ( STACK ) { renderStack(); return; }
 		var fn = renderers[ cfg.page ];
 		els.body.innerHTML = '';
 		if ( 'function' !== typeof fn ) {
@@ -537,6 +540,37 @@
 			showError( S.loadError );
 		}
 		proxyExport();
+	}
+
+	// ST-05 同屏布局：每个报表一段，带自己的小标题；各段互不影响——一段的脚本还没到或出错，另一段照常显示。
+	// 导出按钮留在各自的报表里（不搬到页面标题旁边：两个报表各有一个导出）。
+	function renderStack() {
+		var slot = root.querySelector( '.pc-data-actions' );
+		if ( slot ) { slot.innerHTML = ''; }
+		var html = '';
+		STACK.forEach( function ( key ) {
+			html += '<section class="pc-data-section" data-section="' + esc( key ) + '"><h2 class="pc-data-section-title">' + esc( ( cfg.sections && cfg.sections[ key ] ) || key ) + '</h2><div class="pc-data-section-body"></div></section>';
+		} );
+		els.body.innerHTML = html;
+		var sections = els.body.querySelectorAll( '.pc-data-section' );
+		STACK.forEach( function ( key, index ) {
+			var section = sections[ index ], target = section && section.querySelector( '.pc-data-section-body' ), fn = renderers[ key ];
+			if ( ! target ) { return; }
+			if ( 'function' !== typeof fn ) { target.innerHTML = '<p class="pc-data-empty">' + esc( S.building ) + '</p>'; return; }
+			try { fn( target, state, window.PcData ); } catch ( e ) { target.innerHTML = '<p class="pc-data-empty">' + esc( S.loadError ) + '</p>'; }
+			// 地址里带了 tab（从投手首页点进来）：第一次画的时候滚到那一段。上面那段的数据回来之后会变高，
+			// 所以隔一会儿再对一次位置；这期间用户自己动过页面就不再滚。
+			if ( ! stackFocused && cfg.focus === key && index > 0 && section.scrollIntoView ) { focusSection( section ); }
+		} );
+		stackFocused = true;
+	}
+	var stackFocused = false;
+	function focusSection( section ) {
+		var moved = false, stop = function () { moved = true; };
+		var go = function () { if ( moved || ! section.scrollIntoView ) { return; } try { section.scrollIntoView(); } catch ( e ) {} };
+		if ( window.addEventListener ) { [ 'wheel', 'touchstart', 'keydown', 'mousedown' ].forEach( function ( name ) { window.addEventListener( name, stop, { once: true, passive: true } ); } ); }
+		go();
+		if ( window.setTimeout ) { [ 600, 1800, 4000 ].forEach( function ( ms ) { window.setTimeout( go, ms ); } ); }
 	}
 
 	// 参考后台把“导出”放在标题旁边：报表自己的导出按钮留在原处（逻辑、状态、测试都不变）但在视觉上收起，

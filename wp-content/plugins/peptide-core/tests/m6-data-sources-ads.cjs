@@ -35,7 +35,7 @@ const ads = (group, first = 'Spring <sale>') => ({ ...base, group_by:group, ad_k
     request.resolve(ads(name)); await flush();
     const html = h.el('wrap').innerHTML;
     const identity = (html.match(/<thead><tr>(.*?)<th aria-sort/s) || ['', ''])[1];
-    check(name + ': one column per ad parameter, in order', (identity.match(/<th>/g) || []).length === KEYS[name].length && KEYS[name].every(key => identity.includes(key)));
+    check(name + ': one column per ad parameter, in order', (identity.match(/<th class="pc-sources-id">/g) || []).length === KEYS[name].length && KEYS[name].every(key => identity.includes(key)));
     check(name + ': values are escaped, absent parameters shown by their state', html.includes('Spring &lt;sale&gt;') && !html.includes('Spring <sale>') && html.includes('missing'));
     check(name + ': the accepted answer enables export', !h.el('export').disabled);
     h.el('export').fire('click');
