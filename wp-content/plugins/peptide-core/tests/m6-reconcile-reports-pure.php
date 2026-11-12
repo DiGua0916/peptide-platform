@@ -170,6 +170,9 @@ $wpdb->visit( 28, 8, 5, 8 );
 $steps( 28, array( 'address_completed', 'shipping_selected', 'payment_selected' ) );
 $wpdb->event( 28, 'payment_success', 'server', 8 );
 m6_order( 8, 'cancelled', 20.0, 150, 150, 8, 28 );
+// 访客 9：填地址的事件落在了另一次访问里——那次访问没有打开过结账页，阶段还是 0（本地站点的真实数据里就有这样的访问）。
+$wpdb->visit( 29, 9, 0 );
+$steps( 29, array( 'address_completed' ) );
 $wpdb->devices = array( 21 => 'mobile', 22 => 'mobile', 23 => 'desktop' );
 
 $counts = static fn( array $funnel ): array => array_column( $funnel['layers'], 'count', 'key' );
@@ -178,19 +181,19 @@ $named  = static fn( array $numbers ): array => array_combine( Visitor_Funnel::K
 
 $mode( 'off' );
 $legacy_funnel = $funnel();
-m6_check( 'case 8 off: the legacy funnel, including the skipped step (5 paid > 3 chose payment)', $named( array( 8, 8, 7, 6, 5, 4, 3, 5 ) ) === $counts( $legacy_funnel['overall'] ) );
+m6_check( 'case 8 off: the legacy funnel, including the skipped step (5 paid > 3 chose payment)', $named( array( 9, 8, 7, 6, 6, 4, 3, 5 ) ) === $counts( $legacy_funnel['overall'] ) );
 m6_check( 'case 8 off: nothing logged', array() === Sw::discard_pending() );
 
 $mode( 'shadow' );
 m6_check( 'case 8 shadow: the page gets exactly the legacy funnel', $legacy_funnel === $funnel() );
 $logged = $diffs( 'reports.visitor_funnel' );
-m6_check( 'case 8 shadow: the rule difference is logged layer by layer', 1 === count( $logged ) && array( 'shipping', 'payment', 'paid' ) === array_column( $logged[0]['diffs'], 'path' ) && array( 4, 3, 5 ) === array_column( $logged[0]['diffs'], 'legacy' ) && array( 5, 4, 3 ) === array_column( $logged[0]['diffs'], 'metrics' ) );
+m6_check( 'case 8 shadow: the rule difference is logged layer by layer', 1 === count( $logged ) && array( 'address', 'shipping', 'payment', 'paid' ) === array_column( $logged[0]['diffs'], 'path' ) && array( 6, 4, 3, 5 ) === array_column( $logged[0]['diffs'], 'legacy' ) && array( 5, 5, 4, 3 ) === array_column( $logged[0]['diffs'], 'metrics' ) );
 m6_check( 'case 8 shadow: the log says which period', 'start_ms' === $logged[0]['context']['basis'] && 'all' === $logged[0]['context']['scope'] && isset( $logged[0]['context']['from'], $logged[0]['context']['to'] ) );
 
 $mode( 'on' );
 $modern_funnel = $funnel();
 $modern_counts = $counts( $modern_funnel['overall'] );
-m6_check( 'case 8 on: skipped payment, test order, cancelled order and beta visit are all handled', $named( array( 7, 7, 6, 6, 4, 4, 3, 2 ) ) === $modern_counts );
+m6_check( 'case 8 on: skipped payment, test order, cancelled order, beta visit and the stray address event are all handled', $named( array( 8, 7, 6, 6, 4, 4, 3, 2 ) ) === $modern_counts );
 $descending = static function ( array $list ): bool {
 	for ( $i = 1, $n = count( $list ); $i < $n; ++$i ) {
 		if ( $list[ $i ] > $list[ $i - 1 ] ) { return false; }
@@ -202,7 +205,7 @@ m6_check( 'case 8 on: the same numbers as Data\Metrics on the same data', Metric
 m6_check( 'case 8 on: Metrics::conversion_rate() is the last layer ÷ the first', Metrics::rate( $modern_counts['paid'], $modern_counts['visitors'] ) === Metrics::conversion_rate( 100, 200 ) );
 
 $by_device = $funnel( 'device' )['groups'];
-m6_check( 'case 8 on: grouped funnels follow the same rule', array( 'mobile', 'desktop', 'unknown' ) === array_keys( $by_device ) && $named( array( 2, 2, 2, 2, 1, 1, 1, 1 ) ) === $counts( $by_device['mobile'] ) && $named( array( 1, 1, 1, 1, 1, 1, 1, 1 ) ) === $counts( $by_device['desktop'] ) && $named( array( 4, 4, 3, 3, 2, 2, 1, 0 ) ) === $counts( $by_device['unknown'] ) );
+m6_check( 'case 8 on: grouped funnels follow the same rule', array( 'mobile', 'desktop', 'unknown' ) === array_keys( $by_device ) && $named( array( 2, 2, 2, 2, 1, 1, 1, 1 ) ) === $counts( $by_device['mobile'] ) && $named( array( 1, 1, 1, 1, 1, 1, 1, 1 ) ) === $counts( $by_device['desktop'] ) && $named( array( 5, 4, 3, 3, 2, 2, 1, 0 ) ) === $counts( $by_device['unknown'] ) );
 m6_check( 'case 8 on: group conversion uses the paid layer of the group', 50.0 === Overlay::conversion( 2, $counts( $by_device['mobile'] )['paid'], $counts( $by_device['mobile'] )['visitors'], 'conversion.device' ) );
 
 // 后四层的规则本身。

@@ -286,7 +286,7 @@ namespace {
 					$v    = $cohort[ $e['visit_id'] ] ?? null;
 					$step = 'client' === $e['source'] ? in_array( $e['type'], array( 'checkout_address_completed', 'checkout_shipping_selected', 'checkout_payment_selected' ), true ) : ( 'server' === $e['source'] && 'payment_success' === $e['type'] );
 					if ( ! $v || ! $step || $index + 1 <= $cursor || ! isset( $this->visitors[ $v['visitor_id'] ] ) ) { continue; }
-					$rows[] = array( 'id' => $index + 1, 'type' => $e['type'], 'source' => $e['source'], 'visit_id' => $e['visit_id'], 'visitor_id' => $v['visitor_id'], 'order_id' => $e['order_id'], 'linked_order' => $v['order_id'], 'g' => (string) ( $this->devices[ $e['visit_id'] ] ?? '' ), 'returning_visit' => 0 );
+					$rows[] = array( 'id' => $index + 1, 'type' => $e['type'], 'source' => $e['source'], 'visit_id' => $e['visit_id'], 'visitor_id' => $v['visitor_id'], 'order_id' => $e['order_id'], 'linked_order' => $v['order_id'], 'visit_stage' => $v['stage'], 'g' => (string) ( $this->devices[ $e['visit_id'] ] ?? '' ), 'returning_visit' => 0 );
 				}
 				return array_slice( $rows, 0, 500 );
 			}
