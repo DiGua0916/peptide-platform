@@ -753,7 +753,7 @@ if ( ! $product instanceof \WC_Product || array_key_exists( Product_Offers::CART
 4. 沙盒走查：按 `docs/handoffs/m4-sandbox-walkthrough.md`。
 5. 建议把 `\PeptideCore\Activity\Quote_Cart::supported_hooks() === true` 加进发布前的 critical-path 检查（见给日常会话的第 1 条：这次就是没人发现）。
 6. 测试登记：5 条纯测试已按 `"status": "module-gate", "module": "M4"` 写在 suites 文件末尾；两个 `*-native.php` 要在装好 WooCommerce 的站点上用 `wp eval-file` 跑，不在纯测试编排里。
-7. **冒烟基线里归 F2 的 5 个用例已处理**（2026-11-12，提交 `692f00c` 起）：`smoke-exit-intent`、`smoke-marketing`、`smoke-promotions`、`smoke-pricing`、`smoke-shipping-plans`。根因和预期结果见 `docs/handoffs/m4-sandbox-walkthrough.md` 第 2b 步。换上本分支在沙盒重跑通过后，请把 `tests/smoke-suites.json` 里这 5 条的 `status` 改回 `gate`（那个文件在你的分支上，F2 没有动）。F4 名下的 `smoke-data-apps`（13 / 8）和 `smoke-exit-intent` 是同一个根因，F2 的修复顺带解决，本机 21 / 0。
+7. **冒烟基线里归 F2 的 5 个用例已处理**（2026-11-12，提交 `692f00c` 起）：`smoke-exit-intent`、`smoke-marketing`、`smoke-promotions`、`smoke-pricing`、`smoke-shipping-plans`。根因和预期结果见 `docs/handoffs/m4-sandbox-walkthrough.md` 第 2b 步。**F1 已在沙盒重跑（候选 `c5fb1d8`，F2 `27b3c37`）：5 个加 `smoke-data-apps` 全部通过。** 它们在不含本分支的主线上仍会失败，所以 `tests/smoke-suites.json`（在 F1 分支上，F2 没有动）先保持 `skipped` 并注明“F2 合进主线时改回 gate”——本分支合进主线的那次发布里请一并改回。F4 名下的 `smoke-data-apps`（13 / 8）和 `smoke-exit-intent` 是同一个根因，F2 的修复顺带解决，本机 21 / 0。
 8. **生产只读核对（6 家店各两条命令）——F1 已核对（2026-11-12），结果见下**：
 
 ```bash
