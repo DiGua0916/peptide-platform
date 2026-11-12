@@ -1,8 +1,8 @@
 # M4 营销与价格引擎 · 交接（F2 价格营销会话）
 
-分支 `claude/m4-pricing-35ba90`，从主线 `codex/checkout-acceptance-20261105` 开出，已合入主线到 `7c6d2d3`（2026-11-12）。对应需求 NF-02（优惠部分）、HQ-07（店铺端）。接口约定见 `docs/CONTRACT.md` 文末的 M4 一节；沙盒走查清单见 `docs/handoffs/m4-sandbox-walkthrough.md`。
+分支 `claude/m4-pricing-35ba90`，从主线 `codex/checkout-acceptance-20261105` 开出，已合入主线到 `bd4e355`（2026-11-12）。对应需求 NF-02（优惠部分）、HQ-07（店铺端）。接口约定见 `docs/CONTRACT.md` 文末的 M4 一节；沙盒走查清单见 `docs/handoffs/m4-sandbox-walkthrough.md`。
 
-> **2026-11-12 要先看的一件事**：主线的“手动订单”（11-10 起）把**加购推荐**关掉了——它在每个请求上往购物车计算的钩子加了回调，加购推荐的报价只认白名单里的回调，于是整体放弃。这不是 M4 引起的，优惠码那一半 F2 已修，剩下的要日常会话改 `activity/class-quote-cart.php`（两处，写在 CONTRACT 的 M4 一节“给日常会话”第 1 条）。在生产上核对：`wp eval 'var_dump( \PeptideCore\Activity\Quote_Cart::supported_hooks() );'`，`false` 即中招。**F1 当天在生产 6 家店只读查过：全部是 `false`**——加购推荐现在在所有店都不出现，到主线 `7c6d2d3` 为止修复还没有进来。
+> **加购推荐的问题已经修复（2026-11-12）**：主线的“手动订单”（11-10 起）在每个请求上往购物车计算的钩子加了回调，加购推荐的报价只认白名单里的回调，于是整体放弃——11-10 到 11-12 之间加购推荐在所有店都不出现（F1 在生产 6 家店只读查过，全部是关着的）。这不是 M4 引起的，是 F2 同步主线时发现的。日常会话已在主线 `bd4e355` 按 CONTRACT 里写的两处修好并上线；它报告生产 6 家店和 6 套后台都已恢复（F2 没有在生产上核实）。本分支已同步到 `bd4e355`，在本机真实站点上确认：关 / 影子 / 开三档下 `Quote_Cart::supported_hooks()` 都是 true，普通购物车可以报价，手动订单链接的购物车不报价。核对命令：`wp eval 'var_dump( \PeptideCore\Activity\Quote_Cart::supported_hooks() );'`，应为 `bool(true)`。
 
 本文分四部分：一、现有 7 处优惠逻辑盘点；二、新引擎和开关；三、怎么验证；四、下一步怎么切换。
 
@@ -75,7 +75,7 @@
 
 手动订单带来两个要别人处理的问题（都写进了 CONTRACT 的 M4 一节）：
 
-1. **加购推荐被关掉**（见本文开头）。
+1. **加购推荐被关掉**（见本文开头；已在主线 `bd4e355` 修复）。
 2. 手动订单链接的说明写的是“不叠加店铺的满减活动和优惠券、运费优惠”，实际代码里：店主没填自定义运费时，店铺的**运费折扣照常生效**（样例 54）。引擎照代码做。要不要改由平台所有者定。
 
 ---
@@ -153,13 +153,13 @@
 | `tests/m4-shadow-walkthrough-native.php` | 临时建数据，24 个组合在影子档和开档各走一遍，引擎逐项核对；另走一次请求末尾的入口，确认真的写进统计表 | 一致 48，不一致 0，跳过 0（运费 $15、运费折扣 5 折的情况下） |
 | `tests/m4-series-campaigns-native.php` | 按系列接收活动：试运行、下发、重复下发、不合规、全量对齐、冲突、快照恢复、导出；真实购物车里下发的满减和首单券生效 | 23 / 23 |
 | F3 的真实同步入口（手工） | 把 F3 分支的 `class-series-sync.php` 临时放进私有副本，调 `Series_Sync::sync()` / `restore()` | 试运行出差异、下发记版本、同版本跳过、少发的停用、恢复后回来、不合规返回错误且不记版本——都符合 M3 的约定。临时文件已删，没有提交 |
-| 加购推荐的钩子白名单（手工） | `Quote_Cart::supported_hooks()`、`Recommendation_Coupon::coupon_hooks_supported()` | 主线上两个都是 false；F2 改了自己那半之后优惠码的为 true，报价的仍为 false（等日常会话） |
+| 加购推荐的钩子白名单（手工） | `Quote_Cart::supported_hooks()`、`Recommendation_Coupon::coupon_hooks_supported()`，在像真实店铺的库上关 / 影子 / 开三档各查一次 | 同步主线 `bd4e355` 之后：三档下两个都是 true（引擎在影子档和开档不会把加购推荐关掉）；普通购物车可以报价，带手动订单标记的购物车不报价。同步之前（主线 `976c1fa`–`7c6d2d3`）报价的那个是 false |
 
 **F1 的沙盒走查**（2026-11-12，MySQL + s0010 的脱敏数据；候选里的 F2 是 `8c68298`，和 F3 / F4 / F5 合在一起；记录在 F1 分支的 `docs/handoffs/m1-sandbox-acceptance-all-2026-11-12.md`）
 
 | 步骤 | 结果 |
 | --- | --- |
-| 第 0 步 关着时 | 档位 off、没有核对记录、没有 `pc_m4_shadow` 表。`Quote_Cart::supported_hooks()` 是 false——F1 在生产 6 家店只读查了，也全是 false（加购推荐现在在所有店都关着，等日常会话修） |
+| 第 0 步 关着时 | 档位 off、没有核对记录、没有 `pc_m4_shadow` 表。`Quote_Cart::supported_hooks()` 当时是 false——F1 在生产 6 家店只读查了，也全是 false。之后日常会话在主线 `bd4e355` 修好；沙盒换上含 `bd4e355` 的候选后这一条应为 true |
 | 第 1 步 24 个组合 | 退出码 0，一致 48、不一致 0、跳过 0；运费 22.50（s0010 的运费方案）；临时数据删净，档位回 off。这是第一次在 MySQL 和真实店铺的优惠设置上跑 |
 | 第 2 步 按系列接收活动 | 23 项全部通过 |
 | 第 3 步 浏览器 9 个流程 | **没做**（F1 的机器进不了沙盒前台的认证） |
@@ -226,5 +226,4 @@ F2 够不着沙盒，做法是在本机私有副本里造出“像真实店铺�
 
 - 默认测试套件用本机原生 PHP 8.3.32 跑，有 9 组不通过，改动前后一样：`data-native-search-pure`、`data-product-action-rankings-pure`、`data-product-user-ratios-node`、`experiment-data-pure`、`mail-source-observations`、`tracking-product-actions-pure`、`tracking-store-api-cart-success-pure`、`visitor-intents`、`visitor-product-actions`（都在追踪 / 数据模块）。
 - 整店复制（`tools/deployment/provisioning/clone.py`）会把来源店的 `*_db` / `*_version` 选项留在新店（新店原来没有这个选项时），对应的表却不在复制范围里。F2 名下的两处已改成不依赖这一点；其他第一次写入才建表的模块（挽回、发信队列、邮件日志、像素服务端、操作日志）没有逐个查。写在 CONTRACT 的 M4 一节“给 F1”第 9 条。
-- 加购推荐：`activity/class-quote-cart.php` 的修复到 `7c6d2d3` 为止还没有进主线；进了以后 F2 同步主线、重跑对照测试，并确认 `Quote_Cart::supported_hooks()` 为 true。
 - 项目聊天室（`docs/chat/ROOM.md`）在这台 Mac 上不存在，开工、完工登记写在并行会话的共享笔记目录里。

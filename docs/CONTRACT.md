@@ -724,9 +724,9 @@ M4_WALKTHROUGH=sandbox wp eval-file wp-content/plugins/peptide-core/tests/m4-ser
 
 ### 二、需要其他会话配合
 
-**给日常会话（第 1 条是线上问题，请优先）**
+**给日常会话**
 
-1. **加购推荐被手动订单关掉了。** 主线从 `1fcfea5`（11-10）起，`Manual_Orders::register_hooks()` 在每个请求上往 `woocommerce_before_calculate_totals`（9999）、`woocommerce_cart_calculate_fees`（99）、`woocommerce_coupon_is_valid`（9999）加了回调；加购推荐的报价只认白名单里的回调，于是 `Activity\Quote_Cart::supported_hooks()` 恒为 false，`Activity\Recommendations` 一律隐藏，`Api\Activity_Listener_Controller` 返回 409。F2 在本机真实站点（WordPress 7.1.4 + WooCommerce 11.2.1，主线 976c1fa）上确认：摘掉这三个回调后恢复为 true。优惠码那一半（`Recommendation_Coupon` 的白名单）F2 已改；**`activity/class-quote-cart.php` 请改两处**：
+1. **加购推荐被手动订单关掉了——已修复（主线 `bd4e355`，2026-11-12，日常会话）。** 下面是当时的问题和修法，留作记录；F2 同步后在本机真实站点上确认三档下 `supported_hooks()` 都是 true。主线从 `1fcfea5`（11-10）起，`Manual_Orders::register_hooks()` 在每个请求上往 `woocommerce_before_calculate_totals`（9999）、`woocommerce_cart_calculate_fees`（99）、`woocommerce_coupon_is_valid`（9999）加了回调；加购推荐的报价只认白名单里的回调，于是 `Activity\Quote_Cart::supported_hooks()` 恒为 false，`Activity\Recommendations` 一律隐藏，`Api\Activity_Listener_Controller` 返回 409。F2 在本机真实站点（WordPress 7.1.4 + WooCommerce 11.2.1，主线 976c1fa）上确认：摘掉这三个回调后恢复为 true。优惠码那一半（`Recommendation_Coupon` 的白名单）F2 已改；**`activity/class-quote-cart.php` 请改两处**：
 
 ```php
 // unsupported_hook() 的 $allow：
@@ -737,7 +737,7 @@ M4_WALKTHROUGH=sandbox wp eval-file wp-content/plugins/peptide-core/tests/m4-ser
 if ( ! $product instanceof \WC_Product || array_key_exists( Product_Offers::CART, $item ) || ! empty( $item['pc_manual'] ) || ... ) { return false; }
 ```
 
-   核对办法：任一店 `wp eval 'var_dump( \PeptideCore\Activity\Quote_Cart::supported_hooks() );'` 应为 `true`。2026-11-12 F1 在生产 6 家店只读查过：**全部是 `false`**，也就是加购推荐现在在所有店都不出现。
+   核对办法：任一店 `wp eval 'var_dump( \PeptideCore\Activity\Quote_Cart::supported_hooks() );'` 应为 `true`。2026-11-12 修复前 F1 在生产 6 家店只读查过，全部是 `false`；修复上线后日常会话报告 6 家店和 6 套后台都是 `true`（F2 没有在生产上核实）。
 
 2. 以后往这些钩子上加回调前先看 `Quote_Cart::unsupported_hook()` 的清单：`woocommerce_cart_calculate_fees`、`woocommerce_before_calculate_totals`、`woocommerce_after_calculate_totals`、`woocommerce_calculated_total`、`woocommerce_coupon_*`、`woocommerce_product_get_price` 等。
 3. `admin/class-product-offers-page.php`（赠品 / 捆绑）和 `admin/class-apps-page.php` 里离开挽回的设置页：界面上对 `! Marketing::can_manage()` 的人隐藏保存入口（服务端 `Product_Offers::store()` 已拒绝；离开挽回由系列下发时 `Exit_Intent::save()` 会拒绝登录用户）。
