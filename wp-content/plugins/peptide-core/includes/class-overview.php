@@ -54,6 +54,10 @@ final class Overview {
 
 	/** 测试订单：测试付款方式（订单上保存的付款方式名称以 “Test payment” 开头），或者包含演示商品。 */
 	public static function is_test_order( \WC_Order $order ): bool {
+		// 店主标记为测试单（或测试地址）的也不算进数据（2026-11-11）。
+		if ( Test_Orders::is_test_order( $order ) ) {
+			return true;
+		}
 		if ( str_starts_with( (string) $order->get_payment_method_title(), 'Test payment' ) ) {
 			return true;
 		}

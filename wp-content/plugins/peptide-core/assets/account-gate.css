@@ -1,0 +1,31 @@
+/* 进站 18+ 确认 + 注册弹窗（Accounts）。手机优先。 */
+html.pc-acc-lock, html.pc-acc-lock body { overflow: hidden; }
+.pc-acc { border: 0; padding: 0; margin: auto; width: min(440px, calc(100vw - 24px)); max-width: none; max-height: calc(100dvh - 24px); background: transparent; color: #171717; overflow: visible; }
+.pc-acc::backdrop { background: rgba(10, 14, 22, .72); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.pc-acc--fallback { position: fixed; inset: 0; z-index: 100001; display: flex; align-items: center; justify-content: center; width: 100%; max-height: none; background: rgba(10, 14, 22, .72); }
+.pc-acc--fallback .pc-acc__box { width: min(440px, calc(100vw - 24px)); }
+.pc-acc__box { position: relative; box-sizing: border-box; max-height: calc(100dvh - 24px); overflow: auto; overscroll-behavior: contain; background: #fff; border-radius: 18px; padding: 28px 22px 20px; box-shadow: 0 24px 70px rgba(0, 0, 0, .35); font-size: 15px; line-height: 1.55; text-align: center; }
+.pc-acc h2 { margin: 0 0 10px; font-size: 22px; line-height: 1.25; color: #111; text-wrap: balance; }
+.pc-acc__badge { width: 64px; height: 64px; margin: 0 auto 14px; border-radius: 50%; border: 2px solid #111; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 20px; letter-spacing: -.02em; }
+.pc-acc__lead { margin: 0 0 12px; color: #404040; }
+.pc-acc__small { margin: 0 0 14px; color: #555; font-size: 13.5px; }
+.pc-acc__inline { border: 0; background: none; padding: 0; font: inherit; color: #111; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.pc-acc__doc { text-align: left; max-height: 38vh; overflow: auto; margin: 0 0 14px; padding: 12px 14px; border: 1px solid #e5e5e5; border-radius: 10px; background: #fafafa; font-size: 13px; color: #333; }
+.pc-acc__doc h3 { margin: 0 0 6px; font-size: 15px; }
+.pc-acc__doc h4 { margin: 10px 0 2px; font-size: 13px; }
+.pc-acc__doc p { margin: 0; }
+.pc-acc__actions { display: grid; gap: 8px; }
+.pc-acc__btn { display: block; width: 100%; box-sizing: border-box; min-height: 48px; padding: 12px 16px; border-radius: 10px; font: inherit; font-weight: 700; font-size: 16px; cursor: pointer; border: 1px solid transparent; }
+.pc-acc__btn--primary { background: #111; color: #fff; }
+.pc-acc__btn--primary:disabled { opacity: .6; cursor: default; }
+.pc-acc__btn--ghost { background: #fff; color: #111; border-color: #d4d4d4; font-weight: 600; margin-top: 8px; }
+.pc-acc__btn--text { background: none; color: #666; font-weight: 500; font-size: 14px; min-height: 44px; margin-top: 2px; }
+.pc-acc__x { position: absolute; top: 6px; right: 8px; border: 0; background: none; font-size: 28px; line-height: 1; color: #888; cursor: pointer; min-width: 44px; min-height: 44px; }
+.pc-acc__form { display: grid; gap: 10px; text-align: left; margin: 4px 0 0; }
+.pc-acc__form label { display: grid; gap: 4px; font-size: 13px; font-weight: 600; color: #333; }
+.pc-acc__form label[hidden] { display: none; }
+.pc-acc__form input { width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #cfcfcf; border-radius: 9px; font-size: 16px; font-weight: 400; color: #111; background: #fff; }
+.pc-acc__form input:focus { outline: 2px solid #111; outline-offset: 1px; border-color: #111; }
+.pc-acc__err { margin: 0; color: #b91c1c; font-size: 13.5px; }
+.pc-acc-login-signup { margin-top: 14px; }
+@media (min-width: 600px) { .pc-acc__box { padding: 34px 32px 24px; } }

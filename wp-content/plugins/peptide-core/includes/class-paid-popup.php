@@ -24,6 +24,7 @@ final class Paid_Popup {
 	public static function register_hooks(): void {
 		add_filter( 'pc_panapay_paid_redirect', array( self::class, 'redirect_url' ), 10, 2 );
 		add_action( 'wp_footer', array( self::class, 'render' ), 50 );
+		add_action( 'template_redirect', array( self::class, 'clear_cart' ), 5 );
 		add_action( 'rest_api_init', array( self::class, 'routes' ) );
 		// 店主 2026-11-10：成功下单立刻发关怀邮件。付款完成流程偶尔会中途被打断（#11841 就没发出），每 5 分钟补发一次。
 		add_action( Recovery::CRON, array( self::class, 'care_catchup' ), 40 );
@@ -68,7 +69,7 @@ final class Paid_Popup {
 			'title'       => 'Thank you! Your order is confirmed',
 			'message'     => "Order #{order} has been placed successfully. We truly value your shopping experience.\nAdd our order specialist on WhatsApp to track your shipment in real time, ask any questions, or share your suggestions with us.",
 			'wa_label'    => 'Add us on WhatsApp',
-			'wa_text'     => 'Hi! I just placed an order on {store}: {items}. The total is {total} (order #{order}).',
+			'wa_text'     => 'Hi! I just placed an order on your site: {items}. The total is {total}.', // 店主 2026-11-11：不带店名。
 			'phone_label' => 'Customer service: {phone}',
 			'no_wa_label' => "I don't use WhatsApp",
 			'form_intro'  => 'No problem. Tell us the best way to reach you (phone, email, Telegram, Signal...) and our team will contact you.',
@@ -106,8 +107,22 @@ final class Paid_Popup {
 		return add_query_arg( array( 'pc_paid' => $order->get_id(), 'pc_key' => $order->get_order_key() ), home_url( '/' ) );
 	}
 
+	/** 付款成功回来：清空这个浏览器的购物车（不然会被当成新的弃单，付完款还收到提醒）。 */
+	public static function clear_cart(): void {
+		$order = self::order_from_request();
+		if ( ! $order || ! function_exists( 'WC' ) ) {
+			return;
+		}
+		if ( null === WC()->cart ) {
+			wc_load_cart();
+		}
+		if ( WC()->cart && ! WC()->cart->is_empty() ) {
+			WC()->cart->empty_cart();
+		}
+	}
+
 	/** 当前请求带的、已付款且密钥正确的订单。 */
-	private static function order_from_request(): ?\WC_Order {
+	public static function order_from_request(): ?\WC_Order {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended
 		if ( empty( $_GET['pc_paid'] ) || empty( $_GET['pc_key'] ) || ! function_exists( 'wc_get_order' ) ) {
 			return null;
@@ -163,6 +178,7 @@ final class Paid_Popup {
 		<div class="pc-paid__check" aria-hidden="true">&#10003;</div>
 		<h2 id="pc-paid-title"><?php echo esc_html( self::fill( $s['title'], $order ) ); ?></h2>
 		<div class="pc-paid__msg"><?php echo $msg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 上面逐段转义。 ?></div>
+		<?php echo class_exists( Accounts::class ) ? Accounts::popup_block( $order ) : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 内部已转义。 ?>
 		<?php if ( '' !== $phone ) : ?>
 			<p class="pc-paid__phone"><?php echo esc_html( self::fill( $s['phone_label'], $order ) ); ?></p>
 		<?php endif; ?>
@@ -200,11 +216,21 @@ final class Paid_Popup {
 .pc-paid__form input{width:100%;box-sizing:border-box;padding:12px;border:1px solid #d4d4d4;border-radius:8px;font-size:16px}
 .pc-paid__form button{width:100%;margin-top:8px;padding:12px;border:0;border-radius:8px;background:#171717;color:#fff;font-weight:600;font-size:15px;cursor:pointer;min-height:44px}
 .pc-paid__err{color:#b91c1c;font-size:13px;margin-top:6px}
+.pc-paid__acct{margin:12px 0 4px;padding:14px;border-radius:12px;background:#f5f5f4;text-align:left}
+.pc-paid__acct-title{margin:0 0 2px;font-weight:700;color:#171717}
+.pc-paid__acct-sub{margin:0 0 8px;color:#525252;font-size:14px}
+.pc-paid__acct dl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:0 0 6px;font-size:14px}
+.pc-paid__acct dt{color:#737373}
+.pc-paid__acct dd{margin:0;font-weight:600;word-break:break-all;color:#171717}
+.pc-paid__acct-note{margin:0 0 10px;color:#737373;font-size:12.5px}
+.pc-paid__acct-btn{display:block;text-align:center;padding:12px;border-radius:9px;background:#171717;color:#fff!important;font-weight:600;text-decoration:none;min-height:44px;box-sizing:border-box}
 .pc-paid__thanks{margin:10px 0 0;color:#15803d;font-weight:600}
 </style>
 <script>
 (function(){
 	var box=document.querySelector('[data-pc-paid]'); if(!box) return;
+	// 物流追踪球用：这台设备上付过款的订单（订单号 + 密钥），最多记 5 张。
+	try{ var k='pcTrackOrders', a=JSON.parse(localStorage.getItem(k)||'[]'), o=<?php echo (int) $order->get_id(); ?>; if(!Array.isArray(a)) a=[]; a=a.filter(function(x){return x&&x.o!==o;}); a.push({o:o,k:<?php echo wp_json_encode( $order->get_order_key() ); ?>}); localStorage.setItem(k,JSON.stringify(a.slice(-5))); }catch(e){}
 	function close(){ box.hidden=true; try{ var u=new URL(location.href); u.searchParams.delete('pc_paid'); u.searchParams.delete('pc_key'); history.replaceState(null,'',u.toString()); }catch(e){} }
 	box.addEventListener('click',function(e){ if(e.target===box||e.target.closest('[data-pc-paid-close]')) close(); });
 	document.addEventListener('keydown',function(e){ if(e.key==='Escape') close(); });

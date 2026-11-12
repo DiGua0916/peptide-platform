@@ -11,6 +11,8 @@ final class Completion_Guard {
 	private static array $active = array();
 	private static array $registered_statuses = array();
 	private static bool $registered = false;
+	/** 最近一次拦截的原因（只用于排查日志）。 */
+	public static string $last_block = '';
 
 	public static function complete( \WC_Order $order, string $transaction ): void {
 		$id = $order->get_id();
@@ -44,12 +46,19 @@ final class Completion_Guard {
 
 	public static function guard( $id ): void {
 		if ( ! isset( self::$active[ $id ] ) ) { return; }
+		$why = 'already_blocked';
 		try {
-			if ( ! self::$active[ $id ]['blocked'] && Persistence::has_gateway( (int) $id, self::$active[ $id ]['gateway'] )
-				&& Persistence::is_paid( (int) $id, self::$active[ $id ]['transaction'] ) ) { return; }
+			if ( ! self::$active[ $id ]['blocked'] ) {
+				$gw   = Persistence::has_gateway( (int) $id, self::$active[ $id ]['gateway'] );
+				$paid = $gw && Persistence::is_paid( (int) $id, self::$active[ $id ]['transaction'] );
+				if ( $gw && $paid ) { return; }
+				$why = $gw ? 'not_paid_in_db' : 'gateway_mismatch';
+			}
 		} catch ( \Throwable $error ) {
 			// A persistence read error is not permission to emit completion effects.
+			$why = 'read_error: ' . get_class( $error ) . ' ' . $error->getMessage();
 		}
+		self::$last_block = $why . ' @' . current_action();
 		self::$active[ $id ]['blocked'] = true;
 		throw new \RuntimeException( 'payment_persistence_unconfirmed' );
 	}
