@@ -83,6 +83,33 @@ M4_WALKTHROUGH=sandbox wp eval-file wp-content/plugins/peptide-core/tests/m4-ser
 
 通过：最后是 `RESULT 23 项检查：全部通过`，退出码 0。有 `FAIL` 时把输出发给 F2。
 
+## 第 2b 步 · 基线里归 F2 的 5 个冒烟用例（约 2 分钟，用你的 `tools/sandbox/run-smoke.sh`）
+
+2026-11-12 基线（`12b0f63`）里这 5 个是 `skipped`。根因和处理见 `docs/handoffs/m4-pricing-engine.md` 第三部分的“认领的冒烟用例”。换上本分支后在沙盒重跑，应该是：
+
+| 用例 | 基线 | 现在应为 | 备注 |
+| --- | --- | --- | --- |
+| `smoke-exit-intent` | 30 / 7 | 40 / 0 | 修的是代码（统计表不在时自动补建），加了 3 项检查 |
+| `smoke-marketing` | 80 / 1 | 81 / 0 | 用例不再看店铺自己的满减 |
+| `smoke-promotions` | 33 / 1 | 34 / 0 | 同上 |
+| `smoke-pricing` | 22 / 1 | 23 / 0 | 用例改为比较商品部分 |
+| `smoke-shipping-plans` | 29 / 2 | 31 / 0 | 用例里当作没有店铺的运费折扣 |
+| `smoke-data-apps`（F4 名下） | 13 / 8 | 21 / 0 | 和 `smoke-exit-intent` 同一个根因，F2 的修复顺带解决；F4 的文件没有改 |
+
+通过后请把 `tests/smoke-suites.json` 里这几条的 `status` 改回 `gate`（`smoke-data-apps` 和 F4 说一声）。还有不过的，把那个用例的完整输出（不只是前两条 `FAIL`，连同 `WordPress database error` 开头的行）发给 F2。
+
+顺带请在沙盒店铺站看一眼，确认根因（只读）：
+
+```bash
+wp db query "SHOW TABLES LIKE '%pc_app_stats'"
+```
+
+```bash
+wp option get peptide_core_app_stats_db
+```
+
+第一条是空、第二条是 `1` = 和 F2 在本机复现的情况一样（版本号在、表不在）。生产 6 家店的同样两条命令见 `docs/CONTRACT.md` M4 一节“给 F1”第 8 条。
+
 ## 第 3 步 · 开影子档，用浏览器走真实流程（约 20 分钟）
 
 脚本走的是服务端的计算；下面这些只有浏览器里才会发生，需要人点一遍（手机宽度，沙盒店铺前台）。
@@ -137,7 +164,7 @@ wp peptide price-engine log --limit=10
 node tests/run-data-observations.cjs --suite m4-price-engine-pure --suite m4-engine-mode-pure --suite m4-marketing-quiet-pure --suite m4-campaigns-readonly-pure --suite m4-marketing-quiet
 ```
 
-五行都是 `"exit_code":0` 即通过。想用真实的 WooCommerce 源文件复核金额算法：
+五行都是 `"exit_code":0` 即通过（2026-11-12：对照 59 个样例、档位 37 项、静默 17 + 16 项、只读 50 项）。想用真实的 WooCommerce 源文件复核金额算法：
 
 ```bash
 PC_WC_SRC=/path/to/wp-content/plugins/woocommerce php -n wp-content/plugins/peptide-core/tests/m4-price-engine-pure.php --fuzz=30000

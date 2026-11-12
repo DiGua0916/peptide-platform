@@ -709,7 +709,7 @@ M3 定的外形：`{ kind, key, active, config }`。M4 定的 `config`（没写�
 | 选项 `pc_pricing_engine_mode`、`pc_m4_db`、`pc_series_campaigns` | 没有 | keep（快照导入沙盒后建议把 `pc_pricing_engine_mode` 设回 `off`） |
 | 优惠码 / 满减的 meta `_pc_series_campaign`、`_pc_series_campaign_hash` | 没有 | keep |
 
-两张表是懒建的（第一次有记录要写时才建，版本选项 `pc_m4_db`），关着时不存在。
+两张表是懒建的（第一次有记录要写时才建，版本选项 `pc_m4_db`），关着时不存在。版本号在而表不在时（整店复制会造成这种情况，见下面“给 F1”第 9 条）第一次写入会自动补建，查看和清空当作“还没有记录”。离开挽回的统计表 `{prefix}pc_app_stats`（版本选项 `peptide_core_app_stats_db`，快照里已登记为 keep）2026-11-12 起也是这样处理：`Exit_Intent::installed()` 现在表示“版本号对而且表在”。
 
 **8. 沙盒 / 本地站点上的验证脚本（真实 WordPress + WooCommerce）**
 
@@ -741,6 +741,7 @@ if ( ! $product instanceof \WC_Product || array_key_exists( Product_Offers::CART
 3. `admin/class-product-offers-page.php`（赠品 / 捆绑）和 `admin/class-apps-page.php` 里离开挽回的设置页：界面上对 `! Marketing::can_manage()` 的人隐藏保存入口（服务端 `Product_Offers::store()` 已拒绝；离开挽回由系列下发时 `Exit_Intent::save()` 会拒绝登录用户）。
 4. 加购推荐和进度条的设置（`Activity\Store`）现在只能由登录的管理员保存（`Store::save()` 检查 `can_manage()`）。要让系列下发 `upsell` / `progress_bar`，需要一个不依赖登录用户的写入入口（比如 `Store::apply_series( array $config )`），其中活动和优惠码用代号引用。有了以后 F2 接上。
 5. 手动订单（`class-manual-orders.php`）和运费预览（`class-ship-preview.php`）直接用到 M4 的这些方法，以后删旧算法时 F2 会保留它们的签名：`Promotions::discounts()`、`Promotions::active_ids()`、`Promotions::FEE_META`、`First_Order_Offer::coupon()`、`Shipping\Discounts::applicable()`、`Shipping\Discounts::discounted()`。引擎已经认识手动订单链接的购物车（店主配的价格、运费、自定义优惠、是否带店铺满减 / 首单）。如果手动订单的配置再加影响金额的字段，请告诉 F2。
+6. `tests/smoke-shipping-plans.php` 加了一处（开头 4 行）：本次运行里用 `pre_option_peptide_core_shipping_discounts` 当作没有店铺的运费折扣。原因：真实店铺的数据里有运费折扣时，第 6 步的方案运费 30 / 45 / 110 会被再打折，用例在沙盒基线里因此失败（29 / 2）。方案本身的逻辑没有问题，`Shipping\Plans` 没有动。
 
 **给 F1（发布、连接）**
 
@@ -750,6 +751,20 @@ if ( ! $product instanceof \WC_Product || array_key_exists( Product_Offers::CART
 4. 沙盒走查：按 `docs/handoffs/m4-sandbox-walkthrough.md`。
 5. 建议把 `\PeptideCore\Activity\Quote_Cart::supported_hooks() === true` 加进发布前的 critical-path 检查（见给日常会话的第 1 条：这次就是没人发现）。
 6. 测试登记：5 条纯测试已按 `"status": "module-gate", "module": "M4"` 写在 suites 文件末尾；两个 `*-native.php` 要在装好 WooCommerce 的站点上用 `wp eval-file` 跑，不在纯测试编排里。
+7. **冒烟基线里归 F2 的 5 个用例已处理**（2026-11-12，提交 `692f00c` 起）：`smoke-exit-intent`、`smoke-marketing`、`smoke-promotions`、`smoke-pricing`、`smoke-shipping-plans`。根因和预期结果见 `docs/handoffs/m4-sandbox-walkthrough.md` 第 2b 步。换上本分支在沙盒重跑通过后，请把 `tests/smoke-suites.json` 里这 5 条的 `status` 改回 `gate`（那个文件在你的分支上，F2 没有动）。F4 名下的 `smoke-data-apps`（13 / 8）和 `smoke-exit-intent` 是同一个根因，F2 的修复顺带解决，本机 21 / 0。
+8. **请在生产只读核对一次（6 家店各两条命令）**：
+
+```bash
+wp db query "SHOW TABLES LIKE '%pc_app_stats'"
+wp option get peptide_core_app_stats_db
+```
+
+   第一条为空而第二条是 `1` 的店：离开挽回 / 转盘的弹出、领取、抽奖、订单数一直没有记上（弹窗和优惠码本身不受影响，订单上的标记和备注也照常写）。M4 合进去以后，这家店下一次弹窗事件会自动补建表并开始计数，不需要手工处理；之前的数字补不回来。F2 是从沙盒基线的失败项反推的（在本机把表删掉、版本号留着，`smoke-exit-intent` 和 `smoke-data-apps` 的失败项和沙盒完全一样），**没有看过沙盒和生产的数据库**，所以请以这两条命令的结果为准。
+9. **整店复制会留下“版本号在、表不在”**：`tools/deployment/provisioning/clone.py` 整表复制 `wp_options`，再把目标店原有的 `*_db` / `*_version` 等选项放回去（`KEEP_OPTION_PATTERN`）；目标店原来**没有**的那些，来源店的值就留了下来，而对应的表不在复制范围里。懒建表的模块（第一次写入才建表）都会中招。建议在第 5 步之后删掉“匹配 `KEEP_OPTION_PATTERN`、目标店原来没有”的选项，让各模块按自己的流程重新建表。F2 名下的两处（`pc_app_stats`、M4 的核对日志表）已经改成不依赖这一点；其他懒建表的类（`class-recovery.php`、`class-mail-outbox.php`、`emails/class-log.php`、`pixels/class-server.php`、`class-activity-log.php`）没有逐个查，请归属会话各自确认。
+
+**给 F4（数据）**
+
+1. `smoke-data-apps`（基线 13 / 8）失败是因为沙盒里 `pc_app_stats` 表不在而版本号在：用例开头的 `if ( ! Exit_Intent::installed() ) { Exit_Intent::install(); }` 被版本号骗过去了。F2 改了 `Exit_Intent::installed()`（现在同时确认表在，多一次 `SHOW TABLES LIKE`），你的用例和 `Data\Apps` 不用改；本机在“表不在”的库上 21 / 0。`Data\Apps` 里两处 `Exit_Intent::installed()` 的含义因此变成“表真的能查”，表不在时走原来“没装：全是 0”的分支，不再去查不存在的表。
 
 **给 F3（系列）**
 
