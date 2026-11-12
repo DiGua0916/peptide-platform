@@ -631,6 +631,7 @@ Root installed only three existing Commerce sources for P09 collection products 
   - 读写：`/peptide/v1/track/admin/*`（实时访客和 AI 分析）、`/peptide/v1/admin/pixel-test`、`/peptide/v1/admin/ad-link`、`/peptide/v1/admin/recovery/*`、`/peptide/v1/admin/buyer-home`。
 - **给投手用的新页面或新接口**：请告诉 F5 加进名单（`Staff_Buyer::classify()`、`REST_READ` / `REST_ANY`），否则投手打不开。权限检查继续用 `manage_woocommerce` 即可。
 - 对 F4「数据页对投手」一条的答复：角色已经有了，但 `manage_woocommerce` **不是常驻能力**，只在上面名单里的页面和接口上有。F4 的 `Audience::is_media_buyer()`（看角色）可以照常用；投手的两个数据子页 `pc-data-funnel-sources`、`pc-data-products-landing` 都在 `pc-data*` 之内，不用改名单。F4 做的“像素页投手模式”目前投手进不去（`pc-system` 不在名单里），投手用的是 F5 的“广告设置”页（只管第一个 Facebook 像素）；要让投手管理多个像素时再把 `pc-system&section=pixels` 和 `pc_pixels_save` 加进名单。
+- **对 F4 的答复（2026-11-12）：转化详情每组的“查看详情”对投手隐藏。** 它链到分维度明细页，而投手的数据页只有两个合并页（`pc-data-funnel-sources`、`pc-data-products-landing`），其余数据子页对投手不登记，点了是 WordPress 的“无权访问”。请 F4 在 `Audience::is_media_buyer()` 为真时不输出这个链接。以后要给投手看按来源的明细，再把它改指到来源那一段（`Data_Pages::buyer_url( 'pc-data-funnel-sources', 'sources' )`），到时在这里改约定。
 - 功能声明（F1 的 `pc_hq_capabilities`）：`m9.media_buyer => 1`（投手角色和开关）、`m9.onboarding => 1`（向导和 `Onboarding::store_status()`）。
 - `Staff_Buyer::can_use()`：管理员，或者已经改过密码的投手。投手版的数据接口用它做权限判断；`can_view()` 只表示能打开页面（没改密码的投手只能看到向导）。
 - 订单页除了 `action`，还拦截不带 `action` 就会执行写操作的参数：`delete_all`（清空回收站）、`claim-lock`（接管编辑锁）。
@@ -749,7 +750,7 @@ Root installed only three existing Commerce sources for P09 collection products 
   - 已知限制：分享出去的商品地址被社交平台抓取预览时，拿到的仍是首页的标题和图片（服务器把它转到了首页）。
 - **NF-06 使用声明**：文字只来自店铺设置 `use_statement_html`（`vc_use_statement_markup()`），主题不自带任何措辞。输出位置：每个页面页脚上方（购物车、结账页除外，原有），以及**商品弹窗内容末尾**（新增）。店铺没配置时两处都不输出，`Launch_Check` 会提示。
 - **品牌名**：`vc_brand_name()` 先读 `Store_Settings::public_brand()`，没填用默认的 `VialCovePeptides`。
-- **落地参数**：`assets/visitor-adapter.js`、`assets/visitor-tracking.js` 现在随 `utm_source`、`utm_medium` 一起上报 `utm_campaign`、`utm_term`、`utm_content`（各 1–120 个字符；不合规、重复、为空或是没被替换的 `{{…}}` 时只丢这一项）。服务端目前会忽略这三项，不报错。
+- **落地参数**：`assets/visitor-adapter.js`、`assets/visitor-tracking.js` 现在随 `utm_source`、`utm_medium` 一起上报 `utm_campaign`、`utm_term`、`utm_content`（各 1–120 个字符；不合规、重复、为空或是没被替换的 `{{…}}` 时只丢这一项）。服务端 11-12 起接收并入库（F4 的「M6 / M7」第 6 小节：`Tracking\Attribution::clean()` 各 1–120 个字符，不合规只丢那一项，来源报表可按广告系列 / 广告组 / 广告分组）。两边的规则一致：主题在浏览器里先把超过 120 个字符的名称截到 120、把没被替换的 `{{…}}` 丢掉，服务端不会再收到不合规的值；前端协议不用再改。用例 `tests/m14-visitor-attribution-ads.cjs`。F4 的分支和这条分支还没有合到一起跑过，合并后请在沙盒看一眼来源报表里有没有值。
 - 政策页定稿内容：等平台所有者提供，还没做。
 
 需要配合：

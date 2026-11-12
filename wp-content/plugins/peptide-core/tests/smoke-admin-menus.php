@@ -48,14 +48,17 @@ $slugs = array_column( $menu, 2 );
 $ok( 'media and comments removed (posts are the Blog menu now)', ! array_intersect( array( 'upload.php', 'edit-comments.php' ), $slugs ) );
 // 2026-10-27 照 YY：……访客数据、博客、店铺设置、后台设置、应用中心；员工管理在店铺设置里。
 $pos = array_flip( array_values( array_filter( $slugs, static fn( $s ) => $s && ! str_starts_with( (string) $s, 'separator' ) ) ) );
-$ok( 'Blog comes after Visitors; Admin settings between Store settings and App center', isset( $pos['edit.php'], $pos['pc-visitors'], $pos['pc-media'], $pos['pc-apps'], $pos['admin.php?page=wc-settings'] ) && $pos['edit.php'] === $pos['pc-visitors'] + 1 && $pos['pc-media'] === $pos['admin.php?page=wc-settings'] + 1 && $pos['pc-apps'] === $pos['pc-media'] + 1 );
+// 店主 2026-11-10：博客先隐藏（Admin_Menus::hide_menus()，页面地址还在）；后台设置仍在店铺设置和插件之间。
+$ok( 'Blog is hidden from the menu; Admin settings between Store settings and App center', ! isset( $pos['edit.php'] ) && isset( $pos['pc-visitors'], $pos['pc-media'], $pos['pc-apps'], $pos['admin.php?page=wc-settings'] ) && $pos['pc-media'] === $pos['admin.php?page=wc-settings'] + 1 && $pos['pc-apps'] === $pos['pc-media'] + 1 );
 $ok( 'Blog has Blog posts and Blog collections only; Admin settings has Media library and Activity log', array( 'edit.php', 'edit-tags.php?taxonomy=category' ) === array_column( $submenu['edit.php'] ?? array(), 2 ) && array( 'pc-media', 'pc-activity' ) === array_column( $submenu['pc-media'] ?? array(), 2 ) );
 $ok( 'appearance, tools and settings removed', ! array_intersect( array( 'themes.php', 'tools.php', 'options-general.php' ), $slugs ) );
 $ok( 'WooCommerce top-level menu removed', ! in_array( 'woocommerce', $slugs, true ) );
-$ok( 'dashboard first, then orders and customers', 'pc-overview' === array_values( array_filter( $slugs ) )[0] && in_array( 'admin.php?page=wc-orders', $slugs, true ) && in_array( 'admin.php?page=wc-admin&path=/customers', $slugs, true ) );
+// 店主 2026-11-11：订单菜单顶层是“待处理订单”（Admin_Menus::PENDING）。
+$ok( 'dashboard first, then orders (pending list) and customers', 'pc-overview' === array_values( array_filter( $slugs ) )[0] && in_array( \PeptideCore\Admin\Admin_Menus::PENDING, $slugs, true ) && ! in_array( \PeptideCore\Admin\Admin_Menus::ORDERS, $slugs, true ) && in_array( 'admin.php?page=wc-admin&path=/customers', $slugs, true ) );
 $ok( 'WooCommerce marketing menu replaced by marketing campaigns: spend-and-save, coupon codes, shipping discounts', ! in_array( 'woocommerce-marketing', $slugs, true ) && in_array( 'pc-promotions', $slugs, true ) && array( 'pc-promotions', 'pc-coupons', 'pc-shipping-discounts' ) === array_column( $submenu['pc-promotions'] ?? array(), 2 ) );
 $ok( 'app center menu', in_array( 'pc-apps', $slugs, true ) );
-$ok( 'analytics keeps only its top-level menu, no submenus', in_array( 'wc-admin&path=/analytics/overview', $slugs, true ) && empty( $submenu['wc-admin&path=/analytics/overview'] ) );
+// 2026-11-04：WooCommerce 分析的顶层菜单由“数据”（Data_Pages）顶替，这里不再有分析菜单；它的子菜单一直不显示。
+$ok( 'WooCommerce analytics menu is gone (Data replaces it), no analytics submenus', ! in_array( \PeptideCore\Admin\Admin_Menus::ANALYTICS, $slugs, true ) && empty( $submenu[ \PeptideCore\Admin\Admin_Menus::ANALYTICS ] ) );
 $_GET['page'] = 'wc-settings';
 $wc_tabs      = \PeptideCore\Admin\Admin_Menus::settings_tabs( array( 'general' => 'General', 'products' => 'Products', 'shipping' => 'Shipping', 'checkout' => 'Payments', 'account' => 'Accounts', 'email' => 'Emails', 'integration' => 'Integration', 'site-visibility' => 'Visibility', 'point-of-sale' => 'POS', 'wcpay_multi_currency' => 'Multi-currency', 'advanced' => 'Advanced' ) );
 $ok( 'WooCommerce settings tab bar keeps general, products, accounts and advanced', array( 'general', 'products', 'account', 'advanced' ) === array_keys( $wc_tabs ) );
@@ -87,7 +90,8 @@ $pos = static function ( string $needle ) use ( $ps ): int {
 	}
 	return -1;
 };
-$ok( 'products menu: product management first, then collections, tags and test reports', 'edit.php?post_type=product' === ( $ps[0] ?? '' ) && __( 'Product management', 'peptide-core' ) === ( $pm[0][0] ?? '' ) && $pos( 'taxonomy=product_cat' ) > 0 && $pos( 'taxonomy=product_tag' ) > $pos( 'taxonomy=product_cat' ) && $pos( 'post_type=pc_report' ) > $pos( 'taxonomy=product_tag' ) );
+// 现在的顺序：商品管理、专辑、商品评价、商品标签；检测报告从“报告库”页面进（Report_Library_Page，这里没有登记），原来的报告列表不显示。
+$ok( 'products menu: product management first, then collections, reviews and tags; raw report list hidden', 'edit.php?post_type=product' === ( $ps[0] ?? '' ) && __( 'Product management', 'peptide-core' ) === ( $pm[0][0] ?? '' ) && $pos( 'taxonomy=product_cat' ) > 0 && $pos( 'product-reviews' ) > $pos( 'taxonomy=product_cat' ) && $pos( 'taxonomy=product_tag' ) > $pos( 'product-reviews' ) && -1 === $pos( 'post_type=pc_report' ) );
 $ok( 'products menu labels: Collections, Product tags', __( 'Collections', 'peptide-core' ) === $pm[ $pos( 'taxonomy=product_cat' ) ][0] && __( 'Product tags', 'peptide-core' ) === $pm[ $pos( 'taxonomy=product_tag' ) ][0] );
 $ok( 'add new, brands, attributes and batches are not in the products menu', -1 === $pos( 'post-new.php' ) && -1 === $pos( 'product_brand' ) && -1 === $pos( 'product_attributes' ) && -1 === $pos( 'post_type=pc_batch' ) );
 $ok( 'top-level menu is called Products', in_array( __( 'Products', 'peptide-core' ), array_column( array_filter( $menu, static fn( $m ) => 'edit.php?post_type=product' === ( $m[2] ?? '' ) ), 0 ), true ) );
@@ -119,12 +123,13 @@ $ok( 'and the temporary mappings are removed again', ! array_intersect_key( (arr
 $pagenow = $saved_page;
 $GLOBALS['pagenow'] = $saved_page;
 $plugin_page = 'wc-orders';
-$ok( 'orders menu: all orders, pending orders, abandoned checkouts', array( 'admin.php?page=wc-orders', 'admin.php?page=wc-orders&status=wc-processing', 'pc-recovery' ) === array_column( $submenu['admin.php?page=wc-orders'] ?? array(), 2 ) );
+// 店主 2026-11-11：订单菜单只剩待处理订单和弃单（手动订单由 Manual_Orders 另外登记，这里没有载入）。
+$ok( 'orders menu: pending orders, abandoned checkouts', array( \PeptideCore\Admin\Admin_Menus::PENDING, 'pc-recovery' ) === array_column( $submenu[ \PeptideCore\Admin\Admin_Menus::PENDING ] ?? array(), 2 ) && empty( $submenu[ \PeptideCore\Admin\Admin_Menus::ORDERS ] ) );
 $_GET['page']   = 'wc-orders';
 $_GET['status'] = 'wc-processing';
 $ok( 'the processing order list highlights pending orders', \PeptideCore\Admin\Admin_Menus::PENDING === apply_filters( 'submenu_file', null ) );
 unset( $_GET['status'] );
-$ok( 'other order lists highlight all orders', \PeptideCore\Admin\Admin_Menus::ORDERS === apply_filters( 'submenu_file', null ) );
+$ok( 'other order lists also sit under pending orders (the only orders entry)', \PeptideCore\Admin\Admin_Menus::PENDING === apply_filters( 'submenu_file', null ) );
 
 // 店铺设置子菜单高亮（STORE-SETTINGS-01）。
 $_GET['page'] = 'wc-settings';
@@ -145,7 +150,10 @@ $_GET = array( 'page' => 'pc-system' );
 ob_start();
 \PeptideCore\Admin\Store_Settings::render_system();
 $html = ob_get_clean();
-$ok( 'system settings shows the four section cards (with ad pixels)', 4 === substr_count( $html, 'page=pc-system&#038;section=' ) + substr_count( $html, 'page=pc-system&section=' ) && false !== strpos( $html, 'section=pixels' ) );
+// 卡片后来加到 8 张（基本信息、联系方式、购物、视频、语言、广告像素、邮件、条款）。别的页面会直接链过来的几张必须在；数量不写死，免得再加一张就要改这里。
+preg_match_all( '/page=pc-system&(?:#038;)?section=([a-z_-]+)/', $html, $section_links );
+$sections = array_values( array_unique( $section_links[1] ) );
+$ok( 'system settings shows its section cards (basic, ad pixels, email, terms among them)', count( $sections ) >= 4 && count( $sections ) === count( $section_links[1] ) && ! array_diff( array( 'basic', 'pixels', 'email', 'terms' ), $sections ) );
 // 2026-10-27 前后台隔开：WordPress 设置和工具、WooCommerce 设置、VialCove 设置、系统状态从总后台的“平台工具”进入，店铺后台不显示。
 $ok( 'system settings no longer lists platform tools (they open from the master admin)', ! str_contains( $html, 'options-reading.php' ) && ! str_contains( $html, 'options-permalink.php' ) && ! str_contains( $html, 'page=wc-status' ) && ! str_contains( $html, 'page=pc-settings' ) );
 $_GET['section'] = 'email';
