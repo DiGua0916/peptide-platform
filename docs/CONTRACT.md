@@ -754,6 +754,10 @@ Root installed only three existing Commerce sources for P09 collection products 
   - 商品落地页（`/?vc_product=<ID>`）：`wp_footer`（优先级 5）里印出 `vc_home_quick_view_template( $product )`，也就是 `GET vialcove/v1/home-product/<ID>` 返回的那个 `<template data-vc-quick-product="<ID>">`。`home-quick-view.js` 的 `loadTemplate()` 和 `product-dialog-polish.js` 的 `openProduct()` 本来就先找页面里有没有这个模板，有就不请求。**这两处“先找页面里的模板”的写法请保留**；改了的话落地页不会坏（退回去请求接口），只是提速失效。`wp_head`（优先级 2）里另有一条 `<link rel="preload" as="image" media="(max-width: 767px)">`，取 `vc_home_quick_view_image()` 的 `src / srcset / sizes`。商品落地页不延后样式。
   - 专辑落地页（`/?vc_catalog_category=<ID>`，以及 `vc_catalog_q`）：首页那 11 个样式，加 `vc-home-quick-view`、`vialcove-product-dialog-interaction`、`vc-product-dialog-polish` 3 个，不再挡首屏。
   - 预览、编辑器框架（`pc_template_preview`、`pc_frame`）不动。
+- **两处主题修复，不在开关后面**（2026-11-12，`4cc5a8f`、`4bba65b`）：
+  - `assets/product-dialog-polish.js`：商品落地页（`/?vc_product=<ID>`）要打开弹窗时如果页面在后台（`document.hidden`），不再放弃，改成等 `visibilitychange` 到前台再打开，只开一次。`vc:product-restore-cancel`、`pagehide`、期间任何一次 `vc:product-presented`、回来时已有 `dialog.vc-showcase-quick[open]`、`history.state.__vcCommerceLayers.layers` 非空，这几种情况不补开。对外的 `window.VialCoveStorefrontEntry`（`openProduct`、`bindDialog`、`campaignEligible`）没有变。
+  - `assets/home-quick-view.js`：恢复上一次的弹窗时（`VialCoveHomeQuickView.stageRestore()` 之后表单 `reset`），表单里没有 `.variations select` 的商品不再进入“等规格匹配”的状态（`root.vcHomeSelectionPending`），价格、活动、图片用服务器渲染的。有规格的商品不变。
+  - 开关全关时，前台 HTML 和主线的差别只有这两个脚本地址后面的版本号。
 - **FE-03 “看过 / 已加购”**（`inc/product-activity.php`、`assets/product-activity.js`，2026-11-12）：按店开关 `pc_product_activity`（值 `on` 才生效，**默认关**），下限 `pc_product_activity_min`（整数 1–1000，默认 5），功能声明 `m14.product_activity => 1`。只显示接口给的真实数字，低于下限不显示。**需要 F4 提供接口**，约定如下：
   - `GET /wp-json/peptide/v1/product-activity?product_id=<商品 ID>`，公开、只读；变体商品传父商品 ID。
   - 200：`{ "product_id": 10, "viewing": 12, "added": 31, "window": { "viewing_minutes": 10, "added_hours": 24 }, "generated_at": "2026-11-12T12:00:00Z", "ttl": 60 }`。
