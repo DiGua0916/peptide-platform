@@ -32,7 +32,8 @@ final class Ads_Panel {
 
 	// ---------- 上传 ----------
 
-	public static function render_upload(): void {
+	/** $card = false：放在别的卡片里（开店向导第 5 步），不再套一层卡片边框。 */
+	public static function render_upload( bool $card = true ): void {
 		Schema::maybe_install();
 		Vocab_Sync::maybe_sync();
 		$vocab = Schema::vocab();
@@ -42,7 +43,7 @@ final class Ads_Panel {
 		$pre     = $from ? Contract::parse_ad_name( (string) $from['ad_name'] )['attrs'] : array();
 		$is_vid  = 'vid' === ( $pre['fmt'] ?? '' );
 
-		echo '<section class="pc-by-card pc-cr-upload" id="pc-cr-upload">';
+		echo '<section class="' . ( $card ? 'pc-by-card pc-cr-upload' : 'pc-cr-upload-plain' ) . '" id="pc-cr-upload">';
 		echo '<h2>上传素材，生成投放链接</h2>';
 		echo '<p class="pc-by-why">一个素材一条链接。这个素材以后不管投到多少个广告系列、广告组，都粘贴同一条链接，数据会自动按素材汇总。</p>';
 		if ( $from ) {
@@ -89,7 +90,7 @@ final class Ads_Panel {
 
 	// ---------- 我的素材链接 ----------
 
-	public static function render_links(): void {
+	public static function render_links( bool $card = true ): void {
 		$all     = array_filter( Creatives::all(), static fn( array $c ): bool => Creatives::STATUS_ARCHIVED !== $c['status'] );
 		$stats   = Creatives::stats();
 		$labels  = Creatives::label_map( Schema::vocab() );
@@ -98,7 +99,7 @@ final class Ads_Panel {
 		$unreg   = Creatives::unregistered_ads();
 		$library = admin_url( 'admin.php?page=' . Module::PAGE_LIBRARY );
 
-		echo '<section class="pc-by-card pc-cr-links" id="pc-cr-links">';
+		echo '<section class="' . ( $card ? 'pc-by-card ' : 'pc-cr-links-plain ' ) . 'pc-cr-links" id="pc-cr-links">';
 		echo '<h2>我的素材链接（' . count( $all ) . '）</h2>';
 		if ( $unreg ) {
 			echo '<p class="pc-cr-unbound">有 ' . count( $unreg ) . ' 条广告没用素材链接，数据算“未登记”。<a href="' . esc_url( $library ) . '">去素材库归位</a></p>';
@@ -107,7 +108,7 @@ final class Ads_Panel {
 			echo '<p class="pc-by-hint">还没有素材。在上面上传第一个素材，就会在这里得到它的投放链接。</p></section>';
 			return;
 		}
-		echo '<p class="pc-by-hint">复制链接，粘到 Facebook 广告的“网址”一栏。同一个素材的所有广告都用这一条；要换落地页，先在右边选落地页再复制。</p>';
+		echo '<p class="pc-by-hint">复制链接，粘到 Facebook 广告的“网址”一栏。同一个素材的所有广告都用这一条；要换落地页，先选落地页再复制。</p>';
 		echo '<ul class="pc-cr-link-list">';
 		$badge = Creatives::STATE_LABELS;
 		foreach ( $all as $c ) {
@@ -155,6 +156,7 @@ final class Ads_Panel {
 		?>
 <style>
 .pc-cr-upload{border:2px solid #2271b1}
+.pc-cr-links-plain{margin-top:24px;padding-top:16px;border-top:1px solid #dcdcde}
 .pc-cr-from{background:#fcf9e8;border-left:4px solid #dba617;padding:8px 12px}
 .pc-cr-kind{display:flex;gap:10px;margin:12px 0 16px;flex-wrap:wrap}
 .pc-cr-kind-opt{display:flex;align-items:center;gap:8px;border:1px solid #c3c4c7;border-radius:6px;padding:10px 14px;cursor:pointer;min-width:200px;background:#fff}
@@ -185,7 +187,7 @@ final class Ads_Panel {
 .pc-cr-link-head{margin:0 0 6px}
 .pc-cr-link-head strong{font-family:monospace;font-size:14px;margin-right:6px}
 .pc-cr-link-head span{color:#50575e;font-size:12px}
-.pc-cr-badge{border-radius:10px;padding:1px 8px;background:#f0f0f1}
+.pc-cr-badge{display:inline-block;white-space:nowrap;border-radius:10px;padding:1px 8px;background:#f0f0f1}
 .pc-cr-badge.is-live{background:#edfaef;color:#007017!important}
 .pc-cr-badge.is-pending{background:#fcf9e8;color:#8a6d00!important}
 .pc-cr-badge.is-new{background:#f0f6fc;color:#2271b1!important}
@@ -193,7 +195,9 @@ final class Ads_Panel {
 .pc-cr-copyrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .pc-cr-copyrow input{flex:1 1 320px;min-width:0;font-family:monospace;font-size:12px}
 .pc-cr-copyrow select{max-width:220px}
-@media (max-width:782px){.pc-cr-upload-grid{grid-template-columns:1fr}.pc-cr-drop{max-width:220px}.pc-cr-attr-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:782px){.pc-cr-upload-grid{grid-template-columns:1fr}.pc-cr-drop{max-width:220px}.pc-cr-attr-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+.pc-cr-link-row{grid-template-columns:48px minmax(0,1fr);align-items:start}.pc-cr-link-thumb{width:48px;height:48px}
+.pc-cr-copyrow input{flex:1 1 100%}.pc-cr-copyrow select{flex:1 1 0;min-width:0;max-width:none}.pc-cr-nums{display:block;margin:2px 0 0}}
 </style>
 <script>
 ( function () {

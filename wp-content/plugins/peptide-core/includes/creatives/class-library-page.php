@@ -223,7 +223,7 @@ final class Library_Page {
 		self::styles();
 
 		// 上传在广告设置页。
-		echo '<div class="pc-cr-box pc-cr-howto"><p>上传新素材、复制投放链接，请到 <a class="button button-primary" href="' . esc_url( $ads_page . '#pc-cr-upload' ) . '">广告设置 → 上传素材</a>　这里汇总所有素材的数据，方便对比。</p></div>';
+		echo '<div class="pc-cr-box pc-cr-howto"><p>这里汇总所有素材的数据，方便对比。上传新素材、复制投放链接请到广告设置。</p><p><a class="button button-primary" href="' . esc_url( $ads_page . '#pc-cr-upload' ) . '">去广告设置上传素材</a></p></div>';
 
 		// 未登记广告。
 		if ( $unreg ) {
@@ -395,6 +395,13 @@ final class Library_Page {
 .pc-cr-archive{color:#b32d2e}
 .pc-cr-foot{color:#646970;margin-top:20px}
 .pc-cr-foot .pc-cr-form{display:inline}
+@media (max-width:782px){
+.pc-cr-filter{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.pc-cr-filter select{width:100%;max-width:none;padding-right:28px;text-overflow:ellipsis}
+.pc-cr-filter .button{grid-column:1/-1}
+.pc-cr-thumb{aspect-ratio:auto;height:180px}
+.pc-cr-actions .pc-cr-form{display:flex;margin:6px 0 0}
+}
 </style>';
 	}
 

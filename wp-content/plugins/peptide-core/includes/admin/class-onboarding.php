@@ -2,7 +2,7 @@
 /**
  * 开店向导（ST-01）和投手的“广告设置”页面（ST-06）。
  *
- * 向导 5 步：1 修改密码 → 2 店铺信息 → 3 广告像素 → 4 验证像素 → 5 生成投放链接（可选）。前 4 步做完才算完成；
+ * 向导 5 步：1 修改密码 → 2 店铺信息 → 3 广告像素 → 4 验证像素 → 5 上传素材、拿到投放链接（可选）。前 4 步做完才算完成；
  * 没做完时投手的每个页面顶部都有红色提示条（首页的由 Buyer_Home 输出在最上面）。
  *
  * 每一步是否完成，尽量看真实数据，不单独记“点过了”：
@@ -63,6 +63,11 @@ final class Onboarding {
 		return Staff_Buyer::page_url( self::SLUG, '' !== $step ? array( 'step' => $step ) : array() );
 	}
 
+	/** 店里有没有素材（第 5 步算完成）。素材模块没装好时为 false。 */
+	private static function has_creative(): bool {
+		return class_exists( \PeptideCore\Creatives\Schema::class ) && \PeptideCore\Creatives\Schema::installed() && (bool) \PeptideCore\Creatives\Creatives::codes();
+	}
+
 	/** @return array<string,string> */
 	public static function labels(): array {
 		return array(
@@ -70,7 +75,7 @@ final class Onboarding {
 			'store'    => '店铺信息',
 			'pixel'    => '广告像素',
 			'verify'   => '验证像素',
-			'link'     => '生成投放链接',
+			'link'     => '上传素材，拿到投放链接',
 		);
 	}
 
@@ -136,7 +141,8 @@ final class Onboarding {
 			'pixel_id'        => $pixel['id'],
 			'has_token'       => $pixel['has_token'],
 			'test'            => is_array( $state['pixel_test'] ?? null ) ? $state['pixel_test'] : array(),
-			'link'            => ! empty( $state['link'] ),
+			// 第 5 步：生成过通用链接，或者已经上传过素材（2026-11-12 起向导这一步就是上传素材）。
+			'link'            => ! empty( $state['link'] ) || self::has_creative(),
 		);
 	}
 
@@ -280,7 +286,15 @@ final class Onboarding {
 				self::form_verify( true );
 				break;
 			default:
-				self::form_link();
+				if ( class_exists( \PeptideCore\Creatives\Ads_Panel::class ) ) {
+					// 2026-11-12：第 5 步就是上传第一个素材，拿到它的专属投放链接（和广告设置页同一个表单）。
+					\PeptideCore\Creatives\Ads_Panel::render_upload( false );
+					\PeptideCore\Creatives\Ads_Panel::render_links( false );
+					\PeptideCore\Creatives\Ads_Panel::assets();
+					echo '<p class="pc-by-hint">以后再上传素材、复制链接，都在左侧“广告数据追踪 → 广告设置”。</p>';
+				} else {
+					self::form_link();
+				}
 		}
 		echo '</section>';
 
