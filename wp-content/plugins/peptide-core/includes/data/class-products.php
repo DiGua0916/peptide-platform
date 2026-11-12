@@ -540,7 +540,8 @@ final class Products {
 			'name'     => $product->get_name(),
 			'sku'      => (string) $product->get_sku(),
 			'image'    => $image ? (string) $image : '',
-			'edit_url' => (string) get_edit_post_link( $id, 'raw' ),
+			// 投手没有商品编辑页，不给链接（Audience::product_edit_url()）。
+			'edit_url' => class_exists( Audience::class ) ? Audience::product_edit_url( $id ) : (string) get_edit_post_link( $id, 'raw' ),
 			'view_url' => (string) get_permalink( $id ),
 		) + self::created_info( $product );
 	}

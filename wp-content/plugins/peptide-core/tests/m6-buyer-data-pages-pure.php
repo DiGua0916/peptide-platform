@@ -25,6 +25,7 @@ function add_query_arg( array $args, string $url ) { return $url . '?' . http_bu
 function add_menu_page( ...$args ) { $GLOBALS['t_menu'][] = $args[3]; }
 function add_submenu_page( $parent, $page_title, $menu_title, $cap, $slug, $callback = null ) { $GLOBALS['t_submenu'][ $slug ] = $menu_title; }
 function remove_submenu_page( $parent, $slug ) { $GLOBALS['t_removed'][] = $slug; }
+function get_edit_post_link( $id, $context = 'display' ) { return 'https://store.test/wp-admin/post.php?post=' . (int) $id . '&action=edit'; }
 
 require dirname( __DIR__ ) . '/includes/data/class-audience.php';
 require dirname( __DIR__ ) . '/includes/admin/class-data-pages.php';
@@ -60,6 +61,13 @@ m6_check( 'unknown or logged-out users are not buyers', ! Audience::is_media_buy
 add_filter( 'peptide_core_is_media_buyer', static fn( $is, $user_id ) => 4 === $user_id ? true : $is );
 m6_check( 'the filter can rewrite the decision', Audience::is_media_buyer( 4 ) && ! Audience::is_media_buyer( 1 ) );
 $GLOBALS['m6_filters'] = array();
+
+// 报表里商品名上的编辑链接：投手没有商品编辑页（点进去是 403），不给链接；管理员照旧。
+$GLOBALS['t_user'] = $buyer;
+m6_check( 'buyers get no product edit link in the reports', '' === Audience::product_edit_url( 5 ) );
+$GLOBALS['t_user'] = $admin;
+m6_check( 'administrators keep the product edit link', 'https://store.test/wp-admin/post.php?post=5&action=edit' === Audience::product_edit_url( 5 ) );
+$GLOBALS['t_user'] = $buyer;
 
 // ---------- 管理员：菜单和以前一样 ----------
 $GLOBALS['t_user'] = $admin;
