@@ -210,6 +210,20 @@ CREATE TABLE {$e} (
 		if ( in_array( $filters['status'] ?? '', array( 'SUCCEEDED', 'FAILED', 'pending', 'delivered', 'review' ), true ) ) {
 			$where .= $wpdb->prepare( " AND EXISTS (SELECT 1 FROM {$e} f WHERE f.ref=a.ref AND (f.status=%s OR f.delivery_state=%s))", $filters['status'], $filters['status'] );
 		}
+		if ( $page < 1 ) { // 店主 2026-11-12：按客户合并时一次取最近的记录（最多 2000 条），由页面分组分页。
+			$rows = self::read( "SELECT a.ref,a.site_id,a.site_uuid,a.order_id,a.local_reference,a.account_id,a.amount,a.currency,a.state,a.created_at,a.updated_at FROM {$a} a WHERE {$where} ORDER BY a.created_at DESC,a.ref DESC LIMIT 2000" );
+			if ( $rows ) {
+				$refs = implode( ',', array_map( static function ( array $r ) use ( $wpdb ): string { return $wpdb->prepare( '%s', $r['ref'] ); }, $rows ) );
+				$best = array();
+				foreach ( self::read( "SELECT ref,status AS event_status,delivery_state,disposition FROM {$e} WHERE ref IN ({$refs}) ORDER BY (status='SUCCEEDED') ASC,created_at ASC,event_id ASC" ) as $ev ) { $best[ $ev['ref'] ] = $ev; }
+				foreach ( $rows as &$row ) {
+					$ev = $best[ $row['ref'] ] ?? array( 'event_status' => '', 'delivery_state' => '', 'disposition' => '' );
+					unset( $ev['ref'] );
+					$row = array_merge( $row, $ev );
+				} unset( $row );
+			}
+			return array( 'rows' => $rows, 'total' => count( $rows ), 'per_page' => 20 );
+		}
 		$total = self::read( "SELECT COUNT(*) AS total FROM {$a} a WHERE {$where}" );
 		$rows = self::read( $wpdb->prepare( "SELECT a.ref,a.site_id,a.site_uuid,a.order_id,a.local_reference,a.account_id,a.amount,a.currency,a.state,a.created_at,a.updated_at FROM {$a} a WHERE {$where} ORDER BY a.created_at DESC,a.ref DESC LIMIT 20 OFFSET %d", ( max( 1, min( 100000, $page ) ) - 1 ) * 20 ) );
 		foreach ( $rows as &$row ) {
