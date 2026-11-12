@@ -1,12 +1,12 @@
 # M6 追踪与指标：交接（F4「数据」会话）
 
-2026-11-10 · 分支 `claude/m6-metrics-db7036`（已推送，没有合进主线，没有发布）· 基线 `82032bd`，已合并主线到 `dcaf95e`。
+2026-11-10 起，最近更新 2026-11-12 · 分支 `claude/m6-metrics-db7036`（已推送，没有合进主线，没有发布）· 基线 `82032bd`，已合并主线到 `976c1fa`（11-11）。
 对应需求：NF-02（口径部分）、FE-05、ST-05。口径见 `docs/metrics.md`，给别的会话的签名见 `docs/CONTRACT.md`「M6 / M7」。
 
 ## 先说最重要的
 
 **纯逻辑测试已经在本机跑过并通过；需要 WordPress / WooCommerce / 数据库 / 浏览器的部分一样都没跑过。**
-平台所有者同意后，我在本会话的临时目录里从 php.net 源码编译了 PHP 8.3.36（方法见文末），跑了新写的 11 个用例和仓库里现有的全部纯逻辑用例，结果见“实际做过的检查”。
+平台所有者同意后，我在本会话的临时目录里从 php.net 源码编译了 PHP 8.3.36（方法见文末），跑了新写的 13 个用例和仓库里现有的全部纯逻辑用例，结果见“实际做过的检查”。
 没有验证过的：任何真实数据库上的查询（`Metrics` 的订单和访客读数、对账报告）、概览页和数据页在浏览器里的样子、`wc_get_orders( date_paid … )` 在真实 WooCommerce 下的行为、追踪事件的真实写入。这些要到沙盒或脱敏快照上才能验证。
 
 开关默认是 `off`。按设计，off 时线上行为和这条分支之前完全一样（见“开关关着时改了什么”一节的逐项说明）。
@@ -22,6 +22,7 @@
 | 5 | ST-05：数据子页对投手合并成两页（`Data\Audience` + `Admin\Data_Pages`） | `fe085b5` |
 | 6 | 其余报表接入：测试单规则、订单集合、单笔销售额和归属时刻、分组转化率、八层漏斗（见“已经接入的地方”）；每处一个对账用例 | `e7883ce` |
 | 7 | 排行接入：“已付款订单”的那几张表按付款时间取，支付成功率仍按下单时间算尝试 | `addde8c` |
+| 8 | 合并主线到 `976c1fa`（没有冲突，主线对 F4 名下 5 个文件的改动原样保留）；复核测试单规则，用真正的类补用例；口径文档补访问时长、在线访客、弃单的新规则 | `3658844`、`fb86c21` 及之后 |
 
 M7 的部分见 `docs/handoffs/m7-pixels.md`。
 
@@ -31,7 +32,7 @@ M7 的部分见 `docs/handoffs/m7-pixels.md`。
 
 - `includes/data/class-metrics.php`、`class-metrics-switch.php`、`class-metrics-reconcile.php`、`class-metrics-overlay.php`、`class-audience.php`
 - `includes/tracking/class-funnel-guard.php`
-- `tests/m6-stubs.php`（共用桩）、`m6-metrics-pure.php`、`m6-metrics-switch-pure.php`、`m6-funnel-guard-pure.php`、`m6-reconcile-orders-pure.php`、`m6-reconcile-overlay-pure.php`、`m6-reconcile-reports-pure.php`、`m6-reconcile-conversion-pure.php`、`m6-reconcile-rankings-pure.php`、`m6-buyer-data-pages-pure.php`、`m6-reconcile-report-smoke.php`
+- `tests/m6-stubs.php`（共用桩）、`m6-metrics-pure.php`、`m6-metrics-switch-pure.php`、`m6-funnel-guard-pure.php`、`m6-reconcile-orders-pure.php`、`m6-reconcile-overlay-pure.php`、`m6-reconcile-reports-pure.php`、`m6-reconcile-conversion-pure.php`、`m6-reconcile-rankings-pure.php`、`m6-test-order-flag-pure.php`、`m6-buyer-data-pages-pure.php`、`m6-reconcile-report-smoke.php`
 - `tests/fixtures/conversion-db-059.php`（转化报表用例共用的假数据库，从 `data-classified-conversion-pure.php` 里原样搬出来）
 - `docs/metrics.md`、本文件
 
@@ -47,7 +48,7 @@ M7 的部分见 `docs/handoffs/m7-pixels.md`。
 - `includes/admin/class-overview-page.php`：页面和接口的数据经 `Metrics_Overlay`（新方法 `Overview_Page::data()`）。
 - `includes/admin/class-data-pages.php`：投手的两个合并页。
 - `includes/class-plugin.php`：只追加一行 `Data\Metrics_Switch::register_hooks();`。
-- `tests/data-observations-suites.json`：末尾追加 11 条（`module: M6 / M7`）。
+- `tests/data-observations-suites.json`：末尾追加 13 条（`module: M6 / M7`）。
 - `docs/CONTRACT.md`：末尾追加「M6 / M7」一节。
 
 没有新表、没有改表结构。新增的选项见 CONTRACT 第 2 小节。
@@ -144,9 +145,11 @@ wp eval 'print_r( PeptideCore\Data\Metrics_Switch::log() ); print_r( PeptideCore
 | 默认套件 `node tests/run-data-observations.cjs`：主线 `f0e58d2` | 42 通过 / 9 失败 |
 | 同一命令：本分支第一批（`830c2e2`） | 53 通过 / 6 失败；没有新增失败，修好了 3 个原有失败 |
 | 同一命令：本分支第二批（`e7883ce`，已合并主线 `dcaf95e`） | 58 通过 / 3 失败；又修好 3 个原有失败，剩下 3 个不归 F4 |
-| 同一命令：排行接入之后（`addde8c`） | **59 通过 / 3 失败**（多的 1 个是新用例） |
+| 同一命令：排行接入之后（`addde8c`） | 59 通过 / 3 失败（多的 1 个是新用例） |
+| 同一命令：合并主线 `976c1fa` 之后、修用例之前 | 58 通过 / 4 失败——主线的两处改动让 F4 的两个用例报错（见下） |
+| 同一命令：11-12 这一批之后 | **61 通过 / 3 失败**（新增 `m7-purchase-dedupe-pure`、`m6-test-order-flag-pure`；剩下 3 个不归 F4） |
 | 24 个非默认的可选套件，主线和本分支逐个对比（第一批时做的） | 结果完全相同（两边都是 12 个失败，都是历史套件） |
-| 插件里全部可以单独运行的测试文件（PHP 和 JS 共 124 个），改动前后逐个对比 | 只有变好的，没有变差的 |
+| 插件里全部可以单独运行的测试文件（PHP 和 JS，11-12 时共 127 个），改动前后逐个对比 | 只有变好的，没有变差的 |
 
 第二批（其余报表接入）是这样保证“关着时不变”的：
 
@@ -165,6 +168,11 @@ wp eval 'print_r( PeptideCore\Data\Metrics_Switch::log() ); print_r( PeptideCore
 - `tracking-product-actions-pure`、`tracking-native-visit-classifier-pure`：桩里的 `Tracker` 缺 `is_automated()`（11-08 加的爬虫过滤）。
 - `tracking-store-api-cart-success-pure`：缺 `Recovery::CRON`（11-10 加的付款事件补记）。
 - `experiment-data-pure`：数据页数量的期望值还是 11，现在是 12。
+
+合并主线 `976c1fa` 之后修的 2 个（主线 11-11 改了实现、没改用例；改的都是测试桩）：
+
+- `tracking-native-visit-classifier-pure`：`Ingest` 更新访问的那条语句多了一个参数（这一批里“人还在”的事件数），桩按参数个数认浏览数。
+- `m7-pixels-pure`：`Server::installed()` 现在每次请求确认一次发送记录表在不在，假数据库要回答“在”。
 
 第二批修好的 3 个（也都是用例没跟上主线的改动）：
 

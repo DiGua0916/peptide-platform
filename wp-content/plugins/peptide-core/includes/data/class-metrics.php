@@ -273,7 +273,12 @@ final class Metrics {
 
 	// ---------- 订单 ----------
 
-	/** 测试单：收件信息全 1（Test_Orders），或者测试付款方式 / 演示商品（Overview 的旧规则）。 */
+	/**
+	 * 测试单：订单上的测试单标记 _pc_test_order（下单时收件信息全 1 自动打上，店主也可以事后标）、没有标记的老订单看地址是不是全 1
+	 * （这两项在 Test_Orders 里），或者测试付款方式 / 演示商品（Overview）。
+	 * 2026-11-11 起 Overview::is_test_order() 自己也先问 Test_Orders，所以两条规则现在结论相同；这里仍然两个都问，
+	 * 不依赖 Overview 以后怎么改。用真正的类核对的用例：tests/m6-test-order-flag-pure.php。
+	 */
 	public static function is_test_order( \WC_Order $order ): bool {
 		if ( class_exists( Test_Orders::class ) && Test_Orders::is_test_order( $order ) ) {
 			return true;
