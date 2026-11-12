@@ -148,7 +148,7 @@
 		} catch ( e ) {
 			summary = { status: 'unknown', item_count: 0 };
 		}
-		var sub = c && 'active' === c.status && c.subtotal_text ? '<div class="pc-trk-sub">' + esc( c.subtotal_text ) + '</div>' : '';
+		var sub = c && 'active' === c.status && c.subtotal_text ? '<div class="pc-trk-sub">' + esc( c.subtotal_text ) + ( c.payable_text ? ' · 应付 ' + esc( c.payable_text ) : '' ) + '</div>' : '';
 		return window.PCVisitorCart.buttonHTML( { id: who.id, label: who.label }, summary ) + sub;
 	}
 

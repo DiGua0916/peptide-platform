@@ -83,3 +83,17 @@
 /* 主栏 / 侧栏本身是 grid：列宽锁在容器宽度内，宽表格在面板里横向滚动，不把整页撑宽。 */
 .pc-rc-main, .pc-rc-side { grid-template-columns: minmax(0, 1fr); }
 .pc-rc-panel { min-width: 0; }
+
+/* 店主 2026-11-11：订单时间在金额左边一行小字 */
+.pc-rc-totalrow{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-top:16px;padding-top:14px;border-top:1px solid #dcdcde}
+.pc-rc-totalrow .pc-rc-totals{margin:0;padding:0 12px 0 0;border-top:0}
+.pc-rc-ordered{margin:0;padding-left:12px;font-size:12px;line-height:1.7;color:#8c8f94;font-variant-numeric:tabular-nums}
+@media (max-width:600px){.pc-rc-totalrow{flex-direction:column-reverse}.pc-rc-ordered{padding-left:0}}
+
+/* 商品多的单子：行更紧凑 + 展开全部 */
+.pc-rc-lines.is-many td{padding-top:6px;padding-bottom:6px}
+.pc-rc-lines.is-many .pc-rc-line img,.pc-rc-lines.is-many .pc-rc-line__noimg{width:36px;height:36px}
+.pc-rc-lines.is-many .pc-rc-line .pc-pl-muted{font-size:11px;line-height:1.4}
+.pc-rc-lines tr.pc-rc-more[hidden]{display:none}
+.pc-rc-moretoggle td{text-align:center;padding:8px!important;background:#fafafa}
+.pc-rc-moretoggle .button-link{font-weight:600}

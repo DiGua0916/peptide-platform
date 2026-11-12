@@ -221,6 +221,8 @@ final class Hq_Ai {
 			'back_after_mail' => $last_mail_ms ? $visits_after( $last_mail_ms ) : null,
 			'orders'        => $orders,
 			'intent'        => array( 'score' => $intent['score'], 'level' => $intent['level_text'], 'parts' => $intent['parts'] ),
+			// 现在的购物车（和实时访客、弃单同一来源）。
+			'cart'          => array( 'count' => (int) ( $cart['count'] ?? 0 ), 'status' => (string) ( $cart['status'] ?? '' ), 'subtotal' => (string) ( $cart['subtotal_text'] ?? '' ), 'payable' => (string) ( $cart['payable_text'] ?? '' ) ),
 		);
 	}
 

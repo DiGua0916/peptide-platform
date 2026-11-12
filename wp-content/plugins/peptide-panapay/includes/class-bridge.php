@@ -161,6 +161,12 @@ final class Bridge {
 	}
 
 	private static function session( array $data, string $account_id, string $expected_reference ): array {
+		$out = self::session_inner( $data, $account_id, $expected_reference );
+		// HQ 发给 pp 的订单 id（hang-…），店铺拿来当订单号显示。旧版 HQ 没有这个字段。
+		if ( is_string( $data['pp_ref'] ?? null ) && 1 === preg_match( '/\A(?:PH[a-f0-9]{32}|hang-[0-9]{1,13})\z/D', $data['pp_ref'] ) ) { $out['pp_ref'] = $data['pp_ref']; }
+		return $out;
+	}
+	private static function session_inner( array $data, string $account_id, string $expected_reference ): array {
 		if ( ( $data['account_id'] ?? 'default' ) !== $account_id
 			|| ! in_array( $data['state'] ?? null, array( 'creating', 'created', 'unknown', 'failed' ), true )
 			|| ( 'created' !== $data['state'] && array_key_exists( 'checkout_policy', $data ) ) ) {

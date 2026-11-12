@@ -207,3 +207,315 @@
 - 去掉了“公司名称 ← 店名”（会把“芒果”这类内部名显示给顾客）；主店测试时填的公司名已清空。
 - 店铺地址、Pixel、自己的 WhatsApp、真实付款、AI 调优没有现成资料，不自动填。
 - 主店已执行（测试店）：35 → 50（客服电话 +13039444124，通知邮箱 orders@vialcovepeptides.com）。子店未执行，按钮留给店主点；阳会填 VialCovePeptides@outlook.com，其余 orders@各自域名。orders@域名 能否收信未确认。
+
+### 2026-11-10 六家店公司资料 + 各自邮箱
+- 店主提供公司资料，写入 6 家店：公司名称 VialCove；地址 904 22nd St, San Francisco, CA 94107, US（woocommerce_store_address / _city / _postcode，default_country US:CA，address_2 清空）。原值备份 `pc_company_backup_20261110`。
+- 电话：店主说用站点自己的。阳保留 +14323608942；主店、李军、光辉、老毛、芒果按各自客服 WhatsApp 填 +13039444124（这 5 家的 WhatsApp 都是这个号）。
+- 邮箱：店主要求全部换成站点自己的 orders@本店域名——管理员邮箱（admin_email 直接写，清掉待确认的 new_admin_email/adminhash）、客服邮箱（woocommerce_email_from_address，阳原来是 VialCovePeptides@outlook.com）、新订单 / 取消 / 失败通知收件人。原值备份 `pc_email_backup_20261110`。阳基础配置页核对。
+- 店铺评分：主店 65、李军 60、阳 85、光辉 45、老毛 60、芒果 60。地址填好后弃单提醒邮件不再因缺地址被拦，定时任务会按设置开始发。
+
+### 2026-11-10 订单 → 手动订单
+- 新增后台页 订单 → 手动订单（class-manual-order-page.php + assets/manual-order.js/.css）：搜索商品（含规格）加入；每行改数量、原价、售价（只对这一单）；运费“按店铺运费”或自定义（名称 + 金额）；可加多笔优惠（名称 + 金额，顾客可见）；备注只后台可见；右侧实时算原价合计 / 小计 / 优惠 / 运费 / 合计；“生成付款链接”弹窗显示链接 + 复制 + 打开看看 + 再做一单；右侧“最近生成的链接”（复制、已下的订单）。
+- 引擎 `Manual_Orders`（class-manual-orders.php）：配置存 `pc_manual_links`（token → 配置，30 天有效，最多 300 条）；链接 `/?pc_manual=token` → 清空购物车和优惠券、清顾客资料、按配置加商品（cart item data pc_m_price/pc_m_regular）→ 跳结账。`woocommerce_before_calculate_totals` 9999 设价格（原价 / 售价），`woocommerce_cart_calculate_fees` 99 清掉店铺满减等费用只留自定义优惠，`woocommerce_package_rates` 9999 自定义运费替换所有运费（含运费优惠），`woocommerce_coupon_is_valid` 禁用优惠券；下单时订单加 `_pc_manual_link` 和备注并记到这条链接。
+- `cart-share.js`：手动订单购物车的地址栏改成 `?pc_manual=token`（原来会变成 `?pc_cart=` 普通链接，刷新会变回原价）。
+- 主店测试：2 × 组合装 原价 80 / 售价 50 + bac.water 10，优惠 10 + 5，运费 20 → 结账页 $115.00，原价划线、两笔优惠、运费 $20，无优惠券和满减；刷新仍为 $115.00。测试链接备注 “TEST - Claude 手动订单测试” 留在最近链接里。用链接实际下单后的订单标记未实测。
+
+### 2026-11-10 同一顾客三个金额对不上
+- 阳访客 #119（Wanda Feliciano）：弃单 $133.00 = 结账页应付（商品 95 + 运费 42.75 − 优惠 4.75）；实时访客 $95.00 = 现在购物车商品金额；AI 卡片 $181.30 = 22:10 分析时的购物车快照（当时还有 Retatrutide $86.30，后来删了）。口径和时间都不同。
+- 统一：“购物车”一律指现在购物车的商品金额（Carts::view，仪表盘最可能下单、实时访客、意向分、AI 数据都是这一个来源）；含运费和优惠的另标“应付”。
+  - `Carts::view()` 加 `payable_text`（会话 cart_totals.total，算过运费时才有）；实时访客购物车下面显示“$95.00 · 应付 $133.00”。
+  - `HQ_AI::visitor_live()` 加现在的 cart；AI 卡片 KPI 改为“购物车（现在）$95.00”，小字“应付 $133.00（含运费）· 分析时 $181.30”（分析后购物车变了才写）。
+  - 弃单列表列名“订单总价”改“应付总价（含运费）”，下面加“商品 $95.00”（Recovery_Items item/record_item 加 subtotal）。
+- 阳核对三处一致。
+
+### 2026-11-10 弃单提醒：间隔和文案
+- 问题：地址填好后积压的弃单提醒一次放出，第 1、2 封只隔 10 分钟（只按“弃单后多久”算，没看上一封什么时候发）；第 1 封写 “We tried reaching you on WhatsApp…”（自动邮件没人联系过）、“If your WhatsApp number has changed…”；第 2 封写 “if you'd prefer to pay another way”（现在只收卡）。
+- 修复：`Recovery::STAGE_GAP_MS` = 24 小时，上一封发出 24 小时内不发下一封；`Chase_Copy::defaults_for()` 删掉上面三句，第 1 封结尾改 “Just reply to this email or message us on WhatsApp at …, and we'll take care of it.”，第 2 封改 “If anything went wrong at checkout or you have any questions, just reply…”。各店没有保存自定义正文，默认文案直接生效。手动模板 01（WhatsApp 联系不上后的跟进）不变。
+- 今晚已经 1 小时内收到两封的顾客：主店 1、阳 7、光辉 2、芒果 2（已发出的无法撤回）。
+
+### 2026-11-10 弃单提醒节奏 + 下单关怀邮件
+- 店主：弃单确定后 5 分钟内发第一封，第 3 天、第 7 天再各一封；成功下单立刻发关怀邮件。
+- `Chase_Copy::defaults_for()` 延时：第 1 封 60 秒（弃单本身要“离开 5 分钟”才成立，定时任务每 5 分钟跑，所以确定后 5 分钟内发出），第 2 封 3 天，第 3 封 7 天（都从最后改购物车算）；两封之间仍至少 24 小时。6 家店都没有保存自定义延时，直接生效（60/259200/604800）。
+- `Recovery_Items::RECALL_DAYS` 3 → 4：两封之间最长隔 4 天，不然第 3 天就会显示“召回失败”。
+- 付款成功邮件（customer_processing_order，templates/emails/customer-processing-order.php）改成模板库「05 下单成功感谢」文案，主题统一 “{店名} | Thank You for Your Order”（不再按有没有电话分两种）。
+- `Paid_Popup::care_catchup()` 挂在每 5 分钟的扫描上：`pc_care_since` 之后付款、不是测试单、发件记录里没有这张单的 customer_processing_order 已发送 → 补发并加订单备注；每单只检查一次（`_pc_care_mail`）。旧订单不补。
+
+### 2026-11-11 召回成功判断错误 + 付款后还收到提醒
+- 阳 Sherrie Powers：05:23 下单 #11892，05:26 用首单码 welcome5 刷卡付款 $186.49，05:29 收到付款成功关怀信，05:39 又收到弃单提醒 1。她没有被召回，也没有第二单：付款后购物车没清空，扫描把同一购物车又记成弃单（列表里同价的那条），并发了提醒；列表又因为“这个邮箱有召回信”就把已付款订单标成召回成功（没看信是不是在付款前）。
+- 芒果 John Esteves Flores：卡失败 #11884 → 03:23 付款帮助信 → WALLET #11885 → 03:28 卡付款 #11886 成功；之后 03:45 收到弃单提醒、04:25 又收到 #11885 取消的付款帮助信。芒果 Jennifer Gonzalez 只点了邮件链接没下单，却显示召回成功（点链接就改成 success）。
+- 修复：
+  - `Recovery::PAID_LOOKBACK_MS` 6 小时：发提醒 / 管理员弃单通知前，这个邮箱在记录前 6 小时内付过款就关掉记录（作废“paid before reminder”）。
+  - `Paid_Popup::clear_cart()`：付款成功回到店铺（?pc_paid）时清空购物车。
+  - `Recovery_Items::item()`：已付款订单只有付款前发过召回信才算召回成功。
+  - `Recovery` 点链接只记 clicked_ms / note=clicked，不再直接改成功；付款时 close_with_order 仍把点击算作召回。
+  - `Chase_Copy::paid_elsewhere()`：付款失败邮件（filter woocommerce_email_enabled_customer_failed_order）和取消订单的付款帮助信，顾客前后 6 小时内有别的已付款订单就不发。
+- 数据：关闭已付款仍开着的记录（主店 1@qq.com/#11841、阳 Sherrie/#11892、芒果 John/#11886 → 作废）；芒果 Jennifer 的“点击即成功”改回召回中。现在召回成功：阳 0、芒果 1（John：帮助信 03:23 在付款 03:28 前）。
+
+### 2026-11-11 手动订单显示店铺运费
+- 选“按店铺运费”时，订单金额里直接显示运费（按美国、按改过的售价算，含当前运费优惠），合计含运费；不再写“合计（不含运费）”。
+- `Ship_Preview::estimate()` 抽成公用（店铺运费方案 + 对所有顾客生效的运费优惠）；新接口 POST /peptide/v1/manual-order/shipping；manual-order.js 改商品 / 数量 / 售价后 300ms 重新算。
+- 主店核对：bac.water $10 → 运费 $42.75、合计 $52.75（和结账页一致）；售价改 $1,200 → 运费 $14.25。阳前台运费行仍 $42.75。
+
+### 2026-11-11 “已作废”改成“直接付款（未经召回）”
+- 店主问 Sherrie 为什么是已作废。核对：05:20 第一次进店（Facebook 广告 fb/paid），05:23 下单、05:26 付款，只有这一次访问；付款前没有收到任何召回信或链接，所以不算召回成功。
+- 已付款但付款前没收过召回信的订单，状态徽章显示“直接付款（未经召回）”（`status_text`，仍归在已作废这一栏）。
+- 付完款购物车没清空留下的弃单记录（她 05:49 又多了一条待召回）：`Recovery::converted()`，顾客记录前 6 小时起付过款的待召回 / 召回中记录不再显示；已作废且备注 “paid before reminder” 的记录也不显示（由那张已付款订单代表）。阳 Sherrie 现在只有 #11892 一行。
+- 店主追问：直接付款的不该在弃单里。改为 `Recovery_Items::list()` 只保留召回成功的已付款订单，直接付款（付款前没收过召回信）的订单不再出现在弃单列表和计数里。阳 Sherrie 已不在列表；6 家店已作废里都没有直接付款的行。
+
+### 2026-11-11 召回成功 = 顾客真的被邮件召回来
+- 店主问芒果 John 是不是点邮件回来的。核对：03:17 从 Instagram 广告进来，一直在同一次访问里（没离开过），03:21 卡失败、03:23 付款帮助信发出（没点链接）、03:25 换 WALLET、03:28 自己再刷卡成功。不是被邮件召回的。
+- 新规则（`Recovery_Items::came_back_after()`）：召回成功必须是收到第一封召回信之后顾客“回来”下的单——点过邮件链接（recovery clicked_ms 在发信和付款之间），或付款那次访问在发信之后才开始。订单行（item）和购物车记录（Recovery::close_with_order）都用这个判断。
+- 没付款的单，顾客后来用别的单自己付了款（不是被召回）→ 不算弃单，不出现在列表和计数里（`status_text = converted` 过滤）。
+- 现在 6 家店没有召回成功；列表只剩没付款的召回中：阳 9、光辉 4、芒果 4。
+
+### 2026-11-11 订单列表按 Shopname（yy）排版
+- 参考 yyy12345.shopname.cn 待处理订单：操作 / 订单编号 / 商品名称 / 顾客邮箱 / 国家 / 配送方式 / 订单总价 / 支付方式 / 支付时间 / 流水号；标签 待发货 / 支付中 / 已发货 / 已完成 / 已作废 / 全部。
+- 新增 `Admin\Order_List`（class-order-list.php）：订单列表列改为 操作（查看、已付款未完成的加“发货”）· 订单编号 · 商品（件数 + 第一件名，悬停看全部）· 顾客邮箱 · 国家 · 配送方式 · 订单总价 · 支付方式 · 支付时间（未付款显示“未付款”）· 流水号 · 订单状态 · 发货状态 · 物流单号 · 来源；去掉归属人、配送服务提供商、账单、配送至。每行不折行，表格单独横向滚动。
+- 后台订单状态名（wc_order_statuses，仅后台）：正在处理 → 待发货，等待付款 → 待付款，保留 → 待确认，已完成，已取消，已退款，失败 → 支付失败，结账草稿 → 未完成；标签页和状态徽章跟着变，待发货是橙色。
+- 阳订单列表核对。
+- 订单列表追加（2026-11-11）：订单编号列改为自己的 `pc_number`，只显示 “#11892”（不带顾客名、没有预览小眼睛）；左右滚动条自己画（Mac 会藏原生滚动条）：表格上方一条 + 屏幕底部一条（往下翻也能拖），灰色轨道 + 可拖动滑块，和表格同步，写“左右拖动查看更多列”。阳核对拖动正常。
+- yy 订单号规律：237209-933198 = 店铺编号（固定 237209）- 全平台递增流水号（按时间递增、间隔几百，说明是所有 Shopname 店铺共用的计数器）。我们的订单号是 WooCommerce 订单 ID（每家店自己的计数，6 家店之间会重复）；支付平台那边看到的是总后台支付中心的单号 PH…，对账用列表里的“流水号”（支付平台交易号）。
+
+### 2026-11-11 pp 后台订单号 + 波多黎各没有州
+- pp 后台（backupaoy.top 订单表）列：id、商户、网址、支付状态、付款时间、货币、总金额、邮箱、手机号、快递单号、物流方式、州、国家、通道名称。id（如 Sherrie 132460）是 pp 自己的行号：创建付款的返回里只有 status 和 data{type, payment_url}，没有这个 id；payment_url 里的 id 参数就是交易号 2026111105231017943457906559993（= 我们订单列表的“流水号”），但 pp 表格不显示这个号，按它搜索也搜不到（只能按 pp 自己的 id 搜）。所以目前拿不到 pp 的订单号，对账用 邮箱 + 付款时间 + 金额。
+- 州为空：芒果 John（#11886，PR）城市 Ponce、州空。WooCommerce 对国家 Puerto Rico 隐藏“州”、把城市叫 Municipality，所以 pp 收到的州是空的。Shopname（vialcovebio.com 结账页：Country 下拉 + State 下拉，美国 60 项）把波多黎各的市镇放在州里（pp 里显示 Villalba）。
+- 修复 `US_Territories::fill_state()`（woocommerce_checkout_create_order + woocommerce_store_api_checkout_update_order_from_request）：国家是 PR / GU / VI / AS / MP 且州为空时，把城市（市镇）写进账单和收货的州，支付插件按订单地址发给 pp。测试：PR + Ponce → 州 Ponce；US 订单不变。已发出的订单不改。
+
+### 2026-11-11 手动订单：店铺活动开关
+- 店主：手动订单里载入店铺活动和首单优惠，开关选了就启用，链接里自动带上，顾客直接付款。
+- 手动订单页加“店铺活动”卡：两个开关（默认关）——店铺满减活动（显示进行中的活动名和这一单能减多少）、首单优惠（显示券码和折扣，说明结账时核对是否首单）。订单金额实时含活动优惠。
+- `Manual_Orders`：配置加 store_promos / first_order。开了满减就保留 Promotions 的 pc-promo-* 费用（不开仍全部清掉）；开了首单就在打开链接时自动套用 First_Order_Offer::coupon()（block_coupons 只放行这张券；是否首单仍由券规则在结账核对）。
+- 预览 /manual-order/shipping 返回 promos / active_promos / first：用不跑构造、自己返回商品的 WC_Cart 子类算活动（真 WC_Cart 在接口请求里会去读会话报错），并临时按未登录顾客算（活动有顾客规则）。
+- 主店测试：Tirzepatide 20mg × 6 @ $55，两个开关都开 → 后台预览 $330 − $25（Black Friday）− $16.50（WELCOME5）+ $42.75 = $331.25；顾客打开链接结账页同样 $331.25，无报错。测试链接备注 “TEST - Claude 店铺活动测试”。
+
+### 2026-11-11 手动订单草稿 + 按弃单恢复
+- 草稿：手动订单页“保存草稿”（订单金额卡里），右侧新增“草稿”列表（打开继续做 / 删除，当前在编辑的高亮）。草稿存 `pc_manual_drafts`（每店最多 50 个，原样存页面状态：商品名、数量、原价、售价、运费方式、优惠、备注、店铺活动开关）；用草稿生成付款链接后草稿自动删除。接口 GET/POST /manual-order/drafts、GET/DELETE /manual-order/drafts/{id}；页面 ?draft=ID 直接打开。
+- 按弃单恢复：弃单列表每行操作多一个购物车图标“按这个单创建手动订单”→ 手动订单页 ?from_order=订单ID 或 ?from_rec=弃单记录ID，把原来的商品、数量、当时的单价（原价取商品现价）带进来；原订单用了首单券就开首单优惠、有满减费用就开店铺活动、其他优惠码算一笔 “Coupon XXX” 优惠；没下单的结账从顾客购物会话里读当时的优惠码和满减（会话过期就只带商品）。备注自动写“按弃单 #… 恢复 · 姓名”。
+- 测试：主店草稿保存 → 刷新 → 打开，内容（3 × bac.water $8、备注、首单开关）完整，测试草稿已删。阳 #11891（Dania，10 件）恢复合计 $1,083.74（原单 $1,083.75，分位四舍五入差 1 分）；阳 Wanda（未下单）恢复 $95 − $4.75 + $42.75 = $133.00，与原结账页一致。只打开页面，没在阳保存任何东西。
+
+### 2026-11-11 手动订单：有效期、活动选择、精简
+- 链接有效期可选：1 / 3 / 7 / 14 / 30（默认）/ 60 / 90 / 180 天 / 1 年（订单金额卡“链接有效期”下拉）；配置存 `expires` / `days`，旧链接没有 expires 仍按创建 + 30 天；生成弹窗写“YYYY-MM-DD HH:MM 前有效”，最近链接写“MM-DD 到期”。
+- “店铺满减活动”开关改为活动选择框：按钮显示已选活动和这一单能减多少，点开小弹窗勾选（每个活动显示名称、档位规则、这一单可减多少 / 未达门槛），可选多个、“都不用”。配置存 `promo_ids`，链接购物车只保留选中的活动费用（旧链接 store_promos 没有 promo_ids 的全部保留）；按弃单恢复时按原订单费用上的活动 ID 勾选。首单优惠仍是开关。
+- 去掉“备注”卡（按弃单恢复的说明仍记在链接配置里，下单时写进订单备注）。
+- 草稿可存多个：正在编辑某个草稿时“保存草稿”更新它，“另存为新草稿”再存一份（最多 50 个）。
+- 最近生成的链接精简：一行金额 + 时间 + 到期，一行商品（超长省略，悬停看全部），一行操作。
+- 主店测试：6 × Tirzepatide @ $55，选 Black Friday，7 天 → 预览 $347.75；存草稿 → 改价 $50 → 另存为新草稿（两个草稿）→ 生成链接（2026-11-18 到期，该草稿自动删除）→ 顾客结账 6 × $50、Black Friday −$25、运费 $42.75 = $317.75。测试草稿已删。
+
+### 2026-11-11 弃单详情国家名中文
+- 弃单详情（英文版面）地址里国家显示“波多黎各”。原因：页面最后把中文换成英文时，英文国家名取自 woocommerce/i18n/countries.php，但那个文件里是 __()，后台中文时读出来还是中文，所以对照表是空的。改为临时 switch_to_locale('en_US') 后 new WC_Countries()->get_countries() 取英文名再切回。阳 #11891 核对：Country = Puerto Rico，地址栏没有中文。
+
+### 2026-11-11 弃单详情：订单时间、长订单收起、订单备注全英文
+- 金额区左边加一行小字“Ordered 2026-11-11 04:09:11”（已付款再加一行 Paid …）。
+- 商品超过 4 件的订单：先显示前 3 件、行更紧凑（36px 缩略图、小字），底部“Show all 10 items / Show less”切换。阳 #11891（10 件）核对。
+- 订单备注全英文（店主规则：订单 / 邮件全英文）：Chase_Copy 的三条付款帮助信备注、Test_Orders 的测试单备注改英文；6 家店已有的中文订单备注全部改成英文（追单邮件“已发送追单邮件「…」（店主确认）”、WooCommerce 在后台定时任务里写成中文的“未付款订单 - 已逾期自动取消”等），现在各店中文订单备注为 0。各店前台语言都是 en_US。
+
+### 2026-11-11 手动订单：商品搜索支持简称和价格表代号
+- `includes/class-manual-orders.php`：`rest_search` 改为全部规格建索引（10 分钟缓存，商品改动时清空），按价格表代号（规格 SKU：TR10、SM5、BPC-10、CU50）、代号+规格（tr 10、bpc10）、简称（reta、tirz、sema、ghk、kpv）、名称片段匹配并排序；单独的数字必须等于规格。SKU 是长数字的（Retatrutide）用别名 RT 生成显示代号 RT10。
+- `includes/admin/class-manual-order-page.php`：搜索框提示改为“简称或价格表代号都行”。
+- 已部署 web + hq 各 7 份（含模板），php-fpm 已重载；主店 s0001 页面实测 “tirz 10” → Tirzepatide 10mg (TR10)，阳/芒果测 “tr 10”“reta 10” 结果一致。
+
+### 2026-11-11 支付方订单号改为 hang-数字；支付中心时间改北京时间
+- `peptide-panapay/includes/class-hub.php`：新发起的付款，发给 pp 的订单号（pp 后台“订单id”，物流导入用）由 `PH`+32 位改为 `hang-` + 店铺编号两位 + 店铺订单号 + 第几次发起两位（如阳 #11892 → hang-131189202），总长 ≤18；超长或冲突时用 hang-+13 位随机数字。已产生的 PH… 订单号不改。
+- `class-hub-details.php`：返回明细同时接受 PH… 和 hang-…。
+- `class-hub-page.php`：支付中心“更新时间”和返回明细时间按北京时间显示（HQ 站点时区是 UTC，未改站点设置），表头写明“（北京）”。
+- HQ 本体已安装（备份 /root/panapay-*.bak-20261111085340 及之后），web + hq 店铺副本各 7 份同步。HQ 上用反射测了编号生成；部署后 9 分钟内没有真实付款发起，pp 是否接受新格式待第一笔付款确认。
+
+### 2026-11-11 实时数据：开着不动的标签页不再算在线访客
+- 现象：主店实时数据 10 分钟内一直有 2 个访客、访问量 0。原因是两个开了好几天的桌面标签页（访问 4、26）每 15–30 秒发心跳（hidden / idle，最后操作已是 35 小时前），心跳会续访问的 last_ms，被算成“最近 10 分钟有动静的访客”。
+- `peptide-core/includes/tracking/class-ingest.php`：只有非心跳事件或“前台且正在操作”的心跳才续 visits/visitors 的 last_ms。
+- `peptide-core/includes/data/class-realtime.php`：每分钟访客数不再计入后台/无操作的心跳。
+- `peptide-site/assets/visitor-tracking.js`：页面 30 分钟没人操作就不再发心跳（有操作自动恢复）。
+- web + hq 各 7 份已部署。部署后每分钟访客图立刻归 0；卡片/漏斗在 10 分钟窗口过后归 0。主题 tests/visitor-transport.cjs、visitor-surfaces.cjs 改动前就是失败的，与本次无关。
+
+### 2026-11-11 数据板块核对 + 平均访问时长修正
+- 主店数据板块逐页核对（今日 / 过去 7 天，按原始表重算）：访问用户、销售额/订单、净销售+运费、移动端、转化漏斗、今日访客/访问量/订单、页面访问统计、落地页转化、商品详情、邮件发送数、结账步骤、来源都对得上；A/B 分析为空（没在跑实验），没有写死或演示数字；日界按 Asia/Shanghai。
+- 不对的：平均访问时长被开着几天的标签页拉高（主店今日 3175 秒、7 天 7888 秒）。
+  - 6 店回填：每次访问的 last_ms 改为最后一个非“后台/无操作心跳”事件的时间，共 24 条（主店 5、阳 10、光辉 4、老毛 2、芒果 3）；原值备份在 web 主机 /root/visits-lastms-backup-20261111/。
+  - `peptide-core/includes/data/class-operations.php`：平均访问时长中每次访问最多按 30 分钟算。web + hq 各 7 份已部署。主店现为今日 307 秒、7 天 487 秒。
+- 待店主决定：$1 测试单 #11841（11-10）被算成真实销售（7 天多 1 单 $1，今日对昨日销售额 +21551%，也占一个待发货）；店主/我们自己的设备没有排除（访客 14 等）。
+- 店主确认：主店 $1 订单 #11841 标记为测试单（`_pc_test_order`=1，加英文备注），状态未改。`peptide-core/includes/class-overview.php`：数据统计的测试单判断同时认 Test_Orders 的标记/测试地址（部署前核对 6 店已付款订单，没有其他订单被判为测试单）。web + hq 各 7 份已部署。主店现为昨日 0 单 $0、7 天 1 单 $216.51。
+
+### 2026-11-11 11:42 UTC 注册系统 + WhatsApp 预填话术去店名
+- 付款成功弹窗的 WhatsApp 预填话术改成 “Hi! I just placed an order on your site: {items}. The total is {total}.”（不带店名、不带订单号）；6 店都没有自定义过这条，直接生效。
+- 新模块 `PeptideCore\Accounts`（includes/class-accounts.php、admin/class-accounts-page.php、assets/account-gate.js/.css），后台“店铺设置 → 注册与年龄确认”可分别关闭：
+  - 进站 18+ 确认（年龄 + Terms of Use + Privacy Policy，条款在弹窗里展开；30 天内不再问；选“under 18”跳 google）；
+  - 同意后弹注册（邮箱 / 密码 / 确认密码，可切换登录，可 Skip，跳过后 7 天不弹）；接口 POST /peptide/v1/account/register、/login，按真实 IP 每 10 分钟 10 次；
+  - 付款后游客订单自动建账户（账号 = 密码 = 邮箱，资料从订单带入），已有账户的邮箱直接把订单归过去；只处理 `pc_accounts_since`（各店本次上线时间）之后创建的订单，已有订单不动；付款成功弹窗显示账号密码和 “Track my order”；
+  - “我的账户”首页显示最近 5 单的状态和物流（承运商、单号、Track package），密码仍是邮箱时提示改密码；订单列表有追踪链接的加 “Track package”；未登录的账户页加 “New here? Create an account”。
+  - 只用 localStorage 记录，不写 cookie，首页静态缓存不受影响；用原生 dialog，离开意图弹窗不会叠在上面。
+- 验证：主店 s0001 手机尺寸实测年龄确认 → 注册弹窗 → 切换登录 → Skip → 刷新不再弹；服务端用临时测试邮箱测了注册校验、重复邮箱、登录、自动建账户、已有账户归单、弹窗账户块、账户首页，测试订单和用户已删除。
+- 部署：web + hq 各 7 份（备份 /home/ubuntu/vialcove-deploy-backups/trk-plain-20261111T114140 / T114144，主店另有 /root/acc-backup-20261111113949），6 店清了首页缓存；5 个可访问域名都已出现年龄确认（vialcoveprime.com 源站仍 302 到 shiyishop.com，旧问题）。
+- 顺带：hang- 订单号已被 pp 接受（hang-161188301，光辉 #11883，iframe 创建成功）。
+
+### 2026-11-11 12:20 UTC 右下角物流追踪球 + FedEx 官方追踪接口
+- 新增 `PeptideCore\Track_Widget`（includes/class-track-widget.php、assets/track-widget.js/.css）：右下角货车图标球，自动叠在客服球 / 购物车球上面（结账页不显示）。点开：登录顾客看最近 10 单；这台设备付过款的直接显示（付款成功弹窗把订单号 + 密钥记在 localStorage `pcTrackOrders`，最多 5 张）；其他人用订单号 + 下单邮箱查（按 IP 10 分钟 20 次）。显示进度条（下单 / 付款 / 发货 / 送达）、承运商、单号（点了复制）、FedEx 扫描记录、预计送达、“Track on FedEx website”。不返回地址。接口 GET /peptide/v1/track/mine、POST /peptide/v1/track/lookup。
+- 新增 `PeptideCore\Fedex_Track`（includes/class-fedex-track.php）：FedEx Track API（OAuth client_credentials → /track/v1/trackingnumbers），token 缓存到过期前 1 分钟，每个单号结果缓存 30 分钟（出错 5 分钟）。后台“店铺设置 → 物流追踪”（admin/class-fedex-page.php）：物流球开关、API Key / Secret Key（不回显）、正式 / 测试环境、测试查询、拿密钥的步骤。承运商选 FedEx，或没选但单号是 12/15/20/22 位数字时按 FedEx 查。
+- 验证：主店手机尺寸实测球的位置、打开查询表单、错误单号 / 邮箱提示；用浏览器里的样例数据（不落库）看了“已发货 + FedEx 记录”的样子，修了预计送达日期被换算时区差一天的问题；服务端只读看了真实订单 #11843 的输出。FedEx 接口还没有密钥，未实测。
+- 部署：web + hq 各 7 份（备份 /home/ubuntu/vialcove-deploy-backups/trk-plain-20261111T122000 / T122005，主店另有 /root/trk-backup-20261111121857），6 店清了首页缓存，5 个可访问域名都出现物流球。
+
+### 2026-11-11 12:27 UTC 新订单的订单号显示成 hang-（pp 订单 id）
+- 更正：hang- 三次付款（光辉 #11883：hang-161188301 / 401 / 501）都没成功。前两次 pp 已建交易、回调 FAILED（msg 为空，像是卡被拒），第三次 pp 回“Payment attempts are too frequent”。格式本身 pp 接受，还没有成功的 hang- 付款。
+- HQ `Hub::session()` 回复里加 `pp_ref`（HQ 自身 + 两台机器的店铺副本）；店铺 `Bridge::session()` 校验格式后透传（旧 HQ 没有这个字段时不受影响），`Session_Service` 把它记到付款记录，并且只对 `pc_order_number_since`（各店 1794399995，本次切换时间）之后创建的订单写 meta `_pc_pp_ref`。
+- peptide-core 新增 `Order_Number`：有 `_pc_pp_ref`（hang-…）的订单，`woocommerce_order_number` 显示 hang- 号（顾客邮件、付款成功弹窗、物流球、后台列表都跟着变），后台订单搜索能搜 hang-；老订单不写、不变。物流球查询支持输入 hang- 号，新订单不再接受原数字号。同一单重新付款会换成最新的 hang- 号，付款成功那次就是最终订单号。
+- 验证：HQ 对 hang-161188501 的回复带 pp_ref；主店反射测试 Bridge 透传 / 拒绝异常值 / 兼容旧回复、内存订单显示 hang-、老订单 #11843 仍显示 11843。panapay 自带测试中失败的 6 个改动前后结果一致（原本就失败），checkout-session-policy 通过。
+- 部署：HQ panapay 备份 /root/panapay-class-hub.php.bak-20261111122601；店铺 panapay 和 peptide-core web + hq 各 7 份（备份 /home/ubuntu/vialcove-deploy-backups/trk-plain-20261111T122613 / T122618 等）。
+
+### 2026-11-11 12:50 UTC FedEx 密钥改到总后台统一设置
+- 店主：FedEx 密钥应该放总后台。新增 peptide-hq `Fedex`（includes/class-fedex.php）+ 页面“总后台 → 物流追踪（FedEx）”（admin/class-fedex-page.php）：API Key / Secret Key（Secret 用总后台 Crypto 加密保存、不回显）、正式 / 测试环境、测试查询。接口 POST /peptide-hq/v1/fedex/track（店铺签名，Mail::verify），一次最多 10 个单号；token 和单号结果在总后台缓存（30 分钟 / 出错 5 分钟）。
+- peptide-core `Fedex_Track` 改为签名请求总后台，不再保存密钥；店铺再缓存 30 分钟，总后台未配置时 10 分钟内不再问（后台手动测试不受影响）。店铺“店铺设置 → 物流追踪”去掉密钥栏，只留物流球开关、说明和测试查询。6 店的旧选项 pc_fedex 已删（本来就没填过）。
+- 验证：主店调用走通签名链路，总后台回复“还没有设置密钥”。真实 FedEx 查询等店主在总后台填好密钥后测。
+- 部署：总后台 peptide-hq（备份 /root/hq-fedex-backup-20261111124912）；peptide-core web + hq 各 7 份（备份 /home/ubuntu/vialcove-deploy-backups/trk-plain-20261111T124923 / T124925 等）。
+
+### 2026-11-11 13:32 UTC 总后台菜单：隐藏“站点运维”
+- 店主：站点运维先隐藏。peptide-hq admin/class-operations-page.php 加一段后台 CSS，把菜单里的“站点运维”隐藏；页面本身保留，直接打开 admin.php?page=pchq-operations 仍可用。备份 /root/hq-ops-page.bak-20261111133216。新标签页确认：菜单里有“物流追踪（FedEx）”，“站点运维”不显示。
+
+### 2026-11-11 13:41 UTC 总后台放行 FedEx 接口地址
+- 总后台测试查询报“用户已阻止通过 HTTP 请求此 URL”：HQ wp-config 开着 WP_HTTP_BLOCK_EXTERNAL。WP_ACCESSIBLE_HOSTS 末尾加 apis.fedex.com、apis-sandbox.fedex.com（备份 /root/hq-wp-config.php.bak-20261111134056）。
+- 再测：已能连到 FedEx，但 FedEx 回“Sandbox credentials not allowed in this environment”，店主填的是 Test Key，正式环境要换 Production key。
+
+### 2026-11-11 13:58 UTC 物流追踪改用 17TRACK（FedEx 官方接口作备用）
+- FedEx 正式密钥必须关联自己的 9 位 FedEx 发货账号，店主没有，改用 17TRACK（只要单号）。
+- 新增 peptide-hq `Track17`（includes/class-track17.php）：API v2.4，头 17token；FedEx 承运商编号 100003。先 gettrackinfo，返回“未注册”(-18019902) 时才 register（新账号一次性 200 个额度，每个单号注册扣 1 个），所以只有被查过的单号才扣额度。结果缓存 30 分钟，刚注册 3 分钟，暂无记录 10 分钟，出错 5 分钟。密钥用 Crypto 加密保存。
+- `Fedex::rest_track` 填了 17TRACK 就走 17TRACK，否则走 FedEx 官方接口；返回格式不变，店铺端不用改。总后台页面改名“物流追踪”：上面 17TRACK（Security Key、剩余额度），下面 FedEx 备用；测试查询走当前在用的那个。
+- HQ wp-config WP_ACCESSIBLE_HOSTS 加 api.17track.net（备份 /root/hq-wp-config.php.bak-20261111135746），HQ 实测能连到 17TRACK（无密钥返回 401）。代码备份 /root/hq-17track-backup-20261111135746。等店主填 Security Key 后实测。
+
+### 2026-11-11 14:30 UTC 17TRACK 额度预警（放在“费用”里）
+- 店主：先接入 17TRACK 用免费 200 额度，后续再充值；在费用里加预警。
+- peptide-hq `Track17`：每小时（cron pchq_track17_quota）查一次额度（getquota，结果缓存 1 小时，注册新单号后清缓存）；剩余 < 20 时开“费用”类告警（ref 17track）并用 `Costs::mail` 发邮件，充值后自动恢复。新增 `Alerts::resolve_ref`；`Costs::check_alerts` 不再误关 17TRACK 告警；`Costs::mail` 改 public。
+- 费用页总览卡片加一行“17TRACK 物流追踪额度”（剩余 / 已用 / 总数；不足 20 时标红并让卡片变红；没填密钥时提示去“物流追踪”填）。
+- 部署 HQ（备份 /root/hq-17quota-backup-20261111142831、/root/hq-17cost-backup-20261111142918）；新标签页确认费用页已显示这一行（目前“还没填密钥”）。
+
+### 2026-11-11 14:46 UTC 17TRACK 实测通过
+- 店主在总后台填了 17TRACK Security Key。额度 200/200；查 384521937358、879398956880 时各注册一次（剩 198）。约 1 分钟后：879398956880 Delivered（2026-11-04 13:46 Fort Collins, CO），11 条记录；384521937358 Label created（Shipment information sent to FedEx）。
+- 主店通过总后台查同两个单号结果一致（店铺 → 总后台 → 17TRACK 链路通）；6 店清掉旧的“总后台未配置”10 分钟标记。
+
+### 2026-11-11 15:00 UTC 清理测试数据 + 今日新增功能审查修复
+- 清理：17TRACK 删掉两个测试单号（deletetrack，2 个都接受；已用额度不退，剩 198/200），清掉总后台和主店的物流缓存；之前的测试订单 #11844/#11845、测试用户都已删除。#11841 是真实的 $1 订单（已标测试单），按“已有订单不改”保留。阳 s0007、芒果 s0010 各有 1 个今天通过注册弹窗注册的真实顾客账户（gmail），保留。
+- 独立代码审查找到 13 条，修复：
+  - 弹窗自己注册（没验证邮箱）的账户，不再自动把同邮箱的游客订单归过去（防止有人先用顾客邮箱注册来看别人的订单地址），订单记 `_pc_auto_account=unverified`；付款时自动建的、或者有过付款订单的账户照常归单。
+  - 改账户邮箱必须输入当前密码（初始密码=邮箱，防止被人登录后改邮箱占走账户）。
+  - 注册 / 登录接口只接受本站页面发起（检查 Origin / Referer），防止别的网站偷偷把访客登录到别人的账户。
+  - 弹窗注册改为触发 `woocommerce_created_customer`：服务端 Pixel / CAPI 注册事件、浏览提醒邮件、WooCommerce 欢迎邮件都会照常走；前端不再自己发 fbq CompleteRegistration（避免重复）。尊重店铺的“注册验证邮箱 / 店主审核”设置（woocommerce_registration_auth_new_customer），待验证 / 待审核时登录接口把原因告诉顾客。
+  - 购物车 / 结账 / 付款页不弹注册（年龄确认照常），广告直达结账不被打断。
+  - 自动建账户只在付款完成（woocommerce_payment_complete）和付款成功弹窗时做，不再挂订单状态变化；测试单不建；付款回调和成功页并发时不再误记“失败”。
+  - 物流：店铺请求总后台超时 20s→8s，连不上 / 出错时 2 分钟内不再等；“记住的订单”查询也限频；没选承运商时 20/22 位数字不再当 FedEx（可能是 USPS，免得白扣 17TRACK 额度）；FedEx 链接改新地址 /wtrk/track/；顾客查询也接受数字订单号；弃单搜索可按订单 ID 搜。17TRACK 注释更正（出错不会自动改查 FedEx）。
+- 未改（需店主决定）：自动建账户的初始密码是邮箱本身（店主要求），知道顾客邮箱的人就能登录看到地址和订单。
+- 验证：主店服务端测试（Origin 拦截、未验证账户不归单、测试单不建账户、改邮箱需密码、数字单号查询、22 位数字不当 FedEx），测试数据已删；结账 / 购物车页 pcAccounts.signup=false，商店页 true。部署 web + hq 各 7 份 + HQ track17，6 店清首页缓存。
+
+### 2026-11-11 15:12 UTC 自动建账户改为随机密码 + 邮件设密码
+- 店主同意：付款后自动建的账户，密码改为随机（wp_generate_password 24 位），并直接触发 WooCommerce 自带的“账户已创建”邮件（WC_Email_Customer_New_Account::trigger($uid, '', true)，带“Click here to set your new password”链接；不触发注册广告事件）。6 店这封邮件都已开启、英文标题。之前没有用“密码=邮箱”建过的账户（auto_checkout 计数 0），无需重置。
+- 付款成功弹窗账户块改为：账号（邮箱）+ “We sent a link to this email to set your password. Check your inbox (and spam folder).”；“Track my order”带 data-pc-open-track，物流球脚本接管：关掉付款弹窗、直接打开物流面板（这台设备已记住订单，不用登录）。订单备注改为说明已发设密码邮件。后台“注册与年龄确认”说明同步更新。
+- 验证：主店服务端测试（拦截邮件不实际发送、不进发件记录）：账户已建、密码不是邮箱、给顾客发了带设密码链接的邮件、弹窗和备注文字正确，测试数据已删。浏览器里用 #11843 的付款弹窗点 “Track my order”：弹窗关闭、物流面板打开并显示该订单（之后清掉了本机记住的订单）。部署 web + hq 各 7 份，6 店清首页缓存。
+
+### 2026-11-11 15:30 UTC Meta 像素没抓到购买：原因与修复
+- 投手反馈最近几单 Meta 没收到购买。排查 6 店最近 20 天付款订单：
+  1. 浏览器端 Purchase 只在 WooCommerce“订单已收到”页触发；11-10 起付款成功后跳回首页 ?pc_paid= 弹窗，不经过那个页面 → 浏览器端从此不发。
+  2. 服务端 CAPI 在 woocommerce_order_status_changed 发；但 4 张付款单里 3 张（主店 #11841 测试单、阳 #11892、芒果 #11886）付款完成时被 peptide-panapay 的 Completion_Guard 拦下（用独立数据库连接确认“已付款”没确认到，抛 payment_persistence_unconfirmed），后面的钩子全没跑：确认邮件（已由 care_catchup 补发）、CAPI 购买、注册邀请等。订单本身是已付款。根因还要查（没有日志、没有事务，复现需要真实付款）。
+  3. 5 个子店的 CAPI 发送记录表 wp_pc_px_log 不存在（复制店铺带了 peptide_core_px_log_db=1 选项但没有表），发送结果一直没记下来。
+  4. 配置：光辉 s0008、主店没有 Meta 像素；李军 s0006 的像素没填 CAPI token（只有浏览器端）。
+- 修复（peptide-core）：
+  - Pixels::page_events：付款成功弹窗页（?pc_paid= 且订单密钥正确）发浏览器端 place_order + purchase（每单一次，event_id order_<id> 与服务端去重；测试单不发）。Paid_Popup::order_from_request 改 public。
+  - Pixels::purchase_catchup：挂 Recovery::CRON（每 5 分钟），最近 6 天付款、没回传过的订单用订单上记下的顾客信息补发 CAPI 购买（测试单、退订的不发），写订单备注。
+  - Pixels\Server::installed() 确认表真的存在；5 个子店已建表。
+- 已补发：阳 #11892、芒果 #11886 Purchase，Meta 返回 200。主店验证付款弹窗页事件：第一次 page_view,place_order,purchase（带顾客信息），刷新后只有 page_view；测试标记已清掉。部署 web + hq 各 7 份。
+
+### 2026-11-11 15:45 UTC 物流球换成货车图片、改圆形
+- 店主：物流球图标换成首页“Delivery details”那辆车，球要圆的。把主店那张图（vialcove-home-delivery-vw-id-buzz-150x150.png，26 KB）打包进插件 assets/track-ball-van.png（子店不一定有这张上传图）；球 border-radius: 50% !important（主题给按钮加了 8px 圆角），4px 内边距，图片 44px。部署 web + hq 各 7 份，6 店清首页缓存；主店确认圆形、图片已加载。
+
+### 2026-11-11 15:32 UTC 付款完成流程被中断：排查结果、记录原因、平滑重载（含一次 21 秒宕机）
+- 排查（只读）：同样的“已付款”检查现在对 #11841/#11886/#11892 都通过，不是连不上数据库。规律：成功的 #11843 是 redirect 收银台（WALLET），浏览器回跳比通知晚 11 秒；失败的 3 单都是内嵌 iframe 刷卡，通知和浏览器回跳同一秒到达；HQ 记录第一次投递失败、5 分钟后第二次投递时订单已付款 → review。订单备注显示扣完库存后、发邮件之前就停了。店铺通知入口把完成流程里的任何异常都吞成 503（`catch ( \Throwable )`），WooCommerce 日志和 PHP 错误日志里都没有记录，所以确切原因查不到；返回页只读不写。
+- 处理（不改付款逻辑）：
+  - peptide-panapay `Session_Service`：完成流程被中断时，把异常类型、信息、文件行号、调用栈（不含顾客信息）写进 WooCommerce 日志（来源 peptide-panapay），并加订单备注；`Completion_Guard` 记录拦截原因（gateway_mismatch / not_paid_in_db / read_error + 当时的钩子）。下次再发生就能看到原因。部署 web + hq 各 7 份；panapay 自带测试 checkout-session-policy、checkout-lifecycle 通过。
+  - 邮件（care_catchup）和 Meta 购买（purchase_catchup）都已有每 5 分钟补发兜底。
+- PHP-FPM 平滑重载：两台服务器原来 process_control_timeout = 0（每次部署 reload 会直接杀掉正在处理的请求，包括正在完成的付款）。改为 30s。
+  - 第一次改错：把这行追加在 php-fpm.conf 末尾（include 池配置之后，被当成池配置），配置检测失败、reload 后 php-fpm 起不来，两台机器所有站点 502 约 21 秒（15:30:36–15:30:57 UTC）。立即用备份 /root/php-fpm.conf.bak-20261111153036 恢复并重启，6 店和总后台恢复 200/302。该时段没有新订单、没有付款尝试、没有未投递的支付通知。
+  - 第二次正确修改：把 [global] 段里注释掉的 `;process_control_timeout = 0` 改成 `process_control_timeout = 30s`，先 `php-fpm8.3 -t` 检测通过才替换并 reload（备份 /root/php-fpm.conf.bak-before-pct），两台都 active，站点正常。
+
+### 2026-11-11 15:52 UTC 商品详情显示满减档位（Buy $X and get $Y off）
+- 店主参考别家：商品详情里列出所有满减档位。结论：做成内置功能，不做装修积木（商品详情是首页 JS 弹窗；/product/ 链接也会跳回首页打开同一个弹窗；数据随商品数据一起到，不加请求；积木要每店手动摆、进不了弹窗）。
+- 发现：弹窗原本就有“Order savings”档位（.vc-dialog-offers），但 product-dialog-polish.css 把它 display:none!important，还会被搬进顶部工具栏，顾客一直看不到。
+- 改动（主题）：product-dialog-experience.js 在活动倒计时下面插入单独的 .vc-offer-tiers（礼盒图标 + “Buy $300 and get $25 off” 每档一行，金额去掉 .00），用当前生效的满减活动数据（和原来同一来源，按开始 / 结束时间过滤），切换商品 / 规格只有一个块；product-dialog-polish.css 加样式。旧的 .vc-dialog-offers 保持原样。
+- 验证：主店手机尺寸：Tirzepatide、Retatrutide 弹窗都显示 3 档（$300→$25、$500→$55、$1,000→$120），切换规格不重复，没有新增网络请求、没有脚本错误。部署 web + hq 各 7 份，6 店清首页缓存，5 个域名 200。
+
+### 2026-11-11 16:00 UTC 满减档位位置调整
+- 店主：图标垂直居中，档位往下放。.vc-offer-tiers 改插在商品图下面（summary 里规格说明 .vc-home-quick__specification 前面，找不到时放在商品图后），礼盒图标和文字垂直居中。主店手机尺寸确认位置和居中，部署 web + hq 各 7 份，6 店清首页缓存。
+
+### 2026-11-11 16:05 UTC 满减档位改成“优惠券 + 进度”样式
+- 店主选 D（优惠券票据）+ C（进度条）结合：每张券本身就是进度条。左边“$25 OFF”，右边“Orders over $300”；按顾客购物车金额从左往右填色；已达到的整张填满、实线边、显示“Unlocked ✓”；正在凑的下一档高亮并显示“Add $X more”。
+- 数据：进度用服务端已经算好的购物车数据（Store API cart → extensions.peptide_core.activity_listener：measure、nodes[].threshold / reached、next.remainingText），浏览器不自己算折扣；只在打开商品弹窗时读一次购物车，之后靠 vc:cart-updated 事件（弹窗加购、购物车抽屉都会发，带新购物车）更新，事件里没带购物车时再读一次。监听和请求都绑在弹窗的 AbortController 上，关掉就清理。
+- 验证（主店手机尺寸）：空购物车三张都是 0%，第一张高亮；加一件 $86.30 后：$25 OFF 填 29%、显示“Add $213.70 more”，$55 OFF 17%，$120 OFF 9%；测试商品已从购物车删掉。部署 web + hq 各 7 份，6 店清首页缓存，5 个域名 200。
+
+### 2026-11-11 16:08 UTC 物流面板：登录看物流、没账户引导注册
+- 店主：买过的顾客应该登录后直接看到物流；没买过的不该让填订单号，应该引导注册。
+- track-widget.js：
+  - 没登录且这台设备没记住订单 → 面板直接是登录表单（Email / Password / Sign in，调 /peptide/v1/account/login），下面“Forgot password?”（WooCommerce 找回密码页）、“New here? Create an account…”+“Create an account”（打开注册弹窗）、“Track an order without an account”（按订单号 + 邮箱查，留给账户系统上线前的老订单，带“Back to sign in”）。
+  - 面板里登录成功 → 记 sessionStorage 标记、刷新页面（拿到登录状态和 nonce）→ 自动再打开面板显示“我的订单”。
+  - 登录了但没有订单 → “No orders yet.” + 说明 + “Start shopping”。
+  - 没登录、显示这台设备记住的订单时，底部按钮改为“Sign in to see all your orders”。
+- class-track-widget.php 配置加 login / lost / shop / signup。
+- 验证（主店手机尺寸，没登录）：面板显示登录表单和各按钮；空提交提示“Please enter your email and password.”；Create an account 打开注册弹窗；无账户查询页正常。登录后自动打开、空订单状态需要真实登录，没在线上实测。部署 web + hq 各 7 份，6 店清首页缓存，5 个域名 200。
+
+### 2026-11-11 16:16 UTC 满减券改版式 2（真优惠券，锁在票根）
+- 店主要加小锁（达到解锁、未达到上锁）并看多种版式，选了版式 2。
+- 每张券：左边大字“$25 OFF”+“Orders over $300”，右边票根（虚线分隔、上下半圆缺口）放锁图标和“Unlocked / Locked”。已达到 = 实心红券 + 打开的锁；未达到 = 白底虚线券 + 小进度条 + 锁着；下一档红色边框，文字“Add $X more · over $Y”。进度数据来源不变（服务端购物车数据）。
+- 验证（主店手机尺寸）：三档全解锁、两档解锁一档未解锁两种状态都对。测试时浏览器里本来有店主的 6 件测试商品，我临时加的 12 件已减掉，购物车恢复 6 件。部署 web + hq 各 7 份，6 店清首页缓存，5 个域名 200。
+
+### 2026-11-11 16:32 UTC 库存范围规则 + 热销品 + 解锁烟花
+- 店主：所有库存保持 90–120，热销品 5–10，6 店都用，卖到下限以下自动补回，每天刷新。热销品：TR20、RT20、MS15、klow80、LC216、B-12、Tesamorelin。
+- 新增 peptide-core `Stock_Range`（includes/class-stock-range.php）：选项 pc_stock_range（enabled、min/max、hot_min/hot_max、hot_ids：商品 ID = 整个商品，规格 ID = 只这个规格）。每天 cron pc_stock_range_daily 把所有上架、开了库存管理的规格换成范围内随机数；库存变化（卖出 / 后台改）后在请求结束时检查，超出范围就补回范围内随机数（防递归、不在下单中途改）。没开库存管理的 6 个规格不动。
+- 应用：6 店热销代码都匹配到同样的 7 项（6 个单规格 + Tesamorelin 整个商品 4 个规格 = 10 个规格 5–10），其余 184–185 个规格 90–120。主店实测：TR20 设成 3 → 请求结束后变 9；普通规格设成 40 → 92；每日刷新已排程。
+- 注意：6 店热销规格都没开缺货下单（backorders = no），所以顾客一次最多只能买到当前库存数（5–10 件），待店主决定。
+- 满减券：锁放大加粗、放进圆形底座（解锁白底红锁、下一档粉底红锁、未到灰色）；本次打开弹窗后新解锁的档位：券“弹”一下、锁晃动，并放加购同款烟花（复用 .add-feedback-burst，三波），已解锁的不重复放；系统设置减少动效时不放。主店手机尺寸用模拟购物车更新验证：只有新解锁的 $120 券有动画和烟花。部署 web + hq 各 7 份，6 店清首页缓存，5 个域名 200。
+
+### 2026-11-11 16:35 UTC 热销品库存改 20–30
+- 店主：热销品 20–30，并且每日刷新。Stock_Range 默认值改为 hot 20–30；6 店 pc_stock_range 的 hot_min/hot_max 改为 20/30，并把超出范围的热销规格（每店 10 个）重新设到 20–30，全部规格都在范围内。
+- 每日刷新：6 店都已排程（pc_stock_range_daily，首次约 17:25–17:28 UTC），由各店每分钟一次的 systemd cron 定时器执行（vialcove-web01-cron、vialcove-s0006…s0010-cron），不依赖访客访问。
+- 已记入长期记忆：库存规则和每日刷新。
+
+### 2026-11-11 17:40 UTC 热销品“小火苗”提示
+- 店主：要让顾客在外面就感受到热销品库存不多，但要朴素（小火苗的感觉），只限热销品。
+- `Stock_Range`：is_hot()（规格或整个商品在 hot_ids）、product_has_hot()（卡片用：商品任一规格是热销）、flame()（小火苗 SVG）；过滤 woocommerce_get_availability_text → 热销规格显示“Only N left”，woocommerce_get_availability_class 加 pc-hot-stock；内联样式：卡片“Selling fast”橙色小字 + 轻微摇曳的小火苗，库存行红色 + 小火苗（减少动效时不动）。
+- 主题 functions.php：商品卡片在热销商品上加一行 `<p class="vc-card-hot">🔥 Selling fast</p>`（卡片不写数字：同一商品只有部分规格是热销，例如只有 Tirzepatide 20mg）。
+- 验证（主店手机尺寸）：93 张卡片里正好 7 张显示（Tirzepatide、Retatrutide、Tesamorelin、MOTS-C、KLOW、Lipo-C B12、Vitamin B-12）；Tirzepatide 弹窗 20mg 显示红色“🔥 Only 28 left”，切到 10mg 恢复“119 in stock”。部署 web + hq 各 7 份（插件 + 主题），6 店清缓存，5 个可访问域名首页都有 7 张热销卡片。
+
+### 2026-11-11 18:27 UTC 顾客邮件居中
+- 店主：发到 sun18761388693@gmail.com 的预览邮件（“Thank You for Your Order”、“Your VialCove account has been created!”）整体偏右。用主店临时订单 / 临时账户（发完即删，订单号 #11851 起被占用）发的预览；测试单标记会让系统不发邮件，所以临时订单不打标记、保持待付款。
+- 原因：WooCommerce 11 邮件外层是“空列 + 600 宽列 + 空列”，部分客户端（Gmail）分配不均。
+- 修复：peptide-core 新增 templates/emails/email-header.php、email-footer.php（复制 WC 11.2.1 原模板，只把外层改成经典居中：一个 align=center 的铺满单元格，里面 max-width 600、margin 0 auto、align=center 的表格），`Chase_Copy::TEMPLATES` 加这两个模板，所有 WooCommerce 邮件生效。主店重发两封预览，发件记录确认用的是新结构。部署 web + hq 各 7 份。
+
+### 2026-11-11 18:51 UTC 订单列表操作列和弃单页一致；去掉上方滚动条和提示文字
+- 店主：待处理订单的操作列排版要和弃单页一样；上面的滚动条和“左右拖动查看更多列”删掉，下面的只删文字。
+- includes/admin/class-order-list.php：操作图标改成弃单页同款（28px 蓝色小方块、悬停浅蓝底、18px 图标），新增“写邮件”（带订单号和顾客邮箱打开写邮件）；列宽 104px。自绘滚动条只保留表格下方那条，去掉上方那条和两处提示文字。
+- 注意：店铺后台域名（sNNNN.vialcoveresearch.com）由总后台服务器上的副本提供，只改店铺服务器的主店副本看不到效果；用部署脚本 web + hq 各 7 份后，主店后台确认：只剩下方一条滚动条、没有提示文字、操作列为“查看订单 / 发货 / 写邮件”蓝色图标。
+
+### 2026-11-11 19:00 UTC 新订单详情页（按 yy 后台排版）
+- 店主：订单详情按原来用的 SaaS（yy / Shopname）后台一比一复刻。只读方式看了店主浏览器里那页的结构和截图（滚回原位，没点任何东西），不复制对方品牌。
+- 新增 includes/admin/class-order-detail-page.php（admin.php?page=pc-order&id=订单ID，隐藏菜单，标题“订单详情”）：
+  - 顶部：返回待处理订单列表、订单复制（= 按此单建手动订单）、退款（跳 WooCommerce 原生订单页退款）、作废订单（确认后改为已取消）、上一单 / 下一单。
+  - 订单头：订单号、状态（进行中 / 已完成 / 已取消…）、已支付 / 未支付、已发货 / 未发货徽章，结账成功页、订单追踪页链接，创建 / 支付时间。
+  - 商品表（图、名称、SPU=商品 ID、SKU、规格、单价 × 数量、总价）；金额明细（商品价格、运费、优惠码、活动优惠 = 负数费用行带活动名、其他费用、税费、已退款、订单总价）。
+  - 收货 / 账单地址（复制、编辑、电话旁 WhatsApp）；支付信息（流水号、收款方式、时间）+“支付记录”（每次付款尝试：支付单号 hang- / PH、状态、时间）；物流信息（发货记录 / 暂无物流信息 + 发货按钮）；任务列表（这单的发件记录 + 手动发送邮件）。
+  - 右栏：购买人信息（国旗、姓名、邮箱复制、其他联系方式、首次支付、最后访问、付款订单数、消费金额）、订单基础信息（支付 / 配送方式、下单类型、结账流程、域名来源）、订单备注（买家备注 + 可编辑卖家备注 meta _pc_seller_note）、订单标签（meta _pc_order_tags，回车创建、可删）、订单归因（WooCommerce 归因 utm + 落地页，归因模型 = 下单前的访问记录）、设备信息（访客 ID + 查看轨迹、设备、系统、浏览器、屏幕、IP）、IP 信息（国家 / 州，来自 WooCommerce 地理定位 + 访客记录）。没有的数据（时区、浏览器语言、城市、经纬度、ISP）显示“-”。
+- 订单列表的“查看订单”和订单号改为打开新详情页。
+- 验证：主店后台打开 #11843 全部区块正常（商品名用父商品名、标题 / 面包屑“订单详情”、图片懒加载正常）。部署 web + hq 各 7 份（店铺后台由总后台服务器副本提供）。
+
+### 2026-11-11 19:10 UTC 所有入口都打开新订单详情页
+- 店主反馈“什么都没改”：他是从其他入口打开的订单，落在 WooCommerce 原生“编辑订单”页（admin.php?page=wc-orders&action=edit&id=…），上一版只改了订单列表的链接。
+- Order_Detail_Page::maybe_redirect：在 load-woocommerce_page_wc-orders / load-post.php 上，GET 打开 shop_order 的原生编辑页一律转到 pc-order 新详情页；新详情页里需要原生页的按钮（退款、发货、编辑地址 / 配送方式、查看明细）带 pc_native=1，不转。订单列表的发货图标也带 pc_native=1。
+- 验证：主店打开原生地址 #11843 → 落在新详情页；退款按钮指向带 pc_native=1 的原生页。部署 web + hq 各 7 份。
+
+### 2026-11-11 订单详情：国家 / 州名一律英文
+- 后台语言是中文，WooCommerce 国家表会翻成中文（例如“波多黎各”）。新增 `Order_Detail_Page::en_country()` / `en_state()`：读 WooCommerce 自带的 i18n 表，并临时关掉翻译。订单详情的收货和账单地址、IP 国家 / 州，以及弃单页的地址都改用它们。
+- 部署：class-order-detail-page.php 8b05968bbd03、class-recovery-page.php 3d1a063c2f57，两台主机各 7 份（有备份），php-fpm 已重载。s0010 订单 #11886 实测显示 “Puerto Rico”。
+
+### 2026-11-11 订单详情：修排版重叠 + 地址改成“项目 / 信息”表格
+- 排版：窄屏（约 1180 宽）时第一张卡片被内容撑宽，压到右侧栏下面。主栏和侧栏改成 `minmax(0,1fr)`，子元素加 `min-width:0`，商品卡可以横向滚动，时间行可以换行。
+- 收货和账单地址都改成两列表格（项目 / 信息）：姓名、名（First Name）、姓（Last Name）、公司（有才显示）、街道地址、小区／社区、城市、州／地区（英文名加代码）、邮编、国家（英文）、电话（带 WhatsApp）。
+- 美国属地（PR/GU/VI/AS/MP/UM）按快递面单写：州 = “Puerto Rico（PR）”，国家 = United States。只改显示，订单数据不动。
+- 部署：class-order-detail-page.php bda6301d4b21，两台主机各 7 份，php-fpm 已重载。s0010 订单 #11886 在 1180 宽下已检查。
+
+### 2026-11-11 订单详情地址：州简称单独一行、点击复制、电话去掉 WhatsApp
+- “州／地区”只放英文全名（Puerto Rico），新增“州简称”一行（PR）。地址顶部的“复制”生成 “City, PR 00728” 的格式。
+- 每个值都是按钮，点一下就复制，按钮文字临时变成“已复制”。浏览器不让用剪贴板 API 时，改用 execCommand 复制。
+- 电话只显示号码，不再带 WhatsApp 链接。
+- 部署：class-order-detail-page.php 1220624fd36a，两台主机各 7 份，php-fpm 已重载。s0010 订单 #11886 实际点击后剪贴板已写入。

@@ -53,7 +53,7 @@ final class Hub_Details {
 	 */
 	public static function record( string $ref, string $kind, string $status, $params ): void {
 		try {
-			if ( ! preg_match( '/\APH[a-f0-9]{32}\z/D', $ref ) || ! in_array( $kind, array( 'create', 'notify', 'return' ), true ) || ! self::ready() ) { return; }
+			if ( ! preg_match( '/\A(?:PH[a-f0-9]{32}|hang-[0-9]{1,13})\z/D', $ref ) || ! in_array( $kind, array( 'create', 'notify', 'return' ), true ) || ! self::ready() ) { return; }
 			$flat = is_array( $params ) ? self::flatten( $params ) : array( 'body' => self::text( (string) $params, 2000 ) );
 			global $wpdb;
 			$t = self::table();
@@ -72,7 +72,7 @@ final class Hub_Details {
 	/** @return array<int, array{kind:string,status:string,at:int,params:array}> 新的在前 */
 	public static function for_ref( string $ref ): array {
 		try {
-			if ( ! preg_match( '/\APH[a-f0-9]{32}\z/D', $ref ) || self::VERSION !== get_option( self::OPTION ) ) { return array(); }
+			if ( ! preg_match( '/\A(?:PH[a-f0-9]{32}|hang-[0-9]{1,13})\z/D', $ref ) || self::VERSION !== get_option( self::OPTION ) ) { return array(); }
 			global $wpdb;
 			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT kind,status,params_box,created_at FROM ' . self::table() . ' WHERE ref=%s ORDER BY id DESC LIMIT %d', $ref, self::PER_REF ), ARRAY_A );
 			$out = array();
@@ -88,7 +88,7 @@ final class Hub_Details {
 	/** @param string[] $refs @return array<string,bool> 有记录的付款 */
 	public static function refs_with_details( array $refs ): array {
 		try {
-			$refs = array_values( array_filter( $refs, static fn( $r ): bool => is_string( $r ) && 1 === preg_match( '/\APH[a-f0-9]{32}\z/D', $r ) ) );
+			$refs = array_values( array_filter( $refs, static fn( $r ): bool => is_string( $r ) && 1 === preg_match( '/\A(?:PH[a-f0-9]{32}|hang-[0-9]{1,13})\z/D', $r ) ) );
 			if ( ! $refs || self::VERSION !== get_option( self::OPTION ) ) { return array(); }
 			global $wpdb;
 			$in  = implode( ',', array_fill( 0, count( $refs ), '%s' ) );
