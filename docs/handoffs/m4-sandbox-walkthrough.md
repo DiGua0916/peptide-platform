@@ -25,7 +25,7 @@ wp eval 'var_dump( \PeptideCore\Activity\Quote_Cart::supported_hooks() );'
 | 第一条的输出 | `档位：off`，下一行“最近 7 天没有核对记录。” |
 | 第二条的输出 | 空（关着时不建表） |
 | 前台页面（用你的页面对比脚本） | 和“主线 + M1”逐字节相同：开关都关着时页头**没有** `<script id="pc-marketing-quiet">`（`60820de` 及之前的提交会多出这 1.9KB，之后的提交已改为只在静默时输出）。开了离开挽回的店会加载到新版本的 `exit-intent.js`，这是预期的 |
-| 第三条的输出 | `bool(true)`（主线 `bd4e355` 起；之前的代码是 `false`，那是手动订单把加购推荐关掉的问题，已修）。**如果是 `bool(false)`：加购推荐又被关掉了**——有代码往购物车计算的钩子上加了白名单以外的回调。先告诉平台所有者，再把 `wp eval 'var_dump( ( new ReflectionMethod( \PeptideCore\Activity\Quote_Cart::class, "unsupported_hook" ) )->invoke( null ) );'` 的输出（是哪个回调）发给 F2 和日常会话。开影子档、开档之后各再查一次，也应为 `bool(true)` |
+| 第三条的输出 | `bool(true)`（主线 `bd4e355` 起；之前的代码是 `false`，那是手动订单把加购推荐关掉的问题，已修）。**如果是 `bool(false)`：加购推荐又被关掉了**——有代码往购物车计算的钩子上加了白名单以外的回调。先告诉平台所有者，再把 `wp eval 'var_dump( ( new ReflectionMethod( \PeptideCore\Activity\Quote_Cart::class, "unsupported_hook" ) )->invoke( null ) );'` 的输出发给 F2 和日常会话（输出的是出问题的钩子名，比如 `woocommerce_cart_calculate_fees`；正常时是 `NULL`）。开影子档、开档之后各再查一次，也应为 `bool(true)` |
 
 ## 第 1 步 · 一条命令走完 24 个组合（约 1 分钟）
 
