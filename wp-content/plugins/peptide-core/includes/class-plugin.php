@@ -96,6 +96,7 @@ final class Plugin {
 		Order_Number::register_hooks();
 		Stock_Range::register_hooks();
 		Customer_Id::register_hooks();
+		Logistics_Sync::register_hooks();
 		Ship_Preview::register_hooks();
 		Manual_Orders::register_hooks();
 		Topics::register_hooks();
