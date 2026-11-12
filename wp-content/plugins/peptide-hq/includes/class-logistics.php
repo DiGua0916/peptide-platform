@@ -175,6 +175,9 @@ final class Logistics {
 				++$n;
 			}
 		}
+		if ( $n > 0 && class_exists( Tencent_Docs::class ) ) {
+			Tencent_Docs::soon();
+		}
 		return rest_ensure_response( array( 'saved' => $n ) );
 	}
 
