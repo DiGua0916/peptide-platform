@@ -37,6 +37,12 @@ case "$cmd" in
     [ -d "$dir/src/wp-content" ] || die "发布包里没有 wp-content。"
     bad=$(find "$dir/src" -name '*.php' -print0 | xargs -0 -n 40 -P 2 sh -c 'for f; do php -l "$f" >/dev/null 2>&1 || echo "$f"; done' sh | head -5)
     [ -z "$bad" ] || die "发布包有 PHP 语法错误，没有替换任何文件：$bad"
+    # 空的 PHP 文件语法检查能过，但它本该定义的类就没了（2026-11-13 合并候选时遇到过：入口类文件被清空，总后台 500）。
+    empty=$(find "$dir/src" -name '*.php' -size 0 | head -5)
+    [ -z "$empty" ] || die "发布包里有空的 PHP 文件，没有替换任何文件：$empty"
+    for main in plugins/peptide-core/includes/class-plugin.php plugins/peptide-hq/includes/class-plugin.php; do
+      [ ! -e "$dir/src/wp-content/$(dirname "$(dirname "$main")")" ] || grep -q 'class Plugin' "$dir/src/wp-content/$main" || die "发布包里的 $main 没有定义 Plugin 类。"
+    done
     echo "已解包并通过语法检查：$(find "$dir/src" -type f | wc -l) 个文件"
     ;;
   apply)
