@@ -100,3 +100,43 @@ python3 tools/deployment/prepare_release.py --output <仓库外的目录> --ref 
 scp <发布包.zip> tools/sandbox/refresh.sh ubuntu@<后台机>:m1-sandbox/
 ssh ubuntu@<后台机> 'sudo bash ~/m1-sandbox/refresh.sh code ~/m1-sandbox/<发布包.zip>'
 ```
+
+## 2026-11-12 主线同步、沙盒刷新、M1-3 测试基线
+
+- 主线合入到 `976c1fa`（本分支 `49482b9`）。主线改到 F1 名下的只有 `hq/class-alerts.php`，自动合并，`pchq_alert_types` 过滤器还在。
+- 沙盒三个站更新到 `12b0f63`（主线 `976c1fa` + M1 改动），1122 个文件，8 项健康检查通过，FPM 日志无 fatal。此前放在沙盒上的 F5 候选代码已被替换（F5 要等它同步主线后复验）。沙盒店铺库仍是 11-10 的 s0010 脱敏快照。
+- 脱敏规则跟上主线新功能：生产库没有新表（两台机器只读核对：店铺 74 张、总后台 23 张，与 11-10 相同）；新增处理的是选项和订单资料——手动订单的付款链接和草稿、搜索索引、物流单号（换成假单号）、付款人联系方式、卖家 / 来源备注、付款参考号、像素上下文、关怀邮件记录、17TRACK 和 FedEx 的密钥与令牌。离线自检 11 项通过。**新规则还没在真实库上跑过**，下次导快照时先 `--report-only`。
+- 本机现在能直接跑测试：`../tools/php/php`（原生 PHP 8.3.32）和 `../tools/node-v26.13.0-darwin-arm64/bin/node`。
+
+### M1-3 测试基线
+
+**纯逻辑和前端用例（编排文件，本机跑）**
+- 命令：`node tests/run-data-observations.cjs --php <php 路径>`。新增 `--include-skipped`（连跳过的一起跑）、`--module M4`（只跑某模块登记的）。
+- 编排器现在认 `status: "skipped"`，必须同时写 `skip_reason` 和 `owner`，否则报错。
+- 基线（`49482b9`）：54 个默认用例，**45 过 / 0 败 / 9 跳过**。跳过的 9 个在主线上本来就失败：
+
+| 用例 | 归属 | 原因 |
+| --- | --- | --- |
+| data-product-user-ratios-node | F4 | “十个比率都显示百分比”断言失败 |
+| data-native-search-pure | F4 | “八步都用按访客绑定的映射”断言失败 |
+| data-product-action-rankings-pure | F4 | 同上 |
+| tracking-product-actions-pure | F4 | 调用了已不存在的 `Tracker::is_automated()` |
+| experiment-data-pure | F4 | “分析菜单保留旧 10 项”断言失败 |
+| visitor-product-actions | F5 | 主题用例：“正好发出三个显式动作”失败（11-11 之后新出现） |
+| visitor-intents | F5 | 主题用例：两个“原生锚点排队意图”子用例失败（11-11 之后新出现） |
+| mail-source-observations | 日常会话 | 退出码 2、没有输出 |
+| tracking-store-api-cart-success-pure | 日常会话 | 加载不到 `PeptideCore\Recovery` 类 |
+
+**冒烟和接 WooCommerce 的用例（沙盒跑）**
+- 新脚本 `tools/sandbox/run-smoke.sh`：先备份沙盒两个库，（`SEED=1` 时）写入演示数据，逐个跑 `smoke-*.php` 和 `*-native.php`，跑完恢复数据库。`GATE=tests/smoke-suites.json` 只跑门槛用例，有失败退出码 1。
+- 新目录文件 `tests/smoke-suites.json`：82 个用例的基线状态（`12b0f63`，带演示数据）：
+  - **gate 22 个**：通过，以后发布前必须通过。
+  - **skipped 28 个**：基线时就失败。按名字初步归属：F4 12、日常会话 7、F2 5、F5 2、F1 2（`smoke-hq-connector`、`smoke-hq`，我自己查）。其中 7 个 `smoke-data-*` 只是找不到它们要的“fixture product”，不是功能坏了。
+  - **local-only 32 个**：用例自带“只能在本地隔离环境运行”的保护，在沙盒直接拒绝执行。这些要在本地站跑，沙盒门槛不含它们。
+- 不带演示数据时只有 12 个通过；差的 10 个都是找不到测试商品。
+- 两次冒烟跑完后沙盒库已恢复（健康检查 8 项正常，商品、订单、账号数与跑前一致）。
+
+### 还没做
+- skipped 的 28 个冒烟用例没有逐个分析根因，只记录了第一条失败信息；归属是按文件名猜的，需要各会话认领。
+- local-only 的 32 个没有在本地跑（本地站要 WooCommerce + 数据库，`tools/local-env/setup.sh` 现在有 PHP 可以试了，下一步做）。
+- M1-4 之后的任务、F2 / F3 / F4 的沙盒验收、F5 复验都还没开始。
