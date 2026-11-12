@@ -337,7 +337,8 @@ final class Series {
 		if ( ! $series || null === $clean ) {
 			return new \WP_Error( 'pchq_series_shipping', '运费配置无效：至少要有一个带地区和费用的方案。' );
 		}
-		if ( $series['shipping_ver'] > 0 && $clean === $series['shipping'] ) {
+		// 用 JSON 文本比较：存进数据库再读出来，1000.0 会变成 1000，直接比数组会误判成“改过”。
+		if ( $series['shipping_ver'] > 0 && wp_json_encode( $clean ) === wp_json_encode( $series['shipping'] ) ) {
 			return $series['shipping_ver'];
 		}
 		if ( ! self::update( $id, array( 'shipping' => $clean ) ) ) {

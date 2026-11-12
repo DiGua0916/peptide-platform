@@ -180,9 +180,9 @@ namespace {
 	check( 'real run stamps series and reports everything', 108 === $real['stamped'] && 108 === $real['sent'] && 108 === $real['accepted'] && array() === $real['errors'] && '3' === $GLOBALS['orders'][1]->meta['_pc_series_id'] );
 	check( 'real run totals equal the dry run', $dry['orders'] === $real['orders'] && $dry['total_cents'] === $real['total_cents'] && $dry['test_orders'] === $real['test_orders'] );
 	check( 'batches of at most 50', array( 50, 50, 8 ) === array_map( static fn( $p ) => count( $p['orders'] ), $GLOBALS['posts'] ) );
-	$posts = count( $GLOBALS['posts'] );
+	$sent_before = count( $GLOBALS['posts'] );
 	$third = R::backfill( false );
-	check( 'repeat run has nothing left to do', 0 === $third['to_report'] && 108 === $third['already_reported'] && 0 === $third['missing_series'] && 0 === $third['sent'] && $posts === count( $GLOBALS['posts'] ) );
+	check( 'repeat run has nothing left to do', 0 === $third['to_report'] && 108 === $third['already_reported'] && 0 === $third['missing_series'] && 0 === $third['sent'] && $sent_before === count( $GLOBALS['posts'] ) );
 	check( 'since filter', 27 === R::backfill( true, $t0 + 91 )['orders'] );
 	$digest = R::digest();
 	check( 'digest matches the backfill report', 107 === $digest['count'] && 107000 === $digest['total_cents'] && 1 === $digest['test_count'] && 0 === $digest['refunded_cents'] );
