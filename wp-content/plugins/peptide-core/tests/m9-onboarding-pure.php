@@ -115,7 +115,12 @@ namespace {
 
 	// ---------- 店铺信息 ----------
 	$store = static fn( string $wa, string $email = '', string $brand = '' ): array => \PeptideCore\Admin\Store_Settings::clean_buyer_store( array( 'whatsapp' => $wa, 'email' => $email, 'brand' => $brand, 'store_name' => '不应该被采用' ) );
-	check( 'store info ok', array( array(), array( 'brand' => '', 'whatsapp' => '15551234567', 'email' => '' ) ) === $store( '+1 555 123 4567' ) );
+	// FE-03：投手可以自己打开 / 关掉前台右下角的客服按钮；表单里没有这个勾选框时不动原来的开关。
+	$float = static fn( array $more ): ?bool => \PeptideCore\Admin\Store_Settings::clean_buyer_store( array( 'whatsapp' => '+1 555 123 4567' ) + $more )[1]['float'];
+	check( 'support button switch: ticked', true === $float( array( 'float_present' => '1', 'float' => '1' ) ) );
+	check( 'support button switch: unticked', false === $float( array( 'float_present' => '1' ) ) && false === $float( array( 'float_present' => '1', 'float' => '' ) ) );
+	check( 'support button switch: an older form leaves it alone', null === $float( array() ) && null === $float( array( 'float' => '1' ) ) );
+	check( 'store info ok', array( array(), array( 'brand' => '', 'whatsapp' => '15551234567', 'email' => '', 'float' => null ) ) === $store( '+1 555 123 4567' ) );
 	check( 'internal store name is not editable here', ! array_key_exists( 'name', $store( '+15551234567' )[1] ) && ! array_key_exists( 'store_name', $store( '+15551234567' )[1] ) );
 	check( 'support email kept', 'help@shop.example' === $store( '+15551234567', 'help@shop.example' )[1]['email'] );
 	check( 'WhatsApp required', 1 === count( $store( '' )[0] ) );

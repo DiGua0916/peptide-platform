@@ -814,6 +814,15 @@
       "node_test": false,
       "status": "module-gate",
       "module": "M9"
+    },
+    {
+      "name": "m14-product-trust-pure",
+      "language": "php",
+      "path": "wp-content/themes/peptide-site/tests/m14-product-trust-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M14"
     }
   ]
 }

@@ -103,6 +103,10 @@ final class Store_Settings {
 		echo '<p><label for="pc-by-store-brand">对外英文品牌名（可以不填）</label><input type="text" id="pc-by-store-brand" name="brand" maxlength="' . (int) self::BRAND_MAX . '" value="' . esc_attr( self::public_brand() ) . '"' . ( '' !== $mail ? ' placeholder="例如 ' . esc_attr( $mail ) . '"' : '' ) . '><span class="pc-by-hint">用英文。填了以后显示在网页标题和页脚版权里；页眉的 Logo 图片不会变。不填就沿用默认的品牌名。</span></p>';
 		echo '<p><label for="pc-by-store-wa">客服 WhatsApp</label><input type="tel" id="pc-by-store-wa" name="whatsapp" value="' . esc_attr( '' !== $wa ? '+' . $wa : '' ) . '" placeholder="例如 +1 555 123 4567" required><span class="pc-by-hint">带国家代码。顾客点“联系我们”会直接打开和这个号码的对话。</span></p>';
 		echo '<p><label for="pc-by-store-email">客服邮箱（可以不填）</label><input type="email" id="pc-by-store-email" name="email" value="' . esc_attr( (string) ( $support['email'] ?? '' ) ) . '" placeholder="例如 support@example.com"></p>';
+		// FE-03：前台右下角的客服按钮（主题的 vc-help-widget）早就有，开关是 support.enabled，默认关，原来只有管理员能在
+		// “系统设置 → 联系方式”里打开。投手填了 WhatsApp 也不会出现按钮，所以在这里给一个同样的开关。
+		echo '<input type="hidden" name="float_present" value="1">';
+		echo '<p class="pc-by-check"><label><input type="checkbox" name="float" value="1"' . checked( ! empty( $support['enabled'] ), true, false ) . '> 在前台右下角显示客服按钮</label><span class="pc-by-hint">打开后，前台每个页面右下角有一个客服按钮，顾客点一下就打开和上面这个 WhatsApp 号码的对话。结账页不显示。</span></p>';
 		echo '<p class="pc-by-actions"><button type="submit" class="button button-primary">' . esc_html( 'wizard' === $from ? '保存，下一步' : '保存' ) . '</button></p></form>';
 		echo '<p class="pc-by-hint">后台里的店铺名称“' . esc_html( (string) get_option( 'blogname', '' ) ) . '”由总后台管理，这里不能改。</p>';
 	}
@@ -110,8 +114,9 @@ final class Store_Settings {
 	/**
 	 * 检查店铺信息表单（除邮箱格式外不依赖 WordPress，测试里直接调用）。
 	 *
-	 * @param array<string,mixed> $in brand / whatsapp / email
-	 * @return array{0:string[],1:array{brand:string,whatsapp:string,email:string}} 错误提示和清理后的值。
+	 * @param array<string,mixed> $in brand / whatsapp / email / float（勾了“显示客服按钮”）/ float_present（表单里有这个勾选框）
+	 * @return array{0:string[],1:array{brand:string,whatsapp:string,email:string,float:?bool}} 错误提示和清理后的值；
+	 *         float 为 null = 表单里没有这个勾选框，保持原来的开关不动。
 	 */
 	public static function clean_buyer_store( array $in ): array {
 		$errors = array();
@@ -129,7 +134,8 @@ final class Store_Settings {
 		if ( null === $email ) {
 			$errors[] = '客服邮箱的格式不对。不需要的话可以留空。';
 		}
-		return array( $errors, array( 'brand' => $brand, 'whatsapp' => (string) $wa, 'email' => (string) $email ) );
+		$float = empty( $in['float_present'] ) ? null : ! empty( $in['float'] );
+		return array( $errors, array( 'brand' => $brand, 'whatsapp' => (string) $wa, 'email' => (string) $email, 'float' => $float ) );
 	}
 
 	public static function save_buyer_store(): void {
@@ -139,7 +145,7 @@ final class Store_Settings {
 		check_admin_referer( Staff_Buyer::ACTION_STORE );
 		$from = isset( $_POST['from'] ) && 'wizard' === sanitize_key( wp_unslash( $_POST['from'] ) ) ? 'wizard' : 'store';
 		$in   = array();
-		foreach ( array( 'brand', 'whatsapp', 'email' ) as $key ) {
+		foreach ( array( 'brand', 'whatsapp', 'email', 'float', 'float_present' ) as $key ) {
 			$in[ $key ] = isset( $_POST[ $key ] ) ? sanitize_text_field( wp_unslash( (string) $_POST[ $key ] ) ) : '';
 		}
 		[ $errors, $clean ] = self::clean_buyer_store( $in );
@@ -162,6 +168,9 @@ final class Store_Settings {
 		$form    = Support_Contacts::to_form( $support );
 		$form['support_whatsapp'] = $clean['whatsapp'];
 		$form['support_email']    = $clean['email'];
+		if ( null !== $clean['float'] ) {
+			$form['support_enabled'] = $clean['float'] ? '1' : ''; // 右下角客服按钮的开关（FE-03）。
+		}
 		$stored['support']        = Support_Contacts::sanitize( $form );
 		update_option( Settings::OPTION, $stored );
 		Onboarding::mark_store_saved();
