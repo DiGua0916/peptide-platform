@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # M1-3：在沙盒里跑全部冒烟测试（smoke-*.php）和接 WooCommerce 的测试（*-native.php）。后台机 root 运行。
-#   [SEED=1] run-smoke.sh <解开的测试目录> [只跑名字里含这个词的]
+#   [SEED=1] run-smoke.sh <解开的测试目录> [只跑路径匹配这个正则的]
 # <测试目录> 里的结构与仓库相同（wp-content/plugins/<插件>/tests/…），由 pack-tests.sh 打包上传。
 # 先备份沙盒店铺库和总后台库，跑完后恢复：冒烟测试会建商品、订单、账号，不让它们留在沙盒里。
 # 结果：每个用例一行  <PASS|FAIL|ERROR|TIMEOUT> <用例> <通过数>/<失败数> <说明>，汇总写到 <测试目录>/smoke-result.tsv
@@ -37,7 +37,7 @@ run_one() { # 站点目录  测试文件
 # SEED=1：先写入演示数据（wp peptide demo seed），很多冒烟用例靠它找“测试商品”。跑完随数据库一起恢复掉。
 if [ "${SEED:-0}" = 1 ]; then sudo -u "$OWNER" -H wp --path="$SB/admin/public" peptide demo seed 2>&1 | tail -2; fi
 for f in $(find "$SRC/wp-content" \( -name 'smoke-*.php' -o -name '*-native.php' \) ! -name '._*' | sort); do
-  [ -z "$ONLY" ] || case "$f" in *"$ONLY"*) ;; *) continue;; esac
+  [ -z "$ONLY" ] || echo "$f" | grep -qE "$ONLY" || continue   # 第二个参数是正则，例如 'smoke-(pricing|marketing)\.php' 
   # GATE=<tests/smoke-suites.json 的路径>：只跑登记为 gate 的用例（发布前的沙盒门槛）。
   if [ -n "${GATE:-}" ]; then python3 -c "import json,sys; sys.exit(0 if any(x['status']=='gate' and sys.argv[2].endswith(x['path']) for x in json.load(open(sys.argv[1]))['suites']) else 1)" "$GATE" "$f" || continue; fi
   case "$f" in */peptide-hq/*) run_one "$SB/hq/public" "$f";; *) run_one "$SB/admin/public" "$f";; esac

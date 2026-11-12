@@ -256,3 +256,15 @@ F2 从沙盒失败项反推出一个问题，请 F1 在生产只读核对（只�
 - F1 在沙盒店（MySQL，和子店一样“表不在、版本号是 1”，主线 `bd4e355`）试过：执行前没有这张表；执行后表建好（5 列，0 行），库里只多了这一张表；再执行一次不报错；前台 200。
 - 这是生产写操作（每家店建一张空表），**没有做**，等平台所有者决定。不做的话 M4 发布后会自动补建，在那之前继续记不上。两种办法都补不回之前的数字。
 - 沙盒店现在已经有这张表了（试的时候建的）。
+
+## 2026-11-12（六）M1-6 版本可见和 code_drift；新候选沙盒重跑
+
+- 主线同步到 `61ce4f8`（物流填单、腾讯文档同步）。脱敏登记：`pchq_logistics`（`data` 里是整行发货表，含收件人姓名、电话、地址）和 `pchq_tdocs_rows` 清空；选项 `pchq_tdocs`（Client Secret、授权令牌、文档地址）不带；`pchq_logistics` 选项只有品名、申报价值、HS 编码，保留。critical-path 加了“总后台导航里有物流填单”。
+- **M1-6 完成**：
+  - 店铺端（`core/class-hq-connector.php`）：`/hq/status` 多了 `code`——回答请求的这份副本现算，另外每份副本大约每 10 分钟把自己的组件版本和清单哈希记进共用选项 `pc_code_copies`，所以一次轮询能看到前台、后台两份。目录没变化时不重读文件（按文件数、总大小、最新修改时间判断）。
+  - 总后台新文件 `hq/class-releases.php`：表 `pchq_releases`（版本选项 `pchq_m1_db`）、发布锁（2 小时过期）、巡检 `code_drift`、页面“发布记录”、WP-CLI `wp pchq-release start|site|finish|status|stores|unlock`。`hq/class-plugin.php` 追加一行注册。
+  - `tools/deployment/manifest.py`：和店铺端同一个哈希算法，从发布包清单算各组件哈希。
+  - 测试：`m1-code-manifest-pure`（9 项，PHP 算出的哈希 = Python 算出的）、`m1-releases-pure`（21 项）；默认套件 47 过 / 0 败 / 9 跳过。沙盒实测见 `m1-sandbox-acceptance-all-2026-11-12b.md`。
+  - 没覆盖的：总后台自己的代码（peptide-hq）不在轮询里（总后台不轮询自己），两份开店模板也不是运行中的站点——这三处靠发布脚本结束时用 SSH 做哈希比对（M1-5 的 G4）。店铺列表页上没有加“版本”一列（那个页面归日常会话），版本在新的“发布记录”页看。
+- 新候选 `c5fb1d8` 的沙盒重跑：`docs/handoffs/m1-sandbox-acceptance-all-2026-11-12b.md`。
+- 四件等平台所有者在本会话直接确认的事，都没有做：6 家店只读导出、5 家子店补建弹窗统计表、重导芒果脱敏快照、投手导出表是否带顾客邮箱。

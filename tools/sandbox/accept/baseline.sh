@@ -4,6 +4,7 @@ login sandbox_admin
 menu "$ADMIN/wp-admin/admin.php?page=pc-overview" > $D/menu-$T.txt
 for p in pc-overview pc-promotions pc-system pc-staff "wc-orders" pc-recovery pc-data pc-visitors pc-mail pc-shipping pc-apps pc-manual-order pc-accounts; do echo "$p $(code "$ADMIN/wp-admin/admin.php?page=$p")"; done > $D/pages-$T.txt
 for p in "edit.php?post_type=product" users.php plugins.php; do echo "$p $(code "$ADMIN/wp-admin/$p")"; done >> $D/pages-$T.txt
-COOKIE=x; for u in / /cart/ /my-account/ "/?vc_product=11006&acc=1" /track-order/; do echo "$u $(curl -s -o /dev/null -w '%{http_code} %{size_download}' --max-time 60 "$SHOP$u")"; done > $D/shop-$T.txt
+COOKIE=x; # 都带一个查询参数：带参数的请求不走整页缓存，比的是这一刻真实渲染出来的页面。
+for u in "/?bb=1" "/cart/?bb=1" "/my-account/?bb=1" "/?vc_product=11006&bb=1" "/track-order/?bb=1"; do echo "$u $(curl -s -o /dev/null -w '%{http_code} %{size_download}' --max-time 60 "$SHOP$u")"; done > $D/shop-$T.txt
 assets "/?acc=$T" > $D/assets-$T.txt
 echo "$T: 菜单 $(wc -l < $D/menu-$T.txt) 项，后台页面 $(grep -c ' 200' $D/pages-$T.txt)/$(wc -l < $D/pages-$T.txt) 个 200，前台脚本样式 $(wc -l < $D/assets-$T.txt) 个"
