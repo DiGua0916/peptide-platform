@@ -750,6 +750,20 @@ Root installed only three existing Commerce sources for P09 collection products 
   - 商品地址从哪里来（2026-11-12 修正，原来假定弹窗里有“详情”链接，实际的商品弹窗没有）：依次取弹窗里的 `a.vc-showcase-quick__details`（有的话）、服务器给的“这次进站的商品”（`vcEntryAddress.product = { id, path }`，由 `vc_entry_address_product()` 按请求里的 `vc_product` 给出，只给已发布的商品）、页面上这个商品的卡片链接（`a[data-vc-quick-open="<ID>"]`、`a[data-vc-home-product="<ID>"]`）。都取不到时地址栏用 `/?vc_product=<ID>`。**改商品卡片或商品弹窗的结构时请保留这两个属性之一**，否则从首页点开的商品又会变回 `?vc_product=`。
   - 已知限制：分享出去的商品地址被社交平台抓取预览时，拿到的仍是首页的标题和图片（服务器把它转到了首页）。
 - **FE-03 信任条**（`inc/product-trust.php`，2026-11-12）：按店开关 `pc_trust_badges`（值 `on` 才生效，**默认关**，过滤器 `vc_trust_badges_enabled`），功能声明 `m14.trust_badges => 1`。打开后商品弹窗内容最前面输出一条：`Secure checkout`（只在本次请求是 HTTPS 或店铺地址是 `https://` 时）和结账实际接受的支付标志（`\VialCove\Panapay\Payment_Icons::data( $gateway->payment_icons() )`，只取已启用的支付方式；过滤器 `vc_trust_payment_icons`，结果只留本站地址的图片，最多 9 个）。没有自由文字。两样都没有时不输出。需要支付插件配合的只有一点：`Payment_Icons::data()` 的返回形状（`id / label / url`）不要改。
+- **NF-07 落地页提速**（同一个开关 `pc_front_speed`，2026-11-12 第三轮）：
+  - 商品落地页（`/?vc_product=<ID>`）：`wp_footer`（优先级 5）里印出 `vc_home_quick_view_template( $product )`，也就是 `GET vialcove/v1/home-product/<ID>` 返回的那个 `<template data-vc-quick-product="<ID>">`。`home-quick-view.js` 的 `loadTemplate()` 和 `product-dialog-polish.js` 的 `openProduct()` 本来就先找页面里有没有这个模板，有就不请求。**这两处“先找页面里的模板”的写法请保留**；改了的话落地页不会坏（退回去请求接口），只是提速失效。`wp_head`（优先级 2）里另有一条 `<link rel="preload" as="image" media="(max-width: 767px)">`，取 `vc_home_quick_view_image()` 的 `src / srcset / sizes`。商品落地页不延后样式。
+  - 专辑落地页（`/?vc_catalog_category=<ID>`，以及 `vc_catalog_q`）：首页那 11 个样式，加 `vc-home-quick-view`、`vialcove-product-dialog-interaction`、`vc-product-dialog-polish` 3 个，不再挡首屏。
+  - 预览、编辑器框架（`pc_template_preview`、`pc_frame`）不动。
+- **FE-03 “看过 / 已加购”**（`inc/product-activity.php`、`assets/product-activity.js`，2026-11-12）：按店开关 `pc_product_activity`（值 `on` 才生效，**默认关**），下限 `pc_product_activity_min`（整数 1–1000，默认 5），功能声明 `m14.product_activity => 1`。只显示接口给的真实数字，低于下限不显示。**需要 F4 提供接口**，约定如下：
+  - `GET /wp-json/peptide/v1/product-activity?product_id=<商品 ID>`，公开、只读；变体商品传父商品 ID。
+  - 200：`{ "product_id": 10, "viewing": 12, "added": 31, "window": { "viewing_minutes": 10, "added_hours": 24 }, "generated_at": "2026-11-12T12:00:00Z", "ttl": 60 }`。
+  - `viewing`：最近 `viewing_minutes` 分钟内看过这件商品（打开商品弹窗或商品页；各规格都算在父商品上）的去重访客数。建议 10 分钟。`added`：最近 `added_hours` 小时内把这件商品加进购物车的去重访客数。建议 24 小时。
+  - 两个数都是非负整数（JSON 数字，不是字符串）；没有就是 `0`，不要省略。口径和 `Data\Metrics` 的访客一致：不算员工、已识别的爬虫和测试单的访问。
+  - `window` 请如实返回实际统计的窗口：前台的英文文案按它写（`viewed this in the last 10 minutes`），缺了窗口的那个数字前台不显示。范围 `viewing_minutes` 1–60、`added_hours` 1–168；窗口由 F4 定，改了前台不用改。
+  - 缓存：每件商品的结果服务端缓存 60 秒，响应头 `Cache-Control: public, max-age=60`。前台请求不带 cookie（`credentials: 'omit'`），同一件商品 60 秒内只问一次，所以可以放心让 CDN 缓存。
+  - 商品不存在或未发布：404。指标开关关着、表没建好或算不出来：404，或者两个数给 `0`，前台都不显示。响应里不要有任何访客资料。
+  - **接口注册时请加一行** `add_filter( 'pc_product_activity_available', '__return_true' );`。主题只有在这个过滤器返回 `true`（并且开关打开）时才加载脚本；没有它时不发任何请求。
+  - 前台对返回值的检查：`product_id` 要和请求的一致；数字必须是 0–1000000 的整数；不符合就整行不显示。数字原样显示，不取整、不加基数。
 - **NF-07 首页提速**（`inc/front-speed.php`，2026-11-12）：按店开关 `pc_front_speed`（值 `on` 才生效，**默认关**，过滤器 `vc_front_speed_enabled`），功能声明 `m14.front_speed => 1`。打开后：① 首页（且不是商品 / 专辑落地、不是预览，条件同 `vc_lazy_dialog_enabled()`）上 11 个样式不再挡首屏——`woocommerce-general`、`woocommerce-layout`、`woocommerce-smallscreen`、`vc-live-cart-experience`、`vc-live-cart-progress`、`vc-live-cart-recommendation`、`vc-live-cart-feedback`、`vialcove-product-options`、`vialcove-product-preview`、`vialcove-product-images`、`vc-product-report-viewer`；标签留在原位，`media="print"` 加载完换回 `data-vc-media` 里记的原值。② 前台不输出 emoji 检测脚本和样式。**如果以后让首页的可见内容用到这 11 个样式里的规则**（例如在首页放 WooCommerce 自带的商品列表区块），请把对应的句柄从 `vc_front_speed_style_handles()` 里拿掉，否则那块内容会先无样式闪一下。脚本一个没动。
 - **NF-06 使用声明**：文字只来自店铺设置 `use_statement_html`（`vc_use_statement_markup()`），主题不自带任何措辞。输出位置：每个页面页脚上方（购物车、结账页除外，原有），以及**商品弹窗内容末尾**（新增）。店铺没配置时两处都不输出，`Launch_Check` 会提示。
 - **品牌名**：`vc_brand_name()` 先读 `Store_Settings::public_brand()`，没填用默认的 `VialCovePeptides`。

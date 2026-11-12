@@ -2,6 +2,67 @@
 
 分支 `claude/m9-buyer-admin-940389`，提交 `9b93b55`（第一批）、之后修主题用例的提交、`ab62b67`（商品地址修正），和 M9、M11 在同一个分支上。没有合并 main，没有发布。
 
+## 2026-11-12 第三轮：落地页提速、“看过 / 已加购”
+
+提交 `5f4155e`（落地页提速）、`87589ae`（“看过 / 已加购”的显示）。主线已同步到 `bd4e355`。检查：主题用例 `.cjs` 56 个、PHP 33 个全过；默认套件 57 过 7 败（7 个是主线原有的失败）；F5 登记的 13 条全过。
+
+### NF-07：商品落地页和专辑落地页（同一个开关 `pc_front_speed`，默认关）
+
+上一轮只让首页受益，广告流量主要落在这两种页面。
+
+**先量（改之前，本机这份临时站，手机宽度）**
+
+- 商品落地页（`/?vc_product=ID`，`/product/x/` 会 302 转到这里）：页面出来以后，脚本还要再向服务器要一次这件商品的弹窗内容（`vialcove/v1/home-product/ID`），拿到才打开弹窗。3 次：弹窗打开在 885 / 802 / 792 毫秒，其中那一次请求占 345 毫秒左右。挡首屏的样式 44 个。
+- 专辑落地页（`/?vc_catalog_category=ID`）：挡首屏的样式 44 个，580 KB，压缩后约 123 KB。
+
+**改动**
+
+- 商品落地页：把这件商品的弹窗内容直接印在页面里。弹窗脚本本来就是“页面里已经有这件商品的内容就不再请求”，所以一行脚本没改。印进去的内容和接口返回的逐字相同，只差每次渲染都会变的随机编号（在浏览器里取两边比对过）。
+- 商品落地页、手机宽度：预加载商品主图，用的是弹窗自己那套 `srcset` 和 `sizes`，所以浏览器选的是同一张图（比对过：只下了一次）。桌面宽度不预加载——那里弹窗用更大的图，预加载会白下一张（第一次做的时候在浏览器里看到了这个问题，已改）。
+- 商品落地页不延后任何样式：弹窗一打开就要用。
+- 专辑落地页：首屏用不到的 14 个样式不再挡首屏（首页那 11 个，加商品弹窗自己的 3 个）。逐个元素比对过，整页 553 个可见元素没有差别；打开开关后点商品，弹窗照常带样式。
+
+**再量（打开开关之后）**
+
+| | 改之前 | 打开开关之后 |
+| --- | --- | --- |
+| 商品落地页：弹窗打开（3 次） | 885 / 802 / 792 毫秒 | 543 / 490 / 459 毫秒 |
+| 商品落地页：弹窗打开前要等的请求 | 页面 + 样式脚本 + 再要一次商品内容 | 页面 + 样式脚本 |
+| 商品落地页：页面大小（压缩后） | 约 20.8 KB | 约 22.8 KB（多 1.9 KB） |
+| 专辑落地页：挡首屏的样式 | 44 个，压缩后约 123 KB | 30 个，压缩后约 85 KB（少 31%） |
+
+这些数字的局限要说清楚：是本机、不限速、而且浏览器面板在后台时量的（这个会话没有开着的窗口，页面按后台页面运行，动画不走、取不到绘制时间）。所以它们只能说明“前后差多少、少等了哪一步”，**不是真机 4G 下的秒数**。省掉的那一步是一次完整的服务器往返，网络越慢省得越多。真实的 LCP 要在沙盒用 Lighthouse 或真机量。
+
+**营销组件逐个确认**（商品落地页，开关关着和开着各走一遍，结果一致）
+
+| 组件 | 怎么确认的 | 关着 | 开着 |
+| --- | --- | --- | --- |
+| 满减券 | 弹窗里两张券（$15 OFF / $35 OFF），加购后购物车抽屉里的进度“Spend $10.00 more to unlock $15.00 off” | 有 | 有 |
+| 热销提示 | 弹窗库存行“Only 25 left”，商品卡片“Selling fast” | 有 | 有 |
+| 运费提前显示 | 改一下数量后出现“Shipping $9.90 · Estimated total $49.90” | 有 | 有 |
+| 离开挽回 | 关掉弹窗后停 5 秒，弹出优惠码窗口 | 弹 | 弹 |
+| 转盘 | 同上，弹出转盘，点 Spin now 得到结果 | — | 弹，能转 |
+| 加购推荐 | 加购后购物车抽屉里的“Suggested add-on … Add 1 box” | 有 | 有 |
+
+为了看这些，在本机临时站里配了一个满减活动、一个运费方案、热销商品、离开挽回和活动监听（只在临时站，没有动任何真实店铺）。
+
+顺带看到的（主线的行为，开关关着时就这样，不是这次改出来的，已告诉日常会话）：**简单商品的落地页弹窗打开后，运费那一行不会自己出现，要改一下数量才出现。**
+
+没做的：
+
+- 商品落地页还有一次 302（`/product/x/` → `/?vc_product=ID`），每次广告点击多一次服务器往返。去掉它要改入口的路由方式，牵涉首页缓存、落地页统计和 F4 的页面类型判断，这次没有动。
+- 投放链接工具给的是商品自己的地址（会 302）。直接给 `/?vc_product=ID` 能省这一次往返，但那个地址只在“这台设备启用了弹窗入口”时才打开商品，否则只是首页，所以没有改。
+
+### FE-03：“看过 / 已加购”——显示做好了，等 F4 的接口
+
+- 商品弹窗里一行：`12 people viewed this in the last 10 minutes · 31 added to bag in the last 24 hours`。
+- **只用真实数字。** 数字只从数据模块的接口取，主题不算数、不取整、不加基数。接口不存在、慢、出错或返回的不是约定的样子，就什么都不显示。F4 的接口没到之前没有用任何假数字顶替。
+- 文案里的时间窗口是接口如实返回的那个（所以写的是“最近 10 分钟看过”，不是“正在看”）。
+- 低于下限的那一项不显示：选项 `pc_product_activity_min`，默认 5，可设 1–1000。两项都低就整行不显示。
+- 开关 `pc_product_activity`，默认关。另外要等数据模块声明接口已就绪（过滤器 `pc_product_activity_available`）；在那之前即使打开开关也不加载脚本、不发请求。
+- 需要 F4 提供的接口写在 `docs/CONTRACT.md` 的 M14 一节（按商品返回看过人数和已加购人数、统计窗口、缓存 60 秒）。
+- 本机浏览器里用一个只放在临时站里的替身接口看过四种情况：两项都够、一项不够、两项都不够、接口不存在。
+
 ## 2026-11-12 第二轮：FE-03 和 NF-07
 
 提交 `43153d6`（FE-03）、`8516654`（NF-07）。主线已同步到 `7c6d2d3`。两个新开关都是按店、默认关，关着时页面输出和原来一样。
@@ -105,7 +166,8 @@
 - 新增：`inc/entry-address.php`、`inc/storefront-identity.php`、`assets/entry-address.js`、`tests/m14-entry-address-pure.php`、`tests/m14-storefront-identity-pure.php`、`tests/m14-entry-address.cjs`、`tests/m14-visitor-attribution-ads.cjs`、`tests/m14-visitor-engagement.cjs`。
 - 修改：`functions.php`（两行 require，三个函数移走）、`footer.php`、`inc/product-dialog-content.php`、`assets/site.css`、`assets/visitor-adapter.js`、`assets/visitor-tracking.js`（只加了三个广告参数）、`tests/footer-details.php`、`tests/visitor-transport.cjs`、`tests/visitor-product-actions.cjs`、`tests/visitor-metadata-push.cjs`、`tests/visitor-products.cjs`、`tests/visitor-quick-view-pair.cjs`、`tests/visitor-client-environment.cjs`。
 - 11-12 第二轮新增：`inc/product-trust.php`、`inc/front-speed.php`、`tests/m14-product-trust-pure.php`、`tests/m14-front-speed-pure.php`；修改 `functions.php`（两行 require）、`inc/product-dialog-content.php`（弹窗内容最前面输出信任条）、`assets/site.css`（信任条样式）。
-- 新选项：`pc_entry_address`、`pc_trust_badges`、`pc_front_speed`（都是值 `on` 才生效，默认关）。功能声明：`m14.entry_address`、`m14.trust_badges`、`m14.front_speed`。
+- 11-12 第三轮新增：`inc/product-activity.php`、`assets/product-activity.js`、`tests/m14-product-activity-pure.php`、`tests/m14-product-activity.cjs`；修改 `inc/front-speed.php`、`tests/m14-front-speed-pure.php`、`functions.php`（一行 require）、`assets/site.css`。
+- 新选项：`pc_entry_address`、`pc_trust_badges`、`pc_front_speed`、`pc_product_activity`（都是值 `on` 才生效，默认关）、`pc_product_activity_min`（下限，默认 5）。功能声明：`m14.entry_address`、`m14.trust_badges`、`m14.front_speed`、`m14.product_activity`。
 
 ## 实际做过的检查
 
@@ -132,6 +194,8 @@
 6. 信任条：`wp option update pc_trust_badges on`，打开任意商品弹窗，“A closer look” 下面有一条 Secure checkout 和支付标志（标志和结账页上的一致）；改回 `off` 后消失。
 7. 首页提速：`wp option update pc_front_speed on`。首页看起来和原来一样；点购物车、点商品，抽屉和弹窗都带样式；页面源码里有 11 个带 `data-vc-media` 的样式标签，没有 `_wpemojiSettings`。商品落地页（`/?vc_product=<ID>`）源码里没有 `data-vc-media`。最好在这一步用真机或 Lighthouse 量一次 LCP，开关前后各一次。
 8. 客服按钮：投手在“店铺信息”勾上“在前台右下角显示客服按钮”并保存，前台右下角出现客服按钮，和物流球、购物车球不重叠；取消勾选后消失。
+9. 落地页提速（`pc_front_speed` 打开）：用手机打开一个商品广告链接，商品弹窗照常打开，页面源码里有这件商品的 `<template data-vc-quick-product="ID">`，网络面板里没有 `home-product/ID` 这一次请求；满减券、热销提示、运费、离开挽回 / 转盘、加购推荐都在。专辑链接：源码里有 14 个带 `data-vc-media` 的样式标签，点商品弹窗带样式。**这一步请用 Lighthouse 或真机各量一次 LCP，开关前后对比。**
+10. “看过 / 已加购”（要等 F4 的接口合进来）：`wp option update pc_product_activity on`，打开一个最近有人看的商品，弹窗里出现那一行，数字和 F4 的接口返回的一致；冷门商品不出现这一行。
 
 ## 没做的和已知问题
 
