@@ -344,7 +344,7 @@ final class Onboarding {
 
 	/** 第 5 步：生成带追踪参数的投放链接。 */
 	public static function form_link(): void {
-		echo '<h2>生成投放链接</h2><p class="pc-by-why">广告里要用带追踪参数的链接，数据页才能按广告系列、广告组和广告分开看效果。</p>';
+		echo '<h2>生成投放链接</h2><p class="pc-by-why">广告里要用带追踪参数的链接，数据页和素材看板才能按广告系列、广告组、广告和素材分开看效果。</p>';
 		echo '<form class="pc-by-form" data-pc-by-link><p><label for="pc-by-landing">落地页</label><select id="pc-by-landing" name="landing">';
 		$group = '';
 		foreach ( self::landing_pages() as $page ) {
@@ -355,11 +355,10 @@ final class Onboarding {
 			echo '<option value="' . esc_attr( $page['url'] ) . '">' . esc_html( $page['label'] ) . '</option>';
 		}
 		echo ( '' !== $group ? '</optgroup>' : '' ) . '</select></p>';
-		echo '<p><label for="pc-by-source">投放平台</label><select id="pc-by-source" name="source"><option value="facebook">Facebook</option><option value="instagram">Instagram</option></select></p>';
-		echo '<p><label for="pc-by-campaign">广告系列名称（可以不填）</label><input type="text" id="pc-by-campaign" name="campaign" maxlength="80"><span class="pc-by-hint">不填时链接里用 Facebook 的动态参数，投放时自动换成真实的广告系列、广告组和广告名称。</span></p>';
+		echo '<p class="pc-by-hint">链接里带的是 Facebook 的动态参数：投放时自动换成这条广告所在的平台（Facebook / Instagram 等）、版位，以及广告系列、广告组、广告的 ID 和广告名称。不用手填，Facebook 和 Instagram 用同一条链接。</p>';
 		echo '<p class="pc-by-actions"><button type="submit" class="button button-primary">生成链接</button> <span class="pc-by-result" data-pc-by-link-result role="status"></span></p></form>';
 		echo '<div class="pc-by-copyrow" data-pc-by-link-out hidden><input type="text" readonly aria-label="投放链接" data-pc-by-link-url><button type="button" class="button" data-pc-by-copy="[data-pc-by-link-url]">复制</button></div>';
-		echo '<p class="pc-by-hint">把生成的链接粘贴到 Facebook 广告的“网址”一栏。同一条链接可以给多条广告用。</p>';
+		echo '<p class="pc-by-hint">把生成的链接粘贴到 Facebook 广告的“网址”一栏，同一条链接可以给多条广告用。广告名称请以素材编号开头（例如 <code>C0012_hook-lab_fmt-vid_angle-purity_lang-en_v1</code>），素材看板才能把广告对到素材上。</p>';
 	}
 
 	// ---------- 广告设置页面 ----------

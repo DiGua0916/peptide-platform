@@ -12,6 +12,7 @@ defined( 'ABSPATH' ) || exit;
 final class Plugin {
 
 	public static function boot(): void {
+		add_action( 'current_screen', array( self::class, 'hidden_page_title' ) );
 		Management_Host::register_hooks();
 		if ( ! class_exists( 'WooCommerce' ) ) {
 			add_action( 'admin_notices', array( self::class, 'render_missing_woocommerce_notice' ) );
@@ -227,5 +228,22 @@ final class Plugin {
 			'<div class="notice notice-error"><p>%s</p></div>',
 			esc_html__( 'Peptide Core requires WooCommerce to be installed and active.', 'peptide-core' )
 		);
+	}
+
+	/**
+	 * 父菜单为空的隐藏后台页，WordPress 算不出标题，admin-header.php 会 strip_tags(null)
+	 * 报 PHP 8.1 弃用提示。从注册信息里把页面标题补上。
+	 */
+	public static function hidden_page_title(): void {
+		global $title, $submenu, $plugin_page;
+		if ( ! empty( $title ) || empty( $plugin_page ) || empty( $submenu[''] ) ) {
+			return;
+		}
+		foreach ( (array) $submenu[''] as $item ) {
+			if ( isset( $item[2], $item[3] ) && $item[2] === $plugin_page ) {
+				$title = (string) $item[3]; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+				return;
+			}
+		}
 	}
 }

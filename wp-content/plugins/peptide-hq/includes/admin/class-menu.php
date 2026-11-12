@@ -24,6 +24,7 @@ final class Menu {
 	private const ACTIONS = array( 'pchq_site_refresh', 'pchq_site_rename', 'pchq_site_delete', 'pchq_site_retire', 'pchq_site_server', 'pchq_site_config', 'pchq_secret_regenerate', 'pchq_server_save', 'pchq_server_delete', 'pchq_login', 'pchq_alert_close' );
 
 	public static function register_hooks(): void {
+		add_action( 'current_screen', array( self::class, 'hidden_page_title' ) );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'dialogs' ), 1 );
 		add_filter( 'script_loader_src', array( self::class, 'wordpress_dialogs' ), 18 );
 		add_action( 'admin_menu', array( self::class, 'menu' ) );
@@ -466,5 +467,22 @@ final class Menu {
 		}
 		/* translators: %s: time difference, e.g. 3 hours */
 		return sprintf( __( '%s ago', 'peptide-hq' ), human_time_diff( $time ) );
+	}
+
+	/**
+	 * 父菜单为空的隐藏后台页，WordPress 算不出标题，admin-header.php 会 strip_tags(null)
+	 * 报 PHP 8.1 弃用提示。从注册信息里把页面标题补上。
+	 */
+	public static function hidden_page_title(): void {
+		global $title, $submenu, $plugin_page;
+		if ( ! empty( $title ) || empty( $plugin_page ) || empty( $submenu[''] ) ) {
+			return;
+		}
+		foreach ( (array) $submenu[''] as $item ) {
+			if ( isset( $item[2], $item[3] ) && $item[2] === $plugin_page ) {
+				$title = (string) $item[3]; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+				return;
+			}
+		}
 	}
 }
