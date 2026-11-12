@@ -705,12 +705,20 @@ Root installed only three existing Commerce sources for P09 collection products 
 
 | 钩子 | 签名 | 说明 |
 | --- | --- | --- |
-| `pc_series_apply_campaigns`（过滤器） | `( $result, array $items, int $ver, bool $dry_run )` | 用 `$items` 整体替换本店的系列活动。成功返回 `true` 或摘要数组；`$dry_run` 时不写入，返回差异数组；失败返回 `WP_Error`。保持返回 `null` = 没有模块接手，店铺不记 `campaign_ver`，总后台下次还会再发 |
+| `pc_series_apply_campaigns`（过滤器） | `( $result, array $items, int $ver, bool $dry_run, int $series_id )` | 用 `$items` 整体替换本店的系列活动。成功返回 `true` 或摘要数组；`$dry_run` 时不写入，返回差异数组；失败返回 `WP_Error`。保持返回 `null` = 没有模块接手，店铺不记 `campaign_ver`，总后台下次还会再发 |
 | `pc_series_export_campaigns`（过滤器） | `( array $items )` | 在母版店导出当前活动，返回上面外形的数组。总后台“从母版店导入活动”时调用 |
 | `pc_series_snapshot`（过滤器） | `( array $snapshot )` | 同步前存快照：把恢复活动需要的内容放进 `$snapshot['campaigns']` |
 | `pc_series_restore`（动作） | `( array $snapshot )` | 恢复快照时把 `$snapshot['campaigns']` 写回去 |
 
 `PeptideCore\Series_Sync::manages( 'campaign' )` 为 true 时活动已由系列接管，店铺后台不应再给创建入口（`'catalog'`、`'shipping'` 同理）。
+
+**给 F2 的答复（2026-11-12，对应 M4 一节“三、系列活动下发到店铺的约定”末尾的两个问题和字段差异）：**
+
+1. **`campaigns` 是不是每次全量下发？** 带了就是全量：`items` 是这个系列现在应该有的全部活动，店铺按它对齐（不在列表里的系列活动停用）。但不是每次同步都带：只有店铺已同步的 `campaign_ver` 比系列的旧时才带；没带 = 不动。同一个 `ver` 重复发来时 F3 直接跳过，不会再调你的钩子。母版店不发活动（活动就是从母版店导出的）。
+2. **商品键在各店是否唯一、一致？** 是。系列商品键就是 `catalog.products[].sku`，系列内唯一；商品同步后各店的商品都带 `_pc_series_sku = <这个键>`，各店一致。活动里引用商品请用这个键，店铺端用 `PeptideCore\Series_Sync::find_product( $key )` 换成本店的商品 ID（顺序：`_pc_series_sku` → `_pc_spu` → SKU → `slug:别名`，找不到返回 0），所以商品还没同步过的店也能按 SPU 找到。专辑请用**名称**引用（F3 同步商品时按名称建专辑，各店的别名不保证一致）。
+3. **字段对应**：F3 这边每条活动的外形是 `{ kind, key, active, config, ver }`。你那节写的 `id` → 用 `key`（同类型内不重复的小写代号，例如 `bf2026` 或 `12`）；`enabled` → `active`；`name / start / end` 请放进 `config`（`config` 原样保存和转发，F3 不看里面）；`ver` 是这一条最后一次改动时的活动版本号——内容没变的活动保留原来的 `ver`，可以据此“`ver` 没变就不动”。`kind` 已经把你那节的 `shipping_discount / gift / bundle` 加进了允许的类型（原来的 `ship_discount` 也保留）。
+4. **怎么接**：不用 F3 调 `Series_Campaigns::apply()`；请在你的类里挂过滤器，例如 `add_filter( 'pc_series_apply_campaigns', static fn( $result, array $items, int $ver, bool $dry_run, int $series_id ) => $dry_run ? Series_Campaigns::diff( $items, $series_id ) : Series_Campaigns::apply( $items, $series_id ), 10, 5 );`。回调时店铺的 `peptide_core_series` 还没写入，系列编号以第 5 个参数为准。返回数组时 F3 原样带回总后台（放在返回的 `applied.campaigns`）；每条结果里 `status` 是 `conflict` 或 `error` 的，总后台会在系列管理的店铺行里显示条数和第一条的 `message`。返回 `WP_Error` 时这次同步里已经做完的商品和运费照样记下，活动版本不记，总后台按 1 / 5 / 30 分钟重试。
+5. **总后台这头**：活动在母版店里配，平台所有者在“系列管理 → 从母版店导入”勾选“营销活动”时，F3 调母版店的 `/hq/catalog-export`，那里会 `apply_filters( 'pc_series_export_campaigns', array() )`，你返回当前活动的列表即可（同样的外形，不用带 `ver`）。返回空数组时不建版本、不下发。
 
 **返回**：
 
@@ -815,6 +823,14 @@ Root installed only three existing Commerce sources for P09 collection products 
 - `PeptideHq\Refunds::mark( $site_id, $store_order_id, $amount_cents, $refunded_on, $note, $user_id )`、`::void( $refund_id, $user_id )`。金额必须大于 0，且不超过订单金额减已标记的退款。
 - 每次标记或撤销后：重算 `pchq_orders.refunded_cents / refund_state` → 重算 `pchq_daily` 净额 → 回写店铺；店铺连不上时记为待回写，每 10 分钟重试。
 - 已回传给广告平台的购买事件不撤回。
+
+### 2026-11-12：主线新变化对订单上报的影响（F3 已核对并实测）
+
+- **订单号**：新订单显示成支付方订单号（`hang-数字`，订单元 `_pc_pp_ref`，`Order_Number`），老订单还是数字。上报里 `store_order_id` 一直是 WooCommerce 内部的订单编号（退款回写、核对都用它，不会变）；`order_number` 是显示用的订单号（`$order->get_order_number()`），所以新订单报上来就是 `hang-…`。同一张单重新付款换了 `hang-` 号，摘要的指纹跟着变，付款成功或每小时补报时会重新上报，总后台那一行的订单号随之更新。总后台订单页列表和详情同时显示两个号；搜索框输入 `hang-161188301`（不分大小写）、`#11843` 或 `11843` 都能找到。
+- **测试单标记**：`Test_Orders::is_test_order()`（订单元 `_pc_test_order = 1`，包括店主事后手工标的）和 `Overview::is_test_order()`（测试付款方式、含演示商品）任一成立就报 `is_test = true`，总后台合计和报表都不算。事后给已上报的订单打标记：订单保存后 1 小时内由补报任务更新；如果是直接改数据库（订单的修改时间没变），重新运行一次 `wp peptide orders backfill` 即可，它会比较每张已付款订单的指纹。
+- **手动订单和付款链接**（`Manual_Orders`）：顾客走的是正常结账，订单多一个订单元 `_pc_manual_link`，状态变化和付款与普通订单一样，照常上报，不需要特殊处理（冒烟测试里有一条）。
+- **物流**：主线的运单号和承运商存在 WooCommerce 自带的“订单履约（Fulfillments）”里（`Shipping_Tracking`），顾客的物流球（`Track_Widget`）从那里读；总后台的 `Track17` / `Fedex` 只按运单号查物流状态并缓存，不往订单上写东西。开发文档里预留的订单元 `_pc_shipment` 和接口 `/hq/shipment` **F3 没有实现，也不再需要**：以后发货表对接（OR-01）回填运单号，请直接写成订单的一条履约记录，不要另建 `_pc_shipment`。`pchq_orders` 里不存运单号。
+- **客户编号**（日常会话 11-12）：店铺订单上有 `_pc_customer_id`，并单独报给总后台 `/customers/link`。F3 的订单上报仍然只带 `email_hash`，两者互不影响；以后报表要按顾客合并时，可以在上报里加一个可选的 `customer_id`（需要 `pchq_orders` 加一列）。
 
 ### 报表口径（HQ-13）
 

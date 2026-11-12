@@ -173,6 +173,15 @@ $check( 'payload has every product and the new price', $n === count( $payload['p
 $check( 'shipping saved once', 1 === Series::save_shipping( $default, Series::default_shipping() ) && 1 === Series::save_shipping( $default, Series::default_shipping() ) && 2 === Series::save_shipping( $default, Series::default_shipping( 500 ) ) );
 $check( 'the other series has no shipping', 0 === Series::get( $second )['shipping_ver'] );
 
+// ---- 4b. 系列活动的存放：空的不建版本；内容没变不加版本；没改的那条保留自己的版本号 ----
+$camp = static fn( string $code, int $off ): array => array( 'kind' => 'coupon', 'key' => strtolower( $code ), 'active' => true, 'config' => array( 'code' => $code, 'percent' => $off ) );
+$check( 'an empty first list creates no version', 0 === PeptideHq\Series_Campaigns::replace( $second, array() ) && 0 === Series::get( $second )['campaign_ver'] );
+$check( 'campaigns saved', 1 === PeptideHq\Series_Campaigns::replace( $second, array( $camp( 'WELCOME10', 10 ), $camp( 'VIP20', 20 ) ) ) && 1 === PeptideHq\Series_Campaigns::replace( $second, array( $camp( 'VIP20', 20 ), $camp( 'WELCOME10', 10 ) ) ) );
+$check( 'one changed campaign bumps the list version', 2 === PeptideHq\Series_Campaigns::replace( $second, array( $camp( 'WELCOME10', 15 ), $camp( 'VIP20', 20 ) ) ) );
+$sent_items = array_column( PeptideHq\Series_Campaigns::payload( $second )['items'], 'ver', 'key' );
+$check( 'the unchanged campaign keeps its own version', array( 'vip20' => 1, 'welcome10' => 2 ) === $sent_items && 2 === PeptideHq\Series_Campaigns::payload( $second )['ver'], $sent_items );
+$check( 'invalid campaign refused as a whole', is_wp_error( PeptideHq\Series_Campaigns::replace( $second, array( $camp( 'OK', 1 ), array( 'kind' => 'raffle', 'key' => 'x', 'config' => array() ) ) ) ) && 2 === Series::get( $second )['campaign_ver'] );
+
 // ---- 5. 推送：没确认差异不发商品；母版店只发价格；别的系列的店收不到 ----
 $last = static function () use ( &$store ) {
 	return end( $store['calls'] );

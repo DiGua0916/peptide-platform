@@ -23,24 +23,33 @@
 4. **图片**：按内容哈希去重，复制出来的店里已有的同名同内容文件直接复用；只从母版店域名下载。某张图片下载失败不拦价格和其他内容，原因会显示在系列管理的店铺行里。
 5. **改一个系列的价格只影响这个系列**：版本号、推送队列、落后判断都按系列算（测试 `m3-series-catalog-pure.php` 覆盖）。
 
-## 实际运行过的检查
+## 实际运行过的检查（2026-11-12 更新）
 
-- `python3 tools/catalog/series_diff_report.py`：用两份样例报告跑过，输出正确；错误文件和无参数时的退出码正确。
-- 这台机器（macOS）**没有 PHP**，下面三个测试已写、逐行对照代码推演过，但**没有运行**：
-  - `wp-content/plugins/peptide-hq/tests/m3-series-pure.php`（升级可重复执行、“系列 1”回填、推送计划、重试）
-  - `wp-content/plugins/peptide-hq/tests/m3-series-catalog-pure.php`（导入、改价只影响本系列、确认前不下发、母版店只收价格）
-  - `wp-content/plugins/peptide-core/tests/m3-series-sync-pure.php`（同步幂等、商品校验、差异报告、配对、价格和运费换算、快照选择）
-- 没有 PHP 语法检查。只用自己写的脚本查过括号配对、明显漏分号、静态方法和常量引用是否存在。
-- 另请两个独立的只读复查（总后台端、店铺端各一个）逐行读过全部新代码和测试：没有发现语法错误或会直接报错的地方，五个测试逐条推演没有预期失败项；指出的逻辑问题（共 20 多条）已修，见提交 `88b6da1` 和之后一个提交。这仍然是“读”，不是“跑”。
-- 没有在装了 WooCommerce 的环境里跑过：写商品、下载图片、写运费方案、快照恢复、后台页面渲染都还没实测。
+本机有了原生 PHP 8.3.32、WP-CLI 和 localwp 的站点副本，之前“只做过静态检查”的结论作废，下面是实际运行的结果：
+
+| 检查 | 环境 | 结果 |
+| --- | --- | --- |
+| `php -l` | F3 名下全部 PHP 文件 | 无语法错误 |
+| `peptide-hq/tests/m3-series-pure.php`（64 项） | 本机 PHP，纯逻辑 | 通过 |
+| `peptide-hq/tests/m3-series-catalog-pure.php`（35 项） | 同上 | 通过 |
+| `peptide-core/tests/m3-series-sync-pure.php`（58 项） | 同上 | 通过 |
+| `peptide-core/tests/m3-series-sync-smoke.php`（36 项） | 本机店铺副本：WooCommerce 11.2.1、HPOS、SQLite、5 个商品。导出 → 和自己比无差异 → 同步 → 重复同步跳过 → 改价 / 新增 / 移出 → 写入后再比无差异 → 两级恢复 → 母版店只收价格 | 通过 |
+| `peptide-hq/tests/m3-m10-hq-smoke.php`（79 项，M3 和 M10 共用） | 本机总后台副本（SQLite，30 条店铺记录），用店铺副本导出的真目录：升级重复执行两遍表结构和数据不变、系列和归属、主商品库、运费、活动存放、推送和确认、页面渲染 | 通过 |
+| `wp peptide series export / diff / status / restore` | 本机店铺副本 | 能运行，输出正确 |
+| `tools/catalog/series_diff_report.py` | 用真的差异报告文件 | 输出正确 |
+
+实际跑出来并修掉的问题：系列运费内容没变时也会加版本号（存库再读出后 `1000.0` 变成 `1000`，数组比较误判成“改过”，每次保存都让各店重新同步）——之前两轮人工复查都没看出来。另有两处是测试自己的问题（全局变量重名、闭包按值捕获）。
+
+仍然没有验证的（要靠 F1 的沙盒，步骤见 `docs/handoffs/m3-m10-sandbox-rehearsal.md`）：MySQL / MariaDB 上的升级和写入（本机是 SQLite 翻译层）；总后台和店铺之间真的 HTTP 调用和签名；定时任务真的触发；店铺后台里的只读保护（命令行不受保护限制，冒烟测试测不到）；首次同步时下载图片；商品多时的耗时。
 
 ## 还没做 / 要别人配合
 
 | 事项 | 谁 |
 | --- | --- |
-| 在有 PHP 的环境跑上面三个测试；在脱敏快照上演练升级（重复执行两遍对比）、导出、差异报告、同步、恢复 | F1 提供环境，F3 修问题 |
+| 在沙盒（MySQL、真的总后台 ↔ 店铺连接）上演练升级、导出、差异报告、同步、恢复：步骤和通过标准见 `docs/handoffs/m3-m10-sandbox-rehearsal.md` | F1 执行，F3 修问题 |
+| 各店的差异报告出来后交平台所有者确认；确认之前不开启任何店的同步 | F1 出报告，平台所有者确认 |
 | 开店页面加“系列”必选下拉和“投手”输入，提交时调用 `Series::reserve()` | 日常会话（见 CONTRACT） |
-| 活动的四个钩子（应用、导出、快照、恢复） | F2（见 CONTRACT） |
+| 活动的四个钩子（应用、导出、快照、恢复）；F2 的两个问题和字段差异已在 CONTRACT “M3” 一节答复（2026-11-12） | F2 |
 | 功能键 `series.sync / series.catalog / series.shipping`、巡检类型 `series_out_of_sync` 登记；数据表脱敏登记 | F1 |
 | 发布时抬高 `PEPTIDE_HQ_VERSION`、`PEPTIDE_CORE_VERSION`（入口文件不归 F3） | F1 |
 | 新页面 `pchq-series` 加进 `Menu::navigation_policy()`（不加也能用，只是整页刷新） | 日常会话，可选 |

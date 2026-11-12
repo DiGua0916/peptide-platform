@@ -296,7 +296,8 @@ final class Series_Sync {
 		if ( $due['campaigns'] ) {
 			$items  = array_values( array_filter( (array) ( $p['campaigns']['items'] ?? array() ), 'is_array' ) );
 			$ver    = (int) $p['campaigns']['ver'];
-			$result = apply_filters( 'pc_series_apply_campaigns', null, $items, $ver, $dry );
+			// 第 5 个参数是这次请求的系列编号（这时还没写进 peptide_core_series，不能用 series_id() 读）。
+			$result = apply_filters( 'pc_series_apply_campaigns', null, $items, $ver, $dry, $state['series_id'] );
 			if ( is_wp_error( $result ) ) {
 				return self::fail( $result, $state, $dry );
 			}
@@ -1116,6 +1117,35 @@ final class Series_Sync {
 			$out[]           = $p;
 		}
 		return $out;
+	}
+
+	/**
+	 * 系列商品键在本店对应的商品 ID（给营销模块把活动里的商品键换成本店商品用）。找不到时为 0。
+	 * 顺序和同步时配对商品一样：_pc_series_sku → _pc_spu → SKU → “slug:别名”。
+	 */
+	public static function find_product( string $series_sku ): int {
+		global $wpdb;
+		$series_sku = trim( $series_sku );
+		if ( '' === $series_sku ) {
+			return 0;
+		}
+		foreach ( array( self::PRODUCT_SKU, '_pc_spu', '_sku' ) as $meta_key ) {
+			$id = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->prepare(
+					"SELECT pm.post_id FROM {$wpdb->postmeta} pm JOIN {$wpdb->posts} p ON p.ID = pm.post_id WHERE pm.meta_key = %s AND pm.meta_value = %s AND p.post_type = 'product' AND p.post_status <> 'trash' ORDER BY pm.post_id ASC LIMIT 1",
+					$meta_key,
+					$series_sku
+				)
+			);
+			if ( $id > 0 ) {
+				return $id;
+			}
+		}
+		if ( str_starts_with( $series_sku, 'slug:' ) ) {
+			$post = get_page_by_path( substr( $series_sku, 5 ), OBJECT, 'product' );
+			return $post ? (int) $post->ID : 0;
+		}
+		return 0;
 	}
 
 	/** 母版店导出：商品（只要已发布的）、通用运费方案、活动（由营销模块提供）。 */

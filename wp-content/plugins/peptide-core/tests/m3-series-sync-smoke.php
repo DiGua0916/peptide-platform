@@ -57,6 +57,8 @@ $export = S::export_catalog();
 $check( 'export lists every published product', count( $export['products'] ) === $count_before && $count_before > 0, array( count( $export['products'] ), $count_before ) );
 $check( 'export is valid JSON and a valid catalog', is_string( wp_json_encode( $export ) ) && is_array( S::clean_catalog( array( 'ver' => 1, 'source_host' => $export['source_host'], 'products' => $export['products'] ) ) ) );
 $products = json_decode( (string) wp_json_encode( $export['products'] ), true ); // 和总后台转一手之后的样子一致。
+$by_key   = array_column( S::export_local(), 'id', 'sku' );
+$check( 'series product keys resolve to the local product ids', count( $products ) === count( array_filter( $products, static fn( $p ) => (int) ( $by_key[ $p['sku'] ] ?? -1 ) === S::find_product( $p['sku'] ) ) ) && 0 === S::find_product( 'NO-SUCH-KEY' ) );
 
 $head    = S::clean_header( array( 'series_id' => 7, 'slug' => 'series-7', 'name' => 'Smoke series' ) );
 $catalog = static fn( int $ver, array $list ): array => array( 'ver' => $ver, 'source_host' => $export['source_host'], 'products' => $list );
