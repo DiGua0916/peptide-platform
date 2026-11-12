@@ -50,3 +50,9 @@ git mv tools/deploy-store-plugin-files.sh tools/deployment/emergency/deploy-stor
 日常会话现在的习惯是“改了哪些文件就推哪些文件”，而且经常改 `class-plugin.php`（每加一个新类都要改）。所以只要模块分支先进了主线，它下一次按文件推 `class-plugin.php` 就会出事——和 11-10 那次全站 500 是同一类事故。除了这三个入口，模块分支改过的其他现有文件也可能依赖新文件，按文件推都不安全。
 
 结论：**先让所有人改用整包发布，再把模块分支合进主线。** 整包发布不存在“推了入口没推文件”的问题，而且沙盒那一步会先把这类错误拦住（11-13 演练一就是这种错误，5 秒发现、6 秒回滚）。
+
+### 补充：不止三个入口文件
+
+对合并候选做了一次全量比对（模块分支新增的 40 个类，对照它们改过的 59 个现有文件）：除了上面三个入口，还有大约 20 个现有文件里出现了没有“先确认类存在”保护的新类引用，例如 `class-promotions.php`、`class-product-offers.php`、`shipping/class-discounts.php`（用到 `Pricing\Runtime`）、`class-exit-intent.php`、`class-first-order-offer.php`（`Popups`）、`class-staff.php`、`class-capabilities.php`、`admin/class-staff-page.php`（`Staff_Buyer`）、`tracking/class-ingest.php`、`tracking/class-tracker.php`（`Funnel_Guard`、`Ad_Params`）、`admin/class-overview-page.php`（`Metrics`）。这些文件单独推上去而对应的新文件没推，轻则那个页面报错，重则每个请求都报错（追踪、促销是每个前台请求都会走到的）。
+
+所以规则不能只写“入口文件不许单推”：**模块进主线之后，任何按文件推都不安全，只能整包发。**
