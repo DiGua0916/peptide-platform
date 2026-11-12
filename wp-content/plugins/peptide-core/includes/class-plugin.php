@@ -93,6 +93,7 @@ final class Plugin {
 		Track_Widget::register_hooks();
 		Order_Number::register_hooks();
 		Stock_Range::register_hooks();
+		Customer_Id::register_hooks();
 		Ship_Preview::register_hooks();
 		Manual_Orders::register_hooks();
 		Topics::register_hooks();

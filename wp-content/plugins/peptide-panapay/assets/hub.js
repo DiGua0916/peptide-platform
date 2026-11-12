@@ -165,3 +165,24 @@
 		row.hidden = !open;
 	});
 }());
+
+/* 同一客户的多次付款：点“共 N 次付款”展开/收起（店主 2026-11-12） */
+(function () {
+	if (typeof document === 'undefined') return;
+	document.addEventListener('click', function (event) {
+		var button = event.target && event.target.closest ? event.target.closest('[data-pc-pay-group]') : null;
+		if (!button) return;
+		var key = button.getAttribute('data-pc-pay-group');
+		var open = button.getAttribute('aria-expanded') !== 'true';
+		button.setAttribute('aria-expanded', open ? 'true' : 'false');
+		document.querySelectorAll('tr[data-pc-pay-member="' + key + '"]').forEach(function (row) {
+			row.hidden = !open;
+			var next = row.nextElementSibling;
+			if (!open && next && next.classList.contains('pc-pay-detail-row')) {
+				next.hidden = true;
+				var t = row.querySelector('[data-pc-pay-detail]');
+				if (t) t.setAttribute('aria-expanded', 'false');
+			}
+		});
+	});
+}());

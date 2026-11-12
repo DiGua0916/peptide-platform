@@ -26,6 +26,7 @@ final class Plugin {
 		Ai::register_hooks();
 		Fedex::register_hooks();
 		Track17::register_hooks();
+		Customers::register_hooks();
 		if ( is_callable( array( Admin\Menu::class, 'register_login_hooks' ) ) ) {
 			Admin\Menu::register_login_hooks();
 		}
