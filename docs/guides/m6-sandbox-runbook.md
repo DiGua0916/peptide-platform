@@ -1,6 +1,6 @@
 # M6 / M7：沙盒对账和影子档观察（给 F1）
 
-2026-11-12 · F4「数据」会话。分支 `claude/m6-metrics-db7036`（已含主线 `976c1fa`）。
+2026-11-12 · F4「数据」会话。分支 `claude/m6-metrics-db7036`（已含主线 `7c6d2d3`）。
 现有的表结构没有改；新增一张表 `{prefix}pc_track_ads`（访问的广告参数，没有顾客资料，自己的版本选项 `peptide_core_track_ads_db`），部署后第一次请求时自动建，建好后 `wp option get peptide_core_track_ads_db` 是 `1`。开关 `peptide_core_m6_mode` 默认 `off`。下面每一步都写了命令和通过标准，做完把输出贴回共享笔记，F4 来读。
 
 命令都在沙盒那家店的 WordPress 目录里执行。
@@ -122,7 +122,7 @@ wp eval 'print_r( PeptideCore\Tracking\Funnel_Guard::counters( 1 ) ); print_r( P
 
 这些都是用例没跟上后来的改动，下一批我来修；修好之前请保持跳过。
 
-默认套件里你标成跳过、归 F4 的 5 个（`data-product-user-ratios-node`、`data-native-search-pure`、`data-product-action-rankings-pure`、`tracking-product-actions-pure`、`experiment-data-pure`）在这条分支上都已经修好，合并之后可以把 status 改回去。这条分支上默认套件是 61 通过 / 3 失败，剩下 3 个是 `mail-source-observations`（日常会话）、`visitor-intents`、`visitor-product-actions`（F5 说它那条分支上已修）。
+默认套件里你标成跳过、归 F4 的 5 个（`data-product-user-ratios-node`、`data-native-search-pure`、`data-product-action-rankings-pure`、`tracking-product-actions-pure`、`experiment-data-pure`）在这条分支上都已经修好，合并之后可以把 status 改回去。这条分支上默认套件是 64 通过 / 3 失败，剩下 3 个是 `mail-source-observations`（日常会话）、`visitor-intents`、`visitor-product-actions`（F5 说它那条分支上已修）。
 
 ## 6. 按广告拆分和同屏数据页
 
