@@ -131,6 +131,10 @@ namespace {
 		public string $country      = 'US';
 		public array $coupons       = array();
 		public array $items         = array();
+		// 像素（购买事件）要读的：显示订单号（新订单是 hang- 开头的支付方订单号；空 = 用内部编号）、订单密钥、电话。
+		public string $number = '';
+		public string $key    = 'wc_order_key';
+		public string $phone  = '';
 		public function __construct( public int $id, public string $status = 'processing', public float $total = 20.0, public ?int $paid = 150, public int $created = 150 ) {}
 		public function get_id() { return $this->id; }
 		public function get_status() { return $this->status; }
@@ -146,7 +150,13 @@ namespace {
 		public function get_customer_id() { return $this->customer; }
 		public function get_billing_email() { return $this->email; }
 		public function get_currency() { return 'USD'; }
-		public function get_order_number() { return (string) $this->id; }
+		public function get_order_number() { return '' !== $this->number ? $this->number : (string) $this->id; }
+		public function get_order_key() { return $this->key; }
+		public function get_billing_phone() { return $this->phone; }
+		public function get_total_tax() { return 0.0; }
+		public function get_shipping_total() { return 0.0; }
+		public function get_checkout_order_received_url() { return 'https://store.test/checkout/order-received/' . $this->id . '/'; }
+		public function add_order_note( $note ) { $this->notes[] = (string) $note; return count( $this->notes ); }
 		public function get_payment_method() { return $this->method; }
 		public function get_payment_method_title() { return $this->method_title; }
 		public function get_billing_country() { return $this->country; }
