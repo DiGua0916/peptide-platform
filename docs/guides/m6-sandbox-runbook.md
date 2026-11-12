@@ -1,6 +1,6 @@
 # M6 / M7：沙盒对账和影子档观察（给 F1）
 
-2026-11-12（下午更新了第 0、5、6 节；F1 第一次在沙盒跑完之后又补了第 3、6 节里不用浏览器的做法，见文末“F1 第一次跑的结果”）· F4「数据」会话。分支 `claude/m6-metrics-db7036`（已含主线 `7c6d2d3`）。
+2026-11-12（下午更新了第 0、5、6 节；F1 第一次在沙盒跑完之后又补了第 3、6 节里不用浏览器的做法，见文末“F1 第一次跑的结果”；11-12 晚加了第 8、9 节和“F1 第二次跑的结果”）· F4「数据」会话。分支 `claude/m6-metrics-db7036`（已含主线 `61ce4f8`）。
 现有的表结构没有改；新增一张表 `{prefix}pc_track_ads`（访问的广告参数，没有顾客资料，自己的版本选项 `peptide_core_track_ads_db`），部署后第一次请求时自动建，建好后 `wp option get peptide_core_track_ads_db` 是 `1`。开关 `peptide_core_m6_mode` 默认 `off`。下面每一步都写了命令和通过标准，做完把输出贴回共享笔记，F4 来读。
 
 命令都在沙盒那家店的 WordPress 目录里执行。
@@ -88,7 +88,7 @@ wp eval 'print_r( PeptideCore\Data\Metrics_Switch::log() ); print_r( PeptideCore
 | `overview.totals`、`operations.kpis` | 概览页、运营数据的合计 | 订单数、销售额：晚付款的订单从下单那天挪到付款那天；转化率变小（一人多单只算一人，没有填地址记录的付款不算）；漏斗后四层 |
 | `overview.recovery` | 概览页的弃单激活 | 数据源不同（邮件序列表 → 弃单列表），两个数本来就不一样 |
 | `reports.paid_orders` | 各报表用的订单 | 只在旧口径或只在新口径里的订单号：下单和付款不在同一个时间段的订单；已退款但付过款的订单 |
-| `reports.conversion` | 分组转化率 | 有顾客一人买了多单的那几组变小 |
+| `reports.conversion` | 分组转化率 | 变小的那几组：有顾客一人买了多单；或者组里有订单的访问不算付款访客（没有填地址的记录，或者那次访问不在这个时间段里） |
 | `reports.visitor_funnel` | 带分组的八层漏斗后四层 | “支付成功”变少（没有填地址记录的付款）；“添加物流 / 添加支付”可能变多（付了款的都算） |
 | `reports.test_order` | 测试单规则 | **应该没有记录** |
 
@@ -210,6 +210,48 @@ wp eval-file wp-content/plugins/peptide-core/tests/m7-pixel-acceptance-smoke.php
 
 （没配像素时应该报告一个 Facebook 像素都没填；配了但外网被拦时报告“未通（HTTP 0）”。两种都算正常，出现 PHP 报错才是问题。本地拷贝上跑出来是后一种。）
 
+## 8. 商品“看过 / 已加购”接口（FE-03）
+
+接口 `GET /wp-json/peptide/v1/product-activity?product_id=<商品 ID>` 由按店开关 `pc_product_activity` 控制，默认关，关着时一律 404。约定和实现的出入见 `docs/CONTRACT.md`「M6 / M7」第 8 小节。
+
+```bash
+wp eval-file wp-content/plugins/peptide-core/tests/m6-product-activity-smoke.php run
+```
+
+它临时建一个商品，让 7 位访客通过事件接收接口“看”这件商品、其中 6 位用真正的购物车加购，第 7 位再下一张全“1”的测试单，然后从公开接口把数字读出来，核对：读数（7 / 6，下过测试单的访客去掉之后 6 / 5）、低于下限给 0、开关关着是 404、不存在的商品是 404、缓存头、响应里只有约定的六个字段。结束时删掉访客、订单和临时商品。开关和下限用这一次运行里的过滤器设定，选项不改。通过标准：退出码 0，最后一行是“结果：通过（20 项检查）”。不带 `run` 只打印说明。
+
+想从外面看一眼（可选）：开关关着时，下面这条应该是 404、正文里没有数字（把地址换成沙盒店铺的地址，商品编号换成一个已发布的商品）：
+
+```bash
+curl -s -i 'https://<沙盒店铺>/wp-json/peptide/v1/product-activity?product_id=<商品 ID>'
+```
+
+## 9. 八步漏斗回放（不用浏览器，给 critical-path 用）
+
+```bash
+wp eval-file wp-content/plugins/peptide-core/tests/m6-funnel-replay-smoke.php run
+```
+
+它把一次完整购买按顺序重放一遍，每走一步读一次 `Data\Metrics::funnel()`（今天），核对这一步比运行前正好多一个访客、后面的步骤还是 0：
+
+| 步骤 | 怎么走的 | 走完之后访问的阶段 |
+| --- | --- | --- |
+| 1 访问、2 看商品 | 浏览器事件 `page_view`、`product_view` → `POST /peptide/v1/track/events` | 0、1 |
+| 3 加购 | 真正的购物车 `WC()->cart->add_to_cart()`，服务端自己记 `add_to_cart` | 2 |
+| 4 发起结账、5 填地址、6 选物流、7 选支付 | 浏览器事件 `checkout_view`、`checkout_address_completed`、`checkout_shipping_selected`、`checkout_payment_selected` → 同一个接口 | 3 |
+| 下单 | 建订单，调追踪模块挂在 WooCommerce 下单钩子上的处理函数 | 4 |
+| 8 支付成功 | WooCommerce 的 `payment_complete()` | 5 |
+
+接着是反例 B：另一位访客走到“发起结账”之后**不填地址**，直接选物流、选支付、下单、付款。核对：漏斗的后四步一个都不多；订单号照样挂在访问上、付款事件照样记下、订单数和销售额照算（两张订单都算）；开关按 `on` 时这次访问停在阶段 3，并记两次异常（下单一次、付款一次）。最后是 C：B 的填地址事件晚到，事件一到就补上——B 进到后四步、访问到阶段 5、异常记为“已补上”。
+
+- 默认按新规则跑（这一次运行里用过滤器把开关当成 `on`，选项 `peptide_core_m6_mode` 不改）。命令最后可以再加 `shadow` 或 `off`：读数那一侧三档的期望值完全一样（`Data\Metrics::funnel()` 不看开关）；写入那一侧，`shadow` 和 `off` 下 B 的访问照旧推进到 5，`off` 下不记异常。
+- 会写入 2 位访客和 2 张订单（收件信息正常，邮箱是 `@example.test`；店里没有可用的简单商品时临时建一个），结束时全部删掉，漏斗异常计数恢复成运行前的值。这一次运行里邮件和对外请求一律拦下——付款完成会触发店里挂在它上面的其他动作。
+- 漏斗看的是“今天比运行前多了几个访客”，所以运行期间不能有真实访客进店；沙盒没有这个问题。
+- 通过标准：退出码 0，最后一行是“结果：通过（25 项检查）”。没通过时每一项会写出期望的八个数和实际的八个数。
+- 接进 critical-path：直接调上面这条命令、看退出码即可。两个冒烟用例都要带上同目录的 `m6-smoke-fixtures.php`（访客回放的几个函数在里面）。
+
+我这边在本地拷贝（SQLite）上跑过：`on`、`shadow`、`off` 三种设定都是 25 项全过；故意把读数规则改坏（不再要求填地址）时 4 项没过，把写入规则改坏（没有填地址也推进）时 1 项没过，两次都照样清理干净。**MySQL 上还没跑过。**
+
 ## F1 第一次跑的结果（2026-11-12，合并候选里的 F4 是 `6fa1907`）
 
 记录在 F1 分支的 `docs/handoffs/m1-sandbox-acceptance-all-2026-11-12.md`。第 0、1、2、3、7 步通过；第 4 步（可选）没跑；第 5 步的 12 个冒烟用例那时还没修，等下一次。沙盒的数据是 11-10 的 s0010 快照加 1 张测试订单，所以这次只说明“能跑、结果自洽”，对账本身没有实际意义，要等更真实的快照。
@@ -225,3 +267,13 @@ wp eval-file wp-content/plugins/peptide-core/tests/m7-pixel-acceptance-smoke.php
 | 7 像素 | 补发任务执行成功；验收报告“还没有保存 Facebook 像素” | 符合预期 |
 
 下一次（F4 分支头 `ba93f99` 之后）请跑：第 3 节的新命令、第 5 节的 12 个冒烟用例、第 6 节的新用例。其余步骤数据没换的话不用重跑。
+
+## F1 第二次跑的结果（2026-11-12，候选 `c5fb1d8`，含 F4 `400db8d`）
+
+记录在 F1 分支的 `docs/handoffs/m1-sandbox-acceptance-all-2026-11-12b.md`。对账、三档冒烟、影子档（第 3 节的新命令，36 次全部 200）、广告参数入库（`m6-ad-params-smoke.php`，17 项检查）全部通过；像素验收仍是“还没有保存 Facebook 像素”；`smoke-data-apps` 在候选上 21 / 0。沙盒的数据没有换，结论仍然只是“能跑、结果自洽”。
+
+影子档日志的摘要：比较了 `reports.paid_orders` 48 次、`operations.kpis` 15 次、`reports.conversion` 4 次；有差异的是 `operations.kpis` 4 次、`reports.conversion` 4 次，共 3 条记录；`Funnel_Guard::counters( 7 )` 为空。
+
+- `operations.kpis`、`reports.conversion` 有差异都在第 3 节表里的说明之内：沙盒那张测试订单没有带填地址记录的访问，新口径不算它是付款访客，所以转化率变小。
+- 摘要里没有 `overview.totals`、`overview.recovery` 两项。同一条命令在本地拷贝上这两项各记 3 次（概览页的接口每个时间段调一次）。可能只是摘要没列全；**下一次请把 `Metrics_Switch::log()` 的原文存一份到共享笔记**，我核对一下概览页在沙盒上有没有走到对账。
+- critical-path 里“8 步漏斗顺序”：第 9 节的回放夹具就是给它的。

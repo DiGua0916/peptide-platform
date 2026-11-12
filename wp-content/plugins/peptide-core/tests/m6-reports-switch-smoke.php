@@ -141,11 +141,20 @@ foreach ( $m6s_presets as $m6s_preset ) {
 			if ( '' !== $m6s_db ) {
 				$m6s_fail[] = "{$m6s_preset} / {$m6s_name} / {$m6s_mode}：数据库报错 " . substr( $m6s_db, 0, 200 );
 			}
+			if ( '概览页' === $m6s_name && 200 === $m6s_status ) {
+				// 概览页的接口有 30 秒缓存（关着时一份，其余每档各一份）。刚有别的用例改过订单或访客时，
+				// 某一档的缓存里还是半分钟前的数字，和另一档现算的对不上，会误报“影子档和关着时不一样”。
+				// 所以状态码看接口，拿来比较的数字不走缓存、直接现算。
+				Metrics::flush();
+				Metrics_Overlay::flush();
+				$m6s_out[ $m6s_mode ][ $m6s_name ] = \PeptideCore\Admin\Overview_Page::data( $m6s_preset );
+			}
 		}
 		// 这一档记到的对账结果：只留着打印，不写进日志。
 		foreach ( Metrics_Switch::discard_pending() as $m6s_item ) {
 			if ( 'shadow' === $m6s_mode && $m6s_item['diffs'] ) {
-				$m6s_diffs[ $m6s_preset ][ $m6s_item['metric'] ][] = $m6s_item;
+				// 同一处差异只留一条（概览页接口算一次、上面现算又一次，记到的是同一条）。
+				$m6s_diffs[ $m6s_preset ][ $m6s_item['metric'] ][ md5( (string) wp_json_encode( array( $m6s_item['context'], $m6s_item['diffs'] ) ) ) ] = $m6s_item;
 			}
 		}
 	}
@@ -204,7 +213,7 @@ foreach ( $m6s_presets as $m6s_preset ) {
 			foreach ( array_slice( $m6s_last['diffs'], 0, 6 ) as $m6s_diff ) {
 				$m6s_parts[] = $m6s_diff['path'] . ' ' . wp_json_encode( $m6s_diff['legacy'] ) . ' → ' . wp_json_encode( $m6s_diff['metrics'] );
 			}
-			$m6s_say( sprintf( '    %s（%d 次）：%s', $m6s_metric, count( $m6s_items ), implode( '；', $m6s_parts ) ) );
+			$m6s_say( sprintf( '    %s（%d 处）：%s', $m6s_metric, count( $m6s_items ), implode( '；', $m6s_parts ) ) );
 		}
 	}
 }

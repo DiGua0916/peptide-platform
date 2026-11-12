@@ -750,6 +750,7 @@
     {"name": "m6-ad-params-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-ad-params-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
     {"name": "m6-data-sources-ads", "language": "node", "path": "wp-content/plugins/peptide-core/tests/m6-data-sources-ads.cjs", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
     {"name": "m6-data-stacked", "language": "node", "path": "wp-content/plugins/peptide-core/tests/m6-data-stacked.cjs", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
-    {"name": "customer-checkout-observer", "language": "node", "path": "wp-content/plugins/peptide-core/tests/customer-checkout-observer.cjs", "core": true, "node_test": false, "status": "module-gate", "module": "M6"}
+    {"name": "customer-checkout-observer", "language": "node", "path": "wp-content/plugins/peptide-core/tests/customer-checkout-observer.cjs", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
+    {"name": "m6-product-activity-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-product-activity-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"}
   ]
 }

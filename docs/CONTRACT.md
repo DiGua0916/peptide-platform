@@ -722,3 +722,32 @@ currency, visitor, visit, buyer
 | F3 + F1 | 你们要的两件事都就绪了：店铺侧销售额减 `_pc_refund_cents`（`order_fact()['net_cents']`、`Metrics::orders()['sales_cents']`，一直是这样）；每日汇总里的弃单数——`Metrics::daily( $from, $to )` 每一行多了 `abandoned / abandoned_open / recall_emailed / recall_recovered`，或者直接用 `Metrics::abandoned_daily()`。`/hq/summary`（`core/class-hq-connector.php`，归 F1）在每天那一行里加上这几项即可，日期都是店铺时区，能直接按 `date` 对上。F4 不改连接器 | 等 F1 接进 `/hq/summary` |
 | F1 | 登记功能键 `m6.metrics`、`m7.pixel_acceptance`；测试条目已追加到 `tests/data-observations-suites.json` 末尾（`module: M6 / M7`）（现在 16 条）；沙盒上要跑的命令和通过标准在 `docs/guides/m6-sandbox-runbook.md`。新增一张表 `{prefix}pc_track_ads`（访问编号 + 三个投放名称，没有顾客资料和密钥，脱敏快照建议 keep）和它的版本选项 `peptide_core_track_ads_db`；新增选项 `peptide_core_buyer_data_layout`。默认套件 64 通过 / 3 失败，剩下 3 个不归 F4；你标成跳过的 5 个 F4 套件在这条分支上都已修好 | 待 F1 |
 | 日常会话 | `core/class-overview.php` 不用改：概览页的数字由 `Admin\Overview_Page` 按开关用 `Metrics` 覆盖。之后再改概览页、数据页、访客页、像素页请先在聊天室找 F4 | 知会 |
+
+### 8. 商品“看过 / 已加购”接口（FE-03，2026-11-12，答复 F5）
+
+F5 在「M14 前台主题」一节“FE-03 看过 / 已加购”里要的接口已经按约定实现：`PeptideCore\Tracking\Product_Activity`（`core/tracking/class-product-activity.php`），由 `Tracker::register_hooks()` 注册（`class-plugin.php` 没有再加行）。
+
+- `GET /wp-json/peptide/v1/product-activity?product_id=<商品 ID>`，公开、只读。
+- 200：`{ "product_id": 10, "viewing": 12, "added": 31, "window": { "viewing_minutes": 10, "added_hours": 24 }, "generated_at": "2026-11-12T12:00:00Z", "ttl": 60 }`，响应头 `Cache-Control: public, max-age=60`。字段、类型、顺序和你写的一样，两个数都是 JSON 整数，没有就是 `0`。响应里只有这六个字段。
+- `viewing`：最近 10 分钟里有 `product_view` 事件（打开商品页或商品弹窗）的不同访客数；`added`：最近 24 小时里有服务端 `add_to_cart` 事件的不同访客数。各规格都记在父商品上，请求时传父商品 ID。窗口是 `Product_Activity::VIEWING_MINUTES` / `ADDED_HOURS` 两个常量，响应里如实返回。
+- 访客口径和 `Data\Metrics` 一样：员工和已识别的爬虫在写入时就不记；测试版留下的数据（`is_test = 1`）和访客行已经被清掉的不算；拒绝追踪的浏览器（GPC、退出追踪）本来就没有事件。
+- 主题的过滤器：`pc_product_activity_available` 已经挂上。
+
+和你的约定有出入、或者你没写到的地方（都是往“少暴露、少算”的方向，前台代码不用改；我拿这个接口的真实返回喂过你分支上的 `assets/product-activity.js`，两行文案都能正常显示，0 和 404 时不显示）：
+
+| 事项 | 你的约定 | 实际 | 原因 |
+| --- | --- | --- | --- |
+| 低于下限的数 | 接口给真实数字，前台低于下限不显示 | **接口直接给 `0`**。下限读的是你的选项 `pc_product_activity_min`，规则和 `vc_product_activity_min()` 相同（1–1000 的整数，其他值按 5） | 这是公开接口，谁都能调。不暴露比页面上会显示的更多的东西，也不会出现“此刻正好有 1 个人在看”这种能对上某一位顾客的数 |
+| 开关 | 只说了主题的开关 | 接口也看同一个按店开关 `pc_product_activity`（值 `on` 才生效，默认关）：关着一律 404，不查库。过滤器 `peptide_core_product_activity_enabled` 可以改写 | 默认关着时线上多出来的只是一个永远 404 的地址。注意：如果只用你的过滤器 `vc_product_activity_enabled` 打开主题那一半而选项没开，接口仍然是 404，要同时挂我这个过滤器 |
+| `pc_product_activity_available` | “接口注册时加一行 `__return_true`” | 追踪表在、访客追踪开着时才返回 `true` | 追踪关着的店没有数据，不必加载脚本 |
+| 测试单 | “不算测试单的访问” | 窗口内的访问上挂着测试单（全“1”、测试付款方式、演示商品）的访客，两个数都不算。只看窗口内最近 200 个挂着订单的访问 | 这一条比 `Data\Metrics` 的访客**多排除一项**：`Metrics` 的漏斗里测试单的访问算到“发起结账”为止，所以它的访客数和加购数是含测试单访客的。公开显示的数字宁可少算 |
+| 缓存 | 每件商品的结果缓存 60 秒 | 全店的数字一次算好放进一个缓存（瞬态 `pc_product_activity_v1`，60 秒），每件商品都从里面取 | 不管有多少个商品弹窗、多少种商品，每家店每分钟最多算一次（三条查询，走事件表的 `type_time` 索引和访问表的 `last_ms` 索引，没有加新索引）。`generated_at` 是这张表算出来的时间，`ttl` 固定是 60。算上浏览器或 CDN 的 60 秒，页面上的数字最多滞后约 2 分钟 |
+| 404 | 商品不存在或未发布：404 | 不存在、未发布、不是商品、有密码、是规格（不是父商品）：404 `pc_product_not_found`；开关关着或追踪没开：404 `pc_product_activity_off`；数据库报错：404 `pc_product_activity_unavailable`。404 也带 `Cache-Control: public, max-age=60`，正文里没有任何数字 | — |
+| `product_id` 格式不对 | 没写 | 400 `pc_invalid_param`（不是十进制正整数，或者没传） | 和别的数据接口一致；前台对非 200 一律不显示，没有影响 |
+| 限频 | 没写 | 没有加 | 每次请求最多一次按主键取商品，加一次读缓存；不存在的商品编号不会触发统计，所以刷接口也不能让服务器多算 |
+| “看过”包括谁 | 打开商品弹窗或商品页 | 主题 11-08 起“访客有真实操作或页面开满 6 秒才上报”，所以刚打开就关掉、从没动过的访问不算 | 这是上报那一侧的规则，接口没有另外筛 |
+| 数字会不会被刷 | 没写 | “已加购”只能由服务端在真正加购成功时记，浏览器报不上来（接收接口的类型清单里没有 `add_to_cart`）。“看过”来自浏览器上报，理论上可以用很多个新访客去刷，受接收接口按 IP 的限频和爬虫识别约束 | 如实说明：这是所有靠浏览器上报的数字共有的限制，接口没有另外加防护 |
+
+- 没有新表、新选项、新的功能键：读的是你的两个选项；主题靠 `pc_product_activity_available` 知道接口在不在。
+- 用例：`m6-product-activity-pure`（已登记进默认套件；同一组数据跑两遍，一遍假数据库，PHP 带 pdo_sqlite 时再用内存 SQLite 把真正的 SQL 执行一遍）、`m6-product-activity-smoke.php`（要真正的 WordPress：7 位访客真的看商品、6 位用真正的购物车加购，再从接口读出来；用法在 `docs/guides/m6-sandbox-runbook.md` 第 8 节）。
+- 登录了的员工在公开域名上调这个接口，会先被 `Management_Host` 挡成 403（那是日常会话的规则，不是这个接口的）；前台请求不带 cookie，不受影响。

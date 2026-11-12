@@ -45,6 +45,7 @@ final class Tracker {
 		Privacy::register_hooks();
 		Native_Visit_Classifier::register_hooks();
 		Ad_Params::register_hooks(); // 广告参数的表（自己的版本选项，见 Ad_Params）。
+		Product_Activity::register_hooks(); // FE-03“看过 / 已加购”的公开接口：按店开关 pc_product_activity 关着时一律 404。
 		if ( ! self::enabled() ) {
 			return;
 		}

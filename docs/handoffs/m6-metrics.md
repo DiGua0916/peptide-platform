@@ -1,6 +1,6 @@
 # M6 追踪与指标：交接（F4「数据」会话）
 
-2026-11-10 起，最近更新 2026-11-12 下午 · 分支 `claude/m6-metrics-db7036`（已推送，没有合进主线，没有发布）· 基线 `82032bd`，已合并主线到 `7c6d2d3`（11-12）。
+2026-11-10 起，最近更新 2026-11-12 晚 · 分支 `claude/m6-metrics-db7036`（已推送，没有合进主线，没有发布）· 基线 `82032bd`，已合并主线到 `61ce4f8`（11-12）。
 对应需求：NF-02（口径部分）、FE-05、ST-05。口径见 `docs/metrics.md`，给别的会话的签名见 `docs/CONTRACT.md`「M6 / M7」。
 
 ## 先说最重要的
@@ -33,7 +33,9 @@
 | 14 | 修 F1 冒烟清单里归 F4 的 12 个用例（只改用例）；修 `customer-checkout-observer` 并登记进默认套件 | `12ada08` |
 | 15 | 口径文档把三项没定的口径标成“待确认”，代码保持现状 | `0e733c4` |
 | 16 | 手机宽度检查投手数据页和仪表盘，修三处排版；商品报表对投手不再给“编辑商品”链接 | `51059f1` |
-| 17 | F1 第一次在沙盒跑完手册之后：补两条不用浏览器的验证（广告参数入库用例 `m6-ad-params-smoke.php`、影子档观察的命令），手册文末记下 F1 的结果和说明 | 本次提交 |
+| 17 | F1 第一次在沙盒跑完手册之后：补两条不用浏览器的验证（广告参数入库用例 `m6-ad-params-smoke.php`、影子档观察的命令），手册文末记下 F1 的结果和说明 | `400db8d` |
+| 18 | 再合并主线到 `61ce4f8`（物流表、腾讯文档同步、加购推荐修复；没有冲突，不涉及 F4 名下的文件） | 合并提交 `574a67d` |
+| 19 | FE-03“看过 / 已加购”的公开接口 `Tracking\Product_Activity`（F5 等着的）；不用浏览器的八步漏斗回放夹具（给 F1 的 critical-path） | 本次提交 |
 
 M7 的部分见 `docs/handoffs/m7-pixels.md`。
 
@@ -63,6 +65,7 @@ M7 的部分见 `docs/handoffs/m7-pixels.md`。
 - 11-12 新增：`includes/tracking/class-ad-params.php`；`tests/m6-reports-switch-smoke.php`（要 WordPress）、`m6-ad-params-pure.php`、`m6-data-sources-ads.cjs`、`m6-data-stacked.cjs`；`docs/guides/m6-sandbox-runbook.md`。
 - 11-12 修改：`includes/tracking/class-attribution.php`、`class-privacy.php`、`class-schema.php`、`class-tracker.php`；`includes/data/class-sources.php`、`class-report-exports.php`、`class-visitor-funnel.php`、`class-classified-conversion.php`、`class-metrics.php`；`assets/data.js`、`data.css`、`data-sources.js`、`data-sources.css`；`languages/customer-data-observations-zh_CN.php`（只加了四条新文案的中文）。
 - `docs/CONTRACT.md`：末尾追加「M6 / M7」一节。
+- 11-12 晚新增：`includes/tracking/class-product-activity.php`（FE-03 接口）；`tests/m6-product-activity-pure.php`、`m6-product-activity-smoke.php`、`m6-funnel-replay-smoke.php`、`m6-ad-params-smoke.php`（后三个要 WordPress）。修改：`includes/tracking/class-tracker.php`（`register_hooks()` 里多注册一行 `Product_Activity`）、`tests/m6-smoke-fixtures.php`（加了回放访客行为的几个函数）。
 
 现有的表结构没有改。11-12 新增一张表 `{prefix}pc_track_ads`（访问的广告参数，没有顾客资料），有自己的版本选项 `peptide_core_track_ads_db`，第一次请求时自动建；建不出来只影响“按广告拆分”，追踪和归因照常。新增的选项见 CONTRACT「M6 / M7」第 2、4、6 小节。
 
@@ -82,6 +85,7 @@ M7 的部分见 `docs/handoffs/m7-pixels.md`。
 | 概览页 | `Overview::range_data()` / `summary()` 的结果原样输出；缓存名和以前相同 |
 | 数据页（管理员） | 菜单多注册两个隐藏的合并页（和“来源”页一样在 admin_head 里从菜单拿掉），12 个原有页面的输出不变 |
 | 数据页（投手） | 不受开关控制：只要用户有 `pc_media_buyer` 角色就生效。角色现在还不存在（F5 在做），所以目前对所有人都不生效 |
+| FE-03 接口 `/peptide/v1/product-activity` | 不受 M6 开关控制，有自己的按店开关 `pc_product_activity`（和主题同一个，默认关）。关着时这个地址一律 404，不查库；线上多出来的只是这个 404 地址，和 `rest_api_init` 时多注册一条路由 |
 
 两处不受开关控制、但对现有用户可见的变化都在 M7：像素页多了“发送测试事件”按钮；AddPaymentInfo 的触发方式（见 M7 交接）。
 
@@ -258,9 +262,33 @@ F1 请平台所有者看的两行（近 7 天转化率旧 1.82% / 新 0%；弃�
 
 F1 那边已经接好的：`/hq/summary` 每天带 `abandoned / abandoned_open / recall_emailed / recall_recovered`（取自 `Metrics::abandoned_daily()`）；功能键 `m6.metrics`、`m7.pixel_acceptance` 已登记；`pc_track_ads` 在脱敏快照里登记为 keep；快照里 `peptide_core_m6_mode` 一律设回 `off`。总后台远程换档的通道 F1 还没做。
 
+## FE-03“看过 / 已加购”接口和八步漏斗回放（2026-11-12 晚）
+
+**接口**（F5 等着的，约定在它分支的 CONTRACT「M14 前台主题」里；我的答复在 CONTRACT「M6 / M7」第 8 小节）：`GET /wp-json/peptide/v1/product-activity?product_id=<商品 ID>`，类 `Tracking\Product_Activity`。
+
+- 返回 `viewing`（最近 10 分钟看过这件商品的不同访客）、`added`（最近 24 小时加购的不同访客）、实际的统计窗口、`generated_at`、`ttl`，响应头 `Cache-Control: public, max-age=60`。只有这几个字段，没有任何访客资料。
+- 只有真实数字：从事件表里按访客去重数出来的。访客口径和 `Data\Metrics` 一样（员工、爬虫写入时就不记；测试版数据和已清掉的访客不算），另外多排除“窗口内的访问上挂着测试单的访客”。
+- 和 F5 的约定有三处出入，都是往少暴露的方向：低于店铺下限的数接口直接给 0（公开接口不暴露比页面上显示的更多的东西）；接口也看按店开关 `pc_product_activity`，默认关，关着一律 404；`pc_product_activity_available` 只在追踪开着时才是 true。
+- 轻：全店的数字一次算好缓存 60 秒（三条走已有索引的查询），不管多少个商品弹窗，每家店每分钟最多算一次；没有加新表、新索引、新选项。没有加限频，理由写在 CONTRACT 里。
+- 注册：在 `Tracker::register_hooks()` 里（F4 自己的文件），`class-plugin.php` 没有再加行。
+- 验证：`m6-product-activity-pure`（默认套件里；假数据库 68 条断言，PHP 带 pdo_sqlite 时再用内存 SQLite 把真正的 SQL 执行一遍，共 106 条；故意改坏五处，每次都报错）；`m6-product-activity-smoke.php` 在本地拷贝上 20 项全过；拿接口的真实返回喂给 F5 分支上的 `assets/product-activity.js`，两行文案正常显示。**MySQL 上还没跑，F5 的主题和这个接口也还没有在同一个站上、用真正的浏览器看过。**
+
+**八步漏斗回放**（给 F1 的 critical-path，那一项原来因为事件要浏览器上报而跳过）：`tests/m6-funnel-replay-smoke.php`，用法在沙盒手册第 9 节。
+
+- 一次完整购买按顺序走八步，每走一步读一次 `Metrics::funnel()`，核对这一步正好多一个访客、后面的还是 0。浏览器事件走真正的接收接口，加购走真正的购物车，下单和付款走 WooCommerce 的钩子。
+- 反例：不填地址直接选物流、选支付、下单、付款——后四步一个都不多；订单照挂、付款事件照记、订单数和销售额照算；开关按 `on` 时访问停在“发起结账”并记两次异常。再加一段“填地址事件晚到就补上”。
+- 可以按 `on`（默认）/ `shadow` / `off` 三种设定跑，用的是这一次运行里的过滤器，不改选项。写入的 2 位访客、2 张订单结束时删掉。
+- 本地拷贝上三种设定都是 25 项全过；故意把读数规则或写入规则改坏，夹具都会报没通过。**MySQL 上还没跑。**
+
+顺带修了三档冒烟脚本的一处误报：概览页的接口有 30 秒缓存（关着时一份，其余每档各一份），紧跟在会改订单的用例（例如 `smoke-overview`）后面跑 `m6-reports-switch-smoke.php`，会报“影子档的输出和关着时不一样”。现在脚本看接口的状态码，拿来比较的数字直接现算，不走缓存。只改了脚本。
+
+## F1 第二次沙盒结果（2026-11-12，候选 `c5fb1d8`，含 F4 `400db8d`）
+
+对账、三档冒烟（206 项）、影子档（新命令，36 次全部 200）、广告参数入库（17 项）全部通过；`smoke-data-apps` 在候选上 21 / 0。沙盒数据没有换，结论仍然只是“能跑、结果自洽”。影子档日志里有差异的是 `operations.kpis` 和 `reports.conversion`，都在手册第 3 节表里的说明之内（那张测试订单没有带填地址记录的访问）。F1 的摘要里没有概览页的两项对账，已在手册文末请它下次把日志原文存一份。逐项说明在沙盒手册文末。
+
 ## 下一步
 
-1. 等 F1 在沙盒上用 `ba93f99` 之后的提交再跑一次：手册第 3 节的新命令、第 5 节的 12 个冒烟用例、第 6 节的新用例；数据换成更真实的快照之后第 1、2 步重跑，重点看 `reports.visitor_funnel`（有多少付款没有填地址的记录）和 `reports.paid_orders`（有多少订单不是在下单当天付的款）。F1 发现的问题交回 F4 修。
+1. 等 F1 在沙盒上再跑：手册第 5 节的 12 个冒烟用例、第 8 节（接口冒烟）、第 9 节（漏斗回放，接进 critical-path）；F5 的主题和接口合在一起之后用真正的浏览器看一眼弹窗里的两行字。之前的：手册第 3 节的新命令、第 6 节的新用例 F1 第二次已经跑过；数据换成更真实的快照之后第 1、2 步重跑，重点看 `reports.visitor_funnel`（有多少付款没有填地址的记录）和 `reports.paid_orders`（有多少订单不是在下单当天付的款）。F1 发现的问题交回 F4 修。
 2. 归 F4 的 12 个冒烟用例等 F1 在沙盒上重跑确认，过了之后由 F1 把 `tests/smoke-suites.json` 里的 status 改回去。
 3. 真正的投手账号（F5 的角色）在沙盒上点一遍两个合并页。
 4. 弃单详情、结账流失页读广告参数的地方（以前一直是空的）改成读 `Ad_Params`——那两个页面不归 F4，读法写在 CONTRACT「M6 / M7」第 6 小节，等日常会话接。
