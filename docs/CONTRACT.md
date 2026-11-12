@@ -754,15 +754,17 @@ if ( ! $product instanceof \WC_Product || array_key_exists( Product_Offers::CART
 5. 建议把 `\PeptideCore\Activity\Quote_Cart::supported_hooks() === true` 加进发布前的 critical-path 检查（见给日常会话的第 1 条：这次就是没人发现）。
 6. 测试登记：5 条纯测试已按 `"status": "module-gate", "module": "M4"` 写在 suites 文件末尾；两个 `*-native.php` 要在装好 WooCommerce 的站点上用 `wp eval-file` 跑，不在纯测试编排里。
 7. **冒烟基线里归 F2 的 5 个用例已处理**（2026-11-12，提交 `692f00c` 起）：`smoke-exit-intent`、`smoke-marketing`、`smoke-promotions`、`smoke-pricing`、`smoke-shipping-plans`。根因和预期结果见 `docs/handoffs/m4-sandbox-walkthrough.md` 第 2b 步。换上本分支在沙盒重跑通过后，请把 `tests/smoke-suites.json` 里这 5 条的 `status` 改回 `gate`（那个文件在你的分支上，F2 没有动）。F4 名下的 `smoke-data-apps`（13 / 8）和 `smoke-exit-intent` 是同一个根因，F2 的修复顺带解决，本机 21 / 0。
-8. **请在生产只读核对一次（6 家店各两条命令）**：
+8. **生产只读核对（6 家店各两条命令）——F1 已核对（2026-11-12），结果见下**：
 
 ```bash
 wp db query "SHOW TABLES LIKE '%pc_app_stats'"
 wp option get peptide_core_app_stats_db
 ```
 
-   第一条为空而第二条是 `1` 的店：离开挽回 / 转盘的弹出、领取、抽奖、订单数一直没有记上（弹窗和优惠码本身不受影响，订单上的标记和备注也照常写）。M4 合进去以后，这家店下一次弹窗事件会自动补建表并开始计数，不需要手工处理；之前的数字补不回来。F2 是从沙盒基线的失败项反推的（在本机把表删掉、版本号留着，`smoke-exit-intent` 和 `smoke-data-apps` 的失败项和沙盒完全一样），**没有看过沙盒和生产的数据库**，所以请以这两条命令的结果为准。
-9. **整店复制会留下“版本号在、表不在”**：`tools/deployment/provisioning/clone.py` 整表复制 `wp_options`，再把目标店原有的 `*_db` / `*_version` 等选项放回去（`KEEP_OPTION_PATTERN`）；目标店原来**没有**的那些，来源店的值就留了下来，而对应的表不在复制范围里。懒建表的模块（第一次写入才建表）都会中招。建议在第 5 步之后删掉“匹配 `KEEP_OPTION_PATTERN`、目标店原来没有”的选项，让各模块按自己的流程重新建表。F2 名下的两处（`pc_app_stats`、M4 的核对日志表）已经改成不依赖这一点；其他懒建表的类（`class-recovery.php`、`class-mail-outbox.php`、`emails/class-log.php`、`pixels/class-server.php`、`class-activity-log.php`）没有逐个查，请归属会话各自确认。
+   第一条为空而第二条是 `1` 的店：离开挽回 / 转盘的弹出、领取、抽奖、订单数一直没有记上（弹窗和优惠码本身不受影响，订单上的标记和备注也照常写）。M4 合进去以后，这家店下一次弹窗事件会自动补建表并开始计数，不需要手工处理；之前的数字补不回来。F2 当时是从沙盒基线的失败项反推的（在本机把表删掉、版本号留着，`smoke-exit-intent` 和 `smoke-data-apps` 的失败项和沙盒完全一样）。
+
+   **F1 的核对结果**：s0001 表在、版本号 1（正常）；s0006 / s0007 / s0008 / s0009 / s0010 表不在、版本号 1——这五家店的离开挽回数据从开店起没有记上。不想等 M4 发布的话，现在就可以在这五家店各执行一次 `wp eval '\PeptideCore\Exit_Intent::install();'`：只建这一张表（`dbDelta`，可重复执行），线上现有的代码就有这个方法；F2 在本机用主线 `bd4e355`（不含 M4）试过，执行后计数恢复。这是生产上的写操作，要平台所有者同意、由 F1 执行。
+9. **整店复制会留下“版本号在、表不在”**：`tools/deployment/provisioning/clone.py` 整表复制 `wp_options`，再把目标店原有的 `*_db` / `*_version` 等选项放回去（`KEEP_OPTION_PATTERN`）；目标店原来**没有**的那些，来源店的值就留了下来，而对应的表不在复制范围里。懒建表的模块（第一次写入才建表）都会中招。建议在第 5 步之后删掉“匹配 `KEEP_OPTION_PATTERN`、目标店原来没有”的选项，让各模块按自己的流程重新建表。F2 名下的两处（`pc_app_stats`、M4 的核对日志表）已经改成不依赖这一点；其他懒建表的模块 F1 在生产 6 家店查过（`pc_recovery`、`pc_mail_outbox`、`pc_email_log`、`pc_px_log`、`pc_activity`）：表和版本号都在，没有中招。复制脚本的修正 F1 记成了自己的待办（M1-5 之后）。
 
 **给 F4（数据）**
 
