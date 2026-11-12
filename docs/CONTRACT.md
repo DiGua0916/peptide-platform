@@ -634,6 +634,9 @@ Root installed only three existing Commerce sources for P09 collection products 
 - 功能声明（F1 的 `pc_hq_capabilities`）：`m9.media_buyer => 1`（投手角色和开关）、`m9.onboarding => 1`（向导和 `Onboarding::store_status()`）。
 - `Staff_Buyer::can_use()`：管理员，或者已经改过密码的投手。投手版的数据接口用它做权限判断；`can_view()` 只表示能打开页面（没改密码的投手只能看到向导）。
 - 订单页除了 `action`，还拦截不带 `action` 就会执行写操作的参数：`delete_all`（清空回收站）、`claim-lock`（接管编辑锁）。
+- **主线 2026-11-11 的订单详情页**（`admin.php?page=pc-order&id=…`，`Admin\Order_Detail_Page`）：投手可以只读打开（`Staff_Buyer::PAGE_ORDER`，给订单组的能力，订单菜单保持高亮）。不带 `pc_native` 的 `wc-orders&action=edit` 照常由主线转到详情页；**带 `pc_native` 的原生订单页对投手是 403**（它只剩退款、发货、改地址的用途）。详情页上的写操作 `admin-post.php?action=pc_order_detail`（作废、卖家备注、标签）、写邮件（`pc-mail*`）、订单复制（`pc-manual-order`）都不在投手名单里，一律 403。
+- 导出订单：`admin-post.php?action=pc_buyer_orders_export`（`Staff_Buyer::ACTION_EXPORT`，见 M9-4），投手名单里唯一的下载动作；没改密码时同样 403。
+- **命令面板**：WordPress 7 的命令面板（⌘K）在 `admin_enqueue_scripts` 时把这次请求登记的全部后台菜单连名字带地址写进页面，投手在里面能看到“客户”“邮件”“店铺设置”等页面的名字。投手不加载命令面板（`Staff_Buyer::no_command_palette()`），顶部工具条上的入口也去掉；管理员不受影响。
 - 营销活动（F2 的约定）：`Admin_Menus::add_menus()` 已改为用 `Marketing::can_view()` 和 `Marketing::menu_cap()`（F2 的代码合进来之前沿用原判断）。投手**没有**拿到 `pc_view_campaigns`，营销页面也不在投手的名单里；PRD 要求的“只读的当前活动”放在投手首页，读 `\PeptideCore\Pricing\Campaigns::running()`。F2 如果希望投手能打开只读的营销页面，告诉 F5 把 `pc-promotions`、`pc-coupons`、`pc-shipping-discounts` 加进名单。
 
 需要配合：
@@ -681,17 +684,24 @@ Root installed only three existing Commerce sources for P09 collection products 
 
 ### M9-4 订单只读和店铺信息（`Admin\Admin_Menus`、`Admin\Store_Settings`，ST-03、ST-07）
 
-- 投手的订单列表去掉勾选框、批量操作和行内按钮，增加三列：来源广告（订单上的 `_wc_order_attribution_utm_*`）、运单号（见 M11 的 `Buyer_Status::shipment()`）、退款状态（`_pc_refund_state` 优先，没有时按订单已退金额）。订单页面隐藏保存、改价、退款、作废、加备注。
+- 投手的订单列表：排在主线 `Order_List::columns()`（优先级 999）之后（1000），去掉勾选框、批量操作、行内按钮、主线的“操作”列（发货、写邮件）和 WooCommerce 的“来源”列；后面加来源广告（订单上的 `_wc_order_attribution_utm_*`）、退款状态；列表里没有“物流单号”一列时再加运单号（见 M11 的 `Buyer_Status::shipment()`）。订单号点开的是主线的订单详情页。
+- 订单详情页（主线的 `pc-order`）对投手只读：`Admin_Menus::buyer_order_detail_styles()` 把订单复制、退款、作废、编辑、发货、手动发送邮件、卖家备注的保存、标签增删、“结账成功页 / 订单追踪页”藏起来，并拦住页面上表单的提交；顶部提示“只能查看”。**页面是日常会话的，F5 没有改它的输出**，真正的限制是 M9-1 里的服务端名单。
+- 退款状态（列表、详情页顶部提示、导出）：`Admin_Menus::refund_facts( \WC_Order )` 返回 `array{label,amount}`。两个来源都算，取大的：F3 写的 `_pc_refund_state`（`none / partial / full`）和 `_pc_refund_cents`（美分；不产生 WooCommerce 退款对象），以及订单上 WooCommerce 的已退金额。`label` 是“已退款 / 部分退款 / 无”。
+- **订单导出（ST-03）**：`Admin\Buyer_Order_Export`。投手的订单列表上方选付款日期 → 下载 CSV（UTF-8 带 BOM）。只含已付款、非测试单的订单；一次最多 92 天、5000 行，不填日期是最近 30 天；列：订单号、下单时间、付款时间、订单状态、订单金额、币种、商品、件数、顾客邮箱、国家、来源广告、`utm_source / campaign / content / term`、承运商、运单号、退款状态、退款金额。**不含电话和地址**。以 `= + - @` 开头的内容前面加单引号（防表格公式）。每次导出记一条操作日志（`order / export`）。管理员用同一个地址也能导。
+- WooCommerce 原生订单页的只读处理（去掉“订单操作”框、隐藏按钮、输入框不可用）保留作兜底，正常情况下投手已经到不了那个页面。
 - 店铺信息页面 `admin.php?page=pc-store-info`：投手能改对外英文品牌名、客服 WhatsApp、客服邮箱和自己的密码；后台店铺名称（`blogname`）和域名只读。
   - 对外英文品牌名（平台所有者 2026-11-10 确认可改）：选项 `pc_public_brand`（2–40 个英文字符，可留空），读取用 `\PeptideCore\Admin\Store_Settings::public_brand()`。主题的 `vc_brand_name()` 已经读它（网页标题、Logo 替代文字、页脚版权）；留空时和以前一样。**不写 `blogname`**：那是总后台管理的内部名称，11-08 已定不上前台、不反向同步。
   - WhatsApp、邮箱写 `peptide_core_settings.support` 里的 `whatsapp`、`email`，其余字段不动（保存时从 `Settings::all()` 出发，不会把别的开关关掉）。
-- 订单导出（PRD ST-03 提到）这一版没做。
+- 店铺信息保存后的提示写的是“前台最多 5 分钟后显示新内容”（首页有缓存，见 M11 一节末尾“开关和设置多久生效”）。
 
 需要配合：
 
 | 归属 | 内容 | 没做之前 |
 | --- | --- | --- |
 | 日常会话（`core/class-mail-outbox.php`） | `Mail_Outbox::brand()` 先取 `\PeptideCore\Admin\Store_Settings::public_brand()`，非空就用它，否则照旧按域名推 | `vialcove*` 域名的店邮件落款仍按域名显示，和投手填的品牌名可能不一致 |
+| 日常会话（`Admin\Order_Detail_Page::render()`、`Admin\Order_List::cell()`，可选） | `\PeptideCore\Staff_Buyer::current()` 为真时不输出写操作的入口（订单复制、退款、作废、编辑、发货、手动发送邮件、备注保存、标签增删）。现在是 F5 用样式藏起来，服务端已拒绝 | 入口在页面源码里，看不见，点不到；直接发请求是 403 |
+| 日常会话（`Admin\Order_Detail_Page`，可选） | 详情页显示 F3 的退款标记（`Admin_Menus::refund_facts()` 可以直接用）。现在只有投手能在页面顶部看到这一行 | 管理员在详情页看不到总后台标记的退款 |
+| 日常会话（`core/admin/class-recovery-page.php`） | 弃单页对投手另外还有两个点了是 403 的入口：“弃单通知设置”和店铺地址提示里的“去填写”（都指向 `pc-system`）。和“立即扫描”“作废”一起处理 | 入口可见，点了返回 403 |
 
 ### M11 已购回访和查订单（`PeptideCore\Buyer_Status`、`PeptideCore\Order_Lookup`，FE-10、FE-11）
 
@@ -735,6 +745,7 @@ Root installed only three existing Commerce sources for P09 collection products 
   - 服务器端的入口没有变：`/product/<slug>/` 和专辑链接仍然 302 到首页（`/?vc_product=<ID>`、`/?vc_catalog_category=<ID>`），**已投放的 `/?vc_product=` 链接照常可用，没有加任何 301**。首页缓存、落地页统计（`vc_visitor_entry_product_context()`）都不受影响。
   - 只改地址栏：商品弹窗打开时显示商品固定链接；专辑落地后显示专辑固定链接；关掉弹窗恢复页面自己的地址（去掉 `vc_product`）。写进地址栏的每个地址都是服务器本来就接受的入口，刷新或分享都会回到同一个画面。`utm_*`、`fbclid` 等其他参数原样保留。
   - 只用 `History.prototype.replaceState` 替换**当前**历史记录的地址，不增删历史记录，不动 `live-commerce-navigation.js` 的弹窗层状态。
+  - 商品地址从哪里来（2026-11-12 修正，原来假定弹窗里有“详情”链接，实际的商品弹窗没有）：依次取弹窗里的 `a.vc-showcase-quick__details`（有的话）、服务器给的“这次进站的商品”（`vcEntryAddress.product = { id, path }`，由 `vc_entry_address_product()` 按请求里的 `vc_product` 给出，只给已发布的商品）、页面上这个商品的卡片链接（`a[data-vc-quick-open="<ID>"]`、`a[data-vc-home-product="<ID>"]`）。都取不到时地址栏用 `/?vc_product=<ID>`。**改商品卡片或商品弹窗的结构时请保留这两个属性之一**，否则从首页点开的商品又会变回 `?vc_product=`。
   - 已知限制：分享出去的商品地址被社交平台抓取预览时，拿到的仍是首页的标题和图片（服务器把它转到了首页）。
 - **NF-06 使用声明**：文字只来自店铺设置 `use_statement_html`（`vc_use_statement_markup()`），主题不自带任何措辞。输出位置：每个页面页脚上方（购物车、结账页除外，原有），以及**商品弹窗内容末尾**（新增）。店铺没配置时两处都不输出，`Launch_Check` 会提示。
 - **品牌名**：`vc_brand_name()` 先读 `Store_Settings::public_brand()`，没填用默认的 `VialCovePeptides`。

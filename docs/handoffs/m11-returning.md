@@ -1,6 +1,6 @@
-# M11 已购回访与查订单 交接（F5，2026-11-10）
+# M11 已购回访与查订单 交接（F5，2026-11-10，2026-11-12 更新）
 
-分支 `claude/m9-buyer-admin-940389`（M9、M11 提交在同一个分支上），提交 `99d23e8`。没有合并 main，没有发布。
+分支 `claude/m9-buyer-admin-940389`（M9、M11 提交在同一个分支上），提交 `99d23e8`、`8dc2a04`（查订单认 `hang-` 号）。没有合并 main，没有发布。
 
 对应需求：FE-10、FE-11。接口约定在 `docs/CONTRACT.md` 的「M11 已购回访和查订单」。
 
@@ -59,7 +59,7 @@
   - 物流卡片：只给已购顾客加载 `assets/buyer-status.{js,css}`；进店时浮在页面下方，关掉后这次浏览不再弹；结账、购物车、付款成功落地页不弹。没有运单时显示 “Awaiting shipment”。
   - 运单读取 `Buyer_Status::shipment()`：订单元数据 `_pc_shipment` 优先，其次 WooCommerce 订单履约。
 - `core/class-order-lookup.php`
-  - `POST peptide/v1/order-lookup`（邮箱 + 订单号）。每个 IP 每分钟 5 次；订单不存在、邮箱不符、测试单都返回同一句提示。
+  - `POST peptide/v1/order-lookup`（邮箱 + 订单号）。每个 IP 每分钟 5 次；订单不存在、邮箱不符、测试单都返回同一句提示。订单号认两种：数字号，和 11-11 起顾客看到的 `hang-数字`。
   - 短代码 `[pc_track_order]`；开关第一次打开时自动建 `/track-order` 页面。核对成功且订单付过款时，把这个浏览器记成已购。
 - 价格逻辑（满减、优惠码、阶梯价、首单优惠的计算）一行没动。
 
@@ -73,16 +73,21 @@
 
 - `php -l` 通过；`m11-buyer-status-pure`（51 项）用本机编译的 PHP 8.3.36 跑过，全部通过。
 - 独立复查对照 WordPress / WooCommerce 源码核对过 cookie、两个公开接口和限流的写法，没有发现问题；提醒了一条配置：店铺在 CDN 后面而 `PEPTIDE_CORE_TRUSTED_PROXIES` 没设时，所有顾客会共用同一个“每分钟 5 次”的额度，上线前请 F1 确认生产已配置。
-- `buyer-status.js` 做过语法检查。**没有在浏览器里跑过**，卡片和表单的样式没有在手机上看过；没有真实下单验证过 cookie。
+- 11-10 F1 在沙盒用真实的已付款测试单验了 cookie、两个接口、限流和篡改（HTTP 层，全部通过）。
+- 11-12 在本机临时站里用浏览器（手机宽度）看过：查订单页面用 `hang-` 号和邮箱能查到，结果卡片正确；之后 `buyer/status` 认出已购，页面带 `window.pcBuyer`；回到首页出现物流卡片，订单号、商品、状态正确；关掉后刷新不再出现；新浏览器不加载卡片脚本。cookie 用页面脚本读不到（HttpOnly）。
+- **仍然没验的**：营销弹窗静默（F2 的分支没合进来，本机也没有）；真实付款后落地页写 cookie 的整条流程在浏览器里没有走（F1 用 HTTP 验过）。
+- 已知的行为（F1 问是不是本意，是）：订单状态是 `completed` 但没有运单号时，卡片显示 Shipped，下面没有运单信息。店铺把订单标成已完成就是发货了，只是没录运单号；卡片不编运单信息，也不另加说明文字。
 
 ## 上沙盒后的验收清单
+
+注意生效时间：开关打开或关闭后，匿名访客看到的缓存页（页脚上方的 “Track your order”）最多 5 分钟后才变；验收时等 5 分钟，或用带任意参数的地址（例如 `/?nocache=1`）。带 `pc_buyer` cookie 的顾客不走缓存，立刻生效。
 
 1. `php -n wp-content/plugins/peptide-core/tests/m11-buyer-status-pure.php` 全部 PASS。
 2. 开关关着：下单付款后浏览器里没有 `pc_buyer` cookie；`/wp-json/peptide/v1/buyer/status` 返回 `{"buyer":false}`；页面源码里没有 `buyer-status` 脚本。
 3. `wp option update pc_buyer_recognition on`：出现 `/track-order` 页面。
 4. 用手机下一单并付款（非测试单）：回到店铺后有 `pc_buyer` cookie（HttpOnly）。关掉浏览器重新进店：出现物流卡片，订单号和商品正确，状态 “Awaiting shipment”；关掉卡片后同一次浏览不再出现；加购、用券、结账价格和新客一致。
 5. 新浏览器（无 cookie）：页面和开关关着时一样，没有多余请求。
-6. 查订单：邮箱和订单号对得上时显示订单并写入 cookie；任何一项不对都是同一句提示；连续第 6 次返回 429。
+6. 查订单：邮箱和订单号对得上时显示订单并写入 cookie（新订单填 `hang-` 号，老订单填数字号，都要能查到）；任何一项不对都是同一句提示；连续第 6 次返回 429。
 7. 改 cookie 里的任意一位：`/buyer/status` 返回 `{"buyer":false}`。
 8. F2 的分支合进来之后：已购浏览器不再出现首单券、离开挽回、转盘、倒计时。
 
