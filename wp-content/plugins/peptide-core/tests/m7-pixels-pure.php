@@ -110,7 +110,8 @@ namespace {
 		public array $log     = array();
 		public function insert( $table, array $row ) { $this->log[] = $row; return 1; }
 		public function prepare( string $sql, ...$args ): string { foreach ( $args as $arg ) { $sql = preg_replace( '/%[ds]/', is_int( $arg ) ? (string) $arg : "'" . $arg . "'", $sql, 1 ); } return $sql; }
-		public function get_var( string $sql ) { return 0; }
+		// 11-11 起 Server::installed() 每次请求用 SHOW TABLES 确认一次发送记录表在不在：这里表一直在。
+		public function get_var( string $sql ) { return str_contains( $sql, 'SHOW TABLES LIKE' ) ? $this->prefix . 'pc_px_log' : 0; }
 	}
 
 	require dirname( __DIR__ ) . '/includes/class-pixels.php';
