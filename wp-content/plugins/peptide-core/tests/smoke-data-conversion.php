@@ -54,6 +54,11 @@ foreach ( wc_get_products( array( 'status' => 'publish', 'type' => 'simple', 'li
 	}
 }
 if ( ! $simple ) {
+	// 店里没有可用的简单商品（生产店的脱敏快照里全是多规格商品）：临时建一个，脚本结束时删掉。
+	require_once __DIR__ . '/m6-smoke-fixtures.php';
+	$simple = pc_m6_smoke_temp_product();
+}
+if ( ! $simple ) {
 	echo "FAIL fixture product\n";
 	return;
 }
@@ -202,11 +207,13 @@ $ok( 'Chrome: visitors 2, paid 0; Safari: visitors 1, paid 1, sales = O1 total; 
 $none  = Conversion::params( array() );
 $empty = Conversion::params( array( 'group' => '' ) );
 $brw   = Conversion::params( array( 'group' => 'browser' ) );
-$bad   = Conversion::params( array( 'group' => 'utm' ) );
+$bad   = Conversion::params( array( 'group' => 'nonsense' ) );
+$known = array_map( static fn( string $g ) => Conversion::params( array( 'group' => $g ) ), Conversion::GROUPS );
 $arr   = Conversion::params( array( 'group' => array( 'device' ) ) );
 $flag  = Conversion::params( array( 'group' => true ) );
 $ok( 'params: no group and group="" are device, group=browser is browser', 'device' === $none && 'device' === $empty && 'browser' === $brw );
-$ok( 'params: group=utm is pc_invalid_param with fields.group invalid_format', is_wp_error( $bad ) && 'pc_invalid_param' === $bad->get_error_code() && 'invalid_format' === ( $bad->get_error_data()['fields']['group'] ?? '' ) );
+$ok( 'params: every group in Conversion::GROUPS (utm, domain, country, os, screen, channel were added after device and browser) is accepted as itself', Conversion::GROUPS === $known && in_array( 'utm', Conversion::GROUPS, true ) );
+$ok( 'params: an unknown group is pc_invalid_param with fields.group invalid_format', is_wp_error( $bad ) && 'pc_invalid_param' === $bad->get_error_code() && 'invalid_format' === ( $bad->get_error_data()['fields']['group'] ?? '' ) );
 $ok( 'params: an array or a boolean group is invalid_format too', is_wp_error( $arr ) && is_wp_error( $flag ) && 'invalid_format' === ( $arr->get_error_data()['fields']['group'] ?? '' ) && 'invalid_format' === ( $flag->get_error_data()['fields']['group'] ?? '' ) );
 
 // 10. 接口（管理员）。

@@ -34,10 +34,16 @@ $get_backup = $_GET;
 $admin      = get_users( array( 'role' => 'administrator', 'number' => 1 ) )[0];
 wp_set_current_user( $admin->ID );
 
-if ( ! Exit_Intent::installed() ) {
-	Exit_Intent::install();
-}
 $table = Exit_Intent::table();
+// 脱敏快照带着“已安装”的版本选项，却不一定带这张表：那样 Exit_Intent::record() 一条也写不进去，下面的数字全是 0。
+// 所以除了看选项，还确认表真的在；不在就用插件自己的建表语句补上。
+$has_table = $table === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+if ( ! Exit_Intent::installed() || ! $has_table ) {
+	Exit_Intent::install();
+	if ( ! $has_table ) {
+		echo "INFO table {$table} was missing although its version option said installed: created it\n";
+	}
+}
 $cur   = '2020-10-10';
 $prev  = '2020-10-09';
 

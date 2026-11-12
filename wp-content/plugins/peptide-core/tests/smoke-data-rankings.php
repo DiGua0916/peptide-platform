@@ -54,6 +54,11 @@ foreach ( wc_get_products( array( 'status' => 'publish', 'type' => 'simple', 'li
 	}
 }
 if ( ! $product ) {
+	// 店里没有可用的简单商品（生产店的脱敏快照里全是多规格商品）：临时建一个，脚本结束时删掉。
+	require_once __DIR__ . '/m6-smoke-fixtures.php';
+	$product = pc_m6_smoke_temp_product();
+}
+if ( ! $product ) {
 	echo "FAIL fixture product\n";
 	return;
 }
@@ -233,7 +238,7 @@ $ok( 'payment_success: bacs 66.67 (A, B of A, B, E) / 100 (D) / -33.33 points, c
 $ok( 'coupons: save10 1 / 0 / null and no other coupon', $is( $row( 'coupons', 'save10' ), 1, 0, null ) && array( 'save10' ) === $keys( 'coupons' ) );
 
 // 6. 每张表的格式。
-$shape = array_keys( $tab ) === Rankings::TABLES && 14 === count( Rankings::TABLES );
+$shape = array_keys( $tab ) === Rankings::TABLES && 21 === count( Rankings::TABLES );
 foreach ( Rankings::TABLES as $name ) {
 	$shape = $shape && isset( $tab[ $name ]['rows'], $tab[ $name ]['total_rows'] ) && is_array( $tab[ $name ]['rows'] ) && array_is_list( $tab[ $name ]['rows'] );
 }
@@ -266,7 +271,7 @@ $req->set_param( 'from', '2020-08-10' );
 $req->set_param( 'to', '2020-08-10' );
 $res = rest_do_request( $req );
 $rd  = $res->get_data();
-$ok( 'admin can load the rankings (200, all 14 tables, US has 2 paid orders) and the response is not cached', 200 === $res->get_status() && Rankings::TABLES === array_keys( $rd['tables'] ?? array() ) && 2 === ( $rd['tables']['order_countries']['rows'][0]['current'] ?? null ) && 'no-store' === ( $res->get_headers()['Cache-Control'] ?? '' ) );
+$ok( 'admin can load the rankings (200, all 21 tables, US has 2 paid orders) and the response is not cached', 200 === $res->get_status() && Rankings::TABLES === array_keys( $rd['tables'] ?? array() ) && 2 === ( $rd['tables']['order_countries']['rows'][0]['current'] ?? null ) && 'no-store' === ( $res->get_headers()['Cache-Control'] ?? '' ) );
 $req = new WP_REST_Request( 'GET', '/peptide/v1/data/rankings' );
 $req->set_param( 'from', 'bad' );
 $req->set_param( 'to', '2020-08-10' );
