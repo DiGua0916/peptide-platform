@@ -138,6 +138,12 @@ final class Monitor {
 		$summary = Client::summary( $id, $full ? self::FULL_DAYS : 2 );
 		if ( ! is_wp_error( $summary ) ) {
 			Stats::store( $id, (array) ( $summary['days'] ?? array() ), (string) ( $summary['currency'] ?? '' ) );
+			// 模块要用每日汇总里自己的字段时挂这个动作（例如 M10 存每天的弃单数），不用再发一次请求。
+			try {
+				do_action( 'pchq_summary_days', $id, (array) ( $summary['days'] ?? array() ), $summary );
+			} catch ( \Throwable $e ) {
+				error_log( 'pchq_summary_days: ' . $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			}
 			if ( $full ) {
 				Sites::update( $id, array( 'last_full' => $now ) );
 			}

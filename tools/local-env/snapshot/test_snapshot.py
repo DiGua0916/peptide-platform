@@ -82,6 +82,15 @@ class NewModuleTablesTest(unittest.TestCase):
         latest = "\n".join(snapshot.plan("hq", "wp_", names, "salt"))
         self.assertIn("buyer_name", latest)
 
+    def test_customer_ids_are_rehashed(self):
+        hq = "\n".join(snapshot.plan("hq", "wp_", tables("hq") + ["wp_pchq_customer_links", "wp_pchq_abandoned", "wp_pchq_orders"], "salt"))
+        self.assertIn("`wp_pchq_customer_links` SET customer_id = UPPER(", hq)
+        self.assertIn("email_mask = ''", hq)
+        self.assertIn("`wp_pchq_orders` SET customer_id", hq)
+        self.assertNotIn("`wp_pchq_abandoned`", hq)
+        store = "\n".join(snapshot.plan("store", "wp_", tables("store"), "salt"))
+        self.assertEqual(2, store.count("meta_key = '_pc_customer_id'"))
+
     def test_module_switches_reset_to_off(self):
         sql = "\n".join(snapshot.plan("store", "wp_", ["wp_options"], "salt"))
         self.assertIn("'pc_pricing_engine_mode', 'peptide_core_m6_mode'", sql)

@@ -74,6 +74,8 @@ HQ_TABLES = {
     # M3 / M10（F3）：系列、主商品库、系列活动、广告花费没有顾客资料；订单汇总有邮箱哈希，退款备注可能提到顾客
     "pchq_series": KEEP, "pchq_series_products": KEEP, "pchq_series_campaigns": KEEP, "pchq_ad_spend": KEEP,
     "pchq_orders": SCRUB, "pchq_refunds": SCRUB,
+    # 主线 11-12：跨店客户编号（由邮箱算出，能被撞库）、打码邮箱、设备摘要；F3 的每日弃单汇总没有顾客资料
+    "pchq_customer_links": SCRUB, "pchq_abandoned": KEEP,
 }
 
 # 整条删除的选项：支付、邮件、AI、像素、第三方接口的密钥和连接信息；以及一次性数据。
@@ -169,6 +171,7 @@ def scrub_statements(kind, prefix, present, salt, columns=None):
             f"UPDATE {m} p JOIN {m} c ON c.user_id = p.user_id AND c.meta_key = REPLACE(p.meta_key, 'postcode', 'country') SET p.meta_value = {fake_postcode('c.meta_value')} WHERE p.meta_key IN ('billing_postcode', 'shipping_postcode')",
             f"UPDATE {m} SET meta_value = {fake_email('meta_value', salt)} WHERE meta_key = 'billing_email'",
             f"UPDATE {m} SET meta_value = {fake_phone('meta_value', salt)} WHERE meta_key IN ('billing_phone', 'shipping_phone')",
+            f"UPDATE {m} SET meta_value = UPPER(LEFT(SHA2(CONCAT({q(salt)}, meta_value), 256), 12)) WHERE meta_key = '_pc_customer_id' AND meta_value <> ''",
         ]
     if has("comments"):
         c = t("comments")
@@ -201,6 +204,7 @@ def scrub_statements(kind, prefix, present, salt, columns=None):
             f"DELETE FROM {o} WHERE meta_key IN ('_pc_panapay_sessions') OR meta_key LIKE '\\_pc\\_panapay\\_%' OR meta_key LIKE '%token%' OR meta_key LIKE '%secret%'",
             # 付款人联系方式、卖家 / 来源备注、付款链接和付款参考号、像素上下文（含 IP、浏览器、哈希邮箱）、关怀邮件记录
             f"DELETE FROM {o} WHERE meta_key IN ('_pc_paid_contact', '_pc_paid_emails', '_pc_seller_note', '_pc_note', '_pc_origin_note', '_pc_manual_link', '_pc_link', '_pc_pp_ref', '_pc_px_ctx', '_pc_px_browser', '_pc_px_server', '_pc_care_mail')",
+            f"UPDATE {o} SET meta_value = UPPER(LEFT(SHA2(CONCAT({q(salt)}, meta_value), 256), 12)) WHERE meta_key = '_pc_customer_id' AND meta_value <> ''",
             # 物流单号能查到收件城市：换成假单号，保留“有单号”这个状态。
             f"UPDATE {o} SET meta_value = CONCAT('TEST', order_id) WHERE meta_key = '_pc_tracking_number' AND meta_value <> ''",
         ]
@@ -236,6 +240,11 @@ def scrub_statements(kind, prefix, present, salt, columns=None):
     if col("pchq_orders", "email_hash"):
         # 邮箱的 SHA-256 可以被撞库：重新加盐，保留“同一位顾客”的对应关系。
         sql.append(f"UPDATE {t('pchq_orders')} SET email_hash = IF(email_hash = '', '', SHA2(CONCAT({q(salt)}, email_hash), 256))")
+    # 客户编号是邮箱算出来的：重新加盐（同一次导出里同一位顾客仍是同一个编号；店铺库和总后台库分开导出，两边对不上是预期的）。
+    if col("pchq_orders", "customer_id"):
+        sql.append(f"UPDATE {t('pchq_orders')} SET customer_id = IF(customer_id = '', '', UPPER(LEFT(SHA2(CONCAT({q(salt)}, customer_id), 256), 12)))")
+    if has("pchq_customer_links"):
+        sql.append(f"UPDATE {t('pchq_customer_links')} SET customer_id = UPPER(LEFT(SHA2(CONCAT({q(salt)}, customer_id), 256), 12)), email_mask = '', device = ''")
     if col("pchq_refunds", "note"):
         sql.append(f"UPDATE {t('pchq_refunds')} SET note = ''")
     if has("options"):

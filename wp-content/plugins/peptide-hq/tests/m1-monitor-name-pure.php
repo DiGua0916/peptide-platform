@@ -11,6 +11,8 @@ namespace {
 	class WP_Error { public function __construct( public string $code = '', public string $message = '' ) {} public function get_error_code(): string { return $this->code; } public function get_error_message(): string { return $this->message; } }
 	function is_wp_error( $v ): bool { return $v instanceof WP_Error; }
 	function apply_filters( string $hook, $value ) { return $value; }
+	function add_filter( ...$a ): void {}
+	function do_action( string $hook, ...$args ): void { $GLOBALS['pc_actions'][] = array( $hook, $args ); }
 	function wp_json_encode( $v ): string { return json_encode( $v ); }
 	function __( string $s, string $domain = '' ): string { return $s; }
 	function sanitize_text_field( string $s ): string { return trim( strip_tags( $s ) ); }
@@ -55,6 +57,7 @@ namespace {
 	foreach ( Sites::$updates as $fields ) { check( 'no update touches name', ! array_key_exists( 'name', $fields ) ); }
 	check( 'store-reported name still stored in info', 'vialcoveplus.com' === json_decode( Sites::$row['info'], true )['name'] );
 	check( 'store marked online', 'online' === Sites::$row['status'] && 0 === Sites::$row['fails'] );
+	check( 'summary days handed to modules', 'pchq_summary_days' === ( $GLOBALS['pc_actions'][0][0] ?? '' ) && 1 === $GLOBALS['pc_actions'][0][1][0] && is_array( $GLOBALS['pc_actions'][0][1][1] ) );
 
 	Client::$status = new WP_Error( 'pchq_offline', 'timeout' );
 	Monitor::poll( 1 ); Monitor::poll( 1 );
