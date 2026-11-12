@@ -700,7 +700,7 @@ Root installed only three existing Commerce sources for P09 collection products 
 - 什么时候写：顾客带着订单密钥回到店铺而且订单已付款（`/?pc_paid=<订单>&pc_key=<密钥>`，或 WooCommerce“订单已收到”页面带 `key`）；查订单核对成功且订单付过款。测试单（`Test_Orders::is_test_order()`）不写。
 - 接口（都是公开的，返回 `Cache-Control: no-store, private`）：
   - `GET /peptide/v1/buyer/status` → `{ "buyer": false }`，或 `{ "buyer": true, "order": { "number", "placed", "status", "status_label", "items": [ { "name", "quantity" } ], "more_items", "shipment": { "carrier", "number", "url" } } }`。只看 cookie 里最近的一张订单；`status` 取 `awaiting_shipment` / `shipped` / `refunded` / `cancelled` / `unpaid`。不返回姓名、邮箱、电话、地址。前台等 800 毫秒，没等到就当新客。
-  - `POST /peptide/v1/order-lookup`，JSON `{ "email", "order" }` → `{ "found": true, "order": {…同上} }`，或 `{ "found": false, "message" }`（HTTP 200；订单不存在、邮箱不符、测试单都是同一句提示）。每个 IP 每分钟 5 次（成功失败都算），超过返回 429。IP 的取法同 `Api\Rest_Controller::client_ip()`。
+  - `POST /peptide/v1/order-lookup`，JSON `{ "email", "order" }` → `{ "found": true, "order": {…同上} }`，或 `{ "found": false, "message" }`（HTTP 200；订单不存在、邮箱不符、测试单都是同一句提示）。每个 IP 每分钟 5 次（成功失败都算），超过返回 429。IP 的取法同 `Api\Rest_Controller::client_ip()`。`order` 两种写法都认（2026-11-12）：数字号，和主线 11-11 起顾客看到的 `hang-数字`（不分大小写，可带 `#`）；`hang-` 号用主线的 `Order_Number::find()` 找订单。返回的 `number` 是顾客看到的订单号（`get_order_number()`）。
 - 运单：`Buyer_Status::shipment( \WC_Order $order )` 返回 `array{carrier,number,url,shipped,shipped_at}`。先读订单元数据 `_pc_shipment`（`carrier`、`number`、`url`、`shipped_at`，发货对接 OR-01 写入），没有再读 WooCommerce 订单履约（`Shipping_Tracking::customer_view()`）；都没有而订单是 `completed` 时算已发货但没有运单号。投手的订单列表也用这个函数。
 - 静默营销弹窗：用 F2 提供的过滤器 **`pc_marketing_popups_suppressed`**（见 M4 一节）。已购顾客在前台时 `Buyer_Status` 让它返回 `true`；带 cookie 的访客本来就不走首页缓存，所以在服务端判断，新访客没有任何额外请求。同时在页面 `<head>` 里输出 `window.pcBuyer = { known: true, suppressPopups: true }` 并调用 `window.pcMarketingQuiet.refresh()`（存在时）。F5 没有调用 `pcMarketingQuiet.suppress()`：那会另写一个一年的 cookie，店铺把已购回访关掉以后弹窗仍然不出来。
 - 功能声明：`m11.buyer_status => 1`。
@@ -714,7 +714,17 @@ Root installed only three existing Commerce sources for P09 collection products 
 | 日常会话（`Campaign_Announcement`、`Modules\Product_Broadcast` 等 F2 没覆盖的弹出内容） | 同样读 `Popups::suppressed()`。付款成功弹窗（`Paid_Popup`）不属于营销弹窗，不用改 | 这些内容对已购顾客照常出现 |
 | F3 / 发货对接（OR-01，暂缓） | 发货后把 `carrier`、`number`、`url`、`shipped_at` 写进订单元数据 `_pc_shipment`；退款标记写 `_pc_refund_state`（`full` 时卡片显示 Refunded） | 物流卡片显示“Awaiting shipment”，或显示 WooCommerce 订单履约里的运单 |
 | M14 主题（F5，已做） | 页脚上方输出 “Track your order”（`vc_track_order_entry()`），只在开关打开且有查订单页面时出现。发货邮件里的链接可以带 `?email=…&order=…` 预填 | — |
-| F1（开关） | 试点店打开：`wp option update pc_buyer_recognition on`（或总后台远程写选项）。回退：改回 `off` | — |
+| F1（开关） | 试点店打开：`wp option update pc_buyer_recognition on`（或总后台远程写选项）。回退：改回 `off`。前台匿名访客的缓存页最多 5 分钟后才跟着变（见本节末尾“开关和设置多久生效”） | — |
+
+**和主线 11-11 的账户、物流面板重叠（2026-11-12，等平台所有者决定，决定前下面两条不用做）。** 对比和建议在 `docs/handoffs/m11-returning.md`。如果定了方案 A（看物流只留主线的物流面板，M11 只留“认出已购 → 营销弹窗静默”），需要日常会话配合：
+
+| 归属 | 内容 | 没做之前 |
+| --- | --- | --- |
+| 日常会话（`Track_Widget::rest_lookup()`） | 核对成功时（订单号 + 邮箱，或设备记住的订单号 + 密钥）对每张核对通过的订单触发 `do_action( 'pc_track_order_verified', $order )`。F5 挂在上面，订单付过款、不是测试单时把这个浏览器记成已购（写 `pc_buyer` cookie）。钩子在返回之前触发，这样 cookie 能随这次响应发出 | 顾客换设备后只有登录了才被认出是已购；在物流面板里用订单号 + 邮箱查过也不算 |
+| 日常会话（`Accounts::assets()`） | 输出 `window.pcAccounts.signup` 时再加一个条件：`\PeptideCore\Pricing\Popups::suppressed()` 为真时不弹注册弹窗（类不存在时照旧）。进站的 18+ 确认不受影响 | 买过但没登录的顾客回访时仍会看到注册弹窗 |
+| M14 主题（F5） | 页脚上方的 “Track your order” 改成打开物流面板（`data-pc-open-track`），物流球关着（`pc_track_ball = 0`）的店不显示 | 入口仍指向 `/track-order` 页面 |
+
+**开关和设置多久生效（F1 2026-11-10 沙盒验收时发现，主线已有的情况）。** 首页缓存的失效钩子只在定义了 `PEPTIDE_CORE_PAGE_CACHE` 的那份安装里注册；生产 6 家店的后台那份都没有定义。所以在店铺后台或用后台那份跑 WP-CLI 改 `pc_buyer_recognition`、`pc_entry_address`，或投手在“店铺信息”里改对外品牌名、WhatsApp、邮箱之后，匿名访客看到的缓存页最多 5 分钟后才变。验收和上线时：等 5 分钟，或者用带任意参数的地址（例如 `/?nocache=1`）看。带 `pc_buyer` cookie 的顾客不走缓存，立刻生效。`class-page-cache.php` 归日常会话，F1 已告知。
 
 ### M14 前台主题（`wp-content/themes/peptide-site/`，FE-02、NF-06）
 
@@ -737,4 +747,4 @@ Root installed only three existing Commerce sources for P09 collection products 
 | --- | --- | --- |
 | F4（`Tracking\Attribution`、来源报表） | 服务端白名单放开 `utm_campaign`、`utm_term`、`utm_content` 并入库，来源报表加这三个维度 | 这三项被服务端丢弃，数据仍只能按来源拆 |
 | F4（M7 像素） | 开关打开后地址栏会变。脚本用的是原生 `History.prototype.replaceState`，正常不会触发 Facebook 像素“地址变化自动发 PageView”；请在沙盒用事件管理工具确认打开商品弹窗时没有多出 PageView | — |
-| F1（开关） | 试点店打开：`wp option update pc_entry_address on`；回退：改回 `off` | — |
+| F1（开关） | 试点店打开：`wp option update pc_entry_address on`；回退：改回 `off`。匿名访客的缓存页最多 5 分钟后才跟着变（见 M11 一节末尾“开关和设置多久生效”） | — |
