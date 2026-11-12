@@ -1,0 +1,46 @@
+{
+  "_说明": "复制到仓库之外再填写（主机、私钥路径不入库）。sandbox 的副本写死；production 的店铺列表每次从总后台注册表读，这里只写路径规则。",
+  "environments": {
+    "sandbox": {
+      "hosts": {"admin": {"host": "<后台机 IP>", "user": "ubuntu", "identity": "<私钥路径>"}},
+      "hq_wp": {"host": "admin", "path": "/srv/vialcove-sandbox/hq/public", "user": "vcsandbox"},
+      "reload": {"admin": "systemctl kill -s USR2 vialcove-sandbox-php.service"},
+      "php_logs": {"admin": ["/var/log/vialcove-sandbox/fpm.log"]},
+      "units": [
+        {
+          "name": "sandbox", "stage": "G1", "check": "critical_path", "check_host": "admin",
+          "copies": [
+            {"key": "sandbox/shop", "host": "admin", "root": "/srv/vialcove-sandbox/shop/public", "kind": "store", "owner": "vcsandbox:vcsandbox"},
+            {"key": "sandbox/admin", "host": "admin", "root": "/srv/vialcove-sandbox/admin/public", "kind": "store", "owner": "vcsandbox:vcsandbox"},
+            {"key": "sandbox/hq", "host": "admin", "root": "/srv/vialcove-sandbox/hq/public", "kind": "hq", "owner": "vcsandbox:vcsandbox"}
+          ],
+          "health": [
+            {"host": "admin", "url": "https://sandbox-shop.vialcoveresearch.com/", "expect": [200]},
+            {"host": "admin", "url": "https://sandbox-shop.vialcoveresearch.com/?rest_route=/peptide/v1/", "expect": [200]},
+            {"host": "admin", "url": "https://sandbox-admin.vialcoveresearch.com/wp-login.php", "expect": [200]},
+            {"host": "admin", "url": "https://sandbox.vialcoveresearch.com/wp-login.php", "expect": [200]},
+            {"host": "admin", "url": "https://sandbox.vialcoveresearch.com/?rest_route=/peptide-hq/v1/", "expect": [200]}
+          ]
+        }
+      ]
+    },
+    "production": {
+      "hosts": {
+        "web": {"host": "<前台机 IP>", "user": "ubuntu", "identity": "<私钥路径>"},
+        "admin": {"host": "<后台机 IP>", "user": "ubuntu", "identity": "<私钥路径>"}
+      },
+      "hq_wp": {"host": "admin", "path": "/srv/vialcove/hq/current/public", "user": "<总后台的运行账号>"},
+      "reload": {"web": "systemctl reload php8.3-fpm", "admin": "systemctl reload php8.3-fpm"},
+      "php_logs": {"web": ["/var/log/php8.3-fpm.log"], "admin": ["/var/log/php8.3-fpm.log"]},
+      "gateway": "pc_panapay",
+      "db_snapshot": {"web": ["<每家店的库名>"], "admin": ["<总后台的库名>"]},
+      "production": {
+        "pilot": "s0006",
+        "main_slug": "s0001",
+        "web": {"host": "web", "main": "/srv/vialcove/current", "tenant": "/srv/vialcove/tenants/{slug}/public"},
+        "admin": {"host": "admin", "main": "/srv/vialcove/store-admin/current", "tenant": "/srv/vialcove/tenant-admin/{slug}/public"},
+        "hq": {"host": "admin", "root": "/srv/vialcove/hq/current/public", "url": "<总后台地址>"}
+      }
+    }
+  }
+}
