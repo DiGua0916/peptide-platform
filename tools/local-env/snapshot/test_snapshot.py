@@ -62,6 +62,31 @@ class PlanTest(unittest.TestCase):
         self.assertIn("'it''s'", snapshot.q("it's"))
 
 
+class NewModuleTablesTest(unittest.TestCase):
+    """2026-11-12 登记的各模块新表和新列。"""
+
+    def test_new_tables_are_classified(self):
+        rules = snapshot.classify("store", "wp_", tables("store") + ["wp_pc_track_ads", "wp_pc_m4_shadow_stats", "wp_pc_m4_shadow_log"])
+        self.assertEqual(snapshot.KEEP, rules["wp_pc_track_ads"])
+        self.assertEqual(snapshot.TRUNCATE, rules["wp_pc_m4_shadow_log"])
+        hq = snapshot.classify("hq", "wp_", tables("hq") + ["wp_pchq_series", "wp_pchq_series_products", "wp_pchq_series_campaigns", "wp_pchq_orders", "wp_pchq_refunds", "wp_pchq_ad_spend"])
+        self.assertEqual(snapshot.SCRUB, hq["wp_pchq_orders"])
+
+    def test_new_columns_only_scrubbed_when_present(self):
+        names = tables("hq") + ["wp_pchq_orders", "wp_pchq_refunds"]
+        old = "\n".join(snapshot.plan("hq", "wp_", tables("hq"), "salt", {"wp_pchq_sites": {"id", "key_enc", "key_pending"}}))
+        self.assertNotIn("buyer_name", old)
+        new = "\n".join(snapshot.plan("hq", "wp_", names, "salt", {"wp_pchq_sites": {"id", "key_enc", "key_pending", "buyer_name"}, "wp_pchq_orders": {"email_hash"}, "wp_pchq_refunds": {"note"}}))
+        for needle in ("buyer_name = IF(", "email_hash = IF(", "`wp_pchq_refunds` SET note = ''"):
+            self.assertIn(needle, new)
+        latest = "\n".join(snapshot.plan("hq", "wp_", names, "salt"))
+        self.assertIn("buyer_name", latest)
+
+    def test_module_switches_reset_to_off(self):
+        sql = "\n".join(snapshot.plan("store", "wp_", ["wp_options"], "salt"))
+        self.assertIn("'pc_pricing_engine_mode', 'peptide_core_m6_mode'", sql)
+
+
 class LeakCheckTest(unittest.TestCase):
     def test_real_addresses_are_leaks(self):
         for text in ("john.doe@gmail.com", "a:1:{s:5:\"email\";s:16:\"Jane@Outlook.com\";}", "ok c1@example.test then x@y.co"):

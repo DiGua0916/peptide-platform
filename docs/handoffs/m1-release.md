@@ -140,3 +140,50 @@ ssh ubuntu@<后台机> 'sudo bash ~/m1-sandbox/refresh.sh code ~/m1-sandbox/<发
 - skipped 的 28 个冒烟用例没有逐个分析根因，只记录了第一条失败信息；归属是按文件名猜的，需要各会话认领。
 - local-only 的 32 个没有在本地跑（本地站要 WooCommerce + 数据库，`tools/local-env/setup.sh` 现在有 PHP 可以试了，下一步做）。
 - M1-4 之后的任务、F2 / F3 / F4 的沙盒验收、F5 复验都还没开始。
+
+## 2026-11-12（二）四条分支合并验收、接线登记、两项生产只读核对
+
+- 合并验收：`docs/handoffs/m1-sandbox-acceptance-all-2026-11-12.md`。五条分支代码零冲突；合并后默认套件 80 过 / 0 败 / 9 跳过；F2、F3、F4 手册里服务器上能跑的步骤全部通过。
+- 接线（本分支）：
+  - `/hq/summary` 每天加 `abandoned / abandoned_open / recall_emailed / recall_recovered`（有 M6 时）；`/hq/status` 加 `modules`（`pricing_engine`、`onboarding` 和过滤器 `pc_hq_status_modules`）。
+  - 总后台内置巡检 `pricing_mismatch`（代 F2 实现）。
+  - 脱敏登记：`pc_track_ads` 保留；`pc_m4_shadow_*` 清空；`pchq_series*`、`pchq_ad_spend` 保留；`pchq_orders.email_hash` 重新加盐；`pchq_refunds.note` 清空；`pchq_sites.buyer_name` 改成“投手 N”；`pchq_series_reserved` 不带；各模块开关在快照里一律设回 off。新列只在存在时处理（老库不会报错）。
+  - CONTRACT 的功能键表（16 个）、巡检类型表（4 个）、2b / 2c 两小节。
+  - 测试：`m1-hq-capabilities-pure` 15 项、`m1-monitor-checks-pure` 26 项、快照自检 14 项，本机通过。**这批接线还没在沙盒的真实 WordPress 里跑过**（沙盒上的候选是接线之前打的包）。
+- 还没接的：F5 要的 `/hq/staff` 带 `media_buyer`（NF-05 H 要删这个接口，放到 M2 一起定）；F2 要的总后台三档开关页面和 F4 要的远程换档通道（要动总后台页面，归日常会话 / 待定）；新店默认 `pc_media_buyer_default`。
+
+### 试点店建议值
+
+按“近 7 天访客最少的子店”：**李军 s0006（vialcovepro.com）**，近 7 天访客 54、订单 0（总后台每日汇总，2026-11-12 只读查询）。次少是老毛 s0009（55），但它开着流量斗篷（见下），不适合做验收。发布脚本按 s0006 准备；真正发布前仍要平台所有者确认。
+
+| 店 | 近 7 天访客 | 订单 |
+| --- | --- | --- |
+| 李军 s0006 | 54 | 0 |
+| 老毛 s0009 | 55 | 0 |
+| 地瓜 s0001（主店） | 59 | 2 |
+| 光辉 s0008 | 81 | 0 |
+| 芒果 s0010 | 230 | 2 |
+| 阳 s0007 | 395 | 1 |
+
+### 生产只读核对一：加购推荐
+
+6 家店各执行 `wp eval 'var_dump( \PeptideCore\Activity\Quote_Cart::supported_hooks() );'`：**6 家全部是 `bool(false)`**。按 F2 的说明，这表示主线的手动订单功能让加购推荐在所有店都不出现了。沙盒（同一份主线代码）也是 false。只读，没有改任何东西；原因和修法在 F2 的 CONTRACT M4 一节“给日常会话”第 1 条，归日常会话。
+
+### 生产只读核对二：流量斗篷和跳转
+
+| 店 | `acloak_options` | 里面的 `enabled` | 从这台机器访问首页（手机 / 桌面浏览器标识） |
+| --- | --- | --- | --- |
+| 地瓜 s0001 | 没有 | — | 200 / 200 |
+| 李军 s0006 | 有 | 没有这一项 | 200 / 200 |
+| 阳 s0007 | 有 | 没有这一项 | 200 / 200 |
+| 光辉 s0008 | 有 | 没有这一项 | 200 / 200 |
+| 老毛 s0009 | 有 | `1` | 200 / **302 → https://shiyishop.com/** |
+| 芒果 s0010 | 有 | 没有这一项 | 200 / 200 |
+
+- vialcovepro.com（李军）现在**没有**在跳转（两种浏览器标识都是 200）。
+- 5 家子店都有 `acloak_options`，跳转目标都填的是 `https://shiyishop.com`，并开着按机房 IP 和浏览器标识拦截；但只有老毛 s0009 有 `enabled = 1`，也只有它在实际跳转：桌面浏览器标识被 302 到 shiyishop.com，手机标识正常。
+- 这是从一台美国机房 IP 的机器看到的，真实顾客（住宅 IP、手机）看到什么可能不同。只看了首页。没有改任何设置，怎么处理由平台所有者定。
+
+### 归 F1 的两个冒烟用例
+
+`smoke-hq-connector`（7 过 26 败）、`smoke-hq`（13 过后 LogicException）：还没查，排在 M1-4 之前。

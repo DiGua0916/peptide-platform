@@ -28,6 +28,8 @@ final class Monitor {
 		add_filter( 'cron_schedules', array( self::class, 'cron_schedule' ) );
 		add_action( self::CRON, array( self::class, 'poll_all' ) );
 		add_action( self::POLL_ONE, array( self::class, 'poll_new' ) );
+		add_filter( 'pchq_monitor_checks', array( self::class, 'pricing_engine_check' ), 10, 4 );
+		add_filter( 'pchq_alert_types', array( self::class, 'module_alert_types' ) );
 		if ( ! wp_next_scheduled( self::CRON ) ) {
 			self::schedule();
 		}
@@ -198,6 +200,35 @@ final class Monitor {
 		} else {
 			Alerts::resolve( $id, 'closed' );
 		}
+	}
+
+	/** 模块巡检告警的显示名（各模块自己的类型由各模块用同一个过滤器登记）。 */
+	public static function module_alert_types( $types ): array {
+		return ( is_array( $types ) ? $types : array() ) + array( 'pricing_mismatch' => '价格引擎核对不一致' );
+	}
+
+	/**
+	 * M4 价格引擎（店铺端没有总后台文件，所以这一项放在这里）：店铺在 /hq/status 的 modules.pricing_engine 里上报
+	 * { mode, today: { compared, matched, mismatched, skipped, errors } }。档位不是 off 且今天有不一致或出错 → 告警。
+	 * 没声明 pricing.engine 的店、没带简报的店不报（不适用）。
+	 */
+	public static function pricing_engine_check( $checks, $site_id = 0, $status = array(), $now = 0 ): array {
+		$checks = is_array( $checks ) ? $checks : array();
+		$brief  = is_array( $status ) ? ( $status['modules']['pricing_engine'] ?? null ) : null;
+		if ( ! is_array( $brief ) || ! isset( $status['capabilities']['pricing.engine'] ) ) {
+			return $checks;
+		}
+		$mode  = (string) ( $brief['mode'] ?? 'off' );
+		$today = is_array( $brief['today'] ?? null ) ? $brief['today'] : array();
+		$bad   = (int) ( $today['mismatched'] ?? 0 );
+		$err   = (int) ( $today['errors'] ?? 0 );
+		$ok    = 'off' === $mode || ( 0 === $bad && 0 === $err );
+		$checks[] = array(
+			'type'    => 'pricing_mismatch',
+			'ok'      => $ok,
+			'message' => $ok ? '' : sprintf( '价格引擎（%1$s 档）今天核对 %2$d 次：不一致 %3$d 次，出错 %4$d 次。在这家店执行 wp peptide price-engine log 查看明细；需要时把档位改回 off。', $mode, (int) ( $today['compared'] ?? 0 ), $bad, $err ),
+		);
+		return $checks;
 	}
 
 	/** 本类自己管的告警类型；模块巡检不能用这些名字（否则会把核心告警误关掉）。 */

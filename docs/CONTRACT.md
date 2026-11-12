@@ -645,6 +645,23 @@ $all = \PeptideHq\Client::capabilities( $site_id ); // array<string,string>
 | 功能键 | 版本 | 归属 | 含义 |
 | --- | --- | --- | --- |
 | `hq.capabilities` | 1 | F1 | 支持功能声明 |
+| `pricing.engine` | 1 | F2 | 价格引擎三档开关和 `/hq/pricing-engine` |
+| `marketing.quiet` | 1 | F2 | 营销弹窗静默开关 |
+| `campaigns.readonly` | 1 | F2 | 投手只读、系列下发的活动只读 |
+| `series.campaigns` | 1 | F2 | 能接收系列下发的营销活动 |
+| `series.sync` | 1 | F3 | `/hq/series/sync`、`/hq/series/state`、`/hq/series/restore`、`/hq/catalog-export` |
+| `series.catalog` | 1 | F3 | 能接收商品 |
+| `series.shipping` | 1 | F3 | 能接收运费 |
+| `orders.report` | 1 | F3 | 店铺会上报订单 |
+| `orders.refund` | 1 | F3 | `/hq/order-refund` 和 `/hq/orders/digest` |
+| `m6.metrics` | 1 | F4 | 有 `Data\Metrics`（只说明代码在，不说明开关档位） |
+| `m7.pixel_acceptance` | 1 | F4 | 服务端 AddPaymentInfo、像素验收、`/admin/pixel-test` |
+| `m9.media_buyer` | 1 | F5 | 投手角色和开关 |
+| `m9.onboarding` | 1 | F5 | 开店向导和 `Onboarding::store_status()` |
+| `m11.buyer_status` | 1 | F5 | 已购回访 |
+| `m14.entry_address` | 1 | F5 | 商品地址开关 |
+
+2026-11-12 在沙盒实测：五条分支合在一起时，店铺 `/hq/status` 上报了以上 16 个键，总后台 `Client::capabilities()` 原样读到。
 
 各会话新增功能键时，在自己那节写明键名、版本和含义，F1 汇总到这张表。
 
@@ -673,7 +690,26 @@ add_filter( 'pchq_monitor_checks', static function ( array $checks, int $site_id
 }, 10, 4 );
 ```
 
-- 已登记的巡检类型：`code_drift`（F1，M1-6，待实现：店铺各组件版本和文件清单哈希与最新发布不一致）。
+- 已登记的巡检类型：
+
+| 类型 | 归属 | 显示名 | 什么时候报 |
+| --- | --- | --- | --- |
+| `code_drift` | F1 | 代码版本不一致 | M1-6，待实现 |
+| `pricing_mismatch` | F1 代 F2 实现（`hq/class-monitor.php`） | 价格引擎核对不一致 | 店铺声明了 `pricing.engine` 且带了简报；档位不是 off 且今天有不一致或出错 |
+| `series_out_of_sync` | F3 | 系列内容未同步 | 声明了 `series.sync`、已归入系列、至少同步过一次；上次失败或落后超过 30 分钟 |
+| `order_report_lag` | F3 | 订单上报落后 | 声明了 `orders.report`；近两天已付款订单数比已上报的多且持续超过 2 小时 |
+
+### 2b. 店铺在 `/hq/status` 里带的模块简报（2026-11-12 新增）
+
+巡检不能另发请求，所以店铺把各模块的小结放在 status 的 `modules` 里：`$status['modules'][<键>]`。
+
+- 约定好的两项由连接器直接带上（对应的类还没部署时不带）：`pricing_engine`（`Pricing\Runtime::status_brief()`）、`onboarding`（`Admin\Onboarding::store_status()`）。
+- 其他模块用过滤器加：`add_filter( 'pc_hq_status_modules', fn( array $m ) => $m + array( 'series' => array( … ) ) );`。键：小写字母开头，小写字母、数字、下划线，最长 41；值能转成 JSON，不放顾客资料和密钥；不能覆盖已有的键。
+- 注意位置：F2 原先建议放在 status 顶层的 `pricing_engine`，实际放在 `modules.pricing_engine`。
+
+### 2c. `/hq/summary` 每天多四项（2026-11-12 新增）
+
+店铺有 M6 的 `Data\Metrics::abandoned_daily()` 时，`days[]` 每一行多 `abandoned`、`abandoned_open`、`recall_emailed`、`recall_recovered`（店铺时区的日期）。**店铺还没有 M6 代码时这四个键不存在**——总后台要按“没有这个键 = 这家店还不支持”处理，不能当成 0。
 
 ### 3. 测试登记
 

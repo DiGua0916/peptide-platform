@@ -652,6 +652,7 @@ final class Hq_Connector {
 			'plugins'     => $plugins,
 			'apps'        => self::apps(),
 			'capabilities' => self::capabilities(),
+			'modules'     => self::module_status(),
 			'design'      => Design_Sync::summary(),
 			'versions'    => array(
 				'plugin' => PEPTIDE_CORE_VERSION,
@@ -741,11 +742,75 @@ final class Hq_Connector {
 			$r['revenue'] = round( $r['revenue'], 2 );
 		}
 		unset( $r );
+		$rows = self::with_abandoned( $rows, $start->getTimestamp(), $end->getTimestamp() );
 		return array(
 			'currency' => function_exists( 'get_woocommerce_currency' ) ? get_woocommerce_currency() : '',
 			'timezone' => wp_timezone_string(),
 			'days'     => array_values( $rows ),
 		);
+	}
+
+	/**
+	 * 每日汇总里加上弃单数（M6 的 Data\Metrics::abandoned_daily()，店铺时区的日期）：总后台用它算弃单率。
+	 * 店铺上还没有 M6 的代码时不加这几项——总后台看到没有 `abandoned` 这个键就知道这家店还不支持，不能当成 0。
+	 *
+	 * @param array<string,array> $rows 日期 => 当天的汇总
+	 * @return array<string,array>
+	 */
+	public static function with_abandoned( array $rows, int $from, int $to ): array {
+		$metrics = __NAMESPACE__ . '\\Data\\Metrics';
+		if ( ! $rows || ! is_callable( array( $metrics, 'abandoned_daily' ) ) ) {
+			return $rows;
+		}
+		try {
+			$by_day = (array) call_user_func( array( $metrics, 'abandoned_daily' ), $from, $to );
+		} catch ( \Throwable $e ) {
+			return $rows; // 弃单读不出来不能让每日汇总失败。
+		}
+		foreach ( $rows as $day => $row ) {
+			$a                               = is_array( $by_day[ $day ] ?? null ) ? $by_day[ $day ] : array();
+			$rows[ $day ]['abandoned']       = (int) ( $a['count'] ?? 0 );
+			$rows[ $day ]['abandoned_open']  = (int) ( $a['open'] ?? 0 );
+			$rows[ $day ]['recall_emailed']  = (int) ( $a['emailed'] ?? 0 );
+			$rows[ $day ]['recall_recovered'] = (int) ( $a['recovered'] ?? 0 );
+		}
+		return $rows;
+	}
+
+	/**
+	 * /hq/status 里各模块的简报：总后台巡检不另发请求，只看这里。
+	 * 约定好的两项直接带上（类还没部署时不带）；其他模块用过滤器 pc_hq_status_modules 加自己的键：
+	 *   add_filter( 'pc_hq_status_modules', fn( array $m ) => $m + array( 'my_module' => array( … ) ) );
+	 * 值必须能转成 JSON，不要放顾客资料和密钥。某一项出错只丢这一项。
+	 *
+	 * @return array<string,mixed>
+	 */
+	public static function module_status(): array {
+		$out     = array();
+		$sources = array(
+			'pricing_engine' => array( __NAMESPACE__ . '\\Pricing\\Runtime', 'status_brief' ),   // M4：档位和今天的核对次数
+			'onboarding'     => array( __NAMESPACE__ . '\\Admin\\Onboarding', 'store_status' ),  // M9：开店向导是否完成
+		);
+		foreach ( $sources as $key => $callable ) {
+			if ( is_callable( $callable ) ) {
+				try {
+					$out[ $key ] = call_user_func( $callable );
+				} catch ( \Throwable $e ) {
+					unset( $out[ $key ] );
+				}
+			}
+		}
+		try {
+			$extra = apply_filters( 'pc_hq_status_modules', array() );
+		} catch ( \Throwable $e ) {
+			$extra = array();
+		}
+		foreach ( is_array( $extra ) ? $extra : array() as $key => $value ) {
+			if ( is_string( $key ) && preg_match( '/^[a-z][a-z0-9_]{1,40}$/D', $key ) && ! isset( $out[ $key ] ) && ( is_array( $value ) || is_scalar( $value ) ) ) {
+				$out[ $key ] = $value;
+			}
+		}
+		return $out;
 	}
 
 	// ---------- 一键登录 ----------

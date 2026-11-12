@@ -58,6 +58,10 @@ STORE_TABLES = {
     "pc_subscriptions": SCRUB,
     # 追踪表按设计不存姓名、邮箱、电话、地址，只有匿名访客号
     "pc_track_events": KEEP, "pc_track_tabs": KEEP, "pc_track_visitors": KEEP, "pc_track_visits": KEEP,
+    # M6（F4）：访问的广告参数，没有顾客资料
+    "pc_track_ads": KEEP,
+    # M4（F2）：价格引擎核对统计和明细（懒建；有商品、数量、优惠码，没有顾客资料）
+    "pc_m4_shadow_stats": TRUNCATE, "pc_m4_shadow_log": TRUNCATE,
 }
 HQ_TABLES = {
     "commentmeta": KEEP, "comments": SCRUB, "links": KEEP, "options": SCRUB, "postmeta": SCRUB, "posts": KEEP,
@@ -67,6 +71,9 @@ HQ_TABLES = {
     "pc_pay_hub_attempts": TRUNCATE, "pc_pay_hub_details": TRUNCATE, "pc_pay_hub_events": TRUNCATE,
     "pchq_alerts": KEEP, "pchq_daily": KEEP, "pchq_mail_log": TRUNCATE, "pchq_plugins": KEEP, "pchq_servers": KEEP,
     "pchq_site_plugins": KEEP, "pchq_sites": SCRUB,
+    # M3 / M10（F3）：系列、主商品库、系列活动、广告花费没有顾客资料；订单汇总有邮箱哈希，退款备注可能提到顾客
+    "pchq_series": KEEP, "pchq_series_products": KEEP, "pchq_series_campaigns": KEEP, "pchq_ad_spend": KEEP,
+    "pchq_orders": SCRUB, "pchq_refunds": SCRUB,
 }
 
 # 整条删除的选项：支付、邮件、AI、像素、第三方接口的密钥和连接信息；以及一次性数据。
@@ -81,7 +88,7 @@ OPTION_DELETE_EXACT = [
     "logged_in_key", "logged_in_salt", "nonce_key", "nonce_salt", "secure_auth_key", "secure_auth_salt", "secret_key",
     # 总后台
     "pchq_ai", "pchq_ai_providers", "pchq_ai_models", "pchq_register_secret", "pchq_cdn", "pchq_cdn_bot", "pchq_costs", "pchq_costs_snapshot",
-    "pchq_mail", "pchq_ops_agents", "pchq_track17", "pchq_fedex", "pchq_fedex_token", "pchq_17_quota", "pchq_clone_jobs", "pc_panapay_hub_settings", "pc_panapay_hub_purged",
+    "pchq_mail", "pchq_ops_agents", "pchq_track17", "pchq_fedex", "pchq_series_reserved", "pchq_fedex_token", "pchq_17_quota", "pchq_clone_jobs", "pc_panapay_hub_settings", "pc_panapay_hub_purged",
 ]
 OPTION_DELETE_LIKE = [
     r"\_transient\_%", r"\_site\_transient\_%", r"\_pc\_pay\_nonce\_%", r"pc\_panapay\_handoff\_%", r"pc\_panapay\_hub\_accounts%",
@@ -140,10 +147,12 @@ def fake_postcode(country):
     return f"CASE {country} WHEN 'PR' THEN '00901' WHEN 'US' THEN '10001' WHEN 'CA' THEN 'K1A 0B1' WHEN 'GB' THEN 'SW1A 1AA' ELSE '00000' END"
 
 
-def scrub_statements(kind, prefix, present, salt):
+def scrub_statements(kind, prefix, present, salt, columns=None):
     """present：实际存在的完整表名集合。只为存在的表生成语句。"""
     t = lambda name: f"`{prefix}{name}`"
     has = lambda name: prefix + name in present
+    # columns: {完整表名: {列名}}。给了就只对存在的列生成语句（新列是后来升级加的，老库没有）；没给时按最新结构生成。
+    col = lambda name, column: has(name) and (columns is None or column in columns.get(prefix + name, set()))
     sql = []
     if has("users"):
         sql.append(f"UPDATE {t('users')} SET user_email = {fake_email('user_email', salt)}, user_login = CONCAT('user', ID), user_nicename = CONCAT('user', ID), display_name = CONCAT('User ', ID), user_pass = '!', user_url = '', user_activation_key = ''")
@@ -221,6 +230,14 @@ def scrub_statements(kind, prefix, present, salt):
     if has("pchq_sites"):
         # 店铺连接密钥：本地环境重新注册，不带生产密钥。
         sql.append(f"UPDATE {t('pchq_sites')} SET key_enc = '', key_pending = NULL")
+    if col("pchq_sites", "buyer_name"):
+        # 投手姓名（内部人员）。
+        sql.append(f"UPDATE {t('pchq_sites')} SET buyer_name = IF(buyer_name = '', '', CONCAT('投手 ', id))")
+    if col("pchq_orders", "email_hash"):
+        # 邮箱的 SHA-256 可以被撞库：重新加盐，保留“同一位顾客”的对应关系。
+        sql.append(f"UPDATE {t('pchq_orders')} SET email_hash = IF(email_hash = '', '', SHA2(CONCAT({q(salt)}, email_hash), 256))")
+    if col("pchq_refunds", "note"):
+        sql.append(f"UPDATE {t('pchq_refunds')} SET note = ''")
     if has("options"):
         o = t("options")
         exact = ", ".join(q(name) for name in OPTION_DELETE_EXACT)
@@ -229,18 +246,20 @@ def scrub_statements(kind, prefix, present, salt):
             f"DELETE FROM {o} WHERE option_name IN ({exact}) OR {like}",
             f"DELETE FROM {o} WHERE option_name REGEXP {q(OPTION_DELETE_REGEX)} AND option_name NOT LIKE '%\\_endpoint'",
             f"UPDATE {o} SET option_value = 'admin@example.test' WHERE option_name IN ({', '.join(q(n) for n in OPTION_SET_EMAIL)})",
+            # 快照导入沙盒或本地后，大改模块的开关一律从“关”开始。
+            f"UPDATE {o} SET option_value = 'off' WHERE option_name IN ('pc_pricing_engine_mode', 'peptide_core_m6_mode', 'pc_buyer_recognition', 'pc_entry_address')",
             # 标记：本地环境据此确认导入的是脱敏快照。
             f"INSERT INTO {o} (option_name, option_value, autoload) VALUES ('pc_sanitized_snapshot', {q(datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'))}, 'no') ON DUPLICATE KEY UPDATE option_value = VALUES(option_value)",
         ]
     return sql
 
 
-def plan(kind, prefix, tables, salt):
+def plan(kind, prefix, tables, salt, columns=None):
     rules = classify(kind, prefix, tables)
     present = set(rules)
     sql = ["SET SESSION sql_safe_updates = 0", "SET FOREIGN_KEY_CHECKS = 0"]
     sql += [f"TRUNCATE TABLE `{table}`" for table, rule in sorted(rules.items()) if rule == TRUNCATE]
-    sql += scrub_statements(kind, prefix, present, salt)
+    sql += scrub_statements(kind, prefix, present, salt, columns)
     return sql
 
 
@@ -312,7 +331,11 @@ def export(args):
         # 2. 脱敏。
         tables = mysql(f"SELECT table_name FROM information_schema.tables WHERE table_schema = {q(scratch)}").split()
         prefix = args.prefix or next((name[: -len("options")] for name in tables if name.endswith("options")), "wp_")
-        statements = plan(args.kind, prefix, tables, salt)
+        present_columns = {}
+        for line in mysql(f"SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = {q(scratch)}").splitlines():
+            table, _, column = line.partition("\t")
+            present_columns.setdefault(table, set()).add(column)
+        statements = plan(args.kind, prefix, tables, salt, present_columns)
         mysql(";\n".join(statements) + ";\n", scratch, capture=False)
         # 3. 泄漏检查：任何文本列里还有非示例域名的邮箱，就不出文件。
         rows = [line.split("\t") for line in mysql(f"SELECT table_name, column_name, data_type FROM information_schema.columns WHERE table_schema = {q(scratch)}").splitlines()]

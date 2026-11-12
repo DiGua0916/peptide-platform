@@ -66,6 +66,24 @@ namespace {
 	Monitor::module_checks( 3, array(), 1003 );
 	check( 'non-array result ignored', array() === Alerts::$open );
 
+	// 3b. 价格引擎巡检（内置）：不适用时不报；影子档有不一致时告警；改回 off 或恢复一致时关闭。
+	$GLOBALS['pc_filters'] = array();
+	$caps = array( 'capabilities' => array( 'pricing.engine' => '1' ) );
+	$brief = static fn( string $mode, int $bad, int $err = 0 ) => $caps + array( 'modules' => array( 'pricing_engine' => array( 'mode' => $mode, 'today' => array( 'compared' => 9, 'matched' => 9 - $bad, 'mismatched' => $bad, 'skipped' => 0, 'errors' => $err ) ) ) );
+	check( 'no brief: nothing reported', array() === Monitor::pricing_engine_check( array(), 5, array( 'capabilities' => array( 'pricing.engine' => '1' ) ), 1 ) );
+	check( 'no capability: nothing reported', array() === Monitor::pricing_engine_check( array(), 5, array( 'modules' => $brief( 'shadow', 2 )['modules'] ), 1 ) );
+	$r = Monitor::pricing_engine_check( array( array( 'type' => 'other', 'ok' => true ) ), 5, $brief( 'shadow', 2 ), 1 );
+	check( 'shadow mismatch raises and keeps earlier checks', 2 === count( $r ) && 'pricing_mismatch' === $r[1]['type'] && false === $r[1]['ok'] && str_contains( $r[1]['message'], '不一致 2 次' ) );
+	check( 'errors alone raise', false === Monitor::pricing_engine_check( array(), 5, $brief( 'on', 0, 1 ), 1 )[0]['ok'] );
+	check( 'clean shadow is ok', true === Monitor::pricing_engine_check( array(), 5, $brief( 'shadow', 0 ), 1 )[0]['ok'] );
+	check( 'off clears even with old mismatches', true === Monitor::pricing_engine_check( array(), 5, $brief( 'off', 3 ), 1 )[0]['ok'] );
+	Alerts::$open = array();
+	Monitor::apply_checks( 5, Monitor::pricing_engine_check( array(), 5, $brief( 'shadow', 2 ), 1 ) );
+	check( 'alert opened through apply_checks', isset( Alerts::$open['5|pricing_mismatch|'] ) );
+	Monitor::apply_checks( 5, Monitor::pricing_engine_check( array(), 5, $brief( 'shadow', 0 ), 1 ) );
+	check( 'alert closed when consistent again', array() === Alerts::$open );
+	check( 'alert label registered', '价格引擎核对不一致' === Monitor::module_alert_types( array() )['pricing_mismatch'] );
+
 	// 4. 功能声明：只对声明了的店调用新接口。
 	Sites::$rows = array(
 		1 => array( 'info' => array( 'capabilities' => array( 'hq.capabilities' => '1', 'series.sync' => '2' ) ) ),
