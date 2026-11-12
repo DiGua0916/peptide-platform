@@ -10,6 +10,15 @@
  * @package PeptideCore
  */
 
+namespace PeptideCore {
+	/** M3 的系列同步（替身）：只回答“营销活动是否已由系列接管”。 */
+	final class Series_Sync {
+		public static function manages( string $section ): bool {
+			return 'campaign' === $section && ! empty( $GLOBALS['m4_series_managed'] );
+		}
+	}
+}
+
 namespace PeptideCore\Admin {
 	final class Apps_Page {
 		public static function require_allowed( $app ) {}
@@ -38,6 +47,12 @@ namespace {
 	function wp_timezone_string() { return 'UTC'; }
 	function wp_timezone() { return new DateTimeZone( 'UTC' ); }
 	function get_term( $id, $tax = '' ) { return null; }
+	function wp_unslash( $v ) { return $v; }
+	function sanitize_hex_color( $v ) { return preg_match( '/^#[0-9a-f]{6}$/i', (string) $v ) ? $v : ''; }
+	function sanitize_textarea_field( $v ) { return trim( (string) $v ); }
+	function wp_attachment_is_image( $id ) { return false; }
+	function esc_url_raw( $v, $protocols = null ) { return (string) $v; }
+	function get_woocommerce_currency_symbol() { return '$'; }
 
 	$checks = 0;
 	$failed = array();
@@ -75,7 +90,7 @@ namespace {
 		$_GET                               = array();
 		m4_promotion( 500, 'Black Friday', promo( 'spend_amount', array( array( 100, 10 ), array( 200, 25 ) ) ) );
 		m4_promotion( 501, 'Not started', promo( 'spend_amount', array( array( 50, 5 ) ), array( 'start' => time() + 86400 ) ) );
-		update_post_meta_m4( 500, Campaigns::SERIES_META, '12' );
+		update_post_meta_m4( 500, Campaigns::SERIES_META, 'promotion/black-friday' );
 		welcome5();
 		m4_coupon( 901, 'SAVE10', array( 'type' => 'percent', 'amount' => '10' ) );
 		m4_coupon( 902, 'OLD', array( 'type' => 'percent', 'amount' => '50', 'expires' => time() - 60 ) );
@@ -136,6 +151,53 @@ namespace {
 	$login( 'pc_media_buyer', array( Marketing::VIEW_CAP ) );
 	add_filter( 'pc_marketing_can_manage', static fn() => true );
 	$check( '过滤器 pc_marketing_can_manage 可以放开', Marketing::can_manage() );
+
+	// ---------- 系列统一下发的活动：对所有人只读（管理员也不能改） ----------
+	$login( 'administrator', array( 'edit_shop_coupons', 'manage_woocommerce', 'manage_options' ) );
+	update_post_meta_m4( 500, \PeptideCore\Pricing\Series_Campaigns::META, 'promotion/black-friday' );
+	update_post_meta_m4( 901, \PeptideCore\Pricing\Series_Campaigns::META, 'coupon/save10' );
+	$all = get_option( \PeptideCore\Shipping\Discounts::OPTION );
+	$all[0]['series_key'] = 'half';
+	update_option( \PeptideCore\Shipping\Discounts::OPTION, $all );
+	$check( '认得出哪些是系列下发的', Marketing::locked( 'promotion', 500 ) && ! Marketing::locked( 'promotion', 501 ) && Marketing::locked( 'coupon', 901 ) && ! Marketing::locked( 'coupon', 902 ) && Marketing::locked( 'ship_discount', 1 ) && ! Marketing::locked( 'ship_discount', 2 ) && '' !== Marketing::locked_badge( 'promotion', 500 ) && '' === Marketing::locked_badge( 'promotion', 501 ) );
+	foreach ( array( '满减活动' => array( Promotions_Page::class, 500 ), '优惠码' => array( Coupons_Page::class, 901 ), '运费折扣' => array( Shipping_Discounts_Page::class, 1 ) ) as $name => [ $page, $id ] ) {
+		$_GET = array( 'edit' => (string) $id );
+		$check( '管理员打开系列下发的' . $name . '的编辑页：403', 403 === $status( array( $page, 'render' ) ) );
+		$_GET  = array( 'id' => (string) $id, 'on' => '0' );
+		$check( '管理员停用系列下发的' . $name . '：403', 403 === $status( array( $page, 'toggle' ) ) );
+		$_GET  = array();
+		$_POST = array( 'id' => (string) $id, 'name' => 'x' );
+		$check( '管理员保存系列下发的' . $name . '：403', 403 === $status( array( $page, 'save' ) ) );
+		$_POST = array();
+	}
+	$check( '管理员处理本店自己建的活动：不拦', 200 === $status( static fn() => Marketing::guard_unlocked( 'promotion', 501 ) ) && 200 === $status( static fn() => Marketing::guard_unlocked( 'coupon', 902 ) ) && 200 === $status( static fn() => Marketing::guard_unlocked( 'ship_discount', 2 ) ) );
+	$GLOBALS['pagenow'] = 'post.php';
+	$_REQUEST           = array( 'post' => '901', 'action' => 'edit', 'pc_classic' => '1' );
+	$check( 'WooCommerce 原来的优惠券编辑页也改不了系列下发的券', 403 === $status( array( Marketing::class, 'redirect_old_screens' ) ) );
+	$_REQUEST = array();
+	update_option( \PeptideCore\First_Order_Offer::OPTION, array( 'enabled' => true, 'coupon_id' => 900, 'series_key' => 'main' ) );
+	$_SERVER['REQUEST_METHOD'] = 'POST';
+	$_POST                     = array( 'mode' => 'save', 'coupon_id' => '0' );
+	$check( '首单优惠由系列下发时，管理员在店铺后台也改不了', 403 === $status( array( First_Order_Offer_Page::class, 'handle' ) ) && 900 === get_option( \PeptideCore\First_Order_Offer::OPTION )['coupon_id'] );
+	$_POST = array();
+	update_option( \PeptideCore\Exit_Intent::OPTION, array( 'enabled' => true, 'type' => 'message', 'title' => 'Series popup', 'series_key' => 'exit_intent/main', 'series_hash' => 'h' ) );
+	$errors = \PeptideCore\Exit_Intent::save( array( 'enabled' => false, 'type' => 'message', 'title' => 'Changed by store' ) );
+	$check( '离开挽回由系列下发时，登录的后台用户保存被拒绝，内容不变', 1 === count( $errors ) && 'Series popup' === get_option( \PeptideCore\Exit_Intent::OPTION )['title'] );
+	$GLOBALS['m4']['user'] = 0;
+	$errors                = \PeptideCore\Exit_Intent::save( array( 'enabled' => false, 'type' => 'message', 'title' => 'Series popup', 'button' => '', 'desktop_exit' => '1', 'pages' => array( 'home' ) ) );
+	$after                 = get_option( \PeptideCore\Exit_Intent::OPTION );
+	$check( '总后台的应用开关（没有登录用户）仍然可以关掉弹窗，系列标记保留', array() === $errors && false === $after['enabled'] && 'exit_intent/main' === $after['series_key'] );
+
+	// ---------- 营销活动已由系列接管：店铺后台不再给新建入口 ----------
+	$GLOBALS['m4_series_managed'] = true;
+	$login( 'shop_manager', array( 'edit_shop_coupons' ) );
+	$_GET = array( 'new' => '1' );
+	$check( '系列接管后，原来能改的营销员工也只读：新建地址 403，列表是“当前在跑的活动”', ! Marketing::can_manage() && Marketing::can_view() && 403 === $status( array( Promotions_Page::class, 'render' ) ) );
+	$_GET = array();
+	$check( '系列接管后，营销员工的列表页只读', false !== strpos( $html( array( Coupons_Page::class, 'render' ) ), '当前在跑的活动' ) );
+	$login( 'administrator', array( 'edit_shop_coupons', 'manage_woocommerce', 'manage_options' ) );
+	$check( '系列接管后，平台管理员（总后台一键登录）仍可处理本店自己建的活动', Marketing::can_manage() );
+	$GLOBALS['m4_series_managed'] = false;
 
 	printf( "RESULT %d 项检查：%s\n", $checks, $failed ? count( $failed ) . ' 项不通过' : '全部通过' );
 	exit( $failed ? 1 : 0 );

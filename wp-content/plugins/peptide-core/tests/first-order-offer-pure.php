@@ -87,6 +87,7 @@ require dirname(__DIR__).'/includes/class-coupon-rules.php';
 if(!function_exists('apply_filters')){function apply_filters($tag,$value,...$args){return $value;}}
 require dirname(__DIR__).'/includes/pricing/class-popups.php'; // 营销弹窗静默开关（M4）：这里始终不静默。
 require dirname(__DIR__).'/includes/class-first-order-offer.php';
+require dirname(__DIR__).'/includes/pricing/class-series-campaigns.php'; // Marketing::can_manage() 要问“营销活动是否已由系列接管”（这里没有系列，始终为否）。
 require dirname(__DIR__).'/includes/admin/class-marketing.php'; // HQ-07：保存前检查 Marketing::can_manage()（投手只读）。
 require dirname(__DIR__).'/includes/admin/class-first-order-offer-page.php';
 use PeptideCore\First_Order_Offer as Offer;

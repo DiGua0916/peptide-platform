@@ -45,7 +45,28 @@ final class Marketing {
 	/** 能不能新建、编辑、启停、删除营销活动。投手不能；管理员（含总后台一键登录）和原有的营销员工照旧。 */
 	public static function can_manage(): bool {
 		$can = current_user_can( self::CAP ) && ! in_array( self::BUYER_ROLE, (array) ( wp_get_current_user()->roles ?? array() ), true );
+		// 营销活动已由系列接管（M3）：店铺后台不再给新建入口，只有平台管理员（总后台一键登录）还能处理本店自己建的活动。
+		if ( $can && \PeptideCore\Pricing\Series_Campaigns::managed() && ! current_user_can( 'manage_options' ) ) {
+			$can = false;
+		}
 		return (bool) apply_filters( 'pc_marketing_can_manage', $can );
+	}
+
+	/** 这条活动是不是总后台按系列统一下发的（店铺后台对所有人只读）。$kind：promotion / coupon / ship_discount。 */
+	public static function locked( string $kind, int $id ): bool {
+		return \PeptideCore\Pricing\Series_Campaigns::locked( $kind, $id );
+	}
+
+	/** 要修改、启停、删除系列下发的活动：一律 403。 */
+	public static function guard_unlocked( string $kind, int $id ): void {
+		if ( $id && self::locked( $kind, $id ) ) {
+			wp_die( '这个活动由总后台按系列统一下发，店铺后台不能修改。需要调整请在总后台改系列活动。', '', array( 'response' => 403 ) );
+		}
+	}
+
+	/** 列表里名称后面的小标记。 */
+	public static function locked_badge( string $kind, int $id ): string {
+		return self::locked( $kind, $id ) ? ' <span class="pc-pl-muted">系列统一下发 · 只读</span>' : '';
 	}
 
 	/** 能不能打开营销活动页面（能改的人，或只读的投手）。 */
@@ -92,6 +113,13 @@ final class Marketing {
 	/** 旧地址转到新页面：WooCommerce 的营销概览、优惠券列表 / 编辑页，满减活动的文章列表 / 编辑页。 */
 	public static function redirect_old_screens(): void {
 		global $pagenow;
+		// 系列下发的优惠码 / 满减活动：WooCommerce 原来的编辑页也不能改、不能删（HQ-07）。
+		if ( 'post.php' === $pagenow ) {
+			$locked_id = absint( $_REQUEST['post'] ?? ( $_POST['post_ID'] ?? 0 ) ); // phpcs:ignore WordPress.Security.NonceVerification
+			if ( $locked_id && in_array( get_post_type( $locked_id ), array( 'shop_coupon', Promotions::CPT ), true ) ) {
+				self::guard_unlocked( 'coupon', $locked_id );
+			}
+		}
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended
 		if ( wp_doing_ajax() || ! current_user_can( self::CAP ) || ! empty( $_GET['pc_classic'] ) || 'GET' !== ( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) ) {
 			return;

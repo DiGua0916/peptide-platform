@@ -3,7 +3,7 @@
  * 当前在跑的营销活动（HQ-07 店铺端，只读）。给投手的只读页面和总后台的状态接口用。
  *
  * 汇总七处优惠里“现在对顾客生效”的那些：满减活动、优惠码（含首单券，不含顾客用积分换的个人券）、
- * 运费折扣、赠品 / 捆绑、离开挽回 / 转盘。每条带来源：series = 总后台按系列统一下发的（带 _pc_series_managed 标记），
+ * 运费折扣、赠品 / 捆绑、离开挽回 / 转盘。每条带来源：series = 总后台按系列统一下发的（带 _pc_series_campaign 标记），
  * store = 这家店自己建的。
  *
  * @package PeptideCore
@@ -22,8 +22,8 @@ defined( 'ABSPATH' ) || exit;
 
 final class Campaigns {
 
-	/** 系列统一下发的活动在文章 / 优惠码 meta 上的标记（值 = 系列活动 ID）；运费折扣用数组里的 series_managed。 */
-	public const SERIES_META = '_pc_series_managed';
+	/** 系列统一下发的活动在文章 / 优惠码 meta 上的标记（值 = "kind/key"）；运费折扣、首单、离开挽回用数组里的 series_key。 */
+	public const SERIES_META = Series_Campaigns::META;
 
 	public const KINDS = array(
 		'promotion'         => '满减活动',
@@ -72,7 +72,7 @@ final class Campaigns {
 
 		foreach ( Discounts::all() as $d ) {
 			if ( 'active' === Discounts::status( $d, $now ) && null !== Discounts::value_now( $d, $now ) ) {
-				$rows[] = array( 'kind' => 'shipping_discount', 'id' => (int) $d['id'], 'name' => (string) $d['name'], 'rule' => implode( '；', Discounts::rule_lines( $d ) ), 'ends' => (int) $d['end'], 'source' => empty( $d['series_managed'] ) ? 'store' : 'series' );
+				$rows[] = array( 'kind' => 'shipping_discount', 'id' => (int) $d['id'], 'name' => (string) $d['name'], 'rule' => implode( '；', Discounts::rule_lines( $d ) ), 'ends' => (int) $d['end'], 'source' => '' === (string) ( $d['series_key'] ?? '' ) ? 'store' : 'series' );
 			}
 		}
 
@@ -83,7 +83,7 @@ final class Campaigns {
 		$exit = Exit_Intent::settings();
 		if ( $exit['enabled'] ) {
 			$types  = array( 'coupon' => '弹窗发优惠码 ' . strtoupper( (string) $exit['coupon'] ), 'wheel' => '抽奖转盘（' . count( (array) $exit['prizes'] ) . ' 个奖项）', 'message' => '自定义内容' );
-			$rows[] = array( 'kind' => 'exit_intent', 'id' => 0, 'name' => (string) $exit['title'], 'rule' => $types[ $exit['type'] ] ?? (string) $exit['type'], 'ends' => 0, 'source' => empty( $exit['series_managed'] ) ? 'store' : 'series' );
+			$rows[] = array( 'kind' => 'exit_intent', 'id' => 0, 'name' => (string) $exit['title'], 'rule' => $types[ $exit['type'] ] ?? (string) $exit['type'], 'ends' => 0, 'source' => '' === (string) ( $exit['series_key'] ?? '' ) ? 'store' : 'series' );
 		}
 		return $rows;
 	}

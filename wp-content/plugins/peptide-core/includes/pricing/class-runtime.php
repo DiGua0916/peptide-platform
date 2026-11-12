@@ -34,7 +34,8 @@ final class Runtime {
 	public static function register_hooks(): void {
 		add_action( 'rest_api_init', array( self::class, 'routes' ) );
 		add_filter( 'pc_hq_capabilities', array( self::class, 'capabilities' ) );
-		Popups::register_hooks(); // 营销弹窗静默开关和价格无关，借这里注册，入口文件不用再加一行。
+		Popups::register_hooks();           // 营销弹窗静默开关和价格无关，借这里注册，入口文件不用再加一行。
+		Series_Campaigns::register_hooks(); // 按系列接收营销活动（M3 的四个钩子）。
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			\WP_CLI::add_command( 'peptide price-engine', Cli::class );
 		}
@@ -43,12 +44,15 @@ final class Runtime {
 		}
 	}
 
-	/** 向总后台声明：这家店的代码支持价格引擎开关（F1 的 pc_hq_capabilities 钩子）。 */
-	public static function capabilities( $list ) {
-		$list   = is_array( $list ) ? $list : array();
-		$list[] = 'pricing_engine';
-		$list[] = 'marketing_quiet';
-		return array_values( array_unique( $list ) );
+	/** 向总后台声明这家店支持的 M4 功能（F1 的 pc_hq_capabilities 钩子：功能键 => 版本号）。 */
+	public static function capabilities( $caps ) {
+		$caps = is_array( $caps ) ? $caps : array();
+		return $caps + array(
+			'pricing.engine'     => '1', // 价格引擎三档开关和 /hq/pricing-engine
+			'marketing.quiet'    => '1', // 营销弹窗静默开关
+			'campaigns.readonly' => '1', // 投手只读、系列下发的活动只读
+			'series.campaigns'   => '1', // 能接收系列下发的营销活动（pc_series_apply_campaigns）
+		);
 	}
 
 	/** 现在是否由引擎接管。 */
