@@ -84,6 +84,8 @@
 .vc-trust__secure small{color:var(--muted);font-size:12px}
 .vc-trust__pay{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .vc-trust__pay img{display:block;width:40px;height:25px}
+.vc-product-activity{display:flex;flex-wrap:wrap;gap:4px 16px;margin:0 0 16px;color:var(--muted);font-size:13px;line-height:1.5}
+.vc-product-activity span::before{content:'';display:inline-block;width:6px;height:6px;margin-right:8px;border-radius:50%;background:var(--vc-primary-hover);vertical-align:middle}
 .vc-track-order{margin:-16px 0 32px;text-align:center;font-size:14px}
 .vc-track-order a{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 8px;color:var(--ink);text-decoration:underline;text-underline-offset:3px}
 .vc-track-order svg{width:16px;height:16px;flex:none}

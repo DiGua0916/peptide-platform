@@ -832,6 +832,24 @@
       "node_test": false,
       "status": "module-gate",
       "module": "M14"
+    },
+    {
+      "name": "m14-product-activity-pure",
+      "language": "php",
+      "path": "wp-content/themes/peptide-site/tests/m14-product-activity-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M14"
+    },
+    {
+      "name": "m14-product-activity",
+      "language": "node",
+      "path": "wp-content/themes/peptide-site/tests/m14-product-activity.cjs",
+      "core": true,
+      "node_test": true,
+      "status": "module-gate",
+      "module": "M14"
     }
   ]
 }
