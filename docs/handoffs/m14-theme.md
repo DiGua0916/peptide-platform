@@ -2,6 +2,66 @@
 
 分支 `claude/m9-buyer-admin-940389`，提交 `9b93b55`（第一批）、之后修主题用例的提交、`ab62b67`（商品地址修正），和 M9、M11 在同一个分支上。没有合并 main，没有发布。
 
+## 2026-11-12 第二轮：FE-03 和 NF-07
+
+提交 `43153d6`（FE-03）、`8516654`（NF-07）。主线已同步到 `7c6d2d3`。两个新开关都是按店、默认关，关着时页面输出和原来一样。
+
+检查：主题用例 `.cjs` 55 个、PHP 32 个全过；默认套件 55 过 7 败（7 个是主线原有的失败，不是 F5 的）；F5 登记的 11 条全过。信任条、客服按钮开关、首页提速都在本机临时站的浏览器里看过（手机宽度）。沙盒上没有验。
+
+### FE-03 商品页转化元素：对照 PRD 元素表重新盘点（合并主线 `7c6d2d3` 之后）
+
+| PRD 里的元素 | 现在的情况 | 结论 |
+| --- | --- | --- |
+| 顶部新客券条、活动倒计时、价格 / 原价 / Save | 主线已有 | 已有 |
+| 已售件数、购买播报 | 主线已有购买播报；11-11 加了热销提示（Selling fast、Only N left） | 已有 |
+| “X 人正在看”“X 人已加购” | 没有 | **还缺，这次没做**：要用真实数字，数据归 F4；不能放假数字 |
+| 满减提示 | 主线已有，11-11 改成优惠券样式 | 已有 |
+| 规格、数量、加购、立即购买 | 商品弹窗里的 Buy now 加购后直接去结账页（主线已有）。本机浏览器里点过：到 `/checkout/?pc_cart=…`，商品在单子里 | 已有 |
+| 运费险勾选 | 没有 | 不做（金额和是否默认勾选没定） |
+| 安全信任徽章、支付图标 | 支付图标只在结账页有；商品页没有信任徽章 | **这次新做**，见下 |
+| 分子式、CAS、纯度、储存、声明、COA | 主线已有 | 已有 |
+| WhatsApp 悬浮客服 | 主题早就有右下角客服按钮（点了打开 WhatsApp），但开关默认关，只有管理员能在系统设置里打开；投手填了 WhatsApp 也不出现 | 按钮已有；**这次补了投手能用的开关**，见下 |
+| 底部同专辑商品瀑布流 | 有最近浏览 | 部分（P2），没做 |
+| 运费提前显示、右下角物流球 | 主线 11-11 新加 | 已有（不在 PRD 表里） |
+
+做了的两件：
+
+- **信任条**（`inc/product-trust.php`，开关 `pc_trust_badges`）：商品弹窗内容最上面一条，两样东西：
+  - “Secure checkout · Encrypted connection”，只在店铺地址是 HTTPS 时显示；
+  - 这家店结账实际接受的支付标志，取自支付插件给结账页用的那份配置，没配置就不显示。
+  - 里面没有任何可以自由填写的文字，所以写不出店铺没有的认证、合作方、退款保证或发货承诺（用例里逐个词查过）。两样都没有时整条不输出。
+  - 英文措辞是我定的，平台所有者如果想换说法告诉我。
+- **客服按钮的开关给投手**（`core/admin/class-store-settings.php`）：投手的“店铺信息”里多一个勾选项“在前台右下角显示客服按钮”，写的就是原来那个开关（`support.enabled`），默认仍然是关。本机浏览器里勾上、取消各保存过一次，前台跟着出现 / 消失。
+- 悬浮按钮会不会互相挡：手机宽度下物流球、购物车球、客服按钮从上到下排在右下角，各 56 像素、间隔 12 像素，互不遮挡；客服按钮展开的那一条也不压到另外两个。结账页三个都不显示。
+
+### NF-07 手机端性能（主题这一侧）：先量，再改，再量
+
+量的是首页，新访客、手机宽度、本机这份临时站（没有 CDN、没有压缩，压缩后的大小是把同样的文件用 gzip 算出来的）。
+
+| | 改之前 | 打开开关之后 |
+| --- | --- | --- |
+| 首次打开的请求数 | 117 | 115 |
+| 挡住首屏的样式文件 | 40 个，530 KB（压缩后约 111 KB） | 29 个，368 KB（压缩后约 83 KB，少 25%） |
+| 挡住首屏的脚本 | 5 个，128 KB（压缩后约 45 KB） | 没有动 |
+| emoji 检测脚本 | 有（22 KB，另有一段内联脚本和样式） | 没有 |
+| 样式文件总数 / 脚本总数 | 43 / 63 | 43 / 62（样式一个没少，只是 11 个不再挡首屏） |
+
+改动（`inc/front-speed.php`，开关 `pc_front_speed`）：
+
+- 首页上有 11 个样式只给**关着的**购物车抽屉和**关着的**商品弹窗用：WooCommerce 的 3 个基础样式、购物车抽屉 4 个、商品规格 / 预览 / 图片 / 报告查看器 4 个。它们不再挡首屏：标签还在原来的位置，先按 `print` 加载，加载完换回自己的 `media`，层叠顺序不变。
+- 怎么确认这 11 个在首页上确实没用到：在浏览器里逐个把它们关掉，比对整页每个可见元素的位置、尺寸、颜色、字号，手机和桌面宽度都是 0 处不同。打开开关后再比对一次，553 个可见元素和关着开关时完全一致；购物车抽屉照常打开并带样式。
+- 只在首页生效。商品落地页、专辑落地页（弹窗一打开就要用这些样式）、结账、购物车、查订单等页面输出不变（逐个页面查过）。
+- 店铺前台不再输出 WordPress 的 emoji 检测脚本和样式；内容里的 emoji 仍然用设备自己的字体显示。
+- **营销组件一个没动**：满减、加购推荐、优惠券、离开挽回、转盘的脚本照原样加载和执行。
+
+没量到的和没做的：
+
+- **真机 4G、Facebook 内置浏览器下的 LCP 和可交互时间没有量。** 本机没有限速手段；浏览器面板在后台时也取不到绘制时间，所以上面只有“首屏要等多少东西”的数字，没有“几秒”。要拿到秒数，需要在沙盒上用 Lighthouse 或真机测。按压缩后少 28 KB 估，慢 4G 下大约少等 0.1–0.2 秒，这是估算，不是测量。
+- 首屏上最大的一块是插件的 `modules.css`（105 KB，日常会话的文件）和头部的 jQuery 一组脚本（WordPress / WooCommerce 的），这次没有碰。
+- 购物车那几个脚本（约 122 KB）可以改成“第一次点击或页面空闲时再执行”，和现有商品弹窗的做法一样。它关系到满减进度和加购推荐什么时候就绪，没有真机数据之前没有动。
+- 广告落地最常用的是商品落地页（`/product/x/`），那里弹窗一打开就要全部样式，这次的改动帮不上；要提速得另想办法（例如把弹窗首屏用到的样式单独拆出来），还没做。
+- WebP、服务器侧缓存归 F1，没有动。
+
 ## 2026-11-12 更新
 
 - 合并了主线 11-11 改主题的提交（`product-dialog-experience.js`、`product-dialog-polish.css`、`visitor-tracking.js`、`functions.php`：满减档位改成优惠券样式、热销小火苗、物流球等），没有冲突。合并后主题用例全部通过（`.cjs` 55 个、PHP 30 个）。
@@ -44,7 +104,8 @@
 
 - 新增：`inc/entry-address.php`、`inc/storefront-identity.php`、`assets/entry-address.js`、`tests/m14-entry-address-pure.php`、`tests/m14-storefront-identity-pure.php`、`tests/m14-entry-address.cjs`、`tests/m14-visitor-attribution-ads.cjs`、`tests/m14-visitor-engagement.cjs`。
 - 修改：`functions.php`（两行 require，三个函数移走）、`footer.php`、`inc/product-dialog-content.php`、`assets/site.css`、`assets/visitor-adapter.js`、`assets/visitor-tracking.js`（只加了三个广告参数）、`tests/footer-details.php`、`tests/visitor-transport.cjs`、`tests/visitor-product-actions.cjs`、`tests/visitor-metadata-push.cjs`、`tests/visitor-products.cjs`、`tests/visitor-quick-view-pair.cjs`、`tests/visitor-client-environment.cjs`。
-- 新选项：`pc_entry_address`。
+- 11-12 第二轮新增：`inc/product-trust.php`、`inc/front-speed.php`、`tests/m14-product-trust-pure.php`、`tests/m14-front-speed-pure.php`；修改 `functions.php`（两行 require）、`inc/product-dialog-content.php`（弹窗内容最前面输出信任条）、`assets/site.css`（信任条样式）。
+- 新选项：`pc_entry_address`、`pc_trust_badges`、`pc_front_speed`（都是值 `on` 才生效，默认关）。功能声明：`m14.entry_address`、`m14.trust_badges`、`m14.front_speed`。
 
 ## 实际做过的检查
 
@@ -68,10 +129,13 @@
 3. Facebook 事件管理工具里，打开商品弹窗时没有多出 PageView（请 F4 一起看）。
 4. 配置了使用声明的店：商品弹窗内容最下面有声明；页脚上方照旧有。
 5. 已购回访打开的店：页脚上方有 “Track your order”，查订单页面自己不显示这个入口。
+6. 信任条：`wp option update pc_trust_badges on`，打开任意商品弹窗，“A closer look” 下面有一条 Secure checkout 和支付标志（标志和结账页上的一致）；改回 `off` 后消失。
+7. 首页提速：`wp option update pc_front_speed on`。首页看起来和原来一样；点购物车、点商品，抽屉和弹窗都带样式；页面源码里有 11 个带 `data-vc-media` 的样式标签，没有 `_wpemojiSettings`。商品落地页（`/?vc_product=<ID>`）源码里没有 `data-vc-media`。最好在这一步用真机或 Lighthouse 量一次 LCP，开关前后各一次。
+8. 客服按钮：投手在“店铺信息”勾上“在前台右下角显示客服按钮”并保存，前台右下角出现客服按钮，和物流球、购物车球不重叠；取消勾选后消失。
 
 ## 没做的和已知问题
 
 - 插件目录下的 `peptide-core/tests/customer-checkout-observer.cjs` 也加载主题的追踪脚本，在主线上失败，把互动等待设成 0 也一样失败，原因不是这道门。它不在默认套件里，也不是主题的用例，这次没有动，已告诉 F4。
 - 分享出去的商品地址被社交平台抓取预览时，拿到的仍是首页的标题和图片。
 - 政策页定稿内容：等平台所有者提供。
-- FE-03（商品页转化元素）、NF-07（手机端性能）没有开始。
+- FE-03、NF-07 11-12 做了第一轮，见最上面“第二轮”一节；剩下的写在那里。

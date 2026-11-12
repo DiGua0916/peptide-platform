@@ -693,6 +693,7 @@ Root installed only three existing Commerce sources for P09 collection products 
 - 店铺信息页面 `admin.php?page=pc-store-info`：投手能改对外英文品牌名、客服 WhatsApp、客服邮箱和自己的密码；后台店铺名称（`blogname`）和域名只读。
   - 对外英文品牌名（平台所有者 2026-11-10 确认可改）：选项 `pc_public_brand`（2–40 个英文字符，可留空），读取用 `\PeptideCore\Admin\Store_Settings::public_brand()`。主题的 `vc_brand_name()` 已经读它（网页标题、Logo 替代文字、页脚版权）；留空时和以前一样。**不写 `blogname`**：那是总后台管理的内部名称，11-08 已定不上前台、不反向同步。
   - WhatsApp、邮箱写 `peptide_core_settings.support` 里的 `whatsapp`、`email`，其余字段不动（保存时从 `Settings::all()` 出发，不会把别的开关关掉）。
+  - 勾选项“在前台右下角显示客服按钮”（2026-11-12，FE-03）写同一份设置里的 `support.enabled`，就是“系统设置 → 联系方式”里那个开关，默认关。表单里没有这个勾选框（旧页面提交）时不动它。
 - 店铺信息保存后的提示写的是“前台最多 5 分钟后显示新内容”（首页有缓存，见 M11 一节末尾“开关和设置多久生效”）。
 
 需要配合：
@@ -748,6 +749,8 @@ Root installed only three existing Commerce sources for P09 collection products 
   - 只用 `History.prototype.replaceState` 替换**当前**历史记录的地址，不增删历史记录，不动 `live-commerce-navigation.js` 的弹窗层状态。
   - 商品地址从哪里来（2026-11-12 修正，原来假定弹窗里有“详情”链接，实际的商品弹窗没有）：依次取弹窗里的 `a.vc-showcase-quick__details`（有的话）、服务器给的“这次进站的商品”（`vcEntryAddress.product = { id, path }`，由 `vc_entry_address_product()` 按请求里的 `vc_product` 给出，只给已发布的商品）、页面上这个商品的卡片链接（`a[data-vc-quick-open="<ID>"]`、`a[data-vc-home-product="<ID>"]`）。都取不到时地址栏用 `/?vc_product=<ID>`。**改商品卡片或商品弹窗的结构时请保留这两个属性之一**，否则从首页点开的商品又会变回 `?vc_product=`。
   - 已知限制：分享出去的商品地址被社交平台抓取预览时，拿到的仍是首页的标题和图片（服务器把它转到了首页）。
+- **FE-03 信任条**（`inc/product-trust.php`，2026-11-12）：按店开关 `pc_trust_badges`（值 `on` 才生效，**默认关**，过滤器 `vc_trust_badges_enabled`），功能声明 `m14.trust_badges => 1`。打开后商品弹窗内容最前面输出一条：`Secure checkout`（只在本次请求是 HTTPS 或店铺地址是 `https://` 时）和结账实际接受的支付标志（`\VialCove\Panapay\Payment_Icons::data( $gateway->payment_icons() )`，只取已启用的支付方式；过滤器 `vc_trust_payment_icons`，结果只留本站地址的图片，最多 9 个）。没有自由文字。两样都没有时不输出。需要支付插件配合的只有一点：`Payment_Icons::data()` 的返回形状（`id / label / url`）不要改。
+- **NF-07 首页提速**（`inc/front-speed.php`，2026-11-12）：按店开关 `pc_front_speed`（值 `on` 才生效，**默认关**，过滤器 `vc_front_speed_enabled`），功能声明 `m14.front_speed => 1`。打开后：① 首页（且不是商品 / 专辑落地、不是预览，条件同 `vc_lazy_dialog_enabled()`）上 11 个样式不再挡首屏——`woocommerce-general`、`woocommerce-layout`、`woocommerce-smallscreen`、`vc-live-cart-experience`、`vc-live-cart-progress`、`vc-live-cart-recommendation`、`vc-live-cart-feedback`、`vialcove-product-options`、`vialcove-product-preview`、`vialcove-product-images`、`vc-product-report-viewer`；标签留在原位，`media="print"` 加载完换回 `data-vc-media` 里记的原值。② 前台不输出 emoji 检测脚本和样式。**如果以后让首页的可见内容用到这 11 个样式里的规则**（例如在首页放 WooCommerce 自带的商品列表区块），请把对应的句柄从 `vc_front_speed_style_handles()` 里拿掉，否则那块内容会先无样式闪一下。脚本一个没动。
 - **NF-06 使用声明**：文字只来自店铺设置 `use_statement_html`（`vc_use_statement_markup()`），主题不自带任何措辞。输出位置：每个页面页脚上方（购物车、结账页除外，原有），以及**商品弹窗内容末尾**（新增）。店铺没配置时两处都不输出，`Launch_Check` 会提示。
 - **品牌名**：`vc_brand_name()` 先读 `Store_Settings::public_brand()`，没填用默认的 `VialCovePeptides`。
 - **落地参数**：`assets/visitor-adapter.js`、`assets/visitor-tracking.js` 现在随 `utm_source`、`utm_medium` 一起上报 `utm_campaign`、`utm_term`、`utm_content`（各 1–120 个字符；不合规、重复、为空或是没被替换的 `{{…}}` 时只丢这一项）。服务端 11-12 起接收并入库（F4 的「M6 / M7」第 6 小节：`Tracking\Attribution::clean()` 各 1–120 个字符，不合规只丢那一项，来源报表可按广告系列 / 广告组 / 广告分组）。两边的规则一致：主题在浏览器里先把超过 120 个字符的名称截到 120、把没被替换的 `{{…}}` 丢掉，服务端不会再收到不合规的值；前端协议不用再改。用例 `tests/m14-visitor-attribution-ads.cjs`。F4 的分支和这条分支还没有合到一起跑过，合并后请在沙盒看一眼来源报表里有没有值。
