@@ -519,3 +519,11 @@
 - 每个值都是按钮，点一下就复制，按钮文字临时变成“已复制”。浏览器不让用剪贴板 API 时，改用 execCommand 复制。
 - 电话只显示号码，不再带 WhatsApp 链接。
 - 部署：class-order-detail-page.php 1220624fd36a，两台主机各 7 份，php-fpm 已重载。s0010 订单 #11886 实际点击后剪贴板已写入。
+
+### 2026-11-12 客户编号 + 支付中心按客户合并
+- 店主：同一个人的多次付款合并成一行，点开看付了几次；每个客户要有唯一编号，下次来也能认出来。
+- peptide-core `Customer_Id`（includes/class-customer-id.php）：编号 = “C” + 7 位 Crockford（sha256 算），由邮箱得出（小写，去掉 +后缀，Gmail 去掉点）；没有邮箱时用手机号后 10 位。同一个邮箱在所有店铺编号相同。新订单（classic + Store API 下单钩子）写 `_pc_customer_id`，20 秒后用 cron 把“订单 → 编号、打码邮箱、国家、设备摘要”签名报给总后台。老订单不改，显示时现算。订单详情“购买人信息”加了“客户编号”（点击复制）。
+- peptide-hq `Customers`（includes/class-customers.php）：表 wp_pchq_customer_links，主键 (site_id, order_id)；接口 POST /peptide-hq/v1/customers/link（店铺签名，Mail::verify）。不存邮箱原文。
+- peptide-panapay 支付中心：`Hub_Store::attempts($f, 0)` 一次取最近 2000 条，`Hub_Page::grouped()` 按客户编号合并，按合并后的行数分页。行内显示编号和打码邮箱；多次付款时显示按钮“共 N 次付款 · 成功 x · 失败 y”，点开是每一次的记录（浅灰底、左侧蓝条）。没有编号的记录照旧一行一条。
+- 部署：总后台 peptide-hq + panapay（备份 /root/hq-customers-backup-20261112100504）。先只上主店测试（web/hq 主店副本，备份 cid-main-20261112100515/16）：编号稳定（Gmail 加点 / +后缀算出同一个编号）；新订单会写编号并排队上报（测试单已删除）；主店补报 7 单。然后用 trk-deploy2 上了两台主机各 7 份（peptide-core 3 个文件；panapay 的 hub 4 个文件在店铺副本里不会运行，只是保持一致）。
+- 补报最近 30 天：43 单 → 21 个客户（s0007 17 单 / 9 人，s0010 14 / 7，s0008 5 / 3，主店 7 / 2）。支付中心核对：光辉 #11883–11885 合并为同一人“共 3 次付款 · 失败 3”；芒果 #11858–11861 + #11880 为同一人（共 6 次，失败 5）。

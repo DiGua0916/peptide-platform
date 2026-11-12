@@ -220,3 +220,13 @@ html.pc-pay-modal-open, html:has(.pc-pay-account-dialog[open]) { overflow: hidde
 .pc-pay-detail dt { color: #666; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .pc-pay-detail dd { margin: 0; overflow-wrap: anywhere; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .pc-pay-detail > p { margin: 0; }
+/* 同一客户合并（店主 2026-11-12） */
+.pc-pay-cust { display: block; margin-top: 4px; color: #50575e; font-size: 12px; line-height: 18px; word-break: break-all; }
+.pc-pay-cust b { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; color: #1d2327; letter-spacing: .02em; }
+.pc-pay-group-toggle { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 3px 10px; border: 1px solid #c3c4c7; border-radius: 999px; background: #f6f7f7; color: #2271b1; font: inherit; font-size: 12px; line-height: 18px; cursor: pointer; }
+.pc-pay-group-toggle:hover { background: #f0f6fc; border-color: #2271b1; }
+.pc-pay-group-toggle:focus-visible { outline: 2px solid #2271b1; outline-offset: 2px; }
+.pc-pay-group-toggle i { width: 7px; height: 7px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg) translate(-1px, -1px); transition: transform .15s; }
+.pc-pay-group-toggle[aria-expanded="true"] i { transform: rotate(-135deg) translate(-1px, -1px); }
+.pc-pay-table tr.pc-pay-sub > td { background: #f8f9fa; }
+.pc-pay-table tr.pc-pay-sub > td:first-child { box-shadow: inset 3px 0 0 #72aee6; }
