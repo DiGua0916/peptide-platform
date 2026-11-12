@@ -536,3 +536,22 @@
 - 备份：web `/root/vialcove-backups/quote-cart-manual-orders-20261112T113524Z`、`…T113738Z`；HQ `…T113526Z`、`…T113739Z`。
 - 验证：12 个站点 `supported_hooks()` 全部 `bool(true)`。
 - 回滚：从上述备份目录拷回两个文件并 reload php-fpm。
+
+### 2026-11-12 11:56 UTC 物流填单（总后台新页面，两个子表自动填写）
+- 店主要求：付款成功的订单按他的物流填单表格式自动填，分“发货登记”和“报关填单”两个子表；全自动、不用手填；之后再同步到在线表格。
+- 店铺（peptide-core）：新 `class-logistics-sync.php`（`Logistics_Sync`，在 class-plugin.php 里 Customer_Id 之后注册）。订单状态变化且付过款 → 20 秒后签名 POST 到总后台 `/peptide-hq/v1/logistics/push`；每小时把最近 45 天付款的订单再报一遍（补物流单号）。只读订单；测试订单不报；手动订单一样报。
+- 总后台（peptide-hq，HQ 安装 `/srv/vialcove/hq/current/public`）：新 `class-logistics.php`（表 `wp_pchq_logistics`，每小时用 17TRACK 更新有单号的订单，送达写“妥投”）、`class-xlsx.php`（生成 .xlsx）、`admin/class-logistics-page.php`（总后台 → 物流填单：日期 / 店铺筛选、两个子表、下载 Excel、报关固定栏可改、立即更新物流状态）。
+- 产品栏用商品编号（SKU）× 数量；导入遗留的长数字编号改用“商品名 规格”（主店 103 个规格是这种编号）。目的国家：美国 / PR 写波多黎各；电话写 “+1 号码”。
+- 先在主店测：推送 1 单（另 1 单是测试单，跳过），页面和 Excel（openpyxl 读取：两个表、颜色、冻结表头、换行）都正确；再上线 s0006–s0010 + 两边模板，补报：s0007 1 单、s0010 2 单。4 单与店主手填的 11843 / 11886 / 11892 行核对一致。
+- 部署时发现 `systemctl reload "php*-fpm"` 匹配不到 `php8.3-fpm.service`，改为直接 reload php8.3-fpm（两台都已 reload）。
+- 备份：HQ `/root/vialcove-backups/logistics-hq-20261112T115634Z`、`…T115747Z`、`…T115839Z`；core `logistics-core-20261112T115635Z`、`…T115637Z`、`…T115840Z`、`…T115842Z`（新文件记在 new-files.txt）。
+- 回滚：从备份拷回 class-plugin.php，删掉新文件，reload php8.3-fpm。
+- 待办：同步到店主的在线表格（等店主确认是哪个平台）。
+
+### 2026-11-12 12:08 UTC 物流填单同步到腾讯文档（已上线，等店主建应用授权）
+- 店主的在线表格是腾讯文档。总后台 → 物流填单 → “同步到腾讯文档”：填 Client ID / Secret（Secret 加密保存）、授权（OAuth2 `https://docs.qq.com/oauth/v2/authorize` → `admin-post.php?action=pchq_tdocs_callback`）、两个工作表链接（带 ?tab=）。
+- 新 `peptide-hq/includes/class-tencent-docs.php`（表 `wp_pchq_tdocs_rows` 记我们写到第几行）；`class-logistics.php` 收到新订单后 2 分钟同步一次，另每小时一次；`admin/class-logistics-page.php` 加第三个标签。
+- 规则：按第 1 行表头名字找列；新订单接在最后一个有“客户单号”的行下面，序号接着编；表里已有的单号（店主手填）不动；我们写的行内容变了（物流单号、妥投）才更新。接口不能设背景色。
+- 测试：没有真实应用，用模拟的腾讯文档接口在 HQ 跑（不发请求、不写设置）：两张表各新增 3 行、跳过手填的 1 行、序号接续、第二次运行 0 写入；测试映射行已删除。
+- 备份：`/root/vialcove-backups/tdocs-hq-20261112T120813Z`。
+- 待店主：在腾讯文档开放平台注册开发者、建应用并通过审核、回调地址加白名单、填 ID/Secret、授权、填两个工作表链接。
