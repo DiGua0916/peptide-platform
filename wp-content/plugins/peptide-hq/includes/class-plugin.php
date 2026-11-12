@@ -27,6 +27,8 @@ final class Plugin {
 		Fedex::register_hooks();
 		Track17::register_hooks();
 		Customers::register_hooks();
+		Logistics::register_hooks();
+		Tencent_Docs::register_hooks();
 		if ( is_callable( array( Admin\Menu::class, 'register_login_hooks' ) ) ) {
 			Admin\Menu::register_login_hooks();
 		}
@@ -43,6 +45,7 @@ final class Plugin {
 			Admin\Costs_Page::hooks();
 			Admin\Ai_Page::hooks();
 			Admin\Fedex_Page::hooks();
+			Admin\Logistics_Page::hooks();
 		}
 	}
 }
