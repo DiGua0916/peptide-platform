@@ -259,6 +259,48 @@ def area_recovery(ctx):
     check(a, "同一位顾客 24 小时内只发一封付款帮助信", len(help_mails) == 1, f"{len(help_mails)} 封")
 
 
+def area_mail_links(ctx):
+    """邮件里的链接和店名要指向本店（11-10 的事故：邮件按钮链到了别的店）。只读发件箱和链接生成函数，不改模板。"""
+    a = "邮件链接"
+    email = f"cp.abandon.{RUN}@example.test"
+    r = wp("admin", f"""
+        global $wpdb; $t = $wpdb->prefix . 'pc_mail_outbox';
+        $row = $wpdb->get_row( $wpdb->prepare( "SELECT subject, body FROM {{$t}} WHERE recipient LIKE %s ORDER BY id DESC LIMIT 1", '%{email}%' ), ARRAY_A );
+        $chase = '\\PeptideCore\\Emails\\Chase_Copy'; $rec = '\\PeptideCore\\Recovery';
+        pc_out( array(
+            'subject' => $row['subject'] ?? '', 'body' => $row['body'] ?? '',
+            'home' => wp_parse_url( home_url( '/' ), PHP_URL_HOST ), 'site' => wp_parse_url( site_url( '/' ), PHP_URL_HOST ),
+            'brand' => is_callable( array( $chase, 'brand' ) ) ? $chase::brand() : '',
+            'whatsapp' => is_callable( array( $chase, 'whatsapp' ) ) ? preg_replace( '/\\D+/', '', $chase::whatsapp() ) : '',
+            'whatsapp_link' => is_callable( array( $chase, 'whatsapp_link' ) ) ? $chase::whatsapp_link() : '',
+            'recover' => is_callable( array( $rec, 'recover_url' ) ) ? $rec::recover_url( array( 'id' => 1, 'token' => 'cptoken' ) ) : '',
+            'unsub' => is_callable( array( $rec, 'unsubscribe_url' ) ) ? $rec::unsubscribe_url( array( 'id' => 1, 'token' => 'cptoken' ) ) : '',
+        ) );
+    """)
+    body = r["body"] or ""
+    if not check(a, "发件箱里有付款帮助信的正文", len(body) > 200, f"{len(body)} 字节"):
+        return
+    own = {r["home"], r["site"]}
+    hosts = {urllib.parse.urlparse(u).netloc.lower() for u in re.findall(r'href=["\']([^"\']+)["\']', body) if u.startswith("http")}
+    wa = [u for u in re.findall(r'href=["\']([^"\']+)["\']', body) if re.search(r"wa\.me|whatsapp\.com", u)]
+    foreign = sorted(h for h in hosts if h not in own and not re.search(r"(^|\.)(wa\.me|whatsapp\.com)$", h))
+    check(a, "邮件里的链接都指向本店（或 WhatsApp）", not foreign, "指向了别处：" + "、".join(foreign))
+    check(a, "邮件里有 WhatsApp 按钮", bool(wa), "正文里没有 wa.me / whatsapp 链接")
+    if wa and r["whatsapp"]:
+        numbers = {re.sub(r"\D+", "", re.sub(r"\?.*", "", u.split("/")[-1])) or re.sub(r"\D+", "", urllib.parse.parse_qs(urllib.parse.urlparse(u).query).get("phone", [""])[0]) for u in wa}
+        check(a, "WhatsApp 按钮的号码是本店“客服联系方式”里的号码", numbers == {r["whatsapp"]}, f"邮件里 {sorted(numbers)}，本店设置 {r['whatsapp']}")
+    if r["brand"]:
+        check(a, "邮件标题和正文里的店名是本店的店名", r["brand"] in r["subject"] or r["brand"] in body, f"本店 {r['brand']}，标题 {r['subject'][:60]}")
+        others = sorted(set(re.findall(r"VialCove(?:Peptides|Pro|Ultra|Official|Prime|Plus)\b", r["subject"] + body)) - {r["brand"]})
+        check(a, "邮件里没有出现别的店的店名", not others, "出现了：" + "、".join(others))
+    for label, url in (("恢复购物车链接", r["recover"]), ("退订链接", r["unsub"])):
+        if url:
+            check(a, f"弃单提醒的{label}指向本店前台", urllib.parse.urlparse(url).netloc.lower() == r["home"], url[:90])
+        else:
+            skip(a, f"弃单提醒的{label}", "这份代码里没有这个链接生成函数")
+    skip(a, "弃单提醒三封信的正文", "弃单提醒由购物会话触发，套件里造不出来；这里只验了链接生成函数和付款帮助信的正文")
+
+
 def area_tracking(ctx):
     a = "追踪"
     status, body, _ = http(SHOP + "/?rest_route=/peptide/v1")
@@ -364,7 +406,7 @@ def area_hq(ctx):
         check(a, "一键登录链接能用（跳进店铺后台）", False, "没有拿到链接")
 
 
-AREAS = [("前台", area_front), ("加购", area_cart), ("结账", area_checkout), ("弃单", area_recovery), ("追踪", area_tracking), ("像素", area_pixels), ("后台", area_admin), ("总后台", area_hq)]
+AREAS = [("前台", area_front), ("加购", area_cart), ("结账", area_checkout), ("弃单", area_recovery), ("邮件链接", area_mail_links), ("追踪", area_tracking), ("像素", area_pixels), ("后台", area_admin), ("总后台", area_hq)]
 
 
 def setup():
