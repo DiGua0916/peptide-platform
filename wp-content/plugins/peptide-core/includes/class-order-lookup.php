@@ -11,6 +11,7 @@
  * - 页面：短代码 [pc_track_order]。开关（pc_buyer_recognition）第一次打开时自动建一个 /track-order 页面，
  *   已经有就不动；开关关着时短代码不输出表单，接口按“没找到”回答。
  * - 发货邮件里的链接可以带 ?email=…&order=… 预填表单（不自动提交）。
+ * - 订单号两种都认：原来的数字号，和 2026-11-11 起顾客看到的 hang- 号（主线 Order_Number，存在订单的 `_pc_pp_ref`）。
  *
  * @package PeptideCore
  */
@@ -95,13 +96,13 @@ final class Order_Lookup {
 		wp_enqueue_script( 'peptide-core-buyer-status' );
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- 只用来预填表单，不执行查询。
 		$email = isset( $_GET['email'] ) && is_string( $_GET['email'] ) ? sanitize_email( wp_unslash( $_GET['email'] ) ) : '';
-		$order = isset( $_GET['order'] ) && is_string( $_GET['order'] ) ? preg_replace( '/[^0-9]/', '', wp_unslash( $_GET['order'] ) ) : '';
+		$order = isset( $_GET['order'] ) && is_string( $_GET['order'] ) ? self::clean_order_ref( wp_unslash( $_GET['order'] ) ) : '';
 		// phpcs:enable
 		return '<div class="pc-ol">'
 			. '<form class="pc-ol__form" data-pc-order-lookup novalidate>'
 			. '<p class="pc-ol__intro">Enter the email you used at checkout and your order number. You can find the order number in your confirmation email.</p>'
 			. '<p class="pc-ol__field"><label for="pc-ol-email">Email</label><input type="email" id="pc-ol-email" name="email" autocomplete="email" inputmode="email" required value="' . esc_attr( $email ) . '"></p>'
-			. '<p class="pc-ol__field"><label for="pc-ol-order">Order number</label><input type="text" id="pc-ol-order" name="order" inputmode="numeric" autocomplete="off" required maxlength="14" placeholder="e.g. 1234" value="' . esc_attr( (string) $order ) . '"></p>'
+			. '<p class="pc-ol__field"><label for="pc-ol-order">Order number</label><input type="text" id="pc-ol-order" name="order" autocomplete="off" autocapitalize="none" spellcheck="false" required maxlength="24" placeholder="e.g. hang-131189201" value="' . esc_attr( (string) $order ) . '"></p>'
 			. '<p class="pc-ol__actions"><button type="submit" class="pc-ol__submit">Find my order</button></p>'
 			. '<p class="pc-ol__message" data-pc-order-lookup-message role="alert" hidden></p>'
 			. '</form><div class="pc-ol__result" data-pc-order-lookup-result aria-live="polite"></div></div>';
@@ -113,6 +114,33 @@ final class Order_Lookup {
 	public static function clean_order_number( string $raw ): int {
 		$raw = ltrim( trim( $raw ), "# \t" );
 		return 1 === preg_match( '/^[0-9]{1,12}$/D', $raw ) ? (int) $raw : 0;
+	}
+
+	/**
+	 * 顾客填的订单号整理成统一写法（不读数据库）：数字号 "1234"，或 hang- 号 "hang-131189201"（不分大小写）；
+	 * 认不出来为空。hang- 号的格式和主线 Order_Number::ref() 一致。
+	 */
+	public static function clean_order_ref( string $raw ): string {
+		$raw = strtolower( ltrim( trim( $raw ), "# \t" ) );
+		if ( 1 === preg_match( '/^hang-[0-9]{1,13}$/D', $raw ) ) {
+			return $raw;
+		}
+		$id = self::clean_order_number( $raw );
+		return $id > 0 ? (string) $id : '';
+	}
+
+	/** 按整理过的订单号取订单：数字号直接取；hang- 号交给主线的 Order_Number::find()（没有它时查不到）。 */
+	private static function resolve( string $ref ): ?\WC_Order {
+		if ( '' === $ref || ! function_exists( 'wc_get_order' ) ) {
+			return null;
+		}
+		if ( ctype_digit( $ref ) ) {
+			$order = wc_get_order( (int) $ref );
+		} else {
+			$finder = array( '\PeptideCore\Order_Number', 'find' );
+			$order  = is_callable( $finder ) ? call_user_func( $finder, $ref ) : null;
+		}
+		return $order instanceof \WC_Order ? $order : null;
 	}
 
 	/** 邮箱是不是同一个（不分大小写，不看首尾空格；任一为空都不算）。不读数据库。 */
@@ -152,12 +180,16 @@ final class Order_Lookup {
 		return null;
 	}
 
-	/** 邮箱和订单号都对得上的那张订单；对不上返回 null。测试单不给查。 */
-	public static function find( string $email, int $order_id ): ?\WC_Order {
-		if ( $order_id <= 0 || ! is_email( $email ) || ! function_exists( 'wc_get_order' ) ) {
+	/**
+	 * 邮箱和订单号都对得上的那张订单；对不上返回 null。测试单不给查。
+	 *
+	 * @param string $ref clean_order_ref() 整理过的订单号。
+	 */
+	public static function find( string $email, string $ref ): ?\WC_Order {
+		if ( '' === $ref || ! is_email( $email ) ) {
 			return null;
 		}
-		$order = wc_get_order( $order_id );
+		$order = self::resolve( $ref );
 		if ( ! $order instanceof \WC_Order || 'shop_order' !== $order->get_type() || 'checkout-draft' === $order->get_status() ) {
 			return null;
 		}
@@ -189,7 +221,7 @@ final class Order_Lookup {
 			return $limited;
 		}
 		$email = sanitize_email( (string) $request['email'] );
-		$order = Buyer_Status::enabled() ? self::find( $email, self::clean_order_number( (string) $request['order'] ) ) : null;
+		$order = Buyer_Status::enabled() ? self::find( $email, self::clean_order_ref( (string) $request['order'] ) ) : null;
 		if ( ! $order ) {
 			$response = new \WP_REST_Response( array( 'found' => false, 'message' => self::NOT_FOUND ) );
 		} else {

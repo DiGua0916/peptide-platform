@@ -77,6 +77,14 @@ namespace {
 	$number = static fn( string $raw ): int => \PeptideCore\Order_Lookup::clean_order_number( $raw );
 	check( 'order number with hash', 1234 === $number( '#1234' ) && 1234 === $number( '  # 1234 ' ) );
 	check( 'order number must be digits', 0 === $number( '12a4' ) && 0 === $number( '' ) && 0 === $number( '-5' ) && 0 === $number( '1234567890123' ) && 0 === $number( '12 34' ) );
+	// 2026-11-11 起顾客看到的订单号是 hang- 号（主线 Order_Number）；老订单仍是数字号。两种都要能查。
+	$ref = static fn( string $raw ): string => \PeptideCore\Order_Lookup::clean_order_ref( $raw );
+	check( 'hang- order number is accepted', 'hang-131189201' === $ref( 'hang-131189201' ) && 'hang-131189201' === $ref( '  #HANG-131189201 ' ) );
+	check( 'numeric order number still accepted', '1234' === $ref( '#1234' ) && '12' === $ref( '0012' ) );
+	check( 'unusable order numbers are empty', '' === $ref( '' ) && '' === $ref( '0' ) && '' === $ref( 'hang-' ) && '' === $ref( 'hang-12a' ) && '' === $ref( 'hang-12345678901234' ) && '' === $ref( 'hang 131189201' ) && '' === $ref( 'hang-1 OR 1=1' ) && '' === $ref( "hang-1\n" . 'x' ) && '' === $ref( 'PH0123456789abcdef0123456789abcdef' ) );
+	$lookup_src = (string) file_get_contents( dirname( __DIR__ ) . '/includes/class-order-lookup.php' );
+	check( 'lookup route uses the customer-facing order number', false !== strpos( $lookup_src, 'self::find( $email, self::clean_order_ref( (string) $request[\'order\'] ) )' ) );
+	check( 'lookup form is not limited to digits', false === strpos( $lookup_src, 'inputmode="numeric"' ) && false !== strpos( $lookup_src, 'maxlength="24"' ) );
 	$same = static fn( string $a, string $b ): bool => \PeptideCore\Order_Lookup::same_email( $a, $b );
 	check( 'email ignores case and spaces', $same( ' Jane@Example.com ', 'jane@example.com' ) );
 	check( 'different email', ! $same( 'jane@example.com', 'john@example.com' ) );
