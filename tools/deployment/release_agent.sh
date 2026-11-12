@@ -100,7 +100,7 @@ PY
   fatals)
     since="${1:?}"; shift
     python3 - "$since" "$@" <<'PY'
-import datetime, re, sys
+import re, sys, time
 since = int(sys.argv[1]); count = 0; sample = ""
 for path in sys.argv[2:]:
     try:
@@ -114,10 +114,11 @@ for path in sys.argv[2:]:
         when = None
         if m:
             try:
-                when = datetime.datetime.strptime(m.group(1), "%d-%b-%Y %H:%M:%S").replace(tzinfo=datetime.timezone.utc).timestamp()
+                # 日志里是服务器本地时间（不带时区）：按本机时区换算，否则会把几小时前的错误当成刚发生的。
+                when = time.mktime(time.strptime(m.group(1), "%d-%b-%Y %H:%M:%S"))
             except ValueError:
                 pass
-        if when is None or when >= since - 60:   # 日志时间可能是本地时区：宁可多算，不漏掉
+        if when is None or when >= since - 5:   # 读不出时间的行算进去：宁可多算，不漏掉
             count += 1; sample = sample or line[:240]
 print(f"{count}\t{sample}")
 PY
