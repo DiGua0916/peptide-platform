@@ -56,6 +56,7 @@ namespace {
 		);
 		if ( isset( $GLOBALS['wpdb'] ) ) {
 			$GLOBALS['wpdb']->writes    = array();
+			$GLOBALS['wpdb']->missing   = array();
 			$GLOBALS['wpdb']->insert_id = 0;
 		}
 		\PeptideCore\Pricing\Runtime::reset();
@@ -170,7 +171,14 @@ namespace {
 		if ( 'user_meta' === $GLOBALS['m4']['throw'] ) { throw new RuntimeException( '测试：模拟引擎读取顾客资料时出错' ); }
 		return $GLOBALS['m4']['users'][ (int) $id ]['meta'][ $key ] ?? '';
 	}
-	function dbDelta( $sql ) { $GLOBALS['m4']['dbdelta'][] = (string) $sql; return array(); } // phpcs:ignore WordPress.NamingConventions.ValidFunctionName
+	function dbDelta( $sql ) { // phpcs:ignore WordPress.NamingConventions.ValidFunctionName
+		$GLOBALS['m4']['dbdelta'][] = (string) $sql;
+		// 建过的表记下来：SHOW TABLES LIKE 查得到，往里写也不再失败。
+		if ( preg_match( '/CREATE TABLE (\S+)/', (string) $sql, $m ) && isset( $GLOBALS['wpdb'] ) ) {
+			unset( $GLOBALS['wpdb']->missing[ $m[1] ] );
+		}
+		return array();
+	}
 	function get_transient( $k ) { return $GLOBALS['m4']['transients'][ $k ] ?? false; }
 	function set_transient( $k, $v, $ttl = 0 ) { $GLOBALS['m4']['transients'][ $k ] = $v; return true; }
 	function user_can( $user, $cap ) { return false; }
@@ -178,12 +186,44 @@ namespace {
 		public string $prefix = 'wp_';
 		public function prepare( $query, ...$args ) { return array( $query, $args ); }
 		public function get_row( $prepared, $output = null ) { return $GLOBALS['m4']['ledger'][ (string) ( $prepared[1][0] ?? '' ) ] ?? null; }
-		public function get_var( $prepared ) { return null; }
+		// 表不在的情况（整店复制后版本号在、表没有）：把表名放进 $missing，往里写返回 false，SHOW TABLES LIKE 查不到。
+		public array $missing = array();
+		private bool $quiet   = false;
+		public function esc_like( $text ) { return addcslashes( (string) $text, '_%\\' ); }
+		public function suppress_errors( $suppress = true ) { $was = $this->quiet; $this->quiet = (bool) $suppress; return $was; }
+		private function gone( string $sql ): bool {
+			foreach ( array_keys( $this->missing ) as $table ) {
+				if ( false !== strpos( $sql, $table ) ) {
+					return true;
+				}
+			}
+			return false;
+		}
+		public function get_var( $prepared ) {
+			if ( is_array( $prepared ) && 0 === strpos( (string) $prepared[0], 'SHOW TABLES LIKE' ) ) {
+				$table = stripcslashes( (string) ( $prepared[1][0] ?? '' ) );
+				return isset( $this->missing[ $table ] ) ? null : $table;
+			}
+			return null;
+		}
 		// 核对日志（Shadow）写进来的内容记在内存里，测试直接查看。
 		public array $writes  = array();
 		public int $insert_id = 0;
-		public function query( $q ) { $this->writes[] = array( 'query', $q ); return 1; }
-		public function insert( $table, $data ) { $this->writes[] = array( 'insert', $table, $data ); ++$this->insert_id; return 1; }
+		public function query( $q ) {
+			if ( $this->gone( is_array( $q ) ? (string) $q[0] : (string) $q ) ) {
+				return false;
+			}
+			$this->writes[] = array( 'query', $q );
+			return 1;
+		}
+		public function insert( $table, $data ) {
+			if ( isset( $this->missing[ $table ] ) ) {
+				return false;
+			}
+			$this->writes[] = array( 'insert', $table, $data );
+			++$this->insert_id;
+			return 1;
+		}
 		public function get_results( $q, $output = null ) { return array(); }
 		public function get_charset_collate() { return ''; }
 	}

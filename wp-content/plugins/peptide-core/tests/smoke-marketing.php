@@ -33,6 +33,21 @@ $had_disc   = get_option( Discounts::OPTION, null );
 $had_page   = Promotions::page_id();
 $had_cpage  = \PeptideCore\Coupons::page_id();
 
+// 店铺自己的满减活动（真实店铺的数据里会有）在本次运行里当作不存在：它们会和测试的活动抢商品，
+// 也会被算进冲突检查（同一时间只能有一个“全部商品”的活动），结果就取决于这家店当时开着什么活动。
+// 只在这个进程里把它们从查询结果里去掉，不改店铺的任何数据。
+$store_promos = get_posts( array( 'post_type' => Promotions::CPT, 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids' ) );
+if ( $store_promos ) {
+	add_action(
+		'pre_get_posts',
+		static function ( $query ) use ( $store_promos ) {
+			if ( in_array( Promotions::CPT, (array) $query->get( 'post_type' ), true ) ) {
+				$query->set( 'post__not_in', array_merge( (array) $query->get( 'post__not_in' ), $store_promos ) );
+			}
+		}
+	);
+}
+
 // 测试商品：贵的 $30、便宜的 $10，放在一个测试专辑里；另一个 $20 的商品不在专辑里。
 $term         = wp_insert_term( 'PC smoke marketing ' . wp_rand(), 'product_cat' );
 $cat          = (int) $term['term_id'];

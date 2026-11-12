@@ -94,7 +94,10 @@ WC()->cart->apply_coupon( 'pcsmoke10' );
 WC()->cart->calculate_totals();
 $sum = Pricing::cart_summary( WC()->cart );
 $ok( 'coupon reported separately (Woo discount 6.00), sale savings unchanged 60.00', 600 === Pricing::to_cents( WC()->cart->get_discount_total() ) && '6000' === $sum['sale_savings'] );
-$ok( 'Woo payable total stays authoritative (59.96 - 6.00 = 53.96)', 5396 === Pricing::to_cents( WC()->cart->get_total( 'edit' ) ) );
+// 应付金额以 WooCommerce 为准：商品部分 59.96 - 6.00 = 53.96。店铺自己的运费、满减和税（真实店铺的数据里都有）
+// 由 WooCommerce 照常另外加减，不属于对照价；所以比较的是“商品部分”，再确认应付 = 商品部分 + 这几项，一分不差。
+$extras = Pricing::to_cents( WC()->cart->get_shipping_total() ) + Pricing::to_cents( WC()->cart->get_fee_total() ) + Pricing::to_cents( WC()->cart->get_total_tax() );
+$ok( 'Woo payable total stays authoritative (59.96 - 6.00 = 53.96)', 5396 === Pricing::to_cents( WC()->cart->get_cart_contents_total() ) && 5396 + $extras === Pricing::to_cents( WC()->cart->get_total( 'edit' ) ) );
 
 // 6. 下单快照：保存下单时的每行价格；以后改价不影响。
 $order = wc_create_order();

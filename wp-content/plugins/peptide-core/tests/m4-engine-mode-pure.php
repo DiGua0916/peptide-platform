@@ -215,6 +215,23 @@ $cart->calculate_totals();
 Shadow::compare();
 $check( '关着时请求末尾什么都不做', array() === $GLOBALS['wpdb']->writes && false === get_option( Shadow::DB_OPTION ) );
 
+// ---------- 版本号在、表不在（整店复制出来的新店：版本号跟着设置过来了，表没有） ----------
+m4_reset();
+Mode::set( 'shadow' );
+catalog();
+update_option( Shadow::DB_OPTION, Shadow::DB_VERSION );
+$GLOBALS['wpdb']->missing = array( Shadow::table( 'stats' ) => true, Shadow::table( 'log' ) => true );
+$GLOBALS['m4']['dbdelta'] = array();
+$check( '表不在时查看核对结果：当作还没有记录，不去查不存在的表', array() === Shadow::summary( 7, 20 )['totals'] && array() === Shadow::summary( 7, 20 )['recent'] && 0 === Runtime::status_brief()['today']['compared'] );
+Shadow::clear();
+$check( '表不在时清空：什么都不做', array() === $GLOBALS['wpdb']->writes );
+Shadow::record( 'shadow', 'mismatched', array( 'legacy' => array( 'total' => 100 ), 'engine' => array( 'total' => 101 ) ) );
+$kinds = array_column( $GLOBALS['wpdb']->writes, 0 );
+$check( '表不在时第一次记录：补建两张表，统计和明细都记上', 2 === count( $GLOBALS['m4']['dbdelta'] ) && array( 'query', 'insert' ) === $kinds && array() === $GLOBALS['wpdb']->missing );
+$GLOBALS['m4']['dbdelta'] = array();
+Shadow::record( 'shadow', 'matched', array() );
+$check( '表在时照常只写一次，不重复建表', array() === $GLOBALS['m4']['dbdelta'] && 3 === count( $GLOBALS['wpdb']->writes ) );
+
 // ---------- 常量锁定（放最后：常量定义后不能撤销） ----------
 m4_reset();
 Mode::set( 'on' );

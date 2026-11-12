@@ -78,6 +78,33 @@ KEY kind (kind,id)
 		return self::DB_VERSION === get_option( self::DB_OPTION );
 	}
 
+	/**
+	 * 两张表是不是真的在。只看版本号不够：整店复制会把来源店的版本号带到新店，表却不跟着来
+	 * （2026-11-12 在离开挽回的统计表上查到的同一类问题）。只在查看和清空时用，核对时不多查这一次。
+	 */
+	private static function tables_exist(): bool {
+		global $wpdb;
+		foreach ( array( 'stats', 'log' ) as $kind ) {
+			$t = self::table( $kind );
+			if ( $t !== $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $t ) ) ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/** 写一次；写不进去（版本号在、表不在）就补建表再写一次。第二次不再静默，仍然失败会照常进错误日志。 */
+	private static function write( callable $write ): void {
+		global $wpdb;
+		$quiet = $wpdb->suppress_errors( true );
+		$done  = $write();
+		$wpdb->suppress_errors( $quiet );
+		if ( false === $done ) {
+			self::install();
+			$write();
+		}
+	}
+
 	// ---------- 取数 ----------
 
 	/** WooCommerce 实际算给顾客的数字（分）。 */
@@ -231,7 +258,8 @@ KEY kind (kind,id)
 			return;
 		}
 		$stats = self::table( 'stats' );
-		$wpdb->query( $wpdb->prepare( "INSERT INTO {$stats} (day, mode, compared, {$kind}) VALUES (%s, %s, 1, 1) ON DUPLICATE KEY UPDATE compared = compared + 1, {$kind} = {$kind} + 1", wp_date( 'Y-m-d' ), $mode ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery -- 表名和列名来自上面的白名单。
+		$count = $wpdb->prepare( "INSERT INTO {$stats} (day, mode, compared, {$kind}) VALUES (%s, %s, 1, 1) ON DUPLICATE KEY UPDATE compared = compared + 1, {$kind} = {$kind} + 1", wp_date( 'Y-m-d' ), $mode ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- 表名和列名来自上面的白名单。
+		self::write( static fn() => $wpdb->query( $count ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
 		if ( 'matched' === $kind ) {
 			return;
 		}
@@ -243,17 +271,15 @@ KEY kind (kind,id)
 			set_transient( $throttle, 1, HOUR_IN_SECONDS );
 		}
 		$log = self::table( 'log' );
-		$wpdb->insert(
-			$log,
-			array(
-				'created_gmt'  => gmdate( 'Y-m-d H:i:s' ),
-				'kind'         => $kind,
-				'mode'         => $mode,
-				'legacy_cents' => (int) ( $check['legacy']['total'] ?? 0 ),
-				'engine_cents' => (int) ( $check['engine']['total'] ?? 0 ),
-				'detail'       => (string) wp_json_encode( self::detail( $check ) ),
-			)
-		); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$row = array(
+			'created_gmt'  => gmdate( 'Y-m-d H:i:s' ),
+			'kind'         => $kind,
+			'mode'         => $mode,
+			'legacy_cents' => (int) ( $check['legacy']['total'] ?? 0 ),
+			'engine_cents' => (int) ( $check['engine']['total'] ?? 0 ),
+			'detail'       => (string) wp_json_encode( self::detail( $check ) ),
+		);
+		self::write( static fn() => $wpdb->insert( $log, $row ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		if ( $wpdb->insert_id && 0 === $wpdb->insert_id % 20 ) {
 			$wpdb->query( $wpdb->prepare( "DELETE FROM {$log} WHERE id <= %d", (int) $wpdb->insert_id - self::KEEP ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
 		}
@@ -319,8 +345,8 @@ KEY kind (kind,id)
 	public static function summary( int $days = 7, int $rows = 20 ): array {
 		global $wpdb;
 		$out = array( 'days' => $days, 'totals' => array(), 'recent' => array() );
-		if ( self::DB_VERSION !== get_option( self::DB_OPTION ) ) {
-			return $out; // 还没写过任何记录。
+		if ( self::DB_VERSION !== get_option( self::DB_OPTION ) || ! self::tables_exist() ) {
+			return $out; // 还没写过任何记录（或者版本号是复制店铺时带过来的，表还没建）。
 		}
 		$stats = self::table( 'stats' );
 		$log   = self::table( 'log' );
@@ -338,7 +364,7 @@ KEY kind (kind,id)
 	/** 清空明细和统计（切换档位重新观察之前用）。 */
 	public static function clear(): void {
 		global $wpdb;
-		if ( self::DB_VERSION === get_option( self::DB_OPTION ) ) {
+		if ( self::DB_VERSION === get_option( self::DB_OPTION ) && self::tables_exist() ) {
 			$wpdb->query( 'DELETE FROM ' . self::table( 'log' ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
 			$wpdb->query( 'DELETE FROM ' . self::table( 'stats' ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
 		}

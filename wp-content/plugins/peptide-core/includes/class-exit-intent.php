@@ -479,8 +479,18 @@ final class Exit_Intent {
 		update_option( self::DB_OPTION, self::DB_VERSION, false );
 	}
 
+	/**
+	 * 数据表可以用了吗：版本号对，而且表真的在。
+	 * 只看版本号不够：整店复制会把来源店的版本号带到新店，表却不跟着来（2026-11-12 在沙盒的 s0010 副本上查到），
+	 * 那样新店的展示 / 领取 / 抽奖 / 订单会一直记不上。
+	 */
 	public static function installed(): bool {
-		return self::DB_VERSION === get_option( self::DB_OPTION );
+		global $wpdb;
+		if ( self::DB_VERSION !== get_option( self::DB_OPTION ) ) {
+			return false;
+		}
+		$t = self::table();
+		return $t === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $t ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	}
 
 	/** 当天（店铺时区）的某个事件加一次。 */
@@ -489,11 +499,19 @@ final class Exit_Intent {
 		if ( ! in_array( $event, self::EVENTS, true ) ) {
 			return;
 		}
-		if ( ! self::installed() ) {
+		if ( self::DB_VERSION !== get_option( self::DB_OPTION ) ) {
 			self::install();
 		}
-		$t = self::table();
-		$wpdb->query( $wpdb->prepare( "INSERT INTO {$t} (day, app, event, count, amount) VALUES (%s, %s, %s, 1, %f) ON DUPLICATE KEY UPDATE count = count + 1, amount = amount + VALUES(amount)", $day ?? wp_date( 'Y-m-d' ), self::APP, $event, $amount ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+		$t   = self::table();
+		$sql = $wpdb->prepare( "INSERT INTO {$t} (day, app, event, count, amount) VALUES (%s, %s, %s, 1, %f) ON DUPLICATE KEY UPDATE count = count + 1, amount = amount + VALUES(amount)", $day ?? wp_date( 'Y-m-d' ), self::APP, $event, $amount ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// 正常情况只有这一次写入。写不进去（版本号在、表不在）就补建表再记一次；第二次不再静默，仍然失败会照常进错误日志。
+		$quiet = $wpdb->suppress_errors( true );
+		$done  = $wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
+		$wpdb->suppress_errors( $quiet );
+		if ( false === $done ) {
+			self::install();
+			$wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
+		}
 	}
 
 	/** @return array<string,array{count:int,amount:float}> 最近 N 天（含今天）每个事件的合计。 */
