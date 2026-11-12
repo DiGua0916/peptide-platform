@@ -180,10 +180,16 @@ python3 tools/catalog/series_diff_report.py /tmp/diff-*.json > series-diff-repor
 3. 把 6 个 JSON 拿到任何一个装了本分支代码的 WordPress 上（沙盒，或本机副本），用母版店那一份当主商品库，逐店比较，再汇总：
 
    ```
+   WP="wp --path=<那个 WordPress>" tools/catalog/series_diff_all.sh out s0001 > series-diff-report.md
+   ```
+
+   它先拿主店和自己比（必须一个差异都没有，否则停下），再逐店比较，最后汇总。分开做也行：
+
+   ```
    for s in s0002 s0003 …; do
      wp peptide series diff --file=out/<母版店>.json --store-file=out/$s.json --out=diff-$s.json
    done
-   python3 tools/catalog/series_diff_report.py diff-*.json > series-diff-report.md
+   python3 tools/catalog/series_diff_report.py --master s0001 diff-*.json > series-diff-report.md
    ```
 
    `--store-file` 不读当前站点的任何数据，只比较两个文件。
@@ -191,7 +197,9 @@ python3 tools/catalog/series_diff_report.py /tmp/diff-*.json > series-diff-repor
 
 F3 在本机验证过的：在一份跑**主线代码**（`7c6d2d3`，没有系列类）的店铺副本上用这个脚本导出，写入语句 0 条，没有留下任何选项或附件元；导出的文件和新代码 `wp peptide series export --local` 导出的逐项相同；`--store-file` 比较的结果和在店里直接跑 `series diff` 的结果逐字节相同。没验证的：生产的 PHP / WooCommerce 版本和商品数量（s0010 有 92 个商品，每张图片要读一遍算哈希，估计几秒到几十秒）。
 
-**哪家是母版店**要平台所有者定（现在模板库里默认系列的工作室店）。母版店自己的差异报告只比价格。
+**2026-11-12 更新**：平台所有者已同意在 6 家生产店做只读导出，母版店用主店 s0001（上级会话转达的原话：“同意，用主店”）。同意的范围只是只读导出和离线比较，不执行同步、不开启任何店的系列同步。导出由 F1 执行，文件拉回开发机放在共享笔记目录的 `f3-diff/` 下（不进仓库），F3 在本机副本上比较并出报告；报告写在 `docs/handoffs/m3-series-diff-report-<日期>.md`（只写店铺编号，不写域名）。
+
+报告的写法（给不写代码的人看）：一、结论（每家店一样 / 有差异 / 主店有这家没有 / 这家多出来各多少个）；二、需要确认的清单——价格会变的、会下架的本店商品、会停售的款式、会被换掉的文字图片分类、名字一样但编码对不上的；三、各店明细，每处差异两边各是什么；四、比了什么没比什么（库存数量不比）。离线比较的结果比总后台页面上的差异报告多几样细节：描述从哪里开始不同、图片文件名、附加信息的两边取值、运费方案。
 ## 6. 同步和恢复（沙盒里演练；平台所有者确认差异之后才在生产做）
 
 在沙盒挑一家非母版店：

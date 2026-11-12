@@ -720,7 +720,7 @@ final class Series_Sync {
 	 *
 	 * @param bool $prices_only 母版店：只比价格，不新建、不下架
 	 */
-	public static function diff_catalog( array $incoming, array $locals, int $ver, bool $prices_only = false ): array {
+	public static function diff_catalog( array $incoming, array $locals, int $ver, bool $prices_only = false, int $max_fields = 40 ): array {
 		$match     = self::match_products( $incoming, $locals );
 		$used      = array();
 		$create    = array();
@@ -739,7 +739,7 @@ final class Series_Sync {
 			$fields     = self::compare_product( $locals[ $i ], $p );
 			$fields     = $prices_only ? self::price_fields( $fields ) : $fields;
 			if ( $fields ) {
-				$changed[] = array( 'sku' => $p['sku'], 'name' => $p['name'], 'id' => (int) ( $locals[ $i ]['id'] ?? 0 ), 'fields' => array_slice( $fields, 0, 40 ) );
+				$changed[] = array( 'sku' => $p['sku'], 'name' => $p['name'], 'id' => (int) ( $locals[ $i ]['id'] ?? 0 ), 'fields' => array_slice( $fields, 0, max( 1, $max_fields ) ) );
 			} else {
 				++$same;
 			}
@@ -1246,9 +1246,198 @@ final class Series_Sync {
 			$locals[]        = $p;
 		}
 		$incoming      = array_map( static fn( array $p ): array => self::localize( $p, $host, $target ), $clean['products'] );
-		$diff          = self::diff_catalog( $incoming, $locals, 0 );
-		$diff['store'] = $store;
+		// 给人看的报告：每个商品的差异不截断，并补上两边的原文片段、图片文件名、附加信息的值。
+		$diff            = self::diff_catalog( $incoming, $locals, 0, false, 2000 );
+		$diff['changed'] = self::explain_changes( $diff['changed'], $locals, $incoming );
+		$diff['store']   = $store;
+		if ( is_array( $master['shipping']['plans'] ?? null ) && is_array( $dump['shipping']['plans'] ?? null ) ) {
+			$diff['shipping'] = array(
+				'changed' => self::shipping_key( $master['shipping']['plans'] ) !== self::shipping_key( $dump['shipping']['plans'] ),
+				'store'   => self::shipping_lines( $dump['shipping']['plans'] ),
+				'series'  => self::shipping_lines( $master['shipping']['plans'] ),
+			);
+		}
 		return $diff;
+	}
+
+	/** 去掉标签和多余空白的纯文字（比较描述“看起来”是否一样用）。 */
+	private static function plain_text( string $html ): string {
+		// 段落、换行、列表、表格这类标签先换成空格再去掉：否则 “</p><p>” 两边的字会粘在一起。加粗之类的行内标签直接去掉。
+		$html = (string) preg_replace( '#</?(?:p|div|br|li|ul|ol|h[1-6]|tr|td|th|table|section|blockquote|hr)\b[^>]*>#i', ' ', $html );
+		return trim( (string) preg_replace( '/\s+/u', ' ', html_entity_decode( strip_tags( $html ), ENT_QUOTES, 'UTF-8' ) ) );
+	}
+
+	/**
+	 * 两段文字从哪里开始不一样：各截一小段（从第一个不同的地方往前 20 个字开始，最多 $length 个字）。
+	 *
+	 * @return array{0:string,1:string}
+	 */
+	public static function first_difference( string $a, string $b, int $length = 90 ): array {
+		$x = preg_split( '//u', $a, -1, PREG_SPLIT_NO_EMPTY );
+		$y = preg_split( '//u', $b, -1, PREG_SPLIT_NO_EMPTY );
+		$x = is_array( $x ) ? $x : array();
+		$y = is_array( $y ) ? $y : array();
+		$i = 0;
+		$m = min( count( $x ), count( $y ) );
+		while ( $i < $m && $x[ $i ] === $y[ $i ] ) {
+			++$i;
+		}
+		$from = max( 0, $i - 20 );
+		$cut  = static function ( array $chars ) use ( $from, $length ): string {
+			if ( $from >= count( $chars ) ) {
+				return '（到这里就没有了）';
+			}
+			return ( $from > 0 ? '…' : '' ) . implode( '', array_slice( $chars, $from, $length ) ) . ( count( $chars ) > $from + $length ? '…' : '' );
+		};
+		return array( $cut( $x ), $cut( $y ) );
+	}
+
+	/** 附加信息的一个值写成一行文字。 */
+	private static function meta_text( $value ): string {
+		if ( null === $value || '' === $value || array() === $value ) {
+			return '（没有）';
+		}
+		$text  = is_scalar( $value ) ? (string) $value : (string) json_encode( $value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
+		$chars = preg_split( '//u', $text, -1, PREG_SPLIT_NO_EMPTY );
+		return is_array( $chars ) && count( $chars ) > 300 ? implode( '', array_slice( $chars, 0, 300 ) ) . '…' : $text;
+	}
+
+	/** 本店商品里和系列的这个款式对应的那一个（和比较、写入时找款式的顺序一样：键 → SKU → 属性）。 */
+	private static function local_variation( array $local, array $v ): ?array {
+		foreach ( (array) ( $local['variations'] ?? array() ) as $l ) {
+			if ( $l['key'] === $v['key'] ) {
+				return $l;
+			}
+		}
+		foreach ( (array) ( $local['variations'] ?? array() ) as $l ) {
+			if ( '' !== $v['sku'] && $l['sku'] === $v['sku'] ) {
+				return $l;
+			}
+		}
+		foreach ( (array) ( $local['variations'] ?? array() ) as $l ) {
+			if ( self::attr_key( $l['attributes'] ) === self::attr_key( $v['attributes'] ) ) {
+				return $l;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * 给差异报告补上人能看懂的细节（纯函数）：
+	 * - 描述不一样：两边从第一个不同的地方各截一小段（store_excerpt / series_excerpt）；文字一样、只是排版代码不同的标 note = markup；
+	 * - 图片不一样：各自独有的文件名（store_only / series_only）；图片一样、只是顺序不同的标 note = order；
+	 * - 附加信息：按项拆成多行（key），带上两边的值。
+	 *
+	 * @param array[] $changed  diff_catalog() 的 changed
+	 * @param array[] $locals   本店商品（带 id）
+	 * @param array[] $incoming 系列商品
+	 */
+	public static function explain_changes( array $changed, array $locals, array $incoming ): array {
+		$by_id  = array();
+		$by_sku = array();
+		foreach ( $locals as $l ) {
+			$by_id[ (int) ( $l['id'] ?? 0 ) ] = $l;
+		}
+		foreach ( $incoming as $p ) {
+			$by_sku[ (string) $p['sku'] ] = $p;
+		}
+		foreach ( $changed as $n => $c ) {
+			$l = $by_id[ (int) ( $c['id'] ?? 0 ) ] ?? null;
+			$p = $by_sku[ (string) ( $c['sku'] ?? '' ) ] ?? null;
+			if ( ! is_array( $l ) || ! is_array( $p ) ) {
+				continue;
+			}
+			$rows = array();
+			foreach ( $c['fields'] as $f ) {
+				$field = (string) $f['field'];
+				$label = (string) ( $f['variation'] ?? '' );
+				if ( '' === $label && in_array( $field, array( 'description', 'short_description' ), true ) ) {
+					$a = self::plain_text( (string) $l[ $field ] );
+					$b = self::plain_text( (string) $p[ $field ] );
+					if ( $a === $b ) {
+						$f['note'] = 'markup';
+					} else {
+						[ $f['store_excerpt'], $f['series_excerpt'] ] = self::first_difference( $a, $b );
+					}
+				} elseif ( '' === $label && 'images' === $field ) {
+					$ls = array_column( $l['images'], 'name', 'sha256' );
+					$ps = array_column( $p['images'], 'name', 'sha256' );
+					$f['store_only']  = array_values( array_diff_key( $ls, $ps ) );
+					$f['series_only'] = array_values( array_diff_key( $ps, $ls ) );
+					if ( ! $f['store_only'] && ! $f['series_only'] ) {
+						$f['note'] = 'order';
+					}
+				} elseif ( 'meta' === $field ) {
+					$lm = $l['meta'];
+					$pm = $p['meta'];
+					if ( '' !== $label ) {
+						$pv = null;
+						foreach ( $p['variations'] as $v ) {
+							if ( self::variation_label( $v ) === $label ) {
+								$pv = $v;
+								break;
+							}
+						}
+						$lv = $pv ? self::local_variation( $l, $pv ) : null;
+						if ( ! $pv || ! $lv ) {
+							$rows[] = $f;
+							continue;
+						}
+						$lm = $lv['meta'];
+						$pm = $pv['meta'];
+					}
+					foreach ( array_unique( array_merge( array_keys( $lm ), array_keys( $pm ) ) ) as $k ) {
+						if ( json_encode( $lm[ $k ] ?? null ) !== json_encode( $pm[ $k ] ?? null ) ) {
+							$row = array( 'field' => 'meta', 'key' => (string) $k, 'store' => self::meta_text( $lm[ $k ] ?? null ), 'series' => self::meta_text( $pm[ $k ] ?? null ) );
+							if ( '' !== $label ) {
+								$row['variation'] = $label;
+							}
+							$rows[] = $row;
+						}
+					}
+					continue;
+				}
+				$rows[] = $f;
+			}
+			$changed[ $n ]['fields'] = $rows;
+		}
+		return $changed;
+	}
+
+	/**
+	 * 运费方案写成给人看的几行字（纯函数），每个收费档一行。
+	 *
+	 * @param array[] $plans plans_to_series() 的结果
+	 * @return string[]
+	 */
+	public static function shipping_lines( array $plans ): array {
+		$money = static fn( float $v ): string => '$' . ( floor( $v ) === $v ? number_format( $v, 0, '.', '' ) : number_format( $v, 2, '.', '' ) );
+		$lines = array();
+		foreach ( $plans as $p ) {
+			$where = array();
+			foreach ( (array) ( $p['regions'] ?? array() ) as $r ) {
+				$states  = array_filter( array_map( 'strval', (array) ( $r['states'] ?? array() ) ) );
+				$where[] = (string) ( $r['country'] ?? '' ) . ( $states ? '（' . implode( ', ', $states ) . '）' : '' );
+			}
+			$head = (string) ( $p['name'] ?? '' ) . '｜' . ( $where ? implode( '、', $where ) : '全部地区' );
+			$n    = 0;
+			foreach ( (array) ( $p['rates'] ?? array() ) as $r ) {
+				$min  = (float) ( $r['min'] ?? 0 );
+				$max  = isset( $r['max'] ) ? (float) $r['max'] : null;
+				$rule = (string) ( $r['rule'] ?? 'subtotal' );
+				if ( 'subtotal' === $rule ) {
+					$when = $min > 0 && null !== $max ? '订单金额 ' . $money( $min ) . ' 到 ' . $money( $max ) : ( $min > 0 ? '订单金额满 ' . $money( $min ) : ( null !== $max ? '订单金额不到 ' . $money( $max ) : '不限金额' ) );
+				} else {
+					$when = '按 ' . $rule . '：' . $min . ( null !== $max ? ' 到 ' . $max : ' 以上' );
+				}
+				$lines[] = $head . '｜' . (string) ( $r['name'] ?? '' ) . '：' . $when . '，运费 ' . $money( (int) ( $r['fee_cents'] ?? 0 ) / 100 ) . ( '' !== (string) ( $r['postcodes'] ?? '' ) ? '（限邮编 ' . $r['postcodes'] . '）' : '' );
+				++$n;
+			}
+			if ( 0 === $n ) {
+				$lines[] = $head . '｜没有启用的收费档';
+			}
+		}
+		return $lines;
 	}
 
 	// ---------- 写入商品 ----------
