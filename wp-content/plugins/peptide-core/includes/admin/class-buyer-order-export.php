@@ -5,7 +5,9 @@
  * 订单列表上方一行：选付款日期范围，下载 CSV。只读，不改任何订单。
  * - 只导已付款的订单（按付款时间），测试单不导。
  * - 一次最多 92 天、5000 行；不填日期时是最近 30 天。
- * - 列：订单号、时间、状态、金额、商品、顾客邮箱、国家、来源广告、运单、退款。不含电话和地址。
+ * - 列：订单号、时间、状态、金额、商品、国家、来源广告、运单、退款。不含电话和地址。
+ * - 顾客邮箱默认不导（平台所有者 2026-11-12 还没定）。要带上：这家店的选项 pc_buyer_export_email 设为 on
+ *   （wp option update pc_buyer_export_email on），或用过滤器 pc_buyer_export_with_email。只有这一处开关。
  * - 以 = + - @ 开头的内容前面加一个单引号，表格软件不会把它当公式执行。
  * - 每次导出记一条操作日志（谁、哪段日期、多少行）。
  *
@@ -28,15 +30,28 @@ final class Buyer_Order_Export {
 	public const MAX_ROWS     = 5000;
 	public const DEFAULT_DAYS = 30;
 	private const PAGE_SIZE   = 200;
+	/** 导出里带不带顾客邮箱：值 on 才带。 */
+	public const OPTION_EMAIL = 'pc_buyer_export_email';
+	/** “顾客邮箱”一列的位置（件数后面、国家前面）。 */
+	private const EMAIL_AT    = 8;
 
 	public static function register_hooks(): void {
 		add_action( 'admin_post_' . Staff_Buyer::ACTION_EXPORT, array( self::class, 'handle' ) );
 		add_action( 'admin_notices', array( self::class, 'form' ), 20 );
 	}
 
+	/** 这家店的导出带不带顾客邮箱。默认不带。 */
+	public static function with_email(): bool {
+		return (bool) apply_filters( 'pc_buyer_export_with_email', 'on' === (string) get_option( self::OPTION_EMAIL, 'off' ) );
+	}
+
 	/** 表头。 */
-	public static function columns(): array {
-		return array( '订单号', '下单时间', '付款时间', '订单状态', '订单金额', '币种', '商品', '件数', '顾客邮箱', '国家', '来源广告', 'utm_source', 'utm_campaign', 'utm_content', 'utm_term', '承运商', '运单号', '退款状态', '退款金额' );
+	public static function columns( bool $with_email = false ): array {
+		$columns = array( '订单号', '下单时间', '付款时间', '订单状态', '订单金额', '币种', '商品', '件数', '国家', '来源广告', 'utm_source', 'utm_campaign', 'utm_content', 'utm_term', '承运商', '运单号', '退款状态', '退款金额' );
+		if ( $with_email ) {
+			array_splice( $columns, self::EMAIL_AT, 0, array( '顾客邮箱' ) );
+		}
+		return $columns;
 	}
 
 	/**
@@ -93,9 +108,9 @@ final class Buyer_Order_Export {
 	 * @param array<string,mixed> $f
 	 * @return string[]
 	 */
-	public static function row( array $f ): array {
+	public static function row( array $f, bool $with_email = false ): array {
 		$get = static fn( string $key ): string => self::cell( $f[ $key ] ?? '' );
-		return array(
+		$row = array(
 			$get( 'number' ),
 			$get( 'created' ),
 			$get( 'paid' ),
@@ -105,7 +120,6 @@ final class Buyer_Order_Export {
 			$get( 'currency' ),
 			$get( 'items' ),
 			(string) (int) ( $f['quantity'] ?? 0 ),
-			$get( 'email' ),
 			$get( 'country' ),
 			$get( 'source' ),
 			$get( 'utm_source' ),
@@ -117,10 +131,14 @@ final class Buyer_Order_Export {
 			$get( 'refund' ),
 			number_format( max( 0.0, (float) ( $f['refund_amount'] ?? 0 ) ), 2, '.', '' ),
 		);
+		if ( $with_email ) {
+			array_splice( $row, self::EMAIL_AT, 0, array( $get( 'email' ) ) );
+		}
+		return $row;
 	}
 
 	/** 从订单取出 row() 要的内容。 */
-	private static function facts( \WC_Order $order ): array {
+	private static function facts( \WC_Order $order, bool $with_email = false ): array {
 		$time  = static fn( $date ): string => $date ? wp_date( 'Y-m-d H:i:s', $date->getTimestamp() ) : '';
 		$names = array();
 		$qty   = 0;
@@ -143,7 +161,7 @@ final class Buyer_Order_Export {
 			'currency'      => (string) $order->get_currency(),
 			'items'         => implode( '; ', $names ),
 			'quantity'      => $qty,
-			'email'         => (string) $order->get_billing_email(),
+			'email'         => $with_email ? (string) $order->get_billing_email() : '',
 			'country'       => (string) ( $order->get_shipping_country() ?: $order->get_billing_country() ),
 			'source'        => Admin_Menus::order_source( $utm + array( 'source_type' => (string) $order->get_meta( '_wc_order_attribution_source_type' ) ) ),
 			'carrier'       => (string) ( $shipment['carrier'] ?? '' ),
@@ -178,7 +196,7 @@ final class Buyer_Order_Export {
 			. '<label>付款日期 <input type="date" name="from" value="' . esc_attr( $range['from'] ) . '" max="' . esc_attr( $range['to'] ) . '"></label>'
 			. '<label>到 <input type="date" name="to" value="' . esc_attr( $range['to'] ) . '" max="' . esc_attr( $range['to'] ) . '"></label>'
 			. '<button type="submit" class="button">下载表格</button>'
-			. '<span class="description">只含已付款的订单，一次最多 ' . (int) self::MAX_DAYS . ' 天、' . (int) self::MAX_ROWS . ' 行；不含电话和地址。</span>'
+			. '<span class="description">只含已付款的订单，一次最多 ' . (int) self::MAX_DAYS . ' 天、' . (int) self::MAX_ROWS . ' 行；' . ( self::with_email() ? '含顾客邮箱，不含电话和地址。' : '不含顾客邮箱、电话和地址。' ) . '</span>'
 			. '</form></div>';
 	}
 
@@ -196,8 +214,9 @@ final class Buyer_Order_Export {
 		$start = self::day_edge( $range['from'], false );
 		$end   = self::day_edge( $range['to'], true );
 
-		$rows = array();
-		$page = 1;
+		$email = self::with_email();
+		$rows  = array();
+		$page  = 1;
 		while ( count( $rows ) < self::MAX_ROWS ) {
 			$orders = wc_get_orders(
 				array(
@@ -217,7 +236,7 @@ final class Buyer_Order_Export {
 				if ( ! $order instanceof \WC_Order || ! $order->get_date_paid() || \PeptideCore\Test_Orders::is_test_order( $order ) ) {
 					continue;
 				}
-				$rows[] = self::row( self::facts( $order ) );
+				$rows[] = self::row( self::facts( $order, $email ), $email );
 				if ( count( $rows ) >= self::MAX_ROWS ) {
 					break;
 				}
@@ -228,7 +247,7 @@ final class Buyer_Order_Export {
 			++$page;
 		}
 
-		Activity_Log::log( 'order', 'export', array( 'type' => 'order', 'label' => $range['from'] . ' – ' . $range['to'] ), array( 'rows' => count( $rows ) ) );
+		Activity_Log::log( 'order', 'export', array( 'type' => 'order', 'label' => $range['from'] . ' – ' . $range['to'] ), array( 'rows' => count( $rows ), 'email' => $email ? 'yes' : 'no' ) );
 
 		nocache_headers();
 		header( 'Content-Type: text/csv; charset=utf-8' );
@@ -239,7 +258,7 @@ final class Buyer_Order_Export {
 			wp_die( esc_html( '导出失败，请再试一次。' ), '', array( 'response' => 500 ) );
 		}
 		fwrite( $out, "\xEF\xBB\xBF" ); // 让表格软件按 UTF-8 打开中文表头。
-		fputcsv( $out, self::columns(), ',', '"', '' );
+		fputcsv( $out, self::columns( $email ), ',', '"', '' );
 		foreach ( $rows as $row ) {
 			fputcsv( $out, $row, ',', '"', '' );
 		}

@@ -57,21 +57,29 @@ namespace {
 	check( 'formula-looking cells are neutralised', "'=1+1" === $cell( '=1+1' ) && "'+1" === $cell( '+1' ) && "'-1" === $cell( '-1' ) && "'@SUM(A1)" === $cell( '@SUM(A1)' ) && "'=cmd" === $cell( "\t=cmd" ) );
 	check( 'ordinary cells are untouched', 'hang-131189201' === $cell( 'hang-131189201' ) && 'a b' === $cell( "a\r\nb" ) && '' === $cell( null ) && '' === $cell( array( 'x' ) ) && '12' === $cell( 12 ) );
 	$columns = \PeptideCore\Admin\Buyer_Order_Export::columns();
-	$row     = \PeptideCore\Admin\Buyer_Order_Export::row( array(
+	$facts   = array(
 		'number' => 'hang-131189201', 'created' => '2026-11-11 10:00:00', 'paid' => '2026-11-11 10:03:00', 'status' => '待发货', 'total' => 199.5, 'currency' => 'USD',
 		'items' => 'Kit A x2; Kit B x1', 'quantity' => 3, 'email' => 'jane@example.com', 'country' => 'US', 'source' => 'facebook / =HYPERLINK("x") / ad1',
 		'utm_source' => 'facebook', 'utm_campaign' => '=HYPERLINK("x")', 'utm_content' => 'ad1', 'utm_term' => '', 'carrier' => 'FedEx', 'tracking' => '123456789012',
 		'refund' => '部分退款', 'refund_amount' => 30,
-	) );
-	check( 'row has one value per column', count( $columns ) === count( $row ) && 19 === count( $row ) );
+	);
+	$row     = \PeptideCore\Admin\Buyer_Order_Export::row( $facts );
+	check( 'row has one value per column', count( $columns ) === count( $row ) && 18 === count( $row ) );
 	$by = array_combine( $columns, $row );
-	check( 'row values land in the right columns', 'hang-131189201' === $by['订单号'] && '199.50' === $by['订单金额'] && '3' === $by['件数'] && 'jane@example.com' === $by['顾客邮箱'] && '123456789012' === $by['运单号'] && '部分退款' === $by['退款状态'] && '30.00' === $by['退款金额'] );
+	check( 'row values land in the right columns', 'hang-131189201' === $by['订单号'] && '199.50' === $by['订单金额'] && '3' === $by['件数'] && 'US' === $by['国家'] && '123456789012' === $by['运单号'] && '部分退款' === $by['退款状态'] && '30.00' === $by['退款金额'] );
 	check( 'ad names cannot inject a formula', "'=HYPERLINK(\"x\")" === $by['utm_campaign'] );
-	check( 'missing values are empty, amounts are zero', array_fill( 0, 19, '' ) !== ( $empty = \PeptideCore\Admin\Buyer_Order_Export::row( array() ) ) && '0.00' === $empty[4] && '0' === $empty[7] && '0.00' === $empty[18] && '' === $empty[0] );
-	check( 'no phone or address column', ! array_filter( $columns, static fn( string $c ): bool => false !== strpos( $c, '电话' ) || false !== strpos( $c, '地址' ) ) );
+	check( 'missing values are empty, amounts are zero', array_fill( 0, 18, '' ) !== ( $empty = \PeptideCore\Admin\Buyer_Order_Export::row( array() ) ) && '0.00' === $empty[4] && '0' === $empty[7] && '0.00' === $empty[17] && '' === $empty[0] );
+	// 顾客邮箱默认不导（平台所有者还没定）；这家店把选项 pc_buyer_export_email 设成 on 才带。
+	check( 'no customer email by default', ! in_array( '顾客邮箱', $columns, true ) && ! in_array( 'jane@example.com', $row, true ) );
+	$columns_e = \PeptideCore\Admin\Buyer_Order_Export::columns( true );
+	$row_e     = \PeptideCore\Admin\Buyer_Order_Export::row( $facts, true );
+	check( 'email column is added only when the store asks for it', 19 === count( $columns_e ) && 19 === count( $row_e ) && '顾客邮箱' === $columns_e[8] && 'jane@example.com' === array_combine( $columns_e, $row_e )['顾客邮箱'] );
+	check( 'the other columns do not move', array_values( array_diff( $columns_e, array( '顾客邮箱' ) ) ) === $columns && 'US' === array_combine( $columns_e, $row_e )['国家'] && '30.00' === array_combine( $columns_e, $row_e )['退款金额'] );
+	check( 'no phone or address column', ! array_filter( $columns_e, static fn( string $c ): bool => false !== strpos( $c, '电话' ) || false !== strpos( $c, '地址' ) ) );
 	check( 'limits', 92 === \PeptideCore\Admin\Buyer_Order_Export::MAX_DAYS && 5000 === \PeptideCore\Admin\Buyer_Order_Export::MAX_ROWS );
 	$export_src = (string) file_get_contents( $inc . '/admin/class-buyer-order-export.php' );
 	check( 'export checks who is asking and the nonce before reading orders', strpos( $export_src, 'Staff_Buyer::can_use()' ) < strpos( $export_src, 'check_admin_referer( self::NONCE )' ) && strpos( $export_src, 'check_admin_referer( self::NONCE )' ) < strpos( $export_src, 'wc_get_orders(' ) );
+	check( 'one switch decides the email column, off unless the option says on', 'pc_buyer_export_email' === \PeptideCore\Admin\Buyer_Order_Export::OPTION_EMAIL && false !== strpos( $export_src, "'on' === (string) get_option( self::OPTION_EMAIL, 'off' )" ) && false !== strpos( $export_src, "\$with_email ? (string) \$order->get_billing_email() : ''" ) );
 	check( 'export skips test orders and unpaid orders', false !== strpos( $export_src, 'Test_Orders::is_test_order( $order )' ) && false !== strpos( $export_src, '! $order->get_date_paid()' ) );
 
 	echo "PASS {$checks} buyer order list / refund / export checks\n";
