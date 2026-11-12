@@ -48,10 +48,14 @@ final class Recommendation_Coupon {
 			&& (float) $coupon->get_amount() >= 0 && ! ( 'percent' === $coupon->get_discount_type() && (float) $coupon->get_amount() > 100 );
 	}
 
-	/** Known callbacks are read-only; an unknown coupon integration cannot be guessed. */
+	/**
+	 * Known callbacks are read-only; an unknown coupon integration cannot be guessed.
+	 * Manual_Orders::block_coupons（手动订单链接，2026-11-10）也是只读的：链接购物车里它把首单券以外的券判为不可用，
+	 * 普通购物车原样放行；不认它的话所有店的加购推荐券都会停（M4，2026-11-12）。
+	 */
 	private static function coupon_hooks_supported(): bool {
 		global $wp_filter;
-		$allowed = array( 'woocommerce_coupon_code' => array( 'wc_sanitize_coupon_code', 'wc_strtolower' ), 'woocommerce_coupon_error' => array( 'WC_Brands_Coupons::brand_exclusion_error' ), 'woocommerce_coupon_is_valid' => array( Coupon_Rules::class . '::validate', \PeptideCore\First_Order_Offer::class . '::validate_stack', 'WC_Brands_Coupons::is_coupon_valid', \PeptideCore\Loyalty::class . '::validate_coupon', \PeptideCore\Product_Offers::class . '::coupon_valid' ), 'woocommerce_coupon_is_valid_for_product' => array( 'WC_Brands_Coupons::is_valid_for_product', \PeptideCore\Product_Offers::class . '::coupon_product_valid' ) );
+		$allowed = array( 'woocommerce_coupon_code' => array( 'wc_sanitize_coupon_code', 'wc_strtolower' ), 'woocommerce_coupon_error' => array( 'WC_Brands_Coupons::brand_exclusion_error' ), 'woocommerce_coupon_is_valid' => array( Coupon_Rules::class . '::validate', \PeptideCore\First_Order_Offer::class . '::validate_stack', 'WC_Brands_Coupons::is_coupon_valid', \PeptideCore\Loyalty::class . '::validate_coupon', \PeptideCore\Product_Offers::class . '::coupon_valid', \PeptideCore\Manual_Orders::class . '::block_coupons' ), 'woocommerce_coupon_is_valid_for_product' => array( 'WC_Brands_Coupons::is_valid_for_product', \PeptideCore\Product_Offers::class . '::coupon_product_valid' ) );
 		foreach ( (array) $wp_filter as $name => $hook ) {
 			if ( ! str_starts_with( $name, 'woocommerce_coupon_' ) && ! str_starts_with( $name, 'woocommerce_get_shop_coupon_' ) ) { continue; }
 			// Analytics registers this native SAVE action. Detached quote never saves a coupon.

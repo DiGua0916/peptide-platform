@@ -120,6 +120,19 @@ function m4_fuzz_case( int $seed ): WC_Cart {
 		$codes[] = 'code' . $i;
 	}
 
+	// 首单优惠
+	if ( $chance( 25 ) ) {
+		m4_coupon( 950, 'WELCOME5', array( 'type' => 'percent', 'amount' => '5', 'limit_per_user' => 1 ), array( Coupon_Rules::FIRST_META => 'yes', Coupon_Rules::STRATEGY_META => 'stack' ) );
+		update_option( \PeptideCore\First_Order_Offer::OPTION, array( 'enabled' => true, 'coupon_id' => 950 ) );
+		if ( $chance( 60 ) ) {
+			$codes[] = 'WELCOME5';
+		}
+		if ( $chance( 30 ) ) {
+			$GLOBALS['m4']['billing'] = 'old@example.com';
+			$GLOBALS['m4']['orders'][] = array( 'user' => 0, 'email' => 'old@example.com' );
+		}
+	}
+
 	// 赠品
 	if ( $chance( 25 ) ) {
 		m4_offer( 700, 'Gift', array( 'kind' => 'gift', 'basis' => $pick( array( 'spend', 'quantity' ) ), 'threshold' => (float) $pick( array( 2, 3, 40, 80 ) ), 'gift_product' => $pick( $ids ), 'gift_qty' => mt_rand( 1, 2 ), 'qualifiers' => $chance( 30 ) ? array( $pick( $ids ), 200 ) : array() ) );
@@ -144,6 +157,35 @@ function m4_fuzz_case( int $seed ): WC_Cart {
 		}
 		$used[ $id ] = true;
 		$lines[]     = array( $id, mt_rand( 1, 6 ) );
+	}
+	// 手动订单链接：改价、可选的自定义运费和自定义优惠、可选开店铺满减（选其中几个活动）和首单优惠。
+	if ( $chance( 20 ) ) {
+		$items = array();
+		foreach ( $lines as [ $id, $qty ] ) {
+			$native  = (float) $GLOBALS['m4']['products'][ $id ]['price'];
+			$items[] = array( $id, $qty, round( $native * $pick( array( 0.5, 0.8, 1.0, 1.0 ) ), 2 ), (float) $GLOBALS['m4']['products'][ $id ]['regular'] );
+		}
+		$promo_ids = array();
+		foreach ( array( 500, 501, 502 ) as $pid ) {
+			if ( isset( $GLOBALS['m4']['posts'][ $pid ] ) && $chance( 50 ) ) {
+				$promo_ids[] = $pid;
+			}
+		}
+		$discounts = array();
+		for ( $n = mt_rand( 0, 2 ), $i = 0; $i < $n; $i++ ) {
+			$discounts[] = array( 'label' => 'Manual ' . $i, 'amount' => (float) $pick( array( 1, 2.5, 10, 75 ) ) );
+		}
+		return m4_manual_cart(
+			array(
+				'items'        => $items,
+				'shipping'     => $chance( 40 ) ? array( 'label' => 'Courier', 'amount' => (float) $pick( array( 0, 5, 12.5 ) ) ) : null,
+				'discounts'    => $discounts,
+				'promo_ids'    => $promo_ids,
+				'store_promos' => $chance( 15 ),
+				'first_order'  => $chance( 40 ),
+			),
+			$codes
+		);
 	}
 	return m4_cart( $lines, $codes );
 }

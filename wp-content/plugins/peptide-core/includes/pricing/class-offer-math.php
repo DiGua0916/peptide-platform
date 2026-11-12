@@ -48,7 +48,7 @@ final class Offer_Math {
 			if ( self::conflict( $line, $input ) ) {
 				return false;
 			}
-			$measure += 'quantity' === $offer['basis'] ? (int) $line['qty'] : (float) $line['price'] * (int) $line['qty'];
+			$measure += 'quantity' === $offer['basis'] ? (int) $line['qty'] : (float) ( $line['native'] ?? $line['price'] ) * (int) $line['qty'];
 		}
 		return $measure + 0.000001 >= $offer['threshold']
 			&& ! empty( $offer['gift_product_ok'] )

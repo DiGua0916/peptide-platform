@@ -71,6 +71,11 @@ namespace {
 		add_action( 'woocommerce_cart_calculate_fees', array( \PeptideCore\Promotions::class, 'apply_to_cart' ), 20 );
 		add_filter( 'woocommerce_package_rates', array( \PeptideCore\Shipping\Discounts::class, 'apply' ), 120, 2 );
 		add_filter( 'woocommerce_cart_shipping_packages', array( \PeptideCore\Shipping\Discounts::class, 'tag_packages' ), 20 );
+		// 手动订单链接（Manual_Orders，2026-11-10 起每个请求都挂着）。
+		add_action( 'woocommerce_before_calculate_totals', array( \PeptideCore\Manual_Orders::class, 'apply_prices' ), 9999 );
+		add_action( 'woocommerce_cart_calculate_fees', array( \PeptideCore\Manual_Orders::class, 'apply_fees' ), 99 );
+		add_filter( 'woocommerce_package_rates', array( \PeptideCore\Manual_Orders::class, 'apply_shipping' ), 9999, 2 );
+		add_filter( 'woocommerce_coupon_is_valid', array( \PeptideCore\Manual_Orders::class, 'block_coupons' ), 9999, 2 );
 	}
 
 	// ---------- 钩子 ----------
@@ -237,13 +242,19 @@ namespace {
 	// ---------- WooCommerce：数据对象 ----------
 	final class WC_Product {
 		private array $d;
-		public function __construct( public int $id ) { $this->d = $GLOBALS['m4']['products'][ $id ]; }
+		public function __construct( public int $id ) {
+			$this->d         = $GLOBALS['m4']['products'][ $id ];
+			$this->d['sale'] = (float) $this->d['regular'] > (float) $this->d['price'] ? $this->d['price'] : '';
+		}
+		public function set_regular_price( $p ) { $this->d['regular'] = $p; }
+		public function set_sale_price( $p ) { $this->d['sale'] = $p; }
+		public function get_sale_price( $c = 'view' ) { return $this->d['sale']; }
 		public function get_id() { return $this->id; }
 		public function get_parent_id() { return (int) $this->d['parent']; }
 		public function get_price( $c = 'view' ) { return $this->d['price']; }
 		public function set_price( $p ) { $this->d['price'] = $p; }
 		public function get_regular_price( $c = 'view' ) { return $this->d['regular']; }
-		public function is_on_sale() { return (float) $this->d['regular'] > (float) $GLOBALS['m4']['products'][ $this->id ]['price']; }
+		public function is_on_sale() { return '' !== (string) $this->d['sale'] && (float) $this->d['regular'] > (float) $this->d['sale']; }
 		public function get_type() { return $this->d['parent'] ? 'variation' : 'simple'; }
 		public function is_type( $t ) { return in_array( $this->get_type(), (array) $t, true ); }
 		public function get_status() { return $this->d['status']; }
@@ -266,6 +277,7 @@ namespace {
 		public function get_tentative_usages_for_user( $id, $users ) { return 0; }
 	}
 	class WC_Coupon {
+		public const E_WC_COUPON_INVALID_FILTERED               = 100;
 		public const E_WC_COUPON_USAGE_LIMIT_REACHED            = 106;
 		public const E_WC_COUPON_USAGE_LIMIT_COUPON_STUCK       = 115;
 		public const E_WC_COUPON_USAGE_LIMIT_COUPON_STUCK_GUEST = 116;
@@ -333,7 +345,7 @@ namespace {
 	final class WC_Shipping_Rate {
 		public $taxes  = array();
 		private $meta  = array();
-		public function __construct( public string $id, public $cost ) {}
+		public function __construct( public string $id = '', public string $label = '', public $cost = 0, $taxes = array(), public string $method_id = '' ) {}
 		public function get_id() { return $this->id; }
 		public function get_cost() { return $this->cost; }
 		public function set_cost( $c ) { $this->cost = $c; }
@@ -388,7 +400,7 @@ namespace {
 			if ( ! $this->needs_shipping() ) { return array(); }
 			$packages = apply_filters( 'woocommerce_cart_shipping_packages', array( array( 'contents' => $this->cart_contents ) ) );
 			$rates    = array();
-			foreach ( $GLOBALS['m4']['rates'] as $r ) { $rates[ $r['id'] ] = new WC_Shipping_Rate( $r['id'], $r['cost'] ); }
+			foreach ( $GLOBALS['m4']['rates'] as $r ) { $rates[ $r['id'] ] = new WC_Shipping_Rate( $r['id'], 'Shipping', $r['cost'] ); }
 			$rates                = apply_filters( 'woocommerce_package_rates', $rates, $packages[0] );
 			$packages[0]['rates'] = $rates;
 			$chosen               = $GLOBALS['m4']['chosen'] ?? array_key_first( $rates );
@@ -468,6 +480,31 @@ namespace {
 			$cart->add_to_cart( $parent ? $parent : $product, $qty, $parent ? $product : 0 );
 		}
 		$cart->applied_coupons = array_map( 'wc_format_coupon_code', $coupons );
+		return $cart;
+	}
+
+	/**
+	 * 手动订单链接的购物车。$config：items [[商品 ID, 数量, 售价, 原价]]，其余同 Manual_Orders 存的配置
+	 * （shipping、discounts、promo_ids、first_order）。开了首单优惠时链接会自动挂上首单券。
+	 */
+	function m4_manual_cart( array $config, array $extra_coupons = array() ): WC_Cart {
+		$token = 'tok' . ( ++$GLOBALS['m4']['uuid'] );
+		$all   = (array) get_option( \PeptideCore\Manual_Orders::OPTION, array() );
+		$all[ $token ] = array_merge( array( 'token' => $token, 'shipping' => null, 'discounts' => array(), 'promo_ids' => array(), 'first_order' => false, 'created' => time(), 'expires' => time() + 86400 ), $config );
+		$all[ $token ]['store_promos'] = (bool) $all[ $token ]['promo_ids'] || ! empty( $config['store_promos'] );
+		update_option( \PeptideCore\Manual_Orders::OPTION, $all );
+		$cart      = new WC_Cart();
+		WC()->cart = $cart;
+		foreach ( $config['items'] as [ $product, $qty, $price, $regular ] ) {
+			$parent = (int) $GLOBALS['m4']['products'][ $product ]['parent'];
+			$cart->add_to_cart( $parent ? $parent : $product, $qty, $parent ? $product : 0, array(), array( 'pc_manual' => $token, 'pc_m_price' => $price, 'pc_m_regular' => $regular ) );
+		}
+		$codes = $extra_coupons;
+		$first = ! empty( $config['first_order'] ) ? \PeptideCore\Manual_Orders::first_order_coupon() : null;
+		if ( $first ) {
+			$codes[] = $first->get_code();
+		}
+		$cart->applied_coupons = array_map( 'wc_format_coupon_code', $codes );
 		return $cart;
 	}
 

@@ -54,8 +54,10 @@ final class Cart_Reader {
 				$unsupported[] = 'filter:' . $hook;
 			}
 		}
+		$manual = self::manual( $cart );
 		foreach ( $cart->get_fees() as $fee ) {
-			if ( ! is_object( $fee ) || ! preg_match( '/^pc-promo-[1-9][0-9]*$/D', (string) ( $fee->id ?? '' ) ) ) {
+			// 认识的费用：满减活动；手动订单链接里店主配的自定义优惠。别的插件加的费用引擎不认识。
+			if ( ! is_object( $fee ) || ! preg_match( $manual ? '/^pc-(promo-[1-9][0-9]*|manual-[0-9]+)$/D' : '/^pc-promo-[1-9][0-9]*$/D', (string) ( $fee->id ?? '' ) ) ) {
 				$unsupported[] = 'foreign_fee';
 				break;
 			}
@@ -166,7 +168,8 @@ final class Cart_Reader {
 				$rate = isset( $chosen[ $i ] ) ? ( $package['rates'][ $chosen[ $i ] ] ?? null ) : null;
 				if ( $rate instanceof \WC_Shipping_Rate ) {
 					$meta    = (array) $rate->get_meta_data();
-					$rates[] = array( 'id' => (string) $rate->get_id(), 'cost' => (float) ( $meta[ Discounts::META_COST ] ?? $rate->get_cost() ), 'charged' => (float) $rate->get_cost() );
+					// 手动订单链接里店主配的运费在运费折扣之后才换上去，不再打折。
+					$rates[] = array( 'id' => (string) $rate->get_id(), 'cost' => (float) ( $meta[ Discounts::META_COST ] ?? $rate->get_cost() ), 'charged' => (float) $rate->get_cost(), 'fixed' => 0 === strpos( (string) $rate->get_id(), 'pc_manual:' ) );
 				}
 			}
 		}
@@ -186,6 +189,7 @@ final class Cart_Reader {
 			'promotions'        => $promotions,
 			'offers'            => $facts['offers'],
 			'offer_groups'      => $facts['groups'],
+			'manual'            => $manual,
 			'shipping'          => array( 'rates' => $rates, 'discounts' => $discounts, 'weekday' => (int) wp_date( 'N', $now ) ),
 		);
 	}
@@ -212,6 +216,7 @@ final class Cart_Reader {
 				'qty'        => $item['quantity'],
 				// 有赠品 / 捆绑标记的行，旧逻辑每次都从商品的原价重新算起。
 				'price'      => (float) ( $fact['has_meta'] && null !== $fact['native'] ? $fact['native'] : $product->get_price() ),
+				'native'     => null !== ( $fact['native'] ?? null ) ? (float) $fact['native'] : null,
 				'sellable'   => $fact['sellable'],
 				'offer'      => $fact['offer'],
 				'has_meta'   => $fact['has_meta'],
@@ -271,6 +276,38 @@ final class Cart_Reader {
 			$out[] = array( 'code' => $code, 'strategy' => Coupon_Rules::strategy( new \WC_Coupon( $code ) ) );
 		}
 		return $out;
+	}
+
+	/**
+	 * 这份购物车是不是手动订单链接来的（Manual_Orders，日常会话 2026-11-10）。是的话返回引擎要用的那几项：
+	 * 这一单开没开店铺满减、选了哪些活动、店主配的自定义优惠、开没开首单优惠。链接过期时为 null（和 Manual_Orders::active_cart 一致）。
+	 */
+	public static function manual( \WC_Cart $cart ): ?array {
+		if ( ! class_exists( \PeptideCore\Manual_Orders::class ) ) {
+			return null;
+		}
+		foreach ( $cart->get_cart() as $item ) {
+			if ( empty( $item['pc_manual'] ) ) {
+				continue;
+			}
+			$c = \PeptideCore\Manual_Orders::get( (string) $item['pc_manual'] );
+			if ( ! $c ) {
+				return null;
+			}
+			$first     = \PeptideCore\Manual_Orders::first_order_coupon();
+			$discounts = array();
+			foreach ( (array) ( $c['discounts'] ?? array() ) as $n => $d ) {
+				$discounts[ $n ] = array( 'label' => (string) ( $d['label'] ?? '' ), 'amount' => (float) ( $d['amount'] ?? 0 ) );
+			}
+			return array(
+				'store_promos' => ! empty( $c['store_promos'] ),
+				'promo_ids'    => array_map( 'intval', (array) ( $c['promo_ids'] ?? array() ) ),
+				'discounts'    => $discounts,
+				'first_order'  => ! empty( $c['first_order'] ),
+				'first_code'   => $first ? wc_format_coupon_code( $first->get_code() ) : '',
+			);
+		}
+		return null;
 	}
 
 	/** 加购推荐配置里的优惠码 ID（没开时为 0）。 */

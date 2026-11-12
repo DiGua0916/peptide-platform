@@ -55,6 +55,8 @@ final class Engine {
 			// 赠品 / 捆绑活动：ID => 设置 + active / version / gift_* 事实，ID 大的在前
 			'offers'            => array(),
 			'offer_groups'      => array(), // 捆绑组 => [stock_ok]
+			// 手动订单链接（Manual_Orders）：null = 普通购物车；否则 [store_promos, promo_ids, discounts, first_order, first_code]
+			'manual'            => null,
 			'shipping'          => array(
 				'rates'     => array(), // 已选的运费：[[id, cost（折扣前）]]
 				'discounts' => array(), // 运费折扣，新建的在前
@@ -129,6 +131,10 @@ final class Engine {
 		$valid = array();
 		foreach ( Coupon_Math::sort( $input['coupons'], (bool) $input['sequential'] ) as $code => $coupon ) {
 			$reason = Coupon_Math::invalid_reason( $coupon, $input, $subtotals, $subtotal );
+			// 手动订单链接不叠加优惠码（Manual_Orders::block_coupons，最后执行）：只有这一单开了首单优惠时放行首单券。
+			if ( '' === $reason && $input['manual'] && ! ( $input['manual']['first_order'] && '' !== $input['manual']['first_code'] && (string) $code === $input['manual']['first_code'] ) ) {
+				$reason = 'manual_order';
+			}
 			if ( '' === $reason ) {
 				$valid[ $code ] = $coupon;
 			} else {
@@ -174,7 +180,7 @@ final class Engine {
 		$rates_out      = array();
 		foreach ( (array) $input['shipping']['rates'] as $rate ) {
 			$cost            = (float) $rate['cost'];
-			$best            = Shipping_Math::best( $cost, $applicable, $decimals );
+			$best            = empty( $rate['fixed'] ) ? Shipping_Math::best( $cost, $applicable, $decimals ) : array( 'cost' => $cost, 'by' => null );
 			$shipping_full  += self::cents( $cost, $decimals );
 			$shipping_total += self::cents( (float) $best['cost'], $decimals );
 			$rates_out[]     = array( 'id' => (string) ( $rate['id'] ?? '' ), 'original_cents' => self::cents( $cost, $decimals ), 'cost_cents' => self::cents( (float) $best['cost'], $decimals ), 'discount_id' => $best['by'] ? (int) $best['by']['id'] : 0 );
@@ -191,9 +197,18 @@ final class Engine {
 
 		// 5. 满减活动：每个生效的活动一笔负数费用。合计不超过“商品折后金额 + 运费”（WooCommerce 对负数费用的上限）。
 		$promos = Promotion_Math::discounts( $input, $subtotals );
+		$manual = $input['manual'];
 		$fees   = array();
 		foreach ( $promos['applied'] as $a ) {
-			$fees[ 'pc-promo-' . $a['id'] ] = array( 'id' => (int) $a['id'], 'amount' => -1 * $a['discount'] );
+			// 手动订单链接：这一单没开店铺满减就一个都不留，开了只留店主选的活动（没选具体活动的旧链接全留）。
+			if ( $manual && ( ! $manual['store_promos'] || ( $manual['promo_ids'] && ! in_array( (int) $a['id'], $manual['promo_ids'], true ) ) ) ) {
+				$rejected[] = array( 'source' => 'promotion', 'id' => (int) $a['id'], 'reason' => 'manual_order' );
+				continue;
+			}
+			$fees[ 'pc-promo-' . $a['id'] ] = array( 'kind' => 'promotion', 'id' => (int) $a['id'], 'amount' => -1 * $a['discount'] );
+		}
+		foreach ( $manual ? $manual['discounts'] : array() as $n => $d ) {
+			$fees[ 'pc-manual-' . $n ] = array( 'kind' => 'manual', 'id' => (int) $n, 'label' => (string) $d['label'], 'amount' => -1 * (float) $d['amount'] );
 		}
 		uasort( $fees, static fn( $a, $b ) => $a['amount'] > $b['amount'] ? -1 : 1 ); // WC_Cart_Fees::sort_fees_callback
 		$running    = 0;
@@ -207,8 +222,18 @@ final class Engine {
 			$running                    += $total;
 			$fees_total                 += $total;
 			$fees[ $fee_id ]['total_cents'] = $total;
-			$c                          = $input['promotions'][ $fee['id'] ];
-			$entries[]                  = array(
+			if ( 'manual' === $fee['kind'] ) {
+				$entries[] = array(
+					'source'       => 'manual_discount',
+					'id'           => (int) $fee['id'],
+					'label'        => (string) $fee['label'],
+					'amount_cents' => (int) round( -1 * $total ),
+					'stacking'     => array( 'with_coupons' => false, 'with_promotions' => (bool) $manual['store_promos'] ),
+				);
+				continue;
+			}
+			$c         = $input['promotions'][ $fee['id'] ];
+			$entries[] = array(
 				'source'       => 'promotion',
 				'id'           => (int) $fee['id'],
 				'label'        => (string) ( $c['title'] ?? '' ),

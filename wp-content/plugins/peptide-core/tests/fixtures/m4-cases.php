@@ -242,5 +242,46 @@ $cases['52 离开挽回 / 转盘发的优惠码（指定专辑、每件减 $2）
 	},
 );
 
+// ---------- 手动订单链接（Manual_Orders，2026-11-10）：价格、运费、优惠按店主配的，经购物车计算 ----------
+$manual_items = array( array( 101, 2, 25.0, 29.98 ), array( 103, 1, 40.0, 44.98 ) ); // 小计 $90.00
+$cases['53 手动订单：改价 + 自定义运费 + 两笔自定义优惠；店铺的满减和运费折扣这一单都不算'] = array(
+	'expect' => 9000 - 500 - 300 + 800,
+	'cart'   => static function () use ( $manual_items ) {
+		m4_promotion( 600, 'Store promo', promo( 'spend_amount', array( array( 50, 5 ) ) ) );
+		$GLOBALS['m4']['rates'] = array( array( 'id' => 'plan:std', 'cost' => '15.00' ) );
+		m4_shipping_discount( array( 'id' => 1, 'name' => 'Half shipping', 'kind' => 'percent', 'value' => 50.0 ) );
+		return m4_manual_cart( array( 'items' => $manual_items, 'shipping' => array( 'label' => 'Courier', 'amount' => 8.0 ), 'discounts' => array( array( 'label' => 'Loyal customer', 'amount' => 5.0 ), array( 'label' => 'Rounding', 'amount' => 3.0 ) ) ) );
+	},
+);
+$cases['54 手动订单开了店铺满减，两个活动里只选了一个；运费按店铺的（运费折扣照常）'] = array(
+	'expect' => 9000 - 400 + 1000,
+	'cart'   => static function () use ( $manual_items ) {
+		m4_promotion( 600, 'Product 101', promo( 'qty_amount', array( array( 2, 6 ) ), array( 'scope' => 'products', 'products' => array( 101 ) ) ) );
+		m4_promotion( 601, 'Everything', promo( 'spend_amount', array( array( 30, 4 ) ) ) );
+		$GLOBALS['m4']['rates'] = array( array( 'id' => 'plan:std', 'cost' => '15.00' ) );
+		m4_shipping_discount( array( 'id' => 1, 'name' => '$5 off', 'kind' => 'amount', 'value' => 5.0 ) );
+		return m4_manual_cart( array( 'items' => $manual_items, 'promo_ids' => array( 601 ) ) );
+	},
+);
+$cases['55 手动订单开了首单优惠：链接自动带上 WELCOME5；顾客另外输的券不生效'] = array(
+	'expect' => 9000 - 450,
+	'cart'   => static function () use ( $manual_items ) { welcome5(); m4_coupon( 901, 'SAVE10', array( 'type' => 'percent', 'amount' => '10' ) ); return m4_manual_cart( array( 'items' => $manual_items, 'first_order' => true ), array( 'SAVE10' ) ); },
+);
+$cases['56 手动订单没开首单优惠：购物车里挂着 WELCOME5 也不生效'] = array(
+	'expect' => 9000,
+	'cart'   => static function () use ( $manual_items ) { welcome5(); return m4_manual_cart( array( 'items' => $manual_items ), array( 'WELCOME5' ) ); },
+);
+$cases['57 手动订单的自定义优惠比商品加运费还多：封顶到 0'] = array(
+	'expect' => 0,
+	'cart'   => static function () { return m4_manual_cart( array( 'items' => array( array( 101, 1, 10.0, 29.98 ) ), 'shipping' => array( 'label' => 'Courier', 'amount' => 5.0 ), 'discounts' => array( array( 'label' => 'A', 'amount' => 8.0 ), array( 'label' => 'B', 'amount' => 9.0 ) ) ) ); },
+);
+$cases['58 手动订单把售价改到原价以下（算促销中）+ 开了“不含促销商品”的店铺满减：不参加'] = array(
+	'expect' => 9000,
+	'cart'   => static function () use ( $manual_items ) { m4_promotion( 600, 'No sale items', promo( 'spend_percent', array( array( 30, 10 ) ), array( 'exclude_sale' => true ) ) ); return m4_manual_cart( array( 'items' => $manual_items, 'store_promos' => true ) ); },
+);
+$cases['59 手动订单 + 赠品活动：赠品门槛按商品自己的现价算，不按链接里改过的价'] = array(
+	'cart' => static function () { m4_offer( 700, 'Free vial', array( 'kind' => 'gift', 'basis' => 'spend', 'threshold' => 55.0, 'gift_product' => 105, 'gift_qty' => 1 ) ); return m4_manual_cart( array( 'items' => array( array( 101, 2, 20.0, 29.98 ) ) ) ); },
+);
+
 return $cases;
 }

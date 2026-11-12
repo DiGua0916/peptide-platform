@@ -227,11 +227,13 @@ final class Product_Offers {
 			$has   = isset( $item[ self::CART ] );
 			$valid = $has && self::valid_meta( $item );
 			$fresh = $has ? wc_get_product( $pid ) : null;
+			$sell  = self::product( $pid );
 			$out['lines'][ $key ] = array(
 				'has_meta' => $has,
 				'offer'    => $valid ? array( 'offer' => (int) $item[ self::CART ]['offer'], 'kind' => (string) $item[ self::CART ]['kind'], 'group' => (string) $item[ self::CART ]['group'], 'slot' => (string) $item[ self::CART ]['slot'], 'version' => (string) $item[ self::CART ]['version'] ) : null,
-				'native'   => $fresh ? $fresh->get_price() : null,
-				'sellable' => (bool) self::product( $pid ),
+				// 商品自己的现价（不是购物车行上可能被改过的价）：赠品门槛按它算；有活动标记的行每次从它重新算起。
+				'native'   => $fresh ? $fresh->get_price() : ( $sell ? $sell->get_price() : null ),
+				'sellable' => (bool) $sell,
 			);
 			if ( $valid ) { $groups[ (string) $item[ self::CART ]['group'] ][] = array( 'product' => $pid, 'qty' => $item['quantity'] ); }
 		}
