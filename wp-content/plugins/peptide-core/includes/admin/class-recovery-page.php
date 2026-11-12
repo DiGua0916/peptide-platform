@@ -163,7 +163,7 @@ final class Recovery_Page {
 		echo '<input type="search" name="q" value="' . esc_attr( $q ) . '" placeholder="订单编号、邮箱或姓名（多个用空格隔开）"><button class="button">筛选</button></form>';
 
 		echo '<div class="pc-rc-scroll"><table class="pc-pl-table pc-rc-table"><thead><tr>';
-		foreach ( array( '操作', '姓名', '电话', '邮箱', '国家', '配送方式', '订单总价', '支付方式', '支付时间', '流水号', '订单状态', '召回状态', '邮件发送时间', '召回次数' ) as $h ) {
+		foreach ( array( '操作', '姓名', '电话', '邮箱', '国家', '配送方式', '应付总价（含运费）', '支付方式', '支付时间', '流水号', '订单状态', '召回状态', '邮件发送时间', '召回次数' ) as $h ) {
 			echo '<th>' . esc_html( $h ) . '</th>';
 		}
 		echo '</tr></thead><tbody>';
@@ -188,17 +188,22 @@ final class Recovery_Page {
 		$view = $o ? self::url( array( 'view' => $r['id'] ) ) : self::url( array( 'rec' => (int) $r['rec']['id'] ) );
 		echo '<tr>';
 		echo '<td class="pc-pl-col-act"><a class="pc-rc-icon" href="' . esc_url( $view ) . '" title="查看详情" aria-label="查看详情"><span class="dashicons dashicons-visibility"></span></a>';
-		echo '<a class="pc-rc-icon" href="' . esc_url( Mail_Page::compose_url( array_filter( array( 'order_id' => $o ? $r['id'] : 0, 'to' => $r['email'] ) ) ) ) . '" title="写邮件" aria-label="写邮件"><span class="dashicons dashicons-email"></span></a></td>';
+		echo '<a class="pc-rc-icon" href="' . esc_url( Mail_Page::compose_url( array_filter( array( 'order_id' => $o ? $r['id'] : 0, 'to' => $r['email'] ) ) ) ) . '" title="写邮件" aria-label="写邮件"><span class="dashicons dashicons-email"></span></a>';
+		// 店主 2026-11-11：按这张弃单创建手动订单——原来的商品、数量、价格直接带进手动订单，改好生成付款链接发给顾客。
+		$redo = admin_url( 'admin.php?page=pc-manual-order&' . ( $o ? 'from_order=' . (int) $r['id'] : 'from_rec=' . (int) $r['rec']['id'] ) );
+		echo '<a class="pc-rc-icon" href="' . esc_url( $redo ) . '" title="按这个单创建手动订单" aria-label="按这个单创建手动订单"><span class="dashicons dashicons-cart"></span></a></td>';
 		$more = ( $r['attempts'] ?? 1 ) > 1 ? ' <span class="pc-rc-attempts" title="同一顾客反复下单，只算一条弃单，点进去看全部">共 ' . (int) $r['attempts'] . ' 单</span>' : '';
 		echo '<td><a class="pc-rc-num" href="' . esc_url( $view ) . '">' . esc_html( Recovery_Items::display_name( $r['name'] ) ?: '-' ) . '</a>' . $more . '<br><small class="pc-pl-muted">' . esc_html( $o ? '#' . $r['number'] : '未下单' ) . ' · ' . esc_html( self::time( (int) $r['created_ms'] ) ) . '</small></td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo '<td class="pc-rc-phone">' . ( $r['phone'] ? '<a href="tel:' . esc_attr( preg_replace( '/[^0-9+]/', '', $r['phone'] ) ) . '">' . esc_html( $r['phone'] ) . '</a>' : '-' ) . '</td>';
 		echo '<td>' . ( $r['email'] ? '<a href="mailto:' . esc_attr( $r['email'] ) . '">' . esc_html( $r['email'] ) . '</a>' : '-' ) . '</td>';
 		echo '<td>' . esc_html( $r['country'] ?: '-' ) . '</td><td>' . esc_html( $r['ship_method'] ?: '-' ) . '</td>';
 		$range = ( $r['attempts'] ?? 1 ) > 1 && (float) $r['total_max'] !== (float) $r['total'] ? '<br><small class="pc-pl-muted">最高 ' . wp_strip_all_tags( wc_price( (float) $r['total_max'], array( 'currency' => $r['currency'] ) ) ) . '</small>' : '';
-		echo '<td class="pc-rc-money">' . self::money( $r['total'], $r['currency'] ) . $range . '</td><td>' . esc_html( $r['pay_method'] ?: '-' ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		// 店主 2026-11-10：总价含运费和优惠；下面再写商品金额，和实时访客、AI 分析里的“购物车”对得上。
+		$goods = isset( $r['subtotal'] ) && (float) $r['subtotal'] > 0 && abs( (float) $r['subtotal'] - (float) $r['total'] ) > 0.009 ? '<br><small class="pc-pl-muted">商品 ' . wp_strip_all_tags( wc_price( (float) $r['subtotal'], array( 'currency' => $r['currency'] ) ) ) . '</small>' : '';
+		echo '<td class="pc-rc-money">' . self::money( $r['total'], $r['currency'] ) . $goods . $range . '</td><td>' . esc_html( $r['pay_method'] ?: '-' ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo '<td>' . esc_html( self::time( (int) $r['paid_ms'] ) ) . '</td><td>' . esc_html( '' !== $r['tid'] ? $r['tid'] : '-' ) . '</td>';
 		echo '<td>' . self::badge( Recovery_Items::order_status_label( $r['order_status'] ), $r['paid_ms'] ? 'is-paid' : 'is-open' ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-		echo '<td>' . self::badge( $labels[ $r['status'] ] ?? $r['status'], 'is-' . $r['status'] ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '<td>' . self::badge( ! empty( $r['status_text'] ) ? $r['status_text'] : ( $labels[ $r['status'] ] ?? $r['status'] ), 'is-' . $r['status'] ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo '<td>' . esc_html( self::time( (int) $r['last_sent_ms'] ) ) . '</td><td>' . (int) $r['emails'] . '</td></tr>';
 	}
 
@@ -245,12 +250,15 @@ final class Recovery_Page {
 		echo self::badge( Recovery_Items::order_status_label( $r['order_status'] ), $paid ? 'is-paid' : 'is-open' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo self::badge( $paid ? '已支付' : '未支付', $paid ? 'is-paid' : 'is-warn' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo self::badge( in_array( $order->get_status(), array( 'completed' ), true ) ? '已发货' : '未发货', 'is-muted' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-		echo self::badge( $labels[ $r['status'] ], 'is-' . $r['status'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo self::badge( ! empty( $r['status_text'] ) ? $r['status_text'] : $labels[ $r['status'] ], 'is-' . $r['status'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo '</div><div class="pc-rc-meta"><span>创建时间：' . esc_html( self::time( (int) $r['created_ms'] ) ) . '</span><span>支付时间：' . esc_html( self::time( (int) $r['paid_ms'] ) ) . '</span></div></header>';
 
-		echo '<table class="pc-rc-lines"><thead><tr><th>商品名称</th><th class="pc-rc-right">单价 × 数量</th><th class="pc-rc-right">总价</th></tr></thead><tbody>';
-		foreach ( Recovery_Items::lines( $order ) as $l ) {
-			echo '<tr><td><div class="pc-rc-line">';
+		// 店主 2026-11-11：商品多的单子（超过 4 件）只先显示前 3 件、行更紧凑，点“展开全部”再看其余。
+		$all_lines = Recovery_Items::lines( $order );
+		$many      = count( $all_lines ) > 4;
+		echo '<table class="pc-rc-lines' . ( $many ? ' is-many' : '' ) . '"><thead><tr><th>商品名称</th><th class="pc-rc-right">单价 × 数量</th><th class="pc-rc-right">总价</th></tr></thead><tbody>';
+		foreach ( $all_lines as $li => $l ) {
+			echo '<tr' . ( $many && $li >= 3 ? ' class="pc-rc-more" hidden' : '' ) . '><td><div class="pc-rc-line">';
 			echo $l['image'] ? '<img src="' . esc_url( $l['image'] ) . '" alt="">' : '<span class="pc-rc-line__noimg"></span>';
 			echo '<div><strong>' . esc_html( $l['name'] ) . '</strong>';
 			if ( '' !== $l['sku'] ) {
@@ -262,7 +270,14 @@ final class Recovery_Page {
 			echo '</div></div></td>';
 			echo '<td class="pc-rc-right">' . self::money( $l['unit'], $cur ) . ' × ' . (int) $l['qty'] . '</td><td class="pc-rc-right">' . self::money( $l['total'], $cur ) . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		}
+		if ( $many ) {
+			echo '<tr class="pc-rc-moretoggle"><td colspan="3"><button type="button" class="button-link" onclick="var t=this.closest(\'table\');var open=t.classList.toggle(\'is-open\');t.querySelectorAll(\'.pc-rc-more\').forEach(function(r){r.hidden=!open;});this.textContent=open?this.dataset.less:this.dataset.more;" data-more="展开全部 ' . count( $all_lines ) . ' 件商品" data-less="收起">展开全部 ' . count( $all_lines ) . ' 件商品</button></td></tr>';
+		}
 		echo '</tbody></table>';
+		// 店主 2026-11-11：订单时间放在金额左边，一行小字。
+		$created = $order->get_date_created();
+		$paid_at = $order->get_date_paid();
+		echo '<div class="pc-rc-totalrow"><p class="pc-rc-ordered">' . ( $created ? '下单时间 ' . esc_html( wp_date( 'Y-m-d H:i:s', $created->getTimestamp() ) ) : '' ) . ( $paid_at ? '<br>付款时间 ' . esc_html( wp_date( 'Y-m-d H:i:s', $paid_at->getTimestamp() ) ) : '' ) . '</p>';
 		echo '<dl class="pc-rc-totals">';
 		foreach ( Recovery_Items::totals( $order ) as $row ) {
 			if ( 0.0 === (float) $row[1] && ! str_starts_with( $row[0], '商品' ) && ! str_starts_with( $row[0], '运费' ) ) {
@@ -270,7 +285,7 @@ final class Recovery_Page {
 			}
 			echo '<dt>' . esc_html( $row[0] ) . '</dt><dd>' . self::money( (float) $row[1], $cur ) . '</dd>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		}
-		echo '<dt class="pc-rc-totals__sum">订单总价</dt><dd class="pc-rc-totals__sum">' . self::money( (float) $order->get_total(), $cur ) . '</dd></dl></section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '<dt class="pc-rc-totals__sum">订单总价</dt><dd class="pc-rc-totals__sum">' . self::money( (float) $order->get_total(), $cur ) . '</dd></dl></div></section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		self::addresses( $order->get_address( 'shipping' ), $order->get_address( 'billing' ) );
 
@@ -468,7 +483,7 @@ final class Recovery_Page {
 		echo '<section class="pc-rc-panel pc-rc-addresses">';
 		foreach ( array( 'shipping' => array( '收货地址', $ship ), 'billing' => array( '账单地址', $bill ) ) as $type => $pair ) {
 			list( $title, $a ) = $pair;
-			$country = WC()->countries->countries[ $a['country'] ?? '' ] ?? ( $a['country'] ?? '' );
+			$country = Order_Detail_Page::en_country( (string) ( $a['country'] ?? '' ) );
 			$text    = trim( implode( "\n", array_filter( array( trim( ( $a['first_name'] ?? '' ) . ' ' . ( $a['last_name'] ?? '' ) ), $a['company'] ?? '', $a['address_1'] ?? '', $a['address_2'] ?? '', trim( ( $a['city'] ?? '' ) . ' ' . ( $a['state'] ?? '' ) . ' ' . ( $a['postcode'] ?? '' ) ), $country, $a['phone'] ?? '', $a['email'] ?? '' ) ) ) );
 			echo '<div class="pc-rc-address"><header><strong>' . esc_html( $title ) . '</strong><button type="button" class="button-link pc-rc-copy" data-copy="' . esc_attr( $text ) . '">复制</button></header>';
 			$rows = array( '姓名' => trim( ( $a['first_name'] ?? '' ) . ' ' . ( $a['last_name'] ?? '' ) ), '公司' => $a['company'] ?? '', '街道' => $a['address_1'] ?? '', '寓所' => $a['address_2'] ?? '', '省市区' => trim( ( $a['state'] ?? '' ) . ' ' . ( $a['city'] ?? '' ) ), '邮编' => $a['postcode'] ?? '', '国家' => $country, '电话' => $a['phone'] ?? '' );
@@ -533,7 +548,13 @@ final class Recovery_Page {
 		$html = preg_replace( '/(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})，(\d+) 页/u', '$1, $2 pages', $html );
 		$html = preg_replace( '/(\d+) 单</u', '$1 orders<', $html );
 		$countries = array();
-		$en_list   = file_exists( WC()->plugin_path() . '/i18n/countries.php' ) ? include WC()->plugin_path() . '/i18n/countries.php' : array();
+		// 店主 2026-11-11：国家显示成了“波多黎各”。i18n/countries.php 里是 __()，后台语言是中文时读出来还是中文；
+		// 临时切到英文再读一份英文国家名。
+		$switched = function_exists( 'switch_to_locale' ) ? switch_to_locale( 'en_US' ) : false;
+		$en_list  = ( new \WC_Countries() )->get_countries();
+		if ( $switched ) {
+			restore_previous_locale();
+		}
 		foreach ( WC()->countries->countries as $code => $zh ) {
 			if ( isset( $en_list[ $code ] ) && $zh !== $en_list[ $code ] ) {
 				$countries[ $zh ] = $en_list[ $code ];
@@ -700,6 +721,11 @@ final class Recovery_Page {
 			'提醒 2' => 'Reminder 2',
 			'提醒 3' => 'Reminder 3',
 			'记录' => 'Recorded',
+			'下单时间' => 'Ordered',
+			'件商品' => ' items',
+			'展开全部 ' => 'Show all ',
+			'收起' => 'Show less',
+			'付款时间' => 'Paid',
 		);
 	}
 }

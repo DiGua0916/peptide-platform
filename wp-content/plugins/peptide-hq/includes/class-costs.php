@@ -564,6 +564,7 @@ final class Costs {
 				}
 			}
 		}
+		$keep[] = Track17::ALERT_REF; // 17TRACK 额度告警由 Track17::check_quota 自己开关。
 		Alerts::resolve( 0, 'cost', $keep );
 	}
 
@@ -582,7 +583,7 @@ final class Costs {
 		return round( $s['balance'] - $spent, 2 );
 	}
 
-	private static function mail( string $subject, string $body ): void {
+	public static function mail( string $subject, string $body ): void {
 		$to = self::settings()['email'];
 		if ( '' === $to ) {
 			$to = (string) get_option( 'admin_email' );

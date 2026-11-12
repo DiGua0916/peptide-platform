@@ -150,7 +150,7 @@ final class Test_Orders {
 		$test = self::is_test_address( $order->get_address( 'shipping' ) ) || self::is_test_address( $order->get_address( 'billing' ) );
 		$order->update_meta_data( self::META, $test ? '1' : '0' );
 		if ( $test ) {
-			$order->add_order_note( '测试单（收件信息全为 1）：不发送任何邮件，不进弃单追单。' );
+			$order->add_order_note( 'Test order (all address fields are "1"): no emails are sent and it is excluded from abandoned-cart follow-up.' );
 		}
 		if ( doing_action( 'woocommerce_checkout_create_order' ) ) {
 			return; // WooCommerce 随后会自己保存。

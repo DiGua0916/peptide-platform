@@ -32,7 +32,27 @@ final class Manual_Order_Page {
 		}
 		$f = PEPTIDE_CORE_DIR . '/assets/manual-order.js';
 		wp_enqueue_script( 'pc-manual-order', plugins_url( 'assets/manual-order.js', PEPTIDE_CORE_FILE ), array( 'wp-api-fetch' ), (string) @filemtime( $f ), true ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
-		wp_add_inline_script( 'pc-manual-order', 'window.pcManual=' . wp_json_encode( array( 'currency' => html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' ), 'decimals' => wc_get_price_decimals() ) ) . ';', 'before' );
+		// 打开时带上的内容：弃单恢复（from_order / from_rec）或草稿（draft）。
+		$prefill = null;
+		$draft   = '';
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended
+		if ( ! empty( $_GET['from_order'] ) ) {
+			$o = wc_get_order( absint( $_GET['from_order'] ) );
+			$prefill = $o instanceof \WC_Order ? \PeptideCore\Manual_Orders::state_from_order( $o ) : null;
+		} elseif ( ! empty( $_GET['from_rec'] ) && class_exists( \PeptideCore\Recovery::class ) ) {
+			global $wpdb;
+			$r = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . \PeptideCore\Recovery::table() . ' WHERE id = %d', absint( $_GET['from_rec'] ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+			$prefill = $r ? \PeptideCore\Manual_Orders::state_from_record( $r ) : null;
+		} elseif ( ! empty( $_GET['draft'] ) ) {
+			$id = sanitize_key( (string) $_GET['draft'] );
+			$d  = \PeptideCore\Manual_Orders::drafts()[ $id ] ?? null;
+			if ( $d ) {
+				$prefill = $d['state'];
+				$draft   = $id;
+			}
+		}
+		// phpcs:enable
+		wp_add_inline_script( 'pc-manual-order', 'window.pcManual=' . wp_json_encode( array( 'currency' => html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' ), 'decimals' => wc_get_price_decimals(), 'prefill' => $prefill, 'draft' => $draft ) ) . ';', 'before' );
 		$c = PEPTIDE_CORE_DIR . '/assets/manual-order.css';
 		wp_enqueue_style( 'pc-manual-order', plugins_url( 'assets/manual-order.css', PEPTIDE_CORE_FILE ), array(), (string) @filemtime( $c ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 	}
@@ -50,7 +70,7 @@ final class Manual_Order_Page {
 			<section class="pc-mo-card">
 				<h2>商品</h2>
 				<div class="pc-mo-search">
-					<input type="search" placeholder="搜索商品名称或 SKU" data-mo-q autocomplete="off">
+					<input type="search" placeholder="搜商品：简称或价格表代号都行，如 TR10、tirz 10、reta、bpc" data-mo-q autocomplete="off">
 					<div class="pc-mo-results" data-mo-results hidden></div>
 				</div>
 				<table class="pc-mo-table">
@@ -74,16 +94,35 @@ final class Manual_Order_Page {
 				<button type="button" class="button" data-mo-add-discount>+ 添加一笔优惠</button>
 			</section>
 			<section class="pc-mo-card">
-				<h2>备注（只有你看得到）</h2>
-				<input type="text" class="pc-mo-note" maxlength="200" placeholder="例如：给 Luz 的老客价" data-mo-note>
+				<h2>店铺活动</h2>
+				<p class="pc-mo-hint">开了的会自动带进这一单，顾客打开链接直接付款，不用自己填优惠码。不开就只按上面你填的价格和优惠。</p>
+				<div class="pc-mo-pick" data-mo-pick>
+					<span class="pc-mo-pick__label">满减活动</span>
+					<button type="button" class="pc-mo-pick__btn" data-mo-pick-btn aria-haspopup="true" aria-expanded="false"><span data-mo-pick-text>不使用</span><span class="dashicons dashicons-arrow-down-alt2"></span></button>
+					<div class="pc-mo-pop" data-mo-pop hidden><div data-mo-pop-list></div><p class="pc-mo-pop__foot"><button type="button" class="button-link" data-mo-pick-none>都不用</button><button type="button" class="button button-small" data-mo-pick-done>好了</button></p></div>
+				</div>
+				<label class="pc-mo-switch"><input type="checkbox" data-mo-first><i></i><span><b>首单优惠</b><small data-mo-first-text>正在读取…</small></span></label>
 			</section>
+
 		</div>
 		<aside class="pc-mo-side">
 			<section class="pc-mo-card pc-mo-sum">
 				<h2>订单金额</h2>
 				<dl data-mo-sum></dl>
+				<label class="pc-mo-days">链接有效期
+					<select data-mo-days>
+						<option value="1">1 天</option><option value="3">3 天</option><option value="7">7 天</option><option value="14">14 天</option>
+						<option value="30" selected>30 天（默认）</option><option value="60">60 天</option><option value="90">90 天</option><option value="180">180 天</option><option value="365">1 年</option>
+					</select>
+				</label>
 				<button type="button" class="button button-primary button-hero" data-mo-create disabled>生成付款链接</button>
+				<div class="pc-mo-draftbtns"><button type="button" class="button" data-mo-save-draft>保存草稿</button><button type="button" class="button" data-mo-save-new hidden>另存为新草稿</button></div>
+				<p class="pc-mo-hint" data-mo-draft-state></p>
 				<p class="pc-mo-err" data-mo-err hidden></p>
+			</section>
+			<section class="pc-mo-card">
+				<h2>草稿</h2>
+				<div data-mo-drafts><p class="pc-mo-hint">…</p></div>
 			</section>
 			<section class="pc-mo-card">
 				<h2>最近生成的链接</h2>
@@ -93,7 +132,7 @@ final class Manual_Order_Page {
 	</div>
 	<dialog class="pc-mo-dialog" data-mo-dialog>
 		<h2>付款链接已生成</h2>
-		<p>发给顾客，打开就是这一单的商品和价格，直接结账付款。30 天内有效。</p>
+		<p>发给顾客，打开就是这一单的商品和价格，直接结账付款。<span data-mo-valid></span></p>
 		<div class="pc-mo-link"><input type="text" readonly data-mo-link><button type="button" class="button button-primary" data-mo-copy>复制链接</button></div>
 		<dl data-mo-dsum></dl>
 		<p class="pc-mo-actions"><a class="button" target="_blank" rel="noopener" data-mo-open>打开看看</a><button type="button" class="button" data-mo-new>再做一单</button><button type="button" class="button" data-mo-close>关闭</button></p>

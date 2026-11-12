@@ -17,13 +17,23 @@ defined( 'ABSPATH' ) || exit;
 final class Manual_Orders {
 
 	public const OPTION   = 'pc_manual_links';
+	private static string $allow_code = '';
 	public const ARG      = 'pc_manual';
 	public const META     = '_pc_manual_link';
-	private const TTL     = 30 * DAY_IN_SECONDS;
+	private const TTL     = 30 * DAY_IN_SECONDS; // 默认有效期；店主可以按单选（DAYS）。
+	public const DAYS     = array( 1, 3, 7, 14, 30, 60, 90, 180, 365 );
+
+	/** 这条链接什么时候过期（旧链接没有 expires 就按创建 + 30 天）。 */
+	public static function expires_at( array $c ): int {
+		return (int) ( $c['expires'] ?? ( (int) $c['created'] + self::TTL ) );
+	}
 	private const MAX     = 300;
 
 	public static function register_hooks(): void {
 		add_action( 'rest_api_init', array( self::class, 'routes' ) );
+		foreach ( array( 'woocommerce_update_product', 'woocommerce_new_product', 'woocommerce_update_product_variation', 'woocommerce_new_product_variation', 'trashed_post' ) as $h ) {
+			add_action( $h, static fn() => delete_transient( 'pc_mo_search_idx' ) );
+		}
 		add_action( 'template_redirect', array( self::class, 'handle' ), 1 );
 		add_action( 'woocommerce_before_calculate_totals', array( self::class, 'apply_prices' ), 9999 );
 		add_action( 'woocommerce_cart_calculate_fees', array( self::class, 'apply_fees' ), 99 );
@@ -43,7 +53,7 @@ final class Manual_Orders {
 	public static function get( string $token ): ?array {
 		$all = self::all();
 		$c   = $all[ $token ] ?? null;
-		return is_array( $c ) && (int) $c['created'] + self::TTL > time() ? $c : null;
+		return is_array( $c ) && self::expires_at( $c ) > time() ? $c : null;
 	}
 
 	private static function money( float $v ): float {
@@ -80,14 +90,22 @@ final class Manual_Orders {
 		$token = strtolower( wp_generate_password( 16, false, false ) );
 		$all   = self::all();
 		// 过期的清掉，最多留 MAX 条。
-		$all = array_filter( $all, static fn( $c ) => is_array( $c ) && (int) $c['created'] + self::TTL > time() );
+		$all = array_filter( $all, static fn( $c ) => is_array( $c ) && self::expires_at( $c ) > time() );
+		$days = in_array( (int) ( $in['days'] ?? 30 ), self::DAYS, true ) ? (int) $in['days'] : 30;
+		$promo_ids = array_values( array_unique( array_filter( array_map( 'absint', (array) ( $in['promo_ids'] ?? array() ) ) ) ) );
 		$all[ $token ] = array(
 			'token'     => $token,
 			'items'     => $items,
 			'shipping'  => $shipping,
 			'discounts' => $discounts,
 			'note'      => mb_substr( sanitize_text_field( (string) ( $in['note'] ?? '' ) ), 0, 200 ),
+			// 店主 2026-11-11：店铺满减活动、首单优惠可以选开，开了链接就自动带上，顾客直接付款。
+			'promo_ids'    => $promo_ids, // 店主 2026-11-11：店铺可能有多个活动，按单选用哪些。
+			'store_promos' => (bool) $promo_ids,
+			'first_order'  => ! empty( $in['first_order'] ),
 			'created'   => time(),
+			'expires'   => time() + $days * DAY_IN_SECONDS,
+			'days'      => $days,
 			'by'        => get_current_user_id(),
 			'orders'    => array(),
 		);
@@ -155,6 +173,11 @@ final class Manual_Orders {
 				}
 			} catch ( \Throwable $e ) { /* 下架或缺货的跳过 */ }
 		}
+		if ( ! empty( $c['first_order'] ) && ( $fc = self::first_order_coupon() ) ) {
+			self::$allow_code = wc_format_coupon_code( $fc->get_code() );
+			WC()->cart->apply_coupon( $fc->get_code() );
+			self::$allow_code = '';
+		}
 		WC()->cart->calculate_totals();
 		wc_clear_notices();
 		$keep = array_diff_key( wp_unslash( $_GET ), array( self::ARG => 1 ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended,WordPress.Security.ValidatedSanitizedInput
@@ -197,8 +220,18 @@ final class Manual_Orders {
 		if ( ! $c || ! $cart instanceof \WC_Cart ) {
 			return;
 		}
-		// 不叠加店铺活动：去掉别的优惠费用行，只留店主配的。
-		$cart->fees_api()->set_fees( array() );
+		// 不叠加店铺活动：去掉别的优惠费用行，只留店主配的；店主在这一单开了“店铺满减活动”就保留活动的优惠。
+		$keep = array();
+		if ( ! empty( $c['store_promos'] ) ) {
+			$want = array_map( 'intval', (array) ( $c['promo_ids'] ?? array() ) );
+			foreach ( $cart->fees_api()->get_fees() as $id => $fee ) {
+				// 只留店主在这一单选了的活动（旧链接没选具体活动的，全部保留）。
+				if ( preg_match( '/^pc-promo-(\d+)$/', (string) $id, $m ) && ( ! $want || in_array( (int) $m[1], $want, true ) ) ) {
+					$keep[ $id ] = $fee;
+				}
+			}
+		}
+		$cart->fees_api()->set_fees( $keep );
 		foreach ( $c['discounts'] as $n => $d ) {
 			$cart->fees_api()->add_fee( array( 'id' => 'pc-manual-' . $n, 'name' => $d['label'], 'amount' => -1 * (float) $d['amount'], 'taxable' => false ) );
 		}
@@ -214,7 +247,19 @@ final class Manual_Orders {
 	}
 
 	public static function block_coupons( $valid, $coupon = null ) {
-		return self::active_cart() ? false : $valid;
+		$c = self::active_cart();
+		if ( ! $c && '' === self::$allow_code ) {
+			return $valid;
+		}
+		$code = $coupon instanceof \WC_Coupon ? wc_format_coupon_code( $coupon->get_code() ) : '';
+		$fc   = self::first_order_coupon();
+		$first_ok = $fc && $code === wc_format_coupon_code( $fc->get_code() ) && ( '' !== self::$allow_code || ! empty( $c['first_order'] ) );
+		return $first_ok ? $valid : false;
+	}
+
+	/** 店铺当前生效的首单优惠券（首单优惠功能开着才有）。 */
+	public static function first_order_coupon(): ?\WC_Coupon {
+		return class_exists( First_Order_Offer::class ) ? First_Order_Offer::coupon() : null;
 	}
 
 	public static function tag_order( $order ): void {
@@ -231,45 +276,374 @@ final class Manual_Orders {
 		}
 	}
 
+	// ---------- 草稿（店主 2026-11-11：做到一半要出去看别的信息，先存起来） ----------
+
+	public const DRAFTS = 'pc_manual_drafts';
+
+	public static function drafts(): array {
+		$v = get_option( self::DRAFTS, array() );
+		return is_array( $v ) ? $v : array();
+	}
+
+	/** 草稿原样存页面上的状态（商品行带名称、原价、售价），打开时直接还原。 */
+	public static function save_draft( array $in ) {
+		$state = is_array( $in['state'] ?? null ) ? $in['state'] : array();
+		$lines = array();
+		foreach ( array_slice( (array) ( $state['lines'] ?? array() ), 0, 40 ) as $l ) {
+			$id = absint( $l['id'] ?? 0 );
+			if ( $id ) {
+				$lines[] = array( 'id' => $id, 'name' => mb_substr( sanitize_text_field( (string) ( $l['name'] ?? '' ) ), 0, 200 ), 'qty' => max( 1, min( 999, absint( $l['qty'] ?? 1 ) ) ), 'regular' => self::money( (float) ( $l['regular'] ?? 0 ) ), 'price' => self::money( (float) ( $l['price'] ?? 0 ) ) );
+			}
+		}
+		$disc = array();
+		foreach ( array_slice( (array) ( $state['discounts'] ?? array() ), 0, 10 ) as $d ) {
+			$disc[] = array( 'label' => mb_substr( sanitize_text_field( (string) ( $d['label'] ?? '' ) ), 0, 80 ), 'amount' => self::money( (float) ( $d['amount'] ?? 0 ) ) );
+		}
+		$clean = array(
+			'lines'        => $lines,
+			'discounts'    => $disc,
+			'ship_mode'    => 'custom' === ( $state['ship_mode'] ?? '' ) ? 'custom' : 'store',
+			'ship_label'   => mb_substr( sanitize_text_field( (string) ( $state['ship_label'] ?? 'Shipping' ) ), 0, 80 ),
+			'ship_amount'  => self::money( (float) ( $state['ship_amount'] ?? 0 ) ),
+			'note'         => mb_substr( sanitize_text_field( (string) ( $state['note'] ?? '' ) ), 0, 200 ),
+			'promo_ids'    => array_values( array_filter( array_map( 'absint', (array) ( $state['promo_ids'] ?? array() ) ) ) ),
+			'days'         => in_array( (int) ( $state['days'] ?? 30 ), self::DAYS, true ) ? (int) $state['days'] : 30,
+			'store_promos' => ! empty( $state['promo_ids'] ),
+			'first_order'  => ! empty( $state['first_order'] ),
+		);
+		if ( ! $lines && '' === $clean['note'] ) {
+			return new \WP_Error( 'pc_manual_draft_empty', '还没有内容，不用保存。', array( 'status' => 400 ) );
+		}
+		$all = self::drafts();
+		$id  = ! empty( $in['as_new'] ) ? '' : sanitize_key( (string) ( $in['id'] ?? '' ) );
+		$id  = '' !== $id && isset( $all[ $id ] ) ? $id : 'd' . strtolower( wp_generate_password( 10, false, false ) );
+		$all[ $id ] = array( 'id' => $id, 'state' => $clean, 'saved' => time(), 'by' => get_current_user_id() );
+		if ( count( $all ) > 50 ) {
+			uasort( $all, static fn( $a, $b ) => $a['saved'] <=> $b['saved'] );
+			$all = array_slice( $all, -50, null, true );
+		}
+		update_option( self::DRAFTS, $all, false );
+		return $all[ $id ];
+	}
+
+	public static function draft_summary( array $d ): array {
+		$st  = $d['state'];
+		$sub = 0.0;
+		foreach ( $st['lines'] as $l ) {
+			$sub += $l['price'] * $l['qty'];
+		}
+		return array(
+			'id'    => $d['id'],
+			'saved' => wp_date( 'm-d H:i', (int) $d['saved'] ),
+			'title' => '' !== $st['note'] ? $st['note'] : ( $st['lines'] ? $st['lines'][0]['name'] . ( count( $st['lines'] ) > 1 ? ' 等 ' . count( $st['lines'] ) . ' 件商品' : '' ) : '空草稿' ),
+			'items' => implode( ', ', array_map( static fn( $l ) => $l['name'] . ' x' . $l['qty'], $st['lines'] ) ),
+			'sub'   => html_entity_decode( wp_strip_all_tags( wc_price( $sub ) ), ENT_QUOTES, 'UTF-8' ),
+		);
+	}
+
+	// ---------- 按弃单恢复（店主 2026-11-11：弃单里一点，就把原订单的商品和价格带进手动订单） ----------
+
+	private static function line_from( \WC_Product $p, int $qty, float $line_subtotal ): array {
+		$price = $qty ? self::money( $line_subtotal / $qty ) : (float) $p->get_price();
+		$reg   = (float) ( $p->get_regular_price() ?: $p->get_price() );
+		return array( 'id' => $p->get_id(), 'name' => html_entity_decode( wp_strip_all_tags( $p->get_name() ), ENT_QUOTES, 'UTF-8' ), 'qty' => max( 1, $qty ), 'regular' => max( $reg, $price ), 'price' => $price );
+	}
+
+	/** 原订单 → 手动订单页面状态：商品、数量、当时的价格；用过首单券就开首单优惠，有满减就开店铺活动，其他优惠码算一笔优惠。 */
+	public static function state_from_order( \WC_Order $o ): array {
+		$lines = array();
+		foreach ( $o->get_items() as $it ) {
+			$p = $it->get_product();
+			if ( $p instanceof \WC_Product ) {
+				$lines[] = self::line_from( $p, (int) $it->get_quantity(), (float) $it->get_subtotal() );
+			}
+		}
+		$fc    = self::first_order_coupon();
+		$first = false;
+		$disc  = array();
+		foreach ( $o->get_items( 'coupon' ) as $ci ) {
+			$code = wc_format_coupon_code( $ci->get_code() );
+			if ( $fc && wc_format_coupon_code( $fc->get_code() ) === $code ) {
+				$first = true;
+			} elseif ( (float) $ci->get_discount() > 0 ) {
+				$disc[] = array( 'label' => 'Coupon ' . strtoupper( $code ), 'amount' => self::money( (float) $ci->get_discount() ) );
+			}
+		}
+		$promos    = false;
+		$promo_ids = array();
+		foreach ( $o->get_fees() as $fee ) {
+			if ( (float) $fee->get_total() < 0 ) {
+				$promos = true;
+				$pid    = class_exists( Promotions::class ) ? (int) $fee->get_meta( Promotions::FEE_META ) : 0;
+				if ( $pid ) {
+					$promo_ids[] = $pid;
+				}
+			}
+		}
+		if ( $promos && ! $promo_ids && class_exists( Promotions::class ) ) {
+			$promo_ids = array_map( 'intval', Promotions::active_ids() );
+		}
+		$name = trim( $o->get_billing_first_name() . ' ' . $o->get_billing_last_name() );
+		return array( 'lines' => $lines, 'discounts' => $disc, 'ship_mode' => 'store', 'ship_label' => 'Shipping', 'ship_amount' => 0, 'note' => '按弃单 #' . $o->get_order_number() . ( '' !== $name ? ' 恢复 · ' . $name : ' 恢复' ), 'store_promos' => $promos, 'promo_ids' => array_values( array_unique( $promo_ids ) ), 'first_order' => $first );
+	}
+
+	/** 没下单的结账（弃单记录里的购物车）→ 手动订单页面状态。 */
+	public static function state_from_record( array $r ): array {
+		$lines = array();
+		foreach ( (array) json_decode( (string) $r['cart'], true ) as $it ) {
+			$p = wc_get_product( absint( $it['variation_id'] ?? 0 ) ?: absint( $it['product_id'] ?? 0 ) );
+			if ( $p instanceof \WC_Product ) {
+				$lines[] = self::line_from( $p, (int) ( $it['quantity'] ?? 1 ), (float) ( $it['line_subtotal'] ?? 0 ) );
+			}
+		}
+		// 当时结账用的优惠码、满减：从顾客的购物会话里读（会话过期了就读不到，只带商品）。
+		$first  = false;
+		$promos = false;
+		$disc   = array();
+		global $wpdb;
+		$raw = (string) $wpdb->get_var( $wpdb->prepare( "SELECT session_value FROM {$wpdb->prefix}woocommerce_sessions WHERE session_key = %s", (string) $r['session_key'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		if ( '' !== $raw ) {
+			$sess = maybe_unserialize( $raw );
+			$fc   = self::first_order_coupon();
+			foreach ( (array) maybe_unserialize( $sess['applied_coupons'] ?? '' ) as $code ) {
+				$code = wc_format_coupon_code( (string) $code );
+				if ( $fc && wc_format_coupon_code( $fc->get_code() ) === $code ) {
+					$first = true;
+				}
+			}
+			$totals = (array) maybe_unserialize( $sess['cart_totals'] ?? '' );
+			$promos = (float) ( $totals['fee_total'] ?? 0 ) < 0;
+		}
+		return array( 'lines' => $lines, 'discounts' => $disc, 'ship_mode' => 'store', 'ship_label' => 'Shipping', 'ship_amount' => 0, 'note' => '按弃单恢复 · ' . trim( (string) $r['name'] ?: (string) $r['email'] ), 'store_promos' => $promos, 'promo_ids' => $promos && class_exists( Promotions::class ) ? array_map( 'intval', Promotions::active_ids() ) : array(), 'first_order' => $first );
+	}
+
 	// ---------- 后台接口 ----------
 
 	public static function routes(): void {
 		$perm = static fn() => current_user_can( 'manage_woocommerce' );
 		register_rest_route( 'peptide/v1', '/manual-order/search', array( 'methods' => 'GET', 'permission_callback' => $perm, 'callback' => array( self::class, 'rest_search' ) ) );
+		register_rest_route( 'peptide/v1', '/manual-order/drafts', array(
+			array( 'methods' => 'GET', 'permission_callback' => $perm, 'callback' => static fn() => rest_ensure_response( array( 'items' => array_values( array_map( array( self::class, 'draft_summary' ), array_reverse( self::drafts(), true ) ) ) ) ) ),
+			array( 'methods' => 'POST', 'permission_callback' => $perm, 'callback' => static function ( \WP_REST_Request $r ) {
+				$d = self::save_draft( (array) $r->get_json_params() );
+				return is_wp_error( $d ) ? $d : rest_ensure_response( array( 'id' => $d['id'], 'saved' => wp_date( 'H:i', (int) $d['saved'] ) ) );
+			} ),
+		) );
+		register_rest_route( 'peptide/v1', '/manual-order/drafts/(?P<id>[a-z0-9]+)', array(
+			array( 'methods' => 'GET', 'permission_callback' => $perm, 'callback' => static function ( \WP_REST_Request $r ) {
+				$d = self::drafts()[ (string) $r['id'] ] ?? null;
+				return $d ? rest_ensure_response( array( 'id' => $d['id'], 'state' => $d['state'] ) ) : new \WP_Error( 'pc_manual_draft', '草稿不存在。', array( 'status' => 404 ) );
+			} ),
+			array( 'methods' => 'DELETE', 'permission_callback' => $perm, 'callback' => static function ( \WP_REST_Request $r ) {
+				$all = self::drafts();
+				unset( $all[ (string) $r['id'] ] );
+				update_option( self::DRAFTS, $all, false );
+				return rest_ensure_response( array( 'deleted' => true ) );
+			} ),
+		) );
+		register_rest_route( 'peptide/v1', '/manual-order/shipping', array( 'methods' => 'POST', 'permission_callback' => $perm, 'callback' => array( self::class, 'rest_shipping' ) ) );
 		register_rest_route( 'peptide/v1', '/manual-order', array(
 			array( 'methods' => 'POST', 'permission_callback' => $perm, 'callback' => array( self::class, 'rest_create' ) ),
 			array( 'methods' => 'GET', 'permission_callback' => $perm, 'callback' => array( self::class, 'rest_list' ) ),
 		) );
 	}
 
-	public static function rest_search( \WP_REST_Request $r ) {
-		$q    = sanitize_text_field( (string) $r['q'] );
-		$args = array( 'status' => 'publish', 'limit' => 20, 'type' => array( 'simple', 'variable' ), 'orderby' => 'title', 'order' => 'ASC' );
-		if ( '' !== $q ) {
-			$args['s'] = $q;
+	/** 按店铺运费时，这一单（按改过的售价）大概多少运费：按美国估算，和顾客结账时的算法一样。 */
+	public static function rest_shipping( \WP_REST_Request $r ) {
+		$contents = array();
+		foreach ( array_slice( (array) ( $r->get_json_params()['items'] ?? array() ), 0, 40 ) as $row ) {
+			$p   = wc_get_product( absint( $row['id'] ?? 0 ) );
+			$qty = max( 1, min( 999, absint( $row['qty'] ?? 1 ) ) );
+			if ( $p ) {
+				$contents[] = array( 'data' => $p, 'product_id' => $p->get_parent_id() ?: $p->get_id(), 'quantity' => $qty, 'line_subtotal' => self::money( (float) ( $row['price'] ?? $p->get_price() ) ) * $qty );
+			}
 		}
-		$out = array();
-		foreach ( wc_get_products( $args ) as $p ) {
-			$img  = (string) wp_get_attachment_image_url( $p->get_image_id(), 'thumbnail' );
-			$list = $p->is_type( 'variable' ) ? array_filter( array_map( 'wc_get_product', $p->get_children() ) ) : array( $p );
+		$ship = $contents && class_exists( Ship_Preview::class ) ? Ship_Preview::estimate( $contents, 'US' ) : null;
+		// 店铺满减活动：按这一单（改过的价格）算能减多少；首单优惠：券的比例。
+		$promos = array();
+		if ( $contents && class_exists( Promotions::class ) && class_exists( '\WC_Cart' ) ) {
+			try {
+				// 只用来算活动的空购物车：不跑 WC_Cart 的构造（不挂会话、不在请求结束时保存购物车）。
+				$cart = new class() extends \WC_Cart {
+					public function __construct() {} // phpcs:ignore Generic.CodeAnalysis.UselessOverridingMethod
+					public function get_cart() {
+						return array_filter( (array) $this->cart_contents );
+					}
+				};
+				$rows = array();
+				foreach ( $contents as $n => $row ) {
+					$row['data']        = clone $row['data'];
+					$row['data']->set_price( (string) ( $row['line_subtotal'] / max( 1, $row['quantity'] ) ) );
+					$row['line_total']  = $row['line_subtotal'];
+					$rows[ 'pc' . $n ]  = $row;
+				}
+				$cart->set_cart_contents( $rows );
+				// 活动有“顾客规则”：在后台算的时候当前用户是店主，要按普通顾客（没登录）来算。
+				$admin_id = get_current_user_id();
+				wp_set_current_user( 0 );
+				try {
+					foreach ( (array) ( Promotions::discounts( $cart )['applied'] ?? array() ) as $a ) {
+						$promos[] = array( 'id' => (int) $a['id'], 'title' => (string) $a['title'], 'discount' => (float) $a['discount'] );
+					}
+				} finally {
+					wp_set_current_user( $admin_id );
+				}
+			} catch ( \Throwable $e ) { /* 预览算不出来不影响生成链接 */ }
+		}
+		$active = array();
+		if ( class_exists( Promotions::class ) ) {
+			foreach ( Promotions::active_ids() as $pid ) {
+				$rules    = Promotions::rules_text( Promotions::config( (int) $pid ) );
+				$active[] = array( 'id' => (int) $pid, 'title' => Promotions::customer_title( html_entity_decode( get_the_title( $pid ) ) ), 'rules' => implode( '；', array_slice( (array) $rules, 0, 3 ) ) );
+			}
+		}
+		$fc    = self::first_order_coupon();
+		$first = $fc ? array( 'code' => strtoupper( $fc->get_code() ), 'percent' => (float) $fc->get_amount() ) : null;
+		return rest_ensure_response( array( 'shipping' => $ship, 'promos' => $promos, 'active_promos' => $active, 'first' => $first ) );
+	}
+
+	/** 商品简称：SKU 是纯数字的（主商品 ID 那种）给一个价格表常用的字母代号。 */
+	const ALIASES = array(
+		'retatrutide' => array( 'RT', 'reta' ),
+		'tirzepatide' => array( 'tirz' ),
+		'semaglutide' => array( 'sema' ),
+		'cagri'       => array( 'cagri' ),
+		'hgh'         => array( 'GH' ),
+		'happy'       => array(),
+		'll37'        => array( 'LL' ),
+		'slupp'       => array( 'SLU' ),
+	);
+
+	private static function norm( string $s ): string {
+		return preg_replace( '/[^a-z0-9]+/', '', strtolower( remove_accents( $s ) ) );
+	}
+
+	/** 全部可买的规格（含价格表代号），缓存 10 分钟。 */
+	private static function search_index(): array {
+		$cached = get_transient( 'pc_mo_search_idx' );
+		if ( is_array( $cached ) ) {
+			return $cached;
+		}
+		$idx = array();
+		foreach ( wc_get_products( array( 'status' => 'publish', 'limit' => -1, 'type' => array( 'simple', 'variable' ), 'orderby' => 'title', 'order' => 'ASC' ) ) as $p ) {
+			$pname = html_entity_decode( $p->get_name(), ENT_QUOTES, 'UTF-8' );
+			$pn    = self::norm( $pname );
+			$img   = (string) wp_get_attachment_image_url( $p->get_image_id(), 'thumbnail' );
+			$list  = $p->is_type( 'variable' ) ? array_filter( array_map( 'wc_get_product', $p->get_children() ) ) : array( $p );
+			// 这个商品的字母代号：别名 + 各规格 SKU 的字母前缀（TR10 → TR）。
+			$prefixes = array();
+			foreach ( self::ALIASES as $k => $as ) {
+				if ( str_contains( $pn, $k ) ) {
+					foreach ( $as as $a ) {
+						$prefixes[] = self::norm( $a );
+					}
+				}
+			}
+			foreach ( $list as $v ) {
+				if ( preg_match( '/^([a-z]+)\d/i', (string) $v->get_sku(), $m ) ) {
+					$prefixes[] = strtolower( $m[1] );
+				}
+			}
+			$prefixes = array_values( array_unique( $prefixes ) );
 			foreach ( $list as $v ) {
 				if ( ! $v->is_purchasable() ) {
 					continue;
 				}
 				$attrs = $v->is_type( 'variation' ) ? implode( ' / ', array_filter( array_values( $v->get_variation_attributes() ) ) ) : '';
-				$out[] = array(
+				$sku   = (string) $v->get_sku();
+				$mg    = preg_match( '/(\d+(?:\.\d+)?)/', $attrs, $m ) ? $m[1] : '';
+				// SKU 是长数字（没录价格表代号）的，用“代号+规格数字”当显示代号，如 RT10。
+				$code = ( '' !== $sku && ! preg_match( '/^\d{8,}/', $sku ) ) ? $sku : ( $prefixes && '' !== $mg ? strtoupper( $prefixes[0] ) . $mg : '' );
+				$idx[] = array(
 					'id'      => $v->get_id(),
-					'name'    => html_entity_decode( $p->get_name(), ENT_QUOTES, 'UTF-8' ) . ( '' !== $attrs ? ' – ' . $attrs : '' ),
-					'sku'     => (string) $v->get_sku(),
+					'name'    => $pname . ( '' !== $attrs ? ' – ' . $attrs : '' ),
+					'sku'     => $code,
 					'regular' => (float) ( $v->get_regular_price() ?: $v->get_price() ),
 					'price'   => (float) $v->get_price(),
 					'stock'   => $v->is_in_stock(),
 					'image'   => $img,
+					'_n'      => $pn,
+					'_a'      => self::norm( $attrs ),
+					'_c'      => self::norm( $code ),
+					'_s'      => self::norm( $sku ),
+					'_p'      => $prefixes,
+					'_mg'     => $mg,
 				);
-				if ( count( $out ) >= 60 ) {
-					break 2;
-				}
 			}
+		}
+		set_transient( 'pc_mo_search_idx', $idx, 10 * MINUTE_IN_SECONDS );
+		return $idx;
+	}
+
+	/** 一个词的匹配分数，0 = 不匹配。支持价格表代号（TR10 / tr 10 / bpc10）、简称（reta、tirz、sema）、名称片段。 */
+	private static function score_token( array $i, string $t ): int {
+		if ( '' === $t ) {
+			return 1;
+		}
+		if ( $t === $i['_c'] || $t === $i['_s'] ) {
+			return 100;
+		}
+		$best = 0;
+		if ( preg_match( '/^([a-z]+)(\d+(?:\.\d+)?)$/', $t, $m ) ) {
+			// 字母 + 数字：代号前缀或名称开头 + 规格数字（reta10 → Retatrutide 10mg）。
+			$hit = in_array( $m[1], $i['_p'], true ) || str_starts_with( $i['_n'], $m[1] );
+			if ( $hit && $m[2] === $i['_mg'] ) {
+				// 代号和名称开头都对上的排最前（sema5 → Semaglutide 5mg，而不是 Semax / 复方）。
+				$best = in_array( $m[1], $i['_p'], true ) && str_starts_with( $i['_n'], $m[1] ) ? 93 : 90;
+			}
+		}
+		if ( '' !== $i['_c'] && str_starts_with( $i['_c'], $t ) ) {
+			$best = max( $best, 80 );
+		}
+		if ( in_array( $t, $i['_p'], true ) ) {
+			$best = max( $best, 75 );
+		}
+		if ( str_starts_with( $i['_n'], $t ) ) {
+			$best = max( $best, 70 );
+		} elseif ( strlen( $t ) >= 3 && str_contains( $i['_n'], $t ) ) {
+			$best = max( $best, 50 );
+		}
+		if ( ctype_digit( str_replace( '.', '', $t ) ) && $t === $i['_mg'] ) {
+			$best = max( $best, 40 ); // 单独的数字 = 规格（tirz 10）
+		}
+		if ( strlen( $t ) >= 3 && '' !== $i['_s'] && str_contains( $i['_s'], $t ) ) {
+			$best = max( $best, 30 );
+		}
+		return $best;
+	}
+
+	public static function rest_search( \WP_REST_Request $r ) {
+		$q      = sanitize_text_field( (string) $r['q'] );
+		$tokens = array_values( array_filter( array_map( array( self::class, 'norm' ), preg_split( '/[\s,，+]+/u', $q ) ) ) );
+		// “tr 10”“bpc 10”：字母词后紧跟数字词时，也按合起来的代号试一次。
+		$hits = array();
+		foreach ( self::search_index() as $n => $i ) {
+			$score = 0;
+			$ok    = true;
+			for ( $k = 0, $c = count( $tokens ); $k < $c; $k++ ) {
+				$s = self::score_token( $i, $tokens[ $k ] );
+				if ( isset( $tokens[ $k + 1 ] ) && ctype_alpha( $tokens[ $k ] ) && ctype_digit( $tokens[ $k + 1 ] ) ) {
+					$joint = self::score_token( $i, $tokens[ $k ] . $tokens[ $k + 1 ] );
+					if ( $joint >= 90 ) {
+						$score += $joint;
+						++$k;
+						continue;
+					}
+				}
+				if ( ! $s ) {
+					$ok = false;
+					break;
+				}
+				$score += $s;
+			}
+			if ( $ok ) {
+				$hits[] = array( $score, $n, $i );
+			}
+		}
+		usort( $hits, static fn( $a, $b ) => $b[0] <=> $a[0] ?: (float) $a[2]['_mg'] <=> (float) $b[2]['_mg'] ?: $a[1] <=> $b[1] );
+		$out = array();
+		foreach ( array_slice( $hits, 0, 60 ) as $h ) {
+			$out[] = array_filter( $h[2], static fn( $k ) => '_' !== $k[0], ARRAY_FILTER_USE_KEY );
 		}
 		return rest_ensure_response( array( 'items' => $out ) );
 	}
@@ -279,13 +653,13 @@ final class Manual_Orders {
 		if ( is_wp_error( $c ) ) {
 			return $c;
 		}
-		return rest_ensure_response( array( 'token' => $c['token'], 'url' => self::url( $c['token'] ), 'totals' => self::totals( $c ) ) );
+		return rest_ensure_response( array( 'token' => $c['token'], 'url' => self::url( $c['token'] ), 'totals' => self::totals( $c ), 'expires' => wp_date( 'Y-m-d H:i', self::expires_at( $c ) ) ) );
 	}
 
 	public static function rest_list() {
 		$out = array();
 		foreach ( array_reverse( self::all(), true ) as $c ) {
-			if ( ! is_array( $c ) || (int) $c['created'] + self::TTL <= time() ) {
+			if ( ! is_array( $c ) || self::expires_at( $c ) <= time() ) {
 				continue;
 			}
 			$t     = self::totals( $c );
@@ -295,6 +669,7 @@ final class Manual_Orders {
 				'items'   => implode( ', ', array_map( static fn( $i ) => $i['name'] . ' x' . $i['qty'], $c['items'] ) ),
 				'total'   => html_entity_decode( wp_strip_all_tags( wc_price( $t['total'] ) ), ENT_QUOTES, 'UTF-8' ),
 				'note'    => $c['note'],
+				'expires' => wp_date( 'm-d', self::expires_at( $c ) ),
 				'orders'  => array_map( static fn( $id ) => array( 'id' => $id, 'url' => admin_url( 'admin.php?page=wc-orders&action=edit&id=' . (int) $id ) ), (array) $c['orders'] ),
 			);
 			if ( count( $out ) >= 20 ) {

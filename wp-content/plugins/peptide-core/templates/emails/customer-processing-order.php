@@ -1,7 +1,7 @@
 <?php
 /**
  * 订单处理中（已付款）邮件（覆盖 WooCommerce emails/customer-processing-order.php）：
- * 店主追单母版「Thanks for Your Order — Add Us on WhatsApp」；顾客留了电话就只感谢，不催加 WhatsApp。
+ * 店主 2026-11-10：付款成功立刻发的关怀邮件（模板库 05 下单成功感谢）：感谢、重视购物体验、加专员 WhatsApp（实时物流 / 问题 / 建议）、没有 WhatsApp 就回信留联系方式。
  *
  * @package PeptideCore
  * @var WC_Order $order
@@ -18,20 +18,20 @@ defined( 'ABSPATH' ) || exit;
 
 $brand = Chase_Copy::brand();
 $wa    = Chase_Copy::whatsapp();
-$ask   = Chase_Copy::needs_whatsapp( $order );
 
 do_action( 'woocommerce_email_header', $email_heading, $email ); ?>
 
 <p><?php echo esc_html( Chase_Copy::greeting( $order, 'Dear' ) ); ?></p>
-<p>Thank you for your order <strong>#<?php echo esc_html( $order->get_order_number() ); ?></strong> (order total: <?php echo wp_kses_post( $order->get_formatted_order_total() ); ?>). We've received your payment and will process shipment shortly.</p>
-<?php if ( $ask ) : ?>
-<p>For faster updates on shipping and any questions about your peptides, please add us on WhatsApp at <strong><?php echo esc_html( $wa ); ?></strong> and send a quick hello. That is the easiest way for us to reach you with tracking and support.</p>
+<?php /* 店主 2026-11-10：付款成功立刻发的关怀邮件，用模板库「05 下单成功感谢」的文案。 */ ?>
+<p>Thank you for your order <strong>#<?php echo esc_html( $order->get_order_number() ); ?></strong> (order total: <?php echo wp_kses_post( $order->get_formatted_order_total() ); ?>). We've received your payment and our team is preparing your shipment.</p>
+<p>Your shopping experience truly matters to us. We'd love for you to add our order specialist on WhatsApp — it's the easiest way to:</p>
+<ul>
+<li>Track your shipment in real time</li>
+<li>Ask any questions about your order or products</li>
+<li>Share your feedback and suggestions to help us improve</li>
+</ul>
 <?php echo Chase_Copy::button_html(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-<p>We look forward to chatting with you on WhatsApp.</p>
-<?php else : ?>
-<p>We'll keep a close eye on your order until it reaches you, and we'll send shipping and tracking updates as soon as we have them.</p>
-<p>If you have any questions along the way, reply to this email or message us on WhatsApp at <strong><?php echo esc_html( $wa ); ?></strong>. We're here to help.</p>
-<?php endif; ?>
+<p>Don't use WhatsApp? Simply reply to this email with the best way to reach you (phone, Telegram, Signal…), and our team will contact you directly.</p>
 <p>Here's a summary of what you ordered:</p>
 
 <?php

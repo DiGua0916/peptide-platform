@@ -22,7 +22,7 @@ final class Recovery_Items {
 
 	public const STATUSES   = array( 'pending', 'recalling', 'failed', 'success', 'void' );
 	public const VOID_META  = '_pc_recall_void';
-	public const RECALL_DAYS = 3; // 店主规则：发信后 3 天内没回来下单，第 4 天起算召回失败。
+	public const RECALL_DAYS = 4; // 店主规则：发信后没回来下单算召回失败。2026-11-10 提醒改为第 0 / 3 / 7 天，间隔最长 4 天，所以 4 天后才算失败。
 	private const UNPAID    = array( 'wc-checkout-draft', 'wc-pending', 'wc-failed', 'wc-cancelled', 'wc-on-hold' );
 
 	/** 店主 2026-11-10：顾客彻底离开 5 分钟（最后一次在店里有动作之后 5 分钟没再出现）才算弃单。 */
@@ -107,6 +107,24 @@ final class Recovery_Items {
 		return null;
 	}
 
+	/** 收到第一封召回信之后，顾客是不是“回来”下的单：点过邮件链接，或者下单那次访问在发信之后才开始。 */
+	public static function came_back_after( \WC_Order $order, int $mail_ms, int $paid_ms ): bool {
+		global $wpdb;
+		$email = strtolower( trim( (string) $order->get_billing_email() ) );
+		if ( '' !== $email && Recovery::installed() ) {
+			$clicked = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT MAX(clicked_ms) FROM ' . Recovery::table() . ' WHERE email = %s', $email ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+			if ( $clicked && $clicked >= $mail_ms && $clicked <= $paid_ms ) {
+				return true;
+			}
+		}
+		$visit = (int) $order->get_meta( '_pc_track_visit' );
+		if ( $visit && class_exists( Tracking\Schema::class ) && Tracking\Schema::installed() ) {
+			$start = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT start_ms FROM ' . Tracking\Schema::table( 'visits' ) . ' WHERE id = %d', $visit ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+			return $start > $mail_ms;
+		}
+		return false;
+	}
+
 	/** 把一张订单整理成列表行。 */
 	public static function item( \WC_Order $order ): array {
 		$mails   = self::recall_mails( $order );
@@ -122,13 +140,29 @@ final class Recovery_Items {
 		}
 		$status  = 'pending';
 		$later   = null;
+		$status_text = '';
 		if ( '1' === (string) $order->get_meta( self::VOID_META ) || Test_Orders::is_test_order( $order ) ) {
 			$status = 'void';
 		} elseif ( $paid ) {
-			$status = $sent ? 'success' : 'void';
-		} elseif ( $sent ) {
-			$later  = self::paid_after( $email, (int) floor( $last_ms / 1000 ) - 3600, $order->get_id() );
-			$status = $later ? 'success' : ( time() - (int) floor( $last_ms / 1000 ) > self::RECALL_DAYS * DAY_IN_SECONDS ? 'failed' : 'recalling' );
+			// 只有付款前发过召回信才算召回成功（店主 2026-11-10：付款后才收到的提醒不算）。
+			// 店主 2026-11-11：召回成功 = 顾客是被我们的邮件召回来的——点了邮件里的链接，
+			// 或者付款的那次访问是收到邮件之后才开始的。只是付款前恰好发过信、人一直没离开（芒果 John）不算。
+			$before = array_filter( $sent, static fn( $m ) => (int) $m['created_ms'] <= $paid * 1000 );
+			$status = $before && self::came_back_after( $order, (int) min( array_column( $before, 'created_ms' ) ), $paid * 1000 ) ? 'success' : 'void';
+			$status_text = 'success' === $status ? '' : '直接付款（未经召回）';
+		} else {
+			// 店主 2026-11-11：没付款的单，顾客后来用别的单付了款——付了款就不算弃单。
+			// 收到召回信后真的回来付的（点链接 / 新的访问）才算召回成功，否则这张单直接不出现在弃单里。
+			$born_s = $order->get_date_created() ? $order->get_date_created()->getTimestamp() : 0;
+			$later  = self::paid_after( $email, $born_s, $order->get_id() );
+			if ( $later ) {
+				$lp      = $later->get_date_paid()->getTimestamp() * 1000;
+				$mails_b = array_filter( $sent, static fn( $m ) => (int) $m['created_ms'] <= $lp );
+				$status  = $mails_b && self::came_back_after( $later, (int) min( array_column( $mails_b, 'created_ms' ) ), $lp ) ? 'success' : 'void';
+				$status_text = 'success' === $status ? '' : 'converted';
+			} elseif ( $sent ) {
+				$status = time() - (int) floor( $last_ms / 1000 ) > self::RECALL_DAYS * DAY_IN_SECONDS ? 'failed' : 'recalling';
+			}
 		}
 		return array(
 			'id'           => $order->get_id(),
@@ -142,12 +176,14 @@ final class Recovery_Items {
 			'items'        => count( $order->get_items( 'line_item' ) ),
 			'ship_method'  => (string) $order->get_shipping_method(),
 			'total'        => (float) $order->get_total(),
+			'subtotal'     => (float) $order->get_subtotal(),
 			'currency'     => $order->get_currency(),
 			'pay_method'   => (string) $order->get_payment_method_title(),
 			'paid_ms'      => $paid * 1000,
 			'tid'          => (string) $order->get_transaction_id(),
 			'order_status' => $order->get_status(),
 			'status'       => $status,
+			'status_text'  => $status_text,
 			'emails'       => count( $sent ),
 			'last_sent_ms' => $last_ms,
 			'mails'        => $mails,
@@ -194,7 +230,7 @@ final class Recovery_Items {
 				$hit = false;
 				foreach ( preg_split( '/\s+/', trim( (string) $f['q'] ) ) as $term ) {
 					$term = ltrim( strtolower( $term ), '#' );
-					if ( '' !== $term && ( str_contains( strtolower( $o->get_order_number() ), $term ) || str_contains( strtolower( (string) $o->get_billing_email() ), $term ) || str_contains( strtolower( $o->get_billing_first_name() . ' ' . $o->get_billing_last_name() ), $term ) ) ) {
+					if ( '' !== $term && ( str_contains( strtolower( $o->get_order_number() ), $term ) || (string) $o->get_id() === $term || str_contains( strtolower( (string) $o->get_billing_email() ), $term ) || str_contains( strtolower( $o->get_billing_first_name() . ' ' . $o->get_billing_last_name() ), $term ) ) ) {
 						$hit = true;
 					}
 				}
@@ -204,6 +240,8 @@ final class Recovery_Items {
 			}
 			$items[] = self::item( $o );
 		}
+		// 店主 2026-11-11：直接付款的订单（付款前没收过召回信）不是弃单，不出现在弃单列表里；只有召回成功的已付款订单才留下。
+		$items = array_values( array_filter( $items, static fn( $i ) => ( empty( $i['paid_ms'] ) && 'converted' !== ( $i['status_text'] ?? '' ) ) || 'success' === $i['status'] ) );
 		usort( $items, static fn( $a, $b ) => $b['created_ms'] <=> $a['created_ms'] );
 		$items  = self::group_by_customer( $items );
 		$counts = array_fill_keys( self::STATUSES, 0 );
@@ -297,7 +335,11 @@ final class Recovery_Items {
 			if ( (int) $r['order_id'] || (int) $r['draft_id'] || '' === (string) $r['email'] ) {
 				continue; // 已经变成订单的，按订单那条算。
 			}
-			if ( 'void' === $r['status'] && 'test checkout' === (string) $r['note'] ) {
+			if ( 'void' === $r['status'] && in_array( (string) $r['note'], array( 'test checkout', 'paid before reminder' ), true ) ) {
+				continue; // 测试结账；或者顾客已经付款（那张已付款订单本身会在列表里显示“直接付款”）。
+			}
+			// 店主 2026-11-11：顾客已经付过款（付完款购物车没清空留下的记录）就不再出现在弃单里。
+			if ( in_array( $r['status'], array( 'pending', 'recalling' ), true ) && Recovery::converted( (string) $r['email'], (int) $r['created_ms'] ) ) {
 				continue;
 			}
 			if ( self::still_here( 0, (string) $r['session_key'], (int) $r['changed_ms'] ) ) {
@@ -349,6 +391,7 @@ final class Recovery_Items {
 			'items'        => (int) array_sum( array_column( $items, 'quantity' ) ),
 			'ship_method'  => (string) $r['ship_method'],
 			'total'        => '' !== (string) $r['total'] ? (float) $r['total'] : (float) $r['subtotal'],
+			'subtotal'     => (float) $r['subtotal'],
 			'currency'     => (string) ( $r['currency'] ?: get_woocommerce_currency() ),
 			'pay_method'   => (string) $r['pay_method'],
 			'paid_ms'      => (int) $r['paid_ms'],
