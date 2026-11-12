@@ -2,6 +2,23 @@
 
 分支 `claude/m9-buyer-admin-940389`，基于主线 `codex/checkout-acceptance-20261105`（2026-11-12 已同步到 `7c6d2d3`）。没有合并 main，没有发布，没有碰生产。
 
+## 2026-11-12 第四轮：同步主线、`smoke-admin-menus` 剩下的 2 项
+
+提交 `23ef669`（合并主线 `61ce4f8`）、`1320d9a`（用例）。代码没有改，只改了两个用例文件。
+
+- **同步主线**：合进来的是总后台的“物流填单”和腾讯文档同步（`013abb5`、`61ce4f8`）。店铺这一侧只多了一个 `Logistics_Sync`：订单付款或状态变化时把订单报给总后台，另有每小时一次的补报；它没有后台页面、没有表单、没有接口。
+- **投手有没有因此多出入口**：没有。
+  - 本机这份临时站上用投手账号打开后台：左侧菜单还是 6 项（首页、订单、弃单、数据、广告设置、店铺信息）。
+  - 直接打开 `admin.php?page=pchq-logistics`、`admin.php?page=pchq`、`admin-post.php?action=pchq_logistics_xlsx`、`pchq_tdocs_sync`，以及向 `pchq_logistics_save` 提交表单：全部 403。投手自己的页面（订单详情、数据）照常 200。
+  - `m9-buyer-scope-pure` 加了 9 项（176 → 185）：总后台这两个页面和物流填单的 7 个表单动作，投手一律拒绝。名单本来就是“默认拒绝”，所以代码不用改；加用例是为了以后有人往名单里加东西时这一条不会被顺手放开。
+- **`smoke-admin-menus` 剩下的 2 项**（F1 第二轮沙盒，候选 `c5fb1d8`）：
+  - 失败的是 `payment settings open under the WooCommerce payments menu` 和 `wc-settings tab checkout highlights admin.php?page=wc-settings&tab=checkout&from=PAYMENTS_MENU_ITEM`。
+  - 原因：这两项的预期只对“支付设置在店里”的店成立。支付设置归总后台管的店（`peptide-panapay` 的 `Bridge::enabled()`：定义了 `PEPTIDE_HQ_URL`，或选项 `pc_panapay_central_managed` 为 `yes`；接了总后台的店是这样，沙盒就是）会把 WooCommerce 的“支付”菜单去掉（`Store_Admin::hide_menus()`），支付设置页也打不开（转回概览）。没有“支付”菜单可以展开，这个标签页就和其他标签页一样算“店铺设置 → 系统设置”——这是对的行为，不是菜单坏了。
+  - 本机复现：临时站原样 50 过 0 败；把 `pc_panapay_central_managed` 设成 `yes` 后 48 过 2 败，失败的两行和沙盒逐字相同。
+  - 改法：用例按店的实际情况各有一组确定的预期（不是两种结果都算过），并多一项检查“支付”菜单在不在。本机两种店各跑一遍都是 **51 过 0 败**，用 F1 的跑法（`wp eval "require …"`）也是 51 过。
+  - 沙盒上请 F1 下次重跑时确认是 51 过 0 败。
+- 检查：默认套件 57 过 7 败（7 个仍是主线原有的）；F5 登记的 13 条全过；主题用例 PHP 33 个、`.cjs` 全过。
+
 ## 2026-11-12 第二轮
 
 提交 `621d4ce`、`3b766a4`、`43153d6`（其中店铺信息那部分）。
