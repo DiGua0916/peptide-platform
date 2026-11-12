@@ -165,12 +165,13 @@ final class Buyer_Order_Export {
 		$page   = isset( $_GET['page'] ) && is_string( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
 		$action = isset( $_GET['action'] ) && is_string( $_GET['action'] ) ? sanitize_key( wp_unslash( $_GET['action'] ) ) : '';
 		// phpcs:enable
-		if ( 'wc-orders' !== $page || '' !== $action || ! Staff_Buyer::current() || ! Staff_Buyer::can_use() ) {
+		if ( 'wc-orders' !== $page || ! in_array( $action, array( '', '-1' ), true ) || ! Staff_Buyer::current() || ! Staff_Buyer::can_use() ) {
 			return;
 		}
 		$range = self::range( '', '', wp_date( 'Y-m-d' ) );
-		echo '<style>.pc-by-export{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:12px 0;padding:12px 16px;border:1px solid #e6e6e6;border-radius:8px;background:#fff}.pc-by-export label{display:inline-flex;align-items:center;gap:6px}.pc-by-export .description{color:#666}</style>';
-		echo '<form class="pc-by-export" method="get" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">'
+		// 放在 .notice 里：WooCommerce 的后台外壳会把 admin_notices 里不是提示条的内容整块藏起来。
+		echo '<style>.pc-by-export-box{padding:10px 12px!important}.pc-by-export{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0}.pc-by-export label{display:inline-flex;align-items:center;gap:6px}.pc-by-export .description{color:#666}</style>';
+		echo '<div class="notice notice-info pc-by-export-box"><form class="pc-by-export" method="get" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">'
 			. '<input type="hidden" name="action" value="' . esc_attr( Staff_Buyer::ACTION_EXPORT ) . '">';
 		wp_nonce_field( self::NONCE, '_wpnonce', false );
 		echo '<strong>导出订单</strong>'
@@ -178,7 +179,7 @@ final class Buyer_Order_Export {
 			. '<label>到 <input type="date" name="to" value="' . esc_attr( $range['to'] ) . '" max="' . esc_attr( $range['to'] ) . '"></label>'
 			. '<button type="submit" class="button">下载表格</button>'
 			. '<span class="description">只含已付款的订单，一次最多 ' . (int) self::MAX_DAYS . ' 天、' . (int) self::MAX_ROWS . ' 行；不含电话和地址。</span>'
-			. '</form>';
+			. '</form></div>';
 	}
 
 	/** admin-post.php?action=pc_buyer_orders_export&from=…&to=…&_wpnonce=… → CSV 下载。 */

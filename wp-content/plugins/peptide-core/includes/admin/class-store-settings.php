@@ -165,7 +165,8 @@ final class Store_Settings {
 		$stored['support']        = Support_Contacts::sanitize( $form );
 		update_option( Settings::OPTION, $stored );
 		Onboarding::mark_store_saved();
-		Staff_Buyer::flash( 'success', '店铺信息已保存，前台马上生效。' );
+		// 前台首页有缓存，新内容最多 5 分钟后才出现（F1 2026-11-10 沙盒验收时确认），不要说“马上”。
+		Staff_Buyer::flash( 'success', '店铺信息已保存。前台最多 5 分钟后显示新内容。' );
 		wp_safe_redirect( 'wizard' === $from ? Onboarding::url() : Staff_Buyer::page_url( self::INFO_SLUG ) );
 		exit;
 	}

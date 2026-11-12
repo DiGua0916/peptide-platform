@@ -90,6 +90,15 @@ final class Staff_Buyer {
 		add_action( 'admin_bar_menu', array( self::class, 'admin_bar' ), 9999 );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'no_command_palette' ), 0 );
+		// 这四个页面不挂在菜单下（隐藏页面），WordPress 给不出标题：浏览器标签和面包屑用页面自己的名字。
+		foreach ( array( self::PAGE_HOME => '首页', self::PAGE_ADS => '广告设置', self::PAGE_STORE => '店铺信息', self::PAGE_WIZARD => '开店向导' ) as $slug => $label ) {
+			add_action(
+				'load-admin_page_' . $slug,
+				static function () use ( $label ): void {
+					$GLOBALS['title'] = $label; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+				}
+			);
+		}
 		add_filter( 'pc_hq_capabilities', array( self::class, 'capabilities' ) );
 		add_filter( 'editable_roles', array( self::class, 'hide_role' ) );
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
