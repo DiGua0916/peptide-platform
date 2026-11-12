@@ -39,7 +39,7 @@ STORE_TABLES = {
     # WooCommerce 订单与顾客
     "wc_orders": SCRUB, "wc_order_addresses": SCRUB, "wc_orders_meta": SCRUB, "wc_customer_lookup": SCRUB,
     "wc_order_operational_data": KEEP, "wc_order_stats": KEEP, "wc_order_product_lookup": KEEP, "wc_order_coupon_lookup": KEEP,
-    "wc_order_tax_lookup": KEEP, "wc_order_fulfillments": KEEP, "wc_order_fulfillment_meta": KEEP,
+    "wc_order_tax_lookup": KEEP, "wc_order_fulfillments": KEEP, "wc_order_fulfillment_meta": SCRUB,
     "woocommerce_order_items": KEEP, "woocommerce_order_itemmeta": KEEP,
     "wc_stock_notifications": SCRUB, "wc_stock_notificationmeta": KEEP, "woocommerce_downloadable_product_permissions": SCRUB,
     # 会话、密钥、令牌
@@ -74,12 +74,14 @@ OPTION_DELETE_EXACT = [
     "peptide_core_hq", "peptide_core_pixels", "peptide_core_content_tools", "peptide_core_youtube_metadata", "peptide_core_local_payments",
     "peptide_core_site_tools", "pc_ai_log", "pc_ai_resolved", "auto_core_update_notified",
     # 商品播报的姓名池是店主手填、前台公开显示的，但分不清里面有没有真实顾客名，一并不带。
-    "pc_product_broadcast_v1", "jetpack_options", "jetpack_secrets", "recovery_keys", "woocommerce_share_key",
+    "pc_product_broadcast_v1",
+    # 2026-11-12 主线新功能：手动订单的付款链接和草稿（含顾客资料和自定义价格）
+    "pc_manual_links", "pc_manual_drafts", "pc_mo_search_idx", "jetpack_options", "jetpack_secrets", "recovery_keys", "woocommerce_share_key",
     "woocommerce_maxmind_geolocation_settings", "mailserver_url", "mailserver_login", "mailserver_pass", "auth_key", "auth_salt",
     "logged_in_key", "logged_in_salt", "nonce_key", "nonce_salt", "secure_auth_key", "secure_auth_salt", "secret_key",
     # 总后台
     "pchq_ai", "pchq_ai_providers", "pchq_ai_models", "pchq_register_secret", "pchq_cdn", "pchq_cdn_bot", "pchq_costs", "pchq_costs_snapshot",
-    "pchq_mail", "pchq_ops_agents", "pchq_clone_jobs", "pc_panapay_hub_settings", "pc_panapay_hub_purged",
+    "pchq_mail", "pchq_ops_agents", "pchq_track17", "pchq_fedex", "pchq_fedex_token", "pchq_17_quota", "pchq_clone_jobs", "pc_panapay_hub_settings", "pc_panapay_hub_purged",
 ]
 OPTION_DELETE_LIKE = [
     r"\_transient\_%", r"\_site\_transient\_%", r"\_pc\_pay\_nonce\_%", r"pc\_panapay\_handoff\_%", r"pc\_panapay\_hub\_accounts%",
@@ -188,7 +190,14 @@ def scrub_statements(kind, prefix, present, salt):
         sql += [
             f"UPDATE {o} SET meta_value = '' WHERE meta_key IN ('_billing_address_index', '_shipping_address_index', '_wc_order_attribution_user_agent', '_customer_ip_address', '_customer_user_agent')",
             f"DELETE FROM {o} WHERE meta_key IN ('_pc_panapay_sessions') OR meta_key LIKE '\\_pc\\_panapay\\_%' OR meta_key LIKE '%token%' OR meta_key LIKE '%secret%'",
+            # 付款人联系方式、卖家 / 来源备注、付款链接和付款参考号、像素上下文（含 IP、浏览器、哈希邮箱）、关怀邮件记录
+            f"DELETE FROM {o} WHERE meta_key IN ('_pc_paid_contact', '_pc_paid_emails', '_pc_seller_note', '_pc_note', '_pc_origin_note', '_pc_manual_link', '_pc_link', '_pc_pp_ref', '_pc_px_ctx', '_pc_px_browser', '_pc_px_server', '_pc_care_mail')",
+            # 物流单号能查到收件城市：换成假单号，保留“有单号”这个状态。
+            f"UPDATE {o} SET meta_value = CONCAT('TEST', order_id) WHERE meta_key = '_pc_tracking_number' AND meta_value <> ''",
         ]
+    if has("wc_order_fulfillment_meta"):
+        sql.append(f"UPDATE {t('wc_order_fulfillment_meta')} SET meta_value = CONCAT('TEST', fulfillment_id) WHERE meta_key LIKE '%tracking\\_number%' AND meta_value <> ''")
+        sql.append(f"UPDATE {t('wc_order_fulfillment_meta')} SET meta_value = '' WHERE meta_key LIKE '%tracking\\_url%' OR meta_key LIKE '%tracking\\_link%'")
     if has("wc_customer_lookup"):
         sql.append(
             f"UPDATE {t('wc_customer_lookup')} SET username = CONCAT('customer', customer_id), first_name = 'Test', last_name = CONCAT('Customer', customer_id), email = {fake_email('email', salt)}, "
