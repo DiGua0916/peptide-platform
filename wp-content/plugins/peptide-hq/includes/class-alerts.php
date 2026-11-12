@@ -63,6 +63,12 @@ final class Alerts {
 		}
 	}
 
+	/** 只把某一个对象的未处理告警标记为已恢复（例如费用里的 17TRACK 额度）。 */
+	public static function resolve_ref( int $site_id, string $type, string $ref ): void {
+		global $wpdb;
+		$wpdb->update( Db::table( 'alerts' ), array( 'resolved' => time() ), array( 'site_id' => $site_id, 'type' => $type, 'ref' => $ref, 'resolved' => 0 ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	}
+
 	/** 手动标记为已处理。 */
 	public static function close( int $id ): void {
 		global $wpdb;

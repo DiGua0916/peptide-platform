@@ -283,8 +283,8 @@ final class Operations {
 			list( $sw, $sa ) = Entry_Domain::sql( 's.', $entry_domain, $tm );
 		}
 
-		// 访问用户、移动端、平均访问时长和漏斗前四层一次查完。时长先转成有符号数再相减（无符号相减出现负数时 MySQL 会报错）。
-		$row = $wpdb->get_row( $wpdb->prepare( "SELECT COUNT(DISTINCT visitor_id) AS visitors, COUNT(DISTINCT CASE WHEN device = 'mobile' THEN visitor_id END) AS mobile, AVG(CAST(last_ms AS SIGNED) - CAST(start_ms AS SIGNED)) AS avg_ms, COUNT(DISTINCT CASE WHEN stage >= 1 THEN visitor_id END) AS viewed, COUNT(DISTINCT CASE WHEN stage >= 2 THEN visitor_id END) AS carted, COUNT(DISTINCT CASE WHEN stage >= 3 THEN visitor_id END) AS checkout FROM {$visits} WHERE start_ms >= %d AND start_ms < %d{$dw}", array_merge( array( $fm, $tm ), $da ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		// 访问用户、移动端、平均访问时长和漏斗前四层一次查完。每次访问的时长最多按 30 分钟算（店主 2026-11-11：开着几天的标签页不能把平均时长拉到几小时）。时长先转成有符号数再相减（无符号相减出现负数时 MySQL 会报错）。
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT COUNT(DISTINCT visitor_id) AS visitors, COUNT(DISTINCT CASE WHEN device = 'mobile' THEN visitor_id END) AS mobile, AVG(LEAST(1800000, GREATEST(0, CAST(last_ms AS SIGNED) - CAST(start_ms AS SIGNED)))) AS avg_ms, COUNT(DISTINCT CASE WHEN stage >= 1 THEN visitor_id END) AS viewed, COUNT(DISTINCT CASE WHEN stage >= 2 THEN visitor_id END) AS carted, COUNT(DISTINCT CASE WHEN stage >= 3 THEN visitor_id END) AS checkout FROM {$visits} WHERE start_ms >= %d AND start_ms < %d{$dw}", array_merge( array( $fm, $tm ), $da ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		if ( is_array( $row ) ) {
 			$out['visitors']     = (int) $row['visitors'];
 			$out['mobile']       = (int) $row['mobile'];

@@ -44,6 +44,8 @@ final class Pixels {
 		add_action( 'wp_login', array( self::class, 'on_login' ), 20, 2 );
 		add_action( 'wc_ajax_pc_px_queue', array( self::class, 'ajax_queue' ) );
 		add_action( 'woocommerce_order_status_changed', array( self::class, 'on_order_status' ), 20, 4 );
+		// 2026-11-11 投手反馈 Meta 没抓到购买：付款完成流程中途被支付插件拦下时，上面这个钩子不会跑。每 5 分钟补发一次（CAPI）。
+		add_action( Recovery::CRON, array( self::class, 'purchase_catchup' ), 45 );
 		add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
 		Pixels\Server::register_hooks();
 		Pixels\Acceptance::register_hooks();
@@ -580,9 +582,44 @@ final class Pixels {
 		return $ratio >= 100 || ( crc32( 'pc' . $order_id ) % 100 ) < $ratio;
 	}
 
+	/**
+	 * 补发购买事件：最近 6 天付款、还没回传过的订单（Meta 只收 7 天内的事件）。
+	 * 和付款时一样用订单上记下的顾客信息；没记下的（后台建的单等）不发。测试单不发。event_id 固定，Meta 会和浏览器那次去重。
+	 */
+	public static function purchase_catchup(): void {
+		if ( ! function_exists( 'wc_get_orders' ) || ! self::any() ) {
+			return;
+		}
+		$orders = wc_get_orders( array( 'status' => array( 'processing', 'completed', 'on-hold' ), 'date_paid' => '>' . ( time() - 6 * DAY_IN_SECONDS ), 'limit' => 50, 'return' => 'objects' ) );
+		foreach ( $orders as $order ) {
+			if ( ! $order instanceof \WC_Order || $order->get_meta( Pixels\Server::ORDER_SENT ) || '1' === (string) $order->get_meta( '_pc_px_optout' ) ) {
+				continue;
+			}
+			if ( class_exists( Test_Orders::class ) && Test_Orders::is_test_order( $order ) ) {
+				continue;
+			}
+			$ctx = Pixels\Server::context_from_order( $order );
+			$order->update_meta_data( Pixels\Server::ORDER_SENT, time() );
+			$order->save_meta_data();
+			if ( $ctx ) {
+				Pixels\Server::send( array( self::order_event( $order, 'purchase' ) ), self::user_data( $order ), $ctx );
+				$order->add_order_note( 'Purchase event was not sent to ad platforms at payment time; sent now.' );
+			}
+		}
+	}
+
 	/** 当前页面要输出的事件。 */
 	public static function page_events(): array {
 		$events = array( self::make( 'page_view' ) );
+		// 2026-11-11：付款成功后顾客回到首页的付款成功弹窗（?pc_paid=），不经过 WooCommerce 的“订单已收到”页，在这里发浏览器端的下单 / 购买事件。
+		$paid = ! empty( $_GET['pc_paid'] ) && class_exists( Paid_Popup::class ) ? Paid_Popup::order_from_request() : null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( $paid && ! $paid->get_meta( self::ORDER_SHOWN ) && ! ( class_exists( Test_Orders::class ) && Test_Orders::is_test_order( $paid ) ) ) {
+			$paid->update_meta_data( self::ORDER_SHOWN, time() );
+			$paid->save_meta_data();
+			$events[] = self::order_event( $paid, 'place_order' );
+			$events[] = self::order_event( $paid, 'purchase' ) + array( 'user' => self::user_data( $paid ) );
+			return $events;
+		}
 		if ( function_exists( 'is_order_received_page' ) && is_order_received_page() ) {
 			global $wp;
 			$order = wc_get_order( absint( $wp->query_vars['order-received'] ?? 0 ) );

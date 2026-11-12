@@ -158,7 +158,9 @@ final class Costs_Page {
 		$partial  = ! empty( $aws['error'] ) || ! empty( $cf['error'] );
 		$over     = $s['budget'] > 0 && null !== $forecast && $forecast > $s['budget'];
 		$low      = null !== $remaining && null !== $forecast && $remaining < $forecast;
-		echo '<section class="pcp-card pcp-costs__hero' . ( $over || $low ? ' is-bad' : '' ) . '">';
+		$q17h     = \PeptideHq\Track17::configured() ? \PeptideHq\Track17::quota() : null;
+		$low17    = is_array( $q17h ) && (int) ( $q17h['quota_remain'] ?? 0 ) < \PeptideHq\Track17::LOW;
+		echo '<section class="pcp-card pcp-costs__hero' . ( $over || $low || $low17 ? ' is-bad' : '' ) . '">';
 		echo '<div class="pcp-costs__big"><div><span>本月已花</span><strong>' . ( null !== $spent ? esc_html( self::usd( $spent ) ) : '—' ) . '</strong><small>' . esc_html( wp_date( 'n 月 1 日' ) ) . ' 至今' . ( empty( $aws['error'] ) && ! empty( $aws['data_through'] ) ? '，AWS 数据到 ' . esc_html( substr( (string) $aws['data_through'], 5 ) ) : '' ) . '</small></div>';
 		echo '<div><span>本月预计</span><strong>' . ( null !== $forecast ? esc_html( self::usd( $forecast ) ) : '—' ) . '</strong><small>' . ( $s['budget'] > 0 ? '预算 ' . esc_html( self::usd( $s['budget'] ) ) . ( $over ? '，<b>超出</b>' : '，在预算内' ) : '没设预算' ) . '</small></div>';
 		if ( null !== $remaining ) {
@@ -177,6 +179,18 @@ final class Costs_Page {
 		echo '<li><span>Cloudflare Argo 流量' . ( $argo_on ? '（' . esc_html( implode( '、', array_column( $argo_on, 'name' ) ) ) . '）' : '' ) . '</span><em>' . ( empty( $cf['error'] ) ? esc_html( ( ! empty( $cf['has_argo_plan'] ) ? '套餐含 1 GB，超出部分 ' : '' ) . self::usd( $cf['argo_estimate'] ?? 0 ) . ' 已产生 · 预计 ' . self::usd( $cf['argo_forecast'] ?? 0 ) ) : '<i class="pcp-costs__warn">' . esc_html( (string) $cf['error'] ) . '</i>' ) . '</em></li>';
 		if ( isset( $cf['mail_sent'] ) ) {
 			echo '<li><span>Cloudflare 邮件发送 <small>本月已发 ' . esc_html( number_format( (int) $cf['mail_sent'] ) ) . ' 封，含 ' . esc_html( number_format( (int) $cf['mail_included'] ) ) . ' 封</small></span><em>' . esc_html( '超出部分 ' . self::usd( $cf['mail_estimate'] ) . ' · 预计月底约 ' . number_format( (int) $cf['mail_sent_forecast'] ) . ' 封、' . self::usd( $cf['mail_forecast'] ) ) . '</em></li>';
+		}
+		// 17TRACK 物流追踪额度（店主 2026-11-11：在费用里加预警）。
+		if ( \PeptideHq\Track17::configured() ) {
+			$q17 = \PeptideHq\Track17::quota();
+			if ( is_wp_error( $q17 ) ) {
+				echo '<li><span>17TRACK 物流追踪额度</span><em><i class="pcp-costs__warn">' . esc_html( $q17->get_error_message() ) . '</i></em></li>';
+			} else {
+				$r17 = (int) ( $q17['quota_remain'] ?? 0 );
+				echo '<li><span>17TRACK 物流追踪额度 <small>每个单号第一次被查时扣 1 个；最小套餐 $119 / 5,000 个</small></span><em>' . ( $r17 < \PeptideHq\Track17::LOW ? '<i class="pcp-costs__warn">只剩 ' . $r17 . ' 个，请到 17TRACK 充值</i>' : esc_html( '剩 ' . number_format( $r17 ) . ' 个 · 已用 ' . number_format( (int) ( $q17['quota_used'] ?? 0 ) ) . ' / ' . number_format( (int) ( $q17['quota_total'] ?? 0 ) ) ) ) . '</em></li>';
+			}
+		} else {
+			echo '<li><span>17TRACK 物流追踪额度</span><em>还没填密钥（总后台 → 物流追踪）</em></li>';
 		}
 		echo '</ul>';
 		if ( $partial ) {

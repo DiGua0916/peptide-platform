@@ -455,7 +455,8 @@
     // Keep its lightweight presence signal; pagehide/stop clear this timer.
     // Browser freezing or throttling can still prevent delivery, so the server
     // must retain its timeout fallback rather than infer guaranteed presence.
-    const heartbeat = () => { heartbeatTimer = setInterval(() => emit('heartbeat', state()), heartbeatMs); };
+    // 店主 2026-11-11：标签页开着但 30 分钟没人动，就不再发心跳（有操作或回到前台会自动接着发）。
+    const heartbeat = () => { heartbeatTimer = setInterval(() => { const s = state(); if (s.last_activity_age_ms < 1800000) emit('heartbeat', s); }, heartbeatMs); };
     listen(window, 'pageshow', event => {
       if (!event.persisted || stopped) return;
       suspended = false; pageId = id(); seq = 0; lastActivity = Date.now(); surfaceObserver?.resume(); begin('bfcache');

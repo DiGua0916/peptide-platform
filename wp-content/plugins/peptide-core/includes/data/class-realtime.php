@@ -531,7 +531,7 @@ final class Realtime {
 			$types  = self::activity_types();
 			$marks  = implode( ', ', array_fill( 0, count( $types ), '%s' ) );
 			// 差值先转成有符号数再相减（occurred_ms 是无符号的，负数时 MySQL 会报“超出范围”）。
-			$sql  = "SELECT FLOOR( ( %d - CAST( occurred_ms AS SIGNED ) ) / 60000 ) AS ago, COUNT( DISTINCT visitor_id ) AS visitors FROM {$events} WHERE type IN ( {$marks} ) AND occurred_ms > %d AND occurred_ms <= %d{$predicate} GROUP BY ago";
+			$sql  = "SELECT FLOOR( ( %d - CAST( occurred_ms AS SIGNED ) ) / 60000 ) AS ago, COUNT( DISTINCT visitor_id ) AS visitors FROM {$events} WHERE type IN ( {$marks} ) AND ( type <> 'heartbeat' OR ( data LIKE '%%\"activity\":\"active\"%%' AND data LIKE '%%\"visibility\":\"visible\"%%' ) ) AND occurred_ms > %d AND occurred_ms <= %d{$predicate} GROUP BY ago";
 			$args = array_merge( array( $now_ms ), $types, array( $now_ms - $minutes * 60000, $now_ms ) );
 			$rows = $wpdb->get_results( $wpdb->prepare( $sql, $args ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 			foreach ( (array) $rows as $row ) {
