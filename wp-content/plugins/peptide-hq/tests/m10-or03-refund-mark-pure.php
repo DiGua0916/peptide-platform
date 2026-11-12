@@ -201,6 +201,9 @@ namespace {
 	check( 'order shape rejects bad ids and amounts', null === Orders::clean_order( array( 'store_order_id' => 0, 'total_cents' => 1 ) ) && null === Orders::clean_order( array( 'store_order_id' => 5, 'total_cents' => -1 ) ) && null === Orders::clean_order( array( 'store_order_id' => '5', 'total_cents' => 1 ) ) && null === Orders::clean_order( 'x' ) );
 	check( 'order shape drops unknown fields and bad hash', array( 'order_day' => '', 'email_hash' => '' ) === array_intersect_key( Orders::clean_order( array( 'store_order_id' => 5, 'total_cents' => 1, 'email_hash' => 'plain@example.test', 'order_day' => 'yesterday', 'billing_name' => 'X' ) ), array( 'email_hash' => 1, 'order_day' => 1 ) ) && ! array_key_exists( 'billing_name', Orders::clean_order( array( 'store_order_id' => 5, 'total_cents' => 1, 'billing_name' => 'X' ) ) ) );
 
+	check( 'hang- order numbers survive cleaning', 'hang-161188301' === Orders::clean_order( array( 'store_order_id' => 11843, 'total_cents' => 100, 'order_number' => 'hang-161188301' ) )['order_number'] );
+	check( 'search text is normalised', 'hang-161188301' === Orders::clean_query( ' #HANG-161188301 ' ) && '11843' === Orders::clean_query( '#11843' ) && '' === Orders::clean_query( '%\'"' ) );
+
 	// ---- 上报：按（店铺，订单号）覆盖写入，重复上报结果不变 ----
 	$batch1 = array( $order( 100, 15000 ), $order( 101, 8000 ), $order( 102, 5000, array( 'is_test' => true ) ), $order( 103, 9900, array( 'status' => 'pending', 'paid' => false, 'paid_at' => 0 ) ) );
 	$res    = $send( 1, $batch1 );

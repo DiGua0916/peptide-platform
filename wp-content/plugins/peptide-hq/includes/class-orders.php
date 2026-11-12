@@ -317,9 +317,10 @@ CREATE TABLE {$spend} (
 				$where[] = 'is_test = 1';
 				break;
 		}
-		$q = (string) preg_replace( '/[^A-Za-z0-9#_-]/', '', (string) ( $f['q'] ?? '' ) );
+		// 订单号：顾客和平台所有者看到的号（新订单是支付方的 hang-数字，老订单是数字），或者店铺内部的订单编号。
+		$q = self::clean_query( (string) ( $f['q'] ?? '' ) );
 		if ( '' !== $q ) {
-			$where[] = $wpdb->prepare( '(order_number = %s OR store_order_id = %d)', $q, (int) ltrim( $q, '#' ) );
+			$where[] = $wpdb->prepare( '(order_number = %s OR store_order_id = %d)', $q, ctype_digit( $q ) ? (int) $q : 0 );
 		}
 		if ( ! empty( $f['from'] ) ) {
 			$where[] = $wpdb->prepare( 'paid_at >= %d', (int) $f['from'] );
@@ -333,6 +334,12 @@ CREATE TABLE {$spend} (
 		$total    = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$t} WHERE {$sql}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		$rows     = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} WHERE {$sql} ORDER BY GREATEST(paid_at, created_at) DESC, id DESC LIMIT %d OFFSET %d", $per_page, $offset ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		return array( 'rows' => array_values( array_filter( array_map( array( self::class, 'row' ), $rows ) ) ), 'total' => $total );
+	}
+
+	/** 整理搜索用的订单号（纯函数）：去掉 # 和空白，hang- 号不分大小写。 */
+	public static function clean_query( string $q ): string {
+		$q = (string) preg_replace( '/[^A-Za-z0-9_-]/', '', $q );
+		return 0 === stripos( $q, 'hang-' ) ? strtolower( $q ) : $q;
 	}
 
 	/**

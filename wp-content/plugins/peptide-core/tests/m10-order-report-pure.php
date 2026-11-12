@@ -29,7 +29,7 @@ namespace {
 		public function get_status(): string { return $this->status; }
 		public function get_total() { return $this->total; }
 		public function get_currency(): string { return 'USD'; }
-		public function get_order_number(): string { return (string) $this->id; }
+		public function get_order_number(): string { return '' !== (string) ( $this->meta['_pc_pp_ref'] ?? '' ) ? (string) $this->meta['_pc_pp_ref'] : (string) $this->id; } // 新订单显示支付方订单号（hang-数字）。
 		public function get_billing_email(): string { return $this->email; }
 		public function get_date_created() { return $this->created ? new Stamp( $this->created ) : null; }
 		public function get_date_paid() { return $this->paid_ts ? new Stamp( $this->paid_ts ) : null; }
@@ -137,6 +137,11 @@ namespace {
 	check( 'email only as a hash of the lower-cased address', hash( 'sha256', 'buyer@example.test' ) === $s['email_hash'] && false === strpos( json_encode( $s ), 'xample' ) );
 	check( 'order without series meta uses the store series', 3 === R::summary( $GLOBALS['orders'][102] )['series_id'] );
 	check( 'test order flagged', true === R::summary( $GLOBALS['orders'][104] )['is_test'] );
+	$hang = new WC_Order( 106, 'processing', '30.00', $t0 + 50, $t0 + 350, 'h@example.test', array( '_pc_pp_ref' => 'hang-161188301' ) );
+	check( 'hang- number is only the display number; the id stays the WooCommerce order id', 'hang-161188301' === R::summary( $hang )['order_number'] && 106 === R::summary( $hang )['store_order_id'] );
+	$renumbered = clone $hang;
+	$renumbered->meta['_pc_pp_ref'] = 'hang-161188302';
+	check( 'a new payment attempt changes the fingerprint so the order is reported again', R::fingerprint( R::summary( $hang ) ) !== R::fingerprint( R::summary( $renumbered ) ) );
 
 	// ---- 上报：付过款的才报；成功后记指纹；内容没变不再报 ----
 	$first = R::report( array( 101, 102, 103, 104, 105, 999 ) );
