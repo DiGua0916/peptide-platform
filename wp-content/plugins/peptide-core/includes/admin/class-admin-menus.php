@@ -106,7 +106,7 @@ final class Admin_Menus {
 		add_filter( 'woocommerce_admin_order_actions', array( self::class, 'buyer_no_actions' ), 999 );
 		add_filter( 'woocommerce_admin_order_preview_actions', array( self::class, 'buyer_no_actions' ), 999 );
 		add_filter( 'woocommerce_order_actions', array( self::class, 'buyer_no_actions' ), 999 );
-		add_action( 'add_meta_boxes', array( self::class, 'buyer_order_boxes' ), 999 );
+		add_action( 'add_meta_boxes', array( self::class, 'buyer_order_boxes' ), 999, 1 );
 		add_action( 'admin_head', array( self::class, 'buyer_order_styles' ) );
 		add_action( 'admin_notices', array( self::class, 'buyer_order_notice' ) );
 		add_action( 'admin_footer', array( self::class, 'buyer_release_order_lock' ), 1 );
@@ -202,15 +202,32 @@ final class Admin_Menus {
 		return \PeptideCore\Staff_Buyer::current() ? array() : $actions;
 	}
 
-	/** 订单页面去掉“订单操作”（保存、删除）、自定义字段和下载权限这几个框。 */
-	public static function buyer_order_boxes(): void {
+	/**
+	 * 订单页面去掉“订单操作”（保存、删除）、自定义字段和下载权限这几个框。
+	 * WooCommerce 触发 add_meta_boxes 时带着它实际用的页面标识，优先用它；再按约定的标识去一遍，两者通常相同。
+	 *
+	 * @param mixed $screen_id WooCommerce 传来的页面标识。
+	 */
+	public static function buyer_order_boxes( $screen_id = '' ): void {
 		if ( ! self::buyer_on_orders() ) {
 			return;
 		}
-		$screen = function_exists( 'wc_get_page_screen_id' ) ? wc_get_page_screen_id( 'shop-order' ) : 'woocommerce_page_wc-orders';
-		foreach ( array( array( 'woocommerce-order-actions', 'side' ), array( 'woocommerce-order-downloads', 'normal' ), array( 'order_custom', 'normal' ), array( 'postcustom', 'normal' ) ) as $box ) {
-			remove_meta_box( $box[0], $screen, $box[1] );
+		foreach ( self::order_screens( $screen_id, function_exists( 'wc_get_page_screen_id' ) ? wc_get_page_screen_id( 'shop-order' ) : '' ) as $screen ) {
+			foreach ( array( array( 'woocommerce-order-actions', 'side' ), array( 'woocommerce-order-downloads', 'normal' ), array( 'order_custom', 'normal' ), array( 'postcustom', 'normal' ) ) as $box ) {
+				remove_meta_box( $box[0], $screen, $box[1] );
+			}
 		}
+	}
+
+	/** 要去掉订单框的页面标识：实际的、约定的、默认的，去重、去空（不读数据库）。 */
+	public static function order_screens( $actual, $expected ): array {
+		$out = array();
+		foreach ( array( $actual, $expected, 'woocommerce_page_wc-orders' ) as $id ) {
+			if ( is_string( $id ) && '' !== $id && ! in_array( $id, $out, true ) ) {
+				$out[] = $id;
+			}
+		}
+		return $out;
 	}
 
 	public static function buyer_order_styles(): void {
@@ -221,9 +238,17 @@ final class Admin_Menus {
 			. '.page-title-action,.tablenav .bulkactions,#delete_all,#delete-action,#woocommerce-order-items .wc-order-bulk-actions,#woocommerce-order-items .wc-order-edit-line-item,#woocommerce-order-items .wc-order-edit-line-item-actions,'
 			. '#woocommerce-order-items .refund-items,#woocommerce-order-items .add-items,#woocommerce-order-items .button,#woocommerce-order-items .wc-order-data-row-toggle,'
 			. '#order_data a.edit_address,#order_data .load_customer_billing,#order_data .load_customer_shipping,#order_data .billing-same-as-shipping,'
-			. '#woocommerce-order-notes .add_note,#woocommerce-order-notes .delete_note,.wc-order-preview .wc-action-button-group{display:none!important}'
+			. '#woocommerce-order-notes .add_note,#woocommerce-order-notes .delete_note,.wc-order-preview .wc-action-button-group,'
+			. '#woocommerce-order-actions,#order .save_order,#order .submitdelete{display:none!important}'
 			. '#order_data select,#order_data input,#order_data textarea,#order_data .select2-container{pointer-events:none}'
 			. '</style>' . "\n";
+		// 页面上没有保存按钮，但在输入框里按回车仍会提交整张表单（服务端会拒绝，投手看到的是 403 页面）。
+		// 这里把订单资料里的输入框设为不可用，并拦住表单提交；真正的限制仍在服务端。
+		echo '<script id="pc-buyer-orders-readonly-js">document.addEventListener("DOMContentLoaded",function(){'
+			. 'var f=document.getElementById("order");'
+			. 'if(f){f.addEventListener("submit",function(e){e.preventDefault();e.stopImmediatePropagation();},true);}'
+			. 'document.querySelectorAll("#order_data select,#order_data input:not([type=hidden]),#order_data textarea").forEach(function(el){el.disabled=true;});'
+			. '});</script>' . "\n";
 	}
 
 	public static function buyer_order_notice(): void {

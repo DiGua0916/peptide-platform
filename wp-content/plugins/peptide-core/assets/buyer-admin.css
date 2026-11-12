@@ -16,6 +16,11 @@
 	color: var(--by-ink);
 }
 
+/* hidden 属性要压过下面各处的 display（否则“现在没有待办”和还没生成的投放链接一直显示）。 */
+.pc-by [hidden] {
+	display: none !important;
+}
+
 .pc-by h1 {
 	margin: 8px 0 16px;
 	padding: 0;

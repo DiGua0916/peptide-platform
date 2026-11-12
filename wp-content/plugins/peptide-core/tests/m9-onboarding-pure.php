@@ -148,6 +148,12 @@ namespace {
 	$own = static fn( string $lock, int $user ): bool => \PeptideCore\Admin\Admin_Menus::own_lock( $lock, $user );
 	check( 'own edit lock', $own( '1800000000:7', 7 ) );
 	check( 'someone else\'s edit lock stays', ! $own( '1800000000:8', 7 ) && ! $own( '', 7 ) && ! $own( '1800000000:7x', 7 ) && ! $own( '1800000000:7', 0 ) );
+	// 订单页去掉“订单操作”框：WooCommerce 实际用的页面标识优先，约定的和默认的也各去一遍。
+	$screens = static fn( $actual, $expected ): array => \PeptideCore\Admin\Admin_Menus::order_screens( $actual, $expected );
+	check( 'order screens: usual case is one id', array( 'woocommerce_page_wc-orders' ) === $screens( 'woocommerce_page_wc-orders', 'woocommerce_page_wc-orders' ) );
+	check( 'order screens: a renamed parent menu is covered', array( 'store_page_wc-orders', 'woocommerce_page_wc-orders' ) === $screens( 'store_page_wc-orders', 'woocommerce_page_wc-orders' ) );
+	check( 'order screens: legacy storage', array( 'shop_order', 'woocommerce_page_wc-orders' ) === $screens( 'shop_order', 'shop_order' ) );
+	check( 'order screens: unusable values are dropped', array( 'woocommerce_page_wc-orders' ) === $screens( null, '' ) && array( 'woocommerce_page_wc-orders' ) === $screens( array( 'x' ), 0 ) );
 
 	echo "PASS {$checks} onboarding / home / store-info checks\n";
 }
