@@ -823,6 +823,15 @@
       "node_test": false,
       "status": "module-gate",
       "module": "M14"
+    },
+    {
+      "name": "m14-front-speed-pure",
+      "language": "php",
+      "path": "wp-content/themes/peptide-site/tests/m14-front-speed-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M14"
     }
   ]
 }
