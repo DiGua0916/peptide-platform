@@ -437,6 +437,8 @@ final class Order_Detail_Page {
 		$email = (string) $o->get_billing_email();
 		echo '<section class="pc-od-card"><h2>购买人信息</h2><p class="pc-od-buyer"><span class="pc-od-flag">' . esc_html( self::flag( $cc ) ) . '</span>' . self::v( trim( $o->get_billing_first_name() . ' ' . $o->get_billing_last_name() ) ) . '</p><dl class="pc-od-kv">'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo '<dt>邮箱：</dt><dd class="pc-od-mail"><a href="' . esc_url( Mail_Page::url( array( 'q' => $email ) ) ) . '">' . self::v( $email ) . '</a> <button type="button" class="pc-od-icon" data-pc-copy="' . esc_attr( $email ) . '" title="复制" aria-label="复制邮箱">' . $copy_ic . '</button></dd>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		$cid = class_exists( \PeptideCore\Customer_Id::class ) ? \PeptideCore\Customer_Id::for_order( $o ) : '';
+		echo '<dt>客户编号：</dt><dd>' . ( '' !== $cid ? '<button type="button" class="pc-od-cp" data-pc-copy="' . esc_attr( $cid ) . '" title="点击复制">' . esc_html( $cid ) . '</button>' : '-' ) . '</dd>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo '<dt>其他联系方式：</dt><dd>' . self::v( $o->get_meta( '_pc_paid_contact' ) ) . '</dd></dl><hr class="pc-od-hr"><dl class="pc-od-kv">'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo '<dt>首次支付时间：</dt><dd>' . esc_html( self::t( $stats['first'] ) ) . '</dd>';
 		echo '<dt>最后访问时间：</dt><dd>' . esc_html( $v['row'] ? self::t( (int) floor( (int) $v['row']['last_ms'] / 1000 ) ) : '-' ) . '</dd>';

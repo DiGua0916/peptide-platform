@@ -151,7 +151,7 @@ final class Hub_Page {
 		try { $accounts = Hub_Accounts::all(); } catch ( \Throwable $error ) { $settings_error = true; }
 		try {
 			if ( is_callable( array( Hub_Store::class, 'attempts' ) ) && Hub_Store::installed() ) {
-				$ledger = Hub_Store::attempts( self::filters( $site_id, $state ), $page );
+				$ledger = self::grouped( Hub_Store::attempts( self::filters( $site_id, $state ), 0 ), $page );
 				$summary = Hub_Store::summary( $site_id );
 			}
 		} catch ( \Throwable $error ) { $ledger = null; $summary = null; }
@@ -170,8 +170,8 @@ final class Hub_Page {
 				<p class="pc-pay-muted">支付方确认与店铺订单更新分别记录。回写失败会保留记录重试，不会重新扣款。</p>
 				<?php if ( is_array( $summary ) ) { self::render_summary( $summary ); } ?>
 				<form method="get" class="pc-pay-filters"><input type="hidden" name="page" value="<?php echo esc_attr( self::SLUG ); ?>"><label>店铺<select name="site_id"><option value="0">全部店铺</option><?php foreach ( $sites as $site ) : ?><option value="<?php echo esc_attr( (string) $site['id'] ); ?>" <?php selected( $site_id, $site['id'] ); ?>><?php echo esc_html( $site['name'] ); ?></option><?php endforeach; ?><?php if ( $site_id && ! isset( $sites[ $site_id ] ) ) : ?><option value="<?php echo esc_attr( (string) $site_id ); ?>" selected>已移除店铺 #<?php echo esc_html( (string) $site_id ); ?></option><?php endif; ?></select></label><label>支付状态<select name="state"><option value="">全部状态</option><?php foreach ( self::states() as $key => $label ) : ?><option value="<?php echo esc_attr( $key ); ?>" <?php selected( $state, $key ); ?>><?php echo esc_html( $label ); ?></option><?php endforeach; ?></select></label><button type="submit" class="button">筛选</button></form>
-				<?php if ( null === $ledger ) : ?><div class="pc-pay-empty" role="status"><h3>暂时无法读取交易记录</h3><p>请刷新页面；若仍不可用，请检查支付插件是否已完成数据库升级。</p><a class="button" href="<?php echo esc_url( self::url() ); ?>">刷新记录</a></div><?php elseif ( empty( $ledger['rows'] ) ) : ?><div class="pc-pay-empty"><h3><?php echo esc_html( $site_id || $state ? '没有符合条件的交易' : '还没有付款记录' ); ?></h3><p><?php echo esc_html( $site_id || $state ? '调整店铺或支付状态后重新筛选。' : '在支付设置中配置收款并授权店铺后，新支付会记录在这里。' ); ?></p></div><?php else : ?>
-					<div class="pc-pay-table-scroll" role="region" aria-label="按店铺划分的支付记录" tabindex="0"><table class="widefat pc-pay-table"><thead><tr><th scope="col">店铺 / 订单</th><th scope="col">付款方式</th><th scope="col">支付引用</th><th scope="col" class="pc-pay-number">金额</th><th scope="col">支付方确认</th><th scope="col">店铺回写</th><th scope="col">更新时间（北京）</th></tr></thead><tbody><?php self::$with_details = Hub_Details::refs_with_details( array_column( $ledger['rows'], 'ref' ) ); foreach ( $ledger['rows'] as $row ) { self::render_row( $row, $sites, $accounts ); } ?></tbody></table></div>
+				<?php if ( null === $ledger ) : ?><div class="pc-pay-empty" role="status"><h3>暂时无法读取交易记录</h3><p>请刷新页面；若仍不可用，请检查支付插件是否已完成数据库升级。</p><a class="button" href="<?php echo esc_url( self::url() ); ?>">刷新记录</a></div><?php elseif ( empty( $ledger['groups'] ) ) : ?><div class="pc-pay-empty"><h3><?php echo esc_html( $site_id || $state ? '没有符合条件的交易' : '还没有付款记录' ); ?></h3><p><?php echo esc_html( $site_id || $state ? '调整店铺或支付状态后重新筛选。' : '在支付设置中配置收款并授权店铺后，新支付会记录在这里。' ); ?></p></div><?php else : ?>
+					<div class="pc-pay-table-scroll" role="region" aria-label="按店铺划分的支付记录" tabindex="0"><table class="widefat pc-pay-table"><thead><tr><th scope="col">店铺 / 订单</th><th scope="col">付款方式</th><th scope="col">支付引用</th><th scope="col" class="pc-pay-number">金额</th><th scope="col">支付方确认</th><th scope="col">店铺回写</th><th scope="col">更新时间（北京）</th></tr></thead><tbody><?php self::$with_details = Hub_Details::refs_with_details( array_column( array_merge( ...array_column( $ledger['groups'], 'rows' ) ), 'ref' ) ); foreach ( $ledger['groups'] as $group ) { self::render_group( $group, $sites, $accounts ); } ?></tbody></table></div>
 					<?php self::pagination( $ledger, $page, $site_id, $state ); ?>
 				<?php endif; ?>
 			</section>
@@ -193,7 +193,55 @@ final class Hub_Page {
 	/** @var array<string,bool> 有支付方返回记录的付款 */
 	private static array $with_details = array();
 
-	private static function render_row( array $row, array $sites, array $accounts ): void {
+	/**
+	 * 店主 2026-11-12：同一个客户（按客户编号，见 \PeptideHq\Customers）的多次付款合并成一行，点开看每一次。
+	 * 没有客户编号的记录各自一行。分页按合并后的行数。
+	 */
+	private static function grouped( array $ledger, int $page ): array {
+		$rows   = is_array( $ledger['rows'] ?? null ) ? $ledger['rows'] : array();
+		$links  = class_exists( '\PeptideHq\Customers' ) ? \PeptideHq\Customers::for_orders( array_map( static fn( array $r ): array => array( (int) $r['site_id'], (int) $r['order_id'] ), $rows ) ) : array();
+		$groups = array();
+		foreach ( $rows as $row ) {
+			$link = $links[ (int) $row['site_id'] . ':' . (int) $row['order_id'] ] ?? null;
+			$key  = $link ? 'c:' . $link['customer_id'] : 'r:' . $row['ref'];
+			if ( ! isset( $groups[ $key ] ) ) {
+				$groups[ $key ] = array( 'key' => substr( md5( $key ), 0, 12 ), 'link' => $link, 'rows' => array(), 'ok' => 0, 'fail' => 0 );
+			}
+			$groups[ $key ]['rows'][] = $row;
+			if ( 'SUCCEEDED' === ( $row['event_status'] ?? '' ) ) { ++$groups[ $key ]['ok']; }
+			elseif ( 'FAILED' === ( $row['event_status'] ?? '' ) || in_array( $row['state'] ?? '', array( 'failed', 'unknown' ), true ) ) { ++$groups[ $key ]['fail']; }
+			if ( $link && '' === $groups[ $key ]['link']['email_mask'] && '' !== $link['email_mask'] ) { $groups[ $key ]['link']['email_mask'] = $link['email_mask']; }
+		}
+		$groups = array_values( $groups );
+		return array( 'groups' => array_slice( $groups, ( max( 1, $page ) - 1 ) * 20, 20 ), 'total' => count( $groups ), 'per_page' => 20 );
+	}
+
+	private static function render_group( array $group, array $sites, array $accounts ): void {
+		$rows  = $group['rows'];
+		$count = count( $rows );
+		$head  = array_shift( $rows );
+		self::render_row( $head, $sites, $accounts, $group, $count );
+		foreach ( $rows as $row ) {
+			self::render_row( $row, $sites, $accounts, $group, 0 );
+		}
+	}
+
+	private static function customer_cell( array $group, int $count ): string {
+		$link = $group['link'] ?? null;
+		if ( ! $link ) { return ''; }
+		$html = '<span class="pc-pay-cust"><b>' . esc_html( $link['customer_id'] ) . '</b>' . ( '' !== $link['email_mask'] ? ' · ' . esc_html( $link['email_mask'] ) : '' ) . '</span>';
+		if ( $count > 1 ) {
+			$sum   = '共 ' . $count . ' 次付款';
+			$parts = array();
+			if ( $group['ok'] ) { $parts[] = '成功 ' . $group['ok']; }
+			if ( $group['fail'] ) { $parts[] = '失败 ' . $group['fail']; }
+			if ( $parts ) { $sum .= ' · ' . implode( ' · ', $parts ); }
+			$html .= '<button type="button" class="pc-pay-group-toggle" aria-expanded="false" data-pc-pay-group="' . esc_attr( $group['key'] ) . '">' . esc_html( $sum ) . '<i aria-hidden="true"></i></button>';
+		}
+		return $html;
+	}
+
+	private static function render_row( array $row, array $sites, array $accounts, array $group = array(), int $count = 1 ): void {
 		$id = (int) ( $row['site_id'] ?? 0 );
 		$name = isset( $sites[ $id ] ) ? $sites[ $id ]['name'] : '已移除店铺 #' . $id;
 		$account_id = (string) ( $row['account_id'] ?? 'default' );
@@ -207,7 +255,8 @@ final class Hub_Page {
 		if ( 'FAILED' === ( $row['event_status'] ?? '' ) ) { $provider = '已确认失败'; }
 		$delivery = array( 'pending' => '等待回写', 'delivered' => '已回写', 'review' => '需要核对', 'blocked' => '连接待核对', '' => '尚无付款结果' )[ $row['delivery_state'] ?? '' ] ?? '状态待核对';
 		$disposition = array( 'paid' => '订单已付款', 'failed' => '订单未付款', 'review' => '订单需核对' )[ $row['disposition'] ?? '' ] ?? '';
-		echo '<tr><td data-label="店铺 / 订单"><strong>' . esc_html( $name ) . '</strong><span>订单 #' . esc_html( (string) (int) ( $row['order_id'] ?? 0 ) ) . '</span></td><td data-label="付款方式">' . esc_html( $account_label ) . '</td><td data-label="支付引用" class="pc-pay-reference">' . esc_html( (string) ( $row['ref'] ?? '' ) ) . '</td><td data-label="金额" class="pc-pay-number">' . esc_html( (string) ( $row['currency'] ?? '' ) ) . ' ' . esc_html( (string) ( $row['amount'] ?? '' ) ) . '</td><td data-label="支付方确认">' . self::provider_cell( $row, $provider ) . '</td><td data-label="店铺回写">' . esc_html( $delivery );
+		$sub = $group && 0 === $count;
+		echo '<tr' . ( $sub ? ' class="pc-pay-sub" data-pc-pay-member="' . esc_attr( $group['key'] ) . '" hidden' : '' ) . '><td data-label="店铺 / 订单"><strong>' . esc_html( $name ) . '</strong><span>订单 #' . esc_html( (string) (int) ( $row['order_id'] ?? 0 ) ) . '</span>' . ( $sub ? '' : self::customer_cell( $group, $count ) ) . '</td><td data-label="付款方式">' . esc_html( $account_label ) . '</td><td data-label="支付引用" class="pc-pay-reference">' . esc_html( (string) ( $row['ref'] ?? '' ) ) . '</td><td data-label="金额" class="pc-pay-number">' . esc_html( (string) ( $row['currency'] ?? '' ) ) . ' ' . esc_html( (string) ( $row['amount'] ?? '' ) ) . '</td><td data-label="支付方确认">' . self::provider_cell( $row, $provider ) . '</td><td data-label="店铺回写">' . esc_html( $delivery );
 		if ( '' !== $disposition ) { echo '<span>' . esc_html( $disposition ) . '</span>'; }
 		echo '</td><td data-label="更新时间">' . esc_html( ! empty( $row['updated_at'] ) ? wp_date( 'Y-m-d H:i', (int) $row['updated_at'], new \DateTimeZone( 'Asia/Shanghai' ) ) : '—' ) . '</td></tr>';
 		self::render_details( (string) ( $row['ref'] ?? '' ) );
