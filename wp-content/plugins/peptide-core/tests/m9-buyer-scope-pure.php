@@ -27,11 +27,12 @@ namespace {
 		return $v === array( 'verdict' => $verdict, 'scope' => $scope, 'to' => $to );
 	};
 
-	// 七个菜单，顺序固定（2026-11-11 加“素材”，在“数据”和“广告设置”之间）。
+	// 六个菜单，顺序固定（2026-11-12：“素材”和“广告设置”合成“广告数据追踪”）。
 	$menu = \PeptideCore\Staff_Buyer::menu_items();
-	check( 'exactly seven menus in order', array( 'home', 'orders', 'recovery', 'data', 'creatives', 'ads', 'store' ) === array_keys( $menu ) );
-	check( 'menu labels', array( '首页', '订单', '弃单', '数据', '素材', '广告设置', '店铺信息' ) === array_column( $menu, 'label' ) );
-	check( 'creative sub-pages belong to creatives', 'creatives' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-creatives-spend' ) && 'creatives' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-creatives-board' ) );
+	check( 'exactly six menus in order', array( 'home', 'orders', 'recovery', 'data', 'adtrack', 'store' ) === array_keys( $menu ) );
+	check( 'menu labels', array( '首页', '订单', '弃单', '数据', '广告数据追踪', '店铺信息' ) === array_column( $menu, 'label' ) );
+	check( 'ad settings and creative pages belong to adtrack', 'adtrack' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-buyer-ads' ) && 'adtrack' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-creatives' ) && 'adtrack' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-creatives-spend' ) && 'adtrack' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-creatives-board' ) );
+	check( 'adtrack submenu: ad settings then creative library', array( 'admin.php?page=pc-buyer-ads', 'admin.php?page=pc-creatives' ) === array_column( \PeptideCore\Staff_Buyer::adtrack_submenu(), 2 ) );
 	check( 'look-alike creatives slug is not a creatives page', '' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-creativesx' ) );
 	check( 'orders menu opens paid orders', 'admin.php?page=wc-orders&status=wc-processing' === $menu['orders']['slug'] );
 	check( 'data sub-page belongs to data', 'data' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-data-landing' ) );

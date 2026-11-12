@@ -53,7 +53,10 @@ final class Onboarding {
 	/** 不出现在原来的菜单里（投手的菜单由 Staff_Buyer 生成）；管理员可以直接打开地址。 */
 	public static function add_pages(): void {
 		add_submenu_page( '', '开店向导', '开店向导', Staff_Buyer::CAP_VIEW, self::SLUG, array( self::class, 'render' ) );
-		add_submenu_page( '', '广告设置', '广告设置', Staff_Buyer::CAP_VIEW, self::ADS_SLUG, array( self::class, 'render_ads' ) );
+		// 广告设置页在顶层栏目“广告数据追踪”下（Creatives\Module::add_pages，2026-11-12）；没有素材模块时才单独登记。
+		if ( ! class_exists( \PeptideCore\Creatives\Module::class ) ) {
+			add_submenu_page( '', '广告设置', '广告设置', Staff_Buyer::CAP_VIEW, self::ADS_SLUG, array( self::class, 'render_ads' ) );
+		}
 	}
 
 	public static function url( string $step = '' ): string {

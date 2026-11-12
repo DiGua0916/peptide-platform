@@ -35,6 +35,7 @@ final class Module {
 	public static function register_hooks(): void {
 		add_action( 'admin_init', array( Schema::class, 'maybe_install' ) );
 		add_action( 'admin_menu', array( self::class, 'add_pages' ), 63 );
+		add_filter( 'submenu_file', array( self::class, 'submenu_file' ), 20 );
 		foreach ( array( Library_Page::class, Spend_Page::class, Board_Page::class ) as $page ) {
 			if ( method_exists( $page, 'register_hooks' ) ) {
 				$page::register_hooks();
@@ -66,15 +67,29 @@ final class Module {
 		Daily_Report::rereport( array_keys( $days ) );
 	}
 
+	/** 顶层栏目“广告数据追踪”（2026-11-12）：链接就是广告设置页。 */
+	public const MENU_LABEL = '广告数据追踪';
+
 	/**
-	 * 管理员：营销活动 → 广告素材（素材库）；花费导入和看板不进菜单，从素材库页面顶部的标签切换。
-	 * 投手：菜单由 Staff_Buyer 生成，这里登记的页面只决定能不能打开。
+	 * 管理员：顶层栏目“广告数据追踪” → 广告设置、素材库；花费导入和看板不进菜单，从素材库页面顶部的标签切换。
+	 * 投手：菜单由 Staff_Buyer 生成（同样是“广告数据追踪”一项，下面两个子菜单），这里登记的页面只决定能不能打开。
 	 */
 	public static function add_pages(): void {
-		$cap = Staff_Buyer::CAP_VIEW;
-		add_submenu_page( 'pc-promotions', '广告素材', '广告素材', $cap, self::PAGE_LIBRARY, array( Library_Page::class, 'render' ) );
+		$cap  = Staff_Buyer::CAP_VIEW;
+		$ads  = Staff_Buyer::PAGE_ADS;
+		$view = array( \PeptideCore\Admin\Onboarding::class, 'render_ads' );
+		add_menu_page( self::MENU_LABEL, self::MENU_LABEL, $cap, $ads, $view, 'dashicons-megaphone', 57 );
+		add_submenu_page( $ads, '广告设置', '广告设置', $cap, $ads, $view );
+		add_submenu_page( $ads, '素材库', '素材库', $cap, self::PAGE_LIBRARY, array( Library_Page::class, 'render' ) );
 		add_submenu_page( '', '花费导入', '花费导入', $cap, self::PAGE_SPEND, array( Spend_Page::class, 'render' ) );
 		add_submenu_page( '', '素材看板', '素材看板', $cap, self::PAGE_BOARD, array( Board_Page::class, 'render' ) );
+	}
+
+	/** 花费导入、素材看板打开时，左侧子菜单停在“素材库”。 */
+	public static function submenu_file( $submenu_file ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- 只读。
+		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+		return in_array( $page, array( self::PAGE_SPEND, self::PAGE_BOARD ), true ) ? self::PAGE_LIBRARY : $submenu_file;
 	}
 
 	/** 三个页面顶部共用的标签栏。 */

@@ -73,3 +73,11 @@
 - 实测（MySQL 沙盒）：上传图文素材得到 C0003；不带图片提交被拒；退出登录后用 C0003 链接、广告名写成 “Summer test ad” 进站 → 访问记为 C0003、付费来源，`pc_ad_ads` 里该广告 ID 归到 C0003；换落地页后链接仍带 `cr=C0003`；两套沙盒（MySQL、SQLite）都升级到 2，日志无新增。
 - 已知：沙盒 PHP 上传上限 2 MB，正式服务器要传视频需调大 `upload_max_filesize` / `post_max_size`；`tracking-impressions`、`tracking-native-visit-classifier`、`tracking-preferences` 三个纯函数测试在本次改动前就失败（与本次无关）。
 
+## 栏目“广告数据追踪”（2026-11-12）
+
+- 广告设置和素材库合成一个顶层栏目“广告数据追踪”，子菜单：广告设置、素材库（花费导入、素材看板仍从素材库顶部标签进，打开时子菜单停在“素材库”）。
+- 管理员菜单：`Creatives\Module::add_pages()` 用 `add_menu_page`，栏目链接就是广告设置页（`pc-buyer-ads`），排在“访客”后面（`Admin_Menus::final_order`）；素材库不再挂在“营销活动”下；有素材模块时 `Onboarding` 不再单独登记隐藏的广告设置页。
+- 投手菜单：7 项变 6 项（首页、订单、弃单、数据、广告数据追踪、店铺信息），`Staff_Buyer::adtrack_submenu()` 生成两个子菜单。
+- 员工权限：`pc-buyer-ads`、`pc-creatives` 归“营销”模块（之前素材库没有归属，员工打不开）。
+- 实测：管理员（MySQL 沙盒）和投手（SQLite 沙盒，专属登录链接）菜单、当前项高亮都正确；素材三个页面投手都能打开。主题 JS 测试（cr-visitor-attribution、m14-visitor-attribution-ads、campaign-announcement 等）用工具目录里的 Node 跑过，全部通过。
+

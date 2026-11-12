@@ -2,7 +2,7 @@
 /**
  * 投手版后台（M9，PRD 6.2）：角色 pc_media_buyer。“投手”= 负责投广告的内部员工，不是顾客。
  *
- * 投手只用 7 个菜单：首页、订单（只读）、弃单、数据、素材、广告设置、店铺信息。其余菜单不显示，直接打开地址返回 403。
+ * 投手只用 6 个菜单：首页、订单（只读）、弃单、数据、广告数据追踪（广告设置、素材库）、店铺信息。其余菜单不显示，直接打开地址返回 403。
  * “素材”（素材库、花费导入、素材看板）由 Creatives\Module 提供，2026-11-11 加入。
  * 管理员（包括从总后台一键登录）不受影响，仍然看到全部菜单。
  *
@@ -357,8 +357,8 @@ final class Staff_Buyer {
 		if ( in_array( $page, array( self::PAGE_HOME, self::PAGE_ADS, self::PAGE_STORE, self::PAGE_WIZARD ), true ) ) {
 			return $allow();
 		}
-		// 素材的三个页面只用 CAP_VIEW，不需要店铺能力。
-		if ( 'creatives' === self::menu_for_page( $page ) ) {
+		// 素材的三个页面只用 CAP_VIEW，不需要店铺能力（“广告数据追踪”栏目下 pc-creatives 开头的页面）。
+		if ( 'adtrack' === self::menu_for_page( $page ) && str_starts_with( $page, 'pc-creatives' ) ) {
 			return $allow();
 		}
 		if ( 'pc-overview' === $page ) {
@@ -496,7 +496,7 @@ final class Staff_Buyer {
 	// ---------- 菜单 ----------
 
 	/**
-	 * 投手的 7 个菜单，按显示顺序。slug 是菜单链接，pages 是算在这个菜单下的页面（带同样前缀的子页面也算）。
+	 * 投手的 6 个菜单，按显示顺序。slug 是菜单链接，pages 是算在这个菜单下的页面（带同样前缀的子页面也算）。
 	 *
 	 * @return array<string,array{label:string,slug:string,icon:string,pages:string[]}>
 	 */
@@ -507,8 +507,8 @@ final class Staff_Buyer {
 			'orders'   => array( 'label' => '订单', 'slug' => 'admin.php?page=wc-orders&status=wc-processing', 'icon' => 'dashicons-cart', 'pages' => array( 'wc-orders' ) ),
 			'recovery' => array( 'label' => '弃单', 'slug' => $url( 'pc-recovery' ), 'icon' => 'dashicons-backup', 'pages' => array( 'pc-recovery' ) ),
 			'data'     => array( 'label' => '数据', 'slug' => $url( 'pc-data' ), 'icon' => 'dashicons-chart-area', 'pages' => array( 'pc-data', 'pc-visitors' ) ),
-			'creatives' => array( 'label' => '素材', 'slug' => $url( 'pc-creatives' ), 'icon' => 'dashicons-format-gallery', 'pages' => array( 'pc-creatives' ) ), // Creatives\Module::PAGE_*
-			'ads'      => array( 'label' => '广告设置', 'slug' => $url( self::PAGE_ADS ), 'icon' => 'dashicons-megaphone', 'pages' => array( self::PAGE_ADS ) ),
+			// 2026-11-12：广告设置和素材库合成一个栏目“广告数据追踪”（子菜单见 adtrack_submenu()）。
+			'adtrack'  => array( 'label' => '广告数据追踪', 'slug' => $url( self::PAGE_ADS ), 'icon' => 'dashicons-megaphone', 'pages' => array( self::PAGE_ADS, 'pc-creatives' ) ), // Creatives\Module::PAGE_*
 			'store'    => array( 'label' => '店铺信息', 'slug' => $url( self::PAGE_STORE ), 'icon' => 'dashicons-store', 'pages' => array( self::PAGE_STORE ) ),
 		);
 	}
@@ -556,7 +556,18 @@ final class Staff_Buyer {
 					$submenu[ $item['slug'] ] = $children; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 				}
 			}
+			if ( 'adtrack' === $key ) {
+				$submenu[ $item['slug'] ] = self::adtrack_submenu(); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+			}
 		}
+	}
+
+	/** “广告数据追踪”的子菜单：广告设置、素材库（花费导入和素材看板从素材库顶部的标签进）。 */
+	public static function adtrack_submenu(): array {
+		return array(
+			array( '广告设置', 'read', 'admin.php?page=' . self::PAGE_ADS, '广告设置' ),
+			array( '素材库', 'read', 'admin.php?page=pc-creatives', '素材库' ),
+		);
 	}
 
 	/** “数据”的子菜单：数据页面和实时访客在这次请求里登记的子页面，链接改成完整地址。 */
@@ -589,6 +600,9 @@ final class Staff_Buyer {
 			return $submenu_file;
 		}
 		$page = self::request()['page'];
+		if ( 'adtrack' === self::menu_for_page( $page ) ) {
+			return 'admin.php?page=' . ( str_starts_with( $page, 'pc-creatives' ) ? 'pc-creatives' : self::PAGE_ADS );
+		}
 		if ( 'data' !== self::menu_for_page( $page ) ) {
 			return $submenu_file;
 		}
