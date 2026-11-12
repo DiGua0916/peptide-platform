@@ -126,8 +126,8 @@ final class Page_Cache {
 
 	public static function tracking_name( string $name ): bool {
 		// ref = 推广人代号（Referrals 在 init 读取并写 cookie），和广告参数一样不影响页面内容。
-		// placement、ad_name = CR 素材归因的 Meta 网址参数模板（Creatives\Contract::URL_TEMPLATE），同样不影响页面。
-		return (bool) preg_match( '/\Autm_[a-z_]{1,32}\z/', $name ) || in_array( $name, self::CLICK_IDS, true ) || in_array( $name, array( 'ref', 'placement', 'ad_name' ), true ); // ref = Referrals::PARAM，纯函数测试不加载 Referrals。
+		// placement、ad_name、cr（素材专属链接）= CR 素材归因的 Meta 网址参数模板（Creatives\Contract::URL_TEMPLATE），同样不影响页面。
+		return (bool) preg_match( '/\Autm_[a-z_]{1,32}\z/', $name ) || in_array( $name, self::CLICK_IDS, true ) || in_array( $name, array( 'ref', 'placement', 'ad_name', 'cr' ), true ); // ref = Referrals::PARAM，纯函数测试不加载 Referrals。
 	}
 
 	/**

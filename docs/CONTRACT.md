@@ -1057,6 +1057,8 @@ currency, visitor, visit, buyer
 
 ### 网址参数和广告名
 
+- **素材专属链接（2026-11-12，优先）**：投手在“广告设置”页上传素材（图文为主，视频传封面、视频文件可选），得到这个素材的专属投放链接：落地页 + `cr=素材编号&` + 下面的固定模板（`Contract::creative_query()`，`Onboarding::ad_link( $landing, '', '', $code )`）。一个素材一条链接，投到多少广告系列都用同一条；换落地页只换前半段，编号不变。识别素材时 **`cr` 优先，其次广告名开头的编号**（`Contract::code_from_params()`），广告名不再必须按规范写。`cr` 属于 `Contract::PARAMS` 白名单（最长 16），也算页面缓存的追踪参数。素材表加 `video_id`（`Schema::VERSION` = 2）。素材库页只做汇总和对比，不再有登记入口。
+
 - Meta“网址参数”固定模板（`PeptideCore\Creatives\Contract::URL_TEMPLATE`）：
   `utm_source={{site_source_name}}&utm_medium=paid&utm_campaign={{campaign.id}}&utm_term={{adset.id}}&utm_content={{ad.id}}&placement={{placement}}&ad_name={{ad.name}}`
 - 访问上保存的参数白名单：`Contract::PARAMS`。有效 = 平台是 fb/ig/msg/an、medium 是 paid、三个 ID 都是 6–25 位数字（`params_valid()`）；广告预览带来的 `{{ad.id}}` 原文算无效。

@@ -114,6 +114,9 @@ check( 'clean attrs: problems', array( 'fmt', 'lang' ) === Cr::clean_attrs( arra
 check( 'label map', '检测报告' === Cr::label_map( $vocab )['hook']['lab'] );
 check( 'status: spend today/2 days ago = live', 'live' === Cr::status_for( '2026-11-11', '2026-11-11' ) && 'live' === Cr::status_for( '2026-11-09', '2026-11-11' ) );
 check( 'status: 3 days ago = stopped', 'stopped' === Cr::status_for( '2026-11-08', '2026-11-11' ) && 'stopped' === Cr::status_for( '', '2026-11-11' ) );
+check( 'display: no spend yet, no visitors = new', 'new' === Cr::display_state( array( 'last_day' => '', 'visitors' => 0 ), '2026-11-11' ) );
+check( 'display: no spend yet, has visitors = pending', 'pending' === Cr::display_state( array( 'last_day' => '', 'visitors' => 3 ), '2026-11-11' ) );
+check( 'display: with spend follows status_for', 'live' === Cr::display_state( array( 'last_day' => '2026-11-11', 'visitors' => 0 ), '2026-11-11' ) && 'stopped' === Cr::display_state( array( 'last_day' => '2026-11-01', 'visitors' => 9 ), '2026-11-11' ) );
 check( 'money', '$1,234.56' === Cr::money( 123456 ) && '$0.00' === Cr::money( 0 ) );
 
 // ---------- 未登记、补登记 ----------

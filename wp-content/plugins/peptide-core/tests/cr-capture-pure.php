@@ -80,13 +80,14 @@ namespace {
 		'utm_content'  => '120200000000003',
 		'placement'    => 'Facebook_Mobile_Feed',
 		'ad_name'      => 'C0012_hook-lab_fmt-vid_angle-purity_lang-en_v1',
+		'cr'           => 'C0012',
 	);
 	$wire = array( 'version' => 1, 'host' => 'shop.test', 'landing_query' => array_reverse( $template, true ) + array( 'fbclid' => 'PRIVATE', 'secret' => 'x' ), 'referrer_host' => 'm.facebook.com', 'has_fbclid' => true, 'timezone' => 'America/Chicago', 'language' => 'en-us' );
 	$out  = Attribution::clean( $wire );
 	$check( 'template accepted', $out['ok'] );
 	$check( 'all contract params kept in contract order, others dropped', $template === $out['value']['landing_query'] && array_keys( $out['value']['landing_query'] ) === Contract::PARAMS );
 	$check( 'browser facts kept', true === $out['value']['has_fbclid'] && 'America/Chicago' === $out['value']['timezone'] && 'en-US' === $out['value']['language'] );
-	$check( 'query string in contract order', 'utm_source=fb&utm_medium=paid&utm_campaign=120200000000001&utm_term=120200000000002&utm_content=120200000000003&placement=Facebook_Mobile_Feed&ad_name=C0012_hook-lab_fmt-vid_angle-purity_lang-en_v1' === Attribution::query( $out['value'] ) );
+	$check( 'query string in contract order', 'utm_source=fb&utm_medium=paid&utm_campaign=120200000000001&utm_term=120200000000002&utm_content=120200000000003&placement=Facebook_Mobile_Feed&ad_name=C0012_hook-lab_fmt-vid_angle-purity_lang-en_v1&cr=C0012' === Attribution::query( $out['value'] ) );
 	parse_str( Attribution::query( $out['value'] ), $parsed );
 	$check( 'abandoned-cart / checkout readers see utm_campaign and utm_content', '120200000000001' === $parsed['utm_campaign'] && '120200000000003' === $parsed['utm_content'] );
 	$old = array( 'version' => 1, 'host' => 'shop.test', 'landing_query' => array( 'utm_source' => 'facebook', 'utm_medium' => 'paid' ), 'referrer_host' => '' );
@@ -111,6 +112,12 @@ namespace {
 	$fb_ua   = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Mobile/15E148 [FBAN/FBIOS;FBAV/450.0]';
 	$cols    = Visit_Facts::columns( $meta, $fb_ua, '203.0.113.9', $network );
 	$check( 'paid visit columns', 'paid' === $cols['source_class'] && 1 === $cols['params_valid'] && 1 === $cols['has_fbclid'] && 'C0012' === $cols['creative_code'] && 'fb' === $cols['in_app'] );
+	$cr_meta = $meta;
+	$cr_meta['landing_query']['cr']      = 'C0031';
+	$cr_meta['landing_query']['ad_name'] = 'Summer test ad';
+	$check( 'creative link: cr gives the code even when the ad name has none', 'C0031' === Visit_Facts::columns( $cr_meta, $fb_ua, '203.0.113.9', $network )['creative_code'] );
+	$cr_meta['landing_query']['ad_name'] = 'C0012_hook-lab';
+	$check( 'creative link: cr wins over the ad name', 'C0031' === Visit_Facts::columns( $cr_meta, $fb_ua, '203.0.113.9', $network )['creative_code'] );
 	$check( 'ad params copied', '120200000000003' === $cols['utm_content'] && '120200000000002' === $cols['utm_term'] && '120200000000001' === $cols['utm_campaign'] && 'Facebook_Mobile_Feed' === $cols['placement'] && $template['ad_name'] === $cols['ad_name'] );
 	$check( 'network and browser columns', '203.0.113.9' === $cols['ip'] && 'Austin' === $cols['geo_city'] && 7922 === $cols['asn'] && 'residential' === $cols['ip_type'] && 'America/Chicago' === $cols['timezone'] && 'en-US' === $cols['language'] );
 	$check( 'every column is one the capture writes', array() === array_diff( array_keys( $cols ), Attribution::FACT_COLUMNS ) && array() === array_diff( Attribution::FACT_COLUMNS, array_keys( $cols ) ) );

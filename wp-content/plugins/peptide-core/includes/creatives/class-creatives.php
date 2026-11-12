@@ -100,6 +100,21 @@ final class Creatives {
 		return ( $last_day >= $from && $last_day <= $today ) ? 'live' : 'stopped';
 	}
 
+	/** 状态的中文标签。 */
+	public const STATE_LABELS = array( 'live' => '投放中', 'stopped' => '已停', 'pending' => '有访客 · 待导入花费', 'new' => '未投放', 'archived' => '已归档' );
+
+	/**
+	 * 卡片 / 链接列表显示的状态（2026-11-12）：还没导入过花费时不算“已停”——有访客 = pending，没有 = new。
+	 *
+	 * @param array{last_day?:string,visitors?:int} $st stats() 的一行
+	 */
+	public static function display_state( array $st, string $today ): string {
+		if ( '' === (string) ( $st['last_day'] ?? '' ) ) {
+			return (int) ( $st['visitors'] ?? 0 ) > 0 ? 'pending' : 'new';
+		}
+		return self::status_for( (string) $st['last_day'], $today );
+	}
+
 	/**
 	 * 未登记的广告：编号为空，或编号不在已登记的编号里。
 	 *
@@ -146,6 +161,7 @@ final class Creatives {
 			'id'            => (int) $row['id'],
 			'code'          => (string) $row['code'],
 			'attachment_id' => (int) $row['attachment_id'],
+			'video_id'      => (int) ( $row['video_id'] ?? 0 ),
 			'attrs'         => is_array( $attrs ) ? array_map( 'strval', $attrs ) : array(),
 			'custom'        => is_array( $custom ) ? array_map( 'strval', $custom ) : array(),
 			'note'          => (string) $row['note'],
@@ -198,7 +214,7 @@ final class Creatives {
 	 * @param array<string,string> $attrs 已校验
 	 * @return string|\WP_Error
 	 */
-	public static function create( array $attrs, int $attachment_id, string $note, string $want = '' ) {
+	public static function create( array $attrs, int $attachment_id, string $note, string $want = '', int $video_id = 0 ) {
 		global $wpdb;
 		Schema::maybe_install();
 		$t = Schema::table( 'creatives' );
@@ -211,6 +227,7 @@ final class Creatives {
 				array(
 					'code'          => $code,
 					'attachment_id' => max( 0, $attachment_id ),
+					'video_id'      => max( 0, $video_id ),
 					'attrs'         => (string) wp_json_encode( $attrs ),
 					'custom'        => '{}',
 					'lang'          => (string) ( $attrs['lang'] ?? '' ),
@@ -231,8 +248,8 @@ final class Creatives {
 		return new \WP_Error( 'pc_creative_code', '分配编号失败，请再保存一次。' );
 	}
 
-	/** 修改属性、备注、缩略图（$attachment_id 为 null = 不改）。 */
-	public static function update( string $code, array $attrs, string $note, ?int $attachment_id = null ): bool {
+	/** 修改属性、备注、图片 / 视频（$attachment_id、$video_id 为 null = 不改）。 */
+	public static function update( string $code, array $attrs, string $note, ?int $attachment_id = null, ?int $video_id = null ): bool {
 		global $wpdb;
 		$data = array(
 			'attrs'      => (string) wp_json_encode( $attrs ),
@@ -242,6 +259,9 @@ final class Creatives {
 		);
 		if ( null !== $attachment_id ) {
 			$data['attachment_id'] = max( 0, $attachment_id );
+		}
+		if ( null !== $video_id ) {
+			$data['video_id'] = max( 0, $video_id );
 		}
 		return false !== $wpdb->update( Schema::table( 'creatives' ), $data, array( 'code' => $code ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	}

@@ -1,7 +1,10 @@
 <?php
 /**
- * 素材库页面（线 2，pc-creatives）：登记素材、上传缩略图、选属性，生成编号和规范广告名；
- * 素材卡片（状态、累计花费、进站访客）；未登记广告提醒和补登记。
+ * 素材库页面（线 2，pc-creatives）：所有素材的汇总和数据对比（素材卡片：状态、累计花费、进站访客、投放链接），
+ * 未登记广告提醒、归到已有素材。
+ *
+ * 2026-11-12 起，上传素材、生成投放链接都在“广告设置”页（Ads_Panel），这里不再有登记入口；
+ * 保存逻辑（handle）两边共用，“补登记”跳到广告设置页的上传表单。
  *
  * 写操作都走 admin-post 动作 Module::ACTION_SAVE（字段 op：create / update / archive / restore / link / vocab），
  * 校验 nonce 和 Staff_Buyer::CAP_VIEW。投手的后台拦着 admin-ajax，媒体库弹窗用不了，
@@ -18,8 +21,11 @@ defined( 'ABSPATH' ) || exit;
 
 final class Library_Page {
 
-	/** 缩略图只收这些格式（视频请上传封面截图）。 */
+	/** 图片 / 视频封面只收这些格式。 */
 	private const IMAGE_EXT = array( 'jpg', 'jpeg', 'png', 'gif', 'webp' );
+
+	/** 视频文件只收这些格式（大小受服务器上传上限限制）。 */
+	private const VIDEO_EXT = array( 'mp4', 'mov', 'm4v', 'webm' );
 
 	public static function register_hooks(): void {
 		add_action( 'admin_post_' . Module::ACTION_SAVE, array( self::class, 'handle' ) );
@@ -49,6 +55,7 @@ final class Library_Page {
 			$form[ $k ] = isset( $_POST[ $k ] ) ? sanitize_key( wp_unslash( $_POST[ $k ] ) ) : '';
 		}
 		$picked = isset( $_POST['attachment_id'] ) ? absint( $_POST['attachment_id'] ) : 0;
+		$panel  = isset( $_POST['from'] ) && 'ads' === sanitize_key( wp_unslash( $_POST['from'] ) ); // 广告设置页的上传表单：必须有图。
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 		$done = static function ( string $type, string $msg, string $to ): void {
 			Staff_Buyer::flash( $type, $msg );
@@ -87,26 +94,34 @@ final class Library_Page {
 		if ( is_wp_error( $thumb ) ) {
 			$done( 'error', $thumb->get_error_message(), $back );
 		}
+		if ( 'create' === $op && $panel && $thumb < 1 ) {
+			$done( 'error', '请先选择素材图片（视频素材请选封面图）。', $back );
+		}
+		$video = self::video();
+		if ( is_wp_error( $video ) ) {
+			$done( 'error', $video->get_error_message(), $back );
+		}
 
 		if ( 'update' === $op ) {
 			if ( ! Creatives::get( $code ) ) {
 				$done( 'error', '找不到这个素材。', $back );
 			}
-			Creatives::update( $code, $clean['attrs'], $note, $thumb > 0 ? $thumb : null );
+			Creatives::update( $code, $clean['attrs'], $note, $thumb > 0 ? $thumb : null, $video > 0 ? $video : null );
 			$done( 'success', $code . ' 已保存。属性改了的话，记得同步改 Meta 里的广告名：' . Contract::build_ad_name( $code, $clean['attrs'] ), $back );
 		}
 
 		$from = '' !== $ad ? Creatives::ad( $ad ) : null;
 		$want = $from ? Creatives::code_from_ad( (string) $from['code'], (string) $from['ad_name'], Creatives::codes() ) : '';
-		$new  = Creatives::create( $clean['attrs'], max( 0, $thumb ), $note, $want );
+		$new  = Creatives::create( $clean['attrs'], max( 0, $thumb ), $note, $want, max( 0, $video ) );
 		if ( is_wp_error( $new ) ) {
 			$done( 'error', $new->get_error_message(), $back );
 		}
+		$to = $panel ? $back . '#pc-cr-link-' . strtolower( $new ) : $back;
 		if ( $from ) {
 			Creatives::link_ad( (string) $from['ad_id'], $new );
-			$done( 'success', '已登记为 ' . $new . '，广告 ' . $from['ad_id'] . ' 已归位。' . ( $new !== $want ? '请把 Meta 里的广告名改成：' . Contract::build_ad_name( $new, $clean['attrs'] ) : '' ), $back );
+			$done( 'success', '已登记为 ' . $new . '，广告 ' . $from['ad_id'] . ' 已归位。以后这个素材的广告都用下面 ' . $new . ' 的投放链接。', $to );
 		}
-		$done( 'success', '已登记 ' . $new . '。复制广告名粘到 Meta：' . Contract::build_ad_name( $new, $clean['attrs'] ), $back );
+		$done( 'success', '已生成 ' . $new . ' 的投放链接，在下面“我的素材链接”里复制，粘到这个素材所有广告的“网址”一栏。', $to );
 	}
 
 	/**
@@ -124,7 +139,7 @@ final class Library_Page {
 			}
 			$ext = strtolower( pathinfo( (string) $file['name'], PATHINFO_EXTENSION ) );
 			if ( ! in_array( $ext, self::IMAGE_EXT, true ) ) {
-				return new \WP_Error( 'pc_creative_upload', '缩略图只支持 JPG、PNG、GIF、WebP。视频素材请上传封面截图。' );
+				return new \WP_Error( 'pc_creative_upload', '图片只支持 JPG、PNG、GIF、WebP。视频素材请选封面图，视频文件放在“视频文件”一栏。' );
 			}
 			require_once ABSPATH . 'wp-admin/includes/file.php';
 			require_once ABSPATH . 'wp-admin/includes/media.php';
@@ -139,6 +154,40 @@ final class Library_Page {
 			return $picked;
 		}
 		return 0;
+	}
+
+	/**
+	 * 可选的视频文件（字段 video）。没传 = 0。
+	 *
+	 * @return int|\WP_Error
+	 */
+	private static function video() {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- handle() 已校验。
+		$file = isset( $_FILES['video'] ) && is_array( $_FILES['video'] ) ? $_FILES['video'] : null; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+		if ( ! $file || '' === (string) ( $file['name'] ?? '' ) ) {
+			return 0;
+		}
+		$err = (int) ( $file['error'] ?? UPLOAD_ERR_NO_FILE );
+		if ( in_array( $err, array( UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE ), true ) ) {
+			return new \WP_Error( 'pc_creative_upload', '视频太大，超过了服务器的上传上限（' . size_format( wp_max_upload_size() ) . '）。可以先不传视频，只传封面图。' );
+		}
+		if ( UPLOAD_ERR_OK !== $err ) {
+			return new \WP_Error( 'pc_creative_upload', '视频上传失败，请稍后再试。' );
+		}
+		if ( ! in_array( strtolower( pathinfo( (string) $file['name'], PATHINFO_EXTENSION ) ), self::VIDEO_EXT, true ) ) {
+			return new \WP_Error( 'pc_creative_upload', '视频只支持 MP4、MOV、M4V、WebM。' );
+		}
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/media.php';
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+		$id = media_handle_upload( 'video', 0 );
+		return is_wp_error( $id ) ? new \WP_Error( 'pc_creative_upload', '视频上传失败：' . $id->get_error_message() ) : (int) $id;
+	}
+
+	/** 上传上限（给表单提示用）。 */
+	public static function max_upload(): string {
+		return size_format( wp_max_upload_size() );
 	}
 
 	// ---------- 页面 ----------
@@ -160,13 +209,12 @@ final class Library_Page {
 		foreach ( array_merge( Contract::REQUIRED_ATTRS, array( 'lang' ) ) as $k ) {
 			$filter[ $k ] = isset( $_GET[ 'f_' . $k ] ) ? sanitize_key( wp_unslash( $_GET[ 'f_' . $k ] ) ) : '';
 		}
-		$status  = isset( $_GET['f_status'] ) ? sanitize_key( wp_unslash( $_GET['f_status'] ) ) : '';
-		$from_ad = isset( $_GET['from_ad'] ) ? sanitize_text_field( wp_unslash( $_GET['from_ad'] ) ) : '';
+		$status = isset( $_GET['f_status'] ) ? sanitize_key( wp_unslash( $_GET['f_status'] ) ) : '';
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
-		$from = '' !== $from_ad ? Creatives::ad( $from_ad ) : null;
 		if ( current_user_can( 'upload_files' ) ) {
 			wp_enqueue_media();
 		}
+		$ads_page = Ads_Panel::page_url();
 
 		echo '<div class="wrap pc-creatives pc-cr">';
 		echo '<h1>素材库</h1>';
@@ -174,23 +222,20 @@ final class Library_Page {
 		Staff_Buyer::render_flash();
 		self::styles();
 
-		// 广告怎么填。
-		echo '<div class="pc-cr-box pc-cr-howto"><h2>投放前：每条广告填两样东西</h2>';
-		echo '<p>① 广告的“网址”填首页，<strong>“网址参数”</strong>粘贴下面这段（所有广告都一样，不用改）：</p>';
-		echo '<div class="pc-cr-copyrow"><input type="text" readonly value="' . esc_attr( Contract::URL_TEMPLATE ) . '" aria-label="网址参数模板"><button type="button" class="button" data-pc-cr-copy="' . esc_attr( Contract::URL_TEMPLATE ) . '">复制</button></div>';
-		echo '<p>② <strong>广告名</strong>粘贴素材卡片上的规范广告名（以素材编号开头）。不按这个名字，系统就认不出是哪个素材。</p></div>';
+		// 上传在广告设置页。
+		echo '<div class="pc-cr-box pc-cr-howto"><p>上传新素材、复制投放链接，请到 <a class="button button-primary" href="' . esc_url( $ads_page . '#pc-cr-upload' ) . '">广告设置 → 上传素材</a>　这里汇总所有素材的数据，方便对比。</p></div>';
 
 		// 未登记广告。
 		if ( $unreg ) {
 			echo '<div class="pc-cr-box pc-cr-warn"><h2>未登记的广告（' . count( $unreg ) . '）</h2>';
-			echo '<p>这些广告带来了访客或花费，但广告名里没有已登记的素材编号，统计时算“未登记”。补登记后会自动归位。</p>';
+			echo '<p>这些广告带来了访客或花费，但没用素材投放链接（链接里没有素材编号），统计时算“未登记”。归到已有素材，或去广告设置页补传素材，之前的数据会自动归位。</p>';
 			echo '<table class="widefat striped"><thead><tr><th>广告名</th><th>广告编号</th><th>首次出现</th><th>累计花费</th><th>处理</th></tr></thead><tbody>';
 			foreach ( $unreg as $u ) {
 				echo '<tr><td>' . esc_html( '' !== $u['ad_name'] ? $u['ad_name'] : '（没有广告名）' ) . '</td>';
 				echo '<td><code>' . esc_html( $u['ad_id'] ) . '</code></td>';
 				echo '<td>' . esc_html( $u['first_seen_ms'] > 0 ? wp_date( 'Y-m-d H:i', (int) floor( $u['first_seen_ms'] / 1000 ) ) : '—' ) . '</td>';
 				echo '<td>' . esc_html( Creatives::money( $u['spend_cents'] ) ) . '</td><td class="pc-cr-actions">';
-				echo '<a class="button button-small" href="' . esc_url( self::url( array( 'from_ad' => $u['ad_id'] ) ) . '#pc-cr-new' ) . '">补登记</a>';
+				echo '<a class="button button-small" href="' . esc_url( add_query_arg( 'from_ad', $u['ad_id'], $ads_page ) . '#pc-cr-upload' ) . '">补传素材</a>';
 				if ( $all ) {
 					self::form_open( 'link' );
 					echo '<input type="hidden" name="ad_id" value="' . esc_attr( $u['ad_id'] ) . '"><select name="code" aria-label="归到哪个素材">';
@@ -204,21 +249,6 @@ final class Library_Page {
 			echo '</tbody></table></div>';
 		}
 
-		// 登记新素材。
-		$open = $from || ! $all;
-		echo '<details class="pc-cr-box" id="pc-cr-new"' . ( $open ? ' open' : '' ) . '><summary><h2>' . ( $from ? '补登记广告 ' . esc_html( (string) $from['ad_id'] ) : '登记新素材' ) . '</h2></summary>';
-		$pre = $from ? Contract::parse_ad_name( (string) $from['ad_name'] )['attrs'] : array();
-		if ( $from ) {
-			$want = Creatives::code_from_ad( (string) $from['code'], (string) $from['ad_name'], array_keys( $all ) );
-			echo '<p>广告名：' . esc_html( '' !== (string) $from['ad_name'] ? (string) $from['ad_name'] : '（没有）' ) . '。' . esc_html( '' !== $want ? '登记后编号为 ' . $want . '，Meta 里的广告名不用改。' : '登记后会分配新编号，请再把 Meta 里的广告名改成新的规范广告名。' ) . '</p>';
-		}
-		self::form_open( 'create', true );
-		if ( $from ) {
-			echo '<input type="hidden" name="ad_id" value="' . esc_attr( (string) $from['ad_id'] ) . '">';
-		}
-		self::fields( $vocab, $pre, '', 0, 'new' );
-		echo '<p><button class="button button-primary">登记并生成编号</button></p></form></details>';
-
 		// 筛选。
 		echo '<form class="pc-cr-filter" method="get"><input type="hidden" name="page" value="' . esc_attr( Module::PAGE_LIBRARY ) . '">';
 		foreach ( array_merge( Contract::REQUIRED_ATTRS, array( 'lang' ) ) as $k ) {
@@ -228,7 +258,7 @@ final class Library_Page {
 			}
 			echo '</select>';
 		}
-		$opts = array( '' => '全部（不含归档）', 'live' => '投放中', 'stopped' => '已停', 'archived' => '已归档' );
+		$opts = array( '' => '全部（不含归档）', 'live' => '投放中', 'pending' => '待导入花费', 'new' => '未投放', 'stopped' => '已停', 'archived' => '已归档' );
 		echo '<select name="f_status" aria-label="状态">';
 		foreach ( $opts as $v => $l ) {
 			echo '<option value="' . esc_attr( $v ) . '"' . selected( $status, $v, false ) . '>' . esc_html( $l ) . '</option>';
@@ -240,7 +270,7 @@ final class Library_Page {
 		echo '<div class="pc-cr-grid">';
 		foreach ( $all as $c ) {
 			$st    = $stats[ $c['code'] ] ?? array( 'spend_cents' => 0, 'last_day' => '', 'visitors' => 0 );
-			$state = Creatives::STATUS_ARCHIVED === $c['status'] ? 'archived' : Creatives::status_for( (string) $st['last_day'], $today );
+			$state = Creatives::STATUS_ARCHIVED === $c['status'] ? 'archived' : Creatives::display_state( $st, $today );
 			if ( ( '' === $status && 'archived' === $state ) || ( '' !== $status && $status !== $state ) ) {
 				continue;
 			}
@@ -254,7 +284,7 @@ final class Library_Page {
 		}
 		echo '</div>';
 		if ( ! $shown ) {
-			echo '<p class="pc-cr-empty">' . esc_html( $all ? '没有符合筛选条件的素材。' : '还没有素材。先在上面登记第一个素材。' ) . '</p>';
+			echo '<p class="pc-cr-empty">' . esc_html( $all ? '没有符合筛选条件的素材。' : '还没有素材。到“广告设置”页上传第一个素材。' ) . '</p>';
 		}
 
 		$sync = Vocab_Sync::state();
@@ -265,7 +295,7 @@ final class Library_Page {
 		self::script();
 	}
 
-	private static function form_open( string $op, bool $upload = false ): void {
+	public static function form_open( string $op, bool $upload = false ): void {
 		echo '<form class="pc-cr-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"' . ( $upload ? ' enctype="multipart/form-data"' : '' ) . '>';
 		echo '<input type="hidden" name="action" value="' . esc_attr( Module::ACTION_SAVE ) . '"><input type="hidden" name="op" value="' . esc_attr( $op ) . '">';
 		wp_nonce_field( Module::ACTION_SAVE );
@@ -295,17 +325,17 @@ final class Library_Page {
 			echo '</select></p>';
 		}
 		echo '</div>';
-		echo '<p><label for="pc-cr-' . esc_attr( $uid ) . '-thumb">缩略图' . ( $attachment_id ? '（不选 = 保留现在的）' : '' ) . '</label> <input id="pc-cr-' . esc_attr( $uid ) . '-thumb" type="file" name="thumb" accept=".jpg,.jpeg,.png,.gif,.webp,image/*"> ';
+		echo '<p><label for="pc-cr-' . esc_attr( $uid ) . '-thumb">图片' . ( $attachment_id ? '（不选 = 保留现在的）' : '' ) . '</label> <input id="pc-cr-' . esc_attr( $uid ) . '-thumb" type="file" name="thumb" accept=".jpg,.jpeg,.png,.gif,.webp,image/*"> ';
 		if ( current_user_can( 'upload_files' ) ) {
 			echo '<input type="hidden" name="attachment_id" value="0" data-pc-cr-media-id><button type="button" class="button" data-pc-cr-media>从媒体库选</button> <span data-pc-cr-media-name></span>';
 		}
-		echo '<br><span class="description">图片素材传原图，视频素材传封面截图。</span></p>';
+		echo '<br><span class="description">图文素材传原图，视频素材传封面图。</span></p>';
 		echo '<p><label for="pc-cr-' . esc_attr( $uid ) . '-note">备注（可选）</label><textarea id="pc-cr-' . esc_attr( $uid ) . '-note" name="note" rows="2" maxlength="500">' . esc_textarea( $note ) . '</textarea></p>';
 	}
 
 	private static function card( array $c, array $st, string $state, array $labels, array $vocab ): void {
-		$name  = Contract::build_ad_name( $c['code'], $c['attrs'] );
-		$badge = array( 'live' => '投放中', 'stopped' => '已停', 'archived' => '已归档' );
+		$link  = Ads_Panel::link( home_url( '/' ), $c['code'] );
+		$badge = Creatives::STATE_LABELS;
 		echo '<div class="pc-cr-card is-' . esc_attr( $state ) . '">';
 		echo '<div class="pc-cr-thumb">' . ( $c['attachment_id'] ? wp_get_attachment_image( $c['attachment_id'], 'medium' ) : '<span>无缩略图</span>' ) . '</div>';
 		echo '<div class="pc-cr-body"><p class="pc-cr-head"><strong>' . esc_html( $c['code'] ) . '</strong> <span class="pc-cr-badge is-' . esc_attr( $state ) . '">' . esc_html( $badge[ $state ] ?? $state ) . '</span></p>';
@@ -315,7 +345,7 @@ final class Library_Page {
 				echo '<span>' . esc_html( Creatives::attr_name( $k ) . '：' . ( $labels[ $k ][ $c['attrs'][ $k ] ] ?? $c['attrs'][ $k ] ) ) . '</span>';
 			}
 		}
-		echo '</p><div class="pc-cr-copyrow"><input type="text" readonly value="' . esc_attr( $name ) . '" aria-label="广告名"><button type="button" class="button button-small" data-pc-cr-copy="' . esc_attr( $name ) . '">复制广告名</button></div>';
+		echo '</p><div class="pc-cr-copyrow"><input type="text" readonly value="' . esc_attr( $link ) . '" aria-label="投放链接（首页）"><button type="button" class="button button-small" data-pc-cr-copy="' . esc_attr( $link ) . '">复制链接</button></div>';
 		echo '<p class="pc-cr-nums"><span>累计花费 <b>' . esc_html( Creatives::money( (int) $st['spend_cents'] ) ) . '</b></span><span>进站访客 <b>' . (int) $st['visitors'] . '</b></span></p>';
 		if ( '' !== $c['note'] ) {
 			echo '<p class="pc-cr-note">' . esc_html( $c['note'] ) . '</p>';
@@ -356,6 +386,8 @@ final class Library_Page {
 .pc-cr-head strong{font-size:16px}
 .pc-cr-badge{font-size:12px;border-radius:10px;padding:1px 8px;background:#f0f0f1;color:#50575e}
 .pc-cr-badge.is-live{background:#edfaef;color:#007017}
+.pc-cr-badge.is-pending{background:#fcf9e8;color:#8a6d00}
+.pc-cr-badge.is-new{background:#f0f6fc;color:#2271b1}
 .pc-cr-attrs span,.pc-cr-nums span{display:inline-block;margin-right:10px;font-size:12px}
 .pc-cr-note{color:#50575e;font-size:12px}
 .pc-cr-card details{margin:6px 0}

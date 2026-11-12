@@ -504,3 +504,8 @@
 	font-size: 12px;
 	font-style: normal;
 }
+
+/* 广告设置页（2026-11-12）：像素连通后折叠、通用链接折叠 */
+.pc-by-ads details.pc-by-card > summary { cursor: pointer; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.pc-by-ads details.pc-by-card[open] > summary { margin-bottom: 12px; }
+.pc-by-ok { background: #edfaef; color: #007017; border-radius: 10px; padding: 1px 10px; font-size: 12px; }

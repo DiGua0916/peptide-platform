@@ -33,7 +33,13 @@ check( 'parse: empty name', array( 'code' => '', 'attrs' => array(), 'custom' =>
 $name = C::build_ad_name( 'C0012', array( 'angle' => 'purity', 'hook' => 'LAB', 'fmt' => 'vid', 'lang' => 'en' ), 2 );
 check( 'build: fixed order, lowercase, version', 'C0012_hook-lab_fmt-vid_angle-purity_lang-en_v2' === $name );
 check( 'build -> parse round trip', 'C0012' === C::parse_ad_name( $name )['code'] && 'lab' === C::parse_ad_name( $name )['attrs']['hook'] && 2 === C::parse_ad_name( $name )['version'] );
-check( 'template carries every param', ! array_diff( C::PARAMS, array_map( static fn( $kv ) => explode( '=', $kv )[0], explode( '&', C::URL_TEMPLATE ) ) ) );
+check( 'creative link carries every param', ! array_diff( C::PARAMS, array_map( static fn( $kv ) => explode( '=', $kv )[0], explode( '&', C::creative_query( 'C0012' ) ) ) ) );
+check( 'creative link starts with cr', str_starts_with( C::creative_query( 'C0012' ), 'cr=C0012&utm_source=' ) );
+check( 'creative link without valid code = template only', C::URL_TEMPLATE === C::creative_query( 'X1' ) );
+check( 'code: cr wins over ad name', 'C0007' === C::code_from_params( array( 'cr' => 'c0007', 'ad_name' => 'C0012_hook-lab' ) ) );
+check( 'code: ad name when no cr', 'C0012' === C::code_from_params( array( 'ad_name' => 'C0012_hook-lab' ) ) );
+check( 'code: bad cr falls back to ad name', 'C0012' === C::code_from_params( array( 'cr' => '{{x}}', 'ad_name' => 'C0012_x' ) ) );
+check( 'code: none', '' === C::code_from_params( array( 'cr' => '', 'ad_name' => 'summer sale' ) ) );
 
 // ---------- 属性校验 ----------
 $vocab = array_map( static fn( $i ) => array( 'attr' => $i['attr'], 'value' => $i['value'] ), C::DEFAULT_VOCAB );

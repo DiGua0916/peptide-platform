@@ -58,7 +58,7 @@
         landing[name] = value;
       }
       // Optional ad names: kept when well formed, otherwise left out without rejecting the snapshot.
-      const limits = {utm_campaign: 120, utm_term: 120, utm_content: 120, placement: 64, ad_name: 255};
+      const limits = {utm_campaign: 120, utm_term: 120, utm_content: 120, placement: 64, ad_name: 255, cr: 16};
       for (const name of Object.keys(limits)) if (Object.hasOwn(query, name)) {
         const value = query[name];
         if (typeof value === 'string' && value !== '' && [...value].length <= limits[name] && !/[\x00-\x1f\x7f]/.test(value)) landing[name] = value;

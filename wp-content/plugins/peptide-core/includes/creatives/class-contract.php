@@ -17,8 +17,14 @@ final class Contract {
 	/** 投手在 Meta“网址参数”里填的固定模板。 */
 	public const URL_TEMPLATE = 'utm_source={{site_source_name}}&utm_medium=paid&utm_campaign={{campaign.id}}&utm_term={{adset.id}}&utm_content={{ad.id}}&placement={{placement}}&ad_name={{ad.name}}';
 
+	/**
+	 * 素材专属链接里的素材编号参数（2026-11-12）：一个素材一条链接，不管投到多少广告系列都用同一条。
+	 * 识别素材时优先看它，没有再看广告名开头的编号。
+	 */
+	public const CREATIVE_PARAM = 'cr';
+
 	/** 访问上要保存的广告参数（放宽后的白名单，线 1 在 Tracking\Attribution 里使用）。 */
-	public const PARAMS = array( 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'placement', 'ad_name' );
+	public const PARAMS = array( 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'placement', 'ad_name', 'cr' );
 
 	/** {{site_source_name}} 的取值。 */
 	public const PLATFORMS = array( 'fb', 'ig', 'msg', 'an' );
@@ -71,6 +77,25 @@ final class Contract {
 	/** 素材编号：C 加至少 4 位数字，每家店独立计数。 */
 	public static function valid_code( string $code ): bool {
 		return 1 === preg_match( '/^C\d{4,9}$/', $code );
+	}
+
+	/** 素材专属链接的参数部分：cr=编号 + 固定模板（编号无效时只有模板）。 */
+	public static function creative_query( string $code ): string {
+		return ( self::valid_code( $code ) ? self::CREATIVE_PARAM . '=' . $code . '&' : '' ) . self::URL_TEMPLATE;
+	}
+
+	/**
+	 * 访问属于哪个素材：链接里的 cr 优先，其次广告名开头的编号；都没有 = 空。
+	 *
+	 * @param array<string,string> $p 白名单内的参数
+	 */
+	public static function code_from_params( array $p ): string {
+		$cr = strtoupper( trim( (string) ( $p[ self::CREATIVE_PARAM ] ?? '' ) ) );
+		if ( self::valid_code( $cr ) ) {
+			return $cr;
+		}
+		$name = (string) ( $p['ad_name'] ?? '' );
+		return '' !== $name ? self::parse_ad_name( $name )['code'] : '';
 	}
 
 	/** 第 n 个素材的编号（从 1 开始）。 */

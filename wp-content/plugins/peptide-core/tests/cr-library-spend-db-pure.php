@@ -127,7 +127,7 @@ namespace {
 
 	$pdo = new PDO( 'sqlite::memory:' );
 	$pdo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
-	$pdo->exec( "CREATE TABLE wp_pc_ad_creatives (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE, attachment_id INTEGER NOT NULL DEFAULT 0, attrs TEXT, custom TEXT, lang TEXT NOT NULL DEFAULT 'en', note TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'active', created_by INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL DEFAULT 0)" );
+	$pdo->exec( "CREATE TABLE wp_pc_ad_creatives (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE, attachment_id INTEGER NOT NULL DEFAULT 0, video_id INTEGER NOT NULL DEFAULT 0, attrs TEXT, custom TEXT, lang TEXT NOT NULL DEFAULT 'en', note TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'active', created_by INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL DEFAULT 0)" );
 	$pdo->exec( "CREATE TABLE wp_pc_ad_ads (ad_id TEXT PRIMARY KEY, code TEXT NOT NULL DEFAULT '', ad_name TEXT NOT NULL DEFAULT '', adset_id TEXT NOT NULL DEFAULT '', campaign_id TEXT NOT NULL DEFAULT '', first_seen_ms INTEGER NOT NULL DEFAULT 0, last_seen_ms INTEGER NOT NULL DEFAULT 0)" );
 	$pdo->exec( "CREATE TABLE wp_pc_ad_daily_spend (ad_id TEXT NOT NULL, day TEXT NOT NULL, spend_cents INTEGER NOT NULL DEFAULT 0, impressions INTEGER NOT NULL DEFAULT 0, link_clicks INTEGER NOT NULL DEFAULT 0, ad_name TEXT NOT NULL DEFAULT '', import_id INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (ad_id, day))" );
 	$pdo->exec( "CREATE TABLE wp_pc_ad_spend_imports (id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT NOT NULL DEFAULT '', user_id INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL DEFAULT 0, day_from TEXT NULL, day_to TEXT NULL, rows_total INTEGER NOT NULL DEFAULT 0, rows_saved INTEGER NOT NULL DEFAULT 0, errors TEXT NULL)" );
@@ -157,6 +157,11 @@ namespace {
 	check( 'stored creative decoded', 'es' === $c['attrs']['lang'] && 5 === $c['attachment_id'] && 'active' === $c['status'] );
 	Cr::update( 'C0002', array( 'hook' => 'price', 'fmt' => 'img', 'angle' => 'price' ), 'edited' );
 	check( 'update keeps thumbnail when not given', 5 === Cr::get( 'C0002' )['attachment_id'] && 'price' === Cr::get( 'C0002' )['attrs']['hook'] && 'edited' === Cr::get( 'C0002' )['note'] );
+	check( 'video stored with creative', 'C0052' === Cr::create( $attrs, 7, '', '', 9 ) && 9 === Cr::get( 'C0052' )['video_id'] && 7 === Cr::get( 'C0052' )['attachment_id'] );
+	Cr::update( 'C0052', $attrs, '' );
+	check( 'update keeps video when not given', 9 === Cr::get( 'C0052' )['video_id'] );
+	Cr::update( 'C0052', $attrs, '', null, 0 );
+	check( 'update can clear video', 0 === Cr::get( 'C0052' )['video_id'] );
 	Cr::set_status( 'C0002', 'archived' );
 	check( 'archive', 'archived' === Cr::get( 'C0002' )['status'] );
 

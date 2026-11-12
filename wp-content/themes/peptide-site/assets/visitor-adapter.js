@@ -77,8 +77,8 @@
       // the source above. Names longer than the 120 characters the server keeps are cut, and
       // an ad-platform macro that was not replaced ({{campaign.name}}) is not a name.
       // CR creative attribution (2026-11-11): the Meta URL template also carries placement and ad_name
-      // (ad_name up to 255 characters, placement up to 64, the server column widths).
-      const limits = {utm_campaign: 120, utm_term: 120, utm_content: 120, placement: 64, ad_name: 255};
+      // (ad_name up to 255 characters, placement up to 64, the server column widths). cr = creative link code (2026-11-12).
+      const limits = {utm_campaign: 120, utm_term: 120, utm_content: 120, placement: 64, ad_name: 255, cr: 16};
       for (const key of Object.keys(limits)) {
         const values = params.getAll(key);
         if (values.length !== 1 || values[0] === '' || /[\x00-\x1f\x7f]/.test(values[0]) || values[0].includes('{{')) continue;

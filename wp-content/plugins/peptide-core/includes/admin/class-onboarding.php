@@ -370,13 +370,29 @@ final class Onboarding {
 		echo '<div class="wrap pc-by pc-by-ads"><h1>广告设置</h1>';
 		echo self::banner(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- banner() 里已转义。
 		Staff_Buyer::render_flash();
-		echo '<section class="pc-by-card">';
-		self::form_pixel( 'ads' );
-		echo '</section><section class="pc-by-card">';
-		self::form_verify( false );
-		echo '</section><section class="pc-by-card">';
+		// 2026-11-12：像素连通后折叠成一行；主角是“上传素材 → 专属投放链接”。
+		$verified = self::evaluate( self::facts() )['verify'];
+		$pixel    = self::facebook_pixel();
+		if ( $verified ) {
+			echo '<details class="pc-by-card pc-by-pixel-done"><summary><strong>广告像素</strong> <span class="pc-by-ok">已连通 · 像素 ' . esc_html( $pixel['id'] ) . '</span> <span class="pc-by-hint">点开修改</span></summary>';
+			self::form_pixel( 'ads' );
+			self::form_verify( false );
+			echo '</details>';
+		} else {
+			echo '<section class="pc-by-card">';
+			self::form_pixel( 'ads' );
+			echo '</section><section class="pc-by-card">';
+			self::form_verify( false );
+			echo '</section>';
+		}
+		if ( class_exists( \PeptideCore\Creatives\Ads_Panel::class ) ) {
+			\PeptideCore\Creatives\Ads_Panel::render_upload();
+			\PeptideCore\Creatives\Ads_Panel::render_links();
+			\PeptideCore\Creatives\Ads_Panel::assets();
+		}
+		echo '<details class="pc-by-card pc-by-generic-link"><summary><strong>通用链接（不绑定素材）</strong> <span class="pc-by-hint">只在临时测试时用，数据会算“未登记”</span></summary>';
 		self::form_link();
-		echo '</section></div>';
+		echo '</details></div>';
 	}
 
 	// ---------- 保存 ----------
@@ -590,8 +606,9 @@ final class Onboarding {
 	 * CR 素材归因（2026-11-11）：参数固定用 Contract::URL_TEMPLATE —— 广告系列 / 广告组 / 广告都用 ID（{{campaign.id}} 等），
 	 * 平台用 {{site_source_name}}，另带 placement 和 ad_name。动态参数由 Meta 投放时替换，所以不能转义。
 	 * $campaign、$source 是旧版（用名称）的参数，保留签名兼容旧调用，不再使用。
+	 * $code = 素材编号（2026-11-12）：给了就是这个素材的专属链接（多一个 cr=编号），见 Creatives\Ads_Panel。
 	 */
-	public static function ad_link( string $landing, string $campaign = '', string $source = '' ): string {
+	public static function ad_link( string $landing, string $campaign = '', string $source = '', string $code = '' ): string {
 		unset( $campaign, $source );
 		$landing = (string) preg_replace( '/#.*$/', '', trim( $landing ) );
 		$parts   = explode( '?', $landing, 2 );
@@ -603,7 +620,7 @@ final class Onboarding {
 				$query[] = $pair; // 落地页原有的参数保留，旧的 utm_ 和模板里的参数去掉。
 			}
 		}
-		$query[] = \PeptideCore\Creatives\Contract::URL_TEMPLATE;
+		$query[] = \PeptideCore\Creatives\Contract::creative_query( $code );
 		return $parts[0] . '?' . implode( '&', $query );
 	}
 

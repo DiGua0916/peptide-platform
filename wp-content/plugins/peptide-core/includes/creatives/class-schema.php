@@ -2,7 +2,7 @@
 /**
  * 素材归因（CR）店铺端的数据表。和访客追踪的表分开升级（版本选项 peptide_core_creatives_db）。
  *
- * - pc_ad_creatives：素材（编号、缩略图、属性），线 2 维护；
+ * - pc_ad_creatives：素材（编号、图片 / 视频封面、可选的视频文件、属性），在“广告设置”页上传（2026-11-12 起）；
  * - pc_ad_ads：广告（Meta 的 ad_id → 素材编号），访客第一次带着某个 ad_id 进站时由线 1 / 线 2 写入；
  * - pc_ad_daily_spend：每条广告每天的花费、展示、链接点击，线 2 从 Meta 导出的 CSV 导入；
  * - pc_ad_spend_imports：每次导入的记录；
@@ -19,7 +19,11 @@ defined( 'ABSPATH' ) || exit;
 
 final class Schema {
 
-	public const VERSION = '1';
+	/** 2 = 素材表加 video_id（2026-11-12）。 */
+	public const VERSION = '2';
+
+	/** 这些版本的表都能用（新列缺了不影响读写），只是要升级。 */
+	private const USABLE = array( '1', '2' );
 	public const OPTION  = 'peptide_core_creatives_db';
 	public const TABLES  = array( 'creatives', 'ads', 'daily_spend', 'spend_imports', 'attribute_vocab' );
 
@@ -29,12 +33,12 @@ final class Schema {
 	}
 
 	public static function installed(): bool {
-		return self::VERSION === get_option( self::OPTION );
+		return in_array( (string) get_option( self::OPTION ), self::USABLE, true );
 	}
 
-	/** 后台打开时检查一次；没装好就装（可重复执行）。 */
+	/** 后台打开时检查一次；没装好或版本旧就装（可重复执行，dbDelta 只补缺的列）。 */
 	public static function maybe_install(): void {
-		if ( ! self::installed() ) {
+		if ( self::VERSION !== get_option( self::OPTION ) ) {
 			self::install();
 		}
 	}
@@ -67,6 +71,7 @@ final class Schema {
   id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   code varchar(16) NOT NULL,
   attachment_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  video_id bigint(20) unsigned NOT NULL DEFAULT 0,
   attrs text NULL,
   custom text NULL,
   lang varchar(8) NOT NULL DEFAULT 'en',
