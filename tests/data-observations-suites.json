@@ -740,7 +740,8 @@
       "path": "wp-content/plugins/peptide-core/tests/m4-price-engine-pure.php",
       "core": true,
       "node_test": false,
-      "status": "m4-pricing"
+      "status": "module-gate",
+      "module": "M4"
     },
     {
       "name": "m4-engine-mode-pure",
@@ -748,7 +749,8 @@
       "path": "wp-content/plugins/peptide-core/tests/m4-engine-mode-pure.php",
       "core": true,
       "node_test": false,
-      "status": "m4-pricing"
+      "status": "module-gate",
+      "module": "M4"
     },
     {
       "name": "m4-marketing-quiet-pure",
@@ -756,7 +758,8 @@
       "path": "wp-content/plugins/peptide-core/tests/m4-marketing-quiet-pure.php",
       "core": true,
       "node_test": false,
-      "status": "m4-pricing"
+      "status": "module-gate",
+      "module": "M4"
     },
     {
       "name": "m4-campaigns-readonly-pure",
@@ -764,7 +767,8 @@
       "path": "wp-content/plugins/peptide-core/tests/m4-campaigns-readonly-pure.php",
       "core": true,
       "node_test": false,
-      "status": "m4-pricing"
+      "status": "module-gate",
+      "module": "M4"
     },
     {
       "name": "m4-marketing-quiet",
@@ -772,7 +776,8 @@
       "path": "wp-content/plugins/peptide-core/tests/m4-marketing-quiet.cjs",
       "core": true,
       "node_test": false,
-      "status": "m4-pricing"
+      "status": "module-gate",
+      "module": "M4"
     }
   ]
 }

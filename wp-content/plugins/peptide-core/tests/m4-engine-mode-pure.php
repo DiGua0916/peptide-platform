@@ -56,6 +56,10 @@ $check( '影子：挂上请求末尾的核对', has_action( 'shutdown' ) );
 $caps = apply_filters( 'pc_hq_capabilities', array( 'hq.capabilities' => '1' ) );
 $check( '向总后台声明支持的功能（功能键 => 版本号，不覆盖别人的）', '1' === ( $caps['pricing.engine'] ?? '' ) && '1' === ( $caps['marketing.quiet'] ?? '' ) && '1' === ( $caps['series.campaigns'] ?? '' ) && '1' === ( $caps['hq.capabilities'] ?? '' ) );
 
+m4_reset();
+$brief = Runtime::status_brief();
+$check( '给总后台状态用的简报：关着时只报档位，不查表', 'off' === $brief['mode'] && 0 === $brief['today']['compared'] && array() === $GLOBALS['wpdb']->writes );
+
 // ---------- 样例：关 / 影子 / 开 三档的顾客看到的数字 ----------
 $cases = m4_cases();
 $run   = static function ( callable $build, string $mode ) use ( $numbers ): array {

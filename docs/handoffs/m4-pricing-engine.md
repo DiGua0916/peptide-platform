@@ -1,6 +1,8 @@
 # M4 营销与价格引擎 · 交接（F2 价格营销会话）
 
-分支 `claude/m4-pricing-35ba90`，从主线 `codex/checkout-acceptance-20261105`（6aece05）开出，已合入主线到 2026-11-10 的最新提交。对应需求 NF-02（优惠部分）、HQ-07（店铺端）。接口约定见 `docs/CONTRACT.md` 文末的 M4 一节。
+分支 `claude/m4-pricing-35ba90`，从主线 `codex/checkout-acceptance-20261105` 开出，已合入主线到 `976c1fa`（2026-11-11）。对应需求 NF-02（优惠部分）、HQ-07（店铺端）。接口约定见 `docs/CONTRACT.md` 文末的 M4 一节；沙盒走查清单见 `docs/handoffs/m4-sandbox-walkthrough.md`。
+
+> **2026-11-12 要先看的一件事**：主线的“手动订单”（11-10 起）把**加购推荐**关掉了——它在每个请求上往购物车计算的钩子加了回调，加购推荐的报价只认白名单里的回调，于是整体放弃。这不是 M4 引起的，优惠码那一半 F2 已修，剩下的要日常会话改 `activity/class-quote-cart.php`（两处，写在 CONTRACT 的 M4 一节“给日常会话”第 1 条）。在生产上核对：`wp eval 'var_dump( \PeptideCore\Activity\Quote_Cart::supported_hooks() );'`，`false` 即中招。
 
 本文分四部分：一、现有 7 处优惠逻辑盘点；二、新引擎和开关；三、怎么验证；四、下一步怎么切换。
 
@@ -59,6 +61,23 @@
 4. **满减的负数费用有上限**，超出部分被 WooCommerce 截掉（样例 49、50），订单里记的活动金额会比活动设置的小。
 5. `tests/first-order-offer-pure.php` 在主线上就有 4 项不通过（63 项里的后台保存 4 项）。原因是 11-08 首单优惠后台保存加了 `Apps_Page::require_allowed()`，测试里没有跟着补这个替身，和本次改动无关；见文末“遗留问题”。
 
+### 5. 2026-11-12 同步主线（976c1fa）后新增的“读优惠 / 算优惠”的地方
+
+主线在 11-10 至 11-11 多了约 50 个提交，F2 名下的文件没有被改。逐个看过代码，结论：
+
+| 新功能 | 文件（归属） | 和优惠的关系 | 引擎关着时 | 影子档 |
+| --- | --- | --- | --- | --- |
+| **手动订单链接** | `class-manual-orders.php`（日常） | **第 8 处会改金额的地方。** 每个请求都挂着四个回调：`woocommerce_before_calculate_totals`（9999）把链接里的商品改成店主配的价；`woocommerce_cart_calculate_fees`（99）去掉满减费用（这一单开了“店铺满减”就只留选中的活动），再加上店主配的自定义优惠 `pc-manual-<n>`；`woocommerce_package_rates`（9999）把运费换成店主配的；`woocommerce_coupon_is_valid`（9999）挡掉首单券以外的优惠码。只对带 `pc_manual` 标记的购物车生效 | 不变（引擎没碰它） | 引擎已认识手动订单的购物车，不会误报。对照样例 53–59，随机购物车里 20% 是手动订单 |
+| 手动订单后台的“这一单满减能减多少” | 同上 | 读：用一份临时购物车调 `Promotions::discounts()` | 不变 | 不经过请求末尾的核对；开档时这次调用也由引擎给数，出错退回旧逻辑 |
+| 运费预览 | `class-ship-preview.php`（日常） | 读：`Shipping\Discounts::applicable()` + `discounted()` 自己取折后最低 | 不变 | 不影响购物车，不参与核对 |
+| 商品页的满减档位券（带进度和锁） | 主题 `product-dialog-experience.js`（F5 / 日常） | 读：Store API 购物车扩展里的 `activity_listener`（`Activity\Progress::for_cart()` → `Promotions::discounts()`）。浏览器不自己算折扣 | 不变 | 不影响购物车 |
+| 购物车金额统一口径 | `tracking/class-carts.php` 等（F4 / 日常） | 读：WooCommerce 会话里算好的应付总额 | 不变 | 不影响购物车 |
+
+手动订单带来两个要别人处理的问题（都写进了 CONTRACT 的 M4 一节）：
+
+1. **加购推荐被关掉**（见本文开头）。
+2. 手动订单链接的说明写的是“不叠加店铺的满减活动和优惠券、运费优惠”，实际代码里：店主没填自定义运费时，店铺的**运费折扣照常生效**（样例 54）。引擎照代码做。要不要改由平台所有者定。
+
 ---
 
 ## 二、新引擎和开关
@@ -78,6 +97,7 @@
 | `class-cli.php` | `wp peptide price-engine …` |
 | `class-popups.php` | 营销弹窗静默开关（和价格无关，放在这里是因为归 M4） |
 | `class-campaigns.php` | 当前在跑的活动（HQ-07 只读视图用） |
+| `class-series-campaigns.php` | 按系列接收营销活动：M3 的四个钩子（下发、导出、快照、恢复）；系列下发的活动只读 |
 
 旧类的改动（都很小，关着时不走）：
 
@@ -108,21 +128,32 @@
 
 ---
 
-## 三、怎么验证
+## 三、怎么验证（2026-11-12 的实际结果）
 
-全部是不连 WordPress、不连数据库的脚本测试，`php -n <文件>` 或 `node <文件>` 直接跑；已追加到 `tests/data-observations-suites.json`（5 条，`status: m4-pricing`）。
+本机现在有原生 PHP 8.3.32、Node 26、WooCommerce 11.2.1 源码和一个真实的本地站点（WordPress 7.1.4 + WooCommerce 11.2.1，SQLite）。F2 用的是这个站点的**私有副本**（数据库复制一份、插件指向本分支），没有动共用的那份。
 
-| 测试 | 内容 | 2026-11-10 实际结果 |
+**不需要站点的测试**（`php -n <文件>` / `node <文件>`；5 条已登记在 `tests/data-observations-suites.json`，`module-gate` / `M4`）：
+
+| 测试 | 内容 | 结果 |
 | --- | --- | --- |
-| `tests/m4-price-engine-pure.php` | 52 个购物车样例（单品、多品、满减边界、七种满减类型、券叠加 / 不叠加 / 替换、首单、积分券、赠品、捆绑、运费折扣、推荐券和转盘券组合、负数费用封顶）+ 3000 份随机购物车：旧逻辑和引擎逐分一致；其中 31 个样例另有手算的应付总额 | 全部一致。另用 `--fuzz=30000` 跑过 3 万份，全部一致 |
-| 同上，`PC_WC_SRC=<woocommerce 目录>` | 金额计算改用**真实的 WooCommerce 源文件**（`WC_Discounts`、`WC_Cart_Totals`、`WC_Cart_Fees`、`NumberUtil`，trunk，11-10 取） | 52 个样例 + 3 万份随机购物车全部一致 |
-| `tests/m4-engine-mode-pure.php` | 32 项：默认关；关着不挂钩子；52 个样例和 1500 份随机购物车在关 / 影子 / 开三档下顾客看到的数字逐分相同、核对结果“一致”；开档引擎出错退回旧逻辑；不一致、跳过、出错的记录内容；常量一键关闭 | 32 / 32 |
-| `tests/m4-marketing-quiet-pure.php`、`tests/m4-marketing-quiet.cjs` | 静默开关：服务端 17 项、前台 16 项；含“静默与否价格逐分相同”“不静默时弹窗照常” | 17 / 17、16 / 16 |
-| `tests/m4-campaigns-readonly-pure.php` | HQ-07：投手打开新建 / 编辑地址 403，列表只读，提交保存 / 启停 / 批量 403；管理员照旧 | 32 / 32 |
-| 变异检查（手工） | 故意改错引擎的 8 处（取整方式、活动优先级、负数费用封顶、运费取最低、捆绑零头、替换策略、优惠码顺序……） | 每一处都被对照测试抓到 |
-| 原有测试 | `tests/run-data-observations.cjs` 默认 51 组，改动前后对比 | 结果完全相同（改动前后都是同样的 10 组不通过，见“遗留问题”）；`first-order-offer-pure.php` 从 59 / 63 变为 63 / 63 |
+| `tests/m4-price-engine-pure.php` | 59 个购物车样例（单品、多品、满减边界和七种类型、券叠加 / 不叠加 / 替换、首单、积分券、赠品、捆绑、运费折扣、推荐券和转盘券、负数费用封顶、**手动订单 7 个**）+ 3000 份随机购物车：旧逻辑和引擎逐分一致；37 个样例另有手算的应付总额 | 全部一致；`--fuzz=30000` 也全部一致 |
+| 同上，`PC_WC_SRC=<woocommerce 目录>` | 金额计算改用真实的 WooCommerce 源文件（`WC_Discounts`、`WC_Cart_Totals`、`WC_Cart_Fees`、`NumberUtil`） | 用本机 WooCommerce **11.2.1** 的源码：59 个样例 + 3 万份全部一致；用 trunk（11-10 取）：同样一致 |
+| `tests/m4-engine-mode-pure.php` | 33 项：默认关、关着不挂钩子；59 个样例和 1500 份随机购物车在关 / 影子 / 开三档下顾客看到的数字逐分相同、核对“一致”；开档出错退回；日志内容；常量一键关闭；功能声明 | 33 / 33 |
+| `tests/m4-marketing-quiet-pure.php`、`tests/m4-marketing-quiet.cjs` | 静默开关：服务端 17 项、前台 16 项 | 17 / 17、16 / 16 |
+| `tests/m4-campaigns-readonly-pure.php` | 50 项：投手只读（403、只读列表）；系列下发的活动对所有人只读；系列接管后店铺后台不给新建入口 | 50 / 50 |
+| 变异检查（手工） | 故意改错引擎 12 处（取整、活动优先级、封顶、运费取最低、捆绑零头、替换策略、优惠码顺序、手动订单的四条规则） | 每一处都被抓到 |
+| 原有测试 | `tests/run-data-observations.cjs` 默认套件，改动前后对比 | 没有新增失败（改动前后都是同样的 9 组不通过，见“遗留问题”）；`first-order-offer-pure.php` 63 / 63 |
 
-**没有做的验证（如实说明）**：这台开发机没有 PHP、没有 WooCommerce 站点，以上是在 PHP 8.3（WebAssembly 版）里用替身购物车跑的；替身的金额算法和真实 WooCommerce 源文件对过。**还没有在真实的 WordPress + WooCommerce 站点上跑过**——影子模式在沙盒跑通、无差异日志这一条，要等 F1 的沙盒 / 本地环境。
+**真实 WordPress + WooCommerce 上的测试**（`wp eval-file`，本机私有副本）：
+
+| 测试 | 内容 | 结果 |
+| --- | --- | --- |
+| `tests/m4-shadow-walkthrough-native.php` | 临时建数据，24 个组合在影子档和开档各走一遍，引擎逐项核对；另走一次请求末尾的入口，确认真的写进统计表 | 一致 48，不一致 0，跳过 0（运费 $15、运费折扣 5 折的情况下） |
+| `tests/m4-series-campaigns-native.php` | 按系列接收活动：试运行、下发、重复下发、不合规、全量对齐、冲突、快照恢复、导出；真实购物车里下发的满减和首单券生效 | 23 / 23 |
+| F3 的真实同步入口（手工） | 把 F3 分支的 `class-series-sync.php` 临时放进私有副本，调 `Series_Sync::sync()` / `restore()` | 试运行出差异、下发记版本、同版本跳过、少发的停用、恢复后回来、不合规返回错误且不记版本——都符合 M3 的约定。临时文件已删，没有提交 |
+| 加购推荐的钩子白名单（手工） | `Quote_Cart::supported_hooks()`、`Recommendation_Coupon::coupon_hooks_supported()` | 主线上两个都是 false；F2 改了自己那半之后优惠码的为 true，报价的仍为 false（等日常会话） |
+
+**还没有做的验证**：没有在 F1 的沙盒（MySQL、s0010 的脱敏数据、nginx）上跑；没有用浏览器走过前台流程（Store API、弹窗领券、分享链接）。这两项按 `docs/handoffs/m4-sandbox-walkthrough.md` 由 F1 执行。积分券在真实站点上没有走（本地站点是 SQLite，积分表要 InnoDB），只在不需要站点的测试里覆盖。
 
 ---
 
@@ -131,29 +162,30 @@
 按开发文档 12.6 的步骤，由 F1 发布、平台所有者确认。每一步都能单独退回（把档位拨回 `off`）。
 
 1. **合并和发布**：本分支合进主线，随 `peptide-core` 正常发布到沙盒。此时所有店都是 `off`，线上行为不变，也不会建表。
-2. **沙盒开影子档**：`wp peptide price-engine mode shadow`（或总后台调 `POST /hq/pricing-engine`）。在沙盒前台把下面的组合各走一遍到结账页：
-   - 普通商品 1 件、多件；有满减的商品刚好到门槛、差一点；
-   - 手输优惠码、首单券 WELCOME5、分享链接带券、加购推荐券、离开挽回弹窗 / 转盘领的券；
-   - “不叠加”“替换”策略的券遇到满减；积分兑换的券；
-   - 赠品自动加入、加捆绑、捆绑后再输券；
-   - 有运费折扣时填地址选运费。
-3. **看结果**：`wp peptide price-engine status`、`wp peptide price-engine log`。要求：有“一致”的计数，`mismatched` 和 `errors` 都是 0。出现“跳过”时看原因（`log` 里的 `reason`），按第二部分第 3 点判断是不是这家店的设置所致。
-4. **生产开影子档**：先试点店（s0001），观察 24 小时；再开其余 5 家，观察几天。影子档不改价格，可以放心开。每天看一眼 `status`。
-5. **有不一致怎么办**：`log` 里每条都有购物车内容（商品 ID、数量、单价、券的类型和金额、活动 ID）、新旧各项数字和引擎的优惠明细，交给 F2 复现——把它加进 `tests/fixtures/m4-cases.php` 作为新样例，修到一致再继续。**不一致没清零之前不要开 `on`。**
-6. **开 `on`**：影子档连续几天 `mismatched = 0`、`errors = 0` 后，先试点店 `wp peptide price-engine mode on`，对比开启前后同时段的销售额、支付成功率、报错；再开全部店。
-7. **出问题**：`wp peptide price-engine mode off`；总后台够不着时，在该店 `wp-config.php` 里加 `define( 'PC_PRICING_ENGINE_MODE', 'off' );`。不需要回滚代码。
-8. **下一个版本**：开档稳定后，再做两件事——把优惠码“能不能用”的四个检查也改为由引擎判定（现在引擎只是复算核对）；删掉旧类里被引擎替代的算法（按开发文档 10.2，旧代码保留一个版本再删）。
+2. **沙盒走查**：照 `docs/handoffs/m4-sandbox-walkthrough.md`——第 0 步确认关着时没变，第 1 步一条命令走完 24 个组合（影子档 + 开档），第 2 步按系列接收活动，第 3 步开影子档用浏览器走真实流程。每一步写了看哪条命令的输出、什么算通过、不通过怎么办。
+3. **生产开影子档**：先试点店（s0001）`wp peptide price-engine mode shadow`，观察 24 小时；再开其余 5 家，观察几天。影子档不改价格。每天看一眼 `wp peptide price-engine status`（或总后台的巡检，见 CONTRACT 给 F1 的第 2 条）。
+4. **有不一致怎么办**：`wp peptide price-engine log` 里每条都有购物车内容（商品 ID、数量、单价、券的类型和金额、活动 ID）、新旧各项数字和引擎的优惠明细，交给 F2 复现——把它加进 `tests/fixtures/m4-cases.php` 作为新样例，修到一致再继续。**不一致没清零之前不要开 `on`。**
+5. **开 `on`**：影子档连续几天 `mismatched = 0`、`errors = 0` 后，先试点店 `wp peptide price-engine mode on`，对比开启前后同时段的销售额、支付成功率、报错；再开全部店。
+6. **出问题**：`wp peptide price-engine mode off`；总后台够不着时，在该店 `wp-config.php` 里加 `define( 'PC_PRICING_ENGINE_MODE', 'off' );`。不需要回滚代码。
+7. **下一个版本**：开档稳定后再做两件事——把优惠码“能不能用”的四个检查也改为由引擎判定（现在引擎只是复算核对）；删掉旧类里被引擎替代的算法（旧代码保留一个版本再删；删的时候保留手动订单、运费预览在用的那几个方法，清单见 CONTRACT）。
+
+**系列活动怎么上线**（依赖 M3）：M3 合进主线并发布后，店铺端自动接上四个钩子，不需要另开开关。总后台第一次给一家店下发活动前先发 `dry_run`，看 `diff.campaigns`：`conflict` 的条目是和这家店自己建的活动撞了，由平台所有者决定停哪一个；`skipped` 是活动指定的商品在这家店找不到（先同步商品）。确认后再正式下发。下发后这家店的营销活动页面对店员变成只读。
 
 ### 还没做的
 
-- 按系列接收营销活动（`Series_Campaigns`）：等 F3 的系列结构定稿，约定已写在 `docs/CONTRACT.md` 的 M4 一节。
-- 总后台的三档开关界面和巡检告警：接口已提供，界面由 F1 / 日常会话在总后台实现（见 CONTRACT）。
+- 系列下发 `upsell`（加购推荐）和 `progress_bar`（进度条）：它们的设置只能由登录的管理员保存，等日常会话提供写入入口（CONTRACT 给日常会话的第 4 条）。现在收到会标 `unsupported`。
+- 总后台的三档开关界面、巡检告警、系列活动的编辑界面：店铺端接口都已提供，界面由 F1 / F3 / 日常会话在总后台实现。
 - 店铺后台没有做引擎开关的界面（用命令行、总后台接口或常量）。
-- 带系列标记的活动在店铺后台“对所有人只读”还没做（现在只区分投手和非投手）。
-- 主线 11-10 新加的运费预览（`class-ship-preview.php`，日常会话）自己调用 `Shipping\Discounts::applicable()` / `discounted()` 取折后最低，相当于第 8 处读运费折扣的地方。它只读、规则和引擎一致，这次没动；以后删旧算法时要保留这两个方法，或者让它改调引擎。
+- 优惠码“能不能用”仍由原来的四个检查执行（见第四部分第 7 步）。
+- WooCommerce 的 REST 接口（`wc/v3/coupons`）改系列下发的券没有拦（后台页面和原编辑页已拦）。现在没有人用这个接口改券；要拦的话在下一版加。
+
+### 需要平台所有者定的
+
+1. 手动订单链接没填自定义运费时，店铺的运费折扣要不要生效（现在生效，和说明文字不一致）。
+2. 盘点第 4 点里的两个现状要不要改：挂着但不能用的优惠码会关掉“不能和优惠码同时使用”的满减；捆绑之后输优惠码，捆绑恢复原价、券也不能用。
+3. 系列接管营销活动后，店铺后台现在的做法是：店员只读，平台管理员（总后台一键登录）还能处理本店自己建的活动，系列下发的谁都不能改。要不要连管理员也完全只读。
 
 ### 遗留问题（不是本次改动造成的，记给归属会话）
 
-- 默认测试套件在这台机器的 PHP 8.3 下有 10 组不通过，改动前后一样：`country-resource-attribution-pure`、`data-native-search-pure`、`data-product-action-rankings-pure`、`data-product-user-ratios-node`、`experiment-data-pure`、`mail-source-observations`、`tracking-product-actions-pure`、`tracking-store-api-cart-success-pure`、`visitor-intents`、`visitor-product-actions`（都在追踪 / 数据模块，归 F4；清点归 F1）。另有不在默认套件里的 `fragment-cache-pure.php`、`page-cache-pure.php` 也不通过。
-- `tests/first-order-offer-pure.php` 原有的 4 项不通过已顺手修好（测试里补上 `Apps_Page::require_allowed` 的替身）。
-- 项目聊天室（`docs/chat/ROOM.md`）在这台 Mac 上不存在（它是另一台 Windows 机器上的本地文件），所以开工、完工登记写在了并行会话的共享笔记目录里，没有发到聊天室。
+- 默认测试套件用本机原生 PHP 8.3.32 跑，有 9 组不通过，改动前后一样：`data-native-search-pure`、`data-product-action-rankings-pure`、`data-product-user-ratios-node`、`experiment-data-pure`、`mail-source-observations`、`tracking-product-actions-pure`、`tracking-store-api-cart-success-pure`、`visitor-intents`、`visitor-product-actions`（都在追踪 / 数据模块）。
+- 项目聊天室（`docs/chat/ROOM.md`）在这台 Mac 上不存在，开工、完工登记写在并行会话的共享笔记目录里。

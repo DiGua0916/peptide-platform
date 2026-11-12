@@ -158,6 +158,16 @@ final class Runtime {
 		return self::status();
 	}
 
+	/** 给 /hq/status 用的简报（F1 的巡检不另发请求）：档位和今天的核对次数。关着时不查表。 */
+	public static function status_brief(): array {
+		$mode  = Mode::get();
+		$today = array( 'compared' => 0, 'matched' => 0, 'mismatched' => 0, 'skipped' => 0, 'errors' => 0 );
+		if ( Mode::OFF !== $mode ) {
+			$today = array_merge( $today, (array) ( Shadow::summary( 1, 0 )['totals'][ $mode ] ?? array() ) );
+		}
+		return array( 'mode' => $mode, 'today' => $today );
+	}
+
 	public static function mode_route( \WP_REST_Request $request ) {
 		$p    = (array) $request->get_json_params();
 		$done = Mode::set( is_string( $p['mode'] ?? null ) ? $p['mode'] : '' );

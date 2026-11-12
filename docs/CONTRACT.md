@@ -612,7 +612,7 @@ P07/P08 necessary actual WP three domains and exact DB/MU/token cleanup complete
 Root installed only three existing Commerce sources for P09 collection products and P10 product carousel after independent c645/eac4 review. Formal collection-products-carousel-integration/work/freeze-pin.json2c7c9648..., 47primary+53readonly=100 unique, five LF hunks/exact inverse/fresh dependencies/backups/PHP1JS1 passed. Original Registry/theme/Controls/P05/P07/P08 behavior and precise C20/C21 scope preserved; new theme-template dependency is readonly. P09 had no reference full-width setting, so none invented; P10 keeps its confirmed control. Actual WP validation remains pending with sole QA; reference48/70 currentP13, later tabs remain task-only. Whole70 batch Git and deferred external-service policy remain.
 
 
-## M4 营销与价格引擎（2026-11-10，F2 价格营销会话；需求 NF-02 优惠部分、HQ-07）
+## M4 营销与价格引擎（F2 价格营销会话；需求 NF-02 优惠部分、HQ-07；2026-11-12 更新）
 
 本节由 F2 维护，其他会话只读。代码在 `wp-content/plugins/peptide-core/includes/pricing/`，说明见 `docs/handoffs/m4-pricing-engine.md`。
 
@@ -620,7 +620,7 @@ Root installed only three existing Commerce sources for P09 collection products 
 
 **1. 营销弹窗“静默”开关（给 M11 已购回访用）**
 
-静默时：首单券条、离开挽回弹窗、抽奖转盘、活动倒计时不出现；满减、优惠码、赠品、运费折扣等价格优惠照常生效，WELCOME5 等券仍可手动输入使用。
+过滤器名：**`pc_marketing_popups_suppressed`**。静默时：首单券条、离开挽回弹窗、抽奖转盘、活动倒计时不出现；满减、优惠码、赠品、运费折扣等价格优惠照常生效，WELCOME5 等券仍可手动输入使用。
 
 | 方式 | 用法 | 说明 |
 | --- | --- | --- |
@@ -640,9 +640,9 @@ $result = \PeptideCore\Pricing\Engine::price( $input );          // 纯计算
 
 `$result`（金额一律是“分”）：
 
-- `entries[]`：优惠明细。每条 `source`（`promotion` 满减 / `coupon` 优惠码 / `first_order` 首单券 / `loyalty` 积分券 / `recommendation` 加购推荐券 / `exit_intent` 离开挽回或转盘发的券 / `gift` 赠品 / `bundle` 捆绑 / `shipping_discount` 运费折扣）、`id`、`label`、`amount_cents`（正数 = 省了多少）、`stacking`（能否和优惠码、满减、赠品、捆绑同时用）。
-- `rejected[]`：这一次没生效的优惠和原因（如 `no_stack_with_promotion`、`first_order_only`、`replaced_by_coupon`）。
-- `totals`：`items_subtotal_cents`、`coupon_discount_cents`、`items_total_cents`、`fees_cents`（满减，负数）、`shipping_original_cents`、`shipping_cents`、`total_cents`。
+- `entries[]`：优惠明细。每条 `source`（`promotion` 满减 / `coupon` 优惠码 / `first_order` 首单券 / `loyalty` 积分券 / `recommendation` 加购推荐券 / `exit_intent` 离开挽回或转盘发的券 / `gift` 赠品 / `bundle` 捆绑 / `shipping_discount` 运费折扣 / `manual_discount` 手动订单链接里店主配的优惠）、`id`、`label`、`amount_cents`（正数 = 省了多少）、`stacking`（能否和优惠码、满减、赠品、捆绑同时用）。
+- `rejected[]`：这一次没生效的优惠和原因（如 `no_stack_with_promotion`、`first_order_only`、`replaced_by_coupon`、`manual_order`）。
+- `totals`：`items_subtotal_cents`、`coupon_discount_cents`、`items_total_cents`、`fees_cents`（满减和手动优惠，负数）、`shipping_original_cents`、`shipping_cents`、`total_cents`。
 - `supported` / `unsupported[]`：引擎算不了的情况（价格含税、别的插件加的费用或价格过滤器、非原生的优惠码类型）。
 - 税：引擎不算税，`total_cents` 不含税。
 
@@ -655,56 +655,116 @@ $result = \PeptideCore\Pricing\Engine::price( $input );          // 纯计算
   - `GET peptide/v1/hq/pricing-engine` → `{ mode, locked, engine, summary: { days, totals: { <mode>: { compared, matched, mismatched, skipped, errors } }, recent: [ { id, created_gmt, kind, mode, legacy_cents, engine_cents, detail } ] } }`
   - `POST peptide/v1/hq/pricing-engine`，请求体 `{ "mode": "shadow" }` → 同上；档位不合法或被常量锁定时 400。
 - 命令行：`wp peptide price-engine status | mode <off|shadow|on> | log [--limit=20] | clear`。
-- 功能声明：过滤器 `pc_hq_capabilities` 里会加上 `pricing_engine`、`marketing_quiet`。
-- 数据表（懒建，第一次有记录要写时才建；版本选项 `pc_m4_db`）：`{prefix}pc_m4_shadow_stats`、`{prefix}pc_m4_shadow_log`（只留最近 300 条，不含顾客邮箱等个人信息）。
 
-**4. 营销活动的权限和只读视图（HQ-07 店铺端）**
+**4. 营销活动的权限和只读（HQ-07 店铺端）**
 
-- `\PeptideCore\Admin\Marketing::can_manage()`：能否新建 / 编辑 / 启停 / 删除营销活动。投手角色 `pc_media_buyer` 一律为假（即使被误授了 `edit_shop_coupons`）；可用过滤器 `pc_marketing_can_manage` 调整。
+- `\PeptideCore\Admin\Marketing::can_manage()`：能否新建 / 编辑 / 启停 / 删除营销活动。为假的情况：投手角色 `pc_media_buyer`（即使被误授了 `edit_shop_coupons`）；营销活动已由系列接管（`Series_Sync::manages( 'campaign' )`）而当前用户不是平台管理员（没有 `manage_options`）。可用过滤器 `pc_marketing_can_manage` 调整。
 - `Marketing::can_view()`：有 `edit_shop_coupons` 或只读权限 `pc_view_campaigns` 的人可以打开营销活动页面；`Marketing::menu_cap()` 返回注册菜单时该用的权限名。
 - 只读的人打开满减 / 优惠码 / 运费折扣页面看到的是“当前在跑的活动”；带 `new`、`edit` 参数的地址和所有保存 / 启停 / 批量请求返回 403。
+- `Marketing::locked( $kind, $id )`（`promotion` / `coupon` / `ship_discount`）：这条活动是不是系列统一下发的。**带系列标记的活动对所有人只读（管理员也一样）**：三个营销页面的编辑、保存、启停、批量，WooCommerce 原优惠券编辑页，首单优惠配置页，离开挽回的保存（`Exit_Intent::save()`，登录用户）都会拒绝；总后台的应用开关（没有登录用户）仍可关掉弹窗。要改只能在总后台改系列活动。
 - `\PeptideCore\Pricing\Campaigns::running()`：当前在跑的活动列表，每条 `kind`、`id`、`name`、`rule`、`ends`（UTC 秒，0 = 长期）、`source`（`series` = 系列统一下发，`store` = 本店自建）。
+
+**5. 按系列接收营销活动（已实现，`\PeptideCore\Pricing\Series_Campaigns`，接 M3 的四个钩子）**
+
+M3 定的外形：`{ kind, key, active, config }`。M4 定的 `config`（没写的字段用该功能的默认值；看不懂的字段忽略）：
+
+| kind | 写到哪里 | config |
+| --- | --- | --- |
+| `promotion` | 满减活动 | `name`（≤50 字，必填）、`type`（`spend_amount` / `spend_percent` / `qty_amount` / `qty_percent` / `nth_percent` / `bundle_price` / `buy_x_free_y`）、`tiers: [ { min, value } ]`（最多 5 档）、`unlimited`、`start` / `end`（UTC 秒，0 = 不限）、`scope`（`all` / `categories` / `products`）、`categories: [ 专辑名称或别名 ]`、`products: [ 系列商品键 sku ]`、`sort`、`exclude_sale`、`with_coupons`、`public`、`text` |
+| `coupon` | WooCommerce 优惠码 + 本插件的规则 | `code`（必填）、`description`、`type`（`percent` / `fixed_cart` / `fixed_product`）、`amount`、`start` / `end`、`usage_limit`、`usage_limit_per_user`、`limit_usage_to_x_items`、`individual_use`、`free_shipping`、`exclude_sale_items`、`minimum_amount`、`maximum_amount`、`products` / `excluded_products: [ sku ]`、`categories` / `excluded_categories: [ 专辑 ]`、`strategy`（`stack` 默认 / `no_stack` / `replace`）、`first_order`、`min_spend`、`min_qty`、`public`、`public_title`、`public_text` |
+| `ship_discount` | 运费折扣 | `name`（必填）、`mode`（`fixed` / `stages`）、`kind`（`amount` / `percent`）、`value`、`start` / `end`、`stages: [ { start, end, value } ]`、`member_day`、`member_days: [ 1–7 ]` |
+| `first_order` | 首单优惠（一家店一份） | `coupon`：绑定哪张优惠码（同一批里的 `coupon`，或本店已有的）。这张券必须是按比例 5%、`first_order: true`、`usage_limit_per_user: 1`、`strategy: stack`、不是 `individual_use`、不含 `free_shipping` |
+| `exit_intent` | 离开挽回弹窗（一家店一份） | `type`（`coupon` / `message`）、`title`、`text`、`button`、`decline`、`color`、`coupon`（优惠码）、`link`、`desktop_exit`、`mobile: [ back / scroll / return / idle / bottom ]`、`idle_seconds`、`min_seconds`、`pages`、`audience`、`frequency_days` |
+| `wheel` | 同一个弹窗的转盘类型 | 同上的触发和文字字段，另有 `spin_button`、`win_title`、`win_text`、`lose_text`、`prizes: [ { label, coupon, weight } ]`（2–8 个）。`exit_intent` 和 `wheel` 同时只能启用一个 |
+| `upsell`、`progress_bar` | — | **这一版不接**，结果里标 `unsupported`（见第二部分给日常会话的第 4 条） |
+
+规则：
+
+1. **引用**：商品用系列商品键（按 `_pc_series_sku` → `_pc_spu` → SKU → `slug:<别名>` 找），专辑用名称或别名。找不到的记在结果的 `missing` 里；指定的商品 / 专辑一个都找不到时这条标 `skipped`。
+2. **标记和只读**：满减、优惠码带 meta `_pc_series_campaign = "<kind>/<key>"`；运费折扣、首单、离开挽回是各自设置里的 `series_key`。带标记的对所有人只读（见第 4 点）。
+3. **全量对齐**：带标记但这次没下发的改为停用，不删除（订单上还引用）。本店自己建的活动不动。首单优惠和离开挽回一家店只有一份：系列下发时接管，停用时还原成接管前本店自己的设置。
+4. **冲突**：和本店自建且启用的满减（同范围、时间重叠）或同码的自建优惠券冲突时，不覆盖本店的，这条标 `conflict`，其余照常。
+5. **整体检查**：任何一条内容不合规（`error`）就一条都不写，`pc_series_apply_campaigns` 返回 `WP_Error( 'pc_series_campaigns_invalid' )`（HTTP 422，`data.report` 里有每条的原因），店铺不记 `campaign_ver`。`skipped` / `conflict` / `unsupported` 不算错误。
+6. **幂等**：内容和启用状态都没变的条目标 `unchanged`，不重复写。
+7. **返回 / 差异**（`applied.campaigns` 和 `diff.campaigns` 同一个外形）：`{ summary: { <状态>: 条数 }, items: [ { kind, key, status, message?, missing? } ] }`。下发时的状态：`applied` / `unchanged` / `disabled` / `skipped` / `conflict` / `unsupported`；试运行时是 `create` / `update` / `unchanged` / `disable` / `skipped` / `conflict` / `unsupported` / `error`。
+8. **导出**（母版店，`pc_series_export_campaigns`）：未结束的满减、非个人的优惠码（不含积分兑换券、限定邮箱的券、已过期的券）、非指定顾客的运费折扣、首单优惠、离开挽回。本店自建的条目的 `key`：满减 `p<ID>`、优惠码用码本身（不合规时 `c<ID>`）、运费折扣 `s<ID>`、首单和弹窗 `main`。
+9. **快照 / 恢复**：快照里记“当时接管着的系列活动”（`$snapshot['campaigns'] = { ver, items, store }`）；恢复 = 按那份清单重新对齐（之后新下发的停用，当时在跑的按当时的内容恢复）。快照里没有 `campaigns` 时恢复不动活动。
+10. 店铺选项 `pc_series_campaigns`（不自动加载）记当前接管着的清单和接管前本店自己的首单 / 弹窗设置。
+
+**6. 功能键（请 F1 汇总进功能键表）**
+
+| 功能键 | 版本 | 含义 |
+| --- | --- | --- |
+| `pricing.engine` | 1 | 支持价格引擎三档开关和 `/hq/pricing-engine` |
+| `marketing.quiet` | 1 | 支持营销弹窗静默开关 |
+| `campaigns.readonly` | 1 | 投手只读、系列下发的活动只读 |
+| `series.campaigns` | 1 | 能接收系列下发的营销活动（`pc_series_apply_campaigns` 等四个钩子已接） |
+
+**7. 数据表和选项登记（给 F1 的脱敏快照）**
+
+| 表 / 选项 | 有没有顾客资料或密钥 | 建议 |
+| --- | --- | --- |
+| `{prefix}pc_m4_shadow_stats`（每天每档的核对次数） | 没有 | truncate |
+| `{prefix}pc_m4_shadow_log`（不一致 / 出错 / 跳过的明细，最多 300 条） | 没有邮箱、姓名、地址；有商品 ID、数量、单价、优惠码（积分券只记 ID） | truncate |
+| 选项 `pc_pricing_engine_mode`、`pc_m4_db`、`pc_series_campaigns` | 没有 | keep（快照导入沙盒后建议把 `pc_pricing_engine_mode` 设回 `off`） |
+| 优惠码 / 满减的 meta `_pc_series_campaign`、`_pc_series_campaign_hash` | 没有 | keep |
+
+两张表是懒建的（第一次有记录要写时才建，版本选项 `pc_m4_db`），关着时不存在。
+
+**8. 沙盒 / 本地站点上的验证脚本（真实 WordPress + WooCommerce）**
+
+```bash
+M4_WALKTHROUGH=sandbox wp eval-file wp-content/plugins/peptide-core/tests/m4-shadow-walkthrough-native.php   # 影子档和开档走查
+M4_WALKTHROUGH=sandbox wp eval-file wp-content/plugins/peptide-core/tests/m4-series-campaigns-native.php     # 按系列接收活动
+```
+
+两个脚本都会临时建数据、结束时删除并恢复选项；域名里不带 `sandbox` / `localhost` / `local` / `test` / `staging` 时拒绝运行。完整步骤见 `docs/handoffs/m4-sandbox-walkthrough.md`。
 
 ### 二、需要其他会话配合
 
-| 给谁 | 需要什么 | 没到之前 |
-| --- | --- | --- |
-| F1（发布、连接） | ① `/hq/status` 里触发 `apply_filters( 'pc_hq_capabilities', array() )` 并返回功能列表；② 总后台巡检（`pchq_monitor_checks`）加一项：对声明了 `pricing_engine` 的店定时取 `GET /hq/pricing-engine`，`mismatched` 或 `errors` 大于 0 时告警；③ 总后台给每家店一个三档开关（调 `POST /hq/pricing-engine`）；④ 沙盒先开影子档跑一轮，按 `docs/handoffs/m4-pricing-engine.md` 第四部分的步骤 | 用命令行或 `wp-config.php` 常量切档；不影响线上（默认关） |
-| F5（投手后台、已购回访） | ① 投手角色名用 `pc_media_buyer`，给它只读权限 `pc_view_campaigns`，**不要**给 `edit_shop_coupons`；② `Admin_Menus::add_menus()` 里营销活动菜单的显示条件改为 `Marketing::can_view()`、权限参数改为 `Marketing::menu_cap()`；③ 已购回访在 `/buyer/status` 返回“已购”后调用 `window.pcMarketingQuiet.suppress( { days } )`，服务端可挂 `pc_marketing_popups_suppressed` | 投手看不到营销活动菜单（等同没有入口）；弹窗不静默 |
-| 日常会话 | ① `admin/class-product-offers-page.php`（赠品 / 捆绑）和 `admin/class-apps-page.php` 里离开挽回的设置页，界面上对 `! Marketing::can_manage()` 的人隐藏保存入口（服务端 `Product_Offers::store()` 已经拒绝；离开挽回的保存目前只靠页面权限）；② 不要往这些钩子上加新的回调：`woocommerce_cart_calculate_fees`、`woocommerce_before_calculate_totals`、`woocommerce_after_calculate_totals`、`woocommerce_calculated_total`、`woocommerce_coupon_*`——加购推荐报价（`Activity\Quote_Cart::supported_hooks()`）只认现有的回调，多一个就会停止报价；价格引擎也会把这类购物车记为“跳过” | — |
-| F3（系列） | 按系列下发营销活动的约定见下 | 店铺端先不接；活动仍由各店后台维护 |
+**给日常会话（第 1 条是线上问题，请优先）**
 
-### 三、系列活动下发到店铺的约定（HQ-07，等 F3 的系列结构定稿后实现）
-
-`/hq/series/sync` 的请求体里如果带 `campaigns`，由 F3 的 `Series_Sync` 原样交给 M4：
+1. **加购推荐被手动订单关掉了。** 主线从 `1fcfea5`（11-10）起，`Manual_Orders::register_hooks()` 在每个请求上往 `woocommerce_before_calculate_totals`（9999）、`woocommerce_cart_calculate_fees`（99）、`woocommerce_coupon_is_valid`（9999）加了回调；加购推荐的报价只认白名单里的回调，于是 `Activity\Quote_Cart::supported_hooks()` 恒为 false，`Activity\Recommendations` 一律隐藏，`Api\Activity_Listener_Controller` 返回 409。F2 在本机真实站点（WordPress 7.1.4 + WooCommerce 11.2.1，主线 976c1fa）上确认：摘掉这三个回调后恢复为 true。优惠码那一半（`Recommendation_Coupon` 的白名单）F2 已改；**`activity/class-quote-cart.php` 请改两处**：
 
 ```php
-// 返回每个活动的处理结果，Series_Sync 原样带回总后台。
-$results = \PeptideCore\Pricing\Series_Campaigns::apply( array $campaigns, int $series_id );
+// unsupported_hook() 的 $allow：
+'woocommerce_cart_calculate_fees'      => array( Promotions::class . '::apply_to_cart', \PeptideCore\Manual_Orders::class . '::apply_fees' ),
+'woocommerce_before_calculate_totals' => array( Product_Offers::class . '::sync_cart', \PeptideCore\Manual_Orders::class . '::apply_prices' ),
+
+// supported() 逐行检查的地方：手动订单链接的购物车不报价（报价不走 apply_fees，算出来的满减和实际不一致）
+if ( ! $product instanceof \WC_Product || array_key_exists( Product_Offers::CART, $item ) || ! empty( $item['pc_manual'] ) || ... ) { return false; }
 ```
 
-`$campaigns` 是这个系列**现在应该在跑的全部活动**（全量，不是增量），每个：
+   核对办法：任一店 `wp eval 'var_dump( \PeptideCore\Activity\Quote_Cart::supported_hooks() );'` 应为 `true`。
 
-```json
-{
-  "id": 12,
-  "ver": 3,
-  "kind": "promotion | coupon | first_order | shipping_discount | gift | bundle | exit_intent",
-  "enabled": true,
-  "name": "Black Friday",
-  "start": 0,
-  "end": 0,
-  "config": { "与店铺端这类活动现有的设置同形，见 Promotions::defaults()、Coupons_Page::store()、Shipping\\Discounts::defaults()、Product_Offers::defaults()、Exit_Intent::defaults()" }
-}
-```
+2. 以后往这些钩子上加回调前先看 `Quote_Cart::unsupported_hook()` 的清单：`woocommerce_cart_calculate_fees`、`woocommerce_before_calculate_totals`、`woocommerce_after_calculate_totals`、`woocommerce_calculated_total`、`woocommerce_coupon_*`、`woocommerce_product_get_price` 等。
+3. `admin/class-product-offers-page.php`（赠品 / 捆绑）和 `admin/class-apps-page.php` 里离开挽回的设置页：界面上对 `! Marketing::can_manage()` 的人隐藏保存入口（服务端 `Product_Offers::store()` 已拒绝；离开挽回由系列下发时 `Exit_Intent::save()` 会拒绝登录用户）。
+4. 加购推荐和进度条的设置（`Activity\Store`）现在只能由登录的管理员保存（`Store::save()` 检查 `can_manage()`）。要让系列下发 `upsell` / `progress_bar`，需要一个不依赖登录用户的写入入口（比如 `Store::apply_series( array $config )`），其中活动和优惠码用代号引用。有了以后 F2 接上。
+5. 手动订单（`class-manual-orders.php`）和运费预览（`class-ship-preview.php`）直接用到 M4 的这些方法，以后删旧算法时 F2 会保留它们的签名：`Promotions::discounts()`、`Promotions::active_ids()`、`Promotions::FEE_META`、`First_Order_Offer::coupon()`、`Shipping\Discounts::applicable()`、`Shipping\Discounts::discounted()`。引擎已经认识手动订单链接的购物车（店主配的价格、运费、自定义优惠、是否带店铺满减 / 首单）。如果手动订单的配置再加影响金额的字段，请告诉 F2。
 
-约定：
+**给 F1（发布、连接）**
 
-1. **商品和专辑用 SKU / 别名引用**（`config.products` 是 SKU 列表，`config.categories` 是专辑别名），店铺端换成本店的 ID；找不到的 SKU 记在结果里，不让整个活动失败。
-2. **幂等**：店铺端按 `id` 找到已有的那一条就更新，没有才新建；`ver` 没变就不动。写入的仍是现有存储（满减活动、WooCommerce 优惠码、运费折扣选项、首单优惠选项、赠品 / 捆绑、离开挽回选项），每条带标记 `_pc_series_managed = <id>`（运费折扣和离开挽回用数组里的 `series_managed`）。
-3. **全量对齐**：本店带系列标记、但不在这次列表里的活动改为停用（不删除，保留订单上的记录）。本店自己建的活动（没有标记）不动。
-4. **冲突**：系列活动和本店自建的活动在同一范围、同一时间冲突时（满减的冲突规则见 `Promotions::conflicts()`），不覆盖本店的，结果里报 `conflict`，由总后台决定。
-5. **返回**：`[ { id, ver, status: applied | unchanged | disabled | conflict | error, message, missing_skus: [] } ]`。
-6. 带系列标记的活动在店铺后台对所有人只读（管理员可在总后台改）。
+1. 功能键见上面第 6 点（已经按 `功能键 => 版本号` 接在 `pc_hq_capabilities` 上）；数据表登记见第 7 点。
+2. 巡检：按约定巡检里不另发请求，所以请在 `/hq/status` 里带上价格引擎的简报——`Hq_Connector::status()` 里加一行 `'pricing_engine' => \PeptideCore\Pricing\Runtime::status_brief()`（返回 `{ mode, today: { compared, matched, mismatched, skipped, errors } }`，只读两个选项和一张小表，没有记录时不查表）。总后台的巡检项（类型建议 `pricing_mismatch`，显示名“价格引擎核对不一致”）：`mode` 不是 `off` 且 `mismatched + errors > 0` 时 `ok = false`；`mode` 是 `off` 时不报。
+3. 总后台给每家店一个三档开关（调 `POST /hq/pricing-engine`），只对声明了 `pricing.engine` 的店显示。
+4. 沙盒走查：按 `docs/handoffs/m4-sandbox-walkthrough.md`。
+5. 建议把 `\PeptideCore\Activity\Quote_Cart::supported_hooks() === true` 加进发布前的 critical-path 检查（见给日常会话的第 1 条：这次就是没人发现）。
+6. 测试登记：5 条纯测试已按 `"status": "module-gate", "module": "M4"` 写在 suites 文件末尾；两个 `*-native.php` 要在装好 WooCommerce 的站点上用 `wp eval-file` 跑，不在纯测试编排里。
 
-F3 需要确认的两点：`campaigns` 是否随每次 `/hq/series/sync` 全量下发；系列主商品库里 SKU 是否在各店唯一且一致。确认后 F2 实现 `Series_Campaigns`。
+**给 F3（系列）**
+
+1. 四个钩子已接，`config` 的定义见上面第 5 点。总后台的系列活动编辑界面请按这份字段做（或先用 JSON 文本框）。`Series_Campaigns::replace()` 存之前如果想先检查，可以在一家店上用 `dry_run` 看 `diff.campaigns`。
+2. 用你分支上的 `Series_Sync::sync()` 在本机真实站点走过一遍（试运行、下发、同版本跳过、对齐、`restore()`、不合规返回错误），结果符合约定。
+3. 系列活动的标记用的是 `_pc_series_campaign`（值 `kind/key`），没有用你商品上的 `_pc_series_managed`，两者不冲突。
+4. `kind` 里 `upsell`、`progress_bar` 这一版标 `unsupported`（不算错误，`campaign_ver` 照记）。如果你希望“有不支持的条目时不记版本、等店铺升级后重发”，告诉 F2 改成返回错误。
+5. 母版店：按你的约定总后台不给母版店发活动；F2 这边母版店也不算被接管，店铺后台照常可以建活动。
+
+**给 F5（投手后台、已购回访）**
+
+1. 投手角色名用 `pc_media_buyer`，给它只读权限 `pc_view_campaigns`，**不要**给 `edit_shop_coupons`。
+2. `Admin_Menus::add_menus()` 里营销活动菜单的显示条件改为 `Marketing::can_view()`、权限参数改为 `Marketing::menu_cap()`。
+3. 已购回访在 `/buyer/status` 返回“已购”后调用 `window.pcMarketingQuiet.suppress( { days } )`；服务端可挂 `pc_marketing_popups_suppressed`。
+
+### 三、历史
+
+2026-11-10 的版本里这一节第三部分是“系列活动下发的约定（待 F3 定稿）”，当时设想按数字 `id` 和 `_pc_series_managed` 标记。F3 定稿后改为按 `kind + key` 识别、标记用 `_pc_series_campaign`，以本节第一部分第 5 点为准。
