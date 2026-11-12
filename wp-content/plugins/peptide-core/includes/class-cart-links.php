@@ -131,6 +131,14 @@ final class Cart_Links {
 	 * 店主 2026-11-10：链接只带商品和优惠码。打开链接时清掉这个浏览器里之前填过的邮箱、姓名、地址、电话，
 	 * 让结账页从空白开始（登录的会员不动，用他自己账户里的资料）。
 	 */
+	/** 手动订单链接也用：清掉这个浏览器之前填过的顾客资料。 */
+	public static function clear_customer_public(): void {
+		if ( null === WC()->customer ) {
+			return;
+		}
+		self::clear_customer();
+	}
+
 	private static function clear_customer(): void {
 		if ( is_user_logged_in() || ! WC()->customer ) {
 			return;
@@ -179,6 +187,6 @@ final class Cart_Links {
 			return;
 		}
 		wp_enqueue_script( 'pc-cart-share', plugins_url( 'assets/cart-share.js', PEPTIDE_CORE_FILE ), array(), (string) filemtime( $file ), true );
-		wp_add_inline_script( 'pc-cart-share', 'window.pcCartShare=' . wp_json_encode( array( 'cart' => home_url( '/wp-json/wc/store/v1/cart' ), 'base' => home_url( '/' ), 'cookie' => self::COOKIE ) ) . ';', 'before' );
+		wp_add_inline_script( 'pc-cart-share', 'window.pcCartShare=' . wp_json_encode( array( 'cart' => home_url( '/wp-json/wc/store/v1/cart' ), 'base' => home_url( '/' ), 'cookie' => self::COOKIE, 'manual' => class_exists( Manual_Orders::class ) && ( $m = Manual_Orders::active_cart() ) ? $m['token'] : '' ) ) . ';', 'before' );
 	}
 }

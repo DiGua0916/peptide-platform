@@ -12,6 +12,8 @@ final class Operations_Page {
 	private const TABS = array( 'tasks' => '任务记录', 'releases' => '升级与回滚', 'create' => '创建新店', 'backups' => '备份与恢复', 'agents' => '部署环境' );
 	public static function hooks(): void {
 		add_action( 'admin_menu', static function (): void { add_submenu_page( Dashboard_Page::SLUG, '站点运维', '站点运维', Menu::CAP, self::SLUG, array( self::class, 'render' ) ); }, 20 );
+		// 店主 2026-11-11：站点运维先从菜单隐藏（页面还在，直接打开链接仍可用）。
+		add_action( 'admin_head', static function (): void { echo '<style>#adminmenu li:has(> a[href$="page=pchq-operations"]){display:none!important}</style>'; } );
 		add_action( 'admin_post_pchq_ops', array( self::class, 'handle' ) );
 		add_action( 'wp_ajax_pchq_ops_status', array( self::class, 'ajax' ) );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'assets' ), 1001 );

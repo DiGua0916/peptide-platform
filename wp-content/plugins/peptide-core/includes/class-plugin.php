@@ -91,7 +91,12 @@ final class Plugin {
 		Order_Report::register_hooks(); // M10 订单上报与退款标记（店铺端）。
 		Cart_Links::register_hooks();
 		Paid_Popup::register_hooks();
+		Accounts::register_hooks();
+		Track_Widget::register_hooks();
+		Order_Number::register_hooks();
+		Stock_Range::register_hooks();
 		Ship_Preview::register_hooks();
+		Manual_Orders::register_hooks();
 		Topics::register_hooks();
 		Promotions::register_hooks();
 		Recovery::register_hooks();
@@ -160,7 +165,12 @@ final class Plugin {
 			Admin\Recovery_Page::register_hooks();
 			Admin\Checkout_Dropoff_Page::register_hooks();
 			Admin\Paid_Popup_Page::register_hooks();
+			Admin\Accounts_Page::register_hooks();
+			Admin\Fedex_Page::register_hooks();
 			Admin\Ship_Preview_Page::register_hooks();
+			Admin\Manual_Order_Page::register_hooks();
+			Admin\Order_List::register_hooks();
+			Admin\Order_Detail_Page::register_hooks();
 			Admin\Marketing::register_hooks();
 			Admin\Promotions_Page::register_hooks();
 			Admin\Coupons_Page::register_hooks();

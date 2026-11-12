@@ -171,7 +171,7 @@ final class Hub_Page {
 				<?php if ( is_array( $summary ) ) { self::render_summary( $summary ); } ?>
 				<form method="get" class="pc-pay-filters"><input type="hidden" name="page" value="<?php echo esc_attr( self::SLUG ); ?>"><label>店铺<select name="site_id"><option value="0">全部店铺</option><?php foreach ( $sites as $site ) : ?><option value="<?php echo esc_attr( (string) $site['id'] ); ?>" <?php selected( $site_id, $site['id'] ); ?>><?php echo esc_html( $site['name'] ); ?></option><?php endforeach; ?><?php if ( $site_id && ! isset( $sites[ $site_id ] ) ) : ?><option value="<?php echo esc_attr( (string) $site_id ); ?>" selected>已移除店铺 #<?php echo esc_html( (string) $site_id ); ?></option><?php endif; ?></select></label><label>支付状态<select name="state"><option value="">全部状态</option><?php foreach ( self::states() as $key => $label ) : ?><option value="<?php echo esc_attr( $key ); ?>" <?php selected( $state, $key ); ?>><?php echo esc_html( $label ); ?></option><?php endforeach; ?></select></label><button type="submit" class="button">筛选</button></form>
 				<?php if ( null === $ledger ) : ?><div class="pc-pay-empty" role="status"><h3>暂时无法读取交易记录</h3><p>请刷新页面；若仍不可用，请检查支付插件是否已完成数据库升级。</p><a class="button" href="<?php echo esc_url( self::url() ); ?>">刷新记录</a></div><?php elseif ( empty( $ledger['rows'] ) ) : ?><div class="pc-pay-empty"><h3><?php echo esc_html( $site_id || $state ? '没有符合条件的交易' : '还没有付款记录' ); ?></h3><p><?php echo esc_html( $site_id || $state ? '调整店铺或支付状态后重新筛选。' : '在支付设置中配置收款并授权店铺后，新支付会记录在这里。' ); ?></p></div><?php else : ?>
-					<div class="pc-pay-table-scroll" role="region" aria-label="按店铺划分的支付记录" tabindex="0"><table class="widefat pc-pay-table"><thead><tr><th scope="col">店铺 / 订单</th><th scope="col">付款方式</th><th scope="col">支付引用</th><th scope="col" class="pc-pay-number">金额</th><th scope="col">支付方确认</th><th scope="col">店铺回写</th><th scope="col">更新时间</th></tr></thead><tbody><?php self::$with_details = Hub_Details::refs_with_details( array_column( $ledger['rows'], 'ref' ) ); foreach ( $ledger['rows'] as $row ) { self::render_row( $row, $sites, $accounts ); } ?></tbody></table></div>
+					<div class="pc-pay-table-scroll" role="region" aria-label="按店铺划分的支付记录" tabindex="0"><table class="widefat pc-pay-table"><thead><tr><th scope="col">店铺 / 订单</th><th scope="col">付款方式</th><th scope="col">支付引用</th><th scope="col" class="pc-pay-number">金额</th><th scope="col">支付方确认</th><th scope="col">店铺回写</th><th scope="col">更新时间（北京）</th></tr></thead><tbody><?php self::$with_details = Hub_Details::refs_with_details( array_column( $ledger['rows'], 'ref' ) ); foreach ( $ledger['rows'] as $row ) { self::render_row( $row, $sites, $accounts ); } ?></tbody></table></div>
 					<?php self::pagination( $ledger, $page, $site_id, $state ); ?>
 				<?php endif; ?>
 			</section>
@@ -209,7 +209,7 @@ final class Hub_Page {
 		$disposition = array( 'paid' => '订单已付款', 'failed' => '订单未付款', 'review' => '订单需核对' )[ $row['disposition'] ?? '' ] ?? '';
 		echo '<tr><td data-label="店铺 / 订单"><strong>' . esc_html( $name ) . '</strong><span>订单 #' . esc_html( (string) (int) ( $row['order_id'] ?? 0 ) ) . '</span></td><td data-label="付款方式">' . esc_html( $account_label ) . '</td><td data-label="支付引用" class="pc-pay-reference">' . esc_html( (string) ( $row['ref'] ?? '' ) ) . '</td><td data-label="金额" class="pc-pay-number">' . esc_html( (string) ( $row['currency'] ?? '' ) ) . ' ' . esc_html( (string) ( $row['amount'] ?? '' ) ) . '</td><td data-label="支付方确认">' . self::provider_cell( $row, $provider ) . '</td><td data-label="店铺回写">' . esc_html( $delivery );
 		if ( '' !== $disposition ) { echo '<span>' . esc_html( $disposition ) . '</span>'; }
-		echo '</td><td data-label="更新时间">' . esc_html( ! empty( $row['updated_at'] ) ? wp_date( 'Y-m-d H:i', (int) $row['updated_at'] ) : '—' ) . '</td></tr>';
+		echo '</td><td data-label="更新时间">' . esc_html( ! empty( $row['updated_at'] ) ? wp_date( 'Y-m-d H:i', (int) $row['updated_at'], new \DateTimeZone( 'Asia/Shanghai' ) ) : '—' ) . '</td></tr>';
 		self::render_details( (string) ( $row['ref'] ?? '' ) );
 	}
 
@@ -228,7 +228,7 @@ final class Hub_Page {
 		foreach ( Hub_Details::for_ref( $ref ) as $item ) {
 			echo '<section><header><strong>' . esc_html( $kinds[ $item['kind'] ] ?? $item['kind'] ) . '</strong>';
 			if ( '' !== $item['status'] ) { echo '<span class="pc-pay-state">' . esc_html( $item['status'] ) . '</span>'; }
-			echo '<time>' . esc_html( wp_date( 'Y-m-d H:i:s', $item['at'] ) ) . '</time></header>';
+			echo '<time>' . esc_html( wp_date( 'Y-m-d H:i:s', $item['at'], new \DateTimeZone( 'Asia/Shanghai' ) ) ) . '</time></header>';
 			if ( ! $item['params'] ) { echo '<p class="pc-pay-muted">没有返回内容。</p></section>'; continue; }
 			echo '<dl>';
 			foreach ( $item['params'] as $key => $value ) { echo '<dt>' . esc_html( (string) $key ) . '</dt><dd>' . esc_html( is_scalar( $value ) ? (string) $value : (string) wp_json_encode( $value ) ) . '</dd>'; }

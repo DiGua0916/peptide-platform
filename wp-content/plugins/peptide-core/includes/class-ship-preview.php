@@ -71,6 +71,31 @@ final class Ship_Preview {
 		return html_entity_decode( wp_strip_all_tags( wc_price( $v ) ), ENT_QUOTES, 'UTF-8' );
 	}
 
+	/**
+	 * 一组商品按这家店的运费方案 + 当前运费优惠算出的运费（默认按美国）；算不出来返回 null。
+	 * 手动订单“按店铺运费”也用这个（店主 2026-11-10）。
+	 *
+	 * @param array $contents 每项 {data: WC_Product, product_id, quantity, line_subtotal}
+	 */
+	public static function estimate( array $contents, string $country = '', string $state = '' ): ?float {
+		$country = '' !== $country ? $country : 'US';
+		$quotes  = class_exists( Shipping\Plans::class ) ? Shipping\Plans::quote( array( 'contents' => $contents, 'destination' => array( 'country' => $country, 'state' => $state, 'postcode' => '' ) ) ) : array();
+		if ( ! $quotes ) {
+			return null;
+		}
+		$ship = min( array_map( static fn( $q ) => (float) $q['cost'], $quotes ) );
+		// 运费优惠（例如运费 5% off）按当前对所有顾客生效的那条算。
+		if ( class_exists( Shipping\Discounts::class ) && $ship > 0 ) {
+			$best = $ship;
+			foreach ( Shipping\Discounts::applicable( null, '', 0 ) as $pair ) {
+				[ $d, $v ] = $pair;
+				$best = min( $best, Shipping\Discounts::discounted( $ship, (string) $d['kind'], (float) $v ) );
+			}
+			$ship = $best;
+		}
+		return $ship;
+	}
+
 	public static function rest_estimate( \WP_REST_Request $r ) {
 		if ( ! self::settings()['enabled'] || ! function_exists( 'WC' ) ) {
 			return new \WP_Error( 'pc_ship_off', 'Off', array( 'status' => 404 ) );
@@ -106,21 +131,10 @@ final class Ship_Preview {
 			return rest_ensure_response( array( 'empty' => true ) );
 		}
 		$country = WC()->customer ? (string) ( WC()->customer->get_shipping_country() ?: WC()->customer->get_billing_country() ) : '';
-		$country = '' !== $country ? $country : 'US';
 		$state   = WC()->customer ? (string) WC()->customer->get_shipping_state() : '';
-		$quotes  = class_exists( Shipping\Plans::class ) ? Shipping\Plans::quote( array( 'contents' => $contents, 'destination' => array( 'country' => $country, 'state' => $state, 'postcode' => '' ) ) ) : array();
-		if ( ! $quotes ) {
+		$ship    = self::estimate( $contents, $country, $state );
+		if ( null === $ship ) {
 			return rest_ensure_response( array( 'unknown' => true ) );
-		}
-		$ship = min( array_map( static fn( $q ) => (float) $q['cost'], $quotes ) );
-		// 运费优惠（例如运费 5% off）按当前对所有顾客生效的那条算。
-		if ( class_exists( Shipping\Discounts::class ) && $ship > 0 ) {
-			$best = $ship;
-			foreach ( Shipping\Discounts::applicable() as $pair ) {
-				[ $d, $v ] = $pair;
-				$best = min( $best, Shipping\Discounts::discounted( $ship, (string) $d['kind'], (float) $v ) );
-			}
-			$ship = $best;
 		}
 		$total = max( 0, $subtotal - $discount ) + $ship;
 		return rest_ensure_response(

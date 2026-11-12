@@ -24,6 +24,8 @@ final class Plugin {
 		Mail::register_hooks();
 		Costs::register_hooks();
 		Ai::register_hooks();
+		Fedex::register_hooks();
+		Track17::register_hooks();
 		Series::register_hooks(); // M3 系列与商品目录（系列、推送、系列管理页都从这里启动）。
 		Orders::register_hooks(); // M10 订单汇总、报表与退款（订单上报、退款标记、订单页和报表页都从这里启动）。
 		if ( is_callable( array( Admin\Menu::class, 'register_login_hooks' ) ) ) {
@@ -41,6 +43,7 @@ final class Plugin {
 			Admin\Clone_Page::hooks();
 			Admin\Costs_Page::hooks();
 			Admin\Ai_Page::hooks();
+			Admin\Fedex_Page::hooks();
 		}
 	}
 }

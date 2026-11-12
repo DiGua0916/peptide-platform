@@ -275,6 +275,15 @@ final class Session_Service {
 			$attempt = self::bind_checkout_policy( $attempt, $response );
 			if ( ! empty( $attempt['central'] ) ) { $config = self::attempt_config( $attempt ); }
 			$attempt['state'] = $response['state'];
+			if ( ! empty( $response['pp_ref'] ) ) {
+				$attempt['pp_ref'] = $response['pp_ref'];
+				// 订单号显示成 hang-：只给切换之后创建的新订单（店主：老订单显示老单号）。下面 save() 一起保存。
+				$since   = (int) get_option( 'pc_order_number_since', 0 );
+				$created = $order->get_date_created();
+				if ( $since > 0 && $created && $created->getTimestamp() >= $since ) {
+					$order->update_meta_data( '_pc_pp_ref', $response['pp_ref'] );
+				}
+			}
 			if ( 'created' === $response['state'] ) {
 				$attempt['type'] = $response['type'];
 				$attempt['url_box'] = Crypto::encrypt( $response['url'], 'checkout-url' );
@@ -448,7 +457,11 @@ final class Session_Service {
 				return;
 			}
 			try { Completion_Guard::complete( $order, $native_transaction ); }
-			catch ( \Throwable $error ) { throw new Protocol_Error( 'notification_persistence_unconfirmed', 503 ); }
+			catch ( \Throwable $error ) {
+				// 2026-11-11：内嵌收银台付卡时，完成流程被中断过 3 次，原因被这里吞掉了。只记录原因，不改变付款处理。
+				self::log_interrupted( $order, $error );
+				throw new Protocol_Error( 'notification_persistence_unconfirmed', 503 );
+			}
 			if ( ! Persistence::has_gateway( $order->get_id(), $expected_gateway ) || ! Persistence::is_paid( $order->get_id(), $native_transaction ) ) {
 				// Unknown effects need reconciliation; another request cannot repeat native completion.
 				throw new Protocol_Error( 'notification_persistence_unconfirmed', 503 );
@@ -460,6 +473,21 @@ final class Session_Service {
 			if ( isset( $attempt['creation_reservation'] ) ) { Store::set_creation_state( $attempt['creation_reservation'], 'paid' ); }
 			Store::set_transaction_state( $transaction, $order->get_id(), 'applied', $scope );
 		} finally { Store::release( $lock ); }
+	}
+
+	/** 完成流程被中断时，把原因写进 WooCommerce 日志（来源 peptide-panapay）和订单备注。不含顾客信息。 */
+	private static function log_interrupted( \WC_Order $order, \Throwable $error ): void {
+		try {
+			$where = basename( $error->getFile() ) . ':' . $error->getLine();
+			$trace = array();
+			foreach ( array_slice( $error->getTrace(), 0, 12 ) as $f ) {
+				$trace[] = ( isset( $f['class'] ) ? $f['class'] . '::' : '' ) . ( $f['function'] ?? '?' ) . ( isset( $f['file'] ) ? ' @' . basename( (string) $f['file'] ) . ':' . (int) ( $f['line'] ?? 0 ) : '' );
+			}
+			if ( function_exists( 'wc_get_logger' ) ) {
+				wc_get_logger()->error( sprintf( 'Payment completion interrupted for order #%d: %s: %s at %s', $order->get_id(), get_class( $error ), $error->getMessage(), $where ), array( 'source' => 'peptide-panapay', 'trace' => $trace, 'guard' => Completion_Guard::$last_block ) );
+			}
+			$order->add_order_note( sprintf( 'Payment completion was interrupted (%s: %s at %s). The payment itself is recorded; emails and ad events are sent automatically by the follow-up jobs.', get_class( $error ), mb_substr( $error->getMessage(), 0, 160 ), $where ) );
+		} catch ( \Throwable $ignored ) { /* 记录失败不影响付款处理。 */ }
 	}
 
 	/** Called only after the authenticated bridge has applied this exact notification. */

@@ -12,7 +12,10 @@
 		var url = new URL( location.href );
 		url.searchParams.delete( 'pc_cart' );
 		url.searchParams.delete( 'pc_coupon' );
-		if ( items.length ) {
+		// 手动订单链接来的购物车：地址栏放手动订单链接（刷新、复制都还是店主定的价格），不放普通付款链接。
+		if ( cfg.manual && items.length ) {
+			url.searchParams.set( 'pc_manual', cfg.manual );
+		} else if ( items.length ) {
 			url.searchParams.set( 'pc_cart', items.join( ',' ) );
 			if ( coupons.length ) { url.searchParams.set( 'pc_coupon', coupons.join( ',' ) ); }
 		}
