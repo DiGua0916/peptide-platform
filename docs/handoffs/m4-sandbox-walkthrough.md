@@ -24,6 +24,7 @@ wp eval 'var_dump( \PeptideCore\Activity\Quote_Cart::supported_hooks() );'
 | --- | --- |
 | 第一条的输出 | `档位：off`，下一行“最近 7 天没有核对记录。” |
 | 第二条的输出 | 空（关着时不建表） |
+| 前台页面（用你的页面对比脚本） | 和“主线 + M1”逐字节相同：开关都关着时页头**没有** `<script id="pc-marketing-quiet">`（`60820de` 及之前的提交会多出这 1.9KB，之后的提交已改为只在静默时输出）。开了离开挽回的店会加载到新版本的 `exit-intent.js`，这是预期的 |
 | 第三条的输出 | `bool(true)`。**如果是 `bool(false)`：加购推荐现在是关着的**，原因和修法见 `docs/CONTRACT.md` M4 一节“给日常会话”第 1 条；这不是 M4 引起的，但要先告诉平台所有者 |
 
 ## 第 1 步 · 一条命令走完 24 个组合（约 1 分钟）
@@ -73,7 +74,7 @@ M4_WALKTHROUGH=sandbox wp eval-file wp-content/plugins/peptide-core/tests/m4-sha
 | 运费一列全是 0.00 | 沙盒对美国地址没有运费方案，运费折扣没被走到。先确认运费方案（$15 / $45）在沙盒生效，再跑一次 |
 | 脚本中途被打断 | 再跑一次即可恢复（它每次都从干净状态开始）；另外检查 `wp peptide price-engine status` 是不是 `off`，不是就 `wp peptide price-engine mode off`；临时商品名字以 `M4WT` 开头，可在商品列表里搜出来删掉 |
 
-2026-11-12 F2 在本机真实站点（WordPress 7.1.4 + WooCommerce 11.2.1，SQLite，运费 $15）上的结果：一致 48，不一致 0，跳过 0。
+2026-11-12 F2 在本机真实站点（WordPress 7.1.4 + WooCommerce 11.2.1，SQLite，运费 $15）上的结果：一致 48，不一致 0，跳过 0。同一天 F1 在沙盒（MySQL、s0010 的数据、运费 22.50，提交 `8c68298`）上的结果：一致 48，不一致 0，跳过 0。
 
 ## 第 2 步 · 按系列接收活动（约 30 秒，M3 合进来之后再跑也可以）
 
@@ -112,7 +113,7 @@ wp option get peptide_core_app_stats_db
 
 ## 第 3 步 · 开影子档，用浏览器走真实流程（约 20 分钟）
 
-脚本走的是服务端的计算；下面这些只有浏览器里才会发生，需要人点一遍（手机宽度，沙盒店铺前台）。
+脚本走的是服务端的计算；下面这些只有浏览器里才会发生，需要人点一遍（手机宽度，沙盒店铺前台）。**到 2026-11-12 这一步还没有人做过**（F1 的机器进不了沙盒前台的认证）；生产开影子档之前需要有人走一遍，或者由平台所有者决定跳过。
 
 ```bash
 wp peptide price-engine clear
@@ -164,7 +165,7 @@ wp peptide price-engine log --limit=10
 node tests/run-data-observations.cjs --suite m4-price-engine-pure --suite m4-engine-mode-pure --suite m4-marketing-quiet-pure --suite m4-campaigns-readonly-pure --suite m4-marketing-quiet
 ```
 
-五行都是 `"exit_code":0` 即通过（2026-11-12：对照 59 个样例、档位 37 项、静默 17 + 16 项、只读 50 项）。想用真实的 WooCommerce 源文件复核金额算法：
+五行都是 `"exit_code":0` 即通过（2026-11-12：对照 59 个样例、档位 37 项、静默 19 + 16 项、只读 50 项）。想用真实的 WooCommerce 源文件复核金额算法：
 
 ```bash
 PC_WC_SRC=/path/to/wp-content/plugins/woocommerce php -n wp-content/plugins/peptide-core/tests/m4-price-engine-pure.php --fuzz=30000

@@ -12,7 +12,11 @@
  * window.pcMarketingQuiet.suppress() 会写它），否则为假。带任何这类 cookie 的请求不走首页整页缓存，
  * 所以缓存里的页面永远是“不静默”的版本。
  *
- * 前台另有 assets/marketing-quiet.js（内联在页头）：给只有浏览器才知道状态的情况用，见该文件开头的说明。
+ * 前台另有 assets/marketing-quiet.js（内联在页头）：让页面里已经输出的条和倒计时立刻隐藏，并给前台脚本一个统一的
+ * 判断入口（window.pcMarketingQuiet），见该文件开头的说明。它只在这一次请求需要静默时输出；没有人要静默的页面
+ * （也就是整页缓存里的页面、以及没开已购回访的店的全部页面）不带它，和合入 M4 之前逐字节相同。
+ * 需要在不静默的页面上也能调用 window.pcMarketingQuiet.suppress() 的模块（只有浏览器才知道状态的情况），
+ * 用过滤器 pc_marketing_quiet_script 返回 true，让每个前台页面都带上这段脚本。
  *
  * @package PeptideCore
  */
@@ -24,6 +28,7 @@ defined( 'ABSPATH' ) || exit;
 final class Popups {
 
 	public const FILTER = 'pc_marketing_popups_suppressed';
+	public const SCRIPT = 'pc_marketing_quiet_script';
 	public const COOKIE = 'pc_marketing_quiet';
 	public const ROUTE  = '/peptide/v1/campaign-countdown';
 
@@ -38,9 +43,13 @@ final class Popups {
 		return (bool) apply_filters( self::FILTER, $cookie );
 	}
 
-	/** 页头内联一小段脚本（不多一次请求，赶在各弹窗脚本之前执行）。 */
+	/** 页头内联一小段脚本（不多一次请求，赶在各弹窗脚本之前执行）。只在静默时、或有模块声明需要时输出。 */
 	public static function print_script(): void {
 		if ( is_admin() ) {
+			return;
+		}
+		$quiet = self::suppressed();
+		if ( ! $quiet && ! apply_filters( self::SCRIPT, false ) ) {
 			return;
 		}
 		$file = PEPTIDE_CORE_DIR . '/assets/marketing-quiet.js';
@@ -50,7 +59,7 @@ final class Popups {
 		}
 		// 输出时去掉说明文字和缩进（文件里只有块注释），页头只多 1KB 左右。
 		$js = implode( "\n", array_filter( array_map( 'trim', explode( "\n", (string) preg_replace( '#/\*.*?\*/#s', '', $js ) ) ) ) );
-		echo '<script id="pc-marketing-quiet">' . ( self::suppressed() ? 'window.pcMarketingQuietServer=true;' : '' ) . $js . "</script>\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 插件自带的静态脚本。
+		echo '<script id="pc-marketing-quiet">' . ( $quiet ? 'window.pcMarketingQuietServer=true;' : '' ) . $js . "</script>\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 插件自带的静态脚本。
 	}
 
 	/** 活动倒计时的接口：静默时两处位置都返回“不显示”。 */

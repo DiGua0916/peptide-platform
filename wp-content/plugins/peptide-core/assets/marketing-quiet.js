@@ -7,6 +7,9 @@
  *   2. 页面脚本调用 window.pcMarketingQuiet.suppress()，或设了 window.pcBuyer.suppressPopups = true；
  *   3. 浏览器里有 pc_marketing_quiet=1 这个 cookie（suppress() 会写，下一页一打开就生效，不闪）。
  *
+ * 这段脚本只在静默的请求里输出（Pricing\Popups::print_script），不静默的页面里没有 window.pcMarketingQuiet，
+ * 调用前先判断它存在。要在不静默的页面上也带上它：服务端过滤器 pc_marketing_quiet_script 返回 true。
+ *
  * window.pcMarketingQuiet：
  *   suppressed()        现在是否静默
  *   suppress({ days })  开始静默；days 不填时只到关闭浏览器为止

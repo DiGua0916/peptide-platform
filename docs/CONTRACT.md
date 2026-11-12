@@ -625,9 +625,11 @@ Root installed only three existing Commerce sources for P09 collection products 
 | 方式 | 用法 | 说明 |
 | --- | --- | --- |
 | 服务端过滤器 | `add_filter( 'pc_marketing_popups_suppressed', fn( bool $on ) => $on \|\| 是已购顾客 );` | 默认值：浏览器带 cookie `pc_marketing_quiet=1` 时为真。读取用 `\PeptideCore\Pricing\Popups::suppressed()` |
-| 前台脚本 | `window.pcMarketingQuiet.suppress( { days: 365 } )`、`.release()`、`.suppressed()`、`.refresh()`、`.onChange( fn )` | 内联在页头，早于各弹窗脚本。`suppress()` 会写 cookie `pc_marketing_quiet=1`（不填 days 时只到关闭浏览器），下一页一打开就静默，不闪 |
+| 前台脚本 | `window.pcMarketingQuiet.suppress( { days: 365 } )`、`.release()`、`.suppressed()`、`.refresh()`、`.onChange( fn )` | 内联在页头，早于各弹窗脚本。**只在这一次请求需要静默时输出**（过滤器为真），所以调用前先判断 `window.pcMarketingQuiet` 存在；要在不静默的页面上也能调用，见下面的 `pc_marketing_quiet_script`。`suppress()` 会写 cookie `pc_marketing_quiet=1`（不填 days 时只到关闭浏览器），下一页一打开就静默，不闪 |
 | 前台标记 | `window.pcBuyer = { suppressPopups: true }` 后调用 `window.pcMarketingQuiet.refresh()` | 和开发文档 5.3 FE-10 的写法兼容；在各弹窗脚本运行前设好则不用 refresh |
 | 事件 | `document` 上的 `pc:marketing-quiet`，`detail.suppressed` | 状态变化时派发；同时 `<html>` 加 / 去类名 `pc-marketing-quiet` |
+
+页头脚本什么时候输出（2026-11-12 改）：这一次请求静默时（`<script id="pc-marketing-quiet">`，约 1.9KB，带 `window.pcMarketingQuietServer=true`）。不静默的页面不输出，和合入 M4 之前逐字节相同——开关都关着的店、整页缓存里的页面都是这样。只有浏览器才知道要不要静默的模块（要在不静默的页面上调用 `suppress()`）用 `add_filter( 'pc_marketing_quiet_script', '__return_true' );` 让每个前台页面都带上这段脚本；现在没有模块这样用。
 
 约定：带 `pc_marketing_quiet` 或 `pc_buyer` 这类 cookie 的请求不走首页整页缓存（Page_Cache 现有规则），所以缓存里的页面永远是不静默的版本。活动倒计时的接口 `peptide/v1/campaign-countdown` 在静默时两处位置都返回 `visible: false`。
 
@@ -735,7 +737,7 @@ M4_WALKTHROUGH=sandbox wp eval-file wp-content/plugins/peptide-core/tests/m4-ser
 if ( ! $product instanceof \WC_Product || array_key_exists( Product_Offers::CART, $item ) || ! empty( $item['pc_manual'] ) || ... ) { return false; }
 ```
 
-   核对办法：任一店 `wp eval 'var_dump( \PeptideCore\Activity\Quote_Cart::supported_hooks() );'` 应为 `true`。
+   核对办法：任一店 `wp eval 'var_dump( \PeptideCore\Activity\Quote_Cart::supported_hooks() );'` 应为 `true`。2026-11-12 F1 在生产 6 家店只读查过：**全部是 `false`**，也就是加购推荐现在在所有店都不出现。
 
 2. 以后往这些钩子上加回调前先看 `Quote_Cart::unsupported_hook()` 的清单：`woocommerce_cart_calculate_fees`、`woocommerce_before_calculate_totals`、`woocommerce_after_calculate_totals`、`woocommerce_calculated_total`、`woocommerce_coupon_*`、`woocommerce_product_get_price` 等。
 3. `admin/class-product-offers-page.php`（赠品 / 捆绑）和 `admin/class-apps-page.php` 里离开挽回的设置页：界面上对 `! Marketing::can_manage()` 的人隐藏保存入口（服务端 `Product_Offers::store()` 已拒绝；离开挽回由系列下发时 `Exit_Intent::save()` 会拒绝登录用户）。
@@ -746,8 +748,8 @@ if ( ! $product instanceof \WC_Product || array_key_exists( Product_Offers::CART
 **给 F1（发布、连接）**
 
 1. 功能键见上面第 6 点（已经按 `功能键 => 版本号` 接在 `pc_hq_capabilities` 上）；数据表登记见第 7 点。
-2. 巡检：按约定巡检里不另发请求，所以请在 `/hq/status` 里带上价格引擎的简报——`Hq_Connector::status()` 里加一行 `'pricing_engine' => \PeptideCore\Pricing\Runtime::status_brief()`（返回 `{ mode, today: { compared, matched, mismatched, skipped, errors } }`，只读两个选项和一张小表，没有记录时不查表）。总后台的巡检项（类型建议 `pricing_mismatch`，显示名“价格引擎核对不一致”）：`mode` 不是 `off` 且 `mismatched + errors > 0` 时 `ok = false`；`mode` 是 `off` 时不报。
-3. 总后台给每家店一个三档开关（调 `POST /hq/pricing-engine`），只对声明了 `pricing.engine` 的店显示。
+2. 巡检（**F1 已实现**，2026-11-12，F1 分支 `d2f05cf`）：`/hq/status` 的 `modules.pricing_engine` 带 `\PeptideCore\Pricing\Runtime::status_brief()` 的结果（`{ mode, today: { compared, matched, mismatched, skipped, errors } }`，只读两个选项和一张小表，没有记录时不查表）；总后台巡检类型 `pricing_mismatch`（显示名“价格引擎核对不一致”），店铺声明了 `pricing.engine` 且带了简报才报，`mode` 不是 `off` 且今天 `mismatched` 或 `errors` 大于 0 时告警，`off` 或恢复一致时关闭。F2 核对过：字段和 `status_brief()` 的返回一致。`status_brief()` 的返回外形以后只加不改。
+3. 总后台给每家店一个三档开关（调 `POST /hq/pricing-engine`），只对声明了 `pricing.engine` 的店显示——**还没有人做**（F1：要动总后台页面，不在 F1 名下）。在那之前用命令行或常量切档位。
 4. 沙盒走查：按 `docs/handoffs/m4-sandbox-walkthrough.md`。
 5. 建议把 `\PeptideCore\Activity\Quote_Cart::supported_hooks() === true` 加进发布前的 critical-path 检查（见给日常会话的第 1 条：这次就是没人发现）。
 6. 测试登记：5 条纯测试已按 `"status": "module-gate", "module": "M4"` 写在 suites 文件末尾；两个 `*-native.php` 要在装好 WooCommerce 的站点上用 `wp eval-file` 跑，不在纯测试编排里。
@@ -778,7 +780,7 @@ wp option get peptide_core_app_stats_db
 
 1. 投手角色名用 `pc_media_buyer`，给它只读权限 `pc_view_campaigns`，**不要**给 `edit_shop_coupons`。
 2. `Admin_Menus::add_menus()` 里营销活动菜单的显示条件改为 `Marketing::can_view()`、权限参数改为 `Marketing::menu_cap()`。
-3. 已购回访在 `/buyer/status` 返回“已购”后调用 `window.pcMarketingQuiet.suppress( { days } )`；服务端可挂 `pc_marketing_popups_suppressed`。
+3. 已购回访用服务端过滤器 `pc_marketing_popups_suppressed`（你的 `Buyer_Status::mute` 已经这样做）。页头的 `window.pcMarketingQuiet` 现在只在静默的请求里输出，你现有的写法 `if ( window.pcMarketingQuiet && window.pcMarketingQuiet.refresh )` 不用改；不要在不静默的页面上无条件调用它。
 
 ### 三、历史
 
