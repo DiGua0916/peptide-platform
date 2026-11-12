@@ -387,8 +387,9 @@
       "status": "skipped",
       "previous_status": "Root-approved056 final-source-gate",
       "owner": "F5",
-      "skip_reason": "主题用例：断言“正好发出三个显式动作”失败（主线 11-11 之后新出现）",
-      "skipped_at": "2026-11-12 @49482b9"
+      "skip_reason": "只在不含 F5 分支的主线上失败（用例夹具过时）；F5 分支 ffd349f 已修，F1 在 F1+F5 候选 c4b8e78 上实跑通过。F5 分支合进主线时把 status 改回 previous_status",
+      "skipped_at": "2026-11-12 @49482b9",
+      "fixed_in": "claude/m9-buyer-admin-940389 @ffd349f"
     },
     {
       "name": "visitor-product-actions-config",
@@ -750,8 +751,9 @@
       "previous_status": null,
       "status": "skipped",
       "owner": "F5",
-      "skip_reason": "主题用例：两个“原生锚点排队意图”子用例失败（主线 11-11 之后新出现）",
-      "skipped_at": "2026-11-12 @49482b9"
+      "skip_reason": "只在不含 F5 分支的主线上失败（用例夹具过时）；F5 分支 ffd349f 已修，F1 在 F1+F5 候选 c4b8e78 上实跑通过。F5 分支合进主线时把 status 改回 previous_status",
+      "skipped_at": "2026-11-12 @49482b9",
+      "fixed_in": "claude/m9-buyer-admin-940389 @ffd349f"
     },
     {
       "name": "data-conversion-units",
