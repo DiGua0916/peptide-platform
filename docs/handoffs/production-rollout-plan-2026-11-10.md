@@ -555,3 +555,10 @@
 - 测试：没有真实应用，用模拟的腾讯文档接口在 HQ 跑（不发请求、不写设置）：两张表各新增 3 行、跳过手填的 1 行、序号接续、第二次运行 0 写入；测试映射行已删除。
 - 备份：`/root/vialcove-backups/tdocs-hq-20261112T120813Z`。
 - 待店主：在腾讯文档开放平台注册开发者、建应用并通过审核、回调地址加白名单、填 ID/Secret、授权、填两个工作表链接。
+
+### 2026-11-12 20:10 UTC 光辉（s0008）运营套件补做精简
+- 店主：光辉的运营套件没更新（后来才装的）。11-09 的精简（只留「流量斗篷」，删「支付同步中心」「产品同步」）当时只做了 s0001/s0006/s0007/s0009/s0010，s0008 那时还没装（11-09 记录里写成“s0011”是笔误，光辉是 s0008）。
+- 核对：s0008 与主店的差异只有 `cross-border-suite.php`（31 行，正是精简内容）和 `modules/payment`、`modules/product-sync` 两个目录。光辉的代付网关 payment_proxy / _stripe / _airwallex / _flypay 本来就全是 enabled=no，结账不受影响。
+- 处理：两台主机 `/srv/vialcove/store-plugins/s0008/cross-border-suite` 整目录先备份，主文件换成主店精简版（保留属主 / 权限），删除两个模块目录；`diff -rq` 与主店完全一致；php -l 通过；reload php8.3-fpm。
+- 验证：店铺与后台 `cbs_modules()` = cloak；可用支付方式只剩 Credit card；流量斗篷设置（acloak_options）未动，浏览器访问与阳站一样跳到斗篷页。
+- 备份：web `/root/vialcove-backups/cbs-strip-s0008-20261112T201030Z`，HQ `/root/vialcove-backups/cbs-strip-s0008-20261112T201031Z`。回滚：把备份里的 cross-border-suite 目录拷回原处并 reload php8.3-fpm。
