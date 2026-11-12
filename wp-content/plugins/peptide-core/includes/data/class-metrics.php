@@ -548,6 +548,41 @@ final class Metrics {
 	// ---------- 弃单 ----------
 
 	/**
+	 * 按天的弃单数：店铺时区的日期 => abandoned_from_items() 的结果，按弃单创建那天归属；没有弃单的日子不在结果里。
+	 * 只读一次弃单列表，结果缓存 5 分钟。给 daily() 和总后台的每日汇总用。
+	 *
+	 * @return array<string,array{count:int,open:int,failed:int,emailed:int,recovered:int,recovered_cents:int,rate:?float}>
+	 */
+	public static function abandoned_daily( int $from, int $to ): array {
+		if ( $to <= $from || ! class_exists( Recovery_Items::class ) ) {
+			return array();
+		}
+		$name   = 'pc_m6_abandoned_daily_' . md5( $from . '|' . $to );
+		$cached = get_transient( $name );
+		if ( is_array( $cached ) ) {
+			return $cached;
+		}
+		try {
+			$list = Recovery_Items::list( array( 'from_ms' => $from * 1000, 'to_ms' => $to * 1000 ), 1, 100000 );
+		} catch ( \Throwable $e ) {
+			return array(); // 弃单读不出来时不让每日汇总跟着出错。
+		}
+		$by_day = array();
+		foreach ( (array) ( $list['items'] ?? array() ) as $item ) {
+			$created = (int) ( $item['created_ms'] ?? 0 );
+			if ( $created >= $from * 1000 && $created < $to * 1000 ) {
+				$by_day[ wp_date( 'Y-m-d', intdiv( $created, 1000 ) ) ][] = $item;
+			}
+		}
+		$out = array();
+		foreach ( $by_day as $day => $items ) {
+			$out[ $day ] = self::abandoned_from_items( $items, $from * 1000, $to * 1000 );
+		}
+		set_transient( $name, $out, self::ABANDONED_TTL );
+		return $out;
+	}
+
+	/**
 	 * 弃单数和召回激活率（Recovery_Items 的去重规则）。读一次要查几百张订单，所以结果缓存 5 分钟。
 	 *
 	 * @return array{count:int,open:int,failed:int,emailed:int,recovered:int,recovered_cents:int,rate:?float}
@@ -639,6 +674,7 @@ final class Metrics {
 		foreach ( self::order_facts( $from, $to ) as $fact ) {
 			$by_day[ wp_date( 'Y-m-d', (int) $fact['paid_at'] ) ][] = $fact;
 		}
+		$abandoned = self::abandoned_daily( $from, $to );
 		$cursor = ( new \DateTimeImmutable( '@' . $from ) )->setTimezone( wp_timezone() )->setTime( 0, 0 );
 		for ( $i = 0; $i < 400 && $cursor->getTimestamp() < $to; $i++ ) {
 			$next   = $cursor->modify( '+1 day' );
@@ -655,6 +691,11 @@ final class Metrics {
 				'refund_cents'    => $sum['refund_cents'],
 				'sales_cents'     => $sum['sales_cents'],
 				'aov_cents'       => $sum['aov_cents'],
+				// 弃单按创建那天归属（和 summary() 的 abandoned 同一个定义）。读不出弃单时这四项是 0。
+				'abandoned'        => (int) ( $abandoned[ $day ]['count'] ?? 0 ),
+				'abandoned_open'   => (int) ( $abandoned[ $day ]['open'] ?? 0 ),
+				'recall_emailed'   => (int) ( $abandoned[ $day ]['emailed'] ?? 0 ),
+				'recall_recovered' => (int) ( $abandoned[ $day ]['recovered'] ?? 0 ),
 			);
 			$cursor = $next;
 		}

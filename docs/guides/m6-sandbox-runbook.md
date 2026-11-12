@@ -1,7 +1,7 @@
 # M6 / M7：沙盒对账和影子档观察（给 F1）
 
 2026-11-12 · F4「数据」会话。分支 `claude/m6-metrics-db7036`（已含主线 `976c1fa`）。
-没有新表、没有改表结构；开关 `peptide_core_m6_mode` 默认 `off`。下面每一步都写了命令和通过标准，做完把输出贴回共享笔记，F4 来读。
+现有的表结构没有改；新增一张表 `{prefix}pc_track_ads`（访问的广告参数，没有顾客资料，自己的版本选项 `peptide_core_track_ads_db`），部署后第一次请求时自动建，建好后 `wp option get peptide_core_track_ads_db` 是 `1`。开关 `peptide_core_m6_mode` 默认 `off`。下面每一步都写了命令和通过标准，做完把输出贴回共享笔记，F4 来读。
 
 命令都在沙盒那家店的 WordPress 目录里执行。
 
@@ -15,6 +15,9 @@
 | 第 2 步的报表三档冒烟 | 退出码 0，202 项检查。影子档输出和关着时逐字节相同；开着时概览页、运营数据、转化详情的漏斗和 `Data\Metrics` 一致 |
 | 写入侧的漏斗规则（开关临时设成开，真正的付款完成流程） | 填了地址再付款 → 访问走到第 5 步；没有填地址的记录就付款 → 停在第 3 步、订单号照样挂上、记一次异常；填地址事件晚到 → 补到第 5 步；全 1 测试单 → 停在第 3 步 |
 | F1 清单里归 F4 的 12 个冒烟用例，主线 `976c1fa` 和本分支各跑一遍 | 两边逐个相同：6 个全过，6 个有失败（都是主线上原本就失败的，见第 5 节） |
+| 按广告拆分的整条路径：真正的事件接收 → 入库 → 来源报表三种分组 → CSV → 隐私抹除 | 都对。带 `{{campaign.name}}` 这类没被替换的占位符时只丢广告参数，来源照常记下 |
+| 投手的两个合并页（同屏布局），浏览器里看 | 两段都出数，换时间段一起刷新，按 `tab` 滚到第二段，控制台没有报错。只看了桌面宽度 |
+| `Metrics::daily()` 近 7 天 | 每天的弃单数加起来等于整段的弃单数 |
 
 这是 SQLite 上的结果。**MySQL 上、真实快照上还没跑过**，所以需要沙盒再跑一遍。
 第一次实跑时冒烟脚本就抓到一处真问题（已修）：填地址的事件落在一次没打开过结账页的访问里时，带分组的漏斗和 `Data\Metrics` 数出来不一样。
@@ -121,7 +124,20 @@ wp eval 'print_r( PeptideCore\Tracking\Funnel_Guard::counters( 1 ) ); print_r( P
 
 默认套件里你标成跳过、归 F4 的 5 个（`data-product-user-ratios-node`、`data-native-search-pure`、`data-product-action-rankings-pure`、`tracking-product-actions-pure`、`experiment-data-pure`）在这条分支上都已经修好，合并之后可以把 status 改回去。这条分支上默认套件是 61 通过 / 3 失败，剩下 3 个是 `mail-source-observations`（日常会话）、`visitor-intents`、`visitor-product-actions`（F5 说它那条分支上已修）。
 
-## 6. 像素（M7）
+## 6. 按广告拆分和同屏数据页
+
+```bash
+wp option get peptide_core_track_ads_db
+```
+
+应该是 `1`（表已建好）。然后用带广告参数的地址打开店铺首页一次，例如 `/?utm_source=facebook&utm_medium=paid&utm_campaign=sandbox-c&utm_term=sandbox-s&utm_content=sandbox-a`（不要用登录了后台的浏览器），再到后台数据 → 来源数据，分组选“广告系列”。
+
+通过标准：表里有一行 `sandbox-c`，访客数 1。分组换成“广告组”“广告”，分别多出 `sandbox-s`、`sandbox-a` 两列。
+这一步要主题那一半（F5 的分支）也在沙盒上才看得到值；只有本分支时这三项不会上报，表里只有“没有观察到”和“已捕获但未提供此参数”两行，这也算正常。
+
+同屏数据页：管理员直接打开 `wp-admin/admin.php?page=pc-data-funnel-sources` 和 `…?page=pc-data-products-landing`。通过标准：每页上下两个报表都有数、没有页签、浏览器控制台没有报错。如果方便，请用手机宽度也看一眼，我这边没有看过。
+
+## 7. 像素（M7）
 
 沙盒没有像素 ID 和令牌，也出不了外网，完整验收要到生产店按 `docs/guides/m7-pixel-acceptance-checklist.md` 做。沙盒上只需要确认两件事不报错：
 

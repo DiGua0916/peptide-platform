@@ -632,7 +632,8 @@ Root installed only three existing Commerce sources for P09 collection products 
 | `Metrics::conversion_rate( int $from, int $to ): ?float` | 支付成功访客 ÷ 访客 |
 | `Metrics::funnel( int $from, int $to ): array` | `{unit:'visitors', counts:{visitors,viewed,carted,checkout,address,shipping,payment,paid}, layers:[{key,count,step_rate,visitor_rate}×8]}`，每层不大于上一层 |
 | `Metrics::abandoned( int $from, int $to ): array` | `{count, open, failed, emailed, recovered, recovered_cents, rate}`，结果缓存 5 分钟 |
-| `Metrics::daily( int $from, int $to ): array` | 按店铺时区自然日，每天 `{date, visitors, paid_visitors, conversion_rate, orders, gross_cents, refund_cents, sales_cents, aov_cents}` |
+| `Metrics::daily( int $from, int $to ): array` | 按店铺时区自然日，每天 `{date, visitors, paid_visitors, conversion_rate, orders, gross_cents, refund_cents, sales_cents, aov_cents, abandoned, abandoned_open, recall_emailed, recall_recovered}`。后四项是弃单，按弃单创建那天归属，定义和 `summary()` 的同名项一样（11-12 加的） |
+| `Metrics::abandoned_daily( int $from, int $to ): array` | 店铺时区的日期 => 那一天的 `{count, open, failed, emailed, recovered, recovered_cents, rate}`；没有弃单的日子不在结果里。读一次弃单列表，缓存 5 分钟 |
 | `Metrics::order_fact( \WC_Order $order ): array` | 一张订单的事实，见下 |
 | `Metrics::order_facts( int $from, int $to ): array` | 付款时间在时间段内的已付款订单的事实（含测试单，`test = true`） |
 | `Metrics::paid_orders( int $from, int $to ): array` | 和 `order_facts()` 同一批订单，但返回 `\WC_Order` 对象（含测试单，调用方用 `is_test_order()` 排除） |
@@ -683,9 +684,10 @@ currency, visitor, visit, buyer
 ### 4. 数据页对投手（ST-05）
 
 - 判断投手：`PeptideCore\Data\Audience::is_media_buyer( ?int $user_id = null )` = 用户有角色 `pc_media_buyer` 且没有 `manage_options`；过滤器 `peptide_core_is_media_buyer`（参数：结果、用户编号）可以改写。**需要 F5**：创建角色 `pc_media_buyer`，并给它 `manage_woocommerce`（数据页、概览页、像素页的权限检查都是这一项）。
-- 顶层菜单 slug 仍然是 `pc-data`。投手只有两个子页：`pc-data-funnel-sources`（漏斗 + 来源）、`pc-data-products-landing`（商品 + 落地页），每页用页签（地址栏 `tab=funnel|sources`、`tab=products|landing`）切换原来的两个报表；其余数据子页对投手不注册，直接访问会被拒绝。管理员（含总后台一键登录）仍然看到全部 12 个子页，另外也能打开这两个合并页（不显示在菜单里）。
+- 顶层菜单 slug 仍然是 `pc-data`。投手只有两个子页：`pc-data-funnel-sources`（漏斗 + 来源）、`pc-data-products-landing`（商品 + 落地页），每页把原来的两个报表上下排在同一屏（11-12 起的默认布局）；地址栏的 `tab=funnel|sources`、`tab=products|landing` 仍然有效，用来在打开时滚到那一段。其余数据子页对投手不注册，直接访问会被拒绝。管理员（含总后台一键登录）仍然看到全部 12 个子页，另外也能打开这两个合并页（不显示在菜单里）。
 - F5 的菜单白名单里“数据”保留 `pc-data` 即可；投手点“数据”会进 `pc-data-funnel-sources`。投手如果直接打开 `admin.php?page=pc-data`，页面只显示两个合并页的入口（`Workspace_Shell` 只在 `pc-overview` / `pc-data` 两个地址启动，投手的入口不是这两个地址之一时不受影响）。
-- 这一版是“两页、每页两个页签”，不是同屏合并（同屏要改 `assets/data.js` 的挂载方式，等有浏览器环境再做）。
+- 布局由每家店的选项 `peptide_core_buyer_data_layout` 决定：`stacked`（默认，同屏）/ `tabs`（第一版的“每页两个页签”，留作退路）；过滤器同名。同屏布局 11-12 在本地站点的浏览器里看过两个合并页（桌面宽度），手机宽度没有看。
+- F5 的投手首页如果链到某一个报表，用 `Admin\Data_Pages::buyer_url( $page, $tab )`，两种布局下都能用。
 
 ### 5. 像素与 CAPI（FE-09，M7）
 
@@ -696,11 +698,20 @@ currency, visitor, visit, buyer
 - **给 F5 的向导第 4 步**：`POST /wp-json/peptide/v1/admin/pixel-test`（需要 `manage_woocommerce` 和 REST nonce），或 PHP 里直接 `\PeptideCore\Pixels\Server::test_event()`。无参数，HTTP 200，返回 `{ ok: bool, pixel: string, message: string, reason: '' | 'no_pixel', test_code: bool, results: [ { pixel, ok, code, message } ] }`；`ok = true` 就是“已通”。`pixel` / `message` 是给向导直接显示的：第一个没通的像素（都通时是第一个像素）和一句中文原因（通了是空字符串）；`results` 是每个像素的明细。向导状态由 F5 自己写，这个接口不写任何向导数据。
 - `assets/pixels*.js` 不在第 13.2 节的清单里，但只属于像素模块，由 F4 维护。
 
-### 6. 需要别的会话配合的事
+### 6. 按广告拆分（2026-11-12）
+
+- 主题上报的落地页参数里，`utm_campaign`、`utm_term`、`utm_content`（投放链接里的广告系列、广告组、广告，F5 的 `ad-link` 固定带这三项）现在会通过 `Tracking\Attribution::clean()`：各 1–120 个字符，不合规（空、过长、控制字符、没被 Facebook 替换的 `{{…}}`）时**只丢那一项**，来源和媒介照常记。前端协议不用再改。
+- 入库：`PeptideCore\Tracking\Ad_Params`，表 `{prefix}pc_track_ads`（`visit_id` 主键、`utm_campaign`、`utm_term`、`utm_content`、`captured_ms`），版本选项 `peptide_core_track_ads_db`。访问表的结构和版本号没有动。一次访问第一次记下的值算数；隐私抹除、超期清理、清空追踪数据时跟着删。
+- 读：`Ad_Params::for_visits( int[] $visit_ids ): array`（访问编号 => 三项，没有的项是 `null`）、`Ad_Params::typed( ?array $row, bool $captured ): array`（带状态的值：`value / missing / unobserved`）。
+- 报表：`GET /peptide/v1/data/sources` 的 `group_by` 多三个值——`campaign`（按广告系列）、`adset`（广告系列 + 广告组）、`ad`（广告系列 + 广告组 + 广告）；返回里多 `group_by`、`ad_keys`（这一行的身份由哪几个参数组成）、`ad_capture`（表装好了没有）；每一行带对应的带状态的值。`format=csv` 同样支持。和 `split_medium=1` 不能同时用（400）。`utm` / `channel` 两种分组的返回没有变。
+- 历史访问没有这三项（以前上报时就被丢掉了），会归在“没有观察到”或“已捕获但未提供此参数”一行。
+### 7. 需要别的会话配合的事
 
 | 谁 | 事情 | 状态 |
 | --- | --- | --- |
 | F5 | 角色 `pc_media_buyer` 带 `manage_woocommerce`；菜单白名单保留 `pc-data` | 待 F5 |
+| F5 | 你要的三件事：`/admin/pixel-test`（早就有）；服务端放开 `utm_campaign / utm_term / utm_content` 并入库、来源报表加三种分组（11-12 已做，见第 6 小节）；`Tracker::is_staff()`、`Pixels::allowed()` 认员工角色 `Staff::is_staff()`（11-12 已做）。FE-02 的地址替换会不会让像素多发一次 PageView：已经写进像素验收清单，等沙盒 / 生产验收时看 | F4 已完成 |
 | F3 | 订单上报和总后台汇总按 `order_fact()` 的规则；回写 `_pc_refund_cents` | 待 F3 |
-| F1 | 登记功能键 `m6.metrics`、`m7.pixel_acceptance`；测试条目已追加到 `tests/data-observations-suites.json` 末尾（`module: M6 / M7`）（现在 11 条）；发布前在沙盒把开关切到 `shadow` 观察。F4 的用例已经在本机跑过（PHP 8.3.36），默认套件 59 通过 / 3 失败，剩下 3 个不归 F4 | 待 F1 |
+| F3 + F1 | 你们要的两件事都就绪了：店铺侧销售额减 `_pc_refund_cents`（`order_fact()['net_cents']`、`Metrics::orders()['sales_cents']`，一直是这样）；每日汇总里的弃单数——`Metrics::daily( $from, $to )` 每一行多了 `abandoned / abandoned_open / recall_emailed / recall_recovered`，或者直接用 `Metrics::abandoned_daily()`。`/hq/summary`（`core/class-hq-connector.php`，归 F1）在每天那一行里加上这几项即可，日期都是店铺时区，能直接按 `date` 对上。F4 不改连接器 | 等 F1 接进 `/hq/summary` |
+| F1 | 登记功能键 `m6.metrics`、`m7.pixel_acceptance`；测试条目已追加到 `tests/data-observations-suites.json` 末尾（`module: M6 / M7`）（现在 16 条）；沙盒上要跑的命令和通过标准在 `docs/guides/m6-sandbox-runbook.md`。新增一张表 `{prefix}pc_track_ads`（访问编号 + 三个投放名称，没有顾客资料和密钥，脱敏快照建议 keep）和它的版本选项 `peptide_core_track_ads_db`；新增选项 `peptide_core_buyer_data_layout`。默认套件 64 通过 / 3 失败，剩下 3 个不归 F4；你标成跳过的 5 个 F4 套件在这条分支上都已修好 | 待 F1 |
 | 日常会话 | `core/class-overview.php` 不用改：概览页的数字由 `Admin\Overview_Page` 按开关用 `Metrics` 覆盖。之后再改概览页、数据页、访客页、像素页请先在聊天室找 F4 | 知会 |

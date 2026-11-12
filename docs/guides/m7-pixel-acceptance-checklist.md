@@ -70,6 +70,7 @@ wp eval-file wp-content/plugins/peptide-core/tests/m7-pixel-acceptance-smoke.php
 
 - [ ] 六种事件的“事件匹配质量”有分数；Purchase 的分数明显低（比如 5 分以下）时告诉开发，多半是邮箱、电话或 fbp / fbc 没传到。
 - [ ] 「诊断」里没有“服务器和浏览器事件没有去重”之类的警告。
+- [ ] 这家店如果打开了“商品地址”开关（`pc_entry_address`，从广告落地后地址栏换成商品自己的地址）：从一条广告链接进店，PageView 只有一条。出现两条说明地址替换让像素又发了一次，告诉开发。
 
 Meta 的界面文字会变，上面几处名称对不上时以“每种事件有浏览器和服务器两路、并且去重”为准。
 

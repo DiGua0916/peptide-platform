@@ -72,6 +72,11 @@ unset( $_SERVER['HTTP_SEC_GPC'] );
 \PeptideCore\Access::$staff = true;
 m6_check( 'staff get no event and nothing is sent', array() === $post()->data['events'] && 2 === count( $to_fb() ) );
 \PeptideCore\Access::$staff = false;
+// 员工角色（投手）在前台没有 manage_woocommerce，也不触发像素。桩里的当前用户编号是 0。
+\PeptideCore\Staff::$ids = array( 0 );
+m6_check( 'a staff-role user (media buyer) fires no pixel either', false === Pixels::allowed() );
+\PeptideCore\Staff::$ids = array();
+m6_check( 'ordinary visitors are still allowed', true === Pixels::allowed() );
 m6_check( 'only add_payment_info is served by this endpoint', array() === Pixels::rest_event( new WP_REST_Request( array( 'name' => 'purchase' ) ) )->data['events'] );
 
 // ---------- 2. 像素页对投手只提交 Facebook ----------

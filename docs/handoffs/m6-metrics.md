@@ -6,7 +6,8 @@
 ## 先说最重要的
 
 **纯逻辑测试已经在本机跑过并通过；需要 WordPress / WooCommerce / 数据库 / 浏览器的部分一样都没跑过。**
-平台所有者同意后，我在本会话的临时目录里从 php.net 源码编译了 PHP 8.3.36（方法见文末），跑了新写的 13 个用例和仓库里现有的全部纯逻辑用例，结果见“实际做过的检查”。
+平台所有者同意后，我在本会话的临时目录里从 php.net 源码编译了 PHP 8.3.36（方法见文末），跑了新写的 16 个用例和仓库里现有的全部纯逻辑用例，结果见“实际做过的检查”。
+11-12 起另外有了一份能跑真正 WordPress 的本地环境（见“本地 WordPress 拷贝”一节），对账报告、报表三档、写入侧的漏斗规则、按广告拆分、同屏数据页都在上面实跑过；那是 SQLite，**MySQL 和真实快照上仍然没有跑过**。
 没有验证过的：任何真实数据库上的查询（`Metrics` 的订单和访客读数、对账报告）、概览页和数据页在浏览器里的样子、`wc_get_orders( date_paid … )` 在真实 WooCommerce 下的行为、追踪事件的真实写入。这些要到沙盒或脱敏快照上才能验证。
 
 开关默认是 `off`。按设计，off 时线上行为和这条分支之前完全一样（见“开关关着时改了什么”一节的逐项说明）。
@@ -23,6 +24,10 @@
 | 6 | 其余报表接入：测试单规则、订单集合、单笔销售额和归属时刻、分组转化率、八层漏斗（见“已经接入的地方”）；每处一个对账用例 | `e7883ce` |
 | 7 | 排行接入：“已付款订单”的那几张表按付款时间取，支付成功率仍按下单时间算尝试 | `addde8c` |
 | 8 | 合并主线到 `976c1fa`（没有冲突，主线对 F4 名下 5 个文件的改动原样保留）；复核测试单规则，用真正的类补用例；口径文档补访问时长、在线访客、弃单的新规则 | `3658844`、`fb86c21` 及之后 |
+| 9 | 报表三档冒烟脚本 `m6-reports-switch-smoke.php` 和给 F1 的沙盒手册；实跑发现并修掉一处漏斗不一致（填地址事件落在没打开过结账页的访问里） | `eff5f25` |
+| 10 | 按广告拆分：广告系列 / 广告组 / 广告进归因、入库（`Tracking\Ad_Params`），来源报表加三种分组 | `8989f1f` |
+| 11 | 投手的两个合并页改成同屏布局，页签布局留作退路 | `d65f4ca` |
+| 12 | 每日汇总带弃单数（`Metrics::daily()` / `abandoned_daily()`）；员工角色不被追踪、不触发像素（F5 的请求） | 本次提交 |
 
 M7 的部分见 `docs/handoffs/m7-pixels.md`。
 
@@ -48,10 +53,12 @@ M7 的部分见 `docs/handoffs/m7-pixels.md`。
 - `includes/admin/class-overview-page.php`：页面和接口的数据经 `Metrics_Overlay`（新方法 `Overview_Page::data()`）。
 - `includes/admin/class-data-pages.php`：投手的两个合并页。
 - `includes/class-plugin.php`：只追加一行 `Data\Metrics_Switch::register_hooks();`。
-- `tests/data-observations-suites.json`：末尾追加 13 条（`module: M6 / M7`）。
+- `tests/data-observations-suites.json`：末尾追加 16 条（`module: M6 / M7`）。
+- 11-12 新增：`includes/tracking/class-ad-params.php`；`tests/m6-reports-switch-smoke.php`（要 WordPress）、`m6-ad-params-pure.php`、`m6-data-sources-ads.cjs`、`m6-data-stacked.cjs`；`docs/guides/m6-sandbox-runbook.md`。
+- 11-12 修改：`includes/tracking/class-attribution.php`、`class-privacy.php`、`class-schema.php`、`class-tracker.php`；`includes/data/class-sources.php`、`class-report-exports.php`、`class-visitor-funnel.php`、`class-classified-conversion.php`、`class-metrics.php`；`assets/data.js`、`data.css`、`data-sources.js`、`data-sources.css`；`languages/customer-data-observations-zh_CN.php`（只加了四条新文案的中文）。
 - `docs/CONTRACT.md`：末尾追加「M6 / M7」一节。
 
-没有新表、没有改表结构。新增的选项见 CONTRACT 第 2 小节。
+现有的表结构没有改。11-12 新增一张表 `{prefix}pc_track_ads`（访问的广告参数，没有顾客资料），有自己的版本选项 `peptide_core_track_ads_db`，第一次请求时自动建；建不出来只影响“按广告拆分”，追踪和归因照常。新增的选项见 CONTRACT「M6 / M7」第 2、4、6 小节。
 
 ## 开关关着时改了什么
 
@@ -123,9 +130,10 @@ wp eval 'print_r( PeptideCore\Data\Metrics_Switch::log() ); print_r( PeptideCore
 | 影子模式下的漏斗对账 | 只比后四层的规则差异 | “不算测试版留下的访问”要换 SQL 才能比，影子时没有做；这部分差异在 `operations.kpis` 的访客数里能看到 |
 ## ST-05 的现状
 
-- 投手（角色 `pc_media_buyer`，由 F5 创建）的“数据”菜单只有两页：「漏斗 + 来源」「商品 + 落地页」。每页顶部两个页签，切换的是原来的四个报表（转化率详情、来源、商品详情、落地页转化），脚本和接口没有动。
-- **不是同屏合并**：一页里同时只显示一个报表。同屏要改 `assets/data.js`（现在一页只挂一个报表），需要浏览器环境验证，留到有环境之后。
-- 没有在浏览器里看过页面。
+- 投手（角色 `pc_media_buyer`，由 F5 创建）的“数据”菜单只有两页：「漏斗 + 来源」「商品 + 落地页」。用的还是原来的四个报表（转化率详情、来源、商品详情、落地页转化），报表脚本和接口没有动。
+- **11-12 起默认是同屏布局**：每页把两个报表上下排在一屏，各有小标题和自己的导出按钮；换时间段两段一起刷新；地址里的 `tab` 用来在打开时滚到那一段。第一版的页签布局留作退路：`wp option update peptide_core_buyer_data_layout tabs`。
+- 在本地 WordPress 拷贝上用浏览器看过两个合并页（桌面宽度 1280）：两段都出数，按 `tab` 滚到第二段，来源那一段切到“广告组”分组，当成投手时数据菜单只有这两页，控制台没有报错。**手机宽度没有看；真正的投手账号（F5 的角色）没有试过**，这里是用过滤器把管理员当成投手看的。
+- 转化详情里每组的“查看详情”链到分维度明细页，投手打不开（管理员的页面）。两种布局都是这样，还没处理。
 
 ## 待确认
 
@@ -141,13 +149,15 @@ wp eval 'print_r( PeptideCore\Data\Metrics_Switch::log() ); print_r( PeptideCore
 | --- | --- |
 | `php -l`：全部新增和修改的 PHP 文件 | 无语法错误 |
 | `node --check assets/pixels.js` | 通过 |
-| 新用例 `m6-metrics-pure`（54 条断言）、`m6-metrics-switch-pure`（30）、`m6-funnel-guard-pure`（36）、`m6-reconcile-orders-pure`（23）、`m6-reconcile-overlay-pure`（26）、`m6-reconcile-reports-pure`（46）、`m6-reconcile-conversion-pure`（26）、`m6-reconcile-rankings-pure`（27）、`m6-buyer-data-pages-pure`（31）、`m7-pixel-acceptance-pure`（32）、`m7-pixels-pure`（31） | 全部通过，`E_ALL` 下没有警告 |
+| 新用例 `m6-metrics-pure`（61 条断言）、`m6-metrics-switch-pure`（30）、`m6-funnel-guard-pure`（36）、`m6-reconcile-orders-pure`（23）、`m6-reconcile-overlay-pure`（26）、`m6-reconcile-reports-pure`（46）、`m6-reconcile-conversion-pure`（26）、`m6-reconcile-rankings-pure`（27）、`m6-test-order-flag-pure`（41）、`m6-ad-params-pure`（32）、`m6-data-sources-ads`（25）、`m6-data-stacked`（14）、`m7-purchase-dedupe-pure`（24）、`m6-buyer-data-pages-pure`（36）、`m7-pixel-acceptance-pure`（32）、`m7-pixels-pure`（33） | 全部通过，`E_ALL` 下没有警告 |
 | 默认套件 `node tests/run-data-observations.cjs`：主线 `f0e58d2` | 42 通过 / 9 失败 |
 | 同一命令：本分支第一批（`830c2e2`） | 53 通过 / 6 失败；没有新增失败，修好了 3 个原有失败 |
 | 同一命令：本分支第二批（`e7883ce`，已合并主线 `dcaf95e`） | 58 通过 / 3 失败；又修好 3 个原有失败，剩下 3 个不归 F4 |
 | 同一命令：排行接入之后（`addde8c`） | 59 通过 / 3 失败（多的 1 个是新用例） |
 | 同一命令：合并主线 `976c1fa` 之后、修用例之前 | 58 通过 / 4 失败——主线的两处改动让 F4 的两个用例报错（见下） |
-| 同一命令：11-12 这一批之后 | **61 通过 / 3 失败**（新增 `m7-purchase-dedupe-pure`、`m6-test-order-flag-pure`；剩下 3 个不归 F4） |
+| 同一命令：11-12 复核购买事件和测试单规则之后 | 61 通过 / 3 失败（新增 `m7-purchase-dedupe-pure`、`m6-test-order-flag-pure`） |
+| 同一命令：11-12 全部做完之后 | **64 通过 / 3 失败**（又新增 `m6-ad-params-pure`、`m6-data-sources-ads`、`m6-data-stacked`；剩下 3 个不归 F4） |
+| 真正的 WordPress（本地拷贝，SQLite，HPOS 开）：`m6-reconcile-report-smoke`、`m6-reports-switch-smoke`（202 项检查） | 都通过；归 F4 的 12 个旧冒烟用例主线和本分支逐个相同 |
 | 24 个非默认的可选套件，主线和本分支逐个对比（第一批时做的） | 结果完全相同（两边都是 12 个失败，都是历史套件） |
 | 插件里全部可以单独运行的测试文件（PHP 和 JS，11-12 时共 127 个），改动前后逐个对比 | 只有变好的，没有变差的 |
 
@@ -204,10 +214,22 @@ wp eval 'print_r( PeptideCore\Data\Metrics_Switch::log() ); print_r( PeptideCore
 
 ## 下一步
 
-1. 沙盒或脱敏快照到了之后：`wp eval-file …/m6-reconcile-report-smoke.php`，把结果补到本文件；在沙盒上把开关切到 `shadow` 观察，重点看 `reports.visitor_funnel`（有多少付款没有填地址的记录）和 `reports.paid_orders`（有多少订单不是在创建当天付的款）。
-2. “还没有接入的地方”里剩下的几项按表里写的原因暂时不动（排行已经接完）。
-3. 同屏合并的投手数据页（需要浏览器环境）。
-4. “按广告拆分”：现在主题和 `Tracking\Attribution` 的白名单都只收 `utm_source`、`utm_medium`，广告系列 / 广告组 / 广告三个参数在上报时就被丢掉了（弃单详情、结账流失页读这几个字段一直是空的）。要做：主题两个脚本放开白名单（F5 / 主题归属方），`Attribution` 放开白名单，来源报表加维度。
+1. 等 F1 在沙盒（MySQL、s0010 脱敏快照）上按 `docs/guides/m6-sandbox-runbook.md` 跑一遍，把输出贴回共享笔记；重点看 `reports.visitor_funnel`（有多少付款没有填地址的记录）和 `reports.paid_orders`（有多少订单不是在下单当天付的款）。
+2. 修 F1 冒烟清单里归 F4 的 12 个用例（6 个是找不到可用的简单商品，6 个是期望值没跟上后来的改动，明细在沙盒手册第 5 节）。
+3. 同屏数据页在手机宽度和真正的投手账号下看一遍；转化详情的“查看详情”对投手隐藏或改到来源那一段。
+4. 弃单详情、结账流失页读广告参数的地方（以前一直是空的）改成读 `Ad_Params`——那两个页面不归 F4，读法写在 CONTRACT「M6 / M7」第 6 小节，等日常会话接。
+5. “还没有接入的地方”里剩下的几项按表里写的原因暂时不动。
+## 本地 WordPress 拷贝（2026-11-12）
+
+`../tools` 里有 PHP 8.3.32（带 pdo_sqlite）、WP-CLI、WordPress 7.1.4 和 WooCommerce 11.2.1 的源码，`../localwp/site` 是日常会话的本地站（SQLite，HPOS 开着，插件链到主检出目录）。**不要直接用那个站**，拷一份到会话临时目录再用：
+
+1. 新建一个站点目录：WordPress 根目录下的 `.php` 入口文件和整个 `wp-admin` 要**真的拷贝**，`wp-includes`、WooCommerce、SQLite 插件、主题可以用链接。入口文件如果也用链接，PHP 会按链接的真实位置去找 `wp-config.php`，网页请求就落到原来那个站上了（我第一次就这样，有两次请求打到了原站的登录页，它的数据库文件修改时间因此变了；没有登录、没有改任何设置）。
+2. `wp-content/plugins/peptide-core` 链到自己的工作目录；`wp-config.php` 拷一份，把 `DB_DIR` 和 `WP_DEBUG_LOG` 改到临时目录，数据库文件 `localwp/db/vialcove.sqlite` 拷过去。
+3. 命令行：`../tools/php/php ../tools/wp-cli.phar --path=<站点目录> eval-file …`。
+4. 要在浏览器里看：`php -S 127.0.0.1:<端口> -t <站点目录> <路由文件>`。沙盒不让监听端口，这一条要在沙盒外跑。`wp-config.php` 里加 `WP_HOME` / `WP_SITEURL` 指到这个地址。
+
+这份环境上做过的事和结果写在 `docs/guides/m6-sandbox-runbook.md` 第 0 节。本地库里原来没有真实订单，我在拷贝里造了 6 张（当天下单当天付、9 天前下单 2 天前付、没付款、没有填地址记录就付款、全 1 测试单、总后台标了退款）。
+
 ## 在这台机器上跑测试
 
 机器上没有现成的 PHP。这个会话是这样得到的（会话结束临时目录就没了，要重做，约 3 分钟）：

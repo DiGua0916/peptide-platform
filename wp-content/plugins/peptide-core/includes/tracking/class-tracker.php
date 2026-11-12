@@ -153,7 +153,14 @@ final class Tracker {
 	}
 
 	public static function is_staff( int $user_id ): bool {
-		return $user_id > 0 && ( user_can( $user_id, 'manage_woocommerce' ) || user_can( $user_id, 'manage_options' ) );
+		if ( $user_id <= 0 ) {
+			return false;
+		}
+		if ( user_can( $user_id, 'manage_woocommerce' ) || user_can( $user_id, 'manage_options' ) ) {
+			return true;
+		}
+		// 员工角色（投手等）的权限是进后台时按请求给的，在前台没有 manage_woocommerce；按角色认（F5 的请求，2026-11-12）。
+		return class_exists( \PeptideCore\Staff::class ) && \PeptideCore\Staff::is_staff( $user_id );
 	}
 
 	/** 前台页面加载时发访客 cookie。后台、预览、员工账号不发。 */
