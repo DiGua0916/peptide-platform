@@ -1,5 +1,6 @@
 /*
- * FE-03: "N people are viewing this" / "N added to bag" in the product dialog.
+ * FE-03: "N people viewed this in the last M minutes" / "N added to bag in the last H hours"
+ * in the product dialog.
  *
  * Real numbers only. They come from the data module's endpoint
  * (GET peptide/v1/product-activity?product_id=ID, see docs/CONTRACT.md); this script never
