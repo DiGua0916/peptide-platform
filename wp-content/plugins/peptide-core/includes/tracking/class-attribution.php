@@ -34,6 +34,11 @@ final class Attribution {
 			if ( ! is_string( $value ) || ! preg_match( '//u', $value ) || preg_match( '/[\x00-\x1f\x7f]/', $value ) || preg_match_all( '/./us', $value ) > 120 ) { return $bad; }
 			$allowed[ $key ] = $value;
 		}
+		// M6“按广告拆分”：广告系列 / 广告组 / 广告（utm_campaign / utm_term / utm_content）。可有可无，不合规时只丢那一项，
+		// 不像来源和媒介那样整条拒收——投放名称是投手随手起的，不能因为它不合规就丢掉来源。
+		if ( class_exists( Ad_Params::class ) ) {
+			$allowed += Ad_Params::pick( $query );
+		}
 		return array( 'ok' => true, 'value' => array( 'version' => 1, 'host' => $host, 'landing_query' => $allowed, 'referrer_host' => null === $ref || '' === $ref ? $ref : self::host( $ref ) ) );
 	}
 
@@ -74,7 +79,13 @@ final class Attribution {
 		$sql = 'UPDATE ' . Schema::table( 'visits' ) . ' SET attribution_version = 1, ' . $wpdb->prepare( 'attribution_event_uid = %s, attribution_ms = %d, attribution_path = %s, attribution_host = %s, attribution_query = %s', $id, (int) $event['received_ms'], (string) $event['path'], $metadata['host'], $query ) . ', utm_source = ' . $nullable( $metadata['landing_query']['utm_source'] ?? null ) . ', utm_medium = ' . $nullable( $metadata['landing_query']['utm_medium'] ?? null ) . ', referrer_host = ' . $nullable( $metadata['referrer_host'] ) . $wpdb->prepare( ' WHERE id = %d AND visitor_id = %d AND attribution_version = 0', $visit, $visitor );
 		$changed = $wpdb->query( $sql ); // All snapshot fields are claimed by one atomic compare-and-set.
 		if ( false === $changed ) { return self::receipt( $id, 'retry', 'server_error', true ); }
-		if ( 1 === $changed ) { return self::receipt( $id, 'applied', 'captured' ); }
+		if ( 1 === $changed ) {
+			// 广告参数存在自己的表里；存不上不影响归因。
+			if ( class_exists( Ad_Params::class ) ) {
+				try { Ad_Params::store( $visit, (array) ( $metadata['landing_query'] ?? array() ), (int) $event['received_ms'] ); } catch ( \Throwable $e ) { unset( $e ); }
+			}
+			return self::receipt( $id, 'applied', 'captured' );
+		}
 		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT attribution_version, attribution_event_uid FROM ' . Schema::table( 'visits' ) . ' WHERE id = %d AND visitor_id = %d', $visit, $visitor ), ARRAY_A );
 		if ( $wpdb->last_error ) { return self::receipt( $id, 'retry', 'server_error', true ); }
 		if ( ! $row ) { return self::receipt( $id, 'rejected', 'original_visit_missing' ); }

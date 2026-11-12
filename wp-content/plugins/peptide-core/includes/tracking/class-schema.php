@@ -218,6 +218,7 @@ CREATE TABLE {$t} (
 		global $wpdb;
 		$ids = $wpdb->get_col( 'SELECT id FROM ' . self::table( 'visitors' ) . ' WHERE is_test = 1' ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
 		Privacy::delete_visitors( array_map( 'intval', (array) $ids ) );
+		Ad_Params::delete_for_visits( array_map( 'intval', (array) $wpdb->get_col( 'SELECT id FROM ' . self::table( 'visits' ) . ' WHERE is_test = 1' ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
 		foreach ( array( 'events', 'visits' ) as $name ) {
 			$wpdb->query( 'DELETE FROM ' . self::table( $name ) . ' WHERE is_test = 1' ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
 		}
@@ -226,6 +227,9 @@ CREATE TABLE {$t} (
 	/** 删除全部追踪数据（保留表结构）。 */
 	public static function purge(): void {
 		global $wpdb;
+		if ( Ad_Params::installed() ) {
+			$wpdb->query( 'TRUNCATE TABLE ' . Ad_Params::table() ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+		}
 		foreach ( array( 'events', 'tabs', 'visits', 'visitors' ) as $name ) {
 			$wpdb->query( 'TRUNCATE TABLE ' . self::table( $name ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
 		}

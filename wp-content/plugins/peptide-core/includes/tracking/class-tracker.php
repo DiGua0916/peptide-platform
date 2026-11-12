@@ -44,6 +44,7 @@ final class Tracker {
 		// 保存期限和隐私请求：关着追踪时也要能删旧数据、处理顾客的请求。
 		Privacy::register_hooks();
 		Native_Visit_Classifier::register_hooks();
+		Ad_Params::register_hooks(); // 广告参数的表（自己的版本选项，见 Ad_Params）。
 		if ( ! self::enabled() ) {
 			return;
 		}

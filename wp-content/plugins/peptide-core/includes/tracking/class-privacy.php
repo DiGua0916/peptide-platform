@@ -64,6 +64,7 @@ final class Privacy {
 			$ids = array_map( 'intval', $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$visits} WHERE last_ms < %d LIMIT %d", $cutoff, self::BATCH ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 			if ( $ids ) {
 				$in = implode( ',', $ids );
+				Ad_Params::delete_for_visits( $ids );
 				$wpdb->query( "DELETE FROM {$events} WHERE visit_id IN ({$in})" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 				$wpdb->query( "DELETE FROM {$visits} WHERE id IN ({$in})" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 				$removed += count( $ids );
@@ -92,6 +93,7 @@ final class Privacy {
 			return;
 		}
 		$in = implode( ',', $ids );
+		Ad_Params::delete_for_visitors( $ids ); // 先删广告参数：它是按访问编号找的，访问删掉就找不到了。
 		foreach ( array( 'events', 'tabs', 'visits' ) as $name ) {
 			$wpdb->query( 'DELETE FROM ' . Schema::table( $name ) . " WHERE visitor_id IN ({$in})" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
 		}
