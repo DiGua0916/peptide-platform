@@ -100,7 +100,8 @@ final class Admin_Menus {
 		add_action( 'admin_bar_menu', array( self::class, 'clean_admin_bar' ), 999 );
 		add_action( 'admin_init', array( self::class, 'no_update_nags' ) );
 		// 投手的订单页只读（ST-03）。
-		add_filter( 'manage_woocommerce_page_wc-orders_columns', array( self::class, 'buyer_order_columns' ), 999 );
+		// 1000：排在主线 Order_List::columns()（999，整张表重排）之后。
+		add_filter( 'manage_woocommerce_page_wc-orders_columns', array( self::class, 'buyer_order_columns' ), 1000 );
 		add_action( 'manage_woocommerce_page_wc-orders_custom_column', array( self::class, 'buyer_order_column' ), 10, 2 );
 		add_filter( 'bulk_actions-woocommerce_page_wc-orders', array( self::class, 'buyer_no_actions' ), 999 );
 		add_filter( 'woocommerce_admin_order_actions', array( self::class, 'buyer_no_actions' ), 999 );
@@ -108,6 +109,7 @@ final class Admin_Menus {
 		add_filter( 'woocommerce_order_actions', array( self::class, 'buyer_no_actions' ), 999 );
 		add_action( 'add_meta_boxes', array( self::class, 'buyer_order_boxes' ), 999, 1 );
 		add_action( 'admin_head', array( self::class, 'buyer_order_styles' ) );
+		add_action( 'admin_head', array( self::class, 'buyer_order_detail_styles' ) );
 		add_action( 'admin_notices', array( self::class, 'buyer_order_notice' ) );
 		add_action( 'admin_footer', array( self::class, 'buyer_release_order_lock' ), 1 );
 		add_filter( 'screen_options_show_screen', array( self::class, 'buyer_no_screen_options' ) );
@@ -120,20 +122,33 @@ final class Admin_Menus {
 		return \PeptideCore\Staff_Buyer::current() && 'wc-orders' === self::current_page();
 	}
 
-	/** 订单列表：去掉勾选框和操作列，金额后面加来源广告、运单号、退款状态。 */
+	/** 当前是投手在看主线的订单详情页（Order_Detail_Page，2026-11-11）。 */
+	private static function buyer_on_order_detail(): bool {
+		return \PeptideCore\Staff_Buyer::current() && \PeptideCore\Staff_Buyer::PAGE_ORDER === self::current_page();
+	}
+
+	/** 订单列表：去掉勾选框和操作列，后面加来源广告、运单号、退款状态。 */
 	public static function buyer_order_columns( $columns ) {
 		if ( ! is_array( $columns ) || ! \PeptideCore\Staff_Buyer::current() ) {
 			return $columns;
 		}
-		unset( $columns['cb'], $columns['wc_actions'] );
-		return array_merge(
-			$columns,
-			array(
-				'pc_source'   => '来源广告',
-				'pc_tracking' => '运单号',
-				'pc_refund'   => '退款状态',
-			)
-		);
+		return self::buyer_columns( $columns );
+	}
+
+	/**
+	 * 投手的订单列表有哪些列（不读数据库，测试里直接调用）。
+	 *
+	 * 去掉：勾选框、WooCommerce 的行内按钮、主线的“操作”列（里面有发货和写邮件；订单号本身就能点开详情）、
+	 * WooCommerce 的“来源”（下面的来源广告更具体）。已经有物流单号一列时不再加运单号。
+	 */
+	public static function buyer_columns( array $columns ): array {
+		unset( $columns['cb'], $columns['wc_actions'], $columns['pc_ops'], $columns['origin'] );
+		$columns['pc_source'] = '来源广告';
+		if ( ! isset( $columns['shipment_tracking'] ) ) {
+			$columns['pc_tracking'] = '运单号';
+		}
+		$columns['pc_refund'] = '退款状态';
+		return $columns;
 	}
 
 	public static function buyer_order_column( $column, $order ): void {
@@ -160,7 +175,28 @@ final class Admin_Menus {
 			}
 			return;
 		}
-		echo esc_html( self::refund_label( (string) $order->get_meta( '_pc_refund_state' ), (float) $order->get_total_refunded(), (float) $order->get_total() ) );
+		$refund = self::refund_facts( $order );
+		echo esc_html( $refund['label'] . ( '部分退款' === $refund['label'] && $refund['amount'] > 0 ? ' ' . self::plain_price( $refund['amount'], $order ) : '' ) );
+	}
+
+	/** 金额的纯文字写法（$30.00），用在表格和提示里。 */
+	private static function plain_price( float $amount, \WC_Order $order ): string {
+		return html_entity_decode( wp_strip_all_tags( wc_price( $amount, array( 'currency' => $order->get_currency() ) ) ), ENT_QUOTES, 'UTF-8' );
+	}
+
+	/**
+	 * 一张订单的退款情况：总后台标记的（F3：_pc_refund_state、_pc_refund_cents，不产生 WooCommerce 退款）
+	 * 和店铺里实际做过的 WooCommerce 退款，取其中更大的。
+	 *
+	 * @return array{label:string,amount:float}
+	 */
+	public static function refund_facts( \WC_Order $order ): array {
+		$cents    = max( 0, (int) $order->get_meta( '_pc_refund_cents' ) );
+		$refunded = (float) $order->get_total_refunded();
+		return array(
+			'label'  => self::refund_label( (string) $order->get_meta( '_pc_refund_state' ), $refunded, (float) $order->get_total(), $cents ),
+			'amount' => max( $refunded, $cents / 100 ),
+		);
 	}
 
 	/**
@@ -185,13 +221,20 @@ final class Admin_Menus {
 	}
 
 	/**
-	 * 退款状态一栏的文字（不读数据库）：总后台回写的 _pc_refund_state 优先（OR-03），没有时按订单上的已退金额。
+	 * 退款状态的文字（不读数据库）：已退款 / 部分退款 / 无。
+	 *
+	 * 两个来源都算：总后台标记的 _pc_refund_state（none / partial / full）和 _pc_refund_cents（美分，OR-03），
+	 * 以及订单上 WooCommerce 的已退金额。总后台写的是 none，但店铺里确实退过款时，仍按退过款显示。
+	 *
+	 * @param float $refunded WooCommerce 的已退金额。
+	 * @param int   $cents    总后台标记的退款总额（美分）。
 	 */
-	public static function refund_label( string $state, float $refunded, float $total ): string {
-		if ( 'full' === $state || ( '' === $state && $refunded > 0 && $refunded >= $total ) ) {
-			return '已全额退款';
+	public static function refund_label( string $state, float $refunded, float $total, int $cents = 0 ): string {
+		$amount = max( $refunded, $cents / 100 );
+		if ( 'full' === $state || ( $amount > 0 && $total > 0 && $amount >= $total ) ) {
+			return '已退款';
 		}
-		if ( 'partial' === $state || ( '' === $state && $refunded > 0 ) ) {
+		if ( 'partial' === $state || $amount > 0 ) {
 			return '部分退款';
 		}
 		return '无';
@@ -251,9 +294,51 @@ final class Admin_Menus {
 			. '});</script>' . "\n";
 	}
 
+	/**
+	 * 主线的订单详情页（admin.php?page=pc-order）对投手只读。
+	 *
+	 * 页面是日常会话的，这里不改它的输出，只把写操作的入口藏起来：订单复制、退款、作废、编辑、发货、
+	 * 手动发送邮件、卖家备注的保存、标签的增删；“结账成功页 / 订单追踪页”也不显示（投手用自己的浏览器打开顾客的
+	 * 成功页，可能再触发一次购买事件）。真正的限制在服务端：这些入口指向的 admin-post 动作和页面都不在投手的名单里。
+	 */
+	public static function buyer_order_detail_styles(): void {
+		if ( ! self::buyer_on_order_detail() ) {
+			return;
+		}
+		echo '<style id="pc-buyer-order-detail-readonly">'
+			. '.pc-od-head__l .pc-od-link,.pc-od-head__r .pc-od-btn,.pc-od-head__r form,.pc-od-ohead__links,'
+			. '.pc-od a[href*="pc_native=1"],.pc-od a[href*="page=pc-mail"],.pc-od a[href*="page=pc-manual-order"],'
+			. '.pc-od-note button,.pc-od-tag button,.pc-od-tagform{display:none!important}'
+			. '.pc-od .pc-od-mail a[href]{display:inline!important;pointer-events:none;color:inherit;text-decoration:none}'
+			. '.pc-od-note textarea{pointer-events:none;background:#f6f7f7}'
+			. '</style>' . "\n";
+		echo '<script id="pc-buyer-order-detail-readonly-js">document.addEventListener("DOMContentLoaded",function(){'
+			. 'document.querySelectorAll(".pc-od form").forEach(function(f){f.addEventListener("submit",function(e){e.preventDefault();e.stopImmediatePropagation();},true);});'
+			. 'document.querySelectorAll(".pc-od-note textarea").forEach(function(el){el.readOnly=true;});'
+			. 'document.querySelectorAll(".pc-od .pc-od-mail a[href]").forEach(function(a){a.removeAttribute("href");});'
+			. '});</script>' . "\n";
+	}
+
 	public static function buyer_order_notice(): void {
-		if ( self::buyer_on_orders() ) {
-			echo '<div class="notice notice-info"><p>订单在这里只能查看。改价、退款、作废和发货由总后台处理，有问题请联系平台负责人。</p></div>';
+		$detail = self::buyer_on_order_detail();
+		if ( ! $detail && ! self::buyer_on_orders() ) {
+			return;
+		}
+		echo '<div class="notice notice-info"><p>订单在这里只能查看。改价、退款、作废和发货由总后台处理，有问题请联系平台负责人。</p></div>';
+		if ( ! $detail || ! function_exists( 'wc_get_order' ) ) {
+			return;
+		}
+		// 详情页本身不显示总后台标记的退款（F3 的 _pc_refund_state / _pc_refund_cents），在这里补一行。
+		$id    = isset( $_GET['id'] ) && is_scalar( $_GET['id'] ) ? absint( $_GET['id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$order = $id ? wc_get_order( $id ) : null;
+		if ( ! $order instanceof \WC_Order ) {
+			return;
+		}
+		$refund = self::refund_facts( $order );
+		if ( '无' !== $refund['label'] ) {
+			echo '<div class="notice notice-warning"><p>退款状态：<strong>' . esc_html( $refund['label'] ) . '</strong>'
+				. ( $refund['amount'] > 0 ? '，已退 ' . esc_html( self::plain_price( $refund['amount'], $order ) ) . '（订单金额 ' . esc_html( self::plain_price( (float) $order->get_total(), $order ) ) . '）' : '' )
+				. '。</p></div>';
 		}
 	}
 

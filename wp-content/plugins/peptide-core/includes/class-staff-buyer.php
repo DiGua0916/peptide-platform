@@ -40,13 +40,17 @@ final class Staff_Buyer {
 	public const PAGE_ADS    = 'pc-buyer-ads';
 	public const PAGE_STORE  = 'pc-store-info';
 	public const PAGE_WIZARD = 'pc-onboarding';
+	/** 主线的订单详情页（Admin\Order_Detail_Page，2026-11-11）：投手只读。 */
+	public const PAGE_ORDER  = 'pc-order';
+	/** 导出订单（Admin\Buyer_Order_Export，ST-03）。只读，走 admin-post.php 下载。 */
+	public const ACTION_EXPORT = 'pc_buyer_orders_export';
 
 	public const ACTION_PASSWORD = 'pc_buyer_password';
 	public const ACTION_STORE    = 'pc_buyer_store_save';
 	public const ACTION_ADS      = 'pc_buyer_ads_save';
 
 	/** admin-post.php 里投手能提交的表单（都是投手版页面自己的）。 */
-	private const POST = array( self::ACTION_PASSWORD, self::ACTION_STORE, self::ACTION_ADS );
+	private const POST = array( self::ACTION_PASSWORD, self::ACTION_STORE, self::ACTION_ADS, self::ACTION_EXPORT );
 
 	/** admin-ajax.php 里投手能用的动作 => 需要的能力范围（空 = 不需要店铺能力）。 */
 	private const AJAX = array(
@@ -85,13 +89,14 @@ final class Staff_Buyer {
 		add_filter( 'submenu_file', array( self::class, 'submenu_file' ), 9999 );
 		add_action( 'admin_bar_menu', array( self::class, 'admin_bar' ), 9999 );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
+		add_action( 'admin_enqueue_scripts', array( self::class, 'no_command_palette' ), 0 );
 		add_filter( 'pc_hq_capabilities', array( self::class, 'capabilities' ) );
 		add_filter( 'editable_roles', array( self::class, 'hide_role' ) );
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			\WP_CLI::add_command( 'peptide buyer', Staff_Buyer_Cli::class );
 		}
 		// 投手版自己的页面（首页、向导和广告设置）。店铺信息在 Admin\Store_Settings 里。
-		foreach ( array( Admin\Buyer_Home::class, Admin\Onboarding::class ) as $page ) {
+		foreach ( array( Admin\Buyer_Home::class, Admin\Onboarding::class, Admin\Buyer_Order_Export::class ) as $page ) {
 			if ( class_exists( $page ) ) {
 				$page::register_hooks();
 			}
@@ -236,6 +241,17 @@ final class Staff_Buyer {
 		return 'page' === $r['doing'] && 'admin.php' === $r['file'] && in_array( $r['page'], array( self::PAGE_HOME, self::PAGE_ADS, self::PAGE_STORE, self::PAGE_WIZARD ), true );
 	}
 
+	/**
+	 * WordPress 的命令面板（⌘K）会把这次请求里登记的全部后台菜单连名字带地址写进页面，包括投手看不到的页面
+	 * （客户、邮件、店铺设置……）。它在 admin_enqueue_scripts 时读菜单，比这里重建菜单（admin_head）早。
+	 * 投手不加载命令面板；顶部工具条上的入口在 admin_bar() 里去掉。
+	 */
+	public static function no_command_palette(): void {
+		if ( self::current() ) {
+			remove_action( 'admin_enqueue_scripts', 'wp_enqueue_command_palette_assets' );
+		}
+	}
+
 	/** 投手版页面的样式和脚本（一份，四个页面共用）。 */
 	public static function enqueue(): void {
 		if ( ! self::on_own_page() ) {
@@ -299,6 +315,8 @@ final class Staff_Buyer {
 			'action2' => $text( $_REQUEST['action2'] ?? '' ),
 			// 订单页上不靠 action 也会执行写操作的参数：清空回收站（delete_all）、接管编辑锁（claim-lock）。
 			'writes'  => ( ! empty( $_REQUEST['delete_all'] ) || ! empty( $_REQUEST['claim-lock'] ) ) ? '1' : '',
+			// 主线 2026-11-11：带 pc_native 才打开 WooCommerce 原生订单页（退款、发货、改地址用），不带的转到订单详情页。
+			'native'  => ! empty( $_GET['pc_native'] ) ? '1' : '',
 		);
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 		return self::$request;
@@ -359,12 +377,21 @@ final class Staff_Buyer {
 		if ( 'pc-overview' === $page ) {
 			return $redirect( self::PAGE_HOME ); // 后台里“回到首页”的链接都指向数据大盘，投手的首页是另一个页面。
 		}
+		if ( self::PAGE_ORDER === $page ) {
+			// 主线的订单详情页：只读打开。页面上的作废、卖家备注、标签走 admin-post.php（pc_order_detail），不在名单里。
+			return $allow( 'orders' );
+		}
 		if ( 'wc-orders' === $page ) {
 			// 只读：列表（筛选、搜索、翻页）和打开一张订单。批量操作、新建、删除等都带别的 action；
 			// “清空回收站”和“接管编辑”不带 action，靠单独的参数触发（WooCommerce 的 ListTable::current_action()、
 			// PageController::handle_edit_lock()），一样拒绝。
 			$none = array( '', '-1' );
 			$idle = in_array( (string) ( $r['action2'] ?? '' ), $none, true ) && empty( $r['writes'] );
+			if ( 'edit' === $action && ! empty( $r['native'] ) ) {
+				// 原生订单页现在只剩退款、发货、改地址的用途（详情页上的按钮带 pc_native 跳过来），投手不用。
+				// 不带 pc_native 的由主线转到订单详情页。
+				return $deny;
+			}
 			return ( $idle && ( in_array( $action, $none, true ) || 'edit' === $action ) ) ? $allow( 'orders' ) : $deny;
 		}
 		// 弃单、数据（含实时访客）和它们带同样前缀的子页面。
@@ -499,7 +526,7 @@ final class Staff_Buyer {
 		$url = static fn( string $page ): string => 'admin.php?page=' . $page;
 		return array(
 			'home'     => array( 'label' => '首页', 'slug' => $url( self::PAGE_HOME ), 'icon' => 'dashicons-dashboard', 'pages' => array( self::PAGE_HOME, self::PAGE_WIZARD ) ),
-			'orders'   => array( 'label' => '订单', 'slug' => 'admin.php?page=wc-orders&status=wc-processing', 'icon' => 'dashicons-cart', 'pages' => array( 'wc-orders' ) ),
+			'orders'   => array( 'label' => '订单', 'slug' => 'admin.php?page=wc-orders&status=wc-processing', 'icon' => 'dashicons-cart', 'pages' => array( 'wc-orders', self::PAGE_ORDER ) ),
 			'recovery' => array( 'label' => '弃单', 'slug' => $url( 'pc-recovery' ), 'icon' => 'dashicons-backup', 'pages' => array( 'pc-recovery' ) ),
 			'data'     => array( 'label' => '数据', 'slug' => $url( 'pc-data' ), 'icon' => 'dashicons-chart-area', 'pages' => array( 'pc-data', 'pc-visitors' ) ),
 			'ads'      => array( 'label' => '广告设置', 'slug' => $url( self::PAGE_ADS ), 'icon' => 'dashicons-megaphone', 'pages' => array( self::PAGE_ADS ) ),
@@ -596,7 +623,7 @@ final class Staff_Buyer {
 		if ( ! $bar instanceof \WP_Admin_Bar || ! self::current() ) {
 			return;
 		}
-		foreach ( array( 'new-content', 'edit', 'view', 'archive', 'search', 'customize', 'updates', 'comments' ) as $node ) {
+		foreach ( array( 'new-content', 'edit', 'view', 'archive', 'search', 'customize', 'updates', 'comments', 'command-palette' ) as $node ) {
 			$bar->remove_node( $node );
 		}
 		$store = self::page_url( self::PAGE_STORE );

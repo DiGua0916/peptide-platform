@@ -61,6 +61,23 @@ namespace {
 	check( 'empty trash denied', $is( $page( 'wc-orders', array( 'writes' => '1' ) ), 'deny' ) );
 	check( 'empty trash with a filter submit denied', $is( $page( 'wc-orders', array( 'action' => '-1', 'action2' => '-1', 'writes' => '1' ) ), 'deny' ) );
 	check( 'claiming an edit lock denied', $is( $page( 'wc-orders', array( 'action' => 'edit', 'writes' => '1' ) ), 'deny' ) );
+	// 主线 2026-11-11：打开订单转到订单详情页（pc-order）；原生订单页带 pc_native 才打开，只用来退款、发货、改地址。
+	check( 'order detail page is readable', $is( $page( 'pc-order' ), 'allow', 'orders' ) );
+	check( 'order detail page rejects POST', $is( $page( 'pc-order', array( 'method' => 'POST' ) ), 'deny' ) );
+	check( 'order detail highlights the orders menu', 'orders' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-order' ) );
+	check( 'native order page (refund / ship / edit address) denied', $is( $page( 'wc-orders', array( 'action' => 'edit', 'native' => '1' ) ), 'deny' ) );
+	check( 'order list ignores a stray pc_native', $is( $page( 'wc-orders', array( 'native' => '1' ) ), 'allow', 'orders' ) );
+	check( 'detail page writes (void / seller note / tags) denied', $is( $post( 'pc_order_detail' ), 'deny' ) );
+	check( 'manual email from an order denied', $is( $page( 'pc-mail', array( 'action' => 'compose' ) ), 'deny' ) && $is( $post( 'pc_mail_send' ), 'deny' ) );
+	check( 'copying an order into a manual order denied', $is( $page( 'pc-manual-order' ), 'deny' ) );
+	// 导出订单（只读下载）。
+	check( 'order export allowed', $is( $post( 'pc_buyer_orders_export' ), 'allow' ) );
+	check( 'order export waits for the password change', $is( $post( 'pc_buyer_orders_export' ), 'deny', '', '', true ) );
+	// WordPress 的命令面板会列出全部后台菜单的名字和地址：投手不加载它。
+	$buyer_src = (string) file_get_contents( dirname( __DIR__ ) . '/includes/class-staff-buyer.php' );
+	check( 'command palette is not loaded for buyers', false !== strpos( $buyer_src, "remove_action( 'admin_enqueue_scripts', 'wp_enqueue_command_palette_assets' )" ) && false !== strpos( $buyer_src, "array( self::class, 'no_command_palette' ), 0 )" ) );
+	check( 'command palette button is removed from the toolbar', false !== strpos( $buyer_src, "'comments', 'command-palette' ) as " ) );
+	check( 'export action name matches the constant', 'pc_buyer_orders_export' === \PeptideCore\Staff_Buyer::ACTION_EXPORT && 'pc-order' === \PeptideCore\Staff_Buyer::PAGE_ORDER );
 
 	// 弃单、数据、实时访客。
 	check( 'abandoned checkouts', $is( $page( 'pc-recovery' ), 'allow', 'data' ) );

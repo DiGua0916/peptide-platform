@@ -139,10 +139,11 @@ namespace {
 	check( 'woo placeholders hidden', '搜索引擎' === $src( array( 'utm_source' => '(none)', 'source_type' => 'organic' ) ) );
 	check( 'unknown source', '—' === $src( array() ) );
 	$refund = static fn( string $state, float $refunded, float $total ): string => \PeptideCore\Admin\Admin_Menus::refund_label( $state, $refunded, $total );
-	check( 'HQ full refund', '已全额退款' === $refund( 'full', 0.0, 100.0 ) );
+	check( 'HQ full refund', '已退款' === $refund( 'full', 0.0, 100.0 ) );
 	check( 'HQ partial refund', '部分退款' === $refund( 'partial', 0.0, 100.0 ) );
-	check( 'HQ says none', '无' === $refund( 'none', 50.0, 100.0 ) );
-	check( 'order fully refunded', '已全额退款' === $refund( '', 100.0, 100.0 ) );
+	check( 'HQ says none but the store did refund', '部分退款' === $refund( 'none', 50.0, 100.0 ) );
+	check( 'HQ says none and nothing refunded', '无' === $refund( 'none', 0.0, 100.0 ) );
+	check( 'order fully refunded', '已退款' === $refund( '', 100.0, 100.0 ) );
 	check( 'order partly refunded', '部分退款' === $refund( '', 30.0, 100.0 ) );
 	check( 'no refund', '无' === $refund( '', 0.0, 100.0 ) );
 	$own = static fn( string $lock, int $user ): bool => \PeptideCore\Admin\Admin_Menus::own_lock( $lock, $user );
