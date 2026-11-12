@@ -527,3 +527,12 @@
 - peptide-panapay 支付中心：`Hub_Store::attempts($f, 0)` 一次取最近 2000 条，`Hub_Page::grouped()` 按客户编号合并，按合并后的行数分页。行内显示编号和打码邮箱；多次付款时显示按钮“共 N 次付款 · 成功 x · 失败 y”，点开是每一次的记录（浅灰底、左侧蓝条）。没有编号的记录照旧一行一条。
 - 部署：总后台 peptide-hq + panapay（备份 /root/hq-customers-backup-20261112100504）。先只上主店测试（web/hq 主店副本，备份 cid-main-20261112100515/16）：编号稳定（Gmail 加点 / +后缀算出同一个编号）；新订单会写编号并排队上报（测试单已删除）；主店补报 7 单。然后用 trk-deploy2 上了两台主机各 7 份（peptide-core 3 个文件；panapay 的 hub 4 个文件在店铺副本里不会运行，只是保持一致）。
 - 补报最近 30 天：43 单 → 21 个客户（s0007 17 单 / 9 人，s0010 14 / 7，s0008 5 / 3，主店 7 / 2）。支付中心核对：光辉 #11883–11885 合并为同一人“共 3 次付款 · 失败 3”；芒果 #11858–11861 + #11880 为同一人（共 6 次，失败 5）。
+
+### 2026-11-12 11:35 UTC 恢复加购推荐（手动订单的回调加入报价白名单）
+- 现象：6 家店 `Quote_Cart::supported_hooks()` 全为 false，加购推荐一律不出现（11-10 手动订单上线后，`Manual_Orders` 的 3 个回调不在报价白名单里）。规划会话转来修法，平台所有者同意。
+- 改动：`activity/class-quote-cart.php` 白名单加 `Manual_Orders::apply_fees`、`Manual_Orders::apply_prices`，`supported()` 遇到手动订单链接的购物车行（`pc_manual`）不报价；`activity/class-recommendation-coupon.php` 的 `woocommerce_coupon_is_valid` 白名单加 `Manual_Orders::block_coupons`（与 F2 分支 8c8937a 文字一致）。
+- 先在主店 s0001 测：`supported_hooks()` 与 `coupon_hooks_supported()` 为 true；普通购物车 $252 时出现加购推荐（差 $48 解锁 $25，带 ADDON5 额外 $5）；手动订单链接购物车推荐接口返回 409，不出现推荐，链接价格 $50/盒、店铺满减 −$25、运费不变。测试购物车已清空，没有下单。
+- 上线：web 主店 + s0006–s0010 + 模板 yy-sync-0532574-1794082452-web；HQ store-admin + tenant-admin s0006–s0010 + 模板 yy-sync-0532574-1794082452-admin。文件 md5 前缀 f1b143d2c479 / 89a3fd7179a0。
+- 备份：web `/root/vialcove-backups/quote-cart-manual-orders-20261112T113524Z`、`…T113738Z`；HQ `…T113526Z`、`…T113739Z`。
+- 验证：12 个站点 `supported_hooks()` 全部 `bool(true)`。
+- 回滚：从上述备份目录拷回两个文件并 reload php-fpm。
