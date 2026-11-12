@@ -291,6 +291,10 @@ final class Buyer_Home {
 
 		echo '<div class="wrap pc-by pc-by-home" data-pc-by-home data-range="today"><h1>首页</h1>';
 		echo Onboarding::banner(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- banner() 里已转义。
+		if ( class_exists( \PeptideCore\Pixels\Health::class ) ) {
+			// 像素自动检查：回传出问题时在首页提醒（正常时不显示）。
+			echo \PeptideCore\Pixels\Health::alert( \PeptideCore\Pixels\Health::current(), Staff_Buyer::page_url( Staff_Buyer::PAGE_ADS ) . '#pc-by-pixel' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- alert() 里已转义。
+		}
 		Staff_Buyer::render_flash();
 
 		// 5 个核心数字。

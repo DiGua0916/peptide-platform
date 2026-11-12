@@ -374,15 +374,22 @@ final class Onboarding {
 		echo self::banner(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- banner() 里已转义。
 		Staff_Buyer::render_flash();
 		// 2026-11-12：像素连通后折叠成一行；主角是“上传素材 → 专属投放链接”。
+		// 像素状态自动检查（Pixels\Health，读真实事件的回传记录）：出问题时提示放在页面最上面，像素卡片展开。
 		$verified = self::evaluate( self::facts() )['verify'];
 		$pixel    = self::facebook_pixel();
-		if ( $verified ) {
-			echo '<details class="pc-by-card pc-by-pixel-done"><summary><strong>广告像素</strong> <span class="pc-by-ok">已连通 · 像素 ' . esc_html( $pixel['id'] ) . '</span> <span class="pc-by-hint">点开修改</span></summary>';
+		$health   = class_exists( \PeptideCore\Pixels\Health::class ) ? \PeptideCore\Pixels\Health::current() : array( 'level' => 'none', 'title' => '', 'detail' => '' );
+		$problem  = in_array( $health['level'], array( 'warn', 'bad' ), true );
+		if ( $problem ) {
+			echo \PeptideCore\Pixels\Health::alert( $health, '#pc-by-pixel' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- alert() 里已转义。
+		}
+		if ( ( $verified || 'ok' === $health['level'] ) && ! $problem ) {
+			$state = 'ok' === $health['level'] ? $health['title'] : '已连通' . ( 'idle' === $health['level'] ? ' · 24 小时没有事件' : '' );
+			echo '<details class="pc-by-card pc-by-pixel-done" id="pc-by-pixel"><summary><strong>广告像素</strong> <span class="pc-by-ok">' . esc_html( $state ) . '</span> <span class="pc-by-hint">像素 ' . esc_html( $pixel['id'] ) . ' · 系统自动检查 · 点开修改</span></summary>';
 			self::form_pixel( 'ads' );
 			self::form_verify( false );
 			echo '</details>';
 		} else {
-			echo '<section class="pc-by-card">';
+			echo '<section class="pc-by-card" id="pc-by-pixel">';
 			self::form_pixel( 'ads' );
 			echo '</section><section class="pc-by-card">';
 			self::form_verify( false );

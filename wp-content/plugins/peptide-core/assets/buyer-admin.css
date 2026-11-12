@@ -509,3 +509,9 @@
 .pc-by-ads details.pc-by-card > summary { cursor: pointer; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .pc-by-ads details.pc-by-card[open] > summary { margin-bottom: 12px; }
 .pc-by-ok { background: #edfaef; color: #007017; border-radius: 10px; padding: 1px 10px; font-size: 12px; }
+
+/* 像素自动检查的提示（2026-11-12） */
+.pc-px-health-alert { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin: 0 0 16px; padding: 12px 16px; border-radius: 8px; border-left: 4px solid #dba617; background: #fcf9e8; }
+.pc-px-health-alert.is-bad { border-left-color: #d63638; background: #fcf0f1; }
+.pc-px-health-alert strong { color: #1d2327; }
+.pc-px-health-alert span { color: #50575e; flex: 1 1 320px; }
