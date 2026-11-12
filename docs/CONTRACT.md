@@ -707,6 +707,10 @@ add_filter( 'pchq_monitor_checks', static function ( array $checks, int $site_id
 - 其他模块用过滤器加：`add_filter( 'pc_hq_status_modules', fn( array $m ) => $m + array( 'series' => array( … ) ) );`。键：小写字母开头，小写字母、数字、下划线，最长 41；值能转成 JSON，不放顾客资料和密钥；不能覆盖已有的键。
 - 注意位置：F2 原先建议放在 status 顶层的 `pricing_engine`，实际放在 `modules.pricing_engine`。
 
+### 2d. 总后台动作 `pchq_summary_days`（2026-11-12 新增）
+
+每次轮询拿到店铺的每日汇总并存好之后触发：`do_action( 'pchq_summary_days', int $site_id, array $days, array $summary )`。模块要存 `days[]` 里自己的字段（例如弃单数）就挂它，不用再向店铺发请求。回调里抛错只写日志，不影响轮询。
+
 ### 2c. `/hq/summary` 每天多四项（2026-11-12 新增）
 
 店铺有 M6 的 `Data\Metrics::abandoned_daily()` 时，`days[]` 每一行多 `abandoned`、`abandoned_open`、`recall_emailed`、`recall_recovered`（店铺时区的日期）。**店铺还没有 M6 代码时这四个键不存在**——总后台要按“没有这个键 = 这家店还不支持”处理，不能当成 0。
