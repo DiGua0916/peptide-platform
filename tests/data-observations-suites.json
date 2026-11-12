@@ -850,6 +850,24 @@
       "node_test": true,
       "status": "module-gate",
       "module": "M14"
+    },
+    {
+      "name": "m14-entry-background",
+      "language": "node",
+      "path": "wp-content/themes/peptide-site/tests/m14-entry-background.cjs",
+      "core": true,
+      "node_test": true,
+      "status": "module-gate",
+      "module": "M14"
+    },
+    {
+      "name": "m14-restore-no-specification",
+      "language": "node",
+      "path": "wp-content/themes/peptide-site/tests/m14-restore-no-specification.cjs",
+      "core": true,
+      "node_test": true,
+      "status": "module-gate",
+      "module": "M14"
     }
   ]
 }
