@@ -11,7 +11,9 @@
 use PeptideCore\Series_Sync as S;
 use PeptideCore\Shipping\Plans;
 
-if ( 'local' !== wp_get_environment_type() || '1' !== getenv( 'PC_SMOKE_THROWAWAY' ) ) {
+// 默认只认本地副本；沙盒（staging）要另外明说 PC_SMOKE_ALLOW_STAGING=1，跑完要重新导入沙盒数据。生产环境永远不跑。
+$pc_smoke_env = wp_get_environment_type();
+if ( ! ( 'local' === $pc_smoke_env || ( 'staging' === $pc_smoke_env && '1' === getenv( 'PC_SMOKE_ALLOW_STAGING' ) ) ) || '1' !== getenv( 'PC_SMOKE_THROWAWAY' ) ) {
 	WP_CLI::error( '这个测试会改商品和运费，只能在一次性的本地副本上跑（WP_ENVIRONMENT_TYPE=local 并设 PC_SMOKE_THROWAWAY=1）。' );
 }
 
@@ -57,6 +59,25 @@ $export = S::export_catalog();
 $check( 'export lists every published product', count( $export['products'] ) === $count_before && $count_before > 0, array( count( $export['products'] ), $count_before ) );
 $check( 'export is valid JSON and a valid catalog', is_string( wp_json_encode( $export ) ) && is_array( S::clean_catalog( array( 'ver' => 1, 'source_host' => $export['source_host'], 'products' => $export['products'] ) ) ) );
 $products = json_decode( (string) wp_json_encode( $export['products'] ), true ); // 和总后台转一手之后的样子一致。
+
+// ---- 1b. 只读导出（差异报告用）：一条写入都没有；拿导出文件比较，和在店里比较结果一样 ----
+global $wpdb;
+delete_post_meta_by_key( S::IMAGE_SHA );
+$writes = array();
+$watch  = static function ( $q ) use ( &$writes ) {
+	if ( preg_match( '/^\s*(INSERT|UPDATE|DELETE|REPLACE|ALTER|CREATE|DROP|TRUNCATE)\b/i', (string) $q ) ) {
+		$writes[] = substr( (string) $q, 0, 120 );
+	}
+	return $q;
+};
+add_filter( 'query', $watch );
+$dump = S::export_dump();
+remove_filter( 'query', $watch );
+$check( 'read-only export writes nothing to the database', array() === $writes && 0 === (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = %s", S::IMAGE_SHA ) ), $writes );
+$check( 'the dump carries the catalog, every local product and the store', $dump['products'] == $export['products'] && count( $dump['local'] ) === count( S::export_local() ) && '' !== $dump['store']['host'] && '' !== $dump['store']['name'] ); // phpcs:ignore
+$dump = json_decode( (string) wp_json_encode( $dump ), true );
+$self = S::diff_dump( $dump, $dump );
+$check( 'a store compared with its own file has no differences', is_array( $self ) && array( 'same' => $count_before, 'changed' => 0, 'create' => 0, 'unpublish' => 0 ) === $self['summary'], $self );
 $by_key   = array_column( S::export_local(), 'id', 'sku' );
 $check( 'series product keys resolve to the local product ids', count( $products ) === count( array_filter( $products, static fn( $p ) => (int) ( $by_key[ $p['sku'] ] ?? -1 ) === S::find_product( $p['sku'] ) ) ) && 0 === S::find_product( 'NO-SUCH-KEY' ) );
 
@@ -131,6 +152,8 @@ $dry2 = S::sync( $head, array( 'dry_run' => true, 'catalog' => $catalog( 2, $v2 
 $check( 'diff shows exactly one change, one new, one to unpublish', array( 'same' => $count_before - 2, 'changed' => 1, 'create' => 1, 'unpublish' => 1 ) === $dry2['diff']['summary'], $dry2['diff'] );
 $check( 'the change is the price only', array( 'compare_price', 'price' ) === array_values( array_unique( array_map( static fn( $f ) => $f['field'], $dry2['diff']['changed'][0]['fields'] ) ) ) || array( 'price', 'compare_price' ) === array_values( array_unique( array_map( static fn( $f ) => $f['field'], $dry2['diff']['changed'][0]['fields'] ) ) ), $dry2['diff']['changed'][0]['fields'] );
 $check( 'dry run left the price alone', array( $old_p, $old_c ) === $price_of( $target ) );
+$by_file = S::diff_dump( array( 'source_host' => $export['source_host'], 'products' => $v2 ), json_decode( (string) wp_json_encode( S::export_dump() ), true ) );
+$check( 'comparing export files gives the same report as the dry run on the store', is_array( $by_file ) && $dry2['diff']['summary'] === $by_file['summary'] && $dry2['diff']['changed'] === $by_file['changed'] && $dry2['diff']['create'] === $by_file['create'] && $dry2['diff']['unpublish'] === $by_file['unpublish'], is_array( $by_file ) ? $by_file['summary'] : $by_file );
 
 $r2 = S::sync( $head, array( 'catalog' => $catalog( 2, $v2 ) ), false );
 $check( 'second version applied', is_array( $r2 ) && true === $r2['complete'] && 1 === $r2['applied']['catalog']['created'] && 1 === $r2['applied']['catalog']['updated'] && 1 === $r2['applied']['catalog']['unpublished'] && array() === $r2['applied']['catalog']['errors'], is_array( $r2 ) ? $r2['applied'] : $r2->get_error_message() );

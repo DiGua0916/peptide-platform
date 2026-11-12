@@ -54,6 +54,9 @@ final class Series_Sync {
 	/** 本次同步里没成功的图片（原因），随结果报给总后台；图片失败不拦价格和其他内容。 */
 	private static array $notes = array();
 
+	/** 导出时要不要把算好的图片哈希记在附件上（省得下次重算）。只读导出时关掉：一个字节都不写。 */
+	private static bool $cache_hashes = true;
+
 	public static function register_hooks(): void {
 		add_action( 'rest_api_init', array( self::class, 'routes' ) );
 		add_action( 'woocommerce_before_order_object_save', array( self::class, 'stamp_order' ), 5, 1 );
@@ -941,14 +944,21 @@ final class Series_Sync {
 			$sha = $cached[0];
 		} else {
 			$sha = (string) hash_file( 'sha256', $file );
-			update_post_meta( $attachment_id, self::IMAGE_SHA, $sha . '|' . $mtime );
+			if ( self::$cache_hashes ) {
+				update_post_meta( $attachment_id, self::IMAGE_SHA, $sha . '|' . $mtime );
+			}
 		}
 		return array(
-			'url'    => class_exists( Design_Sync::class ) ? Design_Sync::public_origin() . (string) wp_parse_url( $url, PHP_URL_PATH ) : $url,
+			'url'    => self::own_origin() . (string) wp_parse_url( $url, PHP_URL_PATH ),
 			'sha256' => $sha,
 			'name'   => basename( $file ),
 			'alt'    => (string) get_post_meta( $attachment_id, '_wp_attachment_image_alt', true ),
 		);
+	}
+
+	/** 本店的顾客地址，不带结尾的斜杠。 */
+	private static function own_origin(): string {
+		return is_callable( array( Design_Sync::class, 'public_origin' ) ) ? (string) Design_Sync::public_origin() : untrailingslashit( home_url( '/' ) );
 	}
 
 	/** 现在正在生效的促销价；设了促销时间但还没开始或已经结束的不算（否则各店会提前降价）。 */
@@ -1149,24 +1159,24 @@ final class Series_Sync {
 	}
 
 	/** 母版店导出：商品（只要已发布的）、通用运费方案、活动（由营销模块提供）。 */
-	public static function export_catalog(): array {
+	public static function export_catalog( ?array $local = null ): array {
 		$products = array();
-		foreach ( self::export_local() as $p ) {
+		foreach ( $local ?? self::export_local() as $p ) {
 			unset( $p['id'], $p['series_sku'], $p['managed'] );
 			// 只导出已发布、而且各店能接收的商品（没有款式的可变商品会让整个目录被拒收，这里先跳过）。
 			if ( 'publish' === $p['status'] && null !== self::clean_product( $p ) ) {
 				$products[] = $p;
 			}
 		}
-		$origin = class_exists( Design_Sync::class ) ? Design_Sync::public_origin() : home_url( '/' );
+		$plans = is_callable( array( Shipping\Plans::class, 'all' ) ) && is_callable( array( Shipping\Plans::class, 'rules' ) );
 		return array(
 			'version'     => 1,
-			'source_host' => strtolower( (string) wp_parse_url( $origin, PHP_URL_HOST ) ),
+			'source_host' => strtolower( (string) wp_parse_url( self::own_origin(), PHP_URL_HOST ) ),
 			'exported_at' => time(),
 			'products'    => $products,
 			'shipping'    => array(
-				'plans' => class_exists( Shipping\Plans::class ) ? self::plans_to_series( Shipping\Plans::all() ) : array(),
-				'rules' => class_exists( Shipping\Plans::class ) ? Shipping\Plans::rules() : array(),
+				'plans' => $plans ? self::plans_to_series( Shipping\Plans::all() ) : array(),
+				'rules' => $plans ? Shipping\Plans::rules() : array(),
 			),
 			'campaigns'   => array_values( array_filter( (array) apply_filters( 'pc_series_export_campaigns', array() ), 'is_array' ) ),
 		);
@@ -1179,14 +1189,76 @@ final class Series_Sync {
 		return self::export_catalog();
 	}
 
+	/**
+	 * 只读导出，给“各店与主商品库的差异报告”用：母版店那样的目录（products、运费、活动），
+	 * 再加上本店全部商品的本地信息（local）和店名（store）。任何一家店导出的这种文件，
+	 * 既能当主目录，也能当被比较的那家店。只读商品、分类、图片文件和运费设置，不写数据库。
+	 * 里面没有订单、顾客、账号和任何密钥。
+	 *
+	 * @return array{version:int,source_host:string,exported_at:int,products:array,shipping:array,campaigns:array,local:array,store:array}
+	 */
+	public static function export_dump(): array {
+		$was                = self::$cache_hashes;
+		self::$cache_hashes = false;
+		try {
+			$local         = self::export_local();
+			$data          = self::export_catalog( $local );
+			$data['local'] = $local;
+			$data['store'] = array( 'name' => (string) get_bloginfo( 'name' ), 'host' => $data['source_host'] );
+		} finally {
+			self::$cache_hashes = $was;
+		}
+		return $data;
+	}
+
+	/**
+	 * 拿两份导出文件比较（不碰本店的任何数据）：$master 当主商品库，$dump 是 export_dump() 导出的一家店。
+	 * 结果和在那家店上直接跑差异报告一样。
+	 *
+	 * @return array|string 差异报告；文件不对时返回原因
+	 */
+	public static function diff_dump( array $master, array $dump ) {
+		if ( ! is_array( $master['products'] ?? null ) ) {
+			return '主商品库文件里没有 products。';
+		}
+		if ( ! is_array( $dump['local'] ?? null ) ) {
+			return '店铺文件里没有 local：请用 wp peptide series export --local 或 tools/catalog/store_products_dump.php 导出。';
+		}
+		$clean = self::clean_catalog( array( 'ver' => 1, 'source_host' => (string) ( $master['source_host'] ?? '' ), 'products' => $master['products'] ) );
+		if ( ! is_array( $clean ) ) {
+			return '主商品库文件无效：' . $clean;
+		}
+		$store  = array(
+			'name' => self::str( $dump['store']['name'] ?? '', 200 ),
+			'host' => strtolower( self::str( $dump['store']['host'] ?? ( $dump['source_host'] ?? '' ), 253 ) ),
+		);
+		$target = '' !== $store['host'] ? 'https://' . $store['host'] : '';
+		$host   = $clean['source_host'];
+		$locals = array();
+		foreach ( $dump['local'] as $raw ) {
+			$p = self::clean_product( $raw, false );
+			if ( null === $p ) {
+				continue;
+			}
+			$p['id']         = (int) ( $raw['id'] ?? 0 );
+			$p['series_sku'] = trim( (string) ( $raw['series_sku'] ?? '' ) );
+			$p['managed']    = ! empty( $raw['managed'] );
+			$locals[]        = $p;
+		}
+		$incoming      = array_map( static fn( array $p ): array => self::localize( $p, $host, $target ), $clean['products'] );
+		$diff          = self::diff_catalog( $incoming, $locals, 0 );
+		$diff['store'] = $store;
+		return $diff;
+	}
+
 	// ---------- 写入商品 ----------
 
 	/** 系列商品里指向母版店的绝对链接换成本店地址（描述里的图片、站内链接）。 */
-	private static function localize( array $p, string $source_host ): array {
-		if ( '' === $source_host || ! class_exists( Design_Sync::class ) ) {
+	private static function localize( array $p, string $source_host, string $target = '' ): array {
+		if ( '' === $source_host || ! is_callable( array( Design_Sync::class, 'rewrite_links' ) ) ) {
 			return $p;
 		}
-		$target = Design_Sync::public_origin();
+		$target = '' !== $target ? $target : self::own_origin();
 		foreach ( array( 'description', 'short_description' ) as $k ) {
 			$p[ $k ] = (string) Design_Sync::rewrite_links( $p[ $k ], array( 'https://' . $source_host ), $target );
 		}
@@ -1776,7 +1848,7 @@ final class Series_Sync {
 		}
 		$counts   = array( 'restored' => 0, 'unpublished' => 0, 'missing' => 0, 'failed' => 0 );
 		$deadline = microtime( true ) + self::TIME_BUDGET;
-		$own_host = strtolower( (string) wp_parse_url( class_exists( Design_Sync::class ) ? Design_Sync::public_origin() : home_url( '/' ), PHP_URL_HOST ) );
+		$own_host = strtolower( (string) wp_parse_url( self::own_origin(), PHP_URL_HOST ) );
 		$known    = array();
 		$kses     = self::begin_write();
 		try {
@@ -1882,16 +1954,23 @@ final class Series_Sync {
 	}
 
 	/**
-	 * 把本店的商品、运费、活动导出成系列目录文件（和总后台“从母版店导入”拿到的内容一样）。
+	 * 把本店的商品、运费、活动导出成系列目录文件（和总后台“从母版店导入”拿到的内容一样）。只读，不改本店任何数据。
 	 *
 	 * ## OPTIONS
 	 *
 	 * --file=<path>
 	 * : 写到哪个文件。
+	 *
+	 * [--local]
+	 * : 再带上本店全部商品（含草稿）的本地信息和店名。这样的文件可以拿到别处，用 wp peptide series diff --store-file 做差异比较。
 	 */
 	public static function cli_export( $args, $assoc ): void {
 		$file = (string) ( $assoc['file'] ?? '' );
-		$data = self::export_catalog();
+		// 命令行导出一律只读（连图片哈希的缓存也不写）。--local：再带上本店全部商品的本地信息，供别处做差异比较。
+		$data = self::export_dump();
+		if ( empty( $assoc['local'] ) ) {
+			unset( $data['local'], $data['store'] );
+		}
 		if ( '' === $file || false === file_put_contents( $file, (string) wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT ) ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions
 			\WP_CLI::error( '写不了文件，请用 --file=<路径> 指定一个可写的位置。' );
 		}
@@ -1899,12 +1978,15 @@ final class Series_Sync {
 	}
 
 	/**
-	 * 把一份系列目录文件和本店现有的商品比一遍，只出差异报告，不改任何东西。
+	 * 把一份系列目录文件和本店现有的商品（或另一家店导出的文件）比一遍，只出差异报告，不改任何东西。
 	 *
 	 * ## OPTIONS
 	 *
 	 * --file=<path>
-	 * : 母版店导出的目录文件（wp peptide series export 的结果）。
+	 * : 母版店导出的目录文件（wp peptide series export 的结果，带不带 --local 都行）。
+	 *
+	 * [--store-file=<path>]
+	 * : 不和本店比，而是和这份文件里的店比（那家店用 wp peptide series export --local 或 tools/catalog/store_products_dump.php 导出）。
 	 *
 	 * [--out=<path>]
 	 * : 把完整的差异报告（JSON）写到这个文件，可以交给 tools/catalog/series_diff_report.py 生成给人看的报告。
@@ -1914,19 +1996,24 @@ final class Series_Sync {
 		if ( ! is_array( $raw ) || ! is_array( $raw['products'] ?? null ) ) {
 			\WP_CLI::error( '读不了目录文件。' );
 		}
-		$clean = self::clean_catalog( array( 'ver' => 1, 'source_host' => (string) ( $raw['source_host'] ?? '' ), 'products' => $raw['products'] ) );
-		if ( ! is_array( $clean ) ) {
-			\WP_CLI::error( '目录文件无效：' . $clean );
+		// --store-file：被比较的不是本店，而是另一家店导出的文件（wp peptide series export --local）。两种情况都只读。
+		if ( ! empty( $assoc['store-file'] ) ) {
+			$dump = json_decode( (string) @file_get_contents( (string) $assoc['store-file'] ), true ); // phpcs:ignore WordPress.PHP.NoSilencedErrors,WordPress.WP.AlternativeFunctions
+			if ( ! is_array( $dump ) ) {
+				\WP_CLI::error( '读不了店铺文件。' );
+			}
+		} else {
+			$dump = self::export_dump();
 		}
-		$host     = $clean['source_host'];
-		$incoming = array_map( static fn( array $p ): array => self::localize( $p, $host ), $clean['products'] );
-		$diff     = self::diff_catalog( $incoming, self::export_local(), 0 );
-		$diff['store'] = array( 'name' => get_bloginfo( 'name' ), 'host' => (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
+		$diff = self::diff_dump( $raw, $dump );
+		if ( ! is_array( $diff ) ) {
+			\WP_CLI::error( $diff );
+		}
 		if ( ! empty( $assoc['out'] ) ) {
 			file_put_contents( (string) $assoc['out'], (string) wp_json_encode( $diff, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions
 		}
 		$s = $diff['summary'];
-		\WP_CLI::log( sprintf( '一样：%1$d；有差异：%2$d；本店没有、同步后会新建：%3$d；系列里没有、同步后会下架：%4$d', $s['same'], $s['changed'], $s['create'], $s['unpublish'] ) );
+		\WP_CLI::log( sprintf( '%5$s —— 一样：%1$d；有差异：%2$d；店里没有、同步后会新建：%3$d；系列里没有、同步后会下架：%4$d', $s['same'], $s['changed'], $s['create'], $s['unpublish'], '' !== $diff['store']['host'] ? $diff['store']['host'] : '本店' ) );
 		foreach ( array_slice( $diff['changed'], 0, 30 ) as $c ) {
 			\WP_CLI::log( sprintf( '  %s（%s）：%s', $c['name'], $c['sku'], implode( '，', array_unique( array_column( $c['fields'], 'field' ) ) ) ) );
 		}

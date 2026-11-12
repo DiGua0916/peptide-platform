@@ -12,7 +12,9 @@
 use PeptideCore\Order_Report as R;
 use PeptideCore\Series_Sync;
 
-if ( 'local' !== wp_get_environment_type() || '1' !== getenv( 'PC_SMOKE_THROWAWAY' ) ) {
+// 默认只认本地副本；沙盒（staging）要另外明说 PC_SMOKE_ALLOW_STAGING=1，跑完要重新导入沙盒数据。生产环境永远不跑。
+$pc_smoke_env = wp_get_environment_type();
+if ( ! ( 'local' === $pc_smoke_env || ( 'staging' === $pc_smoke_env && '1' === getenv( 'PC_SMOKE_ALLOW_STAGING' ) ) ) || '1' !== getenv( 'PC_SMOKE_THROWAWAY' ) ) {
 	WP_CLI::error( '这个测试会新建订单，只能在一次性的本地副本上跑（WP_ENVIRONMENT_TYPE=local 并设 PC_SMOKE_THROWAWAY=1）。' );
 }
 if ( ! R::enabled() ) {
@@ -101,7 +103,10 @@ $check( 'new order is stamped with the series', '7' === (string) $paid->get_meta
 
 // ---- 摘要：只有汇总字段 ----
 $s = R::summary( $paid );
-$check( 'summary keys are exactly the contract', array( 'store_order_id', 'order_number', 'status', 'paid', 'is_test', 'currency', 'total_cents', 'created_at', 'paid_at', 'order_day', 'series_id', 'email_hash', 'utm_source', 'ad_id' ) === array_keys( $s ) );
+$check( 'summary keys are exactly the contract', array( 'store_order_id', 'order_number', 'status', 'paid', 'is_test', 'currency', 'total_cents', 'created_at', 'paid_at', 'order_day', 'series_id', 'email_hash', 'utm_source', 'ad_id', 'customer_id' ) === array_keys( $s ) );
+if ( class_exists( PeptideCore\Customer_Id::class ) ) {
+	$check( 'customer id is the store-computed code, the same for the same email', 1 === preg_match( '/^C[0-9A-Z]{7}$/', $s['customer_id'] ) && PeptideCore\Customer_Id::compute( 'smoke.buyer@example.test' ) === $s['customer_id'], $s['customer_id'] );
+}
 $check( 'summary values', $paid->get_id() === $s['store_order_id'] && true === $s['paid'] && false === $s['is_test'] && $s['total_cents'] === R::cents( $paid->get_total() ) && $s['total_cents'] > 0 && $s['paid_at'] > 0 && 7 === $s['series_id'] && 1 === preg_match( '/^\d{4}-\d{2}-\d{2}$/', $s['order_day'] ), $s );
 $json = (string) wp_json_encode( $s );
 $check( 'no personal data in the summary', hash( 'sha256', 'smoke.buyer@example.test' ) === $s['email_hash'] && false === stripos( $json, 'example.test' ) && false === stripos( $json, 'Buyer' ) && false === stripos( $json, 'Test Street' ) && false === strpos( $json, '5550100' ) );

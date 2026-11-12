@@ -2,8 +2,10 @@
 /**
  * 订单汇总（HQ-13、OR-03 的数据底座）：各店把订单摘要报到总后台，供跨店报表和退款标记使用。
  *
- * - 表（模块自己的升级，版本选项 pchq_m10_db，可重复执行）：pchq_orders、pchq_refunds、pchq_ad_spend；
+ * - 表（模块自己的升级，版本选项 pchq_m10_db，可重复执行）：pchq_orders、pchq_refunds、pchq_ad_spend、pchq_abandoned；
  *   pchq_daily 加 gross_cents、refunded_cents 两列。
+ *   第 2 版（2026-11-12）：pchq_orders 加 customer_id（店铺算出的客户编号，同一位顾客在各店相同）；
+ *   新表 pchq_abandoned 存各店每天的弃单数（来自店铺每日汇总），报表的“弃单率”用它。
  * - 店铺 → 总后台 POST /peptide-hq/v1/orders/report：每批最多 50 条，按（店铺，订单号）覆盖写入，重复上报结果不变。
  *   签名校验用邮件中心同一个函数（店铺连接密钥 + X-PC-HQ-Site）。
  * - 报表口径：订单数 = 已付款且不是测试单；销售额 = 订单金额 − 已标记退款；时间按付款时间。
@@ -20,7 +22,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Orders {
 
-	public const VERSION   = '1';
+	public const VERSION   = '2';
 	public const OPTION    = 'pchq_m10_db';
 	public const MAX_BATCH = 50;
 
@@ -29,6 +31,8 @@ final class Orders {
 		add_action( 'rest_api_init', array( self::class, 'routes' ) );
 		add_filter( 'pchq_monitor_checks', array( self::class, 'monitor_check' ), 10, 4 );
 		add_filter( 'pchq_alert_types', array( self::class, 'alert_types' ) );
+		add_action( 'pchq_summary_days', array( self::class, 'store_abandoned' ), 10, 2 );
+		add_filter( 'http_response', array( self::class, 'watch_summary' ), 10, 3 );
 		Refunds::register_hooks();
 		if ( is_admin() ) {
 			foreach ( array( Admin\Orders_Page::class, Admin\Report_Page::class ) as $page ) {
@@ -45,6 +49,10 @@ final class Orders {
 
 	public static function spend_table(): string {
 		return Db::table( 'ad_spend' );
+	}
+
+	public static function abandoned_table(): string {
+		return Db::table( 'abandoned' );
 	}
 
 	public static function ready(): bool {
@@ -73,6 +81,7 @@ final class Orders {
 		$orders  = self::table();
 		$refunds = Refunds::table();
 		$spend   = self::spend_table();
+		$left    = self::abandoned_table();
 		dbDelta(
 			"CREATE TABLE {$orders} (
   id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -95,12 +104,14 @@ final class Orders {
   email_hash varchar(64) NOT NULL DEFAULT '',
   utm_source varchar(120) NOT NULL DEFAULT '',
   ad_id varchar(64) NOT NULL DEFAULT '',
+  customer_id varchar(16) NOT NULL DEFAULT '',
   reported_at int(10) unsigned NOT NULL DEFAULT 0,
   updated_at int(10) unsigned NOT NULL DEFAULT 0,
   PRIMARY KEY  (id),
   UNIQUE KEY site_order (site_id,store_order_id),
   KEY paid_at (paid_at),
-  KEY series_paid (series_id,paid_at)
+  KEY series_paid (series_id,paid_at),
+  KEY customer (customer_id)
 ) {$c};
 CREATE TABLE {$refunds} (
   id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -124,15 +135,30 @@ CREATE TABLE {$spend} (
   updated_at int(10) unsigned NOT NULL DEFAULT 0,
   updated_by bigint(20) unsigned NOT NULL DEFAULT 0,
   PRIMARY KEY  (site_id,day)
+) {$c};
+CREATE TABLE {$left} (
+  site_id bigint(20) unsigned NOT NULL,
+  day date NOT NULL,
+  orders int(10) unsigned NOT NULL DEFAULT 0,
+  abandoned int(10) unsigned NOT NULL DEFAULT 0,
+  abandoned_open int(10) unsigned NOT NULL DEFAULT 0,
+  recall_emailed int(10) unsigned NOT NULL DEFAULT 0,
+  recall_recovered int(10) unsigned NOT NULL DEFAULT 0,
+  updated_at int(10) unsigned NOT NULL DEFAULT 0,
+  PRIMARY KEY  (site_id,day)
 ) {$c};"
 		);
+		// 从第 1 版升上来：dbDelta 会补列和索引；这里再保底补一次（已有就不动）。
+		Series_Db::add_columns( $orders, array( 'customer_id' => "varchar(16) NOT NULL DEFAULT ''" ) );
+		Series_Db::add_index( $orders, 'customer', 'customer_id' );
 		$columns = array(
 			'gross_cents'    => 'bigint(20) NOT NULL DEFAULT 0',
 			'refunded_cents' => 'bigint(20) NOT NULL DEFAULT 0',
 		);
 		Series_Db::add_columns( $daily, $columns );
 		$have = array_map( 'strtolower', (array) $wpdb->get_col( "SHOW COLUMNS FROM {$daily}", 0 ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
-		if ( ! Series_Db::has_table( $orders ) || ! Series_Db::has_table( $refunds ) || ! Series_Db::has_table( $spend ) || array_diff( array_keys( $columns ), $have ) ) {
+		$order_columns = array_map( 'strtolower', (array) $wpdb->get_col( "SHOW COLUMNS FROM {$orders}", 0 ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		if ( ! Series_Db::has_table( $orders ) || ! Series_Db::has_table( $refunds ) || ! Series_Db::has_table( $spend ) || ! Series_Db::has_table( $left ) || array_diff( array_keys( $columns ), $have ) || ! in_array( 'customer_id', $order_columns, true ) ) {
 			return false;
 		}
 		update_option( self::OPTION, self::VERSION, true );
@@ -183,7 +209,14 @@ CREATE TABLE {$spend} (
 			'email_hash'     => preg_match( '/^[a-f0-9]{64}$/D', $hash ) ? $hash : '',
 			'utm_source'     => function_exists( 'mb_substr' ) ? mb_substr( $utm, 0, 120 ) : substr( $utm, 0, 120 ),
 			'ad_id'          => substr( (string) preg_replace( '/[^A-Za-z0-9_.:\-]/', '', (string) ( $o['ad_id'] ?? '' ) ), 0, 64 ),
+			'customer_id'    => self::clean_customer_id( $o['customer_id'] ?? '' ),
 		);
+	}
+
+	/** 客户编号（纯函数）：店铺算出的 “C” 加 7 位字母数字；不是这个样子的一律当作没有。 */
+	public static function clean_customer_id( $id ): string {
+		$id = is_string( $id ) ? strtoupper( trim( $id ) ) : '';
+		return 1 === preg_match( '/^C[0-9A-Z]{7}$/D', $id ) ? $id : '';
 	}
 
 	/**
@@ -231,9 +264,9 @@ CREATE TABLE {$spend} (
 		$t   = self::table();
 		$now = time();
 		$sql = $wpdb->prepare(
-			"INSERT INTO {$t} (site_id, store_order_id, order_number, series_id, status, paid, is_test, currency, total_cents, created_at, paid_at, order_day, email_hash, utm_source, ad_id, reported_at, updated_at)
-			VALUES (%d, %d, %s, %d, %s, %d, %d, %s, %d, %d, %d, %s, %s, %s, %s, %d, %d)
-			ON DUPLICATE KEY UPDATE order_number = VALUES(order_number), series_id = VALUES(series_id), status = VALUES(status), paid = VALUES(paid), is_test = VALUES(is_test), currency = VALUES(currency), total_cents = VALUES(total_cents), created_at = VALUES(created_at), paid_at = VALUES(paid_at), order_day = VALUES(order_day), email_hash = VALUES(email_hash), utm_source = VALUES(utm_source), ad_id = VALUES(ad_id), reported_at = VALUES(reported_at), updated_at = VALUES(updated_at)", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			"INSERT INTO {$t} (site_id, store_order_id, order_number, series_id, status, paid, is_test, currency, total_cents, created_at, paid_at, order_day, email_hash, utm_source, ad_id, customer_id, reported_at, updated_at)
+			VALUES (%d, %d, %s, %d, %s, %d, %d, %s, %d, %d, %d, %s, %s, %s, %s, %s, %d, %d)
+			ON DUPLICATE KEY UPDATE order_number = VALUES(order_number), series_id = VALUES(series_id), status = VALUES(status), paid = VALUES(paid), is_test = VALUES(is_test), currency = VALUES(currency), total_cents = VALUES(total_cents), created_at = VALUES(created_at), paid_at = VALUES(paid_at), order_day = VALUES(order_day), email_hash = VALUES(email_hash), utm_source = VALUES(utm_source), ad_id = VALUES(ad_id), customer_id = VALUES(customer_id), reported_at = VALUES(reported_at), updated_at = VALUES(updated_at)", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$site_id,
 			$o['store_order_id'],
 			$o['order_number'],
@@ -249,6 +282,7 @@ CREATE TABLE {$spend} (
 			$o['email_hash'],
 			$o['utm_source'],
 			$o['ad_id'],
+			$o['customer_id'],
 			$now,
 			$now
 		);
@@ -320,7 +354,7 @@ CREATE TABLE {$spend} (
 		// 订单号：顾客和平台所有者看到的号（新订单是支付方的 hang-数字，老订单是数字），或者店铺内部的订单编号。
 		$q = self::clean_query( (string) ( $f['q'] ?? '' ) );
 		if ( '' !== $q ) {
-			$where[] = $wpdb->prepare( '(order_number = %s OR store_order_id = %d)', $q, ctype_digit( $q ) ? (int) $q : 0 );
+			$where[] = $wpdb->prepare( '(order_number = %s OR store_order_id = %d OR customer_id = %s)', $q, ctype_digit( $q ) ? (int) $q : 0, '' !== self::clean_customer_id( $q ) ? self::clean_customer_id( $q ) : '-' );
 		}
 		if ( ! empty( $f['from'] ) ) {
 			$where[] = $wpdb->prepare( 'paid_at >= %d', (int) $f['from'] );
@@ -451,6 +485,122 @@ CREATE TABLE {$spend} (
 		return $checks;
 	}
 
+	// ---------- 顾客（客户编号） ----------
+
+	/**
+	 * 一段付款时间内每家店有哪些顾客（已付款、非测试单）。顾客用店铺报上来的客户编号认；
+	 * 没有编号的（店铺程序还没更新）退回用邮箱哈希。两样都没有的订单不计入顾客数。
+	 *
+	 * @return array<int,string[]> 店铺 ID => 顾客标识（不重复）
+	 */
+	public static function customers_by_site( int $from = 0, int $to = 0 ): array {
+		global $wpdb;
+		if ( ! self::ready() ) {
+			return array();
+		}
+		$t     = self::table();
+		$where = "paid = 1 AND is_test = 0 AND (customer_id <> '' OR email_hash <> '')";
+		if ( $from > 0 ) {
+			$where .= $wpdb->prepare( ' AND paid_at >= %d', $from );
+		}
+		if ( $to > 0 ) {
+			$where .= $wpdb->prepare( ' AND paid_at <= %d', $to );
+		}
+		$out = array();
+		foreach ( (array) $wpdb->get_results( "SELECT DISTINCT site_id, customer_id, email_hash FROM {$t} WHERE {$where}", ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			$key = '' !== (string) $r['customer_id'] ? (string) $r['customer_id'] : 'e:' . $r['email_hash'];
+			$out[ (int) $r['site_id'] ][ $key ] = $key;
+		}
+		return array_map( 'array_values', $out );
+	}
+
+	// ---------- 弃单数（来自店铺每日汇总） ----------
+
+	/**
+	 * 存一家店若干天的弃单数。$days 是店铺 /hq/summary 返回的 days：每天一行，带 day 和
+	 * abandoned / abandoned_open / recall_emailed / recall_recovered（指标模块 Metrics::daily 的同名项，按弃单创建那天）。
+	 * 没带 abandoned 的行（店铺程序还没更新，不能当成 0）跳过。同一天覆盖。返回存了几天。
+	 * 同一行里的 orders（店铺自己数的当天订单数）一起存下来，算弃单率时做分母：两个数来自同一家店的同一天。
+	 */
+	public static function store_abandoned( $site_id, $days ): int {
+		global $wpdb;
+		$site_id = (int) $site_id;
+		if ( $site_id < 1 || ! is_array( $days ) || ! self::ready() ) {
+			return 0;
+		}
+		$n = 0;
+		foreach ( $days as $d ) {
+			if ( ! is_array( $d ) || ! array_key_exists( 'abandoned', $d ) || ! self::valid_day( (string) ( $d['day'] ?? '' ) ) ) {
+				continue;
+			}
+			$wpdb->replace( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				self::abandoned_table(),
+				array(
+					'site_id'          => $site_id,
+					'day'              => (string) $d['day'],
+					'orders'           => max( 0, (int) ( $d['orders'] ?? 0 ) ),
+					'abandoned'        => max( 0, (int) $d['abandoned'] ),
+					'abandoned_open'   => max( 0, (int) ( $d['abandoned_open'] ?? 0 ) ),
+					'recall_emailed'   => max( 0, (int) ( $d['recall_emailed'] ?? 0 ) ),
+					'recall_recovered' => max( 0, (int) ( $d['recall_recovered'] ?? 0 ) ),
+					'updated_at'       => time(),
+				)
+			);
+			++$n;
+		}
+		return $n;
+	}
+
+	/**
+	 * 轮询拿到店铺的每日汇总时顺手把弃单数存下来。轮询本身（Monitor）不归本模块：
+	 * 它如果触发了 pchq_summary_days 动作就走那条路；这里是保底，直接看 /hq/summary 的回应。
+	 */
+	public static function watch_summary( $response, $args = array(), $url = '' ) {
+		if ( ! is_array( $response ) || ! is_string( $url ) || false === strpos( $url, 'hq%2Fsummary' ) ) {
+			return $response;
+		}
+		$query = array();
+		parse_str( (string) wp_parse_url( $url, PHP_URL_QUERY ), $query );
+		if ( '/peptide/v1/hq/summary' !== ( $query['rest_route'] ?? '' ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
+			return $response;
+		}
+		$data = json_decode( (string) wp_remote_retrieve_body( $response ), true );
+		$host = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
+		if ( ! is_array( $data ) || ! is_array( $data['days'] ?? null ) || '' === $host ) {
+			return $response;
+		}
+		// 只有一家店用这个地址时才认；两家店登记了同一个地址（测试环境）就分不清是谁的，宁可不存。
+		$found = array();
+		foreach ( Sites::all() as $id => $site ) {
+			if ( strtolower( (string) wp_parse_url( Site_Urls::management( $site ), PHP_URL_HOST ) ) === $host ) {
+				$found[] = (int) $id;
+			}
+		}
+		if ( 1 === count( $found ) ) {
+			self::store_abandoned( $found[0], $data['days'] );
+		}
+		return $response;
+	}
+
+	/**
+	 * 这段日期（店铺时区的日期，含两端）里各店的弃单数，和这些天店铺自己数的订单数。
+	 * 没有任何一天带弃单数的店不在结果里（“还不支持”和“0 个弃单”要分开）。
+	 *
+	 * @return array<int,array{abandoned:int,orders:int}>
+	 */
+	public static function abandoned_by_site( string $from_day, string $to_day ): array {
+		global $wpdb;
+		if ( ! self::ready() || ! self::valid_day( $from_day ) || ! self::valid_day( $to_day ) ) {
+			return array();
+		}
+		$t   = self::abandoned_table();
+		$out = array();
+		foreach ( (array) $wpdb->get_results( $wpdb->prepare( "SELECT site_id, SUM(abandoned) AS abandoned, SUM(orders) AS orders FROM {$t} WHERE day BETWEEN %s AND %s GROUP BY site_id", $from_day, $to_day ), ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			$out[ (int) $r['site_id'] ] = array( 'abandoned' => (int) $r['abandoned'], 'orders' => (int) $r['orders'] );
+		}
+		return $out;
+	}
+
 	// ---------- 广告花费（先手填） ----------
 
 	/** 记一家店某一天的广告花费（覆盖）。金额为 0 时删掉这一行。 */
@@ -514,9 +664,15 @@ CREATE TABLE {$spend} (
 	// ---------- 三级汇总（纯函数） ----------
 
 	/**
-	 * 一组数字加上净额、ROAS、客单价、转化率。
+	 * 一组数字加上净额、ROAS、客单价、转化率、弃单率。
+	 *
+	 * 弃单率 = 弃单数 ÷（弃单数 + 订单数）：留下联系方式开始结账的人里，没付款的占多少。
+	 * 分母里的订单数（$abandon_orders）是带了弃单数的那些店、那些天，店铺每日汇总里自己数的订单数——
+	 * 和弃单数同一个来源、同一批日期，所以有的店还没带弃单数、或者日期跨过了功能上线那天，比率也不会被冲淡。
+	 * null 表示这一级没有任何弃单数据，不算弃单率。
+	 * 指标口径文档（docs/metrics.md）只定义了弃单数，没有定义“弃单率”，这是 F3 先用的保守算法；口径定了再改这一处。
 	 */
-	public static function metrics( int $orders, int $gross_cents, int $refunded_cents, int $spend_cents, int $visitors ): array {
+	public static function metrics( int $orders, int $gross_cents, int $refunded_cents, int $spend_cents, int $visitors, int $abandoned = 0, int $customers = 0, ?int $abandon_orders = null ): array {
 		$net = $gross_cents - $refunded_cents;
 		return array(
 			'orders'         => $orders,
@@ -525,60 +681,78 @@ CREATE TABLE {$spend} (
 			'net_cents'      => $net,
 			'spend_cents'    => $spend_cents,
 			'visitors'       => $visitors,
+			'abandoned'      => $abandoned,
+			'abandon_orders' => $abandon_orders,
+			'customers'      => $customers,
 			'roas'           => $spend_cents > 0 ? round( $net / $spend_cents, 2 ) : null,
 			'aov_cents'      => $orders > 0 ? (int) round( $net / $orders ) : null,
 			'cvr'            => $visitors > 0 ? round( $orders / $visitors * 100, 2 ) : null,
+			'abandon_rate'   => null !== $abandon_orders && $abandoned + $abandon_orders > 0 ? round( $abandoned / ( $abandoned + $abandon_orders ) * 100, 2 ) : null,
 		);
 	}
 
 	/**
-	 * 系列 → 投手 → 店铺 三级汇总。每一级的数字都是下一级相加，所以三级合计一定相等。
+	 * 系列 → 投手 → 店铺 三级汇总。订单、金额、花费、访客、弃单数每一级都是下一级相加，所以三级合计一定相等。
+	 * 顾客数例外：同一位顾客在几家店都买过，上一级只算一次（按客户编号去重），所以不是下一级相加。
 	 *
-	 * @param array[] $stores 每家店一行：site_id、name、series_id、series_name、buyer_name、orders、gross_cents、refunded_cents、spend_cents、visitors
+	 * @param array[] $stores 每家店一行：site_id、name、series_id、series_name、buyer_name、orders、gross_cents、refunded_cents、spend_cents、visitors，
+	 *                        可选 abandoned（弃单数）、abandon_orders（有弃单数的那些天店铺自己数的订单数；没有弃单数据时不带或为 null）
+	 *                        和 customer_keys（这家店的顾客标识列表）
 	 * @return array{total:array,series:array}
 	 */
 	public static function rollup( array $stores ): array {
-		$sum  = static function ( array $rows ): array {
-			$t = array( 0, 0, 0, 0, 0 );
+		$sum  = static function ( array $rows, array $customers ): array {
+			$t    = array( 0, 0, 0, 0, 0, 0 );
+			$base = null;
 			foreach ( $rows as $r ) {
 				$t[0] += (int) $r['orders'];
 				$t[1] += (int) $r['gross_cents'];
 				$t[2] += (int) $r['refunded_cents'];
 				$t[3] += (int) $r['spend_cents'];
 				$t[4] += (int) $r['visitors'];
+				$t[5] += (int) ( $r['abandoned'] ?? 0 );
+				if ( isset( $r['abandon_orders'] ) ) {
+					$base = (int) $base + (int) $r['abandon_orders'];
+				}
 			}
-			return self::metrics( $t[0], $t[1], $t[2], $t[3], $t[4] );
+			return self::metrics( $t[0], $t[1], $t[2], $t[3], $t[4], $t[5], count( $customers ), $base );
 		};
 		$tree = array();
 		foreach ( $stores as $s ) {
 			$sid   = (int) $s['series_id'];
 			$buyer = '' !== trim( (string) $s['buyer_name'] ) ? trim( (string) $s['buyer_name'] ) : '';
-			$tree[ $sid ]['name']                       = (string) ( $s['series_name'] ?? '' );
-			$tree[ $sid ]['buyers'][ $buyer ]['stores'][] = array_merge(
+			$keys  = array_fill_keys( array_map( 'strval', (array) ( $s['customer_keys'] ?? array() ) ), true );
+			$tree[ $sid ]['name']                            = (string) ( $s['series_name'] ?? '' );
+			$tree[ $sid ]['buyers'][ $buyer ]['customers'] = ( $tree[ $sid ]['buyers'][ $buyer ]['customers'] ?? array() ) + $keys;
+			$tree[ $sid ]['buyers'][ $buyer ]['stores'][]  = array_merge(
 				array( 'site_id' => (int) $s['site_id'], 'name' => (string) $s['name'] ),
-				self::metrics( (int) $s['orders'], (int) $s['gross_cents'], (int) $s['refunded_cents'], (int) $s['spend_cents'], (int) $s['visitors'] )
+				self::metrics( (int) $s['orders'], (int) $s['gross_cents'], (int) $s['refunded_cents'], (int) $s['spend_cents'], (int) $s['visitors'], (int) ( $s['abandoned'] ?? 0 ), count( $keys ), isset( $s['abandon_orders'] ) ? (int) $s['abandon_orders'] : null )
 			);
 		}
 		ksort( $tree );
 		$series_rows = array();
+		$everyone    = array();
 		foreach ( $tree as $sid => $series ) {
 			ksort( $series['buyers'] );
 			$buyer_rows = array();
+			$in_series  = array();
 			foreach ( $series['buyers'] as $buyer => $b ) {
-				$buyer_rows[] = array( 'buyer_name' => (string) $buyer, 'metrics' => $sum( $b['stores'] ), 'stores' => $b['stores'] );
+				$buyer_rows[] = array( 'buyer_name' => (string) $buyer, 'metrics' => $sum( $b['stores'], $b['customers'] ), 'stores' => $b['stores'] );
+				$in_series   += $b['customers'];
 			}
+			$everyone     += $in_series;
 			$series_rows[] = array(
 				'series_id' => (int) $sid,
 				'name'      => $series['name'],
-				'metrics'   => $sum( array_column( $buyer_rows, 'metrics' ) ),
+				'metrics'   => $sum( array_column( $buyer_rows, 'metrics' ), $in_series ),
 				'buyers'    => $buyer_rows,
 			);
 		}
-		return array( 'total' => $sum( array_column( $series_rows, 'metrics' ) ), 'series' => $series_rows );
+		return array( 'total' => $sum( array_column( $series_rows, 'metrics' ), $everyone ), 'series' => $series_rows );
 	}
 
 	/**
-	 * 报表数据：一段日期（总后台时区，含两端）内每家店的订单、销售额、花费、访客，再做三级汇总。
+	 * 报表数据：一段日期（总后台时区，含两端）内每家店的订单、销售额、花费、访客、弃单数、顾客，再做三级汇总。
 	 *
 	 * @return array{total:array,series:array,from:int,to:int}
 	 */
@@ -589,6 +763,8 @@ CREATE TABLE {$spend} (
 		$sales = self::site_totals( $from, $to );
 		$spend = self::spend_by_site( $from_day, $to_day );
 		$visit = Stats::per_site( $from_day, $to_day );
+		$left  = self::abandoned_by_site( $from_day, $to_day );
+		$who   = self::customers_by_site( $from, $to );
 		$map   = Series::site_map();
 		$names = Series::all( true );
 		$rows  = array();
@@ -605,6 +781,9 @@ CREATE TABLE {$spend} (
 				'refunded_cents' => $sales[ $id ]['refunded_cents'] ?? 0,
 				'spend_cents'    => $spend[ $id ] ?? 0,
 				'visitors'       => $visit[ $id ]['visitors'] ?? 0,
+				'abandoned'      => $left[ $id ]['abandoned'] ?? 0,
+				'abandon_orders' => isset( $left[ $id ] ) ? $left[ $id ]['orders'] : null,
+				'customer_keys'  => $who[ $id ] ?? array(),
 			);
 		}
 		return self::rollup( $rows ) + array( 'from' => $from, 'to' => $to );

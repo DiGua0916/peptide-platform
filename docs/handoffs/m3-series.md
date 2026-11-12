@@ -32,24 +32,28 @@
 | `php -l` | F3 名下全部 PHP 文件 | 无语法错误 |
 | `peptide-hq/tests/m3-series-pure.php`（64 项） | 本机 PHP，纯逻辑 | 通过 |
 | `peptide-hq/tests/m3-series-catalog-pure.php`（35 项） | 同上 | 通过 |
-| `peptide-core/tests/m3-series-sync-pure.php`（58 项） | 同上 | 通过 |
-| `peptide-core/tests/m3-series-sync-smoke.php`（36 项） | 本机店铺副本：WooCommerce 11.2.1、HPOS、SQLite、5 个商品。导出 → 和自己比无差异 → 同步 → 重复同步跳过 → 改价 / 新增 / 移出 → 写入后再比无差异 → 两级恢复 → 母版店只收价格 | 通过 |
-| `peptide-hq/tests/m3-m10-hq-smoke.php`（79 项，M3 和 M10 共用） | 本机总后台副本（SQLite，30 条店铺记录），用店铺副本导出的真目录：升级重复执行两遍表结构和数据不变、系列和归属、主商品库、运费、活动存放、推送和确认、页面渲染 | 通过 |
+| `peptide-core/tests/m3-series-sync-pure.php`（61 项，11-12 第三轮加了“两份导出文件互相比较”） | 同上 | 通过 |
+| `peptide-core/tests/m3-series-sync-smoke.php`（40 项，11-12 第三轮加了：只读导出一条写入都没有、拿文件比较和在店里比较结果一样） | 本机店铺副本：WooCommerce 11.2.1、HPOS、SQLite、5 个商品。导出 → 和自己比无差异 → 同步 → 重复同步跳过 → 改价 / 新增 / 移出 → 写入后再比无差异 → 两级恢复 → 母版店只收价格 | 通过 |
+| `peptide-hq/tests/m3-m10-hq-smoke.php`（99 项，M3 和 M10 共用） | 本机总后台副本（SQLite，30 条店铺记录），用店铺副本导出的真目录：升级重复执行两遍表结构和数据不变、系列和归属、主商品库、运费、活动存放、推送和确认、页面渲染 | 通过 |
 | `wp peptide series export / diff / status / restore` | 本机店铺副本 | 能运行，输出正确 |
 | `tools/catalog/series_diff_report.py` | 用真的差异报告文件 | 输出正确 |
+| `tools/catalog/store_products_dump.php`（只读导出） | 本机店铺副本，插件换成**主线代码**（`7c6d2d3`，没有系列类） | 写入语句 0 条，没留下任何选项或附件元；导出的文件和新代码 `export --local` 的逐项相同 |
+| `wp peptide series diff --store-file=` | 本机店铺副本，主商品库改了一个价格、加一个商品、去掉一个商品 | 和在店里直接比的结果逐字节相同（一样 3、有差异 1、新建 1、下架 1） |
+| 沙盒（F1，11-12，MySQL，92 个商品，候选含 `332458b`） | 总后台升级两遍、店铺升级、总后台到店铺的真实签名调用、导出 92 个商品、自己和自己比无差异 | 通过，没有发现要改的问题（F1 分支 `docs/handoffs/m1-sandbox-acceptance-all-2026-11-12.md`）。同步和恢复（第 6 步）要第二家店，还没跑 |
 
 实际跑出来并修掉的问题：系列运费内容没变时也会加版本号（存库再读出后 `1000.0` 变成 `1000`，数组比较误判成“改过”，每次保存都让各店重新同步）——之前两轮人工复查都没看出来。另有两处是测试自己的问题（全局变量重名、闭包按值捕获）。
 
-仍然没有验证的（要靠 F1 的沙盒，步骤见 `docs/handoffs/m3-m10-sandbox-rehearsal.md`）：MySQL / MariaDB 上的升级和写入（本机是 SQLite 翻译层）；总后台和店铺之间真的 HTTP 调用和签名；定时任务真的触发；店铺后台里的只读保护（命令行不受保护限制，冒烟测试测不到）；首次同步时下载图片；商品多时的耗时。
+仍然没有验证的（要靠 F1 的沙盒，步骤见 `docs/handoffs/m3-m10-sandbox-rehearsal.md`）：在 MySQL 上真的同步一次商品再恢复（要第二家店；升级、导出、签名调用 F1 已在沙盒跑通）；定时任务真的触发；店铺后台里的只读保护（命令行不受保护限制，冒烟测试测不到）；首次同步时下载图片；商品多时的耗时。
 
 ## 还没做 / 要别人配合
 
 | 事项 | 谁 |
 | --- | --- |
 | 在沙盒（MySQL、真的总后台 ↔ 店铺连接）上演练升级、导出、差异报告、同步、恢复：步骤和通过标准见 `docs/handoffs/m3-m10-sandbox-rehearsal.md` | F1 执行，F3 修问题 |
-| 各店的差异报告出来后交平台所有者确认；确认之前不开启任何店的同步 | F1 出报告，平台所有者确认 |
+| **各店的差异报告**：沙盒只有一家店的数据，出不了真报告。F3 准备了只读导出的办法（每家店导一个商品文件，离线比较；不用整库快照，不用等发布），命令、输入格式、通过标准在 `docs/handoffs/m3-m10-sandbox-rehearsal.md` 第 5b 节。在生产店上跑导出要平台所有者同意；哪家是母版店也要平台所有者定 | F1 跑导出，F3 协助出报告，平台所有者确认 |
+| 报告出来后交平台所有者确认；**确认之前不开启任何店的同步** | 平台所有者 |
 | 开店页面加“系列”必选下拉和“投手”输入，提交时调用 `Series::reserve()` | 日常会话（见 CONTRACT） |
-| 活动的四个钩子（应用、导出、快照、恢复）；F2 的两个问题和字段差异已在 CONTRACT “M3” 一节答复（2026-11-12） | F2 |
+| 活动的四个钩子（应用、导出、快照、恢复）：F2 已接好并在它的本机副本上用 F3 的真实入口走通。F2 后来的三条留言（总后台要不要活动编辑界面、`upsell / progress_bar` 标 `unsupported`、母版店不算被接管）已在 CONTRACT “M3” 一节第二次答复（2026-11-12）：不做编辑界面，活动在母版店配、总后台导入；`unsupported` 保持不算错误 | — |
 | 功能键 `series.sync / series.catalog / series.shipping`、巡检类型 `series_out_of_sync` 登记；数据表脱敏登记 | F1 |
 | 发布时抬高 `PEPTIDE_HQ_VERSION`、`PEPTIDE_CORE_VERSION`（入口文件不归 F3） | F1 |
 | 新页面 `pchq-series` 加进 `Menu::navigation_policy()`（不加也能用，只是整页刷新） | 日常会话，可选 |

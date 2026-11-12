@@ -8,11 +8,14 @@
 
 | 检查 | 环境 | 结果 |
 | --- | --- | --- |
-| 5 个纯逻辑测试（263 项断言） | 本机 PHP 8.3.32 | 全部通过 |
-| `m3-series-sync-smoke.php`（36 项） | 本机店铺副本：WordPress + WooCommerce 11.2.1，HPOS 开，SQLite，5 个商品 | 通过 |
-| `m10-order-report-smoke.php`（31 项） | 同上，真订单 | 通过 |
-| `m3-m10-hq-smoke.php`（79 项） | 本机总后台副本：SQLite，30 家店铺记录，用店铺副本导出的真目录和真订单摘要 | 通过 |
+| 5 个纯逻辑测试（279 项断言） | 本机 PHP 8.3.32 | 全部通过 |
+| `m3-series-sync-smoke.php`（40 项） | 本机店铺副本：WordPress + WooCommerce 11.2.1，HPOS 开，SQLite，5 个商品 | 通过 |
+| `m10-order-report-smoke.php`（32 项） | 同上，真订单 | 通过 |
+| `m3-m10-hq-smoke.php`（99 项） | 本机总后台副本：SQLite，30 家店铺记录，用店铺副本导出的真目录和真订单摘要 | 通过 |
 | `php -l` | F3 名下全部 PHP 文件 | 无语法错误 |
+| 总后台数据库第 1 版升第 2 版 | 本机总后台副本，先用 `332458b` 的代码写入订单和退款，再换新代码 | 数据原样，新列、新索引、新表都在 |
+
+**F1 在沙盒（MySQL）上已经跑过的（11-12，候选含 `332458b`）**：第 2、3、4 步和第 5 步的“自己和自己比”，全部通过，没有要改的问题。**之后 F3 又加了一轮改动**（客户编号、弃单率、总后台数据库第 2 版、只读导出），下次换候选时请重跑第 2 步（版本选项应为 `1/2`，见第 2 步末尾）和第 4 步。
 
 本机没覆盖、要靠沙盒验证的：**MySQL / MariaDB**（本机是 SQLite 翻译层）、总后台和店铺之间**真的 HTTP 调用和签名**、定时任务真的触发、店铺后台里的**只读保护**（命令行不受保护限制，所以冒烟测试测不到）、**图片下载**（本机店铺和母版是同一份文件）、商品多时的耗时。
 
@@ -24,7 +27,7 @@ node tests/run-data-observations.cjs --suite m3-series-pure --suite m3-series-ca
 
 通过：最后一行 `{"passed":5,"failed":0}`。
 
-三个冒烟测试会写数据（结束时自己恢复，但总后台那个会留下一个测试系列和几张订单），只在**沙盒的一次性副本**上跑，站点要是 `WP_ENVIRONMENT_TYPE=local`，否则脚本拒绝运行：
+三个冒烟测试会写数据（结束时自己恢复，但总后台那个会留下一个测试系列和几张订单），只在**一次性副本**上跑。默认只认 `WP_ENVIRONMENT_TYPE=local`；沙盒是 `staging`，要跑的话再加一个 `PC_SMOKE_ALLOW_STAGING=1`（2026-11-12 新增，生产环境永远拒绝），**跑完请重新导入沙盒数据**。总后台那个要求至少登记了 3 家店，沙盒总后台只有一家时第一项检查就会停下（什么都没改），那一条只能在本机跑。这一步是可选的：
 
 ```
 # 店铺副本（第二个要求 wp-config.php 里有 PEPTIDE_HQ_URL / PEPTIDE_HQ_SECRET，测试值即可；请求全部被截住，不出网）
@@ -55,7 +58,7 @@ wp db query "SHOW CREATE TABLE wp_pchq_series\G; SHOW CREATE TABLE wp_pchq_serie
 
 通过：
 
-- 两个版本选项是 `1/1`；`wp_pchq_series` 只有一行，`slug = series-1`、`name = 系列 1`；所有店铺 `series_id = 1`、`series_sync = 0`；
+- 两个版本选项是 `1/2`（2026-11-12 第三轮之后；之前的候选是 `1/1`）；`wp_pchq_orders` 有 `customer_id` 列，`wp_pchq_abandoned` 表存在；从 `1/1` 升上来时原有的 `wp_pchq_orders`、`wp_pchq_refunds` 行数和金额不变；`wp_pchq_series` 只有一行，`slug = series-1`、`name = 系列 1`；所有店铺 `series_id = 1`、`series_sync = 0`；
 - `wp_pchq_sites` 多了 `series_id`、`buyer_name`、`onboarding_state`、`series_sync` 四列，`wp_pchq_daily` 多了 `gross_cents`、`refunded_cents` 两列；
 - 升级前记下的店铺数、`pchq_daily` 的天数、销售额合计、订单合计一个都没变。
 
@@ -142,6 +145,53 @@ python3 tools/catalog/series_diff_report.py /tmp/diff-*.json > series-diff-repor
 
 **把 `series-diff-report.md` 交给平台所有者。没有确认之前，不要在任何店点“确认并开启同步”。**
 
+### 5b. 真实各店的差异报告怎么出（2026-11-12，答复 F1 验收记录里“没跑”的那一项）
+
+沙盒只有一家店的数据，真报告需要 6 家店各自的商品。F1 列了两条路（再导 5 份脱敏快照轮流导入沙盒；或者等新代码上了生产再在各店跑 `series diff`）。F3 准备了**第三条路，建议用这条**：每家店只读导出一个商品文件，拿回来离线比较。不用拉整库快照，不用等发布，店铺上不部署任何代码。
+
+| | 办法 A：只读导出商品文件（建议） | 办法 B：5 份脱敏快照轮流进沙盒 | 办法 C：新代码上生产后各店跑 `series diff` |
+| --- | --- | --- | --- |
+| 在生产店上做什么 | 每家店跑一次 `wp eval-file`，只读 | 每家店导一次整库脱敏快照 | 先发布新代码，再每家店跑一条只读命令 |
+| 带出来的数据 | 只有商品、图片地址和哈希、运费方案、店名和域名 | 整库（脱敏后） | 只有差异报告 |
+| 写数据库 | 0 条（脚本自己数，会打印出来） | 不写生产库 | 0 条 |
+| 要等什么 | 平台所有者同意 | 平台所有者同意 + 5 次导入沙盒 | 第一次正式发布 |
+
+**办法 A 的步骤**（哪台机器、什么时候跑由 F1 定；生产店上跑之前要平台所有者同意）：
+
+1. 把两个文件放到店铺服务器上网站目录之外的地方（例如 `/root/f3-diff/`），**不要放进插件目录**：
+   - `tools/catalog/store_products_dump.php`
+   - `wp-content/plugins/peptide-core/includes/class-series-sync.php`（本分支的）
+2. 每家店（含母版店）跑一次：
+
+   ```
+   wp --path=<店铺目录> eval-file /root/f3-diff/store_products_dump.php /root/f3-diff/class-series-sync.php /root/f3-diff/out/<店铺编号>.json
+   ```
+
+   它做的事：把 `class-series-sync.php` 这一个类载入到这一次命令里（只定义类，不注册任何钩子），读商品、款式、分类、图片文件（算哈希）、运费方案，写出一个 JSON。输出文件已存在时拒绝覆盖。正常的输出：
+
+   ```
+   店铺：<店名>（<域名>）
+   商品：全部 N 个（含草稿），其中已发布、能进主商品库的 M 个
+   导出期间对数据库的写入语句：0 条
+   Success: 已写到 …json（… KB）。
+   ```
+
+   **通过：写入语句是 0 条。** 不是 0 就停下告诉 F3（可能是别的插件的后台任务碰巧在这次命令里跑了）。
+3. 把 6 个 JSON 拿到任何一个装了本分支代码的 WordPress 上（沙盒，或本机副本），用母版店那一份当主商品库，逐店比较，再汇总：
+
+   ```
+   for s in s0002 s0003 …; do
+     wp peptide series diff --file=out/<母版店>.json --store-file=out/$s.json --out=diff-$s.json
+   done
+   python3 tools/catalog/series_diff_report.py diff-*.json > series-diff-report.md
+   ```
+
+   `--store-file` 不读当前站点的任何数据，只比较两个文件。
+4. `series-diff-report.md` 交平台所有者。JSON 和报告里有各店域名，**不要提交进仓库**（仓库是公开的），放共享笔记目录或直接发给平台所有者。用完删掉服务器上的 `/root/f3-diff/`。
+
+F3 在本机验证过的：在一份跑**主线代码**（`7c6d2d3`，没有系列类）的店铺副本上用这个脚本导出，写入语句 0 条，没有留下任何选项或附件元；导出的文件和新代码 `wp peptide series export --local` 导出的逐项相同；`--store-file` 比较的结果和在店里直接跑 `series diff` 的结果逐字节相同。没验证的：生产的 PHP / WooCommerce 版本和商品数量（s0010 有 92 个商品，每张图片要读一遍算哈希，估计几秒到几十秒）。
+
+**哪家是母版店**要平台所有者定（现在模板库里默认系列的工作室店）。母版店自己的差异报告只比价格。
 ## 6. 同步和恢复（沙盒里演练；平台所有者确认差异之后才在生产做）
 
 在沙盒挑一家非母版店：

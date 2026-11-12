@@ -151,6 +151,14 @@ namespace {
 	check( 'master store diff is prices only', array( 'same' => 1, 'changed' => 1, 'create' => 0, 'unpublish' => 0 ) === $master['summary'] && true === $master['prices_only'] );
 	check( 'diff is repeatable', $diff === S::diff_catalog( $cat2['products'], $locals, 4 ) );
 
+	// ---- 两份导出文件互相比较：出差异报告不用碰店铺 ----
+	$dump = json_decode( (string) json_encode( array( 'source_host' => 'store-b.example.test', 'store' => array( 'name' => 'Store B', 'host' => 'Store-B.Example.Test' ), 'local' => $locals ) ), true );
+	$file = S::diff_dump( array( 'source_host' => 'master.example.test', 'products' => array( $cheaper, $tb, $new ) ), $dump );
+	$want = S::diff_catalog( $cat2['products'], $locals, 0 );
+	check( 'comparing two export files gives the same report as comparing on the store', is_array( $file ) && $want['summary'] === $file['summary'] && $want['changed'] === $file['changed'] && $want['create'] === $file['create'] && $want['unpublish'] === $file['unpublish'] );
+	check( 'the report names the store from the file', array( 'name' => 'Store B', 'host' => 'store-b.example.test' ) === $file['store'] );
+	check( 'files that are not exports are refused with a reason', is_string( S::diff_dump( array(), $dump ) ) && is_string( S::diff_dump( array( 'products' => array( $cheaper ) ), array( 'products' => array( $cheaper ) ) ) ) && is_string( S::diff_dump( array( 'products' => array() ), $dump ) ) );
+
 	// ---- 运费两档（FE-07）：系列格式 ↔ 店铺运费方案 ----
 	$series_plans = array( array( 'name' => 'Standard shipping', 'regions' => array( array( 'country' => 'US', 'states' => array() ) ), 'rates' => array(
 		array( 'name' => 'Standard Shipping', 'rule' => 'subtotal', 'min' => 0, 'max' => 1000, 'fee_cents' => 4500 ),

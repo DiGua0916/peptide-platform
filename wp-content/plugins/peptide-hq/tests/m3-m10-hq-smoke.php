@@ -20,7 +20,9 @@ use PeptideHq\Series_Push;
 use PeptideHq\Sites;
 use PeptideHq\Stats;
 
-if ( 'local' !== wp_get_environment_type() || '1' !== getenv( 'PC_SMOKE_THROWAWAY' ) ) {
+// 默认只认本地副本；沙盒（staging）要另外明说 PC_SMOKE_ALLOW_STAGING=1，跑完要重新导入沙盒数据。生产环境永远不跑。
+$pc_smoke_env = wp_get_environment_type();
+if ( ! ( 'local' === $pc_smoke_env || ( 'staging' === $pc_smoke_env && '1' === getenv( 'PC_SMOKE_ALLOW_STAGING' ) ) ) || '1' !== getenv( 'PC_SMOKE_THROWAWAY' ) ) {
 	WP_CLI::error( '这个测试会写总后台的数据，只能在一次性的本地副本上跑（WP_ENVIRONMENT_TYPE=local 并设 PC_SMOKE_THROWAWAY=1）。' );
 }
 
@@ -331,6 +333,78 @@ $rep = Orders::report( $from, $today );
 $check( 'ROAS uses net sales', 10000 === $rep['total']['spend_cents'] && round( $rep['total']['net_cents'] / 10000, 2 ) === $rep['total']['roas'] && $levels( $rep ) );
 $check( 'zero removes the spend row', Orders::set_spend( $b, $today, 0, $admin ) && ! isset( Orders::spend_by_site( $today, $today )[ $b ] ) );
 
+// ---- 9b. 客户编号：同一位顾客在两家店只算一位；没有编号的店按邮箱哈希 ----
+$had  = Orders::report( $from, $today );
+$now2 = time();
+$extra = static fn( int $id, string $customer, string $hash ): array => array( 'store_order_id' => $id, 'order_number' => 'hang-' . $id, 'status' => 'processing', 'paid' => true, 'is_test' => false, 'currency' => 'USD', 'total_cents' => 5000, 'created_at' => $now2 - 300, 'paid_at' => $now2 - 200, 'order_day' => $today, 'series_id' => 0, 'email_hash' => $hash, 'utm_source' => '', 'ad_id' => '', 'customer_id' => $customer );
+$r1 = $send( $a, array( $extra( 990001, 'c00smk01', str_repeat( 'c', 64 ) ) ) );
+$r2 = $send( $c_site, array( $extra( 990002, 'C00SMK01', str_repeat( 'd', 64 ) ), $extra( 990003, 'not-an-id', str_repeat( 'e', 64 ) ), $extra( 990004, '', str_repeat( 'e', 64 ) ) ) );
+$check( 'orders with a customer id are accepted', is_array( $r1 ) && 1 === count( $r1['accepted'] ) && is_array( $r2 ) && 3 === count( $r2['accepted'] ) );
+$check( 'customer id is stored upper-case; a malformed one is dropped, the order is kept', 'C00SMK01' === Orders::get( $a, 990001 )['customer_id'] && 'C00SMK01' === Orders::get( $c_site, 990002 )['customer_id'] && '' === Orders::get( $c_site, 990003 )['customer_id'] && 5000 === Orders::get( $c_site, 990003 )['total_cents'] );
+$found = Orders::search( array( 'q' => 'c00smk01' ) );
+$found_ids = array_map( 'intval', array_column( $found['rows'], 'store_order_id' ) );
+sort( $found_ids );
+$check( 'search by customer id finds the orders in both stores', 2 === $found['total'] && array( 990001, 990002 ) === $found_ids, $found_ids );
+$rep        = Orders::report( $from, $today );
+$store_rows = static function ( array $rep ): array {
+	$out = array();
+	foreach ( $rep['series'] as $s ) {
+		foreach ( $s['buyers'] as $buyer ) {
+			foreach ( $buyer['stores'] as $row ) {
+				$out[ $row['site_id'] ] = $row;
+			}
+		}
+	}
+	return $out;
+};
+$was = $store_rows( $had );
+$is  = $store_rows( $rep );
+$check( 'each store counts its own customers', $was[ $a ]['customers'] + 1 === $is[ $a ]['customers'] && $was[ $c_site ]['customers'] + 2 === $is[ $c_site ]['customers'], array( $was[ $a ]['customers'], $is[ $a ]['customers'], $was[ $c_site ]['customers'], $is[ $c_site ]['customers'] ) );
+$check( 'the same customer in two stores is one customer in the total', $had['total']['customers'] + 2 === $rep['total']['customers'] && array_sum( array_column( $is, 'customers' ) ) === $rep['total']['customers'] + 1, array( $had['total']['customers'], $rep['total']['customers'], array_sum( array_column( $is, 'customers' ) ) ) );
+$check( 'money levels still add up with the extra orders', $levels( $rep ) && $had['total']['orders'] + 4 === $rep['total']['orders'] );
+$send( $c_site, array( $extra( 990004, 'C00SMK02', str_repeat( 'e', 64 ) ) ) );
+$check( 'a later report can add the customer id to an order', 'C00SMK02' === Orders::get( $c_site, 990004 )['customer_id'] );
+
+// ---- 9c. 弃单数和弃单率：店铺每日汇总带来的弃单数按店按天存一行，重复不变 ----
+$yday = wp_date( 'Y-m-d', time() - DAY_IN_SECONDS );
+$days = array(
+	array( 'day' => $today, 'orders' => 1, 'abandoned' => 4, 'abandoned_open' => 1, 'recall_emailed' => 2, 'recall_recovered' => 1 ),
+	array( 'day' => $yday, 'orders' => 0, 'abandoned' => 2 ),
+	array( 'day' => 'not-a-day', 'abandoned' => 9 ),
+	array( 'day' => wp_date( 'Y-m-d', time() - 2 * DAY_IN_SECONDS ), 'orders' => 3 ),
+);
+$ab_rows = static fn(): array => $wpdb->get_results( 'SELECT site_id, day, abandoned, abandoned_open, recall_emailed, recall_recovered FROM ' . Orders::abandoned_table() . ' ORDER BY site_id, day', ARRAY_A ); // phpcs:ignore
+do_action( 'pchq_summary_days', $a, $days );
+$first_rows = $ab_rows();
+$check( 'abandoned counts are stored per store and day; rows without the field are ignored', 2 === count( $first_rows ) && array( '2', '4' ) === array_map( 'strval', array_column( $first_rows, 'abandoned' ) ), $first_rows );
+do_action( 'pchq_summary_days', $a, $days );
+$check( 'storing the same days again changes nothing', $first_rows === $ab_rows() );
+$summary_of  = static fn( int $site_id ): string => add_query_arg( array_map( 'rawurlencode', array( 'rest_route' => '/peptide/v1/hq/summary', 'days' => '7' ) ), PeptideHq\Site_Urls::management( Sites::get( $site_id ) ) );
+$reply       = array( 'headers' => array(), 'body' => wp_json_encode( array( 'currency' => 'USD', 'days' => array( array( 'day' => $today, 'orders' => 2, 'revenue' => 100, 'abandoned' => 3 ) ) ) ), 'response' => array( 'code' => 200, 'message' => 'OK' ), 'cookies' => array(), 'filename' => null );
+$twins       = count( array_filter( array_keys( Sites::all() ), static fn( $id ) => $host_of( (int) $id ) === $host_of( $c_site ) ) );
+if ( $twins > 1 ) {
+	// 本地副本里几家店登记的是同一个地址：分不清是哪家的，不能存。
+	apply_filters( 'http_response', $reply, array(), $summary_of( $c_site ) );
+	$check( 'a summary reply from an address shared by several stores is not guessed', $first_rows === $ab_rows() );
+	$own = 'https://smoke-' . strtolower( wp_generate_password( 8, false ) ) . '.example.test/';
+	Sites::update( $c_site, array( 'url' => $own, 'management_url' => $own ) );
+	$check( 'the third store now has an address of its own', wp_parse_url( $own, PHP_URL_HOST ) === $host_of( $c_site ) );
+}
+$summary_url = $summary_of( $c_site );
+$check( 'the summary reply passes through untouched', $reply === apply_filters( 'http_response', $reply, array(), $summary_url ) );
+$check( 'abandoned counts are picked up from the summary reply of that store', array( 'abandoned' => 3, 'orders' => 2 ) === ( Orders::abandoned_by_site( $today, $today )[ $c_site ] ?? null ) && ! isset( Orders::abandoned_by_site( $today, $today )[ $b ] ), Orders::abandoned_by_site( $today, $today ) );
+apply_filters( 'http_response', array_merge( $reply, array( 'response' => array( 'code' => 500, 'message' => 'x' ), 'body' => wp_json_encode( array( 'days' => array( array( 'day' => $today, 'abandoned' => 99 ) ) ) ) ) ), array(), $summary_url );
+apply_filters( 'http_response', array_merge( $reply, array( 'body' => wp_json_encode( array( 'days' => array( array( 'day' => $today, 'abandoned' => 99 ) ) ) ) ) ), array(), str_replace( 'hq%2Fsummary', 'hq%2Fstatus', $summary_url ) );
+apply_filters( 'http_response', array_merge( $reply, array( 'body' => wp_json_encode( array( 'days' => array( array( 'day' => $today, 'orders' => 5 ) ) ) ) ) ), array(), $summary_url );
+$check( 'failed replies, other routes and stores without the field are ignored', 3 === ( Orders::abandoned_by_site( $today, $today )[ $c_site ]['abandoned'] ?? 0 ) );
+$rep = Orders::report( $from, $today );
+$is  = $store_rows( $rep );
+// 店 a：两天共 6 个弃单，这两天店铺自己数的订单 1 笔 → 6 ÷ 7；店 c：3 ÷ (3+2)；合计只用有弃单数据的店和天：9 ÷ (9+3)。
+$check( 'abandon rate = abandoned / (abandoned + orders of the same store days)', 6 === $is[ $a ]['abandoned'] && 85.71 === $is[ $a ]['abandon_rate'] && 60.0 === $is[ $c_site ]['abandon_rate'] && 9 === $rep['total']['abandoned'] && 3 === $rep['total']['abandon_orders'] && 75.0 === $rep['total']['abandon_rate'], array( $is[ $a ], $rep['total'] ) );
+$check( 'a store without abandoned data has no rate and does not dilute the total', 0 === $is[ $b ]['abandoned'] && null === $is[ $b ]['abandon_orders'] && null === $is[ $b ]['abandon_rate'] && $is[ $b ]['orders'] > 0 );
+$check( 'a narrower range only counts its own days', array( 'abandoned' => 4, 'orders' => 1 ) === ( Orders::abandoned_by_site( $today, $today )[ $a ] ?? null ) );
+$check( 'money levels still add up', $levels( $rep ) );
+
 // ---- 10. 三个后台页面能渲染，没有警告 ----
 wp_set_current_user( $admin );
 $render = static function ( string $class, array $get ) use ( $mine ): string {
@@ -355,6 +429,9 @@ $html = $render( PeptideHq\Admin\Orders_Page::class, array( 'page' => 'pchq-orde
 $check( 'order detail renders with the refund form and history', str_contains( $html, 'pchq_refund_mark' ) && str_contains( $html, 'pchq_refund_void' ) && str_contains( $html, '已撤销' ) && str_contains( $html, '店内订单编号' ) );
 $html = $render( PeptideHq\Admin\Report_Page::class, array( 'page' => 'pchq-report', 'from' => $from, 'to' => $today ) );
 $check( 'report page renders three levels', str_contains( $html, '全部系列合计' ) && str_contains( $html, 'Buyer B' ) && str_contains( $html, 'pchq_spend_save' ) && ! str_contains( $html, '<b>Warning</b>' ), strlen( $html ) );
+$check( 'report page shows customers, abandoned and abandon rate', str_contains( $html, '顾客' ) && str_contains( $html, '弃单率' ) && str_contains( $html, number_format( (float) $rep['total']['abandon_rate'], 2 ) . '%' ) && ! str_contains( $html, '<b>Deprecated</b>' ), $rep['total']['abandon_rate'] );
+$html = $render( PeptideHq\Admin\Orders_Page::class, array( 'page' => 'pchq-orders', 'order' => (string) Orders::get( $a, 990001 )['id'] ) );
+$check( 'order detail shows the customer id', str_contains( $html, 'C00SMK01' ) && str_contains( $html, '客户编号' ) );
 $_GET = array();
 
 WP_CLI::success( 'PASS ' . $checks . ' M3 / M10 HQ smoke checks on a real HQ WordPress copy (' . count( $sites ) . ' stores, ' . $n . ' catalog products, ' . count( $in['orders'] ) . ' reported orders).' );

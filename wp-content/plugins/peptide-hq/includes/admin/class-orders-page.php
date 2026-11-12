@@ -244,7 +244,7 @@ final class Orders_Page {
 		}
 		echo '</select></label>';
 		echo '<label>付款日期从<input type="date" name="from" value="' . esc_attr( $from_day ) . '"></label><label>到<input type="date" name="to" value="' . esc_attr( $to_day ) . '"></label>';
-		echo '<label>订单号<input type="text" name="q" value="' . esc_attr( $f['q'] ) . '" maxlength="40" placeholder="例如 hang-161188301 或 11843"></label>';
+		echo '<label>订单号 / 客户编号<input type="text" name="q" value="' . esc_attr( $f['q'] ) . '" maxlength="40" placeholder="订单号、店内编号或客户编号"></label>';
 		echo '<button type="submit" class="button button-primary">筛选</button> <a class="button" href="' . esc_url( self::url() ) . '">清空</a></form>';
 
 		if ( ! $result['rows'] ) {
@@ -319,6 +319,7 @@ final class Orders_Page {
 			'已标记退款'  => Orders::money( $o['refunded_cents'], $cur ),
 			'净额'       => Orders::money( $o['total_cents'] - $o['refunded_cents'], $cur ),
 			'来源'       => '' !== $o['utm_source'] ? $o['utm_source'] . ( '' !== $o['ad_id'] ? ' / ' . $o['ad_id'] : '' ) : '—',
+			'客户编号'    => '' !== (string) ( $o['customer_id'] ?? '' ) ? (string) $o['customer_id'] : '—',
 		) as $k => $v ) {
 			echo '<div><dt>' . esc_html( $k ) . '</dt><dd>' . esc_html( $v ) . '</dd></div>';
 		}
