@@ -527,3 +527,31 @@
 - peptide-panapay 支付中心：`Hub_Store::attempts($f, 0)` 一次取最近 2000 条，`Hub_Page::grouped()` 按客户编号合并，按合并后的行数分页。行内显示编号和打码邮箱；多次付款时显示按钮“共 N 次付款 · 成功 x · 失败 y”，点开是每一次的记录（浅灰底、左侧蓝条）。没有编号的记录照旧一行一条。
 - 部署：总后台 peptide-hq + panapay（备份 /root/hq-customers-backup-20261112100504）。先只上主店测试（web/hq 主店副本，备份 cid-main-20261112100515/16）：编号稳定（Gmail 加点 / +后缀算出同一个编号）；新订单会写编号并排队上报（测试单已删除）；主店补报 7 单。然后用 trk-deploy2 上了两台主机各 7 份（peptide-core 3 个文件；panapay 的 hub 4 个文件在店铺副本里不会运行，只是保持一致）。
 - 补报最近 30 天：43 单 → 21 个客户（s0007 17 单 / 9 人，s0010 14 / 7，s0008 5 / 3，主店 7 / 2）。支付中心核对：光辉 #11883–11885 合并为同一人“共 3 次付款 · 失败 3”；芒果 #11858–11861 + #11880 为同一人（共 6 次，失败 5）。
+
+### 2026-11-12 11:35 UTC 恢复加购推荐（手动订单的回调加入报价白名单）
+- 现象：6 家店 `Quote_Cart::supported_hooks()` 全为 false，加购推荐一律不出现（11-10 手动订单上线后，`Manual_Orders` 的 3 个回调不在报价白名单里）。规划会话转来修法，平台所有者同意。
+- 改动：`activity/class-quote-cart.php` 白名单加 `Manual_Orders::apply_fees`、`Manual_Orders::apply_prices`，`supported()` 遇到手动订单链接的购物车行（`pc_manual`）不报价；`activity/class-recommendation-coupon.php` 的 `woocommerce_coupon_is_valid` 白名单加 `Manual_Orders::block_coupons`（与 F2 分支 8c8937a 文字一致）。
+- 先在主店 s0001 测：`supported_hooks()` 与 `coupon_hooks_supported()` 为 true；普通购物车 $252 时出现加购推荐（差 $48 解锁 $25，带 ADDON5 额外 $5）；手动订单链接购物车推荐接口返回 409，不出现推荐，链接价格 $50/盒、店铺满减 −$25、运费不变。测试购物车已清空，没有下单。
+- 上线：web 主店 + s0006–s0010 + 模板 yy-sync-0532574-1794082452-web；HQ store-admin + tenant-admin s0006–s0010 + 模板 yy-sync-0532574-1794082452-admin。文件 md5 前缀 f1b143d2c479 / 89a3fd7179a0。
+- 备份：web `/root/vialcove-backups/quote-cart-manual-orders-20261112T113524Z`、`…T113738Z`；HQ `…T113526Z`、`…T113739Z`。
+- 验证：12 个站点 `supported_hooks()` 全部 `bool(true)`。
+- 回滚：从上述备份目录拷回两个文件并 reload php-fpm。
+
+### 2026-11-12 11:56 UTC 物流填单（总后台新页面，两个子表自动填写）
+- 店主要求：付款成功的订单按他的物流填单表格式自动填，分“发货登记”和“报关填单”两个子表；全自动、不用手填；之后再同步到在线表格。
+- 店铺（peptide-core）：新 `class-logistics-sync.php`（`Logistics_Sync`，在 class-plugin.php 里 Customer_Id 之后注册）。订单状态变化且付过款 → 20 秒后签名 POST 到总后台 `/peptide-hq/v1/logistics/push`；每小时把最近 45 天付款的订单再报一遍（补物流单号）。只读订单；测试订单不报；手动订单一样报。
+- 总后台（peptide-hq，HQ 安装 `/srv/vialcove/hq/current/public`）：新 `class-logistics.php`（表 `wp_pchq_logistics`，每小时用 17TRACK 更新有单号的订单，送达写“妥投”）、`class-xlsx.php`（生成 .xlsx）、`admin/class-logistics-page.php`（总后台 → 物流填单：日期 / 店铺筛选、两个子表、下载 Excel、报关固定栏可改、立即更新物流状态）。
+- 产品栏用商品编号（SKU）× 数量；导入遗留的长数字编号改用“商品名 规格”（主店 103 个规格是这种编号）。目的国家：美国 / PR 写波多黎各；电话写 “+1 号码”。
+- 先在主店测：推送 1 单（另 1 单是测试单，跳过），页面和 Excel（openpyxl 读取：两个表、颜色、冻结表头、换行）都正确；再上线 s0006–s0010 + 两边模板，补报：s0007 1 单、s0010 2 单。4 单与店主手填的 11843 / 11886 / 11892 行核对一致。
+- 部署时发现 `systemctl reload "php*-fpm"` 匹配不到 `php8.3-fpm.service`，改为直接 reload php8.3-fpm（两台都已 reload）。
+- 备份：HQ `/root/vialcove-backups/logistics-hq-20261112T115634Z`、`…T115747Z`、`…T115839Z`；core `logistics-core-20261112T115635Z`、`…T115637Z`、`…T115840Z`、`…T115842Z`（新文件记在 new-files.txt）。
+- 回滚：从备份拷回 class-plugin.php，删掉新文件，reload php8.3-fpm。
+- 待办：同步到店主的在线表格（等店主确认是哪个平台）。
+
+### 2026-11-12 12:08 UTC 物流填单同步到腾讯文档（已上线，等店主建应用授权）
+- 店主的在线表格是腾讯文档。总后台 → 物流填单 → “同步到腾讯文档”：填 Client ID / Secret（Secret 加密保存）、授权（OAuth2 `https://docs.qq.com/oauth/v2/authorize` → `admin-post.php?action=pchq_tdocs_callback`）、两个工作表链接（带 ?tab=）。
+- 新 `peptide-hq/includes/class-tencent-docs.php`（表 `wp_pchq_tdocs_rows` 记我们写到第几行）；`class-logistics.php` 收到新订单后 2 分钟同步一次，另每小时一次；`admin/class-logistics-page.php` 加第三个标签。
+- 规则：按第 1 行表头名字找列；新订单接在最后一个有“客户单号”的行下面，序号接着编；表里已有的单号（店主手填）不动；我们写的行内容变了（物流单号、妥投）才更新。接口不能设背景色。
+- 测试：没有真实应用，用模拟的腾讯文档接口在 HQ 跑（不发请求、不写设置）：两张表各新增 3 行、跳过手填的 1 行、序号接续、第二次运行 0 写入；测试映射行已删除。
+- 备份：`/root/vialcove-backups/tdocs-hq-20261112T120813Z`。
+- 待店主：在腾讯文档开放平台注册开发者、建应用并通过审核、回调地址加白名单、填 ID/Secret、授权、填两个工作表链接。

@@ -93,9 +93,10 @@ final class Quote_Cart extends \WC_Cart {
 			try { self::existing_coupons( $source ); } catch ( \Throwable $error ) { return false; }
 		}
 		if ( ! self::supported_hooks() ) { return false; }
+		// 手动订单链接的购物车不报价（报价不走 apply_fees，算出来的满减会和实际不一致）。
 		foreach ( $source->cart_contents as $item ) {
 			$product = is_array( $item ) ? ( $item['data'] ?? null ) : null;
-			if ( ! $product instanceof \WC_Product || array_key_exists( Product_Offers::CART, $item ) || ! in_array( $product->get_type(), array( 'simple', 'variation' ), true ) ) { return false; }
+			if ( ! $product instanceof \WC_Product || array_key_exists( Product_Offers::CART, $item ) || ! empty( $item['pc_manual'] ) || ! in_array( $product->get_type(), array( 'simple', 'variation' ), true ) ) { return false; }
 			$price = $product->get_price( 'edit' );
 			$qty   = $item['quantity'] ?? null;
 			if ( ! is_numeric( $price ) || ! is_finite( (float) $price ) || (float) $price < 0 || ! is_numeric( $qty ) || ! is_finite( (float) $qty ) || (float) $qty <= 0 || floor( (float) $qty ) !== (float) $qty ) { return false; }
@@ -114,8 +115,8 @@ final class Quote_Cart extends \WC_Cart {
 	private static function unsupported_hook(): ?string {
 		global $wp_filter;
 		$allow = array(
-			'woocommerce_cart_calculate_fees'      => array( Promotions::class . '::apply_to_cart' ),
-			'woocommerce_before_calculate_totals' => array( Product_Offers::class . '::sync_cart' ),
+			'woocommerce_cart_calculate_fees'      => array( Promotions::class . '::apply_to_cart', \PeptideCore\Manual_Orders::class . '::apply_fees' ),
+			'woocommerce_before_calculate_totals' => array( Product_Offers::class . '::sync_cart', \PeptideCore\Manual_Orders::class . '::apply_prices' ),
 			'woocommerce_after_calculate_totals'  => array( 'WC_Cart_Session::set_session' ),
 			'woocommerce_product_get_price'       => array( 'Automattic\\WooCommerce\\Internal\\ScheduledSalePriceReconciler::reconcile_price' ),
 			'woocommerce_is_purchasable'          => array( Store_Config::class . '::offline_purchasable', 'WC_Payments_Subscriptions_Disabler::make_subscription_products_unpurchasable' ),
