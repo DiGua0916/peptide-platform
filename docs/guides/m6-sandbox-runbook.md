@@ -1,6 +1,6 @@
 # M6 / M7：沙盒对账和影子档观察（给 F1）
 
-2026-11-12（下午更新了第 0、5、6 节）· F4「数据」会话。分支 `claude/m6-metrics-db7036`（已含主线 `7c6d2d3`）。
+2026-11-12（下午更新了第 0、5、6 节；F1 第一次在沙盒跑完之后又补了第 3、6 节里不用浏览器的做法，见文末“F1 第一次跑的结果”）· F4「数据」会话。分支 `claude/m6-metrics-db7036`（已含主线 `7c6d2d3`）。
 现有的表结构没有改；新增一张表 `{prefix}pc_track_ads`（访问的广告参数，没有顾客资料，自己的版本选项 `peptide_core_track_ads_db`），部署后第一次请求时自动建，建好后 `wp option get peptide_core_track_ads_db` 是 `1`。开关 `peptide_core_m6_mode` 默认 `off`。下面每一步都写了命令和通过标准，做完把输出贴回共享笔记，F4 来读。
 
 命令都在沙盒那家店的 WordPress 目录里执行。
@@ -19,6 +19,7 @@
 | 按广告拆分的整条路径：真正的事件接收 → 入库 → 来源报表三种分组 → CSV → 隐私抹除 | 都对。带 `{{campaign.name}}` 这类没被替换的占位符时只丢广告参数，来源照常记下 |
 | 投手的两个合并页（同屏布局），浏览器里看 | 两段都出数，换时间段一起刷新，按 `tab` 滚到第二段，控制台没有报错。只看了桌面宽度 |
 | `Metrics::daily()` 近 7 天 | 每天的弃单数加起来等于整段的弃单数 |
+| 不用浏览器的两条（F1 第一次跑完之后补的）：第 6 节的 `m6-ad-params-smoke.php run`；第 3 节“没有浏览器时”的命令（开关临时设成影子，做完改回关并清了日志） | 前者 17 项检查全过，故意弄坏一项时退出码是 1、照样清理；后者 36 次调用都是 200，日志里记到五项对账 |
 
 这是 SQLite 上的结果。**MySQL 上、真实快照上还没跑过**，所以需要沙盒再跑一遍。
 第一次实跑时冒烟脚本就抓到一处真问题（已修）：填地址的事件落在一次没打开过结账页的访问里时，带分组的漏斗和 `Data\Metrics` 数出来不一样。
@@ -61,7 +62,17 @@ wp eval-file wp-content/plugins/peptide-core/tests/m6-reports-switch-smoke.php
 wp option update peptide_core_m6_mode shadow
 ```
 
-然后像平时一样用后台：打开概览页，数据菜单下每个子页各点一遍、换几个时间段。影子档下页面显示的仍然是旧数字。过一会儿：
+然后像平时一样用后台：打开概览页，数据菜单下每个子页各点一遍、换几个时间段。影子档下页面显示的仍然是旧数字。
+
+**没有浏览器时**：用 curl 取页面只拿到页面外壳，数据页的数字是页面脚本另外调接口取的，所以对账日志里只会有概览页的两项。改用下面这条命令，它以管理员身份把概览页和 11 张数据报表的接口按今天 / 近 7 天 / 近 30 天各调一遍，效果和在浏览器里逐页点开一样（每行应该都是 200）：
+
+```bash
+wp eval 'wp_set_current_user( (int) get_users( array( "role" => "administrator", "number" => 1, "fields" => "ID" ) )[0] ); foreach ( array( "today", "7d", "30d" ) as $r ) { foreach ( array( "overview", "data/operations", "data/trends", "data/rankings", "data/products", "data/conversion", "data/landing", "data/sources", "data/pages", "data/page-conversion", "data/checkout-steps", "data/realtime" ) as $p ) { $q = new WP_REST_Request( "GET", "/peptide/v1/" . $p ); $q->set_query_params( array( "range" => $r ) ); echo $r, " ", $p, " ", rest_do_request( $q )->get_status(), "\n"; } }'
+```
+
+（11-12 在本地拷贝上试过：日志里出现 `reports.visitor_funnel`、`overview.totals`、`overview.recovery`、`reports.paid_orders`、`operations.kpis` 五项，差异都在下表的说明之内。）
+
+过一会儿：
 
 ```bash
 wp eval 'print_r( PeptideCore\Data\Metrics_Switch::log() ); print_r( PeptideCore\Tracking\Funnel_Guard::counters( 7 ) );'
@@ -165,9 +176,20 @@ tools/sandbox/run-smoke.sh <解开的测试目录> smoke-tracking
 wp option get peptide_core_track_ads_db
 ```
 
-应该是 `1`（表已建好）。然后用带广告参数的地址打开店铺首页一次，例如 `/?utm_source=facebook&utm_medium=paid&utm_campaign=sandbox-c&utm_term=sandbox-s&utm_content=sandbox-a`（不要用登录了后台的浏览器），再到后台数据 → 来源数据，分组选“广告系列”。
+应该是 `1`（表已建好）。
 
-通过标准：表里有一行 `sandbox-c`，访客数 1。分组换成“广告组”“广告”，分别多出 `sandbox-s`、`sandbox-a` 两列。
+**入库和报表（不用浏览器）**：
+
+```bash
+wp eval-file wp-content/plugins/peptide-core/tests/m6-ad-params-smoke.php run
+```
+
+它直接走真正的事件接收接口：让 4 个访客带着不同的落地参数进店，检查三个参数进了表、没被替换的占位符（`{{campaign.name}}`）不入库而来源照常记、来源报表按广告系列 / 广告组 / 广告三种分组都读得出来，最后把这 4 个访客连同广告参数删掉。不改设置。通过标准：退出码 0，最后一行是“结果：通过（17 项检查）”。不带 `run` 只打印说明。
+用 curl 打开带 `utm_*` 的地址验不了这一项：上报是前台脚本做的，curl 不执行脚本，表里不会有行。
+
+**浏览器里的那一半（可选，要真正的浏览器）**：用带广告参数的地址打开店铺首页一次，例如 `/?utm_source=facebook&utm_medium=paid&utm_campaign=sandbox-c&utm_term=sandbox-s&utm_content=sandbox-a`（不要用登录了后台的浏览器），再到后台数据 → 来源数据，分组选“广告系列”。
+
+通过标准：来源数据的表格里有一行 `sandbox-c`，访客数 1。分组换成“广告组”“广告”，分别多出 `sandbox-s`、`sandbox-a` 两列。
 这一步要主题那一半（F5 的分支）也在沙盒上才看得到值；只有本分支时这三项不会上报，表里只有“没有观察到”和“已捕获但未提供此参数”两行，这也算正常。
 
 同屏数据页：管理员直接打开 `wp-admin/admin.php?page=pc-data-funnel-sources` 和 `…?page=pc-data-products-landing`。通过标准：每页上下两个报表都有数、没有页签、浏览器控制台没有报错。手机宽度（375）和平板宽度（768）我在本地拷贝上看过并修了三处排版；沙盒上如果有真正的投手账号，请用它点一遍这两页——我只能用过滤器把管理员当成投手看。投手看到的商品名应该是普通文字（没有“编辑商品”的链接），“查看详情”能在页内展开。
@@ -187,3 +209,19 @@ wp eval-file wp-content/plugins/peptide-core/tests/m7-pixel-acceptance-smoke.php
 ```
 
 （没配像素时应该报告一个 Facebook 像素都没填；配了但外网被拦时报告“未通（HTTP 0）”。两种都算正常，出现 PHP 报错才是问题。本地拷贝上跑出来是后一种。）
+
+## F1 第一次跑的结果（2026-11-12，合并候选里的 F4 是 `6fa1907`）
+
+记录在 F1 分支的 `docs/handoffs/m1-sandbox-acceptance-all-2026-11-12.md`。第 0、1、2、3、7 步通过；第 4 步（可选）没跑；第 5 步的 12 个冒烟用例那时还没修，等下一次。沙盒的数据是 11-10 的 s0010 快照加 1 张测试订单，所以这次只说明“能跑、结果自洽”，对账本身没有实际意义，要等更真实的快照。
+
+| 步骤 | F1 看到的 | 说明 |
+| --- | --- | --- |
+| 1 对账 | 订单 1 = 1、销售额 42.00 = 42.00、访客 55 = 55，没有解释不了的 | 符合预期 |
+| 1 转化率 | 近 7 天旧 1.82% / 新 0% | 旧口径是订单数 ÷ 访客（1 ÷ 55）；新口径是付款访客 ÷ 访客，那张测试订单没有带着填地址记录的访问，所以不算。定义不同，不是算错 |
+| 1 弃单激活 | 近 7 天旧“发信 2 / 成功 0”，新“发信 0 / 成功 0” | 数据源不同（邮件序列表 → 弃单列表）。沙盒数据太少，看不出新口径的 0 合不合理。**换了更真实的快照之后如果旧口径有发信、新口径仍然一直是 0，请把这一行贴回来，我查** |
+| 2 三档冒烟 | 通过（206 项检查），影子档没有记到会变的差异 | 符合预期（数据少） |
+| 3 影子档 | 日志里只有概览页两项，各比了 2 次 | curl 取页面不会触发数据页的接口。下次请用第 3 节新加的那条命令 |
+| 6 广告拆分 | 表在，但入库没验到 | curl 不执行前台脚本。下次请跑第 6 节新加的 `m6-ad-params-smoke.php run` |
+| 7 像素 | 补发任务执行成功；验收报告“还没有保存 Facebook 像素” | 符合预期 |
+
+下一次（F4 分支头 `ba93f99` 之后）请跑：第 3 节的新命令、第 5 节的 12 个冒烟用例、第 6 节的新用例。其余步骤数据没换的话不用重跑。
