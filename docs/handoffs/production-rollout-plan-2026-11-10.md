@@ -587,7 +587,7 @@
 - 逻辑：当月文件已在用 → 不做事；DB-IP 没发布当月 → 第二天再看；下载后检查 gzip、> 50 MB、元数据 DBIP-City-Lite → 换 `/srv/vialcove-data/geoip/dbip-city-lite.mmdb` 软链接 → 主店查 8.8.8.8 必须有城市，否则立刻换回上个月并失败退出；只留当月和上月两份。日志在 `journalctl -u vialcove-dbip-update`。
 - 实测：服务运行（已是当月，不动）；手动切到 2026-10（下载 127 MB、查询 Mountain View）再切回 2026-11；放一个假文件 2099-01 → 查询失败 → 自动换回 2026-11、退出码 1，假文件已删。现在用 2026-11，磁盘上留 2026-10 / 2026-11。
 
-### 2026-11-13 12:36 UTC 素材归因第二批合进主线（claude/creative-merge → codex/checkout-acceptance-20261105，待部署）
+### 2026-11-13 12:36 UTC 素材归因第二批合进主线（claude/creative-merge → codex/checkout-acceptance-20261105，已上线 2026-11-13 13:06–13:07 UTC = 北京 21:06–21:07，fd0c316）
 - 店主决定今天上线（原定 F1 先上，改为本批先进主线）。合并 `origin/claude/creative-merge`（ad20bd9，比主线 4059779 多 14 个提交），无冲突；和 F1 的 `claude/m1-pkg2-hotfix-a` 在 Git 上也无冲突。**F1 明天（11-14 北京 14:00–16:00）的发布包要基于这一版主线重新组装**：`peptide-core/includes/tracking/class-tracker.php` 两边都改了（本批改 first_visit_id，热修复包 A 改 is_staff），整文件发布时必须是合并后的版本。
 - 店铺和 HQ 都要更新。不需要手工改表；追踪表自动升到 v7（加 geo_country、screen），素材表仍 v2。
 分四块：
@@ -600,3 +600,13 @@
 3. **单条素材人群画像 + AI 分析**（6516428 起，至 ad20bd9）：素材看板按单个素材时，卡片里有人群画像（15 个维度，和全部素材平均比）、规则分析（来的人 / 质量 / 谁在买 / 卡在哪 / 建议）、AI 深度分析按钮（`POST peptide/v1/creatives/audience-ai`，只发汇总数字）；三块和访客名单都默认收起。数据包加 profiles。
 4. **HQ 一起更新的部分**：AI 设置加用途“素材人群分析”（`Ai::USES['creative']`，没导入专门人设时借用全站分析师人设，追加固定分析步骤）；花费不覆盖手填（class-orders / class-creatives / report-page）；空日报不清数据（class-creatives）。
 - 测试（合并后的主线）：见下一条提交说明。
+- **上线记录（2026-11-13 13:06–13:07 UTC，北京 21:06–21:07，提交 fd0c316）**：
+  - 部署前核对：本次 28 个运行文件（店铺 23 个：peptide-core 22 + 主题 visitor-tracking.js；HQ 5 个 peptide-hq）在 web 7 份（主店 current、s0006–s0010、web 开店模板）和 HQ 8 份（store-admin current、tenant-admin s0006–s0010、admin 开店模板、HQ 安装）上与 267439a 逐个比 md5，全部一致，没有漂移。tests/ 不上生产（生产上本来没有）。
+  - 顺序：先主店（web current + HQ store-admin current），再 s0006–s0010、两份开店模板、HQ tenant-admin、HQ 安装（只 peptide-hq 5 个文件）；两台都 `systemctl reload php8.3-fpm`。部署后 15 份副本 md5 全部等于 fd0c316。
+  - 备份：web `/root/vialcove-backups/cr2-main-web-20261113T130617Z`、`cr2-tenants-web-20261113T130654Z`；HQ 主机 `/root/vialcove-backups/cr2-main-admin-20261113T130618Z`、`cr2-tenants-admin-20261113T130658Z`、`cr2-hq-20261113T130700Z`（新文件 class-audience.php / class-audience-ai.php 记在各自 new-files.txt）。
+  - 追踪表：6 家店 `peptide_core_tracking_db` = "7"（注：选项名是这个，不是 pc_track_db），访问表都有 geo_country、screen 两列。
+  - 老访客数据修复：6 家店 `pc_track_first_visit_fix` = "1"，定时任务已跑完不再排队。`pc_track_first_visit_fix_log`：主店 s0001 {"at":1794575192,"rows":53}；s0006 {"at":1794575275,"rows":61}；s0007 {"at":1794575275,"rows":373}；s0008 {"at":1794575275,"rows":115}；s0009 {"at":1794575274,"rows":53}；s0010 {"at":1794575275,"rows":253}。主店修复后复查：first_visit_id ≠ 最早一次访问的访客 0 个。
+  - 素材看板（6 家店后台在 HQ 主机上按各自 PHP 用户、以管理员身份服务器端渲染“按单个素材”）：全部无 PHP 警告。6 家店目前都没有登记过素材（pc_ad_creatives 0 行、带素材编号的访问 0），只有“未登记素材”卡片，按设计不显示人群画像，所以没有真实素材卡片可点开。改用 s0006 / s0008 / s0010 真实的“全部访客”人群数据喂给卡片渲染（只在内存里，不写库）：人群画像（摘要一行 + 展开）、人群分析、AI 深度分析按钮都出现，全部收起；样本少（1–5 人）时人群分析只显示“样本不足”、没有一句话和展开，这是设计如此；放大到 100 人时一句话 + 展开 5 个分区也正常出现，无警告。访客名单收起状态在 s0006 / s0008 / s0010 的卡片上都在。
+  - HQ → AI 设置：渲染无警告，“素材人群分析人设”一块在，店铺表多了“素材人群分析模板 / 本店素材人群分析”两列。
+  - 前台：6 家店首页、商品页、购物车都是 200，无报错；阳的店手机上像素（fbevents.js 已加载）、追踪脚本、18+ 弹窗照常。服务器上每家店把同一商品加购 2 件：上线前后都是小计 $172.60、总价 $215.35，一致。主店手机访问一次（utm_source=deploycheck，访问 #95）：geo_country=US、screen=375x812、device_model 有值，事件里有 scroll。
+  - 回滚：把上面备份目录里的文件按原路径拷回，删掉 new-files.txt 里列的新文件，reload php8.3-fpm。追踪表 v7 加的列不影响旧代码，不用回退。
