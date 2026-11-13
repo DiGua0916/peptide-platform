@@ -366,6 +366,7 @@ F1 那边已经接好的：`/hq/summary` 每天带 `abandoned / abandoned_open /
 - 按“只优化、不改功能”把会改变线上默认行为的地方都收回开关后面（`1016b2e`、`63d9a42`、`81e0eb4`）：投手合并页默认布局改回页签；按广告拆分改用自己的开关 `peptide_core_track_ads`（不再跟 M6 开关走），关着时来源页下拉、接口参数、页面文案都和线上一样；每日汇总带弃单数加开关 `peptide_core_daily_abandoned`（关着时 `abandoned_daily()` 抛异常，包 A 的 `Hq_Connector::with_abandoned()` 就不加那几项）；商品活跃度接口在开关关着时不注册路由。
 - 新增 `tests/m6-release-snapshot.php`（run / compare），本机同一份数据上线上代码和本分支各读一遍：188 项一样（off / shadow / on 三档）；同一串操作写进库里的东西也一样；升级前后表、选项、定时任务一样。
 - 发布材料、离完全上线的差距、新发现的退款 bug：`docs/handoffs/m6-m7-release.md`。
+- 所有者的原则（11-13）：“优先用站点已经存在的……你的是没经历过测试的”。和线上重叠的一律以线上为准：投手“编辑商品”链接去掉 F4 另写的 `Audience::product_edit_url()`，用线上 WordPress 自己的权限检查；像素这次不发任何文件，没有第二份健康检查或测试接口。逐项核对在发布材料第 6 节。
 
 ## 2026-11-13：热修复 A 的分支 `claude/hotfix-a-m6`
 

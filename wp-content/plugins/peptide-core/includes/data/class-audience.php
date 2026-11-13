@@ -26,15 +26,4 @@ final class Audience {
 		$is   = $user instanceof \WP_User && $user->exists() && in_array( self::ROLE, (array) $user->roles, true ) && ! user_can( $user, 'manage_options' );
 		return (bool) apply_filters( 'peptide_core_is_media_buyer', $is, $user instanceof \WP_User ? (int) $user->ID : 0 );
 	}
-
-	/**
-	 * 报表里商品名上的“编辑商品”链接。投手没有商品编辑页（F5 的菜单白名单默认拒绝，点进去是 403），
-	 * 所以对投手返回空字符串，页面脚本就把商品名显示成普通文字；其他人和以前一样。
-	 */
-	public static function product_edit_url( int $product_id ): string {
-		if ( self::is_media_buyer() ) {
-			return '';
-		}
-		return (string) get_edit_post_link( $product_id, 'raw' );
-	}
 }

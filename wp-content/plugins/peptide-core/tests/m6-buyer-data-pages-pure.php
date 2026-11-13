@@ -62,11 +62,7 @@ add_filter( 'peptide_core_is_media_buyer', static fn( $is, $user_id ) => 4 === $
 m6_check( 'the filter can rewrite the decision', Audience::is_media_buyer( 4 ) && ! Audience::is_media_buyer( 1 ) );
 $GLOBALS['m6_filters'] = array();
 
-// 报表里商品名上的编辑链接：投手没有商品编辑页（点进去是 403），不给链接；管理员照旧。
-$GLOBALS['t_user'] = $buyer;
-m6_check( 'buyers get no product edit link in the reports', '' === Audience::product_edit_url( 5 ) );
-$GLOBALS['t_user'] = $admin;
-m6_check( 'administrators keep the product edit link', 'https://store.test/wp-admin/post.php?post=5&action=edit' === Audience::product_edit_url( 5 ) );
+// 报表里商品名上的编辑链接：用线上原有的 get_edit_post_link()，WordPress 自己按权限给投手返回空（本机实测），不另写一份（11-13 所有者定的原则）。
 $GLOBALS['t_user'] = $buyer;
 
 // ---------- 管理员：菜单和以前一样 ----------
