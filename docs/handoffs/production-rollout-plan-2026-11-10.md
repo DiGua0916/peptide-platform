@@ -610,3 +610,16 @@
   - HQ → AI 设置：渲染无警告，“素材人群分析人设”一块在，店铺表多了“素材人群分析模板 / 本店素材人群分析”两列。
   - 前台：6 家店首页、商品页、购物车都是 200，无报错；阳的店手机上像素（fbevents.js 已加载）、追踪脚本、18+ 弹窗照常。服务器上每家店把同一商品加购 2 件：上线前后都是小计 $172.60、总价 $215.35，一致。主店手机访问一次（utm_source=deploycheck，访问 #95）：geo_country=US、screen=375x812、device_model 有值，事件里有 scroll。
   - 回滚：把上面备份目录里的文件按原路径拷回，删掉 new-files.txt 里列的新文件，reload php8.3-fpm。追踪表 v7 加的列不影响旧代码，不用回退。
+
+### 2026-11-13 15:01–15:05 UTC（北京 23:01–23:05）素材落地页：上传时选落地页；专辑页落地直达产品区；跳转不再丢素材编号
+- 店主要求：① “广告设置”上传素材时就选落地页（原来在下面链接行里）；② 选专辑页（如 Bestselling）时，客户一进来就停在首页产品区并选好这个分类。
+- 改动（4 个文件）：
+  - `peptide-core/includes/creatives/class-ads-panel.php`：上传表单在属性和备注之间加“落地页”下拉（首页 / 专辑页 / 商品页）；每个素材的落地页记在选项 `pc_cr_landings`（{编号: 地址}，首页不记），链接行显示“落地页：xx”，“换落地页”展开后选好点保存（admin-post，不再是只改前端不保存的下拉）。
+  - `peptide-core/includes/creatives/class-library-page.php`：create 时保存 landing；新增 op=landing；素材库卡片的链接也用存的落地页。落地页只收本店可选列表里的地址。
+  - `peptide-site/inc/storefront-entry.php`：**修 bug**——专辑页 / 商品页地址 302 到首页时只保留 utm_* 和 fbclid，把素材编号 `cr`、`placement`、`ad_name` 丢了，从专辑页 / 商品页落地的广告访问归不到素材。现在一起保留。
+  - `peptide-site/assets/product-dialog-polish.js`：**修 bug**——`#vc-products` 落地时本来要滚到产品区，但页面配置里 productId 是字符串 "0"（真值），判断成“有商品”，从不滚动。改用 idValue() 判断。
+- 部署前 14 份副本（web 7 + HQ 主机 7）这 4 个文件和 4a161de 一致，无漂移；部署后全部等于新版本。HQ 安装（peptide-hq）不涉及。
+- 备份：web `/root/vialcove-backups/landing-main-web-20261113T150143Z`、`landing-tenants-web-20261113T150441Z`；HQ 主机 `landing-main-admin-20261113T150145Z`、`landing-tenants-admin-20261113T150442Z`。两台 reload php8.3-fpm。
+- 检查（主店，手机尺寸）：`/product-category/bestselling/?cr=…` → 302 到 `/?vc_catalog_category=353&…&cr=C0001&placement=…&ad_name=…#vc-products`；页面直接停在 “The peptide collection” 产品区（scrollY 1041），Bestselling 已选中；GLP-1 同样，显示 16 件。新访客先出 18+ 弹窗，点进入后仍停在产品区；注册弹窗照常。商品页落地仍直接打开商品弹窗（黑五倒计时、满减照常）。追踪脚本收到的 landing_query 带 cr=C0001。后台广告设置页无 PHP 警告，C0001 已按店主截图改为落地页“专辑页：Bestselling”，链接随之变为 bestselling 地址。6 家店后台服务器端渲染上传表单 + 链接列表无警告。
+- 注意：Bestselling 分类目前包含全部 92 个商品（和 Peptides 一样），所以选它显示 92 件；要只显示热卖品，需要在商品里调整分类。4 家开斗篷的店用 curl 测试会被斗篷转走（预期），s0010 跳转确认带 cr。
+- 回滚：备份目录文件拷回原路径，reload php8.3-fpm；选项 `pc_cr_landings` 留着无害。

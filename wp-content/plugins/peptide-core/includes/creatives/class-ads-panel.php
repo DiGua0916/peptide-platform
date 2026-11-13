@@ -30,6 +30,55 @@ final class Ads_Panel {
 		return Onboarding::ad_link( $landing, '', '', $code );
 	}
 
+	/** 每个素材选的落地页（2026-11-13 店主：上传时就选落地页）：选项 {编号: 地址}，没选 = 首页。 */
+	public const LANDINGS = 'pc_cr_landings';
+
+	/** 这个素材的落地页地址（存的地址已不在可选列表里时退回首页）。 */
+	public static function landing_of( string $code, ?array $pages = null ): string {
+		$saved = (array) get_option( self::LANDINGS, array() );
+		$url   = (string) ( $saved[ $code ] ?? '' );
+		return '' !== $url && null !== self::landing_label( $url, $pages ) ? $url : home_url( '/' );
+	}
+
+	/** 落地页地址对应的名字；不在本店可选落地页里 = null。 */
+	public static function landing_label( string $url, ?array $pages = null ): ?string {
+		foreach ( $pages ?? Onboarding::landing_pages() as $page ) {
+			if ( $page['url'] === $url ) {
+				return ( '' !== $page['group'] ? $page['group'] . '：' : '' ) . $page['label'];
+			}
+		}
+		return null;
+	}
+
+	/** 记下素材的落地页；不在可选列表里的地址不收。 */
+	public static function set_landing( string $code, string $url ): bool {
+		if ( null === self::landing_label( $url ) ) {
+			return false;
+		}
+		$saved = (array) get_option( self::LANDINGS, array() );
+		if ( home_url( '/' ) === $url ) {
+			unset( $saved[ $code ] );
+		} else {
+			$saved[ $code ] = $url;
+		}
+		update_option( self::LANDINGS, $saved, false );
+		return true;
+	}
+
+	/** 落地页下拉（首页 + 专辑页 + 商品页）。 */
+	public static function landing_select( string $name, string $id, string $current, ?array $pages = null ): string {
+		$h     = '<select name="' . esc_attr( $name ) . '" id="' . esc_attr( $id ) . '">';
+		$group = '';
+		foreach ( $pages ?? Onboarding::landing_pages() as $page ) {
+			if ( $page['group'] !== $group ) {
+				$h    .= ( '' !== $group ? '</optgroup>' : '' ) . ( '' !== $page['group'] ? '<optgroup label="' . esc_attr( $page['group'] ) . '">' : '' );
+				$group = $page['group'];
+			}
+			$h .= '<option value="' . esc_attr( $page['url'] ) . '"' . selected( $current, $page['url'], false ) . '>' . esc_html( $page['label'] ) . '</option>';
+		}
+		return $h . ( '' !== $group ? '</optgroup>' : '' ) . '</select>';
+	}
+
 	// ---------- 上传 ----------
 
 	/** $card = false：放在别的卡片里（开店向导第 5 步），不再套一层卡片边框。 */
@@ -83,6 +132,7 @@ final class Ads_Panel {
 		}
 		echo '</div>';
 		echo '<p class="pc-cr-video-row" data-pc-cr-video' . ( $is_vid ? '' : ' hidden' ) . '><label for="pc-cr-up-video">视频文件（可选）</label><input id="pc-cr-up-video" type="file" name="video" accept=".mp4,.mov,.m4v,.webm,video/*"><span class="pc-by-hint">MP4、MOV、M4V、WebM，最大 ' . esc_html( Library_Page::max_upload() ) . '。不传也可以，数据照样统计。</span></p>';
+		echo '<p class="pc-cr-landing-row"><label for="pc-cr-up-landing">落地页</label>' . self::landing_select( 'landing', 'pc-cr-up-landing', home_url( '/' ) ) . '<span class="pc-by-hint">客户点广告后进到哪里。选专辑页，客户一进来就停在首页产品区并选好这个分类；选商品页，直接打开这个商品。以后在下面的链接里也能换。</span></p>';
 		echo '<p><label for="pc-cr-up-note">备注（可选）</label><input type="text" id="pc-cr-up-note" name="note" maxlength="500" placeholder="例如：黑五主图，蓝底"></p>';
 		echo '<p class="pc-by-actions"><button type="submit" class="button button-primary button-hero">上传并生成链接</button></p>';
 		echo '</div></div></form></section>';
@@ -95,7 +145,7 @@ final class Ads_Panel {
 		$stats   = Creatives::stats();
 		$labels  = Creatives::label_map( Schema::vocab() );
 		$today   = wp_date( 'Y-m-d' );
-		$home    = home_url( '/' );
+		$pages   = Onboarding::landing_pages();
 		$unreg   = Creatives::unregistered_ads();
 		$library = admin_url( 'admin.php?page=' . Module::PAGE_LIBRARY );
 
@@ -108,13 +158,14 @@ final class Ads_Panel {
 			echo '<p class="pc-by-hint">还没有素材。在上面上传第一个素材，就会在这里得到它的投放链接。</p></section>';
 			return;
 		}
-		echo '<p class="pc-by-hint">复制链接，粘到 Facebook 广告的“网址”一栏。同一个素材的所有广告都用这一条；要换落地页，先选落地页再复制。</p>';
+		echo '<p class="pc-by-hint">复制链接，粘到 Facebook 广告的“网址”一栏。同一个素材的所有广告都用这一条。换落地页后要重新复制，粘到 Meta 里替换旧链接。</p>';
 		echo '<ul class="pc-cr-link-list">';
 		$badge = Creatives::STATE_LABELS;
 		foreach ( $all as $c ) {
 			$st    = $stats[ $c['code'] ] ?? array( 'spend_cents' => 0, 'last_day' => '', 'visitors' => 0 );
 			$state = Creatives::display_state( $st, $today );
-			$link  = self::link( $home, $c['code'] );
+			$land  = self::landing_of( $c['code'], $pages );
+			$link  = self::link( $land, $c['code'] );
 			$video = $c['video_id'] > 0 || 'vid' === ( $c['attrs']['fmt'] ?? '' );
 			$tags  = array();
 			foreach ( array_merge( Contract::REQUIRED_ATTRS, array( 'lang' ) ) as $k ) {
@@ -127,26 +178,16 @@ final class Ads_Panel {
 			echo '<div class="pc-cr-link-main"><p class="pc-cr-link-head"><strong>' . esc_html( $c['code'] ) . '</strong> <span>' . esc_html( implode( ' · ', $tags ) ) . '</span>';
 			echo ' <span class="pc-cr-badge is-' . esc_attr( $state ) . '">' . esc_html( $badge[ $state ] ?? $state ) . '</span>';
 			echo ' <span class="pc-cr-nums">进站访客 ' . (int) $st['visitors'] . ' · 花费 ' . esc_html( Creatives::money( (int) $st['spend_cents'] ) ) . '</span></p>';
+			echo '<div class="pc-cr-landing-line"><span>落地页：<b>' . esc_html( (string) self::landing_label( $land, $pages ) ) . '</b></span>';
+			echo '<details class="pc-cr-landing-change"><summary class="button button-small">换落地页</summary>';
+			Library_Page::form_open( 'landing' );
+			echo '<input type="hidden" name="code" value="' . esc_attr( $c['code'] ) . '">' . self::landing_select( 'landing', 'pc-cr-landing-' . strtolower( $c['code'] ), $land, $pages );
+			echo ' <button type="submit" class="button button-primary button-small">保存</button></form></details></div>';
 			echo '<div class="pc-cr-copyrow"><input type="text" readonly value="' . esc_attr( $link ) . '" aria-label="' . esc_attr( $c['code'] . ' 的投放链接' ) . '" data-pc-cr-link-out>';
-			echo '<select aria-label="落地页" data-pc-cr-landing data-query="' . esc_attr( Contract::creative_query( $c['code'] ) ) . '"><option value="' . esc_attr( $home ) . '">落地页：首页</option></select>';
 			echo '<button type="button" class="button button-primary" data-pc-cr-copy>复制链接</button></div>';
 			echo '</div></li>';
 		}
 		echo '</ul>';
-		// 落地页选项只输出一份，脚本复制到每一行（没有脚本时只有首页）。
-		echo '<template data-pc-cr-landings>';
-		$group = '';
-		foreach ( Onboarding::landing_pages() as $page ) {
-			if ( $page['url'] === $home ) {
-				continue;
-			}
-			if ( $page['group'] !== $group ) {
-				echo ( '' !== $group ? '</optgroup>' : '' ) . '<optgroup label="' . esc_attr( $page['group'] ) . '">';
-				$group = $page['group'];
-			}
-			echo '<option value="' . esc_attr( $page['url'] ) . '">' . esc_html( $page['label'] ) . '</option>';
-		}
-		echo ( '' !== $group ? '</optgroup>' : '' ) . '</template>';
 		echo '</section>';
 	}
 
@@ -194,27 +235,21 @@ final class Ads_Panel {
 .pc-cr-nums{margin-left:6px}
 .pc-cr-copyrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .pc-cr-copyrow input{flex:1 1 320px;min-width:0;font-family:monospace;font-size:12px}
-.pc-cr-copyrow select{max-width:220px}
+.pc-cr-landing-row select{width:100%;max-width:520px}
+.pc-cr-landing-row .pc-by-hint{display:block;margin-top:2px}
+.pc-cr-landing-line{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 6px;font-size:13px}
+.pc-cr-landing-change summary{list-style:none;cursor:pointer}
+.pc-cr-landing-change summary::-webkit-details-marker{display:none}
+.pc-cr-landing-change[open] summary{margin-bottom:6px}
+.pc-cr-landing-change form{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pc-cr-landing-change select{max-width:280px}
 @media (max-width:782px){.pc-cr-upload-grid{grid-template-columns:1fr}.pc-cr-drop{max-width:220px}.pc-cr-attr-row{grid-template-columns:repeat(2,minmax(0,1fr))}
 .pc-cr-link-row{grid-template-columns:48px minmax(0,1fr);align-items:start}.pc-cr-link-thumb{width:48px;height:48px}
-.pc-cr-copyrow input{flex:1 1 100%}.pc-cr-copyrow select{flex:1 1 0;min-width:0;max-width:none}.pc-cr-nums{display:block;margin:2px 0 0}}
+.pc-cr-copyrow input{flex:1 1 100%}.pc-cr-landing-change select{flex:1 1 0;min-width:0;max-width:none}.pc-cr-nums{display:block;margin:2px 0 0}}
 </style>
 <script>
 ( function () {
-	var tpl = document.querySelector( '[data-pc-cr-landings]' );
-	document.querySelectorAll( '[data-pc-cr-landing]' ).forEach( function ( sel ) {
-		if ( tpl ) { sel.appendChild( tpl.content.cloneNode( true ) ); }
-	} );
-	function build( landing, query ) {
-		var base = String( landing ).split( '#' )[0];
-		return base + ( base.indexOf( '?' ) >= 0 ? '&' : '?' ) + query;
-	}
 	document.addEventListener( 'change', function ( e ) {
-		var sel = e.target.closest( '[data-pc-cr-landing]' );
-		if ( sel ) {
-			sel.parentNode.querySelector( '[data-pc-cr-link-out]' ).value = build( sel.value, sel.getAttribute( 'data-query' ) );
-			return;
-		}
 		if ( e.target.matches( '[data-pc-cr-kind]' ) ) {
 			var vid = 'vid' === e.target.value, form = e.target.form;
 			form.querySelector( '[data-pc-cr-video]' ).hidden = ! vid;

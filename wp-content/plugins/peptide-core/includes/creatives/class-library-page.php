@@ -6,7 +6,7 @@
  * 2026-11-12 起，上传素材、生成投放链接都在“广告设置”页（Ads_Panel），这里不再有登记入口；
  * 保存逻辑（handle）两边共用，“补登记”跳到广告设置页的上传表单。
  *
- * 写操作都走 admin-post 动作 Module::ACTION_SAVE（字段 op：create / update / archive / restore / link / vocab），
+ * 写操作都走 admin-post 动作 Module::ACTION_SAVE（字段 op：create / update / archive / restore / link / landing / vocab），
  * 校验 nonce 和 Staff_Buyer::CAP_VIEW。投手的后台拦着 admin-ajax，媒体库弹窗用不了，
  * 所以缩略图用表单直接上传；有 upload_files 权限的管理员另外可以“从媒体库选”。
  *
@@ -56,6 +56,7 @@ final class Library_Page {
 		}
 		$picked = isset( $_POST['attachment_id'] ) ? absint( $_POST['attachment_id'] ) : 0;
 		$panel  = isset( $_POST['from'] ) && 'ads' === sanitize_key( wp_unslash( $_POST['from'] ) ); // 广告设置页的上传表单：必须有图。
+		$landing = isset( $_POST['landing'] ) ? esc_url_raw( wp_unslash( $_POST['landing'] ) ) : ''; // 落地页（2026-11-13）
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 		$done = static function ( string $type, string $msg, string $to ): void {
 			Staff_Buyer::flash( $type, $msg );
@@ -73,6 +74,15 @@ final class Library_Page {
 			}
 			Creatives::set_status( $code, 'archive' === $op ? Creatives::STATUS_ARCHIVED : Creatives::STATUS_ACTIVE );
 			$done( 'success', $code . ( 'archive' === $op ? ' 已归档。' : ' 已恢复。' ), $back );
+		}
+		if ( 'landing' === $op ) {
+			if ( ! Creatives::get( $code ) ) {
+				$done( 'error', '找不到这个素材。', $back );
+			}
+			if ( ! Ads_Panel::set_landing( $code, $landing ) ) {
+				$done( 'error', '这个落地页不在本店的页面里，请重新选。', $back );
+			}
+			$done( 'success', $code . ' 的落地页已换成“' . Ads_Panel::landing_label( $landing ) . '”。请重新复制链接，到 Meta 里替换这个素材所有广告的网址。', remove_query_arg( 'from_ad', $back ) . '#pc-cr-link-' . strtolower( $code ) );
 		}
 		if ( 'link' === $op ) {
 			if ( ! Creatives::ad( $ad ) || ! Creatives::get( $code ) ) {
@@ -115,6 +125,9 @@ final class Library_Page {
 		$new  = Creatives::create( $clean['attrs'], max( 0, $thumb ), $note, $want, max( 0, $video ) );
 		if ( is_wp_error( $new ) ) {
 			$done( 'error', $new->get_error_message(), $back );
+		}
+		if ( '' !== $landing ) {
+			Ads_Panel::set_landing( $new, $landing ); // 不在可选列表里就不记，链接用首页。
 		}
 		$to = $panel ? $back . '#pc-cr-link-' . strtolower( $new ) : $back;
 		if ( $from ) {
@@ -334,7 +347,7 @@ final class Library_Page {
 	}
 
 	private static function card( array $c, array $st, string $state, array $labels, array $vocab ): void {
-		$link  = Ads_Panel::link( home_url( '/' ), $c['code'] );
+		$link  = Ads_Panel::link( Ads_Panel::landing_of( $c['code'] ), $c['code'] );
 		$badge = Creatives::STATE_LABELS;
 		echo '<div class="pc-cr-card is-' . esc_attr( $state ) . '">';
 		echo '<div class="pc-cr-thumb">' . ( $c['attachment_id'] ? wp_get_attachment_image( $c['attachment_id'], 'medium' ) : '<span>无缩略图</span>' ) . '</div>';
