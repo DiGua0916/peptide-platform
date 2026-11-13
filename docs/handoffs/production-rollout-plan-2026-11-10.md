@@ -633,3 +633,14 @@
 - 部署前 14 份副本（web 7 + HQ 主机 7）这 3 个文件和 58f00f8 一致；部署后全部等于新版本。备份：web `/root/vialcove-backups/crdel-main-web-20261113T152349Z`、`crdel-tenants-web-20261113T152457Z`；HQ 主机 `crdel-main-admin-20261113T152351Z`、`crdel-tenants-admin-20261113T152459Z`。两台 reload php8.3-fpm。
 - 检查：主店在数据库事务里实测（最后回滚，数据库和选项与测试前完全一致，没有动店主的 C0001）：新建 C0002 → 删除成功、记录没了、落地页记录清掉、C0002 记入停用编号 → 再新建分到 C0003（不复用 C0002）；删不存在的编号提示“找不到这个素材”。广告设置页和素材库页（店主已登录的浏览器）都显示删除按钮、无 PHP 警告；6 家店后台服务器端渲染无警告。
 - 回滚：备份文件拷回，reload php8.3-fpm；选项 `pc_cr_retired_codes` 留着无害。
+
+### 2026-11-13 16:21–16:23 UTC（北京 2026-11-14 00:21–00:23）订单页改版：只填 FedEx 单号发货、去筛选、已发货订单、老顾客补建账户
+- 店主要求：订单页上面的筛选去掉；“待处理订单”只放未发货的；弃单不动；发货只输入 FedEx 单号，顾客用账号密码登录后自己查；以前没注册的顾客自动注册并发一封正式的英文邮件（账号 + 密码，登录查询，提醒改密码）。按默认方案：密码随机写在邮件里；老订单只改“客户”一栏；新增“已发货订单”；新订单沿用 11-11 上线的付款后自动建账户（发“设置密码”邮件）。
+- 改动（3 个文件）：
+  - `peptide-core/includes/admin/class-order-list.php`：列表隐藏状态标签页和筛选行（日期 / 发货记录 / 服务商 / 销售渠道 / 注册客户），搜索保留；没带状态打开订单列表 → 跳到待处理订单（处理中）；订单菜单加“已发货订单”（已完成）；货车图标改成弹出小框只填 FedEx 单号（8–34 位字母数字，自动去空格转大写）→ admin-post `pc_ship_order`：建 WooCommerce 原生发货记录（FedEx + 单号 + https://www.fedex.com/fedextrack/?trknbr=单号，含全部未退款商品）、写 `_pc_tracking_number`、订单改为已完成，发一封原生“已发货”邮件（标题改成 “Your {品牌} order #编号 has shipped”），这一次不发“订单已完成”邮件（免得两封）。批次检查开着时缺批次会提示、不发货。投手看不到发货按钮。
+  - `class-admin-menus.php`：已完成状态的订单列表高亮“已发货订单”子菜单。
+  - `peptide-core/includes/class-accounts.php`：`Accounts::invite_existing()`、`invite_mail()`——老的游客付款订单按邮箱建账户（随机 12 位密码，来源 auto_backfill），订单只改 customer_id（并记 `_pc_auto_account=invited` 和一条订单备注），用店铺发件箱发英文邮件；邮箱已有可信账户的直接归过去不发密码；测试单跳过。
+- 部署前 14 份副本这 3 个文件和 4088f53 一致；部署后全部等于新版本。备份：web `/root/vialcove-backups/ship-main-web-20261113T162112Z`、`ship2-main-web-…`、`ship-tenants-web-20261113T162240Z`；HQ 主机 `ship-main-admin-20261113T162113Z`、`ship2-main-admin-…`、`ship-tenants-admin-20261113T162242Z`。两台 reload php8.3-fpm。
+- 检查（主店）：数据库事务里实测发货（最后回滚、邮件全部拦截不外发，订单恢复原样）：错误单号被拒；正确单号 → 订单已完成、顾客侧看到 FedEx + 单号 + 追踪链接、发货状态 fulfilled、只有一封“has shipped”邮件；已发货的再发被拒。浏览器（店主已登录）：筛选和标签页不见了、搜索在，菜单“待处理订单 / 已发货订单 / 手动订单 / 弃单”，货车图标弹出 FedEx 单号框（没提交），已发货订单页高亮正确，无 PHP 警告。
+- 老顾客补建账户（只预演，未执行）：主店 #11843 ryley.tk1996@gmail.com、阳 s0007 #11892 shepower500@gmail.com、芒果 s0010 #11886 jestevesflores@gmail.com 三位要建账户并发信；测试单已跳过。三家店发件箱最近都是“已发出”。**等店主确认邮件原文后再执行。**
+- 回滚：备份文件拷回，reload php8.3-fpm。
