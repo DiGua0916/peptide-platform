@@ -280,6 +280,14 @@ final class Series_Push {
 		if ( $errors ) {
 			$message = mb_substr( sprintf( '有 %1$d 个商品或图片没同步成功：%2$s', count( $errors ), $errors[0] ), 0, 250 );
 		}
+		// 营销模块逐条回报的结果里有冲突或出错的：显示出来，由平台所有者处理。
+		$campaigns = $res['applied']['campaigns'] ?? null;
+		if ( is_array( $campaigns ) && '' === $message ) {
+			$bad = array_values( array_filter( $campaigns, static fn( $r ): bool => is_array( $r ) && in_array( $r['status'] ?? '', array( 'conflict', 'error' ), true ) ) );
+			if ( $bad ) {
+				$message = mb_substr( sprintf( '有 %1$d 个活动没下发成功（和本店自建的活动冲突，或者出错）：%2$s', count( $bad ), (string) ( $bad[0]['message'] ?? ( $bad[0]['id'] ?? '' ) ) ), 0, 250 );
+			}
+		}
 		// 活动发过去了但店铺里还没有营销模块接手：不用每 10 分钟重发，6 小时后再试。
 		$unhandled = 'unhandled' === ( $res['applied']['campaigns'] ?? null );
 		if ( $unhandled && '' === $message ) {

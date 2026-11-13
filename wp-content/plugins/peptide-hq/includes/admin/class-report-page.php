@@ -113,6 +113,7 @@ final class Report_Page {
 	private static function cells( array $m ): string {
 		$dash = '<span class="pchq-f3-muted">—</span>';
 		return '<td class="pchq-f3-num">' . (int) $m['orders'] . '</td>'
+			. '<td class="pchq-f3-num">' . ( $m['customers'] > 0 ? (int) $m['customers'] : $dash ) . '</td>'
 			. '<td class="pchq-f3-num">' . esc_html( Orders::money( $m['gross_cents'] ) ) . '</td>'
 			. '<td class="pchq-f3-num">' . ( $m['refunded_cents'] > 0 ? esc_html( Orders::money( $m['refunded_cents'] ) ) : $dash ) . '</td>'
 			. '<td class="pchq-f3-num"><strong>' . esc_html( Orders::money( $m['net_cents'] ) ) . '</strong></td>'
@@ -120,7 +121,9 @@ final class Report_Page {
 			. '<td class="pchq-f3-num">' . ( null !== $m['roas'] ? esc_html( number_format( (float) $m['roas'], 2 ) ) : $dash ) . '</td>'
 			. '<td class="pchq-f3-num">' . ( null !== $m['aov_cents'] ? esc_html( Orders::money( (int) $m['aov_cents'] ) ) : $dash ) . '</td>'
 			. '<td class="pchq-f3-num">' . ( $m['visitors'] > 0 ? (int) $m['visitors'] : $dash ) . '</td>'
-			. '<td class="pchq-f3-num">' . ( null !== $m['cvr'] ? esc_html( number_format( (float) $m['cvr'], 2 ) . '%' ) : $dash ) . '</td>';
+			. '<td class="pchq-f3-num">' . ( null !== $m['cvr'] ? esc_html( number_format( (float) $m['cvr'], 2 ) . '%' ) : $dash ) . '</td>'
+			. '<td class="pchq-f3-num">' . ( null !== $m['abandon_orders'] ? (int) $m['abandoned'] : $dash ) . '</td>'
+			. '<td class="pchq-f3-num">' . ( null !== $m['abandon_rate'] ? esc_html( number_format( (float) $m['abandon_rate'], 2 ) . '%' ) : $dash ) . '</td>';
 	}
 
 	public static function render(): void {
@@ -159,7 +162,7 @@ final class Report_Page {
 		}
 		echo '<label>从<input type="date" name="from" value="' . esc_attr( $from ) . '"></label><label>到<input type="date" name="to" value="' . esc_attr( $to ) . '"></label><button type="submit" class="button">查看</button></form>';
 
-		echo '<div class="pcp-scroll"><table class="pcp-matrix"><thead><tr><th scope="col">系列 / 投手 / 店铺</th><th scope="col" class="pchq-f3-num">订单</th><th scope="col" class="pchq-f3-num">订单金额</th><th scope="col" class="pchq-f3-num">已标记退款</th><th scope="col" class="pchq-f3-num">销售额（净额）</th><th scope="col" class="pchq-f3-num">广告花费</th><th scope="col" class="pchq-f3-num">ROAS</th><th scope="col" class="pchq-f3-num">客单价</th><th scope="col" class="pchq-f3-num">访客</th><th scope="col" class="pchq-f3-num">转化率</th></tr></thead><tbody>';
+		echo '<div class="pcp-scroll"><table class="pcp-matrix"><thead><tr><th scope="col">系列 / 投手 / 店铺</th><th scope="col" class="pchq-f3-num">订单</th><th scope="col" class="pchq-f3-num">顾客</th><th scope="col" class="pchq-f3-num">订单金额</th><th scope="col" class="pchq-f3-num">已标记退款</th><th scope="col" class="pchq-f3-num">销售额（净额）</th><th scope="col" class="pchq-f3-num">广告花费</th><th scope="col" class="pchq-f3-num">ROAS</th><th scope="col" class="pchq-f3-num">客单价</th><th scope="col" class="pchq-f3-num">访客</th><th scope="col" class="pchq-f3-num">转化率</th><th scope="col" class="pchq-f3-num">弃单</th><th scope="col" class="pchq-f3-num">弃单率</th></tr></thead><tbody>';
 		echo '<tr class="pchq-f3-level1"><td>全部系列合计</td>' . self::cells( $report['total'] ) . '</tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- cells() 已转义。
 		foreach ( $report['series'] as $s ) {
 			echo '<tr class="pchq-f3-level1"><td>' . esc_html( '' !== $s['name'] ? $s['name'] : '未归入系列' ) . '</td>' . self::cells( $s['metrics'] ) . '</tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -170,7 +173,7 @@ final class Report_Page {
 				}
 			}
 		}
-		echo '</tbody></table></div><p class="pcp-hint">访客和转化率用的是各店每天上报的访客数（店铺时区的日期），和按付款时间统计的订单口径略有出入，只作参考。投手在“系列管理”里填写。</p></section>';
+		echo '</tbody></table></div><p class="pcp-hint">访客和转化率用的是各店每天上报的访客数（店铺时区的日期），和按付款时间统计的订单口径略有出入，只作参考。投手在“系列管理”里填写。</p><p class="pcp-hint">顾客：按客户编号去重，同一位顾客在几家店都买过，上一级只算一次，所以这一列不是下级相加。弃单率 = 弃单数 ÷（弃单数 + 订单数）。弃单数来自各店的每日汇总（按弃单产生那天）；分母里的订单数用的是同一家店、同样那些天汇总里的订单数，所以和左边按付款时间统计的“订单”一列可能差一点。店铺程序还没带上弃单数的那些天不参与计算，全都没有时显示“—”。</p></section>';
 
 		// 广告花费
 		$sites = Sites::all();

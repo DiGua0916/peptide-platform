@@ -74,6 +74,17 @@ final class Orders_Page {
 		return '' !== (string) $s['name'] ? (string) $s['name'] : (string) wp_parse_url( (string) $s['url'], PHP_URL_HOST );
 	}
 
+	/** 顾客和平台所有者看到的订单号：新订单是支付方的 hang-数字，老订单是 # 加数字。 */
+	private static function number( array $o ): string {
+		$n = '' !== (string) $o['order_number'] ? (string) $o['order_number'] : (string) $o['store_order_id'];
+		return ctype_digit( $n ) ? '#' . $n : $n;
+	}
+
+	/** 显示的订单号和店铺内部的订单编号不一样（用了支付方订单号的新订单）。 */
+	private static function has_own_number( array $o ): bool {
+		return '' !== (string) $o['order_number'] && (string) $o['order_number'] !== (string) $o['store_order_id'];
+	}
+
 	private static function state_label( array $o ): array {
 		if ( 1 === $o['is_test'] ) {
 			return array( '测试单', 'is-off' );
@@ -233,7 +244,7 @@ final class Orders_Page {
 		}
 		echo '</select></label>';
 		echo '<label>付款日期从<input type="date" name="from" value="' . esc_attr( $from_day ) . '"></label><label>到<input type="date" name="to" value="' . esc_attr( $to_day ) . '"></label>';
-		echo '<label>订单号<input type="text" name="q" value="' . esc_attr( $f['q'] ) . '" maxlength="40" placeholder="例如 1234"></label>';
+		echo '<label>订单号 / 客户编号<input type="text" name="q" value="' . esc_attr( $f['q'] ) . '" maxlength="40" placeholder="订单号、店内编号或客户编号"></label>';
 		echo '<button type="submit" class="button button-primary">筛选</button> <a class="button" href="' . esc_url( self::url() ) . '">清空</a></form>';
 
 		if ( ! $result['rows'] ) {
@@ -245,7 +256,7 @@ final class Orders_Page {
 				$when             = $o['paid_at'] ? $o['paid_at'] : $o['created_at'];
 				echo '<tr><td>' . esc_html( $when ? wp_date( 'Y-m-d H:i', $when ) : '—' ) . '</td>';
 				echo '<td>' . esc_html( self::site_name( $sites, $o['site_id'] ) ) . '</td>';
-				echo '<td><a href="' . esc_url( self::url( array( 'order' => $o['id'] ) ) ) . '">#' . esc_html( '' !== $o['order_number'] ? $o['order_number'] : (string) $o['store_order_id'] ) . '</a></td>';
+				echo '<td><a href="' . esc_url( self::url( array( 'order' => $o['id'] ) ) ) . '">' . esc_html( self::number( $o ) ) . '</a>' . ( self::has_own_number( $o ) ? '<small>店内编号 ' . (int) $o['store_order_id'] . '</small>' : '' ) . '</td>';
 				echo '<td><span class="pcp-state ' . esc_attr( $tone ) . '"><i></i>' . esc_html( $label ) . '</span>' . ( 1 === $o['refund_sync'] ? '<small class="pchq-f3-bad">待写回店铺</small>' : '' ) . '</td>';
 				echo '<td class="pchq-f3-num">' . esc_html( Orders::money( $o['total_cents'], (string) $o['currency'] ) ) . '</td>';
 				echo '<td class="pchq-f3-num">' . ( $o['refunded_cents'] > 0 ? esc_html( Orders::money( $o['refunded_cents'], (string) $o['currency'] ) ) : '<span class="pchq-f3-muted">—</span>' ) . '</td>';
@@ -295,11 +306,12 @@ final class Orders_Page {
 		[ $label, $tone ] = self::state_label( $o );
 		$cur              = (string) $o['currency'];
 		$left             = max( 0, $o['total_cents'] - $o['refunded_cents'] );
-		echo '<section class="pcp-card"><div class="pcp-card__head"><h2>订单 #' . esc_html( '' !== $o['order_number'] ? $o['order_number'] : (string) $o['store_order_id'] ) . '</h2><span class="pcp-state ' . esc_attr( $tone ) . '"><i></i>' . esc_html( $label ) . '</span></div>';
+		echo '<section class="pcp-card"><div class="pcp-card__head"><h2>订单 ' . esc_html( self::number( $o ) ) . '</h2><span class="pcp-state ' . esc_attr( $tone ) . '"><i></i>' . esc_html( $label ) . '</span></div>';
 		echo '<dl class="pchq-f3-grid">';
 		foreach ( array(
 			'店铺'       => self::site_name( $sites, $o['site_id'] ),
 			'系列'       => (string) ( $series[ $o['series_id'] ]['name'] ?? '—' ),
+			'店内订单编号' => (string) $o['store_order_id'],
 			'店铺订单状态' => (string) $o['status'],
 			'下单时间'    => $o['created_at'] ? wp_date( 'Y-m-d H:i', $o['created_at'] ) : '—',
 			'付款时间'    => $o['paid_at'] ? wp_date( 'Y-m-d H:i', $o['paid_at'] ) : '—',
@@ -307,6 +319,7 @@ final class Orders_Page {
 			'已标记退款'  => Orders::money( $o['refunded_cents'], $cur ),
 			'净额'       => Orders::money( $o['total_cents'] - $o['refunded_cents'], $cur ),
 			'来源'       => '' !== $o['utm_source'] ? $o['utm_source'] . ( '' !== $o['ad_id'] ? ' / ' . $o['ad_id'] : '' ) : '—',
+			'客户编号'    => '' !== (string) ( $o['customer_id'] ?? '' ) ? (string) $o['customer_id'] : '—',
 		) as $k => $v ) {
 			echo '<div><dt>' . esc_html( $k ) . '</dt><dd>' . esc_html( $v ) . '</dd></div>';
 		}

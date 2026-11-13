@@ -823,12 +823,26 @@ add_filter( 'pchq_monitor_checks', static function ( array $checks, int $site_id
 
 | 钩子 | 签名 | 说明 |
 | --- | --- | --- |
-| `pc_series_apply_campaigns`（过滤器） | `( $result, array $items, int $ver, bool $dry_run )` | 用 `$items` 整体替换本店的系列活动。成功返回 `true` 或摘要数组；`$dry_run` 时不写入，返回差异数组；失败返回 `WP_Error`。保持返回 `null` = 没有模块接手，店铺不记 `campaign_ver`，总后台下次还会再发 |
+| `pc_series_apply_campaigns`（过滤器） | `( $result, array $items, int $ver, bool $dry_run, int $series_id )` | 用 `$items` 整体替换本店的系列活动。成功返回 `true` 或摘要数组；`$dry_run` 时不写入，返回差异数组；失败返回 `WP_Error`。保持返回 `null` = 没有模块接手，店铺不记 `campaign_ver`，总后台下次还会再发 |
 | `pc_series_export_campaigns`（过滤器） | `( array $items )` | 在母版店导出当前活动，返回上面外形的数组。总后台“从母版店导入活动”时调用 |
 | `pc_series_snapshot`（过滤器） | `( array $snapshot )` | 同步前存快照：把恢复活动需要的内容放进 `$snapshot['campaigns']` |
 | `pc_series_restore`（动作） | `( array $snapshot )` | 恢复快照时把 `$snapshot['campaigns']` 写回去 |
 
 `PeptideCore\Series_Sync::manages( 'campaign' )` 为 true 时活动已由系列接管，店铺后台不应再给创建入口（`'catalog'`、`'shipping'` 同理）。
+
+**给 F2 的答复（2026-11-12，对应 M4 一节“三、系列活动下发到店铺的约定”末尾的两个问题和字段差异）：**
+
+1. **`campaigns` 是不是每次全量下发？** 带了就是全量：`items` 是这个系列现在应该有的全部活动，店铺按它对齐（不在列表里的系列活动停用）。但不是每次同步都带：只有店铺已同步的 `campaign_ver` 比系列的旧时才带；没带 = 不动。同一个 `ver` 重复发来时 F3 直接跳过，不会再调你的钩子。母版店不发活动（活动就是从母版店导出的）。
+2. **商品键在各店是否唯一、一致？** 是。系列商品键就是 `catalog.products[].sku`，系列内唯一；商品同步后各店的商品都带 `_pc_series_sku = <这个键>`，各店一致。活动里引用商品请用这个键，店铺端用 `PeptideCore\Series_Sync::find_product( $key )` 换成本店的商品 ID（顺序：`_pc_series_sku` → `_pc_spu` → SKU → `slug:别名`，找不到返回 0），所以商品还没同步过的店也能按 SPU 找到。专辑请用**名称**引用（F3 同步商品时按名称建专辑，各店的别名不保证一致）。
+3. **字段对应**：F3 这边每条活动的外形是 `{ kind, key, active, config, ver }`。你那节写的 `id` → 用 `key`（同类型内不重复的小写代号，例如 `bf2026` 或 `12`）；`enabled` → `active`；`name / start / end` 请放进 `config`（`config` 原样保存和转发，F3 不看里面）；`ver` 是这一条最后一次改动时的活动版本号——内容没变的活动保留原来的 `ver`，可以据此“`ver` 没变就不动”。`kind` 已经把你那节的 `shipping_discount / gift / bundle` 加进了允许的类型（原来的 `ship_discount` 也保留）。
+4. **怎么接**：不用 F3 调 `Series_Campaigns::apply()`；请在你的类里挂过滤器，例如 `add_filter( 'pc_series_apply_campaigns', static fn( $result, array $items, int $ver, bool $dry_run, int $series_id ) => $dry_run ? Series_Campaigns::diff( $items, $series_id ) : Series_Campaigns::apply( $items, $series_id ), 10, 5 );`。回调时店铺的 `peptide_core_series` 还没写入，系列编号以第 5 个参数为准。返回数组时 F3 原样带回总后台（放在返回的 `applied.campaigns`）；每条结果里 `status` 是 `conflict` 或 `error` 的，总后台会在系列管理的店铺行里显示条数和第一条的 `message`。返回 `WP_Error` 时这次同步里已经做完的商品和运费照样记下，活动版本不记，总后台按 1 / 5 / 30 分钟重试。
+5. **总后台这头**：活动在母版店里配，平台所有者在“系列管理 → 从母版店导入”勾选“营销活动”时，F3 调母版店的 `/hq/catalog-export`，那里会 `apply_filters( 'pc_series_export_campaigns', array() )`，你返回当前活动的列表即可（同样的外形，不用带 `ver`）。返回空数组时不建版本、不下发。
+
+**给 F2 的答复（2026-11-12 第二次，对应 M4 一节“给 F3（系列）”的第 1、4、5 条）：**
+
+- **第 1 条（总后台的活动编辑界面）**：这一版不做编辑界面，也不放 JSON 文本框。活动在母版店的营销后台里配（那里有你的校验和预览），平台所有者在“系列管理 → 从母版店导入”勾“营销活动”导入，再下发。原因：同一份活动只在一个地方编辑，不会出现总后台和母版店各改一版；`config` 的字段以后变了，F3 这边不用跟着改界面。以后如果平台所有者要在总后台直接改，再按你第 5 点的字段做。导入之后、下发之前，系列管理里每家店的“生成差异报告”就是你说的 `dry_run`，`diff.campaigns` 原样显示条数。
+- **第 4 条（`upsell` / `progress_bar` 标 `unsupported`）**：保持现在这样——不算错误，`campaign_ver` 照记。理由：返回错误的话，这家店的活动版本一直记不上，总后台会按 1 / 5 / 30 分钟反复重发同一份，巡检也会一直报“系列内容未同步”，而店铺升级之前重发多少次结果都一样。要注意的后果：等你支持这两种类型之后，各店不会自动重收（版本号没变，母版店重新导入时内容没变也不会产生新版本）。到时请告诉 F3，需要把这个系列的活动版本号加一（`PeptideHq\Series::bump( $series_id, 'campaign' )`）各店才会重收一次；系列管理里现在没有“重新下发活动”的按钮，需要时 F3 加。另外，总后台的店铺行目前只显示 `conflict` 和 `error` 的条数，`unsupported` 的条目不单独显示。
+- **第 5 条（母版店不算被接管）**：一致，不用改。
 
 **返回**：
 
@@ -853,7 +867,9 @@ add_filter( 'pchq_monitor_checks', static function ( array $checks, int $site_id
 | `/peptide/v1/hq/catalog-export` | GET | 母版店导出：`{ version: 1, source_host, exported_at, products: [], shipping: { plans, rules }, campaigns: [] }`，只导出已发布的商品和“通用”运费方案 |
 | `/peptide/v1/hq/series/restore` | POST `{ ver }` | 恢复到某次同步前的快照（`ver` 为 0 用最近一份；否则先找“把商品升到这个版本的那次同步”之前存的快照，再按快照编号找）。店铺属于哪个系列不回退，只回退商品、运费、活动和它们的版本号。返回 `{ snapshot, series, counts: { restored, unpublished, missing, failed } }` |
 
-店铺命令行：`wp peptide series status`（系列状态和快照）、`wp peptide series restore [<ver>] [--yes]`、`wp peptide series export --file=<路径>`、`wp peptide series diff --file=<目录文件> [--out=<路径>]`（只比较，不改）。
+店铺命令行：`wp peptide series status`（系列状态和快照）、`wp peptide series restore [<ver>] [--yes]`、`wp peptide series export --file=<路径> [--local]`、`wp peptide series diff --file=<目录文件> [--store-file=<另一家店的导出文件>] [--out=<路径>]`（只比较，不改）。
+
+**只读导出（2026-11-12 新增，给首次同步前的差异报告用）**：命令行的 `export` 和 `diff` 现在一条数据库写入都没有（以前会把算好的图片哈希缓存到附件元 `_pc_series_sha256`；总后台调 `/hq/catalog-export` 时仍然缓存）。`export --local` 的文件在目录之外多两项：`local`（本店全部商品，含草稿，每个带 `id / series_sku / managed`）和 `store`（`{ name, host }`）。这样的文件既能当主商品库（`--file`），也能当被比较的店（`--store-file`）；`diff --store-file` 不读本店的任何数据，可以在任何装了这份代码的 WordPress 上跑。还没部署系列代码的店用 `tools/catalog/store_products_dump.php` 导出同样的文件（用法见 `tools/catalog/README.md`）。导出文件里只有商品、图片地址和哈希、运费方案、店名和域名，没有订单、顾客、账号、密钥；但含各店域名，**不要提交进仓库**。PHP 接口：`Series_Sync::export_dump(): array`、`Series_Sync::diff_dump( array $master, array $dump ): array|string`。`diff_dump` 的结果和 `dry_run` 的 `diff` 同一个外形，另外多一些给人看的细节（`dry_run` 没有）：每个商品的差异不截断；描述行多 `store_excerpt / series_excerpt`（从第一处不同各截一段）或 `note: "markup"`（文字一样，只是排版代码不同）；图片行多 `store_only / series_only`（各自独有的文件名）或 `note: "order"`；附加信息按项拆成多行并带 `key` 和两边的值；两个文件都带运费方案时多 `shipping: { changed, store: [每个收费档一行字], series: […] }`。
 
 **快照**：每次真正改动前自动存一份（商品、运费、系列状态；活动由 M4 经 `pc_series_snapshot` 放进来），存在选项 `pc_series_snapshot_<编号>`，清单在 `pc_series_snapshots`，保留最近 3 份。快照存不进去时这次同步不做任何改动。
 
@@ -889,10 +905,12 @@ add_filter( 'pchq_monitor_checks', static function ( array $checks, int $site_id
 ### 数据
 
 - 总后台表（升级写在 `PeptideHq\Orders`，版本选项 `pchq_m10_db`）：
-  - `pchq_orders`：`site_id, store_order_id, order_number, series_id, status, paid, is_test, currency, total_cents, refunded_cents, refund_state(none|partial|full), refund_sync, refund_error, created_at, paid_at, order_day, email_hash, utm_source, ad_id, reported_at, updated_at`；`UNIQUE(site_id, store_order_id)`。
+  - `pchq_orders`：`site_id, store_order_id, order_number, series_id, status, paid, is_test, currency, total_cents, refunded_cents, refund_state(none|partial|full), refund_sync, refund_error, created_at, paid_at, order_day, email_hash, utm_source, ad_id, reported_at, updated_at`，第 2 版加 `customer_id`（客户编号，`C` + 7 位，没有时为空串；有索引）；`UNIQUE(site_id, store_order_id)`。
   - `pchq_refunds`：`id, site_id, store_order_id, amount_cents, refunded_on, note, created_by, created_at, voided_at, voided_by`。每次标记一行；撤销只写 `voided_*`，不删行。
   - `pchq_ad_spend`：`site_id, day, spend_cents, source(manual|api), updated_at, updated_by`；`PRIMARY KEY(site_id, day)`。
+  - `pchq_abandoned`（第 2 版新增）：`site_id, day, orders, abandoned, abandoned_open, recall_emailed, recall_recovered, updated_at`；`PRIMARY KEY(site_id, day)`。店铺每日汇总里带了弃单数的那些天，每家店每天一行；`orders` 是同一行汇总里店铺自己数的订单数。
   - `pchq_daily` 新增列 `gross_cents`、`refunded_cents`；有已标记退款的日期，`revenue` 改为净额。
+  - 版本选项 `pchq_m10_db` 现在是 `2`。从 `1` 升上来只加一列、一个索引、一张表，已有的订单和退款记录不动（在真实总后台副本上验证过：先用旧代码写入订单和退款标记，再换新代码，数据原样、可重复执行）。
 - 店铺订单元：`_pc_hq_reported`（最近一次上报成功的内容指纹和时间）、`_pc_refund_cents`（已标记的退款总额，美分）、`_pc_refund_state`（`none / partial / full`）。**投手订单页（F5）请用这两个元显示“已退款 / 部分退款”；店铺侧销售额（F4 的 `Data\Metrics`）请减去 `_pc_refund_cents`。**
 
 ### 店铺 → 总后台：`POST /peptide-hq/v1/orders/report`
@@ -903,13 +921,15 @@ add_filter( 'pchq_monitor_checks', static function ( array $checks, int $site_id
 { "orders": [ {
   "store_order_id": 1234, "order_number": "1234", "status": "processing", "paid": true, "is_test": false,
   "currency": "USD", "total_cents": 14999, "created_at": 1794300000, "paid_at": 1794300100, "order_day": "2026-11-10",
-  "series_id": 1, "email_hash": "<sha256(小写邮箱)>", "utm_source": "facebook", "ad_id": "1202…"
+  "series_id": 1, "email_hash": "<sha256(小写邮箱)>", "utm_source": "facebook", "ad_id": "1202…",
+  "customer_id": "C4F7K2QX"
 } ] }
 ```
 
 - 返回 `{ "accepted": [1234], "rejected": [ { "store_order_id": 0, "code": "invalid" } ] }`。
 - `paid` = 订单处于 WooCommerce 的已付款状态；`is_test` = 测试单（收件信息全填 1、测试付款方式或含演示商品）。报表只算 `paid = 1 且 is_test = 0`。
 - 不上报姓名、邮箱明文、电话、地址。`refunded_cents` 由总后台自己按 `pchq_refunds` 计算，不采用店铺上报的值。
+- `customer_id`（2026-11-12 新增，可选）：主线的客户编号，店铺用 `PeptideCore\Customer_Id::for_order()` 取（老订单没有存编号时现算）；店铺还没有这个类时发空串。总后台只认 `C` 加 7 位数字或大写字母，别的一律当成没有，订单照收。它进了上报内容的指纹，所以部署后每张订单会重新上报一次：近 48 小时的由每小时补报带上，更早的要再跑一遍 `wp peptide orders backfill`（可重复执行）。
 - 店铺端：付款和状态变化时异步上报（钩子 `pc_hq_order_report`）；每小时补报近 48 小时内容有变化但没报成功的订单（`pc_hq_order_reconcile`）。没付过款、也从没上报过的订单不上报。
 - 请求体里另有一个 `nonce`（随机值，只为了让每次请求的签名不同），总后台忽略它。
 - `ad_id` 取下单那次访问落地时查询串里的 `ad_id`，没有就取 `utm_content`。
@@ -934,9 +954,23 @@ add_filter( 'pchq_monitor_checks', static function ( array $checks, int $site_id
 - 每次标记或撤销后：重算 `pchq_orders.refunded_cents / refund_state` → 重算 `pchq_daily` 净额 → 回写店铺；店铺连不上时记为待回写，每 10 分钟重试。
 - 已回传给广告平台的购买事件不撤回。
 
+### 2026-11-12：主线新变化对订单上报的影响（F3 已核对并实测）
+
+- **订单号**：新订单显示成支付方订单号（`hang-数字`，订单元 `_pc_pp_ref`，`Order_Number`），老订单还是数字。上报里 `store_order_id` 一直是 WooCommerce 内部的订单编号（退款回写、核对都用它，不会变）；`order_number` 是显示用的订单号（`$order->get_order_number()`），所以新订单报上来就是 `hang-…`。同一张单重新付款换了 `hang-` 号，摘要的指纹跟着变，付款成功或每小时补报时会重新上报，总后台那一行的订单号随之更新。总后台订单页列表和详情同时显示两个号；搜索框输入 `hang-161188301`（不分大小写）、`#11843` 或 `11843` 都能找到。
+- **测试单标记**：`Test_Orders::is_test_order()`（订单元 `_pc_test_order = 1`，包括店主事后手工标的）和 `Overview::is_test_order()`（测试付款方式、含演示商品）任一成立就报 `is_test = true`，总后台合计和报表都不算。事后给已上报的订单打标记：订单保存后 1 小时内由补报任务更新；如果是直接改数据库（订单的修改时间没变），重新运行一次 `wp peptide orders backfill` 即可，它会比较每张已付款订单的指纹。
+- **手动订单和付款链接**（`Manual_Orders`）：顾客走的是正常结账，订单多一个订单元 `_pc_manual_link`，状态变化和付款与普通订单一样，照常上报，不需要特殊处理（冒烟测试里有一条）。
+- **物流**：主线的运单号和承运商存在 WooCommerce 自带的“订单履约（Fulfillments）”里（`Shipping_Tracking`），顾客的物流球（`Track_Widget`）从那里读；总后台的 `Track17` / `Fedex` 只按运单号查物流状态并缓存，不往订单上写东西。开发文档里预留的订单元 `_pc_shipment` 和接口 `/hq/shipment` **F3 没有实现，也不再需要**：以后发货表对接（OR-01）回填运单号，请直接写成订单的一条履约记录，不要另建 `_pc_shipment`。`pchq_orders` 里不存运单号。
+- **客户编号**（日常会话 11-12）：店铺订单上有 `_pc_customer_id`，并单独报给总后台 `/customers/link`。F3 的订单上报仍然只带 `email_hash`，两者互不影响；以后报表要按顾客合并时，可以在上报里加一个可选的 `customer_id`（需要 `pchq_orders` 加一列）。
+
 ### 报表口径（HQ-13）
 
-订单数 = `paid = 1 且 is_test = 0` 的订单；销售额（净额）= `total_cents − refunded_cents`；ROAS = 净销售额 ÷ 广告花费（`pchq_ad_spend`，先手填）；时间按付款时间，日期边界用总后台时区。三级（系列 → 投手 → 店铺）都由同一批店铺行往上加，合计相等。访客数用 `pchq_daily.visitors`（店铺时区的日期），只作参考。弃单率还没有：总后台没有弃单数据，要等店铺把 F4 的 `Metrics::abandoned()` 放进每日汇总（`/hq/summary` 归 F1）之后再加一列。
+订单数 = `paid = 1 且 is_test = 0` 的订单；销售额（净额）= `total_cents − refunded_cents`；ROAS = 净销售额 ÷ 广告花费（`pchq_ad_spend`，先手填）；时间按付款时间，日期边界用总后台时区。三级（系列 → 投手 → 店铺）都由同一批店铺行往上加，合计相等。访客数用 `pchq_daily.visitors`（店铺时区的日期），只作参考。顾客数和弃单率见下面两段。
+
+**顾客数（2026-11-12 新增）**：一位顾客 = 一个客户编号；订单没有编号时（店铺程序还没更新）退回用邮箱哈希（标识写成 `e:<哈希>`）。店铺一级数本店的顾客；投手、系列、合计三级按标识去重，同一位顾客在几家店都买过只算一位，所以**顾客数不是下一级相加**（订单、金额、花费、访客、弃单数仍然是）。客户编号把 Gmail 的点和 `+后缀` 归一了，邮箱哈希没有，所以它比邮箱哈希更准；两种标识混用的过渡期里，同一个人的老订单（只有哈希）和新订单（有编号）会被算成两位，全量回填之后消失。
+
+**弃单数和弃单率（2026-11-12 新增）**：弃单数来自店铺 `/hq/summary` 每天一行里的 `abandoned`（F1 的 2c；口径是 F4 的 `Metrics::abandoned_daily()`，按弃单创建那天、店铺时区）。**弃单率 = 弃单数 ÷（弃单数 + 订单数）**，其中订单数用的是带了弃单数的那些店、那些天，同一行汇总里的 `orders`——两个数同一个来源、同一批日期，所以有的店还没带弃单数、或者日期跨过功能上线那天，比率不会被没有弃单数据的订单冲淡。没有 `abandoned` 这个键的行不存（“还不支持”不当成 0）；一家店在所选日期里一行都没有时，弃单和弃单率显示“—”；有数据而弃单为 0 时显示 0 和 0.00%。`docs/metrics.md` 只定义了弃单数，没有定义“弃单率”，这个算法是 F3 先用的保守默认值，**待平台所有者 / F4 确认**；改口径只改 `Orders::metrics()` 一处。
+
+**弃单数怎么进总后台**：`Orders::store_abandoned( $site_id, $days )`。两条路：F1 的轮询如果在 `Stats::store()` 之后触发 `do_action( 'pchq_summary_days', $site_id, $days )`，就走这条（**请 F1 加这一行**，这样最稳）；在那之前 F3 用保底办法——挂 WordPress 的 `http_response`，看到某家店 `/peptide/v1/hq/summary` 的 200 回应就按地址认店并存下来。保底办法只在“这个地址只登记了一家店”时才认，两家店登记同一个地址（测试环境）就不存。两条路同时生效也没问题（同一天覆盖写入）。
 
 `pchq_daily` 的净额：轮询每次用店铺的每日汇总覆盖 `pchq_daily`（那时 `gross_cents`、`refunded_cents` 回到 0，`revenue` 是毛额），F3 在轮询之后（`pchq_poll` / `pchq_poll_one` 优先级 20，以及店铺页“立即刷新”之后）按下单日把已标记的退款扣掉。所以概览页的销售额也是净额，不用改概览页。
 
@@ -944,7 +978,8 @@ add_filter( 'pchq_monitor_checks', static function ( array $checks, int $site_id
 
 | 表 / 选项 | 有没有顾客资料或密钥 | 建议 |
 | --- | --- | --- |
-| `pchq_orders` | 没有姓名、邮箱、电话、地址；`email_hash` 是邮箱的 SHA-256，`ad_id`、`utm_source` 是广告来源 | scrub：`email_hash` 置空（或重新加盐哈希） |
+| `pchq_orders` | 没有姓名、邮箱、电话、地址；`email_hash` 是邮箱的 SHA-256，`ad_id`、`utm_source` 是广告来源；`customer_id`（第 2 版新增）是由邮箱算出的固定编号，算法在公开仓库里，知道邮箱就能算出编号 | scrub：`email_hash` 置空（或重新加盐哈希）；`customer_id` 和主线的 `pchq_customer_links.customer_id`、店铺订单元 `_pc_customer_id` 用同一套办法处理（同一个编号换成同一个假编号，或者都置空），不要只处理其中一处 |
+| `pchq_abandoned`（第 2 版新增） | 没有（每家店每天的弃单数和订单数） | keep |
 | `pchq_refunds` | `note` 是平台所有者手写的备注，可能提到顾客 | scrub：`note` 置空 |
 | `pchq_ad_spend`、`pchq_daily` 新增列 `gross_cents`、`refunded_cents` | 没有 | keep |
 | 总后台选项 `pchq_order_lag_since` | 没有 | keep |

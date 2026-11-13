@@ -54,6 +54,9 @@ final class Series_Sync {
 	/** 本次同步里没成功的图片（原因），随结果报给总后台；图片失败不拦价格和其他内容。 */
 	private static array $notes = array();
 
+	/** 导出时要不要把算好的图片哈希记在附件上（省得下次重算）。只读导出时关掉：一个字节都不写。 */
+	private static bool $cache_hashes = true;
+
 	public static function register_hooks(): void {
 		add_action( 'rest_api_init', array( self::class, 'routes' ) );
 		add_action( 'woocommerce_before_order_object_save', array( self::class, 'stamp_order' ), 5, 1 );
@@ -296,7 +299,8 @@ final class Series_Sync {
 		if ( $due['campaigns'] ) {
 			$items  = array_values( array_filter( (array) ( $p['campaigns']['items'] ?? array() ), 'is_array' ) );
 			$ver    = (int) $p['campaigns']['ver'];
-			$result = apply_filters( 'pc_series_apply_campaigns', null, $items, $ver, $dry );
+			// 第 5 个参数是这次请求的系列编号（这时还没写进 peptide_core_series，不能用 series_id() 读）。
+			$result = apply_filters( 'pc_series_apply_campaigns', null, $items, $ver, $dry, $state['series_id'] );
 			if ( is_wp_error( $result ) ) {
 				return self::fail( $result, $state, $dry );
 			}
@@ -716,7 +720,7 @@ final class Series_Sync {
 	 *
 	 * @param bool $prices_only 母版店：只比价格，不新建、不下架
 	 */
-	public static function diff_catalog( array $incoming, array $locals, int $ver, bool $prices_only = false ): array {
+	public static function diff_catalog( array $incoming, array $locals, int $ver, bool $prices_only = false, int $max_fields = 40 ): array {
 		$match     = self::match_products( $incoming, $locals );
 		$used      = array();
 		$create    = array();
@@ -735,7 +739,7 @@ final class Series_Sync {
 			$fields     = self::compare_product( $locals[ $i ], $p );
 			$fields     = $prices_only ? self::price_fields( $fields ) : $fields;
 			if ( $fields ) {
-				$changed[] = array( 'sku' => $p['sku'], 'name' => $p['name'], 'id' => (int) ( $locals[ $i ]['id'] ?? 0 ), 'fields' => array_slice( $fields, 0, 40 ) );
+				$changed[] = array( 'sku' => $p['sku'], 'name' => $p['name'], 'id' => (int) ( $locals[ $i ]['id'] ?? 0 ), 'fields' => array_slice( $fields, 0, max( 1, $max_fields ) ) );
 			} else {
 				++$same;
 			}
@@ -940,14 +944,21 @@ final class Series_Sync {
 			$sha = $cached[0];
 		} else {
 			$sha = (string) hash_file( 'sha256', $file );
-			update_post_meta( $attachment_id, self::IMAGE_SHA, $sha . '|' . $mtime );
+			if ( self::$cache_hashes ) {
+				update_post_meta( $attachment_id, self::IMAGE_SHA, $sha . '|' . $mtime );
+			}
 		}
 		return array(
-			'url'    => class_exists( Design_Sync::class ) ? Design_Sync::public_origin() . (string) wp_parse_url( $url, PHP_URL_PATH ) : $url,
+			'url'    => self::own_origin() . (string) wp_parse_url( $url, PHP_URL_PATH ),
 			'sha256' => $sha,
 			'name'   => basename( $file ),
 			'alt'    => (string) get_post_meta( $attachment_id, '_wp_attachment_image_alt', true ),
 		);
+	}
+
+	/** 本店的顾客地址，不带结尾的斜杠。 */
+	private static function own_origin(): string {
+		return is_callable( array( Design_Sync::class, 'public_origin' ) ) ? (string) Design_Sync::public_origin() : untrailingslashit( home_url( '/' ) );
 	}
 
 	/** 现在正在生效的促销价；设了促销时间但还没开始或已经结束的不算（否则各店会提前降价）。 */
@@ -1118,25 +1129,54 @@ final class Series_Sync {
 		return $out;
 	}
 
+	/**
+	 * 系列商品键在本店对应的商品 ID（给营销模块把活动里的商品键换成本店商品用）。找不到时为 0。
+	 * 顺序和同步时配对商品一样：_pc_series_sku → _pc_spu → SKU → “slug:别名”。
+	 */
+	public static function find_product( string $series_sku ): int {
+		global $wpdb;
+		$series_sku = trim( $series_sku );
+		if ( '' === $series_sku ) {
+			return 0;
+		}
+		foreach ( array( self::PRODUCT_SKU, '_pc_spu', '_sku' ) as $meta_key ) {
+			$id = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->prepare(
+					"SELECT pm.post_id FROM {$wpdb->postmeta} pm JOIN {$wpdb->posts} p ON p.ID = pm.post_id WHERE pm.meta_key = %s AND pm.meta_value = %s AND p.post_type = 'product' AND p.post_status <> 'trash' ORDER BY pm.post_id ASC LIMIT 1",
+					$meta_key,
+					$series_sku
+				)
+			);
+			if ( $id > 0 ) {
+				return $id;
+			}
+		}
+		if ( str_starts_with( $series_sku, 'slug:' ) ) {
+			$post = get_page_by_path( substr( $series_sku, 5 ), OBJECT, 'product' );
+			return $post ? (int) $post->ID : 0;
+		}
+		return 0;
+	}
+
 	/** 母版店导出：商品（只要已发布的）、通用运费方案、活动（由营销模块提供）。 */
-	public static function export_catalog(): array {
+	public static function export_catalog( ?array $local = null ): array {
 		$products = array();
-		foreach ( self::export_local() as $p ) {
+		foreach ( $local ?? self::export_local() as $p ) {
 			unset( $p['id'], $p['series_sku'], $p['managed'] );
 			// 只导出已发布、而且各店能接收的商品（没有款式的可变商品会让整个目录被拒收，这里先跳过）。
 			if ( 'publish' === $p['status'] && null !== self::clean_product( $p ) ) {
 				$products[] = $p;
 			}
 		}
-		$origin = class_exists( Design_Sync::class ) ? Design_Sync::public_origin() : home_url( '/' );
+		$plans = is_callable( array( Shipping\Plans::class, 'all' ) ) && is_callable( array( Shipping\Plans::class, 'rules' ) );
 		return array(
 			'version'     => 1,
-			'source_host' => strtolower( (string) wp_parse_url( $origin, PHP_URL_HOST ) ),
+			'source_host' => strtolower( (string) wp_parse_url( self::own_origin(), PHP_URL_HOST ) ),
 			'exported_at' => time(),
 			'products'    => $products,
 			'shipping'    => array(
-				'plans' => class_exists( Shipping\Plans::class ) ? self::plans_to_series( Shipping\Plans::all() ) : array(),
-				'rules' => class_exists( Shipping\Plans::class ) ? Shipping\Plans::rules() : array(),
+				'plans' => $plans ? self::plans_to_series( Shipping\Plans::all() ) : array(),
+				'rules' => $plans ? Shipping\Plans::rules() : array(),
 			),
 			'campaigns'   => array_values( array_filter( (array) apply_filters( 'pc_series_export_campaigns', array() ), 'is_array' ) ),
 		);
@@ -1149,14 +1189,265 @@ final class Series_Sync {
 		return self::export_catalog();
 	}
 
+	/**
+	 * 只读导出，给“各店与主商品库的差异报告”用：母版店那样的目录（products、运费、活动），
+	 * 再加上本店全部商品的本地信息（local）和店名（store）。任何一家店导出的这种文件，
+	 * 既能当主目录，也能当被比较的那家店。只读商品、分类、图片文件和运费设置，不写数据库。
+	 * 里面没有订单、顾客、账号和任何密钥。
+	 *
+	 * @return array{version:int,source_host:string,exported_at:int,products:array,shipping:array,campaigns:array,local:array,store:array}
+	 */
+	public static function export_dump(): array {
+		$was                = self::$cache_hashes;
+		self::$cache_hashes = false;
+		try {
+			$local         = self::export_local();
+			$data          = self::export_catalog( $local );
+			$data['local'] = $local;
+			$data['store'] = array( 'name' => (string) get_bloginfo( 'name' ), 'host' => $data['source_host'] );
+		} finally {
+			self::$cache_hashes = $was;
+		}
+		return $data;
+	}
+
+	/**
+	 * 拿两份导出文件比较（不碰本店的任何数据）：$master 当主商品库，$dump 是 export_dump() 导出的一家店。
+	 * 结果和在那家店上直接跑差异报告一样。
+	 *
+	 * @return array|string 差异报告；文件不对时返回原因
+	 */
+	public static function diff_dump( array $master, array $dump ) {
+		if ( ! is_array( $master['products'] ?? null ) ) {
+			return '主商品库文件里没有 products。';
+		}
+		if ( ! is_array( $dump['local'] ?? null ) ) {
+			return '店铺文件里没有 local：请用 wp peptide series export --local 或 tools/catalog/store_products_dump.php 导出。';
+		}
+		$clean = self::clean_catalog( array( 'ver' => 1, 'source_host' => (string) ( $master['source_host'] ?? '' ), 'products' => $master['products'] ) );
+		if ( ! is_array( $clean ) ) {
+			return '主商品库文件无效：' . $clean;
+		}
+		$store  = array(
+			'name' => self::str( $dump['store']['name'] ?? '', 200 ),
+			'host' => strtolower( self::str( $dump['store']['host'] ?? ( $dump['source_host'] ?? '' ), 253 ) ),
+		);
+		$target = '' !== $store['host'] ? 'https://' . $store['host'] : '';
+		$host   = $clean['source_host'];
+		$locals = array();
+		foreach ( $dump['local'] as $raw ) {
+			$p = self::clean_product( $raw, false );
+			if ( null === $p ) {
+				continue;
+			}
+			$p['id']         = (int) ( $raw['id'] ?? 0 );
+			$p['series_sku'] = trim( (string) ( $raw['series_sku'] ?? '' ) );
+			$p['managed']    = ! empty( $raw['managed'] );
+			$locals[]        = $p;
+		}
+		$incoming      = array_map( static fn( array $p ): array => self::localize( $p, $host, $target ), $clean['products'] );
+		// 给人看的报告：每个商品的差异不截断，并补上两边的原文片段、图片文件名、附加信息的值。
+		$diff            = self::diff_catalog( $incoming, $locals, 0, false, 2000 );
+		$diff['changed'] = self::explain_changes( $diff['changed'], $locals, $incoming );
+		$diff['store']   = $store;
+		if ( is_array( $master['shipping']['plans'] ?? null ) && is_array( $dump['shipping']['plans'] ?? null ) ) {
+			$diff['shipping'] = array(
+				'changed' => self::shipping_key( $master['shipping']['plans'] ) !== self::shipping_key( $dump['shipping']['plans'] ),
+				'store'   => self::shipping_lines( $dump['shipping']['plans'] ),
+				'series'  => self::shipping_lines( $master['shipping']['plans'] ),
+			);
+		}
+		return $diff;
+	}
+
+	/** 去掉标签和多余空白的纯文字（比较描述“看起来”是否一样用）。 */
+	private static function plain_text( string $html ): string {
+		// 段落、换行、列表、表格这类标签先换成空格再去掉：否则 “</p><p>” 两边的字会粘在一起。加粗之类的行内标签直接去掉。
+		$html = (string) preg_replace( '#</?(?:p|div|br|li|ul|ol|h[1-6]|tr|td|th|table|section|blockquote|hr)\b[^>]*>#i', ' ', $html );
+		return trim( (string) preg_replace( '/\s+/u', ' ', html_entity_decode( strip_tags( $html ), ENT_QUOTES, 'UTF-8' ) ) );
+	}
+
+	/**
+	 * 两段文字从哪里开始不一样：各截一小段（从第一个不同的地方往前 20 个字开始，最多 $length 个字）。
+	 *
+	 * @return array{0:string,1:string}
+	 */
+	public static function first_difference( string $a, string $b, int $length = 90 ): array {
+		$x = preg_split( '//u', $a, -1, PREG_SPLIT_NO_EMPTY );
+		$y = preg_split( '//u', $b, -1, PREG_SPLIT_NO_EMPTY );
+		$x = is_array( $x ) ? $x : array();
+		$y = is_array( $y ) ? $y : array();
+		$i = 0;
+		$m = min( count( $x ), count( $y ) );
+		while ( $i < $m && $x[ $i ] === $y[ $i ] ) {
+			++$i;
+		}
+		$from = max( 0, $i - 20 );
+		$cut  = static function ( array $chars ) use ( $from, $length ): string {
+			if ( $from >= count( $chars ) ) {
+				return '（到这里就没有了）';
+			}
+			return ( $from > 0 ? '…' : '' ) . implode( '', array_slice( $chars, $from, $length ) ) . ( count( $chars ) > $from + $length ? '…' : '' );
+		};
+		return array( $cut( $x ), $cut( $y ) );
+	}
+
+	/** 附加信息的一个值写成一行文字。 */
+	private static function meta_text( $value ): string {
+		if ( null === $value || '' === $value || array() === $value ) {
+			return '（没有）';
+		}
+		$text  = is_scalar( $value ) ? (string) $value : (string) json_encode( $value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
+		$chars = preg_split( '//u', $text, -1, PREG_SPLIT_NO_EMPTY );
+		return is_array( $chars ) && count( $chars ) > 300 ? implode( '', array_slice( $chars, 0, 300 ) ) . '…' : $text;
+	}
+
+	/** 本店商品里和系列的这个款式对应的那一个（和比较、写入时找款式的顺序一样：键 → SKU → 属性）。 */
+	private static function local_variation( array $local, array $v ): ?array {
+		foreach ( (array) ( $local['variations'] ?? array() ) as $l ) {
+			if ( $l['key'] === $v['key'] ) {
+				return $l;
+			}
+		}
+		foreach ( (array) ( $local['variations'] ?? array() ) as $l ) {
+			if ( '' !== $v['sku'] && $l['sku'] === $v['sku'] ) {
+				return $l;
+			}
+		}
+		foreach ( (array) ( $local['variations'] ?? array() ) as $l ) {
+			if ( self::attr_key( $l['attributes'] ) === self::attr_key( $v['attributes'] ) ) {
+				return $l;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * 给差异报告补上人能看懂的细节（纯函数）：
+	 * - 描述不一样：两边从第一个不同的地方各截一小段（store_excerpt / series_excerpt）；文字一样、只是排版代码不同的标 note = markup；
+	 * - 图片不一样：各自独有的文件名（store_only / series_only）；图片一样、只是顺序不同的标 note = order；
+	 * - 附加信息：按项拆成多行（key），带上两边的值。
+	 *
+	 * @param array[] $changed  diff_catalog() 的 changed
+	 * @param array[] $locals   本店商品（带 id）
+	 * @param array[] $incoming 系列商品
+	 */
+	public static function explain_changes( array $changed, array $locals, array $incoming ): array {
+		$by_id  = array();
+		$by_sku = array();
+		foreach ( $locals as $l ) {
+			$by_id[ (int) ( $l['id'] ?? 0 ) ] = $l;
+		}
+		foreach ( $incoming as $p ) {
+			$by_sku[ (string) $p['sku'] ] = $p;
+		}
+		foreach ( $changed as $n => $c ) {
+			$l = $by_id[ (int) ( $c['id'] ?? 0 ) ] ?? null;
+			$p = $by_sku[ (string) ( $c['sku'] ?? '' ) ] ?? null;
+			if ( ! is_array( $l ) || ! is_array( $p ) ) {
+				continue;
+			}
+			$rows = array();
+			foreach ( $c['fields'] as $f ) {
+				$field = (string) $f['field'];
+				$label = (string) ( $f['variation'] ?? '' );
+				if ( '' === $label && in_array( $field, array( 'description', 'short_description' ), true ) ) {
+					$a = self::plain_text( (string) $l[ $field ] );
+					$b = self::plain_text( (string) $p[ $field ] );
+					if ( $a === $b ) {
+						$f['note'] = 'markup';
+					} else {
+						[ $f['store_excerpt'], $f['series_excerpt'] ] = self::first_difference( $a, $b );
+					}
+				} elseif ( '' === $label && 'images' === $field ) {
+					$ls = array_column( $l['images'], 'name', 'sha256' );
+					$ps = array_column( $p['images'], 'name', 'sha256' );
+					$f['store_only']  = array_values( array_diff_key( $ls, $ps ) );
+					$f['series_only'] = array_values( array_diff_key( $ps, $ls ) );
+					if ( ! $f['store_only'] && ! $f['series_only'] ) {
+						$f['note'] = 'order';
+					}
+				} elseif ( 'meta' === $field ) {
+					$lm = $l['meta'];
+					$pm = $p['meta'];
+					if ( '' !== $label ) {
+						$pv = null;
+						foreach ( $p['variations'] as $v ) {
+							if ( self::variation_label( $v ) === $label ) {
+								$pv = $v;
+								break;
+							}
+						}
+						$lv = $pv ? self::local_variation( $l, $pv ) : null;
+						if ( ! $pv || ! $lv ) {
+							$rows[] = $f;
+							continue;
+						}
+						$lm = $lv['meta'];
+						$pm = $pv['meta'];
+					}
+					foreach ( array_unique( array_merge( array_keys( $lm ), array_keys( $pm ) ) ) as $k ) {
+						if ( json_encode( $lm[ $k ] ?? null ) !== json_encode( $pm[ $k ] ?? null ) ) {
+							$row = array( 'field' => 'meta', 'key' => (string) $k, 'store' => self::meta_text( $lm[ $k ] ?? null ), 'series' => self::meta_text( $pm[ $k ] ?? null ) );
+							if ( '' !== $label ) {
+								$row['variation'] = $label;
+							}
+							$rows[] = $row;
+						}
+					}
+					continue;
+				}
+				$rows[] = $f;
+			}
+			$changed[ $n ]['fields'] = $rows;
+		}
+		return $changed;
+	}
+
+	/**
+	 * 运费方案写成给人看的几行字（纯函数），每个收费档一行。
+	 *
+	 * @param array[] $plans plans_to_series() 的结果
+	 * @return string[]
+	 */
+	public static function shipping_lines( array $plans ): array {
+		$money = static fn( float $v ): string => '$' . ( floor( $v ) === $v ? number_format( $v, 0, '.', '' ) : number_format( $v, 2, '.', '' ) );
+		$lines = array();
+		foreach ( $plans as $p ) {
+			$where = array();
+			foreach ( (array) ( $p['regions'] ?? array() ) as $r ) {
+				$states  = array_filter( array_map( 'strval', (array) ( $r['states'] ?? array() ) ) );
+				$where[] = (string) ( $r['country'] ?? '' ) . ( $states ? '（' . implode( ', ', $states ) . '）' : '' );
+			}
+			$head = (string) ( $p['name'] ?? '' ) . '｜' . ( $where ? implode( '、', $where ) : '全部地区' );
+			$n    = 0;
+			foreach ( (array) ( $p['rates'] ?? array() ) as $r ) {
+				$min  = (float) ( $r['min'] ?? 0 );
+				$max  = isset( $r['max'] ) ? (float) $r['max'] : null;
+				$rule = (string) ( $r['rule'] ?? 'subtotal' );
+				if ( 'subtotal' === $rule ) {
+					$when = $min > 0 && null !== $max ? '订单金额 ' . $money( $min ) . ' 到 ' . $money( $max ) : ( $min > 0 ? '订单金额满 ' . $money( $min ) : ( null !== $max ? '订单金额不到 ' . $money( $max ) : '不限金额' ) );
+				} else {
+					$when = '按 ' . $rule . '：' . $min . ( null !== $max ? ' 到 ' . $max : ' 以上' );
+				}
+				$lines[] = $head . '｜' . (string) ( $r['name'] ?? '' ) . '：' . $when . '，运费 ' . $money( (int) ( $r['fee_cents'] ?? 0 ) / 100 ) . ( '' !== (string) ( $r['postcodes'] ?? '' ) ? '（限邮编 ' . $r['postcodes'] . '）' : '' );
+				++$n;
+			}
+			if ( 0 === $n ) {
+				$lines[] = $head . '｜没有启用的收费档';
+			}
+		}
+		return $lines;
+	}
+
 	// ---------- 写入商品 ----------
 
 	/** 系列商品里指向母版店的绝对链接换成本店地址（描述里的图片、站内链接）。 */
-	private static function localize( array $p, string $source_host ): array {
-		if ( '' === $source_host || ! class_exists( Design_Sync::class ) ) {
+	private static function localize( array $p, string $source_host, string $target = '' ): array {
+		if ( '' === $source_host || ! is_callable( array( Design_Sync::class, 'rewrite_links' ) ) ) {
 			return $p;
 		}
-		$target = Design_Sync::public_origin();
+		$target = '' !== $target ? $target : self::own_origin();
 		foreach ( array( 'description', 'short_description' ) as $k ) {
 			$p[ $k ] = (string) Design_Sync::rewrite_links( $p[ $k ], array( 'https://' . $source_host ), $target );
 		}
@@ -1746,7 +2037,7 @@ final class Series_Sync {
 		}
 		$counts   = array( 'restored' => 0, 'unpublished' => 0, 'missing' => 0, 'failed' => 0 );
 		$deadline = microtime( true ) + self::TIME_BUDGET;
-		$own_host = strtolower( (string) wp_parse_url( class_exists( Design_Sync::class ) ? Design_Sync::public_origin() : home_url( '/' ), PHP_URL_HOST ) );
+		$own_host = strtolower( (string) wp_parse_url( self::own_origin(), PHP_URL_HOST ) );
 		$known    = array();
 		$kses     = self::begin_write();
 		try {
@@ -1852,16 +2143,23 @@ final class Series_Sync {
 	}
 
 	/**
-	 * 把本店的商品、运费、活动导出成系列目录文件（和总后台“从母版店导入”拿到的内容一样）。
+	 * 把本店的商品、运费、活动导出成系列目录文件（和总后台“从母版店导入”拿到的内容一样）。只读，不改本店任何数据。
 	 *
 	 * ## OPTIONS
 	 *
 	 * --file=<path>
 	 * : 写到哪个文件。
+	 *
+	 * [--local]
+	 * : 再带上本店全部商品（含草稿）的本地信息和店名。这样的文件可以拿到别处，用 wp peptide series diff --store-file 做差异比较。
 	 */
 	public static function cli_export( $args, $assoc ): void {
 		$file = (string) ( $assoc['file'] ?? '' );
-		$data = self::export_catalog();
+		// 命令行导出一律只读（连图片哈希的缓存也不写）。--local：再带上本店全部商品的本地信息，供别处做差异比较。
+		$data = self::export_dump();
+		if ( empty( $assoc['local'] ) ) {
+			unset( $data['local'], $data['store'] );
+		}
 		if ( '' === $file || false === file_put_contents( $file, (string) wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT ) ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions
 			\WP_CLI::error( '写不了文件，请用 --file=<路径> 指定一个可写的位置。' );
 		}
@@ -1869,12 +2167,15 @@ final class Series_Sync {
 	}
 
 	/**
-	 * 把一份系列目录文件和本店现有的商品比一遍，只出差异报告，不改任何东西。
+	 * 把一份系列目录文件和本店现有的商品（或另一家店导出的文件）比一遍，只出差异报告，不改任何东西。
 	 *
 	 * ## OPTIONS
 	 *
 	 * --file=<path>
-	 * : 母版店导出的目录文件（wp peptide series export 的结果）。
+	 * : 母版店导出的目录文件（wp peptide series export 的结果，带不带 --local 都行）。
+	 *
+	 * [--store-file=<path>]
+	 * : 不和本店比，而是和这份文件里的店比（那家店用 wp peptide series export --local 或 tools/catalog/store_products_dump.php 导出）。
 	 *
 	 * [--out=<path>]
 	 * : 把完整的差异报告（JSON）写到这个文件，可以交给 tools/catalog/series_diff_report.py 生成给人看的报告。
@@ -1884,19 +2185,24 @@ final class Series_Sync {
 		if ( ! is_array( $raw ) || ! is_array( $raw['products'] ?? null ) ) {
 			\WP_CLI::error( '读不了目录文件。' );
 		}
-		$clean = self::clean_catalog( array( 'ver' => 1, 'source_host' => (string) ( $raw['source_host'] ?? '' ), 'products' => $raw['products'] ) );
-		if ( ! is_array( $clean ) ) {
-			\WP_CLI::error( '目录文件无效：' . $clean );
+		// --store-file：被比较的不是本店，而是另一家店导出的文件（wp peptide series export --local）。两种情况都只读。
+		if ( ! empty( $assoc['store-file'] ) ) {
+			$dump = json_decode( (string) @file_get_contents( (string) $assoc['store-file'] ), true ); // phpcs:ignore WordPress.PHP.NoSilencedErrors,WordPress.WP.AlternativeFunctions
+			if ( ! is_array( $dump ) ) {
+				\WP_CLI::error( '读不了店铺文件。' );
+			}
+		} else {
+			$dump = self::export_dump();
 		}
-		$host     = $clean['source_host'];
-		$incoming = array_map( static fn( array $p ): array => self::localize( $p, $host ), $clean['products'] );
-		$diff     = self::diff_catalog( $incoming, self::export_local(), 0 );
-		$diff['store'] = array( 'name' => get_bloginfo( 'name' ), 'host' => (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
+		$diff = self::diff_dump( $raw, $dump );
+		if ( ! is_array( $diff ) ) {
+			\WP_CLI::error( $diff );
+		}
 		if ( ! empty( $assoc['out'] ) ) {
 			file_put_contents( (string) $assoc['out'], (string) wp_json_encode( $diff, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions
 		}
 		$s = $diff['summary'];
-		\WP_CLI::log( sprintf( '一样：%1$d；有差异：%2$d；本店没有、同步后会新建：%3$d；系列里没有、同步后会下架：%4$d', $s['same'], $s['changed'], $s['create'], $s['unpublish'] ) );
+		\WP_CLI::log( sprintf( '%5$s —— 一样：%1$d；有差异：%2$d；店里没有、同步后会新建：%3$d；系列里没有、同步后会下架：%4$d', $s['same'], $s['changed'], $s['create'], $s['unpublish'], '' !== $diff['store']['host'] ? $diff['store']['host'] : '本店' ) );
 		foreach ( array_slice( $diff['changed'], 0, 30 ) as $c ) {
 			\WP_CLI::log( sprintf( '  %s（%s）：%s', $c['name'], $c['sku'], implode( '，', array_unique( array_column( $c['fields'], 'field' ) ) ) ) );
 		}

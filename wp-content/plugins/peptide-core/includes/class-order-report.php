@@ -5,7 +5,7 @@
  * - 订单付款、状态变化时，把订单摘要异步报给总后台 POST /peptide-hq/v1/orders/report（每批最多 50 条）。
  *   签名和邮件中心相同：店铺连接密钥 + X-PC-HQ-Site。总后台按（店铺，订单号）覆盖写入，重复上报结果不变。
  * - 订单元 _pc_hq_reported 记最近一次上报成功的内容指纹和时间；每小时把近 48 小时里内容变了但没报成功的订单补报一次。
- * - 只报汇总需要的字段：状态、金额、时间、所属系列、邮箱的哈希、来源；不报姓名、邮箱、电话、地址。
+ * - 只报汇总需要的字段：状态、金额、时间、所属系列、邮箱的哈希、客户编号、来源；不报姓名、邮箱、电话、地址。
  * - 没付过款、也从没上报过的订单（未付款、草稿、失败）不上报。
  * - 历史订单回填：wp peptide orders backfill [--dry-run] [--since=YYYY-MM-DD]。先试运行看报告，再正式运行；可重复执行。
  * - 退款标记：总后台调用 POST /peptide/v1/hq/order-refund，这里只写 _pc_refund_cents、_pc_refund_state 和一条订单备注。
@@ -213,6 +213,8 @@ final class Order_Report {
 			'email_hash'     => '' !== $email ? hash( 'sha256', $email ) : '',
 			'utm_source'     => $attr['utm_source'],
 			'ad_id'          => $attr['ad_id'],
+			// 客户编号（同一位顾客在各店相同，由邮箱或手机号算出，不含原文）；店铺没有这个功能时为空。
+			'customer_id'    => class_exists( Customer_Id::class ) ? (string) Customer_Id::for_order( $order ) : '',
 		);
 	}
 

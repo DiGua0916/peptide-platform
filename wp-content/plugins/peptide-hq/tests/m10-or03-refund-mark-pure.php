@@ -28,11 +28,14 @@ namespace {
 	function user_can( int $user_id, string $cap ): bool { return in_array( $user_id, $GLOBALS['admins'], true ); }
 	function wp_timezone(): \DateTimeZone { return new \DateTimeZone( 'UTC' ); }
 	function wp_date( string $format, ?int $ts = null ): string { return gmdate( $format, $ts ?? time() ); }
+	function wp_parse_url( string $url, int $component = -1 ) { return parse_url( $url, $component ); }
+	function wp_remote_retrieve_response_code( $r ): int { return (int) ( $r['response']['code'] ?? 0 ); }
+	function wp_remote_retrieve_body( $r ): string { return (string) ( $r['body'] ?? '' ); }
 
 	/** 只认识 M10 用到的那几条 SQL；其他 SQL 直接报错。 */
 	final class Memory_Db {
 		public int $insert_id = 0;
-		public array $tables  = array( 'wp_pchq_orders' => array(), 'wp_pchq_refunds' => array(), 'wp_pchq_daily' => array(), 'wp_pchq_ad_spend' => array() );
+		public array $tables  = array( 'wp_pchq_orders' => array(), 'wp_pchq_refunds' => array(), 'wp_pchq_daily' => array(), 'wp_pchq_ad_spend' => array(), 'wp_pchq_abandoned' => array() );
 		public function prepare( string $sql, ...$args ): string {
 			return (string) preg_replace_callback( '/%[sd]/', static function ( $m ) use ( &$args ) { $v = array_shift( $args ); return '%d' === $m[0] ? (string) (int) $v : "'" . str_replace( "'", "''", (string) $v ) . "'"; }, $sql );
 		}
@@ -117,6 +120,19 @@ namespace {
 				foreach ( $this->tables[ $m[1] ] as $r ) { if ( $r['day'] >= $m[2] && $r['day'] <= $m[3] ) { $out[ $r['site_id'] ] = array( 'site_id' => $r['site_id'], 'spend' => ( $out[ $r['site_id'] ]['spend'] ?? 0 ) + $r['spend_cents'] ); } }
 				return array_values( $out );
 			}
+			if ( preg_match( "/^SELECT DISTINCT site_id, customer_id, email_hash FROM (\S+) WHERE paid = 1 AND is_test = 0 AND \(customer_id <> '' OR email_hash <> ''\)(?: AND paid_at >= (\d+))?(?: AND paid_at <= (\d+))?$/", $sql, $m ) ) {
+				$out = array();
+				foreach ( $this->tables[ $m[1] ] as $r ) {
+					if ( 1 !== (int) $r['paid'] || 0 !== (int) $r['is_test'] || ( '' === $r['customer_id'] && '' === $r['email_hash'] ) || ( ! empty( $m[2] ) && $r['paid_at'] < (int) $m[2] ) || ( ! empty( $m[3] ) && $r['paid_at'] > (int) $m[3] ) ) { continue; }
+					$out[ $r['site_id'] . '|' . $r['customer_id'] . '|' . $r['email_hash'] ] = array( 'site_id' => $r['site_id'], 'customer_id' => $r['customer_id'], 'email_hash' => $r['email_hash'] );
+				}
+				return array_values( $out );
+			}
+			if ( preg_match( "/^SELECT site_id, SUM\(abandoned\) AS abandoned, SUM\(orders\) AS orders FROM (\S+) WHERE day BETWEEN '([\d-]+)' AND '([\d-]+)' GROUP BY site_id$/", $sql, $m ) ) {
+				$out = array();
+				foreach ( $this->tables[ $m[1] ] as $r ) { if ( $r['day'] >= $m[2] && $r['day'] <= $m[3] ) { $out[ $r['site_id'] ] = array( 'site_id' => $r['site_id'], 'abandoned' => ( $out[ $r['site_id'] ]['abandoned'] ?? 0 ) + $r['abandoned'], 'orders' => ( $out[ $r['site_id'] ]['orders'] ?? 0 ) + $r['orders'] ); } }
+				return array_values( $out );
+			}
 			if ( preg_match( '/^SELECT site_id, store_order_id FROM (\S+) WHERE refund_sync = 1 ORDER BY updated_at ASC LIMIT 20$/', $sql, $m ) ) {
 				return array_values( array_filter( $this->tables[ $m[1] ], static fn( $r ) => 1 === (int) $r['refund_sync'] ) );
 			}
@@ -150,7 +166,8 @@ namespace PeptideHq {
 	final class Site_Lifecycle { public static function active( int $id ): bool { return true; } }
 	final class Design_Push { public static function friendly( \WP_Error $e ): string { return $e->get_error_message(); } }
 	final class Series_Db { public static function has_table( string $t ): bool { return true; } public static function add_columns( string $t, array $c ): array { return array(); } }
-	final class Sites { public static function all(): array { return array( 1 => array( 'id' => 1, 'name' => 'Store 1' ), 2 => array( 'id' => 2, 'name' => 'Store 2' ), 3 => array( 'id' => 3, 'name' => 'Store 3' ) ); } }
+	final class Sites { public static function all(): array { return array( 1 => array( 'id' => 1, 'name' => 'Store 1', 'url' => 'https://s1.example.test/' ), 2 => array( 'id' => 2, 'name' => 'Store 2', 'url' => 'https://s2.example.test/' ), 3 => array( 'id' => 3, 'name' => 'Store 3', 'url' => 'https://s3.example.test/' ) ) + ( $GLOBALS['extra_sites'] ?? array() ); } }
+	final class Site_Urls { public static function management( array $site ): string { return (string) $site['url']; } }
 	final class Series {
 		public static function ready(): bool { return true; }
 		public static function all( bool $x = false ): array { return array( 1 => array( 'id' => 1, 'name' => '系列 1' ), 2 => array( 'id' => 2, 'name' => '系列 2' ) ); }
@@ -174,13 +191,14 @@ namespace {
 	foreach ( array( 'orders', 'refunds' ) as $file ) { require dirname( __DIR__ ) . '/includes/class-' . $file . '.php'; }
 	use PeptideHq\Orders;
 	use PeptideHq\Refunds;
+	$GLOBALS['options'][ Orders::OPTION ] = Orders::VERSION; // 表结构算已经升级好。
 
 	$checks = 0;
 	function check( string $name, bool $ok ): void { ++$GLOBALS['checks']; if ( ! $ok ) { throw new RuntimeException( 'FAIL ' . $name ); } }
 	$db    = $GLOBALS['wpdb'];
 	$today = gmdate( 'Y-m-d' );
 	$paid  = strtotime( $today . ' 10:00:00 UTC' );
-	$order = static fn( int $id, int $cents, array $extra = array() ): array => array_merge( array( 'store_order_id' => $id, 'order_number' => (string) $id, 'status' => 'processing', 'paid' => true, 'is_test' => false, 'currency' => 'USD', 'total_cents' => $cents, 'created_at' => $GLOBALS['paid'] - 60, 'paid_at' => $GLOBALS['paid'], 'order_day' => $GLOBALS['today'], 'series_id' => 1, 'email_hash' => str_repeat( 'a', 64 ), 'utm_source' => 'facebook', 'ad_id' => '1201' ), $extra );
+	$order = static fn( int $id, int $cents, array $extra = array() ): array => array_merge( array( 'store_order_id' => $id, 'order_number' => (string) $id, 'status' => 'processing', 'paid' => true, 'is_test' => false, 'currency' => 'USD', 'total_cents' => $cents, 'created_at' => $GLOBALS['paid'] - 60, 'paid_at' => $GLOBALS['paid'], 'order_day' => $GLOBALS['today'], 'series_id' => 1, 'email_hash' => str_repeat( 'a', 64 ), 'utm_source' => 'facebook', 'ad_id' => '1201', 'customer_id' => array( 100 => 'CAAAAAAA', 101 => 'CBBBBBBB', 200 => 'CAAAAAAA', 300 => 'CCCCCCCC' )[ $id ] ?? '' ), $extra );
 	$send  = static fn( int $site, array $orders ) => Orders::handle_report( new WP_REST_Request( array( '_pchq_site' => $site ), array( 'orders' => $orders ) ) );
 	$strip = static fn( array $rows ): array => array_map( static fn( $r ) => array_diff_key( $r, array( 'reported_at' => 1, 'updated_at' => 1 ) ), $rows );
 	$row   = static fn( int $site, int $id ): array => Orders::get( $site, $id );
@@ -200,6 +218,9 @@ namespace {
 	check( 'daily: nothing to do', null === Refunds::adjust_daily( 230.0, 0, 0, 0 ) && null === Refunds::adjust_daily( 230.0, 23000, 0, 0 ) );
 	check( 'order shape rejects bad ids and amounts', null === Orders::clean_order( array( 'store_order_id' => 0, 'total_cents' => 1 ) ) && null === Orders::clean_order( array( 'store_order_id' => 5, 'total_cents' => -1 ) ) && null === Orders::clean_order( array( 'store_order_id' => '5', 'total_cents' => 1 ) ) && null === Orders::clean_order( 'x' ) );
 	check( 'order shape drops unknown fields and bad hash', array( 'order_day' => '', 'email_hash' => '' ) === array_intersect_key( Orders::clean_order( array( 'store_order_id' => 5, 'total_cents' => 1, 'email_hash' => 'plain@example.test', 'order_day' => 'yesterday', 'billing_name' => 'X' ) ), array( 'email_hash' => 1, 'order_day' => 1 ) ) && ! array_key_exists( 'billing_name', Orders::clean_order( array( 'store_order_id' => 5, 'total_cents' => 1, 'billing_name' => 'X' ) ) ) );
+
+	check( 'hang- order numbers survive cleaning', 'hang-161188301' === Orders::clean_order( array( 'store_order_id' => 11843, 'total_cents' => 100, 'order_number' => 'hang-161188301' ) )['order_number'] );
+	check( 'search text is normalised', 'hang-161188301' === Orders::clean_query( ' #HANG-161188301 ' ) && '11843' === Orders::clean_query( '#11843' ) && '' === Orders::clean_query( '%\'"' ) );
 
 	// ---- 上报：按（店铺，订单号）覆盖写入，重复上报结果不变 ----
 	$batch1 = array( $order( 100, 15000 ), $order( 101, 8000 ), $order( 102, 5000, array( 'is_test' => true ) ), $order( 103, 9900, array( 'status' => 'pending', 'paid' => false, 'paid_at' => 0 ) ) );
@@ -229,7 +250,7 @@ namespace {
 	Orders::set_spend( 1, $today, 10000, 1 );
 	Orders::set_spend( 2, $today, 5000, 1 );
 	$levels_equal = static function ( array $rep ): bool {
-		$keys = array( 'orders', 'gross_cents', 'refunded_cents', 'net_cents', 'spend_cents', 'visitors' );
+		$keys = array( 'orders', 'gross_cents', 'refunded_cents', 'net_cents', 'spend_cents', 'visitors', 'abandoned' );
 		$add  = static function ( array $rows ) use ( $keys ): array { $t = array_fill_keys( $keys, 0 ); foreach ( $rows as $r ) { foreach ( $keys as $k ) { $t[ $k ] += $r[ $k ]; } } return $t; };
 		$pick = static fn( array $m ): array => array_intersect_key( $m, array_flip( $keys ) );
 		$stores = array();
@@ -250,6 +271,34 @@ namespace {
 	check( 'series 1 has two buyers', array( 'Buyer A', 'Buyer B' ) === array_column( $rep['series'][0]['buyers'], 'buyer_name' ) && 2.3 === $rep['series'][0]['buyers'][0]['metrics']['roas'] && 4.0 === $rep['series'][0]['buyers'][1]['metrics']['roas'] );
 	check( 'no spend means no ROAS', null === $rep['series'][1]['metrics']['roas'] );
 	check( 'three levels add up', $levels_equal( $rep ) );
+	// ---- 顾客：按客户编号去重，同一位顾客在两家店买过，上一级只算一次；没有编号的退回用邮箱哈希 ----
+	check( 'customer id shape', 'CAAAAAAA' === Orders::clean_customer_id( ' caaaaaaa ' ) && '' === Orders::clean_customer_id( 'C123' ) && '' === Orders::clean_customer_id( 'XAAAAAAA' ) && '' === Orders::clean_customer_id( null ) );
+	check( 'customer id stored with the order', 'CAAAAAAA' === \PeptideHq\Orders::get( 1, 100 )['customer_id'] && '' === \PeptideHq\Orders::get( 3, 301 )['customer_id'] );
+	$stores_of = static fn( array $buyer ): array => array_column( $buyer['stores'], 'customers', 'site_id' );
+	check( 'customers per store', array( 1 => 2 ) === $stores_of( $rep['series'][0]['buyers'][0] ) && array( 2 => 1 ) === $stores_of( $rep['series'][0]['buyers'][1] ) && array( 3 => 2 ) === $stores_of( $rep['series'][1]['buyers'][0] ) );
+	check( 'a customer who bought in two stores counts once higher up', 2 === $rep['series'][0]['metrics']['customers'] && 2 === $rep['series'][1]['metrics']['customers'] && 4 === $rep['total']['customers'] );
+
+	// ---- 弃单数来自店铺每日汇总；弃单率 = 弃单 ÷（弃单 + 订单） ----
+	check( 'no abandoned data yet means no rate', 0 === $rep['total']['abandoned'] && null === $rep['total']['abandon_orders'] && null === $rep['total']['abandon_rate'] );
+	check( 'only rows that carry the abandoned count are stored', 1 === Orders::store_abandoned( 1, array( array( 'day' => $today, 'orders' => 2, 'abandoned' => 3, 'abandoned_open' => 2, 'recall_emailed' => 1, 'recall_recovered' => 0 ), array( 'day' => $today, 'orders' => 2 ), array( 'day' => 'bad', 'abandoned' => 9 ) ) ) && 0 === Orders::store_abandoned( 0, array() ) );
+	$summary = array( 'response' => array( 'code' => 200 ), 'body' => json_encode( array( 'days' => array( array( 'day' => $today, 'orders' => 1, 'abandoned' => 1 ) ) ) ) );
+	check( 'the summary reply of a store is picked up by its address', $summary === Orders::watch_summary( $summary, array(), 'https://s2.example.test/?rest_route=%2Fpeptide%2Fv1%2Fhq%2Fsummary&days=2' ) && array( 1 => array( 'abandoned' => 3, 'orders' => 2 ), 2 => array( 'abandoned' => 1, 'orders' => 1 ) ) === Orders::abandoned_by_site( $today, $today ) );
+	Orders::watch_summary( $summary, array(), 'https://s3.example.test/?rest_route=%2Fpeptide%2Fv1%2Fhq%2Fstatus' );
+	Orders::watch_summary( array( 'response' => array( 'code' => 500 ), 'body' => $summary['body'] ), array(), 'https://s3.example.test/?rest_route=%2Fpeptide%2Fv1%2Fhq%2Fsummary' );
+	check( 'other routes and failed replies are ignored', array( 1, 2 ) === array_keys( Orders::abandoned_by_site( $today, $today ) ) );
+	// 两家店登记了同一个地址：分不清是谁的，不存。
+	$GLOBALS['extra_sites'] = array( 9 => array( 'id' => 9, 'name' => 'Twin', 'url' => 'https://s2.example.test/' ) );
+	Orders::watch_summary( array( 'response' => array( 'code' => 200 ), 'body' => json_encode( array( 'days' => array( array( 'day' => $today, 'orders' => 7, 'abandoned' => 7 ) ) ) ) ), array(), 'https://s2.example.test/?rest_route=%2Fpeptide%2Fv1%2Fhq%2Fsummary&days=2' );
+	unset( $GLOBALS['extra_sites'] );
+	check( 'an address shared by two stores is not guessed', array( 'abandoned' => 1, 'orders' => 1 ) === Orders::abandoned_by_site( $today, $today )[2] );
+	Orders::store_abandoned( 1, array( array( 'day' => $today, 'orders' => 2, 'abandoned' => 3 ) ) );
+	$rep = Orders::report( $today, $today );
+	// 店 1：3 ÷ (3+2) = 60%；店 2：1 ÷ (1+1) = 50%；店 3 没有弃单数据；合计只用有数据的店：4 ÷ (4+3) = 57.14%（不是 4 ÷ (4+5)）。
+	check( 'abandon rate at every level', 4 === $rep['total']['abandoned'] && 3 === $rep['total']['abandon_orders'] && 57.14 === $rep['total']['abandon_rate'] && 60.0 === $rep['series'][0]['buyers'][0]['metrics']['abandon_rate'] && 50.0 === $rep['series'][0]['buyers'][1]['metrics']['abandon_rate'] && null === $rep['series'][1]['metrics']['abandon_rate'] && $levels_equal( $rep ), array( $rep['total']['abandon_orders'], $rep['total']['abandon_rate'] ) );
+	Orders::store_abandoned( 3, array( array( 'day' => $today, 'orders' => 4, 'abandoned' => 0 ) ) );
+	$rep = Orders::report( $today, $today );
+	check( 'a store that reports zero abandoned has a rate of 0, not a dash', 0.0 === $rep['series'][1]['metrics']['abandon_rate'] && 0 === $rep['series'][1]['metrics']['abandoned'] && 36.36 === $rep['total']['abandon_rate'] );
+	check( 'rate needs a denominator', null === Orders::metrics( 0, 0, 0, 0, 0, 0, 0, 0 )['abandon_rate'] && null === Orders::metrics( 5, 0, 0, 0, 0, 3, 0, null )['abandon_rate'] && 100.0 === Orders::metrics( 0, 0, 0, 0, 0, 3, 0, 0 )['abandon_rate'] );
 	check( 'yesterday is empty', 0 === Orders::report( gmdate( 'Y-m-d', time() - 86400 ), gmdate( 'Y-m-d', time() - 86400 ) )['total']['orders'] );
 
 	// ---- 每日数字：轮询写入的是毛额 ----

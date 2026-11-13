@@ -29,7 +29,7 @@ namespace {
 		public function get_status(): string { return $this->status; }
 		public function get_total() { return $this->total; }
 		public function get_currency(): string { return 'USD'; }
-		public function get_order_number(): string { return (string) $this->id; }
+		public function get_order_number(): string { return '' !== (string) ( $this->meta['_pc_pp_ref'] ?? '' ) ? (string) $this->meta['_pc_pp_ref'] : (string) $this->id; } // 新订单显示支付方订单号（hang-数字）。
 		public function get_billing_email(): string { return $this->email; }
 		public function get_date_created() { return $this->created ? new Stamp( $this->created ) : null; }
 		public function get_date_paid() { return $this->paid_ts ? new Stamp( $this->paid_ts ) : null; }
@@ -92,6 +92,7 @@ namespace PeptideCore {
 	}
 	final class Test_Orders { public static function is_test_order( $order ): bool { return '1' === (string) $order->get_meta( '_pc_test_order' ); } }
 	final class Overview { public static function is_test_order( $order ): bool { return false; } }
+	final class Customer_Id { public static function for_order( $order ): string { return (string) ( $order->meta['_pc_customer_id'] ?? '' ); } }
 }
 namespace {
 	require dirname( __DIR__ ) . '/includes/class-series-sync.php';
@@ -132,11 +133,18 @@ namespace {
 		105 => new WC_Order( 105, 'cancelled', '20.00', $t0 + 40 ),
 	);
 	$s = R::summary( $GLOBALS['orders'][101] );
-	check( 'summary fields are exactly the contract', array( 'store_order_id', 'order_number', 'status', 'paid', 'is_test', 'currency', 'total_cents', 'created_at', 'paid_at', 'order_day', 'series_id', 'email_hash', 'utm_source', 'ad_id' ) === array_keys( $s ) );
+	check( 'summary fields are exactly the contract', array( 'store_order_id', 'order_number', 'status', 'paid', 'is_test', 'currency', 'total_cents', 'created_at', 'paid_at', 'order_day', 'series_id', 'email_hash', 'utm_source', 'ad_id', 'customer_id' ) === array_keys( $s ) );
 	check( 'summary values', 101 === $s['store_order_id'] && true === $s['paid'] && false === $s['is_test'] && 14999 === $s['total_cents'] && $t0 + 100 === $s['paid_at'] && gmdate( 'Y-m-d', $t0 ) === $s['order_day'] && 3 === $s['series_id'] );
 	check( 'email only as a hash of the lower-cased address', hash( 'sha256', 'buyer@example.test' ) === $s['email_hash'] && false === strpos( json_encode( $s ), 'xample' ) );
 	check( 'order without series meta uses the store series', 3 === R::summary( $GLOBALS['orders'][102] )['series_id'] );
 	check( 'test order flagged', true === R::summary( $GLOBALS['orders'][104] )['is_test'] );
+	$known = new WC_Order( 107, 'processing', '30.00', $t0 + 60, $t0 + 360, 'k@example.test', array( '_pc_customer_id' => 'C0ABCDEF' ) );
+	check( 'customer id is reported when the store has one', 'C0ABCDEF' === R::summary( $known )['customer_id'] && '' === R::summary( $GLOBALS['orders'][101] )['customer_id'] );
+	$hang = new WC_Order( 106, 'processing', '30.00', $t0 + 50, $t0 + 350, 'h@example.test', array( '_pc_pp_ref' => 'hang-161188301' ) );
+	check( 'hang- number is only the display number; the id stays the WooCommerce order id', 'hang-161188301' === R::summary( $hang )['order_number'] && 106 === R::summary( $hang )['store_order_id'] );
+	$renumbered = clone $hang;
+	$renumbered->meta['_pc_pp_ref'] = 'hang-161188302';
+	check( 'a new payment attempt changes the fingerprint so the order is reported again', R::fingerprint( R::summary( $hang ) ) !== R::fingerprint( R::summary( $renumbered ) ) );
 
 	// ---- 上报：付过款的才报；成功后记指纹；内容没变不再报 ----
 	$first = R::report( array( 101, 102, 103, 104, 105, 999 ) );
