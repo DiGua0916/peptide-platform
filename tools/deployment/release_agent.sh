@@ -33,7 +33,8 @@ case "$cmd" in
   stage)
     zip="${1:?缺少发布包}"; label="${2:?缺少版本标签}"; label_ok "$label"; [ -f "$zip" ] || die "找不到 $zip"
     dir="$STATE/$label"; rm -rf "$dir"; mkdir -p "$dir/src"; chmod 700 "$STATE" "$dir"
-    unzip -q "$zip" -d "$dir/src"
+    # 前台机没有装 unzip（2026-11-13 上线前只读探查发现）：没有就用 python3 自带的解包，不为此在生产上装软件。
+    if command -v unzip >/dev/null 2>&1 && [ -z "${RELEASE_NO_UNZIP:-}" ]; then unzip -q "$zip" -d "$dir/src"; else python3 -c 'import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' "$zip" "$dir/src"; fi
     [ -d "$dir/src/wp-content" ] || die "发布包里没有 wp-content。"
     bad=$(find "$dir/src" -name '*.php' -print0 | xargs -0 -n 40 -P 2 sh -c 'for f; do php -l "$f" >/dev/null 2>&1 || echo "$f"; done' sh | head -5)
     [ -z "$bad" ] || die "发布包有 PHP 语法错误，没有替换任何文件：$bad"
