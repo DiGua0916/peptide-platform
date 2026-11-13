@@ -581,3 +581,8 @@
 - 6 家店 `uploads/peptide-geoip/dbip-city-lite.mmdb` 都软链接到这一份（uploads 是持久目录），和之前复制的 GeoLite2-ASN 一起用。
 - 验证：`Ip_Network::lookup` 主店 155.116.153.10 → Texas / Houston / PANDG；子店 8.8.8.8 → California / Mountain View / GOOGLE。地区在一次访问开始时查，所以之前的访问不会补；之后的新访问都会带州和城市。
 - 许可：DB-IP Lite 是 CC BY 4.0，需要注明 “IP Geolocation by DB-IP”（只在后台显示，影响不大）。库每月更新一次，目前不自动更新；要更新时下载新月份文件、改软链接即可。
+
+### 2026-11-13 11:25 UTC DB-IP 城市库每月自动更新
+- 店主要求每月自动更新。web 主机装 `/usr/local/sbin/vialcove-dbip-update`（源码 `tools/deployment/geoip/dbip-city-update.sh`）+ systemd `vialcove-dbip-update.service` / `.timer`（每天 04:17 UTC 随机延迟 30 分钟，Persistent）。
+- 逻辑：当月文件已在用 → 不做事；DB-IP 没发布当月 → 第二天再看；下载后检查 gzip、> 50 MB、元数据 DBIP-City-Lite → 换 `/srv/vialcove-data/geoip/dbip-city-lite.mmdb` 软链接 → 主店查 8.8.8.8 必须有城市，否则立刻换回上个月并失败退出；只留当月和上月两份。日志在 `journalctl -u vialcove-dbip-update`。
+- 实测：服务运行（已是当月，不动）；手动切到 2026-10（下载 127 MB、查询 Mountain View）再切回 2026-11；放一个假文件 2099-01 → 查询失败 → 自动换回 2026-11、退出码 1，假文件已删。现在用 2026-11，磁盘上留 2026-10 / 2026-11。
