@@ -108,6 +108,7 @@ final class Admin_Menus {
 		add_filter( 'woocommerce_order_actions', array( self::class, 'buyer_no_actions' ), 999 );
 		add_action( 'add_meta_boxes', array( self::class, 'buyer_order_boxes' ), 999 );
 		add_action( 'admin_head', array( self::class, 'buyer_order_styles' ) );
+		add_action( 'admin_head', array( self::class, 'buyer_order_detail_styles' ) );
 		add_action( 'admin_notices', array( self::class, 'buyer_order_notice' ) );
 		add_action( 'admin_footer', array( self::class, 'buyer_release_order_lock' ), 1 );
 		add_filter( 'screen_options_show_screen', array( self::class, 'buyer_no_screen_options' ) );
@@ -224,6 +225,35 @@ final class Admin_Menus {
 			. '#woocommerce-order-notes .add_note,#woocommerce-order-notes .delete_note,.wc-order-preview .wc-action-button-group{display:none!important}'
 			. '#order_data select,#order_data input,#order_data textarea,#order_data .select2-container{pointer-events:none}'
 			. '</style>' . "\n";
+	}
+
+	/** 当前是投手在看订单详情页（Admin\Order_Detail_Page，admin.php?page=pc-order）。 */
+	private static function buyer_on_order_detail(): bool {
+		return \PeptideCore\Staff_Buyer::current() && \PeptideCore\Staff_Buyer::PAGE_ORDER === self::current_page();
+	}
+
+	/**
+	 * 订单详情页对投手只读。不改页面本身的输出，只把写操作的入口藏起来：订单复制、退款、作废、编辑、发货、
+	 * 手动发送邮件、卖家备注的保存、标签的增删；“结账成功页 / 订单追踪页”的链接也不显示。
+	 * 真正的限制在服务端：这些入口指向的 admin-post 动作和页面都不在投手的名单里（Staff_Buyer::classify()），
+	 * 点了也是 403；这里只是不让投手看到用不了的按钮。
+	 */
+	public static function buyer_order_detail_styles(): void {
+		if ( ! self::buyer_on_order_detail() ) {
+			return;
+		}
+		echo '<style id="pc-buyer-order-detail-readonly">'
+			. '.pc-od-head__l .pc-od-link,.pc-od-head__r .pc-od-btn,.pc-od-head__r form,.pc-od-ohead__links,'
+			. '.pc-od a[href*="pc_native=1"],.pc-od a[href*="page=pc-mail"],.pc-od a[href*="page=pc-manual-order"],'
+			. '.pc-od-note button,.pc-od-tag button,.pc-od-tagform{display:none!important}'
+			. '.pc-od .pc-od-mail a[href]{display:inline!important;pointer-events:none;color:inherit;text-decoration:none}'
+			. '.pc-od-note textarea{pointer-events:none;background:#f6f7f7}'
+			. '</style>' . "\n";
+		echo '<script id="pc-buyer-order-detail-readonly-js">document.addEventListener("DOMContentLoaded",function(){'
+			. 'document.querySelectorAll(".pc-od form").forEach(function(f){f.addEventListener("submit",function(e){e.preventDefault();e.stopImmediatePropagation();},true);});'
+			. 'document.querySelectorAll(".pc-od-note textarea").forEach(function(el){el.readOnly=true;});'
+			. 'document.querySelectorAll(".pc-od .pc-od-mail a[href]").forEach(function(a){a.removeAttribute("href");});'
+			. '});</script>' . "\n";
 	}
 
 	public static function buyer_order_notice(): void {
