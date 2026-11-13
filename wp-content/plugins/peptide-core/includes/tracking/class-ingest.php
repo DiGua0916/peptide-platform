@@ -69,6 +69,7 @@ final class Ingest {
 			'cart_view'               => array( 'source' => 'str:40' ),
 			'checkout_view'           => array(),
 			'visibility_change'       => self::STATE,
+			'scroll'                  => array( 'depth' => 'int' ), // 2026-11-13：滚动深度档位（25 / 50 / 75 / 100）
 			'heartbeat'               => self::STATE,
 			'page_exit'               => array_merge( array( 'persisted' => 'bool' ), self::STATE ),
 			'variant_select'          => array( 'product_id' => 'int', 'attribute' => 'str:60', 'value' => 'str:120' ),
@@ -475,7 +476,7 @@ final class Ingest {
 			}
 			if ( isset( $data['attribution'] ) ) {
 				if ( 1 === (int) $inserted ) {
-					$facts = Visit_Facts::for_request( $data['attribution'] );
+					$facts = Visit_Facts::for_request( $data['attribution'], $data['page_context'] ?? null );
 					$attempts[ $c['index'] ] = Attribution::capture( $visitor['id'], array( 'event_uid' => $c['event_id'], 'visitor_id' => $visitor['id'], 'visit_id' => $visit, 'path' => $page['path'], 'received_ms' => $now_ms ), $data['attribution'], $facts );
 					if ( 'captured' === $attempts[ $c['index'] ]['code'] ) { Visit_Facts::after_capture( $visitor['id'], $visit, $facts, $now_ms ); }
 				} else {
@@ -555,7 +556,7 @@ final class Ingest {
 		$data = json_decode( (string) $saved['data'], true );
 		if ( ! is_array( $data ) || ! isset( $data['attribution'] ) ) { return Attribution::receipt( $incoming['event_id'], 'rejected', 'duplicate_without_capture' ); }
 		if ( 'page_view' !== $saved['type'] || 'client' !== $saved['source'] || $saved['path'] !== $incoming['page']['path'] || $data['attribution'] !== $incoming['data']['attribution'] ) { return Attribution::receipt( $incoming['event_id'], 'rejected', 'duplicate_payload_mismatch' ); }
-		$facts   = Visit_Facts::for_request( $data['attribution'] );
+		$facts   = Visit_Facts::for_request( $data['attribution'], $data['page_context'] ?? null );
 		$receipt = Attribution::capture( $visitor, $saved, $data['attribution'], $facts );
 		if ( 'captured' === $receipt['code'] ) { Visit_Facts::after_capture( $visitor, (int) $saved['visit_id'], $facts, (int) $saved['received_ms'] ); }
 		return $receipt;
