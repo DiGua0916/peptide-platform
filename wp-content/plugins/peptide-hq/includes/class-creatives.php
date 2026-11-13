@@ -347,6 +347,11 @@ CREATE TABLE {$vocab} (
 				return $fail();
 			}
 		}
+		if ( ! $records ) {
+			// 空日报不清已有数据（2026-11-13 修）：店铺追踪没就绪或查询出错时会发来空日报，以前会把这一天整片清掉。
+			$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			return 0;
+		}
 		$existing = $wpdb->get_col( $wpdb->prepare( "SELECT code FROM {$t} WHERE site_id = %d AND day = %s", $site_id, $day ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		if ( ! is_array( $existing ) ) {
 			return $fail();
@@ -882,7 +887,7 @@ CREATE TABLE {$vocab} (
 
 	/**
 	 * 整理每日全店花费（纯函数）：{"days":[{"day":"2026-11-11","spend_cents":12345}]}，最多 62 天。
-	 * 同一天出现多次时取最后一个；金额为 0 表示这一天没花费（总后台删掉这一行）。
+	 * 同一天出现多次时取最后一个；金额为 0 表示这一天没花费（总后台记 0，不删行；手填过的日期不覆盖）。
 	 *
 	 * @param mixed $p
 	 * @return array<string,int>|null 日期 => 美分；格式不对时为 null
@@ -913,12 +918,17 @@ CREATE TABLE {$vocab} (
 			return new \WP_Error( 'pchq_orders_db', 'The spend table is not ready yet.', array( 'status' => 503 ) );
 		}
 		$saved = array();
+		$kept  = array(); // 总后台已有手填花费的日期：不覆盖（2026-11-13）
 		foreach ( $days as $day => $cents ) {
+			if ( 'manual' === Orders::spend_source( $site_id, $day ) ) {
+				$kept[] = $day;
+				continue;
+			}
 			if ( Orders::set_spend( $site_id, $day, $cents, 0, 'csv' ) ) {
 				$saved[] = $day;
 			}
 		}
-		return array( 'saved' => $saved );
+		return array( 'saved' => $saved, 'kept_manual' => $kept );
 	}
 
 	/**

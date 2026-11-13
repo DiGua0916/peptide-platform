@@ -91,7 +91,7 @@ namespace {
 			}
 			if ( str_contains( $sql, 'INSERT IGNORE INTO fixture_tabs' ) ) { $this->tabs[$a[2]] = $this->tabs[$a[2]] ?? array( 'visitor_id' => $a[0], 'visit_id' => $a[1], 'tab_id' => $a[2], 'last_signal_ms' => $a[3] ); return 1; }
 			if ( str_contains( $sql, 'UPDATE fixture_tabs' ) ) { $this->tabs[$a[3]]['visit_id'] = $a[0]; $this->tabs[$a[3]]['last_signal_ms'] = max( $this->tabs[$a[3]]['last_signal_ms'], $a[1] ); return 1; }
-			if ( str_contains( $sql, 'UPDATE fixture_visits' ) ) { $id = $a[count( $a ) - 1]; $this->visits[$id]['events'] += $a[0]; if ( count( $a ) >= 4 ) { $this->visits[$id]['pageviews'] += $a[1]; } return 1; }
+			if ( str_contains( $sql, 'UPDATE fixture_visits' ) ) { $id = $a[count( $a ) - 1]; $this->visits[$id]['events'] += $a[0]; if ( str_contains( $sql, 'pageviews = pageviews +' ) ) { $this->visits[$id]['pageviews'] += $a[1]; } return 1; }
 			if ( str_contains( $sql, 'UPDATE fixture_visitors' ) ) { return 1; }
 			throw new RuntimeException( 'Unexpected mutation shape in pure spy' );
 		}

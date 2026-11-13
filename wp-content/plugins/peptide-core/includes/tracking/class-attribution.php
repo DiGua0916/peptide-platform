@@ -22,7 +22,7 @@ final class Attribution {
 	private const EXTRA_MAX = array( 'utm_campaign' => 120, 'utm_term' => 120, 'utm_content' => 120, 'placement' => 64, 'ad_name' => 255, 'cr' => 16 );
 
 	/** v5 访问表里由 capture() 写入的列（来自 Visit_Facts::columns()）。 */
-	public const FACT_COLUMNS = array( 'utm_campaign', 'utm_term', 'utm_content', 'placement', 'ad_name', 'creative_code', 'has_fbclid', 'source_class', 'params_valid', 'ip', 'geo_region', 'geo_city', 'geo_lat', 'geo_lon', 'isp', 'asn', 'ip_type', 'timezone', 'language', 'in_app', 'ua', 'os', 'os_version', 'device_model' );
+	public const FACT_COLUMNS = array( 'utm_campaign', 'utm_term', 'utm_content', 'placement', 'ad_name', 'creative_code', 'has_fbclid', 'source_class', 'params_valid', 'ip', 'geo_region', 'geo_city', 'geo_lat', 'geo_lon', 'isp', 'asn', 'ip_type', 'timezone', 'language', 'in_app', 'ua', 'os', 'os_version', 'device_model', 'geo_country', 'screen' );
 
 	/** 白名单的固定顺序（= Contract::PARAMS）。 */
 	public static function params(): array {

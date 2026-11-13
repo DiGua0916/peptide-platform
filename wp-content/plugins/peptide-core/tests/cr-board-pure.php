@@ -8,7 +8,7 @@
 define( 'ABSPATH', __DIR__ . '/' );
 $inc = dirname( __DIR__ ) . '/includes';
 require $inc . '/class-hq-connector.php';
-foreach ( array( 'contract', 'intent-tiers', 'board', 'export', 'daily-report', 'module', 'board-page' ) as $f ) {
+foreach ( array( 'contract', 'intent-tiers', 'audience', 'board', 'export', 'daily-report', 'module', 'board-page' ) as $f ) {
 	require $inc . '/creatives/class-' . $f . '.php';
 }
 
@@ -248,7 +248,7 @@ $ds  = Export::dataset( array( 'name' => 'all', 'label' => '全量', 'from_day' 
 $exp = Export::build( array( 'id' => '20261111-093000-0123456789ab', 'kind' => 'checkpoint', 'label' => '累计 100 访客', 'checkpoints' => array( 'all:100' ), 'generated_at' => 1, 'tz' => $tz, 'version' => 'v1' ), $vers, array( $ds ) );
 check( 'export: top-level fields', array( 'format', 'id', 'kind', 'label', 'checkpoints', 'generated_at', 'site', 'tz', 'version', 'min_valid', 'intent_tiers', 'version_log', 'datasets' ) === array_keys( $exp ) );
 check( 'export: version log sorted', array( 'v1', 'v2', 'v3' ) === array_column( $exp['version_log'], 'ver' ) );
-check( 'export: dataset sections', array( 'name', 'label', 'range', 'attribution', 'totals', 'intent', 'untagged', 'audience', 'creatives', 'attributes' ) === array_keys( $ds ) );
+check( 'export: dataset sections', array( 'name', 'label', 'range', 'attribution', 'totals', 'intent', 'untagged', 'audience', 'creatives', 'attributes', 'profiles' ) === array_keys( $ds ) );
 check( 'export: no visitor ids leak into the export', ! str_contains( json_encode( $exp ), 'visitor_ids' ) );
 check( 'export: creative row has code + thumb', 'C0001' === $ds['creatives'][0]['code'] && 'https://s.test/1.jpg' === $ds['creatives'][0]['thumb'] );
 check( 'export: attribute row split', 'hook' === $ds['attributes'][0]['attr'] );
@@ -256,8 +256,9 @@ check( 'export: intent totals', 5 === array_sum( $ds['intent'] ) );
 $csv = Export::csv_rows( $exp );
 check( 'csv: header', Export::CSV_HEAD === $csv[0] );
 check( 'csv: every row same width', 1 === count( array_unique( array_map( 'count', $csv ) ) ) );
-check( 'csv: sections present', array( 'version_log', 'total', 'untagged', 'creative', 'attribute' ) === array_values( array_unique( array_filter( array_column( $csv, 1 ), static fn( $s ) => ! str_starts_with( $s, 'audience' ) && 'section' !== $s ) ) ) );
+check( 'csv: sections present', array( 'version_log', 'total', 'untagged', 'creative', 'attribute' ) === array_values( array_unique( array_filter( array_column( $csv, 1 ), static fn( $s ) => ! str_starts_with( $s, 'audience' ) && ! str_starts_with( $s, 'profile:' ) && 'section' !== $s ) ) ) );
 check( 'csv: audience rows', in_array( 'audience:device', array_column( $csv, 1 ), true ) );
+check( 'csv: per-creative profile rows', in_array( 'profile:ALL:os', array_column( $csv, 1 ), true ) );
 check( 'csv: null -> blank cell', in_array( '', array_column( array_values( array_filter( $csv, static fn( $r ) => 'UNREG' === $r[2] ) ), 25 ), true ) );
 check( 'csv: formula injection neutralised', "'=1+1" === Export::text( '=1+1' ) && "'-x" === Export::text( '-x' ) && 'C0001' === Export::text( 'C0001' ) );
 
@@ -338,6 +339,12 @@ $ranked = Board::rank_visitors( array( 10, 7, 8, 9, 7 ), $amt, array( 8 => 'Jane
 check( 'rank: highest amount first, then by id, deduped', array( 8, 7, 9, 10 ) === array_column( $ranked, 'id' ) );
 check( 'rank: name kept when known', 'Jane Doe' === $ranked[0]['name'] && '' === $ranked[1]['name'] && 12900 === $ranked[0]['cents'] );
 check( 'rank: limit applies after sorting', array( 8 ) === array_column( Board::rank_visitors( array( 10, 9, 8 ), $amt, array(), 1 ), 'id' ) );
+// ---------- 复制广告编号（2026-11-13） ----------
+$cat = array( '120210000001101' => array( 'code' => 'C0001', 'adset_id' => '120210000000011' ), '120210000001102' => array( 'code' => 'C0001', 'adset_id' => '120210000000012' ), '120210000002101' => array( 'code' => 'C0002', 'adset_id' => '120210000000011' ), '{{ad.id}}' => array( 'code' => 'C0001', 'adset_id' => '120210000000011' ) );
+check( 'ad ids: creative -> its ads, preview junk skipped', array( '120210000001101', '120210000001102' ) === Board::ad_ids_for( 'creative', 'C0001', $cat ) );
+check( 'ad ids: ad row -> itself', array( '120210000002101' ) === Board::ad_ids_for( 'ad', 'ad:120210000002101', $cat ) );
+check( 'ad ids: adset -> ads in it', array( '120210000001101', '120210000002101' ) === Board::ad_ids_for( 'adset', 'adset:120210000000011', $cat ) );
+check( 'ad ids: unknown creative -> none', array() === Board::ad_ids_for( 'creative', 'C0099', $cat ) );
 check( 'filters: defaults', 'creative' === $fdef['dim'] && 'first' === $fdef['mode'] && '2026-11-10' === $fdef['to'] && '2026-11-04' === $fdef['from'] && '' === $fdef['ver'] );
 $fbad = Board_Page::filters( array( 'dim' => 'x', 'mode' => array(), 'from' => '2026-11-09', 'to' => '2026-11-01', 'ver' => '../v1' ), $tz, $now2 );
 check( 'filters: bad input falls back', 'creative' === $fbad['dim'] && 'first' === $fbad['mode'] && '2026-11-04' === $fbad['from'] && '' === $fbad['ver'] );

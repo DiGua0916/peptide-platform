@@ -243,7 +243,14 @@ final class Daily_Report {
 
 	/** 生成并发送一天。 */
 	public static function send( string $day, string $tz ): array {
+		// 追踪表或素材表没就绪、或读数据时出错：不上报（2026-11-13 修：以前会发空日报，总后台把这一天清掉），稍后重试。
+		if ( ! \PeptideCore\Tracking\Schema::installed() || ! Schema::installed() ) {
+			return array( 'outcome' => 'retry', 'code' => null, 'error' => 'not_ready' );
+		}
 		$payload = self::payload( $day, $tz );
+		if ( false === $payload ) {
+			return array( 'outcome' => 'retry', 'code' => null, 'error' => 'query_failed' );
+		}
 		if ( null === $payload ) {
 			return array( 'outcome' => 'drop', 'code' => null, 'error' => 'payload_invalid' );
 		}
@@ -259,13 +266,16 @@ final class Daily_Report {
 		return array( 'outcome' => self::outcome( $code ), 'code' => $code, 'error' => 200 === $code ? '' : 'HTTP ' . $code . $msg );
 	}
 
-	/** 一天的请求体（不含 nonce）。 */
-	public static function payload( string $day, string $tz ): ?array {
+	/** 一天的请求体（不含 nonce）。读数据出错时为 false（不要发）。 @return array|null|false */
+	public static function payload( string $day, string $tz ) {
 		$ms = Board::range_ms( $day, $day, $tz );
 		if ( null === $ms ) {
 			return null;
 		}
 		$data = Board::load( $ms, $day, $day );
+		if ( ! empty( $data['error'] ) ) {
+			return false;
+		}
 		$agg  = Board::aggregate( $data, array( 'mode' => 'last', 'dim' => 'creative', 'from_ms' => $ms[0], 'to_ms' => $ms[1], 'tz' => $tz ) );
 		$rows = self::report_rows( $agg['rows'], $data['creatives'] );
 		if ( count( $rows ) > Contract::MAX_ROWS ) {
