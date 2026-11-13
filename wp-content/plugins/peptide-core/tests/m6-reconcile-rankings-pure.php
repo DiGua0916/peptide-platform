@@ -132,39 +132,39 @@ namespace {
 	m6_check( 'shadow: the whole ranking payload is byte-for-byte what it was with the switch off', json_encode( $off ) === json_encode( $shadow ) );
 	$logged = array_values( array_filter( Sw::discard_pending(), static fn( array $i ): bool => 'reports.paid_orders' === $i['metric'] ) );
 	m6_check( 'shadow: one comparison per period', 2 === count( $logged ) );
-	m6_check( 'shadow: today — B only under the old rule, C and F only under the new one', array( '2', '3,6' ) === array_column( $logged[0]['diffs'], 'metrics' ) );
-	m6_check( 'shadow: yesterday — C only under the old rule', array( 'only_legacy' ) === array_column( $logged[1]['diffs'], 'path' ) && '3' === $logged[1]['diffs'][0]['metrics'] );
+	m6_check( 'shadow: today — B is counted by both rules now (version 2, order date); only F (refunded after paying) is new', array( '6' ) === array_column( $logged[0]['diffs'], 'metrics' ) && array( 'only_metrics' ) === array_column( $logged[0]['diffs'], 'path' ) );
+	m6_check( 'shadow: yesterday — C is counted by both rules now, nothing differs', array() === $logged[1]['diffs'] );
 	$why = Reconcile::orders( 100, 200 );
 	ksort( $why['reasons'] );
-	m6_check( 'shadow: every order that differs has a reason', $why['explained'] && array( 'created_outside_range', 'paid_outside_range', 'refunded_status', 'test_order_rule' ) === array_keys( $why['reasons'] ) && array( 3 ) === $why['reasons']['created_outside_range']['ids'] && array( 2 ) === $why['reasons']['paid_outside_range']['ids'] && array( 6 ) === $why['reasons']['refunded_status']['ids'] && array( 5 ) === $why['reasons']['test_order_rule']['ids'] );
+	m6_check( 'shadow: every order that differs has a reason', $why['explained'] && array( 'refunded_status', 'test_order_rule' ) === array_keys( $why['reasons'] ) && array( 6 ) === $why['reasons']['refunded_status']['ids'] && array( 5 ) === $why['reasons']['test_order_rule']['ids'] );
 
-	// ---------- 开：时间段内付款的、算数的订单 ----------
+	// ---------- 开：时间段内下单、收到过支付成功、算数的订单（口径版本 2） ----------
 	Sw::set( 'on' );
 	$on     = $summary();
 	$orders = Metrics::orders( 100, 200 );
-	m6_check( 'on: Data\Metrics on this data — A, C and F', 3 === $orders['orders'] && 8000 === $orders['sales_cents'] && 1 === $orders['test_orders'] );
-	m6_check( 'case 12 on: payment methods add up to the order count of Data\Metrics', array( 'card' => array( 2, 0 ), 'paypal' => array( 1, 0 ) ) === $table( $on, 'payment_methods' ) && $orders['orders'] === array_sum( array_column( $table( $on, 'payment_methods' ), 0 ) ) );
+	m6_check( 'on: Data\Metrics on this data — A, B and F (placed today; C was placed yesterday)', 3 === $orders['orders'] && 7000 === $orders['sales_cents'] && 1 === $orders['test_orders'] );
+	m6_check( 'case 12 on: payment methods add up to the order count of Data\Metrics', array( 'card' => array( 3, 0 ), 'paypal' => array( 0, 1 ) ) === $table( $on, 'payment_methods' ) && $orders['orders'] === array_sum( array_column( $table( $on, 'payment_methods' ), 0 ) ) );
 	m6_check( 'case 12 on: the method of an order created earlier still gets its title', 'PayPal' === array_column( $on['tables']['payment_methods']['rows'], 'label', 'key' )['paypal'] );
-	m6_check( 'case 12 on: order countries — the order paid tomorrow is gone, yesterday has no paid order', array( 'US' => array( 3, 0 ) ) === $table( $on, 'order_countries' ) );
-	m6_check( 'case 12 on: buyers by country', array( 'US' => array( 2, 0 ) ) === $table( $on, 'customer_countries' ) );
+	m6_check( 'case 12 on: order countries — B (paid tomorrow) stays today, C stays yesterday', array( 'US' => array( 2, 1 ), 'CA' => array( 1, 0 ) ) === $table( $on, 'order_countries' ) );
+	m6_check( 'case 12 on: buyers by country', array( 'US' => array( 1, 1 ) ) === $table( $on, 'customer_countries' ) );
 	m6_check( 'case 12 on: coupons', array( 'save10' => array( 1, 0 ) ) === $table( $on, 'coupons' ) );
-	m6_check( 'case 12 on: products by units — no test order, no unpaid-today order', array( '8' => array( 3, 0 ), '7' => array( 2, 0 ), '9' => array( 1, 0 ) ) === $table( $on, 'products_units' ) );
-	m6_check( 'case 12 on: products by sales', array( '7' => array( 40.0, 0 ), '8' => array( 30.0, 0 ), '9' => array( 10.0, 0 ) ) === $table( $on, 'products_sales' ) );
-	m6_check( 'case 12 on: categories', array( '70' => array( 6, 0 ) ) === $table( $on, 'categories_units' ) && array( '70' => array( 80.0, 0 ) ) === $table( $on, 'categories_sales' ) );
-	m6_check( 'case 12 on: order browsers and order source count the same three orders', array( 'unknown' => array( 3, 0 ) ) === $table( $on, 'order_browsers' ) && array( 'fb' => array( 3, 0 ) ) === $table( $on, 'order_source' ) && array( 11, 13, 16 ) === $visits( 0 ) && array() === $visits( 1 ) );
+	m6_check( 'case 12 on: products by units — no test order, no unpaid order', array( '7' => array( 3, 0 ), '9' => array( 1, 0 ), '8' => array( 0, 3 ) ) === $table( $on, 'products_units' ) );
+	m6_check( 'case 12 on: products by sales', array( '7' => array( 60.0, 0 ), '9' => array( 10.0, 0 ), '8' => array( 0, 30.0 ) ) === $table( $on, 'products_sales' ) );
+	m6_check( 'case 12 on: categories', array( '70' => array( 4, 3 ) ) === $table( $on, 'categories_units' ) && array( '70' => array( 70.0, 30.0 ) ) === $table( $on, 'categories_sales' ) );
+	m6_check( 'case 12 on: order browsers and order source count the same three orders', array( 'unknown' => array( 3, 1 ) ) === $table( $on, 'order_browsers' ) && array( 'fb' => array( 3, 1 ) ) === $table( $on, 'order_source' ) && array( 11, 12, 16 ) === $visits( 0 ) && array( 13 ) === $visits( 1 ) );
 	m6_check( 'case 13 on: attempts stay with the day the order was placed; 3 of 5 succeeded', array( 'card' => array( 60.0, null ), 'paypal' => array( null, 100.0 ) ) === $table( $on, 'payment_success' ) );
 
 	// ---------- 用例 14：选了入口域名（只有访问 11、13 属于这个域名） ----------
 	Entry_Domain::$visits = array( 11, 13 );
 	$domain_on            = $summary( 'shop.test' );
-	m6_check( 'case 14 on: paid tables are filtered by the entry domain after switching to paid time', array( 'card' => array( 1, 0 ), 'paypal' => array( 1, 0 ) ) === $table( $domain_on, 'payment_methods' ) && array( 'US' => array( 2, 0 ) ) === $table( $domain_on, 'order_countries' ) && 'shop.test' === $domain_on['entry_domain'] );
+	m6_check( 'case 14 on: paid tables are filtered by the entry domain', array( 'card' => array( 1, 0 ), 'paypal' => array( 0, 1 ) ) === $table( $domain_on, 'payment_methods' ) && array( 'US' => array( 1, 1 ) ) === $table( $domain_on, 'order_countries' ) && 'shop.test' === $domain_on['entry_domain'] );
 	m6_check( 'case 14 on: the success rate only sees attempts of that domain', array( 'card' => array( 100.0, null ), 'paypal' => array( null, 100.0 ) ) === $table( $domain_on, 'payment_success' ) );
 	Sw::set( 'off' );
 	Sw::discard_pending();
 	$domain_off = $summary( 'shop.test' );
 	m6_check( 'case 14 off: the old rule with the same filter', array( 'card' => array( 1, 0 ), 'paypal' => array( 0, 1 ) ) === $table( $domain_off, 'payment_methods' ) );
 	Sw::set( 'shadow' );
-	m6_check( 'case 14 shadow: identical to off, and the comparison is still store-wide', json_encode( $domain_off ) === json_encode( $summary( 'shop.test' ) ) && array( '2', '3,6' ) === array_column( array_values( array_filter( Sw::discard_pending(), static fn( array $i ): bool => 'reports.paid_orders' === $i['metric'] ) )[0]['diffs'], 'metrics' ) );
+	m6_check( 'case 14 shadow: identical to off, and the comparison is still store-wide', json_encode( $domain_off ) === json_encode( $summary( 'shop.test' ) ) && array( '6' ) === array_column( array_values( array_filter( Sw::discard_pending(), static fn( array $i ): bool => 'reports.paid_orders' === $i['metric'] ) )[0]['diffs'], 'metrics' ) );
 
 	// ---------- 换回关：和最开始一模一样 ----------
 	Sw::set( 'off' );

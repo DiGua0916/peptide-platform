@@ -20,16 +20,16 @@ m6_check( 'money converts cents back', 19.99 === Metrics::money( 1999 ) && 0.0 =
 m6_check( 'rate is a percentage with two decimals', 7.14 === Metrics::rate( 1, 14 ) && 100.0 === Metrics::rate( 3, 3 ) && 0.0 === Metrics::rate( 0, 5 ) );
 m6_check( 'rate without a denominator is null, never zero', null === Metrics::rate( 1, 0 ) && null === Metrics::rate( 0, 0 ) );
 
-// ---------- 订单：时间段 [100, 200) ----------
+// ---------- 订单：时间段 [100, 200)。口径版本 2：按下单时间归属（和线上一致） ----------
 m6_order( 1, 'processing', 20.0, 150, 150, 8, 18 );                       // 正常已付款。
-$o2 = m6_order( 2, 'completed', 35.5, 160, 90, 9, 19 );                    // 之前创建、时间段内付款；已标记退款 5.50。
+$o2 = m6_order( 2, 'completed', 35.5, 160, 90, 9, 19 );                    // 之前下单、时间段内付款：不算在这一段（算在下单那段）；已标记退款 5.50。
 $o2->meta['_pc_refund_cents'] = 550;
-m6_order( 3, 'processing', 10.0, 250, 150 );                              // 时间段内创建、之后才付款：不算在这一段。
+m6_order( 3, 'processing', 10.0, 250, 150 );                              // 时间段内下单、之后才付款：算在这一段。
 m6_order( 4, 'processing', 1.0, 150, 150, 11, 21 )->ones = true;           // 收件信息全 1 的测试单。
 m6_order( 5, 'refunded', 40.0, 170, 150 )->meta['_pc_refund_cents'] = 4000; // 付过款、全额标记退款：算订单，销售额为 0。
 m6_order( 6, 'refunded', 15.0, null, 150 );                               // 标成已退款但从没付过款：不算。
 m6_order( 7, 'on-hold', 99.0, null, 150 );                                // 保留（待确认）：不算。
-m6_order( 8, 'processing', 5.0, null, 120, 99, 98 );                      // 已付款状态但没有付款时间：按创建时间算。
+m6_order( 8, 'processing', 5.0, null, 120, 99, 98 );                      // 已付款状态但没有付款时间：照样按下单时间算。
 m6_order( 9, 'processing', 7.0, 150, 150 )->legacy_test = true;            // 测试付款方式 / 演示商品。
 m6_order( 10, 'pending', 50.0, null, 150, 12, 22 );                       // 待付款。
 
@@ -51,11 +51,14 @@ m6_check( 'WooCommerce refunds are reported for reconciliation but never subtrac
 
 $ids = array_column( Metrics::order_facts( 100, 200 ), 'id' );
 sort( $ids );
-m6_check( 'orders belong to the period they were paid in', array( 1, 2, 4, 5, 8, 9 ) === $ids );
+m6_check( 'orders belong to the period they were placed in (version 2, as in production)', array( 1, 3, 4, 5, 8, 9 ) === $ids );
+m6_check( 'the period is read by order date, not by payment date', array() === array_filter( $GLOBALS['m6_order_queries'], static fn( $q ) => isset( $q['date_paid'] ) ) );
+m6_check( 'the paid time in the order fact is still the payment time (the HQ order report uses it)', 250 === Metrics::order_fact( $GLOBALS['m6_orders'][3] )['paid_at'] && 150 === Metrics::order_at( $GLOBALS['m6_orders'][3] ) );
 $orders = Metrics::orders( 100, 200 );
 m6_check( 'orders exclude both kinds of test orders', 4 === $orders['orders'] && 2 === $orders['test_orders'] );
-m6_check( 'sales = paid amount - marked refunds', 10050 === $orders['gross_cents'] && 4550 === $orders['refund_cents'] && 5500 === $orders['sales_cents'] );
-m6_check( 'average order value = sales / orders', 1375 === $orders['aov_cents'] );
+m6_check( 'sales = paid amount - marked refunds', 7500 === $orders['gross_cents'] && 4000 === $orders['refund_cents'] && 3500 === $orders['sales_cents'] );
+m6_check( 'average order value = sales / orders', 875 === $orders['aov_cents'] );
+m6_check( 'the metrics version says the order date rule', 2 === Metrics::VERSION );
 m6_check( 'no orders gives zero, not a division error', array( 'orders' => 0, 'gross_cents' => 0, 'refund_cents' => 0, 'sales_cents' => 0, 'aov_cents' => 0, 'test_orders' => 0 ) === Metrics::sum_orders( array() ) );
 m6_check( 'empty or reversed period reads nothing', array() === Metrics::order_facts( 200, 100 ) && 0 === Metrics::visitors( 200, 100 ) );
 $before = count( $GLOBALS['m6_order_queries'] );
@@ -170,12 +173,12 @@ Recovery_Items::$fail = false;
 
 // ---------- 汇总 ----------
 $summary = Metrics::summary( 100, 200 );
-m6_check( 'summary carries the seven metrics', 14 === $summary['visitors'] && 7.14 === $summary['conversion_rate'] && 4 === $summary['orders'] && 5500 === $summary['sales_cents'] && 1375 === $summary['aov_cents'] && 5 === $summary['abandoned'] && 50.0 === $summary['recall_rate'] );
+m6_check( 'summary carries the seven metrics', 14 === $summary['visitors'] && 7.14 === $summary['conversion_rate'] && 4 === $summary['orders'] && 3500 === $summary['sales_cents'] && 875 === $summary['aov_cents'] && 5 === $summary['abandoned'] && 50.0 === $summary['recall_rate'] );
 m6_check( 'summary names its version, period and currency', Metrics::VERSION === $summary['version'] && 100 === $summary['from'] && 200 === $summary['to'] && 'USD' === $summary['currency'] );
 m6_check( 'summary funnel has eight layers', 8 === count( $summary['funnel'] ) && 1 === $summary['paid_visitors'] );
 m6_check( 'window uses the overview presets', array( 'from' => 0, 'to' => 700, 'bucket' => 'day' ) === Metrics::window( '7d' ) && array( 'from' => 100, 'to' => 200, 'bucket' => 'hour' ) === Metrics::window( 'nonsense' ) );
 $preset = Metrics::preset( 'nonsense' );
-m6_check( 'preset falls back to today and equals the summary of its window', 'today' === $preset['preset'] && 5500 === $preset['sales_cents'] && 100 === $preset['from'] );
+m6_check( 'preset falls back to today and equals the summary of its window', 'today' === $preset['preset'] && 3500 === $preset['sales_cents'] && 100 === $preset['from'] );
 
 // ---------- 按天拆分：[第 2 天 0 点, 第 4 天 0 点) ----------
 $GLOBALS['m6_orders'] = array();
@@ -183,14 +186,14 @@ $wpdb                 = new M6_DB();
 Metrics::flush();
 $day = 86400;
 m6_order( 31, 'processing', 10.0, $day + 10, $day + 10 );
-m6_order( 32, 'completed', 20.5, 2 * $day + 5, $day + 20 );          // 第 2 天创建、第 3 天付款：算在第 3 天。
+m6_order( 32, 'completed', 20.5, 2 * $day + 5, $day + 20 );          // 第 2 天下单、第 3 天付款：算在第 2 天（口径版本 2）。
 m6_order( 33, 'processing', 3.0, 2 * $day + 6, 2 * $day + 6 )->ones = true;
 $wpdb->visit( 1, 1, 0, 0, ( $day + 1 ) * 1000 );
 $wpdb->visit( 2, 2, 0, 0, ( 2 * $day + 1 ) * 1000 );
 $wpdb->visit( 3, 3, 1, 0, ( 2 * $day + 2 ) * 1000 );
 $rows = Metrics::daily( $day, 3 * $day );
 m6_check( 'daily rows follow store days', array( '1970-01-02', '1970-01-03' ) === array_column( $rows, 'date' ) );
-m6_check( 'daily orders and sales land on the paid day', array( 1, 1 ) === array_column( $rows, 'orders' ) && array( 1000, 2050 ) === array_column( $rows, 'sales_cents' ) );
+m6_check( 'daily orders and sales land on the day the order was placed', array( 2, 0 ) === array_column( $rows, 'orders' ) && array( 3050, 0 ) === array_column( $rows, 'sales_cents' ) );
 m6_check( 'daily visitors', array( 1, 2 ) === array_column( $rows, 'visitors' ) && array( 0.0, 0.0 ) === array_column( $rows, 'conversion_rate' ) );
 m6_check( 'daily rows add up to the period total', array_sum( array_column( $rows, 'sales_cents' ) ) === Metrics::orders( $day, 3 * $day )['sales_cents'] );
 m6_check( 'reversed daily period is empty', array() === Metrics::daily( 5, 5 ) );
@@ -223,7 +226,7 @@ m6_check( 'abandoned_daily is keyed by store date and skips empty days', array( 
 Recovery_Items::$fail = true;
 $GLOBALS['m6_transients'] = array();
 $rows = Metrics::daily( $day, 3 * $day );
-m6_check( 'a failing abandoned list leaves zeros and never breaks the daily rows', 2 === count( $rows ) && array( 0, 0 ) === array_column( $rows, 'abandoned' ) && array( 1, 1 ) === array_column( $rows, 'orders' ) );
+m6_check( 'a failing abandoned list leaves zeros and never breaks the daily rows', 2 === count( $rows ) && array( 0, 0 ) === array_column( $rows, 'abandoned' ) && array( 2, 0 ) === array_column( $rows, 'orders' ) );
 Recovery_Items::$fail = false;
 Recovery_Items::$items = array();
 unset( $GLOBALS['m6_options'][ Metrics::DAILY_ABANDONED_OPTION ] );

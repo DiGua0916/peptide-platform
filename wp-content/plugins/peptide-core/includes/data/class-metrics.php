@@ -6,7 +6,7 @@
  * 约定：
  * - 时间段一律是 [from, to)，Unix 秒；店铺时区的换算由调用方用 Data\Range 或 Metrics::window() 做好。
  * - 金额一律是美分整数（*_cents），币种是订单币种；比率是百分数，保留 2 位，分母为 0 时是 null。
- * - 访问按 start_ms 落在时间段内算（和现有报表相同的“访问批次”口径）；订单按付款时间算。
+ * - 访问按 start_ms 落在时间段内算（和现有报表相同的“访问批次”口径）；订单按下单时间算（口径版本 2，和线上一致）。
  *
  * 七个指标：
  * - 访客        去重的 pc_track_visitors，只算 is_test = 0；爬虫在写入时就被 Tracker::is_automated() 挡掉，不会产生访客行。
@@ -36,8 +36,11 @@ defined( 'ABSPATH' ) || exit;
 
 final class Metrics {
 
-	/** 口径版本。口径变了就加 1，并在 docs/metrics.md 写明变了什么。 */
-	public const VERSION = 1;
+	/**
+	 * 口径版本。口径变了就加 1，并在 docs/metrics.md 写明变了什么。
+	 * 2：订单归到哪一天改按下单时间（和线上一致，平台所有者 2026-11-13 定），原来按付款时间。
+	 */
+	public const VERSION = 2;
 
 	/** 总后台回写的已标记退款（美分，OR-03）。 */
 	public const REFUND_META = '_pc_refund_cents';
@@ -295,6 +298,15 @@ final class Metrics {
 		return 'refunded' === $status && null !== $order->get_date_paid();
 	}
 
+	/**
+	 * 订单算在哪个时刻（Unix 秒）：下单时间（订单的创建时间），和线上的运营数据、概览页一致（口径版本 2）。
+	 * 没有创建时间时退回付款时间。订单事实里的 paid_at 仍是付款时间（总后台的订单上报要用），只是不再决定订单归到哪一天。
+	 */
+	public static function order_at( \WC_Order $order ): int {
+		$created = $order->get_date_created();
+		return $created ? (int) $created->getTimestamp() : self::paid_at( $order );
+	}
+
 	/** 付款时间（Unix 秒）；没有记录时退回创建时间。 */
 	public static function paid_at( \WC_Order $order ): int {
 		$paid = $order->get_date_paid();
@@ -339,7 +351,9 @@ final class Metrics {
 	}
 
 	/**
-	 * 付款时间在 [from, to) 内的已付款订单的事实（含测试单，test = true，由 sum_orders() 排除）。
+	 * 下单时间在 [from, to) 内、收到过支付成功的订单的事实（含测试单，test = true，由 sum_orders() 排除）。
+	 * 口径版本 2（2026-11-13）：按下单时间归属，和线上的 Operations::paid_orders() 一致；版本 1 按付款时间。
+	 * 和线上那份的区别只剩“已退款但付过款的订单”这里也算（金额减去已标记的退款）。
 	 *
 	 * @return array<int,array<string,mixed>>
 	 */
@@ -355,11 +369,11 @@ final class Metrics {
 			$seen     = array();
 			$orders   = wc_get_orders(
 				array(
-					'type'      => 'shop_order',
-					'status'    => $statuses,
-					'date_paid' => $from . '...' . ( $to - 1 ),
-					'limit'     => -1,
-					'return'    => 'objects',
+					'type'         => 'shop_order',
+					'status'       => $statuses,
+					'date_created' => $from . '...' . ( $to - 1 ),
+					'limit'        => -1,
+					'return'       => 'objects',
 				)
 			);
 			foreach ( is_array( $orders ) ? $orders : array() as $order ) {
@@ -368,32 +382,8 @@ final class Metrics {
 				}
 				$seen[ $order->get_id() ] = true;
 				$fact                     = self::order_fact( $order );
-				if ( $fact['paid'] && $fact['paid_at'] >= $from && $fact['paid_at'] < $to ) {
-					$facts[]   = $fact;
-					$objects[] = $order;
-				}
-			}
-			// 状态是已付款但没有付款时间的订单（导入的、手工改状态的）：按创建时间归属。
-			$ids = wc_get_orders(
-				array(
-					'type'         => 'shop_order',
-					'status'       => $statuses,
-					'date_created' => $from . '...' . ( $to - 1 ),
-					'limit'        => -1,
-					'return'       => 'ids',
-				)
-			);
-			foreach ( is_array( $ids ) ? $ids : array() as $id ) {
-				$id = $id instanceof \WC_Order ? (int) $id->get_id() : (int) $id; // 有的环境不认 return => ids，给回来的是订单对象。
-				if ( isset( $seen[ $id ] ) ) {
-					continue;
-				}
-				$order = wc_get_order( $id );
-				if ( ! $order instanceof \WC_Order || null !== $order->get_date_paid() ) {
-					continue; // 有付款时间的已经按付款时间算过（或者不在这个时间段付的款）。
-				}
-				$fact = self::order_fact( $order );
-				if ( $fact['paid'] ) {
+				$at                       = self::order_at( $order );
+				if ( $fact['paid'] && $at >= $from && $at < $to ) {
 					$facts[]   = $fact;
 					$objects[] = $order;
 				}
@@ -406,7 +396,7 @@ final class Metrics {
 
 	/**
 	 * 和 order_facts() 同一批订单，但返回订单对象（含测试单，由调用方排除）。还在按订单对象算的旧报表在开关开着时用这一份，
-	 * 这样它们和上面的合计是同一批订单（按付款时间归属）。
+	 * 这样它们和上面的合计是同一批订单（按下单时间归属）。
 	 *
 	 * @return \WC_Order[]
 	 */
@@ -687,7 +677,7 @@ final class Metrics {
 		}
 		$by_day = array();
 		foreach ( self::order_facts( $from, $to ) as $fact ) {
-			$by_day[ wp_date( 'Y-m-d', (int) $fact['paid_at'] ) ][] = $fact;
+			$by_day[ wp_date( 'Y-m-d', (int) ( $fact['created_at'] ?: $fact['paid_at'] ) ) ][] = $fact; // 下单那天（口径版本 2）。
 		}
 		$abandoned = self::daily_abandoned_on() ? self::abandoned_daily( $from, $to ) : null; // 开关关着时每一行和以前一样，没有弃单那四项。
 		$cursor = ( new \DateTimeImmutable( '@' . $from ) )->setTimezone( wp_timezone() )->setTime( 0, 0 );

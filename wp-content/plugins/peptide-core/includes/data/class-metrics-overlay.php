@@ -106,7 +106,7 @@ final class Metrics_Overlay {
 	}
 
 	/**
-	 * 趋势图：每个时间格的订单数和销售额按付款时间重算（访客数和浏览量不动）。
+	 * 趋势图：每个时间格的订单数和销售额按统一口径重算（按下单时间归格；访客数和浏览量不动）。
 	 *
 	 * @param array<int,array<string,mixed>> $series 概览页的时间格，每格带 start（Y-m-d H:00 或 Y-m-d）。
 	 * @param array<int,array<string,mixed>> $facts  Metrics::order_facts()。
@@ -123,7 +123,7 @@ final class Metrics_Overlay {
 			if ( empty( $fact['counted'] ) ) {
 				continue;
 			}
-			$key = wp_date( 'hour' === $bucket ? 'Y-m-d H:00' : 'Y-m-d', (int) $fact['paid_at'] );
+			$key = wp_date( 'hour' === $bucket ? 'Y-m-d H:00' : 'Y-m-d', (int) ( $fact['created_at'] ?: $fact['paid_at'] ) );
 			if ( ! isset( $index[ $key ] ) ) {
 				continue;
 			}
@@ -256,7 +256,7 @@ final class Metrics_Overlay {
 
 	/**
 	 * 报表用的“时间段内的已付款订单”（含测试单，由调用方排除）。
-	 * 旧：时间段内创建、已付款状态（Operations::paid_orders() 原来的结果，原样传进来）。新：时间段内付款（Metrics::paid_orders()）。
+	 * 旧：时间段内创建、已付款状态（Operations::paid_orders() 原来的结果，原样传进来）。新：时间段内创建、收到过支付成功（含已退款，Metrics::paid_orders()）。
 	 * 影子：返回旧的那一批，两批订单号不一样时记进对账日志（reports.paid_orders）。
 	 *
 	 * @param \WC_Order[] $legacy Operations::paid_orders() 按旧口径查出来的订单。
@@ -294,11 +294,11 @@ final class Metrics_Overlay {
 		return (float) $order->get_total() - (float) $order->get_total_refunded();
 	}
 
-	/** 一张订单算在哪个时刻（Unix 秒）。旧：创建时间；新：付款时间。都没有时返回 null。 */
+	/** 一张订单算在哪个时刻（Unix 秒）：下单时间。口径版本 2 起新旧一样（版本 1 的新口径是付款时间）。没有时返回 null。 */
 	public static function order_time( \WC_Order $order ): ?int {
 		if ( Metrics_Switch::on() ) {
-			$paid = Metrics::paid_at( $order );
-			return $paid > 0 ? $paid : null;
+			$at = Metrics::order_at( $order );
+			return $at > 0 ? $at : null;
 		}
 		$created = $order->get_date_created();
 		return $created ? (int) $created->getTimestamp() : null;

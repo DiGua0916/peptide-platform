@@ -53,7 +53,7 @@ m6_check( 'case 4 shadow: the all-1 order is logged once, with its order number'
 $mode( 'on' );
 m6_check( 'case 4 on: the all-1 order is a test order in every report', false === Overlay::is_test_order( $real ) && true === Overlay::is_test_order( $ones ) && true === Overlay::is_test_order( $demo ) );
 
-// ---------- 用例 5：哪些订单算在时间段里（“今天” = [100, 200)） ----------
+// ---------- 用例 5：哪些订单算在时间段里（“今天” = [100, 200)）。口径版本 2：两边都按下单时间 ----------
 $GLOBALS['m6_orders'] = array();
 $a = m6_order( 11, 'processing', 20.0, 150, 150 ); // 今天创建、今天付款。
 $b = m6_order( 12, 'processing', 30.0, 250, 150 ); // 今天创建、明天才付款。
@@ -69,18 +69,18 @@ m6_check( 'case 5 off: no order query at all', ! isset( $GLOBALS['m6_order_queri
 $mode( 'shadow' );
 m6_check( 'case 5 shadow: reports still get the legacy list', $legacy_orders === Overlay::paid_orders( $legacy_orders, 100, 200 ) );
 $logged = $diffs( 'reports.paid_orders' );
-// 日志里 only_legacy / only_metrics 两行的 metrics 一栏分别是“只在旧口径里的订单号”和“只在新口径里的订单号”。
-m6_check( 'case 5 shadow: the two lists are compared by order number', 1 === count( $logged ) && array( 'only_legacy', 'only_metrics' ) === array_column( $logged[0]['diffs'], 'path' ) && '12' === $logged[0]['diffs'][0]['metrics'] && '13' === $logged[0]['diffs'][1]['metrics'] );
+// 版本 1 按付款时间时，B 只在旧口径里、C 只在新口径里；版本 2 两边都按下单时间：B 两边都算，C 两边都不算，没有差异。
+m6_check( 'case 5 shadow: today the two lists are the same (B paid tomorrow is in both, C placed yesterday in neither)', array() === array_merge( array(), ...array_column( $logged, 'diffs' ) ) );
 $why = Reconcile::orders( 100, 200 );
-m6_check( 'case 5: both differences are explained by paid-time attribution', $why['explained'] && array( 'paid_outside_range', 'created_outside_range' ) === array_keys( $why['reasons'] ) && array( 12 ) === $why['reasons']['paid_outside_range']['ids'] && array( 13 ) === $why['reasons']['created_outside_range']['ids'] );
+m6_check( 'case 5: nothing to explain any more', $why['explained'] && array() === $why['reasons'] );
 
 $mode( 'on' );
-m6_check( 'case 5 on: reports get the orders paid in the range', array( 11, 13 ) === $ids( Overlay::paid_orders( $legacy_orders, 100, 200 ) ) );
-m6_check( 'case 5 on: same orders as the totals', 2 === Metrics::orders( 100, 200 )['orders'] && 6000 === Metrics::orders( 100, 200 )['sales_cents'] );
+m6_check( 'case 5 on: reports get the orders placed in the range', array( 11, 12 ) === $ids( Overlay::paid_orders( $legacy_orders, 100, 200 ) ) );
+m6_check( 'case 5 on: same orders as the totals', 2 === Metrics::orders( 100, 200 )['orders'] && 5000 === Metrics::orders( 100, 200 )['sales_cents'] );
 
 // 同一批订单时不记差异。
 $mode( 'shadow' );
-Overlay::paid_orders( array( $a, $c ), 100, 200 );
+Overlay::paid_orders( array( $a, $b ), 100, 200 );
 Sw::flush();
 m6_check( 'case 5 shadow: identical lists are counted as compared, not as different', 1 === Sw::log()['compared']['reports.paid_orders'] && ! isset( Sw::log()['differed']['reports.paid_orders'] ) );
 Sw::reset_log();
@@ -98,8 +98,8 @@ foreach ( array( 'off', 'shadow' ) as $legacy_mode ) {
 }
 $mode( 'on' );
 m6_check( 'case 6 on: sales = total − refunds marked by HQ', 90.0 === Overlay::order_sales( $refunded ) && 15.0 === Overlay::order_sales( $unpaid_date ) );
-m6_check( 'case 6 on: the order belongs to the moment it was paid', 180 === Overlay::order_time( $refunded ) );
-m6_check( 'case 6 on: no paid date falls back to the created date', 150 === Overlay::order_time( $unpaid_date ) );
+m6_check( 'case 6 on: the order belongs to the moment it was placed (version 2, same as off)', 150 === Overlay::order_time( $refunded ) );
+m6_check( 'case 6 on: an order without a paid date also belongs to its created date', 150 === Overlay::order_time( $unpaid_date ) );
 $why = Reconcile::classify( array( Reconcile::row( $refunded, 100, 200 ) ) );
 m6_check( 'case 6: the amount difference is explained by the refund basis', $why['explained'] && array( 'refund_basis' ) === array_keys( $why['reasons'] ) && 2000 === $why['reasons']['refund_basis']['cents'] );
 

@@ -854,10 +854,10 @@ Root installed only three existing Commerce sources for P09 collection products 
 | `Metrics::daily( int $from, int $to ): array` | 按店铺时区自然日，每天 `{date, visitors, paid_visitors, conversion_rate, orders, gross_cents, refund_cents, sales_cents, aov_cents, abandoned, abandoned_open, recall_emailed, recall_recovered}`。后四项是弃单，按弃单创建那天归属，定义和 `summary()` 的同名项一样（11-12 加的）。**11-13 起后四项只在开关 `peptide_core_daily_abandoned = on` 时有**，默认关，关着时每一行和线上一样没有这四项 |
 | `Metrics::abandoned_daily( int $from, int $to ): array` | 店铺时区的日期 => 那一天的 `{count, open, failed, emailed, recovered, recovered_cents, rate}`；没有弃单的日子不在结果里。读一次弃单列表，缓存 5 分钟。**11-13 起开关 `peptide_core_daily_abandoned` 不是 `on` 时抛 `RuntimeException`**：F1 的 `Hq_Connector::with_abandoned()` 遇到异常就原样返回每日汇总（不加弃单几项，总后台按“这家店还没提供”处理）；返回空数组的话它会把每天填成 0。打开要所有者同意（是新功能） |
 | `Metrics::order_fact( \WC_Order $order ): array` | 一张订单的事实，见下 |
-| `Metrics::order_facts( int $from, int $to ): array` | 付款时间在时间段内的已付款订单的事实（含测试单，`test = true`） |
+| `Metrics::order_facts( int $from, int $to ): array` | **下单时间**在时间段内、收到过支付成功的订单的事实（含测试单，`test = true`）。口径版本 2（11-13）起按下单时间，版本 1 按付款时间 |
 | `Metrics::paid_orders( int $from, int $to ): array` | 和 `order_facts()` 同一批订单，但返回 `\WC_Order` 对象（含测试单，调用方用 `is_test_order()` 排除） |
 | `Metrics::tail_steps( array $evidence, bool $paid ): array` | 一次访问在漏斗后四层走到了哪几步（纯函数）：`$evidence` 是这次访问里有没有 `address / shipping / payment` 事件，`$paid` 是有没有算数的已付款订单；返回 `address / shipping / payment / paid` 里走到的那几步 |
-| `Metrics::is_test_order( \WC_Order $order ): bool` / `is_paid_order()` / `paid_at()` | 测试单 / 收到过支付成功通知 / 付款时间（秒） |
+| `Metrics::is_test_order( \WC_Order $order ): bool` / `is_paid_order()` / `paid_at()` / `order_at()` | 测试单 / 收到过支付成功通知 / 付款时间（秒）/ 订单归到哪个时刻（秒，下单时间，11-13 加） |
 | `Metrics::sum_orders( array $facts ): array` | 把事实加总（纯函数），返回同 `orders()` |
 
 `summary()` 的 key（保证存在，后续只会增加）：
@@ -879,7 +879,7 @@ currency, visitor, visit, buyer
 ```
 
 - **F5 投手首页**：五个核心数字用 `Metrics::preset( 'today' | 'yesterday' | '7d' )` 的 `visitors / orders / sales_cents / conversion_rate / abandoned`；待办里的“未跟进弃单数”用 `abandoned_open`。
-- **F3 订单上报和报表**：每张订单上报 `order_fact()` 里的 `counted / paid_at / gross_cents / refund_cents`，总后台按同样的规则汇总（`counted` 的才算订单；销售额 = `gross_cents − refund_cents`；归属日 = `paid_at` 的店铺时区日期）。总后台回写 `_pc_refund_cents` 之后店铺端的销售额自动跟着变，不需要通知 F4。每日汇总可以直接取 `Metrics::daily()`。
+- **F3 订单上报和报表**：每张订单上报 `order_fact()` 里的 `counted / paid_at / gross_cents / refund_cents`，总后台按同样的规则汇总（`counted` 的才算订单；销售额 = `gross_cents − refund_cents`；归属日 = `paid_at` 的店铺时区日期）。**11-13 更正**：所有者定了订单按下单时间归到某一天，店铺端 `Metrics` 已改（口径版本 2），归属日应改成 `created_at` 的店铺时区日期，总后台要和店铺的数对上就跟着改；`paid_at` 仍是付款时间，照旧上报、照旧显示成“付款时间”。总后台那一侧归 F3，F4 没有改。总后台回写 `_pc_refund_cents` 之后店铺端的销售额自动跟着变，不需要通知 F4。每日汇总可以直接取 `Metrics::daily()`。
 
 ### 2. 开关 `PeptideCore\Data\Metrics_Switch`
 
@@ -932,7 +932,7 @@ currency, visitor, visit, buyer
 - 历史访问没有这三项（以前上报时就被丢掉了），会归在“没有观察到”或“已捕获但未提供此参数”一行。
 ### 7. 需要别的会话配合的事
 
-还没定的口径（订单按付款时间还是创建时间、弃单数含不含召回成功的、排行的支付成功率按哪个时间）在 `docs/metrics.md` 第 6 节标了“待确认”，定之前代码保持现状。F3 / F5 用 `Metrics` 的返回值时，这三项的含义以那一节写的现状为准。
+三项口径 2026-11-13 平台所有者定了（`docs/metrics.md` 第 6 节第 4–6 条），都和线上一致：订单按**下单时间**归到某一天（`Metrics` 口径版本 2，`Metrics::order_at()`；订单事实里的 `paid_at` 仍是付款时间，F3 的订单上报照旧用它）；弃单数包含召回成功的；排行的支付成功率按下单时间。
 
 | 谁 | 事情 | 状态 |
 | --- | --- | --- |

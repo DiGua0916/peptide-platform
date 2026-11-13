@@ -25,8 +25,6 @@ final class Metrics_Reconcile {
 	/** 差异原因 => 白话说明。 */
 	public const REASONS = array(
 		'test_order_rule'       => '新口径认定是测试单、旧口径当成真实订单。2026-11-11 起两条规则相同，这一项正常是空的；有订单落在这里说明两条规则又分开了。',
-		'paid_outside_range'    => '时间段内创建、但不是在这个时间段付的款：旧口径按创建时间算，新口径按付款时间算（算在付款那天）。',
-		'created_outside_range' => '时间段内付的款、但订单是之前创建的：旧口径算在创建那天，新口径算在付款这天。',
 		'refunded_status'       => '状态是已退款、但付过款的订单：旧口径不算订单，新口径算订单，金额减去已标记的退款。',
 		'refund_basis'          => '退款口径：旧口径减 WooCommerce 里记的退款，新口径减总后台标记的退款（_pc_refund_cents）。',
 		'other'                 => '没有解释的差异，需要人工看这些订单。',
@@ -85,12 +83,9 @@ final class Metrics_Reconcile {
 			if ( ! empty( $row['test'] ) && empty( $row['legacy_test'] ) ) {
 				return 'test_order_rule';
 			}
-			return empty( $row['paid_in'] ) ? 'paid_outside_range' : 'other';
+			return 'other'; // 口径版本 2 起两边都按下单时间归属，不会再因为付款时间不同而分开。
 		}
 		if ( $in_metrics && ! $in_legacy ) {
-			if ( empty( $row['created_in'] ) ) {
-				return 'created_outside_range';
-			}
 			return empty( $row['status_paid'] ) ? 'refunded_status' : 'other';
 		}
 		return 'refund_basis'; // 两边都算，只是金额不同。
@@ -112,7 +107,7 @@ final class Metrics_Reconcile {
 			'legacy_test'   => $legacy_test,
 			'legacy'        => $created_in && $status_paid && ! $legacy_test,
 			'legacy_cents'  => $fact['gross_cents'] - $fact['wc_refund_cents'],
-			'metrics'       => $paid_in && ! $fact['test'],
+			'metrics'       => $created_in && $fact['paid'] && ! $fact['test'], // 口径版本 2：按下单时间归属，和旧口径同一个时间段。
 			'metrics_cents' => $fact['net_cents'],
 		);
 	}
@@ -136,7 +131,7 @@ final class Metrics_Reconcile {
 					$rows[ $order->get_id() ] = self::row( $order, $from, $to );
 				}
 			}
-			// 新口径的候选：时间段内付款。
+			// 新口径的候选：时间段内下单、收到过支付成功（多出来的只会是已退款但付过款的订单）。
 			foreach ( Metrics::order_facts( $from, $to ) as $fact ) {
 				if ( isset( $rows[ $fact['id'] ] ) ) {
 					continue;
