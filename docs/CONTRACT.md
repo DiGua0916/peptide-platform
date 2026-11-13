@@ -643,7 +643,7 @@ Root installed only three existing Commerce sources for P09 collection products 
   - **菜单和拦截归 F5**：
     - 投手菜单里的“营销活动”排在数据后面，链接 `admin.php?page=pc-promotions`，没有子菜单（三个页面给投手的是同一张列表）。显示条件 `Staff_Buyer::campaigns_visible()`：F2 的 `Marketing::can_view()` 为真，并且 `Marketing::can_manage()` 为假（看到的是只读列表）。
     - 注册菜单用的权限名仍然由 `Admin_Menus::add_menus()` 调 `Marketing::menu_cap()` 得到（之前已改好）。
-    - 投手带 F2 约定的只读权限 `pc_view_campaigns`（`Staff_Buyer::CAP_CAMPAIGNS`，由 `user_has_cap` 给；还没改密码的投手不给）。**不带** `edit_shop_coupons`，打开营销页面时也不给任何店铺能力。
+    - 投手带 F2 约定的只读权限 `pc_view_campaigns`（`Staff_Buyer::CAP_CAMPAIGNS`）。**存在角色 `pc_media_buyer` 上**（`Staff_Buyer::role_caps()`：`read`、`view_admin_dashboard`、`pc_view_campaigns` 三项）；已经建好角色的店由 `ensure_role()` 在下一次请求时补上，每家店只写一次 `wp_user_roles`。**不带** `edit_shop_coupons`、`manage_woocommerce` 这类能改的权限，打开营销页面时也不临时给任何店铺能力。还没改密码的投手角色上也有这项权限，但页面拦截只让去向导。
     - F5 这一层对投手的判断（`Staff_Buyer::classify()`，在 F2 的判断之前）：
 
       | 请求 | 结果 |
