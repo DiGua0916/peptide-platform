@@ -9,6 +9,7 @@
 
 namespace PeptideCore\Admin;
 
+use PeptideCore\Data\Audience;
 use PeptideCore\Pixels;
 use PeptideCore\Pixels\Server;
 
@@ -36,9 +37,76 @@ final class Pixels_Page {
 		return (array) apply_filters( 'peptide_core_pixels_visible_platforms', self::VISIBLE );
 	}
 
+	/** 总后台给某家店的投手打开其他平台时写这个选项（平台 key 的数组）。 */
+	public const BUYER_OPTION = 'peptide_core_pixels_buyer_platforms';
+
+	/** 当前用户是不是投手（ST-06）。 */
+	private static function buyer_view(): bool {
+		return class_exists( Audience::class ) && Audience::is_media_buyer();
+	}
+
+	/**
+	 * 投手能看到、能修改的平台（ST-06）：默认只有 Facebook。其他平台的卡片对投手不显示也不提交，
+	 * 已经保存的设置原样保留（见 save()）。管理员不受影响。
+	 *
+	 * @return string[]
+	 */
+	public static function buyer_platforms(): array {
+		$saved = get_option( self::BUYER_OPTION, array( 'facebook' ) );
+		$keys  = is_array( $saved ) ? array_values( array_intersect( array_keys( Pixels::platforms() ), array_map( 'strval', $saved ) ) ) : array();
+		return $keys ? $keys : array( 'facebook' );
+	}
+
 	public static function register_hooks(): void {
 		add_action( 'admin_post_pc_pixels_save', array( self::class, 'save' ) );
+		add_action( 'admin_post_pc_pixels_test', array( self::class, 'test' ) );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
+	}
+
+	/** “发送测试事件”（ST-06）：用已保存的 Facebook 像素和令牌发一条测试 PageView，回到页面显示已通 / 未通。 */
+	public static function test(): void {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'peptide-core' ), 403 );
+		}
+		check_admin_referer( 'pc_pixels_test' );
+		set_transient( 'pc_px_test_' . get_current_user_id(), Server::test_event(), 5 * MINUTE_IN_SECONDS );
+		wp_safe_redirect( self::url( array( 'pc_px_test' => 1 ) ) );
+		exit;
+	}
+
+	/** 测试事件的结果提示（只显示一次）。 */
+	private static function test_notice(): void {
+		if ( empty( $_GET['pc_px_test'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			return;
+		}
+		$name   = 'pc_px_test_' . get_current_user_id();
+		$result = get_transient( $name );
+		if ( ! is_array( $result ) ) {
+			return;
+		}
+		delete_transient( $name );
+		$zh = str_starts_with( (string) get_user_locale(), 'zh' );
+		if ( 'no_pixel' === ( $result['reason'] ?? '' ) ) {
+			echo '<div class="notice notice-warning inline"><p>' . esc_html( $zh ? '还没有保存 Facebook 像素：先新建像素、填上 CAPI 令牌并保存，再发送测试事件。' : 'No Facebook pixel is saved yet. Add a pixel with its CAPI access token, save, then send the test event.' ) . '</p></div>';
+			return;
+		}
+		$ok = ! empty( $result['ok'] );
+		echo '<div class="notice ' . ( $ok ? 'notice-success' : 'notice-error' ) . ' inline"><p><strong>' . esc_html( $ok ? ( $zh ? '已通：Facebook 收到了测试事件。' : 'Connected: Facebook accepted the test event.' ) : ( $zh ? '未通：Facebook 没有收下测试事件。' : 'Not connected: Facebook did not accept the test event.' ) ) . '</strong></p><ul>';
+		foreach ( (array) ( $result['results'] ?? array() ) as $row ) {
+			if ( ! empty( $row['ok'] ) ) {
+				$text = $zh ? '已通' : 'OK';
+			} elseif ( 'no_token' === ( $row['message'] ?? '' ) ) {
+				$text = $zh ? '没有填 CAPI 令牌，服务端不会回传' : 'No CAPI access token, so the server sends nothing';
+			} else {
+				$text = ( $zh ? '未通' : 'Failed' ) . '（HTTP ' . (int) ( $row['code'] ?? 0 ) . '）' . (string) ( $row['message'] ?? '' );
+			}
+			echo '<li><code>' . esc_html( (string) ( $row['pixel'] ?? '' ) ) . '</code> ' . esc_html( $text ) . '</li>';
+		}
+		echo '</ul>';
+		if ( $ok ) {
+			echo '<p>' . esc_html( ! empty( $result['test_code'] ) ? ( $zh ? '这条事件带了测试事件代码，可以在 Facebook 事件管理器 → 测试事件里看到。' : 'The event carried the test event code; see it in Meta Events Manager → Test events.' ) : ( $zh ? '没有填测试事件代码，所以这是一条普通的服务端 PageView，在事件管理器的“概览”里稍后可以看到。' : 'No test event code is set, so this was a normal server PageView; it shows up in Events Manager → Overview a little later.' ) ) . '</p>';
+		}
+		echo '</div>';
 	}
 
 	public static function url( array $args = array() ): string {
@@ -190,14 +258,23 @@ final class Pixels_Page {
 		if ( ! Pixels::any( $s ) ) {
 			echo '<div class="notice notice-info inline"><p>' . esc_html__( 'No pixels yet, so nothing is sent. Add the IDs of the platforms you advertise on and save.', 'peptide-core' ) . '</p></div>';
 		}
+		self::test_notice();
 		echo '<div class="pc-px-grid"' . ( self::SHOW_NOTES ? '' : ' style="grid-template-columns:minmax(0,1fr)"' ) . '><div class="pc-px-main">';
+		// ST-06：投手只看到 Facebook（或总后台给这家店打开的平台），其他平台的卡片不输出；管理员照旧（Facebook 展开，其余折叠）。
+		$buyer  = self::buyer_view();
+		$shown  = $buyer ? self::buyer_platforms() : self::visible_platforms();
 		$others = array();
 		foreach ( Pixels::platforms() as $key => $def ) {
-			if ( in_array( $key, self::visible_platforms(), true ) ) {
+			if ( in_array( $key, $shown, true ) ) {
 				self::card( $key, $def, $s['platforms'][ $key ] );
-			} else {
+			} elseif ( ! $buyer ) {
 				$others[ $key ] = $def;
 			}
+		}
+		// ST-06“发送测试事件”：用已保存的设置发一条测试 PageView（改了像素或令牌要先保存）。
+		if ( $s['platforms']['facebook']['pixels'] ) {
+			$zh = str_starts_with( (string) get_user_locale(), 'zh' );
+			echo '<p class="pc-px-test"><a class="button" href="' . esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=pc_pixels_test' ), 'pc_pixels_test' ) ) . '">' . esc_html( $zh ? '发送测试事件' : 'Send a test event' ) . '</a> <span class="pc-pl-muted">' . esc_html( $zh ? '用已保存的 Facebook 像素和令牌发一条测试 PageView，马上知道通不通。改过像素或令牌请先保存。' : 'Sends one test PageView with the saved Facebook pixel and token. Save your changes first.' ) . '</span></p>';
 		}
 
 		// 服务端回传记录。
@@ -265,7 +342,9 @@ final class Pixels_Page {
 			wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'peptide-core' ), 403 );
 		}
 		check_admin_referer( 'pc_pixels_save' );
-		$errors = Pixels::save( wp_unslash( $_POST ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- 在 Pixels::clean() 里逐项清理。
+		// ST-06：投手的表单里只有他能看到的平台，其余平台原样保留，不能因为没提交就被清空。管理员的表单包含全部平台，$keep 是空的。
+		$keep   = self::buyer_view() ? array_values( array_diff( array_keys( Pixels::platforms() ), self::buyer_platforms() ) ) : array();
+		$errors = Pixels::save( wp_unslash( $_POST ), $keep ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- 在 Pixels::clean() 里逐项清理。
 		if ( $errors ) {
 			Marketing::flash_errors( array_merge( array( __( 'Saved, but please check:', 'peptide-core' ) ), $errors ) );
 			wp_safe_redirect( self::url() );

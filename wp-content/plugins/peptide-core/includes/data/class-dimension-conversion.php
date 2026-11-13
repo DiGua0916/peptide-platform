@@ -33,9 +33,16 @@ final class Dimension_Conversion {
 			$funnel = $groups[$key] ?? array( 'unit' => 'visitors', 'layers' => Visitor_Funnel::layers( Visitor_Funnel::zero() ) );
 			$counts = array_column( $funnel['layers'], 'count', 'key' ); $financial = $paid[$key] ?? array( 'paid' => 0, 'sales' => 0.0 );
 			$value = $typed[$key] ?? $financial['dimension']; $visitors = $counts['visitors'];
-			$out[] = array( 'key' => $key, 'label' => Dimension_Reports::label( $value, $dimension ), 'dimension' => $value, 'conversion' => $visitors ? round( $financial['paid'] / $visitors * 100, 2 ) : null, 'sales' => round( $financial['sales'], 2 ), 'visitors' => $visitors, 'paid' => $financial['paid'], 'funnel' => Operations::layers( array( 'visitors' => $visitors, 'viewed' => $counts['viewed'], 'carted' => $counts['carted'], 'checkout' => $counts['checkout'], 'paid' => $financial['paid'] ) ), 'visitor_funnel' => $funnel );
+			$out[] = array( 'key' => $key, 'label' => Dimension_Reports::label( $value, $dimension ), 'dimension' => $value, 'conversion' => self::conversion( (int) $financial['paid'], (int) $counts['paid'], (int) $visitors, 'conversion.' . $dimension ), 'sales' => round( $financial['sales'], 2 ), 'visitors' => $visitors, 'paid' => $financial['paid'], 'funnel' => Operations::layers( array( 'visitors' => $visitors, 'viewed' => $counts['viewed'], 'carted' => $counts['carted'], 'checkout' => $counts['checkout'], 'paid' => $financial['paid'] ) ), 'visitor_funnel' => $funnel );
 		}
 		usort( $out, static function ( array $a, array $b ): int { $cmp = $b['visitors'] <=> $a['visitors']; $cmp = $cmp ?: $b['paid'] <=> $a['paid']; return $cmp ?: strcmp( $a['key'], $b['key'] ); } );
 		return $out;
+	}
+	/** M6（NF-02）：分组转化率按开关走 Metrics_Overlay::conversion()（关着时 = 订单数 ÷ 访客，和以前一样；开了 = 付了款的访客 ÷ 访客）。 */
+	private static function conversion( int $orders, int $paid_visitors, int $visitors, string $report ): ?float {
+		if ( class_exists( Metrics_Overlay::class ) ) {
+			return Metrics_Overlay::conversion( $orders, $paid_visitors, $visitors, $report );
+		}
+		return $visitors ? round( $orders / $visitors * 100, 2 ) : null;
 	}
 }

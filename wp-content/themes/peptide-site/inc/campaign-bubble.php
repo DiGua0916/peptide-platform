@@ -47,6 +47,11 @@ function vc_campaign_bubble_html( $html, array $module, string $context, string 
             return '<div class="pc-campaign__tiers"' . $attributes . '>';
         }, $native );
         $sticky = is_front_page() && 'editor' !== $context ? ' data-vc-campaign-sticky' : '';
+        // Only when a strip is rendered: the native render above has just
+        // enqueued pc-commerce-blocks, so the dependency is registered.
+        if ( ! is_admin() && wp_script_is( 'pc-commerce-blocks', 'registered' ) ) {
+            wp_enqueue_script( 'vc-campaign-announcement', get_template_directory_uri() . '/assets/campaign-announcement.js', array( 'pc-commerce-blocks' ), (string) filemtime( get_template_directory() . '/assets/campaign-announcement.js' ), true );
+        }
         return '<div class="vc-campaign-strip" data-vc-campaign-strip' . $sticky . '>' . $native . '</div>';
     }
     return '<div class="vc-campaign-bubble" data-vc-campaign-bubble>' . $native . '</div>';
@@ -58,7 +63,6 @@ function vc_campaign_bubble_assets(): void {
     $dir = get_template_directory() . '/assets/';
     wp_enqueue_style( 'vc-campaign-bubble', get_template_directory_uri() . '/assets/campaign-bubble.css', array(), (string) filemtime( $dir . 'campaign-bubble.css' ) );
     if ( ! is_admin() ) {
-        wp_enqueue_script( 'vc-campaign-announcement', get_template_directory_uri() . '/assets/campaign-announcement.js', array( 'pc-commerce-blocks' ), (string) filemtime( $dir . 'campaign-announcement.js' ), true );
         if ( is_front_page() ) {
             wp_enqueue_script( 'vc-campaign-strip-sticky', get_template_directory_uri() . '/assets/campaign-strip-sticky.js', array(), (string) filemtime( $dir . 'campaign-strip-sticky.js' ), true );
         }

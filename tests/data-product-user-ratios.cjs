@@ -41,7 +41,9 @@ function canonical(params){const filter={entry_domain_state:params.entry_domain_
  check('selected new ratio checkboxes are disabled at five',five.box('cart_user_rate').disabled&&five.box('paid_user_rate').disabled);
  const rates=tools.make(JSON.stringify(RATES.concat(['sales'])));const rateData=product(tools.base());rateData.rows[0].change.paid_user_rate=-3.25;rates.calls[0].resolve(rateData);await flush();
  const cells=[...rates.el('wrap').innerHTML.matchAll(/<td class="pc-prod-metric">([\s\S]*?)<\/td>/g)].map(match=>match[1]);
- check('all ten rates render percent values',RATES.every((key,index)=>cells[index].includes('<div class="pc-prod-cur">12.5%</div>')&&cells[index].includes('VS 10%')));
+ // 对比期那一行的“VS ”后来改成只给读屏软件念（包在 screen-reader-text 里），所以按去掉标签后的文字来比。
+ const text=cell=>cell.replace(/<[^>]+>/g,'');
+ check('all ten rates render percent values',RATES.every((key,index)=>cells[index].includes('<div class="pc-prod-cur">12.5%</div>')&&text(cells[index]).includes('VS 10%')));
  check('all ten rate changes use percentage points',RATES.every((key,index)=>cells[index].includes((key==='paid_user_rate'?'-3.25':'+2.5')+' Percentage points')));
  check('old cart_rate and conversion change labels are corrected',cells[0].includes('+2.5 Percentage points')&&cells[1].includes('+2.5 Percentage points'));
  check('non-rate change keeps the existing formatter',!cells.at(-1).includes('Percentage points')&&cells.at(-1).includes('>2.5</div>'));

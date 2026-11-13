@@ -114,7 +114,7 @@ final class Realtime_Filter {
 		if ( null !== $this->orders ) { throw new \LogicException( 'Prime the complete order union before reading panels.' ); }
 		$this->require_ready(); $this->order_from = $from; $this->order_to = $to; $this->orders = array(); $ids = array();
 		foreach ( Operations::paid_orders( $from, $to ) as $order ) {
-			if ( ! $order instanceof \WC_Order || Overview::is_test_order( $order ) ) { continue; }
+			if ( ! $order instanceof \WC_Order || self::is_test( $order ) ) { continue; }
 			$this->orders[] = $order;
 			$link = array( self::positive_id( $order->get_meta( Server_Events::ORDER_VISIT_META ) ), self::positive_id( $order->get_meta( Server_Events::ORDER_VISITOR_META ) ) );
 			$this->order_links[ $order->get_id() ] = $link; if ( $link[0] && $link[1] ) { $ids[] = $link[0]; }
@@ -125,7 +125,21 @@ final class Realtime_Filter {
 	public function order_visit( \WC_Order $order ): ?array { $link = $this->order_links[ $order->get_id() ] ?? array( null, null ); return $link[0] && $link[1] ? $this->linked_visit( $link[0], $link[1] ) : null; }
 	public function orders( int $from, int $to, bool $matching = true ): array {
 		$this->prime_orders( $from, $to ); $out = array();
-		foreach ( $this->orders as $order ) { $created = $order->get_date_created(); if ( $created && $created->getTimestamp() >= $from && $created->getTimestamp() < $to && ( ! $matching || $this->matches( $this->order_facts[ $order->get_id() ] ) ) ) { $out[] = $order; } }
+		foreach ( $this->orders as $order ) { $ts = self::order_ts( $order ); if ( null !== $ts && $ts >= $from && $ts < $to && ( ! $matching || $this->matches( $this->order_facts[ $order->get_id() ] ) ) ) { $out[] = $order; } }
 		return $out;
+	}
+
+	/** M6（NF-02）：测试单规则按开关走 Metrics_Overlay::is_test_order()（关着时就是 Overview 的旧规则）；不带自动加载的纯逻辑测试里没有这个类，直接用旧规则。 */
+	private static function is_test( $order ): bool {
+		return class_exists( Metrics_Overlay::class ) ? Metrics_Overlay::is_test_order( $order ) : \PeptideCore\Overview::is_test_order( $order );
+	}
+
+	/** M6（NF-02）：一张订单算在哪个时刻（Unix 秒）按开关走 Metrics_Overlay::order_time()（关着时 = 创建时间，和以前一样）；没有时返回 null。 */
+	private static function order_ts( $order ): ?int {
+		if ( class_exists( Metrics_Overlay::class ) ) {
+			return Metrics_Overlay::order_time( $order );
+		}
+		$created = $order->get_date_created();
+		return $created ? (int) $created->getTimestamp() : null;
 	}
 }

@@ -875,6 +875,12 @@
 		if ( debug && w.console ) {
 			w.console.info( '[pc-pixels]', e.name, e.id, sent, e );
 		}
+		// FE-09 验收：只有带着验收码的浏览器才有 cfg.check。把 Facebook 像素真的发出去的事件报给服务器，用来核对 event_id。
+		if ( cfg.check && cfg.checkCode && w.fetch && sent.join( ',' ).indexOf( 'facebook:' ) !== -1 ) {
+			try {
+				w.fetch( cfg.check, { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( { code: cfg.checkCode, name: e.name, id: String( e.id ) } ) } ).then( function () {}, function () {} );
+			} catch ( err ) {}
+		}
 	}
 
 	function start() {
@@ -937,18 +943,60 @@
 				}, function () {} );
 			} );
 		}
-		// 结账页选择付款方式。
+		// 结账页“选支付”（add_payment_info）：顾客选了付款方式，或点了下单（先到的那个），每个页面一次。
+		// FE-09：先请服务器生成事件 —— 服务器用同一个 event_id 回传 Conversions API，浏览器拿到后发像素，平台按 event_id 去重。
+		// 请求失败、服务器没有返回事件（购物车空了、一分钟内已经发过）时，退回原来的做法：只发浏览器事件。
 		var paid = false;
+		function paymentInfo() {
+			if ( paid ) {
+				return;
+			}
+			paid = true;
+			var settled = false;
+			var settle = function ( events ) {
+				if ( settled ) {
+					return;
+				}
+				settled = true;
+				if ( events && events.length ) {
+					events.forEach( fire );
+					return;
+				}
+				var base = ( cfg.events || [] ).filter( function ( x ) {
+					return 'begin_checkout' === x.name;
+				} )[ 0 ] || { items: [], value: 0, items_value: 0, currency: cfg.currency };
+				fire( { name: 'add_payment_info', id: 'pay_' + Date.now().toString( 36 ) + Math.random().toString( 36 ).slice( 2, 8 ), items: base.items, value: base.value, items_value: base.items_value, currency: base.currency } );
+			};
+			if ( ! cfg.pixelEvent || ! w.fetch ) {
+				settle( null );
+				return;
+			}
+			try {
+				w.fetch( cfg.pixelEvent, { method: 'POST', credentials: 'same-origin', keepalive: true, headers: cfg.restNonce ? { 'Content-Type': 'application/json', 'X-WP-Nonce': cfg.restNonce } : { 'Content-Type': 'application/json' }, body: JSON.stringify( { name: 'add_payment_info' } ) } ).then( function ( r ) {
+					return r.ok ? r.json() : null;
+				} ).then( function ( j ) {
+					settle( j && j.events );
+				}, function () {
+					settle( null );
+				} );
+			} catch ( err ) {
+				settle( null );
+			}
+		}
 		d.addEventListener( 'change', function ( ev ) {
 			var t = ev.target;
 			if ( paid || ! t || ! t.name || ( 'payment_method' !== t.name && t.name.indexOf( 'payment-method' ) === -1 ) ) {
 				return;
 			}
-			paid = true;
-			var base = ( cfg.events || [] ).filter( function ( x ) {
-				return 'begin_checkout' === x.name;
-			} )[ 0 ] || { items: [], value: 0, items_value: 0, currency: cfg.currency };
-			fire( { name: 'add_payment_info', id: 'pay_' + Date.now().toString( 36 ) + Math.random().toString( 36 ).slice( 2, 8 ), items: base.items, value: base.value, items_value: base.items_value, currency: base.currency } );
+			paymentInfo();
+		}, true );
+		// 只有一种付款方式、或者顾客没有改默认选项时不会有 change：点下单也算“选定支付方式并提交”。
+		d.addEventListener( 'click', function ( ev ) {
+			var t = ev.target;
+			if ( paid || ! t || ! t.closest || ! t.closest( '.wc-block-components-checkout-place-order-button, #place_order' ) ) {
+				return;
+			}
+			paymentInfo();
 		}, true );
 	}
 

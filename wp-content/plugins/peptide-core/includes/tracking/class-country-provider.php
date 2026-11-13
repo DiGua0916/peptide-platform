@@ -15,8 +15,8 @@ final class Country_Provider {
 		return array( 'status' => $public ? 'unavailable' : 'unknown' );
 	}
 
-	/** Only absolute local files: no stream wrappers, URLs, UNC shares or relative paths. */
-	private static function local_path( $path ): ?string {
+	/** Only absolute local files: no stream wrappers, URLs, UNC shares or relative paths.（Ip_Network 共用，CR 线 1） */
+	public static function local_path( $path ): ?string {
 		if ( ! is_string( $path ) || '' === $path || preg_match( '/[\x00-\x1f\x7f]/', $path ) || str_contains( $path, '://' ) || str_starts_with( $path, '//' ) || str_starts_with( $path, '\\' ) ) { return null; }
 		if ( '/' === $path[0] ) { return $path; }
 		if ( 1 === preg_match( '~\A[A-Za-z]:[\\\\/]~D', $path ) && ! str_contains( substr( $path, 2 ), ':' ) ) { return $path; }
@@ -43,8 +43,8 @@ final class Country_Provider {
 		return self::local_path( $path );
 	}
 
-	/** Reuse Woo's bundled Reader only. Includes define classes and never start integration services. */
-	private static function reader_available(): bool {
+	/** Reuse Woo's bundled Reader only. Includes define classes and never start integration services.（Ip_Network 共用，CR 线 1） */
+	public static function reader_available(): bool {
 		if ( class_exists( '\MaxMind\Db\Reader' ) ) { return true; }
 		$base = defined( 'WC_ABSPATH' ) ? constant( 'WC_ABSPATH' ) : ( defined( 'WC_PLUGIN_FILE' ) && is_string( constant( 'WC_PLUGIN_FILE' ) ) ? dirname( constant( 'WC_PLUGIN_FILE' ) ) : null );
 		$base = self::local_path( $base );

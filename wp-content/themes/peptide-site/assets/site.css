@@ -76,6 +76,10 @@
 .vc-use-statement .eyebrow{display:block;color:var(--ink);font-size:10px;margin-bottom:10px}
 .vc-use-statement p{margin:0 0 10px}.vc-use-statement p:last-child{margin:0}
 .vc-use-statement a{color:var(--vc-primary-hover);text-decoration:underline}
+.vc-product-dialog-content>.vc-use-statement{margin:24px 0 8px}
+.vc-track-order{margin:-16px 0 32px;text-align:center;font-size:14px}
+.vc-track-order a{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 8px;color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+.vc-track-order svg{width:16px;height:16px;flex:none}
 .woocommerce .pc-order-batch{background:var(--paper);border:1px solid var(--soft);border-radius:8px;padding:12px 14px;margin-top:12px;color:var(--ink);line-height:1.65;overflow-wrap:anywhere}
 .woocommerce .pc-order-batch small{font-size:12px}
 .woocommerce .pc-order-batch__report{color:var(--vc-primary-hover);text-decoration:underline;text-underline-offset:3px}
