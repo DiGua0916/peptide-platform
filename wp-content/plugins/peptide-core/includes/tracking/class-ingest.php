@@ -69,6 +69,7 @@ final class Ingest {
 			'cart_view'               => array( 'source' => 'str:40' ),
 			'checkout_view'           => array(),
 			'visibility_change'       => self::STATE,
+			'scroll'                  => array( 'depth' => 'int' ), // 2026-11-13：滚动深度档位（25 / 50 / 75 / 100）
 			'heartbeat'               => self::STATE,
 			'page_exit'               => array_merge( array( 'persisted' => 'bool' ), self::STATE ),
 			'variant_select'          => array( 'product_id' => 'int', 'attribute' => 'str:60', 'value' => 'str:120' ),

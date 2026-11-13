@@ -451,6 +451,26 @@
     if (!engaged) engageTimer = setTimeout(() => { if (!document.hidden) engage(); else listen(document, 'visibilitychange', () => { if (!document.hidden) engage(); }, {once: true}); }, engageMs);
     cleanups.push(() => clearTimeout(engageTimer));
     ['pointerdown', 'pointermove', 'keydown', 'scroll', 'touchstart'].forEach(type => listen(document, type, activity, {passive: true}));
+    // Scroll depth (2026-11-13): one 'scroll' event per page instance per band (25/50/75/100 %),
+    // only after a real (trusted) scroll and only on pages that are taller than the viewport.
+    // Only the band is sent, never a position.
+    let scrollMarks = new Set(), scrollQueued = false;
+    const scrollDepth = () => {
+      try {
+        const doc = document.documentElement, body = document.body;
+        const total = Math.max(doc ? doc.scrollHeight : 0, body ? body.scrollHeight : 0);
+        const view = window.innerHeight || (doc ? doc.clientHeight : 0);
+        if (!(view > 0 && total > view + 50)) return;
+        const y = window.scrollY || window.pageYOffset || 0;
+        const pct = Math.min(100, Math.round((y + view) / total * 100));
+        for (const mark of [25, 50, 75, 100]) if (pct >= mark && !scrollMarks.has(mark)) { scrollMarks.add(mark); emit('scroll', {depth: mark}); }
+      } catch { /* Optional observation. */ }
+    };
+    listen(window, 'scroll', event => {
+      if (!event.isTrusted || scrollQueued) return;
+      scrollQueued = true;
+      (window.requestAnimationFrame || (f => setTimeout(f, 0)))(() => { scrollQueued = false; scrollDepth(); });
+    }, {passive: true});
     listen(document, 'visibilitychange', () => { videoObserver?.flush(); emit('visibility_change', state()); if (document.hidden) void flush(); });
     listen(window, 'pagehide', event => {
       bridgeCall('suspend');
@@ -470,7 +490,7 @@
     const heartbeat = () => { heartbeatTimer = setInterval(() => { const s = state(); if (s.last_activity_age_ms < 1800000) emit('heartbeat', s); }, heartbeatMs); };
     listen(window, 'pageshow', event => {
       if (!event.persisted || stopped) return;
-      suspended = false; pageId = id(); seq = 0; lastActivity = Date.now(); surfaceObserver?.resume(); begin('bfcache');
+      suspended = false; pageId = id(); seq = 0; scrollMarks = new Set(); lastActivity = Date.now(); surfaceObserver?.resume(); begin('bfcache');
       bridgeCall('reset'); bridgeCall('resume');
       // A restored document has a new page instance; reset its video counters too.
       videoObserver?.stop(); observeVideos();
