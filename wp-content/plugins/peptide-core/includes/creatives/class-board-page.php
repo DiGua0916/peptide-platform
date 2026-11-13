@@ -388,6 +388,12 @@ final class Board_Page {
 .pc-cr-board .pc-cr-aud-bar .t em{position:absolute;top:-3px;bottom:-3px;width:2px;background:#50575e}
 .pc-cr-board .pc-cr-aud-bar .n{flex:none;color:#646970;white-space:nowrap;font-variant-numeric:tabular-nums}
 .pc-cr-board details.pc-cr-aud-more{margin:8px 0 0}
+.pc-cr-board .pc-cr-aud-tags.is-summary{margin:0 0 6px}
+.pc-cr-board .pc-cr-aud-diff{margin:0 0 4px;font-size:12px;line-height:1.6;color:#614a19}
+.pc-cr-board .pc-cr-aud-diff b{font-weight:600}
+.pc-cr-board details.pc-cr-aud-more>summary .is-open{display:none}
+.pc-cr-board details.pc-cr-aud-more[open]>summary .is-shut{display:none}
+.pc-cr-board details.pc-cr-aud-more[open]>summary .is-open{display:inline}
 .pc-cr-board details.pc-cr-aud-more>summary{cursor:pointer;color:#2271b1;font-size:12px;margin-bottom:8px}
 .pc-cr-board .pc-cr-aud ul{columns:auto}
 .pc-cr-board .pc-cr-aud-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:12px;margin:10px 0 4px}
@@ -1004,35 +1010,42 @@ final class Board_Page {
 		}
 		$a = Audience::analyse( $p, $all );
 		echo '<div class="pc-cr-aud"><h3 class="pc-cr-aud-h">人群画像 <span>' . esc_html( '付费访客 ' . (int) $p['total']['visitors'] . ' 人 · 平均 = 同时间段全部素材' ) . '</span></h3>';
-		if ( $a['common'] ) {
-			echo '<div class="pc-cr-aud-box is-common"><b>同类型（这条素材的人大多是）</b><p>' . esc_html( implode( '；', $a['common'] ) ) . '</p></div>';
+		// 2026-11-13 店主：默认收起，只显示一行摘要（每个主要维度占比最高的一项）和不同项；点开看全部 15 个维度。
+		$dims = array_keys( Audience::DIMS );
+		echo '<div class="pc-cr-aud-tags is-summary">';
+		foreach ( array_slice( $dims, 0, Audience::FIRST ) as $dim ) {
+			$top = null;
+			foreach ( (array) ( $p['dims'][ $dim ] ?? array() ) as $r ) {
+				if ( 'unknown' !== $r['value'] ) {
+					$top = $r;
+					break;
+				}
+			}
+			if ( $top ) {
+				echo '<span><em>' . esc_html( Audience::DIMS[ $dim ] ) . '</em>' . esc_html( $top['label'] . ' ' . (int) round( 100 * $top['share'] ) . '%' ) . '</span>';
+			}
 		}
+		echo '</div>';
 		if ( $a['diff'] ) {
-			echo '<div class="pc-cr-aud-box is-diff"><b>不同项（和全部素材平均比）</b><p>' . esc_html( implode( ' · ', array_column( $a['diff'], 'text' ) ) ) . '</p></div>';
+			echo '<p class="pc-cr-aud-diff"><b>和平均比：</b>' . esc_html( implode( ' · ', array_column( $a['diff'], 'text' ) ) ) . '</p>';
 		}
+		echo '<details class="pc-cr-aud-more"><summary><span class="is-shut">展开人群画像（全部 ' . count( $dims ) . ' 个维度）</span><span class="is-open">收起人群画像</span></summary>';
 		echo '<p class="pc-cr-aud-legend"><i class="is-bar"></i> 这条素材占比 <i class="is-avg"></i> 全部素材平均 · 右侧：人数 · 占比 · 下单</p>';
-		$grid = static function ( array $dims ) use ( $p, $all ): void {
-			echo '<div class="pc-cr-aud-grid">';
-			foreach ( $dims as $dim ) {
-				$list = array_slice( (array) ( $p['dims'][ $dim ] ?? array() ), 0, 6 );
-				if ( ! $list ) {
-					continue;
-				}
-				echo '<div class="pc-cr-aud-dim"><h4>' . esc_html( Audience::DIMS[ $dim ] ) . '</h4>';
-				foreach ( $list as $r ) {
-					$w   = (int) round( 100 * $r['share'] );
-					$avg = (int) round( 100 * Audience::avg_share( $all, $dim, $r['value'] ) );
-					echo '<div class="pc-cr-aud-bar" title="' . esc_attr( $r['label'] . ( $r['label'] !== $r['value'] && 'unknown' !== $r['value'] ? '（' . $r['value'] . '）' : '' ) . '：这条素材 ' . $w . '%，平均 ' . $avg . '%' ) . '"><span class="l">' . esc_html( $r['label'] ) . '</span><span class="t"><i style="width:' . esc_attr( (string) $w ) . '%"></i><em style="left:' . esc_attr( (string) min( 99, $avg ) ) . '%"></em></span><span class="n">' . esc_html( $r['visitors'] . ' · ' . $w . '% · ' . (int) $r['paid'] . ' 单' ) . '</span></div>';
-				}
-				echo '</div>';
+		echo '<div class="pc-cr-aud-grid">';
+		foreach ( $dims as $dim ) {
+			$list = array_slice( (array) ( $p['dims'][ $dim ] ?? array() ), 0, 6 );
+			if ( ! $list ) {
+				continue;
+			}
+			echo '<div class="pc-cr-aud-dim"><h4>' . esc_html( Audience::DIMS[ $dim ] ) . '</h4>';
+			foreach ( $list as $r ) {
+				$w   = (int) round( 100 * $r['share'] );
+				$avg = (int) round( 100 * Audience::avg_share( $all, $dim, $r['value'] ) );
+				echo '<div class="pc-cr-aud-bar" title="' . esc_attr( $r['label'] . ( $r['label'] !== $r['value'] && 'unknown' !== $r['value'] ? '（' . $r['value'] . '）' : '' ) . '：这条素材 ' . $w . '%，平均 ' . $avg . '%' ) . '"><span class="l">' . esc_html( $r['label'] ) . '</span><span class="t"><i style="width:' . esc_attr( (string) $w ) . '%"></i><em style="left:' . esc_attr( (string) min( 99, $avg ) ) . '%"></em></span><span class="n">' . esc_html( $r['visitors'] . ' · ' . $w . '% · ' . (int) $r['paid'] . ' 单' ) . '</span></div>';
 			}
 			echo '</div>';
-		};
-		$dims = array_keys( Audience::DIMS );
-		$grid( array_slice( $dims, 0, Audience::FIRST ) );
-		echo '<details class="pc-cr-aud-more"><summary>更多维度：' . esc_html( implode( ' · ', array_map( static fn( $d ) => Audience::DIMS[ $d ], array_slice( $dims, Audience::FIRST ) ) ) ) . '</summary>';
-		$grid( array_slice( $dims, Audience::FIRST ) );
-		echo '</details>';
+		}
+		echo '</div></details>';
 
 		// 规则分析（2026-11-13 改版：一条一行、依据单独一行；分区做成卡片，宽屏两列）。
 		echo '<h3 class="pc-cr-aud-h">人群分析 <span>' . esc_html( $a['confidence_text'] ) . '</span></h3>';
