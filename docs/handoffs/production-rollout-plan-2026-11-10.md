@@ -623,3 +623,13 @@
 - 检查（主店，手机尺寸）：`/product-category/bestselling/?cr=…` → 302 到 `/?vc_catalog_category=353&…&cr=C0001&placement=…&ad_name=…#vc-products`；页面直接停在 “The peptide collection” 产品区（scrollY 1041），Bestselling 已选中；GLP-1 同样，显示 16 件。新访客先出 18+ 弹窗，点进入后仍停在产品区；注册弹窗照常。商品页落地仍直接打开商品弹窗（黑五倒计时、满减照常）。追踪脚本收到的 landing_query 带 cr=C0001。后台广告设置页无 PHP 警告，C0001 已按店主截图改为落地页“专辑页：Bestselling”，链接随之变为 bestselling 地址。6 家店后台服务器端渲染上传表单 + 链接列表无警告。
 - 注意：Bestselling 分类目前包含全部 92 个商品（和 Peptides 一样），所以选它显示 92 件；要只显示热卖品，需要在商品里调整分类。4 家开斗篷的店用 curl 测试会被斗篷转走（预期），s0010 跳转确认带 cr。
 - 回滚：备份目录文件拷回原路径，reload php8.3-fpm；选项 `pc_cr_landings` 留着无害。
+
+### 2026-11-13 15:23–15:25 UTC（北京 23:23–23:25）素材删除
+- 店主要求加“删除素材”。原来只有素材库里的“归档”（隐藏、数据保留、可恢复），没有删除。
+- 改动（3 个文件）：
+  - `peptide-core/includes/creatives/class-creatives.php`：`Creatives::delete()`、`delete_blocker()`、`retired_codes()`。只有**没有进站访客、没有花费、没有广告用过这个编号**的素材能删（传错了、还没用过的）；有数据的只能归档，数据不丢。删除只删素材记录，同时清掉它的落地页（`pc_cr_landings`）和 AI 分析记录（`pc_cr_audience_ai`）；图片 / 视频留在媒体库。删过的编号记在选项 `pc_cr_retired_codes`，新素材分号时跳过，免得 Meta 里还挂着的旧链接算到新素材上。
+  - `class-library-page.php`：新增 op=delete；`delete_button()`（能删 = 红色“删除”按钮，点了先确认；有数据 = 按钮置灰，悬停提示只能归档）；素材库卡片的“归档”改成按钮，和“删除”并排。
+  - `class-ads-panel.php`：广告设置页每条素材链接的“复制链接”旁边加“删除”按钮，同样先确认。
+- 部署前 14 份副本（web 7 + HQ 主机 7）这 3 个文件和 58f00f8 一致；部署后全部等于新版本。备份：web `/root/vialcove-backups/crdel-main-web-20261113T152349Z`、`crdel-tenants-web-20261113T152457Z`；HQ 主机 `crdel-main-admin-20261113T152351Z`、`crdel-tenants-admin-20261113T152459Z`。两台 reload php8.3-fpm。
+- 检查：主店在数据库事务里实测（最后回滚，数据库和选项与测试前完全一致，没有动店主的 C0001）：新建 C0002 → 删除成功、记录没了、落地页记录清掉、C0002 记入停用编号 → 再新建分到 C0003（不复用 C0002）；删不存在的编号提示“找不到这个素材”。广告设置页和素材库页（店主已登录的浏览器）都显示删除按钮、无 PHP 警告；6 家店后台服务器端渲染无警告。
+- 回滚：备份文件拷回，reload php8.3-fpm；选项 `pc_cr_retired_codes` 留着无害。

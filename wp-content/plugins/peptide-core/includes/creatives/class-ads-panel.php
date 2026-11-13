@@ -184,8 +184,9 @@ final class Ads_Panel {
 			echo '<input type="hidden" name="code" value="' . esc_attr( $c['code'] ) . '">' . self::landing_select( 'landing', 'pc-cr-landing-' . strtolower( $c['code'] ), $land, $pages );
 			echo ' <button type="submit" class="button button-primary button-small">保存</button></form></details></div>';
 			echo '<div class="pc-cr-copyrow"><input type="text" readonly value="' . esc_attr( $link ) . '" aria-label="' . esc_attr( $c['code'] . ' 的投放链接' ) . '" data-pc-cr-link-out>';
-			echo '<button type="button" class="button button-primary" data-pc-cr-copy>复制链接</button></div>';
-			echo '</div></li>';
+			echo '<button type="button" class="button button-primary" data-pc-cr-copy>复制链接</button>';
+			Library_Page::delete_button( $c['code'], $st );
+			echo '</div></div></li>';
 		}
 		echo '</ul>';
 		echo '</section>';
@@ -234,6 +235,8 @@ final class Ads_Panel {
 .pc-cr-badge.is-new{background:#f0f6fc;color:#2271b1!important}
 .pc-cr-nums{margin-left:6px}
 .pc-cr-copyrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pc-cr-copyrow form{margin:0}
+.pc-cr-del:not([disabled]){color:#b32d2e!important;border-color:#b32d2e!important}
 .pc-cr-copyrow input{flex:1 1 320px;min-width:0;font-family:monospace;font-size:12px}
 .pc-cr-landing-row select{width:100%;max-width:520px}
 .pc-cr-landing-row .pc-by-hint{display:block;margin-top:2px}
@@ -269,6 +272,12 @@ final class Ads_Panel {
 				img.src = URL.createObjectURL( file );
 				drop.insertBefore( img, e.target );
 			}
+		}
+	} );
+	document.addEventListener( 'submit', function ( e ) {
+		var d = e.target.querySelector( '[data-pc-cr-del]' );
+		if ( d && e.target.closest( '.pc-cr-links' ) && ! window.confirm( '删除 ' + d.getAttribute( 'data-pc-cr-del' ) + '？删除后不能恢复，这个编号也不会再用。图片留在媒体库。' ) ) {
+			e.preventDefault();
 		}
 	} );
 	document.addEventListener( 'click', function ( e ) {
