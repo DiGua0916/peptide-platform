@@ -17,6 +17,12 @@ class Element extends Target{
 function fixture(options={}){
  let now=0,nextTimer=0;const timers=new Map(),ios=[],mos=[],calls=[],responses=[];
  const document=new Target(),window=new Target();document.nodeType=9;document.documentElement=new Element('html');document.documentElement.connected=true;document.defaultView=window;document.visibilityState='visible';document.hidden=false;document.prerendering=false;document.referrer='';document.querySelectorAll=s=>document.documentElement.querySelectorAll(s);document.querySelector=s=>document.querySelectorAll(s)[0]||null;
+ // Engagement gate (2026-11-08): the observer sends nothing until a real interaction or engageMs (6 s by default).
+ // These suites cover what happens after that point, so every observer started here is engaged from the start,
+ // through the observer's own engageMs option. The gate itself is covered in m14-visitor-engagement.cjs.
+ let observerApi;
+ Object.defineProperty(window, 'VialCoveVisitorObserver', {configurable: true, enumerable: true, get: () => observerApi,
+   set(api) { const start = api.start; observerApi = {...api, start: options => start({engageMs: 0, ...options})}; }});
  const later=(fn,ms,interval=0)=>{const id=++nextTimer;timers.set(id,{fn,due:now+Number(ms||0),interval});return id;};
  class ClockDate extends Date{constructor(...args){super(...(args.length?args:[Date.parse('2026-11-01T00:00:00Z')+now]));}static now(){return Date.parse('2026-11-01T00:00:00Z')+now;}}
  class IO{constructor(callback){this.callback=callback;this.targets=new Set();this.pending=[];this.disconnected=false;ios.push(this);}observe(target){this.targets.add(target);}unobserve(target){this.targets.delete(target);}takeRecords(){return this.pending.splice(0);}disconnect(){this.targets.clear();this.disconnected=true;}}

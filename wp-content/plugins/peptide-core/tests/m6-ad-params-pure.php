@@ -8,8 +8,14 @@
  * 2. 归因写成功的那一刻把广告参数存进自己的表；一次访问第一次记下的算数；表没装好时什么都不做，归因照常。
  * 3. 报表拿到的是带状态的值：有值 / 没有这个参数 / 没有观察到。
  * 4. 删访问（隐私抹除、超期清理）时这张表的行跟着删。
+ *
+ * 2026-11-13 合并主线之后：归因的清洗（Attribution::clean()）以主线为准——素材归因把参数白名单放宽到了 Contract::PARAMS，
+ * 广告参数由它自己校验（非空、不超长、没有控制字符；没被替换的 {{…}} 占位符它不拦），并且写进访问表的新列。
+ * 这张表（pc_track_ads）是另存的一份，放在 M6 开关后面，默认不写；占位符在入这张表之前由 Ad_Params::pick() 拦掉。
  */
 require __DIR__ . '/m6-stubs.php';
+require dirname( __DIR__ ) . '/includes/creatives/class-contract.php';
+require dirname( __DIR__ ) . '/includes/tracking/class-client-environment.php';
 require dirname( __DIR__ ) . '/includes/tracking/class-ad-params.php';
 require dirname( __DIR__ ) . '/includes/tracking/class-attribution.php';
 
@@ -79,13 +85,14 @@ m6_check( '1: pick keeps only the three keys, in a fixed order', array( 'utm_cam
 $wire  = array( 'version' => 1, 'host' => 'store.test', 'referrer_host' => 'm.facebook.com', 'landing_query' => array( 'utm_source' => 'facebook', 'utm_medium' => 'paid', 'utm_campaign' => 'Spring sale', 'utm_term' => 'US women 25-44', 'utm_content' => 'Video A' ) );
 $clean = Attribution::clean( $wire );
 m6_check( '1: valid ad parameters pass the attribution cleaner next to source and medium', $clean['ok'] && array( 'utm_source' => 'facebook', 'utm_medium' => 'paid', 'utm_campaign' => 'Spring sale', 'utm_term' => 'US women 25-44', 'utm_content' => 'Video A' ) === $clean['value']['landing_query'] );
-m6_check( '1: the stored attribution query string still holds only source and medium', 'utm_source=facebook&utm_medium=paid' === Attribution::query( $clean['value'] ) );
+m6_check( '1: the stored attribution query string carries the ad parameters too (mainline since 11-11), in the fixed order', 'utm_source=facebook&utm_medium=paid&utm_campaign=Spring%20sale&utm_term=US%20women%2025-44&utm_content=Video%20A' === Attribution::query( $clean['value'] ) );
 
 $dirty                                  = $wire;
 $dirty['landing_query']['utm_campaign'] = '{{campaign.name}}';      // Facebook 没替换掉的占位符。
 $dirty['landing_query']['utm_term']     = str_repeat( 'x', 500 );   // 太长。
 $partial                                = Attribution::clean( $dirty );
-m6_check( '1: a bad ad parameter is dropped alone; source, medium and the good one survive', $partial['ok'] && array( 'utm_source' => 'facebook', 'utm_medium' => 'paid', 'utm_content' => 'Video A' ) === $partial['value']['landing_query'] );
+m6_check( '1: a too-long ad parameter is dropped alone; source, medium and the others survive', $partial['ok'] && array( 'utm_source' => 'facebook', 'utm_medium' => 'paid', 'utm_campaign' => '{{campaign.name}}', 'utm_content' => 'Video A' ) === $partial['value']['landing_query'] );
+m6_check( '1: the mainline cleaner lets an unreplaced macro through; this table never stores it (pick drops it)', array( 'utm_content' => 'Video A' ) === Ad_Params::pick( $partial['value']['landing_query'] ) );
 
 $strict                                = $wire;
 $strict['landing_query']['utm_source'] = "bad\nsource";
@@ -96,6 +103,19 @@ m6_check( '1: links without ad parameters clean exactly as before', array( 'utm_
 
 // ---------- 2. 入库 ----------
 $event = static fn( int $visit, int $visitor = 7 ): array => array( 'event_uid' => 'pv-' . $visit, 'visitor_id' => $visitor, 'visit_id' => $visit, 'path' => '/', 'received_ms' => 150000 + $visit );
+
+// M6 开关关着（默认）：表装好了也不写这一份，归因照常成功。
+m6_check( '2: writing follows the M6 switch — off by default', false === Ad_Params::writing() );
+// 开关关着时不建表：maybe_install() 要是往下走，会去加载 wp-admin 的升级文件（这里没有，会直接报错）并写版本选项。
+Ad_Params::maybe_install();
+m6_check( '2: with the switch off the table is not created (no version option is written)', false === Ad_Params::installed() && ! array_key_exists( Ad_Params::OPTION, $GLOBALS['m6_options'] ) );
+$GLOBALS['m6_options'][ Ad_Params::OPTION ] = Ad_Params::DB_VERSION; // 就算表早就在（以前开过开关）。
+$receipt = Attribution::capture( 7, $event( 10 ), $clean['value'] );
+m6_check( '2: with the switch off attribution succeeds and this table gets nothing', 'applied' === $receipt['status'] && 'captured' === $receipt['code'] && array() === $wpdb->ads && false === Ad_Params::store( 10, array( 'utm_campaign' => 'Direct' ), 1 ) && array() === $wpdb->ads );
+unset( $GLOBALS['m6_options'][ Ad_Params::OPTION ] );
+// 下面都是开关打开之后的行为（过滤器 peptide_core_track_ads_write；真正的开关是 peptide_core_m6_mode 不为 off）。
+add_filter( 'peptide_core_track_ads_write', static fn() => true );
+m6_check( '2: the filter (or an M6 mode other than off) turns writing on', true === Ad_Params::writing() );
 
 // 表还没装好：归因照常成功，广告参数不存，也不报错。
 $receipt = Attribution::capture( 7, $event( 11 ), $clean['value'] );

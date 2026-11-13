@@ -1,7 +1,7 @@
 <?php defined( 'ABSPATH' ) || exit;
 if ( class_exists( '\PeptideCore\Design_Pages' ) && \PeptideCore\Design_Pages::rendering_native() ) { return; }
 ?>
-<?php if ( ! function_exists( 'is_checkout' ) || ( ! is_checkout() && ! is_cart() ) ) : ?><div class="container"><?php vc_use_statement(); ?></div><?php endif; ?>
+<?php if ( ! function_exists( 'is_checkout' ) || ( ! is_checkout() && ! is_cart() ) ) : ?><div class="container"><?php vc_use_statement(); vc_track_order_entry(); ?></div><?php endif; ?>
 <?php if ( class_exists( '\PeptideCore\Modules\Site_Design' ) && \PeptideCore\Modules\Site_Design::has_part( 'footer' ) ) :
 	echo \PeptideCore\Modules\Site_Design::render_part( 'footer' );
 else : ?>

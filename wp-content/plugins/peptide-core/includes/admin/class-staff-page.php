@@ -6,6 +6,8 @@
  * - 添加 / 编辑：账号（建好后不能改）、邮箱、姓名、密码（新建必填，编辑时留空不改）、权限（勾选菜单）、状态。
  * - 删除员工：他写的博客、商品等内容转给当前管理员，不会一起删掉。
  * - 只有管理员（create_users）能管理员工。每次改动都写进操作记录。
+ * - 投手版（M9）：列表里每个销售账号有“后台版本”开关，表单里有同样的勾选。打开 = 这个账号只看到投手的 6 个菜单
+ *   （规则见 PeptideCore\Staff_Buyer），关闭 = 恢复下面勾选的菜单。默认都是关闭，不会自动改任何现有账号。
  *
  * @package PeptideCore
  */
@@ -14,6 +16,7 @@ namespace PeptideCore\Admin;
 
 use PeptideCore\Activity_Log;
 use PeptideCore\Staff;
+use PeptideCore\Staff_Buyer;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -25,7 +28,7 @@ final class Staff_Page {
 	/** 密码最少几位。 */
 	public const MIN_PASSWORD = 8;
 
-	private const ACTIONS = array( 'pc_staff_save', 'pc_staff_delete', 'pc_staff_toggle' );
+	private const ACTIONS = array( 'pc_staff_save', 'pc_staff_delete', 'pc_staff_toggle', 'pc_staff_buyer' );
 
 	public static function register_hooks(): void {
 		add_action( 'admin_menu', array( self::class, 'add_menu' ), 61 );
@@ -76,7 +79,8 @@ final class Staff_Page {
 	/**
 	 * 新建或修改员工。
 	 *
-	 * @param array{login?:string,email:string,name?:string,password?:string,modules?:string[],disabled?:bool} $data
+	 * @param array{login?:string,email:string,name?:string,password?:string,modules?:string[],disabled?:bool,media_buyer?:bool} $data
+	 *        media_buyer：给了就按它切换投手版；不给时不改（新建账号在本店“默认投手版”打开时直接用投手版）。
 	 * @return int|\WP_Error 员工的用户 ID
 	 */
 	public static function save( int $id, array $data ) {
@@ -90,6 +94,12 @@ final class Staff_Page {
 			/* translators: %d: minimum length */
 			return new \WP_Error( 'pc_staff_password', sprintf( __( 'The password needs at least %d characters.', 'peptide-core' ), self::MIN_PASSWORD ) );
 		}
+		if ( str_contains( $pass, '\\' ) ) {
+			return new \WP_Error( 'pc_staff_password', '密码里不能有反斜杠（\\）。' );
+		}
+		// 登录时 WordPress 拿“给引号加了反斜杠”的密码去比对（wp_signon() 直接用 $_POST['pwd']），它自己的用户编辑页也是
+		// 按这个形式加密的。这里保持一致，否则带引号的密码保存成功却登录不上。$pass 进来时已经去掉转义（表单和总后台两条路都是）。
+		$hash_input = wp_slash( trim( $pass ) );
 		$user = array(
 			'user_email'   => $email,
 			'display_name' => '' !== $name ? $name : $email,
@@ -101,7 +111,7 @@ final class Staff_Page {
 			}
 			$user['ID'] = $id;
 			if ( '' !== $pass ) {
-				$user['user_pass'] = $pass;
+				$user['user_pass'] = $hash_input;
 			}
 			$result = wp_update_user( $user );
 		} else {
@@ -110,7 +120,7 @@ final class Staff_Page {
 				return new \WP_Error( 'pc_staff_login', __( 'Enter an account name (letters, numbers, - _ . @).', 'peptide-core' ) );
 			}
 			$user['user_login'] = $login;
-			$user['user_pass']  = $pass;
+			$user['user_pass']  = $hash_input;
 			$user['role']       = Staff::ROLE;
 			$result             = wp_insert_user( $user );
 		}
@@ -123,6 +133,16 @@ final class Staff_Page {
 		$was_off = Staff::disabled( $id );
 		$modules = Staff::set_modules( $id, (array) ( $data['modules'] ?? array() ) );
 		Staff::set_disabled( $id, $off );
+		// 投手版（M9）。密码是别人设的（新建或重置）时，投手下次登录要先改成自己的。
+		$is_new = ! isset( $user['ID'] );
+		if ( array_key_exists( 'media_buyer', $data ) ) {
+			Staff_Buyer::set( $id, ! empty( $data['media_buyer'] ), $is_new );
+		} elseif ( $is_new && Staff_Buyer::default_on() ) {
+			Staff_Buyer::set( $id, true, true );
+		}
+		if ( '' !== $pass && Staff_Buyer::is_buyer( $id ) ) {
+			Staff_Buyer::set_must_change( $id, true );
+		}
 		$object = array( 'type' => 'user', 'id' => $id, 'label' => (string) get_userdata( $id )->user_login );
 		if ( ! isset( $user['ID'] ) ) {
 			Activity_Log::log( 'staff', 'create', $object, array( 'modules' => self::labels( $modules ) ) );
@@ -157,6 +177,7 @@ final class Staff_Page {
 					'password' => isset( $_POST['password'] ) ? (string) wp_unslash( $_POST['password'] ) : '', // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- 密码原样交给 WordPress 加密。
 					'modules'  => isset( $_POST['modules'] ) ? array_map( 'sanitize_key', (array) wp_unslash( $_POST['modules'] ) ) : array(),
 					'disabled' => ! empty( $_POST['disabled'] ),
+					'media_buyer' => ! empty( $_POST['media_buyer'] ),
 				);
 				$result = self::save( $id, $data );
 				if ( is_wp_error( $result ) ) {
@@ -175,6 +196,18 @@ final class Staff_Page {
 					Staff::set_disabled( $id, $off );
 					Activity_Log::log( 'staff', $off ? 'disable' : 'enable', array( 'type' => 'user', 'id' => $id, 'label' => (string) get_userdata( $id )->user_login ) );
 					self::flash( 'success', $off ? __( 'Staff account disabled. It is logged out and cannot log in.', 'peptide-core' ) : __( 'Staff account enabled.', 'peptide-core' ) );
+				}
+				break;
+
+			case 'pc_staff_buyer':
+				if ( Staff::is_staff( $id ) ) {
+					$on     = ! Staff_Buyer::is_buyer( $id );
+					$result = Staff_Buyer::set( $id, $on );
+					if ( is_wp_error( $result ) ) {
+						self::flash( 'error', $result->get_error_message() );
+					} else {
+						self::flash( 'success', $on ? '已切到投手版：这个账号下次打开后台只看到首页、订单、弃单、数据、广告设置、店铺信息。' : '已改回按勾选菜单的权限。' );
+					}
 				}
 				break;
 
@@ -232,6 +265,7 @@ final class Staff_Page {
 						<th scope="col"><?php esc_html_e( 'Name', 'peptide-core' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Email', 'peptide-core' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Permissions', 'peptide-core' ); ?></th>
+						<th scope="col">后台版本</th>
 						<th scope="col"><?php esc_html_e( 'Status', 'peptide-core' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Last login', 'peptide-core' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Created', 'peptide-core' ); ?></th>
@@ -245,6 +279,7 @@ final class Staff_Page {
 						$last     = (int) get_user_meta( $u->ID, Staff::META_LOGIN, true );
 						$off      = $is_staff && Staff::disabled( $u->ID );
 						$mods     = $is_staff ? array_values( array_intersect( array_keys( Staff::modules() ), (array) get_user_meta( $u->ID, Staff::META_MODULES, true ) ) ) : array();
+						$buyer    = $is_staff && Staff_Buyer::is_buyer( $u );
 						?>
 						<tr>
 							<td data-label="<?php esc_attr_e( 'Account', 'peptide-core' ); ?>">
@@ -255,7 +290,15 @@ final class Staff_Page {
 							</td>
 							<td data-label="<?php esc_attr_e( 'Name', 'peptide-core' ); ?>"><?php echo esc_html( $u->display_name ); ?></td>
 							<td data-label="<?php esc_attr_e( 'Email', 'peptide-core' ); ?>" class="pc-media-source"><?php echo esc_html( $u->user_email ); ?></td>
-							<td data-label="<?php esc_attr_e( 'Permissions', 'peptide-core' ); ?>" class="pc-staff-perms"><?php echo esc_html( $is_staff ? ( $mods ? self::labels( $mods ) : __( 'None', 'peptide-core' ) ) : __( 'All permissions', 'peptide-core' ) ); ?></td>
+							<td data-label="<?php esc_attr_e( 'Permissions', 'peptide-core' ); ?>" class="pc-staff-perms"><?php echo esc_html( $is_staff ? ( $buyer ? '投手的 6 个菜单' : ( $mods ? self::labels( $mods ) : __( 'None', 'peptide-core' ) ) ) : __( 'All permissions', 'peptide-core' ) ); ?></td>
+							<td data-label="后台版本">
+								<?php if ( $is_staff ) : ?>
+									<a class="pc-dm-switch<?php echo $buyer ? ' is-on' : ''; ?>" role="switch" aria-checked="<?php echo $buyer ? 'true' : 'false'; ?>" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=pc_staff_buyer&user=' . $u->ID ), 'pc_staff_buyer' ) ); ?>" aria-label="<?php echo esc_attr( ( $buyer ? '改回按勾选菜单：' : '切到投手版：' ) . $u->user_login ); ?>" data-pc-confirm-json="<?php echo esc_attr( wp_json_encode( $buyer ? '把这个账号改回按勾选菜单的权限？' : '把这个账号切到投手版？它只会看到首页、订单、弃单、数据、广告设置、店铺信息，可以随时改回。' ) ); ?>"></a>
+									<span class="pc-staff-state"><?php echo esc_html( $buyer ? '投手版' : '按勾选菜单' ); ?></span>
+								<?php else : ?>
+									—
+								<?php endif; ?>
+							</td>
 							<td data-label="<?php esc_attr_e( 'Status', 'peptide-core' ); ?>">
 								<?php if ( $is_staff ) : ?>
 									<a class="pc-dm-switch<?php echo $off ? '' : ' is-on'; ?>" role="switch" aria-checked="<?php echo $off ? 'false' : 'true'; ?>" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=pc_staff_toggle&user=' . $u->ID ), 'pc_staff_toggle' ) ); ?>" aria-label="<?php echo esc_attr( sprintf( $off ? /* translators: %s: account */ __( 'Enable %s', 'peptide-core' ) : /* translators: %s: account */ __( 'Disable %s', 'peptide-core' ), $u->user_login ) ); ?>" data-pc-confirm-json="<?php echo esc_attr( wp_json_encode( $off ? __( 'Enable this staff account?', 'peptide-core' ) : __( 'Disable this staff account? It is logged out at once and cannot log in until enabled again.', 'peptide-core' ) ) ); ?>"></a>
@@ -294,6 +337,7 @@ final class Staff_Page {
 			'name'     => $back['name'] ?? ( $user ? (string) $user->first_name : '' ),
 			'modules'  => $back['modules'] ?? ( $user ? (array) get_user_meta( $id, Staff::META_MODULES, true ) : array() ),
 			'disabled' => $back['disabled'] ?? ( $user ? Staff::disabled( $id ) : false ),
+			'media_buyer' => $back['media_buyer'] ?? ( $user ? Staff_Buyer::is_buyer( $user ) : Staff_Buyer::default_on() ),
 		);
 		?>
 		<p class="pc-dm-back"><a href="<?php echo esc_url( self::url() ); ?>"><span class="dashicons dashicons-arrow-left-alt" aria-hidden="true"></span><?php esc_html_e( 'Back to staff', 'peptide-core' ); ?></a></p>
@@ -340,6 +384,10 @@ final class Staff_Page {
 				<?php endforeach; ?>
 				<p class="description"><?php esc_html_e( 'Staff management, plugins, users and WordPress settings stay with administrators.', 'peptide-core' ); ?></p>
 			</fieldset>
+			<p>
+				<label><input type="checkbox" name="media_buyer" value="1" <?php checked( (bool) $vals['media_buyer'] ); ?>> 投手版后台（只显示首页、订单、弃单、数据、广告设置、店铺信息）</label>
+				<br><span class="description">勾选后上面的菜单勾选暂时不生效；取消勾选就恢复。密码由你设置或重置后，投手下次登录要先改成自己的密码。</span>
+			</p>
 			<p>
 				<label><input type="checkbox" name="disabled" value="1" <?php checked( (bool) $vals['disabled'] ); ?>> <?php esc_html_e( 'Disable this account (cannot log in)', 'peptide-core' ); ?></label>
 			</p>

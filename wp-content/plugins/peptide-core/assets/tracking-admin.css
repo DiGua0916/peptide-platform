@@ -269,3 +269,8 @@
 		grid-template-columns: 1fr;
 	}
 }
+
+/* 设备和网络（2026-11-13） */
+.pc-trk-net-title { margin: 18px 0 6px; font-size: 15px; }
+.pc-trk-net-title small { font-weight: 400; color: #646970; }
+.pc-trk-net .pc-trk-card b { font-size: 14px; word-break: break-all; }

@@ -9,6 +9,10 @@
  *
  * 不含顾客资料：只有访问编号和三个投放名称。隐私抹除、超期清理删访问时这里的行跟着删。
  *
+ * 2026-11-13：素材归因（主线 11-11 起、11-13 上线）已经把同样三项写进了访问表的新列（utm_campaign / utm_term / utm_content）。
+ * 两份数据最终用哪一份由平台所有者定；定之前这一份放在 M6 开关后面（见 writing()）：开关是 off（默认）时
+ * 不建表、不写入，线上只有访问表那一份。
+ *
  * @package PeptideCore
  */
 
@@ -38,9 +42,18 @@ final class Ad_Params {
 		return self::DB_VERSION === get_option( self::OPTION );
 	}
 
-	/** 访客追踪的表装好之后才建这张表。 */
+	/**
+	 * 这一份广告参数写不写：跟 M6 开关走，off（默认）时不写，shadow / on 时写。
+	 * 过滤器 peptide_core_track_ads_write( bool ) 可以改写（冒烟用例用它在一次运行里打开，不动选项）。
+	 */
+	public static function writing(): bool {
+		$on = class_exists( \PeptideCore\Data\Metrics_Switch::class ) && ! \PeptideCore\Data\Metrics_Switch::off();
+		return function_exists( 'apply_filters' ) ? (bool) apply_filters( 'peptide_core_track_ads_write', $on ) : $on;
+	}
+
+	/** 访客追踪的表装好之后才建这张表；开关关着时不建。 */
 	public static function maybe_install(): void {
-		if ( ! self::installed() && Schema::installed() ) {
+		if ( ! self::installed() && self::writing() && Schema::installed() ) {
 			self::install();
 		}
 	}
@@ -97,6 +110,9 @@ final class Ad_Params {
 	 */
 	public static function store( int $visit_id, array $landing_query, int $ms ): bool {
 		global $wpdb;
+		if ( ! self::writing() ) {
+			return false; // 开关关着：只有访问表的新列那一份。
+		}
 		$values = self::pick( $landing_query );
 		if ( $visit_id <= 0 || ! $values || ! self::installed() ) {
 			return false;

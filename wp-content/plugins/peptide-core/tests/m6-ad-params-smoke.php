@@ -10,6 +10,10 @@
  * 会临时写入 4 个访客（各一次访问、一条页面浏览事件），结束时用 Privacy::delete_visitors() 连同广告参数一起删掉；
  * 不改任何设置和开关。不带 run 只打印这段说明。只在开发站 / 沙盒运行，不要在正式站点运行。
  *
+ * 2026-11-13：pc_track_ads 这一份放在 M6 开关后面，默认不建表、不写入（素材归因已经把同样三项写进访问表的新列，
+ * 两份数据最终用哪一份还没定）。这个用例在这一次运行里用过滤器 peptide_core_track_ads_write 把写入打开，
+ * 表不在就建上（表会留下，是空的）；选项 peptide_core_m6_mode 不改。它同时核对访问表的新列也写上了。
+ *
  * 通过标准（退出码 0）：最后一行是“结果：通过（N 项检查）”。
  * 这个用例只管服务端这一半；浏览器里主题脚本有没有把三个参数带上来，要用真正的浏览器看（F5 的主题用例管那一半）。
  *
@@ -57,6 +61,11 @@ $m6a_check  = static function ( string $label, bool $ok, string $detail = '' ) u
 		$m6a_fail[] = $label;
 	}
 };
+
+// 这一次运行里把 pc_track_ads 的写入打开（默认跟 M6 开关走，off 时不建表也不写）。
+$m6a_write = static fn() => true;
+add_filter( 'peptide_core_track_ads_write', $m6a_write, PHP_INT_MAX );
+Ad_Params::maybe_install();
 
 // 0. 前提：追踪表、广告参数表都在，访客追踪开着。
 if ( ! Schema::installed() || ! Ad_Params::installed() || ! Tracker::enabled() ) {
@@ -152,6 +161,9 @@ $m6a_check( '访客 C：没被替换的占位符不入库', array() === array_fi
 $m6a_check( '访客 D：没有广告参数就没有这一行', array() === $m6a_row( 'D' ), wp_json_encode( $m6a_row( 'D' ) ) );
 $m6a_sources = $m6a_visit( 'C' ) > 0 ? $wpdb->get_row( $wpdb->prepare( 'SELECT utm_source, utm_medium FROM ' . Schema::table( 'visits' ) . ' WHERE id = %d', $m6a_visit( 'C' ) ), ARRAY_A ) : array(); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
 $m6a_check( '访客 C：来源和媒介照常记在访问上（不因为广告参数不合规而丢）', 'facebook' === ( $m6a_sources['utm_source'] ?? null ) && 'paid' === ( $m6a_sources['utm_medium'] ?? null ), wp_json_encode( $m6a_sources ) );
+// 素材归因（主线 11-11 起）把同样三项写进访问表的新列：两份应该一致。
+$m6a_columns = $m6a_visit( 'A' ) > 0 ? $wpdb->get_row( $wpdb->prepare( 'SELECT utm_campaign, utm_term, utm_content FROM ' . Schema::table( 'visits' ) . ' WHERE id = %d', $m6a_visit( 'A' ) ), ARRAY_A ) : array(); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+$m6a_check( '访客 A：访问表的新列里也是同样三项（素材归因写的那一份）', $m6a_campaign === ( $m6a_columns['utm_campaign'] ?? null ) && 'adset-1-' . $m6a_token === ( $m6a_columns['utm_term'] ?? null ) && 'ad-1-' . $m6a_token === ( $m6a_columns['utm_content'] ?? null ), wp_json_encode( $m6a_columns ) );
 
 $m6a_say( '' );
 $m6a_say( '3. 来源报表按广告系列 / 广告组 / 广告分组' );
@@ -201,6 +213,7 @@ $m6a_check( '广告参数的行也删了', 0 === $m6a_ads_left, (string) $m6a_ad
 $m6a_check( '来源报表里不再有这次运行的行', 200 === $m6a_status && array() === $m6a_found, $m6a_status . ' ' . wp_json_encode( $m6a_found ) );
 
 // 恢复运行前的环境。
+remove_filter( 'peptide_core_track_ads_write', $m6a_write, PHP_INT_MAX );
 foreach ( array( 'ua' => 'HTTP_USER_AGENT', 'ip' => 'REMOTE_ADDR' ) as $m6a_key => $m6a_name ) {
 	if ( null === $m6a_backup[ $m6a_key ] ) {
 		unset( $_SERVER[ $m6a_name ] );

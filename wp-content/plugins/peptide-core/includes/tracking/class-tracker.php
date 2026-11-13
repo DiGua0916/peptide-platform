@@ -7,6 +7,8 @@
  *   同时打开的多个标签页共用同一个访客。它只用于统计，不能当作登录凭证。数据库里的访客行在第一次收到事件时才建，
  *   不跑脚本的爬虫不会产生记录。
  * - 访问：同一访客 30 分钟（VISIT_GAP_MS）没有任何事件，下一次事件开始新的访问。
+ *   CR 素材归因（2026-11-11）：带着和当前访问不同的有效广告 ID（utm_content）进站时，也开新访问。
+ *   访客行的 first_visit_id 在第一次新建访问时写（只在为 0 时写），之后不改。
  * - 标签页：前端在 sessionStorage 里保存的 tab_id（同一标签页内跨页面不变），没有时退回 page_instance_id。
  * - 登录：登录时（wp_login）把当前访客关联到账号；之后每批事件也会根据登录 cookie 补关联。员工账号不追踪。
  *
@@ -50,6 +52,7 @@ final class Tracker {
 			return;
 		}
 		add_action( 'template_redirect', array( self::class, 'ensure_cookie' ), 1 );
+		add_action( 'send_headers', array( self::class, 'client_hints_header' ) );
 		add_filter( 'vialcove_visitor_observer_config', array( self::class, 'observer_config' ), 20 );
 		Server_Events::register_hooks();
 		Carts::register_hooks();
@@ -165,6 +168,13 @@ final class Tracker {
 	}
 
 	/** 前台页面加载时发访客 cookie。后台、预览、员工账号不发。 */
+	/** 请 Chrome 在之后的同站请求里带上型号和系统版本（新版 Chrome 的标识里把安卓型号藏成 “K”）。 */
+	public static function client_hints_header(): void {
+		if ( ! is_admin() && ! headers_sent() ) {
+			header( 'Accept-CH: Sec-CH-UA-Model, Sec-CH-UA-Platform-Version', false );
+		}
+	}
+
 	public static function ensure_cookie(): void {
 		if ( is_admin() || is_preview() || is_customize_preview() || isset( $_GET['pc_frame'] ) || isset( $_GET['pc_preview_token'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			return;
@@ -227,14 +237,15 @@ final class Tracker {
 
 	/**
 	 * 这次活动属于哪一次访问：最近一次访问在 30 分钟内有事件就沿用，否则新开一次。
+	 * $ad_id 是这批事件入口页带来的有效广告 ID（Visit_Facts::ad_id()）；和最近一次访问记录的广告 ID 不同时也新开一次。
 	 */
-	public static function visit( int $visitor_id, int $now_ms, string $landing_path = '' ): int {
+	public static function visit( int $visitor_id, int $now_ms, string $landing_path = '', string $ad_id = '' ): int {
 		global $wpdb;
 		// 同一访客的两个标签页同时上报时，不能各自新开一次访问：查找和新建放在访客级的数据库锁里。
 		$lock = 'pc_trk_visit_' . $visitor_id;
 		$got  = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 5)', $lock ) );
 		try {
-			return self::find_or_create_visit( $visitor_id, $now_ms, $landing_path );
+			return self::find_or_create_visit( $visitor_id, $now_ms, $landing_path, $ad_id );
 		} finally {
 			if ( $got ) {
 				$wpdb->query( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) );
@@ -242,11 +253,19 @@ final class Tracker {
 		}
 	}
 
-	private static function find_or_create_visit( int $visitor_id, int $now_ms, string $landing_path ): int {
+	/** 最近一次访问能不能沿用（纯函数）：30 分钟内有活动，并且没有换成另一条有效广告。 */
+	public static function continues( ?array $last, int $now_ms, string $ad_id ): bool {
+		if ( ! $last || (int) $last['last_ms'] < $now_ms - self::VISIT_GAP_MS ) {
+			return false;
+		}
+		return '' === $ad_id || (string) ( $last['utm_content'] ?? '' ) === $ad_id;
+	}
+
+	private static function find_or_create_visit( int $visitor_id, int $now_ms, string $landing_path, string $ad_id = '' ): int {
 		global $wpdb;
 		$visits = Schema::table( 'visits' );
-		$row    = $wpdb->get_row( $wpdb->prepare( "SELECT id, last_ms FROM {$visits} WHERE visitor_id = %d ORDER BY start_ms DESC, id DESC LIMIT 1", $visitor_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
-		if ( $row && (int) $row['last_ms'] >= $now_ms - self::VISIT_GAP_MS ) {
+		$row    = $wpdb->get_row( $wpdb->prepare( "SELECT id, last_ms, utm_content FROM {$visits} WHERE visitor_id = %d ORDER BY start_ms DESC, id DESC LIMIT 1", $visitor_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		if ( self::continues( $row ?: null, $now_ms, $ad_id ) ) {
 			// 先把最后活动时间推到现在，锁释放后别的请求看到的就是这次访问。
 			$wpdb->query( $wpdb->prepare( "UPDATE {$visits} SET last_ms = GREATEST(last_ms, %d) WHERE id = %d", $now_ms, (int) $row['id'] ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 			return (int) $row['id'];
@@ -265,7 +284,8 @@ final class Tracker {
 			)
 		);
 		$id = (int) $wpdb->insert_id;
-		$wpdb->query( $wpdb->prepare( 'UPDATE ' . Schema::table( 'visitors' ) . ' SET visits = visits + 1 WHERE id = %d', $visitor_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+		// first_visit_id 只在为 0 时写（访客的第一次访问，之后不改）。
+		$wpdb->query( $wpdb->prepare( 'UPDATE ' . Schema::table( 'visitors' ) . ' SET visits = visits + 1, first_visit_id = CASE WHEN first_visit_id = 0 THEN %d ELSE first_visit_id END WHERE id = %d', $id, $visitor_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
 		return $id;
 	}
 

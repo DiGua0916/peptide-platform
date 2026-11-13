@@ -555,3 +555,34 @@
 - 测试：没有真实应用，用模拟的腾讯文档接口在 HQ 跑（不发请求、不写设置）：两张表各新增 3 行、跳过手填的 1 行、序号接续、第二次运行 0 写入；测试映射行已删除。
 - 备份：`/root/vialcove-backups/tdocs-hq-20261112T120813Z`。
 - 待店主：在腾讯文档开放平台注册开发者、建应用并通过审核、回调地址加白名单、填 ID/Secret、授权、填两个工作表链接。
+
+### 2026-11-12 20:10 UTC 光辉（s0008）运营套件补做精简
+- 店主：光辉的运营套件没更新（后来才装的）。11-09 的精简（只留「流量斗篷」，删「支付同步中心」「产品同步」）当时只做了 s0001/s0006/s0007/s0009/s0010，s0008 那时还没装（11-09 记录里写成“s0011”是笔误，光辉是 s0008）。
+- 核对：s0008 与主店的差异只有 `cross-border-suite.php`（31 行，正是精简内容）和 `modules/payment`、`modules/product-sync` 两个目录。光辉的代付网关 payment_proxy / _stripe / _airwallex / _flypay 本来就全是 enabled=no，结账不受影响。
+- 处理：两台主机 `/srv/vialcove/store-plugins/s0008/cross-border-suite` 整目录先备份，主文件换成主店精简版（保留属主 / 权限），删除两个模块目录；`diff -rq` 与主店完全一致；php -l 通过；reload php8.3-fpm。
+- 验证：店铺与后台 `cbs_modules()` = cloak；可用支付方式只剩 Credit card；流量斗篷设置（acloak_options）未动，浏览器访问与阳站一样跳到斗篷页。
+- 备份：web `/root/vialcove-backups/cbs-strip-s0008-20261112T201030Z`，HQ `/root/vialcove-backups/cbs-strip-s0008-20261112T201031Z`。回滚：把备份里的 cross-border-suite 目录拷回原处并 reload php8.3-fpm。
+
+### 2026-11-13 11:05 UTC 上线素材归因（claude/creative-merge → 集成线，267439a）
+- 集成线 `git merge --ff-only origin/claude/creative-merge`（b8b59dc → 267439a，65 个提交）。除素材归因（广告数据追踪、素材库、素材看板、像素自动检查、访客机型和 IP）外，还带进 M9 投手后台、M14/FE-10/FE-11 主题、FE-09 服务端 AddPaymentInfo、HQ-05 系列同步、HQ-06 运费两档、HQ-13 订单上报、NF-02 指标口径。
+- 测试：`tests/run-data-observations.cjs` 84 套 83 过（`mail-source-observations` 需已安装的 WordPress，合并前同样失败）；全部 `*-pure.php` 94 个 79 过、15 个失败——交接说的 9 个 + panapay 6 个（callback-return-status、hub-new-account-defaults、hub-return-failure-binding、hub-return-status-check、provider-site-bindings、return-cart），15 个在 b8b59dc 上同样失败，本次未改 panapay。
+- 部署前核对：53 个被修改文件在 14 份店铺副本 + HQ 安装上与 b8b59dc 完全一致（无漂移）。系列推送默认不发（`series_sync` 默认 0），不会自动改店铺商品 / 运费。像素改动只新增（服务端 AddPaymentInfo 同 event_id、验收码、测试事件），原有事件不变。
+- 先上主店：web `/srv/vialcove/current` + HQ `store-admin/current`（89 个店铺文件）。访问表升到 v6、素材表 v2；首页 92 个商品、控制台无错；购物车 Melanotan ×1 总价 $84.75 与上线前一致；广告设置 / 素材库 / 素材看板 / 花费导入以管理员身份渲染无 PHP 警告。
+- 再上：HQ 安装（16 个 peptide-hq 文件）、web s0006–s0010 + 模板、HQ tenant-admin s0006–s0010 + 模板；reload php8.3-fpm；5 家店表升级完成；阳、芒果后台 4 个新页面渲染正常。
+- 服务器配置：
+  - 访客 IP：nginx 已经 `real_ip_header CF-Connecting-IP` + Cloudflare 段 `set_real_ip_from`，REMOTE_ADDR 就是访客真实 IP（实测记录的 IP 与本机出口 IP 一致），**不需要** `PEPTIDE_CORE_TRUSTED_PROXIES`。
+  - 运营商：把服务器上已有的 `GeoLite2-ASN.mmdb`（运营套件斗篷模块自带）复制到 6 家店 `uploads/peptide-geoip/`（uploads 是持久目录），查询正常（8.8.8.8 → AS15169）。城市 / 地区库还没有（需要下载 DB-IP 或 GeoLite2 City，等店主同意）。
+  - 视频上传：店铺后台 PHP 上限 96M、nginx 68M，暂不调整。
+  - 访客追踪：6 家店都已开启。
+- 备份：web/HQ `/root/vialcove-backups/creative-merge-20261113T1105*`、`…T110729Z`、`…T110735Z`，HQ `creative-merge-hq-20261113T110728Z`（新文件清单在 new-files.txt）。
+
+### 2026-11-13 11:12 UTC 访客地区：DB-IP 城市库
+- 店主同意后，在 web 主机下载 DB-IP City Lite 2026-11（`https://download.db-ip.com/free/dbip-city-lite-2026-11.mmdb.gz`，60 MB，gzip 校验通过，解压 127 MB，元数据 DBIP-City-Lite），放在 `/srv/vialcove-data/geoip/`，`dbip-city-lite.mmdb` 软链接指向当月文件。
+- 6 家店 `uploads/peptide-geoip/dbip-city-lite.mmdb` 都软链接到这一份（uploads 是持久目录），和之前复制的 GeoLite2-ASN 一起用。
+- 验证：`Ip_Network::lookup` 主店 155.116.153.10 → Texas / Houston / PANDG；子店 8.8.8.8 → California / Mountain View / GOOGLE。地区在一次访问开始时查，所以之前的访问不会补；之后的新访问都会带州和城市。
+- 许可：DB-IP Lite 是 CC BY 4.0，需要注明 “IP Geolocation by DB-IP”（只在后台显示，影响不大）。库每月更新一次，目前不自动更新；要更新时下载新月份文件、改软链接即可。
+
+### 2026-11-13 11:25 UTC DB-IP 城市库每月自动更新
+- 店主要求每月自动更新。web 主机装 `/usr/local/sbin/vialcove-dbip-update`（源码 `tools/deployment/geoip/dbip-city-update.sh`）+ systemd `vialcove-dbip-update.service` / `.timer`（每天 04:17 UTC 随机延迟 30 分钟，Persistent）。
+- 逻辑：当月文件已在用 → 不做事；DB-IP 没发布当月 → 第二天再看；下载后检查 gzip、> 50 MB、元数据 DBIP-City-Lite → 换 `/srv/vialcove-data/geoip/dbip-city-lite.mmdb` 软链接 → 主店查 8.8.8.8 必须有城市，否则立刻换回上个月并失败退出；只留当月和上月两份。日志在 `journalctl -u vialcove-dbip-update`。
+- 实测：服务运行（已是当月，不动）；手动切到 2026-10（下载 127 MB、查询 Mountain View）再切回 2026-11；放一个假文件 2099-01 → 查询失败 → 自动换回 2026-11、退出码 1，假文件已删。现在用 2026-11，磁盘上留 2026-10 / 2026-11。

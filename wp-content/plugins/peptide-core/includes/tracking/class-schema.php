@@ -22,7 +22,9 @@ final class Schema {
 	// v2（VISITOR-CART-01）：访客当前购物车快照；标签页记录最后事件的页面实例和序号（并发 / 乱序时单调更新）。
 	// v3（VISITOR-ARCHIVE-01）：访问按最后活动时间排序的索引（访客归档分页）。
 	// v4: immutable, first-successfully-captured optional visit attribution.
-	public const DB_VERSION = '4';
+	// v5（CR 素材归因，2026-11-11）：访问记录完整广告参数、来源分类、IP 与地理网络、时区语言、内置浏览器；
+	//     访客记录首次访问和最近一次付费访问。列由打地基统一加好，写入由线 1（采集补齐）负责。
+	public const DB_VERSION = '6'; // 6 = 访问表加 ua / os / os_version / device_model（2026-11-13，机型追踪）
 	public const OPTION     = 'peptide_core_tracking_db';
 	/** Successful checks only, scoped to this PHP request and physical table identity. */
 	private static array $ready_cache = array();
@@ -88,6 +90,8 @@ final class Schema {
   cart longtext NULL,
   cart_ms bigint(20) unsigned NOT NULL DEFAULT 0,
   cart_key varchar(64) NOT NULL DEFAULT '',
+  first_visit_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  last_paid_visit_id bigint(20) unsigned NOT NULL DEFAULT 0,
   PRIMARY KEY  (id),
   UNIQUE KEY vid (vid),
   KEY user_id (user_id),
@@ -109,6 +113,30 @@ CREATE TABLE {$s} (
   utm_source varchar(120) NULL,
   utm_medium varchar(120) NULL,
   referrer_host varchar(253) NULL,
+  utm_campaign varchar(120) NULL,
+  utm_term varchar(120) NULL,
+  utm_content varchar(120) NULL,
+  placement varchar(64) NULL,
+  ad_name varchar(255) NULL,
+  creative_code varchar(16) NOT NULL DEFAULT '',
+  has_fbclid tinyint(1) NOT NULL DEFAULT 0,
+  source_class varchar(16) NOT NULL DEFAULT '',
+  params_valid tinyint(1) NOT NULL DEFAULT 0,
+  ip varchar(45) NOT NULL DEFAULT '',
+  geo_region varchar(64) NOT NULL DEFAULT '',
+  geo_city varchar(80) NOT NULL DEFAULT '',
+  geo_lat varchar(16) NOT NULL DEFAULT '',
+  geo_lon varchar(16) NOT NULL DEFAULT '',
+  isp varchar(120) NOT NULL DEFAULT '',
+  asn int(10) unsigned NOT NULL DEFAULT 0,
+  ip_type varchar(16) NOT NULL DEFAULT '',
+  timezone varchar(64) NOT NULL DEFAULT '',
+  language varchar(35) NOT NULL DEFAULT '',
+  in_app varchar(8) NOT NULL DEFAULT '',
+  ua varchar(400) NOT NULL DEFAULT '',
+  os varchar(20) NOT NULL DEFAULT '',
+  os_version varchar(20) NOT NULL DEFAULT '',
+  device_model varchar(80) NOT NULL DEFAULT '',
   device varchar(10) NOT NULL DEFAULT '',
   events int(10) unsigned NOT NULL DEFAULT 0,
   pageviews int(10) unsigned NOT NULL DEFAULT 0,
@@ -118,7 +146,9 @@ CREATE TABLE {$s} (
   PRIMARY KEY  (id),
   KEY visitor (visitor_id,start_ms),
   KEY start_ms (start_ms),
-  KEY last_ms (last_ms,id)
+  KEY last_ms (last_ms,id),
+  KEY ad_time (utm_content,start_ms),
+  KEY creative_time (creative_code,start_ms)
 ) {$charset};
 CREATE TABLE {$e} (
   id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
