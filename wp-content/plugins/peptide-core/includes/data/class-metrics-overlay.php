@@ -234,7 +234,8 @@ final class Metrics_Overlay {
 	private static array $test_memo = array();
 
 	/**
-	 * 这张订单是不是测试单。旧规则：测试付款方式 / 演示商品。新规则多认收件信息全 1 的测试单（_pc_test_order）。
+	 * 这张订单是不是测试单。旧规则（Overview）：测试付款方式 / 演示商品，2026-11-11 起也认测试单标记和全 1 地址；
+	 * 新规则（Metrics）：同样四项。现在两条规则结论相同，下面的对账正常不会记到东西；记到了就说明两条规则又分开了。
 	 * 影子：仍按旧规则，两条规则结论不同的订单记进对账日志（reports.test_order，每张订单一条）。
 	 */
 	public static function is_test_order( \WC_Order $order ): bool {

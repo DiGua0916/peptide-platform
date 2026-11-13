@@ -195,6 +195,32 @@ m6_check( 'daily visitors', array( 1, 2 ) === array_column( $rows, 'visitors' ) 
 m6_check( 'daily rows add up to the period total', array_sum( array_column( $rows, 'sales_cents' ) ) === Metrics::orders( $day, 3 * $day )['sales_cents'] );
 m6_check( 'reversed daily period is empty', array() === Metrics::daily( 5, 5 ) );
 
+// 每日汇总里的弃单数（给总后台的每日汇总和 F3 的报表）：弃单按创建那天归属。
+m6_check( 'daily rows carry abandoned counts, zero when there are none', array( 0, 0 ) === array_column( $rows, 'abandoned' ) && array( 0, 0 ) === array_column( $rows, 'recall_recovered' ) );
+Recovery_Items::$items = array(
+	array( 'created_ms' => ( $day + 100 ) * 1000, 'status' => 'pending', 'total' => 10.0 ),
+	array( 'created_ms' => ( $day + 200 ) * 1000, 'status' => 'success', 'total' => 20.0 ),
+	array( 'created_ms' => ( 2 * $day + 100 ) * 1000, 'status' => 'recalling', 'total' => 10.0 ),
+	array( 'created_ms' => ( 2 * $day + 200 ) * 1000, 'status' => 'void', 'total' => 10.0 ),   // 自己付了款的：不算弃单。
+	array( 'created_ms' => ( 3 * $day + 100 ) * 1000, 'status' => 'pending', 'total' => 10.0 ), // 时间段之外。
+);
+$GLOBALS['m6_transients'] = array();
+$calls = Recovery_Items::$calls;
+$rows  = Metrics::daily( $day, 3 * $day );
+m6_check( 'daily abandoned: by the day the cart was abandoned', array( 2, 1 ) === array_column( $rows, 'abandoned' ) && array( 1, 1 ) === array_column( $rows, 'abandoned_open' ) );
+m6_check( 'daily recall: reminded and recovered', array( 1, 1 ) === array_column( $rows, 'recall_emailed' ) && array( 1, 0 ) === array_column( $rows, 'recall_recovered' ) );
+m6_check( 'daily abandoned adds up to the period total', array_sum( array_column( $rows, 'abandoned' ) ) === Metrics::abandoned( $day, 3 * $day )['count'] );
+Metrics::daily( $day, 3 * $day );
+m6_check( 'the abandoned list is read once per period for the daily rows, then cached', $calls + 2 === Recovery_Items::$calls );
+$by_day = Metrics::abandoned_daily( $day, 3 * $day );
+m6_check( 'abandoned_daily is keyed by store date and skips empty days', array( '1970-01-02', '1970-01-03' ) === array_keys( $by_day ) && 2000 === $by_day['1970-01-02']['recovered_cents'] );
+Recovery_Items::$fail = true;
+$GLOBALS['m6_transients'] = array();
+$rows = Metrics::daily( $day, 3 * $day );
+m6_check( 'a failing abandoned list leaves zeros and never breaks the daily rows', 2 === count( $rows ) && array( 0, 0 ) === array_column( $rows, 'abandoned' ) && array( 1, 1 ) === array_column( $rows, 'orders' ) );
+Recovery_Items::$fail = false;
+Recovery_Items::$items = array();
+
 // ---------- 先付款、后又下了一张没付的单（从数据库读） ----------
 $GLOBALS['m6_orders'] = array();
 $wpdb                 = new M6_DB();

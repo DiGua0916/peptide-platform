@@ -130,7 +130,14 @@ final class Attribution {
 		$sql = 'UPDATE ' . Schema::table( 'visits' ) . ' SET attribution_version = 1, ' . $wpdb->prepare( 'attribution_event_uid = %s, attribution_ms = %d, attribution_path = %s, attribution_host = %s, attribution_query = %s', $id, (int) $event['received_ms'], (string) $event['path'], $metadata['host'], $query ) . ', utm_source = ' . $nullable( $metadata['landing_query']['utm_source'] ?? null ) . ', utm_medium = ' . $nullable( $metadata['landing_query']['utm_medium'] ?? null ) . ', referrer_host = ' . $nullable( $metadata['referrer_host'] ) . self::fact_sql( $facts, $nullable ) . $wpdb->prepare( ' WHERE id = %d AND visitor_id = %d AND attribution_version = 0', $visit, $visitor );
 		$changed = $wpdb->query( $sql ); // All snapshot fields are claimed by one atomic compare-and-set.
 		if ( false === $changed ) { return self::receipt( $id, 'retry', 'server_error', true ); }
-		if ( 1 === $changed ) { return self::receipt( $id, 'applied', 'captured' ); }
+		if ( 1 === $changed ) {
+			// M6 另存一份到 pc_track_ads：只在 M6 开关不是 off 时写（Ad_Params::writing()，默认关），存不上不影响归因。
+			// 上面那条 UPDATE 已经把同样三项写进访问表的新列；两份数据最终用哪一份还没定。
+			if ( class_exists( Ad_Params::class ) ) {
+				try { Ad_Params::store( $visit, (array) ( $metadata['landing_query'] ?? array() ), (int) $event['received_ms'] ); } catch ( \Throwable $e ) { unset( $e ); }
+			}
+			return self::receipt( $id, 'applied', 'captured' );
+		}
 		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT attribution_version, attribution_event_uid FROM ' . Schema::table( 'visits' ) . ' WHERE id = %d AND visitor_id = %d', $visit, $visitor ), ARRAY_A );
 		if ( $wpdb->last_error ) { return self::receipt( $id, 'retry', 'server_error', true ); }
 		if ( ! $row ) { return self::receipt( $id, 'rejected', 'original_visit_missing' ); }

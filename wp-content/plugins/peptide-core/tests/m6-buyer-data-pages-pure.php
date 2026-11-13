@@ -25,6 +25,7 @@ function add_query_arg( array $args, string $url ) { return $url . '?' . http_bu
 function add_menu_page( ...$args ) { $GLOBALS['t_menu'][] = $args[3]; }
 function add_submenu_page( $parent, $page_title, $menu_title, $cap, $slug, $callback = null ) { $GLOBALS['t_submenu'][ $slug ] = $menu_title; }
 function remove_submenu_page( $parent, $slug ) { $GLOBALS['t_removed'][] = $slug; }
+function get_edit_post_link( $id, $context = 'display' ) { return 'https://store.test/wp-admin/post.php?post=' . (int) $id . '&action=edit'; }
 
 require dirname( __DIR__ ) . '/includes/data/class-audience.php';
 require dirname( __DIR__ ) . '/includes/admin/class-data-pages.php';
@@ -60,6 +61,13 @@ m6_check( 'unknown or logged-out users are not buyers', ! Audience::is_media_buy
 add_filter( 'peptide_core_is_media_buyer', static fn( $is, $user_id ) => 4 === $user_id ? true : $is );
 m6_check( 'the filter can rewrite the decision', Audience::is_media_buyer( 4 ) && ! Audience::is_media_buyer( 1 ) );
 $GLOBALS['m6_filters'] = array();
+
+// 报表里商品名上的编辑链接：投手没有商品编辑页（点进去是 403），不给链接；管理员照旧。
+$GLOBALS['t_user'] = $buyer;
+m6_check( 'buyers get no product edit link in the reports', '' === Audience::product_edit_url( 5 ) );
+$GLOBALS['t_user'] = $admin;
+m6_check( 'administrators keep the product edit link', 'https://store.test/wp-admin/post.php?post=5&action=edit' === Audience::product_edit_url( 5 ) );
+$GLOBALS['t_user'] = $buyer;
 
 // ---------- 管理员：菜单和以前一样 ----------
 $GLOBALS['t_user'] = $admin;
@@ -97,11 +105,26 @@ foreach ( $tabs as [ $page, $tab, $key ] ) {
 	m6_check( "buyer: {$page} tab '{$tab}' shows the {$key} report", $key === Data_Pages::current_key() );
 }
 
+// 默认是同屏布局；下面几条看的是页签布局（退路），所以先把选项设成 tabs。
+$GLOBALS['m6_options'][ Data_Pages::BUYER_LAYOUT_OPTION ] = 'tabs';
 $html = $render( array( 'page' => 'pc-data-funnel-sources' ) );
 m6_check( 'buyer: merged page renders the existing report container', str_contains( $html, '<div id="pc-data" class="pc-data" data-page="conversion">' ) );
 m6_check( 'buyer: merged page has both tabs, the first one active', str_contains( $html, '<a class="nav-tab nav-tab-active" aria-current="page" href="https://store.test/wp-admin/admin.php?page=pc-data-funnel-sources&tab=funnel">漏斗</a>' ) && str_contains( $html, '<a class="nav-tab" href="https://store.test/wp-admin/admin.php?page=pc-data-funnel-sources&tab=sources">来源（按广告）</a>' ) );
 $html = $render( array( 'page' => 'pc-data-products-landing', 'tab' => 'landing' ) );
 m6_check( 'buyer: second merged page switches report by tab', str_contains( $html, 'data-page="landing"' ) && str_contains( $html, 'nav-tab-active" aria-current="page" href="https://store.test/wp-admin/admin.php?page=pc-data-products-landing&tab=landing">落地页</a>' ) && str_contains( $html, '>商品</a>' ) );
+
+// 同屏布局（选项 peptide_core_buyer_data_layout = stacked）：不出页签，容器不变；tab 仍然决定“当前是哪个报表”（外壳脚本用它滚到那一段）。
+$GLOBALS['m6_options'][ Data_Pages::BUYER_LAYOUT_OPTION ] = 'stacked';
+$html = $render( array( 'page' => 'pc-data-funnel-sources', 'tab' => 'sources' ) );
+m6_check( 'buyer stacked: no tabs, same container', ! str_contains( $html, 'nav-tab' ) && str_contains( $html, '<div id="pc-data" class="pc-data" data-page="sources">' ) );
+m6_check( 'buyer stacked: the tab still names the report to focus', 'sources' === Data_Pages::current_key() );
+$GLOBALS['m6_options'][ Data_Pages::BUYER_LAYOUT_OPTION ] = 'something-else';
+m6_check( 'an unknown layout value means the default (stacked)', ! str_contains( $render( array( 'page' => 'pc-data-funnel-sources' ) ), 'nav-tab' ) );
+unset( $GLOBALS['m6_options'][ Data_Pages::BUYER_LAYOUT_OPTION ] );
+m6_check( 'without the option the layout is stacked', ! str_contains( $render( array( 'page' => 'pc-data-funnel-sources' ) ), 'nav-tab' ) && str_contains( $render( array( 'page' => 'pc-data-funnel-sources' ) ), 'id="pc-data"' ) );
+$GLOBALS['m6_options'][ Data_Pages::BUYER_LAYOUT_OPTION ] = 'tabs';
+m6_check( 'the tabs layout is still available as a fallback', str_contains( $render( array( 'page' => 'pc-data-funnel-sources' ) ), 'nav-tab-active' ) );
+unset( $GLOBALS['m6_options'][ Data_Pages::BUYER_LAYOUT_OPTION ] );
 
 $html = $render( array( 'page' => 'pc-data' ) );
 m6_check( 'buyer: other data pages show no report, only the two entries', ! str_contains( $html, 'id="pc-data"' ) && str_contains( $html, 'admin.php?page=pc-data-funnel-sources">漏斗 + 来源</a>' ) && str_contains( $html, 'admin.php?page=pc-data-products-landing">商品 + 落地页</a>' ) );

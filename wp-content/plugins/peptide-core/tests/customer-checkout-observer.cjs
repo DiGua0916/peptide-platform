@@ -49,6 +49,10 @@ function fixture(options = {}) {
   if (options.throwFactory) window.PeptideCheckoutBridge.create = () => { throw Error('Unavailable integration'); };
   check('Factory evaluation alone creates no hooks/subscriptions/transport', actions.size === 0 && subscriptions.size === 0 && calls.length === 0);
   for (const filename of ['visitor-tracking.js', 'visitor-adapter.js']) vm.runInContext(fs.readFileSync(path.join(theme, filename), 'utf8'), context, {filename});
+  // 2026-11-08 起主题脚本在访客有真实操作（指针 / 触摸 / 按键 / 滚动）或页面开满 6 秒之前什么都不发。
+  // 这里的用例看的是结账步骤，所以默认当作访客已经动过一下；options.idle 留给“没动过”的那一组。
+  const engage = () => document.dispatchEvent({type: 'pointerdown', isTrusted: true, target: document.body});
+  if (!options.idle) engage();
   async function advance(ms = 300) {
     const end = now + ms; await drain();
     for (let loops = 0; loops < 10000; loops++) {
@@ -64,7 +68,8 @@ function fixture(options = {}) {
   const notify = () => { for (const fn of [...subscriptions]) fn(); };
   const events = type => calls.flatMap(call => call.body.events).filter(event => !type || event.type === type);
   const click = () => {
-    const button = {disabled: false, classList: {contains: () => false}, getAttribute: () => null, matches: () => true};
+    // 真实元素都有 closest()：主题脚本的模块点击 / 商品点击会用它往上找容器，这里的下单按钮不在任何模块或商品卡片里。
+    const button = {disabled: false, classList: {contains: () => false}, getAttribute: () => null, matches: () => true, closest: () => null, dataset: {}};
     document.dispatchEvent({type: 'click', isTrusted: true, button: 0, target: {closest: () => button}});
   };
   const radio = (kind, value, options = {}) => {
@@ -74,7 +79,7 @@ function fixture(options = {}) {
     Object.defineProperty(target, 'value', {get() { throw Error('Read static method attribute only'); }});
     document.dispatchEvent({type: options.type || 'change', isTrusted: options.trusted !== false, button: 0, target});
   };
-  return {window, document, state, actions, subscriptions, timers, calls, responses, storage, advance, hook, notify, events, click, radio, stop: () => window.VialCoveVisitorTransport.stop()};
+  return {window, document, state, actions, subscriptions, timers, calls, responses, storage, advance, hook, notify, events, click, radio, engage, stop: () => window.VialCoveVisitorTransport.stop()};
 }
 async function run() {
   const f = fixture({state: {resolved: false}}); await f.advance();
@@ -209,6 +214,15 @@ async function run() {
   }
   const product = fixture({page: 'product'}); await product.advance();
   check('Noncheckout collector remains independent of bridge', product.actions.size === 0 && product.events('page_view').length === 1); product.stop();
+  // 访客还没动过：结账步骤的事件先攒着不发；页面开满 6 秒（或有了第一次真实操作）才一起发出去。
+  const idle = fixture({idle: true}); await idle.advance();
+  check('Nothing is sent before the visitor interacts', idle.calls.length === 0 && idle.actions.size > 0);
+  await idle.advance(6000);
+  check('After six seconds on a visible page the held checkout view is sent once', idle.events('checkout_view').length === 1);
+  idle.stop();
+  const touched = fixture({idle: true}); await touched.advance(); touched.engage(); await touched.advance();
+  check('The first trusted interaction releases the held checkout view', touched.events('checkout_view').length === 1);
+  touched.stop();
   console.log(JSON.stringify({suite: 'customer-checkout-observer', passed: checks, failed: 0}));
 }
 run().catch(error => { console.error(error); process.exitCode = 1; });

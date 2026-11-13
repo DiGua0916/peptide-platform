@@ -40,6 +40,11 @@ foreach ( wc_get_products( array( 'status' => 'publish', 'type' => 'simple', 'li
 	}
 }
 if ( ! $simple ) {
+	// 店里没有可用的简单商品（生产店的脱敏快照里全是多规格商品）：临时建一个，脚本结束时删掉。
+	require_once __DIR__ . '/m6-smoke-fixtures.php';
+	$simple = pc_m6_smoke_temp_product();
+}
+if ( ! $simple ) {
 	echo "FAIL fixture product\n";
 	return;
 }

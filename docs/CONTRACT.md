@@ -969,7 +969,8 @@ add_filter( 'pchq_monitor_checks', static function ( array $checks, int $site_id
 | `Metrics::conversion_rate( int $from, int $to ): ?float` | 支付成功访客 ÷ 访客 |
 | `Metrics::funnel( int $from, int $to ): array` | `{unit:'visitors', counts:{visitors,viewed,carted,checkout,address,shipping,payment,paid}, layers:[{key,count,step_rate,visitor_rate}×8]}`，每层不大于上一层 |
 | `Metrics::abandoned( int $from, int $to ): array` | `{count, open, failed, emailed, recovered, recovered_cents, rate}`，结果缓存 5 分钟 |
-| `Metrics::daily( int $from, int $to ): array` | 按店铺时区自然日，每天 `{date, visitors, paid_visitors, conversion_rate, orders, gross_cents, refund_cents, sales_cents, aov_cents}` |
+| `Metrics::daily( int $from, int $to ): array` | 按店铺时区自然日，每天 `{date, visitors, paid_visitors, conversion_rate, orders, gross_cents, refund_cents, sales_cents, aov_cents, abandoned, abandoned_open, recall_emailed, recall_recovered}`。后四项是弃单，按弃单创建那天归属，定义和 `summary()` 的同名项一样（11-12 加的） |
+| `Metrics::abandoned_daily( int $from, int $to ): array` | 店铺时区的日期 => 那一天的 `{count, open, failed, emailed, recovered, recovered_cents, rate}`；没有弃单的日子不在结果里。读一次弃单列表，缓存 5 分钟 |
 | `Metrics::order_fact( \WC_Order $order ): array` | 一张订单的事实，见下 |
 | `Metrics::order_facts( int $from, int $to ): array` | 付款时间在时间段内的已付款订单的事实（含测试单，`test = true`） |
 | `Metrics::paid_orders( int $from, int $to ): array` | 和 `order_facts()` 同一批订单，但返回 `\WC_Order` 对象（含测试单，调用方用 `is_test_order()` 排除） |
@@ -1020,9 +1021,15 @@ currency, visitor, visit, buyer
 ### 4. 数据页对投手（ST-05）
 
 - 判断投手：`PeptideCore\Data\Audience::is_media_buyer( ?int $user_id = null )` = 用户有角色 `pc_media_buyer` 且没有 `manage_options`；过滤器 `peptide_core_is_media_buyer`（参数：结果、用户编号）可以改写。**需要 F5**：创建角色 `pc_media_buyer`，并给它 `manage_woocommerce`（数据页、概览页、像素页的权限检查都是这一项）。
-- 顶层菜单 slug 仍然是 `pc-data`。投手只有两个子页：`pc-data-funnel-sources`（漏斗 + 来源）、`pc-data-products-landing`（商品 + 落地页），每页用页签（地址栏 `tab=funnel|sources`、`tab=products|landing`）切换原来的两个报表；其余数据子页对投手不注册，直接访问会被拒绝。管理员（含总后台一键登录）仍然看到全部 12 个子页，另外也能打开这两个合并页（不显示在菜单里）。
+- 顶层菜单 slug 仍然是 `pc-data`。投手只有两个子页：`pc-data-funnel-sources`（漏斗 + 来源）、`pc-data-products-landing`（商品 + 落地页），每页把原来的两个报表上下排在同一屏（11-12 起的默认布局）；地址栏的 `tab=funnel|sources`、`tab=products|landing` 仍然有效，用来在打开时滚到那一段。其余数据子页对投手不注册，直接访问会被拒绝。管理员（含总后台一键登录）仍然看到全部 12 个子页，另外也能打开这两个合并页（不显示在菜单里）。
 - F5 的菜单白名单里“数据”保留 `pc-data` 即可；投手点“数据”会进 `pc-data-funnel-sources`。投手如果直接打开 `admin.php?page=pc-data`，页面只显示两个合并页的入口（`Workspace_Shell` 只在 `pc-overview` / `pc-data` 两个地址启动，投手的入口不是这两个地址之一时不受影响）。
-- 这一版是“两页、每页两个页签”，不是同屏合并（同屏要改 `assets/data.js` 的挂载方式，等有浏览器环境再做）。
+- 布局由每家店的选项 `peptide_core_buyer_data_layout` 决定：`stacked`（默认，同屏）/ `tabs`（第一版的“每页两个页签”，留作退路）；过滤器同名。同屏布局 11-12 在本地站点的浏览器里看过两个合并页：桌面宽度、平板宽度（768）和手机宽度（375）都看了，手机宽度下修了三处排版（日期框的年份被切、筛选行的输入框伸出屏幕、每页条数的数字和箭头重叠），两种布局都没有横向溢出。
+- **投手页面上的链接（11-12 定，F4 + F5）**：约定是“投手页面上不出现投手打不开的入口”，F5 的菜单白名单对没列出的后台页一律 403，所以由出页面的一方负责不输出。两个合并页逐个链接查过：
+  - 转化详情每组的“查看详情 / 收起详情”是页内展开按钮（把 5 层漏斗展开成 8 层），不是链接，不发请求，投手能正常用，**保留**。（F4 在 11-12 上午的交接里把它写成了“链到分维度明细页、投手打不开”，那是看错了，以这里为准。）
+  - 商品报表里商品名上的“编辑商品”链接（`post.php?post=…&action=edit`）投手打不开：**对投手隐藏**，商品名显示成普通文字。实现是 `Data\Audience::product_edit_url( int $product_id ): string`，对投手返回空字符串；接口 `GET /peptide/v1/data/products` 里投手拿到的 `product.edit_url` 是 `''`（字段还在，页面脚本本来就把空值显示成文字）。管理员不变。
+  - 落地页报表的“打开页面”指向前台地址，投手能打开，保留。来源报表在同屏布局下没有“返回运营数据”的链接；页签布局下它指向投手自己的合并页。
+  - F5 如果希望投手能点进某个商品（例如以后给投手一个只读的商品页），告诉 F4 把这个函数改成返回那个地址即可，只有这一处。
+- F5 的投手首页如果链到某一个报表，用 `Admin\Data_Pages::buyer_url( $page, $tab )`，两种布局下都能用。
 
 ### 5. 像素与 CAPI（FE-09，M7）
 
@@ -1033,14 +1040,55 @@ currency, visitor, visit, buyer
 - **给 F5 的向导第 4 步**：`POST /wp-json/peptide/v1/admin/pixel-test`（需要 `manage_woocommerce` 和 REST nonce），或 PHP 里直接 `\PeptideCore\Pixels\Server::test_event()`。无参数，HTTP 200，返回 `{ ok: bool, pixel: string, message: string, reason: '' | 'no_pixel', test_code: bool, results: [ { pixel, ok, code, message } ] }`；`ok = true` 就是“已通”。`pixel` / `message` 是给向导直接显示的：第一个没通的像素（都通时是第一个像素）和一句中文原因（通了是空字符串）；`results` 是每个像素的明细。向导状态由 F5 自己写，这个接口不写任何向导数据。
 - `assets/pixels*.js` 不在第 13.2 节的清单里，但只属于像素模块，由 F4 维护。
 
-### 6. 需要别的会话配合的事
+### 6. 按广告拆分（2026-11-12）
+
+- 主题上报的落地页参数里，`utm_campaign`、`utm_term`、`utm_content`（投放链接里的广告系列、广告组、广告，F5 的 `ad-link` 固定带这三项）现在会通过 `Tracking\Attribution::clean()`：各 1–120 个字符，不合规（空、过长、控制字符、没被 Facebook 替换的 `{{…}}`）时**只丢那一项**，来源和媒介照常记。前端协议不用再改。
+- 入库：`PeptideCore\Tracking\Ad_Params`，表 `{prefix}pc_track_ads`（`visit_id` 主键、`utm_campaign`、`utm_term`、`utm_content`、`captured_ms`），版本选项 `peptide_core_track_ads_db`。访问表的结构和版本号没有动。一次访问第一次记下的值算数；隐私抹除、超期清理、清空追踪数据时跟着删。
+- 读：`Ad_Params::for_visits( int[] $visit_ids ): array`（访问编号 => 三项，没有的项是 `null`）、`Ad_Params::typed( ?array $row, bool $captured ): array`（带状态的值：`value / missing / unobserved`）。
+- 报表：`GET /peptide/v1/data/sources` 的 `group_by` 多三个值——`campaign`（按广告系列）、`adset`（广告系列 + 广告组）、`ad`（广告系列 + 广告组 + 广告）；返回里多 `group_by`、`ad_keys`（这一行的身份由哪几个参数组成）、`ad_capture`（表装好了没有）；每一行带对应的带状态的值。`format=csv` 同样支持。和 `split_medium=1` 不能同时用（400）。`utm` / `channel` 两种分组的返回没有变。
+- 历史访问没有这三项（以前上报时就被丢掉了），会归在“没有观察到”或“已捕获但未提供此参数”一行。
+### 7. 需要别的会话配合的事
+
+还没定的口径（订单按付款时间还是创建时间、弃单数含不含召回成功的、排行的支付成功率按哪个时间）在 `docs/metrics.md` 第 6 节标了“待确认”，定之前代码保持现状。F3 / F5 用 `Metrics` 的返回值时，这三项的含义以那一节写的现状为准。
 
 | 谁 | 事情 | 状态 |
 | --- | --- | --- |
 | F5 | 角色 `pc_media_buyer` 带 `manage_woocommerce`；菜单白名单保留 `pc-data` | 待 F5 |
+| F5 | 你要的三件事：`/admin/pixel-test`（早就有）；服务端放开 `utm_campaign / utm_term / utm_content` 并入库、来源报表加三种分组（11-12 已做，见第 6 小节）；`Tracker::is_staff()`、`Pixels::allowed()` 认员工角色 `Staff::is_staff()`（11-12 已做）。FE-02 的地址替换会不会让像素多发一次 PageView：已经写进像素验收清单，等沙盒 / 生产验收时看 | F4 已完成 |
 | F3 | 订单上报和总后台汇总按 `order_fact()` 的规则；回写 `_pc_refund_cents` | 待 F3 |
-| F1 | 登记功能键 `m6.metrics`、`m7.pixel_acceptance`；测试条目已追加到 `tests/data-observations-suites.json` 末尾（`module: M6 / M7`）（现在 11 条）；发布前在沙盒把开关切到 `shadow` 观察。F4 的用例已经在本机跑过（PHP 8.3.36），默认套件 59 通过 / 3 失败，剩下 3 个不归 F4 | 待 F1 |
+| F3 + F1 | 你们要的两件事都就绪了：店铺侧销售额减 `_pc_refund_cents`（`order_fact()['net_cents']`、`Metrics::orders()['sales_cents']`，一直是这样）；每日汇总里的弃单数——`Metrics::daily( $from, $to )` 每一行多了 `abandoned / abandoned_open / recall_emailed / recall_recovered`，或者直接用 `Metrics::abandoned_daily()`。`/hq/summary`（`core/class-hq-connector.php`，归 F1）在每天那一行里加上这几项即可，日期都是店铺时区，能直接按 `date` 对上。F4 不改连接器 | 等 F1 接进 `/hq/summary` |
+| F1 | 登记功能键 `m6.metrics`、`m7.pixel_acceptance`；测试条目已追加到 `tests/data-observations-suites.json` 末尾（`module: M6 / M7`）（现在 16 条）；沙盒上要跑的命令和通过标准在 `docs/guides/m6-sandbox-runbook.md`。新增一张表 `{prefix}pc_track_ads`（访问编号 + 三个投放名称，没有顾客资料和密钥，脱敏快照建议 keep）和它的版本选项 `peptide_core_track_ads_db`；新增选项 `peptide_core_buyer_data_layout`。默认套件 64 通过 / 3 失败，剩下 3 个不归 F4；你标成跳过的 5 个 F4 套件在这条分支上都已修好 | 待 F1 |
 | 日常会话 | `core/class-overview.php` 不用改：概览页的数字由 `Admin\Overview_Page` 按开关用 `Metrics` 覆盖。之后再改概览页、数据页、访客页、像素页请先在聊天室找 F4 | 知会 |
+
+### 8. 商品“看过 / 已加购”接口（FE-03，2026-11-12，答复 F5）
+
+F5 在「M14 前台主题」一节“FE-03 看过 / 已加购”里要的接口已经按约定实现：`PeptideCore\Tracking\Product_Activity`（`core/tracking/class-product-activity.php`），由 `Tracker::register_hooks()` 注册（`class-plugin.php` 没有再加行）。
+
+- `GET /wp-json/peptide/v1/product-activity?product_id=<商品 ID>`，公开、只读。
+- 200：`{ "product_id": 10, "viewing": 12, "added": 31, "window": { "viewing_minutes": 10, "added_hours": 24 }, "generated_at": "2026-11-12T12:00:00Z", "ttl": 60 }`，响应头 `Cache-Control: public, max-age=60`。字段、类型、顺序和你写的一样，两个数都是 JSON 整数，没有就是 `0`。响应里只有这六个字段。
+- `viewing`：最近 10 分钟里有 `product_view` 事件（打开商品页或商品弹窗）的不同访客数；`added`：最近 24 小时里有服务端 `add_to_cart` 事件的不同访客数。各规格都记在父商品上，请求时传父商品 ID。窗口是 `Product_Activity::VIEWING_MINUTES` / `ADDED_HOURS` 两个常量，响应里如实返回。
+- 访客口径和 `Data\Metrics` 一样：员工和已识别的爬虫在写入时就不记；测试版留下的数据（`is_test = 1`）和访客行已经被清掉的不算；拒绝追踪的浏览器（GPC、退出追踪）本来就没有事件。
+- 主题的过滤器：`pc_product_activity_available` 已经挂上。
+
+和你的约定有出入、或者你没写到的地方（都是往“少暴露、少算”的方向，前台代码不用改；我拿这个接口的真实返回喂过你分支上的 `assets/product-activity.js`，两行文案都能正常显示，0 和 404 时不显示）：
+
+| 事项 | 你的约定 | 实际 | 原因 |
+| --- | --- | --- | --- |
+| 低于下限的数 | 接口给真实数字，前台低于下限不显示 | **接口直接给 `0`**。下限读的是你的选项 `pc_product_activity_min`，规则和 `vc_product_activity_min()` 相同（1–1000 的整数，其他值按 5） | 这是公开接口，谁都能调。不暴露比页面上会显示的更多的东西，也不会出现“此刻正好有 1 个人在看”这种能对上某一位顾客的数 |
+| 开关 | 只说了主题的开关 | 接口也看同一个按店开关 `pc_product_activity`（值 `on` 才生效，默认关）：关着一律 404，不查库。过滤器 `peptide_core_product_activity_enabled` 可以改写 | 默认关着时线上多出来的只是一个永远 404 的地址。注意：如果只用你的过滤器 `vc_product_activity_enabled` 打开主题那一半而选项没开，接口仍然是 404，要同时挂我这个过滤器 |
+| `pc_product_activity_available` | “接口注册时加一行 `__return_true`” | 追踪表在、访客追踪开着时才返回 `true` | 追踪关着的店没有数据，不必加载脚本 |
+| 测试单 | “不算测试单的访问” | 窗口内的访问上挂着测试单（全“1”、测试付款方式、演示商品）的访客，两个数都不算。只看窗口内最近 200 个挂着订单的访问 | 这一条比 `Data\Metrics` 的访客**多排除一项**：`Metrics` 的漏斗里测试单的访问算到“发起结账”为止，所以它的访客数和加购数是含测试单访客的。公开显示的数字宁可少算 |
+| 缓存 | 每件商品的结果缓存 60 秒 | 全店的数字一次算好放进一个缓存（瞬态 `pc_product_activity_v1`，60 秒），每件商品都从里面取 | 不管有多少个商品弹窗、多少种商品，每家店每分钟最多算一次（三条查询，走事件表的 `type_time` 索引和访问表的 `last_ms` 索引，没有加新索引）。`generated_at` 是这张表算出来的时间，`ttl` 固定是 60。算上浏览器或 CDN 的 60 秒，页面上的数字最多滞后约 2 分钟 |
+| 404 | 商品不存在或未发布：404 | 不存在、未发布、不是商品、有密码、是规格（不是父商品）：404 `pc_product_not_found`；开关关着或追踪没开：404 `pc_product_activity_off`；数据库报错：404 `pc_product_activity_unavailable`。404 也带 `Cache-Control: public, max-age=60`，正文里没有任何数字 | — |
+| `product_id` 格式不对 | 没写 | 400 `pc_invalid_param`（不是十进制正整数，或者没传） | 和别的数据接口一致；前台对非 200 一律不显示，没有影响 |
+| 限频 | 没写 | 没有加 | 每次请求最多一次按主键取商品，加一次读缓存；不存在的商品编号不会触发统计，所以刷接口也不能让服务器多算 |
+| “看过”包括谁 | 打开商品弹窗或商品页 | 主题 11-08 起“访客有真实操作或页面开满 6 秒才上报”，所以刚打开就关掉、从没动过的访问不算 | 这是上报那一侧的规则，接口没有另外筛 |
+| 数字会不会被刷 | 没写 | “已加购”只能由服务端在真正加购成功时记，浏览器报不上来（接收接口的类型清单里没有 `add_to_cart`）。“看过”来自浏览器上报，理论上可以用很多个新访客去刷，受接收接口按 IP 的限频和爬虫识别约束 | 如实说明：这是所有靠浏览器上报的数字共有的限制，接口没有另外加防护 |
+
+- 没有新表、新选项、新的功能键：读的是你的两个选项；主题靠 `pc_product_activity_available` 知道接口在不在。
+- 用例：`m6-product-activity-pure`（已登记进默认套件；同一组数据跑两遍，一遍假数据库，PHP 带 pdo_sqlite 时再用内存 SQLite 把真正的 SQL 执行一遍）、`m6-product-activity-smoke.php`（要真正的 WordPress：7 位访客真的看商品、6 位用真正的购物车加购，再从接口读出来；用法在 `docs/guides/m6-sandbox-runbook.md` 第 8 节）。
+- 登录了的员工在公开域名上调这个接口，会先被 `Management_Host` 挡成 403（那是日常会话的规则，不是这个接口的）；前台请求不带 cookie，不受影响。
+
 ## M9 投手后台 / M11 已购回访 / M14 前台主题（F5，2026-11-10 起）
 
 本节由 F5 会话维护。标“需要配合”的条目请归属会话实现；没实现之前 F5 的代码按“未就绪”处理，不会报错。
