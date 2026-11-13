@@ -13,7 +13,7 @@ defined( 'ABSPATH' ) || exit;
 final class Alerts {
 
 	public static function types(): array {
-		return array(
+		$core = array(
 			'offline'   => __( 'Store unreachable', 'peptide-hq' ),
 			'denied'    => __( 'Connection code no longer valid', 'peptide-hq' ),
 			'domain'    => __( 'Domain not connected', 'peptide-hq' ),
@@ -23,6 +23,9 @@ final class Alerts {
 			'cost'      => '费用提醒',
 			'payment'   => '支付通道提醒',
 		);
+		// 模块巡检（pchq_monitor_checks）的告警显示名：add_filter( 'pchq_alert_types', fn( $t ) => $t + array( 'code_drift' => '代码版本不一致' ) );
+		$extra = apply_filters( 'pchq_alert_types', array() );
+		return $core + array_map( 'strval', array_filter( is_array( $extra ) ? $extra : array(), 'is_scalar' ) );
 	}
 
 	/** 开一条告警；同一店铺、同一类型、同一对象已经有未处理的就不再开。返回是否新开了。 */

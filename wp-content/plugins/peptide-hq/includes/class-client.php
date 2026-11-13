@@ -102,6 +102,29 @@ final class Client {
 		return self::request( $site_id, 'GET', '/peptide/v1/hq/status' );
 	}
 
+	/**
+	 * 店铺上次轮询时声明支持的功能（店铺端过滤器 pc_hq_capabilities）。旧版店铺没有这一项，返回空数组。
+	 *
+	 * @return array<string,string> 功能键 => 版本号
+	 */
+	public static function capabilities( int $site_id ): array {
+		$site = Sites::get( $site_id );
+		$caps = is_array( $site ) && is_array( $site['info']['capabilities'] ?? null ) ? $site['info']['capabilities'] : array();
+		return array_map( 'strval', array_filter( $caps, 'is_scalar' ) );
+	}
+
+	/**
+	 * 调用新接口之前先问：这家店声明支持这个功能吗？（$min 不为空时还要求版本号不低于它。）
+	 * 没声明就不要调用，店铺升级后下一次轮询会自动变成支持。
+	 */
+	public static function supports( int $site_id, string $capability, string $min = '' ): bool {
+		$caps = self::capabilities( $site_id );
+		if ( ! isset( $caps[ $capability ] ) ) {
+			return false;
+		}
+		return '' === $min || version_compare( $caps[ $capability ], $min, '>=' );
+	}
+
 	public static function summary( int $site_id, int $days ) {
 		return self::request( $site_id, 'GET', '/peptide/v1/hq/summary', array( 'days' => (string) $days ) );
 	}

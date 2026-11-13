@@ -611,6 +611,124 @@ P07/P08 necessary actual WP three domains and exact DB/MU/token cleanup complete
 
 Root installed only three existing Commerce sources for P09 collection products and P10 product carousel after independent c645/eac4 review. Formal collection-products-carousel-integration/work/freeze-pin.json2c7c9648..., 47primary+53readonly=100 unique, five LF hunks/exact inverse/fresh dependencies/backups/PHP1JS1 passed. Original Registry/theme/Controls/P05/P07/P08 behavior and precise C20/C21 scope preserved; new theme-template dependency is readonly. P09 had no reference full-width setting, so none invented; P10 keeps its confirmed control. Actual WP validation remains pending with sole QA; reference48/70 currentP13, later tabs remain task-only. Whole70 batch Git and deferred external-service policy remain.
 
+## M1 / M2 基础：功能声明、巡检钩子、测试与快照登记（2026-11-10，F1）
+
+本节由 F1 维护。其他会话只读；要 F1 配合的事写在自己那节，F1 来实现。
+
+### 1. 店铺功能声明 `pc_hq_capabilities`（店铺端，peptide-core）
+
+用途：逐店发布期间新旧版本混跑。店铺在 `/peptide/v1/hq/status` 里上报自己支持的功能，总后台**只对声明了的店**调用新接口。
+
+- 过滤器：`apply_filters( 'pc_hq_capabilities', array $caps ): array`，在 `Hq_Connector::capabilities()` 里调用，结果放进 status 的 `capabilities` 字段。
+- 格式：`功能键 => 版本号`。键：小写字母、数字、`.` `_` `-`，以字母或数字开头，最长 64，建议写成 `<模块>.<功能>`；值：版本号字符串（`'1'`、`'1.2.0'`），最长 32；写 `true` 等于 `'1'`。格式不对的条目被丢弃，最多 200 项。
+- 约定的内置项：`hq.capabilities => '1'`（表示这家店的 peptide-core 已经支持功能声明）。
+- 过滤器里抛异常不会让 `/hq/status` 失败（只退回内置项），但各模块不要依赖这一点。
+
+店铺端声明（写在各自的类里，不改 `class-hq-connector.php`）：
+
+```php
+add_filter( 'pc_hq_capabilities', static fn( array $caps ): array => $caps + array( 'series.sync' => '1' ) );
+```
+
+总后台调用前先问（`hq/class-client.php`）：
+
+```php
+if ( \PeptideHq\Client::supports( $site_id, 'series.sync' ) ) { /* 调用 /hq/series/sync */ }
+if ( \PeptideHq\Client::supports( $site_id, 'series.sync', '2' ) ) { /* 需要 2 以上版本 */ }
+$all = \PeptideHq\Client::capabilities( $site_id ); // array<string,string>
+```
+
+- 数据来自上一次轮询（每 10 分钟）存下的店铺状态，不额外发请求。旧版店铺没有 `capabilities` 字段，`supports()` 一律返回 false。店铺升级后，下一次轮询自动变成支持。
+- 规矩（开发文档 12.4）：先发店铺端（接口和声明就位），再开总后台的功能；两边都忽略看不懂的字段。
+- 已登记的功能键：
+
+| 功能键 | 版本 | 归属 | 含义 |
+| --- | --- | --- | --- |
+| `hq.capabilities` | 1 | F1 | 支持功能声明 |
+| `pricing.engine` | 1 | F2 | 价格引擎三档开关和 `/hq/pricing-engine` |
+| `marketing.quiet` | 1 | F2 | 营销弹窗静默开关 |
+| `campaigns.readonly` | 1 | F2 | 投手只读、系列下发的活动只读 |
+| `series.campaigns` | 1 | F2 | 能接收系列下发的营销活动 |
+| `series.sync` | 1 | F3 | `/hq/series/sync`、`/hq/series/state`、`/hq/series/restore`、`/hq/catalog-export` |
+| `series.catalog` | 1 | F3 | 能接收商品 |
+| `series.shipping` | 1 | F3 | 能接收运费 |
+| `orders.report` | 1 | F3 | 店铺会上报订单 |
+| `orders.refund` | 1 | F3 | `/hq/order-refund` 和 `/hq/orders/digest` |
+| `m6.metrics` | 1 | F4 | 有 `Data\Metrics`（只说明代码在，不说明开关档位） |
+| `m7.pixel_acceptance` | 1 | F4 | 服务端 AddPaymentInfo、像素验收、`/admin/pixel-test` |
+| `m9.media_buyer` | 1 | F5 | 投手角色和开关 |
+| `m9.onboarding` | 1 | F5 | 开店向导和 `Onboarding::store_status()` |
+| `m11.buyer_status` | 1 | F5 | 已购回访 |
+| `m14.entry_address` | 1 | F5 | 商品地址开关 |
+
+2026-11-12 在沙盒实测：五条分支合在一起时，店铺 `/hq/status` 上报了以上 16 个键，总后台 `Client::capabilities()` 原样读到。
+
+各会话新增功能键时，在自己那节写明键名、版本和含义，F1 汇总到这张表。
+
+### 2. 总后台巡检钩子 `pchq_monitor_checks`（总后台，peptide-hq）
+
+用途：各模块把自己的巡检项挂到总后台每 10 分钟一次的店铺轮询上，不改 `class-monitor.php`。
+
+- 过滤器：`apply_filters( 'pchq_monitor_checks', array $checks, int $site_id, array $status, int $now ): array`，在店铺轮询成功后调用（店铺连不上时不调用）。`$status` 是店铺 `/hq/status` 的返回。
+- 每个巡检项：`array( 'type' => string, 'ok' => bool, 'ref' => string（可选）, 'message' => string )`。
+  - `type`：告警类型，小写字母开头，只含小写字母、数字、下划线，2–32 位。不能用核心类型 `offline` `denied` `domain` `https` `no_orders` `closed` `cost` `payment`。
+  - `ok = false`：开告警（同一店铺、同一类型、同一 `ref` 只开一条，会发邮件给总后台管理员邮箱）。`message` 最长 255，写给平台所有者看，用大白话。
+  - `ok = true`：把这类告警标记为已恢复。同一类型里有的 `ref` 正常、有的不正常时，只恢复正常的那些。
+  - 这次没有报的类型不动。所以“这家店不适用”时不要报，“检查过了、没问题”时必须报 `ok = true`，否则旧告警关不掉。
+- 告警显示名：`add_filter( 'pchq_alert_types', fn( array $t ) => $t + array( 'code_drift' => '代码版本不一致' ) );`
+- 巡检里不要发新的 HTTP 请求去店铺（轮询是串行的，慢了会拖住所有店）；需要店铺数据就让店铺把它放进 `/hq/status`，或者用自己的定时任务。
+- 过滤器里抛异常只会跳过本轮模块巡检并写错误日志，不影响核心告警。
+
+```php
+add_filter( 'pchq_monitor_checks', static function ( array $checks, int $site_id, array $status, int $now ): array {
+	if ( ! \PeptideHq\Client::supports( $site_id, 'orders.report' ) ) {
+		return $checks; // 不适用：不报
+	}
+	$late = $now - (int) ( $status['orders_report']['last_push'] ?? 0 ) > 2 * HOUR_IN_SECONDS;
+	$checks[] = array( 'type' => 'orders_report_late', 'ok' => ! $late, 'message' => '这家店超过 2 小时没有上报订单。' );
+	return $checks;
+}, 10, 4 );
+```
+
+- 已登记的巡检类型：
+
+| 类型 | 归属 | 显示名 | 什么时候报 |
+| --- | --- | --- | --- |
+| `code_drift` | F1 | 代码版本不一致 | M1-6，待实现 |
+| `pricing_mismatch` | F1 代 F2 实现（`hq/class-monitor.php`） | 价格引擎核对不一致 | 店铺声明了 `pricing.engine` 且带了简报；档位不是 off 且今天有不一致或出错 |
+| `series_out_of_sync` | F3 | 系列内容未同步 | 声明了 `series.sync`、已归入系列、至少同步过一次；上次失败或落后超过 30 分钟 |
+| `order_report_lag` | F3 | 订单上报落后 | 声明了 `orders.report`；近两天已付款订单数比已上报的多且持续超过 2 小时 |
+
+### 2b. 店铺在 `/hq/status` 里带的模块简报（2026-11-12 新增）
+
+巡检不能另发请求，所以店铺把各模块的小结放在 status 的 `modules` 里：`$status['modules'][<键>]`。
+
+- 约定好的两项由连接器直接带上（对应的类还没部署时不带）：`pricing_engine`（`Pricing\Runtime::status_brief()`）、`onboarding`（`Admin\Onboarding::store_status()`）。
+- 其他模块用过滤器加：`add_filter( 'pc_hq_status_modules', fn( array $m ) => $m + array( 'series' => array( … ) ) );`。键：小写字母开头，小写字母、数字、下划线，最长 41；值能转成 JSON，不放顾客资料和密钥；不能覆盖已有的键。
+- 注意位置：F2 原先建议放在 status 顶层的 `pricing_engine`，实际放在 `modules.pricing_engine`。
+
+### 2d. 总后台动作 `pchq_summary_days`（2026-11-12 新增）
+
+每次轮询拿到店铺的每日汇总并存好之后触发：`do_action( 'pchq_summary_days', int $site_id, array $days, array $summary )`。模块要存 `days[]` 里自己的字段（例如弃单数）就挂它，不用再向店铺发请求。回调里抛错只写日志，不影响轮询。
+
+### 2c. `/hq/summary` 每天多四项（2026-11-12 新增）
+
+店铺有 M6 的 `Data\Metrics::abandoned_daily()` 时，`days[]` 每一行多 `abandoned`、`abandoned_open`、`recall_emailed`、`recall_recovered`（店铺时区的日期）。**店铺还没有 M6 代码时这四个键不存在**——总后台要按“没有这个键 = 这家店还不支持”处理，不能当成 0。
+
+### 3. 测试登记
+
+- 文件名带模块前缀：`m4-price-engine-pure.php`、`m6-metrics-smoke.php`、`m9-buyer-menu.cjs`。
+- 提交时在 `tests/data-observations-suites.json` 的 `suites` 末尾追加自己的条目（只追加，不改别人的）：`{"name": "m4-price-engine-pure", "language": "php", "path": "…", "core": true, "node_test": false, "status": "module-gate", "module": "M4"}`。
+- 测试失败由归属会话修。F1 只会把它的 `status` 改成 `skipped` 并写 `skip_reason`，然后通知归属会话。
+
+### 4. 新表要登记怎么脱敏
+
+脱敏快照（`tools/local-env/snapshot/snapshot.py`）遇到没登记的表会拒绝导出。新增数据表时，在自己那节写一行：表名、有没有顾客姓名 / 邮箱 / 电话 / 地址 / 密钥、建议 keep（原样保留）/ truncate（清空）/ scrub（改写哪些列）。F1 据此登记。
+
+### 5. 发布（M1-5 上线前的临时规矩）
+
+- 生产只由 F1 发布，每次发布都要平台所有者确认。其他会话把提交推到自己的分支，在聊天室（或共享笔记）告诉 F1：分支、提交、改了哪些组件、有没有表结构变化、怎么验收。
+- 2026-11-10 盘点结论见 `docs/handoffs/m1-inventory-2026-11-10.md`：生产 14 份店铺副本 + 总后台，目前没有“只在生产上、不在仓库里”的改动。
 
 ## M3 系列与商品目录（2026-11-10，F3，HQ-05 / HQ-06 / FE-07 / NF-12）
 
