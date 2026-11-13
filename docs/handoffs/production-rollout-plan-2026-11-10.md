@@ -575,3 +575,9 @@
   - 视频上传：店铺后台 PHP 上限 96M、nginx 68M，暂不调整。
   - 访客追踪：6 家店都已开启。
 - 备份：web/HQ `/root/vialcove-backups/creative-merge-20261113T1105*`、`…T110729Z`、`…T110735Z`，HQ `creative-merge-hq-20261113T110728Z`（新文件清单在 new-files.txt）。
+
+### 2026-11-13 11:12 UTC 访客地区：DB-IP 城市库
+- 店主同意后，在 web 主机下载 DB-IP City Lite 2026-11（`https://download.db-ip.com/free/dbip-city-lite-2026-11.mmdb.gz`，60 MB，gzip 校验通过，解压 127 MB，元数据 DBIP-City-Lite），放在 `/srv/vialcove-data/geoip/`，`dbip-city-lite.mmdb` 软链接指向当月文件。
+- 6 家店 `uploads/peptide-geoip/dbip-city-lite.mmdb` 都软链接到这一份（uploads 是持久目录），和之前复制的 GeoLite2-ASN 一起用。
+- 验证：`Ip_Network::lookup` 主店 155.116.153.10 → Texas / Houston / PANDG；子店 8.8.8.8 → California / Mountain View / GOOGLE。地区在一次访问开始时查，所以之前的访问不会补；之后的新访问都会带州和城市。
+- 许可：DB-IP Lite 是 CC BY 4.0，需要注明 “IP Geolocation by DB-IP”（只在后台显示，影响不大）。库每月更新一次，目前不自动更新；要更新时下载新月份文件、改软链接即可。
