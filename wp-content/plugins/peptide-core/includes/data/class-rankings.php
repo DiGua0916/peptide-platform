@@ -24,6 +24,11 @@
  * - devices 设备：时间段内访问的 device（空 = unknown）的不同访客数。
  * 访客追踪的表没装时，事件和访问的表是空的，订单浏览器全是 unknown。
  *
+ * M6（NF-02）：开关 peptide_core_m6_mode 开着时，上面“已付款订单”的那几张表（热卖 / 热门商品、商品类型、订单和顾客来源国家、订单浏览器、
+ * 下单支付方式、优惠券、订单来源 / 域名）换成 Data\Metrics 的那一批订单：时间段内**付款**的、算数的订单（已付款状态，或已退款但付过款；
+ * 去掉全部测试单）。支付成功率仍然按时间段内**创建**的订单算（一次尝试发生在下单那一刻），只是“成功”改用 Metrics::is_paid_order()。
+ * 商品级的件数和金额仍然减 WooCommerce 里逐件记的退款（总后台标记的退款是整单的，分不到每件商品上）。关着和影子时和以前完全一样。
+ *
  * 每张表：本期或对比期的值大于 0 的行（payment_success 是任何一边有支付尝试的支付方式）。排序：本期值从大到小（null 当作 -1），
  * 再对比期值从大到小，再 key 从小到大（商品和分类 ID 按数字，其余 strcmp）；最多 MAX_ROWS 行，total_rows 是截断前的行数。
  * 变化用 Range::change()；payment_success 的变化是百分点差 round( 本期 - 对比期, 2 )；任何一边是 null 时变化是 null。
@@ -205,6 +210,10 @@ final class Rankings {
 			)
 		);
 
+		// M6（NF-02）：开关开着时“已付款订单”的那几张表用的订单；关着或影子时是 null（沿用下面循环里的旧口径）。
+		// 在按入口域名筛之前问：影子对账比的是整店的两批订单。
+		$modern = self::modern_paid( is_array( $orders ) ? $orders : array(), $from, $to, $entry_domain );
+
 		if ( null !== $entry_domain && is_array( $orders ) ) {
 			// 选了入口域名：订单类的表只算归属这个域名的访问里下的订单。
 			$orders = Entry_Domain::orders( array_values( array_filter( $orders, static fn( $o ) => $o instanceof \WC_Order ) ), $entry_domain, $to * 1000 );
@@ -216,72 +225,33 @@ final class Rankings {
 		$visitor_ids   = array();
 		$dimension_orders = array();
 		foreach ( is_array( $orders ) ? $orders : array() as $order ) {
-			if ( ! $order instanceof \WC_Order || Overview::is_test_order( $order ) ) {
+			if ( ! $order instanceof \WC_Order || self::is_test( $order ) ) {
 				continue;
 			}
 			$status = (string) $order->get_status();
 			$paid   = in_array( $status, $paid_statuses, true );
 			$method = self::group_key( (string) $order->get_payment_method() );
 
-			// 支付方式的名称：两个时间段里最新的订单（先创建时间，再订单 ID）的标题。
-			$created = $order->get_date_created();
-			$stamp   = array( $created ? $created->getTimestamp() : 0, (int) $order->get_id() );
-			if ( ! isset( $cache['methods'][ $method ] ) || $stamp > $cache['methods'][ $method ]['stamp'] ) {
-				$cache['methods'][ $method ] = array(
-					'stamp' => $stamp,
-					'title' => (string) $order->get_payment_method_title(),
-				);
-			}
+			self::remember_method( $cache, $method, $order );
 
 			// 支付成功率：全部订单是尝试，已付款和已退款（付过款）的是成功。
 			self::add( $attempts, $method, 1 );
-			if ( $paid || 'refunded' === $status ) {
+			if ( null !== $modern ? Metrics::is_paid_order( $order ) : ( $paid || 'refunded' === $status ) ) {
 				self::add( $successes, $method, 1 );
 			}
-			if ( ! $paid ) {
+			if ( ! $paid || null !== $modern ) {
+				continue; // 没付款；或者开关开着——已付款订单的几张表在下面按付款时间另算。
+			}
+
+			self::tally_paid( $order, $method, $out, $buyers, $visitor_ids, $dimension_orders, $cache );
+		}
+		foreach ( (array) $modern as $order ) {
+			if ( ! $order instanceof \WC_Order || self::is_test( $order ) ) {
 				continue;
 			}
-
-			self::add( $out['payment_methods'], $method, 1 );
-
-			$country = self::group_key( (string) $order->get_billing_country() );
-			self::add( $out['order_countries'], $country, 1 );
-
-			// 买家：有账号按账号，游客按账单邮箱（不分大小写）；游客没有邮箱的不算。
-			$customer_id = (int) $order->get_customer_id();
-			if ( $customer_id > 0 ) {
-				$buyers[ $country ][ 'u' . $customer_id ] = true;
-			} else {
-				$email = strtolower( trim( (string) $order->get_billing_email() ) );
-				if ( '' !== $email ) {
-					$buyers[ $country ][ 'e' . $email ] = true;
-				}
-			}
-
-			foreach ( $order->get_coupon_codes() as $code ) {
-				self::add( $out['coupons'], (string) $code, 1 );
-			}
-
-			$visitor_ids[] = (int) $order->get_meta( Server_Events::ORDER_VISITOR_META );
-			$dimension_orders[] = array( 'visitor' => (int) $order->get_meta( Server_Events::ORDER_VISITOR_META ), 'visit' => (int) $order->get_meta( Server_Events::ORDER_VISIT_META ) );
-
-			foreach ( $order->get_items() as $item ) {
-				if ( ! $item instanceof \WC_Order_Item_Product ) {
-					continue;
-				}
-				$pid = (int) $item->get_product_id();
-				if ( $pid <= 0 ) {
-					continue;
-				}
-				$units = (int) $item->get_quantity() - abs( (int) $order->get_qty_refunded_for_item( $item->get_id() ) );
-				$sales = (float) $item->get_subtotal() - (float) $order->get_total_refunded_for_item( $item->get_id() );
-				self::add( $out['products_units'], $pid, $units );
-				self::add( $out['products_sales'], $pid, $sales );
-				foreach ( self::term_ids( $pid, $cache ) as $term_id ) {
-					self::add( $out['categories_units'], $term_id, $units );
-					self::add( $out['categories_sales'], $term_id, $sales );
-				}
-			}
+			$method = self::group_key( (string) $order->get_payment_method() );
+			self::remember_method( $cache, $method, $order ); // 之前创建、这个时间段才付款的订单不在上面的循环里。
+			self::tally_paid( $order, $method, $out, $buyers, $visitor_ids, $dimension_orders, $cache );
 		}
 
 		foreach ( $buyers as $country => $set ) {
@@ -533,5 +503,96 @@ final class Rankings {
 			'label'    => $label,
 			'edit_url' => '',
 		);
+	}
+
+	/** 支付方式的名称：两个时间段里最新的订单（先创建时间，再订单 ID）的标题。 */
+	private static function remember_method( array &$cache, string $method, \WC_Order $order ): void {
+		$created = $order->get_date_created();
+		$stamp   = array( $created ? $created->getTimestamp() : 0, (int) $order->get_id() );
+		if ( ! isset( $cache['methods'][ $method ] ) || $stamp > $cache['methods'][ $method ]['stamp'] ) {
+			$cache['methods'][ $method ] = array(
+				'stamp' => $stamp,
+				'title' => (string) $order->get_payment_method_title(),
+			);
+		}
+	}
+
+	/**
+	 * 一张已付款的非测试订单记进“已付款订单”的那几张表（原来写在 period() 的循环里，原样搬出来，两种口径共用）。
+	 *
+	 * @param array<string,array> $out              period() 的结果。
+	 * @param array               $buyers           国家 => 买家集合。
+	 * @param int[]               $visitor_ids      每张订单的访客（订单浏览器用）。
+	 * @param array               $dimension_orders 每张订单的访客 / 访问（订单来源、订单域名用）。
+	 * @param array               $cache            summary() 里的共用缓存。
+	 */
+	private static function tally_paid( \WC_Order $order, string $method, array &$out, array &$buyers, array &$visitor_ids, array &$dimension_orders, array &$cache ): void {
+		self::add( $out['payment_methods'], $method, 1 );
+
+		$country = self::group_key( (string) $order->get_billing_country() );
+		self::add( $out['order_countries'], $country, 1 );
+
+		// 买家：有账号按账号，游客按账单邮箱（不分大小写）；游客没有邮箱的不算。
+		$customer_id = (int) $order->get_customer_id();
+		if ( $customer_id > 0 ) {
+			$buyers[ $country ][ 'u' . $customer_id ] = true;
+		} else {
+			$email = strtolower( trim( (string) $order->get_billing_email() ) );
+			if ( '' !== $email ) {
+				$buyers[ $country ][ 'e' . $email ] = true;
+			}
+		}
+
+		foreach ( $order->get_coupon_codes() as $code ) {
+			self::add( $out['coupons'], (string) $code, 1 );
+		}
+
+		$visitor_ids[] = (int) $order->get_meta( Server_Events::ORDER_VISITOR_META );
+		$dimension_orders[] = array( 'visitor' => (int) $order->get_meta( Server_Events::ORDER_VISITOR_META ), 'visit' => (int) $order->get_meta( Server_Events::ORDER_VISIT_META ) );
+
+		foreach ( $order->get_items() as $item ) {
+			if ( ! $item instanceof \WC_Order_Item_Product ) {
+				continue;
+			}
+			$pid = (int) $item->get_product_id();
+			if ( $pid <= 0 ) {
+				continue;
+			}
+			$units = (int) $item->get_quantity() - abs( (int) $order->get_qty_refunded_for_item( $item->get_id() ) );
+			$sales = (float) $item->get_subtotal() - (float) $order->get_total_refunded_for_item( $item->get_id() );
+			self::add( $out['products_units'], $pid, $units );
+			self::add( $out['products_sales'], $pid, $sales );
+			foreach ( self::term_ids( $pid, $cache ) as $term_id ) {
+				self::add( $out['categories_units'], $term_id, $units );
+				self::add( $out['categories_sales'], $term_id, $sales );
+			}
+		}
+	}
+
+	/**
+	 * M6（NF-02）：开关开着时“已付款订单”那几张表用的订单——时间段内付款的（Data\Metrics::paid_orders()，含测试单，调用方排除），
+	 * 选了入口域名时再按订单的访问筛一次。关着或影子时返回 null：沿用“时间段内创建、已付款状态”的旧口径；
+	 * 影子顺便把两批订单号的差异记进对账日志（reports.paid_orders，和别的报表是同一条）。
+	 *
+	 * @param array $created 时间段内创建的全部状态的订单（还没按入口域名筛）。
+	 * @return \WC_Order[]|null
+	 */
+	private static function modern_paid( array $created, int $from, int $to, ?string $entry_domain ): ?array {
+		if ( ! class_exists( Metrics_Overlay::class ) || Metrics_Switch::off() ) {
+			return null;
+		}
+		$paid_statuses = wc_get_is_paid_statuses();
+		$legacy        = array_values( array_filter( $created, static fn( $o ) => $o instanceof \WC_Order && in_array( (string) $o->get_status(), $paid_statuses, true ) ) );
+		$orders        = Metrics_Overlay::paid_orders( $legacy, $from, $to );
+		if ( ! Metrics_Switch::on() ) {
+			return null;
+		}
+		$orders = array_values( array_filter( $orders, static fn( $o ) => $o instanceof \WC_Order ) );
+		return null === $entry_domain ? $orders : Entry_Domain::orders( $orders, $entry_domain, $to * 1000 );
+	}
+
+	/** M6（NF-02）：测试单规则按开关走 Metrics_Overlay::is_test_order()（关着时就是 Overview 的旧规则）；不带自动加载的纯逻辑测试里没有这个类，直接用旧规则。 */
+	private static function is_test( $order ): bool {
+		return class_exists( Metrics_Overlay::class ) ? Metrics_Overlay::is_test_order( $order ) : \PeptideCore\Overview::is_test_order( $order );
 	}
 }

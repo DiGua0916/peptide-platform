@@ -15,7 +15,9 @@
  * 整批错误：400 pc_track_bad_request、403 pc_track_disabled / pc_track_staff、413 pc_track_too_large、
  *   429 pc_track_rate_limited（带 retry_after 秒）。
  *
- * 只保存白名单字段，字符串截断；不保存 IP、表单内容、搜索词、订单号。
+ * 只保存白名单字段，字符串截断；不保存表单内容、搜索词、订单号。
+ * CR 素材归因（2026-11-11）：访问的入口快照另外记 IP 和由它查出的地理网络信息（用户已同意 IP 入库，见 Visit_Facts），
+ * 入口页带着和当前访问不同的有效广告 ID 时开新访问（Tracker::visit 的 $ad_id）。
  *
  * @package PeptideCore
  */
@@ -374,7 +376,15 @@ final class Ingest {
 			if ( $wpdb->last_error ) { $only_replays = false; }
 			if ( $row ) { $saved[ $c['event_id'] ] = $row; } else { $only_replays = false; }
 		}
-		$visit = $legacy ? ( $only_replays ? (int) $saved[ $legacy[0]['event_id'] ]['visit_id'] : Tracker::visit( $visitor['id'], $now_ms, $legacy[0]['page']['path'] ) ) : 0;
+		// CR：这批里新的入口页带来的有效广告 ID；和最近一次访问的不同就开新访问。
+		$ad_id = '';
+		foreach ( $legacy as $c ) {
+			if ( 'page_view' === $c['type'] && isset( $c['data']['attribution'] ) && ! isset( $saved[ $c['event_id'] ] ) ) {
+				$ad_id = Visit_Facts::ad_id( $c['data']['attribution'] );
+				if ( '' !== $ad_id ) { break; }
+			}
+		}
+		$visit = $legacy ? ( $only_replays ? (int) $saved[ $legacy[0]['event_id'] ]['visit_id'] : Tracker::visit( $visitor['id'], $now_ms, $legacy[0]['page']['path'], $ad_id ) ) : 0;
 		if ( $legacy && $user_id && $user_id !== $visitor['user_id'] ) {
 			Tracker::link_user( $visitor['id'], $user_id, $visit );
 		}
@@ -385,6 +395,7 @@ final class Ingest {
 		$views        = 0;
 		$alive        = 0;
 		$stage        = 0;
+		$address_completed = 0; // FE-05：这一批里新保存的填地址事件有几条。
 		$impression_visit = $legacy && ! $only_replays ? $visit : 0;
 		$impression_visit_attempted = (bool) $impression_visit;
 		$impression_visit_checked = false; $impression_visit_ready = false; $impression_visit_error = false;
@@ -464,7 +475,9 @@ final class Ingest {
 			}
 			if ( isset( $data['attribution'] ) ) {
 				if ( 1 === (int) $inserted ) {
-					$attempts[ $c['index'] ] = Attribution::capture( $visitor['id'], array( 'event_uid' => $c['event_id'], 'visitor_id' => $visitor['id'], 'visit_id' => $visit, 'path' => $page['path'], 'received_ms' => $now_ms ), $data['attribution'] );
+					$facts = Visit_Facts::for_request( $data['attribution'] );
+					$attempts[ $c['index'] ] = Attribution::capture( $visitor['id'], array( 'event_uid' => $c['event_id'], 'visitor_id' => $visitor['id'], 'visit_id' => $visit, 'path' => $page['path'], 'received_ms' => $now_ms ), $data['attribution'], $facts );
+					if ( 'captured' === $attempts[ $c['index'] ]['code'] ) { Visit_Facts::after_capture( $visitor['id'], $visit, $facts, $now_ms ); }
 				} else {
 					$attempts[ $c['index'] ] = $read_failed ? Attribution::receipt( $c['event_id'], 'retry', 'server_error', true ) : ( $original ? self::replay( $visitor['id'], $c, $original ) : Attribution::receipt( $c['event_id'], 'rejected', 'original_visit_missing' ) );
 				}
@@ -490,6 +503,8 @@ final class Ingest {
 				$stage = max( $stage, 1 );
 			} elseif ( 'checkout_view' === $c['type'] ) {
 				$stage = max( $stage, 3 );
+			} elseif ( 'checkout_address_completed' === $c['type'] ) {
+				++$address_completed;
 			}
 			self::update_tab( $visitor['id'], $visit, $c, $now_ms );
 		}
@@ -518,6 +533,12 @@ final class Ingest {
 				Tracker::raise_stage( $visit, $stage );
 			}
 		}
+		if ( $address_completed ) {
+			// FE-05：填地址的事件可能比下单晚到（浏览器攒批上报）。Funnel_Guard 听这个动作，把当时没推进的阶段补上。
+			// M6 开关关着时 Funnel_Guard::settle() 立刻返回，这一行什么都不改。
+			try { do_action( 'peptide_core_tracking_address_completed', (int) $visitor['id'], (int) $visit, $address_completed ); }
+			catch ( \Throwable $optional_failure ) { /* A guard failure must not change tracking ACK. */ }
+		}
 		// Optional Data verdicts follow genuine new persistence, never retries/rejections.
 		foreach ( $classifier_new as $original_visit => $new_uids ) {
 			try { do_action( 'peptide_core_tracking_client_persisted', (int) $visitor['id'], (int) $original_visit, $new_uids ); }
@@ -534,7 +555,10 @@ final class Ingest {
 		$data = json_decode( (string) $saved['data'], true );
 		if ( ! is_array( $data ) || ! isset( $data['attribution'] ) ) { return Attribution::receipt( $incoming['event_id'], 'rejected', 'duplicate_without_capture' ); }
 		if ( 'page_view' !== $saved['type'] || 'client' !== $saved['source'] || $saved['path'] !== $incoming['page']['path'] || $data['attribution'] !== $incoming['data']['attribution'] ) { return Attribution::receipt( $incoming['event_id'], 'rejected', 'duplicate_payload_mismatch' ); }
-		return Attribution::capture( $visitor, $saved, $data['attribution'] );
+		$facts   = Visit_Facts::for_request( $data['attribution'] );
+		$receipt = Attribution::capture( $visitor, $saved, $data['attribution'], $facts );
+		if ( 'captured' === $receipt['code'] ) { Visit_Facts::after_capture( $visitor, (int) $saved['visit_id'], $facts, (int) $saved['received_ms'] ); }
+		return $receipt;
 	}
 
 	private static function result( array $ack, array $rejected, int $visitor, int $visit, array $attempts, array $contexts = array() ): array {

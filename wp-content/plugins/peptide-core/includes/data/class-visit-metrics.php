@@ -16,7 +16,7 @@ final class Visit_Metrics {
 	}
 	public static function order_fact( \WC_Order $order ): array {
 		$customer = (int) $order->get_customer_id(); $email = strtolower( trim( (string) $order->get_billing_email() ) );
-		return array( 'sales' => (float) $order->get_total() - (float) $order->get_total_refunded(), 'visitor' => (int) $order->get_meta( \PeptideCore\Tracking\Server_Events::ORDER_VISITOR_META ), 'visit' => (int) $order->get_meta( \PeptideCore\Tracking\Server_Events::ORDER_VISIT_META ), 'buyer' => $customer > 0 ? 'u' . $customer : ( '' !== $email ? 'e' . $email : '' ) );
+		return array( 'sales' => self::sales( $order ), 'visitor' => (int) $order->get_meta( \PeptideCore\Tracking\Server_Events::ORDER_VISITOR_META ), 'visit' => (int) $order->get_meta( \PeptideCore\Tracking\Server_Events::ORDER_VISIT_META ), 'buyer' => $customer > 0 ? 'u' . $customer : ( '' !== $email ? 'e' . $email : '' ) );
 	}
 	public static function order( array &$group, array $order ): void {
 		++$group['orders']; $group['sales'] += $order['sales'];
@@ -25,6 +25,18 @@ final class Visit_Metrics {
 	}
 	public static function finish( array $group ): array {
 		$uv = count( $group['visitors'] ); $count = (int) $group['orders']; $sales = round( (float) $group['sales'], 2 );
-		return array( 'uv' => $uv, 'customers' => count( $group['customers'] ), 'viewed_uv' => count( $group['viewed'] ), 'carted_uv' => count( $group['carted'] ), 'paid_uv' => count( $group['paid_visitors'] ), 'orders' => $count, 'conversion' => $uv > 0 ? round( $count / $uv * 100, 2 ) : null, 'sales' => $sales, 'aov' => $count > 0 ? round( $sales / $count, 2 ) : 0.0, 'uv_value' => $uv > 0 ? round( $sales / $uv, 2 ) : null );
+		return array( 'uv' => $uv, 'customers' => count( $group['customers'] ), 'viewed_uv' => count( $group['viewed'] ), 'carted_uv' => count( $group['carted'] ), 'paid_uv' => count( $group['paid_visitors'] ), 'orders' => $count, 'conversion' => self::conversion( $count, count( array_intersect_key( $group['paid_visitors'], $group['visitors'] ) ), $uv, 'visit_metrics' ), 'sales' => $sales, 'aov' => $count > 0 ? round( $sales / $count, 2 ) : 0.0, 'uv_value' => $uv > 0 ? round( $sales / $uv, 2 ) : null );
+	}
+
+	/** M6（NF-02）：一张订单的销售额按开关走 Metrics_Overlay::order_sales()（关着时 = 订单金额 − WooCommerce 退款，和以前一样）。 */
+	private static function sales( $order ): float {
+		return class_exists( Metrics_Overlay::class ) ? Metrics_Overlay::order_sales( $order ) : (float) $order->get_total() - (float) $order->get_total_refunded();
+	}
+	/** M6（NF-02）：分组转化率按开关走 Metrics_Overlay::conversion()（关着时 = 订单数 ÷ 访客，和以前一样；开了 = 付了款的访客 ÷ 访客）。 */
+	private static function conversion( int $orders, int $paid_visitors, int $visitors, string $report ): ?float {
+		if ( class_exists( Metrics_Overlay::class ) ) {
+			return Metrics_Overlay::conversion( $orders, $paid_visitors, $visitors, $report );
+		}
+		return $visitors ? round( $orders / $visitors * 100, 2 ) : null;
 	}
 }

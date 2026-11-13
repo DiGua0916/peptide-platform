@@ -1,5 +1,7 @@
 <?php
 /** Actual new helper/replay/reducer/ranking/CSV with pure boundary doubles only. */
+// 排行后来多了“收藏商品”一张表（Data\Product_Actions），单独运行这个用例时也要能加载到它。
+require_once __DIR__ . '/product-actions-test-autoload.php';
 spl_autoload_register( static function ( string $class ): void {
 	$files = array( 'PeptideCore\\Data\\Search_Observations' => 'data/class-search-observations.php', 'PeptideCore\\Tracking\\Search_Context' => 'tracking/class-search-context.php', 'PeptideCore\\Tracking\\Client_Environment' => 'tracking/class-client-environment.php' );
 	if ( isset( $files[$class] ) ) { require dirname( __DIR__ ) . '/includes/' . $files[$class]; }
@@ -13,7 +15,12 @@ $n046 = 0;
 $assert046 = static function ( string $label, bool $ok ) use ( &$n046 ): void { if ( ! $ok ) { throw new RuntimeException( $label ); } ++$n046; };
 $oracle046 = json_decode( file_get_contents( dirname(__DIR__,4) . '/tests/fixtures/data-observations/046/native-search-legacy19.json' ), true );
 $first046 = array_slice( Ranks::TABLES, 0, 19 );
-$assert046( 'original nineteen numerical JSON/labels/order unchanged', json_encode( array_intersect_key( $summary['tables'], array_flip( $first046 ) ) ) === json_encode( $oracle046['summary'] ) );
+// 冻结的期望值是加“商品缩略图 / 国旗”之前导出的：每一行后来多了一个只给页面用的 image 字段（c466262）。
+// 数字、名称、顺序仍然逐字比对；image 单独检查——每一行都有、而且是字符串。
+$tables046 = array_intersect_key( $summary['tables'], array_flip( $first046 ) ); $images046 = 0; $rows046 = 0;
+foreach ( $tables046 as &$table046 ) { foreach ( $table046['rows'] as &$row046 ) { ++$rows046; if ( array_key_exists( 'image', $row046 ) && is_string( $row046['image'] ) ) { ++$images046; } unset( $row046['image'] ); } unset( $row046 ); } unset( $table046 );
+$assert046( 'original nineteen numerical JSON/labels/order unchanged', json_encode( $tables046 ) === json_encode( $oracle046['summary'] ) );
+$assert046( 'every ranking row carries a string image field', $rows046 > 0 && $images046 === $rows046 );
 foreach ( $first046 as $table046 ) { $args['table'] = $table046; $args['q'] = ''; $actual046 = iterator_to_array( $csv_method->invoke( null, $range, $args ) ); $assert046( 'original complete CSV unchanged: ' . $table046, json_encode( $actual046 ) === json_encode( $oracle046['csv'][$table046] ) ); }
 foreach ( array( ' Demo  PEPTIDE ' => 'demo peptide', '  研究\u{3000}肽  ' => '研究 肽', 'ÉCOLE αβ' => 'école αβ', "o'hara + test-2.0" => "o'hara + test-2.0" ) as $raw046 => $expected046 ) {
 	$raw046 = str_replace( '\u{3000}', "\u{3000}", $raw046 );

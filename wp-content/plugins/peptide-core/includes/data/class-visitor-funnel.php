@@ -66,6 +66,10 @@ final class Visitor_Funnel {
 		$ret = $wpdb->prepare( 'v.id IS NOT NULL AND s.start_ms >= ( FLOOR( ( v.first_ms + %d ) / 86400000 ) + 1 ) * 86400000 - %d + %d', $off, $off, $gap );
 		$cohort = $wpdb->prepare( "s.{$basis} >= %d AND s.{$basis} < %d", $from, $to );
 		if ( $filter ) { $filter->require_ready(); $cohort .= ' AND ' . $filter->visit_sql( 's' ); }
+		// M6（FE-05 / NF-02）：开关开着时按 Data\Metrics 的漏斗规则算——不算测试版留下的访问；“支付成功”必须是同一次访问里填过地址的，
+		// 付了款的人四层都算，所以每一步都不会比上一步多。关着和影子时下面的统计和以前完全一样，影子只是顺手按新规则再数一遍、记对账。
+		$mode = self::mode(); $strict = 'on' === $mode;
+		if ( $strict ) { $cohort .= ' AND s.is_test = 0'; }
 		$select = array();
 		foreach ( array( 'visitors' => 0, 'viewed' => 1, 'carted' => 2, 'checkout' => 3 ) as $key => $stage ) {
 			$select[] = "COUNT(DISTINCT CASE WHEN s.stage >= {$stage} THEN s.visitor_id END) AS {$key}";
@@ -109,6 +113,9 @@ final class Visitor_Funnel {
 		// “添加物流 / 添加支付”只在同一次访问里已经填好地址时才算，所以先记下来，整段事件读完再结算。
 		$address_visits = array();
 		$held = array();
+		$address_raw = array(); // 这次访问里出现过填地址事件（不管访问后来挂的是不是测试单）。
+		$legacy_paid = array(); // 旧规则下算“支付成功”的访客。
+		$paid_held = array();   // 新规则下的付款：访问编号 => 访客 => [ 是不是回访, 分组 ]，整段事件读完再结算。
 		$cursor = 0;
 		$time = null === $now ? '' : $wpdb->prepare( ' AND e.occurred_ms <= %d', $now );
 		do {
@@ -124,12 +131,18 @@ final class Visitor_Funnel {
 				$cursor = (int) $row['id'];
 				$id = (int) ( $row['order_id'] ?: ( 'client' === $row['source'] ? $row['linked_order'] : 0 ) );
 				$order = $this->orders[ $id ] ?? null;
+				if ( 'off' !== $mode && 'checkout_address_completed' === $row['type'] ) { $address_raw[ (int) $row['visit_id'] ] = true; }
 				if ( $id && ( ! $order || $order['test'] ) ) { continue; }
 				if ( 'server' === $row['source'] ) {
 					if ( ! $id || ! $order['paid'] || $order['visitor'] !== (int) $row['visitor_id'] || $order['visit'] !== (int) $row['visit_id'] ) { continue; }
 					$step = 'paid';
 				} else { $step = self::CLIENT_STEPS[ $row['type'] ]; }
 				$visitor = (int) $row['visitor_id'];
+				if ( 'paid' === $step && 'off' !== $mode ) {
+					$legacy_paid[ $visitor ] = true;
+					if ( $order['counted'] ) { $paid_held[ (int) $row['visit_id'] ][ $visitor ] = array( (bool) $row['returning_visit'], $group ? ( '' === $row['g'] ? 'unknown' : (string) $row['g'] ) : null ); }
+					if ( $strict ) { continue; }
+				}
 				if ( 'address' === $step ) { $address_visits[ (int) $row['visit_id'] ] = true; }
 				if ( in_array( $step, array( 'shipping', 'payment' ), true ) ) {
 					$held[ (int) $row['visit_id'] ][ $step ][ $visitor ] = array( (bool) $row['returning_visit'], $group ? ( '' === $row['g'] ? 'unknown' : (string) $row['g'] ) : null );
@@ -162,6 +175,30 @@ final class Visitor_Funnel {
 				}
 			}
 		}
+		if ( 'off' !== $mode ) {
+			$tail = array_slice( self::KEYS, 4 ); $legacy = array(); $probe = array();
+			foreach ( $tail as $step ) { $legacy[ $step ] = count( 'paid' === $step ? $legacy_paid : ( $seen[ $step ] ?? array() ) ); $probe[ $step ] = 'paid' === $step ? array() : ( $seen[ $step ] ?? array() ); }
+			foreach ( $paid_held as $visit_id => $buyers ) {
+				if ( empty( $address_raw[ $visit_id ] ) ) { continue; } // 同一次访问里没有填地址的付款：不进后四层（FE-05）。
+				foreach ( $buyers as $visitor => [ $is_returning, $gkey ] ) {
+					foreach ( $tail as $step ) {
+						$probe[ $step ][ $visitor ] = true;
+						if ( ! $strict ) { continue; }
+						$seen[ $step ][ $visitor ] = true;
+						if ( $is_returning ) { $seen_returning[ $step ][ $visitor ] = true; }
+						if ( null !== $gkey ) { $seen_groups[ $gkey ][ $step ][ $visitor ] = true; }
+						if ( null !== $group_map ) {
+							$entry = $group_map[ $visit_id ] ?? null;
+							if ( $entry && $visitor > 0 && $entry['visitor_id'] === $visitor ) { $seen_groups[ $entry['key'] ][ $step ][ $visitor ] = true; }
+						}
+					}
+				}
+			}
+			// 对账（reports.visitor_funnel）：后四层在旧规则和新规则下的人数。实时窗口（last_ms）每次请求都在动，日志里不带起止时间。
+			$context = array( 'basis' => $basis, 'scope' => $filter ? 'filtered' : 'all' );
+			if ( 'start_ms' === $basis ) { $context += array( 'from' => wp_date( 'Y-m-d H:i', intdiv( $from, 1000 ) ), 'to' => wp_date( 'Y-m-d H:i', intdiv( $to - 1, 1000 ) ) ); }
+			Metrics_Switch::report( 'reports.visitor_funnel', Metrics_Switch::diff( $legacy, array_map( 'count', $probe ) ), $context );
+		}
 		foreach ( array_slice( self::KEYS, 4 ) as $step ) {
 			$counts[ $step ] = count( $seen[ $step ] ?? array() );
 			$returning[ $step ] = count( $seen_returning[ $step ] ?? array() );
@@ -176,12 +213,24 @@ final class Visitor_Funnel {
 		foreach ( wc_get_orders( array( 'post__in' => array_values( $need ), 'limit' => count( $need ), 'type' => 'shop_order', 'status' => array_keys( wc_get_order_statuses() ) ) ) as $order ) {
 			$id = $order->get_id();
 			if ( ! isset( $need[ $id ] ) ) { continue; }
-			$this->orders[ $id ] = array( 'test' => Overview::is_test_order( $order ), 'paid' => $order->is_paid() || null !== $order->get_date_paid(), 'visitor' => (int) $order->get_meta( Server_Events::ORDER_VISITOR_META ), 'visit' => (int) $order->get_meta( Server_Events::ORDER_VISIT_META ) );
+			$paid = $order->is_paid() || null !== $order->get_date_paid();
+			// counted：Data\Metrics 的“已付款”（已付款状态，或已退款但付过款）；比旧规则少的是“付过款、后来取消 / 失败”的订单。开关关着时不用它。
+			$this->orders[ $id ] = array( 'test' => self::is_test( $order ), 'paid' => $paid, 'counted' => 'off' === self::mode() ? $paid : Metrics::is_paid_order( $order ), 'visitor' => (int) $order->get_meta( Server_Events::ORDER_VISITOR_META ), 'visit' => (int) $order->get_meta( Server_Events::ORDER_VISIT_META ) );
 		}
 	}
 
 	private function result( array $counts, array $returning, array $groups ): array {
 		$wrap = static fn( array $values ) => array( 'unit' => 'visitors', 'layers' => self::layers( $values ) );
 		return array( 'overall' => $wrap( $counts ), 'returning' => $wrap( $returning ), 'groups' => array_map( $wrap, $groups ) );
+	}
+
+	/** M6 的开关档位；不带自动加载的纯逻辑测试里没有 Metrics_Switch，一律当作关着。 */
+	private static function mode(): string {
+		return class_exists( Metrics_Switch::class ) ? Metrics_Switch::mode() : 'off';
+	}
+
+	/** M6（NF-02）：测试单规则按开关走 Metrics_Overlay::is_test_order()（关着时就是 Overview 的旧规则）；不带自动加载的纯逻辑测试里没有这个类，直接用旧规则。 */
+	private static function is_test( $order ): bool {
+		return class_exists( Metrics_Overlay::class ) ? Metrics_Overlay::is_test_order( $order ) : \PeptideCore\Overview::is_test_order( $order );
 	}
 }

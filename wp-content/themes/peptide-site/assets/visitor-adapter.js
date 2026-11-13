@@ -72,9 +72,26 @@
           query[key] = values[0];
         }
       }
+      // Campaign / ad set / ad names from ad links (M9 "generate ad link"). Optional extras:
+      // a missing, repeated, empty or unusable value is simply left out and never discards
+      // the source above. Names longer than the 120 characters the server keeps are cut, and
+      // an ad-platform macro that was not replaced ({{campaign.name}}) is not a name.
+      // CR creative attribution (2026-11-11): the Meta URL template also carries placement and ad_name
+      // (ad_name up to 255 characters, placement up to 64, the server column widths). cr = creative link code (2026-11-12).
+      const limits = {utm_campaign: 120, utm_term: 120, utm_content: 120, placement: 64, ad_name: 255, cr: 16};
+      for (const key of Object.keys(limits)) {
+        const values = params.getAll(key);
+        if (values.length !== 1 || values[0] === '' || /[\x00-\x1f\x7f]/.test(values[0]) || values[0].includes('{{')) continue;
+        query[key] = [...values[0]].slice(0, limits[key]).join('');
+      }
       let referrer = null;
       try { const value = document.referrer; referrer = value === '' ? '' : typeof value === 'string' ? host(new URL(value).hostname) : null; } catch { /* Unavailable referrer remains null. */ }
-      return {version: 1, host: domain, landing_query: query, referrer_host: referrer};
+      const snapshot = {version: 1, host: domain, landing_query: query, referrer_host: referrer};
+      // Only whether a Meta click ID was present, never its value. Timezone and language are optional browser facts.
+      if (params.has('fbclid')) snapshot.has_fbclid = true;
+      try { const zone = Intl.DateTimeFormat().resolvedOptions().timeZone; if (typeof zone === 'string' && zone.length <= 64 && /^[A-Za-z][A-Za-z0-9_+\-]{0,31}(?:\/[A-Za-z0-9_+\-]{1,31}){0,2}$/.test(zone)) snapshot.timezone = zone; } catch { /* Optional. */ }
+      try { const lang = navigator.language; if (typeof lang === 'string' && lang.length <= 35 && /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{1,8}){0,4}$/.test(lang)) snapshot.language = lang; } catch { /* Optional. */ }
+      return snapshot;
     } catch { return null; }
   }
   // Low-entropy browser reports only. Called synchronously for a new PV, never a send/retry.

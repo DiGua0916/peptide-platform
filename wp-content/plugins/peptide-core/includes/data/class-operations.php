@@ -103,7 +103,7 @@ final class Operations {
 	public static function period( int $from, int $to, ?string $entry_domain = null ): array {
 		// 已付款订单只取一次，销售额、订单数、件数、净销售额、顾客（订单部分）和漏斗的支付成功都从这一份算。
 		$all       = self::paid_orders( $from, $to );
-		$orders    = array_values( array_filter( $all, static fn( $o ) => ! Overview::is_test_order( $o ) ) );
+		$orders    = array_values( array_filter( $all, static fn( $o ) => ! self::is_test( $o ) ) );
 		if ( null !== $entry_domain ) {
 			// 选了入口域名：只算归属这个域名的访问里下的订单。
 			$orders = Entry_Domain::orders( $orders, $entry_domain, $to * 1000 );
@@ -114,7 +114,7 @@ final class Operations {
 		$customers = array();
 		$paid_ids  = array();
 		foreach ( $orders as $order ) {
-			$sales += (float) $order->get_total() - (float) $order->get_total_refunded();
+			$sales += self::sales( $order );
 
 			$paid_ids[ (int) $order->get_id() ] = true;
 			foreach ( $order->get_items() as $item ) {
@@ -158,6 +158,11 @@ final class Operations {
 			'customers'      => count( $customers ),
 			'mobile'         => $v['mobile'],
 		);
+		// M6（NF-02）：访客、订单、销售额、客单价、转化率按开关改用 Data\Metrics。开关关着时 Metrics_Overlay 原样返回；
+		// 选了入口域名时没有统一口径，保持旧算法。class_exists：不带自动加载的纯逻辑测试里没有这个类，直接跳过。
+		if ( null === $entry_domain && class_exists( Metrics_Overlay::class ) ) {
+			$kpis = Metrics_Overlay::operations( $kpis, $from, $to );
+		}
 
 		$funnel            = $v['funnel'];
 		$funnel['paid']    = $count;
@@ -183,7 +188,10 @@ final class Operations {
 				'return'       => 'objects',
 			)
 		);
-		return is_array( $orders ) ? $orders : array();
+		$orders = is_array( $orders ) ? $orders : array();
+		// M6（NF-02）：开关开着时换成“时间段内付款”的那一批（Data\Metrics::paid_orders()），影子时对账；关着时原样返回。
+		// 商品、落地页、来源、分维度、趋势、实时、实验等报表都从这里取订单，所以它们和概览页的合计是同一批订单。
+		return class_exists( Metrics_Overlay::class ) ? Metrics_Overlay::paid_orders( $orders, $from, $to ) : $orders;
 	}
 
 	/** 时间段内注册的账号数（和概览页同一个查询）。 */
@@ -223,7 +231,7 @@ final class Operations {
 				continue;
 			}
 			$parent = wc_get_order( $refund->get_parent_id() );
-			if ( ! $parent instanceof \WC_Order || Overview::is_test_order( $parent ) ) {
+			if ( ! $parent instanceof \WC_Order || self::is_test( $parent ) ) {
 				continue;
 			}
 			// 选了入口域名：只算原订单归属这个域名的退款（原订单的访问在退款所在时间段结束前已保存入口）。
@@ -353,5 +361,15 @@ final class Operations {
 			'previous' => $previous,
 			'change'   => $change,
 		);
+	}
+
+	/** M6（NF-02）：测试单规则按开关走 Metrics_Overlay::is_test_order()（关着时就是 Overview 的旧规则）；不带自动加载的纯逻辑测试里没有这个类，直接用旧规则。 */
+	private static function is_test( $order ): bool {
+		return class_exists( Metrics_Overlay::class ) ? Metrics_Overlay::is_test_order( $order ) : \PeptideCore\Overview::is_test_order( $order );
+	}
+
+	/** M6（NF-02）：一张订单的销售额按开关走 Metrics_Overlay::order_sales()（关着时 = 订单金额 − WooCommerce 退款，和以前一样）。 */
+	private static function sales( $order ): float {
+		return class_exists( Metrics_Overlay::class ) ? Metrics_Overlay::order_sales( $order ) : (float) $order->get_total() - (float) $order->get_total_refunded();
 	}
 }

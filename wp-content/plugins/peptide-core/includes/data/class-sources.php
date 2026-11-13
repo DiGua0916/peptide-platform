@@ -43,7 +43,7 @@ final class Sources {
 		}
 		$orders = array(); $ids = array();
 		foreach ( Operations::paid_orders( (int) $range['from'], (int) $range['to'] ) as $order ) {
-			if ( Overview::is_test_order( $order ) ) { continue; }
+			if ( self::is_test( $order ) ) { continue; }
 			$o = Visit_Metrics::order_fact( $order );
 			$o['visit'] = Report_Dimensions::positive_id( $order->get_meta( \PeptideCore\Tracking\Server_Events::ORDER_VISIT_META ) ) ?? 0;
 			$o['visitor'] = Report_Dimensions::positive_id( $order->get_meta( \PeptideCore\Tracking\Server_Events::ORDER_VISITOR_META ) ) ?? 0;
@@ -62,5 +62,10 @@ final class Sources {
 		}
 		usort( $rows, static function ( array $a, array $b ) use ( $args ): int { $av = $a[ $args['sort'] ] ?? -1; $bv = $b[ $args['sort'] ] ?? -1; $cmp = 'asc' === $args['order'] ? $av <=> $bv : $bv <=> $av; return $cmp ?: strcmp( $a['_key'], $b['_key'] ); } );
 		foreach ( $rows as &$row ) { unset( $row['_key'] ); } unset( $row ); return $rows;
+	}
+
+	/** M6（NF-02）：测试单规则按开关走 Metrics_Overlay::is_test_order()（关着时就是 Overview 的旧规则）；不带自动加载的纯逻辑测试里没有这个类，直接用旧规则。 */
+	private static function is_test( $order ): bool {
+		return class_exists( Metrics_Overlay::class ) ? Metrics_Overlay::is_test_order( $order ) : \PeptideCore\Overview::is_test_order( $order );
 	}
 }
