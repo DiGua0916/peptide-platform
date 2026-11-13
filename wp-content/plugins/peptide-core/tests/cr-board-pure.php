@@ -301,9 +301,9 @@ check( 'yesterday in store timezone', '2026-11-09' === D::yesterday( (int) ( $da
 // ---------- 页面参数和格式 ----------
 $now2 = (int) ( $day1[0] / 1000 ) + 7200;
 $fdef = Board_Page::filters( array(), $tz, $now2 );
-check( 'filters: defaults', 'attr' === $fdef['dim'] && 'first' === $fdef['mode'] && '2026-11-10' === $fdef['to'] && '2026-11-04' === $fdef['from'] && '' === $fdef['ver'] );
+check( 'filters: defaults', 'creative' === $fdef['dim'] && 'first' === $fdef['mode'] && '2026-11-10' === $fdef['to'] && '2026-11-04' === $fdef['from'] && '' === $fdef['ver'] );
 $fbad = Board_Page::filters( array( 'dim' => 'x', 'mode' => array(), 'from' => '2026-11-09', 'to' => '2026-11-01', 'ver' => '../v1' ), $tz, $now2 );
-check( 'filters: bad input falls back', 'attr' === $fbad['dim'] && 'first' === $fbad['mode'] && '2026-11-04' === $fbad['from'] && '' === $fbad['ver'] );
+check( 'filters: bad input falls back', 'creative' === $fbad['dim'] && 'first' === $fbad['mode'] && '2026-11-04' === $fbad['from'] && '' === $fbad['ver'] );
 $fok = Board_Page::filters( array( 'dim' => 'ad', 'mode' => 'last', 'from' => '2026-11-01', 'to' => '2026-11-09', 'ver' => 'v1.2' ), $tz, $now2 );
 check( 'filters: valid input kept', array( 'dim' => 'ad', 'mode' => 'last', 'from' => '2026-11-01', 'to' => '2026-11-09', 'ver' => 'v1.2' ) === $fok );
 check( 'version names', Board_Page::valid_version( 'v2' ) && Board_Page::valid_version( '2026.11-a' ) && ! Board_Page::valid_version( '' ) && ! Board_Page::valid_version( 'v 2' ) && ! Board_Page::valid_version( str_repeat( 'a', 33 ) ) );

@@ -119,7 +119,7 @@ final class Board_Page {
 	 * @return array{dim:string,mode:string,from:string,to:string,ver:string}
 	 */
 	public static function filters( array $get, string $tz, int $now ): array {
-		$dim  = is_string( $get['dim'] ?? null ) && isset( Board::DIMS[ $get['dim'] ] ) ? $get['dim'] : 'attr';
+		$dim  = is_string( $get['dim'] ?? null ) && isset( Board::DIMS[ $get['dim'] ] ) ? $get['dim'] : 'creative';
 		$mode = is_string( $get['mode'] ?? null ) && isset( Board::MODES[ $get['mode'] ] ) ? $get['mode'] : 'first';
 		$to   = Board::day( $now * 1000, $tz );
 		$from = Board::day( ( $now - ( self::DEFAULT_DAYS - 1 ) * 86400 ) * 1000, $tz );
@@ -195,6 +195,7 @@ final class Board_Page {
 .pc-cr-board tr.pc-cr-thin td{color:#a7aaad}
 .pc-cr-board tr.pc-cr-thin td:first-child{color:#646970}
 .pc-cr-board .pc-cr-tag{display:inline-block;font-size:11px;line-height:16px;padding:0 6px;border-radius:8px;background:#f0f0f1;color:#646970;margin-left:6px}
+.pc-cr-board .pc-cr-attrs-inline{display:inline-block;font-size:12px;color:#50575e;margin-left:6px}
 .pc-cr-board tr.pc-cr-group th{background:#f6f7f7;text-align:left}
 .pc-cr-board tr.pc-cr-total td{font-weight:600;border-top:2px solid #c3c4c7}
 .pc-cr-board .pc-cr-thumb{width:32px;height:32px;object-fit:cover;vertical-align:middle;margin-right:6px;border-radius:3px}
@@ -313,6 +314,19 @@ final class Board_Page {
 			echo '<img class="pc-cr-thumb" src="' . esc_url( $thumb ) . '" alt="">';
 		}
 		$label = esc_html( (string) $row['label'] );
+		$attrs = (array) ( $row['meta']['attrs'] ?? array() );
+		if ( $attrs && ! $is_total ) {
+			// 按单个素材：编号后面带上这个素材的属性（钩子 · 形式 · 卖点 · 语言），不用回素材库查。
+			static $names = null;
+			$names = $names ?? Creatives::label_map( Schema::vocab() );
+			$parts = array();
+			foreach ( array_merge( Contract::REQUIRED_ATTRS, array( 'lang' ) ) as $k ) {
+				if ( '' !== (string) ( $attrs[ $k ] ?? '' ) ) {
+					$parts[] = $names[ $k ][ $attrs[ $k ] ] ?? $attrs[ $k ];
+				}
+			}
+			$label .= $parts ? '<span class="pc-cr-attrs-inline">' . esc_html( implode( ' · ', $parts ) ) . '</span>' : '';
+		}
 		if ( $row['insufficient'] && ! $is_total ) {
 			$label .= '<span class="pc-cr-tag">样本不足</span>';
 		}

@@ -24,9 +24,10 @@ defined( 'ABSPATH' ) || exit;
 
 final class Board {
 
+	// 2026-11-12：“按单个素材”放第一个、也是默认维度（一个素材一条链接，投手先看每个素材的数据）。
 	public const DIMS  = array(
-		'attr'     => '按素材属性',
 		'creative' => '按单个素材',
+		'attr'     => '按素材属性',
 		'ad'       => '按广告',
 		'adset'    => '按广告组',
 		'platform' => '按平台 / 版位',
@@ -434,7 +435,7 @@ final class Board {
 	}
 
 	private static function row_meta( string $dim, string $key, string $code, array $creatives ): array {
-		return 'creative' === $dim ? array( 'thumb' => (string) ( $creatives[ $code ]['thumb'] ?? '' ), 'code' => $code ) : array();
+		return 'creative' === $dim ? array( 'thumb' => (string) ( $creatives[ $code ]['thumb'] ?? '' ), 'code' => $code, 'attrs' => (array) ( $creatives[ $code ]['attrs'] ?? array() ) ) : array();
 	}
 
 	private static function zero( string $label = '合计', array $meta = array() ): array {
