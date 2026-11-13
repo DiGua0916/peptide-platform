@@ -83,6 +83,7 @@ final class Board {
 			'pageviews'        => null,
 			'interactions'     => null,
 			'scrolled'         => null,
+			'scroll_depth'     => 0, // 2026-11-13：这次访问最深滚到百分之几（素材人群画像用）
 			'timezone'         => (string) ( $visit['timezone'] ?? '' ),
 			'language'         => (string) ( $visit['language'] ?? '' ),
 			'ip_country'       => 1 === preg_match( '/\A[A-Z]{2}\z/', (string) ( $visit['geo_country'] ?? '' ) ) ? (string) $visit['geo_country'] : '', // 2026-11-13：IP 库查到的国家优先
@@ -120,6 +121,9 @@ final class Board {
 			}
 			if ( 'scroll' === $type || 'product_scroll' === $type ) {
 				$f['scrolled'] = true;
+				if ( 'scroll' === $type ) {
+					$f['scroll_depth'] = max( $f['scroll_depth'], min( 100, (int) ( $data['depth'] ?? 0 ) ) );
+				}
 			}
 			if ( 'product_view' === $type && (int) ( $e['product_id'] ?? 0 ) > 0 ) {
 				$f['products'][] = (int) $e['product_id'];
@@ -185,6 +189,7 @@ final class Board {
 		$untagged = array();
 		$ad_day   = array();
 		$aud      = array();
+		$prof     = array(); // 2026-11-13：每条素材的人群画像（Audience）
 		foreach ( $by_visitor as $vid => $list ) {
 			usort( $list, static fn( $a, $b ) => array( (int) $a['start_ms'], (int) $a['id'] ) <=> array( (int) $b['start_ms'], (int) $b['id'] ) );
 			// 回访、以前看过的商品、到这次为止来了几次。
@@ -219,6 +224,7 @@ final class Board {
 			foreach ( self::audience_keys( $anchor ) as $group => $value ) {
 				$aud[ $group ][ $value ][ $tier ] = ( $aud[ $group ][ $value ][ $tier ] ?? 0 ) + 1;
 			}
+			Audience::add( $prof, $code, Audience::keys( $anchor ), $tier, $facts, self::behavior( $after ) );
 			foreach ( self::row_keys( $dim, $anchor, $code, $ads, $crs, $labels ) as $key => $label ) {
 				$rows[ $key ] = self::add( $rows[ $key ] ?? self::zero( $label, self::row_meta( $dim, $key, $code, $crs ) ), $tier, $facts, $vid );
 			}
@@ -272,7 +278,24 @@ final class Board {
 			'paid'            => (int) $total['visitors'],
 			'ad_day_visitors' => $counts,
 			'audience'        => self::audience_table( $aud ),
+			'profiles'        => Audience::finish( $prof ),
 		);
+	}
+
+	/** 访客从归因那次起的浏览行为：总停留、总页数、最深滚动。 @return array{dwell_ms:?int,pageviews:int,scroll_depth:int} */
+	public static function behavior( array $visits ): array {
+		$dwell = null;
+		$pv    = 0;
+		$depth = 0;
+		foreach ( $visits as $v ) {
+			$f = (array) ( $v['features'] ?? array() );
+			if ( null !== ( $f['dwell_ms'] ?? null ) ) {
+				$dwell = (int) $dwell + (int) $f['dwell_ms'];
+			}
+			$pv   += (int) ( $f['pageviews'] ?? 0 );
+			$depth = max( $depth, (int) ( $f['scroll_depth'] ?? 0 ) );
+		}
+		return array( 'dwell_ms' => $dwell, 'pageviews' => $pv, 'scroll_depth' => $depth );
 	}
 
 	/** 人群分布要看的维度（取归因的那次访问）。 */
@@ -837,7 +860,7 @@ final class Board {
 		// 范围内有过付费 / 未带参访问的访客，再取他们到范围结束为止的全部访问（判断首次来源、回访）。
 		$ids = array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT visitor_id FROM {$visits_t} WHERE start_ms >= %d AND start_ms < %d AND source_class IN ('paid','fb_untagged') LIMIT %d", $ms[0], $ms[1], self::MAX_VISITS ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		$seen();
-		$cols = 'id, visitor_id, start_ms, last_ms, utm_source, utm_medium, utm_term, utm_content, placement, ad_name, creative_code, source_class, ip_type, timezone, language, geo_region, geo_country, in_app, device, pageviews, stage, order_id';
+		$cols = 'id, visitor_id, start_ms, last_ms, utm_source, utm_medium, utm_term, utm_content, placement, ad_name, creative_code, source_class, ip_type, timezone, language, geo_region, geo_country, in_app, device, pageviews, stage, order_id, ua, os, os_version, device_model, screen, isp, geo_city';
 		$owners = array();
 		foreach ( array_chunk( $ids, 500 ) as $chunk ) {
 			$in   = implode( ',', $chunk );

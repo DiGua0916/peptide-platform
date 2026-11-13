@@ -38,7 +38,24 @@ final class Board_Page {
 		add_action( 'admin_post_' . Module::ACTION_EXPORT, array( self::class, 'handle' ) );
 		Export::register_hooks();
 		Daily_Report::register_hooks();
+		Audience_Ai::register_hooks();
 	}
+
+	/** 筛选 → 时间范围（毫秒），选了版本时和版本时间段取交集。 @return array{0:int,1:int} */
+	public static function range( array $f, string $tz ): array {
+		$ms = Board::range_ms( $f['from'], $f['to'], $tz );
+		if ( '' !== $f['ver'] ) {
+			$r = Export::version_range( self::versions(), $f['ver'], (int) floor( microtime( true ) * 1000 ) );
+			if ( $r ) {
+				$ms = array( max( $ms[0], $r[0] ), min( $ms[1], $r[1] ) );
+			}
+		}
+		return $ms;
+	}
+
+	/** 当前页面的人群画像（素材编号 => 画像，'*' = 全部）和筛选条件，给卡片用。 */
+	private static array $profiles = array();
+	private static array $filters  = array();
 
 	// ---------- 设置和版本 ----------
 
@@ -171,6 +188,7 @@ final class Board_Page {
 		if ( ! current_user_can( Staff_Buyer::CAP_VIEW ) ) {
 			wp_die( esc_html__( 'Sorry, you are not allowed to access this page.', 'peptide-core' ), 403 );
 		}
+		wp_enqueue_script( 'wp-api-fetch' ); // 卡片上的“AI 深度分析”按钮用（2026-11-13）
 		$tz       = Board::timezone();
 		$f        = self::filters( wp_unslash( $_GET ), $tz, time() ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$settings = self::settings();
@@ -348,7 +366,49 @@ final class Board_Page {
 .pc-cr-board table.pc-cr-grid td.is-bad{background:#f09595;color:#501313}
 .pc-cr-board table.pc-cr-grid td.is-nospend{background:#e6f1fb;color:#0c447c}
 .pc-cr-board table.pc-cr-grid td.is-thin{opacity:.6}
-@media (max-width:600px){.pc-cr-board .pc-cr-funnel{grid-template-columns:repeat(3,minmax(0,1fr))}.pc-cr-board ul.pc-cr-visitors{columns:2}.pc-cr-board .pc-cr-kpi b{font-size:18px}}
+.pc-cr-board .pc-cr-aud{border-top:1px solid #f0f0f1;margin-top:12px;padding-top:4px}
+.pc-cr-board .pc-cr-aud-h{font-size:14px;margin:14px 0 8px;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.pc-cr-board .pc-cr-aud-h span{font-size:12px;font-weight:400;color:#646970}
+.pc-cr-board .pc-cr-aud-box{border-radius:6px;padding:9px 12px;margin:0 0 8px;font-size:13px;line-height:1.7}
+.pc-cr-board .pc-cr-aud-box p{margin:2px 0 0}
+.pc-cr-board .pc-cr-aud-box.is-common{background:#edfaef;color:#0f5132}
+.pc-cr-board .pc-cr-aud-box.is-diff{background:#fcf9e8;color:#614a19}
+.pc-cr-board .pc-cr-aud-box.is-head{background:#f0f6fc;color:#0a4b78;font-size:14px}
+.pc-cr-board .pc-cr-aud-legend{font-size:12px;color:#646970;margin:8px 0 6px}
+.pc-cr-board .pc-cr-aud-legend i{display:inline-block;width:10px;height:10px;vertical-align:-1px;border-radius:2px}
+.pc-cr-board .pc-cr-aud-legend i.is-bar{background:#7f77dd}
+.pc-cr-board .pc-cr-aud-legend i.is-avg{width:2px;background:#50575e;margin-left:8px}
+.pc-cr-board .pc-cr-aud-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:10px}
+.pc-cr-board .pc-cr-aud-dim{border:1px solid #dcdcde;border-radius:6px;padding:8px 10px;min-width:0;background:#fff}
+.pc-cr-board .pc-cr-aud-dim h4{margin:0 0 4px;font-size:12px;color:#50575e;font-weight:600}
+.pc-cr-board .pc-cr-aud-bar{display:flex;align-items:center;gap:8px;font-size:12px;margin:5px 0}
+.pc-cr-board .pc-cr-aud-bar .l{width:104px;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pc-cr-board .pc-cr-aud-bar .t{flex:1;min-width:30px;height:9px;background:#f0f0f1;border-radius:3px;position:relative}
+.pc-cr-board .pc-cr-aud-bar .t i{position:absolute;left:0;top:0;bottom:0;background:#7f77dd;border-radius:3px}
+.pc-cr-board .pc-cr-aud-bar .t em{position:absolute;top:-3px;bottom:-3px;width:2px;background:#50575e}
+.pc-cr-board .pc-cr-aud-bar .n{flex:none;color:#646970;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pc-cr-board details.pc-cr-aud-more{margin:8px 0 0}
+.pc-cr-board details.pc-cr-aud-more>summary{cursor:pointer;color:#2271b1;font-size:12px;margin-bottom:8px}
+.pc-cr-board .pc-cr-aud-sec{margin:0 0 10px}
+.pc-cr-board .pc-cr-aud-sec h4{margin:0 0 4px;font-size:13px}
+.pc-cr-board .pc-cr-aud-sec ul{margin:0 0 0 18px;list-style:disc}
+.pc-cr-board .pc-cr-aud-sec li,.pc-cr-board .pc-cr-aud-sec p{font-size:13px;line-height:1.7;margin:0 0 2px}
+.pc-cr-board .pc-cr-aud-sec small{color:#646970}
+.pc-cr-board .pc-cr-aud-table{max-width:620px;margin:4px 0 6px;font-size:12px}
+.pc-cr-board .pc-cr-aud-table>div{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(4,minmax(0,1fr));gap:6px;padding:4px 0;border-bottom:1px solid #f0f0f1;font-variant-numeric:tabular-nums}
+.pc-cr-board .pc-cr-aud-table>div span:not(:first-child){text-align:right}
+.pc-cr-board .pc-cr-aud-table>div.h{color:#646970}
+.pc-cr-board .pc-cr-aud-table>div.is-good .r{color:#007017;font-weight:600}
+.pc-cr-board .pc-cr-aud-table>div.is-bad .r{color:#b32d2e;font-weight:600}
+.pc-cr-board .pc-cr-aud-ai{border:1px solid #c5d9ed;background:#f6fafd;border-radius:6px;padding:10px 12px;margin:10px 0 4px}
+.pc-cr-board .pc-cr-aud-ai-head{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+.pc-cr-board .pc-cr-aud-ai-head .pc-cr-muted{flex:1;min-width:200px;margin:0}
+.pc-cr-board .pc-cr-aud-ai-body h4{margin:12px 0 4px;font-size:13px}
+.pc-cr-board .pc-cr-aud-ai-body p{margin:0 0 4px;font-size:13px;line-height:1.7}
+.pc-cr-board .pc-cr-aud-ai-body p.is-li{padding-left:14px;text-indent:-10px}
+.pc-cr-board .pc-cr-aud-ai-body p.is-li::before{content:"• "}
+.pc-cr-board .pc-cr-aud-ai-body .is-err{color:#b32d2e}
+@media (max-width:600px){.pc-cr-board .pc-cr-aud-bar .l{width:84px}.pc-cr-board .pc-cr-funnel{grid-template-columns:repeat(3,minmax(0,1fr))}.pc-cr-board ul.pc-cr-visitors{columns:2}.pc-cr-board .pc-cr-kpi b{font-size:18px}}
 </style>';
 	}
 
@@ -562,6 +622,8 @@ final class Board_Page {
 
 	private static function render_cards( array $agg, array $f, array $settings, array $data = array() ): void {
 		self::load_people( $data );
+		self::$profiles = 'creative' === $f['dim'] ? (array) ( $agg['profiles'] ?? array() ) : array();
+		self::$filters  = $f;
 		$total = $agg['total'];
 		$rules = self::rules( $settings );
 		$money = static fn( $c ): string => self::format( $c, 'money' );
@@ -652,6 +714,21 @@ final class Board_Page {
 			var done = function () { c.textContent = '已复制，到 Meta 广告管理里粘贴搜索'; setTimeout( function () { c.textContent = label; }, 2500 ); };
 			if ( navigator.clipboard && window.isSecureContext ) { navigator.clipboard.writeText( text ).then( done ); }
 			else { var t = document.createElement( 'textarea' ); t.value = text; document.body.appendChild( t ); t.select(); try { document.execCommand( 'copy' ); done(); } catch ( err ) {} t.remove(); }
+			return;
+		}
+		var ai = e.target.closest( '[data-pc-cr-ai]' );
+		if ( ai ) {
+			var box = ai.closest( '[data-pc-cr-ai-box]' ), body = box.querySelector( '[data-pc-cr-ai-body]' ), meta = box.querySelector( '[data-pc-cr-ai-meta]' );
+			if ( ! window.wp || ! window.wp.apiFetch ) { body.innerHTML = '<p class="is-err">页面没加载好，请刷新后再试。</p>'; return; }
+			ai.disabled = true; var was = ai.textContent; ai.textContent = 'AI 分析中，约 30–90 秒…';
+			window.wp.apiFetch( { path: '/peptide/v1/creatives/audience-ai', method: 'POST', data: { code: ai.getAttribute( 'data-pc-cr-ai' ), from: ai.getAttribute( 'data-from' ), to: ai.getAttribute( 'data-to' ), mode: ai.getAttribute( 'data-mode' ), ver: ai.getAttribute( 'data-ver' ), refresh: ai.hasAttribute( 'data-refresh' ) ? 1 : 0 } } ).then( function ( r ) {
+				body.innerHTML = r.html || '<p>AI 没有返回内容。</p>';
+				meta.textContent = r.at + ' · ' + r.range + ( r.persona ? ' · 人设：' + r.persona : '' ) + ( r.cached ? ' · 30 分钟内的结果' : '' );
+				ai.setAttribute( 'data-refresh', '1' ); ai.textContent = '重新分析'; ai.disabled = false;
+			} ).catch( function ( err ) {
+				var p = document.createElement( 'p' ); p.className = 'is-err'; p.textContent = '没分析成功：' + ( ( err && err.message ) || '请稍后再试' );
+				body.innerHTML = ''; body.appendChild( p ); ai.textContent = was; ai.disabled = false;
+			} );
 			return;
 		}
 		var b = e.target.closest( '[data-pc-cr-expand]' );
@@ -878,6 +955,7 @@ final class Board_Page {
 			echo '<div><span>' . esc_html( $col[0] ) . '</span><b>' . esc_html( self::format( $row[ $key ] ?? null, $col[1] ) ) . '</b></div>';
 		}
 		echo '</div>';
+		self::render_audience( (string) ( $row['key'] ?? '' ) );
 		$ids = (array) ( $row['visitor_ids'] ?? array() );
 		if ( $ids ) {
 			// 2026-11-13：按下单金额从高到低；有姓名的显示客户姓名。
@@ -895,6 +973,93 @@ final class Board_Page {
 			}
 		}
 		echo '</div></details>';
+	}
+
+	// ---------- 素材人群画像和分析（2026-11-13） ----------
+
+	private static function pct( ?float $x ): string {
+		return null === $x ? '—' : (string) round( $x * 100 ) . '%';
+	}
+
+	/** 一条素材的人群画像：同类型 / 不同项、各维度分布（和平均比）、规则分析、AI 深度分析。 */
+	private static function render_audience( string $code ): void {
+		$p   = self::$profiles[ $code ] ?? null;
+		$all = self::$profiles[ Audience::ALL ] ?? null;
+		if ( ! $p || ! $all || Contract::UNREGISTERED === $code ) {
+			return;
+		}
+		$a = Audience::analyse( $p, $all );
+		echo '<div class="pc-cr-aud"><h3 class="pc-cr-aud-h">人群画像 <span>' . esc_html( '付费访客 ' . (int) $p['total']['visitors'] . ' 人 · 平均 = 同时间段全部素材' ) . '</span></h3>';
+		if ( $a['common'] ) {
+			echo '<div class="pc-cr-aud-box is-common"><b>同类型（这条素材的人大多是）</b><p>' . esc_html( implode( '；', $a['common'] ) ) . '</p></div>';
+		}
+		if ( $a['diff'] ) {
+			echo '<div class="pc-cr-aud-box is-diff"><b>不同项（和全部素材平均比）</b><p>' . esc_html( implode( ' · ', array_column( $a['diff'], 'text' ) ) ) . '</p></div>';
+		}
+		echo '<p class="pc-cr-aud-legend"><i class="is-bar"></i> 这条素材占比 <i class="is-avg"></i> 全部素材平均 · 右侧：人数 · 占比 · 下单</p>';
+		$grid = static function ( array $dims ) use ( $p, $all ): void {
+			echo '<div class="pc-cr-aud-grid">';
+			foreach ( $dims as $dim ) {
+				$list = array_slice( (array) ( $p['dims'][ $dim ] ?? array() ), 0, 6 );
+				if ( ! $list ) {
+					continue;
+				}
+				echo '<div class="pc-cr-aud-dim"><h4>' . esc_html( Audience::DIMS[ $dim ] ) . '</h4>';
+				foreach ( $list as $r ) {
+					$w   = (int) round( 100 * $r['share'] );
+					$avg = (int) round( 100 * Audience::avg_share( $all, $dim, $r['value'] ) );
+					echo '<div class="pc-cr-aud-bar" title="' . esc_attr( $r['label'] . '：这条素材 ' . $w . '%，平均 ' . $avg . '%' ) . '"><span class="l">' . esc_html( $r['label'] ) . '</span><span class="t"><i style="width:' . esc_attr( (string) $w ) . '%"></i><em style="left:' . esc_attr( (string) min( 99, $avg ) ) . '%"></em></span><span class="n">' . esc_html( $r['visitors'] . ' · ' . $w . '% · ' . (int) $r['paid'] . ' 单' ) . '</span></div>';
+				}
+				echo '</div>';
+			}
+			echo '</div>';
+		};
+		$dims = array_keys( Audience::DIMS );
+		$grid( array_slice( $dims, 0, Audience::FIRST ) );
+		echo '<details class="pc-cr-aud-more"><summary>更多维度：' . esc_html( implode( ' · ', array_map( static fn( $d ) => Audience::DIMS[ $d ], array_slice( $dims, Audience::FIRST ) ) ) ) . '</summary>';
+		$grid( array_slice( $dims, Audience::FIRST ) );
+		echo '</details>';
+
+		// 规则分析。
+		echo '<h3 class="pc-cr-aud-h">人群分析 <span>' . esc_html( $a['confidence_text'] ) . '</span></h3>';
+		if ( '' !== $a['headline'] ) {
+			echo '<div class="pc-cr-aud-box is-head"><b>一句话：</b>' . esc_html( $a['headline'] ) . '</div>';
+			$sec = static function ( string $title, array $items ): void {
+				if ( ! $items ) {
+					return;
+				}
+				echo '<div class="pc-cr-aud-sec"><h4>' . esc_html( $title ) . '</h4><ul>';
+				foreach ( $items as $it ) {
+					echo '<li>' . esc_html( $it['text'] ) . ( '' !== (string) ( $it['ev'] ?? '' ) ? ' <small>依据：' . esc_html( $it['ev'] ) . '</small>' : '' ) . '</li>';
+				}
+				echo '</ul></div>';
+			};
+			$sec( '1. 来的是什么人', $a['who'] );
+			$sec( '2. 质量怎么样', $a['quality'] );
+			if ( $a['buyers'] ) {
+				echo '<div class="pc-cr-aud-sec"><h4>3. 谁在买，谁不买</h4><div class="pc-cr-aud-table"><div class="h"><span>人群</span><span>访客</span><span>加购率</span><span>下单率</span><span>客单价</span></div>';
+				foreach ( $a['buyers'] as $b ) {
+					echo '<div class="is-' . esc_attr( $b['mark'] ) . '"><span>' . esc_html( $b['name'] ) . '</span><span>' . (int) $b['visitors'] . '</span><span>' . esc_html( self::pct( $b['cart_rate'] ) ) . '</span><span class="r">' . esc_html( self::pct( $b['order_rate'] ) ) . '</span><span>' . esc_html( null === $b['aov_cents'] ? '—' : self::format( $b['aov_cents'], 'money' ) ) . '</span></div>';
+				}
+				echo '</div>';
+				foreach ( $a['buyer_notes'] as $it ) {
+					echo '<p>' . esc_html( $it['text'] ) . '</p>';
+				}
+				echo '</div>';
+			} else {
+				$sec( '3. 谁在买，谁不买', array_merge( array( array( 'text' => '没有哪个人群到 ' . Audience::MIN_SEGMENT . ' 人，暂不拆开比较。', 'ev' => '' ) ), $a['buyer_notes'] ) );
+			}
+			$sec( '4. 没买的人卡在哪', $a['stuck'] ? $a['stuck'] : array( array( 'text' => '各人群的转化差不多，没有明显卡住的地方。', 'ev' => '' ) ) );
+			$sec( '5. 建议（只是建议，不会自动改广告）', $a['advice'] );
+		}
+
+		// AI 深度分析（总后台接入的 AI）。
+		$saved = Audience_Ai::saved()[ $code ] ?? null;
+		$f     = self::$filters;
+		echo '<div class="pc-cr-aud-ai" data-pc-cr-ai-box><div class="pc-cr-aud-ai-head"><b>AI 深度分析</b><span class="pc-cr-muted" data-pc-cr-ai-meta>' . esc_html( $saved ? Audience_Ai::view( $saved )['at'] . ' · ' . $saved['range'] . ( '' !== $saved['persona'] ? ' · 人设：' . $saved['persona'] : '' ) : '用总后台接入的 AI，把这条素材的人群数据和上面的规则结论交给“素材人群分析”人设，写成完整报告。只发汇总数字，不发访客的 IP、姓名、联系方式。' ) . '</span>';
+		echo '<button type="button" class="button" data-pc-cr-ai="' . esc_attr( $code ) . '" data-from="' . esc_attr( (string) ( $f['from'] ?? '' ) ) . '" data-to="' . esc_attr( (string) ( $f['to'] ?? '' ) ) . '" data-mode="' . esc_attr( (string) ( $f['mode'] ?? '' ) ) . '" data-ver="' . esc_attr( (string) ( $f['ver'] ?? '' ) ) . '"' . ( $saved ? ' data-refresh="1"' : '' ) . '>' . ( $saved ? '重新分析' : '开始分析' ) . '</button></div>';
+		echo '<div class="pc-cr-aud-ai-body" data-pc-cr-ai-body>' . ( $saved ? Audience_Ai::view( $saved )['html'] : '' ) . '</div></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- html() 先转义再加标签。
+		echo '</div>';
 	}
 
 	private static function render_settings( array $settings, array $versions ): void {

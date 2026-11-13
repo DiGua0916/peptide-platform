@@ -136,6 +136,16 @@ final class Export {
 			$attrs[] = array( 'attr' => $pair[0], 'value' => $pair[1] ?? '' ) + $strip( $row );
 		}
 		$total = $strip( (array) ( $by_creative['total'] ?? array() ) );
+		// 2026-11-13：每条素材的人群画像（各维度前 Audience::TOP 项）和规则分析，交给“人群与素材分析师”。
+		$profiles = array();
+		$all      = (array) ( $by_creative['profiles'][ Audience::ALL ] ?? array() );
+		foreach ( (array) ( $by_creative['profiles'] ?? array() ) as $code => $p ) {
+			$dims = array();
+			foreach ( (array) $p['dims'] as $dim => $list ) {
+				$dims[ $dim ] = array_slice( (array) $list, 0, Audience::TOP );
+			}
+			$profiles[ (string) $code ] = array( 'total' => $p['total'], 'dims' => $dims ) + ( Audience::ALL !== (string) $code && $all ? array( 'analysis' => Audience::analyse( $p, $all ) ) : array() );
+		}
 		return array(
 			'name'       => (string) $info['name'],
 			'label'      => (string) $info['label'],
@@ -147,6 +157,7 @@ final class Export {
 			'audience'   => (array) ( $by_creative['audience'] ?? array() ),
 			'creatives'  => $creatives,
 			'attributes' => $attrs,
+			'profiles'   => $profiles,
 		);
 	}
 
@@ -211,6 +222,13 @@ final class Export {
 			}
 			foreach ( (array) $ds['attributes'] as $r ) {
 				$rows[] = $line( $name, 'attribute', $r['attr'] . ':' . $r['value'], (string) $r['label'], $r );
+			}
+			foreach ( (array) ( $ds['profiles'] ?? array() ) as $code => $p ) {
+				foreach ( (array) $p['dims'] as $dim => $list ) {
+					foreach ( (array) $list as $r ) {
+						$rows[] = $line( $name, 'profile:' . ( Audience::ALL === (string) $code ? 'ALL' : $code ) . ':' . $dim, (string) $r['value'], ( Audience::DIMS[ $dim ] ?? $dim ) . ' · ' . $r['label'], array( 'visitors' => $r['visitors'], 'valid' => $r['valid'], 'carted' => $r['carted'], 'cart_rate' => $r['cart_rate'], 'checkout' => $r['checkout'], 'orders' => $r['orders'], 'sales_cents' => $r['sales_cents'] ) );
+					}
+				}
 			}
 			foreach ( (array) $ds['audience'] as $group => $list ) {
 				foreach ( (array) $list as $r ) {
