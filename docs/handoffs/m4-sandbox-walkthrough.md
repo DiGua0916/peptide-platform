@@ -113,6 +113,42 @@ wp option get peptide_core_app_stats_db
 
 第一条是空、第二条是 `1` = 和 F2 在本机复现的情况一样（版本号在、表不在）。生产 6 家店的同样两条命令见 `docs/CONTRACT.md` M4 一节“给 F1”第 8 条。
 
+## 第 2c 步 · 投手对营销活动只读（约 3 分钟；候选里要同时有 F5 的 M9）
+
+平台所有者 2026-11-13 定：投手可以看只读的“当前在跑的活动”，其余一律不能动。
+
+**一条命令（服务端的拒绝，不需要浏览器）**
+
+```bash
+M4_WALKTHROUGH=sandbox wp eval-file wp-content/plugins/peptide-core/tests/m4-buyer-readonly-native.php
+```
+
+它做什么：临时建 3 个隐藏商品、2 个满减、3 张优惠码、1 个运费折扣、1 个赠品、1 个转盘和 3 个账号（一个投手同时带店长角色、一个正常的投手、一个不是投手的店长），用投手账号把每个能改活动和优惠码的入口实际撞一遍，核对数据没变，最后删掉临时数据和账号、恢复选项。不发邮件、不建订单。
+
+| 看什么 | 通过 |
+| --- | --- |
+| 每行开头 | 全是 `ok`，没有 `FAIL` |
+| 倒数第二行 | `RESULT 48 项检查：全部通过` |
+| 最后一行 | “临时账号和临时数据已删除，选项已恢复。” |
+| 中间“投手看到的只读页面（纯文字）”一段 | 这就是投手看到的内容，可以顺便读一遍措辞 |
+
+有 `FAIL` 时把整段输出发给 F2。2026-11-13 F2 在本机真实站点（SQLite）上的结果：48 项全部通过。
+
+**用投手账号在浏览器里看（沙盒店铺后台，`sbx_buyer` 或任何用 `wp peptide buyer on` 开的账号）**
+
+| 打开 | 应当看到 |
+| --- | --- |
+| 左边菜单的“营销活动” | 只读页“当前在跑的活动”：每个活动一张卡片，有“条件（顾客要做到）”和“优惠（顾客能得到）”两栏；页面上没有新建、编辑、启停、删除，也没有任何可以点进活动的链接 |
+| `wp-admin/admin.php?page=pc-coupons`、`?page=pc-shipping-discounts` | 同一张只读页 |
+| `?page=pc-promotions&new=1`、`?page=pc-promotions&edit=<任意数字>`、`?page=pc-coupons&new=1` | 403 |
+| `wp-admin/edit.php?post_type=shop_coupon`、`wp-admin/post-new.php?post_type=shop_coupon` | 403 |
+| `?page=pc-promotions-product-offers`、`?page=pc-apps`、`?page=pc-apps&app=exit-intent` | 403 |
+| `wp-admin/admin-post.php?action=pc_promo_toggle&id=<任意数字>&on=0` | 403，活动没有被停用 |
+
+再用管理员账号打开 `?page=pc-promotions`：应当是原来可以管理的列表（有“New promotion”按钮和编辑图标），不是只读页。
+
+2026-11-13 F2 把 F5 的分支（`dcda12f`）和本分支在本机合起来，用真投手账号在浏览器里走过上表，结果都符合。
+
 ## 第 3 步 · 开影子档，用浏览器走真实流程（约 20 分钟）
 
 脚本走的是服务端的计算；下面这些只有浏览器里才会发生，需要人点一遍（手机宽度，沙盒店铺前台）。**到 2026-11-12 这一步还没有人做过**（F1 的机器进不了沙盒前台的认证）；生产开影子档之前需要有人走一遍，或者由平台所有者决定跳过。
@@ -167,7 +203,7 @@ wp peptide price-engine log --limit=10
 node tests/run-data-observations.cjs --suite m4-price-engine-pure --suite m4-engine-mode-pure --suite m4-marketing-quiet-pure --suite m4-campaigns-readonly-pure --suite m4-marketing-quiet
 ```
 
-五行都是 `"exit_code":0` 即通过（2026-11-12：对照 59 个样例、档位 37 项、静默 19 + 16 项、只读 50 项）。想用真实的 WooCommerce 源文件复核金额算法：
+五行都是 `"exit_code":0` 即通过（2026-11-12：对照 59 个样例、档位 37 项、静默 19 + 16 项、只读 72 项；2026-11-13 新加一条 `--suite m4-campaign-text-pure`，44 项）。想用真实的 WooCommerce 源文件复核金额算法：
 
 ```bash
 PC_WC_SRC=/path/to/wp-content/plugins/woocommerce php -n wp-content/plugins/peptide-core/tests/m4-price-engine-pure.php --fuzz=30000

@@ -1,10 +1,10 @@
 # M4 营销与价格引擎 · 交接（F2 价格营销会话）
 
-分支 `claude/m4-pricing-35ba90`，从主线 `codex/checkout-acceptance-20261105` 开出，已合入主线到 `61ce4f8`（2026-11-12）。对应需求 NF-02（优惠部分）、HQ-07（店铺端）。接口约定见 `docs/CONTRACT.md` 文末的 M4 一节；沙盒走查清单见 `docs/handoffs/m4-sandbox-walkthrough.md`。
+分支 `claude/m4-pricing-35ba90`，从主线 `codex/checkout-acceptance-20261105` 开出，已合入主线到 `b8b59dc`（2026-11-13）。对应需求 NF-02（优惠部分）、HQ-07（店铺端）。接口约定见 `docs/CONTRACT.md` 文末的 M4 一节；沙盒走查清单见 `docs/handoffs/m4-sandbox-walkthrough.md`。
 
 > **加购推荐的问题已经修复（2026-11-12）**：主线的“手动订单”（11-10 起）在每个请求上往购物车计算的钩子加了回调，加购推荐的报价只认白名单里的回调，于是整体放弃——11-10 到 11-12 之间加购推荐在所有店都不出现（F1 在生产 6 家店只读查过，全部是关着的）。这不是 M4 引起的，是 F2 同步主线时发现的。日常会话已在主线 `bd4e355` 按 CONTRACT 里写的两处修好并上线；它报告生产 6 家店和 6 套后台都已恢复（F2 没有在生产上核实）。本分支已同步到 `bd4e355`，在本机真实站点上确认：关 / 影子 / 开三档下 `Quote_Cart::supported_hooks()` 都是 true，普通购物车可以报价，手动订单链接的购物车不报价。核对命令：`wp eval 'var_dump( \PeptideCore\Activity\Quote_Cart::supported_hooks() );'`，应为 `bool(true)`。
 
-本文分四部分：一、现有 7 处优惠逻辑盘点；二、新引擎和开关；三、怎么验证；四、下一步怎么切换。
+本文分五部分：一、现有 7 处优惠逻辑盘点；二、新引擎和开关；三、怎么验证；四、下一步怎么切换；五、投手对营销活动只读（2026-11-13 定稿，在文末）。
 
 ---
 
@@ -244,3 +244,55 @@ F2 够不着沙盒，做法是在本机私有副本里造出“像真实店铺�
 - 默认测试套件用本机原生 PHP 8.3.32 跑，有 9 组不通过，改动前后一样：`data-native-search-pure`、`data-product-action-rankings-pure`、`data-product-user-ratios-node`、`experiment-data-pure`、`mail-source-observations`、`tracking-product-actions-pure`、`tracking-store-api-cart-success-pure`、`visitor-intents`、`visitor-product-actions`（都在追踪 / 数据模块）。
 - 整店复制（`tools/deployment/provisioning/clone.py`）会把来源店的 `*_db` / `*_version` 选项留在新店（新店原来没有这个选项时），对应的表却不在复制范围里。F2 名下的两处已改成不依赖这一点。F1 在生产 6 家店查过其他第一次写入才建表的模块（挽回、发信队列、邮件日志、像素日志、操作日志）：表和版本号都在，没有中招；只有离开挽回的统计表在五家子店不在。复制脚本的修正 F1 记成了自己的待办（M1-5 之后）。写在 CONTRACT 的 M4 一节“给 F1”第 8、9 条。
 - 项目聊天室（`docs/chat/ROOM.md`）在这台 Mac 上不存在，开工、完工登记写在并行会话的共享笔记目录里。
+
+---
+
+## 五、投手对营销活动只读（HQ-07，2026-11-13 定稿）
+
+平台所有者 2026-11-13 定：**投手可以看只读的“当前在跑的活动”，这个只读页就是最终做法**；新建、编辑、保存、启停、删除一律不行。分工：只读页面和所有保存入口的拒绝归 F2，菜单、页面标题和投手的地址名单归 F5（它的 M9 一节有对应的一条）。
+
+### 1. 投手能碰到的写入口，一共查了哪些
+
+| 入口 | 有几个 | 谁拦 | 结果 |
+| --- | --- | --- | --- |
+| 三个营销页面的新建 / 编辑地址（`new`、`edit`） | 6 | `Marketing::read_only_gate()` | 403 |
+| 向三个营销页面提交（POST） | 3 | 同上（这一轮新加） | 403 |
+| 满减活动：保存、启停、批量、页面设置 | 4 | `Marketing::guard()`，在校验 nonce 之前 | 403 |
+| 优惠码：保存、启停、批量、页面设置 | 4 | 同上 | 403 |
+| 运费折扣：保存、启停、批量 | 3 | 同上 | 403 |
+| 首单优惠：保存 | 1 | `First_Order_Offer_Page::access()` | 403 |
+| 赠品 / 捆绑：保存、删除（页面归日常会话） | 2 | 页面先查 `edit_shop_coupons`，投手没有这个能力（这一轮新加的那一层） | 403 |
+| 离开挽回 / 转盘：保存（页面归日常会话） | 1 | F2 在同一个动作上排在前面拦（这一轮新加） | 403 |
+| WooCommerce 原生的优惠码列表、新建、编辑、快速编辑、批量 | 一组 | 投手没有任何优惠码能力，WordPress 自己拒绝 | 403 |
+| REST 接口 `wc/v3/coupons`：查、建、改、删、批量 | 5 | 同上 | 401 / 403 |
+| 直接调用保存方法：`Product_Offers::store()`、`Exit_Intent::save()`；直接删赠品 / 捆绑的文章 | 4 | 方法本身（这一轮新加了后两样） | 返回错误 / 删不掉 |
+
+满减活动和赠品 / 捆绑的文章类型不在 WordPress 的编辑界面和 REST 里出现（`show_ui`、`show_in_rest` 都是 false），所以它们没有原生的入口。
+
+### 2. 这一轮改了什么
+
+- **新加一层“能力”**：投手（带 `pc_media_buyer` 角色、不是管理员）没有任何优惠码相关的能力，对每个请求生效。原来只有 F2 自己的页面认“投手不能改”，WooCommerce 原生的页面和接口靠的是“投手账号上本来就没有这些能力”；如果账号被误授了营销权限（比如原来勾过“营销”模块），原生的那一路就开着。现在不管账号上被加了什么，这一路都是关的。
+- `Marketing::can_manage()` 对投手恒为假，过滤器 `pc_marketing_can_manage` 也放不开。
+- `Marketing::can_view()` 对投手角色本身为真，不再依赖账号上有没有 `pc_view_campaigns`，也不看这次请求是哪个页面。新增 `view_url()`、`VIEW_PAGE`、`is_buyer()`。这几个方法的签名和含义写进了 CONTRACT，和 F5 定下来不再改。
+- 离开挽回 / 转盘的保存、赠品 / 捆绑的删除各补了一道（见上表）。
+- **只读页重写**（`Pricing\Campaign_Text` 生成文字，`Campaigns::running()` 每条多了 `plain`）：每个活动一张卡片，标出“条件（顾客要做到）”和“优惠（顾客能得到）”，再写哪些商品、哪些顾客、顾客怎么用、和别的优惠能不能一起用、次数限制、有效期、网站上的写法。优惠码写了广告链接带券的写法（`?pc_coupon=码`）。不显示内部编号、顾客邮箱、访客编号、转盘的中奖概率；页面上没有表单、按钮、链接。
+
+### 3. 验证（2026-11-13）
+
+| 测试 | 内容 | 结果 |
+| --- | --- | --- |
+| `tests/m4-campaigns-readonly-pure.php` | 原来 50 项，现在 72 项：加了“没有任何营销能力的投手也能看”、11 个提交入口逐个 403 且数据不变、向页面 POST、能力清除、过滤器放不开投手、离开挽回和赠品删除、只读页没有表单 / 链接 / 内部编号 | 72 / 72 |
+| `tests/m4-campaign-text-pure.php`（新） | 大白话的文字：7 种满减类型和上不封顶的写法、优惠码的各种组合、运费折扣、赠品 / 捆绑、弹窗和转盘；不出现邮箱、访客编号、中奖概率 | 44 / 44 |
+| `tests/m4-buyer-readonly-native.php`（新，真实 WordPress + WooCommerce，本机私有副本） | 建一个投手账号并**故意同时给店长角色**（模拟被误授权限），把上表的入口逐个撞一遍：17 种提交都带有效的 nonce、按真实的 admin-post 动作触发；REST 5 种；原生能力 14 项；直接调用。之后核对数据的指纹没变。再确认管理员和不是投手的店长照旧能改（管理员用 REST 建券、停用满减都成功） | 48 / 48 |
+| 和 F5 的分支合起来，浏览器里实看（本机，只在临时目录里合，没有动任何分支；F5 取到 `dcda12f`） | 用 F5 的命令 `wp peptide buyer on` 开出来的真投手账号：`pc-promotions` / `pc-coupons` / `pc-shipping-discounts` 是 200 的只读页；新建 / 编辑地址、向页面 POST、9 个 admin-post 提交、WooCommerce 的优惠码页面、赠品 / 捆绑页面、应用中心和离开挽回设置，22 个地址全部 403。换成管理员看同一个地址，是原来可以管理的列表（有新建按钮和编辑链接）。只读页在手机宽度（375）下没有横向滚动 | 符合预期 |
+| 合并后的代码上两边的用例 | F5 的 `m9-buyer-campaigns-pure` 87、`m9-buyer-scope-pure` 249、`m9-buyer-orders-pure` 33；F2 的只读 72、文字 44、静默 19、档位 37 | 全过 |
+| 回归 | 对照 59 个样例 + 3 万份随机购物车新旧逐分一致；默认套件 47 过 / 9 败（和之前相同的 9 个）；本机真实站点走查一致 48 / 不一致 0、系列活动 23 / 23；`smoke-exit-intent` 40 / 0、`smoke-marketing` 81 / 0、`smoke-promotions` 34 / 0、`smoke-coupons` 36 / 0 | 没有变化 |
+
+**没有验证的**：没有在沙盒（MySQL、s0010 的数据、nginx）上跑；F5 和 F2 合在一起的候选还没有由 F1 在沙盒里用投手账号走过。沙盒上怎么查见走查清单第 2c 步。
+
+### 4. 给下一个人
+
+- 只读页的文字都在 `includes/pricing/class-campaign-text.php`，改措辞只动这一个文件；它不读数据库，改完跑 `php -n tests/m4-campaign-text-pure.php`。
+- 以后给营销活动加新的保存入口（新的 admin-post 动作、REST 路由、admin-ajax 动作），**必须先过 `Marketing::guard()` 或 `can_manage()`**，并把它加进 `tests/m4-buyer-readonly-native.php` 的入口清单。
+- `smoke-product-offers` 在“店里自己有满减和赠品”的库上只过 3 项就报错停下，主线代码也一样（用例假设店里没有自己的活动，和之前处理的那 5 个是同一类问题）。它不在 F1 分给 F2 的清单里，这一轮没有动；要处理的话照 `smoke-promotions` 的做法在用例开头把店铺自己的活动挡掉。
+
