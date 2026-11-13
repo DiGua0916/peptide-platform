@@ -10,6 +10,7 @@
  * - 店铺信息：有客服 WhatsApp，并且在向导或店铺信息页保存过一次（选项 pc_onboarding 的 store）。店名只读，不算在内；
  * - 广告像素：第一个 Facebook 像素有 ID 和访问令牌（读 Pixels 的设置）；
  * - 验证像素：最近一次测试通过，而且测的就是现在这个像素（pc_onboarding 的 pixel_test；换了像素要重新验证）；
+ *   或者（2026-11-13）像素自动检查（Pixels\Health）显示这个像素最近 24 小时真实回传正常——已经在跑的店不用再手动点测试；
  * - 投放链接：生成过一次（pc_onboarding 的 link）。
  * 向导状态按店铺记（一家店一个投手，管理员替投手做也算），只有“修改密码”按账号。
  *
@@ -66,6 +67,22 @@ final class Onboarding {
 	/** 店里有没有素材（第 5 步算完成）。素材模块没装好时为 false。 */
 	private static function has_creative(): bool {
 		return class_exists( \PeptideCore\Creatives\Schema::class ) && \PeptideCore\Creatives\Schema::installed() && (bool) \PeptideCore\Creatives\Creatives::codes();
+	}
+
+	/**
+	 * 像素自动检查是否显示“回传正常”：是就返回那个像素 ID（evaluate() 拿它和当前像素比），否则空字符串。
+	 * 同一请求只查一次（向导、首页提示条、广告设置页都会用到）。
+	 */
+	private static function pixel_live( string $pixel_id ): string {
+		static $cache = array();
+		if ( '' === $pixel_id || ! class_exists( \PeptideCore\Pixels\Health::class ) ) {
+			return '';
+		}
+		if ( ! array_key_exists( $pixel_id, $cache ) ) {
+			$h                    = \PeptideCore\Pixels\Health::current();
+			$cache[ $pixel_id ] = ( 'ok' === ( $h['level'] ?? '' ) && $pixel_id === (string) ( $h['pixel'] ?? '' ) ) ? $pixel_id : '';
+		}
+		return $cache[ $pixel_id ];
 	}
 
 	/** @return array<string,string> */
@@ -141,6 +158,7 @@ final class Onboarding {
 			'pixel_id'        => $pixel['id'],
 			'has_token'       => $pixel['has_token'],
 			'test'            => is_array( $state['pixel_test'] ?? null ) ? $state['pixel_test'] : array(),
+			'live'            => self::pixel_live( $pixel['id'] ),
 			// 第 5 步：生成过通用链接，或者已经上传过素材（2026-11-12 起向导这一步就是上传素材）。
 			'link'            => ! empty( $state['link'] ) || self::has_creative(),
 		);
@@ -160,7 +178,7 @@ final class Onboarding {
 			'password' => empty( $facts['must_change'] ),
 			'store'    => '' !== (string) ( $facts['whatsapp'] ?? '' ) && ! empty( $facts['store_confirmed'] ),
 			'pixel'    => $pixel,
-			'verify'   => $pixel && ! empty( $test['ok'] ) && (string) ( $test['pixel'] ?? '' ) === $pixel_id,
+			'verify'   => $pixel && ( ( ! empty( $test['ok'] ) && (string) ( $test['pixel'] ?? '' ) === $pixel_id ) || (string) ( $facts['live'] ?? '' ) === $pixel_id ),
 			'link'     => ! empty( $facts['link'] ),
 		);
 	}
