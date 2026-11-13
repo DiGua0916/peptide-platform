@@ -851,8 +851,8 @@ Root installed only three existing Commerce sources for P09 collection products 
 | `Metrics::conversion_rate( int $from, int $to ): ?float` | 支付成功访客 ÷ 访客 |
 | `Metrics::funnel( int $from, int $to ): array` | `{unit:'visitors', counts:{visitors,viewed,carted,checkout,address,shipping,payment,paid}, layers:[{key,count,step_rate,visitor_rate}×8]}`，每层不大于上一层 |
 | `Metrics::abandoned( int $from, int $to ): array` | `{count, open, failed, emailed, recovered, recovered_cents, rate}`，结果缓存 5 分钟 |
-| `Metrics::daily( int $from, int $to ): array` | 按店铺时区自然日，每天 `{date, visitors, paid_visitors, conversion_rate, orders, gross_cents, refund_cents, sales_cents, aov_cents, abandoned, abandoned_open, recall_emailed, recall_recovered}`。后四项是弃单，按弃单创建那天归属，定义和 `summary()` 的同名项一样（11-12 加的） |
-| `Metrics::abandoned_daily( int $from, int $to ): array` | 店铺时区的日期 => 那一天的 `{count, open, failed, emailed, recovered, recovered_cents, rate}`；没有弃单的日子不在结果里。读一次弃单列表，缓存 5 分钟 |
+| `Metrics::daily( int $from, int $to ): array` | 按店铺时区自然日，每天 `{date, visitors, paid_visitors, conversion_rate, orders, gross_cents, refund_cents, sales_cents, aov_cents, abandoned, abandoned_open, recall_emailed, recall_recovered}`。后四项是弃单，按弃单创建那天归属，定义和 `summary()` 的同名项一样（11-12 加的）。**11-13 起后四项只在开关 `peptide_core_daily_abandoned = on` 时有**，默认关，关着时每一行和线上一样没有这四项 |
+| `Metrics::abandoned_daily( int $from, int $to ): array` | 店铺时区的日期 => 那一天的 `{count, open, failed, emailed, recovered, recovered_cents, rate}`；没有弃单的日子不在结果里。读一次弃单列表，缓存 5 分钟。**11-13 起开关 `peptide_core_daily_abandoned` 不是 `on` 时抛 `RuntimeException`**：F1 的 `Hq_Connector::with_abandoned()` 遇到异常就原样返回每日汇总（不加弃单几项，总后台按“这家店还没提供”处理）；返回空数组的话它会把每天填成 0。打开要所有者同意（是新功能） |
 | `Metrics::order_fact( \WC_Order $order ): array` | 一张订单的事实，见下 |
 | `Metrics::order_facts( int $from, int $to ): array` | 付款时间在时间段内的已付款订单的事实（含测试单，`test = true`） |
 | `Metrics::paid_orders( int $from, int $to ): array` | 和 `order_facts()` 同一批订单，但返回 `\WC_Order` 对象（含测试单，调用方用 `is_test_order()` 排除） |
@@ -962,7 +962,7 @@ F5 在「M14 前台主题」一节“FE-03 看过 / 已加购”里要的接口�
 | `pc_product_activity_available` | “接口注册时加一行 `__return_true`” | 追踪表在、访客追踪开着时才返回 `true` | 追踪关着的店没有数据，不必加载脚本 |
 | 测试单 | “不算测试单的访问” | 窗口内的访问上挂着测试单（全“1”、测试付款方式、演示商品）的访客，两个数都不算。只看窗口内最近 200 个挂着订单的访问 | 这一条比 `Data\Metrics` 的访客**多排除一项**：`Metrics` 的漏斗里测试单的访问算到“发起结账”为止，所以它的访客数和加购数是含测试单访客的。公开显示的数字宁可少算 |
 | 缓存 | 每件商品的结果缓存 60 秒 | 全店的数字一次算好放进一个缓存（瞬态 `pc_product_activity_v1`，60 秒），每件商品都从里面取 | 不管有多少个商品弹窗、多少种商品，每家店每分钟最多算一次（三条查询，走事件表的 `type_time` 索引和访问表的 `last_ms` 索引，没有加新索引）。`generated_at` 是这张表算出来的时间，`ttl` 固定是 60。算上浏览器或 CDN 的 60 秒，页面上的数字最多滞后约 2 分钟 |
-| 404 | 商品不存在或未发布：404 | 不存在、未发布、不是商品、有密码、是规格（不是父商品）：404 `pc_product_not_found`；开关关着或追踪没开：404 `pc_product_activity_off`；数据库报错：404 `pc_product_activity_unavailable`。404 也带 `Cache-Control: public, max-age=60`，正文里没有任何数字 | — |
+| 404 | 商品不存在或未发布：404 | 不存在、未发布、不是商品、有密码、是规格（不是父商品）：404 `pc_product_not_found`；追踪没开：404 `pc_product_activity_off`；开关关着时（11-13 起）路由不注册，请求得到 WordPress 自己的 404 `rest_no_route`，和没有这个接口的线上一样；数据库报错：404 `pc_product_activity_unavailable`。404 也带 `Cache-Control: public, max-age=60`，正文里没有任何数字 | — |
 | `product_id` 格式不对 | 没写 | 400 `pc_invalid_param`（不是十进制正整数，或者没传） | 和别的数据接口一致；前台对非 200 一律不显示，没有影响 |
 | 限频 | 没写 | 没有加 | 每次请求最多一次按主键取商品，加一次读缓存；不存在的商品编号不会触发统计，所以刷接口也不能让服务器多算 |
 | “看过”包括谁 | 打开商品弹窗或商品页 | 主题 11-08 起“访客有真实操作或页面开满 6 秒才上报”，所以刚打开就关掉、从没动过的访问不算 | 这是上报那一侧的规则，接口没有另外筛 |
