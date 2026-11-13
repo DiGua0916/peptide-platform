@@ -108,7 +108,8 @@ namespace {
 	m6_check( 'a rejected server event is a failure with the platform error', ! $r['pass'] && 'server_failed' === $r['events']['AddToCart']['status'] && array( 'HTTP 400 Invalid OAuth access token' ) === $r['events']['AddToCart']['errors'] && str_contains( $r['events']['AddToCart']['hint'], '令牌' ) );
 
 	$r = Acceptance::evaluate( $full( array(), array( 'Purchase' ) ), 'code1' );
-	m6_check( 'browser Purchase missing: go back to the thank-you page', ! $r['pass'] && 'browser_missing' === $r['events']['Purchase']['status'] && str_contains( $r['events']['Purchase']['hint'], '下单成功' ) );
+	// 11-11 起浏览器的购买事件由付款成功弹窗页发（?pc_paid=），提示跟着改了。
+	m6_check( 'browser Purchase missing: wait for the paid popup; a test order sends none', ! $r['pass'] && 'browser_missing' === $r['events']['Purchase']['status'] && str_contains( $r['events']['Purchase']['hint'], '付款成功的弹窗' ) && str_contains( $r['events']['Purchase']['hint'], '测试单' ) );
 
 	$rows   = $full( array(), array( 'AddPaymentInfo' ) );
 	$rows[] = $row( 'browser', 'AddPaymentInfo', 'pay_local1', 1, 'code1' ); // 浏览器退回了只发浏览器事件的做法。
