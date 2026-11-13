@@ -624,7 +624,7 @@ Root installed only three existing Commerce sources for P09 collection products 
   - 命令行：`wp peptide buyer list`、`wp peptide buyer on <账号> [--must-change-password]`、`wp peptide buyer off <账号>`、`wp peptide buyer default [on|off]`。
   - 选项 `pc_media_buyer_default`（值 `1`）：这家店新建的销售账号直接是投手版并要求首次登录改密码。现有店铺没有这个选项；新店由开店流程写入。
 - 判断：`Staff_Buyer::is_buyer( $user )`、`Staff_Buyer::current()`（当前登录的人）。管理员永远不算投手。`Staff::is_staff()` 对投手仍为真，`Staff::granted()` 对投手固定返回 `orders`、`data`。
-- 投手的 6 个菜单：首页 `pc-buyer-home`、订单 `wc-orders`（只读）、弃单 `pc-recovery`、数据 `pc-data*` 和 `pc-visitors*`、广告设置 `pc-buyer-ads`、店铺信息 `pc-store-info`；另有开店向导 `pc-onboarding`。
+- 投手的 7 个菜单（2026-11-13 起）：首页 `pc-buyer-home`、订单 `wc-orders`（只读）、弃单 `pc-recovery`、数据 `pc-data*` 和 `pc-visitors*`、营销活动 `pc-promotions`（只读，见下面“投手看营销活动”）、广告设置 `pc-buyer-ads`、店铺信息 `pc-store-info`；另有开店向导 `pc-onboarding`。
 - 其余后台地址对投手一律 403（`index.php`、`pc-overview` 转到首页，`profile.php` 转到店铺信息）。`admin-ajax.php` 只放行 `heartbeat`、界面偏好、订单预览和按顾客筛选；`admin-post.php` 只放行投手版页面自己的表单；对未登录访客开放的动作不受影响。
 - 能力按请求临时给（`Capabilities::BUYER_SCOPES`）：订单页给订单的查看能力，弃单 / 数据 / 访客页给 `manage_woocommerce`、`view_woocommerce_reports`。REST 只有下面的接口给能力，其他接口上投手没有任何店铺能力：
   - 只读（GET）：`/peptide/v1/data/*`、`/peptide/v1/overview*`；
@@ -638,7 +638,29 @@ Root installed only three existing Commerce sources for P09 collection products 
 - **主线 2026-11-11 的订单详情页**（`admin.php?page=pc-order&id=…`，`Admin\Order_Detail_Page`）：投手可以只读打开（`Staff_Buyer::PAGE_ORDER`，给订单组的能力，订单菜单保持高亮）。不带 `pc_native` 的 `wc-orders&action=edit` 照常由主线转到详情页；**带 `pc_native` 的原生订单页对投手是 403**（它只剩退款、发货、改地址的用途）。详情页上的写操作 `admin-post.php?action=pc_order_detail`（作废、卖家备注、标签）、写邮件（`pc-mail*`）、订单复制（`pc-manual-order`）都不在投手名单里，一律 403。
 - 导出订单：`admin-post.php?action=pc_buyer_orders_export`（`Staff_Buyer::ACTION_EXPORT`，见 M9-4），投手名单里唯一的下载动作；没改密码时同样 403。
 - **命令面板**：WordPress 7 的命令面板（⌘K）在 `admin_enqueue_scripts` 时把这次请求登记的全部后台菜单连名字带地址写进页面，投手在里面能看到“客户”“邮件”“店铺设置”等页面的名字。投手不加载命令面板（`Staff_Buyer::no_command_palette()`），顶部工具条上的入口也去掉；管理员不受影响。
-- 营销活动（F2 的约定）：`Admin_Menus::add_menus()` 已改为用 `Marketing::can_view()` 和 `Marketing::menu_cap()`（F2 的代码合进来之前沿用原判断）。投手**没有**拿到 `pc_view_campaigns`，营销页面也不在投手的名单里；PRD 要求的“只读的当前活动”放在投手首页，读 `\PeptideCore\Pricing\Campaigns::running()`。F2 如果希望投手能打开只读的营销页面，告诉 F5 把 `pc-promotions`、`pc-coupons`、`pc-shipping-discounts` 加进名单。
+- **投手看营销活动：只读（平台所有者 2026-11-13 定，F5 和 F2 的分工）。** 投手可以看只读的“当前在跑的活动”，不能新建、编辑、启停、删除。下面这一条取代原来“营销页面不在投手的名单里”的说法。
+  - **只读入口归 F2**：`Admin\Marketing::can_view()`、`can_manage()`、`menu_cap()`、`read_only_gate()`（对不能改的人：带 `new` / `edit` 的地址 403，其余输出只读列表“当前在跑的活动”）、`Pricing\Campaigns::running()`；三个页面 `pc-promotions`、`pc-coupons`、`pc-shipping-discounts` 的保存、启停、批量、设置各自在服务端 403。
+  - **菜单和拦截归 F5**：
+    - 投手菜单里的“营销活动”排在数据后面，链接 `admin.php?page=pc-promotions`，没有子菜单（三个页面给投手的是同一张列表）。显示条件 `Staff_Buyer::campaigns_visible()`：F2 的 `Marketing::can_view()` 为真，并且 `Marketing::can_manage()` 为假（看到的是只读列表）。
+    - 注册菜单用的权限名仍然由 `Admin_Menus::add_menus()` 调 `Marketing::menu_cap()` 得到（之前已改好）。
+    - 投手带 F2 约定的只读权限 `pc_view_campaigns`（`Staff_Buyer::CAP_CAMPAIGNS`，由 `user_has_cap` 给；还没改密码的投手不给）。**不带** `edit_shop_coupons`，打开营销页面时也不给任何店铺能力。
+    - F5 这一层对投手的判断（`Staff_Buyer::classify()`，在 F2 的判断之前）：
+
+      | 请求 | 结果 |
+      | --- | --- |
+      | `GET admin.php?page=pc-promotions` / `pc-coupons` / `pc-shipping-discounts`，不带操作参数 | 放行，由 F2 输出只读列表 |
+      | 同上，带 `new` 或 `edit` | 403 |
+      | 同上，带 `action` / `action2`（不是空也不是 `-1`） | 403 |
+      | 对这三个页面的 POST | 403 |
+      | `admin-post.php` 的 `pc_promo_*`、`pc_coupon_*`、`pc_shipdisc_*` | 403（不在投手的名单里） |
+      | 地址以 `pc-promotions-` 开头的其他页面（赠品 / 捆绑、活动积木、订阅者）、应用中心 `pc-apps` 和里面的设置页（离开挽回、转盘、加购推荐、已付款弹窗、物流球等）、WooCommerce 的优惠券页面 | 403，和以前一样 |
+
+    - F2 的只读代码不在这份代码里，或者 F2 认为这个账号能改（例如有人用过滤器 `pc_marketing_can_manage` 放开）：上表第一行也是 403，菜单里没有“营销活动”。也就是说 F5 这一层只在“F2 给的确实是只读列表”时才放行。
+    - 投手打开这三个页面时，页面顶部和浏览器标签显示“营销活动”（`Staff_Buyer::campaigns_title()`），不显示给能改的人看的“满减活动 / 优惠码 / 运费折扣”。
+  - **请 F2 保持**：上面几个方法的名字和含义；只读列表里不出现新建、编辑、启停、删除的入口。以后只读列表要加会用到 `action` 参数的筛选、或者要调接口（REST、admin-ajax），请先告诉 F5——投手的接口名单里现在没有营销相关的，会被挡成 403。
+  - 投手首页上原有的“当前活动”（读 `\PeptideCore\Pricing\Campaigns::running()`）不变。
+  - 用例：`m9-buyer-scope-pure`（F2 的代码不在时的行为和各种拒绝的地址）、`m9-buyer-campaigns-pure`（用假的 `Marketing` 顶替 F2 的类，验证接起来之后的菜单、权限、标题）。F2 的 `m4-campaigns-readonly-pure` 在两个分支合起来的代码上 50 项全过。
+- （以下是 2026-11-13 之前的说法，留作记录）营销活动（F2 的约定）：`Admin_Menus::add_menus()` 已改为用 `Marketing::can_view()` 和 `Marketing::menu_cap()`（F2 的代码合进来之前沿用原判断）。当时投手**没有**拿到 `pc_view_campaigns`，营销页面也不在投手的名单里；PRD 要求的“只读的当前活动”放在投手首页，读 `\PeptideCore\Pricing\Campaigns::running()`。F2 如果希望投手能打开只读的营销页面，告诉 F5 把 `pc-promotions`、`pc-coupons`、`pc-shipping-discounts` 加进名单。
 
 需要配合：
 
