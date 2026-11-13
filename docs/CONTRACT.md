@@ -1117,7 +1117,14 @@ currency, visitor, visit, buyer
 
 ## M4 营销与价格引擎（F2 价格营销会话；需求 NF-02 优惠部分、HQ-07；2026-11-14 发布准备时更新）
 
-**发布时的原则（2026-11-14）**：线上已有的功能保持原样。M4 上线时所有新东西都关着：价格引擎（`pc_pricing_engine_mode`）、按系列接收营销活动（`pc_series_campaigns_mode`）两个开关默认关，投手的只读页要等 M9 新版给投手角色加上 `pc_view_campaigns` 才出现。只带一个 bug 修复：离开挽回的统计表在整店复制出来的店上补建。逐项差异、测试结果和回退办法见 `docs/handoffs/m4-release.md`。
+**发布时的原则（2026-11-14，以这一段为准）**：平台所有者原话“以后遇上类似的问题，优先用站点已经存在的，因为那个是我亲自加的，而不是用你这块后面自己写的，你的是没经历过测试的”。所以凡是和线上已有功能重叠的（满减、优惠码、运费折扣、赠品 / 捆绑、积分券、首单优惠、离开挽回 / 转盘、活动倒计时、营销后台的权限），一律以线上的行为为准，M4 的实现都关在开关后面：
+
+- 价格引擎：`pc_pricing_engine_mode`（默认 `off`）；
+- 按系列接收营销活动：`pc_series_campaigns_mode`（默认关）；
+- 营销弹窗静默：`pc_marketing_quiet_mode`（默认关，2026-11-14 新加，见下面第 1 点）；
+- 投手只读、系列活动只读的那几道加固：只读规则 `Marketing::rules_active()`。投手角色上有 `pc_view_campaigns`（M9 新版才加）或者打开了按系列接收活动时，才算生效（见第 4 点）。
+
+M4 不带任何 bug 修复：离开挽回统计表用的是主线 `f5a0b2d`（日常会话的修法，已经上线），M4 自己的版本删掉了。逐项差异、比对结果、测试和回退办法见 `docs/handoffs/m4-release.md`。以后打开任何一个开关都要平台所有者先定；打开以后和线上的结果不一致时，改 M4 去对齐线上。
 
 本节由 F2 维护，其他会话只读。代码在 `wp-content/plugins/peptide-core/includes/pricing/`，说明见 `docs/handoffs/m4-pricing-engine.md`。
 
@@ -1125,7 +1132,9 @@ currency, visitor, visit, buyer
 
 **1. 营销弹窗“静默”开关（给 M11 已购回访用）**
 
-过滤器名：**`pc_marketing_popups_suppressed`**。静默时：首单券条、离开挽回弹窗、抽奖转盘、活动倒计时不出现；满减、优惠码、赠品、运费折扣等价格优惠照常生效，WELCOME5 等券仍可手动输入使用。
+**按店开关，默认关**（2026-11-14 加）：选项 `pc_marketing_quiet_mode`，值是 `on` 才生效；`wp-config.php` 里的常量 `PC_MARKETING_QUIET_MODE` 优先。关着的时候，下面说的东西全都不起作用：`Popups::suppressed()` 永远为假，页头不输出脚本，活动倒计时接口原样返回。首单券条、离开挽回 / 转盘、活动倒计时和线上完全一样，过滤器返回真也一样（比如打开了已购回访的店里的老顾客）。打开要平台所有者先同意（这是功能变化），然后 `wp option update pc_marketing_quiet_mode on`。打开以后才声明功能键 `marketing.quiet`。
+
+过滤器名：**`pc_marketing_popups_suppressed`**。开关打开、并且静默时：首单券条、离开挽回弹窗、抽奖转盘、活动倒计时不出现；满减、优惠码、赠品、运费折扣等价格优惠照常生效，WELCOME5 等券仍然可以手动输入使用。
 
 | 方式 | 用法 | 说明 |
 | --- | --- | --- |
@@ -1175,6 +1184,7 @@ $result = \PeptideCore\Pricing\Engine::price( $input );          // 纯计算
 | `Marketing::read_only_gate(): bool` | 三个营销页面的入口都先过它。不能改的人：带 `new` / `edit` 的地址、非 GET 的请求返回 403；其余输出只读页并返回 true | F2 的三个页面 |
 | `Marketing::view_url(): string`、`Marketing::VIEW_PAGE` | 只读入口的地址 `admin.php?page=pc-promotions`。投手只需要这一个入口（另外两个页面给只读的人的是同一张列表） | F5 的投手菜单可以用 |
 | `Marketing::is_buyer( $user = null ): bool` | 是不是投手：带 `pc_media_buyer` 角色、不是管理员。和 `Staff_Buyer::is_buyer()` 口径一致，F2 的代码单独在场时也能判断 | F2 内部 |
+| `Marketing::rules_active(): bool`（2026-11-14 加） | M4 的只读规则有没有生效：投手角色上有 `pc_view_campaigns`，或者打开了按系列接收活动。为假时，`can_manage()` 不额外排除投手，下面“三层”也都不起作用，和 M4 上线前一样 | F2 内部（F5 不用调） |
 | `Marketing::VIEW_CAP` = `pc_view_campaigns`、`Marketing::BUYER_ROLE` = `pc_media_buyer` | 常量 | 双方 |
 
 **哪些页面有只读视图（F5 按这张表放行，其余仍然 403）**
@@ -1198,6 +1208,8 @@ $result = \PeptideCore\Pricing\Engine::price( $input );          // 纯计算
 关于 `pc_view_campaigns`（2026-11-14 改回，**以这一段为准**）：`can_view()` 只认这项权限，不再对投手角色本身为真。原因：M4 要单独先上线（发布顺序 F4 → F2 → F3 → F5），线上投手角色上还没有这项权限，这样 M4 上线时线上投手看到的东西一点不变；等 F5 的 M9 新版把这项权限加到投手角色上（`Staff_Buyer::role_caps()`，F5 分支上已经写好）、并把上表第一、二行放进投手的名单，只读页才对投手出现。所以投手看不看得到只读页，取决于两件事都在：角色上有这项权限，F5 的名单放行。（`773eae8`–`245e277` 之间的版本曾让 `can_view()` 对投手角色本身为真，没有上过线。）2026-11-13 主线并入素材归因之后的现状：主线里的 M9 还是没有放行营销页面的较早版本，所以“主线 + M4”上投手打开 `pc-promotions` 是 403；F5 分支上放行它的提交和主线有 3 个文件冲突（`class-staff-buyer.php`、`buyer-admin.css`、`m9-buyer-scope-pure.php`，素材归因也改了投手菜单），要 F5 合主线后才能进候选。
 
 **投手改不了任何营销活动：服务端的三层**（哪一层单独在都拦得住，不靠隐藏按钮）
+
+这三层，以及 `can_manage()` 里排除投手那一条，**只在只读规则生效时起作用**（2026-11-14 起，按“和线上重叠的以线上为准”的原则）。判断用 `Marketing::rules_active(): bool`：投手角色 `pc_media_buyer` 上有 `pc_view_campaigns`，或者 `pc_series_campaigns_mode` 是 `on`。规则没生效时（M4 单独上线、线上的投手角色还没有这项权限），投手能做什么完全由线上已有的权限和 M9 决定，和 M4 上线前一样。F5 的 M9 新版给角色加上这项权限后，下面三层自动生效，F5 那边不用再调什么。
 
 1. **能力**：投手没有任何优惠码相关的能力（`Marketing::buyer_caps()`，挂在 `user_has_cap` 上，优先级 9999，后台、admin-ajax、REST 每个请求都生效）。满减活动、赠品 / 捆绑的文章类型用的也是这组能力。所以 WooCommerce 原生的优惠码列表、编辑页、快速编辑、批量操作，REST 接口 `wc/v3/coupons`（查、建、改、删、批量），以及所有先查 `edit_shop_coupons` 的入口（赠品 / 捆绑页面的保存和删除、首单优惠）都拒绝，即使这个账号原来勾过“营销”模块或被误加了店长角色。别的能力（订单、数据等）不动。
 2. **入口**：F2 名下 12 个提交入口（满减 / 优惠码的保存、启停、批量、页面设置；运费折扣的保存、启停、批量；首单优惠）都先过 `Marketing::guard()` 或 `can_manage()`，在校验 nonce 之前就返回 403。离开挽回 / 转盘的保存（`admin_post_pc_app_exit_save`）F2 在优先级 0 先拦一道 403。三个营销页面带 `new` / `edit` 或非 GET 返回 403。离开挽回 / 首单优惠的设置页（`pc-apps&app=…`）没有只读视图，投手打开直接 403（`Marketing::deny_buyer_settings()`）。
@@ -1249,8 +1261,8 @@ M3 定的外形：`{ kind, key, active, config }`。M4 定的 `config`（没写�
 | 功能键 | 版本 | 含义 |
 | --- | --- | --- |
 | `pricing.engine` | 1 | 支持价格引擎三档开关和 `/hq/pricing-engine` |
-| `marketing.quiet` | 1 | 支持营销弹窗静默开关 |
-| `campaigns.readonly` | 1 | 投手只读、系列下发的活动只读 |
+| `marketing.quiet` | 1 | 营销弹窗静默已打开。**只在这家店打开了 `pc_marketing_quiet_mode` 时才声明**（2026-11-14 起） |
+| `campaigns.readonly` | 1 | 投手只读、系列下发的活动只读已生效。**只在 `Marketing::rules_active()` 为真时才声明**（2026-11-14 起） |
 | `series.campaigns` | 1 | 能接收系列下发的营销活动。**只在这家店打开了 `pc_series_campaigns_mode` 时才声明**，总后台据此只给打开了的店发活动 |
 
 **7. 数据表和选项登记（给 F1 的脱敏快照）**
@@ -1259,10 +1271,10 @@ M3 定的外形：`{ kind, key, active, config }`。M4 定的 `config`（没写�
 | --- | --- | --- |
 | `{prefix}pc_m4_shadow_stats`（每天每档的核对次数） | 没有 | truncate |
 | `{prefix}pc_m4_shadow_log`（不一致 / 出错 / 跳过的明细，最多 300 条） | 没有邮箱、姓名、地址；有商品 ID、数量、单价、优惠码（积分券只记 ID） | truncate |
-| 选项 `pc_pricing_engine_mode`、`pc_series_campaigns_mode`、`pc_m4_db`、`pc_series_campaigns` | 没有 | keep（快照导入沙盒后建议把两个开关设回 `off`） |
+| 选项 `pc_pricing_engine_mode`、`pc_series_campaigns_mode`、`pc_marketing_quiet_mode`、`pc_m4_db`、`pc_series_campaigns` | 没有 | keep（快照导入沙盒后建议把三个开关设回 `off`） |
 | 优惠码 / 满减的 meta `_pc_series_campaign`、`_pc_series_campaign_hash` | 没有 | keep |
 
-两张表是懒建的（第一次有记录要写时才建，版本选项 `pc_m4_db`），关着时不存在。版本号在而表不在时（整店复制会造成这种情况，见下面“给 F1”第 9 条）第一次写入会自动补建，查看和清空当作“还没有记录”。离开挽回的统计表 `{prefix}pc_app_stats`（版本选项 `peptide_core_app_stats_db`，快照里已登记为 keep）2026-11-12 起也是这样处理：`Exit_Intent::installed()` 现在表示“版本号对而且表在”。
+两张表是懒建的（第一次有记录要写时才建，版本选项 `pc_m4_db`），关着时不存在。版本号在而表不在时（整店复制会造成这种情况，见下面“给 F1”第 9 条）第一次写入会自动补建，查看和清空当作“还没有记录”。离开挽回的统计表 `{prefix}pc_app_stats`（版本选项 `peptide_core_app_stats_db`，快照里已登记为 keep）用的是主线 `f5a0b2d` 的修法（日常会话，已上线）：`Exit_Intent::installed()` 仍然只看版本号，`record()` 写入时如果报“表不存在”，就建表再写一次。M4 原来的版本（让 `installed()` 同时检查表在不在）2026-11-14 合主线时删掉了，以线上为准。
 
 **8. 沙盒 / 本地站点上的验证脚本（真实 WordPress + WooCommerce）**
 
@@ -1306,7 +1318,7 @@ if ( ! $product instanceof \WC_Product || array_key_exists( Product_Offers::CART
 4. 沙盒走查：按 `docs/handoffs/m4-sandbox-walkthrough.md`。
 5. 建议把 `\PeptideCore\Activity\Quote_Cart::supported_hooks() === true` 加进发布前的 critical-path 检查（见给日常会话的第 1 条：这次就是没人发现）。
 6. 测试登记（2026-11-13：又追加了一条 `m4-campaign-text-pure`，共 6 条；第三个 `*-native.php` 是 `m4-buyer-readonly-native.php`）：5 条纯测试已按 `"status": "module-gate", "module": "M4"` 写在 suites 文件末尾；两个 `*-native.php` 要在装好 WooCommerce 的站点上用 `wp eval-file` 跑，不在纯测试编排里。
-7. **冒烟基线里归 F2 的 5 个用例已处理**（2026-11-12，提交 `692f00c` 起）：`smoke-exit-intent`、`smoke-marketing`、`smoke-promotions`、`smoke-pricing`、`smoke-shipping-plans`。根因和预期结果见 `docs/handoffs/m4-sandbox-walkthrough.md` 第 2b 步。**F1 已在沙盒重跑（候选 `c5fb1d8`，F2 `27b3c37`）：5 个加 `smoke-data-apps` 全部通过。** 它们在不含本分支的主线上仍会失败，所以 `tests/smoke-suites.json`（在 F1 分支上，F2 没有动）先保持 `skipped` 并注明“F2 合进主线时改回 gate”——本分支合进主线的那次发布里请一并改回。F4 名下的 `smoke-data-apps`（13 / 8）和 `smoke-exit-intent` 是同一个根因，F2 的修复顺带解决，本机 21 / 0。
+7. **冒烟基线里归 F2 的 5 个用例已处理**（2026-11-12，提交 `692f00c` 起）：`smoke-exit-intent`、`smoke-marketing`、`smoke-promotions`、`smoke-pricing`、`smoke-shipping-plans`。根因和预期结果见 `docs/handoffs/m4-sandbox-walkthrough.md` 第 2b 步。**F1 已在沙盒重跑（候选 `c5fb1d8`，F2 `27b3c37`）：5 个加 `smoke-data-apps` 全部通过。** 它们在不含本分支的主线上仍会失败，所以 `tests/smoke-suites.json`（在 F1 分支上，F2 没有动）先保持 `skipped` 并注明“F2 合进主线时改回 gate”——本分支合进主线的那次发布里请一并改回。F4 名下的 `smoke-data-apps`（13 / 8）和 `smoke-exit-intent` 是同一个根因，2026-11-14 起由主线 `f5a0b2d` 的修法解决（M4 不再带自己的修复，`smoke-exit-intent` 也恢复成主线的版本，37 / 0），本机 21 / 0。
 8. **生产只读核对（6 家店各两条命令）——F1 已核对（2026-11-12），结果见下**：
 
 ```bash
@@ -1314,14 +1326,16 @@ wp db query "SHOW TABLES LIKE '%pc_app_stats'"
 wp option get peptide_core_app_stats_db
 ```
 
-   第一条为空而第二条是 `1` 的店：离开挽回 / 转盘的弹出、领取、抽奖、订单数一直没有记上（弹窗和优惠码本身不受影响，订单上的标记和备注也照常写）。M4 合进去以后，这家店下一次弹窗事件会自动补建表并开始计数，不需要手工处理；之前的数字补不回来。F2 当时是从沙盒基线的失败项反推的（在本机把表删掉、版本号留着，`smoke-exit-intent` 和 `smoke-data-apps` 的失败项和沙盒完全一样）。
+   **2026-11-14 更新：这一条已经由线上解决，M4 不再带这个修复。** 日常会话在主线 `f5a0b2d` 修好并上线（`record()` 遇到表不存在就建表重试），五家子店的表已经建好（见 `docs/handoffs/production-rollout-plan-2026-11-10.md` 的上线记录）。M4 合主线时用了这份线上的代码，自己的版本删掉了；M4 上线不会再因为这张表让任何店的数据变化。下面是当时的记录。
+
+   第一条为空而第二条是 `1` 的店：离开挽回 / 转盘的弹出、领取、抽奖、订单数一直没有记上（弹窗和优惠码本身不受影响，订单上的标记和备注也照常写）。（当时的说法：M4 合进去以后，这家店下一次弹窗事件会自动补建表并开始计数，之前的数字补不回来。）F2 当时是从沙盒基线的失败项反推的（在本机把表删掉、版本号留着，`smoke-exit-intent` 和 `smoke-data-apps` 的失败项和沙盒完全一样）。
 
    **F1 的核对结果**：s0001 表在、版本号 1（正常）；s0006 / s0007 / s0008 / s0009 / s0010 表不在、版本号 1——这五家店的离开挽回数据从开店起没有记上。不想等 M4 发布的话，现在就可以在这五家店各执行一次 `wp eval '\PeptideCore\Exit_Intent::install();'`：只建这一张表（`dbDelta`，可重复执行），线上现有的代码就有这个方法；F2 在本机用主线 `bd4e355`（不含 M4）试过，执行后计数恢复。这是生产上的写操作，要平台所有者同意、由 F1 执行。
 9. **整店复制会留下“版本号在、表不在”**：`tools/deployment/provisioning/clone.py` 整表复制 `wp_options`，再把目标店原有的 `*_db` / `*_version` 等选项放回去（`KEEP_OPTION_PATTERN`）；目标店原来**没有**的那些，来源店的值就留了下来，而对应的表不在复制范围里。懒建表的模块（第一次写入才建表）都会中招。建议在第 5 步之后删掉“匹配 `KEEP_OPTION_PATTERN`、目标店原来没有”的选项，让各模块按自己的流程重新建表。F2 名下的两处（`pc_app_stats`、M4 的核对日志表）已经改成不依赖这一点；其他懒建表的模块 F1 在生产 6 家店查过（`pc_recovery`、`pc_mail_outbox`、`pc_email_log`、`pc_px_log`、`pc_activity`）：表和版本号都在，没有中招。复制脚本的修正 F1 记成了自己的待办（M1-5 之后）。
 
 **给 F4（数据）**
 
-1. `smoke-data-apps`（基线 13 / 8）失败是因为沙盒里 `pc_app_stats` 表不在而版本号在：用例开头的 `if ( ! Exit_Intent::installed() ) { Exit_Intent::install(); }` 被版本号骗过去了。F2 改了 `Exit_Intent::installed()`（现在同时确认表在，多一次 `SHOW TABLES LIKE`），你的用例和 `Data\Apps` 不用改；本机在“表不在”的库上 21 / 0。`Data\Apps` 里两处 `Exit_Intent::installed()` 的含义因此变成“表真的能查”，表不在时走原来“没装：全是 0”的分支，不再去查不存在的表。
+1. `smoke-data-apps`（基线 13 / 8）失败是因为沙盒里 `pc_app_stats` 表不在而版本号在：用例开头的 `if ( ! Exit_Intent::installed() ) { Exit_Intent::install(); }` 被版本号骗过去了。**2026-11-14 更新**：F2 原来改 `Exit_Intent::installed()` 的做法已经撤掉，改用主线 `f5a0b2d` 的线上修法（`installed()` 仍然只看版本号，`record()` 遇到表不存在就建表重试）。`Data\Apps` 里 `installed()` 的含义和线上一样。你的用例和 `Data\Apps` 不用改；本机在“表不在”的库和干净的库上都是 21 / 0。
 
 **给 F3（系列）**
 
@@ -1335,7 +1349,7 @@ wp option get peptide_core_app_stats_db
 
 1. 投手角色名用 `pc_media_buyer`，给它只读权限 `pc_view_campaigns`，**不要**给 `edit_shop_coupons`。你已经做了（权限存在角色上）。**这项权限必须在**：2026-11-14 起 F2 的 `can_view()` 只认它（M4 先上线时线上投手不能因此有任何变化），角色上没有它，投手就看不到只读页。
 2. `Admin_Menus::add_menus()` 里营销活动菜单的显示条件用 `Marketing::can_view()`、权限参数用 `Marketing::menu_cap()`。你已经做了。判断入口的方法以本节第一部分第 4 点的表为准，签名不再改。
-3. 已购回访用服务端过滤器 `pc_marketing_popups_suppressed`（你的 `Buyer_Status::mute` 已经这样做）。页头的 `window.pcMarketingQuiet` 现在只在静默的请求里输出，你现有的写法 `if ( window.pcMarketingQuiet && window.pcMarketingQuiet.refresh )` 不用改；不要在不静默的页面上无条件调用它。
+3. 已购回访用服务端过滤器 `pc_marketing_popups_suppressed`（你的 `Buyer_Status::mute` 已经这样做）。页头的 `window.pcMarketingQuiet` 现在只在静默的请求里输出，你现有的写法 `if ( window.pcMarketingQuiet && window.pcMarketingQuiet.refresh )` 不用改；不要在不静默的页面上无条件调用它。**2026-11-14 起，静默还要这家店打开 `pc_marketing_quiet_mode` 才生效**（见第一部分第 1 点）。没打开时，已购老顾客照样看得到首单券条、离开挽回 / 转盘、活动倒计时，和现在线上一样；你那边的过滤器、`window.pcBuyer` 写法都不用改。打不打开由平台所有者定，由 F1 按店执行。
 4. **投手看营销活动的分工**（和你 M9 一节“投手看营销活动”那一条对应）：只读页面和所有保存入口的拒绝归 F2，菜单、页面标题和投手的地址名单归 F5。2026-11-13 F2 把两个分支在本机合起来（只在临时目录里合，没有动任何分支；你的分支取到 `dcda12f`），用 `wp peptide buyer on` 开出来的真投手账号在浏览器里走了一遍：`pc-promotions` / `pc-coupons` / `pc-shipping-discounts` 是 200 的只读页；新建 / 编辑地址、向页面 POST、9 个 admin-post 提交、WooCommerce 的优惠码页面、赠品 / 捆绑页面、应用中心和离开挽回设置，共 22 个地址全部 403；换成管理员看同一个地址是原来可以管理的列表。合并后的代码上你的 `m9-buyer-campaigns-pure`（87）、`m9-buyer-scope-pure`（249）、`m9-buyer-orders-pure`（33）和 F2 的 `m4-campaigns-readonly-pure`（当时 72 项，之后加到 77 项）、`m4-campaign-text-pure`（44 项）全过。代码文件合并没有冲突（只有 `docs/CONTRACT.md` 和 `tests/data-observations-suites.json` 两个都在末尾追加的文件要手工取并集）。
 5. 你的投手页面上方的开店向导提示条（“继续设置”）会出现在只读页标题下面，这是 WordPress 把提示挪到标题后面的结果，F2 的卡片里没有任何链接。
 

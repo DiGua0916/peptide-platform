@@ -24,7 +24,7 @@ wp eval 'var_dump( \PeptideCore\Activity\Quote_Cart::supported_hooks() );'
 | --- | --- |
 | 第一条的输出 | `档位：off`，下一行“最近 7 天没有核对记录。” |
 | 第二条的输出 | 空（关着时不建表） |
-| 前台页面（用你的页面对比脚本） | 和“主线 + M1”逐字节相同：开关都关着时页头**没有** `<script id="pc-marketing-quiet">`（`60820de` 及之前的提交会多出这 1.9KB，之后的提交已改为只在静默时输出；F1 第二轮在沙盒确认首页、购物车、我的账户、商品链接四个页面的字节数和主线相同）。开了离开挽回的店会加载到新版本的 `exit-intent.js`，这是预期的 |
+| 前台页面（用你的页面对比脚本） | 和“主线 + M1”逐字节相同：开关都关着时页头**没有** `<script id="pc-marketing-quiet">`（`60820de` 及之前的提交会多出这 1.9KB，之后的提交已改为只在静默时输出；F1 第二轮在沙盒确认首页、购物车、我的账户、商品链接四个页面的字节数和主线相同）。开了离开挽回的店会加载到新版本的 `exit-intent.js`，这是预期的（新加的“静默时不弹”判断在开关关着时永远为假）。2026-11-14 起静默还关在 `pc_marketing_quiet_mode` 后面，所以打开了已购回访的店、带已购 cookie 的老顾客，页面也和主线一样 |
 | 第三条的输出 | `bool(true)`（主线 `bd4e355` 起；之前的代码是 `false`，那是手动订单把加购推荐关掉的问题，已修）。**如果是 `bool(false)`：加购推荐又被关掉了**——有代码往购物车计算的钩子上加了白名单以外的回调。先告诉平台所有者，再把 `wp eval 'var_dump( ( new ReflectionMethod( \PeptideCore\Activity\Quote_Cart::class, "unsupported_hook" ) )->invoke( null ) );'` 的输出发给 F2 和日常会话（输出的是出问题的钩子名，比如 `woocommerce_cart_calculate_fees`；正常时是 `NULL`）。开影子档、开档之后各再查一次，也应为 `bool(true)` |
 
 ## 第 1 步 · 一条命令走完 24 个组合（约 1 分钟）
@@ -90,12 +90,12 @@ M4_WALKTHROUGH=sandbox wp eval-file wp-content/plugins/peptide-core/tests/m4-ser
 
 | 用例 | 基线 | 现在应为 | 备注 |
 | --- | --- | --- | --- |
-| `smoke-exit-intent` | 30 / 7 | 40 / 0 | 修的是代码（统计表不在时自动补建），加了 3 项检查 |
+| `smoke-exit-intent` | 30 / 7 | 37 / 0 | 2026-11-14 起用例和统计表代码都是主线 `f5a0b2d` 的版本（日常会话修好、已上线），M4 不再改它们；主线单独跑也是 37 / 0 |
 | `smoke-marketing` | 80 / 1 | 81 / 0 | 用例不再看店铺自己的满减 |
 | `smoke-promotions` | 33 / 1 | 34 / 0 | 同上 |
 | `smoke-pricing` | 22 / 1 | 23 / 0 | 用例改为比较商品部分 |
 | `smoke-shipping-plans` | 29 / 2 | 31 / 0 | 用例里当作没有店铺的运费折扣 |
-| `smoke-data-apps`（F4 名下） | 13 / 8 | 21 / 0 | 和 `smoke-exit-intent` 同一个根因，F2 的修复顺带解决；F4 的文件没有改 |
+| `smoke-data-apps`（F4 名下） | 13 / 8 | 21 / 0 | 和 `smoke-exit-intent` 同一个根因，主线 `f5a0b2d` 的修法解决；F4 的文件没有改 |
 
 2026-11-12 F1 第二轮（候选 `c5fb1d8`，F2 `27b3c37`）在沙盒的结果：6 个全部通过，数字和上表“现在应为”一栏相同。
 
@@ -128,11 +128,11 @@ M4_WALKTHROUGH=sandbox wp eval-file wp-content/plugins/peptide-core/tests/m4-buy
 | 看什么 | 通过 |
 | --- | --- |
 | 每行开头 | 全是 `ok`，没有 `FAIL` |
-| 倒数第二行 | `RESULT 52 项检查：全部通过` |
+| 倒数第二行 | `RESULT 55 项检查：全部通过` |
 | 最后一行 | “临时账号和临时数据已删除，选项已恢复。” |
 | 中间“投手看到的只读页面（纯文字）”一段 | 这就是投手看到的内容，可以顺便读一遍措辞 |
 
-有 `FAIL` 时把整段输出发给 F2。2026-11-14 F2 在本机真实站点（SQLite）上的结果：52 项全部通过。脚本给前两个测试投手单独加了只读权限（模拟 M9 新版），第三个不加（代表线上现在的投手，应当看不到只读页）。
+有 `FAIL` 时把整段输出发给 F2。2026-11-14（`a226d0b`）F2 在本机真实站点（SQLite）上的结果：55 项全部通过。脚本先把投手角色上的只读权限拿掉，按线上现状检查 M4 什么都不做（只读规则不生效，带店长角色的投手优惠码能力原样保留，M4 不拦设置页，看不到只读页）；再给角色加上这项权限（模拟 M9 新版）跑后面的检查；结束时把角色恢复成运行前的样子。
 
 **用投手账号在浏览器里看（沙盒店铺后台，`sbx_buyer` 或任何用 `wp peptide buyer on` 开的账号）**
 
@@ -204,7 +204,7 @@ wp peptide price-engine log --limit=10
 node tests/run-data-observations.cjs --suite m4-price-engine-pure --suite m4-engine-mode-pure --suite m4-marketing-quiet-pure --suite m4-campaigns-readonly-pure --suite m4-marketing-quiet
 ```
 
-五行都是 `"exit_code":0` 即通过（2026-11-12：对照 59 个样例、档位 39 项、静默 19 + 16 项、只读 80 项；2026-11-13 新加一条 `--suite m4-campaign-text-pure`，44 项）。想用真实的 WooCommerce 源文件复核金额算法：
+五行都是 `"exit_code":0` 即通过（2026-11-14 `a226d0b`：对照 59 个样例、档位 41 项、静默 21 + 16 项、只读 82 项；另有一条 `--suite m4-campaign-text-pure`，44 项）。想用真实的 WooCommerce 源文件复核金额算法：
 
 ```bash
 PC_WC_SRC=/path/to/wp-content/plugins/woocommerce php -n wp-content/plugins/peptide-core/tests/m4-price-engine-pure.php --fuzz=30000
