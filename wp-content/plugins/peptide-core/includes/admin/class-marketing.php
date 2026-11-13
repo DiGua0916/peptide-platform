@@ -34,12 +34,38 @@ final class Marketing {
 	private const FORM_KEY = 'pc_mk_form_';
 
 	public static function register_hooks(): void {
+		add_action( 'admin_init', array( self::class, 'deny_buyer_settings' ), 1 );
 		add_action( 'admin_init', array( self::class, 'redirect_old_screens' ) );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
 	}
 
+	/**
+	 * 有只读视图的页面，只有这三个（给不能改的人看的是同一张“当前在跑的活动”）。投手的入口用第一个（VIEW_PAGE）。
+	 * F5 按这份名单放行查看，其余营销相关的页面对投手一律 403（名单和原因见 docs/CONTRACT.md 的 M4 一节第 4 点）。
+	 */
 	public static function pages(): array {
 		return array( Promotions_Page::SLUG, Coupons_Page::SLUG, Shipping_Discounts_Page::SLUG );
+	}
+
+	/** 应用中心（pc-apps）里属于营销的两个设置页：离开挽回 / 转盘、首单优惠。它们没有只读视图。 */
+	public const SETTINGS_APPS = array( 'exit-intent', 'first-order-offer' );
+
+	/**
+	 * admin_init：投手打开离开挽回 / 首单优惠的设置页直接 403。
+	 * 这两个页面只有可编辑的表单，没有只读视图；它们的内容在只读页“当前在跑的活动”里已经有对应的卡片。
+	 * 应用中心查的是 manage_woocommerce，不是优惠码能力，所以这里单独拦（正常的投手在这个地址上本来就没有店铺能力）。
+	 */
+	public static function deny_buyer_settings(): void {
+		if ( ! self::is_buyer() ) {
+			return;
+		}
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- 只用来判断打开的是哪个页面。
+		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+		$app  = isset( $_GET['app'] ) ? sanitize_key( wp_unslash( $_GET['app'] ) ) : '';
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+		if ( 'pc-apps' === $page && in_array( $app, self::SETTINGS_APPS, true ) ) {
+			wp_die( '这个设置页由总后台统一管理，这个账号只能在“营销活动”里查看当前在跑的活动。', '', array( 'response' => 403 ) );
+		}
 	}
 
 	// ---------- 谁能改、谁只能看（HQ-07） ----------

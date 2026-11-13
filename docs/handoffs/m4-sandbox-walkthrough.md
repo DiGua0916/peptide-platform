@@ -128,11 +128,11 @@ M4_WALKTHROUGH=sandbox wp eval-file wp-content/plugins/peptide-core/tests/m4-buy
 | 看什么 | 通过 |
 | --- | --- |
 | 每行开头 | 全是 `ok`，没有 `FAIL` |
-| 倒数第二行 | `RESULT 48 项检查：全部通过` |
+| 倒数第二行 | `RESULT 51 项检查：全部通过` |
 | 最后一行 | “临时账号和临时数据已删除，选项已恢复。” |
 | 中间“投手看到的只读页面（纯文字）”一段 | 这就是投手看到的内容，可以顺便读一遍措辞 |
 
-有 `FAIL` 时把整段输出发给 F2。2026-11-13 F2 在本机真实站点（SQLite）上的结果：48 项全部通过。
+有 `FAIL` 时把整段输出发给 F2。2026-11-13 F2 在本机真实站点（SQLite）上的结果：51 项全部通过。
 
 **用投手账号在浏览器里看（沙盒店铺后台，`sbx_buyer` 或任何用 `wp peptide buyer on` 开的账号）**
 
@@ -142,7 +142,8 @@ M4_WALKTHROUGH=sandbox wp eval-file wp-content/plugins/peptide-core/tests/m4-buy
 | `wp-admin/admin.php?page=pc-coupons`、`?page=pc-shipping-discounts` | 同一张只读页 |
 | `?page=pc-promotions&new=1`、`?page=pc-promotions&edit=<任意数字>`、`?page=pc-coupons&new=1` | 403 |
 | `wp-admin/edit.php?post_type=shop_coupon`、`wp-admin/post-new.php?post_type=shop_coupon` | 403 |
-| `?page=pc-promotions-product-offers`、`?page=pc-apps`、`?page=pc-apps&app=exit-intent` | 403 |
+| `?page=pc-promotions-product-offers`、`?page=pc-apps`、`?page=pc-apps&app=exit-intent`、`?page=pc-apps&app=first-order-offer` | 403（这几个页面没有只读视图） |
+| `?page=pc-exit-intent`、`?page=pc-first-order-offer`、`?page=pc-marketing` | 403。代码里没有这三个页面，WordPress 本来就拒绝；离开挽回和首单优惠的设置页是上一行 `pc-apps&app=…` 那两个 |
 | `wp-admin/admin-post.php?action=pc_promo_toggle&id=<任意数字>&on=0` | 403，活动没有被停用 |
 
 再用管理员账号打开 `?page=pc-promotions`：应当是原来可以管理的列表（有“New promotion”按钮和编辑图标），不是只读页。
@@ -203,7 +204,7 @@ wp peptide price-engine log --limit=10
 node tests/run-data-observations.cjs --suite m4-price-engine-pure --suite m4-engine-mode-pure --suite m4-marketing-quiet-pure --suite m4-campaigns-readonly-pure --suite m4-marketing-quiet
 ```
 
-五行都是 `"exit_code":0` 即通过（2026-11-12：对照 59 个样例、档位 37 项、静默 19 + 16 项、只读 72 项；2026-11-13 新加一条 `--suite m4-campaign-text-pure`，44 项）。想用真实的 WooCommerce 源文件复核金额算法：
+五行都是 `"exit_code":0` 即通过（2026-11-12：对照 59 个样例、档位 37 项、静默 19 + 16 项、只读 77 项；2026-11-13 新加一条 `--suite m4-campaign-text-pure`，44 项）。想用真实的 WooCommerce 源文件复核金额算法：
 
 ```bash
 PC_WC_SRC=/path/to/wp-content/plugins/woocommerce php -n wp-content/plugins/peptide-core/tests/m4-price-engine-pure.php --fuzz=30000

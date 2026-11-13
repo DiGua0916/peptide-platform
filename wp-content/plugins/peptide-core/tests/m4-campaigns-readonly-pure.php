@@ -180,6 +180,16 @@ namespace {
 	$errors      = \PeptideCore\Exit_Intent::save( array( 'enabled' => false, 'type' => 'message', 'title' => 'Changed by buyer', 'button' => '', 'desktop_exit' => '1', 'pages' => array( 'home' ) ) );
 	$check( '投手不能改离开挽回 / 转盘的设置，内容不变', 1 === count( $errors ) && $exit_before === get_option( \PeptideCore\Exit_Intent::OPTION ) );
 
+	// 有只读视图的页面只有三个；离开挽回 / 首单优惠的设置页没有只读视图，投手打开直接 403。
+	$check( '有只读视图的页面名单：满减活动、优惠码、运费折扣', array( 'pc-promotions', 'pc-coupons', 'pc-shipping-discounts' ) === Marketing::pages() && Marketing::VIEW_PAGE === Marketing::pages()[0] );
+	foreach ( array( '离开挽回 / 转盘' => 'exit-intent', '首单优惠' => 'first-order-offer' ) as $name => $app ) {
+		$_GET = array( 'page' => 'pc-apps', 'app' => $app );
+		$check( '投手打开“' . $name . '”的设置页：403（没有只读视图）', 403 === $status( array( Marketing::class, 'deny_buyer_settings' ) ) );
+	}
+	$_GET = array( 'page' => 'pc-promotions' );
+	$check( '投手打开只读入口：这一道不拦', 200 === $status( array( Marketing::class, 'deny_buyer_settings' ) ) );
+	$_GET = array();
+
 	// 投手没有任何优惠码相关的能力：WooCommerce 原生的优惠码页面、快速编辑、REST 接口都靠这些能力把关。
 	$given = array( 'read' => true, 'manage_woocommerce' => true, 'edit_shop_coupons' => true, 'edit_shop_coupon' => true, 'publish_shop_coupons' => true, 'delete_shop_coupons' => true, 'edit_others_shop_coupons' => true, 'read_private_shop_coupons' => true, 'manage_shop_coupon_terms' => true, 'edit_shop_orders' => true );
 	$buyer = get_userdata( 3 );
@@ -218,6 +228,9 @@ namespace {
 	$check( '管理员提交保存：通过权限检查，接着校验 nonce', 200 === $status( static fn() => Marketing::guard( 'pc_promo_save' ) ) && array( 'pc_promo_save' ) === $GLOBALS['nonce_checked'] );
 	$login( 'shop_manager', array( 'edit_shop_coupons' ) );
 	$check( '原有的营销员工（有优惠券权限、不是投手）：能改', Marketing::can_manage() );
+	$_GET = array( 'page' => 'pc-apps', 'app' => 'exit-intent' );
+	$check( '不是投手的人打开离开挽回的设置页：这一道不拦（照旧由应用中心自己的权限决定）', 200 === $status( array( Marketing::class, 'deny_buyer_settings' ) ) );
+	$_GET = array();
 	$login( 'customer', array() );
 	$check( '没有任何营销权限的人：看不到页面', ! Marketing::can_view() && '' === $html( array( Promotions_Page::class, 'render' ) ) && 403 === $status( static fn() => Marketing::guard( 'pc_promo_save' ) ) );
 	$login( 'shop_manager', array( Marketing::VIEW_CAP ) );

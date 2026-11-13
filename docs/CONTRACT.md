@@ -1175,10 +1175,30 @@ $result = \PeptideCore\Pricing\Engine::price( $input );          // 纯计算
 | `Marketing::is_buyer( $user = null ): bool` | 是不是投手：带 `pc_media_buyer` 角色、不是管理员。和 `Staff_Buyer::is_buyer()` 口径一致，F2 的代码单独在场时也能判断 | F2 内部 |
 | `Marketing::VIEW_CAP` = `pc_view_campaigns`、`Marketing::BUYER_ROLE` = `pc_media_buyer` | 常量 | 双方 |
 
+**哪些页面有只读视图（F5 按这张表放行，其余仍然 403）**
+
+只读列表实际用到的页面只有三个，名单在代码里是 `Marketing::pages()`：
+
+| 地址（`wp-admin/admin.php?page=…`） | 是什么 | 有没有只读视图 | 投手 |
+| --- | --- | --- | --- |
+| `pc-promotions` | 满减活动。**只读入口**（`Marketing::VIEW_PAGE`、`Marketing::view_url()`），投手菜单里的“营销活动”指向它 | 有 | 放行不带操作参数的 GET |
+| `pc-coupons`、`pc-shipping-discounts` | 优惠码、运费折扣 | 有，和上面是同一张列表 | 同上（放不放行都不影响内容，投手只需要一个入口） |
+| `pc-apps` | 应用中心首页（归日常会话） | 没有 | 403 |
+| `pc-apps&app=exit-intent` | 离开挽回 / 转盘的设置页 | 没有。只有可编辑的表单；它的内容在只读列表的“离开挽回弹窗 / 抽奖转盘”卡片里 | 403（F2 这边 `Marketing::deny_buyer_settings()` 也拦） |
+| `pc-apps&app=first-order-offer` | 首单优惠的设置页 | 没有。内容在只读列表的“首单优惠”卡片里 | 403（同上，另有 `First_Order_Offer_Page::access()`） |
+| `pc-promotions-product-offers` | 赠品 / 捆绑（页面归日常会话） | 没有。内容在“满额赠品 / 捆绑组合”卡片里 | 403（页面要 `edit_shop_coupons`，投手没有） |
+| `pc-promotions-subscribers`、`pc-promotions-campaigns` | 订阅者、邮件群发（不归 F2） | 没有 | 403（同上） |
+| `pc-exit-intent`、`pc-first-order-offer`、`pc-marketing` | **代码里没有这三个页面**（`pc-first-order-offer` 只是一个样式文件的登记名）。离开挽回和首单优惠的设置页是上面 `pc-apps&app=…` 那两行 | 没有 | 403（WordPress 对不存在的页面本来就拒绝，不用单独处理） |
+| `edit.php?post_type=shop_coupon`、`post-new.php?post_type=shop_coupon`、`post.php?post=<优惠码>` | WooCommerce 原生的优惠码页面 | 没有 | 403（投手没有优惠码能力） |
+
+也就是说：**投手只需要放行 `pc-promotions`（外加同一张列表的 `pc-coupons`、`pc-shipping-discounts`）的 GET，别的营销相关页面都没有只读视图，一律 403。** 离开挽回、首单优惠、赠品 / 捆绑现在在跑什么，投手在只读列表里都看得到，不需要进它们的设置页。
+
+关于 `pc_view_campaigns`：F2 的 `can_view()` 从 `773eae8` 起对投手角色本身为真，**不再依赖角色上有没有这项权限**（2026-11-13 F1 在沙盒看到“只读列表对投手不出现”是之前的版本：那时 `can_view()` 只认这项权限）。角色上加了它也没有坏处，`menu_cap()` 会优先返回它。投手看不看得到只读页，现在只取决于 F5 的名单有没有放行上表第一、二行。
+
 **投手改不了任何营销活动：服务端的三层**（哪一层单独在都拦得住，不靠隐藏按钮）
 
 1. **能力**：投手没有任何优惠码相关的能力（`Marketing::buyer_caps()`，挂在 `user_has_cap` 上，优先级 9999，后台、admin-ajax、REST 每个请求都生效）。满减活动、赠品 / 捆绑的文章类型用的也是这组能力。所以 WooCommerce 原生的优惠码列表、编辑页、快速编辑、批量操作，REST 接口 `wc/v3/coupons`（查、建、改、删、批量），以及所有先查 `edit_shop_coupons` 的入口（赠品 / 捆绑页面的保存和删除、首单优惠）都拒绝，即使这个账号原来勾过“营销”模块或被误加了店长角色。别的能力（订单、数据等）不动。
-2. **入口**：F2 名下 12 个提交入口（满减 / 优惠码的保存、启停、批量、页面设置；运费折扣的保存、启停、批量；首单优惠）都先过 `Marketing::guard()` 或 `can_manage()`，在校验 nonce 之前就返回 403。离开挽回 / 转盘的保存（`admin_post_pc_app_exit_save`）F2 在优先级 0 先拦一道 403。三个营销页面带 `new` / `edit` 或非 GET 返回 403。
+2. **入口**：F2 名下 12 个提交入口（满减 / 优惠码的保存、启停、批量、页面设置；运费折扣的保存、启停、批量；首单优惠）都先过 `Marketing::guard()` 或 `can_manage()`，在校验 nonce 之前就返回 403。离开挽回 / 转盘的保存（`admin_post_pc_app_exit_save`）F2 在优先级 0 先拦一道 403。三个营销页面带 `new` / `edit` 或非 GET 返回 403。离开挽回 / 首单优惠的设置页（`pc-apps&app=…`）没有只读视图，投手打开直接 403（`Marketing::deny_buyer_settings()`）。
 3. **保存方法本身**：`Product_Offers::store()`、`Exit_Intent::save()` 对投手返回错误；赠品 / 捆绑的文章对“登录了但不能管理营销活动的人”删不掉（`pre_delete_post` / `pre_trash_post`）。没有登录用户的调用（系列下发、总后台的应用开关、定时任务）不受影响。
 
 F5 的拦截（`Staff_Buyer::classify()`，见 M9 一节）排在这些前面，是第四层。
@@ -1311,7 +1331,7 @@ wp option get peptide_core_app_stats_db
 1. 投手角色名用 `pc_media_buyer`，给它只读权限 `pc_view_campaigns`，**不要**给 `edit_shop_coupons`。你已经做了（权限存在角色上）。F2 这边 `can_view()` 现在对投手角色本身就为真，所以角色上有没有 `pc_view_campaigns` 都能看；有的话 `menu_cap()` 返回它，没有时返回 `read`。
 2. `Admin_Menus::add_menus()` 里营销活动菜单的显示条件用 `Marketing::can_view()`、权限参数用 `Marketing::menu_cap()`。你已经做了。判断入口的方法以本节第一部分第 4 点的表为准，签名不再改。
 3. 已购回访用服务端过滤器 `pc_marketing_popups_suppressed`（你的 `Buyer_Status::mute` 已经这样做）。页头的 `window.pcMarketingQuiet` 现在只在静默的请求里输出，你现有的写法 `if ( window.pcMarketingQuiet && window.pcMarketingQuiet.refresh )` 不用改；不要在不静默的页面上无条件调用它。
-4. **投手看营销活动的分工**（和你 M9 一节“投手看营销活动”那一条对应）：只读页面和所有保存入口的拒绝归 F2，菜单、页面标题和投手的地址名单归 F5。2026-11-13 F2 把两个分支在本机合起来（只在临时目录里合，没有动任何分支；你的分支取到 `dcda12f`），用 `wp peptide buyer on` 开出来的真投手账号在浏览器里走了一遍：`pc-promotions` / `pc-coupons` / `pc-shipping-discounts` 是 200 的只读页；新建 / 编辑地址、向页面 POST、9 个 admin-post 提交、WooCommerce 的优惠码页面、赠品 / 捆绑页面、应用中心和离开挽回设置，共 22 个地址全部 403；换成管理员看同一个地址是原来可以管理的列表。合并后的代码上你的 `m9-buyer-campaigns-pure`（87）、`m9-buyer-scope-pure`（249）、`m9-buyer-orders-pure`（33）和 F2 的 `m4-campaigns-readonly-pure`（现在 72 项）、`m4-campaign-text-pure`（44 项）全过。代码文件合并没有冲突（只有 `docs/CONTRACT.md` 和 `tests/data-observations-suites.json` 两个都在末尾追加的文件要手工取并集）。
+4. **投手看营销活动的分工**（和你 M9 一节“投手看营销活动”那一条对应）：只读页面和所有保存入口的拒绝归 F2，菜单、页面标题和投手的地址名单归 F5。2026-11-13 F2 把两个分支在本机合起来（只在临时目录里合，没有动任何分支；你的分支取到 `dcda12f`），用 `wp peptide buyer on` 开出来的真投手账号在浏览器里走了一遍：`pc-promotions` / `pc-coupons` / `pc-shipping-discounts` 是 200 的只读页；新建 / 编辑地址、向页面 POST、9 个 admin-post 提交、WooCommerce 的优惠码页面、赠品 / 捆绑页面、应用中心和离开挽回设置，共 22 个地址全部 403；换成管理员看同一个地址是原来可以管理的列表。合并后的代码上你的 `m9-buyer-campaigns-pure`（87）、`m9-buyer-scope-pure`（249）、`m9-buyer-orders-pure`（33）和 F2 的 `m4-campaigns-readonly-pure`（当时 72 项，之后加到 77 项）、`m4-campaign-text-pure`（44 项）全过。代码文件合并没有冲突（只有 `docs/CONTRACT.md` 和 `tests/data-observations-suites.json` 两个都在末尾追加的文件要手工取并集）。
 5. 你的投手页面上方的开店向导提示条（“继续设置”）会出现在只读页标题下面，这是 WordPress 把提示挪到标题后面的结果，F2 的卡片里没有任何链接。
 
 ### 三、历史

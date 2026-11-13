@@ -227,6 +227,13 @@ if ( ! class_exists( 'M4_Buyer_Stop' ) ) {
 			$check( '投手打开“' . $name . '”列表：只读的“当前在跑的活动”，没有表单、按钮、链接', 200 === $code && false !== strpos( $out, '当前在跑的活动' ) && false === stripos( $out, '<form' ) && false === stripos( $out, '<input' ) && false === stripos( $out, '<button' ) && false === stripos( $out, '<a ' ) && false === strpos( $out, 'admin-post.php' ) && false === strpos( $out, '_wpnonce' ) );
 		}
 
+		// 离开挽回 / 首单优惠的设置页没有只读视图：投手（哪怕带着店长的能力）打开直接 403。
+		foreach ( array( '离开挽回 / 转盘' => 'exit-intent', '首单优惠' => 'first-order-offer' ) as $name => $app ) {
+			$request( 'GET', array( 'page' => 'pc-apps', 'app' => $app ) );
+			$check( '投手打开“' . $name . '”的设置页（应用中心里）：403', 403 === $run( array( Marketing::class, 'deny_buyer_settings' ) )[0] );
+		}
+		$check( '有只读视图的页面只有三个', array( 'pc-promotions', 'pc-coupons', 'pc-shipping-discounts' ) === Marketing::pages() );
+
 		// ---------- 3. 15 个提交入口（17 种提交），都带有效的 nonce ----------
 		// 每个入口按真实的 admin-post 动作触发（do_action( 'admin_post_<动作>' )），和浏览器提交走的是同一条路。
 		// 命令行里后台页面的钩子没有注册（它们只在 wp-admin 里注册），所以这里先把处理函数挂到各自的动作上。
