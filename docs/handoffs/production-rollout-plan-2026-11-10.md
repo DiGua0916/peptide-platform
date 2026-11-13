@@ -642,5 +642,5 @@
   - `peptide-core/includes/class-accounts.php`：`Accounts::invite_existing()`、`invite_mail()`——老的游客付款订单按邮箱建账户（随机 12 位密码，来源 auto_backfill），订单只改 customer_id（并记 `_pc_auto_account=invited` 和一条订单备注），用店铺发件箱发英文邮件；邮箱已有可信账户的直接归过去不发密码；测试单跳过。
 - 部署前 14 份副本这 3 个文件和 4088f53 一致；部署后全部等于新版本。备份：web `/root/vialcove-backups/ship-main-web-20261113T162112Z`、`ship2-main-web-…`、`ship-tenants-web-20261113T162240Z`；HQ 主机 `ship-main-admin-20261113T162113Z`、`ship2-main-admin-…`、`ship-tenants-admin-20261113T162242Z`。两台 reload php8.3-fpm。
 - 检查（主店）：数据库事务里实测发货（最后回滚、邮件全部拦截不外发，订单恢复原样）：错误单号被拒；正确单号 → 订单已完成、顾客侧看到 FedEx + 单号 + 追踪链接、发货状态 fulfilled、只有一封“has shipped”邮件；已发货的再发被拒。浏览器（店主已登录）：筛选和标签页不见了、搜索在，菜单“待处理订单 / 已发货订单 / 手动订单 / 弃单”，货车图标弹出 FedEx 单号框（没提交），已发货订单页高亮正确，无 PHP 警告。
-- 老顾客补建账户（只预演，未执行）：主店 #11843 ryley.tk1996@gmail.com、阳 s0007 #11892 shepower500@gmail.com、芒果 s0010 #11886 jestevesflores@gmail.com 三位要建账户并发信；测试单已跳过。三家店发件箱最近都是“已发出”。**等店主确认邮件原文后再执行。**
+- 老顾客补建账户（只预演，未执行）：主店 #11843 ryley.tk1996@gmail.com、阳 s0007 #11892 shepower500@gmail.com、芒果 s0010 #11886 jestevesflores@gmail.com 三位要建账户并发信；测试单已跳过。三家店发件箱最近都是“已发出”。**店主确认邮件原文后已于 2026-11-13 16:44 UTC 执行**：三位都建好账户、订单归到账户，邮件“Your {品牌} account is ready”在三家店发件箱都是“已发出”（主店 #27、s0007 #52、s0010 #61）。再预演一次三家店都没有剩下要处理的订单。
 - 回滚：备份文件拷回，reload php8.3-fpm。
