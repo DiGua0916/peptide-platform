@@ -936,7 +936,7 @@ currency, visitor, visit, buyer
   - 命令行：`wp peptide buyer list`、`wp peptide buyer on <账号> [--must-change-password]`、`wp peptide buyer off <账号>`、`wp peptide buyer default [on|off]`。
   - 选项 `pc_media_buyer_default`（值 `1`）：这家店新建的销售账号直接是投手版并要求首次登录改密码。现有店铺没有这个选项；新店由开店流程写入。
 - 判断：`Staff_Buyer::is_buyer( $user )`、`Staff_Buyer::current()`（当前登录的人）。管理员永远不算投手。`Staff::is_staff()` 对投手仍为真，`Staff::granted()` 对投手固定返回 `orders`、`data`。
-- 投手的 7 个菜单（2026-11-13 起）：首页 `pc-buyer-home`、订单 `wc-orders`（只读）、弃单 `pc-recovery`、数据 `pc-data*` 和 `pc-visitors*`、营销活动 `pc-promotions`（只读，见下面“投手看营销活动”）、广告设置 `pc-buyer-ads`、店铺信息 `pc-store-info`；另有开店向导 `pc-onboarding`。
+- 投手的 7 个菜单（2026-11-13 合并主线 `4059779` 之后）：首页 `pc-buyer-home`、订单 `wc-orders`（只读）、弃单 `pc-recovery`、数据 `pc-data*` 和 `pc-visitors*`、营销活动 `pc-promotions`（只读，见下面“投手看营销活动”；F2 的只读页面不在时不显示，这时是 6 个）、广告数据追踪（主线 11-12 的新栏目，菜单键 `adtrack`，原来的键 `ads` 不再存在；子菜单：广告设置 `pc-buyer-ads`、素材库 `pc-creatives`，花费导入 `pc-creatives-spend` 和素材看板 `pc-creatives-board` 从素材库顶部进）、店铺信息 `pc-store-info`；另有开店向导 `pc-onboarding`。投手能提交的表单：`pc_buyer_password`、`pc_buyer_store_save`、`pc_buyer_ads_save`、`pc_buyer_orders_export`，加主线的 `pc_creative_save`、`pc_creative_spend_import`、`pc_creative_export`。
 - 其余后台地址对投手一律 403（`index.php`、`pc-overview` 转到首页，`profile.php` 转到店铺信息）。`admin-ajax.php` 只放行 `heartbeat`、界面偏好、订单预览和按顾客筛选；`admin-post.php` 只放行投手版页面自己的表单；对未登录访客开放的动作不受影响。
 - 能力按请求临时给（`Capabilities::BUYER_SCOPES`）：订单页给订单的查看能力，弃单 / 数据 / 访客页给 `manage_woocommerce`、`view_woocommerce_reports`。REST 只有下面的接口给能力，其他接口上投手没有任何店铺能力：
   - 只读（GET）：`/peptide/v1/data/*`、`/peptide/v1/overview*`；
