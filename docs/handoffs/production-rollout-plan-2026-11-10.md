@@ -662,3 +662,4 @@
 - 部署前 14 份副本这 2 个文件和 6d191df 一致；部署后全部一致。备份：web `/root/vialcove-backups/sidebar-main-web-20261113T170252Z`、`sidebar-tenants-web-…`；HQ 主机 `sidebar-main-admin-20261113T170253Z`、`sidebar-tenants-admin-…`。
 - 检查（主店访客归档，1296px 宽）：页面滚到底（8304px），菜单位置始终在顶部 32px，position=fixed，当前菜单项“访客归档”看得见。
 - 回滚：备份文件拷回即可（纯样式 / 前端脚本）。
+- 追加（17:06 UTC）：店主要求上下滚动的滚动条一律隐藏（以后同类改动也照此）。`admin-workspace.css`：整页（html）和左侧菜单 `scrollbar-width:none`，所有元素 `::-webkit-scrollbar:vertical{width:0}`；照常能滚，只是不显示。左右滚动条不动（订单列表横向滚动条 11-11 要求一直看得见）。主店实测：整页滚动条宽 0、菜单滚动条宽 0，页面滚到 3000px 菜单仍固定在 32px、菜单仍可单独滚。14 份副本已更新，备份 `scrollbar-*-20261113T17…`。
