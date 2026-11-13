@@ -137,6 +137,21 @@ final class Buyer_Order_Export {
 		return $row;
 	}
 
+	/**
+	 * 一张订单的第一个包裹：承运商和单号。读线上物流面板和订单列表“物流单号”用的同一个来源
+	 * （WooCommerce 订单履约，PeptideCore\Shipping_Tracking::customer_view()）；没有发货记录时为空。
+	 *
+	 * @return array{carrier:string,number:string}
+	 */
+	private static function shipment( \WC_Order $order ): array {
+		$view  = class_exists( \PeptideCore\Shipping_Tracking::class ) ? \PeptideCore\Shipping_Tracking::customer_view( $order ) : null;
+		$first = is_array( $view ) && ! empty( $view['shipments'][0] ) && is_array( $view['shipments'][0] ) ? $view['shipments'][0] : array();
+		return array(
+			'carrier' => (string) ( $first['provider_name'] ?? '' ),
+			'number'  => (string) ( $first['tracking_number'] ?? '' ),
+		);
+	}
+
 	/** 从订单取出 row() 要的内容。 */
 	private static function facts( \WC_Order $order, bool $with_email = false ): array {
 		$time  = static fn( $date ): string => $date ? wp_date( 'Y-m-d H:i:s', $date->getTimestamp() ) : '';
@@ -150,7 +165,7 @@ final class Buyer_Order_Export {
 		foreach ( array( 'utm_source', 'utm_campaign', 'utm_content', 'utm_term' ) as $key ) {
 			$utm[ $key ] = (string) $order->get_meta( '_wc_order_attribution_' . $key );
 		}
-		$shipment = is_callable( array( '\PeptideCore\Buyer_Status', 'shipment' ) ) ? \PeptideCore\Buyer_Status::shipment( $order ) : array();
+		$shipment = self::shipment( $order );
 		$refund   = Admin_Menus::refund_facts( $order );
 		return $utm + array(
 			'number'        => (string) $order->get_order_number(),

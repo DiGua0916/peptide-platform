@@ -122,7 +122,7 @@ final class Admin_Menus {
 		return \PeptideCore\Staff_Buyer::current() && 'wc-orders' === self::current_page();
 	}
 
-	/** 订单列表：去掉勾选框和操作列，后面加来源广告、运单号、退款状态。 */
+	/** 订单列表：去掉勾选框和操作列；开关打开时后面加退款状态。 */
 	public static function buyer_order_columns( $columns ) {
 		if ( ! is_array( $columns ) || ! \PeptideCore\Staff_Buyer::current() ) {
 			return $columns;
@@ -135,45 +135,21 @@ final class Admin_Menus {
 	 *
 	 * 总是去掉（修 bug）：勾选框（投手没有批量操作）、WooCommerce 的行内按钮和主线的“操作”列（里面的发货、写邮件
 	 * 对投手都是 403；订单号本身就能点开详情）。
-	 * 开关 Staff_Buyer::OPTION_EXTRAS 打开时另外：用“来源广告”代替 WooCommerce 的“来源”，加“运单号”（已经有物流单号
-	 * 一列时不加）和“退款状态”。开关关着时其余列和线上一样。
+	 * 开关 Staff_Buyer::OPTION_EXTRAS 打开时另外加“退款状态”（线上列表不显示总后台标记的退款）。开关关着时其余列和线上一样。
+	 * 2026-11-14（平台所有者：线上已有的优先）：原来开关里的“来源广告”（代替线上的“来源”）和“运单号”（线上已有
+	 * “物流单号”）两列已经去掉，来源和物流单号一律看线上的列。
 	 */
 	public static function buyer_columns( array $columns, bool $extras ): array {
 		unset( $columns['cb'], $columns['wc_actions'], $columns['pc_ops'] );
 		if ( ! $extras ) {
 			return $columns;
 		}
-		unset( $columns['origin'] );
-		$columns['pc_source'] = '来源广告';
-		if ( ! isset( $columns['shipment_tracking'] ) ) {
-			$columns['pc_tracking'] = '运单号';
-		}
 		$columns['pc_refund'] = '退款状态';
 		return $columns;
 	}
 
 	public static function buyer_order_column( $column, $order ): void {
-		if ( ! $order instanceof \WC_Order || ! in_array( $column, array( 'pc_source', 'pc_tracking', 'pc_refund' ), true ) ) {
-			return;
-		}
-		if ( 'pc_source' === $column ) {
-			echo esc_html( self::order_source( array(
-				'utm_source'   => (string) $order->get_meta( '_wc_order_attribution_utm_source' ),
-				'utm_campaign' => (string) $order->get_meta( '_wc_order_attribution_utm_campaign' ),
-				'utm_content'  => (string) $order->get_meta( '_wc_order_attribution_utm_content' ),
-				'source_type'  => (string) $order->get_meta( '_wc_order_attribution_source_type' ),
-			) ) );
-			return;
-		}
-		if ( 'pc_tracking' === $column ) {
-			$shipment = is_callable( array( '\PeptideCore\Buyer_Status', 'shipment' ) ) ? \PeptideCore\Buyer_Status::shipment( $order ) : array( 'number' => '', 'url' => '', 'shipped' => false );
-			if ( '' === $shipment['number'] ) {
-				echo esc_html( $shipment['shipped'] ? '已发货' : '待发货' );
-			} elseif ( '' !== $shipment['url'] ) {
-				echo '<a href="' . esc_url( $shipment['url'] ) . '" target="_blank" rel="noopener">' . esc_html( $shipment['number'] ) . '</a>';
-			} else {
-				echo esc_html( $shipment['number'] );
-			}
+		if ( ! $order instanceof \WC_Order || 'pc_refund' !== $column ) {
 			return;
 		}
 		$refund = self::refund_facts( $order );
