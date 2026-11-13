@@ -138,7 +138,7 @@ final class Data_Pages {
 							if ( is_wp_error( $p ) ) {
 								return $p;
 							}
-							$res = new \WP_REST_Response( Realtime::summary( (int) round( microtime( true ) * 1000 ), $p['funnel'], $p['minutes'] ) );
+							$res = new \WP_REST_Response( Realtime::summary( (int) round( microtime( true ) * 1000 ), $p['funnel'], $p['minutes'], $p['cards'] ) );
 							$res->header( 'Cache-Control', 'no-store' );
 							return $res;
 						},
@@ -194,7 +194,7 @@ final class Data_Pages {
 							$range = 'history' === $mode ? Realtime::history_params( $raw, intdiv( $now, 1000 ) ) : null;
 							if ( is_wp_error( $range ) ) { return $range; }
 							try {
-								$data = 'history' === $mode ? Realtime::filtered_history( $range, $filter ) : Realtime::filtered_summary( $now, $params['funnel'], $params['minutes'], $filter );
+								$data = 'history' === $mode ? Realtime::filtered_history( $range, $filter ) : Realtime::filtered_summary( $now, $params['funnel'], $params['minutes'], $filter, $params['cards'] );
 								$response = new \WP_REST_Response( $data ); $response->header( 'Cache-Control', 'no-store' ); return $response;
 							} catch ( \Throwable $error ) { return new \WP_Error( 'pc_realtime_filter_unavailable', __( 'Realtime entry attribution is unavailable.', 'peptide-core' ), array( 'status' => 503 ) ); }
 						},
@@ -931,6 +931,7 @@ final class Data_Pages {
 			'count' => __( 'Count', 'peptide-core' ),
 			'share' => __( 'Share of page views', 'peptide-core' ),
 			'window' => __( '%d minutes', 'peptide-core' ),
+			'windowDay' => '一天（最近 24 小时）',
 			'history' => __( 'Selected calendar range', 'peptide-core' ),
 			'captured_missing' => __( 'Captured source key absent', 'peptide-core' ),
 			'captured_empty' => __( 'Captured source observed empty', 'peptide-core' ),
@@ -999,8 +1000,11 @@ final class Data_Pages {
 			'windowNote'     => __( 'Last 10 minutes', 'peptide-core' ),
 			'behaviour'      => __( 'Real-time visitor behaviour', 'peptide-core' ),
 			'perMinute'      => __( 'Visitors per minute', 'peptide-core' ),
+			'perHour'        => '每小时访客数量',
+			'hoursAgo'       => '%d 小时前',
 			/* translators: %d: number of minutes */
 			'minutesOption'  => __( '%d minutes', 'peptide-core' ),
+			'dayOption'      => '一天（最近 24 小时）',
 			/* translators: %d: number of minutes */
 			'minutesAgo'     => __( '%d min ago', 'peptide-core' ),
 			'now'            => __( 'Now', 'peptide-core' ),
@@ -1021,6 +1025,10 @@ final class Data_Pages {
 			'trackingOff'    => __( 'Visitor tracking is off, so visitor numbers, conversion and the funnels stay at zero.', 'peptide-core' ),
 			'live'          => __( 'Real time', 'peptide-core' ),
 			'todayOption'   => __( 'Today', 'peptide-core' ),
+			'last24'        => '最近 24 小时',
+			'last24Visits'  => '最近 24 小时访问',
+			'last24Sales'   => '最近 24 小时销售',
+			'last24Power'   => '最近 24 小时购买力',
 			'yesterday'     => __( 'Yesterday', 'peptide-core' ),
 			'from'          => __( 'Start date', 'peptide-core' ),
 			'to'            => __( 'End date', 'peptide-core' ),
@@ -1281,6 +1289,8 @@ final class Data_Pages {
 			'share_users' => __( 'Sharing users', 'peptide-core' ),
 			'intent_count' => __( 'Explicit intent operations', 'peptide-core' ),
 			'intent_users' => __( 'Intent operation users', 'peptide-core' ),
+			'repeat_view_users' => '重复浏览人数',
+			'returning_view_users' => '回访浏览人数',
 			'actionNote' => __( 'Favorite, share and intent values count only received successful source operations for parent products. Coverage is partial: an unobserved product, kind or period is blank, not zero. Favorites are additions, not current balances; intent means explicit quick-view or buy-now operations, not an inferred purchase score. Variations have no separate measurement.', 'peptide-core' ),
 			'created_at' => __( 'Product creation time', 'peptide-core' ),
 			'createdTimezone' => __( 'Creation times are shown in %s. CSV uses UTC.', 'peptide-core' ),

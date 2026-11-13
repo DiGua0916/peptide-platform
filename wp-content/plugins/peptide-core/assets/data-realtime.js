@@ -18,6 +18,17 @@
 	var T = cfg.strings;
 	var PATH = '/peptide/v1/data/realtime';
 	var WINDOWS = [ 10, 20, 30 ];
+	var FUNNEL_WINDOWS = [ 10, 20, 30, 1440 ]; // 每分钟访客图也用这组（一天 = 按小时）
+	var hourly = false;
+	// “最近 24 小时”按钮（店主 2026-11-14）：实时模式，但卡片、访客行为、访客图（按小时）和下面所有面板都看最近 24 小时。记在 localStorage。
+	var KEY_SPAN24 = 'pcDataRealtimeSpan24';
+	var span24 = ( function () { try { return '1' === window.localStorage.getItem( KEY_SPAN24 ); } catch ( e ) { return false; } }() );
+	function setSpan24( on ) {
+		span24 = !! on;
+		try { window.localStorage.setItem( KEY_SPAN24, span24 ? '1' : '0' ); } catch ( e ) { /* 可选 */ }
+		if ( dimensions && dimensions.setOverride ) { dimensions.setOverride( span24 ? 1440 : null ); }
+	}
+	function mainWindows() { return span24 ? { funnel: 1440, minutes: 1440 } : { funnel: state.funnel, minutes: state.minutes }; } // 实时访客行为多一个“一天”（店主 2026-11-14）
 	var KEY_FUNNEL = 'pcDataRealtimeFunnel';
 	var KEY_MINUTES = 'pcDataRealtimeMinutes';
 	var REFRESH_MS = 60000;
@@ -25,7 +36,7 @@
 	var LAYERS = [ 'visitors', 'viewed', 'carted', 'checkout', 'address', 'shipping', 'payment', 'paid' ];
 	var LAYER_TEXT = { visitors: 'funnelVisitors', viewed: 'viewed', carted: 'carted', checkout: 'checkout', address: 'address', shipping: 'shipping', payment: 'payment', paid: 'paidVisitors' };
 
-	var state = { funnel: readWindow( KEY_FUNNEL ), minutes: readWindow( KEY_MINUTES ) };
+	var state = { funnel: readWindow( KEY_FUNNEL, FUNNEL_WINDOWS ), minutes: readWindow( KEY_MINUTES, FUNNEL_WINDOWS ) };
 	var wanted = { mode: 'live', params: {} };
 	var urlAction = '';
 	var displayedHistory = false;
@@ -80,10 +91,11 @@
 	}
 
 	// 窗口选择记在 localStorage 里；读写都可能失败（隐私模式、被禁用），失败就用默认的 10。
-	function readWindow( key ) {
+	function readWindow( key, list ) {
+		list = list || WINDOWS;
 		try {
 			var n = parseInt( window.localStorage.getItem( key ), 10 );
-			return WINDOWS.indexOf( n ) >= 0 ? n : WINDOWS[ 0 ];
+			return list.indexOf( n ) >= 0 ? n : list[ 0 ];
 		} catch ( e ) {
 			return WINDOWS[ 0 ];
 		}
@@ -128,17 +140,17 @@
 		};
 		return '<div class="pc-rt-cards">' +
 			card(
-				displayedHistory ? T.historyVisits : T.visits,
+				displayedHistory ? T.historyVisits : ( span24 ? ( T.last24Visits || T.visits ) : T.visits ),
 				metric( T.visitors, ctx.number( now.visitors ), ctx.number( day.visitors ) ),
 				metric( T.pageviews, ctx.number( now.pageviews ), ctx.number( day.pageviews ) )
 			) +
 			card(
-				displayedHistory ? T.historySales : T.sales,
+				displayedHistory ? T.historySales : ( span24 ? ( T.last24Sales || T.sales ) : T.sales ),
 				metric( T.orders, ctx.number( now.orders ), ctx.number( day.orders ) ),
 				metric( withCode( T.salesAmount ), ctx.money( now.sales ), ctx.money( day.sales ) )
 			) +
 			card(
-				displayedHistory ? T.historyPower : T.power,
+				displayedHistory ? T.historyPower : ( span24 ? ( T.last24Power || T.power ) : T.power ),
 				metric( T.unitsPerOrder, dec2( now.units_per_order ), dec2( day.units_per_order ) ),
 				metric( withCode( T.aov ), ctx.money( now.aov ), ctx.money( day.aov ) )
 			) +
@@ -223,7 +235,7 @@
 			var px = x( i ), py = y( v );
 			pts.push( [ px, py ] );
 			var ago = Number( p.ago ) || 0;
-			var text = displayedHistory ? p.label : ( 0 === ago ? T.now : fill( T.minutesAgo, { '%d': ago } ) );
+			var text = displayedHistory ? p.label : ( 0 === ago ? T.now : fill( hourly ? ( T.hoursAgo || '%d 小时前' ) : T.minutesAgo, { '%d': ago } ) );
 			var show = displayedHistory ? 0 === i % every : 0 === ago % every;
 			dots += '<circle class="pc-rt-line__dot' + ( v ? '' : ' is-zero' ) + '" cx="' + px + '" cy="' + py + '" r="3"><title>' + esc( text + ': ' + ctx.number( v ) ) + '</title></circle>';
 			if ( show ) {
@@ -296,9 +308,9 @@
 
 	// ---------- 页面框架（只建一次） ----------
 
-	function selectHtml( cls, label, current ) {
-		var options = WINDOWS.map( function ( n ) {
-			return '<option value="' + esc( n ) + '"' + ( n === current ? ' selected' : '' ) + '>' + esc( fill( T.minutesOption, { '%d': n } ) ) + '</option>';
+	function selectHtml( cls, label, current, list ) {
+		var options = ( list || WINDOWS ).map( function ( n ) {
+			return '<option value="' + esc( n ) + '"' + ( n === current ? ' selected' : '' ) + '>' + esc( 1440 === n ? ( T.dayOption || '一天（最近 24 小时）' ) : fill( T.minutesOption, { '%d': n } ) ) + '</option>';
 		} ).join( '' );
 		return '<select class="pc-rt-select ' + cls + '" aria-label="' + esc( label ) + '">' + options + '</select>';
 	}
@@ -319,6 +331,7 @@
 				'<form class="pc-rt-range" novalidate>' +
 					'<div class="pc-rt-modes" role="group" aria-label="' + esc( T.period ) + '">' +
 						'<button type="button" class="pc-rt-live" aria-pressed="false">' + esc( T.live ) + '</button>' +
+						'<button type="button" class="pc-rt-last24" aria-pressed="false">' + esc( T.last24 || '最近 24 小时' ) + '</button>' +
 						'<button type="button" class="pc-rt-today" aria-pressed="false">' + esc( T.todayOption ) + '</button>' +
 						'<button type="button" class="pc-rt-yesterday" aria-pressed="false">' + esc( T.yesterday ) + '</button>' +
 					'</div>' +
@@ -338,14 +351,14 @@
 				'<section class="pc-rt-section">' +
 					'<div class="pc-rt-section__head">' +
 						'<h2 class="pc-rt-section__title"><span class="pc-rt-funnel-title">' + esc( T.behaviour ) + '</span><span class="pc-rt-funnel-tip"></span></h2>' +
-						selectHtml( 'pc-rt-funnel-select', T.behaviour, state.funnel ) +
+						selectHtml( 'pc-rt-funnel-select', T.behaviour, state.funnel, FUNNEL_WINDOWS ) +
 					'</div>' +
 					'<div class="pc-rt-steps"></div>' +
 				'</section>' +
 				'<section class="pc-rt-section">' +
 					'<div class="pc-rt-section__head">' +
 						'<h2 class="pc-rt-section__title"><span class="pc-rt-chart-title">' + esc( T.perMinute ) + '</span></h2>' +
-						selectHtml( 'pc-rt-minutes-select', T.perMinute, state.minutes ) +
+						selectHtml( 'pc-rt-minutes-select', T.perMinute, state.minutes, FUNNEL_WINDOWS ) +
 					'</div>' +
 					'<div class="pc-rt-chart-wrap" tabindex="0" role="region" aria-label="' + esc( T.historyChart ) + '"></div>' +
 				'</section>' +
@@ -366,19 +379,20 @@
 			funnelSelect: bodyEl.querySelector( '.pc-rt-funnel-select' ),
 			minutesSelect: bodyEl.querySelector( '.pc-rt-minutes-select' )
 		};
-		[ 'range', 'from', 'to', 'live', 'today', 'yesterday', 'period', 'refresh-note', 'funnel-title', 'funnel-tip', 'chart-title' ].forEach( function ( name ) {
+		[ 'range', 'from', 'to', 'live', 'last24', 'today', 'yesterday', 'period', 'refresh-note', 'funnel-title', 'funnel-tip', 'chart-title' ].forEach( function ( name ) {
 			els[ name ] = bodyEl.querySelector( '.pc-rt-' + name );
 		} );
 		painted = false;
 		if ( window.PcDataRealtimeDimensions ) {
 			dimensions = window.PcDataRealtimeDimensions.mount( bodyEl.querySelector( '.pc-rt-dimensions-host' ), ctx, T.dimensions, window.PcDataRealtimeCountries );
 			els.lists.hidden = true;
+			if ( span24 && dimensions.setOverride ) { dimensions.setOverride( 1440 ); }
 		}
 
 		if ( window.PcDataRealtimeFilters ) {
 			filters = window.PcDataRealtimeFilters.mount( bodyEl.querySelector( '.pc-rt-filters-host' ), ctx, T.filters, {
 				onChange: changeFilter, onRetry: load,
-				getMainWindows: function () { return { funnel: state.funnel, minutes: state.minutes }; },
+				getMainWindows: mainWindows,
 				getWindows: function () { if ( dimensions && dimensions.getWindows ) { return dimensions.getWindows(); } var values = {}; [ 'viewed', 'carted', 'sold', 'map', 'active_countries', 'popular_countries', 'sources', 'collections', 'pages' ].forEach( function ( key ) { values[ key ] = 10; } ); return values; }
 			} );
 			if ( dimensions && dimensions.setWindowsListener ) { dimensions.setWindowsListener( function () { if ( filters ) { filters.windowsChanged(); } } ); }
@@ -393,9 +407,10 @@
 		els.minutesSelect.addEventListener( 'change', function () {
 			choose( 'minutes', els.minutesSelect.value );
 		} );
-		els.live.addEventListener( 'click', function () { select( { mode: 'live', params: {} }, 'push' ); } );
+		els.live.addEventListener( 'click', function () { setSpan24( false ); select( { mode: 'live', params: {} }, 'push' ); } );
+		els.last24.addEventListener( 'click', function () { setSpan24( true ); select( { mode: 'live', params: {} }, 'push' ); } );
 		[ 'today', 'yesterday' ].forEach( function ( preset ) {
-			els[ preset ].addEventListener( 'click', function () { select( { mode: 'history', params: { range: preset } }, 'push' ); } );
+			els[ preset ].addEventListener( 'click', function () { setSpan24( false ); select( { mode: 'history', params: { range: preset } }, 'push' ); } );
 		} );
 		els.range.addEventListener( 'submit', function ( event ) {
 			event.preventDefault();
@@ -484,7 +499,7 @@
 	// 选了新的窗口：只认 10 / 20 / 30，记下来，马上重新取数。
 	function choose( which, value ) {
 		var n = parseInt( value, 10 );
-		if ( WINDOWS.indexOf( n ) < 0 ) {
+		if ( FUNNEL_WINDOWS.indexOf( n ) < 0 ) {
 			return;
 		}
 		state[ which ] = n;
@@ -498,16 +513,17 @@
 		displayedHistory = 'history' === data.mode;
 		els.root.classList.toggle( 'is-history', displayedHistory );
 		var range = data.range || {};
-		els.period.textContent = displayedHistory ? ( ( range.preset === 'today' ? T.todayOption : ( range.preset === 'yesterday' ? T.yesterday : T.custom ) ) + ': ' + range.dates.from + ' – ' + range.dates.to + ' · ' + range.timezone ) : T.live + ' · ' + ( cfg.timezone || '' );
-		[ 'live', 'today', 'yesterday' ].forEach( function ( key ) {
-			var on = 'live' === key ? ! displayedHistory : displayedHistory && range.preset === key;
+		els.period.textContent = displayedHistory ? ( ( range.preset === 'today' ? T.todayOption : ( range.preset === 'yesterday' ? T.yesterday : T.custom ) ) + ': ' + range.dates.from + ' – ' + range.dates.to + ' · ' + range.timezone ) : ( span24 ? ( T.last24 || '最近 24 小时' ) : T.live ) + ' · ' + ( cfg.timezone || '' );
+		[ 'live', 'last24', 'today', 'yesterday' ].forEach( function ( key ) {
+			var on = 'live' === key ? ! displayedHistory && ! span24 : ( 'last24' === key ? ! displayedHistory && span24 : displayedHistory && range.preset === key );
 			els[ key ].setAttribute( 'aria-pressed', on ? 'true' : 'false' );
 			els[ key ].classList.toggle( 'is-active', on );
 		} );
-		els.funnelSelect.hidden = displayedHistory;
-		els.minutesSelect.hidden = displayedHistory;
+		els.funnelSelect.hidden = displayedHistory || span24;
+		els.minutesSelect.hidden = displayedHistory || span24;
 		els[ 'funnel-title' ].textContent = displayedHistory ? T.historyFunnel : T.behaviour;
-		els[ 'chart-title' ].textContent = displayedHistory ? T.historyChart : T.perMinute;
+		hourly = ! displayedHistory && data.minutes && 'hour' === data.minutes.unit;
+		els[ 'chart-title' ].textContent = displayedHistory ? T.historyChart : ( hourly ? ( T.perHour || '每小时访客数量' ) : T.perMinute );
 		els[ 'refresh-note' ].textContent = displayedHistory ? T.manualRefresh : T.autoRefresh;
 		if ( displayedHistory ) { els.from.value = range.dates.from; els.to.value = range.dates.to; }
 		els.updated.textContent = fill( T.updated, { '%s': data.updated || '' } );
@@ -544,7 +560,7 @@
 		setBusy( true );
 		if ( dimensions ) { dimensions.beginMain(); }
 		if ( filters ) { filters.beginMain(); els.root.classList.toggle( 'is-stale', painted ); }
-		var active = filters && window.PcDataRealtimeFilters.active( selection.filter ), params = 'history' === selection.mode ? selection.params : { funnel: state.funnel, minutes: state.minutes };
+		var active = filters && window.PcDataRealtimeFilters.active( selection.filter ), params = 'history' === selection.mode ? selection.params : ( span24 ? { funnel: 1440, minutes: 1440, cards: 1440 } : { funnel: state.funnel, minutes: state.minutes } );
 		if ( active ) { var filtered = { mode: selection.mode }; Object.keys( params ).forEach( function ( key ) { filtered[ key ] = params[ key ]; } ); Object.keys( selection.filter ).forEach( function ( key ) { filtered[ key ] = selection.filter[ key ]; } ); params = filtered; }
 		ctx.api( active ? PATH + '/filtered' : PATH + ( 'history' === selection.mode ? '/history' : '' ), params ).then(
 			function ( data ) {

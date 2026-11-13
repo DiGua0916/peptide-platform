@@ -221,7 +221,7 @@ final class Creatives {
 		$now = time();
 		$suppress = $wpdb->suppress_errors( true );
 		for ( $try = 0; $try < 8; $try++ ) {
-			$code = ( '' !== $want && Contract::valid_code( $want ) ) ? $want : Contract::code_for( self::next_number( array_merge( self::codes(), self::ad_codes() ) ) );
+			$code = ( '' !== $want && Contract::valid_code( $want ) ) ? $want : Contract::code_for( self::next_number( array_merge( self::codes(), self::ad_codes(), self::retired_codes() ) ) );
 			$ok   = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 				$t,
 				array(
@@ -264,6 +264,56 @@ final class Creatives {
 			$data['video_id'] = max( 0, $video_id );
 		}
 		return false !== $wpdb->update( Schema::table( 'creatives' ), $data, array( 'code' => $code ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	}
+
+	/** 删除过的编号（2026-11-13）：不再分给新素材，免得 Meta 里还挂着的旧链接算到新素材上。 */
+	public const RETIRED = 'pc_cr_retired_codes';
+
+	/** @return string[] */
+	public static function retired_codes(): array {
+		return array_values( array_filter( array_map( 'strval', (array) get_option( self::RETIRED, array() ) ), array( Contract::class, 'valid_code' ) ) );
+	}
+
+	/**
+	 * 能不能删：没有进站访客、没有花费、没有广告用过这个编号才能删（只删“传错了、还没用过”的素材）；
+	 * 已经有数据的只能归档，数据不能丢。返回不能删的原因，能删 = ''。
+	 */
+	public static function delete_blocker( string $code, ?array $st = null ): string {
+		global $wpdb;
+		$st = $st ?? ( self::stats()[ $code ] ?? array() );
+		if ( (int) ( $st['visitors'] ?? 0 ) > 0 || (int) ( $st['spend_cents'] ?? 0 ) > 0 ) {
+			return '已经有访客或花费数据';
+		}
+		$ads = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . Schema::table( 'ads' ) . ' WHERE code = %s', $code ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+		return $ads > 0 ? '已经有广告用了这个素材' : '';
+	}
+
+	/**
+	 * 删除素材（2026-11-13）：只删素材记录和它的落地页、AI 分析记录；图片 / 视频留在媒体库。
+	 *
+	 * @return true|\WP_Error
+	 */
+	public static function delete( string $code ) {
+		global $wpdb;
+		if ( ! self::get( $code ) ) {
+			return new \WP_Error( 'pc_creative_missing', '找不到这个素材。' );
+		}
+		$why = self::delete_blocker( $code );
+		if ( '' !== $why ) {
+			return new \WP_Error( 'pc_creative_in_use', $code . ' ' . $why . '，不能删除，可以归档（数据保留，随时恢复）。' );
+		}
+		if ( false === $wpdb->delete( Schema::table( 'creatives' ), array( 'code' => $code ) ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			return new \WP_Error( 'pc_creative_delete', '删除失败，请再试一次。' );
+		}
+		update_option( self::RETIRED, array_values( array_unique( array_merge( self::retired_codes(), array( $code ) ) ) ), false );
+		foreach ( array( Ads_Panel::LANDINGS, Audience_Ai::OPTION ) as $opt ) {
+			$v = get_option( $opt, array() );
+			if ( is_array( $v ) && isset( $v[ $code ] ) ) {
+				unset( $v[ $code ] );
+				update_option( $opt, $v, false );
+			}
+		}
+		return true;
 	}
 
 	public static function set_status( string $code, string $status ): bool {

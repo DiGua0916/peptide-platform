@@ -6,7 +6,7 @@
  * 2026-11-12 起，上传素材、生成投放链接都在“广告设置”页（Ads_Panel），这里不再有登记入口；
  * 保存逻辑（handle）两边共用，“补登记”跳到广告设置页的上传表单。
  *
- * 写操作都走 admin-post 动作 Module::ACTION_SAVE（字段 op：create / update / archive / restore / link / vocab），
+ * 写操作都走 admin-post 动作 Module::ACTION_SAVE（字段 op：create / update / archive / restore / link / landing / delete / vocab），
  * 校验 nonce 和 Staff_Buyer::CAP_VIEW。投手的后台拦着 admin-ajax，媒体库弹窗用不了，
  * 所以缩略图用表单直接上传；有 upload_files 权限的管理员另外可以“从媒体库选”。
  *
@@ -56,6 +56,7 @@ final class Library_Page {
 		}
 		$picked = isset( $_POST['attachment_id'] ) ? absint( $_POST['attachment_id'] ) : 0;
 		$panel  = isset( $_POST['from'] ) && 'ads' === sanitize_key( wp_unslash( $_POST['from'] ) ); // 广告设置页的上传表单：必须有图。
+		$landing = isset( $_POST['landing'] ) ? esc_url_raw( wp_unslash( $_POST['landing'] ) ) : ''; // 落地页（2026-11-13）
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 		$done = static function ( string $type, string $msg, string $to ): void {
 			Staff_Buyer::flash( $type, $msg );
@@ -73,6 +74,22 @@ final class Library_Page {
 			}
 			Creatives::set_status( $code, 'archive' === $op ? Creatives::STATUS_ARCHIVED : Creatives::STATUS_ACTIVE );
 			$done( 'success', $code . ( 'archive' === $op ? ' 已归档。' : ' 已恢复。' ), $back );
+		}
+		if ( 'delete' === $op ) {
+			$r = Creatives::delete( $code );
+			if ( is_wp_error( $r ) ) {
+				$done( 'error', $r->get_error_message(), $back );
+			}
+			$done( 'success', $code . ' 已删除。这个编号以后不会再分给新素材。', remove_query_arg( 'from_ad', $back ) );
+		}
+		if ( 'landing' === $op ) {
+			if ( ! Creatives::get( $code ) ) {
+				$done( 'error', '找不到这个素材。', $back );
+			}
+			if ( ! Ads_Panel::set_landing( $code, $landing ) ) {
+				$done( 'error', '这个落地页不在本店的页面里，请重新选。', $back );
+			}
+			$done( 'success', $code . ' 的落地页已换成“' . Ads_Panel::landing_label( $landing ) . '”。请重新复制链接，到 Meta 里替换这个素材所有广告的网址。', remove_query_arg( 'from_ad', $back ) . '#pc-cr-link-' . strtolower( $code ) );
 		}
 		if ( 'link' === $op ) {
 			if ( ! Creatives::ad( $ad ) || ! Creatives::get( $code ) ) {
@@ -115,6 +132,9 @@ final class Library_Page {
 		$new  = Creatives::create( $clean['attrs'], max( 0, $thumb ), $note, $want, max( 0, $video ) );
 		if ( is_wp_error( $new ) ) {
 			$done( 'error', $new->get_error_message(), $back );
+		}
+		if ( '' !== $landing ) {
+			Ads_Panel::set_landing( $new, $landing ); // 不在可选列表里就不记，链接用首页。
 		}
 		$to = $panel ? $back . '#pc-cr-link-' . strtolower( $new ) : $back;
 		if ( $from ) {
@@ -334,7 +354,7 @@ final class Library_Page {
 	}
 
 	private static function card( array $c, array $st, string $state, array $labels, array $vocab ): void {
-		$link  = Ads_Panel::link( home_url( '/' ), $c['code'] );
+		$link  = Ads_Panel::link( Ads_Panel::landing_of( $c['code'] ), $c['code'] );
 		$badge = Creatives::STATE_LABELS;
 		echo '<div class="pc-cr-card is-' . esc_attr( $state ) . '">';
 		echo '<div class="pc-cr-thumb">' . ( $c['attachment_id'] ? wp_get_attachment_image( $c['attachment_id'], 'medium' ) : '<span>无缩略图</span>' ) . '</div>';
@@ -356,9 +376,23 @@ final class Library_Page {
 		self::fields( $vocab, $c['attrs'], $c['note'], $c['attachment_id'], strtolower( $c['code'] ) );
 		echo '<p><button class="button button-primary">保存</button></p></form></details>';
 		$arch = Creatives::STATUS_ARCHIVED === $c['status'];
+		echo '<div class="pc-cr-card-acts">';
 		self::form_open( $arch ? 'restore' : 'archive' );
-		echo '<input type="hidden" name="code" value="' . esc_attr( $c['code'] ) . '"><button class="button-link' . ( $arch ? '' : ' pc-cr-archive' ) . '">' . esc_html( $arch ? '恢复' : '归档' ) . '</button></form>';
+		echo '<input type="hidden" name="code" value="' . esc_attr( $c['code'] ) . '"><button class="button button-small' . ( $arch ? '' : ' pc-cr-archive' ) . '">' . esc_html( $arch ? '恢复' : '归档' ) . '</button></form>';
+		self::delete_button( $c['code'], $st );
+		echo '</div>';
 		echo '</div></div>';
+	}
+
+	/** 删除按钮（2026-11-13）：有数据的素材按钮置灰，提示只能归档。广告设置页的链接行也用。 */
+	public static function delete_button( string $code, array $st ): void {
+		$why = Creatives::delete_blocker( $code, $st );
+		if ( '' !== $why ) {
+			echo '<button type="button" class="button button-small pc-cr-del" disabled title="' . esc_attr( $why . '，不能删除，可以归档' ) . '">删除</button>';
+			return;
+		}
+		self::form_open( 'delete' );
+		echo '<input type="hidden" name="code" value="' . esc_attr( $code ) . '"><button class="button button-small pc-cr-del" data-pc-cr-del="' . esc_attr( $code ) . '">删除</button></form>';
 	}
 
 	private static function styles(): void {
@@ -393,6 +427,9 @@ final class Library_Page {
 .pc-cr-card details{margin:6px 0}
 .pc-cr-card .pc-cr-fields{display:block}
 .pc-cr-archive{color:#b32d2e}
+.pc-cr-card-acts{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.pc-cr-card-acts form{margin:0}
+.pc-cr-del:not([disabled]){color:#b32d2e!important;border-color:#b32d2e!important}
 .pc-cr-foot{color:#646970;margin-top:20px}
 .pc-cr-foot .pc-cr-form{display:inline}
 @media (max-width:782px){
@@ -437,6 +474,11 @@ final class Library_Page {
 		}
 	} );
 	document.addEventListener( 'submit', function ( e ) {
+		var d = e.target.querySelector( '[data-pc-cr-del]' );
+		if ( d && ! window.confirm( '删除 ' + d.getAttribute( 'data-pc-cr-del' ) + '？删除后不能恢复，这个编号也不会再用。图片留在媒体库。' ) ) {
+			e.preventDefault();
+			return;
+		}
 		var b = e.target.querySelector( '.pc-cr-archive' );
 		if ( b && ! window.confirm( '归档后素材卡片默认不显示，数据保留，可以随时恢复。确定归档？' ) ) {
 			e.preventDefault();

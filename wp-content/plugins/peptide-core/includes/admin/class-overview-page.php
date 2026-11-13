@@ -129,7 +129,7 @@ final class Overview_Page {
 						'failed'      => admin_url( 'admin.php?page=wc-orders&status=wc-failed' ),
 						'batches'     => admin_url( 'edit.php?post_type=pc_batch' ),
 						'visitors'    => admin_url( 'admin.php?page=' . Tracking_Page::SLUG ),
-						'conversion'  => admin_url( 'admin.php?page=' . Tracking_Page::STATS_SLUG ),
+						'conversion'  => admin_url( 'admin.php?page=pc-data-operations' ), // 转化统计并进运营数据（2026-11-13）
 						'visitor'     => admin_url( 'admin.php?page=' . Tracking_Page::SLUG . '&visitor=' ),
 						'products'    => admin_url( 'edit.php?post_type=product' ),
 						'promotions'  => admin_url( 'admin.php?page=' . Promotions_Page::SLUG ),
