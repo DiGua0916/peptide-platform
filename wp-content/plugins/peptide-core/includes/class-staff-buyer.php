@@ -41,6 +41,8 @@ final class Staff_Buyer {
 	public const PAGE_ADS    = 'pc-buyer-ads';
 	public const PAGE_STORE  = 'pc-store-info';
 	public const PAGE_WIZARD = 'pc-onboarding';
+	/** 订单详情页（Admin\Order_Detail_Page，2026-11-11 起订单列表和原生编辑页都转到这里）：投手只读。 */
+	public const PAGE_ORDER  = 'pc-order';
 
 	public const ACTION_PASSWORD = 'pc_buyer_password';
 	public const ACTION_STORE    = 'pc_buyer_store_save';
@@ -364,6 +366,11 @@ final class Staff_Buyer {
 		if ( 'pc-overview' === $page ) {
 			return $redirect( self::PAGE_HOME ); // 后台里“回到首页”的链接都指向数据大盘，投手的首页是另一个页面。
 		}
+		if ( self::PAGE_ORDER === $page ) {
+			// 订单详情页：只读打开（走到这里的只有 GET / HEAD）。页面上的作废、卖家备注、标签提交到
+			// admin-post.php（pc_order_detail），不在投手的名单里，仍然 403。
+			return $allow( 'orders' );
+		}
 		if ( 'wc-orders' === $page ) {
 			// 只读：列表（筛选、搜索、翻页）和打开一张订单。批量操作、新建、删除等都带别的 action；
 			// “清空回收站”和“接管编辑”不带 action，靠单独的参数触发（WooCommerce 的 ListTable::current_action()、
@@ -504,7 +511,7 @@ final class Staff_Buyer {
 		$url = static fn( string $page ): string => 'admin.php?page=' . $page;
 		return array(
 			'home'     => array( 'label' => '首页', 'slug' => $url( self::PAGE_HOME ), 'icon' => 'dashicons-dashboard', 'pages' => array( self::PAGE_HOME, self::PAGE_WIZARD ) ),
-			'orders'   => array( 'label' => '订单', 'slug' => 'admin.php?page=wc-orders&status=wc-processing', 'icon' => 'dashicons-cart', 'pages' => array( 'wc-orders' ) ),
+			'orders'   => array( 'label' => '订单', 'slug' => 'admin.php?page=wc-orders&status=wc-processing', 'icon' => 'dashicons-cart', 'pages' => array( 'wc-orders', self::PAGE_ORDER ) ),
 			'recovery' => array( 'label' => '弃单', 'slug' => $url( 'pc-recovery' ), 'icon' => 'dashicons-backup', 'pages' => array( 'pc-recovery' ) ),
 			'data'     => array( 'label' => '数据', 'slug' => $url( 'pc-data' ), 'icon' => 'dashicons-chart-area', 'pages' => array( 'pc-data', 'pc-visitors' ) ),
 			// 2026-11-12：广告设置和素材库合成一个栏目“广告数据追踪”（子菜单见 adtrack_submenu()）。

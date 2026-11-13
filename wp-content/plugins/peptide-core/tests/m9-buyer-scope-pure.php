@@ -74,6 +74,14 @@ namespace {
 	check( 'empty trash denied', $is( $page( 'wc-orders', array( 'writes' => '1' ) ), 'deny' ) );
 	check( 'empty trash with a filter submit denied', $is( $page( 'wc-orders', array( 'action' => '-1', 'action2' => '-1', 'writes' => '1' ) ), 'deny' ) );
 	check( 'claiming an edit lock denied', $is( $page( 'wc-orders', array( 'action' => 'edit', 'writes' => '1' ) ), 'deny' ) );
+	// 订单详情页（pc-order）：订单列表里的链接和原生编辑页都转到这里。之前它不在投手的名单里，点开任何订单都是 403。
+	check( 'order detail page opens read-only with the orders caps', $is( $page( 'pc-order' ), 'allow', 'orders' ) && $is( $page( 'pc-order', array( 'method' => 'HEAD' ) ), 'allow', 'orders' ) );
+	check( 'order detail page rejects POST', $is( $page( 'pc-order', array( 'method' => 'POST' ) ), 'deny' ) );
+	check( 'order detail writes (void / seller note / tags) stay denied', $is( $post( 'pc_order_detail' ), 'deny' ) && $is( array_merge( $post( 'pc_order_detail' ), array( 'method' => 'GET' ) ), 'deny' ) );
+	check( 'pages the detail page links to for writing stay denied', $is( $page( 'pc-manual-order' ), 'deny' ) && $is( $page( 'pc-mail', array( 'action' => 'compose' ) ), 'deny' ) );
+	check( 'order detail page keeps the orders menu highlighted', 'orders' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-order' ) );
+	check( 'a look-alike slug is not the order detail page', $is( $page( 'pc-orderx' ), 'deny' ) );
+	check( 'locked: order detail goes to the wizard without caps', $is( $page( 'pc-order' ), 'redirect', '', 'pc-onboarding', true ) );
 
 	// 弃单、数据、实时访客。
 	check( 'abandoned checkouts', $is( $page( 'pc-recovery' ), 'allow', 'data' ) );
