@@ -195,7 +195,13 @@ m6_check( 'daily visitors', array( 1, 2 ) === array_column( $rows, 'visitors' ) 
 m6_check( 'daily rows add up to the period total', array_sum( array_column( $rows, 'sales_cents' ) ) === Metrics::orders( $day, 3 * $day )['sales_cents'] );
 m6_check( 'reversed daily period is empty', array() === Metrics::daily( 5, 5 ) );
 
-// 每日汇总里的弃单数（给总后台的每日汇总和 F3 的报表）：弃单按创建那天归属。
+// 每日汇总里的弃单数（给总后台的每日汇总和 F3 的报表）：弃单按创建那天归属。是新功能，开关默认关。
+m6_check( 'switch off (default): daily rows are as before, without the abandoned columns', ! array_key_exists( 'abandoned', $rows[0] ) && ! array_key_exists( 'recall_recovered', $rows[1] ) );
+$m6_threw = false;
+try { Metrics::abandoned_daily( $day, 3 * $day ); } catch ( \RuntimeException $e ) { $m6_threw = true; }
+m6_check( 'switch off: abandoned_daily throws, so the HQ connector leaves the columns out instead of sending zeros', $m6_threw );
+$GLOBALS['m6_options'][ Metrics::DAILY_ABANDONED_OPTION ] = 'on';
+$rows = Metrics::daily( $day, 3 * $day );
 m6_check( 'daily rows carry abandoned counts, zero when there are none', array( 0, 0 ) === array_column( $rows, 'abandoned' ) && array( 0, 0 ) === array_column( $rows, 'recall_recovered' ) );
 Recovery_Items::$items = array(
 	array( 'created_ms' => ( $day + 100 ) * 1000, 'status' => 'pending', 'total' => 10.0 ),
@@ -220,6 +226,7 @@ $rows = Metrics::daily( $day, 3 * $day );
 m6_check( 'a failing abandoned list leaves zeros and never breaks the daily rows', 2 === count( $rows ) && array( 0, 0 ) === array_column( $rows, 'abandoned' ) && array( 1, 1 ) === array_column( $rows, 'orders' ) );
 Recovery_Items::$fail = false;
 Recovery_Items::$items = array();
+unset( $GLOBALS['m6_options'][ Metrics::DAILY_ABANDONED_OPTION ] );
 
 // ---------- 先付款、后又下了一张没付的单（从数据库读） ----------
 $GLOBALS['m6_orders'] = array();

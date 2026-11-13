@@ -547,13 +547,28 @@ final class Metrics {
 
 	// ---------- 弃单 ----------
 
+	/** 每日汇总带弃单数的开关：每家店一个选项，值是 on 才算；默认关（线上现在的每日汇总没有弃单数）。 */
+	public const DAILY_ABANDONED_OPTION = 'peptide_core_daily_abandoned';
+
+	public static function daily_abandoned_on(): bool {
+		return function_exists( 'get_option' ) && 'on' === get_option( self::DAILY_ABANDONED_OPTION, 'off' );
+	}
+
 	/**
 	 * 按天的弃单数：店铺时区的日期 => abandoned_from_items() 的结果，按弃单创建那天归属；没有弃单的日子不在结果里。
 	 * 只读一次弃单列表，结果缓存 5 分钟。给 daily() 和总后台的每日汇总用。
 	 *
+	 * 2026-11-13：这是新功能（总后台的弃单率要用），模块发布只做优化，所以放在开关 DAILY_ABANDONED_OPTION 后面，默认关。
+	 * 关着时抛异常而不是返回空数组：总后台连接器（Hq_Connector::with_abandoned()）遇到异常就不往每日汇总里加弃单那几项，
+	 * 总后台看到没有这几项就知道这家店还没提供；返回空数组的话它会把每天都填成 0，成了错的数。
+	 *
 	 * @return array<string,array{count:int,open:int,failed:int,emailed:int,recovered:int,recovered_cents:int,rate:?float}>
+	 * @throws \RuntimeException 开关关着时。
 	 */
 	public static function abandoned_daily( int $from, int $to ): array {
+		if ( ! self::daily_abandoned_on() ) {
+			throw new \RuntimeException( 'Daily abandoned counts are off (option ' . self::DAILY_ABANDONED_OPTION . ').' );
+		}
 		if ( $to <= $from || ! class_exists( Recovery_Items::class ) ) {
 			return array();
 		}
@@ -674,14 +689,14 @@ final class Metrics {
 		foreach ( self::order_facts( $from, $to ) as $fact ) {
 			$by_day[ wp_date( 'Y-m-d', (int) $fact['paid_at'] ) ][] = $fact;
 		}
-		$abandoned = self::abandoned_daily( $from, $to );
+		$abandoned = self::daily_abandoned_on() ? self::abandoned_daily( $from, $to ) : null; // 开关关着时每一行和以前一样，没有弃单那四项。
 		$cursor = ( new \DateTimeImmutable( '@' . $from ) )->setTimezone( wp_timezone() )->setTime( 0, 0 );
 		for ( $i = 0; $i < 400 && $cursor->getTimestamp() < $to; $i++ ) {
 			$next   = $cursor->modify( '+1 day' );
 			$day    = $cursor->format( 'Y-m-d' );
 			$sum    = self::sum_orders( $by_day[ $day ] ?? array() );
 			$counts = self::funnel( max( $from, $cursor->getTimestamp() ), min( $to, $next->getTimestamp() ) )['counts'];
-			$rows[] = array(
+			$row    = array(
 				'date'            => $day,
 				'visitors'        => (int) $counts['visitors'],
 				'paid_visitors'   => (int) $counts['paid'],
@@ -691,12 +706,17 @@ final class Metrics {
 				'refund_cents'    => $sum['refund_cents'],
 				'sales_cents'     => $sum['sales_cents'],
 				'aov_cents'       => $sum['aov_cents'],
-				// 弃单按创建那天归属（和 summary() 的 abandoned 同一个定义）。读不出弃单时这四项是 0。
-				'abandoned'        => (int) ( $abandoned[ $day ]['count'] ?? 0 ),
-				'abandoned_open'   => (int) ( $abandoned[ $day ]['open'] ?? 0 ),
-				'recall_emailed'   => (int) ( $abandoned[ $day ]['emailed'] ?? 0 ),
-				'recall_recovered' => (int) ( $abandoned[ $day ]['recovered'] ?? 0 ),
 			);
+			if ( null !== $abandoned ) {
+				// 弃单按创建那天归属（和 summary() 的 abandoned 同一个定义）。读不出弃单时这四项是 0。
+				$row += array(
+					'abandoned'        => (int) ( $abandoned[ $day ]['count'] ?? 0 ),
+					'abandoned_open'   => (int) ( $abandoned[ $day ]['open'] ?? 0 ),
+					'recall_emailed'   => (int) ( $abandoned[ $day ]['emailed'] ?? 0 ),
+					'recall_recovered' => (int) ( $abandoned[ $day ]['recovered'] ?? 0 ),
+				);
+			}
+			$rows[] = $row;
 			$cursor = $next;
 		}
 		return $rows;
