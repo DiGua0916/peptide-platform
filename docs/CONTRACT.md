@@ -938,7 +938,7 @@ currency, visitor, visit, buyer
 - 判断：`Staff_Buyer::is_buyer( $user )`、`Staff_Buyer::current()`（当前登录的人）。管理员永远不算投手。`Staff::is_staff()` 对投手仍为真，`Staff::granted()` 对投手固定返回 `orders`、`data`。
 - 投手的 7 个菜单（2026-11-13 合并主线 `4059779` 之后）：首页 `pc-buyer-home`、订单 `wc-orders`（只读）、弃单 `pc-recovery`、数据 `pc-data*` 和 `pc-visitors*`、营销活动 `pc-promotions`（只读，见下面“投手看营销活动”；F2 的只读页面不在时不显示，这时是 6 个）、广告数据追踪（主线 11-12 的新栏目，菜单键 `adtrack`，原来的键 `ads` 不再存在；子菜单：广告设置 `pc-buyer-ads`、素材库 `pc-creatives`，花费导入 `pc-creatives-spend` 和素材看板 `pc-creatives-board` 从素材库顶部进）、店铺信息 `pc-store-info`；另有开店向导 `pc-onboarding`。投手能提交的表单：`pc_buyer_password`、`pc_buyer_store_save`、`pc_buyer_ads_save`、`pc_buyer_orders_export`，加主线的 `pc_creative_save`、`pc_creative_spend_import`、`pc_creative_export`。
 - **投手后台的两个按店开关（2026-11-14，“优化，不改功能”）**，都是值 `on` 才生效、默认关，关着时投手看到的和线上一样；功能声明 `m9.buyer_extras`、`m9.buyer_no_palette`：
-  - `pc_buyer_extras`（`Staff_Buyer::extras()`，过滤器 `pc_buyer_extras_enabled`）：订单列表上方的导出订单（关着时下载请求也拒绝）、订单列表的“来源广告 / 运单号 / 退款状态”三列（代替 WooCommerce 的“来源”）、详情页顶部的退款提示、店铺信息里的“显示客服按钮”（关着时保存店铺信息也不动 `support.enabled`）。
+  - `pc_buyer_extras`（`Staff_Buyer::extras()`，过滤器 `pc_buyer_extras_enabled`）：订单列表上方的导出订单（关着时下载请求也拒绝）、订单列表的“退款状态”一列（2026-11-14 起来源和物流单号一律用线上的“来源”“物流单号”两列，原来的“来源广告”“运单号”已去掉）、详情页顶部的退款提示、店铺信息里的“显示客服按钮”（关着时保存店铺信息也不动 `support.enabled`）。
   - `pc_buyer_no_palette`（`Staff_Buyer::hide_palette()`，过滤器 `pc_buyer_no_palette_enabled`）：投手不加载 WordPress 的命令面板。
   - 不在开关后面、总是生效的：投手订单列表去掉勾选框和“操作”两列（`Admin_Menus::buyer_columns( $columns, false )`），其余列和主线一样。
   - 发布材料（和线上逐页比对、升级和退回、开关状态、还差什么）在 `docs/handoffs/m9-m11-m14-release.md`。
@@ -1024,7 +1024,7 @@ currency, visitor, visit, buyer
 
 ### M9-4 订单只读和店铺信息（`Admin\Admin_Menus`、`Admin\Store_Settings`，ST-03、ST-07）
 
-- 投手的订单列表：排在主线 `Order_List::columns()`（优先级 999）之后（1000），去掉勾选框、批量操作、行内按钮、主线的“操作”列（发货、写邮件）和 WooCommerce 的“来源”列；后面加来源广告（订单上的 `_wc_order_attribution_utm_*`）、退款状态；列表里没有“物流单号”一列时再加运单号（见 M11 的 `Buyer_Status::shipment()`）。订单号点开的是主线的订单详情页。
+- 投手的订单列表：排在主线 `Order_List::columns()`（优先级 999）之后（1000），去掉勾选框、批量操作、行内按钮、主线的“操作”列（发货、写邮件）；`pc_buyer_extras` 打开时最后加“退款状态”。来源和物流单号用线上列表自己的“来源”“物流单号”两列（2026-11-14 起，原来代替“来源”的“来源广告”和补的“运单号”已去掉）。订单号点开的是主线的订单详情页。
 - 订单详情页（主线的 `pc-order`）对投手只读：`Admin_Menus::buyer_order_detail_styles()` 把订单复制、退款、作废、编辑、发货、手动发送邮件、卖家备注的保存、标签增删、“结账成功页 / 订单追踪页”藏起来，并拦住页面上表单的提交；顶部提示“只能查看”。**页面是日常会话的，F5 没有改它的输出**，真正的限制是 M9-1 里的服务端名单。
 - 退款状态（列表、详情页顶部提示、导出）：`Admin_Menus::refund_facts( \WC_Order )` 返回 `array{label,amount}`。两个来源都算，取大的：F3 写的 `_pc_refund_state`（`none / partial / full`）和 `_pc_refund_cents`（美分；不产生 WooCommerce 退款对象），以及订单上 WooCommerce 的已退金额。`label` 是“已退款 / 部分退款 / 无”。
 - **订单导出（ST-03）**：`Admin\Buyer_Order_Export`。投手的订单列表上方选付款日期 → 下载 CSV（UTF-8 带 BOM）。只含已付款、非测试单的订单；一次最多 92 天、5000 行，不填日期是最近 30 天；列：订单号、下单时间、付款时间、订单状态、订单金额、币种、商品、件数、国家、来源广告、`utm_source / campaign / content / term`、承运商、运单号、退款状态、退款金额。**不含电话和地址；顾客邮箱默认也不含**（平台所有者 2026-11-12 还没定，先按不带）。要带邮箱只有一处开关：这家店的选项 `pc_buyer_export_email` 设为 `on`（`wp option update pc_buyer_export_email on`，或过滤器 `pc_buyer_export_with_email`），打开后“顾客邮箱”排在件数后面。以 `= + - @` 开头的内容前面加单引号（防表格公式）。每次导出记一条操作日志（`order / export`）。管理员用同一个地址也能导。
@@ -1044,36 +1044,31 @@ currency, visitor, visit, buyer
 | 日常会话（`Admin\Order_Detail_Page`，可选） | 详情页显示 F3 的退款标记（`Admin_Menus::refund_facts()` 可以直接用）。现在只有投手能在页面顶部看到这一行 | 管理员在详情页看不到总后台标记的退款 |
 | 日常会话（`core/admin/class-recovery-page.php`） | 弃单页对投手另外还有两个点了是 403 的入口：“弃单通知设置”和店铺地址提示里的“去填写”（都指向 `pc-system`）。和“立即扫描”“作废”一起处理 | 入口可见，点了返回 403 |
 
-### M11 已购回访和查订单（`PeptideCore\Buyer_Status`、`PeptideCore\Order_Lookup`，FE-10、FE-11）
+### M11 已购回访（`PeptideCore\Buyer_Status`，FE-10；Q20 定为方案 A）
 
-- **按店开关，默认关**：选项 `pc_buyer_recognition`，值 `on` 才生效（过滤器 `pc_buyer_recognition_enabled` 可以覆盖）。关着时不写 cookie、不静默弹窗、不加载前台脚本，两个接口都按“不是已购 / 没找到”回答。第一次改成 `on` 时自动建一个 `/track-order` 页面（内容是短代码 `[pc_track_order]`，页面 ID 记在选项 `pc_track_order_page`；已有同名页面就用它）。
-- cookie `pc_buyer`：`v1.<订单号-订单号…>.<签发时间>.<HMAC-SHA256>`，最多 10 张订单，1 年，HttpOnly，SameSite=Lax，HTTPS 下带 Secure。密钥是 `wp_salt( 'pc_buyer' )`。里面没有顾客资料。
-- 什么时候写：顾客带着订单密钥回到店铺而且订单已付款（`/?pc_paid=<订单>&pc_key=<密钥>`，或 WooCommerce“订单已收到”页面带 `key`）；查订单核对成功且订单付过款。测试单（`Test_Orders::is_test_order()`）不写。
-- 接口（都是公开的，返回 `Cache-Control: no-store, private`）：
-  - `GET /peptide/v1/buyer/status` → `{ "buyer": false }`，或 `{ "buyer": true, "order": { "number", "placed", "status", "status_label", "items": [ { "name", "quantity" } ], "more_items", "shipment": { "carrier", "number", "url" } } }`。只看 cookie 里最近的一张订单；`status` 取 `awaiting_shipment` / `shipped` / `refunded` / `cancelled` / `unpaid`。不返回姓名、邮箱、电话、地址。前台等 800 毫秒，没等到就当新客。
-  - `POST /peptide/v1/order-lookup`，JSON `{ "email", "order" }` → `{ "found": true, "order": {…同上} }`，或 `{ "found": false, "message" }`（HTTP 200；订单不存在、邮箱不符、测试单都是同一句提示）。每个 IP 每分钟 5 次（成功失败都算），超过返回 429。IP 的取法同 `Api\Rest_Controller::client_ip()`。`order` 两种写法都认（2026-11-12）：数字号，和主线 11-11 起顾客看到的 `hang-数字`（不分大小写，可带 `#`）；`hang-` 号用主线的 `Order_Number::find()` 找订单。返回的 `number` 是顾客看到的订单号（`get_order_number()`）。
-- 运单：`Buyer_Status::shipment( \WC_Order $order )` 返回 `array{carrier,number,url,shipped,shipped_at}`。先读订单元数据 `_pc_shipment`（`carrier`、`number`、`url`、`shipped_at`，发货对接 OR-01 写入），没有再读 WooCommerce 订单履约（`Shipping_Tracking::customer_view()`）；都没有而订单是 `completed` 时算已发货但没有运单号。投手的订单列表也用这个函数。
-- 静默营销弹窗：用 F2 提供的过滤器 **`pc_marketing_popups_suppressed`**（见 M4 一节）。已购顾客在前台时 `Buyer_Status` 让它返回 `true`；带 cookie 的访客本来就不走首页缓存，所以在服务端判断，新访客没有任何额外请求。同时在页面 `<head>` 里输出 `window.pcBuyer = { known: true, suppressPopups: true }` 并调用 `window.pcMarketingQuiet.refresh()`（存在时）。F5 没有调用 `pcMarketingQuiet.suppress()`：那会另写一个一年的 cookie，店铺把已购回访关掉以后弹窗仍然不出来。
-- 功能声明：`m11.buyer_status => 1`。
-- 没有新数据表。新选项：`pc_buyer_recognition`、`pc_track_order_page`。
+**2026-11-14 平台所有者定了 Q20**：“以后遇上类似的问题，优先用站点已经存在的”。所以看物流只用线上已有的物流面板（`Track_Widget`，右下角物流球，日常会话的）。M11 原来的物流卡片、`/track-order` 页面、短代码 `[pc_track_order]`、`POST /peptide/v1/order-lookup`、`GET /peptide/v1/buyer/status`（以及 `assets/buyer-status.js`、`buyer-status.css`、`class-order-lookup.php`）**全部下线**。M11 只做线上没有的一件事：认出已购顾客，让营销弹窗不再打扰他。
+
+- **按店开关，默认关**：选项 `pc_buyer_recognition`，值 `on` 才生效（过滤器 `pc_buyer_recognition_enabled` 可以覆盖）。关着时不写 cookie、不静默弹窗、页面上不多任何东西，和线上一样。打开时**不再**建 `/track-order` 页面。
+- 怎么认（`Buyer_Status::known()`）：开关打开，并且 ① 带着有效的 cookie `pc_buyer`；或 ② 已登录、账户名下有已付款订单（`wc_get_orders` 按 `customer_id`、订单状态“处理中 / 已完成”取最近 5 张，有付款时间且不是测试单就算；同一次请求只查一次）。
+- cookie `pc_buyer`：`v1.<订单号-订单号…>.<签发时间>.<HMAC-SHA256>`，最多 10 张订单，1 年，HttpOnly，SameSite=Lax，HTTPS 下带 Secure。密钥是 `wp_salt( 'pc_buyer' )`。里面没有顾客资料。**格式和线上旧版相同**，已经发出去的 cookie 照样认。
+- 什么时候写 cookie：顾客带着订单密钥回到店铺而且订单已付款（`/?pc_paid=<订单>&pc_key=<密钥>`，或 WooCommerce“订单已收到”页面带 `key`）；线上物流面板核对成功、触发动作 `pc_track_order_verified` 时（见下表，日常会话加了之后才生效）。只记真正的订单（`shop_order`）、付过款、不是测试单（`Test_Orders::is_test_order()`）。
+- 动作 **`pc_track_order_verified`**（F5 在听，日常会话来触发）：参数是那张 `\WC_Order`。`Buyer_Status::verified()` 在开关打开、订单符合上一条时把它记进 cookie。要在 REST 响应发出之前触发，cookie 才能随这次响应带回去。
+- 静默营销弹窗：用 F2 提供的过滤器 **`pc_marketing_popups_suppressed`**（见 M4 一节，读取用 `\PeptideCore\Pricing\Popups::suppressed()`）。认出的已购顾客在前台时让它返回 `true`；带 cookie 的访客和已登录的顾客本来就不走首页缓存，所以在服务端判断，新访客没有任何额外请求。同时在页面 `<head>` 里输出 `window.pcBuyer = { known: true, suppressPopups: true }` 并调用 `window.pcMarketingQuiet.refresh()`（存在时）。F5 没有调用 `pcMarketingQuiet.suppress()`：那会另写一个一年的 cookie，店铺把已购回访关掉以后弹窗仍然不出来。
+- 短代码 `[pc_track_order]` 留一个空的处理（输出空字符串），万一哪家店的页面里还留着它，也不会露出方括号原文。
+- 页脚上方的 “Track your order”（M14 主题，`vc_track_order_entry()`）：现在是一个按钮，用线上物流面板自己的 `[data-pc-open-track]` 打开物流面板（付款成功弹窗里的 “Track my order” 用的也是它）。只在 `pc_buyer_recognition` 打开、物流球开着（`Track_Widget::enabled()`，即 `pc_track_ball` 不是 `0`）、不在定制器预览时出现；购物车和结账页本来就不印。
+- 功能声明：`m11.buyer_status => 1`、`m11.plan_a => 1`（后者表示查订单已交给线上物流面板）。
+- 没有新数据表。新选项只有 `pc_buyer_recognition`（`pc_track_order_page` 不再使用；开关从没在生产打开过，按 F1 记录生产上不会有这个选项和 `/track-order` 页面）。
+- 投手订单列表、订单导出不再用 M11 的函数：导出里的承运商、运单号直接读线上的 `Shipping_Tracking::customer_view()`（第一个包裹）。
 
 需要配合：
 
 | 归属 | 内容 | 没做之前 |
 | --- | --- | --- |
-| F2（离开挽回、首单券条、转盘、活动倒计时）**F2 已在自己分支实现** | 弹窗读 `\PeptideCore\Pricing\Popups::suppressed()`。F5 已经挂好过滤器，两个分支合到一起就生效 | F2 的分支合进来之前，已购顾客仍然会看到这些弹窗；物流卡片和查订单不受影响 |
-| 日常会话（`Campaign_Announcement`、`Modules\Product_Broadcast` 等 F2 没覆盖的弹出内容） | 同样读 `Popups::suppressed()`。付款成功弹窗（`Paid_Popup`）不属于营销弹窗，不用改 | 这些内容对已购顾客照常出现 |
-| F3 / 发货对接（OR-01，暂缓） | 发货后把 `carrier`、`number`、`url`、`shipped_at` 写进订单元数据 `_pc_shipment`；退款标记写 `_pc_refund_state`（`full` 时卡片显示 Refunded） | 物流卡片显示“Awaiting shipment”，或显示 WooCommerce 订单履约里的运单 |
-| M14 主题（F5，已做） | 页脚上方输出 “Track your order”（`vc_track_order_entry()`），只在开关打开且有查订单页面时出现。发货邮件里的链接可以带 `?email=…&order=…` 预填 | — |
-| F1（开关） | 试点店打开：`wp option update pc_buyer_recognition on`（或总后台远程写选项）。回退：改回 `off`。前台匿名访客的缓存页最多 5 分钟后才跟着变（见本节末尾“开关和设置多久生效”） | — |
-
-**和主线 11-11 的账户、物流面板重叠（2026-11-12，等平台所有者决定，决定前下面两条不用做）。** 对比和建议在 `docs/handoffs/m11-returning.md`。如果定了方案 A（看物流只留主线的物流面板，M11 只留“认出已购 → 营销弹窗静默”），需要日常会话配合：
-
-| 归属 | 内容 | 没做之前 |
-| --- | --- | --- |
-| 日常会话（`Track_Widget::rest_lookup()`） | 核对成功时（订单号 + 邮箱，或设备记住的订单号 + 密钥）对每张核对通过的订单触发 `do_action( 'pc_track_order_verified', $order )`。F5 挂在上面，订单付过款、不是测试单时把这个浏览器记成已购（写 `pc_buyer` cookie）。钩子在返回之前触发，这样 cookie 能随这次响应发出 | 顾客换设备后只有登录了才被认出是已购；在物流面板里用订单号 + 邮箱查过也不算 |
-| 日常会话（`Accounts::assets()`） | 输出 `window.pcAccounts.signup` 时再加一个条件：`\PeptideCore\Pricing\Popups::suppressed()` 为真时不弹注册弹窗（类不存在时照旧）。进站的 18+ 确认不受影响 | 买过但没登录的顾客回访时仍会看到注册弹窗 |
-| M14 主题（F5） | 页脚上方的 “Track your order” 改成打开物流面板（`data-pc-open-track`），物流球关着（`pc_track_ball = 0`）的店不显示 | 入口仍指向 `/track-order` 页面 |
+| F2（离开挽回、首单券条、转盘、活动倒计时）**F2 已在自己分支实现，11-18 上线** | 弹窗读 `\PeptideCore\Pricing\Popups::suppressed()`。F5 已经挂好过滤器，两个分支都上线就生效 | 已购顾客仍然会看到这些弹窗 |
+| 日常会话（`Track_Widget::rest_lookup()`；**生产冻结，之后再接**） | 核对成功时（订单号 + 邮箱，或设备记住的订单号 + 密钥）对每张核对通过的订单触发 `do_action( 'pc_track_order_verified', $order )`，在返回之前触发 | 顾客换设备后只有登录了才被认出是已购；在物流面板里用订单号 + 邮箱查过也不算 |
+| 日常会话（`Accounts::assets()`；**生产冻结，之后再接**） | 输出 `window.pcAccounts.signup` 时再加一个条件：`\PeptideCore\Pricing\Popups::suppressed()` 为真时不弹注册弹窗（类不存在时照旧）。进站的 18+ 确认不受影响 | 买过但没登录的顾客回访时仍会看到注册弹窗 |
+| 日常会话（`Campaign_Announcement`、`Modules\Product_Broadcast` 等 F2 没覆盖的弹出内容，可选） | 同样读 `Popups::suppressed()`。付款成功弹窗（`Paid_Popup`）不属于营销弹窗，不用改 | 这些内容对已购顾客照常出现 |
+| F1（开关） | 沙盒测过、平台所有者确认之后，试点店打开：`wp option update pc_buyer_recognition on`。回退：`wp option delete pc_buyer_recognition`。前台匿名访客的缓存页最多 5 分钟后才跟着变（见下一段） | — |
 
 **开关和设置多久生效（F1 2026-11-10 沙盒验收时发现，主线已有的情况）。** 首页缓存的失效钩子只在定义了 `PEPTIDE_CORE_PAGE_CACHE` 的那份安装里注册；生产 6 家店的后台那份都没有定义。所以在店铺后台或用后台那份跑 WP-CLI 改 `pc_buyer_recognition`、`pc_entry_address`，或投手在“店铺信息”里改对外品牌名、WhatsApp、邮箱之后，匿名访客看到的缓存页最多 5 分钟后才变。验收和上线时：等 5 分钟，或者用带任意参数的地址（例如 `/?nocache=1`）看。带 `pc_buyer` cookie 的顾客不走缓存，立刻生效。`class-page-cache.php` 归日常会话，F1 已告知。
 
@@ -1082,6 +1077,7 @@ currency, visitor, visit, buyer
 平台所有者 2026-11-10 确认：Codex 不再修改主题，主题由 F5 接手（`AGENTS.md` 已更新）；Q5 选“保留弹窗，换地址”。别的会话要改主题里的东西，在这里提，F5 来做。
 
 - **FE-02 商品 / 专辑地址**（`inc/entry-address.php`、`assets/entry-address.js`）
+  - **2026-11-14 平台所有者：线上已有的优先。商品链接继续 302 到首页 + 弹窗，FE-02 先不开**（开关 `pc_entry_address` 保持关，代码留着）。年龄确认和商品弹窗谁在上面也以线上为准：现在两边都是商品弹窗在上、18+ 确认在下（本机 SQLite 副本里线上代码和分支代码各跑 3 次，结果相同），F5 不改这个顺序。
   - 按店开关：选项 `pc_entry_address`，值 `on` 才生效，**默认关**（过滤器 `vc_entry_address_enabled` 可覆盖）。关着时不加载脚本，行为和以前一样。功能声明 `m14.entry_address => 1`。
   - 服务器端的入口没有变：`/product/<slug>/` 和专辑链接仍然 302 到首页（`/?vc_product=<ID>`、`/?vc_catalog_category=<ID>`），**已投放的 `/?vc_product=` 链接照常可用，没有加任何 301**。首页缓存、落地页统计（`vc_visitor_entry_product_context()`）都不受影响。
   - 只改地址栏：商品弹窗打开时显示商品固定链接；专辑落地后显示专辑固定链接；关掉弹窗恢复页面自己的地址（去掉 `vc_product`）。写进地址栏的每个地址都是服务器本来就接受的入口，刷新或分享都会回到同一个画面。`utm_*`、`fbclid` 等其他参数原样保留。

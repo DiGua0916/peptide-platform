@@ -2,6 +2,13 @@
 
 分支 `claude/m9-buyer-admin-940389`，提交 `9b93b55`（第一批）、之后修主题用例的提交、`ab62b67`（商品地址修正），和 M9、M11 在同一个分支上。没有合并 main，没有发布。
 
+## 2026-11-14 第七轮：线上已有的优先（`c7e7d52`）
+
+- 页脚上方的 “Track your order”（`inc/storefront-identity.php` 的 `vc_track_order_entry()`）：原来链到 M11 的 `/track-order`，现在是 `<button type="button" data-pc-open-track>`，点开线上的物流面板（`peptide-core` 的 `Track_Widget`，物流面板自己就听这个属性）。条件：`pc_buyer_recognition` 打开（和以前一样，关着时不显示）、物流球开着（`Track_Widget::enabled()`）、不在定制器预览。`assets/site.css` 里 `.vc-track-order a` 换成 `.vc-track-order button`（去掉按钮默认外观，看起来和原来的链接一样）。
+- FE-02：所有者定“商品链接继续 302 到首页 + 弹窗，FE-02 先不开”。代码不动，开关 `pc_entry_address` 保持关。
+- 年龄确认和商品弹窗谁在上面：所有者定“以线上现在的表现为准”。本机副本里清掉 `pcAgeOk` 后打开商品链接，线上代码和分支代码各 3 次（简单、多规格商品）都是两个弹窗都开、商品弹窗在上，一样，所以不改。
+- 用例：`m14-storefront-identity-pure` 17 项；主题 PHP 33 个、`.cjs` 59 个文件全过。开关全关时访客的首页、商品落地页、商品链接、购物车和线上同库逐行一致。
+
 ## 2026-11-12 第六轮：修两个主题问题
 
 提交 `4cc5a8f`（后台加载时商品弹窗不开）、`4bba65b`（无规格商品价格卡住）、`ed2f017`（登记用例）。改了两个脚本，加了两个用例。两处都是修复，**不在开关后面**。

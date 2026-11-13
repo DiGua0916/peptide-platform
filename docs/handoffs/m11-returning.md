@@ -1,10 +1,25 @@
-# M11 已购回访与查订单 交接（F5，2026-11-10，2026-11-12 更新）
+# M11 已购回访 交接（F5，2026-11-10；2026-11-14 按 Q20 方案 A 改完）
 
-分支 `claude/m9-buyer-admin-940389`（M9、M11 提交在同一个分支上），提交 `99d23e8`、`8dc2a04`（查订单认 `hang-` 号）。没有合并 main，没有发布。
+分支 `claude/m9-buyer-admin-940389`（M9、M11、M14 在同一个分支上）。11-10 的 M11 代码（`99d23e8`）已经随素材归因版本在线上，但开关从没开过；11-14 按方案 A 改的是 `c7e7d52`，还没发布（随 F5 模块 11-23 发布）。
 
-对应需求：FE-10、FE-11。接口约定在 `docs/CONTRACT.md` 的「M11 已购回访和查订单」。
+对应需求：FE-10（FE-11 查订单交给线上物流面板）。接口约定在 `docs/CONTRACT.md` 的「M11 已购回访」。发布材料在 `docs/handoffs/m9-m11-m14-release.md`（第七节）。
 
-## 和主线 11-11 新功能的重叠（2026-11-12，等平台所有者决定，决定前 M11 不再扩展）
+## 2026-11-14：Q20 定为方案 A，已改完（`c7e7d52`）
+
+平台所有者原话：“以后遇上类似的问题，优先用站点已经存在的，因为那个是我亲自加的，而不是用你这块后面自己写的，你的是没经历过测试的。”
+
+- **下线**：物流卡片（`assets/buyer-status.js`、`buyer-status.css`）、`/track-order` 页面（开关打开时不再自动建）、`[pc_track_order]`（留一个输出空字符串的处理）、`POST peptide/v1/order-lookup`、`GET peptide/v1/buyer/status`、`core/class-order-lookup.php`、`Buyer_Status::card() / shipment() / state()`。
+- **留下的只有一件事**：认出已购顾客 → F2 的过滤器 `pc_marketing_popups_suppressed` 返回真、页头输出 `window.pcBuyer`。认的方式：cookie `pc_buyer`（签发和校验代码逐字没动，线上发出去的照样认），或**已登录且账户名下有已付款订单**（新加，处理中 / 已完成、有付款时间、不是测试单，同一次请求只查一次）。仍在 `pc_buyer_recognition` 后面，默认关。
+- **新挂的钩子**：动作 `pc_track_order_verified`（参数是 `WC_Order`）。线上物流面板核对成功时由日常会话触发，F5 把付过款、非测试单的订单记进 cookie。日常会话的文件没改，生产冻结，之后再接。
+- **页脚 “Track your order”**（主题）：改成按钮，用线上物流面板自己的 `[data-pc-open-track]` 打开物流面板；物流球关着（`pc_track_ball = 0`）的店不显示；开关关着时和线上一样不显示。
+- 顺带：投手订单导出里的承运商、运单号原来读 `Buyer_Status::shipment()`，改成读线上物流用的 `Shipping_Tracking::customer_view()`；投手订单列表（`pc_buyer_extras`）去掉“来源广告”“运单号”，用线上的列（见 `m9-buyer-admin.md` 第十一轮）。
+- 功能声明多一项 `m11.plan_a => 1`。
+
+**实际检查**（本机 SQLite 副本，浏览器 + WP-CLI）：`m11-buyer-status-pure` 59 项、`m14-storefront-identity-pure` 17 项通过；开关关时访客页面和线上同库逐行一致，两个下线接口返回 404；开关开时：新访客不认、页脚按钮打开线上物流面板；无订单的登录账户不认；有已付款订单的登录账户认出；退出后走 `/?pc_paid=…&pc_key=…` 落地，下一页认出（cookie HttpOnly）；物流球关掉后按钮消失；打开开关不建页面。**没验的**：营销弹窗真的不弹（要 F2 的代码，F2 11-18 上线）；MySQL 沙盒。
+
+下面“和主线 11-11 新功能的重叠”和“11-10 原来做了什么”是方案 A 之前的记录，留作历史；以本节和 CONTRACT 为准。
+
+## 和主线 11-11 新功能的重叠（2026-11-12 的分析；11-14 已定方案 A，见上一节）
 
 日常会话 11-11 在主线上做了顾客账户、右下角物流球和物流面板、付款成功弹窗里的 Track my order、17TRACK / FedEx 物流记录、`hang-` 订单号。读的是合并后的 `core/class-accounts.php`、`class-track-widget.php`、`class-paid-popup.php`、`class-order-number.php`、`class-fedex-track.php`、`assets/track-widget.js`、`assets/account-gate.js` 和总后台的 `class-track17.php`。
 
@@ -45,11 +60,9 @@
 - **方案 B：两套都留。** 不建议。顾客会同时看到卡片和物流球，卡片只显示 1 张订单，查订单有两个地方、两种限制。
 - **方案 C：M11 整个下线，弹窗静默改成只看“是否登录”。** 不建议。自动建的账户要顾客去邮箱设密码才能登录，多数回访顾客是没登录的，认不出来，营销弹窗照弹。
 
-**请平台所有者定 A / B / C。** 决定之前 M11 的代码保持现状（开关关着，对线上没有任何影响）。
+**11-14 平台所有者定了方案 A**，已按上面 1–5 改完。（11-12 修的“查订单认 `hang-` 号”随查订单一起下线了。）
 
-不管选哪个都要修的一件事已经修了：订单号改成 `hang-数字` 之后，`/order-lookup` 原来只认纯数字，顾客照着订单号填会一律“没找到”。现在数字号和 `hang-` 号都能查（提交 `8dc2a04`，本机 WordPress 里实际查过）。
-
-## 做了什么
+## 11-10 原来做了什么（方案 A 之前，留作历史）
 
 - `core/class-buyer-status.php`
   - 按店开关 `pc_buyer_recognition`（`on` 才生效，**默认关**）。关着时不写 cookie、不静默弹窗、不加载前台脚本，线上行为和以前一样。
@@ -78,22 +91,22 @@
 - **仍然没验的**：营销弹窗静默（F2 的分支没合进来，本机也没有）；真实付款后落地页写 cookie 的整条流程在浏览器里没有走（F1 用 HTTP 验过）。
 - 已知的行为（F1 问是不是本意，是）：订单状态是 `completed` 但没有运单号时，卡片显示 Shipped，下面没有运单信息。店铺把订单标成已完成就是发货了，只是没录运单号；卡片不编运单信息，也不另加说明文字。
 
-## 上沙盒后的验收清单
+## 上沙盒后的验收清单（11-14 方案 A 版）
 
-注意生效时间：开关打开或关闭后，匿名访客看到的缓存页（页脚上方的 “Track your order”）最多 5 分钟后才变；验收时等 5 分钟，或用带任意参数的地址（例如 `/?nocache=1`）。带 `pc_buyer` cookie 的顾客不走缓存，立刻生效。
+注意生效时间：开关打开或关闭后，匿名访客看到的缓存页（页脚上方的 “Track your order”）最多 5 分钟后才变；验收时等 5 分钟，或用带任意参数的地址（例如 `/?nocache=1`）。带 `pc_buyer` cookie 的顾客和已登录的顾客不走缓存，立刻生效。
 
-1. `php -n wp-content/plugins/peptide-core/tests/m11-buyer-status-pure.php` 全部 PASS。
-2. 开关关着：下单付款后浏览器里没有 `pc_buyer` cookie；`/wp-json/peptide/v1/buyer/status` 返回 `{"buyer":false}`；页面源码里没有 `buyer-status` 脚本。
-3. `wp option update pc_buyer_recognition on`：出现 `/track-order` 页面。
-4. 用手机下一单并付款（非测试单）：回到店铺后有 `pc_buyer` cookie（HttpOnly）。关掉浏览器重新进店：出现物流卡片，订单号和商品正确，状态 “Awaiting shipment”；关掉卡片后同一次浏览不再出现；加购、用券、结账价格和新客一致。
-5. 新浏览器（无 cookie）：页面和开关关着时一样，没有多余请求。
-6. 查订单：邮箱和订单号对得上时显示订单并写入 cookie（新订单填 `hang-` 号，老订单填数字号，都要能查到）；任何一项不对都是同一句提示；连续第 6 次返回 429。
-7. 改 cookie 里的任意一位：`/buyer/status` 返回 `{"buyer":false}`。
-8. F2 的分支合进来之后：已购浏览器不再出现首单券、离开挽回、转盘、倒计时。
+1. `php -n wp-content/plugins/peptide-core/tests/m11-buyer-status-pure.php` 和 `php -n wp-content/themes/peptide-site/tests/m14-storefront-identity-pure.php` 全部 PASS。
+2. 开关关着：页面源码里没有 `window.pcBuyer`、没有 `vc-track-order`；`POST /wp-json/peptide/v1/order-lookup` 和 `GET /wp-json/peptide/v1/buyer/status` 都是 404 `rest_no_route`；右下角物流球照常。
+3. `wp option update pc_buyer_recognition on`：**不**出现 `/track-order` 页面，`wp option get pc_track_order_page` 报不存在。
+4. 新浏览器：页脚上方有 “Track your order” 按钮，点开的是右下角物流球那个面板；页面里没有 `window.pcBuyer`。
+5. 用手机下一单并付款（非测试单），回到店铺：有 `pc_buyer` cookie（HttpOnly）；之后每页有 `window.pcBuyer = {known:true,suppressPopups:true}`；加购、用券、结账价格和新客一致。
+6. 换一个浏览器，用那张订单的顾客账户登录：同样有 `window.pcBuyer`。名下没有已付款订单的账户登录：没有。
+7. `wp option update pc_track_ball 0`：页脚按钮和物流球都不见；删掉这个选项恢复。
+8. F2 上线之后：带 cookie 或已登录的已购顾客不再出现首单券、离开挽回、转盘、倒计时；新访客照常出现。
+9. 回退：`wp option delete pc_buyer_recognition`，第 2 条的样子回来。
 
 ## 没做的
 
 - 营销弹窗的静默依赖 F2 和日常会话读过滤器，F5 没有去改它们的文件。
-- 前台“查订单”入口已在主题页脚上方输出（M14，开关打开且有查订单页面时才出现）。
-- 发货邮件（OR-02）暂缓，所以卡片上没有承诺“发货后邮件通知”。
-- 已付款的老顾客没有 cookie，只能从上线后下单或用“查订单”的顾客开始识别（开发文档 12.5 已说明）。
+- 日常会话的两处钩子（`pc_track_order_verified`、注册弹窗读 `Popups::suppressed()`）只写在 CONTRACT，生产冻结，之后再接。
+- 已付款的老顾客没有 cookie：登录账户就能认出；没登录的从上线后下单开始识别（日常会话接上 `pc_track_order_verified` 后，用物流面板查过订单的也算）。
