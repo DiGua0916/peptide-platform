@@ -124,6 +124,7 @@ final class Plugin {
 		Data\Metrics_Switch::register_hooks();
 		Api\Menu_Controller::register_hooks();
 		add_action( 'init', array( Installer::class, 'maybe_upgrade' ), 5 );
+		add_action( Tracking\Schema::FIRST_VISIT_CRON, array( Tracking\Schema::class, 'repair_first_visits' ) );
 		Api\Rest_Controller::register_hooks();
 		Api\Store_Api::register_hooks();
 		Cart_Write_Lock::register_hooks();

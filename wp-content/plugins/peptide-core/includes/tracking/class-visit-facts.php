@@ -57,6 +57,7 @@ final class Visit_Facts {
 		}
 		$out['timezone'] = is_string( $metadata['timezone'] ?? null ) ? $metadata['timezone'] : '';
 		$out['language'] = is_string( $metadata['language'] ?? null ) ? $metadata['language'] : '';
+		$out['screen']   = self::screen( $metadata['page_context'] ?? null );
 		$out['in_app']   = Contract::in_app( $user_agent );
 		// 机型（2026-11-13）：系统、版本、型号；原始标识也存一份，以后型号表更新了可以重新翻译。
 		$device              = User_Agent::parse( $user_agent, (string) ( $hints['model'] ?? '' ), (string) ( $hints['platform_version'] ?? '' ) );
@@ -89,8 +90,23 @@ final class Visit_Facts {
 		);
 	}
 
-	/** 这次请求的 v5 新列：IP 和地理网络在同一请求里只查一次。 */
-	public static function for_request( array $metadata ): array {
+	/**
+	 * 屏幕尺寸（2026-11-13）：取已有的“客户端环境”（page_context.environment.screen，服务器声明支持后浏览器才读），
+	 * 形如 390x844；没有或不是 known 时为空。
+	 */
+	public static function screen( $page_context ): string {
+		$s = is_array( $page_context ) && is_array( $page_context['environment']['screen'] ?? null ) ? $page_context['environment']['screen'] : array();
+		if ( 'known' !== ( $s['status'] ?? '' ) || ! is_int( $s['width'] ?? null ) || ! is_int( $s['height'] ?? null ) ) {
+			return '';
+		}
+		return $s['width'] . 'x' . $s['height'];
+	}
+
+	/** 这次请求的 v5 新列：IP 和地理网络在同一请求里只查一次。$page_context = 同一条 page_view 的页面上下文（取屏幕尺寸）。 */
+	public static function for_request( array $metadata, $page_context = null ): array {
+		if ( null !== $page_context ) {
+			$metadata['page_context'] = $page_context;
+		}
 		$ip = self::client_ip();
 		if ( ! array_key_exists( $ip, self::$network ) ) {
 			self::$network[ $ip ] = '' === $ip ? Ip_Network::EMPTY : Ip_Network::lookup( $ip );

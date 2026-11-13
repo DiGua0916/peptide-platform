@@ -439,7 +439,7 @@
 	}
 	function placeText( n ) {
 		if ( ! n ) { return ''; }
-		var where = [ n.city, n.region ].filter( Boolean ).join( ', ' );
+		var where = [ n.city, n.region, n.country ].filter( Boolean ).join( ', ' );
 		return [ n.ip ? 'IP ' + n.ip : '', where, n.isp ].filter( Boolean ).join( ' · ' );
 	}
 	function sourceText( n ) {
@@ -452,9 +452,12 @@
 		return '<h2 class="pc-trk-net-title">设备和网络 <small>（最近一次访问）</small></h2><div class="pc-trk-cards pc-trk-net">' +
 			item( '机型', n.model || '看不出（' + ( n.os || '未知系统' ) + '）' ) +
 			item( '系统', ( n.os + ' ' + n.os_version ).trim() ) +
-			item( '浏览器', [ browser, IN_APP[ n.in_app ] || '' ].filter( Boolean ).join( ' · ' ) ) +
+			item( '浏览器', [ IN_APP[ n.in_app ] && 'Other' === browser ? '' : browser, IN_APP[ n.in_app ] || '' ].filter( Boolean ).join( ' · ' ) ) +
 			item( 'IP', n.ip ) +
+			item( '国家', n.country ) +
 			item( '地区', [ n.city, n.region ].filter( Boolean ).join( ', ' ) || ( n.ip ? '未装 IP 地理库' : '' ) ) +
+			item( '经纬度', n.lat && n.lon ? n.lat + ', ' + n.lon : '' ) +
+			item( '屏幕', n.screen ? n.screen.replace( 'x', ' × ' ) : '' ) +
 			item( '运营商', n.isp ) +
 			item( '时区', n.timezone ) +
 			item( '语言', n.language ) +

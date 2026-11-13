@@ -24,7 +24,7 @@ final class Schema {
 	// v4: immutable, first-successfully-captured optional visit attribution.
 	// v5（CR 素材归因，2026-11-11）：访问记录完整广告参数、来源分类、IP 与地理网络、时区语言、内置浏览器；
 	//     访客记录首次访问和最近一次付费访问。列由打地基统一加好，写入由线 1（采集补齐）负责。
-	public const DB_VERSION = '6'; // 6 = 访问表加 ua / os / os_version / device_model（2026-11-13，机型追踪）
+	public const DB_VERSION = '7'; // 6 = 访问表加 ua / os / os_version / device_model；7 = 加 geo_country、screen（2026-11-13）
 	public const OPTION     = 'peptide_core_tracking_db';
 	/** Successful checks only, scoped to this PHP request and physical table identity. */
 	private static array $ready_cache = array();
@@ -58,6 +58,43 @@ final class Schema {
 		self::$ready_cache[ $key ] = true;
 		update_option( self::VERIFIED_OPTION, self::verification_key(), true );
 		return true;
+	}
+
+	/** 一次性数据修复的标记：first_visit_id 改成访客最早一次访问（2026-11-13）。 */
+	public const FIRST_VISIT_FIX = 'pc_track_first_visit_fix';
+	/** 后台定时任务名（不在前台请求里跑，免得拖慢那一个请求）。 */
+	public const FIRST_VISIT_CRON = 'pc_track_repair_first_visits';
+
+	/**
+	 * 把 first_visit_id 不等于“这位访客最早一次访问”的访客改正（只跑一次，成功后记标记）。
+	 * 老访客的 first_visit_id 以前会被写成上线后的第一次回访，“首次来源”和付费访客数因此虚高。
+	 *
+	 * @return int|null 改了几行；没跑（已跑过 / 表没就绪）为 null；出错为 -1（不记标记，下次再试）
+	 */
+	public static function repair_first_visits(): ?int {
+		if ( '1' === (string) get_option( self::FIRST_VISIT_FIX, '' ) || ! self::installed() ) {
+			return null;
+		}
+		// 同时只跑一个：add_option 在选项已存在时返回 false（原子）；锁超过 1 小时视为上次中断，可以重来。
+		$lock = self::FIRST_VISIT_FIX . '_lock';
+		if ( ! add_option( $lock, time(), '', false ) ) {
+			if ( time() - (int) get_option( $lock, 0 ) < HOUR_IN_SECONDS ) {
+				return null;
+			}
+			update_option( $lock, time(), false );
+		}
+		global $wpdb;
+		$v = self::table( 'visitors' );
+		$s = self::table( 'visits' );
+		$n = $wpdb->query( "UPDATE {$v} SET first_visit_id = ( SELECT MIN(x.id) FROM {$s} x WHERE x.visitor_id = {$v}.id ) WHERE EXISTS ( SELECT 1 FROM {$s} y WHERE y.visitor_id = {$v}.id ) AND first_visit_id <> ( SELECT MIN(z.id) FROM {$s} z WHERE z.visitor_id = {$v}.id )" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		if ( false === $n ) {
+			delete_option( $lock );
+			return -1;
+		}
+		delete_option( $lock );
+		update_option( self::FIRST_VISIT_FIX, '1', true );
+		update_option( self::FIRST_VISIT_FIX . '_log', array( 'at' => time(), 'rows' => (int) $n ), false );
+		return (int) $n;
 	}
 
 	public static function install(): void {
@@ -123,6 +160,7 @@ CREATE TABLE {$s} (
   source_class varchar(16) NOT NULL DEFAULT '',
   params_valid tinyint(1) NOT NULL DEFAULT 0,
   ip varchar(45) NOT NULL DEFAULT '',
+  geo_country varchar(2) NOT NULL DEFAULT '',
   geo_region varchar(64) NOT NULL DEFAULT '',
   geo_city varchar(80) NOT NULL DEFAULT '',
   geo_lat varchar(16) NOT NULL DEFAULT '',
@@ -137,6 +175,7 @@ CREATE TABLE {$s} (
   os varchar(20) NOT NULL DEFAULT '',
   os_version varchar(20) NOT NULL DEFAULT '',
   device_model varchar(80) NOT NULL DEFAULT '',
+  screen varchar(16) NOT NULL DEFAULT '',
   device varchar(10) NOT NULL DEFAULT '',
   events int(10) unsigned NOT NULL DEFAULT 0,
   pageviews int(10) unsigned NOT NULL DEFAULT 0,
