@@ -318,7 +318,7 @@ F1 那边已经接好的：`/hq/summary` 每天带 `abandoned / abandoned_open /
   - 普通销售账号：同上。顾客和匿名访客：照常追踪、照常触发像素。
   - **一个没覆盖到的边角**：只有 `pc_media_buyer` 角色、没有 `pc_staff` 角色的账号不算员工。界面上开不出这种账号（投手版只能在销售账号上打开），所以现在没有影响；要补的话是在两处各加一个 `Staff_Buyer::is_buyer()`，没有做。
 - `ea72130`（测试单不发购买、补发任务不重复）：`Pixels::is_test_order()` 和付款回传、“订单已收到”页两处调用，补发任务的 10 分钟缓冲（`CATCHUP_GRACE`）都在。`m7-purchase-dedupe-pure`、`m7-pixels-pure`、真正 WordPress 上的 `smoke-pixels`（48 条）都通过。
-- 给热修复包的提醒：这两个提交里除了修复还带着别的改动（每日汇总的弃单数、文档），不能整个摘。只要修复的话，取 `git diff 4059779 8b36cd7 -- wp-content/plugins/peptide-core/includes/class-pixels.php` 的全部，和 `…/includes/tracking/class-tracker.php` 里 `is_staff()` 那一段（同一个文件里另外两行是注册 `Ad_Params`、`Product_Activity`，不属于修复）。
+- 给热修复包的提醒：这两个提交里除了修复还带着别的改动（每日汇总的弃单数、文档），不能整个摘。只要修复的话，取 `git diff 4059779 8b36cd7 -- wp-content/plugins/peptide-core/includes/class-pixels.php` 的全部，和 `…/includes/tracking/class-tracker.php` 里 `is_staff()` 那一段（同一个文件里另外两行是注册 `Ad_Params`、`Product_Activity`，不属于修复）。**11-13 晚已经按这个范围摘成了单独的分支 `claude/hotfix-a-m6`，见下面“热修复 A 的分支”一节，打包从那里取。**
 
 ### 测试
 
@@ -359,6 +359,48 @@ F1 那边已经接好的：`/hq/summary` 每天带 `abandoned / abandoned_open /
 
 六条加起来大约一到一个半人日（含用例），另加沙盒实测和线上补数据（第 2、3 条）。
 
+## 2026-11-13：热修复 A 的分支 `claude/hotfix-a-m6`
+
+给 F1 的热修复包 A 用。**只含两项 bug 修复**，起点是主线 `4059779`，已推送，没有强推，没有上线。没有带任何功能改动，没有动表结构和追踪表版本号（仍是 `'6'`），没有碰素材会话的分支。
+
+| 提交 | 内容 | 代码改动 | 用例改动 |
+| --- | --- | --- | --- |
+| `04aac82` | 测试单四条路都不发购买；补发任务留 10 分钟缓冲（`ea72130` 整体） | `includes/class-pixels.php` +26 / −2；`includes/pixels/class-acceptance.php` +3 / −3（验收页的三句提示文字） | `m7-purchase-dedupe-pure.php`（新，24 条）、`m7-stubs.php`（新，从 `m7-pixels-pure.php` 里抽出来的测试桩）、`m7-pixels-pure.php`、`m7-pixel-acceptance-pure.php`、`m6-stubs.php`、套件清单加 1 条 |
+| `b4aece9` | 员工角色不被追踪、不触发像素（`db7df57` 里只取这一部分） | `includes/tracking/class-tracker.php` +8 / −1（`is_staff()`）；`includes/class-pixels.php` +2 / −1（`allowed()`） | `m6-tracker-staff-pure.php`（新，8 条）、`m7-pixels-pure.php` 加 2 条、`m7-stubs.php` 加员工桩、套件清单加 1 条 |
+
+合计 10 个文件，+480 / −215；其中上线会跑到的代码是 3 个文件，+39 / −7。`db7df57` 里的“每日汇总带弃单数”和文档没有带。
+
+和本分支的关系：这两项修复本分支早就有（`8b36cd7` 合并后仍然生效）。热修复分支上的 `class-pixels.php` 和本分支的完全一样；`class-tracker.php` 只比本分支少注册 `Ad_Params`、`Product_Activity` 的两行（那是功能）。所以热修复进了主线之后，本分支再合并主线时这几处不会有实质冲突。
+
+### 测试（本机，原生 PHP 8.3 / Node 26）
+
+| 范围 | 主线 `4059779` | 热修复分支 `b4aece9` |
+| --- | --- | --- |
+| 仓库里全部 `*-pure.php` | 94 个，**15 个失败** | 96 个，**同样 15 个失败，没有新增**；多出来的 2 个是新用例，都通过 |
+| 全部 Node 用例 | 19 个失败 | 同样 19 个失败，没有新增 |
+| 默认套件 | 83 过 / 1 败 | 85 过 / 1 败（`mail-source-observations`，主线原有） |
+| M6 的纯测试（10 个） | — | 全部通过 |
+| M7 的纯测试（3 个：33 / 24 / 32 条） | — | 全部通过 |
+
+主线原有的 15 个失败（热修复分支上一个不少、一个不多）：`client-environment-pure`、`data-dimensions-pure`、`data-product-exposure-pure`、`first-order-offer-pure`、`tracking-impressions-pure`、`tracking-native-visit-classifier-pure`、`tracking-preferences-pure`、`management-addresses-pure`、`provision-customer-domain-pure`、`callback-return-status-pure`、`hub-new-account-defaults-pure`、`hub-return-failure-binding-pure`、`hub-return-status-check-pure`、`provider-site-bindings-pure`、`return-cart-pure`。
+
+用例确实在看这两项修复：把 `class-tracker.php`、`class-pixels.php` 换回主线的版本，`m6-tracker-staff-pure`、`m7-pixels-pure`、`m7-purchase-dedupe-pure` 三个都失败。
+
+### 在真正的 WordPress 上对照（本地拷贝，SQLite，对外请求全部拦下）
+
+同一份核对脚本（临时的，没有进仓库），21 项检查，分别用热修复分支和主线的代码跑：
+
+- 热修复分支：**21 项全过**。投手（销售账号 + 投手角色）和普通销售账号：算员工、像素不触发；顾客和匿名访客：照常。顾客下的单付款时发一次购买（事件编号 `order_<订单号>`）；付款 10 分钟内补发任务不再发第二次；付款 20 分钟还没发过的，补发任务补一次，之后不再发；测试单付款时和补发时都不发。
+- 主线：**8 项失败**，正是要修的这几处——投手和销售账号被追踪、像素照常触发；补发任务在付款后马上再发一次；测试单付款时发购买。
+
+没有在 MySQL 上跑，没有连真实的 Meta；“订单已收到”页那条路只有纯测试覆盖（命令行里模拟不了那个页面）。
+
+### 上线后要知道的一件事
+
+员工下的单本来就不回传购买（订单记 `_pc_px_optout`）。这次修复之后，“员工”里多了投手和销售账号：**投手登录着自己的账号在前台下单，这张单不会发购买事件**（主线现在会发）。投手要用真实下单验证像素时，得退出登录或者开无痕窗口。
+
+还有一个没覆盖的边角（和 11-13 合并时写的一样）：只有 `pc_media_buyer`、没有 `pc_staff` 的账号不算员工；界面上开不出这种账号，没有修。
+
 ## 下一步
 
 1. 等 F1 在沙盒上再跑：手册第 5 节的 12 个冒烟用例、第 8 节（接口冒烟）、第 9 节（漏斗回放，接进 critical-path）；F5 的主题和接口合在一起之后用真正的浏览器看一眼弹窗里的两行字。之前的：手册第 3 节的新命令、第 6 节的新用例 F1 第二次已经跑过；数据换成更真实的快照之后第 1、2 步重跑，重点看 `reports.visitor_funnel`（有多少付款没有填地址的记录）和 `reports.paid_orders`（有多少订单不是在下单当天付的款）。F1 发现的问题交回 F4 修。
@@ -369,6 +411,7 @@ F1 那边已经接好的：`/hq/summary` 每天带 `abandoned / abandoned_open /
 6. **后续（这次不做）**：来源报表“广告系列 / 广告组 / 广告”三种分组改读访问表的新列，并拆掉 `pc_track_ads`。前提是平台所有者定了数据源、素材会话那部分稳定下来。要点和工作量见“广告参数存哪一份：我的意见”。在那之前 `pc_track_ads` 保持现状：开关关着不建表、不写入。
 7. **后续**：素材会话的 `claude/creative-merge` 进主线之后，再做一次增量合并（它带追踪表 v7，合并时版本号跟主线走）。
 8. **等分配**：审查发现的 6 个问题（见“审查发现的 6 个问题：逐条确认”）都没有修。
+9. **等 F1**：热修复包 A 从 `claude/hotfix-a-m6`（`b4aece9`）取这两项修复去打包；F1 在 MySQL 沙盒上验证时发现问题交回 F4。进了主线之后，本分支下一次合并主线时确认这几处没有重复。
 ## 本地 WordPress 拷贝（2026-11-12）
 
 `../tools` 里有 PHP 8.3.32（带 pdo_sqlite）、WP-CLI、WordPress 7.1.4 和 WooCommerce 11.2.1 的源码，`../localwp/site` 是日常会话的本地站（SQLite，HPOS 开着，插件链到主检出目录）。**不要直接用那个站**，拷一份到会话临时目录再用：
