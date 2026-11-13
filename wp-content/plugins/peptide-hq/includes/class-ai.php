@@ -19,7 +19,13 @@ final class Ai {
 
 	public const OPTION   = 'pchq_ai';
 	public const PERSONAS = 'pchq_ai_personas';
-	public const USES     = array( 'customer' => '客户分析', 'business' => '全站分析师' );
+	public const USES     = array( 'customer' => '客户分析', 'business' => '全站分析师', 'creative' => '素材人群分析' );
+
+	/**
+	 * 素材人群分析的固定任务说明（2026-11-13，店主：分析整条素材带来的一群人，不是单个客户）。
+	 * 不管用的是专门的素材人设还是借用全站分析师人设，都追加这段，保证输出结构一致。
+	 */
+	public const CREATIVE_TASK = "【本次任务：单条广告素材的人群分析】\n数据是某一条广告素材带来的全部付费访客的汇总（不是单个客户）：各维度人群分布（系统、机型、浏览器、屏幕、国家、省州、城市、ISP、IP 类型、语言、时区、版位等），每个人群的人数、意向分层、加购、结账、下单、客单价，以及和全部素材平均值的对比；“规则结论”是系统按固定规则算出的初步判断，可以采纳、补充或反驳，但要说明理由。\n按下面 5 段输出，每段标题照抄，每条结论后面用括号写出依据的数字：\n1. 来的是什么人（人群定性：共同特征、消费能力推断、真人比例）\n2. 质量怎么样（意向、停留、滚动、看页数，和平均比）\n3. 谁在买，谁不买（按人群比较加购率、下单率、客单价）\n4. 没买的人卡在哪（按人群看漏斗哪一步掉得最多，推测原因）\n5. 建议（只能是建议：加投 / 减投 / 先查再投 / 做同款，写清楚对哪个人群、怎么在广告后台操作）\n最后一行写“可信度：高 / 中 / 低”和原因。样本少于 100 人的人群不要下结论。机型只能推断消费能力，不能当作确定事实。";
 	/** 内置服务商（店主 2026-11-10：Claude、OpenAI 由我们配好；其他的店主在“服务商设置”里自己加）。 */
 	public const BUILTIN = array(
 		'anthropic' => array( 'label' => 'Claude（Anthropic）', 'format' => 'anthropic', 'endpoint' => 'https://api.anthropic.com/v1/messages', 'models' => 'https://api.anthropic.com/v1/models' ),
@@ -191,11 +197,10 @@ final class Ai {
 			$sites = array();
 			foreach ( Sites::all() as $site ) {
 				$row = (array) ( $in['sites'][ $site['id'] ] ?? array() );
-				$sites[ (int) $site['id'] ] = array(
-					'enabled'  => ! empty( $row['enabled'] ),
-					'customer' => in_array( (string) ( $row['customer'] ?? '' ), $ids, true ) ? (string) $row['customer'] : '',
-					'business' => in_array( (string) ( $row['business'] ?? '' ), $ids, true ) ? (string) $row['business'] : '',
-				);
+				$sites[ (int) $site['id'] ] = array( 'enabled' => ! empty( $row['enabled'] ) );
+				foreach ( array_keys( self::USES ) as $use ) {
+					$sites[ (int) $site['id'] ][ $use ] = in_array( (string) ( $row[ $use ] ?? '' ), $ids, true ) ? (string) $row[ $use ] : '';
+				}
 			}
 			$raw['sites'] = $sites;
 		}
@@ -545,11 +550,13 @@ final class Ai {
 		if ( ! $cfg['enabled'] ) {
 			return new \WP_Error( 'pchq_ai_off', '这家店的 AI 分析没有开启（总后台 → AI 设置）。', array( 'status' => 403 ) );
 		}
-		if ( ! $cfg[ $use ] ) {
+		// 素材人群分析还没有专门人设时，借用全站分析师人设（任务说明 CREATIVE_TASK 另外追加）。
+		$borrow = 'creative' === $use && ! $cfg[ $use ] && $cfg['business'];
+		if ( ! $cfg[ $use ] && ! $borrow ) {
 			return new \WP_Error( 'pchq_ai_persona', '总后台还没有“' . self::USES[ $use ] . '”的人设，请先导入。', array( 'status' => 409 ) );
 		}
 		$s = self::settings();
-		$persona = self::site_persona( $site_id, $use );
+		$persona = self::site_persona( $site_id, $borrow ? 'business' : $use );
 		if ( ! $persona ) {
 			return new \WP_Error( 'pchq_ai_persona', '总后台还没有“' . self::USES[ $use ] . '”的人设，请先导入。', array( 'status' => 409 ) );
 		}
@@ -560,6 +567,9 @@ final class Ai {
 		if ( '' !== $tuning ) {
 			// 店主 2026-11-10：每家店把 AI 调成自己喜欢的样子，只影响这家店。
 			$system .= "\n\n---\n【本店人设调优】（这家店店主自己写的，优先于上面的通用人设）：\n" . $tuning . "\n\n按上面的调优来：店主要求的回答格式、长短、先后顺序、重点、想看的数据，都以调优为准，和通用人设冲突时听调优；店主写明的事实当作确认过的事实，不要再给出和它矛盾的判断或建议（例如店主说支付已测试正常，就不要再把“支付故障”当原因或建议排查支付）。";
+		}
+		if ( 'creative' === $use ) {
+			$system .= "\n\n---\n" . self::CREATIVE_TASK;
 		}
 		$system .= "\n\n---\n如果数据里有【店主确认已解决的问题】，这些问题店主已经确认解决：不要再把它们当成原因，也不要再建议排查或修复它们，改从其他方向分析。";
 		$system .= "\n\n---\n回答语言：" . $s['language'] . "。只根据提供的数据分析，数据里没有的不要编造；数据是浏览行为线索，不代表个人身份或购买意愿的确定事实。";

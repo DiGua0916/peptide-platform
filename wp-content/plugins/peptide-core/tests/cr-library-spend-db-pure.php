@@ -35,6 +35,8 @@ namespace {
 		}
 		private function run( string $sql, array $params = array() ) {
 			$sql = 'START TRANSACTION' === $sql ? 'BEGIN' : $sql;
+			// MySQL 的 SHOW TABLES LIKE → SQLite 的表目录（Schema::installed() 要确认表真的在）。
+			$sql = (string) preg_replace( "/^SHOW TABLES LIKE ('[^']*')$/", "SELECT name FROM sqlite_master WHERE type = 'table' AND name = $1", $sql );
 			try {
 				$st = $this->pdo->prepare( $sql );
 				$st->execute( $params );
@@ -136,6 +138,17 @@ namespace {
 	$GLOBALS['wpdb'] = $wpdb = new Fake_Wpdb( $pdo );
 	update_option( Schema::OPTION, Schema::VERSION );
 	Schema::seed_vocab();
+
+	// 2026-11-13：选项在、表不在（从模板复制出来的新店）时不算装好。
+	$reset_cache = static function (): void { $r = new ReflectionProperty( Schema::class, 'tables_ok' ); $r->setAccessible( true ); $r->setValue( null, null ); };
+	$reset_cache();
+	check( 'installed: option and tables present', Schema::installed() );
+	$pdo->exec( 'ALTER TABLE wp_pc_ad_spend_imports RENAME TO wp_pc_ad_spend_imports_x' );
+	$reset_cache();
+	check( 'installed: option present but a table missing -> false', ! Schema::installed() );
+	$pdo->exec( 'ALTER TABLE wp_pc_ad_spend_imports_x RENAME TO wp_pc_ad_spend_imports' );
+	$reset_cache();
+	check( 'installed: table back -> true', Schema::installed() );
 
 	$attrs = array( 'hook' => 'lab', 'fmt' => 'vid', 'angle' => 'purity' );
 

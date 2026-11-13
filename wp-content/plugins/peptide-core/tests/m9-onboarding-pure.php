@@ -54,6 +54,9 @@ namespace {
 	check( 'changed pixel must be verified again', false === $eval( array( 'pixel_id' => '999999' ) )['verify'] && 'verify' === $now( array( 'pixel_id' => '999999' ) ) );
 	check( 'failed test is not verified', false === $eval( array( 'test' => array( 'pixel' => '1234567890123456', 'ok' => false ) ) )['verify'] );
 	check( 'never tested', false === $eval( array( 'test' => array() ) )['verify'] );
+	check( 'never tested but real events flowing = verified', true === $eval( array( 'test' => array(), 'live' => '1234567890123456' ) )['verify'] );
+	check( 'healthy events of another pixel do not count', false === $eval( array( 'test' => array(), 'live' => '999999' ) )['verify'] );
+	check( 'healthy events but no token = not verified', false === $eval( array( 'test' => array(), 'live' => '1234567890123456', 'has_token' => false ) )['verify'] );
 	check( 'fresh store needs all four', 4 === \PeptideCore\Admin\Onboarding::remaining( \PeptideCore\Admin\Onboarding::evaluate( array( 'must_change' => true ) ) ) );
 	check( 'five steps, four required', 5 === count( \PeptideCore\Admin\Onboarding::STEPS ) && 4 === count( \PeptideCore\Admin\Onboarding::REQUIRED ) && array_keys( \PeptideCore\Admin\Onboarding::labels() ) === \PeptideCore\Admin\Onboarding::STEPS );
 

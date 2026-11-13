@@ -603,14 +603,32 @@ CREATE TABLE {$left} (
 
 	// ---------- 广告花费（先手填） ----------
 
-	/** 记一家店某一天的广告花费（覆盖）。金额为 0 时删掉这一行。 */
+	/** 这一天这家店的花费是谁写的：manual / csv / api；没有这一行为空。 */
+	public static function spend_source( int $site_id, string $day ): string {
+		global $wpdb;
+		if ( ! self::ready() || $site_id < 1 || ! self::valid_day( $day ) ) {
+			return '';
+		}
+		return (string) $wpdb->get_var( $wpdb->prepare( 'SELECT source FROM ' . self::spend_table() . ' WHERE site_id = %d AND day = %s', $site_id, $day ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+	}
+
+	/**
+	 * 记一家店某一天的广告花费（覆盖）。
+	 *
+	 * 2026-11-13 修（审查发现）：
+	 * - 店铺推送的表格花费（csv）不覆盖手填的（manual）——“以手填为准还是以表格为准”店主还没定，先保住手填；
+	 * - 表格推送的 0 记成 0，不删行；只有手填时清空才删行（管理员明确的操作）。
+	 */
 	public static function set_spend( int $site_id, string $day, int $cents, int $user_id = 0, string $source = 'manual' ): bool {
 		global $wpdb;
 		if ( ! self::ready() || $site_id < 1 || ! self::valid_day( $day ) || $cents < 0 ) {
 			return false;
 		}
 		$t = self::spend_table();
-		if ( 0 === $cents ) {
+		if ( 'csv' === $source && 'manual' === self::spend_source( $site_id, $day ) ) {
+			return false;
+		}
+		if ( 0 === $cents && 'manual' === $source ) {
 			return false !== $wpdb->delete( $t, array( 'site_id' => $site_id, 'day' => $day ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		}
 		return false !== $wpdb->replace( // phpcs:ignore WordPress.DB.DirectDatabaseQuery

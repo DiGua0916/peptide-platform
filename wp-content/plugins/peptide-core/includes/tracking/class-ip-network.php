@@ -22,7 +22,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Ip_Network {
 
-	public const EMPTY = array( 'geo_region' => '', 'geo_city' => '', 'geo_lat' => '', 'geo_lon' => '', 'isp' => '', 'asn' => 0, 'ip_type' => '' );
+	public const EMPTY = array( 'geo_country' => '', 'geo_region' => '', 'geo_city' => '', 'geo_lat' => '', 'geo_lon' => '', 'isp' => '', 'asn' => 0, 'ip_type' => '' );
 
 	public const TYPE_VPN         = 'vpn';
 	public const TYPE_HOSTING     = 'hosting';
@@ -165,6 +165,9 @@ final class Ip_Network {
 			$value = $names['en'] ?? ( $node['iso_code'] ?? '' );
 			return is_string( $value ) ? $value : '';
 		};
+		// 国家（2026-11-13）：两位国家代码（US、PR、MX）。
+		$iso                = is_array( $city['country'] ?? null ) ? ( $city['country']['iso_code'] ?? '' ) : '';
+		$out['geo_country'] = is_string( $iso ) && 1 === preg_match( '/\A[A-Za-z]{2}\z/', $iso ) ? strtoupper( $iso ) : '';
 		$sub               = is_array( $city['subdivisions'] ?? null ) ? ( $city['subdivisions'][0] ?? null ) : null;
 		$out['geo_region'] = self::text( $name( $sub ), 64 );
 		$out['geo_city']   = self::text( $name( $city['city'] ?? null ), 80 );

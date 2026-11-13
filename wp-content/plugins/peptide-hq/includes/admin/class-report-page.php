@@ -85,6 +85,8 @@ final class Report_Page {
 		if ( ! Orders::valid_day( $day ) || $day > wp_date( 'Y-m-d' ) ) {
 			set_transient( 'pchq_report_flash_' . get_current_user_id(), array( 'error', '请选择一个不晚于今天的日期。' ), 120 );
 		} else {
+			// 表单里预填的是现有金额（可能来自店铺推送）；只保存改过的，没改的不动，免得把推送的数字都变成“手填”。
+			$have = Orders::spend_by_site( $day, $day );
 			foreach ( (array) ( $_POST['spend'] ?? array() ) as $site_id => $value ) {
 				$site_id = absint( $site_id );
 				$value   = trim( sanitize_text_field( wp_unslash( (string) $value ) ) );
@@ -94,6 +96,9 @@ final class Report_Page {
 				$cents = '' === $value ? 0 : Orders::parse_money( $value );
 				if ( $cents < 0 ) {
 					$bad[] = (string) $sites[ $site_id ]['name'];
+					continue;
+				}
+				if ( $cents === (int) ( $have[ $site_id ] ?? 0 ) ) {
 					continue;
 				}
 				if ( Orders::set_spend( $site_id, $day, $cents, get_current_user_id() ) ) {
