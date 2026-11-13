@@ -28,19 +28,19 @@ final class Audience {
 		'model'      => '机型',
 		'browser'    => '浏览器',
 		'region'     => '省 / 州',
+		'city'       => '城市',
+		'timezone'   => '时区',
 		'tier'       => '机型档次',
 		'os_version' => '系统版本',
 		'device'     => '设备类型',
 		'screen'     => '屏幕尺寸',
 		'country'    => '国家',
-		'city'       => '城市',
 		'isp'        => 'ISP',
 		'ip_type'    => 'IP 类型',
 		'language'   => '语言',
-		'timezone'   => '时区',
 		'placement'  => '版位',
 	);
-	public const FIRST = 4;
+	public const FIRST = 6; // 2026-11-13：城市、时区挪到上面，上面 6 个、更多维度 9 个，三列时都正好排满
 
 	/** 参与“同类型 / 不同项”比较的维度（城市、ISP、时区、屏幕太散，只看分布不下结论）。 */
 	public const COMPARE = array( 'os', 'tier', 'browser', 'device', 'country', 'region', 'ip_type', 'language', 'placement', 'model' );
@@ -83,16 +83,16 @@ final class Audience {
 			'model'      => $model,
 			'browser'    => self::browser( (string) ( $v['ua'] ?? '' ), (string) ( $v['in_app'] ?? '' ) ),
 			'region'     => (string) ( $v['geo_region'] ?? '' ),
+			'city'       => (string) ( $v['geo_city'] ?? '' ),
+			'timezone'   => (string) ( $v['timezone'] ?? '' ),
 			'tier'       => self::tier( $os, $model, (string) ( $v['device'] ?? '' ) ),
 			'os_version' => '' !== $os && '' !== $major ? $os . ' ' . $major : '',
 			'device'     => (string) ( $v['device'] ?? '' ),
 			'screen'     => self::screen( (string) ( $v['screen'] ?? '' ) ),
 			'country'    => 1 === preg_match( '/\A[A-Z]{2}\z/', $cc ) ? $cc : '',
-			'city'       => (string) ( $v['geo_city'] ?? '' ),
 			'isp'        => mb_substr( (string) ( $v['isp'] ?? '' ), 0, 60 ),
 			'ip_type'    => (string) ( $v['ip_type'] ?? '' ),
 			'language'   => 1 === preg_match( '/\A[a-z]{2,3}\z/', $lang ) ? $lang : '',
-			'timezone'   => (string) ( $v['timezone'] ?? '' ),
 			'placement'  => (string) ( $v['placement'] ?? '' ),
 		);
 		return array_map( static fn( $x ) => '' !== trim( $x ) ? trim( $x ) : 'unknown', $out );
