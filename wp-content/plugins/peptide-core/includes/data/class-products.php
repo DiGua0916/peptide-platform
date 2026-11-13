@@ -41,10 +41,11 @@ defined( 'ABSPATH' ) || exit;
 final class Products {
 
 	/** 原26项保序，末尾追加两个现有用户计数的比率；顺序也是CSV/列配置契约。 */
-	public const METRICS = array( 'views', 'view_users', 'carts', 'cart_users', 'cart_units', 'cart_rate', 'paid_orders', 'paid_users', 'paid_units', 'conversion', 'sales', 'net_sales', 'exposed_users', 'impressions', 'exposure_viewed_users', 'exposure_view_user_rate', 'exposure_views', 'exposure_view_rate', 'exposure_cart_users', 'exposure_cart_user_rate', 'exposure_carts', 'exposure_cart_rate', 'exposure_paid_users', 'exposure_paid_user_rate', 'exposure_paid_units', 'exposure_paid_rate', 'cart_user_rate', 'paid_user_rate', 'favorite_count', 'share_count', 'share_users', 'intent_count', 'intent_users' );
+	public const METRICS = array( 'views', 'view_users', 'carts', 'cart_users', 'cart_units', 'cart_rate', 'paid_orders', 'paid_users', 'paid_units', 'conversion', 'sales', 'net_sales', 'exposed_users', 'impressions', 'exposure_viewed_users', 'exposure_view_user_rate', 'exposure_views', 'exposure_view_rate', 'exposure_cart_users', 'exposure_cart_user_rate', 'exposure_carts', 'exposure_cart_rate', 'exposure_paid_users', 'exposure_paid_user_rate', 'exposure_paid_units', 'exposure_paid_rate', 'cart_user_rate', 'paid_user_rate', 'favorite_count', 'share_count', 'share_users', 'intent_count', 'intent_users', 'repeat_view_users', 'returning_view_users' );
 
 	/** 默认显示的列（Shopname 的默认列里我们有数据的那些）。 */
 	public const DEFAULTS = array( 'views', 'carts', 'cart_rate', 'cart_units', 'paid_units', 'conversion', 'sales', 'exposed_users', 'impressions', 'exposure_view_user_rate' );
+	// 2026-11-13：原“访客数据 → 商品浏览统计”的重复浏览、回访浏览并进来，追加在末尾（不进默认列，列设置里勾选）。
 
 	/** 所有比率的变化用百分点差。 */
 	public const RATES = array( 'cart_rate', 'conversion', 'exposure_view_user_rate', 'exposure_view_rate', 'exposure_cart_user_rate', 'exposure_cart_rate', 'exposure_paid_user_rate', 'exposure_paid_rate', 'cart_user_rate', 'paid_user_rate' );
@@ -311,6 +312,15 @@ final class Products {
 				$p[ $pid ][ $viewed ? 'view_users' : 'cart_users' ] = (int) $row['users'];
 			}
 
+			// 重复浏览（同一人看了 2 次以上）、回访浏览（同一人在 2 次以上的访问里看过）的人数（原“商品浏览统计”，2026-11-13 并进来）。
+			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT b.product_id, SUM(b.n >= 2) AS repeat_users, SUM(b.visits >= 2) AS returning_users FROM ( SELECT product_id, visitor_id, COUNT(*) AS n, COUNT(DISTINCT visit_id) AS visits FROM {$events} WHERE type = 'product_view' AND occurred_ms >= %d AND occurred_ms < %d AND product_id > 0 GROUP BY product_id, visitor_id ) b GROUP BY b.product_id", $fm, $tm ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			foreach ( (array) $rows as $row ) {
+				$pid = (int) $row['product_id'];
+				$p[ $pid ] = $p[ $pid ] ?? array();
+				$p[ $pid ]['repeat_view_users']    = (int) $row['repeat_users'];
+				$p[ $pid ]['returning_view_users'] = (int) $row['returning_users'];
+			}
+
 			// 加购按商品 + 款式：次数、不同访客数、件数（data.quantity 之和）。
 			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT product_id, variation_id, COUNT(*) AS n, COUNT(DISTINCT visitor_id) AS users, COALESCE( SUM( CAST( JSON_UNQUOTE( JSON_EXTRACT( data, \'$.quantity\' ) ) AS DECIMAL( 12, 2 ) ) ), 0 ) AS units FROM ' . $events . " WHERE type = 'add_to_cart' AND occurred_ms >= %d AND occurred_ms < %d AND product_id > 0 GROUP BY product_id, variation_id", $fm, $tm ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 			foreach ( (array) $rows as $row ) {
@@ -330,12 +340,16 @@ final class Products {
 		}
 
 		if ( $filter ) {
-			$counts = array(); $carts = array();
+			$counts = array(); $carts = array(); $seen = array();
 			foreach ( $filter->events( $from, $to, array( 'product_view', 'add_to_cart' ) ) as $event ) {
 				$pid = (int) $event['product_id']; if ( $pid <= 0 ) { continue; }
 				$type = $event['type']; $visitor = (int) $event['visitor_id'];
 				$counts[ $pid ][ $type ]['n'] = ( $counts[ $pid ][ $type ]['n'] ?? 0 ) + 1;
 				$counts[ $pid ][ $type ]['visitors'][ $visitor ] = true;
+				if ( 'product_view' === $type ) {
+					$seen[ $pid ][ $visitor ]['n'] = ( $seen[ $pid ][ $visitor ]['n'] ?? 0 ) + 1;
+					$seen[ $pid ][ $visitor ]['visits'][ (int) ( $event['visit_id'] ?? 0 ) ] = true;
+				}
 				if ( 'add_to_cart' === $type ) {
 					$vid = (int) $event['variation_id']; $data = json_decode( (string) $event['data'], true ); $quantity = $data['quantity'] ?? 0;
 					$carts[ $pid ][ $vid ]['n'] = ( $carts[ $pid ][ $vid ]['n'] ?? 0 ) + 1;
@@ -344,6 +358,7 @@ final class Products {
 				}
 			}
 			foreach ( $counts as $pid => $types ) { foreach ( $types as $type => $raw ) { $viewed = 'product_view' === $type; $p[ $pid ][ $viewed ? 'views' : 'carts' ] = $raw['n']; $p[ $pid ][ $viewed ? 'view_users' : 'cart_users' ] = count( $raw['visitors'] ); } }
+			foreach ( $seen as $pid => $people ) { $p[ $pid ]['repeat_view_users'] = count( array_filter( $people, static fn( $x ) => $x['n'] >= 2 ) ); $p[ $pid ]['returning_view_users'] = count( array_filter( $people, static fn( $x ) => count( $x['visits'] ) >= 2 ) ); }
 			foreach ( $carts as $pid => $variants ) { foreach ( $variants as $vid => $raw ) { $units = (int) round( $raw['units'] ); $p[ $pid ]['cart_units'] = ( $p[ $pid ]['cart_units'] ?? 0 ) + $units; if ( $vid > 0 ) { $v[ $pid ][ $vid ] = array( 'carts' => $raw['n'], 'cart_users' => count( $raw['visitors'] ), 'cart_units' => $units ); } } }
 		}
 
@@ -445,7 +460,10 @@ final class Products {
 			// Existing cart visitors and native buyers have distinct identity/time-window definitions.
 			'cart_user_rate' => $view_users ? round( (int) ( $raw['cart_users'] ?? 0 ) / $view_users * 100, 2 ) : null,
 			'paid_user_rate' => $view_users ? round( count( $raw['buyers'] ?? array() ) / $view_users * 100, 2 ) : null,
-		) + Product_Actions::empty_metrics();
+		) + Product_Actions::empty_metrics() + array(
+			'repeat_view_users'    => $variation ? null : (int) ( $raw['repeat_view_users'] ?? 0 ),
+			'returning_view_users' => $variation ? null : (int) ( $raw['returning_view_users'] ?? 0 ),
+		);
 	}
 
 	/**

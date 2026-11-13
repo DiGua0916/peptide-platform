@@ -155,8 +155,8 @@
   if(restored)bindDialog(restored,restored.closest('dialog'));
   restoreCatalog();
   const layers=global.history.state?.__vcCommerceLayers?.layers;
-  if(global.location.hash==='#vc-products'&&!config.productId&&!layers?.length)document.querySelector('[data-vc-catalog]')?.scrollIntoView({block:'start',behavior:'instant'});
-  if(config.productId){
+  if(global.location.hash==='#vc-products'&&!idValue(config.productId)&&!layers?.length)document.querySelector('[data-vc-catalog]')?.scrollIntoView({block:'start',behavior:'instant'});
+  if(idValue(config.productId)){
    // A refreshed history layer may intentionally be a different product or
    // only the bag. The old deep-link query does not own that newer selection.
    if(Array.isArray(layers)&&layers.length&&!layers.some(layer=>layer.kind==='product'&&Number(layer.productId)===idValue(config.productId)))return;
