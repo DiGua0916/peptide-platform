@@ -321,6 +321,23 @@ check( 'verdict: custom rules', 'scale' === Board::verdict( $vr( array() ), arra
 $sorted = Board::sort_rows( array( array( 'label' => 'a', 'roas' => 1.0, 'visitors' => 5 ), array( 'label' => 'b', 'roas' => null, 'visitors' => 50 ), array( 'label' => 'c', 'roas' => 4.0, 'visitors' => 9 ), array( 'label' => 'd', 'roas' => 1.0, 'visitors' => 20 ) ), 'roas' );
 check( 'sort by roas: high first, null last, ties by visitors', array( 'c', 'd', 'a', 'b' ) === array_column( $sorted, 'label' ) );
 check( 'sort by orders', array( 'y', 'x' ) === array_column( Board::sort_rows( array( array( 'label' => 'x', 'orders' => 1 ), array( 'label' => 'y', 'orders' => 3 ) ), 'orders' ), 'label' ) );
+// ---------- 访客名单：按下单金额排、显示姓名（2026-11-13） ----------
+$amt = Board::visitor_amounts(
+	array(
+		array( 'visitor_id' => 7, 'order_id' => 501, 'stage' => 5 ),
+		array( 'visitor_id' => 7, 'order_id' => 501, 'stage' => 5 ), // 同一订单两次访问只算一次
+		array( 'visitor_id' => 7, 'order_id' => 502, 'stage' => 5 ),
+		array( 'visitor_id' => 8, 'order_id' => 503, 'stage' => 5 ),
+		array( 'visitor_id' => 9, 'order_id' => 504, 'stage' => 4 ), // 没付款不算
+		array( 'visitor_id' => 10, 'order_id' => 0, 'stage' => 1 ),
+	),
+	array( 501 => 4900, 502 => 7900, 503 => 12900, 504 => 5900 )
+);
+check( 'amounts: per visitor, each order once, unpaid ignored', array( 7 => 12800, 8 => 12900 ) === $amt );
+$ranked = Board::rank_visitors( array( 10, 7, 8, 9, 7 ), $amt, array( 8 => 'Jane Doe' ) );
+check( 'rank: highest amount first, then by id, deduped', array( 8, 7, 9, 10 ) === array_column( $ranked, 'id' ) );
+check( 'rank: name kept when known', 'Jane Doe' === $ranked[0]['name'] && '' === $ranked[1]['name'] && 12900 === $ranked[0]['cents'] );
+check( 'rank: limit applies after sorting', array( 8 ) === array_column( Board::rank_visitors( array( 10, 9, 8 ), $amt, array(), 1 ), 'id' ) );
 check( 'filters: defaults', 'creative' === $fdef['dim'] && 'first' === $fdef['mode'] && '2026-11-10' === $fdef['to'] && '2026-11-04' === $fdef['from'] && '' === $fdef['ver'] );
 $fbad = Board_Page::filters( array( 'dim' => 'x', 'mode' => array(), 'from' => '2026-11-09', 'to' => '2026-11-01', 'ver' => '../v1' ), $tz, $now2 );
 check( 'filters: bad input falls back', 'creative' === $fbad['dim'] && 'first' === $fbad['mode'] && '2026-11-04' === $fbad['from'] && '' === $fbad['ver'] );

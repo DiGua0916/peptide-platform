@@ -192,7 +192,7 @@ final class Board_Page {
 		}
 		self::render_alerts( $agg, $data, $settings );
 		self::render_filters( $f, $versions, $ver_note );
-		self::render_cards( $agg, $f, $settings );
+		self::render_cards( $agg, $f, $settings, $data );
 		self::render_exports();
 		self::render_settings( $settings, $versions );
 		self::render_report_status();
@@ -276,6 +276,9 @@ final class Board_Page {
 .pc-cr-board .pc-cr-all span{display:block;font-size:11px;color:#646970}
 .pc-cr-board .pc-cr-all b{font-variant-numeric:tabular-nums}
 .pc-cr-board ul.pc-cr-visitors{columns:4;font-size:12px;margin:4px 0 0}
+.pc-cr-board ul.pc-cr-visitors li{break-inside:avoid;margin:0 0 4px}
+.pc-cr-board ul.pc-cr-visitors li.is-buyer a{font-weight:600}
+.pc-cr-board ul.pc-cr-visitors li b{color:#007017;font-weight:600;font-variant-numeric:tabular-nums}
 /* 卡片展开提示（2026-11-13） */
 .pc-cr-board .pc-cr-toggle{font-size:12px;color:#2271b1;white-space:nowrap;margin-left:4px}
 .pc-cr-board .pc-cr-toggle b{font-weight:400}
@@ -493,7 +496,44 @@ final class Board_Page {
 
 	// ---------- 新样式（2026-11-13）：总数 + 每个素材一张卡片（关键数字、漏斗、建议），点开看全部指标和访客 ----------
 
-	private static function render_cards( array $agg, array $f, array $settings ): void {
+	/** 卡片里访客名单用：每位访客的下单金额和客户姓名（订单上的账单姓名，没有就用账号显示名）。 */
+	private static array $people = array( 'amounts' => array(), 'names' => array() );
+
+	private static function load_people( array $data ): void {
+		$visits  = (array) ( $data['visits'] ?? array() );
+		$amounts = Board::visitor_amounts( $visits, (array) ( $data['orders'] ?? array() ) );
+		$names   = array();
+		foreach ( $visits as $v ) {
+			$vid = (int) ( $v['visitor_id'] ?? 0 );
+			$oid = (int) ( $v['order_id'] ?? 0 );
+			if ( $vid <= 0 || $oid <= 0 || isset( $names[ $vid ] ) || ! function_exists( 'wc_get_order' ) ) {
+				continue;
+			}
+			$order = wc_get_order( $oid );
+			if ( $order instanceof \WC_Order ) {
+				$name = trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() );
+				if ( '' !== $name ) {
+					$names[ $vid ] = $name;
+				}
+			}
+		}
+		// 登录过但没下单的访客：用账号显示名。
+		$rest = array_diff( array_unique( array_map( static fn( $v ) => (int) ( $v['visitor_id'] ?? 0 ), $visits ) ), array_keys( $names ), array( 0 ) );
+		if ( $rest && class_exists( \PeptideCore\Tracking\Schema::class ) ) {
+			global $wpdb;
+			$in = implode( ',', array_map( 'intval', $rest ) );
+			foreach ( (array) $wpdb->get_results( 'SELECT id, user_id FROM ' . \PeptideCore\Tracking\Schema::table( 'visitors' ) . " WHERE user_id > 0 AND id IN ({$in})", ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+				$user = get_userdata( (int) $r['user_id'] );
+				if ( $user && '' !== trim( (string) $user->display_name ) ) {
+					$names[ (int) $r['id'] ] = (string) $user->display_name;
+				}
+			}
+		}
+		self::$people = array( 'amounts' => $amounts, 'names' => $names );
+	}
+
+	private static function render_cards( array $agg, array $f, array $settings, array $data = array() ): void {
+		self::load_people( $data );
 		$total = $agg['total'];
 		$rules = self::rules( $settings );
 		$money = static fn( $c ): string => self::format( $c, 'money' );
@@ -782,12 +822,17 @@ final class Board_Page {
 		echo '</div>';
 		$ids = (array) ( $row['visitor_ids'] ?? array() );
 		if ( $ids ) {
-			echo '<p class="pc-cr-muted">访客（点进去看机型、IP、浏览路径）：</p><ul class="pc-cr-visitors">';
-			foreach ( $ids as $id ) {
-				echo '<li><a href="' . esc_url( admin_url( 'admin.php?page=pc-visitors&visitor=' . (int) $id ) ) . '">访客 #' . esc_html( (string) (int) $id ) . '</a></li>';
+			// 2026-11-13：按下单金额从高到低；有姓名的显示客户姓名。
+			$people = Board::rank_visitors( $ids, self::$people['amounts'], self::$people['names'] );
+			$buyers = count( array_filter( $people, static fn( $p ) => $p['cents'] > 0 ) );
+			$all    = count( array_unique( array_map( 'intval', $ids ) ) );
+			echo '<p class="pc-cr-muted">' . esc_html( '访客 ' . $all . ' 位，其中 ' . $buyers . ' 位下单，按下单金额从高到低（点进去看机型、IP、浏览路径）：' ) . '</p><ul class="pc-cr-visitors">';
+			foreach ( $people as $p ) {
+				$label = '' !== $p['name'] ? $p['name'] : '访客 #' . $p['id'];
+				echo '<li' . ( $p['cents'] > 0 ? ' class="is-buyer"' : '' ) . '><a href="' . esc_url( admin_url( 'admin.php?page=pc-visitors&visitor=' . (int) $p['id'] ) ) . '">' . esc_html( $label ) . '</a>' . ( $p['cents'] > 0 ? ' <b>' . esc_html( self::format( $p['cents'], 'money' ) ) . '</b>' : '' ) . '</li>';
 			}
 			echo '</ul>';
-			if ( count( $ids ) >= Board::DRILL_LIMIT ) {
+			if ( $all > Board::DRILL_LIMIT ) {
 				echo '<p class="pc-cr-muted">只列出前 ' . esc_html( (string) Board::DRILL_LIMIT ) . ' 位。</p>';
 			}
 		}

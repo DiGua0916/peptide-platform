@@ -495,10 +495,48 @@ final class Board {
 				$row['sales_cents'] += $cents;
 			}
 		}
-		if ( count( $row['visitor_ids'] ) < self::DRILL_LIMIT ) {
-			$row['visitor_ids'][] = $vid;
-		}
+		// 全部记下（2026-11-13）：名单按下单金额排序后才截前 DRILL_LIMIT 位，先截会把后面的买家截掉。
+		$row['visitor_ids'][] = $vid;
 		return $row;
+	}
+
+	/**
+	 * 每位访客在这段时间的下单金额（美分，纯函数）。同一张订单只算一次。
+	 *
+	 * @param array<int,array<string,mixed>> $visits load() 的 visits
+	 * @param array<int,int>                 $orders 订单号 => 金额（已扣退款）
+	 * @return array<int,int> 访客 ID => 金额
+	 */
+	public static function visitor_amounts( array $visits, array $orders ): array {
+		$out  = array();
+		$seen = array();
+		foreach ( $visits as $v ) {
+			$oid = (int) ( $v['order_id'] ?? 0 );
+			if ( $oid <= 0 || (int) ( $v['stage'] ?? 0 ) < 5 || ! isset( $orders[ $oid ] ) || isset( $seen[ $oid ] ) ) {
+				continue;
+			}
+			$seen[ $oid ] = true;
+			$vid          = (int) $v['visitor_id'];
+			$out[ $vid ]  = ( $out[ $vid ] ?? 0 ) + max( 0, (int) $orders[ $oid ] );
+		}
+		return $out;
+	}
+
+	/**
+	 * 访客名单排序（纯函数）：下单金额从高到低，没下单的排后面按编号；最多 $limit 位。
+	 *
+	 * @param int[]              $ids
+	 * @param array<int,int>     $amounts visitor_amounts()
+	 * @param array<int,string>  $names   访客 ID => 客户姓名（有订单或账号时）
+	 * @return list<array{id:int,name:string,cents:int}>
+	 */
+	public static function rank_visitors( array $ids, array $amounts, array $names, int $limit = self::DRILL_LIMIT ): array {
+		$list = array();
+		foreach ( array_unique( array_map( 'intval', $ids ) ) as $id ) {
+			$list[] = array( 'id' => $id, 'name' => (string) ( $names[ $id ] ?? '' ), 'cents' => (int) ( $amounts[ $id ] ?? 0 ) );
+		}
+		usort( $list, static fn( $a, $b ) => array( $b['cents'], $a['id'] ) <=> array( $a['cents'], $b['id'] ) );
+		return array_slice( $list, 0, max( 1, $limit ) );
 	}
 
 	/** 计数 → 指标。 */
