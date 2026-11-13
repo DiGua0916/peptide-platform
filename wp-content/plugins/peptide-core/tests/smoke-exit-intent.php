@@ -173,6 +173,20 @@ remove_filter( 'wp_doing_ajax', '__return_true' );
 $t = Exit_Intent::totals( 30 );
 $ok( 'totals include today’s claims and order amount', $t['claim']['count'] >= 1 && $t['order']['amount'] >= 18 );
 
+// 6b. 版本号在、表不在（整店复制出来的新店就是这样：版本号跟着设置过来了，表没有）：不报错，下一次计数时自动补建。
+// 表里原有的数据先读出来（这张表每天每个事件一行，很小），检查完原样写回去。
+$show_before = $count( 'show' );
+$kept        = (array) $wpdb->get_results( "SELECT * FROM {$table}", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+$wpdb->query( "DROP TABLE {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+$ok( 'stats table missing but the version option set: reads as not installed, totals are zero', ! Exit_Intent::installed() && 0 === Exit_Intent::totals( 30 )['show']['count'] );
+Exit_Intent::record( 'show' );
+$ok( 'the next event recreates the table and is counted', Exit_Intent::installed() && 1 === $count( 'show' ) );
+$wpdb->query( "DELETE FROM {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+foreach ( $kept as $row ) {
+	$wpdb->insert( $table, $row );
+}
+$ok( 'the earlier stats are back', count( $kept ) === (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table}" ) && $show_before === $count( 'show' ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
 // 7. 前台加载条件。
 $loaded = static function (): bool {
 	wp_dequeue_script( 'peptide-core-exit-intent' );

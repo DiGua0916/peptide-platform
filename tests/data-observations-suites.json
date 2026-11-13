@@ -960,6 +960,60 @@
     {"name": "cr-library-spend-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-library-spend-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR", "extensions": ["mbstring"]},
     {"name": "cr-library-spend-db-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-library-spend-db-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR", "extensions": ["pdo_sqlite"]},
     {"name": "cr-hq-compare-pure", "language": "php", "path": "wp-content/plugins/peptide-hq/tests/cr-hq-compare-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR", "extensions": ["mbstring"]},
-    {"name": "cr-board-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-board-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"}
+    {"name": "cr-board-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-board-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"},
+    {
+      "name": "m4-price-engine-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m4-price-engine-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M4"
+    },
+    {
+      "name": "m4-engine-mode-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m4-engine-mode-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M4"
+    },
+    {
+      "name": "m4-marketing-quiet-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m4-marketing-quiet-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M4"
+    },
+    {
+      "name": "m4-campaigns-readonly-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m4-campaigns-readonly-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M4"
+    },
+    {
+      "name": "m4-marketing-quiet",
+      "language": "node",
+      "path": "wp-content/plugins/peptide-core/tests/m4-marketing-quiet.cjs",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M4"
+    },
+    {
+      "name": "m4-campaign-text-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m4-campaign-text-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M4"
+    }
   ]
 }

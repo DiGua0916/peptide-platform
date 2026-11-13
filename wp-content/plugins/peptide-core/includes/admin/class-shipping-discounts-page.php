@@ -29,7 +29,11 @@ final class Shipping_Discounts_Page {
 	// ---------- 列表 ----------
 
 	public static function render(): void {
-		if ( ! current_user_can( Marketing::CAP ) ) {
+		if ( ! Marketing::can_view() ) {
+			return;
+		}
+		// HQ-07：投手只读——新建 / 编辑地址 403，列表显示“当前在跑的活动”。
+		if ( Marketing::read_only_gate() ) {
 			return;
 		}
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended
@@ -59,7 +63,7 @@ final class Shipping_Discounts_Page {
 		foreach ( $shown as $r ) {
 			$d = $r['d'];
 			echo '<tr>' . Marketing::check_cell( $d['id'] ) . '<td class="pc-mk-col-act">' . Marketing::row_actions( self::url( array( 'edit' => $d['id'] ) ), wp_nonce_url( admin_url( 'admin-post.php?action=pc_shipdisc_toggle&id=' . $d['id'] . '&on=' . ( $d['enabled'] ? 0 : 1 ) ), 'pc_shipdisc_toggle' ), $d['enabled'] ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-			echo '<td><a class="pc-mk-name" href="' . esc_url( self::url( array( 'edit' => $d['id'] ) ) ) . '">' . esc_html( $d['name'] ) . '</a></td>';
+			echo '<td><a class="pc-mk-name" href="' . esc_url( self::url( array( 'edit' => $d['id'] ) ) ) . '">' . esc_html( $d['name'] ) . '</a>' . Marketing::locked_badge( 'ship_discount', (int) $d['id'] ) . '</td>';
 			echo '<td>' . esc_html( 'stages' === $d['mode'] ? __( 'Time-limited stages', 'peptide-core' ) : __( 'Fixed discount', 'peptide-core' ) ) . '</td>';
 			echo '<td class="pc-mk-time-cell">' . esc_html( Marketing::date_text( (int) $d['start'] ) . ' ~ ' . ( $d['end'] ? Marketing::date_text( (int) $d['end'] ) : __( 'Long-term', 'peptide-core' ) ) ) . '</td>';
 			echo '<td>' . implode( '<br>', array_map( 'esc_html', Discounts::rule_lines( $d ) ) ) . '</td><td>' . esc_html( self::customers_text( $d ) ) . '</td><td>' . Marketing::badge( $r['status'] ) . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -89,6 +93,7 @@ final class Shipping_Discounts_Page {
 	// ---------- 编辑 ----------
 
 	private static function render_edit( int $id ): void {
+		Marketing::guard_unlocked( 'ship_discount', $id ); // 系列统一下发的运费折扣只读。
 		$d = $id ? Discounts::get( $id ) : null;
 		if ( $id && ! $d ) {
 			echo '<div class="wrap"><p>' . esc_html__( 'This shipping discount does not exist.', 'peptide-core' ) . '</p></div>';
@@ -201,6 +206,7 @@ final class Shipping_Discounts_Page {
 		Marketing::guard( 'pc_shipdisc_save' );
 		$in                 = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- 在 Discounts::normalize() 里逐项清理。
 		[ $raw, $errors ]   = self::from_form( $in );
+		Marketing::guard_unlocked( 'ship_discount', (int) $raw['id'] );
 		$old                = $raw['id'] ? Discounts::get( $raw['id'] ) : null;
 		$raw['enabled']     = $old ? $old['enabled'] : true;
 		[ $d, $more ]       = Discounts::normalize( $raw );
@@ -220,6 +226,7 @@ final class Shipping_Discounts_Page {
 	public static function toggle(): void {
 		Marketing::guard( 'pc_shipdisc_toggle' );
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended
+		Marketing::guard_unlocked( 'ship_discount', absint( $_GET['id'] ?? 0 ) );
 		Discounts::set_enabled( absint( $_GET['id'] ?? 0 ), ! empty( $_GET['on'] ) );
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 		wp_safe_redirect( self::url( array( 'pc_done' => 1 ) ) );
@@ -231,8 +238,8 @@ final class Shipping_Discounts_Page {
 		$op   = sanitize_key( wp_unslash( $_POST['bulk'] ?? '' ) );
 		$done = 0;
 		foreach ( Marketing::posted_ids() as $id ) {
-			if ( ! Discounts::get( $id ) ) {
-				continue;
+			if ( ! Discounts::get( $id ) || Marketing::locked( 'ship_discount', $id ) ) {
+				continue; // 不存在的、系列统一下发的跳过。
 			}
 			if ( 'delete' === $op ) {
 				Discounts::delete( $id );

@@ -14,6 +14,9 @@ final class Product_Offers {
 
 	public static function register_hooks(): void {
 		add_action( 'init', array( self::class, 'register' ) );
+		// HQ-07：赠品 / 捆绑只能由能管理营销活动的人删除（后台页面的删除入口只查了 edit_shop_coupons）。
+		add_filter( 'pre_delete_post', array( self::class, 'guard_delete' ), 10, 2 );
+		add_filter( 'pre_trash_post', array( self::class, 'guard_delete' ), 10, 2 );
 		add_shortcode( 'pc_product_offer', array( self::class, 'shortcode' ) );
 		add_action( 'woocommerce_single_product_summary', array( self::class, 'product_forms' ), 36 );
 		add_action( 'admin_post_pc_offer_add', array( self::class, 'add_action' ) );
@@ -32,6 +35,14 @@ final class Product_Offers {
 	}
 	public static function register(): void {
 		register_post_type( self::CPT, array( 'label' => __( 'Product offers', 'peptide-core' ), 'public' => false, 'show_ui' => false, 'show_in_rest' => false, 'supports' => array( 'title' ), 'capability_type' => 'shop_coupon', 'map_meta_cap' => true ) );
+	}
+	/**
+	 * pre_delete_post / pre_trash_post：登录的后台用户里，不能管理营销活动的人（投手、活动被系列接管后的店员）删不掉赠品 / 捆绑。
+	 * 没有登录用户的调用（系列下发、命令行、定时任务）不受影响。返回 false = 不删。
+	 */
+	public static function guard_delete( $check, $post = null ) {
+		if ( null !== $check || ! $post instanceof \WP_Post || self::CPT !== $post->post_type ) { return $check; }
+		return ( get_current_user_id() && ! Admin\Marketing::can_manage() ) ? false : $check;
 	}
 	private static function error( string $code, string $message ): \WP_Error { return new \WP_Error( $code, $message ); }
 	public static function policy(): string { return __( 'Gifts and bundles do not combine with coupons or other promotions. Only one gift offer applies per cart. Adding a bundle replaces any automatic gift.', 'peptide-core' ); }
@@ -53,7 +64,8 @@ final class Product_Offers {
 		return $out;
 	}
 	public static function store( int $id, array $raw ) {
-		if ( ! current_user_can( self::CAP ) ) { return self::error( 'pc_offer_forbidden', __( 'You cannot manage product offers.', 'peptide-core' ) ); }
+		// HQ-07：投手不能新建或修改赠品 / 捆绑。
+		if ( ! current_user_can( self::CAP ) || ! Admin\Marketing::can_manage() ) { return self::error( 'pc_offer_forbidden', __( 'You cannot manage product offers.', 'peptide-core' ) ); }
 		if ( $id && ! self::get( $id ) ) { return self::error( 'pc_offer_missing', __( 'Product offer not found.', 'peptide-core' ) ); }
 		$c = self::defaults(); $title = mb_substr( sanitize_text_field( $raw['title'] ?? '' ), 0, 160 );
 		$c['kind'] = in_array( $raw['kind'] ?? '', array( 'gift', 'bundle' ), true ) ? $raw['kind'] : 'gift';
@@ -206,7 +218,51 @@ final class Product_Offers {
 				foreach ( array_keys( $fractions ) as $key ) { if ( $remainder <= 0 ) { break; } ++$allocated[ $key ]; --$remainder; }
 				foreach ( $items as $key => $item ) { $cart->cart_contents[ $key ]['data']->set_price( $allocated[ $key ] / $scale / $item['quantity'] ); }
 			}
+			// 价格引擎“开”档（M4）：购物车整理完之后，赠品 / 捆绑行的单价改用引擎算的；引擎出错时保持上面的结果。
+			if ( Pricing\Runtime::on() ) { Pricing\Runtime::offer_prices( $cart ); }
 		} finally { self::$busy = false; }
+	}
+	/**
+	 * 价格引擎读取用（M4，只读）：这份购物车里和赠品 / 捆绑有关的事实——每行的活动标记是否有效、原价、
+	 * 商品是否可购买；每个活动是否进行中、版本、赠品的库存；每个捆绑组的库存。不改购物车，也不决定价格。
+	 */
+	public static function pricing_facts( \WC_Cart $cart ): array {
+		$line_facts = static function ( \WC_Product $p ): array {
+			$parent = $p->get_parent_id();
+			return array( 'product_id' => $p->get_id(), 'parent_id' => $parent, 'cats' => wc_get_product_cat_ids( $parent ? $parent : $p->get_id() ), 'on_sale' => $p->is_on_sale() );
+		};
+		$out = array( 'lines' => array(), 'offers' => array(), 'groups' => array() );
+		$groups = array();
+		foreach ( $cart->get_cart() as $key => $item ) {
+			$pid   = (int) ( $item['variation_id'] ?: $item['product_id'] );
+			$has   = isset( $item[ self::CART ] );
+			$valid = $has && self::valid_meta( $item );
+			$fresh = $has ? wc_get_product( $pid ) : null;
+			$sell  = self::product( $pid );
+			$out['lines'][ $key ] = array(
+				'has_meta' => $has,
+				'offer'    => $valid ? array( 'offer' => (int) $item[ self::CART ]['offer'], 'kind' => (string) $item[ self::CART ]['kind'], 'group' => (string) $item[ self::CART ]['group'], 'slot' => (string) $item[ self::CART ]['slot'], 'version' => (string) $item[ self::CART ]['version'] ) : null,
+				// 商品自己的现价（不是购物车行上可能被改过的价）：赠品门槛按它算；有活动标记的行每次从它重新算起。
+				'native'   => $fresh ? $fresh->get_price() : ( $sell ? $sell->get_price() : null ),
+				'sellable' => (bool) $sell,
+			);
+			if ( $valid ) { $groups[ (string) $item[ self::CART ]['group'] ][] = array( 'product' => $pid, 'qty' => $item['quantity'] ); }
+		}
+		foreach ( self::all() as $id => $offer ) {
+			$offer['active']  = self::active( $offer );
+			$offer['version'] = self::version( array_diff_key( $offer, array( 'active' => 1 ) ) );
+			if ( 'gift' === $offer['kind'] && $offer['active'] ) {
+				$p = self::product( (int) $offer['gift_product'] );
+				$offer['gift_product_ok'] = (bool) $p;
+				$offer['gift_line']       = $p ? $line_facts( $p ) : null;
+				$offer['gift_stock_ok']   = self::stock_ok( array( array( 'product' => $offer['gift_product'], 'qty' => $offer['gift_qty'] ) ), $cart, 'gift-' . $offer['id'] );
+			}
+			$out['offers'][ (int) $id ] = $offer;
+		}
+		foreach ( $groups as $group => $selection ) {
+			$out['groups'][ $group ] = array( 'stock_ok' => 0 === strpos( $group, 'gift-' ) ? true : self::stock_ok( $selection, $cart, $group ) );
+		}
+		return $out;
 	}
 	public static function validate_cart( \WC_Cart $cart ): array {
 		$errors = array(); foreach ( $cart->get_cart() as $item ) { if ( isset( $item[ self::CART ] ) && ! self::valid_meta( $item ) ) { $errors[] = __( 'Invalid offer data. Remove and re-add the affected product.', 'peptide-core' ); } }

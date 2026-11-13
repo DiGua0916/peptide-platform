@@ -43,6 +43,8 @@ final class Exit_Intent {
 
 	public static function register_hooks(): void {
 		add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue' ) );
+		// HQ-07：投手不能改弹窗设置。设置页的保存入口在 Admin\Apps_Page（只查店铺能力），这里先拦一道，直接 403。
+		add_action( 'admin_post_pc_app_exit_save', array( self::class, 'deny_buyer' ), 0 );
 		add_action( 'wc_ajax_pc_exit_event', array( self::class, 'ajax_event' ) );
 		add_action( 'wc_ajax_pc_exit_claim', array( self::class, 'ajax_claim' ) );
 		add_action( 'wc_ajax_pc_exit_spin', array( self::class, 'ajax_spin' ) );
@@ -192,11 +194,32 @@ final class Exit_Intent {
 		return array( $s, array_values( array_unique( $errors ) ) );
 	}
 
+	/** admin_post_pc_app_exit_save（排在保存之前）：投手提交弹窗设置直接 403。 */
+	public static function deny_buyer(): void {
+		if ( Admin\Marketing::is_buyer() ) {
+			wp_die( '这个账号只能查看当前在跑的活动，不能修改弹窗设置。', '', array( 'response' => 403 ) );
+		}
+	}
+
 	/** 保存设置。有错误时不能开启（其他内容照样保存，方便继续编辑）。 */
 	public static function save( array $raw ): array {
+		// 弹窗由系列统一下发时（HQ-07）：登录的后台用户不能改；总后台的应用开关（没有登录用户）照常，系列标记保留。
+		$old    = get_option( self::OPTION, array() );
+		$series = is_array( $old ) && '' !== (string) ( $old['series_key'] ?? '' );
+		if ( $series && get_current_user_id() ) {
+			return array( '这个弹窗由总后台按系列统一下发，店铺后台不能修改。' );
+		}
+		// 投手只能看当前在跑的活动，不能改弹窗设置（HQ-07）。没有登录用户的调用（总后台的应用开关、系列下发）不受影响。
+		if ( get_current_user_id() && Admin\Marketing::is_buyer() ) {
+			return array( '这个账号只能查看当前在跑的活动，不能修改弹窗设置。' );
+		}
 		[ $s, $errors ] = self::clean( $raw );
 		if ( $errors ) {
 			$s['enabled'] = false;
+		}
+		if ( $series ) {
+			$s['series_key']  = $old['series_key'];
+			$s['series_hash'] = '';
 		}
 		update_option( self::OPTION, $s, false );
 		return $errors;
@@ -294,6 +317,10 @@ final class Exit_Intent {
 				return;
 			}
 			if ( ! in_array( self::page_kind(), $s['pages'], true ) || ! self::audience_ok( $s ) ) {
+				return;
+			}
+			// 营销弹窗静默（M4，已购回访等）：不加载弹窗和转盘；优惠码本身照常可用。
+			if ( Pricing\Popups::suppressed() ) {
 				return;
 			}
 		}
@@ -465,8 +492,18 @@ final class Exit_Intent {
 		update_option( self::DB_OPTION, self::DB_VERSION, false );
 	}
 
+	/**
+	 * 数据表可以用了吗：版本号对，而且表真的在。
+	 * 只看版本号不够：整店复制（tools/deployment/provisioning/clone.py）整表复制设置，来源店的版本号会留在新店，
+	 * 表却不跟着来，那样新店的展示 / 领取 / 抽奖 / 订单会一直记不上（2026-11-12 认领冒烟用例时查到）。
+	 */
 	public static function installed(): bool {
-		return self::DB_VERSION === get_option( self::DB_OPTION );
+		global $wpdb;
+		if ( self::DB_VERSION !== get_option( self::DB_OPTION ) ) {
+			return false;
+		}
+		$t = self::table();
+		return $t === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $t ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	}
 
 	/** 当天（店铺时区）的某个事件加一次。 */
@@ -475,11 +512,19 @@ final class Exit_Intent {
 		if ( ! in_array( $event, self::EVENTS, true ) ) {
 			return;
 		}
-		if ( ! self::installed() ) {
+		if ( self::DB_VERSION !== get_option( self::DB_OPTION ) ) {
 			self::install();
 		}
-		$t = self::table();
-		$wpdb->query( $wpdb->prepare( "INSERT INTO {$t} (day, app, event, count, amount) VALUES (%s, %s, %s, 1, %f) ON DUPLICATE KEY UPDATE count = count + 1, amount = amount + VALUES(amount)", $day ?? wp_date( 'Y-m-d' ), self::APP, $event, $amount ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+		$t   = self::table();
+		$sql = $wpdb->prepare( "INSERT INTO {$t} (day, app, event, count, amount) VALUES (%s, %s, %s, 1, %f) ON DUPLICATE KEY UPDATE count = count + 1, amount = amount + VALUES(amount)", $day ?? wp_date( 'Y-m-d' ), self::APP, $event, $amount ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// 正常情况只有这一次写入。写不进去（版本号在、表不在）就补建表再记一次；第二次不再静默，仍然失败会照常进错误日志。
+		$quiet = $wpdb->suppress_errors( true );
+		$done  = $wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
+		$wpdb->suppress_errors( $quiet );
+		if ( false === $done ) {
+			self::install();
+			$wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
+		}
 	}
 
 	/** @return array<string,array{count:int,amount:float}> 最近 N 天（含今天）每个事件的合计。 */

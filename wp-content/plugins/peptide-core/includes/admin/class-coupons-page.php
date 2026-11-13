@@ -38,7 +38,11 @@ final class Coupons_Page {
 	// ---------- 列表 ----------
 
 	public static function render(): void {
-		if ( ! current_user_can( Marketing::CAP ) ) {
+		if ( ! Marketing::can_view() ) {
+			return;
+		}
+		// HQ-07：投手只读——新建 / 编辑地址 403，列表显示“当前在跑的活动”。
+		if ( Marketing::read_only_gate() ) {
 			return;
 		}
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended
@@ -90,7 +94,7 @@ final class Coupons_Page {
 			$limit   = (int) $coupon->get_usage_limit();
 			$used    = (int) $coupon->get_usage_count();
 			echo '<tr>' . Marketing::check_cell( $id ) . '<td class="pc-mk-col-act">' . Marketing::row_actions( self::url( array( 'edit' => $id ) ), wp_nonce_url( admin_url( 'admin-post.php?action=pc_coupon_toggle&id=' . $id . '&on=' . ( $on ? 0 : 1 ) ), 'pc_coupon_toggle' ), $on ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-			echo '<td><a class="pc-mk-name" href="' . esc_url( self::url( array( 'edit' => $id ) ) ) . '">' . esc_html( '' !== $coupon->get_description() ? $coupon->get_description() : '—' ) . '</a></td><td><code>' . esc_html( Coupon_Rules::display_code( $coupon ) ) . '</code></td>';
+			echo '<td><a class="pc-mk-name" href="' . esc_url( self::url( array( 'edit' => $id ) ) ) . '">' . esc_html( '' !== $coupon->get_description() ? $coupon->get_description() : '—' ) . '</a>' . Marketing::locked_badge( 'coupon', $id ) . '</td><td><code>' . esc_html( Coupon_Rules::display_code( $coupon ) ) . '</code></td>';
 			echo '<td class="pc-mk-time-cell">' . esc_html( $start ? Marketing::date_text( $start ) : Marketing::date_text( (int) strtotime( (string) get_post_field( 'post_date_gmt', $id ) . ' UTC' ) ) ) . ' ~<br>' . esc_html( $expires ? Marketing::date_text( $expires->getTimestamp() ) : __( 'No end date', 'peptide-core' ) ) . '</td>';
 			echo '<td>' . esc_html( Coupon_Rules::rule_text( $coupon ) ) . '</td><td>' . esc_html( self::scope_text( $coupon ) ) . '</td><td>' . Marketing::badge( $r['status'] ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			echo '<td>' . esc_html__( 'Used / left', 'peptide-core' ) . '<br>' . esc_html( $used . '/' . ( $limit ? max( 0, $limit - $used ) : __( 'Unlimited', 'peptide-core' ) ) ) . '</td></tr>';
@@ -198,6 +202,7 @@ final class Coupons_Page {
 			echo '<div class="wrap"><p>' . esc_html__( 'This coupon code does not exist.', 'peptide-core' ) . '</p></div>';
 			return;
 		}
+		Marketing::guard_unlocked( 'coupon', $id ); // 系列统一下发的优惠码只读。
 		$f   = self::form_values( $id );
 		$cur = get_woocommerce_currency();
 
@@ -387,6 +392,7 @@ final class Coupons_Page {
 		Marketing::guard( 'pc_coupon_save' );
 		$in                    = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- 在 store() 里逐项清理。
 		$id                    = absint( $in['id'] ?? 0 );
+		Marketing::guard_unlocked( 'coupon', $id );
 		[ $saved, $errors, $f ] = self::store( $id, $in );
 		if ( $errors ) {
 			Marketing::keep_form( 'coupon', $f, $errors );
@@ -408,6 +414,7 @@ final class Coupons_Page {
 	public static function toggle(): void {
 		Marketing::guard( 'pc_coupon_toggle' );
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended
+		Marketing::guard_unlocked( 'coupon', absint( $_GET['id'] ?? 0 ) );
 		$done = self::set_enabled( absint( $_GET['id'] ?? 0 ), ! empty( $_GET['on'] ) );
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 		wp_safe_redirect( self::url( array( 'pc_done' => (int) $done ) ) );
@@ -419,8 +426,8 @@ final class Coupons_Page {
 		$op   = sanitize_key( wp_unslash( $_POST['bulk'] ?? '' ) );
 		$done = 0;
 		foreach ( Marketing::posted_ids() as $id ) {
-			if ( 'shop_coupon' !== get_post_type( $id ) ) {
-				continue;
+			if ( 'shop_coupon' !== get_post_type( $id ) || Marketing::locked( 'coupon', $id ) ) {
+				continue; // 不存在的、系列统一下发的跳过。
 			}
 			if ( 'delete' === $op ) {
 				wp_trash_post( $id ); // 和 WooCommerce 一样放进回收站（可以在 WooCommerce 原优惠券列表里恢复）。

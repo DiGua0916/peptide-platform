@@ -23,6 +23,21 @@ wp_set_current_user( $admin->ID );
 $had_page = Promotions::page_id();
 $made     = array();
 
+// 店铺自己的满减活动（真实店铺的数据里会有）在本次运行里当作不存在：它们会和测试的活动抢商品，
+// 也会被算进冲突检查（同一时间只能有一个“全部商品”的活动），结果就取决于这家店当时开着什么活动。
+// 只在这个进程里把它们从查询结果里去掉，不改店铺的任何数据。
+$store_promos = get_posts( array( 'post_type' => Promotions::CPT, 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids' ) );
+if ( $store_promos ) {
+	add_action(
+		'pre_get_posts',
+		static function ( $query ) use ( $store_promos ) {
+			if ( in_array( Promotions::CPT, (array) $query->get( 'post_type' ), true ) ) {
+				$query->set( 'post__not_in', array_merge( (array) $query->get( 'post__not_in' ), $store_promos ) );
+			}
+		}
+	);
+}
+
 // 1. 规则校验。
 [ $c, $e ] = Promotions::clean( array( 'basis' => 'spend', 'reward' => 'amount', 'tiers' => array( array( 'min' => 200, 'value' => 25 ), array( 'min' => 100, 'value' => 10 ), array( 'min' => '', 'value' => '' ) ) ) );
 $ok( 'tiers sorted, empty rows ignored', ! $e && array( 100.0, 200.0 ) === array_column( $c['tiers'], 'min' ) );

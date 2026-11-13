@@ -110,6 +110,7 @@ final class Plugin {
 		Store_Config::register_hooks();
 		Shipping\Plans::register_hooks();
 		Shipping\Discounts::register_hooks();
+		Pricing\Runtime::register_hooks();
 		Emails\Registry::register_hooks();
 		Emails\Chase_Copy::register_hooks();
 		Terms::register_hooks();

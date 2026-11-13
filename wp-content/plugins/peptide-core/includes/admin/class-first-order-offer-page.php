@@ -14,7 +14,8 @@ final class First_Order_Offer_Page {
 		add_action( 'admin_enqueue_scripts', array( self::class, 'assets' ) );
 	}
 	private static function access(): void {
-		if ( ! current_user_can( 'manage_woocommerce' ) || ! current_user_can( 'edit_shop_coupons' ) ) { wp_die( '没有首单优惠配置权限。', '', array( 'response'=>403 ) ); }
+		// HQ-07：投手不能配置首单优惠（Marketing::can_manage 对投手角色为假）。
+		if ( ! current_user_can( 'manage_woocommerce' ) || ! current_user_can( 'edit_shop_coupons' ) || ! Marketing::can_manage() ) { wp_die( '没有首单优惠配置权限。', '', array( 'response'=>403 ) ); }
 	}
 	public static function assets(): void {
 		if ( 'pc-apps' !== ( $_GET['page'] ?? '' ) || First_Order_Offer::APP !== ( $_GET['app'] ?? '' ) ) { return; }
@@ -26,6 +27,9 @@ final class First_Order_Offer_Page {
 		if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) { wp_die( '只接受 POST。', '', array( 'response'=>405 ) ); }
 		check_admin_referer( self::ACTION );
 		Apps_Page::require_allowed( First_Order_Offer::APP );
+		// 首单优惠由系列统一下发时，店铺后台不能改（HQ-07）。
+		$bound = get_option( First_Order_Offer::OPTION, array() );
+		if ( is_array( $bound ) && '' !== (string) ( $bound['series_key'] ?? '' ) ) { wp_die( '首单优惠由总后台按系列统一下发，店铺后台不能修改。', '', array( 'response'=>403 ) ); }
 		$mode = is_string( $_POST['mode'] ?? null ) ? $_POST['mode'] : '';
 		if ( 'create' === $mode ) {
 			$id = First_Order_Offer::create_welcome_coupon();

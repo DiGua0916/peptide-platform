@@ -81,10 +81,14 @@ final class Storefront_Translation { public static bool $es=false;public static 
 final class Templates { public static int $id=0;public static function previewing_id() { return self::$id; } }
 }
 namespace PeptideCore\Modules { final class Renderer { public static bool $in_editor=false; } }
-namespace PeptideCore\Admin { final class Apps_Page { public static function url($args=array()) { return 'https://example.invalid/wp-admin/admin.php?'.http_build_query($args); } } }
+namespace PeptideCore\Admin { final class Apps_Page { public static function url($args=array()) { return 'https://example.invalid/wp-admin/admin.php?'.http_build_query($args); } public static function require_allowed($app) { /* 2026-11-08 起保存前先检查总后台是否停用了这个应用；这里一律放行。 */ } } }
 namespace {
 require dirname(__DIR__).'/includes/class-coupon-rules.php';
+if(!function_exists('apply_filters')){function apply_filters($tag,$value,...$args){return $value;}}
+require dirname(__DIR__).'/includes/pricing/class-popups.php'; // 营销弹窗静默开关（M4）：这里始终不静默。
 require dirname(__DIR__).'/includes/class-first-order-offer.php';
+require dirname(__DIR__).'/includes/pricing/class-series-campaigns.php'; // Marketing::can_manage() 要问“营销活动是否已由系列接管”（这里没有系列，始终为否）。
+require dirname(__DIR__).'/includes/admin/class-marketing.php'; // HQ-07：保存前检查 Marketing::can_manage()（投手只读）。
 require dirname(__DIR__).'/includes/admin/class-first-order-offer-page.php';
 use PeptideCore\First_Order_Offer as Offer;
 use PeptideCore\Coupon_Rules;

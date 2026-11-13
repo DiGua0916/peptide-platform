@@ -297,7 +297,9 @@ final class Discounts {
 		if ( ! is_array( $rates ) || ! $rates ) {
 			return $rates;
 		}
-		$list = self::applicable();
+		// 价格引擎“开”档（M4）：可用的折扣和“取折后最低”由引擎给出；引擎出错时返回 null，照旧走旧逻辑。
+		$engine = \PeptideCore\Pricing\Runtime::on() ? \PeptideCore\Pricing\Runtime::shipping_applicable() : null;
+		$list   = null !== $engine ? $engine : self::applicable();
 		if ( ! $list ) {
 			return $rates;
 		}
@@ -311,11 +313,17 @@ final class Discounts {
 			}
 			$best = $cost;
 			$by   = null;
-			foreach ( $list as [ $d, $v ] ) {
-				$new = self::discounted( $cost, $d['kind'], $v );
-				if ( $new < $best ) {
-					$best = $new;
-					$by   = $d;
+			if ( null !== $engine ) {
+				$pick = \PeptideCore\Pricing\Shipping_Math::best( $cost, $list, wc_get_price_decimals() );
+				$best = $pick['cost'];
+				$by   = $pick['by'];
+			} else {
+				foreach ( $list as [ $d, $v ] ) {
+					$new = self::discounted( $cost, $d['kind'], $v );
+					if ( $new < $best ) {
+						$best = $new;
+						$by   = $d;
+					}
 				}
 			}
 			if ( ! $by ) {
