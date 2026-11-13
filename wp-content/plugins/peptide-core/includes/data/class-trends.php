@@ -99,12 +99,11 @@ final class Trends {
 		// 订单：只取一次，订单数、销售额、件数和复购都从这一份算（按创建时间从早到晚，复购要按先后判断）。
 		$rows = array();
 		foreach ( Operations::paid_orders( $from, $to ) as $order ) {
-			if ( Overview::is_test_order( $order ) ) {
+			if ( self::is_test( $order ) ) {
 				continue;
 			}
-			$created = $order->get_date_created();
 			$rows[]  = array(
-				'ts'    => $created ? $created->getTimestamp() : 0,
+				'ts'    => self::order_ts( $order ) ?? 0,
 				'id'    => (int) $order->get_id(),
 				'order' => $order,
 			);
@@ -124,7 +123,7 @@ final class Trends {
 			if ( null === $i ) {
 				continue;
 			}
-			$sales = (float) $order->get_total() - (float) $order->get_total_refunded();
+			$sales = self::sales( $order );
 			$units = 0;
 			foreach ( $order->get_items() as $item ) {
 				if ( $item instanceof \WC_Order_Item_Product ) {
@@ -339,12 +338,31 @@ final class Trends {
 		$ids   = wc_get_orders( $args );
 		foreach ( is_array( $ids ) ? $ids : array() as $id ) {
 			$past = wc_get_order( $id );
-			if ( $past instanceof \WC_Order && ! Overview::is_test_order( $past ) ) {
+			if ( $past instanceof \WC_Order && ! self::is_test( $past ) ) {
 				$found = true;
 				break;
 			}
 		}
 		$cache[ $key ] = $found;
 		return $found;
+	}
+
+	/** M6（NF-02）：测试单规则按开关走 Metrics_Overlay::is_test_order()（关着时就是 Overview 的旧规则）；不带自动加载的纯逻辑测试里没有这个类，直接用旧规则。 */
+	private static function is_test( $order ): bool {
+		return class_exists( Metrics_Overlay::class ) ? Metrics_Overlay::is_test_order( $order ) : \PeptideCore\Overview::is_test_order( $order );
+	}
+
+	/** M6（NF-02）：一张订单的销售额按开关走 Metrics_Overlay::order_sales()（关着时 = 订单金额 − WooCommerce 退款，和以前一样）。 */
+	private static function sales( $order ): float {
+		return class_exists( Metrics_Overlay::class ) ? Metrics_Overlay::order_sales( $order ) : (float) $order->get_total() - (float) $order->get_total_refunded();
+	}
+
+	/** M6（NF-02）：一张订单算在哪个时刻（Unix 秒）按开关走 Metrics_Overlay::order_time()（关着时 = 创建时间，和以前一样）；没有时返回 null。 */
+	private static function order_ts( $order ): ?int {
+		if ( class_exists( Metrics_Overlay::class ) ) {
+			return Metrics_Overlay::order_time( $order );
+		}
+		$created = $order->get_date_created();
+		return $created ? (int) $created->getTimestamp() : null;
 	}
 }

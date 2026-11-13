@@ -145,7 +145,7 @@ final class Page_Conversion {
 			$orders = wc_get_orders( array( 'type' => 'shop_order', 'post__in' => $batch, 'limit' => count( $batch ), 'return' => 'objects' ) );
 			if ( ! is_array( $orders ) || $wpdb->last_error ) { throw new \RuntimeException( 'Native paid order read unavailable' ); }
 			foreach ( $orders as $order ) {
-				$id = (int) $order->get_id(); if ( ! in_array( $id, $batch, true ) || $order->get_type() !== 'shop_order' || Overview::is_test_order( $order ) || $order->get_payment_method() === 'cod' || ( ! $order->is_paid() && $order->get_date_paid() === null ) ) { continue; }
+				$id = (int) $order->get_id(); if ( ! in_array( $id, $batch, true ) || $order->get_type() !== 'shop_order' || self::is_test( $order ) || $order->get_payment_method() === 'cod' || ( ! $order->is_paid() && $order->get_date_paid() === null ) ) { continue; }
 				$visitor = Impressions::column_id( $order->get_meta( Server_Events::ORDER_VISITOR_META, true ) ); $visit = Impressions::column_id( $order->get_meta( Server_Events::ORDER_VISIT_META, true ) );
 				if ( ! $visitor || ! $visit ) { continue; } $lines = array();
 				foreach ( $order->get_items() as $item ) { if ( ! $item instanceof \WC_Order_Item_Product || ! ( $parent = Impressions::column_id( $item->get_product_id() ) ) ) { continue; } $lines[] = array( 'id' => (int) $item->get_id(), 'parent' => $parent, 'units' => (int) $item->get_quantity() - abs( (int) $order->get_qty_refunded_for_item( $item->get_id() ) ) ); }
@@ -178,5 +178,10 @@ final class Page_Conversion {
 	private static function origin(): string {
 		$parts = wp_parse_url( home_url() ); if ( ! is_array( $parts ) || ! isset( $parts['host'], $parts['scheme'] ) || ! in_array( $parts['scheme'], array( 'http', 'https' ), true ) ) { return ''; }
 		return $parts['scheme'] . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . (int) $parts['port'] : '' );
+	}
+
+	/** M6（NF-02）：测试单规则按开关走 Metrics_Overlay::is_test_order()（关着时就是 Overview 的旧规则）；不带自动加载的纯逻辑测试里没有这个类，直接用旧规则。 */
+	private static function is_test( $order ): bool {
+		return class_exists( Metrics_Overlay::class ) ? Metrics_Overlay::is_test_order( $order ) : \PeptideCore\Overview::is_test_order( $order );
 	}
 }

@@ -29,7 +29,8 @@ function fixture(options = {}) {
   assert.equal(source.split(marker).length, 2, 'one private API construction boundary');
   const bridge = `    window.__pairRead = () => ({maxQueue,seq,pending:pending.map(entry => ({record:entry.record,inFlight:entry.inFlight,attempts:entry.attempts,readyAt:entry.readyAt})),actions:[...productActions],stats:{...stats}});\n`;
   vm.runInContext(source.replace(marker, bridge + marker), vm.createContext(window), {filename: file});
-  const api = window.VialCoveVisitorObserver.start({context: {page_type: 'shop', path: '/shop/?private=OMIT'}, productActionsProtocol: 1, maxQueue: options.maxQueue ?? 10, batchMax: options.batchMax ?? 20,
+  // engageMs: 0 — the queue rules below start after the visitor's first interaction (engagement gate, 2026-11-08).
+  const api = window.VialCoveVisitorObserver.start({engageMs: 0, context: {page_type: 'shop', path: '/shop/?private=OMIT'}, productActionsProtocol: 1, maxQueue: options.maxQueue ?? 10, batchMax: options.batchMax ?? 20,
     ...(options.metadata ? {pageViewMetadata: () => ({page_context: {version: 1, kind: 'shop'}})} : {}),
     onEventRetired: (id, reason) => retirements.push({id, reason}),
     sendBatch(events, hint) { calls.push({events: plain(events), unload: hint.unload}); if (options.hold) return new Promise(resolve => deliveries.push(() => resolve({ackEventIds: events.map(e => e.event_id)}))); return Promise.resolve({ackEventIds: options.noAck ? [] : events.map(e => e.event_id)}); }

@@ -14,6 +14,7 @@ WordPress, WooCommerce ordering, VialCove branding and the purchased Lunira sour
 
 - Latest user decision on 2026-10-11: the proposed frontend/backend swap was cancelled. Codex continues frontend work; Claude continues backend work. Keep the existing A/B demo code and records for reference; do not expand that demo without a new user request.
 - Codex owns wp-content/themes/peptide-site/ and docs/handoffs/frontend.md.
+- Update 2026-11-10 (platform owner's decision): Codex has stopped changing the theme. For the parallel module work (development document section 13) wp-content/themes/peptide-site/ is owned by the Claude F5 session (M14 storefront theme); its handoff is docs/handoffs/m14-theme.md. docs/handoffs/frontend.md stays as Codex's historical record. No other session edits the theme; requests go through the F5 section of docs/CONTRACT.md.
 - Claude owns wp-content/plugins/peptide-core/, docs/handoffs/backend.md, and docs/handoffs/backend-*.md proposal documents.
 - Shared requirements, contracts, environment configuration, and task definitions require explicit coordination between roles. Record a proposed shared change in the role handoff before integration.
 - Use codex/frontend and claude/backend worktrees for development. The main checkout is the integration copy.

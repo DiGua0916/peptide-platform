@@ -1,9 +1,11 @@
 <?php
 require_once __DIR__ . "/product-actions-test-autoload.php";
+// 排行里的商品行后来带上了缩略图（Realtime::product_media()，c466262）：加载真正的类，下面的假商品补上它要读的三个方法（都没有图）。
+spl_autoload_register( static function ( string $class ): void { if ( 'PeptideCore\\Data\\Realtime' === $class ) { require_once dirname( __DIR__ ) . '/includes/data/class-realtime.php'; } } );
 /** Actual old nineteen oracle + search twentieth + complete favorite twenty-first pipeline. */
 use PeptideCore\Data\Rankings as Ranks;
 require __DIR__.'/data-native-search-pure.php';
-function wc_get_product($id){return new WC_Product((int)$id);}function get_edit_post_link($id,$mode){return '/edit/'.$id;}function _prime_post_caches(...$args){}class WC_Product{public function __construct(public int $id){}public function get_name(){return $this->id===100?'=Formula':'Product '.$this->id;}}
+function wc_get_product($id){return new WC_Product((int)$id);}function get_edit_post_link($id,$mode){return '/edit/'.$id;}function _prime_post_caches(...$args){}class WC_Product{public function __construct(public int $id){}public function get_name(){return $this->id===100?'=Formula':'Product '.$this->id;}public function get_image_id(){return 0;}public function get_parent_id(){return 0;}public function get_sku(){return '';}}
 class FavoriteRankDB056{
  public string $last_error='';public string $posts='test_posts';public array $actions=array();public function __construct(public object $legacy){}
  public function prepare(...$args){return $this->legacy->prepare(...$args);}public function get_row(...$args){return $this->legacy->get_row(...$args);}public function get_col($sql){return array_column($this->actions,'product_id');}

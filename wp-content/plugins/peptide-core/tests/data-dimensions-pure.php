@@ -92,6 +92,8 @@ namespace {
 	$check( 'typed missing empty unobserved and literal source names have distinct keys', count( $mapping['typed'] ) === 6 && count( array_unique( array_keys( $mapping['typed'] ) ) ) === 6 );
 	$check( 'source case and literal sentinel labels preserved', Dimensions::label( $facts[1]['utm_source'], 'utm_source' ) === 'unknown' && Dimensions::label( $facts[2]['utm_source'], 'utm_source' ) === 'Other' && Dimensions::label( $facts[6]['utm_source'], 'utm_source' ) === 'UNKNOWN' );
 	$event( 7, 1, 1, 'checkout_address_completed', 140000 ); $event( 8, 2, 1, 'checkout_shipping_selected', 140000 ); $event( 9, 1, 1, 'checkout_payment_selected', 150000 ); $event( 10, 1, 1, 'payment_success', 160000, array(), 10 ); $event( 11, 2, 1, 'payment_success', 160000, array(), 10 );
+	// 2026-11-08 起（1b5b594）选物流 / 选支付只在同一次访问里填过地址才算，选支付还要先选过物流：两次访问各补一条前置事件，断言的意思不变（每一步都归到事件自己那次访问的分组）。
+	$event( 12, 1, 1, 'checkout_shipping_selected', 145000 ); $event( 13, 2, 1, 'checkout_address_completed', 139000 );
 	$GLOBALS['test_orders'] = array( new WC_Order( 10, 1, 1 ), new WC_Order( 11, 999, 1 ), new WC_Order( 12, 0, 0 ) );
 	$reader = new Visitor_Funnel(); $funnel = $reader->period( 100000, 200000, 'start_ms', '', null, null, $mapping['map'] );
 	$key = Facts::key( $facts[1]['utm_source'] ); $other = Facts::key( $facts[2]['utm_source'] );
@@ -122,7 +124,8 @@ namespace {
 	$csv_method = new ReflectionMethod( \PeptideCore\Data\Report_Exports::class, 'rankings' ); $csv = iterator_to_array( $csv_method->invoke( null, $range, $args ) );
 	$check( 'actual CSV mapper exports complete rows regardless of selected page', count( $csv ) === count( $complete ) + 1 && array_column( array_slice( $csv, 1 ), 1 ) === array_column( $complete, 'key' ) && count( $csv[0] ) === 13 );
 	$check( 'actual CSV mapper neutralizes literal formula source labels', in_array( "'=formula", array_column( $csv, 2 ), true ) );
-	$check( 'seven advertised groups and twenty ranking kinds', \PeptideCore\Data\Conversion::GROUPS === array( 'device', 'browser', 'utm', 'domain', 'country', 'os', 'screen' ) && count( Rankings::TABLES ) === 21 );
+	// 2026-11 起分组多了 channel（流量渠道），断言跟上现有常量；原来的七个分组顺序不变。
+	$check( 'seven advertised groups (plus channel) and twenty-one ranking kinds', \PeptideCore\Data\Conversion::GROUPS === array( 'device', 'browser', 'utm', 'domain', 'country', 'os', 'screen', 'channel' ) && count( Rankings::TABLES ) === 21 );
 	$before_queries = count( $wpdb->queries ); $cache = array(); Dimensions::rankings( 100, 200, array(), $cache );
 	$check( 'sixty-six visitor groups use one cohort/facts/geo scan rather than one query per group', count( $wpdb->queries ) - $before_queries === 3 );
 	echo 'PASS ', $passed, " standalone dimension report assertions\n";

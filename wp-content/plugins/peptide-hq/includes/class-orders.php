@@ -10,7 +10,7 @@
  *   签名校验用邮件中心同一个函数（店铺连接密钥 + X-PC-HQ-Site）。
  * - 报表口径：订单数 = 已付款且不是测试单；销售额 = 订单金额 − 已标记退款；时间按付款时间。
  *   三级（系列 → 投手 → 店铺）都由同一批店铺行往上加，所以合计相等。
- * - 广告花费先手填（pchq_ad_spend，每店每天一行）。
+ * - 广告花费先手填（pchq_ad_spend，每店每天一行）；CR 素材归因上线后由店铺导入 Meta 报表时自动推送（source = csv）。
  * - 顾客的姓名、邮箱、电话、地址不进总后台，只有邮箱的哈希。
  *
  * @package PeptideHq
@@ -619,7 +619,7 @@ CREATE TABLE {$left} (
 				'site_id'     => $site_id,
 				'day'         => $day,
 				'spend_cents' => $cents,
-				'source'      => 'api' === $source ? 'api' : 'manual',
+				'source'      => in_array( $source, array( 'api', 'csv' ), true ) ? $source : 'manual', // csv = 店铺导入 Meta 报表后推送（CR 素材归因）。
 				'updated_at'  => time(),
 				'updated_by'  => $user_id,
 			)

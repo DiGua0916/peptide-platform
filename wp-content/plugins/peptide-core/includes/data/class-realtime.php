@@ -447,7 +447,7 @@ final class Realtime {
 
 	/** 去掉测试订单。 */
 	private static function real_orders( array $orders ): array {
-		return array_values( array_filter( $orders, static fn( $o ) => $o instanceof \WC_Order && ! Overview::is_test_order( $o ) ) );
+		return array_values( array_filter( $orders, static fn( $o ) => $o instanceof \WC_Order && ! self::is_test( $o ) ) );
 	}
 
 	/**
@@ -460,7 +460,7 @@ final class Realtime {
 		$sales = 0.0;
 		$units = 0;
 		foreach ( $orders as $order ) {
-			$sales += (float) $order->get_total() - (float) $order->get_total_refunded();
+			$sales += self::sales( $order );
 			foreach ( $order->get_items() as $item ) {
 				if ( $item instanceof \WC_Order_Item_Product ) {
 					$units += (int) $item->get_quantity() - abs( (int) $order->get_qty_refunded_for_item( $item->get_id() ) );
@@ -694,5 +694,15 @@ final class Realtime {
 			'image' => is_string( $image ) ? $image : '',
 			'sku'   => (string) $product->get_sku(),
 		);
+	}
+
+	/** M6（NF-02）：测试单规则按开关走 Metrics_Overlay::is_test_order()（关着时就是 Overview 的旧规则）；不带自动加载的纯逻辑测试里没有这个类，直接用旧规则。 */
+	private static function is_test( $order ): bool {
+		return class_exists( Metrics_Overlay::class ) ? Metrics_Overlay::is_test_order( $order ) : \PeptideCore\Overview::is_test_order( $order );
+	}
+
+	/** M6（NF-02）：一张订单的销售额按开关走 Metrics_Overlay::order_sales()（关着时 = 订单金额 − WooCommerce 退款，和以前一样）。 */
+	private static function sales( $order ): float {
+		return class_exists( Metrics_Overlay::class ) ? Metrics_Overlay::order_sales( $order ) : (float) $order->get_total() - (float) $order->get_total_refunded();
 	}
 }

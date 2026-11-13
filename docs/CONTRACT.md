@@ -866,3 +866,287 @@ Root installed only three existing Commerce sources for P09 collection products 
 | `pchq_ad_spend`、`pchq_daily` 新增列 `gross_cents`、`refunded_cents` | 没有 | keep |
 | 总后台选项 `pchq_order_lag_since` | 没有 | keep |
 | 店铺订单元 `_pc_hq_reported`、`_pc_refund_cents`、`_pc_refund_state` | 没有 | keep |
+## M6 / M7：指标入口、漏斗规则与像素（2026-11-10，F4「数据」会话）
+
+本节只由 F4 修改。口径见 `docs/metrics.md`；进度和未接入的报表见 `docs/handoffs/m6-metrics.md`、`docs/handoffs/m7-pixels.md`。
+状态：代码已提交在分支 `claude/m6-metrics-db7036`，还没有合进主线、没有发布。F3、F5 先按下面的签名用假数据开发。
+
+### 1. `PeptideCore\Data\Metrics`（只读，店铺端）
+
+约定：时间段 `[from, to)`，Unix 秒；金额是美分整数；比率是百分数（2 位小数），分母为 0 时是 `null`。不看开关，随时可以调用。
+
+| 函数 | 返回 |
+| --- | --- |
+| `Metrics::window( string $preset, ?int $now = null ): array` | `today / yesterday / 7d / 30d`（店铺时区）→ `{from, to, bucket}` |
+| `Metrics::summary( int $from, int $to ): array` | 一个时间段的全部指标，见下 |
+| `Metrics::preset( string $preset, ?int $now = null ): array` | `summary( window( $preset ) )`，多一个 `preset` |
+| `Metrics::orders( int $from, int $to ): array` | `{orders, gross_cents, refund_cents, sales_cents, aov_cents, test_orders}` |
+| `Metrics::visitors( int $from, int $to ): int` | 访客数 |
+| `Metrics::paid_visitors( int $from, int $to ): int` | 支付成功访客数 |
+| `Metrics::conversion_rate( int $from, int $to ): ?float` | 支付成功访客 ÷ 访客 |
+| `Metrics::funnel( int $from, int $to ): array` | `{unit:'visitors', counts:{visitors,viewed,carted,checkout,address,shipping,payment,paid}, layers:[{key,count,step_rate,visitor_rate}×8]}`，每层不大于上一层 |
+| `Metrics::abandoned( int $from, int $to ): array` | `{count, open, failed, emailed, recovered, recovered_cents, rate}`，结果缓存 5 分钟 |
+| `Metrics::daily( int $from, int $to ): array` | 按店铺时区自然日，每天 `{date, visitors, paid_visitors, conversion_rate, orders, gross_cents, refund_cents, sales_cents, aov_cents}` |
+| `Metrics::order_fact( \WC_Order $order ): array` | 一张订单的事实，见下 |
+| `Metrics::order_facts( int $from, int $to ): array` | 付款时间在时间段内的已付款订单的事实（含测试单，`test = true`） |
+| `Metrics::paid_orders( int $from, int $to ): array` | 和 `order_facts()` 同一批订单，但返回 `\WC_Order` 对象（含测试单，调用方用 `is_test_order()` 排除） |
+| `Metrics::tail_steps( array $evidence, bool $paid ): array` | 一次访问在漏斗后四层走到了哪几步（纯函数）：`$evidence` 是这次访问里有没有 `address / shipping / payment` 事件，`$paid` 是有没有算数的已付款订单；返回 `address / shipping / payment / paid` 里走到的那几步 |
+| `Metrics::is_test_order( \WC_Order $order ): bool` / `is_paid_order()` / `paid_at()` | 测试单 / 收到过支付成功通知 / 付款时间（秒） |
+| `Metrics::sum_orders( array $facts ): array` | 把事实加总（纯函数），返回同 `orders()` |
+
+`summary()` 的 key（保证存在，后续只会增加）：
+
+```
+version, from, to, currency,
+visitors, paid_visitors, conversion_rate,
+orders, gross_cents, refund_cents, sales_cents, aov_cents, test_orders,
+abandoned, abandoned_open, recall_emailed, recall_recovered, recall_rate, recovered_cents,
+funnel
+```
+
+`order_fact()` 的 key：
+
+```
+id, status, paid, test, counted (= paid && !test), paid_at, created_at,
+gross_cents, refund_cents (= _pc_refund_cents，不超过 gross), net_cents, wc_refund_cents (只用于对账),
+currency, visitor, visit, buyer
+```
+
+- **F5 投手首页**：五个核心数字用 `Metrics::preset( 'today' | 'yesterday' | '7d' )` 的 `visitors / orders / sales_cents / conversion_rate / abandoned`；待办里的“未跟进弃单数”用 `abandoned_open`。
+- **F3 订单上报和报表**：每张订单上报 `order_fact()` 里的 `counted / paid_at / gross_cents / refund_cents`，总后台按同样的规则汇总（`counted` 的才算订单；销售额 = `gross_cents − refund_cents`；归属日 = `paid_at` 的店铺时区日期）。总后台回写 `_pc_refund_cents` 之后店铺端的销售额自动跟着变，不需要通知 F4。每日汇总可以直接取 `Metrics::daily()`。
+
+### 2. 开关 `PeptideCore\Data\Metrics_Switch`
+
+- 每家店一个选项 `peptide_core_m6_mode`：`off`（默认）/ `shadow` / `on`；过滤器 `peptide_core_m6_mode` 可以覆盖。
+- `Metrics_Switch::mode()`、`off()`、`shadow()`、`on()`、`set( $mode )`、`pick( $metric, $legacy, callable $modern, array $context = [], float $tolerance = 0 )`、`log()`、`reset_log()`。
+- 影子和开的时候，新旧不一致写进选项 `peptide_core_m6_shadow_log`，并触发 `do_action( 'peptide_core_m6_shadow_diff', string $metric, array $diffs, array $context )`（F1 的巡检可以挂）。
+- 功能声明（F1 的 `pc_hq_capabilities`，格式 功能键 => 版本号）：`m6.metrics => '1'`（这家店有 `Data\Metrics`，版本 = `Metrics::VERSION`）、`m7.pixel_acceptance => '1'`（有服务端 AddPaymentInfo、像素验收和 `/admin/pixel-test`）。只说明代码在不在，不说明开关是哪一档。
+- 总后台如果要远程换档：改这个选项即可（需要 F1 在连接器里提供写选项的通道，F4 不改连接器）。
+- 对账日志里的指标名：`overview.totals`、`overview.recovery`、`operations.kpis`、`reports.test_order`、`reports.paid_orders`、`reports.conversion`、`reports.visitor_funnel`（含义见 `docs/metrics.md` 第 5 节的表）。
+- `Data\Metrics_Overlay` 是 F4 的报表类内部用的（按开关在旧算法和 `Metrics` 之间取值），别的模块不要调用它，直接用第 1 小节的 `Metrics`。
+- **开关会影响到的、不归 F4 的调用方**：`core/class-overview.php` 和 `core/class-hq-ai.php` 读 `Data\Visitor_Funnel::period()`、`Data\Operations::period()`。开关开着时它们拿到的是新口径的数字（和概览页、数据页一致），关着时和以前一样；这两个文件不用改。
+- 新增的选项（没有新表）：`peptide_core_m6_mode`、`peptide_core_m6_shadow_log`（只有指标名和数字）、`peptide_core_m6_funnel_anomalies`（按天的计数）、`peptide_core_px_acceptance`（验收码和时间）、`peptide_core_pixels_buyer_platforms`。都不含顾客资料和密钥，脱敏快照里可以原样保留。验收期间浏览器上报的事件记在现有的 `pc_px_log` 里（`platform = browser`，只有事件名和 event_id）。
+
+### 3. 漏斗推进规则 `PeptideCore\Tracking\Funnel_Guard`（FE-05）
+
+- `Tracker::raise_stage( $visit_id, $stage, $order_id = 0 )` 的签名不变。开关是 `on` 时，升到 4（下单）或 5（支付成功）之前要求同一次访问里已经有 `checkout_address_completed`，否则不推进到 4、5：最多记到 3（进入结账），订单号仍然挂到访问上。
+- 新动作：`do_action( 'peptide_core_tracking_address_completed', int $visitor_id, int $visit_id, int $new )`，在 `POST /track/events` 新保存了填地址事件之后触发，每批一次；`$new` 是这一批里新保存了几条。
+- `Funnel_Guard::counters( int $days = 7 ): array`（按店铺日期的异常计数）、`Funnel_Guard::anomalies( int $from, int $to ): array`（准确数和访问编号）。
+- 前端协议没有变化，主题不用改。
+
+### 4. 数据页对投手（ST-05）
+
+- 判断投手：`PeptideCore\Data\Audience::is_media_buyer( ?int $user_id = null )` = 用户有角色 `pc_media_buyer` 且没有 `manage_options`；过滤器 `peptide_core_is_media_buyer`（参数：结果、用户编号）可以改写。**需要 F5**：创建角色 `pc_media_buyer`，并给它 `manage_woocommerce`（数据页、概览页、像素页的权限检查都是这一项）。
+- 顶层菜单 slug 仍然是 `pc-data`。投手只有两个子页：`pc-data-funnel-sources`（漏斗 + 来源）、`pc-data-products-landing`（商品 + 落地页），每页用页签（地址栏 `tab=funnel|sources`、`tab=products|landing`）切换原来的两个报表；其余数据子页对投手不注册，直接访问会被拒绝。管理员（含总后台一键登录）仍然看到全部 12 个子页，另外也能打开这两个合并页（不显示在菜单里）。
+- F5 的菜单白名单里“数据”保留 `pc-data` 即可；投手点“数据”会进 `pc-data-funnel-sources`。投手如果直接打开 `admin.php?page=pc-data`，页面只显示两个合并页的入口（`Workspace_Shell` 只在 `pc-overview` / `pc-data` 两个地址启动，投手的入口不是这两个地址之一时不受影响）。
+- 这一版是“两页、每页两个页签”，不是同屏合并（同屏要改 `assets/data.js` 的挂载方式，等有浏览器环境再做）。
+
+### 5. 像素与 CAPI（FE-09，M7）
+
+- 新接口 `POST /wp-json/peptide/v1/pixel-event`，JSON `{ "name": "add_payment_info" }`，公开（和 `/pixel-view` 一样，受 `Pixels::allowed()` 约束）。返回 `{ events: [ … ] }`：服务端生成事件并用同一个 `event_id` 发 Conversions API，浏览器拿到后用这个 `event_id` 发像素。接口失败时浏览器退回原来只发浏览器事件的做法。
+- 触发时机：结账页顾客选了支付方式，或点了下单（先到的那个），每个页面一次。
+- 像素页对投手只显示 Facebook；其他平台的卡片不显示也不提交（已保存的设置原样保留）。总后台要给某家店打开其他平台：选项 `peptide_core_pixels_buyer_platforms`（平台 key 的数组，默认 `[ 'facebook' ]`）。
+- 验收：`wp eval-file wp-content/plugins/peptide-core/tests/m7-pixel-acceptance-smoke.php start|check|stop|test`（`PeptideCore\Pixels\Acceptance`），核对 `pc_px_log` 里六类事件。验收期间带验收码的浏览器把发出的事件报到 `POST /peptide/v1/pixel-check`（公开，验收码过期即拒绝）。操作清单见 `docs/guides/m7-pixel-acceptance-checklist.md`。
+- **给 F5 的向导第 4 步**：`POST /wp-json/peptide/v1/admin/pixel-test`（需要 `manage_woocommerce` 和 REST nonce），或 PHP 里直接 `\PeptideCore\Pixels\Server::test_event()`。无参数，HTTP 200，返回 `{ ok: bool, pixel: string, message: string, reason: '' | 'no_pixel', test_code: bool, results: [ { pixel, ok, code, message } ] }`；`ok = true` 就是“已通”。`pixel` / `message` 是给向导直接显示的：第一个没通的像素（都通时是第一个像素）和一句中文原因（通了是空字符串）；`results` 是每个像素的明细。向导状态由 F5 自己写，这个接口不写任何向导数据。
+- `assets/pixels*.js` 不在第 13.2 节的清单里，但只属于像素模块，由 F4 维护。
+
+### 6. 需要别的会话配合的事
+
+| 谁 | 事情 | 状态 |
+| --- | --- | --- |
+| F5 | 角色 `pc_media_buyer` 带 `manage_woocommerce`；菜单白名单保留 `pc-data` | 待 F5 |
+| F3 | 订单上报和总后台汇总按 `order_fact()` 的规则；回写 `_pc_refund_cents` | 待 F3 |
+| F1 | 登记功能键 `m6.metrics`、`m7.pixel_acceptance`；测试条目已追加到 `tests/data-observations-suites.json` 末尾（`module: M6 / M7`）（现在 11 条）；发布前在沙盒把开关切到 `shadow` 观察。F4 的用例已经在本机跑过（PHP 8.3.36），默认套件 59 通过 / 3 失败，剩下 3 个不归 F4 | 待 F1 |
+| 日常会话 | `core/class-overview.php` 不用改：概览页的数字由 `Admin\Overview_Page` 按开关用 `Metrics` 覆盖。之后再改概览页、数据页、访客页、像素页请先在聊天室找 F4 | 知会 |
+## M9 投手后台 / M11 已购回访 / M14 前台主题（F5，2026-11-10 起）
+
+本节由 F5 会话维护。标“需要配合”的条目请归属会话实现；没实现之前 F5 的代码按“未就绪”处理，不会报错。
+
+### M9-1 投手角色（`PeptideCore\Staff_Buyer`，ST 总则）
+
+- 角色 `pc_media_buyer`（显示名“投手”）。角色本身只存 `read`、`view_admin_dashboard`。
+- **按账号开关，默认全部关闭**：给销售账号（`pc_staff`）加上这个角色 = 投手版；去掉 = 恢复按模块勾选。原角色和 `pc_staff_modules` 不动，所以总后台“销售账号”列表、专属登录入口、停用开关照常工作。
+  - 代码：`Staff_Buyer::set( int $user_id, bool $on, bool $must_change_password = false )`（返回 `true` 或 `WP_Error`；管理员账号和非销售账号会被拒绝）。
+  - 店铺后台：员工管理页面（`admin.php?page=pc-staff`，仅管理员）每行的“后台版本”开关，或表单里的“投手版后台”勾选。
+  - 命令行：`wp peptide buyer list`、`wp peptide buyer on <账号> [--must-change-password]`、`wp peptide buyer off <账号>`、`wp peptide buyer default [on|off]`。
+  - 选项 `pc_media_buyer_default`（值 `1`）：这家店新建的销售账号直接是投手版并要求首次登录改密码。现有店铺没有这个选项；新店由开店流程写入。
+- 判断：`Staff_Buyer::is_buyer( $user )`、`Staff_Buyer::current()`（当前登录的人）。管理员永远不算投手。`Staff::is_staff()` 对投手仍为真，`Staff::granted()` 对投手固定返回 `orders`、`data`。
+- 投手的 6 个菜单：首页 `pc-buyer-home`、订单 `wc-orders`（只读）、弃单 `pc-recovery`、数据 `pc-data*` 和 `pc-visitors*`、广告设置 `pc-buyer-ads`、店铺信息 `pc-store-info`；另有开店向导 `pc-onboarding`。
+- 其余后台地址对投手一律 403（`index.php`、`pc-overview` 转到首页，`profile.php` 转到店铺信息）。`admin-ajax.php` 只放行 `heartbeat`、界面偏好、订单预览和按顾客筛选；`admin-post.php` 只放行投手版页面自己的表单；对未登录访客开放的动作不受影响。
+- 能力按请求临时给（`Capabilities::BUYER_SCOPES`）：订单页给订单的查看能力，弃单 / 数据 / 访客页给 `manage_woocommerce`、`view_woocommerce_reports`。REST 只有下面的接口给能力，其他接口上投手没有任何店铺能力：
+  - 只读（GET）：`/peptide/v1/data/*`、`/peptide/v1/overview*`；
+  - 读写：`/peptide/v1/track/admin/*`（实时访客和 AI 分析）、`/peptide/v1/admin/pixel-test`、`/peptide/v1/admin/ad-link`、`/peptide/v1/admin/recovery/*`、`/peptide/v1/admin/buyer-home`。
+- **给投手用的新页面或新接口**：请告诉 F5 加进名单（`Staff_Buyer::classify()`、`REST_READ` / `REST_ANY`），否则投手打不开。权限检查继续用 `manage_woocommerce` 即可。
+- 对 F4「数据页对投手」一条的答复：角色已经有了，但 `manage_woocommerce` **不是常驻能力**，只在上面名单里的页面和接口上有。F4 的 `Audience::is_media_buyer()`（看角色）可以照常用；投手的两个数据子页 `pc-data-funnel-sources`、`pc-data-products-landing` 都在 `pc-data*` 之内，不用改名单。F4 做的“像素页投手模式”目前投手进不去（`pc-system` 不在名单里），投手用的是 F5 的“广告设置”页（只管第一个 Facebook 像素）；要让投手管理多个像素时再把 `pc-system&section=pixels` 和 `pc_pixels_save` 加进名单。
+- 功能声明（F1 的 `pc_hq_capabilities`）：`m9.media_buyer => 1`（投手角色和开关）、`m9.onboarding => 1`（向导和 `Onboarding::store_status()`）。
+- `Staff_Buyer::can_use()`：管理员，或者已经改过密码的投手。投手版的数据接口用它做权限判断；`can_view()` 只表示能打开页面（没改密码的投手只能看到向导）。
+- 订单页除了 `action`，还拦截不带 `action` 就会执行写操作的参数：`delete_all`（清空回收站）、`claim-lock`（接管编辑锁）。
+- 营销活动（F2 的约定）：`Admin_Menus::add_menus()` 已改为用 `Marketing::can_view()` 和 `Marketing::menu_cap()`（F2 的代码合进来之前沿用原判断）。投手**没有**拿到 `pc_view_campaigns`，营销页面也不在投手的名单里；PRD 要求的“只读的当前活动”放在投手首页，读 `\PeptideCore\Pricing\Campaigns::running()`。F2 如果希望投手能打开只读的营销页面，告诉 F5 把 `pc-promotions`、`pc-coupons`、`pc-shipping-discounts` 加进名单。
+
+需要配合：
+
+| 归属 | 内容 | 没做之前 |
+| --- | --- | --- |
+| F1（`core/class-hq-connector.php`） | `/hq/staff` 的账号数据加 `media_buyer`（`Staff_Buyer::is_buyer()`）；`staff_save` 把请求里的 `media_buyer`（布尔）原样放进传给 `Admin\Staff_Page::save()` 的数组（不带这个键 = 不改）。若按 NF-05 H 删除 `/hq/staff`，改为在新的账号接口里带上 | 只能在店铺的员工管理页面或命令行切换 |
+| 日常会话（总后台“销售账号”页面） | 显示“投手版 / 按模块”，提供切换 | 同上 |
+| F1 / 日常会话（开店流程） | 新店写入选项 `pc_media_buyer_default = 1` | 新店账号仍是按模块，需要手动切 |
+| 日常会话（`core/admin/class-recovery-page.php`） | `\PeptideCore\Staff_Buyer::current()` 为真时不输出“立即扫描”“作废”按钮（服务端已拦截 `pc_recovery_scan`、`pc_recovery_void`，只是界面整洁） | 按钮可见，点了返回 403 |
+| F4（`Tracking\Tracker::is_staff()`、`Pixels::allowed()`）、F2（`Exit_Intent`） | “是不是员工”的判断加上 `\PeptideCore\Staff::is_staff( $user_id )`。投手在前台没有 `manage_woocommerce`，现在只按能力判断会把投手自己的访问算成访客、给他发像素事件和弹窗。只影响前后台同域名的环境；生产是分开的域名，员工在前台本来就是匿名的 | 同域名环境（沙盒、本地）里投手自己的浏览会进数据 |
+
+### M9-2 开店向导和广告设置（`Admin\Onboarding`，ST-01、ST-06）
+
+- 页面：`admin.php?page=pc-onboarding`（向导，`&step=password|store|pixel|verify|link`）、`admin.php?page=pc-buyer-ads`（广告设置 = 第 3、4、5 步放在一页）。两个页面都不在原来的菜单里，能力 `pc_view_buyer_admin`（投手和管理员都有）。
+- 5 步：修改密码 → 店铺信息 → 广告像素 → 验证像素 → 生成投放链接（可选）。前 4 步做完才算完成；没完成时投手的每个页面顶部都有红色提示条“还差 N 步就可以投广告”。
+- 状态：
+  - 用户资料 `pc_must_change_password`（值 `1`）：下次登录只能打开向导改密码。切到投手版时带 `--must-change-password`、新建账号、管理员或总后台重置密码时写入；本人改完密码后删除。
+  - 选项 `pc_onboarding`（按店铺，不自动加载）：`store`（店铺信息保存过的时间）、`pixel_test`（`pixel`、`ok`、`at`、`message`）、`link`（生成过投放链接的时间）。开发文档 3.3 写的是用户资料 `pc_onboarding`，这里改成按店铺记：一家店一个投手，管理员替投手做也算，总后台巡检也只需要店铺级的结果。
+  - 其余按真实数据判断：店名和 WhatsApp 非空、第一个 Facebook 像素有 ID 和令牌、测试通过且测的是当前像素（换像素要重新验证）。
+- 给总后台巡检用：`\PeptideCore\Admin\Onboarding::store_status()` 返回 `array{steps:array<string,bool>,remaining:int,complete:bool,current:string}`。
+- 生成投放链接（F5 已实现）：`POST /peptide/v1/admin/ad-link`，参数 `landing`（必须是本店地址）、`campaign`（可空）、`source`（`facebook` / `instagram`），返回 `{ url }`。链接固定带 `utm_source`、`utm_medium=paid`、`utm_campaign`、`utm_term`、`utm_content`；广告系列名不填时用 Facebook 动态参数 `{{campaign.name}}`、`{{adset.name}}`、`{{ad.name}}`。
+
+需要配合：
+
+| 归属 | 内容 | 没做之前 |
+| --- | --- | --- |
+| F4（M7，`core/class-pixels.php` / `core/pixels/class-server.php`）**F4 已在自己分支实现** | `POST /peptide/v1/admin/pixel-test`：权限 `manage_woocommerce`，不需要参数；向第一个 Facebook 像素发一条测试事件并判断结果。不论通没通都返回 HTTP 200：`{ "ok": true|false, "pixel": "<像素 ID>", "message": "<未通时给投手看的中文原因>" }`；没填像素或令牌时也返回 `ok:false` 加原因。F5 在 `rest_request_after_callbacks` 里读这个返回并写入 `pc_onboarding.pixel_test`，F4 不需要调用 F5 的任何代码 | 页面提示“验证功能还没上线”，向导停在第 4 步，红条不会消失 |
+| F4（可选） | `Pixels::set_facebook_pixel( string $pixel_id, string $token ): void`：设置主 Facebook 像素（令牌为空 = 沿用原令牌），其余设置不动 | F5 用 `Onboarding::merge_pixel()` 直接改 `peptide_core_pixels` 里 `platforms.facebook.pixels` 的第一项，其他内容原样写回 |
+| F4（M6 归因） | 落地页参数里的 `utm_campaign`、`utm_term`、`utm_content` 需要进归因，数据页才能按广告系列 / 广告组 / 广告拆分（现在访客表只存 `utm_source`、`utm_medium`） | 只能按来源拆分 |
+| F1（`/hq/status`） | 状态里带上 `Onboarding::store_status()`，供总后台巡检“向导是否完成” | 总后台看不到向导进度 |
+
+### M9-3 投手首页（`Admin\Buyer_Home`，ST-02）
+
+- 页面 `admin.php?page=pc-buyer-home`；数据接口 `GET /peptide/v1/admin/buyer-home?range=today|yesterday|7d`（投手或管理员），返回排好格式的 5 个数字、统计时间、未跟进弃单数；每个时间段缓存 60 秒。
+- 待办来源：向导没做完、支付域名没登记、未跟进弃单数。
+
+需要配合：
+
+| 归属 | 内容 | 没做之前 |
+| --- | --- | --- |
+| F4（M6，已按 F4 的约定接好） | 首页用 `\PeptideCore\Data\Metrics::preset( 'today' \| 'yesterday' \| '7d' )` 的 `visitors`、`orders`、`sales_cents`、`conversion_rate`、`abandoned`，待办用 `preset( '7d' )` 的 `abandoned_open`。**只在这家店的指标开关 `Metrics_Switch::mode()` 是 `on` 时才用**，这样首页和数据页任何时候都是同一个口径 | 开关是 `off` / `shadow`，或 F4 的代码还没合进来：沿用 `Overview::range_data()` 和 `Recovery_Items::list()` 的统计（真实数据，不是假数据） |
+| 日常会话（M5）/ F1 | 店铺选项 `pc_pay_domain_missing`：总后台发现这家店的收银台域名不在名单里时写 `1`，登记好后删除（也可以用过滤器 `pc_pay_domain_missing` 返回布尔值） | 这一条待办不会出现 |
+| 日常会话（M8） | `Recovery_Items::uncontacted_count(): int`（未标记“已联系”的待召回 / 召回中顾客数），或者在 `Recovery_Items::list()` 的每一项里带 `contacted_ms` | 首页把全部待召回 / 召回中的顾客都算作未跟进 |
+
+### M9-4 订单只读和店铺信息（`Admin\Admin_Menus`、`Admin\Store_Settings`，ST-03、ST-07）
+
+- 投手的订单列表去掉勾选框、批量操作和行内按钮，增加三列：来源广告（订单上的 `_wc_order_attribution_utm_*`）、运单号（见 M11 的 `Buyer_Status::shipment()`）、退款状态（`_pc_refund_state` 优先，没有时按订单已退金额）。订单页面隐藏保存、改价、退款、作废、加备注。
+- 店铺信息页面 `admin.php?page=pc-store-info`：投手能改对外英文品牌名、客服 WhatsApp、客服邮箱和自己的密码；后台店铺名称（`blogname`）和域名只读。
+  - 对外英文品牌名（平台所有者 2026-11-10 确认可改）：选项 `pc_public_brand`（2–40 个英文字符，可留空），读取用 `\PeptideCore\Admin\Store_Settings::public_brand()`。主题的 `vc_brand_name()` 已经读它（网页标题、Logo 替代文字、页脚版权）；留空时和以前一样。**不写 `blogname`**：那是总后台管理的内部名称，11-08 已定不上前台、不反向同步。
+  - WhatsApp、邮箱写 `peptide_core_settings.support` 里的 `whatsapp`、`email`，其余字段不动（保存时从 `Settings::all()` 出发，不会把别的开关关掉）。
+- 订单导出（PRD ST-03 提到）这一版没做。
+
+需要配合：
+
+| 归属 | 内容 | 没做之前 |
+| --- | --- | --- |
+| 日常会话（`core/class-mail-outbox.php`） | `Mail_Outbox::brand()` 先取 `\PeptideCore\Admin\Store_Settings::public_brand()`，非空就用它，否则照旧按域名推 | `vialcove*` 域名的店邮件落款仍按域名显示，和投手填的品牌名可能不一致 |
+
+### M11 已购回访和查订单（`PeptideCore\Buyer_Status`、`PeptideCore\Order_Lookup`，FE-10、FE-11）
+
+- **按店开关，默认关**：选项 `pc_buyer_recognition`，值 `on` 才生效（过滤器 `pc_buyer_recognition_enabled` 可以覆盖）。关着时不写 cookie、不静默弹窗、不加载前台脚本，两个接口都按“不是已购 / 没找到”回答。第一次改成 `on` 时自动建一个 `/track-order` 页面（内容是短代码 `[pc_track_order]`，页面 ID 记在选项 `pc_track_order_page`；已有同名页面就用它）。
+- cookie `pc_buyer`：`v1.<订单号-订单号…>.<签发时间>.<HMAC-SHA256>`，最多 10 张订单，1 年，HttpOnly，SameSite=Lax，HTTPS 下带 Secure。密钥是 `wp_salt( 'pc_buyer' )`。里面没有顾客资料。
+- 什么时候写：顾客带着订单密钥回到店铺而且订单已付款（`/?pc_paid=<订单>&pc_key=<密钥>`，或 WooCommerce“订单已收到”页面带 `key`）；查订单核对成功且订单付过款。测试单（`Test_Orders::is_test_order()`）不写。
+- 接口（都是公开的，返回 `Cache-Control: no-store, private`）：
+  - `GET /peptide/v1/buyer/status` → `{ "buyer": false }`，或 `{ "buyer": true, "order": { "number", "placed", "status", "status_label", "items": [ { "name", "quantity" } ], "more_items", "shipment": { "carrier", "number", "url" } } }`。只看 cookie 里最近的一张订单；`status` 取 `awaiting_shipment` / `shipped` / `refunded` / `cancelled` / `unpaid`。不返回姓名、邮箱、电话、地址。前台等 800 毫秒，没等到就当新客。
+  - `POST /peptide/v1/order-lookup`，JSON `{ "email", "order" }` → `{ "found": true, "order": {…同上} }`，或 `{ "found": false, "message" }`（HTTP 200；订单不存在、邮箱不符、测试单都是同一句提示）。每个 IP 每分钟 5 次（成功失败都算），超过返回 429。IP 的取法同 `Api\Rest_Controller::client_ip()`。
+- 运单：`Buyer_Status::shipment( \WC_Order $order )` 返回 `array{carrier,number,url,shipped,shipped_at}`。先读订单元数据 `_pc_shipment`（`carrier`、`number`、`url`、`shipped_at`，发货对接 OR-01 写入），没有再读 WooCommerce 订单履约（`Shipping_Tracking::customer_view()`）；都没有而订单是 `completed` 时算已发货但没有运单号。投手的订单列表也用这个函数。
+- 静默营销弹窗：用 F2 提供的过滤器 **`pc_marketing_popups_suppressed`**（见 M4 一节）。已购顾客在前台时 `Buyer_Status` 让它返回 `true`；带 cookie 的访客本来就不走首页缓存，所以在服务端判断，新访客没有任何额外请求。同时在页面 `<head>` 里输出 `window.pcBuyer = { known: true, suppressPopups: true }` 并调用 `window.pcMarketingQuiet.refresh()`（存在时）。F5 没有调用 `pcMarketingQuiet.suppress()`：那会另写一个一年的 cookie，店铺把已购回访关掉以后弹窗仍然不出来。
+- 功能声明：`m11.buyer_status => 1`。
+- 没有新数据表。新选项：`pc_buyer_recognition`、`pc_track_order_page`。
+
+需要配合：
+
+| 归属 | 内容 | 没做之前 |
+| --- | --- | --- |
+| F2（离开挽回、首单券条、转盘、活动倒计时）**F2 已在自己分支实现** | 弹窗读 `\PeptideCore\Pricing\Popups::suppressed()`。F5 已经挂好过滤器，两个分支合到一起就生效 | F2 的分支合进来之前，已购顾客仍然会看到这些弹窗；物流卡片和查订单不受影响 |
+| 日常会话（`Campaign_Announcement`、`Modules\Product_Broadcast` 等 F2 没覆盖的弹出内容） | 同样读 `Popups::suppressed()`。付款成功弹窗（`Paid_Popup`）不属于营销弹窗，不用改 | 这些内容对已购顾客照常出现 |
+| F3 / 发货对接（OR-01，暂缓） | 发货后把 `carrier`、`number`、`url`、`shipped_at` 写进订单元数据 `_pc_shipment`；退款标记写 `_pc_refund_state`（`full` 时卡片显示 Refunded） | 物流卡片显示“Awaiting shipment”，或显示 WooCommerce 订单履约里的运单 |
+| M14 主题（F5，已做） | 页脚上方输出 “Track your order”（`vc_track_order_entry()`），只在开关打开且有查订单页面时出现。发货邮件里的链接可以带 `?email=…&order=…` 预填 | — |
+| F1（开关） | 试点店打开：`wp option update pc_buyer_recognition on`（或总后台远程写选项）。回退：改回 `off` | — |
+
+### M14 前台主题（`wp-content/themes/peptide-site/`，FE-02、NF-06）
+
+平台所有者 2026-11-10 确认：Codex 不再修改主题，主题由 F5 接手（`AGENTS.md` 已更新）；Q5 选“保留弹窗，换地址”。别的会话要改主题里的东西，在这里提，F5 来做。
+
+- **FE-02 商品 / 专辑地址**（`inc/entry-address.php`、`assets/entry-address.js`）
+  - 按店开关：选项 `pc_entry_address`，值 `on` 才生效，**默认关**（过滤器 `vc_entry_address_enabled` 可覆盖）。关着时不加载脚本，行为和以前一样。功能声明 `m14.entry_address => 1`。
+  - 服务器端的入口没有变：`/product/<slug>/` 和专辑链接仍然 302 到首页（`/?vc_product=<ID>`、`/?vc_catalog_category=<ID>`），**已投放的 `/?vc_product=` 链接照常可用，没有加任何 301**。首页缓存、落地页统计（`vc_visitor_entry_product_context()`）都不受影响。
+  - 只改地址栏：商品弹窗打开时显示商品固定链接；专辑落地后显示专辑固定链接；关掉弹窗恢复页面自己的地址（去掉 `vc_product`）。写进地址栏的每个地址都是服务器本来就接受的入口，刷新或分享都会回到同一个画面。`utm_*`、`fbclid` 等其他参数原样保留。
+  - 只用 `History.prototype.replaceState` 替换**当前**历史记录的地址，不增删历史记录，不动 `live-commerce-navigation.js` 的弹窗层状态。
+  - 已知限制：分享出去的商品地址被社交平台抓取预览时，拿到的仍是首页的标题和图片（服务器把它转到了首页）。
+- **NF-06 使用声明**：文字只来自店铺设置 `use_statement_html`（`vc_use_statement_markup()`），主题不自带任何措辞。输出位置：每个页面页脚上方（购物车、结账页除外，原有），以及**商品弹窗内容末尾**（新增）。店铺没配置时两处都不输出，`Launch_Check` 会提示。
+- **品牌名**：`vc_brand_name()` 先读 `Store_Settings::public_brand()`，没填用默认的 `VialCovePeptides`。
+- **落地参数**：`assets/visitor-adapter.js`、`assets/visitor-tracking.js` 现在随 `utm_source`、`utm_medium` 一起上报 `utm_campaign`、`utm_term`、`utm_content`（各 1–120 个字符；不合规、重复、为空或是没被替换的 `{{…}}` 时只丢这一项）。服务端目前会忽略这三项，不报错。
+- 政策页定稿内容：等平台所有者提供，还没做。
+
+需要配合：
+
+| 归属 | 内容 | 没做之前 |
+| --- | --- | --- |
+| F4（`Tracking\Attribution`、来源报表） | 服务端白名单放开 `utm_campaign`、`utm_term`、`utm_content` 并入库，来源报表加这三个维度 | 这三项被服务端丢弃，数据仍只能按来源拆 |
+| F4（M7 像素） | 开关打开后地址栏会变。脚本用的是原生 `History.prototype.replaceState`，正常不会触发 Facebook 像素“地址变化自动发 PageView”；请在沙盒用事件管理工具确认打开商品弹窗时没有多出 PageView | — |
+| F1（开关） | 试点店打开：`wp option update pc_entry_address on`；回退：改回 `off` | — |
+
+## CR 素材归因（2026-11-11 起，打地基 + 线 1–4）
+
+需求见《素材库与广告归因模块 需求文档》（claude.ai 文档，2026-11-11）。所有广告的“网址”填首页域名，只靠网址参数区分素材；拿不到 Meta API，素材由投手登记、花费由投手导入 CSV。打地基已建好表、页面入口、接口和校验函数；各线只在自己的文件里写，见 `docs/handoffs/cr-foundation.md`。
+
+### 网址参数和广告名
+
+- **素材专属链接（2026-11-12，优先）**：投手在“广告设置”页上传素材（图文为主，视频传封面、视频文件可选），得到这个素材的专属投放链接：落地页 + `cr=素材编号&` + 下面的固定模板（`Contract::creative_query()`，`Onboarding::ad_link( $landing, '', '', $code )`）。一个素材一条链接，投到多少广告系列都用同一条；换落地页只换前半段，编号不变。识别素材时 **`cr` 优先，其次广告名开头的编号**（`Contract::code_from_params()`），广告名不再必须按规范写。`cr` 属于 `Contract::PARAMS` 白名单（最长 16），也算页面缓存的追踪参数。素材表加 `video_id`（`Schema::VERSION` = 2）。素材库页只做汇总和对比，不再有登记入口。
+
+- Meta“网址参数”固定模板（`PeptideCore\Creatives\Contract::URL_TEMPLATE`）：
+  `utm_source={{site_source_name}}&utm_medium=paid&utm_campaign={{campaign.id}}&utm_term={{adset.id}}&utm_content={{ad.id}}&placement={{placement}}&ad_name={{ad.name}}`
+- 访问上保存的参数白名单：`Contract::PARAMS`。有效 = 平台是 fb/ig/msg/an、medium 是 paid、三个 ID 都是 6–25 位数字（`params_valid()`）；广告预览带来的 `{{ad.id}}` 原文算无效。
+- 来源分类 `source_class`：`paid`（参数有效）/ `fb_untagged`（没有 utm，但带 fbclid、来源页是 facebook.com / instagram.com、或在 FB / IG 内置浏览器）/ `other`。
+- 素材编号：`C` + 至少 4 位数字，每家店独立计数（`code_for(n)`）；没登记的素材统计时用 `UNREG`。
+- 广告名：`C0012_hook-lab_fmt-vid_angle-purity_lang-en_v1`。编号在最前；`属性-取值` 小写字母数字；`v数字` 是版本；看不懂的属性放 custom。拆分 / 生成：`Contract::parse_ad_name()` / `build_ad_name()`。**素材的属性以素材库登记为准**，名字里的属性只是方便人看。
+- 必填属性 `hook`、`fmt`、`angle`，可选 `lang`。词表初版 `Contract::DEFAULT_VOCAB` = 总后台 `Creatives::DEFAULT_VOCAB`（测试保证一致）。
+
+### 店铺端数据
+
+- 访客追踪表升到 v5（`Tracking\Schema::DB_VERSION = '5'`，列已加好，写入归线 1）：
+  - `pc_track_visits` 新列：`utm_campaign, utm_term, utm_content(=ad_id), placement, ad_name, creative_code, has_fbclid, source_class, params_valid, ip, geo_region, geo_city, geo_lat, geo_lon, isp, asn, ip_type, timezone, language, in_app`；索引 `ad_time(utm_content,start_ms)`、`creative_time(creative_code,start_ms)`。
+  - `pc_track_visitors` 新列：`first_visit_id`（只在为 0 时写）、`last_paid_visit_id`（每次 `source_class = paid` 的新访问更新）。
+  - 带着和当前访问不同的广告 ID 进站时开新访问（线 1）。
+- 素材表（`Creatives\Schema`，版本选项 `peptide_core_creatives_db`，后台打开时自动建表）：
+  - `pc_ad_creatives(code UNIQUE, attachment_id, attrs JSON, custom JSON, lang, note, status active|archived, created_by, created_at, updated_at)`
+  - `pc_ad_ads(ad_id PK, code, ad_name, adset_id, campaign_id, first_seen_ms, last_seen_ms)`：某个 ad_id 第一次出现时写入，编号来自广告名。
+  - `pc_ad_daily_spend(ad_id + day PK, spend_cents, impressions, link_clicks, ad_name, import_id)`：CSV 导入按 (ad_id, day) 覆盖。
+  - `pc_ad_spend_imports(id, filename, user_id, created_at, day_from, day_to, rows_total, rows_saved, errors)`
+  - `pc_ad_attribute_vocab(attr + value PK, label, required, active, position, ver)`：总后台下发后整体覆盖；ver = 0 是初版。
+- 后台页面（能力 `Staff_Buyer::CAP_VIEW`）：`pc-creatives`（素材库，线 2）、`pc-creatives-spend`（花费导入，线 2）、`pc-creatives-board`（素材看板，线 4）。投手菜单“素材”在“数据”和“广告设置”之间；管理员在“营销活动 → 广告素材”。
+- 投手可提交的 admin-post 动作：`pc_creative_save`、`pc_creative_spend_import`、`pc_creative_export`（`Creatives\Module::ACTION_*`，已加入 `Staff_Buyer::POST`）。
+- REST 前缀预留：`peptide/v1/creatives/...`，权限用 `CAP_VIEW`，不需要店铺能力。
+
+### 店铺 → 总后台
+
+签名同订单上报（`X-PC-HQ-Site / Time / Sign`，总后台 `Mail::verify`）。请求体都带 `nonce`。
+
+- `POST /peptide-hq/v1/creatives/report`：一天一次（店铺时区的前一天），补登记或补导入后重报受影响的日期（整天覆盖）。
+  ```json
+  {"nonce":"…","day":"2026-11-11","tz":"America/New_York","untagged":{"visitors":7},
+   "rows":[{"code":"C0012","attrs":{"angle":"purity","fmt":"vid","hook":"lab","lang":"en"},"custom":{},"thumb":"https://…",
+            "intent":{"high":3,"mid":9,"low":23,"invalid":5},"visitors":40,"valid_visitors":35,"add_to_cart":4,"checkout":2,
+            "cashier":2,"orders":1,"sales_cents":15900,"spend_cents":2350,"impressions":3100,"link_clicks":52}]}
+  ```
+  店铺端用 `Contract::report_payload()` 生成，总后台用 `Creatives::clean_report()` 校验，两边按 `tests/fixtures/creatives/report-sample.json` 测。最多 500 行；同一天同一编号只留最后一行；计数非负整数，缺的补 0；`thumb` 只收 https。回应 `{day, stored, rejected}`。写入（线 3）：同一家店同一天整天覆盖；写失败返回 500，原有数据不动。
+- `POST /peptide-hq/v1/creatives/spend`：`{"nonce":"…","days":[{"day":"2026-11-11","spend_cents":12345}]}`，1–62 天，写进 `pchq_ad_spend`（`source = csv`）；0 = 当天没花费（删掉那一行）。回应 `{saved: [日期…]}`。已实现。
+- `GET /peptide-hq/v1/creatives/vocab`：`{"ver":1,"items":[{"attr":"hook","value":"lab","label":"检测报告","required":true,"position":0}]}`。店铺发现 ver 变大时整体覆盖本地词表。已实现。
+
+### 总后台数据
+
+- `pchq_creative_daily(site_id + day + code PK, attrs, custom, thumb, visitors, valid_visitors, intent_high/mid/low/invalid, add_to_cart, checkout, cashier, orders, sales_cents, spend_cents, impressions, link_clicks, reported_at)`
+- `pchq_attribute_vocab(attr + value PK, label, required, active, position, updated_at)`，版本号选项 `pchq_attribute_vocab_ver`（改词表加一）。
+- `pchq_ad_spend.source` 新增取值 `csv`（`Orders::set_spend()`）。
+
+### 联调后补充（2026-11-11）
+
+- **每日上报口径**（线 4，`Creatives\Daily_Report`）：店铺时区的前一天，按“当天最近来源”归到素材；有效访客 = 进站访客去掉意向分层为“无效”的；加购 / 进结账 / 进收银页 / 订单按访问的 `stage` ≥ 2 / 3 / 4 / 5。总后台对比页的比率都用有效访客做分母。每小时检查一次，失败按退避重试，501 / 网络错误重试，400 丢弃并记日志。
+- **重报**：`Daily_Report::rereport( $days )`。素材归位后（`do_action( 'pc_creatives_relinked', $ad_id, $code )`）重报这条广告带来访客的日期；花费导入后（`do_action( 'pc_creatives_spend_imported', $days, $import_id )`）重报导入涉及的日期。由 `Creatives\Module` 接起来。
+- **补登记**会把 `pc_track_visits.creative_code` 一起改成新编号（`WHERE utm_content = ad_id`）；`pc_ad_ads` 由采集（线 1）和花费导入（线 2）两处补，都只在没有这条广告时插入。
+- **页面缓存**：`placement`、`ad_name` 和 `utm_*` 一样算追踪参数，带模板参数的广告链接也能用首页缓存。
+- **店铺端选项 / 定时任务**：`peptide_core_creatives_spend_pending`（待推送的花费日期）、`peptide_core_creatives_vocab_sync`（词表同步状态）、`pc_creatives_site_versions`（站点版本号）、`pc_creatives_board`（看板阈值）；定时任务 `pc_creatives_vocab_sync`、`pc_creatives_spend_push` 和每日上报的小时任务。
+- **总后台选项**：`pchq_creatives_checkpoint`、`pchq_creatives_exports`（检查点导出）；词表版本 `pchq_attribute_vocab_ver` 只在有改动时加一。
+- **IP 地理库**：生产需要把 GeoLite2-City / GeoLite2-ASN（或 DB-IP lite）放进 `uploads/peptide-geoip/` 或用常量指定；没有库时地理网络列为空，不报错。DB-IP lite 需要署名。
+- **已知缺口**（不影响上线，后续补）：`ip_type` 目前只判断 `vpn / hosting / mobile / residential`，意向分层里“企业 / 高校 IP”一条暂时用不上；前端没有滚动事件，“没有滚动”这条无效规则按“看不出”处理；访问表没有国家列，看板从 `page_view` 事件取国家；个人数据导出还没包含 IP 等新列（合规层面用户决定后期再做）。
+

@@ -28,7 +28,8 @@ final class Classified_Conversion {
   if ( ! $need ) { return; } foreach ( $need as $id ) { $orders[$id] = null; }
   foreach ( wc_get_orders( array( 'post__in' => array_values( $need ), 'limit' => count( $need ), 'type' => 'shop_order', 'status' => array_keys( wc_get_order_statuses() ) ) ) as $order ) {
    $id = $order->get_id(); if ( ! isset( $need[$id] ) ) { continue; }
-   $orders[$id] = array( 'test' => Overview::is_test_order( $order ), 'paid' => $order->is_paid() || null !== $order->get_date_paid(), 'failed' => $order->has_status( 'failed' ), 'method' => self::method( $order->get_payment_method() ), 'visitor' => (int) $order->get_meta( Server_Events::ORDER_VISITOR_META ), 'visit' => (int) $order->get_meta( Server_Events::ORDER_VISIT_META ) );
+   $was_paid = $order->is_paid() || null !== $order->get_date_paid();
+   $orders[$id] = array( 'test' => self::is_test( $order ), 'paid' => $was_paid, 'counted' => class_exists( Metrics_Switch::class ) && Metrics_Switch::on() ? Metrics::is_paid_order( $order ) : $was_paid, 'failed' => $order->has_status( 'failed' ), 'method' => self::method( $order->get_payment_method() ), 'visitor' => (int) $order->get_meta( Server_Events::ORDER_VISITOR_META ), 'visit' => (int) $order->get_meta( Server_Events::ORDER_VISIT_META ) );
   }
  }
  /** Classification is as-of receipt cutoff; visit stage and checkout remain accumulated historical progress. */
@@ -52,6 +53,8 @@ final class Classified_Conversion {
    foreach ( array( 'visitors' => 0, 'viewed' => 1, 'carted' => 2, 'checkout' => 3 ) as $step => $stage ) { if ( (int) $row['stage'] >= $stage ) { $sets[$step][(int) $row['visitor_id']] = true; $groups[$key]['sets'][$step][(int) $row['visitor_id']] = true; } }
   }
   $checkout_seen = array_fill_keys( array_keys( Checkout_Steps::EVENTS ), array() ); $channels = array(); $orders = array();
+  // M6（FE-05）：开关开着时，后四层先按访问记下来，整段事件读完再按 Metrics::tail_steps() 结算（没填地址的付款不算，付了款的四层都算）。关着和影子时和以前一样逐条累加。
+  $strict = class_exists( Metrics_Switch::class ) && Metrics_Switch::on(); $visit_steps = array();
   foreach ( array_chunk( array_keys( $selected ), 500 ) as $ids ) {
    $in = implode( ',', $ids ); $cursor = 0;
    do {
@@ -62,7 +65,7 @@ final class Classified_Conversion {
      if ( ! isset( $selected[$visit] ) || $visitor !== (int) $selected[$visit]['visitor_id'] || $visitor !== (int) $row['owner'] || (int) $row['is_test'] || (int) $row['visit_test'] || (int) $row['visitor_test'] || ( $source === 'client' ? ! in_array( $type, self::CLIENT, true ) : $source !== 'server' || ! in_array( $type, array( 'payment_attempt', 'payment_success', 'payment_failed' ), true ) ) ) { continue; }
      $id = (int) ( $row['order_id'] ?: ( $row['linked_order'] ?? 0 ) ); $order = $orders[$id] ?? null;
      if ( ( $id && ( ! $order || $order['test'] || $order['visit'] !== $visit || $order['visitor'] !== $visitor ) ) || ( $source === 'server' && (int) $row['order_id'] <= 0 ) || ( $type === 'payment_success' && ( ! $order || ! $order['paid'] ) ) ) { continue; }
-     $step = self::MIDDLE[$type] ?? ( $type === 'payment_success' ? 'paid' : null ); if ( $step !== null ) { $sets[$step][$visitor] = true; $groups[$keys[$visit]]['sets'][$step][$visitor] = true; }
+     $step = self::MIDDLE[$type] ?? ( $type === 'payment_success' ? 'paid' : null ); if ( $step !== null ) { if ( $strict ) { if ( $step !== 'paid' || $order['counted'] ) { $visit_steps[$visit][$step] = true; } } else { $sets[$step][$visitor] = true; $groups[$keys[$visit]]['sets'][$step][$visitor] = true; } }
      if ( isset( Checkout_Steps::EVENTS[$type] ) ) { $checkout_seen[$type][$visit] = true; }
      if ( ! in_array( $type, array( 'checkout_payment_selected', 'payment_attempt', 'payment_success', 'payment_failed' ), true ) ) { continue; }
      $data = json_decode( (string) $row['data'], true ); $method = self::method( is_array( $data ) ? ( $data['method'] ?? '' ) : '' );
@@ -73,21 +76,22 @@ final class Classified_Conversion {
     }
    } while ( count( $rows ) === 500 );
   }
+  foreach ( $visit_steps as $visit => $steps ) { $visitor = (int) $selected[$visit]['visitor_id']; foreach ( Metrics::tail_steps( $steps, ! empty( $steps['paid'] ) ) as $step ) { $sets[$step][$visitor] = true; $groups[$keys[$visit]]['sets'][$step][$visitor] = true; } }
   $paid = 0;
   foreach ( Operations::paid_orders( $from, $to ) as $order ) {
-   if ( Overview::is_test_order( $order ) ) { continue; } $created = $order->get_date_created(); $at = $created ? $created->getTimestamp() : -1;
+   if ( self::is_test( $order ) ) { continue; } $at = self::order_ts( $order ) ?? -1;
    $visit = (int) $order->get_meta( Server_Events::ORDER_VISIT_META ); $visitor = (int) $order->get_meta( Server_Events::ORDER_VISITOR_META );
    if ( $at < $from || $at >= $to || ! isset( $selected[$visit] ) || $visitor !== (int) $selected[$visit]['visitor_id'] ) { continue; }
-   ++$paid; ++$groups[$keys[$visit]]['paid']; $groups[$keys[$visit]]['sales'] += (float) $order->get_total() - (float) $order->get_total_refunded();
+   ++$paid; ++$groups[$keys[$visit]]['paid']; $groups[$keys[$visit]]['sales'] += self::sales( $order );
   }
   $counts = self::counts( $sets ); $rows = array();
   foreach ( $groups as $key => $g ) {
-   $n = self::counts( $g['sets'] ); $row = array( 'key' => (string) $key, 'conversion' => $n['visitors'] ? round( $g['paid'] / $n['visitors'] * 100, 2 ) : null, 'sales' => round( $g['sales'], 2 ), 'visitors' => $n['visitors'], 'paid' => $g['paid'], 'funnel' => Operations::layers( array( 'visitors' => $n['visitors'], 'viewed' => $n['viewed'], 'carted' => $n['carted'], 'checkout' => $n['checkout'], 'paid' => $g['paid'] ) ), 'visitor_funnel' => array( 'unit' => 'visitors', 'layers' => Visitor_Funnel::layers( $n ) ) );
+   $n = self::counts( $g['sets'] ); $row = array( 'key' => (string) $key, 'conversion' => self::conversion( (int) $g['paid'], (int) $n['paid'], (int) $n['visitors'], 'conversion.classified.' . $group ), 'sales' => round( $g['sales'], 2 ), 'visitors' => $n['visitors'], 'paid' => $g['paid'], 'funnel' => Operations::layers( array( 'visitors' => $n['visitors'], 'viewed' => $n['viewed'], 'carted' => $n['carted'], 'checkout' => $n['checkout'], 'paid' => $g['paid'] ) ), 'visitor_funnel' => array( 'unit' => 'visitors', 'layers' => Visitor_Funnel::layers( $n ) ) );
    if ( $dimension !== null ) { $row['dimension'] = $mapping['typed'][$key]; $row['label'] = Dimension_Reports::label( $row['dimension'], $dimension ); } $rows[] = $row;
   }
   usort( $rows, static fn( $a, $b ) => ( $b['visitors'] <=> $a['visitors'] ) ?: ( $b['paid'] <=> $a['paid'] ) ?: strcmp( $a['key'], $b['key'] ) );
   $out_channels = array(); foreach ( $channels as $method => $channel ) { $m = self::empty_channel(); foreach ( array( 'initial', 'user', 'automatic', 'attempt_visits', 'attempt_orders' ) as $key ) { $m[$key] = count( $channel[$key] ); } $m['attempts'] = $channel['attempts']; foreach ( $channel['attempt_orders'] as $id => $unused ) { if ( $orders[$id]['method'] !== $method ) { continue; } if ( isset( $channel['paid'][$id] ) && $orders[$id]['paid'] ) { ++$m['succeeded']; } if ( $orders[$id]['failed'] ) { ++$m['failed']; } } $m['success_rate'] = $m['attempt_orders'] ? round( 100 * $m['succeeded'] / $m['attempt_orders'], 2 ) : null; $out_channels[$method] = $m; }
-  $out = array( 'coverage' => $coverage, 'overall' => array( 'conversion' => $counts['visitors'] ? round( $paid / $counts['visitors'] * 100, 2 ) : null, 'paid' => $paid, 'visitors' => $counts['visitors'], 'viewed' => $counts['viewed'], 'carted' => $counts['carted'], 'checkout' => $counts['checkout'] ), 'rows' => $rows, 'funnel' => array( 'unit' => 'visitors', 'layers' => Visitor_Funnel::layers( $counts ) ), 'checkout' => array( 'counts' => array_map( 'count', $checkout_seen ), 'channels' => $out_channels ) );
+  $out = array( 'coverage' => $coverage, 'overall' => array( 'conversion' => self::conversion( (int) $paid, (int) $counts['paid'], (int) $counts['visitors'], 'conversion.classified.overall' ), 'paid' => $paid, 'visitors' => $counts['visitors'], 'viewed' => $counts['viewed'], 'carted' => $counts['carted'], 'checkout' => $counts['checkout'] ), 'rows' => $rows, 'funnel' => array( 'unit' => 'visitors', 'layers' => Visitor_Funnel::layers( $counts ) ), 'checkout' => array( 'counts' => array_map( 'count', $checkout_seen ), 'channels' => $out_channels ) );
   if ( $mapping !== null ) { $out['dimension_coverage'] = $mapping['coverage']; } return $out;
  }
  private static function checkout_compare( array $current, array $previous ): array {
@@ -96,4 +100,30 @@ final class Classified_Conversion {
   foreach ( $methods as $method ) { $c = $current['channels'][$method] ?? self::empty_channel(); $p = $previous['channels'][$method] ?? self::empty_channel(); $delta = array(); foreach ( self::CHANNEL as $key ) { $delta[$key] = Range::change( $c[$key], $p[$key] ); } $delta['success_rate'] = null === $c['success_rate'] || null === $p['success_rate'] ? null : round( $c['success_rate'] - $p['success_rate'], 2 ); $channels[] = array( 'method' => $method, 'current' => $c, 'previous' => $p, 'change' => $delta ); }
   return array( 'labels' => Checkout_Steps::labels(), 'sources' => Checkout_Steps::EVENTS, 'current' => $current['counts'], 'previous' => $previous['counts'], 'change' => $change, 'channels' => $channels, 'local_simulation' => \PeptideCore\Payments\Local_Payments::allowed() );
  }
+
+	/** M6（NF-02）：测试单规则按开关走 Metrics_Overlay::is_test_order()（关着时就是 Overview 的旧规则）；不带自动加载的纯逻辑测试里没有这个类，直接用旧规则。 */
+	private static function is_test( $order ): bool {
+		return class_exists( Metrics_Overlay::class ) ? Metrics_Overlay::is_test_order( $order ) : \PeptideCore\Overview::is_test_order( $order );
+	}
+
+	/** M6（NF-02）：一张订单的销售额按开关走 Metrics_Overlay::order_sales()（关着时 = 订单金额 − WooCommerce 退款，和以前一样）。 */
+	private static function sales( $order ): float {
+		return class_exists( Metrics_Overlay::class ) ? Metrics_Overlay::order_sales( $order ) : (float) $order->get_total() - (float) $order->get_total_refunded();
+	}
+
+	/** M6（NF-02）：一张订单算在哪个时刻（Unix 秒）按开关走 Metrics_Overlay::order_time()（关着时 = 创建时间，和以前一样）；没有时返回 null。 */
+	private static function order_ts( $order ): ?int {
+		if ( class_exists( Metrics_Overlay::class ) ) {
+			return Metrics_Overlay::order_time( $order );
+		}
+		$created = $order->get_date_created();
+		return $created ? (int) $created->getTimestamp() : null;
+	}
+	/** M6（NF-02）：分组转化率按开关走 Metrics_Overlay::conversion()（关着时 = 订单数 ÷ 访客，和以前一样；开了 = 付了款的访客 ÷ 访客）。 */
+	private static function conversion( int $orders, int $paid_visitors, int $visitors, string $report ): ?float {
+		if ( class_exists( Metrics_Overlay::class ) ) {
+			return Metrics_Overlay::conversion( $orders, $paid_visitors, $visitors, $report );
+		}
+		return $visitors ? round( $orders / $visitors * 100, 2 ) : null;
+	}
 }

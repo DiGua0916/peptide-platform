@@ -1,0 +1,26 @@
+{
+  "comment": "CR 素材归因：店铺每日上报的样例。input 是店铺端整理前的数据，expected 是 Contract::report_payload() 和 PeptideHq\\Creatives::clean_report() 都应该得到的结果（HQ 另多一个 rejected 计数）。",
+  "input": {
+    "day": "2026-11-11",
+    "tz": "America/New_York",
+    "untagged": 7,
+    "rows": [
+      {"code": "C0012", "attrs": {"hook": "lab", "fmt": "vid", "angle": "purity", "lang": "en"}, "custom": {"cta": "shopnow", "Bad Key": "x"}, "thumb": "https://store.example.test/wp-content/uploads/c0012.jpg", "visitors": 40, "valid_visitors": 35, "intent": {"high": 3, "mid": 9, "low": 23, "invalid": 5}, "add_to_cart": 4, "checkout": 2, "cashier": 2, "orders": 1, "sales_cents": 15900, "spend_cents": 2350, "impressions": 3100, "link_clicks": 52, "extra": "dropped"},
+      {"code": "C0003", "attrs": {"hook": "price", "fmt": "img", "angle": "price"}, "thumb": "http://not-https.example.test/a.jpg", "visitors": 12, "valid_visitors": -3, "intent": {"high": "2"}, "orders": 0},
+      {"code": "UNREG", "visitors": 5, "valid_visitors": 4},
+      {"code": "c12", "visitors": 9},
+      "not an object"
+    ]
+  },
+  "expected": {
+    "day": "2026-11-11",
+    "tz": "America/New_York",
+    "rows": [
+      {"code": "C0003", "attrs": {"angle": "price", "fmt": "img", "hook": "price"}, "custom": {}, "thumb": "", "intent": {"high": 0, "mid": 0, "low": 0, "invalid": 0}, "visitors": 12, "valid_visitors": 0, "add_to_cart": 0, "checkout": 0, "cashier": 0, "orders": 0, "sales_cents": 0, "spend_cents": 0, "impressions": 0, "link_clicks": 0},
+      {"code": "C0012", "attrs": {"angle": "purity", "fmt": "vid", "hook": "lab", "lang": "en"}, "custom": {"cta": "shopnow"}, "thumb": "https://store.example.test/wp-content/uploads/c0012.jpg", "intent": {"high": 3, "mid": 9, "low": 23, "invalid": 5}, "visitors": 40, "valid_visitors": 35, "add_to_cart": 4, "checkout": 2, "cashier": 2, "orders": 1, "sales_cents": 15900, "spend_cents": 2350, "impressions": 3100, "link_clicks": 52},
+      {"code": "UNREG", "attrs": {}, "custom": {}, "thumb": "", "intent": {"high": 0, "mid": 0, "low": 0, "invalid": 0}, "visitors": 5, "valid_visitors": 4, "add_to_cart": 0, "checkout": 0, "cashier": 0, "orders": 0, "sales_cents": 0, "spend_cents": 0, "impressions": 0, "link_clicks": 0}
+    ],
+    "untagged": {"visitors": 7},
+    "hq_rejected": 2
+  }
+}

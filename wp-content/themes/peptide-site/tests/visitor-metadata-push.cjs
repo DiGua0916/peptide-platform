@@ -24,6 +24,12 @@ function fixture(options = {}) {
   let now = Date.parse('2026-10-31T12:00:00Z'), timer = 0, href = new URL(options.url || 'https://shop.test/Collections/Native/page/2/'), urlReads = 0, refReads = 0, aborts = 0, videoStops = 0;
   const timers = new Map(), calls = [], scenarios = [], pending = [], store = new Map(), channels = [];
   const document = new Target(), window = new Target(); document.visibilityState = 'visible'; document.hidden = false;
+  // Engagement gate (2026-11-08): the observer sends nothing until a real interaction or engageMs (6 s by default).
+  // These suites cover what happens after that point, so every observer started here is engaged from the start,
+  // through the observer's own engageMs option. The gate itself is covered in m14-visitor-engagement.cjs.
+  let observerApi;
+  Object.defineProperty(window, 'VialCoveVisitorObserver', {configurable: true, enumerable: true, get: () => observerApi,
+    set(api) { const start = api.start; observerApi = {...api, start: options => start({engageMs: 0, ...options})}; }});
   Object.defineProperty(document, 'referrer', {get() { refReads++; if (options.referrerHook) options.referrerHook(window); if (options.referrerThrows) throw Error('unavailable'); return options.referrer ?? ''; }});
   class ClockDate extends Date { constructor(...args) { super(...(args.length ? args : [now])); } static now() { return now; } }
   const later = (fn, ms, interval = 0) => { const id = ++timer; timers.set(id, {fn, due: now + (Number(ms) || 0), interval}); return id; };
