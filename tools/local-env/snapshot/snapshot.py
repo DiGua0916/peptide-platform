@@ -57,7 +57,11 @@ STORE_TABLES = {
     "pc_points_accounts": KEEP, "pc_points_ledger": SCRUB, "pc_px_log": KEEP, "pc_recovery": SCRUB, "pc_referral_touches": KEEP,
     "pc_subscriptions": SCRUB,
     # 追踪表按设计不存姓名、邮箱、电话、地址，只有匿名访客号
-    "pc_track_events": KEEP, "pc_track_tabs": KEEP, "pc_track_visitors": KEEP, "pc_track_visits": KEEP,
+    "pc_track_events": KEEP, "pc_track_tabs": KEEP, "pc_track_visitors": KEEP,
+    # 2026-11-13 起（访问表 v6，素材归因）：访问表多了访客 IP、经纬度、完整 UA——IP 换成文档保留段的假地址，经纬度清空，UA 只留前 120 个字符
+    "pc_track_visits": SCRUB,
+    # CR 素材归因：素材、广告、每日花费、属性词表没有顾客资料；花费导入记录有上传的文件名和报错原文，清空
+    "pc_ad_creatives": KEEP, "pc_ad_ads": KEEP, "pc_ad_daily_spend": KEEP, "pc_ad_attribute_vocab": KEEP, "pc_ad_spend_imports": TRUNCATE,
     # M6（F4）：访问的广告参数，没有顾客资料
     "pc_track_ads": KEEP,
     # M4（F2）：价格引擎核对统计和明细（懒建；有商品、数量、优惠码，没有顾客资料）
@@ -73,6 +77,8 @@ HQ_TABLES = {
     "pchq_site_plugins": KEEP, "pchq_sites": SCRUB,
     # M3 / M10（F3）：系列、主商品库、系列活动、广告花费没有顾客资料；订单汇总有邮箱哈希，退款备注可能提到顾客
     "pchq_series": KEEP, "pchq_series_products": KEEP, "pchq_series_campaigns": KEEP, "pchq_ad_spend": KEEP,
+    # CR 素材归因（总后台）：各店每日素材汇总和属性词表，只有计数和金额
+    "pchq_creative_daily": KEEP, "pchq_attribute_vocab": KEEP,
     "pchq_orders": SCRUB, "pchq_refunds": SCRUB,
     # 主线 11-12：跨店客户编号（由邮箱算出，能被撞库）、打码邮箱、设备摘要；F3 的每日弃单汇总没有顾客资料
     "pchq_customer_links": SCRUB, "pchq_abandoned": KEEP,
@@ -93,7 +99,7 @@ OPTION_DELETE_EXACT = [
     "logged_in_key", "logged_in_salt", "nonce_key", "nonce_salt", "secure_auth_key", "secure_auth_salt", "secret_key",
     # 总后台
     "pchq_ai", "pchq_ai_providers", "pchq_ai_models", "pchq_register_secret", "pchq_cdn", "pchq_cdn_bot", "pchq_costs", "pchq_costs_snapshot",
-    "pchq_mail", "pchq_ops_agents", "pchq_track17", "pchq_fedex", "pchq_series_reserved", "pchq_tdocs", "pchq_fedex_token", "pchq_17_quota", "pchq_clone_jobs", "pc_panapay_hub_settings", "pc_panapay_hub_purged",
+    "pchq_mail", "pchq_ops_agents", "pchq_track17", "pchq_fedex", "pchq_series_reserved", "pchq_tdocs", "pchq_creatives_exports", "pchq_fedex_token", "pchq_17_quota", "pchq_clone_jobs", "pc_panapay_hub_settings", "pc_panapay_hub_purged",
 ]
 OPTION_DELETE_LIKE = [
     r"\_transient\_%", r"\_site\_transient\_%", r"\_pc\_pay\_nonce\_%", r"pc\_panapay\_handoff\_%", r"pc\_panapay\_hub\_accounts%",
@@ -228,6 +234,14 @@ def scrub_statements(kind, prefix, present, salt, columns=None):
             f"UPDATE {t('pc_recovery')} SET email = {fake_email('email', salt)}, name = IF(name = '' OR name = '1 1', name, CONCAT('Test Customer', id)), note = '', "
             f"token = LEFT(SHA2(CONCAT({q(salt)}, 'recovery', id), 256), 32)"
         )
+    if col("pc_track_visits", "ip"):
+        # 同一个真实 IP 换成同一个假 IP（看板按 IP 去重的逻辑照常能用），假地址落在 198.18.0.0/15（测试保留段）。
+        fake_ip = f"CONCAT('198.', 18 + (CONV(SUBSTRING(SHA2(CONCAT({q(salt)}, ip), 256), 1, 2), 16, 10) % 2), '.', CONV(SUBSTRING(SHA2(CONCAT({q(salt)}, ip), 256), 3, 2), 16, 10), '.', CONV(SUBSTRING(SHA2(CONCAT({q(salt)}, ip), 256), 5, 2), 16, 10))"
+        sets = [f"ip = IF(ip = '', '', {fake_ip})"]
+        sets += [f"{c} = ''" for c in ("geo_lat", "geo_lon") if col("pc_track_visits", c)]
+        if col("pc_track_visits", "ua"):
+            sets.append("ua = LEFT(ua, 120)")
+        sql.append(f"UPDATE {t('pc_track_visits')} SET " + ", ".join(sets))
     if has("pc_subscriptions"):
         sql.append(
             f"UPDATE {t('pc_subscriptions')} SET email = {fake_email('email', salt)}, other_contact = '', token_hash = SHA2(CONCAT({q(salt)}, 'sub', id), 256), unsubscribe_hash = SHA2(CONCAT({q(salt)}, 'unsub', id), 256)"

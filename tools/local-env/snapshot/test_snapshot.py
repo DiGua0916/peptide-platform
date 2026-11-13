@@ -97,6 +97,18 @@ class NewModuleTablesTest(unittest.TestCase):
         self.assertIn("TRUNCATE TABLE `wp_pchq_tdocs_rows`", hq)
         self.assertIn("'pchq_tdocs'", hq)
 
+    def test_creative_attribution_tables_and_visit_ip(self):
+        # 2026-11-13：访问表 v6 多了访客 IP / 经纬度 / UA；素材归因新增 5 张店铺表、2 张总后台表。
+        names = ["wp_pc_track_visits", "wp_pc_ad_creatives", "wp_pc_ad_ads", "wp_pc_ad_daily_spend", "wp_pc_ad_attribute_vocab", "wp_pc_ad_spend_imports"]
+        new = "\n".join(snapshot.plan("store", "wp_", names, "salt", {"wp_pc_track_visits": {"ip", "geo_lat", "geo_lon", "ua"}}))
+        self.assertIn("UPDATE `wp_pc_track_visits` SET ip = IF(ip = '', '', CONCAT('198.'", new)
+        self.assertIn("geo_lat = '', geo_lon = '', ua = LEFT(ua, 120)", new)
+        self.assertIn("TRUNCATE TABLE `wp_pc_ad_spend_imports`", new)
+        old = "\n".join(snapshot.plan("store", "wp_", ["wp_pc_track_visits"], "salt", {"wp_pc_track_visits": {"id"}}))
+        self.assertNotIn("`wp_pc_track_visits` SET", old)   # 还没升级到 v6 的库没有这些列，不生成语句
+        hq = "\n".join(snapshot.plan("hq", "wp_", tables("hq") + ["wp_pchq_creative_daily", "wp_pchq_attribute_vocab"], "salt"))
+        self.assertIn("'pchq_creatives_exports'", hq)
+
     def test_module_switches_reset_to_off(self):
         sql = "\n".join(snapshot.plan("store", "wp_", ["wp_options"], "salt"))
         self.assertIn("'pc_pricing_engine_mode', 'peptide_core_m6_mode'", sql)
