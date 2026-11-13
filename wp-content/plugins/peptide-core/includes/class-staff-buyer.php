@@ -107,6 +107,7 @@ final class Staff_Buyer {
 				}
 			);
 		}
+		add_action( 'current_screen', array( self::class, 'campaigns_title' ) );
 		add_filter( 'pc_hq_capabilities', array( self::class, 'capabilities' ) );
 		add_filter( 'editable_roles', array( self::class, 'hide_role' ) );
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
@@ -356,6 +357,16 @@ final class Staff_Buyer {
 	 */
 	public static function campaigns_read_only(): bool {
 		return self::campaigns_ready() && ! Admin\Marketing::can_manage();
+	}
+
+	/**
+	 * 投手打开三个营销页面时，页面顶部和浏览器标签用投手菜单里的名字。这三个页面登记的名字是给能改的人看的
+	 * （满减活动 / 优惠码 / 运费折扣），投手看到的三个页面都是同一张只读列表。
+	 */
+	public static function campaigns_title(): void {
+		if ( self::current() && in_array( self::request()['page'], self::CAMPAIGN_PAGES, true ) ) {
+			$GLOBALS['title'] = self::menu_items()['campaigns']['label']; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		}
 	}
 
 	/** 投手菜单里要不要显示“营销活动”：F2 说这个人能看（Marketing::can_view()），并且看到的是只读列表。 */

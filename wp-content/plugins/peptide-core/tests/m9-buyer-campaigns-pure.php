@@ -166,6 +166,17 @@ namespace {
 	check( 'buyer menu: seven entries, campaigns after data', $expected === $menu_labels() );
 	$open( 7, 'pc-coupons' );
 	check( 'on a campaign page the campaigns entry is the highlighted one', 'admin.php?page=pc-promotions' === Staff_Buyer::parent_file( 'x' ) );
+	$GLOBALS['title'] = 'Coupon codes';
+	Staff_Buyer::campaigns_title();
+	check( 'the page is titled like the buyer menu entry, not like the editable page', '营销活动' === $GLOBALS['title'] );
+	$open( 7, 'pc-data' );
+	$GLOBALS['title'] = 'Data';
+	Staff_Buyer::campaigns_title();
+	check( 'other buyer pages keep their own title', 'Data' === $GLOBALS['title'] );
+	$open( 9, 'pc-coupons' );
+	$GLOBALS['title'] = 'Coupon codes';
+	Staff_Buyer::campaigns_title();
+	check( 'people who can edit keep the page\'s own title', 'Coupon codes' === $GLOBALS['title'] );
 
 	// 4. 其余营销页面和应用中心（离开挽回、转盘、加购推荐等设置）：仍然不开放。
 	foreach ( array( 'pc-promotions-product-offers', 'pc-promotions-campaigns', 'pc-promotions-subscribers', 'pc-apps', 'pc-paid-popup', 'pc-tracking-ball', 'pc-cart-links', 'pc-referrals' ) as $page ) {
