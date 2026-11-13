@@ -29,7 +29,7 @@ final class First_Order_Offer_Page {
 		Apps_Page::require_allowed( First_Order_Offer::APP );
 		// 首单优惠由系列统一下发时，店铺后台不能改（HQ-07）。
 		$bound = get_option( First_Order_Offer::OPTION, array() );
-		if ( is_array( $bound ) && '' !== (string) ( $bound['series_key'] ?? '' ) ) { wp_die( '首单优惠由总后台按系列统一下发，店铺后台不能修改。', '', array( 'response'=>403 ) ); }
+		if ( \PeptideCore\Pricing\Series_Campaigns::setting_locked( $bound ) ) { wp_die( '首单优惠由总后台按系列统一下发，店铺后台不能修改。', '', array( 'response'=>403 ) ); }
 		$mode = is_string( $_POST['mode'] ?? null ) ? $_POST['mode'] : '';
 		if ( 'create' === $mode ) {
 			$id = First_Order_Offer::create_welcome_coupon();

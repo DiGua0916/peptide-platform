@@ -205,7 +205,7 @@ final class Exit_Intent {
 	public static function save( array $raw ): array {
 		// 弹窗由系列统一下发时（HQ-07）：登录的后台用户不能改；总后台的应用开关（没有登录用户）照常，系列标记保留。
 		$old    = get_option( self::OPTION, array() );
-		$series = is_array( $old ) && '' !== (string) ( $old['series_key'] ?? '' );
+		$series = Pricing\Series_Campaigns::setting_locked( $old );
 		if ( $series && get_current_user_id() ) {
 			return array( '这个弹窗由总后台按系列统一下发，店铺后台不能修改。' );
 		}

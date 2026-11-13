@@ -137,24 +137,22 @@ final class Marketing {
 	}
 
 	/**
-	 * 当前登录的人能不能看营销活动（显示入口、打开页面都用这一个判断）：
-	 * 能改的人、有 pc_view_campaigns 的人、投手（平台所有者 2026-11-13 定：投手可以看只读列表）。
-	 * 不看“这次请求是哪个页面”，所以在任何后台页面上问结果都一样，可以直接用来决定菜单里出不出现入口。
+	 * 当前登录的人能不能看营销活动（显示入口、打开页面都用这一个判断）：能改的人，或有只读权限 pc_view_campaigns 的人。
+	 * 平台所有者 2026-11-13 定：投手可以看只读列表——投手的这项权限由 M9 存在投手角色上（Staff_Buyer::role_caps()）。
+	 * 所以 M4 单独上线时线上的投手没有任何变化（角色上还没有这项权限，菜单不登记、页面仍是 403）；
+	 * 等 M9 的新版把权限加到角色上、把页面放进投手的名单，只读页才对投手出现。
+	 * 不看“这次请求是哪个页面”，在任何后台页面上问结果都一样，可以直接用来决定菜单里出不出现入口。
 	 * 签名和含义已经和 F5 约定（docs/CONTRACT.md 的 M4 一节），不要改。
 	 */
 	public static function can_view(): bool {
-		return current_user_can( self::CAP ) || current_user_can( self::VIEW_CAP ) || self::is_buyer();
+		return current_user_can( self::CAP ) || current_user_can( self::VIEW_CAP );
 	}
 
 	/**
-	 * 注册菜单页面时用的能力名（add_menu_page 的第三个参数）：能改的人用 CAP，有 VIEW_CAP 的人用 VIEW_CAP，
-	 * 投手用 read（投手账号只有 read，页面里再由 can_view() / read_only_gate() 把关）。先问 can_view() 再注册。
+	 * 注册菜单页面时用的能力名（add_menu_page 的第三个参数）：能改的人用 CAP，只读的人用 VIEW_CAP。先问 can_view() 再注册。
 	 */
 	public static function menu_cap(): string {
-		if ( current_user_can( self::CAP ) ) {
-			return self::CAP;
-		}
-		return ( self::is_buyer() && ! current_user_can( self::VIEW_CAP ) ) ? 'read' : self::VIEW_CAP;
+		return current_user_can( self::CAP ) ? self::CAP : self::VIEW_CAP;
 	}
 
 	/** 只读入口的地址（投手菜单里的那一项指向这里）。 */

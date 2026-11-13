@@ -120,13 +120,16 @@ namespace {
 		update_option( \PeptideCore\Exit_Intent::OPTION, array( 'enabled' => true, 'type' => 'wheel', 'title' => 'Spin to win', 'prizes' => array( array( 'label' => 'A', 'coupon' => 'save10', 'weight' => 1 ), array( 'label' => 'B', 'coupon' => '', 'weight' => 1 ) ) ) );
 	};
 	function update_post_meta_m4( int $id, string $key, $value ): void { $GLOBALS['m4']['posts'][ $id ]['meta'][ $key ] = $value; }
+	/** 直接调 M3 约定的下发钩子的处理函数。 */
+	function apply_filters_m4_series( $result, array $items, int $ver, bool $dry ) { return \PeptideCore\Pricing\Series_Campaigns::apply( $result, $items, $ver, $dry ); }
 	function wp_strip_all_tags_m4( string $html ): string { return trim( (string) preg_replace( '/\s+/', ' ', strip_tags( $html ) ) ); }
 
 	// ---------- 投手：只读 ----------
-	// M9 的投手账号平时只有 read：不靠任何营销能力也能看只读页（平台所有者 2026-11-13 定）。
+	// 线上现在的投手（M9 旧版）：角色上还没有只读权限 pc_view_campaigns。M4 单独上线时对他们没有任何变化：
+	// 看不到、菜单不登记、页面不输出任何内容。等 M9 的新版把这项权限加到投手角色上，只读页才出现。
 	$login( 'pc_media_buyer', array() );
-	$check( '投手（没有任何营销能力）：能看、不能改；注册菜单用 read；只读入口是满减活动那个页面', Marketing::is_buyer() && Marketing::can_view() && ! Marketing::can_manage() && 'read' === Marketing::menu_cap() && Marketing::VIEW_PAGE === Promotions_Page::SLUG && false !== strpos( Marketing::view_url(), 'page=pc-promotions' ) );
-	$check( '投手不带任何能力打开页面：是只读的“当前在跑的活动”', false !== strpos( $html( array( Promotions_Page::class, 'render' ) ), '当前在跑的活动' ) );
+	$check( '投手角色上还没有只读权限时（线上现状）：不能看、不能改，页面什么都不输出', Marketing::is_buyer() && ! Marketing::can_view() && ! Marketing::can_manage() && '' === $html( array( Promotions_Page::class, 'render' ) ) && '' === $html( array( Coupons_Page::class, 'render' ) ) );
+	$check( '只读入口是满减活动那个页面', Marketing::VIEW_PAGE === Promotions_Page::SLUG && false !== strpos( Marketing::view_url(), 'page=pc-promotions' ) );
 	$GLOBALS['m4']['users'][3]['roles'] = array( 'pc_staff', 'pc_media_buyer' );
 	$check( '销售账号加上投手角色（M9 的做法）：算投手', Marketing::is_buyer() && Marketing::is_buyer( 3 ) && ! Marketing::can_manage() );
 	$GLOBALS['m4']['users'][3]['roles'] = array( 'administrator', 'pc_media_buyer' );
@@ -247,6 +250,9 @@ namespace {
 	$all = get_option( \PeptideCore\Shipping\Discounts::OPTION );
 	$all[0]['series_key'] = 'half';
 	update_option( \PeptideCore\Shipping\Discounts::OPTION, $all );
+	update_option( \PeptideCore\Exit_Intent::OPTION, array( 'enabled' => true, 'type' => 'message', 'title' => 'Series popup', 'series_key' => 'exit_intent/main' ) );
+	$check( '开关关着（默认）：系列标记不起作用，谁能改还能改（和 M4 上线之前一样）', ! Marketing::locked( 'promotion', 500 ) && ! Marketing::locked( 'coupon', 901 ) && ! Marketing::locked( 'ship_discount', 1 ) && ! \PeptideCore\Pricing\Series_Campaigns::setting_locked( get_option( \PeptideCore\Exit_Intent::OPTION ) ) && 200 === $status( static fn() => Marketing::guard_unlocked( 'promotion', 500 ) ) );
+	update_option( \PeptideCore\Pricing\Series_Campaigns::MODE_OPTION, 'on' );
 	$check( '认得出哪些是系列下发的', Marketing::locked( 'promotion', 500 ) && ! Marketing::locked( 'promotion', 501 ) && Marketing::locked( 'coupon', 901 ) && ! Marketing::locked( 'coupon', 902 ) && Marketing::locked( 'ship_discount', 1 ) && ! Marketing::locked( 'ship_discount', 2 ) && '' !== Marketing::locked_badge( 'promotion', 500 ) && '' === Marketing::locked_badge( 'promotion', 501 ) );
 	foreach ( array( '满减活动' => array( Promotions_Page::class, 500 ), '优惠码' => array( Coupons_Page::class, 901 ), '运费折扣' => array( Shipping_Discounts_Page::class, 1 ) ) as $name => [ $page, $id ] ) {
 		$_GET = array( 'edit' => (string) $id );
@@ -276,14 +282,23 @@ namespace {
 	$after                 = get_option( \PeptideCore\Exit_Intent::OPTION );
 	$check( '总后台的应用开关（没有登录用户）仍然可以关掉弹窗，系列标记保留', array() === $errors && false === $after['enabled'] && 'exit_intent/main' === $after['series_key'] );
 
+	// ---------- 按系列接收营销活动默认关：系列同步说“活动已同步”也不改变店铺后台 ----------
+	$GLOBALS['m4_series_managed'] = true;
+	$login( 'shop_manager', array( 'edit_shop_coupons' ) );
+	$check( '开关关着（默认）：不算被系列接管，营销员工照旧能改', ! \PeptideCore\Pricing\Series_Campaigns::enabled() && ! \PeptideCore\Pricing\Series_Campaigns::managed() && Marketing::can_manage() );
+	$unhandled = apply_filters_m4_series( null, array( array( 'kind' => 'promotion', 'key' => 'x', 'active' => true, 'config' => array( 'type' => 'spend_amount', 'tiers' => array( array( 'min' => 10, 'value' => 1 ) ) ) ) ), 3, false );
+	$check( '开关关着：下发的活动原样放行（系列同步按“没有人处理”记），不写任何东西', null === $unhandled && false === get_option( \PeptideCore\Pricing\Series_Campaigns::OPTION ) && array( 'x' => 1 ) === \PeptideCore\Pricing\Series_Campaigns::export( array( 'x' => 1 ) ) && array( 'y' => 2 ) === \PeptideCore\Pricing\Series_Campaigns::snapshot( array( 'y' => 2 ) ) );
+
 	// ---------- 营销活动已由系列接管：店铺后台不再给新建入口 ----------
 	$GLOBALS['m4_series_managed'] = true;
 	$login( 'shop_manager', array( 'edit_shop_coupons' ) );
+	update_option( \PeptideCore\Pricing\Series_Campaigns::MODE_OPTION, 'on' );
 	$_GET = array( 'new' => '1' );
 	$check( '系列接管后，原来能改的营销员工也只读：新建地址 403，列表是“当前在跑的活动”', ! Marketing::can_manage() && Marketing::can_view() && 403 === $status( array( Promotions_Page::class, 'render' ) ) );
 	$_GET = array();
 	$check( '系列接管后，营销员工的列表页只读', false !== strpos( $html( array( Coupons_Page::class, 'render' ) ), '当前在跑的活动' ) );
 	$login( 'administrator', array( 'edit_shop_coupons', 'manage_woocommerce', 'manage_options' ) );
+	update_option( \PeptideCore\Pricing\Series_Campaigns::MODE_OPTION, 'on' );
 	$check( '系列接管后，平台管理员（总后台一键登录）仍可处理本店自己建的活动', Marketing::can_manage() );
 	$GLOBALS['m4_series_managed'] = false;
 

@@ -50,11 +50,11 @@ final class Runtime {
 	/** 向总后台声明这家店支持的 M4 功能（F1 的 pc_hq_capabilities 钩子：功能键 => 版本号）。 */
 	public static function capabilities( $caps ) {
 		$caps = is_array( $caps ) ? $caps : array();
-		return $caps + array(
+		// series.campaigns 只在这家店打开了“按系列接收营销活动”时才声明（默认关，见 Series_Campaigns::enabled()）。
+		return $caps + ( Series_Campaigns::enabled() ? array( 'series.campaigns' => '1' ) : array() ) + array(
 			'pricing.engine'     => '1', // 价格引擎三档开关和 /hq/pricing-engine
 			'marketing.quiet'    => '1', // 营销弹窗静默开关
 			'campaigns.readonly' => '1', // 投手只读、系列下发的活动只读
-			'series.campaigns'   => '1', // 能接收系列下发的营销活动（pc_series_apply_campaigns）
 		);
 	}
 
@@ -154,7 +154,7 @@ final class Runtime {
 	}
 
 	public static function status(): array {
-		return array( 'mode' => Mode::get(), 'locked' => Mode::locked(), 'engine' => Engine::VERSION, 'summary' => Shadow::summary( 7, 20 ) );
+		return array( 'mode' => Mode::get(), 'locked' => Mode::locked(), 'engine' => Engine::VERSION, 'summary' => Shadow::summary( 7, 20 ), 'series_campaigns' => Series_Campaigns::enabled() ? 'on' : 'off' );
 	}
 
 	public static function status_route() {

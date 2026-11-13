@@ -43,7 +43,7 @@ defined( 'ABSPATH' ) || exit;
 			$failed[] = $label;
 		}
 	};
-	$options = array( Series_Campaigns::OPTION, First_Order_Offer::OPTION, Exit_Intent::OPTION, Discounts::OPTION, \PeptideCore\Pricing\Mode::OPTION );
+	$options = array( Series_Campaigns::OPTION, Series_Campaigns::MODE_OPTION, First_Order_Offer::OPTION, Exit_Intent::OPTION, Discounts::OPTION, \PeptideCore\Pricing\Mode::OPTION );
 	$saved   = array();
 	foreach ( $options as $name ) {
 		$saved[ $name ] = get_option( $name, null );
@@ -98,6 +98,15 @@ defined( 'ABSPATH' ) || exit;
 			array( 'kind' => 'exit_intent', 'key' => 'main', 'active' => true, 'config' => array( 'type' => 'coupon', 'title' => 'Series popup ' . $tag, 'coupon' => $save10, 'desktop_exit' => true, 'mobile' => array( 'back' ), 'pages' => array( 'home', 'product' ) ) ),
 			array( 'kind' => 'upsell', 'key' => 'main', 'active' => true, 'config' => array() ),
 		);
+
+		// ---------- 开关默认关：下发的活动没有人处理，什么都不写（和 M4 上线之前一样） ----------
+		delete_option( Series_Campaigns::MODE_OPTION );
+		$off = $apply( $items, 1, false );
+		$caps = (array) apply_filters( 'pc_hq_capabilities', array() );
+		$check( '按系列接收营销活动默认关：下发原样放行（没有人处理）、什么都没写、不算被系列接管、不声明 series.campaigns', null === $off && ! Series_Campaigns::enabled() && ! Series_Campaigns::managed() && $before_marked === $marked() && ! wc_get_coupon_id_by_code( $welcome ) && array() === Series_Campaigns::state()['items'] && ! isset( $caps['series.campaigns'] ) );
+		update_option( Series_Campaigns::MODE_OPTION, 'on', false );
+		$caps = (array) apply_filters( 'pc_hq_capabilities', array() );
+		$check( '打开开关（pc_series_campaigns_mode = on）以后才接收，并声明 series.campaigns', Series_Campaigns::enabled() && '1' === ( $caps['series.campaigns'] ?? '' ) );
 
 		// ---------- 试运行：只出差异，不写 ----------
 		$dry = $apply( $items, 1, true );

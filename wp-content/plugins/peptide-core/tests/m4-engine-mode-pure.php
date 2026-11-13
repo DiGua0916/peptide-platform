@@ -54,7 +54,11 @@ Mode::set( 'shadow' );
 Runtime::register_hooks();
 $check( '影子：挂上请求末尾的核对', has_action( 'shutdown' ) );
 $caps = apply_filters( 'pc_hq_capabilities', array( 'hq.capabilities' => '1' ) );
-$check( '向总后台声明支持的功能（功能键 => 版本号，不覆盖别人的）', '1' === ( $caps['pricing.engine'] ?? '' ) && '1' === ( $caps['marketing.quiet'] ?? '' ) && '1' === ( $caps['series.campaigns'] ?? '' ) && '1' === ( $caps['hq.capabilities'] ?? '' ) );
+$check( '向总后台声明支持的功能（功能键 => 版本号，不覆盖别人的）', '1' === ( $caps['pricing.engine'] ?? '' ) && '1' === ( $caps['marketing.quiet'] ?? '' ) && '1' === ( $caps['campaigns.readonly'] ?? '' ) && '1' === ( $caps['hq.capabilities'] ?? '' ) );
+$check( '按系列接收营销活动默认关：不向总后台声明 series.campaigns', ! isset( $caps['series.campaigns'] ) && 'off' === Runtime::status()['series_campaigns'] );
+update_option( \PeptideCore\Pricing\Series_Campaigns::MODE_OPTION, 'on' );
+$caps = apply_filters( 'pc_hq_capabilities', array( 'hq.capabilities' => '1' ) );
+$check( '打开以后才声明 series.campaigns', '1' === ( $caps['series.campaigns'] ?? '' ) && 'on' === Runtime::status()['series_campaigns'] );
 
 m4_reset();
 $brief = Runtime::status_brief();

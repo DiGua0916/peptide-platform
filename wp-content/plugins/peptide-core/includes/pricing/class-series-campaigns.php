@@ -52,6 +52,23 @@ final class Series_Campaigns {
 	public const KINDS       = array( 'promotion', 'coupon', 'ship_discount', 'first_order', 'exit_intent', 'wheel' );
 	public const UNSUPPORTED = array( 'upsell', 'progress_bar' );
 
+	/**
+	 * 按店开关：值是 on 才接收系列下发的营销活动，默认关（wp-config.php 的常量 PC_SERIES_CAMPAIGNS_MODE 优先）。
+	 * 关着时四个钩子都原样放行：系列同步里的活动部分和 M4 上线之前一样是“没有人处理”（unhandled），
+	 * 活动版本号不记，店铺后台的营销页面不会因此变成只读，也不向总后台声明 series.campaigns。
+	 */
+	public const MODE_OPTION = 'pc_series_campaigns_mode';
+
+	/** 首单优惠 / 离开挽回这类“一家店一份设置”的选项，是不是系列下发的（开关关着时一律不算）。 */
+	public static function setting_locked( $option ): bool {
+		return self::enabled() && is_array( $option ) && '' !== (string) ( $option['series_key'] ?? '' );
+	}
+
+	public static function enabled(): bool {
+		$mode = defined( 'PC_SERIES_CAMPAIGNS_MODE' ) ? (string) PC_SERIES_CAMPAIGNS_MODE : (string) get_option( self::MODE_OPTION, 'off' );
+		return 'on' === $mode;
+	}
+
 	public static function register_hooks(): void {
 		add_filter( 'pc_series_apply_campaigns', array( self::class, 'apply' ), 10, 4 );
 		add_filter( 'pc_series_export_campaigns', array( self::class, 'export' ) );
@@ -69,11 +86,14 @@ final class Series_Campaigns {
 
 	/** 系列是否已经接管本店的营销活动（M3 的 Series_Sync 还没合进来时为否）。 */
 	public static function managed(): bool {
-		return class_exists( \PeptideCore\Series_Sync::class ) && \PeptideCore\Series_Sync::manages( 'campaign' );
+		return self::enabled() && class_exists( \PeptideCore\Series_Sync::class ) && \PeptideCore\Series_Sync::manages( 'campaign' );
 	}
 
 	/** 这条活动是不是系列下发的（店铺后台对所有人只读）。$kind：promotion / coupon / ship_discount。 */
 	public static function locked( string $kind, int $id ): bool {
+		if ( ! self::enabled() ) {
+			return false; // 开关关着：系列标记不起作用，和 M4 上线之前一样谁能改就还能改。
+		}
 		if ( 'ship_discount' === $kind ) {
 			$d = Discounts::get( $id );
 			return $d && '' !== (string) ( $d['series_key'] ?? '' );
@@ -404,8 +424,8 @@ final class Series_Campaigns {
 	 * @param mixed $result 前面的模块已经接手时原样返回。
 	 */
 	public static function apply( $result, $items = array(), $ver = 0, $dry_run = false ) {
-		if ( null !== $result ) {
-			return $result;
+		if ( null !== $result || ! self::enabled() ) {
+			return $result; // 关着：原样放行，系列同步按“没有人处理”记。
 		}
 		$items = array_values( array_filter( (array) $items, 'is_array' ) );
 		$plan  = self::plan( $items );
@@ -589,6 +609,9 @@ final class Series_Campaigns {
 	/** pc_series_export_campaigns：母版店现在的活动（已结束的不导出），外形同下发。 */
 	public static function export( $items = array() ): array {
 		$items = is_array( $items ) ? $items : array();
+		if ( ! self::enabled() ) {
+			return $items;
+		}
 		$now   = time();
 		foreach ( get_posts( array( 'post_type' => Promotions::CPT, 'post_status' => array( 'publish', 'draft' ), 'posts_per_page' => 200, 'fields' => 'ids', 'no_found_rows' => true, 'orderby' => 'ID', 'order' => 'ASC' ) ) as $id ) {
 			$c = Promotions::config( (int) $id );
@@ -671,6 +694,9 @@ final class Series_Campaigns {
 	/** pc_series_snapshot：记下同步前本店接管着的系列活动（恢复时按这份重新对齐）。 */
 	public static function snapshot( $snapshot = array() ): array {
 		$snapshot              = is_array( $snapshot ) ? $snapshot : array();
+		if ( ! self::enabled() ) {
+			return $snapshot;
+		}
 		$snapshot['campaigns'] = self::state();
 		return $snapshot;
 	}
@@ -678,7 +704,7 @@ final class Series_Campaigns {
 	/** pc_series_restore：回到快照时的系列活动——那之后新下发的停用，当时在跑的按当时的内容恢复。 */
 	public static function restore( $snapshot = array() ): void {
 		$saved = is_array( $snapshot ) && is_array( $snapshot['campaigns'] ?? null ) ? $snapshot['campaigns'] : null;
-		if ( null === $saved ) {
+		if ( null === $saved || ! self::enabled() ) {
 			return; // 快照里没有活动（比如是这个功能上线前存的）：不动。
 		}
 		$items = array_values( array_filter( (array) ( $saved['items'] ?? array() ), 'is_array' ) );

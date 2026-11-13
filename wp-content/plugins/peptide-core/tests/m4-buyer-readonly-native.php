@@ -193,8 +193,14 @@ if ( ! class_exists( 'M4_Buyer_Stop' ) ) {
 			return $id;
 		};
 		$buyer_plus = $user( 'buyerplus', array( 'shop_manager', Marketing::BUYER_ROLE ) ); // 投手，但被误授了店长的全部能力
-		$buyer      = $user( 'buyer', array( Marketing::BUYER_ROLE ) );                     // 正常的投手：只有 read
+		$buyer      = $user( 'buyer', array( Marketing::BUYER_ROLE ) );                     // 正常的投手：只有 read 和只读权限
+		$buyer_old  = $user( 'buyerold', array( Marketing::BUYER_ROLE ) );                  // 线上现在的投手：角色上还没有只读权限
 		$manager    = $user( 'manager', array( 'shop_manager' ) );                          // 不是投手的店长
+		// 只读权限 pc_view_campaigns 由 M9 的新版存在投手角色上。这条分支（或线上）的角色上可能还没有，
+		// 所以给前两个测试账号单独加上，模拟 M9 新版之后的投手；第三个账号不加，代表线上现状。
+		$role_has_view = (bool) get_role( Marketing::BUYER_ROLE )->has_cap( Marketing::VIEW_CAP );
+		get_userdata( $buyer_plus )->add_cap( Marketing::VIEW_CAP );
+		get_userdata( $buyer )->add_cap( Marketing::VIEW_CAP );
 
 		// ---------- 1. 能力 ----------
 		wp_set_current_user( $buyer_plus );
@@ -211,7 +217,7 @@ if ( ! class_exists( 'M4_Buyer_Stop' ) ) {
 		}
 		$check( '投手不能编辑、删除、发布任何一张优惠码、满减活动、赠品（WordPress 原生的权限判断）', array() === $meta_caps, $meta_caps );
 		$check( '店长的其他能力没有被动（只去掉优惠码相关的）', current_user_can( 'manage_woocommerce' ) && current_user_can( 'edit_products' ) );
-		$check( '投手：能看、不能改；注册菜单用 read', Marketing::is_buyer() && Marketing::can_view() && ! Marketing::can_manage() && 'read' === Marketing::menu_cap() );
+		$check( '投手（有只读权限）：能看、不能改；注册菜单用只读权限', Marketing::is_buyer() && Marketing::can_view() && ! Marketing::can_manage() && Marketing::VIEW_CAP === Marketing::menu_cap() );
 
 		// ---------- 2. 三个页面 ----------
 		$pages = array( '满减活动' => array( Promotions_Page::class, $promo ), '优惠码' => array( Coupons_Page::class, $save10 ), '运费折扣' => array( Shipping_Discounts_Page::class, $disc ) );
@@ -299,7 +305,16 @@ if ( ! class_exists( 'M4_Buyer_Stop' ) ) {
 
 		// ---------- 7. 正常的投手（只有 read）看只读页 ----------
 		wp_set_current_user( $buyer );
-		$check( '正常的投手（只有 read，没有任何店铺能力）：能看、不能改', Marketing::can_view() && ! Marketing::can_manage() && 'read' === Marketing::menu_cap() && ! current_user_can( 'manage_woocommerce' ) && ! current_user_can( 'edit_shop_coupons' ) );
+		wp_set_current_user( $buyer_old );
+		if ( $role_has_view ) {
+			echo "跳过  这份代码的投手角色上已经有只读权限（M9 新版），不检查“线上现状的投手看不到”这一项\n";
+		} else {
+			$request( 'GET', array( 'page' => Promotions_Page::SLUG ) );
+			[ $old_code, , $old_out ] = $run( array( Promotions_Page::class, 'render' ) );
+			$check( '线上现在的投手（角色上还没有只读权限）：不能看，页面什么都不输出——M4 单独上线对他们没有变化', ! Marketing::can_view() && ! Marketing::can_manage() && 200 === $old_code && '' === trim( $old_out ) );
+		}
+		wp_set_current_user( $buyer );
+		$check( '正常的投手（只有 read 和只读权限，没有任何店铺能力）：能看、不能改', Marketing::can_view() && ! Marketing::can_manage() && Marketing::VIEW_CAP === Marketing::menu_cap() && ! current_user_can( 'manage_woocommerce' ) && ! current_user_can( 'edit_shop_coupons' ) );
 		$request( 'GET', array( 'page' => Promotions_Page::SLUG ) );
 		[ $code, , $out ] = $run( array( Promotions_Page::class, 'render' ) );
 		$text = trim( (string) preg_replace( '/[ \t]+/', ' ', (string) preg_replace( '/\s*\n\s*/', "\n", wp_strip_all_tags( (string) preg_replace( '#</(h1|h2|h3|p|li|tr|dt|dd|th|td|section)>#', "$0\n", $out ) ) ) ) );
