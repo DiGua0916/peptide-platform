@@ -982,7 +982,9 @@ final class Board_Page {
 			$people = Board::rank_visitors( $ids, self::$people['amounts'], self::$people['names'] );
 			$buyers = count( array_filter( $people, static fn( $p ) => $p['cents'] > 0 ) );
 			$all    = count( array_unique( array_map( 'intval', $ids ) ) );
-			echo '<p class="pc-cr-muted">' . esc_html( '访客 ' . $all . ' 位，其中 ' . $buyers . ' 位下单，按下单金额从高到低（点进去看机型、IP、浏览路径）：' ) . '</p><ul class="pc-cr-visitors">';
+			// 2026-11-13 店主：名单默认收起。
+			echo '<details class="pc-cr-aud-more pc-cr-people"><summary><span class="is-shut">' . esc_html( '展开访客名单（' . $all . ' 位，其中 ' . $buyers . ' 位下单）' ) . '</span><span class="is-open">收起访客名单</span></summary>';
+			echo '<p class="pc-cr-muted">按下单金额从高到低，点进去看机型、IP、浏览路径：</p><ul class="pc-cr-visitors">';
 			foreach ( $people as $p ) {
 				$label = '' !== $p['name'] ? $p['name'] : '访客 #' . $p['id'];
 				echo '<li' . ( $p['cents'] > 0 ? ' class="is-buyer"' : '' ) . '><a href="' . esc_url( admin_url( 'admin.php?page=pc-visitors&visitor=' . (int) $p['id'] ) ) . '">' . esc_html( $label ) . '</a>' . ( $p['cents'] > 0 ? ' <b>' . esc_html( self::format( $p['cents'], 'money' ) ) . '</b>' : '' ) . '</li>';
@@ -991,6 +993,7 @@ final class Board_Page {
 			if ( $all > Board::DRILL_LIMIT ) {
 				echo '<p class="pc-cr-muted">只列出前 ' . esc_html( (string) Board::DRILL_LIMIT ) . ' 位。</p>';
 			}
+			echo '</details>';
 		}
 		echo '</div></details>';
 	}
