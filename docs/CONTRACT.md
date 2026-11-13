@@ -1115,7 +1115,9 @@ currency, visitor, visit, buyer
 - **IP 地理库**：生产需要把 GeoLite2-City / GeoLite2-ASN（或 DB-IP lite）放进 `uploads/peptide-geoip/` 或用常量指定；没有库时地理网络列为空，不报错。DB-IP lite 需要署名。
 - **已知缺口**（不影响上线，后续补）：`ip_type` 目前只判断 `vpn / hosting / mobile / residential`，意向分层里“企业 / 高校 IP”一条暂时用不上；前端没有滚动事件，“没有滚动”这条无效规则按“看不出”处理；访问表没有国家列，看板从 `page_view` 事件取国家；个人数据导出还没包含 IP 等新列（合规层面用户决定后期再做）。
 
-## M4 营销与价格引擎（F2 价格营销会话；需求 NF-02 优惠部分、HQ-07；2026-11-13 更新）
+## M4 营销与价格引擎（F2 价格营销会话；需求 NF-02 优惠部分、HQ-07；2026-11-14 发布准备时更新）
+
+**发布时的原则（2026-11-14）**：线上已有的功能保持原样。M4 上线时所有新东西都关着：价格引擎（`pc_pricing_engine_mode`）、按系列接收营销活动（`pc_series_campaigns_mode`）两个开关默认关，投手的只读页要等 M9 新版给投手角色加上 `pc_view_campaigns` 才出现。只带一个 bug 修复：离开挽回的统计表在整店复制出来的店上补建。逐项差异、测试结果和回退办法见 `docs/handoffs/m4-release.md`。
 
 本节由 F2 维护，其他会话只读。代码在 `wp-content/plugins/peptide-core/includes/pricing/`，说明见 `docs/handoffs/m4-pricing-engine.md`。
 
@@ -1167,9 +1169,9 @@ $result = \PeptideCore\Pricing\Engine::price( $input );          // 纯计算
 
 | 方法 | 含义 | 谁在用 |
 | --- | --- | --- |
-| `\PeptideCore\Admin\Marketing::can_view(): bool` | 当前登录的人能不能看营销活动。为真：有 `edit_shop_coupons` 的人、有只读权限 `pc_view_campaigns` 的人、投手。**不看这次请求是哪个页面**，在任何后台页面上问结果都一样，所以可以直接用来决定菜单里出不出现入口 | F5：`Admin_Menus::add_menus()`、`Staff_Buyer::campaigns_visible()` |
+| `\PeptideCore\Admin\Marketing::can_view(): bool` | 当前登录的人能不能看营销活动。为真：有 `edit_shop_coupons` 的人、有只读权限 `pc_view_campaigns` 的人（投手的这项权限由 M9 存在投手角色上）。**不看这次请求是哪个页面**，在任何后台页面上问结果都一样，所以可以直接用来决定菜单里出不出现入口 | F5：`Admin_Menus::add_menus()`、`Staff_Buyer::campaigns_visible()` |
 | `Marketing::can_manage(): bool` | 能不能新建 / 编辑 / 启停 / 删除。为假：投手（过滤器 `pc_marketing_can_manage` 也不能把投手放开）；营销活动已由系列接管而当前用户没有 `manage_options`。为假而 `can_view()` 为真 = 看到的是只读列表 | F5：`Staff_Buyer::campaigns_read_only()`；F2 的全部保存入口 |
-| `Marketing::menu_cap(): string` | `add_menu_page()` 第三个参数用的能力名：能改的人 `edit_shop_coupons`，有只读权限的人 `pc_view_campaigns`，两样都没有的投手 `read`。先问 `can_view()` 再注册 | F5：`Admin_Menus::add_menus()` |
+| `Marketing::menu_cap(): string` | `add_menu_page()` 第三个参数用的能力名：能改的人 `edit_shop_coupons`，其余（只读的人）`pc_view_campaigns`。先问 `can_view()` 再注册 | F5：`Admin_Menus::add_menus()` |
 | `Marketing::read_only_gate(): bool` | 三个营销页面的入口都先过它。不能改的人：带 `new` / `edit` 的地址、非 GET 的请求返回 403；其余输出只读页并返回 true | F2 的三个页面 |
 | `Marketing::view_url(): string`、`Marketing::VIEW_PAGE` | 只读入口的地址 `admin.php?page=pc-promotions`。投手只需要这一个入口（另外两个页面给只读的人的是同一张列表） | F5 的投手菜单可以用 |
 | `Marketing::is_buyer( $user = null ): bool` | 是不是投手：带 `pc_media_buyer` 角色、不是管理员。和 `Staff_Buyer::is_buyer()` 口径一致，F2 的代码单独在场时也能判断 | F2 内部 |
@@ -1193,7 +1195,7 @@ $result = \PeptideCore\Pricing\Engine::price( $input );          // 纯计算
 
 也就是说：**投手只需要放行 `pc-promotions`（外加同一张列表的 `pc-coupons`、`pc-shipping-discounts`）的 GET，别的营销相关页面都没有只读视图，一律 403。** 离开挽回、首单优惠、赠品 / 捆绑现在在跑什么，投手在只读列表里都看得到，不需要进它们的设置页。
 
-关于 `pc_view_campaigns`：F2 的 `can_view()` 从 `773eae8` 起对投手角色本身为真，**不再依赖角色上有没有这项权限**（2026-11-13 F1 在沙盒看到“只读列表对投手不出现”是之前的版本：那时 `can_view()` 只认这项权限）。角色上加了它也没有坏处，`menu_cap()` 会优先返回它。投手看不看得到只读页，现在只取决于 F5 的名单有没有放行上表第一、二行。2026-11-13 主线并入素材归因之后的现状：主线里的 M9 还是没有放行营销页面的较早版本，所以“主线 + M4”上投手打开 `pc-promotions` 是 403；F5 分支上放行它的提交和主线有 3 个文件冲突（`class-staff-buyer.php`、`buyer-admin.css`、`m9-buyer-scope-pure.php`，素材归因也改了投手菜单），要 F5 合主线后才能进候选。
+关于 `pc_view_campaigns`（2026-11-14 改回，**以这一段为准**）：`can_view()` 只认这项权限，不再对投手角色本身为真。原因：M4 要单独先上线（发布顺序 F4 → F2 → F3 → F5），线上投手角色上还没有这项权限，这样 M4 上线时线上投手看到的东西一点不变；等 F5 的 M9 新版把这项权限加到投手角色上（`Staff_Buyer::role_caps()`，F5 分支上已经写好）、并把上表第一、二行放进投手的名单，只读页才对投手出现。所以投手看不看得到只读页，取决于两件事都在：角色上有这项权限，F5 的名单放行。（`773eae8`–`245e277` 之间的版本曾让 `can_view()` 对投手角色本身为真，没有上过线。）2026-11-13 主线并入素材归因之后的现状：主线里的 M9 还是没有放行营销页面的较早版本，所以“主线 + M4”上投手打开 `pc-promotions` 是 403；F5 分支上放行它的提交和主线有 3 个文件冲突（`class-staff-buyer.php`、`buyer-admin.css`、`m9-buyer-scope-pure.php`，素材归因也改了投手菜单），要 F5 合主线后才能进候选。
 
 **投手改不了任何营销活动：服务端的三层**（哪一层单独在都拦得住，不靠隐藏按钮）
 
@@ -1214,6 +1216,8 @@ F5 的拦截（`Staff_Buyer::classify()`，见 M9 一节）排在这些前面，
 
 
 **5. 按系列接收营销活动（已实现，`\PeptideCore\Pricing\Series_Campaigns`，接 M3 的四个钩子）**
+
+**按店开关，默认关**（2026-11-14 加）：选项 `pc_series_campaigns_mode`，值 `on` 才接收；`wp-config.php` 的常量 `PC_SERIES_CAMPAIGNS_MODE` 优先。关着时四个钩子都原样放行：系列同步里的活动部分和 M4 上线之前一样记 `unhandled`、`campaign_ver` 不记；带系列标记的活动不锁（`Marketing::locked()`、`Series_Campaigns::setting_locked()` 都为假）；`Series_Campaigns::managed()` 为假（店铺后台不因此变只读）；不声明 `series.campaigns`。打开：`wp option update pc_series_campaigns_mode on`；关回去：`wp option update pc_series_campaigns_mode off`（已经下发的活动保留原样，只是不再锁、不再接收新的）。要等总后台的系列活动编辑界面和平台所有者决定之后再打开，下面的规则都是“打开以后”的行为。
 
 M3 定的外形：`{ kind, key, active, config }`。M4 定的 `config`（没写的字段用该功能的默认值；看不懂的字段忽略）：
 
@@ -1247,7 +1251,7 @@ M3 定的外形：`{ kind, key, active, config }`。M4 定的 `config`（没写�
 | `pricing.engine` | 1 | 支持价格引擎三档开关和 `/hq/pricing-engine` |
 | `marketing.quiet` | 1 | 支持营销弹窗静默开关 |
 | `campaigns.readonly` | 1 | 投手只读、系列下发的活动只读 |
-| `series.campaigns` | 1 | 能接收系列下发的营销活动（`pc_series_apply_campaigns` 等四个钩子已接） |
+| `series.campaigns` | 1 | 能接收系列下发的营销活动。**只在这家店打开了 `pc_series_campaigns_mode` 时才声明**，总后台据此只给打开了的店发活动 |
 
 **7. 数据表和选项登记（给 F1 的脱敏快照）**
 
@@ -1255,7 +1259,7 @@ M3 定的外形：`{ kind, key, active, config }`。M4 定的 `config`（没写�
 | --- | --- | --- |
 | `{prefix}pc_m4_shadow_stats`（每天每档的核对次数） | 没有 | truncate |
 | `{prefix}pc_m4_shadow_log`（不一致 / 出错 / 跳过的明细，最多 300 条） | 没有邮箱、姓名、地址；有商品 ID、数量、单价、优惠码（积分券只记 ID） | truncate |
-| 选项 `pc_pricing_engine_mode`、`pc_m4_db`、`pc_series_campaigns` | 没有 | keep（快照导入沙盒后建议把 `pc_pricing_engine_mode` 设回 `off`） |
+| 选项 `pc_pricing_engine_mode`、`pc_series_campaigns_mode`、`pc_m4_db`、`pc_series_campaigns` | 没有 | keep（快照导入沙盒后建议把两个开关设回 `off`） |
 | 优惠码 / 满减的 meta `_pc_series_campaign`、`_pc_series_campaign_hash` | 没有 | keep |
 
 两张表是懒建的（第一次有记录要写时才建，版本选项 `pc_m4_db`），关着时不存在。版本号在而表不在时（整店复制会造成这种情况，见下面“给 F1”第 9 条）第一次写入会自动补建，查看和清空当作“还没有记录”。离开挽回的统计表 `{prefix}pc_app_stats`（版本选项 `peptide_core_app_stats_db`，快照里已登记为 keep）2026-11-12 起也是这样处理：`Exit_Intent::installed()` 现在表示“版本号对而且表在”。
@@ -1266,9 +1270,10 @@ M3 定的外形：`{ kind, key, active, config }`。M4 定的 `config`（没写�
 M4_WALKTHROUGH=sandbox wp eval-file wp-content/plugins/peptide-core/tests/m4-shadow-walkthrough-native.php   # 影子档和开档走查
 M4_WALKTHROUGH=sandbox wp eval-file wp-content/plugins/peptide-core/tests/m4-series-campaigns-native.php     # 按系列接收活动
 M4_WALKTHROUGH=sandbox wp eval-file wp-content/plugins/peptide-core/tests/m4-buyer-readonly-native.php       # 投手对营销活动只读（2026-11-13）
+M4_WALKTHROUGH=sandbox M4_COMPARE_OUT=/tmp/x.json wp eval-file wp-content/plugins/peptide-core/tests/m4-release-compare-native.php   # 发布前比对：线上代码和 M4 各跑一次，比两个文件
 ```
 
-三个脚本都会临时建数据、结束时删除并恢复选项；域名里不带 `sandbox` / `localhost` / `local` / `test` / `staging` 时拒绝运行。完整步骤见 `docs/handoffs/m4-sandbox-walkthrough.md`。
+这几个脚本都会临时建数据、结束时删除并恢复选项；域名里不带 `sandbox` / `localhost` / `local` / `test` / `staging` 时拒绝运行。完整步骤见 `docs/handoffs/m4-sandbox-walkthrough.md`。
 
 ### 二、需要其他会话配合
 
@@ -1328,7 +1333,7 @@ wp option get peptide_core_app_stats_db
 
 **给 F5（投手后台、已购回访）**
 
-1. 投手角色名用 `pc_media_buyer`，给它只读权限 `pc_view_campaigns`，**不要**给 `edit_shop_coupons`。你已经做了（权限存在角色上）。F2 这边 `can_view()` 现在对投手角色本身就为真，所以角色上有没有 `pc_view_campaigns` 都能看；有的话 `menu_cap()` 返回它，没有时返回 `read`。
+1. 投手角色名用 `pc_media_buyer`，给它只读权限 `pc_view_campaigns`，**不要**给 `edit_shop_coupons`。你已经做了（权限存在角色上）。**这项权限必须在**：2026-11-14 起 F2 的 `can_view()` 只认它（M4 先上线时线上投手不能因此有任何变化），角色上没有它，投手就看不到只读页。
 2. `Admin_Menus::add_menus()` 里营销活动菜单的显示条件用 `Marketing::can_view()`、权限参数用 `Marketing::menu_cap()`。你已经做了。判断入口的方法以本节第一部分第 4 点的表为准，签名不再改。
 3. 已购回访用服务端过滤器 `pc_marketing_popups_suppressed`（你的 `Buyer_Status::mute` 已经这样做）。页头的 `window.pcMarketingQuiet` 现在只在静默的请求里输出，你现有的写法 `if ( window.pcMarketingQuiet && window.pcMarketingQuiet.refresh )` 不用改；不要在不静默的页面上无条件调用它。
 4. **投手看营销活动的分工**（和你 M9 一节“投手看营销活动”那一条对应）：只读页面和所有保存入口的拒绝归 F2，菜单、页面标题和投手的地址名单归 F5。2026-11-13 F2 把两个分支在本机合起来（只在临时目录里合，没有动任何分支；你的分支取到 `dcda12f`），用 `wp peptide buyer on` 开出来的真投手账号在浏览器里走了一遍：`pc-promotions` / `pc-coupons` / `pc-shipping-discounts` 是 200 的只读页；新建 / 编辑地址、向页面 POST、9 个 admin-post 提交、WooCommerce 的优惠码页面、赠品 / 捆绑页面、应用中心和离开挽回设置，共 22 个地址全部 403；换成管理员看同一个地址是原来可以管理的列表。合并后的代码上你的 `m9-buyer-campaigns-pure`（87）、`m9-buyer-scope-pure`（249）、`m9-buyer-orders-pure`（33）和 F2 的 `m4-campaigns-readonly-pure`（当时 72 项，之后加到 77 项）、`m4-campaign-text-pure`（44 项）全过。代码文件合并没有冲突（只有 `docs/CONTRACT.md` 和 `tests/data-observations-suites.json` 两个都在末尾追加的文件要手工取并集）。

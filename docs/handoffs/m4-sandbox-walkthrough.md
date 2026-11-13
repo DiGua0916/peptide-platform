@@ -82,7 +82,7 @@ M4_WALKTHROUGH=sandbox wp eval-file wp-content/plugins/peptide-core/tests/m4-sha
 M4_WALKTHROUGH=sandbox wp eval-file wp-content/plugins/peptide-core/tests/m4-series-campaigns-native.php
 ```
 
-通过：最后是 `RESULT 23 项检查：全部通过`，退出码 0。有 `FAIL` 时把输出发给 F2。
+通过：最后是 `RESULT 25 项检查：全部通过`，退出码 0。有 `FAIL` 时把输出发给 F2。脚本先确认开关 `pc_series_campaigns_mode` 关着时什么都不做，再临时打开它跑后面的检查，结束时恢复原值。
 
 ## 第 2b 步 · 基线里归 F2 的 5 个冒烟用例（约 2 分钟，用你的 `tools/sandbox/run-smoke.sh`）
 
@@ -128,11 +128,11 @@ M4_WALKTHROUGH=sandbox wp eval-file wp-content/plugins/peptide-core/tests/m4-buy
 | 看什么 | 通过 |
 | --- | --- |
 | 每行开头 | 全是 `ok`，没有 `FAIL` |
-| 倒数第二行 | `RESULT 51 项检查：全部通过` |
+| 倒数第二行 | `RESULT 52 项检查：全部通过` |
 | 最后一行 | “临时账号和临时数据已删除，选项已恢复。” |
 | 中间“投手看到的只读页面（纯文字）”一段 | 这就是投手看到的内容，可以顺便读一遍措辞 |
 
-有 `FAIL` 时把整段输出发给 F2。2026-11-13 F2 在本机真实站点（SQLite）上的结果：51 项全部通过。
+有 `FAIL` 时把整段输出发给 F2。2026-11-14 F2 在本机真实站点（SQLite）上的结果：52 项全部通过。脚本给前两个测试投手单独加了只读权限（模拟 M9 新版），第三个不加（代表线上现在的投手，应当看不到只读页）。
 
 **用投手账号在浏览器里看（沙盒店铺后台，`sbx_buyer` 或任何用 `wp peptide buyer on` 开的账号）**
 
@@ -204,7 +204,7 @@ wp peptide price-engine log --limit=10
 node tests/run-data-observations.cjs --suite m4-price-engine-pure --suite m4-engine-mode-pure --suite m4-marketing-quiet-pure --suite m4-campaigns-readonly-pure --suite m4-marketing-quiet
 ```
 
-五行都是 `"exit_code":0` 即通过（2026-11-12：对照 59 个样例、档位 37 项、静默 19 + 16 项、只读 77 项；2026-11-13 新加一条 `--suite m4-campaign-text-pure`，44 项）。想用真实的 WooCommerce 源文件复核金额算法：
+五行都是 `"exit_code":0` 即通过（2026-11-12：对照 59 个样例、档位 39 项、静默 19 + 16 项、只读 80 项；2026-11-13 新加一条 `--suite m4-campaign-text-pure`，44 项）。想用真实的 WooCommerce 源文件复核金额算法：
 
 ```bash
 PC_WC_SRC=/path/to/wp-content/plugins/woocommerce php -n wp-content/plugins/peptide-core/tests/m4-price-engine-pure.php --fuzz=30000
