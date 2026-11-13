@@ -78,16 +78,20 @@ final class Order_List {
 		switch ( $column ) {
 			case 'pc_ops':
 				$edit = $order->get_edit_order_url();
-				echo '<span class="pc-ol-ops"><a href="' . esc_url( $edit ) . '" title="查看订单" aria-label="查看订单"><span class="dashicons dashicons-visibility"></span></a>';
+				// 店主 2026-11-11：操作按钮和“弃单”页一样（蓝色小方块图标 + 写邮件）。
+				echo '<span class="pc-ol-ops"><a href="' . esc_url( Order_Detail_Page::url( $order->get_id() ) ) . '" title="查看订单" aria-label="查看订单"><span class="dashicons dashicons-visibility"></span></a>';
 				if ( $order->is_paid() && ! $order->has_status( array( 'completed', 'refunded', 'cancelled' ) ) ) {
-					echo '<a href="' . esc_url( $edit . '#woocommerce-order-fulfillments' ) . '" title="发货" aria-label="发货"><span class="dashicons dashicons-car"></span></a>';
+					echo '<a href="' . esc_url( add_query_arg( 'pc_native', '1', $edit ) . '#woocommerce-order-fulfillments' ) . '" title="发货" aria-label="发货"><span class="dashicons dashicons-car"></span></a>';
+				}
+				if ( '' !== (string) $order->get_billing_email() && class_exists( Mail_Page::class ) ) {
+					echo '<a href="' . esc_url( Mail_Page::compose_url( array( 'order_id' => $order->get_id(), 'to' => $order->get_billing_email() ) ) ) . '" title="写邮件" aria-label="写邮件"><span class="dashicons dashicons-email"></span></a>';
 				}
 				echo '</span>';
 				break;
 			case 'pc_number':
 				// 店主 2026-11-11：订单编号只显示编号，不带顾客名、不带预览小眼睛。
 				// 和支付平台对账用后面的“流水号”（支付平台的交易号）。
-				echo '<a class="pc-ol-num" href="' . esc_url( $order->get_edit_order_url() ) . '">#' . esc_html( $order->get_order_number() ) . '</a>';
+				echo '<a class="pc-ol-num" href="' . esc_url( Order_Detail_Page::url( $order->get_id() ) ) . '">#' . esc_html( $order->get_order_number() ) . '</a>';
 				break;
 			case 'pc_items':
 				$names = array();
@@ -127,7 +131,7 @@ final class Order_List {
 			return;
 		}
 		echo '<style>
-.wp-list-table .column-pc_ops{width:64px}.pc-ol-ops{display:inline-flex;gap:8px}.pc-ol-ops a{color:#475569;text-decoration:none}.pc-ol-ops a:hover{color:#111827}
+.wp-list-table .column-pc_ops{width:104px}.pc-ol-ops{display:inline-flex;gap:2px}.pc-ol-ops a{display:inline-flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:6px;color:#2271b1;text-decoration:none}.pc-ol-ops a:hover{background:#f0f6fc;color:#2271b1}.pc-ol-ops .dashicons{font-size:18px;width:18px;height:18px}
 .wp-list-table .column-pc_items{width:150px}.pc-ol-items{display:grid;line-height:1.35}.pc-ol-items small{color:#6b7280;font-size:12px}
 .wp-list-table .column-pc_country{width:56px}.wp-list-table .column-pc_paid{width:150px}
 .pc-ol-tid{font-size:11px;background:#f3f4f6;padding:2px 4px;border-radius:4px;word-break:break-all}
@@ -154,10 +158,10 @@ final class Order_List {
 .wp-list-table .column-order_status mark.order-status.status-processing{background:#fff4e5;color:#b45309}
 </style>';
 		// 店主 2026-11-11：左右滚动条要一直看得见（Mac 会藏原生滚动条）。自己画一条：灰色轨道 + 可拖动的滑块，
-		// 放在表格上方，并且一条固定在屏幕底部（往下翻也能拖）；和表格的左右位置同步。
+		// 店主 2026-11-11：只留表格下方这一条（固定在屏幕底部，往下翻也能拖），不要上面那条和“左右拖动查看更多列”文字。和表格左右位置同步。
 		echo '<script>document.addEventListener("DOMContentLoaded",function(){var t=document.querySelector(".woocommerce_page_wc-orders table.wp-list-table");if(!t)return;
-function bar(cls){var w=document.createElement("div");w.className="pc-ol-bar "+cls;w.innerHTML="<div class=\\"pc-ol-bar__track\\"><div class=\\"pc-ol-bar__thumb\\"></div></div><span class=\\"pc-ol-bar__hint\\">左右拖动查看更多列</span>";return w;}
-var top=bar("is-top"),bottom=bar("is-bottom");t.parentNode.insertBefore(top,t);t.parentNode.insertBefore(bottom,t.nextSibling);var bars=[top,bottom];
+function bar(cls){var w=document.createElement("div");w.className="pc-ol-bar "+cls;w.innerHTML="<div class=\\"pc-ol-bar__track\\"><div class=\\"pc-ol-bar__thumb\\"></div></div>";return w;}
+var bottom=bar("is-bottom");t.parentNode.insertBefore(bottom,t.nextSibling);var bars=[bottom];
 function max(){return Math.max(0,t.scrollWidth-t.clientWidth);}
 function paint(){var m=max();bars.forEach(function(b){b.style.display=m>2?"":"none";var tr=b.firstChild,th=tr.firstChild,w=tr.clientWidth,tw=Math.max(40,w*t.clientWidth/t.scrollWidth);th.style.width=tw+"px";th.style.transform="translateX("+(m?(w-tw)*t.scrollLeft/m:0)+"px)";});}
 bars.forEach(function(b){var tr=b.firstChild,th=tr.firstChild,drag=null;

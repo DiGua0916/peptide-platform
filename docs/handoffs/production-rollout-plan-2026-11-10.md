@@ -466,3 +466,99 @@
 - 应用：6 店热销代码都匹配到同样的 7 项（6 个单规格 + Tesamorelin 整个商品 4 个规格 = 10 个规格 5–10），其余 184–185 个规格 90–120。主店实测：TR20 设成 3 → 请求结束后变 9；普通规格设成 40 → 92；每日刷新已排程。
 - 注意：6 店热销规格都没开缺货下单（backorders = no），所以顾客一次最多只能买到当前库存数（5–10 件），待店主决定。
 - 满减券：锁放大加粗、放进圆形底座（解锁白底红锁、下一档粉底红锁、未到灰色）；本次打开弹窗后新解锁的档位：券“弹”一下、锁晃动，并放加购同款烟花（复用 .add-feedback-burst，三波），已解锁的不重复放；系统设置减少动效时不放。主店手机尺寸用模拟购物车更新验证：只有新解锁的 $120 券有动画和烟花。部署 web + hq 各 7 份，6 店清首页缓存，5 个域名 200。
+
+### 2026-11-11 16:35 UTC 热销品库存改 20–30
+- 店主：热销品 20–30，并且每日刷新。Stock_Range 默认值改为 hot 20–30；6 店 pc_stock_range 的 hot_min/hot_max 改为 20/30，并把超出范围的热销规格（每店 10 个）重新设到 20–30，全部规格都在范围内。
+- 每日刷新：6 店都已排程（pc_stock_range_daily，首次约 17:25–17:28 UTC），由各店每分钟一次的 systemd cron 定时器执行（vialcove-web01-cron、vialcove-s0006…s0010-cron），不依赖访客访问。
+- 已记入长期记忆：库存规则和每日刷新。
+
+### 2026-11-11 17:40 UTC 热销品“小火苗”提示
+- 店主：要让顾客在外面就感受到热销品库存不多，但要朴素（小火苗的感觉），只限热销品。
+- `Stock_Range`：is_hot()（规格或整个商品在 hot_ids）、product_has_hot()（卡片用：商品任一规格是热销）、flame()（小火苗 SVG）；过滤 woocommerce_get_availability_text → 热销规格显示“Only N left”，woocommerce_get_availability_class 加 pc-hot-stock；内联样式：卡片“Selling fast”橙色小字 + 轻微摇曳的小火苗，库存行红色 + 小火苗（减少动效时不动）。
+- 主题 functions.php：商品卡片在热销商品上加一行 `<p class="vc-card-hot">🔥 Selling fast</p>`（卡片不写数字：同一商品只有部分规格是热销，例如只有 Tirzepatide 20mg）。
+- 验证（主店手机尺寸）：93 张卡片里正好 7 张显示（Tirzepatide、Retatrutide、Tesamorelin、MOTS-C、KLOW、Lipo-C B12、Vitamin B-12）；Tirzepatide 弹窗 20mg 显示红色“🔥 Only 28 left”，切到 10mg 恢复“119 in stock”。部署 web + hq 各 7 份（插件 + 主题），6 店清缓存，5 个可访问域名首页都有 7 张热销卡片。
+
+### 2026-11-11 18:27 UTC 顾客邮件居中
+- 店主：发到 sun18761388693@gmail.com 的预览邮件（“Thank You for Your Order”、“Your VialCove account has been created!”）整体偏右。用主店临时订单 / 临时账户（发完即删，订单号 #11851 起被占用）发的预览；测试单标记会让系统不发邮件，所以临时订单不打标记、保持待付款。
+- 原因：WooCommerce 11 邮件外层是“空列 + 600 宽列 + 空列”，部分客户端（Gmail）分配不均。
+- 修复：peptide-core 新增 templates/emails/email-header.php、email-footer.php（复制 WC 11.2.1 原模板，只把外层改成经典居中：一个 align=center 的铺满单元格，里面 max-width 600、margin 0 auto、align=center 的表格），`Chase_Copy::TEMPLATES` 加这两个模板，所有 WooCommerce 邮件生效。主店重发两封预览，发件记录确认用的是新结构。部署 web + hq 各 7 份。
+
+### 2026-11-11 18:51 UTC 订单列表操作列和弃单页一致；去掉上方滚动条和提示文字
+- 店主：待处理订单的操作列排版要和弃单页一样；上面的滚动条和“左右拖动查看更多列”删掉，下面的只删文字。
+- includes/admin/class-order-list.php：操作图标改成弃单页同款（28px 蓝色小方块、悬停浅蓝底、18px 图标），新增“写邮件”（带订单号和顾客邮箱打开写邮件）；列宽 104px。自绘滚动条只保留表格下方那条，去掉上方那条和两处提示文字。
+- 注意：店铺后台域名（sNNNN.vialcoveresearch.com）由总后台服务器上的副本提供，只改店铺服务器的主店副本看不到效果；用部署脚本 web + hq 各 7 份后，主店后台确认：只剩下方一条滚动条、没有提示文字、操作列为“查看订单 / 发货 / 写邮件”蓝色图标。
+
+### 2026-11-11 19:00 UTC 新订单详情页（按 yy 后台排版）
+- 店主：订单详情按原来用的 SaaS（yy / Shopname）后台一比一复刻。只读方式看了店主浏览器里那页的结构和截图（滚回原位，没点任何东西），不复制对方品牌。
+- 新增 includes/admin/class-order-detail-page.php（admin.php?page=pc-order&id=订单ID，隐藏菜单，标题“订单详情”）：
+  - 顶部：返回待处理订单列表、订单复制（= 按此单建手动订单）、退款（跳 WooCommerce 原生订单页退款）、作废订单（确认后改为已取消）、上一单 / 下一单。
+  - 订单头：订单号、状态（进行中 / 已完成 / 已取消…）、已支付 / 未支付、已发货 / 未发货徽章，结账成功页、订单追踪页链接，创建 / 支付时间。
+  - 商品表（图、名称、SPU=商品 ID、SKU、规格、单价 × 数量、总价）；金额明细（商品价格、运费、优惠码、活动优惠 = 负数费用行带活动名、其他费用、税费、已退款、订单总价）。
+  - 收货 / 账单地址（复制、编辑、电话旁 WhatsApp）；支付信息（流水号、收款方式、时间）+“支付记录”（每次付款尝试：支付单号 hang- / PH、状态、时间）；物流信息（发货记录 / 暂无物流信息 + 发货按钮）；任务列表（这单的发件记录 + 手动发送邮件）。
+  - 右栏：购买人信息（国旗、姓名、邮箱复制、其他联系方式、首次支付、最后访问、付款订单数、消费金额）、订单基础信息（支付 / 配送方式、下单类型、结账流程、域名来源）、订单备注（买家备注 + 可编辑卖家备注 meta _pc_seller_note）、订单标签（meta _pc_order_tags，回车创建、可删）、订单归因（WooCommerce 归因 utm + 落地页，归因模型 = 下单前的访问记录）、设备信息（访客 ID + 查看轨迹、设备、系统、浏览器、屏幕、IP）、IP 信息（国家 / 州，来自 WooCommerce 地理定位 + 访客记录）。没有的数据（时区、浏览器语言、城市、经纬度、ISP）显示“-”。
+- 订单列表的“查看订单”和订单号改为打开新详情页。
+- 验证：主店后台打开 #11843 全部区块正常（商品名用父商品名、标题 / 面包屑“订单详情”、图片懒加载正常）。部署 web + hq 各 7 份（店铺后台由总后台服务器副本提供）。
+
+### 2026-11-11 19:10 UTC 所有入口都打开新订单详情页
+- 店主反馈“什么都没改”：他是从其他入口打开的订单，落在 WooCommerce 原生“编辑订单”页（admin.php?page=wc-orders&action=edit&id=…），上一版只改了订单列表的链接。
+- Order_Detail_Page::maybe_redirect：在 load-woocommerce_page_wc-orders / load-post.php 上，GET 打开 shop_order 的原生编辑页一律转到 pc-order 新详情页；新详情页里需要原生页的按钮（退款、发货、编辑地址 / 配送方式、查看明细）带 pc_native=1，不转。订单列表的发货图标也带 pc_native=1。
+- 验证：主店打开原生地址 #11843 → 落在新详情页；退款按钮指向带 pc_native=1 的原生页。部署 web + hq 各 7 份。
+
+### 2026-11-11 订单详情：国家 / 州名一律英文
+- 后台语言是中文，WooCommerce 国家表会翻成中文（例如“波多黎各”）。新增 `Order_Detail_Page::en_country()` / `en_state()`：读 WooCommerce 自带的 i18n 表，并临时关掉翻译。订单详情的收货和账单地址、IP 国家 / 州，以及弃单页的地址都改用它们。
+- 部署：class-order-detail-page.php 8b05968bbd03、class-recovery-page.php 3d1a063c2f57，两台主机各 7 份（有备份），php-fpm 已重载。s0010 订单 #11886 实测显示 “Puerto Rico”。
+
+### 2026-11-11 订单详情：修排版重叠 + 地址改成“项目 / 信息”表格
+- 排版：窄屏（约 1180 宽）时第一张卡片被内容撑宽，压到右侧栏下面。主栏和侧栏改成 `minmax(0,1fr)`，子元素加 `min-width:0`，商品卡可以横向滚动，时间行可以换行。
+- 收货和账单地址都改成两列表格（项目 / 信息）：姓名、名（First Name）、姓（Last Name）、公司（有才显示）、街道地址、小区／社区、城市、州／地区（英文名加代码）、邮编、国家（英文）、电话（带 WhatsApp）。
+- 美国属地（PR/GU/VI/AS/MP/UM）按快递面单写：州 = “Puerto Rico（PR）”，国家 = United States。只改显示，订单数据不动。
+- 部署：class-order-detail-page.php bda6301d4b21，两台主机各 7 份，php-fpm 已重载。s0010 订单 #11886 在 1180 宽下已检查。
+
+### 2026-11-11 订单详情地址：州简称单独一行、点击复制、电话去掉 WhatsApp
+- “州／地区”只放英文全名（Puerto Rico），新增“州简称”一行（PR）。地址顶部的“复制”生成 “City, PR 00728” 的格式。
+- 每个值都是按钮，点一下就复制，按钮文字临时变成“已复制”。浏览器不让用剪贴板 API 时，改用 execCommand 复制。
+- 电话只显示号码，不再带 WhatsApp 链接。
+- 部署：class-order-detail-page.php 1220624fd36a，两台主机各 7 份，php-fpm 已重载。s0010 订单 #11886 实际点击后剪贴板已写入。
+
+### 2026-11-12 客户编号 + 支付中心按客户合并
+- 店主：同一个人的多次付款合并成一行，点开看付了几次；每个客户要有唯一编号，下次来也能认出来。
+- peptide-core `Customer_Id`（includes/class-customer-id.php）：编号 = “C” + 7 位 Crockford（sha256 算），由邮箱得出（小写，去掉 +后缀，Gmail 去掉点）；没有邮箱时用手机号后 10 位。同一个邮箱在所有店铺编号相同。新订单（classic + Store API 下单钩子）写 `_pc_customer_id`，20 秒后用 cron 把“订单 → 编号、打码邮箱、国家、设备摘要”签名报给总后台。老订单不改，显示时现算。订单详情“购买人信息”加了“客户编号”（点击复制）。
+- peptide-hq `Customers`（includes/class-customers.php）：表 wp_pchq_customer_links，主键 (site_id, order_id)；接口 POST /peptide-hq/v1/customers/link（店铺签名，Mail::verify）。不存邮箱原文。
+- peptide-panapay 支付中心：`Hub_Store::attempts($f, 0)` 一次取最近 2000 条，`Hub_Page::grouped()` 按客户编号合并，按合并后的行数分页。行内显示编号和打码邮箱；多次付款时显示按钮“共 N 次付款 · 成功 x · 失败 y”，点开是每一次的记录（浅灰底、左侧蓝条）。没有编号的记录照旧一行一条。
+- 部署：总后台 peptide-hq + panapay（备份 /root/hq-customers-backup-20261112100504）。先只上主店测试（web/hq 主店副本，备份 cid-main-20261112100515/16）：编号稳定（Gmail 加点 / +后缀算出同一个编号）；新订单会写编号并排队上报（测试单已删除）；主店补报 7 单。然后用 trk-deploy2 上了两台主机各 7 份（peptide-core 3 个文件；panapay 的 hub 4 个文件在店铺副本里不会运行，只是保持一致）。
+- 补报最近 30 天：43 单 → 21 个客户（s0007 17 单 / 9 人，s0010 14 / 7，s0008 5 / 3，主店 7 / 2）。支付中心核对：光辉 #11883–11885 合并为同一人“共 3 次付款 · 失败 3”；芒果 #11858–11861 + #11880 为同一人（共 6 次，失败 5）。
+
+### 2026-11-12 11:35 UTC 恢复加购推荐（手动订单的回调加入报价白名单）
+- 现象：6 家店 `Quote_Cart::supported_hooks()` 全为 false，加购推荐一律不出现（11-10 手动订单上线后，`Manual_Orders` 的 3 个回调不在报价白名单里）。规划会话转来修法，平台所有者同意。
+- 改动：`activity/class-quote-cart.php` 白名单加 `Manual_Orders::apply_fees`、`Manual_Orders::apply_prices`，`supported()` 遇到手动订单链接的购物车行（`pc_manual`）不报价；`activity/class-recommendation-coupon.php` 的 `woocommerce_coupon_is_valid` 白名单加 `Manual_Orders::block_coupons`（与 F2 分支 8c8937a 文字一致）。
+- 先在主店 s0001 测：`supported_hooks()` 与 `coupon_hooks_supported()` 为 true；普通购物车 $252 时出现加购推荐（差 $48 解锁 $25，带 ADDON5 额外 $5）；手动订单链接购物车推荐接口返回 409，不出现推荐，链接价格 $50/盒、店铺满减 −$25、运费不变。测试购物车已清空，没有下单。
+- 上线：web 主店 + s0006–s0010 + 模板 yy-sync-0532574-1794082452-web；HQ store-admin + tenant-admin s0006–s0010 + 模板 yy-sync-0532574-1794082452-admin。文件 md5 前缀 f1b143d2c479 / 89a3fd7179a0。
+- 备份：web `/root/vialcove-backups/quote-cart-manual-orders-20261112T113524Z`、`…T113738Z`；HQ `…T113526Z`、`…T113739Z`。
+- 验证：12 个站点 `supported_hooks()` 全部 `bool(true)`。
+- 回滚：从上述备份目录拷回两个文件并 reload php-fpm。
+
+### 2026-11-12 11:56 UTC 物流填单（总后台新页面，两个子表自动填写）
+- 店主要求：付款成功的订单按他的物流填单表格式自动填，分“发货登记”和“报关填单”两个子表；全自动、不用手填；之后再同步到在线表格。
+- 店铺（peptide-core）：新 `class-logistics-sync.php`（`Logistics_Sync`，在 class-plugin.php 里 Customer_Id 之后注册）。订单状态变化且付过款 → 20 秒后签名 POST 到总后台 `/peptide-hq/v1/logistics/push`；每小时把最近 45 天付款的订单再报一遍（补物流单号）。只读订单；测试订单不报；手动订单一样报。
+- 总后台（peptide-hq，HQ 安装 `/srv/vialcove/hq/current/public`）：新 `class-logistics.php`（表 `wp_pchq_logistics`，每小时用 17TRACK 更新有单号的订单，送达写“妥投”）、`class-xlsx.php`（生成 .xlsx）、`admin/class-logistics-page.php`（总后台 → 物流填单：日期 / 店铺筛选、两个子表、下载 Excel、报关固定栏可改、立即更新物流状态）。
+- 产品栏用商品编号（SKU）× 数量；导入遗留的长数字编号改用“商品名 规格”（主店 103 个规格是这种编号）。目的国家：美国 / PR 写波多黎各；电话写 “+1 号码”。
+- 先在主店测：推送 1 单（另 1 单是测试单，跳过），页面和 Excel（openpyxl 读取：两个表、颜色、冻结表头、换行）都正确；再上线 s0006–s0010 + 两边模板，补报：s0007 1 单、s0010 2 单。4 单与店主手填的 11843 / 11886 / 11892 行核对一致。
+- 部署时发现 `systemctl reload "php*-fpm"` 匹配不到 `php8.3-fpm.service`，改为直接 reload php8.3-fpm（两台都已 reload）。
+- 备份：HQ `/root/vialcove-backups/logistics-hq-20261112T115634Z`、`…T115747Z`、`…T115839Z`；core `logistics-core-20261112T115635Z`、`…T115637Z`、`…T115840Z`、`…T115842Z`（新文件记在 new-files.txt）。
+- 回滚：从备份拷回 class-plugin.php，删掉新文件，reload php8.3-fpm。
+- 待办：同步到店主的在线表格（等店主确认是哪个平台）。
+
+### 2026-11-12 12:08 UTC 物流填单同步到腾讯文档（已上线，等店主建应用授权）
+- 店主的在线表格是腾讯文档。总后台 → 物流填单 → “同步到腾讯文档”：填 Client ID / Secret（Secret 加密保存）、授权（OAuth2 `https://docs.qq.com/oauth/v2/authorize` → `admin-post.php?action=pchq_tdocs_callback`）、两个工作表链接（带 ?tab=）。
+- 新 `peptide-hq/includes/class-tencent-docs.php`（表 `wp_pchq_tdocs_rows` 记我们写到第几行）；`class-logistics.php` 收到新订单后 2 分钟同步一次，另每小时一次；`admin/class-logistics-page.php` 加第三个标签。
+- 规则：按第 1 行表头名字找列；新订单接在最后一个有“客户单号”的行下面，序号接着编；表里已有的单号（店主手填）不动；我们写的行内容变了（物流单号、妥投）才更新。接口不能设背景色。
+- 测试：没有真实应用，用模拟的腾讯文档接口在 HQ 跑（不发请求、不写设置）：两张表各新增 3 行、跳过手填的 1 行、序号接续、第二次运行 0 写入；测试映射行已删除。
+- 备份：`/root/vialcove-backups/tdocs-hq-20261112T120813Z`。
+- 待店主：在腾讯文档开放平台注册开发者、建应用并通过审核、回调地址加白名单、填 ID/Secret、授权、填两个工作表链接。
+
+### 2026-11-12 20:10 UTC 光辉（s0008）运营套件补做精简
+- 店主：光辉的运营套件没更新（后来才装的）。11-09 的精简（只留「流量斗篷」，删「支付同步中心」「产品同步」）当时只做了 s0001/s0006/s0007/s0009/s0010，s0008 那时还没装（11-09 记录里写成“s0011”是笔误，光辉是 s0008）。
+- 核对：s0008 与主店的差异只有 `cross-border-suite.php`（31 行，正是精简内容）和 `modules/payment`、`modules/product-sync` 两个目录。光辉的代付网关 payment_proxy / _stripe / _airwallex / _flypay 本来就全是 enabled=no，结账不受影响。
+- 处理：两台主机 `/srv/vialcove/store-plugins/s0008/cross-border-suite` 整目录先备份，主文件换成主店精简版（保留属主 / 权限），删除两个模块目录；`diff -rq` 与主店完全一致；php -l 通过；reload php8.3-fpm。
+- 验证：店铺与后台 `cbs_modules()` = cloak；可用支付方式只剩 Credit card；流量斗篷设置（acloak_options）未动，浏览器访问与阳站一样跳到斗篷页。
+- 备份：web `/root/vialcove-backups/cbs-strip-s0008-20261112T201030Z`，HQ `/root/vialcove-backups/cbs-strip-s0008-20261112T201031Z`。回滚：把备份里的 cross-border-suite 目录拷回原处并 reload php8.3-fpm。
