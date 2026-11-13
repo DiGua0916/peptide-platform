@@ -189,7 +189,25 @@ final class Board_Page {
 		echo '<style>
 .pc-cr-board .pc-cr-filters{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:flex-end;margin:12px 0}
 .pc-cr-board .pc-cr-filters label{display:flex;flex-direction:column;font-size:12px;color:#50575e;gap:2px}
-.pc-cr-board .pc-cr-scroll{overflow-x:auto;max-width:100%}
+.pc-cr-board .pc-cr-scroll{overflow-x:auto;max-width:100%;container-type:inline-size}
+.pc-cr-board table.pc-cr-table th{white-space:normal!important;line-height:1.3;vertical-align:bottom}
+/* 自适应（2026-11-13）：放不下整张表时，每行变成一张卡片，所有指标带名称显示，花费 / 订单 / 销售额 / ROAS 排在前面。 */
+@container (max-width: 1240px){
+.pc-cr-board table.pc-cr-table,.pc-cr-board table.pc-cr-table tbody{display:block;border:0;background:none;width:100%;box-sizing:border-box}
+.pc-cr-board table.pc-cr-table tr{box-sizing:border-box;width:auto}
+.pc-cr-board table.pc-cr-table{overflow-x:clip}
+.pc-cr-board table.pc-cr-table thead{display:none}
+.pc-cr-board table.pc-cr-table tr{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:2px 10px;background:#fff;border:1px solid #dcdcde;border-radius:6px;padding:10px 12px;margin:0 0 10px}
+.pc-cr-board table.pc-cr-table tr.pc-cr-thin{background:#fafafa}
+.pc-cr-board table.pc-cr-table tr.pc-cr-total{border:2px solid #2271b1}
+.pc-cr-board table.pc-cr-table tr.pc-cr-group{display:block;border:0;background:none;padding:6px 0 0;margin:8px 0 4px}
+.pc-cr-board table.pc-cr-table td,.pc-cr-board table.pc-cr-table th{display:block;text-align:left!important;padding:4px 0!important;border:0!important;white-space:normal}
+.pc-cr-board table.pc-cr-table td:first-child{grid-column:1/-1;min-width:0;padding-bottom:8px!important;margin-bottom:4px;border-bottom:1px solid #f0f0f1!important}
+.pc-cr-board table.pc-cr-table td[data-label]::before{content:attr(data-label);display:block;font-size:11px;line-height:15px;color:#646970;font-variant-numeric:normal}
+.pc-cr-board table.pc-cr-table td[data-label]{font-size:14px;font-weight:600}
+.pc-cr-board table.pc-cr-table td.pc-cr-key{order:-1;font-size:16px}
+.pc-cr-board table.pc-cr-table td:first-child{order:-2}
+}
 .pc-cr-board table.pc-cr-table td,.pc-cr-board table.pc-cr-table th{white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
 .pc-cr-board table.pc-cr-table td:first-child,.pc-cr-board table.pc-cr-table th:first-child{text-align:left;white-space:normal;min-width:180px}
 .pc-cr-board tr.pc-cr-thin td{color:#a7aaad}
@@ -346,7 +364,8 @@ final class Board_Page {
 		}
 		echo '</td>';
 		foreach ( self::COLUMNS as $key => $col ) {
-			echo '<td>' . esc_html( self::format( $row[ $key ] ?? null, $col[1] ) ) . '</td>';
+			$key_metric = in_array( $key, array( 'spend_cents', 'orders', 'sales_cents', 'roas' ), true );
+			echo '<td data-label="' . esc_attr( $col[0] ) . '"' . ( $key_metric ? ' class="pc-cr-key"' : '' ) . '>' . esc_html( self::format( $row[ $key ] ?? null, $col[1] ) ) . '</td>';
 		}
 		echo '</tr>';
 	}
