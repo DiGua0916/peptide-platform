@@ -241,7 +241,9 @@ final class Onboarding {
 		$next   = '下一步：' . ( $labels[ $status['current'] ] ?? '' );
 		$link   = '<a class="button" href="' . esc_url( self::url() ) . '">继续设置</a>';
 		if ( $native ) {
-			return '<div class="notice notice-error"><p><strong>' . esc_html( $text ) . '</strong>　' . esc_html( $next ) . '　' . $link . '</p></div>';
+			// 每段整体换行，手机上不会把“店铺信息”断成“店铺信 / 息”。
+			$keep = 'display:inline-block;white-space:nowrap;margin:2px 12px 2px 0;vertical-align:middle';
+			return '<div class="notice notice-error"><p><strong style="' . $keep . '">' . esc_html( $text ) . '</strong><span style="' . $keep . '">' . esc_html( $next ) . '</span>' . str_replace( 'class="button"', 'class="button" style="vertical-align:middle"', $link ) . '</p></div>';
 		}
 		return '<div class="pc-by-alert" role="alert"><div><strong>' . esc_html( $text ) . '</strong><span>' . esc_html( $next ) . '</span></div>' . $link . '</div>';
 	}
