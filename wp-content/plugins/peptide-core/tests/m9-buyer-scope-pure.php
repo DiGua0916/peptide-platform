@@ -27,16 +27,25 @@ namespace {
 		return $v === array( 'verdict' => $verdict, 'scope' => $scope, 'to' => $to );
 	};
 
-	// 六个菜单，顺序固定。
+	// 七个菜单，顺序固定。“营销活动”（只读，平台所有者 2026-11-13 定）排在数据后面；它显示不显示另看 F2 的只读页面在不在。
 	$menu = \PeptideCore\Staff_Buyer::menu_items();
-	check( 'exactly six menus in order', array( 'home', 'orders', 'recovery', 'data', 'ads', 'store' ) === array_keys( $menu ) );
-	check( 'menu labels', array( '首页', '订单', '弃单', '数据', '广告设置', '店铺信息' ) === array_column( $menu, 'label' ) );
+	check( 'exactly seven menus in order', array( 'home', 'orders', 'recovery', 'data', 'campaigns', 'ads', 'store' ) === array_keys( $menu ) );
+	check( 'menu labels', array( '首页', '订单', '弃单', '数据', '营销活动', '广告设置', '店铺信息' ) === array_column( $menu, 'label' ) );
+	check( 'campaigns menu opens the promotions page (F2 shows its read-only list there)', 'admin.php?page=pc-promotions' === $menu['campaigns']['slug'] );
 	check( 'orders menu opens paid orders', 'admin.php?page=wc-orders&status=wc-processing' === $menu['orders']['slug'] );
 	check( 'data sub-page belongs to data', 'data' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-data-landing' ) );
 	check( 'visitors belong to data', 'data' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-visitors-archive' ) );
 	check( 'wizard highlights home', 'home' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-onboarding' ) );
 	check( 'look-alike slug is not a data page', '' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-datax' ) );
-	check( 'hidden page has no menu', '' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-promotions' ) );
+	check( 'hidden page has no menu', '' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-apps' ) );
+	foreach ( \PeptideCore\Staff_Buyer::CAMPAIGN_PAGES as $campaign_page ) {
+		check( "$campaign_page belongs to the campaigns menu", 'campaigns' === \PeptideCore\Staff_Buyer::menu_for_page( $campaign_page ) );
+	}
+	check( 'the three campaign pages are exactly these', array( 'pc-promotions', 'pc-coupons', 'pc-shipping-discounts' ) === \PeptideCore\Staff_Buyer::CAMPAIGN_PAGES );
+	// 地址只是以 pc-promotions- 开头的其他营销页面（赠品 / 捆绑、活动积木、订阅者）不算“营销活动”。
+	foreach ( array( 'pc-promotions-product-offers', 'pc-promotions-campaigns', 'pc-promotions-subscribers', 'pc-coupons-import', 'pc-shipping-discounts-x' ) as $look_alike ) {
+		check( "$look_alike is not a campaigns page", '' === \PeptideCore\Staff_Buyer::menu_for_page( $look_alike ) );
+	}
 
 	// 前台浏览不受影响，也不给能力。
 	check( 'storefront allowed without caps', $is( array( 'doing' => 'front' ), 'allow' ) );
@@ -92,7 +101,28 @@ namespace {
 	check( 'profile goes to store info', $is( $file( 'profile.php' ), 'redirect', '', 'pc-store-info' ) );
 
 	// 其余菜单：直接打开地址也拒绝。
-	foreach ( array( 'pc-promotions', 'pc-coupons', 'pc-shipping', 'pc-tax', 'pc-system', 'pc-staff', 'pc-apps', 'pc-mail', 'pc-store-design', 'pc-design-editor', 'pc-customers', 'pc-media', 'pc-activity', 'pc-site-tools', 'pc-manual-order', 'pc-ship-preview', 'pc-datax', 'wc-settings', 'wc-admin', 'wc-status', 'cbs-dashboard' ) as $hidden ) {
+	// 营销活动（F2 的只读“当前在跑的活动”）。$r['campaigns'] 由 request() 填：F2 的只读页面在这份代码里、并且 F2 认为这个账号不能改。
+	$ro = array( 'campaigns' => '1' );
+	foreach ( \PeptideCore\Staff_Buyer::CAMPAIGN_PAGES as $campaign_page ) {
+		check( "$campaign_page: read-only list opens, with no store caps handed out", $is( $page( $campaign_page, $ro ), 'allow' ) );
+		check( "$campaign_page: HEAD is also read-only", $is( $page( $campaign_page, $ro + array( 'method' => 'HEAD' ) ), 'allow' ) );
+		check( "$campaign_page: new / edit form address denied", $is( $page( $campaign_page, $ro + array( 'edits' => '1' ) ), 'deny' ) );
+		check( "$campaign_page: bulk or toggle action in the address denied", $is( $page( $campaign_page, $ro + array( 'action' => 'delete' ) ), 'deny' ) && $is( $page( $campaign_page, $ro + array( 'action' => '-1', 'action2' => 'disable' ) ), 'deny' ) );
+		check( "$campaign_page: list filter submit without an action still opens", $is( $page( $campaign_page, $ro + array( 'action' => '-1', 'action2' => '-1' ) ), 'allow' ) );
+		check( "$campaign_page: POST denied", $is( $page( $campaign_page, $ro + array( 'method' => 'POST' ) ), 'deny' ) );
+		check( "$campaign_page: denied while the read-only page is not in this code (or F2 says the account can edit)", $is( $page( $campaign_page ), 'deny' ) && $is( $page( $campaign_page, array( 'campaigns' => '' ) ), 'deny' ) );
+		check( "$campaign_page: waits for the password change", $is( $page( $campaign_page, $ro ), 'redirect', '', 'pc-onboarding', true ) );
+	}
+	check( 'F2 read-only code is not loaded in this test, so nothing is opened by default', ! \PeptideCore\Staff_Buyer::campaigns_ready() && ! \PeptideCore\Staff_Buyer::campaigns_read_only() );
+	// 营销里其余的页面和应用中心里的设置页（离开挽回、转盘、加购推荐、已付款弹窗、物流球等）：有没有只读列表都不开放。
+	foreach ( array( 'pc-promotions-product-offers', 'pc-promotions-campaigns', 'pc-promotions-subscribers', 'pc-apps', 'pc-paid-popup', 'pc-tracking-ball', 'pc-cart-links', 'pc-referrals', 'pc-accounts', 'pc-checkout-dropoff', 'pc-collections', 'pc-product-reviews', 'pc-product-reports', 'pc-settings' ) as $closed ) {
+		check( "still closed: $closed", $is( $page( $closed ), 'deny' ) && $is( $page( $closed, $ro ), 'deny' ) );
+	}
+	// 营销页面的保存、启停、批量、设置：都走 admin-post.php，不在投手的名单里（F2 那边也各自返回 403）。
+	foreach ( array( 'pc_promo_save', 'pc_promo_toggle', 'pc_promo_bulk', 'pc_promo_settings', 'pc_coupon_save', 'pc_coupon_toggle', 'pc_coupon_bulk', 'pc_coupon_settings', 'pc_shipdisc_save', 'pc_shipdisc_toggle', 'pc_shipdisc_bulk' ) as $campaign_write ) {
+		check( "campaign write $campaign_write denied (POST and GET, read-only list or not)", $is( $post( $campaign_write ), 'deny' ) && $is( $post( $campaign_write ) + $ro, 'deny' ) && $is( array_merge( $post( $campaign_write ), array( 'method' => 'GET' ) ) + $ro, 'deny' ) );
+	}
+	foreach ( array( 'pc-shipping', 'pc-tax', 'pc-system', 'pc-staff', 'pc-apps', 'pc-mail', 'pc-store-design', 'pc-design-editor', 'pc-customers', 'pc-media', 'pc-activity', 'pc-site-tools', 'pc-manual-order', 'pc-ship-preview', 'pc-datax', 'wc-settings', 'wc-admin', 'wc-status', 'cbs-dashboard' ) as $hidden ) {
 		check( "hidden page $hidden", $is( $page( $hidden ), 'deny' ) );
 	}
 	foreach ( array( 'edit.php', 'post.php', 'post-new.php', 'upload.php', 'users.php', 'user-new.php', 'plugins.php', 'themes.php', 'options-general.php', 'tools.php', 'edit-tags.php', 'customize.php', 'site-health.php', 'export.php', 'about.php' ) as $core ) {

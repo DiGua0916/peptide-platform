@@ -868,6 +868,15 @@
       "node_test": true,
       "status": "module-gate",
       "module": "M14"
+    },
+    {
+      "name": "m9-buyer-campaigns-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m9-buyer-campaigns-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M9"
     }
   ]
 }

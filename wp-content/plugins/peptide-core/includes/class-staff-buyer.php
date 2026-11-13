@@ -2,7 +2,10 @@
 /**
  * 投手版后台（M9，PRD 6.2）：角色 pc_media_buyer。“投手”= 负责投广告的内部员工，不是顾客。
  *
- * 投手只用 6 个菜单：首页、订单（只读）、弃单、数据、广告设置、店铺信息。其余菜单不显示，直接打开地址返回 403。
+ * 投手的菜单：首页、订单（只读）、弃单、数据、营销活动（只读）、广告设置、店铺信息。其余菜单不显示，直接打开地址返回 403。
+ * “营销活动”（平台所有者 2026-11-13 定）：投手可以看只读的“当前在跑的活动”，不能新建、编辑、启停、删除。
+ * 只读页面归 F2（Admin\Marketing::read_only_gate()），这里只管菜单入口和放行“不带任何操作参数的 GET”；
+ * F2 的只读代码不在（或它认为这个账号能改）时，三个营销页面对投手仍然整页 403。
  * 管理员（包括从总后台一键登录）不受影响，仍然看到全部菜单。
  *
  * 做法：
@@ -44,6 +47,11 @@ final class Staff_Buyer {
 	public const PAGE_ORDER  = 'pc-order';
 	/** 导出订单（Admin\Buyer_Order_Export，ST-03）。只读，走 admin-post.php 下载。 */
 	public const ACTION_EXPORT = 'pc_buyer_orders_export';
+
+	/** F2（M4）的三个营销页面：满减、优惠码、运费折扣。投手只能看 F2 的只读列表。只认这三个地址，带同样前缀的其他页面不算。 */
+	public const CAMPAIGN_PAGES = array( 'pc-promotions', 'pc-coupons', 'pc-shipping-discounts' );
+	/** F2 定的只读权限（Admin\Marketing::VIEW_CAP）。写字面值：F2 的代码合进来之前那个常量还不存在。 */
+	public const CAP_CAMPAIGNS  = 'pc_view_campaigns';
 
 	public const ACTION_PASSWORD = 'pc_buyer_password';
 	public const ACTION_STORE    = 'pc_buyer_store_save';
@@ -326,9 +334,33 @@ final class Staff_Buyer {
 			'writes'  => ( ! empty( $_REQUEST['delete_all'] ) || ! empty( $_REQUEST['claim-lock'] ) ) ? '1' : '',
 			// 主线 2026-11-11：带 pc_native 才打开 WooCommerce 原生订单页（退款、发货、改地址用），不带的转到订单详情页。
 			'native'  => ! empty( $_GET['pc_native'] ) ? '1' : '',
+			// 营销页面上打开新建 / 编辑表单的参数（Admin\Marketing::read_only_gate() 看的是同样两个）。
+			'edits'   => ( isset( $_REQUEST['new'] ) || isset( $_REQUEST['edit'] ) ) ? '1' : '',
+			'campaigns' => '',
 		);
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+		// 先把上面的结果存好再问 F2：它的判断要查当前用户的能力，会回到 scoped_caps() 再读一次这里。
+		self::$request['campaigns'] = self::campaigns_read_only() ? '1' : '';
 		return self::$request;
+	}
+
+	/** F2 的只读“当前在跑的活动”在不在这份代码里。 */
+	public static function campaigns_ready(): bool {
+		$marketing = Admin\Marketing::class;
+		return class_exists( $marketing ) && is_callable( array( $marketing, 'can_view' ) ) && is_callable( array( $marketing, 'can_manage' ) ) && is_callable( array( $marketing, 'read_only_gate' ) );
+	}
+
+	/**
+	 * 当前登录的人打开营销页面时，F2 给的是不是只读列表。F2 的代码不在，或者它认为这个人能改（比如有人用过滤器
+	 * pc_marketing_can_manage 放开了），都返回 false：投手的拦截仍然整页拒绝，不会因为这里放行而露出可编辑的页面。
+	 */
+	public static function campaigns_read_only(): bool {
+		return self::campaigns_ready() && ! Admin\Marketing::can_manage();
+	}
+
+	/** 投手菜单里要不要显示“营销活动”：F2 说这个人能看（Marketing::can_view()），并且看到的是只读列表。 */
+	public static function campaigns_visible(): bool {
+		return ! empty( self::request()['campaigns'] ) && (bool) Admin\Marketing::can_view();
 	}
 
 	/**
@@ -390,11 +422,17 @@ final class Staff_Buyer {
 			// 主线的订单详情页：只读打开。页面上的作废、卖家备注、标签走 admin-post.php（pc_order_detail），不在名单里。
 			return $allow( 'orders' );
 		}
+		$none = array( '', '-1' );
+		if ( in_array( $page, self::CAMPAIGN_PAGES, true ) ) {
+			// F2 的只读列表“当前在跑的活动”：只放行不带任何操作参数的 GET。打开新建 / 编辑表单（new、edit）、
+			// 批量和启停（action、action2）一律拒绝；保存和启停的提交走 admin-post.php，不在投手的名单里。
+			$plain = empty( $r['edits'] ) && in_array( $action, $none, true ) && in_array( (string) ( $r['action2'] ?? '' ), $none, true );
+			return ( ! empty( $r['campaigns'] ) && $plain ) ? $allow() : $deny;
+		}
 		if ( 'wc-orders' === $page ) {
 			// 只读：列表（筛选、搜索、翻页）和打开一张订单。批量操作、新建、删除等都带别的 action；
 			// “清空回收站”和“接管编辑”不带 action，靠单独的参数触发（WooCommerce 的 ListTable::current_action()、
 			// PageController::handle_edit_lock()），一样拒绝。
-			$none = array( '', '-1' );
 			$idle = in_array( (string) ( $r['action2'] ?? '' ), $none, true ) && empty( $r['writes'] );
 			if ( 'edit' === $action && ! empty( $r['native'] ) ) {
 				// 原生订单页现在只剩退款、发货、改地址的用途（详情页上的按钮带 pc_native 跳过来），投手不用。
@@ -463,6 +501,10 @@ final class Staff_Buyer {
 			return $allcaps;
 		}
 		$allcaps[ self::CAP_VIEW ] = true;
+		// F2 约定的只读权限：有它只能看“当前在跑的活动”，不能改。没改密码之前不给（那时只能打开向导）。
+		if ( ! self::must_change( (int) $user->ID ) ) {
+			$allcaps[ self::CAP_CAMPAIGNS ] = true;
+		}
 		// 只按“当前登录的人、当前这次请求”给：后台任务里的 user_can( 投手, … ) 不会顺带拿到店铺能力。
 		if ( (int) get_current_user_id() !== (int) $user->ID ) {
 			return $allcaps;
@@ -527,9 +569,10 @@ final class Staff_Buyer {
 	// ---------- 菜单 ----------
 
 	/**
-	 * 投手的 6 个菜单，按显示顺序。slug 是菜单链接，pages 是算在这个菜单下的页面（带同样前缀的子页面也算）。
+	 * 投手的菜单，按显示顺序。slug 是菜单链接，pages 是算在这个菜单下的页面（带同样前缀的子页面也算；
+	 * exact 为真时只认 pages 里写的地址）。“营销活动”只在 campaigns_visible() 时显示，见 build_menu()。
 	 *
-	 * @return array<string,array{label:string,slug:string,icon:string,pages:string[]}>
+	 * @return array<string,array{label:string,slug:string,icon:string,pages:string[],exact?:bool}>
 	 */
 	public static function menu_items(): array {
 		$url = static fn( string $page ): string => 'admin.php?page=' . $page;
@@ -538,6 +581,7 @@ final class Staff_Buyer {
 			'orders'   => array( 'label' => '订单', 'slug' => 'admin.php?page=wc-orders&status=wc-processing', 'icon' => 'dashicons-cart', 'pages' => array( 'wc-orders', self::PAGE_ORDER ) ),
 			'recovery' => array( 'label' => '弃单', 'slug' => $url( 'pc-recovery' ), 'icon' => 'dashicons-backup', 'pages' => array( 'pc-recovery' ) ),
 			'data'     => array( 'label' => '数据', 'slug' => $url( 'pc-data' ), 'icon' => 'dashicons-chart-area', 'pages' => array( 'pc-data', 'pc-visitors' ) ),
+			'campaigns' => array( 'label' => '营销活动', 'slug' => $url( self::CAMPAIGN_PAGES[0] ), 'icon' => 'dashicons-tag', 'pages' => self::CAMPAIGN_PAGES, 'exact' => true ),
 			'ads'      => array( 'label' => '广告设置', 'slug' => $url( self::PAGE_ADS ), 'icon' => 'dashicons-megaphone', 'pages' => array( self::PAGE_ADS ) ),
 			'store'    => array( 'label' => '店铺信息', 'slug' => $url( self::PAGE_STORE ), 'icon' => 'dashicons-store', 'pages' => array( self::PAGE_STORE ) ),
 		);
@@ -550,7 +594,7 @@ final class Staff_Buyer {
 		}
 		foreach ( self::menu_items() as $key => $item ) {
 			foreach ( $item['pages'] as $base ) {
-				if ( $page === $base || str_starts_with( $page, $base . '-' ) ) {
+				if ( $page === $base || ( empty( $item['exact'] ) && str_starts_with( $page, $base . '-' ) ) ) {
 					return $key;
 				}
 			}
@@ -559,7 +603,7 @@ final class Staff_Buyer {
 	}
 
 	/**
-	 * 左侧菜单换成投手的 6 项。
+	 * 左侧菜单换成投手的这几项。
 	 *
 	 * 在 admin_head 才换：页面能不能打开，WordPress 是按各页面原来登记的菜单判断的（admin_menu 之后立刻检查），
 	 * 那时不能动；到这里只剩显示。“数据”下面保留数据页面自己登记的子页面和实时访客。
@@ -577,6 +621,9 @@ final class Staff_Buyer {
 		foreach ( self::menu_items() as $key => $item ) {
 			if ( $locked && 'home' !== $key ) {
 				continue; // 还没改密码：只留首页（会转到向导）。
+			}
+			if ( 'campaigns' === $key && ! self::campaigns_visible() ) {
+				continue; // F2 的只读列表不在这份代码里，或者 F2 说这个人不能看。
 			}
 			$position         += 5;
 			$menu[ $position ] = array( $item['label'], 'read', $item['slug'], $item['label'], 'menu-top pc-buyer-menu', 'pc-buyer-menu-' . $key, $item['icon'] ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited

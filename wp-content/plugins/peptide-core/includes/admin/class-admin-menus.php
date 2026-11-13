@@ -33,7 +33,7 @@
  *
  * 店铺菜单整理只影响能管理商店的人（manage_woocommerce）；营销页面独立按 edit_shop_coupons 注册。
  *
- * - 投手版（M9）：投手（PeptideCore\Staff_Buyer）的左侧菜单固定 6 项，由 Staff_Buyer::build_menu() 生成，不走这里的整理。
+ * - 投手版（M9）：投手（PeptideCore\Staff_Buyer）的左侧菜单是固定的几项，由 Staff_Buyer::build_menu() 生成，不走这里的整理。
  *   这里只负责投手的订单页（ST-03）：列表加“来源广告、运单号、退款状态”三列，去掉勾选框、批量操作和行内按钮；
  *   订单页面隐藏保存、改价、退款、作废、加备注等入口。隐藏只是为了界面干净，写请求本身已经被 Staff_Buyer 拦截。
  *
