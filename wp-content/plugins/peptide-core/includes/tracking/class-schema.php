@@ -62,6 +62,8 @@ final class Schema {
 
 	/** 一次性数据修复的标记：first_visit_id 改成访客最早一次访问（2026-11-13）。 */
 	public const FIRST_VISIT_FIX = 'pc_track_first_visit_fix';
+	/** 后台定时任务名（不在前台请求里跑，免得拖慢那一个请求）。 */
+	public const FIRST_VISIT_CRON = 'pc_track_repair_first_visits';
 
 	/**
 	 * 把 first_visit_id 不等于“这位访客最早一次访问”的访客改正（只跑一次，成功后记标记）。
@@ -73,13 +75,23 @@ final class Schema {
 		if ( '1' === (string) get_option( self::FIRST_VISIT_FIX, '' ) || ! self::installed() ) {
 			return null;
 		}
+		// 同时只跑一个：add_option 在选项已存在时返回 false（原子）；锁超过 1 小时视为上次中断，可以重来。
+		$lock = self::FIRST_VISIT_FIX . '_lock';
+		if ( ! add_option( $lock, time(), '', false ) ) {
+			if ( time() - (int) get_option( $lock, 0 ) < HOUR_IN_SECONDS ) {
+				return null;
+			}
+			update_option( $lock, time(), false );
+		}
 		global $wpdb;
 		$v = self::table( 'visitors' );
 		$s = self::table( 'visits' );
 		$n = $wpdb->query( "UPDATE {$v} SET first_visit_id = ( SELECT MIN(x.id) FROM {$s} x WHERE x.visitor_id = {$v}.id ) WHERE EXISTS ( SELECT 1 FROM {$s} y WHERE y.visitor_id = {$v}.id ) AND first_visit_id <> ( SELECT MIN(z.id) FROM {$s} z WHERE z.visitor_id = {$v}.id )" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		if ( false === $n ) {
+			delete_option( $lock );
 			return -1;
 		}
+		delete_option( $lock );
 		update_option( self::FIRST_VISIT_FIX, '1', true );
 		update_option( self::FIRST_VISIT_FIX . '_log', array( 'at' => time(), 'rows' => (int) $n ), false );
 		return (int) $n;
