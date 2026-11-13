@@ -12,6 +12,7 @@ final class Workspace {
 		require_once __DIR__ . '/class-workspace-shell.php';
 		Workspace_Shell::register_hooks();
 		add_filter( 'admin_body_class', array( self::class, 'body_class' ) );
+		add_filter( 'heartbeat_settings', array( self::class, 'heartbeat' ) );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ), 1000 );
 		add_action( 'admin_print_styles', array( self::class, 'navigation_head' ), 0 );
 		add_action( 'admin_footer', array( self::class, 'navigation_ready' ), 0 );
@@ -125,6 +126,21 @@ JS;
 		$screen = get_current_screen();
 		if ( $screen && 'product' === $screen->post_type && 'post' === $screen->base ) { $classes .= ' pc-admin-product'; }
 		return $classes;
+	}
+
+	/**
+	 * 2026-11-14 提速：后台心跳从 60 秒一次改成 120 秒一次（外框和内嵌页各有一个心跳，原来每分钟两次请求）。
+	 * 编辑文章 / 商品 / 订单的页面不改（那里靠心跳保持“正在编辑”的锁和登录状态）。
+	 */
+	public static function heartbeat( $settings ) {
+		global $pagenow;
+		$editing = in_array( (string) $pagenow, array( 'post.php', 'post-new.php' ), true )
+			|| ( isset( $_GET['action'] ) && 'edit' === sanitize_key( wp_unslash( $_GET['action'] ) ) ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			|| ( isset( $_GET['action'] ) && 'new' === sanitize_key( wp_unslash( $_GET['action'] ) ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( ! $editing && is_array( $settings ) ) {
+			$settings['interval'] = 120;
+		}
+		return $settings;
 	}
 
 	public static function enqueue(): void {

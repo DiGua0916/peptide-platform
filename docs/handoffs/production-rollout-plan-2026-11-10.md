@@ -663,3 +663,16 @@
 - 检查（主店访客归档，1296px 宽）：页面滚到底（8304px），菜单位置始终在顶部 32px，position=fixed，当前菜单项“访客归档”看得见。
 - 回滚：备份文件拷回即可（纯样式 / 前端脚本）。
 - 追加（17:06 UTC）：店主要求上下滚动的滚动条一律隐藏（以后同类改动也照此）。`admin-workspace.css`：整页（html）和左侧菜单 `scrollbar-width:none`，所有元素 `::-webkit-scrollbar:vertical{width:0}`；照常能滚，只是不显示。左右滚动条不动（订单列表横向滚动条 11-11 要求一直看得见）。主店实测：整页滚动条宽 0、菜单滚动条宽 0，页面滚到 3000px 菜单仍固定在 32px、菜单仍可单独滚。14 份副本已更新，备份 `scrollbar-*-20261113T17…`。
+
+### 2026-11-13 17:25–17:37 UTC（北京 2026-11-14 01:25–01:37）后台提速
+- 店主：后台感觉“网络卡”。实测：静态文件 40ms（Cloudflare 节点，网络正常）；动态请求每个 250–300ms，主要在服务器。剖析（主店后台一个最简单的接口）：68 条数据库查询，其中 51 条是逐个读单个设置；测试单邮件开关每次请求都把 WooCommerce 全部邮件类建一遍（14ms）；总后台主机上的店铺后台每个请求经 SSH 通道新连一次数据库要 42–83ms（40ms 整倍数，SSH 非交互连接没开 TCP_NODELAY），web 主机本地连接 0.2ms；子店后台 PHP 进程闲 15 秒就退，下次点要重开进程、重连数据库。
+- 改动：
+  1. `peptide-core/includes/class-test-orders.php`：测试单邮件开关改挂在 `woocommerce_email_classes`（邮件系统真被用到时才挂），init 里只在邮件系统已先建好时补挂。已验证建邮件系统后过滤器在（优先级 5）。
+  2. `peptide-core/peptide-core.php`：WooCommerce 加载前用一条 `wp_prime_option_caches` 取回约 75 个每次都会单独读的设置（不存在的也记成“没有”）。
+  3. 数据库：6 家店各把约 24 个已存在、每次都读的小设置改成自动加载（自动加载数据 +2–4KB）。改了哪些记在 web 主机 `/root/vialcove-backups/autoload-20261114/pc-autoload-<库名>.txt`，回滚用 `wp_set_option_autoload_values( 名单 => false )`。
+  4. `peptide-core/includes/admin/class-workspace.php`：后台心跳 60 秒 → 120 秒；编辑文章 / 商品 / 订单（post.php、post-new.php、action=edit/new）不改。
+  5. 总后台主机 6 份店铺后台 + admin 开店模板加 `wp-content/db.php`（源文件 `tools/deployment/store-admin/db.php`）：数据库走 TCP 远程地址时用 mysqli 持久连接（主机名加 `p:`），每个 PHP 进程复用自己的连接；本机数据库不受影响。新文件清单 `/root/vialcove-backups/dbreuse-20261114/new-files.txt`，回滚 = 删掉这些 db.php 再 reload。web 主机 MySQL 连接数 3 → 10（上限 151，历史最高 37）。
+  6. PHP 进程池：总后台主机主店后台 vcs0001（dynamic）常驻 2–3 → 3–5；子店后台 vcs0006–0010（ondemand）闲置退出 15s → 600s；web 主机全部店铺池闲置退出 15/20s → 120s。原配置备份在两台的 `/root/vialcove-backups/fpm-pools-20261114/`。
+- 结果（主店）：每个请求的数据库查询 68 → 20；总后台主机上接口 ~240ms → ~190ms（6 家店后台都在 185–200ms）；浏览器实测实时数据接口 323ms → ~200ms、简单接口 300–350ms → ~245ms。web 主机首页 ~93ms，6 家店购物车同一商品 2 件仍 $215.35。
+- 剩下的大头是 WordPress + WooCommerce 本身（WooCommerce 注册接口 / 区块约 55ms）；SSH 通道复用连接时重置仍有一次 40ms 等待，彻底去掉要改成两台主机直连数据库（加密），涉及安全组和数据库配置，未做、需店主决定。
+- 部署前 14 份副本这 3 个 peptide-core 文件和 d1e6932 一致；部署后全部一致。备份 `speed-*-20261113T17…`。
