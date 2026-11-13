@@ -8,6 +8,7 @@ namespace PeptideCore\Tracking {
 		public static bool $fail_visit = false;
 		public static function cookie_user_id(): int { return 0; }
 		public static function is_staff( int $id ): bool { return false; }
+		public static function is_automated( string $ua = '' ): bool { return false; }
 		public static function current_vid(): string { return str_repeat( 'a', 32 ); }
 		public static function issue_vid(): string { return self::current_vid(); }
 		public static function visitor( string $vid, int $now ): array { global $wpdb; ++self::$allocations; if ( ! isset( $wpdb->visitors[10] ) ) { $wpdb->visitors[10] = array( 'id' => 10, 'user_id' => 0 ); } return $wpdb->visitors[10]; }
@@ -94,6 +95,7 @@ namespace {
 		}
 	}
 
+	require_once __DIR__ . '/product-actions-test-autoload.php'; // Ingest 现在也认商品动作事件。
 	require_once dirname( __DIR__ ) . '/includes/tracking/class-impressions.php';
 	require_once dirname( __DIR__ ) . '/includes/tracking/class-attribution.php';
 	require_once dirname( __DIR__ ) . '/includes/tracking/class-page-context.php';
@@ -181,6 +183,8 @@ namespace {
 	require_once dirname( __DIR__ ) . '/includes/api/class-errors.php';
 	require_once dirname( __DIR__ ) . '/includes/data/class-params.php';
 	require_once dirname( __DIR__ ) . '/includes/data/class-range.php';
+	require_once dirname( __DIR__ ) . '/includes/data/class-report-filter.php';
+	if ( ! function_exists( 'is_wp_error' ) ) { function is_wp_error( $v ) { return $v instanceof WP_Error; } }
 	require_once dirname( __DIR__ ) . '/includes/data/class-page-conversion.php';
 	$report = \PeptideCore\Data\Page_Conversion::class;
 	$check( 'report fourteen metrics and ten defaults are independently fixed', $report::METRICS === array( 'exposed_users', 'viewed_users', 'view_user_rate', 'cart_users', 'cart_user_rate', 'paid_users', 'paid_user_rate', 'impressions', 'views', 'view_rate', 'carts', 'cart_rate', 'paid_units', 'paid_rate' ) && $report::DEFAULTS === array( 'exposed_users', 'view_user_rate', 'viewed_users', 'cart_user_rate', 'cart_users', 'paid_users', 'paid_user_rate', 'impressions', 'views', 'view_rate' ) );

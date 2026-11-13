@@ -108,7 +108,8 @@ namespace {
 	$first_delete = array_search( 'DELETE ' . $t, $db->log, true );
 	$last_replace = max( array_keys( $db->log, 'REPLACE ' . $t, true ) );
 	check( 'new rows written before old rows deleted', false !== $first_delete && $last_replace < $first_delete );
-	check( 'empty resend clears the day', 0 === H::store_rows( 7, array( 'day' => '2026-11-11', 'rows' => array() ) ) && 6 === count( $db->rows( $t ) ) );
+	// 2026-11-13：空日报不清已有数据（店铺追踪没就绪 / 查询出错时会发来空日报）。
+	check( 'empty resend keeps the day', 0 === H::store_rows( 7, array( 'day' => '2026-11-11', 'rows' => array() ) ) && 7 === count( $db->rows( $t ) ) && ! in_array( 'DELETE ' . $t, array_slice( $db->log, -3 ), true ) );
 
 	$before                = $db->tables;
 	$db->fail_replace_at   = $db->replaces + 2; // 这次的第二行写失败
