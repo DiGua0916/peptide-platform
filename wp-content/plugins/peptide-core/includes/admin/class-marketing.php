@@ -56,7 +56,7 @@ final class Marketing {
 	 * 应用中心查的是 manage_woocommerce，不是优惠码能力，所以这里单独拦（正常的投手在这个地址上本来就没有店铺能力）。
 	 */
 	public static function deny_buyer_settings(): void {
-		if ( ! self::is_buyer() ) {
+		if ( ! self::is_buyer() || ! self::rules_active() ) {
 			return;
 		}
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- 只用来判断打开的是哪个页面。
@@ -90,14 +90,24 @@ final class Marketing {
 	}
 
 	/**
-	 * user_has_cap（每个请求都挂，见 Pricing\Runtime）：投手没有任何优惠码相关的能力。
+	 * M4 的只读规则（投手只读、系列下发的活动只读）有没有生效：投手角色上有了只读权限 pc_view_campaigns（M9 新版），
+	 * 或者这家店打开了按系列接收营销活动。没生效时，下面几道加固都不起作用，谁能改营销活动完全由线上已有的
+	 * 权限（优惠码能力、M9 的投手拦截）决定，和 M4 上线之前一样。
+	 */
+	public static function rules_active(): bool {
+		$role = function_exists( 'get_role' ) ? get_role( self::BUYER_ROLE ) : null;
+		return ( is_object( $role ) && $role->has_cap( self::VIEW_CAP ) ) || \PeptideCore\Pricing\Series_Campaigns::enabled();
+	}
+
+	/**
+	 * user_has_cap（每个请求都挂，见 Pricing\Runtime）：投手没有任何优惠码相关的能力。只在只读规则生效时起作用。
 	 * 满减活动、赠品 / 捆绑的文章类型用的也是优惠码这组能力，所以这一条同时挡住：
 	 * WooCommerce 原生的优惠码列表和编辑页、快速编辑、批量操作、REST 接口 wc/v3/coupons（含批量），
 	 * 以及本插件里所有先查 edit_shop_coupons 的保存入口。即使账号被误授了营销权限（比如原来勾了“营销”模块），也一样拒绝。
 	 * 只读页面不靠这些能力（见 can_view()）。
 	 */
 	public static function buyer_caps( $allcaps, $caps = array(), $args = array(), $user = null ) {
-		if ( ! is_array( $allcaps ) || ! is_object( $user ) || ! self::is_buyer( $user ) ) {
+		if ( ! is_array( $allcaps ) || ! is_object( $user ) || ! self::is_buyer( $user ) || ! self::rules_active() ) {
 			return $allcaps;
 		}
 		foreach ( array_keys( $allcaps ) as $cap ) {
@@ -115,8 +125,8 @@ final class Marketing {
 		if ( $can && \PeptideCore\Pricing\Series_Campaigns::managed() && ! current_user_can( 'manage_options' ) ) {
 			$can = false;
 		}
-		// 投手放在过滤器之后判断：别的代码不能把投手改成可以修改。
-		return (bool) apply_filters( 'pc_marketing_can_manage', $can ) && ! self::is_buyer();
+		// 投手放在过滤器之后判断：别的代码不能把投手改成可以修改。只读规则没生效时不额外排除投手（和线上一样）。
+		return (bool) apply_filters( 'pc_marketing_can_manage', $can ) && ! ( self::rules_active() && self::is_buyer() );
 	}
 
 	/** 这条活动是不是总后台按系列统一下发的（店铺后台对所有人只读）。$kind：promotion / coupon / ship_discount。 */

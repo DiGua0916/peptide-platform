@@ -72,11 +72,24 @@ namespace {
 		welcome5();
 		m4_coupon( 950, 'COMEBACK', array( 'type' => 'percent', 'amount' => '10' ) );
 		update_option( Exit_Intent::OPTION, array( 'enabled' => true, 'type' => 'coupon', 'coupon' => 'comeback' ) );
+		update_option( Popups::MODE_OPTION, 'on' );
 		$GLOBALS['enqueued'] = array();
 		$_COOKIE             = array();
 	};
 
-	// ---------- 开关本身 ----------
+	// ---------- 开关关着（默认，线上现状）：和线上完全一样 ----------
+	$store();
+	update_option( Popups::MODE_OPTION, 'off' );
+	$_COOKIE[ Popups::COOKIE ] = '1';
+	add_filter( Popups::FILTER, '__return_true_m4_off' );
+	function __return_true_m4_off() { return true; } // phpcs:ignore
+	ob_start();
+	Popups::print_script();
+	$off_head = (string) ob_get_clean();
+	$check( '静默开关关着：带着 cookie、过滤器（比如已购回访）说要静默，也不静默；页头不输出脚本', ! Popups::enabled() && false === Popups::suppressed() && '' === $off_head );
+	$check( '静默开关关着：首单券条照常输出，离开挽回照常加载（和线上一样）', false !== strpos( First_Order_Offer::render(), 'data-pc-first-order-offer' ) && ( Exit_Intent::enqueue() || true ) && in_array( 'script:peptide-core-exit-intent', $GLOBALS['enqueued'], true ) );
+
+	// ---------- 开关本身（打开以后） ----------
 	$store();
 	$check( '默认不静默', false === Popups::suppressed() );
 	$_COOKIE[ Popups::COOKIE ] = '1';

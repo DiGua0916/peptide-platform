@@ -2,7 +2,10 @@
 /**
  * 营销弹窗“静默”开关（M4；已购回访 FE-10 由 F5 调用，接口见 docs/CONTRACT.md 的 M4 一节）。
  *
- * 过滤器 pc_marketing_popups_suppressed 返回真时，这一次请求里：
+ * 按店开关 pc_marketing_quiet_mode（值 on 才生效，默认关；常量 PC_MARKETING_QUIET_MODE 优先）。
+ * 关着时这个类什么都不做：suppressed() 恒为假、不输出页头脚本、活动倒计时接口原样返回——
+ * 首单券条、离开挽回 / 转盘、活动倒计时和线上完全一样（平台所有者 2026-11-14：和线上重叠的以线上为准）。
+ * 打开以后，过滤器 pc_marketing_popups_suppressed 返回真时，这一次请求里：
  * - 首单券条（First_Order_Offer）不输出；
  * - 离开挽回弹窗和抽奖转盘（Exit_Intent）不加载；
  * - 活动倒计时（Campaign_Countdown）的接口返回“不显示”，页面上的倒计时被隐藏。
@@ -28,6 +31,7 @@ defined( 'ABSPATH' ) || exit;
 final class Popups {
 
 	public const FILTER = 'pc_marketing_popups_suppressed';
+	public const MODE_OPTION = 'pc_marketing_quiet_mode';
 	public const SCRIPT = 'pc_marketing_quiet_script';
 	public const COOKIE = 'pc_marketing_quiet';
 	public const ROUTE  = '/peptide/v1/campaign-countdown';
@@ -37,8 +41,17 @@ final class Popups {
 		add_filter( 'rest_post_dispatch', array( self::class, 'quiet_countdown' ), 20, 3 );
 	}
 
-	/** 这一次请求是否静默。 */
+	/** 这家店有没有打开营销弹窗静默。 */
+	public static function enabled(): bool {
+		$mode = defined( 'PC_MARKETING_QUIET_MODE' ) ? (string) PC_MARKETING_QUIET_MODE : (string) get_option( self::MODE_OPTION, 'off' );
+		return 'on' === $mode;
+	}
+
+	/** 这一次请求是否静默。开关关着时恒为假。 */
 	public static function suppressed(): bool {
+		if ( ! self::enabled() ) {
+			return false;
+		}
 		$cookie = isset( $_COOKIE[ self::COOKIE ] ) && '1' === $_COOKIE[ self::COOKIE ]; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- 只和固定值比较。
 		return (bool) apply_filters( self::FILTER, $cookie );
 	}
@@ -46,6 +59,9 @@ final class Popups {
 	/** 页头内联一小段脚本（不多一次请求，赶在各弹窗脚本之前执行）。只在静默时、或有模块声明需要时输出。 */
 	public static function print_script(): void {
 		if ( is_admin() ) {
+			return;
+		}
+		if ( ! self::enabled() ) {
 			return;
 		}
 		$quiet = self::suppressed();

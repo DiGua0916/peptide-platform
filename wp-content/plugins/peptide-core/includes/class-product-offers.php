@@ -42,7 +42,7 @@ final class Product_Offers {
 	 */
 	public static function guard_delete( $check, $post = null ) {
 		if ( null !== $check || ! $post instanceof \WP_Post || self::CPT !== $post->post_type ) { return $check; }
-		return ( get_current_user_id() && ! Admin\Marketing::can_manage() ) ? false : $check;
+		return ( get_current_user_id() && Admin\Marketing::rules_active() && ! Admin\Marketing::can_manage() ) ? false : $check;
 	}
 	private static function error( string $code, string $message ): \WP_Error { return new \WP_Error( $code, $message ); }
 	public static function policy(): string { return __( 'Gifts and bundles do not combine with coupons or other promotions. Only one gift offer applies per cart. Adding a bundle replaces any automatic gift.', 'peptide-core' ); }

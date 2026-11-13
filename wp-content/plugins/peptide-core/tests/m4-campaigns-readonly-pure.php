@@ -99,6 +99,8 @@ namespace {
 	/** 一家有各种进行中活动的店，登录的人按 $role / $caps。 */
 	$login = static function ( string $role, array $caps ): void {
 		m4_reset();
+		// 默认按 M9 新版：投手角色上有只读权限，M4 的只读规则生效。“线上现状”那一段会把它去掉。
+		$GLOBALS['m4_role_caps'] = array( 'pc_media_buyer' => array( 'pc_view_campaigns' => true ) );
 		catalog();
 		m4_user( 3, 'staff@example.com' );
 		$GLOBALS['m4']['users'][3]['roles'] = array( $role );
@@ -120,6 +122,14 @@ namespace {
 		update_option( \PeptideCore\Exit_Intent::OPTION, array( 'enabled' => true, 'type' => 'wheel', 'title' => 'Spin to win', 'prizes' => array( array( 'label' => 'A', 'coupon' => 'save10', 'weight' => 1 ), array( 'label' => 'B', 'coupon' => '', 'weight' => 1 ) ) ) );
 	};
 	function update_post_meta_m4( int $id, string $key, $value ): void { $GLOBALS['m4']['posts'][ $id ]['meta'][ $key ] = $value; }
+	/** WordPress 的角色（替身）：只回答这个角色有没有某项权限。 */
+	function get_role( $role ) {
+		$caps = $GLOBALS['m4_role_caps'][ $role ] ?? null;
+		return null === $caps ? null : new class( $caps ) {
+			public function __construct( private array $caps ) {}
+			public function has_cap( $cap ) { return ! empty( $this->caps[ $cap ] ); }
+		};
+	}
 	/** 直接调 M3 约定的下发钩子的处理函数。 */
 	function apply_filters_m4_series( $result, array $items, int $ver, bool $dry ) { return \PeptideCore\Pricing\Series_Campaigns::apply( $result, $items, $ver, $dry ); }
 	function wp_strip_all_tags_m4( string $html ): string { return trim( (string) preg_replace( '/\s+/', ' ', strip_tags( $html ) ) ); }
@@ -128,6 +138,12 @@ namespace {
 	// 线上现在的投手（M9 旧版）：角色上还没有只读权限 pc_view_campaigns。M4 单独上线时对他们没有任何变化：
 	// 看不到、菜单不登记、页面不输出任何内容。等 M9 的新版把这项权限加到投手角色上，只读页才出现。
 	$login( 'pc_media_buyer', array() );
+	$GLOBALS['m4_role_caps'] = array();
+	$given = array( 'read' => true, 'edit_shop_coupons' => true, 'edit_shop_orders' => true );
+	$check( '只读规则没生效（线上现状）：M4 不碰投手的权限，全按线上已有的 M9', ! Marketing::rules_active() && $given === Marketing::buyer_caps( $given, array(), array(), get_userdata( 3 ) ) && 200 === $status( static function () { $_GET = array( 'page' => 'pc-apps', 'app' => 'exit-intent' ); Marketing::deny_buyer_settings(); $_GET = array(); } ) );
+	$GLOBALS['caps'] = array( 'edit_shop_coupons' );
+	$check( '只读规则没生效（线上现状）：带着优惠码能力的投手，M4 判断能不能改也和线上一样（看优惠码能力）', Marketing::can_manage() );
+	$GLOBALS['caps'] = array();
 	$check( '投手角色上还没有只读权限时（线上现状）：不能看、不能改，页面什么都不输出', Marketing::is_buyer() && ! Marketing::can_view() && ! Marketing::can_manage() && '' === $html( array( Promotions_Page::class, 'render' ) ) && '' === $html( array( Coupons_Page::class, 'render' ) ) );
 	$check( '只读入口是满减活动那个页面', Marketing::VIEW_PAGE === Promotions_Page::SLUG && false !== strpos( Marketing::view_url(), 'page=pc-promotions' ) );
 	$GLOBALS['m4']['users'][3]['roles'] = array( 'pc_staff', 'pc_media_buyer' );

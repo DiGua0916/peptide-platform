@@ -196,11 +196,23 @@ if ( ! class_exists( 'M4_Buyer_Stop' ) ) {
 		$buyer      = $user( 'buyer', array( Marketing::BUYER_ROLE ) );                     // 正常的投手：只有 read 和只读权限
 		$buyer_old  = $user( 'buyerold', array( Marketing::BUYER_ROLE ) );                  // 线上现在的投手：角色上还没有只读权限
 		$manager    = $user( 'manager', array( 'shop_manager' ) );                          // 不是投手的店长
-		// 只读权限 pc_view_campaigns 由 M9 的新版存在投手角色上。这条分支（或线上）的角色上可能还没有，
-		// 所以给前两个测试账号单独加上，模拟 M9 新版之后的投手；第三个账号不加，代表线上现状。
-		$role_has_view = (bool) get_role( Marketing::BUYER_ROLE )->has_cap( Marketing::VIEW_CAP );
-		get_userdata( $buyer_plus )->add_cap( Marketing::VIEW_CAP );
-		get_userdata( $buyer )->add_cap( Marketing::VIEW_CAP );
+		// ---------- 0. 线上现状：投手角色上没有只读权限，M4 的只读规则不生效，什么都不做 ----------
+		// 只读权限 pc_view_campaigns 由 M9 的新版存在投手角色上。先把它拿掉（结束时恢复原样），按线上现状检查。
+		$role_had_view = (bool) get_role( Marketing::BUYER_ROLE )->has_cap( Marketing::VIEW_CAP );
+		get_role( Marketing::BUYER_ROLE )->remove_cap( Marketing::VIEW_CAP );
+		wp_set_current_user( $buyer_plus );
+		$check( '线上现状：只读规则不生效（角色上没有只读权限、系列活动开关关着）', ! Marketing::rules_active() );
+		$check( '线上现状：M4 不动投手的权限——带着店长角色的投手，优惠码能力原样保留（谁能进哪个页面仍由线上的 M9 决定）', current_user_can( 'edit_shop_coupons' ) && Marketing::can_manage() );
+		$request( 'GET', array( 'page' => 'pc-apps', 'app' => 'exit-intent' ) );
+		$check( '线上现状：M4 不拦投手打开弹窗设置页（线上由 M9 拦）', 200 === $run( array( Marketing::class, 'deny_buyer_settings' ) )[0] );
+		wp_set_current_user( $buyer_old );
+		$request( 'GET', array( 'page' => Promotions_Page::SLUG ) );
+		[ $old_code, , $old_out ] = $run( array( Promotions_Page::class, 'render' ) );
+		$check( '线上现状：投手看不到只读页，页面什么都不输出——M4 单独上线对他们没有变化', ! Marketing::can_view() && ! Marketing::can_manage() && 200 === $old_code && '' === trim( $old_out ) );
+		$request( 'GET' );
+
+		// 以下模拟 M9 新版：投手角色上有了只读权限，M4 的只读规则生效。
+		get_role( Marketing::BUYER_ROLE )->add_cap( Marketing::VIEW_CAP );
 
 		// ---------- 1. 能力 ----------
 		wp_set_current_user( $buyer_plus );
@@ -305,14 +317,6 @@ if ( ! class_exists( 'M4_Buyer_Stop' ) ) {
 
 		// ---------- 7. 正常的投手（只有 read）看只读页 ----------
 		wp_set_current_user( $buyer );
-		wp_set_current_user( $buyer_old );
-		if ( $role_has_view ) {
-			echo "跳过  这份代码的投手角色上已经有只读权限（M9 新版），不检查“线上现状的投手看不到”这一项\n";
-		} else {
-			$request( 'GET', array( 'page' => Promotions_Page::SLUG ) );
-			[ $old_code, , $old_out ] = $run( array( Promotions_Page::class, 'render' ) );
-			$check( '线上现在的投手（角色上还没有只读权限）：不能看，页面什么都不输出——M4 单独上线对他们没有变化', ! Marketing::can_view() && ! Marketing::can_manage() && 200 === $old_code && '' === trim( $old_out ) );
-		}
 		wp_set_current_user( $buyer );
 		$check( '正常的投手（只有 read 和只读权限，没有任何店铺能力）：能看、不能改', Marketing::can_view() && ! Marketing::can_manage() && Marketing::VIEW_CAP === Marketing::menu_cap() && ! current_user_can( 'manage_woocommerce' ) && ! current_user_can( 'edit_shop_coupons' ) );
 		$request( 'GET', array( 'page' => Promotions_Page::SLUG ) );
@@ -384,6 +388,13 @@ if ( ! class_exists( 'M4_Buyer_Stop' ) ) {
 		}
 		if ( $made_role ) {
 			remove_role( Marketing::BUYER_ROLE );
+		} elseif ( isset( $role_had_view ) && get_role( Marketing::BUYER_ROLE ) ) {
+			// 投手角色恢复成运行前的样子。
+			if ( $role_had_view ) {
+				get_role( Marketing::BUYER_ROLE )->add_cap( Marketing::VIEW_CAP );
+			} else {
+				get_role( Marketing::BUYER_ROLE )->remove_cap( Marketing::VIEW_CAP );
+			}
 		}
 		\WC_Cache_Helper::get_transient_version( 'shipping', true );
 		wp_set_current_user( $was_user );

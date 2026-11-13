@@ -51,10 +51,13 @@ final class Runtime {
 	public static function capabilities( $caps ) {
 		$caps = is_array( $caps ) ? $caps : array();
 		// series.campaigns 只在这家店打开了“按系列接收营销活动”时才声明（默认关，见 Series_Campaigns::enabled()）。
-		return $caps + ( Series_Campaigns::enabled() ? array( 'series.campaigns' => '1' ) : array() ) + array(
+		// marketing.quiet、campaigns.readonly 也只在对应的开关 / 规则生效时声明。
+		return $caps
+			+ ( Series_Campaigns::enabled() ? array( 'series.campaigns' => '1' ) : array() )
+			+ ( Popups::enabled() ? array( 'marketing.quiet' => '1' ) : array() )
+			+ ( \PeptideCore\Admin\Marketing::rules_active() ? array( 'campaigns.readonly' => '1' ) : array() )
+			+ array(
 			'pricing.engine'     => '1', // 价格引擎三档开关和 /hq/pricing-engine
-			'marketing.quiet'    => '1', // 营销弹窗静默开关
-			'campaigns.readonly' => '1', // 投手只读、系列下发的活动只读
 		);
 	}
 
