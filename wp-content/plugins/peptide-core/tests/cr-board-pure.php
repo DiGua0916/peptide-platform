@@ -178,7 +178,15 @@ check( 'attr: every attribute group sums to the total', 5 === array_sum( array_m
 check( 'attr: vocab label used', '钩子 · 检测报告' === $arow['hook:lab']['label'] );
 check( 'attr: missing attribute shows 未填', '语言 · 未填' === $arow['lang:']['label'] );
 check( 'attr: spend follows attrs', 6500 === $arow['hook:lab']['spend_cents'] && 6500 === $arow['lang:en']['spend_cents'] );
-check( 'attr: grouped in hook, fmt, angle, lang order', str_starts_with( $attr['rows'][0]['key'], 'hook:' ) && str_starts_with( end( $attr['rows'] )['key'], 'lang:' ) );
+[ $aplain, $amatrix ] = Board::split_matrix( $attr['rows'] );
+check( 'attr: grouped in hook, fmt, angle, lang order', str_starts_with( $aplain[0]['key'], 'hook:' ) && str_starts_with( end( $aplain )['key'], 'lang:' ) );
+check( 'matrix: hook x angle rows split out, labelled with vocab names', $amatrix && str_starts_with( $amatrix[0]['key'], 'mx:' ) && str_contains( $amatrix[0]['label'], ' × ' ) );
+check( 'matrix: unregistered creatives get no cell', ! array_filter( $amatrix, static fn( $r ) => str_contains( $r['key'], 'UNREG' ) ) );
+check( 'matrix: cell visitors never exceed its hook row', $amatrix[0]['visitors'] <= $arow[ 'hook:' . explode( '|', substr( $amatrix[0]['key'], 3 ) )[0] ]['visitors'] );
+check( 'reason: no intent = creative problem', str_contains( Board::reason( array( 'visitors' => 25, 'intent' => array( 'high' => 2, 'mid' => 6 ), 'carted' => 1, 'checkout' => 0, 'orders' => 0 ) ), '素材吸引来的人不对' ) );
+check( 'reason: drops at cart', str_contains( Board::reason( array( 'visitors' => 40, 'intent' => array( 'high' => 20, 'mid' => 15 ), 'carted' => 21, 'checkout' => 14, 'orders' => 11 ) ), '没加购' ) );
+check( 'reason: drops at payment', str_contains( Board::reason( array( 'visitors' => 20, 'intent' => array( 'high' => 18, 'mid' => 1 ), 'carted' => 18, 'checkout' => 17, 'orders' => 2 ) ), '没付款' ) );
+check( 'reason: no visitors', str_contains( Board::reason( array( 'visitors' => 0 ) ), '没有访客' ) );
 
 $ad = Board::aggregate( $data, $opt + array( 'mode' => 'first', 'dim' => 'ad' ) );
 $adr = array_column( $ad['rows'], null, 'key' );

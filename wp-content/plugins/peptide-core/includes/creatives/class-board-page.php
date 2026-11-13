@@ -276,6 +276,36 @@ final class Board_Page {
 .pc-cr-board .pc-cr-all span{display:block;font-size:11px;color:#646970}
 .pc-cr-board .pc-cr-all b{font-variant-numeric:tabular-nums}
 .pc-cr-board ul.pc-cr-visitors{columns:4;font-size:12px;margin:4px 0 0}
+/* 决策清单、象限图、热力格（2026-11-13） */
+.pc-cr-board .pc-cr-h2{font-size:16px;margin:26px 0 6px}
+.pc-cr-board .pc-cr-h3{font-size:14px;margin:16px 0 4px}
+.pc-cr-board .pc-cr-today .pc-cr-h2{margin-top:18px}
+.pc-cr-board .pc-cr-todo{display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid #dcdcde;border-left:4px solid #c3c4c7;border-radius:0 8px 8px 0;padding:12px 14px;margin:0 0 8px}
+.pc-cr-board .pc-cr-todo.is-stop{border-left-color:#d63638}
+.pc-cr-board .pc-cr-todo.is-scale{border-left-color:#00a32a}
+.pc-cr-board .pc-cr-todo>div{flex:1;min-width:0}
+.pc-cr-board .pc-cr-todo p{margin:0}
+.pc-cr-board .pc-cr-todo .pc-cr-thumb{width:46px;height:46px;margin:0;flex:none}
+.pc-cr-board .pc-cr-thumb.is-blank{display:inline-block;background:#f0f0f1;border-radius:3px}
+.pc-cr-board .pc-cr-todo-title{font-size:15px;font-weight:600}
+.pc-cr-board .pc-cr-todo-why{color:#50575e;margin:2px 0 4px!important}
+.pc-cr-board .pc-cr-todo-nums{color:#646970;font-size:12px;font-variant-numeric:tabular-nums}
+.pc-cr-board ul.pc-cr-waits{margin:4px 0 0;color:#50575e}
+.pc-cr-board ul.pc-cr-waits li{margin:0 0 2px}
+.pc-cr-board .pc-cr-quadrant svg{width:100%;max-width:780px;height:auto;background:#fff;border:1px solid #dcdcde;border-radius:8px}
+.pc-cr-board .pc-cr-grid-wrap{overflow-x:auto;max-width:100%}
+.pc-cr-board table.pc-cr-grid{border-collapse:separate;border-spacing:4px;min-width:460px}
+.pc-cr-board table.pc-cr-grid th{font-size:12px;color:#50575e;font-weight:400;padding:2px 6px;text-align:center}
+.pc-cr-board table.pc-cr-grid th[scope=row]{text-align:left;white-space:nowrap}
+.pc-cr-board table.pc-cr-grid td{min-width:84px;text-align:center;border-radius:5px;padding:8px 6px;background:#f6f7f7;line-height:1.3}
+.pc-cr-board table.pc-cr-grid td b{display:block;font-size:15px;font-variant-numeric:tabular-nums}
+.pc-cr-board table.pc-cr-grid td span{font-size:11px;opacity:.85}
+.pc-cr-board table.pc-cr-grid td.is-none{color:#8c8f94;font-size:12px}
+.pc-cr-board table.pc-cr-grid td.is-good{background:#5dcaa5;color:#04342c}
+.pc-cr-board table.pc-cr-grid td.is-mid{background:#fac775;color:#412402}
+.pc-cr-board table.pc-cr-grid td.is-bad{background:#f09595;color:#501313}
+.pc-cr-board table.pc-cr-grid td.is-nospend{background:#e6f1fb;color:#0c447c}
+.pc-cr-board table.pc-cr-grid td.is-thin{opacity:.6}
 @media (max-width:600px){.pc-cr-board .pc-cr-funnel{grid-template-columns:repeat(3,minmax(0,1fr))}.pc-cr-board ul.pc-cr-visitors{columns:2}.pc-cr-board .pc-cr-kpi b{font-size:18px}}
 </style>';
 	}
@@ -469,7 +499,11 @@ final class Board_Page {
 		echo '</div>';
 		echo '<p class="pc-cr-muted">' . esc_html( sprintf( '%s ~ %s · %s · %s · 意向：高 %d / 中 %d / 低 %d / 无效 %d · 没带参数的 FB/IG 访客 %d', $f['from'], $f['to'], Board::MODES[ $f['mode'] ], Board::DIMS[ $f['dim'] ], $total['intent']['high'], $total['intent']['mid'], $total['intent']['low'], $total['intent']['invalid'], $agg['untagged'] ) ) . '</p>';
 
-		$rows = array_values( $agg['rows'] );
+		$rows   = array_values( $agg['rows'] );
+		$matrix = array();
+		if ( 'attr' === $f['dim'] ) {
+			list( $rows, $matrix ) = Board::split_matrix( $rows );
+		}
 		$counts = array_fill_keys( array_keys( Board::VERDICTS ), 0 );
 		foreach ( $rows as $i => $row ) {
 			$rows[ $i ]['verdict'] = Board::verdict( $row, $rules );
@@ -489,6 +523,12 @@ final class Board_Page {
 			$rows = Board::sort_rows( $rows, $f['sort'] );
 		}
 
+		self::render_decisions( $rows, $f );
+		self::render_quadrant( $rows, $rules, $f );
+		if ( 'attr' === $f['dim'] ) {
+			self::render_matrix( $matrix, $rules );
+		}
+		echo '<h2 class="pc-cr-h2">' . esc_html( Board::DIMS[ $f['dim'] ] ) . '（' . count( $rows ) . '）</h2>';
 		echo '<div class="pc-cr-toolbar"><span class="pc-cr-sorts">';
 		foreach ( Board::SORTS as $k => $label ) {
 			$url = add_query_arg( array( 'page' => Module::PAGE_BOARD, 'dim' => $f['dim'], 'mode' => $f['mode'], 'from' => $f['from'], 'to' => $f['to'], 'ver' => $f['ver'], 'sort' => $k ), admin_url( 'admin.php' ) );
@@ -517,6 +557,146 @@ final class Board_Page {
 			self::render_card( $row, $rules );
 		}
 		echo '<p class="pc-cr-muted">建议：ROAS ≥ ' . esc_html( self::num( $rules['scale_roas'], 1 ) ) . ' 加投，&lt; ' . esc_html( self::num( $rules['stop_roas'], 1 ) ) . ' 建议停，花费 ≥ ' . esc_html( $money( $rules['stop_spend_cents'] ) ) . ' 还没订单也建议停；有效访客不到 ' . esc_html( (string) Board::MIN_VALID ) . ' 显示样本不足。规则在下面“设置”里改。漏斗按这一行的进站访客算比例，红色是丢人最多的一步。点卡片看全部指标和访客名单。</p>';
+	}
+
+	/** 今天要做的事（2026-11-13）：只在能直接操作的维度显示（素材、广告、广告组）。 */
+	private static function render_decisions( array $rows, array $f ): void {
+		if ( ! in_array( $f['dim'], array( 'creative', 'ad', 'adset' ), true ) ) {
+			return;
+		}
+		$act   = array_values( array_filter( $rows, static fn( $r ) => in_array( $r['verdict'], array( 'stop', 'scale' ), true ) ) );
+		$watch = array_values( array_filter( $rows, static fn( $r ) => 'watch' === $r['verdict'] ) );
+		$later = array_values( array_filter( $rows, static fn( $r ) => in_array( $r['verdict'], array( 'thin', 'nospend' ), true ) ) );
+		// 先停后加；同类按花费从多到少。
+		usort( $act, static fn( $a, $b ) => array( 'stop' === $b['verdict'] ? 1 : 0, (int) $b['spend_cents'] ) <=> array( 'stop' === $a['verdict'] ? 1 : 0, (int) $a['spend_cents'] ) );
+
+		echo '<div class="pc-cr-today"><h2 class="pc-cr-h2">今天要做的事' . ( $act ? '（' . count( $act ) . '）' : '' ) . '</h2>';
+		if ( ! $act ) {
+			echo '<p class="pc-cr-muted">没有要马上处理的，继续跑。</p>';
+		}
+		foreach ( $act as $row ) {
+			$scale = 'scale' === $row['verdict'];
+			$zero  = 0 === (int) $row['orders'];
+			$name  = (string) $row['label'];
+			$title = $scale ? '给 ' . $name . ' 加预算' : ( $zero ? '停掉 ' . $name : '停掉或换掉 ' . $name );
+			$why   = $scale
+				? 'ROAS ' . self::format( $row['roas'], 'x' ) . '，有效访客 ' . (int) $row['valid'] . ' 人，样本够了。'
+				: ( $zero ? '花了 ' . self::format( $row['spend_cents'], 'money' ) . '，一单没有。' : 'ROAS ' . self::format( $row['roas'], 'x' ) . '，赚不回广告费。' );
+			echo '<div class="pc-cr-todo is-' . esc_attr( $row['verdict'] ) . '">';
+			echo ( '' !== (string) ( $row['meta']['thumb'] ?? '' ) ? '<img class="pc-cr-thumb" src="' . esc_url( (string) $row['meta']['thumb'] ) . '" alt="">' : '<span class="pc-cr-thumb is-blank" aria-hidden="true"></span>' );
+			echo '<div><p class="pc-cr-todo-title">' . esc_html( $title ) . '</p>';
+			echo '<p class="pc-cr-todo-why">' . esc_html( $why . Board::reason( $row ) ) . '</p>';
+			echo '<p class="pc-cr-todo-nums">' . esc_html( '花费 ' . self::format( $row['spend_cents'], 'money' ) . ' · 订单 ' . (int) $row['orders'] . ' · 销售额 ' . self::format( $row['sales_cents'], 'money' ) . ' · 进站 ' . (int) $row['visitors'] ) . '</p>';
+			echo '</div><span class="pc-cr-badge is-' . esc_attr( $row['verdict'] ) . '">' . esc_html( Board::VERDICTS[ $row['verdict'] ] ) . '</span></div>';
+		}
+		if ( $watch || $later ) {
+			echo '<h3 class="pc-cr-h3">再等等（' . ( count( $watch ) + count( $later ) ) . '）</h3><ul class="pc-cr-waits">';
+			foreach ( $watch as $row ) {
+				echo '<li><b>' . esc_html( (string) $row['label'] ) . '</b> ROAS ' . esc_html( self::format( $row['roas'], 'x' ) ) . ' 在观察区间，有效访客 ' . esc_html( (string) (int) $row['valid'] ) . ' 人</li>';
+			}
+			foreach ( $later as $row ) {
+				$note = 'nospend' === $row['verdict'] ? '还没导入花费，算不出 ROAS' : '有效访客 ' . (int) $row['valid'] . ' 人，还差 ' . max( 0, Board::MIN_VALID - (int) $row['valid'] ) . ' 人才能下结论';
+				echo '<li><b>' . esc_html( (string) $row['label'] ) . '</b> ' . esc_html( $note ) . '</li>';
+			}
+			echo '</ul>';
+		}
+		echo '</div>';
+	}
+
+	/** 花费与回报象限图（2026-11-13）：横轴花费、纵轴 ROAS、圆大小 = 订单数。 */
+	private static function render_quadrant( array $rows, array $rules, array $f ): void {
+		$pts = array_values( array_filter( $rows, static fn( $r ) => null !== $r['spend_cents'] && (int) $r['spend_cents'] > 0 && null !== $r['roas'] ) );
+		if ( count( $pts ) < 2 ) {
+			return;
+		}
+		$max_spend = 0;
+		$max_roas  = (float) $rules['scale_roas'] * 1.3;
+		foreach ( $pts as $r ) {
+			$max_spend = max( $max_spend, (int) $r['spend_cents'] );
+			$max_roas  = max( $max_roas, (float) $r['roas'] * 1.15 );
+		}
+		$max_spend = max( 1, $max_spend ) * 1.12;
+		$x0 = 58.0;
+		$x1 = 612.0;
+		$y0 = 26.0;
+		$y1 = 268.0;
+		$px = static fn( $cents ): float => $x0 + ( $cents / $max_spend ) * ( $x1 - $x0 );
+		$py = static fn( $roas ): float => $y1 - ( min( $roas, $max_roas ) / $max_roas ) * ( $y1 - $y0 );
+		$fill = array( 'scale' => '#1D9E75', 'watch' => '#BA7517', 'stop' => '#E24B4A', 'thin' => '#888780', 'nospend' => '#888780' );
+		$y_scale = $py( (float) $rules['scale_roas'] );
+		$y_stop  = $py( (float) $rules['stop_roas'] );
+
+		echo '<div class="pc-cr-quadrant"><h2 class="pc-cr-h2">花费与回报</h2>';
+		echo '<p class="pc-cr-muted">圆越大订单越多；空心 = 还没有订单。横轴花费，纵轴 ROAS，虚线是“设置”里的两条阈值线。</p>';
+		echo '<svg viewBox="0 0 680 300" role="img" aria-label="花费与 ROAS 象限图">';
+		echo '<rect x="' . $x0 . '" y="' . $y0 . '" width="' . ( $x1 - $x0 ) . '" height="' . max( 0, $y_scale - $y0 ) . '" fill="#e1f5ee"/>';
+		echo '<rect x="' . $x0 . '" y="' . $y_stop . '" width="' . ( $x1 - $x0 ) . '" height="' . max( 0, $y1 - $y_stop ) . '" fill="#fcebeb"/>';
+		echo '<line x1="' . $x0 . '" y1="' . $y_scale . '" x2="' . $x1 . '" y2="' . $y_scale . '" stroke="#1d9e75" stroke-dasharray="4 4"/>';
+		echo '<line x1="' . $x0 . '" y1="' . $y_stop . '" x2="' . $x1 . '" y2="' . $y_stop . '" stroke="#e24b4a" stroke-dasharray="4 4"/>';
+		echo '<line x1="' . $x0 . '" y1="' . $y0 . '" x2="' . $x0 . '" y2="' . $y1 . '" stroke="#c3c4c7"/><line x1="' . $x0 . '" y1="' . $y1 . '" x2="' . $x1 . '" y2="' . $y1 . '" stroke="#c3c4c7"/>';
+		echo '<text x="' . ( $x1 + 6 ) . '" y="' . ( $y_scale - 6 ) . '" font-size="11" fill="#0f6e56">加投区</text>';
+		echo '<text x="' . ( $x1 + 6 ) . '" y="' . ( $y_stop + 14 ) . '" font-size="11" fill="#a32d2d">止损区</text>';
+		echo '<text x="' . ( $x0 - 6 ) . '" y="' . ( $y_scale + 4 ) . '" font-size="11" text-anchor="end" fill="#0f6e56">' . esc_html( self::num( (float) $rules['scale_roas'], 1 ) ) . '</text>';
+		echo '<text x="' . ( $x0 - 6 ) . '" y="' . ( $y_stop + 4 ) . '" font-size="11" text-anchor="end" fill="#a32d2d">' . esc_html( self::num( (float) $rules['stop_roas'], 1 ) ) . '</text>';
+		echo '<text x="' . ( $x0 - 6 ) . '" y="' . ( $y1 + 4 ) . '" font-size="11" text-anchor="end" fill="#8c8f94">0</text>';
+		echo '<text x="' . ( $x0 - 40 ) . '" y="' . ( ( $y0 + $y1 ) / 2 ) . '" font-size="11" fill="#646970" transform="rotate(-90 ' . ( $x0 - 40 ) . ' ' . ( ( $y0 + $y1 ) / 2 ) . ')" text-anchor="middle">ROAS</text>';
+		echo '<text x="' . $x0 . '" y="' . ( $y1 + 20 ) . '" font-size="11" fill="#8c8f94">$0</text>';
+		echo '<text x="' . $x1 . '" y="' . ( $y1 + 20 ) . '" font-size="11" fill="#8c8f94" text-anchor="end">' . esc_html( self::format( (int) round( $max_spend ), 'money' ) ) . '　花费 →</text>';
+		foreach ( $pts as $r ) {
+			$cx     = $px( (int) $r['spend_cents'] );
+			$cy     = $py( (float) $r['roas'] );
+			$orders = (int) $r['orders'];
+			$rad    = min( 26.0, 7.0 + sqrt( max( 0, $orders ) ) * 4.0 );
+			$color  = $fill[ $r['verdict'] ] ?? '#888780';
+			$name   = (string) ( $r['meta']['code'] ?? $r['label'] );
+			echo '<g><title>' . esc_html( $name . '：花费 ' . self::format( $r['spend_cents'], 'money' ) . ' · ROAS ' . self::format( $r['roas'], 'x' ) . ' · ' . $orders . ' 单' ) . '</title>';
+			if ( $orders > 0 ) {
+				echo '<circle cx="' . $cx . '" cy="' . $cy . '" r="' . $rad . '" fill="' . $color . '" fill-opacity="0.85"/>';
+			} else {
+				echo '<circle cx="' . $cx . '" cy="' . $cy . '" r="' . $rad . '" fill="none" stroke="' . $color . '" stroke-width="2"/>';
+			}
+			echo '<text x="' . $cx . '" y="' . ( $cy - $rad - 6 ) . '" font-size="11" text-anchor="middle" fill="#50575e">' . esc_html( mb_substr( $name, 0, 10 ) ) . '</text></g>';
+		}
+		echo '</svg></div>';
+	}
+
+	/** 钩子 × 卖点热力格（2026-11-13，只在“按素材属性”显示）：哪种组合好卖、哪些还没试过。 */
+	private static function render_matrix( array $matrix, array $rules ): void {
+		$vocab  = Schema::vocab();
+		$labels = Creatives::label_map( $vocab );
+		$hooks  = (array) ( $labels['hook'] ?? array() );
+		$angles = (array) ( $labels['angle'] ?? array() );
+		if ( ! $hooks || ! $angles ) {
+			return;
+		}
+		$cells = array();
+		foreach ( $matrix as $row ) {
+			$cells[ substr( (string) $row['key'], strlen( Board::MATRIX_PREFIX ) ) ] = $row;
+		}
+		$tested = count( $cells );
+		echo '<div class="pc-cr-matrix"><h2 class="pc-cr-h2">哪种组合好卖</h2>';
+		echo '<p class="pc-cr-muted">' . esc_html( '钩子 × 卖点，' . ( count( $hooks ) * count( $angles ) ) . ' 种组合里试过 ' . $tested . ' 种。格子里是 ROAS 和进站访客。' ) . '</p>';
+		echo '<div class="pc-cr-grid-wrap"><table class="pc-cr-grid"><thead><tr><th></th>';
+		foreach ( $angles as $label ) {
+			echo '<th>' . esc_html( $label ) . '</th>';
+		}
+		echo '</tr></thead><tbody>';
+		foreach ( $hooks as $hv => $hl ) {
+			echo '<tr><th scope="row">' . esc_html( $hl ) . '</th>';
+			foreach ( $angles as $av => $al ) {
+				$cell = $cells[ $hv . '|' . $av ] ?? null;
+				if ( ! $cell ) {
+					echo '<td class="is-none"><span>未测</span></td>';
+					continue;
+				}
+				$roas = $cell['roas'];
+				$cls  = null === $roas ? 'is-nospend' : ( $roas >= (float) $rules['scale_roas'] ? 'is-good' : ( $roas < (float) $rules['stop_roas'] ? 'is-bad' : 'is-mid' ) );
+				echo '<td class="' . esc_attr( $cls ) . ( ! empty( $cell['insufficient'] ) ? ' is-thin' : '' ) . '"><b>' . esc_html( null === $roas ? '待花费' : self::format( $roas, 'x' ) ) . '</b><span>' . esc_html( '访客 ' . (int) $cell['visitors'] . ( ! empty( $cell['insufficient'] ) ? ' · 样本不足' : '' ) ) . '</span></td>';
+			}
+			echo '</tr>';
+		}
+		echo '</tbody></table></div>';
+		echo '<p class="pc-cr-muted">灰格 = 这个组合还没有素材，可以作为下一批拍摄的方向。</p></div>';
 	}
 
 	private static function render_card( array $row, array $rules ): void {

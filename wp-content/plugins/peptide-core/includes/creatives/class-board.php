@@ -47,6 +47,9 @@ final class Board {
 	/** 属性的中文名（词表的 label 是取值的中文名）。 */
 	public const ATTR_LABELS = array( 'hook' => '钩子', 'fmt' => '形式', 'angle' => '卖点', 'lang' => '语言' );
 
+	/** 钩子 × 卖点组合行的 key 前缀（按素材属性时一起算出来，给热力格用）。 */
+	public const MATRIX_PREFIX = 'mx:';
+
 	/** 不算“主动操作”的事件。 */
 	private const PASSIVE = array( 'page_view', 'heartbeat', 'visibility_change', 'page_exit', 'product_impression', 'video_progress', 'checkout_step_applicability', 'visit_classification', 'cart_change_response' );
 
@@ -431,7 +434,27 @@ final class Board {
 			$value = (string) ( $attrs[ $attr ] ?? '' );
 			$out[ $attr . ':' . $value ] = $name . ' · ' . ( '' === $value ? '未填' : ( $labels[ $attr ][ $value ] ?? $value ) );
 		}
+		// 钩子 × 卖点的组合（2026-11-13，热力格用）：两项都填了才算一格。
+		$hook  = (string) ( $attrs['hook'] ?? '' );
+		$angle = (string) ( $attrs['angle'] ?? '' );
+		if ( Contract::UNREGISTERED !== $code && '' !== $hook && '' !== $angle ) {
+			$out[ self::MATRIX_PREFIX . $hook . '|' . $angle ] = ( $labels['hook'][ $hook ] ?? $hook ) . ' × ' . ( $labels['angle'][ $angle ] ?? $angle );
+		}
 		return $out;
+	}
+
+	/** 把 mx: 开头的组合行从属性行里分出来。 @return array{0:array<int,array>,1:array<int,array>} [属性行, 组合行] */
+	public static function split_matrix( array $rows ): array {
+		$plain  = array();
+		$matrix = array();
+		foreach ( $rows as $row ) {
+			if ( str_starts_with( (string) ( $row['key'] ?? '' ), self::MATRIX_PREFIX ) ) {
+				$matrix[] = $row;
+			} else {
+				$plain[] = $row;
+			}
+		}
+		return array( $plain, $matrix );
 	}
 
 	private static function row_meta( string $dim, string $key, string $code, array $creatives ): array {
@@ -539,6 +562,50 @@ final class Board {
 			return 'scale';
 		}
 		return $roas < (float) $rules['stop_roas'] ? 'stop' : 'watch';
+	}
+
+	/**
+	 * 一句话说清楚人丢在哪（纯函数）：看漏斗里丢人最多的一步（都按进站访客算比例）。
+	 *
+	 * @param array<string,mixed> $row metrics() 的结果
+	 */
+	public static function reason( array $row ): string {
+		$in = (int) ( $row['visitors'] ?? 0 );
+		if ( $in <= 0 ) {
+			return '这段时间没有访客进站。';
+		}
+		$intent   = (array) ( $row['intent'] ?? array() );
+		$mid_high = (int) ( $intent['high'] ?? 0 ) + (int) ( $intent['mid'] ?? 0 );
+		$cart     = (int) ( $row['carted'] ?? 0 );
+		$checkout = (int) ( $row['checkout'] ?? 0 );
+		$orders   = (int) ( $row['orders'] ?? 0 );
+		$steps    = array(
+			array( 'intent', $in, $mid_high ),
+			array( 'cart', $mid_high, $cart ),
+			array( 'checkout', $cart, $checkout ),
+			array( 'order', $checkout, $orders ),
+		);
+		$worst = '';
+		$drop  = 0.0;
+		foreach ( $steps as $s ) {
+			$loss = max( 0, $s[1] - $s[2] ) / $in;
+			if ( $loss > $drop ) {
+				$drop  = $loss;
+				$worst = $s[0];
+			}
+		}
+		$pct = (int) round( $drop * 100 );
+		switch ( $worst ) {
+			case 'intent':
+				return '进站 ' . $in . ' 人里有 ' . ( $in - $mid_high ) . ' 人没有购买意向（' . $pct . '%）——素材吸引来的人不对，不是落地页的问题。';
+			case 'cart':
+				return '有意向的人里 ' . $pct . '% 没加购——人是对的，看看商品页、价格或库存。';
+			case 'checkout':
+				return '加购之后 ' . $pct . '% 没进结账——看看运费、起订量或购物车页面。';
+			case 'order':
+				return '进了结账还有 ' . $pct . '% 没付款——看看支付方式和收银页。';
+		}
+		return '各步都没有明显流失。';
 	}
 
 	public const SORTS = array( 'roas' => '按 ROAS', 'spend' => '按花费', 'orders' => '按订单', 'visitors' => '按访客' );
