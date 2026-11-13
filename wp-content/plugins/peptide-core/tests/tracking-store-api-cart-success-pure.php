@@ -18,6 +18,10 @@ namespace PeptideCore\Tracking {
 		public static function raise_stage( int $visit, int $stage ): void { self::$stages[] = array( $visit, $stage ); }
 	}
 }
+namespace PeptideCore {
+	// 2026-11-10 起 Server_Events::register_hooks() 挂在弃单扫描的定时任务上（补记付款事件）；桩没跟上，这个用例从那时起一直报错。
+	final class Recovery { public const CRON = 'peptide_core_recovery_scan'; }
+}
 namespace {
 	define( 'ABSPATH', __DIR__ . '/' );
 	class WP_REST_Request {

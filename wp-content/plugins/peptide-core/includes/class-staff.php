@@ -336,6 +336,8 @@ final class Staff {
 				'pc-store-design'       => 'design',
 				'pc-design-editor'      => 'design',
 				'pc-promotions'         => 'marketing',
+				'pc-buyer-ads'          => 'marketing', // 广告数据追踪（2026-11-12）
+				'pc-creatives'          => 'marketing',
 				'pc-coupons'            => 'marketing',
 				'pc-shipping-discounts' => 'marketing',
 				'pc-shipping'           => 'settings',

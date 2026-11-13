@@ -2,7 +2,7 @@
 /**
  * 开店向导（ST-01）和投手的“广告设置”页面（ST-06）。
  *
- * 向导 5 步：1 修改密码 → 2 店铺信息 → 3 广告像素 → 4 验证像素 → 5 生成投放链接（可选）。前 4 步做完才算完成；
+ * 向导 5 步：1 修改密码 → 2 店铺信息 → 3 广告像素 → 4 验证像素 → 5 上传素材、拿到投放链接（可选）。前 4 步做完才算完成；
  * 没做完时投手的每个页面顶部都有红色提示条（首页的由 Buyer_Home 输出在最上面）。
  *
  * 每一步是否完成，尽量看真实数据，不单独记“点过了”：
@@ -53,11 +53,19 @@ final class Onboarding {
 	/** 不出现在原来的菜单里（投手的菜单由 Staff_Buyer 生成）；管理员可以直接打开地址。 */
 	public static function add_pages(): void {
 		add_submenu_page( '', '开店向导', '开店向导', Staff_Buyer::CAP_VIEW, self::SLUG, array( self::class, 'render' ) );
-		add_submenu_page( '', '广告设置', '广告设置', Staff_Buyer::CAP_VIEW, self::ADS_SLUG, array( self::class, 'render_ads' ) );
+		// 广告设置页在顶层栏目“广告数据追踪”下（Creatives\Module::add_pages，2026-11-12）；没有素材模块时才单独登记。
+		if ( ! class_exists( \PeptideCore\Creatives\Module::class ) ) {
+			add_submenu_page( '', '广告设置', '广告设置', Staff_Buyer::CAP_VIEW, self::ADS_SLUG, array( self::class, 'render_ads' ) );
+		}
 	}
 
 	public static function url( string $step = '' ): string {
 		return Staff_Buyer::page_url( self::SLUG, '' !== $step ? array( 'step' => $step ) : array() );
+	}
+
+	/** 店里有没有素材（第 5 步算完成）。素材模块没装好时为 false。 */
+	private static function has_creative(): bool {
+		return class_exists( \PeptideCore\Creatives\Schema::class ) && \PeptideCore\Creatives\Schema::installed() && (bool) \PeptideCore\Creatives\Creatives::codes();
 	}
 
 	/** @return array<string,string> */
@@ -67,7 +75,7 @@ final class Onboarding {
 			'store'    => '店铺信息',
 			'pixel'    => '广告像素',
 			'verify'   => '验证像素',
-			'link'     => '生成投放链接',
+			'link'     => '上传素材，拿到投放链接',
 		);
 	}
 
@@ -133,7 +141,8 @@ final class Onboarding {
 			'pixel_id'        => $pixel['id'],
 			'has_token'       => $pixel['has_token'],
 			'test'            => is_array( $state['pixel_test'] ?? null ) ? $state['pixel_test'] : array(),
-			'link'            => ! empty( $state['link'] ),
+			// 第 5 步：生成过通用链接，或者已经上传过素材（2026-11-12 起向导这一步就是上传素材）。
+			'link'            => ! empty( $state['link'] ) || self::has_creative(),
 		);
 	}
 
@@ -277,7 +286,15 @@ final class Onboarding {
 				self::form_verify( true );
 				break;
 			default:
-				self::form_link();
+				if ( class_exists( \PeptideCore\Creatives\Ads_Panel::class ) ) {
+					// 2026-11-12：第 5 步就是上传第一个素材，拿到它的专属投放链接（和广告设置页同一个表单）。
+					\PeptideCore\Creatives\Ads_Panel::render_upload( false );
+					\PeptideCore\Creatives\Ads_Panel::render_links( false );
+					\PeptideCore\Creatives\Ads_Panel::assets();
+					echo '<p class="pc-by-hint">以后再上传素材、复制链接，都在左侧“广告数据追踪 → 广告设置”。</p>';
+				} else {
+					self::form_link();
+				}
 		}
 		echo '</section>';
 
@@ -344,7 +361,7 @@ final class Onboarding {
 
 	/** 第 5 步：生成带追踪参数的投放链接。 */
 	public static function form_link(): void {
-		echo '<h2>生成投放链接</h2><p class="pc-by-why">广告里要用带追踪参数的链接，数据页才能按广告系列、广告组和广告分开看效果。</p>';
+		echo '<h2>生成投放链接</h2><p class="pc-by-why">广告里要用带追踪参数的链接，数据页和素材看板才能按广告系列、广告组、广告和素材分开看效果。</p>';
 		echo '<form class="pc-by-form" data-pc-by-link><p><label for="pc-by-landing">落地页</label><select id="pc-by-landing" name="landing">';
 		$group = '';
 		foreach ( self::landing_pages() as $page ) {
@@ -355,11 +372,10 @@ final class Onboarding {
 			echo '<option value="' . esc_attr( $page['url'] ) . '">' . esc_html( $page['label'] ) . '</option>';
 		}
 		echo ( '' !== $group ? '</optgroup>' : '' ) . '</select></p>';
-		echo '<p><label for="pc-by-source">投放平台</label><select id="pc-by-source" name="source"><option value="facebook">Facebook</option><option value="instagram">Instagram</option></select></p>';
-		echo '<p><label for="pc-by-campaign">广告系列名称（可以不填）</label><input type="text" id="pc-by-campaign" name="campaign" maxlength="80"><span class="pc-by-hint">不填时链接里用 Facebook 的动态参数，投放时自动换成真实的广告系列、广告组和广告名称。</span></p>';
+		echo '<p class="pc-by-hint">链接里带的是 Facebook 的动态参数：投放时自动换成这条广告所在的平台（Facebook / Instagram 等）、版位，以及广告系列、广告组、广告的 ID 和广告名称。不用手填，Facebook 和 Instagram 用同一条链接。</p>';
 		echo '<p class="pc-by-actions"><button type="submit" class="button button-primary">生成链接</button> <span class="pc-by-result" data-pc-by-link-result role="status"></span></p></form>';
 		echo '<div class="pc-by-copyrow" data-pc-by-link-out hidden><input type="text" readonly aria-label="投放链接" data-pc-by-link-url><button type="button" class="button" data-pc-by-copy="[data-pc-by-link-url]">复制</button></div>';
-		echo '<p class="pc-by-hint">把生成的链接粘贴到 Facebook 广告的“网址”一栏。同一条链接可以给多条广告用。</p>';
+		echo '<p class="pc-by-hint">把生成的链接粘贴到 Facebook 广告的“网址”一栏，同一条链接可以给多条广告用。广告名称请以素材编号开头（例如 <code>C0012_hook-lab_fmt-vid_angle-purity_lang-en_v1</code>），素材看板才能把广告对到素材上。</p>';
 	}
 
 	// ---------- 广告设置页面 ----------
@@ -371,13 +387,36 @@ final class Onboarding {
 		echo '<div class="wrap pc-by pc-by-ads"><h1>广告设置</h1>';
 		echo self::banner(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- banner() 里已转义。
 		Staff_Buyer::render_flash();
-		echo '<section class="pc-by-card">';
-		self::form_pixel( 'ads' );
-		echo '</section><section class="pc-by-card">';
-		self::form_verify( false );
-		echo '</section><section class="pc-by-card">';
+		// 2026-11-12：像素连通后折叠成一行；主角是“上传素材 → 专属投放链接”。
+		// 像素状态自动检查（Pixels\Health，读真实事件的回传记录）：出问题时提示放在页面最上面，像素卡片展开。
+		$verified = self::evaluate( self::facts() )['verify'];
+		$pixel    = self::facebook_pixel();
+		$health   = class_exists( \PeptideCore\Pixels\Health::class ) ? \PeptideCore\Pixels\Health::current() : array( 'level' => 'none', 'title' => '', 'detail' => '' );
+		$problem  = in_array( $health['level'], array( 'warn', 'bad' ), true );
+		if ( $problem ) {
+			echo \PeptideCore\Pixels\Health::alert( $health, '#pc-by-pixel' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- alert() 里已转义。
+		}
+		if ( ( $verified || 'ok' === $health['level'] ) && ! $problem ) {
+			$state = 'ok' === $health['level'] ? $health['title'] : '已连通' . ( 'idle' === $health['level'] ? ' · 24 小时没有事件' : '' );
+			echo '<details class="pc-by-card pc-by-pixel-done" id="pc-by-pixel"><summary><strong>广告像素</strong> <span class="pc-by-ok">' . esc_html( $state ) . '</span> <span class="pc-by-hint">像素 ' . esc_html( $pixel['id'] ) . ' · 系统自动检查 · 点开修改</span></summary>';
+			self::form_pixel( 'ads' );
+			self::form_verify( false );
+			echo '</details>';
+		} else {
+			echo '<section class="pc-by-card" id="pc-by-pixel">';
+			self::form_pixel( 'ads' );
+			echo '</section><section class="pc-by-card">';
+			self::form_verify( false );
+			echo '</section>';
+		}
+		if ( class_exists( \PeptideCore\Creatives\Ads_Panel::class ) ) {
+			\PeptideCore\Creatives\Ads_Panel::render_upload();
+			\PeptideCore\Creatives\Ads_Panel::render_links();
+			\PeptideCore\Creatives\Ads_Panel::assets();
+		}
+		echo '<details class="pc-by-card pc-by-generic-link"><summary><strong>通用链接（不绑定素材）</strong> <span class="pc-by-hint">只在临时测试时用，数据会算“未登记”</span></summary>';
 		self::form_link();
-		echo '</section></div>';
+		echo '</details></div>';
 	}
 
 	// ---------- 保存 ----------
@@ -588,23 +627,24 @@ final class Onboarding {
 
 	/**
 	 * 投放链接 = 落地页地址 + 追踪参数（不读数据库，测试里直接调用）。
-	 * 广告系列名不填时用 Facebook 的动态参数（{{campaign.name}} 等），投放时由 Facebook 换成真实名称，所以不能转义。
+	 * CR 素材归因（2026-11-11）：参数固定用 Contract::URL_TEMPLATE —— 广告系列 / 广告组 / 广告都用 ID（{{campaign.id}} 等），
+	 * 平台用 {{site_source_name}}，另带 placement 和 ad_name。动态参数由 Meta 投放时替换，所以不能转义。
+	 * $campaign、$source 是旧版（用名称）的参数，保留签名兼容旧调用，不再使用。
+	 * $code = 素材编号（2026-11-12）：给了就是这个素材的专属链接（多一个 cr=编号），见 Creatives\Ads_Panel。
 	 */
-	public static function ad_link( string $landing, string $campaign = '', string $source = 'facebook' ): string {
+	public static function ad_link( string $landing, string $campaign = '', string $source = '', string $code = '' ): string {
+		unset( $campaign, $source );
 		$landing = (string) preg_replace( '/#.*$/', '', trim( $landing ) );
 		$parts   = explode( '?', $landing, 2 );
 		$query   = array();
+		$ours    = array_merge( \PeptideCore\Creatives\Contract::PARAMS, array( 'fbclid' ) );
 		foreach ( isset( $parts[1] ) ? explode( '&', $parts[1] ) : array() as $pair ) {
-			if ( '' !== $pair && 1 !== preg_match( '/^utm_[a-z_]+(=|$)/i', $pair ) ) {
-				$query[] = $pair; // 落地页原有的参数保留，旧的 utm_ 参数去掉。
+			$name = strtolower( rawurldecode( explode( '=', $pair, 2 )[0] ) );
+			if ( '' !== $pair && 1 !== preg_match( '/^utm_[a-z_]+$/', $name ) && ! in_array( $name, $ours, true ) ) {
+				$query[] = $pair; // 落地页原有的参数保留，旧的 utm_ 和模板里的参数去掉。
 			}
 		}
-		$campaign = trim( $campaign );
-		$query[]  = 'utm_source=' . ( 'instagram' === $source ? 'instagram' : 'facebook' );
-		$query[]  = 'utm_medium=paid';
-		$query[]  = 'utm_campaign=' . ( '' !== $campaign ? rawurlencode( $campaign ) : '{{campaign.name}}' );
-		$query[]  = 'utm_term={{adset.name}}';
-		$query[]  = 'utm_content={{ad.name}}';
+		$query[] = \PeptideCore\Creatives\Contract::creative_query( $code );
 		return $parts[0] . '?' . implode( '&', $query );
 	}
 

@@ -431,15 +431,47 @@
 		} ).finally(function(){if(token===timelineToken && box.dataset.visitId===String(id))box.dataset.loading='false';});
 	}
 
+	// 设备和网络（2026-11-13）：机型、系统、内置浏览器；IP、地区、运营商；来源素材和广告。
+	var IN_APP = { fb: 'Facebook 内置浏览器', ig: 'Instagram 内置浏览器' };
+	function deviceText( n ) {
+		if ( ! n ) { return ''; }
+		return [ n.model, ( n.os + ' ' + n.os_version ).trim(), IN_APP[ n.in_app ] || '' ].filter( Boolean ).join( ' · ' );
+	}
+	function placeText( n ) {
+		if ( ! n ) { return ''; }
+		var where = [ n.city, n.region ].filter( Boolean ).join( ', ' );
+		return [ n.ip ? 'IP ' + n.ip : '', where, n.isp ].filter( Boolean ).join( ' · ' );
+	}
+	function sourceText( n ) {
+		if ( ! n || ! n.creative && ! n.ad_id ) { return ''; }
+		return [ n.creative ? '素材 ' + n.creative : '', n.ad_id ? '广告 ' + n.ad_id : '', n.placement ].filter( Boolean ).join( ' · ' );
+	}
+	function netCards( n, browser ) {
+		if ( ! n || ! ( n.ip || n.model || n.os ) ) { return ''; }
+		var item = function ( label, value ) { return value ? '<div class="pc-trk-card"><span>' + esc( label ) + '</span><b>' + esc( value ) + '</b></div>' : ''; };
+		return '<h2 class="pc-trk-net-title">设备和网络 <small>（最近一次访问）</small></h2><div class="pc-trk-cards pc-trk-net">' +
+			item( '机型', n.model || '看不出（' + ( n.os || '未知系统' ) + '）' ) +
+			item( '系统', ( n.os + ' ' + n.os_version ).trim() ) +
+			item( '浏览器', [ browser, IN_APP[ n.in_app ] || '' ].filter( Boolean ).join( ' · ' ) ) +
+			item( 'IP', n.ip ) +
+			item( '地区', [ n.city, n.region ].filter( Boolean ).join( ', ' ) || ( n.ip ? '未装 IP 地理库' : '' ) ) +
+			item( '运营商', n.isp ) +
+			item( '时区', n.timezone ) +
+			item( '语言', n.language ) +
+			item( '来源', sourceText( n ) ) +
+			'</div>';
+	}
+
 	function visitRow( s ) {
-		return '<tr data-visit="' + esc( s.id ) + '" tabindex="0"><td>' + esc( clock( s.start_ms, true ) ) + '<div class="pc-trk-sub"><code>' + esc( s.landing ) + '</code></div></td><td>' + esc( ago( s.last_ms - s.start_ms ) ) + '</td><td>' + esc( s.pageviews ) + '</td><td>' + esc( S.stages[ s.stage ] ) + ( s.order_url ? ' <a href="' + esc( s.order_url ) + '">#' + esc( s.order_id ) + '</a>' : '' ) + '</td></tr>';
+		var n = s.net, extra = [ deviceText( n ), placeText( n ), sourceText( n ) ].filter( Boolean ).map( function ( t ) { return '<div class="pc-trk-sub">' + esc( t ) + '</div>'; } ).join( '' );
+		return '<tr data-visit="' + esc( s.id ) + '" tabindex="0"><td>' + esc( clock( s.start_ms, true ) ) + '<div class="pc-trk-sub"><code>' + esc( s.landing ) + '</code></div>' + extra + '</td><td>' + esc( ago( s.last_ms - s.start_ms ) ) + '</td><td>' + esc( s.pageviews ) + '</td><td>' + esc( S.stages[ s.stage ] ) + ( s.order_url ? ' <a href="' + esc( s.order_url ) + '">#' + esc( s.order_id ) + '</a>' : '' ) + '</td></tr>';
 	}
 
 	function visitor() {
 		load( '/peptide/v1/track/admin/visitors/' + cfg.visitor ).then( function ( res ) {
 			var v = res.visitor;
 			var html = '<p class="pc-trk-backlinks"><a href="' + esc( cfg.liveUrl ) + '">' + esc( S.back ) + '</a><a href="' + esc( cfg.archiveUrl ) + '">' + esc( S.archive ) + '</a></p>';
-			html += '<div class="pc-trk-cards"><div class="pc-trk-card"><span>' + esc( S.visitor ) + '</span><b>' + esc( v.label ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.status ) + '</span><b>' + dot( res.presence ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.account ) + '</span><b>' + esc( v.user_id ? v.email : S.guest ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.device ) + '</span><b>' + esc( ( S[ v.device ] || v.device ) + ' · ' + v.browser ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.firstSeen ) + '</span><b>' + esc( clock( v.first_ms, true ) ).replace( ' ', '<br>' ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.visits ) + '</span><b>' + esc( v.visits ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.cart ) + '</span><b>' + cartCell( v, res.cart ) + '</b></div></div>';
+			html += '<div class="pc-trk-cards"><div class="pc-trk-card"><span>' + esc( S.visitor ) + '</span><b>' + esc( v.label ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.status ) + '</span><b>' + dot( res.presence ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.account ) + '</span><b>' + esc( v.user_id ? v.email : S.guest ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.device ) + '</span><b>' + esc( ( S[ v.device ] || v.device ) + ' · ' + v.browser ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.firstSeen ) + '</span><b>' + esc( clock( v.first_ms, true ) ).replace( ' ', '<br>' ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.visits ) + '</span><b>' + esc( v.visits ) + '</b></div><div class="pc-trk-card"><span>' + esc( S.cart ) + '</span><b>' + cartCell( v, res.cart ) + '</b></div></div>'; html += netCards( res.visits[ 0 ] && res.visits[ 0 ].net, v.browser );
 			if ( res.others.length ) {
 				html += '<p>' + esc( S.otherDevices ) + ': ' + res.others.map( function ( o ) {
 					return '<a href="' + esc( cfg.liveUrl + '&visitor=' + o.id ) + '">' + esc( '#' + o.id + ' ' + ( S[ o.device ] || o.device ) + ' · ' + o.browser ) + '</a>';
@@ -529,7 +561,7 @@
 		var who = it.visitor;
 		var visit = it.visit;
 		var page = it.last_page;
-		return '<tr><td><a href="' + esc( cfg.liveUrl + '&visitor=' + who.id + '&visit=' + visit.id ) + '"><strong>' + esc( who.label ) + '</strong></a><div class="pc-trk-sub">' + esc( ( S[ who.device ] || who.device ) + ' · ' + who.browser + ' · ' + S.visits + ' ' + who.visits ) + '</div></td>' +
+		return '<tr><td><a href="' + esc( cfg.liveUrl + '&visitor=' + who.id + '&visit=' + visit.id ) + '"><strong>' + esc( who.label ) + '</strong></a><div class="pc-trk-sub">' + esc( ( S[ who.device ] || who.device ) + ' · ' + who.browser + ' · ' + S.visits + ' ' + who.visits ) + '</div>' + ( visit.net && ( visit.net.model || visit.net.ip ) ? '<div class="pc-trk-sub">' + esc( [ visit.net.model, visit.net.ip ].filter( Boolean ).join( ' · ' ) ) + '</div>' : '' ) + '</td>' +
 			'<td>' + esc( clock( visit.start_ms, true ) ) + '<div class="pc-trk-sub">→ ' + esc( clock( it.left_ms, true ) ) + ' · ' + esc( ago( visit.last_ms - visit.start_ms ) ) + '</div></td>' +
 			( 'ongoing' === it.reason ? '<td>' + ( 'active' === it.presence ? '<span class="pc-trk-ongoing">正在浏览</span><div class="pc-trk-sub">页面在前台、最近有操作</div>' : 'idle' === it.presence ? '<span class="pc-trk-ongoing is-idle">停住了</span><div class="pc-trk-sub">页面开着但在后台或没操作</div>' : '<span class="pc-trk-ongoing is-away">刚离开</span><div class="pc-trk-sub">没满 30 分钟，还没算结束</div>' ) + '</td>' : '<td>' + esc( 'exit_signal' === it.reason ? S.reasonExit : S.reasonTimeout ) + '<div class="pc-trk-sub">' + esc( S.leftEstimated ) + '</div></td>' ) +
 			'<td>' + ( page ? pageText( page ) : '—' ) + '</td>' +

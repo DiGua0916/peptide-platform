@@ -15,6 +15,8 @@
 namespace PeptideCore\Admin;
 
 use PeptideCore\Api\Rest_Controller;
+use PeptideCore\Data\Metrics_Overlay;
+use PeptideCore\Data\Metrics_Switch;
 use PeptideCore\Overview;
 use PeptideCore\Recovery;
 
@@ -46,10 +48,11 @@ final class Overview_Page {
 							$range = is_string( $request['range'] ) ? sanitize_key( $request['range'] ) : 'today';
 							// Several open dashboards each re-ran the full statistics every minute
 							// (code review 2026-11-06). Share one result per range and store day for 30 s.
-							$cache = 'pc_overview_' . md5( $range . '|' . wp_date( 'Y-m-d' ) . '|' . get_locale() );
+							// M6：开关不是 off 时缓存另存一份，换档后不会再显示上一档算出来的数字。off 时缓存名和以前一样。
+							$cache = 'pc_overview_' . md5( $range . '|' . wp_date( 'Y-m-d' ) . '|' . get_locale() . ( Metrics_Switch::off() ? '' : '|' . Metrics_Switch::mode() ) );
 							$data = get_transient( $cache );
 							if ( ! is_array( $data ) ) {
-								$data = array( 'summary' => Overview::summary(), 'range' => Overview::range_data( $range ) );
+								$data = self::data( $range );
 								set_transient( $cache, $data, 30 );
 							}
 							$res = new \WP_REST_Response( $data );
@@ -60,6 +63,20 @@ final class Overview_Page {
 					)
 				);
 			}
+		);
+	}
+
+	/**
+	 * 页面和接口共用的数据：Overview 照旧算，再按 M6 开关用 Data\Metrics 对账或替换核心数字
+	 * （访客、订单、销售额、客单价、转化率、八层漏斗、弃单激活）。开关关着时就是 Overview 的原始结果。
+	 *
+	 * @return array{summary:array,range:array}
+	 */
+	public static function data( string $range ): array {
+		$period = Metrics_Overlay::overview( Overview::range_data( $range ) );
+		return array(
+			'summary' => Metrics_Overlay::recovery( Overview::summary(), (string) ( $period['range'] ?? 'today' ) ),
+			'range'   => $period,
 		);
 	}
 
@@ -95,12 +112,13 @@ final class Overview_Page {
 		$ver = static fn( string $file ): string => PEPTIDE_CORE_VERSION . '.' . (int) @filemtime( PEPTIDE_CORE_DIR . '/assets/' . $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 		wp_enqueue_style( 'peptide-core-overview', $url . 'overview.css', array(), $ver( 'overview.css' ) );
 		wp_enqueue_script( 'peptide-core-overview', $url . 'overview.js', array( 'wp-api-fetch' ), $ver( 'overview.js' ), array( 'in_footer' => true ) );
+		$initial = self::data( 'today' );
 		wp_add_inline_script(
 			'peptide-core-overview',
 			'window.pcOverview = ' . wp_json_encode(
 				array(
-					'summary'  => Overview::summary(),
-					'range'    => Overview::range_data( 'today' ),
+					'summary'  => $initial['summary'],
+					'range'    => $initial['range'],
 					'recovery' => Recovery::enabled(),
 					// 开着但发不出去（缺店铺地址 / 发件邮箱无效）时，仪表盘照实说明。
 					'blocked'  => Recovery::enabled() ? Recovery::blocked_reason() : '',

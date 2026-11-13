@@ -55,6 +55,32 @@ final class Query {
 			'stage'     => (int) $s['stage'],
 			'order_id'  => (int) $s['order_id'],
 			'order_url' => (int) $s['order_id'] ? self::order_url( (int) $s['order_id'] ) : '',
+			'net'       => self::net_view( $s ),
+		);
+	}
+
+	/**
+	 * 这次访问的设备和网络（2026-11-13）：机型、系统、IP、地区、运营商、内置浏览器、时区、语言、来源素材和广告。
+	 * 旧数据没有这些列时都是空字符串。
+	 */
+	public static function net_view( array $s ): array {
+		$str = static fn( string $k ): string => (string) ( $s[ $k ] ?? '' );
+		return array(
+			'ip'         => $str( 'ip' ),
+			'region'     => $str( 'geo_region' ),
+			'city'       => $str( 'geo_city' ),
+			'isp'        => $str( 'isp' ),
+			'ip_type'    => $str( 'ip_type' ),
+			'in_app'     => $str( 'in_app' ),
+			'timezone'   => $str( 'timezone' ),
+			'language'   => $str( 'language' ),
+			'os'         => $str( 'os' ),
+			'os_version' => $str( 'os_version' ),
+			'model'      => $str( 'device_model' ),
+			'creative'   => $str( 'creative_code' ),
+			'ad_id'      => $str( 'utm_content' ),
+			'placement'  => $str( 'placement' ),
+			'source'     => $str( 'source_class' ),
 		);
 	}
 
@@ -242,6 +268,9 @@ final class Query {
 		if ( '' !== $q ) {
 			if ( preg_match( '/^#?(\d+)$/', $q, $m ) ) {
 				$where[] = $wpdb->prepare( 's.visitor_id = %d', (int) $m[1] );
+			} elseif ( preg_match( '/^(\d{1,3}\.){1,3}\d{0,3}$|^[0-9a-f]{0,4}(:[0-9a-f]{0,4}){2,7}$/i', $q ) ) {
+				// IP（2026-11-13）：完整 IP 或开头一段（例如 203.0.113.）都能搜。
+				$where[] = $wpdb->prepare( 's.ip LIKE %s', $wpdb->esc_like( $q ) . '%' );
 			} else {
 				$like  = '%' . $wpdb->esc_like( $q ) . '%';
 				$users = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$wpdb->users} WHERE display_name LIKE %s OR user_email LIKE %s OR user_login LIKE %s LIMIT 200", $like, $like, $like ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery

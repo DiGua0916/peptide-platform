@@ -193,7 +193,7 @@ namespace {
 		check( "submit $action denied", 'post' === $got['request']['doing'] && $deny === $got['verdict'] );
 	}
 
-	// 3. 菜单：七项，“营销活动”在数据后面；在别的页面上也显示。
+	// 3. 菜单：七项，“营销活动”在数据后面、“广告数据追踪”（主线 2026-11-12：广告设置 + 素材库）前面；在别的页面上也显示。
 	$open( 7, 'pc-buyer-home' );
 	$expected = array(
 		'首页 => admin.php?page=pc-buyer-home',
@@ -201,10 +201,13 @@ namespace {
 		'弃单 => admin.php?page=pc-recovery',
 		'数据 => admin.php?page=pc-data',
 		'营销活动 => admin.php?page=pc-promotions',
-		'广告设置 => admin.php?page=pc-buyer-ads',
+		'广告数据追踪 => admin.php?page=pc-buyer-ads',
 		'店铺信息 => admin.php?page=pc-store-info',
 	);
 	check( 'buyer menu: seven entries, campaigns after data', $expected === $menu_labels() );
+	check( 'ad tracking keeps its two sub-entries, campaigns has none', array( '广告设置', '素材库' ) === array_column( $GLOBALS['submenu']['admin.php?page=pc-buyer-ads'] ?? array(), 0 ) && ! isset( $GLOBALS['submenu']['admin.php?page=pc-promotions'] ) );
+	check( 'creative pages still open for the buyer without store caps', $allow === $open( 7, 'pc-creatives' )['verdict'] && $allow === $open( 7, 'pc-creatives-board' )['verdict'] && $deny === $open( 7, 'pc-creatives', array(), 'POST' )['verdict'] );
+	$open( 7, 'pc-buyer-home' );
 	$open( 7, 'pc-coupons' );
 	check( 'on a campaign page the campaigns entry is the highlighted one', 'admin.php?page=pc-promotions' === Staff_Buyer::parent_file( 'x' ) );
 	$GLOBALS['title'] = 'Coupon codes';

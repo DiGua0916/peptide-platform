@@ -735,6 +735,77 @@
       "status": "final-source-gate"
     },
     {
+      "name": "m3-series-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-hq/tests/m3-series-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M3",
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "m3-series-catalog-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-hq/tests/m3-series-catalog-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M3",
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "m3-series-sync-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m3-series-sync-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M3",
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "m10-or03-refund-mark-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-hq/tests/m10-or03-refund-mark-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M10",
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {
+      "name": "m10-order-report-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m10-order-report-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M10",
+      "extensions": [
+        "mbstring"
+      ]
+    },
+    {"name": "m6-metrics-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-metrics-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
+    {"name": "m6-metrics-switch-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-metrics-switch-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
+    {"name": "m6-funnel-guard-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-funnel-guard-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
+    {"name": "m6-reconcile-orders-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-reconcile-orders-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
+    {"name": "m6-reconcile-overlay-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-reconcile-overlay-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
+    {"name": "m6-buyer-data-pages-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-buyer-data-pages-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
+    {"name": "m7-pixel-acceptance-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m7-pixel-acceptance-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M7"},
+    {"name": "m7-pixels-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m7-pixels-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M7"},
+    {"name": "m6-reconcile-reports-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-reconcile-reports-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
+    {"name": "m6-reconcile-conversion-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-reconcile-conversion-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
+    {"name": "m6-reconcile-rankings-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-reconcile-rankings-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
+    {
       "name": "m9-buyer-scope-pure",
       "language": "php",
       "path": "wp-content/plugins/peptide-core/tests/m9-buyer-scope-pure.php",
@@ -877,6 +948,15 @@
       "node_test": false,
       "status": "module-gate",
       "module": "M9"
-    }
+    },
+    {"name": "cr-contract-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-contract-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"},
+    {"name": "cr-hq-contract-pure", "language": "php", "path": "wp-content/plugins/peptide-hq/tests/cr-hq-contract-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"},
+    {"name": "cr-capture-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-capture-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"},
+    {"name": "cr-visitor-attribution", "language": "node", "path": "wp-content/themes/peptide-site/tests/cr-visitor-attribution.cjs", "core": true, "node_test": true, "status": "module-gate", "module": "CR"},
+    {"name": "tracking-attribution-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/tracking-attribution-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"},
+    {"name": "cr-library-spend-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-library-spend-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR", "extensions": ["mbstring"]},
+    {"name": "cr-library-spend-db-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-library-spend-db-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR", "extensions": ["pdo_sqlite"]},
+    {"name": "cr-hq-compare-pure", "language": "php", "path": "wp-content/plugins/peptide-hq/tests/cr-hq-compare-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR", "extensions": ["mbstring"]},
+    {"name": "cr-board-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-board-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"}
   ]
 }

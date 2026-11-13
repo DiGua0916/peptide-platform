@@ -206,7 +206,7 @@ final class Landing {
 		$native_orders = Operations::paid_orders( $from, $to );
 		if ( $filter ) { $native_orders = $filter->orders( $native_orders ); }
 		foreach ( $native_orders as $order ) {
-			if ( Overview::is_test_order( $order ) ) { continue; }
+			if ( self::is_test( $order ) ) { continue; }
 			$fact = Visit_Metrics::order_fact( $order );
 			if ( $filter ) { $fact['visit'] = Report_Dimensions::positive_id( $order->get_meta( Server_Events::ORDER_VISIT_META ) ) ?? 0; $fact['visitor'] = Report_Dimensions::positive_id( $order->get_meta( Server_Events::ORDER_VISITOR_META ) ) ?? 0; }
 			$orders[] = $fact;
@@ -301,5 +301,10 @@ final class Landing {
 	private static function relative_path( string $path ): string {
 		$clean = (string) wp_parse_url( $path, PHP_URL_PATH );
 		return '' !== $clean && '/' === $clean[0] && ! str_starts_with( $clean, '//' ) ? substr( sanitize_text_field( $clean ), 0, 500 ) : '';
+	}
+
+	/** M6（NF-02）：测试单规则按开关走 Metrics_Overlay::is_test_order()（关着时就是 Overview 的旧规则）；不带自动加载的纯逻辑测试里没有这个类，直接用旧规则。 */
+	private static function is_test( $order ): bool {
+		return class_exists( Metrics_Overlay::class ) ? Metrics_Overlay::is_test_order( $order ) : \PeptideCore\Overview::is_test_order( $order );
 	}
 }

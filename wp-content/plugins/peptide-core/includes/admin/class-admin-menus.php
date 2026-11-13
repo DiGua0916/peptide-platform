@@ -631,6 +631,7 @@ final class Admin_Menus {
 			array_splice( $order, $to + 1, 0, array( $slug ) );
 		};
 		$move( 'pc-visitors', Data_Pages::SLUG );
+		$move( 'pc-buyer-ads', 'pc-visitors' ); // 广告数据追踪紧跟在访客后面（2026-11-12）。
 		$move( Mail_Page::SLUG, self::CUSTOMERS ); // 邮件紧跟在顾客后面（2026-11-09）。
 		$move( 'cbs-dashboard', 'pc-referrals' );
 		$move( 'edit.php', in_array( 'cbs-dashboard', $order, true ) ? 'cbs-dashboard' : 'pc-referrals' );

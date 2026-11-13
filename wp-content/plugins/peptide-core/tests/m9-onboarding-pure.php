@@ -23,6 +23,7 @@ namespace {
 	$inc = dirname( __DIR__ ) . '/includes';
 	require $inc . '/class-staff-buyer.php';
 	require $inc . '/class-support-contacts.php';
+	require $inc . '/creatives/class-contract.php';
 	require $inc . '/admin/class-onboarding.php';
 	require $inc . '/admin/class-buyer-home.php';
 	require $inc . '/admin/class-store-settings.php';
@@ -86,12 +87,14 @@ namespace {
 	check( 'token is cleaned', 'abcd' === $merge( array(), '111', 'ab c!d' )[0]['token'] );
 
 	// ---------- 投放链接 ----------
-	$tail = 'utm_medium=paid&utm_campaign={{campaign.name}}&utm_term={{adset.name}}&utm_content={{ad.name}}';
-	check( 'link with Facebook macros', 'https://shop.example/collections/best/?utm_source=facebook&' . $tail === \PeptideCore\Admin\Onboarding::ad_link( 'https://shop.example/collections/best/' ) );
-	check( 'instagram source', 'https://shop.example/?utm_source=instagram&' . $tail === \PeptideCore\Admin\Onboarding::ad_link( 'https://shop.example/', '', 'instagram' ) );
-	check( 'unknown source falls back', str_contains( \PeptideCore\Admin\Onboarding::ad_link( 'https://shop.example/', '', 'tiktok' ), 'utm_source=facebook&' ) );
-	check( 'fixed campaign name is encoded', str_contains( \PeptideCore\Admin\Onboarding::ad_link( 'https://shop.example/', 'BF Sale & More' ), 'utm_campaign=BF%20Sale%20%26%20More&utm_term={{adset.name}}' ) );
-	check( 'keeps other parameters, drops old utm and fragment', 'https://shop.example/p/?ref=1&utm_source=facebook&' . $tail === \PeptideCore\Admin\Onboarding::ad_link( 'https://shop.example/p/?ref=1&utm_source=x&utm_campaign=y#top' ) );
+	// CR 素材归因（2026-11-11）：固定用 Contract::URL_TEMPLATE（ID 而不是名称，平台用 {{site_source_name}}）。
+	$tpl = 'utm_source={{site_source_name}}&utm_medium=paid&utm_campaign={{campaign.id}}&utm_term={{adset.id}}&utm_content={{ad.id}}&placement={{placement}}&ad_name={{ad.name}}';
+	check( 'template is the contract one', \PeptideCore\Creatives\Contract::URL_TEMPLATE === $tpl );
+	check( 'link uses the ID template', 'https://shop.example/collections/best/?' . $tpl === \PeptideCore\Admin\Onboarding::ad_link( 'https://shop.example/collections/best/' ) );
+	check( 'home link', 'https://shop.example/?' . $tpl === \PeptideCore\Admin\Onboarding::ad_link( 'https://shop.example/' ) );
+	check( 'old campaign / source arguments no longer change the link', 'https://shop.example/?' . $tpl === \PeptideCore\Admin\Onboarding::ad_link( 'https://shop.example/', 'BF Sale & More', 'instagram' ) );
+	check( 'no names in the link', ! str_contains( \PeptideCore\Admin\Onboarding::ad_link( 'https://shop.example/' ), 'campaign.name' ) && ! str_contains( \PeptideCore\Admin\Onboarding::ad_link( 'https://shop.example/' ), 'adset.name' ) );
+	check( 'keeps other parameters, drops old utm, template params and fragment', 'https://shop.example/p/?ref=1&' . $tpl === \PeptideCore\Admin\Onboarding::ad_link( 'https://shop.example/p/?ref=1&utm_source=x&utm_campaign=y&placement=feed&ad_name=old&fbclid=Z#top' ) );
 
 	// ---------- 首页 ----------
 	check( 'conversion', 0.025 === \PeptideCore\Admin\Buyer_Home::conversion( 5, 200 ) );

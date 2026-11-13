@@ -27,11 +27,16 @@ namespace {
 		return $v === array( 'verdict' => $verdict, 'scope' => $scope, 'to' => $to );
 	};
 
-	// 七个菜单，顺序固定。“营销活动”（只读，平台所有者 2026-11-13 定）排在数据后面；它显示不显示另看 F2 的只读页面在不在。
+	// 七个菜单，顺序固定。2026-11-12 主线把“广告设置”和“素材库”合成“广告数据追踪”（键 adtrack）；
+	// “营销活动”（只读，平台所有者 2026-11-13 定）排在数据后面，它显示不显示另看 F2 的只读页面在不在。
 	$menu = \PeptideCore\Staff_Buyer::menu_items();
-	check( 'exactly seven menus in order', array( 'home', 'orders', 'recovery', 'data', 'campaigns', 'ads', 'store' ) === array_keys( $menu ) );
-	check( 'menu labels', array( '首页', '订单', '弃单', '数据', '营销活动', '广告设置', '店铺信息' ) === array_column( $menu, 'label' ) );
+	check( 'exactly seven menus in order', array( 'home', 'orders', 'recovery', 'data', 'campaigns', 'adtrack', 'store' ) === array_keys( $menu ) );
+	check( 'menu labels', array( '首页', '订单', '弃单', '数据', '营销活动', '广告数据追踪', '店铺信息' ) === array_column( $menu, 'label' ) );
 	check( 'campaigns menu opens the promotions page (F2 shows its read-only list there)', 'admin.php?page=pc-promotions' === $menu['campaigns']['slug'] );
+	check( 'ad settings and creative pages belong to adtrack', 'adtrack' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-buyer-ads' ) && 'adtrack' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-creatives' ) && 'adtrack' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-creatives-spend' ) && 'adtrack' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-creatives-board' ) );
+	check( 'adtrack submenu: ad settings then creative library', array( 'admin.php?page=pc-buyer-ads', 'admin.php?page=pc-creatives' ) === array_column( \PeptideCore\Staff_Buyer::adtrack_submenu(), 2 ) );
+	check( 'look-alike creatives slug is not a creatives page', '' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-creativesx' ) );
+	check( 'the old menu key is gone', ! isset( $menu['ads'] ) );
 	check( 'orders menu opens paid orders', 'admin.php?page=wc-orders&status=wc-processing' === $menu['orders']['slug'] );
 	check( 'data sub-page belongs to data', 'data' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-data-landing' ) );
 	check( 'visitors belong to data', 'data' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-visitors-archive' ) );
@@ -54,6 +59,16 @@ namespace {
 	foreach ( array( 'pc-buyer-home', 'pc-buyer-ads', 'pc-store-info', 'pc-onboarding' ) as $own ) {
 		check( "own page $own", $is( $page( $own ), 'allow' ) );
 		check( "own page $own rejects POST", $is( $page( $own, array( 'method' => 'POST' ) ), 'deny' ) );
+	}
+
+	// 素材的三个页面：只读打开，不给店铺能力；写操作走 admin-post 的三个动作。
+	foreach ( array( 'pc-creatives', 'pc-creatives-spend', 'pc-creatives-board' ) as $own ) {
+		check( "creatives page $own", $is( $page( $own ), 'allow' ) );
+		check( "creatives page $own rejects POST", $is( $page( $own, array( 'method' => 'POST' ) ), 'deny' ) );
+	}
+	foreach ( array( 'pc_creative_save', 'pc_creative_spend_import', 'pc_creative_export' ) as $action ) {
+		check( "creatives action $action allowed", $is( $post( $action ), 'allow' ) );
+		check( "creatives action $action blocked before password change", ! $is( $post( $action ), 'allow', '', '', true ) );
 	}
 
 	// 订单只读。

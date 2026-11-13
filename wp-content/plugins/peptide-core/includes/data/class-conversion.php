@@ -63,6 +63,11 @@ final class Conversion {
 		$rows = self::rows( $from, $to, $group );
 		foreach ( $rows as &$row ) {
 			$row['visitor_funnel'] = $detail['groups'][ $row['key'] ] ?? array( 'unit' => 'visitors', 'layers' => Visitor_Funnel::layers( Visitor_Funnel::zero() ) );
+			// M6（NF-02）：分组转化率按开关走。关着时算出来还是 rows() 里的 订单数 ÷ 访客；开了用这一组漏斗里“支付成功”的访客数做分子。
+			if ( class_exists( Metrics_Overlay::class ) ) {
+				$paid_uv           = (int) ( array_column( $row['visitor_funnel']['layers'], 'count', 'key' )['paid'] ?? 0 );
+				$row['conversion'] = Metrics_Overlay::conversion( (int) $row['paid'], $paid_uv, (int) $row['visitors'], 'conversion.' . $group );
+			}
 		}
 		unset( $row );
 
@@ -251,12 +256,12 @@ final class Conversion {
 	public static function paid_groups( int $from, int $to, string $group ): array {
 		$orders = array();
 		foreach ( Operations::paid_orders( $from, $to ) as $order ) {
-			if ( Overview::is_test_order( $order ) ) {
+			if ( self::is_test( $order ) ) {
 				continue;
 			}
 			// meta 值 0 表示“没有”（没带追踪信息的订单）。
 			$orders[] = array(
-				'sales'   => (float) $order->get_total() - (float) $order->get_total_refunded(),
+				'sales'   => self::sales( $order ),
 				'visitor' => (int) $order->get_meta( Server_Events::ORDER_VISITOR_META ),
 				'visit'   => (int) $order->get_meta( Server_Events::ORDER_VISIT_META ),
 			);
@@ -334,5 +339,15 @@ final class Conversion {
 			$out[ (int) $row['id'] ] = (string) $row['g'];
 		}
 		return $out;
+	}
+
+	/** M6（NF-02）：测试单规则按开关走 Metrics_Overlay::is_test_order()（关着时就是 Overview 的旧规则）；不带自动加载的纯逻辑测试里没有这个类，直接用旧规则。 */
+	private static function is_test( $order ): bool {
+		return class_exists( Metrics_Overlay::class ) ? Metrics_Overlay::is_test_order( $order ) : \PeptideCore\Overview::is_test_order( $order );
+	}
+
+	/** M6（NF-02）：一张订单的销售额按开关走 Metrics_Overlay::order_sales()（关着时 = 订单金额 − WooCommerce 退款，和以前一样）。 */
+	private static function sales( $order ): float {
+		return class_exists( Metrics_Overlay::class ) ? Metrics_Overlay::order_sales( $order ) : (float) $order->get_total() - (float) $order->get_total_refunded();
 	}
 }

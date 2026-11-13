@@ -58,11 +58,17 @@
         landing[name] = value;
       }
       // Optional ad names: kept when well formed, otherwise left out without rejecting the snapshot.
-      for (const name of ['utm_campaign', 'utm_term', 'utm_content']) if (Object.hasOwn(query, name)) {
+      const limits = {utm_campaign: 120, utm_term: 120, utm_content: 120, placement: 64, ad_name: 255, cr: 16};
+      for (const name of Object.keys(limits)) if (Object.hasOwn(query, name)) {
         const value = query[name];
-        if (typeof value === 'string' && value !== '' && [...value].length <= 120 && !/[\x00-\x1f\x7f]/.test(value)) landing[name] = value;
+        if (typeof value === 'string' && value !== '' && [...value].length <= limits[name] && !/[\x00-\x1f\x7f]/.test(value)) landing[name] = value;
       }
-      return Object.freeze({version: 1, host: domain, landing_query: Object.freeze(landing), referrer_host: ref === null || ref === '' ? ref : host(ref)});
+      const snapshot = {version: 1, host: domain, landing_query: Object.freeze(landing), referrer_host: ref === null || ref === '' ? ref : host(ref)};
+      // CR optional browser facts: kept when well formed, otherwise left out.
+      if (input.has_fbclid === true) snapshot.has_fbclid = true;
+      if (typeof input.timezone === 'string' && input.timezone.length <= 64 && /^[A-Za-z][A-Za-z0-9_+\-]{0,31}(?:\/[A-Za-z0-9_+\-]{1,31}){0,2}$/.test(input.timezone)) snapshot.timezone = input.timezone;
+      if (typeof input.language === 'string' && input.language.length <= 35 && /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{1,8}){0,4}$/.test(input.language)) snapshot.language = input.language;
+      return Object.freeze(snapshot);
     }
     const kinds = ['home', 'shop', 'product', 'cart', 'checkout', 'account', 'order_received', 'order_pay', 'content', 'collection', 'search', 'unknown'];
     if (!kinds.includes(input.kind)) return null;

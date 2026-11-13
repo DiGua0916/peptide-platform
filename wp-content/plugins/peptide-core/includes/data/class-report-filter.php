@@ -50,7 +50,7 @@ final class Report_Filter {
 		$matches = $this->matches( $fact ); if ( $matches ) { ++$this->coverage[ $unit ]['matched_count']; } return $matches;
 	}
 	public function orders( array $orders ): array {
-		$orders = array_values( array_filter( $orders, static fn( $order ) => ! \PeptideCore\Overview::is_test_order( $order ) ) );
+		$orders = array_values( array_filter( $orders, static fn( $order ) => ! self::is_test( $order ) ) );
 		$ids = array(); $links = array();
 		foreach ( $orders as $order ) { $id = $order->get_id(); $visit = Report_Dimensions::positive_id( $order->get_meta( Server_Events::ORDER_VISIT_META ) ) ?? 0; $visitor = Report_Dimensions::positive_id( $order->get_meta( Server_Events::ORDER_VISITOR_META ) ) ?? 0; $links[ $id ] = array( $visit, $visitor ); if ( $visit && $visitor ) { $ids[] = $visit; } }
 		$facts = Report_Dimensions::visit_facts( $ids, $this->cutoff ); $out = array();
@@ -77,5 +77,10 @@ final class Report_Filter {
 			$facts = Report_Dimensions::visit_facts( array_column( (array) $rows, 'id' ), $this->cutoff );
 			foreach ( (array) $rows as $row ) { $cursor = (int) $row['id']; if ( $this->observe( 'visits', Report_Dimensions::for_visit( $facts, $cursor, (int) $row['visitor_id'] ) ) ) { yield $row; } }
 		} while ( count( (array) $rows ) === 500 );
+	}
+
+	/** M6（NF-02）：测试单规则按开关走 Metrics_Overlay::is_test_order()（关着时就是 Overview 的旧规则）；不带自动加载的纯逻辑测试里没有这个类，直接用旧规则。 */
+	private static function is_test( $order ): bool {
+		return class_exists( Metrics_Overlay::class ) ? Metrics_Overlay::is_test_order( $order ) : \PeptideCore\Overview::is_test_order( $order );
 	}
 }

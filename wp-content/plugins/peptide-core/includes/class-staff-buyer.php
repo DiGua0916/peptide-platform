@@ -2,10 +2,11 @@
 /**
  * 投手版后台（M9，PRD 6.2）：角色 pc_media_buyer。“投手”= 负责投广告的内部员工，不是顾客。
  *
- * 投手的菜单：首页、订单（只读）、弃单、数据、营销活动（只读）、广告设置、店铺信息。其余菜单不显示，直接打开地址返回 403。
+ * 投手的菜单：首页、订单（只读）、弃单、数据、营销活动（只读）、广告数据追踪（广告设置、素材库）、店铺信息。其余菜单不显示，直接打开地址返回 403。
  * “营销活动”（平台所有者 2026-11-13 定）：投手可以看只读的“当前在跑的活动”，不能新建、编辑、启停、删除。
  * 只读页面归 F2（Admin\Marketing::read_only_gate()），这里只管菜单入口和放行“不带任何操作参数的 GET”；
  * F2 的只读代码不在（或它认为这个账号能改）时，三个营销页面对投手仍然整页 403。
+ * “素材”（素材库、花费导入、素材看板）由 Creatives\Module 提供，2026-11-11 加入；2026-11-12 和广告设置合成“广告数据追踪”。
  * 管理员（包括从总后台一键登录）不受影响，仍然看到全部菜单。
  *
  * 做法：
@@ -57,8 +58,8 @@ final class Staff_Buyer {
 	public const ACTION_STORE    = 'pc_buyer_store_save';
 	public const ACTION_ADS      = 'pc_buyer_ads_save';
 
-	/** admin-post.php 里投手能提交的表单（都是投手版页面自己的）。 */
-	private const POST = array( self::ACTION_PASSWORD, self::ACTION_STORE, self::ACTION_ADS, self::ACTION_EXPORT );
+	/** admin-post.php 里投手能提交的表单（都是投手版页面自己的，含导出订单、素材登记、花费导入、看板导出）。 */
+	private const POST = array( self::ACTION_PASSWORD, self::ACTION_STORE, self::ACTION_ADS, self::ACTION_EXPORT, 'pc_creative_save', 'pc_creative_spend_import', 'pc_creative_export' ); // 后三个和 Creatives\Module::ACTION_* 一致。
 
 	/** admin-ajax.php 里投手能用的动作 => 需要的能力范围（空 = 不需要店铺能力）。 */
 	private const AJAX = array(
@@ -439,6 +440,10 @@ final class Staff_Buyer {
 		if ( in_array( $page, array( self::PAGE_HOME, self::PAGE_ADS, self::PAGE_STORE, self::PAGE_WIZARD ), true ) ) {
 			return $allow();
 		}
+		// 素材的三个页面只用 CAP_VIEW，不需要店铺能力（“广告数据追踪”栏目下 pc-creatives 开头的页面）。
+		if ( 'adtrack' === self::menu_for_page( $page ) && str_starts_with( $page, 'pc-creatives' ) ) {
+			return $allow();
+		}
 		if ( 'pc-overview' === $page ) {
 			return $redirect( self::PAGE_HOME ); // 后台里“回到首页”的链接都指向数据大盘，投手的首页是另一个页面。
 		}
@@ -605,7 +610,8 @@ final class Staff_Buyer {
 			'recovery' => array( 'label' => '弃单', 'slug' => $url( 'pc-recovery' ), 'icon' => 'dashicons-backup', 'pages' => array( 'pc-recovery' ) ),
 			'data'     => array( 'label' => '数据', 'slug' => $url( 'pc-data' ), 'icon' => 'dashicons-chart-area', 'pages' => array( 'pc-data', 'pc-visitors' ) ),
 			'campaigns' => array( 'label' => '营销活动', 'slug' => $url( self::CAMPAIGN_PAGES[0] ), 'icon' => 'dashicons-tag', 'pages' => self::CAMPAIGN_PAGES, 'exact' => true ),
-			'ads'      => array( 'label' => '广告设置', 'slug' => $url( self::PAGE_ADS ), 'icon' => 'dashicons-megaphone', 'pages' => array( self::PAGE_ADS ) ),
+			// 2026-11-12：广告设置和素材库合成一个栏目“广告数据追踪”（子菜单见 adtrack_submenu()）。
+			'adtrack'  => array( 'label' => '广告数据追踪', 'slug' => $url( self::PAGE_ADS ), 'icon' => 'dashicons-megaphone', 'pages' => array( self::PAGE_ADS, 'pc-creatives' ) ), // Creatives\Module::PAGE_*
 			'store'    => array( 'label' => '店铺信息', 'slug' => $url( self::PAGE_STORE ), 'icon' => 'dashicons-store', 'pages' => array( self::PAGE_STORE ) ),
 		);
 	}
@@ -656,7 +662,18 @@ final class Staff_Buyer {
 					$submenu[ $item['slug'] ] = $children; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 				}
 			}
+			if ( 'adtrack' === $key ) {
+				$submenu[ $item['slug'] ] = self::adtrack_submenu(); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+			}
 		}
+	}
+
+	/** “广告数据追踪”的子菜单：广告设置、素材库（花费导入和素材看板从素材库顶部的标签进）。 */
+	public static function adtrack_submenu(): array {
+		return array(
+			array( '广告设置', 'read', 'admin.php?page=' . self::PAGE_ADS, '广告设置' ),
+			array( '素材库', 'read', 'admin.php?page=pc-creatives', '素材库' ),
+		);
 	}
 
 	/** “数据”的子菜单：数据页面和实时访客在这次请求里登记的子页面，链接改成完整地址。 */
@@ -689,6 +706,9 @@ final class Staff_Buyer {
 			return $submenu_file;
 		}
 		$page = self::request()['page'];
+		if ( 'adtrack' === self::menu_for_page( $page ) ) {
+			return 'admin.php?page=' . ( str_starts_with( $page, 'pc-creatives' ) ? 'pc-creatives' : self::PAGE_ADS );
+		}
 		if ( 'data' !== self::menu_for_page( $page ) ) {
 			return $submenu_file;
 		}

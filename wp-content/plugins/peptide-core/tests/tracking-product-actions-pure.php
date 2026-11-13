@@ -8,6 +8,8 @@ namespace PeptideCore\Tracking {
 		public static bool $fail_visit = false;
 		public static function cookie_user_id(): int { return 0; }
 		public static function is_staff( int $id ): bool { return false; }
+		// 2026-11-08 起 Ingest::handle() 先问 Tracker::is_automated()（爬虫不追踪）；桩没跟上，这个用例从那时起一直报错。
+		public static function is_automated( string $ua = '' ): bool { return false; }
 		public static function current_vid(): string { return str_repeat( 'a', 32 ); }
 		public static function issue_vid(): string { return self::current_vid(); }
 		public static function visitor( string $vid, int $now ): array { global $wpdb; ++self::$allocations; if ( ! isset( $wpdb->visitors[10] ) ) { $wpdb->visitors[10] = array( 'id' => 10, 'user_id' => 0 ); } return $wpdb->visitors[10]; }
