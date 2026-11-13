@@ -12,7 +12,7 @@
  * - 按账号开关。给销售账号（pc_staff）加上 pc_media_buyer 这个角色就是投手版，去掉就恢复原来按模块勾选的权限。
  *   原来的角色和勾选的模块都不动，所以总后台的“销售账号”列表、专属登录入口、停用开关照常工作。
  *   默认不改任何现有账号；开关在“员工管理”页面和 `wp peptide buyer on|off <账号>`。
- * - 角色本身只存 read 和 view_admin_dashboard。页面需要的能力（多数店铺页面共用 manage_woocommerce）只在
+ * - 角色本身只存 read、view_admin_dashboard 和只读的 pc_view_campaigns（role_caps()）。页面需要的能力（多数店铺页面共用 manage_woocommerce）只在
  *   “这次请求是允许的页面或接口”时通过 user_has_cap 临时给（classify()、rest_scope()，能力清单在 Capabilities::BUYER_SCOPES）。
  *   在其他地址上投手没有任何店铺能力，WordPress、WooCommerce 和插件自己的权限检查都会拒绝。
  * - 后台页面、admin-ajax、admin-post 另有一道白名单（gate_page()、gate_action()）：不在名单里的直接 403。
@@ -128,16 +128,29 @@ final class Staff_Buyer {
 
 	// ---------- 角色和开关 ----------
 
+	/**
+	 * 角色上存的能力，只有这三项。pc_view_campaigns 是 F2 约定的只读权限：有它只能看“当前在跑的活动”。
+	 * 能改东西的权限（edit_shop_coupons、manage_woocommerce 等）不在这里，也永远不加到角色上。
+	 *
+	 * @return array<string,bool>
+	 */
+	public static function role_caps(): array {
+		return array(
+			'read'                 => true,
+			'view_admin_dashboard' => true, // WooCommerce 只让有这个能力的人进后台。
+			self::CAP_CAMPAIGNS    => true,
+		);
+	}
+
 	public static function ensure_role(): void {
-		if ( ! get_role( self::ROLE ) ) {
-			add_role(
-				self::ROLE,
-				'Media buyer',
-				array(
-					'read'                 => true,
-					'view_admin_dashboard' => true, // WooCommerce 只让有这个能力的人进后台。
-				)
-			);
+		$role = get_role( self::ROLE );
+		if ( ! $role ) {
+			add_role( self::ROLE, 'Media buyer', self::role_caps() );
+			return;
+		}
+		// 2026-11-13 之前建好角色的店：补上只读权限。每家店只写一次（之后 has_cap 为真，不再写）。
+		if ( ! $role->has_cap( self::CAP_CAMPAIGNS ) ) {
+			$role->add_cap( self::CAP_CAMPAIGNS );
 		}
 	}
 
@@ -512,10 +525,9 @@ final class Staff_Buyer {
 			return $allcaps;
 		}
 		$allcaps[ self::CAP_VIEW ] = true;
-		// F2 约定的只读权限：有它只能看“当前在跑的活动”，不能改。没改密码之前不给（那时只能打开向导）。
-		if ( ! self::must_change( (int) $user->ID ) ) {
-			$allcaps[ self::CAP_CAMPAIGNS ] = true;
-		}
+		// F2 约定的只读权限：有它只能看“当前在跑的活动”，不能改。角色上已经存了（ensure_role()）；
+		// 这里再给一次，是为了角色记录还没来得及补上的那一次请求（拦截在 init 3，补角色在 init 5）。
+		$allcaps[ self::CAP_CAMPAIGNS ] = true;
 		// 只按“当前登录的人、当前这次请求”给：后台任务里的 user_can( 投手, … ) 不会顺带拿到店铺能力。
 		if ( (int) get_current_user_id() !== (int) $user->ID ) {
 			return $allcaps;

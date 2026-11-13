@@ -108,6 +108,7 @@ namespace {
 		check( "$campaign_page: HEAD is also read-only", $is( $page( $campaign_page, $ro + array( 'method' => 'HEAD' ) ), 'allow' ) );
 		check( "$campaign_page: new / edit form address denied", $is( $page( $campaign_page, $ro + array( 'edits' => '1' ) ), 'deny' ) );
 		check( "$campaign_page: bulk or toggle action in the address denied", $is( $page( $campaign_page, $ro + array( 'action' => 'delete' ) ), 'deny' ) && $is( $page( $campaign_page, $ro + array( 'action' => '-1', 'action2' => 'disable' ) ), 'deny' ) );
+		check( "$campaign_page: action=new and action=edit in the address denied", $is( $page( $campaign_page, $ro + array( 'action' => 'new' ) ), 'deny' ) && $is( $page( $campaign_page, $ro + array( 'action' => 'edit' ) ), 'deny' ) );
 		check( "$campaign_page: list filter submit without an action still opens", $is( $page( $campaign_page, $ro + array( 'action' => '-1', 'action2' => '-1' ) ), 'allow' ) );
 		check( "$campaign_page: POST denied", $is( $page( $campaign_page, $ro + array( 'method' => 'POST' ) ), 'deny' ) );
 		check( "$campaign_page: denied while the read-only page is not in this code (or F2 says the account can edit)", $is( $page( $campaign_page ), 'deny' ) && $is( $page( $campaign_page, array( 'campaigns' => '' ) ), 'deny' ) );
@@ -115,7 +116,7 @@ namespace {
 	}
 	check( 'F2 read-only code is not loaded in this test, so nothing is opened by default', ! \PeptideCore\Staff_Buyer::campaigns_ready() && ! \PeptideCore\Staff_Buyer::campaigns_read_only() );
 	// 营销里其余的页面和应用中心里的设置页（离开挽回、转盘、加购推荐、已付款弹窗、物流球等）：有没有只读列表都不开放。
-	foreach ( array( 'pc-promotions-product-offers', 'pc-promotions-campaigns', 'pc-promotions-subscribers', 'pc-apps', 'pc-paid-popup', 'pc-tracking-ball', 'pc-cart-links', 'pc-referrals', 'pc-accounts', 'pc-checkout-dropoff', 'pc-collections', 'pc-product-reviews', 'pc-product-reports', 'pc-settings' ) as $closed ) {
+	foreach ( array( 'pc-first-order-offer', 'pc-exit-intent', 'pc-marketing', 'pc-promotions-product-offers', 'pc-promotions-campaigns', 'pc-promotions-subscribers', 'pc-apps', 'pc-paid-popup', 'pc-tracking-ball', 'pc-cart-links', 'pc-referrals', 'pc-accounts', 'pc-checkout-dropoff', 'pc-collections', 'pc-product-reviews', 'pc-product-reports', 'pc-settings' ) as $closed ) {
 		check( "still closed: $closed", $is( $page( $closed ), 'deny' ) && $is( $page( $closed, $ro ), 'deny' ) );
 	}
 	// 营销页面的保存、启停、批量、设置：都走 admin-post.php，不在投手的名单里（F2 那边也各自返回 403）。

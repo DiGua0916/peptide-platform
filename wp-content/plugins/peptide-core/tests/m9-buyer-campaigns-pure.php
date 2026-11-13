@@ -83,6 +83,19 @@ namespace {
 	function get_userdata( $id ) { return $GLOBALS['f5_users'][ (int) $id ] ?? false; }
 	function get_user_meta( $id, $key = '', $single = false ) { return $GLOBALS['f5_meta'][ (int) $id ][ $key ] ?? ''; }
 	function is_admin(): bool { return true; }
+
+	/** WordPress 的角色记录（wp_user_roles 选项）。writes 记下每一次写入。 */
+	final class WP_Role {
+		public string $name;
+		public array $capabilities;
+		public function __construct( string $name, array $caps ) { $this->name = $name; $this->capabilities = $caps; }
+		public function has_cap( string $cap ): bool { return ! empty( $this->capabilities[ $cap ] ); }
+		public function add_cap( string $cap, bool $grant = true ): void { $this->capabilities[ $cap ] = $grant; $GLOBALS['f5_role_writes'][] = 'add_cap ' . $cap; }
+	}
+	$GLOBALS['f5_roles']       = array();
+	$GLOBALS['f5_role_writes'] = array();
+	function get_role( string $name ) { return $GLOBALS['f5_roles'][ $name ] ?? null; }
+	function add_role( string $name, string $label, array $caps = array() ) { $GLOBALS['f5_role_writes'][] = 'add_role ' . $name; return $GLOBALS['f5_roles'][ $name ] = new WP_Role( $name, $caps ); }
 	function wp_doing_ajax(): bool { return false; }
 	function wp_unslash( $value ) { return $value; }
 	function sanitize_text_field( $value ) { return trim( (string) $value ); }
@@ -93,11 +106,31 @@ namespace {
 	use PeptideCore\Staff_Buyer;
 	use PeptideCore\Admin\Marketing;
 
-	$buyer   = new WP_User( 7, array( 'pc_staff', 'pc_media_buyer' ), array( 'read' => true, 'view_admin_dashboard' => true ) );
-	$locked  = new WP_User( 8, array( 'pc_staff', 'pc_media_buyer' ), array( 'read' => true ) );
+	// 0. 角色上存什么：只有 read、进后台、只读的 pc_view_campaigns。能改东西的权限一项都没有。
+	$write_caps = array( 'pc_manage_marketing', 'edit_shop_coupons', 'edit_others_shop_coupons', 'publish_shop_coupons', 'delete_shop_coupons', 'manage_woocommerce', 'edit_shop_orders', 'edit_products', 'manage_options', 'edit_posts' );
+	check( 'role stores exactly read, dashboard access and the read-only campaigns cap', array( 'read' => true, 'view_admin_dashboard' => true, 'pc_view_campaigns' => true ) === Staff_Buyer::role_caps() );
+	check( 'role stores nothing that can change a campaign or the store', array() === array_intersect( $write_caps, array_keys( Staff_Buyer::role_caps() ) ) );
+	Staff_Buyer::ensure_role();
+	check( 'new store: the role is created with the read-only cap', array( 'add_role pc_media_buyer' ) === $GLOBALS['f5_role_writes'] && Staff_Buyer::role_caps() === get_role( 'pc_media_buyer' )->capabilities );
+	// 2026-11-13 之前建好的角色（沙盒和现有的店）：没有这项权限，F1 在沙盒量到的就是这个状态。
+	$GLOBALS['f5_roles']['pc_media_buyer'] = new WP_Role( 'pc_media_buyer', array( 'read' => true, 'view_admin_dashboard' => true ) );
+	$GLOBALS['f5_role_writes']             = array();
+	check( 'existing store before the fix: the role has no campaigns cap', ! get_role( 'pc_media_buyer' )->has_cap( 'pc_view_campaigns' ) );
+	Staff_Buyer::ensure_role();
+	check( 'existing store: the read-only cap is added to the role', get_role( 'pc_media_buyer' )->has_cap( 'pc_view_campaigns' ) && array( 'add_cap pc_view_campaigns' ) === $GLOBALS['f5_role_writes'] );
+	Staff_Buyer::ensure_role();
+	Staff_Buyer::ensure_role();
+	check( 'and it is written once, not on every request', array( 'add_cap pc_view_campaigns' ) === $GLOBALS['f5_role_writes'] );
+	check( 'the role still stores only the three caps', Staff_Buyer::role_caps() === get_role( 'pc_media_buyer' )->capabilities );
+
+	// WordPress 把角色上存的能力并进账号的 allcaps，这里照样给两个投手账号。
+	$buyer   = new WP_User( 7, array( 'pc_staff', 'pc_media_buyer' ), Staff_Buyer::role_caps() );
+	$locked  = new WP_User( 8, array( 'pc_staff', 'pc_media_buyer' ), Staff_Buyer::role_caps() );
+	// 角色记录还没补上的那一次请求（旧的角色能力）：只读权限由 scoped_caps() 补，结果一样。
+	$stale   = new WP_User( 6, array( 'pc_staff', 'pc_media_buyer' ), array( 'read' => true, 'view_admin_dashboard' => true ) );
 	$staff   = new WP_User( 9, array( 'pc_staff' ), array( 'read' => true, 'edit_shop_coupons' => true ) );
 	$admin   = new WP_User( 1, array( 'administrator' ), array( 'manage_options' => true, 'edit_shop_coupons' => true ) );
-	$GLOBALS['f5_users'] = array( 7 => $buyer, 8 => $locked, 9 => $staff, 1 => $admin );
+	$GLOBALS['f5_users'] = array( 6 => $stale, 7 => $buyer, 8 => $locked, 9 => $staff, 1 => $admin );
 	$GLOBALS['f5_meta']  = array( 8 => array( Staff_Buyer::META_MUST_PASS => '1' ) );
 
 	/** 以某个账号打开一个后台地址（每次都是一次新的请求）。 */
@@ -134,10 +167,16 @@ namespace {
 		check( "$page: F2 would show its read-only list to this account", '1' === $got['request']['campaigns'] && Marketing::read_only_gate() );
 		check( "$page: the buyer gate lets the plain list through", $allow === $got['verdict'] );
 		$have = $caps( $buyer );
-		check( "$page: the buyer holds the view cap and nothing that can change a campaign or the store", ! empty( $have['pc_view_campaigns'] ) && empty( $have['edit_shop_coupons'] ) && empty( $have['manage_woocommerce'] ) && empty( $have['edit_shop_orders'] ) );
+		check( "$page: the buyer holds the view cap and nothing that can change a campaign or the store", ! empty( $have['pc_view_campaigns'] ) && array() === array_intersect( $write_caps, array_keys( array_filter( $have ) ) ) );
+		check( "$page: exactly the role caps plus the buyer-page cap, nothing else", array( 'pc_view_buyer_admin', 'pc_view_campaigns', 'read', 'view_admin_dashboard' ) === ( static function ( array $c ) { $k = array_keys( array_filter( $c ) ); sort( $k ); return $k; } )( $have ) );
 		check( "$page: F2 agrees — can view, cannot manage, menu registered with the view cap", Marketing::can_view() && ! Marketing::can_manage() && 'pc_view_campaigns' === Marketing::menu_cap() );
 		check( "$page: the entry is shown", Staff_Buyer::campaigns_visible() );
 	}
+
+	// 1b. 角色记录还没补上的那一次请求：照样能看，照样没有写权限。
+	$got = $open( 6, 'pc-promotions' );
+	check( 'stale role record: the list still opens and the entry is shown', $allow === $got['verdict'] && Staff_Buyer::campaigns_visible() );
+	check( 'stale role record: view cap yes, write caps no', ! empty( $caps( $stale )['pc_view_campaigns'] ) && array() === array_intersect( $write_caps, array_keys( array_filter( $caps( $stale ) ) ) ) );
 
 	// 2. 新建、编辑、带操作的地址，和提交：都拒绝。
 	foreach ( Staff_Buyer::CAMPAIGN_PAGES as $page ) {
@@ -145,6 +184,8 @@ namespace {
 		check( "$page?edit=12 denied", $deny === $open( 7, $page, array( 'edit' => '12' ) )['verdict'] );
 		check( "$page?edit= (empty value) denied", $deny === $open( 7, $page, array( 'edit' => '' ) )['verdict'] );
 		check( "$page with a bulk action denied", $deny === $open( 7, $page, array( 'action' => 'delete', 'ids' => '3,4' ) )['verdict'] );
+		check( "$page&action=new denied", $deny === $open( 7, $page, array( 'action' => 'new' ) )['verdict'] );
+		check( "$page&action=edit&id=12 denied", $deny === $open( 7, $page, array( 'action' => 'edit', 'id' => '12' ) )['verdict'] );
 		check( "$page POST denied", $deny === $open( 7, $page, array(), 'POST' )['verdict'] );
 	}
 	foreach ( array( 'pc_promo_save', 'pc_promo_toggle', 'pc_promo_bulk', 'pc_coupon_save', 'pc_coupon_toggle', 'pc_shipdisc_save', 'pc_shipdisc_toggle' ) as $action ) {
@@ -179,7 +220,7 @@ namespace {
 	check( 'people who can edit keep the page\'s own title', 'Coupon codes' === $GLOBALS['title'] );
 
 	// 4. 其余营销页面和应用中心（离开挽回、转盘、加购推荐等设置）：仍然不开放。
-	foreach ( array( 'pc-promotions-product-offers', 'pc-promotions-campaigns', 'pc-promotions-subscribers', 'pc-apps', 'pc-paid-popup', 'pc-tracking-ball', 'pc-cart-links', 'pc-referrals' ) as $page ) {
+	foreach ( array( 'pc-first-order-offer', 'pc-exit-intent', 'pc-marketing', 'pc-promotions-product-offers', 'pc-promotions-campaigns', 'pc-promotions-subscribers', 'pc-apps', 'pc-paid-popup', 'pc-tracking-ball', 'pc-cart-links', 'pc-referrals' ) as $page ) {
 		check( "still closed with the read-only list present: $page", $deny === $open( 7, $page )['verdict'] );
 	}
 
@@ -193,16 +234,20 @@ namespace {
 	check( 'no campaigns entry in that case', ! Staff_Buyer::campaigns_visible() && 6 === count( $menu_labels() ) && ! in_array( '营销活动 => admin.php?page=pc-promotions', $menu_labels(), true ) );
 	Marketing::$forced_manage = false;
 
-	// 6. 还没改密码的投手：只能去向导，没有只读权限，菜单只有首页。
+	// 6. 还没改密码的投手：只读权限在角色上，但只能去向导，菜单只有首页。
 	$got = $open( 8, 'pc-promotions' );
 	check( 'locked buyer is sent to the wizard', array( 'verdict' => 'redirect', 'scope' => '', 'to' => 'pc-onboarding' ) === $got['verdict'] );
-	check( 'locked buyer does not hold the view cap yet', empty( $caps( $locked )['pc_view_campaigns'] ) && ! Staff_Buyer::campaigns_visible() );
+	foreach ( Staff_Buyer::CAMPAIGN_PAGES as $page ) {
+		check( "locked buyer cannot open $page, with or without parameters", 'redirect' === $open( 8, $page )['verdict']['verdict'] && 'redirect' === $open( 8, $page, array( 'new' => '1' ) )['verdict']['verdict'] );
+	}
+	check( 'locked buyer still has no store caps', array() === array_intersect( $write_caps, array_keys( array_filter( $caps( $locked ) ) ) ) );
+	$open( 8, 'pc-promotions' );
 	check( 'locked buyer menu is home only', array( '首页 => admin.php?page=pc-buyer-home' ) === $menu_labels() );
 
 	// 7. 被停用的投手：什么都不给。
 	\PeptideCore\Staff::$disabled = array( 7 );
 	$open( 7, 'pc-promotions' );
-	check( 'disabled buyer gets no caps from this class', empty( $caps( $buyer )['pc_view_campaigns'] ) && empty( $caps( $buyer )['pc_view_buyer_admin'] ) );
+	check( 'disabled buyer gets nothing from this class beyond what the role stores', $buyer->allcaps === $caps( $buyer ) && empty( $caps( $buyer )['pc_view_buyer_admin'] ) && array() === array_intersect( $write_caps, array_keys( array_filter( $caps( $buyer ) ) ) ) );
 	\PeptideCore\Staff::$disabled = array();
 
 	// 8. 不是投手的人不受影响：营销员工照旧能改；管理员照旧。
