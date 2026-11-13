@@ -844,6 +844,17 @@ Root installed only three existing Commerce sources for P09 collection products 
 - **物流**：主线的运单号和承运商存在 WooCommerce 自带的“订单履约（Fulfillments）”里（`Shipping_Tracking`），顾客的物流球（`Track_Widget`）从那里读；总后台的 `Track17` / `Fedex` 只按运单号查物流状态并缓存，不往订单上写东西。开发文档里预留的订单元 `_pc_shipment` 和接口 `/hq/shipment` **F3 没有实现，也不再需要**：以后发货表对接（OR-01）回填运单号，请直接写成订单的一条履约记录，不要另建 `_pc_shipment`。`pchq_orders` 里不存运单号。
 - **客户编号**（日常会话 11-12）：店铺订单上有 `_pc_customer_id`，并单独报给总后台 `/customers/link`。F3 的订单上报仍然只带 `email_hash`，两者互不影响；以后报表要按顾客合并时，可以在上报里加一个可选的 `customer_id`（需要 `pchq_orders` 加一列）。
 
+### 2026-11-14：默认关闭的两个开关（发布时都不打开）
+
+按“线上已有功能保持原样、新东西默认关着”的发布原则，11-12 之后加的东西都放在开关后面：
+
+| 开关 | 在哪 | 关着（默认） | 打开 |
+| --- | --- | --- | --- |
+| `pchq_m10_extras` | 总后台选项（没有 = 关；过滤器 `pchq_m10_extras` 可以覆盖） | 跨店报表、订单页和 11-10 上线的版本一样；不收集弃单数 | 报表多“顾客”“弃单”“弃单率”三列；订单页多“店内订单编号”“客户编号”；可按客户编号搜索；从各店每日汇总收弃单数（`pchq_summary_days` 动作和 `http_response` 保底） |
+| `pc_order_report_customer_id` | 店铺选项（没有 = 关；过滤器同名） | 上报的订单摘要和 11-10 上线的版本逐项相同，没有 `customer_id` | 摘要带 `customer_id`；指纹变了，每张已上报的订单会重报一次 |
+
+`PeptideHq\Orders::extras()`、`PeptideCore\Order_Report::with_customer_id()` 返回当前状态。报表数据 `Orders::report()` 里的 `customers / abandoned / abandon_orders / abandon_rate` 不管开关都会算，只是关着时页面不显示。
+
 ### 报表口径（HQ-13）
 
 订单数 = `paid = 1 且 is_test = 0` 的订单；销售额（净额）= `total_cents − refunded_cents`；ROAS = 净销售额 ÷ 广告花费（`pchq_ad_spend`，先手填）；时间按付款时间，日期边界用总后台时区。三级（系列 → 投手 → 店铺）都由同一批店铺行往上加，合计相等。访客数用 `pchq_daily.visitors`（店铺时区的日期），只作参考。顾客数和弃单率见下面两段。
