@@ -610,3 +610,120 @@
   - HQ → AI 设置：渲染无警告，“素材人群分析人设”一块在，店铺表多了“素材人群分析模板 / 本店素材人群分析”两列。
   - 前台：6 家店首页、商品页、购物车都是 200，无报错；阳的店手机上像素（fbevents.js 已加载）、追踪脚本、18+ 弹窗照常。服务器上每家店把同一商品加购 2 件：上线前后都是小计 $172.60、总价 $215.35，一致。主店手机访问一次（utm_source=deploycheck，访问 #95）：geo_country=US、screen=375x812、device_model 有值，事件里有 scroll。
   - 回滚：把上面备份目录里的文件按原路径拷回，删掉 new-files.txt 里列的新文件，reload php8.3-fpm。追踪表 v7 加的列不影响旧代码，不用回退。
+
+### 2026-11-13 15:01–15:05 UTC（北京 23:01–23:05）素材落地页：上传时选落地页；专辑页落地直达产品区；跳转不再丢素材编号
+- 店主要求：① “广告设置”上传素材时就选落地页（原来在下面链接行里）；② 选专辑页（如 Bestselling）时，客户一进来就停在首页产品区并选好这个分类。
+- 改动（4 个文件）：
+  - `peptide-core/includes/creatives/class-ads-panel.php`：上传表单在属性和备注之间加“落地页”下拉（首页 / 专辑页 / 商品页）；每个素材的落地页记在选项 `pc_cr_landings`（{编号: 地址}，首页不记），链接行显示“落地页：xx”，“换落地页”展开后选好点保存（admin-post，不再是只改前端不保存的下拉）。
+  - `peptide-core/includes/creatives/class-library-page.php`：create 时保存 landing；新增 op=landing；素材库卡片的链接也用存的落地页。落地页只收本店可选列表里的地址。
+  - `peptide-site/inc/storefront-entry.php`：**修 bug**——专辑页 / 商品页地址 302 到首页时只保留 utm_* 和 fbclid，把素材编号 `cr`、`placement`、`ad_name` 丢了，从专辑页 / 商品页落地的广告访问归不到素材。现在一起保留。
+  - `peptide-site/assets/product-dialog-polish.js`：**修 bug**——`#vc-products` 落地时本来要滚到产品区，但页面配置里 productId 是字符串 "0"（真值），判断成“有商品”，从不滚动。改用 idValue() 判断。
+- 部署前 14 份副本（web 7 + HQ 主机 7）这 4 个文件和 4a161de 一致，无漂移；部署后全部等于新版本。HQ 安装（peptide-hq）不涉及。
+- 备份：web `/root/vialcove-backups/landing-main-web-20261113T150143Z`、`landing-tenants-web-20261113T150441Z`；HQ 主机 `landing-main-admin-20261113T150145Z`、`landing-tenants-admin-20261113T150442Z`。两台 reload php8.3-fpm。
+- 检查（主店，手机尺寸）：`/product-category/bestselling/?cr=…` → 302 到 `/?vc_catalog_category=353&…&cr=C0001&placement=…&ad_name=…#vc-products`；页面直接停在 “The peptide collection” 产品区（scrollY 1041），Bestselling 已选中；GLP-1 同样，显示 16 件。新访客先出 18+ 弹窗，点进入后仍停在产品区；注册弹窗照常。商品页落地仍直接打开商品弹窗（黑五倒计时、满减照常）。追踪脚本收到的 landing_query 带 cr=C0001。后台广告设置页无 PHP 警告，C0001 已按店主截图改为落地页“专辑页：Bestselling”，链接随之变为 bestselling 地址。6 家店后台服务器端渲染上传表单 + 链接列表无警告。
+- 注意：Bestselling 分类目前包含全部 92 个商品（和 Peptides 一样），所以选它显示 92 件；要只显示热卖品，需要在商品里调整分类。4 家开斗篷的店用 curl 测试会被斗篷转走（预期），s0010 跳转确认带 cr。
+- 回滚：备份目录文件拷回原路径，reload php8.3-fpm；选项 `pc_cr_landings` 留着无害。
+
+### 2026-11-13 15:23–15:25 UTC（北京 23:23–23:25）素材删除
+- 店主要求加“删除素材”。原来只有素材库里的“归档”（隐藏、数据保留、可恢复），没有删除。
+- 改动（3 个文件）：
+  - `peptide-core/includes/creatives/class-creatives.php`：`Creatives::delete()`、`delete_blocker()`、`retired_codes()`。只有**没有进站访客、没有花费、没有广告用过这个编号**的素材能删（传错了、还没用过的）；有数据的只能归档，数据不丢。删除只删素材记录，同时清掉它的落地页（`pc_cr_landings`）和 AI 分析记录（`pc_cr_audience_ai`）；图片 / 视频留在媒体库。删过的编号记在选项 `pc_cr_retired_codes`，新素材分号时跳过，免得 Meta 里还挂着的旧链接算到新素材上。
+  - `class-library-page.php`：新增 op=delete；`delete_button()`（能删 = 红色“删除”按钮，点了先确认；有数据 = 按钮置灰，悬停提示只能归档）；素材库卡片的“归档”改成按钮，和“删除”并排。
+  - `class-ads-panel.php`：广告设置页每条素材链接的“复制链接”旁边加“删除”按钮，同样先确认。
+- 部署前 14 份副本（web 7 + HQ 主机 7）这 3 个文件和 58f00f8 一致；部署后全部等于新版本。备份：web `/root/vialcove-backups/crdel-main-web-20261113T152349Z`、`crdel-tenants-web-20261113T152457Z`；HQ 主机 `crdel-main-admin-20261113T152351Z`、`crdel-tenants-admin-20261113T152459Z`。两台 reload php8.3-fpm。
+- 检查：主店在数据库事务里实测（最后回滚，数据库和选项与测试前完全一致，没有动店主的 C0001）：新建 C0002 → 删除成功、记录没了、落地页记录清掉、C0002 记入停用编号 → 再新建分到 C0003（不复用 C0002）；删不存在的编号提示“找不到这个素材”。广告设置页和素材库页（店主已登录的浏览器）都显示删除按钮、无 PHP 警告；6 家店后台服务器端渲染无警告。
+- 回滚：备份文件拷回，reload php8.3-fpm；选项 `pc_cr_retired_codes` 留着无害。
+
+### 2026-11-13 16:21–16:23 UTC（北京 2026-11-14 00:21–00:23）订单页改版：只填 FedEx 单号发货、去筛选、已发货订单、老顾客补建账户
+- 店主要求：订单页上面的筛选去掉；“待处理订单”只放未发货的；弃单不动；发货只输入 FedEx 单号，顾客用账号密码登录后自己查；以前没注册的顾客自动注册并发一封正式的英文邮件（账号 + 密码，登录查询，提醒改密码）。按默认方案：密码随机写在邮件里；老订单只改“客户”一栏；新增“已发货订单”；新订单沿用 11-11 上线的付款后自动建账户（发“设置密码”邮件）。
+- 改动（3 个文件）：
+  - `peptide-core/includes/admin/class-order-list.php`：列表隐藏状态标签页和筛选行（日期 / 发货记录 / 服务商 / 销售渠道 / 注册客户），搜索保留；没带状态打开订单列表 → 跳到待处理订单（处理中）；订单菜单加“已发货订单”（已完成）；货车图标改成弹出小框只填 FedEx 单号（8–34 位字母数字，自动去空格转大写）→ admin-post `pc_ship_order`：建 WooCommerce 原生发货记录（FedEx + 单号 + https://www.fedex.com/fedextrack/?trknbr=单号，含全部未退款商品）、写 `_pc_tracking_number`、订单改为已完成，发一封原生“已发货”邮件（标题改成 “Your {品牌} order #编号 has shipped”），这一次不发“订单已完成”邮件（免得两封）。批次检查开着时缺批次会提示、不发货。投手看不到发货按钮。
+  - `class-admin-menus.php`：已完成状态的订单列表高亮“已发货订单”子菜单。
+  - `peptide-core/includes/class-accounts.php`：`Accounts::invite_existing()`、`invite_mail()`——老的游客付款订单按邮箱建账户（随机 12 位密码，来源 auto_backfill），订单只改 customer_id（并记 `_pc_auto_account=invited` 和一条订单备注），用店铺发件箱发英文邮件；邮箱已有可信账户的直接归过去不发密码；测试单跳过。
+- 部署前 14 份副本这 3 个文件和 4088f53 一致；部署后全部等于新版本。备份：web `/root/vialcove-backups/ship-main-web-20261113T162112Z`、`ship2-main-web-…`、`ship-tenants-web-20261113T162240Z`；HQ 主机 `ship-main-admin-20261113T162113Z`、`ship2-main-admin-…`、`ship-tenants-admin-20261113T162242Z`。两台 reload php8.3-fpm。
+- 检查（主店）：数据库事务里实测发货（最后回滚、邮件全部拦截不外发，订单恢复原样）：错误单号被拒；正确单号 → 订单已完成、顾客侧看到 FedEx + 单号 + 追踪链接、发货状态 fulfilled、只有一封“has shipped”邮件；已发货的再发被拒。浏览器（店主已登录）：筛选和标签页不见了、搜索在，菜单“待处理订单 / 已发货订单 / 手动订单 / 弃单”，货车图标弹出 FedEx 单号框（没提交），已发货订单页高亮正确，无 PHP 警告。
+- 老顾客补建账户（只预演，未执行）：主店 #11843 ryley.tk1996@gmail.com、阳 s0007 #11892 shepower500@gmail.com、芒果 s0010 #11886 jestevesflores@gmail.com 三位要建账户并发信；测试单已跳过。三家店发件箱最近都是“已发出”。**店主确认邮件原文后已于 2026-11-13 16:44 UTC 执行**：三位都建好账户、订单归到账户，邮件“Your {品牌} account is ready”在三家店发件箱都是“已发出”（主店 #27、s0007 #52、s0010 #61）。再预演一次三家店都没有剩下要处理的订单。
+- 回滚：备份文件拷回，reload php8.3-fpm。
+
+### 2026-11-13 16:53–16:56 UTC（北京 2026-11-14 00:53–00:56）数据页 / 访客数据去重
+- 店主：访客数据里大量重复，都在分析加购商品。排查：“大家对什么感兴趣 + 全站分析师 AI”整块一字不差出现在实时访客、访客归档、转化统计三页；块内“加购商品”讲了 5 遍（被加进购物车最多、商品热度、商品漏斗横向对比表、AI 商品横向对比表、卡在结账）；后台约 8 处讲商品浏览 / 加购。按店主确认的方案整理：
+  - 访客数据只留“实时访客”“访客归档”两页，都只有访客列表 / 详情；那一大块去掉。访客详情的“客户分析 AI”不变。
+  - “转化统计”从菜单去掉，旧地址跳到“数据 → 运营数据”（漏斗、访客转化、结账步骤都在那；它自己的商品列表和商品详情数据重复）。注：运营数据没有“每天加购成功次数”这一列。
+  - “商品浏览统计”从菜单去掉（直接打开地址仍可用，可按商品看是哪些访客浏览的）；“重复浏览人数”“回访浏览人数”两列并进“数据 → 商品详情数据”（列设置里勾选，CSV 导出多 6 列：本期 / 对比期 / 变化）。数字和原页面逐个核对一致（主店近 30 天前 6 个商品 views / viewers / repeat / returning 全部相同）。
+  - 全站分析师 AI 只放“数据 → AI 分析”（pc-data-ai）一页：保留日 / 周 / 月、导出、KPI、转化漏斗、流量来源、版块点击、在哪离开和 AI 报告；不再画商品热度、加购排行、商品漏斗横向对比。给 AI 的调优里固定加一段版面要求：不输出商品明细表 / 商品横向对比，商品只点出 1–3 个最值得关注的。主店重新分析一次验证：新报告没有“商品横向对比”，只剩“大盘体检”指标表。
+- 改动：peptide-core `assets/tracking-insights.js`、`assets/workspace-shell.js`、`includes/admin/class-tracking-page.php`、`class-tracking-product-page.php`、`class-overview-page.php`（工作台“转化”链接改到运营数据）、`class-data-pages.php`（两列中文名）、`includes/class-hq-ai.php`（SITE_LAYOUT）、`includes/data/class-products.php`（repeat_view_users、returning_view_users，追加在 METRICS 末尾，不进默认列）；测试 `data-product-user-ratios.php`、`data-product-created.php` 跟着改指标数 33→35、CSV 列 110→116（通过）。`tracking-insights.cjs`、`data-product-exposure-pure.php` 改之前就跑不了（缺 jsdom 路径 / 缺类），和本次无关。
+- 部署前 14 份副本这 8 个文件和 1a4c189 一致；部署后全部等于新版本。备份：web `/root/vialcove-backups/dataclean-main-web-20261113T165344Z`、`dataclean2-main-web-…`、`dataclean-tenants-web-20261113T165614Z`；HQ 主机 `dataclean-main-admin-20261113T165345Z`、`dataclean2-main-admin-…`、`dataclean-tenants-admin-20261113T165617Z`。
+- 检查：主店浏览器——实时访客、访客归档只剩列表、无警告；访客数据菜单只有两项；转化统计旧地址跳到运营数据；AI 分析页正常；商品详情数据列设置里有两列新列；访客详情仍有客户分析 AI。6 家店服务器端：商品详情数据接口 200 且带新列、AI 分析页正常、无 PHP 警告。
+- 回滚：备份文件拷回，reload php8.3-fpm（没有改表、没有删数据）。
+
+### 2026-11-13 17:02–17:04 UTC（北京 2026-11-14 01:02–01:04）后台左侧菜单固定
+- 店主：右边内容往下滑时，左侧菜单要保持不动。原来菜单比屏幕长时，WordPress 会让菜单跟着页面一起滚走。
+- 改动：`peptide-core/assets/admin-workspace.css` 宽屏（≥1025px、没收起菜单）时 `#adminmenuwrap` 固定在工具条下面、菜单太长就自己单独滚动（盖过 WordPress pinMenu 的行内样式）；`includes/admin/class-workspace.php` 打开页面时把当前菜单项滚到看得见的位置。手机 / 平板的抽屉菜单、收起菜单（只剩图标）不变。
+- 部署前 14 份副本这 2 个文件和 6d191df 一致；部署后全部一致。备份：web `/root/vialcove-backups/sidebar-main-web-20261113T170252Z`、`sidebar-tenants-web-…`；HQ 主机 `sidebar-main-admin-20261113T170253Z`、`sidebar-tenants-admin-…`。
+- 检查（主店访客归档，1296px 宽）：页面滚到底（8304px），菜单位置始终在顶部 32px，position=fixed，当前菜单项“访客归档”看得见。
+- 回滚：备份文件拷回即可（纯样式 / 前端脚本）。
+- 追加（17:06 UTC）：店主要求上下滚动的滚动条一律隐藏（以后同类改动也照此）。`admin-workspace.css`：整页（html）和左侧菜单 `scrollbar-width:none`，所有元素 `::-webkit-scrollbar:vertical{width:0}`；照常能滚，只是不显示。左右滚动条不动（订单列表横向滚动条 11-11 要求一直看得见）。主店实测：整页滚动条宽 0、菜单滚动条宽 0，页面滚到 3000px 菜单仍固定在 32px、菜单仍可单独滚。14 份副本已更新，备份 `scrollbar-*-20261113T17…`。
+
+### 2026-11-13 17:25–17:37 UTC（北京 2026-11-14 01:25–01:37）后台提速
+- 店主：后台感觉“网络卡”。实测：静态文件 40ms（Cloudflare 节点，网络正常）；动态请求每个 250–300ms，主要在服务器。剖析（主店后台一个最简单的接口）：68 条数据库查询，其中 51 条是逐个读单个设置；测试单邮件开关每次请求都把 WooCommerce 全部邮件类建一遍（14ms）；总后台主机上的店铺后台每个请求经 SSH 通道新连一次数据库要 42–83ms（40ms 整倍数，SSH 非交互连接没开 TCP_NODELAY），web 主机本地连接 0.2ms；子店后台 PHP 进程闲 15 秒就退，下次点要重开进程、重连数据库。
+- 改动：
+  1. `peptide-core/includes/class-test-orders.php`：测试单邮件开关改挂在 `woocommerce_email_classes`（邮件系统真被用到时才挂），init 里只在邮件系统已先建好时补挂。已验证建邮件系统后过滤器在（优先级 5）。
+  2. `peptide-core/peptide-core.php`：WooCommerce 加载前用一条 `wp_prime_option_caches` 取回约 75 个每次都会单独读的设置（不存在的也记成“没有”）。
+  3. 数据库：6 家店各把约 24 个已存在、每次都读的小设置改成自动加载（自动加载数据 +2–4KB）。改了哪些记在 web 主机 `/root/vialcove-backups/autoload-20261114/pc-autoload-<库名>.txt`，回滚用 `wp_set_option_autoload_values( 名单 => false )`。
+  4. `peptide-core/includes/admin/class-workspace.php`：后台心跳 60 秒 → 120 秒；编辑文章 / 商品 / 订单（post.php、post-new.php、action=edit/new）不改。
+  5. 总后台主机 6 份店铺后台 + admin 开店模板加 `wp-content/db.php`（源文件 `tools/deployment/store-admin/db.php`）：数据库走 TCP 远程地址时用 mysqli 持久连接（主机名加 `p:`），每个 PHP 进程复用自己的连接；本机数据库不受影响。新文件清单 `/root/vialcove-backups/dbreuse-20261114/new-files.txt`，回滚 = 删掉这些 db.php 再 reload。web 主机 MySQL 连接数 3 → 10（上限 151，历史最高 37）。
+  6. PHP 进程池：总后台主机主店后台 vcs0001（dynamic）常驻 2–3 → 3–5；子店后台 vcs0006–0010（ondemand）闲置退出 15s → 600s；web 主机全部店铺池闲置退出 15/20s → 120s。原配置备份在两台的 `/root/vialcove-backups/fpm-pools-20261114/`。
+- 结果（主店）：每个请求的数据库查询 68 → 20；总后台主机上接口 ~240ms → ~190ms（6 家店后台都在 185–200ms）；浏览器实测实时数据接口 323ms → ~200ms、简单接口 300–350ms → ~245ms。web 主机首页 ~93ms，6 家店购物车同一商品 2 件仍 $215.35。
+- 剩下的大头是 WordPress + WooCommerce 本身（WooCommerce 注册接口 / 区块约 55ms）；SSH 通道复用连接时重置仍有一次 40ms 等待，彻底去掉要改成两台主机直连数据库（加密），涉及安全组和数据库配置，未做、需店主决定。
+- 部署前 14 份副本这 3 个 peptide-core 文件和 d1e6932 一致；部署后全部一致。备份 `speed-*-20261113T17…`。
+
+### 2026-11-13 17:42–17:50 UTC（北京 2026-11-14 01:42–01:50）数据页抓不到国家；实时访客行为加“一天”
+- 店主：有人反馈数据页国家不显示。原因：实时数据的国家（地图、在线国家、热门国家）来自 `Tracking\Country_Provider`，它只认常量 `PC_DATA_GEOIP_DATABASE` 或 WooCommerce 的 MaxMind 国家库。只有主店（web current 和 store-admin）的 wp-config 配了常量；5 家子店都没配，查询一律“unavailable”，国家从来不显示。
+- 改动：
+  - `peptide-core/includes/tracking/class-country-provider.php`：配置的库文件不存在 / 没配置时，退回用访客追踪同一份 DB-IP 城市库（`Ip_Network::databases()['city']`，即 uploads/peptide-geoip/dbip-city-lite.mmdb，每月自动更新，含国家）；用的是 DB-IP 的库就显示 “IP Geolocation by DB-IP” 出处（许可要求）。
+  - 总后台主机 5 家子店后台 `shared/wp-config.php` 加上和主店后台相同的 `PC_DATA_GEOIP_DATABASE=/etc/vialcove/geoip/dbip-country-lite-2026-11.mmdb`、`PC_DATA_GEOIP_ATTRIBUTION=db-ip`（那台主机上 peptide-geoip 的软链接指向的城市库不存在）。原文件备份 `/root/vialcove-backups/geo-wpconfig-20261114/`。
+  - 店主同时要求“实时访客行为”除了 10 / 20 / 30 分钟再加“一天”：`class-realtime.php` 新增 `FUNNEL_WINDOWS = 10/20/30/1440`（只用于漏斗；每分钟访客图仍是 10/20/30），参数校验和两处 summary 都按它；`data-realtime.js` 漏斗下拉多“一天（最近 24 小时）”，记住选择；`class-data-pages.php` 加文字。
+- 检查：12 份副本（web 6 + 后台 6）`Country_Provider::lookup('81.2.69.142')` 全部 known=GB、出处 DB-IP；子店后台登录页 200。主店浏览器选“一天”：realtime / filter-options / dimensions 三个请求都 200，漏斗显示最近 24 小时 12 访问 → 5 看商品 → 5 加购 → 2 发起结账 …；60 分钟等非法值仍返回 pc_invalid_param；测试 realtime 相关 cjs / pure 全过，country 两套测试全过。
+- 注意：国家是在访客打开页面时记下的，子店之前的访问没有国家，不会补；从现在起的新访问会有。
+- 部署前 14 份副本这 4 个文件和 243dc7e 一致；部署后全部一致。备份 `geo-*`、`geo2-*-20261113T17…`。
+
+### 2026-11-13 17:50–17:53 UTC（北京 2026-11-14 01:50–01:53）排查同类问题（子店和主店配置不一致、功能静默失效）
+- 店主要求检查还有没有类似“子店国家不显示”的问题。逐项核对 6 家店（web + 后台）：
+  - 配置常量：除已修好的国家库外，全部一致。
+  - 定时任务：6 家店都有每分钟的系统定时器，没有逾期任务；后台任务 2 天内只有芒果 11-11 一次 WooCommerce 批处理失败（偶发，未再出现）。积分券过期任务只在发券时才建，子店没有是正常的。备份每月 1 号一次是店主 11-08 的决定。
+  - 数据库表：对照代码里用到的全部表。**5 家子店都缺 `wp_pc_app_stats`**（“应用统计”/离开意图弹窗的每日数据），但“已建表”标记 `peptide_core_app_stats_db=1` 在（从模板复制带过来的），代码看到标记就不建表，弹窗照常弹，但弹出 / 关闭 / 领取 / 用券下单这些数据从来没记上。已在 5 家子店建表；`peptide-core/includes/class-exit-intent.php` 的 `record()` 改成写入失败且是“表不存在”时自动建表再写一次（以后从模板开新店也不会再这样）。在 s0007 用事务验证：记录一次 0→1，回滚后 0。主店不缺表；`pc_pay_hub_*` 只属于总后台，总后台三张都在。
+  - 数据接口：主店和阳逐个调用全部数据接口，除上面的缺表外都是 200（带必填参数的几个 400 是测试没传参数，页面上正常）。
+  - PHP 错误日志（近一天）：子店 s0006 / s0010 各 2 条 “ABSPATH” 是有人直接访问 wp-settings.php（扫描器），无害；s0007 / s0010 后台各 1 次“重复列”是今天两台同时升级访问表 v7 撞在一起，列已加好；s0008 后台 5 次写 WooCommerce 邮件日志被拒，发生在我在服务器上跑命令的时间，店铺自己的进程写日志正常。
+  - 设置差异（未改，告诉店主）：运费预览主店 11-10 关了，5 家子店还是默认开；像素主店和光辉没填（已知）。
+- 部署前 14 份副本 class-exit-intent.php 和 e2555fd 一致；部署后全部一致。备份 `exitstats-*-20261113T1752…`。
+
+### 2026-11-13 18:00–18:05 UTC（北京 2026-11-14 02:00–02:05）实时数据其他面板也加“一天”；核对各店数据页是否一样
+- 店主：每分钟访客数量、最近浏览商品、最近加购商品等也要能看一天；另外怀疑其他人的数据页和自己的不一样。
+- 核对：在总后台主机上用各店自己的管理员身份打开实时数据页（只读）：6 家店“数据”菜单完全一样（13 项同顺序），顶部菜单一样，实时数据页结构和脚本一样（页面大小只差店名 / 订单角标约 200 字节）；每家子店只有一个管理员账号 a123456，角色都是 administrator。看起来不一样是数据不一样：子店今天之前记不到国家、应用统计缺表（都已修），访客少的店图表空。
+- 改动：
+  - `class-realtime.php`：每分钟访客图 minutes 也可选 1440；选“一天”时按小时出 24 个点（返回 `unit: hour`），其余按分钟。
+  - `class-realtime-dimensions.php`：9 个小面板（最近浏览 / 加购 / 卖出、地图、在线国家、热门国家、来源、专辑、页面）窗口允许 1440。
+  - `data-realtime.js`：每分钟图下拉多“一天（最近 24 小时）”，选了标题变“每小时访客数量”、横轴“N 小时前”；`data-realtime-dimensions.js`：面板下拉多“一天”，单位行显示“一天（最近 24 小时）”；`class-data-pages.php` 加文字。
+- 检查：主店浏览器——每小时图 24 个点、“21 小时前 … 现在”；最近浏览 / 最近加购选一天显示最近 24 小时（Retatrutide 浏览 3、加购 5 等）；请求全部 200。realtime 相关测试全过。
+- 部署前 14 份副本这 5 个文件和 f5a0b2d 一致；部署后全部一致。备份 `dayall-*-20261113T18…`。
+
+### 2026-11-13 18:07–18:12 UTC（北京 2026-11-14 02:07–02:12）流量斗篷：已购用户信任 IP
+- 店主：斗篷开着时，下过单的真实客户也要能进来查订单；在斗篷设置里加“已购用户信任 IP”，只给真实付款的客户。
+- 斗篷现状（cross-border-suite 的 cloak 模块，在各店 store-plugins 目录，不在仓库）：已登录用户本来就不拦，但客户要先打开登录页；规则是只放美国、拦电脑（PC）、拦云服务器 ASN、拦部分国家，所以手机下单后用电脑、或公司网络 / VPN 的客户连登录页都进不去。开着斗篷的：s0006–s0010（芒果 s0010 现在也开了）；主店关。
+- 实现（不改斗篷插件，新文件 `peptide-core/includes/class-cloak-trust.php`，在 `class-plugin.php` 注册）：
+  - 名单选项 `pc_cloak_buyer_ips`（自动加载）：订单变成处理中 / 已完成（排除测试单）时记下下单 IP；退款 / 取消 / 失败时移出（同 IP 还有别的已付款订单就保留）。上线后第一次打开后台补录已有已付款订单（各店已补：主店 2、阳 1、芒果 2，其余店还没有付款订单）。
+  - 信任设备：付款成功页、已付款客户登录时发签名 Cookie `pc_buyer_trust`（一年，HMAC，httponly）；带着它从新 IP 来也放行，并把新 IP 补进名单。伪造的 Cookie 无效。
+  - 斗篷读 `acloak_options` 时（前台和它的 AJAX 复查）把名单临时并进它的 ip_whitelist，只在内存里；后台设置页读原值，手填白名单不受影响。
+  - 斗篷设置页“IP 白名单”后面加“已购用户信任 IP（N）”卡片：IP、订单（链到订单详情）、来源（下单时 / 付款设备 / 客户登录）、加入时间、“移出”按钮。
+- 检查：6 家店直接调用斗篷判断——付款客户 IP + 电脑：放行；陌生 IP + 电脑：拦；Googlebot：拦。主店事务内测信任 Cookie：真 Cookie 新 IP 放行并入名单，假 Cookie 拦且不入名单（回滚，名单仍 2 条）。设置页卡片显示正常、无警告、手填白名单为空未被污染。
+- 事故记录：第一次部署主店时脚本只带了改过的文件，漏了新文件 class-cloak-trust.php，主店约 1 分钟里 Plugin 注册了不存在的类；立即补传，两台错误日志该时段 0 条相关报错（首页走缓存、后台没请求）。部署脚本已改成把新文件也带上。
+- 部署后 14 份副本一致。备份 `cloaktrust-*`、`cloaktrust-newfile-*`、`cloaktrust2-*-20261113T18…`。回滚：删 class-cloak-trust.php、恢复 class-plugin.php，reload；选项 `pc_cloak_buyer_ips` 留着无害。
+- 追加（18:20 UTC）：店主要求“已购用户信任 IP”卡片默认最小化：改成只显示一行标题 + “展开”按钮，点开看说明和名单（带 #pc-cloak-trust 打开时自动展开，移出后回来仍是展开）。店主问 IP 是否真实：逐个查了 5 个信任 IP 的网络——AT&T 家庭宽带、T-Mobile 手机网络 ×2、Liberty 波多黎各宽带、Cox 家庭宽带，都是普通用户网络，不是机房 / VPN；4 个 IP 定位的州和收货地址的州一致（#11843 AT&T 定位加州、收货德州，AT&T 定位常不准）。14 份副本已更新，备份 `ctmin-*`。
+
+### 2026-11-13 18:24–18:28 UTC（北京 2026-11-14 02:24–02:28）实时数据加“最近 24 小时”按钮
+- 店主找不到当天数据。实时数据页的“今天”按北京时间零点切，北京凌晨时几乎是空的（客户在美国，美国当天的数据大部分落在“昨天”）。店主选择加“最近 24 小时”按钮，不改时区。
+- 改动：
+  - `class-realtime.php`：`params()` 新增 `cards`（10 / 1440，默认 10）；`summary()` / `filtered_summary()` 顶部三张卡片按这个窗口统计（访客、访问量、订单、销售额、客单数、客单价）。`class-data-pages.php` 两个接口把它传进去，加文字。
+  - `data-realtime.js`：“实时数据”和“今天”之间加“最近 24 小时”；点了之后卡片标题变“最近 24 小时访问 / 销售 / 购买力”，访客行为、访客图（按小时）、下面 9 个面板都用 24 小时，窗口下拉藏起来；选择记在 localStorage；点“实时数据 / 今天 / 昨天”切回去，各下拉原来的选择不变。`data-realtime-dimensions.js`：加 `setOverride()`，所有面板临时用 1440。
+- 检查（主店浏览器）：最近 24 小时 = 访客 12、访问量 133、订单 1、销售额 $175.37（同时“今日”= 访客 1、访问量 10、0 单）；三个请求都带 1440 且 200；切回“实时数据”卡片回到 10 分钟、下拉重新显示；realtime 相关测试全过。
+- 部署前 14 份副本这 4 个文件和 d6a3956 一致；部署后全部一致。备份 `last24-*-20261113T18…`。

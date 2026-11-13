@@ -22,6 +22,9 @@ final class Hq_Ai {
 	public const RESOLVED = 'pc_ai_resolved'; // 店主确认已解决的问题（店主 2026-11-10：例如“支付没问题”），AI 不再当原因或建议。
 
 	/** 这家店对某种分析的人设调优（只放店主自己写的阅读习惯和要求）。 */
+	/** 全站分析的版面要求（店主 2026-11-13：商品明细只在商品详情数据里看，报告不重复列表）。 */
+	public const SITE_LAYOUT = '【版面要求（店铺后台已改版，必须遵守）】每个商品的浏览、加购、下单、付款明细，店主在“数据 → 商品详情数据”里看。报告里不要输出商品明细表格，不要写“商品横向对比”表，也不要逐个列出商品的浏览、加购数字。商品方面只用一两句话点出最值得关注的 1–3 个商品和原因。其余部分（大盘体检、状态评级、顾客在哪里卡住、店铺优化建议、行动清单、下期重点）照常写。';
+
 	public static function tune( string $use ): string {
 		return trim( (string) get_option( self::TUNE . $use, '' ) );
 	}
@@ -367,7 +370,12 @@ final class Hq_Ai {
 			return $facts;
 		}
 		$use = 'site' === $scope ? 'business' : 'customer';
-		$r   = self::call( '/peptide-hq/v1/ai/analyse', array( 'use' => $use, 'facts' => $facts, 'experience' => self::experience( $use ), 'tuning' => self::tune( $use ) ), self::$timeout );
+		$tuning = self::tune( $use );
+		if ( 'business' === $use ) {
+			// 店主 2026-11-13：后台数据页去重。商品明细统一在“数据 → 商品详情数据”，AI 报告里不再重复列商品表。
+			$tuning = trim( $tuning . "\n\n" . self::SITE_LAYOUT );
+		}
+		$r   = self::call( '/peptide-hq/v1/ai/analyse', array( 'use' => $use, 'facts' => $facts, 'experience' => self::experience( $use ), 'tuning' => $tuning ), self::$timeout );
 		if ( is_wp_error( $r ) ) {
 			return $r;
 		}

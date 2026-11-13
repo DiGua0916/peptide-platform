@@ -63,7 +63,7 @@ function vc_storefront_entry_destination(): string {
         $search = get_search_query( false );
         if ( is_string( $search ) && '' !== trim( $search ) ) { $args['vc_catalog_q'] = mb_substr( $search, 0, 200 ); }
     } else { return ''; }
-    foreach ( array( 'pc_lang', 'pc_lang_auto', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'msclkid' ) as $key ) {
+    foreach ( array( 'pc_lang', 'pc_lang_auto', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'msclkid', 'cr', 'placement', 'ad_name' ) as $key ) { // cr / placement / ad_name：素材投放链接的参数（2026-11-13），跳转时不能丢，否则访问归不到素材。
         $value = $_GET[ $key ] ?? null;
         if ( ! is_string( $value ) || strlen( $value ) > 2048 ) { continue; }
         if ( 'pc_lang' === $key && ! in_array( $value, array( 'en', 'es' ), true ) ) { continue; }

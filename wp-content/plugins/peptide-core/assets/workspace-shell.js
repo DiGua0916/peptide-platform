@@ -6,7 +6,7 @@
   if (typeof document !== 'undefined') api.start();
 }(function () {
   'use strict';
-  const pages = new Set(['pc-overview','pc-data','pc-data-operations','pc-data-products','pc-data-pages','pc-data-page-conversion','pc-data-apps','pc-data-landing','pc-data-sources','pc-data-dimensions','pc-data-conversion','pc-data-emails','pc-data-experiments','pc-visitors','pc-visitors-stats','pc-store-design','pc-promotions','pc-shipping','pc-media','pc-apps','wc-orders']);
+  const pages = new Set(['pc-overview','pc-data','pc-data-operations','pc-data-products','pc-data-pages','pc-data-page-conversion','pc-data-apps','pc-data-landing','pc-data-sources','pc-data-dimensions','pc-data-conversion','pc-data-emails','pc-data-experiments','pc-visitors','pc-data-ai','pc-store-design','pc-promotions','pc-shipping','pc-media','pc-apps','wc-orders']);
   function canonical(value, base) {
     try {
       const url = new URL(value, base), origin = new URL(base);

@@ -68,6 +68,7 @@ final class Plugin {
 		Postal_Assist::register_hooks();
 		US_Territories::register_hooks();
 		Exit_Intent::register_hooks();
+		Cloak_Trust::register_hooks(); // 流量斗篷“已购用户信任 IP”（2026-11-14）
 		Modules\Product_Broadcast::register_hooks();
 		Api\Product_Broadcast_Controller::register_hooks();
 		Activity\Mount::register_hooks();
