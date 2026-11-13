@@ -372,7 +372,8 @@ final class Pixels {
 		if ( $s['gpc'] && '1' === (string) ( $_SERVER['HTTP_SEC_GPC'] ?? '' ) ) {
 			return false;
 		}
-		if ( ! $s['staff'] && ( Access::is_staff( get_current_user_id() ) || current_user_can( 'manage_woocommerce' ) ) ) {
+		// 员工角色（投手等）在前台没有 manage_woocommerce，也按员工算（F5 的请求，2026-11-12）。
+		if ( ! $s['staff'] && ( Access::is_staff( get_current_user_id() ) || current_user_can( 'manage_woocommerce' ) || ( class_exists( Staff::class ) && Staff::is_staff( get_current_user_id() ) ) ) ) {
 			return false;
 		}
 		return true;

@@ -8,6 +8,11 @@
  * - 假订单、选项、钩子来自 m6-stubs.php。
  */
 namespace PeptideCore {
+	/** 员工角色（投手等）：$ids 里的用户编号算员工。 */
+	final class Staff {
+		public static array $ids = array();
+		public static function is_staff( $user ): bool { return in_array( (int) ( is_object( $user ) ? $user->ID : $user ), self::$ids, true ); }
+	}
 	final class Access {
 		public static bool $staff = false;
 		public static function is_staff( $user_id ): bool { return self::$staff; }
