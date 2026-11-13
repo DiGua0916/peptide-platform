@@ -1352,6 +1352,7 @@ wp option get peptide_core_app_stats_db
 3. 已购回访用服务端过滤器 `pc_marketing_popups_suppressed`（你的 `Buyer_Status::mute` 已经这样做）。页头的 `window.pcMarketingQuiet` 现在只在静默的请求里输出，你现有的写法 `if ( window.pcMarketingQuiet && window.pcMarketingQuiet.refresh )` 不用改；不要在不静默的页面上无条件调用它。**2026-11-14 起，静默还要这家店打开 `pc_marketing_quiet_mode` 才生效**（见第一部分第 1 点）。没打开时，已购老顾客照样看得到首单券条、离开挽回 / 转盘、活动倒计时，和现在线上一样；你那边的过滤器、`window.pcBuyer` 写法都不用改。打不打开由平台所有者定，由 F1 按店执行。
 4. **投手看营销活动的分工**（和你 M9 一节“投手看营销活动”那一条对应）：只读页面和所有保存入口的拒绝归 F2，菜单、页面标题和投手的地址名单归 F5。2026-11-13 F2 把两个分支在本机合起来（只在临时目录里合，没有动任何分支；你的分支取到 `dcda12f`），用 `wp peptide buyer on` 开出来的真投手账号在浏览器里走了一遍：`pc-promotions` / `pc-coupons` / `pc-shipping-discounts` 是 200 的只读页；新建 / 编辑地址、向页面 POST、9 个 admin-post 提交、WooCommerce 的优惠码页面、赠品 / 捆绑页面、应用中心和离开挽回设置，共 22 个地址全部 403；换成管理员看同一个地址是原来可以管理的列表。合并后的代码上你的 `m9-buyer-campaigns-pure`（87）、`m9-buyer-scope-pure`（249）、`m9-buyer-orders-pure`（33）和 F2 的 `m4-campaigns-readonly-pure`（当时 72 项，之后加到 77 项）、`m4-campaign-text-pure`（44 项）全过。代码文件合并没有冲突（只有 `docs/CONTRACT.md` 和 `tests/data-observations-suites.json` 两个都在末尾追加的文件要手工取并集）。
 5. 你的投手页面上方的开店向导提示条（“继续设置”）会出现在只读页标题下面，这是 WordPress 把提示挪到标题后面的结果，F2 的卡片里没有任何链接。
+6. **投手首页的“当前在跑的活动”卡片（2026-11-14 F2 复查发现，请你或日常会话定）**：主线里的 `admin/class-buyer-home.php` 只要发现 `Pricing\Campaigns::running()` 存在就显示这张卡片。所以 M4 单独上线时，线上投手的首页就会多出它，而营销只读页要等 M9 新版才出现，两者不同步，也打破了“M4 上线一点不变”。本机实测：同一份数据，线上代码没有卡片，M4 有（7 个活动）。建议在 `render_campaigns()` 开头加 `if ( ! current_user_can( 'pc_view_campaigns' ) ) { return; }`，让卡片和只读页一起等这项权限。F2 不改你的文件，`Campaigns::running()` 的签名和返回也不变。如果所有者同意 M4 上线时就显示这张卡片，这条作废。
 
 ### 三、历史
 
