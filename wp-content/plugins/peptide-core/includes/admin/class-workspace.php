@@ -142,6 +142,8 @@ JS;
 		wp_enqueue_script( 'pc-workspace-touch', $url . 'workspace-touch.js', array( 'pc-admin-workspace' ), $ver( 'workspace-touch.js' ), true );
 		$home = \PeptideCore\Staff::is_staff( get_current_user_id() ) ? \PeptideCore\Staff::home_url( get_current_user_id() ) : Overview_Page::url();
 		wp_add_inline_script( 'pc-admin-workspace', 'window.pcWorkspaceHome=' . wp_json_encode( $home ) . ';', 'before' );
+		// 店主 2026-11-14：左侧菜单固定后自己滚动；打开页面时把当前菜单项滚到看得见的位置。
+		wp_add_inline_script( 'pc-admin-workspace', '(function(){var w=document.getElementById("adminmenuwrap");if(!w||window.innerWidth<1025||document.body.classList.contains("folded"))return;var c=w.querySelector("li.current>a,li.wp-has-current-submenu>a.menu-top");if(!c)return;var r=c.getBoundingClientRect(),wr=w.getBoundingClientRect();if(r.bottom>wr.bottom-24||r.top<wr.top){w.scrollTop+=r.top-wr.top-Math.round(wr.height/3);}})();' );
 		$screen = get_current_screen();
 		if ( $screen && str_contains( $screen->id, 'pc-visitors' ) ) {
 			wp_enqueue_style( 'pc-tracking-workspace', $url . 'tracking-workspace.css', array( 'pc-admin-workspace' ), $ver( 'tracking-workspace.css' ) );

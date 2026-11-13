@@ -655,3 +655,10 @@
 - 部署前 14 份副本这 8 个文件和 1a4c189 一致；部署后全部等于新版本。备份：web `/root/vialcove-backups/dataclean-main-web-20261113T165344Z`、`dataclean2-main-web-…`、`dataclean-tenants-web-20261113T165614Z`；HQ 主机 `dataclean-main-admin-20261113T165345Z`、`dataclean2-main-admin-…`、`dataclean-tenants-admin-20261113T165617Z`。
 - 检查：主店浏览器——实时访客、访客归档只剩列表、无警告；访客数据菜单只有两项；转化统计旧地址跳到运营数据；AI 分析页正常；商品详情数据列设置里有两列新列；访客详情仍有客户分析 AI。6 家店服务器端：商品详情数据接口 200 且带新列、AI 分析页正常、无 PHP 警告。
 - 回滚：备份文件拷回，reload php8.3-fpm（没有改表、没有删数据）。
+
+### 2026-11-13 17:02–17:04 UTC（北京 2026-11-14 01:02–01:04）后台左侧菜单固定
+- 店主：右边内容往下滑时，左侧菜单要保持不动。原来菜单比屏幕长时，WordPress 会让菜单跟着页面一起滚走。
+- 改动：`peptide-core/assets/admin-workspace.css` 宽屏（≥1025px、没收起菜单）时 `#adminmenuwrap` 固定在工具条下面、菜单太长就自己单独滚动（盖过 WordPress pinMenu 的行内样式）；`includes/admin/class-workspace.php` 打开页面时把当前菜单项滚到看得见的位置。手机 / 平板的抽屉菜单、收起菜单（只剩图标）不变。
+- 部署前 14 份副本这 2 个文件和 6d191df 一致；部署后全部一致。备份：web `/root/vialcove-backups/sidebar-main-web-20261113T170252Z`、`sidebar-tenants-web-…`；HQ 主机 `sidebar-main-admin-20261113T170253Z`、`sidebar-tenants-admin-…`。
+- 检查（主店访客归档，1296px 宽）：页面滚到底（8304px），菜单位置始终在顶部 32px，position=fixed，当前菜单项“访客归档”看得见。
+- 回滚：备份文件拷回即可（纯样式 / 前端脚本）。

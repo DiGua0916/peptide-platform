@@ -429,3 +429,11 @@ body.pc-admin-workspace #wpbody-content :is(.description,.howto){color:#525252}
 }
 /* 窄屏兜底：隐藏的提示框等看不见的元素不把整页撑出横向滚动（clip 不影响 sticky）。 */
 @media (max-width:782px){ html,body.pc-admin-workspace{overflow-x:clip} }
+
+/* 店主 2026-11-14：右边内容往下滑时，左侧菜单固定不动；菜单比屏幕长时菜单自己单独滚动。
+   WordPress 自带的 pinMenu 会给 #adminmenuwrap 写行内 position/top，这里用 !important 盖过。收起菜单（只剩图标）时不改，免得悬停弹出的子菜单被裁掉。 */
+@media (min-width:1025px){
+ body.pc-admin-workspace:not(.folded):not(.pc-design-editor-page) #adminmenuwrap{position:fixed!important;top:var(--wp-admin--admin-bar--height,32px)!important;bottom:0!important;left:0;margin:0!important;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#cfcfcf transparent;z-index:9990}
+ body.pc-admin-workspace:not(.folded):not(.pc-design-editor-page) #adminmenuwrap::-webkit-scrollbar{width:6px}
+ body.pc-admin-workspace:not(.folded):not(.pc-design-editor-page) #adminmenuwrap::-webkit-scrollbar-thumb{background:#cfcfcf;border-radius:3px}
+}
