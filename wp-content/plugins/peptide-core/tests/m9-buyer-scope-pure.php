@@ -85,15 +85,18 @@ namespace {
 	check( 'empty trash denied', $is( $page( 'wc-orders', array( 'writes' => '1' ) ), 'deny' ) );
 	check( 'empty trash with a filter submit denied', $is( $page( 'wc-orders', array( 'action' => '-1', 'action2' => '-1', 'writes' => '1' ) ), 'deny' ) );
 	check( 'claiming an edit lock denied', $is( $page( 'wc-orders', array( 'action' => 'edit', 'writes' => '1' ) ), 'deny' ) );
-	// 主线 2026-11-11：打开订单转到订单详情页（pc-order）；原生订单页带 pc_native 才打开，只用来退款、发货、改地址。
-	check( 'order detail page is readable', $is( $page( 'pc-order' ), 'allow', 'orders' ) );
+	// 订单详情页（pc-order）：订单列表里的链接和原生编辑页都转到这里。之前它不在投手的名单里，点开任何订单都是 403。
+	check( 'order detail page opens read-only with the orders caps', $is( $page( 'pc-order' ), 'allow', 'orders' ) && $is( $page( 'pc-order', array( 'method' => 'HEAD' ) ), 'allow', 'orders' ) );
 	check( 'order detail page rejects POST', $is( $page( 'pc-order', array( 'method' => 'POST' ) ), 'deny' ) );
-	check( 'order detail highlights the orders menu', 'orders' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-order' ) );
+	check( 'order detail writes (void / seller note / tags) stay denied', $is( $post( 'pc_order_detail' ), 'deny' ) && $is( array_merge( $post( 'pc_order_detail' ), array( 'method' => 'GET' ) ), 'deny' ) );
+	check( 'pages the detail page links to for writing stay denied', $is( $page( 'pc-manual-order' ), 'deny' ) && $is( $page( 'pc-mail', array( 'action' => 'compose' ) ), 'deny' ) );
+	check( 'order detail page keeps the orders menu highlighted', 'orders' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-order' ) );
+	check( 'a look-alike slug is not the order detail page', $is( $page( 'pc-orderx' ), 'deny' ) );
+	check( 'locked: order detail goes to the wizard without caps', $is( $page( 'pc-order' ), 'redirect', '', 'pc-onboarding', true ) );
+	// 以下是模块分支比热修复多出来的：带 pc_native 的原生订单页（退款、发货、改地址）对投手也拒绝；写邮件的提交。
+	check( 'manual email submit from an order denied', $is( $post( 'pc_mail_send' ), 'deny' ) );
 	check( 'native order page (refund / ship / edit address) denied', $is( $page( 'wc-orders', array( 'action' => 'edit', 'native' => '1' ) ), 'deny' ) );
 	check( 'order list ignores a stray pc_native', $is( $page( 'wc-orders', array( 'native' => '1' ) ), 'allow', 'orders' ) );
-	check( 'detail page writes (void / seller note / tags) denied', $is( $post( 'pc_order_detail' ), 'deny' ) );
-	check( 'manual email from an order denied', $is( $page( 'pc-mail', array( 'action' => 'compose' ) ), 'deny' ) && $is( $post( 'pc_mail_send' ), 'deny' ) );
-	check( 'copying an order into a manual order denied', $is( $page( 'pc-manual-order' ), 'deny' ) );
 	// 导出订单（只读下载）。
 	check( 'order export allowed', $is( $post( 'pc_buyer_orders_export' ), 'allow' ) );
 	check( 'order export waits for the password change', $is( $post( 'pc_buyer_orders_export' ), 'deny', '', '', true ) );

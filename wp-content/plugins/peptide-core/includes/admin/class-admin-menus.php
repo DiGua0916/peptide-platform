@@ -122,11 +122,6 @@ final class Admin_Menus {
 		return \PeptideCore\Staff_Buyer::current() && 'wc-orders' === self::current_page();
 	}
 
-	/** 当前是投手在看主线的订单详情页（Order_Detail_Page，2026-11-11）。 */
-	private static function buyer_on_order_detail(): bool {
-		return \PeptideCore\Staff_Buyer::current() && \PeptideCore\Staff_Buyer::PAGE_ORDER === self::current_page();
-	}
-
 	/** 订单列表：去掉勾选框和操作列，后面加来源广告、运单号、退款状态。 */
 	public static function buyer_order_columns( $columns ) {
 		if ( ! is_array( $columns ) || ! \PeptideCore\Staff_Buyer::current() ) {
@@ -294,12 +289,16 @@ final class Admin_Menus {
 			. '});</script>' . "\n";
 	}
 
+	/** 当前是投手在看订单详情页（Admin\Order_Detail_Page，admin.php?page=pc-order）。 */
+	private static function buyer_on_order_detail(): bool {
+		return \PeptideCore\Staff_Buyer::current() && \PeptideCore\Staff_Buyer::PAGE_ORDER === self::current_page();
+	}
+
 	/**
-	 * 主线的订单详情页（admin.php?page=pc-order）对投手只读。
-	 *
-	 * 页面是日常会话的，这里不改它的输出，只把写操作的入口藏起来：订单复制、退款、作废、编辑、发货、
-	 * 手动发送邮件、卖家备注的保存、标签的增删；“结账成功页 / 订单追踪页”也不显示（投手用自己的浏览器打开顾客的
-	 * 成功页，可能再触发一次购买事件）。真正的限制在服务端：这些入口指向的 admin-post 动作和页面都不在投手的名单里。
+	 * 订单详情页对投手只读。不改页面本身的输出，只把写操作的入口藏起来：订单复制、退款、作废、编辑、发货、
+	 * 手动发送邮件、卖家备注的保存、标签的增删；“结账成功页 / 订单追踪页”的链接也不显示。
+	 * 真正的限制在服务端：这些入口指向的 admin-post 动作和页面都不在投手的名单里（Staff_Buyer::classify()），
+	 * 点了也是 403；这里只是不让投手看到用不了的按钮。
 	 */
 	public static function buyer_order_detail_styles(): void {
 		if ( ! self::buyer_on_order_detail() ) {

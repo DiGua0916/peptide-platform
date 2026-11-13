@@ -44,7 +44,7 @@ final class Staff_Buyer {
 	public const PAGE_ADS    = 'pc-buyer-ads';
 	public const PAGE_STORE  = 'pc-store-info';
 	public const PAGE_WIZARD = 'pc-onboarding';
-	/** 主线的订单详情页（Admin\Order_Detail_Page，2026-11-11）：投手只读。 */
+	/** 订单详情页（Admin\Order_Detail_Page，2026-11-11 起订单列表和原生编辑页都转到这里）：投手只读。 */
 	public const PAGE_ORDER  = 'pc-order';
 	/** 导出订单（Admin\Buyer_Order_Export，ST-03）。只读，走 admin-post.php 下载。 */
 	public const ACTION_EXPORT = 'pc_buyer_orders_export';
@@ -448,7 +448,8 @@ final class Staff_Buyer {
 			return $redirect( self::PAGE_HOME ); // 后台里“回到首页”的链接都指向数据大盘，投手的首页是另一个页面。
 		}
 		if ( self::PAGE_ORDER === $page ) {
-			// 主线的订单详情页：只读打开。页面上的作废、卖家备注、标签走 admin-post.php（pc_order_detail），不在名单里。
+			// 订单详情页：只读打开（走到这里的只有 GET / HEAD）。页面上的作废、卖家备注、标签提交到
+			// admin-post.php（pc_order_detail），不在投手的名单里，仍然 403。
 			return $allow( 'orders' );
 		}
 		$none = array( '', '-1' );
