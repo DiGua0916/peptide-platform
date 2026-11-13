@@ -59,6 +59,17 @@ KEEP_OPTIONS = {'siteurl', 'home', 'blogname', 'admin_email', 'new_admin_email',
                 'woocommerce_stock_email_recipient', 'woocommerce_pos_store_email',
                 'peptide_core_recovery_optout', 'recovery_keys', 'recovery_mode_email_last_sent'}
 KEEP_OPTION_PATTERN = r'(_db|_db_version|_schema|_schema_version|_version)$'
+# 表结构版本号（不含普通的 *_version）。来源店有、目标店原来没有的这类选项必须删掉：
+# 对应的表不在复制范围里，留着版本号会让模块以为表已经建好，之后一直写不进数据
+# （2026-11-12 生产核对：5 家子店的 pc_app_stats 就是这样丢了全部弹窗统计）。
+TABLE_VERSION_PATTERN = r'(_db|_db_version|_schema|_schema_version)$'
+
+
+def orphan_table_version_sql():
+    """删掉“来源店带过来、目标店原来没有”的表结构版本号。必须在 pc_clone_keep 还在时执行。"""
+    return ("DELETE o FROM wp_options o LEFT JOIN pc_clone_keep k ON k.option_name=o.option_name "
+            "WHERE k.option_name IS NULL AND o.option_name REGEXP '" + TABLE_VERSION_PATTERN + "'")
+
 # Owner 2026-11-08: the third-party "cross-border-suite" plugin is never part of a copy;
 # whatever the target has for it stays as it is.
 IGNORED_PLUGIN_OPTIONS = ['cbs_%', 'cross_border%', 'cross-border%', 'payment_proxy%', 'cloaker%', 'advanced_cloaker%', 'woocommerce_payment_proxy%']
@@ -225,7 +236,8 @@ def clone(source, target, parts_arg='all', dry_run=False):
     if 'products' not in parts:
         cleanup += ["TRUNCATE wp_wc_product_meta_lookup", "TRUNCATE wp_wc_product_attributes_lookup", "TRUNCATE wp_wc_category_lookup"]
     # 5) Put the target's identity (and unchosen setting groups) back.
-    cleanup += ["DELETE o FROM wp_options o JOIN pc_clone_keep k ON k.option_name=o.option_name",
+    cleanup += [orphan_table_version_sql(),
+                "DELETE o FROM wp_options o JOIN pc_clone_keep k ON k.option_name=o.option_name",
                 "INSERT INTO wp_options (option_name, option_value, autoload) SELECT option_name, option_value, autoload FROM pc_clone_keep",
                 "DROP TABLE pc_clone_keep",
                 "INSERT INTO wp_options (option_name, option_value, autoload) VALUES ('woocommerce_coming_soon','no','yes') "
