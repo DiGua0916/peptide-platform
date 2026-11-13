@@ -55,7 +55,14 @@ final class Product_Activity {
 		add_filter( 'pc_product_activity_available', array( self::class, 'available' ) );
 	}
 
+	/**
+	 * 按店开关关着时不注册这条路由：和线上一样，请求得到 WordPress 自己的 404（rest_no_route），接口目录里也没有它。
+	 * 开关在请求中途打开（用例用过滤器）时，rest() 里还会再判断一次。
+	 */
 	public static function register_route(): void {
+		if ( ! self::enabled() ) {
+			return;
+		}
 		register_rest_route(
 			'peptide/v1',
 			'/product-activity',

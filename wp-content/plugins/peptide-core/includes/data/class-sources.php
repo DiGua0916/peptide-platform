@@ -22,7 +22,9 @@ final class Sources {
 		foreach ( array( 'sort' => array( 'uv', self::METRICS ), 'order' => array( 'desc', array( 'asc', 'desc' ) ) ) as $key => $rule ) { $out[ $key ] = Params::word( $params, $key, $rule[0], $rule[1] ); if ( null === $out[ $key ] ) { $errors[ $key ] = 'invalid_format'; } }
 		foreach ( array( 'page' => array( 1, 999999999 ), 'per_page' => array( 20, 100 ), 'split_medium' => array( 0, 1 ) ) as $key => $rule ) { $out[ $key ] = Params::whole( $params, $key, $rule[0], 'split_medium' === $key ? 0 : 1, $rule[1] ); if ( null === $out[ $key ] ) { $errors[ $key ] = 'invalid_format'; } }
 		$out['group_by'] = array_key_exists( 'group_by', $params ) ? $params['group_by'] : 'utm';
-		if ( ! is_string( $out['group_by'] ) || ! in_array( $out['group_by'], array_merge( array( 'utm', 'channel' ), array_keys( self::AD_GROUPS ) ), true ) ) { $errors['group_by'] = 'invalid_format'; }
+		// 三种广告分组只在广告参数的开关开着时认（Ad_Params::writing()，默认关）；关着时和线上一样只认 utm / channel，别的值是 400。
+		$groups = array( 'utm', 'channel' ); if ( class_exists( \PeptideCore\Tracking\Ad_Params::class ) && \PeptideCore\Tracking\Ad_Params::writing() ) { $groups = array_merge( $groups, array_keys( self::AD_GROUPS ) ); }
+		if ( ! is_string( $out['group_by'] ) || ! in_array( $out['group_by'], $groups, true ) ) { $errors['group_by'] = 'invalid_format'; }
 		if ( ! isset( $errors['group_by'] ) && 'utm' !== $out['group_by'] && 1 === $out['split_medium'] ) { $errors['split_medium'] = 'incompatible_group'; }
 		$out['q'] = isset( $params['q'] ) && is_scalar( $params['q'] ) ? mb_substr( trim( (string) $params['q'] ), 0, 100 ) : '';
 		return $errors ? Errors::invalid( $errors ) : $out;
