@@ -34,7 +34,7 @@ final class Visit_Facts {
 	 * @param array<string,mixed> $network  Ip_Network::lookup() 的结果（可以是 Ip_Network::EMPTY）
 	 * @return array<string,mixed>
 	 */
-	public static function columns( array $metadata, string $user_agent, string $ip, array $network ): array {
+	public static function columns( array $metadata, string $user_agent, string $ip, array $network, array $hints = array() ): array {
 		$query  = is_array( $metadata['landing_query'] ?? null ) ? $metadata['landing_query'] : array();
 		$params = array();
 		foreach ( Contract::PARAMS as $key ) {
@@ -58,6 +58,12 @@ final class Visit_Facts {
 		$out['timezone'] = is_string( $metadata['timezone'] ?? null ) ? $metadata['timezone'] : '';
 		$out['language'] = is_string( $metadata['language'] ?? null ) ? $metadata['language'] : '';
 		$out['in_app']   = Contract::in_app( $user_agent );
+		// 机型（2026-11-13）：系统、版本、型号；原始标识也存一份，以后型号表更新了可以重新翻译。
+		$device              = User_Agent::parse( $user_agent, (string) ( $hints['model'] ?? '' ), (string) ( $hints['platform_version'] ?? '' ) );
+		$out['ua']           = substr( $user_agent, 0, 400 );
+		$out['os']           = $device['os'];
+		$out['os_version']   = substr( $device['os_version'], 0, 20 );
+		$out['device_model'] = function_exists( 'mb_substr' ) ? mb_substr( $device['model'], 0, 80 ) : substr( $device['model'], 0, 80 );
 		return $out;
 	}
 
@@ -89,7 +95,7 @@ final class Visit_Facts {
 		if ( ! array_key_exists( $ip, self::$network ) ) {
 			self::$network[ $ip ] = '' === $ip ? Ip_Network::EMPTY : Ip_Network::lookup( $ip );
 		}
-		return self::columns( $metadata, self::user_agent(), $ip, self::$network[ $ip ] );
+		return self::columns( $metadata, self::user_agent(), $ip, self::$network[ $ip ], self::client_hints() );
 	}
 
 	/**
@@ -112,6 +118,12 @@ final class Visit_Facts {
 			}
 		}
 		return false !== filter_var( $ip, FILTER_VALIDATE_IP ) ? $ip : '';
+	}
+
+	/** Chrome 的客户端提示（前台页面发了 Accept-CH 之后，同站请求会带上）：型号、系统版本。 */
+	public static function client_hints(): array {
+		$get = static fn( string $k ): string => isset( $_SERVER[ $k ] ) ? substr( sanitize_text_field( wp_unslash( (string) $_SERVER[ $k ] ) ), 0, 80 ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		return array( 'model' => $get( 'HTTP_SEC_CH_UA_MODEL' ), 'platform_version' => $get( 'HTTP_SEC_CH_UA_PLATFORM_VERSION' ) );
 	}
 
 	public static function user_agent(): string {

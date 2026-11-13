@@ -50,6 +50,7 @@ final class Tracker {
 			return;
 		}
 		add_action( 'template_redirect', array( self::class, 'ensure_cookie' ), 1 );
+		add_action( 'send_headers', array( self::class, 'client_hints_header' ) );
 		add_filter( 'vialcove_visitor_observer_config', array( self::class, 'observer_config' ), 20 );
 		Server_Events::register_hooks();
 		Carts::register_hooks();
@@ -158,6 +159,13 @@ final class Tracker {
 	}
 
 	/** 前台页面加载时发访客 cookie。后台、预览、员工账号不发。 */
+	/** 请 Chrome 在之后的同站请求里带上型号和系统版本（新版 Chrome 的标识里把安卓型号藏成 “K”）。 */
+	public static function client_hints_header(): void {
+		if ( ! is_admin() && ! headers_sent() ) {
+			header( 'Accept-CH: Sec-CH-UA-Model, Sec-CH-UA-Platform-Version', false );
+		}
+	}
+
 	public static function ensure_cookie(): void {
 		if ( is_admin() || is_preview() || is_customize_preview() || isset( $_GET['pc_frame'] ) || isset( $_GET['pc_preview_token'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			return;

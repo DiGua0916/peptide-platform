@@ -20,6 +20,7 @@ namespace {
 	require $inc . '/tracking/class-client-environment.php';
 	require $inc . '/tracking/class-country-provider.php';
 	require $inc . '/tracking/class-ip-network.php';
+	require $inc . '/tracking/class-user-agent.php';
 	require $inc . '/tracking/class-attribution.php';
 	require $inc . '/tracking/class-visit-facts.php';
 	require $inc . '/tracking/class-tracker.php';
@@ -117,6 +118,8 @@ namespace {
 	$cr_meta['landing_query']['ad_name'] = 'Summer test ad';
 	$check( 'creative link: cr gives the code even when the ad name has none', 'C0031' === Visit_Facts::columns( $cr_meta, $fb_ua, '203.0.113.9', $network )['creative_code'] );
 	$cr_meta['landing_query']['ad_name'] = 'C0012_hook-lab';
+	$check( 'device columns: os, version, model and raw ua', 'iOS' === $cols['os'] && '' !== $cols['os_version'] && '' !== $cols['device_model'] && $fb_ua === $cols['ua'] );
+	$check( 'client hint model used when Chrome hides it', str_contains( Visit_Facts::columns( $meta, 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36', '', array(), array( 'model' => '"SM-S918B"' ) )['device_model'], 'Galaxy S23 Ultra' ) );
 	$check( 'creative link: cr wins over the ad name', 'C0031' === Visit_Facts::columns( $cr_meta, $fb_ua, '203.0.113.9', $network )['creative_code'] );
 	$check( 'ad params copied', '120200000000003' === $cols['utm_content'] && '120200000000002' === $cols['utm_term'] && '120200000000001' === $cols['utm_campaign'] && 'Facebook_Mobile_Feed' === $cols['placement'] && $template['ad_name'] === $cols['ad_name'] );
 	$check( 'network and browser columns', '203.0.113.9' === $cols['ip'] && 'Austin' === $cols['geo_city'] && 7922 === $cols['asn'] && 'residential' === $cols['ip_type'] && 'America/Chicago' === $cols['timezone'] && 'en-US' === $cols['language'] );

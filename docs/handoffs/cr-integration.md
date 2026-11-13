@@ -105,3 +105,10 @@
 - 用户反馈：一个素材一条链接，看板就该先看每个素材。`Board::DIMS` 里“按单个素材”放第一个并作为默认维度（原来默认“按素材属性”）；每行编号后面带上素材属性（钩子 · 形式 · 卖点 · 语言）。
 - 模拟测试（SQLite 沙盒，像素发送在沙盒里整体关闭、出站请求拦截，0 条发出）：150 个访客实时浏览、23 笔真实订单（货到付款，仅沙盒）、导入 Meta 格式花费表；看板按单个素材的访客、订单、花费与模拟器记录逐项一致。
 
+## 访客机型、IP 显示（2026-11-13）
+
+- 访问表 v6（`Tracking\Schema::DB_VERSION` = 6）加 `ua`、`os`、`os_version`、`device_model`；`Tracking\User_Agent::parse()` 识别系统、版本、机型：FB / IG 内置浏览器里的 iPhone 型号代码翻成名字（iPhone15,3 → iPhone 14 Pro Max），安卓型号（三星常见型号翻成市场名），新版 Chrome 藏起来的安卓型号用客户端提示 `Sec-CH-UA-Model`（前台页面发 `Accept-CH`）；Safari 的 iPhone 只能知道 “iPhone + iOS 版本”。
+- 访客档案：新增“设备和网络（最近一次访问）”：机型、系统、浏览器 / 内置浏览器、IP、地区、运营商、时区、语言、来源素材和广告；每次访问一行下面也显示机型、IP / 地区 / 运营商、来源。访客归档列表显示机型和 IP，搜索框可以按 IP（整段或开头）搜。`Query::net_view()` 输出这些字段。
+- 部署要点：站点在 Cloudflare 后面时要配 `PEPTIDE_CORE_TRUSTED_PROXIES`，否则记下的是 Cloudflare 的 IP；地区和运营商需要放 GeoLite2 / DB-IP 库（见 Ip_Network）。
+- 测试：`tests/tracking-user-agent-pure.php`（13 项）；`cr-capture-pure` 加机型列检查。沙盒：生成小型 GeoLite2 库 + 信任本机代理，模拟访客带各自 IP 和不同机型。
+
