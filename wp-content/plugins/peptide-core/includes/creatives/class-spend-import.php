@@ -435,16 +435,23 @@ final class Spend_Import {
 	 * 这些日期的全店花费合计（没有数据的日期 = 0）。
 	 *
 	 * @param string[] $days
-	 * @return array<string,int>
+	 * @return array<string,int>|null 查询出错或表没就绪时为 null（2026-11-13：以前会当成全是 0 推给总后台）
 	 */
-	public static function totals( array $days ): array {
+	public static function totals( array $days ): ?array {
 		global $wpdb;
 		$out = array_fill_keys( $days, 0 );
 		if ( ! $days ) {
 			return $out;
 		}
+		if ( ! Schema::installed() ) {
+			return null;
+		}
 		$in   = implode( ',', array_fill( 0, count( $days ), '%s' ) );
-		$rows = (array) $wpdb->get_results( $wpdb->prepare( 'SELECT day, SUM(spend_cents) AS cents FROM ' . Schema::table( 'daily_spend' ) . " WHERE day IN ({$in}) GROUP BY day", $days ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		$wpdb->last_error = '';
+		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT day, SUM(spend_cents) AS cents FROM ' . Schema::table( 'daily_spend' ) . " WHERE day IN ({$in}) GROUP BY day", $days ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		if ( ! is_array( $rows ) || '' !== (string) $wpdb->last_error ) {
+			return null;
+		}
 		foreach ( $rows as $r ) {
 			$out[ substr( (string) $r['day'], 0, 10 ) ] = (int) $r['cents'];
 		}
@@ -475,9 +482,17 @@ final class Spend_Import {
 			}
 			return array( 'status' => 'not_connected', 'message' => '这家店还没有接入总后台，每日花费合计先存在本店，接入后会自动补推。' );
 		}
-		$done  = array();
-		$error = '';
-		foreach ( self::hq_payloads( self::totals( $pending ) ) as $body ) {
+		$done   = array();
+		$error  = '';
+		$totals = self::totals( $pending );
+		if ( null === $totals ) {
+			// 读不出本店花费：不推（推出去会是一串 0），留着下次重试。
+			if ( ! wp_next_scheduled( self::RETRY ) ) {
+				wp_schedule_single_event( time() + HOUR_IN_SECONDS, self::RETRY );
+			}
+			return array( 'status' => 'failed', 'message' => '本店的花费表暂时读不出来，没有推送，一小时后自动重试。' );
+		}
+		foreach ( self::hq_payloads( $totals ) as $body ) {
 			$res = Creatives::hq_request( 'POST', self::ROUTE, $body );
 			if ( is_wp_error( $res ) ) {
 				$error = $res->get_error_message();

@@ -282,8 +282,9 @@ final class Tracker {
 			)
 		);
 		$id = (int) $wpdb->insert_id;
-		// first_visit_id 只在为 0 时写（访客的第一次访问，之后不改）。
-		$wpdb->query( $wpdb->prepare( 'UPDATE ' . Schema::table( 'visitors' ) . ' SET visits = visits + 1, first_visit_id = CASE WHEN first_visit_id = 0 THEN %d ELSE first_visit_id END WHERE id = %d', $id, $visitor_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
+		// first_visit_id 只在为 0 时写，写的是这位访客最早的那次访问（2026-11-13 修：以前写的是“这一次”，
+		// 上线前就来过的老访客第一次回来时会被当成首次访问，把自然流量的老客算成付费拉新）。
+		$wpdb->query( $wpdb->prepare( 'UPDATE ' . Schema::table( 'visitors' ) . " SET visits = visits + 1, first_visit_id = CASE WHEN first_visit_id = 0 THEN COALESCE( ( SELECT MIN(x.id) FROM {$visits} x WHERE x.visitor_id = %d ), %d ) ELSE first_visit_id END WHERE id = %d", $visitor_id, $id, $visitor_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		return $id;
 	}
 

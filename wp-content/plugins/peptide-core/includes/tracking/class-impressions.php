@@ -48,7 +48,7 @@ final class Impressions {
 	}
 
 	public static function path( $path ): ?string {
-		return is_string( $path ) && strlen( $path ) <= 500 && str_starts_with( $path, '/' ) && preg_match( '//u', $path ) === 1 && ! preg_match( '/[\x00-\x1f\x7f<>?#]/', $path ) && parse_url( $path, PHP_URL_PATH ) === $path ? $path : null;
+		return is_string( $path ) && strlen( $path ) <= 500 && str_starts_with( $path, '/' ) && preg_match( '//u', $path ) === 1 && ! preg_match( '/[\x00-\x1f\x7f<>?#]/', $path ) && ! str_starts_with( $path, '//' ) ? $path : null; // 不用 parse_url：macOS 的 C 语言环境下它会把部分 UTF-8 字节换成下划线。
 	}
 
 	/** Shared historical report/export eligibility. JOIN aliases prove both identities, not catalog state. */

@@ -47,6 +47,21 @@ final class Hq_Ai {
 		return 64 === strlen( $s['key'] ) && '' !== $s['uuid'];
 	}
 
+	/**
+	 * 素材人群分析（2026-11-13）：把一条素材的人群画像交给总后台 AI（用途 creative；总后台没有专门人设时借用全站分析师人设）。
+	 * 只发汇总数字，不发任何访客的 IP、姓名、邮箱、电话。
+	 *
+	 * @return array{text:string,persona:string,model:string}|\WP_Error
+	 */
+	public static function ask_creative( array $facts ) {
+		$r = self::call( '/peptide-hq/v1/ai/analyse', array( 'use' => 'creative', 'facts' => $facts, 'experience' => array(), 'tuning' => self::tune( 'creative' ) ), self::$timeout );
+		if ( is_wp_error( $r ) ) {
+			return $r;
+		}
+		delete_transient( 'pc_ai_status' );
+		return array( 'text' => (string) ( $r['text'] ?? '' ), 'persona' => (string) ( $r['persona'] ?? '' ), 'model' => (string) ( $r['model'] ?? '' ) );
+	}
+
 	/** 签名后 POST 到总后台。 */
 	private static function call( string $route, array $payload, int $timeout ) {
 		if ( ! self::available() ) {
@@ -93,6 +108,7 @@ final class Hq_Ai {
 				'enabled'    => ! empty( $r['enabled'] ),
 				'customer'   => is_array( $r['customer'] ?? null ) ? (string) $r['customer']['name'] : '',
 				'business'   => is_array( $r['business'] ?? null ) ? (string) $r['business']['name'] : '',
+				'creative'   => is_array( $r['creative'] ?? null ) ? (string) $r['creative']['name'] : '', // 空 = 总后台借用全站分析师人设
 				'used_today' => (int) ( $r['used_today'] ?? 0 ),
 				'daily_cap'  => 0,
 				'auto_customer' => ! empty( $r['auto_customer'] ),

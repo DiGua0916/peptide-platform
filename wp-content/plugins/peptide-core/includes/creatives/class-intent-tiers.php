@@ -8,7 +8,7 @@
  * - dwell_ms         int|null   停留时长（最后活动 - 开始）
  * - pageviews        int|null   打开页面数
  * - interactions     int|null   主动操作次数（看商品、点模块、选规格、加购、结账……；不含心跳、可见性、离开）
- * - scrolled         bool|null  是否滚动过（目前前端不上报滚动，null = 看不出）
+ * - scrolled         bool|null  是否滚动过（2026-11-13 起前端上报 scroll 事件，按 25/50/75/100% 档位；没有 = 看不出）
  * - timezone         string     浏览器时区（'' = 不知道）
  * - language         string     浏览器语言，如 en-US（'' = 不知道）
  * - ip_country       string     IP 所在国家两位代码（'' = 不知道）

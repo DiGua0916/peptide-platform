@@ -31,7 +31,8 @@
       },
       "hq_wp": {"host": "admin", "path": "/srv/vialcove/hq/current/public", "user": "<总后台的运行账号>"},
       "reload": {"web": "systemctl reload php8.3-fpm", "admin": "systemctl reload php8.3-fpm"},
-      "php_logs": {"web": ["/var/log/php8.3-fpm.log"], "admin": ["/var/log/php8.3-fpm.log"]},
+      "_php_logs说明": "要填每个 FPM 池自己的 error_log（各店的致命错误写在那里，不在 /var/log/php8.3-fpm.log 里）；用 grep error_log /etc/php/*/fpm/pool.d/*.conf 查。",
+      "php_logs": {"web": ["/var/log/php8.3-fpm.log", "<主店池的 error_log>", "<每家子店池的 error_log>"], "admin": ["/var/log/php8.3-fpm.log", "<总后台池的 error_log>", "<每家店后台池的 error_log>"]},
       "gateway": "pc_panapay",
       "db_snapshot": {"web": ["<每家店的库名>"], "admin": ["<总后台的库名>"]},
       "production": {

@@ -32,13 +32,37 @@ final class Schema {
 		return $wpdb->prefix . 'pc_ad_' . $name;
 	}
 
+	/** 这次请求里查过的“表都在”结果（null = 还没查）。 */
+	private static ?bool $tables_ok = null;
+
+	/**
+	 * 版本号可用、而且表真的都在（2026-11-13 修：从模板复制出来的新店带着版本选项却没有表，
+	 * 以前只看选项，永远不建表，上传素材、看板、写广告表都会悄悄失败）。每次请求只查一次库。
+	 */
 	public static function installed(): bool {
-		return in_array( (string) get_option( self::OPTION ), self::USABLE, true );
+		if ( ! in_array( (string) get_option( self::OPTION ), self::USABLE, true ) ) {
+			return false;
+		}
+		if ( null === self::$tables_ok ) {
+			self::$tables_ok = self::tables_exist();
+		}
+		return self::$tables_ok;
 	}
 
-	/** 后台打开时检查一次；没装好或版本旧就装（可重复执行，dbDelta 只补缺的列）。 */
+	private static function tables_exist(): bool {
+		global $wpdb;
+		foreach ( self::TABLES as $name ) {
+			$t = self::table( $name );
+			if ( $t !== $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $t ) ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/** 后台打开时检查一次；版本旧、或者选项在但表不在，就装（可重复执行，dbDelta 只补缺的列）。 */
 	public static function maybe_install(): void {
-		if ( self::VERSION !== get_option( self::OPTION ) ) {
+		if ( self::VERSION !== get_option( self::OPTION ) || ! self::installed() ) {
 			self::install();
 		}
 	}
@@ -56,6 +80,7 @@ final class Schema {
 		}
 		self::seed_vocab();
 		update_option( self::OPTION, self::VERSION, false );
+		self::$tables_ok = true;
 		return true;
 	}
 

@@ -185,7 +185,7 @@ final class Ai_Page {
 
 		// 3. 店铺（同一个表单一起保存）
 		echo '<h3 style="margin-top:24px">各店铺</h3><p class="pcai-muted">新接入的店铺默认开启，用每种用途的第一个人设。人设和店铺模板一样，第一次只下发一份给店铺；之后每家店用自己的那份，店主在店铺后台写“人设调优”把它调成自己喜欢的样子，只影响他自己。总后台改模板不影响已下发的店，要更新就点下面的“统一下发”。</p>';
-		echo '<div style="overflow-x:auto"><table class="pcai-table pcai-sites"><thead><tr><th>店铺</th><th>开启</th><th>客户分析模板</th><th>本店客户分析</th><th>全站分析师模板</th><th>本店全站分析</th><th>今天已用</th></tr></thead><tbody>';
+		echo '<div style="overflow-x:auto"><table class="pcai-table pcai-sites"><thead><tr><th>店铺</th><th>开启</th><th>客户分析模板</th><th>本店客户分析</th><th>全站分析师模板</th><th>本店全站分析</th><th>素材人群分析模板</th><th>本店素材人群分析</th><th>今天已用</th></tr></thead><tbody>';
 		$copies  = Ai::site_personas();
 		$dialogs = '';
 		foreach ( Sites::all() as $site ) {
@@ -275,10 +275,11 @@ final class Ai_Page {
 		echo '</div><p class="pcai-actions"><button type="submit" class="button button-primary">添加</button><button type="button" class="button" data-providers-close>关闭</button></p></form></dialog>';
 		echo '</section>';
 
-		// 2. 人设：分两块，客户分析（专门分析单个客户）和全站分析师（站在全盘视角分析全站），各自导入、各自管理。
+		// 2. 人设：分三块，客户分析（单个客户）、全站分析师（全站）、素材人群分析（一条素材带来的一群人），各自导入、各自管理。
 		$intro = array(
 			'customer' => array( '客户分析人设', '专门分析“人”：在访客详情页，根据一位客户的浏览、加购、结账行为，判断他在看什么、有多大可能下单、该怎么跟进。', '例如：客户分析师' ),
 			'business' => array( '全站分析师人设', '站在全盘视角分析全站：在实时访客页，根据所选时间段全站的流量、转化、商品和版块数据，找出问题和机会、给出经营建议。', '例如：全站分析师' ),
+			'creative' => array( '素材人群分析人设', '分析一条广告素材带来的整群人：在素材看板的每张素材卡片上，根据这条素材所有付费访客的人群分布、各人群的意向和转化，说明来的是什么人、谁在买、卡在哪、该怎么投。还没导入时借用全站分析师人设（系统另外附上固定的分析步骤）。', '例如：人群与素材分析师' ),
 		);
 		foreach ( $intro as $use => [ $title, $desc, $placeholder ] ) {
 			$mine = array_values( array_filter( $personas, static fn( $p ) => $p['use'] === $use ) );
