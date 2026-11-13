@@ -18,7 +18,8 @@
 	var T = cfg.strings;
 	var PATH = '/peptide/v1/data/realtime';
 	var WINDOWS = [ 10, 20, 30 ];
-	var FUNNEL_WINDOWS = [ 10, 20, 30, 1440 ]; // 实时访客行为多一个“一天”（店主 2026-11-14）
+	var FUNNEL_WINDOWS = [ 10, 20, 30, 1440 ]; // 每分钟访客图也用这组（一天 = 按小时）
+	var hourly = false; // 实时访客行为多一个“一天”（店主 2026-11-14）
 	var KEY_FUNNEL = 'pcDataRealtimeFunnel';
 	var KEY_MINUTES = 'pcDataRealtimeMinutes';
 	var REFRESH_MS = 60000;
@@ -26,7 +27,7 @@
 	var LAYERS = [ 'visitors', 'viewed', 'carted', 'checkout', 'address', 'shipping', 'payment', 'paid' ];
 	var LAYER_TEXT = { visitors: 'funnelVisitors', viewed: 'viewed', carted: 'carted', checkout: 'checkout', address: 'address', shipping: 'shipping', payment: 'payment', paid: 'paidVisitors' };
 
-	var state = { funnel: readWindow( KEY_FUNNEL, FUNNEL_WINDOWS ), minutes: readWindow( KEY_MINUTES ) };
+	var state = { funnel: readWindow( KEY_FUNNEL, FUNNEL_WINDOWS ), minutes: readWindow( KEY_MINUTES, FUNNEL_WINDOWS ) };
 	var wanted = { mode: 'live', params: {} };
 	var urlAction = '';
 	var displayedHistory = false;
@@ -225,7 +226,7 @@
 			var px = x( i ), py = y( v );
 			pts.push( [ px, py ] );
 			var ago = Number( p.ago ) || 0;
-			var text = displayedHistory ? p.label : ( 0 === ago ? T.now : fill( T.minutesAgo, { '%d': ago } ) );
+			var text = displayedHistory ? p.label : ( 0 === ago ? T.now : fill( hourly ? ( T.hoursAgo || '%d 小时前' ) : T.minutesAgo, { '%d': ago } ) );
 			var show = displayedHistory ? 0 === i % every : 0 === ago % every;
 			dots += '<circle class="pc-rt-line__dot' + ( v ? '' : ' is-zero' ) + '" cx="' + px + '" cy="' + py + '" r="3"><title>' + esc( text + ': ' + ctx.number( v ) ) + '</title></circle>';
 			if ( show ) {
@@ -347,7 +348,7 @@
 				'<section class="pc-rt-section">' +
 					'<div class="pc-rt-section__head">' +
 						'<h2 class="pc-rt-section__title"><span class="pc-rt-chart-title">' + esc( T.perMinute ) + '</span></h2>' +
-						selectHtml( 'pc-rt-minutes-select', T.perMinute, state.minutes ) +
+						selectHtml( 'pc-rt-minutes-select', T.perMinute, state.minutes, FUNNEL_WINDOWS ) +
 					'</div>' +
 					'<div class="pc-rt-chart-wrap" tabindex="0" role="region" aria-label="' + esc( T.historyChart ) + '"></div>' +
 				'</section>' +
@@ -486,7 +487,7 @@
 	// 选了新的窗口：只认 10 / 20 / 30，记下来，马上重新取数。
 	function choose( which, value ) {
 		var n = parseInt( value, 10 );
-		if ( ( 'funnel' === which ? FUNNEL_WINDOWS : WINDOWS ).indexOf( n ) < 0 ) {
+		if ( FUNNEL_WINDOWS.indexOf( n ) < 0 ) {
 			return;
 		}
 		state[ which ] = n;
@@ -509,7 +510,8 @@
 		els.funnelSelect.hidden = displayedHistory;
 		els.minutesSelect.hidden = displayedHistory;
 		els[ 'funnel-title' ].textContent = displayedHistory ? T.historyFunnel : T.behaviour;
-		els[ 'chart-title' ].textContent = displayedHistory ? T.historyChart : T.perMinute;
+		hourly = ! displayedHistory && data.minutes && 'hour' === data.minutes.unit;
+		els[ 'chart-title' ].textContent = displayedHistory ? T.historyChart : ( hourly ? ( T.perHour || '每小时访客数量' ) : T.perMinute );
 		els[ 'refresh-note' ].textContent = displayedHistory ? T.manualRefresh : T.autoRefresh;
 		if ( displayedHistory ) { els.from.value = range.dates.from; els.to.value = range.dates.to; }
 		els.updated.textContent = fill( T.updated, { '%s': data.updated || '' } );

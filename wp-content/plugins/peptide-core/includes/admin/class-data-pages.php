@@ -892,6 +892,7 @@ final class Data_Pages {
 			'count' => __( 'Count', 'peptide-core' ),
 			'share' => __( 'Share of page views', 'peptide-core' ),
 			'window' => __( '%d minutes', 'peptide-core' ),
+			'windowDay' => '一天（最近 24 小时）',
 			'history' => __( 'Selected calendar range', 'peptide-core' ),
 			'captured_missing' => __( 'Captured source key absent', 'peptide-core' ),
 			'captured_empty' => __( 'Captured source observed empty', 'peptide-core' ),
@@ -960,6 +961,8 @@ final class Data_Pages {
 			'windowNote'     => __( 'Last 10 minutes', 'peptide-core' ),
 			'behaviour'      => __( 'Real-time visitor behaviour', 'peptide-core' ),
 			'perMinute'      => __( 'Visitors per minute', 'peptide-core' ),
+			'perHour'        => '每小时访客数量',
+			'hoursAgo'       => '%d 小时前',
 			/* translators: %d: number of minutes */
 			'minutesOption'  => __( '%d minutes', 'peptide-core' ),
 			'dayOption'      => '一天（最近 24 小时）',

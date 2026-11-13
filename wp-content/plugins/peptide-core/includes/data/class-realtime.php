@@ -74,7 +74,7 @@ final class Realtime {
 	 */
 	public static function summary( int $now_ms, int $funnel, int $minutes ): array {
 		$funnel  = in_array( $funnel, self::FUNNEL_WINDOWS, true ) ? $funnel : self::WINDOWS[0];
-		$minutes = in_array( $minutes, self::WINDOWS, true ) ? $minutes : self::WINDOWS[0];
+		$minutes = in_array( $minutes, self::FUNNEL_WINDOWS, true ) ? $minutes : self::WINDOWS[0];
 		$sec     = intdiv( $now_ms, 1000 );
 		$day     = Overview::window( 'today', $sec );
 		$day_ms  = array( $day[0] * 1000, $day[1] * 1000 );
@@ -124,6 +124,7 @@ final class Realtime {
 			'minutes'  => array(
 				'window' => $minutes,
 				'points' => self::per_minute( $now_ms, $minutes ),
+				'unit'   => 1440 === $minutes ? 'hour' : 'minute',
 			),
 			'lists'    => array(
 				'viewed' => self::top_products( 'product_view', $day_ms[0], $day_ms[1] ),
@@ -143,7 +144,7 @@ final class Realtime {
 		if ( $filter->is_all() ) { return self::summary( $now_ms, $funnel, $minutes ); }
 		$filter = $filter->at( $now_ms + 1 ); $filter->require_ready();
 		$funnel  = in_array( $funnel, self::FUNNEL_WINDOWS, true ) ? $funnel : self::WINDOWS[0];
-		$minutes = in_array( $minutes, self::WINDOWS, true ) ? $minutes : self::WINDOWS[0];
+		$minutes = in_array( $minutes, self::FUNNEL_WINDOWS, true ) ? $minutes : self::WINDOWS[0];
 		$sec     = intdiv( $now_ms, 1000 );
 		$day     = Overview::window( 'today', $sec );
 		$day_ms  = array( $day[0] * 1000, $day[1] * 1000 );
@@ -196,6 +197,7 @@ final class Realtime {
 			'minutes'  => array(
 				'window' => $minutes,
 				'points' => self::per_minute( $now_ms, $minutes, $filter ),
+				'unit'   => 1440 === $minutes ? 'hour' : 'minute',
 			),
 			'lists'    => array(
 				'viewed' => self::top_products( 'product_view', $day_ms[0], $day_ms[1], $filter ),
@@ -276,7 +278,7 @@ final class Realtime {
 		if ( null === $funnel ) {
 			$errors['funnel'] = 'invalid_format';
 		}
-		$minutes = Params::word( $params, 'minutes', $allowed[0], $allowed );
+		$minutes = Params::word( $params, 'minutes', $allowed[0], array_map( 'strval', self::FUNNEL_WINDOWS ) ); // 2026-11-14：每分钟访客图也可选“一天”（按小时）
 		if ( null === $minutes ) {
 			$errors['minutes'] = 'invalid_format';
 		}
@@ -533,7 +535,7 @@ final class Realtime {
 			$types  = self::activity_types();
 			$marks  = implode( ', ', array_fill( 0, count( $types ), '%s' ) );
 			// 差值先转成有符号数再相减（occurred_ms 是无符号的，负数时 MySQL 会报“超出范围”）。
-			$sql  = "SELECT FLOOR( ( %d - CAST( occurred_ms AS SIGNED ) ) / 60000 ) AS ago, COUNT( DISTINCT visitor_id ) AS visitors FROM {$events} WHERE type IN ( {$marks} ) AND ( type <> 'heartbeat' OR ( data LIKE '%%\"activity\":\"active\"%%' AND data LIKE '%%\"visibility\":\"visible\"%%' ) ) AND occurred_ms > %d AND occurred_ms <= %d{$predicate} GROUP BY ago";
+			$sql  = "SELECT FLOOR( ( %d - CAST( occurred_ms AS SIGNED ) ) / " . ( 1440 === $minutes ? 3600000 : 60000 ) . " ) AS ago, COUNT( DISTINCT visitor_id ) AS visitors FROM {$events} WHERE type IN ( {$marks} ) AND ( type <> 'heartbeat' OR ( data LIKE '%%\"activity\":\"active\"%%' AND data LIKE '%%\"visibility\":\"visible\"%%' ) ) AND occurred_ms > %d AND occurred_ms <= %d{$predicate} GROUP BY ago";
 			$args = array_merge( array( $now_ms ), $types, array( $now_ms - $minutes * 60000, $now_ms ) );
 			$rows = $wpdb->get_results( $wpdb->prepare( $sql, $args ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 			foreach ( (array) $rows as $row ) {
@@ -542,7 +544,8 @@ final class Realtime {
 		}
 
 		$points = array();
-		for ( $ago = $minutes - 1; $ago >= 0; $ago-- ) {
+		// “一天”按小时出 24 个点（ago = 几小时前），其余按分钟。
+		for ( $ago = ( 1440 === $minutes ? 24 : $minutes ) - 1; $ago >= 0; $ago-- ) {
 			$points[] = array(
 				'ago'      => $ago,
 				'visitors' => $by_ago[ $ago ] ?? 0,
