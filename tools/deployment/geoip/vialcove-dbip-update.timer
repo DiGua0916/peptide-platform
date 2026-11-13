@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily check for a new monthly DB-IP City Lite database (VialCove)
+
+[Timer]
+OnCalendar=*-*-* 04:17:00 UTC
+RandomizedDelaySec=1800
+Persistent=true
+
+[Install]
+WantedBy=timers.target
