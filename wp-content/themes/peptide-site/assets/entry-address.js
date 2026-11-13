@@ -61,6 +61,20 @@
 	}
 
 	/*
+	 * Permalink path of the product whose dialog is open: the first candidate link that is a
+	 * same-origin address other than the storefront home. '' when none is usable.
+	 */
+	function productPath( hrefs, origin, homePath ) {
+		for ( var i = 0; i < ( hrefs || [] ).length; i++ ) {
+			var path = samePath( hrefs[ i ], origin );
+			if ( path && path !== String( homePath || '/' ) ) {
+				return path;
+			}
+		}
+		return '';
+	}
+
+	/*
 	 * The address the bar should show.
 	 * input.base: { path, search, hash } of the page as it was loaded.
 	 * input.homePath: the storefront home path (entry redirects land there).
@@ -105,13 +119,32 @@
 			var dialog = doc.querySelector( 'dialog.vc-showcase-quick' );
 			var open = !! ( dialog && dialog.open );
 			var product = open ? dialog.querySelector( '.vc-showcase-quick-product' ) : null;
-			var link = open ? dialog.querySelector( 'a.vc-showcase-quick__details[href]' ) : null;
+			var id = product ? Number( product.getAttribute( 'data-vc-product-id' ) || 0 ) : 0;
+			var home = config.home || '/';
+			// Where the product's permalink can be read from, most specific first: a details link
+			// inside the dialog (not every dialog has one), the product this page was entered
+			// through (the server knows its permalink), and the product's card on the page.
+			var hrefs = [];
+			if ( open && id > 0 ) {
+				var details = dialog.querySelector( 'a.vc-showcase-quick__details[href]' );
+				if ( details ) {
+					hrefs.push( details.href );
+				}
+				var entered = config.product || null;
+				if ( entered && Number( entered.id ) === id && typeof entered.path === 'string' && entered.path.charAt( 0 ) === '/' ) {
+					hrefs.push( location.origin + entered.path );
+				}
+				var cards = doc.querySelectorAll ? doc.querySelectorAll( 'a[data-vc-quick-open="' + id + '"][href], a[data-vc-home-product="' + id + '"][href]' ) : [];
+				for ( var i = 0; i < cards.length; i++ ) {
+					hrefs.push( cards[ i ].href );
+				}
+			}
 			var want = resolve( {
 				base: base,
-				homePath: config.home || '/',
+				homePath: home,
 				categoryPath: config.category || '',
-				productPath: link ? samePath( link.href, location.origin ) : '',
-				productId: product ? Number( product.getAttribute( 'data-vc-product-id' ) || 0 ) : 0
+				productPath: productPath( hrefs, location.origin, home ),
+				productId: id
 			} );
 			if ( want && want !== location.pathname + location.search + location.hash ) {
 				try {
@@ -136,5 +169,5 @@
 		later();
 	}
 
-	return { withoutKeys: withoutKeys, hasKey: hasKey, samePath: samePath, resolve: resolve, start: start };
+	return { withoutKeys: withoutKeys, hasKey: hasKey, samePath: samePath, productPath: productPath, resolve: resolve, start: start };
 } ) );

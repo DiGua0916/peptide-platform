@@ -9,7 +9,7 @@
  *   因为很多店铺页面共用 manage_woocommerce，菜单和页面按模块控制；数据接口按能力控制。
  * - 停用的员工不能登录，已登录的会被退出。
  * - 管理员（administrator）不受影响，始终有全部权限。
- * - 投手版（M9）：销售账号另外带上 pc_media_buyer 角色时，菜单、页面和能力改由 Staff_Buyer 管（固定 6 个菜单），
+ * - 投手版（M9）：销售账号另外带上 pc_media_buyer 角色时，菜单、页面和能力改由 Staff_Buyer 管（固定几个菜单），
  *   这里按模块给能力、过滤菜单和拦截页面的逻辑对它不生效；granted() 对它固定返回 订单 + 数据，供其他类判断模块时使用。
  *   去掉那个角色就恢复这里按勾选模块的规则，勾选记录一直保留。
  *
@@ -480,7 +480,7 @@ final class Staff {
 	public static function filter_menu(): void {
 		$id = get_current_user_id();
 		if ( ! $id || ! self::is_staff( $id ) || Staff_Buyer::is_buyer( $id ) ) {
-			return; // 投手版的菜单由 Staff_Buyer::build_menu() 换成固定 6 项。
+			return; // 投手版的菜单由 Staff_Buyer::build_menu() 换成它自己的那几项。
 		}
 		global $menu, $submenu;
 		foreach ( (array) $submenu as $parent => $items ) {

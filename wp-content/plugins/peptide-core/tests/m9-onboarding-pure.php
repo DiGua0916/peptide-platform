@@ -118,7 +118,12 @@ namespace {
 
 	// ---------- 店铺信息 ----------
 	$store = static fn( string $wa, string $email = '', string $brand = '' ): array => \PeptideCore\Admin\Store_Settings::clean_buyer_store( array( 'whatsapp' => $wa, 'email' => $email, 'brand' => $brand, 'store_name' => '不应该被采用' ) );
-	check( 'store info ok', array( array(), array( 'brand' => '', 'whatsapp' => '15551234567', 'email' => '' ) ) === $store( '+1 555 123 4567' ) );
+	// FE-03：投手可以自己打开 / 关掉前台右下角的客服按钮；表单里没有这个勾选框时不动原来的开关。
+	$float = static fn( array $more ): ?bool => \PeptideCore\Admin\Store_Settings::clean_buyer_store( array( 'whatsapp' => '+1 555 123 4567' ) + $more )[1]['float'];
+	check( 'support button switch: ticked', true === $float( array( 'float_present' => '1', 'float' => '1' ) ) );
+	check( 'support button switch: unticked', false === $float( array( 'float_present' => '1' ) ) && false === $float( array( 'float_present' => '1', 'float' => '' ) ) );
+	check( 'support button switch: an older form leaves it alone', null === $float( array() ) && null === $float( array( 'float' => '1' ) ) );
+	check( 'store info ok', array( array(), array( 'brand' => '', 'whatsapp' => '15551234567', 'email' => '', 'float' => null ) ) === $store( '+1 555 123 4567' ) );
 	check( 'internal store name is not editable here', ! array_key_exists( 'name', $store( '+15551234567' )[1] ) && ! array_key_exists( 'store_name', $store( '+15551234567' )[1] ) );
 	check( 'support email kept', 'help@shop.example' === $store( '+15551234567', 'help@shop.example' )[1]['email'] );
 	check( 'WhatsApp required', 1 === count( $store( '' )[0] ) );
@@ -142,15 +147,22 @@ namespace {
 	check( 'woo placeholders hidden', '搜索引擎' === $src( array( 'utm_source' => '(none)', 'source_type' => 'organic' ) ) );
 	check( 'unknown source', '—' === $src( array() ) );
 	$refund = static fn( string $state, float $refunded, float $total ): string => \PeptideCore\Admin\Admin_Menus::refund_label( $state, $refunded, $total );
-	check( 'HQ full refund', '已全额退款' === $refund( 'full', 0.0, 100.0 ) );
+	check( 'HQ full refund', '已退款' === $refund( 'full', 0.0, 100.0 ) );
 	check( 'HQ partial refund', '部分退款' === $refund( 'partial', 0.0, 100.0 ) );
-	check( 'HQ says none', '无' === $refund( 'none', 50.0, 100.0 ) );
-	check( 'order fully refunded', '已全额退款' === $refund( '', 100.0, 100.0 ) );
+	check( 'HQ says none but the store did refund', '部分退款' === $refund( 'none', 50.0, 100.0 ) );
+	check( 'HQ says none and nothing refunded', '无' === $refund( 'none', 0.0, 100.0 ) );
+	check( 'order fully refunded', '已退款' === $refund( '', 100.0, 100.0 ) );
 	check( 'order partly refunded', '部分退款' === $refund( '', 30.0, 100.0 ) );
 	check( 'no refund', '无' === $refund( '', 0.0, 100.0 ) );
 	$own = static fn( string $lock, int $user ): bool => \PeptideCore\Admin\Admin_Menus::own_lock( $lock, $user );
 	check( 'own edit lock', $own( '1800000000:7', 7 ) );
 	check( 'someone else\'s edit lock stays', ! $own( '1800000000:8', 7 ) && ! $own( '', 7 ) && ! $own( '1800000000:7x', 7 ) && ! $own( '1800000000:7', 0 ) );
+	// 订单页去掉“订单操作”框：WooCommerce 实际用的页面标识优先，约定的和默认的也各去一遍。
+	$screens = static fn( $actual, $expected ): array => \PeptideCore\Admin\Admin_Menus::order_screens( $actual, $expected );
+	check( 'order screens: usual case is one id', array( 'woocommerce_page_wc-orders' ) === $screens( 'woocommerce_page_wc-orders', 'woocommerce_page_wc-orders' ) );
+	check( 'order screens: a renamed parent menu is covered', array( 'store_page_wc-orders', 'woocommerce_page_wc-orders' ) === $screens( 'store_page_wc-orders', 'woocommerce_page_wc-orders' ) );
+	check( 'order screens: legacy storage', array( 'shop_order', 'woocommerce_page_wc-orders' ) === $screens( 'shop_order', 'shop_order' ) );
+	check( 'order screens: unusable values are dropped', array( 'woocommerce_page_wc-orders' ) === $screens( null, '' ) && array( 'woocommerce_page_wc-orders' ) === $screens( array( 'x' ), 0 ) );
 
 	echo "PASS {$checks} onboarding / home / store-info checks\n";
 }

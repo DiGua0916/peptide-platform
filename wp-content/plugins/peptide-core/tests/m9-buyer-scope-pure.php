@@ -27,19 +27,30 @@ namespace {
 		return $v === array( 'verdict' => $verdict, 'scope' => $scope, 'to' => $to );
 	};
 
-	// 六个菜单，顺序固定（2026-11-12：“素材”和“广告设置”合成“广告数据追踪”）。
+	// 七个菜单，顺序固定。2026-11-12 主线把“广告设置”和“素材库”合成“广告数据追踪”（键 adtrack）；
+	// “营销活动”（只读，平台所有者 2026-11-13 定）排在数据后面，它显示不显示另看 F2 的只读页面在不在。
 	$menu = \PeptideCore\Staff_Buyer::menu_items();
-	check( 'exactly six menus in order', array( 'home', 'orders', 'recovery', 'data', 'adtrack', 'store' ) === array_keys( $menu ) );
-	check( 'menu labels', array( '首页', '订单', '弃单', '数据', '广告数据追踪', '店铺信息' ) === array_column( $menu, 'label' ) );
+	check( 'exactly seven menus in order', array( 'home', 'orders', 'recovery', 'data', 'campaigns', 'adtrack', 'store' ) === array_keys( $menu ) );
+	check( 'menu labels', array( '首页', '订单', '弃单', '数据', '营销活动', '广告数据追踪', '店铺信息' ) === array_column( $menu, 'label' ) );
+	check( 'campaigns menu opens the promotions page (F2 shows its read-only list there)', 'admin.php?page=pc-promotions' === $menu['campaigns']['slug'] );
 	check( 'ad settings and creative pages belong to adtrack', 'adtrack' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-buyer-ads' ) && 'adtrack' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-creatives' ) && 'adtrack' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-creatives-spend' ) && 'adtrack' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-creatives-board' ) );
 	check( 'adtrack submenu: ad settings then creative library', array( 'admin.php?page=pc-buyer-ads', 'admin.php?page=pc-creatives' ) === array_column( \PeptideCore\Staff_Buyer::adtrack_submenu(), 2 ) );
 	check( 'look-alike creatives slug is not a creatives page', '' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-creativesx' ) );
+	check( 'the old menu key is gone', ! isset( $menu['ads'] ) );
 	check( 'orders menu opens paid orders', 'admin.php?page=wc-orders&status=wc-processing' === $menu['orders']['slug'] );
 	check( 'data sub-page belongs to data', 'data' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-data-landing' ) );
 	check( 'visitors belong to data', 'data' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-visitors-archive' ) );
 	check( 'wizard highlights home', 'home' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-onboarding' ) );
 	check( 'look-alike slug is not a data page', '' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-datax' ) );
-	check( 'hidden page has no menu', '' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-promotions' ) );
+	check( 'hidden page has no menu', '' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-apps' ) );
+	foreach ( \PeptideCore\Staff_Buyer::CAMPAIGN_PAGES as $campaign_page ) {
+		check( "$campaign_page belongs to the campaigns menu", 'campaigns' === \PeptideCore\Staff_Buyer::menu_for_page( $campaign_page ) );
+	}
+	check( 'the three campaign pages are exactly these', array( 'pc-promotions', 'pc-coupons', 'pc-shipping-discounts' ) === \PeptideCore\Staff_Buyer::CAMPAIGN_PAGES );
+	// 地址只是以 pc-promotions- 开头的其他营销页面（赠品 / 捆绑、活动积木、订阅者）不算“营销活动”。
+	foreach ( array( 'pc-promotions-product-offers', 'pc-promotions-campaigns', 'pc-promotions-subscribers', 'pc-coupons-import', 'pc-shipping-discounts-x' ) as $look_alike ) {
+		check( "$look_alike is not a campaigns page", '' === \PeptideCore\Staff_Buyer::menu_for_page( $look_alike ) );
+	}
 
 	// 前台浏览不受影响，也不给能力。
 	check( 'storefront allowed without caps', $is( array( 'doing' => 'front' ), 'allow' ) );
@@ -74,6 +85,23 @@ namespace {
 	check( 'empty trash denied', $is( $page( 'wc-orders', array( 'writes' => '1' ) ), 'deny' ) );
 	check( 'empty trash with a filter submit denied', $is( $page( 'wc-orders', array( 'action' => '-1', 'action2' => '-1', 'writes' => '1' ) ), 'deny' ) );
 	check( 'claiming an edit lock denied', $is( $page( 'wc-orders', array( 'action' => 'edit', 'writes' => '1' ) ), 'deny' ) );
+	// 主线 2026-11-11：打开订单转到订单详情页（pc-order）；原生订单页带 pc_native 才打开，只用来退款、发货、改地址。
+	check( 'order detail page is readable', $is( $page( 'pc-order' ), 'allow', 'orders' ) );
+	check( 'order detail page rejects POST', $is( $page( 'pc-order', array( 'method' => 'POST' ) ), 'deny' ) );
+	check( 'order detail highlights the orders menu', 'orders' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-order' ) );
+	check( 'native order page (refund / ship / edit address) denied', $is( $page( 'wc-orders', array( 'action' => 'edit', 'native' => '1' ) ), 'deny' ) );
+	check( 'order list ignores a stray pc_native', $is( $page( 'wc-orders', array( 'native' => '1' ) ), 'allow', 'orders' ) );
+	check( 'detail page writes (void / seller note / tags) denied', $is( $post( 'pc_order_detail' ), 'deny' ) );
+	check( 'manual email from an order denied', $is( $page( 'pc-mail', array( 'action' => 'compose' ) ), 'deny' ) && $is( $post( 'pc_mail_send' ), 'deny' ) );
+	check( 'copying an order into a manual order denied', $is( $page( 'pc-manual-order' ), 'deny' ) );
+	// 导出订单（只读下载）。
+	check( 'order export allowed', $is( $post( 'pc_buyer_orders_export' ), 'allow' ) );
+	check( 'order export waits for the password change', $is( $post( 'pc_buyer_orders_export' ), 'deny', '', '', true ) );
+	// WordPress 的命令面板会列出全部后台菜单的名字和地址：投手不加载它。
+	$buyer_src = (string) file_get_contents( dirname( __DIR__ ) . '/includes/class-staff-buyer.php' );
+	check( 'command palette is not loaded for buyers', false !== strpos( $buyer_src, "remove_action( 'admin_enqueue_scripts', 'wp_enqueue_command_palette_assets' )" ) && false !== strpos( $buyer_src, "array( self::class, 'no_command_palette' ), 0 )" ) );
+	check( 'command palette button is removed from the toolbar', false !== strpos( $buyer_src, "'comments', 'command-palette' ) as " ) );
+	check( 'export action name matches the constant', 'pc_buyer_orders_export' === \PeptideCore\Staff_Buyer::ACTION_EXPORT && 'pc-order' === \PeptideCore\Staff_Buyer::PAGE_ORDER );
 
 	// 弃单、数据、实时访客。
 	check( 'abandoned checkouts', $is( $page( 'pc-recovery' ), 'allow', 'data' ) );
@@ -88,7 +116,29 @@ namespace {
 	check( 'profile goes to store info', $is( $file( 'profile.php' ), 'redirect', '', 'pc-store-info' ) );
 
 	// 其余菜单：直接打开地址也拒绝。
-	foreach ( array( 'pc-promotions', 'pc-coupons', 'pc-shipping', 'pc-tax', 'pc-system', 'pc-staff', 'pc-apps', 'pc-mail', 'pc-store-design', 'pc-design-editor', 'pc-customers', 'pc-media', 'pc-activity', 'pc-site-tools', 'pc-manual-order', 'pc-ship-preview', 'pc-datax', 'wc-settings', 'wc-admin', 'wc-status', 'cbs-dashboard' ) as $hidden ) {
+	// 营销活动（F2 的只读“当前在跑的活动”）。$r['campaigns'] 由 request() 填：F2 的只读页面在这份代码里、并且 F2 认为这个账号不能改。
+	$ro = array( 'campaigns' => '1' );
+	foreach ( \PeptideCore\Staff_Buyer::CAMPAIGN_PAGES as $campaign_page ) {
+		check( "$campaign_page: read-only list opens, with no store caps handed out", $is( $page( $campaign_page, $ro ), 'allow' ) );
+		check( "$campaign_page: HEAD is also read-only", $is( $page( $campaign_page, $ro + array( 'method' => 'HEAD' ) ), 'allow' ) );
+		check( "$campaign_page: new / edit form address denied", $is( $page( $campaign_page, $ro + array( 'edits' => '1' ) ), 'deny' ) );
+		check( "$campaign_page: bulk or toggle action in the address denied", $is( $page( $campaign_page, $ro + array( 'action' => 'delete' ) ), 'deny' ) && $is( $page( $campaign_page, $ro + array( 'action' => '-1', 'action2' => 'disable' ) ), 'deny' ) );
+		check( "$campaign_page: action=new and action=edit in the address denied", $is( $page( $campaign_page, $ro + array( 'action' => 'new' ) ), 'deny' ) && $is( $page( $campaign_page, $ro + array( 'action' => 'edit' ) ), 'deny' ) );
+		check( "$campaign_page: list filter submit without an action still opens", $is( $page( $campaign_page, $ro + array( 'action' => '-1', 'action2' => '-1' ) ), 'allow' ) );
+		check( "$campaign_page: POST denied", $is( $page( $campaign_page, $ro + array( 'method' => 'POST' ) ), 'deny' ) );
+		check( "$campaign_page: denied while the read-only page is not in this code (or F2 says the account can edit)", $is( $page( $campaign_page ), 'deny' ) && $is( $page( $campaign_page, array( 'campaigns' => '' ) ), 'deny' ) );
+		check( "$campaign_page: waits for the password change", $is( $page( $campaign_page, $ro ), 'redirect', '', 'pc-onboarding', true ) );
+	}
+	check( 'F2 read-only code is not loaded in this test, so nothing is opened by default', ! \PeptideCore\Staff_Buyer::campaigns_ready() && ! \PeptideCore\Staff_Buyer::campaigns_read_only() );
+	// 营销里其余的页面和应用中心里的设置页（离开挽回、转盘、加购推荐、已付款弹窗、物流球等）：有没有只读列表都不开放。
+	foreach ( array( 'pc-first-order-offer', 'pc-exit-intent', 'pc-marketing', 'pc-promotions-product-offers', 'pc-promotions-campaigns', 'pc-promotions-subscribers', 'pc-apps', 'pc-paid-popup', 'pc-tracking-ball', 'pc-cart-links', 'pc-referrals', 'pc-accounts', 'pc-checkout-dropoff', 'pc-collections', 'pc-product-reviews', 'pc-product-reports', 'pc-settings' ) as $closed ) {
+		check( "still closed: $closed", $is( $page( $closed ), 'deny' ) && $is( $page( $closed, $ro ), 'deny' ) );
+	}
+	// 营销页面的保存、启停、批量、设置：都走 admin-post.php，不在投手的名单里（F2 那边也各自返回 403）。
+	foreach ( array( 'pc_promo_save', 'pc_promo_toggle', 'pc_promo_bulk', 'pc_promo_settings', 'pc_coupon_save', 'pc_coupon_toggle', 'pc_coupon_bulk', 'pc_coupon_settings', 'pc_shipdisc_save', 'pc_shipdisc_toggle', 'pc_shipdisc_bulk' ) as $campaign_write ) {
+		check( "campaign write $campaign_write denied (POST and GET, read-only list or not)", $is( $post( $campaign_write ), 'deny' ) && $is( $post( $campaign_write ) + $ro, 'deny' ) && $is( array_merge( $post( $campaign_write ), array( 'method' => 'GET' ) ) + $ro, 'deny' ) );
+	}
+	foreach ( array( 'pc-shipping', 'pc-tax', 'pc-system', 'pc-staff', 'pc-apps', 'pc-mail', 'pc-store-design', 'pc-design-editor', 'pc-customers', 'pc-media', 'pc-activity', 'pc-site-tools', 'pc-manual-order', 'pc-ship-preview', 'pc-datax', 'wc-settings', 'wc-admin', 'wc-status', 'cbs-dashboard' ) as $hidden ) {
 		check( "hidden page $hidden", $is( $page( $hidden ), 'deny' ) );
 	}
 	foreach ( array( 'edit.php', 'post.php', 'post-new.php', 'upload.php', 'users.php', 'user-new.php', 'plugins.php', 'themes.php', 'options-general.php', 'tools.php', 'edit-tags.php', 'customize.php', 'site-health.php', 'export.php', 'about.php' ) as $core ) {
@@ -114,6 +164,15 @@ namespace {
 		check( "post $other denied", $is( $post( $other ), 'deny' ) );
 	}
 	check( 'public form post allowed', $is( $post( 'pc_subscribe', true ), 'allow' ) );
+
+	// 主线 2026-11-12 在总后台加的“物流填单”（peptide-hq 的 pchq-logistics）：它不在店铺后台，
+	// 即使同一个站点上两个插件都开着，投手也打不开页面、下载不了表、动不了腾讯文档的设置。
+	foreach ( array( 'pchq', 'pchq-logistics' ) as $hq_page ) {
+		check( "HQ page $hq_page denied", $is( $page( $hq_page ), 'deny' ) && $is( $page( $hq_page, array( 'method' => 'POST' ) ), 'deny' ) );
+	}
+	foreach ( array( 'pchq_logistics_xlsx', 'pchq_logistics_save', 'pchq_logistics_track', 'pchq_tdocs_save', 'pchq_tdocs_auth', 'pchq_tdocs_callback', 'pchq_tdocs_sync' ) as $hq_action ) {
+		check( "HQ logistics action $hq_action denied (POST and GET)", $is( $post( $hq_action ), 'deny' ) && $is( array_merge( $post( $hq_action ), array( 'method' => 'GET' ) ), 'deny' ) );
+	}
 
 	// 还没改密码：只能打开向导、提交改密码。
 	check( 'locked: wizard', $is( $page( 'pc-onboarding' ), 'allow', '', '', true ) );

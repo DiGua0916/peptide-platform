@@ -68,14 +68,14 @@
   function destroy() { if (disposed) return; disposed = true; observer.disconnect(); controller?.abort(); clearInterval(timer); clearTimeout(expiry); clock?.destroy(); host.remove(); dialog.classList.remove('vc-dialog-polished'); dialog.removeEventListener('close',destroy);document.removeEventListener('visibilitychange',resume); owners.delete(dialog); }
   const owner = {root,offers,sync,destroy}; owners.set(dialog,owner); dialog.addEventListener('close',destroy,{once:true});document.addEventListener('visibilitychange',resume);sync();refresh();timer=setInterval(()=>{if(!document.hidden){sync();if(global.performance.now()-lastRead>=60000)refresh();}},60000);return owner;
  }
- document.addEventListener('vc:product-presented', event => { bindDialog(event.detail?.root,event.detail?.dialog);if(entryState==='loading'&&Number(event.detail?.productId)!==requestedProductId)cancel(); });
+ document.addEventListener('vc:product-presented', event => { postponed=0; bindDialog(event.detail?.root,event.detail?.dialog);if(entryState==='loading'&&Number(event.detail?.productId)!==requestedProductId)cancel(); });
  document.addEventListener('vc:product-dialog-selection', event => { bindDialog(event.detail?.root,event.detail?.dialog); });
  document.addEventListener('vc:product-experience-disposed', event => {
   const previous = owners.get(event.detail?.dialog);
   if (previous && previous.root === event.detail?.root) previous.destroy();
  });
 
- let intent = 0, request = null, recovery = null, waiting = null, entryState = '', presenting = false, requestedProductId=idValue(config.productId);
+ let intent = 0, request = null, recovery = null, waiting = null, entryState = '', presenting = false, postponed = 0, requestedProductId=idValue(config.productId);
  function panel() {
   if (recovery?.isConnected) return recovery;
   recovery = document.createElement('section'); recovery.className = 'vc-entry-recovery';
@@ -87,10 +87,24 @@
  function clearRecovery() { recovery?.remove(); recovery=null; entryState=''; }
  function retireWait() { const previous=waiting;waiting=null;previous?.(); }
  function cancel() {
-  ++intent; request?.abort();request=null;retireWait();
+  postponed=0;++intent; request?.abort();request=null;retireWait();
   // Back, a newer product and page lifecycle exits are user intent, not a
   // failed service. Retire their transient UI instead of leaving a retry card.
   if(entryState==='loading'||entryState==='ready')clearRecovery();
+ }
+ // A page in the background (the ad link opened in another tab, an in-app browser that loads before
+ // it is shown) is neither a failed service nor the visitor changing their mind. Nothing is presented
+ // while nobody can see it, but the product is kept and presented the moment the page is looked at.
+ // Back, Escape, leaving the page, or any product being presented in between all drop it (cancel()).
+ function postpone(id) { cancel(); postponed=id; }
+ function resumePostponed() {
+  if(document.hidden||!postponed)return;
+  const id=postponed;postponed=0;
+  if(document.querySelector('dialog.vc-showcase-quick[open] .vc-home-quick-product'))return;
+  // Same rule as boot(): a history entry that already holds layers is presented by its controller.
+  const layers=global.history.state?.__vcCommerceLayers?.layers;
+  if(Array.isArray(layers)&&layers.length)return;
+  openProduct(id);
  }
  function waitPresented(id, milliseconds, trigger) {
   retireWait();
@@ -122,7 +136,7 @@
     }finally{clearTimeout(timeout);if(request===active)request=null;}
    }
    if(ticket!==intent)return false;
-   if(document.hidden){cancel();return false;}
+   if(document.hidden){postpone(id);return false;}
    status('ready'); button.dataset.vcHomeProduct=String(id);button.dataset.vcQuickOpen=String(id);
    if(recovery)recovery.hidden=true;
    const opener=[...(document.querySelectorAll?.('[data-vc-home-product="'+id+'"][data-vc-quick-open]')||[])].find(node=>node!==button&&node.getClientRects().length&&!node.closest('[inert]'))||button;
@@ -135,11 +149,11 @@
    const params=new URL(global.location.href).searchParams;
    presented.querySelectorAll('.variations select').forEach(select=>{const value=params.get(select.name);if(value!==null&&[...select.options].some(option=>option.value===value)){select.value=value;global.jQuery?global.jQuery(select).trigger('change'):select.dispatchEvent(new Event('change',{bubbles:true}));}});
    return true;
-  }catch(_){if(ticket===intent){const retry=status('failed');delete retry.dataset.vcQuickOpen;delete retry.dataset.vcHomeProduct;}return false;}
+  }catch(_){if(ticket===intent){if(document.hidden){postpone(id);return false;}const retry=status('failed');delete retry.dataset.vcQuickOpen;delete retry.dataset.vcHomeProduct;}return false;}
  }
  // Entry recovery button must use only one native presentation attempt, not recurse through its own listener.
  document.addEventListener('vc:product-restore-cancel',cancel);global.addEventListener('pagehide',cancel);
- document.addEventListener('visibilitychange',()=>{if(document.hidden&&(entryState==='loading'||waiting))cancel();});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)resumePostponed();else if(entryState==='loading'||waiting)postpone(requestedProductId);});
  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&(entryState==='loading'||waiting))cancel();});
  document.addEventListener('click',event=>{const opener=event.target.closest?.('[data-vc-home-product][data-vc-quick-open]');if(!presenting&&opener&&!recovery?.contains(opener)&&(entryState==='loading'||waiting))cancel();},true);
  function restoreCatalog() {

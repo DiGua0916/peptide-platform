@@ -12,6 +12,8 @@ require_once __DIR__ . '/inc/layout-modules.php';
 require_once __DIR__ . '/inc/home-quick-view.php';
 require_once __DIR__ . '/inc/storefront-entry.php';
 require_once __DIR__ . '/inc/entry-address.php';
+require_once __DIR__ . '/inc/product-trust.php';
+require_once __DIR__ . '/inc/product-activity.php';
 require_once __DIR__ . '/inc/demo-home-catalog.php';
 require_once __DIR__ . '/inc/demo-home-modules.php';
 require_once __DIR__ . '/inc/demo-site-parts.php';
@@ -26,6 +28,7 @@ require_once __DIR__ . '/inc/storefront-utilities.php';
 require_once __DIR__ . '/inc/campaign-bubble.php';
 require_once __DIR__ . '/inc/lazy-dialog.php';
 require_once __DIR__ . '/inc/offscreen-styles.php';
+require_once __DIR__ . '/inc/front-speed.php';
 
 add_action( 'after_setup_theme', function () {
     add_theme_support( 'title-tag' );

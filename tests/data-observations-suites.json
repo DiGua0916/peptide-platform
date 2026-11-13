@@ -952,6 +952,78 @@
       "status": "module-gate",
       "module": "M14"
     },
+    {
+      "name": "m9-buyer-orders-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m9-buyer-orders-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M9"
+    },
+    {
+      "name": "m14-product-trust-pure",
+      "language": "php",
+      "path": "wp-content/themes/peptide-site/tests/m14-product-trust-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M14"
+    },
+    {
+      "name": "m14-front-speed-pure",
+      "language": "php",
+      "path": "wp-content/themes/peptide-site/tests/m14-front-speed-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M14"
+    },
+    {
+      "name": "m14-product-activity-pure",
+      "language": "php",
+      "path": "wp-content/themes/peptide-site/tests/m14-product-activity-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M14"
+    },
+    {
+      "name": "m14-product-activity",
+      "language": "node",
+      "path": "wp-content/themes/peptide-site/tests/m14-product-activity.cjs",
+      "core": true,
+      "node_test": true,
+      "status": "module-gate",
+      "module": "M14"
+    },
+    {
+      "name": "m14-entry-background",
+      "language": "node",
+      "path": "wp-content/themes/peptide-site/tests/m14-entry-background.cjs",
+      "core": true,
+      "node_test": true,
+      "status": "module-gate",
+      "module": "M14"
+    },
+    {
+      "name": "m14-restore-no-specification",
+      "language": "node",
+      "path": "wp-content/themes/peptide-site/tests/m14-restore-no-specification.cjs",
+      "core": true,
+      "node_test": true,
+      "status": "module-gate",
+      "module": "M14"
+    },
+    {
+      "name": "m9-buyer-campaigns-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m9-buyer-campaigns-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M9"
+    },
     {"name": "cr-contract-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-contract-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"},
     {"name": "cr-hq-contract-pure", "language": "php", "path": "wp-content/plugins/peptide-hq/tests/cr-hq-contract-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"},
     {"name": "cr-capture-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-capture-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"},

@@ -26,6 +26,10 @@
     }
     const qty = form.querySelector('input.qty');
     if (qty && /^\d+$/.test(entry.item.quantity || '')) qty.defaultValue = qty.value = String(entry.item.quantity);
+    // A product without specifications has no native match to wait for: nothing
+    // would ever end the pending state, and its price would stay "Updating price…"
+    // with its offers and artwork withheld. Its server-rendered values stand.
+    if (!form.querySelector('.variations select')) return;
     // Server/default imagery and discounts must not flash while the restored
     // native match is pending. Normal SKU changes still preserve their artwork.
     clearSelection(form); media(root, null);
