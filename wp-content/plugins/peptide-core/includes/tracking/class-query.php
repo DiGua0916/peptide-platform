@@ -67,6 +67,10 @@ final class Query {
 		$str = static fn( string $k ): string => (string) ( $s[ $k ] ?? '' );
 		return array(
 			'ip'         => $str( 'ip' ),
+			'country'    => $str( 'geo_country' ),
+			'lat'        => $str( 'geo_lat' ),
+			'lon'        => $str( 'geo_lon' ),
+			'screen'     => $str( 'screen' ),
 			'region'     => $str( 'geo_region' ),
 			'city'       => $str( 'geo_city' ),
 			'isp'        => $str( 'isp' ),

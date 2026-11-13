@@ -1,7 +1,7 @@
 <?php
 namespace PeptideCore\Tracking { final class Tracker { public const IDLE_MS = 60000; } }
 namespace {
- define( 'ABSPATH', __DIR__ ); require dirname( __DIR__ ) . '/includes/tracking/class-preferences.php';
+ define( 'ABSPATH', __DIR__ ); require dirname( __DIR__ ) . '/includes/tracking/class-labels.php'; require dirname( __DIR__ ) . '/includes/tracking/class-preferences.php';
  $passed=0; $check=static function($label,$yes)use(&$passed){if(!$yes)throw new \RuntimeException($label);++$passed;};
  $row=static function($at,$type='heartbeat',$data=[],$tab='a',$pid=0,$path='/'){
   return ['id'=>$at,'visitor_id'=>1,'visit_id'=>1,'tab_id'=>$tab,'page_instance_id'=>'page','seq'=>$at,'type'=>$type,'source'=>'client','occurred_ms'=>$at,'page_type'=>'home','path'=>$path,'product_id'=>$pid,'data'=>json_encode($data+['visibility'=>'visible','activity'=>'active','last_activity_age_ms'=>0])];

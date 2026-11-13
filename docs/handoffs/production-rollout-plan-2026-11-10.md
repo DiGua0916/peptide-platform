@@ -586,3 +586,17 @@
 - 店主要求每月自动更新。web 主机装 `/usr/local/sbin/vialcove-dbip-update`（源码 `tools/deployment/geoip/dbip-city-update.sh`）+ systemd `vialcove-dbip-update.service` / `.timer`（每天 04:17 UTC 随机延迟 30 分钟，Persistent）。
 - 逻辑：当月文件已在用 → 不做事；DB-IP 没发布当月 → 第二天再看；下载后检查 gzip、> 50 MB、元数据 DBIP-City-Lite → 换 `/srv/vialcove-data/geoip/dbip-city-lite.mmdb` 软链接 → 主店查 8.8.8.8 必须有城市，否则立刻换回上个月并失败退出；只留当月和上月两份。日志在 `journalctl -u vialcove-dbip-update`。
 - 实测：服务运行（已是当月，不动）；手动切到 2026-10（下载 127 MB、查询 Mountain View）再切回 2026-11；放一个假文件 2099-01 → 查询失败 → 自动换回 2026-11、退出码 1，假文件已删。现在用 2026-11，磁盘上留 2026-10 / 2026-11。
+
+### 2026-11-13 12:36 UTC 素材归因第二批合进主线（claude/creative-merge → codex/checkout-acceptance-20261105，待部署）
+- 店主决定今天上线（原定 F1 先上，改为本批先进主线）。合并 `origin/claude/creative-merge`（ad20bd9，比主线 4059779 多 14 个提交），无冲突；和 F1 的 `claude/m1-pkg2-hotfix-a` 在 Git 上也无冲突。**F1 明天（11-14 北京 14:00–16:00）的发布包要基于这一版主线重新组装**：`peptide-core/includes/tracking/class-tracker.php` 两边都改了（本批改 first_visit_id，热修复包 A 改 is_staff），整文件发布时必须是合并后的版本。
+- 店铺和 HQ 都要更新。不需要手工改表；追踪表自动升到 v7（加 geo_country、screen），素材表仍 v2。
+分四块：
+1. **审查 4 个 bug 修复**（5e84415、83055a9）：
+   - 老访客 first_visit_id 改为最早一次访问（MIN(id)）；一次性数据修复 `Tracking\Schema::repair_first_visits()` 由升级后排的单次 wp-cron 任务 `pc_track_repair_first_visits` 跑（不在前台请求里，带锁），结果记在选项 `pc_track_first_visit_fix_log`（{at, rows}）。部署后各店自动跑，核对看这个选项。
+   - 素材表安装检查同时确认 5 张 pc_ad_ 表都在，缺表会自动建。
+   - HQ 花费：店铺推送（csv）不覆盖手填（manual），推送的 0 记 0 不删行；报表页只保存改过的金额；店铺读不出花费时不推。“以手填还是表格为准”店主未定，暂保手填。
+   - 空日报：店铺未就绪 / 查询出错不上报、稍后重试；HQ 收到空日报不清已有数据。
+2. **访客追踪 v7 + 滚动深度**：访问表加 geo_country、screen（来自前台客户端环境，受原有隐私开关控制）；访客档案显示国家、经纬度、屏幕；前台上报页面滚动深度 25/50/75/100%（新事件 `scroll`）。另含：开店向导“验证像素”按真实回传自动完成、今天要做的事（复制广告编号 / 标记已处理）、3 个追踪纯测试修好、手机上“还差 N 步”红条不断词。
+3. **单条素材人群画像 + AI 分析**（6516428 起，至 ad20bd9）：素材看板按单个素材时，卡片里有人群画像（15 个维度，和全部素材平均比）、规则分析（来的人 / 质量 / 谁在买 / 卡在哪 / 建议）、AI 深度分析按钮（`POST peptide/v1/creatives/audience-ai`，只发汇总数字）；三块和访客名单都默认收起。数据包加 profiles。
+4. **HQ 一起更新的部分**：AI 设置加用途“素材人群分析”（`Ai::USES['creative']`，没导入专门人设时借用全站分析师人设，追加固定分析步骤）；花费不覆盖手填（class-orders / class-creatives / report-page）；空日报不清数据（class-creatives）。
+- 测试（合并后的主线）：见下一条提交说明。

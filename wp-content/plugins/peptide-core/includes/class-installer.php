@@ -35,6 +35,10 @@ final class Installer {
 			}
 			update_option( self::OPTION_VERSION, PEPTIDE_CORE_VERSION, false );
 		}
+		// 一次性数据修复（2026-11-13）：交给后台定时任务跑，不拖慢前台请求；跑过就只读一个自动加载的选项。
+		if ( '1' !== (string) get_option( Tracking\Schema::FIRST_VISIT_FIX, '' ) && get_option( Tracking\Schema::OPTION ) && ! wp_next_scheduled( Tracking\Schema::FIRST_VISIT_CRON ) ) {
+			wp_schedule_single_event( time(), Tracking\Schema::FIRST_VISIT_CRON );
+		}
 	}
 
 	/**
