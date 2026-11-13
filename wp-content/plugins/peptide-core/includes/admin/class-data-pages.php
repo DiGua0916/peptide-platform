@@ -138,7 +138,7 @@ final class Data_Pages {
 							if ( is_wp_error( $p ) ) {
 								return $p;
 							}
-							$res = new \WP_REST_Response( Realtime::summary( (int) round( microtime( true ) * 1000 ), $p['funnel'], $p['minutes'] ) );
+							$res = new \WP_REST_Response( Realtime::summary( (int) round( microtime( true ) * 1000 ), $p['funnel'], $p['minutes'], $p['cards'] ) );
 							$res->header( 'Cache-Control', 'no-store' );
 							return $res;
 						},
@@ -194,7 +194,7 @@ final class Data_Pages {
 							$range = 'history' === $mode ? Realtime::history_params( $raw, intdiv( $now, 1000 ) ) : null;
 							if ( is_wp_error( $range ) ) { return $range; }
 							try {
-								$data = 'history' === $mode ? Realtime::filtered_history( $range, $filter ) : Realtime::filtered_summary( $now, $params['funnel'], $params['minutes'], $filter );
+								$data = 'history' === $mode ? Realtime::filtered_history( $range, $filter ) : Realtime::filtered_summary( $now, $params['funnel'], $params['minutes'], $filter, $params['cards'] );
 								$response = new \WP_REST_Response( $data ); $response->header( 'Cache-Control', 'no-store' ); return $response;
 							} catch ( \Throwable $error ) { return new \WP_Error( 'pc_realtime_filter_unavailable', __( 'Realtime entry attribution is unavailable.', 'peptide-core' ), array( 'status' => 503 ) ); }
 						},
@@ -986,6 +986,10 @@ final class Data_Pages {
 			'trackingOff'    => __( 'Visitor tracking is off, so visitor numbers, conversion and the funnels stay at zero.', 'peptide-core' ),
 			'live'          => __( 'Real time', 'peptide-core' ),
 			'todayOption'   => __( 'Today', 'peptide-core' ),
+			'last24'        => '最近 24 小时',
+			'last24Visits'  => '最近 24 小时访问',
+			'last24Sales'   => '最近 24 小时销售',
+			'last24Power'   => '最近 24 小时购买力',
 			'yesterday'     => __( 'Yesterday', 'peptide-core' ),
 			'from'          => __( 'Start date', 'peptide-core' ),
 			'to'            => __( 'End date', 'peptide-core' ),

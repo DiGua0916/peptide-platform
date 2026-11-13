@@ -72,7 +72,8 @@ final class Realtime {
 	 * @param int $funnel  漏斗窗口，WINDOWS 里的值，其他按 10。
 	 * @param int $minutes 每分钟图的窗口，WINDOWS 里的值，其他按 10。
 	 */
-	public static function summary( int $now_ms, int $funnel, int $minutes ): array {
+	public static function summary( int $now_ms, int $funnel, int $minutes, int $cards_window = self::CARD_WINDOW ): array {
+		$cw = in_array( $cards_window, array( self::CARD_WINDOW, 1440 ), true ) ? $cards_window : self::CARD_WINDOW; // 卡片窗口：10 分钟，或“最近 24 小时”= 1440（2026-11-14）
 		$funnel  = in_array( $funnel, self::FUNNEL_WINDOWS, true ) ? $funnel : self::WINDOWS[0];
 		$minutes = in_array( $minutes, self::FUNNEL_WINDOWS, true ) ? $minutes : self::WINDOWS[0];
 		$sec     = intdiv( $now_ms, 1000 );
@@ -80,17 +81,17 @@ final class Realtime {
 		$day_ms  = array( $day[0] * 1000, $day[1] * 1000 );
 
 		// 访问的漏斗数：卡片的 10 分钟和漏斗窗口相同时只查一次。
-		$visits = array( self::CARD_WINDOW => self::visit_counts( $now_ms, self::CARD_WINDOW ) );
+		$visits = array( $cw => self::visit_counts( $now_ms, $cw ) );
 		if ( ! isset( $visits[ $funnel ] ) ) {
 			$visits[ $funnel ] = self::visit_counts( $now_ms, $funnel );
 		}
 
 		// 卡片：10 分钟窗口的订单（整秒）和事件。
-		$card_orders = self::order_numbers( self::real_orders( Operations::paid_orders( $sec - self::CARD_WINDOW * 60 + 1, $sec + 1 ) ) );
-		$card_window = self::window_ms( $now_ms, self::CARD_WINDOW );
+		$card_orders = self::order_numbers( self::real_orders( Operations::paid_orders( $sec - $cw * 60 + 1, $sec + 1 ) ) );
+		$card_window = self::window_ms( $now_ms, $cw );
 		$cards       = array(
-			'window'          => self::CARD_WINDOW,
-			'visitors'        => $visits[ self::CARD_WINDOW ]['visitors'],
+			'window'          => $cw,
+			'visitors'        => $visits[ $cw ]['visitors'],
 			'pageviews'       => self::count_page_views( $card_window[0], $card_window[1] ),
 			'orders'          => $card_orders['orders'],
 			'sales'           => $card_orders['sales'],
@@ -140,8 +141,9 @@ final class Realtime {
 	}
 
 	/** Whole-page active filter; All delegates byte-exact legacy behavior. */
-	public static function filtered_summary( int $now_ms, int $funnel, int $minutes, Realtime_Filter $filter ): array {
-		if ( $filter->is_all() ) { return self::summary( $now_ms, $funnel, $minutes ); }
+	public static function filtered_summary( int $now_ms, int $funnel, int $minutes, Realtime_Filter $filter, int $cards_window = self::CARD_WINDOW ): array {
+		$cw = in_array( $cards_window, array( self::CARD_WINDOW, 1440 ), true ) ? $cards_window : self::CARD_WINDOW; // 卡片窗口：10 分钟，或“最近 24 小时”= 1440（2026-11-14）
+		if ( $filter->is_all() ) { return self::summary( $now_ms, $funnel, $minutes, $cards_window ); }
 		$filter = $filter->at( $now_ms + 1 ); $filter->require_ready();
 		$funnel  = in_array( $funnel, self::FUNNEL_WINDOWS, true ) ? $funnel : self::WINDOWS[0];
 		$minutes = in_array( $minutes, self::FUNNEL_WINDOWS, true ) ? $minutes : self::WINDOWS[0];
@@ -149,19 +151,19 @@ final class Realtime {
 		$day     = Overview::window( 'today', $sec );
 		$day_ms  = array( $day[0] * 1000, $day[1] * 1000 );
 
-		$filter->prime_orders( min( $day[0], $sec - self::CARD_WINDOW * 60 + 1 ), max( $day[1], $sec + 1 ) );
+		$filter->prime_orders( min( $day[0], $sec - $cw * 60 + 1 ), max( $day[1], $sec + 1 ) );
 		// 访问的漏斗数：卡片的 10 分钟和漏斗窗口相同时只查一次。
-		$visits = array( self::CARD_WINDOW => self::visit_counts( $now_ms, self::CARD_WINDOW, $filter ) );
+		$visits = array( $cw => self::visit_counts( $now_ms, $cw, $filter ) );
 		if ( ! isset( $visits[ $funnel ] ) ) {
 			$visits[ $funnel ] = self::visit_counts( $now_ms, $funnel, $filter );
 		}
 
 		// 卡片：10 分钟窗口的订单（整秒）和事件。
-		$card_orders = self::order_numbers( $filter->orders( $sec - self::CARD_WINDOW * 60 + 1, $sec + 1 ) );
-		$card_window = self::window_ms( $now_ms, self::CARD_WINDOW );
+		$card_orders = self::order_numbers( $filter->orders( $sec - $cw * 60 + 1, $sec + 1 ) );
+		$card_window = self::window_ms( $now_ms, $cw );
 		$cards       = array(
-			'window'          => self::CARD_WINDOW,
-			'visitors'        => $visits[ self::CARD_WINDOW ]['visitors'],
+			'window'          => $cw,
+			'visitors'        => $visits[ $cw ]['visitors'],
 			'pageviews'       => self::count_page_views( $card_window[0], $card_window[1], $filter ),
 			'orders'          => $card_orders['orders'],
 			'sales'           => $card_orders['sales'],
@@ -279,6 +281,10 @@ final class Realtime {
 			$errors['funnel'] = 'invalid_format';
 		}
 		$minutes = Params::word( $params, 'minutes', $allowed[0], array_map( 'strval', self::FUNNEL_WINDOWS ) ); // 2026-11-14：每分钟访客图也可选“一天”（按小时）
+		$cards = Params::word( $params, 'cards', '10', array( '10', '1440' ) ); // 顶部三张卡片的窗口：10 分钟 / 最近 24 小时（2026-11-14）
+		if ( null === $cards ) {
+			$errors['cards'] = 'invalid_format';
+		}
 		if ( null === $minutes ) {
 			$errors['minutes'] = 'invalid_format';
 		}
@@ -289,6 +295,7 @@ final class Realtime {
 		return array(
 			'funnel'  => (int) $funnel,
 			'minutes' => (int) $minutes,
+			'cards'   => (int) $cards,
 		);
 	}
 
