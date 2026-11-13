@@ -85,7 +85,7 @@ final class Board {
 			'scrolled'         => null,
 			'timezone'         => (string) ( $visit['timezone'] ?? '' ),
 			'language'         => (string) ( $visit['language'] ?? '' ),
-			'ip_country'       => '',
+			'ip_country'       => 1 === preg_match( '/\A[A-Z]{2}\z/', (string) ( $visit['geo_country'] ?? '' ) ) ? (string) $visit['geo_country'] : '', // 2026-11-13：IP 库查到的国家优先
 			'carted'           => $stage >= 2,
 			'checkout'         => $stage >= 3,
 			'products'         => array(),
@@ -829,7 +829,7 @@ final class Board {
 		}
 		// 范围内有过付费 / 未带参访问的访客，再取他们到范围结束为止的全部访问（判断首次来源、回访）。
 		$ids = array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT visitor_id FROM {$visits_t} WHERE start_ms >= %d AND start_ms < %d AND source_class IN ('paid','fb_untagged') LIMIT %d", $ms[0], $ms[1], self::MAX_VISITS ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
-		$cols = 'id, visitor_id, start_ms, last_ms, utm_source, utm_medium, utm_term, utm_content, placement, ad_name, creative_code, source_class, ip_type, timezone, language, geo_region, in_app, device, pageviews, stage, order_id';
+		$cols = 'id, visitor_id, start_ms, last_ms, utm_source, utm_medium, utm_term, utm_content, placement, ad_name, creative_code, source_class, ip_type, timezone, language, geo_region, geo_country, in_app, device, pageviews, stage, order_id';
 		$owners = array();
 		foreach ( array_chunk( $ids, 500 ) as $chunk ) {
 			$in   = implode( ',', $chunk );

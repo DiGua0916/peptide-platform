@@ -218,7 +218,9 @@ namespace {
 	);
 	$asn  = array( 'autonomous_system_number' => 7922, 'autonomous_system_organization' => 'Comcast Cable Communications, LLC' );
 	$m    = Ip_Network::from_records( $city, $asn );
-	$check( 'records mapped', array( 'geo_region' => 'Texas', 'geo_city' => 'Austin', 'geo_lat' => '30.2672', 'geo_lon' => '-97.7431', 'isp' => 'Comcast Cable Communications, LLC', 'asn' => 7922, 'ip_type' => 'residential' ) === $m );
+	$check( 'country from city record', 'US' === Ip_Network::from_records( $city + array( 'country' => array( 'iso_code' => 'us' ) ), $asn )['geo_country'] && '' === Ip_Network::from_records( $city + array( 'country' => array( 'iso_code' => 'USA' ) ), $asn )['geo_country'] );
+	$check( 'screen from client environment', '390x844' === Visit_Facts::screen( array( 'environment' => array( 'version' => 1, 'screen' => array( 'status' => 'known', 'width' => 390, 'height' => 844 ) ) ) ) && '' === Visit_Facts::screen( array( 'environment' => array( 'screen' => array( 'status' => 'unavailable' ) ) ) ) && '' === Visit_Facts::screen( null ) );
+	$check( 'records mapped', array( 'geo_country' => '', 'geo_region' => 'Texas', 'geo_city' => 'Austin', 'geo_lat' => '30.2672', 'geo_lon' => '-97.7431', 'isp' => 'Comcast Cable Communications, LLC', 'asn' => 7922, 'ip_type' => 'residential' ) === $m );
 	$check( 'no records = empty', Ip_Network::EMPTY === Ip_Network::from_records( null, null ) );
 	$check( 'region falls back to iso code, bad location ignored', 'TX' === Ip_Network::from_records( array( 'subdivisions' => array( array( 'iso_code' => 'TX' ) ), 'location' => array( 'latitude' => 200, 'longitude' => 0 ) ), null )['geo_region'] && '' === Ip_Network::from_records( array( 'location' => array( 'latitude' => 200, 'longitude' => 0 ) ), null )['geo_lat'] );
 	$check( 'paid ISP database fields win', 'mobile' === Ip_Network::from_records( null, array( 'autonomous_system_number' => 5, 'isp' => 'Acme', 'connection_type' => 'Cellular' ) )['ip_type'] );

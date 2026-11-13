@@ -24,7 +24,7 @@ final class Schema {
 	// v4: immutable, first-successfully-captured optional visit attribution.
 	// v5（CR 素材归因，2026-11-11）：访问记录完整广告参数、来源分类、IP 与地理网络、时区语言、内置浏览器；
 	//     访客记录首次访问和最近一次付费访问。列由打地基统一加好，写入由线 1（采集补齐）负责。
-	public const DB_VERSION = '6'; // 6 = 访问表加 ua / os / os_version / device_model（2026-11-13，机型追踪）
+	public const DB_VERSION = '7'; // 6 = 访问表加 ua / os / os_version / device_model；7 = 加 geo_country、screen（2026-11-13）
 	public const OPTION     = 'peptide_core_tracking_db';
 	/** Successful checks only, scoped to this PHP request and physical table identity. */
 	private static array $ready_cache = array();
@@ -123,6 +123,7 @@ CREATE TABLE {$s} (
   source_class varchar(16) NOT NULL DEFAULT '',
   params_valid tinyint(1) NOT NULL DEFAULT 0,
   ip varchar(45) NOT NULL DEFAULT '',
+  geo_country varchar(2) NOT NULL DEFAULT '',
   geo_region varchar(64) NOT NULL DEFAULT '',
   geo_city varchar(80) NOT NULL DEFAULT '',
   geo_lat varchar(16) NOT NULL DEFAULT '',
@@ -137,6 +138,7 @@ CREATE TABLE {$s} (
   os varchar(20) NOT NULL DEFAULT '',
   os_version varchar(20) NOT NULL DEFAULT '',
   device_model varchar(80) NOT NULL DEFAULT '',
+  screen varchar(16) NOT NULL DEFAULT '',
   device varchar(10) NOT NULL DEFAULT '',
   events int(10) unsigned NOT NULL DEFAULT 0,
   pageviews int(10) unsigned NOT NULL DEFAULT 0,
