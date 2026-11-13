@@ -44,6 +44,8 @@ check( 'keys: os version major', 'iOS 18' === $k['os_version'] );
 check( 'keys: country upper, language base', 'US' === $k['country'] && 'en' === $k['language'] );
 check( 'keys: missing -> unknown', 'unknown' === $k['city'] && 'unknown' === $k['screen'] );
 check( 'keys: every dim present', array_keys( Audience::DIMS ) === array_keys( $k ) );
+check( 'label: short time zone and placement', '美山地' === Audience::label( 'timezone', 'America/Denver' ) && 'FB 手机动态' === Audience::label( 'placement', 'Facebook_Mobile_Feed' ) && 'IG 快拍' === Audience::label( 'placement', 'Instagram_Stories' ) );
+check( 'label: unlisted fall back to short forms', 'FB New Place' === Audience::label( 'placement', 'Facebook_New_Place' ) && 'Buenos Aires' === Audience::label( 'timezone', 'America/Argentina/Buenos_Aires' ) );
 check( 'label: Chinese names', '美国' === Audience::label( 'country', 'US' ) && '家庭宽带' === Audience::label( 'ip_type', 'residential' ) && '未知' === Audience::label( 'os', 'unknown' ) );
 
 // ---------- 合成数据 ----------

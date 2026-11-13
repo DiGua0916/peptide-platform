@@ -389,12 +389,26 @@ final class Board_Page {
 .pc-cr-board .pc-cr-aud-bar .n{flex:none;color:#646970;white-space:nowrap;font-variant-numeric:tabular-nums}
 .pc-cr-board details.pc-cr-aud-more{margin:8px 0 0}
 .pc-cr-board details.pc-cr-aud-more>summary{cursor:pointer;color:#2271b1;font-size:12px;margin-bottom:8px}
-.pc-cr-board .pc-cr-aud-sec{margin:0 0 10px}
-.pc-cr-board .pc-cr-aud-sec h4{margin:0 0 4px;font-size:13px}
-.pc-cr-board .pc-cr-aud-sec ul{margin:0 0 0 18px;list-style:disc}
-.pc-cr-board .pc-cr-aud-sec li,.pc-cr-board .pc-cr-aud-sec p{font-size:13px;line-height:1.7;margin:0 0 2px}
-.pc-cr-board .pc-cr-aud-sec small{color:#646970}
-.pc-cr-board .pc-cr-aud-table{max-width:620px;margin:4px 0 6px;font-size:12px}
+.pc-cr-board .pc-cr-aud ul{columns:auto}
+.pc-cr-board .pc-cr-aud-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:12px;margin:10px 0 4px}
+.pc-cr-board .pc-cr-aud-card{background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:12px 14px;min-width:0}
+.pc-cr-board .pc-cr-aud-card.is-wide{grid-column:1/-1}
+.pc-cr-board .pc-cr-aud-card h4{margin:0 0 8px;font-size:14px;font-weight:600;color:#1d2327}
+.pc-cr-board .pc-cr-aud-item{padding:7px 0;border-top:1px solid #f0f0f1}
+.pc-cr-board .pc-cr-aud-tags+.pc-cr-aud-note+.pc-cr-aud-item,.pc-cr-board .pc-cr-aud-card h4+.pc-cr-aud-item{border-top:0;padding-top:0}
+.pc-cr-board .pc-cr-aud-item p{margin:0;font-size:13px;line-height:1.65;color:#1d2327}
+.pc-cr-board .pc-cr-aud-item small,.pc-cr-board .pc-cr-aud-note{display:block;margin-top:2px;font-size:12px;line-height:1.5;color:#787c82}
+.pc-cr-board .pc-cr-aud-note{margin:2px 0 8px}
+.pc-cr-board .pc-cr-aud-tags{display:flex;flex-wrap:wrap;gap:6px}
+.pc-cr-board .pc-cr-aud-tags span{background:#f0f6fc;color:#0a4b78;border-radius:999px;padding:3px 10px;font-size:12px;white-space:nowrap}
+.pc-cr-board .pc-cr-aud-tags em{font-style:normal;color:#50575e;margin-right:4px}
+.pc-cr-board .pc-cr-aud-act{display:inline-block;font-size:12px;font-weight:600;border-radius:4px;padding:1px 8px;margin-right:8px;vertical-align:1px;white-space:nowrap}
+.pc-cr-board .pc-cr-aud-act.is-scale{background:#edfaef;color:#00701a}
+.pc-cr-board .pc-cr-aud-act.is-check{background:#fcf9e8;color:#8a6116}
+.pc-cr-board .pc-cr-aud-act.is-cut{background:#fcf0f1;color:#b32d2e}
+.pc-cr-board .pc-cr-aud-act.is-clone{background:#f0f6fc;color:#0a4b78}
+.pc-cr-board .pc-cr-aud-act.is-watch{background:#f0f0f1;color:#50575e}
+.pc-cr-board .pc-cr-aud-table{max-width:720px;margin:0 0 8px;font-size:13px}
 .pc-cr-board .pc-cr-aud-table>div{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(4,minmax(0,1fr));gap:6px;padding:4px 0;border-bottom:1px solid #f0f0f1;font-variant-numeric:tabular-nums}
 .pc-cr-board .pc-cr-aud-table>div span:not(:first-child){text-align:right}
 .pc-cr-board .pc-cr-aud-table>div.h{color:#646970}
@@ -408,7 +422,7 @@ final class Board_Page {
 .pc-cr-board .pc-cr-aud-ai-body p.is-li{padding-left:14px;text-indent:-10px}
 .pc-cr-board .pc-cr-aud-ai-body p.is-li::before{content:"• "}
 .pc-cr-board .pc-cr-aud-ai-body .is-err{color:#b32d2e}
-@media (max-width:600px){.pc-cr-board .pc-cr-aud-bar .l{width:84px}.pc-cr-board .pc-cr-funnel{grid-template-columns:repeat(3,minmax(0,1fr))}.pc-cr-board ul.pc-cr-visitors{columns:2}.pc-cr-board .pc-cr-kpi b{font-size:18px}}
+@media (max-width:600px){.pc-cr-board .pc-cr-aud-table{font-size:12px}.pc-cr-board .pc-cr-aud-table>div{gap:4px;grid-template-columns:minmax(0,1.9fr) repeat(4,minmax(0,1fr))}.pc-cr-board .pc-cr-aud-card{padding:10px 12px}.pc-cr-board .pc-cr-aud-bar .l{width:84px}.pc-cr-board .pc-cr-funnel{grid-template-columns:repeat(3,minmax(0,1fr))}.pc-cr-board ul.pc-cr-visitors{columns:2}.pc-cr-board .pc-cr-kpi b{font-size:18px}}
 </style>';
 	}
 
@@ -1008,7 +1022,7 @@ final class Board_Page {
 				foreach ( $list as $r ) {
 					$w   = (int) round( 100 * $r['share'] );
 					$avg = (int) round( 100 * Audience::avg_share( $all, $dim, $r['value'] ) );
-					echo '<div class="pc-cr-aud-bar" title="' . esc_attr( $r['label'] . '：这条素材 ' . $w . '%，平均 ' . $avg . '%' ) . '"><span class="l">' . esc_html( $r['label'] ) . '</span><span class="t"><i style="width:' . esc_attr( (string) $w ) . '%"></i><em style="left:' . esc_attr( (string) min( 99, $avg ) ) . '%"></em></span><span class="n">' . esc_html( $r['visitors'] . ' · ' . $w . '% · ' . (int) $r['paid'] . ' 单' ) . '</span></div>';
+					echo '<div class="pc-cr-aud-bar" title="' . esc_attr( $r['label'] . ( $r['label'] !== $r['value'] && 'unknown' !== $r['value'] ? '（' . $r['value'] . '）' : '' ) . '：这条素材 ' . $w . '%，平均 ' . $avg . '%' ) . '"><span class="l">' . esc_html( $r['label'] ) . '</span><span class="t"><i style="width:' . esc_attr( (string) $w ) . '%"></i><em style="left:' . esc_attr( (string) min( 99, $avg ) ) . '%"></em></span><span class="n">' . esc_html( $r['visitors'] . ' · ' . $w . '% · ' . (int) $r['paid'] . ' 单' ) . '</span></div>';
 				}
 				echo '</div>';
 			}
@@ -1020,37 +1034,62 @@ final class Board_Page {
 		$grid( array_slice( $dims, Audience::FIRST ) );
 		echo '</details>';
 
-		// 规则分析。
+		// 规则分析（2026-11-13 改版：一条一行、依据单独一行；分区做成卡片，宽屏两列）。
 		echo '<h3 class="pc-cr-aud-h">人群分析 <span>' . esc_html( $a['confidence_text'] ) . '</span></h3>';
 		if ( '' !== $a['headline'] ) {
 			echo '<div class="pc-cr-aud-box is-head"><b>一句话：</b>' . esc_html( $a['headline'] ) . '</div>';
-			$sec = static function ( string $title, array $items ): void {
-				if ( ! $items ) {
-					return;
+			$items = static function ( array $list ): string {
+				$h = '';
+				foreach ( $list as $it ) {
+					$h .= '<div class="pc-cr-aud-item"><p>' . esc_html( $it['text'] ) . '</p>' . ( '' !== (string) ( $it['ev'] ?? '' ) ? '<small>依据：' . esc_html( $it['ev'] ) . '</small>' : '' ) . '</div>';
 				}
-				echo '<div class="pc-cr-aud-sec"><h4>' . esc_html( $title ) . '</h4><ul>';
-				foreach ( $items as $it ) {
-					echo '<li>' . esc_html( $it['text'] ) . ( '' !== (string) ( $it['ev'] ?? '' ) ? ' <small>依据：' . esc_html( $it['ev'] ) . '</small>' : '' ) . '</li>';
-				}
-				echo '</ul></div>';
+				return $h;
 			};
-			$sec( '1. 来的是什么人', $a['who'] );
-			$sec( '2. 质量怎么样', $a['quality'] );
-			if ( $a['buyers'] ) {
-				echo '<div class="pc-cr-aud-sec"><h4>3. 谁在买，谁不买</h4><div class="pc-cr-aud-table"><div class="h"><span>人群</span><span>访客</span><span>加购率</span><span>下单率</span><span>客单价</span></div>';
-				foreach ( $a['buyers'] as $b ) {
-					echo '<div class="is-' . esc_attr( $b['mark'] ) . '"><span>' . esc_html( $b['name'] ) . '</span><span>' . (int) $b['visitors'] . '</span><span>' . esc_html( self::pct( $b['cart_rate'] ) ) . '</span><span class="r">' . esc_html( self::pct( $b['order_rate'] ) ) . '</span><span>' . esc_html( null === $b['aov_cents'] ? '—' : self::format( $b['aov_cents'], 'money' ) ) . '</span></div>';
+			$card = static function ( string $title, string $body, string $cls = '' ): void {
+				echo '<section class="pc-cr-aud-card' . ( '' !== $cls ? ' ' . esc_attr( $cls ) : '' ) . '"><h4>' . esc_html( $title ) . '</h4>' . $body . '</section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $body 由上面的函数转义生成。
+			};
+			echo '<div class="pc-cr-aud-cards">';
+			// 1. 来的是什么人：共同特征做成标签，其余一条一行。
+			$who = $a['who'];
+			$tags = '';
+			if ( $a['common'] ) {
+				array_shift( $who ); // 第一条是“主要是：……”，改用标签显示
+				$tags = '<div class="pc-cr-aud-tags">';
+				foreach ( $a['common'] as $c ) {
+					$parts = explode( '：', $c, 2 );
+					$tags .= '<span><em>' . esc_html( $parts[0] ) . '</em>' . esc_html( $parts[1] ?? '' ) . '</span>';
 				}
-				echo '</div>';
-				foreach ( $a['buyer_notes'] as $it ) {
-					echo '<p>' . esc_html( $it['text'] ) . '</p>';
-				}
-				echo '</div>';
-			} else {
-				$sec( '3. 谁在买，谁不买', array_merge( array( array( 'text' => '没有哪个人群到 ' . Audience::MIN_SEGMENT . ' 人，暂不拆开比较。', 'ev' => '' ) ), $a['buyer_notes'] ) );
+				$tags .= '</div><small class="pc-cr-aud-note">以上是占比过半的特征</small>';
 			}
-			$sec( '4. 没买的人卡在哪', $a['stuck'] ? $a['stuck'] : array( array( 'text' => '各人群的转化差不多，没有明显卡住的地方。', 'ev' => '' ) ) );
-			$sec( '5. 建议（只是建议，不会自动改广告）', $a['advice'] );
+			$card( '1. 来的是什么人', $tags . $items( $who ) );
+			$card( '2. 质量怎么样', $items( $a['quality'] ) );
+			// 3. 谁在买：表格。
+			if ( $a['buyers'] ) {
+				$t = '<div class="pc-cr-aud-table"><div class="h"><span>人群</span><span>访客</span><span>加购率</span><span>下单率</span><span>客单价</span></div>';
+				foreach ( $a['buyers'] as $b ) {
+					$t .= '<div class="is-' . esc_attr( $b['mark'] ) . '"><span>' . esc_html( $b['name'] ) . '</span><span>' . (int) $b['visitors'] . '</span><span>' . esc_html( self::pct( $b['cart_rate'] ) ) . '</span><span class="r">' . esc_html( self::pct( $b['order_rate'] ) ) . '</span><span>' . esc_html( null === $b['aov_cents'] ? '—' : self::format( $b['aov_cents'], 'money' ) ) . '</span></div>';
+				}
+				$t .= '</div>';
+				$card( '3. 谁在买，谁不买', $t . $items( $a['buyer_notes'] ), 'is-wide' );
+			} else {
+				$card( '3. 谁在买，谁不买', $items( array_merge( array( array( 'text' => '没有哪个人群到 ' . Audience::MIN_SEGMENT . ' 人，暂不拆开比较。', 'ev' => '' ) ), $a['buyer_notes'] ) ), 'is-wide' );
+			}
+			// 4. 卡在哪：人群名加粗。
+			$stuck = '';
+			foreach ( $a['stuck'] ? $a['stuck'] : array( array( 'seg' => '', 'text' => '各人群的转化差不多，没有明显卡住的地方。', 'ev' => '' ) ) as $it ) {
+				$parts  = '' !== $it['seg'] ? explode( '：', $it['text'], 2 ) : array( '', $it['text'] );
+				$stuck .= '<div class="pc-cr-aud-item"><p>' . ( '' !== $parts[0] ? '<b>' . esc_html( $parts[0] ) . '</b>　' : '' ) . esc_html( $parts[1] ?? '' ) . '</p>' . ( '' !== (string) $it['ev'] ? '<small>依据：' . esc_html( $it['ev'] ) . '</small>' : '' ) . '</div>';
+			}
+			$card( '4. 没买的人卡在哪', $stuck );
+			// 5. 建议：动作做成彩色标签。
+			$adv = '';
+			foreach ( $a['advice'] as $it ) {
+				$parts = explode( '：', $it['text'], 2 );
+				$tag   = isset( $parts[1] ) ? $parts[0] : '';
+				$adv  .= '<div class="pc-cr-aud-item is-advice"><p>' . ( '' !== $tag ? '<span class="pc-cr-aud-act is-' . esc_attr( $it['kind'] ) . '">' . esc_html( $tag ) . '</span>' : '' ) . esc_html( $parts[1] ?? $parts[0] ) . '</p><small>依据：' . esc_html( $it['ev'] ) . '</small></div>';
+			}
+			$card( '5. 建议', $adv . '<small class="pc-cr-aud-note">只是建议，不会自动改广告。</small>' );
+			echo '</div>';
 		}
 
 		// AI 深度分析（总后台接入的 AI）。

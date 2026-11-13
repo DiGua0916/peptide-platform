@@ -62,6 +62,9 @@ final class Audience {
 		'ip_type'  => array( 'residential' => '家庭宽带', 'mobile' => '手机网络', 'hosting' => '机房', 'vpn' => 'VPN', 'datacenter' => '机房' ),
 		'device'   => array( 'mobile' => '手机', 'tablet' => '平板', 'desktop' => '电脑' ),
 		'country'  => array( 'US' => '美国', 'CA' => '加拿大', 'GB' => '英国', 'AU' => '澳大利亚', 'NZ' => '新西兰', 'MX' => '墨西哥', 'DE' => '德国', 'FR' => '法国', 'IE' => '爱尔兰', 'PR' => '波多黎各', 'CN' => '中国', 'HK' => '中国香港', 'TW' => '中国台湾', 'PH' => '菲律宾', 'IN' => '印度', 'BR' => '巴西' ),
+		// 时区、版位显示简称（2026-11-13，店主：名字太长看不全）；库里仍存原始值，悬停可见。
+		'timezone'  => array( 'America/New_York' => '美东', 'America/Detroit' => '美东', 'America/Indiana/Indianapolis' => '美东', 'America/Chicago' => '美中', 'America/Denver' => '美山地', 'America/Boise' => '美山地', 'America/Phoenix' => '亚利桑那', 'America/Los_Angeles' => '美西', 'America/Anchorage' => '阿拉斯加', 'Pacific/Honolulu' => '夏威夷', 'America/Puerto_Rico' => '波多黎各', 'America/Toronto' => '加东', 'America/Vancouver' => '加西', 'America/Mexico_City' => '墨西哥城', 'Europe/London' => '伦敦', 'Australia/Sydney' => '悉尼', 'Asia/Shanghai' => '北京', 'Asia/Hong_Kong' => '香港', 'Asia/Manila' => '马尼拉' ),
+		'placement' => array( 'Facebook_Mobile_Feed' => 'FB 手机动态', 'Facebook_Desktop_Feed' => 'FB 电脑动态', 'Facebook_Reels' => 'FB Reels', 'Facebook_Stories' => 'FB 快拍', 'Facebook_Marketplace' => 'FB 市场', 'Facebook_Video_Feeds' => 'FB 视频动态', 'Facebook_Right_Column' => 'FB 右侧栏', 'Facebook_Search_Results' => 'FB 搜索', 'Facebook_Instream_Video' => 'FB 视频插播', 'Facebook_Reels_Overlay' => 'FB Reels 浮层', 'Instagram_Feed' => 'IG 动态', 'Instagram_Stories' => 'IG 快拍', 'Instagram_Reels' => 'IG Reels', 'Instagram_Explore' => 'IG 发现', 'Instagram_Explore_Home' => 'IG 发现首页', 'Instagram_Profile_Feed' => 'IG 主页动态', 'Instagram_Search_Results' => 'IG 搜索', 'Messenger_Inbox' => 'Messenger 收件箱', 'Messenger_Stories' => 'Messenger 快拍', 'Audience_Network' => '受众网络', 'Threads_Feed' => 'Threads 动态' ),
 		'language' => array( 'en' => '英语', 'es' => '西班牙语', 'zh' => '中文', 'fr' => '法语', 'de' => '德语', 'pt' => '葡萄牙语', 'ja' => '日语', 'ko' => '韩语', 'vi' => '越南语', 'tl' => '他加禄语' ),
 	);
 
@@ -151,7 +154,17 @@ final class Audience {
 		if ( 'unknown' === $value ) {
 			return '未知';
 		}
-		return self::VALUE_LABELS[ $dim ][ $value ] ?? $value;
+		if ( isset( self::VALUE_LABELS[ $dim ][ $value ] ) ) {
+			return self::VALUE_LABELS[ $dim ][ $value ];
+		}
+		if ( 'placement' === $dim ) {
+			// 没列出的版位：Facebook_ → FB，Instagram_ → IG，下划线换空格。
+			return str_replace( '_', ' ', (string) preg_replace( array( '/^Facebook_/i', '/^Instagram_/i' ), array( 'FB ', 'IG ' ), $value ) );
+		}
+		if ( 'timezone' === $dim && str_contains( $value, '/' ) ) {
+			return str_replace( '_', ' ', substr( $value, strrpos( $value, '/' ) + 1 ) ); // America/Los_Angeles → Los Angeles
+		}
+		return $value;
 	}
 
 	// ---------- 累计 ----------
