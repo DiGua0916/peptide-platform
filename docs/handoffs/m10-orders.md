@@ -60,6 +60,54 @@
 3. 广告花费先手填（跨店报表页下方，每天每店一个金额）。
 4. 在“系列管理”里给每家店填投手，否则报表的第二级都显示“未填投手”。
 
+## 2026-11-13：合并主线 `4059779`（含 `251b727`，素材归因已上线）
+
+**背景**：11-13 素材归因分支合进了主线并上线到 6 家店和总后台。它带上的是本分支 **11-10 的旧代码（`5100ad8`）**，所以线上现在有 M3 / M10 的表（`pchq_m3_db = 1`、`pchq_m10_db = 1`）和页面，但没有 11-12 之后的修复。这次把主线合进本分支（合并提交 `99de8a4`，没有 rebase、没有强推），没有上线、没有动生产。
+
+**冲突三处，怎么解的**
+
+| 文件 | 冲突 | 取舍 |
+| --- | --- | --- |
+| `peptide-hq/includes/class-plugin.php` | 主线把 `Series`、`Orders`、`Creatives` 注册在中间；本分支上次合并时把 `Series`、`Orders` 追加在了末尾 | 用主线的顺序，去掉末尾重复的两行。合并后和主线的这个文件逐字节相同：`Series`、`Orders`、`Creatives` 各注册一次 |
+| `peptide-hq/includes/class-series.php` | “运费内容没变也加版本号”这个问题两边各修了一次 | 用主线的写法（把库里读出的值按同样规则清洗后再比）。本分支的 M3 纯测试 64 项、总后台冒烟测试在这个写法上通过。合并后这个文件和主线相同 |
+| `peptide-core/tests/m10-order-report-pure.php` | 同一条用例两边各改了一个变量名 | 用主线的名字。是同一条用例，没有重复保留；本分支新增的用例都在（共 48 项） |
+
+`docs/CONTRACT.md`、`tests/data-observations-suites.json` 自动合并，没有冲突：两个 F3 小节各一份、没有重复标题；测试登记 108 条、没有重名，F3 的 5 条都在。主线对 `hq/class-orders.php` 的两处改动（花费来源允许 `csv`）自动合并，保持原样，没有改逻辑。合并后除了 F3 名下的 13 个代码 / 测试文件、`tools/catalog/` 和 F3 的文档，其余文件和主线完全相同。
+
+**迁移没有回退**：`pchq_m3_db` 仍是 `1`，`pchq_creatives_db` 仍是 `1`。`pchq_m10_db` 从 `1` **向前**升到 `2`（只加 `pchq_orders.customer_id` 列和索引、新表 `pchq_abandoned`；每次请求启动时检查，不用人工触发）。如果升到 `2` 之后又把代码退回现在线上的版本，旧代码会把版本号写回 `1`，多出来的列和表留着不用，不影响旧代码。
+
+**测试**（本机，原生 PHP 8.3.32；副本是 SQLite）
+
+- M3 / M10 的 5 个纯测试：64 / 35 / 71 / 71 / 48 项全部通过；报告脚本自检 7 项通过。
+- 默认套件（`tests/run-data-observations.cjs`）：主线 83 过 / 1 败，合并后 83 过 / 1 败，失败的是同一个 `mail-source-observations`（日常会话的）。
+- 仓库里全部 94 个 `*-pure.php` 逐个用 `php -n` 跑：主线 79 过 / 15 败，合并后 79 过 / 15 败，**是同样的 15 个，没有新增失败**。这 15 个都不是 M3 / M10 的：
+  - peptide-core（7）：`client-environment-pure`、`data-dimensions-pure`、`data-product-exposure-pure`、`first-order-offer-pure`、`tracking-impressions-pure`、`tracking-native-visit-classifier-pure`、`tracking-preferences-pure`
+  - peptide-hq（2）：`management-addresses-pure`、`provision-customer-domain-pure`
+  - peptide-panapay（6）：`callback-return-status-pure`、`hub-new-account-defaults-pure`、`hub-return-failure-binding-pure`、`hub-return-status-check-pure`、`provider-site-bindings-pure`、`return-cart-pure`
+- 3 个冒烟测试在合并后的代码上重跑通过：店铺 40 + 32 项，总后台 99 项。订单冒烟测试这次是第一次跑在主线已合入的 F4 `Data\Metrics::order_fact()` 上（以前走的是本地的同口径实现）。
+- **按线上状态升级**（总后台副本）：先装主线代码（版本 `1/1/1`），写入 1 笔订单、1 笔退款标记、1 行手填花费、1 行素材推送的花费（`csv`）；换成合并后的代码 → 版本 `1/2/1`，订单、退款、两行花费原样；素材的花费推送接口照常写入（`csv`）；按 `hang-` 订单号能搜到；报表数字正确。
+
+**哪些修复还不在线上、合并后要在沙盒（MySQL）上重新验证**
+
+| 修复 / 功能 | 提交 | 沙盒上要看什么 |
+| --- | --- | --- |
+| 订单页按 `hang-` 订单号搜索、显示店内编号 | `b41e00a` | 总后台“订单与退款”里输 `hang-…` 能搜到 |
+| 订单带客户编号；总后台数据库第 2 版；报表“顾客”一列 | `0c9d2cd` | 在**已有素材表和 `csv` 花费**的总后台库上从 `1` 升 `2`，数据不变（演练第 2 步）；每家店重跑回填（第 4 步），订单带上编号 |
+| 报表“弃单”“弃单率”两列 | `0c9d2cd` | 主线还没有 F1 的 `/hq/summary` 弃单字段和 `pchq_summary_days`，所以合到主线后这两列先显示“—”，等 F1 那部分合入才有数 |
+| 系列活动：类型清单、内容没变不加版本、每条带 `ver`、钩子多第 5 个参数 | `332458b` | 和 F2 的代码合在一起时走一遍系列活动下发（F2 的走查脚本） |
+| 命令行导出 / 比较完全只读；`export --local`、`diff --store-file`；差异报告细节 | `0c9d2cd`、`9647a51` | 沙盒店上 `series_diff_all.sh` 的自检（主店和自己比无差异）、写入 0 条 |
+| 素材看板和花费推送在升级后照常 | 主线功能 | 升到第 2 版后素材对比页能打开、店铺导入报表后花费能推上来 |
+
+线上已经有、不用重验的：运费重复保存不加版本（主线自己修了，`d43c45e`）。
+
+**看到但这次没有动的两处（等平台所有者定）**
+
+1. **邮箱哈希没有加盐**：`peptide-core/includes/class-order-report.php` 第 213 行，`hash( 'sha256', $email )`。两边代码一样，保持原样。
+2. **素材的花费推送会覆盖手填的花费，金额为 0 时删掉那一行**：
+   - 店铺端 `peptide-core/includes/creatives/class-spend-import.php`：导入 Meta 报表后把受影响日期的全店每日花费推给总后台 `/peptide-hq/v1/creatives/spend`。
+   - 总后台 `peptide-hq/includes/class-creatives.php` 的 `handle_spend()`（约 906–921 行）：逐天调用 `Orders::set_spend( …, 'csv' )`。
+   - `peptide-hq/includes/class-orders.php` 的 `set_spend()`（约 607–628 行）：`pchq_ad_spend` 每店每天只有一行（主键是店铺 + 日期），写入用的是整行替换，不看原来是 `manual` 还是 `csv`；金额为 0 时直接删行。
+   - 所以：某天手填过花费、之后店铺导入的报表里也有这一天 → 手填的被换掉，来源变成 `csv`；导入的报表里这一天花费是 0 → 手填的那一行被删。反过来也一样，在报表页手填会盖掉推送来的数（`admin/class-report-page.php` 第 99 行）。上面“按线上状态升级”的测试里两行花费日期不同，所以没有互相覆盖。
 ## 2026-11-12：主线新变化的核对结论
 
 - 新订单的 `hang-` 订单号：`store_order_id` 用的是 WooCommerce 内部订单编号，`order_number` 是显示用的号；总后台订单页两个号都显示、都能搜。已实测。
