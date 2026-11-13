@@ -940,7 +940,7 @@ currency, visitor, visit, buyer
 - **投手后台的两个按店开关（2026-11-14，“优化，不改功能”）**，都是值 `on` 才生效、默认关，关着时投手看到的和线上一样；功能声明 `m9.buyer_extras`、`m9.buyer_no_palette`：
   - `pc_buyer_extras`（`Staff_Buyer::extras()`，过滤器 `pc_buyer_extras_enabled`）：订单列表上方的导出订单（关着时下载请求也拒绝）、订单列表的“退款状态”一列（2026-11-14 起来源和物流单号一律用线上的“来源”“物流单号”两列，原来的“来源广告”“运单号”已去掉）、详情页顶部的退款提示、店铺信息里的“显示客服按钮”（关着时保存店铺信息也不动 `support.enabled`）。
   - `pc_buyer_no_palette`（`Staff_Buyer::hide_palette()`，过滤器 `pc_buyer_no_palette_enabled`）：投手不加载 WordPress 的命令面板。
-  - 不在开关后面、总是生效的：投手订单列表去掉勾选框和“操作”两列（`Admin_Menus::buyer_columns( $columns, false )`），其余列和主线一样。
+  - 开关关着时投手订单列表和线上一模一样（`Admin_Menus::buyer_columns( $columns, false )` 原样返回）。2026-11-14 起按“重复的以主站为主”不再去掉勾选框和“操作”两列（主线 `1a4c189` 的“操作”列已经不给投手发货按钮）。
   - 发布材料（和线上逐页比对、升级和退回、开关状态、还差什么）在 `docs/handoffs/m9-m11-m14-release.md`。
 - 其余后台地址对投手一律 403（`index.php`、`pc-overview` 转到首页，`profile.php` 转到店铺信息）。`admin-ajax.php` 只放行 `heartbeat`、界面偏好、订单预览和按顾客筛选；`admin-post.php` 只放行投手版页面自己的表单；对未登录访客开放的动作不受影响。
 - 能力按请求临时给（`Capabilities::BUYER_SCOPES`）：订单页给订单的查看能力，弃单 / 数据 / 访客页给 `manage_woocommerce`、`view_woocommerce_reports`。REST 只有下面的接口给能力，其他接口上投手没有任何店铺能力：
@@ -952,7 +952,7 @@ currency, visitor, visit, buyer
 - 功能声明（F1 的 `pc_hq_capabilities`）：`m9.media_buyer => 1`（投手角色和开关）、`m9.onboarding => 1`（向导和 `Onboarding::store_status()`）。
 - `Staff_Buyer::can_use()`：管理员，或者已经改过密码的投手。投手版的数据接口用它做权限判断；`can_view()` 只表示能打开页面（没改密码的投手只能看到向导）。
 - 订单页除了 `action`，还拦截不带 `action` 就会执行写操作的参数：`delete_all`（清空回收站）、`claim-lock`（接管编辑锁）。
-- **主线 2026-11-11 的订单详情页**（`admin.php?page=pc-order&id=…`，`Admin\Order_Detail_Page`）：投手可以只读打开（`Staff_Buyer::PAGE_ORDER`，给订单组的能力，订单菜单保持高亮）。不带 `pc_native` 的 `wc-orders&action=edit` 照常由主线转到详情页；**带 `pc_native` 的原生订单页对投手是 403**（它只剩退款、发货、改地址的用途）。详情页上的写操作 `admin-post.php?action=pc_order_detail`（作废、卖家备注、标签）、写邮件（`pc-mail*`）、订单复制（`pc-manual-order`）都不在投手名单里，一律 403。
+- **主线 2026-11-11 的订单详情页**（`admin.php?page=pc-order&id=…`，`Admin\Order_Detail_Page`）：投手可以只读打开（`Staff_Buyer::PAGE_ORDER`，给订单组的能力，订单菜单保持高亮）。不带 `pc_native` 的 `wc-orders&action=edit` 照常由主线转到详情页；带 `pc_native` 的原生订单页和线上一样只读打开（2026-11-14 起不再对投手 403；保存仍被服务端拒绝）。订单这块投手版比线上只多“只读打开详情页”这一处（= 热修复包 A）。详情页上的写操作 `admin-post.php?action=pc_order_detail`（作废、卖家备注、标签）、写邮件（`pc-mail*`）、订单复制（`pc-manual-order`）都不在投手名单里，一律 403。
 - 导出订单：`admin-post.php?action=pc_buyer_orders_export`（`Staff_Buyer::ACTION_EXPORT`，见 M9-4），投手名单里唯一的下载动作；没改密码时同样 403。
 - **命令面板**：WordPress 7 的命令面板（⌘K）在 `admin_enqueue_scripts` 时把这次请求登记的全部后台菜单连名字带地址写进页面，投手在里面能看到“客户”“邮件”“店铺设置”等页面的名字。投手不加载命令面板（`Staff_Buyer::no_command_palette()`），顶部工具条上的入口也去掉；管理员不受影响。
 - **投手看营销活动：只读（平台所有者 2026-11-13 定，F5 和 F2 的分工）。** 投手可以看只读的“当前在跑的活动”，不能新建、编辑、启停、删除。下面这一条取代原来“营销页面不在投手的名单里”的说法。
@@ -1024,11 +1024,11 @@ currency, visitor, visit, buyer
 
 ### M9-4 订单只读和店铺信息（`Admin\Admin_Menus`、`Admin\Store_Settings`，ST-03、ST-07）
 
-- 投手的订单列表：排在主线 `Order_List::columns()`（优先级 999）之后（1000），去掉勾选框、批量操作、行内按钮、主线的“操作”列（发货、写邮件）；`pc_buyer_extras` 打开时最后加“退款状态”。来源和物流单号用线上列表自己的“来源”“物流单号”两列（2026-11-14 起，原来代替“来源”的“来源广告”和补的“运单号”已去掉）。订单号点开的是主线的订单详情页。
-- 订单详情页（主线的 `pc-order`）对投手只读：`Admin_Menus::buyer_order_detail_styles()` 把订单复制、退款、作废、编辑、发货、手动发送邮件、卖家备注的保存、标签增删、“结账成功页 / 订单追踪页”藏起来，并拦住页面上表单的提交；顶部提示“只能查看”。**页面是日常会话的，F5 没有改它的输出**，真正的限制是 M9-1 里的服务端名单。
+- 投手的订单列表：和线上（主线 `Order_List`，11-13 改版）一样，F5 不去掉任何列；`Admin_Menus::buyer_order_columns()` 排在 `Order_List::columns()`（999）之后（1000），只在 `pc_buyer_extras` 打开时最后加“退款状态”。来源和物流单号用线上列表自己的“来源”“物流单号”两列（2026-11-14 起，原来代替“来源”的“来源广告”和补的“运单号”已去掉）。订单号点开的是主线的订单详情页。
+- 订单详情页（主线的 `pc-order`）对投手只读：`Admin_Menus::buyer_order_detail_styles()` 把订单复制、退款、作废、编辑、发货、手动发送邮件、卖家备注的保存、标签增删、“结账成功页 / 订单追踪页”藏起来，并拦住页面上表单的提交（= 热修复包 A）。**页面是日常会话的，F5 没有改它的输出**，真正的限制是 M9-1 里的服务端名单。
 - 退款状态（列表、详情页顶部提示、导出）：`Admin_Menus::refund_facts( \WC_Order )` 返回 `array{label,amount}`。两个来源都算，取大的：F3 写的 `_pc_refund_state`（`none / partial / full`）和 `_pc_refund_cents`（美分；不产生 WooCommerce 退款对象），以及订单上 WooCommerce 的已退金额。`label` 是“已退款 / 部分退款 / 无”。
 - **订单导出（ST-03）**：`Admin\Buyer_Order_Export`。投手的订单列表上方选付款日期 → 下载 CSV（UTF-8 带 BOM）。只含已付款、非测试单的订单；一次最多 92 天、5000 行，不填日期是最近 30 天；列：订单号、下单时间、付款时间、订单状态、订单金额、币种、商品、件数、国家、来源广告、`utm_source / campaign / content / term`、承运商、运单号、退款状态、退款金额。**不含电话和地址；顾客邮箱默认也不含**（平台所有者 2026-11-12 还没定，先按不带）。要带邮箱只有一处开关：这家店的选项 `pc_buyer_export_email` 设为 `on`（`wp option update pc_buyer_export_email on`，或过滤器 `pc_buyer_export_with_email`），打开后“顾客邮箱”排在件数后面。以 `= + - @` 开头的内容前面加单引号（防表格公式）。每次导出记一条操作日志（`order / export`）。管理员用同一个地址也能导。
-- WooCommerce 原生订单页的只读处理（去掉“订单操作”框、隐藏按钮、输入框不可用）保留作兜底，正常情况下投手已经到不了那个页面。
+- WooCommerce 原生订单页（带 `pc_native`）的只读处理和线上同一版本（去掉“订单操作”框、隐藏按钮、输入框不可点；顶部提示“只能查看”）。
 - 店铺信息页面 `admin.php?page=pc-store-info`：投手能改对外英文品牌名、客服 WhatsApp、客服邮箱和自己的密码；后台店铺名称（`blogname`）和域名只读。
   - 对外英文品牌名（平台所有者 2026-11-10 确认可改）：选项 `pc_public_brand`（2–40 个英文字符，可留空），读取用 `\PeptideCore\Admin\Store_Settings::public_brand()`。主题的 `vc_brand_name()` 已经读它（网页标题、Logo 替代文字、页脚版权）；留空时和以前一样。**不写 `blogname`**：那是总后台管理的内部名称，11-08 已定不上前台、不反向同步。
   - WhatsApp、邮箱写 `peptide_core_settings.support` 里的 `whatsapp`、`email`，其余字段不动（保存时从 `Settings::all()` 出发，不会把别的开关关掉）。
@@ -1067,6 +1067,7 @@ currency, visitor, visit, buyer
 | F2（离开挽回、首单券条、转盘、活动倒计时）**F2 已在自己分支实现，11-18 上线** | 弹窗读 `\PeptideCore\Pricing\Popups::suppressed()`。F5 已经挂好过滤器，两个分支都上线就生效 | 已购顾客仍然会看到这些弹窗 |
 | 日常会话（`Track_Widget::rest_lookup()`；**生产冻结，之后再接**） | 核对成功时（订单号 + 邮箱，或设备记住的订单号 + 密钥）对每张核对通过的订单触发 `do_action( 'pc_track_order_verified', $order )`，在返回之前触发 | 顾客换设备后只有登录了才被认出是已购；在物流面板里用订单号 + 邮箱查过也不算 |
 | 日常会话（`Accounts::assets()`；**生产冻结，之后再接**） | 输出 `window.pcAccounts.signup` 时再加一个条件：`\PeptideCore\Pricing\Popups::suppressed()` 为真时不弹注册弹窗（类不存在时照旧）。进站的 18+ 确认不受影响 | 买过但没登录的顾客回访时仍会看到注册弹窗 |
+| 日常会话（`Cloak_Trust`，主线 `8cdb833`；**生产冻结，之后再接**） | 线上已经给付过款的设备发签名 cookie `pc_buyer_trust`（付款成功页、付过款的顾客登录时），和 M11 的 `pc_buyer` 是同一件事。按“重复的以主站为主”，请加一个公开方法（例如 `Cloak_Trust::trusted_order(): ?\WC_Order`，就是现在私有的 `cookie_order()`）；F5 随后让 `Buyer_Status::known()` 改读它，不再写 `pc_buyer`（约 0.5 天） | M11 仍用自己的 `pc_buyer`（开关默认关，线上不会两套同时出现） |
 | 日常会话（`Campaign_Announcement`、`Modules\Product_Broadcast` 等 F2 没覆盖的弹出内容，可选） | 同样读 `Popups::suppressed()`。付款成功弹窗（`Paid_Popup`）不属于营销弹窗，不用改 | 这些内容对已购顾客照常出现 |
 | F1（开关） | 沙盒测过、平台所有者确认之后，试点店打开：`wp option update pc_buyer_recognition on`。回退：`wp option delete pc_buyer_recognition`。前台匿名访客的缓存页最多 5 分钟后才跟着变（见下一段） | — |
 

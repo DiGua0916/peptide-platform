@@ -2,6 +2,12 @@
 
 分支 `claude/m9-buyer-admin-940389`，提交 `9b93b55`（第一批）、之后修主题用例的提交、`ab62b67`（商品地址修正），和 M9、M11 在同一个分支上。没有合并 main，没有发布。
 
+## 2026-11-14 第八轮：合主线 `3a297df`（合并 `1ce0d24`）
+
+- 主线改了 `assets/product-dialog-polish.js`（落地页商品号统一走 `idValue()`）和 `inc/storefront-entry.php`（跳转时保留素材参数 `cr`、`placement`、`ad_name`）。0 冲突。合并后 `storefront-entry.php` 和主线一字不差；`product-dialog-polish.js` = 主线 + 第六轮“后台加载不放弃弹窗”那处修复，没有重复。
+- 主线 `243dc7e` 的提速在服务器那头（一次预读设置、心跳、邮件钩子），和 `pc_front_speed`（浏览器那头少等样式文件、落地页不再多一次请求）不是一回事，两个都留。主线预读名单里没有 `pc_trust_badges`、`pc_front_speed`、`pc_product_activity` 等 F5 新开关，名单在核心插件入口文件里（主线的），没改，建议主线下次顺手加。
+- 主题 PHP 33 个、`.cjs` 59 个用例全过；访客 13 个地址里 12 个和线上同库一致，剩下的是 M11 下线的 `buyer/status`（见发布材料第二节）。
+
 ## 2026-11-14 第七轮：线上已有的优先（`c7e7d52`）
 
 - 页脚上方的 “Track your order”（`inc/storefront-identity.php` 的 `vc_track_order_entry()`）：原来链到 M11 的 `/track-order`，现在是 `<button type="button" data-pc-open-track>`，点开线上的物流面板（`peptide-core` 的 `Track_Widget`，物流面板自己就听这个属性）。条件：`pc_buyer_recognition` 打开（和以前一样，关着时不显示）、物流球开着（`Track_Widget::enabled()`）、不在定制器预览。`assets/site.css` 里 `.vc-track-order a` 换成 `.vc-track-order button`（去掉按钮默认外观，看起来和原来的链接一样）。
