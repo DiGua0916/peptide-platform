@@ -411,3 +411,13 @@ F2 从沙盒失败项反推出一个问题，请 F1 在生产只读核对（只�
 - 核对到的事实：素材分支 `claude/creative-merge` = 1b25f74，比主线多 6 个提交、少 1 个；未合的改动涉及 `tracking/class-attribution.php`、`class-schema.php`（访问表第 7 版）、`class-ingest.php`、`class-visit-facts.php`、`creatives/class-board*.php`、`admin/class-onboarding.php`、主题 `assets/visitor-tracking.js` 等 19 个文件；没有动 `class-pixels.php`、`tracking/class-tracker.php`、`creatives/class-schema.php`、总后台 `class-creatives.php`。
 - M1-7（把发布规则写进 AGENTS.md / CLAUDE.md、挪直推脚本）继续搁置，等所有者确认新的纪律写法。
 
+## 2026-11-13（六）基于新主线的完整候选分支（只在本地组装并推送，没有部署）
+
+- 分支 `claude/m1-candidate-20261113`，顶端 `a7e5702`，从主线 4059779 新开，按顺序合入：m1 `043f7b1` → m6 `922e64b` → m4 `245e277` → m3 `d1aeafb` → m9 `e8f01f8`。5 次合并都没有冲突（`docs/CONTRACT.md` 和 `tests/data-observations-suites.json` 自动合并）。
+- 这个分支只用来组装和验证，不合进主线，也不是任何一个包要发的内容；旧的本地候选 `f1/sandbox-candidate`（73b4997）作废但沙盒上还在跑它。
+- 静态核对：没有 PHP 语法错误、没有空 PHP 文件、没有残留的冲突标记；核心插件入口 157 个启动行、总后台 31 个，对应的类文件都在；主题 29 个 require 的文件都在。相对主线，入口文件只多了 `Pricing\Runtime`、`Releases` 两行和主题三个 require（`product-trust`、`product-activity`、`front-speed`）。
+- 开关在代码里的默认值都是关：`pc_pricing_engine_mode`、`peptide_core_m6_mode`、`pc_buyer_recognition`、`pc_entry_address`、`pc_trust_badges`、`pc_front_speed`、`pc_product_activity`；总后台 `series_sync` 默认 0。（“开关全关”指的是代码默认值；沙盒数据库里现在是开着的，部署时要另外重置。）
+- 测试：`*-pure.php` 113 个，100 过、13 失败；13 个全部在主线的 15 个失败名单里，**新增失败 0 个**。主线失败、候选里通过的 2 个：`first-order-offer-pure`、`tracking-native-visit-classifier-pure`。登记的测试集 109 过、0 失败、1 跳过。发布脚本 11 个、脱敏工具 17 个、开店复制 4 个离线测试全过。
+- 没做：没有部署到沙盒，没有碰生产；冒烟测试和关键链路检查需要装好的环境，没跑。
+- 热修复 A 的两个分支（`claude/hotfix-a-m6`、`claude/hotfix-a-m9`）组装时还没推送，等推送后再取。
+
