@@ -850,7 +850,7 @@ Root installed only three existing Commerce sources for P09 collection products 
 
 | 开关 | 在哪 | 关着（默认） | 打开 |
 | --- | --- | --- | --- |
-| `pchq_m10_extras` | 总后台选项（没有 = 关；过滤器 `pchq_m10_extras` 可以覆盖） | 跨店报表、订单页和 11-10 上线的版本一样；不收集弃单数 | 报表多“顾客”“弃单”“弃单率”三列；订单页多“店内订单编号”“客户编号”；可按客户编号搜索；从各店每日汇总收弃单数（`pchq_summary_days` 动作和 `http_response` 保底） |
+| `pchq_m10_extras` | 总后台选项（没有 = 关；过滤器 `pchq_m10_extras` 可以覆盖） | 跨店报表、订单页（含 hang- 单号的显示和搜索）和 11-10 上线的版本逐字节一样；不收集弃单数 | 报表多“顾客”“弃单”“弃单率”三列；订单页多“店内订单编号”“客户编号”，hang- 单号前不加“#”；搜索去掉“#”、不分大小写、可按客户编号搜；从各店每日汇总收弃单数（`pchq_summary_days` 动作和 `http_response` 保底） |
 | `pc_order_report_customer_id` | 店铺选项（没有 = 关；过滤器同名） | 上报的订单摘要和 11-10 上线的版本逐项相同，没有 `customer_id` | 摘要带 `customer_id`；指纹变了，每张已上报的订单会重报一次 |
 
 `PeptideHq\Orders::extras()`、`PeptideCore\Order_Report::with_customer_id()` 返回当前状态。报表数据 `Orders::report()` 里的 `customers / abandoned / abandon_orders / abandon_rate` 不管开关都会算，只是关着时页面不显示。

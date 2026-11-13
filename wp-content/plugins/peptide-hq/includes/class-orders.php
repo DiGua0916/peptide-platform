@@ -26,7 +26,9 @@ final class Orders {
 	public const OPTION    = 'pchq_m10_db';
 
 	/**
-	 * 开关（默认关）：报表的“顾客”“弃单”“弃单率”三列、订单页的客户编号和店内订单编号、按客户编号搜索、收集各店每日汇总里的弃单数。
+	 * 开关（默认关）：报表的“顾客”“弃单”“弃单率”三列、订单页的客户编号和店内订单编号、按客户编号搜索、收集各店每日汇总里的弃单数，
+	 * 以及 hang- 单号的新显示（不带 #）和新搜法（去掉 #、不分大小写）。
+	 * 平台所有者 2026-11-14 定的原则：和线上已有功能重叠的地方一律以线上为准，所以关着时这些都照 11-10 上线的写法。
 	 * 这些是 2026-11-12 之后加的新东西；关着时页面和 11-10 上线的版本一样。打开：wp option update pchq_m10_extras 1。
 	 */
 	public const EXTRAS    = 'pchq_m10_extras';
@@ -364,8 +366,15 @@ CREATE TABLE {$left} (
 				$where[] = 'is_test = 1';
 				break;
 		}
-		// 订单号：顾客和平台所有者看到的号（新订单是支付方的 hang-数字，老订单是数字），或者店铺内部的订单编号。
-		$q = self::clean_query( (string) ( $f['q'] ?? '' ) );
+		// 开关关着：照线上（11-10）的写法，一个字不改。
+		if ( ! self::extras() ) {
+			$q = (string) preg_replace( '/[^A-Za-z0-9#_-]/', '', (string) ( $f['q'] ?? '' ) );
+			if ( '' !== $q ) {
+				$where[] = $wpdb->prepare( '(order_number = %s OR store_order_id = %d)', $q, (int) ltrim( $q, '#' ) );
+			}
+		}
+		// 开关打开：顾客和平台所有者看到的号（新订单是支付方的 hang-数字，老订单是数字），或者店铺内部的订单编号，或者客户编号。
+		$q = self::extras() ? self::clean_query( (string) ( $f['q'] ?? '' ) ) : '';
 		if ( '' !== $q ) {
 			$customer = self::extras() ? self::clean_customer_id( $q ) : '';
 			$where[]  = '' !== $customer

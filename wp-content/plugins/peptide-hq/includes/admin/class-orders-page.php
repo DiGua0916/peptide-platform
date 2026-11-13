@@ -77,6 +77,9 @@ final class Orders_Page {
 	/** 顾客和平台所有者看到的订单号：新订单是支付方的 hang-数字，老订单是 # 加数字。 */
 	private static function number( array $o ): string {
 		$n = '' !== (string) $o['order_number'] ? (string) $o['order_number'] : (string) $o['store_order_id'];
+		if ( ! Orders::extras() ) {
+			return '#' . $n; // 开关关着：照线上（11-10）的写法，所有订单号前都加 #。
+		}
 		return ctype_digit( $n ) ? '#' . $n : $n;
 	}
 
