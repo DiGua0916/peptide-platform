@@ -16,7 +16,9 @@ final class Tracking_Product_Page {
 	}
 
 	public static function add_menu(): void {
+		// 店主 2026-11-13：重复浏览、回访浏览并进“数据 → 商品详情数据”，这一页不再放在菜单里（直接打开地址仍能用）。
 		add_submenu_page( Tracking_Page::SLUG, __( '商品浏览统计', 'peptide-core' ), __( '商品浏览统计', 'peptide-core' ), 'manage_woocommerce', self::SLUG, array( self::class, 'render' ) );
+		add_action( 'admin_head', static function (): void { remove_submenu_page( Tracking_Page::SLUG, self::SLUG ); } );
 	}
 
 	public static function enqueue( string $hook ): void {

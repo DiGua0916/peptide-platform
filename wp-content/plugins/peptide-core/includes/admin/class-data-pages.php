@@ -1242,6 +1242,8 @@ final class Data_Pages {
 			'share_users' => __( 'Sharing users', 'peptide-core' ),
 			'intent_count' => __( 'Explicit intent operations', 'peptide-core' ),
 			'intent_users' => __( 'Intent operation users', 'peptide-core' ),
+			'repeat_view_users' => '重复浏览人数',
+			'returning_view_users' => '回访浏览人数',
 			'actionNote' => __( 'Favorite, share and intent values count only received successful source operations for parent products. Coverage is partial: an unobserved product, kind or period is blank, not zero. Favorites are additions, not current balances; intent means explicit quick-view or buy-now operations, not an inferred purchase score. Variations have no separate measurement.', 'peptide-core' ),
 			'created_at' => __( 'Product creation time', 'peptide-core' ),
 			'createdTimezone' => __( 'Creation times are shown in %s. CSV uses UTC.', 'peptide-core' ),

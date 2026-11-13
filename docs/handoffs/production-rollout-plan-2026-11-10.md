@@ -644,3 +644,14 @@
 - 检查（主店）：数据库事务里实测发货（最后回滚、邮件全部拦截不外发，订单恢复原样）：错误单号被拒；正确单号 → 订单已完成、顾客侧看到 FedEx + 单号 + 追踪链接、发货状态 fulfilled、只有一封“has shipped”邮件；已发货的再发被拒。浏览器（店主已登录）：筛选和标签页不见了、搜索在，菜单“待处理订单 / 已发货订单 / 手动订单 / 弃单”，货车图标弹出 FedEx 单号框（没提交），已发货订单页高亮正确，无 PHP 警告。
 - 老顾客补建账户（只预演，未执行）：主店 #11843 ryley.tk1996@gmail.com、阳 s0007 #11892 shepower500@gmail.com、芒果 s0010 #11886 jestevesflores@gmail.com 三位要建账户并发信；测试单已跳过。三家店发件箱最近都是“已发出”。**店主确认邮件原文后已于 2026-11-13 16:44 UTC 执行**：三位都建好账户、订单归到账户，邮件“Your {品牌} account is ready”在三家店发件箱都是“已发出”（主店 #27、s0007 #52、s0010 #61）。再预演一次三家店都没有剩下要处理的订单。
 - 回滚：备份文件拷回，reload php8.3-fpm。
+
+### 2026-11-13 16:53–16:56 UTC（北京 2026-11-14 00:53–00:56）数据页 / 访客数据去重
+- 店主：访客数据里大量重复，都在分析加购商品。排查：“大家对什么感兴趣 + 全站分析师 AI”整块一字不差出现在实时访客、访客归档、转化统计三页；块内“加购商品”讲了 5 遍（被加进购物车最多、商品热度、商品漏斗横向对比表、AI 商品横向对比表、卡在结账）；后台约 8 处讲商品浏览 / 加购。按店主确认的方案整理：
+  - 访客数据只留“实时访客”“访客归档”两页，都只有访客列表 / 详情；那一大块去掉。访客详情的“客户分析 AI”不变。
+  - “转化统计”从菜单去掉，旧地址跳到“数据 → 运营数据”（漏斗、访客转化、结账步骤都在那；它自己的商品列表和商品详情数据重复）。注：运营数据没有“每天加购成功次数”这一列。
+  - “商品浏览统计”从菜单去掉（直接打开地址仍可用，可按商品看是哪些访客浏览的）；“重复浏览人数”“回访浏览人数”两列并进“数据 → 商品详情数据”（列设置里勾选，CSV 导出多 6 列：本期 / 对比期 / 变化）。数字和原页面逐个核对一致（主店近 30 天前 6 个商品 views / viewers / repeat / returning 全部相同）。
+  - 全站分析师 AI 只放“数据 → AI 分析”（pc-data-ai）一页：保留日 / 周 / 月、导出、KPI、转化漏斗、流量来源、版块点击、在哪离开和 AI 报告；不再画商品热度、加购排行、商品漏斗横向对比。给 AI 的调优里固定加一段版面要求：不输出商品明细表 / 商品横向对比，商品只点出 1–3 个最值得关注的。主店重新分析一次验证：新报告没有“商品横向对比”，只剩“大盘体检”指标表。
+- 改动：peptide-core `assets/tracking-insights.js`、`assets/workspace-shell.js`、`includes/admin/class-tracking-page.php`、`class-tracking-product-page.php`、`class-overview-page.php`（工作台“转化”链接改到运营数据）、`class-data-pages.php`（两列中文名）、`includes/class-hq-ai.php`（SITE_LAYOUT）、`includes/data/class-products.php`（repeat_view_users、returning_view_users，追加在 METRICS 末尾，不进默认列）；测试 `data-product-user-ratios.php`、`data-product-created.php` 跟着改指标数 33→35、CSV 列 110→116（通过）。`tracking-insights.cjs`、`data-product-exposure-pure.php` 改之前就跑不了（缺 jsdom 路径 / 缺类），和本次无关。
+- 部署前 14 份副本这 8 个文件和 1a4c189 一致；部署后全部等于新版本。备份：web `/root/vialcove-backups/dataclean-main-web-20261113T165344Z`、`dataclean2-main-web-…`、`dataclean-tenants-web-20261113T165614Z`；HQ 主机 `dataclean-main-admin-20261113T165345Z`、`dataclean2-main-admin-…`、`dataclean-tenants-admin-20261113T165617Z`。
+- 检查：主店浏览器——实时访客、访客归档只剩列表、无警告；访客数据菜单只有两项；转化统计旧地址跳到运营数据；AI 分析页正常；商品详情数据列设置里有两列新列；访客详情仍有客户分析 AI。6 家店服务器端：商品详情数据接口 200 且带新列、AI 分析页正常、无 PHP 警告。
+- 回滚：备份文件拷回，reload php8.3-fpm（没有改表、没有删数据）。
