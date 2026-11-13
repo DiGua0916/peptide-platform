@@ -1061,6 +1061,8 @@ final class Board_Page {
 			$card = static function ( string $title, string $body, string $cls = '' ): void {
 				echo '<section class="pc-cr-aud-card' . ( '' !== $cls ? ' ' . esc_attr( $cls ) : '' ) . '"><h4>' . esc_html( $title ) . '</h4>' . $body . '</section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $body 由上面的函数转义生成。
 			};
+			// 2026-11-13 店主：默认收起，只留一句话；点开看 5 个分区。
+			echo '<details class="pc-cr-aud-more"><summary><span class="is-shut">展开人群分析（来的人、质量、谁在买、卡在哪、建议）</span><span class="is-open">收起人群分析</span></summary>';
 			echo '<div class="pc-cr-aud-cards">';
 			// 1. 来的是什么人：共同特征做成标签，其余一条一行。
 			$who = $a['who'];
@@ -1102,7 +1104,7 @@ final class Board_Page {
 				$adv  .= '<div class="pc-cr-aud-item is-advice"><p>' . ( '' !== $tag ? '<span class="pc-cr-aud-act is-' . esc_attr( $it['kind'] ) . '">' . esc_html( $tag ) . '</span>' : '' ) . esc_html( $parts[1] ?? $parts[0] ) . '</p><small>依据：' . esc_html( $it['ev'] ) . '</small></div>';
 			}
 			$card( '5. 建议', $adv . '<small class="pc-cr-aud-note">只是建议，不会自动改广告。</small>' );
-			echo '</div>';
+			echo '</div></details>';
 		}
 
 		// AI 深度分析（总后台接入的 AI）。
