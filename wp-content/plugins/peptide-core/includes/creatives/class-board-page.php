@@ -276,6 +276,17 @@ final class Board_Page {
 .pc-cr-board .pc-cr-all span{display:block;font-size:11px;color:#646970}
 .pc-cr-board .pc-cr-all b{font-variant-numeric:tabular-nums}
 .pc-cr-board ul.pc-cr-visitors{columns:4;font-size:12px;margin:4px 0 0}
+/* 卡片展开提示（2026-11-13） */
+.pc-cr-board .pc-cr-toggle{font-size:12px;color:#2271b1;white-space:nowrap;margin-left:4px}
+.pc-cr-board .pc-cr-toggle b{font-weight:400}
+.pc-cr-board .pc-cr-toggle .is-shut::after{content:" \25BE"}
+.pc-cr-board .pc-cr-toggle .is-open{display:none}
+.pc-cr-board .pc-cr-toggle .is-open::after{content:" \25B4"}
+.pc-cr-board details.pc-cr-row[open] .pc-cr-toggle .is-shut{display:none}
+.pc-cr-board details.pc-cr-row[open] .pc-cr-toggle .is-open{display:inline;color:#646970}
+.pc-cr-board details.pc-cr-row>summary:hover{background:#f6f7f7}
+.pc-cr-board details.pc-cr-row[open]>summary{border-bottom:1px solid #f0f0f1}
+.pc-cr-board .pc-cr-expand{font-size:13px}
 /* 决策清单、象限图、热力格（2026-11-13） */
 .pc-cr-board .pc-cr-h2{font-size:16px;margin:26px 0 6px}
 .pc-cr-board .pc-cr-h3{font-size:14px;margin:16px 0 4px}
@@ -534,6 +545,7 @@ final class Board_Page {
 			$url = add_query_arg( array( 'page' => Module::PAGE_BOARD, 'dim' => $f['dim'], 'mode' => $f['mode'], 'from' => $f['from'], 'to' => $f['to'], 'ver' => $f['ver'], 'sort' => $k ), admin_url( 'admin.php' ) );
 			echo $k === $f['sort'] ? '<b>' . esc_html( $label ) . '</b>' : '<a href="' . esc_url( $url ) . '">' . esc_html( $label ) . '</a>';
 		}
+		echo '<button type="button" class="button-link pc-cr-expand" data-pc-cr-expand>展开全部详细数据</button>';
 		echo '</span><span class="pc-cr-counts">';
 		foreach ( Board::VERDICTS as $k => $label ) {
 			if ( $counts[ $k ] ) {
@@ -556,7 +568,26 @@ final class Board_Page {
 			}
 			self::render_card( $row, $rules );
 		}
+		self::cards_script();
 		echo '<p class="pc-cr-muted">建议：ROAS ≥ ' . esc_html( self::num( $rules['scale_roas'], 1 ) ) . ' 加投，&lt; ' . esc_html( self::num( $rules['stop_roas'], 1 ) ) . ' 建议停，花费 ≥ ' . esc_html( $money( $rules['stop_spend_cents'] ) ) . ' 还没订单也建议停；有效访客不到 ' . esc_html( (string) Board::MIN_VALID ) . ' 显示样本不足。规则在下面“设置”里改。漏斗按这一行的进站访客算比例，红色是丢人最多的一步。点卡片看全部指标和访客名单。</p>';
+	}
+
+	/** “展开全部详细数据”按钮。 */
+	private static function cards_script(): void {
+		?>
+<script>
+( function () {
+	document.addEventListener( 'click', function ( e ) {
+		var b = e.target.closest( '[data-pc-cr-expand]' );
+		if ( ! b ) { return; }
+		var shut = '1' !== b.getAttribute( 'data-open' );
+		document.querySelectorAll( 'details.pc-cr-row' ).forEach( function ( d ) { d.open = shut; } );
+		b.setAttribute( 'data-open', shut ? '1' : '0' );
+		b.textContent = shut ? '收起全部' : '展开全部详细数据';
+	} );
+} )();
+</script>
+		<?php
 	}
 
 	/** 今天要做的事（2026-11-13）：只在能直接操作的维度显示（素材、广告、广告组）。 */
@@ -719,7 +750,8 @@ final class Board_Page {
 		echo '<details class="pc-cr-row is-' . esc_attr( $v ) . '"><summary>';
 		echo '<div class="pc-cr-row-head">' . ( '' !== $thumb ? '<img class="pc-cr-thumb" src="' . esc_url( $thumb ) . '" alt="">' : '' );
 		echo '<div class="pc-cr-row-name"><b>' . esc_html( (string) $row['label'] ) . '</b>' . ( '' !== $attr_t ? '<span>' . esc_html( $attr_t ) . '</span>' : '' ) . '</div>';
-		echo '<span class="pc-cr-badge is-' . esc_attr( $v ) . '">' . esc_html( Board::VERDICTS[ $v ] ?? $v ) . '</span></div>';
+		echo '<span class="pc-cr-badge is-' . esc_attr( $v ) . '">' . esc_html( Board::VERDICTS[ $v ] ?? $v ) . '</span>';
+		echo '<span class="pc-cr-toggle"><b class="is-shut">详细数据</b><b class="is-open">收起</b></span></div>';
 		echo '<div class="pc-cr-row-keys">';
 		foreach ( array( array( '花费', self::format( $row['spend_cents'], 'money' ), '' ), array( '订单', (string) (int) $row['orders'], '' ), array( '销售额', self::format( $row['sales_cents'], 'money' ), '' ), array( 'ROAS', self::format( $row['roas'], 'x' ), $roas_cls ) ) as $k ) {
 			echo '<span>' . esc_html( $k[0] ) . ' <b class="' . esc_attr( $k[2] ) . '">' . esc_html( $k[1] ) . '</b></span>';
