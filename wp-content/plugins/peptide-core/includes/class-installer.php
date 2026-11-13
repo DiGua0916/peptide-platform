@@ -35,6 +35,10 @@ final class Installer {
 			}
 			update_option( self::OPTION_VERSION, PEPTIDE_CORE_VERSION, false );
 		}
+		// 一次性数据修复（2026-11-13）：跑过就只读一个自动加载的选项，不查库。
+		if ( '1' !== (string) get_option( Tracking\Schema::FIRST_VISIT_FIX, '' ) && get_option( Tracking\Schema::OPTION ) ) {
+			Tracking\Schema::repair_first_visits();
+		}
 	}
 
 	/**

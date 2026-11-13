@@ -57,6 +57,7 @@ namespace {
 			}, $sql );
 		}
 		public function query( string $sql ) { $this->queries[] = $sql; return $this->next_query; }
+		public function get_var( string $sql ) { return preg_match( "/^SHOW TABLES LIKE '([^']*)'$/", $sql, $m ) ? $m[1] : null; } // 素材表都在
 		public function get_row( $sql, $mode = null ) { $this->queries[] = $sql; return null; }
 	}
 	$GLOBALS['wpdb'] = new Fake_Wpdb();
@@ -185,7 +186,7 @@ namespace {
 	Visit_Facts::after_capture( 7, 42, $cols, $now );
 	$check( 'creative tables not installed: only the visitor update', 1 === count( $wpdb->queries ) );
 	$tracker_src = (string) file_get_contents( $inc . '/tracking/class-tracker.php' );
-	$check( 'first_visit_id only written when 0', str_contains( $tracker_src, 'first_visit_id = CASE WHEN first_visit_id = 0 THEN %d ELSE first_visit_id END' ) );
+	$check( 'first_visit_id only written when 0, as the earliest visit', str_contains( $tracker_src, 'first_visit_id = CASE WHEN first_visit_id = 0 THEN COALESCE( ( SELECT MIN(x.id) FROM {$visits} x WHERE x.visitor_id = %d ), %d ) ELSE first_visit_id END' ) );
 
 	// ---------- IP 类型 ----------
 	$types = array(

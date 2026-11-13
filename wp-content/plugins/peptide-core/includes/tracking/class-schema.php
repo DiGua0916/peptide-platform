@@ -60,6 +60,31 @@ final class Schema {
 		return true;
 	}
 
+	/** 一次性数据修复的标记：first_visit_id 改成访客最早一次访问（2026-11-13）。 */
+	public const FIRST_VISIT_FIX = 'pc_track_first_visit_fix';
+
+	/**
+	 * 把 first_visit_id 不等于“这位访客最早一次访问”的访客改正（只跑一次，成功后记标记）。
+	 * 老访客的 first_visit_id 以前会被写成上线后的第一次回访，“首次来源”和付费访客数因此虚高。
+	 *
+	 * @return int|null 改了几行；没跑（已跑过 / 表没就绪）为 null；出错为 -1（不记标记，下次再试）
+	 */
+	public static function repair_first_visits(): ?int {
+		if ( '1' === (string) get_option( self::FIRST_VISIT_FIX, '' ) || ! self::installed() ) {
+			return null;
+		}
+		global $wpdb;
+		$v = self::table( 'visitors' );
+		$s = self::table( 'visits' );
+		$n = $wpdb->query( "UPDATE {$v} SET first_visit_id = ( SELECT MIN(x.id) FROM {$s} x WHERE x.visitor_id = {$v}.id ) WHERE EXISTS ( SELECT 1 FROM {$s} y WHERE y.visitor_id = {$v}.id ) AND first_visit_id <> ( SELECT MIN(z.id) FROM {$s} z WHERE z.visitor_id = {$v}.id )" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		if ( false === $n ) {
+			return -1;
+		}
+		update_option( self::FIRST_VISIT_FIX, '1', true );
+		update_option( self::FIRST_VISIT_FIX . '_log', array( 'at' => time(), 'rows' => (int) $n ), false );
+		return (int) $n;
+	}
+
 	public static function install(): void {
 		self::$ready_cache = array();
 		delete_option( self::VERIFIED_OPTION );

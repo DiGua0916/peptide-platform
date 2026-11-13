@@ -825,15 +825,24 @@ final class Board {
 		$events_t   = \PeptideCore\Tracking\Schema::table( 'events' );
 		$out        = array( 'visits' => array(), 'visitors' => array(), 'ads' => array(), 'creatives' => array(), 'spend' => array(), 'orders' => array(), 'labels' => array() );
 		if ( ! \PeptideCore\Tracking\Schema::installed() ) {
-			return $out;
+			return $out + array( 'error' => true ); // 2026-11-13：没就绪也算“读不出”，日报不能当成空的发出去
 		}
+		$err  = false;
+		$seen = static function () use ( $wpdb, &$err ): void {
+			if ( '' !== (string) $wpdb->last_error ) {
+				$err = true;
+			}
+		};
+		$wpdb->last_error = '';
 		// 范围内有过付费 / 未带参访问的访客，再取他们到范围结束为止的全部访问（判断首次来源、回访）。
 		$ids = array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT visitor_id FROM {$visits_t} WHERE start_ms >= %d AND start_ms < %d AND source_class IN ('paid','fb_untagged') LIMIT %d", $ms[0], $ms[1], self::MAX_VISITS ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		$seen();
 		$cols = 'id, visitor_id, start_ms, last_ms, utm_source, utm_medium, utm_term, utm_content, placement, ad_name, creative_code, source_class, ip_type, timezone, language, geo_region, geo_country, in_app, device, pageviews, stage, order_id';
 		$owners = array();
 		foreach ( array_chunk( $ids, 500 ) as $chunk ) {
 			$in   = implode( ',', $chunk );
 			$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT {$cols} FROM {$visits_t} WHERE visitor_id IN ({$in}) AND start_ms < %d ORDER BY start_ms, id", $ms[1] ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			$seen();
 			foreach ( $rows as $r ) {
 				$out['visits'][ (int) $r['id'] ] = $r;
 				$owners[ (int) $r['id'] ]        = (int) $r['visitor_id'];
@@ -841,6 +850,7 @@ final class Board {
 			foreach ( (array) $wpdb->get_results( "SELECT id, first_visit_id, last_paid_visit_id FROM {$visitors_t} WHERE id IN ({$in})", ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 				$out['visitors'][ (int) $r['id'] ] = array( 'first_visit_id' => (int) $r['first_visit_id'], 'last_paid_visit_id' => (int) $r['last_paid_visit_id'] );
 			}
+			$seen();
 		}
 		// 事件明细：只取判断意向要用的类型。
 		$types  = "'page_view','product_view','product_click','product_intent','variant_select','module_click','add_to_cart','add_to_cart_attempt','checkout_view','checkout_submit_attempt','cart_view','cart_open','product_favorite','product_share','video_play','scroll','product_scroll'";
@@ -850,6 +860,7 @@ final class Board {
 			foreach ( (array) $wpdb->get_results( "SELECT visit_id, type, page_type, path, product_id, data FROM {$events_t} WHERE visit_id IN ({$in}) AND type IN ({$types}) ORDER BY occurred_ms, id", ARRAY_A ) as $e ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 				$events[ (int) $e['visit_id'] ][] = $e;
 			}
+			$seen();
 		}
 		$status = array();
 		try {
@@ -873,7 +884,10 @@ final class Board {
 				$out['orders'][ $oid ] = (int) round( max( 0.0, (float) $order->get_total() - (float) $order->get_total_refunded() ) * 100 );
 			}
 		}
-		return array_merge( $out, self::catalog(), array( 'spend' => self::spend( $day_from, $day_to ) ) );
+		$wpdb->last_error = '';
+		$out = array_merge( $out, self::catalog(), array( 'spend' => self::spend( $day_from, $day_to ) ) );
+		$seen();
+		return $out + array( 'error' => $err );
 	}
 
 	/** 素材、广告、词表中文名。 */
