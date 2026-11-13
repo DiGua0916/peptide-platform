@@ -196,7 +196,7 @@ final class Exit_Intent {
 
 	/** admin_post_pc_app_exit_save（排在保存之前）：投手提交弹窗设置直接 403。 */
 	public static function deny_buyer(): void {
-		if ( Admin\Marketing::is_buyer() ) {
+		if ( Admin\Marketing::is_buyer() && Admin\Marketing::rules_active() ) {
 			wp_die( '这个账号只能查看当前在跑的活动，不能修改弹窗设置。', '', array( 'response' => 403 ) );
 		}
 	}
@@ -210,7 +210,7 @@ final class Exit_Intent {
 			return array( '这个弹窗由总后台按系列统一下发，店铺后台不能修改。' );
 		}
 		// 投手只能看当前在跑的活动，不能改弹窗设置（HQ-07）。没有登录用户的调用（总后台的应用开关、系列下发）不受影响。
-		if ( get_current_user_id() && Admin\Marketing::is_buyer() ) {
+		if ( get_current_user_id() && Admin\Marketing::is_buyer() && Admin\Marketing::rules_active() ) {
 			return array( '这个账号只能查看当前在跑的活动，不能修改弹窗设置。' );
 		}
 		[ $s, $errors ] = self::clean( $raw );
@@ -492,18 +492,8 @@ final class Exit_Intent {
 		update_option( self::DB_OPTION, self::DB_VERSION, false );
 	}
 
-	/**
-	 * 数据表可以用了吗：版本号对，而且表真的在。
-	 * 只看版本号不够：整店复制（tools/deployment/provisioning/clone.py）整表复制设置，来源店的版本号会留在新店，
-	 * 表却不跟着来，那样新店的展示 / 领取 / 抽奖 / 订单会一直记不上（2026-11-12 认领冒烟用例时查到）。
-	 */
 	public static function installed(): bool {
-		global $wpdb;
-		if ( self::DB_VERSION !== get_option( self::DB_OPTION ) ) {
-			return false;
-		}
-		$t = self::table();
-		return $t === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $t ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		return self::DB_VERSION === get_option( self::DB_OPTION );
 	}
 
 	/** 当天（店铺时区）的某个事件加一次。 */
@@ -512,19 +502,19 @@ final class Exit_Intent {
 		if ( ! in_array( $event, self::EVENTS, true ) ) {
 			return;
 		}
-		if ( self::DB_VERSION !== get_option( self::DB_OPTION ) ) {
+		if ( ! self::installed() ) {
 			self::install();
 		}
 		$t   = self::table();
 		$sql = $wpdb->prepare( "INSERT INTO {$t} (day, app, event, count, amount) VALUES (%s, %s, %s, 1, %f) ON DUPLICATE KEY UPDATE count = count + 1, amount = amount + VALUES(amount)", $day ?? wp_date( 'Y-m-d' ), self::APP, $event, $amount ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		// 正常情况只有这一次写入。写不进去（版本号在、表不在）就补建表再记一次；第二次不再静默，仍然失败会照常进错误日志。
-		$quiet = $wpdb->suppress_errors( true );
-		$done  = $wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
-		$wpdb->suppress_errors( $quiet );
-		if ( false === $done ) {
+		$suppress = $wpdb->suppress_errors( true );
+		$ok       = $wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
+		// 2026-11-14：子店从模板复制时带了“已建表”标记却没有表，记录一直静默失败。表不在就建表再记一次。
+		if ( false === $ok && false !== stripos( (string) $wpdb->last_error, "doesn't exist" ) ) {
 			self::install();
 			$wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
 		}
+		$wpdb->suppress_errors( $suppress );
 	}
 
 	/** @return array<string,array{count:int,amount:float}> 最近 N 天（含今天）每个事件的合计。 */

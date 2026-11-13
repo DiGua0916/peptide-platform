@@ -23,18 +23,37 @@ final class Tracking_Page {
 	public const SLUG       = 'pc-visitors';
 	public const STATS_SLUG   = 'pc-visitors-stats';
 	public const ARCHIVE_SLUG = 'pc-visitors-archive';
+	public const AI_SLUG      = 'pc-data-ai'; // 店主 2026-11-13：全站分析师 AI 只放这一页（数据 → AI 分析）。
 
 	public static function register_hooks(): void {
 		add_action( 'admin_menu', array( self::class, 'add_menu' ), 57 );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
 		add_action( 'admin_post_pc_tracking_purge', array( self::class, 'handle_purge' ) );
+		add_action( 'admin_menu', array( self::class, 'add_ai_menu' ), 62 );
+		add_action( 'admin_init', array( self::class, 'retire_stats' ), 0 );
+		add_action( 'admin_page_access_denied', array( self::class, 'retire_stats' ), 0 ); // 菜单里已经没有这一页，WordPress 先报“没有权限”，在那之前跳走。
+	}
+
+	/** 数据 → AI 分析（全站分析师 AI，原来在实时访客 / 访客归档 / 转化统计三页各放一份）。 */
+	public static function add_ai_menu(): void {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			return;
+		}
+		add_submenu_page( Data_Pages::SLUG, 'AI 分析', 'AI 分析', 'manage_woocommerce', self::AI_SLUG, array( self::class, 'render' ) );
+	}
+
+	/** 转化统计页并进“数据 → 运营数据”（店主 2026-11-13），旧链接跳过去。 */
+	public static function retire_stats(): void {
+		if ( isset( $_GET['page'] ) && self::STATS_SLUG === sanitize_key( wp_unslash( $_GET['page'] ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			wp_safe_redirect( admin_url( 'admin.php?page=pc-data-operations' ) );
+			exit;
+		}
 	}
 
 	public static function add_menu(): void {
 		add_menu_page( __( 'Visitors', 'peptide-core' ), __( 'Visitors', 'peptide-core' ), 'manage_woocommerce', self::SLUG, array( self::class, 'render' ), 'dashicons-visibility', 57 );
 		add_submenu_page( self::SLUG, __( 'Live visitors', 'peptide-core' ), __( 'Live visitors', 'peptide-core' ), 'manage_woocommerce', self::SLUG, array( self::class, 'render' ) );
 		add_submenu_page( self::SLUG, __( 'Visitor archive', 'peptide-core' ), __( 'Visitor archive', 'peptide-core' ), 'manage_woocommerce', self::ARCHIVE_SLUG, array( self::class, 'render' ) );
-		add_submenu_page( self::SLUG, __( 'Conversion', 'peptide-core' ), __( 'Conversion', 'peptide-core' ), 'manage_woocommerce', self::STATS_SLUG, array( self::class, 'render' ) );
 	}
 
 	private static function view(): string {
@@ -45,11 +64,14 @@ final class Tracking_Page {
 		if ( self::ARCHIVE_SLUG === $page ) {
 			return 'archive';
 		}
+		if ( self::AI_SLUG === $page ) {
+			return 'ai';
+		}
 		return isset( $_GET['visitor'] ) ? 'visitor' : 'live'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 	}
 
 	public static function enqueue( string $hook ): void {
-		if ( ! str_ends_with( $hook, self::SLUG ) && ! str_ends_with( $hook, self::STATS_SLUG ) && ! str_ends_with( $hook, self::ARCHIVE_SLUG ) ) {
+		if ( ! str_ends_with( $hook, self::SLUG ) && ! str_ends_with( $hook, self::ARCHIVE_SLUG ) && ! str_ends_with( $hook, self::AI_SLUG ) ) {
 			return;
 		}
 		$url = plugins_url( 'assets/', PEPTIDE_CORE_FILE );
@@ -321,6 +343,7 @@ final class Tracking_Page {
 			'visitor' => __( 'Visitor details', 'peptide-core' ),
 			'stats'   => __( 'Conversion', 'peptide-core' ),
 			'archive' => __( 'Visitor archive', 'peptide-core' ),
+			'ai'      => 'AI 分析',
 		);
 		?>
 		<div class="wrap pc-trk">
@@ -348,8 +371,13 @@ final class Tracking_Page {
 					<?php endif; ?>
 				</div>
 			<?php endif; ?>
-			<div id="pc-trk-app" class="pc-trk-app"><p><?php esc_html_e( 'Loading…', 'peptide-core' ); ?></p></div>
-			<div id="pc-trk-insights"></div>
+			<?php if ( 'ai' !== $view ) : ?>
+				<div id="pc-trk-app" class="pc-trk-app"><p><?php esc_html_e( 'Loading…', 'peptide-core' ); ?></p></div>
+			<?php endif; ?>
+			<?php // 店主 2026-11-13：“大家对什么感兴趣 + 全站分析师 AI”原来在实时访客、访客归档、转化统计各放一份，现在只在“数据 → AI 分析”；访客详情照常有自己的客户分析。 ?>
+			<?php if ( in_array( $view, array( 'visitor', 'ai' ), true ) ) : ?>
+				<div id="pc-trk-insights"></div>
+			<?php endif; ?>
 		</div>
 		<?php
 	}
