@@ -397,3 +397,17 @@ F2 从沙盒失败项反推出一个问题，请 F1 在生产只读核对（只�
 - 冒烟测试这次没跑。
 - 发布脚本还可以加一道检查：入口文件里每个被启动的类，包里都要有对应的类文件（现在只检查空文件和 `Plugin` 类）。没做，记为待办。
 
+## 2026-11-13（五）首发方案第 3 版：只优化、不改功能
+
+平台所有者定的原则（主会话转达）：我们是优化，不改功能；线上已有的功能保持原样；素材会话还在改的部分暂时不碰，也不拦它。只改了文档，没有任何生产或沙盒动作。
+
+- 分支已推送：合并提交 `35b2901` 和之后的提交都在 `origin/claude/m1-release-6edf1f`。
+- `docs/handoffs/m1-first-production-release-plan.md` 改为第 3 版：
+  - 热修复 A 只放 bug 修复。`db7df57` 里“每日汇总带弃单数”（`data/class-metrics.php`）是功能，不取；`427c58e` 只取修 403 一处，订单导出、退款标记、不给命令面板都不进包。
+  - 新增“基线核对”三关：每个包发之前重新取主线、线上逐文件和主线比、和素材分支未合的改动比。线上有主线里没有的改动就停，绝不覆盖。原因：F1 是整目录替换，会把素材会话刚推上去、主线里没有的文件盖回旧版。
+  - 素材相关的 4 个 bug 由谁修提了两个方案：甲（建议）交给素材会话自己修、自己上线；乙 别的会话只改素材会话当前没在动的 3 个文件、由 F1 发，首次访问编号仍交素材会话。
+  - 发布纪律分两类：素材会话照旧自己推（只请它先合进主线、记一笔）；其余会话统一交 F1。锁目录的做法搁置；直推脚本先不挪。
+  - 新增“待定的策略问题”表：投手看 IP 和经纬度、邮箱哈希加盐、流量斗篷、导出表的顾客邮箱列、不给投手命令面板。都不进热修复包。
+- 核对到的事实：素材分支 `claude/creative-merge` = 1b25f74，比主线多 6 个提交、少 1 个；未合的改动涉及 `tracking/class-attribution.php`、`class-schema.php`（访问表第 7 版）、`class-ingest.php`、`class-visit-facts.php`、`creatives/class-board*.php`、`admin/class-onboarding.php`、主题 `assets/visitor-tracking.js` 等 19 个文件；没有动 `class-pixels.php`、`tracking/class-tracker.php`、`creatives/class-schema.php`、总后台 `class-creatives.php`。
+- M1-7（把发布规则写进 AGENTS.md / CLAUDE.md、挪直推脚本）继续搁置，等所有者确认新的纪律写法。
+
