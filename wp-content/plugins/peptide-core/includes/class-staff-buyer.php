@@ -366,8 +366,6 @@ final class Staff_Buyer {
 			'action2' => $text( $_REQUEST['action2'] ?? '' ),
 			// 订单页上不靠 action 也会执行写操作的参数：清空回收站（delete_all）、接管编辑锁（claim-lock）。
 			'writes'  => ( ! empty( $_REQUEST['delete_all'] ) || ! empty( $_REQUEST['claim-lock'] ) ) ? '1' : '',
-			// 主线 2026-11-11：带 pc_native 才打开 WooCommerce 原生订单页（退款、发货、改地址用），不带的转到订单详情页。
-			'native'  => ! empty( $_GET['pc_native'] ) ? '1' : '',
 			// 营销页面上打开新建 / 编辑表单的参数（Admin\Marketing::read_only_gate() 看的是同样两个）。
 			'edits'   => ( isset( $_REQUEST['new'] ) || isset( $_REQUEST['edit'] ) ) ? '1' : '',
 			'campaigns' => '',
@@ -483,11 +481,6 @@ final class Staff_Buyer {
 			// “清空回收站”和“接管编辑”不带 action，靠单独的参数触发（WooCommerce 的 ListTable::current_action()、
 			// PageController::handle_edit_lock()），一样拒绝。
 			$idle = in_array( (string) ( $r['action2'] ?? '' ), $none, true ) && empty( $r['writes'] );
-			if ( 'edit' === $action && ! empty( $r['native'] ) ) {
-				// 原生订单页现在只剩退款、发货、改地址的用途（详情页上的按钮带 pc_native 跳过来），投手不用。
-				// 不带 pc_native 的由主线转到订单详情页。
-				return $deny;
-			}
 			return ( $idle && ( in_array( $action, $none, true ) || 'edit' === $action ) ) ? $allow( 'orders' ) : $deny;
 		}
 		// 弃单、数据（含实时访客）和它们带同样前缀的子页面。

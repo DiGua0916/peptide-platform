@@ -22,22 +22,14 @@ namespace {
 	// ---------- 订单列表的列 ----------
 	// 主线 Order_List::columns()（2026-11-11）给出的列。
 	$mainline = array( 'cb' => '', 'pc_ops' => '操作', 'pc_number' => '订单编号', 'pc_items' => '商品', 'pc_email' => '顾客邮箱', 'pc_country' => '国家', 'pc_ship' => '配送方式', 'order_total' => '订单总价', 'pc_pay' => '支付方式', 'pc_paid' => '支付时间', 'pc_tid' => '流水号', 'order_status' => '订单状态', 'fulfillment_status' => '发货状态', 'shipment_tracking' => '物流单号', 'origin' => '来源' );
-	// 开关 pc_buyer_extras 关着（默认，和线上一样）：只去掉投手用不了的勾选框和“操作”列，其余列和线上一字不差。
+	// 开关 pc_buyer_extras 关着（默认）：原样返回，和线上（11-13 改版后的订单列表）一模一样，勾选框和“操作”列也不去掉。
 	$online = \PeptideCore\Admin\Admin_Menus::buyer_columns( $mainline, false );
-	$expect = $mainline;
-	unset( $expect['cb'], $expect['pc_ops'] );
-	check( 'switch off: only the checkbox and the action column (ship / write email, 403 for buyers) go; the rest is as online', $expect === $online );
-	check( 'switch off: no ad source, tracking or refund column is added', ! isset( $online['pc_source'] ) && ! isset( $online['pc_tracking'] ) && ! isset( $online['pc_refund'] ) && isset( $online['origin'] ) );
-	check( 'switch off: WooCommerce row buttons also go', ! isset( \PeptideCore\Admin\Admin_Menus::buyer_columns( array( 'order_number' => 'Order', 'wc_actions' => 'Actions' ), false )['wc_actions'] ) );
-	// 开关打开：只多一列“退款状态”。来源和物流单号一律用线上的列（2026-11-14，线上已有的优先）。
-	$cols     = \PeptideCore\Admin\Admin_Menus::buyer_columns( $mainline, true );
-	check( 'switch on: no checkbox, no action column (ship / write email)', ! isset( $cols['cb'] ) && ! isset( $cols['pc_ops'] ) && ! isset( $cols['wc_actions'] ) );
-	check( 'switch on: the online source and tracking columns stay, with nothing of ours next to them', isset( $cols['origin'] ) && isset( $cols['shipment_tracking'] ) && ! isset( $cols['pc_source'] ) && ! isset( $cols['pc_tracking'] ) );
-	check( 'order number column stays (it opens the detail page)', isset( $cols['pc_number'] ) && isset( $cols['order_total'] ) && isset( $cols['order_status'] ) );
-	$expect_on = $expect + array( 'pc_refund' => '退款状态' );
-	check( 'switch on: exactly the online columns plus refund status at the end', $expect_on === $cols );
-	$plain = \PeptideCore\Admin\Admin_Menus::buyer_columns( array( 'cb' => '', 'order_number' => 'Order', 'order_total' => 'Total', 'wc_actions' => 'Actions' ), true );
-	check( 'without mainline columns: no tracking column of our own either', array( 'order_number', 'order_total', 'pc_refund' ) === array_keys( $plain ) );
+	check( 'switch off: exactly the online columns, nothing removed or added', $mainline === $online );
+	check( 'switch off: WooCommerce columns pass through untouched', array( 'order_number' => 'Order', 'wc_actions' => 'Actions' ) === \PeptideCore\Admin\Admin_Menus::buyer_columns( array( 'order_number' => 'Order', 'wc_actions' => 'Actions' ), false ) );
+	// 开关打开：只在最后多一列“退款状态”。来源和物流单号一律用线上的列（2026-11-14，重复的以主站为准）。
+	$cols = \PeptideCore\Admin\Admin_Menus::buyer_columns( $mainline, true );
+	check( 'switch on: exactly the online columns plus refund status at the end', $mainline + array( 'pc_refund' => '退款状态' ) === $cols );
+	check( 'switch on: no column of our own for source or tracking', ! isset( $cols['pc_source'] ) && ! isset( $cols['pc_tracking'] ) );
 	$src = (string) file_get_contents( $inc . '/admin/class-admin-menus.php' );
 	check( 'buyer columns run after the mainline list (999)', false !== strpos( $src, "array( self::class, 'buyer_order_columns' ), 1000 )" ) );
 

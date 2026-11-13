@@ -93,10 +93,11 @@ namespace {
 	check( 'order detail page keeps the orders menu highlighted', 'orders' === \PeptideCore\Staff_Buyer::menu_for_page( 'pc-order' ) );
 	check( 'a look-alike slug is not the order detail page', $is( $page( 'pc-orderx' ), 'deny' ) );
 	check( 'locked: order detail goes to the wizard without caps', $is( $page( 'pc-order' ), 'redirect', '', 'pc-onboarding', true ) );
-	// 以下是模块分支比热修复多出来的：带 pc_native 的原生订单页（退款、发货、改地址）对投手也拒绝；写邮件的提交。
+	// 写邮件的提交仍然拒绝。带 pc_native 的原生订单页和线上一样能打开（只读，保存仍被拒绝）：2026-11-14 按“重复的以主站为准”，
+	// 模块分支不再比线上多拦这一页，订单这边只保留热修复包 A 的“只读打开订单详情”。
 	check( 'manual email submit from an order denied', $is( $post( 'pc_mail_send' ), 'deny' ) );
-	check( 'native order page (refund / ship / edit address) denied', $is( $page( 'wc-orders', array( 'action' => 'edit', 'native' => '1' ) ), 'deny' ) );
-	check( 'order list ignores a stray pc_native', $is( $page( 'wc-orders', array( 'native' => '1' ) ), 'allow', 'orders' ) );
+	check( 'native order page opens read-only as online', $is( $page( 'wc-orders', array( 'action' => 'edit', 'native' => '1' ) ), 'allow', 'orders' ) );
+	check( 'saving the native order page is still denied', $is( $page( 'wc-orders', array( 'action' => 'edit', 'native' => '1', 'method' => 'POST' ) ), 'deny' ) );
 	// 导出订单（只读下载）。
 	check( 'order export allowed', $is( $post( 'pc_buyer_orders_export' ), 'allow' ) );
 	check( 'order export waits for the password change', $is( $post( 'pc_buyer_orders_export' ), 'deny', '', '', true ) );

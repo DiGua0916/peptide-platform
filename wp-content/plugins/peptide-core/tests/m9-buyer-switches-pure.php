@@ -129,7 +129,7 @@ namespace {
 	// ---------- 订单列表的新列、详情页退款提示、店铺信息的勾选框：都跟着同一个开关 ----------
 	$menus = (string) file_get_contents( $inc . '/admin/class-admin-menus.php' );
 	check( 'order list columns follow the switch', false !== strpos( $menus, 'return self::buyer_columns( $columns, \\PeptideCore\\Staff_Buyer::extras() );' ) );
-	check( 'refund notice on the detail page follows the switch', false !== strpos( $menus, "if ( ! \$detail || ! \\PeptideCore\\Staff_Buyer::extras() || ! function_exists( 'wc_get_order' ) ) {" ) );
+	check( 'refund notice on the detail page follows the switch', false !== strpos( $menus, "if ( ! self::buyer_on_order_detail() || ! \\PeptideCore\\Staff_Buyer::extras() || ! function_exists( 'wc_get_order' ) ) {" ) );
 	$store = (string) file_get_contents( $inc . '/admin/class-store-settings.php' );
 	check( 'store info: the support-button checkbox is only drawn with the switch on', 1 === preg_match( "/if \\( Staff_Buyer::extras\\(\\) \\) \\{\\s*echo '<input type=\"hidden\" name=\"float_present\"/", $store ) );
 	check( 'store info: saving never touches support.enabled with the switch off, even from a crafted form', false !== strpos( $store, "if ( null !== \$clean['float'] && Staff_Buyer::extras() ) {" ) );

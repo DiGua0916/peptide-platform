@@ -107,7 +107,7 @@ final class Admin_Menus {
 		add_filter( 'woocommerce_admin_order_actions', array( self::class, 'buyer_no_actions' ), 999 );
 		add_filter( 'woocommerce_admin_order_preview_actions', array( self::class, 'buyer_no_actions' ), 999 );
 		add_filter( 'woocommerce_order_actions', array( self::class, 'buyer_no_actions' ), 999 );
-		add_action( 'add_meta_boxes', array( self::class, 'buyer_order_boxes' ), 999, 1 );
+		add_action( 'add_meta_boxes', array( self::class, 'buyer_order_boxes' ), 999 );
 		add_action( 'admin_head', array( self::class, 'buyer_order_styles' ) );
 		add_action( 'admin_head', array( self::class, 'buyer_order_detail_styles' ) );
 		add_action( 'admin_notices', array( self::class, 'buyer_order_notice' ) );
@@ -122,7 +122,7 @@ final class Admin_Menus {
 		return \PeptideCore\Staff_Buyer::current() && 'wc-orders' === self::current_page();
 	}
 
-	/** 订单列表：去掉勾选框和操作列；开关打开时后面加退款状态。 */
+	/** 订单列表：和线上一样；开关打开时最后加“退款状态”。 */
 	public static function buyer_order_columns( $columns ) {
 		if ( ! is_array( $columns ) || ! \PeptideCore\Staff_Buyer::current() ) {
 			return $columns;
@@ -133,18 +133,15 @@ final class Admin_Menus {
 	/**
 	 * 投手的订单列表有哪些列（不读数据库，测试里直接调用）。
 	 *
-	 * 总是去掉（修 bug）：勾选框（投手没有批量操作）、WooCommerce 的行内按钮和主线的“操作”列（里面的发货、写邮件
-	 * 对投手都是 403；订单号本身就能点开详情）。
-	 * 开关 Staff_Buyer::OPTION_EXTRAS 打开时另外加“退款状态”（线上列表不显示总后台标记的退款）。开关关着时其余列和线上一样。
-	 * 2026-11-14（平台所有者：线上已有的优先）：原来开关里的“来源广告”（代替线上的“来源”）和“运单号”（线上已有
-	 * “物流单号”）两列已经去掉，来源和物流单号一律看线上的列。
+	 * 开关关着（默认）：原样返回，和线上的订单列表（主线 Order_List::columns()，2026-11-13 改版）一模一样。
+	 * 开关 Staff_Buyer::OPTION_EXTRAS 打开：最后加一列“退款状态”（线上列表不显示总后台标记的退款）。
+	 * 2026-11-14（平台所有者：重复的以主站为准）：原来总是去掉的勾选框、行内按钮和“操作”列不再去掉（线上的
+	 * “操作”列已经不给投手发货按钮）；开关里代替线上“来源”的“来源广告”和补的“运单号”也已去掉。
 	 */
 	public static function buyer_columns( array $columns, bool $extras ): array {
-		unset( $columns['cb'], $columns['wc_actions'], $columns['pc_ops'] );
-		if ( ! $extras ) {
-			return $columns;
+		if ( $extras ) {
+			$columns['pc_refund'] = '退款状态';
 		}
-		$columns['pc_refund'] = '退款状态';
 		return $columns;
 	}
 
@@ -222,33 +219,17 @@ final class Admin_Menus {
 		return \PeptideCore\Staff_Buyer::current() ? array() : $actions;
 	}
 
-	/**
-	 * 订单页面去掉“订单操作”（保存、删除）、自定义字段和下载权限这几个框。
-	 * WooCommerce 触发 add_meta_boxes 时带着它实际用的页面标识，优先用它；再按约定的标识去一遍，两者通常相同。
-	 *
-	 * @param mixed $screen_id WooCommerce 传来的页面标识。
-	 */
-	public static function buyer_order_boxes( $screen_id = '' ): void {
+	/** 订单页面去掉“订单操作”（保存、删除）、自定义字段和下载权限这几个框。 */
+	public static function buyer_order_boxes(): void {
 		if ( ! self::buyer_on_orders() ) {
 			return;
 		}
-		foreach ( self::order_screens( $screen_id, function_exists( 'wc_get_page_screen_id' ) ? wc_get_page_screen_id( 'shop-order' ) : '' ) as $screen ) {
-			foreach ( array( array( 'woocommerce-order-actions', 'side' ), array( 'woocommerce-order-downloads', 'normal' ), array( 'order_custom', 'normal' ), array( 'postcustom', 'normal' ) ) as $box ) {
-				remove_meta_box( $box[0], $screen, $box[1] );
-			}
+		$screen = function_exists( 'wc_get_page_screen_id' ) ? wc_get_page_screen_id( 'shop-order' ) : 'woocommerce_page_wc-orders';
+		foreach ( array( array( 'woocommerce-order-actions', 'side' ), array( 'woocommerce-order-downloads', 'normal' ), array( 'order_custom', 'normal' ), array( 'postcustom', 'normal' ) ) as $box ) {
+			remove_meta_box( $box[0], $screen, $box[1] );
 		}
 	}
 
-	/** 要去掉订单框的页面标识：实际的、约定的、默认的，去重、去空（不读数据库）。 */
-	public static function order_screens( $actual, $expected ): array {
-		$out = array();
-		foreach ( array( $actual, $expected, 'woocommerce_page_wc-orders' ) as $id ) {
-			if ( is_string( $id ) && '' !== $id && ! in_array( $id, $out, true ) ) {
-				$out[] = $id;
-			}
-		}
-		return $out;
-	}
 
 	public static function buyer_order_styles(): void {
 		if ( ! self::buyer_on_orders() ) {
@@ -258,17 +239,9 @@ final class Admin_Menus {
 			. '.page-title-action,.tablenav .bulkactions,#delete_all,#delete-action,#woocommerce-order-items .wc-order-bulk-actions,#woocommerce-order-items .wc-order-edit-line-item,#woocommerce-order-items .wc-order-edit-line-item-actions,'
 			. '#woocommerce-order-items .refund-items,#woocommerce-order-items .add-items,#woocommerce-order-items .button,#woocommerce-order-items .wc-order-data-row-toggle,'
 			. '#order_data a.edit_address,#order_data .load_customer_billing,#order_data .load_customer_shipping,#order_data .billing-same-as-shipping,'
-			. '#woocommerce-order-notes .add_note,#woocommerce-order-notes .delete_note,.wc-order-preview .wc-action-button-group,'
-			. '#woocommerce-order-actions,#order .save_order,#order .submitdelete{display:none!important}'
+			. '#woocommerce-order-notes .add_note,#woocommerce-order-notes .delete_note,.wc-order-preview .wc-action-button-group{display:none!important}'
 			. '#order_data select,#order_data input,#order_data textarea,#order_data .select2-container{pointer-events:none}'
 			. '</style>' . "\n";
-		// 页面上没有保存按钮，但在输入框里按回车仍会提交整张表单（服务端会拒绝，投手看到的是 403 页面）。
-		// 这里把订单资料里的输入框设为不可用，并拦住表单提交；真正的限制仍在服务端。
-		echo '<script id="pc-buyer-orders-readonly-js">document.addEventListener("DOMContentLoaded",function(){'
-			. 'var f=document.getElementById("order");'
-			. 'if(f){f.addEventListener("submit",function(e){e.preventDefault();e.stopImmediatePropagation();},true);}'
-			. 'document.querySelectorAll("#order_data select,#order_data input:not([type=hidden]),#order_data textarea").forEach(function(el){el.disabled=true;});'
-			. '});</script>' . "\n";
 	}
 
 	/** 当前是投手在看订单详情页（Admin\Order_Detail_Page，admin.php?page=pc-order）。 */
@@ -301,15 +274,14 @@ final class Admin_Menus {
 	}
 
 	public static function buyer_order_notice(): void {
-		$detail = self::buyer_on_order_detail();
-		if ( ! $detail && ! self::buyer_on_orders() ) {
+		if ( self::buyer_on_orders() ) {
+			echo '<div class="notice notice-info"><p>订单在这里只能查看。改价、退款、作废和发货由总后台处理，有问题请联系平台负责人。</p></div>';
 			return;
 		}
-		echo '<div class="notice notice-info"><p>订单在这里只能查看。改价、退款、作废和发货由总后台处理，有问题请联系平台负责人。</p></div>';
-		if ( ! $detail || ! \PeptideCore\Staff_Buyer::extras() || ! function_exists( 'wc_get_order' ) ) {
+		// 开关 OPTION_EXTRAS 打开时：订单详情页本身不显示总后台标记的退款（F3 的 _pc_refund_state / _pc_refund_cents），在这里补一行。
+		if ( ! self::buyer_on_order_detail() || ! \PeptideCore\Staff_Buyer::extras() || ! function_exists( 'wc_get_order' ) ) {
 			return;
 		}
-		// 详情页本身不显示总后台标记的退款（F3 的 _pc_refund_state / _pc_refund_cents），在这里补一行。
 		$id    = isset( $_GET['id'] ) && is_scalar( $_GET['id'] ) ? absint( $_GET['id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$order = $id ? wc_get_order( $id ) : null;
 		if ( ! $order instanceof \WC_Order ) {
