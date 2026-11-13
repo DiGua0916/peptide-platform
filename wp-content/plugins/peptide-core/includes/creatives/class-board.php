@@ -646,6 +646,31 @@ final class Board {
 		return '各步都没有明显流失。';
 	}
 
+	/**
+	 * 这一行对应的 Meta 广告编号（纯函数，“复制广告编号”用）：素材 = 用了这个素材的广告；广告 = 自己；广告组 = 组里的广告。
+	 *
+	 * @param array<string,array<string,string>> $ads catalog() 的 ads
+	 * @return string[]
+	 */
+	public static function ad_ids_for( string $dim, string $key, array $ads ): array {
+		$out = array();
+		if ( 'ad' === $dim ) {
+			$id = substr( $key, 3 );
+			return Contract::valid_meta_id( $id ) ? array( $id ) : array();
+		}
+		foreach ( $ads as $ad_id => $ad ) {
+			$ad_id = (string) $ad_id;
+			if ( ! Contract::valid_meta_id( $ad_id ) ) {
+				continue;
+			}
+			if ( ( 'creative' === $dim && (string) ( $ad['code'] ?? '' ) === $key ) || ( 'adset' === $dim && 'adset:' . (string) ( $ad['adset_id'] ?? '' ) === $key ) ) {
+				$out[] = $ad_id;
+			}
+		}
+		sort( $out );
+		return $out;
+	}
+
 	public const SORTS = array( 'roas' => '按 ROAS', 'spend' => '按花费', 'orders' => '按订单', 'visitors' => '按访客' );
 
 	/**

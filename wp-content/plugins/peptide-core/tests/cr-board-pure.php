@@ -338,6 +338,12 @@ $ranked = Board::rank_visitors( array( 10, 7, 8, 9, 7 ), $amt, array( 8 => 'Jane
 check( 'rank: highest amount first, then by id, deduped', array( 8, 7, 9, 10 ) === array_column( $ranked, 'id' ) );
 check( 'rank: name kept when known', 'Jane Doe' === $ranked[0]['name'] && '' === $ranked[1]['name'] && 12900 === $ranked[0]['cents'] );
 check( 'rank: limit applies after sorting', array( 8 ) === array_column( Board::rank_visitors( array( 10, 9, 8 ), $amt, array(), 1 ), 'id' ) );
+// ---------- 复制广告编号（2026-11-13） ----------
+$cat = array( '120210000001101' => array( 'code' => 'C0001', 'adset_id' => '120210000000011' ), '120210000001102' => array( 'code' => 'C0001', 'adset_id' => '120210000000012' ), '120210000002101' => array( 'code' => 'C0002', 'adset_id' => '120210000000011' ), '{{ad.id}}' => array( 'code' => 'C0001', 'adset_id' => '120210000000011' ) );
+check( 'ad ids: creative -> its ads, preview junk skipped', array( '120210000001101', '120210000001102' ) === Board::ad_ids_for( 'creative', 'C0001', $cat ) );
+check( 'ad ids: ad row -> itself', array( '120210000002101' ) === Board::ad_ids_for( 'ad', 'ad:120210000002101', $cat ) );
+check( 'ad ids: adset -> ads in it', array( '120210000001101', '120210000002101' ) === Board::ad_ids_for( 'adset', 'adset:120210000000011', $cat ) );
+check( 'ad ids: unknown creative -> none', array() === Board::ad_ids_for( 'creative', 'C0099', $cat ) );
 check( 'filters: defaults', 'creative' === $fdef['dim'] && 'first' === $fdef['mode'] && '2026-11-10' === $fdef['to'] && '2026-11-04' === $fdef['from'] && '' === $fdef['ver'] );
 $fbad = Board_Page::filters( array( 'dim' => 'x', 'mode' => array(), 'from' => '2026-11-09', 'to' => '2026-11-01', 'ver' => '../v1' ), $tz, $now2 );
 check( 'filters: bad input falls back', 'creative' === $fbad['dim'] && 'first' === $fbad['mode'] && '2026-11-04' === $fbad['from'] && '' === $fbad['ver'] );

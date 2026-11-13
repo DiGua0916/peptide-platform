@@ -22,6 +22,14 @@ final class Board_Page {
 
 	public const OPTION_SETTINGS = 'pc_creatives_board';
 	public const OPTION_VERSIONS = 'pc_creatives_site_versions';
+	/** “今天要做的事”里标记过已处理的行（按店铺记，只当天有效）：array{day:string,keys:array<string,int>} */
+	public const OPTION_HANDLED  = 'pc_creatives_board_handled';
+
+	/** 今天已处理的行 key => 时间戳（换天自动清空）。 */
+	public static function handled_today(): array {
+		$h = get_option( self::OPTION_HANDLED, array() );
+		return is_array( $h ) && ( $h['day'] ?? '' ) === wp_date( 'Y-m-d' ) && is_array( $h['keys'] ?? null ) ? $h['keys'] : array();
+	}
 
 	/** 默认看最近几天。 */
 	public const DEFAULT_DAYS = 7;
@@ -81,6 +89,20 @@ final class Board_Page {
 			check_admin_referer( 'pc_creative_export_dl' );
 			Export::stream( isset( $_GET['id'] ) ? sanitize_text_field( wp_unslash( $_GET['id'] ) ) : '', isset( $_GET['fmt'] ) ? sanitize_key( wp_unslash( $_GET['fmt'] ) ) : 'json' );
 			return;
+		}
+		if ( 'handled' === $op || 'unhandle' === $op ) {
+			check_admin_referer( 'pc_creative_board_handled' );
+			$key  = isset( $_POST['key'] ) ? substr( (string) preg_replace( '/[^A-Za-z0-9:_|.-]/', '', (string) wp_unslash( $_POST['key'] ) ), 0, 80 ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+			$keys = self::handled_today();
+			if ( '' !== $key ) {
+				if ( 'handled' === $op ) {
+					$keys[ $key ] = time();
+				} else {
+					unset( $keys[ $key ] );
+				}
+				update_option( self::OPTION_HANDLED, array( 'day' => wp_date( 'Y-m-d' ), 'keys' => $keys ), false );
+			}
+			self::back( 'success', 'handled' === $op ? '已标记为处理过，今天不再提醒。' : '已撤销，重新放回待办。' );
 		}
 		if ( 'manual' === $op ) {
 			check_admin_referer( 'pc_creative_export_manual' );
@@ -290,6 +312,12 @@ final class Board_Page {
 .pc-cr-board details.pc-cr-row>summary:hover{background:#f6f7f7}
 .pc-cr-board details.pc-cr-row[open]>summary{border-bottom:1px solid #f0f0f1}
 .pc-cr-board .pc-cr-expand{font-size:13px}
+/* 决策清单按钮（2026-11-13） */
+.pc-cr-board .pc-cr-todo-actions{margin-top:8px!important;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.pc-cr-board .pc-cr-inline-form{display:inline}
+.pc-cr-board details.pc-cr-done{margin:6px 0 0;color:#50575e}
+.pc-cr-board details.pc-cr-done summary{cursor:pointer}
+.pc-cr-board details.pc-cr-done li{margin:4px 0}
 /* 决策清单、象限图、热力格（2026-11-13） */
 .pc-cr-board .pc-cr-h2{font-size:16px;margin:26px 0 6px}
 .pc-cr-board .pc-cr-h3{font-size:14px;margin:16px 0 4px}
@@ -574,7 +602,7 @@ final class Board_Page {
 			$rows = Board::sort_rows( $rows, $f['sort'] );
 		}
 
-		self::render_decisions( $rows, $f );
+		self::render_decisions( $rows, $f, (array) ( $data['ads'] ?? array() ) );
 		self::render_quadrant( $rows, $rules, $f );
 		if ( 'attr' === $f['dim'] ) {
 			self::render_matrix( $matrix, $rules );
@@ -618,6 +646,14 @@ final class Board_Page {
 <script>
 ( function () {
 	document.addEventListener( 'click', function ( e ) {
+		var c = e.target.closest( '[data-pc-cr-copy-ids]' );
+		if ( c ) {
+			var text = c.getAttribute( 'data-pc-cr-copy-ids' ), label = c.textContent;
+			var done = function () { c.textContent = '已复制，到 Meta 广告管理里粘贴搜索'; setTimeout( function () { c.textContent = label; }, 2500 ); };
+			if ( navigator.clipboard && window.isSecureContext ) { navigator.clipboard.writeText( text ).then( done ); }
+			else { var t = document.createElement( 'textarea' ); t.value = text; document.body.appendChild( t ); t.select(); try { document.execCommand( 'copy' ); done(); } catch ( err ) {} t.remove(); }
+			return;
+		}
 		var b = e.target.closest( '[data-pc-cr-expand]' );
 		if ( ! b ) { return; }
 		var shut = '1' !== b.getAttribute( 'data-open' );
@@ -631,11 +667,19 @@ final class Board_Page {
 	}
 
 	/** 今天要做的事（2026-11-13）：只在能直接操作的维度显示（素材、广告、广告组）。 */
-	private static function render_decisions( array $rows, array $f ): void {
+	private static function handled_form( string $op, string $key, string $label ): string {
+		return '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="pc-cr-inline-form"><input type="hidden" name="action" value="' . esc_attr( Module::ACTION_EXPORT ) . '"><input type="hidden" name="op" value="' . esc_attr( $op ) . '"><input type="hidden" name="key" value="' . esc_attr( $key ) . '">'
+			. wp_nonce_field( 'pc_creative_board_handled', '_wpnonce', true, false ) . '<button class="button button-small">' . esc_html( $label ) . '</button></form>';
+	}
+
+	private static function render_decisions( array $rows, array $f, array $ads = array() ): void {
 		if ( ! in_array( $f['dim'], array( 'creative', 'ad', 'adset' ), true ) ) {
 			return;
 		}
-		$act   = array_values( array_filter( $rows, static fn( $r ) => in_array( $r['verdict'], array( 'stop', 'scale' ), true ) ) );
+		$handled = self::handled_today();
+		$act_all = array_values( array_filter( $rows, static fn( $r ) => in_array( $r['verdict'], array( 'stop', 'scale' ), true ) ) );
+		$done    = array_values( array_filter( $act_all, static fn( $r ) => isset( $handled[ (string) $r['key'] ] ) ) );
+		$act     = array_values( array_filter( $act_all, static fn( $r ) => ! isset( $handled[ (string) $r['key'] ] ) ) );
 		$watch = array_values( array_filter( $rows, static fn( $r ) => 'watch' === $r['verdict'] ) );
 		$later = array_values( array_filter( $rows, static fn( $r ) => in_array( $r['verdict'], array( 'thin', 'nospend' ), true ) ) );
 		// 先停后加；同类按花费从多到少。
@@ -643,7 +687,7 @@ final class Board_Page {
 
 		echo '<div class="pc-cr-today"><h2 class="pc-cr-h2">今天要做的事' . ( $act ? '（' . count( $act ) . '）' : '' ) . '</h2>';
 		if ( ! $act ) {
-			echo '<p class="pc-cr-muted">没有要马上处理的，继续跑。</p>';
+			echo '<p class="pc-cr-muted">' . esc_html( $done ? '今天要做的都处理完了。' : '没有要马上处理的，继续跑。' ) . '</p>';
 		}
 		foreach ( $act as $row ) {
 			$scale = 'scale' === $row['verdict'];
@@ -658,7 +702,21 @@ final class Board_Page {
 			echo '<div><p class="pc-cr-todo-title">' . esc_html( $title ) . '</p>';
 			echo '<p class="pc-cr-todo-why">' . esc_html( $why . Board::reason( $row ) ) . '</p>';
 			echo '<p class="pc-cr-todo-nums">' . esc_html( '花费 ' . self::format( $row['spend_cents'], 'money' ) . ' · 订单 ' . (int) $row['orders'] . ' · 销售额 ' . self::format( $row['sales_cents'], 'money' ) . ' · 进站 ' . (int) $row['visitors'] ) . '</p>';
+			$ids = Board::ad_ids_for( $f['dim'], (string) $row['key'], $ads );
+			echo '<p class="pc-cr-todo-actions">';
+			if ( $ids ) {
+				echo '<button type="button" class="button button-small" data-pc-cr-copy-ids="' . esc_attr( implode( ',', $ids ) ) . '">' . esc_html( '复制广告编号（' . count( $ids ) . ' 条）' ) . '</button> ';
+			}
+			echo self::handled_form( 'handled', (string) $row['key'], '标记已处理' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- handled_form() 里已转义。
+			echo '</p>';
 			echo '</div><span class="pc-cr-badge is-' . esc_attr( $row['verdict'] ) . '">' . esc_html( Board::VERDICTS[ $row['verdict'] ] ) . '</span></div>';
+		}
+		if ( $done ) {
+			echo '<details class="pc-cr-done"><summary>' . esc_html( '今天已处理（' . count( $done ) . '）' ) . '</summary><ul>';
+			foreach ( $done as $row ) {
+				echo '<li><b>' . esc_html( (string) $row['label'] ) . '</b> ' . esc_html( Board::VERDICTS[ $row['verdict'] ] ) . ' · ' . esc_html( wp_date( 'H:i', (int) $handled[ (string) $row['key'] ] ) ) . ' ' . self::handled_form( 'unhandle', (string) $row['key'], '撤销' ) . '</li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- handled_form() 里已转义。
+			}
+			echo '</ul></details>';
 		}
 		if ( $watch || $later ) {
 			echo '<h3 class="pc-cr-h3">再等等（' . ( count( $watch ) + count( $later ) ) . '）</h3><ul class="pc-cr-waits">';
