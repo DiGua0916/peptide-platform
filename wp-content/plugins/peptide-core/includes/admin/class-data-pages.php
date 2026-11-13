@@ -531,20 +531,26 @@ final class Data_Pages {
 	}
 
 	/**
-	 * 合并页的布局：stacked（默认）= 两个报表上下排在同一屏；tabs = 一页两个页签，一次显示一个报表（第一版的做法，留作退路）。
+	 * 合并页的布局：tabs（默认，线上现在的样子）= 一页两个页签，一次显示一个报表；stacked = 两个报表上下排在同一屏（ST-05）。
 	 * 每家店一个选项 peptide_core_buyer_data_layout，过滤器同名。同屏布局 2026-11-12 在本地站点的浏览器里核对过两个合并页。
+	 * 2026-11-13：模块发布只做优化、不改线上已有的功能，所以默认值是线上的页签布局；要同屏的店把选项设成 stacked。
 	 */
 	public const BUYER_LAYOUT_OPTION = 'peptide_core_buyer_data_layout';
 
 	private static function buyer_layout(): string {
-		$layout = function_exists( 'get_option' ) ? get_option( self::BUYER_LAYOUT_OPTION, 'stacked' ) : 'stacked';
+		$layout = function_exists( 'get_option' ) ? get_option( self::BUYER_LAYOUT_OPTION, 'tabs' ) : 'tabs';
 		$layout = function_exists( 'apply_filters' ) ? apply_filters( self::BUYER_LAYOUT_OPTION, $layout ) : $layout;
-		return 'tabs' === $layout ? 'tabs' : 'stacked';
+		return 'stacked' === $layout ? 'stacked' : 'tabs';
 	}
 
 	/** 这个合并页要同屏显示的报表（PAGES 的 key，按页面上的顺序）；不是同屏布局时只有当前这一个。 */
 	private static function buyer_keys( string $page, string $key ): array {
 		return isset( self::BUYER_PAGES[ $page ] ) && 'stacked' === self::buyer_layout() ? array_values( self::BUYER_PAGES[ $page ] ) : array( $key );
+	}
+
+	/** 来源页给不给“广告系列 / 广告组 / 广告”三种分组：只在广告参数那张表的开关开着时给（默认关，下拉和线上一样只有两项）。 */
+	private static function ad_groups_on(): bool {
+		return class_exists( \PeptideCore\Tracking\Ad_Params::class ) && \PeptideCore\Tracking\Ad_Params::writing();
 	}
 
 	/** 合并页当前的页签：地址栏的 tab，没有或不认识时是第一个。 */
@@ -677,7 +683,7 @@ final class Data_Pages {
 		if ( 'sources' === $key ) {
 			wp_enqueue_script( 'peptide-core-data-export', $url . 'data-export.js', array( self::SCRIPT, 'wp-api-fetch', 'wp-url' ), $ver( 'data-export.js' ), array( 'in_footer' => true ) );
 			wp_enqueue_script( 'peptide-core-data-sources', $url . 'data-sources.js', array( self::SCRIPT, 'peptide-core-data-export' ), $ver( 'data-sources.js' ), array( 'in_footer' => true ) );
-			wp_add_inline_script( 'peptide-core-data-sources', 'window.pcDataSources = ' . wp_json_encode( array( 'strings' => self::sources_strings(), 'operationsUrl' => count( $keys ) > 1 ? '' : ( '' !== $buyer_page ? self::buyer_url( $buyer_page ) : admin_url( 'admin.php?page=' . self::PAGES['operations'] ) ) ) ) . ';', 'before' );
+			wp_add_inline_script( 'peptide-core-data-sources', 'window.pcDataSources = ' . wp_json_encode( array( 'strings' => self::sources_strings(), 'operationsUrl' => count( $keys ) > 1 ? '' : ( '' !== $buyer_page ? self::buyer_url( $buyer_page ) : admin_url( 'admin.php?page=' . self::PAGES['operations'] ) ) ) + ( self::ad_groups_on() ? array( 'adGroups' => true ) : array() ) ) . ';', 'before' );
 		}
 		if ( 'dimension_details' === $key ) {
 			$dimension = self::dimension_page();

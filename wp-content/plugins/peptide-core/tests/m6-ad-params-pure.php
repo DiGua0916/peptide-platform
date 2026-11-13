@@ -104,8 +104,18 @@ m6_check( '1: links without ad parameters clean exactly as before', array( 'utm_
 // ---------- 2. 入库 ----------
 $event = static fn( int $visit, int $visitor = 7 ): array => array( 'event_uid' => 'pv-' . $visit, 'visitor_id' => $visitor, 'visit_id' => $visit, 'path' => '/', 'received_ms' => 150000 + $visit );
 
-// M6 开关关着（默认）：表装好了也不写这一份，归因照常成功。
-m6_check( '2: writing follows the M6 switch — off by default', false === Ad_Params::writing() );
+// 自己的开关关着（默认）：表装好了也不写这一份，归因照常成功。M6 开关打到影子档 / 打开都不会把它带起来。
+m6_check( '2: writing has its own switch — off by default', false === Ad_Params::writing() );
+foreach ( array( 'shadow', 'on' ) as $m6_mode ) {
+	$GLOBALS['m6_options']['peptide_core_m6_mode'] = $m6_mode;
+	m6_check( "2: the M6 switch in {$m6_mode} does not turn writing on", false === Ad_Params::writing() );
+}
+unset( $GLOBALS['m6_options']['peptide_core_m6_mode'] );
+$GLOBALS['m6_options'][ Ad_Params::SWITCH_OPTION ] = 'on';
+m6_check( '2: its own option (peptide_core_track_ads = on) turns writing on', true === Ad_Params::writing() );
+$GLOBALS['m6_options'][ Ad_Params::SWITCH_OPTION ] = 'yes';
+m6_check( '2: any other value of the option means off', false === Ad_Params::writing() );
+unset( $GLOBALS['m6_options'][ Ad_Params::SWITCH_OPTION ] );
 // 开关关着时不建表：maybe_install() 要是往下走，会去加载 wp-admin 的升级文件（这里没有，会直接报错）并写版本选项。
 Ad_Params::maybe_install();
 m6_check( '2: with the switch off the table is not created (no version option is written)', false === Ad_Params::installed() && ! array_key_exists( Ad_Params::OPTION, $GLOBALS['m6_options'] ) );
@@ -113,9 +123,9 @@ $GLOBALS['m6_options'][ Ad_Params::OPTION ] = Ad_Params::DB_VERSION; // 就算�
 $receipt = Attribution::capture( 7, $event( 10 ), $clean['value'] );
 m6_check( '2: with the switch off attribution succeeds and this table gets nothing', 'applied' === $receipt['status'] && 'captured' === $receipt['code'] && array() === $wpdb->ads && false === Ad_Params::store( 10, array( 'utm_campaign' => 'Direct' ), 1 ) && array() === $wpdb->ads );
 unset( $GLOBALS['m6_options'][ Ad_Params::OPTION ] );
-// 下面都是开关打开之后的行为（过滤器 peptide_core_track_ads_write；真正的开关是 peptide_core_m6_mode 不为 off）。
+// 下面都是开关打开之后的行为（过滤器 peptide_core_track_ads_write；真正的开关是选项 peptide_core_track_ads = on）。
 add_filter( 'peptide_core_track_ads_write', static fn() => true );
-m6_check( '2: the filter (or an M6 mode other than off) turns writing on', true === Ad_Params::writing() );
+m6_check( '2: the filter turns writing on', true === Ad_Params::writing() );
 
 // 表还没装好：归因照常成功，广告参数不存，也不报错。
 $receipt = Attribution::capture( 7, $event( 11 ), $clean['value'] );

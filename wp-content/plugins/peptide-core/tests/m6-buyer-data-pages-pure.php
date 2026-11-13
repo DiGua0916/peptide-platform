@@ -105,7 +105,7 @@ foreach ( $tabs as [ $page, $tab, $key ] ) {
 	m6_check( "buyer: {$page} tab '{$tab}' shows the {$key} report", $key === Data_Pages::current_key() );
 }
 
-// 默认是同屏布局；下面几条看的是页签布局（退路），所以先把选项设成 tabs。
+// 默认是页签布局（线上现在的样子）；这里仍然明确把选项设成 tabs，下面再看没有选项时的默认值。
 $GLOBALS['m6_options'][ Data_Pages::BUYER_LAYOUT_OPTION ] = 'tabs';
 $html = $render( array( 'page' => 'pc-data-funnel-sources' ) );
 m6_check( 'buyer: merged page renders the existing report container', str_contains( $html, '<div id="pc-data" class="pc-data" data-page="conversion">' ) );
@@ -119,11 +119,11 @@ $html = $render( array( 'page' => 'pc-data-funnel-sources', 'tab' => 'sources' )
 m6_check( 'buyer stacked: no tabs, same container', ! str_contains( $html, 'nav-tab' ) && str_contains( $html, '<div id="pc-data" class="pc-data" data-page="sources">' ) );
 m6_check( 'buyer stacked: the tab still names the report to focus', 'sources' === Data_Pages::current_key() );
 $GLOBALS['m6_options'][ Data_Pages::BUYER_LAYOUT_OPTION ] = 'something-else';
-m6_check( 'an unknown layout value means the default (stacked)', ! str_contains( $render( array( 'page' => 'pc-data-funnel-sources' ) ), 'nav-tab' ) );
+m6_check( 'an unknown layout value means the default (tabs)', str_contains( $render( array( 'page' => 'pc-data-funnel-sources' ) ), 'nav-tab-active' ) );
 unset( $GLOBALS['m6_options'][ Data_Pages::BUYER_LAYOUT_OPTION ] );
-m6_check( 'without the option the layout is stacked', ! str_contains( $render( array( 'page' => 'pc-data-funnel-sources' ) ), 'nav-tab' ) && str_contains( $render( array( 'page' => 'pc-data-funnel-sources' ) ), 'id="pc-data"' ) );
+m6_check( 'without the option the layout is tabs, as it is in production', str_contains( $render( array( 'page' => 'pc-data-funnel-sources' ) ), 'nav-tab-active' ) && str_contains( $render( array( 'page' => 'pc-data-funnel-sources' ) ), 'id="pc-data"' ) );
 $GLOBALS['m6_options'][ Data_Pages::BUYER_LAYOUT_OPTION ] = 'tabs';
-m6_check( 'the tabs layout is still available as a fallback', str_contains( $render( array( 'page' => 'pc-data-funnel-sources' ) ), 'nav-tab-active' ) );
+m6_check( 'the tabs layout can also be set explicitly', str_contains( $render( array( 'page' => 'pc-data-funnel-sources' ) ), 'nav-tab-active' ) );
 unset( $GLOBALS['m6_options'][ Data_Pages::BUYER_LAYOUT_OPTION ] );
 
 $html = $render( array( 'page' => 'pc-data' ) );

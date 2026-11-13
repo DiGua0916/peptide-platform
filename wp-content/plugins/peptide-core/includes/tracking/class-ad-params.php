@@ -10,8 +10,8 @@
  * 不含顾客资料：只有访问编号和三个投放名称。隐私抹除、超期清理删访问时这里的行跟着删。
  *
  * 2026-11-13：素材归因（主线 11-11 起、11-13 上线）已经把同样三项写进了访问表的新列（utm_campaign / utm_term / utm_content）。
- * 两份数据最终用哪一份由平台所有者定；定之前这一份放在 M6 开关后面（见 writing()）：开关是 off（默认）时
- * 不建表、不写入，线上只有访问表那一份。
+ * 两份数据最终用哪一份由平台所有者定；定之前这一份放在自己的开关后面（见 writing()，选项 peptide_core_track_ads，
+ * 默认关）：关着时不建表、不写入，线上只有访问表那一份。它不跟 M6 开关走——M6 开关打到影子档是为了对账，不该顺带建表。
  *
  * @package PeptideCore
  */
@@ -42,12 +42,16 @@ final class Ad_Params {
 		return self::DB_VERSION === get_option( self::OPTION );
 	}
 
+	/** 这一份广告参数写不写的开关：每家店一个选项，值是 on 才写；没有这个选项（默认）就是关。 */
+	public const SWITCH_OPTION = 'peptide_core_track_ads';
+
 	/**
-	 * 这一份广告参数写不写：跟 M6 开关走，off（默认）时不写，shadow / on 时写。
+	 * 这一份广告参数写不写：只看自己的开关（SWITCH_OPTION），默认关。2026-11-13 起不再跟 M6 开关走：
+	 * 模块发布之后 M6 开关要打到影子档做对账，那时候不应该顺带开始建表、写入、在来源页多出三种分组。
 	 * 过滤器 peptide_core_track_ads_write( bool ) 可以改写（冒烟用例用它在一次运行里打开，不动选项）。
 	 */
 	public static function writing(): bool {
-		$on = class_exists( \PeptideCore\Data\Metrics_Switch::class ) && ! \PeptideCore\Data\Metrics_Switch::off();
+		$on = function_exists( 'get_option' ) && 'on' === get_option( self::SWITCH_OPTION, 'off' );
 		return function_exists( 'apply_filters' ) ? (bool) apply_filters( 'peptide_core_track_ads_write', $on ) : $on;
 	}
 

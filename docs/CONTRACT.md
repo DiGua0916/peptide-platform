@@ -903,9 +903,9 @@ currency, visitor, visit, buyer
 ### 4. 数据页对投手（ST-05）
 
 - 判断投手：`PeptideCore\Data\Audience::is_media_buyer( ?int $user_id = null )` = 用户有角色 `pc_media_buyer` 且没有 `manage_options`；过滤器 `peptide_core_is_media_buyer`（参数：结果、用户编号）可以改写。**需要 F5**：创建角色 `pc_media_buyer`，并给它 `manage_woocommerce`（数据页、概览页、像素页的权限检查都是这一项）。
-- 顶层菜单 slug 仍然是 `pc-data`。投手只有两个子页：`pc-data-funnel-sources`（漏斗 + 来源）、`pc-data-products-landing`（商品 + 落地页），每页把原来的两个报表上下排在同一屏（11-12 起的默认布局）；地址栏的 `tab=funnel|sources`、`tab=products|landing` 仍然有效，用来在打开时滚到那一段。其余数据子页对投手不注册，直接访问会被拒绝。管理员（含总后台一键登录）仍然看到全部 12 个子页，另外也能打开这两个合并页（不显示在菜单里）。
+- 顶层菜单 slug 仍然是 `pc-data`。投手只有两个子页：`pc-data-funnel-sources`（漏斗 + 来源）、`pc-data-products-landing`（商品 + 落地页），默认和线上一样是“一页两个页签”，店铺把选项设成 `stacked` 后两个报表上下排在同一屏（11-13 起默认改回页签，见下一条）；地址栏的 `tab=funnel|sources`、`tab=products|landing` 仍然有效，用来在打开时滚到那一段。其余数据子页对投手不注册，直接访问会被拒绝。管理员（含总后台一键登录）仍然看到全部 12 个子页，另外也能打开这两个合并页（不显示在菜单里）。
 - F5 的菜单白名单里“数据”保留 `pc-data` 即可；投手点“数据”会进 `pc-data-funnel-sources`。投手如果直接打开 `admin.php?page=pc-data`，页面只显示两个合并页的入口（`Workspace_Shell` 只在 `pc-overview` / `pc-data` 两个地址启动，投手的入口不是这两个地址之一时不受影响）。
-- 布局由每家店的选项 `peptide_core_buyer_data_layout` 决定：`stacked`（默认，同屏）/ `tabs`（第一版的“每页两个页签”，留作退路）；过滤器同名。同屏布局 11-12 在本地站点的浏览器里看过两个合并页：桌面宽度、平板宽度（768）和手机宽度（375）都看了，手机宽度下修了三处排版（日期框的年份被切、筛选行的输入框伸出屏幕、每页条数的数字和箭头重叠），两种布局都没有横向溢出。
+- 布局由每家店的选项 `peptide_core_buyer_data_layout` 决定：`tabs`（默认，线上现在的“每页两个页签”）/ `stacked`（同屏，ST-05）；过滤器同名。**2026-11-13 起默认值改回 `tabs`**：模块发布只做优化、不改线上已有的功能，同屏布局要平台所有者同意后按店打开。同屏布局 11-12 在本地站点的浏览器里看过两个合并页：桌面宽度、平板宽度（768）和手机宽度（375）都看了，手机宽度下修了三处排版（日期框的年份被切、筛选行的输入框伸出屏幕、每页条数的数字和箭头重叠），两种布局都没有横向溢出。
 - **投手页面上的链接（11-12 定，F4 + F5）**：约定是“投手页面上不出现投手打不开的入口”，F5 的菜单白名单对没列出的后台页一律 403，所以由出页面的一方负责不输出。两个合并页逐个链接查过：
   - 转化详情每组的“查看详情 / 收起详情”是页内展开按钮（把 5 层漏斗展开成 8 层），不是链接，不发请求，投手能正常用，**保留**。（F4 在 11-12 上午的交接里把它写成了“链到分维度明细页、投手打不开”，那是看错了，以这里为准。）
   - 商品报表里商品名上的“编辑商品”链接（`post.php?post=…&action=edit`）投手打不开：**对投手隐藏**，商品名显示成普通文字。实现是 `Data\Audience::product_edit_url( int $product_id ): string`，对投手返回空字符串；接口 `GET /peptide/v1/data/products` 里投手拿到的 `product.edit_url` 是 `''`（字段还在，页面脚本本来就把空值显示成文字）。管理员不变。
@@ -927,6 +927,7 @@ currency, visitor, visit, buyer
 - 主题上报的落地页参数里，`utm_campaign`、`utm_term`、`utm_content`（投放链接里的广告系列、广告组、广告，F5 的 `ad-link` 固定带这三项）现在会通过 `Tracking\Attribution::clean()`：各 1–120 个字符，不合规（空、过长、控制字符、没被 Facebook 替换的 `{{…}}`）时**只丢那一项**，来源和媒介照常记。前端协议不用再改。
 - 入库：`PeptideCore\Tracking\Ad_Params`，表 `{prefix}pc_track_ads`（`visit_id` 主键、`utm_campaign`、`utm_term`、`utm_content`、`captured_ms`），版本选项 `peptide_core_track_ads_db`。访问表的结构和版本号没有动。一次访问第一次记下的值算数；隐私抹除、超期清理、清空追踪数据时跟着删。
 - 读：`Ad_Params::for_visits( int[] $visit_ids ): array`（访问编号 => 三项，没有的项是 `null`）、`Ad_Params::typed( ?array $row, bool $captured ): array`（带状态的值：`value / missing / unobserved`）。
+- **开关（2026-11-13 起）**：这一份放在自己的选项 `peptide_core_track_ads` 后面，值是 `on` 才建表、写入，来源页的分组下拉里才出现下面三项；默认关（和线上一样只有“UTM 来源 / 自动流量渠道”两项）。不跟 M6 开关走：M6 打到影子档做对账时不会顺带打开它。接口本身认这三个值不受开关影响（没开时这三种分组只有“没有观察到 / 已捕获但未提供此参数”两行）。
 - 报表：`GET /peptide/v1/data/sources` 的 `group_by` 多三个值——`campaign`（按广告系列）、`adset`（广告系列 + 广告组）、`ad`（广告系列 + 广告组 + 广告）；返回里多 `group_by`、`ad_keys`（这一行的身份由哪几个参数组成）、`ad_capture`（表装好了没有）；每一行带对应的带状态的值。`format=csv` 同样支持。和 `split_medium=1` 不能同时用（400）。`utm` / `channel` 两种分组的返回没有变。
 - 历史访问没有这三项（以前上报时就被丢掉了），会归在“没有观察到”或“已捕获但未提供此参数”一行。
 ### 7. 需要别的会话配合的事

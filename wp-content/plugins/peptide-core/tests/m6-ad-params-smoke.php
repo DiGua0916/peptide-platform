@@ -10,8 +10,8 @@
  * 会临时写入 4 个访客（各一次访问、一条页面浏览事件），结束时用 Privacy::delete_visitors() 连同广告参数一起删掉；
  * 不改任何设置和开关。不带 run 只打印这段说明。只在开发站 / 沙盒运行，不要在正式站点运行。
  *
- * 2026-11-13：pc_track_ads 这一份放在 M6 开关后面，默认不建表、不写入（素材归因已经把同样三项写进访问表的新列，
- * 两份数据最终用哪一份还没定）。这个用例在这一次运行里用过滤器 peptide_core_track_ads_write 把写入打开，
+ * 2026-11-13：pc_track_ads 这一份放在自己的开关后面（选项 peptide_core_track_ads，值是 on 才写；不跟 M6 开关走），
+ * 默认不建表、不写入（素材归因已经把同样三项写进访问表的新列，两份数据最终用哪一份还没定）。这个用例在这一次运行里用过滤器 peptide_core_track_ads_write 把写入打开，
  * 表不在就建上（表会留下，是空的）；选项 peptide_core_m6_mode 不改。它同时核对访问表的新列也写上了。
  *
  * 通过标准（退出码 0）：最后一行是“结果：通过（N 项检查）”。
@@ -62,7 +62,7 @@ $m6a_check  = static function ( string $label, bool $ok, string $detail = '' ) u
 	}
 };
 
-// 这一次运行里把 pc_track_ads 的写入打开（默认跟 M6 开关走，off 时不建表也不写）。
+// 这一次运行里把 pc_track_ads 的写入打开（默认关：选项 peptide_core_track_ads 不是 on 时不建表也不写）。
 $m6a_write = static fn() => true;
 add_filter( 'peptide_core_track_ads_write', $m6a_write, PHP_INT_MAX );
 Ad_Params::maybe_install();

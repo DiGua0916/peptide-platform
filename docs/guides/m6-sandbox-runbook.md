@@ -174,6 +174,8 @@ tools/sandbox/run-smoke.sh <解开的测试目录> smoke-tracking
 
 ## 6. 按广告拆分和同屏数据页
 
+> **2026-11-13 晚更新**：`pc_track_ads` 不再跟 M6 开关走，改成自己的选项 `peptide_core_track_ads`（值是 `on` 才建表、写入，来源页才多出三种广告分组），默认关。投手合并页的默认布局改回线上的页签（`peptide_core_buyer_data_layout` 默认 `tabs`）。所以下面“同屏数据页”那一条要先 `wp option update peptide_core_buyer_data_layout stacked` 才看得到，看完 `wp option delete peptide_core_buyer_data_layout` 恢复；浏览器里看广告分组要先 `wp option update peptide_core_track_ads on`，看完 `wp option delete peptide_core_track_ads`。`m6-ad-params-smoke.php run` 不用改设置，它在运行里自己打开写入。
+
 ```bash
 wp option get peptide_core_track_ads_db
 ```

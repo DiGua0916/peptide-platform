@@ -8,6 +8,9 @@ const check = (name, ok) => { assert.ok(ok, name); ++passed; };
 const flush = () => new Promise(resolve => setImmediate(resolve));
 let boundary = fs.readFileSync(path.join(__dirname, 'data-exports.cjs'), 'utf8').split('(async()=>{')[0];
 boundary = boundary.replace("(report==='products'?'Products':'Pages')", "(report==='products'?'Products':report==='sources'?'Sources':'Pages')").replace("const prefix=report==='products'?'prod':'pages'", "const prefix=report==='products'?'prod':report==='sources'?'sources':'pages'");
+// 页面配置里多给的项（服务端的 window.pcDataSources）：harness( 'sources', { adGroups: true } )。
+boundary = boundary.replace('function harness(report) {', 'function harness(report, extra = {}) {').replace("window['pcData'+(report==='products'?'Products':report==='sources'?'Sources':'Pages')]={strings};", "window['pcData'+(report==='products'?'Products':report==='sources'?'Sources':'Pages')]={strings,...extra};");
+if (!boundary.includes('{strings,...extra}')) { throw new Error('test boundary changed: cannot pass page config'); }
 const scope = { require, __dirname, console, URL, URLSearchParams, setImmediate };
 vm.runInNewContext(boundary + ';globalThis.boundary={harness,data,raw};', scope);
 const { harness, raw } = scope.boundary;
@@ -23,7 +26,14 @@ const ads = (group, first = 'Spring <sale>') => ({ ...base, group_by:group, ad_k
   Object.fromEntries(KEYS[group].map(key => [key, missing]).concat(Object.entries(metrics))),
 ] });
 (async()=>{
-  const h = harness('sources'); h.last().resolve(utm()); await flush();
+  // 默认（服务端没给 adGroups）：下拉和线上一样只有两项，改成别的值会被弹回去。
+  const plain = harness('sources'); plain.last().resolve(utm()); await flush();
+  const plainGroup = plain.root.querySelector('.pc-sources-group');
+  check('without adGroups only the two existing groupings are offered', plainGroup.querySelectorAll('option').map(option => option.getAttribute('value')).join() === 'utm,channel');
+  const before = plain.calls.length; plainGroup.value = 'campaign'; plainGroup.fire('change');
+  check('without adGroups an ad grouping cannot be selected', plainGroup.value === 'utm' && plain.calls.length === before);
+
+  const h = harness('sources', { adGroups: true }); h.last().resolve(utm()); await flush();
   const group = h.root.querySelector('.pc-sources-group');
   check('the page still opens on UTM source', group.value === 'utm' && !Object.hasOwn(h.calls[0].params, 'group_by') && !h.el('export').disabled);
   check('three ad groupings are offered after the two existing ones', group.querySelectorAll('option').map(option => option.getAttribute('value')).join() === 'utm,channel,campaign,adset,ad');
