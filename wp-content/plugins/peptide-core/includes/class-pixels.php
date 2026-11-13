@@ -33,6 +33,9 @@ final class Pixels {
 	public const QUEUE_KEY   = 'pc_px_queue';
 	public const OPTOUT      = 'pc_px_optout';
 	public const ORDER_SHOWN = '_pc_px_browser';
+
+	/** 补发任务不碰刚付款的订单（秒）：留给付款时那一次回传，免得两边同时发出两条服务端购买。 */
+	public const CATCHUP_GRACE = 600;
 	public const MAX_QUEUE   = 20;
 
 	public static function register_hooks(): void {
@@ -532,7 +535,11 @@ final class Pixels {
 		return esc_url_raw( home_url( $uri ) );
 	}
 
-	/** 订单 → 下单 / 购买事件（同一个订单的 event_id 固定，浏览器和服务端可以去重）。 */
+	/**
+	 * 订单 → 下单 / 购买事件（同一个订单的 event_id 固定，浏览器和服务端可以去重）。
+	 * event_id 用的是订单的内部编号（order_<编号>），不是显示给顾客的订单号：新订单的显示订单号是 hang- 开头的支付方订单号，
+	 * 重新付款一次就会变；内部编号不变。显示订单号只放在事件的 order_id 里。
+	 */
 	public static function order_event( \WC_Order $order, string $name = 'purchase' ): array {
 		$items = array();
 		foreach ( $order->get_items() as $line ) {
@@ -598,6 +605,12 @@ final class Pixels {
 			if ( class_exists( Test_Orders::class ) && Test_Orders::is_test_order( $order ) ) {
 				continue;
 			}
+			// FE-09 复核（F4，2026-11-12）：付款时那一次回传是先改订单状态、再给订单打“已回传”的标记，中间有一小段时间。
+			// 这个任务要是正好在那段时间里读到订单，就会再发一条——两条都是服务端发的，Meta 不保证去重。所以付款不到 10 分钟的先不补。
+			$paid_at = $order->get_date_paid();
+			if ( $paid_at && $paid_at->getTimestamp() > time() - self::CATCHUP_GRACE ) {
+				continue;
+			}
 			$ctx = Pixels\Server::context_from_order( $order );
 			$order->update_meta_data( Pixels\Server::ORDER_SENT, time() );
 			$order->save_meta_data();
@@ -624,7 +637,7 @@ final class Pixels {
 			global $wp;
 			$order = wc_get_order( absint( $wp->query_vars['order-received'] ?? 0 ) );
 			$key   = isset( $_GET['key'] ) ? wc_clean( wp_unslash( $_GET['key'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			if ( $order && hash_equals( $order->get_order_key(), (string) $key ) && ! $order->has_status( array( 'failed', 'cancelled', 'pending' ) ) && ! $order->get_meta( self::ORDER_SHOWN ) ) {
+			if ( $order && hash_equals( $order->get_order_key(), (string) $key ) && ! $order->has_status( array( 'failed', 'cancelled', 'pending' ) ) && ! $order->get_meta( self::ORDER_SHOWN ) && ! self::is_test_order( $order ) ) {
 				$order->update_meta_data( self::ORDER_SHOWN, time() );
 				$order->save_meta_data();
 				$events[] = self::order_event( $order, 'place_order' );
@@ -857,9 +870,20 @@ final class Pixels {
 		if ( ! self::any() || '1' === (string) $order->get_meta( '_pc_px_optout' ) ) {
 			return;
 		}
+		if ( self::is_test_order( $order ) ) {
+			return; // 测试单不回传购买（付款弹窗页和补发任务本来就不发，这里补齐）。
+		}
 		$order->update_meta_data( Pixels\Server::ORDER_SENT, time() );
 		$order->save_meta_data();
 		Pixels\Server::send( array( self::order_event( $order, 'purchase' ) ), self::user_data( $order ), Pixels\Server::context_from_order( $order ) );
+	}
+
+	/**
+	 * 测试单（收件信息全 1，或店主标记的）不回传购买。购买事件一共四条路：付款时服务端发、每 5 分钟的补发、付款成功弹窗页的浏览器事件、
+	 * “订单已收到”页的浏览器事件——四条路用同一个判断，否则服务端发了、浏览器没发，事件管理器里就只有一路。
+	 */
+	public static function is_test_order( \WC_Order $order ): bool {
+		return class_exists( Test_Orders::class ) && Test_Orders::is_test_order( $order );
 	}
 
 	// ---------- 前台 ----------
