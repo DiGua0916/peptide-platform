@@ -102,6 +102,9 @@ $created = array( $paid->get_id(), $unpaid->get_id() );
 $check( 'new order is stamped with the series', '7' === (string) $paid->get_meta( Series_Sync::ORDER_META ) );
 
 // ---- 摘要：只有汇总字段 ----
+// 开关默认关：摘要和 11-10 上线的版本逐项相同。之后打开开关，这个测试其余部分都带客户编号。
+$check( 'by default the summary is exactly what is live (no customer id)', ! R::with_customer_id() && array( 'store_order_id', 'order_number', 'status', 'paid', 'is_test', 'currency', 'total_cents', 'created_at', 'paid_at', 'order_day', 'series_id', 'email_hash', 'utm_source', 'ad_id' ) === array_keys( R::summary( $paid ) ) );
+update_option( R::CUSTOMER_ID, '1' );
 $s = R::summary( $paid );
 $check( 'summary keys are exactly the contract', array( 'store_order_id', 'order_number', 'status', 'paid', 'is_test', 'currency', 'total_cents', 'created_at', 'paid_at', 'order_day', 'series_id', 'email_hash', 'utm_source', 'ad_id', 'customer_id' ) === array_keys( $s ) );
 if ( class_exists( PeptideCore\Customer_Id::class ) ) {

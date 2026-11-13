@@ -21,6 +21,7 @@ namespace {
 	}
 	function is_wp_error( $v ): bool { return $v instanceof WP_Error; }
 	function get_option( string $k, $default = false ) { return $GLOBALS['options'][ $k ] ?? $default; }
+	function apply_filters( string $hook, $value, ...$rest ) { return $value; }
 	function update_option( string $k, $v, $autoload = null ): bool { $GLOBALS['options'][ $k ] = $v; return true; }
 	function sanitize_text_field( $s ): string { return trim( strip_tags( (string) $s ) ); }
 	function add_action( ...$a ): void { $GLOBALS['actions'][] = $a; }
@@ -272,6 +273,8 @@ namespace {
 	check( 'no spend means no ROAS', null === $rep['series'][1]['metrics']['roas'] );
 	check( 'three levels add up', $levels_equal( $rep ) );
 	// ---- 顾客：按客户编号去重，同一位顾客在两家店买过，上一级只算一次；没有编号的退回用邮箱哈希 ----
+	check( 'report extras are off unless the option says so', false === Orders::extras() && ( $GLOBALS['options'][ Orders::EXTRAS ] = '1' ) && true === Orders::extras() );
+	unset( $GLOBALS['options'][ Orders::EXTRAS ] );
 	check( 'customer id shape', 'CAAAAAAA' === Orders::clean_customer_id( ' caaaaaaa ' ) && '' === Orders::clean_customer_id( 'C123' ) && '' === Orders::clean_customer_id( 'XAAAAAAA' ) && '' === Orders::clean_customer_id( null ) );
 	check( 'customer id stored with the order', 'CAAAAAAA' === \PeptideHq\Orders::get( 1, 100 )['customer_id'] && '' === \PeptideHq\Orders::get( 3, 301 )['customer_id'] );
 	$stores_of = static fn( array $buyer ): array => array_column( $buyer['stores'], 'customers', 'site_id' );

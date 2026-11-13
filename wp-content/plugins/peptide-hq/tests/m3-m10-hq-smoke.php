@@ -34,6 +34,12 @@ $check  = static function ( string $name, bool $ok, $detail = null ) use ( &$che
 	}
 };
 $mine = array( 'class-series', 'class-orders', 'class-refunds', 'class-design-push', 'class-store-clone', 'class-report-page' );
+
+// 新加的报表列和客户编号默认关着。这个测试两种状态都要看：先确认默认是关的，再打开跑完全部检查，最后关上再看一遍页面。
+$check( 'report extras are off by default', ! PeptideHq\Orders::extras() && false === has_action( 'pchq_summary_days', array( PeptideHq\Orders::class, 'store_abandoned' ) ) && false === has_filter( 'http_response', array( PeptideHq\Orders::class, 'watch_summary' ) ) );
+update_option( PeptideHq\Orders::EXTRAS, '1' );
+add_action( 'pchq_summary_days', array( PeptideHq\Orders::class, 'store_abandoned' ), 10, 2 ); // 打开开关后下一次请求才会挂上，这里手工挂。
+add_filter( 'http_response', array( PeptideHq\Orders::class, 'watch_summary' ), 10, 3 );
 set_error_handler(
 	static function ( int $no, string $msg, string $file, int $line ) use ( $mine ): bool {
 		foreach ( $mine as $needle ) {
@@ -432,6 +438,17 @@ $check( 'report page renders three levels', str_contains( $html, '全部系列�
 $check( 'report page shows customers, abandoned and abandon rate', str_contains( $html, '顾客' ) && str_contains( $html, '弃单率' ) && str_contains( $html, number_format( (float) $rep['total']['abandon_rate'], 2 ) . '%' ) && ! str_contains( $html, '<b>Deprecated</b>' ), $rep['total']['abandon_rate'] );
 $html = $render( PeptideHq\Admin\Orders_Page::class, array( 'page' => 'pchq-orders', 'order' => (string) Orders::get( $a, 990001 )['id'] ) );
 $check( 'order detail shows the customer id', str_contains( $html, 'C00SMK01' ) && str_contains( $html, '客户编号' ) );
+
+// ---- 11. 开关关上：页面回到 11-10 上线时的样子（没有顾客 / 弃单 / 弃单率三列，没有客户编号） ----
+add_filter( 'pchq_m10_extras', '__return_false' );
+$html = $render( PeptideHq\Admin\Report_Page::class, array( 'page' => 'pchq-report', 'from' => $from, 'to' => $today ) );
+$check( 'switch off: the report has the columns that are live and nothing else', ! str_contains( $html, '顾客' ) && ! str_contains( $html, '弃单' ) && 10 === substr_count( explode( '</thead>', $html )[0], '<th scope="col"' ) && str_contains( $html, '全部系列合计' ) && str_contains( $html, '转化率' ), substr_count( explode( '</thead>', $html )[0], '<th scope="col"' ) );
+$html = $render( PeptideHq\Admin\Orders_Page::class, array( 'page' => 'pchq-orders', 'order' => (string) Orders::get( $a, 990001 )['id'] ) );
+$check( 'switch off: order detail has no customer id row', ! str_contains( $html, '客户编号' ) && ! str_contains( $html, 'C00SMK01' ) && str_contains( $html, '店内订单编号' ) );
+$html = $render( PeptideHq\Admin\Orders_Page::class, array( 'page' => 'pchq-orders' ) );
+$check( 'switch off: the search box is the one that is live', str_contains( $html, '<label>订单号<input' ) && ! str_contains( $html, '客户编号' ) );
+$check( 'switch off: a customer id finds nothing, order numbers still do', 0 === Orders::search( array( 'q' => 'C00SMK01' ) )['total'] && 1 === Orders::search( array( 'q' => 'HANG-990001' ) )['total'] );
+remove_filter( 'pchq_m10_extras', '__return_false' );
 $_GET = array();
 
 WP_CLI::success( 'PASS ' . $checks . ' M3 / M10 HQ smoke checks on a real HQ WordPress copy (' . count( $sites ) . ' stores, ' . $n . ' catalog products, ' . count( $in['orders'] ) . ' reported orders).' );

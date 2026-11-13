@@ -133,13 +133,19 @@ namespace {
 		105 => new WC_Order( 105, 'cancelled', '20.00', $t0 + 40 ),
 	);
 	$s = R::summary( $GLOBALS['orders'][101] );
-	check( 'summary fields are exactly the contract', array( 'store_order_id', 'order_number', 'status', 'paid', 'is_test', 'currency', 'total_cents', 'created_at', 'paid_at', 'order_day', 'series_id', 'email_hash', 'utm_source', 'ad_id', 'customer_id' ) === array_keys( $s ) );
+	// 开关默认关：摘要和 11-10 上线的版本逐项相同（升级后不会把订单全部重报一遍）。
+	check( 'summary fields are exactly the contract that is live', false === R::with_customer_id() && array( 'store_order_id', 'order_number', 'status', 'paid', 'is_test', 'currency', 'total_cents', 'created_at', 'paid_at', 'order_day', 'series_id', 'email_hash', 'utm_source', 'ad_id' ) === array_keys( $s ) );
+	$off = R::fingerprint( $s );
+	$GLOBALS['options'][ R::CUSTOMER_ID ] = '1';
+	check( 'with the switch on the summary also carries the customer id', R::with_customer_id() && array_merge( array( 'store_order_id', 'order_number', 'status', 'paid', 'is_test', 'currency', 'total_cents', 'created_at', 'paid_at', 'order_day', 'series_id', 'email_hash', 'utm_source', 'ad_id' ), array( 'customer_id' ) ) === array_keys( R::summary( $GLOBALS['orders'][101] ) ) && $off !== R::fingerprint( R::summary( $GLOBALS['orders'][101] ) ) );
 	check( 'summary values', 101 === $s['store_order_id'] && true === $s['paid'] && false === $s['is_test'] && 14999 === $s['total_cents'] && $t0 + 100 === $s['paid_at'] && gmdate( 'Y-m-d', $t0 ) === $s['order_day'] && 3 === $s['series_id'] );
 	check( 'email only as a hash of the lower-cased address', hash( 'sha256', 'buyer@example.test' ) === $s['email_hash'] && false === strpos( json_encode( $s ), 'xample' ) );
 	check( 'order without series meta uses the store series', 3 === R::summary( $GLOBALS['orders'][102] )['series_id'] );
 	check( 'test order flagged', true === R::summary( $GLOBALS['orders'][104] )['is_test'] );
 	$known = new WC_Order( 107, 'processing', '30.00', $t0 + 60, $t0 + 360, 'k@example.test', array( '_pc_customer_id' => 'C0ABCDEF' ) );
 	check( 'customer id is reported when the store has one', 'C0ABCDEF' === R::summary( $known )['customer_id'] && '' === R::summary( $GLOBALS['orders'][101] )['customer_id'] );
+	unset( $GLOBALS['options'][ R::CUSTOMER_ID ] );
+	check( 'switch off again: same fingerprint as before', $off === R::fingerprint( R::summary( $GLOBALS['orders'][101] ) ) );
 	$hang = new WC_Order( 106, 'processing', '30.00', $t0 + 50, $t0 + 350, 'h@example.test', array( '_pc_pp_ref' => 'hang-161188301' ) );
 	check( 'hang- number is only the display number; the id stays the WooCommerce order id', 'hang-161188301' === R::summary( $hang )['order_number'] && 106 === R::summary( $hang )['store_order_id'] );
 	$renumbered = clone $hang;

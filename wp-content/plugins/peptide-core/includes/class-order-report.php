@@ -191,6 +191,16 @@ final class Order_Report {
 		return $out;
 	}
 
+	/**
+	 * 开关（默认关）：订单摘要里带不带客户编号。关着时摘要和 11-10 上线的版本逐项相同，
+	 * 所以已经上报过的订单不会因为升级而全部重报一遍。打开：wp option update pc_order_report_customer_id 1。
+	 */
+	public const CUSTOMER_ID = 'pc_order_report_customer_id';
+
+	public static function with_customer_id(): bool {
+		return (bool) apply_filters( 'pc_order_report_customer_id', '1' === (string) get_option( self::CUSTOMER_ID, '0' ) ) && class_exists( Customer_Id::class );
+	}
+
 	/** 报给总后台的订单摘要。 */
 	public static function summary( \WC_Order $order ): array {
 		$facts   = self::facts( $order );
@@ -198,7 +208,7 @@ final class Order_Report {
 		$email   = strtolower( trim( (string) $order->get_billing_email() ) );
 		$attr    = self::attribution( $order );
 		$series  = (int) $order->get_meta( Series_Sync::ORDER_META );
-		return array(
+		$out     = array(
 			'store_order_id' => (int) $order->get_id(),
 			'order_number'   => (string) $order->get_order_number(),
 			'status'         => (string) $order->get_status(),
@@ -213,9 +223,12 @@ final class Order_Report {
 			'email_hash'     => '' !== $email ? hash( 'sha256', $email ) : '',
 			'utm_source'     => $attr['utm_source'],
 			'ad_id'          => $attr['ad_id'],
-			// 客户编号（同一位顾客在各店相同，由邮箱或手机号算出，不含原文）；店铺没有这个功能时为空。
-			'customer_id'    => class_exists( Customer_Id::class ) ? (string) Customer_Id::for_order( $order ) : '',
 		);
+		if ( self::with_customer_id() ) {
+			// 客户编号（同一位顾客在各店相同，由邮箱或手机号算出，不含原文）。
+			$out['customer_id'] = (string) Customer_Id::for_order( $order );
+		}
+		return $out;
 	}
 
 	private static function reported( \WC_Order $order ): array {

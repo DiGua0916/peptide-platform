@@ -24,6 +24,12 @@ final class Orders {
 
 	public const VERSION   = '2';
 	public const OPTION    = 'pchq_m10_db';
+
+	/**
+	 * 开关（默认关）：报表的“顾客”“弃单”“弃单率”三列、订单页的客户编号、按客户编号搜索、收集各店每日汇总里的弃单数。
+	 * 这些是 2026-11-12 之后加的新东西；关着时页面和 11-10 上线的版本一样。打开：wp option update pchq_m10_extras 1。
+	 */
+	public const EXTRAS    = 'pchq_m10_extras';
 	public const MAX_BATCH = 50;
 
 	public static function register_hooks(): void {
@@ -31,8 +37,10 @@ final class Orders {
 		add_action( 'rest_api_init', array( self::class, 'routes' ) );
 		add_filter( 'pchq_monitor_checks', array( self::class, 'monitor_check' ), 10, 4 );
 		add_filter( 'pchq_alert_types', array( self::class, 'alert_types' ) );
-		add_action( 'pchq_summary_days', array( self::class, 'store_abandoned' ), 10, 2 );
-		add_filter( 'http_response', array( self::class, 'watch_summary' ), 10, 3 );
+		if ( self::extras() ) {
+			add_action( 'pchq_summary_days', array( self::class, 'store_abandoned' ), 10, 2 );
+			add_filter( 'http_response', array( self::class, 'watch_summary' ), 10, 3 );
+		}
 		Refunds::register_hooks();
 		if ( is_admin() ) {
 			foreach ( array( Admin\Orders_Page::class, Admin\Report_Page::class ) as $page ) {
@@ -57,6 +65,11 @@ final class Orders {
 
 	public static function ready(): bool {
 		return self::VERSION === get_option( self::OPTION );
+	}
+
+	/** 新加的报表列和客户编号是不是打开了（默认关，见 EXTRAS）。 */
+	public static function extras(): bool {
+		return (bool) apply_filters( 'pchq_m10_extras', '1' === (string) get_option( self::EXTRAS, '0' ) );
 	}
 
 	// ---------- 表结构 ----------
@@ -354,7 +367,10 @@ CREATE TABLE {$left} (
 		// 订单号：顾客和平台所有者看到的号（新订单是支付方的 hang-数字，老订单是数字），或者店铺内部的订单编号。
 		$q = self::clean_query( (string) ( $f['q'] ?? '' ) );
 		if ( '' !== $q ) {
-			$where[] = $wpdb->prepare( '(order_number = %s OR store_order_id = %d OR customer_id = %s)', $q, ctype_digit( $q ) ? (int) $q : 0, '' !== self::clean_customer_id( $q ) ? self::clean_customer_id( $q ) : '-' );
+			$customer = self::extras() ? self::clean_customer_id( $q ) : '';
+			$where[]  = '' !== $customer
+				? $wpdb->prepare( '(order_number = %s OR store_order_id = %d OR customer_id = %s)', $q, ctype_digit( $q ) ? (int) $q : 0, $customer )
+				: $wpdb->prepare( '(order_number = %s OR store_order_id = %d)', $q, ctype_digit( $q ) ? (int) $q : 0 );
 		}
 		if ( ! empty( $f['from'] ) ) {
 			$where[] = $wpdb->prepare( 'paid_at >= %d', (int) $f['from'] );
