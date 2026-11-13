@@ -14,6 +14,9 @@ final class Product_Offers {
 
 	public static function register_hooks(): void {
 		add_action( 'init', array( self::class, 'register' ) );
+		// HQ-07：赠品 / 捆绑只能由能管理营销活动的人删除（后台页面的删除入口只查了 edit_shop_coupons）。
+		add_filter( 'pre_delete_post', array( self::class, 'guard_delete' ), 10, 2 );
+		add_filter( 'pre_trash_post', array( self::class, 'guard_delete' ), 10, 2 );
 		add_shortcode( 'pc_product_offer', array( self::class, 'shortcode' ) );
 		add_action( 'woocommerce_single_product_summary', array( self::class, 'product_forms' ), 36 );
 		add_action( 'admin_post_pc_offer_add', array( self::class, 'add_action' ) );
@@ -32,6 +35,14 @@ final class Product_Offers {
 	}
 	public static function register(): void {
 		register_post_type( self::CPT, array( 'label' => __( 'Product offers', 'peptide-core' ), 'public' => false, 'show_ui' => false, 'show_in_rest' => false, 'supports' => array( 'title' ), 'capability_type' => 'shop_coupon', 'map_meta_cap' => true ) );
+	}
+	/**
+	 * pre_delete_post / pre_trash_post：登录的后台用户里，不能管理营销活动的人（投手、活动被系列接管后的店员）删不掉赠品 / 捆绑。
+	 * 没有登录用户的调用（系列下发、命令行、定时任务）不受影响。返回 false = 不删。
+	 */
+	public static function guard_delete( $check, $post = null ) {
+		if ( null !== $check || ! $post instanceof \WP_Post || self::CPT !== $post->post_type ) { return $check; }
+		return ( get_current_user_id() && ! Admin\Marketing::can_manage() ) ? false : $check;
 	}
 	private static function error( string $code, string $message ): \WP_Error { return new \WP_Error( $code, $message ); }
 	public static function policy(): string { return __( 'Gifts and bundles do not combine with coupons or other promotions. Only one gift offer applies per cart. Adding a bundle replaces any automatic gift.', 'peptide-core' ); }

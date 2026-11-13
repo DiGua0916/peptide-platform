@@ -36,6 +36,9 @@ final class Runtime {
 		add_filter( 'pc_hq_capabilities', array( self::class, 'capabilities' ) );
 		Popups::register_hooks();           // 营销弹窗静默开关和价格无关，借这里注册，入口文件不用再加一行。
 		Series_Campaigns::register_hooks(); // 按系列接收营销活动（M3 的四个钩子）。
+		// 投手没有优惠码相关的能力（HQ-07）。放在这里是因为要对每个请求生效（后台、admin-ajax、REST），
+		// Admin\Marketing 自己的钩子只在后台注册。排在 M9 按页面临时给能力（30）之后。
+		add_filter( 'user_has_cap', array( \PeptideCore\Admin\Marketing::class, 'buyer_caps' ), 9999, 4 );
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			\WP_CLI::add_command( 'peptide price-engine', Cli::class );
 		}

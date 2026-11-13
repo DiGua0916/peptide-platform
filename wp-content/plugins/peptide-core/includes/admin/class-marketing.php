@@ -25,6 +25,8 @@ final class Marketing {
 	public const VIEW_CAP = 'pc_view_campaigns';
 	/** 投手角色（由 M9 创建）。即使被误授了 edit_shop_coupons，也不能新建或修改营销活动。 */
 	public const BUYER_ROLE = 'pc_media_buyer';
+	/** 只读的人只需要这一个页面（GET）：admin.php?page=pc-promotions。值和 Promotions_Page::SLUG 相同。 */
+	public const VIEW_PAGE = 'pc-promotions';
 	public const PER_PAGE = array( 10, 20, 50, 100 );
 	public const TABS     = array( 'all', 'upcoming', 'active', 'ended' );
 
@@ -42,14 +44,53 @@ final class Marketing {
 
 	// ---------- 谁能改、谁只能看（HQ-07） ----------
 
+	/**
+	 * 是不是投手（M9 的投手版账号：带 pc_media_buyer 角色的销售账号）。管理员永远不算，和 Staff_Buyer::is_buyer() 的口径一致。
+	 * 不传参数 = 当前登录的人。
+	 *
+	 * @param \WP_User|int|null $user
+	 */
+	public static function is_buyer( $user = null ): bool {
+		if ( null === $user ) {
+			$user = wp_get_current_user();
+		} elseif ( ! is_object( $user ) ) {
+			$user = get_userdata( (int) $user );
+		}
+		if ( ! is_object( $user ) || empty( $user->ID ) ) {
+			return false;
+		}
+		$roles = (array) ( $user->roles ?? array() );
+		return in_array( self::BUYER_ROLE, $roles, true ) && ! in_array( 'administrator', $roles, true );
+	}
+
+	/**
+	 * user_has_cap（每个请求都挂，见 Pricing\Runtime）：投手没有任何优惠码相关的能力。
+	 * 满减活动、赠品 / 捆绑的文章类型用的也是优惠码这组能力，所以这一条同时挡住：
+	 * WooCommerce 原生的优惠码列表和编辑页、快速编辑、批量操作、REST 接口 wc/v3/coupons（含批量），
+	 * 以及本插件里所有先查 edit_shop_coupons 的保存入口。即使账号被误授了营销权限（比如原来勾了“营销”模块），也一样拒绝。
+	 * 只读页面不靠这些能力（见 can_view()）。
+	 */
+	public static function buyer_caps( $allcaps, $caps = array(), $args = array(), $user = null ) {
+		if ( ! is_array( $allcaps ) || ! is_object( $user ) || ! self::is_buyer( $user ) ) {
+			return $allcaps;
+		}
+		foreach ( array_keys( $allcaps ) as $cap ) {
+			if ( false !== strpos( (string) $cap, 'shop_coupon' ) ) {
+				unset( $allcaps[ $cap ] );
+			}
+		}
+		return $allcaps;
+	}
+
 	/** 能不能新建、编辑、启停、删除营销活动。投手不能；管理员（含总后台一键登录）和原有的营销员工照旧。 */
 	public static function can_manage(): bool {
-		$can = current_user_can( self::CAP ) && ! in_array( self::BUYER_ROLE, (array) ( wp_get_current_user()->roles ?? array() ), true );
+		$can = current_user_can( self::CAP );
 		// 营销活动已由系列接管（M3）：店铺后台不再给新建入口，只有平台管理员（总后台一键登录）还能处理本店自己建的活动。
 		if ( $can && \PeptideCore\Pricing\Series_Campaigns::managed() && ! current_user_can( 'manage_options' ) ) {
 			$can = false;
 		}
-		return (bool) apply_filters( 'pc_marketing_can_manage', $can );
+		// 投手放在过滤器之后判断：别的代码不能把投手改成可以修改。
+		return (bool) apply_filters( 'pc_marketing_can_manage', $can ) && ! self::is_buyer();
 	}
 
 	/** 这条活动是不是总后台按系列统一下发的（店铺后台对所有人只读）。$kind：promotion / coupon / ship_discount。 */
@@ -69,45 +110,110 @@ final class Marketing {
 		return self::locked( $kind, $id ) ? ' <span class="pc-pl-muted">系列统一下发 · 只读</span>' : '';
 	}
 
-	/** 能不能打开营销活动页面（能改的人，或只读的投手）。 */
+	/**
+	 * 当前登录的人能不能看营销活动（显示入口、打开页面都用这一个判断）：
+	 * 能改的人、有 pc_view_campaigns 的人、投手（平台所有者 2026-11-13 定：投手可以看只读列表）。
+	 * 不看“这次请求是哪个页面”，所以在任何后台页面上问结果都一样，可以直接用来决定菜单里出不出现入口。
+	 * 签名和含义已经和 F5 约定（docs/CONTRACT.md 的 M4 一节），不要改。
+	 */
 	public static function can_view(): bool {
-		return current_user_can( self::CAP ) || current_user_can( self::VIEW_CAP );
-	}
-
-	/** 菜单用的权限名：能改的人用 CAP，只读的人用 VIEW_CAP（供 Admin_Menus 注册菜单时调用）。 */
-	public static function menu_cap(): string {
-		return current_user_can( self::CAP ) ? self::CAP : self::VIEW_CAP;
+		return current_user_can( self::CAP ) || current_user_can( self::VIEW_CAP ) || self::is_buyer();
 	}
 
 	/**
-	 * 三个营销页面的入口都先过这里。只读的人：打开新建 / 编辑地址直接 403，列表改为只读的“当前在跑的活动”。
+	 * 注册菜单页面时用的能力名（add_menu_page 的第三个参数）：能改的人用 CAP，有 VIEW_CAP 的人用 VIEW_CAP，
+	 * 投手用 read（投手账号只有 read，页面里再由 can_view() / read_only_gate() 把关）。先问 can_view() 再注册。
+	 */
+	public static function menu_cap(): string {
+		if ( current_user_can( self::CAP ) ) {
+			return self::CAP;
+		}
+		return ( self::is_buyer() && ! current_user_can( self::VIEW_CAP ) ) ? 'read' : self::VIEW_CAP;
+	}
+
+	/** 只读入口的地址（投手菜单里的那一项指向这里）。 */
+	public static function view_url(): string {
+		return self::url( self::VIEW_PAGE );
+	}
+
+	/**
+	 * 三个营销页面的入口都先过这里。只读的人（投手、被系列接管后的店员）：
+	 * - 带 new / edit 参数（新建、编辑页的地址）直接 403；
+	 * - 不是 GET / HEAD 的请求直接 403（这三个页面本身不接收提交，提交都走 admin-post.php，那里各有 guard()）；
+	 * - 其余情况输出只读的“当前在跑的活动”。
 	 * 返回 true 表示页面已经输出完，调用方直接 return。
 	 */
 	public static function read_only_gate(): bool {
 		if ( self::can_manage() ) {
 			return false;
 		}
-		if ( isset( $_GET['edit'] ) || isset( $_GET['new'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$method = strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		if ( isset( $_GET['edit'] ) || isset( $_GET['new'] ) || ! in_array( $method, array( 'GET', 'HEAD' ), true ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			wp_die( '营销活动由总后台统一创建和调整，这个账号只能查看当前在跑的活动。', '', array( 'response' => 403 ) );
 		}
 		self::render_running();
 		return true;
 	}
 
-	/** 只读页面：当前在跑的活动。没有新建、编辑、启停、删除的入口。 */
+	/**
+	 * 只读页面：当前在跑的活动。给投手写广告文案用，所以每个活动用大白话写清楚条件和优惠，
+	 * 不出现内部编号、编辑链接、表单。文字见 Pricing\Campaign_Text。
+	 */
 	public static function render_running(): void {
-		$rows = \PeptideCore\Pricing\Campaigns::running();
-		echo '<div class="wrap pc-mk pc-mk-running"><h1>当前在跑的活动</h1>';
-		echo '<p class="pc-pl-muted">营销活动由总后台按系列统一创建和调整，这里只读。需要新增或修改活动，请联系平台管理员。</p>';
-		if ( ! $rows ) {
-			echo '<p>现在没有进行中的活动。</p></div>';
+		$groups = \PeptideCore\Pricing\Campaigns::grouped();
+		$buyer  = self::is_buyer();
+		echo '<div class="wrap pc-mk pc-rc"><h1>当前在跑的活动</h1>';
+		echo '<p class="pc-rc__lead">下面是这家店<strong>现在对顾客生效</strong>的全部优惠，写广告文案时以这里为准。每个活动都写了“条件”（顾客要做到什么）和“优惠”（顾客能得到什么）。时间是店铺时间（' . esc_html( self::tz_label() ) . '）。</p>';
+		echo '<p class="pc-rc__lead pc-pl-muted">这里只能看，不能改。要新增、修改或停掉活动，请联系平台管理员。</p>';
+		if ( ! $groups ) {
+			echo '<p class="pc-rc__empty">现在没有进行中的活动。</p></div>';
 			return;
 		}
-		echo '<table class="widefat striped"><thead><tr><th>类型</th><th>名称</th><th>规则</th><th>结束时间（' . esc_html( self::tz_label() ) . '）</th><th>来源</th></tr></thead><tbody>';
-		foreach ( $rows as $row ) {
-			echo '<tr><td>' . esc_html( \PeptideCore\Pricing\Campaigns::KINDS[ $row['kind'] ] ?? $row['kind'] ) . '</td><td>' . esc_html( $row['name'] ) . '</td><td>' . esc_html( $row['rule'] ) . '</td><td>' . esc_html( $row['ends'] ? self::date_text( $row['ends'] ) : '长期' ) . '</td><td>' . ( 'series' === $row['source'] ? '系列统一下发' : '本店' ) . '</td></tr>';
+		$summary = array();
+		foreach ( $groups as $kind => $rows ) {
+			$summary[] = \PeptideCore\Pricing\Campaigns::KINDS[ $kind ] . ' ' . count( $rows ) . ' 个';
 		}
-		echo '</tbody></table></div>';
+		echo '<p class="pc-rc__summary">现在一共：' . esc_html( implode( '，', $summary ) ) . '。</p>';
+
+		$list = static function ( array $lines ): string {
+			$lines = array_values( array_filter( array_map( 'strval', $lines ), static fn( $l ) => '' !== trim( $l ) ) );
+			if ( count( $lines ) < 2 ) {
+				return esc_html( (string) ( $lines[0] ?? '' ) );
+			}
+			return '<ul>' . implode( '', array_map( static fn( $l ) => '<li>' . esc_html( $l ) . '</li>', $lines ) ) . '</ul>';
+		};
+		foreach ( $groups as $kind => $rows ) {
+			echo '<h2 class="pc-rc__group">' . esc_html( \PeptideCore\Pricing\Campaigns::GROUPS[ $kind ] ) . '</h2>';
+			foreach ( $rows as $row ) {
+				$p = $row['plain'];
+				echo '<section class="pc-rc__card"><h3><span class="pc-rc__kind">' . esc_html( $p['kind'] ) . '</span> ' . esc_html( $row['name'] ) . '</h3>';
+				echo '<table class="pc-rc__deal"><thead><tr><th>条件（顾客要做到）</th><th>优惠（顾客能得到）</th></tr></thead><tbody>';
+				foreach ( $p['pairs'] as $pair ) {
+					echo '<tr><td>' . $list( explode( '；', (string) $pair[0] ) ) . '</td><td>' . $list( explode( '；', (string) $pair[1] ) ) . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $list() 已转义。
+				}
+				echo '</tbody></table><dl class="pc-rc__facts">';
+				$facts = array(
+					'哪些商品'       => array( $p['scope'] ),
+					'哪些顾客'       => array( $p['who'] ),
+					'顾客怎么用'     => explode( '。', (string) $p['how'] ),
+					'和别的优惠'     => $p['stack'],
+					'次数限制'       => $p['limits'],
+					'有效期'         => array( $p['period'] ),
+					'网站上的写法'   => $p['site'],
+				);
+				if ( ! $buyer ) {
+					$facts['来源'] = array( 'series' === $row['source'] ? '总后台按系列统一下发' : '这家店自己建的' );
+				}
+				foreach ( $facts as $label => $lines ) {
+					$html = $list( (array) $lines );
+					if ( '' !== $html ) {
+						echo '<dt>' . esc_html( $label ) . '</dt><dd>' . $html . '</dd>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $list() 已转义。
+					}
+				}
+				echo '</dl></section>';
+			}
+		}
+		echo '</div>';
 	}
 
 	/** 旧地址转到新页面：WooCommerce 的营销概览、优惠券列表 / 编辑页，满减活动的文章列表 / 编辑页。 */

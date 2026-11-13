@@ -778,6 +778,15 @@
       "node_test": false,
       "status": "module-gate",
       "module": "M4"
+    },
+    {
+      "name": "m4-campaign-text-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m4-campaign-text-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M4"
     }
   ]
 }
